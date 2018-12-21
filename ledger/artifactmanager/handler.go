@@ -148,11 +148,13 @@ func (h *MessageHandler) handleSetBlob(ctx context.Context, parcel core.Parcel) 
 	}
 
 	id, err := h.db.SetBlob(ctx, jetID, parcel.Pulse(), msg.Memory)
-	if err != nil {
-		return nil, err
+	if err == nil {
+		return &reply.ID{ID: *id}, nil
 	}
-
-	return &reply.ID{ID: *id}, nil
+	if err == storage.ErrOverride {
+		return &reply.ID{ID: *calculatedID}, nil
+	}
+	return nil, err
 }
 
 func (h *MessageHandler) handleGetCode(ctx context.Context, parcel core.Parcel) (core.Reply, error) {

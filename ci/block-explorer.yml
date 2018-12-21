@@ -1,0 +1,416 @@
+groups:
+- name: unloader
+  jobs:
+    - build-unloader
+    - pack-unloader
+- name: loader
+  jobs:
+    - build-sdk
+    - build-loader
+    - pack-loader
+- name: explorer
+  jobs:
+    - build-explorer
+
+resource_types:
+- name: maven-resource
+  type: docker-image
+  source:
+    repository: nulldriver/maven-resource
+    tag: latest
+
+- name: kubernetes
+  type: docker-image
+  source:
+    repository: zlabjp/kubernetes-resource
+    tag: "1.11"
+
+resources:
+- name: adm
+  type: git
+  source:
+    uri: git@github.com:insolar/adm.git
+    branch: master
+    private_key: ((meta.github.adm_key))
+
+- name: deploy
+  type: kubernetes
+  source:
+    kubeconfig: ((meta.kubernetes.dev-config))
+
+- name: nexus
+  type: maven-resource
+  source:
+    url: https://nexus.ins.world/repository/maven-releases/
+    artifact: io.insolar:insolar-sdk-java:jar
+    username: ((meta.nexus.username))
+    password: ((meta.nexus.password))
+
+- name: nexus-loader
+  type: maven-resource
+  source:
+    url: https://nexus.ins.world/repository/maven-releases/
+    artifact: io.insolar:db-loader:jar
+    username: ((meta.nexus.username))
+    password: ((meta.nexus.password))
+
+- name: nexus-unloader
+  type: maven-resource
+  source:
+    url: https://nexus.ins.world/repository/maven-releases/
+    artifact: io.insolar:db-unloader:jar
+    username: ((meta.nexus.username))
+    password: ((meta.nexus.password))
+
+- name: git-insolar-sdk-java
+  type: git
+  source:
+    uri: git@github.com:insolar/insolar-sdk-java.git
+    branch: master
+    private_key: ((meta.github.sdk_key))
+
+- name: git-db-unloader
+  type: git
+  source:
+    uri: git@github.com:insolar/block-explorer-db-unloader.git
+    branch: master
+    private_key: ((meta.github.unloader_key))
+
+- name: git-db-loader
+  type: git
+  source:
+    uri: git@github.com:insolar/block-explorer-db-loader.git
+    branch: master
+    private_key: ((meta.github.loader_key))
+
+- name: git-explorer
+  type: git
+  source:
+    uri: https://git.websecret.by/developers/insolar
+    branch: master
+    username: ((meta.gitlab.websecret.username))
+    password: ((meta.gitlab.websecret.password))
+
+- name: registry-explorer
+  type: docker-image
+  source:
+    repository: registry.ins.world/explorer
+    username: ((meta.registry.username))
+    password: ((meta.registry.password))
+
+- name: registry-db-unloader
+  type: docker-image
+  source:
+    repository: registry.ins.world/unloader
+    username: ((meta.registry.username))
+    password: ((meta.registry.password))
+
+- name: registry-db-loader
+  type: docker-image
+  source:
+    repository: registry.ins.world/loader
+    username: ((meta.registry.username))
+    password: ((meta.registry.password))
+
+jobs:
+- name: build-sdk
+  plan:
+  - get: git-insolar-sdk-java
+    trigger: true
+  - task: build-sdk
+    config:
+      platform: linux
+      image_resource:
+        type: docker-image
+        source:
+          repository: maven
+          tag: 3-jdk-8-alpine
+      inputs:
+      - name: git-insolar-sdk-java
+      outputs:
+      - name: artifacts
+      run:
+        path: sh
+        args:
+          - -exc
+          - |
+            cd git-insolar-sdk-java
+            #MAVEN_OPTS=-Djdk.net.URLClassPath.disableClassPathURLCheck=true
+            mvn -X install #-DskipTests
+            ls -alh
+            ls -alhR /root/.m2/repository/io/insolar/insolar-sdk-java/
+            cp /root/.m2/repository/io/insolar/insolar-sdk-java/*/*.jar ../artifacts/
+            cp /root/.m2/repository/io/insolar/insolar-sdk-java/*/*.pom ../artifacts/
+  - put: nexus
+    params:
+      file: artifacts/*.jar
+      pom_file: artifacts/*.pom
+
+- name: build-unloader
+  plan:
+  - get: git-db-unloader
+    trigger: true
+  - task: build-unloader
+    config:
+      platform: linux
+      image_resource:
+        type: docker-image
+        source:
+          repository: maven
+          tag: 3-jdk-8-alpine
+      inputs:
+      - name: git-db-unloader
+      outputs:
+      - name: artifacts
+      run:
+        path: sh
+        args:
+          - -exc
+          - |
+            cd git-db-unloader
+            mvn clean package
+            ls -alh
+            cp target/*.jar ../artifacts/
+            cp pom.xml ../artifacts/
+  - put: nexus-unloader
+    params:
+      file: artifacts/*.jar
+      pom_file: artifacts/pom.xml
+
+- name: build-loader
+  plan:
+  - get: git-db-loader
+    trigger: true
+  - get: nexus
+    passed: [build-sdk]
+    trigger: true
+  - task: build-loader
+    config:
+      platform: linux
+      image_resource:
+        type: docker-image
+        source:
+          repository: maven
+          tag: 3-jdk-8-alpine
+      inputs:
+      - name: git-db-loader
+      outputs:
+      - name: artifacts
+      run:
+        path: sh
+        args:
+          - -exc
+          - |
+            cd git-db-loader
+            mkdir /root/.m2
+            cat << EOF > /root/.m2/settings.xml
+             <settings>
+             <servers>
+                   <server>
+                       <id>io.insolar</id>
+                       <username>((meta.nexus.username))</username>
+                       <password>((meta.nexus.password))</password>
+                   </server>
+             </servers>
+             <profiles>
+             <profile>
+               <id>io.insolar</id>
+               <repositories>
+                 <repository>
+                   <id>io.insolar</id>
+                   <name>insolar</name>
+                   <url>https://nexus.ins.world/repository/maven-releases</url>
+                   <releases>
+                     <enabled>true</enabled>
+                   </releases>
+                   <snapshots>
+                     <enabled>true</enabled>
+                   </snapshots>
+                 </repository>
+               </repositories>
+               <pluginRepositories>
+                 <pluginRepository>
+                   <id>io.insolar</id>
+                   <name>insolar</name>
+                   <url>https://nexus.ins.world/repository/maven-releases</url>
+                   <releases>
+                     <enabled>true</enabled>
+                   </releases>
+                   <snapshots>
+                     <enabled>true</enabled>
+                   </snapshots>
+                 </pluginRepository>
+               </pluginRepositories>
+             </profile>
+            </profiles>
+            <activeProfiles>
+             <activeProfile>io.insolar</activeProfile>
+            </activeProfiles>
+            </settings>
+            EOF
+            mvn clean package
+            ls -alh
+            cp target/*.jar ../artifacts/
+            cp pom.xml ../artifacts/
+  - put: nexus-loader
+    params:
+      file: artifacts/*.jar
+      pom_file: artifacts/pom.xml
+
+- name: pack-unloader
+  plan:
+  - get: nexus-unloader
+    passed: [build-unloader]
+    trigger: true
+  - get: git-db-unloader
+    trigger: false
+  - get: adm
+    trigger: false
+  - task: pack-unloader
+    config:
+      platform: linux
+      image_resource:
+        type: docker-image
+        source:
+          repository: alpine
+      inputs:
+      - name: nexus-unloader
+      - name: git-db-unloader
+      - name: adm
+      outputs:
+      - name: artifacts
+      run:
+        path: sh
+        args:
+          - -exc
+          - |
+            cp git-db-unloader/.git/short_ref artifacts/docker-tag
+            echo change image tag
+            cp adm/manifests/block-explorer/db-unloader.yaml artifacts/db-unloader.yaml
+            sed -i "s/registry.ins.world\/unloader/registry.ins.world\/unloader:$(cat artifacts/docker-tag)/g" artifacts/db-unloader.yaml
+            cp nexus-unloader/*.jar artifacts/unloader.jar
+            cat << EOF > artifacts/Dockerfile
+            FROM openjdk:8-jdk-alpine
+            RUN apk update && apk add bind-tools
+            COPY *.jar /opt/unloader/
+            EOF
+            ls -alh artifacts/
+  - put: registry-db-unloader
+    params:
+      build: artifacts
+      tag_file: artifacts/docker-tag
+  - put: deploy
+    params:
+      namespace: block-explorer
+      kubectl: apply -f artifacts/db-unloader.yaml
+
+- name: pack-loader
+  plan:
+  - get: nexus-loader
+    passed: [build-loader]
+    trigger: true
+  - get: git-db-loader
+    trigger: false
+  - get: adm
+    trigger: false
+  - task: pack-loader
+    config:
+      platform: linux
+      image_resource:
+        type: docker-image
+        source:
+          repository: alpine
+      inputs:
+      - name: nexus-loader
+      - name: git-db-loader
+      - name: adm
+      outputs:
+      - name: artifacts
+      run:
+        path: sh
+        args:
+          - -exc
+          - |
+            cp git-db-loader/.git/short_ref artifacts/docker-tag
+
+            echo change image tag
+            cp adm/manifests/block-explorer/db-loader.yaml artifacts/db-loader.yaml
+            sed -i "s/registry.ins.world\/loader/registry.ins.world\/loader:$(cat artifacts/docker-tag)/g" artifacts/db-loader.yaml
+
+            cp nexus-loader/*.jar artifacts/loader.jar
+            cat << EOF > artifacts/Dockerfile
+            FROM openjdk:8-jdk-alpine
+            RUN apk update && apk add bind-tools
+            COPY *.jar /opt/loader/
+            EOF
+            ls -alh artifacts/
+  - put: registry-db-loader
+    params:
+      build: artifacts
+      tag_file: artifacts/docker-tag
+  - put: deploy
+    params:
+      namespace: block-explorer
+      kubectl: apply -f artifacts/db-loader.yaml
+
+- name: build-explorer
+  plan:
+    - get: git-explorer
+      trigger: true
+    - get: adm
+      trigger: false
+    - task: build-explorer
+      config:
+        platform: linux
+        image_resource:
+          type: docker-image
+          source: {repository: alpine/git}
+        inputs:
+        - name: git-explorer
+        - name: adm
+        outputs:
+        - name: artifacts
+        run:
+          path: sh
+          args:
+            - -exc
+            - |
+               cp git-explorer/.git/short_ref artifacts/docker-tag
+               echo change image tag
+               cp adm/manifests/block-explorer/explorer.yaml artifacts/explorer.yaml
+               sed -i "s/registry.ins.world\/explorer/registry.ins.world\/explorer:$(cat artifacts/docker-tag)/g" artifacts/explorer.yaml
+
+               echo create Dockerfile
+               cat << EOF > git-explorer/.env.production
+               REACT_APP_API_URL=https://explorer.dev.insolar.io/api
+               EOF
+               cat << EOF > git-explorer/Dockerfile
+               FROM node:8-alpine as builder
+               ADD . /site
+               WORKDIR /site
+               RUN rm -Rf build/* && npm i && npm run build
+
+               FROM nginx:alpine as site
+               COPY --from=builder /site/build /usr/share/nginx/html
+               EOF
+               cat git-explorer/Dockerfile
+               rm -Rf git-explorer/site/*
+               mv git-explorer/* artifacts/
+               mv git-explorer/.env.production artifacts/
+               ls -alh
+    - put: registry-explorer
+      get_params: {skip_download: true}
+      params:
+        build: artifacts
+        target: site
+        tag_file: artifacts/docker-tag
+        tag_as_latest: true
+    - put: deploy
+      params:
+        namespace: block-explorer
+        kubectl: apply -f artifacts/explorer.yaml
+
+
+
+
+
