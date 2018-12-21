@@ -18,10 +18,13 @@ package fakepulsar
 
 import (
 	"context"
+	"encoding/binary"
+	"math"
+	"math/rand"
+	"sync"
 	"time"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/pulsar/entropygenerator"
 )
 
 // Fakepulsar needed when the network starts and can't receive a real pulse.
@@ -31,10 +34,13 @@ type callbackOnPulse func(ctx context.Context, pulse core.Pulse)
 
 // FakePulsar is a struct which uses at void network state.
 type FakePulsar struct {
-	onPulse   callbackOnPulse
-	stop      chan bool
-	timeoutMs int32 // ms
-	running   bool
+	onPulse        callbackOnPulse
+	stop           chan bool
+	timeoutMs      int32 // ms
+	running        bool
+	firstPulseTime int64
+	pulseNum       int64
+	mut            sync.Mutex
 }
 
 // NewFakePulsar creates and returns a new FakePulsar.
@@ -55,18 +61,24 @@ func (fp *FakePulsar) GetFakePulse() *core.Pulse {
 // Start starts sending a fake pulse.
 func (fp *FakePulsar) Start(ctx context.Context) {
 	fp.running = true
+	fp.firstPulseTime = time.Now().Unix()
 	go func(fp *FakePulsar) {
 		for {
 			select {
 			case <-time.After(time.Millisecond * time.Duration(fp.timeoutMs)):
 				{
+					if math.Abs(float64(time.Now().Second()-time.Unix(fp.firstPulseTime, 0).Second())) != float64(fp.timeoutMs/1000) {
+						time.Sleep(time.Duration(math.Abs(float64(time.Now().Second() - time.Unix(fp.firstPulseTime, 0).Second()))))
+					}
+					fp.mut.Lock()
+					defer fp.mut.Unlock()
+					fp.pulseNum++
 					fp.onPulse(ctx, *fp.GetFakePulse())
 				}
 			case <-fp.stop:
 				return
 			}
 		}
-
 	}(fp)
 }
 
@@ -80,10 +92,29 @@ func (fp *FakePulsar) Stop(ctx context.Context) {
 }
 
 func (fp *FakePulsar) newPulse() *core.Pulse {
-	generator := entropygenerator.StandardEntropyGenerator{}
+	rand.Seed(fp.pulseNum)
+	tmp := make([]byte, core.EntropySize)
+	binary.BigEndian.PutUint64(tmp, rand.Uint64())
+	var entropy core.Entropy
+	copy(entropy[:], tmp[:core.EntropySize])
 	return &core.Pulse{
 		PulseNumber:     0,
 		NextPulseNumber: 0,
-		Entropy:         generator.GenerateEntropy(),
+		Entropy:         entropy,
 	}
+}
+
+func (fp *FakePulsar) GetFirstPulseTime() int64 {
+	return fp.firstPulseTime
+}
+
+func (fp *FakePulsar) GetPulseNum() int64 {
+	return fp.pulseNum
+}
+
+func (fp *FakePulsar) SetPulseData(time, pulseNum int64) {
+	fp.mut.Lock()
+	defer fp.mut.Unlock()
+	fp.firstPulseTime = time
+	fp.pulseNum = pulseNum
 }
