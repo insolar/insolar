@@ -127,6 +127,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		n.MerkleCalculator,
 		n.ConsensusNetwork,
 		n.Communicator,
+		n.PhaseManager,
 		firstPhase,
 		secondPhase,
 		thirdPhase,
