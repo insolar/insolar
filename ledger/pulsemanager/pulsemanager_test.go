@@ -80,7 +80,7 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 	providerMock.GetStorageMock.Return(recentMock)
 
 	mbMock := testutils.NewMessageBusMock(t)
-	mbMock.SendFunc = func(p context.Context, p1 core.Message, _ core.Pulse, p2 *core.MessageSendOptions) (r core.Reply, r1 error) {
+	mbMock.SendFunc = func(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) (r core.Reply, r1 error) {
 		val, ok := p1.(*message.HotData)
 		if !ok {
 			return nil, nil

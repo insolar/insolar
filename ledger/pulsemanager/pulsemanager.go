@@ -208,7 +208,7 @@ func (m *PulseManager) processDrop(
 		Messages:    messages,
 		PulseNumber: pulse.PulseNumber,
 	}
-	_, err := m.Bus.Send(ctx, msg, *pulse, nil)
+	_, err := m.Bus.Send(ctx, msg, nil)
 	if err != nil {
 		return err
 	}
@@ -321,17 +321,17 @@ func (m *PulseManager) sendExecutorData(
 		leftMsg.Jet = *core.NewRecordRef(core.DomainID, *left)
 		rightMsg := *msg
 		rightMsg.Jet = *core.NewRecordRef(core.DomainID, *right)
-		_, err = m.Bus.Send(ctx, &leftMsg, *currentPulse, nil)
+		_, err = m.Bus.Send(ctx, &leftMsg, nil)
 		if err != nil {
 			return errors.Wrap(err, "failed to send executor data")
 		}
-		_, err = m.Bus.Send(ctx, &rightMsg, *currentPulse, nil)
+		_, err = m.Bus.Send(ctx, &rightMsg, nil)
 		if err != nil {
 			return errors.Wrap(err, "failed to send executor data")
 		}
 	} else {
 		msg.Jet = *core.NewRecordRef(core.DomainID, jetID)
-		_, err := m.Bus.Send(ctx, msg, *currentPulse, nil)
+		_, err := m.Bus.Send(ctx, msg, nil)
 		if err != nil {
 			return errors.Wrap(err, "failed to send executor data")
 		}
