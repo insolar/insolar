@@ -51,4 +51,9 @@ const (
 	Phase2
 	// Phase3Pulse is packet type for phase 3 ( pulse )
 	Phase3
+
+	// FakePulsarRequest is a request for fake pulsar
+	FakePulsarRequest
+	// FakePulsarRequest is a response from fake pulsar
+	FakePulsarResponse
 )
