@@ -50,11 +50,6 @@ type storageTape struct {
 	id    uuid.UUID
 }
 
-type couple struct {
-	Key   []byte
-	Value []byte
-}
-
 // newStorageTape creates new storageTape with random id.
 func newStorageTape(ls core.LocalStorage, pulse core.PulseNumber) (*storageTape, error) {
 	id, err := uuid.NewV4()
@@ -81,7 +76,7 @@ func newStorageTapeFromReader(ctx context.Context, ls core.LocalStorage, r io.Re
 		return nil, err
 	}
 	for {
-		var rep couple
+		var rep core.KV
 		err = decoder.Decode(&rep)
 		if err == io.EOF {
 			break
@@ -89,7 +84,7 @@ func newStorageTapeFromReader(ctx context.Context, ls core.LocalStorage, r io.Re
 		if err != nil {
 			return nil, err
 		}
-		err = tape.setReplyBinary(ctx, rep.Key, rep.Value)
+		err = tape.setReplyBinary(ctx, rep.K, rep.V)
 		if err != nil {
 			return nil, err
 		}
@@ -113,9 +108,9 @@ func (t *storageTape) Write(ctx context.Context, w io.Writer) error {
 	}
 
 	err = t.ls.Iterate(ctx, t.pulse, t.id[:], func(k, v []byte) error {
-		return encoder.Encode(&couple{
-			Key:   k[len(t.id):],
-			Value: v,
+		return encoder.Encode(&core.KV{
+			K: k[len(t.id):],
+			V: v,
 		})
 	})
 
