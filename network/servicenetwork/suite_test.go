@@ -27,7 +27,6 @@ import (
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/consensus/packets"
-	"github.com/insolar/insolar/consensus/phases"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/log"
@@ -278,20 +277,23 @@ func (s *testSuite) initNode(node *networkNode, timeOut PhaseTimeOut) {
 	var keeper network.NodeKeeper
 	keeper = &nodeKeeperWrapper{realKeeper}
 
-	var phaseManager phases.PhaseManager
-	switch timeOut {
-	case Disable:
-		phaseManager = &phaseManagerWrapper{original: phases.NewPhaseManager()}
-	case Full:
-		phaseManager = &FullTimeoutPhaseManager{}
-	case Partial:
-		phaseManager = &PartialTimeoutPhaseManager{}
-		keeper = &nodeKeeperWrapper{realKeeper}
-	}
-
 	node.componentManager = &component.Manager{}
 	node.componentManager.Register(keeper, pulseManagerMock, pulseStorageMock, netCoordinator, amMock, realKeeper)
-	node.componentManager.Register(certManager, cryptographyService, phaseManager)
+	node.componentManager.Register(certManager, cryptographyService)
 	node.componentManager.Inject(serviceNetwork, netSwitcher)
 	node.serviceNetwork = serviceNetwork
+	/*
+		var phaseManager phases.PhaseManager
+		switch timeOut {
+		case Disable:
+			phaseManager = &phaseManagerWrapper{original: node.serviceNetwork.PhaseManager}
+		case Full:
+			phaseManager = &FullTimeoutPhaseManager{}
+		case Partial:
+			phaseManager = &PartialTimeoutPhaseManager{}
+			keeper = &nodeKeeperWrapper{realKeeper}
+		}
+
+		node.serviceNetwork.PhaseManager = phaseManager
+	*/
 }
