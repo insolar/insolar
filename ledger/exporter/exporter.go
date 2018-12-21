@@ -83,7 +83,7 @@ func (e *Exporter) Export(ctx context.Context, fromPulse core.PulseNumber, size 
 			return nil, errors.Wrap(err, "failed to fetch pulse data")
 		}
 
-		var data[]*pulseData
+		var data []*pulseData
 		for jetID := range jetIDs {
 			fetchedData, err := e.exportPulse(ctx, jetID, &pulse.Pulse)
 			if err != nil {
@@ -106,7 +106,7 @@ func (e *Exporter) Export(ctx context.Context, fromPulse core.PulseNumber, size 
 
 func (e *Exporter) exportPulse(ctx context.Context, jetID core.RecordID, pulse *core.Pulse) (*pulseData, error) {
 	records := recordsData{}
-	err := e.db.IterateRecords(ctx, jetID, pulse.PulseNumber, func(id core.RecordID, rec record.Record) error {
+	err := e.db.IterateRecordsOnPulse(ctx, jetID, pulse.PulseNumber, func(id core.RecordID, rec record.Record) error {
 		pl, err := e.getPayload(ctx, rec)
 		if err != nil {
 			return err

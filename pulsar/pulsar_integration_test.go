@@ -281,7 +281,7 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 		err = firstPulsar.StartConsensusProcess(ctx, core.GenesisPulse.PulseNumber+1)
 		require.NoError(t, err)
 	}()
-	time.Sleep(300 * time.Millisecond)
+	time.Sleep(500 * time.Millisecond)
 
 	// Assert
 	pulseDistributor.MinimockWait(100 * time.Millisecond)
@@ -325,15 +325,6 @@ func TestSevenPulsars_Full_Consensus(t *testing.T) {
 		"127.0.0.1:1646",
 		"127.0.0.1:1647",
 	}
-
-	// keyGenerator := func() (crypto.PrivateKey, crypto.PublicKey, string) {
-	// 	kp := platformpolicy.NewKeyProcessor()
-	// 	key, _ := kp.GeneratePrivateKey()
-	// 	publicKey := kp.ExtractPublicKey(key)
-	// 	pubKeyString, _ := kp.ExportPublicKey(publicKey)
-	//
-	// 	return key, publicKey, string(pubKeyString)
-	// }
 
 	keyProcessor := platformpolicy.NewKeyProcessor()
 
@@ -424,7 +415,7 @@ func TestSevenPulsars_Full_Consensus(t *testing.T) {
 		require.NoError(t, err)
 	}()
 
-	time.Sleep(500 * time.Millisecond)
+	time.Sleep(1000 * time.Millisecond)
 
 	pulseDistributorMock.MinimockFinish()
 
