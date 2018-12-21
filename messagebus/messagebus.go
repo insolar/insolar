@@ -159,9 +159,7 @@ func (mb *MessageBus) SendParcel(
 	currentPulse core.Pulse,
 	options *core.MessageSendOptions,
 ) (core.Reply, error) {
-	scope := newReaderScope(&mb.globalLock)
-	scope.Lock(ctx, "Sending parcel ...")
-	scope.Unlock(ctx, "Sending parcel done")
+	readBarrier(ctx, &mb.globalLock)
 
 	var nodes []core.RecordRef
 	if options != nil && options.Receiver != nil {
@@ -210,9 +208,7 @@ func (e *serializableError) Error() string {
 
 func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Reply, error) {
 	defer func() {
-		scope := newReaderScope(&mb.globalLock)
-		scope.Lock(ctx, "doDeliver: lock")
-		scope.Unlock(ctx, "doDeliver: unlock")
+		readBarrier(ctx, &mb.globalLock)
 	}()
 	inslogger.FromContext(ctx).Debug("MessageBus.doDeliver starts ...")
 	handler, ok := mb.handlers[msg.Type()]
@@ -246,9 +242,7 @@ func (mb *MessageBus) deliver(ctx context.Context, args [][]byte) (result []byte
 	parcelCtx := parcel.Context(ctx)
 	inslogger.FromContext(ctx).Debugf("MessageBus.deliver after deserialize msg. Msg Type: %s", parcel.Type())
 
-	scope := newReaderScope(&mb.globalLock)
-	scope.Lock(ctx, "Delivering ...")
-	scope.Unlock(ctx, "Delivering done")
+	readBarrier(ctx, &mb.globalLock)
 
 	if err := mb.checkParcel(parcelCtx, parcel); err != nil {
 		return nil, err
@@ -314,27 +308,13 @@ func (mb *MessageBus) checkParcel(ctx context.Context, parcel core.Parcel) error
 	return nil
 }
 
+func readBarrier(ctx context.Context, mutex *sync.RWMutex) {
+	inslogger.FromContext(ctx).Info("Locking readBarrier")
+	mutex.RLock()
+	mutex.RUnlock()
+	inslogger.FromContext(ctx).Info("readBarrier unlocked")
+}
+
 func init() {
 	gob.Register(&serializableError{})
-}
-
-type readerScope struct {
-	mutex *sync.RWMutex
-}
-
-func newReaderScope(mutex *sync.RWMutex) *readerScope {
-	return &readerScope{
-		mutex: mutex,
-	}
-}
-
-func (rs *readerScope) Lock(ctx context.Context, info string) {
-	inslogger.FromContext(ctx).Info(info)
-	rs.mutex.RLock()
-}
-
-// Unlock unlocks scope if it locked. Do nothing if scope already unlocked.
-func (rs *readerScope) Unlock(ctx context.Context, info string) {
-	inslogger.FromContext(ctx).Info(info)
-	rs.mutex.RUnlock()
 }
