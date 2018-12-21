@@ -30,6 +30,14 @@ type platformCryptographyScheme struct {
 	SignProvider sign.AlgorithmProvider `inject:""`
 }
 
+func (pcs *platformCryptographyScheme) PublicKeySize() int {
+	return sign.TwoBigIntBytesLength
+}
+
+func (pcs *platformCryptographyScheme) SignatureSIze() int {
+	return sign.TwoBigIntBytesLength
+}
+
 func (pcs *platformCryptographyScheme) ReferenceHasher() core.Hasher {
 	return pcs.HashProvider.Hash224bits()
 }

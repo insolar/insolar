@@ -193,7 +193,7 @@ func (ar *Runner) getMemberPubKey(ctx context.Context, ref string) (crypto.Publi
 	}
 
 	kp := platformpolicy.NewKeyProcessor()
-	publicKey, err = kp.ImportPublicKey([]byte(publicKeyString))
+	publicKey, err = kp.ImportPublicKeyPEM([]byte(publicKeyString))
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to convert public key")
 	}
