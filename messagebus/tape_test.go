@@ -112,33 +112,3 @@ func TestTape_Write(t *testing.T) {
 
 	require.Equal(t, expectedBuff.Bytes(), buff.Bytes())
 }
-
-func TestNewTapeFromReader(t *testing.T) {
-	mc := minimock.NewController(t)
-	defer mc.Finish()
-
-	// Prepare test data.
-	ctx := inslogger.TestContext(t)
-	id := uuid.UUID{1, 2, 3}
-	buff := bytes.NewBuffer(nil)
-	enc := gob.NewEncoder(buff)
-	enc.Encode(core.PulseNumber(42))
-	enc.Encode(id)
-	enc.Encode(core.KV{K: []byte{1}, V: []byte{2}})
-	enc.Encode(core.KV{K: []byte{3}, V: []byte{4}})
-
-	var values []core.KV
-	expectedValues := []core.KV{
-		{K: bytes.Join([][]byte{id[:], {1}}, nil), V: []byte{2}},
-		{K: bytes.Join([][]byte{id[:], {3}}, nil), V: []byte{4}},
-	}
-	ls := testutils.NewLocalStorageMock(mc)
-	ls.SetFunc = func(ctx context.Context, pulse core.PulseNumber, k, v []byte) (r error) {
-		values = append(values, core.KV{K: k, V: v})
-		return nil
-	}
-
-	// _, err := newStorageTapeFromReader(ctx, ls, bytes.NewBuffer(buff.Bytes()))
-	// require.NoError(t, err)
-	// require.Equal(t, expectedValues, values)
-}

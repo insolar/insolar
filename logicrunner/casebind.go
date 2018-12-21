@@ -82,7 +82,7 @@ func (cb *CaseBind) getCaseBindForMessage(ctx context.Context) []message.CaseBin
 
 	for i, req := range cb.Requests {
 		var tape bytes.Buffer
-		err := req.MessageBus.WriteTape(ctx, &tape)
+		err := req.MessageBus.(core.TapeWriter).WriteTape(ctx, &tape)
 		if err != nil {
 			panic("couldn't write tape: " + err.Error())
 		}
