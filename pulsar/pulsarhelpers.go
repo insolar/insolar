@@ -105,7 +105,7 @@ func (currentPulsar *Pulsar) preparePayload(body PayloadData) (*Payload, error) 
 }
 
 func (currentPulsar *Pulsar) checkPayloadSignature(request *Payload) (bool, error) {
-	publicKey, err := currentPulsar.KeyProcessor.ImportPublicKey([]byte(request.PublicKey))
+	publicKey, err := currentPulsar.KeyProcessor.ImportPublicKeyPEM([]byte(request.PublicKey))
 	if err != nil {
 		return false, err
 	}

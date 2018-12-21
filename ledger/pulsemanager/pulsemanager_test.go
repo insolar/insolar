@@ -17,7 +17,6 @@
 package pulsemanager_test
 
 import (
-	"bytes"
 	"context"
 	"testing"
 
@@ -72,9 +71,6 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 		*firstID: 1,
 	})
 	recentMock.GetRequestsMock.Return(map[core.RecordID]map[core.RecordID]struct{}{objID: {*secondID: struct{}{}}})
-	recentMock.IsMineFunc = func(inputID core.RecordID) (r bool) {
-		return bytes.Equal(firstID.Bytes(), inputID.Bytes())
-	}
 
 	providerMock := recentstorage.NewProviderMock(t)
 	providerMock.GetStorageMock.Return(recentMock)
@@ -176,7 +172,6 @@ func TestPulseManager_Set_PerformsSplit(t *testing.T) {
 	recentMock.ClearObjectsMock.Return()
 	recentMock.GetObjectsMock.Return(nil)
 	recentMock.GetRequestsMock.Return(nil)
-	recentMock.IsMineMock.Return(true)
 
 	providerMock := recentstorage.NewProviderMock(t)
 	providerMock.GetStorageMock.Return(recentMock)

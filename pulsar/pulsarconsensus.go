@@ -134,7 +134,7 @@ func (currentPulsar *Pulsar) verify(ctx context.Context) {
 				continue
 			}
 
-			publicKey, err := currentPulsar.KeyProcessor.ImportPublicKey([]byte(column.PubPem))
+			publicKey, err := currentPulsar.KeyProcessor.ImportPublicKeyPEM([]byte(column.PubPem))
 			if err != nil {
 				currentColumnStat["nil"]++
 				continue

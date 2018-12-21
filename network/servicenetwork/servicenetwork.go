@@ -197,7 +197,7 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
 			return
 		}
 
-		//err = n.NetworkSwitcher.OnPulse(ctx, pulse)
+		// err = n.NetworkSwitcher.OnPulse(ctx, pulse)
 		if err != nil {
 			logger.Error(errors.Wrap(err, "Failed to call OnPulse on NetworkSwitcher"))
 			return
@@ -205,7 +205,7 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
 
 		logger.Infof("Set new current pulse number: %d", pulse.PulseNumber)
 		go func(logger core.Logger, network *ServiceNetwork) {
-			if network.NetworkCoordinator == nil {
+			if network.NetworkCoordinator == nil || !network.NetworkCoordinator.IsStarted() {
 				return
 			}
 			err := network.NetworkCoordinator.WriteActiveNodes(ctx, pulse.PulseNumber, network.NodeNetwork.GetActiveNodes())
