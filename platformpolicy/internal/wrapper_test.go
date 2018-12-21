@@ -28,22 +28,25 @@ import (
 )
 
 func TestEcdsaMarshalUnmarshal(t *testing.T) {
-	count := 1000
+	count := 10000
 	data := testutils.RandomRef()
+
+	kp := platformpolicy.NewKeyProcessor()
+	provider := sign.NewECDSAProvider()
+
+	cm := component.Manager{}
+	cm.Inject(provider, hash.NewSHA3Provider())
+
 	for i := 0; i < count; i++ {
-		kp := platformpolicy.NewKeyProcessor()
-		ecdsaProv := sign.NewECDSAProvider()
-		mngr := component.Manager{}
-		mngr.Inject(ecdsaProv, hash.NewSHA3Provider())
 		privateKey, err := kp.GeneratePrivateKey()
 		assert.NoError(t, err)
 
-		signer := ecdsaProv.Sign(privateKey)
-		verif := ecdsaProv.Verify(kp.ExtractPublicKey(privateKey))
+		signer := provider.Sign(privateKey)
+		verifier := provider.Verify(kp.ExtractPublicKey(privateKey))
 
 		signature, err := signer.Sign(data.Bytes())
 		assert.NoError(t, err)
 
-		assert.True(t, verif.Verify(*signature, data.Bytes()))
+		assert.True(t, verifier.Verify(*signature, data.Bytes()))
 	}
 }

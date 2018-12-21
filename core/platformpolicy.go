@@ -36,6 +36,9 @@ type Verifier interface {
 }
 
 type PlatformCryptographyScheme interface {
+	PublicKeySize() int
+	SignatureSIze() int
+
 	ReferenceHasher() Hasher
 	IntegrityHasher() Hasher
 
@@ -48,9 +51,12 @@ type KeyProcessor interface {
 	GeneratePrivateKey() (crypto.PrivateKey, error)
 	ExtractPublicKey(crypto.PrivateKey) crypto.PublicKey
 
+	ExportPublicKey(crypto.PublicKey) ([]byte, error)
 	ImportPublicKey([]byte) (crypto.PublicKey, error)
+
+	ExportPrivateKey(crypto.PrivateKey) ([]byte, error)
 	ImportPrivateKey([]byte) (crypto.PrivateKey, error)
 
-	ExportPublicKey(crypto.PublicKey) ([]byte, error)
-	ExportPrivateKey(crypto.PrivateKey) ([]byte, error)
+	ExportPublicKeyBinary(crypto.PublicKey) ([]byte, error)
+	ImportPublicKeyBinary([]byte) (crypto.PublicKey, error)
 }

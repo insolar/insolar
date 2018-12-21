@@ -49,3 +49,25 @@ func TestExportImportPublicKey(t *testing.T) {
 
 	assert.ObjectsAreEqual(decoded, privateKey)
 }
+
+func TestExportImportPublicKeyBinary(t *testing.T) {
+	ks := NewKeyProcessor()
+
+	privateKey, _ := ks.GeneratePrivateKey()
+	publicKey := ks.ExtractPublicKey(privateKey)
+
+	encoded, err := ks.ExportPublicKey(publicKey)
+	require.NoError(t, err)
+
+	bin, err := ks.ExportPublicKeyBinary(publicKey)
+	require.NoError(t, err)
+	assert.Len(t, bin, 66)
+
+	binPK, err := ks.ImportPublicKeyBinary(bin)
+	require.NoError(t, err)
+
+	encodedBinPK, err := ks.ExportPublicKey(binPK)
+	require.NoError(t, err)
+
+	assert.Equal(t, encoded, encodedBinPK)
+}

@@ -95,3 +95,21 @@ func (*keyProcessor) ExportPrivateKey(privateKey crypto.PrivateKey) ([]byte, err
 	pemEncoded := pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: x509Encoded})
 	return pemEncoded, nil
 }
+
+func (kp *keyProcessor) ExportPublicKeyBinary(publicKey crypto.PublicKey) ([]byte, error) {
+	ecdsaPublicKey := sign.MustConvertPublicKeyToEcdsa(publicKey)
+	return sign.SerializeTwoBigInt(ecdsaPublicKey.X, ecdsaPublicKey.Y), nil
+}
+
+func (kp *keyProcessor) ImportPublicKeyBinary(data []byte) (crypto.PublicKey, error) {
+	x, y, err := sign.DeserializeTwoBigInt(data)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ImportPublicKeyBinary ]")
+	}
+
+	return &ecdsa.PublicKey{
+		Curve: kp.curve,
+		X:     x,
+		Y:     y,
+	}, nil
+}
