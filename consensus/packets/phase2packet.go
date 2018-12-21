@@ -39,11 +39,8 @@ type Phase2Packet struct {
 	SignatureHeaderSection2 [SignatureLength]byte
 }
 
-func NewPhase2Packet(globuleHashSignature GlobuleHashSignature, bitSet BitSet) *Phase2Packet {
-	result := &Phase2Packet{
-		globuleHashSignature: globuleHashSignature,
-		bitSet:               bitSet,
-	}
+func NewPhase2Packet() *Phase2Packet {
+	result := &Phase2Packet{}
 	result.packetHeader.PacketT = Phase2
 	return result
 }

@@ -56,7 +56,7 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 		return nil, errors.Wrap(err, "[ SecondPhase ] Failed to calculate globule proof")
 	}
 
-	packet := packets.Phase2Packet{}
+	packet := packets.NewPhase2Packet()
 	err = packet.SetGlobuleHashSignature(globuleProof.Signature.Bytes())
 	if err != nil {
 		return nil, errors.Wrap(err, "[ SecondPhase ] Failed to set globule proof in Phase2Packet")
@@ -67,10 +67,11 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 	}
 	packet.SetBitSet(bitset)
 	activeNodes := state.UnsyncList.GetActiveNodes()
-	packets, err := sp.Communicator.ExchangePhase2(ctx, state.UnsyncList, activeNodes, &packet)
+	packets, err := sp.Communicator.ExchangePhase2(ctx, state.UnsyncList, activeNodes, packet)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ SecondPhase ] Failed to exchange packets on phase 2")
 	}
+	inslogger.FromContext(ctx).Infof("[ SecondPhase ] received responses: %d/%d", len(packets), len(activeNodes))
 
 	origin := sp.NodeKeeper.GetOrigin().ID()
 	stateMatrix := NewStateMatrix(state.UnsyncList)
@@ -121,14 +122,14 @@ func (sp *SecondPhase) Execute21(ctx context.Context, state *SecondPhaseState) (
 	results := make(map[uint16]*packets.MissingNodeSupplementaryVote)
 	claims := make(map[uint16]*packets.MissingNodeClaim)
 
-	packet := packets.Phase2Packet{}
+	packet := packets.NewPhase2Packet()
 	err := packet.SetGlobuleHashSignature(state.GlobuleProof.Signature.Bytes())
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Phase 2.1 ] Failed to set pulse proof in Phase2Packet.")
 	}
 	packet.SetBitSet(state.BitSet)
 
-	voteAnswers, err := sp.Communicator.ExchangePhase21(ctx, state.UnsyncList, &packet, additionalRequests)
+	voteAnswers, err := sp.Communicator.ExchangePhase21(ctx, state.UnsyncList, packet, additionalRequests)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Phase 2.1 ] Failed to send additional requests on phase 2.1")
 	}

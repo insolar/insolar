@@ -110,12 +110,13 @@ func newPhase1Packet() *consensus.Phase1Packet {
 }
 
 func newPhase2Packet() (*consensus.Phase2Packet, error) {
-	var ghs consensus.GlobuleHashSignature
 	bitset, err := consensus.NewBitSet(10)
 	if err != nil {
 		return nil, err
 	}
-	return consensus.NewPhase2Packet(ghs, bitset), nil
+	result := consensus.NewPhase2Packet()
+	result.SetBitSet(bitset)
+	return result, nil
 }
 
 func newPhase3Packet() (*consensus.Phase3Packet, error) {

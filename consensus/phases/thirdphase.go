@@ -46,6 +46,7 @@ func (tp *ThirdPhase) Execute(ctx context.Context, state *SecondPhaseState) (*Th
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Phase 3 ] Failed exchange packets on phase 3")
 	}
+	inslogger.FromContext(ctx).Infof("[ Phase 3 ] received responses: %d/%d", len(responses), len(nodes))
 
 	for ref, packet := range responses {
 		err = nil
