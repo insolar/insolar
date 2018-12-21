@@ -187,7 +187,7 @@ func (fp *FirstPhase) filterClaims(nodeID core.RecordRef, claims []packets.Refer
 		if ok {
 			err := fp.checkClaimSignature(signedClaim)
 			if err != nil {
-				log.Error("[ filterClaims ] failed to check a claim sign")
+				log.Error("[ filterClaims ] failed to check a claim sign: " + err.Error())
 				continue
 			}
 		}
