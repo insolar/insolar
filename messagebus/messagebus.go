@@ -217,6 +217,7 @@ func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Repl
 	}
 
 	ctx = hack.SetSkipValidation(ctx, true)
+	// TODO: sergey.morozov 2018-12-21 there is potential race condition because of readBarrier. We must implement correct locking.
 	resp, err := handler(ctx, msg)
 	if err != nil {
 		return nil, &serializableError{
@@ -242,11 +243,12 @@ func (mb *MessageBus) deliver(ctx context.Context, args [][]byte) (result []byte
 	parcelCtx := parcel.Context(ctx)
 	inslogger.FromContext(ctx).Debugf("MessageBus.deliver after deserialize msg. Msg Type: %s", parcel.Type())
 
-	readBarrier(ctx, &mb.globalLock)
-
-	if err := mb.checkParcel(parcelCtx, parcel); err != nil {
+	mb.globalLock.RLock()
+	if err = mb.checkParcel(parcelCtx, parcel); err != nil {
+		mb.globalLock.RUnlock()
 		return nil, err
 	}
+	mb.globalLock.RUnlock()
 
 	resp, err := mb.doDeliver(parcelCtx, parcel)
 	if err != nil {

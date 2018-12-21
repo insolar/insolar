@@ -76,6 +76,7 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 			return nil, err
 		}
 		if !isMine {
+			// TODO: sergey.morozov 2018-12-21 This is hack. Must implement correct Jet checking for HME.
 			logger.Debugf("checkJet: [ HACK ] checking if I am Heavy Material")
 			isHeavy, err := m.jetCoordinator.AmI(ctx, core.DynamicRoleHeavyExecutor, target, target.Pulse())
 			if err != nil {
