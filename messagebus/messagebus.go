@@ -207,9 +207,7 @@ func (e *serializableError) Error() string {
 }
 
 func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Reply, error) {
-	defer func() {
-		readBarrier(ctx, &mb.globalLock)
-	}()
+	defer readBarrier(ctx, &mb.globalLock)
 	inslogger.FromContext(ctx).Debug("MessageBus.doDeliver starts ...")
 	handler, ok := mb.handlers[msg.Type()]
 	if !ok {
