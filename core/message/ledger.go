@@ -21,13 +21,6 @@ import (
 	"github.com/insolar/insolar/ledger/storage/jet"
 )
 
-// LedgerMessage is an interface for ledger-specific methods.
-type LedgerMessage interface {
-	core.Message
-	// TargetPulse is pulse for jet calculations. If nil, will calculate from parcel pulse.
-	TargetPulse() core.PulseNumber
-}
-
 // FIXME: @andreyromancev. 21.12.18. Remove this and create 'LogicRunnerMessage' interface to get rid of 'GetCaller' in ledger.
 type ledgerMessage struct {
 }
@@ -43,11 +36,6 @@ type SetRecord struct {
 
 	Record    []byte
 	TargetRef core.RecordRef
-}
-
-// TargetPulse implementation of LedgerMessage interface.
-func (m *SetRecord) TargetPulse() core.PulseNumber {
-	return m.TargetRef.Record().Pulse()
 }
 
 // AllowedSenderObjectAndRole implements interface method
@@ -96,11 +84,6 @@ func (*GetCode) Type() core.MessageType {
 	return core.TypeGetCode
 }
 
-// TargetPulse implementation of LedgerMessage interface.
-func (m *GetCode) TargetPulse() core.PulseNumber {
-	return core.PulseNumberCurrent
-}
-
 // GetObject retrieves object From storage.
 type GetObject struct {
 	ledgerMessage
@@ -127,14 +110,6 @@ func (m *GetObject) DefaultTarget() *core.RecordRef {
 // Type implementation of Message interface.
 func (*GetObject) Type() core.MessageType {
 	return core.TypeGetObject
-}
-
-// TargetPulse implementation of LedgerMessage interface.
-func (m *GetObject) TargetPulse() core.PulseNumber {
-	if m.State != nil {
-		m.State.Pulse()
-	}
-	return core.PulseNumberCurrent
 }
 
 // GetDelegate retrieves object represented as provided type.
@@ -164,11 +139,6 @@ func (*GetDelegate) Type() core.MessageType {
 	return core.TypeGetDelegate
 }
 
-// TargetPulse implementation of LedgerMessage interface.
-func (m *GetDelegate) TargetPulse() core.PulseNumber {
-	return core.PulseNumberCurrent
-}
-
 // UpdateObject amends object.
 type UpdateObject struct {
 	ledgerMessage
@@ -195,11 +165,6 @@ func (m *UpdateObject) DefaultTarget() *core.RecordRef {
 // Type implementation of Message interface.
 func (*UpdateObject) Type() core.MessageType {
 	return core.TypeUpdateObject
-}
-
-// TargetPulse implementation of LedgerMessage interface.
-func (m *UpdateObject) TargetPulse() core.PulseNumber {
-	return core.PulseNumberCurrent
 }
 
 // RegisterChild amends object.
@@ -231,11 +196,6 @@ func (*RegisterChild) Type() core.MessageType {
 	return core.TypeRegisterChild
 }
 
-// TargetPulse implementation of LedgerMessage interface.
-func (m *RegisterChild) TargetPulse() core.PulseNumber {
-	return core.PulseNumberCurrent
-}
-
 // GetChildren retrieves a chunk of children references.
 type GetChildren struct {
 	ledgerMessage
@@ -263,11 +223,6 @@ func (m *GetChildren) DefaultTarget() *core.RecordRef {
 // Type implementation of Message interface.
 func (*GetChildren) Type() core.MessageType {
 	return core.TypeGetChildren
-}
-
-// TargetPulse implementation of LedgerMessage interface.
-func (m *GetChildren) TargetPulse() core.PulseNumber {
-	return core.PulseNumberCurrent
 }
 
 // JetDrop spreads jet drop
@@ -302,11 +257,6 @@ func (*JetDrop) Type() core.MessageType {
 	return core.TypeJetDrop
 }
 
-// TargetPulse implementation of LedgerMessage interface.
-func (m *JetDrop) TargetPulse() core.PulseNumber {
-	return core.PulseNumberJet
-}
-
 // ValidateRecord creates VM validation for specific object record.
 type ValidateRecord struct {
 	ledgerMessage
@@ -337,11 +287,6 @@ func (*ValidateRecord) Type() core.MessageType {
 	return core.TypeValidateRecord
 }
 
-// TargetPulse implementation of LedgerMessage interface.
-func (m *ValidateRecord) TargetPulse() core.PulseNumber {
-	return m.Object.Record().Pulse()
-}
-
 // SetBlob saves blob in storage.
 type SetBlob struct {
 	ledgerMessage
@@ -370,11 +315,6 @@ func (*SetBlob) Type() core.MessageType {
 	return core.TypeSetBlob
 }
 
-// TargetPulse implementation of LedgerMessage interface.
-func (m *SetBlob) TargetPulse() core.PulseNumber {
-	return core.PulseNumberCurrent
-}
-
 // GetObjectIndex fetches objects index.
 type GetObjectIndex struct {
 	ledgerMessage
@@ -400,11 +340,6 @@ func (m *GetObjectIndex) DefaultTarget() *core.RecordRef {
 // Type implementation of Message interface.
 func (*GetObjectIndex) Type() core.MessageType {
 	return core.TypeGetObjectIndex
-}
-
-// TargetPulse implementation of LedgerMessage interface.
-func (m *GetObjectIndex) TargetPulse() core.PulseNumber {
-	return core.PulseNumberCurrent
 }
 
 // ValidationCheck checks if validation of a particular record can be performed.
@@ -437,11 +372,6 @@ func (*ValidationCheck) Type() core.MessageType {
 	return core.TypeValidationCheck
 }
 
-// TargetPulse implementation of LedgerMessage interface.
-func (m *ValidationCheck) TargetPulse() core.PulseNumber {
-	return m.ValidatedState.Pulse()
-}
-
 // HotData contains hot-data
 type HotData struct {
 	ledgerMessage
@@ -471,11 +401,6 @@ func (m *HotData) DefaultTarget() *core.RecordRef {
 // Type implementation of Message interface.
 func (*HotData) Type() core.MessageType {
 	return core.TypeHotRecords
-}
-
-// TargetPulse implementation of LedgerMessage interface.
-func (m *HotData) TargetPulse() core.PulseNumber {
-	return core.PulseNumberJet
 }
 
 // HotIndex contains meat about hot-data
@@ -511,11 +436,6 @@ func (m *GetPendingRequests) DefaultTarget() *core.RecordRef {
 	return &m.Object
 }
 
-// TargetPulse implementation of LedgerMessage interface.
-func (m *GetPendingRequests) TargetPulse() core.PulseNumber {
-	return core.PulseNumberCurrent
-}
-
 // GetJet requests to calculate a jet for provided object.
 type GetJet struct {
 	ledgerMessage
@@ -541,9 +461,4 @@ func (*GetJet) DefaultRole() core.DynamicRole {
 // DefaultTarget returns of target of this event.
 func (m *GetJet) DefaultTarget() *core.RecordRef {
 	return core.NewRecordRef(core.DomainID, m.Object)
-}
-
-// TargetPulse implementation of LedgerMessage interface.
-func (m *GetJet) TargetPulse() core.PulseNumber {
-	return core.PulseNumberCurrent
 }

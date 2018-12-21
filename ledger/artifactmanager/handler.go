@@ -626,7 +626,7 @@ func (h *MessageHandler) handleValidateRecord(ctx context.Context, parcel core.P
 		}
 
 		// Find node that has this state.
-		node, err := h.nodeForJet(ctx, jetID, parcel.Pulse(), msg.TargetPulse())
+		node, err := h.nodeForJet(ctx, jetID, parcel.Pulse(), msg.Object.Record().Pulse())
 		if err != nil {
 			return err
 		}

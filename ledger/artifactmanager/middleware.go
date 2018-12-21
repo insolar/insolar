@@ -58,25 +58,17 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 	return func(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
 		logger := inslogger.FromContext(ctx)
 
-		genericMsg := parcel.Message()
-		msg, ok := genericMsg.(message.LedgerMessage)
-		if !ok {
-			return nil, errors.New("unexpected message")
-		}
+		msg := parcel.Message()
 		if msg.DefaultTarget() == nil {
 			return nil, errors.New("unexpected message")
-		}
-		targetPulse := msg.TargetPulse()
-		if targetPulse == core.PulseNumberCurrent {
-			targetPulse = parcel.Pulse()
 		}
 
 		// Calculate jet.
 		var jetID core.RecordID
-		if msg.TargetPulse() == core.PulseNumberJet {
+		if msg.DefaultTarget().Record().Pulse() == core.PulseNumberJet {
 			jetID = *msg.DefaultTarget().Record()
 		} else {
-			j, err := m.fetchJet(ctx, *msg.DefaultTarget().Record(), targetPulse, parcel.Pulse(), fetchJetReties)
+			j, err := m.fetchJet(ctx, *msg.DefaultTarget().Record(), parcel.Pulse(), fetchJetReties)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to fetch jet tree")
 			}
@@ -84,7 +76,7 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 		}
 
 		// Check if jet is ours.
-		node, err := m.jetCoordinator.LightExecutorForJet(ctx, jetID, targetPulse)
+		node, err := m.jetCoordinator.LightExecutorForJet(ctx, jetID, parcel.Pulse())
 		if err != nil {
 			logger.Debugf("checkJet: failed to check isMine: %s", err.Error())
 			return nil, errors.Wrap(err, "failed to calculate executor for jet")
@@ -92,7 +84,7 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 		if *node != m.jetCoordinator.Me() {
 			// TODO: sergey.morozov 2018-12-21 This is hack. Must implement correct Jet checking for HME.
 			logger.Debugf("checkJet: [ HACK ] checking if I am Heavy Material")
-			heavy, err := m.jetCoordinator.Heavy(ctx, targetPulse)
+			heavy, err := m.jetCoordinator.Heavy(ctx, parcel.Pulse())
 			if err != nil {
 				logger.Debugf("checkJet: [ HACK ] failed to check for Heavy role")
 				return nil, errors.Wrap(err, "[ HACK ] failed to check for heavy role")
@@ -128,14 +120,14 @@ func (m *middleware) saveParcel(handler core.MessageHandler) core.MessageHandler
 }
 
 func (m *middleware) fetchJet(
-	ctx context.Context, target core.RecordID, parcelPulse, targetPulse core.PulseNumber, retries int,
+	ctx context.Context, target core.RecordID, pulse core.PulseNumber, retries int,
 ) (*core.RecordID, error) {
 	if retries < 0 {
 		return nil, errors.New("retries exceeded")
 	}
 
 	// Look in the local tree. Return if the actual jet found.
-	tree, err := m.db.GetJetTree(ctx, targetPulse)
+	tree, err := m.db.GetJetTree(ctx, pulse)
 	if err != nil {
 		return nil, err
 	}
@@ -145,7 +137,7 @@ func (m *middleware) fetchJet(
 	}
 
 	// Couldn't find the actual jet locally. Ask for the jet from the previous executor.
-	prevPulse, err := m.db.GetPreviousPulse(ctx, parcelPulse)
+	prevPulse, err := m.db.GetPreviousPulse(ctx, pulse)
 	if err != nil {
 		return nil, err
 	}
@@ -167,11 +159,11 @@ func (m *middleware) fetchJet(
 	// TODO: check if the same jet again
 
 	// Update local tree.
-	err = m.db.UpdateJetTree(ctx, targetPulse, r.Actual)
+	err = m.db.UpdateJetTree(ctx, pulse, r.Actual)
 	if err != nil {
 		return nil, err
 	}
 
 	// Repeat the process again.
-	return m.fetchJet(ctx, target, parcelPulse, targetPulse, retries-1)
+	return m.fetchJet(ctx, target, pulse, retries-1)
 }
