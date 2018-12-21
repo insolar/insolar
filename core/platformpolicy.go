@@ -51,11 +51,11 @@ type KeyProcessor interface {
 	GeneratePrivateKey() (crypto.PrivateKey, error)
 	ExtractPublicKey(crypto.PrivateKey) crypto.PublicKey
 
-	ExportPublicKey(crypto.PublicKey) ([]byte, error)
-	ImportPublicKey([]byte) (crypto.PublicKey, error)
+	ExportPublicKeyPEM(crypto.PublicKey) ([]byte, error)
+	ImportPublicKeyPEM([]byte) (crypto.PublicKey, error)
 
-	ExportPrivateKey(crypto.PrivateKey) ([]byte, error)
-	ImportPrivateKey([]byte) (crypto.PrivateKey, error)
+	ExportPrivateKeyPEM(crypto.PrivateKey) ([]byte, error)
+	ImportPrivateKeyPEM([]byte) (crypto.PrivateKey, error)
 
 	ExportPublicKeyBinary(crypto.PublicKey) ([]byte, error)
 	ImportPublicKeyBinary([]byte) (crypto.PublicKey, error)

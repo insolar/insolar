@@ -47,11 +47,11 @@ func GeneratePrivateKey() (crypto.PrivateKey, error) {
 }
 
 func ImportPublicKey(publicKey string) (crypto.PublicKey, error) {
-	return keyProcessor.ImportPublicKey([]byte(publicKey))
+	return keyProcessor.ImportPublicKeyPEM([]byte(publicKey))
 }
 
 func ExportPublicKey(publicKey crypto.PublicKey) (string, error) {
-	key, err := keyProcessor.ExportPublicKey(publicKey)
+	key, err := keyProcessor.ExportPublicKeyPEM(publicKey)
 	return string(key), err
 }
 
