@@ -260,6 +260,7 @@ func (m *PulseManager) getExecutorData(
 			TTL:   ttl,
 			Index: encoded,
 		}
+
 	}
 
 	for objID, requests := range recentStorage.GetRequests() {
@@ -374,7 +375,8 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 	m.currentPulse = newPulse
 
 	// swap active nodes
-	m.ActiveListSwapper.MoveSyncToActive()
+	// TODO: fix network consensus and uncomment this (after NETD18-74)
+	// m.ActiveListSwapper.MoveSyncToActive()
 	if persist {
 		if err := m.db.AddPulse(ctx, newPulse); err != nil {
 			m.GIL.Release(ctx)
