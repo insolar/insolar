@@ -465,8 +465,8 @@ func (db *DB) IterateLocalData(
 	return db.iterate(ctx, fullPrefix, handler)
 }
 
-// IterateRecords iterates over records.
-func (db *DB) IterateRecords(
+// IterateRecordsOnPulse iterates over records on provided Jet ID and Pulse.
+func (db *DB) IterateRecordsOnPulse(
 	ctx context.Context,
 	jetID core.RecordID,
 	pulse core.PulseNumber,
