@@ -51,7 +51,6 @@ func (nc *NetworkCoordinator) Start(ctx context.Context) error {
 		nc.ContractRequester,
 		nc.MessageBus,
 		nc.CS,
-		nc.PS,
 	)
 	nc.isStarted = true
 	return nil

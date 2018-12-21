@@ -110,7 +110,7 @@ func mockMessageBus(t *testing.T, ok bool, ref *core.RecordRef, discovery *core.
 	mb.MustRegisterFunc = func(p core.MessageType, handler core.MessageHandler) {
 		require.Equal(t, p, core.TypeNodeSignRequest)
 	}
-	mb.SendFunc = func(p context.Context, msg core.Message, pulse core.Pulse, options *core.MessageSendOptions) (core.Reply, error) {
+	mb.SendFunc = func(p context.Context, msg core.Message, options *core.MessageSendOptions) (core.Reply, error) {
 		require.Equal(t, ref, msg.(*message.NodeSignPayload).NodeRef)
 		require.Equal(t, discovery, options.Receiver)
 		if ok {

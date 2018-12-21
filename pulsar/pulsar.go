@@ -131,7 +131,7 @@ func NewPulsar(
 	}
 	pulsar.PublicKey = pubKey
 
-	pubKeyRaw, err := keyProcessor.ExportPublicKey(pubKey)
+	pubKeyRaw, err := keyProcessor.ExportPublicKeyPEM(pubKey)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -154,7 +154,7 @@ func NewPulsar(
 		if len(neighbour.PublicKey) == 0 {
 			continue
 		}
-		publicKey, err := keyProcessor.ImportPublicKey([]byte(neighbour.PublicKey))
+		publicKey, err := keyProcessor.ImportPublicKeyPEM([]byte(neighbour.PublicKey))
 		if err != nil {
 			continue
 		}

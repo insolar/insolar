@@ -310,7 +310,7 @@ func (nk *nodekeeper) nodeToClaim() (*consensus.NodeJoinClaim, error) {
 		return nil, errors.Wrap(err, "[ nodeToClaim ] failed to get a public key")
 	}
 	keyProc := platformpolicy.NewKeyProcessor()
-	exportedKey, err := keyProc.ExportPublicKey(key)
+	exportedKey, err := keyProc.ExportPublicKeyPEM(key)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ nodeToClaim ] failed to export a public key")
 	}

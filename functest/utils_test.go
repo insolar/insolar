@@ -211,12 +211,12 @@ func newUserWithKeys() (*user, error) {
 		return nil, err
 	}
 
-	privKeyStr, err := ks.ExportPrivateKey(privateKey)
+	privKeyStr, err := ks.ExportPrivateKeyPEM(privateKey)
 	if err != nil {
 		return nil, err
 	}
 	publicKey := ks.ExtractPublicKey(privateKey)
-	pubKeyStr, err := ks.ExportPublicKey(publicKey)
+	pubKeyStr, err := ks.ExportPublicKeyPEM(publicKey)
 	if err != nil {
 		return nil, err
 	}

@@ -110,6 +110,14 @@ func (m *cryptographySchemeMock) Verifier(publicKey crypto.PublicKey) core.Verif
 	panic("not implemented")
 }
 
+func (m *cryptographySchemeMock) PublicKeySize() int {
+	panic("not implemented")
+}
+
+func (m *cryptographySchemeMock) SignatureSIze() int {
+	panic("not implemented")
+}
+
 func NewPlatformCryptographyScheme() core.PlatformCryptographyScheme {
 	return &cryptographySchemeMock{}
 }
