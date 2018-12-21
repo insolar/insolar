@@ -25,11 +25,12 @@ import (
 )
 
 // RemoveJetIndexesUntil removes for provided JetID all lifelines older than provided pulse number.
-func (db *DB) RemoveJetIndexesUntil(ctx context.Context, jetID core.RecordID, pn core.PulseNumber) error {
+func (db *DB) RemoveJetIndexesUntil(ctx context.Context, jetID core.RecordID, pn core.PulseNumber) (int, error) {
+	count := 0
 	prefix := prefixkey(scopeIDLifeline, jetID[:])
 	untilBytes := pn.Bytes()
 
-	return db.db.Update(func(txn *badger.Txn) error {
+	return count, db.db.Update(func(txn *badger.Txn) error {
 		it := txn.NewIterator(badger.DefaultIteratorOptions)
 		defer it.Close()
 		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
@@ -41,6 +42,7 @@ func (db *DB) RemoveJetIndexesUntil(ctx context.Context, jetID core.RecordID, pn
 			if err := txn.Delete(key); err != nil {
 				return err
 			}
+			count++
 		}
 		return nil
 	})

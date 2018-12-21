@@ -149,7 +149,7 @@ func (m *PulseManager) processEndPulse(
 	// TODO: maybe move cleanup in the above cycle or process removal in separate job - 20.Dec.2018 @nordicdyno
 	untilPN := currentPulse.PulseNumber - m.options.storeLightPulses
 	for jetID := range jetIDs {
-		if err := m.db.RemoveJetIndexesUntil(ctx, jetID, untilPN); err != nil {
+		if _, err := m.db.RemoveJetIndexesUntil(ctx, jetID, untilPN); err != nil {
 			return err
 		}
 	}
