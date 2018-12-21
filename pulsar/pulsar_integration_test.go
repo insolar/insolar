@@ -244,7 +244,6 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 	firstStateSwitcher.setState(WaitingForStart)
 	firstStateSwitcher.SetPulsar(firstPulsar)
 
-
 	secondStateSwitcher := &StateSwitcherImpl{}
 	secondPulsar, err := NewPulsar(
 		configuration.Pulsar{
@@ -454,7 +453,7 @@ func TestSevenPulsars_Full_Consensus(t *testing.T) {
 			hashProvider := pulsar.PlatformCryptographyScheme.IntegrityHasher()
 			hash, _ := confirmationForCheck.Hash(hashProvider)
 
-			isOk := pulsar.CryptographyService.Verify(pubKey, core.SignatureFromBytes(pulseSenderConfirmation.Signature),hash)
+			isOk := pulsar.CryptographyService.Verify(pubKey, core.SignatureFromBytes(pulseSenderConfirmation.Signature), hash)
 			require.Equal(t, true, isOk)
 		}
 	}
