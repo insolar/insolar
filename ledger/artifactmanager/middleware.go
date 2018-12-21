@@ -23,6 +23,7 @@ import (
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/pkg/errors"
 )
 
@@ -83,7 +84,7 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 			}
 			if isHeavy {
 				logger.Debugf("checkJet: [ HACK ] I am Heavy. Accept parcel.")
-				return handler(ctx, parcel)
+				return handler(contextWithJet(ctx, jet.ZeroJetID), parcel)
 			}
 
 			logger.Debugf("checkJet: not Mine")
