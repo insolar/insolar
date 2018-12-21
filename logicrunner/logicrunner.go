@@ -22,8 +22,11 @@ import (
 	"context"
 	"encoding/gob"
 	"net"
+	"runtime"
 	"sync"
 	"time"
+
+	"github.com/insolar/insolar/log"
 
 	"github.com/pkg/errors"
 
@@ -57,7 +60,7 @@ const (
 )
 
 type ExecutionState struct {
-	sync.Mutex
+	MMM sync.Mutex
 
 	ArtifactManager core.ArtifactManager
 
@@ -72,6 +75,18 @@ type ExecutionState struct {
 	// TODO not using in validation, need separate ObjectState.ExecutionState and ObjectState.Validation from ExecutionState struct
 	pending              PendingState
 	QueueProcessorActive bool
+}
+
+func (es *ExecutionState) Lock() {
+	_, f, l, _ := runtime.Caller(1)
+	log.Warnf("XXX LOCK %s:%d", f, l)
+	es.MMM.Lock()
+}
+
+func (es *ExecutionState) Unlock() {
+	_, f, l, _ := runtime.Caller(1)
+	log.Warnf("XXX UNLOCK %s:%d", f, l)
+	es.MMM.Unlock()
 }
 
 type CurrentExecution struct {
@@ -516,9 +531,7 @@ func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionS
 		es.Current.Context = core.ContextWithMessageBus(qe.ctx, recordingBus)
 
 		inslogger.FromContext(qe.ctx).Debug("Registering request within execution behaviour")
-		es.Behaviour.(*ValidationSaver).NewRequest(
-			qe.parcel.Message(), *qe.request, recordingBus,
-		)
+		es.Behaviour.(*ValidationSaver).NewRequest(qe.parcel, *qe.request, recordingBus)
 
 		res.reply, res.err = lr.executeOrValidate(es.Current.Context, es, qe.parcel)
 

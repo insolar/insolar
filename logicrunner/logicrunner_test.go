@@ -191,7 +191,6 @@ func mockCryptographyService(t *testing.T) core.CryptographyService {
 }
 
 func ValidateAllResults(t testing.TB, ctx context.Context, lr core.LogicRunner, mustfail ...core.RecordRef) {
-	return // TODO REMOVE
 	failmap := make(map[core.RecordRef]struct{})
 	for _, r := range mustfail {
 		failmap[r] = struct{}{}
