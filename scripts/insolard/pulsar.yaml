@@ -18,5 +18,6 @@ pulsar:
     behindnat: false
   pulsedistributor:
     bootstraphosts:
-    - localhost:53837
+#    if you want start system with real pulsar, change this to host of one of discovery nodes (for example, localhost:13831)
+    - localhost:11111
 keyspath: "scripts/insolard/configs/bootstrap_keys.json"

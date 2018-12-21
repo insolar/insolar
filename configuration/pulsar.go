@@ -77,7 +77,7 @@ func NewPulsar() Pulsar {
 
 		NumberDelta: 10,
 		DistributionTransport: Transport{
-			Protocol:  "UTP",
+			Protocol:  "TCP",
 			Address:   "0.0.0.0:18091",
 			BehindNAT: false,
 		},

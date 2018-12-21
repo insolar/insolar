@@ -104,7 +104,7 @@ func TestReceiveNodeCert(t *testing.T) {
 	nodePart := res.Result.Cert.SerializeNodePart()
 
 	for _, discoveryNode := range res.Result.Cert.BootstrapNodes {
-		pKey, err := keyProcessor.ImportPublicKey([]byte(discoveryNode.PublicKey))
+		pKey, err := keyProcessor.ImportPublicKeyPEM([]byte(discoveryNode.PublicKey))
 		require.NoError(t, err)
 
 		t.Run("Verify network sign for "+discoveryNode.Host, func(t *testing.T) {

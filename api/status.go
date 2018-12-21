@@ -24,10 +24,19 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
+type Node struct {
+	Reference string
+	Role      string
+}
+
 // StatusReply is reply for Status service requests.
 type StatusReply struct {
 	NetworkState   string
+	Origin         Node
 	ActiveListSize int
+	ActiveList     []Node
+	PulseNumber    uint32
+	Entropy        []byte
 }
 
 // StatusService is a service that provides API for getting status of node.
@@ -43,12 +52,37 @@ func NewStatusService(runner *Runner) *StatusService {
 // Get returns status info
 func (s *StatusService) Get(r *http.Request, args *interface{}, reply *StatusReply) error {
 	traceID := utils.RandTraceID()
-	_, inslog := inslogger.WithTraceField(context.Background(), traceID)
+	ctx, inslog := inslogger.WithTraceField(context.Background(), traceID)
 
 	inslog.Infof("[ StatusService.Get ] Incoming request: %s", r.RequestURI)
 
 	reply.NetworkState = s.runner.NetworkSwitcher.GetState().String()
-	reply.ActiveListSize = len(s.runner.NodeNetwork.GetActiveNodes())
+	activeNodes := s.runner.NodeNetwork.GetActiveNodes()
+
+	reply.ActiveListSize = len(activeNodes)
+
+	nodes := make([]Node, reply.ActiveListSize)
+	for i, node := range activeNodes {
+		nodes[i] = Node{
+			Reference: node.ID().String(),
+			Role:      node.Role().String(),
+		}
+	}
+
+	reply.ActiveList = nodes
+	origin := s.runner.NodeNetwork.GetOrigin()
+	reply.Origin = Node{
+		Reference: origin.ID().String(),
+		Role:      origin.Role().String(),
+	}
+
+	pulse, err := s.runner.PulseStorage.Current(ctx)
+	if err != nil {
+		return err
+	}
+
+	reply.PulseNumber = uint32(pulse.PulseNumber)
+	reply.Entropy = pulse.Entropy[:]
 
 	return nil
 }

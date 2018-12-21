@@ -149,13 +149,6 @@ func (t *transportSuite) TestSendPacketConsensus() {
 	t.Assert().Equal(types.Phase1, msg.Type)
 }
 
-func TestUTPTransport(t *testing.T) {
-	cfg1 := configuration.Transport{Protocol: "UTP", Address: "127.0.0.1:17010", BehindNAT: false}
-	cfg2 := configuration.Transport{Protocol: "UTP", Address: "127.0.0.1:17011", BehindNAT: false}
-
-	suite.Run(t, NewSuite(cfg1, cfg2))
-}
-
 func TestUDPTransport(t *testing.T) {
 	cfg1 := configuration.Transport{Protocol: "PURE_UDP", Address: "127.0.0.1:17014", BehindNAT: false}
 	cfg2 := configuration.Transport{Protocol: "PURE_UDP", Address: "127.0.0.1:17015", BehindNAT: false}
