@@ -207,6 +207,8 @@ func (e *serializableError) Error() string {
 }
 
 func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Reply, error) {
+	// We must check barrier just before exiting function
+	// to deliver reply right after pulse switches if it is switching right now.
 	defer readBarrier(ctx, &mb.globalLock)
 	inslogger.FromContext(ctx).Debug("MessageBus.doDeliver starts ...")
 	handler, ok := mb.handlers[msg.Type()]
@@ -307,10 +309,11 @@ func (mb *MessageBus) checkParcel(ctx context.Context, parcel core.Parcel) error
 }
 
 func readBarrier(ctx context.Context, mutex *sync.RWMutex) {
-	inslogger.FromContext(ctx).Info("Locking readBarrier")
+	inslogger.FromContext(ctx).Debug("Locking readBarrier")
 	mutex.RLock()
+	inslogger.FromContext(ctx).Debug("readBarrier locked")
 	mutex.RUnlock()
-	inslogger.FromContext(ctx).Info("readBarrier unlocked")
+	inslogger.FromContext(ctx).Debug("readBarrier unlocked")
 }
 
 func init() {
