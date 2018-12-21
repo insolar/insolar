@@ -129,19 +129,9 @@ func (m *LedgerArtifactManager) GetCode(
 		return entry.desc, nil
 	}
 
-	latestPulse, err := m.db.GetLatestPulse(ctx)
-	if err != nil {
-		return nil, err
-	}
-
 	var genericReact core.Reply
 	utils.MeasureExecutionTime(ctx, "artifactmanager.GetCode m.bus(ctx).Send", func() {
-		genericReact, err = m.bus(ctx).Send(
-			ctx,
-			&message.GetCode{Code: code},
-			latestPulse.Pulse,
-			nil,
-		)
+		genericReact, err = m.bus(ctx).Send(ctx, &message.GetCode{Code: code}, nil)
 	})
 	if err != nil {
 		return nil, err
@@ -221,12 +211,8 @@ func (m *LedgerArtifactManager) HasPendingRequests(
 	ctx context.Context,
 	object core.RecordRef,
 ) (bool, error) {
-	currentPulse, err := m.db.GetLatestPulse(ctx)
-	if err != nil {
-		return false, err
-	}
 
-	rep, err := m.bus(ctx).Send(ctx, &message.GetPendingRequests{Object: object}, currentPulse.Pulse, nil)
+	rep, err := m.bus(ctx).Send(ctx, &message.GetPendingRequests{Object: object}, nil)
 	if err != nil {
 		return false, err
 	}
@@ -248,20 +234,10 @@ func (m *LedgerArtifactManager) GetDelegate(
 	var err error
 	defer instrument(ctx, "GetDelegate").err(&err).end()
 
-	latestPulse, err := m.db.GetLatestPulse(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	genericReact, err := m.bus(ctx).Send(
-		ctx,
-		&message.GetDelegate{
-			Head:   head,
-			AsType: asType,
-		},
-		latestPulse.Pulse,
-		nil,
-	)
+	genericReact, err := m.bus(ctx).Send(ctx, &message.GetDelegate{
+		Head:   head,
+		AsType: asType,
+	}, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -503,12 +479,7 @@ func (m *LedgerArtifactManager) RegisterValidation(
 		ValidationMessages: validationMessages,
 	}
 
-	latestPulse, err := m.db.GetLatestPulse(ctx)
-	if err != nil {
-		return err
-	}
-
-	_, err = m.bus(ctx).Send(ctx, &msg, latestPulse.Pulse, nil)
+	_, err = m.bus(ctx).Send(ctx, &msg, nil)
 	return err
 }
 
@@ -715,15 +686,10 @@ func (m *LedgerArtifactManager) setBlob(
 	currentPulse core.Pulse,
 ) (*core.RecordID, error) {
 	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.setBlob starts ...")
-	genericReact, err := m.bus(ctx).Send(
-		ctx,
-		&message.SetBlob{
-			Memory:    blob,
-			TargetRef: target,
-		},
-		currentPulse,
-		nil,
-	)
+	genericReact, err := m.bus(ctx).Send(ctx, &message.SetBlob{
+		Memory:    blob,
+		TargetRef: target,
+	}, nil)
 
 	if err != nil {
 		return nil, err
@@ -745,28 +711,18 @@ func (m *LedgerArtifactManager) sendUpdateObject(
 	currentPulse core.Pulse,
 ) (*reply.Object, error) {
 	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.sendUpdateObject starts ...")
-	_, err := m.bus(ctx).Send(
-		ctx,
-		&message.SetBlob{
-			TargetRef: object,
-			Memory:    memory,
-		},
-		currentPulse,
-		nil,
-	)
+	_, err := m.bus(ctx).Send(ctx, &message.SetBlob{
+		TargetRef: object,
+		Memory:    memory,
+	}, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to save object's memory blob")
 	}
 
-	genericRep, err := m.bus(ctx).Send(
-		ctx,
-		&message.UpdateObject{
-			Record: record.SerializeRecord(rec),
-			Object: object,
-		},
-		currentPulse,
-		nil,
-	)
+	genericRep, err := m.bus(ctx).Send(ctx, &message.UpdateObject{
+		Record: record.SerializeRecord(rec),
+		Object: object,
+	}, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to update object")
 	}
@@ -788,17 +744,12 @@ func (m *LedgerArtifactManager) registerChild(
 	currentPulse core.Pulse,
 ) (*core.RecordID, error) {
 	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.registerChild starts ...")
-	genericReact, err := m.bus(ctx).Send(
-		ctx,
-		&message.RegisterChild{
-			Record: record.SerializeRecord(rec),
-			Parent: parent,
-			Child:  child,
-			AsType: asType,
-		},
-		currentPulse,
-		nil,
-	)
+	genericReact, err := m.bus(ctx).Send(ctx, &message.RegisterChild{
+		Record: record.SerializeRecord(rec),
+		Parent: parent,
+		Child:  child,
+		AsType: asType,
+	}, nil)
 
 	if err != nil {
 		return nil, err
@@ -824,7 +775,7 @@ func sendAndFollowRedirect(
 	pulse core.Pulse,
 ) (core.Reply, error) {
 	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.sendAndFollowRedirect starts ...")
-	rep, err := bus.Send(ctx, msg, pulse, nil)
+	rep, err := bus.Send(ctx, msg, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -832,15 +783,10 @@ func sendAndFollowRedirect(
 	switch r := rep.(type) {
 	case core.RedirectReply:
 		redirected := r.Redirected(msg)
-		rep, err = bus.Send(
-			ctx,
-			redirected,
-			pulse,
-			&core.MessageSendOptions{
-				Token:    r.GetToken(),
-				Receiver: r.GetReceiver(),
-			},
-		)
+		rep, err = bus.Send(ctx, redirected, &core.MessageSendOptions{
+			Token:    r.GetToken(),
+			Receiver: r.GetReceiver(),
+		})
 		if err != nil {
 			return nil, err
 		}
@@ -866,7 +812,7 @@ func sendAndRetryJet(
 	if retries <= 0 {
 		return nil, errors.New("failed to find jet (retry limit exceeded)")
 	}
-	rep, err := bus.Send(ctx, msg, pulse, nil)
+	rep, err := bus.Send(ctx, msg, nil)
 	if err != nil {
 		return nil, err
 	}
