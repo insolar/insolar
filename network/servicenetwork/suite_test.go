@@ -192,7 +192,7 @@ func (s *testSuite) initCrypto(node *networkNode, ref core.RecordRef) (*certific
 	// init certificate
 
 	proc := platformpolicy.NewKeyProcessor()
-	publicKey, err := proc.ExportPublicKey(pubKey)
+	publicKey, err := proc.ExportPublicKeyPEM(pubKey)
 	s.NoError(err)
 
 	cert := &certificate.Certificate{}
