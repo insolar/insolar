@@ -35,6 +35,7 @@ import (
 	"github.com/insolar/insolar/network/utils"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
@@ -80,27 +81,54 @@ func (s *testSuite) SetupSuite() {
 		s.initNode(node, Disable)
 	}
 
+	expected := len(s.bootstrapNodes) + len(s.networkNodes)
+	results := make(chan error, expected)
+	initNode := func(node *networkNode) {
+		err := node.componentManager.Init(s.ctx)
+		results <- err
+	}
+	startNode := func(node *networkNode) {
+		err := node.componentManager.Start(s.ctx)
+		results <- err
+	}
+
+	waitResults := func(results chan error, expected int) error {
+		count := 0
+		for {
+			select {
+			case err := <-results:
+				count++
+				s.NoError(err)
+				if count == expected {
+					return nil
+				}
+			case <-time.After(time.Second * 5):
+				return errors.New("timeout")
+			}
+		}
+	}
+
 	log.Infoln("Init bootstrap nodes")
 	for _, n := range s.bootstrapNodes {
-		err := n.componentManager.Init(s.ctx)
-		s.NoError(err)
+		go initNode(n)
 	}
 	log.Infoln("Init network nodes")
 	for _, n := range s.networkNodes {
-		err := n.componentManager.Init(s.ctx)
-		s.NoError(err)
+		go initNode(n)
 	}
+	err := waitResults(results, expected)
+	s.NoError(err)
 
 	log.Infoln("Start bootstrap nodes")
 	for _, n := range s.bootstrapNodes {
-		err := n.componentManager.Start(s.ctx)
-		s.NoError(err)
+		go startNode(n)
 	}
 	log.Infoln("Start network nodes")
 	for _, n := range s.networkNodes {
-		err := n.componentManager.Start(s.ctx)
-		s.NoError(err)
+		go startNode(n)
 	}
+	err = waitResults(results, expected)
+	s.NoError(err)
 
 	<-time.After(time.Second * 2)
 	//TODO: wait for first consensus
