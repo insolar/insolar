@@ -33,7 +33,7 @@ func (currentPulsar *Pulsar) broadcastSignatureOfEntropy(ctx context.Context) {
 	}
 
 	payload, err := currentPulsar.preparePayload(&EntropySignaturePayload{
-		PulseNumber: currentPulsar.ProcessingPulseNumber,
+		PulseNumber:      currentPulsar.ProcessingPulseNumber,
 		EntropySignature: currentPulsar.GeneratedEntropySign,
 	})
 	if err != nil {
@@ -91,9 +91,9 @@ func (currentPulsar *Pulsar) broadcastEntropy(ctx context.Context) {
 	}
 
 	payload, err := currentPulsar.preparePayload(&EntropyPayload{
-			PulseNumber: currentPulsar.ProcessingPulseNumber,
-			Entropy: *currentPulsar.GetGeneratedEntropy(),
-		})
+		PulseNumber: currentPulsar.ProcessingPulseNumber,
+		Entropy:     *currentPulsar.GetGeneratedEntropy(),
+	})
 	if err != nil {
 		currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)
 		return
@@ -191,7 +191,6 @@ func (currentPulsar *Pulsar) sendPulseSign(ctx context.Context) {
 		currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)
 		return
 	}
-
 
 	signature, err := currentPulsar.CryptographyService.Sign(hash)
 	if err != nil {

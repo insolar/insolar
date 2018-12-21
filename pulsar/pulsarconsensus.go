@@ -140,7 +140,6 @@ func (currentPulsar *Pulsar) verify(ctx context.Context) {
 				continue
 			}
 
-
 			entropy := bftCell.GetEntropy()
 			ok := currentPulsar.CryptographyService.Verify(publicKey, core.SignatureFromBytes(bftCell.GetSign()), entropy[:])
 			if !ok {
