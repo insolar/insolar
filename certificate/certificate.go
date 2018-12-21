@@ -105,7 +105,7 @@ func newCertificate(publicKey crypto.PublicKey, keyProcessor core.KeyProcessor, 
 		return nil, errors.Wrap(err, "[ newCertificate ] failed to parse certificate json")
 	}
 
-	pub, err := keyProcessor.ExportPublicKey(publicKey)
+	pub, err := keyProcessor.ExportPublicKeyPEM(publicKey)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ newCertificate ] failed to retrieve public key from node private key")
 	}
@@ -155,14 +155,14 @@ func (cert *Certificate) SignNetworkPart(key crypto.PrivateKey) ([]byte, error) 
 }
 
 func (cert *Certificate) fillExtraFields(keyProcessor core.KeyProcessor) error {
-	importedNodePubKey, err := keyProcessor.ImportPublicKey([]byte(cert.PublicKey))
+	importedNodePubKey, err := keyProcessor.ImportPublicKeyPEM([]byte(cert.PublicKey))
 	if err != nil {
 		return errors.Wrapf(err, "[ fillExtraFields ] Bad PublicKey: %s", cert.PublicKey)
 	}
 	cert.nodePublicKey = importedNodePubKey
 
 	for _, pulsarKey := range cert.PulsarPublicKeys {
-		importedPulsarPubKey, err := keyProcessor.ImportPublicKey([]byte(pulsarKey))
+		importedPulsarPubKey, err := keyProcessor.ImportPublicKeyPEM([]byte(pulsarKey))
 		if err != nil {
 			return errors.Wrapf(err, "[ fillExtraFields ] Bad pulsarKey: %s", pulsarKey)
 		}
@@ -171,7 +171,7 @@ func (cert *Certificate) fillExtraFields(keyProcessor core.KeyProcessor) error {
 
 	for i := 0; i < len(cert.BootstrapNodes); i++ {
 		currentNode := &cert.BootstrapNodes[i]
-		importedBNodePubKey, err := keyProcessor.ImportPublicKey([]byte(currentNode.PublicKey))
+		importedBNodePubKey, err := keyProcessor.ImportPublicKeyPEM([]byte(currentNode.PublicKey))
 		if err != nil {
 			return errors.Wrapf(err, "[ fillExtraFields ] Bad Bootstrap PublicKey: %s", currentNode.PublicKey)
 		}
@@ -244,7 +244,7 @@ func NewCertificatesWithKeys(publicKey crypto.PublicKey, keyProcessor core.KeyPr
 
 	cert.Reference = testutils.RandomRef().String()
 
-	keyBytes, err := keyProcessor.ExportPublicKey(publicKey)
+	keyBytes, err := keyProcessor.ExportPublicKeyPEM(publicKey)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ReadCertificate ] failed to retrieve public key from node private key")
 	}

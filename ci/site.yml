@@ -16,16 +16,20 @@ resources:
 - name: master
   type: git
   source:
-    uri: ssh://git@gitlab.corp.code-pilots.ru:22222/its/Insolar.git
+    #uri: ssh://git@gitlab.corp.code-pilots.ru:22222/its/Insolar.git
+    uri: git@github.com:insolar/insolar-io-frontend.git
     branch: master
-    private_key: ((meta.github.private_key))
+    #private_key: ((meta.github.private_key))
+    private_key: ((meta.github.site_key))
 
 - name: tags
   type: git
   source:
-    uri: ssh://git@gitlab.corp.code-pilots.ru:22222/its/Insolar.git
+    uri: git@github.com:insolar/insolar-io-frontend.git
+    #uri: ssh://git@gitlab.corp.code-pilots.ru:22222/its/Insolar.git
     branch: master
-    private_key: ((meta.github.private_key))
+    private_key: ((meta.github.site_key))
+    #private_key: ((meta.github.private_key))
     tag_filter: '*'
 
 - name: docker-builder
