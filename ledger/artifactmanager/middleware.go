@@ -21,6 +21,7 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/pkg/errors"
 )
@@ -48,28 +49,48 @@ func jetFromContext(ctx context.Context) core.RecordID {
 
 func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 	return func(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
+		logger := inslogger.FromContext(ctx)
+
 		msg := parcel.Message()
 		target := msg.DefaultTarget().Record()
 		if target == nil {
+			logger.Debug("checkJet: unexpected message (target is nil)")
 			return nil, errors.New("unexpected message")
 		}
+
 		tree, err := m.db.GetJetTree(ctx, target.Pulse())
 		if err != nil {
+			logger.Debugf("checkJet: failed to fetch jet tree: %s", err.Error())
 			return nil, errors.Wrap(err, "failed to fetch jet tree")
 		}
 		jetID := tree.Find(*target)
 		if err != nil {
+			logger.Debugf("checkJet: failed to Find: %s", err.Error())
 			return nil, err
 		}
 
 		isMine, err := m.jetCoordinator.AmI(ctx, core.DynamicRoleLightExecutor, target, target.Pulse())
 		if err != nil {
+			logger.Debugf("checkJet: failed to check isMine: %s", err.Error())
 			return nil, err
 		}
 		if !isMine {
+			logger.Debugf("checkJet: [ HACK ] checking if I am Heavy Material")
+			isHeavy, err := m.jetCoordinator.AmI(ctx, core.DynamicRoleHeavyExecutor, target, target.Pulse())
+			if err != nil {
+				logger.Debugf("checkJet: [ HACK ] failed to check for Heavy role")
+				return nil, errors.Wrap(err, "[ HACK ] failed to check for heavy role")
+			}
+			if isHeavy {
+				logger.Debugf("checkJet: [ HACK ] I am Heavy. Accept parcel.")
+				return handler(ctx, parcel)
+			}
+
+			logger.Debugf("checkJet: not Mine")
 			return &reply.JetMiss{JetID: *jetID}, nil
 		}
 
+		logger.Debugf("checkJet: done well")
 		return handler(contextWithJet(ctx, *jetID), parcel)
 	}
 }
