@@ -60,7 +60,7 @@ func NewMessageBus(config configuration.Configuration) (*MessageBus, error) {
 		handlers:     map[core.MessageType]core.MessageHandler{},
 		signmessages: config.Host.SignMessages,
 	}
-	mb.globalLock.Lock()
+	mb.Lock(context.Background())
 	return mb, nil
 }
 
@@ -155,7 +155,7 @@ func (mb *MessageBus) SendParcel(
 ) (core.Reply, error) {
 	scope := newReaderScope(&mb.globalLock)
 	scope.Lock(ctx, "Sending parcel ...")
-	defer scope.Unlock(ctx, "Sending parcel done")
+	scope.Unlock(ctx, "Sending parcel done")
 
 	var nodes []core.RecordRef
 	if options != nil && options.Receiver != nil {
@@ -191,8 +191,6 @@ func (mb *MessageBus) SendParcel(
 		return nil, err
 	}
 
-	scope.Unlock(ctx, "Sending parcel done")
-
 	return reply.Deserialize(bytes.NewBuffer(res))
 }
 
@@ -205,6 +203,11 @@ func (e *serializableError) Error() string {
 }
 
 func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Reply, error) {
+	defer func() {
+		scope := newReaderScope(&mb.globalLock)
+		scope.Lock(ctx, "doDeliver: lock")
+		scope.Unlock(ctx, "doDeliver: unlock")
+	}()
 	inslogger.FromContext(ctx).Debug("MessageBus.doDeliver starts ...")
 	handler, ok := mb.handlers[msg.Type()]
 	if !ok {
@@ -239,7 +242,7 @@ func (mb *MessageBus) deliver(ctx context.Context, args [][]byte) (result []byte
 
 	scope := newReaderScope(&mb.globalLock)
 	scope.Lock(ctx, "Delivering ...")
-	defer scope.Unlock(ctx, "Delivering done")
+	scope.Unlock(ctx, "Delivering done")
 
 	if err := mb.checkParcel(parcelCtx, parcel); err != nil {
 		return nil, err
@@ -249,8 +252,6 @@ func (mb *MessageBus) deliver(ctx context.Context, args [][]byte) (result []byte
 	if err != nil {
 		return nil, err
 	}
-
-	scope.Unlock(ctx, "Delivering done")
 
 	rd, err := reply.Serialize(resp)
 	if err != nil {
@@ -312,8 +313,7 @@ func init() {
 }
 
 type readerScope struct {
-	mutex  *sync.RWMutex
-	locked bool
+	mutex *sync.RWMutex
 }
 
 func newReaderScope(mutex *sync.RWMutex) *readerScope {
@@ -325,14 +325,10 @@ func newReaderScope(mutex *sync.RWMutex) *readerScope {
 func (rs *readerScope) Lock(ctx context.Context, info string) {
 	inslogger.FromContext(ctx).Info(info)
 	rs.mutex.RLock()
-	rs.locked = true
 }
 
 // Unlock unlocks scope if it locked. Do nothing if scope already unlocked.
 func (rs *readerScope) Unlock(ctx context.Context, info string) {
-	if rs.locked {
-		rs.locked = false
-		inslogger.FromContext(ctx).Info(info)
-		rs.mutex.RUnlock()
-	}
+	inslogger.FromContext(ctx).Info(info)
+	rs.mutex.RUnlock()
 }
