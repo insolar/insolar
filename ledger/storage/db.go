@@ -59,6 +59,8 @@ type DB struct {
 	db         *badger.DB
 	genesisRef *core.RecordRef
 
+	// dropLock protects dropWG from concurrent calls to Add and Wait
+	dropLock sync.Mutex
 	// dropWG guards inflight updates before jet drop calculated.
 	dropWG sync.WaitGroup
 
@@ -339,7 +341,9 @@ func (db *DB) RemoveObjectIndex(
 }
 
 func (db *DB) waitinflight() {
+	db.dropLock.Lock()
 	db.dropWG.Wait()
+	db.dropLock.Unlock()
 }
 
 // BeginTransaction opens a new transaction.
@@ -353,7 +357,9 @@ func (db *DB) BeginTransaction(update bool) (*TransactionManager, error) {
 	}
 
 	if update {
+		db.dropLock.Lock()
 		db.dropWG.Add(1)
+		db.dropLock.Unlock()
 	}
 	return &TransactionManager{
 		db:        db,
