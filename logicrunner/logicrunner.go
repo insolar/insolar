@@ -850,16 +850,11 @@ func (lr *LogicRunner) executeConstructorCall(
 }
 
 func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
-	// start of new Pulse, lock CaseBind data, copy it, clean original, unlock original
-
 	lr.stateMutex.Lock()
-	defer lr.stateMutex.Unlock()
-
 	messages := make([]core.Message, 0)
 
-	// send copy for validation
 	for ref, state := range lr.state {
-		// we are executor again - we still working
+		// we are executor again - just continue working
 		// TODO we need to do something with validation
 		isAuthorized, _ := lr.JetCoordinator.AmI(
 			ctx, core.DynamicRoleVirtualExecutor, ref.Record(), pulse.PulseNumber)
@@ -882,7 +877,6 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 			queue := es.releaseQueue()
 			caseBind := es.Behaviour.(*ValidationSaver).caseBind
 			requests := caseBind.getCaseBindForMessage(ctx)
-
 			messages = append(
 				messages,
 				&message.ValidateCaseBind{
@@ -910,16 +904,41 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 		state.Unlock()
 	}
 
-	for _, msg := range messages {
-		_, err := lr.MessageBus.Send(ctx, msg, pulse, nil)
-		if err != nil {
-			return errors.Wrap(err, "error while sending validation data on pulse")
+	lr.stateMutex.Unlock()
+
+	var errorCounter int
+	var sendWg sync.WaitGroup
+	if len(messages) > 0 {
+		errChan := make(chan error, len(messages))
+		sendWg.Add(len(messages))
+
+		for _, msg := range messages {
+			go lr.sendOnPulseMessagesAsync(ctx, msg, pulse, &sendWg, &errChan)
+		}
+
+		sendWg.Wait()
+		close(errChan)
+
+		for err := range errChan {
+			if err != nil {
+				errorCounter++
+				inslogger.FromContext(ctx).Error(errors.Wrap(err, "error while sending validation data on pulse"))
+			}
+		}
+
+		if errorCounter > 0 {
+			return errors.New("error while sending executor data in OnPulse, see logs for more information")
 		}
 	}
 
 	return nil
 }
 
+func (lr *LogicRunner) sendOnPulseMessagesAsync(ctx context.Context, msg core.Message, pulse core.Pulse, sendWg *sync.WaitGroup, errChan *chan error) {
+	defer sendWg.Done()
+	_, err := lr.MessageBus.Send(ctx, msg, pulse, nil)
+	*errChan <- err
+}
 func convertQueueToMessageQueue(queue []ExecutionQueueElement) []message.ExecutionQueueElement {
 	mq := make([]message.ExecutionQueueElement, 0)
 	for _, elem := range queue {
