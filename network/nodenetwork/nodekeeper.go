@@ -335,7 +335,11 @@ func (nk *nodekeeper) MoveSyncToActive() error {
 	nk.tempMapS = make(map[core.ShortNodeID]*host.Host)
 	nk.tempLock.Unlock()
 
-	sync := nk.sync.(*unsyncList)
+	sync, ok := nk.sync.(*unsyncList)
+	if !ok {
+		return errors.New("[ MoveSyncToActive ] UnsyncList is nil")
+	}
+
 	var err error
 	nk.active, err = sync.getMergedNodeMap()
 	if err != nil {
