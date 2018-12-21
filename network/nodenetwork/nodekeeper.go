@@ -93,6 +93,7 @@ func NewNodeKeeper(origin core.Node) network.NodeKeeper {
 		indexShortID: make(map[core.ShortNodeID]core.Node),
 		tempMapR:     make(map[core.RecordRef]*host.Host),
 		tempMapS:     make(map[core.ShortNodeID]*host.Host),
+		sync:         newUnsyncList(origin, []core.Node{}),
 	}
 	result.SetState(network.Ready)
 	return result
@@ -233,6 +234,8 @@ func (nk *nodekeeper) AddActiveNodes(nodes []core.Node) {
 		nk.addActiveNode(node)
 		activeNodes[i] = node.ID().String()
 	}
+	syncList := nk.sync.(*unsyncList)
+	syncList.addNodes(nodes)
 	log.Debugf("Added active nodes: %s", strings.Join(activeNodes, ", "))
 }
 
@@ -380,16 +383,16 @@ func (nk *nodekeeper) nodeToSignedClaim() (*consensus.NodeJoinClaim, error) {
 		return nil, err
 	}
 	dataToSign, err := claim.SerializeRaw()
-	log.Infof("dataToSign len: %d", len(dataToSign))
+	log.Debugf("dataToSign len: %d", len(dataToSign))
 	if err != nil {
 		return nil, errors.Wrap(err, "[ nodeToSignedClaim ] failed to serialize a claim")
 	}
 	sign, err := nk.sign(dataToSign)
-	log.Infof("sign len: %d", len(sign))
+	log.Debugf("sign len: %d", len(sign))
 	if err != nil {
 		return nil, errors.Wrap(err, "[ nodeToSignedClaim ] failed to sign a claim")
 	}
-	// copy(claim.Signature[:], sign[:consensus.SignatureLength])
+	copy(claim.Signature[:], sign[:consensus.SignatureLength])
 	return claim, nil
 }
 
