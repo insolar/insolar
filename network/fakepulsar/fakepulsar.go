@@ -72,10 +72,10 @@ func (fp *FakePulsar) Start(ctx context.Context) {
 					if math.Abs(float64(time.Now().Second()-time.Unix(fp.firstPulseTime, 0).Second())) != float64(fp.timeoutMs/1000) {
 						time.Sleep(time.Duration(math.Abs(float64(time.Now().Second() - time.Unix(fp.firstPulseTime, 0).Second()))))
 					}
-					fp.mutex.Lock()
-					defer fp.mutex.Unlock()
+					fp.mut.Lock()
 					fp.pulseNum++
 					fp.onPulse.HandlePulse(ctx, *fp.newPulse())
+					fp.mut.Unlock()
 				}
 			case <-fp.stop:
 				return
@@ -115,8 +115,8 @@ func (fp *FakePulsar) newPulse() *core.Pulse {
 	copy(entropy[:], tmp[:core.EntropySize])
 	return &core.Pulse{
 		EpochPulseNumber: -1,
-		PulseNumber:      core.PulseNumber(fp.pulse),
-		NextPulseNumber:  core.PulseNumber(fp.pulse + 1),
+		PulseNumber:      core.PulseNumber(fp.pulseNum),
+		NextPulseNumber:  core.PulseNumber(fp.pulseNum + 1),
 		Entropy:          entropy,
 	}
 }

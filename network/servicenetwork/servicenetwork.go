@@ -136,8 +136,8 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	err = n.MerkleCalculator.(component.Initer).Init(ctx)
 	n.hostNetwork = hostnetwork.NewHostTransport(internalTransport, n.routingTable)
 	options := controller.ConfigureOptions(n.cfg.Host)
-	n.controller = controller.NewNetworkController(n, options, n.CertificateManager.GetCertificate(), internalTransport, n.routingTable, n.hostNetwork, n.CryptographyScheme, n.fakePulsar)
 	n.fakePulsar = fakepulsar.NewFakePulsar(n, n.cfg.Pulsar.PulseTime)
+	n.controller = controller.NewNetworkController(n, options, n.CertificateManager.GetCertificate(), internalTransport, n.routingTable, n.hostNetwork, n.CryptographyScheme, n.fakePulsar)
 	log.Info("==== ServiceNetwork inited ====")
 
 	return err
