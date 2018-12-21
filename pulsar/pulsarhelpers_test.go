@@ -41,13 +41,13 @@ func TestPreparePayloadAndCheckIt(t *testing.T) {
 	require.NoError(t, err)
 
 	pulsar := Pulsar{
-		CryptographyService:cryptoService,
-		PlatformCryptographyScheme:scheme,
-		KeyProcessor:keyProcessor,
-		PublicKeyRaw : string(pubKeyRaw),
+		CryptographyService:        cryptoService,
+		PlatformCryptographyScheme: scheme,
+		KeyProcessor:               keyProcessor,
+		PublicKeyRaw:               string(pubKeyRaw),
 	}
 
-	t.Run("HandshakePayload", func(t *testing.T){
+	t.Run("HandshakePayload", func(t *testing.T) {
 		// Arrange
 		entropyGenerator := entropygenerator.StandardEntropyGenerator{}
 		handshakePayload := &HandshakePayload{Entropy: entropyGenerator.GenerateEntropy()}
@@ -64,7 +64,7 @@ func TestPreparePayloadAndCheckIt(t *testing.T) {
 		require.Equal(t, handshakePayload, payload.Body.(*HandshakePayload))
 	})
 
-	t.Run("EntropySignaturePayload", func(t *testing.T){
+	t.Run("EntropySignaturePayload", func(t *testing.T) {
 		// Arrange
 		entropyGenerator := entropygenerator.StandardEntropyGenerator{}
 		entropy := entropyGenerator.GenerateEntropy()
@@ -82,7 +82,7 @@ func TestPreparePayloadAndCheckIt(t *testing.T) {
 		require.Equal(t, entropySignPayload, payload.Body.(*EntropySignaturePayload))
 	})
 
-	t.Run("EntropyPayload", func(t *testing.T){
+	t.Run("EntropyPayload", func(t *testing.T) {
 		// Arrange
 		entropyGenerator := entropygenerator.StandardEntropyGenerator{}
 		entropyPayload := &EntropyPayload{Entropy: entropyGenerator.GenerateEntropy()}
@@ -99,21 +99,21 @@ func TestPreparePayloadAndCheckIt(t *testing.T) {
 		require.Equal(t, entropyPayload, payload.Body.(*EntropyPayload))
 	})
 
-	t.Run("VectorPayload", func(t *testing.T){
+	t.Run("VectorPayload", func(t *testing.T) {
 		// Arrange
 		entropyGenerator := entropygenerator.StandardEntropyGenerator{}
 		firstEntropy := entropyGenerator.GenerateEntropy()
 		secondEntropy := entropyGenerator.GenerateEntropy()
 		firstVector := &VectorPayload{Vector: map[string]*BftCell{
-			"first" : &BftCell{Entropy:firstEntropy},
-			"second" : &BftCell{Entropy:secondEntropy},
+			"first":  &BftCell{Entropy: firstEntropy},
+			"second": &BftCell{Entropy: secondEntropy},
 		}}
 		secondVector := &VectorPayload{Vector: map[string]*BftCell{
-			"first" : &BftCell{Entropy:firstEntropy},
-			"second" : &BftCell{Entropy:secondEntropy},
+			"first":  &BftCell{Entropy: firstEntropy},
+			"second": &BftCell{Entropy: secondEntropy},
 		}}
 
-		t.Run("preparePayload works for VectorPayload", func(t *testing.T){
+		t.Run("preparePayload works for VectorPayload", func(t *testing.T) {
 			// Act
 			payload, firstError := pulsar.preparePayload(firstVector)
 			require.NoError(t, firstError)
@@ -126,7 +126,7 @@ func TestPreparePayloadAndCheckIt(t *testing.T) {
 			require.Equal(t, firstVector, payload.Body.(*VectorPayload))
 		})
 
-		t.Run("checkPayloadSignature work for maps", func(t *testing.T){
+		t.Run("checkPayloadSignature work for maps", func(t *testing.T) {
 			// Act
 			payload, firstError := pulsar.preparePayload(firstVector)
 			require.NoError(t, firstError)
@@ -141,30 +141,30 @@ func TestPreparePayloadAndCheckIt(t *testing.T) {
 		})
 	})
 
-	t.Run("PulsePayload", func(t *testing.T){
+	t.Run("PulsePayload", func(t *testing.T) {
 		// Arrange
 		entropyGenerator := entropygenerator.StandardEntropyGenerator{}
 		firstEntropy := entropyGenerator.GenerateEntropy()
 		secondEntropy := entropyGenerator.GenerateEntropy()
 		pulseEntropy := entropyGenerator.GenerateEntropy()
 		pulsePayload := &PulsePayload{
-			Pulse : core.Pulse{
+			Pulse: core.Pulse{
 				Entropy: pulseEntropy,
 				Signs: map[string]core.PulseSenderConfirmation{
-					"first" : core.PulseSenderConfirmation{Entropy:firstEntropy},
-					"second" : core.PulseSenderConfirmation{Entropy:secondEntropy},
+					"first":  core.PulseSenderConfirmation{Entropy: firstEntropy},
+					"second": core.PulseSenderConfirmation{Entropy: secondEntropy},
 				},
-		}}
+			}}
 		secondPulsePayload := &PulsePayload{
-			Pulse : core.Pulse{
+			Pulse: core.Pulse{
 				Entropy: pulseEntropy,
 				Signs: map[string]core.PulseSenderConfirmation{
-					"second" : core.PulseSenderConfirmation{Entropy:secondEntropy},
-					"first" : core.PulseSenderConfirmation{Entropy:firstEntropy},
+					"second": core.PulseSenderConfirmation{Entropy: secondEntropy},
+					"first":  core.PulseSenderConfirmation{Entropy: firstEntropy},
 				},
 			}}
 
-		t.Run("preparePayload works for PulsePayload", func(t *testing.T){
+		t.Run("preparePayload works for PulsePayload", func(t *testing.T) {
 			// Act
 			payload, firstError := pulsar.preparePayload(pulsePayload)
 			require.NoError(t, firstError)
@@ -177,7 +177,7 @@ func TestPreparePayloadAndCheckIt(t *testing.T) {
 			require.Equal(t, pulsePayload, payload.Body.(*PulsePayload))
 		})
 
-		t.Run("checkPayloadSignature work for maps", func(t *testing.T){
+		t.Run("checkPayloadSignature work for maps", func(t *testing.T) {
 			// Act
 			payload, firstError := pulsar.preparePayload(pulsePayload)
 			require.NoError(t, firstError)
@@ -192,7 +192,7 @@ func TestPreparePayloadAndCheckIt(t *testing.T) {
 		})
 	})
 
-	t.Run("PulseSenderConfirmationPayload", func(t *testing.T){
+	t.Run("PulseSenderConfirmationPayload", func(t *testing.T) {
 		// Arrange
 		entropyGenerator := entropygenerator.StandardEntropyGenerator{}
 		payloadBody := &PulseSenderConfirmationPayload{core.PulseSenderConfirmation{Entropy: entropyGenerator.GenerateEntropy()}}
