@@ -46,6 +46,7 @@ type MessageBus struct {
 	CryptographyService        core.CryptographyService        `inject:""`
 	DelegationTokenFactory     core.DelegationTokenFactory     `inject:""`
 	ParcelFactory              message.ParcelFactory           `inject:""`
+	PulseStorage               core.PulseStorage               `inject:""`
 
 	handlers     map[core.MessageType]core.MessageHandler
 	signmessages bool
@@ -73,7 +74,7 @@ func (mb *MessageBus) NewPlayer(ctx context.Context, reader io.Reader) (core.Mes
 	if err != nil {
 		return nil, err
 	}
-	pl := newPlayer(mb, tape, mb.PlatformCryptographyScheme)
+	pl := newPlayer(mb, tape, mb.PlatformCryptographyScheme, mb.PulseStorage)
 	return pl, nil
 }
 
@@ -82,7 +83,7 @@ func (mb *MessageBus) NewPlayer(ctx context.Context, reader io.Reader) (core.Mes
 // Recorder can be created from MessageBus and passed as MessageBus instance.
 func (mb *MessageBus) NewRecorder(ctx context.Context, currentPulse core.Pulse) (core.MessageBus, error) {
 	tape := newMemoryTape(currentPulse.PulseNumber)
-	rec := newRecorder(mb, tape, mb.PlatformCryptographyScheme)
+	rec := newRecorder(mb, tape, mb.PlatformCryptographyScheme, mb.PulseStorage)
 	return rec, nil
 }
 
@@ -132,13 +133,18 @@ func (mb *MessageBus) MustRegister(p core.MessageType, handler core.MessageHandl
 }
 
 // Send an `Message` and get a `Value` or error from remote host.
-func (mb *MessageBus) Send(ctx context.Context, msg core.Message, currentPulse core.Pulse, ops *core.MessageSendOptions) (core.Reply, error) {
-	parcel, err := mb.CreateParcel(ctx, msg, ops.Safe().Token, currentPulse)
+func (mb *MessageBus) Send(ctx context.Context, msg core.Message, ops *core.MessageSendOptions) (core.Reply, error) {
+	currentPulse, err := mb.PulseStorage.Current(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	return mb.SendParcel(ctx, parcel, currentPulse, ops)
+	parcel, err := mb.CreateParcel(ctx, msg, ops.Safe().Token, *currentPulse)
+	if err != nil {
+		return nil, err
+	}
+
+	return mb.SendParcel(ctx, parcel, *currentPulse, ops)
 }
 
 // CreateParcel creates signed message from provided message.
