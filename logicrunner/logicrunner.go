@@ -539,13 +539,8 @@ func (lr *LogicRunner) finishPendingIfNeeded(ctx context.Context, es *ExecutionS
 	es.pending = NotPending
 
 	go func() {
-		pulse, err := lr.PulseStorage.Current(ctx)
-		if err != nil {
-			inslogger.FromContext(ctx).Error("Unable to determine current pulse and thus to send PendingFinished message:", err)
-			return
-		}
 		msg := message.PendingFinished{Reference: currentRef}
-		_, err = lr.MessageBus.Send(ctx, &msg, *pulse, nil)
+		_, err := lr.MessageBus.Send(ctx, &msg, nil)
 		if err != nil {
 			inslogger.FromContext(ctx).Error("Unable to send PendingFinished message:", err)
 		}
@@ -596,7 +591,7 @@ func (lr *LogicRunner) executeOrValidate(
 			Request: *es.Current.Request,
 			Reply:   re,
 			Error:   errstr,
-		}, *lr.pulse(ctx), &core.MessageSendOptions{
+		}, &core.MessageSendOptions{
 			Receiver: es.Current.RequesterNode,
 		})
 		if err != nil {
@@ -887,7 +882,7 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 	}
 
 	for _, msg := range messages {
-		_, err := lr.MessageBus.Send(ctx, msg, pulse, nil)
+		_, err := lr.MessageBus.Send(ctx, msg, nil)
 		if err != nil {
 			return errors.Wrap(err, "error while sending validation data on pulse")
 		}

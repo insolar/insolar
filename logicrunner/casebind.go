@@ -215,20 +215,11 @@ func (lr *LogicRunner) ValidateCaseBind(ctx context.Context, inmsg core.Parcel) 
 		errstr = validationError.Error()
 	}
 
-	currentSlotPulse, err := lr.PulseStorage.Current(ctx)
-	if err != nil {
-		return nil, err
-	}
-	_, err = lr.MessageBus.Send(
-		ctx,
-		&message.ValidationResults{
-			RecordRef:        msg.GetReference(),
-			PassedStepsCount: passedStepsCount,
-			Error:            errstr,
-		},
-		*currentSlotPulse,
-		nil,
-	)
+	_, err = lr.MessageBus.Send(ctx, &message.ValidationResults{
+		RecordRef:        msg.GetReference(),
+		PassedStepsCount: passedStepsCount,
+		Error:            errstr,
+	}, nil)
 
 	return &reply.OK{}, err
 }
