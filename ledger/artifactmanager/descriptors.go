@@ -247,22 +247,17 @@ func (i *ChildIterator) hasInBuffer() bool {
 }
 
 func (i *ChildIterator) sendAndFollowRedirect(ctx context.Context, msg core.Message, currentPulse core.Pulse) (core.Reply, error) {
-	rep, err := i.messageBus.Send(ctx, msg, currentPulse, nil)
+	rep, err := i.messageBus.Send(ctx, msg, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	if redirect, ok := rep.(core.RedirectReply); ok {
 		redirected := redirect.Redirected(msg)
-		rep, err = i.messageBus.Send(
-			ctx,
-			redirected,
-			currentPulse,
-			&core.MessageSendOptions{
-				Token:    redirect.GetToken(),
-				Receiver: redirect.GetReceiver(),
-			},
-		)
+		rep, err = i.messageBus.Send(ctx, redirected, &core.MessageSendOptions{
+			Token:    redirect.GetToken(),
+			Receiver: redirect.GetReceiver(),
+		})
 		if err != nil {
 			return nil, err
 		}

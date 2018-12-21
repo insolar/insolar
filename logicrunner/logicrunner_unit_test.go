@@ -121,7 +121,7 @@ func TestPendingFinished(t *testing.T) {
 	// make sure that in pending case finishPendingIfNeeded returns true
 	// sends PendingFinished message and sets ExecutionState.pending back to NotPending
 	es.pending = InPending
-	mb.SendMock.Expect(ctx, &message.PendingFinished{Reference: objectRef}, pulse, nil).Return(&reply.ID{}, nil)
+	mb.SendMock.Expect(ctx, &message.PendingFinished{Reference: objectRef}, nil).Return(&reply.ID{}, nil)
 	lr.finishPendingIfNeeded(ctx, es, objectRef)
 	require.Equal(t, NotPending, es.pending)
 }
