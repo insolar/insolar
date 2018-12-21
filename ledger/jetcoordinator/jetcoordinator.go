@@ -258,17 +258,6 @@ func (jc *JetCoordinator) lightMaterialsForJet(
 	)
 }
 
-func (jc *JetCoordinator) jetForObject(
-	ctx context.Context, id core.RecordID, pulse core.PulseNumber,
-) (*core.RecordID, error) {
-	tree, err := jc.db.GetJetTree(ctx, pulse)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to fetch jet tree")
-	}
-	jetID, _ := tree.Find(id)
-	return jetID, nil
-}
-
 func getRefs(
 	scheme core.PlatformCryptographyScheme,
 	e []byte,
