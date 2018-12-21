@@ -437,6 +437,8 @@ func (h *MessageHandler) handleGetChildren(
 }
 
 func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
+	inslog := inslogger.FromContext(ctx)
+
 	msg := parcel.Message().(*message.UpdateObject)
 	jetID := jetFromContext(ctx)
 
@@ -450,7 +452,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 	var idx *index.ObjectLifeline
 	err := h.db.Update(ctx, func(tx *storage.TransactionManager) error {
 		var err error
-		inslogger.FromContext(ctx).Debugf("Get index for: %v, jet: %v", msg.Object.Record(), jetID)
+		inslog.Debugf("Get index for: %v, jet: %v", msg.Object.Record(), jetID)
 		idx, err = tx.GetObjectIndex(ctx, jetID, msg.Object.Record(), true)
 		// No index on our node.
 		if err == storage.ErrNotFound {
@@ -458,7 +460,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 				// We are activating the object. There is no index for it anywhere.
 				idx = &index.ObjectLifeline{State: record.StateUndefined}
 			} else {
-				inslogger.FromContext(ctx).Debugf("Not found index for: %v, jet: %v", msg.Object.Record(), jetID)
+				inslog.Debugf("Not found index for: %v, jet: %v", msg.Object.Record(), jetID)
 				// We are updating object. Index should be on the heavy executor.
 				heavy, err := h.findHeavy(ctx, msg.Object.Record(), parcel.Pulse())
 				if err != nil {
@@ -491,7 +493,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 		if state.State() == record.StateActivation {
 			idx.Parent = state.(*record.ObjectActivateRecord).Parent
 		}
-		inslogger.FromContext(ctx).Debugf("Save index for: %v, jet: %v", msg.Object.Record(), jetID)
+		inslog.Debugf("Save index for: %v, jet: %v", msg.Object.Record(), jetID)
 		return tx.SetObjectIndex(ctx, jetID, msg.Object.Record(), idx)
 	})
 	if err != nil {
