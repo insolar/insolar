@@ -123,8 +123,8 @@ func init() {
 	gob.Register(&StartSessionResponse{})
 	gob.Register(&GenesisRequest{})
 	gob.Register(&GenesisResponse{})
-	gob.Register(&fakepulsar.FakePulsarRequest{})
-	gob.Register(&fakepulsar.FakePulsarResponse{})
+	gob.Register(&fakepulsar.Request{})
+	gob.Register(&fakepulsar.Response{})
 }
 
 // Bootstrap on the discovery node (step 1 of the bootstrap process)
@@ -305,7 +305,7 @@ func (bc *Bootstrapper) startBootstrap(address string) (*host.Host, error) {
 	case Redirected:
 		return bootstrap(data.RedirectHost, bc.options, bc.startBootstrap)
 	case Accepted:
-		request := bc.transport.NewRequestBuilder().Type(types.FakePulsarRequest).Data(fakepulsar.FakePulsarRequest{}).Build()
+		request := bc.transport.NewRequestBuilder().Type(types.FakePulsarRequest).Data(fakepulsar.Request{}).Build()
 		future, err := bc.transport.SendRequestPacket(request, bootstrapHost)
 		if err != nil {
 			return nil, errors.Wrapf(err, "Failed to send bootstrap request to address %s", address)
@@ -314,7 +314,7 @@ func (bc *Bootstrapper) startBootstrap(address string) (*host.Host, error) {
 		if err != nil {
 			return nil, errors.Wrapf(err, "Failed to get response to bootstrap request from address %s", address)
 		}
-		data := response.GetData().(*fakepulsar.FakePulsarResponse)
+		data := response.GetData().(*fakepulsar.Response)
 		bc.fakePulsar.SetPulseData(data.FirstPulseTime, data.PulseNum)
 	}
 	return response.GetSenderHost(), nil
@@ -348,7 +348,7 @@ func (bc *Bootstrapper) processGenesis(ctx context.Context, request network.Requ
 }
 
 func (bc *Bootstrapper) processFakePulse(ctx context.Context, request network.Request) (network.Response, error) {
-	return bc.transport.BuildResponse(request, &fakepulsar.FakePulsarResponse{
+	return bc.transport.BuildResponse(request, &fakepulsar.Response{
 		PulseNum:       bc.fakePulsar.GetPulseNum(),
 		FirstPulseTime: bc.fakePulsar.GetFirstPulseTime(),
 	}), nil

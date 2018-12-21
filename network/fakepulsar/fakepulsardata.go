@@ -20,18 +20,18 @@ import (
 	"github.com/insolar/insolar/network/transport/packet/types"
 )
 
-type FakePulsarRequest struct {
+type Request struct {
 }
 
-func (fpr *FakePulsarRequest) Type() types.PacketType {
+func (fpr *Request) Type() types.PacketType {
 	return types.FakePulsarRequest
 }
 
-type FakePulsarResponse struct {
+type Response struct {
 	PulseNum       int64
 	FirstPulseTime int64
 }
 
-func (fpr *FakePulsarResponse) Type() types.PacketType {
+func (fpr *Response) Type() types.PacketType {
 	return types.FakePulsarResponse
 }
