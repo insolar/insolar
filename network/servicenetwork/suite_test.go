@@ -242,7 +242,8 @@ func (s *testSuite) initNode(node *networkNode, timeOut PhaseTimeOut) {
 
 	pulseManagerMock := testutils.NewPulseManagerMock(s.T())
 	pulseManagerMock.SetMock.Set(func(p context.Context, p1 core.Pulse, p2 bool) (r error) {
-		return nil
+		return serviceNetwork.NodeKeeper.MoveSyncToActive()
+		//return nil
 	})
 
 	netCoordinator := testutils.NewNetworkCoordinatorMock(s.T())
