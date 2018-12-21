@@ -83,7 +83,7 @@ func (e *Exporter) Export(ctx context.Context, fromPulse core.PulseNumber, size 
 			return nil, errors.Wrap(err, "failed to fetch pulse data")
 		}
 
-		var data[]*pulseData
+		var data []*pulseData
 		for jetID := range jetIDs {
 			fetchedData, err := e.exportPulse(ctx, jetID, &pulse.Pulse)
 			if err != nil {
