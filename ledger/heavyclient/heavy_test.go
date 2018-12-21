@@ -99,7 +99,7 @@ func sendToHeavy(t *testing.T, withretry bool) {
 
 	// Mock N8: Active List Swapper mock
 	alsMock := testutils.NewActiveListSwapperMock(t)
-	alsMock.MoveSyncToActiveFunc = func() {}
+	alsMock.MoveSyncToActiveFunc = func() error { return nil }
 
 	// Mock N8: Crypto things mock
 	cryptoServiceMock := testutils.NewCryptographyServiceMock(t)

@@ -25,18 +25,22 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/network"
 )
 
 // Fakepulsar needed when the network starts and can't receive a real pulse.
 
 // onPulse is a callbaback for pulse recv.
-type callbackOnPulse func(ctx context.Context, pulse core.Pulse)
+// type callbackOnPulse func(ctx context.Context, pulse core.Pulse)
 
 // FakePulsar is a struct which uses at void network state.
 type FakePulsar struct {
-	onPulse        callbackOnPulse
-	stop           chan bool
-	timeoutMs      int32 // ms
+	onPulse   network.PulseHandler
+	stop      chan bool
+	timeoutMs int32 // mspulse     int
+
+	mutex          sync.RWMutex
 	running        bool
 	firstPulseTime int64
 	pulseNum       int64
@@ -44,22 +48,20 @@ type FakePulsar struct {
 }
 
 // NewFakePulsar creates and returns a new FakePulsar.
-func NewFakePulsar(callback callbackOnPulse, timeoutMs int32) *FakePulsar {
+func NewFakePulsar(callback network.PulseHandler, timeoutMs int32) *FakePulsar {
 	return &FakePulsar{
 		onPulse:   callback,
 		timeoutMs: timeoutMs,
-		stop:      make(chan bool),
+		stop:      make(chan bool, 1),
 		running:   false,
 	}
 }
 
-// GetFakePulse creates and returns a fake pulse.
-func (fp *FakePulsar) GetFakePulse() *core.Pulse {
-	return fp.newPulse()
-}
-
 // Start starts sending a fake pulse.
 func (fp *FakePulsar) Start(ctx context.Context) {
+	fp.mutex.Lock()
+	defer fp.mutex.Unlock()
+
 	fp.running = true
 	fp.firstPulseTime = time.Now().Unix()
 	go func(fp *FakePulsar) {
@@ -70,25 +72,39 @@ func (fp *FakePulsar) Start(ctx context.Context) {
 					if math.Abs(float64(time.Now().Second()-time.Unix(fp.firstPulseTime, 0).Second())) != float64(fp.timeoutMs/1000) {
 						time.Sleep(time.Duration(math.Abs(float64(time.Now().Second() - time.Unix(fp.firstPulseTime, 0).Second()))))
 					}
-					fp.mut.Lock()
-					defer fp.mut.Unlock()
+					fp.mutex.Lock()
+					defer fp.mutex.Unlock()
 					fp.pulseNum++
-					fp.onPulse(ctx, *fp.GetFakePulse())
+					fp.onPulse.HandlePulse(ctx, *fp.newPulse())
 				}
 			case <-fp.stop:
 				return
 			}
 		}
 	}(fp)
+	log.Info("fake pulsar started")
 }
 
 // Stop sending a fake pulse.
 func (fp *FakePulsar) Stop(ctx context.Context) {
+	fp.mutex.Lock()
+	defer fp.mutex.Unlock()
+
+	log.Info("Fake pulsar going to stop")
+
 	if fp.running {
 		fp.stop <- true
 		close(fp.stop)
 		fp.running = false
 	}
+	log.Info("Fake pulsar stopped")
+}
+
+func (fp *FakePulsar) Stopped() bool {
+	fp.mutex.RLock()
+	defer fp.mutex.RUnlock()
+
+	return !fp.running
 }
 
 func (fp *FakePulsar) newPulse() *core.Pulse {
@@ -98,9 +114,10 @@ func (fp *FakePulsar) newPulse() *core.Pulse {
 	var entropy core.Entropy
 	copy(entropy[:], tmp[:core.EntropySize])
 	return &core.Pulse{
-		PulseNumber:     0,
-		NextPulseNumber: 0,
-		Entropy:         entropy,
+		EpochPulseNumber: -1,
+		PulseNumber:      core.PulseNumber(fp.pulse),
+		NextPulseNumber:  core.PulseNumber(fp.pulse + 1),
+		Entropy:          entropy,
 	}
 }
 

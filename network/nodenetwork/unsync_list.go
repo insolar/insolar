@@ -22,7 +22,6 @@ import (
 	consensus "github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 )
 
@@ -35,48 +34,109 @@ func copyMap(m map[core.RecordRef]core.Node) map[core.RecordRef]core.Node {
 }
 
 type unsyncList struct {
+	origin      core.Node
 	activeNodes map[core.RecordRef]core.Node
-	addressMap  map[core.RecordRef]string
 	claims      map[core.RecordRef][]consensus.ReferendumClaim
 	refToIndex  map[core.RecordRef]int
+	proofs      map[core.RecordRef]*consensus.NodePulseProof
+	ghs         map[core.RecordRef]consensus.GlobuleHashSignature
 	indexToRef  map[int]core.RecordRef
 	cache       []byte
 }
 
-func newUnsyncList(activeNodesSorted []core.Node) *unsyncList {
-	indexToRef := make(map[int]core.RecordRef, len(activeNodesSorted))
-	refToIndex := make(map[core.RecordRef]int, len(activeNodesSorted))
-	activeNodes := make(map[core.RecordRef]core.Node, len(activeNodesSorted))
-	for i, node := range activeNodesSorted {
-		indexToRef[i] = node.ID()
-		refToIndex[node.ID()] = i
-		activeNodes[node.ID()] = node
-	}
-	claims := make(map[core.RecordRef][]consensus.ReferendumClaim)
-
-	return &unsyncList{activeNodes: activeNodes, claims: claims, refToIndex: refToIndex, indexToRef: indexToRef}
+func (ul *unsyncList) GlobuleHashSignatures() map[core.RecordRef]consensus.GlobuleHashSignature {
+	return ul.ghs
 }
 
-func (ul *unsyncList) RemoveClaims(from core.RecordRef) {
-	delete(ul.claims, from)
+func (ul *unsyncList) ApproveSync(sync []core.RecordRef) {
+	prevActive := make([]core.RecordRef, 0, len(ul.activeNodes))
+	for nodeID := range ul.activeNodes {
+		prevActive = append(prevActive, nodeID)
+	}
+	diff := diffList(prevActive, sync)
+	for _, node := range diff {
+		ul.removeNode(node)
+	}
+}
+
+func (ul *unsyncList) AddNode(node core.Node, bitsetIndex uint16) {
+	ul.addNode(node, int(bitsetIndex))
+}
+
+func (ul *unsyncList) GetClaims(nodeID core.RecordRef) []consensus.ReferendumClaim {
+	return ul.claims[nodeID]
+}
+
+func (ul *unsyncList) AddProof(nodeID core.RecordRef, proof *consensus.NodePulseProof) {
+	ul.proofs[nodeID] = proof
+}
+
+func (ul *unsyncList) GetProof(nodeID core.RecordRef) *consensus.NodePulseProof {
+	return ul.proofs[nodeID]
+}
+
+func newUnsyncList(origin core.Node, activeNodesSorted []core.Node) *unsyncList {
+	result := &unsyncList{
+		origin:      origin,
+		indexToRef:  make(map[int]core.RecordRef, len(activeNodesSorted)),
+		refToIndex:  make(map[core.RecordRef]int, len(activeNodesSorted)),
+		activeNodes: make(map[core.RecordRef]core.Node, len(activeNodesSorted)),
+	}
+	for i, node := range activeNodesSorted {
+		result.addNode(node, i)
+	}
+	result.proofs = make(map[core.RecordRef]*consensus.NodePulseProof)
+	result.claims = make(map[core.RecordRef][]consensus.ReferendumClaim)
+	result.ghs = make(map[core.RecordRef]consensus.GlobuleHashSignature)
+
+	return result
+}
+
+func (ul *unsyncList) addNodes(nodes []core.Node) {
+	sort.Slice(nodes, func(i, j int) bool {
+		return nodes[i].ID().Compare(nodes[j].ID()) < 0
+	})
+
+	for index, node := range nodes {
+		ul.addNode(node, index)
+	}
+}
+
+func (ul *unsyncList) addNode(node core.Node, index int) {
+	ul.indexToRef[index] = node.ID()
+	ul.refToIndex[node.ID()] = index
+	ul.activeNodes[node.ID()] = node
+}
+
+func (ul *unsyncList) removeNode(nodeID core.RecordRef) {
+	delete(ul.activeNodes, nodeID)
+	delete(ul.claims, nodeID)
+	delete(ul.proofs, nodeID)
+	delete(ul.ghs, nodeID)
+	i, ok := ul.refToIndex[nodeID]
+	if ok {
+		delete(ul.indexToRef, i)
+	}
+	delete(ul.refToIndex, nodeID)
 	ul.cache = nil
 }
 
-func (ul *unsyncList) AddClaims(claims map[core.RecordRef][]consensus.ReferendumClaim, addressMap map[core.RecordRef]string) {
-	ul.addressMap = addressMap
+func (ul *unsyncList) AddClaims(claims map[core.RecordRef][]consensus.ReferendumClaim) error {
 	ul.claims = claims
 	ul.cache = nil
+	return nil
 }
 
-func (ul *unsyncList) CalculateHash() ([]byte, error) {
+func (ul *unsyncList) CalculateHash(scheme core.PlatformCryptographyScheme) ([]byte, error) {
 	if ul.cache != nil {
 		return ul.cache, nil
 	}
-	m := copyMap(ul.activeNodes)
-	ul.merge(m, ul.claims)
+	m, err := ul.getMergedNodeMap()
+	if err != nil {
+		return nil, errors.Wrap(err, "[ CalculateHash ] failed to merge a node map")
+	}
 	sorted := sortedNodeList(m)
-	var err error
-	ul.cache, err = CalculateHash(nil, sorted)
+	ul.cache, err = CalculateHash(scheme, sorted)
 	return ul.cache, err
 }
 
@@ -88,41 +148,36 @@ func (ul *unsyncList) GetActiveNodes() []core.Node {
 	return sortedNodeList(ul.activeNodes)
 }
 
-type adder func(core.Node)
-type deleter func(core.RecordRef)
+func (ul *unsyncList) getMergedNodeMap() (map[core.RecordRef]core.Node, error) {
+	nodes := copyMap(ul.activeNodes)
 
-func (ul *unsyncList) merge(nodes map[core.RecordRef]core.Node, claims map[core.RecordRef][]consensus.ReferendumClaim) {
-	addNode := func(node core.Node) {
-		nodes[node.ID()] = node
-	}
-	delNode := func(ref core.RecordRef) {
-		delete(nodes, ref)
-	}
-	ul.mergeWith(claims, addNode, delNode)
-}
-
-func (ul *unsyncList) mergeWith(claims map[core.RecordRef][]consensus.ReferendumClaim, addFunc adder, delFunc deleter) {
-	for _, claimList := range claims {
+	for _, claimList := range ul.claims {
 		for _, claim := range claimList {
-			ul.mergeClaim(claim, addFunc, delFunc)
+			err := ul.mergeClaim(nodes, claim)
+			if err != nil {
+				return nil, errors.Wrap(err, "[ getMergedNodeMap ] failed to merge a claim")
+			}
 		}
 	}
+
+	return nodes, nil
 }
 
-func (ul *unsyncList) mergeClaim(claim consensus.ReferendumClaim, addFunc adder, delFunc deleter) {
+func (ul *unsyncList) mergeClaim(nodes map[core.RecordRef]core.Node, claim consensus.ReferendumClaim) error {
 	switch t := claim.(type) {
 	case *consensus.NodeJoinClaim:
 		// TODO: fix version
-		node, err := claimToNode(ul.addressMap[t.NodeRef], "", t)
+		node, err := ClaimToNode("", t)
 		if err != nil {
-			log.Error("[ mergeClaim ] failed to convert Claim -> Node")
+			return errors.Wrap(err, "[ mergeClaim ] failed to convert Claim -> Node")
 		}
-		addFunc(node)
+		nodes[node.ID()] = node
 	case *consensus.NodeLeaveClaim:
 		// TODO: add node ID to node leave claim (only to struct, not packet)
-		// delFunc()
+		// delete(nodes, ref)
 		break
 	}
+	return nil
 }
 
 func sortedNodeList(nodes map[core.RecordRef]core.Node) []core.Node {
@@ -166,16 +221,19 @@ type sparseUnsyncList struct {
 	capacity int
 }
 
-func newSparseUnsyncList(capacity int) *sparseUnsyncList {
-	return &sparseUnsyncList{unsyncList: *newUnsyncList(nil), capacity: capacity}
+func newSparseUnsyncList(origin core.Node, capacity int) *sparseUnsyncList {
+	return &sparseUnsyncList{unsyncList: *newUnsyncList(origin, nil), capacity: capacity}
 }
 
 func (ul *sparseUnsyncList) Length() int {
 	return ul.capacity
 }
 
-func (ul *sparseUnsyncList) AddClaims(claims map[core.RecordRef][]consensus.ReferendumClaim, addressMap map[core.RecordRef]string) {
-	ul.unsyncList.AddClaims(claims, addressMap)
+func (ul *sparseUnsyncList) AddClaims(claims map[core.RecordRef][]consensus.ReferendumClaim) error {
+	err := ul.unsyncList.AddClaims(claims)
+	if err != nil {
+		return errors.Wrap(err, "[ AddClaims ] failed to add a claims")
+	}
 
 	for _, claimList := range claims {
 		for _, claim := range claimList {
@@ -189,26 +247,14 @@ func (ul *sparseUnsyncList) AddClaims(claims map[core.RecordRef][]consensus.Refe
 			}
 
 			// TODO: fix version
-			node, err := claimToNode(ul.addressMap[c.NodeRef], "", &c.NodeJoinClaim)
+			node, err := ClaimToNode("", &c.NodeJoinClaim)
 			if err != nil {
-				log.Error("[ AddClaims ] failed to convert Claim -> Node")
+				return errors.Wrap(err, "[ AddClaims ] failed to convert Claim -> Node")
 			}
-			ul.activeNodes[node.ID()] = node
+			// TODO: check these two
+			ul.addNode(node, int(c.NodeAnnouncerIndex))
+			ul.addNode(ul.origin, int(c.NodeJoinerIndex))
 		}
 	}
-}
-
-func claimToNode(address, version string, claim *consensus.NodeJoinClaim) (core.Node, error) {
-	keyProc := platformpolicy.NewKeyProcessor()
-	key, err := keyProc.ImportPublicKeyPEM(claim.NodePK[:])
-	if err != nil {
-		return nil, errors.Wrap(err, "[ ClaimToNode ] failed to import a public key")
-	}
-	node := NewNode(
-		claim.NodeRef,
-		core.StaticRole(int(claim.NodeRoleRecID)),
-		key,
-		address,
-		version)
-	return node, nil
+	return nil
 }

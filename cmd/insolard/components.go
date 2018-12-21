@@ -157,6 +157,8 @@ func initComponents(
 	err = logicRunner.OnPulse(ctx, *pulsar.NewPulse(cfg.Pulsar.NumberDelta, 0, &entropygenerator.StandardEntropyGenerator{}))
 	checkError(ctx, err, "failed init pulse for LogicRunner")
 
+	phaseManager := phases.NewPhaseManager()
+
 	cm := component.Manager{}
 	cm.Register(
 		platformCryptographyScheme,
@@ -190,6 +192,7 @@ func initComponents(
 		networkCoordinator,
 		phases.NewPhaseManager(),
 		cryptographyService,
+		phaseManager,
 	}...)
 
 	cm.Inject(components...)

@@ -22,15 +22,16 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/testutils/network"
 	"github.com/stretchr/testify/assert"
 )
 
-func onPulse(ctx context.Context, pulse core.Pulse) {
-}
-
+// TODO: write adequate tests instead of this imitation of work
 func TestGetFakePulse(t *testing.T) {
-	pulsar := NewFakePulsar(onPulse, 1000)
-	pulse := pulsar.GetFakePulse()
+	handler := network.PulseHandlerMock{}
+	handler.HandlePulseFunc = func(p context.Context, p1 core.Pulse) {}
+	pulsar := NewFakePulsar(&handler, 1000)
+	pulse := pulsar.newPulse()
 	assert.NotNil(t, pulse)
 	pulsar.pulseNum++
 	pulse2 := pulsar.GetFakePulse()
@@ -45,7 +46,9 @@ func TestGetFakePulse(t *testing.T) {
 }
 
 func TestFakePulsar_Start(t *testing.T) {
-	pulsar := NewFakePulsar(onPulse, 1000)
+	handler := network.PulseHandlerMock{}
+	handler.HandlePulseFunc = func(p context.Context, p1 core.Pulse) {}
+	pulsar := NewFakePulsar(&handler, 1000)
 	ctx := context.TODO()
 	pulsar.Start(ctx)
 	time.Sleep(time.Millisecond * 1100)
