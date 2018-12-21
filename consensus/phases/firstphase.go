@@ -59,13 +59,6 @@ type FirstPhase struct {
 func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPhaseState, error) {
 	entry := &merkle.PulseEntry{Pulse: pulse}
 
-	if fp.Calculator == nil {
-		panic("calculator is nil")
-	}
-
-	if fp.NodeNetwork == nil {
-		panic("NodeNetwork is nil")
-	}
 	pulseHash, pulseProof, err := fp.Calculator.GetPulseProof(entry)
 	if fp.NodeKeeper.GetState() == network.Ready {
 		fp.UnsyncList = fp.NodeKeeper.GetUnsyncList()
