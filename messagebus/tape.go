@@ -59,40 +59,6 @@ func newStorageTape(ls core.LocalStorage, pulse core.PulseNumber) (*storageTape,
 	return &storageTape{ls: ls, pulse: pulse, id: id}, nil
 }
 
-// newStorageTapeFromReader creates and fills a new storageTape from a stream.
-//
-// This is a very long operation, as it saves replies in storage until the stream is exhausted.
-func newStorageTapeFromReader(ctx context.Context, ls core.LocalStorage, r io.Reader) (*storageTape, error) {
-	var err error
-	tape := storageTape{ls: ls}
-
-	decoder := gob.NewDecoder(r)
-	err = decoder.Decode(&tape.pulse)
-	if err != nil {
-		return nil, err
-	}
-	err = decoder.Decode(&tape.id)
-	if err != nil {
-		return nil, err
-	}
-	for {
-		var rep core.KV
-		err = decoder.Decode(&rep)
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return nil, err
-		}
-		err = tape.setReplyBinary(ctx, rep.K, rep.V)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return &tape, nil
-}
-
 // Write writes all saved in tape replies to provided writer.
 func (t *storageTape) Write(ctx context.Context, w io.Writer) error {
 	var err error
