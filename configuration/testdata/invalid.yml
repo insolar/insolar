@@ -1,7 +1,7 @@
 invalid:
   most
     transport:
-      protocol: UTP
+      protocol: TCP
       address: 0.0.0.0:0
       behindnat: true
     bootstraphosts: []

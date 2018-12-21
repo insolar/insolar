@@ -106,7 +106,7 @@ type networkNode struct {
 
 func initCertificate(t *testing.T, nodes []certificate.BootstrapNode, key crypto.PublicKey, ref core.RecordRef) *certificate.CertificateManager {
 	proc := platformpolicy.NewKeyProcessor()
-	publicKey, err := proc.ExportPublicKey(key)
+	publicKey, err := proc.ExportPublicKeyPEM(key)
 	assert.NoError(t, err)
 	bytes.NewReader(publicKey)
 

@@ -752,10 +752,9 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 		require.Equal(t, o, obj)
 		require.Equal(t, p, *secondId)
 	}
-	recentStorageMock.AddObjectWithTLLFunc = func(p core.RecordID, ttl int, isMine bool) {
+	recentStorageMock.AddObjectWithTLLFunc = func(p core.RecordID, ttl int) {
 		require.Equal(t, p, *firstID)
 		require.Equal(t, 320, ttl)
-		require.Equal(t, true, isMine)
 	}
 	provideMock := recentstorage.NewProviderMock(t)
 	provideMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {

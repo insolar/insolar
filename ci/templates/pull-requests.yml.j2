@@ -18,13 +18,13 @@ resource_types:
     tag: latest
 
 resources:
-- name: lock
-  type: pool
-  source:
-    uri: git@github.com:insolar/locks.git
-    branch: master
-    pool: builds
-    private_key: ((meta.github.lock_key))
+#- name: lock
+#  type: pool
+#  source:
+#    uri: git@github.com:insolar/locks.git
+#    branch: master
+#    pool: builds
+#    private_key: ((meta.github.lock_key))
 - name: master
   type: git
   source:
@@ -56,17 +56,20 @@ jobs:
       state: pending
   - get: master
     trigger: true
-  - put: lock
-    params: {acquire: true}
+#  - put: lock
+#    params: {acquire: true}
   - get: pull-request-{{ pull.number }}
     trigger: true
   - task: unit
-    timeout: 10m
+    timeout: 20m
     config:
       platform: linux
       image_resource:
         type: docker-image
-        source: {repository: golang}
+        source: 
+          repository: registry.ins.world/builder
+          username: ((meta.registry.username))
+          password: ((meta.registry.password))
       inputs:
       - name: pull-request-{{ pull.number }}
         path: /go/src/github.com/insolar/insolar
@@ -78,7 +81,7 @@ jobs:
              echo tests
              pwd
              ls -alh go
-             export CGO_ENABLED=0
+             export CGO_ENABLED=1
              export GORACE="halt_on_error=1"
              export GOMAXPROCS=2
              export INSOLAR_LOG_LEVEL=debug
@@ -89,10 +92,13 @@ jobs:
              ls -alh
              env
              cd $GOPATH/src/github.com/insolar/insolar
-             make install-deps
+             #make install-deps
+             rm -Rf $GOPATH/src/github.com/insolar/insolar/vendor/* && mv /go/vendor $GOPATH/src/github.com/insolar/insolar/
              make pre-build
              make build
              make test_with_coverage
+             #CGO_ENABLED=1 go test -count 1 --coverprofile=coverage.txt --covermode=atomic ./...
+             make functest
     on_success:
       aggregate:
       - put: pull-request-{{ pull.number }}
@@ -111,7 +117,7 @@ jobs:
         params:
           silent: true
           text: ":new_moon_with_face: {{ pull.number }}, {{ pull.title }} $ATC_EXTERNAL_URL/teams/$BUILD_TEAM_NAME/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME"
-    ensure:
-      put: lock
-      params: {release: lock}
+#    ensure:
+#      put: lock
+#      params: {release: lock}
 {% endfor %}

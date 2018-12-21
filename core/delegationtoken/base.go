@@ -19,6 +19,8 @@
 package delegationtoken
 
 import (
+	"encoding/gob"
+
 	"github.com/insolar/insolar/core"
 	"github.com/pkg/errors"
 )
@@ -85,4 +87,11 @@ func (t *GetCodeRedirect) Type() core.DelegationTokenType {
 // Verify implementation of Token interface.
 func (t *GetCodeRedirect) Verify(parcel core.Parcel) (bool, error) {
 	panic("")
+}
+
+func init() {
+	gob.Register(PendingExecution{})
+	gob.Register(GetObjectRedirect{})
+	gob.Register(GetChildrenRedirect{})
+	gob.Register(GetCodeRedirect{})
 }

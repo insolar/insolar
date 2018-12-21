@@ -121,6 +121,9 @@ func setInfo() error {
 	if err != nil {
 		return errors.Wrapf(err, "[ setInfo ] couldn't unmarshall answer")
 	}
+	if infoResp.Error != nil {
+		return errors.New(fmt.Sprintf("[ setInfo ] error in get.Info request: %s", infoResp.Error))
+	}
 	info = infoResp.Result
 	return nil
 }

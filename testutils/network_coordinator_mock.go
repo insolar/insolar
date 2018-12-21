@@ -25,6 +25,11 @@ type NetworkCoordinatorMock struct {
 	GetCertPreCounter uint64
 	GetCertMock       mNetworkCoordinatorMockGetCert
 
+	IsStartedFunc       func() (r bool)
+	IsStartedCounter    uint64
+	IsStartedPreCounter uint64
+	IsStartedMock       mNetworkCoordinatorMockIsStarted
+
 	SetPulseFunc       func(p context.Context, p1 core.Pulse) (r error)
 	SetPulseCounter    uint64
 	SetPulsePreCounter uint64
@@ -50,6 +55,7 @@ func NewNetworkCoordinatorMock(t minimock.Tester) *NetworkCoordinatorMock {
 	}
 
 	m.GetCertMock = mNetworkCoordinatorMockGetCert{mock: m}
+	m.IsStartedMock = mNetworkCoordinatorMockIsStarted{mock: m}
 	m.SetPulseMock = mNetworkCoordinatorMockSetPulse{mock: m}
 	m.ValidateCertMock = mNetworkCoordinatorMockValidateCert{mock: m}
 	m.WriteActiveNodesMock = mNetworkCoordinatorMockWriteActiveNodes{mock: m}
@@ -203,6 +209,140 @@ func (m *NetworkCoordinatorMock) GetCertFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.GetCertFunc != nil {
 		return atomic.LoadUint64(&m.GetCertCounter) > 0
+	}
+
+	return true
+}
+
+type mNetworkCoordinatorMockIsStarted struct {
+	mock              *NetworkCoordinatorMock
+	mainExpectation   *NetworkCoordinatorMockIsStartedExpectation
+	expectationSeries []*NetworkCoordinatorMockIsStartedExpectation
+}
+
+type NetworkCoordinatorMockIsStartedExpectation struct {
+	result *NetworkCoordinatorMockIsStartedResult
+}
+
+type NetworkCoordinatorMockIsStartedResult struct {
+	r bool
+}
+
+//Expect specifies that invocation of NetworkCoordinator.IsStarted is expected from 1 to Infinity times
+func (m *mNetworkCoordinatorMockIsStarted) Expect() *mNetworkCoordinatorMockIsStarted {
+	m.mock.IsStartedFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &NetworkCoordinatorMockIsStartedExpectation{}
+	}
+
+	return m
+}
+
+//Return specifies results of invocation of NetworkCoordinator.IsStarted
+func (m *mNetworkCoordinatorMockIsStarted) Return(r bool) *NetworkCoordinatorMock {
+	m.mock.IsStartedFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &NetworkCoordinatorMockIsStartedExpectation{}
+	}
+	m.mainExpectation.result = &NetworkCoordinatorMockIsStartedResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of NetworkCoordinator.IsStarted is expected once
+func (m *mNetworkCoordinatorMockIsStarted) ExpectOnce() *NetworkCoordinatorMockIsStartedExpectation {
+	m.mock.IsStartedFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &NetworkCoordinatorMockIsStartedExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *NetworkCoordinatorMockIsStartedExpectation) Return(r bool) {
+	e.result = &NetworkCoordinatorMockIsStartedResult{r}
+}
+
+//Set uses given function f as a mock of NetworkCoordinator.IsStarted method
+func (m *mNetworkCoordinatorMockIsStarted) Set(f func() (r bool)) *NetworkCoordinatorMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.IsStartedFunc = f
+	return m.mock
+}
+
+//IsStarted implements github.com/insolar/insolar/core.NetworkCoordinator interface
+func (m *NetworkCoordinatorMock) IsStarted() (r bool) {
+	counter := atomic.AddUint64(&m.IsStartedPreCounter, 1)
+	defer atomic.AddUint64(&m.IsStartedCounter, 1)
+
+	if len(m.IsStartedMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.IsStartedMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to NetworkCoordinatorMock.IsStarted.")
+			return
+		}
+
+		result := m.IsStartedMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the NetworkCoordinatorMock.IsStarted")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.IsStartedMock.mainExpectation != nil {
+
+		result := m.IsStartedMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the NetworkCoordinatorMock.IsStarted")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.IsStartedFunc == nil {
+		m.t.Fatalf("Unexpected call to NetworkCoordinatorMock.IsStarted.")
+		return
+	}
+
+	return m.IsStartedFunc()
+}
+
+//IsStartedMinimockCounter returns a count of NetworkCoordinatorMock.IsStartedFunc invocations
+func (m *NetworkCoordinatorMock) IsStartedMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.IsStartedCounter)
+}
+
+//IsStartedMinimockPreCounter returns the value of NetworkCoordinatorMock.IsStarted invocations
+func (m *NetworkCoordinatorMock) IsStartedMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.IsStartedPreCounter)
+}
+
+//IsStartedFinished returns true if mock invocations count is ok
+func (m *NetworkCoordinatorMock) IsStartedFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.IsStartedMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.IsStartedCounter) == uint64(len(m.IsStartedMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.IsStartedMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.IsStartedCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.IsStartedFunc != nil {
+		return atomic.LoadUint64(&m.IsStartedCounter) > 0
 	}
 
 	return true
@@ -664,6 +804,10 @@ func (m *NetworkCoordinatorMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to NetworkCoordinatorMock.GetCert")
 	}
 
+	if !m.IsStartedFinished() {
+		m.t.Fatal("Expected call to NetworkCoordinatorMock.IsStarted")
+	}
+
 	if !m.SetPulseFinished() {
 		m.t.Fatal("Expected call to NetworkCoordinatorMock.SetPulse")
 	}
@@ -697,6 +841,10 @@ func (m *NetworkCoordinatorMock) MinimockFinish() {
 		m.t.Fatal("Expected call to NetworkCoordinatorMock.GetCert")
 	}
 
+	if !m.IsStartedFinished() {
+		m.t.Fatal("Expected call to NetworkCoordinatorMock.IsStarted")
+	}
+
 	if !m.SetPulseFinished() {
 		m.t.Fatal("Expected call to NetworkCoordinatorMock.SetPulse")
 	}
@@ -724,6 +872,7 @@ func (m *NetworkCoordinatorMock) MinimockWait(timeout time.Duration) {
 	for {
 		ok := true
 		ok = ok && m.GetCertFinished()
+		ok = ok && m.IsStartedFinished()
 		ok = ok && m.SetPulseFinished()
 		ok = ok && m.ValidateCertFinished()
 		ok = ok && m.WriteActiveNodesFinished()
@@ -737,6 +886,10 @@ func (m *NetworkCoordinatorMock) MinimockWait(timeout time.Duration) {
 
 			if !m.GetCertFinished() {
 				m.t.Error("Expected call to NetworkCoordinatorMock.GetCert")
+			}
+
+			if !m.IsStartedFinished() {
+				m.t.Error("Expected call to NetworkCoordinatorMock.IsStarted")
 			}
 
 			if !m.SetPulseFinished() {
@@ -764,6 +917,10 @@ func (m *NetworkCoordinatorMock) MinimockWait(timeout time.Duration) {
 func (m *NetworkCoordinatorMock) AllMocksCalled() bool {
 
 	if !m.GetCertFinished() {
+		return false
+	}
+
+	if !m.IsStartedFinished() {
 		return false
 	}
 

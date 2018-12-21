@@ -168,7 +168,7 @@ func (handler *Handler) ReceiveEntropy(request *Payload, response *Payload) erro
 
 	if btfCell, ok := handler.Pulsar.OwnedBftRow[request.PublicKey]; ok {
 
-		publicKey, err := handler.Pulsar.KeyProcessor.ImportPublicKey([]byte(request.PublicKey))
+		publicKey, err := handler.Pulsar.KeyProcessor.ImportPublicKeyPEM([]byte(request.PublicKey))
 		if err != nil {
 			inslog.Errorf("[ReceiveEntropy] %v", err)
 			return err
@@ -234,7 +234,7 @@ func (handler *Handler) ReceiveChosenSignature(request *Payload, response *Paylo
 		return fmt.Errorf("processing pulse number is bigger than received one")
 	}
 
-	publicKey, err := handler.Pulsar.KeyProcessor.ImportPublicKey([]byte(request.PublicKey))
+	publicKey, err := handler.Pulsar.KeyProcessor.ImportPublicKeyPEM([]byte(request.PublicKey))
 	if err != nil {
 		inslog.Errorf("[ReceiveEntropy] %v", err)
 		return err

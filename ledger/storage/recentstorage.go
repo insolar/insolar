@@ -59,8 +59,7 @@ type RecentStorage struct {
 }
 
 type recentObjectMeta struct {
-	isMine bool
-	ttl    int
+	ttl int
 }
 
 // NewRecentStorage creates default RecentStorage object
@@ -74,12 +73,12 @@ func NewRecentStorage(defaultTTL int) *RecentStorage {
 }
 
 // AddObject adds object to cache
-func (r *RecentStorage) AddObject(id core.RecordID, isMine bool) {
-	r.AddObjectWithTLL(id, r.DefaultTTL, isMine)
+func (r *RecentStorage) AddObject(id core.RecordID) {
+	r.AddObjectWithTLL(id, r.DefaultTTL)
 }
 
 // AddObjectWithTLL adds object with specified TTL to the cache
-func (r *RecentStorage) AddObjectWithTLL(id core.RecordID, ttl int, isMine bool) {
+func (r *RecentStorage) AddObjectWithTLL(id core.RecordID, ttl int) {
 	r.objectLock.Lock()
 	defer r.objectLock.Unlock()
 	r.recentObjects[id] = &recentObjectMeta{ttl: r.DefaultTTL}
@@ -108,15 +107,6 @@ func (r *RecentStorage) RemovePendingRequest(obj, req core.RecordID) {
 	if len(r.pendingRequests[obj]) == 0 {
 		delete(r.pendingRequests, obj)
 	}
-}
-
-// IsMine checks mine-status of an object
-func (r *RecentStorage) IsMine(id core.RecordID) bool {
-	r.objectLock.Lock()
-	defer r.objectLock.Unlock()
-
-	val, ok := r.recentObjects[id]
-	return ok && val.isMine
 }
 
 // GetObjects returns object hot-indexes.

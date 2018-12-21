@@ -33,6 +33,7 @@ type NetworkCoordinator struct {
 
 	realCoordinator Coordinator
 	zeroCoordinator Coordinator
+	isStarted       bool
 }
 
 // New creates new NetworkCoordinator
@@ -51,6 +52,7 @@ func (nc *NetworkCoordinator) Start(ctx context.Context) error {
 		nc.MessageBus,
 		nc.CS,
 	)
+	nc.isStarted = true
 	return nil
 }
 
@@ -59,6 +61,11 @@ func (nc *NetworkCoordinator) getCoordinator() Coordinator {
 		return nc.realCoordinator
 	}
 	return nc.zeroCoordinator
+}
+
+// IsStarted returns true if component was started and false in other way
+func (nc *NetworkCoordinator) IsStarted() bool {
+	return nc.isStarted
 }
 
 // GetCert method returns node certificate by requesting sign from discovery nodes

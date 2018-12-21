@@ -37,7 +37,7 @@ func TestPreparePayloadAndCheckIt(t *testing.T) {
 
 	pubKey, err := cryptoService.GetPublicKey()
 	require.NoError(t, err)
-	pubKeyRaw, err := keyProcessor.ExportPublicKey(pubKey)
+	pubKeyRaw, err := keyProcessor.ExportPublicKeyPEM(pubKey)
 	require.NoError(t, err)
 
 	pulsar := Pulsar{
