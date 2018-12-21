@@ -205,8 +205,8 @@ func (e *serializableError) Error() string {
 func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Reply, error) {
 	defer func() {
 		scope := newReaderScope(&mb.globalLock)
-		scope.Lock(ctx, "Sending parcel ... (test)")
-		scope.Unlock(ctx, "Sending parcel done")
+		scope.Lock(ctx, "doDeliver: lock")
+		scope.Unlock(ctx, "doDeliver: unlock")
 	}()
 	inslogger.FromContext(ctx).Debug("MessageBus.doDeliver starts ...")
 	handler, ok := mb.handlers[msg.Type()]
