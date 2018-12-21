@@ -150,6 +150,9 @@ func (m *middleware) fetchJet(
 		&message.GetJet{Object: target},
 		&core.MessageSendOptions{Receiver: prevExecutor},
 	)
+	if err != nil {
+		return nil, err
+	}
 	r, ok := rep.(*reply.Jet)
 	if !ok {
 		return nil, ErrUnexpectedReply
