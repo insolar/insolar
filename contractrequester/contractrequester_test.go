@@ -79,10 +79,11 @@ func TestContractRequester_SendRequest(t *testing.T) {
 			cReq.ResultMutex.Unlock()
 			runtime.Gosched()
 		}
+
 		cReq.ResultMutex.Lock()
 		for k, v := range cReq.ResultMap {
 			v <- &message.ReturnResults{
-				Request: k,
+				Sequence: k,
 				Reply:   &reply.CallMethod{},
 			}
 		}
@@ -118,7 +119,7 @@ func TestContractRequester_SendRequest_RouteError(t *testing.T) {
 		cReq.ResultMutex.Lock()
 		for k, v := range cReq.ResultMap {
 			v <- &message.ReturnResults{
-				Request: k,
+				Sequence: k,
 				Reply:   nil,
 			}
 		}
