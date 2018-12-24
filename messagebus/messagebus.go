@@ -46,6 +46,7 @@ type MessageBus struct {
 	CryptographyService        core.CryptographyService        `inject:""`
 	DelegationTokenFactory     core.DelegationTokenFactory     `inject:""`
 	ParcelFactory              message.ParcelFactory           `inject:""`
+	PulseStorage               core.PulseStorage               `inject:""`
 
 	handlers     map[core.MessageType]core.MessageHandler
 	signmessages bool
@@ -73,7 +74,7 @@ func (mb *MessageBus) NewPlayer(ctx context.Context, reader io.Reader) (core.Mes
 	if err != nil {
 		return nil, err
 	}
-	pl := newPlayer(mb, tape, mb.PlatformCryptographyScheme)
+	pl := newPlayer(mb, tape, mb.PlatformCryptographyScheme, mb.PulseStorage)
 	return pl, nil
 }
 
@@ -82,7 +83,7 @@ func (mb *MessageBus) NewPlayer(ctx context.Context, reader io.Reader) (core.Mes
 // Recorder can be created from MessageBus and passed as MessageBus instance.
 func (mb *MessageBus) NewRecorder(ctx context.Context, currentPulse core.Pulse) (core.MessageBus, error) {
 	tape := newMemoryTape(currentPulse.PulseNumber)
-	rec := newRecorder(mb, tape, mb.PlatformCryptographyScheme)
+	rec := newRecorder(mb, tape, mb.PlatformCryptographyScheme, mb.PulseStorage)
 	return rec, nil
 }
 
@@ -132,13 +133,18 @@ func (mb *MessageBus) MustRegister(p core.MessageType, handler core.MessageHandl
 }
 
 // Send an `Message` and get a `Value` or error from remote host.
-func (mb *MessageBus) Send(ctx context.Context, msg core.Message, currentPulse core.Pulse, ops *core.MessageSendOptions) (core.Reply, error) {
-	parcel, err := mb.CreateParcel(ctx, msg, ops.Safe().Token, currentPulse)
+func (mb *MessageBus) Send(ctx context.Context, msg core.Message, ops *core.MessageSendOptions) (core.Reply, error) {
+	currentPulse, err := mb.PulseStorage.Current(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	return mb.SendParcel(ctx, parcel, currentPulse, ops)
+	parcel, err := mb.CreateParcel(ctx, msg, ops.Safe().Token, *currentPulse)
+	if err != nil {
+		return nil, err
+	}
+
+	return mb.SendParcel(ctx, parcel, *currentPulse, ops)
 }
 
 // CreateParcel creates signed message from provided message.
@@ -153,9 +159,7 @@ func (mb *MessageBus) SendParcel(
 	currentPulse core.Pulse,
 	options *core.MessageSendOptions,
 ) (core.Reply, error) {
-	scope := newReaderScope(&mb.globalLock)
-	scope.Lock(ctx, "Sending parcel ...")
-	scope.Unlock(ctx, "Sending parcel done")
+	readBarrier(ctx, &mb.globalLock)
 
 	var nodes []core.RecordRef
 	if options != nil && options.Receiver != nil {
@@ -203,11 +207,9 @@ func (e *serializableError) Error() string {
 }
 
 func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Reply, error) {
-	defer func() {
-		scope := newReaderScope(&mb.globalLock)
-		scope.Lock(ctx, "doDeliver: lock")
-		scope.Unlock(ctx, "doDeliver: unlock")
-	}()
+	// We must check barrier just before exiting function
+	// to deliver reply right after pulse switches if it is switching right now.
+	defer readBarrier(ctx, &mb.globalLock)
 	inslogger.FromContext(ctx).Debug("MessageBus.doDeliver starts ...")
 	handler, ok := mb.handlers[msg.Type()]
 	if !ok {
@@ -215,6 +217,7 @@ func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Repl
 	}
 
 	ctx = hack.SetSkipValidation(ctx, true)
+	// TODO: sergey.morozov 2018-12-21 there is potential race condition because of readBarrier. We must implement correct locking.
 	resp, err := handler(ctx, msg)
 	if err != nil {
 		return nil, &serializableError{
@@ -240,13 +243,12 @@ func (mb *MessageBus) deliver(ctx context.Context, args [][]byte) (result []byte
 	parcelCtx := parcel.Context(ctx)
 	inslogger.FromContext(ctx).Debugf("MessageBus.deliver after deserialize msg. Msg Type: %s", parcel.Type())
 
-	scope := newReaderScope(&mb.globalLock)
-	scope.Lock(ctx, "Delivering ...")
-	scope.Unlock(ctx, "Delivering done")
-
-	if err := mb.checkParcel(parcelCtx, parcel); err != nil {
+	mb.globalLock.RLock()
+	if err = mb.checkParcel(parcelCtx, parcel); err != nil {
+		mb.globalLock.RUnlock()
 		return nil, err
 	}
+	mb.globalLock.RUnlock()
 
 	resp, err := mb.doDeliver(parcelCtx, parcel)
 	if err != nil {
@@ -308,27 +310,14 @@ func (mb *MessageBus) checkParcel(ctx context.Context, parcel core.Parcel) error
 	return nil
 }
 
+func readBarrier(ctx context.Context, mutex *sync.RWMutex) {
+	inslogger.FromContext(ctx).Debug("Locking readBarrier")
+	mutex.RLock()
+	inslogger.FromContext(ctx).Debug("readBarrier locked")
+	mutex.RUnlock()
+	inslogger.FromContext(ctx).Debug("readBarrier unlocked")
+}
+
 func init() {
 	gob.Register(&serializableError{})
-}
-
-type readerScope struct {
-	mutex *sync.RWMutex
-}
-
-func newReaderScope(mutex *sync.RWMutex) *readerScope {
-	return &readerScope{
-		mutex: mutex,
-	}
-}
-
-func (rs *readerScope) Lock(ctx context.Context, info string) {
-	inslogger.FromContext(ctx).Info(info)
-	rs.mutex.RLock()
-}
-
-// Unlock unlocks scope if it locked. Do nothing if scope already unlocked.
-func (rs *readerScope) Unlock(ctx context.Context, info string) {
-	inslogger.FromContext(ctx).Info(info)
-	rs.mutex.RUnlock()
 }

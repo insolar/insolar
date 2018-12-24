@@ -37,6 +37,7 @@ const (
 
 type IBaseLogicMessage interface {
 	core.Message
+	GetBaseLogicMessage() *BaseLogicMessage
 	GetReference() core.RecordRef
 	GetRequest() core.RecordRef
 	GetCallerPrototype() *core.RecordRef
@@ -48,6 +49,11 @@ type BaseLogicMessage struct {
 	Request         core.RecordRef
 	CallerPrototype core.RecordRef
 	Nonce           uint64
+	Sequence        uint64
+}
+
+func (m *BaseLogicMessage) GetBaseLogicMessage() *BaseLogicMessage {
+	return m
 }
 
 func (m *BaseLogicMessage) Type() core.MessageType {
@@ -87,7 +93,7 @@ func (m *BaseLogicMessage) GetRequest() core.RecordRef {
 type ReturnResults struct {
 	Target  core.RecordRef
 	Caller  core.RecordRef
-	Request core.RecordRef
+	Sequence uint64
 	Reply   core.Reply
 	Error   string
 }
@@ -252,7 +258,7 @@ type ValidateCaseBind struct {
 }
 
 type CaseBindRequest struct {
-	Message        core.Message
+	Parcel         core.Parcel
 	Request        core.RecordRef
 	MessageBusTape []byte
 	Reply          core.Reply

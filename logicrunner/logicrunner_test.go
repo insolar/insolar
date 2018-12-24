@@ -28,7 +28,6 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/contractrequester"
-
 	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/logicrunner/goplugin"
@@ -120,7 +119,6 @@ func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *gop
 	nk := nodekeeper.GetTestNodekeeper(mock)
 
 	mb := testmessagebus.NewTestMessageBus(t)
-	mb.PulseNumber = 0
 
 	nw := network.GetTestNetwork()
 	// FIXME: TmpLedger is deprecated. Use mocks instead.
@@ -161,8 +159,6 @@ func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *gop
 		true,
 	)
 	require.NoError(t, err)
-
-	mb.PulseNumber = newPulseNumber
 
 	assert.NoError(t, err)
 	if err != nil {
