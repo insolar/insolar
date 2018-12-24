@@ -18,9 +18,7 @@ package fakepulsar
 
 import (
 	"context"
-	"encoding/binary"
 	"math"
-	"math/rand"
 	"sync"
 	"time"
 
@@ -45,15 +43,22 @@ type FakePulsar struct {
 	firstPulseTime int64
 	pulseNum       int64
 	mut            sync.Mutex
+	entropy        core.Entropy
 }
 
 // NewFakePulsar creates and returns a new FakePulsar.
 func NewFakePulsar(callback network.PulseHandler, timeoutMs int32) *FakePulsar {
+	tmp := make([]byte, core.EntropySize)
+	var entropy core.Entropy
+	copy(entropy[:], tmp[:core.EntropySize])
 	return &FakePulsar{
-		onPulse:   callback,
-		timeoutMs: timeoutMs,
-		stop:      make(chan bool, 1),
-		running:   false,
+		onPulse:        callback,
+		timeoutMs:      timeoutMs,
+		stop:           make(chan bool, 1),
+		running:        false,
+		firstPulseTime: time.Now().UTC().Unix(),
+		entropy:        entropy,
+		pulseNum:       0,
 	}
 }
 
@@ -108,16 +113,11 @@ func (fp *FakePulsar) Stopped() bool {
 }
 
 func (fp *FakePulsar) newPulse() *core.Pulse {
-	rand.Seed(fp.pulseNum)
-	tmp := make([]byte, core.EntropySize)
-	binary.BigEndian.PutUint64(tmp, rand.Uint64())
-	var entropy core.Entropy
-	copy(entropy[:], tmp[:core.EntropySize])
 	return &core.Pulse{
 		EpochPulseNumber: -1,
 		PulseNumber:      core.PulseNumber(fp.pulseNum),
 		NextPulseNumber:  core.PulseNumber(fp.pulseNum + 1),
-		Entropy:          entropy,
+		Entropy:          fp.entropy,
 	}
 }
 
