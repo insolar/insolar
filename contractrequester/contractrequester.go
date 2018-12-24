@@ -37,13 +37,14 @@ type ContractRequester struct {
 	MessageBus   core.MessageBus   `inject:""`
 	PulseStorage core.PulseStorage `inject:""`
 	ResultMutex  sync.Mutex
-	ResultMap    map[core.RecordRef]chan *message.ReturnResults
+	ResultMap    map[uint64]chan *message.ReturnResults
+	Sequence     uint64
 }
 
 // New creates new ContractRequester
 func New() (*ContractRequester, error) {
 	return &ContractRequester{
-		ResultMap: make(map[core.RecordRef]chan *message.ReturnResults),
+		ResultMap: make(map[uint64]chan *message.ReturnResults),
 	}, nil
 }
 
@@ -110,7 +111,25 @@ func (cr *ContractRequester) CallMethod(ctx context.Context, base core.Message, 
 		msg.ProxyPrototype = *mustPrototype
 	}
 
-	// <<<<<<< Updated upstream
+	// <<<<<<< HEAD
+	//	<<<<<<< Updated upstream
+	// =======
+	var seq uint64
+	var ch chan *message.ReturnResults
+
+	if !async {
+		cr.ResultMutex.Lock()
+
+		cr.Sequence++
+		seq = cr.Sequence
+		msg.Sequence = seq
+		ch = make(chan *message.ReturnResults, 1)
+		cr.ResultMap[seq] = ch
+
+		cr.ResultMutex.Unlock()
+	}
+
+	// >>>>>>> 7a186f3e231d2813f6ee9ce345148581008356d4
 	res, err := mb.Send(ctx, msg, nil)
 	// =======
 	currentSlotPulse, err := cr.PulseStorage.Current(ctx)
@@ -135,12 +154,8 @@ func (cr *ContractRequester) CallMethod(ctx context.Context, base core.Message, 
 
 	if async {
 		return res, nil
-
 	}
-	cr.ResultMutex.Lock()
-	ch := make(chan *message.ReturnResults)
-	cr.ResultMap[r.Request] = ch
-	cr.ResultMutex.Unlock()
+
 	inslogger.FromContext(ctx).Debug("Waiting for Method results ref=", r.Request)
 
 	select {
@@ -160,7 +175,7 @@ func (cr *ContractRequester) CallMethod(ctx context.Context, base core.Message, 
 		}, nil
 	case <-ctx.Done():
 		cr.ResultMutex.Lock()
-		delete(cr.ResultMap, r.Request)
+		delete(cr.ResultMap, seq)
 		cr.ResultMutex.Unlock()
 		return nil, errors.New("canceled")
 	}
@@ -188,6 +203,20 @@ func (cr *ContractRequester) CallConstructor(ctx context.Context, base core.Mess
 		SaveAs:           message.SaveAs(saveAs),
 	}
 
+	var seq uint64
+	var ch chan *message.ReturnResults
+	if !async {
+		cr.ResultMutex.Lock()
+
+		cr.Sequence++
+		seq = cr.Sequence
+		msg.Sequence = seq
+		ch = make(chan *message.ReturnResults, 1)
+		cr.ResultMap[seq] = ch
+
+		cr.ResultMutex.Unlock()
+	}
+
 	res, err := mb.Send(ctx, msg, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't save new object as delegate")
@@ -202,11 +231,7 @@ func (cr *ContractRequester) CallConstructor(ctx context.Context, base core.Mess
 		return &r.Request, nil
 	}
 
-	cr.ResultMutex.Lock()
-	ch := make(chan *message.ReturnResults)
-	cr.ResultMap[r.Request] = ch
-	cr.ResultMutex.Unlock()
-	inslogger.FromContext(ctx).Debug("Waiting for constructor results ref=", r.Request)
+	inslogger.FromContext(ctx).Debug("Waiting for constructor results req=", r.Request, " seq=", seq)
 
 	select {
 	case ret := <-ch:
@@ -216,9 +241,11 @@ func (cr *ContractRequester) CallConstructor(ctx context.Context, base core.Mess
 		}
 		return &r.Request, nil
 	case <-ctx.Done():
+
 		cr.ResultMutex.Lock()
-		delete(cr.ResultMap, r.Request)
+		delete(cr.ResultMap, seq)
 		cr.ResultMutex.Unlock()
+
 		return nil, errors.New("canceled")
 	}
 }
@@ -231,15 +258,16 @@ func (cr *ContractRequester) ReceiveResult(ctx context.Context, parcel core.Parc
 
 	cr.ResultMutex.Lock()
 	defer cr.ResultMutex.Unlock()
+
 	log := inslogger.FromContext(ctx)
-	c, ok := cr.ResultMap[msg.Request]
+	c, ok := cr.ResultMap[msg.Sequence]
 	if !ok {
-		log.Info("oops unwaited results ref=", msg.Request)
+		log.Info("oops unwaited results seq=", msg.Sequence)
 		return &reply.OK{}, nil
 	}
-	inslogger.FromContext(ctx).Debug("Got wanted results ref=", msg.Request)
+	inslogger.FromContext(ctx).Debug("Got wanted results seq=", msg.Sequence)
 
 	c <- msg
-	delete(cr.ResultMap, msg.Request)
+	delete(cr.ResultMap, msg.Sequence)
 	return &reply.OK{}, nil
 }

@@ -33,7 +33,7 @@ import (
 )
 
 type CaseRequest struct {
-	Message    core.Message
+	Parcel     core.Parcel
 	Request    core.RecordRef
 	MessageBus core.MessageBus
 	Reply      core.Reply
@@ -59,7 +59,7 @@ func NewCaseBindFromValidateMessage(ctx context.Context, mb core.MessageBus, msg
 			panic("couldn't read tape: " + err.Error())
 		}
 		res.Requests[i] = CaseRequest{
-			Message:    req.Message,
+			Parcel:     req.Parcel,
 			Request:    req.Request,
 			MessageBus: mb,
 			Reply:      req.Reply,
@@ -87,7 +87,7 @@ func (cb *CaseBind) getCaseBindForMessage(ctx context.Context) []message.CaseBin
 			panic("couldn't write tape: " + err.Error())
 		}
 		requests[i] = message.CaseBindRequest{
-			Message:        req.Message,
+			Parcel:         req.Parcel,
 			Request:        req.Request,
 			MessageBusTape: tape.Bytes(),
 			Reply:          req.Reply,
@@ -107,9 +107,9 @@ func (cb *CaseBind) ToValidateMessage(ctx context.Context, ref Ref, pulse core.P
 	return res
 }
 
-func (cb *CaseBind) NewRequest(msg core.Message, request Ref, mb core.MessageBus) *CaseRequest {
+func (cb *CaseBind) NewRequest(p core.Parcel, request Ref, mb core.MessageBus) *CaseRequest {
 	res := CaseRequest{
-		Message:    msg,
+		Parcel:     p,
 		Request:    request,
 		MessageBus: mb,
 	}
@@ -142,14 +142,6 @@ func (r *CaseBindReplay) NextRequest() *CaseRequest {
 	return &r.CaseBind.Requests[r.Request]
 }
 
-func HashInterface(scheme core.PlatformCryptographyScheme, in interface{}) []byte {
-	s, err := core.Serialize(in)
-	if err != nil {
-		panic("Can't marshal: " + err.Error())
-	}
-	return scheme.IntegrityHasher().Hash(s)
-}
-
 func (lr *LogicRunner) Validate(ctx context.Context, ref Ref, p core.Pulse, cb CaseBind) (int, error) {
 	os := lr.UpsertObjectState(ref)
 	vs := os.StartValidation()
@@ -170,25 +162,25 @@ func (lr *LogicRunner) Validate(ctx context.Context, ref Ref, p core.Pulse, cb C
 			break
 		}
 
-		msg := request.Message
-		parcel, err := lr.ParcelFactory.Create(ctx, msg, ref, nil, *core.GenesisPulse)
-		if err != nil {
-			return 0, errors.New("failed to create a parcel")
-		}
-
 		traceID := "TODO" // FIXME
 
 		ctx = inslogger.ContextWithTrace(ctx, traceID)
 		ctx = core.ContextWithMessageBus(ctx, request.MessageBus)
 
+		sender := request.Parcel.GetSender()
 		vs.Current = &CurrentExecution{
-			Context: ctx,
-			Request: &request.Request,
+			Context:       ctx,
+			Request:       &request.Request,
+			RequesterNode: &sender,
 		}
 
-		reply, err := lr.executeOrValidate(ctx, vs, parcel)
+		rep, err := func() (core.Reply, error) {
+			vs.Unlock()
+			defer vs.Lock()
+			return lr.executeOrValidate(ctx, vs, request.Parcel)
+		}()
 
-		err = vs.Behaviour.Result(reply, err)
+		err = vs.Behaviour.Result(rep, err)
 		if err != nil {
 			return 0, errors.Wrap(err, "validation step failed")
 		}
@@ -277,8 +269,8 @@ func (vb *ValidationSaver) Mode() string {
 	return "execution"
 }
 
-func (vb *ValidationSaver) NewRequest(msg core.Message, request Ref, mb core.MessageBus) {
-	vb.current = vb.caseBind.NewRequest(msg, request, mb)
+func (vb *ValidationSaver) NewRequest(p core.Parcel, request Ref, mb core.MessageBus) {
+	vb.current = vb.caseBind.NewRequest(p, request, mb)
 }
 
 func (vb *ValidationSaver) Result(reply core.Reply, err error) error {

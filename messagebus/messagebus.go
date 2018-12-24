@@ -77,7 +77,7 @@ func (mb *MessageBus) NewPlayer(ctx context.Context, reader io.Reader) (core.Mes
 	if err != nil {
 		return nil, err
 	}
-	pl := newPlayer(mb, tape, mb.PlatformCryptographyScheme)
+	pl := newPlayer(mb, tape, mb.PlatformCryptographyScheme, mb.PulseStorage)
 	return pl, nil
 }
 
@@ -86,7 +86,7 @@ func (mb *MessageBus) NewPlayer(ctx context.Context, reader io.Reader) (core.Mes
 // Recorder can be created from MessageBus and passed as MessageBus instance.
 func (mb *MessageBus) NewRecorder(ctx context.Context, currentPulse core.Pulse) (core.MessageBus, error) {
 	tape := newMemoryTape(currentPulse.PulseNumber)
-	rec := newRecorder(mb, tape, mb.PlatformCryptographyScheme)
+	rec := newRecorder(mb, tape, mb.PlatformCryptographyScheme, mb.PulseStorage)
 	return rec, nil
 }
 
@@ -232,6 +232,7 @@ func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Repl
 	}
 
 	ctx = hack.SetSkipValidation(ctx, true)
+	// TODO: sergey.morozov 2018-12-21 there is potential race condition because of readBarrier. We must implement correct locking.
 	resp, err := handler(ctx, msg)
 	if err != nil {
 		return nil, &serializableError{
@@ -257,20 +258,17 @@ func (mb *MessageBus) deliver(ctx context.Context, args [][]byte) (result []byte
 	parcelCtx := parcel.Context(ctx)
 	inslogger.FromContext(ctx).Debugf("MessageBus.deliver after deserialize msg. Msg Type: %s", parcel.Type())
 
-	scope := newReaderScope(&mb.globalLock)
-	scope.Lock(ctx, "Delivering ...")
-	defer scope.Unlock(ctx, "Delivering done")
-
-	if err := mb.checkParcel(parcelCtx, parcel); err != nil {
+	mb.globalLock.RLock()
+	if err = mb.checkParcel(parcelCtx, parcel); err != nil {
+		mb.globalLock.RUnlock()
 		return nil, err
 	}
+	mb.globalLock.RUnlock()
 
 	resp, err := mb.doDeliver(parcelCtx, parcel)
 	if err != nil {
 		return nil, err
 	}
-
-	scope.Unlock(ctx, "Delivering done")
 
 	rd, err := reply.Serialize(resp)
 	if err != nil {

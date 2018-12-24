@@ -139,6 +139,10 @@ func (m *PulseManager) processEndPulse(
 			if dropErr != nil {
 				return errors.Wrap(dropErr, "processDrop failed")
 			}
+
+			// TODO: @andreyromancev. 20.12.18. uncomment me when pending notifications required.
+			// m.sendAbandonedRequests(ctx, newPulse, jetID)
+
 			return nil
 		})
 	}
@@ -156,6 +160,36 @@ func (m *PulseManager) processEndPulse(
 	}
 	return nil
 }
+
+// TODO: @andreyromancev. 20.12.18. uncomment me when pending notifications required.
+// func (m *PulseManager) sendAbandonedRequests(ctx context.Context, pulse *core.Pulse, jetID core.RecordID) {
+// 	pendingRequests := m.RecentStorageProvider.GetStorage(jetID).GetRequests()
+// 	wg := sync.WaitGroup{}
+// 	wg.Add(len(pendingRequests))
+// 	for objID, requests := range pendingRequests {
+// 		go func(object core.RecordID, objectRequests map[core.RecordID]struct{}) {
+// 			defer wg.Done()
+//
+// 			var toSend []core.RecordID
+// 			for reqID := range objectRequests {
+// 				toSend = append(toSend, reqID)
+// 			}
+// 			rep, err := m.Bus.Send(ctx, &message.AbandonedRequestsNotification{
+// 				Object:   object,
+// 				Requests: toSend,
+// 			}, *pulse, nil)
+// 			if err != nil {
+// 				inslogger.FromContext(ctx).Error("failed to notify about pending requests")
+// 				return
+// 			}
+// 			if _, ok := rep.(*reply.OK); !ok {
+// 				inslogger.FromContext(ctx).Error("received unexpected reply on pending notification")
+// 			}
+// 		}(objID, requests)
+// 	}
+//
+// 	wg.Wait()
+// }
 
 func (m *PulseManager) createDrop(
 	ctx context.Context,

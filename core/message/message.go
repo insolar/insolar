@@ -23,6 +23,8 @@ import (
 	"io"
 	"io/ioutil"
 
+	"github.com/ugorji/go/codec"
+
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/core"
@@ -71,6 +73,8 @@ func getEmptyMessage(mt core.MessageType) (core.Message, error) {
 		return &ValidationCheck{}, nil
 	case core.TypeGetPendingRequests:
 		return &GetPendingRequests{}, nil
+	case core.TypeAbandonedRequestsNotification:
+		return &AbandonedRequestsNotification{}, nil
 
 	// heavy sync
 	case core.TypeHeavyStartStop:
@@ -113,8 +117,8 @@ func Serialize(msg core.Message) (io.Reader, error) {
 		return nil, err
 	}
 
-	enc := gob.NewEncoder(buff)
-	err = enc.Encode(msg)
+	enc := codec.NewEncoder(buff, &codec.CborHandle{})
+	enc.MustEncode(msg)
 	return buff, err
 }
 
@@ -130,7 +134,7 @@ func Deserialize(buff io.Reader) (core.Parcel, error) {
 	if err != nil {
 		return nil, err
 	}
-	enc := gob.NewDecoder(buff)
+	enc := codec.NewDecoder(buff, &codec.CborHandle{})
 	if err = enc.Decode(msg); err != nil {
 		return nil, err
 	}
@@ -205,6 +209,7 @@ func init() {
 	gob.Register(&ValidateRecord{})
 	gob.Register(&ValidationCheck{})
 	gob.Register(&GetPendingRequests{})
+	gob.Register(&AbandonedRequestsNotification{})
 
 	// heavy
 	gob.Register(&HeavyStartStop{})
