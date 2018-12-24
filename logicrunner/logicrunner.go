@@ -610,14 +610,14 @@ func (lr *LogicRunner) executeOrValidate(
 		_, err = core.MessageBusFromContext(ctx, nil).Send(
 			ctx,
 			&message.ReturnResults{
-				Caller:  lr.NodeNetwork.GetOrigin().ID(),
-				Target:  target,
+				Caller:   lr.NodeNetwork.GetOrigin().ID(),
+				Target:   target,
 				Sequence: seq,
-				Reply:   re,
-				Error:   errstr,
+				Reply:    re,
+				Error:    errstr,
 			},
 			&core.MessageSendOptions{
-			Receiver: &target,
+				Receiver: &target,
 			},
 		)
 		if err != nil {
@@ -876,11 +876,11 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 			requests := caseBind.getCaseBindForMessage(ctx)
 			messages = append(
 				messages,
-				&message.ValidateCaseBind{
-					RecordRef: ref,
-					Requests:  requests,
-					Pulse:     pulse,
-				},
+				//&message.ValidateCaseBind{
+				//	RecordRef: ref,
+				//	Requests:  requests,
+				//	Pulse:     pulse,
+				//},
 				&message.ExecutorResults{
 					RecordRef: ref,
 					Pending:   es.pending == InPending,
@@ -931,7 +931,7 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 	return nil
 }
 
-func (lr *LogicRunner) sendOnPulseMessagesAsync(ctx context.Context, msg core.Message,sendWg *sync.WaitGroup, errChan *chan error) {
+func (lr *LogicRunner) sendOnPulseMessagesAsync(ctx context.Context, msg core.Message, sendWg *sync.WaitGroup, errChan *chan error) {
 	defer sendWg.Done()
 	_, err := lr.MessageBus.Send(ctx, msg, nil)
 	*errChan <- err
