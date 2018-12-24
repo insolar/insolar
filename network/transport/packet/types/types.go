@@ -44,9 +44,4 @@ const (
 	Challenge2
 	// Disconnect is packet type to gracefully disconnect from network.
 	Disconnect
-
-	// FakePulsarRequest is a request for fake pulsar
-	FakePulsarRequest
-	// FakePulsarRequest is a response from fake pulsar
-	FakePulsarResponse
 )

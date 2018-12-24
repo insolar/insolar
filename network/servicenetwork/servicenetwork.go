@@ -156,7 +156,6 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "Failed to bootstrap network")
 	}
-
 	n.fakePulsar.Start(ctx)
 	log.Info("----- ServiceNetwork started ------")
 	return nil
