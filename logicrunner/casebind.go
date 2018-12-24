@@ -196,7 +196,7 @@ func (lr *LogicRunner) ValidateCaseBind(ctx context.Context, inmsg core.Parcel) 
 
 	err := lr.CheckOurRole(ctx, msg, core.DynamicRoleVirtualValidator)
 	if err != nil {
-		return nil, errors.Wrap(err, "can't play role")
+		return nil, errors.Wrap(err, "[ ValidateCaseBind ] can't play role")
 	}
 
 	passedStepsCount, validationError := lr.Validate(

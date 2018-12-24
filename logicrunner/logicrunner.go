@@ -344,7 +344,7 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 	err := lr.CheckOurRole(ctx, msg, core.DynamicRoleVirtualExecutor)
 	if err != nil {
 		es.Unlock()
-		return nil, errors.Wrap(err, "can't play role")
+		return nil, errors.Wrap(err, "[ Execute ] can't play role")
 	}
 
 	if lr.CheckExecutionLoop(ctx, es, parcel) {
@@ -355,7 +355,7 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 	request, err := lr.RegisterRequest(ctx, parcel)
 	if err != nil {
 		es.Unlock()
-		return nil, os.WrapError(err, "can't create request")
+		return nil, os.WrapError(err, "[ Execute ] can't create request")
 	}
 
 	qElement := ExecutionQueueElement{
