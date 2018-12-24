@@ -171,7 +171,6 @@ func (db *DB) GetJetTree(ctx context.Context, pulse core.PulseNumber) (*jet.Tree
 	return db.getJetTree(ctx, pulse)
 }
 
-// GetJetTree fetches tree for specified pulse.
 func (db *DB) getJetTree(ctx context.Context, pulse core.PulseNumber) (*jet.Tree, error) {
 	k := prefixkey(scopeIDSystem, []byte{sysJetTree}, pulse.Bytes())
 	buff, err := db.get(ctx, k)
@@ -229,7 +228,10 @@ func (db *DB) CloneJetTree(
 	if err != nil {
 		return err
 	}
-	tree.ResetActual()
+
+	if from != core.FirstPulseNumber {
+		tree.ResetActual()
+	}
 
 	return db.set(ctx, k, tree.Bytes())
 }
