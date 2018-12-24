@@ -462,3 +462,31 @@ func (*GetJet) DefaultRole() core.DynamicRole {
 func (m *GetJet) DefaultTarget() *core.RecordRef {
 	return core.NewRecordRef(core.DomainID, m.Object)
 }
+
+// AbandonedRequestsNotification informs virtual node about unclosed requests.
+type AbandonedRequestsNotification struct {
+	ledgerMessage
+
+	Object   core.RecordID
+	Requests []core.RecordID
+}
+
+// Type implementation of Message interface.
+func (*AbandonedRequestsNotification) Type() core.MessageType {
+	return core.TypeAbandonedRequestsNotification
+}
+
+// AllowedSenderObjectAndRole implements interface method
+func (m *AbandonedRequestsNotification) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return nil, core.DynamicRoleUndefined
+}
+
+// DefaultRole returns role for this event
+func (*AbandonedRequestsNotification) DefaultRole() core.DynamicRole {
+	return core.DynamicRoleVirtualExecutor
+}
+
+// DefaultTarget returns of target of this event.
+func (m *AbandonedRequestsNotification) DefaultTarget() *core.RecordRef {
+	return core.NewRecordRef(core.DomainID, m.Object)
+}

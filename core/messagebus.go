@@ -197,6 +197,8 @@ const (
 	TypeHotRecords
 	// TypeGetJet requests to calculate a jet for provided object.
 	TypeGetJet
+	// TypeAbandonedRequestsNotification informs virtual node about unclosed requests.
+	TypeAbandonedRequestsNotification
 
 	// TypeValidationCheck checks if validation of a particular record can be performed.
 	TypeValidationCheck

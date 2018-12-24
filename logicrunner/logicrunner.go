@@ -79,6 +79,7 @@ type CurrentExecution struct {
 	Context       context.Context
 	LogicContext  *core.LogicCallContext
 	Request       *Ref
+	Sequence      uint64
 	RequesterNode *Ref
 	ReturnMode    message.MethodReturnMode
 	SentResult    bool
@@ -343,7 +344,7 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 	err := lr.CheckOurRole(ctx, msg, core.DynamicRoleVirtualExecutor)
 	if err != nil {
 		es.Unlock()
-		return nil, errors.Wrap(err, "can't play role")
+		return nil, errors.Wrap(err, "[ Execute ] can't play role")
 	}
 
 	if lr.CheckExecutionLoop(ctx, es, parcel) {
@@ -354,7 +355,7 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 	request, err := lr.RegisterRequest(ctx, parcel)
 	if err != nil {
 		es.Unlock()
-		return nil, os.WrapError(err, "can't create request")
+		return nil, os.WrapError(err, "[ Execute ] can't create request")
 	}
 
 	qElement := ExecutionQueueElement{
@@ -499,8 +500,11 @@ func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionS
 			RequesterNode: &sender,
 		}
 
-		if msg, ok := qe.parcel.Message().(*message.CallMethod); ok && msg.ReturnMode == message.ReturnNoWait {
+		if msg, ok := qe.parcel.Message().(*message.CallMethod); ok {
 			es.Current.ReturnMode = msg.ReturnMode
+		}
+		if msg, ok := qe.parcel.Message().(message.IBaseLogicMessage); ok {
+			es.Current.Sequence = msg.GetBaseLogicMessage().Sequence
 		}
 
 		es.Unlock()
@@ -516,9 +520,7 @@ func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionS
 		es.Current.Context = core.ContextWithMessageBus(qe.ctx, recordingBus)
 
 		inslogger.FromContext(qe.ctx).Debug("Registering request within execution behaviour")
-		es.Behaviour.(*ValidationSaver).NewRequest(
-			qe.parcel.Message(), *qe.request, recordingBus,
-		)
+		es.Behaviour.(*ValidationSaver).NewRequest(qe.parcel, *qe.request, recordingBus)
 
 		res.reply, res.err = lr.executeOrValidate(es.Current.Context, es, qe.parcel)
 
@@ -600,6 +602,7 @@ func (lr *LogicRunner) executeOrValidate(
 
 	target := *es.Current.RequesterNode
 	request := *es.Current.Request
+	seq := es.Current.Sequence
 
 	go func() {
 		inslogger.FromContext(ctx).Debugf("Sending Method Results for ", request)
@@ -607,14 +610,14 @@ func (lr *LogicRunner) executeOrValidate(
 		_, err = core.MessageBusFromContext(ctx, nil).Send(
 			ctx,
 			&message.ReturnResults{
-				Caller:  lr.NodeNetwork.GetOrigin().ID(),
-				Target:  target,
-				Request: request,
-				Reply:   re,
-				Error:   errstr,
+				Caller:   lr.NodeNetwork.GetOrigin().ID(),
+				Target:   target,
+				Sequence: seq,
+				Reply:    re,
+				Error:    errstr,
 			},
 			&core.MessageSendOptions{
-			Receiver: &target,
+				Receiver: &target,
 			},
 		)
 		if err != nil {
@@ -873,11 +876,11 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 			requests := caseBind.getCaseBindForMessage(ctx)
 			messages = append(
 				messages,
-				&message.ValidateCaseBind{
-					RecordRef: ref,
-					Requests:  requests,
-					Pulse:     pulse,
-				},
+				//&message.ValidateCaseBind{
+				//	RecordRef: ref,
+				//	Requests:  requests,
+				//	Pulse:     pulse,
+				//},
 				&message.ExecutorResults{
 					RecordRef: ref,
 					Pending:   es.pending == InPending,
@@ -928,7 +931,7 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 	return nil
 }
 
-func (lr *LogicRunner) sendOnPulseMessagesAsync(ctx context.Context, msg core.Message,sendWg *sync.WaitGroup, errChan *chan error) {
+func (lr *LogicRunner) sendOnPulseMessagesAsync(ctx context.Context, msg core.Message, sendWg *sync.WaitGroup, errChan *chan error) {
 	defer sendWg.Done()
 	_, err := lr.MessageBus.Send(ctx, msg, nil)
 	*errChan <- err
