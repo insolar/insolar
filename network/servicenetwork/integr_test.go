@@ -30,7 +30,6 @@ import (
 )
 
 func (s *testSuite) TestNodeConnect() {
-
 	phasesResult := make(chan error)
 
 	s.initNode(s.testNode, Disable)
@@ -55,25 +54,37 @@ func (s *testSuite) TestNodeConnect() {
 }
 
 func (s *testSuite) TestNodeLeave() {
+	phasesResult := make(chan error)
 
 	s.initNode(s.testNode, Disable)
 
-	phasesResult := make(chan error)
 	s.InitTestNode()
+	s.bootstrapNodes[0].serviceNetwork.PhaseManager = &phaseManagerWrapper{original: s.bootstrapNodes[0].serviceNetwork.PhaseManager, result: phasesResult}
+
 	s.StartTestNode()
+
 	res := <-phasesResult
 	s.NoError(res)
-	activeNodes := s.testNode.serviceNetwork.NodeKeeper.GetActiveNodes()
-	s.Equal(2, len(activeNodes))
+	activeNodes := s.bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.nodesCount(), len(activeNodes))
+	err := s.bootstrapNodes[0].serviceNetwork.NodeKeeper.MoveSyncToActive()
+	s.NoError(err)
+	activeNodes = s.bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.nodesCount()+1, len(activeNodes))
 
-	// teardown
-	<-time.After(time.Second * 5)
+	s.testNode.serviceNetwork.Stop(context.Background())
 
 	res = <-phasesResult
 	s.NoError(res)
-	activeNodes = s.testNode.serviceNetwork.NodeKeeper.GetActiveNodes()
+	activeNodes = s.bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.nodesCount()+1, len(activeNodes))
+	err = s.bootstrapNodes[0].serviceNetwork.NodeKeeper.MoveSyncToActive()
+	s.NoError(err)
+	activeNodes = s.bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
 	s.Equal(s.nodesCount(), len(activeNodes))
 
+	// teardown
+	<-time.After(time.Second * 3)
 	s.StopTestNode()
 }
 
@@ -82,12 +93,16 @@ func TestServiceNetworkIntegration(t *testing.T) {
 	suite.Run(t, s)
 }
 
-/*
-func TestServiceNetwork3BootsrtapNodes(t *testing.T) {
-	s := NewTestSuite(3, 0)
+func TestServiceNetworkManyBootstraps(t *testing.T) {
+	s := NewTestSuite(15, 0)
 	suite.Run(t, s)
 }
-*/
+
+func TestServiceNetworkManyNodes(t *testing.T) {
+	s := NewTestSuite(3, 20)
+	suite.Run(t, s)
+}
+
 // Full timeout test
 type FullTimeoutPhaseManager struct {
 }
