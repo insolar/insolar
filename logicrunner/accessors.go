@@ -86,7 +86,7 @@ func (lr *LogicRunner) GetConsensus(ctx context.Context, ref Ref) *Consensus {
 		validators, err := lr.JetCoordinator.QueryRole(
 			ctx,
 			core.DynamicRoleVirtualValidator,
-			ref.Record(),
+			*ref.Record(),
 			lr.pulse(ctx).PulseNumber,
 		)
 		if err != nil {

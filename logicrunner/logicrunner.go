@@ -289,8 +289,8 @@ func (lr *LogicRunner) Stop(ctx context.Context) error {
 func (lr *LogicRunner) CheckOurRole(ctx context.Context, msg core.Message, role core.DynamicRole) error {
 	// TODO do map of supported objects for pulse, go to jetCoordinator only if map is empty for ref
 	target := msg.DefaultTarget()
-	isAuthorized, err := lr.JetCoordinator.AmI(
-		ctx, role, target.Record(), lr.pulse(ctx).PulseNumber,
+	isAuthorized, err := lr.JetCoordinator.IsAuthorized(
+		ctx, role, *target.Record(), lr.pulse(ctx).PulseNumber, lr.JetCoordinator.Me(),
 	)
 	if err != nil {
 		return errors.Wrap(err, "authorization failed with error")
@@ -853,9 +853,9 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 	for ref, state := range lr.state {
 		// we are executor again - just continue working
 		// TODO we need to do something with validation
-		isAuthorized, _ := lr.JetCoordinator.AmI(
-			ctx, core.DynamicRoleVirtualExecutor, ref.Record(), pulse.PulseNumber)
-
+		isAuthorized, _ := lr.JetCoordinator.IsAuthorized(
+			ctx, core.DynamicRoleVirtualExecutor, *ref.Record(), pulse.PulseNumber, lr.JetCoordinator.Me(),
+		)
 		if isAuthorized {
 			continue
 		}

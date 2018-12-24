@@ -100,6 +100,7 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 
 	nodeMock := network.NewNodeMock(t)
 	nodeMock.RoleMock.Return(core.StaticRoleLightMaterial)
+	nodeMock.IDMock.Return(core.RecordRef{})
 
 	nodeNetworkMock := network.NewNodeNetworkMock(t)
 	nodeNetworkMock.GetActiveNodesMock.Return([]core.Node{nodeMock})
@@ -181,6 +182,7 @@ func TestPulseManager_Set_PerformsSplit(t *testing.T) {
 
 	nodeMock := network.NewNodeMock(t)
 	nodeMock.RoleMock.Return(core.StaticRoleLightMaterial)
+	nodeMock.IDMock.Return(core.RecordRef{})
 
 	nodeNetworkMock := network.NewNodeNetworkMock(t)
 	nodeNetworkMock.GetActiveNodesMock.Return([]core.Node{nodeMock})
