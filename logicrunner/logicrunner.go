@@ -79,6 +79,7 @@ type CurrentExecution struct {
 	Context       context.Context
 	LogicContext  *core.LogicCallContext
 	Request       *Ref
+	Sequence      uint64
 	RequesterNode *Ref
 	ReturnMode    message.MethodReturnMode
 	SentResult    bool
@@ -499,8 +500,11 @@ func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionS
 			RequesterNode: &sender,
 		}
 
-		if msg, ok := qe.parcel.Message().(*message.CallMethod); ok && msg.ReturnMode == message.ReturnNoWait {
+		if msg, ok := qe.parcel.Message().(*message.CallMethod); ok {
 			es.Current.ReturnMode = msg.ReturnMode
+		}
+		if msg, ok := qe.parcel.Message().(message.IBaseLogicMessage); ok {
+			es.Current.Sequence = msg.GetBaseLogicMessage().Sequence
 		}
 
 		es.Unlock()
@@ -546,13 +550,8 @@ func (lr *LogicRunner) finishPendingIfNeeded(ctx context.Context, es *ExecutionS
 	es.pending = NotPending
 
 	go func() {
-		pulse, err := lr.PulseStorage.Current(ctx)
-		if err != nil {
-			inslogger.FromContext(ctx).Error("Unable to determine current pulse and thus to send PendingFinished message:", err)
-			return
-		}
 		msg := message.PendingFinished{Reference: currentRef}
-		_, err = lr.MessageBus.Send(ctx, &msg, *pulse, nil)
+		_, err := lr.MessageBus.Send(ctx, &msg, nil)
 		if err != nil {
 			inslogger.FromContext(ctx).Error("Unable to send PendingFinished message:", err)
 		}
@@ -605,6 +604,7 @@ func (lr *LogicRunner) executeOrValidate(
 
 	target := *es.Current.RequesterNode
 	request := *es.Current.Request
+	seq := es.Current.Sequence
 
 	go func() {
 		inslogger.FromContext(ctx).Debugf("Sending Method Results for ", request)
@@ -614,13 +614,12 @@ func (lr *LogicRunner) executeOrValidate(
 			&message.ReturnResults{
 				Caller:  lr.NodeNetwork.GetOrigin().ID(),
 				Target:  target,
-				Request: request,
+				Sequence: seq,
 				Reply:   re,
 				Error:   errstr,
 			},
-			*lr.pulse(ctx),
 			&core.MessageSendOptions{
-				Receiver: &target,
+			Receiver: &target,
 			},
 		)
 		if err != nil {
@@ -913,7 +912,7 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 		sendWg.Add(len(messages))
 
 		for _, msg := range messages {
-			go lr.sendOnPulseMessagesAsync(ctx, msg, pulse, &sendWg, &errChan)
+			go lr.sendOnPulseMessagesAsync(ctx, msg, &sendWg, &errChan)
 		}
 
 		sendWg.Wait()
@@ -934,9 +933,9 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 	return nil
 }
 
-func (lr *LogicRunner) sendOnPulseMessagesAsync(ctx context.Context, msg core.Message, pulse core.Pulse, sendWg *sync.WaitGroup, errChan *chan error) {
+func (lr *LogicRunner) sendOnPulseMessagesAsync(ctx context.Context, msg core.Message,sendWg *sync.WaitGroup, errChan *chan error) {
 	defer sendWg.Done()
-	_, err := lr.MessageBus.Send(ctx, msg, pulse, nil)
+	_, err := lr.MessageBus.Send(ctx, msg, nil)
 	*errChan <- err
 }
 func convertQueueToMessageQueue(queue []ExecutionQueueElement) []message.ExecutionQueueElement {

@@ -82,25 +82,25 @@ func TestCurrent_ThreeThreads(t *testing.T) {
 
 	// Act
 	var g errgroup.Group
-	g.Go(func() error{
+	g.Go(func() error {
 		pStorage.Lock()
 		defer pStorage.Unlock()
-		err := testDb.AddPulse(ctx, core.Pulse{PulseNumber:core.FirstPulseNumber + 123})
+		err := testDb.AddPulse(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 123})
 		return err
 	})
-	g.Go(func() error{
+	g.Go(func() error {
 		_, err := pStorage.Current(ctx)
 		return err
 	})
-	g.Go(func() error{
+	g.Go(func() error {
 		_, err := pStorage.Current(ctx)
 		return err
 	})
 	err := g.Wait()
-	require.NoError(t,err)
+	require.NoError(t, err)
 	pulse, err := pStorage.Current(ctx)
 
 	// Assert
 	require.NoError(t, err)
-	require.Equal(t, core.GenesisPulse.PulseNumber + 123, pulse.PulseNumber)
+	require.Equal(t, core.GenesisPulse.PulseNumber+123, pulse.PulseNumber)
 }

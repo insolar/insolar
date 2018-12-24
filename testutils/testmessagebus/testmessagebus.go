@@ -45,11 +45,11 @@ type TapeRecord struct {
 }
 
 type TestMessageBus struct {
-	handlers    map[core.MessageType]core.MessageHandler
-	pf          message.ParcelFactory
-	PulseNumber core.PulseNumber
-	ReadingTape []TapeRecord
-	WritingTape []TapeRecord
+	handlers     map[core.MessageType]core.MessageHandler
+	pf           message.ParcelFactory
+	PulseStorage core.PulseStorage
+	ReadingTape  []TapeRecord
+	WritingTape  []TapeRecord
 }
 
 func (mb *TestMessageBus) NewPlayer(ctx context.Context, reader io.Reader) (core.MessageBus, error) {
@@ -85,16 +85,19 @@ func (mb *TestMessageBus) NewRecorder(ctx context.Context, currentPulse core.Pul
 }
 
 func NewTestMessageBus(t *testing.T) *TestMessageBus {
-	mock := testutils.NewCryptographyServiceMock(t)
-	mock.SignFunc = func(p []byte) (r *core.Signature, r1 error) {
+	cryptoServiceMock := testutils.NewCryptographyServiceMock(t)
+	cryptoServiceMock.SignFunc = func(p []byte) (r *core.Signature, r1 error) {
 		signature := core.SignatureFromBytes(nil)
 		return &signature, nil
 	}
+
 	delegationTokenFactory := delegationtoken.NewDelegationTokenFactory()
+
 	parcelFactory := messagebus.NewParcelFactory()
+
 	cm := &component.Manager{}
 	cm.Register(platformpolicy.NewPlatformCryptographyScheme())
-	cm.Inject(delegationTokenFactory, parcelFactory, mock)
+	cm.Inject(delegationTokenFactory, parcelFactory, cryptoServiceMock)
 
 	return &TestMessageBus{handlers: map[core.MessageType]core.MessageHandler{}, pf: parcelFactory}
 }
@@ -120,9 +123,7 @@ func (mb *TestMessageBus) MustRegister(p core.MessageType, handler core.MessageH
 	}
 }
 
-func (mb *TestMessageBus) Send(
-	ctx context.Context, m core.Message, currentPulse core.Pulse, ops *core.MessageSendOptions,
-) (core.Reply, error) {
+func (mb *TestMessageBus) Send(ctx context.Context, m core.Message, _ *core.MessageSendOptions) (core.Reply, error) {
 	if mb.ReadingTape != nil {
 		if len(mb.ReadingTape) == 0 {
 			return nil, errors.Errorf("No expected messages, got %+v", m)
@@ -137,7 +138,13 @@ func (mb *TestMessageBus) Send(
 		}
 		return head.Reply, head.Error
 	}
-	parcel, err := mb.pf.Create(ctx, m, testutils.RandomRef(), nil, currentPulse)
+
+	currentPulse, err := mb.PulseStorage.Current(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	parcel, err := mb.pf.Create(ctx, m, testutils.RandomRef(), nil, core.Pulse{PulseNumber: currentPulse.PulseNumber, Entropy: core.Entropy{}})
 	if err != nil {
 		return nil, err
 	}

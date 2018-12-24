@@ -32,6 +32,7 @@ import (
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/messagebus"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
@@ -39,7 +40,7 @@ import (
 )
 
 // TmpLedger crteates ledger on top of temporary database.
-// Returns *ledger.Ledger andh cleanup function.
+// Returns *ledger.Ledger and cleanup function.
 // FIXME: THIS METHOD IS DEPRECATED. USE MOCKS.
 func TmpLedger(t *testing.T, dir string, c core.Components) (*ledger.Ledger, func()) {
 	log.Warn("TmpLedger is deprecated. Use mocks.")
@@ -51,6 +52,7 @@ func TmpLedger(t *testing.T, dir string, c core.Components) (*ledger.Ledger, fun
 	ctx := inslogger.TestContext(t)
 	conf := configuration.NewLedger()
 	db, dbcancel := storagetest.TmpDB(ctx, t, storagetest.Dir(dir))
+	pulseStorage := storage.NewPulseStorage(db)
 
 	am := artifactmanager.NewArtifactManger(db)
 	am.PlatformCryptographyScheme = pcs
@@ -63,7 +65,18 @@ func TmpLedger(t *testing.T, dir string, c core.Components) (*ledger.Ledger, fun
 
 	// Init components.
 	if c.MessageBus == nil {
-		c.MessageBus = testmessagebus.NewTestMessageBus(t)
+		mb := testmessagebus.NewTestMessageBus(t)
+		mb.PulseStorage = pulseStorage
+		c.MessageBus = mb
+	} else {
+		switch mb := c.MessageBus.(type) {
+		case *messagebus.MessageBus:
+			mb.PulseStorage = pulseStorage
+		case *testmessagebus.TestMessageBus:
+			mb.PulseStorage = pulseStorage
+		default:
+			panic("unknown message bus")
+		}
 	}
 	if c.NodeNetwork == nil {
 		c.NodeNetwork = nodenetwork.NewNodeKeeper(nodenetwork.NewNode(core.RecordRef{}, core.StaticRoleUnknown, nil, "127.0.0.1:5432", ""))
@@ -87,7 +100,7 @@ func TmpLedger(t *testing.T, dir string, c core.Components) (*ledger.Ledger, fun
 	pm.Bus = c.MessageBus
 	pm.LR = c.LogicRunner
 	pm.ActiveListSwapper = alsMock
-	pm.PulseStorage = storage.NewPulseStorage(db)
+	pm.PulseStorage = pulseStorage
 
 	recentStorageMock := recentstorage.NewRecentStorageMock(t)
 	recentStorageMock.AddPendingRequestMock.Return()
