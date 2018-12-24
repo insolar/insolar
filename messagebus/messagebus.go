@@ -51,8 +51,7 @@ type MessageBus struct {
 	handlers     map[core.MessageType]core.MessageHandler
 	signmessages bool
 
-	globalLock sync.RWMutex
-
+	globalLock  sync.RWMutex
 	waitingChan chan interface{}
 }
 
@@ -62,9 +61,8 @@ func NewMessageBus(config configuration.Configuration) (*MessageBus, error) {
 	mb := &MessageBus{
 		handlers:     map[core.MessageType]core.MessageHandler{},
 		signmessages: config.Host.SignMessages,
-		waitingChan:  make(chan interface{}),
 	}
-	mb.globalLock.Lock()
+	mb.Lock(context.Background())
 	return mb, nil
 }
 
@@ -136,13 +134,18 @@ func (mb *MessageBus) MustRegister(p core.MessageType, handler core.MessageHandl
 }
 
 // Send an `Message` and get a `Value` or error from remote host.
-func (mb *MessageBus) Send(ctx context.Context, msg core.Message, currentPulse core.Pulse, ops *core.MessageSendOptions) (core.Reply, error) {
-	parcel, err := mb.CreateParcel(ctx, msg, ops.Safe().Token, currentPulse)
+func (mb *MessageBus) Send(ctx context.Context, msg core.Message, ops *core.MessageSendOptions) (core.Reply, error) {
+	currentPulse, err := mb.PulseStorage.Current(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	return mb.SendParcel(ctx, parcel, currentPulse, ops)
+	parcel, err := mb.CreateParcel(ctx, msg, ops.Safe().Token, *currentPulse)
+	if err != nil {
+		return nil, err
+	}
+
+	return mb.SendParcel(ctx, parcel, *currentPulse, ops)
 }
 
 // CreateParcel creates signed message from provided message.
@@ -157,18 +160,22 @@ func (mb *MessageBus) SendParcel(
 	currentPulse core.Pulse,
 	options *core.MessageSendOptions,
 ) (core.Reply, error) {
-	scope := newReaderScope(&mb.globalLock)
-	scope.Lock(ctx, "Sending parcel ...")
-	defer scope.Unlock(ctx, "Sending parcel done")
+	readBarrier(ctx, &mb.globalLock)
 
-	var nodes []core.RecordRef
+	var (
+		nodes []core.RecordRef
+		err   error
+	)
 	if options != nil && options.Receiver != nil {
 		nodes = []core.RecordRef{*options.Receiver}
 	} else {
 		// TODO: send to all actors of the role if nil Target
 		target := parcel.DefaultTarget()
-		var err error
-		nodes, err = mb.JetCoordinator.QueryRole(ctx, parcel.DefaultRole(), target.Record(), currentPulse.PulseNumber)
+		// FIXME: @andreyromancev. 21.12.18. Temp hack. All messages should have a default target.
+		if target == nil {
+			target = &core.RecordRef{}
+		}
+		nodes, err = mb.JetCoordinator.QueryRole(ctx, parcel.DefaultRole(), *target.Record(), currentPulse.PulseNumber)
 		if err != nil {
 			return nil, err
 		}
@@ -194,8 +201,6 @@ func (mb *MessageBus) SendParcel(
 	if err != nil {
 		return nil, err
 	}
-
-	scope.Unlock(ctx, "Sending parcel done")
 
 	return reply.Deserialize(bytes.NewBuffer(res))
 }
@@ -225,6 +230,9 @@ func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Repl
 		return nil, errors.New("incorrect pulse")
 	}
 
+	// We must check barrier just before exiting function
+	// to deliver reply right after pulse switches if it is switching right now.
+	defer readBarrier(ctx, &mb.globalLock)
 	inslogger.FromContext(ctx).Debug("MessageBus.doDeliver starts ...")
 	handler, ok := mb.handlers[msg.Type()]
 	if !ok {
@@ -314,7 +322,7 @@ func (mb *MessageBus) checkParcel(ctx context.Context, parcel core.Parcel) error
 	}
 
 	validSender, err := mb.JetCoordinator.IsAuthorized(
-		ctx, allowedSenderRole, sendingObject.Record(), parcel.Pulse(), sender,
+		ctx, allowedSenderRole, *sendingObject.Record(), parcel.Pulse(), sender,
 	)
 	if err != nil {
 		return err
@@ -325,32 +333,14 @@ func (mb *MessageBus) checkParcel(ctx context.Context, parcel core.Parcel) error
 	return nil
 }
 
+func readBarrier(ctx context.Context, mutex *sync.RWMutex) {
+	inslogger.FromContext(ctx).Debug("Locking readBarrier")
+	mutex.RLock()
+	inslogger.FromContext(ctx).Debug("readBarrier locked")
+	mutex.RUnlock()
+	inslogger.FromContext(ctx).Debug("readBarrier unlocked")
+}
+
 func init() {
 	gob.Register(&serializableError{})
-}
-
-type readerScope struct {
-	mutex  *sync.RWMutex
-	locked bool
-}
-
-func newReaderScope(mutex *sync.RWMutex) *readerScope {
-	return &readerScope{
-		mutex: mutex,
-	}
-}
-
-func (rs *readerScope) Lock(ctx context.Context, info string) {
-	inslogger.FromContext(ctx).Info(info)
-	rs.mutex.RLock()
-	rs.locked = true
-}
-
-// Unlock unlocks scope if it locked. Do nothing if scope already unlocked.
-func (rs *readerScope) Unlock(ctx context.Context, info string) {
-	if rs.locked {
-		rs.locked = false
-		inslogger.FromContext(ctx).Info(info)
-		rs.mutex.RUnlock()
-	}
 }
