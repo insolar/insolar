@@ -40,8 +40,11 @@ func TestLedgerArtifactManager_PendingRequest(t *testing.T) {
 	defer cleaner()
 	defer mc.Finish()
 
+	pulseStorage := storage.NewPulseStorage(db)
+
 	cs := testutils.NewPlatformCryptographyScheme()
 	mb := testmessagebus.NewTestMessageBus(t)
+	mb.PulseStorage = pulseStorage
 	jc := testutils.NewJetCoordinatorMock(mc)
 	jc.AmIMock.Return(true, nil)
 	am := NewArtifactManger(db)

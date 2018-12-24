@@ -108,12 +108,7 @@ func (cr *ContractRequester) CallMethod(ctx context.Context, base core.Message, 
 		msg.ProxyPrototype = *mustPrototype
 	}
 
-	currentSlotPulse, err := cr.PulseStorage.Current(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't get pulse")
-	}
-
-	res, err := mb.Send(ctx, msg, *currentSlotPulse, nil)
+	res, err := mb.Send(ctx, msg, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't dispatch event")
 	}
@@ -178,11 +173,7 @@ func (cr *ContractRequester) CallConstructor(ctx context.Context, base core.Mess
 		SaveAs:           message.SaveAs(saveAs),
 	}
 
-	currentSlotPulse, err := cr.PulseStorage.Current(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't get pulse")
-	}
-	res, err := mb.Send(ctx, msg, *currentSlotPulse, nil)
+	res, err := mb.Send(ctx, msg, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't save new object as delegate")
 	}
