@@ -36,6 +36,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/api/requester"
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
 	"github.com/pkg/errors"
 )
@@ -192,10 +193,13 @@ func waitForNet() error {
 			if err != nil {
 				fmt.Println("[ waitForNet ] Problem with port " + port + ". Err: " + err.Error())
 				break
-			} else {
-				fmt.Println("[ waitForNet ] Good response from port " + port + ". Response: " + resp.NetworkState)
-				currentOk++
 			}
+			if resp.NetworkState != core.CompleteNetworkState.String() {
+				fmt.Println("[ waitForNet ] Good response from port " + port + ". Net is not ready. Response: " + resp.NetworkState)
+				break
+			}
+			fmt.Println("[ waitForNet ] Good response from port " + port + ". Net is ready. Response: " + resp.NetworkState)
+			currentOk++
 		}
 		if currentOk == numNodes {
 			fmt.Printf("[ waitForNet ] All %d nodes have started\n", numNodes)
