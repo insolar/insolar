@@ -33,11 +33,17 @@ import (
 //go:generate minimock -i github.com/insolar/insolar/messagebus.tape -o .
 type tape interface {
 	Write(ctx context.Context, writer io.Writer) error
-	GetReply(ctx context.Context, msgHash []byte) (core.Reply, error)
-	SetReply(ctx context.Context, msgHash []byte, rep core.Reply) error
+	Get(ctx context.Context, msgHash []byte) (*TapeItem, error)
+	Set(ctx context.Context, msgHash []byte, rep core.Reply, gotError error) error
 }
 
-// memoryTape saves and fetches message replies to/from memory array.
+// TapeItem stores reply/error pair for tape.
+type TapeItem struct {
+	Reply core.Reply
+	Error error
+}
+
+// memoryTape saves and fetches message reply/error pairs to/from memory array.
 //
 // It uses <storageTape id> + <message hash> for Value keys.
 type memoryTape struct {
@@ -47,7 +53,7 @@ type memoryTape struct {
 
 type memoryTapeMessage struct {
 	msgHash []byte
-	reply   core.Reply
+	item    TapeItem
 }
 
 func newMemoryTape(pulse core.PulseNumber) *memoryTape {
@@ -86,22 +92,27 @@ func (t *memoryTape) Write(ctx context.Context, w io.Writer) error {
 	return nil
 }
 
-func (t *memoryTape) GetReply(ctx context.Context, msgHash []byte) (core.Reply, error) {
+func (t *memoryTape) Get(ctx context.Context, msgHash []byte) (*TapeItem, error) {
 	if len(t.storage) == 0 {
 		return nil, errors.New("Validation error. Message is not expected")
 	}
-	if !bytes.Equal(msgHash, t.storage[0].msgHash) {
+
+	tapeMsg := t.storage[0]
+	if !bytes.Equal(msgHash, tapeMsg.msgHash) {
 		return nil, errors.New("Validation error. Message mismatch")
 	}
-	ret := t.storage[0]
 	t.storage = t.storage[1:]
-	return ret.reply, nil
+
+	return &tapeMsg.item, nil
 }
 
-func (t *memoryTape) SetReply(ctx context.Context, msgHash []byte, rep core.Reply) error {
+func (t *memoryTape) Set(ctx context.Context, msgHash []byte, rep core.Reply, gotError error) error {
 	t.storage = append(t.storage, memoryTapeMessage{
 		msgHash: msgHash,
-		reply:   rep,
+		item: TapeItem{
+			Reply: rep,
+			Error: gotError,
+		},
 	})
 	return nil
 }

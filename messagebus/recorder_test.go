@@ -52,7 +52,7 @@ func TestRecorder_Send(t *testing.T) {
 	recorder := newRecorder(s, tape, pcs, pulseStorageMock)
 
 	t.Run("with no reply on the tape sends the message and returns reply", func(t *testing.T) {
-		tape.SetReplyMock.Expect(ctx, msgHash, &expectedRep).Return(nil)
+		tape.SetMock.Expect(ctx, msgHash, &expectedRep, nil).Return(nil)
 		s.SendParcelMock.Expect(ctx, &parcel, *core.GenesisPulse, nil).Return(&expectedRep, nil)
 
 		recorderReply, err := recorder.Send(ctx, &msg, nil)

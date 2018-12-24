@@ -42,22 +42,9 @@ func newPlayer(s sender, tape tape, scheme core.PlatformCryptographyScheme, puls
 	}
 }
 
-<<<<<<< HEAD
-// WriteTape for player is not available.
-func (p *player) WriteTape(ctx context.Context, w io.Writer) error {
-	panic("can't write the tape from player")
-}
-
-=======
->>>>>>> INS-976: extract WriteTape method to separate interface
 // Send wraps MessageBus Send to reply replies from the tape. If reply for this message is not on the tape, an error
 // will be returned.
 func (p *player) Send(ctx context.Context, msg core.Message, ops *core.MessageSendOptions) (core.Reply, error) {
-	var (
-		rep core.Reply
-		err error
-	)
-
 	currentPulse, err := p.pulseStorage.Current(ctx)
 	if err != nil {
 		return nil, err
@@ -69,13 +56,13 @@ func (p *player) Send(ctx context.Context, msg core.Message, ops *core.MessageSe
 	}
 	id := GetMessageHash(p.scheme, parcel)
 
-	rep, err = p.tape.GetReply(ctx, id)
-	if err == nil {
-		return rep, nil
-	}
-	if err == localstorage.ErrNotFound {
-		return nil, ErrNoReply
-	} else {
+	item, err := p.tape.Get(ctx, id)
+	if err != nil {
+		if err == localstorage.ErrNotFound {
+			return nil, ErrNoReply
+		}
 		return nil, err
 	}
+
+	return item.Reply, item.Error
 }
