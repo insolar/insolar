@@ -134,19 +134,19 @@ func (currentPulsar *Pulsar) verify(ctx context.Context) {
 				continue
 			}
 
-			ok, err := checkSignature(
-				currentPulsar.CryptographyService,
-				currentPulsar.KeyProcessor,
-				bftCell.GetEntropy(),
-				column.PubPem,
-				bftCell.GetSign(),
-			)
-			if !ok || err != nil {
+			publicKey, err := currentPulsar.KeyProcessor.ImportPublicKeyPEM([]byte(column.PubPem))
+			if err != nil {
 				currentColumnStat["nil"]++
 				continue
 			}
 
 			entropy := bftCell.GetEntropy()
+			ok := currentPulsar.CryptographyService.Verify(publicKey, core.SignatureFromBytes(bftCell.GetSign()), entropy[:])
+			if !ok {
+				currentColumnStat["nil"]++
+				continue
+			}
+
 			currentColumnStat[string(entropy[:])]++
 		}
 
@@ -195,19 +195,27 @@ func (currentPulsar *Pulsar) finalizeBft(ctx context.Context, finalEntropy core.
 	currentPulsar.CurrentSlotPulseSender = chosenPulsar[0]
 	if currentPulsar.CurrentSlotPulseSender == currentPulsar.PublicKeyRaw {
 		//here confirmation myself
-		signature, err := signData(currentPulsar.CryptographyService, core.PulseSenderConfirmation{
+		payload := PulseSenderConfirmationPayload{core.PulseSenderConfirmation{
 			ChosenPublicKey: currentPulsar.CurrentSlotPulseSender,
 			Entropy:         *currentPulsar.GetCurrentSlotEntropy(),
 			PulseNumber:     currentPulsar.ProcessingPulseNumber,
-		})
+		}}
+		hashProvider := currentPulsar.PlatformCryptographyScheme.IntegrityHasher()
+		hash, err := payload.Hash(hashProvider)
 		if err != nil {
 			currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)
 			return
 		}
+		signature, err := currentPulsar.CryptographyService.Sign(hash)
+		if err != nil {
+			currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)
+			return
+		}
+
 		currentPulsar.currentSlotSenderConfirmationsLock.Lock()
 		currentPulsar.CurrentSlotSenderConfirmations[currentPulsar.PublicKeyRaw] = core.PulseSenderConfirmation{
 			ChosenPublicKey: currentPulsar.CurrentSlotPulseSender,
-			Signature:       signature,
+			Signature:       signature.Bytes(),
 			Entropy:         *currentPulsar.GetCurrentSlotEntropy(),
 			PulseNumber:     currentPulsar.ProcessingPulseNumber,
 		}

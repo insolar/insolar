@@ -100,7 +100,7 @@ func (d *distributor) Distribute(ctx context.Context, pulse *core.Pulse) {
 		}
 
 		if len(hosts) == 0 {
-			err := d.sendPulseToHost(ctx, pulse, bootstrapHost)
+			err := d.SendPulseToHost(ctx, pulse, bootstrapHost)
 			if err != nil {
 				logger.Error(err)
 			}
@@ -183,14 +183,14 @@ func (d *distributor) sendPulseToHosts(ctx context.Context, pulse *core.Pulse, h
 	logger := inslogger.FromContext(ctx)
 	logger.Debugf("Before sending pulse to nodes - %v", hosts)
 	for _, pulseReceiver := range hosts {
-		err := d.sendPulseToHost(ctx, pulse, &pulseReceiver)
+		err := d.SendPulseToHost(ctx, pulse, &pulseReceiver)
 		if err != nil {
 			logger.Error(err)
 		}
 	}
 }
 
-func (d *distributor) sendPulseToHost(ctx context.Context, pulse *core.Pulse, host *host.Host) error {
+func (d *distributor) SendPulseToHost(ctx context.Context, pulse *core.Pulse, host *host.Host) error {
 	logger := inslogger.FromContext(ctx)
 	defer func() {
 		if x := recover(); x != nil {

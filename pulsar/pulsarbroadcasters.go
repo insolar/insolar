@@ -32,7 +32,10 @@ func (currentPulsar *Pulsar) broadcastSignatureOfEntropy(ctx context.Context) {
 		return
 	}
 
-	payload, err := currentPulsar.preparePayload(EntropySignaturePayload{PulseNumber: currentPulsar.ProcessingPulseNumber, Signature: currentPulsar.GeneratedEntropySign})
+	payload, err := currentPulsar.preparePayload(&EntropySignaturePayload{
+		PulseNumber:      currentPulsar.ProcessingPulseNumber,
+		EntropySignature: currentPulsar.GeneratedEntropySign,
+	})
 	if err != nil {
 		currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)
 		return
@@ -58,9 +61,10 @@ func (currentPulsar *Pulsar) broadcastVector(ctx context.Context) {
 	if currentPulsar.IsStateFailed() {
 		return
 	}
-	payload, err := currentPulsar.preparePayload(VectorPayload{
+	payload, err := currentPulsar.preparePayload(&VectorPayload{
 		PulseNumber: currentPulsar.ProcessingPulseNumber,
-		Vector:      currentPulsar.OwnedBftRow})
+		Vector:      currentPulsar.OwnedBftRow,
+	})
 
 	if err != nil {
 		currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)
@@ -86,7 +90,10 @@ func (currentPulsar *Pulsar) broadcastEntropy(ctx context.Context) {
 		return
 	}
 
-	payload, err := currentPulsar.preparePayload(EntropyPayload{PulseNumber: currentPulsar.ProcessingPulseNumber, Entropy: *currentPulsar.GetGeneratedEntropy()})
+	payload, err := currentPulsar.preparePayload(&EntropyPayload{
+		PulseNumber: currentPulsar.ProcessingPulseNumber,
+		Entropy:     *currentPulsar.GetGeneratedEntropy(),
+	})
 	if err != nil {
 		currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)
 		return
@@ -112,7 +119,7 @@ func (currentPulsar *Pulsar) sendPulseToPulsars(ctx context.Context, pulse core.
 	}
 
 	currentPulsar.currentSlotSenderConfirmationsLock.RLock()
-	payload, err := currentPulsar.preparePayload(PulsePayload{Pulse: pulse})
+	payload, err := currentPulsar.preparePayload(&PulsePayload{Pulse: pulse})
 	currentPulsar.currentSlotSenderConfirmationsLock.RUnlock()
 
 	if err != nil {
@@ -171,29 +178,41 @@ func (currentPulsar *Pulsar) sendPulseSign(ctx context.Context) {
 		return
 	}
 
-	signature, err := signData(currentPulsar.CryptographyService, core.PulseSenderConfirmation{
-		Entropy:         *currentPulsar.GetCurrentSlotEntropy(),
-		ChosenPublicKey: currentPulsar.CurrentSlotPulseSender,
-		PulseNumber:     currentPulsar.ProcessingPulseNumber,
-	})
-	if err != nil {
-		currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)
-		return
+	payload := PulseSenderConfirmationPayload{
+		core.PulseSenderConfirmation{
+			Entropy:         *currentPulsar.GetCurrentSlotEntropy(),
+			ChosenPublicKey: currentPulsar.CurrentSlotPulseSender,
+			PulseNumber:     currentPulsar.ProcessingPulseNumber,
+		},
 	}
-	confirmation := core.PulseSenderConfirmation{
-		PulseNumber:     currentPulsar.ProcessingPulseNumber,
-		ChosenPublicKey: currentPulsar.CurrentSlotPulseSender,
-		Entropy:         *currentPulsar.GetCurrentSlotEntropy(),
-		Signature:       signature,
-	}
-
-	payload, err := currentPulsar.preparePayload(confirmation)
+	hashProvider := currentPulsar.PlatformCryptographyScheme.IntegrityHasher()
+	hash, err := payload.Hash(hashProvider)
 	if err != nil {
 		currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)
 		return
 	}
 
-	call := currentPulsar.Neighbours[currentPulsar.CurrentSlotPulseSender].OutgoingClient.Go(ReceiveChosenSignature.String(), payload, nil, nil)
+	signature, err := currentPulsar.CryptographyService.Sign(hash)
+	if err != nil {
+		currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)
+		return
+	}
+	confirmation := PulseSenderConfirmationPayload{
+		core.PulseSenderConfirmation{
+			PulseNumber:     currentPulsar.ProcessingPulseNumber,
+			ChosenPublicKey: currentPulsar.CurrentSlotPulseSender,
+			Entropy:         *currentPulsar.GetCurrentSlotEntropy(),
+			Signature:       signature.Bytes(),
+		},
+	}
+
+	message, err := currentPulsar.preparePayload(&confirmation)
+	if err != nil {
+		currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)
+		return
+	}
+
+	call := currentPulsar.Neighbours[currentPulsar.CurrentSlotPulseSender].OutgoingClient.Go(ReceiveChosenSignature.String(), message, nil, nil)
 	reply := <-call.Done
 	if reply.Error != nil {
 		// Here should be retry

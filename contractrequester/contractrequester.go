@@ -20,6 +20,8 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/binary"
+	"encoding/json"
+	"fmt"
 	"sync"
 
 	"github.com/insolar/insolar/core"
@@ -108,16 +110,24 @@ func (cr *ContractRequester) CallMethod(ctx context.Context, base core.Message, 
 		msg.ProxyPrototype = *mustPrototype
 	}
 
+	// <<<<<<< Updated upstream
+	res, err := mb.Send(ctx, msg, nil)
+	// =======
 	currentSlotPulse, err := cr.PulseStorage.Current(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get pulse")
 	}
 
-	res, err := mb.Send(ctx, msg, *currentSlotPulse, nil)
+	z, _ := json.MarshalIndent(currentSlotPulse, "", "  ")
+	fmt.Println("PULSE:", method, string(z))
+	// res, err := mb.Send(ctx, msg, *currentSlotPulse, nil)
+	// >>>>>>> Stashed changes
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't dispatch event")
 	}
 
+	e, x := json.MarshalIndent(res, "", "  ")
+	fmt.Println("RES", string(e), x)
 	r, ok := res.(*reply.RegisterRequest)
 	if !ok {
 		return nil, errors.New("Got not reply.RegisterRequest in reply for CallMethod")
@@ -178,11 +188,7 @@ func (cr *ContractRequester) CallConstructor(ctx context.Context, base core.Mess
 		SaveAs:           message.SaveAs(saveAs),
 	}
 
-	currentSlotPulse, err := cr.PulseStorage.Current(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't get pulse")
-	}
-	res, err := mb.Send(ctx, msg, *currentSlotPulse, nil)
+	res, err := mb.Send(ctx, msg, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't save new object as delegate")
 	}

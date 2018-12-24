@@ -28,7 +28,6 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/contractrequester"
-
 	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/logicrunner/goplugin"
@@ -120,7 +119,6 @@ func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *gop
 	nk := nodekeeper.GetTestNodekeeper(mock)
 
 	mb := testmessagebus.NewTestMessageBus(t)
-	mb.PulseNumber = 0
 
 	nw := network.GetTestNetwork()
 	// FIXME: TmpLedger is deprecated. Use mocks instead.
@@ -161,8 +159,6 @@ func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *gop
 		true,
 	)
 	require.NoError(t, err)
-
-	mb.PulseNumber = newPulseNumber
 
 	assert.NoError(t, err)
 	if err != nil {
@@ -1082,7 +1078,7 @@ func TestRootDomainContract(t *testing.T) {
 	// Creating Root member
 	rootKey, err := kp.GeneratePrivateKey()
 	assert.NoError(t, err)
-	rootPubKey, err := kp.ExportPublicKey(kp.ExtractPublicKey(rootKey))
+	rootPubKey, err := kp.ExportPublicKeyPEM(kp.ExtractPublicKey(rootKey))
 	assert.NoError(t, err)
 
 	rootMemberID, err := am.RegisterRequest(
@@ -1121,7 +1117,7 @@ func TestRootDomainContract(t *testing.T) {
 	// Creating Member1
 	member1Key, err := kp.GeneratePrivateKey()
 	assert.NoError(t, err)
-	member1PubKey, err := kp.ExportPublicKey(kp.ExtractPublicKey(member1Key))
+	member1PubKey, err := kp.ExportPublicKeyPEM(kp.ExtractPublicKey(member1Key))
 	assert.NoError(t, err)
 
 	res1 := root.SignedCall(ctx, pm, *rootDomainRef, "CreateMember", *cb.Prototypes["member"], []interface{}{"Member1", member1PubKey})
@@ -1131,7 +1127,7 @@ func TestRootDomainContract(t *testing.T) {
 	// Creating Member2
 	member2Key, err := kp.GeneratePrivateKey()
 	assert.NoError(t, err)
-	member2PubKey, err := kp.ExportPublicKey(kp.ExtractPublicKey(member2Key))
+	member2PubKey, err := kp.ExportPublicKeyPEM(kp.ExtractPublicKey(member2Key))
 	assert.NoError(t, err)
 
 	res2 := root.SignedCall(ctx, pm, *rootDomainRef, "CreateMember", *cb.Prototypes["member"], []interface{}{"Member2", member2PubKey})
@@ -1472,7 +1468,7 @@ func (r *One) CreateAllowance(member string) (error) {
 	// Creating Root member
 	rootKey, err := kp.GeneratePrivateKey()
 	assert.NoError(t, err)
-	rootPubKey, err := kp.ExportPublicKey(kp.ExtractPublicKey(rootKey))
+	rootPubKey, err := kp.ExportPublicKeyPEM(kp.ExtractPublicKey(rootKey))
 	assert.NoError(t, err)
 
 	rootMemberID, err := am.RegisterRequest(
@@ -1511,7 +1507,7 @@ func (r *One) CreateAllowance(member string) (error) {
 	// Creating Member
 	memberKey, err := kp.GeneratePrivateKey()
 	assert.NoError(t, err)
-	memberPubKey, err := kp.ExportPublicKey(kp.ExtractPublicKey(memberKey))
+	memberPubKey, err := kp.ExportPublicKeyPEM(kp.ExtractPublicKey(memberKey))
 	assert.NoError(t, err)
 
 	res1 := root.SignedCall(ctx, pm, *rootDomainRef, "CreateMember", *cb.Prototypes["member"], []interface{}{"Member", string(memberPubKey)})
@@ -1767,14 +1763,14 @@ func (r *One) EmptyMethod() (error) {
 	client.Go("RPC.CallMethod", req, res, nil)
 
 	// emulate death
-	rlr.sock.Close()
-
+	err = rlr.sock.Close()
+	require.NoError(t, err)
 	// wait for gorund try to send answer back, it will see closing connection, after that it needs to die
-	time.Sleep(300 * time.Millisecond)
+	time.Sleep(1 * time.Second)
 
 	// ping to goPlugin, it has to be dead
 	_, err = rpc.Dial(gp.Cfg.GoPlugin.RunnerProtocol, gp.Cfg.GoPlugin.RunnerListen)
-	assert.Error(t, err, "rpc Dial")
+	require.Error(t, err, "rpc Dial")
 	assert.Contains(t, err.Error(), "connect: connection refused")
 }
 

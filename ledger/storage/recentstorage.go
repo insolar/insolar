@@ -54,13 +54,12 @@ type RecentStorage struct {
 	recentObjects   map[core.RecordID]*recentObjectMeta
 	objectLock      sync.Mutex
 	pendingRequests map[core.RecordID]map[core.RecordID]struct{}
-	requestLock     sync.Mutex
+	requestLock     sync.RWMutex
 	DefaultTTL      int
 }
 
 type recentObjectMeta struct {
-	isMine bool
-	ttl    int
+	ttl int
 }
 
 // NewRecentStorage creates default RecentStorage object
@@ -74,12 +73,12 @@ func NewRecentStorage(defaultTTL int) *RecentStorage {
 }
 
 // AddObject adds object to cache
-func (r *RecentStorage) AddObject(id core.RecordID, isMine bool) {
-	r.AddObjectWithTLL(id, r.DefaultTTL, isMine)
+func (r *RecentStorage) AddObject(id core.RecordID) {
+	r.AddObjectWithTLL(id, r.DefaultTTL)
 }
 
 // AddObjectWithTLL adds object with specified TTL to the cache
-func (r *RecentStorage) AddObjectWithTLL(id core.RecordID, ttl int, isMine bool) {
+func (r *RecentStorage) AddObjectWithTLL(id core.RecordID, ttl int) {
 	r.objectLock.Lock()
 	defer r.objectLock.Unlock()
 	r.recentObjects[id] = &recentObjectMeta{ttl: r.DefaultTTL}
@@ -110,15 +109,6 @@ func (r *RecentStorage) RemovePendingRequest(obj, req core.RecordID) {
 	}
 }
 
-// IsMine checks mine-status of an object
-func (r *RecentStorage) IsMine(id core.RecordID) bool {
-	r.objectLock.Lock()
-	defer r.objectLock.Unlock()
-
-	val, ok := r.recentObjects[id]
-	return ok && val.isMine
-}
-
 // GetObjects returns object hot-indexes.
 func (r *RecentStorage) GetObjects() map[core.RecordID]int {
 	r.objectLock.Lock()
@@ -134,10 +124,27 @@ func (r *RecentStorage) GetObjects() map[core.RecordID]int {
 
 // GetRequests returns request hot-indexes.
 func (r *RecentStorage) GetRequests() map[core.RecordID]map[core.RecordID]struct{} {
-	r.requestLock.Lock()
-	defer r.requestLock.Unlock()
+	r.requestLock.RLock()
+	defer r.requestLock.RUnlock()
 
 	return r.pendingRequests
+}
+
+// GetRequestsForObject returns request hot-indexes for object.
+func (r *RecentStorage) GetRequestsForObject(obj core.RecordID) []core.RecordID {
+	r.requestLock.RLock()
+	defer r.requestLock.RUnlock()
+
+	forObject, ok := r.pendingRequests[obj]
+	if !ok {
+		return nil
+	}
+	results := make([]core.RecordID, 0, len(forObject))
+	for reqID := range forObject {
+		results = append(results, reqID)
+	}
+
+	return results
 }
 
 // ClearZeroTTLObjects clears objects with zero TTL

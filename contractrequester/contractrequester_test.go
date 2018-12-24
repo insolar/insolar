@@ -18,7 +18,6 @@ package contractrequester
 
 import (
 	"context"
-	"errors"
 	"runtime"
 	"testing"
 
@@ -36,16 +35,8 @@ import (
 
 func mockMessageBus(t *testing.T, result core.Reply) *testutils.MessageBusMock {
 	mbMock := testutils.NewMessageBusMock(t)
-	mbMock.SendFunc = func(c context.Context, m core.Message, _ core.Pulse, o *core.MessageSendOptions) (r core.Reply, r1 error) {
+	mbMock.SendFunc = func(c context.Context, m core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
 		return result, nil
-	}
-	return mbMock
-}
-
-func mockMessageBusError(t *testing.T) *testutils.MessageBusMock {
-	mbMock := testutils.NewMessageBusMock(t)
-	mbMock.SendFunc = func(c context.Context, m core.Message, _ core.Pulse, o *core.MessageSendOptions) (r core.Reply, r1 error) {
-		return nil, errors.New("test error message")
 	}
 	return mbMock
 }
@@ -81,7 +72,11 @@ func TestContractRequester_SendRequest(t *testing.T) {
 	cReq.Start(ctx)
 
 	go func() {
-		for len(cReq.ResultMap) == 0 {
+		resLen := 0
+		for resLen == 0 {
+			cReq.ResultMutex.Lock()
+			resLen = len(cReq.ResultMap)
+			cReq.ResultMutex.Unlock()
 			runtime.Gosched()
 		}
 		cReq.ResultMutex.Lock()

@@ -1,6 +1,6 @@
 host:
   transport:
-    protocol: UTP
+    protocol: TCP
     address: 127.0.0.1:0
     behindnat: false
   bootstraphosts: []
@@ -50,7 +50,7 @@ pulsar:
   neighbours: []
   numberdelta: 10
   distributiontransport:
-    protocol: UTP
+    protocol: TCP
     address: 0.0.0.0:18091
     behindnat: false
   pulsedistributor:

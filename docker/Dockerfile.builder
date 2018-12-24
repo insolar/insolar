@@ -8,4 +8,4 @@ ENV BIN_DIR="/go/bin"
 ENV CGO_ENABLED=1
 ENV GOOS=linux
 
-RUN apt-get update && apt-get -y install jq && apt-get clean && rm -Rf /go/src/github.com/insolar/insolar/vendor/* && make install-deps && make pre-build && mv /go/src/github.com/insolar/insolar/vendor /go/
+RUN apt-get update && apt-get -y install jq lsof vim && apt-get clean && rm -Rf /go/src/github.com/insolar/insolar/vendor/* && make install-deps && make pre-build && make test && mv /go/src/github.com/insolar/insolar/vendor /go/

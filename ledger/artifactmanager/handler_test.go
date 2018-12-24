@@ -17,9 +17,7 @@
 package artifactmanager
 
 import (
-	"bytes"
 	"context"
-	"sort"
 	"testing"
 
 	"github.com/gojuno/minimock"
@@ -69,7 +67,7 @@ func TestMessageHandler_HandleGetObject_Redirects(t *testing.T) {
 
 	mb := testutils.NewMessageBusMock(mc)
 	mb.MustRegisterMock.Return()
-	mb.SendFunc = func(c context.Context, gm core.Message, cp core.Pulse, o *core.MessageSendOptions) (r core.Reply, r1 error) {
+	mb.SendFunc = func(c context.Context, gm core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
 		if m, ok := gm.(*message.GetObjectIndex); ok {
 			assert.Equal(t, msg.Head, m.Object)
 			buf, err := index.EncodeObjectLifeline(&objIndex)
@@ -187,7 +185,7 @@ func TestMessageHandler_HandleGetChildren_Redirects(t *testing.T) {
 	}
 	objIndex := index.ObjectLifeline{LatestState: genRandomID(0)}
 
-	mb.SendFunc = func(c context.Context, gm core.Message, cp core.Pulse, o *core.MessageSendOptions) (r core.Reply, r1 error) {
+	mb.SendFunc = func(c context.Context, gm core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
 		if m, ok := gm.(*message.GetObjectIndex); ok {
 			assert.Equal(t, msg.Parent, m.Object)
 			buf, err := index.EncodeObjectLifeline(&objIndex)
@@ -314,7 +312,7 @@ func TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeavy(t *testing.T) {
 		AsType: delegateType,
 	}
 
-	mb.SendFunc = func(c context.Context, gm core.Message, cp core.Pulse, o *core.MessageSendOptions) (r core.Reply, r1 error) {
+	mb.SendFunc = func(c context.Context, gm core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
 		if m, ok := gm.(*message.GetObjectIndex); ok {
 			assert.Equal(t, msg.Head, m.Object)
 			buf, err := index.EncodeObjectLifeline(&objIndex)
@@ -390,7 +388,7 @@ func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 		Object: *genRandomRef(0),
 	}
 
-	mb.SendFunc = func(c context.Context, gm core.Message, cp core.Pulse, o *core.MessageSendOptions) (r core.Reply, r1 error) {
+	mb.SendFunc = func(c context.Context, gm core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
 		if m, ok := gm.(*message.GetObjectIndex); ok {
 			assert.Equal(t, msg.Object, m.Object)
 			buf, err := index.EncodeObjectLifeline(&objIndex)
@@ -486,17 +484,9 @@ func TestMessageHandler_HandleHasPendingRequests(t *testing.T) {
 		*genRandomID(core.FirstPulseNumber),
 		*genRandomID(core.FirstPulseNumber),
 	}
-	sort.Slice(pendingRequests, func(i, j int) bool {
-		return bytes.Compare(pendingRequests[i][:], pendingRequests[j][:]) < 0
-	})
 
 	recentStorageMock := recentstorage.NewRecentStorageMock(t)
-	recentStorageMock.GetRequestsMock.Return(map[core.RecordID]map[core.RecordID]struct{}{
-		*msg.Object.Record(): {
-			pendingRequests[0]: struct{}{},
-			pendingRequests[1]: struct{}{},
-		},
-	})
+	recentStorageMock.GetRequestsForObjectMock.Return(pendingRequests)
 
 	jc := testutils.NewJetCoordinatorMock(mc)
 	mb := testutils.NewMessageBusMock(mc)
@@ -643,7 +633,7 @@ func TestMessageHandler_HandleRegisterChild_FetchesIndexFromHeavy(t *testing.T) 
 		Parent: *genRandomRef(0),
 	}
 
-	mb.SendFunc = func(c context.Context, gm core.Message, cp core.Pulse, o *core.MessageSendOptions) (r core.Reply, r1 error) {
+	mb.SendFunc = func(c context.Context, gm core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
 		if m, ok := gm.(*message.GetObjectIndex); ok {
 			assert.Equal(t, msg.Parent, m.Object)
 			buf, err := index.EncodeObjectLifeline(&objIndex)
@@ -762,10 +752,9 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 		require.Equal(t, o, obj)
 		require.Equal(t, p, *secondId)
 	}
-	recentStorageMock.AddObjectWithTLLFunc = func(p core.RecordID, ttl int, isMine bool) {
+	recentStorageMock.AddObjectWithTLLFunc = func(p core.RecordID, ttl int) {
 		require.Equal(t, p, *firstID)
 		require.Equal(t, 320, ttl)
-		require.Equal(t, true, isMine)
 	}
 	provideMock := recentstorage.NewProviderMock(t)
 	provideMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
