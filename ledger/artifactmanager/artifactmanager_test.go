@@ -457,13 +457,13 @@ func TestLedgerArtifactManager_GetObject_FollowsRedirect(t *testing.T) {
 			return &reply.ObjectIndex{}, nil
 		case *message.GetObject:
 			if o.Receiver == nil {
-				return &reply.GetObjectRedirect{
+				return &reply.GetObjectRedirectReply{
 					Receiver: nodeRef,
-					Token:    &delegationtoken.GetObjectRedirect{Signature: []byte{1, 2, 3}},
+					Token:    &delegationtoken.GetObjectRedirectToken{Signature: []byte{1, 2, 3}},
 				}, nil
 			}
 
-			token, ok := o.Token.(*delegationtoken.GetObjectRedirect)
+			token, ok := o.Token.(*delegationtoken.GetObjectRedirectToken)
 			assert.True(t, ok)
 			assert.Equal(t, []byte{1, 2, 3}, token.Signature)
 			assert.Equal(t, nodeRef, o.Receiver)
@@ -629,13 +629,13 @@ func TestLedgerArtifactManager_GetChildren_FollowsRedirect(t *testing.T) {
 	mb.SendFunc = func(c context.Context, m core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
 		o = o.Safe()
 		if o.Receiver == nil {
-			return &reply.GetChildrenRedirect{
+			return &reply.GetChildrenRedirectReply{
 				Receiver: nodeRef,
-				Token:    &delegationtoken.GetChildrenRedirect{Signature: []byte{1, 2, 3}},
+				Token:    &delegationtoken.GetChildrenRedirectToken{Signature: []byte{1, 2, 3}},
 			}, nil
 		}
 
-		token, ok := o.Token.(*delegationtoken.GetChildrenRedirect)
+		token, ok := o.Token.(*delegationtoken.GetChildrenRedirectToken)
 		assert.True(t, ok)
 		assert.Equal(t, []byte{1, 2, 3}, token.Signature)
 		assert.Equal(t, nodeRef, o.Receiver)

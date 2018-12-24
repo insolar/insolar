@@ -56,7 +56,7 @@ func TestMessageHandler_HandleGetObject_Redirects(t *testing.T) {
 	}
 	objIndex := index.ObjectLifeline{LatestState: genRandomID(0)}
 
-	tf.IssueGetObjectRedirectMock.Return(&delegationtoken.GetObjectRedirect{Signature: []byte{1, 2, 3}}, nil)
+	tf.IssueGetObjectRedirectMock.Return(&delegationtoken.GetObjectRedirectToken{Signature: []byte{1, 2, 3}}, nil)
 	h := NewMessageHandler(db, &configuration.Ledger{
 		LightChainLimit: 3,
 	})
@@ -100,9 +100,9 @@ func TestMessageHandler_HandleGetObject_Redirects(t *testing.T) {
 			Msg: &msg,
 		})
 		require.NoError(t, err)
-		redirect, ok := rep.(*reply.GetObjectRedirect)
+		redirect, ok := rep.(*reply.GetObjectRedirectReply)
 		require.True(t, ok)
-		token, ok := redirect.Token.(*delegationtoken.GetObjectRedirect)
+		token, ok := redirect.Token.(*delegationtoken.GetObjectRedirectToken)
 		assert.Equal(t, []byte{1, 2, 3}, token.Signature)
 		assert.Equal(t, lightRef, redirect.GetReceiver())
 		assert.Nil(t, redirect.StateID)
@@ -127,9 +127,9 @@ func TestMessageHandler_HandleGetObject_Redirects(t *testing.T) {
 			PulseNumber: 1,
 		})
 		require.NoError(t, err)
-		redirect, ok := rep.(*reply.GetObjectRedirect)
+		redirect, ok := rep.(*reply.GetObjectRedirectReply)
 		require.True(t, ok)
-		token, ok := redirect.Token.(*delegationtoken.GetObjectRedirect)
+		token, ok := redirect.Token.(*delegationtoken.GetObjectRedirectToken)
 		assert.Equal(t, []byte{1, 2, 3}, token.Signature)
 		assert.Equal(t, lightRef, redirect.GetReceiver())
 		assert.Equal(t, stateID, redirect.StateID)
@@ -151,9 +151,9 @@ func TestMessageHandler_HandleGetObject_Redirects(t *testing.T) {
 			PulseNumber: 5,
 		})
 		require.NoError(t, err)
-		redirect, ok := rep.(*reply.GetObjectRedirect)
+		redirect, ok := rep.(*reply.GetObjectRedirectReply)
 		require.True(t, ok)
-		token, ok := redirect.Token.(*delegationtoken.GetObjectRedirect)
+		token, ok := redirect.Token.(*delegationtoken.GetObjectRedirectToken)
 		assert.Equal(t, []byte{1, 2, 3}, token.Signature)
 		assert.Equal(t, heavyRef, redirect.GetReceiver())
 		assert.Equal(t, stateID, redirect.StateID)
@@ -170,7 +170,7 @@ func TestMessageHandler_HandleGetChildren_Redirects(t *testing.T) {
 	jetID := *jet.NewID(0, nil)
 
 	tf := testutils.NewDelegationTokenFactoryMock(mc)
-	tf.IssueGetChildrenRedirectMock.Return(&delegationtoken.GetChildrenRedirect{Signature: []byte{1, 2, 3}}, nil)
+	tf.IssueGetChildrenRedirectMock.Return(&delegationtoken.GetChildrenRedirectToken{Signature: []byte{1, 2, 3}}, nil)
 	mb := testutils.NewMessageBusMock(mc)
 	mb.MustRegisterMock.Return()
 	jc := testutils.NewJetCoordinatorMock(mc)
@@ -221,9 +221,9 @@ func TestMessageHandler_HandleGetChildren_Redirects(t *testing.T) {
 			Msg: &msg,
 		})
 		require.NoError(t, err)
-		redirect, ok := rep.(*reply.GetChildrenRedirect)
+		redirect, ok := rep.(*reply.GetChildrenRedirectReply)
 		require.True(t, ok)
-		token, ok := redirect.Token.(*delegationtoken.GetChildrenRedirect)
+		token, ok := redirect.Token.(*delegationtoken.GetChildrenRedirectToken)
 		assert.Equal(t, []byte{1, 2, 3}, token.Signature)
 		assert.Equal(t, heavyRef, redirect.GetReceiver())
 
@@ -246,9 +246,9 @@ func TestMessageHandler_HandleGetChildren_Redirects(t *testing.T) {
 			PulseNumber: 1,
 		})
 		require.NoError(t, err)
-		redirect, ok := rep.(*reply.GetChildrenRedirect)
+		redirect, ok := rep.(*reply.GetChildrenRedirectReply)
 		require.True(t, ok)
-		token, ok := redirect.Token.(*delegationtoken.GetChildrenRedirect)
+		token, ok := redirect.Token.(*delegationtoken.GetChildrenRedirectToken)
 		assert.Equal(t, []byte{1, 2, 3}, token.Signature)
 		assert.Equal(t, lightRef, redirect.GetReceiver())
 	})
@@ -267,9 +267,9 @@ func TestMessageHandler_HandleGetChildren_Redirects(t *testing.T) {
 			PulseNumber: 5,
 		})
 		require.NoError(t, err)
-		redirect, ok := rep.(*reply.GetChildrenRedirect)
+		redirect, ok := rep.(*reply.GetChildrenRedirectReply)
 		require.True(t, ok)
-		token, ok := redirect.Token.(*delegationtoken.GetChildrenRedirect)
+		token, ok := redirect.Token.(*delegationtoken.GetChildrenRedirectToken)
 		assert.Equal(t, []byte{1, 2, 3}, token.Signature)
 		assert.Equal(t, heavyRef, redirect.GetReceiver())
 	})
@@ -536,7 +536,7 @@ func TestMessageHandler_HandleGetCode_Redirects(t *testing.T) {
 	recentStorageMock.AddObjectMock.Return()
 	recentStorageMock.RemovePendingRequestMock.Return()
 
-	tf.IssueGetCodeRedirectMock.Return(&delegationtoken.GetCodeRedirect{Signature: []byte{1, 2, 3}}, nil)
+	tf.IssueGetCodeRedirectMock.Return(&delegationtoken.GetCodeRedirectToken{Signature: []byte{1, 2, 3}}, nil)
 
 	jc.AmIMock.Return(true, nil)
 	h := NewMessageHandler(db, &configuration.Ledger{
@@ -564,9 +564,9 @@ func TestMessageHandler_HandleGetCode_Redirects(t *testing.T) {
 			Msg: &msg,
 		})
 		require.NoError(t, err)
-		redirect, ok := rep.(*reply.GetCodeRedirect)
+		redirect, ok := rep.(*reply.GetCodeRedirectReply)
 		require.True(t, ok)
-		token, ok := redirect.Token.(*delegationtoken.GetCodeRedirect)
+		token, ok := redirect.Token.(*delegationtoken.GetCodeRedirectToken)
 		assert.Equal(t, []byte{1, 2, 3}, token.Signature)
 		assert.Equal(t, lightRef, redirect.GetReceiver())
 	})
@@ -581,9 +581,9 @@ func TestMessageHandler_HandleGetCode_Redirects(t *testing.T) {
 			PulseNumber: 5,
 		})
 		require.NoError(t, err)
-		redirect, ok := rep.(*reply.GetCodeRedirect)
+		redirect, ok := rep.(*reply.GetCodeRedirectReply)
 		require.True(t, ok)
-		token, ok := redirect.Token.(*delegationtoken.GetCodeRedirect)
+		token, ok := redirect.Token.(*delegationtoken.GetCodeRedirectToken)
 		assert.Equal(t, []byte{1, 2, 3}, token.Signature)
 		assert.Equal(t, heavyRef, redirect.GetReceiver())
 	})
