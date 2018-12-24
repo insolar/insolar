@@ -352,16 +352,6 @@ func (bc *Bootstrapper) Start(keeper network.NodeKeeper) {
 	bc.transport.RegisterPacketHandler(types.Genesis, bc.processGenesis)
 }
 
-func getMinRef(nodes []core.DiscoveryNode) *core.RecordRef {
-	minRef := nodes[0].GetNodeRef()
-	for _, node := range nodes {
-		if node.GetNodeRef().Compare(*minRef) == -1 {
-			minRef = node.GetNodeRef()
-		}
-	}
-	return minRef
-}
-
 func NewBootstrapper(
 	options *common.Options,
 	certificate core.Certificate,
