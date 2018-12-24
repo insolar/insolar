@@ -77,6 +77,8 @@ func getTestData(t *testing.T) (
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	pulseStorage := storage.NewPulseStorage(db)
 	jc := testutils.NewJetCoordinatorMock(mc)
+	jc.LightExecutorForJetMock.Return(&core.RecordRef{}, nil)
+	jc.MeMock.Return(core.RecordRef{})
 	mb := testmessagebus.NewTestMessageBus(t)
 	mb.PulseStorage = pulseStorage
 	db.PlatformCryptographyScheme = scheme
@@ -99,8 +101,6 @@ func getTestData(t *testing.T) (
 	}
 
 	handler.RecentStorageProvider = provideMock
-
-	jc.AmIMock.Return(true, nil)
 
 	handler.Bus = mb
 	handler.JetCoordinator = jc
@@ -690,6 +690,8 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 	mb := testmessagebus.NewTestMessageBus(t)
 	mb.PulseStorage = storage.NewPulseStorage(db)
 	jc := testutils.NewJetCoordinatorMock(mc)
+	jc.LightExecutorForJetMock.Return(&core.RecordRef{}, nil)
+	jc.MeMock.Return(core.RecordRef{})
 
 	recentStorageMock := recentstorage.NewRecentStorageMock(t)
 	recentStorageMock.AddPendingRequestMock.Return()
@@ -722,9 +724,6 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 		getChildrenChunkSize:       100,
 		PlatformCryptographyScheme: scheme,
 	}
-
-	jc.QueryRoleMock.Return([]core.RecordRef{*genRandomRef(0)}, nil)
-	jc.AmIMock.Return(true, nil)
 
 	objID, err := am.RegisterRequest(
 		ctx,
@@ -834,7 +833,8 @@ func TestLedgerArtifactManager_RegisterRequest_JetMiss(t *testing.T) {
 
 		tree, err := db.GetJetTree(ctx, core.FirstPulseNumber)
 		require.NoError(t, err)
-		jetID := tree.Find(*core.NewRecordID(0, []byte{0xD5}))
+		jetID, actual := tree.Find(*core.NewRecordID(0, []byte{0xD5}))
 		assert.Equal(t, *jet.NewID(4, []byte{0xD0}), *jetID)
+		assert.True(t, actual)
 	})
 }

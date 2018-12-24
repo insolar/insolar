@@ -289,8 +289,8 @@ func (lr *LogicRunner) Stop(ctx context.Context) error {
 func (lr *LogicRunner) CheckOurRole(ctx context.Context, msg core.Message, role core.DynamicRole) error {
 	// TODO do map of supported objects for pulse, go to jetCoordinator only if map is empty for ref
 	target := msg.DefaultTarget()
-	isAuthorized, err := lr.JetCoordinator.AmI(
-		ctx, role, target.Record(), lr.pulse(ctx).PulseNumber,
+	isAuthorized, err := lr.JetCoordinator.IsAuthorized(
+		ctx, role, *target.Record(), lr.pulse(ctx).PulseNumber, lr.JetCoordinator.Me(),
 	)
 	if err != nil {
 		return errors.Wrap(err, "authorization failed with error")
@@ -344,7 +344,7 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 	err := lr.CheckOurRole(ctx, msg, core.DynamicRoleVirtualExecutor)
 	if err != nil {
 		es.Unlock()
-		return nil, errors.Wrap(err, "can't play role")
+		return nil, errors.Wrap(err, "[ Execute ] can't play role")
 	}
 
 	if lr.CheckExecutionLoop(ctx, es, parcel) {
@@ -355,7 +355,7 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 	request, err := lr.RegisterRequest(ctx, parcel)
 	if err != nil {
 		es.Unlock()
-		return nil, os.WrapError(err, "can't create request")
+		return nil, os.WrapError(err, "[ Execute ] can't create request")
 	}
 
 	qElement := ExecutionQueueElement{
@@ -610,14 +610,14 @@ func (lr *LogicRunner) executeOrValidate(
 		_, err = core.MessageBusFromContext(ctx, nil).Send(
 			ctx,
 			&message.ReturnResults{
-				Caller:  lr.NodeNetwork.GetOrigin().ID(),
-				Target:  target,
+				Caller:   lr.NodeNetwork.GetOrigin().ID(),
+				Target:   target,
 				Sequence: seq,
-				Reply:   re,
-				Error:   errstr,
+				Reply:    re,
+				Error:    errstr,
 			},
 			&core.MessageSendOptions{
-			Receiver: &target,
+				Receiver: &target,
 			},
 		)
 		if err != nil {
@@ -853,9 +853,9 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 	for ref, state := range lr.state {
 		// we are executor again - just continue working
 		// TODO we need to do something with validation
-		isAuthorized, _ := lr.JetCoordinator.AmI(
-			ctx, core.DynamicRoleVirtualExecutor, ref.Record(), pulse.PulseNumber)
-
+		isAuthorized, _ := lr.JetCoordinator.IsAuthorized(
+			ctx, core.DynamicRoleVirtualExecutor, *ref.Record(), pulse.PulseNumber, lr.JetCoordinator.Me(),
+		)
 		if isAuthorized {
 			continue
 		}
@@ -876,11 +876,11 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 			requests := caseBind.getCaseBindForMessage(ctx)
 			messages = append(
 				messages,
-				&message.ValidateCaseBind{
-					RecordRef: ref,
-					Requests:  requests,
-					Pulse:     pulse,
-				},
+				//&message.ValidateCaseBind{
+				//	RecordRef: ref,
+				//	Requests:  requests,
+				//	Pulse:     pulse,
+				//},
 				&message.ExecutorResults{
 					RecordRef: ref,
 					Pending:   es.pending == InPending,
@@ -931,7 +931,7 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 	return nil
 }
 
-func (lr *LogicRunner) sendOnPulseMessagesAsync(ctx context.Context, msg core.Message,sendWg *sync.WaitGroup, errChan *chan error) {
+func (lr *LogicRunner) sendOnPulseMessagesAsync(ctx context.Context, msg core.Message, sendWg *sync.WaitGroup, errChan *chan error) {
 	defer sendWg.Done()
 	_, err := lr.MessageBus.Send(ctx, msg, nil)
 	*errChan <- err

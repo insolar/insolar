@@ -51,6 +51,7 @@ func check(msg string, err error) {
 type memberInfo struct {
 	ref        string
 	privateKey string
+	traceId    string
 }
 
 type memberKeys struct {
@@ -73,7 +74,7 @@ func getRootMemberInfo(fileName string) memberInfo {
 	err = json.Unmarshal(rawConf, &keys)
 	check("problem with unmarshaling root member keys", err)
 
-	return memberInfo{getRootMemberRef(), keys.Private}
+	return memberInfo{getRootMemberRef(), keys.Private, ""}
 }
 
 func main() {

@@ -21,6 +21,7 @@ import (
 	"github.com/insolar/insolar/ledger/storage/jet"
 )
 
+// FIXME: @andreyromancev. 21.12.18. Remove this and create 'LogicRunnerMessage' interface to get rid of 'GetCaller' in ledger.
 type ledgerMessage struct {
 }
 
@@ -38,8 +39,8 @@ type SetRecord struct {
 }
 
 // AllowedSenderObjectAndRole implements interface method
-func (sr *SetRecord) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
-	return &sr.TargetRef, core.DynamicRoleVirtualExecutor
+func (m *SetRecord) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return &m.TargetRef, core.DynamicRoleVirtualExecutor
 }
 
 // DefaultRole returns role for this event
@@ -48,12 +49,12 @@ func (*SetRecord) DefaultRole() core.DynamicRole {
 }
 
 // DefaultTarget returns of target of this event.
-func (sr *SetRecord) DefaultTarget() *core.RecordRef {
-	return &sr.TargetRef
+func (m *SetRecord) DefaultTarget() *core.RecordRef {
+	return &m.TargetRef
 }
 
 // Type implementation of Message interface.
-func (e *SetRecord) Type() core.MessageType {
+func (m *SetRecord) Type() core.MessageType {
 	return core.TypeSetRecord
 }
 
@@ -64,8 +65,8 @@ type GetCode struct {
 }
 
 // AllowedSenderObjectAndRole implements interface method
-func (gc *GetCode) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
-	return &gc.Code, core.DynamicRoleVirtualExecutor
+func (m *GetCode) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return &m.Code, core.DynamicRoleVirtualExecutor
 }
 
 // DefaultRole returns role for this event
@@ -74,12 +75,12 @@ func (*GetCode) DefaultRole() core.DynamicRole {
 }
 
 // DefaultTarget returns of target of this event.
-func (gc *GetCode) DefaultTarget() *core.RecordRef {
-	return &gc.Code
+func (m *GetCode) DefaultTarget() *core.RecordRef {
+	return &m.Code
 }
 
 // Type implementation of Message interface.
-func (e *GetCode) Type() core.MessageType {
+func (*GetCode) Type() core.MessageType {
 	return core.TypeGetCode
 }
 
@@ -92,8 +93,8 @@ type GetObject struct {
 }
 
 // AllowedSenderObjectAndRole implements interface method
-func (getObj *GetObject) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
-	return &getObj.Head, core.DynamicRoleVirtualExecutor
+func (m *GetObject) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return &m.Head, core.DynamicRoleVirtualExecutor
 }
 
 // DefaultRole returns role for this event
@@ -102,12 +103,12 @@ func (*GetObject) DefaultRole() core.DynamicRole {
 }
 
 // DefaultTarget returns of target of this event.
-func (getObj *GetObject) DefaultTarget() *core.RecordRef {
-	return &getObj.Head
+func (m *GetObject) DefaultTarget() *core.RecordRef {
+	return &m.Head
 }
 
 // Type implementation of Message interface.
-func (getObj *GetObject) Type() core.MessageType {
+func (*GetObject) Type() core.MessageType {
 	return core.TypeGetObject
 }
 
@@ -119,8 +120,8 @@ type GetDelegate struct {
 }
 
 // AllowedSenderObjectAndRole implements interface method
-func (gd *GetDelegate) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
-	return &gd.Head, core.DynamicRoleVirtualExecutor
+func (m *GetDelegate) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return &m.Head, core.DynamicRoleVirtualExecutor
 }
 
 // DefaultRole returns role for this event
@@ -129,12 +130,12 @@ func (*GetDelegate) DefaultRole() core.DynamicRole {
 }
 
 // DefaultTarget returns of target of this event.
-func (gd *GetDelegate) DefaultTarget() *core.RecordRef {
-	return &gd.Head
+func (m *GetDelegate) DefaultTarget() *core.RecordRef {
+	return &m.Head
 }
 
 // Type implementation of Message interface.
-func (e *GetDelegate) Type() core.MessageType {
+func (*GetDelegate) Type() core.MessageType {
 	return core.TypeGetDelegate
 }
 
@@ -147,8 +148,8 @@ type UpdateObject struct {
 }
 
 // AllowedSenderObjectAndRole implements interface method
-func (uo *UpdateObject) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
-	return &uo.Object, core.DynamicRoleVirtualExecutor
+func (m *UpdateObject) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return &m.Object, core.DynamicRoleVirtualExecutor
 }
 
 // DefaultRole returns role for this event
@@ -157,12 +158,12 @@ func (*UpdateObject) DefaultRole() core.DynamicRole {
 }
 
 // DefaultTarget returns of target of this event.
-func (uo *UpdateObject) DefaultTarget() *core.RecordRef {
-	return &uo.Object
+func (m *UpdateObject) DefaultTarget() *core.RecordRef {
+	return &m.Object
 }
 
 // Type implementation of Message interface.
-func (e *UpdateObject) Type() core.MessageType {
+func (*UpdateObject) Type() core.MessageType {
 	return core.TypeUpdateObject
 }
 
@@ -176,8 +177,8 @@ type RegisterChild struct {
 }
 
 // AllowedSenderObjectAndRole implements interface method
-func (rc *RegisterChild) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
-	return &rc.Child, core.DynamicRoleVirtualExecutor
+func (m *RegisterChild) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return &m.Child, core.DynamicRoleVirtualExecutor
 }
 
 // DefaultRole returns role for this event
@@ -186,12 +187,12 @@ func (*RegisterChild) DefaultRole() core.DynamicRole {
 }
 
 // DefaultTarget returns of target of this event.
-func (rc *RegisterChild) DefaultTarget() *core.RecordRef {
-	return &rc.Parent
+func (m *RegisterChild) DefaultTarget() *core.RecordRef {
+	return &m.Parent
 }
 
 // Type implementation of Message interface.
-func (rc *RegisterChild) Type() core.MessageType {
+func (*RegisterChild) Type() core.MessageType {
 	return core.TypeRegisterChild
 }
 
@@ -205,8 +206,8 @@ type GetChildren struct {
 }
 
 // AllowedSenderObjectAndRole implements interface method
-func (gc *GetChildren) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
-	return &gc.Parent, core.DynamicRoleVirtualExecutor
+func (m *GetChildren) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return &m.Parent, core.DynamicRoleVirtualExecutor
 }
 
 // DefaultRole returns role for this event
@@ -215,12 +216,12 @@ func (*GetChildren) DefaultRole() core.DynamicRole {
 }
 
 // DefaultTarget returns of target of this event.
-func (gc *GetChildren) DefaultTarget() *core.RecordRef {
-	return &gc.Parent
+func (m *GetChildren) DefaultTarget() *core.RecordRef {
+	return &m.Parent
 }
 
 // Type implementation of Message interface.
-func (e *GetChildren) Type() core.MessageType {
+func (*GetChildren) Type() core.MessageType {
 	return core.TypeGetChildren
 }
 
@@ -236,7 +237,7 @@ type JetDrop struct {
 }
 
 // AllowedSenderObjectAndRole implements interface method
-func (jd *JetDrop) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+func (m *JetDrop) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
 	// This check is not needed, because JetDrop sender is explicitly checked in handler.
 	return nil, core.DynamicRoleUndefined
 }
@@ -247,12 +248,12 @@ func (*JetDrop) DefaultRole() core.DynamicRole {
 }
 
 // DefaultTarget returns of target of this event.
-func (jd *JetDrop) DefaultTarget() *core.RecordRef {
-	return core.NewRecordRef(core.RecordID{}, jd.JetID)
+func (m *JetDrop) DefaultTarget() *core.RecordRef {
+	return core.NewRecordRef(core.RecordID{}, m.JetID)
 }
 
 // Type implementation of Message interface.
-func (e *JetDrop) Type() core.MessageType {
+func (*JetDrop) Type() core.MessageType {
 	return core.TypeJetDrop
 }
 
@@ -267,8 +268,8 @@ type ValidateRecord struct {
 }
 
 // AllowedSenderObjectAndRole implements interface method
-func (vr *ValidateRecord) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
-	return &vr.Object, core.DynamicRoleVirtualExecutor
+func (m *ValidateRecord) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return &m.Object, core.DynamicRoleVirtualExecutor
 }
 
 // DefaultRole returns role for this event
@@ -277,8 +278,8 @@ func (*ValidateRecord) DefaultRole() core.DynamicRole {
 }
 
 // DefaultTarget returns of target of this event.
-func (vr *ValidateRecord) DefaultTarget() *core.RecordRef {
-	return &vr.Object
+func (m *ValidateRecord) DefaultTarget() *core.RecordRef {
+	return &m.Object
 }
 
 // Type implementation of Message interface.
@@ -295,8 +296,8 @@ type SetBlob struct {
 }
 
 // AllowedSenderObjectAndRole implements interface method
-func (sb *SetBlob) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
-	return &sb.TargetRef, core.DynamicRoleVirtualExecutor
+func (m *SetBlob) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return &m.TargetRef, core.DynamicRoleVirtualExecutor
 }
 
 // DefaultRole returns role for this event
@@ -305,8 +306,8 @@ func (*SetBlob) DefaultRole() core.DynamicRole {
 }
 
 // DefaultTarget returns of target of this event.
-func (sb *SetBlob) DefaultTarget() *core.RecordRef {
-	return &sb.TargetRef
+func (m *SetBlob) DefaultTarget() *core.RecordRef {
+	return &m.TargetRef
 }
 
 // Type implementation of Message interface.
@@ -322,8 +323,8 @@ type GetObjectIndex struct {
 }
 
 // AllowedSenderObjectAndRole implements interface method
-func (getObjectIndex *GetObjectIndex) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
-	return &getObjectIndex.Object, core.DynamicRoleLightExecutor
+func (m *GetObjectIndex) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return &m.Object, core.DynamicRoleLightExecutor
 }
 
 // DefaultRole returns role for this event
@@ -332,8 +333,8 @@ func (*GetObjectIndex) DefaultRole() core.DynamicRole {
 }
 
 // DefaultTarget returns of target of this event.
-func (getObjectIndex *GetObjectIndex) DefaultTarget() *core.RecordRef {
-	return &getObjectIndex.Object
+func (m *GetObjectIndex) DefaultTarget() *core.RecordRef {
+	return &m.Object
 }
 
 // Type implementation of Message interface.
@@ -351,17 +352,17 @@ type ValidationCheck struct {
 }
 
 // DefaultTarget returns of target of this event.
-func (vc *ValidationCheck) DefaultTarget() *core.RecordRef {
-	return &vc.Object
+func (m *ValidationCheck) DefaultTarget() *core.RecordRef {
+	return &m.Object
 }
 
 // DefaultRole returns role for this event
-func (vc *ValidationCheck) DefaultRole() core.DynamicRole {
+func (m *ValidationCheck) DefaultRole() core.DynamicRole {
 	return core.DynamicRoleLightExecutor
 }
 
 // AllowedSenderObjectAndRole implements interface method
-func (vc *ValidationCheck) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+func (m *ValidationCheck) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
 	// TODO: return smth real
 	return nil, 0
 }
@@ -383,8 +384,8 @@ type HotData struct {
 }
 
 // AllowedSenderObjectAndRole implements interface method
-func (hd *HotData) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
-	return &hd.Jet, core.DynamicRoleLightExecutor
+func (m *HotData) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return &m.Jet, core.DynamicRoleLightExecutor
 }
 
 // DefaultRole returns role for this event
@@ -393,8 +394,8 @@ func (*HotData) DefaultRole() core.DynamicRole {
 }
 
 // DefaultTarget returns of target of this event.
-func (hd *HotData) DefaultTarget() *core.RecordRef {
-	return &hd.Jet
+func (m *HotData) DefaultTarget() *core.RecordRef {
+	return &m.Jet
 }
 
 // Type implementation of Message interface.
@@ -433,6 +434,33 @@ func (*GetPendingRequests) DefaultRole() core.DynamicRole {
 // DefaultTarget returns of target of this event.
 func (m *GetPendingRequests) DefaultTarget() *core.RecordRef {
 	return &m.Object
+}
+
+// GetJet requests to calculate a jet for provided object.
+type GetJet struct {
+	ledgerMessage
+
+	Object core.RecordID
+}
+
+// Type implementation of Message interface.
+func (*GetJet) Type() core.MessageType {
+	return core.TypeGetJet
+}
+
+// AllowedSenderObjectAndRole implements interface method
+func (m *GetJet) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return core.NewRecordRef(core.DomainID, m.Object), core.DynamicRoleLightExecutor
+}
+
+// DefaultRole returns role for this event
+func (*GetJet) DefaultRole() core.DynamicRole {
+	return core.DynamicRoleLightExecutor
+}
+
+// DefaultTarget returns of target of this event.
+func (m *GetJet) DefaultTarget() *core.RecordRef {
+	return core.NewRecordRef(core.DomainID, m.Object)
 }
 
 // AbandonedRequestsNotification informs virtual node about unclosed requests.

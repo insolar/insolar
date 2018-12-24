@@ -68,6 +68,8 @@ const (
 	TypeJetMiss
 	// TypePendingRequests contains unclosed requests for an object.
 	TypePendingRequests
+	// TypeJet contains jet.
+	TypeJet
 
 	// TypeHeavyError carries heavy record sync
 	TypeHeavyError
@@ -120,6 +122,8 @@ func getEmptyReply(t core.ReplyType) (core.Reply, error) {
 		return &JetMiss{}, nil
 	case TypePendingRequests:
 		return &HasPendingRequests{}, nil
+	case TypeJet:
+		return &Jet{}, nil
 
 	case TypeNodeSign:
 		return &NodeSign{}, nil

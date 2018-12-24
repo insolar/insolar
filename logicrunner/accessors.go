@@ -63,7 +63,7 @@ func (lr *LogicRunner) UpsertObjectState(ref Ref) *ObjectState {
 func (lr *LogicRunner) MustObjectState(ref Ref) *ObjectState {
 	res := lr.GetObjectState(ref)
 	if res == nil {
-		panic("No requested object state")
+		panic("No requested object state. ref: " + ref.String())
 	}
 	return res
 }
@@ -86,7 +86,7 @@ func (lr *LogicRunner) GetConsensus(ctx context.Context, ref Ref) *Consensus {
 		validators, err := lr.JetCoordinator.QueryRole(
 			ctx,
 			core.DynamicRoleVirtualValidator,
-			ref.Record(),
+			*ref.Record(),
 			lr.pulse(ctx).PulseNumber,
 		)
 		if err != nil {
