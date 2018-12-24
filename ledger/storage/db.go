@@ -76,8 +76,8 @@ type DB struct {
 	// NodeHistory is an in-memory active node storage for each pulse. It's required to calculate node roles
 	// for past pulses to locate data.
 	// It should only contain previous N pulses. It should be stored on disk.
-	nodeHistory     map[core.PulseNumber][]core.Node
-	nodeHistoryLock sync.Mutex
+	nodeHistory     map[core.PulseNumber][]Node
+	nodeHistoryLock sync.RWMutex
 
 	addJetLock       sync.RWMutex
 	addBlockSizeLock sync.RWMutex
@@ -129,7 +129,7 @@ func NewDB(conf configuration.Ledger, opts *badger.Options) (*DB, error) {
 		txretiries:           conf.Storage.TxRetriesOnConflict,
 		jetSizesHistoryDepth: conf.JetSizesHistoryDepth,
 		idlocker:             NewIDLocker(),
-		nodeHistory:          map[core.PulseNumber][]core.Node{},
+		nodeHistory:          map[core.PulseNumber][]Node{},
 	}
 	return db, nil
 }
@@ -516,22 +516,54 @@ func (db *DB) SetActiveNodes(pulse core.PulseNumber, nodes []core.Node) error {
 	defer db.nodeHistoryLock.Unlock()
 
 	if _, ok := db.nodeHistory[pulse]; ok {
-		return errors.New("node history override is forbidden")
+		return ErrOverride
 	}
 
-	db.nodeHistory[pulse] = nodes
+	db.nodeHistory[pulse] = []Node{}
+	for _, n := range nodes {
+		db.nodeHistory[pulse] = append(db.nodeHistory[pulse], Node{
+			FID:   n.ID(),
+			FRole: n.Role(),
+		})
+	}
 
 	return nil
 }
 
 // GetActiveNodes return active nodes for specified pulse.
 func (db *DB) GetActiveNodes(pulse core.PulseNumber) ([]core.Node, error) {
+	db.nodeHistoryLock.RLock()
+	defer db.nodeHistoryLock.RUnlock()
+
 	nodes, ok := db.nodeHistory[pulse]
 	if !ok {
 		return nil, errors.New("no nodes for this pulse")
 	}
+	res := make([]core.Node, 0, len(nodes))
+	for _, n := range nodes {
+		res = append(res, n)
+	}
 
-	return nodes, nil
+	return res, nil
+}
+
+// GetActiveNodesByRole return active nodes for specified pulse and role.
+func (db *DB) GetActiveNodesByRole(pulse core.PulseNumber, role core.StaticRole) ([]core.Node, error) {
+	db.nodeHistoryLock.RLock()
+	defer db.nodeHistoryLock.RUnlock()
+
+	nodes, ok := db.nodeHistory[pulse]
+	if !ok {
+		return nil, errors.New("no nodes for this pulse")
+	}
+	var inRole []core.Node
+	for _, n := range nodes {
+		if n.Role() == role {
+			inRole = append(inRole, n)
+		}
+	}
+
+	return inRole, nil
 }
 
 // StoreKeyValues stores provided key/value pairs.

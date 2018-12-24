@@ -130,7 +130,7 @@ func (s *testSuite) SetupSuite() {
 	err = waitResults(results, expected)
 	s.NoError(err)
 
-	<-time.After(time.Second * 2)
+	<-time.After(time.Second * 5)
 	//TODO: wait for first consensus
 	// active nodes count verification
 	activeNodes := s.bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
@@ -141,15 +141,15 @@ func (s *testSuite) SetupSuite() {
 func (s *testSuite) TearDownSuite() {
 	log.Infoln("TearDownSuite")
 	log.Infoln("Stop network nodes")
-	for _, n := range s.networkNodes {
-		err := n.componentManager.Stop(s.ctx)
-		s.NoError(err)
-	}
-	log.Infoln("Stop bootstrap nodes")
-	for _, n := range s.bootstrapNodes {
-		err := n.componentManager.Stop(s.ctx)
-		s.NoError(err)
-	}
+	// for _, n := range s.networkNodes {
+	// 	err := n.componentManager.Stop(s.ctx)
+	// 	s.NoError(err)
+	// }
+	// log.Infoln("Stop bootstrap nodes")
+	// for _, n := range s.bootstrapNodes {
+	// 	err := n.componentManager.Stop(s.ctx)
+	// 	s.NoError(err)
+	// }
 }
 
 // nodesCount returns count of nodes in network without testNode

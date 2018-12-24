@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
@@ -27,9 +28,14 @@ import (
 	"github.com/pkg/errors"
 )
 
+const (
+	fetchJetReties = 10
+)
+
 type middleware struct {
 	db             *storage.DB
 	jetCoordinator core.JetCoordinator
+	messageBus     core.MessageBus
 }
 
 type jetKey struct{}
@@ -40,12 +46,12 @@ func contextWithJet(ctx context.Context, jetID core.RecordID) context.Context {
 
 func jetFromContext(ctx context.Context) core.RecordID {
 	val := ctx.Value(jetKey{})
-	jet, ok := val.(core.RecordID)
+	j, ok := val.(core.RecordID)
 	if !ok {
 		panic("failed to extract jet from context")
 	}
 
-	return jet
+	return j
 }
 
 func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
@@ -53,47 +59,47 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 		logger := inslogger.FromContext(ctx)
 
 		msg := parcel.Message()
-		target := msg.DefaultTarget().Record()
-		if target == nil {
-			logger.Debug("checkJet: unexpected message (target is nil)")
+		if msg.DefaultTarget() == nil {
 			return nil, errors.New("unexpected message")
 		}
 
-		tree, err := m.db.GetJetTree(ctx, target.Pulse())
-		if err != nil {
-			logger.Debugf("checkJet: failed to fetch jet tree: %s", err.Error())
-			return nil, errors.Wrap(err, "failed to fetch jet tree")
-		}
-		jetID := tree.Find(*target)
-		if err != nil {
-			logger.Debugf("checkJet: failed to Find: %s", err.Error())
-			return nil, err
+		// Calculate jet.
+		var jetID core.RecordID
+		if msg.DefaultTarget().Record().Pulse() == core.PulseNumberJet {
+			jetID = *msg.DefaultTarget().Record()
+		} else {
+			j, err := m.fetchJet(ctx, *msg.DefaultTarget().Record(), parcel.Pulse(), fetchJetReties)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to fetch jet tree")
+			}
+			jetID = *j
 		}
 
-		isMine, err := m.jetCoordinator.AmI(ctx, core.DynamicRoleLightExecutor, target, target.Pulse())
+		// Check if jet is ours.
+		node, err := m.jetCoordinator.LightExecutorForJet(ctx, jetID, parcel.Pulse())
 		if err != nil {
 			logger.Debugf("checkJet: failed to check isMine: %s", err.Error())
-			return nil, err
+			return nil, errors.Wrap(err, "failed to calculate executor for jet")
 		}
-		if !isMine {
+		if *node != m.jetCoordinator.Me() {
 			// TODO: sergey.morozov 2018-12-21 This is hack. Must implement correct Jet checking for HME.
 			logger.Debugf("checkJet: [ HACK ] checking if I am Heavy Material")
-			isHeavy, err := m.jetCoordinator.AmI(ctx, core.DynamicRoleHeavyExecutor, target, target.Pulse())
+			heavy, err := m.jetCoordinator.Heavy(ctx, parcel.Pulse())
 			if err != nil {
 				logger.Debugf("checkJet: [ HACK ] failed to check for Heavy role")
 				return nil, errors.Wrap(err, "[ HACK ] failed to check for heavy role")
 			}
-			if isHeavy {
+			if *heavy == m.jetCoordinator.Me() {
 				logger.Debugf("checkJet: [ HACK ] I am Heavy. Accept parcel.")
 				return handler(contextWithJet(ctx, jet.ZeroJetID), parcel)
 			}
 
 			logger.Debugf("checkJet: not Mine")
-			return &reply.JetMiss{JetID: *jetID}, nil
+			return &reply.JetMiss{JetID: jetID}, nil
 		}
 
 		logger.Debugf("checkJet: done well")
-		return handler(contextWithJet(ctx, *jetID), parcel)
+		return handler(contextWithJet(ctx, jetID), parcel)
 	}
 }
 
@@ -111,4 +117,55 @@ func (m *middleware) saveParcel(handler core.MessageHandler) core.MessageHandler
 
 		return handler(ctx, parcel)
 	}
+}
+
+func (m *middleware) fetchJet(
+	ctx context.Context, target core.RecordID, pulse core.PulseNumber, retries int,
+) (*core.RecordID, error) {
+	if retries < 0 {
+		return nil, errors.New("retries exceeded")
+	}
+
+	// Look in the local tree. Return if the actual jet found.
+	tree, err := m.db.GetJetTree(ctx, pulse)
+	if err != nil {
+		return nil, err
+	}
+	jetID, actual := tree.Find(target)
+	if actual {
+		return jetID, nil
+	}
+
+	// Couldn't find the actual jet locally. Ask for the jet from the previous executor.
+	prevPulse, err := m.db.GetPreviousPulse(ctx, pulse)
+	if err != nil {
+		return nil, err
+	}
+	prevExecutor, err := m.jetCoordinator.LightExecutorForJet(ctx, *jetID, prevPulse.Pulse.PulseNumber)
+	if err != nil {
+		return nil, err
+	}
+	rep, err := m.messageBus.Send(
+		ctx,
+		&message.GetJet{Object: target},
+		&core.MessageSendOptions{Receiver: prevExecutor},
+	)
+	if err != nil {
+		return nil, err
+	}
+	r, ok := rep.(*reply.Jet)
+	if !ok {
+		return nil, ErrUnexpectedReply
+	}
+
+	// TODO: check if the same executor again or the same jet again. INS-1041
+
+	// Update local tree.
+	err = m.db.UpdateJetTree(ctx, pulse, r.Actual)
+	if err != nil {
+		return nil, err
+	}
+
+	// Repeat the process again.
+	return m.fetchJet(ctx, target, pulse, retries-1)
 }

@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/merkle"
+	"github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 )
 
@@ -58,11 +59,14 @@ type FirstPhase struct {
 // Execute do first phase
 func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPhaseState, error) {
 	entry := &merkle.PulseEntry{Pulse: pulse}
+	logger := inslogger.FromContext(ctx)
 
 	pulseHash, pulseProof, err := fp.Calculator.GetPulseProof(entry)
 	if fp.NodeKeeper.GetState() == network.Ready {
 		fp.UnsyncList = fp.NodeKeeper.GetUnsyncList()
 	}
+
+	logger.Infof("[ FirstPhase ] Calculated pulse proof: %s", base58.Encode(pulseHash))
 
 	if err != nil {
 		return nil, errors.Wrap(err, "[ FirstPhase ] Failed to calculate pulse proof.")
@@ -103,7 +107,7 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 	if err != nil {
 		return nil, errors.Wrap(err, "[ FirstPhase ] Failed to exchange results.")
 	}
-	inslogger.FromContext(ctx).Infof("[ FirstPhase ] received responses: %d/%d", len(resultPackets), len(activeNodes))
+	logger.Infof("[ FirstPhase ] received responses: %d/%d", len(resultPackets), len(activeNodes))
 
 	proofSet := make(map[core.RecordRef]*merkle.PulseProof)
 	rawProofs := make(map[core.RecordRef]*packets.NodePulseProof)
@@ -114,7 +118,7 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 			err = fp.checkPacketSignature(packet, ref)
 		}
 		if err != nil {
-			inslogger.FromContext(ctx).Warnf("Failed to check phase1 packet signature from %s: %s", ref, err.Error())
+			logger.Warnf("Failed to check phase1 packet signature from %s: %s", ref, err.Error())
 			continue
 		}
 		rawProof := packet.GetPulseProof()
@@ -141,7 +145,7 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 		fp.UnsyncList.AddProof(node.ID(), rawProofs[node.ID()])
 	}
 	for nodeID := range fault {
-		inslogger.FromContext(ctx).Warnf("[ FirstPhase ] Failed to validate proof from %s", nodeID)
+		logger.Warnf("[ FirstPhase ] Failed to validate proof from %s", nodeID)
 		delete(claimMap, nodeID)
 	}
 	err = fp.UnsyncList.AddClaims(claimMap)

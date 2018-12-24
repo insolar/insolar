@@ -46,7 +46,8 @@ func TestLedgerArtifactManager_PendingRequest(t *testing.T) {
 	mb := testmessagebus.NewTestMessageBus(t)
 	mb.PulseStorage = pulseStorage
 	jc := testutils.NewJetCoordinatorMock(mc)
-	jc.AmIMock.Return(true, nil)
+	jc.LightExecutorForJetMock.Return(&core.RecordRef{}, nil)
+	jc.MeMock.Return(core.RecordRef{})
 	am := NewArtifactManger(db)
 	am.PlatformCryptographyScheme = cs
 	am.DefaultBus = mb

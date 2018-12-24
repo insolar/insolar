@@ -66,13 +66,7 @@ func (m *PulseManager) NextSyncPulses(ctx context.Context, jetID core.RecordID) 
 }
 
 func (m *PulseManager) findAllCompleted(ctx context.Context, jetID core.RecordID, from core.PulseNumber) ([]core.PulseNumber, error) {
-	wasalight, err := m.JetCoordinator.IsAuthorized(
-		ctx,
-		core.DynamicRoleLightExecutor,
-		&jetID,
-		from,
-		m.NodeNet.GetOrigin().ID(),
-	)
+	node, err := m.JetCoordinator.LightExecutorForJet(ctx, jetID, from)
 	if err != nil {
 		return nil, errors.Wrapf(err, "check 'am I light' for pulse num %v failed", from)
 	}
@@ -87,7 +81,7 @@ func (m *PulseManager) findAllCompleted(ctx context.Context, jetID core.RecordID
 	}
 
 	var found []core.PulseNumber
-	if wasalight {
+	if *node == m.JetCoordinator.Me() {
 		found = append(found, from)
 	}
 	extra, err := m.findAllCompleted(ctx, jetID, *next)

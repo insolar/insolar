@@ -55,11 +55,16 @@ func (jc *JetCoordinator) loadConfig(conf configuration.JetCoordinator) {
 	}
 }
 
+// Me returns current node.
+func (jc *JetCoordinator) Me() core.RecordRef {
+	return jc.NodeNet.GetOrigin().ID()
+}
+
 // IsAuthorized checks for role on concrete pulse for the address.
 func (jc *JetCoordinator) IsAuthorized(
 	ctx context.Context,
 	role core.DynamicRole,
-	obj *core.RecordID,
+	obj core.RecordID,
 	pulse core.PulseNumber,
 	node core.RecordRef,
 ) (bool, error) {
@@ -75,72 +80,199 @@ func (jc *JetCoordinator) IsAuthorized(
 	return false, nil
 }
 
-// AmI checks for role on concrete pulse for current node.
-func (jc *JetCoordinator) AmI(
-	ctx context.Context,
-	role core.DynamicRole,
-	obj *core.RecordID,
-	pulse core.PulseNumber,
-) (bool, error) {
-	return jc.IsAuthorized(ctx, role, obj, pulse, jc.NodeNet.GetOrigin().ID())
-}
-
 // QueryRole returns node refs responsible for role bound operations for given object and pulse.
 func (jc *JetCoordinator) QueryRole(
 	ctx context.Context,
 	role core.DynamicRole,
-	obj *core.RecordID,
+	objID core.RecordID,
 	pulse core.PulseNumber,
 ) ([]core.RecordRef, error) {
+	switch role {
+	case core.DynamicRoleVirtualExecutor:
+		node, err := jc.VirtualExecutorForObject(ctx, objID, pulse)
+		if err != nil {
+			return nil, err
+		}
+		return []core.RecordRef{*node}, nil
+
+	case core.DynamicRoleVirtualValidator:
+		return jc.VirtualValidatorsForObject(ctx, objID, pulse)
+
+	case core.DynamicRoleLightExecutor:
+		node, err := jc.LightExecutorForObject(ctx, objID, pulse)
+		if err != nil {
+			return nil, err
+		}
+		return []core.RecordRef{*node}, nil
+
+	case core.DynamicRoleLightValidator:
+		return jc.LightValidatorsForObject(ctx, objID, pulse)
+
+	case core.DynamicRoleHeavyExecutor:
+		node, err := jc.Heavy(ctx, pulse)
+		if err != nil {
+			return nil, err
+		}
+		return []core.RecordRef{*node}, nil
+	}
+
+	panic("unexpected role")
+}
+
+func (jc *JetCoordinator) VirtualExecutorForObject(
+	ctx context.Context, objID core.RecordID, pulse core.PulseNumber,
+) (*core.RecordRef, error) {
+	nodes, err := jc.virtualsForObject(ctx, objID, pulse, 1)
+	if err != nil {
+		return nil, err
+	}
+	return &nodes[0], nil
+}
+
+func (jc *JetCoordinator) VirtualValidatorsForObject(
+	ctx context.Context, objID core.RecordID, pulse core.PulseNumber,
+) ([]core.RecordRef, error) {
+	count, ok := jc.roleCounts[core.DynamicRoleVirtualValidator]
+	if !ok {
+		return nil, errors.New(fmt.Sprintf("no candidates for role %d", core.DynamicRoleVirtualValidator))
+	}
+	nodes, err := jc.virtualsForObject(ctx, objID, pulse, count+1)
+	if err != nil {
+		return nil, err
+	}
+	return nodes[1:], nil
+}
+
+func (jc *JetCoordinator) LightExecutorForJet(
+	ctx context.Context, jetID core.RecordID, pulse core.PulseNumber,
+) (*core.RecordRef, error) {
+	nodes, err := jc.lightMaterialsForJet(ctx, jetID, pulse, 1)
+	if err != nil {
+		return nil, err
+	}
+	return &nodes[0], nil
+}
+
+func (jc *JetCoordinator) LightValidatorsForJet(
+	ctx context.Context, jetID core.RecordID, pulse core.PulseNumber,
+) ([]core.RecordRef, error) {
+	count, ok := jc.roleCounts[core.DynamicRoleLightValidator]
+	if !ok {
+		return nil, errors.New(fmt.Sprintf("no candidates for role %d", core.DynamicRoleLightValidator))
+	}
+	nodes, err := jc.lightMaterialsForJet(ctx, jetID, pulse, count+1)
+	if err != nil {
+		return nil, err
+	}
+	return nodes[1:], nil
+}
+
+func (jc *JetCoordinator) LightExecutorForObject(
+	ctx context.Context, objID core.RecordID, pulse core.PulseNumber,
+) (*core.RecordRef, error) {
+	tree, err := jc.db.GetJetTree(ctx, pulse)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to fetch jet tree")
+	}
+	jetID, _ := tree.Find(objID)
+	return jc.LightExecutorForJet(ctx, *jetID, pulse)
+}
+
+func (jc *JetCoordinator) LightValidatorsForObject(
+	ctx context.Context, objID core.RecordID, pulse core.PulseNumber,
+) ([]core.RecordRef, error) {
+	tree, err := jc.db.GetJetTree(ctx, pulse)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to fetch jet tree")
+	}
+	jetID, _ := tree.Find(objID)
+	return jc.LightValidatorsForJet(ctx, *jetID, pulse)
+}
+
+func (jc *JetCoordinator) Heavy(ctx context.Context, pulse core.PulseNumber) (*core.RecordRef, error) {
+	candidates, err := jc.db.GetActiveNodesByRole(pulse, core.StaticRoleHeavyMaterial)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to fetch active nodes for pulse %v", pulse)
+	}
+	if len(candidates) == 0 {
+		return nil, errors.New(fmt.Sprintf("no active nodes for pulse %d", pulse))
+	}
 	pulseData, err := jc.db.GetPulse(ctx, pulse)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch pulse data for pulse %v", pulse)
 	}
-	candidates := jc.NodeNet.GetActiveNodesByRole(role)
-	if len(candidates) == 0 {
-		return nil, errors.New(fmt.Sprintf("no candidates for role %d", role))
+	nodes, err := getRefs(
+		jc.PlatformCryptographyScheme,
+		pulseData.Pulse.Entropy[:],
+		candidates,
+		1,
+	)
+	if err != nil {
+		return nil, err
 	}
-	count, ok := jc.roleCounts[role]
-	if !ok {
-		return nil, errors.New("no candidate count for this role")
-	}
-	ent := pulseData.Pulse.Entropy[:]
-
-	if obj == nil {
-		return getRefs(jc.PlatformCryptographyScheme, ent, candidates, count)
-	}
-
-	if role == core.DynamicRoleLightExecutor {
-		jetTree, err := jc.db.GetJetTree(ctx, obj.Pulse())
-		if err != nil {
-			return nil, err
-		}
-		id := jetTree.Find(*obj)
-		_, prefix := jet.Jet(*id)
-		return getRefs(jc.PlatformCryptographyScheme, circleXOR(ent, prefix), candidates, count)
-	}
-
-	return getRefs(jc.PlatformCryptographyScheme, circleXOR(ent, obj.Hash()), candidates, count)
+	return &nodes[0], nil
 }
 
-// GetActiveNodes return active nodes for specified pulse.
-func (jc *JetCoordinator) GetActiveNodes(pulse core.PulseNumber) ([]core.Node, error) {
-	return jc.db.GetActiveNodes(pulse)
+func (jc *JetCoordinator) virtualsForObject(
+	ctx context.Context, objID core.RecordID, pulse core.PulseNumber, count int,
+) ([]core.RecordRef, error) {
+	candidates, err := jc.db.GetActiveNodesByRole(pulse, core.StaticRoleVirtual)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to fetch active nodes for pulse %v", pulse)
+	}
+	if len(candidates) == 0 {
+		return nil, errors.New(fmt.Sprintf("no active nodes for pulse %d", pulse))
+	}
+	pulseData, err := jc.db.GetPulse(ctx, pulse)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to fetch pulse data for pulse %v", pulse)
+	}
+	return getRefs(
+		jc.PlatformCryptographyScheme,
+		circleXOR(pulseData.Pulse.Entropy[:], objID.Hash()),
+		candidates,
+		count,
+	)
+}
+
+func (jc *JetCoordinator) lightMaterialsForJet(
+	ctx context.Context, jetID core.RecordID, pulse core.PulseNumber, count int,
+) ([]core.RecordRef, error) {
+	_, prefix := jet.Jet(jetID)
+	candidates, err := jc.db.GetActiveNodesByRole(pulse, core.StaticRoleLightMaterial)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to fetch active nodes for pulse %v", pulse)
+	}
+	if len(candidates) == 0 {
+		return nil, errors.New(fmt.Sprintf("no active nodes for pulse %d", pulse))
+	}
+	pulseData, err := jc.db.GetPulse(ctx, pulse)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to fetch pulse data for pulse %v", pulse)
+	}
+	return getRefs(
+		jc.PlatformCryptographyScheme,
+		circleXOR(pulseData.Pulse.Entropy[:], prefix),
+		candidates,
+		count,
+	)
 }
 
 func getRefs(
 	scheme core.PlatformCryptographyScheme,
 	e []byte,
-	values []core.RecordRef,
+	values []core.Node,
 	count int,
 ) ([]core.RecordRef, error) {
 	// TODO: remove sort when network provides sorted result from GetActiveNodesByRole (INS-890) - @nordicdyno 5.Dec.2018
 	sort.SliceStable(values, func(i, j int) bool {
-		return bytes.Compare(values[i][:], values[j][:]) < 0
+		v1 := values[i].ID()
+		v2 := values[j].ID()
+		return bytes.Compare(v1[:], v2[:]) < 0
 	})
 	in := make([]interface{}, 0, len(values))
 	for _, value := range values {
-		in = append(in, interface{}(value))
+		in = append(in, interface{}(value.ID()))
 	}
 
 	res, err := entropy.SelectByEntropy(scheme, e, in, count)
@@ -162,26 +294,5 @@ func circleXOR(value, src []byte) []byte {
 	for i := range result {
 		result[i] = value[i] ^ src[i%srcLen]
 	}
-	return result
-}
-
-// ResetBits returns a new byte slice with all bits in 'value' reset, starting from 'start' number of bit. If 'start'
-// is bigger than len(value), the original slice will be returned.
-func resetBits(value []byte, start int) []byte {
-	if start > len(value)*8 {
-		return value
-	}
-
-	startByte := start / 8
-	startBit := start % 8
-
-	result := make([]byte, len(value))
-	copy(result, value[:startByte])
-
-	// Reset bits in starting byte.
-	mask := byte(0xFF)
-	mask <<= 8 - byte(startBit)
-	result[startByte] &= mask
-
 	return result
 }
