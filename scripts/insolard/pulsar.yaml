@@ -18,5 +18,5 @@ pulsar:
     behindnat: false
   pulsedistributor:
     bootstraphosts:
-    - localhost:13831
+    - 127.0.0.1:13831
 keyspath: "scripts/insolard/configs/bootstrap_keys.json"

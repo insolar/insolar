@@ -28,12 +28,12 @@ stop_listening()
 {
     echo "stop_listening() starts ..."
     stop_insgorund=$1
-    ports="13831 13832 23832 23833 33833 33834"
+    ports="13831 13832 23832 23833 33833 33834 58090"
     if [ "$stop_insgorund" == "true" ]
     then
         ports="$ports $INSGORUND_LISTEN_PORT $INSGORUND_RPS_PORT"
     fi
-    
+
     echo "Stop listening..."
     for port in $ports
     do
