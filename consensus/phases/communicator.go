@@ -44,6 +44,8 @@ type Communicator interface {
 	ExchangePhase21(ctx context.Context, list network.UnsyncList, packet *packets.Phase2Packet, additionalRequests []*AdditionalRequest) ([]packets.ReferendumVote, error)
 	// ExchangePhase3 used in third consensus step to exchange data between participants
 	ExchangePhase3(ctx context.Context, participants []core.Node, packet *packets.Phase3Packet) (map[core.RecordRef]*packets.Phase3Packet, error)
+
+	Start(ctx context.Context) error
 }
 
 type phase1Result struct {
@@ -103,6 +105,10 @@ func (nc *NaiveCommunicator) setPulseNumber(new core.PulseNumber) bool {
 
 func (nc *NaiveCommunicator) sendRequestToNodes(participants []core.Node, packet packets.ConsensusPacket) {
 	for _, node := range participants {
+		if node.ID().Equal(nc.NodeKeeper.GetOrigin().ID()) {
+			continue
+		}
+
 		go func(n core.Node) {
 			err := nc.ConsensusNetwork.SignAndSendPacket(packet, n.ID(), nc.Cryptography)
 			if err != nil {
@@ -126,6 +132,10 @@ func (nc *NaiveCommunicator) sendRequestToNodesWithOrigin(originClaim *packets.N
 	}
 
 	for ref, req := range requests {
+		if ref.Equal(nc.NodeKeeper.GetOrigin().ID()) {
+			continue
+		}
+
 		go func(node core.RecordRef, consensusPacket packets.ConsensusPacket) {
 			err := nc.ConsensusNetwork.SignAndSendPacket(consensusPacket, node, nc.Cryptography)
 			if err != nil {
@@ -186,7 +196,7 @@ func (nc *NaiveCommunicator) generatePhase2Response(origReq, req *packets.Phase2
 			answers = append(answers, &claimAnswer)
 		}
 	}
-	response := packets.Phase2Packet{}
+	response := packets.NewPhase2Packet()
 	response.SetBitSet(origReq.GetBitSet())
 	ghs := origReq.GetGlobuleHashSignature()
 	err := response.SetGlobuleHashSignature(ghs[:])
@@ -196,7 +206,7 @@ func (nc *NaiveCommunicator) generatePhase2Response(origReq, req *packets.Phase2
 	for _, answer := range answers {
 		response.AddVote(answer)
 	}
-	return &response, nil
+	return response, nil
 }
 
 // ExchangePhase1 used in first consensus phase to exchange data between participants
@@ -218,7 +228,7 @@ func (nc *NaiveCommunicator) ExchangePhase1(
 	if originClaim == nil {
 		request = packet
 	} else {
-		request = &packets.Phase1Packet{}
+		request = packets.NewPhase1Packet()
 		*request = *packet
 		request.RemoveAnnounceClaim()
 	}
@@ -238,7 +248,6 @@ func (nc *NaiveCommunicator) ExchangePhase1(
 	}
 	response := request
 
-	inslogger.FromContext(ctx).Infof("result len %d", len(result))
 	for {
 		select {
 		case res := <-nc.phase1result:
@@ -295,7 +304,6 @@ func (nc *NaiveCommunicator) ExchangePhase2(ctx context.Context, list network.Un
 		return firstResultReceive || packetContainsVoteRequests
 	}
 
-	inslogger.FromContext(ctx).Infof("result len %d", len(result))
 	var err error
 	for {
 		select {
@@ -446,7 +454,6 @@ func (nc *NaiveCommunicator) ExchangePhase3(ctx context.Context, participants []
 		return !ok || val == nil
 	}
 
-	inslogger.FromContext(ctx).Infof("result len %d", len(result))
 	for {
 		select {
 		case res := <-nc.phase3result:

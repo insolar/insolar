@@ -79,6 +79,7 @@ type CurrentExecution struct {
 	Context       context.Context
 	LogicContext  *core.LogicCallContext
 	Request       *Ref
+	Sequence      uint64
 	RequesterNode *Ref
 	ReturnMode    message.MethodReturnMode
 	SentResult    bool
@@ -499,8 +500,11 @@ func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionS
 			RequesterNode: &sender,
 		}
 
-		if msg, ok := qe.parcel.Message().(*message.CallMethod); ok && msg.ReturnMode == message.ReturnNoWait {
+		if msg, ok := qe.parcel.Message().(*message.CallMethod); ok {
 			es.Current.ReturnMode = msg.ReturnMode
+		}
+		if msg, ok := qe.parcel.Message().(message.IBaseLogicMessage); ok {
+			es.Current.Sequence = msg.GetBaseLogicMessage().Sequence
 		}
 
 		es.Unlock()
@@ -516,9 +520,7 @@ func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionS
 		es.Current.Context = core.ContextWithMessageBus(qe.ctx, recordingBus)
 
 		inslogger.FromContext(qe.ctx).Debug("Registering request within execution behaviour")
-		es.Behaviour.(*ValidationSaver).NewRequest(
-			qe.parcel.Message(), *qe.request, recordingBus,
-		)
+		es.Behaviour.(*ValidationSaver).NewRequest(qe.parcel, *qe.request, recordingBus)
 
 		res.reply, res.err = lr.executeOrValidate(es.Current.Context, es, qe.parcel)
 
@@ -600,6 +602,7 @@ func (lr *LogicRunner) executeOrValidate(
 
 	target := *es.Current.RequesterNode
 	request := *es.Current.Request
+	seq := es.Current.Sequence
 
 	go func() {
 		inslogger.FromContext(ctx).Debugf("Sending Method Results for ", request)
@@ -609,7 +612,7 @@ func (lr *LogicRunner) executeOrValidate(
 			&message.ReturnResults{
 				Caller:  lr.NodeNetwork.GetOrigin().ID(),
 				Target:  target,
-				Request: request,
+				Sequence: seq,
 				Reply:   re,
 				Error:   errstr,
 			},
