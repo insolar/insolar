@@ -48,7 +48,7 @@ func (f *delegationTokenFactory) IssuePendingExecution(
 	if err != nil {
 		return nil, err
 	}
-	token := &PendingExecution{}
+	token := &PendingExecutionToken{}
 	token.Signature = sign.Bytes()
 
 	return token, nil
@@ -64,7 +64,7 @@ func (f *delegationTokenFactory) IssueGetObjectRedirect(
 	if err != nil {
 		return nil, err
 	}
-	return &GetObjectRedirect{Signature: sign.Bytes()}, nil
+	return &GetObjectRedirectToken{Signature: sign.Bytes()}, nil
 }
 
 // IssueGetChildrenRedirect creates new token for provided message.
@@ -77,7 +77,7 @@ func (f *delegationTokenFactory) IssueGetChildrenRedirect(
 	if err != nil {
 		return nil, err
 	}
-	return &GetChildrenRedirect{Signature: sign.Bytes()}, nil
+	return &GetChildrenRedirectToken{Signature: sign.Bytes()}, nil
 }
 
 // IssueGetCodeRedirect creates new token for provided message.
@@ -90,7 +90,7 @@ func (f *delegationTokenFactory) IssueGetCodeRedirect(
 	if err != nil {
 		return nil, err
 	}
-	return &GetCodeRedirect{Signature: sign.Bytes()}, nil
+	return &GetCodeRedirectToken{Signature: sign.Bytes()}, nil
 }
 
 // Verify performs token validation.
