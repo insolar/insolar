@@ -19,16 +19,12 @@ package messagebus
 import (
 	"bytes"
 	"context"
-	"encoding/gob"
 	"io"
 
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
 
-	"github.com/satori/go.uuid"
-
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/reply"
 )
 
 // Tape is an abstraction for saving replies for messages and restoring them.
@@ -39,78 +35,6 @@ type tape interface {
 	Write(ctx context.Context, writer io.Writer) error
 	GetReply(ctx context.Context, msgHash []byte) (core.Reply, error)
 	SetReply(ctx context.Context, msgHash []byte, rep core.Reply) error
-}
-
-// StorageTape saves and fetches message replies to/from local storage.
-//
-// It uses <storageTape id> + <message hash> for Value keys.
-type storageTape struct {
-	ls    core.LocalStorage
-	pulse core.PulseNumber
-	id    uuid.UUID
-}
-
-// newStorageTape creates new storageTape with random id.
-func newStorageTape(ls core.LocalStorage, pulse core.PulseNumber) (*storageTape, error) {
-	id, err := uuid.NewV4()
-	if err != nil {
-		return nil, err
-	}
-	return &storageTape{ls: ls, pulse: pulse, id: id}, nil
-}
-
-// Write writes all saved in tape replies to provided writer.
-func (t *storageTape) Write(ctx context.Context, w io.Writer) error {
-	var err error
-
-	encoder := gob.NewEncoder(w)
-	err = encoder.Encode(t.pulse)
-	if err != nil {
-		return err
-	}
-	err = encoder.Encode(t.id)
-	if err != nil {
-		return err
-	}
-
-	err = t.ls.Iterate(ctx, t.pulse, t.id[:], func(k, v []byte) error {
-		return encoder.Encode(&core.KV{
-			K: k[len(t.id):],
-			V: v,
-		})
-	})
-
-	return err
-}
-
-// GetReply returns reply if it was previously saved on that tape.
-func (t *storageTape) GetReply(ctx context.Context, msgHash []byte) (core.Reply, error) {
-	key := bytes.Join([][]byte{t.id[:], msgHash}, nil)
-	buff, err := t.ls.Get(ctx, t.pulse, key)
-	if err != nil {
-		return nil, err
-	}
-
-	return reply.Deserialize(bytes.NewBuffer(buff))
-}
-
-// SetReply stores provided reply for this tape.
-func (t *storageTape) SetReply(ctx context.Context, msgHash []byte, rep core.Reply) error {
-	reader, err := reply.Serialize(rep)
-	if err != nil {
-		return err
-	}
-	buff := new(bytes.Buffer)
-	_, err = buff.ReadFrom(reader)
-	if err != nil {
-		return err
-	}
-	return t.setReplyBinary(ctx, msgHash, buff.Bytes())
-}
-
-func (t *storageTape) setReplyBinary(ctx context.Context, msgHash []byte, rep []byte) error {
-	key := bytes.Join([][]byte{t.id[:], msgHash}, nil)
-	return t.ls.Set(ctx, t.pulse, key, rep)
 }
 
 // memoryTape saves and fetches message replies to/from memory array.
