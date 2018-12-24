@@ -46,14 +46,17 @@ type Bootstrapper struct {
 	cert       core.Certificate
 	keeper     network.NodeKeeper
 	fakePulsar *fakepulsar.FakePulsar
+	minNodeRef *core.RecordRef
 }
 
 type NodeBootstrapRequest struct{}
 
 type NodeBootstrapResponse struct {
-	Code         Code
-	RedirectHost string
-	RejectReason string
+	FirstPulseTime int64
+	PulseNum       int64
+	Code           Code
+	RedirectHost   string
+	RejectReason   string
 }
 
 type GenesisRequest struct {
@@ -123,8 +126,6 @@ func init() {
 	gob.Register(&StartSessionResponse{})
 	gob.Register(&GenesisRequest{})
 	gob.Register(&GenesisResponse{})
-	gob.Register(&fakepulsar.Request{})
-	gob.Register(&fakepulsar.Response{})
 }
 
 // Bootstrap on the discovery node (step 1 of the bootstrap process)
@@ -224,21 +225,16 @@ func (bc *Bootstrapper) sendGenesisRequest(ctx context.Context, h *host.Host) (c
 func (bc *Bootstrapper) getDiscoveryNodesChannel(ctx context.Context, discoveryNodes []core.DiscoveryNode, needResponses int) <-chan *host.Host {
 	// we need only one host to bootstrap
 	bootstrapHosts := make(chan *host.Host, needResponses)
-	minRef := getMinRef(discoveryNodes)
-	needToSyncFakePulsar := false
 	for _, discoveryNode := range discoveryNodes {
-		if discoveryNode.GetNodeRef().Equal(*minRef) {
-			needToSyncFakePulsar = true
-		}
-		go func(ctx context.Context, address string, ch chan<- *host.Host, syncFakePulsar bool) {
+		go func(ctx context.Context, address string, ch chan<- *host.Host) {
 			inslogger.FromContext(ctx).Infof("Starting bootstrap to address %s", address)
-			bootstrapHost, err := bootstrap(address, bc.options, bc.startBootstrap, needToSyncFakePulsar)
+			bootstrapHost, err := bootstrap(address, bc.options, bc.startBootstrap)
 			if err != nil {
 				inslogger.FromContext(ctx).Errorf("Error bootstrapping to address %s: %s", address, err.Error())
 				return
 			}
 			bootstrapHosts <- bootstrapHost
-		}(ctx, discoveryNode.GetHost(), bootstrapHosts, needToSyncFakePulsar)
+		}(ctx, discoveryNode.GetHost(), bootstrapHosts)
 	}
 
 	return bootstrapHosts
@@ -272,13 +268,13 @@ func (bc *Bootstrapper) waitResultsFromChannel(ctx context.Context, ch <-chan *h
 	}
 }
 
-func bootstrap(address string, options *common.Options, bootstrapF func(string, bool) (*host.Host, error), syncFakePulsar bool) (*host.Host, error) {
+func bootstrap(address string, options *common.Options, bootstrapF func(string) (*host.Host, error)) (*host.Host, error) {
 	minTO := options.MinTimeout
 	if !options.InfinityBootstrap {
-		return bootstrapF(address, syncFakePulsar)
+		return bootstrapF(address)
 	}
 	for {
-		result, err := bootstrapF(address, syncFakePulsar)
+		result, err := bootstrapF(address)
 		if err == nil {
 			return result, nil
 		}
@@ -290,7 +286,7 @@ func bootstrap(address string, options *common.Options, bootstrapF func(string, 
 	}
 }
 
-func (bc *Bootstrapper) startBootstrap(address string, syncFakePulsar bool) (*host.Host, error) {
+func (bc *Bootstrapper) startBootstrap(address string) (*host.Host, error) {
 	bootstrapHost, err := bc.pinger.Ping(address, bc.options.PingTimeout)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Failed to ping address %s", address)
@@ -309,19 +305,9 @@ func (bc *Bootstrapper) startBootstrap(address string, syncFakePulsar bool) (*ho
 	case Rejected:
 		return nil, errors.New("Rejected: " + data.RejectReason)
 	case Redirected:
-		return bootstrap(data.RedirectHost, bc.options, bc.startBootstrap, syncFakePulsar)
+		return bootstrap(data.RedirectHost, bc.options, bc.startBootstrap)
 	case Accepted:
-		if syncFakePulsar {
-			request := bc.transport.NewRequestBuilder().Type(types.FakePulsarRequest).Data(fakepulsar.Request{}).Build()
-			future, err := bc.transport.SendRequestPacket(request, bootstrapHost)
-			if err != nil {
-				return nil, errors.Wrapf(err, "Failed to send bootstrap request to address %s", address)
-			}
-			response, err := future.GetResponse(bc.options.BootstrapTimeout)
-			if err != nil {
-				return nil, errors.Wrapf(err, "Failed to get response to bootstrap request from address %s", address)
-			}
-			data := response.GetData().(*fakepulsar.Response)
+		if bc.minNodeRef.Compare(response.GetSender()) > 0 {
 			bc.fakePulsar.SetPulseData(data.FirstPulseTime, data.PulseNum)
 		}
 	}
@@ -330,7 +316,12 @@ func (bc *Bootstrapper) startBootstrap(address string, syncFakePulsar bool) (*ho
 
 func (bc *Bootstrapper) processBootstrap(ctx context.Context, request network.Request) (network.Response, error) {
 	// TODO: redirect logic
-	return bc.transport.BuildResponse(request, &NodeBootstrapResponse{Code: Accepted}), nil
+	return bc.transport.BuildResponse(request, &NodeBootstrapResponse{
+		Code:           Accepted,
+		FirstPulseTime: time.Now().UTC().Unix(),
+		PulseNum:       0,
+	},
+	), nil
 }
 
 func (bc *Bootstrapper) checkGenesisCert(cert core.AuthorizationCertificate) error {
@@ -355,18 +346,10 @@ func (bc *Bootstrapper) processGenesis(ctx context.Context, request network.Requ
 	return bc.transport.BuildResponse(request, &GenesisResponse{Discovery: discovery}), nil
 }
 
-func (bc *Bootstrapper) processFakePulse(ctx context.Context, request network.Request) (network.Response, error) {
-	return bc.transport.BuildResponse(request, &fakepulsar.Response{
-		PulseNum:       bc.fakePulsar.GetPulseNum(),
-		FirstPulseTime: bc.fakePulsar.GetFirstPulseTime(),
-	}), nil
-}
-
 func (bc *Bootstrapper) Start(keeper network.NodeKeeper) {
 	bc.keeper = keeper
 	bc.transport.RegisterPacketHandler(types.Bootstrap, bc.processBootstrap)
 	bc.transport.RegisterPacketHandler(types.Genesis, bc.processGenesis)
-	bc.transport.RegisterPacketHandler(types.FakePulsarRequest, bc.processFakePulse)
 }
 
 func getMinRef(nodes []core.DiscoveryNode) *core.RecordRef {
@@ -390,5 +373,6 @@ func NewBootstrapper(
 		transport:  transport,
 		pinger:     pinger.NewPinger(transport),
 		fakePulsar: pulsar,
+		minNodeRef: certificate.GetNodeRef(),
 	}
 }
