@@ -40,6 +40,11 @@ type Phase1Packet struct {
 	Signature [SignatureLength]byte
 }
 
+func (p1p *Phase1Packet) Clone() ConsensusPacket {
+	clone := *p1p
+	return &clone
+}
+
 func (p1p *Phase1Packet) GetOrigin() core.ShortNodeID {
 	return p1p.packetHeader.OriginNodeID
 }

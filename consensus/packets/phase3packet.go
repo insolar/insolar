@@ -33,6 +33,11 @@ type Phase3Packet struct {
 	SignatureHeaderSection1 [SignatureLength]byte
 }
 
+func (p3p *Phase3Packet) Clone() ConsensusPacket {
+	clone := *p3p
+	return &clone
+}
+
 func (p3p *Phase3Packet) GetType() PacketType {
 	return p3p.packetHeader.PacketT
 }

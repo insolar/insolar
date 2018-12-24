@@ -39,6 +39,11 @@ type Phase2Packet struct {
 	SignatureHeaderSection2 [SignatureLength]byte
 }
 
+func (p2p *Phase2Packet) Clone() ConsensusPacket {
+	clone := *p2p
+	return &clone
+}
+
 func NewPhase2Packet() *Phase2Packet {
 	result := &Phase2Packet{}
 	result.packetHeader.PacketT = Phase2

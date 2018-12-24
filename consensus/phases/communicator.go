@@ -110,7 +110,7 @@ func (nc *NaiveCommunicator) sendRequestToNodes(participants []core.Node, packet
 		}
 
 		go func(n core.Node) {
-			err := nc.ConsensusNetwork.SignAndSendPacket(packet, n.ID(), nc.Cryptography)
+			err := nc.ConsensusNetwork.SignAndSendPacket(packet.Clone(), n.ID(), nc.Cryptography)
 			if err != nil {
 				log.Errorln(err.Error())
 			}
@@ -127,8 +127,7 @@ func (nc *NaiveCommunicator) sendRequestToNodesWithOrigin(originClaim *packets.N
 		if err != nil {
 			return errors.Wrap(err, "Failed to update claims before sending in phase1")
 		}
-		req := *packet
-		requests[participant.ID()] = &req
+		requests[participant.ID()] = packet.Clone()
 	}
 
 	for ref, req := range requests {

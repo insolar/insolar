@@ -48,6 +48,7 @@ type SignedPacket interface {
 
 type ConsensusPacket interface {
 	GetType() PacketType
+	Clone() ConsensusPacket
 
 	SignedPacket
 	HeaderSkipDeserializer
@@ -57,6 +58,7 @@ type ConsensusPacket interface {
 
 func ExtractPacket(reader io.Reader) (ConsensusPacket, error) {
 	header := PacketHeader{}
+	// TODO: serialize/deserialize consensus packets without header and move header serialization/deserialization to transport layer
 	err := header.Deserialize(reader)
 	if err != nil {
 		return nil, errors.New("[ ExtractPacket ] Can't read packet header")
