@@ -147,6 +147,8 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 func (n *ServiceNetwork) Start(ctx context.Context) error {
 	log.Infoln("Network starts listening...")
 	n.hostNetwork.Start(ctx)
+	n.ConsensusNetwork.Start(ctx)
+	n.Communicator.Start(ctx)
 
 	n.controller.Inject(n.CryptographyService, n.NetworkCoordinator, n.NodeKeeper)
 	n.routingTable.Inject(n.NodeKeeper)
@@ -173,6 +175,10 @@ func (n *ServiceNetwork) Stop(ctx context.Context) error {
 }
 
 func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse core.Pulse) {
+	if n.NodeKeeper.GetState() == network.Waiting {
+		return
+	}
+
 	traceID := "pulse_" + strconv.FormatUint(uint64(newPulse.PulseNumber), 10)
 	ctx, logger := inslogger.WithTraceField(ctx, traceID)
 	logger.Infof("Got new newPulse number: %d", newPulse.PulseNumber)

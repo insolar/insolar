@@ -68,7 +68,7 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 		return nil, errors.Wrap(err, "[ FirstPhase ] Failed to calculate pulse proof.")
 	}
 
-	packet := packets.Phase1Packet{}
+	packet := packets.NewPhase1Packet()
 	err = packet.SetPulseProof(pulseProof.StateHash, pulseProof.Signature.Bytes())
 	if err != nil {
 		return nil, errors.Wrap(err, "[ FirstPhase ] Failed to set pulse proof in Phase1Packet.")
@@ -99,16 +99,20 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 	}
 
 	activeNodes := fp.NodeKeeper.GetActiveNodes()
-	resultPackets, err := fp.Communicator.ExchangePhase1(ctx, originClaim, activeNodes, &packet)
+	resultPackets, err := fp.Communicator.ExchangePhase1(ctx, originClaim, activeNodes, packet)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ FirstPhase ] Failed to exchange results.")
 	}
+	inslogger.FromContext(ctx).Infof("[ FirstPhase ] received responses: %d/%d", len(resultPackets), len(activeNodes))
 
 	proofSet := make(map[core.RecordRef]*merkle.PulseProof)
 	rawProofs := make(map[core.RecordRef]*packets.NodePulseProof)
 	claimMap := make(map[core.RecordRef][]packets.ReferendumClaim)
 	for ref, packet := range resultPackets {
-		err = fp.checkPacketSignature(packet, ref)
+		err = nil
+		if !ref.Equal(fp.NodeKeeper.GetOrigin().ID()) {
+			err = fp.checkPacketSignature(packet, ref)
+		}
 		if err != nil {
 			inslogger.FromContext(ctx).Warnf("Failed to check phase1 packet signature from %s: %s", ref, err.Error())
 			continue
@@ -137,7 +141,7 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 		fp.UnsyncList.AddProof(node.ID(), rawProofs[node.ID()])
 	}
 	for nodeID := range fault {
-		inslogger.FromContext(ctx).Warnf("Failed to validate proof from %s", nodeID)
+		inslogger.FromContext(ctx).Warnf("[ FirstPhase ] Failed to validate proof from %s", nodeID)
 		delete(claimMap, nodeID)
 	}
 	err = fp.UnsyncList.AddClaims(claimMap)
@@ -184,7 +188,7 @@ func (fp *FirstPhase) filterClaims(nodeID core.RecordRef, claims []packets.Refer
 	result := make([]packets.ReferendumClaim, 0)
 	for _, claim := range claims {
 		signedClaim, ok := claim.(packets.SignedClaim)
-		if ok {
+		if ok && !nodeID.Equal(fp.NodeKeeper.GetOrigin().ID()) {
 			err := fp.checkClaimSignature(signedClaim)
 			if err != nil {
 				log.Error("[ filterClaims ] failed to check a claim sign: " + err.Error())

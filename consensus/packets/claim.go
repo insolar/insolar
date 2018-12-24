@@ -109,7 +109,13 @@ func (address *NodeAddress) Set(s string) {
 }
 
 func (address NodeAddress) Get() string {
-	return string(address[:])
+	var i int
+	for i = 1; i < len(address); i++ {
+		if address[i] == 0 {
+			break
+		}
+	}
+	return string(address[1:i])
 }
 
 // NodeJoinClaim is a type 1, len == 272.

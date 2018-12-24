@@ -102,7 +102,7 @@ func (sm *StateMatrix) CalculatePhase2(origin core.RecordRef) (*Phase2MatrixStat
 				}
 			}
 		}
-		active := consensusReachedMajority(timedOuts, count)
+		active := consensusReachedMajority(count-timedOuts, count)
 		if !active {
 			continue
 		}
