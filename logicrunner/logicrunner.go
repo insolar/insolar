@@ -520,9 +520,7 @@ func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionS
 		es.Current.Context = core.ContextWithMessageBus(qe.ctx, recordingBus)
 
 		inslogger.FromContext(qe.ctx).Debug("Registering request within execution behaviour")
-		es.Behaviour.(*ValidationSaver).NewRequest(
-			qe.parcel.Message(), *qe.request, recordingBus,
-		)
+		es.Behaviour.(*ValidationSaver).NewRequest(qe.parcel, *qe.request, recordingBus)
 
 		res.reply, res.err = lr.executeOrValidate(es.Current.Context, es, qe.parcel)
 

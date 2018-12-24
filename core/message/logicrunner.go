@@ -258,7 +258,7 @@ type ValidateCaseBind struct {
 }
 
 type CaseBindRequest struct {
-	Message        core.Message
+	Parcel         core.Parcel
 	Request        core.RecordRef
 	MessageBusTape []byte
 	Reply          core.Reply
