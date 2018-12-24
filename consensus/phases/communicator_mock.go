@@ -41,6 +41,11 @@ type CommunicatorMock struct {
 	ExchangePhase3Counter    uint64
 	ExchangePhase3PreCounter uint64
 	ExchangePhase3Mock       mCommunicatorMockExchangePhase3
+
+	StartFunc       func(p context.Context) (r error)
+	StartCounter    uint64
+	StartPreCounter uint64
+	StartMock       mCommunicatorMockStart
 }
 
 //NewCommunicatorMock returns a mock for github.com/insolar/insolar/consensus/phases.Communicator
@@ -55,6 +60,7 @@ func NewCommunicatorMock(t minimock.Tester) *CommunicatorMock {
 	m.ExchangePhase2Mock = mCommunicatorMockExchangePhase2{mock: m}
 	m.ExchangePhase21Mock = mCommunicatorMockExchangePhase21{mock: m}
 	m.ExchangePhase3Mock = mCommunicatorMockExchangePhase3{mock: m}
+	m.StartMock = mCommunicatorMockStart{mock: m}
 
 	return m
 }
@@ -670,6 +676,153 @@ func (m *CommunicatorMock) ExchangePhase3Finished() bool {
 	return true
 }
 
+type mCommunicatorMockStart struct {
+	mock              *CommunicatorMock
+	mainExpectation   *CommunicatorMockStartExpectation
+	expectationSeries []*CommunicatorMockStartExpectation
+}
+
+type CommunicatorMockStartExpectation struct {
+	input  *CommunicatorMockStartInput
+	result *CommunicatorMockStartResult
+}
+
+type CommunicatorMockStartInput struct {
+	p context.Context
+}
+
+type CommunicatorMockStartResult struct {
+	r error
+}
+
+//Expect specifies that invocation of Communicator.Start is expected from 1 to Infinity times
+func (m *mCommunicatorMockStart) Expect(p context.Context) *mCommunicatorMockStart {
+	m.mock.StartFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &CommunicatorMockStartExpectation{}
+	}
+	m.mainExpectation.input = &CommunicatorMockStartInput{p}
+	return m
+}
+
+//Return specifies results of invocation of Communicator.Start
+func (m *mCommunicatorMockStart) Return(r error) *CommunicatorMock {
+	m.mock.StartFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &CommunicatorMockStartExpectation{}
+	}
+	m.mainExpectation.result = &CommunicatorMockStartResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of Communicator.Start is expected once
+func (m *mCommunicatorMockStart) ExpectOnce(p context.Context) *CommunicatorMockStartExpectation {
+	m.mock.StartFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &CommunicatorMockStartExpectation{}
+	expectation.input = &CommunicatorMockStartInput{p}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *CommunicatorMockStartExpectation) Return(r error) {
+	e.result = &CommunicatorMockStartResult{r}
+}
+
+//Set uses given function f as a mock of Communicator.Start method
+func (m *mCommunicatorMockStart) Set(f func(p context.Context) (r error)) *CommunicatorMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.StartFunc = f
+	return m.mock
+}
+
+//Start implements github.com/insolar/insolar/consensus/phases.Communicator interface
+func (m *CommunicatorMock) Start(p context.Context) (r error) {
+	counter := atomic.AddUint64(&m.StartPreCounter, 1)
+	defer atomic.AddUint64(&m.StartCounter, 1)
+
+	if len(m.StartMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.StartMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to CommunicatorMock.Start. %v", p)
+			return
+		}
+
+		input := m.StartMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, CommunicatorMockStartInput{p}, "Communicator.Start got unexpected parameters")
+
+		result := m.StartMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the CommunicatorMock.Start")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.StartMock.mainExpectation != nil {
+
+		input := m.StartMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, CommunicatorMockStartInput{p}, "Communicator.Start got unexpected parameters")
+		}
+
+		result := m.StartMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the CommunicatorMock.Start")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.StartFunc == nil {
+		m.t.Fatalf("Unexpected call to CommunicatorMock.Start. %v", p)
+		return
+	}
+
+	return m.StartFunc(p)
+}
+
+//StartMinimockCounter returns a count of CommunicatorMock.StartFunc invocations
+func (m *CommunicatorMock) StartMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.StartCounter)
+}
+
+//StartMinimockPreCounter returns the value of CommunicatorMock.Start invocations
+func (m *CommunicatorMock) StartMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.StartPreCounter)
+}
+
+//StartFinished returns true if mock invocations count is ok
+func (m *CommunicatorMock) StartFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.StartMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.StartCounter) == uint64(len(m.StartMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.StartMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.StartCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.StartFunc != nil {
+		return atomic.LoadUint64(&m.StartCounter) > 0
+	}
+
+	return true
+}
+
 //ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *CommunicatorMock) ValidateCallCounters() {
@@ -688,6 +841,10 @@ func (m *CommunicatorMock) ValidateCallCounters() {
 
 	if !m.ExchangePhase3Finished() {
 		m.t.Fatal("Expected call to CommunicatorMock.ExchangePhase3")
+	}
+
+	if !m.StartFinished() {
+		m.t.Fatal("Expected call to CommunicatorMock.Start")
 	}
 
 }
@@ -723,6 +880,10 @@ func (m *CommunicatorMock) MinimockFinish() {
 		m.t.Fatal("Expected call to CommunicatorMock.ExchangePhase3")
 	}
 
+	if !m.StartFinished() {
+		m.t.Fatal("Expected call to CommunicatorMock.Start")
+	}
+
 }
 
 //Wait waits for all mocked methods to be called at least once
@@ -741,6 +902,7 @@ func (m *CommunicatorMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.ExchangePhase2Finished()
 		ok = ok && m.ExchangePhase21Finished()
 		ok = ok && m.ExchangePhase3Finished()
+		ok = ok && m.StartFinished()
 
 		if ok {
 			return
@@ -763,6 +925,10 @@ func (m *CommunicatorMock) MinimockWait(timeout time.Duration) {
 
 			if !m.ExchangePhase3Finished() {
 				m.t.Error("Expected call to CommunicatorMock.ExchangePhase3")
+			}
+
+			if !m.StartFinished() {
+				m.t.Error("Expected call to CommunicatorMock.Start")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)
@@ -790,6 +956,10 @@ func (m *CommunicatorMock) AllMocksCalled() bool {
 	}
 
 	if !m.ExchangePhase3Finished() {
+		return false
+	}
+
+	if !m.StartFinished() {
 		return false
 	}
 

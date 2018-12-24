@@ -79,6 +79,10 @@ func (tc *transportConsensus) processMessage(ctx context.Context, msg *packet.Pa
 		log.Errorf("Error processing incoming message: target ID %d differs from origin %d", p.GetTarget(), tc.origin.ShortID)
 		return
 	}
+	if p.GetOrigin() == tc.origin.ShortID {
+		log.Errorf("Error processing incoming message: sender ID %d equals to origin %d", p.GetTarget(), tc.origin.ShortID)
+		return
+	}
 	sender, err := tc.resolver.ResolveConsensus(p.GetOrigin())
 	// TODO: NETD18-79
 	// special case for Phase1 because we can get a valid packet from a node we don't know yet (first consensus case)

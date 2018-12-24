@@ -56,7 +56,7 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 		return nil, errors.Wrap(err, "[ SecondPhase ] Failed to calculate globule proof")
 	}
 
-	packet := packets.Phase2Packet{}
+	packet := packets.NewPhase2Packet()
 	err = packet.SetGlobuleHashSignature(globuleProof.Signature.Bytes())
 	if err != nil {
 		return nil, errors.Wrap(err, "[ SecondPhase ] Failed to set globule proof in Phase2Packet")
@@ -66,21 +66,23 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 		return nil, errors.Wrap(err, "[ SecondPhase ] Failed to generate bitset for Phase2Packet")
 	}
 	packet.SetBitSet(bitset)
-	err = packet.Sign(sp.Cryptography)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ SecondPhase ] Failed to sign a packet")
-	}
 	activeNodes := state.UnsyncList.GetActiveNodes()
-	packets, err := sp.Communicator.ExchangePhase2(ctx, state.UnsyncList, activeNodes, &packet)
+	packets, err := sp.Communicator.ExchangePhase2(ctx, state.UnsyncList, activeNodes, packet)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ SecondPhase ] Failed to exchange packets on phase 2")
 	}
+	inslogger.FromContext(ctx).Infof("[ SecondPhase ] received responses: %d/%d", len(packets), len(activeNodes))
 
-	// nodeProofs := make(map[core.Node]*GlobuleProofValidated)
+	origin := sp.NodeKeeper.GetOrigin().ID()
 	stateMatrix := NewStateMatrix(state.UnsyncList)
+	stateMatrix.ApplyBitSet(origin, bitset)
+	state.UnsyncList.GlobuleHashSignatures()[origin] = packet.GetGlobuleHashSignature()
 
 	for ref, packet := range packets {
-		err = sp.checkPacketSignature(packet, ref)
+		err = nil
+		if !ref.Equal(origin) {
+			err = sp.checkPacketSignature(packet, ref)
+		}
 		if err != nil {
 			inslogger.FromContext(ctx).Warnf("Failed to check phase2 packet signature from %s: %s", ref, err.Error())
 			continue
@@ -94,7 +96,7 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 		}
 	}
 
-	matrixCalculation, err := stateMatrix.CalculatePhase2(sp.NodeKeeper.GetOrigin().ID())
+	matrixCalculation, err := stateMatrix.CalculatePhase2(origin)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ SecondPhase ] Failed to calculate bitset matrix consensus result")
 	}
@@ -120,14 +122,14 @@ func (sp *SecondPhase) Execute21(ctx context.Context, state *SecondPhaseState) (
 	results := make(map[uint16]*packets.MissingNodeSupplementaryVote)
 	claims := make(map[uint16]*packets.MissingNodeClaim)
 
-	packet := packets.Phase2Packet{}
+	packet := packets.NewPhase2Packet()
 	err := packet.SetGlobuleHashSignature(state.GlobuleProof.Signature.Bytes())
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Phase 2.1 ] Failed to set pulse proof in Phase2Packet.")
 	}
 	packet.SetBitSet(state.BitSet)
 
-	voteAnswers, err := sp.Communicator.ExchangePhase21(ctx, state.UnsyncList, &packet, additionalRequests)
+	voteAnswers, err := sp.Communicator.ExchangePhase21(ctx, state.UnsyncList, packet, additionalRequests)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Phase 2.1 ] Failed to send additional requests on phase 2.1")
 	}
@@ -220,6 +222,9 @@ func (sp *SecondPhase) Execute21(ctx context.Context, state *SecondPhaseState) (
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Phase 2.1 ] Failed to calculate globule proof")
 	}
+	var ghs packets.GlobuleHashSignature
+	copy(ghs[:], state.GlobuleProof.Signature.Bytes()[:packets.SignatureLength])
+	state.UnsyncList.GlobuleHashSignatures()[origin] = ghs
 
 	return state, nil
 }
