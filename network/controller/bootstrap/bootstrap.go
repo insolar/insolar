@@ -224,17 +224,23 @@ func (bc *Bootstrapper) sendGenesisRequest(ctx context.Context, h *host.Host) (c
 func (bc *Bootstrapper) getDiscoveryNodesChannel(ctx context.Context, discoveryNodes []core.DiscoveryNode, needResponses int) <-chan *host.Host {
 	// we need only one host to bootstrap
 	bootstrapHosts := make(chan *host.Host, needResponses)
+	minRef := getMinRef(discoveryNodes)
+	needToSyncFakePulsar := false
 	for _, discoveryNode := range discoveryNodes {
-		go func(ctx context.Context, address string, ch chan<- *host.Host) {
+		if discoveryNode.GetNodeRef().Equal(*minRef) {
+			needToSyncFakePulsar = true
+		}
+		go func(ctx context.Context, address string, ch chan<- *host.Host, syncFakePulsar bool) {
 			inslogger.FromContext(ctx).Infof("Starting bootstrap to address %s", address)
-			bootstrapHost, err := bootstrap(address, bc.options, bc.startBootstrap)
+			bootstrapHost, err := bootstrap(address, bc.options, bc.startBootstrap, needToSyncFakePulsar)
 			if err != nil {
 				inslogger.FromContext(ctx).Errorf("Error bootstrapping to address %s: %s", address, err.Error())
 				return
 			}
 			bootstrapHosts <- bootstrapHost
-		}(ctx, discoveryNode.GetHost(), bootstrapHosts)
+		}(ctx, discoveryNode.GetHost(), bootstrapHosts, needToSyncFakePulsar)
 	}
+
 	return bootstrapHosts
 }
 
@@ -266,13 +272,13 @@ func (bc *Bootstrapper) waitResultsFromChannel(ctx context.Context, ch <-chan *h
 	}
 }
 
-func bootstrap(address string, options *common.Options, bootstrapF func(string) (*host.Host, error)) (*host.Host, error) {
+func bootstrap(address string, options *common.Options, bootstrapF func(string, bool) (*host.Host, error), syncFakePulsar bool) (*host.Host, error) {
 	minTO := options.MinTimeout
 	if !options.InfinityBootstrap {
-		return bootstrapF(address)
+		return bootstrapF(address, syncFakePulsar)
 	}
 	for {
-		result, err := bootstrapF(address)
+		result, err := bootstrapF(address, syncFakePulsar)
 		if err == nil {
 			return result, nil
 		}
@@ -284,7 +290,7 @@ func bootstrap(address string, options *common.Options, bootstrapF func(string) 
 	}
 }
 
-func (bc *Bootstrapper) startBootstrap(address string) (*host.Host, error) {
+func (bc *Bootstrapper) startBootstrap(address string, syncFakePulsar bool) (*host.Host, error) {
 	bootstrapHost, err := bc.pinger.Ping(address, bc.options.PingTimeout)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Failed to ping address %s", address)
@@ -303,19 +309,21 @@ func (bc *Bootstrapper) startBootstrap(address string) (*host.Host, error) {
 	case Rejected:
 		return nil, errors.New("Rejected: " + data.RejectReason)
 	case Redirected:
-		return bootstrap(data.RedirectHost, bc.options, bc.startBootstrap)
+		return bootstrap(data.RedirectHost, bc.options, bc.startBootstrap, syncFakePulsar)
 	case Accepted:
-		request := bc.transport.NewRequestBuilder().Type(types.FakePulsarRequest).Data(fakepulsar.Request{}).Build()
-		future, err := bc.transport.SendRequestPacket(request, bootstrapHost)
-		if err != nil {
-			return nil, errors.Wrapf(err, "Failed to send bootstrap request to address %s", address)
+		if syncFakePulsar {
+			request := bc.transport.NewRequestBuilder().Type(types.FakePulsarRequest).Data(fakepulsar.Request{}).Build()
+			future, err := bc.transport.SendRequestPacket(request, bootstrapHost)
+			if err != nil {
+				return nil, errors.Wrapf(err, "Failed to send bootstrap request to address %s", address)
+			}
+			response, err := future.GetResponse(bc.options.BootstrapTimeout)
+			if err != nil {
+				return nil, errors.Wrapf(err, "Failed to get response to bootstrap request from address %s", address)
+			}
+			data := response.GetData().(*fakepulsar.Response)
+			bc.fakePulsar.SetPulseData(data.FirstPulseTime, data.PulseNum)
 		}
-		response, err := future.GetResponse(bc.options.BootstrapTimeout)
-		if err != nil {
-			return nil, errors.Wrapf(err, "Failed to get response to bootstrap request from address %s", address)
-		}
-		data := response.GetData().(*fakepulsar.Response)
-		bc.fakePulsar.SetPulseData(data.FirstPulseTime, data.PulseNum)
 	}
 	return response.GetSenderHost(), nil
 }
