@@ -24,7 +24,6 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/pulsar/entropygenerator"
 )
 
 // Fakepulsar needed when the network starts and can't receive a real pulse.
@@ -97,11 +96,12 @@ func (fp *FakePulsar) Stopped() bool {
 
 func (fp *FakePulsar) newPulse() *core.Pulse {
 	fp.pulse++
-	generator := entropygenerator.StandardEntropyGenerator{}
+	// TODO: fair entropy
+	// generator := entropygenerator.StandardEntropyGenerator{}
 	return &core.Pulse{
 		EpochPulseNumber: -1,
 		PulseNumber:      core.PulseNumber(fp.pulse),
 		NextPulseNumber:  core.PulseNumber(fp.pulse + 1),
-		Entropy:          generator.GenerateEntropy(),
+		Entropy:          core.Entropy{},
 	}
 }
