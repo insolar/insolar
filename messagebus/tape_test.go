@@ -35,7 +35,7 @@ func TestGetMessageHash(t *testing.T) {
 	require.Equal(t, 64, len(GetMessageHash(pcs, &message.Parcel{Msg: &message.GenesisRequest{}})))
 }
 
-func TestTape_SetReply(t *testing.T) {
+func TestTape_Set(t *testing.T) {
 	mc := minimock.NewController(t)
 	defer mc.Finish()
 
@@ -49,7 +49,7 @@ func TestTape_SetReply(t *testing.T) {
 	require.NoError(t, err)
 
 	tp := newMemoryTape(pn)
-	err = tp.SetReply(ctx, []byte{4, 5, 6}, &rep)
+	err = tp.Set(ctx, []byte{4, 5, 6}, &rep, nil)
 	require.NoError(t, err)
 }
 
