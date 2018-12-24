@@ -46,7 +46,7 @@ type senderMock struct {
 	RegisterPreCounter uint64
 	RegisterMock       msenderMockRegister
 
-	SendFunc       func(p context.Context, p1 core.Message, p2 core.Pulse, p3 *core.MessageSendOptions) (r core.Reply, r1 error)
+	SendFunc       func(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) (r core.Reply, r1 error)
 	SendCounter    uint64
 	SendPreCounter uint64
 	SendMock       msenderMockSend
@@ -823,8 +823,7 @@ type senderMockSendExpectation struct {
 type senderMockSendInput struct {
 	p  context.Context
 	p1 core.Message
-	p2 core.Pulse
-	p3 *core.MessageSendOptions
+	p2 *core.MessageSendOptions
 }
 
 type senderMockSendResult struct {
@@ -833,14 +832,14 @@ type senderMockSendResult struct {
 }
 
 //Expect specifies that invocation of sender.Send is expected from 1 to Infinity times
-func (m *msenderMockSend) Expect(p context.Context, p1 core.Message, p2 core.Pulse, p3 *core.MessageSendOptions) *msenderMockSend {
+func (m *msenderMockSend) Expect(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) *msenderMockSend {
 	m.mock.SendFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &senderMockSendExpectation{}
 	}
-	m.mainExpectation.input = &senderMockSendInput{p, p1, p2, p3}
+	m.mainExpectation.input = &senderMockSendInput{p, p1, p2}
 	return m
 }
 
@@ -857,12 +856,12 @@ func (m *msenderMockSend) Return(r core.Reply, r1 error) *senderMock {
 }
 
 //ExpectOnce specifies that invocation of sender.Send is expected once
-func (m *msenderMockSend) ExpectOnce(p context.Context, p1 core.Message, p2 core.Pulse, p3 *core.MessageSendOptions) *senderMockSendExpectation {
+func (m *msenderMockSend) ExpectOnce(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) *senderMockSendExpectation {
 	m.mock.SendFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &senderMockSendExpectation{}
-	expectation.input = &senderMockSendInput{p, p1, p2, p3}
+	expectation.input = &senderMockSendInput{p, p1, p2}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
@@ -872,7 +871,7 @@ func (e *senderMockSendExpectation) Return(r core.Reply, r1 error) {
 }
 
 //Set uses given function f as a mock of sender.Send method
-func (m *msenderMockSend) Set(f func(p context.Context, p1 core.Message, p2 core.Pulse, p3 *core.MessageSendOptions) (r core.Reply, r1 error)) *senderMock {
+func (m *msenderMockSend) Set(f func(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) (r core.Reply, r1 error)) *senderMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -881,18 +880,18 @@ func (m *msenderMockSend) Set(f func(p context.Context, p1 core.Message, p2 core
 }
 
 //Send implements github.com/insolar/insolar/messagebus.sender interface
-func (m *senderMock) Send(p context.Context, p1 core.Message, p2 core.Pulse, p3 *core.MessageSendOptions) (r core.Reply, r1 error) {
+func (m *senderMock) Send(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) (r core.Reply, r1 error) {
 	counter := atomic.AddUint64(&m.SendPreCounter, 1)
 	defer atomic.AddUint64(&m.SendCounter, 1)
 
 	if len(m.SendMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.SendMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to senderMock.Send. %v %v %v %v", p, p1, p2, p3)
+			m.t.Fatalf("Unexpected call to senderMock.Send. %v %v %v", p, p1, p2)
 			return
 		}
 
 		input := m.SendMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, senderMockSendInput{p, p1, p2, p3}, "sender.Send got unexpected parameters")
+		testify_assert.Equal(m.t, *input, senderMockSendInput{p, p1, p2}, "sender.Send got unexpected parameters")
 
 		result := m.SendMock.expectationSeries[counter-1].result
 		if result == nil {
@@ -910,7 +909,7 @@ func (m *senderMock) Send(p context.Context, p1 core.Message, p2 core.Pulse, p3 
 
 		input := m.SendMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, senderMockSendInput{p, p1, p2, p3}, "sender.Send got unexpected parameters")
+			testify_assert.Equal(m.t, *input, senderMockSendInput{p, p1, p2}, "sender.Send got unexpected parameters")
 		}
 
 		result := m.SendMock.mainExpectation.result
@@ -925,11 +924,11 @@ func (m *senderMock) Send(p context.Context, p1 core.Message, p2 core.Pulse, p3 
 	}
 
 	if m.SendFunc == nil {
-		m.t.Fatalf("Unexpected call to senderMock.Send. %v %v %v %v", p, p1, p2, p3)
+		m.t.Fatalf("Unexpected call to senderMock.Send. %v %v %v", p, p1, p2)
 		return
 	}
 
-	return m.SendFunc(p, p1, p2, p3)
+	return m.SendFunc(p, p1, p2)
 }
 
 //SendMinimockCounter returns a count of senderMock.SendFunc invocations
