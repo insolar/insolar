@@ -471,14 +471,14 @@ func (gi *GoInsider) DeactivateObject(object core.RecordRef) error {
 // Serialize - CBOR serializer wrapper: `what` -> `to`
 func (gi *GoInsider) Serialize(what interface{}, to *[]byte) error {
 	ch := new(codec.CborHandle)
-	log.Debugf("serializing %+v", what)
+	///log.Debugf("serializing %+v", what)
 	return codec.NewEncoderBytes(to, ch).Encode(what)
 }
 
 // Deserialize - CBOR de-serializer wrapper: `from` -> `into`
 func (gi *GoInsider) Deserialize(from []byte, into interface{}) error {
 	ch := new(codec.CborHandle)
-	log.Debugf("de-serializing %+v", from)
+	///log.Debugf("de-serializing %+v", from)
 	return codec.NewDecoderBytes(from, ch).Decode(into)
 }
 
