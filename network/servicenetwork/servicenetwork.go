@@ -22,6 +22,7 @@ import (
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/consensus/phases"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -138,14 +139,16 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	options := controller.ConfigureOptions(n.cfg.Host)
 	n.fakePulsar = fakepulsar.NewFakePulsar(n, n.cfg.Pulsar.PulseTime)
 	n.controller = controller.NewNetworkController(n, options, n.CertificateManager.GetCertificate(), internalTransport, n.routingTable, n.hostNetwork, n.CryptographyScheme)
-	log.Info("==== ServiceNetwork inited ====")
+	log.Info("Service network initialized")
 
 	return err
 }
 
 // Start implements component.Starter
 func (n *ServiceNetwork) Start(ctx context.Context) error {
-	log.Infoln("Network starts listening...")
+	logger := inslogger.FromContext(ctx)
+
+	logger.Infoln("Network starts listening...")
 	n.hostNetwork.Start(ctx)
 	n.ConsensusNetwork.Start(ctx)
 	n.Communicator.Start(ctx)
@@ -160,18 +163,29 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 	}
 	n.parseBootstrapResults(results)
 	n.fakePulsar.Start(ctx)
-	log.Info("----- ServiceNetwork started ------")
+	logger.Info("Service network started")
 	return nil
+}
+
+func (n *ServiceNetwork) GracefulStop(ctx context.Context) {
+	logger := inslogger.FromContext(ctx)
+	logger.Info("Gracefully stopping service network")
+
+	n.NodeKeeper.AddPendingClaim(&packets.NodeLeaveClaim{})
 }
 
 // Stop implements core.Component
 func (n *ServiceNetwork) Stop(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
+	logger.Info("Stopping service network")
+
+	n.NodeKeeper.AddPendingClaim(&packets.NodeLeaveClaim{})
 
 	logger.Info("Stopping host network")
 	n.hostNetwork.Stop()
 	logger.Info("Stopping consensus network")
 	n.ConsensusNetwork.Stop()
+	logger.Info("Service network stopped")
 	return nil
 }
 
@@ -218,7 +232,7 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse core.Pulse) {
 	// 	return
 	// }
 
-	logger.Infof("Set new current newPulse number: %d", newPulse.PulseNumber)
+	logger.Infof("Set new current pulse number: %d", newPulse.PulseNumber)
 	go n.networkCoordinatorOnPulse(ctx, newPulse)
 	go n.phaseManagerOnPulse(ctx, newPulse)
 }

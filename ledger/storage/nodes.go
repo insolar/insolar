@@ -11,16 +11,20 @@ type Node struct {
 	FRole core.StaticRole
 }
 
+func (n Node) Address() string {
+	panic("implement me")
+}
+
+func (n Node) ConsensusAddress() string {
+	panic("implement me")
+}
+
 func (Node) GetGlobuleID() core.GlobuleID {
 	panic("implement me")
 }
 
 func (n Node) ID() core.RecordRef {
 	return n.FID
-}
-
-func (Node) PhysicalAddress() string {
-	panic("implement me")
 }
 
 func (Node) PublicKey() crypto.PublicKey {
