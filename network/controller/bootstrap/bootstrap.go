@@ -38,12 +38,11 @@ import (
 )
 
 type Bootstrapper struct {
-	options    *common.Options
-	transport  network.InternalTransport
-	pinger     *pinger.Pinger
-	cert       core.Certificate
-	keeper     network.NodeKeeper
-	minNodeRef *core.RecordRef
+	options   *common.Options
+	transport network.InternalTransport
+	pinger    *pinger.Pinger
+	cert      core.Certificate
+	keeper    network.NodeKeeper
 }
 
 type NodeBootstrapRequest struct{}
@@ -357,10 +356,9 @@ func NewBootstrapper(
 	certificate core.Certificate,
 	transport network.InternalTransport) *Bootstrapper {
 	return &Bootstrapper{
-		options:    options,
-		cert:       certificate,
-		transport:  transport,
-		pinger:     pinger.NewPinger(transport),
-		minNodeRef: certificate.GetNodeRef(),
+		options:   options,
+		cert:      certificate,
+		transport: transport,
+		pinger:    pinger.NewPinger(transport),
 	}
 }
