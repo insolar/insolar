@@ -247,8 +247,8 @@ func (lr *LogicRunner) ExecutorResults(ctx context.Context, inmsg core.Parcel) (
 	}
 
 	// validation things
-	c := lr.GetConsensus(ctx, msg.RecordRef)
-	c.AddExecutor(ctx, inmsg, msg)
+	// c := lr.GetConsensus(ctx, msg.RecordRef)
+	// c.AddExecutor(ctx, inmsg, msg)
 
 	return &reply.OK{}, nil
 }

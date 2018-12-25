@@ -44,12 +44,13 @@ func main() {
 	rpcProtocol := pflag.String("rpc-proto", "tcp", "protocol of RPC API")
 	metricsAddress := pflag.String("metrics", "", "address and port of prometheus metrics")
 	code := pflag.String("code", "", "add pre-compiled code to cache (<ref>:</path/to/plugin.so>)")
+	logLevel := pflag.String("log-level", "debug", "log level")
 
 	pflag.Parse()
 
-	err := log.SetLevel("Debug")
+	err := log.SetLevel(*logLevel)
 	if err != nil {
-		log.Errorln(err.Error())
+		log.Fatalf("Couldn't set log level to %q: %s", *logLevel, err)
 	}
 
 	if *path == "" {

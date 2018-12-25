@@ -99,6 +99,8 @@ const (
 	FirstPulseNumber = 65537
 	// PulseNumberJet is a special pulse number value that signifies jet ID.
 	PulseNumberJet = PulseNumber(1)
+	// PulseNumberCurrent is a special pulse number value that signifies current pulse number.
+	PulseNumberCurrent = PulseNumber(2)
 )
 
 // GenesisPulse is a first pulse for the system

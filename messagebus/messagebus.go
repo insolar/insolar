@@ -161,14 +161,20 @@ func (mb *MessageBus) SendParcel(
 ) (core.Reply, error) {
 	readBarrier(ctx, &mb.globalLock)
 
-	var nodes []core.RecordRef
+	var (
+		nodes []core.RecordRef
+		err   error
+	)
 	if options != nil && options.Receiver != nil {
 		nodes = []core.RecordRef{*options.Receiver}
 	} else {
 		// TODO: send to all actors of the role if nil Target
 		target := parcel.DefaultTarget()
-		var err error
-		nodes, err = mb.JetCoordinator.QueryRole(ctx, parcel.DefaultRole(), target.Record(), currentPulse.PulseNumber)
+		// FIXME: @andreyromancev. 21.12.18. Temp hack. All messages should have a default target.
+		if target == nil {
+			target = &core.RecordRef{}
+		}
+		nodes, err = mb.JetCoordinator.QueryRole(ctx, parcel.DefaultRole(), *target.Record(), currentPulse.PulseNumber)
 		if err != nil {
 			return nil, err
 		}
@@ -299,7 +305,7 @@ func (mb *MessageBus) checkParcel(ctx context.Context, parcel core.Parcel) error
 	}
 
 	validSender, err := mb.JetCoordinator.IsAuthorized(
-		ctx, allowedSenderRole, sendingObject.Record(), parcel.Pulse(), sender,
+		ctx, allowedSenderRole, *sendingObject.Record(), parcel.Pulse(), sender,
 	)
 	if err != nil {
 		return err
