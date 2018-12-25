@@ -136,9 +136,9 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 
 	err = n.MerkleCalculator.(component.Initer).Init(ctx)
 	n.hostNetwork = hostnetwork.NewHostTransport(internalTransport, n.routingTable)
-	options := controller.ConfigureOptions(n.cfg.Host)
-	n.controller = controller.NewNetworkController(n, options, n.CertificateManager.GetCertificate(), internalTransport, n.routingTable, n.hostNetwork, n.CryptographyScheme)
+	options := controller.ConfigureOptions(n.cfg)
 	n.fakePulsar = fakepulsar.NewFakePulsar(n, n.cfg.Pulsar.PulseTime)
+	n.controller = controller.NewNetworkController(n, options, n.CertificateManager.GetCertificate(), internalTransport, n.routingTable, n.hostNetwork, n.CryptographyScheme)
 	log.Info("Service network initialized")
 
 	return err
@@ -156,12 +156,12 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 	n.controller.Inject(n.CryptographyService, n.NetworkCoordinator, n.NodeKeeper)
 	n.routingTable.Inject(n.NodeKeeper)
 
-	logger.Infoln("Bootstrapping network...")
-	err := n.controller.Bootstrap(ctx)
+	log.Infoln("Bootstrapping network...")
+	result, err := n.controller.Bootstrap(ctx)
 	if err != nil {
 		return errors.Wrap(err, "Failed to bootstrap network")
 	}
-
+	n.fakePulsar.SetPulseData(result.FirstPulseTime, result.PulseNum)
 	n.fakePulsar.Start(ctx)
 	logger.Info("Service network started")
 	return nil

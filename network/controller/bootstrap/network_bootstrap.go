@@ -19,6 +19,7 @@ package bootstrap
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
@@ -37,19 +38,29 @@ type NetworkBootstrapper struct {
 	authController      *AuthorizationController
 	challengeController *ChallengeResponseController
 	nodeKeeper          network.NodeKeeper
+	firstPulseTS        int64
 }
 
-func (nb *NetworkBootstrapper) Bootstrap(ctx context.Context) error {
+func (nb *NetworkBootstrapper) Bootstrap(ctx context.Context) (*network.BootstrapResult, error) {
 	if len(nb.certificate.GetDiscoveryNodes()) == 0 {
+		host, err := host.NewHostN(nb.nodeKeeper.GetOrigin().Address(), nb.nodeKeeper.GetOrigin().ID())
+		if err != nil {
+			return nil, errors.Wrap(err, "[ Bootstrap ] failed to create a host")
+		}
 		log.Info("Zero bootstrap")
-		return nil
+		return &network.BootstrapResult{
+			Host:           host,
+			FirstPulseTime: nb.firstPulseTS,
+			PulseNum:       0,
+		}, nil
 	}
 	if utils.OriginIsDiscovery(nb.certificate) {
-		if err := nb.bootstrapDiscovery(ctx); err != nil {
-			return errors.Wrap(err, "[ Bootstrap ] Couldn't OriginIsDiscovery")
+		result, err := nb.bootstrapDiscovery(ctx)
+		if err != nil {
+			return nil, errors.Wrap(err, "[ Bootstrap ] Couldn't OriginIsDiscovery")
 		}
 		nb.nodeKeeper.SetIsBootstrapped(true)
-		return nil
+		return result, nil
 	}
 	return nb.bootstrapJoiner(ctx)
 }
@@ -61,6 +72,7 @@ func (nb *NetworkBootstrapper) Start(cryptographyService core.CryptographyServic
 	nb.bootstrapper.Start(nodeKeeper)
 	nb.authController.Start(networkCoordinator, nodeKeeper)
 	nb.challengeController.Start(cryptographyService, nodeKeeper)
+	nb.firstPulseTS = time.Now().Unix()
 
 	// TODO: we also have to call Stop method somewhere
 	err := nb.sessionManager.Start(context.TODO())
@@ -74,27 +86,27 @@ type DiscoveryNode struct {
 	Node core.DiscoveryNode
 }
 
-func (nb *NetworkBootstrapper) bootstrapJoiner(ctx context.Context) error {
-	discoveryNode, err := nb.bootstrapper.Bootstrap(ctx)
+func (nb *NetworkBootstrapper) bootstrapJoiner(ctx context.Context) (*network.BootstrapResult, error) {
+	result, discoveryNode, err := nb.bootstrapper.Bootstrap(ctx)
 	if err != nil {
-		return errors.Wrap(err, "Error bootstrapping to discovery node")
+		return nil, errors.Wrap(err, "Error bootstrapping to discovery node")
 	}
 	sessionID, err := nb.authController.Authorize(ctx, discoveryNode, nb.certificate)
 	if err != nil {
-		return errors.Wrap(err, "Error authorizing on discovery node")
+		return nil, errors.Wrap(err, "Error authorizing on discovery node")
 	}
 
 	data, err := nb.challengeController.Execute(ctx, discoveryNode, sessionID)
 	if err != nil {
-		return errors.Wrap(err, "Error executing double challenge response")
+		return nil, errors.Wrap(err, "Error executing double challenge response")
 	}
 	origin := nb.nodeKeeper.GetOrigin()
 	mutableOrigin := origin.(nodenetwork.MutableNode)
 	mutableOrigin.SetShortID(data.AssignShortID)
-	return nb.authController.Register(ctx, discoveryNode, sessionID)
+	return result, nb.authController.Register(ctx, discoveryNode, sessionID)
 }
 
-func (nb *NetworkBootstrapper) bootstrapDiscovery(ctx context.Context) error {
+func (nb *NetworkBootstrapper) bootstrapDiscovery(ctx context.Context) (*network.BootstrapResult, error) {
 	return nb.bootstrapper.BootstrapDiscovery(ctx)
 }
 

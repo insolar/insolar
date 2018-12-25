@@ -20,8 +20,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller/common"
-	"github.com/insolar/insolar/network/transport/host"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
@@ -42,11 +42,11 @@ var BootstrapError = errors.New("bootstrap without repeat")
 var InfinityBootstrapError = errors.New("infinity bootstrap")
 var bootstrapRetries = 0
 
-func mockBoostrap(string) (*host.Host, error) {
+func mockBoostrap(string) (*network.BootstrapResult, error) {
 	return nil, BootstrapError
 }
 
-func mockInfinityBootstrap(string) (*host.Host, error) {
+func mockInfinityBootstrap(string) (*network.BootstrapResult, error) {
 	bootstrapRetries++
 	if bootstrapRetries >= 5 {
 		return nil, nil
