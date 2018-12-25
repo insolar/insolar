@@ -73,18 +73,26 @@ func NewTestSuite(bootstrapCount, nodesCount int) *testSuite {
 // SetupSuite creates and run network with bootstrap and common nodes once before run all tests in the suite
 func (s *testSuite) SetupSuite() {
 	log.Infoln("SetupSuite")
-	for _, node := range s.bootstrapNodes {
-		s.initNode(node, Disable)
+
+	log.Infoln("Setup bootstrap nodes")
+	s.SetupNodesNetwork(s.bootstrapNodes)
+
+	<-time.After(time.Second * 5)
+	//s.waitForConsensus(1)
+	//TODO: wait for first consensus
+	// active nodes count verification
+	activeNodes := s.bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	require.Equal(s.T(), s.nodesCount(), len(activeNodes))
+}
+
+func (s *testSuite) SetupNodesNetwork(nodes []*networkNode) {
+	for _, node := range nodes {
+		s.preInitNode(node, Disable)
 	}
 
-	for _, node := range s.networkNodes {
-		s.initNode(node, Disable)
-	}
-
-	expected := len(s.bootstrapNodes) + len(s.networkNodes)
-	results := make(chan error, expected)
+	results := make(chan error, len(nodes))
 	initNode := func(node *networkNode) {
-		err := node.componentManager.Init(s.ctx)
+		err := node.init(s.ctx)
 		results <- err
 	}
 	startNode := func(node *networkNode) {
@@ -116,25 +124,16 @@ func (s *testSuite) SetupSuite() {
 	for _, n := range s.networkNodes {
 		go initNode(n)
 	}
-	err := waitResults(results, expected)
-	s.NoError(err)
 
-	log.Infoln("Start bootstrap nodes")
+	err := waitResults(results, len(nodes))
+	s.NoError(err, "Failed to setup zeronet")
+
 	for _, n := range s.bootstrapNodes {
 		go startNode(n)
 	}
-	log.Infoln("Start network nodes")
-	for _, n := range s.networkNodes {
-		go startNode(n)
-	}
-	err = waitResults(results, expected)
-	s.NoError(err)
 
-	<-time.After(time.Second * 5)
-	//TODO: wait for first consensus
-	// active nodes count verification
-	activeNodes := s.bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
-	require.Equal(s.T(), s.nodesCount(), len(activeNodes))
+	err = waitResults(results, len(nodes))
+	s.NoError(err)
 }
 
 // TearDownSuite shutdowns all nodes in network, calls once after all tests in suite finished
@@ -152,6 +151,13 @@ func (s *testSuite) TearDownSuite() {
 	// }
 }
 
+func (s *testSuite) waitForConsensus(consensusCount int) {
+	for _, n := range s.bootstrapNodes {
+		err := <-n.consensusResult
+		s.NoError(err)
+	}
+}
+
 // nodesCount returns count of nodes in network without testNode
 func (s *testSuite) nodesCount() int {
 	return len(s.bootstrapNodes) + len(s.networkNodes)
@@ -167,7 +173,7 @@ const (
 
 func (s *testSuite) InitTestNode() {
 	if s.testNode.componentManager != nil {
-		err := s.testNode.componentManager.Init(s.ctx)
+		err := s.testNode.init(s.ctx)
 		s.NoError(err)
 	}
 }
@@ -194,6 +200,7 @@ type networkNode struct {
 
 	componentManager *component.Manager
 	serviceNetwork   *ServiceNetwork
+	consensusResult  chan error
 }
 
 // newNetworkNode returns networkNode initialized only with id, host address and key pair
@@ -210,7 +217,15 @@ func newNetworkNode() *networkNode {
 		privateKey:          key,
 		cryptographyService: cryptography.NewKeyBoundCryptographyService(key),
 		host:                address,
+		consensusResult:     make(chan error, 30),
 	}
+}
+
+// init calls Init for node component manager and wraps PhaseManager
+func (n *networkNode) init(ctx context.Context) error {
+	err := n.componentManager.Init(ctx)
+	n.serviceNetwork.PhaseManager = &phaseManagerWrapper{original: n.serviceNetwork.PhaseManager, result: n.consensusResult}
+	return err
 }
 
 func (s *testSuite) initCrypto(node *networkNode, ref core.RecordRef) (*certificate.CertificateManager, core.CryptographyService) {
@@ -253,8 +268,8 @@ func (s *testSuite) initCrypto(node *networkNode, ref core.RecordRef) (*certific
 	return certificate.NewCertificateManager(cert), node.cryptographyService
 }
 
-// initNode inits previously created node
-func (s *testSuite) initNode(node *networkNode, timeOut PhaseTimeOut) {
+// preInitNode inits previously created node with mocks and external dependencies
+func (s *testSuite) preInitNode(node *networkNode, timeOut PhaseTimeOut) {
 	cfg := configuration.NewConfiguration()
 	cfg.Host.Transport.Address = node.host
 
@@ -307,11 +322,11 @@ func (s *testSuite) initNode(node *networkNode, timeOut PhaseTimeOut) {
 		realKeeper.AddActiveNodes([]core.Node{origin})
 	}
 
-	var keeper network.NodeKeeper
-	keeper = &nodeKeeperWrapper{realKeeper}
+	// var keeper network.NodeKeeper
+	// keeper = &nodeKeeperWrapper{realKeeper}
 
 	node.componentManager = &component.Manager{}
-	node.componentManager.Register(keeper, pulseManagerMock, pulseStorageMock, netCoordinator, amMock, realKeeper)
+	node.componentManager.Register(realKeeper, pulseManagerMock, pulseStorageMock, netCoordinator, amMock)
 	node.componentManager.Register(certManager, cryptographyService)
 	node.componentManager.Inject(serviceNetwork, netSwitcher)
 	node.serviceNetwork = serviceNetwork
