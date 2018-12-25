@@ -562,25 +562,25 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel core.Pa
 }
 
 func (h *MessageHandler) handleJetDrop(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
-	if hack.SkipValidation(ctx) {
-		return &reply.OK{}, nil
-	}
+
 	msg := parcel.Message().(*message.JetDrop)
 
-	for _, parcelBuff := range msg.Messages {
-		parcel, err := message.Deserialize(bytes.NewBuffer(parcelBuff))
-		if err != nil {
-			return nil, err
-		}
+	if !hack.SkipValidation(ctx) {
+		for _, parcelBuff := range msg.Messages {
+			parcel, err := message.Deserialize(bytes.NewBuffer(parcelBuff))
+			if err != nil {
+				return nil, err
+			}
 
-		handler, ok := h.replayHandlers[parcel.Message().Type()]
-		if !ok {
-			return nil, errors.New("unknown message type")
-		}
+			handler, ok := h.replayHandlers[parcel.Message().Type()]
+			if !ok {
+				return nil, errors.New("unknown message type")
+			}
 
-		_, err = handler(ctx, parcel)
-		if err != nil {
-			return nil, err
+			_, err = handler(ctx, parcel)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
