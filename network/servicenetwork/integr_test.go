@@ -44,8 +44,11 @@ func (s *testSuite) TestNodeConnect() {
 
 	activeNodes := s.bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
 	s.Equal(s.nodesCount(), len(activeNodes))
-	err := s.bootstrapNodes[0].serviceNetwork.NodeKeeper.MoveSyncToActive()
-	s.NoError(err)
+	//err := s.bootstrapNodes[0].serviceNetwork.NodeKeeper.MoveSyncToActive()
+	//s.NoError(err)
+
+	s.waitForConsensus(1)
+
 	activeNodes = s.bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
 	s.Equal(s.nodesCount()+1, len(activeNodes))
 

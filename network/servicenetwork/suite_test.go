@@ -225,6 +225,7 @@ func newNetworkNode() *networkNode {
 func (n *networkNode) init(ctx context.Context) error {
 	err := n.componentManager.Init(ctx)
 	n.serviceNetwork.PhaseManager = &phaseManagerWrapper{original: n.serviceNetwork.PhaseManager, result: n.consensusResult}
+	n.serviceNetwork.NodeKeeper = &nodeKeeperWrapper{original: n.serviceNetwork.NodeKeeper}
 	return err
 }
 
@@ -285,7 +286,8 @@ func (s *testSuite) preInitNode(node *networkNode, timeOut PhaseTimeOut) {
 
 	pulseManagerMock := testutils.NewPulseManagerMock(s.T())
 	pulseManagerMock.SetMock.Set(func(p context.Context, p1 core.Pulse, p2 bool) (r error) {
-		return nil
+		return serviceNetwork.NodeKeeper.MoveSyncToActive()
+		//return nil
 	})
 
 	netCoordinator := testutils.NewNetworkCoordinatorMock(s.T())
