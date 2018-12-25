@@ -562,7 +562,6 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel core.Pa
 }
 
 func (h *MessageHandler) handleJetDrop(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
-
 	msg := parcel.Message().(*message.JetDrop)
 
 	if !hack.SkipValidation(ctx) {
@@ -592,7 +591,7 @@ func (h *MessageHandler) handleJetDrop(ctx context.Context, parcel core.Parcel) 
 	// TODO: temporary hardcoded tree. Remove after split is functional.
 	err = h.db.UpdateJetTree(
 		ctx,
-		msg.PulseNumber,
+		parcel.Pulse(),
 		true,
 		*jet.NewID(2, []byte{}),       // 00
 		*jet.NewID(2, []byte{1 << 6}), // 01
