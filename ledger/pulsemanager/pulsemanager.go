@@ -18,7 +18,6 @@ package pulsemanager
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/pkg/errors"
@@ -384,7 +383,6 @@ func (m *PulseManager) sendExecutorData(
 
 // Set set's new pulse and closes current jet drop.
 func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist bool) error {
-	fmt.Println("SET")
 	// Ensure this does not execute in parallel.
 	m.setLock.Lock()
 	defer m.setLock.Unlock()
@@ -392,13 +390,10 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 		return errors.New("can't call Set method on PulseManager after stop")
 	}
 
-	fmt.Println("STOPPED")
 	var err error
 	m.GIL.Acquire(ctx)
 
-	fmt.Println("HERE")
 	m.PulseStorage.Lock()
-	fmt.Println("LOCK")
 
 	// FIXME: @andreyromancev. 17.12.18. return core.Pulse here.
 	storagePulse, err := m.db.GetLatestPulse(ctx)
@@ -412,38 +407,26 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 
 	// swap pulse
 	m.currentPulse = newPulse
-	fmt.Println("SWAP PULSE")
 
 	// swap active nodes
-	// <<<<<<< Updated upstream
 	// TODO: fix network consensus and uncomment this (after NETD18-74)
 	// m.ActiveListSwapper.MoveSyncToActive()
-	// =======
-	//m.ActiveListSwapper.MoveSyncToActive()
-	// >>>>>>> Stashed changes
 	if persist {
 		if err := m.db.AddPulse(ctx, newPulse); err != nil {
 			m.GIL.Release(ctx)
 			m.PulseStorage.Unlock()
 			return errors.Wrap(err, "call of AddPulse failed")
 		}
-		// 	err = m.db.SetActiveNodes(newPulse.PulseNumber, m.NodeNet.GetActiveNodes())
-		// 	if err != nil {
-		// 		m.GIL.Release(ctx)
-		// 		m.PulseStorage.Unlock()
-		// 		return errors.Wrap(err, "call of SetActiveNodes failed")
-		// 	}
+		err = m.db.SetActiveNodes(newPulse.PulseNumber, m.NodeNet.GetActiveNodes())
+		if err != nil {
+			m.GIL.Release(ctx)
+			m.PulseStorage.Unlock()
+			return errors.Wrap(err, "call of SetActiveNodes failed")
+		}
 	}
 
 	m.PulseStorage.Unlock()
 	m.GIL.Release(ctx)
-	fmt.Println("RELEASE")
-
-	e, f := m.Bus.(interface{ OnPulse() })
-	if f {
-		fmt.Println("GO ONPULSE")
-		e.OnPulse()
-	}
 
 	if !persist {
 		return nil
