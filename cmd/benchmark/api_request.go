@@ -55,7 +55,7 @@ func sendRequest(ctx context.Context, method string, params []interface{}, membe
 	return body
 }
 
-func transfer(ctx context.Context, amount float64, from memberInfo, to memberInfo) string {
+func transfer(ctx context.Context, amount uint, from memberInfo, to memberInfo) string {
 	params := []interface{}{amount, to.ref}
 	body := sendRequest(ctx, "Transfer", params, from)
 	transferResponse := getResponse(body)
