@@ -129,15 +129,15 @@ func init() {
 }
 
 // Bootstrap on the discovery node (step 1 of the bootstrap process)
-func (bc *Bootstrapper) Bootstrap(ctx context.Context) (*DiscoveryNode, error) {
+func (bc *Bootstrapper) Bootstrap(ctx context.Context) ([]*network.BootstrapResult, *DiscoveryNode, error) {
 	log.Info("Bootstrapping to discovery node")
 	ch := bc.getDiscoveryNodesChannel(ctx, bc.cert.GetDiscoveryNodes(), 1)
-	host := bc.waitResultFromChannel(ctx, ch)
-	if host == nil {
-		return nil, errors.New("Failed to bootstrap to any of discovery nodes")
+	result := bc.waitResultFromChannel(ctx, ch)
+	if result == nil {
+		return nil, nil, errors.New("Failed to bootstrap to any of discovery nodes")
 	}
-	discovery := FindDiscovery(bc.cert, host.NodeID)
-	return &DiscoveryNode{Host: host, Node: discovery}, nil
+	discovery := FindDiscovery(bc.cert, result.Host.NodeID)
+	return []*network.BootstrapResult{result}, &DiscoveryNode{result.Host, discovery}, nil
 }
 
 func (bc *Bootstrapper) checkActiveNode(node core.Node) error {
@@ -152,23 +152,24 @@ func (bc *Bootstrapper) checkActiveNode(node core.Node) error {
 	return nil
 }
 
-func (bc *Bootstrapper) BootstrapDiscovery(ctx context.Context) error {
+func (bc *Bootstrapper) BootstrapDiscovery(ctx context.Context) ([]*network.BootstrapResult, error) {
 	inslogger.FromContext(ctx).Info("Network bootstrap between discovery nodes")
 	discoveryNodes := bc.cert.GetDiscoveryNodes()
 	var err error
 	discoveryNodes, err = RemoveOrigin(discoveryNodes, *bc.cert.GetNodeRef())
 	if err != nil {
-		return errors.Wrapf(err, "Discovery bootstrap failed")
+		return nil, errors.Wrapf(err, "Discovery bootstrap failed")
 	}
 	discoveryCount := len(discoveryNodes)
 	if discoveryCount == 0 {
-		return nil
+		return nil, nil
 	}
 
+	var bootstrapResults []*network.BootstrapResult
 	var hosts []*host.Host
 	for {
 		ch := bc.getDiscoveryNodesChannel(ctx, discoveryNodes, discoveryCount)
-		hosts = bc.waitResultsFromChannel(ctx, ch, discoveryCount)
+		bootstrapResults, hosts = bc.waitResultsFromChannel(ctx, ch, discoveryCount)
 		if len(hosts) == discoveryCount {
 			// we connected to all discovery nodes
 			break
@@ -179,7 +180,7 @@ func (bc *Bootstrapper) BootstrapDiscovery(ctx context.Context) error {
 	for _, h := range hosts {
 		activeNode, err := bc.sendGenesisRequest(ctx, h)
 		if err != nil {
-			return errors.Wrapf(err, "Discovery bootstrap to host %s failed", h)
+			return nil, errors.Wrapf(err, "Discovery bootstrap to host %s failed", h)
 		}
 		activeNodes = append(activeNodes, activeNode)
 		activeNodesStr = append(activeNodesStr, activeNode.ID().String())
@@ -187,12 +188,12 @@ func (bc *Bootstrapper) BootstrapDiscovery(ctx context.Context) error {
 	for _, activeNode := range activeNodes {
 		err = bc.checkActiveNode(activeNode)
 		if err != nil {
-			return errors.Wrapf(err, "Discovery check of node %s failed", activeNode.ID())
+			return nil, errors.Wrapf(err, "Discovery check of node %s failed", activeNode.ID())
 		}
 	}
 	bc.keeper.AddActiveNodes(activeNodes)
 	inslogger.FromContext(ctx).Infof("Added active nodes: %s", strings.Join(activeNodesStr, ", "))
-	return nil
+	return bootstrapResults, nil
 }
 
 func (bc *Bootstrapper) sendGenesisRequest(ctx context.Context, h *host.Host) (core.Node, error) {
@@ -222,25 +223,25 @@ func (bc *Bootstrapper) sendGenesisRequest(ctx context.Context, h *host.Host) (c
 	return discovery, nil
 }
 
-func (bc *Bootstrapper) getDiscoveryNodesChannel(ctx context.Context, discoveryNodes []core.DiscoveryNode, needResponses int) <-chan *host.Host {
+func (bc *Bootstrapper) getDiscoveryNodesChannel(ctx context.Context, discoveryNodes []core.DiscoveryNode, needResponses int) <-chan *network.BootstrapResult {
 	// we need only one host to bootstrap
-	bootstrapHosts := make(chan *host.Host, needResponses)
+	bootstrapResults := make(chan *network.BootstrapResult, needResponses)
 	for _, discoveryNode := range discoveryNodes {
-		go func(ctx context.Context, address string, ch chan<- *host.Host) {
+		go func(ctx context.Context, address string, ch chan<- *network.BootstrapResult) {
 			inslogger.FromContext(ctx).Infof("Starting bootstrap to address %s", address)
-			bootstrapHost, err := bootstrap(address, bc.options, bc.startBootstrap)
+			bootstrapResult, err := bootstrap(address, bc.options, bc.startBootstrap)
 			if err != nil {
 				inslogger.FromContext(ctx).Errorf("Error bootstrapping to address %s: %s", address, err.Error())
 				return
 			}
-			bootstrapHosts <- bootstrapHost
-		}(ctx, discoveryNode.GetHost(), bootstrapHosts)
+			bootstrapResults <- bootstrapResult
+		}(ctx, discoveryNode.GetHost(), bootstrapResults)
 	}
 
-	return bootstrapHosts
+	return bootstrapResults
 }
 
-func (bc *Bootstrapper) waitResultFromChannel(ctx context.Context, ch <-chan *host.Host) *host.Host {
+func (bc *Bootstrapper) waitResultFromChannel(ctx context.Context, ch <-chan *network.BootstrapResult) *network.BootstrapResult {
 	for {
 		select {
 		case bootstrapHost := <-ch:
@@ -252,23 +253,25 @@ func (bc *Bootstrapper) waitResultFromChannel(ctx context.Context, ch <-chan *ho
 	}
 }
 
-func (bc *Bootstrapper) waitResultsFromChannel(ctx context.Context, ch <-chan *host.Host, count int) []*host.Host {
-	result := make([]*host.Host, 0)
+func (bc *Bootstrapper) waitResultsFromChannel(ctx context.Context, ch <-chan *network.BootstrapResult, count int) ([]*network.BootstrapResult, []*host.Host) {
+	result := make([]*network.BootstrapResult, 0)
+	hosts := make([]*host.Host, 0)
 	for {
 		select {
-		case bootstrapHost := <-ch:
-			result = append(result, bootstrapHost)
+		case bootstrapResult := <-ch:
+			result = append(result, bootstrapResult)
+			hosts = append(hosts, bootstrapResult.Host)
 			if len(result) == count {
-				return result
+				return result, hosts
 			}
 		case <-time.After(bc.options.BootstrapTimeout):
 			inslogger.FromContext(ctx).Warnf("Bootstrap timeout, successful bootstraps: %d/%d", len(result), count)
-			return result
+			return result, hosts
 		}
 	}
 }
 
-func bootstrap(address string, options *common.Options, bootstrapF func(string) (*host.Host, error)) (*host.Host, error) {
+func bootstrap(address string, options *common.Options, bootstrapF func(string) (*network.BootstrapResult, error)) (*network.BootstrapResult, error) {
 	minTO := options.MinTimeout
 	if !options.InfinityBootstrap {
 		return bootstrapF(address)
@@ -286,7 +289,7 @@ func bootstrap(address string, options *common.Options, bootstrapF func(string) 
 	}
 }
 
-func (bc *Bootstrapper) startBootstrap(address string) (*host.Host, error) {
+func (bc *Bootstrapper) startBootstrap(address string) (*network.BootstrapResult, error) {
 	bootstrapHost, err := bc.pinger.Ping(address, bc.options.PingTimeout)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Failed to ping address %s", address)
@@ -306,12 +309,12 @@ func (bc *Bootstrapper) startBootstrap(address string) (*host.Host, error) {
 		return nil, errors.New("Rejected: " + data.RejectReason)
 	case Redirected:
 		return bootstrap(data.RedirectHost, bc.options, bc.startBootstrap)
-	case Accepted:
-		if bc.minNodeRef.Compare(response.GetSender()) > 0 {
-			bc.fakePulsar.SetPulseData(data.FirstPulseTime, data.PulseNum)
-		}
 	}
-	return response.GetSenderHost(), nil
+	return &network.BootstrapResult{
+		PulseNum:       data.PulseNum,
+		FirstPulseTime: data.FirstPulseTime,
+		Host:           response.GetSenderHost(),
+	}, nil
 }
 
 func (bc *Bootstrapper) processBootstrap(ctx context.Context, request network.Request) (network.Response, error) {

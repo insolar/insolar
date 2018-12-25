@@ -41,17 +41,18 @@ type NetworkBootstrapper struct {
 	nodeKeeper          network.NodeKeeper
 }
 
-func (nb *NetworkBootstrapper) Bootstrap(ctx context.Context) error {
+func (nb *NetworkBootstrapper) Bootstrap(ctx context.Context) ([]*network.BootstrapResult, error) {
 	if len(nb.certificate.GetDiscoveryNodes()) == 0 {
 		log.Info("Zero bootstrap")
-		return nil
+		return nil, nil
 	}
 	if utils.OriginIsDiscovery(nb.certificate) {
-		if err := nb.bootstrapDiscovery(ctx); err != nil {
-			return errors.Wrap(err, "[ Bootstrap ] Couldn't OriginIsDiscovery")
+		results, err := nb.bootstrapDiscovery(ctx)
+		if err != nil {
+			return nil, errors.Wrap(err, "[ Bootstrap ] Couldn't OriginIsDiscovery")
 		}
 		nb.nodeKeeper.SetIsBootstrapped(true)
-		return nil
+		return results, nil
 	}
 	return nb.bootstrapJoiner(ctx)
 }
@@ -76,27 +77,27 @@ type DiscoveryNode struct {
 	Node core.DiscoveryNode
 }
 
-func (nb *NetworkBootstrapper) bootstrapJoiner(ctx context.Context) error {
-	discoveryNode, err := nb.bootstrapper.Bootstrap(ctx)
+func (nb *NetworkBootstrapper) bootstrapJoiner(ctx context.Context) ([]*network.BootstrapResult, error) {
+	result, discoveryNode, err := nb.bootstrapper.Bootstrap(ctx)
 	if err != nil {
-		return errors.Wrap(err, "Error bootstrapping to discovery node")
+		return nil, errors.Wrap(err, "Error bootstrapping to discovery node")
 	}
 	sessionID, err := nb.authController.Authorize(ctx, discoveryNode, nb.certificate)
 	if err != nil {
-		return errors.Wrap(err, "Error authorizing on discovery node")
+		return nil, errors.Wrap(err, "Error authorizing on discovery node")
 	}
 
 	data, err := nb.challengeController.Execute(ctx, discoveryNode, sessionID)
 	if err != nil {
-		return errors.Wrap(err, "Error executing double challenge response")
+		return nil, errors.Wrap(err, "Error executing double challenge response")
 	}
 	origin := nb.nodeKeeper.GetOrigin()
 	mutableOrigin := origin.(nodenetwork.MutableNode)
 	mutableOrigin.SetShortID(data.AssignShortID)
-	return nb.authController.Register(ctx, discoveryNode, sessionID)
+	return result, nb.authController.Register(ctx, discoveryNode, sessionID)
 }
 
-func (nb *NetworkBootstrapper) bootstrapDiscovery(ctx context.Context) error {
+func (nb *NetworkBootstrapper) bootstrapDiscovery(ctx context.Context) ([]*network.BootstrapResult, error) {
 	return nb.bootstrapper.BootstrapDiscovery(ctx)
 }
 

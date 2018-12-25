@@ -20,13 +20,12 @@ import (
 	"context"
 	"time"
 
-	"github.com/insolar/insolar/network/fakepulsar"
-
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller/bootstrap"
 	"github.com/insolar/insolar/network/controller/common"
+	"github.com/insolar/insolar/network/fakepulsar"
 	"github.com/insolar/insolar/network/transport/packet/types"
 )
 
@@ -56,7 +55,7 @@ func (c *Controller) SendCascadeMessage(data core.Cascade, method string, msg co
 }
 
 // Bootstrap init bootstrap process: 1. Connect to discovery node; 2. Reconnect to new discovery node if redirected.
-func (c *Controller) Bootstrap(ctx context.Context) error {
+func (c *Controller) Bootstrap(ctx context.Context) ([]*network.BootstrapResult, error) {
 	return c.bootstrapper.Bootstrap(ctx)
 }
 
