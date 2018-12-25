@@ -77,7 +77,7 @@ type Pulsar struct {
 	lastPulse     *core.Pulse
 
 	ownedBtfRowLock sync.RWMutex
-	OwnedBftRow map[string]*BftCell
+	ownedBftRow     map[string]*BftCell
 
 	bftGrid     map[string]map[string]*BftCell
 	BftGridLock sync.RWMutex
@@ -166,7 +166,7 @@ func NewPulsar(
 			PublicKey:         publicKey,
 			OutgoingClient:    rpcWrapperFactory.CreateWrapper(),
 		}
-		pulsar.OwnedBftRow[neighbour.PublicKey] = nil
+		pulsar.AddItemToVector(neighbour.PublicKey, nil)
 	}
 
 	gob.Register(Payload{})
@@ -318,11 +318,11 @@ func (currentPulsar *Pulsar) StartConsensusProcess(ctx context.Context, pulseNum
 	inslog.Debugf("Entropy generated - %v", currentPulsar.GetGeneratedEntropy())
 	inslog.Debugf("Entropy sign generated - %v", currentPulsar.GeneratedEntropySign)
 
-	currentPulsar.OwnedBftRow[currentPulsar.PublicKeyRaw] = &BftCell{
+	currentPulsar.AddItemToVector(currentPulsar.PublicKeyRaw, &BftCell{
 		Entropy:           *currentPulsar.GetGeneratedEntropy(),
 		IsEntropyReceived: true,
 		Sign:              currentPulsar.GeneratedEntropySign,
-	}
+	})
 
 	currentPulsar.StartProcessLock.Unlock()
 
