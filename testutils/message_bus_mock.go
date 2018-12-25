@@ -36,7 +36,7 @@ type MessageBusMock struct {
 	NewRecorderPreCounter uint64
 	NewRecorderMock       mMessageBusMockNewRecorder
 
-	OnPulseFunc       func()
+	OnPulseFunc       func(p context.Context, p1 core.Pulse) (r error)
 	OnPulseCounter    uint64
 	OnPulsePreCounter uint64
 	OnPulseMock       mMessageBusMockOnPulse
@@ -503,45 +503,60 @@ type mMessageBusMockOnPulse struct {
 }
 
 type MessageBusMockOnPulseExpectation struct {
+	input  *MessageBusMockOnPulseInput
+	result *MessageBusMockOnPulseResult
+}
+
+type MessageBusMockOnPulseInput struct {
+	p  context.Context
+	p1 core.Pulse
+}
+
+type MessageBusMockOnPulseResult struct {
+	r error
 }
 
 //Expect specifies that invocation of MessageBus.OnPulse is expected from 1 to Infinity times
-func (m *mMessageBusMockOnPulse) Expect() *mMessageBusMockOnPulse {
+func (m *mMessageBusMockOnPulse) Expect(p context.Context, p1 core.Pulse) *mMessageBusMockOnPulse {
 	m.mock.OnPulseFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &MessageBusMockOnPulseExpectation{}
 	}
-
+	m.mainExpectation.input = &MessageBusMockOnPulseInput{p, p1}
 	return m
 }
 
 //Return specifies results of invocation of MessageBus.OnPulse
-func (m *mMessageBusMockOnPulse) Return() *MessageBusMock {
+func (m *mMessageBusMockOnPulse) Return(r error) *MessageBusMock {
 	m.mock.OnPulseFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &MessageBusMockOnPulseExpectation{}
 	}
-
+	m.mainExpectation.result = &MessageBusMockOnPulseResult{r}
 	return m.mock
 }
 
 //ExpectOnce specifies that invocation of MessageBus.OnPulse is expected once
-func (m *mMessageBusMockOnPulse) ExpectOnce() *MessageBusMockOnPulseExpectation {
+func (m *mMessageBusMockOnPulse) ExpectOnce(p context.Context, p1 core.Pulse) *MessageBusMockOnPulseExpectation {
 	m.mock.OnPulseFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &MessageBusMockOnPulseExpectation{}
-
+	expectation.input = &MessageBusMockOnPulseInput{p, p1}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
+func (e *MessageBusMockOnPulseExpectation) Return(r error) {
+	e.result = &MessageBusMockOnPulseResult{r}
+}
+
 //Set uses given function f as a mock of MessageBus.OnPulse method
-func (m *mMessageBusMockOnPulse) Set(f func()) *MessageBusMock {
+func (m *mMessageBusMockOnPulse) Set(f func(p context.Context, p1 core.Pulse) (r error)) *MessageBusMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -550,30 +565,53 @@ func (m *mMessageBusMockOnPulse) Set(f func()) *MessageBusMock {
 }
 
 //OnPulse implements github.com/insolar/insolar/core.MessageBus interface
-func (m *MessageBusMock) OnPulse() {
+func (m *MessageBusMock) OnPulse(p context.Context, p1 core.Pulse) (r error) {
 	counter := atomic.AddUint64(&m.OnPulsePreCounter, 1)
 	defer atomic.AddUint64(&m.OnPulseCounter, 1)
 
 	if len(m.OnPulseMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.OnPulseMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to MessageBusMock.OnPulse.")
+			m.t.Fatalf("Unexpected call to MessageBusMock.OnPulse. %v %v", p, p1)
 			return
 		}
+
+		input := m.OnPulseMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, MessageBusMockOnPulseInput{p, p1}, "MessageBus.OnPulse got unexpected parameters")
+
+		result := m.OnPulseMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the MessageBusMock.OnPulse")
+			return
+		}
+
+		r = result.r
 
 		return
 	}
 
 	if m.OnPulseMock.mainExpectation != nil {
 
+		input := m.OnPulseMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, MessageBusMockOnPulseInput{p, p1}, "MessageBus.OnPulse got unexpected parameters")
+		}
+
+		result := m.OnPulseMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the MessageBusMock.OnPulse")
+		}
+
+		r = result.r
+
 		return
 	}
 
 	if m.OnPulseFunc == nil {
-		m.t.Fatalf("Unexpected call to MessageBusMock.OnPulse.")
+		m.t.Fatalf("Unexpected call to MessageBusMock.OnPulse. %v %v", p, p1)
 		return
 	}
 
-	m.OnPulseFunc()
+	return m.OnPulseFunc(p, p1)
 }
 
 //OnPulseMinimockCounter returns a count of MessageBusMock.OnPulseFunc invocations

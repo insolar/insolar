@@ -76,7 +76,9 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 	providerMock.GetStorageMock.Return(recentMock)
 
 	mbMock := testutils.NewMessageBusMock(t)
-	mbMock.OnPulseFunc = func() {}
+	mbMock.OnPulseFunc = func(context.Context, core.Pulse) error {
+		return nil
+	}
 	mbMock.SendFunc = func(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) (r core.Reply, r1 error) {
 		val, ok := p1.(*message.HotData)
 		if !ok {
@@ -179,7 +181,9 @@ func TestPulseManager_Set_PerformsSplit(t *testing.T) {
 	providerMock.GetStorageMock.Return(recentMock)
 
 	mbMock := testutils.NewMessageBusMock(t)
-	mbMock.OnPulseFunc = func() {}
+	mbMock.OnPulseFunc = func(context.Context, core.Pulse) error {
+		return nil
+	}
 	mbMock.SendMock.Return(nil, nil)
 
 	nodeMock := network.NewNodeMock(t)

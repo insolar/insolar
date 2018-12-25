@@ -41,7 +41,7 @@ type senderMock struct {
 	NewRecorderPreCounter uint64
 	NewRecorderMock       msenderMockNewRecorder
 
-	OnPulseFunc       func()
+	OnPulseFunc       func(p context.Context, p1 core.Pulse) (r error)
 	OnPulseCounter    uint64
 	OnPulsePreCounter uint64
 	OnPulseMock       msenderMockOnPulse
@@ -668,45 +668,60 @@ type msenderMockOnPulse struct {
 }
 
 type senderMockOnPulseExpectation struct {
+	input  *senderMockOnPulseInput
+	result *senderMockOnPulseResult
+}
+
+type senderMockOnPulseInput struct {
+	p  context.Context
+	p1 core.Pulse
+}
+
+type senderMockOnPulseResult struct {
+	r error
 }
 
 //Expect specifies that invocation of sender.OnPulse is expected from 1 to Infinity times
-func (m *msenderMockOnPulse) Expect() *msenderMockOnPulse {
+func (m *msenderMockOnPulse) Expect(p context.Context, p1 core.Pulse) *msenderMockOnPulse {
 	m.mock.OnPulseFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &senderMockOnPulseExpectation{}
 	}
-
+	m.mainExpectation.input = &senderMockOnPulseInput{p, p1}
 	return m
 }
 
 //Return specifies results of invocation of sender.OnPulse
-func (m *msenderMockOnPulse) Return() *senderMock {
+func (m *msenderMockOnPulse) Return(r error) *senderMock {
 	m.mock.OnPulseFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &senderMockOnPulseExpectation{}
 	}
-
+	m.mainExpectation.result = &senderMockOnPulseResult{r}
 	return m.mock
 }
 
 //ExpectOnce specifies that invocation of sender.OnPulse is expected once
-func (m *msenderMockOnPulse) ExpectOnce() *senderMockOnPulseExpectation {
+func (m *msenderMockOnPulse) ExpectOnce(p context.Context, p1 core.Pulse) *senderMockOnPulseExpectation {
 	m.mock.OnPulseFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &senderMockOnPulseExpectation{}
-
+	expectation.input = &senderMockOnPulseInput{p, p1}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
+func (e *senderMockOnPulseExpectation) Return(r error) {
+	e.result = &senderMockOnPulseResult{r}
+}
+
 //Set uses given function f as a mock of sender.OnPulse method
-func (m *msenderMockOnPulse) Set(f func()) *senderMock {
+func (m *msenderMockOnPulse) Set(f func(p context.Context, p1 core.Pulse) (r error)) *senderMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -715,30 +730,53 @@ func (m *msenderMockOnPulse) Set(f func()) *senderMock {
 }
 
 //OnPulse implements github.com/insolar/insolar/messagebus.sender interface
-func (m *senderMock) OnPulse() {
+func (m *senderMock) OnPulse(p context.Context, p1 core.Pulse) (r error) {
 	counter := atomic.AddUint64(&m.OnPulsePreCounter, 1)
 	defer atomic.AddUint64(&m.OnPulseCounter, 1)
 
 	if len(m.OnPulseMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.OnPulseMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to senderMock.OnPulse.")
+			m.t.Fatalf("Unexpected call to senderMock.OnPulse. %v %v", p, p1)
 			return
 		}
+
+		input := m.OnPulseMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, senderMockOnPulseInput{p, p1}, "sender.OnPulse got unexpected parameters")
+
+		result := m.OnPulseMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the senderMock.OnPulse")
+			return
+		}
+
+		r = result.r
 
 		return
 	}
 
 	if m.OnPulseMock.mainExpectation != nil {
 
+		input := m.OnPulseMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, senderMockOnPulseInput{p, p1}, "sender.OnPulse got unexpected parameters")
+		}
+
+		result := m.OnPulseMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the senderMock.OnPulse")
+		}
+
+		r = result.r
+
 		return
 	}
 
 	if m.OnPulseFunc == nil {
-		m.t.Fatalf("Unexpected call to senderMock.OnPulse.")
+		m.t.Fatalf("Unexpected call to senderMock.OnPulse. %v %v", p, p1)
 		return
 	}
 
-	m.OnPulseFunc()
+	return m.OnPulseFunc(p, p1)
 }
 
 //OnPulseMinimockCounter returns a count of senderMock.OnPulseFunc invocations

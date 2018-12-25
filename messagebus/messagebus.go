@@ -217,13 +217,14 @@ func (e *serializableError) Error() string {
 	return e.S
 }
 
-func (mb *MessageBus) OnPulse() {
+func (mb *MessageBus) OnPulse(context.Context, core.Pulse) error {
 	tmp := mb.waitingChan
 	mb.waitingChan = make(chan interface{})
 	mb.waitingLock.Lock()
 	mb.waitingCounter = 0
 	mb.waitingLock.Unlock()
 	close(tmp)
+	return nil
 }
 
 func (mb *MessageBus) countWaiting() bool {

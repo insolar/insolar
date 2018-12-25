@@ -100,14 +100,15 @@ func TestMessageBus_doDeliverNextPulse(t *testing.T) {
 
 	go func() {
 		time.Sleep(time.Second)
+		newPulse := &core.Pulse{
+			PulseNumber:     101,
+			NextPulseNumber: 102,
+		}
 		ps.CurrentFunc = func(ctx context.Context) (*core.Pulse, error) {
-			return &core.Pulse{
-				PulseNumber:     101,
-				NextPulseNumber: 102,
-			}, nil
+			return newPulse, nil
 		}
 		pulseUpdated = true
-		mb.OnPulse()
+		mb.OnPulse(ctx, *newPulse)
 	}()
 	result, err := mb.doDeliver(ctx, parcel)
 	require.NoError(t, err)
