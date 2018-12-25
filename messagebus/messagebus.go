@@ -51,8 +51,10 @@ type MessageBus struct {
 	handlers     map[core.MessageType]core.MessageHandler
 	signmessages bool
 
-	globalLock  sync.RWMutex
-	waitingChan chan interface{}
+	globalLock     sync.RWMutex
+	waitingChan    chan interface{}
+	waitingLock    sync.Mutex
+	waitingCounter uint
 }
 
 // NewMessageBus creates plain MessageBus instance. It can be used to create Player and Recorder instances that
@@ -216,13 +218,27 @@ func (e *serializableError) Error() string {
 func (mb *MessageBus) OnPulse() {
 	tmp := mb.waitingChan
 	mb.waitingChan = make(chan interface{})
+	mb.waitingLock.Lock()
+	mb.waitingCounter = 0
+	mb.waitingLock.Unlock()
 	close(tmp)
+}
+
+func (mb *MessageBus) countWaiting() bool {
+	mb.waitingLock.Lock()
+	defer mb.waitingLock.Unlock()
+
+	if mb.waitingCounter > 1000 {
+		return false
+	}
+	mb.waitingCounter++
+	return true
 }
 
 func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Reply, error) {
 
 	pulse, err := mb.PulseStorage.Current(ctx)
-	if msg.Pulse() == pulse.NextPulseNumber {
+	if msg.Pulse() == pulse.NextPulseNumber && mb.countWaiting() {
 		<-mb.waitingChan
 	}
 

@@ -428,6 +428,10 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 	m.PulseStorage.Unlock()
 	m.GIL.Release(ctx)
 
+	if mb, ok := m.Bus.(core.MessageBusWithOnPulse); ok {
+		mb.OnPulse()
+	}
+
 	if !persist {
 		return nil
 	}
