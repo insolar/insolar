@@ -442,7 +442,7 @@ func TestPulsar_StartConsensusProcess_Success(t *testing.T) {
 		EntropyGenerator:           pulsartestutils.MockEntropyGenerator{},
 		CryptographyService:        cryptoService,
 		PlatformCryptographyScheme: scheme,
-		OwnedBftRow:                map[string]*BftCell{},
+		ownedBftRow:                map[string]*BftCell{},
 	}
 	pulsar.ProcessingPulseNumber = core.PulseNumber(120)
 	pulsar.SetLastPulse(&core.Pulse{PulseNumber: core.PulseNumber(2)})
@@ -523,7 +523,7 @@ func TestPulsar_broadcastVector_StateFailed(t *testing.T) {
 		Neighbours: map[string]*Neighbour{
 			"1": {},
 		},
-		OwnedBftRow:           map[string]*BftCell{},
+		ownedBftRow:           map[string]*BftCell{},
 		StateSwitcher:         mockSwitcher,
 		ProcessingPulseNumber: core.PulseNumber(123),
 	}
@@ -555,7 +555,7 @@ func TestPulsar_broadcastVector_SendToNeighbours(t *testing.T) {
 			"2": {OutgoingClient: mockClientWrapper, ConnectionAddress: "second"},
 		},
 		CryptographyService:        cryptoService,
-		OwnedBftRow:                map[string]*BftCell{},
+		ownedBftRow:                map[string]*BftCell{},
 		StateSwitcher:              mockSwitcher,
 		GeneratedEntropySign:       pulsartestutils.MockEntropy[:],
 		generatedEntropy:           &generatedEntropy,
@@ -583,7 +583,7 @@ func TestPulsar_broadcastEntropy_StateFailed(t *testing.T) {
 		Neighbours: map[string]*Neighbour{
 			"1": {},
 		},
-		OwnedBftRow:           map[string]*BftCell{},
+		ownedBftRow:           map[string]*BftCell{},
 		StateSwitcher:         mockSwitcher,
 		ProcessingPulseNumber: core.PulseNumber(123),
 	}
@@ -676,7 +676,7 @@ func TestPulsar_sendVector_TwoPulsars(t *testing.T) {
 		Neighbours:                 map[string]*Neighbour{},
 		CryptographyService:        cryptoService,
 		PlatformCryptographyScheme: scheme,
-		OwnedBftRow:                map[string]*BftCell{},
+		ownedBftRow:                map[string]*BftCell{},
 		bftGrid:                    map[string]map[string]*BftCell{},
 	}
 
@@ -725,7 +725,7 @@ func TestPulsar_sendEntropy_TwoPulsars(t *testing.T) {
 	pulsar := Pulsar{
 		Neighbours:                 map[string]*Neighbour{},
 		CryptographyService:        cryptoService,
-		OwnedBftRow:                map[string]*BftCell{},
+		ownedBftRow:                map[string]*BftCell{},
 		PlatformCryptographyScheme: scheme,
 	}
 	generatedEntropy := core.Entropy(pulsartestutils.MockEntropy)
@@ -751,7 +751,7 @@ func TestPulsar_verify_failedState(t *testing.T) {
 	switcherMock.GetStateMock.Return(Failed)
 	pulsar := &Pulsar{StateSwitcher: switcherMock}
 	pulsar.PublicKeyRaw = "testKey"
-	pulsar.OwnedBftRow = map[string]*BftCell{}
+	pulsar.ownedBftRow = map[string]*BftCell{}
 	pulsar.bftGrid = map[string]map[string]*BftCell{}
 
 	pulsar.verify(ctx)
@@ -766,7 +766,7 @@ func TestPulsar_verify_Standalone_Success(t *testing.T) {
 	pulsar.PublicKeyRaw = "testKey"
 	generatedEntropy := core.Entropy(pulsartestutils.MockEntropy)
 	pulsar.generatedEntropy = &generatedEntropy
-	pulsar.OwnedBftRow = map[string]*BftCell{}
+	pulsar.ownedBftRow = map[string]*BftCell{}
 	pulsar.bftGrid = map[string]map[string]*BftCell{}
 
 	pulsar.verify(ctx)
@@ -791,7 +791,7 @@ func TestPulsar_verify_NotEnoughForConsensus_Success(t *testing.T) {
 		StateSwitcher:       mockSwitcher,
 		PublicKeyRaw:        "testKey",
 		CryptographyService: cryptoService,
-		OwnedBftRow:         map[string]*BftCell{},
+		ownedBftRow:         map[string]*BftCell{},
 		bftGrid:             map[string]map[string]*BftCell{},
 		Neighbours: map[string]*Neighbour{
 			"1": {},
@@ -851,7 +851,7 @@ func TestPulsar_verify_Success(t *testing.T) {
 		CryptographyService:        pulsarCryptoService,
 		PlatformCryptographyScheme: platformpolicy.NewPlatformCryptographyScheme(),
 		PublicKeyRaw:               currentPulsarPublicKey,
-		OwnedBftRow:                map[string]*BftCell{},
+		ownedBftRow:                map[string]*BftCell{},
 		bftGrid:                    map[string]map[string]*BftCell{},
 		CurrentSlotSenderConfirmations: map[string]core.PulseSenderConfirmation{},
 		Neighbours: map[string]*Neighbour{

@@ -414,7 +414,7 @@ func TestSevenPulsars_Full_Consensus(t *testing.T) {
 		require.NoError(t, err)
 	}()
 
-	time.Sleep(1000 * time.Millisecond)
+	time.Sleep(2000 * time.Millisecond)
 
 	pulseDistributorMock.MinimockFinish()
 

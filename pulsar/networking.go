@@ -143,7 +143,7 @@ func (handler *Handler) ReceiveSignatureForEntropy(request *Payload, response *P
 
 	bftCell := &BftCell{}
 	bftCell.SetSign(requestBody.EntropySignature)
-	handler.Pulsar.OwnedBftRow[request.PublicKey] = bftCell
+	handler.Pulsar.AddItemToVector(request.PublicKey, bftCell)  //.OwnedBftRow[request.PublicKey] = bftCell
 
 	return nil
 }
@@ -166,7 +166,7 @@ func (handler *Handler) ReceiveEntropy(request *Payload, response *Payload) erro
 		return fmt.Errorf("processing pulse number is bigger than received one")
 	}
 
-	if btfCell, ok := handler.Pulsar.OwnedBftRow[request.PublicKey]; ok {
+	if btfCell, ok := handler.Pulsar.GetItemFromVector(request.PublicKey); ok {
 
 		publicKey, err := handler.Pulsar.KeyProcessor.ImportPublicKeyPEM([]byte(request.PublicKey))
 		if err != nil {
@@ -176,7 +176,7 @@ func (handler *Handler) ReceiveEntropy(request *Payload, response *Payload) erro
 
 		isVerified := handler.Pulsar.CryptographyService.Verify(publicKey, core.SignatureFromBytes(btfCell.GetSign()), requestBody.Entropy[:])
 		if err != nil || !isVerified {
-			handler.Pulsar.OwnedBftRow[request.PublicKey] = nil
+			handler.Pulsar.AddItemToVector(request.PublicKey, nil)
 			inslog.Errorf("signature and Entropy aren't matched")
 			return errors.New("signature and Entropy aren't matched")
 		}
