@@ -53,7 +53,6 @@ type FirstPhase struct {
 	Communicator Communicator             `inject:""`
 	Cryptography core.CryptographyService `inject:""`
 	NodeKeeper   network.NodeKeeper       `inject:""`
-	UnsyncList   network.UnsyncList
 }
 
 // Execute do first phase
@@ -61,9 +60,11 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 	entry := &merkle.PulseEntry{Pulse: pulse}
 	logger := inslogger.FromContext(ctx)
 
+	var unsyncList network.UnsyncList
+
 	pulseHash, pulseProof, err := fp.Calculator.GetPulseProof(entry)
 	if fp.NodeKeeper.GetState() == network.Ready {
-		fp.UnsyncList = fp.NodeKeeper.GetUnsyncList()
+		unsyncList = fp.NodeKeeper.GetUnsyncList()
 	}
 
 	logger.Infof("[ FirstPhase ] Calculated pulse proof: %s", base58.Encode(pulseHash))
@@ -81,7 +82,7 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 	var success bool
 	var originClaim *packets.NodeAnnounceClaim
 	if fp.NodeKeeper.NodesJoinedDuringPreviousPulse() {
-		originClaim, err = fp.NodeKeeper.GetOriginAnnounceClaim(fp.UnsyncList)
+		originClaim, err = fp.NodeKeeper.GetOriginAnnounceClaim(unsyncList)
 		if err != nil {
 			return nil, errors.Wrap(err, "[ FirstPhase ] Failed to get origin claim")
 		}
@@ -137,18 +138,18 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 		if err != nil {
 			return nil, errors.Wrapf(err, "[ FirstPhase ] Failed to detect bitset length")
 		}
-		fp.UnsyncList = fp.NodeKeeper.GetSparseUnsyncList(length)
+		unsyncList = fp.NodeKeeper.GetSparseUnsyncList(length)
 	}
 
-	valid, fault := validateProofs(fp.Calculator, fp.UnsyncList, pulseHash, proofSet)
+	valid, fault := validateProofs(fp.Calculator, unsyncList, pulseHash, proofSet)
 	for node := range valid {
-		fp.UnsyncList.AddProof(node.ID(), rawProofs[node.ID()])
+		unsyncList.AddProof(node.ID(), rawProofs[node.ID()])
 	}
 	for nodeID := range fault {
 		logger.Warnf("[ FirstPhase ] Failed to validate proof from %s", nodeID)
 		delete(claimMap, nodeID)
 	}
-	err = fp.UnsyncList.AddClaims(claimMap)
+	err = unsyncList.AddClaims(claimMap)
 	if err != nil {
 		return nil, errors.Wrapf(err, "[ FirstPhase ] Failed to add claims")
 	}
@@ -159,7 +160,7 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 		PulseProof:  pulseProof,
 		ValidProofs: valid,
 		FaultProofs: fault,
-		UnsyncList:  fp.UnsyncList,
+		UnsyncList:  unsyncList,
 	}, nil
 }
 

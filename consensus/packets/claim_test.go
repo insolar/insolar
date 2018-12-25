@@ -66,9 +66,9 @@ func makeNodeJoinClaim(withSignature bool) *NodeJoinClaim {
 	nodeJoinClaim.JoinsAfter = uint32(67)
 	nodeJoinClaim.NodeRoleRecID = 32
 	nodeJoinClaim.NodeRef = testutils.RandomRef()
-	nodeJoinClaim.NodePK = randomArray64()
+	nodeJoinClaim.NodePK = randomArray66()
 	if withSignature {
-		nodeJoinClaim.Signature = randomArray71()
+		nodeJoinClaim.Signature = randomArray66()
 	}
 	nodeJoinClaim.NodeAddress.Set("127.0.0.1:5566")
 
