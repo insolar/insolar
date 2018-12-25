@@ -188,7 +188,7 @@ func (lr *LogicRunner) Validate(ctx context.Context, ref Ref, p core.Pulse, cb C
 	return 1, nil
 }
 
-func (lr *LogicRunner) ValidateCaseBind(ctx context.Context, inmsg core.Parcel) (core.Reply, error) {
+func (lr *LogicRunner) HandleValidateCaseBindMessage(ctx context.Context, inmsg core.Parcel) (core.Reply, error) {
 	msg, ok := inmsg.Message().(*message.ValidateCaseBind)
 	if !ok {
 		return nil, errors.New("Execute( ! message.ValidateCaseBindInterface )")
@@ -196,7 +196,7 @@ func (lr *LogicRunner) ValidateCaseBind(ctx context.Context, inmsg core.Parcel) 
 
 	err := lr.CheckOurRole(ctx, msg, core.DynamicRoleVirtualValidator)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ ValidateCaseBind ] can't play role")
+		return nil, errors.Wrap(err, "[ HandleValidateCaseBindMessage ] can't play role")
 	}
 
 	passedStepsCount, validationError := lr.Validate(
@@ -216,10 +216,10 @@ func (lr *LogicRunner) ValidateCaseBind(ctx context.Context, inmsg core.Parcel) 
 	return &reply.OK{}, err
 }
 
-func (lr *LogicRunner) ProcessValidationResults(ctx context.Context, inmsg core.Parcel) (core.Reply, error) {
+func (lr *LogicRunner) HandleValidationResultsMessage(ctx context.Context, inmsg core.Parcel) (core.Reply, error) {
 	msg, ok := inmsg.Message().(*message.ValidationResults)
 	if !ok {
-		return nil, errors.Errorf("ProcessValidationResults got argument typed %t", inmsg)
+		return nil, errors.Errorf("HandleValidationResultsMessage got argument typed %t", inmsg)
 	}
 
 	c := lr.GetConsensus(ctx, msg.RecordRef)
@@ -229,13 +229,13 @@ func (lr *LogicRunner) ProcessValidationResults(ctx context.Context, inmsg core.
 	return &reply.OK{}, nil
 }
 
-func (lr *LogicRunner) ExecutorResults(ctx context.Context, inmsg core.Parcel) (core.Reply, error) {
+func (lr *LogicRunner) HandleExecutorResultsMessage(ctx context.Context, inmsg core.Parcel) (core.Reply, error) {
 	msg, ok := inmsg.Message().(*message.ExecutorResults)
 	if !ok {
-		return nil, errors.Errorf("ProcessValidationResults got argument typed %t", inmsg)
+		return nil, errors.Errorf("HandleValidationResultsMessage got argument typed %t", inmsg)
 	}
 
-	// now we have 2 different types of data in message.ExecutorResults
+	// now we have 2 different types of data in message.HandleExecutorResultsMessage
 	// one part of it is about consensus
 	// another one is about prepare state on new executor after pulse
 	// TODO make it in different goroutines
