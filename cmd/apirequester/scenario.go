@@ -27,7 +27,7 @@ func oneSimpleRequest() {
 	if err != nil {
 		fmt.Println("Can not create member, error:", err)
 	} else {
-		fmt.Println("Success! New member ref:", m.ref)
+		fmt.Println("Success! New member ref:", m.ref, ". TraceId: ", m.traceId)
 	}
 	fmt.Print("oneSimpleRequest done just fine\n\n")
 }
