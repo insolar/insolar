@@ -35,7 +35,7 @@ import (
 type FakePulsar struct {
 	onPulse   network.PulseHandler
 	stop      chan bool
-	timeoutMs int32 // mspulse     int
+	timeoutMs int32 // ms
 
 	mutex          sync.RWMutex
 	running        bool

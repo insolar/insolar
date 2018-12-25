@@ -164,7 +164,7 @@ func (bc *Bootstrapper) BootstrapDiscovery(ctx context.Context) (*network.Bootst
 		if err != nil {
 			return nil, errors.Wrap(err, "[ BootstrapDiscovery ] failed to create a host")
 		}
-		pulseNum, _ := fakepulsar.GetPassedPulseCountAndWaitTime(bc.firstPulseTS, bc.options.PulseTimeout)
+		pulseNum, _ := fakepulsar.GetPassedPulseCountAndWaitTime(time.Now().Unix(), bc.firstPulseTS, bc.options.PulseTimeout)
 		return &network.BootstrapResult{
 			Host:           host,
 			FirstPulseTime: bc.firstPulseTS,
