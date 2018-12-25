@@ -152,7 +152,7 @@ func (currentPulsar *Pulsar) sendVector(ctx context.Context) {
 
 	currentPulsar.broadcastVector(ctx)
 
-	currentPulsar.SetBftGridItem(currentPulsar.PublicKeyRaw, currentPulsar.OwnedBftRow)
+	currentPulsar.SetBftGridItem(currentPulsar.PublicKeyRaw, currentPulsar.CreateVectorCopy())
 	currentPulsar.StateSwitcher.SwitchToState(ctx, WaitingForVectors, nil)
 }
 
