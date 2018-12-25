@@ -20,8 +20,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/insolar/insolar/network/fakepulsar"
-
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
@@ -101,11 +99,11 @@ func (nb *NetworkBootstrapper) bootstrapDiscovery(ctx context.Context) ([]*netwo
 	return nb.bootstrapper.BootstrapDiscovery(ctx)
 }
 
-func NewNetworkBootstrapper(options *common.Options, cert core.Certificate, transport network.InternalTransport, pulsar *fakepulsar.FakePulsar) *NetworkBootstrapper {
+func NewNetworkBootstrapper(options *common.Options, cert core.Certificate, transport network.InternalTransport) *NetworkBootstrapper {
 	nb := &NetworkBootstrapper{}
 	nb.certificate = cert
 	nb.sessionManager = NewSessionManager()
-	nb.bootstrapper = NewBootstrapper(options, cert, transport, pulsar)
+	nb.bootstrapper = NewBootstrapper(options, cert, transport)
 	nb.authController = NewAuthorizationController(options, transport, nb.sessionManager)
 	nb.challengeController = NewChallengeResponseController(options, transport, nb.sessionManager)
 	return nb

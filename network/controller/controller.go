@@ -25,7 +25,6 @@ import (
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller/bootstrap"
 	"github.com/insolar/insolar/network/controller/common"
-	"github.com/insolar/insolar/network/fakepulsar"
 	"github.com/insolar/insolar/network/transport/packet/types"
 )
 
@@ -93,13 +92,12 @@ func NewNetworkController(
 	transport network.InternalTransport,
 	routingTable network.RoutingTable,
 	network network.HostNetwork,
-	scheme core.PlatformCryptographyScheme,
-	pulsar *fakepulsar.FakePulsar) network.Controller {
+	scheme core.PlatformCryptographyScheme) network.Controller {
 
 	c := Controller{}
 	c.network = network
 	c.options = options
-	c.bootstrapper = bootstrap.NewNetworkBootstrapper(c.options, certificate, transport, pulsar)
+	c.bootstrapper = bootstrap.NewNetworkBootstrapper(c.options, certificate, transport)
 	c.pulseController = NewPulseController(pulseHandler, network, routingTable)
 	c.rpcController = NewRPCController(c.options, network, scheme)
 

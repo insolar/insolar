@@ -23,8 +23,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/insolar/insolar/network/fakepulsar"
-
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -45,7 +43,6 @@ type Bootstrapper struct {
 	pinger     *pinger.Pinger
 	cert       core.Certificate
 	keeper     network.NodeKeeper
-	fakePulsar *fakepulsar.FakePulsar
 	minNodeRef *core.RecordRef
 }
 
@@ -358,14 +355,12 @@ func (bc *Bootstrapper) Start(keeper network.NodeKeeper) {
 func NewBootstrapper(
 	options *common.Options,
 	certificate core.Certificate,
-	transport network.InternalTransport,
-	pulsar *fakepulsar.FakePulsar) *Bootstrapper {
+	transport network.InternalTransport) *Bootstrapper {
 	return &Bootstrapper{
 		options:    options,
 		cert:       certificate,
 		transport:  transport,
 		pinger:     pinger.NewPinger(transport),
-		fakePulsar: pulsar,
 		minNodeRef: certificate.GetNodeRef(),
 	}
 }
