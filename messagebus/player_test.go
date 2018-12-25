@@ -63,7 +63,7 @@ func TestPlayer_Send(t *testing.T) {
 			Reply: &expectedRep,
 		}
 		tape.GetMock.Expect(ctx, msgHash).Return(&item, nil)
-		rep, err := player.Send(ctx, &msg, *core.GenesisPulse, nil)
+		rep, err := player.Send(ctx, &msg, nil)
 
 		require.NoError(t, err)
 		require.Equal(t, &expectedRep, rep)
