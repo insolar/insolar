@@ -154,10 +154,11 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 	n.routingTable.Inject(n.NodeKeeper)
 
 	log.Infoln("Bootstrapping network...")
-	err := n.controller.Bootstrap(ctx)
+	results, err := n.controller.Bootstrap(ctx)
 	if err != nil {
 		return errors.Wrap(err, "Failed to bootstrap network")
 	}
+	n.parseBootstrapResults(results)
 	n.fakePulsar.Start(ctx)
 	log.Info("----- ServiceNetwork started ------")
 	return nil
@@ -240,6 +241,20 @@ func (n *ServiceNetwork) phaseManagerOnPulse(ctx context.Context, newPulse core.
 
 	if err := n.PhaseManager.OnPulse(ctx, &newPulse); err != nil {
 		logger.Warn("phase manager fail: " + err.Error())
+	}
+}
+
+func (n *ServiceNetwork) parseBootstrapResults(results []*network.BootstrapResult) {
+	if len(results) == 0 {
+		return
+	}
+	minRef := results[0].Host.NodeID
+	n.fakePulsar.SetPulseData(results[0].FirstPulseTime, results[0].PulseNum)
+	for _, result := range results {
+		if result.Host.NodeID.Compare(minRef) > 0 {
+			minRef = result.Host.NodeID
+			n.fakePulsar.SetPulseData(result.FirstPulseTime, result.PulseNum)
+		}
 	}
 }
 
