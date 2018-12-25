@@ -167,3 +167,6 @@ func (mb *TestMessageBus) Send(ctx context.Context, m core.Message, _ *core.Mess
 
 	return reply, err
 }
+
+func (mb *TestMessageBus) OnPulse() {
+}

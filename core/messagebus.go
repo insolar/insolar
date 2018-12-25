@@ -122,9 +122,7 @@ type MessageBus interface {
 
 	// WriteTape writes recorder's tape to the provided writer.
 	WriteTape(ctx context.Context, writer io.Writer) error
-}
 
-type MessageBusWithOnPulse interface {
 	OnPulse()
 }
 

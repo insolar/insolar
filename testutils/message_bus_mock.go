@@ -36,6 +36,11 @@ type MessageBusMock struct {
 	NewRecorderPreCounter uint64
 	NewRecorderMock       mMessageBusMockNewRecorder
 
+	OnPulseFunc       func()
+	OnPulseCounter    uint64
+	OnPulsePreCounter uint64
+	OnPulseMock       mMessageBusMockOnPulse
+
 	RegisterFunc       func(p core.MessageType, p1 core.MessageHandler) (r error)
 	RegisterCounter    uint64
 	RegisterPreCounter uint64
@@ -63,6 +68,7 @@ func NewMessageBusMock(t minimock.Tester) *MessageBusMock {
 	m.MustRegisterMock = mMessageBusMockMustRegister{mock: m}
 	m.NewPlayerMock = mMessageBusMockNewPlayer{mock: m}
 	m.NewRecorderMock = mMessageBusMockNewRecorder{mock: m}
+	m.OnPulseMock = mMessageBusMockOnPulse{mock: m}
 	m.RegisterMock = mMessageBusMockRegister{mock: m}
 	m.SendMock = mMessageBusMockSend{mock: m}
 	m.WriteTapeMock = mMessageBusMockWriteTape{mock: m}
@@ -491,6 +497,116 @@ func (m *MessageBusMock) NewRecorderFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.NewRecorderFunc != nil {
 		return atomic.LoadUint64(&m.NewRecorderCounter) > 0
+	}
+
+	return true
+}
+
+type mMessageBusMockOnPulse struct {
+	mock              *MessageBusMock
+	mainExpectation   *MessageBusMockOnPulseExpectation
+	expectationSeries []*MessageBusMockOnPulseExpectation
+}
+
+type MessageBusMockOnPulseExpectation struct {
+}
+
+//Expect specifies that invocation of MessageBus.OnPulse is expected from 1 to Infinity times
+func (m *mMessageBusMockOnPulse) Expect() *mMessageBusMockOnPulse {
+	m.mock.OnPulseFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &MessageBusMockOnPulseExpectation{}
+	}
+
+	return m
+}
+
+//Return specifies results of invocation of MessageBus.OnPulse
+func (m *mMessageBusMockOnPulse) Return() *MessageBusMock {
+	m.mock.OnPulseFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &MessageBusMockOnPulseExpectation{}
+	}
+
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of MessageBus.OnPulse is expected once
+func (m *mMessageBusMockOnPulse) ExpectOnce() *MessageBusMockOnPulseExpectation {
+	m.mock.OnPulseFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &MessageBusMockOnPulseExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+//Set uses given function f as a mock of MessageBus.OnPulse method
+func (m *mMessageBusMockOnPulse) Set(f func()) *MessageBusMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.OnPulseFunc = f
+	return m.mock
+}
+
+//OnPulse implements github.com/insolar/insolar/core.MessageBus interface
+func (m *MessageBusMock) OnPulse() {
+	counter := atomic.AddUint64(&m.OnPulsePreCounter, 1)
+	defer atomic.AddUint64(&m.OnPulseCounter, 1)
+
+	if len(m.OnPulseMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.OnPulseMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to MessageBusMock.OnPulse.")
+			return
+		}
+
+		return
+	}
+
+	if m.OnPulseMock.mainExpectation != nil {
+
+		return
+	}
+
+	if m.OnPulseFunc == nil {
+		m.t.Fatalf("Unexpected call to MessageBusMock.OnPulse.")
+		return
+	}
+
+	m.OnPulseFunc()
+}
+
+//OnPulseMinimockCounter returns a count of MessageBusMock.OnPulseFunc invocations
+func (m *MessageBusMock) OnPulseMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.OnPulseCounter)
+}
+
+//OnPulseMinimockPreCounter returns the value of MessageBusMock.OnPulse invocations
+func (m *MessageBusMock) OnPulseMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.OnPulsePreCounter)
+}
+
+//OnPulseFinished returns true if mock invocations count is ok
+func (m *MessageBusMock) OnPulseFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.OnPulseMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.OnPulseCounter) == uint64(len(m.OnPulseMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.OnPulseMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.OnPulseCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.OnPulseFunc != nil {
+		return atomic.LoadUint64(&m.OnPulseCounter) > 0
 	}
 
 	return true
@@ -960,6 +1076,10 @@ func (m *MessageBusMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to MessageBusMock.NewRecorder")
 	}
 
+	if !m.OnPulseFinished() {
+		m.t.Fatal("Expected call to MessageBusMock.OnPulse")
+	}
+
 	if !m.RegisterFinished() {
 		m.t.Fatal("Expected call to MessageBusMock.Register")
 	}
@@ -1001,6 +1121,10 @@ func (m *MessageBusMock) MinimockFinish() {
 		m.t.Fatal("Expected call to MessageBusMock.NewRecorder")
 	}
 
+	if !m.OnPulseFinished() {
+		m.t.Fatal("Expected call to MessageBusMock.OnPulse")
+	}
+
 	if !m.RegisterFinished() {
 		m.t.Fatal("Expected call to MessageBusMock.Register")
 	}
@@ -1030,6 +1154,7 @@ func (m *MessageBusMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.MustRegisterFinished()
 		ok = ok && m.NewPlayerFinished()
 		ok = ok && m.NewRecorderFinished()
+		ok = ok && m.OnPulseFinished()
 		ok = ok && m.RegisterFinished()
 		ok = ok && m.SendFinished()
 		ok = ok && m.WriteTapeFinished()
@@ -1051,6 +1176,10 @@ func (m *MessageBusMock) MinimockWait(timeout time.Duration) {
 
 			if !m.NewRecorderFinished() {
 				m.t.Error("Expected call to MessageBusMock.NewRecorder")
+			}
+
+			if !m.OnPulseFinished() {
+				m.t.Error("Expected call to MessageBusMock.OnPulse")
 			}
 
 			if !m.RegisterFinished() {
@@ -1086,6 +1215,10 @@ func (m *MessageBusMock) AllMocksCalled() bool {
 	}
 
 	if !m.NewRecorderFinished() {
+		return false
+	}
+
+	if !m.OnPulseFinished() {
 		return false
 	}
 

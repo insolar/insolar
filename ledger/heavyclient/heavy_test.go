@@ -79,6 +79,7 @@ func sendToHeavy(t *testing.T, withretry bool) {
 
 	// Mock N4: message bus for Send method
 	busMock := testutils.NewMessageBusMock(t)
+	busMock.OnPulseFunc = func() {}
 
 	// Mock5: RecentStorageMock
 	recentMock := recentstorage.NewRecentStorageMock(t)

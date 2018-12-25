@@ -77,3 +77,7 @@ func (p *player) Send(ctx context.Context, msg core.Message, ops *core.MessageSe
 		return nil, err
 	}
 }
+
+func (p *player) OnPulse() {
+	panic("This method must not be called")
+}
