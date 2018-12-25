@@ -173,8 +173,7 @@ func (ul *unsyncList) mergeClaim(nodes map[core.RecordRef]core.Node, claim conse
 		}
 		nodes[node.ID()] = node
 	case *consensus.NodeLeaveClaim:
-		// TODO: add node ID to node leave claim (only to struct, not packet)
-		// delete(nodes, ref)
+		delete(nodes, t.NodeID)
 		break
 	}
 	return nil
