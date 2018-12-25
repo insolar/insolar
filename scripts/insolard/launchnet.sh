@@ -11,11 +11,16 @@ LEDGER_DIR=data
 INSGORUND_LISTEN_PORT=18181
 INSGORUND_RPS_PORT=18182
 CONFIGS_DIR=configs
-KEYS_FILE=scripts/insolard/$CONFIGS_DIR/bootstrap_keys.json
-ROOT_MEMBER_KEYS_FILE=scripts/insolard/$CONFIGS_DIR/root_member_keys.json
-NODES_DATA=scripts/insolard/nodes/
+BASE_DIR=scripts/insolard
+KEYS_FILE=$BASE_DIR/$CONFIGS_DIR/bootstrap_keys.json
+ROOT_MEMBER_KEYS_FILE=$BASE_DIR/$CONFIGS_DIR/root_member_keys.json
+NODES_DATA=$BASE_DIR/nodes/
+GENESIS_CONFIG=$BASE_DIR/genesis.yaml
 
-NUM_NODES=3
+insolar_log_level=Debug
+gorund_log_level=$insolar_log_level
+
+NUM_NODES=$(grep "host: " $GENESIS_CONFIG | grep -cv "#" )
 
 for i in `seq 1 $NUM_NODES`
 do
@@ -28,7 +33,7 @@ stop_listening()
 {
     echo "stop_listening() starts ..."
     stop_insgorund=$1
-    ports="13831 13832 23832 23833 33833 33834"
+    ports="13831 13832 23832 23833 33833 33834 43834 53835 58090 58182"
     if [ "$stop_insgorund" == "true" ]
     then
         ports="$ports $INSGORUND_LISTEN_PORT $INSGORUND_RPS_PORT"
@@ -165,7 +170,12 @@ process_input_params()
 launch_insgorund()
 {
     host=127.0.0.1
-    $INSGORUND -l $host:$INSGORUND_LISTEN_PORT --rpc $host:$INSGORUND_RPS_PORT
+    $INSGORUND -l $host:$INSGORUND_LISTEN_PORT --rpc $host:$INSGORUND_RPS_PORT --log-level=$gorund_log_level &
+
+    if [ "$NUM_NODES" == "5" ]
+    then
+        $INSGORUND -l $host:58181 --rpc $host:58182 --log-level=$gorund_log_level &
+    fi
 }
 
 copy_data()
@@ -199,7 +209,7 @@ genesis()
     generate_discovery_nodes_keys
 
     printf "start genesis ... \n"
-    $INSOLARD --config scripts/insolard/insolar.yaml --genesis scripts/insolard/genesis.yaml --keyout $NODES_DATA/certs
+    $INSOLARD --config $BASE_DIR/insolar.yaml --genesis $GENESIS_CONFIG --keyout $NODES_DATA/certs
     printf "genesis is done\n"
 
     copy_data
@@ -213,12 +223,12 @@ check_working_dir
 process_input_params $@
 
 printf "start pulsar ... \n"
-$PULSARD -c scripts/insolard/pulsar.yaml &> $NODES_DATA/pulsar_output.txt &
+$PULSARD -c $BASE_DIR/pulsar.yaml &> $NODES_DATA/pulsar_output.txt &
 
 if [ "$run_insgorund" == "true" ]
 then
     printf "start insgorund ... \n"
-    launch_insgorund &
+    launch_insgorund
 else
     echo "INSGORUND IS NOT LAUNCHED"
 fi
@@ -232,10 +242,10 @@ do
     if [ "$i" -eq "$NUM_NODES" ]
     then
         echo "NODE $i STARTED in foreground"
-        $INSOLARD --config scripts/insolard/insolar_$i.yaml --measure $node/measure.txt &> $node/output.txt
+        INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $BASE_DIR/insolar_$i.yaml --measure $node/measure.txt &> $node/output.txt
         break
     fi
-    $INSOLARD --config scripts/insolard/insolar_$i.yaml --measure $node/measure.txt &> $node/output.txt &
+    INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $BASE_DIR/insolar_$i.yaml --measure $node/measure.txt &> $node/output.txt &
     echo "NODE $i STARTED in background"
 done
 
