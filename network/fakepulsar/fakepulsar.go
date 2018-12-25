@@ -127,7 +127,7 @@ func (fp *FakePulsar) SetPulseData(time, pulseNum int64) {
 
 func GetPassedPulseCountAndWaitTime(firstPulseTime int64, pulseTime int32) (count, waitTime int64) {
 	pulseTimeSec := int64(pulseTime / 1000)
-	delta := int64(time.Now().Sub(time.Unix(firstPulseTime, 0)).Seconds())
+	delta := int64(time.Since(time.Unix(firstPulseTime, 0)).Seconds())
 	count = delta / pulseTimeSec
 	waitTime = delta - count*pulseTimeSec
 	return
