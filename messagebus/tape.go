@@ -19,12 +19,14 @@ package messagebus
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/reply"
 )
 
 // Tape is an abstraction for saving replies for messages and restoring them.
@@ -52,8 +54,14 @@ type memoryTape struct {
 }
 
 type memoryTapeMessage struct {
-	msgHash []byte
-	item    TapeItem
+	MsgHash []byte
+	Item    TapeItem
+}
+
+type itemBlob struct {
+	MsgHash []byte
+	ReplyB  []byte
+	ErrorB  []byte
 }
 
 func newMemoryTape(pulse core.PulseNumber) *memoryTape {
@@ -70,10 +78,31 @@ func newMemoryTapeFromReader(ctx context.Context, r io.Reader) (*memoryTape, err
 	if err != nil {
 		return nil, errors.Wrap(err, "[ MemoryTape ] can't read pulse")
 	}
-	err = decoder.Decode(&t.storage)
+
+	var storageBlobs []itemBlob
+	err = decoder.Decode(&storageBlobs)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ MemoryTape ] can't read storage")
 	}
+	storage := make([]memoryTapeMessage, 0, len(storageBlobs))
+	for _, blob := range storageBlobs {
+		item := TapeItem{}
+		if blob.ReplyB != nil {
+			rep, err := reply.Deserialize(bytes.NewReader(blob.ReplyB))
+			if err != nil {
+				return nil, err
+			}
+			item.Reply = rep
+		}
+		if blob.ErrorB != nil {
+			item.Error = fmt.Errorf(string(blob.ErrorB))
+		}
+		storage = append(storage, memoryTapeMessage{
+			MsgHash: blob.MsgHash,
+			Item:    item,
+		})
+	}
+	t.storage = storage
 	return &t, nil
 }
 
@@ -85,7 +114,21 @@ func (t *memoryTape) Write(ctx context.Context, w io.Writer) error {
 		return errors.Wrap(err, "[ MemoryTape ] can't write pulse")
 	}
 
-	err = encoder.Encode(t.storage)
+	storageBlobs := make([]itemBlob, 0, len(t.storage))
+	for _, record := range t.storage {
+		blob := itemBlob{
+			MsgHash: record.MsgHash,
+		}
+		if record.Item.Reply != nil {
+			blob.ReplyB = reply.ToBytes(record.Item.Reply)
+		}
+		if record.Item.Error != nil {
+			// TODO: preserve error type (use gob?) - 24.Dec.2018 - @nordicdyno
+			blob.ErrorB = []byte(record.Item.Error.Error())
+		}
+		storageBlobs = append(storageBlobs, blob)
+	}
+	err = encoder.Encode(storageBlobs)
 	if err != nil {
 		return errors.Wrap(err, "[ MemoryTape ] can't write storage")
 	}
@@ -98,18 +141,18 @@ func (t *memoryTape) Get(ctx context.Context, msgHash []byte) (*TapeItem, error)
 	}
 
 	tapeMsg := t.storage[0]
-	if !bytes.Equal(msgHash, tapeMsg.msgHash) {
+	if !bytes.Equal(msgHash, tapeMsg.MsgHash) {
 		return nil, errors.New("Validation error. Message mismatch")
 	}
 	t.storage = t.storage[1:]
 
-	return &tapeMsg.item, nil
+	return &tapeMsg.Item, nil
 }
 
 func (t *memoryTape) Set(ctx context.Context, msgHash []byte, rep core.Reply, gotError error) error {
 	t.storage = append(t.storage, memoryTapeMessage{
-		msgHash: msgHash,
-		item: TapeItem{
+		MsgHash: msgHash,
+		Item: TapeItem{
 			Reply: rep,
 			Error: gotError,
 		},

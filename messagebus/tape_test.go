@@ -18,10 +18,12 @@ package messagebus
 
 import (
 	"bytes"
+	"fmt"
 	"testing"
 
-	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/platformpolicy"
+	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/core"
@@ -35,67 +37,98 @@ func TestGetMessageHash(t *testing.T) {
 	require.Equal(t, 64, len(GetMessageHash(pcs, &message.Parcel{Msg: &message.GenesisRequest{}})))
 }
 
-func TestTape_Set(t *testing.T) {
-	mc := minimock.NewController(t)
-	defer mc.Finish()
-
+func TestTape_SetGet(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	pn := core.PulseNumber(1)
 
 	rep := reply.Object{Memory: []byte{9, 9, 9}}
 	rd, err := reply.Serialize(&rep)
-	buff := new(bytes.Buffer)
-	_, err = buff.ReadFrom(rd)
+	var buf bytes.Buffer
+	_, err = buf.ReadFrom(rd)
 	require.NoError(t, err)
+
+	msgHash := []byte{4, 5, 6}
+	tp := newMemoryTape(pn)
+	err = tp.Set(ctx, msgHash, &rep, nil)
+	require.NoError(t, err)
+
+	item, err := tp.Get(ctx, msgHash)
+	require.NoError(t, err)
+
+	assert.Equal(t, &rep, item.Reply)
+	assert.Nil(t, item.Error)
+}
+
+func TestTape_SetGet_WithError(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+	pn := core.PulseNumber(1)
+
+	expectedErr := fmt.Errorf("Error")
+	gotErr := fmt.Errorf("Error")
+
+	msgHash := []byte{4, 5, 6}
+	tp := newMemoryTape(pn)
+	err := tp.Set(ctx, msgHash, nil, gotErr)
+	require.NoError(t, err)
+
+	item, err := tp.Get(ctx, msgHash)
+	require.NoError(t, err)
+
+	assert.Nil(t, item.Reply)
+	assert.Equal(t, expectedErr, item.Error)
+}
+
+func TestTape_Write(t *testing.T) {
+	// 	mc := minimock.NewController(t)
+	// 	defer mc.Finish()
+
+	// 	// Prepare test data.
+	ctx := inslogger.TestContext(t)
+	pn := core.PulseNumber(core.FirstPulseNumber + 1000)
 
 	tp := newMemoryTape(pn)
-	err = tp.Set(ctx, []byte{4, 5, 6}, &rep, nil)
+
+	// 	// Write buffer from storageTape.
+	// 	expected.GetReply()
+	expected := []struct {
+		msgHash []byte
+		item    TapeItem
+	}{
+		{
+			msgHash: []byte{4, 5, 6},
+			item: TapeItem{
+				Reply: &reply.Object{Memory: []byte{9, 9, 9}},
+			},
+		},
+		{
+			msgHash: []byte{4, 5, 7},
+			item: TapeItem{
+				Error: errors.New("send failed"),
+			},
+		},
+	}
+
+	for _, tCase := range expected {
+		err := tp.Set(ctx, tCase.msgHash, tCase.item.Reply, tCase.item.Error)
+		require.NoError(t, err)
+	}
+	var buf bytes.Buffer
+	err := tp.Write(ctx, &buf)
 	require.NoError(t, err)
+
+	rTape, err := newMemoryTapeFromReader(ctx, bytes.NewReader(buf.Bytes()))
+	require.NoError(t, err)
+
+	for _, tCase := range expected {
+		gotItem, err := rTape.Get(ctx, tCase.msgHash)
+		// fmt.Println("err =>", err)
+		require.NoError(t, err)
+		assert.Equal(t, tCase.item.Reply, gotItem.Reply)
+		if tCase.item.Error == nil {
+			assert.Nil(t, gotItem.Error)
+		} else {
+			assert.Equal(t, tCase.item.Error.Error(), gotItem.Error.Error())
+		}
+		// fmt.Printf("gotItem => %+v\n", gotItem)
+	}
 }
-
-func TestTape_GetReply(t *testing.T) {
-	// mc := minimock.NewController(t)
-	// defer mc.Finish()
-
-	// ctx := inslogger.TestContext(t)
-	// pn := core.PulseNumber(1)
-
-	// expectedRep := reply.Object{Memory: []byte{42}}
-	// rd, err := reply.Serialize(&expectedRep)
-	// buff := new(bytes.Buffer)
-	// _, err = buff.ReadFrom(rd)
-	// require.NoError(t, err)
-
-	// tp := newMemoryTape(pn)
-	// rep, err := tp.GetReply(ctx, []byte{4, 5, 6})
-	// require.NoError(t, err)
-	// require.Equal(t, expectedRep, *rep.(*reply.Object))
-}
-
-// func TestTape_Write(t *testing.T) {
-// 	mc := minimock.NewController(t)
-// 	defer mc.Finish()
-
-// 	// Prepare test data.
-// 	ctx := inslogger.TestContext(t)
-// 	pn := core.PulseNumber(core.FirstPulseNumber + 1000)
-// 	tp := newMemoryTape(pn)
-
-// 	// Write buffer from storageTape.
-// 	buff := bytes.NewBuffer(nil)
-// 	expected.GetReply()
-// 	err := tp.Write(ctx, buff)
-// 	require.NoError(t, err)
-
-// 	r, err := newMemoryTapeFromReader(ctx, bytes.NewReader(buff.Bytes()))
-// 	require.NoError(t, err)
-
-// 	// Write expected buffer.
-// 	// expectedBuff := bytes.NewBuffer(nil)
-// 	// enc := gob.NewEncoder(expectedBuff)
-// 	// enc.Encode(tp.pulse)
-// 	// enc.Encode(core.KV{K: []byte{1}, V: []byte{2}})
-// 	// enc.Encode(core.KV{K: []byte{3}, V: []byte{4}})
-
-// 	require.Equal(t, expectedBuff.Bytes(), buff.Bytes())
-// }
