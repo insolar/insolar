@@ -119,13 +119,13 @@ type MessageBus interface {
 	//
 	// Recorder can be created from MessageBus and passed as MessageBus instance.s
 	NewRecorder(ctx context.Context, currentPulse Pulse) (MessageBus, error)
+
+	OnPulse()
 }
 
 type TapeWriter interface {
 	// WriteTape writes recorder's tape to the provided writer.
 	WriteTape(ctx context.Context, writer io.Writer) error
-
-	OnPulse()
 }
 
 type messageBusKey struct{}
