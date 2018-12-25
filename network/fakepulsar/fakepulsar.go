@@ -51,7 +51,7 @@ func NewFakePulsar(callback network.PulseHandler, timeoutMs int32) *FakePulsar {
 		timeoutMs:      timeoutMs,
 		stop:           make(chan bool, 1),
 		running:        false,
-		firstPulseTime: time.Now().UTC().Unix(),
+		firstPulseTime: 0,
 		pulseNum:       0,
 	}
 }
@@ -62,11 +62,10 @@ func (fp *FakePulsar) Start(ctx context.Context) {
 	defer fp.mutex.Unlock()
 
 	fp.running = true
-	fp.firstPulseTime = time.Now().Unix()
-	delta := int32(math.Abs(float64(time.Now().Second() - time.Unix(fp.firstPulseTime, 0).Second())))
-	if delta != fp.timeoutMs/1000 {
-		time.Sleep(time.Duration(delta))
-	}
+	var waitTime int64
+	fp.pulseNum, waitTime = GetPassedPulseCountAndWaitTime(fp.firstPulseTime, fp.timeoutMs)
+
+	time.Sleep(time.Duration(waitTime))
 	go func(fp *FakePulsar) {
 		for {
 			select {
@@ -125,4 +124,12 @@ func (fp *FakePulsar) GetPulseNum() int64 {
 func (fp *FakePulsar) SetPulseData(time, pulseNum int64) {
 	fp.firstPulseTime = time
 	fp.pulseNum = pulseNum
+}
+
+func GetPassedPulseCountAndWaitTime(firstPulseTime int64, pulseTime int32) (count, waitTime int64) {
+	pulseTimeSec := int64(pulseTime / 1000)
+	delta := int64(math.Abs(float64(time.Now().Second() - time.Unix(firstPulseTime, 0).Second())))
+	count = delta / pulseTimeSec
+	waitTime = pulseTimeSec * ((delta % pulseTimeSec) / 10)
+	return
 }

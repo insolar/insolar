@@ -136,7 +136,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 
 	err = n.MerkleCalculator.(component.Initer).Init(ctx)
 	n.hostNetwork = hostnetwork.NewHostTransport(internalTransport, n.routingTable)
-	options := controller.ConfigureOptions(n.cfg.Host)
+	options := controller.ConfigureOptions(n.cfg)
 	n.fakePulsar = fakepulsar.NewFakePulsar(n, n.cfg.Pulsar.PulseTime)
 	n.controller = controller.NewNetworkController(n, options, n.CertificateManager.GetCertificate(), internalTransport, n.routingTable, n.hostNetwork, n.CryptographyScheme)
 	log.Info("Service network initialized")
@@ -157,11 +157,11 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 	n.routingTable.Inject(n.NodeKeeper)
 
 	log.Infoln("Bootstrapping network...")
-	results, err := n.controller.Bootstrap(ctx)
+	result, err := n.controller.Bootstrap(ctx)
 	if err != nil {
 		return errors.Wrap(err, "Failed to bootstrap network")
 	}
-	setFakePulsarData(n.fakePulsar, results)
+	n.fakePulsar.SetPulseData(result.FirstPulseTime, result.PulseNum)
 	n.fakePulsar.Start(ctx)
 	logger.Info("Service network started")
 	return nil
@@ -255,20 +255,6 @@ func (n *ServiceNetwork) phaseManagerOnPulse(ctx context.Context, newPulse core.
 
 	if err := n.PhaseManager.OnPulse(ctx, &newPulse); err != nil {
 		logger.Warn("phase manager fail: " + err.Error())
-	}
-}
-
-func setFakePulsarData(fp *fakepulsar.FakePulsar, results []*network.BootstrapResult) {
-	if len(results) == 0 {
-		return
-	}
-	minRef := results[0].Host.NodeID
-	fp.SetPulseData(results[0].FirstPulseTime, results[0].PulseNum)
-	for _, result := range results {
-		if result.Host.NodeID.Compare(minRef) > 0 {
-			minRef = result.Host.NodeID
-			fp.SetPulseData(result.FirstPulseTime, result.PulseNum)
-		}
 	}
 }
 

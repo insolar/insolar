@@ -37,20 +37,25 @@ type NetworkBootstrapper struct {
 	authController      *AuthorizationController
 	challengeController *ChallengeResponseController
 	nodeKeeper          network.NodeKeeper
+	firstPulseTS        int64
 }
 
-func (nb *NetworkBootstrapper) Bootstrap(ctx context.Context) ([]*network.BootstrapResult, error) {
+func (nb *NetworkBootstrapper) Bootstrap(ctx context.Context) (*network.BootstrapResult, error) {
 	if len(nb.certificate.GetDiscoveryNodes()) == 0 {
+		host, err := host.NewHostN(nb.nodeKeeper.GetOrigin().Address(), nb.nodeKeeper.GetOrigin().ID())
+		if err != nil {
+			return nil, errors.Wrap(err, "[ Bootstrap ] failed to create a host")
+		}
 		log.Info("Zero bootstrap")
-		return nil, nil
+		return &network.BootstrapResult{host, nb.firstPulseTS, 0}, nil
 	}
 	if utils.OriginIsDiscovery(nb.certificate) {
-		results, err := nb.bootstrapDiscovery(ctx)
+		result, err := nb.bootstrapDiscovery(ctx)
 		if err != nil {
 			return nil, errors.Wrap(err, "[ Bootstrap ] Couldn't OriginIsDiscovery")
 		}
 		nb.nodeKeeper.SetIsBootstrapped(true)
-		return results, nil
+		return result, nil
 	}
 	return nb.bootstrapJoiner(ctx)
 }
@@ -75,7 +80,7 @@ type DiscoveryNode struct {
 	Node core.DiscoveryNode
 }
 
-func (nb *NetworkBootstrapper) bootstrapJoiner(ctx context.Context) ([]*network.BootstrapResult, error) {
+func (nb *NetworkBootstrapper) bootstrapJoiner(ctx context.Context) (*network.BootstrapResult, error) {
 	result, discoveryNode, err := nb.bootstrapper.Bootstrap(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error bootstrapping to discovery node")
@@ -95,7 +100,7 @@ func (nb *NetworkBootstrapper) bootstrapJoiner(ctx context.Context) ([]*network.
 	return result, nb.authController.Register(ctx, discoveryNode, sessionID)
 }
 
-func (nb *NetworkBootstrapper) bootstrapDiscovery(ctx context.Context) ([]*network.BootstrapResult, error) {
+func (nb *NetworkBootstrapper) bootstrapDiscovery(ctx context.Context) (*network.BootstrapResult, error) {
 	return nb.bootstrapper.BootstrapDiscovery(ctx)
 }
 

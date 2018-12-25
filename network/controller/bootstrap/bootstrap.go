@@ -30,6 +30,7 @@ import (
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller/common"
 	"github.com/insolar/insolar/network/controller/pinger"
+	"github.com/insolar/insolar/network/fakepulsar"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet/types"
@@ -38,11 +39,12 @@ import (
 )
 
 type Bootstrapper struct {
-	options   *common.Options
-	transport network.InternalTransport
-	pinger    *pinger.Pinger
-	cert      core.Certificate
-	keeper    network.NodeKeeper
+	options      *common.Options
+	transport    network.InternalTransport
+	pinger       *pinger.Pinger
+	cert         core.Certificate
+	keeper       network.NodeKeeper
+	firstPulseTS int64
 }
 
 type NodeBootstrapRequest struct{}
@@ -125,7 +127,7 @@ func init() {
 }
 
 // Bootstrap on the discovery node (step 1 of the bootstrap process)
-func (bc *Bootstrapper) Bootstrap(ctx context.Context) ([]*network.BootstrapResult, *DiscoveryNode, error) {
+func (bc *Bootstrapper) Bootstrap(ctx context.Context) (*network.BootstrapResult, *DiscoveryNode, error) {
 	log.Info("Bootstrapping to discovery node")
 	ch := bc.getDiscoveryNodesChannel(ctx, bc.cert.GetDiscoveryNodes(), 1)
 	result := bc.waitResultFromChannel(ctx, ch)
@@ -133,7 +135,7 @@ func (bc *Bootstrapper) Bootstrap(ctx context.Context) ([]*network.BootstrapResu
 		return nil, nil, errors.New("Failed to bootstrap to any of discovery nodes")
 	}
 	discovery := FindDiscovery(bc.cert, result.Host.NodeID)
-	return []*network.BootstrapResult{result}, &DiscoveryNode{result.Host, discovery}, nil
+	return result, &DiscoveryNode{result.Host, discovery}, nil
 }
 
 func (bc *Bootstrapper) checkActiveNode(node core.Node) error {
@@ -148,7 +150,7 @@ func (bc *Bootstrapper) checkActiveNode(node core.Node) error {
 	return nil
 }
 
-func (bc *Bootstrapper) BootstrapDiscovery(ctx context.Context) ([]*network.BootstrapResult, error) {
+func (bc *Bootstrapper) BootstrapDiscovery(ctx context.Context) (*network.BootstrapResult, error) {
 	inslogger.FromContext(ctx).Info("Network bootstrap between discovery nodes")
 	discoveryNodes := bc.cert.GetDiscoveryNodes()
 	var err error
@@ -158,7 +160,16 @@ func (bc *Bootstrapper) BootstrapDiscovery(ctx context.Context) ([]*network.Boot
 	}
 	discoveryCount := len(discoveryNodes)
 	if discoveryCount == 0 {
-		return nil, nil
+		host, err := host.NewHostN(bc.keeper.GetOrigin().Address(), bc.keeper.GetOrigin().ID())
+		if err != nil {
+			return nil, errors.Wrap(err, "[ BootstrapDiscovery ] failed to create a host")
+		}
+		pulseNum, _ := fakepulsar.GetPassedPulseCountAndWaitTime(bc.firstPulseTS, bc.options.PulseTimeout)
+		return &network.BootstrapResult{
+			Host:           host,
+			FirstPulseTime: bc.firstPulseTS,
+			PulseNum:       pulseNum,
+		}, nil
 	}
 
 	var bootstrapResults []*network.BootstrapResult
@@ -189,7 +200,7 @@ func (bc *Bootstrapper) BootstrapDiscovery(ctx context.Context) ([]*network.Boot
 	}
 	bc.keeper.AddActiveNodes(activeNodes)
 	inslogger.FromContext(ctx).Infof("Added active nodes: %s", strings.Join(activeNodesStr, ", "))
-	return bootstrapResults, nil
+	return parseBotstrapResults(bootstrapResults), nil
 }
 
 func (bc *Bootstrapper) sendGenesisRequest(ctx context.Context, h *host.Host) (core.Node, error) {
@@ -317,7 +328,7 @@ func (bc *Bootstrapper) processBootstrap(ctx context.Context, request network.Re
 	// TODO: redirect logic
 	return bc.transport.BuildResponse(request, &NodeBootstrapResponse{
 		Code:           Accepted,
-		FirstPulseTime: time.Now().UTC().Unix(),
+		FirstPulseTime: bc.firstPulseTS,
 		PulseNum:       0,
 	},
 	), nil
@@ -349,6 +360,17 @@ func (bc *Bootstrapper) Start(keeper network.NodeKeeper) {
 	bc.keeper = keeper
 	bc.transport.RegisterPacketHandler(types.Bootstrap, bc.processBootstrap)
 	bc.transport.RegisterPacketHandler(types.Genesis, bc.processGenesis)
+}
+
+func parseBotstrapResults(results []*network.BootstrapResult) *network.BootstrapResult {
+	minIDIndex := 0
+	minID := results[0].Host.NodeID
+	for i, result := range results {
+		if minID.Compare(result.Host.NodeID) > 0 {
+			minIDIndex = i
+		}
+	}
+	return results[minIDIndex]
 }
 
 func NewBootstrapper(

@@ -41,7 +41,7 @@ type Controller interface {
 	// SendCascadeMessage sends a message from MessageBus to a cascade of nodes.
 	SendCascadeMessage(data core.Cascade, method string, msg core.Parcel) error
 	// Bootstrap init complex bootstrap process. Blocks until bootstrap is complete.
-	Bootstrap(ctx context.Context) ([]*BootstrapResult, error)
+	Bootstrap(ctx context.Context) (*BootstrapResult, error)
 
 	// Inject inject components.
 	Inject(cryptographyService core.CryptographyService,
