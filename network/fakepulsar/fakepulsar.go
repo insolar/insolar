@@ -62,7 +62,7 @@ func (fp *FakePulsar) Start(ctx context.Context) {
 
 	fp.running = true
 	var waitTime int64
-	fp.pulseNum, waitTime = GetPassedPulseCountAndWaitTime(fp.firstPulseTime, fp.timeoutMs)
+	fp.pulseNum, waitTime = GetPassedPulseCountAndWaitTime(time.Now().Unix(), fp.firstPulseTime, fp.timeoutMs)
 
 	time.Sleep(time.Duration(waitTime))
 	go func(fp *FakePulsar) {
@@ -125,9 +125,9 @@ func (fp *FakePulsar) SetPulseData(time, pulseNum int64) {
 	fp.pulseNum = pulseNum
 }
 
-func GetPassedPulseCountAndWaitTime(firstPulseTime int64, pulseTime int32) (count, waitTime int64) {
-	pulseTimeSec := int64(pulseTime / 1000)
-	delta := int64(time.Since(time.Unix(firstPulseTime, 0)).Seconds())
+func GetPassedPulseCountAndWaitTime(currentTime, firstPulseTime int64, pulseTimeout int32) (count, waitTime int64) {
+	pulseTimeSec := int64(pulseTimeout / 1000)
+	delta := int64(time.Unix(currentTime, 0).Sub(time.Unix(firstPulseTime, 0)).Seconds())
 	count = delta / pulseTimeSec
 	waitTime = delta - count*pulseTimeSec
 	return

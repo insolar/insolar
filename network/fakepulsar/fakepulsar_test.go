@@ -18,7 +18,6 @@ package fakepulsar
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 
@@ -59,15 +58,12 @@ func TestFakePulsar_Start(t *testing.T) {
 func TestGetPassedPulseCountAndWaitTime(t *testing.T) {
 	pulseCount := 5
 	waitSec := int64(5)
-	pulseTimout := 10000
-	local := time.Now()
-	firstPulseTime := local.Add(time.Second * time.Duration(-pulseCount*(pulseTimout/1000)))
-	firstPulseTime = firstPulseTime.Add(time.Second * time.Duration(-waitSec))
+	pulseTimeout := 12000
 
-	fmt.Println(local)
-	fmt.Println(firstPulseTime)
+	firstPulseTime := time.Date(2018, 12, 25, 2, 10, 10, 0, time.Local)
+	local := time.Date(2018, 12, 25, 2, 11, 15, 0, time.Local)
 
-	count, waitTime := GetPassedPulseCountAndWaitTime(firstPulseTime.Unix(), int32(pulseTimout))
+	count, waitTime := GetPassedPulseCountAndWaitTime(local.Unix(), firstPulseTime.Unix(), int32(pulseTimeout))
 
 	assert.Equal(t, int64(pulseCount), count)
 	assert.Equal(t, waitSec, waitTime)
