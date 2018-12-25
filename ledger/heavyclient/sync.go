@@ -70,7 +70,10 @@ func (c *JetClient) HeavySync(
 		if err != nil {
 			panic(err)
 		}
-		msg := &message.HeavyPayload{Records: recs}
+		msg := &message.HeavyPayload{
+			PulseNum: pn,
+			Records:  recs,
+		}
 		busreply, buserr = c.Bus.Send(ctx, msg, nil)
 		if buserr != nil {
 			inslog.Error("synchronize: payload send error", buserr.Error())
