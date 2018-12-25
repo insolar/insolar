@@ -248,6 +248,11 @@ func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Repl
 		<-mb.waitingChan
 	}
 
+	pulse, err = mb.PulseStorage.Current(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ MessageBus ] Couldn't get current pulse number")
+	}
+
 	if msg.Pulse() != pulse.PulseNumber {
 		inslogger.FromContext(ctx).Error("[ MessageBus ] Incorrect message pulse")
 		return nil, fmt.Errorf("[ MessageBus ] Incorrect message pulse %d %d", pulse.PulseNumber, msg.Pulse())
