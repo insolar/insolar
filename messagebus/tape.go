@@ -19,13 +19,11 @@ package messagebus
 import (
 	"bytes"
 	"context"
-	"encoding/gob"
+	"fmt"
 	"io"
 
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
-
-	"github.com/satori/go.uuid"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/reply"
@@ -37,122 +35,17 @@ import (
 //go:generate minimock -i github.com/insolar/insolar/messagebus.tape -o .
 type tape interface {
 	Write(ctx context.Context, writer io.Writer) error
-	GetReply(ctx context.Context, msgHash []byte) (core.Reply, error)
-	SetReply(ctx context.Context, msgHash []byte, rep core.Reply) error
+	Get(ctx context.Context, msgHash []byte) (*TapeItem, error)
+	Set(ctx context.Context, msgHash []byte, rep core.Reply, gotError error) error
 }
 
-// StorageTape saves and fetches message replies to/from local storage.
-//
-// It uses <storageTape id> + <message hash> for Value keys.
-type storageTape struct {
-	ls    core.LocalStorage
-	pulse core.PulseNumber
-	id    uuid.UUID
+// TapeItem stores reply/error pair for tape.
+type TapeItem struct {
+	Reply core.Reply
+	Error error
 }
 
-type couple struct {
-	Key   []byte
-	Value []byte
-}
-
-// newStorageTape creates new storageTape with random id.
-func newStorageTape(ls core.LocalStorage, pulse core.PulseNumber) (*storageTape, error) {
-	id, err := uuid.NewV4()
-	if err != nil {
-		return nil, err
-	}
-	return &storageTape{ls: ls, pulse: pulse, id: id}, nil
-}
-
-// newStorageTapeFromReader creates and fills a new storageTape from a stream.
-//
-// This is a very long operation, as it saves replies in storage until the stream is exhausted.
-func newStorageTapeFromReader(ctx context.Context, ls core.LocalStorage, r io.Reader) (*storageTape, error) {
-	var err error
-	tape := storageTape{ls: ls}
-
-	decoder := gob.NewDecoder(r)
-	err = decoder.Decode(&tape.pulse)
-	if err != nil {
-		return nil, err
-	}
-	err = decoder.Decode(&tape.id)
-	if err != nil {
-		return nil, err
-	}
-	for {
-		var rep couple
-		err = decoder.Decode(&rep)
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return nil, err
-		}
-		err = tape.setReplyBinary(ctx, rep.Key, rep.Value)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return &tape, nil
-}
-
-// Write writes all saved in tape replies to provided writer.
-func (t *storageTape) Write(ctx context.Context, w io.Writer) error {
-	var err error
-
-	encoder := gob.NewEncoder(w)
-	err = encoder.Encode(t.pulse)
-	if err != nil {
-		return err
-	}
-	err = encoder.Encode(t.id)
-	if err != nil {
-		return err
-	}
-
-	err = t.ls.Iterate(ctx, t.pulse, t.id[:], func(k, v []byte) error {
-		return encoder.Encode(&couple{
-			Key:   k[len(t.id):],
-			Value: v,
-		})
-	})
-
-	return err
-}
-
-// GetReply returns reply if it was previously saved on that tape.
-func (t *storageTape) GetReply(ctx context.Context, msgHash []byte) (core.Reply, error) {
-	key := bytes.Join([][]byte{t.id[:], msgHash}, nil)
-	buff, err := t.ls.Get(ctx, t.pulse, key)
-	if err != nil {
-		return nil, err
-	}
-
-	return reply.Deserialize(bytes.NewBuffer(buff))
-}
-
-// SetReply stores provided reply for this tape.
-func (t *storageTape) SetReply(ctx context.Context, msgHash []byte, rep core.Reply) error {
-	reader, err := reply.Serialize(rep)
-	if err != nil {
-		return err
-	}
-	buff := new(bytes.Buffer)
-	_, err = buff.ReadFrom(reader)
-	if err != nil {
-		return err
-	}
-	return t.setReplyBinary(ctx, msgHash, buff.Bytes())
-}
-
-func (t *storageTape) setReplyBinary(ctx context.Context, msgHash []byte, rep []byte) error {
-	key := bytes.Join([][]byte{t.id[:], msgHash}, nil)
-	return t.ls.Set(ctx, t.pulse, key, rep)
-}
-
-// memoryTape saves and fetches message replies to/from memory array.
+// memoryTape saves and fetches message reply/error pairs to/from memory array.
 //
 // It uses <storageTape id> + <message hash> for Value keys.
 type memoryTape struct {
@@ -161,8 +54,14 @@ type memoryTape struct {
 }
 
 type memoryTapeMessage struct {
-	msgHash []byte
-	reply   core.Reply
+	MsgHash []byte
+	Item    TapeItem
+}
+
+type itemBlob struct {
+	MsgHash []byte
+	ReplyB  []byte
+	ErrorB  []byte
 }
 
 func newMemoryTape(pulse core.PulseNumber) *memoryTape {
@@ -179,10 +78,31 @@ func newMemoryTapeFromReader(ctx context.Context, r io.Reader) (*memoryTape, err
 	if err != nil {
 		return nil, errors.Wrap(err, "[ MemoryTape ] can't read pulse")
 	}
-	err = decoder.Decode(&t.storage)
+
+	var storageBlobs []itemBlob
+	err = decoder.Decode(&storageBlobs)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ MemoryTape ] can't read storage")
 	}
+	storage := make([]memoryTapeMessage, 0, len(storageBlobs))
+	for _, blob := range storageBlobs {
+		item := TapeItem{}
+		if blob.ReplyB != nil {
+			rep, err := reply.Deserialize(bytes.NewReader(blob.ReplyB))
+			if err != nil {
+				return nil, err
+			}
+			item.Reply = rep
+		}
+		if blob.ErrorB != nil {
+			item.Error = fmt.Errorf(string(blob.ErrorB))
+		}
+		storage = append(storage, memoryTapeMessage{
+			MsgHash: blob.MsgHash,
+			Item:    item,
+		})
+	}
+	t.storage = storage
 	return &t, nil
 }
 
@@ -194,29 +114,48 @@ func (t *memoryTape) Write(ctx context.Context, w io.Writer) error {
 		return errors.Wrap(err, "[ MemoryTape ] can't write pulse")
 	}
 
-	err = encoder.Encode(t.storage)
+	storageBlobs := make([]itemBlob, 0, len(t.storage))
+	for _, record := range t.storage {
+		blob := itemBlob{
+			MsgHash: record.MsgHash,
+		}
+		if record.Item.Reply != nil {
+			blob.ReplyB = reply.ToBytes(record.Item.Reply)
+		}
+		if record.Item.Error != nil {
+			// TODO: preserve error type (use gob?) - 24.Dec.2018 - @nordicdyno
+			blob.ErrorB = []byte(record.Item.Error.Error())
+		}
+		storageBlobs = append(storageBlobs, blob)
+	}
+	err = encoder.Encode(storageBlobs)
 	if err != nil {
 		return errors.Wrap(err, "[ MemoryTape ] can't write storage")
 	}
 	return nil
 }
 
-func (t *memoryTape) GetReply(ctx context.Context, msgHash []byte) (core.Reply, error) {
+func (t *memoryTape) Get(ctx context.Context, msgHash []byte) (*TapeItem, error) {
 	if len(t.storage) == 0 {
 		return nil, errors.New("Validation error. Message is not expected")
 	}
-	if !bytes.Equal(msgHash, t.storage[0].msgHash) {
+
+	tapeMsg := t.storage[0]
+	if !bytes.Equal(msgHash, tapeMsg.MsgHash) {
 		return nil, errors.New("Validation error. Message mismatch")
 	}
-	ret := t.storage[0]
 	t.storage = t.storage[1:]
-	return ret.reply, nil
+
+	return &tapeMsg.Item, nil
 }
 
-func (t *memoryTape) SetReply(ctx context.Context, msgHash []byte, rep core.Reply) error {
+func (t *memoryTape) Set(ctx context.Context, msgHash []byte, rep core.Reply, gotError error) error {
 	t.storage = append(t.storage, memoryTapeMessage{
-		msgHash: msgHash,
-		reply:   rep,
+		MsgHash: msgHash,
+		Item: TapeItem{
+			Reply: rep,
+			Error: gotError,
+		},
 	})
 	return nil
 }
