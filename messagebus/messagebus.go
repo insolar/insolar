@@ -63,6 +63,7 @@ func NewMessageBus(config configuration.Configuration) (*MessageBus, error) {
 	mb := &MessageBus{
 		handlers:     map[core.MessageType]core.MessageHandler{},
 		signmessages: config.Host.SignMessages,
+		waitingChan:  make(chan interface{}),
 	}
 	mb.Lock(context.Background())
 	return mb, nil
