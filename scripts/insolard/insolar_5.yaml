@@ -30,7 +30,7 @@ logicrunner:
   rpclisten: 127.0.0.1:58182
   builtin: {}
   goplugin:
-    runnerlisten: 127.0.0.1:18181
+    runnerlisten: 127.0.0.1:58181
 apirunner:
   address: 127.0.0.1:19195
 pulsar:
