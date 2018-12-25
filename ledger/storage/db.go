@@ -540,9 +540,9 @@ func (db *DB) GetActiveNodes(pulse core.PulseNumber) ([]core.Node, error) {
 		return nil, errors.New("no nodes for this pulse")
 	}
 	res := make([]core.Node, 0, len(nodes))
-	for _, n := range nodes {
-		res = append(res, n)
-	}
+	// for _, n := range nodes {
+	// 	res = append(res, n)
+	// }
 
 	return res, nil
 }
@@ -559,7 +559,7 @@ func (db *DB) GetActiveNodesByRole(pulse core.PulseNumber, role core.StaticRole)
 	var inRole []core.Node
 	for _, n := range nodes {
 		if n.Role() == role {
-			inRole = append(inRole, n)
+			// inRole = append(inRole, n)
 		}
 	}
 
