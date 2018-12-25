@@ -176,8 +176,9 @@ func startInsgorund() (err error) {
 func stopInsgorund() error {
 	if insgorundCleaner != nil {
 		insgorundCleaner()
+		return nil
 	}
-	return nil
+	return errors.New("[ stopInsgorund ] cleaner func not found")
 }
 
 func waitForNet() error {
