@@ -47,7 +47,11 @@ func (nb *NetworkBootstrapper) Bootstrap(ctx context.Context) (*network.Bootstra
 			return nil, errors.Wrap(err, "[ Bootstrap ] failed to create a host")
 		}
 		log.Info("Zero bootstrap")
-		return &network.BootstrapResult{host, nb.firstPulseTS, 0}, nil
+		return &network.BootstrapResult{
+			Host:           host,
+			FirstPulseTime: nb.firstPulseTS,
+			PulseNum:       0,
+		}, nil
 	}
 	if utils.OriginIsDiscovery(nb.certificate) {
 		result, err := nb.bootstrapDiscovery(ctx)
