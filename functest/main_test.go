@@ -214,14 +214,13 @@ func startAllInsgorunds() (err error) {
 	return nil
 }
 
-func stopAllInsgorunds() {
-	if insgorundCleaner != nil {
-		insgorundCleaner()
+func stopAllInsgorunds() error {
+	if insgorundCleaner == nil || secondInsgorundCleaner == nil {
+		return errors.New("[ stopInsgorund ] cleaner func not found")
 	}
-
-	if secondInsgorundCleaner != nil {
-		secondInsgorundCleaner()
-	}
+	insgorundCleaner()
+	secondInsgorundCleaner()
+	return nil
 }
 
 func waitForNet() error {

@@ -93,7 +93,7 @@ $(HEALTHCHECK):
 
 
 functest:
-	CGO_ENABLED=1 go test -tags functest ./functest
+	CGO_ENABLED=1 go test -tags functest ./functest -count=1
 
 test:
 	CGO_ENABLED=1 go test $(ALL_PACKAGES)
