@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/gob"
+	"github.com/insolar/insolar/metrics"
 	"io"
 	"sync"
 
@@ -175,6 +176,8 @@ func (mb *MessageBus) SendParcel(
 		}
 	}
 
+	metrics.ParcelsSentTotal.WithLabelValues(parcel.Type().String()).Inc()
+
 	if len(nodes) > 1 {
 		cascade := core.Cascade{
 			NodeIds:           nodes,
@@ -188,6 +191,7 @@ func (mb *MessageBus) SendParcel(
 	// Short path when sending to self node. Skip serialization
 	origin := mb.NodeNetwork.GetOrigin()
 	if nodes[0].Equal(origin.ID()) {
+		metrics.LocallyDeliveredParcelsTotal.WithLabelValues(parcel.Type().String()).Inc()
 		return mb.doDeliver(parcel.Context(context.Background()), parcel)
 	}
 
