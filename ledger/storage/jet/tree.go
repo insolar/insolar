@@ -18,6 +18,8 @@ package jet
 
 import (
 	"bytes"
+	"fmt"
+	"strings"
 
 	"github.com/insolar/insolar/core"
 	"github.com/pkg/errors"
@@ -85,6 +87,30 @@ func (j *jet) ResetActual() {
 // Tree stores jet in a binary tree.
 type Tree struct {
 	Head *jet
+}
+
+// String visualizes Jet's tree.
+func (t Tree) String() string {
+	if t.Head == nil {
+		return "<nil>"
+	}
+	return nodeDeepFmt(0, "", t.Head)
+}
+
+func nodeDeepFmt(deep int, binPrefix string, node *jet) string {
+	prefix := strings.Repeat(" ", deep)
+	if deep == 0 {
+		prefix = "root"
+	}
+	s := fmt.Sprintf("%s%v (level=%v actual=%v)\n", prefix, binPrefix, deep, node.Actual)
+
+	if node.Left != nil {
+		s += nodeDeepFmt(deep+1, binPrefix+"0", node.Left)
+	}
+	if node.Right != nil {
+		s += nodeDeepFmt(deep+1, binPrefix+"1", node.Right)
+	}
+	return s
 }
 
 // NewTree creates new tree.
