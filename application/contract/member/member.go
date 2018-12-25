@@ -144,9 +144,6 @@ func (m *Member) transferCall(params []byte) (interface{}, error) {
 	if err := signer.UnmarshalParams(params, &amount, &toStr); err != nil {
 		return nil, fmt.Errorf("[ transferCall ] Can't unmarshal params: %s", err.Error())
 	}
-	if amount <= 0 {
-		return nil, fmt.Errorf("[ transferCall ] Amount must be positive")
-	}
 	to, err := core.NewRefFromBase58(toStr)
 	if err != nil {
 		return nil, fmt.Errorf("[ transferCall ] Failed to parse 'to' param: %s", err.Error())
