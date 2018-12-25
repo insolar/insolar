@@ -96,8 +96,6 @@ func TestServiceNetworkIntegration(t *testing.T) {
 }
 
 func TestServiceNetworkManyBootstraps(t *testing.T) {
-	t.Skip("tmp 123")
-
 	s := NewTestSuite(15, 0)
 	suite.Run(t, s)
 }
