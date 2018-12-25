@@ -185,3 +185,21 @@ func (currentPulsar *Pulsar) SetGeneratedEntropy(currentSlotEntropy *core.Entrop
 	defer currentPulsar.generatedEntropyLock.Unlock()
 	currentPulsar.generatedEntropy = currentSlotEntropy
 }
+
+
+func (currentPulsar *Pulsar) CreateVectorCopy() map[string]*BftCell {
+	currentPulsar.ownedBtfRowLock.Lock()
+	defer 	currentPulsar.ownedBtfRowLock.Unlock()
+
+	newMap := map[string]*BftCell{}
+
+	for key, value := range currentPulsar.OwnedBftRow{
+		newMap[key]= &BftCell{
+			Entropy:value.GetEntropy(),
+			IsEntropyReceived:value.GetIsEntropyReceived(),
+			Sign:value.GetSign(),
+		}
+	}
+
+	return newMap
+}
