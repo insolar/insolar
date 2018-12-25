@@ -76,6 +76,7 @@ type Pulsar struct {
 	lastPulseLock sync.RWMutex
 	lastPulse     *core.Pulse
 
+	ownedBtfRowLock sync.RWMutex
 	OwnedBftRow map[string]*BftCell
 
 	bftGrid     map[string]map[string]*BftCell
