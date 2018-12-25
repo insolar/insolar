@@ -21,7 +21,6 @@ import (
 	"bytes"
 	"encoding/gob"
 	"io"
-	"io/ioutil"
 
 	"github.com/insolar/insolar/core"
 	"github.com/pkg/errors"
@@ -169,11 +168,7 @@ func ToBytes(rep core.Reply) []byte {
 	if err != nil {
 		panic("failed to serialize reply")
 	}
-	buff, err := ioutil.ReadAll(repBuff)
-	if err != nil {
-		panic("failed to serialize reply")
-	}
-	return buff
+	return repBuff.(*bytes.Buffer).Bytes()
 }
 
 func init() {
