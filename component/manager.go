@@ -94,7 +94,7 @@ func (m *Manager) Start(ctx context.Context) error {
 			}
 			log.Debugf("ComponentManager: Component %s started ", name)
 		} else {
-			log.Debug("ComponentManager: Component %s has no Start method", name)
+			log.Debugf("ComponentManager: Component %s has no Start method", name)
 		}
 	}
 	return nil
