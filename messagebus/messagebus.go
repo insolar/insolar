@@ -97,11 +97,6 @@ func (mb *MessageBus) Start(ctx context.Context) error {
 // Stop releases resources and stops the bus
 func (mb *MessageBus) Stop(ctx context.Context) error { return nil }
 
-// WriteTape for MessageBus is not available.
-func (mb *MessageBus) WriteTape(ctx context.Context, writer io.Writer) error {
-	panic("this is not a recorder")
-}
-
 func (mb *MessageBus) Lock(ctx context.Context) {
 	inslogger.FromContext(ctx).Info("Acquire GIL")
 	mb.globalLock.Lock()
