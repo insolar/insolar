@@ -60,11 +60,6 @@ type senderMock struct {
 	SendParcelCounter    uint64
 	SendParcelPreCounter uint64
 	SendParcelMock       msenderMockSendParcel
-
-	WriteTapeFunc       func(p context.Context, p1 io.Writer) (r error)
-	WriteTapeCounter    uint64
-	WriteTapePreCounter uint64
-	WriteTapeMock       msenderMockWriteTape
 }
 
 //NewsenderMock returns a mock for github.com/insolar/insolar/messagebus.sender
@@ -83,7 +78,6 @@ func NewsenderMock(t minimock.Tester) *senderMock {
 	m.RegisterMock = msenderMockRegister{mock: m}
 	m.SendMock = msenderMockSend{mock: m}
 	m.SendParcelMock = msenderMockSendParcel{mock: m}
-	m.WriteTapeMock = msenderMockWriteTape{mock: m}
 
 	return m
 }
@@ -1230,154 +1224,6 @@ func (m *senderMock) SendParcelFinished() bool {
 	return true
 }
 
-type msenderMockWriteTape struct {
-	mock              *senderMock
-	mainExpectation   *senderMockWriteTapeExpectation
-	expectationSeries []*senderMockWriteTapeExpectation
-}
-
-type senderMockWriteTapeExpectation struct {
-	input  *senderMockWriteTapeInput
-	result *senderMockWriteTapeResult
-}
-
-type senderMockWriteTapeInput struct {
-	p  context.Context
-	p1 io.Writer
-}
-
-type senderMockWriteTapeResult struct {
-	r error
-}
-
-//Expect specifies that invocation of sender.WriteTape is expected from 1 to Infinity times
-func (m *msenderMockWriteTape) Expect(p context.Context, p1 io.Writer) *msenderMockWriteTape {
-	m.mock.WriteTapeFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &senderMockWriteTapeExpectation{}
-	}
-	m.mainExpectation.input = &senderMockWriteTapeInput{p, p1}
-	return m
-}
-
-//Return specifies results of invocation of sender.WriteTape
-func (m *msenderMockWriteTape) Return(r error) *senderMock {
-	m.mock.WriteTapeFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &senderMockWriteTapeExpectation{}
-	}
-	m.mainExpectation.result = &senderMockWriteTapeResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of sender.WriteTape is expected once
-func (m *msenderMockWriteTape) ExpectOnce(p context.Context, p1 io.Writer) *senderMockWriteTapeExpectation {
-	m.mock.WriteTapeFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &senderMockWriteTapeExpectation{}
-	expectation.input = &senderMockWriteTapeInput{p, p1}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *senderMockWriteTapeExpectation) Return(r error) {
-	e.result = &senderMockWriteTapeResult{r}
-}
-
-//Set uses given function f as a mock of sender.WriteTape method
-func (m *msenderMockWriteTape) Set(f func(p context.Context, p1 io.Writer) (r error)) *senderMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.WriteTapeFunc = f
-	return m.mock
-}
-
-//WriteTape implements github.com/insolar/insolar/messagebus.sender interface
-func (m *senderMock) WriteTape(p context.Context, p1 io.Writer) (r error) {
-	counter := atomic.AddUint64(&m.WriteTapePreCounter, 1)
-	defer atomic.AddUint64(&m.WriteTapeCounter, 1)
-
-	if len(m.WriteTapeMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.WriteTapeMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to senderMock.WriteTape. %v %v", p, p1)
-			return
-		}
-
-		input := m.WriteTapeMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, senderMockWriteTapeInput{p, p1}, "sender.WriteTape got unexpected parameters")
-
-		result := m.WriteTapeMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the senderMock.WriteTape")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.WriteTapeMock.mainExpectation != nil {
-
-		input := m.WriteTapeMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, senderMockWriteTapeInput{p, p1}, "sender.WriteTape got unexpected parameters")
-		}
-
-		result := m.WriteTapeMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the senderMock.WriteTape")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.WriteTapeFunc == nil {
-		m.t.Fatalf("Unexpected call to senderMock.WriteTape. %v %v", p, p1)
-		return
-	}
-
-	return m.WriteTapeFunc(p, p1)
-}
-
-//WriteTapeMinimockCounter returns a count of senderMock.WriteTapeFunc invocations
-func (m *senderMock) WriteTapeMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.WriteTapeCounter)
-}
-
-//WriteTapeMinimockPreCounter returns the value of senderMock.WriteTape invocations
-func (m *senderMock) WriteTapeMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.WriteTapePreCounter)
-}
-
-//WriteTapeFinished returns true if mock invocations count is ok
-func (m *senderMock) WriteTapeFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.WriteTapeMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.WriteTapeCounter) == uint64(len(m.WriteTapeMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.WriteTapeMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.WriteTapeCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.WriteTapeFunc != nil {
-		return atomic.LoadUint64(&m.WriteTapeCounter) > 0
-	}
-
-	return true
-}
-
 //ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *senderMock) ValidateCallCounters() {
@@ -1412,10 +1258,6 @@ func (m *senderMock) ValidateCallCounters() {
 
 	if !m.SendParcelFinished() {
 		m.t.Fatal("Expected call to senderMock.SendParcel")
-	}
-
-	if !m.WriteTapeFinished() {
-		m.t.Fatal("Expected call to senderMock.WriteTape")
 	}
 
 }
@@ -1467,10 +1309,6 @@ func (m *senderMock) MinimockFinish() {
 		m.t.Fatal("Expected call to senderMock.SendParcel")
 	}
 
-	if !m.WriteTapeFinished() {
-		m.t.Fatal("Expected call to senderMock.WriteTape")
-	}
-
 }
 
 //Wait waits for all mocked methods to be called at least once
@@ -1493,7 +1331,6 @@ func (m *senderMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.RegisterFinished()
 		ok = ok && m.SendFinished()
 		ok = ok && m.SendParcelFinished()
-		ok = ok && m.WriteTapeFinished()
 
 		if ok {
 			return
@@ -1532,10 +1369,6 @@ func (m *senderMock) MinimockWait(timeout time.Duration) {
 
 			if !m.SendParcelFinished() {
 				m.t.Error("Expected call to senderMock.SendParcel")
-			}
-
-			if !m.WriteTapeFinished() {
-				m.t.Error("Expected call to senderMock.WriteTape")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)
@@ -1579,10 +1412,6 @@ func (m *senderMock) AllMocksCalled() bool {
 	}
 
 	if !m.SendParcelFinished() {
-		return false
-	}
-
-	if !m.WriteTapeFinished() {
 		return false
 	}
 

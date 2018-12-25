@@ -83,9 +83,9 @@ func TestMain(m *testing.M) {
 func MessageBusTrivialBehavior(mb *testmessagebus.TestMessageBus, lr core.LogicRunner) {
 	mb.ReRegister(core.TypeCallMethod, lr.Execute)
 	mb.ReRegister(core.TypeCallConstructor, lr.Execute)
-	mb.ReRegister(core.TypeValidateCaseBind, lr.ValidateCaseBind)
-	mb.ReRegister(core.TypeValidationResults, lr.ProcessValidationResults)
-	mb.ReRegister(core.TypeExecutorResults, lr.ExecutorResults)
+	mb.ReRegister(core.TypeValidateCaseBind, lr.HandleValidateCaseBindMessage)
+	mb.ReRegister(core.TypeValidationResults, lr.HandleValidationResultsMessage)
+	mb.ReRegister(core.TypeExecutorResults, lr.HandleExecutorResultsMessage)
 }
 
 func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *goplugintestutils.ContractsBuilder, core.PulseManager, func()) {
@@ -1260,15 +1260,15 @@ func New(n int) (*Child, error) {
 	assert.NoError(t, err)
 
 	for _, m := range toValidate {
-		lr.ValidateCaseBind(ctx, m)
+		lr.HandleValidateCaseBindMessage(ctx, m)
 	}
 
 	for _, m := range toExecute {
-		lr.ExecutorResults(ctx, m)
+		lr.HandleExecutorResultsMessage(ctx, m)
 	}
 
 	for _, m := range toCheckValidate {
-		lr.ProcessValidationResults(ctx, m)
+		lr.HandleValidationResultsMessage(ctx, m)
 	}
 }
 
