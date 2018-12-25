@@ -38,9 +38,19 @@ var LocallyDeliveredParcelsTotal = prometheus.NewCounterVec(
 
 var ParcelsSentSizeBytes = prometheus.NewSummaryVec(
 	prometheus.SummaryOpts{
-		Namespace: insolarNamespace,
-		Name:      "parcels_sent_size_bytes",
-		Help:      "Size of sent parcels",
+		Namespace:  insolarNamespace,
+		Name:       "parcels_sent_size_bytes",
+		Help:       "Size of sent parcels",
+		Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.95: 0.005, 0.99: 0.001},
+	},
+	[]string{"messageType"},
+)
+
+var ParcelsReplySizeBytes = prometheus.NewSummaryVec(
+	prometheus.SummaryOpts{
+		Namespace:  insolarNamespace,
+		Name:       "parcels_reply_size_bytes",
+		Help:       "Size of replies to parcels",
 		Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.95: 0.005, 0.99: 0.001},
 	},
 	[]string{"messageType"},
