@@ -194,6 +194,7 @@ func (rpc *RPCController) SendMessage(nodeID core.RecordRef, name string, msg co
 	if !data.Success {
 		return nil, errors.New("RPC call returned error: " + data.Error)
 	}
+	metrics.ParcelsReplySizeBytes.WithLabelValues(msg.Type().String()).Observe(float64(len(msgBytes)))
 	return data.Result, nil
 }
 
