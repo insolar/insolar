@@ -255,7 +255,7 @@ func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Repl
 
 	if msg.Pulse() != pulse.PulseNumber {
 		inslogger.FromContext(ctx).Error("[ MessageBus ] Incorrect message pulse")
-		return nil, fmt.Errorf("[ MessageBus ] Incorrect message pulse %d %d", pulse.PulseNumber, msg.Pulse())
+		return nil, fmt.Errorf("[ MessageBus ] Incorrect message pulse %d %d", msg.Pulse(), pulse.PulseNumber)
 	}
 
 	// We must check barrier just before exiting function
