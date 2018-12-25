@@ -249,6 +249,7 @@ func (m *TransactionManager) get(ctx context.Context, key []byte) ([]byte, error
 
 // removes value by key
 func (m *TransactionManager) remove(ctx context.Context, key []byte) error {
+	return nil
 	debugf(ctx, "get key %v", bytes2hex(key))
 
 	txn := m.db.db.NewTransaction(true)

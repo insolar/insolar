@@ -24,7 +24,6 @@ import (
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/pkg/errors"
 )
 
@@ -68,7 +67,7 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 		if msg.DefaultTarget().Record().Pulse() == core.PulseNumberJet {
 			jetID = *msg.DefaultTarget().Record()
 		} else {
-			j, err := m.fetchJet(ctx, *msg.DefaultTarget().Record(), parcel.Pulse(), fetchJetReties)
+			j, err := m.fetchJet(ctx, *msg.DefaultTarget().Record(), msg.DefaultTarget().Record().Pulse(), fetchJetReties)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to fetch jet tree")
 			}
@@ -91,7 +90,7 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 			}
 			if *heavy == m.jetCoordinator.Me() {
 				logger.Debugf("checkJet: [ HACK ] I am Heavy. Accept parcel.")
-				return handler(contextWithJet(ctx, jet.ZeroJetID), parcel)
+				return handler(contextWithJet(ctx, jetID), parcel)
 			}
 
 			logger.Debugf("checkJet: not Mine")
