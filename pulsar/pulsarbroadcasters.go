@@ -63,7 +63,7 @@ func (currentPulsar *Pulsar) broadcastVector(ctx context.Context) {
 	}
 	payload, err := currentPulsar.preparePayload(&VectorPayload{
 		PulseNumber: currentPulsar.ProcessingPulseNumber,
-		Vector:      currentPulsar.OwnedBftRow,
+		Vector:      currentPulsar.CreateVectorCopy(),
 	})
 
 	if err != nil {
