@@ -12,8 +12,8 @@ func TestInsgorundReload(t *testing.T) {
 	_, err := signedRequest(&root, "DumpAllUsers")
 	require.NoError(t, err)
 
-	stopInsgorund()
-	err = startInsgorund()
+	stopAllInsgorunds()
+	err = startAllInsgorunds()
 	require.NoError(t, err)
 
 	_, err = signedRequest(&root, "DumpAllUsers")
