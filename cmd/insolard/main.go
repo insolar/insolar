@@ -164,7 +164,7 @@ func main() {
 		err = cm.Stop(ctx)
 		jaegerflush()
 		checkError(ctx, err, "failed to graceful stop components")
-		os.Exit(0)
+		close(waitChannel)
 	}()
 
 	err = cm.Start(ctx)
