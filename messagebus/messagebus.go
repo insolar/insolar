@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/gob"
+	"fmt"
 	"io"
 	"sync"
 
@@ -239,12 +240,17 @@ func (mb *MessageBus) countWaiting() bool {
 func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Reply, error) {
 
 	pulse, err := mb.PulseStorage.Current(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ MessageBus ] Couldn't get current pulse number")
+	}
+
 	if msg.Pulse() == pulse.NextPulseNumber && mb.countWaiting() {
 		<-mb.waitingChan
 	}
 
 	if msg.Pulse() != pulse.PulseNumber {
-		return nil, errors.New("incorrect pulse")
+		inslogger.FromContext(ctx).Error("[ MessageBus ] Incorrect message pulse")
+		return nil, fmt.Errorf("[ MessageBus ] Incorrect message pulse %d %d", pulse.PulseNumber, msg.Pulse())
 	}
 
 	// We must check barrier just before exiting function
