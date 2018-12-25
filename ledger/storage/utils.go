@@ -19,6 +19,8 @@ package storage
 import (
 	"bytes"
 	"encoding/hex"
+
+	"github.com/insolar/insolar/core"
 )
 
 type bytes2hex []byte
@@ -33,4 +35,9 @@ func prefixkey(prefix byte, parts ...[]byte) []byte {
 	k[0] = prefix
 	_ = copy(k[1:], tail)
 	return k
+}
+
+func pulseFromKey(key []byte) core.PulseNumber {
+	pBuf := key[1+core.RecordIDSize : 1+core.RecordIDSize+core.PulseNumberSize]
+	return core.NewPulseNumber(pBuf)
 }

@@ -122,7 +122,7 @@ func (r *ReplicaIter) NextRecords() ([]core.KV, error) {
 }
 
 // LastPulse returns maximum pulse number of returned keys after each fetch.
-func (r *ReplicaIter) LastPulse() core.PulseNumber {
+func (r *ReplicaIter) LastSeenPulse() core.PulseNumber {
 	return r.lastpulse
 }
 
@@ -179,7 +179,7 @@ func (fc *fetchchunk) fetch(
 				return nil
 			}
 
-			lastpulse = core.NewPulseNumber(key[1 : 1+core.PulseNumberSize])
+			lastpulse = pulseFromKey(key)
 			// fmt.Printf("key: %v (pulse=%v)\n", hex.EncodeToString(key), lastpulse)
 
 			value, err := it.Item().ValueCopy(nil)
