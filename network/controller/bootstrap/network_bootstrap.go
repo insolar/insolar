@@ -19,6 +19,7 @@ package bootstrap
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
@@ -71,6 +72,7 @@ func (nb *NetworkBootstrapper) Start(cryptographyService core.CryptographyServic
 	nb.bootstrapper.Start(nodeKeeper)
 	nb.authController.Start(networkCoordinator, nodeKeeper)
 	nb.challengeController.Start(cryptographyService, nodeKeeper)
+	nb.firstPulseTS = time.Now().Unix()
 
 	// TODO: we also have to call Stop method somewhere
 	err := nb.sessionManager.Start(context.TODO())

@@ -18,7 +18,6 @@ package fakepulsar
 
 import (
 	"context"
-	"math"
 	"sync"
 	"time"
 
@@ -128,8 +127,8 @@ func (fp *FakePulsar) SetPulseData(time, pulseNum int64) {
 
 func GetPassedPulseCountAndWaitTime(firstPulseTime int64, pulseTime int32) (count, waitTime int64) {
 	pulseTimeSec := int64(pulseTime / 1000)
-	delta := int64(math.Abs(float64(time.Now().Second() - time.Unix(firstPulseTime, 0).Second())))
+	delta := int64(time.Now().Sub(time.Unix(firstPulseTime, 0)).Seconds())
 	count = delta / pulseTimeSec
-	waitTime = pulseTimeSec * ((delta % pulseTimeSec) / 10)
+	waitTime = delta - count*pulseTimeSec
 	return
 }
