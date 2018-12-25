@@ -17,6 +17,7 @@
 package jet
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/insolar/insolar/core"
@@ -125,4 +126,39 @@ func TestTree_Split(t *testing.T) {
 		assert.Equal(t, lExpectedPrefix, lPrefix)
 		assert.Equal(t, rExpectedPrefix, rPrefix)
 	})
+}
+
+func TestTree_String(t *testing.T) {
+	tree := Tree{
+		Head: &jet{
+			Left: &jet{
+				Actual: true,
+				Right: &jet{
+					Actual: true,
+					Left:   &jet{Actual: true},
+					Right:  &jet{},
+				},
+			},
+			Right: &jet{
+				Left:  &jet{},
+				Right: &jet{},
+			},
+		},
+	}
+	treeOut := strings.Join([]string{
+		"root (level=0 actual=false)",
+		" 0 (level=1 actual=true)",
+		"  01 (level=2 actual=true)",
+		"   010 (level=3 actual=true)",
+		"   011 (level=3 actual=false)",
+		" 1 (level=1 actual=false)",
+		"  10 (level=2 actual=false)",
+		"  11 (level=2 actual=false)",
+	}, "\n") + "\n"
+	assert.Equal(t, treeOut, tree.String())
+
+	emptyTree := Tree{
+		Head: &jet{},
+	}
+	assert.Equal(t, "root (level=0 actual=false)\n", emptyTree.String())
 }
