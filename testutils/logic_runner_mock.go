@@ -235,7 +235,7 @@ type LogicRunnerMockExecutorResultsResult struct {
 	r1 error
 }
 
-//Expect specifies that invocation of LogicRunner.ExecutorResults is expected from 1 to Infinity times
+//Expect specifies that invocation of LogicRunner.HandleExecutorResultsMessage is expected from 1 to Infinity times
 func (m *mLogicRunnerMockExecutorResults) Expect(p context.Context, p1 core.Parcel) *mLogicRunnerMockExecutorResults {
 	m.mock.ExecutorResultsFunc = nil
 	m.expectationSeries = nil
@@ -247,7 +247,7 @@ func (m *mLogicRunnerMockExecutorResults) Expect(p context.Context, p1 core.Parc
 	return m
 }
 
-//Return specifies results of invocation of LogicRunner.ExecutorResults
+//Return specifies results of invocation of LogicRunner.HandleExecutorResultsMessage
 func (m *mLogicRunnerMockExecutorResults) Return(r core.Reply, r1 error) *LogicRunnerMock {
 	m.mock.ExecutorResultsFunc = nil
 	m.expectationSeries = nil
@@ -259,7 +259,7 @@ func (m *mLogicRunnerMockExecutorResults) Return(r core.Reply, r1 error) *LogicR
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of LogicRunner.ExecutorResults is expected once
+//ExpectOnce specifies that invocation of LogicRunner.HandleExecutorResultsMessage is expected once
 func (m *mLogicRunnerMockExecutorResults) ExpectOnce(p context.Context, p1 core.Parcel) *LogicRunnerMockExecutorResultsExpectation {
 	m.mock.ExecutorResultsFunc = nil
 	m.mainExpectation = nil
@@ -274,7 +274,7 @@ func (e *LogicRunnerMockExecutorResultsExpectation) Return(r core.Reply, r1 erro
 	e.result = &LogicRunnerMockExecutorResultsResult{r, r1}
 }
 
-//Set uses given function f as a mock of LogicRunner.ExecutorResults method
+//Set uses given function f as a mock of LogicRunner.HandleExecutorResultsMessage method
 func (m *mLogicRunnerMockExecutorResults) Set(f func(p context.Context, p1 core.Parcel) (r core.Reply, r1 error)) *LogicRunnerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -283,23 +283,23 @@ func (m *mLogicRunnerMockExecutorResults) Set(f func(p context.Context, p1 core.
 	return m.mock
 }
 
-//ExecutorResults implements github.com/insolar/insolar/core.LogicRunner interface
+//HandleExecutorResultsMessage implements github.com/insolar/insolar/core.LogicRunner interface
 func (m *LogicRunnerMock) ExecutorResults(p context.Context, p1 core.Parcel) (r core.Reply, r1 error) {
 	counter := atomic.AddUint64(&m.ExecutorResultsPreCounter, 1)
 	defer atomic.AddUint64(&m.ExecutorResultsCounter, 1)
 
 	if len(m.ExecutorResultsMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.ExecutorResultsMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to LogicRunnerMock.ExecutorResults. %v %v", p, p1)
+			m.t.Fatalf("Unexpected call to LogicRunnerMock.HandleExecutorResultsMessage. %v %v", p, p1)
 			return
 		}
 
 		input := m.ExecutorResultsMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, LogicRunnerMockExecutorResultsInput{p, p1}, "LogicRunner.ExecutorResults got unexpected parameters")
+		testify_assert.Equal(m.t, *input, LogicRunnerMockExecutorResultsInput{p, p1}, "LogicRunner.HandleExecutorResultsMessage got unexpected parameters")
 
 		result := m.ExecutorResultsMock.expectationSeries[counter-1].result
 		if result == nil {
-			m.t.Fatal("No results are set for the LogicRunnerMock.ExecutorResults")
+			m.t.Fatal("No results are set for the LogicRunnerMock.HandleExecutorResultsMessage")
 			return
 		}
 
@@ -313,12 +313,12 @@ func (m *LogicRunnerMock) ExecutorResults(p context.Context, p1 core.Parcel) (r 
 
 		input := m.ExecutorResultsMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, LogicRunnerMockExecutorResultsInput{p, p1}, "LogicRunner.ExecutorResults got unexpected parameters")
+			testify_assert.Equal(m.t, *input, LogicRunnerMockExecutorResultsInput{p, p1}, "LogicRunner.HandleExecutorResultsMessage got unexpected parameters")
 		}
 
 		result := m.ExecutorResultsMock.mainExpectation.result
 		if result == nil {
-			m.t.Fatal("No results are set for the LogicRunnerMock.ExecutorResults")
+			m.t.Fatal("No results are set for the LogicRunnerMock.HandleExecutorResultsMessage")
 		}
 
 		r = result.r
@@ -328,7 +328,7 @@ func (m *LogicRunnerMock) ExecutorResults(p context.Context, p1 core.Parcel) (r 
 	}
 
 	if m.ExecutorResultsFunc == nil {
-		m.t.Fatalf("Unexpected call to LogicRunnerMock.ExecutorResults. %v %v", p, p1)
+		m.t.Fatalf("Unexpected call to LogicRunnerMock.HandleExecutorResultsMessage. %v %v", p, p1)
 		return
 	}
 
@@ -340,7 +340,7 @@ func (m *LogicRunnerMock) ExecutorResultsMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.ExecutorResultsCounter)
 }
 
-//ExecutorResultsMinimockPreCounter returns the value of LogicRunnerMock.ExecutorResults invocations
+//ExecutorResultsMinimockPreCounter returns the value of LogicRunnerMock.HandleExecutorResultsMessage invocations
 func (m *LogicRunnerMock) ExecutorResultsMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.ExecutorResultsPreCounter)
 }
@@ -534,7 +534,7 @@ type LogicRunnerMockProcessValidationResultsResult struct {
 	r1 error
 }
 
-//Expect specifies that invocation of LogicRunner.ProcessValidationResults is expected from 1 to Infinity times
+//Expect specifies that invocation of LogicRunner.HandleValidationResultsMessage is expected from 1 to Infinity times
 func (m *mLogicRunnerMockProcessValidationResults) Expect(p context.Context, p1 core.Parcel) *mLogicRunnerMockProcessValidationResults {
 	m.mock.ProcessValidationResultsFunc = nil
 	m.expectationSeries = nil
@@ -546,7 +546,7 @@ func (m *mLogicRunnerMockProcessValidationResults) Expect(p context.Context, p1 
 	return m
 }
 
-//Return specifies results of invocation of LogicRunner.ProcessValidationResults
+//Return specifies results of invocation of LogicRunner.HandleValidationResultsMessage
 func (m *mLogicRunnerMockProcessValidationResults) Return(r core.Reply, r1 error) *LogicRunnerMock {
 	m.mock.ProcessValidationResultsFunc = nil
 	m.expectationSeries = nil
@@ -558,7 +558,7 @@ func (m *mLogicRunnerMockProcessValidationResults) Return(r core.Reply, r1 error
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of LogicRunner.ProcessValidationResults is expected once
+//ExpectOnce specifies that invocation of LogicRunner.HandleValidationResultsMessage is expected once
 func (m *mLogicRunnerMockProcessValidationResults) ExpectOnce(p context.Context, p1 core.Parcel) *LogicRunnerMockProcessValidationResultsExpectation {
 	m.mock.ProcessValidationResultsFunc = nil
 	m.mainExpectation = nil
@@ -573,7 +573,7 @@ func (e *LogicRunnerMockProcessValidationResultsExpectation) Return(r core.Reply
 	e.result = &LogicRunnerMockProcessValidationResultsResult{r, r1}
 }
 
-//Set uses given function f as a mock of LogicRunner.ProcessValidationResults method
+//Set uses given function f as a mock of LogicRunner.HandleValidationResultsMessage method
 func (m *mLogicRunnerMockProcessValidationResults) Set(f func(p context.Context, p1 core.Parcel) (r core.Reply, r1 error)) *LogicRunnerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -582,23 +582,23 @@ func (m *mLogicRunnerMockProcessValidationResults) Set(f func(p context.Context,
 	return m.mock
 }
 
-//ProcessValidationResults implements github.com/insolar/insolar/core.LogicRunner interface
+//HandleValidationResultsMessage implements github.com/insolar/insolar/core.LogicRunner interface
 func (m *LogicRunnerMock) ProcessValidationResults(p context.Context, p1 core.Parcel) (r core.Reply, r1 error) {
 	counter := atomic.AddUint64(&m.ProcessValidationResultsPreCounter, 1)
 	defer atomic.AddUint64(&m.ProcessValidationResultsCounter, 1)
 
 	if len(m.ProcessValidationResultsMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.ProcessValidationResultsMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to LogicRunnerMock.ProcessValidationResults. %v %v", p, p1)
+			m.t.Fatalf("Unexpected call to LogicRunnerMock.HandleValidationResultsMessage. %v %v", p, p1)
 			return
 		}
 
 		input := m.ProcessValidationResultsMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, LogicRunnerMockProcessValidationResultsInput{p, p1}, "LogicRunner.ProcessValidationResults got unexpected parameters")
+		testify_assert.Equal(m.t, *input, LogicRunnerMockProcessValidationResultsInput{p, p1}, "LogicRunner.HandleValidationResultsMessage got unexpected parameters")
 
 		result := m.ProcessValidationResultsMock.expectationSeries[counter-1].result
 		if result == nil {
-			m.t.Fatal("No results are set for the LogicRunnerMock.ProcessValidationResults")
+			m.t.Fatal("No results are set for the LogicRunnerMock.HandleValidationResultsMessage")
 			return
 		}
 
@@ -612,12 +612,12 @@ func (m *LogicRunnerMock) ProcessValidationResults(p context.Context, p1 core.Pa
 
 		input := m.ProcessValidationResultsMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, LogicRunnerMockProcessValidationResultsInput{p, p1}, "LogicRunner.ProcessValidationResults got unexpected parameters")
+			testify_assert.Equal(m.t, *input, LogicRunnerMockProcessValidationResultsInput{p, p1}, "LogicRunner.HandleValidationResultsMessage got unexpected parameters")
 		}
 
 		result := m.ProcessValidationResultsMock.mainExpectation.result
 		if result == nil {
-			m.t.Fatal("No results are set for the LogicRunnerMock.ProcessValidationResults")
+			m.t.Fatal("No results are set for the LogicRunnerMock.HandleValidationResultsMessage")
 		}
 
 		r = result.r
@@ -627,7 +627,7 @@ func (m *LogicRunnerMock) ProcessValidationResults(p context.Context, p1 core.Pa
 	}
 
 	if m.ProcessValidationResultsFunc == nil {
-		m.t.Fatalf("Unexpected call to LogicRunnerMock.ProcessValidationResults. %v %v", p, p1)
+		m.t.Fatalf("Unexpected call to LogicRunnerMock.HandleValidationResultsMessage. %v %v", p, p1)
 		return
 	}
 
@@ -639,7 +639,7 @@ func (m *LogicRunnerMock) ProcessValidationResultsMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.ProcessValidationResultsCounter)
 }
 
-//ProcessValidationResultsMinimockPreCounter returns the value of LogicRunnerMock.ProcessValidationResults invocations
+//ProcessValidationResultsMinimockPreCounter returns the value of LogicRunnerMock.HandleValidationResultsMessage invocations
 func (m *LogicRunnerMock) ProcessValidationResultsMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.ProcessValidationResultsPreCounter)
 }
@@ -685,7 +685,7 @@ type LogicRunnerMockValidateCaseBindResult struct {
 	r1 error
 }
 
-//Expect specifies that invocation of LogicRunner.ValidateCaseBind is expected from 1 to Infinity times
+//Expect specifies that invocation of LogicRunner.HandleValidateCaseBindMessage is expected from 1 to Infinity times
 func (m *mLogicRunnerMockValidateCaseBind) Expect(p context.Context, p1 core.Parcel) *mLogicRunnerMockValidateCaseBind {
 	m.mock.ValidateCaseBindFunc = nil
 	m.expectationSeries = nil
@@ -697,7 +697,7 @@ func (m *mLogicRunnerMockValidateCaseBind) Expect(p context.Context, p1 core.Par
 	return m
 }
 
-//Return specifies results of invocation of LogicRunner.ValidateCaseBind
+//Return specifies results of invocation of LogicRunner.HandleValidateCaseBindMessage
 func (m *mLogicRunnerMockValidateCaseBind) Return(r core.Reply, r1 error) *LogicRunnerMock {
 	m.mock.ValidateCaseBindFunc = nil
 	m.expectationSeries = nil
@@ -709,7 +709,7 @@ func (m *mLogicRunnerMockValidateCaseBind) Return(r core.Reply, r1 error) *Logic
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of LogicRunner.ValidateCaseBind is expected once
+//ExpectOnce specifies that invocation of LogicRunner.HandleValidateCaseBindMessage is expected once
 func (m *mLogicRunnerMockValidateCaseBind) ExpectOnce(p context.Context, p1 core.Parcel) *LogicRunnerMockValidateCaseBindExpectation {
 	m.mock.ValidateCaseBindFunc = nil
 	m.mainExpectation = nil
@@ -724,7 +724,7 @@ func (e *LogicRunnerMockValidateCaseBindExpectation) Return(r core.Reply, r1 err
 	e.result = &LogicRunnerMockValidateCaseBindResult{r, r1}
 }
 
-//Set uses given function f as a mock of LogicRunner.ValidateCaseBind method
+//Set uses given function f as a mock of LogicRunner.HandleValidateCaseBindMessage method
 func (m *mLogicRunnerMockValidateCaseBind) Set(f func(p context.Context, p1 core.Parcel) (r core.Reply, r1 error)) *LogicRunnerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -733,23 +733,23 @@ func (m *mLogicRunnerMockValidateCaseBind) Set(f func(p context.Context, p1 core
 	return m.mock
 }
 
-//ValidateCaseBind implements github.com/insolar/insolar/core.LogicRunner interface
+//HandleValidateCaseBindMessage implements github.com/insolar/insolar/core.LogicRunner interface
 func (m *LogicRunnerMock) ValidateCaseBind(p context.Context, p1 core.Parcel) (r core.Reply, r1 error) {
 	counter := atomic.AddUint64(&m.ValidateCaseBindPreCounter, 1)
 	defer atomic.AddUint64(&m.ValidateCaseBindCounter, 1)
 
 	if len(m.ValidateCaseBindMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.ValidateCaseBindMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to LogicRunnerMock.ValidateCaseBind. %v %v", p, p1)
+			m.t.Fatalf("Unexpected call to LogicRunnerMock.HandleValidateCaseBindMessage. %v %v", p, p1)
 			return
 		}
 
 		input := m.ValidateCaseBindMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, LogicRunnerMockValidateCaseBindInput{p, p1}, "LogicRunner.ValidateCaseBind got unexpected parameters")
+		testify_assert.Equal(m.t, *input, LogicRunnerMockValidateCaseBindInput{p, p1}, "LogicRunner.HandleValidateCaseBindMessage got unexpected parameters")
 
 		result := m.ValidateCaseBindMock.expectationSeries[counter-1].result
 		if result == nil {
-			m.t.Fatal("No results are set for the LogicRunnerMock.ValidateCaseBind")
+			m.t.Fatal("No results are set for the LogicRunnerMock.HandleValidateCaseBindMessage")
 			return
 		}
 
@@ -763,12 +763,12 @@ func (m *LogicRunnerMock) ValidateCaseBind(p context.Context, p1 core.Parcel) (r
 
 		input := m.ValidateCaseBindMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, LogicRunnerMockValidateCaseBindInput{p, p1}, "LogicRunner.ValidateCaseBind got unexpected parameters")
+			testify_assert.Equal(m.t, *input, LogicRunnerMockValidateCaseBindInput{p, p1}, "LogicRunner.HandleValidateCaseBindMessage got unexpected parameters")
 		}
 
 		result := m.ValidateCaseBindMock.mainExpectation.result
 		if result == nil {
-			m.t.Fatal("No results are set for the LogicRunnerMock.ValidateCaseBind")
+			m.t.Fatal("No results are set for the LogicRunnerMock.HandleValidateCaseBindMessage")
 		}
 
 		r = result.r
@@ -778,7 +778,7 @@ func (m *LogicRunnerMock) ValidateCaseBind(p context.Context, p1 core.Parcel) (r
 	}
 
 	if m.ValidateCaseBindFunc == nil {
-		m.t.Fatalf("Unexpected call to LogicRunnerMock.ValidateCaseBind. %v %v", p, p1)
+		m.t.Fatalf("Unexpected call to LogicRunnerMock.HandleValidateCaseBindMessage. %v %v", p, p1)
 		return
 	}
 
@@ -790,7 +790,7 @@ func (m *LogicRunnerMock) ValidateCaseBindMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.ValidateCaseBindCounter)
 }
 
-//ValidateCaseBindMinimockPreCounter returns the value of LogicRunnerMock.ValidateCaseBind invocations
+//ValidateCaseBindMinimockPreCounter returns the value of LogicRunnerMock.HandleValidateCaseBindMessage invocations
 func (m *LogicRunnerMock) ValidateCaseBindMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.ValidateCaseBindPreCounter)
 }
@@ -824,7 +824,7 @@ func (m *LogicRunnerMock) ValidateCallCounters() {
 	}
 
 	if !m.ExecutorResultsFinished() {
-		m.t.Fatal("Expected call to LogicRunnerMock.ExecutorResults")
+		m.t.Fatal("Expected call to LogicRunnerMock.HandleExecutorResultsMessage")
 	}
 
 	if !m.OnPulseFinished() {
@@ -832,11 +832,11 @@ func (m *LogicRunnerMock) ValidateCallCounters() {
 	}
 
 	if !m.ProcessValidationResultsFinished() {
-		m.t.Fatal("Expected call to LogicRunnerMock.ProcessValidationResults")
+		m.t.Fatal("Expected call to LogicRunnerMock.HandleValidationResultsMessage")
 	}
 
 	if !m.ValidateCaseBindFinished() {
-		m.t.Fatal("Expected call to LogicRunnerMock.ValidateCaseBind")
+		m.t.Fatal("Expected call to LogicRunnerMock.HandleValidateCaseBindMessage")
 	}
 
 }
@@ -861,7 +861,7 @@ func (m *LogicRunnerMock) MinimockFinish() {
 	}
 
 	if !m.ExecutorResultsFinished() {
-		m.t.Fatal("Expected call to LogicRunnerMock.ExecutorResults")
+		m.t.Fatal("Expected call to LogicRunnerMock.HandleExecutorResultsMessage")
 	}
 
 	if !m.OnPulseFinished() {
@@ -869,11 +869,11 @@ func (m *LogicRunnerMock) MinimockFinish() {
 	}
 
 	if !m.ProcessValidationResultsFinished() {
-		m.t.Fatal("Expected call to LogicRunnerMock.ProcessValidationResults")
+		m.t.Fatal("Expected call to LogicRunnerMock.HandleValidationResultsMessage")
 	}
 
 	if !m.ValidateCaseBindFinished() {
-		m.t.Fatal("Expected call to LogicRunnerMock.ValidateCaseBind")
+		m.t.Fatal("Expected call to LogicRunnerMock.HandleValidateCaseBindMessage")
 	}
 
 }
@@ -908,7 +908,7 @@ func (m *LogicRunnerMock) MinimockWait(timeout time.Duration) {
 			}
 
 			if !m.ExecutorResultsFinished() {
-				m.t.Error("Expected call to LogicRunnerMock.ExecutorResults")
+				m.t.Error("Expected call to LogicRunnerMock.HandleExecutorResultsMessage")
 			}
 
 			if !m.OnPulseFinished() {
@@ -916,11 +916,11 @@ func (m *LogicRunnerMock) MinimockWait(timeout time.Duration) {
 			}
 
 			if !m.ProcessValidationResultsFinished() {
-				m.t.Error("Expected call to LogicRunnerMock.ProcessValidationResults")
+				m.t.Error("Expected call to LogicRunnerMock.HandleValidationResultsMessage")
 			}
 
 			if !m.ValidateCaseBindFinished() {
-				m.t.Error("Expected call to LogicRunnerMock.ValidateCaseBind")
+				m.t.Error("Expected call to LogicRunnerMock.HandleValidateCaseBindMessage")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)
