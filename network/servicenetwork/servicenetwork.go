@@ -161,7 +161,7 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "Failed to bootstrap network")
 	}
-	n.parseBootstrapResults(results)
+	setFakePulsarData(n.fakePulsar, results)
 	n.fakePulsar.Start(ctx)
 	logger.Info("Service network started")
 	return nil
@@ -258,16 +258,16 @@ func (n *ServiceNetwork) phaseManagerOnPulse(ctx context.Context, newPulse core.
 	}
 }
 
-func (n *ServiceNetwork) parseBootstrapResults(results []*network.BootstrapResult) {
+func setFakePulsarData(fp *fakepulsar.FakePulsar, results []*network.BootstrapResult) {
 	if len(results) == 0 {
 		return
 	}
 	minRef := results[0].Host.NodeID
-	n.fakePulsar.SetPulseData(results[0].FirstPulseTime, results[0].PulseNum)
+	fp.SetPulseData(results[0].FirstPulseTime, results[0].PulseNum)
 	for _, result := range results {
 		if result.Host.NodeID.Compare(minRef) > 0 {
 			minRef = result.Host.NodeID
-			n.fakePulsar.SetPulseData(result.FirstPulseTime, result.PulseNum)
+			fp.SetPulseData(result.FirstPulseTime, result.PulseNum)
 		}
 	}
 }

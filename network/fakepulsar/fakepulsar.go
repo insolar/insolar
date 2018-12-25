@@ -63,8 +63,9 @@ func (fp *FakePulsar) Start(ctx context.Context) {
 
 	fp.running = true
 	fp.firstPulseTime = time.Now().Unix()
-	if math.Abs(float64(time.Now().Second()-time.Unix(fp.firstPulseTime, 0).Second())) != float64(fp.timeoutMs/1000) {
-		time.Sleep(time.Duration(math.Abs(float64(time.Now().Second() - time.Unix(fp.firstPulseTime, 0).Second()))))
+	delta := int32(math.Abs(float64(time.Now().Second() - time.Unix(fp.firstPulseTime, 0).Second())))
+	if delta != fp.timeoutMs/1000 {
+		time.Sleep(time.Duration(delta))
 	}
 	go func(fp *FakePulsar) {
 		for {
