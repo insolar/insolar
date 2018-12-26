@@ -38,8 +38,8 @@ type Entropy [EntropySize]byte
 
 // PulseNumber is a sequential number of Pulse.
 // Upper 2 bits are reserved for use in references (scope), must be zero otherwise.
-// Valid Absolute PulseNum must be >65536.
-// If PulseNum <65536 it is a relative PulseNum
+// Valid Absolute PulseNumber must be >65536.
+// If PulseNumber <65536 it is a relative PulseNumber
 type PulseNumber uint32
 
 // NewPulseNumber creates pulse number from bytes.
