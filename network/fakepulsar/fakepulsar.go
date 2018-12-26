@@ -36,7 +36,7 @@ import (
 type FakePulsar struct {
 	onPulse network.PulseHandler
 	stop    chan bool
-	mutex   sync.Mutex
+	mutex   sync.RWMutex
 	running bool
 
 	firstPulseTime     time.Time
@@ -49,7 +49,7 @@ type FakePulsar struct {
 func NewFakePulsar(callback network.PulseHandler, pulseDuration time.Duration) *FakePulsar {
 	return &FakePulsar{
 		onPulse: callback,
-		stop:    make(chan bool, 1),
+		stop:    make(chan bool),
 		running: false,
 
 		pulseDuration:    pulseDuration,
@@ -63,31 +63,31 @@ func (fp *FakePulsar) Start(ctx context.Context, firstPulseTime time.Time) {
 	defer fp.mutex.Unlock()
 
 	logger := inslogger.FromContext(ctx)
-	startTime := time.Now()
-
-	fp.firstPulseTime = firstPulseTime
-
-	currentPulseNumber, initialWaitDuration := fp.getCurrentPulseAndWaitTime(startTime)
 
 	fp.running = true
-	fp.currentPulseNumber = currentPulseNumber
+	fp.firstPulseTime = firstPulseTime
+
+	startTime := time.Now()
+	pulseInfo := fp.getCurrentPulseAndWaitTime(startTime)
+
+	fp.currentPulseNumber = pulseInfo.currentPulseNumber
 
 	logger.Infof(
 		"Fake pulsar is going to start, currentPulse: %d, next pulse scheduled for: %s",
-		currentPulseNumber,
-		startTime.Add(initialWaitDuration),
+		pulseInfo.currentPulseNumber,
+		startTime.Add(pulseInfo.nextPulseAfter),
 	)
 
-	time.AfterFunc(initialWaitDuration, func() {
+	time.AfterFunc(pulseInfo.nextPulseAfter, func() {
 		fp.pulse(ctx)
 		for {
 			now := time.Now()
-			_, pulseDuration := fp.getCurrentPulseAndWaitTime(now)
+			pulseInfo := fp.getCurrentPulseAndWaitTime(now)
 
-			logger.Debug("Pulse scheduled for: %s", now.Add(fp.pulseDuration))
+			logger.Debug("Pulse scheduled for: %s", now.Add(pulseInfo.nextPulseAfter))
 
 			select {
-			case <-time.After(pulseDuration):
+			case <-time.After(pulseInfo.nextPulseAfter):
 				fp.pulse(ctx)
 			case <-fp.stop:
 				return
@@ -96,8 +96,8 @@ func (fp *FakePulsar) Start(ctx context.Context, firstPulseTime time.Time) {
 	})
 }
 
-func (fp *FakePulsar) getCurrentPulseAndWaitTime(target time.Time) (core.PulseNumber, time.Duration) {
-	return getCurrentPulseAndWaitTime(target, fp.firstPulseTime, fp.pulseDuration)
+func (fp *FakePulsar) getCurrentPulseAndWaitTime(target time.Time) pulseInfo {
+	return calculatePulseInfo(target, fp.firstPulseTime, fp.pulseDuration)
 }
 
 func (fp *FakePulsar) pulse(ctx context.Context) {
@@ -130,7 +130,12 @@ func (fp *FakePulsar) newPulse() *core.Pulse {
 	}
 }
 
-func getCurrentPulseAndWaitTime(target, firstPulseTime time.Time, pulseDuration time.Duration) (core.PulseNumber, time.Duration) {
+type pulseInfo struct {
+	currentPulseNumber core.PulseNumber
+	nextPulseAfter     time.Duration
+}
+
+func calculatePulseInfo(target, firstPulseTime time.Time, pulseDuration time.Duration) pulseInfo {
 	if target.Before(firstPulseTime) {
 		panic(fmt.Sprintf("First pulse time `%s` is greater then target `%s`", firstPulseTime, target))
 	}
@@ -138,10 +143,13 @@ func getCurrentPulseAndWaitTime(target, firstPulseTime time.Time, pulseDuration 
 	timeSinceFirstPulse := target.Sub(firstPulseTime)
 
 	passedPulses := int64(timeSinceFirstPulse) / int64(pulseDuration)
-	currentPulse := core.PulseNumber(passedPulses)
+	currentPulseNumber := core.PulseNumber(passedPulses)
 
 	passedPulsesDuration := time.Duration(int64(pulseDuration) * passedPulses)
-	waitDuration := pulseDuration - (timeSinceFirstPulse - passedPulsesDuration)
+	nextPulseAfter := pulseDuration - (timeSinceFirstPulse - passedPulsesDuration)
 
-	return currentPulse, waitDuration
+	return pulseInfo{
+		currentPulseNumber: currentPulseNumber,
+		nextPulseAfter:     nextPulseAfter,
+	}
 }
