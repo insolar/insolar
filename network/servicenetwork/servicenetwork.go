@@ -46,7 +46,6 @@ type ServiceNetwork struct {
 
 	// dependencies
 	CertificateManager  core.CertificateManager         `inject:""`
-	NodeNetwork         core.NodeNetwork                `inject:""`
 	PulseManager        core.PulseManager               `inject:""`
 	PulseStorage        core.PulseStorage               `inject:""`
 	CryptographyService core.CryptographyService        `inject:""`
@@ -111,9 +110,9 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	}
 
 	n.ConsensusNetwork, err = hostnetwork.NewConsensusNetwork(
-		n.NodeNetwork.GetOrigin().ConsensusAddress(),
+		n.NodeKeeper.GetOrigin().ConsensusAddress(),
 		n.CertificateManager.GetCertificate().GetNodeRef().String(),
-		n.NodeNetwork.GetOrigin().ShortID(),
+		n.NodeKeeper.GetOrigin().ShortID(),
 		n.routingTable,
 	)
 	if err != nil {
@@ -121,7 +120,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	}
 
 	cm := component.Manager{}
-	cm.Register(n.CertificateManager, n.NodeNetwork, n.PulseManager, n.CryptographyService, n.NetworkCoordinator,
+	cm.Register(n.CertificateManager, n.NodeKeeper, n.PulseManager, n.CryptographyService, n.NetworkCoordinator,
 		n.ArtifactManager, n.CryptographyScheme, n.PulseHandler)
 
 	cm.Inject(n.NodeKeeper,
@@ -243,7 +242,7 @@ func (n *ServiceNetwork) networkCoordinatorOnPulse(ctx context.Context, newPulse
 	if !n.NetworkCoordinator.IsStarted() {
 		return
 	}
-	err := n.NetworkCoordinator.WriteActiveNodes(ctx, newPulse.PulseNumber, n.NodeNetwork.GetActiveNodes())
+	err := n.NetworkCoordinator.WriteActiveNodes(ctx, newPulse.PulseNumber, n.NodeKeeper.GetActiveNodes())
 	if err != nil {
 		logger.Warn("Error writing active nodes to ledger: " + err.Error())
 	}

@@ -77,7 +77,7 @@ func (s *testSuite) TestNodeLeave() {
 	activeNodes = s.bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
 	s.Equal(s.nodesCount()+1, len(activeNodes))
 
-	s.testNode.serviceNetwork.Stop(context.Background())
+	s.testNode.serviceNetwork.GracefulStop(context.Background())
 
 	res = <-phasesResult
 	s.NoError(res)
