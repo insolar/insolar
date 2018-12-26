@@ -65,7 +65,7 @@ func TestFakePulsar_Start(t *testing.T) {
 	assert.Equal(t, pulsar.currentPulseNumber, pulseInfo.currentPulseNumber)
 }
 
-func TestGetPassedPulseCountAndWaitTime(t *testing.T) {
+func TestCalculatePulseInfo(t *testing.T) {
 	firstPulseTime := time.Now()
 	timePassed := 3500 * time.Millisecond
 	pulsarNow := firstPulseTime.Add(timePassed)
@@ -74,4 +74,15 @@ func TestGetPassedPulseCountAndWaitTime(t *testing.T) {
 
 	assert.Equal(t, core.PulseNumber(3), pulseInfo.currentPulseNumber)
 	assert.Equal(t, pulseInfo.nextPulseAfter, 500*time.Millisecond)
+}
+
+func TestCalculatePulseInfo_FirstPulseInFuture(t *testing.T) {
+	pulsarNow := time.Now()
+	timePassed := 3500 * time.Millisecond
+	firstPulseTime := pulsarNow.Add(timePassed)
+
+	pulseInfo := calculatePulseInfo(pulsarNow, firstPulseTime, time.Second)
+
+	assert.Equal(t, core.PulseNumber(0), pulseInfo.currentPulseNumber)
+	assert.Equal(t, 3500*time.Millisecond, pulseInfo.nextPulseAfter)
 }

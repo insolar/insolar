@@ -18,12 +18,12 @@ package fakepulsar
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 )
 
@@ -67,24 +67,22 @@ func (fp *FakePulsar) Start(ctx context.Context, firstPulseTime time.Time) {
 	fp.running = true
 	fp.firstPulseTime = firstPulseTime
 
-	startTime := time.Now()
-	pulseInfo := fp.getCurrentPulseAndWaitTime(startTime)
+	pulseInfo := fp.getPulseInfo()
 
 	fp.currentPulseNumber = pulseInfo.currentPulseNumber
 
 	logger.Infof(
 		"Fake pulsar is going to start, currentPulse: %d, next pulse scheduled for: %s",
 		pulseInfo.currentPulseNumber,
-		startTime.Add(pulseInfo.nextPulseAfter),
+		time.Now().Add(pulseInfo.nextPulseAfter),
 	)
 
 	time.AfterFunc(pulseInfo.nextPulseAfter, func() {
 		fp.pulse(ctx)
 		for {
-			now := time.Now()
-			pulseInfo := fp.getCurrentPulseAndWaitTime(now)
+			pulseInfo := fp.getPulseInfo()
 
-			logger.Debug("Pulse scheduled for: %s", now.Add(pulseInfo.nextPulseAfter))
+			logger.Debug("Pulse scheduled for: %s", time.Now().Add(pulseInfo.nextPulseAfter))
 
 			select {
 			case <-time.After(pulseInfo.nextPulseAfter):
@@ -96,8 +94,8 @@ func (fp *FakePulsar) Start(ctx context.Context, firstPulseTime time.Time) {
 	})
 }
 
-func (fp *FakePulsar) getCurrentPulseAndWaitTime(target time.Time) pulseInfo {
-	return calculatePulseInfo(target, fp.firstPulseTime, fp.pulseDuration)
+func (fp *FakePulsar) getPulseInfo() pulseInfo {
+	return calculatePulseInfo(time.Now(), fp.firstPulseTime, fp.pulseDuration)
 }
 
 func (fp *FakePulsar) pulse(ctx context.Context) {
@@ -135,12 +133,17 @@ type pulseInfo struct {
 	nextPulseAfter     time.Duration
 }
 
-func calculatePulseInfo(target, firstPulseTime time.Time, pulseDuration time.Duration) pulseInfo {
-	if target.Before(firstPulseTime) {
-		panic(fmt.Sprintf("First pulse time `%s` is greater then target `%s`", firstPulseTime, target))
+func calculatePulseInfo(targetTime, firstPulseTime time.Time, pulseDuration time.Duration) pulseInfo {
+	if firstPulseTime.After(targetTime) {
+		log.Warn("First pulse time `%s` is after then targetTime `%s`", firstPulseTime, targetTime)
+
+		return pulseInfo{
+			currentPulseNumber: core.PulseNumber(0),
+			nextPulseAfter:     firstPulseTime.Sub(targetTime),
+		}
 	}
 
-	timeSinceFirstPulse := target.Sub(firstPulseTime)
+	timeSinceFirstPulse := targetTime.Sub(firstPulseTime)
 
 	passedPulses := int64(timeSinceFirstPulse) / int64(pulseDuration)
 	currentPulseNumber := core.PulseNumber(passedPulses)
