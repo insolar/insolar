@@ -17,9 +17,7 @@
 package storage
 
 import (
-	"bytes"
 	"context"
-	"encoding/hex"
 
 	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/core"
@@ -38,20 +36,6 @@ type TransactionManager struct {
 	update    bool
 	locks     []*core.RecordID
 	txupdates map[string]keyval
-}
-
-type bytes2hex []byte
-
-func (h bytes2hex) String() string {
-	return hex.EncodeToString(h)
-}
-
-func prefixkey(prefix byte, parts ...[]byte) []byte {
-	tail := bytes.Join(parts, nil)
-	k := make([]byte, len(tail)+1)
-	k[0] = prefix
-	_ = copy(k[1:], tail)
-	return k
 }
 
 func (m *TransactionManager) lockOnID(id *core.RecordID) {
