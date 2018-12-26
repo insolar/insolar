@@ -74,6 +74,11 @@ type ParcelMock struct {
 	TypeCounter    uint64
 	TypePreCounter uint64
 	TypeMock       mParcelMockType
+
+	UpdatePulseFunc       func(p core.PulseNumber)
+	UpdatePulseCounter    uint64
+	UpdatePulsePreCounter uint64
+	UpdatePulseMock       mParcelMockUpdatePulse
 }
 
 //NewParcelMock returns a mock for github.com/insolar/insolar/core.Parcel
@@ -95,6 +100,7 @@ func NewParcelMock(t minimock.Tester) *ParcelMock {
 	m.MessageMock = mParcelMockMessage{mock: m}
 	m.PulseMock = mParcelMockPulse{mock: m}
 	m.TypeMock = mParcelMockType{mock: m}
+	m.UpdatePulseMock = mParcelMockUpdatePulse{mock: m}
 
 	return m
 }
@@ -1589,6 +1595,129 @@ func (m *ParcelMock) TypeFinished() bool {
 	return true
 }
 
+type mParcelMockUpdatePulse struct {
+	mock              *ParcelMock
+	mainExpectation   *ParcelMockUpdatePulseExpectation
+	expectationSeries []*ParcelMockUpdatePulseExpectation
+}
+
+type ParcelMockUpdatePulseExpectation struct {
+	input *ParcelMockUpdatePulseInput
+}
+
+type ParcelMockUpdatePulseInput struct {
+	p core.PulseNumber
+}
+
+//Expect specifies that invocation of Parcel.UpdatePulse is expected from 1 to Infinity times
+func (m *mParcelMockUpdatePulse) Expect(p core.PulseNumber) *mParcelMockUpdatePulse {
+	m.mock.UpdatePulseFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &ParcelMockUpdatePulseExpectation{}
+	}
+	m.mainExpectation.input = &ParcelMockUpdatePulseInput{p}
+	return m
+}
+
+//Return specifies results of invocation of Parcel.UpdatePulse
+func (m *mParcelMockUpdatePulse) Return() *ParcelMock {
+	m.mock.UpdatePulseFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &ParcelMockUpdatePulseExpectation{}
+	}
+
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of Parcel.UpdatePulse is expected once
+func (m *mParcelMockUpdatePulse) ExpectOnce(p core.PulseNumber) *ParcelMockUpdatePulseExpectation {
+	m.mock.UpdatePulseFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &ParcelMockUpdatePulseExpectation{}
+	expectation.input = &ParcelMockUpdatePulseInput{p}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+//Set uses given function f as a mock of Parcel.UpdatePulse method
+func (m *mParcelMockUpdatePulse) Set(f func(p core.PulseNumber)) *ParcelMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.UpdatePulseFunc = f
+	return m.mock
+}
+
+//UpdatePulse implements github.com/insolar/insolar/core.Parcel interface
+func (m *ParcelMock) UpdatePulse(p core.PulseNumber) {
+	counter := atomic.AddUint64(&m.UpdatePulsePreCounter, 1)
+	defer atomic.AddUint64(&m.UpdatePulseCounter, 1)
+
+	if len(m.UpdatePulseMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.UpdatePulseMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to ParcelMock.UpdatePulse. %v", p)
+			return
+		}
+
+		input := m.UpdatePulseMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, ParcelMockUpdatePulseInput{p}, "Parcel.UpdatePulse got unexpected parameters")
+
+		return
+	}
+
+	if m.UpdatePulseMock.mainExpectation != nil {
+
+		input := m.UpdatePulseMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, ParcelMockUpdatePulseInput{p}, "Parcel.UpdatePulse got unexpected parameters")
+		}
+
+		return
+	}
+
+	if m.UpdatePulseFunc == nil {
+		m.t.Fatalf("Unexpected call to ParcelMock.UpdatePulse. %v", p)
+		return
+	}
+
+	m.UpdatePulseFunc(p)
+}
+
+//UpdatePulseMinimockCounter returns a count of ParcelMock.UpdatePulseFunc invocations
+func (m *ParcelMock) UpdatePulseMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.UpdatePulseCounter)
+}
+
+//UpdatePulseMinimockPreCounter returns the value of ParcelMock.UpdatePulse invocations
+func (m *ParcelMock) UpdatePulseMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.UpdatePulsePreCounter)
+}
+
+//UpdatePulseFinished returns true if mock invocations count is ok
+func (m *ParcelMock) UpdatePulseFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.UpdatePulseMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.UpdatePulseCounter) == uint64(len(m.UpdatePulseMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.UpdatePulseMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.UpdatePulseCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.UpdatePulseFunc != nil {
+		return atomic.LoadUint64(&m.UpdatePulseCounter) > 0
+	}
+
+	return true
+}
+
 //ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *ParcelMock) ValidateCallCounters() {
@@ -1635,6 +1764,10 @@ func (m *ParcelMock) ValidateCallCounters() {
 
 	if !m.TypeFinished() {
 		m.t.Fatal("Expected call to ParcelMock.Type")
+	}
+
+	if !m.UpdatePulseFinished() {
+		m.t.Fatal("Expected call to ParcelMock.UpdatePulse")
 	}
 
 }
@@ -1698,6 +1831,10 @@ func (m *ParcelMock) MinimockFinish() {
 		m.t.Fatal("Expected call to ParcelMock.Type")
 	}
 
+	if !m.UpdatePulseFinished() {
+		m.t.Fatal("Expected call to ParcelMock.UpdatePulse")
+	}
+
 }
 
 //Wait waits for all mocked methods to be called at least once
@@ -1723,6 +1860,7 @@ func (m *ParcelMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.MessageFinished()
 		ok = ok && m.PulseFinished()
 		ok = ok && m.TypeFinished()
+		ok = ok && m.UpdatePulseFinished()
 
 		if ok {
 			return
@@ -1773,6 +1911,10 @@ func (m *ParcelMock) MinimockWait(timeout time.Duration) {
 
 			if !m.TypeFinished() {
 				m.t.Error("Expected call to ParcelMock.Type")
+			}
+
+			if !m.UpdatePulseFinished() {
+				m.t.Error("Expected call to ParcelMock.UpdatePulse")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)
@@ -1828,6 +1970,10 @@ func (m *ParcelMock) AllMocksCalled() bool {
 	}
 
 	if !m.TypeFinished() {
+		return false
+	}
+
+	if !m.UpdatePulseFinished() {
 		return false
 	}
 

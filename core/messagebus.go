@@ -66,6 +66,7 @@ type Parcel interface {
 	Context(context.Context) context.Context
 
 	Pulse() PulseNumber
+	UpdatePulse(PulseNumber)
 
 	DelegationToken() DelegationToken
 }

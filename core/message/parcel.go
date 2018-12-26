@@ -58,13 +58,17 @@ func (p *Parcel) DefaultTarget() *core.RecordRef {
 }
 
 // Pulse returns pulse, when parcel was sent
-func (sm *Parcel) Pulse() core.PulseNumber {
-	return sm.PulseNumber
+func (p *Parcel) Pulse() core.PulseNumber {
+	return p.PulseNumber
+}
+
+func (p *Parcel) UpdatePulse(pulse core.PulseNumber) {
+	p.PulseNumber = pulse
 }
 
 // Message returns current instance's message
-func (sm *Parcel) Message() core.Message {
-	return sm.Msg
+func (p *Parcel) Message() core.Message {
+	return p.Msg
 }
 
 // Context returns initialized context with propagated data with ctx as parent.

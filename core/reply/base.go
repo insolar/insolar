@@ -74,6 +74,8 @@ const (
 	TypeHeavyError
 
 	TypeNodeSign
+
+	TypeWrongPulseNumber
 )
 
 // ErrType is used to determine and compare reply errors.

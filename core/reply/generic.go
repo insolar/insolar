@@ -16,7 +16,10 @@
 
 package reply
 
-import "github.com/insolar/insolar/core"
+import (
+	"github.com/insolar/insolar/core"
+	"github.com/pkg/errors"
+)
 
 // OK is a generic reply for signaling a positive result.
 type OK struct {
@@ -55,4 +58,17 @@ func (e *Error) Error() error {
 		return core.ErrStateNotAvailable
 	}
 	return core.ErrUnknown
+}
+
+type WrongPulseNumber struct {
+	CurrentPulse *core.Pulse
+}
+
+func (e *WrongPulseNumber) Type() core.ReplyType {
+	return TypeWrongPulseNumber
+}
+
+//Error returns concrete error for stored type.
+func (e *WrongPulseNumber) Error() error {
+	return errors.New("Wrong pulse number")
 }
