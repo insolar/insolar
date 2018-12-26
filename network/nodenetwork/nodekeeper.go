@@ -24,7 +24,6 @@ import (
 	"github.com/insolar/insolar/configuration"
 	consensus "github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
-	coreutils "github.com/insolar/insolar/core/utils"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/transport"
@@ -321,6 +320,20 @@ func (nk *nodekeeper) Sync(list network.UnsyncList) {
 	nk.syncLock.Lock()
 	defer nk.syncLock.Unlock()
 
+	nodes := list.GetActiveNodes()
+
+	foundOrigin := false
+	for _, node := range nodes {
+		if node.ID().Equal(nk.origin.ID()) {
+			foundOrigin = true
+		}
+	}
+
+	if nk.shouldExit(foundOrigin) {
+		// TODO: graceful stop
+		panic("Node leave acknowledged by network. Goodbye!")
+	}
+
 	nk.sync = list
 }
 
@@ -338,10 +351,7 @@ func (nk *nodekeeper) MoveSyncToActive() error {
 	nk.tempMapS = make(map[core.ShortNodeID]*host.Host)
 	nk.tempLock.Unlock()
 
-	sync, ok := nk.sync.(*unsyncList)
-	if !ok {
-		return errors.New("[ MoveSyncToActive ] UnsyncList is nil")
-	}
+	sync := nk.sync.(*unsyncList)
 
 	newActiveList, err := sync.getMergedNodeMap()
 	if err != nil {
@@ -359,23 +369,8 @@ func (nk *nodekeeper) reindex() {
 	nk.indexNode = make(map[core.StaticRole]*recordRefSet)
 	nk.indexShortID = make(map[core.ShortNodeID]core.Node)
 
-	foundOrigin := false
 	for _, node := range nk.active {
 		nk.addToIndex(node)
-		if node.ID().Equal(nk.origin.ID()) {
-			foundOrigin = true
-		}
-	}
-
-	if nk.shouldExit(foundOrigin) {
-		// we left active node list, can gracefully stop
-
-		// graceful stop instead of panic
-		err := coreutils.SendGracefulStopSignal()
-		if err != nil {
-			// we tried :(
-			panic("Node leave acknowledged by network. Goodbye!")
-		}
 	}
 }
 
