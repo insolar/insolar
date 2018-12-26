@@ -36,7 +36,7 @@ import (
 type FakePulsar struct {
 	onPulse network.PulseHandler
 	stop    chan bool
-	mutex   sync.RWMutex
+	mutex   sync.Mutex
 	running bool
 
 	firstPulseTime     time.Time
@@ -119,13 +119,6 @@ func (fp *FakePulsar) Stop(ctx context.Context) {
 	}
 
 	inslogger.FromContext(ctx).Info("Fake pulsar stopped")
-}
-
-func (fp *FakePulsar) Stopped() bool {
-	fp.mutex.RLock()
-	defer fp.mutex.RUnlock()
-
-	return !fp.running
 }
 
 func (fp *FakePulsar) newPulse() *core.Pulse {
