@@ -18,7 +18,6 @@ package servicenetwork
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 
@@ -47,10 +46,10 @@ func (s *testSuite) TestNodeConnect() {
 	s.Equal(s.nodesCount(), len(activeNodes))
 
 	//log.Warn("-------=-=-=-=-=-=-================")
-	err := s.bootstrapNodes[0].serviceNetwork.NodeKeeper.MoveSyncToActive()
-	s.NoError(err)
+	//err := s.bootstrapNodes[0].serviceNetwork.NodeKeeper.MoveSyncToActive()
+	//s.NoError(err)
 
-	//s.waitForConsensus(1)
+	s.waitForConsensus(1)
 	//s.waitForConsensus(1)
 
 	activeNodes = s.bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
@@ -99,11 +98,6 @@ func (s *testSuite) TestNodeLeave() {
 func TestServiceNetworkIntegration(t *testing.T) {
 	s := NewTestSuite(1, 0)
 	suite.Run(t, s)
-	defer func() {
-		p := recover()
-		fmt.Println(p)
-	}()
-
 }
 
 func TestServiceNetworkManyBootstraps(t *testing.T) {
