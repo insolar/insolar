@@ -90,6 +90,10 @@ func (tc *transportConsensus) processMessage(ctx context.Context, msg *packet.Pa
 		log.Errorf("Error processing incoming message: failed to resolve ShortID (%d) -> NodeID", msg.Sender.ShortID)
 		return
 	}
+	if sender == nil {
+		log.Info("NU BLYA")
+		sender = &host.Host{}
+	}
 	handler, exist := tc.handlers[p.GetType()]
 	if !exist {
 		log.Errorf("No handler set for packet type %s from node %d, %s", p.GetType(), sender.ShortID, sender.NodeID)

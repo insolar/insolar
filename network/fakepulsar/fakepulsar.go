@@ -80,7 +80,6 @@ func (fp *FakePulsar) Start(ctx context.Context, firstPulseTime time.Time) {
 
 	time.AfterFunc(initialWaitDuration, func() {
 		fp.pulse(ctx)
-
 		for {
 			now := time.Now()
 			_, pulseDuration := fp.getCurrentPulseAndWaitTime(now)

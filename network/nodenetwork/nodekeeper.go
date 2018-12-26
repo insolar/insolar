@@ -343,11 +343,13 @@ func (nk *nodekeeper) MoveSyncToActive() error {
 		return errors.New("[ MoveSyncToActive ] UnsyncList is nil")
 	}
 
-	var err error
-	nk.active, err = sync.getMergedNodeMap()
+	newActiveList, err := sync.getMergedNodeMap()
 	if err != nil {
-		return errors.Wrap(err, "[ MoveSyncToActive ] failed to mergeWith")
+		return errors.Wrap(err, "[ MoveSyncToActive ] Failed to calculate new active list")
 	}
+	log.Infof("[ MoveSyncToActive ] New active list confirmed. Active list size: %d -> %d",
+		len(nk.active), len(newActiveList))
+	nk.active = newActiveList
 	nk.reindex()
 	return nil
 }
