@@ -27,7 +27,6 @@ var rmScanFromPulse = core.PulseNumber(core.FirstPulseNumber + 1).Bytes()
 
 // RemoveJetIndexesUntil removes for provided JetID all lifelines older than provided pulse number.
 func (db *DB) RemoveJetIndexesUntil(ctx context.Context, jetID core.RecordID, pn core.PulseNumber) (int, error) {
-	return 0, nil
 	count := 0
 	jetprefix := prefixkey(scopeIDLifeline, jetID[:])
 	startprefix := prefixkey(scopeIDLifeline, jetID[:], rmScanFromPulse)
