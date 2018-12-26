@@ -73,11 +73,9 @@ func (s *Sync) checkIsNextPulse(ctx context.Context, jetID core.RecordID, jetsta
 		}
 	}
 
-	// TODO: not sure how to handle this case properly
+	// just start sync on first sync
+	// (TODO: not sure how to handle this case properly)
 	if checkpoint == 0 {
-		if pn != core.FirstPulseNumber {
-			return errors.New("Pulse should be equal first pulse number if sync checkpoint on heavy not found")
-		}
 		return nil
 	}
 
