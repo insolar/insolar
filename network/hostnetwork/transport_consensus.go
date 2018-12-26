@@ -91,7 +91,7 @@ func (tc *transportConsensus) processMessage(ctx context.Context, msg *packet.Pa
 		return
 	}
 	if sender == nil {
-		log.Info("NU BLYA")
+		log.Warn("NU BLYA")
 		sender = &host.Host{}
 	}
 	handler, exist := tc.handlers[p.GetType()]
