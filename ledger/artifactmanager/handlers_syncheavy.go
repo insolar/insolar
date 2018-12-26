@@ -18,11 +18,11 @@ package artifactmanager
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
-	"github.com/insolar/insolar/instrumentation/hack"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
@@ -30,35 +30,36 @@ import (
 // sender := genericMsg.GetSender()
 // sender.isItWasLMInPulse(pulsenum)
 func (h *MessageHandler) handleHeavyPayload(ctx context.Context, genericMsg core.Parcel) (core.Reply, error) {
-	inslog := inslogger.FromContext(ctx)
-	if hack.SkipValidation(ctx) {
-		return &reply.OK{}, nil
-	}
 	msg := genericMsg.Message().(*message.HeavyPayload)
-	inslog.Debugf("Heavy sync: get start payload message with %v records", len(msg.Records))
+
+	inslog := inslogger.FromContext(ctx).WithField("pulseNum", msg.PulseNum)
+	inslog = inslog.WithField("jetID", msg.JetID)
+	inslog.Debugf("Heavy sync: get payload message with %v records", len(msg.Records))
+
 	if err := h.HeavySync.Store(ctx, msg.JetID, msg.PulseNum, msg.Records); err != nil {
+		inslog.Error("Heavy store failed", err)
 		return heavyerrreply(err), err
 	}
+	inslog.Debugf("Heavy sync: stores %v records", len(msg.Records))
 	return &reply.OK{}, nil
 }
 
 func (h *MessageHandler) handleHeavyStartStop(ctx context.Context, genericMsg core.Parcel) (core.Reply, error) {
-	inslog := inslogger.FromContext(ctx)
-	if hack.SkipValidation(ctx) {
-		return &reply.OK{}, nil
-	}
-
 	msg := genericMsg.Message().(*message.HeavyStartStop)
-	// stop branch
+
+	inslog := inslogger.FromContext(ctx).WithField("pulseNum", msg.PulseNum)
+	inslog = inslog.WithField("jetID", fmt.Sprintf("%+v", msg.JetID))
+
+	// stop
 	if msg.Finished {
-		inslog.Debugf("Heavy sync: get stop message for pulse %v", msg.PulseNum)
+		inslog.Debug("Heavy sync: get stop message")
 		if err := h.HeavySync.Stop(ctx, msg.JetID, msg.PulseNum); err != nil {
 			return nil, err
 		}
 		return &reply.OK{}, nil
 	}
 	// start
-	inslog.Debugf("Heavy sync: get start message for pulse %v", msg.PulseNum)
+	inslog.Debug("Heavy sync: get start message")
 	if err := h.HeavySync.Start(ctx, msg.JetID, msg.PulseNum); err != nil {
 		return heavyerrreply(err), err
 	}
@@ -66,13 +67,12 @@ func (h *MessageHandler) handleHeavyStartStop(ctx context.Context, genericMsg co
 }
 
 func (h *MessageHandler) handleHeavyReset(ctx context.Context, genericMsg core.Parcel) (core.Reply, error) {
-	inslog := inslogger.FromContext(ctx)
-	if hack.SkipValidation(ctx) {
-		return &reply.OK{}, nil
-	}
-
 	msg := genericMsg.Message().(*message.HeavyReset)
-	inslog.Debugf("Heavy sync: get reset message for pulse %v", msg.PulseNum)
+
+	inslog := inslogger.FromContext(ctx).WithField("pulseNum", msg.PulseNum)
+	inslog = inslog.WithField("jetID", fmt.Sprintf("%+v", msg.JetID))
+
+	inslog.Debug("Heavy sync: get reset message")
 	if err := h.HeavySync.Reset(ctx, msg.JetID, msg.PulseNum); err != nil {
 		return heavyerrreply(err), err
 	}
