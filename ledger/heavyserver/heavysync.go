@@ -118,6 +118,10 @@ func (s *Sync) Start(ctx context.Context, jetID core.RecordID, pn core.PulseNumb
 		return ErrSyncInProgress
 	}
 
+	if pn <= core.FirstPulseNumber {
+		return fmt.Errorf("sync pulse should be greater than first pulse %v (got %v)", core.FirstPulseNumber, pn)
+	}
+
 	if err := s.checkIsNextPulse(ctx, jetID, jetState, pn); err != nil {
 		return err
 	}
