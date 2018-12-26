@@ -18,11 +18,12 @@ package fakepulsar
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
 )
 
@@ -33,55 +34,76 @@ import (
 
 // FakePulsar is a struct which uses at void network state.
 type FakePulsar struct {
-	onPulse   network.PulseHandler
-	stop      chan bool
-	timeoutMs int32 // ms
+	onPulse network.PulseHandler
+	stop    chan bool
+	mutex   sync.RWMutex
+	running bool
 
-	mutex          sync.RWMutex
-	running        bool
-	firstPulseTime int64
-	pulseNum       int64
+	firstPulseTime     time.Time
+	pulseDuration      time.Duration
+	pulseNumberDelta   core.PulseNumber
+	currentPulseNumber core.PulseNumber
 }
 
 // NewFakePulsar creates and returns a new FakePulsar.
-func NewFakePulsar(callback network.PulseHandler, timeoutMs int32) *FakePulsar {
+func NewFakePulsar(callback network.PulseHandler, pulseDuration time.Duration) *FakePulsar {
 	return &FakePulsar{
-		onPulse:        callback,
-		timeoutMs:      timeoutMs,
-		stop:           make(chan bool, 1),
-		running:        false,
-		firstPulseTime: 0,
-		pulseNum:       0,
+		onPulse: callback,
+		stop:    make(chan bool, 1),
+		running: false,
+
+		pulseDuration:    pulseDuration,
+		pulseNumberDelta: core.PulseNumber(pulseDuration.Seconds()),
 	}
 }
 
 // Start starts sending a fake pulse.
-func (fp *FakePulsar) Start(ctx context.Context) {
+func (fp *FakePulsar) Start(ctx context.Context, firstPulseTime time.Time) {
 	fp.mutex.Lock()
 	defer fp.mutex.Unlock()
 
-	fp.running = true
-	var waitTime int64
-	fp.pulseNum, waitTime = GetPassedPulseCountAndWaitTime(time.Now().Unix(), fp.firstPulseTime, fp.timeoutMs)
+	logger := inslogger.FromContext(ctx)
+	startTime := time.Now()
 
-	log.Infof("Fake pulsar started, first pulse %d scheduled for: %s", fp.pulseNum, time.Now().Add(time.Duration(waitTime)))
-	time.Sleep(time.Duration(waitTime))
-	fp.pulse(ctx)
-	go func(fp *FakePulsar) {
+	fp.firstPulseTime = firstPulseTime
+
+	currentPulseNumber, initialWaitDuration := fp.getCurrentPulseAndWaitTime(startTime)
+
+	fp.running = true
+	fp.currentPulseNumber = currentPulseNumber
+
+	logger.Infof(
+		"Fake pulsar is going to start, currentPulse: %d, next pulse scheduled for: %s",
+		currentPulseNumber,
+		startTime.Add(initialWaitDuration),
+	)
+
+	time.AfterFunc(initialWaitDuration, func() {
+		fp.pulse(ctx)
+
 		for {
+			now := time.Now()
+			_, pulseDuration := fp.getCurrentPulseAndWaitTime(now)
+
+			logger.Debug("Pulse scheduled for: %s", now.Add(fp.pulseDuration))
+
 			select {
-			case <-time.After(time.Millisecond * time.Duration(fp.timeoutMs)):
+			case <-time.After(pulseDuration):
 				fp.pulse(ctx)
 			case <-fp.stop:
 				return
 			}
 		}
-	}(fp)
+	})
+}
+
+func (fp *FakePulsar) getCurrentPulseAndWaitTime(target time.Time) (core.PulseNumber, time.Duration) {
+	return getCurrentPulseAndWaitTime(target, fp.firstPulseTime, fp.pulseDuration)
 }
 
 func (fp *FakePulsar) pulse(ctx context.Context) {
-	fp.pulseNum++
-	fp.onPulse.HandlePulse(ctx, *fp.newPulse())
+	fp.currentPulseNumber += fp.pulseNumberDelta
+	go fp.onPulse.HandlePulse(ctx, *fp.newPulse())
 }
 
 // Stop sending a fake pulse.
@@ -89,14 +111,15 @@ func (fp *FakePulsar) Stop(ctx context.Context) {
 	fp.mutex.Lock()
 	defer fp.mutex.Unlock()
 
-	log.Info("Fake pulsar going to stop")
+	inslogger.FromContext(ctx).Info("Fake pulsar going to stop")
 
 	if fp.running {
 		fp.stop <- true
 		close(fp.stop)
 		fp.running = false
 	}
-	log.Info("Fake pulsar stopped")
+
+	inslogger.FromContext(ctx).Info("Fake pulsar stopped")
 }
 
 func (fp *FakePulsar) Stopped() bool {
@@ -109,29 +132,24 @@ func (fp *FakePulsar) Stopped() bool {
 func (fp *FakePulsar) newPulse() *core.Pulse {
 	return &core.Pulse{
 		EpochPulseNumber: -1,
-		PulseNumber:      core.PulseNumber(fp.pulseNum),
-		NextPulseNumber:  core.PulseNumber(fp.pulseNum + 1),
+		PulseNumber:      core.PulseNumber(fp.currentPulseNumber),
+		NextPulseNumber:  core.PulseNumber(fp.currentPulseNumber + fp.pulseNumberDelta),
 		Entropy:          core.Entropy{},
 	}
 }
 
-func (fp *FakePulsar) GetFirstPulseTime() int64 {
-	return fp.firstPulseTime
-}
+func getCurrentPulseAndWaitTime(target, firstPulseTime time.Time, pulseDuration time.Duration) (core.PulseNumber, time.Duration) {
+	if target.Before(firstPulseTime) {
+		panic(fmt.Sprintf("First pulse time `%s` is greater then target `%s`", firstPulseTime, target))
+	}
 
-func (fp *FakePulsar) GetPulseNum() int64 {
-	return fp.pulseNum
-}
+	timeSinceFirstPulse := target.Sub(firstPulseTime)
 
-func (fp *FakePulsar) SetPulseData(time, pulseNum int64) {
-	fp.firstPulseTime = time
-	fp.pulseNum = pulseNum
-}
+	passedPulses := int64(timeSinceFirstPulse) / int64(pulseDuration)
+	currentPulse := core.PulseNumber(passedPulses)
 
-func GetPassedPulseCountAndWaitTime(currentTime, firstPulseTime int64, pulseTimeout int32) (count, waitTime int64) {
-	pulseTimeSec := int64(pulseTimeout / 1000)
-	delta := int64(time.Unix(currentTime, 0).Sub(time.Unix(firstPulseTime, 0)).Seconds())
-	count = delta / pulseTimeSec
-	waitTime = delta - count*pulseTimeSec
-	return
+	passedPulsesDuration := time.Duration(int64(pulseDuration) * passedPulses)
+	waitDuration := pulseDuration - (timeSinceFirstPulse - passedPulsesDuration)
+
+	return currentPulse, waitDuration
 }

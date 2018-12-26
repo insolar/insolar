@@ -28,8 +28,7 @@ import (
 
 type BootstrapResult struct {
 	Host           *host.Host
-	FirstPulseTime int64
-	PulseNum       int64
+	FirstPulseTime time.Time
 }
 
 // Controller contains network logic.
