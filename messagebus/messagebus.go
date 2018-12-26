@@ -38,6 +38,8 @@ import (
 
 const deliverRPCMethodName = "MessageBus.Deliver"
 
+const MaxNextPulseMessagePool = 1000
+
 // MessageBus is component that routes application logic requests,
 // e.g. glue between network and logic runner
 type MessageBus struct {
@@ -54,19 +56,19 @@ type MessageBus struct {
 	handlers     map[core.MessageType]core.MessageHandler
 	signmessages bool
 
-	globalLock     sync.RWMutex
-	waitingChan    chan interface{}
-	waitingLock    sync.Mutex
-	waitingCounter uint
+	globalLock                  sync.RWMutex
+	NextPulseMessagePoolChan    chan interface{}
+	NextPulseMessagePoolCounter uint32
+	NextPulseMessagePoolLock    sync.Mutex
 }
 
 // NewMessageBus creates plain MessageBus instance. It can be used to create Player and Recorder instances that
 // wrap it, providing additional functionality.
 func NewMessageBus(config configuration.Configuration) (*MessageBus, error) {
 	mb := &MessageBus{
-		handlers:     map[core.MessageType]core.MessageHandler{},
-		signmessages: config.Host.SignMessages,
-		waitingChan:  make(chan interface{}),
+		handlers:                 map[core.MessageType]core.MessageHandler{},
+		signmessages:             config.Host.SignMessages,
+		NextPulseMessagePoolChan: make(chan interface{}),
 	}
 	mb.Lock(context.Background())
 	return mb, nil
@@ -218,23 +220,24 @@ func (e *serializableError) Error() string {
 }
 
 func (mb *MessageBus) OnPulse(context.Context, core.Pulse) error {
-	tmp := mb.waitingChan
-	mb.waitingChan = make(chan interface{})
-	mb.waitingLock.Lock()
-	mb.waitingCounter = 0
-	mb.waitingLock.Unlock()
+	tmp := mb.NextPulseMessagePoolChan
+	mb.NextPulseMessagePoolChan = make(chan interface{})
+	mb.NextPulseMessagePoolLock.Lock()
+	mb.NextPulseMessagePoolCounter = 0
+	mb.NextPulseMessagePoolLock.Unlock()
 	close(tmp)
 	return nil
 }
 
-func (mb *MessageBus) countWaiting() bool {
-	mb.waitingLock.Lock()
-	defer mb.waitingLock.Unlock()
+func (mb *MessageBus) accuireMessagePoolItem() bool {
+	mb.NextPulseMessagePoolLock.Lock()
+	defer mb.NextPulseMessagePoolLock.Unlock()
 
-	if mb.waitingCounter > 1000 {
+	if mb.NextPulseMessagePoolCounter > MaxNextPulseMessagePool {
 		return false
 	}
-	mb.waitingCounter++
+
+	mb.NextPulseMessagePoolCounter++
 	return true
 }
 
@@ -245,8 +248,8 @@ func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Repl
 		return nil, errors.Wrap(err, "[ MessageBus ] Couldn't get current pulse number")
 	}
 
-	if msg.Pulse() == pulse.NextPulseNumber && mb.countWaiting() {
-		<-mb.waitingChan
+	if msg.Pulse() == pulse.NextPulseNumber && mb.accuireMessagePoolItem() {
+		<-mb.NextPulseMessagePoolChan
 	}
 
 	pulse, err = mb.PulseStorage.Current(ctx)
