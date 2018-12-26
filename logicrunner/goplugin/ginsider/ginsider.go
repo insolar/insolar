@@ -95,7 +95,7 @@ func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCa
 	start := time.Now()
 	metrics.InsgorundCallsTotal.Inc()
 	ctx := inslogger.ContextWithTrace(context.Background(), args.Context.TraceID)
-	inslogger.FromContext(ctx).Debugf("Calling method %q on object %q", args.Method, args.Context.Callee)
+	// inslogger.FromContext(ctx).Debugf("Calling method %q on object %q", args.Method, args.Context.Callee)
 	defer recoverRPC(ctx, &err)
 
 	gls.Set("callCtx", args.Context)
