@@ -357,6 +357,7 @@ func (bc *Bootstrapper) processGenesis(ctx context.Context, request network.Requ
 }
 
 func (bc *Bootstrapper) Start(keeper network.NodeKeeper) {
+	bc.firstPulseTS = time.Now().Unix()
 	bc.keeper = keeper
 	bc.transport.RegisterPacketHandler(types.Bootstrap, bc.processBootstrap)
 	bc.transport.RegisterPacketHandler(types.Genesis, bc.processGenesis)
