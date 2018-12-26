@@ -37,7 +37,7 @@ type CaseRequest struct {
 	Request    core.RecordRef
 	MessageBus core.MessageBus
 	Reply      core.Reply
-	Error      error
+	Error      string
 }
 
 // CaseBinder is a whole result of executor efforts on every object it seen on this pulse
@@ -278,7 +278,9 @@ func (vb *ValidationSaver) Result(reply core.Reply, err error) error {
 		return errors.New("result call without request registered")
 	}
 	vb.current.Reply = reply
-	vb.current.Error = err
+	if err != nil {
+		vb.current.Error = err.Error()
+	}
 	return nil
 }
 
