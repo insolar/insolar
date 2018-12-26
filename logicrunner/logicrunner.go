@@ -105,6 +105,10 @@ type Error struct {
 	Method   string
 }
 
+func init() {
+	gob.Register(&Error{})
+}
+
 func (lre Error) Error() string {
 	var buffer bytes.Buffer
 
