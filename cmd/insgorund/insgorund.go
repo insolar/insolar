@@ -102,11 +102,12 @@ func main() {
 	signal.Notify(gracefulStop, syscall.SIGTERM)
 	signal.Notify(gracefulStop, syscall.SIGINT)
 
+	var waitChannel = make(chan bool)
+
 	go func() {
 		sig := <-gracefulStop
-
-		log.Info("ginsider get signal: ", sig.String())
-		os.Exit(1)
+		log.Info("ginsider get signal: ", sig)
+		close(waitChannel)
 	}()
 
 	if *metricsAddress != "" {
@@ -133,7 +134,8 @@ func main() {
 	}
 
 	log.Debug("ginsider launched, listens " + *listen)
-	rpc.Accept(listener)
+	go rpc.Accept(listener)
 
+	<-waitChannel
 	log.Debug("bye\n")
 }

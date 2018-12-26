@@ -35,6 +35,8 @@ import (
 	"testing"
 	"time"
 
+	"gopkg.in/yaml.v2"
+
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
 	"github.com/pkg/errors"
@@ -47,13 +49,15 @@ const TestCallUrl = TestAPIURL + "/call"
 
 const insolarRootMemberKeys = "root_member_keys.json"
 
+const conf_dir = "../scripts/insolard/"
+
 var cmd *exec.Cmd
 var cmdCompleted = make(chan error, 1)
 var stdin io.WriteCloser
 var stdout io.ReadCloser
 var stderr io.ReadCloser
 
-var insolarRootMemberKeysPath = filepath.Join("../scripts/insolard/configs", insolarRootMemberKeys)
+var insolarRootMemberKeysPath = filepath.Join(conf_dir+"/configs", insolarRootMemberKeys)
 
 var info infoResponse
 var root user
@@ -62,6 +66,26 @@ type user struct {
 	ref     string
 	privKey string
 	pubKey  string
+}
+
+func getNumberNodes() (int, error) {
+	type genesisConf struct {
+		DiscoverNodes []interface{} `yaml:"discovery_nodes"`
+	}
+
+	var conf genesisConf
+
+	buff, err := ioutil.ReadFile(conf_dir + "/genesis.yaml")
+	if err != nil {
+		return 0, errors.Wrap(err, "[ getNumberNodes ] Can't read genesis conf")
+	}
+
+	err = yaml.Unmarshal(buff, &conf)
+	if err != nil {
+		return 0, errors.Wrap(err, "[ getNumberNodes ] Can't parse genesis conf")
+	}
+
+	return len(conf.DiscoverNodes), nil
 }
 
 func functestPath() string {
@@ -163,20 +187,39 @@ func stopInsolard() error {
 }
 
 var insgorundCleaner func()
+var secondInsgorundCleaner func()
 
-func startInsgorund() (err error) {
+func startInsgorund(listenPort string, upstreamPort string) (func(), error) {
 	// It starts on ports of "virtual" node
-	insgorundCleaner, err = goplugintestutils.StartInsgorund(insgorundPath, "tcp", "127.0.0.1:18181", "tcp", "127.0.0.1:18182")
+	cleaner, err := goplugintestutils.StartInsgorund(insgorundPath, "tcp", "127.0.0.1:"+listenPort, "tcp", "127.0.0.1:"+upstreamPort)
 	if err != nil {
-		return errors.Wrap(err, "[ startInsgorund ] couldn't wait for insolard to start completely: ")
+		return cleaner, errors.Wrap(err, "[ startInsgorund ] couldn't wait for insolard to start completely: ")
 	}
+	return cleaner, nil
+}
+
+func startAllInsgorunds() (err error) {
+	insgorundCleaner, err = startInsgorund("18181", "18182")
+	if err != nil {
+		return errors.Wrap(err, "[ setup ] could't start insgorund: ")
+	}
+	fmt.Println("[ startAllInsgorunds ] insgorund was successfully started")
+
+	secondInsgorundCleaner, err = startInsgorund("58181", "58182")
+	if err != nil {
+		return errors.Wrap(err, "[ setup ] could't start second insgorund: ")
+	}
+	fmt.Println("[ startAllInsgorunds ] second insgorund was successfully started")
+
 	return nil
 }
 
-func stopInsgorund() error {
-	if insgorundCleaner != nil {
-		insgorundCleaner()
+func stopAllInsgorunds() error {
+	if insgorundCleaner == nil || secondInsgorundCleaner == nil {
+		return errors.New("[ stopInsgorund ] cleaner func not found")
 	}
+	insgorundCleaner()
+	secondInsgorundCleaner()
 	return nil
 }
 
@@ -303,7 +346,7 @@ func setup() error {
 	}
 	fmt.Println("[ setup ] ginsider CLI was successfully builded")
 
-	err = startInsgorund()
+	err = startAllInsgorunds()
 	if err != nil {
 		return errors.Wrap(err, "[ setup ] could't start insgorund: ")
 	}
@@ -347,10 +390,7 @@ func teardown() {
 	}
 	fmt.Println("[ teardown ] insolard was successfully stoped")
 
-	err = stopInsgorund()
-	if err != nil {
-		fmt.Println("[ teardown ] failed to stop insgorund: ", err)
-	}
+	stopAllInsgorunds()
 	fmt.Println("[ teardown ] insgorund was successfully stoped")
 
 	err = deleteDirForContracts()

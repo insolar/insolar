@@ -258,9 +258,9 @@ func (lr *LogicRunner) Start(ctx context.Context) error {
 func (lr *LogicRunner) RegisterHandlers() {
 	lr.MessageBus.MustRegister(core.TypeCallMethod, lr.Execute)
 	lr.MessageBus.MustRegister(core.TypeCallConstructor, lr.Execute)
-	lr.MessageBus.MustRegister(core.TypeExecutorResults, lr.ExecutorResults)
-	lr.MessageBus.MustRegister(core.TypeValidateCaseBind, lr.ValidateCaseBind)
-	lr.MessageBus.MustRegister(core.TypeValidationResults, lr.ProcessValidationResults)
+	lr.MessageBus.MustRegister(core.TypeExecutorResults, lr.HandleExecutorResultsMessage)
+	lr.MessageBus.MustRegister(core.TypeValidateCaseBind, lr.HandleValidateCaseBindMessage)
+	lr.MessageBus.MustRegister(core.TypeValidationResults, lr.HandleValidationResultsMessage)
 	lr.MessageBus.MustRegister(core.TypePendingFinished, lr.HandlePendingFinishedMessage)
 }
 

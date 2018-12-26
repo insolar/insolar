@@ -139,13 +139,10 @@ func (m *Member) getBalance(params []byte) (interface{}, error) {
 }
 
 func (m *Member) transferCall(params []byte) (interface{}, error) {
-	var amount float64
+	var amount uint
 	var toStr string
 	if err := signer.UnmarshalParams(params, &amount, &toStr); err != nil {
 		return nil, fmt.Errorf("[ transferCall ] Can't unmarshal params: %s", err.Error())
-	}
-	if amount <= 0 {
-		return nil, fmt.Errorf("[ transferCall ] Amount must be positive")
 	}
 	to, err := core.NewRefFromBase58(toStr)
 	if err != nil {
@@ -159,7 +156,7 @@ func (m *Member) transferCall(params []byte) (interface{}, error) {
 		return nil, fmt.Errorf("[ transferCall ] Can't get implementation: %s", err.Error())
 	}
 
-	return nil, w.Transfer(uint(amount), to)
+	return nil, w.Transfer(amount, to)
 }
 
 func (m *Member) dumpUserInfoCall(ref core.RecordRef, params []byte) (interface{}, error) {

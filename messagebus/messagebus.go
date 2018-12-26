@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/gob"
+	"github.com/insolar/insolar/metrics"
 	"io"
 	"sync"
 
@@ -96,11 +97,6 @@ func (mb *MessageBus) Start(ctx context.Context) error {
 
 // Stop releases resources and stops the bus
 func (mb *MessageBus) Stop(ctx context.Context) error { return nil }
-
-// WriteTape for MessageBus is not available.
-func (mb *MessageBus) WriteTape(ctx context.Context, writer io.Writer) error {
-	panic("this is not a recorder")
-}
 
 func (mb *MessageBus) Lock(ctx context.Context) {
 	inslogger.FromContext(ctx).Info("Acquire GIL")
@@ -180,6 +176,8 @@ func (mb *MessageBus) SendParcel(
 		}
 	}
 
+	metrics.ParcelsSentTotal.WithLabelValues(parcel.Type().String()).Inc()
+
 	if len(nodes) > 1 {
 		cascade := core.Cascade{
 			NodeIds:           nodes,
@@ -193,6 +191,7 @@ func (mb *MessageBus) SendParcel(
 	// Short path when sending to self node. Skip serialization
 	origin := mb.NodeNetwork.GetOrigin()
 	if nodes[0].Equal(origin.ID()) {
+		metrics.LocallyDeliveredParcelsTotal.WithLabelValues(parcel.Type().String()).Inc()
 		return mb.doDeliver(parcel.Context(context.Background()), parcel)
 	}
 

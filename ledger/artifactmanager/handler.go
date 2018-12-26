@@ -562,25 +562,24 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel core.Pa
 }
 
 func (h *MessageHandler) handleJetDrop(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
-	if hack.SkipValidation(ctx) {
-		return &reply.OK{}, nil
-	}
 	msg := parcel.Message().(*message.JetDrop)
 
-	for _, parcelBuff := range msg.Messages {
-		parcel, err := message.Deserialize(bytes.NewBuffer(parcelBuff))
-		if err != nil {
-			return nil, err
-		}
+	if !hack.SkipValidation(ctx) {
+		for _, parcelBuff := range msg.Messages {
+			parcel, err := message.Deserialize(bytes.NewBuffer(parcelBuff))
+			if err != nil {
+				return nil, err
+			}
 
-		handler, ok := h.replayHandlers[parcel.Message().Type()]
-		if !ok {
-			return nil, errors.New("unknown message type")
-		}
+			handler, ok := h.replayHandlers[parcel.Message().Type()]
+			if !ok {
+				return nil, errors.New("unknown message type")
+			}
 
-		_, err = handler(ctx, parcel)
-		if err != nil {
-			return nil, err
+			_, err = handler(ctx, parcel)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -592,11 +591,11 @@ func (h *MessageHandler) handleJetDrop(ctx context.Context, parcel core.Parcel) 
 	// TODO: temporary hardcoded tree. Remove after split is functional.
 	err = h.db.UpdateJetTree(
 		ctx,
-		msg.PulseNumber,
+		parcel.Pulse(),
 		true,
 		*jet.NewID(2, []byte{}),       // 00
 		*jet.NewID(2, []byte{1 << 6}), // 01
-		*jet.NewID(2, []byte{1 << 7}), // 10
+		*jet.NewID(1, []byte{1 << 7}), // 10
 		msg.JetID,                     // Don't delete this.
 	)
 	if err != nil {
@@ -817,11 +816,11 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 	// TODO: temporary hardcoded tree. Remove after split is functional.
 	err = h.db.UpdateJetTree(
 		ctx,
-		msg.PulseNumber,
+		parcel.Pulse(),
 		true,
 		*jet.NewID(2, []byte{}),       // 00
 		*jet.NewID(2, []byte{1 << 6}), // 01
-		*jet.NewID(2, []byte{1 << 7}), // 10
+		*jet.NewID(1, []byte{1 << 7}), // 10
 		jetID,                         // Don't delete this.
 	)
 	if err != nil {
