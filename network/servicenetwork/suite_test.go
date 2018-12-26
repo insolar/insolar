@@ -77,7 +77,7 @@ func (s *testSuite) SetupSuite() {
 	log.Infoln("Setup bootstrap nodes")
 	s.SetupNodesNetwork(s.bootstrapNodes)
 
-	<-time.After(time.Second * 5)
+	<-time.After(time.Second * 3)
 	//s.waitForConsensus(1)
 	//TODO: wait for first consensus
 	// active nodes count verification
@@ -138,23 +138,22 @@ func (s *testSuite) SetupNodesNetwork(nodes []*networkNode) {
 
 // TearDownSuite shutdowns all nodes in network, calls once after all tests in suite finished
 func (s *testSuite) TearDownSuite() {
-	log.Infoln("TearDownSuite")
 	log.Infoln("Stop network nodes")
-	// for _, n := range s.networkNodes {
-	// 	err := n.componentManager.Stop(s.ctx)
-	// 	s.NoError(err)
-	// }
-	// log.Infoln("Stop bootstrap nodes")
-	// for _, n := range s.bootstrapNodes {
-	// 	err := n.componentManager.Stop(s.ctx)
-	// 	s.NoError(err)
-	// }
+	for _, n := range s.networkNodes {
+		n.componentManager.Stop(s.ctx)
+	}
+	log.Infoln("Stop bootstrap nodes")
+	for _, n := range s.bootstrapNodes {
+		n.componentManager.Stop(s.ctx)
+	}
 }
 
 func (s *testSuite) waitForConsensus(consensusCount int) {
-	for _, n := range s.bootstrapNodes {
-		err := <-n.consensusResult
-		s.NoError(err)
+	for i := 0; i < consensusCount; i++ {
+		for _, n := range s.bootstrapNodes {
+			err := <-n.consensusResult
+			s.NoError(err)
+		}
 	}
 }
 
@@ -285,10 +284,6 @@ func (s *testSuite) preInitNode(node *networkNode, timeOut PhaseTimeOut) {
 	})
 
 	pulseManagerMock := testutils.NewPulseManagerMock(s.T())
-	pulseManagerMock.SetMock.Set(func(p context.Context, p1 core.Pulse, p2 bool) (r error) {
-		return serviceNetwork.NodeKeeper.MoveSyncToActive()
-		//return nil
-	})
 
 	netCoordinator := testutils.NewNetworkCoordinatorMock(s.T())
 	netCoordinator.ValidateCertMock.Set(func(p context.Context, p1 core.AuthorizationCertificate) (bool, error) {
@@ -332,6 +327,14 @@ func (s *testSuite) preInitNode(node *networkNode, timeOut PhaseTimeOut) {
 	node.componentManager.Register(certManager, cryptographyService)
 	node.componentManager.Inject(serviceNetwork, netSwitcher)
 	node.serviceNetwork = serviceNetwork
+
+	pulseManagerMock.SetMock.Set(func(p context.Context, p1 core.Pulse, p2 bool) (r error) {
+		if serviceNetwork.NodeKeeper == nil {
+			panic("NodeKeeper == nil")
+		}
+		return serviceNetwork.NodeKeeper.MoveSyncToActive()
+		//return nil
+	})
 	/*
 		var phaseManager phases.PhaseManager
 		switch timeOut {

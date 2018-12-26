@@ -18,6 +18,7 @@ package servicenetwork
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -34,27 +35,29 @@ func (s *testSuite) TestNetworkConsensus3Times() {
 }
 
 func (s *testSuite) TestNodeConnect() {
-
 	s.preInitNode(s.testNode, Disable)
 
 	s.InitTestNode()
 	s.StartTestNode()
+	defer s.StopTestNode()
 
 	s.waitForConsensus(1)
 
 	activeNodes := s.bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
 	s.Equal(s.nodesCount(), len(activeNodes))
-	//err := s.bootstrapNodes[0].serviceNetwork.NodeKeeper.MoveSyncToActive()
-	//s.NoError(err)
 
-	s.waitForConsensus(1)
+	//log.Warn("-------=-=-=-=-=-=-================")
+	err := s.bootstrapNodes[0].serviceNetwork.NodeKeeper.MoveSyncToActive()
+	s.NoError(err)
+
+	//s.waitForConsensus(1)
+	//s.waitForConsensus(1)
 
 	activeNodes = s.bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
 	s.Equal(s.nodesCount()+1, len(activeNodes))
 
 	// teardown
-	<-time.After(time.Second * 3)
-	s.StopTestNode()
+	// <-time.After(time.Second * 5)
 }
 
 func (s *testSuite) TestNodeLeave() {
@@ -96,6 +99,11 @@ func (s *testSuite) TestNodeLeave() {
 func TestServiceNetworkIntegration(t *testing.T) {
 	s := NewTestSuite(1, 0)
 	suite.Run(t, s)
+	defer func() {
+		p := recover()
+		fmt.Println(p)
+	}()
+
 }
 
 func TestServiceNetworkManyBootstraps(t *testing.T) {
@@ -103,13 +111,14 @@ func TestServiceNetworkManyBootstraps(t *testing.T) {
 	suite.Run(t, s)
 }
 
+/*
 func TestServiceNetworkManyNodes(t *testing.T) {
 	t.Skip("tmp 123")
 
 	s := NewTestSuite(3, 20)
 	suite.Run(t, s)
 }
-
+*/
 // Full timeout test
 type FullTimeoutPhaseManager struct {
 }
