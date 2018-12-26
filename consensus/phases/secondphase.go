@@ -75,7 +75,10 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 
 	origin := sp.NodeKeeper.GetOrigin().ID()
 	stateMatrix := NewStateMatrix(state.UnsyncList)
-	stateMatrix.ApplyBitSet(origin, bitset)
+	if err = stateMatrix.ApplyBitSet(origin, bitset); err != nil {
+		return nil, errors.Wrap(err, "[ SecondPhase ] Failed to apply bitset states")
+	}
+
 	state.UnsyncList.GlobuleHashSignatures()[origin] = packet.GetGlobuleHashSignature()
 
 	for ref, packet := range packets {
@@ -199,7 +202,9 @@ func (sp *SecondPhase) Execute21(ctx context.Context, state *SecondPhaseState) (
 		list = append(list, claim.Claim)
 		claimMap[ref] = list
 	}
-	state.UnsyncList.AddClaims(claimMap)
+	if err = state.UnsyncList.AddClaims(claimMap); err != nil {
+		return nil, errors.Wrapf(err, "[ Phase 2.1 ] Failed to add claims")
+	}
 	state.MatrixState, err = state.Matrix.CalculatePhase2(origin)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Phase 2.1 ] Failed to calculate matrix state")

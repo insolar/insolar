@@ -336,8 +336,6 @@ func (nc *NaiveCommunicator) ExchangePhase2(ctx context.Context, list network.Un
 			return result, nil
 		}
 	}
-
-	return result, nil
 }
 
 func selectCandidate(candidates []core.RecordRef) core.RecordRef {
