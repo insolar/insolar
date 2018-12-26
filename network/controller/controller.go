@@ -82,7 +82,7 @@ func ConfigureOptions(conf configuration.Configuration) *common.Options {
 		PacketTimeout:       10 * time.Second,
 		BootstrapTimeout:    10 * time.Second,
 		HandshakeSessionTTL: time.Duration(config.HandshakeSessionTTL) * time.Millisecond,
-		PulseTimeout:        conf.Pulsar.PulseTime,
+		FakePulseDuration:   time.Duration(conf.Pulsar.PulseTime) * time.Millisecond,
 	}
 }
 

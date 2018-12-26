@@ -30,16 +30,16 @@ import (
 func TestGetFakePulse(t *testing.T) {
 	handler := network.PulseHandlerMock{}
 	handler.HandlePulseFunc = func(p context.Context, p1 core.Pulse) {}
-	pulsar := NewFakePulsar(&handler, 1000)
+	pulsar := NewFakePulsar(&handler, time.Second)
 	pulse := pulsar.newPulse()
 	assert.NotNil(t, pulse)
-	pulsar.pulseNum++
+	pulsar.currentPulseNumber++
 	pulse2 := pulsar.newPulse()
 	assert.NotNil(t, pulse2)
 	assert.NotEqual(t, pulse, pulse2)
 
-	pulsar2 := NewFakePulsar(&handler, 1000)
-	pulsar2.pulseNum = pulsar.pulseNum
+	pulsar2 := NewFakePulsar(&handler, time.Second)
+	pulsar2.currentPulseNumber = pulsar.currentPulseNumber
 	pulse3 := pulsar2.newPulse()
 	assert.NotNil(t, pulse3)
 	assert.Equal(t, pulse3, pulse2)
@@ -48,23 +48,41 @@ func TestGetFakePulse(t *testing.T) {
 func TestFakePulsar_Start(t *testing.T) {
 	handler := network.PulseHandlerMock{}
 	handler.HandlePulseFunc = func(p context.Context, p1 core.Pulse) {}
-	pulsar := NewFakePulsar(&handler, 1000)
+	pulsar := NewFakePulsar(&handler, time.Second)
+
 	ctx := context.TODO()
-	pulsar.Start(ctx)
-	time.Sleep(time.Millisecond * 1100)
+	firstPulseTime := time.Now()
+
+	pulsar.Start(ctx, firstPulseTime)
+	workTime := time.Millisecond * 3500
+	time.Sleep(workTime)
+
 	pulsar.Stop(ctx)
+
+	pulseInfo := calculatePulseInfo(firstPulseTime.Add(workTime), firstPulseTime, 1000*time.Millisecond)
+
+	assert.Equal(t, core.PulseNumber(3), pulsar.currentPulseNumber)
+	assert.Equal(t, pulsar.currentPulseNumber, pulseInfo.currentPulseNumber)
 }
 
-func TestGetPassedPulseCountAndWaitTime(t *testing.T) {
-	pulseCount := 5
-	waitSec := int64(5)
-	pulseTimeout := 12000
+func TestCalculatePulseInfo(t *testing.T) {
+	firstPulseTime := time.Now()
+	timePassed := 3500 * time.Millisecond
+	pulsarNow := firstPulseTime.Add(timePassed)
 
-	firstPulseTime := time.Date(2018, 12, 25, 2, 10, 10, 0, time.Local)
-	local := time.Date(2018, 12, 25, 2, 11, 15, 0, time.Local)
+	pulseInfo := calculatePulseInfo(pulsarNow, firstPulseTime, time.Second)
 
-	count, waitTime := GetPassedPulseCountAndWaitTime(local.Unix(), firstPulseTime.Unix(), int32(pulseTimeout))
+	assert.Equal(t, core.PulseNumber(3), pulseInfo.currentPulseNumber)
+	assert.Equal(t, pulseInfo.nextPulseAfter, 500*time.Millisecond)
+}
 
-	assert.Equal(t, int64(pulseCount), count)
-	assert.Equal(t, waitSec, waitTime)
+func TestCalculatePulseInfo_FirstPulseInFuture(t *testing.T) {
+	pulsarNow := time.Now()
+	timePassed := 3500 * time.Millisecond
+	firstPulseTime := pulsarNow.Add(timePassed)
+
+	pulseInfo := calculatePulseInfo(pulsarNow, firstPulseTime, time.Second)
+
+	assert.Equal(t, core.PulseNumber(0), pulseInfo.currentPulseNumber)
+	assert.Equal(t, 3500*time.Millisecond, pulseInfo.nextPulseAfter)
 }

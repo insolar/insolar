@@ -30,7 +30,6 @@ import (
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller/common"
 	"github.com/insolar/insolar/network/controller/pinger"
-	"github.com/insolar/insolar/network/fakepulsar"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet/types"
@@ -39,22 +38,21 @@ import (
 )
 
 type Bootstrapper struct {
-	options      *common.Options
-	transport    network.InternalTransport
-	pinger       *pinger.Pinger
-	cert         core.Certificate
-	keeper       network.NodeKeeper
-	firstPulseTS int64
+	options        *common.Options
+	transport      network.InternalTransport
+	pinger         *pinger.Pinger
+	cert           core.Certificate
+	keeper         network.NodeKeeper
+	firstPulseTime time.Time
 }
 
 type NodeBootstrapRequest struct{}
 
 type NodeBootstrapResponse struct {
-	FirstPulseTime int64
-	PulseNum       int64
-	Code           Code
-	RedirectHost   string
-	RejectReason   string
+	Code               Code
+	RedirectHost       string
+	RejectReason       string
+	FirstPulseTimeUnix int64
 }
 
 type GenesisRequest struct {
@@ -164,11 +162,9 @@ func (bc *Bootstrapper) BootstrapDiscovery(ctx context.Context) (*network.Bootst
 		if err != nil {
 			return nil, errors.Wrap(err, "[ BootstrapDiscovery ] failed to create a host")
 		}
-		pulseNum, _ := fakepulsar.GetPassedPulseCountAndWaitTime(time.Now().Unix(), bc.firstPulseTS, bc.options.PulseTimeout)
 		return &network.BootstrapResult{
 			Host:           host,
-			FirstPulseTime: bc.firstPulseTS,
-			PulseNum:       pulseNum,
+			FirstPulseTime: bc.firstPulseTime,
 		}, nil
 	}
 
@@ -318,8 +314,7 @@ func (bc *Bootstrapper) startBootstrap(address string) (*network.BootstrapResult
 		return bootstrap(data.RedirectHost, bc.options, bc.startBootstrap)
 	}
 	return &network.BootstrapResult{
-		PulseNum:       data.PulseNum,
-		FirstPulseTime: data.FirstPulseTime,
+		FirstPulseTime: time.Unix(data.FirstPulseTimeUnix, 0),
 		Host:           response.GetSenderHost(),
 	}, nil
 }
@@ -327,9 +322,8 @@ func (bc *Bootstrapper) startBootstrap(address string) (*network.BootstrapResult
 func (bc *Bootstrapper) processBootstrap(ctx context.Context, request network.Request) (network.Response, error) {
 	// TODO: redirect logic
 	return bc.transport.BuildResponse(request, &NodeBootstrapResponse{
-		Code:           Accepted,
-		FirstPulseTime: bc.firstPulseTS,
-		PulseNum:       0,
+		Code:               Accepted,
+		FirstPulseTimeUnix: bc.firstPulseTime.Unix(),
 	},
 	), nil
 }
@@ -357,7 +351,7 @@ func (bc *Bootstrapper) processGenesis(ctx context.Context, request network.Requ
 }
 
 func (bc *Bootstrapper) Start(keeper network.NodeKeeper) {
-	bc.firstPulseTS = time.Now().Unix()
+	bc.firstPulseTime = time.Now()
 	bc.keeper = keeper
 	bc.transport.RegisterPacketHandler(types.Bootstrap, bc.processBootstrap)
 	bc.transport.RegisterPacketHandler(types.Genesis, bc.processGenesis)

@@ -19,7 +19,6 @@ package bootstrap
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
@@ -38,7 +37,6 @@ type NetworkBootstrapper struct {
 	authController      *AuthorizationController
 	challengeController *ChallengeResponseController
 	nodeKeeper          network.NodeKeeper
-	firstPulseTS        int64
 }
 
 func (nb *NetworkBootstrapper) Bootstrap(ctx context.Context) (*network.BootstrapResult, error) {
@@ -50,8 +48,7 @@ func (nb *NetworkBootstrapper) Bootstrap(ctx context.Context) (*network.Bootstra
 		log.Info("Zero bootstrap")
 		return &network.BootstrapResult{
 			Host:           host,
-			FirstPulseTime: nb.firstPulseTS,
-			PulseNum:       0,
+			FirstPulseTime: nb.bootstrapper.firstPulseTime,
 		}, nil
 	}
 	if utils.OriginIsDiscovery(nb.certificate) {
@@ -72,7 +69,6 @@ func (nb *NetworkBootstrapper) Start(cryptographyService core.CryptographyServic
 	nb.bootstrapper.Start(nodeKeeper)
 	nb.authController.Start(networkCoordinator, nodeKeeper)
 	nb.challengeController.Start(cryptographyService, nodeKeeper)
-	nb.firstPulseTS = time.Now().Unix()
 
 	// TODO: we also have to call Stop method somewhere
 	err := nb.sessionManager.Start(context.TODO())
