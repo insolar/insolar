@@ -119,7 +119,7 @@ func (ar *Runner) makeCall(ctx context.Context, params Request) (interface{}, er
 
 	var res core.Reply
 
-	utils.MeasureExecutionTime(ctx, "makeCall ar.ContractRequester.SendRequest",
+	utils.MeasureExecutionTime(ctx, "makeCall SendRequest, Method = "+params.Method,
 		func() {
 			res, err = ar.ContractRequester.SendRequest(
 				ctx,
@@ -135,7 +135,7 @@ func (ar *Runner) makeCall(ctx context.Context, params Request) (interface{}, er
 	var result interface{}
 	var contractErr *foundation.Error
 
-	utils.MeasureExecutionTime(ctx, "makeCall extractor.CallResponse",
+	utils.MeasureExecutionTime(ctx, "makeCall CallResponse",
 		func() {
 			result, contractErr, err = extractor.CallResponse(res.(*reply.CallMethod).Result)
 		})
