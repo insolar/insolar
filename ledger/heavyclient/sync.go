@@ -91,6 +91,6 @@ func (c *JetClient) HeavySync(
 	inslog.Debug("synchronize: sucessfully send finish message")
 
 	lastMeetPulse := replicator.LastSeenPulse()
-	inslog.Debug("synchronize: finished (maximum pulse of saved messages is %v)", lastMeetPulse)
+	inslog.Debugf("synchronize: finished (maximum pulse of saved messages is %v)", lastMeetPulse)
 	return nil
 }
