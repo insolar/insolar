@@ -384,11 +384,17 @@ func setup() error {
 }
 
 func teardown() {
-	err := stopInsolard()
-	if err != nil {
-		fmt.Println("[ teardown ]  failed to stop insolard: ", err)
+	var envSetting = os.Getenv("TEST_ENV")
+	var err error
+	fmt.Println("TEST_ENV: ", envSetting)
+	if envSetting != "CI" {
+		err = stopInsolard()
+
+		if err != nil {
+			fmt.Println("[ teardown ]  failed to stop insolard: ", err)
+		}
+		fmt.Println("[ teardown ] insolard was successfully stoped")
 	}
-	fmt.Println("[ teardown ] insolard was successfully stoped")
 
 	stopAllInsgorunds()
 	fmt.Println("[ teardown ] insgorund was successfully stoped")
