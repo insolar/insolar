@@ -38,6 +38,9 @@ func prefixkey(prefix byte, parts ...[]byte) []byte {
 }
 
 func pulseFromKey(key []byte) core.PulseNumber {
-	pBuf := key[1+core.RecordIDSize : 1+core.RecordIDSize+core.PulseNumberSize]
-	return core.NewPulseNumber(pBuf)
+	return core.NewPulseNumber(pulseBytesFromKey(key))
+}
+
+func pulseBytesFromKey(key []byte) []byte {
+	return key[1+core.RecordIDSize : 1+core.RecordIDSize+core.PulseNumberSize]
 }
