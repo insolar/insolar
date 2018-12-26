@@ -76,6 +76,17 @@ var measurementsLock sync.Mutex
 var measurementsWriter *bufio.Writer
 var measurementsEnabled = false
 
+func MeasureWrite(format string, args ...interface{}) {
+	if !measurementsEnabled {
+		return
+	}
+
+	err := writeMeasure(format, args)
+	if err != nil {
+		// do nothing, yet
+	}
+}
+
 // write one measure to the log
 func writeMeasure(format string, args ...interface{}) error {
 	measurementsLock.Lock()

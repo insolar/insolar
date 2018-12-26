@@ -149,27 +149,38 @@ func (cr *ContractRequester) CallMethod(ctx context.Context, base core.Message, 
 
 	inslogger.FromContext(ctx).Debug("Waiting for Method results ref=", r.Request)
 
-	select {
-	case ret := <-ch:
-		inslogger.FromContext(ctx).Debug("GOT Method results")
-		if ret.Error != "" {
-			return nil, errors.New(ret.Error)
-		}
-		retReply, ok := ret.Reply.(*reply.CallMethod)
-		if !ok {
-			return nil, errors.New("Reply is not CallMethod")
+	var result *reply.CallMethod = nil
+	err = nil
 
-		}
-		return &reply.CallMethod{
-			Request: r.Request,
-			Result:  retReply.Result,
-		}, nil
-	case <-ctx.Done():
-		cr.ResultMutex.Lock()
-		delete(cr.ResultMap, seq)
-		cr.ResultMutex.Unlock()
-		return nil, errors.New("canceled")
-	}
+	utils.MeasureExecutionTime(ctx, "ContractRequester.CallMethod select",
+		func() {
+			select {
+			case ret := <-ch:
+				inslogger.FromContext(ctx).Debug("GOT Method results")
+				if ret.Error != "" {
+					err = errors.New(ret.Error)
+					return
+				}
+				retReply, ok := ret.Reply.(*reply.CallMethod)
+				if !ok {
+					err = errors.New("Reply is not CallMethod")
+					return
+
+				}
+				result = &reply.CallMethod{
+					Request: r.Request,
+					Result:  retReply.Result,
+				}
+			case <-ctx.Done():
+				cr.ResultMutex.Lock()
+				delete(cr.ResultMap, seq)
+				cr.ResultMutex.Unlock()
+				err = errors.New("canceled")
+			}
+		})
+
+	utils.MeasureWrite("ContractRequester.CallMethod select returned result = %v, error = %v", result, err)
+	return result, err
 }
 
 func (cr *ContractRequester) CallConstructor(ctx context.Context, base core.Message, async bool,
