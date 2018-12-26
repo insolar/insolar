@@ -36,19 +36,22 @@ type FakePulsar struct {
 	onPulse   network.PulseHandler
 	stop      chan bool
 	timeoutMs int32 // ms
-	pulse     int
 
-	mutex   sync.RWMutex
-	running bool
+	mutex          sync.RWMutex
+	running        bool
+	firstPulseTime int64
+	pulseNum       int64
 }
 
 // NewFakePulsar creates and returns a new FakePulsar.
 func NewFakePulsar(callback network.PulseHandler, timeoutMs int32) *FakePulsar {
 	return &FakePulsar{
-		onPulse:   callback,
-		timeoutMs: timeoutMs,
-		stop:      make(chan bool, 1),
-		running:   false,
+		onPulse:        callback,
+		timeoutMs:      timeoutMs,
+		stop:           make(chan bool, 1),
+		running:        false,
+		firstPulseTime: 0,
+		pulseNum:       0,
 	}
 }
 
@@ -58,16 +61,22 @@ func (fp *FakePulsar) Start(ctx context.Context) {
 	defer fp.mutex.Unlock()
 
 	fp.running = true
+	var waitTime int64
+	fp.pulseNum, waitTime = GetPassedPulseCountAndWaitTime(time.Now().Unix(), fp.firstPulseTime, fp.timeoutMs)
+
+	time.Sleep(time.Duration(waitTime))
 	go func(fp *FakePulsar) {
 		for {
 			select {
 			case <-time.After(time.Millisecond * time.Duration(fp.timeoutMs)):
-				fp.onPulse.HandlePulse(ctx, *fp.newPulse())
+				{
+					fp.pulseNum++
+					fp.onPulse.HandlePulse(ctx, *fp.newPulse())
+				}
 			case <-fp.stop:
 				return
 			}
 		}
-
 	}(fp)
 	log.Info("fake pulsar started")
 }
@@ -95,13 +104,31 @@ func (fp *FakePulsar) Stopped() bool {
 }
 
 func (fp *FakePulsar) newPulse() *core.Pulse {
-	fp.pulse++
-	// TODO: fair entropy
-	// generator := entropygenerator.StandardEntropyGenerator{}
 	return &core.Pulse{
 		EpochPulseNumber: -1,
-		PulseNumber:      core.PulseNumber(fp.pulse),
-		NextPulseNumber:  core.PulseNumber(fp.pulse + 1),
+		PulseNumber:      core.PulseNumber(fp.pulseNum),
+		NextPulseNumber:  core.PulseNumber(fp.pulseNum + 1),
 		Entropy:          core.Entropy{},
 	}
+}
+
+func (fp *FakePulsar) GetFirstPulseTime() int64 {
+	return fp.firstPulseTime
+}
+
+func (fp *FakePulsar) GetPulseNum() int64 {
+	return fp.pulseNum
+}
+
+func (fp *FakePulsar) SetPulseData(time, pulseNum int64) {
+	fp.firstPulseTime = time
+	fp.pulseNum = pulseNum
+}
+
+func GetPassedPulseCountAndWaitTime(currentTime, firstPulseTime int64, pulseTimeout int32) (count, waitTime int64) {
+	pulseTimeSec := int64(pulseTimeout / 1000)
+	delta := int64(time.Unix(currentTime, 0).Sub(time.Unix(firstPulseTime, 0)).Seconds())
+	count = delta / pulseTimeSec
+	waitTime = delta - count*pulseTimeSec
+	return
 }

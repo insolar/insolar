@@ -16,13 +16,8 @@
 
 package configuration
 
-// Service is configuration struct for servicenetwork.Service.
-type Service struct {
-}
-
 // ServiceNetwork is configuration for ServiceNetwork.
 type ServiceNetwork struct {
-	Service Service
 }
 
 // NewServiceNetwork creates a new ServiceNetwork configuration.
