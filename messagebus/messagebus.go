@@ -38,9 +38,6 @@ import (
 
 const deliverRPCMethodName = "MessageBus.Deliver"
 
-const MaxNextPulseMessagePool = 1000
-const MaxNextPulseReplyPool = 1000
-
 // MessageBus is component that routes application logic requests,
 // e.g. glue between network and logic runner
 type MessageBus struct {
@@ -57,23 +54,19 @@ type MessageBus struct {
 	handlers     map[core.MessageType]core.MessageHandler
 	signmessages bool
 
-	globalLock                  sync.RWMutex
-	NextPulseMessagePoolChan    chan interface{}
-	NextPulseMessagePoolCounter uint32
-	NextPulseMessagePoolLock    sync.Mutex
-	NextPulseReplyPoolChan      chan interface{}
-	NextPulseReplyPoolCounter   uint32
-	NextPulseReplyPoolLock      sync.Mutex
+	globalLock           sync.RWMutex
+	NextPulseMessagePool waitingPool
+	NextPulseReplyPool   waitingPool
 }
 
 // NewMessageBus creates plain MessageBus instance. It can be used to create Player and Recorder instances that
 // wrap it, providing additional functionality.
 func NewMessageBus(config configuration.Configuration) (*MessageBus, error) {
 	mb := &MessageBus{
-		handlers:                 map[core.MessageType]core.MessageHandler{},
-		signmessages:             config.Host.SignMessages,
-		NextPulseMessagePoolChan: make(chan interface{}),
-		NextPulseReplyPoolChan:   make(chan interface{}),
+		handlers:             map[core.MessageType]core.MessageHandler{},
+		signmessages:         config.Host.SignMessages,
+		NextPulseMessagePool: newWaitingPool(MaxNextPulseMessagePool),
+		NextPulseReplyPool:   newWaitingPool(MaxNextPulseReplyPool),
 	}
 	mb.Lock(context.Background())
 	return mb, nil
@@ -220,8 +213,8 @@ func (mb *MessageBus) SendParcel(
 
 	if replyData.Type() == reply.TypeWrongPulseNumber &&
 		replyData.(*reply.WrongPulseNumber).CurrentPulse.PulseNumber == currentPulse.NextPulseNumber &&
-		mb.accuireReplyPoolItem() {
-		<-mb.NextPulseReplyPoolChan
+		mb.NextPulseReplyPool.acquire() {
+		<-mb.NextPulseReplyPool.waiting
 
 		current, err := mb.PulseStorage.Current(ctx)
 		if err != nil {
@@ -247,43 +240,9 @@ func (e *serializableError) Error() string {
 }
 
 func (mb *MessageBus) OnPulse(context.Context, core.Pulse) error {
-	tmpMsg := mb.NextPulseMessagePoolChan
-	mb.NextPulseMessagePoolChan = make(chan interface{})
-	mb.NextPulseMessagePoolLock.Lock()
-	mb.NextPulseMessagePoolCounter = 0
-	mb.NextPulseMessagePoolLock.Unlock()
-	close(tmpMsg)
-	tmpReply := mb.NextPulseReplyPoolChan
-	mb.NextPulseReplyPoolChan = make(chan interface{})
-	mb.NextPulseReplyPoolLock.Lock()
-	mb.NextPulseReplyPoolCounter = 0
-	mb.NextPulseReplyPoolLock.Unlock()
-	close(tmpReply)
+	mb.NextPulseMessagePool.clear()
+	mb.NextPulseReplyPool.clear()
 	return nil
-}
-
-func (mb *MessageBus) accuireReplyPoolItem() bool {
-	mb.NextPulseReplyPoolLock.Lock()
-	defer mb.NextPulseReplyPoolLock.Unlock()
-
-	if mb.NextPulseReplyPoolCounter > MaxNextPulseReplyPool {
-		return false
-	}
-
-	mb.NextPulseReplyPoolCounter++
-	return true
-}
-
-func (mb *MessageBus) accuireMessagePoolItem() bool {
-	mb.NextPulseMessagePoolLock.Lock()
-	defer mb.NextPulseMessagePoolLock.Unlock()
-
-	if mb.NextPulseMessagePoolCounter > MaxNextPulseMessagePool {
-		return false
-	}
-
-	mb.NextPulseMessagePoolCounter++
-	return true
 }
 
 func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Reply, error) {
@@ -293,8 +252,8 @@ func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Repl
 		return nil, errors.Wrap(err, "[ MessageBus ] Couldn't get current pulse number")
 	}
 
-	if msg.Pulse() == pulse.NextPulseNumber && mb.accuireMessagePoolItem() {
-		<-mb.NextPulseMessagePoolChan
+	if msg.Pulse() == pulse.NextPulseNumber && mb.NextPulseMessagePool.acquire() {
+		<-mb.NextPulseMessagePool.waiting
 	}
 
 	pulse, err = mb.PulseStorage.Current(ctx)
