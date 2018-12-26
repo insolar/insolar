@@ -66,7 +66,7 @@ func (fp *FakePulsar) Start(ctx context.Context) {
 
 	log.Infof("Fake pulsar started, first pulse %d scheduled for: %s", fp.pulseNum, time.Now().Add(time.Duration(waitTime)))
 	time.Sleep(time.Duration(waitTime))
-	fp.pulse(ctx)
+	go fp.pulse(ctx)
 	go func(fp *FakePulsar) {
 		for {
 			select {
@@ -80,7 +80,9 @@ func (fp *FakePulsar) Start(ctx context.Context) {
 }
 
 func (fp *FakePulsar) pulse(ctx context.Context) {
+	fp.mutex.Lock()
 	fp.pulseNum++
+	fp.mutex.Unlock()
 	fp.onPulse.HandlePulse(ctx, *fp.newPulse())
 }
 
@@ -107,6 +109,9 @@ func (fp *FakePulsar) Stopped() bool {
 }
 
 func (fp *FakePulsar) newPulse() *core.Pulse {
+	fp.mutex.Lock()
+	defer fp.mutex.Unlock()
+
 	return &core.Pulse{
 		EpochPulseNumber: -1,
 		PulseNumber:      core.PulseNumber(fp.pulseNum),
