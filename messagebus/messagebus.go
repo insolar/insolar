@@ -20,9 +20,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/gob"
-	"github.com/insolar/insolar/metrics"
 	"io"
 	"sync"
+
+	"github.com/insolar/insolar/core/utils"
+	"github.com/insolar/insolar/metrics"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
@@ -130,17 +132,31 @@ func (mb *MessageBus) MustRegister(p core.MessageType, handler core.MessageHandl
 
 // Send an `Message` and get a `Value` or error from remote host.
 func (mb *MessageBus) Send(ctx context.Context, msg core.Message, ops *core.MessageSendOptions) (core.Reply, error) {
-	currentPulse, err := mb.PulseStorage.Current(ctx)
+	var currentPulse *core.Pulse
+	var err error
+	utils.MeasureExecutionTime(ctx, "MessageBus.Send PulseStorage.Current",
+		func() {
+			currentPulse, err = mb.PulseStorage.Current(ctx)
+		})
 	if err != nil {
 		return nil, err
 	}
 
-	parcel, err := mb.CreateParcel(ctx, msg, ops.Safe().Token, *currentPulse)
+	var parcel core.Parcel
+	utils.MeasureExecutionTime(ctx, "MessageBus.Send mb.CreateParcel",
+		func() {
+			parcel, err = mb.CreateParcel(ctx, msg, ops.Safe().Token, *currentPulse)
+		})
 	if err != nil {
 		return nil, err
 	}
 
-	return mb.SendParcel(ctx, parcel, *currentPulse, ops)
+	var rep core.Reply
+	utils.MeasureExecutionTime(ctx, "MessageBus.Send mb.SendParcel",
+		func() {
+			rep, err = mb.SendParcel(ctx, parcel, *currentPulse, ops)
+		})
+	return rep, err
 }
 
 // CreateParcel creates signed message from provided message.

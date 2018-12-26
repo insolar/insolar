@@ -22,6 +22,8 @@ import (
 	"encoding/binary"
 	"sync"
 
+	"github.com/insolar/insolar/core/utils"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
@@ -98,6 +100,7 @@ func (cr *ContractRequester) CallMethod(ctx context.Context, base core.Message, 
 	} else {
 		mode = message.ReturnResult
 	}
+
 	msg := &message.CallMethod{
 		BaseLogicMessage: *baseMessage,
 		ReturnMode:       mode,
@@ -124,7 +127,13 @@ func (cr *ContractRequester) CallMethod(ctx context.Context, base core.Message, 
 		cr.ResultMutex.Unlock()
 	}
 
-	res, err := mb.Send(ctx, msg, nil)
+	var res core.Reply
+	var err error
+
+	utils.MeasureExecutionTime(ctx, "ContractRequester.CallMethod mb.Send",
+		func() {
+			res, err = mb.Send(ctx, msg, nil)
+		})
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't dispatch event")
 	}
