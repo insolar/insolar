@@ -25,6 +25,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/core/utils"
+
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/configuration"
@@ -320,6 +322,18 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 	if !ok {
 		return nil, errors.New("Execute( ! message.IBaseLogicMessage )")
 	}
+
+	var rep core.Reply
+	var err error
+	utils.MeasureExecutionTime(ctx, "LogicRunner.Execute, Method = "+msg.Type().String(),
+		func() {
+			rep, err = lr.executeActual(ctx, parcel, msg)
+		})
+	return rep, err
+}
+
+func (lr *LogicRunner) executeActual(ctx context.Context, parcel core.Parcel, msg message.IBaseLogicMessage) (core.Reply, error) {
+
 	ref := msg.GetReference()
 	os := lr.UpsertObjectState(ref)
 
