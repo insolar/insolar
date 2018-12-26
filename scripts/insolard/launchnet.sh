@@ -17,7 +17,7 @@ ROOT_MEMBER_KEYS_FILE=$BASE_DIR/$CONFIGS_DIR/root_member_keys.json
 NODES_DATA=$BASE_DIR/nodes/
 GENESIS_CONFIG=$BASE_DIR/genesis.yaml
 
-insolar_log_level=Debug
+insolar_log_level=Error
 gorund_log_level=$insolar_log_level
 
 NUM_NODES=$(grep "host: " $GENESIS_CONFIG | grep -cv "#" )
