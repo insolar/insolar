@@ -64,21 +64,24 @@ func (fp *FakePulsar) Start(ctx context.Context) {
 	var waitTime int64
 	fp.pulseNum, waitTime = GetPassedPulseCountAndWaitTime(time.Now().Unix(), fp.firstPulseTime, fp.timeoutMs)
 
+	log.Infof("Fake pulsar started, first pulse %d scheduled for: %s", fp.pulseNum, time.Now().Add(time.Duration(waitTime)))
 	time.Sleep(time.Duration(waitTime))
+	fp.pulse(ctx)
 	go func(fp *FakePulsar) {
 		for {
 			select {
 			case <-time.After(time.Millisecond * time.Duration(fp.timeoutMs)):
-				{
-					fp.pulseNum++
-					fp.onPulse.HandlePulse(ctx, *fp.newPulse())
-				}
+				fp.pulse(ctx)
 			case <-fp.stop:
 				return
 			}
 		}
 	}(fp)
-	log.Info("fake pulsar started")
+}
+
+func (fp *FakePulsar) pulse(ctx context.Context) {
+	fp.pulseNum++
+	fp.onPulse.HandlePulse(ctx, *fp.newPulse())
 }
 
 // Stop sending a fake pulse.
