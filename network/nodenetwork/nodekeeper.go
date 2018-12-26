@@ -367,7 +367,7 @@ func (nk *nodekeeper) reindex() {
 		}
 	}
 
-	if !foundOrigin {
+	if nk.shouldExit(foundOrigin) {
 		// we left active node list, can gracefully stop
 
 		// graceful stop instead of panic
@@ -377,6 +377,10 @@ func (nk *nodekeeper) reindex() {
 			panic("Node leave acknowledged by network. Goodbye!")
 		}
 	}
+}
+
+func (nk *nodekeeper) shouldExit(foundOrigin bool) bool {
+	return !foundOrigin && nk.state == network.Ready && len(nk.active) != 0
 }
 
 func (nk *nodekeeper) nodeToSignedClaim() (*consensus.NodeJoinClaim, error) {
