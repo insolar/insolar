@@ -216,8 +216,8 @@ func (currentPulsar *Pulsar) sendPulseSign(ctx context.Context) {
 	reply := <-call.Done
 	if reply.Error != nil {
 		// Here should be retry
-		log.Error(reply.Error)
-		currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, log.Error)
+		currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, reply.Error)
+		return
 	}
 
 	currentPulsar.StateSwitcher.SwitchToState(ctx, WaitingForStart, nil)
