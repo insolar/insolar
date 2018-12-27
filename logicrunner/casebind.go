@@ -69,10 +69,6 @@ func NewCaseBindFromValidateMessage(ctx context.Context, mb core.MessageBus, msg
 	return res
 }
 
-func NewCaseBindFromExecutorResultsMessage(msg *message.ExecutorResults) *CaseBind {
-	panic("not implemented")
-}
-
 func (cb *CaseBind) getCaseBindForMessage(ctx context.Context) []message.CaseBindRequest {
 	if cb == nil {
 		return make([]message.CaseBindRequest, 0)
