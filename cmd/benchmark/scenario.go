@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"io"
 	"sync"
+	"sync/atomic"
+	"time"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
@@ -29,6 +31,7 @@ type scenario interface {
 	canBeStarted() error
 	start()
 	getOperationsNumber() int
+	getAverageOperationDuration() time.Duration
 	getName() string
 	getOut() io.Writer
 }
@@ -39,10 +42,15 @@ type transferDifferentMembersScenario struct {
 	repetitions int
 	members     []memberInfo
 	out         io.Writer
+	totalTime   int64
 }
 
 func (s *transferDifferentMembersScenario) getOperationsNumber() int {
 	return s.concurrent * s.repetitions
+}
+
+func (s *transferDifferentMembersScenario) getAverageOperationDuration() time.Duration {
+	return time.Duration(s.totalTime/int64(s.getOperationsNumber()))
 }
 
 func (s *transferDifferentMembersScenario) getName() string {
@@ -76,7 +84,11 @@ func (s *transferDifferentMembersScenario) startMember(index int, wg *sync.WaitG
 		ctx := inslogger.ContextWithTrace(context.Background(), fmt.Sprintf("transferFromMemberNumber%d", index))
 		from := s.members[index]
 		to := s.members[index+1]
+
+		start := time.Now()
 		response := transfer(ctx, 1, from, to)
+		atomic.AddInt64(&s.totalTime, int64(time.Since(start)))
+
 		if response != "success" {
 			writeToOutput(s.out, fmt.Sprintf("[Member №%d] Transfer from %s to %s. Response: %s.\n", index, from.ref, to.ref, response))
 		}
