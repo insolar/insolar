@@ -91,6 +91,7 @@ jobs:
             echo "---" >> deploy/all.yaml
             echo  >> deploy/all.yaml
             cat deploy/pulsar.yaml >> deploy/all.yaml
+            cat deploy/all.yaml
   - put: deploy
     params:
       namespace: dev-991
