@@ -90,7 +90,7 @@ func (m *LedgerArtifactManager) RegisterRequest(
 	}
 
 	rec := record.RequestRecord{
-		Payload: message.ToBytes(parcel.Message()),
+		Payload: message.ParcelToBytes(parcel),
 		Object:  *obj.Record(),
 	}
 	recID := record.NewRecordIDFromRecord(m.PlatformCryptographyScheme, currentPulse.Pulse.PulseNumber, &rec)

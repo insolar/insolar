@@ -126,7 +126,7 @@ func TestLedgerArtifactManager_RegisterRequest(t *testing.T) {
 	assert.NoError(t, err)
 	rec, err := db.GetRecord(ctx, *jet.NewID(0, nil), id)
 	assert.NoError(t, err)
-	assert.Equal(t, message.ToBytes(parcel.Message()), rec.(*record.RequestRecord).Payload)
+	assert.Equal(t, message.ParcelToBytes(&parcel), rec.(*record.RequestRecord).Payload)
 }
 
 func TestLedgerArtifactManager_GetCodeWithCache(t *testing.T) {

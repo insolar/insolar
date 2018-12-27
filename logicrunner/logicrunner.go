@@ -79,6 +79,7 @@ type CurrentExecution struct {
 	Context       context.Context
 	LogicContext  *core.LogicCallContext
 	Request       *Ref
+	Sequence      uint64
 	RequesterNode *Ref
 	ReturnMode    message.MethodReturnMode
 	SentResult    bool
@@ -197,6 +198,7 @@ type LogicRunner struct {
 	Ledger                     core.Ledger                     `inject:""`
 	NodeNetwork                core.NodeNetwork                `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
+	ParcelFactory              message.ParcelFactory           `inject:""`
 	PulseStorage               core.PulseStorage               `inject:""`
 	ArtifactManager            core.ArtifactManager            `inject:""`
 	JetCoordinator             core.JetCoordinator             `inject:""`
@@ -501,6 +503,9 @@ func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionS
 		if msg, ok := qe.parcel.Message().(*message.CallMethod); ok {
 			es.Current.ReturnMode = msg.ReturnMode
 		}
+		if msg, ok := qe.parcel.Message().(message.IBaseLogicMessage); ok {
+			es.Current.Sequence = msg.GetBaseLogicMessage().Sequence
+		}
 
 		es.Unlock()
 
@@ -597,6 +602,7 @@ func (lr *LogicRunner) executeOrValidate(
 
 	target := *es.Current.RequesterNode
 	request := *es.Current.Request
+	seq := es.Current.Sequence
 
 	go func() {
 		inslogger.FromContext(ctx).Debugf("Sending Method Results for ", request)
@@ -604,11 +610,11 @@ func (lr *LogicRunner) executeOrValidate(
 		_, err = core.MessageBusFromContext(ctx, nil).Send(
 			ctx,
 			&message.ReturnResults{
-				Caller:  lr.NodeNetwork.GetOrigin().ID(),
-				Target:  target,
-				Request: request,
-				Reply:   re,
-				Error:   errstr,
+				Caller:   lr.NodeNetwork.GetOrigin().ID(),
+				Target:   target,
+				Sequence: seq,
+				Reply:    re,
+				Error:    errstr,
 			},
 			&core.MessageSendOptions{
 				Receiver: &target,

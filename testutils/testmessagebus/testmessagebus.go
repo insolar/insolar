@@ -26,14 +26,13 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/davecgh/go-spew/spew"
-
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/delegationtoken"
 	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/messagebus"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
@@ -132,11 +131,9 @@ func (mb *TestMessageBus) Send(ctx context.Context, m core.Message, _ *core.Mess
 		head, tail := mb.ReadingTape[0], mb.ReadingTape[1:]
 		mb.ReadingTape = tail
 
-		//inslogger.FromContext(ctx).Debugf("Reading message %+v off the tape", head.Message)
+		inslogger.FromContext(ctx).Debugf("Reading message %+v off the tape", head.Message)
 
 		if !reflect.DeepEqual(head.Message, m) {
-			spew.Dump(head)
-			spew.Dump(m)
 			return nil, errors.Errorf("Message in the tape and sended arn't equal; got: %+v, expected: %+v", m, head.Message)
 		}
 		return head.Reply, head.Error
