@@ -144,6 +144,8 @@ type NodeKeeper interface {
 	// TODO: remove this interface when bootstrap mechanism completed
 	core.SwitcherWorkAround
 
+	// GetCloudHash returns current cloud hash
+	GetCloudHash() []byte
 	// SetCloudHash set new cloud hash
 	SetCloudHash([]byte)
 	// AddActiveNodes add active nodes.

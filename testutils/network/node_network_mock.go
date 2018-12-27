@@ -34,11 +34,6 @@ type NodeNetworkMock struct {
 	GetActiveNodesByRolePreCounter uint64
 	GetActiveNodesByRoleMock       mNodeNetworkMockGetActiveNodesByRole
 
-	GetCloudHashFunc       func() (r []byte)
-	GetCloudHashCounter    uint64
-	GetCloudHashPreCounter uint64
-	GetCloudHashMock       mNodeNetworkMockGetCloudHash
-
 	GetOriginFunc       func() (r core.Node)
 	GetOriginCounter    uint64
 	GetOriginPreCounter uint64
@@ -56,7 +51,6 @@ func NewNodeNetworkMock(t minimock.Tester) *NodeNetworkMock {
 	m.GetActiveNodeMock = mNodeNetworkMockGetActiveNode{mock: m}
 	m.GetActiveNodesMock = mNodeNetworkMockGetActiveNodes{mock: m}
 	m.GetActiveNodesByRoleMock = mNodeNetworkMockGetActiveNodesByRole{mock: m}
-	m.GetCloudHashMock = mNodeNetworkMockGetCloudHash{mock: m}
 	m.GetOriginMock = mNodeNetworkMockGetOrigin{mock: m}
 
 	return m
@@ -490,140 +484,6 @@ func (m *NodeNetworkMock) GetActiveNodesByRoleFinished() bool {
 	return true
 }
 
-type mNodeNetworkMockGetCloudHash struct {
-	mock              *NodeNetworkMock
-	mainExpectation   *NodeNetworkMockGetCloudHashExpectation
-	expectationSeries []*NodeNetworkMockGetCloudHashExpectation
-}
-
-type NodeNetworkMockGetCloudHashExpectation struct {
-	result *NodeNetworkMockGetCloudHashResult
-}
-
-type NodeNetworkMockGetCloudHashResult struct {
-	r []byte
-}
-
-//Expect specifies that invocation of NodeNetwork.GetCloudHash is expected from 1 to Infinity times
-func (m *mNodeNetworkMockGetCloudHash) Expect() *mNodeNetworkMockGetCloudHash {
-	m.mock.GetCloudHashFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &NodeNetworkMockGetCloudHashExpectation{}
-	}
-
-	return m
-}
-
-//Return specifies results of invocation of NodeNetwork.GetCloudHash
-func (m *mNodeNetworkMockGetCloudHash) Return(r []byte) *NodeNetworkMock {
-	m.mock.GetCloudHashFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &NodeNetworkMockGetCloudHashExpectation{}
-	}
-	m.mainExpectation.result = &NodeNetworkMockGetCloudHashResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of NodeNetwork.GetCloudHash is expected once
-func (m *mNodeNetworkMockGetCloudHash) ExpectOnce() *NodeNetworkMockGetCloudHashExpectation {
-	m.mock.GetCloudHashFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &NodeNetworkMockGetCloudHashExpectation{}
-
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *NodeNetworkMockGetCloudHashExpectation) Return(r []byte) {
-	e.result = &NodeNetworkMockGetCloudHashResult{r}
-}
-
-//Set uses given function f as a mock of NodeNetwork.GetCloudHash method
-func (m *mNodeNetworkMockGetCloudHash) Set(f func() (r []byte)) *NodeNetworkMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.GetCloudHashFunc = f
-	return m.mock
-}
-
-//GetCloudHash implements github.com/insolar/insolar/core.NodeNetwork interface
-func (m *NodeNetworkMock) GetCloudHash() (r []byte) {
-	counter := atomic.AddUint64(&m.GetCloudHashPreCounter, 1)
-	defer atomic.AddUint64(&m.GetCloudHashCounter, 1)
-
-	if len(m.GetCloudHashMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.GetCloudHashMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to NodeNetworkMock.GetCloudHash.")
-			return
-		}
-
-		result := m.GetCloudHashMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the NodeNetworkMock.GetCloudHash")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.GetCloudHashMock.mainExpectation != nil {
-
-		result := m.GetCloudHashMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the NodeNetworkMock.GetCloudHash")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.GetCloudHashFunc == nil {
-		m.t.Fatalf("Unexpected call to NodeNetworkMock.GetCloudHash.")
-		return
-	}
-
-	return m.GetCloudHashFunc()
-}
-
-//GetCloudHashMinimockCounter returns a count of NodeNetworkMock.GetCloudHashFunc invocations
-func (m *NodeNetworkMock) GetCloudHashMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.GetCloudHashCounter)
-}
-
-//GetCloudHashMinimockPreCounter returns the value of NodeNetworkMock.GetCloudHash invocations
-func (m *NodeNetworkMock) GetCloudHashMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.GetCloudHashPreCounter)
-}
-
-//GetCloudHashFinished returns true if mock invocations count is ok
-func (m *NodeNetworkMock) GetCloudHashFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.GetCloudHashMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.GetCloudHashCounter) == uint64(len(m.GetCloudHashMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.GetCloudHashMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.GetCloudHashCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.GetCloudHashFunc != nil {
-		return atomic.LoadUint64(&m.GetCloudHashCounter) > 0
-	}
-
-	return true
-}
-
 type mNodeNetworkMockGetOrigin struct {
 	mock              *NodeNetworkMock
 	mainExpectation   *NodeNetworkMockGetOriginExpectation
@@ -774,10 +634,6 @@ func (m *NodeNetworkMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to NodeNetworkMock.GetActiveNodesByRole")
 	}
 
-	if !m.GetCloudHashFinished() {
-		m.t.Fatal("Expected call to NodeNetworkMock.GetCloudHash")
-	}
-
 	if !m.GetOriginFinished() {
 		m.t.Fatal("Expected call to NodeNetworkMock.GetOrigin")
 	}
@@ -811,10 +667,6 @@ func (m *NodeNetworkMock) MinimockFinish() {
 		m.t.Fatal("Expected call to NodeNetworkMock.GetActiveNodesByRole")
 	}
 
-	if !m.GetCloudHashFinished() {
-		m.t.Fatal("Expected call to NodeNetworkMock.GetCloudHash")
-	}
-
 	if !m.GetOriginFinished() {
 		m.t.Fatal("Expected call to NodeNetworkMock.GetOrigin")
 	}
@@ -836,7 +688,6 @@ func (m *NodeNetworkMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.GetActiveNodeFinished()
 		ok = ok && m.GetActiveNodesFinished()
 		ok = ok && m.GetActiveNodesByRoleFinished()
-		ok = ok && m.GetCloudHashFinished()
 		ok = ok && m.GetOriginFinished()
 
 		if ok {
@@ -856,10 +707,6 @@ func (m *NodeNetworkMock) MinimockWait(timeout time.Duration) {
 
 			if !m.GetActiveNodesByRoleFinished() {
 				m.t.Error("Expected call to NodeNetworkMock.GetActiveNodesByRole")
-			}
-
-			if !m.GetCloudHashFinished() {
-				m.t.Error("Expected call to NodeNetworkMock.GetCloudHash")
 			}
 
 			if !m.GetOriginFinished() {
@@ -887,10 +734,6 @@ func (m *NodeNetworkMock) AllMocksCalled() bool {
 	}
 
 	if !m.GetActiveNodesByRoleFinished() {
-		return false
-	}
-
-	if !m.GetCloudHashFinished() {
 		return false
 	}
 

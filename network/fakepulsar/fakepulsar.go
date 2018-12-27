@@ -121,9 +121,11 @@ func (fp *FakePulsar) Stop(ctx context.Context) {
 
 func (fp *FakePulsar) newPulse() *core.Pulse {
 	return &core.Pulse{
-		EpochPulseNumber: -1,
+		PulseTimestamp:   time.Now().Unix(),
+		PrevPulseNumber:  core.PulseNumber(fp.currentPulseNumber - fp.pulseNumberDelta),
 		PulseNumber:      core.PulseNumber(fp.currentPulseNumber),
 		NextPulseNumber:  core.PulseNumber(fp.currentPulseNumber + fp.pulseNumberDelta),
+		EpochPulseNumber: -1,
 		Entropy:          core.Entropy{},
 	}
 }
