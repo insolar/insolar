@@ -84,7 +84,7 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 	for ref, packet := range packets {
 		err = nil
 		if !ref.Equal(origin) {
-			err = sp.checkPacketSignature(packet, ref)
+			err = sp.checkPacketSignature(packet, ref, state.UnsyncList)
 		}
 		if err != nil {
 			inslogger.FromContext(ctx).Warnf("Failed to check phase2 packet signature from %s: %s", ref, err.Error())
@@ -251,8 +251,8 @@ func (sp *SecondPhase) generatePhase2Bitset(list network.UnsyncList, proofs map[
 	return bitset, nil
 }
 
-func (sp *SecondPhase) checkPacketSignature(packet *packets.Phase2Packet, recordRef core.RecordRef) error {
-	activeNode := sp.NodeKeeper.GetActiveNode(recordRef)
+func (sp *SecondPhase) checkPacketSignature(packet *packets.Phase2Packet, recordRef core.RecordRef, unsyncList network.UnsyncList) error {
+	activeNode := unsyncList.GetActiveNode(recordRef)
 	if activeNode == nil {
 		return errors.New("failed to get active node")
 	}

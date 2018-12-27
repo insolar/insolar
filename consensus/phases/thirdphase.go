@@ -51,7 +51,7 @@ func (tp *ThirdPhase) Execute(ctx context.Context, state *SecondPhaseState) (*Th
 	for ref, packet := range responses {
 		err = nil
 		if !ref.Equal(tp.NodeKeeper.GetOrigin().ID()) {
-			err = tp.checkPacketSignature(packet, ref)
+			err = tp.checkPacketSignature(packet, ref, state.UnsyncList)
 		}
 		if err != nil {
 			inslogger.FromContext(ctx).Warnf("Failed to check phase3 packet signature from %s: %s", ref, err.Error())
@@ -96,8 +96,8 @@ func (tp *ThirdPhase) Execute(ctx context.Context, state *SecondPhaseState) (*Th
 	}, nil
 }
 
-func (tp *ThirdPhase) checkPacketSignature(packet *packets.Phase3Packet, recordRef core.RecordRef) error {
-	activeNode := tp.NodeNetwork.GetActiveNode(recordRef)
+func (tp *ThirdPhase) checkPacketSignature(packet *packets.Phase3Packet, recordRef core.RecordRef, unsyncList network.UnsyncList) error {
+	activeNode := unsyncList.GetActiveNode(recordRef)
 	if activeNode == nil {
 		return errors.New("failed to get active node")
 	}
