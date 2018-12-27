@@ -82,8 +82,8 @@ func (h *MessageHandler) handleHeavyReset(ctx context.Context, genericMsg core.P
 func (h *MessageHandler) handleHeavyJetTree(ctx context.Context, genericMsg core.Parcel) (core.Reply, error) {
 	msg := genericMsg.Message().(*message.HeavyJetTree)
 
-	err := h.HeavyJetSync.SyncTree(ctx, msg.JetTree, msg.PulseNum)
-	if err != nil{
+	err := h.HeavyJetTreeSync.SyncTree(ctx, msg.JetTree, msg.PulseNum)
+	if err != nil {
 		return nil, err
 	}
 

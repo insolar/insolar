@@ -284,7 +284,6 @@ func TestTree_Merge(t *testing.T) {
 		require.Equal(t, newTree.String(), result.String())
 	})
 
-
 	t.Run("Two levels saved is empty", func(t *testing.T) {
 		savedTree := Tree{
 			Head: &jet{
@@ -383,7 +382,7 @@ func TestTree_Merge(t *testing.T) {
 						Actual: false,
 					},
 				},
-				
+
 				Actual: true,
 
 				Right: &jet{

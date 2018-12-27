@@ -45,7 +45,7 @@ type MessageHandler struct {
 	CryptographyService        core.CryptographyService        `inject:""`
 	DelegationTokenFactory     core.DelegationTokenFactory     `inject:""`
 	HeavySync                  core.HeavySync                  `inject:""`
-	HeavyJetSync               heavy.HeavyJetSync        `inject:""`
+	HeavyJetTreeSync           heavy.JetTreeSync               `inject:""`
 
 	db             *storage.DB
 	replayHandlers map[core.MessageType]core.MessageHandler
@@ -85,12 +85,6 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 	h.replayHandlers[core.TypeValidationCheck] = m.checkJet(h.handleValidationCheck)
 	h.replayHandlers[core.TypeHotRecords] = h.handleHotRecords
 
-	// Heavy.
-	h.replayHandlers[core.TypeHeavyStartStop] = h.handleHeavyStartStop
-	h.replayHandlers[core.TypeHeavyReset] = h.handleHeavyReset
-	h.replayHandlers[core.TypeHeavyPayload] = h.handleHeavyPayload
-	h.replayHandlers[core.TypeHeavyJetTree] = h.handleHeavyJetTree
-
 	// Generic.
 	h.Bus.MustRegister(core.TypeGetCode, m.checkJet(m.saveParcel(h.handleGetCode)))
 	h.Bus.MustRegister(core.TypeGetObject, m.checkJet(m.saveParcel(h.handleGetObject)))
@@ -114,6 +108,7 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 	h.Bus.MustRegister(core.TypeHeavyStartStop, h.handleHeavyStartStop)
 	h.Bus.MustRegister(core.TypeHeavyReset, h.handleHeavyReset)
 	h.Bus.MustRegister(core.TypeHeavyPayload, h.handleHeavyPayload)
+	h.Bus.MustRegister(core.TypeHeavyJetTree, h.handleHeavyJetTree)
 
 	return nil
 }
