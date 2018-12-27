@@ -79,13 +79,14 @@ jobs:
           - -exc
           - |
             cp master/.git/short_ref deploy/tag
-            cp adm/manifests/dev/bootstrap-ss.yaml deploy/bootstrap.yaml
+            cp adm/manifests/dev/bootstrap-temporary.yaml deploy/bootstrap.yaml
             ls -alh
             sed -i "s/registry.ins.world\/insolard/registry.ins.world\/insolard:$(cat deploy/tag)/g" deploy/bootstrap.yaml
             cat deploy/bootstrap.yaml
   - put: deploy
     params:
       namespace: dev
+      wait_until_ready: 120
       kubectl: apply -f deploy/bootstrap.yaml
 
 - name: builder
