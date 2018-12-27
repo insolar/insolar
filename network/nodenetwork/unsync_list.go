@@ -242,13 +242,10 @@ func (ul *sparseUnsyncList) AddClaims(claims map[core.RecordRef][]consensus.Refe
 
 	for _, claimList := range claims {
 		for _, claim := range claimList {
-			t := claim.Type()
-			if t != consensus.TypeNodeAnnounceClaim {
-				continue
-			}
 			c, ok := claim.(*consensus.NodeAnnounceClaim)
 			if !ok {
 				log.Error("[ AddClaims ] Could not convert claim with type TypeNodeAnnounceClaim to NodeAnnounceClaim")
+				continue
 			}
 
 			// TODO: fix version

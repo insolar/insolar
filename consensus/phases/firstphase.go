@@ -108,12 +108,16 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 	activeNodes := fp.NodeKeeper.GetActiveNodes()
 	resultPackets, err := fp.Communicator.ExchangePhase1(ctx, originClaim, activeNodes, packet)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ FirstPhase ] Failed to exchange results.")
+		return nil, errors.Wrap(err, "[ FirstPhase ] Failed to exchange results")
 	}
 	if len(resultPackets) < 2 && fp.NodeKeeper.GetState() == network.Waiting {
-		return nil, errors.New("[ FirstPhase ] Failed to receive requests from other nodes")
+		return nil, errors.New("[ FirstPhase ] Failed to receive packets from other nodes")
 	}
-	logger.Infof("[ FirstPhase ] received responses: %d/%d", len(resultPackets), len(activeNodes))
+	if fp.NodeKeeper.GetState() == network.Waiting {
+		logger.Infof("[ FirstPhase ] received packets: %d", len(resultPackets))
+	} else {
+		logger.Infof("[ FirstPhase ] received packets: %d/%d", len(resultPackets), len(activeNodes))
+	}
 
 	proofSet := make(map[core.RecordRef]*merkle.PulseProof)
 	rawProofs := make(map[core.RecordRef]*packets.NodePulseProof)

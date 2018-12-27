@@ -123,6 +123,10 @@ func (nc *NaiveCommunicator) sendRequestToNodesWithOrigin(originClaim *packets.N
 
 	requests := make(map[core.RecordRef]packets.ConsensusPacket)
 	for _, participant := range participants {
+		if participant.ID().Equal(nc.NodeKeeper.GetOrigin().ID()) {
+			continue
+		}
+
 		err := originClaim.Update(participant.ID(), nc.Cryptography)
 		if err != nil {
 			return errors.Wrap(err, "Failed to update claims before sending in phase1")
@@ -131,10 +135,6 @@ func (nc *NaiveCommunicator) sendRequestToNodesWithOrigin(originClaim *packets.N
 	}
 
 	for ref, req := range requests {
-		if ref.Equal(nc.NodeKeeper.GetOrigin().ID()) {
-			continue
-		}
-
 		go func(node core.RecordRef, consensusPacket packets.ConsensusPacket) {
 			err := nc.ConsensusNetwork.SignAndSendPacket(consensusPacket, node, nc.Cryptography)
 			if err != nil {
@@ -223,6 +223,9 @@ func (nc *NaiveCommunicator) ExchangePhase1(
 
 	var request *packets.Phase1Packet
 
+	type none struct{}
+	sentRequests := make(map[core.RecordRef]none)
+
 	// TODO: awful, need rework
 	if originClaim == nil {
 		request = packet
@@ -239,10 +242,13 @@ func (nc *NaiveCommunicator) ExchangePhase1(
 			return nil, errors.Wrap(err, "[ExchangePhase1] Failed to send requests")
 		}
 	}
+	for _, p := range participants {
+		sentRequests[p.ID()] = none{}
+	}
 
 	shouldSendResponse := func(ref core.RecordRef) bool {
-		val, ok := result[ref]
-		return !ok || val == nil
+		_, ok := sentRequests[ref]
+		return !ok
 	}
 	response := request
 
@@ -277,6 +283,7 @@ func (nc *NaiveCommunicator) ExchangePhase1(
 				}
 			}
 			if !res.id.IsEmpty() {
+				sentRequests[res.id] = none{}
 				result[res.id] = res.packet
 			}
 
@@ -300,11 +307,12 @@ func (nc *NaiveCommunicator) ExchangePhase2(ctx context.Context, list network.Un
 
 	nc.sendRequestToNodes(participants, packet)
 
+	type none struct{}
+	sentRequests := make(map[core.RecordRef]none)
+
 	shouldSendResponse := func(p *phase2Result) bool {
-		val, ok := result[p.id]
-		firstResultReceive := !ok || val == nil
-		packetContainsVoteRequests := p.packet.ContainsRequests()
-		return firstResultReceive || packetContainsVoteRequests
+		_, ok := sentRequests[p.id]
+		return !ok || p.packet.ContainsRequests()
 	}
 
 	var err error
@@ -333,6 +341,7 @@ func (nc *NaiveCommunicator) ExchangePhase2(ctx context.Context, list network.Un
 				}
 			}
 			result[res.id] = res.packet
+			sentRequests[res.id] = none{}
 
 			// FIXME: early return is commented to have synchronized length of phases on all nodes
 			// if len(result) == len(participants) {
@@ -452,9 +461,12 @@ func (nc *NaiveCommunicator) ExchangePhase3(ctx context.Context, participants []
 
 	nc.sendRequestToNodes(participants, packet)
 
+	type none struct{}
+	sentRequests := make(map[core.RecordRef]none)
+
 	shouldSendResponse := func(p *phase3Result) bool {
-		val, ok := result[p.id]
-		return !ok || val == nil
+		_, ok := sentRequests[p.id]
+		return !ok
 	}
 
 	for {
@@ -468,6 +480,7 @@ func (nc *NaiveCommunicator) ExchangePhase3(ctx context.Context, participants []
 				}
 			}
 			result[res.id] = res.packet
+			sentRequests[res.id] = none{}
 
 			// FIXME: early return is commented to have synchronized length of phases on all nodes
 			// if len(result) == len(participants) {

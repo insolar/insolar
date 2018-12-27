@@ -107,7 +107,7 @@ func (p1p *Phase1Packet) GetPulseNumber() core.PulseNumber {
 }
 
 func (p1p *Phase1Packet) GetPulse() core.Pulse {
-	//TODO: need convert method with pulse signature check
+	// TODO: need convert method with pulse signature check
 	return core.Pulse{
 		PulseNumber: core.PulseNumber(p1p.packetHeader.Pulse),
 		Entropy:     p1p.pulseData.Entropy,
@@ -152,8 +152,12 @@ func (p1p *Phase1Packet) AddClaim(claim ReferendumClaim) bool {
 	}
 
 	p1p.claims = append(p1p.claims, claim)
-	p1p.packetHeader.f01 = true
+	p1p.updateHeader()
 	return true
+}
+
+func (p1p *Phase1Packet) updateHeader() {
+	p1p.packetHeader.f01 = len(p1p.claims) > 0
 }
 
 // TODO: I AM AWFUL WORKAROUND, NEED TO REWORK
@@ -163,6 +167,7 @@ func (p1p *Phase1Packet) RemoveAnnounceClaim() {
 			p1p.claims = append(p1p.claims[:i], p1p.claims[i+1:]...)
 		}
 	}
+	p1p.updateHeader()
 }
 
 func (p1p *Phase1Packet) GetAnnounceClaim() *NodeAnnounceClaim {
