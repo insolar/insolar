@@ -56,8 +56,6 @@ type NodeNetwork interface {
 	GetActiveNodes() []Node
 	// GetActiveNodesByRole get active nodes by role
 	GetActiveNodesByRole(role DynamicRole) []RecordRef
-	// GetCloudHash returns current cloud hash
-	GetCloudHash() []byte
 }
 
 // TODO: remove this interface when bootstrap mechanism completed
