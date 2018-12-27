@@ -57,7 +57,7 @@ func sendRequest(ctx context.Context, method string, params []interface{}, membe
 	return body
 }
 
-func transfer(amount int, from memberInfo, to memberInfo) string {
+func transfer(amount uint, from memberInfo, to memberInfo) string {
 	params := []interface{}{amount, to.ref}
 	ctx := inslogger.ContextWithTrace(context.Background(), utils.RandTraceID())
 	body := sendRequest(ctx, "Transfer", params, from)
