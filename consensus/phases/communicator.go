@@ -109,12 +109,12 @@ func (nc *NaiveCommunicator) sendRequestToNodes(participants []core.Node, packet
 			continue
 		}
 
-		go func(n core.Node) {
-			err := nc.ConsensusNetwork.SignAndSendPacket(packet.Clone(), n.ID(), nc.Cryptography)
+		go func(n core.Node, packet packets.ConsensusPacket) {
+			err := nc.ConsensusNetwork.SignAndSendPacket(packet, n.ID(), nc.Cryptography)
 			if err != nil {
 				log.Errorln(err.Error())
 			}
-		}(node)
+		}(node, packet.Clone())
 	}
 }
 
