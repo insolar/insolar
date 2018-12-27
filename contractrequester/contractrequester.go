@@ -149,7 +149,7 @@ func (cr *ContractRequester) CallMethod(ctx context.Context, base core.Message, 
 
 	inslogger.FromContext(ctx).Debug("Waiting for Method results ref=", r.Request)
 
-	var result *reply.CallMethod = nil
+	var result *reply.CallMethod
 	err = nil
 
 	utils.MeasureExecutionTime(ctx, "ContractRequester.CallMethod select",
