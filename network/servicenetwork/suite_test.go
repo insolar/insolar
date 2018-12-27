@@ -19,6 +19,7 @@ package servicenetwork
 import (
 	"context"
 	"crypto"
+	"math/rand"
 	"strconv"
 	"strings"
 	"time"
@@ -78,8 +79,8 @@ func (s *testSuite) SetupTest() {
 	s.SetupNodesNetwork(s.bootstrapNodes)
 
 	<-time.After(time.Second * 3)
-	//s.waitForConsensus(1)
-	//TODO: wait for first consensus
+	// s.waitForConsensus(1)
+	// TODO: wait for first consensus
 	// active nodes count verification
 	activeNodes := s.bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
 	require.Equal(s.T(), s.nodesCount(), len(activeNodes))
@@ -196,6 +197,7 @@ func (s *testSuite) StopTestNode() {
 
 type networkNode struct {
 	id                  core.RecordRef
+	role                core.StaticRole
 	privateKey          crypto.PrivateKey
 	cryptographyService core.CryptographyService
 	host                string
@@ -216,6 +218,7 @@ func newNetworkNode() *networkNode {
 
 	return &networkNode{
 		id:                  testutils.RandomRef(),
+		role:                RandomRole(),
 		privateKey:          key,
 		cryptographyService: cryptography.NewKeyBoundCryptographyService(key),
 		host:                address,
@@ -231,7 +234,7 @@ func (n *networkNode) init(ctx context.Context) error {
 	return err
 }
 
-func (s *testSuite) initCrypto(node *networkNode, ref core.RecordRef) (*certificate.CertificateManager, core.CryptographyService) {
+func (s *testSuite) initCrypto(node *networkNode) (*certificate.CertificateManager, core.CryptographyService) {
 	pubKey, err := node.cryptographyService.GetPublicKey()
 	s.NoError(err)
 
@@ -243,8 +246,8 @@ func (s *testSuite) initCrypto(node *networkNode, ref core.RecordRef) (*certific
 
 	cert := &certificate.Certificate{}
 	cert.PublicKey = string(publicKey[:])
-	cert.Reference = ref.String()
-	cert.Role = "virtual"
+	cert.Reference = node.id.String()
+	cert.Role = node.role.String()
 	cert.BootstrapNodes = make([]certificate.BootstrapNode, 0)
 
 	for _, b := range s.bootstrapNodes {
@@ -269,6 +272,11 @@ func (s *testSuite) initCrypto(node *networkNode, ref core.RecordRef) (*certific
 	cert, err = certificate.ReadCertificateFromReader(pubKey, proc, strings.NewReader(jsonCert))
 	s.NoError(err)
 	return certificate.NewCertificateManager(cert), node.cryptographyService
+}
+
+func RandomRole() core.StaticRole {
+	i := rand.Int()%3 + 1
+	return core.StaticRole(i)
 }
 
 // preInitNode inits previously created node with mocks and external dependencies
@@ -307,8 +315,8 @@ func (s *testSuite) preInitNode(node *networkNode, timeOut PhaseTimeOut) {
 
 	pubKey, _ := node.cryptographyService.GetPublicKey()
 
-	origin := nodenetwork.NewNode(node.id, core.StaticRoleVirtual, pubKey, node.host, "")
-	certManager, cryptographyService := s.initCrypto(node, origin.ID())
+	origin := nodenetwork.NewNode(node.id, node.role, pubKey, node.host, "")
+	certManager, cryptographyService := s.initCrypto(node)
 	netSwitcher := testutils.NewNetworkSwitcherMock(s.T())
 	netSwitcher.GetStateMock.Set(func() (r core.NetworkState) {
 		return core.VoidNetworkState
