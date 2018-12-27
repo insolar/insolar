@@ -41,7 +41,7 @@ resources:
 - name: nexus
   type: maven-resource
   source:
-    url: https://nexus.ins.world/repository/maven-releases/
+    url: https://nexus.ins.world/repository/insolar/
     artifact: io.insolar:insolar-sdk-java:jar
     username: ((meta.nexus.username))
     password: ((meta.nexus.password))
@@ -49,7 +49,8 @@ resources:
 - name: nexus-loader
   type: maven-resource
   source:
-    url: https://nexus.ins.world/repository/maven-releases/
+    url: https://nexus.ins.world/repository/insolar/
+    snapshot_url: https://nexus.ins.world/repository/insolar/
     artifact: io.insolar:db-loader:jar
     username: ((meta.nexus.username))
     password: ((meta.nexus.password))
@@ -57,7 +58,8 @@ resources:
 - name: nexus-unloader
   type: maven-resource
   source:
-    url: https://nexus.ins.world/repository/maven-releases/
+    url: https://nexus.ins.world/repository/insolar/
+    snapshot_url: https://nexus.ins.world/repository/insolar/
     artifact: io.insolar:db-unloader:jar
     username: ((meta.nexus.username))
     password: ((meta.nexus.password))
@@ -135,6 +137,52 @@ jobs:
           - -exc
           - |
             cd git-insolar-sdk-java
+            mkdir /root/.m2
+            cat << EOF > /root/.m2/settings.xml
+             <settings>
+             <servers>
+                   <server>
+                       <id>io.insolar</id>
+                       <username>((meta.nexus.username))</username>
+                       <password>((meta.nexus.password))</password>
+                   </server>
+             </servers>
+             <profiles>
+             <profile>
+               <id>io.insolar</id>
+               <repositories>
+                 <repository>
+                   <id>io.insolar</id>
+                   <name>insolar</name>
+                   <url>https://nexus.ins.world/repository/insolar</url>
+                   <releases>
+                     <enabled>true</enabled>
+                   </releases>
+                   <snapshots>
+                     <enabled>true</enabled>
+                   </snapshots>
+                 </repository>
+               </repositories>
+               <pluginRepositories>
+                 <pluginRepository>
+                   <id>io.insolar</id>
+                   <name>insolar</name>
+                   <url>https://nexus.ins.world/repository/insolar</url>
+                   <releases>
+                     <enabled>true</enabled>
+                   </releases>
+                   <snapshots>
+                     <enabled>true</enabled>
+                   </snapshots>
+                 </pluginRepository>
+               </pluginRepositories>
+             </profile>
+            </profiles>
+            <activeProfiles>
+             <activeProfile>io.insolar</activeProfile>
+            </activeProfiles>
+            </settings>
+            EOF
             #MAVEN_OPTS=-Djdk.net.URLClassPath.disableClassPathURLCheck=true
             mvn -X install #-DskipTests
             ls -alh
@@ -168,6 +216,53 @@ jobs:
           - -exc
           - |
             cd git-db-unloader
+            mkdir /root/.m2
+            cat << EOF > /root/.m2/settings.xml
+             <settings>
+             <servers>
+                   <server>
+                       <id>io.insolar</id>
+                       <username>((meta.nexus.username))</username>
+                       <password>((meta.nexus.password))</password>
+                   </server>
+             </servers>
+             <profiles>
+             <profile>
+               <id>io.insolar</id>
+               <repositories>
+                 <repository>
+                   <id>io.insolar</id>
+                   <name>insolar</name>
+                   <url>https://nexus.ins.world/repository/insolar</url>
+                   <releases>
+                     <enabled>true</enabled>
+                   </releases>
+                   <snapshots>
+                     <enabled>true</enabled>
+                   </snapshots>
+                 </repository>
+               </repositories>
+               <pluginRepositories>
+                 <pluginRepository>
+                   <id>io.insolar</id>
+                   <name>insolar</name>
+                   <url>https://nexus.ins.world/repository/insolar</url>
+                   <releases>
+                     <enabled>true</enabled>
+                   </releases>
+                   <snapshots>
+                     <enabled>true</enabled>
+                   </snapshots>
+                 </pluginRepository>
+               </pluginRepositories>
+             </profile>
+            </profiles>
+            <activeProfiles>
+             <activeProfile>io.insolar</activeProfile>
+            </activeProfiles>
+            </settings>
+            EOF
+            sed -i 's/<version>0.0.2<\/version>/<version>0.0.2-SNAPSHOT<\/version>/' pom.xml
             mvn clean package
             ls -alh
             cp target/*.jar ../artifacts/
@@ -219,7 +314,7 @@ jobs:
                  <repository>
                    <id>io.insolar</id>
                    <name>insolar</name>
-                   <url>https://nexus.ins.world/repository/maven-releases</url>
+                   <url>https://nexus.ins.world/repository/insolar</url>
                    <releases>
                      <enabled>true</enabled>
                    </releases>
@@ -232,7 +327,7 @@ jobs:
                  <pluginRepository>
                    <id>io.insolar</id>
                    <name>insolar</name>
-                   <url>https://nexus.ins.world/repository/maven-releases</url>
+                   <url>https://nexus.ins.world/repository/insolar</url>
                    <releases>
                      <enabled>true</enabled>
                    </releases>
@@ -248,6 +343,7 @@ jobs:
             </activeProfiles>
             </settings>
             EOF
+            sed -i 's/<version>0.0.2<\/version>/<version>0.0.2-SNAPSHOT<\/version>/' pom.xml
             mvn clean package
             ls -alh
             cp target/*.jar ../artifacts/
@@ -376,6 +472,7 @@ jobs:
             - -exc
             - |
                cp git-explorer/.git/short_ref artifacts/docker-tag
+               cp git-explorer/nginx.conf artifacts/nginx.conf
                echo change image tag
                cp adm/manifests/block-explorer/explorer.yaml artifacts/explorer.yaml
                sed -i "s/registry.ins.world\/explorer/registry.ins.world\/explorer:$(cat artifacts/docker-tag)/g" artifacts/explorer.yaml
@@ -392,6 +489,7 @@ jobs:
 
                FROM nginx:alpine as site
                COPY --from=builder /site/build /usr/share/nginx/html
+               COPY nginx.conf /usr/share/nginx/html/nginx.conf
                EOF
                cat git-explorer/Dockerfile
                rm -Rf git-explorer/site/*
