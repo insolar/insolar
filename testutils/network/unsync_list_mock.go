@@ -60,6 +60,11 @@ type UnsyncListMock struct {
 	GetClaimsPreCounter uint64
 	GetClaimsMock       mUnsyncListMockGetClaims
 
+	GetMergedNodeMapFunc       func() (r map[core.RecordRef]core.Node, r1 bool, r2 error)
+	GetMergedNodeMapCounter    uint64
+	GetMergedNodeMapPreCounter uint64
+	GetMergedNodeMapMock       mUnsyncListMockGetMergedNodeMap
+
 	GetProofFunc       func(p core.RecordRef) (r *packets.NodePulseProof)
 	GetProofCounter    uint64
 	GetProofPreCounter uint64
@@ -102,6 +107,7 @@ func NewUnsyncListMock(t minimock.Tester) *UnsyncListMock {
 	m.GetActiveNodeMock = mUnsyncListMockGetActiveNode{mock: m}
 	m.GetActiveNodesMock = mUnsyncListMockGetActiveNodes{mock: m}
 	m.GetClaimsMock = mUnsyncListMockGetClaims{mock: m}
+	m.GetMergedNodeMapMock = mUnsyncListMockGetMergedNodeMap{mock: m}
 	m.GetProofMock = mUnsyncListMockGetProof{mock: m}
 	m.GlobuleHashSignaturesMock = mUnsyncListMockGlobuleHashSignatures{mock: m}
 	m.IndexToRefMock = mUnsyncListMockIndexToRef{mock: m}
@@ -1207,6 +1213,146 @@ func (m *UnsyncListMock) GetClaimsFinished() bool {
 	return true
 }
 
+type mUnsyncListMockGetMergedNodeMap struct {
+	mock              *UnsyncListMock
+	mainExpectation   *UnsyncListMockGetMergedNodeMapExpectation
+	expectationSeries []*UnsyncListMockGetMergedNodeMapExpectation
+}
+
+type UnsyncListMockGetMergedNodeMapExpectation struct {
+	result *UnsyncListMockGetMergedNodeMapResult
+}
+
+type UnsyncListMockGetMergedNodeMapResult struct {
+	r  map[core.RecordRef]core.Node
+	r1 bool
+	r2 error
+}
+
+//Expect specifies that invocation of UnsyncList.GetMergedNodeMap is expected from 1 to Infinity times
+func (m *mUnsyncListMockGetMergedNodeMap) Expect() *mUnsyncListMockGetMergedNodeMap {
+	m.mock.GetMergedNodeMapFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &UnsyncListMockGetMergedNodeMapExpectation{}
+	}
+
+	return m
+}
+
+//Return specifies results of invocation of UnsyncList.GetMergedNodeMap
+func (m *mUnsyncListMockGetMergedNodeMap) Return(r map[core.RecordRef]core.Node, r1 bool, r2 error) *UnsyncListMock {
+	m.mock.GetMergedNodeMapFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &UnsyncListMockGetMergedNodeMapExpectation{}
+	}
+	m.mainExpectation.result = &UnsyncListMockGetMergedNodeMapResult{r, r1, r2}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of UnsyncList.GetMergedNodeMap is expected once
+func (m *mUnsyncListMockGetMergedNodeMap) ExpectOnce() *UnsyncListMockGetMergedNodeMapExpectation {
+	m.mock.GetMergedNodeMapFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &UnsyncListMockGetMergedNodeMapExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *UnsyncListMockGetMergedNodeMapExpectation) Return(r map[core.RecordRef]core.Node, r1 bool, r2 error) {
+	e.result = &UnsyncListMockGetMergedNodeMapResult{r, r1, r2}
+}
+
+//Set uses given function f as a mock of UnsyncList.GetMergedNodeMap method
+func (m *mUnsyncListMockGetMergedNodeMap) Set(f func() (r map[core.RecordRef]core.Node, r1 bool, r2 error)) *UnsyncListMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.GetMergedNodeMapFunc = f
+	return m.mock
+}
+
+//GetMergedNodeMap implements github.com/insolar/insolar/network.UnsyncList interface
+func (m *UnsyncListMock) GetMergedNodeMap() (r map[core.RecordRef]core.Node, r1 bool, r2 error) {
+	counter := atomic.AddUint64(&m.GetMergedNodeMapPreCounter, 1)
+	defer atomic.AddUint64(&m.GetMergedNodeMapCounter, 1)
+
+	if len(m.GetMergedNodeMapMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.GetMergedNodeMapMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to UnsyncListMock.GetMergedNodeMap.")
+			return
+		}
+
+		result := m.GetMergedNodeMapMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the UnsyncListMock.GetMergedNodeMap")
+			return
+		}
+
+		r = result.r
+		r1 = result.r1
+		r2 = result.r2
+
+		return
+	}
+
+	if m.GetMergedNodeMapMock.mainExpectation != nil {
+
+		result := m.GetMergedNodeMapMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the UnsyncListMock.GetMergedNodeMap")
+		}
+
+		r = result.r
+		r1 = result.r1
+		r2 = result.r2
+
+		return
+	}
+
+	if m.GetMergedNodeMapFunc == nil {
+		m.t.Fatalf("Unexpected call to UnsyncListMock.GetMergedNodeMap.")
+		return
+	}
+
+	return m.GetMergedNodeMapFunc()
+}
+
+//GetMergedNodeMapMinimockCounter returns a count of UnsyncListMock.GetMergedNodeMapFunc invocations
+func (m *UnsyncListMock) GetMergedNodeMapMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.GetMergedNodeMapCounter)
+}
+
+//GetMergedNodeMapMinimockPreCounter returns the value of UnsyncListMock.GetMergedNodeMap invocations
+func (m *UnsyncListMock) GetMergedNodeMapMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.GetMergedNodeMapPreCounter)
+}
+
+//GetMergedNodeMapFinished returns true if mock invocations count is ok
+func (m *UnsyncListMock) GetMergedNodeMapFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.GetMergedNodeMapMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.GetMergedNodeMapCounter) == uint64(len(m.GetMergedNodeMapMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.GetMergedNodeMapMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.GetMergedNodeMapCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.GetMergedNodeMapFunc != nil {
+		return atomic.LoadUint64(&m.GetMergedNodeMapCounter) > 0
+	}
+
+	return true
+}
+
 type mUnsyncListMockGetProof struct {
 	mock              *UnsyncListMock
 	mainExpectation   *UnsyncListMockGetProofExpectation
@@ -1958,6 +2104,10 @@ func (m *UnsyncListMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to UnsyncListMock.GetClaims")
 	}
 
+	if !m.GetMergedNodeMapFinished() {
+		m.t.Fatal("Expected call to UnsyncListMock.GetMergedNodeMap")
+	}
+
 	if !m.GetProofFinished() {
 		m.t.Fatal("Expected call to UnsyncListMock.GetProof")
 	}
@@ -2027,6 +2177,10 @@ func (m *UnsyncListMock) MinimockFinish() {
 		m.t.Fatal("Expected call to UnsyncListMock.GetClaims")
 	}
 
+	if !m.GetMergedNodeMapFinished() {
+		m.t.Fatal("Expected call to UnsyncListMock.GetMergedNodeMap")
+	}
+
 	if !m.GetProofFinished() {
 		m.t.Fatal("Expected call to UnsyncListMock.GetProof")
 	}
@@ -2069,6 +2223,7 @@ func (m *UnsyncListMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.GetActiveNodeFinished()
 		ok = ok && m.GetActiveNodesFinished()
 		ok = ok && m.GetClaimsFinished()
+		ok = ok && m.GetMergedNodeMapFinished()
 		ok = ok && m.GetProofFinished()
 		ok = ok && m.GlobuleHashSignaturesFinished()
 		ok = ok && m.IndexToRefFinished()
@@ -2112,6 +2267,10 @@ func (m *UnsyncListMock) MinimockWait(timeout time.Duration) {
 
 			if !m.GetClaimsFinished() {
 				m.t.Error("Expected call to UnsyncListMock.GetClaims")
+			}
+
+			if !m.GetMergedNodeMapFinished() {
+				m.t.Error("Expected call to UnsyncListMock.GetMergedNodeMap")
 			}
 
 			if !m.GetProofFinished() {
@@ -2175,6 +2334,10 @@ func (m *UnsyncListMock) AllMocksCalled() bool {
 	}
 
 	if !m.GetClaimsFinished() {
+		return false
+	}
+
+	if !m.GetMergedNodeMapFinished() {
 		return false
 	}
 

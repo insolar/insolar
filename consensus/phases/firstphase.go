@@ -143,7 +143,7 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 	}
 
 	if fp.NodeKeeper.GetState() == network.Waiting {
-		length, err := detectSparseBitsetLength(claimMap)
+		length, err := detectSparseBitsetLength(claimMap, fp.NodeKeeper)
 		if err != nil {
 			return nil, errors.Wrapf(err, "[ FirstPhase ] Failed to detect bitset length")
 		}
@@ -199,7 +199,7 @@ func (fp *FirstPhase) checkPacketSignatureFromClaim(packet *packets.Phase1Packet
 	return packet.Verify(fp.Cryptography, pk)
 }
 
-func detectSparseBitsetLength(claims map[core.RecordRef][]packets.ReferendumClaim) (int, error) {
+func detectSparseBitsetLength(claims map[core.RecordRef][]packets.ReferendumClaim, nk network.NodeKeeper) (int, error) {
 	// TODO: NETD18-47
 	for _, claimList := range claims {
 		for _, claim := range claimList {
@@ -208,6 +208,8 @@ func detectSparseBitsetLength(claims map[core.RecordRef][]packets.ReferendumClai
 				if !ok {
 					continue
 				}
+
+				nk.SetCloudHash(announceClaim.CloudHash[:])
 				return int(announceClaim.NodeCount), nil
 			}
 		}

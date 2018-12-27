@@ -352,9 +352,7 @@ func (nk *nodekeeper) MoveSyncToActive() error {
 	nk.tempMapS = make(map[core.ShortNodeID]*host.Host)
 	nk.tempLock.Unlock()
 
-	sync := nk.sync.(*unsyncList)
-
-	newActiveList, nodesJoinedDuringPrevPulse, err := sync.getMergedNodeMap()
+	newActiveList, nodesJoinedDuringPrevPulse, err := nk.sync.GetMergedNodeMap()
 	if err != nil {
 		return errors.Wrap(err, "[ MoveSyncToActive ] Failed to calculate new active list")
 	}
@@ -413,6 +411,7 @@ func (nk *nodekeeper) nodeToAnnounceClaim(mapper consensus.BitSetMapper) (*conse
 	}
 	claim.NodeAnnouncerIndex = uint16(announcerIndex)
 	claim.BitSetMapper = mapper
+	claim.SetCloudHash(nk.GetCloudHash())
 	return &claim, nil
 }
 

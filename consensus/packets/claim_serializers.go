@@ -265,6 +265,10 @@ func (nac *NodeAnnounceClaim) SerializeRaw() ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NodeAnnounceClaim.Serialize ] Can't write NodeCount")
 	}
+	err = binary.Write(result, defaultByteOrder, nac.CloudHash)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ NodeAnnounceClaim.Serialize ] Can't write CloudHash")
+	}
 	return result.Bytes(), nil
 }
 
@@ -307,6 +311,10 @@ func (nac *NodeAnnounceClaim) Deserialize(data io.Reader) error {
 	err = binary.Read(data, defaultByteOrder, &nac.NodeCount)
 	if err != nil {
 		return errors.Wrap(err, "[ NodeAnnounceClaim.Deserialize ] Can't read NodeCount")
+	}
+	err = binary.Read(data, defaultByteOrder, &nac.CloudHash)
+	if err != nil {
+		return errors.Wrap(err, "[ NodeAnnounceClaim.Deserialize ] Can't read CloudHash")
 	}
 	err = binary.Read(data, defaultByteOrder, &nac.Signature)
 	if err != nil {

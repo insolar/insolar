@@ -131,7 +131,7 @@ func (ul *unsyncList) CalculateHash(scheme core.PlatformCryptographyScheme) ([]b
 	if ul.cache != nil {
 		return ul.cache, nil
 	}
-	m, _, err := ul.getMergedNodeMap()
+	m, _, err := ul.GetMergedNodeMap()
 	if err != nil {
 		return nil, errors.Wrap(err, "[ CalculateHash ] failed to merge a node map")
 	}
@@ -148,7 +148,7 @@ func (ul *unsyncList) GetActiveNodes() []core.Node {
 	return sortedNodeList(ul.activeNodes)
 }
 
-func (ul *unsyncList) getMergedNodeMap() (map[core.RecordRef]core.Node, bool, error) {
+func (ul *unsyncList) GetMergedNodeMap() (map[core.RecordRef]core.Node, bool, error) {
 	nodes := copyMap(ul.activeNodes)
 
 	nodesJoinedDuringPrevPulse := false
@@ -156,7 +156,7 @@ func (ul *unsyncList) getMergedNodeMap() (map[core.RecordRef]core.Node, bool, er
 		for _, claim := range claimList {
 			isJoinClaim, err := ul.mergeClaim(nodes, claim)
 			if err != nil {
-				return nil, false, errors.Wrap(err, "[ getMergedNodeMap ] failed to merge a claim")
+				return nil, false, errors.Wrap(err, "[ GetMergedNodeMap ] failed to merge a claim")
 			}
 			if isJoinClaim {
 				nodesJoinedDuringPrevPulse = true

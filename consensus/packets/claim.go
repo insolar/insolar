@@ -155,6 +155,7 @@ type NodeAnnounceClaim struct {
 	NodeAnnouncerIndex uint16
 	NodeJoinerIndex    uint16
 	NodeCount          uint16
+	CloudHash          [HashLength]byte
 
 	// mapper is used to fill three fields above, is not serialized
 	BitSetMapper BitSetMapper
@@ -162,6 +163,10 @@ type NodeAnnounceClaim struct {
 
 func (nac *NodeAnnounceClaim) Type() ClaimType {
 	return TypeNodeAnnounceClaim
+}
+
+func (nac *NodeAnnounceClaim) SetCloudHash(cloudHash []byte) {
+	copy(nac.CloudHash[:], cloudHash[:HashLength])
 }
 
 // NodeLeaveClaim can be the only be issued by the node itself and must be the only claim record.
