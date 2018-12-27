@@ -33,15 +33,56 @@ import (
 
 var testType = core.MessageType(123)
 
-var testReply = &reply.OK{}
-
-func testHandler(ctx context.Context, msg core.Parcel) (core.Reply, error) {
-	return testReply, nil
+var replyOk = &reply.OK{}
+var replyWrong = &reply.WrongPulseNumber{
+	CurrentPulse: &core.Pulse{
+		PrevPulseNumber: core.PulseNumber(100),
+		PulseNumber:     core.PulseNumber(101),
+		NextPulseNumber: core.PulseNumber(102),
+	},
+}
+var ref = testutils.RandomRef()
+var opts = &core.MessageSendOptions{
+	Receiver: &ref,
 }
 
-func prepare(t *testing.T, ctx context.Context, currentPulse int, msgPulse int) (*MessageBus, *testutils.PulseStorageMock, core.Parcel) {
+type tester struct {
+	t            *testing.T
+	ctx          context.Context
+	mb           core.MessageBus
+	currentPulse core.Pulse
+	messagePulse core.PulseNumber
+	reply        core.Reply
+}
+
+func (t *tester) updatePulse(pulse uint32) {
+	t.currentPulse = core.Pulse{
+		PrevPulseNumber: t.currentPulse.PulseNumber,
+		PulseNumber:     core.PulseNumber(pulse),
+		NextPulseNumber: core.PulseNumber(pulse + 1),
+	}
+	t.mb.OnPulse(t.ctx, t.currentPulse)
+}
+
+func (t *tester) setReply(rep core.Reply) {
+	t.reply = rep
+}
+
+func prepare(t *testing.T, ctx context.Context, currentPulse uint32, messagePulse uint32) (*MessageBus, *tester, core.Parcel) {
 	mb, err := NewMessageBus(configuration.Configuration{})
 	require.NoError(t, err)
+	zz := &tester{
+		t:   t,
+		ctx: ctx,
+		mb:  mb,
+		currentPulse: core.Pulse{
+			PrevPulseNumber: core.PulseNumber(currentPulse - 1),
+			PulseNumber:     core.PulseNumber(currentPulse),
+			NextPulseNumber: core.PulseNumber(currentPulse + 1),
+		},
+		messagePulse: core.PulseNumber(messagePulse),
+		reply:        replyOk,
+	}
 
 	net := testutils.NewNetworkMock(t)
 	jc := testutils.NewJetCoordinatorMock(t)
@@ -55,28 +96,43 @@ func prepare(t *testing.T, ctx context.Context, currentPulse int, msgPulse int) 
 
 	(&component.Manager{}).Inject(net, jc, ls, nn, pcs, cs, dtf, pf, ps, mb)
 
-	ps.CurrentFunc = func(ctx context.Context) (*core.Pulse, error) {
-		return &core.Pulse{
-			PulseNumber:     core.PulseNumber(currentPulse),
-			NextPulseNumber: core.PulseNumber(currentPulse + 1),
-		}, nil
+	ps.CurrentFunc = func(context.Context) (*core.Pulse, error) {
+		return &zz.currentPulse, nil
 	}
 
-	err = mb.Register(testType, testHandler)
+	net.SendMessageFunc = func(core.RecordRef, string, core.Parcel) ([]byte, error) {
+		rd, err := reply.Serialize(zz.reply)
+		require.NoError(t, err)
+		return rd.(*bytes.Buffer).Bytes(), nil
+	}
+
+	nn.GetOriginFunc = func() (r core.Node) {
+		node := network.NewNodeMock(t)
+		node.IDFunc = func() (r core.RecordRef) {
+			return testutils.RandomRef()
+		}
+		return node
+	}
+
+	err = mb.Register(testType, func(context.Context, core.Parcel) (core.Reply, error) {
+		return replyOk, nil
+	})
 	require.NoError(t, err)
 
 	parcel := testutils.NewParcelMock(t)
-
 	parcel.PulseFunc = func() core.PulseNumber {
-		return core.PulseNumber(msgPulse)
+		return zz.messagePulse
 	}
 	parcel.TypeFunc = func() core.MessageType {
 		return testType
 	}
+	parcel.UpdatePulseFunc = func(newPulse core.PulseNumber) {
+		zz.messagePulse = newPulse
+	}
 
 	mb.Unlock(ctx)
 
-	return mb, ps, parcel
+	return mb, zz, parcel
 }
 
 func TestMessageBus_doDeliverSamePulse(t *testing.T) {
@@ -86,31 +142,24 @@ func TestMessageBus_doDeliverSamePulse(t *testing.T) {
 
 	result, err := mb.doDeliver(ctx, parcel)
 	require.NoError(t, err)
-	require.Equal(t, testReply, result)
+	require.Equal(t, replyOk, result)
 }
 
 func TestMessageBus_doDeliverNextPulse(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
-	mb, ps, parcel := prepare(t, ctx, 100, 101)
+	mb, zz, parcel := prepare(t, ctx, 100, 101)
 
 	pulseUpdated := false
 
 	go func() {
 		time.Sleep(time.Second)
-		newPulse := &core.Pulse{
-			PulseNumber:     101,
-			NextPulseNumber: 102,
-		}
-		ps.CurrentFunc = func(ctx context.Context) (*core.Pulse, error) {
-			return newPulse, nil
-		}
 		pulseUpdated = true
-		mb.OnPulse(ctx, *newPulse)
+		zz.updatePulse(101)
 	}()
 	result, err := mb.doDeliver(ctx, parcel)
 	require.NoError(t, err)
-	require.Equal(t, testReply, result)
+	require.Equal(t, replyOk, result)
 	require.True(t, pulseUpdated)
 }
 
@@ -123,88 +172,35 @@ func TestMessageBus_doDeliverWrongPulse(t *testing.T) {
 	require.EqualError(t, err, "[ MessageBus ] Incorrect message pulse 200 100")
 }
 
+func TestMessageBus_SendWithSamePulse(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	mb, zz, parcel := prepare(t, ctx, 100, 100)
+
+	pulse := zz.currentPulse
+	res, err := mb.SendParcel(ctx, parcel, pulse, opts)
+	require.NoError(t, err)
+	require.Equal(t, replyOk, res)
+}
+
 func TestMessageBus_SendWithPrevPulse(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
-	mb, ps, parcel := prepare(t, ctx, 100, 100)
+	mb, zz, parcel := prepare(t, ctx, 100, 101)
 
-	mb.Network.(*testutils.NetworkMock).SendMessageFunc = func(p core.RecordRef, p1 string, p2 core.Parcel) (r []byte, r1 error) {
-		rd, err := reply.Serialize(testReply)
-		require.NoError(t, err)
-		return rd.(*bytes.Buffer).Bytes(), nil
-	}
-
-	mb.NodeNetwork.(*network.NodeNetworkMock).GetOriginFunc = func() (r core.Node) {
-		node := network.NewNodeMock(t)
-		node.IDFunc = func() (r core.RecordRef) {
-			return testutils.RandomRef()
-		}
-		return node
-	}
-
-	pulse, _ := ps.Current(ctx)
-	ref := testutils.RandomRef()
-	res, err := mb.SendParcel(ctx, parcel, *pulse, &core.MessageSendOptions{
-		Receiver: &ref,
-	})
-	require.NoError(t, err)
-	require.Equal(t, testReply, res)
-
-}
-
-func TestMessageBus_SendWithPrevPulse1(t *testing.T) {
-	t.Parallel()
-	ctx := context.Background()
-	mb, ps, parcel := prepare(t, ctx, 100, 100)
-
-	parcel.(*testutils.ParcelMock).UpdatePulseFunc = func(pulseNumber core.PulseNumber) {
-		parcel.(*testutils.ParcelMock).PulseFunc = func() core.PulseNumber {
-			return core.PulseNumber(pulseNumber)
-		}
-	}
-
-	mb.Network.(*testutils.NetworkMock).SendMessageFunc = func(p core.RecordRef, p1 string, p2 core.Parcel) (r []byte, r1 error) {
-		rd, err := reply.Serialize(&reply.WrongPulseNumber{
-			CurrentPulse: &core.Pulse{
-				PulseNumber: 101,
-			},
-		})
-		require.NoError(t, err)
-		return rd.(*bytes.Buffer).Bytes(), nil
-	}
-
-	mb.NodeNetwork.(*network.NodeNetworkMock).GetOriginFunc = func() (r core.Node) {
-		node := network.NewNodeMock(t)
-		node.IDFunc = func() (r core.RecordRef) {
-			return testutils.RandomRef()
-		}
-		return node
-	}
+	pulseUpdated := false
 
 	go func() {
 		time.Sleep(time.Second)
-		newPulse := &core.Pulse{
-			PulseNumber:     101,
-			NextPulseNumber: 102,
-		}
-		mb.Network.(*testutils.NetworkMock).SendMessageFunc = func(p core.RecordRef, p1 string, p2 core.Parcel) (r []byte, r1 error) {
-			rd, err := reply.Serialize(&reply.OK{})
-			require.NoError(t, err)
-			return rd.(*bytes.Buffer).Bytes(), nil
-		}
-		ps.CurrentFunc = func(ctx context.Context) (*core.Pulse, error) {
-			return newPulse, nil
-		}
-		//pulseUpdated = true
-		mb.OnPulse(ctx, *newPulse)
+		zz.setReply(replyOk)
+		pulseUpdated = true
+		zz.updatePulse(101)
 	}()
 
-	pulse, _ := ps.Current(ctx)
-	ref := testutils.RandomRef()
-	res, err := mb.SendParcel(ctx, parcel, *pulse, &core.MessageSendOptions{
-		Receiver: &ref,
-	})
+	zz.setReply(replyWrong)
+	pulse := zz.currentPulse
+	res, err := mb.SendParcel(ctx, parcel, pulse, opts)
 	require.NoError(t, err)
-	require.Equal(t, testReply, res)
-
+	require.True(t, pulseUpdated)
+	require.Equal(t, replyOk, res)
 }
