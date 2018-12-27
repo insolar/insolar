@@ -77,10 +77,6 @@ func (c *Consensus) AddValidated(ctx context.Context, sm core.Parcel, msg *messa
 	return nil
 }
 
-func NewCaseBindFromExecutorResultsMessage(msg *message.ExecutorResults) *CaseBind {
-	panic("not implemented")
-}
-
 func (c *Consensus) AddExecutor(ctx context.Context, sm core.Parcel, msg *message.ExecutorResults) {
 	c.Lock()
 	defer c.Unlock()

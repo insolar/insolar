@@ -22,8 +22,6 @@ import (
 	"encoding/binary"
 	"sync"
 
-	"github.com/insolar/insolar/platformpolicy"
-
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
@@ -36,15 +34,15 @@ import (
 type ContractRequester struct {
 	MessageBus   core.MessageBus   `inject:""`
 	PulseStorage core.PulseStorage `inject:""`
-
-	ResultMutex sync.Mutex
-	ResultMap   map[core.RecordRef]chan *message.ReturnResults
+	ResultMutex  sync.Mutex
+	ResultMap    map[uint64]chan *message.ReturnResults
+	Sequence     uint64
 }
 
 // New creates new ContractRequester
 func New() (*ContractRequester, error) {
 	return &ContractRequester{
-		ResultMap: make(map[core.RecordRef]chan *message.ReturnResults),
+		ResultMap: make(map[uint64]chan *message.ReturnResults),
 	}, nil
 }
 
@@ -81,16 +79,6 @@ func (cr *ContractRequester) SendRequest(ctx context.Context, ref *core.RecordRe
 	return routResult, nil
 }
 
-var hasher = platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher() // TODO: create message factory
-
-func genRequest(pn core.PulseNumber, payload []byte) *core.RecordRef {
-	ref := core.NewRecordRef(
-		core.RecordID{},
-		*core.NewRecordID(pn, hasher.Hash(payload)),
-	)
-	return ref
-}
-
 func (cr *ContractRequester) CallMethod(ctx context.Context, base core.Message, async bool, ref *core.RecordRef, method string, argsIn core.Arguments, mustPrototype *core.RecordRef) (core.Reply, error) {
 	baseMessage, ok := base.(*message.BaseLogicMessage)
 	if !ok {
@@ -121,17 +109,18 @@ func (cr *ContractRequester) CallMethod(ctx context.Context, base core.Message, 
 		msg.ProxyPrototype = *mustPrototype
 	}
 
+	var seq uint64
 	var ch chan *message.ReturnResults
 
-	pu, _ := cr.PulseStorage.Current(ctx)
-	reqref := genRequest(pu.PulseNumber, message.MustSerializeBytes(msg))
-	inslogger.FromContext(ctx).Debug("Calculated ref=", reqref)
-
 	if !async {
-
 		cr.ResultMutex.Lock()
+
+		cr.Sequence++
+		seq = cr.Sequence
+		msg.Sequence = seq
 		ch = make(chan *message.ReturnResults, 1)
-		cr.ResultMap[*reqref] = ch
+		cr.ResultMap[seq] = ch
+
 		cr.ResultMutex.Unlock()
 	}
 
@@ -168,7 +157,7 @@ func (cr *ContractRequester) CallMethod(ctx context.Context, base core.Message, 
 		}, nil
 	case <-ctx.Done():
 		cr.ResultMutex.Lock()
-		delete(cr.ResultMap, *reqref)
+		delete(cr.ResultMap, seq)
 		cr.ResultMutex.Unlock()
 		return nil, errors.New("canceled")
 	}
@@ -196,14 +185,16 @@ func (cr *ContractRequester) CallConstructor(ctx context.Context, base core.Mess
 		SaveAs:           message.SaveAs(saveAs),
 	}
 
+	var seq uint64
 	var ch chan *message.ReturnResults
-	pu, _ := cr.PulseStorage.Current(ctx)
-	reqref := genRequest(pu.PulseNumber, message.MustSerializeBytes(msg))
-
 	if !async {
 		cr.ResultMutex.Lock()
+
+		cr.Sequence++
+		seq = cr.Sequence
+		msg.Sequence = seq
 		ch = make(chan *message.ReturnResults, 1)
-		cr.ResultMap[*reqref] = ch
+		cr.ResultMap[seq] = ch
 
 		cr.ResultMutex.Unlock()
 	}
@@ -222,7 +213,7 @@ func (cr *ContractRequester) CallConstructor(ctx context.Context, base core.Mess
 		return &r.Request, nil
 	}
 
-	inslogger.FromContext(ctx).Debug("Waiting for constructor results req=", r.Request)
+	inslogger.FromContext(ctx).Debug("Waiting for constructor results req=", r.Request, " seq=", seq)
 
 	select {
 	case ret := <-ch:
@@ -234,7 +225,7 @@ func (cr *ContractRequester) CallConstructor(ctx context.Context, base core.Mess
 	case <-ctx.Done():
 
 		cr.ResultMutex.Lock()
-		delete(cr.ResultMap, *reqref)
+		delete(cr.ResultMap, seq)
 		cr.ResultMutex.Unlock()
 
 		return nil, errors.New("canceled")
@@ -251,17 +242,14 @@ func (cr *ContractRequester) ReceiveResult(ctx context.Context, parcel core.Parc
 	defer cr.ResultMutex.Unlock()
 
 	log := inslogger.FromContext(ctx)
-	c, ok := cr.ResultMap[msg.Request]
+	c, ok := cr.ResultMap[msg.Sequence]
 	if !ok {
-		for k := range cr.ResultMap {
-			log.Warnf(" XXX > %s", k)
-		}
-		log.Info("oops unwaited results seq=", msg.Request)
+		log.Info("oops unwaited results seq=", msg.Sequence)
 		return &reply.OK{}, nil
 	}
-	inslogger.FromContext(ctx).Debug("Got wanted results seq=", msg.Request)
+	inslogger.FromContext(ctx).Debug("Got wanted results seq=", msg.Sequence)
 
 	c <- msg
-	delete(cr.ResultMap, msg.Request)
+	delete(cr.ResultMap, msg.Sequence)
 	return &reply.OK{}, nil
 }
