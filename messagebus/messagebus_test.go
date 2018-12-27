@@ -84,6 +84,7 @@ func prepare(t *testing.T, ctx context.Context, currentPulse int, msgPulse int) 
 }
 
 func TestMessageBus_doDeliverSamePulse(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	mb, _, parcel := prepare(t, ctx, 100, 100)
 
@@ -93,6 +94,7 @@ func TestMessageBus_doDeliverSamePulse(t *testing.T) {
 }
 
 func TestMessageBus_doDeliverNextPulse(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	mb, ps, parcel := prepare(t, ctx, 100, 101)
 
@@ -117,6 +119,7 @@ func TestMessageBus_doDeliverNextPulse(t *testing.T) {
 }
 
 func TestMessageBus_doDeliverWrongPulse(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	mb, _, parcel := prepare(t, ctx, 100, 200)
 

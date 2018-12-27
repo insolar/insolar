@@ -48,7 +48,7 @@ func (wp *waitingPool) acquire() bool {
 	wp.locker.Lock()
 	defer wp.locker.Unlock()
 
-	if wp.counter > wp.limit {
+	if wp.counter >= wp.limit {
 		return false
 	}
 

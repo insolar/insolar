@@ -60,15 +60,17 @@ func (e *Error) Error() error {
 	return core.ErrUnknown
 }
 
+// WrongPulseNumber is error reply for message with incorrect pulse.
 type WrongPulseNumber struct {
 	CurrentPulse *core.Pulse
 }
 
+// Type implementation of Reply interface.
 func (e *WrongPulseNumber) Type() core.ReplyType {
 	return TypeWrongPulseNumber
 }
 
-//Error returns concrete error for stored type.
+// Error returns concrete error.
 func (e *WrongPulseNumber) Error() error {
 	return errors.New("Wrong pulse number")
 }
