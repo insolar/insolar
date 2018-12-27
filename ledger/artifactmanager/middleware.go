@@ -67,7 +67,7 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 		if msg.DefaultTarget().Record().Pulse() == core.PulseNumberJet {
 			jetID = *msg.DefaultTarget().Record()
 		} else {
-			j, err := m.fetchJet(ctx, *msg.DefaultTarget().Record(), msg.DefaultTarget().Record().Pulse(), fetchJetReties)
+			j, err := m.fetchJet(ctx, *msg.DefaultTarget().Record(), parcel.Pulse(), fetchJetReties)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to fetch jet tree")
 			}
@@ -160,7 +160,7 @@ func (m *middleware) fetchJet(
 	// TODO: check if the same executor again or the same jet again. INS-1041
 
 	// Update local tree.
-	err = m.db.UpdateJetTree(ctx, pulse, r.Actual)
+	err = m.db.UpdateJetTree(ctx, pulse, true, r.ID)
 	if err != nil {
 		return nil, err
 	}

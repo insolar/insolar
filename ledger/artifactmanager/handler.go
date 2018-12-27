@@ -163,7 +163,7 @@ func (h *MessageHandler) handleGetCode(ctx context.Context, parcel core.Parcel) 
 	msg := parcel.Message().(*message.GetCode)
 	jetID := jetFromContext(ctx)
 
-	codeRec, err := getCode(ctx, h.db, msg.Code.Record())
+	codeRec, err := getCode(ctx, h.db, jetID, msg.Code.Record())
 	if err == storage.ErrNotFound {
 		// The record wasn't found on the current node. Return redirect to the node that contains it.
 		var node *core.RecordRef
@@ -706,8 +706,7 @@ func (h *MessageHandler) handleValidationCheck(ctx context.Context, parcel core.
 	return &reply.OK{}, nil
 }
 
-func getCode(ctx context.Context, s storage.Store, id *core.RecordID) (*record.CodeRecord, error) {
-	jetID := *jet.NewID(0, nil)
+func getCode(ctx context.Context, s storage.Store, jetID core.RecordID, id *core.RecordID) (*record.CodeRecord, error) {
 
 	rec, err := s.GetRecord(ctx, jetID, id)
 	if err != nil {
@@ -843,7 +842,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 func (h *MessageHandler) nodeForJet(
 	ctx context.Context, jetID core.RecordID, parcelPulse, targetPulse core.PulseNumber,
 ) (*core.RecordRef, error) {
-	if targetPulse == core.PulseNumberCurrent {
+	if targetPulse == core.PulseNumberCurrent || targetPulse == core.FirstPulseNumber {
 		targetPulse = parcelPulse
 	}
 	if parcelPulse-targetPulse < h.conf.LightChainLimit {
