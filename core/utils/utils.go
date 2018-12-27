@@ -149,9 +149,9 @@ func measureExecutionTimeInternal(ctx context.Context, comment string, thefuncti
 	start := TimestampMs()
 	var err error
 	if info {
-		err = writeMeasure("%v %s INFO %s\n", start, traceID, comment)
+		err = writeMeasure("%f %s INFO %s\n", start, traceID, comment)
 	} else {
-		err = writeMeasure("%v %s STARTED %s\n", start, traceID, comment)
+		err = writeMeasure("%f %s STARTED %s\n", start, traceID, comment)
 	}
 	if err != nil {
 		return
@@ -162,6 +162,6 @@ func measureExecutionTimeInternal(ctx context.Context, comment string, thefuncti
 	if !info {
 		end := TimestampMs()
 		delta := end - start
-		_ = writeMeasure("%v %s ENDED %s, took: %v ms\n", end, traceID, comment, delta)
+		_ = writeMeasure("%f %s ENDED %s, took: %v ms\n", end, traceID, comment, delta)
 	}
 }
