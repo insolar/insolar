@@ -213,6 +213,8 @@ const (
 	TypeHeavyPayload
 	// TypeHeavyReset resets current sync (on errors)
 	TypeHeavyReset
+	// TypeHeavyJetTree sync jet trees
+	TypeHeavyJetTree
 
 	// Bootstrap
 
