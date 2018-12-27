@@ -24,7 +24,7 @@ ledger:
       5: 1
 
 log:
-  level: Error
+  level: Debug
   adapter: logrus
 stats:
   listenaddress: 0.0.0.0:8080

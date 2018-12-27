@@ -14,7 +14,6 @@
  *    limitations under the License.
  */
 
-
 /*
 Package insolar is the next generation high-performance scalable blockchain platform
 designed with the express purpose to meet an immense business scope.

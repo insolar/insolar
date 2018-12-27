@@ -95,7 +95,7 @@ func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCa
 	start := time.Now()
 	metrics.InsgorundCallsTotal.Inc()
 	ctx := inslogger.ContextWithTrace(context.Background(), args.Context.TraceID)
-	// inslogger.FromContext(ctx).Debugf("Calling method %q on object %q", args.Method, args.Context.Callee)
+	inslogger.FromContext(ctx).Debugf("Calling method %q on object %q", args.Method, args.Context.Callee)
 	defer recoverRPC(ctx, &err)
 
 	gls.Set("callCtx", args.Context)
@@ -154,7 +154,7 @@ func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCa
 func (t *RPC) CallConstructor(args rpctypes.DownCallConstructorReq, reply *rpctypes.DownCallConstructorResp) (err error) {
 	metrics.InsgorundCallsTotal.Inc()
 	ctx := inslogger.ContextWithTrace(context.Background(), args.Context.TraceID)
-	// inslogger.FromContext(ctx).Debugf("Calling constructor %q in code %q", args.Name, args.Code)
+	inslogger.FromContext(ctx).Debugf("Calling constructor %q in code %q", args.Name, args.Code)
 	defer recoverRPC(ctx, &err)
 
 	gls.Set("callCtx", args.Context)

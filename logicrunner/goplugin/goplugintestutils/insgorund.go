@@ -33,7 +33,6 @@ import (
 func StartInsgorund(cmdPath, lProto, listen, upstreamProto, upstreamAddr string) (func(), error) {
 	id := testutils.RandomString()
 	log.Debug("Starting 'insgorund' ", id)
-	log.SetLevel("Error")
 
 	stackTrace := (string)(debug.Stack())
 	cancelWarning := make(chan error, 1)
