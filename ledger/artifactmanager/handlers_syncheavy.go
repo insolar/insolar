@@ -79,6 +79,17 @@ func (h *MessageHandler) handleHeavyReset(ctx context.Context, genericMsg core.P
 	return &reply.OK{}, nil
 }
 
+func (h *MessageHandler) handleHeavyJetTree(ctx context.Context, genericMsg core.Parcel) (core.Reply, error) {
+	msg := genericMsg.Message().(*message.HeavyJetTree)
+
+	err := h.HeavyJetSync.SyncTree(ctx, msg.JetTree, msg.PulseNum)
+	if err != nil{
+		return nil, err
+	}
+
+	return &reply.OK{}, nil
+}
+
 func heavyerrreply(err error) core.Reply {
 	if herr, ok := err.(*reply.HeavyError); ok {
 		return herr
