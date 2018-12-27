@@ -22,6 +22,7 @@ import (
 	"encoding/gob"
 	"fmt"
 	"io"
+	"strconv"
 	"sync"
 
 	"github.com/insolar/insolar/core/utils"
@@ -150,7 +151,7 @@ func (mb *MessageBus) Send(ctx context.Context, msg core.Message, ops *core.Mess
 	}
 
 	var rep core.Reply
-	utils.MeasureExecutionTime(ctx, "MessageBus.Send mb.SendParcel",
+	utils.MeasureExecutionTime(ctx, "MessageBus.Send mb.SendParcel, msg.Type = "+msg.Type().String()+", parcel.DefaultRole() = "+strconv.Itoa(int(parcel.DefaultRole())),
 		func() {
 			rep, err = mb.SendParcel(ctx, parcel, *currentPulse, ops)
 		})
