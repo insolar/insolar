@@ -23,11 +23,10 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/insolar/insolar/core/utils"
-
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/core/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 
 	"github.com/pkg/errors"
