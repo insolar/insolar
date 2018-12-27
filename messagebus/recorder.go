@@ -75,3 +75,7 @@ func (r *recorder) Send(ctx context.Context, msg core.Message, ops *core.Message
 	}
 	return rep, nil
 }
+
+func (r *recorder) OnPulse(context.Context, core.Pulse) error {
+	panic("This method must not be called")
+}
