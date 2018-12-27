@@ -91,11 +91,11 @@ func (m *BaseLogicMessage) GetRequest() core.RecordRef {
 
 // ReturnResults - push results of methods
 type ReturnResults struct {
-	Target   core.RecordRef
-	Caller   core.RecordRef
-	Sequence uint64
-	Reply    core.Reply
-	Error    string
+	Target  core.RecordRef
+	Caller  core.RecordRef
+	Request core.RecordRef
+	Reply   core.Reply
+	Error   string
 }
 
 func (rr *ReturnResults) Type() core.MessageType {
