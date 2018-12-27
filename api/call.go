@@ -22,11 +22,10 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
-
 	"github.com/insolar/insolar/application/extractor"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/core/utils"
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/platformpolicy"
 
 	"github.com/insolar/insolar/api/seedmanager"
