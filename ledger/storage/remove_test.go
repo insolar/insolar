@@ -51,6 +51,7 @@ func removeJetIndexesUntil(t *testing.T, skip bool) {
 
 	pulses := []core.PulseNumber{}
 	var expectLeftIDs []core.RecordID
+	expectedRmCount := 0
 	for i := 0; i < pulsesCount; i++ {
 		pn := core.FirstPulseNumber + core.PulseNumber(i)
 		if i == untilIdx {
@@ -68,9 +69,11 @@ func removeJetIndexesUntil(t *testing.T, skip bool) {
 			LatestState: &objID,
 		})
 		require.NoError(t, err)
-		// fmt.Println("..save", objID)
-		if i >= untilIdx {
+		// fmt.Println("..save", objID, "on pulse", pn)
+		if (pn == core.FirstPulseNumber) || (i >= untilIdx) {
 			expectLeftIDs = append(expectLeftIDs, objID)
+		} else {
+			expectedRmCount += 1
 		}
 	}
 	rmcount, err := db.RemoveJetIndexesUntil(ctx, jetID, until)
@@ -84,6 +87,6 @@ func removeJetIndexesUntil(t *testing.T, skip bool) {
 		return nil
 	})
 
-	require.Equal(t, 5, rmcount)
+	require.Equal(t, expectedRmCount, rmcount)
 	require.Equal(t, expectLeftIDs, foundIDs)
 }

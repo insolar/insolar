@@ -1764,11 +1764,19 @@ func (r *One) EmptyMethod() (error) {
 	// emulate death
 	err = rlr.sock.Close()
 	require.NoError(t, err)
-	// wait for gorund try to send answer back, it will see closing connection, after that it needs to die
-	time.Sleep(1 * time.Second)
 
+	// wait for gorund try to send answer back, it will see closing connection, after that it needs to die
 	// ping to goPlugin, it has to be dead
-	_, err = rpc.Dial(gp.Cfg.GoPlugin.RunnerProtocol, gp.Cfg.GoPlugin.RunnerListen)
+	for start := time.Now(); time.Since(start) < time.Minute; {
+		time.Sleep(100 * time.Millisecond)
+		_, err = rpc.Dial(gp.Cfg.GoPlugin.RunnerProtocol, gp.Cfg.GoPlugin.RunnerListen)
+		if err != nil {
+			break
+		}
+
+		log.Debug("TestGinsiderMustDieAfterInsolard: gorund still alive")
+	}
+
 	require.Error(t, err, "rpc Dial")
 	assert.Contains(t, err.Error(), "connect: connection refused")
 }

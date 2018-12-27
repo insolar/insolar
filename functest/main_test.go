@@ -214,14 +214,13 @@ func startAllInsgorunds() (err error) {
 	return nil
 }
 
-func stopAllInsgorunds() {
-	if insgorundCleaner != nil {
-		insgorundCleaner()
+func stopAllInsgorunds() error {
+	if insgorundCleaner == nil || secondInsgorundCleaner == nil {
+		return errors.New("[ stopInsgorund ] cleaner func not found")
 	}
-
-	if secondInsgorundCleaner != nil {
-		secondInsgorundCleaner()
-	}
+	insgorundCleaner()
+	secondInsgorundCleaner()
+	return nil
 }
 
 func waitForNet() error {
@@ -385,11 +384,17 @@ func setup() error {
 }
 
 func teardown() {
-	err := stopInsolard()
-	if err != nil {
-		fmt.Println("[ teardown ]  failed to stop insolard: ", err)
+	var envSetting = os.Getenv("TEST_ENV")
+	var err error
+	fmt.Println("TEST_ENV: ", envSetting)
+	if envSetting != "CI" {
+		err = stopInsolard()
+
+		if err != nil {
+			fmt.Println("[ teardown ]  failed to stop insolard: ", err)
+		}
+		fmt.Println("[ teardown ] insolard was successfully stoped")
 	}
-	fmt.Println("[ teardown ] insolard was successfully stoped")
 
 	stopAllInsgorunds()
 	fmt.Println("[ teardown ] insgorund was successfully stoped")

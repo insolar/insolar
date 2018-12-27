@@ -10,7 +10,7 @@ If you want to add metrics in your component code,
 you need to describe it as global collector variable in this package. 
 Each global collector must be registered in constructor `NewMetrics()`
 
-When you creating collector, you need to fill `Ops` structure. 
+When you creating collector, you need to fill `Opts` structure. 
 You should to [read this guide](https://prometheus.io/docs/practices/naming/) before choosing `Opts.Name`
 
 #### Collector types

@@ -119,6 +119,9 @@ type MessageBus interface {
 	//
 	// Recorder can be created from MessageBus and passed as MessageBus instance.s
 	NewRecorder(ctx context.Context, currentPulse Pulse) (MessageBus, error)
+
+	// Called each new pulse, cleans next pulse messages buffer
+	OnPulse(context.Context, Pulse) error
 }
 
 type TapeWriter interface {
