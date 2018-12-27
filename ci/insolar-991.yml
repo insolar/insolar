@@ -81,16 +81,12 @@ jobs:
           - -exc
           - |
             cp master/.git/short_ref deploy/tag
-            cp adm/manifests/dev/bootstrap-temporary.yaml deploy/bootstrap.yaml
-            cp adm/manifests/dev/pulsar.yaml deploy/pulsar.yaml
-            ls -alh
-            sed -i "s/registry.ins.world\/insolard/registry.ins.world\/insolard:$(cat deploy/tag)/g" deploy/bootstrap.yaml
-            sed -i "s/registry.ins.world\/insolard/registry.ins.world\/insolard:$(cat deploy/tag)/g" deploy/pulsar.yaml
-            cat deploy/bootstrap.yaml > deploy/all.yaml
+            cat adm/manifests/dev/bootstrap-temporary.yaml > deploy/all.yaml
             echo  >> deploy/all.yaml
             echo "---" >> deploy/all.yaml
             echo  >> deploy/all.yaml
-            cat deploy/pulsar.yaml >> deploy/all.yaml
+            cat adm/manifests/dev/pulsar.yaml >> deploy/all.yaml
+            sed -i "s/registry.ins.world\/insolard/registry.ins.world\/insolard:$(cat deploy/tag)/g" deploy/all.yaml
             cat deploy/all.yaml
   - put: deploy
     params:
