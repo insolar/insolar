@@ -162,3 +162,281 @@ func TestTree_String(t *testing.T) {
 	}
 	assert.Equal(t, "root (level=0 actual=false)\n", emptyTree.String())
 }
+
+func TestTree_Merge(t *testing.T) {
+	t.Run("One level", func(t *testing.T) {
+		savedTree := Tree{
+			Head: &jet{
+				Left: &jet{
+					Actual: true,
+				},
+				Right: &jet{
+					Actual: false,
+				},
+				Actual: true,
+			},
+		}
+
+		newTree := Tree{
+			Head: &jet{
+				Left: &jet{
+					Actual: false,
+				},
+				Right: &jet{
+					Actual: true,
+				},
+				Actual: false,
+			},
+		}
+
+		result := savedTree.Merge(&newTree)
+
+		require.Equal(t,
+			Tree{
+				Head: &jet{
+					Left: &jet{
+						Actual: true,
+					},
+					Right: &jet{
+						Actual: true,
+					},
+					Actual: true,
+				},
+			}.String(),
+			result.String())
+	})
+
+	t.Run("Five levels saved is false active is true", func(t *testing.T) {
+		savedTree := Tree{
+			Head: &jet{
+				Left: &jet{
+					Actual: false,
+					Left: &jet{
+						Actual: false,
+					},
+					Right: &jet{
+						Actual: false,
+					},
+				},
+				Right: &jet{
+					Actual: false,
+					Left: &jet{
+						Actual: false,
+						Left: &jet{
+							Actual: false,
+						},
+						Right: &jet{
+							Actual: false,
+							Left: &jet{
+								Actual: false,
+							},
+							Right: &jet{
+								Actual: false,
+							},
+						},
+					},
+					Right: &jet{
+						Actual: false,
+					},
+				},
+				Actual: false,
+			},
+		}
+
+		newTree := Tree{
+			Head: &jet{
+				Left: &jet{
+					Actual: true,
+					Left: &jet{
+						Actual: true,
+					},
+					Right: &jet{
+						Actual: true,
+					},
+				},
+				Right: &jet{
+					Actual: true,
+					Left: &jet{
+						Actual: true,
+						Left: &jet{
+							Actual: true,
+						},
+						Right: &jet{
+							Actual: true,
+							Left: &jet{
+								Actual: true,
+							},
+							Right: &jet{
+								Actual: true,
+							},
+						},
+					},
+					Right: &jet{
+						Actual: true,
+					},
+				},
+				Actual: true,
+			},
+		}
+
+		result := savedTree.Merge(&newTree)
+
+		require.Equal(t, newTree.String(), result.String())
+	})
+
+	t.Run("Two levels saved is empty", func(t *testing.T) {
+		savedTree := Tree{
+			Head: &jet{
+				Actual: false,
+			},
+		}
+
+		newTree := Tree{
+			Head: &jet{
+				Left: &jet{
+					Actual: true,
+					Left: &jet{
+						Actual: true,
+					},
+					Right: &jet{
+						Actual: true,
+					},
+				},
+				Right: &jet{
+					Actual: true,
+					Left: &jet{
+						Actual: true,
+						Left: &jet{
+							Actual: true,
+						},
+						Right: &jet{
+							Actual: true,
+							Left: &jet{
+								Actual: true,
+							},
+							Right: &jet{
+								Actual: true,
+							},
+						},
+					},
+					Right: &jet{
+						Actual: true,
+					},
+				},
+				Actual: true,
+			},
+		}
+
+		result := savedTree.Merge(&newTree)
+
+		require.Equal(t, newTree.String(), result.String())
+	})
+
+	t.Run("Three levels saved with left and new with right", func(t *testing.T) {
+		savedTree := Tree{
+			Head: &jet{
+				Actual: true,
+				Left: &jet{
+					Actual: true,
+					Left: &jet{
+						Actual: true,
+						Left: &jet{
+							Actual: true,
+						},
+					},
+					Right: &jet{
+						Actual: false,
+					},
+				},
+			},
+		}
+
+		newTree := Tree{
+			Head: &jet{
+				Right: &jet{
+					Right: &jet{
+						Actual: true,
+						Right: &jet{
+							Actual: true,
+							Right: &jet{
+								Actual: false,
+							},
+						},
+					},
+				},
+				Actual: true,
+			},
+		}
+
+		expectedTree := Tree{
+			Head: &jet{
+				Left: &jet{
+					Actual: true,
+					Left: &jet{
+						Actual: true,
+						Left: &jet{
+							Actual: true,
+						},
+					},
+					Right: &jet{
+						Actual: false,
+					},
+				},
+
+				Actual: true,
+
+				Right: &jet{
+					Right: &jet{
+						Actual: true,
+						Right: &jet{
+							Actual: true,
+							Right: &jet{
+								Actual: false,
+							},
+						},
+					},
+				},
+			},
+		}
+
+		result := savedTree.Merge(&newTree)
+
+		require.Equal(t, expectedTree.String(), result.String())
+	})
+
+	t.Run("heads saved false new true", func(t *testing.T) {
+		savedTree := Tree{
+			Head: &jet{
+				Actual: false,
+			},
+		}
+
+		newTree := Tree{
+			Head: &jet{
+				Actual: true,
+			},
+		}
+
+		result := savedTree.Merge(&newTree)
+
+		require.Equal(t, newTree.String(), result.String())
+	})
+
+	t.Run("heads saved false new true", func(t *testing.T) {
+		savedTree := Tree{
+			Head: &jet{
+				Actual: true,
+			},
+		}
+
+		newTree := Tree{
+			Head: &jet{
+				Actual: false,
+			},
+		}
+
+		result := savedTree.Merge(&newTree)
+
+		require.Equal(t, savedTree.String(), result.String())
+	})
+}

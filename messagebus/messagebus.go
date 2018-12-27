@@ -22,18 +22,19 @@ import (
 	"encoding/gob"
 	"fmt"
 	"io"
+	"strconv"
 	"sync"
 
-	"github.com/insolar/insolar/metrics"
-
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/core/utils"
 	"github.com/insolar/insolar/instrumentation/hack"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/metrics"
 )
 
 const deliverRPCMethodName = "MessageBus.Deliver"
@@ -148,7 +149,12 @@ func (mb *MessageBus) Send(ctx context.Context, msg core.Message, ops *core.Mess
 		return nil, err
 	}
 
-	return mb.SendParcel(ctx, parcel, *currentPulse, ops)
+	var rep core.Reply
+	utils.MeasureExecutionTime(ctx, "MessageBus.Send mb.SendParcel, msg.Type = "+msg.Type().String()+", parcel.DefaultRole() = "+strconv.Itoa(int(parcel.DefaultRole())),
+		func() {
+			rep, err = mb.SendParcel(ctx, parcel, *currentPulse, ops)
+		})
+	return rep, err
 }
 
 // CreateParcel creates signed message from provided message.

@@ -67,14 +67,24 @@ func SendGracefulStopSignal() error {
 }
 
 // TimestampMs returns current timestamp in milliseconds.
-func TimestampMs() int64 {
-	return time.Now().UnixNano() / int64(time.Millisecond)
+func TimestampMs() float64 {
+	return float64(time.Now().UnixNano()) / float64(time.Millisecond)
 }
 
 // We have to use a lock since all IO is not thread safe by default
 var measurementsLock sync.Mutex
 var measurementsWriter *bufio.Writer
 var measurementsEnabled = false
+
+func MeasureInfo(ctx context.Context, msg string) {
+	measureExecutionTimeInternal(ctx, msg, func() {}, true)
+}
+
+// MeasureExecutionTime writes execution time of given function to
+// the profile log (if profile logging is enabled).
+func MeasureExecutionTime(ctx context.Context, comment string, thefunction func()) {
+	measureExecutionTimeInternal(ctx, comment, thefunction, false)
+}
 
 // write one measure to the log
 func writeMeasure(format string, args ...interface{}) error {
@@ -128,9 +138,7 @@ func EnableExecutionTimeMeasurement(fname string) (func(), error) {
 	return cleanup, nil
 }
 
-// MeasureExecutionTime writes execution time of given function to
-// the profile log (if profile logging is enabled).
-func MeasureExecutionTime(ctx context.Context, comment string, thefunction func()) {
+func measureExecutionTimeInternal(ctx context.Context, comment string, thefunction func(), info bool) {
 	if !measurementsEnabled {
 		thefunction()
 		return
@@ -139,14 +147,21 @@ func MeasureExecutionTime(ctx context.Context, comment string, thefunction func(
 	traceID := TraceID(ctx)
 
 	start := TimestampMs()
-	err := writeMeasure("%v %s STARTED %s\n", start, traceID, comment)
+	var err error
+	if info {
+		err = writeMeasure("%f %s INFO %s\n", start, traceID, comment)
+	} else {
+		err = writeMeasure("%f %s STARTED %s\n", start, traceID, comment)
+	}
 	if err != nil {
 		return
 	}
 
 	thefunction()
 
-	end := TimestampMs()
-	delta := end - start
-	_ = writeMeasure("%v %s ENDED %s, took: %v ms\n", end, traceID, comment, delta)
+	if !info {
+		end := TimestampMs()
+		delta := end - start
+		_ = writeMeasure("%f %s ENDED %s, took: %v ms\n", end, traceID, comment, delta)
+	}
 }
