@@ -71,7 +71,7 @@ func NewTestSuite(bootstrapCount, nodesCount int) *testSuite {
 }
 
 // SetupSuite creates and run network with bootstrap and common nodes once before run all tests in the suite
-func (s *testSuite) SetupSuite() {
+func (s *testSuite) SetupTest() {
 	log.Infoln("SetupSuite")
 
 	log.Infoln("Setup bootstrap nodes")
@@ -137,14 +137,17 @@ func (s *testSuite) SetupNodesNetwork(nodes []*networkNode) {
 }
 
 // TearDownSuite shutdowns all nodes in network, calls once after all tests in suite finished
-func (s *testSuite) TearDownSuite() {
+func (s *testSuite) TearDownTest() {
 	log.Infoln("Stop network nodes")
 	for _, n := range s.networkNodes {
-		n.componentManager.Stop(s.ctx)
+		err := n.componentManager.Stop(s.ctx)
+		s.NoError(err)
 	}
 	log.Infoln("Stop bootstrap nodes")
 	for _, n := range s.bootstrapNodes {
-		n.componentManager.Stop(s.ctx)
+		err := n.componentManager.Stop(s.ctx)
+		s.NoError(err)
+
 	}
 }
 

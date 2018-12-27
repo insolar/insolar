@@ -45,18 +45,10 @@ func (s *testSuite) TestNodeConnect() {
 	activeNodes := s.bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
 	s.Equal(s.nodesCount(), len(activeNodes))
 
-	//log.Warn("-------=-=-=-=-=-=-================")
-	//err := s.bootstrapNodes[0].serviceNetwork.NodeKeeper.MoveSyncToActive()
-	//s.NoError(err)
-
 	s.waitForConsensus(1)
-	//s.waitForConsensus(1)
 
 	activeNodes = s.bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
 	s.Equal(s.nodesCount()+1, len(activeNodes))
-
-	// teardown
-	// <-time.After(time.Second * 5)
 }
 
 func (s *testSuite) TestNodeLeave() {
@@ -122,20 +114,29 @@ func (ftpm *FullTimeoutPhaseManager) OnPulse(ctx context.Context, pulse *core.Pu
 }
 
 func (s *testSuite) TestFullTimeOut() {
-	s.T().Skip("will be available after phase result fix !")
-	phasesResult := make(chan error)
+	if len(s.bootstrapNodes) < 3 {
+		s.T().Skip("skip test for bootstrap nodes < 3")
+	}
 
-	s.preInitNode(s.testNode, Full)
+	wrapper := s.bootstrapNodes[1].serviceNetwork.PhaseManager.(*phaseManagerWrapper)
+	wrapper.original = &FullTimeoutPhaseManager{}
+	s.bootstrapNodes[1].serviceNetwork.PhaseManager = wrapper
+
+	s.preInitNode(s.testNode, Disable)
 
 	s.InitTestNode()
 	s.StartTestNode()
-	res := <-phasesResult
-	s.NoError(res)
-	activeNodes := s.testNode.serviceNetwork.NodeKeeper.GetActiveNodes()
-	s.Equal(1, len(activeNodes))
-	// teardown
-	<-time.After(time.Second * 5)
-	s.StopTestNode()
+	defer s.StopTestNode()
+
+	s.waitForConsensus(1)
+
+	activeNodes := s.bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.nodesCount(), len(activeNodes))
+
+	s.waitForConsensus(1)
+
+	activeNodes = s.bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.nodesCount()+1-1, len(activeNodes))
 }
 
 // Partial timeout
