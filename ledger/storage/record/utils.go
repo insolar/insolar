@@ -16,7 +16,10 @@
 
 package record
 
-import "github.com/insolar/insolar/core"
+import (
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/message"
+)
 
 func NewRecordIDFromRecord(scheme core.PlatformCryptographyScheme, pulse core.PulseNumber, rec Record) *core.RecordID {
 	hasher := scheme.ReferenceHasher()
@@ -25,4 +28,18 @@ func NewRecordIDFromRecord(scheme core.PlatformCryptographyScheme, pulse core.Pu
 		panic(err)
 	}
 	return core.NewRecordID(pulse, hasher.Sum(nil))
+}
+
+func NewRecordIDFromByteSlice(scheme core.PlatformCryptographyScheme, pulse core.PulseNumber, slice []byte) *core.RecordID {
+	hasher := scheme.ReferenceHasher()
+	_, err := hasher.Write(slice)
+	if err != nil {
+		panic(err)
+	}
+	return core.NewRecordID(pulse, hasher.Sum(nil))
+}
+
+func NewRecordRefFromMessage(scheme core.PlatformCryptographyScheme, pulse core.PulseNumber, msg core.Message) *core.RecordRef {
+	id := NewRecordIDFromByteSlice(scheme, pulse, message.MustSerializeBytes(msg))
+	return core.NewRecordRef(core.RecordID{}, *id)
 }

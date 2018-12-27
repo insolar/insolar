@@ -91,11 +91,11 @@ func (m *BaseLogicMessage) GetRequest() core.RecordRef {
 
 // ReturnResults - push results of methods
 type ReturnResults struct {
-	Target   core.RecordRef
-	Caller   core.RecordRef
-	Sequence uint64
-	Reply    core.Reply
-	Error    string
+	Target  core.RecordRef
+	Caller  core.RecordRef
+	Request core.RecordRef
+	Reply   core.Reply
+	Error   string
 }
 
 func (rr *ReturnResults) Type() core.MessageType {
@@ -332,6 +332,7 @@ func (vr *ValidationResults) GetReference() core.RecordRef {
 	return vr.RecordRef
 }
 
+// TODO MOVE TO ledger/record/...
 var hasher = platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher() // TODO: create message factory
 
 // GenRequest calculates RecordRef for request message from pulse number and request's payload.

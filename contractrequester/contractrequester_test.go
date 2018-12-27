@@ -21,6 +21,10 @@ import (
 	"runtime"
 	"testing"
 
+	"github.com/insolar/insolar/ledger/storage/record"
+
+	"github.com/insolar/insolar/platformpolicy"
+
 	"github.com/insolar/insolar/core/message"
 
 	"github.com/stretchr/testify/assert"
@@ -44,11 +48,12 @@ func mockMessageBus(t *testing.T, result core.Reply) *testutils.MessageBusMock {
 func TestNew(t *testing.T) {
 	ps := testutils.NewPulseStorageMock(t)
 	messageBus := mockMessageBus(t, nil)
+	pcs := platformpolicy.NewPlatformCryptographyScheme()
 
 	contractRequester, err := New()
 
 	cm := &component.Manager{}
-	cm.Inject(ps, messageBus, contractRequester)
+	cm.Inject(ps, pcs, messageBus, contractRequester)
 
 	require.NoError(t, err)
 	require.Equal(t, messageBus, contractRequester.MessageBus)
@@ -62,11 +67,15 @@ func TestContractRequester_SendRequest(t *testing.T) {
 	pm := testutils.NewPulseStorageMock(t)
 	pm.CurrentMock.Return(core.GenesisPulse, nil)
 
-	mbm := mockMessageBus(t, &reply.RegisterRequest{})
+	mbm := testutils.NewMessageBusMock(t)
+
 	cReq, err := New()
 	assert.NoError(t, err)
 	cReq.MessageBus = mbm
 	cReq.PulseStorage = pm
+	cReq.PlatformCryptographyScheme = platformpolicy.NewPlatformCryptographyScheme()
+
+	pu, _ := cReq.PulseStorage.Current(ctx)
 
 	mbm.MustRegisterMock.Return()
 	cReq.Start(ctx)
@@ -83,16 +92,23 @@ func TestContractRequester_SendRequest(t *testing.T) {
 		cReq.ResultMutex.Lock()
 		for k, v := range cReq.ResultMap {
 			v <- &message.ReturnResults{
-				Sequence: k,
-				Reply:   &reply.CallMethod{},
+				Request: k,
+				Reply:   &reply.CallMethod{Request: k},
 			}
 		}
 		cReq.ResultMutex.Unlock()
 	}()
+
+	var reqRef core.RecordRef
+	mbm.SendFunc = func(c context.Context, m core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
+		reqRef = *record.NewRecordRefFromMessage(cReq.PlatformCryptographyScheme, pu.PulseNumber, m)
+		repl := &reply.RegisterRequest{Request: reqRef}
+		return repl, nil
+	}
 	result, err := cReq.SendRequest(ctx, &ref, "TestMethod", []interface{}{})
 
 	require.NoError(t, err)
-	require.Equal(t, &reply.CallMethod{}, result)
+	require.Equal(t, &reply.CallMethod{Request: reqRef}, result)
 }
 
 func TestContractRequester_SendRequest_RouteError(t *testing.T) {
@@ -107,6 +123,7 @@ func TestContractRequester_SendRequest_RouteError(t *testing.T) {
 	assert.NoError(t, err)
 	cReq.MessageBus = mbm
 	cReq.PulseStorage = pm
+	cReq.PlatformCryptographyScheme = platformpolicy.NewPlatformCryptographyScheme()
 
 	mbm.MustRegisterMock.Return()
 	cReq.Start(ctx)
@@ -119,7 +136,7 @@ func TestContractRequester_SendRequest_RouteError(t *testing.T) {
 		cReq.ResultMutex.Lock()
 		for k, v := range cReq.ResultMap {
 			v <- &message.ReturnResults{
-				Sequence: k,
+				Request: k,
 				Reply:   nil,
 			}
 		}

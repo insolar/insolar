@@ -602,7 +602,6 @@ func (lr *LogicRunner) executeOrValidate(
 
 	target := *es.Current.RequesterNode
 	request := *es.Current.Request
-	seq := es.Current.Sequence
 
 	go func() {
 		inslogger.FromContext(ctx).Debugf("Sending Method Results for ", request)
@@ -610,11 +609,11 @@ func (lr *LogicRunner) executeOrValidate(
 		_, err = core.MessageBusFromContext(ctx, nil).Send(
 			ctx,
 			&message.ReturnResults{
-				Caller:   lr.NodeNetwork.GetOrigin().ID(),
-				Target:   target,
-				Sequence: seq,
-				Reply:    re,
-				Error:    errstr,
+				Caller:  lr.NodeNetwork.GetOrigin().ID(),
+				Target:  target,
+				Request: request,
+				Reply:   re,
+				Error:   errstr,
 			},
 			&core.MessageSendOptions{
 				Receiver: &target,

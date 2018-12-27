@@ -22,6 +22,8 @@ import (
 	"encoding/binary"
 	"sync"
 
+	"github.com/insolar/insolar/ledger/storage/record"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
@@ -32,22 +34,22 @@ import (
 
 // ContractRequester helps to call contracts
 type ContractRequester struct {
-	MessageBus   core.MessageBus   `inject:""`
-	PulseStorage core.PulseStorage `inject:""`
-	ResultMutex  sync.Mutex
-	ResultMap    map[uint64]chan *message.ReturnResults
-	Sequence     uint64
+	MessageBus                 core.MessageBus                 `inject:""`
+	PulseStorage               core.PulseStorage               `inject:""`
+	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
+	ResultMutex                sync.Mutex
+	ResultMap                  map[core.RecordRef]chan *message.ReturnResults
 }
 
 // New creates new ContractRequester
 func New() (*ContractRequester, error) {
 	return &ContractRequester{
-		ResultMap: make(map[uint64]chan *message.ReturnResults),
+		ResultMap: make(map[core.RecordRef]chan *message.ReturnResults),
 	}, nil
 }
 
 func (cr *ContractRequester) Start(ctx context.Context) error {
-	cr.MessageBus.MustRegister(core.TypeReturnResults, cr.ReceiveResult)
+	cr.MessageBus.MustRegister(core.TypeReturnResults, cr.HandleReceiveResultMessage)
 	return nil
 }
 
@@ -109,18 +111,16 @@ func (cr *ContractRequester) CallMethod(ctx context.Context, base core.Message, 
 		msg.ProxyPrototype = *mustPrototype
 	}
 
-	var seq uint64
 	var ch chan *message.ReturnResults
+	var reqRef core.RecordRef
 
 	if !async {
+		pu, _ := cr.PulseStorage.Current(ctx)
+		reqRef = *record.NewRecordRefFromMessage(cr.PlatformCryptographyScheme, pu.PulseNumber, msg)
+
 		cr.ResultMutex.Lock()
-
-		cr.Sequence++
-		seq = cr.Sequence
-		msg.Sequence = seq
 		ch = make(chan *message.ReturnResults, 1)
-		cr.ResultMap[seq] = ch
-
+		cr.ResultMap[reqRef] = ch
 		cr.ResultMutex.Unlock()
 	}
 
@@ -132,6 +132,8 @@ func (cr *ContractRequester) CallMethod(ctx context.Context, base core.Message, 
 	r, ok := res.(*reply.RegisterRequest)
 	if !ok {
 		return nil, errors.New("Got not reply.RegisterRequest in reply for CallMethod")
+	} else if !async && !r.Request.Equal(reqRef) {
+		return nil, errors.Errorf("RecordId was predicted incorrectly we=%s their=%s", reqRef.String(), r.Request.String())
 	}
 
 	if async {
@@ -157,7 +159,7 @@ func (cr *ContractRequester) CallMethod(ctx context.Context, base core.Message, 
 		}, nil
 	case <-ctx.Done():
 		cr.ResultMutex.Lock()
-		delete(cr.ResultMap, seq)
+		delete(cr.ResultMap, reqRef)
 		cr.ResultMutex.Unlock()
 		return nil, errors.New("canceled")
 	}
@@ -185,17 +187,15 @@ func (cr *ContractRequester) CallConstructor(ctx context.Context, base core.Mess
 		SaveAs:           message.SaveAs(saveAs),
 	}
 
-	var seq uint64
+	var reqRef core.RecordRef
 	var ch chan *message.ReturnResults
 	if !async {
+		pu, _ := cr.PulseStorage.Current(ctx)
+		reqRef = *record.NewRecordRefFromMessage(cr.PlatformCryptographyScheme, pu.PulseNumber, msg)
+
 		cr.ResultMutex.Lock()
-
-		cr.Sequence++
-		seq = cr.Sequence
-		msg.Sequence = seq
 		ch = make(chan *message.ReturnResults, 1)
-		cr.ResultMap[seq] = ch
-
+		cr.ResultMap[reqRef] = ch
 		cr.ResultMutex.Unlock()
 	}
 
@@ -207,13 +207,15 @@ func (cr *ContractRequester) CallConstructor(ctx context.Context, base core.Mess
 	r, ok := res.(*reply.RegisterRequest)
 	if !ok {
 		return nil, errors.New("Got not reply.CallConstructor in reply for CallConstructor")
+	} else if !async && !r.Request.Equal(reqRef) {
+		return nil, errors.Errorf("RecordId was predicted incorrectly we=%s their=%s", reqRef.String(), r.Request.String())
 	}
 
 	if async {
 		return &r.Request, nil
 	}
 
-	inslogger.FromContext(ctx).Debug("Waiting for constructor results req=", r.Request, " seq=", seq)
+	inslogger.FromContext(ctx).Debug("Waiting for constructor results req=", r.Request)
 
 	select {
 	case ret := <-ch:
@@ -225,14 +227,14 @@ func (cr *ContractRequester) CallConstructor(ctx context.Context, base core.Mess
 	case <-ctx.Done():
 
 		cr.ResultMutex.Lock()
-		delete(cr.ResultMap, seq)
+		delete(cr.ResultMap, reqRef)
 		cr.ResultMutex.Unlock()
 
 		return nil, errors.New("canceled")
 	}
 }
 
-func (cr *ContractRequester) ReceiveResult(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
+func (cr *ContractRequester) HandleReceiveResultMessage(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
 	msg, ok := parcel.Message().(*message.ReturnResults)
 	if !ok {
 		return nil, errors.New("ReceiveResult() accepts only message.ReturnResults")
@@ -242,14 +244,14 @@ func (cr *ContractRequester) ReceiveResult(ctx context.Context, parcel core.Parc
 	defer cr.ResultMutex.Unlock()
 
 	log := inslogger.FromContext(ctx)
-	c, ok := cr.ResultMap[msg.Sequence]
+	c, ok := cr.ResultMap[msg.Request]
 	if !ok {
-		log.Info("oops unwaited results seq=", msg.Sequence)
+		log.Info("oops unwaited results req=", msg.Request)
 		return &reply.OK{}, nil
 	}
-	inslogger.FromContext(ctx).Debug("Got wanted results seq=", msg.Sequence)
+	inslogger.FromContext(ctx).Debug("Got wanted results seq=", msg.Request)
 
 	c <- msg
-	delete(cr.ResultMap, msg.Sequence)
+	delete(cr.ResultMap, msg.Request)
 	return &reply.OK{}, nil
 }
