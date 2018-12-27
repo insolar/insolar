@@ -93,7 +93,7 @@ func (m *BaseLogicMessage) GetRequest() core.RecordRef {
 type ReturnResults struct {
 	Target  core.RecordRef
 	Caller  core.RecordRef
-	Sequence uint64
+	Request core.RecordRef
 	Reply   core.Reply
 	Error   string
 }
