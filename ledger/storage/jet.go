@@ -164,13 +164,19 @@ func (db *DB) UpdateJetTree(ctx context.Context, pulse core.PulseNumber, setActu
 	return db.set(ctx, k, tree.Bytes())
 }
 
-// SetJetTree sets jet tree for specified pulse.
-func (db *DB) SetJetTree(ctx context.Context, pulse core.PulseNumber, tree *jet.Tree) error {
+// AppendJetTree append a jet tree for specified pulse.
+func (db *DB) AppendJetTree(ctx context.Context, pulse core.PulseNumber, tree *jet.Tree) error {
 	db.jetTreeLock.Lock()
 	defer db.jetTreeLock.Unlock()
 
+	savedTree, err := db.GetJetTree(ctx, pulse)
+	if err != nil {
+		return err
+	}
+	mergedTree := savedTree.Merge(tree)
+
 	k := prefixkey(scopeIDSystem, []byte{sysJetTree}, pulse.Bytes())
-	return db.set(ctx, k, tree.Bytes())
+	return db.set(ctx, k, mergedTree.Bytes())
 }
 
 // GetJetTree fetches tree for specified pulse.

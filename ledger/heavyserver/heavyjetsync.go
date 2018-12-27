@@ -24,7 +24,7 @@ import (
 	"github.com/insolar/insolar/ledger/storage/jet"
 )
 
-// HeavyJetTreeSync is used for sync jets on heavy
+// HeavyJetSync is used for sync jets on heavy
 type HeavyJetSync struct {
 	db *storage.DB
 }
@@ -36,11 +36,5 @@ func NewHeavyJetSync(db *storage.DB) *HeavyJetSync {
 
 // SyncTree updates state of the heavy's jet tree
 func (hs *HeavyJetSync) SyncTree(ctx context.Context, tree jet.Tree, pulse core.PulseNumber) error {
-	savedTree, err := hs.db.GetJetTree(ctx, pulse)
-	if err != nil {
-		return err
-	}
-
-	mergedTree := savedTree.Merge(&tree)
-	return hs.db.SetJetTree(ctx, pulse, mergedTree)
+	return hs.db.AppendJetTree(ctx, pulse, &tree)
 }
