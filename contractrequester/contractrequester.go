@@ -117,8 +117,10 @@ func (cr *ContractRequester) CallMethod(ctx context.Context, base core.Message, 
 	var ch chan *message.ReturnResults
 
 	if !async {
-		cr.ResultMutex.Lock()
-
+		utils.MeasureExecutionTime(ctx, "ContractRequester.CallMethod cr.ResultMutex.Lock",
+			func() {
+				cr.ResultMutex.Lock()
+			})
 		cr.Sequence++
 		seq = cr.Sequence
 		msg.Sequence = seq
@@ -131,7 +133,7 @@ func (cr *ContractRequester) CallMethod(ctx context.Context, base core.Message, 
 	var res core.Reply
 	var err error
 
-	utils.MeasureExecutionTime(ctx, "ContractRequester.CallMethod mb.Send",
+	utils.MeasureExecutionTime(ctx, "ContractRequester.CallMethod mb.Send, msg.method="+msg.Method,
 		func() {
 			res, err = mb.Send(ctx, msg, nil)
 		})
@@ -259,18 +261,25 @@ func (cr *ContractRequester) ReceiveResult(ctx context.Context, parcel core.Parc
 		return nil, errors.New("ReceiveResult() accepts only message.ReturnResults")
 	}
 
-	cr.ResultMutex.Lock()
-	defer cr.ResultMutex.Unlock()
+	utils.MeasureExecutionTime(ctx, "ContractRequester.ReceiveResult",
+		func() {
+			utils.MeasureExecutionTime(ctx, "ContractRequester.ReceiveResult cr.ResultMutex.Lock",
+				func() {
+					cr.ResultMutex.Lock()
+				})
+			defer cr.ResultMutex.Unlock()
 
-	log := inslogger.FromContext(ctx)
-	c, ok := cr.ResultMap[msg.Sequence]
-	if !ok {
-		log.Info("oops unwaited results seq=", msg.Sequence)
-		return &reply.OK{}, nil
-	}
-	inslogger.FromContext(ctx).Debug("Got wanted results seq=", msg.Sequence)
+			log := inslogger.FromContext(ctx)
+			c, ok := cr.ResultMap[msg.Sequence]
+			if !ok {
+				log.Info("oops unwaited results seq=", msg.Sequence)
+				return
+			}
+			inslogger.FromContext(ctx).Debug("Got wanted results seq=", msg.Sequence)
 
-	c <- msg
-	delete(cr.ResultMap, msg.Sequence)
+			c <- msg
+			delete(cr.ResultMap, msg.Sequence)
+		})
+
 	return &reply.OK{}, nil
 }
