@@ -35,6 +35,7 @@ import (
 	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/messagebus"
 	"github.com/insolar/insolar/metrics"
+	"github.com/insolar/insolar/network/merkle"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/insolar/insolar/network/state"
@@ -158,6 +159,7 @@ func initComponents(
 	checkError(ctx, err, "failed init pulse for LogicRunner")
 
 	phaseManager := phases.NewPhaseManager()
+	merkleCalculator := merkle.NewCalculator()
 
 	cm := component.Manager{}
 	cm.Register(
@@ -193,6 +195,7 @@ func initComponents(
 		phases.NewPhaseManager(),
 		cryptographyService,
 		phaseManager,
+		merkleCalculator,
 	}...)
 
 	cm.Inject(components...)
