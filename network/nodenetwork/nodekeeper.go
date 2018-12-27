@@ -371,6 +371,9 @@ func (nk *nodekeeper) reindex() {
 
 	for _, node := range nk.active {
 		nk.addToIndex(node)
+		if node.ID().Equal(nk.origin.ID()) {
+			nk.state = network.Ready
+		}
 	}
 }
 

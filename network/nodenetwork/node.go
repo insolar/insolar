@@ -124,12 +124,13 @@ func ClaimToNode(version string, claim *packets.NodeJoinClaim) (core.Node, error
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ClaimToNode ] failed to import a public key")
 	}
-	node := NewNode(
+	node := newMutableNode(
 		claim.NodeRef,
 		claim.NodeRoleRecID,
 		key,
 		claim.NodeAddress.Get(),
 		version)
+	node.SetShortID(claim.ShortNodeID)
 	return node, nil
 }
 

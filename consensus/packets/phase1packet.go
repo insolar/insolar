@@ -42,6 +42,10 @@ type Phase1Packet struct {
 
 func (p1p *Phase1Packet) Clone() ConsensusPacket {
 	clone := *p1p
+	clone.claims = make([]ReferendumClaim, len(p1p.claims))
+	for i := 0; i < len(p1p.claims); i++ {
+		clone.claims[i] = p1p.claims[i].Clone()
+	}
 	return &clone
 }
 

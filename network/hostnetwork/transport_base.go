@@ -75,8 +75,8 @@ func (h *transportBase) listen(ctx context.Context) {
 
 // Disconnect stop listening to network requests.
 func (h *transportBase) Stop() {
-	go h.transport.Stop()
 	if atomic.CompareAndSwapUint32(&h.started, 1, 0) {
+		go h.transport.Stop()
 		<-h.transport.Stopped()
 		h.transport.Close()
 	}

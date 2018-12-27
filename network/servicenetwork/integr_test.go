@@ -38,7 +38,10 @@ func (s *testSuite) TestNodeConnect() {
 
 	s.InitTestNode()
 	s.StartTestNode()
-	defer s.StopTestNode()
+	defer func() {
+		s.StopTestNode()
+		// s.TearDownTest()
+	}()
 
 	s.waitForConsensus(1)
 
@@ -46,45 +49,42 @@ func (s *testSuite) TestNodeConnect() {
 	s.Equal(s.nodesCount(), len(activeNodes))
 
 	s.waitForConsensus(1)
+
+	activeNodes = s.bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.nodesCount()+1, len(activeNodes))
+
+	s.waitForConsensus(2)
 
 	activeNodes = s.bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
 	s.Equal(s.nodesCount()+1, len(activeNodes))
 }
 
 func (s *testSuite) TestNodeLeave() {
-	s.T().Skip("tmp 123")
-	phasesResult := make(chan error)
-
 	s.preInitNode(s.testNode, Disable)
 
 	s.InitTestNode()
-	s.bootstrapNodes[0].serviceNetwork.PhaseManager = &phaseManagerWrapper{original: s.bootstrapNodes[0].serviceNetwork.PhaseManager, result: phasesResult}
-
 	s.StartTestNode()
+	defer func() {
+		s.StopTestNode()
+		// s.TearDownTest()
+	}()
 
-	res := <-phasesResult
-	s.NoError(res)
+	s.waitForConsensus(1)
+
 	activeNodes := s.bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
 	s.Equal(s.nodesCount(), len(activeNodes))
-	err := s.bootstrapNodes[0].serviceNetwork.NodeKeeper.MoveSyncToActive()
-	s.NoError(err)
+
+	s.waitForConsensus(1)
+
 	activeNodes = s.bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
 	s.Equal(s.nodesCount()+1, len(activeNodes))
 
 	s.testNode.serviceNetwork.GracefulStop(context.Background())
 
-	res = <-phasesResult
-	s.NoError(res)
-	activeNodes = s.bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
-	s.Equal(s.nodesCount()+1, len(activeNodes))
-	err = s.bootstrapNodes[0].serviceNetwork.NodeKeeper.MoveSyncToActive()
-	s.NoError(err)
+	s.waitForConsensus(2)
+
 	activeNodes = s.bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
 	s.Equal(s.nodesCount(), len(activeNodes))
-
-	// teardown
-	<-time.After(time.Second * 3)
-	s.StopTestNode()
 }
 
 func TestServiceNetworkIntegration(t *testing.T) {

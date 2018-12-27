@@ -49,6 +49,7 @@ func (cnc *ChangeNetworkClaim) Type() ClaimType {
 type ReferendumClaim interface {
 	Serializer
 	Type() ClaimType
+	Clone() ReferendumClaim
 }
 
 type ClaimSupplementary interface {
@@ -68,6 +69,11 @@ type NodeBroadcast struct {
 	EmergencyLevel uint8
 }
 
+func (nb *NodeBroadcast) Clone() ReferendumClaim {
+	result := *nb
+	return &result
+}
+
 func (nb *NodeBroadcast) Type() ClaimType {
 	return TypeNodeBroadcast
 }
@@ -79,6 +85,11 @@ type CapabilityPoolingAndActivation struct {
 	CapabilityRef  [ReferenceLength]byte
 }
 
+func (cpa *CapabilityPoolingAndActivation) Clone() ReferendumClaim {
+	result := *cpa
+	return &result
+}
+
 func (cpa *CapabilityPoolingAndActivation) Type() ClaimType {
 	return TypeCapabilityPollingAndActivation
 }
@@ -87,6 +98,11 @@ func (cpa *CapabilityPoolingAndActivation) Type() ClaimType {
 type NodeViolationBlame struct {
 	BlameNodeID   uint32
 	TypeViolation uint8
+}
+
+func (nvb *NodeViolationBlame) Clone() ReferendumClaim {
+	result := *nvb
+	return &result
 }
 
 func (nvb *NodeViolationBlame) Type() ClaimType {
@@ -131,6 +147,11 @@ type NodeJoinClaim struct {
 	Signature               [SignatureLength]byte
 }
 
+func (njc *NodeJoinClaim) Clone() ReferendumClaim {
+	result := *njc
+	return &result
+}
+
 func (njc *NodeJoinClaim) GetNodeID() core.RecordRef {
 	return njc.NodeRef
 }
@@ -161,6 +182,11 @@ type NodeAnnounceClaim struct {
 	BitSetMapper BitSetMapper
 }
 
+func (nac *NodeAnnounceClaim) Clone() ReferendumClaim {
+	result := *nac
+	return &result
+}
+
 func (nac *NodeAnnounceClaim) Type() ClaimType {
 	return TypeNodeAnnounceClaim
 }
@@ -174,6 +200,11 @@ func (nac *NodeAnnounceClaim) SetCloudHash(cloudHash []byte) {
 type NodeLeaveClaim struct {
 	// additional field that is not serialized and is set from transport layer on packet receive
 	NodeID core.RecordRef
+}
+
+func (nlc *NodeLeaveClaim) Clone() ReferendumClaim {
+	result := *nlc
+	return &result
 }
 
 func (nlc *NodeLeaveClaim) AddSupplementaryInfo(nodeID core.RecordRef) {
