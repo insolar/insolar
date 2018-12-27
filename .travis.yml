@@ -23,6 +23,7 @@ install:
 script:
 # check if git repo unchanged in CI before build stage (try to catch forgotten generated files)
   # - make test_git_no_changes
+  - git describe --abbrev=0 --tags
   - make build
   - make functest
   # - make test_with_coverage
