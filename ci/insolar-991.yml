@@ -89,10 +89,12 @@ jobs:
   - put: deploy
     params:
       namespace: dev-991
+      wait_until_ready: 120
       kubectl: apply -f deploy/bootstrap.yaml
   - put: deploy
     params:
       namespace: dev-991
+      wait_until_ready: 120
       kubectl: apply -f deploy/pulsar.yaml
 
 - name: builder
