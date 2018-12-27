@@ -147,7 +147,11 @@ func (p1p *Phase1Packet) Serialize() ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Phase1Packet.Serialize ] Failed to get raw bytes")
 	}
-	result.Write(raw)
+
+	_, err = result.Write(raw)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Phase1Packet.Serialize ] Can't write raw bytes")
+	}
 
 	// serializing of signature
 	err = binary.Write(result, defaultByteOrder, p1p.Signature)
