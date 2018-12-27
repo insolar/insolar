@@ -250,11 +250,13 @@ func (nc *NaiveCommunicator) ExchangePhase1(
 	for {
 		select {
 		case res := <-nc.phase1result:
+			log.Debugf("got phase1 request from %s", res.id)
 			if res.packet.GetPulseNumber() != core.PulseNumber(nc.currentPulseNumber) {
 				continue
 			}
 
 			if res.id.IsEmpty() {
+				log.Debug("got unknown phase1 request, try to get routing info from announce claim")
 				claim := res.packet.GetAnnounceClaim()
 				if claim == nil {
 					continue
@@ -269,12 +271,15 @@ func (nc *NaiveCommunicator) ExchangePhase1(
 
 			if shouldSendResponse(res.id) {
 				// send response
+				log.Debugf("send phase1 response to %s", res.id)
 				err := nc.ConsensusNetwork.SignAndSendPacket(response, res.id, nc.Cryptography)
 				if err != nil {
 					log.Errorln(err.Error())
 				}
 			}
-			result[res.id] = res.packet
+			if !res.id.IsEmpty() {
+				result[res.id] = res.packet
+			}
 
 			// FIXME: early return is commented to have synchronized length of phases on all nodes
 			// if len(result) == len(participants) {
@@ -307,11 +312,13 @@ func (nc *NaiveCommunicator) ExchangePhase2(ctx context.Context, list network.Un
 	for {
 		select {
 		case res := <-nc.phase2result:
+			log.Debugf("got phase2 request from %s", res.id)
 			if res.packet.GetPulseNumber() != core.PulseNumber(nc.currentPulseNumber) {
 				continue
 			}
 
 			if shouldSendResponse(&res) {
+				log.Debugf("send phase2 response to %s", res.id)
 				// send response
 				response := packet
 				if res.packet.ContainsRequests() {

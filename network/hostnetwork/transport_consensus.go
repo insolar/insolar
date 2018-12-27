@@ -87,7 +87,7 @@ func (tc *transportConsensus) processMessage(ctx context.Context, msg *packet.Pa
 	// TODO: NETD18-79
 	// special case for Phase1 because we can get a valid packet from a node we don't know yet (first consensus case)
 	if err != nil && p.GetType() != consensus.Phase1 {
-		log.Errorf("Error processing incoming message: failed to resolve ShortID (%d) -> NodeID", msg.Sender.ShortID)
+		log.Errorf("Error processing incoming message: failed to resolve ShortID (%d) -> NodeID", p.GetOrigin())
 		return
 	}
 	if sender == nil {

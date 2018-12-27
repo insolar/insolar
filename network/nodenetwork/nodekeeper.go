@@ -140,6 +140,7 @@ func (nk *nodekeeper) AddTemporaryMapping(nodeID core.RecordRef, shortID core.Sh
 	nk.tempMapR[nodeID] = h
 	nk.tempMapS[shortID] = h
 	nk.tempLock.Unlock()
+	log.Infof("Added temporary mapping: %s -> (%s, %d)", consensusAddress, nodeID, shortID)
 	return nil
 }
 
@@ -353,7 +354,7 @@ func (nk *nodekeeper) MoveSyncToActive() error {
 
 	sync := nk.sync.(*unsyncList)
 
-	newActiveList, err := sync.getMergedNodeMap()
+	newActiveList, nodesJoinedDuringPrevPulse, err := sync.getMergedNodeMap()
 	if err != nil {
 		return errors.Wrap(err, "[ MoveSyncToActive ] Failed to calculate new active list")
 	}
@@ -361,6 +362,7 @@ func (nk *nodekeeper) MoveSyncToActive() error {
 		len(nk.active), len(newActiveList))
 	nk.active = newActiveList
 	nk.reindex()
+	nk.nodesJoinedDuringPrevPulse = nodesJoinedDuringPrevPulse
 	return nil
 }
 

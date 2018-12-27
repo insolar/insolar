@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/merkle"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 )
@@ -82,6 +83,7 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 	var success bool
 	var originClaim *packets.NodeAnnounceClaim
 	if fp.NodeKeeper.NodesJoinedDuringPreviousPulse() {
+		log.Debug("Add origin announce claim to consensus phase1 packet")
 		originClaim, err = fp.NodeKeeper.GetOriginAnnounceClaim(unsyncList)
 		if err != nil {
 			return nil, errors.Wrap(err, "[ FirstPhase ] Failed to get origin claim")
@@ -107,6 +109,9 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 	resultPackets, err := fp.Communicator.ExchangePhase1(ctx, originClaim, activeNodes, packet)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ FirstPhase ] Failed to exchange results.")
+	}
+	if len(resultPackets) < 2 && fp.NodeKeeper.GetState() == network.Waiting {
+		return nil, errors.New("[ FirstPhase ] Failed to receive requests from other nodes")
 	}
 	logger.Infof("[ FirstPhase ] received responses: %d/%d", len(resultPackets), len(activeNodes))
 
@@ -141,17 +146,18 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 		unsyncList = fp.NodeKeeper.GetSparseUnsyncList(length)
 	}
 
+	err = unsyncList.AddClaims(claimMap)
+	if err != nil {
+		return nil, errors.Wrapf(err, "[ FirstPhase ] Failed to add claims")
+	}
 	valid, fault := validateProofs(fp.Calculator, unsyncList, pulseHash, proofSet)
 	for node := range valid {
 		unsyncList.AddProof(node.ID(), rawProofs[node.ID()])
 	}
 	for nodeID := range fault {
 		logger.Warnf("[ FirstPhase ] Failed to validate proof from %s", nodeID)
-		delete(claimMap, nodeID)
-	}
-	err = unsyncList.AddClaims(claimMap)
-	if err != nil {
-		return nil, errors.Wrapf(err, "[ FirstPhase ] Failed to add claims")
+		// TODO: add RemoveClaims to unsyncList interface and call it here
+		// unsyncList.RemoveClaims(nodeID)
 	}
 
 	return &FirstPhaseState{
@@ -165,12 +171,28 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 }
 
 func (fp *FirstPhase) checkPacketSignature(packet *packets.Phase1Packet, recordRef core.RecordRef) error {
+	if fp.NodeKeeper.GetState() == network.Waiting {
+		return fp.checkPacketSignatureFromClaim(packet, recordRef)
+	}
+
 	activeNode := fp.NodeNetwork.GetActiveNode(recordRef)
 	if activeNode == nil {
 		return errors.New("failed to get active node")
 	}
 	key := activeNode.PublicKey()
 	return packet.Verify(fp.Cryptography, key)
+}
+
+func (fp *FirstPhase) checkPacketSignatureFromClaim(packet *packets.Phase1Packet, recordRef core.RecordRef) error {
+	announceClaim := packet.GetAnnounceClaim()
+	if announceClaim == nil {
+		return errors.New("could not find announce claim")
+	}
+	pk, err := platformpolicy.NewKeyProcessor().ImportPublicKeyBinary(announceClaim.NodePK[:])
+	if err != nil {
+		return errors.Wrap(err, "could not import public key from announce claim")
+	}
+	return packet.Verify(fp.Cryptography, pk)
 }
 
 func detectSparseBitsetLength(claims map[core.RecordRef][]packets.ReferendumClaim) (int, error) {

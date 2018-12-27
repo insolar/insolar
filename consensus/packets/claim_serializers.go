@@ -399,6 +399,8 @@ func parseReferendumClaim(data []byte) ([]ReferendumClaim, error) {
 			refClaim = &NodeBroadcast{}
 		case TypeNodeLeaveClaim:
 			refClaim = &NodeLeaveClaim{}
+		case TypeNodeAnnounceClaim:
+			refClaim = &NodeAnnounceClaim{}
 		default:
 			return nil, errors.Wrap(err, "[ PacketHeader.parseReferendumClaim ] Unsupported claim type.")
 		}

@@ -191,14 +191,16 @@ func (p1p *Phase1Packet) rawBytes() ([]byte, error) {
 		return nil, errors.Wrap(err, "[ Phase1Packet.Serialize ] Can't append proofNodePulseRaw")
 	}
 
-	// serializing of ReferendumClaim
-	claimRaw, err := serializeClaims(p1p.claims)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ Phase1Packet.Serialize ] Can't append claimRaw")
-	}
-	_, err = result.Write(claimRaw)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ Phase1Packet.Serialize ] Can't append claimRaw")
+	if p1p.hasSection2() {
+		// serializing of ReferendumClaim
+		claimRaw, err := serializeClaims(p1p.claims)
+		if err != nil {
+			return nil, errors.Wrap(err, "[ Phase1Packet.Serialize ] Can't append claimRaw")
+		}
+		_, err = result.Write(claimRaw)
+		if err != nil {
+			return nil, errors.Wrap(err, "[ Phase1Packet.Serialize ] Can't append claimRaw")
+		}
 	}
 
 	return result.Bytes(), nil

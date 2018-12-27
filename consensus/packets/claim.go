@@ -115,7 +115,7 @@ func (address NodeAddress) Get() string {
 			break
 		}
 	}
-	return string(address[1:i])
+	return string(address[:i])
 }
 
 // NodeJoinClaim is a type 1, len == 272.
