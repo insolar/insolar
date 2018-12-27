@@ -34,6 +34,7 @@ type Cascade struct {
 type RemoteProcedure func(ctx context.Context, args [][]byte) ([]byte, error)
 
 // Network is interface for network modules facade.
+//go:generate minimock -i github.com/insolar/insolar/core.Network -o ../testutils -s _mock.go
 type Network interface {
 	// SendParcel sends a message.
 	SendMessage(nodeID RecordRef, method string, msg Parcel) ([]byte, error)

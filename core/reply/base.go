@@ -129,6 +129,9 @@ func getEmptyReply(t core.ReplyType) (core.Reply, error) {
 	case TypeNodeSign:
 		return &NodeSign{}, nil
 
+	case TypeWrongPulseNumber:
+		return &WrongPulseNumber{}, nil
+
 	default:
 		return nil, errors.Errorf("unimplemented reply type: '%d'", t)
 	}
