@@ -181,29 +181,19 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 					}
 				}()
 
-				var err error
-				utils.MeasureExecutionTime(ctx, "callHandler UnmarshalRequest",
-					func() {
-						_, err = UnmarshalRequest(req, &params)
-					})
+				_, err := UnmarshalRequest(req, &params)
 				if err != nil {
 					processError(err, "Can't unmarshal request", &resp, insLog)
 					return
 				}
 
-				utils.MeasureExecutionTime(ctx, "callHandler checkSeed",
-					func() {
-						err = ar.checkSeed(params.Seed)
-					})
+				err = ar.checkSeed(params.Seed)
 				if err != nil {
 					processError(err, "Can't checkSeed", &resp, insLog)
 					return
 				}
 
-				utils.MeasureExecutionTime(ctx, "callHandler verifySignature",
-					func() {
-						err = ar.verifySignature(ctx, params)
-					})
+				err = ar.verifySignature(ctx, params)
 				if err != nil {
 					processError(err, "Can't verify signature", &resp, insLog)
 					return

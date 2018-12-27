@@ -139,21 +139,12 @@ func (mb *MessageBus) MustRegister(p core.MessageType, handler core.MessageHandl
 
 // Send an `Message` and get a `Value` or error from remote host.
 func (mb *MessageBus) Send(ctx context.Context, msg core.Message, ops *core.MessageSendOptions) (core.Reply, error) {
-	var currentPulse *core.Pulse
-	var err error
-	utils.MeasureExecutionTime(ctx, "MessageBus.Send PulseStorage.Current",
-		func() {
-			currentPulse, err = mb.PulseStorage.Current(ctx)
-		})
+	currentPulse, err := mb.PulseStorage.Current(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	var parcel core.Parcel
-	utils.MeasureExecutionTime(ctx, "MessageBus.Send mb.CreateParcel",
-		func() {
-			parcel, err = mb.CreateParcel(ctx, msg, ops.Safe().Token, *currentPulse)
-		})
+	parcel, err := mb.CreateParcel(ctx, msg, ops.Safe().Token, *currentPulse)
 	if err != nil {
 		return nil, err
 	}

@@ -117,10 +117,7 @@ func (cr *ContractRequester) CallMethod(ctx context.Context, base core.Message, 
 	var ch chan *message.ReturnResults
 
 	if !async {
-		utils.MeasureExecutionTime(ctx, "ContractRequester.CallMethod cr.ResultMutex.Lock",
-			func() {
-				cr.ResultMutex.Lock()
-			})
+		cr.ResultMutex.Lock()
 		cr.Sequence++
 		seq = cr.Sequence
 		msg.Sequence = seq
@@ -263,10 +260,7 @@ func (cr *ContractRequester) ReceiveResult(ctx context.Context, parcel core.Parc
 
 	utils.MeasureExecutionTime(ctx, "ContractRequester.ReceiveResult",
 		func() {
-			utils.MeasureExecutionTime(ctx, "ContractRequester.ReceiveResult cr.ResultMutex.Lock",
-				func() {
-					cr.ResultMutex.Lock()
-				})
+			cr.ResultMutex.Lock()
 			defer cr.ResultMutex.Unlock()
 
 			log := inslogger.FromContext(ctx)
