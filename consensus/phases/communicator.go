@@ -227,8 +227,7 @@ func (nc *NaiveCommunicator) ExchangePhase1(
 	if originClaim == nil {
 		request = packet
 	} else {
-		request = packets.NewPhase1Packet()
-		*request = *packet
+		request = packet.Clone().(*packets.Phase1Packet)
 		request.RemoveAnnounceClaim()
 	}
 
