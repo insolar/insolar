@@ -445,10 +445,22 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 			if err != nil {
 				return err
 			}
+			go m.sendTreeToHeady(ctx, storagePulse.Pulse.PulseNumber)
 		}
 	}
 
 	return m.LR.OnPulse(ctx, newPulse)
+}
+
+func (m *PulseManager) sendTreeToHeady(ctx context.Context, pn core.PulseNumber){
+	jetTree, err := m.db.GetJetTree(ctx, pn)
+	if err != nil{
+		inslogger.FromContext(ctx).Error(err)
+	}
+	_, err = m.Bus.Send(ctx, &message.HeavyJetTree{PulseNum:pn, JetTree: *jetTree}, nil)
+	if err != nil{
+		inslogger.FromContext(ctx).Error(err)
+	}
 }
 
 // AddPulseToSyncClients add pulse number to all sync clients in pool.
