@@ -62,6 +62,8 @@ jobs:
       load_base: builder
       tag_file: master/.git/short_ref
       tag_as_latest: false
+    get_params:
+      skip_download: true
   - task: set-tag
     config:
       platform: linux
@@ -106,3 +108,5 @@ jobs:
     params:
       build: master
       dockerfile: master/docker/Dockerfile.builder
+    get_params:
+      skip_download: true
