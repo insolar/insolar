@@ -345,10 +345,10 @@ func TestSevenPulsars_Full_Consensus(t *testing.T) {
 				ConnectionType:                 "tcp",
 				MainListenerAddress:            mainAddresses[pulsarIndex],
 				Neighbours:                     []configuration.PulsarNodeAddress{},
-				ReceivingSignTimeout:           50,
-				ReceivingNumberTimeout:         50,
-				ReceivingSignsForChosenTimeout: 50,
-				ReceivingVectorTimeout:         50,
+				ReceivingSignTimeout:           100,
+				ReceivingNumberTimeout:         100,
+				ReceivingSignsForChosenTimeout: 100,
+				ReceivingVectorTimeout:         100,
 			}}
 
 		for configIndex := 0; configIndex < 7; configIndex++ {
@@ -414,7 +414,7 @@ func TestSevenPulsars_Full_Consensus(t *testing.T) {
 		require.NoError(t, err)
 	}()
 
-	time.Sleep(2000 * time.Millisecond)
+	time.Sleep(2500 * time.Millisecond)
 
 	pulseDistributorMock.MinimockFinish()
 
