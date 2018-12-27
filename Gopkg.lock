@@ -570,6 +570,7 @@
   input-imports = [
     "github.com/blang/semver",
     "github.com/ccding/go-stun/stun",
+    "github.com/davecgh/go-spew/spew",
     "github.com/dgraph-io/badger",
     "github.com/gojuno/minimock",
     "github.com/gorilla/rpc/v2",
