@@ -67,8 +67,8 @@ func SendGracefulStopSignal() error {
 }
 
 // TimestampMs returns current timestamp in milliseconds.
-func TimestampMs() int64 {
-	return time.Now().UnixNano() / int64(time.Millisecond)
+func TimestampMs() float64 {
+	return float64(time.Now().UnixNano()) / float64(time.Millisecond)
 }
 
 // We have to use a lock since all IO is not thread safe by default
@@ -77,13 +77,13 @@ var measurementsWriter *bufio.Writer
 var measurementsEnabled = false
 
 func MeasureInfo(ctx context.Context, msg string) {
-	measureExecutionTimeInt(ctx, msg, func() {}, true)
+	measureExecutionTimeInternal(ctx, msg, func() {}, true)
 }
 
 // MeasureExecutionTime writes execution time of given function to
 // the profile log (if profile logging is enabled).
 func MeasureExecutionTime(ctx context.Context, comment string, thefunction func()) {
-	measureExecutionTimeInt(ctx, comment, thefunction, false)
+	measureExecutionTimeInternal(ctx, comment, thefunction, false)
 }
 
 // write one measure to the log
@@ -138,7 +138,7 @@ func EnableExecutionTimeMeasurement(fname string) (func(), error) {
 	return cleanup, nil
 }
 
-func measureExecutionTimeInt(ctx context.Context, comment string, thefunction func(), info bool) {
+func measureExecutionTimeInternal(ctx context.Context, comment string, thefunction func(), info bool) {
 	if !measurementsEnabled {
 		thefunction()
 		return
