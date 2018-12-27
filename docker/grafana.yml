@@ -1,3 +1,6 @@
+ # docker-compose -f docker/grafana.yml up
+ # localhost:3000 admin:pass
+ 
 version: '3'
 services:
   prometheus:
