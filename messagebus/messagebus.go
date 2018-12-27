@@ -25,17 +25,16 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/insolar/insolar/core/utils"
-	"github.com/insolar/insolar/metrics"
-
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/core/utils"
 	"github.com/insolar/insolar/instrumentation/hack"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/metrics"
 )
 
 const deliverRPCMethodName = "MessageBus.Deliver"
