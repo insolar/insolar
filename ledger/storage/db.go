@@ -138,7 +138,9 @@ func NewDB(conf configuration.Ledger, opts *badger.Options) (*DB, error) {
 func (db *DB) Init(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
 	inslog.Debug("start storage bootstrap")
-	jetID := *jet.NewID(0, nil)
+	jetID := *jet.NewID(2, []byte{})        // 00
+	jetID2 := *jet.NewID(2, []byte{1 << 6}) // 01
+	jetID3 := *jet.NewID(1, []byte{1 << 7}) // 10
 
 	getGenesisRef := func() (*core.RecordRef, error) {
 		buff, err := db.get(ctx, prefixkey(scopeIDSystem, []byte{sysGenesis}))
@@ -166,18 +168,26 @@ func (db *DB) Init(ctx context.Context) error {
 		if err != nil {
 			return nil, err
 		}
+		err = db.SetDrop(ctx, jetID2, &jet.JetDrop{})
+		if err != nil {
+			return nil, err
+		}
+		err = db.SetDrop(ctx, jetID3, &jet.JetDrop{})
+		if err != nil {
+			return nil, err
+		}
 
 		lastPulse, err := db.GetLatestPulse(ctx)
 		if err != nil {
 			return nil, err
 		}
-		genesisID, err := db.SetRecord(ctx, jetID, lastPulse.Pulse.PulseNumber, &record.GenesisRecord{})
+		genesisID, err := db.SetRecord(ctx, jetID3, lastPulse.Pulse.PulseNumber, &record.GenesisRecord{})
 		if err != nil {
 			return nil, err
 		}
 		err = db.SetObjectIndex(
 			ctx,
-			jetID,
+			jetID3,
 			genesisID,
 			&index.ObjectLifeline{LatestState: genesisID, LatestStateApproved: genesisID},
 		)
@@ -199,7 +209,15 @@ func (db *DB) Init(ctx context.Context) error {
 	}
 
 	// TODO: required for test passing, need figure out how to do init jets properly
-	return db.AddJets(ctx, jetID)
+	err = db.AddJets(ctx, jetID, jetID2, jetID3)
+	if err != nil {
+		return err
+	}
+	lp, err := db.GetLatestPulse(ctx)
+	if err != nil {
+		return err
+	}
+	return db.UpdateJetTree(ctx, lp.Pulse.PulseNumber, true, jetID, jetID2, jetID3)
 }
 
 // GenesisRef returns the genesis record reference.
