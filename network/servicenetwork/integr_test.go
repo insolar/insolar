@@ -142,8 +142,8 @@ func (s *testSuite) TestPartialTimeOut() {
 	}
 
 	comm := s.fixture().bootstrapNodes[0].serviceNetwork.PhaseManager.(*phaseManagerWrapper).original.(*phases.Phases).FirstPhase.Communicator
-	wrapper := &CommunicatorMock{comm, PartialNegative1Phase}
-	s.fixture().bootstrapNodes[0].serviceNetwork.PhaseManager.(*phases.Phases).FirstPhase.Communicator = wrapper
+	wrapper := &CommunicatorMock{comm, PartialPositive1Phase}
+	s.fixture().bootstrapNodes[0].serviceNetwork.PhaseManager.(*phaseManagerWrapper).original.(*phases.Phases).FirstPhase.Communicator = wrapper
 
 	s.preInitNode(s.fixture().testNode)
 
@@ -155,5 +155,5 @@ func (s *testSuite) TestPartialTimeOut() {
 	s.Equal(s.getNodesCount(), len(activeNodes))
 	s.waitForConsensus(1)
 	activeNodes = s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetActiveNodes()
-	s.Equal(s.getNodesCount()-1, len(activeNodes))
+	s.Equal(s.getNodesCount(), len(activeNodes))
 }

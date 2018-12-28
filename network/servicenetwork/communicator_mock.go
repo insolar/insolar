@@ -28,10 +28,10 @@ import (
 type CommunicatorTestOpt int
 
 const (
-	PartitialPositive1Phase = CommunicatorTestOpt(iota + 1)
+	PartialPositive1Phase = CommunicatorTestOpt(iota + 1)
 	PartialNegative1Phase
-	PartitialPositive2Phase
-	PartitialNegative2Phase
+	PartialPositive2Phase
+	PartialNegative2Phase
 )
 
 type CommunicatorMock struct {
@@ -49,7 +49,7 @@ func (cm *CommunicatorMock) ExchangePhase1(
 	case PartialNegative1Phase:
 		rmNodesCount := float64(len(participants)) * 0.5
 		participants = participants[:int(rmNodesCount)]
-	case PartitialPositive1Phase:
+	case PartialPositive1Phase:
 		rmNodesCount := float64(len(participants)) * 0.2
 		participants = participants[:len(participants)-int(rmNodesCount)]
 	}
@@ -58,10 +58,10 @@ func (cm *CommunicatorMock) ExchangePhase1(
 
 func (cm *CommunicatorMock) ExchangePhase2(ctx context.Context, list network.UnsyncList, participants []core.Node, packet *packets.Phase2Packet) (map[core.RecordRef]*packets.Phase2Packet, error) {
 	switch cm.testOpt {
-	case PartitialNegative2Phase:
+	case PartialNegative2Phase:
 		rmNodesCount := float64(len(participants)) * 0.5
 		participants = participants[:int(rmNodesCount)]
-	case PartitialPositive2Phase:
+	case PartialPositive2Phase:
 		rmNodesCount := float64(len(participants)) * 0.2
 		participants = participants[:len(participants)-int(rmNodesCount)]
 	}
