@@ -91,7 +91,7 @@ jobs:
   - put: deploy
     params:
       namespace: dev-991
-      wait_until_ready: 120
+      wait_until_ready: 240
       kubectl: apply -f deploy/all.yaml
 
 - name: builder
