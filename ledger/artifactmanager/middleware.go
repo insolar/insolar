@@ -18,6 +18,7 @@ package artifactmanager
 
 import (
 	"context"
+	"sync"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
@@ -36,6 +37,24 @@ type middleware struct {
 	db             *storage.DB
 	jetCoordinator core.JetCoordinator
 	messageBus     core.MessageBus
+
+	jetDropTimeoutProvider jetDropTimeoutProvider
+}
+
+func newMiddleware(
+	db *storage.DB,
+	jetCoordinator core.JetCoordinator,
+	messageBus core.MessageBus,
+) *middleware {
+	return &middleware{
+		db:             db,
+		jetCoordinator: jetCoordinator,
+		messageBus:     messageBus,
+		jetDropTimeoutProvider:jetDropTimeoutProvider{
+			waiters: map[core.RecordID]*jetDropTimeout{},
+			waitersInitLocks: map[core.RecordID]*sync.RWMutex{},
+		},
+	}
 }
 
 type jetKey struct{}
