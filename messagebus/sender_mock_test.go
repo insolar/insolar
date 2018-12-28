@@ -41,6 +41,11 @@ type senderMock struct {
 	NewRecorderPreCounter uint64
 	NewRecorderMock       msenderMockNewRecorder
 
+	OnPulseFunc       func(p context.Context, p1 core.Pulse) (r error)
+	OnPulseCounter    uint64
+	OnPulsePreCounter uint64
+	OnPulseMock       msenderMockOnPulse
+
 	RegisterFunc       func(p core.MessageType, p1 core.MessageHandler) (r error)
 	RegisterCounter    uint64
 	RegisterPreCounter uint64
@@ -69,6 +74,7 @@ func NewsenderMock(t minimock.Tester) *senderMock {
 	m.MustRegisterMock = msenderMockMustRegister{mock: m}
 	m.NewPlayerMock = msenderMockNewPlayer{mock: m}
 	m.NewRecorderMock = msenderMockNewRecorder{mock: m}
+	m.OnPulseMock = msenderMockOnPulse{mock: m}
 	m.RegisterMock = msenderMockRegister{mock: m}
 	m.SendMock = msenderMockSend{mock: m}
 	m.SendParcelMock = msenderMockSendParcel{mock: m}
@@ -655,6 +661,154 @@ func (m *senderMock) NewRecorderFinished() bool {
 	return true
 }
 
+type msenderMockOnPulse struct {
+	mock              *senderMock
+	mainExpectation   *senderMockOnPulseExpectation
+	expectationSeries []*senderMockOnPulseExpectation
+}
+
+type senderMockOnPulseExpectation struct {
+	input  *senderMockOnPulseInput
+	result *senderMockOnPulseResult
+}
+
+type senderMockOnPulseInput struct {
+	p  context.Context
+	p1 core.Pulse
+}
+
+type senderMockOnPulseResult struct {
+	r error
+}
+
+//Expect specifies that invocation of sender.OnPulse is expected from 1 to Infinity times
+func (m *msenderMockOnPulse) Expect(p context.Context, p1 core.Pulse) *msenderMockOnPulse {
+	m.mock.OnPulseFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &senderMockOnPulseExpectation{}
+	}
+	m.mainExpectation.input = &senderMockOnPulseInput{p, p1}
+	return m
+}
+
+//Return specifies results of invocation of sender.OnPulse
+func (m *msenderMockOnPulse) Return(r error) *senderMock {
+	m.mock.OnPulseFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &senderMockOnPulseExpectation{}
+	}
+	m.mainExpectation.result = &senderMockOnPulseResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of sender.OnPulse is expected once
+func (m *msenderMockOnPulse) ExpectOnce(p context.Context, p1 core.Pulse) *senderMockOnPulseExpectation {
+	m.mock.OnPulseFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &senderMockOnPulseExpectation{}
+	expectation.input = &senderMockOnPulseInput{p, p1}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *senderMockOnPulseExpectation) Return(r error) {
+	e.result = &senderMockOnPulseResult{r}
+}
+
+//Set uses given function f as a mock of sender.OnPulse method
+func (m *msenderMockOnPulse) Set(f func(p context.Context, p1 core.Pulse) (r error)) *senderMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.OnPulseFunc = f
+	return m.mock
+}
+
+//OnPulse implements github.com/insolar/insolar/messagebus.sender interface
+func (m *senderMock) OnPulse(p context.Context, p1 core.Pulse) (r error) {
+	counter := atomic.AddUint64(&m.OnPulsePreCounter, 1)
+	defer atomic.AddUint64(&m.OnPulseCounter, 1)
+
+	if len(m.OnPulseMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.OnPulseMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to senderMock.OnPulse. %v %v", p, p1)
+			return
+		}
+
+		input := m.OnPulseMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, senderMockOnPulseInput{p, p1}, "sender.OnPulse got unexpected parameters")
+
+		result := m.OnPulseMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the senderMock.OnPulse")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.OnPulseMock.mainExpectation != nil {
+
+		input := m.OnPulseMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, senderMockOnPulseInput{p, p1}, "sender.OnPulse got unexpected parameters")
+		}
+
+		result := m.OnPulseMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the senderMock.OnPulse")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.OnPulseFunc == nil {
+		m.t.Fatalf("Unexpected call to senderMock.OnPulse. %v %v", p, p1)
+		return
+	}
+
+	return m.OnPulseFunc(p, p1)
+}
+
+//OnPulseMinimockCounter returns a count of senderMock.OnPulseFunc invocations
+func (m *senderMock) OnPulseMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.OnPulseCounter)
+}
+
+//OnPulseMinimockPreCounter returns the value of senderMock.OnPulse invocations
+func (m *senderMock) OnPulseMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.OnPulsePreCounter)
+}
+
+//OnPulseFinished returns true if mock invocations count is ok
+func (m *senderMock) OnPulseFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.OnPulseMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.OnPulseCounter) == uint64(len(m.OnPulseMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.OnPulseMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.OnPulseCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.OnPulseFunc != nil {
+		return atomic.LoadUint64(&m.OnPulseCounter) > 0
+	}
+
+	return true
+}
+
 type msenderMockRegister struct {
 	mock              *senderMock
 	mainExpectation   *senderMockRegisterExpectation
@@ -1128,6 +1282,10 @@ func (m *senderMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to senderMock.NewRecorder")
 	}
 
+	if !m.OnPulseFinished() {
+		m.t.Fatal("Expected call to senderMock.OnPulse")
+	}
+
 	if !m.RegisterFinished() {
 		m.t.Fatal("Expected call to senderMock.Register")
 	}
@@ -1173,6 +1331,10 @@ func (m *senderMock) MinimockFinish() {
 		m.t.Fatal("Expected call to senderMock.NewRecorder")
 	}
 
+	if !m.OnPulseFinished() {
+		m.t.Fatal("Expected call to senderMock.OnPulse")
+	}
+
 	if !m.RegisterFinished() {
 		m.t.Fatal("Expected call to senderMock.Register")
 	}
@@ -1203,6 +1365,7 @@ func (m *senderMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.MustRegisterFinished()
 		ok = ok && m.NewPlayerFinished()
 		ok = ok && m.NewRecorderFinished()
+		ok = ok && m.OnPulseFinished()
 		ok = ok && m.RegisterFinished()
 		ok = ok && m.SendFinished()
 		ok = ok && m.SendParcelFinished()
@@ -1228,6 +1391,10 @@ func (m *senderMock) MinimockWait(timeout time.Duration) {
 
 			if !m.NewRecorderFinished() {
 				m.t.Error("Expected call to senderMock.NewRecorder")
+			}
+
+			if !m.OnPulseFinished() {
+				m.t.Error("Expected call to senderMock.OnPulse")
 			}
 
 			if !m.RegisterFinished() {
@@ -1267,6 +1434,10 @@ func (m *senderMock) AllMocksCalled() bool {
 	}
 
 	if !m.NewRecorderFinished() {
+		return false
+	}
+
+	if !m.OnPulseFinished() {
 		return false
 	}
 
