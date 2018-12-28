@@ -29,13 +29,11 @@ import (
 )
 
 func Test_RemoveJetIndexesUntil_Basic(t *testing.T) {
-	t.Skip("Temporary disable index removal")
 	t.Parallel()
 	removeJetIndexesUntil(t, false)
 }
 
 func Test_RemoveJetIndexesUntil_WithSkips(t *testing.T) {
-	t.Skip("Temporary disable index removal")
 	t.Parallel()
 	removeJetIndexesUntil(t, true)
 }
