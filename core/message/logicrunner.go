@@ -17,8 +17,6 @@
 package message
 
 import (
-	"context"
-
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/platformpolicy"
 )
@@ -215,7 +213,6 @@ type ExecutorResults struct {
 }
 
 type ExecutionQueueElement struct {
-	Ctx     context.Context
 	Parcel  core.Parcel
 	Request *core.RecordRef
 	Pulse   core.PulseNumber

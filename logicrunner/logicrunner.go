@@ -688,7 +688,7 @@ func (lr *LogicRunner) prepareObjectState(ctx context.Context, msg *message.Exec
 			queueFromMessage = append(
 				queueFromMessage,
 				ExecutionQueueElement{
-					ctx:     qe.Ctx,
+					ctx:     qe.Parcel.Context(context.Background()),
 					parcel:  qe.Parcel,
 					request: qe.Request,
 					pulse:   qe.Pulse,
@@ -953,7 +953,6 @@ func convertQueueToMessageQueue(queue []ExecutionQueueElement) []message.Executi
 	mq := make([]message.ExecutionQueueElement, 0)
 	for _, elem := range queue {
 		mq = append(mq, message.ExecutionQueueElement{
-			Ctx:     elem.ctx,
 			Parcel:  elem.parcel,
 			Request: elem.request,
 			Pulse:   elem.pulse,

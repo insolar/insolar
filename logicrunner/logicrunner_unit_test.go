@@ -1,6 +1,7 @@
 package logicrunner
 
 import (
+	"context"
 	"testing"
 
 	"github.com/gojuno/minimock"
@@ -246,13 +247,18 @@ func TestPrepareState(t *testing.T) {
 	_ = lr.prepareObjectState(ctx, msg)
 	require.Equal(t, InPending, lr.state[object].ExecutionState.pending)
 
+	parcel := testutils.NewParcelMock(t)
+	parcel.ContextMock.Expect(context.Background()).Return(context.Background())
 	// brand new queue from message
-	msg.Queue = []message.ExecutionQueueElement{message.ExecutionQueueElement{}}
+	msg.Queue = []message.ExecutionQueueElement{
+		message.ExecutionQueueElement{Parcel: parcel},
+	}
 	_ = lr.prepareObjectState(ctx, msg)
 	require.Equal(t, 1, len(lr.state[object].ExecutionState.Queue))
 
 	testMsg := message.CallMethod{ReturnMode: message.ReturnNoWait}
-	parcel := testutils.NewParcelMock(t)
+	parcel = testutils.NewParcelMock(t)
+	parcel.ContextMock.Expect(context.Background()).Return(context.Background())
 	parcel.MessageMock.Return(&testMsg) // mock message that returns NoWait
 
 	queueElementRequest := testutils.RandomRef()
