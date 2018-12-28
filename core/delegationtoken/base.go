@@ -90,8 +90,8 @@ func (t *GetCodeRedirectToken) Verify(parcel core.Parcel) (bool, error) {
 }
 
 func init() {
-	gob.Register(PendingExecutionToken{})
-	gob.Register(GetObjectRedirectToken{})
-	gob.Register(GetChildrenRedirectToken{})
-	gob.Register(GetCodeRedirectToken{})
+	gob.Register(&PendingExecutionToken{})
+	gob.Register(&GetObjectRedirectToken{})
+	gob.Register(&GetChildrenRedirectToken{})
+	gob.Register(&GetCodeRedirectToken{})
 }
