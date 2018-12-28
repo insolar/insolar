@@ -136,7 +136,7 @@ func (s *testSuite) TestFullTimeOut() {
 
 // Partial timeout
 
-func (s *testSuite) TestPartialTimeOut() {
+func (s *testSuite) TestPartialPositive1PhaseTimeOut() {
 	if len(s.fixture().bootstrapNodes) < 3 {
 		s.T().Skip("skip test for bootstrap nodes < 3")
 	}
@@ -156,4 +156,26 @@ func (s *testSuite) TestPartialTimeOut() {
 	s.waitForConsensus(1)
 	activeNodes = s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetActiveNodes()
 	s.Equal(s.getNodesCount(), len(activeNodes))
+}
+
+func (s *testSuite) TestPartialNegative1PhaseTimeOut() {
+	if len(s.fixture().bootstrapNodes) < 3 {
+		s.T().Skip("skip test for bootstrap nodes < 3")
+	}
+
+	comm := s.fixture().bootstrapNodes[0].serviceNetwork.PhaseManager.(*phaseManagerWrapper).original.(*phases.Phases).FirstPhase.Communicator
+	wrapper := &CommunicatorMock{comm, PartialNegative1Phase}
+	s.fixture().bootstrapNodes[0].serviceNetwork.PhaseManager.(*phaseManagerWrapper).original.(*phases.Phases).FirstPhase.Communicator = wrapper
+
+	s.preInitNode(s.fixture().testNode)
+
+	s.InitTestNode()
+	s.StartTestNode()
+	defer s.StopTestNode()
+
+	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount(), len(activeNodes))
+	s.waitForConsensus(1)
+	activeNodes = s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount()-1, len(activeNodes))
 }

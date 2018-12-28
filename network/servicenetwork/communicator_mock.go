@@ -47,8 +47,8 @@ func (cm *CommunicatorMock) ExchangePhase1(
 ) (map[core.RecordRef]*packets.Phase1Packet, error) {
 	switch cm.testOpt {
 	case PartialNegative1Phase:
-		rmNodesCount := float64(len(participants)) * 0.5
-		participants = participants[:int(rmNodesCount)]
+		nodesCount := float64(len(participants)) * 0.4
+		participants = participants[:int(nodesCount)]
 	case PartialPositive1Phase:
 		rmNodesCount := float64(len(participants)) * 0.2
 		participants = participants[:len(participants)-int(rmNodesCount)]
@@ -59,8 +59,8 @@ func (cm *CommunicatorMock) ExchangePhase1(
 func (cm *CommunicatorMock) ExchangePhase2(ctx context.Context, list network.UnsyncList, participants []core.Node, packet *packets.Phase2Packet) (map[core.RecordRef]*packets.Phase2Packet, error) {
 	switch cm.testOpt {
 	case PartialNegative2Phase:
-		rmNodesCount := float64(len(participants)) * 0.5
-		participants = participants[:int(rmNodesCount)]
+		nodesCount := float64(len(participants)) * 0.4
+		participants = participants[:int(nodesCount)]
 	case PartialPositive2Phase:
 		rmNodesCount := float64(len(participants)) * 0.2
 		participants = participants[:len(participants)-int(rmNodesCount)]
