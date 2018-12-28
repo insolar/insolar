@@ -52,6 +52,7 @@ func (cm *CommunicatorMock) ExchangePhase1(
 	}
 	switch cm.testOpt {
 	case PartialNegative1Phase:
+		fallthrough
 	case PartialPositive1Phase:
 		delete(pckts, cm.ignoreFrom)
 	}
@@ -65,6 +66,7 @@ func (cm *CommunicatorMock) ExchangePhase2(ctx context.Context, list network.Uns
 	}
 	switch cm.testOpt {
 	case PartialPositive2Phase:
+		fallthrough
 	case PartialNegative2Phase:
 		delete(pckts, cm.ignoreFrom)
 	}
