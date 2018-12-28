@@ -251,7 +251,7 @@ func newNetworkNode() *networkNode {
 // init calls Init for node component manager and wraps PhaseManager
 func (n *networkNode) init(ctx context.Context) error {
 	err := n.componentManager.Init(ctx)
-	// n.serviceNetwork.PhaseManager = &phaseManagerWrapper{original: n.serviceNetwork.PhaseManager, result: n.consensusResult}
+	n.serviceNetwork.PhaseManager = &phaseManagerWrapper{original: n.serviceNetwork.PhaseManager, result: n.consensusResult}
 	n.serviceNetwork.NodeKeeper = &nodeKeeperWrapper{original: n.serviceNetwork.NodeKeeper}
 	return err
 }

@@ -137,7 +137,9 @@ func (s *testSuite) TestFullTimeOut() {
 // Partial timeout
 
 func (s *testSuite) TestPartialTimeOut() {
-	s.T().Skip("fix me")
+	if len(s.fixture().bootstrapNodes) < 3 {
+		s.T().Skip("skip test for bootstrap nodes < 3")
+	}
 
 	comm := s.fixture().bootstrapNodes[0].serviceNetwork.PhaseManager.(*phases.Phases).FirstPhase.Communicator
 	wrapper := &CommunicatorMock{comm, PartialNegative1Phase}
