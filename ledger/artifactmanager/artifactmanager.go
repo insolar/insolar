@@ -41,8 +41,10 @@ type LedgerArtifactManager struct {
 	db                         *storage.DB
 	DefaultBus                 core.MessageBus                 `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
-	codeCacheLock              *sync.Mutex
-	codeCache                  map[core.RecordRef]*cacheEntry
+	PulseStorage               core.PulseStorage               `inject:""`
+
+	codeCacheLock *sync.Mutex
+	codeCache     map[core.RecordRef]*cacheEntry
 
 	getChildrenChunkSize int
 }
@@ -84,7 +86,7 @@ func (m *LedgerArtifactManager) RegisterRequest(
 	var err error
 	defer instrument(ctx, "RegisterRequest").err(&err).end()
 
-	currentPulse, err := m.db.GetLatestPulse(ctx)
+	currentPulse, err := m.PulseStorage.Current(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -93,13 +95,13 @@ func (m *LedgerArtifactManager) RegisterRequest(
 		Payload: message.MustSerializeBytes(parcel.Message()),
 		Object:  *obj.Record(),
 	}
-	recID := record.NewRecordIDFromRecord(m.PlatformCryptographyScheme, currentPulse.Pulse.PulseNumber, &rec)
+	recID := record.NewRecordIDFromRecord(m.PlatformCryptographyScheme, currentPulse.PulseNumber, &rec)
 	recRef := core.NewRecordRef(*parcel.DefaultTarget().Domain(), *recID)
 	id, err := m.setRecord(
 		ctx,
 		&rec,
 		*recRef,
-		currentPulse.Pulse,
+		*currentPulse,
 	)
 	if !recID.Equal(id) {
 		inslogger.FromContext(ctx).Errorf("LedgerArtifactManager.RegisterRequest request wrongly predicted their=%s our=%s", id, recID)
@@ -173,7 +175,7 @@ func (m *LedgerArtifactManager) GetObject(
 	)
 	defer instrument(ctx, "GetObject").err(&err).end()
 
-	currentPulse, err := m.db.GetLatestPulse(ctx)
+	currentPulse, err := m.PulseStorage.Current(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -183,7 +185,7 @@ func (m *LedgerArtifactManager) GetObject(
 		State:    state,
 		Approved: approved,
 	}
-	rep, err := sendAndFollowRedirect(ctx, m.bus(ctx), m.db, getObjectMsg, currentPulse.Pulse)
+	rep, err := sendAndFollowRedirect(ctx, m.bus(ctx), m.db, getObjectMsg, *currentPulse)
 	if err != nil {
 		return nil, err
 	}
@@ -262,12 +264,12 @@ func (m *LedgerArtifactManager) GetChildren(
 	var err error
 	defer instrument(ctx, "GetChildren").err(&err).end()
 
-	latestPulse, err := m.db.GetLatestPulse(ctx)
+	latestPulse, err := m.PulseStorage.Current(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	iter, err := NewChildIterator(ctx, m.bus(ctx), parent, pulse, m.getChildrenChunkSize, latestPulse.Pulse)
+	iter, err := NewChildIterator(ctx, m.bus(ctx), parent, pulse, m.getChildrenChunkSize, *latestPulse)
 	return iter, err
 }
 
@@ -280,7 +282,7 @@ func (m *LedgerArtifactManager) DeclareType(
 	var err error
 	defer instrument(ctx, "DeclareType").err(&err).end()
 
-	currentPulse, err := m.db.GetLatestPulse(ctx)
+	currentPulse, err := m.PulseStorage.Current(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -295,7 +297,7 @@ func (m *LedgerArtifactManager) DeclareType(
 			TypeDeclaration: typeDec,
 		},
 		request,
-		currentPulse.Pulse,
+		*currentPulse,
 	)
 	return recid, err
 }
@@ -313,7 +315,7 @@ func (m *LedgerArtifactManager) DeployCode(
 	var err error
 	defer instrument(ctx, "DeployCode").err(&err).end()
 
-	pulse, err := m.db.GetLatestPulse(ctx)
+	currentPulse, err := m.PulseStorage.Current(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -330,18 +332,18 @@ func (m *LedgerArtifactManager) DeployCode(
 					Domain:  domain,
 					Request: request,
 				},
-				Code:        record.CalculateIDForBlob(m.PlatformCryptographyScheme, pulse.Pulse.PulseNumber, code),
+				Code:        record.CalculateIDForBlob(m.PlatformCryptographyScheme, currentPulse.PulseNumber, code),
 				MachineType: machineType,
 			},
 			request,
-			pulse.Pulse,
+			*currentPulse,
 		)
 		wg.Done()
 	}()
 
 	var setBlobErr error
 	go func() {
-		_, setBlobErr = m.setBlob(ctx, code, request, pulse.Pulse)
+		_, setBlobErr = m.setBlob(ctx, code, request, *currentPulse)
 		wg.Done()
 	}()
 	wg.Wait()
@@ -399,7 +401,7 @@ func (m *LedgerArtifactManager) DeactivateObject(
 	var err error
 	defer instrument(ctx, "DeactivateObject").err(&err).end()
 
-	currentPulse, err := m.db.GetLatestPulse(ctx)
+	currentPulse, err := m.PulseStorage.Current(ctx)
 
 	desc, err := m.sendUpdateObject(
 		ctx,
@@ -412,7 +414,7 @@ func (m *LedgerArtifactManager) DeactivateObject(
 		},
 		*object.HeadRef(),
 		nil,
-		currentPulse.Pulse,
+		*currentPulse,
 	)
 	if err != nil {
 		return nil, err
@@ -493,7 +495,7 @@ func (m *LedgerArtifactManager) RegisterResult(
 	var err error
 	defer instrument(ctx, "RegisterResult").err(&err).end()
 
-	pulse, err := m.db.GetLatestPulse(ctx)
+	currentPulse, err := m.PulseStorage.Current(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -506,7 +508,7 @@ func (m *LedgerArtifactManager) RegisterResult(
 			Payload: payload,
 		},
 		request,
-		pulse.Pulse,
+		*currentPulse,
 	)
 	return recid, err
 }
@@ -525,7 +527,7 @@ func (m *LedgerArtifactManager) activateObject(
 	if err != nil {
 		return nil, err
 	}
-	pulse, err := m.db.GetLatestPulse(ctx)
+	currentPulse, err := m.PulseStorage.Current(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -538,7 +540,7 @@ func (m *LedgerArtifactManager) activateObject(
 				Request: object,
 			},
 			ObjectStateRecord: record.ObjectStateRecord{
-				Memory:      record.CalculateIDForBlob(m.PlatformCryptographyScheme, pulse.Pulse.PulseNumber, memory),
+				Memory:      record.CalculateIDForBlob(m.PlatformCryptographyScheme, currentPulse.PulseNumber, memory),
 				Image:       prototype,
 				IsPrototype: isPrototype,
 			},
@@ -547,7 +549,7 @@ func (m *LedgerArtifactManager) activateObject(
 		},
 		object,
 		memory,
-		pulse.Pulse,
+		*currentPulse,
 	)
 	if err != nil {
 		return nil, err
@@ -572,7 +574,7 @@ func (m *LedgerArtifactManager) activateObject(
 		parent,
 		object,
 		asType,
-		pulse.Pulse,
+		*currentPulse,
 	)
 	if err != nil {
 		return nil, err
@@ -615,7 +617,7 @@ func (m *LedgerArtifactManager) updateObject(
 		return nil, errors.Wrap(err, "failed to update object")
 	}
 
-	pulse, err := m.db.GetLatestPulse(ctx)
+	currentPulse, err := m.PulseStorage.Current(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -631,7 +633,7 @@ func (m *LedgerArtifactManager) updateObject(
 				Request: request,
 			},
 			ObjectStateRecord: record.ObjectStateRecord{
-				Memory:      record.CalculateIDForBlob(m.PlatformCryptographyScheme, pulse.Pulse.PulseNumber, memory),
+				Memory:      record.CalculateIDForBlob(m.PlatformCryptographyScheme, currentPulse.PulseNumber, memory),
 				Image:       *image,
 				IsPrototype: object.IsPrototype(),
 			},
@@ -639,7 +641,7 @@ func (m *LedgerArtifactManager) updateObject(
 		},
 		*object.HeadRef(),
 		memory,
-		pulse.Pulse,
+		*currentPulse,
 	)
 	if err != nil {
 		return nil, err

@@ -86,7 +86,7 @@ func getTestData(t *testing.T) (
 		db:                         db,
 		replayHandlers:             map[core.MessageType]core.MessageHandler{},
 		PlatformCryptographyScheme: scheme,
-		conf:                       &configuration.Ledger{LightChainLimit: 3},
+		conf: &configuration.Ledger{LightChainLimit: 3},
 	}
 
 	recentStorageMock := recentstorage.NewRecentStorageMock(t)
@@ -106,11 +106,13 @@ func getTestData(t *testing.T) (
 	handler.JetCoordinator = jc
 	err := handler.Init(ctx)
 	require.NoError(t, err)
+
 	am := LedgerArtifactManager{
 		db:                         db,
 		DefaultBus:                 mb,
 		getChildrenChunkSize:       100,
 		PlatformCryptographyScheme: scheme,
+		PulseStorage:               pulseStorage,
 	}
 
 	return ctx, db, &am, cleaner
@@ -474,6 +476,7 @@ func TestLedgerArtifactManager_GetObject_FollowsRedirect(t *testing.T) {
 	}
 	am.DefaultBus = mb
 	am.db = db
+	am.PulseStorage = storage.NewPulseStorage(db)
 
 	_, err := am.GetObject(ctx, *objRef, nil, false)
 
@@ -623,6 +626,7 @@ func TestLedgerArtifactManager_GetChildren_FollowsRedirect(t *testing.T) {
 	defer cleaner()
 
 	am.db = db
+	am.PulseStorage = storage.NewPulseStorage(db)
 
 	objRef := genRandomRef(0)
 	nodeRef := genRandomRef(0)
@@ -703,7 +707,7 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 		db:                         db,
 		replayHandlers:             map[core.MessageType]core.MessageHandler{},
 		PlatformCryptographyScheme: scheme,
-		conf:                       &configuration.Ledger{LightChainLimit: 3},
+		conf: &configuration.Ledger{LightChainLimit: 3},
 	}
 
 	handler.Bus = mb
@@ -718,11 +722,20 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 
 	err := handler.Init(ctx)
 	require.NoError(t, err)
+
+	amPulseStorageMock := testutils.NewPulseStorageMock(t)
+	amPulseStorageMock.CurrentFunc = func(p context.Context) (r *core.Pulse, r1 error) {
+		pulse, err := db.GetLatestPulse(p)
+		require.NoError(t, err)
+		return &pulse.Pulse, err
+	}
+
 	am := LedgerArtifactManager{
 		db:                         db,
 		DefaultBus:                 mb,
 		getChildrenChunkSize:       100,
 		PlatformCryptographyScheme: scheme,
+		PulseStorage:               amPulseStorageMock,
 	}
 
 	objID, err := am.RegisterRequest(
@@ -808,6 +821,12 @@ func TestLedgerArtifactManager_RegisterRequest_JetMiss(t *testing.T) {
 	cs := testutils.NewPlatformCryptographyScheme()
 	am := NewArtifactManger(db)
 	am.PlatformCryptographyScheme = cs
+	pulseStorageMock := testutils.NewPulseStorageMock(t)
+	pulseStorageMock.CurrentFunc = func(ctx context.Context) (*core.Pulse, error) {
+		return &core.Pulse{PulseNumber: core.FirstPulseNumber}, nil
+	}
+
+	am.PulseStorage = pulseStorageMock
 
 	t.Run("returns error on exceeding retry limit", func(t *testing.T) {
 		mb := testutils.NewMessageBusMock(mc)
