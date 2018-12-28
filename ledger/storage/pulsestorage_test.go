@@ -22,7 +22,6 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
 )
@@ -30,11 +29,9 @@ import (
 func TestNewPulseStorage(t *testing.T) {
 	t.Parallel()
 
-	// Arrange
-	testDb := storage.DB{}
-
 	// Act
-	pStorage := storage.NewPulseStorage(&testDb)
+	testDb := &storage.DB{}
+	pStorage := storage.NewPulseStorage(testDb)
 
 	// Assert
 	require.NotNil(t, pStorage)
@@ -43,9 +40,8 @@ func TestNewPulseStorage(t *testing.T) {
 func TestLockUnlock(t *testing.T) {
 	t.Parallel()
 
-	// Arrange
-	testDb := storage.DB{}
-	pStorage := storage.NewPulseStorage(&testDb)
+	testDb := &storage.DB{}
+	pStorage := storage.NewPulseStorage(testDb)
 
 	// Act
 	pStorage.Lock()
@@ -57,11 +53,10 @@ func TestCurrent_OneThread(t *testing.T) {
 
 	// Arrange
 	ctx := inslogger.TestContext(t)
-	testDb, cleaner := storagetest.TmpDB(ctx, t)
-	defer cleaner()
-	err := testDb.AddPulse(ctx, *core.GenesisPulse)
-	require.NoError(t, err)
+
+	testDb := &storage.DB{}
 	pStorage := storage.NewPulseStorage(testDb)
+	pStorage.Set(core.GenesisPulse)
 
 	// Act
 	pulse, err := pStorage.Current(ctx)
@@ -76,17 +71,15 @@ func TestCurrent_ThreeThreads(t *testing.T) {
 
 	// Arrange
 	ctx := inslogger.TestContext(t)
-	testDb, cleaner := storagetest.TmpDB(ctx, t)
-	defer cleaner()
+	testDb := &storage.DB{}
 	pStorage := storage.NewPulseStorage(testDb)
+	pStorage.Set(&core.Pulse{PulseNumber: core.FirstPulseNumber})
 
 	// Act
 	var g errgroup.Group
 	g.Go(func() error {
-		pStorage.Lock()
-		defer pStorage.Unlock()
-		err := testDb.AddPulse(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 123})
-		return err
+		pStorage.Set(&core.Pulse{PulseNumber: core.FirstPulseNumber + 123})
+		return nil
 	})
 	g.Go(func() error {
 		_, err := pStorage.Current(ctx)
