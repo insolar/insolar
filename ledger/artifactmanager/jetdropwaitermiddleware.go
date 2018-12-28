@@ -20,13 +20,11 @@ func (p *jetDropTimeoutProvider) getLock(jetID core.RecordID) *sync.RWMutex{
 	p.waitersInitLocksLock.Lock()
 	defer p.waitersInitLocksLock.Unlock()
 
-	var lock *sync.RWMutex
-	if lock, ok := p.waitersInitLocks[jetID]; !ok {
-		lock = &sync.RWMutex{}
-		p.waitersInitLocks[jetID] = lock
+	if _, ok := p.waitersInitLocks[jetID]; !ok {
+		p.waitersInitLocks[jetID] = &sync.RWMutex{}
 	}
 
-	return lock
+	return p.waitersInitLocks[jetID]
 }
 
 func (p *jetDropTimeoutProvider) getWaiter(jetID core.RecordID) *jetDropTimeout {
