@@ -37,6 +37,7 @@ import (
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/testmessagebus"
+	"github.com/stretchr/testify/require"
 )
 
 // TmpLedger crteates ledger on top of temporary database.
@@ -55,6 +56,7 @@ func TmpLedger(t *testing.T, dir string, c core.Components) (*ledger.Ledger, fun
 	pulseStorage := storage.NewPulseStorage(db)
 
 	pulse, err := db.GetLatestPulse(ctx)
+	require.NoError(t, err)
 	pulseStorage.Set(&pulse.Pulse)
 
 	am := artifactmanager.NewArtifactManger(db)
