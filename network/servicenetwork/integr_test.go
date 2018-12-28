@@ -115,21 +115,10 @@ func (s *testSuite) TestFullTimeOut() {
 	wrapper.original = &FullTimeoutPhaseManager{}
 	s.fixture().bootstrapNodes[1].serviceNetwork.PhaseManager = wrapper
 
-	s.preInitNode(s.fixture().testNode)
-
-	s.InitTestNode()
-	s.StartTestNode()
-	defer s.StopTestNode()
-
-	s.waitForConsensus(1)
+	s.waitForConsensus(2)
 
 	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
-	s.Equal(s.getNodesCount(), len(activeNodes))
-
-	s.waitForConsensus(1)
-
-	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
-	s.Equal(s.getNodesCount()+1-1, len(activeNodes))
+	s.Equal(s.getNodesCount()-1, len(activeNodes))
 }
 
 // Partial timeout
