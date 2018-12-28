@@ -31,7 +31,7 @@ func (s *testSuite) TestNetworkConsensus3Times() {
 
 func (s *testSuite) TestNodeConnect() {
 	s.T().Skip()
-	s.preInitNode(s.testNode)
+	s.preInitNode(s.fixture().testNode)
 
 	s.InitTestNode()
 	s.StartTestNode()
@@ -42,23 +42,23 @@ func (s *testSuite) TestNodeConnect() {
 
 	s.waitForConsensus(1)
 
-	activeNodes := s.bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
-	s.Equal(s.nodesCount(), len(activeNodes))
+	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount(), len(activeNodes))
 
 	s.waitForConsensus(1)
 
-	activeNodes = s.bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
-	s.Equal(s.nodesCount()+1, len(activeNodes))
+	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount()+1, len(activeNodes))
 
 	s.waitForConsensus(2)
 
-	activeNodes = s.bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
-	s.Equal(s.nodesCount()+1, len(activeNodes))
+	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount()+1, len(activeNodes))
 }
 
 func (s *testSuite) TestNodeLeave() {
 	s.T().Skip()
-	s.preInitNode(s.testNode)
+	s.preInitNode(s.fixture().testNode)
 
 	s.InitTestNode()
 	s.StartTestNode()
@@ -69,26 +69,26 @@ func (s *testSuite) TestNodeLeave() {
 
 	s.waitForConsensus(1)
 
-	activeNodes := s.bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
-	s.Equal(s.nodesCount(), len(activeNodes))
+	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount(), len(activeNodes))
 
 	s.waitForConsensus(1)
 
-	activeNodes = s.bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
-	s.Equal(s.nodesCount()+1, len(activeNodes))
+	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount()+1, len(activeNodes))
 
-	s.testNode.serviceNetwork.GracefulStop(context.Background())
+	s.fixture().testNode.serviceNetwork.GracefulStop(context.Background())
 
 	s.waitForConsensus(2)
 
-	activeNodes = s.bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
-	s.Equal(s.nodesCount(), len(activeNodes))
+	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount(), len(activeNodes))
 }
 
-// func TestServiceNetworkIntegration(t *testing.T) {
-// 	s := NewTestSuite(1, 0)
-// 	suite.Run(t, s)
-// }
+func TestServiceNetworkIntegration(t *testing.T) {
+	s := NewTestSuite(1, 0)
+	suite.Run(t, s)
+}
 
 func TestServiceNetworkManyBootstraps(t *testing.T) {
 	s := NewTestSuite(15, 0)
@@ -112,16 +112,15 @@ func (ftpm *FullTimeoutPhaseManager) OnPulse(ctx context.Context, pulse *core.Pu
 }
 
 func (s *testSuite) TestFullTimeOut() {
-	s.T().Skip()
-	if len(s.bootstrapNodes) < 3 {
+	if len(s.fixture().bootstrapNodes) < 3 {
 		s.T().Skip("skip test for bootstrap nodes < 3")
 	}
 
-	wrapper := s.bootstrapNodes[1].serviceNetwork.PhaseManager.(*phaseManagerWrapper)
+	wrapper := s.fixture().bootstrapNodes[1].serviceNetwork.PhaseManager.(*phaseManagerWrapper)
 	wrapper.original = &FullTimeoutPhaseManager{}
-	s.bootstrapNodes[1].serviceNetwork.PhaseManager = wrapper
+	s.fixture().bootstrapNodes[1].serviceNetwork.PhaseManager = wrapper
 
-	s.preInitNode(s.testNode)
+	s.preInitNode(s.fixture().testNode)
 
 	s.InitTestNode()
 	s.StartTestNode()
@@ -129,13 +128,13 @@ func (s *testSuite) TestFullTimeOut() {
 
 	s.waitForConsensus(1)
 
-	activeNodes := s.bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
-	s.Equal(s.nodesCount(), len(activeNodes))
+	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount(), len(activeNodes))
 
 	s.waitForConsensus(1)
 
-	activeNodes = s.bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
-	s.Equal(s.nodesCount()+1-1, len(activeNodes))
+	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount()+1-1, len(activeNodes))
 }
 
 // Partial timeout
@@ -143,13 +142,13 @@ func (s *testSuite) TestFullTimeOut() {
 func (s *testSuite) TestPartialTimeOut() {
 	// s.T().Skip("fix me")
 
-	comm := s.bootstrapNodes[0].serviceNetwork.PhaseManager.(*phases.Phases).FirstPhase.Communicator
+	comm := s.fixture().bootstrapNodes[0].serviceNetwork.PhaseManager.(*phases.Phases).FirstPhase.Communicator
 	wrapper := &CommunicatorMock{comm, PartialNegative1Phase}
-	s.bootstrapNodes[0].serviceNetwork.PhaseManager.(*phases.Phases).FirstPhase.Communicator = wrapper
+	s.fixture().bootstrapNodes[0].serviceNetwork.PhaseManager.(*phases.Phases).FirstPhase.Communicator = wrapper
 
-	activeNodes := s.bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
-	s.Equal(s.nodesCount(), len(activeNodes)) // TODO: do test check
+	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount(), len(activeNodes)) // TODO: do test check
 	s.waitForConsensus(1)
-	activeNodes = s.bootstrapNodes[1].serviceNetwork.NodeKeeper.GetActiveNodes()
-	s.Equal(s.nodesCount()-1, len(activeNodes)) // TODO: do test check
+	activeNodes = s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount()-1, len(activeNodes)) // TODO: do test check
 }
