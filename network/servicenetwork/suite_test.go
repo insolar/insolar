@@ -84,8 +84,6 @@ func (s *testSuite) SetupTest() {
 
 	log.Infoln("SetupSuite")
 
-	log.Infoln("Setup bootstrap nodes")
-
 	for i := 0; i < s.bootstrapCount; i++ {
 		s.fixture().bootstrapNodes = append(s.fixture().bootstrapNodes, newNetworkNode())
 	}
@@ -94,12 +92,19 @@ func (s *testSuite) SetupTest() {
 		s.fixture().networkNodes = append(s.fixture().networkNodes, newNetworkNode())
 	}
 
-	s.fixtureMap[s.T().Name()].testNode = newNetworkNode()
+	s.fixture().testNode = newNetworkNode()
 
+	log.Infoln("Setup bootstrap nodes")
 	s.SetupNodesNetwork(s.fixture().bootstrapNodes)
 
 	<-time.After(time.Second * 2)
-	// s.waitForConsensus(1)
+
+	if len(s.fixture().networkNodes) > 0 {
+		log.Infoln("Setup network nodes")
+		s.SetupNodesNetwork(s.fixture().networkNodes)
+		s.waitForConsensus(2)
+	}
+
 	// TODO: wait for first consensus
 	// active nodes count verification
 	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
@@ -137,20 +142,17 @@ func (s *testSuite) SetupNodesNetwork(nodes []*networkNode) {
 		}
 	}
 
-	log.Infoln("Init bootstrap nodes")
-	for _, n := range s.fixture().bootstrapNodes {
-		go initNode(n)
-	}
-	log.Infoln("Init network nodes")
-	for _, n := range s.fixture().networkNodes {
-		go initNode(n)
+	log.Infoln("Init nodes")
+	for _, node := range nodes {
+		go initNode(node)
 	}
 
 	err := waitResults(results, len(nodes))
-	s.NoError(err, "Failed to setup zeronet")
+	s.NoError(err)
 
-	for _, n := range s.fixture().bootstrapNodes {
-		go startNode(n)
+	log.Infoln("Start nodes")
+	for _, node := range nodes {
+		go startNode(node)
 	}
 
 	err = waitResults(results, len(nodes))

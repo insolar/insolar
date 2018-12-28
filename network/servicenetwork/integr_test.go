@@ -37,7 +37,6 @@ func (s *testSuite) TestNodeConnect() {
 	s.StartTestNode()
 	defer func() {
 		s.StopTestNode()
-		// s.TearDownTest()
 	}()
 
 	s.waitForConsensus(1)
@@ -64,7 +63,6 @@ func (s *testSuite) TestNodeLeave() {
 	s.StartTestNode()
 	defer func() {
 		s.StopTestNode()
-		// s.TearDownTest()
 	}()
 
 	s.waitForConsensus(1)
@@ -85,7 +83,7 @@ func (s *testSuite) TestNodeLeave() {
 	s.Equal(s.getNodesCount(), len(activeNodes))
 }
 
-func TestServiceNetworkIntegration(t *testing.T) {
+func TestServiceNetworkOneBootstrap(t *testing.T) {
 	s := NewTestSuite(1, 0)
 	suite.Run(t, s)
 }
@@ -95,14 +93,13 @@ func TestServiceNetworkManyBootstraps(t *testing.T) {
 	suite.Run(t, s)
 }
 
-/*
 func TestServiceNetworkManyNodes(t *testing.T) {
 	t.Skip("tmp 123")
 
-	s := NewTestSuite(3, 20)
+	s := NewTestSuite(3, 5)
 	suite.Run(t, s)
 }
-*/
+
 // Full timeout test
 type FullTimeoutPhaseManager struct {
 }
