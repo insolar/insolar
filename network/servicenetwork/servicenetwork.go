@@ -148,6 +148,7 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
 
 	logger.Infoln("Network starts listening...")
+	n.routingTable.Inject(n.NodeKeeper)
 	n.hostNetwork.Start(ctx)
 	n.ConsensusNetwork.Start(ctx)
 	if err := n.Communicator.Start(ctx); err != nil {
@@ -155,7 +156,6 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 	}
 
 	n.controller.Inject(n.CryptographyService, n.NetworkCoordinator, n.NodeKeeper)
-	n.routingTable.Inject(n.NodeKeeper)
 
 	logger.Infoln("Bootstrapping network...")
 	result, err := n.controller.Bootstrap(ctx)
