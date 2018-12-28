@@ -97,6 +97,104 @@ func (t Tree) String() string {
 	return nodeDeepFmt(0, "", t.Head)
 }
 
+func (t *Tree) toArray() []*jet {
+	queue := []*jet{t.Head}
+	queueIndex := 0
+	lastElementIndex := 0
+
+	for queueIndex <= lastElementIndex {
+		currentNode := queue[queueIndex]
+		if currentNode == nil {
+			queueIndex++
+			continue
+		}
+		nextLeftIndex := (queueIndex * 2) + 1
+		nextRightIndex := (queueIndex * 2) + 2
+
+		if nextRightIndex >= len(queue) {
+			for nextRightIndex >= len(queue) {
+				queue = append(queue, nil)
+			}
+		}
+
+		queue[nextLeftIndex] = queue[queueIndex].Left
+		queue[nextRightIndex] = queue[queueIndex].Right
+
+		if queue[nextLeftIndex] != nil && nextLeftIndex > lastElementIndex {
+			lastElementIndex = nextLeftIndex
+		}
+
+		if queue[nextRightIndex] != nil && nextRightIndex > lastElementIndex {
+			lastElementIndex = nextRightIndex
+		}
+		queueIndex++
+	}
+
+	return queue[:lastElementIndex+1]
+}
+
+// Merge merges two trees to one
+func (t *Tree) Merge(newTree *Tree) *Tree {
+	maxLengthFunc := func(left int, right int) int {
+		if left > right {
+			return left
+		}
+
+		return right
+	}
+
+	savedTree := t.toArray()
+	inputTree := newTree.toArray()
+
+	maxLength := maxLengthFunc(len(savedTree), len(inputTree))
+
+	result := make([]*jet, maxLength)
+
+	for index := 0; index < maxLength; index++ {
+		var savedItem *jet
+		var newItem *jet
+
+		if index < len(savedTree) {
+			savedItem = savedTree[index]
+		}
+		if index < len(inputTree) {
+			newItem = inputTree[index]
+		}
+
+		if savedItem == nil {
+			result[index] = newItem
+			continue
+		}
+		if newItem == nil {
+			result[index] = savedItem
+			continue
+		}
+
+		if !savedItem.Actual && newItem.Actual {
+			result[index] = newItem
+		} else {
+			result[index] = savedItem
+		}
+	}
+
+	for index := 0; index < (maxLength/2)+1; index++ {
+		current := result[index]
+		if current != nil {
+			leftIndex := index*2 + 1
+			if leftIndex < len(result) {
+				current.Left = result[index*2+1]
+			}
+
+			rightIndex := index*2 + 2
+			if rightIndex < len(result) {
+				current.Right = result[index*2+2]
+			}
+		}
+	}
+
+	return &Tree{Head: result[0]}
+}
+
 func nodeDeepFmt(deep int, binPrefix string, node *jet) string {
 	prefix := strings.Repeat(" ", deep)
 	if deep == 0 {
