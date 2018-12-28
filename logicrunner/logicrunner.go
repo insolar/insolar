@@ -31,6 +31,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/core/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/builtin"
 	"github.com/insolar/insolar/logicrunner/goplugin"
@@ -320,6 +321,18 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 	if !ok {
 		return nil, errors.New("Execute( ! message.IBaseLogicMessage )")
 	}
+
+	var rep core.Reply
+	var err error
+	utils.MeasureExecutionTime(ctx, "LogicRunner.Execute, Method = "+msg.Type().String(),
+		func() {
+			rep, err = lr.executeActual(ctx, parcel, msg)
+		})
+	return rep, err
+}
+
+func (lr *LogicRunner) executeActual(ctx context.Context, parcel core.Parcel, msg message.IBaseLogicMessage) (core.Reply, error) {
+
 	ref := msg.GetReference()
 	os := lr.UpsertObjectState(ref)
 
@@ -674,7 +687,7 @@ func (lr *LogicRunner) prepareObjectState(ctx context.Context, msg *message.Exec
 			queueFromMessage = append(
 				queueFromMessage,
 				ExecutionQueueElement{
-					ctx:     qe.Ctx,
+					ctx:     qe.Parcel.Context(context.Background()),
 					parcel:  qe.Parcel,
 					request: qe.Request,
 					pulse:   qe.Pulse,
@@ -939,7 +952,6 @@ func convertQueueToMessageQueue(queue []ExecutionQueueElement) []message.Executi
 	mq := make([]message.ExecutionQueueElement, 0)
 	for _, elem := range queue {
 		mq = append(mq, message.ExecutionQueueElement{
-			Ctx:     elem.ctx,
 			Parcel:  elem.parcel,
 			Request: elem.request,
 			Pulse:   elem.pulse,

@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/application/extractor"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/core/utils"
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/platformpolicy"
 
 	"github.com/insolar/insolar/api/seedmanager"
@@ -114,17 +115,29 @@ func (ar *Runner) makeCall(ctx context.Context, params Request) (interface{}, er
 	if err != nil {
 		return nil, errors.Wrap(err, "[ makeCall ] failed to parse params.Reference")
 	}
-	res, err := ar.ContractRequester.SendRequest(
-		ctx,
-		reference,
-		"Call",
-		[]interface{}{*ar.CertificateManager.GetCertificate().GetRootDomainReference(), params.Method, params.Params, params.Seed, params.Signature},
-	)
+
+	var res core.Reply
+
+	utils.MeasureExecutionTime(ctx, "makeCall SendRequest, Method = "+params.Method,
+		func() {
+			res, err = ar.ContractRequester.SendRequest(
+				ctx,
+				reference,
+				"Call",
+				[]interface{}{*ar.CertificateManager.GetCertificate().GetRootDomainReference(), params.Method, params.Params, params.Seed, params.Signature},
+			)
+		})
 	if err != nil {
 		return nil, errors.Wrap(err, "[ makeCall ] Can't send request")
 	}
 
-	result, contractErr, err := extractor.CallResponse(res.(*reply.CallMethod).Result)
+	var result interface{}
+	var contractErr *foundation.Error
+
+	utils.MeasureExecutionTime(ctx, "makeCall CallResponse",
+		func() {
+			result, contractErr, err = extractor.CallResponse(res.(*reply.CallMethod).Result)
+		})
 	if err != nil {
 		return nil, errors.Wrap(err, "[ makeCall ] Can't extract response")
 	}
@@ -185,7 +198,11 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 					return
 				}
 
-				result, err := ar.makeCall(ctx, params)
+				var result interface{}
+				utils.MeasureExecutionTime(ctx, "callHandler makeCall",
+					func() {
+						result, err = ar.makeCall(ctx, params)
+					})
 				if err != nil {
 					processError(err, "Can't makeCall", &resp, insLog)
 					return
