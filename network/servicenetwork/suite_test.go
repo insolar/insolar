@@ -88,7 +88,7 @@ func (s *testSuite) SetupTest() {
 
 func (s *testSuite) SetupNodesNetwork(nodes []*networkNode) {
 	for _, node := range nodes {
-		s.preInitNode(node, Disable)
+		s.preInitNode(node)
 	}
 
 	results := make(chan error, len(nodes))
@@ -229,7 +229,7 @@ func newNetworkNode() *networkNode {
 // init calls Init for node component manager and wraps PhaseManager
 func (n *networkNode) init(ctx context.Context) error {
 	err := n.componentManager.Init(ctx)
-	n.serviceNetwork.PhaseManager = &phaseManagerWrapper{original: n.serviceNetwork.PhaseManager, result: n.consensusResult}
+	// n.serviceNetwork.PhaseManager = &phaseManagerWrapper{original: n.serviceNetwork.PhaseManager, result: n.consensusResult}
 	n.serviceNetwork.NodeKeeper = &nodeKeeperWrapper{original: n.serviceNetwork.NodeKeeper}
 	return err
 }
@@ -280,7 +280,7 @@ func RandomRole() core.StaticRole {
 }
 
 // preInitNode inits previously created node with mocks and external dependencies
-func (s *testSuite) preInitNode(node *networkNode, timeOut PhaseTimeOut) {
+func (s *testSuite) preInitNode(node *networkNode) {
 	cfg := configuration.NewConfiguration()
 	cfg.Host.Transport.Address = node.host
 
@@ -330,9 +330,6 @@ func (s *testSuite) preInitNode(node *networkNode, timeOut PhaseTimeOut) {
 		realKeeper.AddActiveNodes([]core.Node{origin})
 	}
 
-	// var keeper network.NodeKeeper
-	// keeper = &nodeKeeperWrapper{realKeeper}
-
 	node.componentManager = &component.Manager{}
 	node.componentManager.Register(realKeeper, pulseManagerMock, pulseStorageMock, netCoordinator, amMock)
 	node.componentManager.Register(certManager, cryptographyService)
@@ -344,20 +341,5 @@ func (s *testSuite) preInitNode(node *networkNode, timeOut PhaseTimeOut) {
 			panic("NodeKeeper == nil")
 		}
 		return serviceNetwork.NodeKeeper.MoveSyncToActive()
-		//return nil
 	})
-	/*
-		var phaseManager phases.PhaseManager
-		switch timeOut {
-		case Disable:
-			phaseManager = &phaseManagerWrapper{original: node.serviceNetwork.PhaseManager}
-		case Full:
-			phaseManager = &FullTimeoutPhaseManager{}
-		case Partial:
-			phaseManager = &PartialTimeoutPhaseManager{}
-			keeper = &nodeKeeperWrapper{realKeeper}
-		}
-
-		node.serviceNetwork.PhaseManager = phaseManager
-	*/
 }
