@@ -331,8 +331,7 @@ func (nk *nodekeeper) Sync(list network.UnsyncList) {
 	}
 
 	if nk.shouldExit(foundOrigin) {
-		// TODO: graceful stop
-		panic("Node leave acknowledged by network. Goodbye!")
+		nk.gracefullyStop()
 	}
 
 	nk.sync = list
@@ -352,16 +351,25 @@ func (nk *nodekeeper) MoveSyncToActive() error {
 	nk.tempMapS = make(map[core.ShortNodeID]*host.Host)
 	nk.tempLock.Unlock()
 
-	newActiveList, nodesJoinedDuringPrevPulse, err := nk.sync.GetMergedNodeMap()
+	mergeResult, err := nk.sync.GetMergedCopy()
 	if err != nil {
 		return errors.Wrap(err, "[ MoveSyncToActive ] Failed to calculate new active list")
 	}
+	if mergeResult.Flags.ShouldExit {
+		nk.gracefullyStop()
+	}
+
 	log.Infof("[ MoveSyncToActive ] New active list confirmed. Active list size: %d -> %d",
-		len(nk.active), len(newActiveList))
-	nk.active = newActiveList
+		len(nk.active), len(mergeResult.ActiveList))
+	nk.active = mergeResult.ActiveList
 	nk.reindex()
-	nk.nodesJoinedDuringPrevPulse = nodesJoinedDuringPrevPulse
+	nk.nodesJoinedDuringPrevPulse = mergeResult.Flags.NodesJoinedDuringPrevPulse
 	return nil
+}
+
+func (nk *nodekeeper) gracefullyStop() {
+	// TODO: graceful stop
+	panic("Node leave acknowledged by network. Goodbye!")
 }
 
 func (nk *nodekeeper) reindex() {

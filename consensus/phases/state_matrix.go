@@ -70,6 +70,7 @@ type Phase2MatrixState struct {
 	NeedPhase21 bool
 
 	Active                   []core.RecordRef
+	TimedOut                 []core.RecordRef
 	AdditionalRequestsPhase2 []*AdditionalRequest
 }
 
@@ -77,6 +78,7 @@ func newPhase2MatrixState() *Phase2MatrixState {
 	return &Phase2MatrixState{
 		NeedPhase21:              false,
 		Active:                   make([]core.RecordRef, 0),
+		TimedOut:                 make([]core.RecordRef, 0),
 		AdditionalRequestsPhase2: make([]*AdditionalRequest, 0),
 	}
 }
@@ -104,6 +106,11 @@ func (sm *StateMatrix) CalculatePhase2(origin core.RecordRef) (*Phase2MatrixStat
 		}
 		active := consensusReachedMajority(count-timedOuts, count)
 		if !active {
+			timedOutRef, err := sm.mapper.IndexToRef(j)
+			if err == nil {
+				result.TimedOut = append(result.TimedOut, timedOutRef)
+			}
+			// else we can ignore error, we can do nothing with unknown node on such index
 			continue
 		}
 		if timedOuts > 0 {

@@ -22,6 +22,7 @@ import (
 
 	"github.com/insolar/insolar/consensus/phases"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/log"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -75,7 +76,7 @@ func (s *testSuite) TestNodeLeave() {
 
 	s.fixture().testNode.serviceNetwork.GracefulStop(context.Background())
 
-	s.waitForConsensus(2)
+	s.waitForConsensus(3)
 
 	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
 	s.Equal(s.getNodesCount(), len(activeNodes))
@@ -149,6 +150,14 @@ func (s *testSuite) TestPartialPositive2PhaseTimeOut() {
 }
 
 func (s *testSuite) TestPartialNegative1PhaseTimeOut() {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Warnf("panic: %s", r)
+			activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetActiveNodes()
+			s.Equal(s.getNodesCount()-1, len(activeNodes))
+		}
+	}()
+
 	if len(s.fixture().bootstrapNodes) < 3 {
 		s.T().Skip("skip test for bootstrap nodes < 3")
 	}
@@ -157,7 +166,7 @@ func (s *testSuite) TestPartialNegative1PhaseTimeOut() {
 
 	s.waitForConsensus(2)
 	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetActiveNodes()
-	s.Equal(s.getNodesCount(), len(activeNodes))
+	s.Equal(s.getNodesCount()-1, len(activeNodes))
 }
 
 func (s *testSuite) TestPartialNegative2PhaseTimeOut() {

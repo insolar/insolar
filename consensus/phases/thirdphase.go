@@ -68,6 +68,9 @@ func (tp *ThirdPhase) Execute(ctx context.Context, state *SecondPhaseState) (*Th
 	prevCloudHash := tp.NodeKeeper.GetCloudHash()
 	for ref, ghs := range state.UnsyncList.GlobuleHashSignatures() {
 		node := state.UnsyncList.GetActiveNode(ref)
+		if node == nil {
+			continue
+		}
 		proof := &merkle.GlobuleProof{
 			BaseProof: merkle.BaseProof{
 				Signature: core.SignatureFromBytes(ghs[:]),

@@ -22,6 +22,7 @@ import (
 	consensus "github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/network"
 	"github.com/pkg/errors"
 )
 
@@ -42,6 +43,13 @@ type unsyncList struct {
 	ghs         map[core.RecordRef]consensus.GlobuleHashSignature
 	indexToRef  map[int]core.RecordRef
 	cache       []byte
+}
+
+func (ul *unsyncList) RemoveNode(nodeID core.RecordRef) {
+	delete(ul.activeNodes, nodeID)
+	delete(ul.claims, nodeID)
+	delete(ul.proofs, nodeID)
+	delete(ul.ghs, nodeID)
 }
 
 func (ul *unsyncList) GlobuleHashSignatures() map[core.RecordRef]consensus.GlobuleHashSignature {
@@ -131,11 +139,11 @@ func (ul *unsyncList) CalculateHash(scheme core.PlatformCryptographyScheme) ([]b
 	if ul.cache != nil {
 		return ul.cache, nil
 	}
-	m, _, err := ul.GetMergedNodeMap()
+	m, err := ul.GetMergedCopy()
 	if err != nil {
 		return nil, errors.Wrap(err, "[ CalculateHash ] failed to merge a node map")
 	}
-	sorted := sortedNodeList(m)
+	sorted := sortedNodeList(m.ActiveList)
 	ul.cache, err = CalculateHash(scheme, sorted)
 	return ul.cache, err
 }
@@ -148,41 +156,51 @@ func (ul *unsyncList) GetActiveNodes() []core.Node {
 	return sortedNodeList(ul.activeNodes)
 }
 
-func (ul *unsyncList) GetMergedNodeMap() (map[core.RecordRef]core.Node, bool, error) {
+func (ul *unsyncList) GetMergedCopy() (*network.MergedListCopy, error) {
 	nodes := copyMap(ul.activeNodes)
 
-	nodesJoinedDuringPrevPulse := false
+	resultFlags := network.MergedListFlags{}
 	for _, claimList := range ul.claims {
 		for _, claim := range claimList {
-			isJoinClaim, err := ul.mergeClaim(nodes, claim)
+			flags, err := ul.mergeClaim(ul.origin, nodes, claim)
 			if err != nil {
-				return nil, false, errors.Wrap(err, "[ GetMergedNodeMap ] failed to merge a claim")
+				return nil, errors.Wrap(err, "[ GetMergedCopy ] failed to merge a claim")
 			}
-			if isJoinClaim {
-				nodesJoinedDuringPrevPulse = true
+			if flags.ShouldExit {
+				resultFlags.ShouldExit = true
+			}
+			if flags.NodesJoinedDuringPrevPulse {
+				resultFlags.NodesJoinedDuringPrevPulse = true
 			}
 		}
 	}
 
-	return nodes, nodesJoinedDuringPrevPulse, nil
+	return &network.MergedListCopy{
+		ActiveList: nodes,
+		Flags:      resultFlags,
+	}, nil
 }
 
-func (ul *unsyncList) mergeClaim(nodes map[core.RecordRef]core.Node, claim consensus.ReferendumClaim) (bool, error) {
+func (ul *unsyncList) mergeClaim(origin core.Node, nodes map[core.RecordRef]core.Node, claim consensus.ReferendumClaim) (*network.MergedListFlags, error) {
 	isJoinClaim := false
+	shouldExit := false
 	switch t := claim.(type) {
 	case *consensus.NodeJoinClaim:
 		// TODO: fix version
 		node, err := ClaimToNode("", t)
 		if err != nil {
-			return false, errors.Wrap(err, "[ mergeClaim ] failed to convert Claim -> Node")
+			return nil, errors.Wrap(err, "[ mergeClaim ] failed to convert Claim -> Node")
 		}
 		nodes[node.ID()] = node
 		isJoinClaim = true
 	case *consensus.NodeLeaveClaim:
+		if origin.ID().Equal(t.NodeID) {
+			shouldExit = true
+		}
 		delete(nodes, t.NodeID)
 		break
 	}
-	return isJoinClaim, nil
+	return &network.MergedListFlags{NodesJoinedDuringPrevPulse: isJoinClaim, ShouldExit: shouldExit}, nil
 }
 
 func sortedNodeList(nodes map[core.RecordRef]core.Node) []core.Node {

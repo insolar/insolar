@@ -160,9 +160,9 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 	}
 	for nodeID := range fault {
 		logger.Warnf("[ FirstPhase ] Failed to validate proof from %s", nodeID)
-		// TODO: add RemoveClaims to unsyncList interface and call it here
-		// unsyncList.RemoveClaims(nodeID)
+		unsyncList.RemoveNode(nodeID)
 	}
+	logger.Infof("[ FirstPhase ] Valid proofs after phase: %d/%d", len(valid), len(resultPackets))
 
 	return &FirstPhaseState{
 		PulseEntry:  entry,

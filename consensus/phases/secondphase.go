@@ -75,9 +75,6 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 
 	origin := sp.NodeKeeper.GetOrigin().ID()
 	stateMatrix := NewStateMatrix(state.UnsyncList)
-	if err = stateMatrix.ApplyBitSet(origin, bitset); err != nil {
-		return nil, errors.Wrap(err, "[ SecondPhase ] Failed to apply bitset states")
-	}
 
 	state.UnsyncList.GlobuleHashSignatures()[origin] = packet.GetGlobuleHashSignature()
 
@@ -102,6 +99,43 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 	matrixCalculation, err := stateMatrix.CalculatePhase2(origin)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ SecondPhase ] Failed to calculate bitset matrix consensus result")
+	}
+
+	if len(matrixCalculation.TimedOut) > 0 {
+		for _, nodeID := range matrixCalculation.TimedOut {
+			log.Infof("Remove timed out node %s from consensus", nodeID)
+			state.UnsyncList.RemoveNode(nodeID)
+		}
+
+		type none struct{}
+		newActive := make(map[core.RecordRef]none)
+		for _, active := range matrixCalculation.Active {
+			newActive[active] = none{}
+		}
+
+		newProofs := make(map[core.Node]*merkle.PulseProof)
+		for node, proof := range state.ValidProofs {
+			_, ok := newActive[node.ID()]
+			if !ok {
+				continue
+			}
+			newProofs[node] = proof
+		}
+
+		state.ValidProofs = newProofs
+
+		entry := &merkle.GlobuleEntry{
+			PulseEntry:    state.PulseEntry,
+			ProofSet:      state.ValidProofs,
+			PulseHash:     state.PulseHash,
+			PrevCloudHash: prevCloudHash,
+			GlobuleID:     sp.NodeKeeper.GetOrigin().GetGlobuleID(),
+		}
+		globuleHash, globuleProof, err = sp.Calculator.GetGlobuleProof(entry)
+
+		if err != nil {
+			return nil, errors.Wrap(err, "[ SecondPhase ] Failed to calculate globule proof")
+		}
 	}
 
 	return &SecondPhaseState{
