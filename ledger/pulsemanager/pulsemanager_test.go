@@ -130,6 +130,7 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 	pulseStorageMock.CurrentMock.Return(core.GenesisPulse, nil)
 	pulseStorageMock.LockMock.Return()
 	pulseStorageMock.UnlockMock.Return()
+	pulseStorageMock.SetMock.Return()
 
 	pm.LR = lr
 
@@ -195,6 +196,7 @@ func TestPulseManager_Set_PerformsSplit(t *testing.T) {
 	nodeNetworkMock.GetOriginMock.Return(nodeMock)
 
 	pulseStorage := pulsemanager.NewpulseStoragePmMock(t)
+	pulseStorage.SetMock.Return()
 	pulseStorage.LockMock.Return()
 	pulseStorage.UnlockMock.Return()
 

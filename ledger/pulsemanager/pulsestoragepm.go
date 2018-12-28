@@ -25,6 +25,8 @@ import (
 type pulseStoragePm interface {
 	core.PulseStorage
 
+	Set(pulse *core.Pulse)
+
 	Lock()
 	Unlock()
 }
