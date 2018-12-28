@@ -112,11 +112,11 @@ func getEmptyReply(t core.ReplyType) (core.Reply, error) {
 	case TypeObjectIndex:
 		return &ObjectIndex{}, nil
 	case TypeGetCodeRedirect:
-		return &GetCodeRedirect{}, nil
+		return &GetCodeRedirectReply{}, nil
 	case TypeGetObjectRedirect:
-		return &GetObjectRedirect{}, nil
+		return &GetObjectRedirectReply{}, nil
 	case TypeGetChildrenRedirect:
-		return &GetChildrenRedirect{}, nil
+		return &GetChildrenRedirectReply{}, nil
 	case TypeJetMiss:
 		return &JetMiss{}, nil
 	case TypePendingRequests:
@@ -183,9 +183,9 @@ func init() {
 	gob.Register(&Error{})
 	gob.Register(&OK{})
 	gob.Register(&ObjectIndex{})
-	gob.Register(&GetCodeRedirect{})
-	gob.Register(&GetObjectRedirect{})
-	gob.Register(&GetChildrenRedirect{})
+	gob.Register(&GetCodeRedirectReply{})
+	gob.Register(&GetObjectRedirectReply{})
+	gob.Register(&GetChildrenRedirectReply{})
 	gob.Register(&HeavyError{})
 	gob.Register(&JetMiss{})
 	gob.Register(&NodeSign{})
