@@ -54,6 +54,9 @@ func TmpLedger(t *testing.T, dir string, c core.Components) (*ledger.Ledger, fun
 	db, dbcancel := storagetest.TmpDB(ctx, t, storagetest.Dir(dir))
 	pulseStorage := storage.NewPulseStorage(db)
 
+	pulse, err := db.GetLatestPulse(ctx)
+	pulseStorage.Set(&pulse.Pulse)
+
 	am := artifactmanager.NewArtifactManger(db)
 	am.PlatformCryptographyScheme = pcs
 	conf.PulseManager.HeavySyncEnabled = false
@@ -116,7 +119,7 @@ func TmpLedger(t *testing.T, dir string, c core.Components) (*ledger.Ledger, fun
 
 	handler.RecentStorageProvider = provideMock
 
-	err := handler.Init(ctx)
+	err = handler.Init(ctx)
 	if err != nil {
 		panic(err)
 	}

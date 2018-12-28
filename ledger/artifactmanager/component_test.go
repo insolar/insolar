@@ -41,8 +41,6 @@ func TestLedgerArtifactManager_PendingRequest(t *testing.T) {
 	defer cleaner()
 	defer mc.Finish()
 
-	pulseStorage := storage.NewPulseStorage(db)
-
 	amPulseStorageMock := testutils.NewPulseStorageMock(t)
 	amPulseStorageMock.CurrentFunc = func(p context.Context) (r *core.Pulse, r1 error) {
 		pulse, err := db.GetLatestPulse(p)
@@ -52,7 +50,7 @@ func TestLedgerArtifactManager_PendingRequest(t *testing.T) {
 
 	cs := testutils.NewPlatformCryptographyScheme()
 	mb := testmessagebus.NewTestMessageBus(t)
-	mb.PulseStorage = pulseStorage
+	mb.PulseStorage = amPulseStorageMock
 	jc := testutils.NewJetCoordinatorMock(mc)
 	jc.LightExecutorForJetMock.Return(&core.RecordRef{}, nil)
 	jc.MeMock.Return(core.RecordRef{})
