@@ -74,8 +74,12 @@ func getTestData(t *testing.T) (
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
-	db, cleaner := storagetest.TmpDB(ctx, t)
+	db, cleaner := storagetest.TmpDB(ctx, t, storagetest.ZeroJetBootstrap())
 	pulseStorage := storage.NewPulseStorage(db)
+
+	pulse, err := db.GetLatestPulse(ctx)
+	require.NoError(t, err)
+	pulseStorage.Set(&pulse.Pulse)
 	jc := testutils.NewJetCoordinatorMock(mc)
 	jc.LightExecutorForJetMock.Return(&core.RecordRef{}, nil)
 	jc.MeMock.Return(core.RecordRef{})
@@ -104,7 +108,7 @@ func getTestData(t *testing.T) (
 
 	handler.Bus = mb
 	handler.JetCoordinator = jc
-	err := handler.Init(ctx)
+	err = handler.Init(ctx)
 	require.NoError(t, err)
 
 	am := LedgerArtifactManager{
@@ -476,7 +480,7 @@ func TestLedgerArtifactManager_GetObject_FollowsRedirect(t *testing.T) {
 	}
 	am.DefaultBus = mb
 	am.db = db
-	am.PulseStorage = storage.NewPulseStorage(db)
+	am.PulseStorage = makePulseStorage(db, ctx, t)
 
 	_, err := am.GetObject(ctx, *objRef, nil, false)
 
@@ -615,6 +619,15 @@ func TestLedgerArtifactManager_GetChildren(t *testing.T) {
 	})
 }
 
+func makePulseStorage(db *storage.DB, ctx context.Context, t *testing.T) core.PulseStorage {
+	pulseStorage := storage.NewPulseStorage(db)
+	pulse, err := db.GetLatestPulse(ctx)
+	require.NoError(t, err)
+	pulseStorage.Set(&pulse.Pulse)
+
+	return pulseStorage
+}
+
 func TestLedgerArtifactManager_GetChildren_FollowsRedirect(t *testing.T) {
 	t.Parallel()
 	ctx := inslogger.TestContext(t)
@@ -626,7 +639,7 @@ func TestLedgerArtifactManager_GetChildren_FollowsRedirect(t *testing.T) {
 	defer cleaner()
 
 	am.db = db
-	am.PulseStorage = storage.NewPulseStorage(db)
+	am.PulseStorage = makePulseStorage(db, ctx, t)
 
 	objRef := genRandomRef(0)
 	nodeRef := genRandomRef(0)
@@ -692,7 +705,7 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 	defer mc.Finish()
 
 	mb := testmessagebus.NewTestMessageBus(t)
-	mb.PulseStorage = storage.NewPulseStorage(db)
+	mb.PulseStorage = makePulseStorage(db, ctx, t)
 	jc := testutils.NewJetCoordinatorMock(mc)
 	jc.LightExecutorForJetMock.Return(&core.RecordRef{}, nil)
 	jc.MeMock.Return(core.RecordRef{})
