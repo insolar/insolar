@@ -1,6 +1,6 @@
 pulsar:
   connectiontype: tcp
-  mainlisteneraddress: 0.0.0.0:58090
+  mainlisteneraddress: 127.0.0.1:58090
   storage:
     datadirectory: ./data_pulsar
     txretriesonconflict: 0
@@ -14,7 +14,7 @@ pulsar:
   numberdelta: 10
   distributiontransport:
     protocol: TCP
-    address: 0.0.0.0:58091
+    address: 127.0.0.1:58091
     behindnat: false
   pulsedistributor:
     bootstraphosts:
