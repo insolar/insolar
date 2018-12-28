@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
 
-
 for port in 19191 19192 19193 19194 19195
 do
     echo "Port $port. Status: "
