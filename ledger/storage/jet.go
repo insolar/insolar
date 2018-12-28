@@ -169,7 +169,7 @@ func (db *DB) AppendJetTree(ctx context.Context, pulse core.PulseNumber, tree *j
 	db.jetTreeLock.Lock()
 	defer db.jetTreeLock.Unlock()
 
-	savedTree, err := db.GetJetTree(ctx, pulse)
+	savedTree, err := db.getJetTree(ctx, pulse)
 	if err != nil {
 		return err
 	}
