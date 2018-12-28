@@ -19,6 +19,7 @@ package servicenetwork
 import (
 	"context"
 	"crypto"
+	"fmt"
 	"math/rand"
 	"strconv"
 	"strings"
@@ -82,7 +83,7 @@ func (s *testSuite) fixture() *fixture {
 func (s *testSuite) SetupTest() {
 	s.fixtureMap[s.T().Name()] = newFixture()
 
-	log.Infoln("SetupSuite")
+	log.Infoln("SetupTest")
 
 	for i := 0; i < s.bootstrapCount; i++ {
 		s.fixture().bootstrapNodes = append(s.fixture().bootstrapNodes, newNetworkNode())
@@ -98,17 +99,22 @@ func (s *testSuite) SetupTest() {
 	s.SetupNodesNetwork(s.fixture().bootstrapNodes)
 
 	<-time.After(time.Second * 2)
+	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	require.Equal(s.T(), len(s.fixture().bootstrapNodes), len(activeNodes))
 
 	if len(s.fixture().networkNodes) > 0 {
 		log.Infoln("Setup network nodes")
 		s.SetupNodesNetwork(s.fixture().networkNodes)
 		s.waitForConsensus(2)
-	}
 
-	// TODO: wait for first consensus
-	// active nodes count verification
-	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
-	require.Equal(s.T(), s.getNodesCount(), len(activeNodes))
+		// active nodes count verification
+		activeNodes1 := s.fixture().networkNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+		activeNodes2 := s.fixture().networkNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+
+		require.Equal(s.T(), s.getNodesCount(), len(activeNodes1))
+		require.Equal(s.T(), s.getNodesCount(), len(activeNodes2))
+	}
+	fmt.Println("=================== SetupTest() Done")
 }
 
 func (s *testSuite) SetupNodesNetwork(nodes []*networkNode) {
@@ -161,6 +167,7 @@ func (s *testSuite) SetupNodesNetwork(nodes []*networkNode) {
 
 // TearDownSuite shutdowns all nodes in network, calls once after all tests in suite finished
 func (s *testSuite) TearDownTest() {
+	log.Info("=================== TearDownTest()")
 	log.Infoln("Stop network nodes")
 	for _, n := range s.fixture().networkNodes {
 		err := n.componentManager.Stop(s.fixture().ctx)
@@ -177,6 +184,11 @@ func (s *testSuite) TearDownTest() {
 func (s *testSuite) waitForConsensus(consensusCount int) {
 	for i := 0; i < consensusCount; i++ {
 		for _, n := range s.fixture().bootstrapNodes {
+			err := <-n.consensusResult
+			s.NoError(err)
+		}
+
+		for _, n := range s.fixture().networkNodes {
 			err := <-n.consensusResult
 			s.NoError(err)
 		}
@@ -304,6 +316,7 @@ func RandomRole() core.StaticRole {
 // preInitNode inits previously created node with mocks and external dependencies
 func (s *testSuite) preInitNode(node *networkNode) {
 	cfg := configuration.NewConfiguration()
+	cfg.Pulsar.PulseTime = 5000 // pulse 5 sec for faster tests
 	cfg.Host.Transport.Address = node.host
 
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
