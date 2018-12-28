@@ -840,7 +840,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 func (h *MessageHandler) nodeForJet(
 	ctx context.Context, jetID core.RecordID, parcelPulse, targetPulse core.PulseNumber,
 ) (*core.RecordRef, error) {
-	if targetPulse == core.PulseNumberCurrent || targetPulse == core.FirstPulseNumber {
+	if targetPulse == core.PulseNumberCurrent {
 		targetPulse = parcelPulse
 	}
 	if parcelPulse-targetPulse < h.conf.LightChainLimit {

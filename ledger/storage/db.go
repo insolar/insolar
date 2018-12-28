@@ -643,3 +643,71 @@ func (db *DB) iterate(
 		return nil
 	})
 }
+
+// InitDBWithZeroJet creates initial records in storage with zero jetID.
+func (db *DB) InitDBWithZeroJet(ctx context.Context) error {
+	inslog := inslogger.FromContext(ctx)
+	inslog.Debug("start storage bootstrap")
+	jetID := *jet.NewID(0, nil)
+
+	getGenesisRef := func() (*core.RecordRef, error) {
+		buff, err := db.get(ctx, prefixkey(scopeIDSystem, []byte{sysGenesis}))
+		if err != nil {
+			return nil, err
+		}
+		var genesisRef core.RecordRef
+		copy(genesisRef[:], buff)
+		return &genesisRef, nil
+	}
+
+	createGenesisRecord := func() (*core.RecordRef, error) {
+		err := db.AddPulse(
+			ctx,
+			core.Pulse{
+				PulseNumber: core.GenesisPulse.PulseNumber,
+				Entropy:     core.GenesisPulse.Entropy,
+			},
+		)
+		if err != nil {
+			return nil, err
+		}
+		// It should be 0. Becase pulse after 65537 will try to use a hash of drop between 0 - 65537
+		err = db.SetDrop(ctx, jetID, &jet.JetDrop{})
+		if err != nil {
+			return nil, err
+		}
+
+		lastPulse, err := db.GetLatestPulse(ctx)
+		if err != nil {
+			return nil, err
+		}
+		genesisID, err := db.SetRecord(ctx, jetID, lastPulse.Pulse.PulseNumber, &record.GenesisRecord{})
+		if err != nil {
+			return nil, err
+		}
+		err = db.SetObjectIndex(
+			ctx,
+			jetID,
+			genesisID,
+			&index.ObjectLifeline{LatestState: genesisID, LatestStateApproved: genesisID},
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		genesisRef := core.NewRecordRef(*genesisID, *genesisID)
+		return genesisRef, db.set(ctx, prefixkey(scopeIDSystem, []byte{sysGenesis}), genesisRef[:])
+	}
+
+	var err error
+	db.genesisRef, err = getGenesisRef()
+	if err == ErrNotFound {
+		db.genesisRef, err = createGenesisRecord()
+	}
+	if err != nil {
+		return errors.Wrap(err, "bootstrap failed")
+	}
+
+	// TODO: required for test passing, need figure out how to do init jets properly
+	return db.AddJets(ctx, jetID)
+}
