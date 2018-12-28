@@ -36,7 +36,6 @@ const (
 
 type CommunicatorMock struct {
 	communicator phases.Communicator
-	testOpt      CommunicatorTestOpt
 	ignoreFrom   core.RecordRef
 }
 

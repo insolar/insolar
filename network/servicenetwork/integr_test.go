@@ -185,9 +185,9 @@ func setCommunicatorMock(nodes []*networkNode, opt CommunicatorTestOpt) {
 	case PartialPositive1Phase:
 		nodesCount = int(float64(len(nodes)) * 0.2)
 	}
-	for i := nodesCount; i <= nodesCount; i++ {
+	for i := 1; i <= nodesCount; i++ {
 		comm := nodes[i].serviceNetwork.PhaseManager.(*phaseManagerWrapper).original.(*phases.Phases).FirstPhase.Communicator
-		wrapper := &CommunicatorMock{comm, PartialNegative1Phase, ref}
+		wrapper := &CommunicatorMock{comm, ref}
 		nodes[i].serviceNetwork.PhaseManager.(*phaseManagerWrapper).original.(*phases.Phases).FirstPhase.Communicator = wrapper
 	}
 }
