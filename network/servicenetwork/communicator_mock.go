@@ -37,6 +37,7 @@ const (
 type CommunicatorMock struct {
 	communicator phases.Communicator
 	testOpt      CommunicatorTestOpt
+	ignoreFrom   core.RecordRef
 }
 
 func (cm *CommunicatorMock) ExchangePhase1(
@@ -45,26 +46,15 @@ func (cm *CommunicatorMock) ExchangePhase1(
 	participants []core.Node,
 	packet *packets.Phase1Packet,
 ) (map[core.RecordRef]*packets.Phase1Packet, error) {
-	switch cm.testOpt {
-	case PartialNegative1Phase:
-		nodesCount := float64(len(participants)) * 0.4
-		participants = participants[:int(nodesCount)]
-	case PartialPositive1Phase:
-		rmNodesCount := float64(len(participants)) * 0.2
-		participants = participants[:len(participants)-int(rmNodesCount)]
+	pckts, err := cm.communicator.ExchangePhase1(ctx, originClaim, participants, packet)
+	if err != nil {
+		return nil, err
 	}
-	return cm.communicator.ExchangePhase1(ctx, originClaim, participants, packet)
+	delete(pckts, cm.ignoreFrom)
+	return pckts, nil
 }
 
 func (cm *CommunicatorMock) ExchangePhase2(ctx context.Context, list network.UnsyncList, participants []core.Node, packet *packets.Phase2Packet) (map[core.RecordRef]*packets.Phase2Packet, error) {
-	switch cm.testOpt {
-	case PartialNegative2Phase:
-		nodesCount := float64(len(participants)) * 0.4
-		participants = participants[:int(nodesCount)]
-	case PartialPositive2Phase:
-		rmNodesCount := float64(len(participants)) * 0.2
-		participants = participants[:len(participants)-int(rmNodesCount)]
-	}
 	return cm.communicator.ExchangePhase2(ctx, list, participants, packet)
 }
 
