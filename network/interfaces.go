@@ -183,6 +183,8 @@ type NodeKeeper interface {
 	ResolveConsensus(shortID core.ShortNodeID) *host.Host
 	// ResolveConsensusRef get temporary mapping by node ID
 	ResolveConsensusRef(nodeID core.RecordRef) *host.Host
+	// workaround for tests
+	SetExitHandler(handler func())
 }
 
 // UnsyncList is interface to manage unsync list

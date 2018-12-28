@@ -195,6 +195,26 @@ func (s *testSuite) waitForConsensus(consensusCount int) {
 	}
 }
 
+func (s *testSuite) waitForConsensusExcept(consensusCount int, exception core.RecordRef) {
+	for i := 0; i < consensusCount; i++ {
+		for _, n := range s.fixture().bootstrapNodes {
+			if n.id.Equal(exception) {
+				continue
+			}
+			err := <-n.consensusResult
+			s.NoError(err)
+		}
+
+		for _, n := range s.fixture().networkNodes {
+			if n.id.Equal(exception) {
+				continue
+			}
+			err := <-n.consensusResult
+			s.NoError(err)
+		}
+	}
+}
+
 // nodesCount returns count of nodes in network without testNode
 func (s *testSuite) getNodesCount() int {
 	return len(s.fixture().bootstrapNodes) + len(s.fixture().networkNodes)
@@ -364,6 +384,9 @@ func (s *testSuite) preInitNode(node *networkNode) {
 		realKeeper.SetState(network.Ready)
 		realKeeper.AddActiveNodes([]core.Node{origin})
 	}
+	realKeeper.SetExitHandler(func() {
+		log.Info("node exited, bye bye")
+	})
 
 	node.componentManager = &component.Manager{}
 	node.componentManager.Register(realKeeper, pulseManagerMock, pulseStorageMock, netCoordinator, amMock)

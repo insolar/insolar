@@ -103,7 +103,6 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 
 	if len(matrixCalculation.TimedOut) > 0 {
 		for _, nodeID := range matrixCalculation.TimedOut {
-			log.Infof("Remove timed out node %s from consensus", nodeID)
 			state.UnsyncList.RemoveNode(nodeID)
 		}
 

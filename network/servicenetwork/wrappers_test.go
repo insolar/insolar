@@ -138,3 +138,7 @@ func (n *nodeKeeperWrapper) Sync(list network.UnsyncList) {
 func (n *nodeKeeperWrapper) MoveSyncToActive() error {
 	return n.original.MoveSyncToActive()
 }
+
+func (n *nodeKeeperWrapper) SetExitHandler(handler func()) {
+	n.original.SetExitHandler(handler)
+}

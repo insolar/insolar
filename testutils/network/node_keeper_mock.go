@@ -127,6 +127,11 @@ type NodeKeeperMock struct {
 	SetCloudHashPreCounter uint64
 	SetCloudHashMock       mNodeKeeperMockSetCloudHash
 
+	SetExitHandlerFunc       func(p func())
+	SetExitHandlerCounter    uint64
+	SetExitHandlerPreCounter uint64
+	SetExitHandlerMock       mNodeKeeperMockSetExitHandler
+
 	SetIsBootstrappedFunc       func(p bool)
 	SetIsBootstrappedCounter    uint64
 	SetIsBootstrappedPreCounter uint64
@@ -172,6 +177,7 @@ func NewNodeKeeperMock(t minimock.Tester) *NodeKeeperMock {
 	m.ResolveConsensusMock = mNodeKeeperMockResolveConsensus{mock: m}
 	m.ResolveConsensusRefMock = mNodeKeeperMockResolveConsensusRef{mock: m}
 	m.SetCloudHashMock = mNodeKeeperMockSetCloudHash{mock: m}
+	m.SetExitHandlerMock = mNodeKeeperMockSetExitHandler{mock: m}
 	m.SetIsBootstrappedMock = mNodeKeeperMockSetIsBootstrapped{mock: m}
 	m.SetStateMock = mNodeKeeperMockSetState{mock: m}
 	m.SyncMock = mNodeKeeperMockSync{mock: m}
@@ -3096,6 +3102,129 @@ func (m *NodeKeeperMock) SetCloudHashFinished() bool {
 	return true
 }
 
+type mNodeKeeperMockSetExitHandler struct {
+	mock              *NodeKeeperMock
+	mainExpectation   *NodeKeeperMockSetExitHandlerExpectation
+	expectationSeries []*NodeKeeperMockSetExitHandlerExpectation
+}
+
+type NodeKeeperMockSetExitHandlerExpectation struct {
+	input *NodeKeeperMockSetExitHandlerInput
+}
+
+type NodeKeeperMockSetExitHandlerInput struct {
+	p func()
+}
+
+//Expect specifies that invocation of NodeKeeper.SetExitHandler is expected from 1 to Infinity times
+func (m *mNodeKeeperMockSetExitHandler) Expect(p func()) *mNodeKeeperMockSetExitHandler {
+	m.mock.SetExitHandlerFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &NodeKeeperMockSetExitHandlerExpectation{}
+	}
+	m.mainExpectation.input = &NodeKeeperMockSetExitHandlerInput{p}
+	return m
+}
+
+//Return specifies results of invocation of NodeKeeper.SetExitHandler
+func (m *mNodeKeeperMockSetExitHandler) Return() *NodeKeeperMock {
+	m.mock.SetExitHandlerFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &NodeKeeperMockSetExitHandlerExpectation{}
+	}
+
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of NodeKeeper.SetExitHandler is expected once
+func (m *mNodeKeeperMockSetExitHandler) ExpectOnce(p func()) *NodeKeeperMockSetExitHandlerExpectation {
+	m.mock.SetExitHandlerFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &NodeKeeperMockSetExitHandlerExpectation{}
+	expectation.input = &NodeKeeperMockSetExitHandlerInput{p}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+//Set uses given function f as a mock of NodeKeeper.SetExitHandler method
+func (m *mNodeKeeperMockSetExitHandler) Set(f func(p func())) *NodeKeeperMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.SetExitHandlerFunc = f
+	return m.mock
+}
+
+//SetExitHandler implements github.com/insolar/insolar/network.NodeKeeper interface
+func (m *NodeKeeperMock) SetExitHandler(p func()) {
+	counter := atomic.AddUint64(&m.SetExitHandlerPreCounter, 1)
+	defer atomic.AddUint64(&m.SetExitHandlerCounter, 1)
+
+	if len(m.SetExitHandlerMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.SetExitHandlerMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to NodeKeeperMock.SetExitHandler. %v", p)
+			return
+		}
+
+		input := m.SetExitHandlerMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, NodeKeeperMockSetExitHandlerInput{p}, "NodeKeeper.SetExitHandler got unexpected parameters")
+
+		return
+	}
+
+	if m.SetExitHandlerMock.mainExpectation != nil {
+
+		input := m.SetExitHandlerMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, NodeKeeperMockSetExitHandlerInput{p}, "NodeKeeper.SetExitHandler got unexpected parameters")
+		}
+
+		return
+	}
+
+	if m.SetExitHandlerFunc == nil {
+		m.t.Fatalf("Unexpected call to NodeKeeperMock.SetExitHandler. %v", p)
+		return
+	}
+
+	m.SetExitHandlerFunc(p)
+}
+
+//SetExitHandlerMinimockCounter returns a count of NodeKeeperMock.SetExitHandlerFunc invocations
+func (m *NodeKeeperMock) SetExitHandlerMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.SetExitHandlerCounter)
+}
+
+//SetExitHandlerMinimockPreCounter returns the value of NodeKeeperMock.SetExitHandler invocations
+func (m *NodeKeeperMock) SetExitHandlerMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.SetExitHandlerPreCounter)
+}
+
+//SetExitHandlerFinished returns true if mock invocations count is ok
+func (m *NodeKeeperMock) SetExitHandlerFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.SetExitHandlerMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.SetExitHandlerCounter) == uint64(len(m.SetExitHandlerMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.SetExitHandlerMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.SetExitHandlerCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.SetExitHandlerFunc != nil {
+		return atomic.LoadUint64(&m.SetExitHandlerCounter) > 0
+	}
+
+	return true
+}
+
 type mNodeKeeperMockSetIsBootstrapped struct {
 	mock              *NodeKeeperMock
 	mainExpectation   *NodeKeeperMockSetIsBootstrappedExpectation
@@ -3553,6 +3682,10 @@ func (m *NodeKeeperMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to NodeKeeperMock.SetCloudHash")
 	}
 
+	if !m.SetExitHandlerFinished() {
+		m.t.Fatal("Expected call to NodeKeeperMock.SetExitHandler")
+	}
+
 	if !m.SetIsBootstrappedFinished() {
 		m.t.Fatal("Expected call to NodeKeeperMock.SetIsBootstrapped")
 	}
@@ -3666,6 +3799,10 @@ func (m *NodeKeeperMock) MinimockFinish() {
 		m.t.Fatal("Expected call to NodeKeeperMock.SetCloudHash")
 	}
 
+	if !m.SetExitHandlerFinished() {
+		m.t.Fatal("Expected call to NodeKeeperMock.SetExitHandler")
+	}
+
 	if !m.SetIsBootstrappedFinished() {
 		m.t.Fatal("Expected call to NodeKeeperMock.SetIsBootstrapped")
 	}
@@ -3713,6 +3850,7 @@ func (m *NodeKeeperMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.ResolveConsensusFinished()
 		ok = ok && m.ResolveConsensusRefFinished()
 		ok = ok && m.SetCloudHashFinished()
+		ok = ok && m.SetExitHandlerFinished()
 		ok = ok && m.SetIsBootstrappedFinished()
 		ok = ok && m.SetStateFinished()
 		ok = ok && m.SyncFinished()
@@ -3806,6 +3944,10 @@ func (m *NodeKeeperMock) MinimockWait(timeout time.Duration) {
 
 			if !m.SetCloudHashFinished() {
 				m.t.Error("Expected call to NodeKeeperMock.SetCloudHash")
+			}
+
+			if !m.SetExitHandlerFinished() {
+				m.t.Error("Expected call to NodeKeeperMock.SetExitHandler")
 			}
 
 			if !m.SetIsBootstrappedFinished() {
@@ -3913,6 +4055,10 @@ func (m *NodeKeeperMock) AllMocksCalled() bool {
 	}
 
 	if !m.SetCloudHashFinished() {
+		return false
+	}
+
+	if !m.SetExitHandlerFinished() {
 		return false
 	}
 
