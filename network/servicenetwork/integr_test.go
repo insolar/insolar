@@ -141,7 +141,7 @@ func (s *testSuite) TestPartialTimeOut() {
 		s.T().Skip("skip test for bootstrap nodes < 3")
 	}
 
-	comm := s.fixture().bootstrapNodes[0].serviceNetwork.PhaseManager.(*phases.Phases).FirstPhase.Communicator
+	comm := s.fixture().bootstrapNodes[0].serviceNetwork.PhaseManager.(*phaseManagerWrapper).original.(*phases.Phases).FirstPhase.Communicator
 	wrapper := &CommunicatorMock{comm, PartialNegative1Phase}
 	s.fixture().bootstrapNodes[0].serviceNetwork.PhaseManager.(*phases.Phases).FirstPhase.Communicator = wrapper
 
