@@ -66,3 +66,7 @@ func (p *player) Send(ctx context.Context, msg core.Message, ops *core.MessageSe
 
 	return item.Reply, item.Error
 }
+
+func (p *player) OnPulse(context.Context, core.Pulse) error {
+	panic("This method must not be called")
+}

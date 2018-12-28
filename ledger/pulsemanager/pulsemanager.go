@@ -430,6 +430,11 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 	m.PulseStorage.Unlock()
 	m.GIL.Release(ctx)
 
+	err = m.Bus.OnPulse(ctx, newPulse)
+	if err != nil {
+		inslogger.FromContext(ctx).Error(errors.Wrap(err, "MessageBus OnPulse() returns error"))
+	}
+
 	if !persist {
 		return nil
 	}
@@ -447,10 +452,22 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 			if err != nil {
 				return err
 			}
+			go m.sendTreeToHeavy(ctx, storagePulse.Pulse.PulseNumber)
 		}
 	}
 
 	return m.LR.OnPulse(ctx, newPulse)
+}
+
+func (m *PulseManager) sendTreeToHeavy(ctx context.Context, pn core.PulseNumber) {
+	jetTree, err := m.db.GetJetTree(ctx, pn)
+	if err != nil {
+		inslogger.FromContext(ctx).Error(err)
+	}
+	_, err = m.Bus.Send(ctx, &message.HeavyJetTree{PulseNum: pn, JetTree: *jetTree}, nil)
+	if err != nil {
+		inslogger.FromContext(ctx).Error(err)
+	}
 }
 
 // AddPulseToSyncClients add pulse number to all sync clients in pool.

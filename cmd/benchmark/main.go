@@ -174,6 +174,13 @@ func startScenario(s scenario) {
 	elapsedInSeconds := float64(elapsed) / float64(time.Second)
 	speed := float64(s.getOperationsNumber()) / float64(elapsedInSeconds)
 	writeToOutput(s.getOut(), fmt.Sprintf("Scenario %s: Speed - %f resp/s \n", s.getName(), speed))
+	writeToOutput(
+		s.getOut(),
+		fmt.Sprintf(
+			"Scenario %s: Average Request Duration - %s\n",
+			s.getName(), s.getAverageOperationDuration(),
+		),
+	)
 }
 
 func main() {

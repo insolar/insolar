@@ -17,8 +17,6 @@
 package message
 
 import (
-	"context"
-
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/platformpolicy"
 )
@@ -91,11 +89,11 @@ func (m *BaseLogicMessage) GetRequest() core.RecordRef {
 
 // ReturnResults - push results of methods
 type ReturnResults struct {
-	Target  core.RecordRef
-	Caller  core.RecordRef
+	Target   core.RecordRef
+	Caller   core.RecordRef
 	Sequence uint64
-	Reply   core.Reply
-	Error   string
+	Reply    core.Reply
+	Error    string
 }
 
 func (rr *ReturnResults) Type() core.MessageType {
@@ -215,7 +213,6 @@ type ExecutorResults struct {
 }
 
 type ExecutionQueueElement struct {
-	Ctx     context.Context
 	Parcel  core.Parcel
 	Request *core.RecordRef
 	Pulse   core.PulseNumber
@@ -262,7 +259,7 @@ type CaseBindRequest struct {
 	Request        core.RecordRef
 	MessageBusTape []byte
 	Reply          core.Reply
-	Error          error
+	Error          string
 }
 
 // AllowedSenderObjectAndRole implements interface method
