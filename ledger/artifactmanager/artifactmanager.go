@@ -101,6 +101,9 @@ func (m *LedgerArtifactManager) RegisterRequest(
 		*recRef,
 		currentPulse.Pulse,
 	)
+	if !recID.Equal(id) {
+		inslogger.FromContext(ctx).Errorf("LedgerArtifactManager.RegisterRequest request wrongly predicted their=%s our=%s", id, recID)
+	}
 	return id, errors.Wrap(err, "[ RegisterRequest ] ")
 }
 
