@@ -423,6 +423,8 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 			m.PulseStorage.Unlock()
 			return errors.Wrap(err, "call of SetActiveNodes failed")
 		}
+	} else {
+		inslogger.FromContext(ctx).Warn("SKIP PERSIST PULSE", newPulse.PulseNumber)
 	}
 
 	m.PulseStorage.Unlock()
