@@ -255,10 +255,10 @@ func (currentPulsar *Pulsar) sendPulseToNodesAndPulsars(ctx context.Context) {
 	if err != nil {
 		log.Error(err)
 	}
-	err = currentPulsar.Storage.SetLastPulse(&pulseForSending)
-	if err != nil {
-		log.Error(err)
-	}
+	// err = currentPulsar.Storage.SetLastPulse(&pulseForSending)
+	// if err != nil {
+	// 	log.Error(err)
+	// }
 	currentPulsar.SetLastPulse(&pulseForSending)
 	logger.Infof("Latest pulse is %v", pulseForSending.PulseNumber)
 
