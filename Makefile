@@ -77,7 +77,8 @@ $(PULSARD):
 	go build -o $(BIN_DIR)/$(PULSARD) -ldflags "${LDFLAGS}" cmd/pulsard/*.go
 
 $(INSGORUND):
-	CGO_ENABLED=1 go build -o $(BIN_DIR)/$(INSGORUND) -ldflags "${LDFLAGS}" cmd/insgorund/*.go
+	#CGO_ENABLED=1
+	go build -o $(BIN_DIR)/$(INSGORUND) -ldflags "${LDFLAGS}" cmd/insgorund/*.go
 
 $(BENCHMARK):
 	go build -o $(BIN_DIR)/$(BENCHMARK) -ldflags "${LDFLAGS}" cmd/benchmark/*.go
@@ -93,19 +94,23 @@ $(HEALTHCHECK):
 
 
 functest:
-	CGO_ENABLED=1 go test -tags functest ./functest -count=1
+	#CGO_ENABLED=1
+	go test -tags functest ./functest -count=1
 
 test:
-	CGO_ENABLED=1 go test $(ALL_PACKAGES)
+	#CGO_ENABLED=1
+	go test $(ALL_PACKAGES)
 
 test_fast:
 	go test -count 1 -v $(ALL_PACKAGES)
 
 test_with_coverage:
-	CGO_ENABLED=1 go test --coverprofile=$(COVERPROFILE) --covermode=atomic $(TESTED_PACKAGES)
+	#CGO_ENABLED=1
+	go test --coverprofile=$(COVERPROFILE) --covermode=atomic $(TESTED_PACKAGES)
 
 test_with_coverage_fast:
-	CGO_ENABLED=1 go test -count 1 --coverprofile=$(COVERPROFILE) --covermode=atomic $(ALL_PACKAGES)
+	#CGO_ENABLED=1
+	go test -count 1 --coverprofile=$(COVERPROFILE) --covermode=atomic $(ALL_PACKAGES)
 
 
 CONTRACTS = $(wildcard application/contract/*)
