@@ -34,7 +34,7 @@ func (s *testSuite) TestNetworkConsensus3Times() {
 }
 
 func (s *testSuite) TestNodeConnect() {
-	s.preInitNode(s.testNode, Disable)
+	s.preInitNode(s.fixture().testNode, Disable)
 
 	s.InitTestNode()
 	s.StartTestNode()
@@ -45,22 +45,22 @@ func (s *testSuite) TestNodeConnect() {
 
 	s.waitForConsensus(1)
 
-	activeNodes := s.bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
-	s.Equal(s.nodesCount(), len(activeNodes))
+	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount(), len(activeNodes))
 
 	s.waitForConsensus(1)
 
-	activeNodes = s.bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
-	s.Equal(s.nodesCount()+1, len(activeNodes))
+	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount()+1, len(activeNodes))
 
 	s.waitForConsensus(2)
 
-	activeNodes = s.bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
-	s.Equal(s.nodesCount()+1, len(activeNodes))
+	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount()+1, len(activeNodes))
 }
 
 func (s *testSuite) TestNodeLeave() {
-	s.preInitNode(s.testNode, Disable)
+	s.preInitNode(s.fixture().testNode, Disable)
 
 	s.InitTestNode()
 	s.StartTestNode()
@@ -71,20 +71,20 @@ func (s *testSuite) TestNodeLeave() {
 
 	s.waitForConsensus(1)
 
-	activeNodes := s.bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
-	s.Equal(s.nodesCount(), len(activeNodes))
+	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount(), len(activeNodes))
 
 	s.waitForConsensus(1)
 
-	activeNodes = s.bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
-	s.Equal(s.nodesCount()+1, len(activeNodes))
+	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount()+1, len(activeNodes))
 
-	s.testNode.serviceNetwork.GracefulStop(context.Background())
+	s.fixture().testNode.serviceNetwork.GracefulStop(context.Background())
 
 	s.waitForConsensus(2)
 
-	activeNodes = s.bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
-	s.Equal(s.nodesCount(), len(activeNodes))
+	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount(), len(activeNodes))
 }
 
 func TestServiceNetworkIntegration(t *testing.T) {
@@ -114,15 +114,15 @@ func (ftpm *FullTimeoutPhaseManager) OnPulse(ctx context.Context, pulse *core.Pu
 }
 
 func (s *testSuite) TestFullTimeOut() {
-	if len(s.bootstrapNodes) < 3 {
+	if len(s.fixture().bootstrapNodes) < 3 {
 		s.T().Skip("skip test for bootstrap nodes < 3")
 	}
 
-	wrapper := s.bootstrapNodes[1].serviceNetwork.PhaseManager.(*phaseManagerWrapper)
+	wrapper := s.fixture().bootstrapNodes[1].serviceNetwork.PhaseManager.(*phaseManagerWrapper)
 	wrapper.original = &FullTimeoutPhaseManager{}
-	s.bootstrapNodes[1].serviceNetwork.PhaseManager = wrapper
+	s.fixture().bootstrapNodes[1].serviceNetwork.PhaseManager = wrapper
 
-	s.preInitNode(s.testNode, Disable)
+	s.preInitNode(s.fixture().testNode, Disable)
 
 	s.InitTestNode()
 	s.StartTestNode()
@@ -130,13 +130,13 @@ func (s *testSuite) TestFullTimeOut() {
 
 	s.waitForConsensus(1)
 
-	activeNodes := s.bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
-	s.Equal(s.nodesCount(), len(activeNodes))
+	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount(), len(activeNodes))
 
 	s.waitForConsensus(1)
 
-	activeNodes = s.bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
-	s.Equal(s.nodesCount()+1-1, len(activeNodes))
+	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount()+1-1, len(activeNodes))
 }
 
 // Partial timeout
@@ -145,7 +145,7 @@ func (s *testSuite) TestPartialTimeOut() {
 	s.T().Skip("fix me")
 	phasesResult := make(chan error)
 
-	s.preInitNode(s.testNode, Partial)
+	s.preInitNode(s.fixture().testNode, Partial)
 
 	s.InitTestNode()
 	s.StartTestNode()

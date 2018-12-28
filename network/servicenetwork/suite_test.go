@@ -43,47 +43,67 @@ import (
 
 var testNetworkPort = 10010
 
-type testSuite struct {
-	suite.Suite
+type fixture struct {
 	ctx            context.Context
 	bootstrapNodes []*networkNode
 	networkNodes   []*networkNode
 	testNode       *networkNode
 }
 
-func NewTestSuite(bootstrapCount, nodesCount int) *testSuite {
-	s := &testSuite{
-		Suite:          suite.Suite{},
+func newFixture() *fixture {
+	return &fixture{
 		ctx:            context.Background(),
 		bootstrapNodes: make([]*networkNode, 0),
 		networkNodes:   make([]*networkNode, 0),
 	}
+}
 
-	for i := 0; i < bootstrapCount; i++ {
-		s.bootstrapNodes = append(s.bootstrapNodes, newNetworkNode())
+type testSuite struct {
+	suite.Suite
+	fixtureMap     map[string]*fixture
+	bootstrapCount int
+	nodesCount     int
+}
+
+func NewTestSuite(bootstrapCount, nodesCount int) *testSuite {
+	return &testSuite{
+		Suite:          suite.Suite{},
+		fixtureMap:     make(map[string]*fixture, 0),
+		bootstrapCount: bootstrapCount,
+		nodesCount:     nodesCount,
 	}
+}
 
-	for i := 0; i < nodesCount; i++ {
-		s.networkNodes = append(s.networkNodes, newNetworkNode())
-	}
-
-	s.testNode = newNetworkNode()
-	return s
+func (s *testSuite) fixture() *fixture {
+	return s.fixtureMap[s.T().Name()]
 }
 
 // SetupSuite creates and run network with bootstrap and common nodes once before run all tests in the suite
 func (s *testSuite) SetupTest() {
+	s.fixtureMap[s.T().Name()] = newFixture()
+
 	log.Infoln("SetupSuite")
 
 	log.Infoln("Setup bootstrap nodes")
-	s.SetupNodesNetwork(s.bootstrapNodes)
 
-	<-time.After(time.Second * 3)
+	for i := 0; i < s.bootstrapCount; i++ {
+		s.fixture().bootstrapNodes = append(s.fixture().bootstrapNodes, newNetworkNode())
+	}
+
+	for i := 0; i < s.nodesCount; i++ {
+		s.fixture().networkNodes = append(s.fixture().networkNodes, newNetworkNode())
+	}
+
+	s.fixtureMap[s.T().Name()].testNode = newNetworkNode()
+
+	s.SetupNodesNetwork(s.fixture().bootstrapNodes)
+
+	<-time.After(time.Second * 2)
 	// s.waitForConsensus(1)
 	// TODO: wait for first consensus
 	// active nodes count verification
-	activeNodes := s.bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
-	require.Equal(s.T(), s.nodesCount(), len(activeNodes))
+	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	require.Equal(s.T(), s.getNodesCount(), len(activeNodes))
 }
 
 func (s *testSuite) SetupNodesNetwork(nodes []*networkNode) {
@@ -93,11 +113,11 @@ func (s *testSuite) SetupNodesNetwork(nodes []*networkNode) {
 
 	results := make(chan error, len(nodes))
 	initNode := func(node *networkNode) {
-		err := node.init(s.ctx)
+		err := node.init(s.fixture().ctx)
 		results <- err
 	}
 	startNode := func(node *networkNode) {
-		err := node.componentManager.Start(s.ctx)
+		err := node.componentManager.Start(s.fixture().ctx)
 		results <- err
 	}
 
@@ -118,18 +138,18 @@ func (s *testSuite) SetupNodesNetwork(nodes []*networkNode) {
 	}
 
 	log.Infoln("Init bootstrap nodes")
-	for _, n := range s.bootstrapNodes {
+	for _, n := range s.fixture().bootstrapNodes {
 		go initNode(n)
 	}
 	log.Infoln("Init network nodes")
-	for _, n := range s.networkNodes {
+	for _, n := range s.fixture().networkNodes {
 		go initNode(n)
 	}
 
 	err := waitResults(results, len(nodes))
 	s.NoError(err, "Failed to setup zeronet")
 
-	for _, n := range s.bootstrapNodes {
+	for _, n := range s.fixture().bootstrapNodes {
 		go startNode(n)
 	}
 
@@ -140,13 +160,13 @@ func (s *testSuite) SetupNodesNetwork(nodes []*networkNode) {
 // TearDownSuite shutdowns all nodes in network, calls once after all tests in suite finished
 func (s *testSuite) TearDownTest() {
 	log.Infoln("Stop network nodes")
-	for _, n := range s.networkNodes {
-		err := n.componentManager.Stop(s.ctx)
+	for _, n := range s.fixture().networkNodes {
+		err := n.componentManager.Stop(s.fixture().ctx)
 		s.NoError(err)
 	}
 	log.Infoln("Stop bootstrap nodes")
-	for _, n := range s.bootstrapNodes {
-		err := n.componentManager.Stop(s.ctx)
+	for _, n := range s.fixture().bootstrapNodes {
+		err := n.componentManager.Stop(s.fixture().ctx)
 		s.NoError(err)
 
 	}
@@ -154,7 +174,7 @@ func (s *testSuite) TearDownTest() {
 
 func (s *testSuite) waitForConsensus(consensusCount int) {
 	for i := 0; i < consensusCount; i++ {
-		for _, n := range s.bootstrapNodes {
+		for _, n := range s.fixture().bootstrapNodes {
 			err := <-n.consensusResult
 			s.NoError(err)
 		}
@@ -162,8 +182,8 @@ func (s *testSuite) waitForConsensus(consensusCount int) {
 }
 
 // nodesCount returns count of nodes in network without testNode
-func (s *testSuite) nodesCount() int {
-	return len(s.bootstrapNodes) + len(s.networkNodes)
+func (s *testSuite) getNodesCount() int {
+	return len(s.fixture().bootstrapNodes) + len(s.fixture().networkNodes)
 }
 
 type PhaseTimeOut uint8
@@ -175,22 +195,22 @@ const (
 )
 
 func (s *testSuite) InitTestNode() {
-	if s.testNode.componentManager != nil {
-		err := s.testNode.init(s.ctx)
+	if s.fixture().testNode.componentManager != nil {
+		err := s.fixture().testNode.init(s.fixture().ctx)
 		s.NoError(err)
 	}
 }
 
 func (s *testSuite) StartTestNode() {
-	if s.testNode.componentManager != nil {
-		err := s.testNode.componentManager.Start(s.ctx)
+	if s.fixture().testNode.componentManager != nil {
+		err := s.fixture().testNode.componentManager.Start(s.fixture().ctx)
 		s.NoError(err)
 	}
 }
 
 func (s *testSuite) StopTestNode() {
-	if s.testNode.componentManager != nil {
-		err := s.testNode.componentManager.Stop(s.ctx)
+	if s.fixture().testNode.componentManager != nil {
+		err := s.fixture().testNode.componentManager.Stop(s.fixture().ctx)
 		s.NoError(err)
 	}
 }
@@ -250,7 +270,7 @@ func (s *testSuite) initCrypto(node *networkNode) (*certificate.CertificateManag
 	cert.Role = node.role.String()
 	cert.BootstrapNodes = make([]certificate.BootstrapNode, 0)
 
-	for _, b := range s.bootstrapNodes {
+	for _, b := range s.fixture().bootstrapNodes {
 		pubKey, _ := b.cryptographyService.GetPublicKey()
 		pubKeyBuf, err := proc.ExportPublicKeyPEM(pubKey)
 		s.NoError(err)
