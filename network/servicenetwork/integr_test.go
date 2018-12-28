@@ -30,7 +30,6 @@ func (s *testSuite) TestNetworkConsensus3Times() {
 }
 
 func (s *testSuite) TestNodeConnect() {
-	s.T().Skip()
 	s.preInitNode(s.fixture().testNode)
 
 	s.InitTestNode()
@@ -56,7 +55,6 @@ func (s *testSuite) TestNodeConnect() {
 }
 
 func (s *testSuite) TestNodeLeave() {
-	s.T().Skip()
 	s.preInitNode(s.fixture().testNode)
 
 	s.InitTestNode()
@@ -96,7 +94,7 @@ func TestServiceNetworkManyBootstraps(t *testing.T) {
 func TestServiceNetworkManyNodes(t *testing.T) {
 	t.Skip("tmp 123")
 
-	s := NewTestSuite(3, 5)
+	s := NewTestSuite(5, 10)
 	suite.Run(t, s)
 }
 
