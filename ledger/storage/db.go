@@ -426,7 +426,7 @@ func (db *DB) GetBadgerDB() *badger.DB {
 
 // SetMessage persists message to the database
 func (db *DB) SetMessage(ctx context.Context, jetID core.RecordID, pulseNumber core.PulseNumber, genericMessage core.Message) error {
-	messageBytes := message.ToBytes(genericMessage)
+	messageBytes := message.MustSerializeBytes(genericMessage)
 	hw := db.PlatformCryptographyScheme.ReferenceHasher()
 	_, err := hw.Write(messageBytes)
 	if err != nil {

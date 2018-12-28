@@ -104,11 +104,11 @@ func getEmptyMessage(mt core.MessageType) (core.Message, error) {
 func MustSerializeBytes(msg core.Message) []byte {
 	r, err := Serialize(msg)
 	if err != nil {
-		panic(err)
+		panic(errors.Wrap(err, "failed to serialize message").Error())
 	}
 	b, err := ioutil.ReadAll(r)
 	if err != nil {
-		panic(err)
+		panic(errors.Wrap(err, "failed to serialize message").Error())
 	}
 	return b
 }
@@ -143,19 +143,6 @@ func Deserialize(buff io.Reader) (core.Parcel, error) {
 		return nil, err
 	}
 	return &Parcel{Msg: msg}, nil
-}
-
-// ToBytes deserialize a core.Message to bytes.
-func ToBytes(msg core.Message) []byte {
-	reqBuff, err := Serialize(msg)
-	if err != nil {
-		panic(errors.Wrap(err, "failed to serialize message"))
-	}
-	buff, err := ioutil.ReadAll(reqBuff)
-	if err != nil {
-		panic(errors.Wrap(err, "failed to serialize message"))
-	}
-	return buff
 }
 
 // SerializeParcel returns io.Reader on buffer with encoded core.Parcel.

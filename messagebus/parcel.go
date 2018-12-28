@@ -43,7 +43,7 @@ func (pf *parcelFactory) Create(ctx context.Context, msg core.Message, sender co
 		return nil, errors.New("failed to signature a nil message")
 	}
 
-	serialized := message.ToBytes(msg)
+	serialized := message.MustSerializeBytes(msg)
 	signature, err := pf.Cryptography.Sign(serialized)
 	if err != nil {
 		return nil, err
@@ -61,7 +61,7 @@ func (pf *parcelFactory) Create(ctx context.Context, msg core.Message, sender co
 }
 
 func (pf *parcelFactory) Validate(publicKey crypto.PublicKey, parcel core.Parcel) error {
-	ok := pf.Cryptography.Verify(publicKey, core.SignatureFromBytes(parcel.GetSign()), message.ToBytes(parcel.Message()))
+	ok := pf.Cryptography.Verify(publicKey, core.SignatureFromBytes(parcel.GetSign()), message.MustSerializeBytes(parcel.Message()))
 	if !ok {
 		return errors.New("parcel isn't valid")
 	}

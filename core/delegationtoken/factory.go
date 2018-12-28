@@ -59,7 +59,7 @@ func (f *delegationTokenFactory) IssueGetObjectRedirect(
 	sender *core.RecordRef, redirectedMessage core.Message,
 ) (core.DelegationToken, error) {
 	parsedMessage := redirectedMessage.(*message.GetObject)
-	dataForSign := append(sender.Bytes(), message.ToBytes(parsedMessage)...)
+	dataForSign := append(sender.Bytes(), message.MustSerializeBytes(parsedMessage)...)
 	sign, err := f.Cryptography.Sign(dataForSign)
 	if err != nil {
 		return nil, err
@@ -72,7 +72,7 @@ func (f *delegationTokenFactory) IssueGetChildrenRedirect(
 	sender *core.RecordRef, redirectedMessage core.Message,
 ) (core.DelegationToken, error) {
 	parsedMessage := redirectedMessage.(*message.GetChildren)
-	dataForSign := append(sender.Bytes(), message.ToBytes(parsedMessage)...)
+	dataForSign := append(sender.Bytes(), message.MustSerializeBytes(parsedMessage)...)
 	sign, err := f.Cryptography.Sign(dataForSign)
 	if err != nil {
 		return nil, err
@@ -85,7 +85,7 @@ func (f *delegationTokenFactory) IssueGetCodeRedirect(
 	sender *core.RecordRef, redirectedMessage core.Message,
 ) (core.DelegationToken, error) {
 	parsedMessage := redirectedMessage.(*message.GetCode)
-	dataForSign := append(sender.Bytes(), message.ToBytes(parsedMessage)...)
+	dataForSign := append(sender.Bytes(), message.MustSerializeBytes(parsedMessage)...)
 	sign, err := f.Cryptography.Sign(dataForSign)
 	if err != nil {
 		return nil, err

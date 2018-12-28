@@ -126,7 +126,7 @@ func TestLedgerArtifactManager_RegisterRequest(t *testing.T) {
 	assert.NoError(t, err)
 	rec, err := db.GetRecord(ctx, *jet.NewID(0, nil), id)
 	assert.NoError(t, err)
-	assert.Equal(t, message.ToBytes(parcel.Message()), rec.(*record.RequestRecord).Payload)
+	assert.Equal(t, message.MustSerializeBytes(parcel.Message()), rec.(*record.RequestRecord).Payload)
 }
 
 func TestLedgerArtifactManager_GetCodeWithCache(t *testing.T) {
@@ -665,7 +665,7 @@ func TestLedgerArtifactManager_HandleJetDrop(t *testing.T) {
 	rep, err := am.DefaultBus.Send(ctx, &message.JetDrop{
 		JetID: jetID,
 		Messages: [][]byte{
-			message.ToBytes(&setRecordMessage),
+			message.MustSerializeBytes(&setRecordMessage),
 		},
 		PulseNumber: core.GenesisPulse.PulseNumber,
 	}, nil)
