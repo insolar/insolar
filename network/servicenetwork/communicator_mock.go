@@ -37,6 +37,7 @@ const (
 type CommunicatorMock struct {
 	communicator phases.Communicator
 	ignoreFrom   core.RecordRef
+	testOpt      CommunicatorTestOpt
 }
 
 func (cm *CommunicatorMock) ExchangePhase1(
@@ -49,12 +50,25 @@ func (cm *CommunicatorMock) ExchangePhase1(
 	if err != nil {
 		return nil, err
 	}
-	delete(pckts, cm.ignoreFrom)
+	switch cm.testOpt {
+	case PartialNegative1Phase:
+	case PartialPositive1Phase:
+		delete(pckts, cm.ignoreFrom)
+	}
 	return pckts, nil
 }
 
 func (cm *CommunicatorMock) ExchangePhase2(ctx context.Context, list network.UnsyncList, participants []core.Node, packet *packets.Phase2Packet) (map[core.RecordRef]*packets.Phase2Packet, error) {
-	return cm.communicator.ExchangePhase2(ctx, list, participants, packet)
+	pckts, err := cm.communicator.ExchangePhase2(ctx, list, participants, packet)
+	if err != nil {
+		return nil, err
+	}
+	switch cm.testOpt {
+	case PartialPositive2Phase:
+	case PartialNegative2Phase:
+		delete(pckts, cm.ignoreFrom)
+	}
+	return pckts, nil
 }
 
 func (cm *CommunicatorMock) ExchangePhase21(ctx context.Context, list network.UnsyncList, packet *packets.Phase2Packet, additionalRequests []*phases.AdditionalRequest) ([]packets.ReferendumVote, error) {

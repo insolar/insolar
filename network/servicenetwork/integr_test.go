@@ -156,6 +156,26 @@ func (s *testSuite) TestPartialPositive1PhaseTimeOut() {
 	s.Equal(s.getNodesCount(), len(activeNodes))
 }
 
+func (s *testSuite) TestPartialPositive2PhaseTimeOut() {
+	if len(s.fixture().bootstrapNodes) < 3 {
+		s.T().Skip("skip test for bootstrap nodes < 3")
+	}
+
+	setCommunicatorMock(s.fixture().bootstrapNodes, PartialPositive2Phase)
+
+	s.preInitNode(s.fixture().testNode)
+
+	s.InitTestNode()
+	s.StartTestNode()
+	defer s.StopTestNode()
+
+	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount(), len(activeNodes))
+	s.waitForConsensus(1)
+	activeNodes = s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount(), len(activeNodes))
+}
+
 func (s *testSuite) TestPartialNegative1PhaseTimeOut() {
 	if len(s.fixture().bootstrapNodes) < 3 {
 		s.T().Skip("skip test for bootstrap nodes < 3")
@@ -171,7 +191,27 @@ func (s *testSuite) TestPartialNegative1PhaseTimeOut() {
 
 	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
 	s.Equal(s.getNodesCount(), len(activeNodes))
-	s.waitForConsensus(2)
+	s.waitForConsensus(1)
+	activeNodes = s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount()-1, len(activeNodes))
+}
+
+func (s *testSuite) TestPartialNegative2PhaseTimeOut() {
+	if len(s.fixture().bootstrapNodes) < 3 {
+		s.T().Skip("skip test for bootstrap nodes < 3")
+	}
+
+	setCommunicatorMock(s.fixture().bootstrapNodes, PartialNegative2Phase)
+
+	s.preInitNode(s.fixture().testNode)
+
+	s.InitTestNode()
+	s.StartTestNode()
+	defer s.StopTestNode()
+
+	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount(), len(activeNodes))
+	s.waitForConsensus(1)
 	activeNodes = s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetActiveNodes()
 	s.Equal(s.getNodesCount()-1, len(activeNodes))
 }
@@ -187,7 +227,7 @@ func setCommunicatorMock(nodes []*networkNode, opt CommunicatorTestOpt) {
 	}
 	for i := 1; i <= nodesCount; i++ {
 		comm := nodes[i].serviceNetwork.PhaseManager.(*phaseManagerWrapper).original.(*phases.Phases).FirstPhase.Communicator
-		wrapper := &CommunicatorMock{comm, ref}
+		wrapper := &CommunicatorMock{comm, ref, opt}
 		nodes[i].serviceNetwork.PhaseManager.(*phaseManagerWrapper).original.(*phases.Phases).FirstPhase.Communicator = wrapper
 	}
 }
