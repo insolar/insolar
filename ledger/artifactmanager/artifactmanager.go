@@ -317,6 +317,18 @@ func (m *LedgerArtifactManager) DeployCode(
 		return nil, err
 	}
 
+	codeRec := &record.CodeRecord{
+		SideEffectRecord: record.SideEffectRecord{
+			Domain:  domain,
+			Request: request,
+		},
+		Code:        record.CalculateIDForBlob(m.PlatformCryptographyScheme, currentPulse.PulseNumber, code),
+		MachineType: machineType,
+	}
+	codeID := record.NewRecordIDFromRecord(m.PlatformCryptographyScheme, currentPulse.PulseNumber, codeRec)
+
+	codeRef := core.NewRecordRef(*domain.Record(), *codeID)
+
 	var wg sync.WaitGroup
 	wg.Add(2)
 	var setRecord *core.RecordID
@@ -324,15 +336,8 @@ func (m *LedgerArtifactManager) DeployCode(
 	go func() {
 		setRecord, setRecordErr = m.setRecord(
 			ctx,
-			&record.CodeRecord{
-				SideEffectRecord: record.SideEffectRecord{
-					Domain:  domain,
-					Request: request,
-				},
-				Code:        record.CalculateIDForBlob(m.PlatformCryptographyScheme, currentPulse.PulseNumber, code),
-				MachineType: machineType,
-			},
-			request,
+			codeRec,
+			*codeRef,
 			*currentPulse,
 		)
 		wg.Done()
@@ -340,7 +345,7 @@ func (m *LedgerArtifactManager) DeployCode(
 
 	var setBlobErr error
 	go func() {
-		_, setBlobErr = m.setBlob(ctx, code, request, *currentPulse)
+		_, setBlobErr = m.setBlob(ctx, code, *codeRef, *currentPulse)
 		wg.Done()
 	}()
 	wg.Wait()
