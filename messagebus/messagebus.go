@@ -24,6 +24,7 @@ import (
 	"io"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/pkg/errors"
 
@@ -189,6 +190,9 @@ func (mb *MessageBus) SendParcel(
 			return nil, err
 		}
 	}
+
+	start := time.Now()
+	defer metrics.ParcelsTime.WithLabelValues(parcel.Type().String()).Observe(time.Since(start).Seconds())
 
 	metrics.ParcelsSentTotal.WithLabelValues(parcel.Type().String()).Inc()
 

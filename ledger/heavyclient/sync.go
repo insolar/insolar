@@ -45,13 +45,19 @@ func (c *JetClient) HeavySync(
 
 	if retry {
 		inslog.Info("synchronize: send reset message (retry sync)")
-		resetMsg := &message.HeavyReset{PulseNum: pn}
+		resetMsg := &message.HeavyReset{
+			JetID:    jetID,
+			PulseNum: pn,
+		}
 		if busreply, buserr = c.Bus.Send(ctx, resetMsg, nil); buserr != nil {
 			return HeavyErr{reply: busreply, err: buserr}
 		}
 	}
 
-	signalMsg := &message.HeavyStartStop{PulseNum: pn}
+	signalMsg := &message.HeavyStartStop{
+		JetID:    jetID,
+		PulseNum: pn,
+	}
 	busreply, buserr = c.Bus.Send(ctx, signalMsg, nil)
 	// TODO: check if locked
 	if buserr != nil {
@@ -71,6 +77,7 @@ func (c *JetClient) HeavySync(
 			panic(err)
 		}
 		msg := &message.HeavyPayload{
+			JetID:    jetID,
 			PulseNum: pn,
 			Records:  recs,
 		}
