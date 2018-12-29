@@ -18,6 +18,7 @@ package goplugintestutils
 
 import (
 	"go/build"
+	"os"
 	"os/exec"
 	"path/filepath"
 
@@ -30,11 +31,13 @@ var testdataDir = testdataPath()
 
 func buildCLI(name string) (string, error) {
 	binPath := filepath.Join(testdataDir, name)
-	out, err := exec.Command(
+	cmd := exec.Command(
 		"go", "build",
 		"-o", binPath,
 		filepath.Join(insolarImportPath, "cmd", name),
-	).CombinedOutput()
+	)
+	cmd.Env = append(os.Environ(), "CGO_ENABLED=1")
+	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return "", errors.Wrapf(err, "can't build preprocessor. Build output: %s", string(out))
 	}
