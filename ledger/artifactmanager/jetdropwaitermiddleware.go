@@ -9,14 +9,14 @@ import (
 )
 
 type jetDropTimeoutProvider struct {
-	waiters map[core.RecordID]*jetDropTimeout
+	waiters          map[core.RecordID]*jetDropTimeout
 	waitersInitLocks map[core.RecordID]*sync.RWMutex
 
-	waitersLock  sync.RWMutex
+	waitersLock          sync.RWMutex
 	waitersInitLocksLock sync.Mutex
 }
 
-func (p *jetDropTimeoutProvider) getLock(jetID core.RecordID) *sync.RWMutex{
+func (p *jetDropTimeoutProvider) getLock(jetID core.RecordID) *sync.RWMutex {
 	p.waitersInitLocksLock.Lock()
 	defer p.waitersInitLocksLock.Unlock()
 
@@ -33,7 +33,6 @@ func (p *jetDropTimeoutProvider) getWaiter(jetID core.RecordID) *jetDropTimeout 
 
 	return p.waiters[jetID]
 }
-
 
 type jetDropTimeout struct {
 	lastJdPulseLock sync.RWMutex
@@ -60,13 +59,11 @@ func (jdw *jetDropTimeout) setLastJdPulse(pn core.PulseNumber) {
 	jdw.lastJdPulse = pn
 }
 
-
-func (m middleware) waitForDrop(handler core.MessageHandler) core.MessageHandler {
+func (m *middleware) waitForDrop(handler core.MessageHandler) core.MessageHandler {
 	return func(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
 		jetID := jetFromContext(ctx)
 		lock := m.jetDropTimeoutProvider.getLock(jetID)
 		waiter := m.jetDropTimeoutProvider.getWaiter(jetID)
-
 
 		lock.RLock()
 		if waiter == nil {
@@ -92,11 +89,11 @@ func (m middleware) waitForDrop(handler core.MessageHandler) core.MessageHandler
 	}
 }
 
-func (w jetDropTimeout) runDropWaitingTimeout(){
+func (w *jetDropTimeout) runDropWaitingTimeout() {
 	w.isTimeoutRunLock.Lock()
-	defer 	w.isTimeoutRunLock.Unlock()
+	defer w.isTimeoutRunLock.Unlock()
 
-	if w.isTimeoutRun{
+	if w.isTimeoutRun {
 		return
 	}
 
@@ -113,7 +110,7 @@ func (w jetDropTimeout) runDropWaitingTimeout(){
 	}()
 }
 
-func (m middleware) unlockDropWaiters(handler core.MessageHandler) core.MessageHandler {
+func (m *middleware) unlockDropWaiters(handler core.MessageHandler) core.MessageHandler {
 	return func(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
 		jetID := jetFromContext(ctx)
 		lock := m.jetDropTimeoutProvider.getLock(jetID)
