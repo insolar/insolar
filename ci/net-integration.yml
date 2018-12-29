@@ -90,7 +90,7 @@ jobs:
             cat deploy/all.yaml
   - put: deploy
     params:
-      namespace: net-interation
+      namespace: net-integration
       wait_until_ready: 240
       kubectl: apply -f deploy/all.yaml
 
