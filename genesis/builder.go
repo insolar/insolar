@@ -243,7 +243,10 @@ func (cb *ContractsBuilder) plugin(name string) error {
 		"-o", filepath.Join(dstDir, name+".so"),
 		filepath.Join(cb.root, "src/contract", name),
 	)
-	cmd.Env = append(os.Environ(), "GOPATH="+PrependGoPath(cb.root))
+	cmd.Env = append(os.Environ(),
+		"GOPATH="+PrependGoPath(cb.root),
+		"CGO_ENABLED=1",
+	)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return errors.Wrap(err, "can't build contract: "+string(out))
