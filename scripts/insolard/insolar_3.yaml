@@ -33,9 +33,6 @@ logicrunner:
     runnerlisten: 127.0.0.1:38181
 apirunner:
   address: 127.0.0.1:19193
-pulsar:
-  type: tcp
-  listenaddress: 0.0.0.0:8093
 keyspath: "scripts/insolard/nodes/3/keys.json"
 certificatepath: "scripts/insolard/nodes/3/cert.json"
 metrics:
