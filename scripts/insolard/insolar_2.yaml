@@ -36,4 +36,4 @@ apirunner:
 keyspath: "scripts/insolard/nodes/2/keys.json"
 certificatepath: "scripts/insolard/nodes/2/cert.json"
 metrics:
-  listenaddress: 0.0.0.0:8082
+  listenaddress: :8082
