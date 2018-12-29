@@ -16,6 +16,22 @@
 
 package servicenetwork
 
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
+
+func TestNewServiceNetwork_incrementPort(t *testing.T) {
+	addr, err := incrementPort("0.0.0.0:8080")
+	assert.NoError(t, err)
+	assert.Equal(t, "0.0.0.0:8081", addr)
+
+	addr, err = incrementPort("[::]:8080")
+	assert.NoError(t, err)
+	assert.Equal(t, "[::]:8081", addr)
+}
+
 /*
 func newTestNodeKeeper(nodeID core.RecordRef, address string, isBootstrap bool) (network.NodeKeeper, core.Node) {
 	origin := nodenetwork.NewNode(nodeID, nil, nil, 0, address, "")
