@@ -428,6 +428,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 	}
 
 	m.PulseStorage.Unlock()
+	m.PulseStorage.Set(&newPulse)
 	m.GIL.Release(ctx)
 
 	err = m.Bus.OnPulse(ctx, newPulse)

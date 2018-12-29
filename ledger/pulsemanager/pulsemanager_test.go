@@ -45,8 +45,15 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 	lr := testutils.NewLogicRunnerMock(t)
 	lr.OnPulseMock.Return(nil)
 
-	db, dbcancel := storagetest.TmpDB(ctx, t)
+	db, dbcancel := storagetest.TmpDB(ctx, t, storagetest.DisableBootstrap())
 	defer dbcancel()
+	err := db.AddPulse(ctx, *core.GenesisPulse)
+	require.NoError(t, err)
+	err = db.AddJets(ctx, jetID)
+	require.NoError(t, err)
+	err = db.SetDrop(ctx, jetID, &jet.JetDrop{})
+	require.NoError(t, err)
+
 	firstID, _ := db.SetRecord(
 		ctx,
 		jetID,
@@ -130,6 +137,7 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 	pulseStorageMock.CurrentMock.Return(core.GenesisPulse, nil)
 	pulseStorageMock.LockMock.Return()
 	pulseStorageMock.UnlockMock.Return()
+	pulseStorageMock.SetMock.Return()
 
 	pm.LR = lr
 
@@ -143,7 +151,7 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 	pm.PulseStorage = pulseStorageMock
 
 	// Act
-	err := pm.Set(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 1}, true)
+	err = pm.Set(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 1}, true)
 	require.NoError(t, err)
 	assert.Equal(t, uint64(2), mbMock.SendMinimockCounter()) // 1 validator drop + 1 executor (no split)
 	savedIndex, err := db.GetObjectIndex(ctx, jetID, firstID, false)
@@ -162,10 +170,17 @@ func TestPulseManager_Set_PerformsSplit(t *testing.T) {
 	lr := testutils.NewLogicRunnerMock(t)
 	lr.OnPulseMock.Return(nil)
 
-	db, dbcancel := storagetest.TmpDB(ctx, t)
+	db, dbcancel := storagetest.TmpDB(ctx, t, storagetest.DisableBootstrap())
 	defer dbcancel()
 
-	err := db.AddDropSize(ctx, &jet.DropSize{
+	err := db.AddPulse(ctx, *core.GenesisPulse)
+	require.NoError(t, err)
+	err = db.AddJets(ctx, jetID)
+	require.NoError(t, err)
+	err = db.SetDrop(ctx, jetID, &jet.JetDrop{})
+	require.NoError(t, err)
+
+	err = db.AddDropSize(ctx, &jet.DropSize{
 		JetID:    jetID,
 		DropSize: 100,
 	})
@@ -195,6 +210,7 @@ func TestPulseManager_Set_PerformsSplit(t *testing.T) {
 	nodeNetworkMock.GetOriginMock.Return(nodeMock)
 
 	pulseStorage := pulsemanager.NewpulseStoragePmMock(t)
+	pulseStorage.SetMock.Return()
 	pulseStorage.LockMock.Return()
 	pulseStorage.UnlockMock.Return()
 

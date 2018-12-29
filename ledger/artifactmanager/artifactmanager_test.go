@@ -74,8 +74,12 @@ func getTestData(t *testing.T) (
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
-	db, cleaner := storagetest.TmpDB(ctx, t)
+	db, cleaner := storagetest.TmpDB(ctx, t, storagetest.ZeroJetBootstrap())
 	pulseStorage := storage.NewPulseStorage(db)
+
+	pulse, err := db.GetLatestPulse(ctx)
+	require.NoError(t, err)
+	pulseStorage.Set(&pulse.Pulse)
 	jc := testutils.NewJetCoordinatorMock(mc)
 	jc.LightExecutorForJetMock.Return(&core.RecordRef{}, nil)
 	jc.MeMock.Return(core.RecordRef{})
@@ -104,7 +108,7 @@ func getTestData(t *testing.T) (
 
 	handler.Bus = mb
 	handler.JetCoordinator = jc
-	err := handler.Init(ctx)
+	err = handler.Init(ctx)
 	require.NoError(t, err)
 
 	am := LedgerArtifactManager{
@@ -459,13 +463,13 @@ func TestLedgerArtifactManager_GetObject_FollowsRedirect(t *testing.T) {
 			return &reply.ObjectIndex{}, nil
 		case *message.GetObject:
 			if o.Receiver == nil {
-				return &reply.GetObjectRedirect{
+				return &reply.GetObjectRedirectReply{
 					Receiver: nodeRef,
-					Token:    &delegationtoken.GetObjectRedirect{Signature: []byte{1, 2, 3}},
+					Token:    &delegationtoken.GetObjectRedirectToken{Signature: []byte{1, 2, 3}},
 				}, nil
 			}
 
-			token, ok := o.Token.(*delegationtoken.GetObjectRedirect)
+			token, ok := o.Token.(*delegationtoken.GetObjectRedirectToken)
 			assert.True(t, ok)
 			assert.Equal(t, []byte{1, 2, 3}, token.Signature)
 			assert.Equal(t, nodeRef, o.Receiver)
@@ -476,7 +480,7 @@ func TestLedgerArtifactManager_GetObject_FollowsRedirect(t *testing.T) {
 	}
 	am.DefaultBus = mb
 	am.db = db
-	am.PulseStorage = storage.NewPulseStorage(db)
+	am.PulseStorage = makePulseStorage(db, ctx, t)
 
 	_, err := am.GetObject(ctx, *objRef, nil, false)
 
@@ -615,6 +619,15 @@ func TestLedgerArtifactManager_GetChildren(t *testing.T) {
 	})
 }
 
+func makePulseStorage(db *storage.DB, ctx context.Context, t *testing.T) core.PulseStorage {
+	pulseStorage := storage.NewPulseStorage(db)
+	pulse, err := db.GetLatestPulse(ctx)
+	require.NoError(t, err)
+	pulseStorage.Set(&pulse.Pulse)
+
+	return pulseStorage
+}
+
 func TestLedgerArtifactManager_GetChildren_FollowsRedirect(t *testing.T) {
 	t.Parallel()
 	ctx := inslogger.TestContext(t)
@@ -626,20 +639,20 @@ func TestLedgerArtifactManager_GetChildren_FollowsRedirect(t *testing.T) {
 	defer cleaner()
 
 	am.db = db
-	am.PulseStorage = storage.NewPulseStorage(db)
+	am.PulseStorage = makePulseStorage(db, ctx, t)
 
 	objRef := genRandomRef(0)
 	nodeRef := genRandomRef(0)
 	mb.SendFunc = func(c context.Context, m core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
 		o = o.Safe()
 		if o.Receiver == nil {
-			return &reply.GetChildrenRedirect{
+			return &reply.GetChildrenRedirectReply{
 				Receiver: nodeRef,
-				Token:    &delegationtoken.GetChildrenRedirect{Signature: []byte{1, 2, 3}},
+				Token:    &delegationtoken.GetChildrenRedirectToken{Signature: []byte{1, 2, 3}},
 			}, nil
 		}
 
-		token, ok := o.Token.(*delegationtoken.GetChildrenRedirect)
+		token, ok := o.Token.(*delegationtoken.GetChildrenRedirectToken)
 		assert.True(t, ok)
 		assert.Equal(t, []byte{1, 2, 3}, token.Signature)
 		assert.Equal(t, nodeRef, o.Receiver)
@@ -692,7 +705,7 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 	defer mc.Finish()
 
 	mb := testmessagebus.NewTestMessageBus(t)
-	mb.PulseStorage = storage.NewPulseStorage(db)
+	mb.PulseStorage = makePulseStorage(db, ctx, t)
 	jc := testutils.NewJetCoordinatorMock(mc)
 	jc.LightExecutorForJetMock.Return(&core.RecordRef{}, nil)
 	jc.MeMock.Return(core.RecordRef{})

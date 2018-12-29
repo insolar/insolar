@@ -37,11 +37,12 @@ func TestLedgerArtifactManager_PendingRequest(t *testing.T) {
 	t.Parallel()
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
-	db, cleaner := storagetest.TmpDB(ctx, t)
+	db, cleaner := storagetest.TmpDB(ctx, t, storagetest.DisableBootstrap())
 	defer cleaner()
 	defer mc.Finish()
 
-	pulseStorage := storage.NewPulseStorage(db)
+	err := db.AddPulse(ctx, *core.GenesisPulse)
+	require.NoError(t, err)
 
 	amPulseStorageMock := testutils.NewPulseStorageMock(t)
 	amPulseStorageMock.CurrentFunc = func(p context.Context) (r *core.Pulse, r1 error) {
@@ -52,7 +53,7 @@ func TestLedgerArtifactManager_PendingRequest(t *testing.T) {
 
 	cs := testutils.NewPlatformCryptographyScheme()
 	mb := testmessagebus.NewTestMessageBus(t)
-	mb.PulseStorage = pulseStorage
+	mb.PulseStorage = amPulseStorageMock
 	jc := testutils.NewJetCoordinatorMock(mc)
 	jc.LightExecutorForJetMock.Return(&core.RecordRef{}, nil)
 	jc.MeMock.Return(core.RecordRef{})
@@ -65,7 +66,7 @@ func TestLedgerArtifactManager_PendingRequest(t *testing.T) {
 	handler.Bus = mb
 	handler.JetCoordinator = jc
 	handler.RecentStorageProvider = provider
-	err := handler.Init(ctx)
+	err = handler.Init(ctx)
 	require.NoError(t, err)
 	objRef := *genRandomRef(0)
 
