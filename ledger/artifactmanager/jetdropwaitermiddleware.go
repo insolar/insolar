@@ -83,6 +83,9 @@ func (m middleware) waitForDrop(handler core.MessageHandler) core.MessageHandler
 			case <-waiter.timeoutLocker:
 			}
 
+			waiter.isTimeoutRunLock.Lock()
+			waiter.isTimeoutRun = false
+			waiter.isTimeoutRunLock.Unlock()
 		}
 
 		return handler(ctx, parcel)
