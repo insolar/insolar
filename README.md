@@ -36,7 +36,8 @@ Record storage engine backed by [BadgerDB](https://github.com/dgraph-io/badger).
 ### [Virtual machines](vm)
 
 Various engines for smart contract execution:
-[wasm](vm/wasm) - WebAssembly implementation of smart contracts
+
+* [wasm](vm/wasm) - WebAssembly implementation of smart contracts
 
 ### [Application layer](application)
 
