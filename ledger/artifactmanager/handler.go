@@ -101,7 +101,7 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 	// Validation.
 	h.Bus.MustRegister(core.TypeValidateRecord, m.checkJet(m.waitForDrop(m.saveParcel(h.handleValidateRecord))))
 	h.Bus.MustRegister(core.TypeValidationCheck, m.checkJet(m.waitForDrop(m.saveParcel(h.handleValidationCheck))))
-	h.Bus.MustRegister(core.TypeHotRecords, m.unlockDropWaiters(m.checkJet(m.saveParcel(h.handleHotRecords))))
+	h.Bus.MustRegister(core.TypeHotRecords, m.checkJet(m.unlockDropWaiters(m.saveParcel(h.handleHotRecords))))
 	h.Bus.MustRegister(core.TypeJetDrop, m.checkJet(h.handleJetDrop))
 
 	// Heavy.
