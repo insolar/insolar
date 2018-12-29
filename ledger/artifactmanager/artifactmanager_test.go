@@ -74,7 +74,7 @@ func getTestData(t *testing.T) (
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
-	db, cleaner := storagetest.TmpDB(ctx, t)
+	db, cleaner := storagetest.TmpDB(ctx, t, storagetest.ZeroJetBootstrap())
 	pulseStorage := storage.NewPulseStorage(db)
 
 	pulse, err := db.GetLatestPulse(ctx)

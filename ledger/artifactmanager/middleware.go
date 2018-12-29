@@ -160,7 +160,7 @@ func (m *middleware) fetchJet(
 	// TODO: check if the same executor again or the same jet again. INS-1041
 
 	// Update local tree.
-	err = m.db.UpdateJetTree(ctx, pulse, r.Actual)
+	err = m.db.UpdateJetTree(ctx, pulse, true, r.ID)
 	if err != nil {
 		return nil, err
 	}
