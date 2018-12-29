@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/contractrequester"
+	"github.com/insolar/insolar/genesis"
 	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/logicrunner/goplugin"
@@ -88,7 +89,7 @@ func MessageBusTrivialBehavior(mb *testmessagebus.TestMessageBus, lr core.LogicR
 	mb.ReRegister(core.TypeExecutorResults, lr.HandleExecutorResultsMessage)
 }
 
-func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *goplugintestutils.ContractsBuilder, core.PulseManager, func()) {
+func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *genesis.ContractsBuilder, core.PulseManager, func()) {
 	ctx := context.TODO()
 	lrSock := os.TempDir() + "/" + testutils.RandomString() + ".sock"
 	rundSock := os.TempDir() + "/" + testutils.RandomString() + ".sock"
@@ -164,7 +165,7 @@ func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *gop
 	if err != nil {
 		t.Fatal("pulse set died, ", err)
 	}
-	cb := goplugintestutils.NewContractBuilder(am, icc)
+	cb := genesis.NewContractBuilder(am)
 
 	return lr, am, cb, pm, func() {
 		cb.Clean()
@@ -286,7 +287,7 @@ func (c *One) Dec() (int, error) {
 	lr, am, cb, pm, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()
 
-	err := cb.Build(map[string]string{"one": contractOneCode})
+	err := cb.BuildMap(map[string]string{"one": contractOneCode})
 	assert.NoError(t, err)
 
 	obj, prototype := getObjectInstance(t, ctx, am, cb, "one")
@@ -388,7 +389,7 @@ func (r *Two) Hello(s string) (string, error) {
 	lr, am, cb, pm, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()
 
-	err := cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
+	err := cb.BuildMap(map[string]string{"one": contractOneCode, "two": contractTwoCode})
 	assert.NoError(t, err)
 
 	obj, prototype := getObjectInstance(t, ctx, am, cb, "one")
@@ -491,7 +492,7 @@ func (r *Two) Hello(s string) (string, error) {
 	lr, am, cb, pm, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()
 
-	err := cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
+	err := cb.BuildMap(map[string]string{"one": contractOneCode, "two": contractTwoCode})
 	assert.NoError(t, err)
 
 	obj, prototype := getObjectInstance(t, ctx, am, cb, "one")
@@ -577,7 +578,7 @@ func (r *Two) Value() (int, error) {
 	lr, am, cb, pm, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()
 
-	err := cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
+	err := cb.BuildMap(map[string]string{"one": contractOneCode, "two": contractTwoCode})
 	assert.NoError(t, err)
 
 	obj, prototype := getObjectInstance(t, ctx, am, cb, "one")
@@ -611,7 +612,7 @@ func (r *One) Hello() (string, error) {
 	lr, am, cb, pm, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()
 
-	err := cb.Build(map[string]string{"one": code})
+	err := cb.BuildMap(map[string]string{"one": code})
 	assert.NoError(t, err)
 
 	obj, prototype := getObjectInstance(t, ctx, am, cb, "one")
@@ -645,7 +646,7 @@ func (r *One) Kill() error {
 	lr, am, cb, pm, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()
 
-	err := cb.Build(map[string]string{"one": code})
+	err := cb.BuildMap(map[string]string{"one": code})
 	assert.NoError(t, err)
 
 	obj, prototype := getObjectInstance(t, ctx, am, cb, "one")
@@ -679,7 +680,7 @@ func (r *One) NotPanic() error {
 	lr, am, cb, pm, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()
 
-	err := cb.Build(map[string]string{"one": code})
+	err := cb.BuildMap(map[string]string{"one": code})
 	assert.NoError(t, err)
 
 	obj, prototype := getObjectInstance(t, ctx, am, cb, "one")
@@ -762,9 +763,9 @@ func New(n int) (*Child, error) {
 	lr, am, cb, pm, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()
 
-	err := cb.Build(map[string]string{"child": goChild})
+	err := cb.BuildMap(map[string]string{"child": goChild})
 	assert.NoError(t, err)
-	err = cb.Build(map[string]string{"contract": goContract})
+	err = cb.BuildMap(map[string]string{"contract": goContract})
 	assert.NoError(t, err)
 
 	obj, prototype := getObjectInstance(t, ctx, am, cb, "contract")
@@ -811,7 +812,7 @@ func (c *Contract) Rand() (int, error) {
 	lr, am, cb, pm, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()
 
-	err := cb.Build(map[string]string{"contract": goContract})
+	err := cb.BuildMap(map[string]string{"contract": goContract})
 	assert.NoError(t, err)
 
 	obj, prototype := getObjectInstance(t, ctx, am, cb, "contract")
@@ -887,7 +888,7 @@ func (r *Two) NoError() error {
 	lr, am, cb, pm, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()
 
-	err := cb.Build(map[string]string{
+	err := cb.BuildMap(map[string]string{
 		"one": contractOneCode,
 		"two": contractTwoCode,
 	})
@@ -958,7 +959,7 @@ func (r *Two) Hello() (*string, error) {
 	lr, am, cb, pm, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()
 
-	err := cb.Build(map[string]string{
+	err := cb.BuildMap(map[string]string{
 		"one": contractOneCode,
 		"two": contractTwoCode,
 	})
@@ -1041,7 +1042,7 @@ func TestRootDomainContract(t *testing.T) {
 	// TODO need use pulseManager to sync all refs
 	lr, am, cb, pm, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()
-	err = cb.Build(map[string]string{
+	err = cb.BuildMap(map[string]string{
 		"member":     string(memberCode),
 		"allowance":  string(allowanceCode),
 		"wallet":     string(walletCode),
@@ -1226,7 +1227,7 @@ func New(n int) (*Child, error) {
 	lr, am, cb, pm, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()
 
-	err := cb.Build(map[string]string{"child": goChild, "contract": goContract})
+	err := cb.BuildMap(map[string]string{"child": goChild, "contract": goContract})
 	assert.NoError(t, err)
 
 	obj, prototype := getObjectInstance(t, ctx, am, cb, "contract")
@@ -1317,7 +1318,7 @@ func New() (*Two, error) {
 	lr, am, cb, pm, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()
 
-	err := cb.Build(map[string]string{
+	err := cb.BuildMap(map[string]string{
 		"one": contractOneCode,
 		"two": contractTwoCode,
 	})
@@ -1369,7 +1370,7 @@ func (r *One) Recursive() (error) {
 	lr, am, cb, pm, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()
 
-	err := cb.Build(map[string]string{
+	err := cb.BuildMap(map[string]string{
 		"recursive": recursiveContractCode,
 	})
 	assert.NoError(t, err)
@@ -1438,7 +1439,7 @@ func (r *One) CreateAllowance(member string) (error) {
 	ctx := context.TODO()
 	lr, am, cb, pm, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()
-	err = cb.Build(map[string]string{
+	err = cb.BuildMap(map[string]string{
 		"one":        contractOneCode,
 		"member":     string(memberCode),
 		"allowance":  string(allowanceCode),
@@ -1588,7 +1589,7 @@ package main
 	ctx := context.Background()
 	lr, am, cb, pm, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()
-	err := cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
+	err := cb.BuildMap(map[string]string{"one": contractOneCode, "two": contractTwoCode})
 	assert.NoError(t, err)
 
 	obj, prototype := getObjectInstance(t, ctx, am, cb, "one")
@@ -1638,7 +1639,7 @@ func (r *One) ShortSleep() (error) {
 	lr, am, cb, pm, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()
 
-	err := cb.Build(map[string]string{
+	err := cb.BuildMap(map[string]string{
 		"one": sleepContract,
 	})
 	assert.NoError(t, err)
@@ -1725,7 +1726,7 @@ func (r *One) EmptyMethod() (error) {
 	lr, am, cb, _, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()
 
-	err := cb.Build(map[string]string{
+	err := cb.BuildMap(map[string]string{
 		"one": emptyMethodContract,
 	})
 	assert.NoError(t, err)
@@ -1829,7 +1830,10 @@ package main
 	ctx := context.Background()
 	lr, am, cb, pm, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()
-	err := cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
+	err := cb.BuildMap(map[string]string{
+		"one": contractOneCode,
+		"two": contractTwoCode,
+	})
 	assert.NoError(t, err)
 
 	obj, prototype := getObjectInstance(t, ctx, am, cb, "one")
@@ -1896,7 +1900,7 @@ package main
 	ctx := context.Background()
 	lr, am, cb, pm, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()
-	err := cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
+	err := cb.BuildMap(map[string]string{"one": contractOneCode, "two": contractTwoCode})
 	assert.NoError(t, err)
 
 	obj, prototype := getObjectInstance(t, ctx, am, cb, "one")
@@ -1964,7 +1968,7 @@ func (c *First) GetName() (string, error) {
 	lr, am, cb, pm, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()
 
-	err := cb.Build(map[string]string{"test": testContract, "first": firstContract, "second": secondContract})
+	err := cb.BuildMap(map[string]string{"test": testContract, "first": firstContract, "second": secondContract})
 	assert.NoError(t, err)
 
 	testObj, testPrototype := getObjectInstance(t, ctx, am, cb, "test")
@@ -1982,7 +1986,7 @@ func (c *First) GetName() (string, error) {
 	assert.Equal(t, map[interface{}]interface{}(map[interface{}]interface{}{"S": "[ RouteCall ] on calling main API: proxy call error: try to call method of prototype as method of another prototype"}), res[1])
 }
 
-func getObjectInstance(t *testing.T, ctx context.Context, am core.ArtifactManager, cb *goplugintestutils.ContractsBuilder, contractName string) (*core.RecordRef, *core.RecordRef) {
+func getObjectInstance(t *testing.T, ctx context.Context, am core.ArtifactManager, cb *genesis.ContractsBuilder, contractName string) (*core.RecordRef, *core.RecordRef) {
 	domain, err := core.NewRefFromBase58("4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa")
 	require.NoError(t, err)
 	contractID, err := am.RegisterRequest(

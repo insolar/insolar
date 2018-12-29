@@ -23,6 +23,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
@@ -202,6 +203,29 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]*pre
 	}
 
 	return nil
+}
+
+// BuildMap builds string map of contracts saved strings (for tests and backward campability)
+func (cb *ContractsBuilder) BuildMap(contracts map[string]string) error {
+	ctx := context.TODO()
+	domainRef := core.RecordID{}
+	contractsParsed := map[string]*preprocessor.ParsedFile{}
+	re := regexp.MustCompile(`package\s+\S+`)
+	for name, code := range contracts {
+		code = re.ReplaceAllString(code, "package main")
+		toDir := filepath.Join(cb.root, "src/contract", name)
+		err := WriteFile(toDir, "main.go", code)
+		if err != nil {
+			return errors.Wrap(err, "[ Build ] Can't WriteFile")
+		}
+
+		parsed, err := preprocessor.ParseFile(filepath.Join(toDir, "main.go"))
+		if err != nil {
+			return err
+		}
+		contractsParsed[name] = parsed
+	}
+	return cb.Build(ctx, contractsParsed, &domainRef)
 }
 
 // Plugin ...

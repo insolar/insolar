@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package preprocessor
+package genesis
 
 import (
 	"bytes"
@@ -28,6 +28,7 @@ import (
 
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
+	"github.com/insolar/insolar/logicrunner/goplugin/preprocessor"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -57,15 +58,15 @@ func MakeTestName(file string, contractType string) string {
 
 func TestGenerateProxiesForRealSmartContracts(t *testing.T) {
 	t.Parallel()
-	contractNames, err := GetRealContractsNames()
+	contractNames, err := preprocessor.GetRealContractsNames()
 	assert.NoError(t, err)
-	contractsDir, err := GetRealApplicationDir("contract")
+	contractsDir, err := preprocessor.GetRealApplicationDir("contract")
 	assert.NoError(t, err)
 	for _, name := range contractNames {
 		file := contractPath(name, contractsDir)
 		t.Run(MakeTestName(file, "proxy"), func(t *testing.T) {
 			t.Parallel()
-			parsed, err := ParseFile(file)
+			parsed, err := preprocessor.ParseFile(file)
 			assert.NoError(t, err)
 
 			var buf bytes.Buffer
@@ -81,15 +82,15 @@ func TestGenerateProxiesForRealSmartContracts(t *testing.T) {
 
 func TestGenerateWrappersForRealSmartContracts(t *testing.T) {
 	t.Parallel()
-	contractNames, err := GetRealContractsNames()
+	contractNames, err := preprocessor.GetRealContractsNames()
 	assert.NoError(t, err)
-	contractsDir, err := GetRealApplicationDir("contract")
+	contractsDir, err := preprocessor.GetRealApplicationDir("contract")
 	assert.NoError(t, err)
 	for _, name := range contractNames {
 		file := contractPath(name, contractsDir)
 		t.Run(MakeTestName(file, "wrapper"), func(t *testing.T) {
 			t.Parallel()
-			parsed, err := ParseFile(file)
+			parsed, err := preprocessor.ParseFile(file)
 			assert.NoError(t, err)
 
 			var buf bytes.Buffer
@@ -106,9 +107,9 @@ func TestGenerateWrappersForRealSmartContracts(t *testing.T) {
 func TestCompilingRealSmartContracts(t *testing.T) {
 	t.Parallel()
 	contracts := make(map[string]string)
-	contractNames, err := GetRealContractsNames()
+	contractNames, err := preprocessor.GetRealContractsNames()
 	assert.NoError(t, err)
-	contractsDir, err := GetRealApplicationDir("contract")
+	contractsDir, err := preprocessor.GetRealApplicationDir("contract")
 	assert.NoError(t, err)
 	for _, name := range contractNames {
 		code, err := ioutil.ReadFile(contractPath(name, contractsDir))
@@ -117,8 +118,8 @@ func TestCompilingRealSmartContracts(t *testing.T) {
 	}
 
 	am := goplugintestutils.NewTestArtifactManager()
-	cb := goplugintestutils.NewContractBuilder(am, icc)
+	cb := NewContractBuilder(am)
 	defer cb.Clean()
-	err = cb.Build(contracts)
+	err = cb.BuildMap(contracts)
 	assert.NoError(t, err)
 }
