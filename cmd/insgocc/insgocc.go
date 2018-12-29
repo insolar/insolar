@@ -24,6 +24,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"strings"
 
 	"github.com/insolar/insolar/logicrunner/goplugin/preprocessor"
 	"github.com/pkg/errors"
@@ -243,9 +244,15 @@ func main() {
 			}
 
 			eCmd := exec.Command("go", "build", "-buildmode=plugin", "-o", path.Join(dir, outdir, name+".so"))
-			eCmd.Env = append(os.Environ(),
-				"CGO_ENABLED=1",
-			)
+
+			for _, ev := range os.Environ() {
+				if strings.HasPrefix(ev, "CGO_ENABLED=") {
+					continue
+				}
+				eCmd.Env = append(eCmd.Env, ev)
+			}
+			eCmd.Env = append(eCmd.Env, "CGO_ENABLED=1")
+
 			out, err := eCmd.CombinedOutput()
 			if err != nil {
 				fmt.Println(errors.Wrap(err, "can't build contract: "+string(out)))

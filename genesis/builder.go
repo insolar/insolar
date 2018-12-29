@@ -24,6 +24,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strings"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
@@ -243,10 +244,17 @@ func (cb *ContractsBuilder) plugin(name string) error {
 		"-o", filepath.Join(dstDir, name+".so"),
 		filepath.Join(cb.root, "src/contract", name),
 	)
-	cmd.Env = append(os.Environ(),
+	for _, ev := range os.Environ() {
+		if strings.HasPrefix(ev, "CGO_ENABLED=") || strings.HasPrefix(ev, "GOPATH=") {
+			continue
+		}
+		cmd.Env = append(cmd.Env, ev)
+	}
+	cmd.Env = append(cmd.Env,
 		"GOPATH="+PrependGoPath(cb.root),
 		"CGO_ENABLED=1",
 	)
+
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return errors.Wrap(err, "can't build contract: "+string(out))

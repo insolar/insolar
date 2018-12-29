@@ -21,6 +21,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/pkg/errors"
 )
@@ -36,7 +37,14 @@ func buildCLI(name string) (string, error) {
 		"-o", binPath,
 		filepath.Join(insolarImportPath, "cmd", name),
 	)
-	cmd.Env = append(os.Environ(), "CGO_ENABLED=1")
+	for _, ev := range os.Environ() {
+		if strings.HasPrefix(ev, "CGO_ENABLED=") {
+			continue
+		}
+		cmd.Env = append(cmd.Env, ev)
+	}
+	cmd.Env = append(cmd.Env, "CGO_ENABLED=1")
+
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return "", errors.Wrapf(err, "can't build preprocessor. Build output: %s", string(out))
