@@ -39,4 +39,4 @@ pulsar:
 keyspath: "scripts/insolard/nodes/4/keys.json"
 certificatepath: "scripts/insolard/nodes/4/cert.json"
 metrics:
-  listenaddress: 0.0.0.0:8084
+  listenaddress: :8084
