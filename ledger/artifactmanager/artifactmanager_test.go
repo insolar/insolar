@@ -152,11 +152,19 @@ func TestLedgerArtifactManager_GetCodeWithCache(t *testing.T) {
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
 
+	amPulseStorageMock := testutils.NewPulseStorageMock(t)
+	amPulseStorageMock.CurrentFunc = func(p context.Context) (r *core.Pulse, r1 error) {
+		pulse, err := db.GetLatestPulse(p)
+		require.NoError(t, err)
+		return &pulse.Pulse, err
+	}
+
 	am := LedgerArtifactManager{
 		DefaultBus:    mb,
 		db:            db,
 		codeCacheLock: &sync.Mutex{},
 		codeCache:     make(map[core.RecordRef]*cacheEntry),
+		PulseStorage:  amPulseStorageMock,
 	}
 
 	desc, err := am.GetCode(ctx, codeRef)
