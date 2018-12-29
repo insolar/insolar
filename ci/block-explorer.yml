@@ -88,10 +88,12 @@ resources:
 - name: git-explorer
   type: git
   source:
-    uri: https://git.websecret.by/developers/insolar
+    #uri: https://git.websecret.by/developers/insolar
+    uri: git@github.com:insolar/block-explorer-frontend.git
     branch: master
-    username: ((meta.gitlab.websecret.username))
-    password: ((meta.gitlab.websecret.password))
+    private_key: ((meta.github.block-explorer-frontend))
+    #username: ((meta.gitlab.websecret.username))
+    #password: ((meta.gitlab.websecret.password))
 
 - name: registry-explorer
   type: docker-image
