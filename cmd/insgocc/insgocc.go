@@ -242,7 +242,11 @@ func main() {
 				os.Exit(1)
 			}
 
-			out, err := exec.Command("go", "build", "-buildmode=plugin", "-o", path.Join(dir, outdir, name+".so")).CombinedOutput()
+			eCmd := exec.Command("go", "build", "-buildmode=plugin", "-o", path.Join(dir, outdir, name+".so"))
+			eCmd.Env = append(os.Environ(),
+				"CGO_ENABLED=1",
+			)
+			out, err := eCmd.CombinedOutput()
 			if err != nil {
 				fmt.Println(errors.Wrap(err, "can't build contract: "+string(out)))
 				os.Exit(1)
