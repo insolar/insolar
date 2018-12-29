@@ -74,8 +74,12 @@ func getTestData(t *testing.T) (
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
-	db, cleaner := storagetest.TmpDB(ctx, t)
+	db, cleaner := storagetest.TmpDB(ctx, t, storagetest.ZeroJetBootstrap())
 	pulseStorage := storage.NewPulseStorage(db)
+
+	pulse, err := db.GetLatestPulse(ctx)
+	require.NoError(t, err)
+	pulseStorage.Set(&pulse.Pulse)
 	jc := testutils.NewJetCoordinatorMock(mc)
 	jc.LightExecutorForJetMock.Return(&core.RecordRef{}, nil)
 	jc.MeMock.Return(core.RecordRef{})
@@ -86,7 +90,7 @@ func getTestData(t *testing.T) (
 		db:                         db,
 		replayHandlers:             map[core.MessageType]core.MessageHandler{},
 		PlatformCryptographyScheme: scheme,
-		conf:                       &configuration.Ledger{LightChainLimit: 3},
+		conf: &configuration.Ledger{LightChainLimit: 3},
 	}
 
 	recentStorageMock := recentstorage.NewRecentStorageMock(t)
@@ -104,13 +108,15 @@ func getTestData(t *testing.T) (
 
 	handler.Bus = mb
 	handler.JetCoordinator = jc
-	err := handler.Init(ctx)
+	err = handler.Init(ctx)
 	require.NoError(t, err)
+
 	am := LedgerArtifactManager{
 		db:                         db,
 		DefaultBus:                 mb,
 		getChildrenChunkSize:       100,
 		PlatformCryptographyScheme: scheme,
+		PulseStorage:               pulseStorage,
 	}
 
 	return ctx, db, &am, cleaner
@@ -146,11 +152,19 @@ func TestLedgerArtifactManager_GetCodeWithCache(t *testing.T) {
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
 
+	amPulseStorageMock := testutils.NewPulseStorageMock(t)
+	amPulseStorageMock.CurrentFunc = func(p context.Context) (r *core.Pulse, r1 error) {
+		pulse, err := db.GetLatestPulse(p)
+		require.NoError(t, err)
+		return &pulse.Pulse, err
+	}
+
 	am := LedgerArtifactManager{
 		DefaultBus:    mb,
 		db:            db,
 		codeCacheLock: &sync.Mutex{},
 		codeCache:     make(map[core.RecordRef]*cacheEntry),
+		PulseStorage:  amPulseStorageMock,
 	}
 
 	desc, err := am.GetCode(ctx, codeRef)
@@ -457,13 +471,13 @@ func TestLedgerArtifactManager_GetObject_FollowsRedirect(t *testing.T) {
 			return &reply.ObjectIndex{}, nil
 		case *message.GetObject:
 			if o.Receiver == nil {
-				return &reply.GetObjectRedirect{
+				return &reply.GetObjectRedirectReply{
 					Receiver: nodeRef,
-					Token:    &delegationtoken.GetObjectRedirect{Signature: []byte{1, 2, 3}},
+					Token:    &delegationtoken.GetObjectRedirectToken{Signature: []byte{1, 2, 3}},
 				}, nil
 			}
 
-			token, ok := o.Token.(*delegationtoken.GetObjectRedirect)
+			token, ok := o.Token.(*delegationtoken.GetObjectRedirectToken)
 			assert.True(t, ok)
 			assert.Equal(t, []byte{1, 2, 3}, token.Signature)
 			assert.Equal(t, nodeRef, o.Receiver)
@@ -474,6 +488,7 @@ func TestLedgerArtifactManager_GetObject_FollowsRedirect(t *testing.T) {
 	}
 	am.DefaultBus = mb
 	am.db = db
+	am.PulseStorage = makePulseStorage(db, ctx, t)
 
 	_, err := am.GetObject(ctx, *objRef, nil, false)
 
@@ -612,6 +627,15 @@ func TestLedgerArtifactManager_GetChildren(t *testing.T) {
 	})
 }
 
+func makePulseStorage(db *storage.DB, ctx context.Context, t *testing.T) core.PulseStorage {
+	pulseStorage := storage.NewPulseStorage(db)
+	pulse, err := db.GetLatestPulse(ctx)
+	require.NoError(t, err)
+	pulseStorage.Set(&pulse.Pulse)
+
+	return pulseStorage
+}
+
 func TestLedgerArtifactManager_GetChildren_FollowsRedirect(t *testing.T) {
 	t.Parallel()
 	ctx := inslogger.TestContext(t)
@@ -623,19 +647,20 @@ func TestLedgerArtifactManager_GetChildren_FollowsRedirect(t *testing.T) {
 	defer cleaner()
 
 	am.db = db
+	am.PulseStorage = makePulseStorage(db, ctx, t)
 
 	objRef := genRandomRef(0)
 	nodeRef := genRandomRef(0)
 	mb.SendFunc = func(c context.Context, m core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
 		o = o.Safe()
 		if o.Receiver == nil {
-			return &reply.GetChildrenRedirect{
+			return &reply.GetChildrenRedirectReply{
 				Receiver: nodeRef,
-				Token:    &delegationtoken.GetChildrenRedirect{Signature: []byte{1, 2, 3}},
+				Token:    &delegationtoken.GetChildrenRedirectToken{Signature: []byte{1, 2, 3}},
 			}, nil
 		}
 
-		token, ok := o.Token.(*delegationtoken.GetChildrenRedirect)
+		token, ok := o.Token.(*delegationtoken.GetChildrenRedirectToken)
 		assert.True(t, ok)
 		assert.Equal(t, []byte{1, 2, 3}, token.Signature)
 		assert.Equal(t, nodeRef, o.Receiver)
@@ -688,7 +713,7 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 	defer mc.Finish()
 
 	mb := testmessagebus.NewTestMessageBus(t)
-	mb.PulseStorage = storage.NewPulseStorage(db)
+	mb.PulseStorage = makePulseStorage(db, ctx, t)
 	jc := testutils.NewJetCoordinatorMock(mc)
 	jc.LightExecutorForJetMock.Return(&core.RecordRef{}, nil)
 	jc.MeMock.Return(core.RecordRef{})
@@ -703,7 +728,7 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 		db:                         db,
 		replayHandlers:             map[core.MessageType]core.MessageHandler{},
 		PlatformCryptographyScheme: scheme,
-		conf:                       &configuration.Ledger{LightChainLimit: 3},
+		conf: &configuration.Ledger{LightChainLimit: 3},
 	}
 
 	handler.Bus = mb
@@ -718,11 +743,20 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 
 	err := handler.Init(ctx)
 	require.NoError(t, err)
+
+	amPulseStorageMock := testutils.NewPulseStorageMock(t)
+	amPulseStorageMock.CurrentFunc = func(p context.Context) (r *core.Pulse, r1 error) {
+		pulse, err := db.GetLatestPulse(p)
+		require.NoError(t, err)
+		return &pulse.Pulse, err
+	}
+
 	am := LedgerArtifactManager{
 		db:                         db,
 		DefaultBus:                 mb,
 		getChildrenChunkSize:       100,
 		PlatformCryptographyScheme: scheme,
+		PulseStorage:               amPulseStorageMock,
 	}
 
 	objID, err := am.RegisterRequest(
@@ -808,6 +842,12 @@ func TestLedgerArtifactManager_RegisterRequest_JetMiss(t *testing.T) {
 	cs := testutils.NewPlatformCryptographyScheme()
 	am := NewArtifactManger(db)
 	am.PlatformCryptographyScheme = cs
+	pulseStorageMock := testutils.NewPulseStorageMock(t)
+	pulseStorageMock.CurrentFunc = func(ctx context.Context) (*core.Pulse, error) {
+		return &core.Pulse{PulseNumber: core.FirstPulseNumber}, nil
+	}
+
+	am.PulseStorage = pulseStorageMock
 
 	t.Run("returns error on exceeding retry limit", func(t *testing.T) {
 		mb := testutils.NewMessageBusMock(mc)

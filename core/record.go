@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/jbenet/go-base58"
@@ -43,6 +44,27 @@ type RecordID [RecordIDSize]byte
 // String implements stringer on RecordID and returns base58 encoded value
 func (id *RecordID) String() string {
 	return base58.Encode(id[:])
+}
+
+func (id *RecordID) JetIDString() string {
+	jetPN := id[:PulseNumberSize]
+	depth := id[PulseNumberSize]
+	prefix := id[PulseNumberSize+1:]
+
+	prefixBits := make([]int, len(prefix)*8)
+	for i, b := range prefix {
+		for j := 0; j < 8; j++ {
+			prefixBits[i*8+j] = int(b >> uint(7-j) & 0x01)
+		}
+	}
+
+	str := fmt.Sprintf("depth=%d prefix=%s", depth, fmt.Sprint(prefixBits))
+	if !bytes.Equal(jetPN, PulseNumberJet.Bytes()) {
+		str = "[JET (BAD PULSE NUMBER)] " + str
+	} else {
+		str = "[JET] " + str
+	}
+	return str
 }
 
 // NewRecordID generates RecordID byte representation.

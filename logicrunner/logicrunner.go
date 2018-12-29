@@ -666,41 +666,39 @@ func (lr *LogicRunner) prepareObjectState(ctx context.Context, msg *message.Exec
 			Behaviour:       &ValidationSaver{lr: lr, caseBind: NewCaseBind()},
 		}
 	}
+	es := state.ExecutionState
 	state.Unlock()
 
-	state.ExecutionState.Lock()
+	es.Lock()
 
 	// prepare pending
-	if state.ExecutionState.pending == PendingUnknown {
+	if es.pending == PendingUnknown {
 		if msg.Pending {
-			state.ExecutionState.pending = InPending
+			es.pending = InPending
 		} else {
-			state.ExecutionState.pending = NotPending
+			es.pending = NotPending
 		}
 	}
 
 	//prepare Queue
 	if msg.Queue != nil {
-		state := lr.UpsertObjectState(msg.GetReference())
-
 		queueFromMessage := make([]ExecutionQueueElement, 0)
 		for _, qe := range msg.Queue {
 			queueFromMessage = append(
 				queueFromMessage,
 				ExecutionQueueElement{
-					ctx:     qe.Ctx,
+					ctx:     qe.Parcel.Context(context.Background()),
 					parcel:  qe.Parcel,
 					request: qe.Request,
 					pulse:   qe.Pulse,
 				})
 		}
-		state.ExecutionState.Queue = append(queueFromMessage, state.ExecutionState.Queue...)
-
+		es.Queue = append(queueFromMessage, es.Queue...)
 	}
 
-	state.ExecutionState.Unlock()
+	es.Unlock()
 
-	err := lr.StartQueueProcessorIfNeeded(ctx, state.ExecutionState, msg)
+	err := lr.StartQueueProcessorIfNeeded(ctx, es, msg)
 	if err != nil {
 		return errors.Wrap(err, "can't start Queue Processor from prepareObjectState")
 	}
@@ -953,7 +951,6 @@ func convertQueueToMessageQueue(queue []ExecutionQueueElement) []message.Executi
 	mq := make([]message.ExecutionQueueElement, 0)
 	for _, elem := range queue {
 		mq = append(mq, message.ExecutionQueueElement{
-			Ctx:     elem.ctx,
 			Parcel:  elem.parcel,
 			Request: elem.request,
 			Pulse:   elem.pulse,

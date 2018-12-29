@@ -31,6 +31,7 @@ import (
 type tmpDBOptions struct {
 	dir         string
 	nobootstrap bool
+	zeroJet     bool
 }
 
 // Option provides functional option for TmpDB.
@@ -47,6 +48,13 @@ func Dir(dir string) Option {
 func DisableBootstrap() Option {
 	return func(opts *tmpDBOptions) {
 		opts.nobootstrap = true
+	}
+}
+
+// ZeroJetBootstrap use db with only zero jetID.
+func ZeroJetBootstrap() Option {
+	return func(opts *tmpDBOptions) {
+		opts.zeroJet = true
 	}
 }
 
@@ -72,7 +80,10 @@ func TmpDB(ctx context.Context, t testing.TB, options ...Option) (*storage.DB, f
 	db.PlatformCryptographyScheme = platformpolicy.NewPlatformCryptographyScheme()
 
 	// Bootstrap
-	if !opts.nobootstrap {
+	if opts.zeroJet {
+		err = db.InitDBWithZeroJet(ctx)
+		require.NoError(t, err)
+	} else if !opts.nobootstrap {
 		err = db.Init(ctx)
 		require.NoError(t, err)
 	}

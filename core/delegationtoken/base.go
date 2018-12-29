@@ -25,15 +25,15 @@ import (
 	"github.com/pkg/errors"
 )
 
-type PendingExecution struct {
+type PendingExecutionToken struct {
 	Signature []byte
 }
 
-func (t *PendingExecution) Type() core.DelegationTokenType {
+func (t *PendingExecutionToken) Type() core.DelegationTokenType {
 	return core.DTTypePendingExecution
 }
 
-func (t *PendingExecution) Verify(parcel core.Parcel) (bool, error) {
+func (t *PendingExecutionToken) Verify(parcel core.Parcel) (bool, error) {
 	switch mt := parcel.Message().Type(); mt {
 
 	//TODO: stab should start verification
@@ -44,54 +44,54 @@ func (t *PendingExecution) Verify(parcel core.Parcel) (bool, error) {
 	}
 }
 
-// GetObjectRedirect is a redirect token for the GetObject method
-type GetObjectRedirect struct {
+// GetObjectRedirectToken is a redirect token for the GetObject method
+type GetObjectRedirectToken struct {
 	Signature []byte
 }
 
 // Type implementation of Token interface.
-func (t *GetObjectRedirect) Type() core.DelegationTokenType {
+func (t *GetObjectRedirectToken) Type() core.DelegationTokenType {
 	return core.DTTypeGetObjectRedirect
 }
 
 // Verify implementation of Token interface.
-func (t *GetObjectRedirect) Verify(parcel core.Parcel) (bool, error) {
+func (t *GetObjectRedirectToken) Verify(parcel core.Parcel) (bool, error) {
 	panic("implement me")
 }
 
-// GetChildrenRedirect is a redirect token for the GetObject method
-type GetChildrenRedirect struct {
+// GetChildrenRedirectToken is a redirect token for the GetObject method
+type GetChildrenRedirectToken struct {
 	Signature []byte
 }
 
 // Type implementation of Token interface.
-func (t *GetChildrenRedirect) Type() core.DelegationTokenType {
+func (t *GetChildrenRedirectToken) Type() core.DelegationTokenType {
 	return core.DTTypeGetChildrenRedirect
 }
 
 // Verify implementation of Token interface.
-func (t *GetChildrenRedirect) Verify(parcel core.Parcel) (bool, error) {
+func (t *GetChildrenRedirectToken) Verify(parcel core.Parcel) (bool, error) {
 	panic("implement me")
 }
 
-// GetCodeRedirect is a redirect token for the GetObject method
-type GetCodeRedirect struct {
+// GetCodeRedirectToken is a redirect token for the GetObject method
+type GetCodeRedirectToken struct {
 	Signature []byte
 }
 
 // Type implementation of Token interface.
-func (t *GetCodeRedirect) Type() core.DelegationTokenType {
+func (t *GetCodeRedirectToken) Type() core.DelegationTokenType {
 	return core.DTTypeGetCodeRedirect
 }
 
 // Verify implementation of Token interface.
-func (t *GetCodeRedirect) Verify(parcel core.Parcel) (bool, error) {
+func (t *GetCodeRedirectToken) Verify(parcel core.Parcel) (bool, error) {
 	panic("implement me")
 }
 
 func init() {
-	gob.Register(PendingExecution{})
-	gob.Register(GetObjectRedirect{})
-	gob.Register(GetChildrenRedirect{})
-	gob.Register(GetCodeRedirect{})
+	gob.Register(&PendingExecutionToken{})
+	gob.Register(&GetObjectRedirectToken{})
+	gob.Register(&GetChildrenRedirectToken{})
+	gob.Register(&GetCodeRedirectToken{})
 }
