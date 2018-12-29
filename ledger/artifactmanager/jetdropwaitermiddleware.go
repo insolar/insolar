@@ -89,24 +89,24 @@ func (m *middleware) waitForDrop(handler core.MessageHandler) core.MessageHandle
 	}
 }
 
-func (w *jetDropTimeout) runDropWaitingTimeout() {
-	w.isTimeoutRunLock.Lock()
-	defer w.isTimeoutRunLock.Unlock()
+func (jdw *jetDropTimeout) runDropWaitingTimeout() {
+	jdw.isTimeoutRunLock.Lock()
+	defer jdw.isTimeoutRunLock.Unlock()
 
-	if w.isTimeoutRun {
+	if jdw.isTimeoutRun {
 		return
 	}
 
-	w.isTimeoutRun = true
+	jdw.isTimeoutRun = true
 	go func() {
 		time.Sleep(2 * time.Second)
 
-		close(w.timeoutLocker)
-		w.timeoutLocker = make(chan struct{})
+		close(jdw.timeoutLocker)
+		jdw.timeoutLocker = make(chan struct{})
 
-		w.isTimeoutRunLock.Lock()
-		w.isTimeoutRun = false
-		w.isTimeoutRunLock.Unlock()
+		jdw.isTimeoutRunLock.Lock()
+		jdw.isTimeoutRun = false
+		jdw.isTimeoutRunLock.Unlock()
 	}()
 }
 
