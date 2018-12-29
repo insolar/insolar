@@ -25,6 +25,7 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/jbenet/go-base58"
@@ -68,9 +69,12 @@ type pulseData struct {
 // Export returns data view from storage.
 func (e *Exporter) Export(ctx context.Context, fromPulse core.PulseNumber, size int) (*core.StorageExportResult, error) {
 	result := core.StorageExportResult{Data: map[string]interface{}{}}
+	inslog := inslogger.FromContext(ctx)
+	inslog.Debugf("[ API Export ] start")
 
 	jetIDs, err := e.db.GetJets(ctx)
 	if err != nil {
+		inslog.Debugf("[ API Export ] error getting jets: %s", err.Error())
 		return nil, err
 	}
 
@@ -107,9 +111,9 @@ func (e *Exporter) Export(ctx context.Context, fromPulse core.PulseNumber, size 
 func (e *Exporter) exportPulse(ctx context.Context, jetID core.RecordID, pulse *core.Pulse) (*pulseData, error) {
 	records := recordsData{}
 	err := e.db.IterateRecordsOnPulse(ctx, jetID, pulse.PulseNumber, func(id core.RecordID, rec record.Record) error {
-		pl, err := e.getPayload(ctx, rec)
+		pl, err := e.getPayload(ctx, jetID, rec)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "exportPulse failed to getPayload")
 		}
 		records[string(base58.Encode(id[:]))] = recordData{
 			Type:    strings.Title(rec.Type().String()),
@@ -119,7 +123,7 @@ func (e *Exporter) exportPulse(ctx context.Context, jetID core.RecordID, pulse *
 		return nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "exportPulse failed to IterateRecordsOnPulse")
 	}
 
 	data := pulseData{
@@ -131,8 +135,7 @@ func (e *Exporter) exportPulse(ctx context.Context, jetID core.RecordID, pulse *
 	return &data, nil
 }
 
-func (e *Exporter) getPayload(ctx context.Context, rec record.Record) (payload, error) {
-	jetID := core.TODOJetID
+func (e *Exporter) getPayload(ctx context.Context, jetID core.RecordID, rec record.Record) (payload, error) {
 	switch r := rec.(type) {
 	case record.ObjectState:
 		if r.GetMemory() == nil {
@@ -140,7 +143,7 @@ func (e *Exporter) getPayload(ctx context.Context, rec record.Record) (payload, 
 		}
 		blob, err := e.db.GetBlob(ctx, jetID, r.GetMemory())
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrapf(err, "getPayload failed to GetBlob (jet: %s)", jetID.JetIDString())
 		}
 		memory := payload{}
 		err = codec.NewDecoderBytes(blob, &codec.CborHandle{}).Decode(&memory)
