@@ -114,6 +114,10 @@ func (t *memoryTape) Write(ctx context.Context, w io.Writer) error {
 		return errors.Wrap(err, "[ MemoryTape ] can't write pulse")
 	}
 
+	// TODO: remove once https://github.com/ugorji/go/issues/278
+	// is resolved
+	encoder.Reset(w)
+
 	storageBlobs := make([]itemBlob, 0, len(t.storage))
 	for _, record := range t.storage {
 		blob := itemBlob{
