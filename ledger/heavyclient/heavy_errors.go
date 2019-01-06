@@ -17,26 +17,30 @@
 package heavyclient
 
 import (
-	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/reply"
 )
 
 // HeavyErr holds core.Reply and implements core.Retryable and error interfaces.
 type HeavyErr struct {
-	reply core.Reply
+	reply *reply.HeavyError
 	err   error
 }
 
 // Error implements error interface.
 func (he HeavyErr) Error() string {
-	return he.err.Error()
+	if he.err != nil {
+		return he.err.Error()
+	}
+	if he.reply != nil {
+		return he.reply.Error()
+	}
+	panic("neither reply or error defined in HeavyErr")
 }
 
 // IsRetryable checks retryability of message.
 func (he HeavyErr) IsRetryable() bool {
-	herr, ok := he.reply.(*reply.HeavyError)
-	if !ok {
+	if he.reply == nil {
 		return false
 	}
-	return herr.ConcreteType() == reply.ErrHeavySyncInProgress
+	return he.reply.IsRetryable()
 }
