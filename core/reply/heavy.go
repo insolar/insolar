@@ -45,3 +45,8 @@ func (e *HeavyError) ConcreteType() ErrType {
 func (e *HeavyError) Error() string {
 	return e.Message
 }
+
+// IsRetryable returns true if retry could be performed.
+func (e *HeavyError) IsRetryable() bool {
+	return e.SubType == ErrHeavySyncInProgress
+}
