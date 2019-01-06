@@ -92,7 +92,7 @@ func (h *MessageHandler) handleHeavyJetTree(ctx context.Context, genericMsg core
 
 func heavyerrreply(err error) (core.Reply, error) {
 	if herr, ok := err.(*reply.HeavyError); ok {
-		return herr, err
+		return herr, nil
 	}
 	return nil, err
 }
