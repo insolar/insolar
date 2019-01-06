@@ -193,6 +193,7 @@ func (s *Sync) Stop(ctx context.Context, jetID core.RecordID, pn core.PulseNumbe
 	if err != nil {
 		return err
 	}
+	inslogger.FromContext(ctx).Debugf("heavyserver: Fin sync: jetID=%v, pulse=%v", jetID, pn)
 	jetState.lastok = pn
 	return nil
 }
