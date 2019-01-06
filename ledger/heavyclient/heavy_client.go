@@ -23,6 +23,7 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/utils/backoff"
@@ -188,7 +189,7 @@ func (c *JetClient) syncloop(ctx context.Context) {
 
 		syncerr := c.HeavySync(ctx, syncPN, isretry)
 		if syncerr != nil {
-			if heavyerr, ok := syncerr.(HeavyErr); ok {
+			if heavyerr, ok := syncerr.(*reply.HeavyError); ok {
 				shouldretry = heavyerr.IsRetryable()
 			}
 

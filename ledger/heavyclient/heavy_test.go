@@ -132,7 +132,10 @@ func sendToHeavy(t *testing.T, withretry bool) {
 		heavymsg, ok := msg.(*message.HeavyPayload)
 		if ok {
 			if withretry && atomic.AddInt32(&bussendfailed, 1) < 2 {
-				return &reply.HeavyError{Message: "retryable error"}, nil
+				return &reply.HeavyError{
+					SubType: reply.ErrHeavySyncInProgress,
+					Message: "retryable error",
+				}, nil
 			}
 
 			syncsended++
