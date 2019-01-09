@@ -98,11 +98,12 @@ func (jdw *jetDropTimeout) runDropWaitingTimeout() {
 	}
 
 	jdw.isTimeoutRun = true
+	jdw.timeoutLocker = make(chan struct{})
+
 	go func() {
 		time.Sleep(2 * time.Second)
 
 		close(jdw.timeoutLocker)
-		jdw.timeoutLocker = make(chan struct{})
 
 		jdw.isTimeoutRunLock.Lock()
 		jdw.isTimeoutRun = false

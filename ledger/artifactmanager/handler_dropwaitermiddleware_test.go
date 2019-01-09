@@ -81,7 +81,9 @@ func TestMiddleware_waitForDrop(t *testing.T){
 
 		require.NoError(t, err)
 		require.Equal(t, &reply.Object{IsPrototype:true}, rep)
+		middleware.jetDropTimeoutProvider.waiters[*jetID].isTimeoutRunLock.Lock()
 		require.Equal(t, false, middleware.jetDropTimeoutProvider.waiters[*jetID].isTimeoutRun)
+		middleware.jetDropTimeoutProvider.waiters[*jetID].isTimeoutRunLock.Unlock()
 	})
 
 	t.Run("unlockDropWaiters", func(t *testing.T) {
