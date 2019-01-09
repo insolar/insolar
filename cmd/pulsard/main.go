@@ -83,7 +83,7 @@ func main() {
 		inslog.Warnln("failed to load configuration from env:", err.Error())
 	}
 
-	server, storage := initPulsar(ctx, cfgHolder.Configuration)
+	server, storage, tp := initPulsar(ctx, cfgHolder.Configuration)
 	server.ID = uniqueID
 
 	go server.StartServer(ctx)
@@ -97,6 +97,7 @@ func main() {
 			inslog.Error(err)
 		}
 		server.StopServer(ctx)
+		tp.Close()
 	}()
 
 	var gracefulStop = make(chan os.Signal, 1)
@@ -106,7 +107,7 @@ func main() {
 	<-gracefulStop
 }
 
-func initPulsar(ctx context.Context, cfg configuration.Configuration) (*pulsar.Pulsar, pulsarstorage.PulsarStorage) {
+func initPulsar(ctx context.Context, cfg configuration.Configuration) (*pulsar.Pulsar, pulsarstorage.PulsarStorage, transport.Transport) {
 	fmt.Print("Starts with configuration:\n", configuration.ToString(cfg))
 	fmt.Println("Version: ", version.GetFullVersion())
 
@@ -165,7 +166,7 @@ func initPulsar(ctx context.Context, cfg configuration.Configuration) (*pulsar.P
 	}
 	switcher.SetPulsar(server)
 
-	return server, storage
+	return server, storage, tp
 }
 
 func runPulsar(ctx context.Context, server *pulsar.Pulsar, cfg configuration.Pulsar) (pulseTicker *time.Ticker, refreshTicker *time.Ticker) {
