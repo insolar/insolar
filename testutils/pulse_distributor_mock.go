@@ -20,6 +20,11 @@ import (
 type PulseDistributorMock struct {
 	t minimock.Tester
 
+	CloseFunc       func()
+	CloseCounter    uint64
+	ClosePreCounter uint64
+	CloseMock       mPulseDistributorMockClose
+
 	DistributeFunc       func(p context.Context, p1 *core.Pulse)
 	DistributeCounter    uint64
 	DistributePreCounter uint64
@@ -34,9 +39,120 @@ func NewPulseDistributorMock(t minimock.Tester) *PulseDistributorMock {
 		controller.RegisterMocker(m)
 	}
 
+	m.CloseMock = mPulseDistributorMockClose{mock: m}
 	m.DistributeMock = mPulseDistributorMockDistribute{mock: m}
 
 	return m
+}
+
+type mPulseDistributorMockClose struct {
+	mock              *PulseDistributorMock
+	mainExpectation   *PulseDistributorMockCloseExpectation
+	expectationSeries []*PulseDistributorMockCloseExpectation
+}
+
+type PulseDistributorMockCloseExpectation struct {
+}
+
+//Expect specifies that invocation of PulseDistributor.Close is expected from 1 to Infinity times
+func (m *mPulseDistributorMockClose) Expect() *mPulseDistributorMockClose {
+	m.mock.CloseFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &PulseDistributorMockCloseExpectation{}
+	}
+
+	return m
+}
+
+//Return specifies results of invocation of PulseDistributor.Close
+func (m *mPulseDistributorMockClose) Return() *PulseDistributorMock {
+	m.mock.CloseFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &PulseDistributorMockCloseExpectation{}
+	}
+
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of PulseDistributor.Close is expected once
+func (m *mPulseDistributorMockClose) ExpectOnce() *PulseDistributorMockCloseExpectation {
+	m.mock.CloseFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &PulseDistributorMockCloseExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+//Set uses given function f as a mock of PulseDistributor.Close method
+func (m *mPulseDistributorMockClose) Set(f func()) *PulseDistributorMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.CloseFunc = f
+	return m.mock
+}
+
+//Close implements github.com/insolar/insolar/core.PulseDistributor interface
+func (m *PulseDistributorMock) Close() {
+	counter := atomic.AddUint64(&m.ClosePreCounter, 1)
+	defer atomic.AddUint64(&m.CloseCounter, 1)
+
+	if len(m.CloseMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.CloseMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to PulseDistributorMock.Close.")
+			return
+		}
+
+		return
+	}
+
+	if m.CloseMock.mainExpectation != nil {
+
+		return
+	}
+
+	if m.CloseFunc == nil {
+		m.t.Fatalf("Unexpected call to PulseDistributorMock.Close.")
+		return
+	}
+
+	m.CloseFunc()
+}
+
+//CloseMinimockCounter returns a count of PulseDistributorMock.CloseFunc invocations
+func (m *PulseDistributorMock) CloseMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.CloseCounter)
+}
+
+//CloseMinimockPreCounter returns the value of PulseDistributorMock.Close invocations
+func (m *PulseDistributorMock) CloseMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.ClosePreCounter)
+}
+
+//CloseFinished returns true if mock invocations count is ok
+func (m *PulseDistributorMock) CloseFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.CloseMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.CloseCounter) == uint64(len(m.CloseMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.CloseMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.CloseCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.CloseFunc != nil {
+		return atomic.LoadUint64(&m.CloseCounter) > 0
+	}
+
+	return true
 }
 
 type mPulseDistributorMockDistribute struct {
@@ -167,6 +283,10 @@ func (m *PulseDistributorMock) DistributeFinished() bool {
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *PulseDistributorMock) ValidateCallCounters() {
 
+	if !m.CloseFinished() {
+		m.t.Fatal("Expected call to PulseDistributorMock.Close")
+	}
+
 	if !m.DistributeFinished() {
 		m.t.Fatal("Expected call to PulseDistributorMock.Distribute")
 	}
@@ -188,6 +308,10 @@ func (m *PulseDistributorMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *PulseDistributorMock) MinimockFinish() {
 
+	if !m.CloseFinished() {
+		m.t.Fatal("Expected call to PulseDistributorMock.Close")
+	}
+
 	if !m.DistributeFinished() {
 		m.t.Fatal("Expected call to PulseDistributorMock.Distribute")
 	}
@@ -206,6 +330,7 @@ func (m *PulseDistributorMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
+		ok = ok && m.CloseFinished()
 		ok = ok && m.DistributeFinished()
 
 		if ok {
@@ -214,6 +339,10 @@ func (m *PulseDistributorMock) MinimockWait(timeout time.Duration) {
 
 		select {
 		case <-timeoutCh:
+
+			if !m.CloseFinished() {
+				m.t.Error("Expected call to PulseDistributorMock.Close")
+			}
 
 			if !m.DistributeFinished() {
 				m.t.Error("Expected call to PulseDistributorMock.Distribute")
@@ -230,6 +359,10 @@ func (m *PulseDistributorMock) MinimockWait(timeout time.Duration) {
 //AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *PulseDistributorMock) AllMocksCalled() bool {
+
+	if !m.CloseFinished() {
+		return false
+	}
 
 	if !m.DistributeFinished() {
 		return false
