@@ -21,9 +21,24 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
 )
+
+func messageToHeavy(ctx context.Context, bus core.MessageBus, msg core.Message) error {
+	busreply, buserr := bus.Send(ctx, msg, nil)
+	if buserr != nil {
+		return buserr
+	}
+	if busreply != nil {
+		herr, ok := busreply.(*reply.HeavyError)
+		if ok {
+			return herr
+		}
+	}
+	return nil
+}
 
 // HeavySync syncs records from light to heavy node, returns last synced pulse and error.
 //
@@ -38,25 +53,23 @@ func (c *JetClient) HeavySync(
 	inslog = inslog.WithField("jetID", jetID).WithField("pulseNum", pn)
 
 	inslog.Debug("JetClient.HeavySync")
-	var (
-		busreply core.Reply
-		buserr   error
-	)
-
 	if retry {
 		inslog.Info("synchronize: send reset message (retry sync)")
-		resetMsg := &message.HeavyReset{PulseNum: pn}
-		if busreply, buserr = c.Bus.Send(ctx, resetMsg, nil); buserr != nil {
-			return HeavyErr{reply: busreply, err: buserr}
+		resetMsg := &message.HeavyReset{
+			JetID:    jetID,
+			PulseNum: pn,
+		}
+		if err := messageToHeavy(ctx, c.Bus, resetMsg); err != nil {
+			return err
 		}
 	}
 
-	signalMsg := &message.HeavyStartStop{PulseNum: pn}
-	busreply, buserr = c.Bus.Send(ctx, signalMsg, nil)
-	// TODO: check if locked
-	if buserr != nil {
-		inslog.Error("synchronize: start send error", buserr.Error())
-		return HeavyErr{reply: busreply, err: buserr}
+	signalMsg := &message.HeavyStartStop{
+		JetID:    jetID,
+		PulseNum: pn,
+	}
+	if err := messageToHeavy(ctx, c.Bus, signalMsg); err != nil {
+		return err
 	}
 	inslog.Debug("synchronize: sucessfully send start message")
 
@@ -71,22 +84,20 @@ func (c *JetClient) HeavySync(
 			panic(err)
 		}
 		msg := &message.HeavyPayload{
+			JetID:    jetID,
 			PulseNum: pn,
 			Records:  recs,
 		}
-		busreply, buserr = c.Bus.Send(ctx, msg, nil)
-		if buserr != nil {
-			inslog.Error("synchronize: payload send error", buserr.Error())
-			return HeavyErr{reply: busreply, err: buserr}
+		if err := messageToHeavy(ctx, c.Bus, msg); err != nil {
+			return err
 		}
 		inslog.Debug("synchronize: sucessfully send save message")
 	}
 
 	signalMsg.Finished = true
-	busreply, buserr = c.Bus.Send(ctx, signalMsg, nil)
-	if buserr != nil {
-		inslog.Error("synchronize: finish send error", buserr.Error())
-		return HeavyErr{reply: busreply, err: buserr}
+	if err := messageToHeavy(ctx, c.Bus, signalMsg); err != nil {
+		inslog.Error("synchronize: finish send error", err.Error())
+		return err
 	}
 	inslog.Debug("synchronize: sucessfully send finish message")
 

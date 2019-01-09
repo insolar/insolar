@@ -50,8 +50,8 @@ func newMiddleware(
 		jetCoordinator: jetCoordinator,
 		messageBus:     messageBus,
 		jetDropTimeoutProvider:jetDropTimeoutProvider{
-			waiters: map[core.RecordID]*jetDropTimeout{},
-			waitersInitLocks: map[core.RecordID]*sync.RWMutex{},
+			waiters:            map[core.RecordID]*jetDropTimeout{},
+			waitersInitMutexes: map[core.RecordID]*sync.RWMutex{},
 		},
 	}
 }

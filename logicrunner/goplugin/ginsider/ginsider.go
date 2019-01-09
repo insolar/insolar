@@ -144,7 +144,7 @@ func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCa
 	reply.Data = state
 	reply.Ret = result
 
-	metrics.InsgorundContractExecutionTime.Observe(time.Since(start).Seconds())
+	metrics.InsgorundContractExecutionTime.WithLabelValues(args.Method).Observe(time.Since(start).Seconds())
 
 	return nil
 }
