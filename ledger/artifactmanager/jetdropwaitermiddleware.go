@@ -77,6 +77,12 @@ func (jdw *jetDropTimeout) setLastPulse(pn core.PulseNumber) {
 
 func (m *middleware) waitForDrop(handler core.MessageHandler) core.MessageHandler {
 	return func(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
+		// If the call is a call in redirect-chain
+		// skip waiting for the hot records
+		if parcel.DelegationToken() != nil{
+			return handler(ctx, parcel)
+		}
+
 		jetID := jetFromContext(ctx)
 		lock := m.jetDropTimeoutProvider.getLock(jetID)
 		waiter := m.jetDropTimeoutProvider.getWaiter(jetID)
@@ -88,7 +94,7 @@ func (m *middleware) waitForDrop(handler core.MessageHandler) core.MessageHandle
 		}
 		lock.RUnlock()
 
-		if waiter.getLastPulse() != parcel.Pulse() {
+		if waiter.getLastPulse() < parcel.Pulse() {
 			waiter.runDropWaitingTimeout()
 
 			select {
