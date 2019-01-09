@@ -150,9 +150,6 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 
 func (sp *SecondPhase) Execute21(ctx context.Context, state *SecondPhaseState) (*SecondPhaseState, error) {
 	additionalRequests := state.MatrixState.AdditionalRequestsPhase2
-	if len(additionalRequests) == 0 {
-		return state, nil
-	}
 
 	count := len(additionalRequests)
 	results := make(map[uint16]*packets.MissingNodeSupplementaryVote)
@@ -168,6 +165,10 @@ func (sp *SecondPhase) Execute21(ctx context.Context, state *SecondPhaseState) (
 	voteAnswers, err := sp.Communicator.ExchangePhase21(ctx, state.UnsyncList, packet, additionalRequests)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Phase 2.1 ] Failed to send additional requests on phase 2.1")
+	}
+
+	if len(additionalRequests) == 0 {
+		return state, nil
 	}
 
 	for _, vote := range voteAnswers {
@@ -213,9 +214,8 @@ func (sp *SecondPhase) Execute21(ctx context.Context, state *SecondPhaseState) (
 		}
 		state.UnsyncList.AddNode(node, index)
 		state.UnsyncList.AddProof(node.ID(), &result.NodePulseProof)
-		state.UnsyncList.GlobuleHashSignatures()[node.ID()] = result.GlobuleHashSignature
 		state.ValidProofs[node] = merkleProof
-		bitsetChanges = append(bitsetChanges, packets.BitSetCell{})
+		bitsetChanges = append(bitsetChanges, packets.BitSetCell{NodeID: node.ID(), State: packets.Legit})
 	}
 
 	err = state.BitSet.ApplyChanges(bitsetChanges, state.UnsyncList)

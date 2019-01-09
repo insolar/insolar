@@ -66,8 +66,7 @@ func (mn *MissingNodeClaim) Type() VoteType {
 type MissingNodeSupplementaryVote struct {
 	NodeIndex uint16
 
-	NodePulseProof       NodePulseProof
-	GlobuleHashSignature GlobuleHashSignature
+	NodePulseProof NodePulseProof
 	// TODO: make it signed
 	NodeClaimUnsigned NodeJoinClaim
 }
@@ -250,10 +249,6 @@ func (v *MissingNodeSupplementaryVote) Deserialize(data io.Reader) error {
 	if err != nil {
 		return errors.Wrap(err, "[ MissingNodeSupplementaryVote.Deserialize ] Can't read NodePulseProof")
 	}
-	err = binary.Read(data, defaultByteOrder, &v.GlobuleHashSignature)
-	if err != nil {
-		return errors.Wrap(err, "[ MissingNodeSupplementaryVote.Deserialize ] Can't read GlobuleHashSignature")
-	}
 	err = v.NodeClaimUnsigned.deserializeRaw(data)
 	if err != nil {
 		return errors.Wrap(err, "[ MissingNodeSupplementaryVote.Deserialize ] Can't read NodeClaimUnsigned")
@@ -278,11 +273,6 @@ func (v *MissingNodeSupplementaryVote) Serialize() ([]byte, error) {
 	_, err = result.Write(nodePulseProofRaw)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ MissingNodeSupplementaryVote.Serialize ] Can't append NodePulseProof")
-	}
-
-	_, err = result.Write(v.GlobuleHashSignature[:])
-	if err != nil {
-		return nil, errors.Wrap(err, "[ MissingNodeSupplementaryVote.Serialize ] Can't write GlobuleHashSignature")
 	}
 
 	joinClaim, err := v.NodeClaimUnsigned.SerializeRaw()
