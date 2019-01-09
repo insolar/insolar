@@ -25,27 +25,27 @@ import (
 )
 
 type jetDropTimeoutProvider struct {
-	waitersMutex sync.RWMutex
-	waiters      map[core.RecordID]*jetDropTimeout
+	waitersLock sync.RWMutex
+	waiters     map[core.RecordID]*jetDropTimeout
 
-	waitersInitMutexesMutex sync.Mutex
-	waitersInitMutexes      map[core.RecordID]*sync.RWMutex
+	waitersInitLocksLock sync.Mutex
+	waitersInitLocks     map[core.RecordID]*sync.RWMutex
 }
 
-func (p *jetDropTimeoutProvider) getMutex(jetID core.RecordID) *sync.RWMutex {
-	p.waitersInitMutexesMutex.Lock()
-	defer p.waitersInitMutexesMutex.Unlock()
+func (p *jetDropTimeoutProvider) getLock(jetID core.RecordID) *sync.RWMutex {
+	p.waitersInitLocksLock.Lock()
+	defer p.waitersInitLocksLock.Unlock()
 
-	if _, ok := p.waitersInitMutexes[jetID]; !ok {
-		p.waitersInitMutexes[jetID] = &sync.RWMutex{}
+	if _, ok := p.waitersInitLocks[jetID]; !ok {
+		p.waitersInitLocks[jetID] = &sync.RWMutex{}
 	}
 
-	return p.waitersInitMutexes[jetID]
+	return p.waitersInitLocks[jetID]
 }
 
 func (p *jetDropTimeoutProvider) getWaiter(jetID core.RecordID) *jetDropTimeout {
-	p.waitersMutex.RLock()
-	defer p.waitersMutex.RUnlock()
+	p.waitersLock.RLock()
+	defer p.waitersLock.RUnlock()
 
 	return p.waiters[jetID]
 }
@@ -78,7 +78,7 @@ func (jdw *jetDropTimeout) setLastPulse(pn core.PulseNumber) {
 func (m *middleware) waitForDrop(handler core.MessageHandler) core.MessageHandler {
 	return func(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
 		jetID := jetFromContext(ctx)
-		lock := m.jetDropTimeoutProvider.getMutex(jetID)
+		lock := m.jetDropTimeoutProvider.getLock(jetID)
 		waiter := m.jetDropTimeoutProvider.getWaiter(jetID)
 
 		lock.RLock()
@@ -130,7 +130,7 @@ func (jdw *jetDropTimeout) runDropWaitingTimeout() {
 func (m *middleware) unlockDropWaiters(handler core.MessageHandler) core.MessageHandler {
 	return func(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
 		jetID := jetFromContext(ctx)
-		lock := m.jetDropTimeoutProvider.getMutex(jetID)
+		lock := m.jetDropTimeoutProvider.getLock(jetID)
 		waiter := m.jetDropTimeoutProvider.getWaiter(jetID)
 
 		lock.Lock()
