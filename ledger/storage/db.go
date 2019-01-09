@@ -217,7 +217,31 @@ func (db *DB) Init(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	return db.UpdateJetTree(ctx, lp.Pulse.PulseNumber, true, jetID, jetID2, jetID3)
+	db.UpdateJetTree(
+		ctx,
+		0,
+		true,
+		*jet.NewID(2, []byte{}),       // 00
+		*jet.NewID(2, []byte{1 << 6}), // 01
+		*jet.NewID(1, []byte{1 << 7}), // 10 		// Don't delete this.
+	)
+	db.UpdateJetTree(
+		ctx,
+		core.FirstPulseNumber,
+		true,
+		*jet.NewID(2, []byte{}),       // 00
+		*jet.NewID(2, []byte{1 << 6}), // 01
+		*jet.NewID(1, []byte{1 << 7}), // 10 		// Don't delete this.
+	)
+	db.UpdateJetTree(
+		ctx,
+		lp.Pulse.PulseNumber,
+		true,
+		*jet.NewID(2, []byte{}),       // 00
+		*jet.NewID(2, []byte{1 << 6}), // 01
+		*jet.NewID(1, []byte{1 << 7}), // 10 		// Don't delete this.
+	)
+	return nil
 }
 
 // GenesisRef returns the genesis record reference.
