@@ -30,6 +30,11 @@ type pulseStoragePmMock struct {
 	LockPreCounter uint64
 	LockMock       mpulseStoragePmMockLock
 
+	SetFunc       func(p *core.Pulse)
+	SetCounter    uint64
+	SetPreCounter uint64
+	SetMock       mpulseStoragePmMockSet
+
 	UnlockFunc       func()
 	UnlockCounter    uint64
 	UnlockPreCounter uint64
@@ -46,6 +51,7 @@ func NewpulseStoragePmMock(t minimock.Tester) *pulseStoragePmMock {
 
 	m.CurrentMock = mpulseStoragePmMockCurrent{mock: m}
 	m.LockMock = mpulseStoragePmMockLock{mock: m}
+	m.SetMock = mpulseStoragePmMockSet{mock: m}
 	m.UnlockMock = mpulseStoragePmMockUnlock{mock: m}
 
 	return m
@@ -311,6 +317,129 @@ func (m *pulseStoragePmMock) LockFinished() bool {
 	return true
 }
 
+type mpulseStoragePmMockSet struct {
+	mock              *pulseStoragePmMock
+	mainExpectation   *pulseStoragePmMockSetExpectation
+	expectationSeries []*pulseStoragePmMockSetExpectation
+}
+
+type pulseStoragePmMockSetExpectation struct {
+	input *pulseStoragePmMockSetInput
+}
+
+type pulseStoragePmMockSetInput struct {
+	p *core.Pulse
+}
+
+//Expect specifies that invocation of pulseStoragePm.Set is expected from 1 to Infinity times
+func (m *mpulseStoragePmMockSet) Expect(p *core.Pulse) *mpulseStoragePmMockSet {
+	m.mock.SetFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &pulseStoragePmMockSetExpectation{}
+	}
+	m.mainExpectation.input = &pulseStoragePmMockSetInput{p}
+	return m
+}
+
+//Return specifies results of invocation of pulseStoragePm.Set
+func (m *mpulseStoragePmMockSet) Return() *pulseStoragePmMock {
+	m.mock.SetFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &pulseStoragePmMockSetExpectation{}
+	}
+
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of pulseStoragePm.Set is expected once
+func (m *mpulseStoragePmMockSet) ExpectOnce(p *core.Pulse) *pulseStoragePmMockSetExpectation {
+	m.mock.SetFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &pulseStoragePmMockSetExpectation{}
+	expectation.input = &pulseStoragePmMockSetInput{p}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+//Set uses given function f as a mock of pulseStoragePm.Set method
+func (m *mpulseStoragePmMockSet) Set(f func(p *core.Pulse)) *pulseStoragePmMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.SetFunc = f
+	return m.mock
+}
+
+//Set implements github.com/insolar/insolar/ledger/pulsemanager.pulseStoragePm interface
+func (m *pulseStoragePmMock) Set(p *core.Pulse) {
+	counter := atomic.AddUint64(&m.SetPreCounter, 1)
+	defer atomic.AddUint64(&m.SetCounter, 1)
+
+	if len(m.SetMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.SetMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to pulseStoragePmMock.Set. %v", p)
+			return
+		}
+
+		input := m.SetMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, pulseStoragePmMockSetInput{p}, "pulseStoragePm.Set got unexpected parameters")
+
+		return
+	}
+
+	if m.SetMock.mainExpectation != nil {
+
+		input := m.SetMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, pulseStoragePmMockSetInput{p}, "pulseStoragePm.Set got unexpected parameters")
+		}
+
+		return
+	}
+
+	if m.SetFunc == nil {
+		m.t.Fatalf("Unexpected call to pulseStoragePmMock.Set. %v", p)
+		return
+	}
+
+	m.SetFunc(p)
+}
+
+//SetMinimockCounter returns a count of pulseStoragePmMock.SetFunc invocations
+func (m *pulseStoragePmMock) SetMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.SetCounter)
+}
+
+//SetMinimockPreCounter returns the value of pulseStoragePmMock.Set invocations
+func (m *pulseStoragePmMock) SetMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.SetPreCounter)
+}
+
+//SetFinished returns true if mock invocations count is ok
+func (m *pulseStoragePmMock) SetFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.SetMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.SetCounter) == uint64(len(m.SetMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.SetMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.SetCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.SetFunc != nil {
+		return atomic.LoadUint64(&m.SetCounter) > 0
+	}
+
+	return true
+}
+
 type mpulseStoragePmMockUnlock struct {
 	mock              *pulseStoragePmMock
 	mainExpectation   *pulseStoragePmMockUnlockExpectation
@@ -433,6 +562,10 @@ func (m *pulseStoragePmMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to pulseStoragePmMock.Lock")
 	}
 
+	if !m.SetFinished() {
+		m.t.Fatal("Expected call to pulseStoragePmMock.Set")
+	}
+
 	if !m.UnlockFinished() {
 		m.t.Fatal("Expected call to pulseStoragePmMock.Unlock")
 	}
@@ -462,6 +595,10 @@ func (m *pulseStoragePmMock) MinimockFinish() {
 		m.t.Fatal("Expected call to pulseStoragePmMock.Lock")
 	}
 
+	if !m.SetFinished() {
+		m.t.Fatal("Expected call to pulseStoragePmMock.Set")
+	}
+
 	if !m.UnlockFinished() {
 		m.t.Fatal("Expected call to pulseStoragePmMock.Unlock")
 	}
@@ -482,6 +619,7 @@ func (m *pulseStoragePmMock) MinimockWait(timeout time.Duration) {
 		ok := true
 		ok = ok && m.CurrentFinished()
 		ok = ok && m.LockFinished()
+		ok = ok && m.SetFinished()
 		ok = ok && m.UnlockFinished()
 
 		if ok {
@@ -497,6 +635,10 @@ func (m *pulseStoragePmMock) MinimockWait(timeout time.Duration) {
 
 			if !m.LockFinished() {
 				m.t.Error("Expected call to pulseStoragePmMock.Lock")
+			}
+
+			if !m.SetFinished() {
+				m.t.Error("Expected call to pulseStoragePmMock.Set")
 			}
 
 			if !m.UnlockFinished() {
@@ -520,6 +662,10 @@ func (m *pulseStoragePmMock) AllMocksCalled() bool {
 	}
 
 	if !m.LockFinished() {
+		return false
+	}
+
+	if !m.SetFinished() {
 		return false
 	}
 

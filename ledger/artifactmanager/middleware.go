@@ -18,13 +18,13 @@ package artifactmanager
 
 import (
 	"context"
+	"sync"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/pkg/errors"
 )
 
@@ -36,6 +36,24 @@ type middleware struct {
 	db             *storage.DB
 	jetCoordinator core.JetCoordinator
 	messageBus     core.MessageBus
+
+	jetDropTimeoutProvider jetDropTimeoutProvider
+}
+
+func newMiddleware(
+	db *storage.DB,
+	jetCoordinator core.JetCoordinator,
+	messageBus core.MessageBus,
+) *middleware {
+	return &middleware{
+		db:             db,
+		jetCoordinator: jetCoordinator,
+		messageBus:     messageBus,
+		jetDropTimeoutProvider:jetDropTimeoutProvider{
+			waiters: map[core.RecordID]*jetDropTimeout{},
+			waitersInitLocks: map[core.RecordID]*sync.RWMutex{},
+		},
+	}
 }
 
 type jetKey struct{}
@@ -91,7 +109,7 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 			}
 			if *heavy == m.jetCoordinator.Me() {
 				logger.Debugf("checkJet: [ HACK ] I am Heavy. Accept parcel.")
-				return handler(contextWithJet(ctx, jet.ZeroJetID), parcel)
+				return handler(contextWithJet(ctx, jetID), parcel)
 			}
 
 			logger.Debugf("checkJet: not Mine")
@@ -161,7 +179,7 @@ func (m *middleware) fetchJet(
 	// TODO: check if the same executor again or the same jet again. INS-1041
 
 	// Update local tree.
-	err = m.db.UpdateJetTree(ctx, pulse, r.Actual)
+	err = m.db.UpdateJetTree(ctx, pulse, true, r.ID)
 	if err != nil {
 		return nil, err
 	}

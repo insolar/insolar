@@ -145,8 +145,10 @@ func TestCalculatorError(t *testing.T) {
 	}
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
 
+	pulseManager := testutils.NewPulseStorageMock(t)
+
 	nk := nodekeeper.GetTestNodekeeper(service)
-	cm.Inject(nk, l.ArtifactManager, calculator, service, scheme)
+	cm.Inject(nk, l.ArtifactManager, calculator, service, scheme, pulseManager)
 
 	require.NotNil(t, calculator.ArtifactManager)
 	require.NotNil(t, calculator.NodeNetwork)

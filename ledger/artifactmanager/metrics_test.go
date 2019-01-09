@@ -17,10 +17,12 @@
 package artifactmanager
 
 import (
+	"context"
 	"testing"
 	"time"
 
 	"github.com/gojuno/minimock"
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/recentstorage"
@@ -46,12 +48,20 @@ func TestLedgerArtifactManager_Metrics(t *testing.T) {
 	recentStorageMock.AddObjectMock.Return()
 	recentStorageMock.RemovePendingRequestMock.Return()
 
+	amPulseStorageMock := testutils.NewPulseStorageMock(t)
+	amPulseStorageMock.CurrentFunc = func(p context.Context) (r *core.Pulse, r1 error) {
+		pulse, err := db.GetLatestPulse(p)
+		require.NoError(t, err)
+		return &pulse.Pulse, err
+	}
+
 	mb := testutils.NewMessageBusMock(mc)
 	mb.SendMock.Return(&reply.ID{}, nil)
 	cs := testutils.NewPlatformCryptographyScheme()
 	am := NewArtifactManger(db)
 	am.PlatformCryptographyScheme = cs
 	am.DefaultBus = mb
+	am.PulseStorage = amPulseStorageMock
 
 	tmetrics := testmetrics.Start(ctx)
 	defer tmetrics.Stop()

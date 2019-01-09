@@ -65,7 +65,7 @@ func NewMessageHandler(
 
 // Init initializes handlers and middleware.
 func (h *MessageHandler) Init(ctx context.Context) error {
-	m := middleware{db: h.db, jetCoordinator: h.JetCoordinator, messageBus: h.Bus}
+	m := newMiddleware(h.db, h.JetCoordinator, h.Bus)
 
 	// Generic.
 	h.replayHandlers[core.TypeGetCode] = m.checkJet(h.handleGetCode)
@@ -86,22 +86,22 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 	h.replayHandlers[core.TypeHotRecords] = h.handleHotRecords
 
 	// Generic.
-	h.Bus.MustRegister(core.TypeGetCode, m.checkJet(m.saveParcel(h.handleGetCode)))
-	h.Bus.MustRegister(core.TypeGetObject, m.checkJet(m.saveParcel(h.handleGetObject)))
-	h.Bus.MustRegister(core.TypeGetDelegate, m.checkJet(m.saveParcel(h.handleGetDelegate)))
-	h.Bus.MustRegister(core.TypeGetChildren, m.checkJet(m.saveParcel(h.handleGetChildren)))
-	h.Bus.MustRegister(core.TypeSetRecord, m.checkJet(m.saveParcel(h.handleSetRecord)))
-	h.Bus.MustRegister(core.TypeUpdateObject, m.checkJet(m.saveParcel(h.handleUpdateObject)))
-	h.Bus.MustRegister(core.TypeRegisterChild, m.checkJet(m.saveParcel(h.handleRegisterChild)))
-	h.Bus.MustRegister(core.TypeSetBlob, m.checkJet(m.saveParcel(h.handleSetBlob)))
-	h.Bus.MustRegister(core.TypeGetObjectIndex, m.checkJet(m.saveParcel(h.handleGetObjectIndex)))
-	h.Bus.MustRegister(core.TypeGetPendingRequests, m.checkJet(m.saveParcel(h.handleHasPendingRequests)))
+	h.Bus.MustRegister(core.TypeGetCode, m.checkJet(m.waitForDrop(m.saveParcel(h.handleGetCode))))
+	h.Bus.MustRegister(core.TypeGetObject, m.checkJet(m.waitForDrop(m.saveParcel(h.handleGetObject))))
+	h.Bus.MustRegister(core.TypeGetDelegate, m.checkJet(m.waitForDrop(m.saveParcel(h.handleGetDelegate))))
+	h.Bus.MustRegister(core.TypeGetChildren, m.checkJet(m.waitForDrop(m.saveParcel(h.handleGetChildren))))
+	h.Bus.MustRegister(core.TypeSetRecord, m.checkJet(m.waitForDrop(m.saveParcel(h.handleSetRecord))))
+	h.Bus.MustRegister(core.TypeUpdateObject, m.checkJet(m.waitForDrop(m.saveParcel(h.handleUpdateObject))))
+	h.Bus.MustRegister(core.TypeRegisterChild, m.checkJet(m.waitForDrop(m.saveParcel(h.handleRegisterChild))))
+	h.Bus.MustRegister(core.TypeSetBlob, m.checkJet(m.waitForDrop(m.saveParcel(h.handleSetBlob))))
+	h.Bus.MustRegister(core.TypeGetObjectIndex, m.checkJet(m.waitForDrop(m.saveParcel(h.handleGetObjectIndex))))
+	h.Bus.MustRegister(core.TypeGetPendingRequests, m.checkJet(m.waitForDrop(m.saveParcel(h.handleHasPendingRequests))))
 	h.Bus.MustRegister(core.TypeGetJet, h.handleGetJet)
 
 	// Validation.
-	h.Bus.MustRegister(core.TypeValidateRecord, m.checkJet(m.saveParcel(h.handleValidateRecord)))
-	h.Bus.MustRegister(core.TypeValidationCheck, m.checkJet(m.saveParcel(h.handleValidationCheck)))
-	h.Bus.MustRegister(core.TypeHotRecords, m.checkJet(m.saveParcel(h.handleHotRecords)))
+	h.Bus.MustRegister(core.TypeValidateRecord, m.checkJet(m.waitForDrop(m.saveParcel(h.handleValidateRecord))))
+	h.Bus.MustRegister(core.TypeValidationCheck, m.checkJet(m.waitForDrop(m.saveParcel(h.handleValidationCheck))))
+	h.Bus.MustRegister(core.TypeHotRecords, m.checkJet(m.unlockDropWaiters(m.saveParcel(h.handleHotRecords))))
 	h.Bus.MustRegister(core.TypeJetDrop, m.checkJet(h.handleJetDrop))
 
 	// Heavy.
@@ -161,7 +161,7 @@ func (h *MessageHandler) handleGetCode(ctx context.Context, parcel core.Parcel) 
 	msg := parcel.Message().(*message.GetCode)
 	jetID := jetFromContext(ctx)
 
-	codeRec, err := getCode(ctx, h.db, msg.Code.Record())
+	codeRec, err := getCode(ctx, h.db, jetID, msg.Code.Record())
 	if err == storage.ErrNotFound {
 		// The record wasn't found on the current node. Return redirect to the node that contains it.
 		var node *core.RecordRef
@@ -704,8 +704,7 @@ func (h *MessageHandler) handleValidationCheck(ctx context.Context, parcel core.
 	return &reply.OK{}, nil
 }
 
-func getCode(ctx context.Context, s storage.Store, id *core.RecordID) (*record.CodeRecord, error) {
-	jetID := *jet.NewID(0, nil)
+func getCode(ctx context.Context, s storage.Store, jetID core.RecordID, id *core.RecordID) (*record.CodeRecord, error) {
 
 	rec, err := s.GetRecord(ctx, jetID, id)
 	if err != nil {
