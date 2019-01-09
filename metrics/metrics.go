@@ -20,6 +20,7 @@ import (
 	"context"
 	"net"
 	"net/http"
+	"runtime"
 	"strings"
 	"time"
 
@@ -51,6 +52,7 @@ func NewMetrics(ctx context.Context, cfg configuration.Metrics, registry *promet
 
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", promhandler)
+	runtime.SetBlockProfileRate(20)
 	pprof.Handle(mux)
 	if cfg.ZpagesEnabled {
 		// https://opencensus.io/zpages/
