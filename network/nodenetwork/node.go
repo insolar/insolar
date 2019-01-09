@@ -25,7 +25,6 @@ import (
 
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/utils"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
@@ -137,7 +136,6 @@ func ClaimToNode(version string, claim *packets.NodeJoinClaim) (core.Node, error
 
 // incrementPort increments port number if it not equals 0
 func incrementPort(address string) (string, error) {
-	log.Warnf("---incrementPort for %s", address)
 	parts := strings.Split(address, ":")
 	if len(parts) != 2 {
 		return address, errors.New("failed to get port from address")
