@@ -114,12 +114,12 @@ func (HeavyReset) GetCaller() *core.RecordRef {
 
 // Type implementation of Message interface.
 func (e *HeavyReset) Type() core.MessageType {
-	return core.TypeHeavyStartStop
+	return core.TypeHeavyReset
 }
 
 // HeavyJetTree brings JetTree to heavy
 type HeavyJetTree struct {
-	JetTree    jet.Tree
+	JetTree  jet.Tree
 	PulseNum core.PulseNumber
 }
 
