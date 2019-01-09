@@ -119,7 +119,7 @@ func (m *PulseManager) processEndPulse(
 	for jetID := range jetIDs {
 		jetID := jetID
 		g.Go(func() error {
-			drop, dropSerialized, messages, err := m.createDrop(ctx, jetID, prevPulseNumber, currentPulse.PulseNumber)
+			drop, dropSerialized, _, err := m.createDrop(ctx, jetID, prevPulseNumber, currentPulse.PulseNumber)
 			if err != nil {
 				return errors.Wrapf(err, "create drop on pulse %v failed", currentPulse.PulseNumber)
 			}
@@ -134,10 +134,11 @@ func (m *PulseManager) processEndPulse(
 				return err
 			}
 
-			dropErr := m.processDrop(ctx, jetID, currentPulse, dropSerialized, messages)
-			if dropErr != nil {
-				return errors.Wrap(dropErr, "processDrop failed")
-			}
+			// FIXME: @andreyromancev. 09.01.2019. Temporary disabled validation. Uncomment when jet split works properly.
+			// dropErr := m.processDrop(ctx, jetID, currentPulse, dropSerialized, messages)
+			// if dropErr != nil {
+			// 	return errors.Wrap(dropErr, "processDrop failed")
+			// }
 
 			// TODO: @andreyromancev. 20.12.18. uncomment me when pending notifications required.
 			// m.sendAbandonedRequests(ctx, newPulse, jetID)
@@ -332,19 +333,21 @@ func (m *PulseManager) sendExecutorData(
 	jetID core.RecordID,
 	msg *message.HotData,
 ) error {
-	shouldSplit := func() bool {
-		if len(msg.JetDropSizeHistory) < m.options.dropHistorySize {
-			return false
-		}
-		for _, info := range msg.JetDropSizeHistory {
-			if info.DropSize < m.options.splitThreshold {
-				return false
-			}
-		}
-		return true
-	}
+	// shouldSplit := func() bool {
+	// 	if len(msg.JetDropSizeHistory) < m.options.dropHistorySize {
+	// 		return false
+	// 	}
+	// 	for _, info := range msg.JetDropSizeHistory {
+	// 		if info.DropSize < m.options.splitThreshold {
+	// 			return false
+	// 		}
+	// 	}
+	// 	return true
+	// }
 
-	if shouldSplit() {
+	// FIXME: enable split
+	// if shouldSplit() {
+	if false {
 		left, right, err := m.db.SplitJetTree(
 			ctx,
 			currentPulse.PulseNumber,

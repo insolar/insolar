@@ -342,16 +342,17 @@ func (mb *MessageBus) checkParcel(ctx context.Context, parcel core.Parcel) error
 		}
 	}
 
-	if parcel.DelegationToken() != nil {
-		valid, err := mb.DelegationTokenFactory.Verify(parcel)
-		if err != nil {
-			return err
-		}
-		if !valid {
-			return errors.New("delegation token is not valid")
-		}
-		return nil
-	}
+	// FIXME: @andreyromancev. 09.01.2019. Implement verify method.
+	// if parcel.DelegationToken() != nil {
+	// 	valid, err := mb.DelegationTokenFactory.Verify(parcel)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	if !valid {
+	// 		return errors.New("delegation token is not valid")
+	// 	}
+	// 	return nil
+	// }
 
 	sendingObject, allowedSenderRole := parcel.AllowedSenderObjectAndRole()
 	if sendingObject == nil {
