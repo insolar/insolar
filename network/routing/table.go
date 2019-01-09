@@ -74,22 +74,38 @@ func (t *Table) AddToKnownHosts(h *host.Host) {
 
 // GetRandomNodes get a specified number of random nodes. Returns less if there are not enough nodes in network.
 func (t *Table) GetRandomNodes(count int) []host.Host {
-	// not so random for now
+	// TODO: this workaround returns all nodes
 	nodes := t.NodeKeeper.GetActiveNodes()
-	resultCount := count
-	if count > len(nodes) {
-		resultCount = len(nodes)
-	}
 	result := make([]host.Host, 0)
-	for i := 0; i < resultCount; i++ {
-		address, err := host.NewAddress(nodes[i].PhysicalAddress())
+	for _, n := range nodes {
+		address, err := host.NewAddress(n.PhysicalAddress())
 		if err != nil {
 			log.Error(err)
 			continue
 		}
-		h := host.Host{NodeID: nodes[i].ID(), Address: address}
-		result = append(result, h)
+		result = append(result, host.Host{NodeID: n.ID(), Address: address})
 	}
+
+	// TODO: original implementation
+	/*
+		// not so random for now
+		nodes := t.NodeKeeper.GetActiveNodes()
+		//return nodes
+		resultCount := count
+		if count > len(nodes) {
+			resultCount = len(nodes)
+		}
+		result := make([]host.Host, 0)
+		for i := 0; i < resultCount; i++ {
+			address, err := host.NewAddress(nodes[i].PhysicalAddress())
+			if err != nil {
+				log.Error(err)
+				continue
+			}
+			h := host.Host{NodeID: nodes[i].ID(), Address: address}
+			result = append(result, h)
+		}
+	*/
 	return result
 }
 
