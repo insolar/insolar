@@ -27,6 +27,17 @@ var ParcelsSentTotal = prometheus.NewCounterVec(
 	[]string{"messageType"},
 )
 
+var ParcelsTime = prometheus.NewSummaryVec(
+	prometheus.SummaryOpts{
+		Namespace: insolarNamespace,
+		Name:      "parcels_time",
+		Help:      "Time spent on sending parcels",
+		Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.95: 0.005, 0.99: 0.001},
+
+	},
+	[]string{"messageType"},
+)
+
 var LocallyDeliveredParcelsTotal = prometheus.NewCounterVec(
 	prometheus.CounterOpts{
 		Namespace: insolarNamespace,

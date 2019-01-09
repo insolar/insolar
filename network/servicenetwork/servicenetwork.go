@@ -18,7 +18,6 @@ package servicenetwork
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -91,10 +90,10 @@ func (n *ServiceNetwork) RemoteProcedureRegister(name string, method core.Remote
 // incrementPort increments port number if it not equals 0
 func incrementPort(address string) (string, error) {
 	parts := strings.Split(address, ":")
-	if len(parts) != 2 {
+	if len(parts) < 2 {
 		return address, errors.New("failed to get port from address")
 	}
-	port, err := strconv.Atoi(parts[1])
+	port, err := strconv.Atoi(parts[len(parts)-1])
 	if err != nil {
 		return address, err
 	}
@@ -102,7 +101,9 @@ func incrementPort(address string) (string, error) {
 	if port != 0 {
 		port++
 	}
-	return fmt.Sprintf("%s:%d", parts[0], port), nil
+
+	parts = append(parts[:len(parts)-1], strconv.Itoa(port))
+	return strings.Join(parts, ":"), nil
 }
 
 // Start implements component.Initer

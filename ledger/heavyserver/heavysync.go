@@ -25,13 +25,17 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
 )
 
-// ErrSyncInProgress indicates that sync for provided jet is in sync
-var ErrSyncInProgress = &reply.HeavyError{
-	Message: "Heavy node sync in progress",
-	SubType: reply.ErrHeavySyncInProgress,
+func errSyncInProgress(jetID core.RecordID, pn core.PulseNumber) *reply.HeavyError {
+	return &reply.HeavyError{
+		Message:  "Heavy node sync in progress",
+		SubType:  reply.ErrHeavySyncInProgress,
+		JetID:    jetID,
+		PulseNum: pn,
+	}
 }
 
 // in testnet we start with only one jet
@@ -115,7 +119,7 @@ func (s *Sync) Start(ctx context.Context, jetID core.RecordID, pn core.PulseNumb
 	defer jetState.Unlock()
 
 	if jetState.syncpulse != nil {
-		return ErrSyncInProgress
+		return errSyncInProgress(jetID, pn)
 	}
 
 	if pn <= core.FirstPulseNumber {
@@ -146,7 +150,7 @@ func (s *Sync) Store(ctx context.Context, jetID core.RecordID, pn core.PulseNumb
 			return fmt.Errorf("Passed pulse %v doesn't math in-sync pulse %v", pn, *jetState.syncpulse)
 		}
 		if jetState.insync {
-			return ErrSyncInProgress
+			return errSyncInProgress(jetID, pn)
 		}
 		jetState.insync = true
 		return nil
@@ -181,7 +185,7 @@ func (s *Sync) Stop(ctx context.Context, jetID core.RecordID, pn core.PulseNumbe
 			pn, *jetState.syncpulse, jetID)
 	}
 	if jetState.insync {
-		return ErrSyncInProgress
+		return errSyncInProgress(jetID, pn)
 	}
 	jetState.syncpulse = nil
 
@@ -189,6 +193,7 @@ func (s *Sync) Stop(ctx context.Context, jetID core.RecordID, pn core.PulseNumbe
 	if err != nil {
 		return err
 	}
+	inslogger.FromContext(ctx).Debugf("heavyserver: Fin sync: jetID=%v, pulse=%v", jetID, pn)
 	jetState.lastok = pn
 	return nil
 }
@@ -200,7 +205,7 @@ func (s *Sync) Reset(ctx context.Context, jetID core.RecordID, pn core.PulseNumb
 	defer jetState.Unlock()
 
 	if jetState.insync {
-		return ErrSyncInProgress
+		return errSyncInProgress(jetID, pn)
 	}
 
 	jetState.syncpulse = nil
