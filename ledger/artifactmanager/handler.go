@@ -772,7 +772,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 		ctx,
 		parcel.Pulse(),
 		true,
-		jetID, // Don't delete this.
+		jetID,
 	)
 	if err != nil {
 		return nil, err
