@@ -111,6 +111,10 @@ func (d *distributor) Distribute(ctx context.Context, pulse *core.Pulse) {
 	}
 }
 
+func (d *distributor) Close() {
+	d.Transport.Close()
+}
+
 func (d *distributor) pingHost(ctx context.Context, host *host.Host) error {
 	logger := inslogger.FromContext(ctx)
 
