@@ -56,7 +56,7 @@ func (t *GetObjectRedirectToken) Type() core.DelegationTokenType {
 
 // Verify implementation of Token interface.
 func (t *GetObjectRedirectToken) Verify(parcel core.Parcel) (bool, error) {
-	panic("")
+	panic("implement me")
 }
 
 // GetChildrenRedirectToken is a redirect token for the GetObject method
@@ -71,7 +71,7 @@ func (t *GetChildrenRedirectToken) Type() core.DelegationTokenType {
 
 // Verify implementation of Token interface.
 func (t *GetChildrenRedirectToken) Verify(parcel core.Parcel) (bool, error) {
-	panic("")
+	panic("implement me")
 }
 
 // GetCodeRedirectToken is a redirect token for the GetObject method
@@ -86,7 +86,7 @@ func (t *GetCodeRedirectToken) Type() core.DelegationTokenType {
 
 // Verify implementation of Token interface.
 func (t *GetCodeRedirectToken) Verify(parcel core.Parcel) (bool, error) {
-	panic("")
+	panic("implement me")
 }
 
 func init() {

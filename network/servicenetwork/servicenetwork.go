@@ -19,6 +19,7 @@ package servicenetwork
 import (
 	"context"
 	"strconv"
+	"strings"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
@@ -84,6 +85,25 @@ func (n *ServiceNetwork) SendCascadeMessage(data core.Cascade, method string, ms
 // RemoteProcedureRegister registers procedure for remote call on this host.
 func (n *ServiceNetwork) RemoteProcedureRegister(name string, method core.RemoteProcedure) {
 	n.controller.RemoteProcedureRegister(name, method)
+}
+
+// incrementPort increments port number if it not equals 0
+func incrementPort(address string) (string, error) {
+	parts := strings.Split(address, ":")
+	if len(parts) < 2 {
+		return address, errors.New("failed to get port from address")
+	}
+	port, err := strconv.Atoi(parts[len(parts)-1])
+	if err != nil {
+		return address, err
+	}
+
+	if port != 0 {
+		port++
+	}
+
+	parts = append(parts[:len(parts)-1], strconv.Itoa(port))
+	return strings.Join(parts, ":"), nil
 }
 
 // Start implements component.Initer
