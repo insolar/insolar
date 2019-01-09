@@ -49,7 +49,7 @@ func newMiddleware(
 		db:             db,
 		jetCoordinator: jetCoordinator,
 		messageBus:     messageBus,
-		jetDropTimeoutProvider:jetDropTimeoutProvider{
+		jetDropTimeoutProvider: jetDropTimeoutProvider{
 			waiters:          map[core.RecordID]*jetDropTimeout{},
 			waitersInitLocks: map[core.RecordID]*sync.RWMutex{},
 		},
@@ -81,7 +81,20 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 			return nil, errors.New("unexpected message")
 		}
 
-		// Calculate jet.
+		// Check token jet.
+		token := parcel.DelegationToken()
+		if token != nil {
+			// Calculate jet for target pulse.
+			target := *msg.DefaultTarget().Record()
+			tree, err := m.db.GetJetTree(ctx, target.Pulse())
+			if err != nil {
+				return nil, err
+			}
+			jetID, _ := tree.Find(target)
+			return handler(contextWithJet(ctx, *jetID), parcel)
+		}
+
+		// Calculate jet for current pulse.
 		var jetID core.RecordID
 		if msg.DefaultTarget().Record().Pulse() == core.PulseNumberJet {
 			jetID = *msg.DefaultTarget().Record()
