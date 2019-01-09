@@ -106,10 +106,12 @@ func (switcher *StateSwitcherImpl) SwitchToState(ctx context.Context, state Stat
 		panic(fmt.Sprintf("Attempt to set a backward step. %v", switcher.pulsar.Config.MainListenerAddress))
 	}
 
+	logger.Debug(".setState(state)")
 	switcher.setState(state)
 
 	switch state {
 	case WaitingForStart:
+		logger.Debug("switcher.pulsar.clearState()")
 		switcher.pulsar.clearState()
 	case WaitingForEntropySigns:
 		switcher.pulsar.waitForEntropySigns(ctx)

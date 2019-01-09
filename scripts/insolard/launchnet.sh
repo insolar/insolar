@@ -38,7 +38,7 @@ stop_listening()
     then
         ports="$ports $INSGORUND_LISTEN_PORT $INSGORUND_RPS_PORT"
     fi
-    
+
     echo "Stop listening..."
     for port in $ports
     do
