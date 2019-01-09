@@ -48,4 +48,6 @@ type Network interface {
 type PulseDistributor interface {
 	// Distribute distributes a pulse across the network.
 	Distribute(context.Context, *Pulse)
+	// Close closes all the internal connections
+	Close()
 }
