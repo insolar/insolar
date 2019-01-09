@@ -20,6 +20,7 @@ import (
 	"context"
 	"sync"
 
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
@@ -33,14 +34,15 @@ const (
 )
 
 type middleware struct {
-	db             *storage.DB
-	jetCoordinator core.JetCoordinator
-	messageBus     core.MessageBus
-
+	db                     *storage.DB
+	jetCoordinator         core.JetCoordinator
+	messageBus             core.MessageBus
 	jetDropTimeoutProvider jetDropTimeoutProvider
+	conf                   *configuration.Ledger
 }
 
 func newMiddleware(
+	conf *configuration.Ledger,
 	db *storage.DB,
 	jetCoordinator core.JetCoordinator,
 	messageBus core.MessageBus,
@@ -53,6 +55,7 @@ func newMiddleware(
 			waiters:          map[core.RecordID]*jetDropTimeout{},
 			waitersInitLocks: map[core.RecordID]*sync.RWMutex{},
 		},
+		conf: conf,
 	}
 }
 
@@ -144,6 +147,21 @@ func (m *middleware) saveParcel(handler core.MessageHandler) core.MessageHandler
 		err = m.db.SetMessage(ctx, jetID, pulse.Pulse.PulseNumber, parcel)
 		if err != nil {
 			return nil, err
+		}
+
+		return handler(ctx, parcel)
+	}
+}
+
+func (m *middleware) checkHeavySync(handler core.MessageHandler) core.MessageHandler {
+	return func(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
+		jetID := jetFromContext(ctx)
+		replicated, err := m.db.GetReplicatedPulse(ctx, jetID)
+		if err != nil {
+			return nil, err
+		}
+		if parcel.Pulse()-replicated >= m.conf.LightChainLimit {
+			return nil, errors.New("failed to write data (waiting for heavy replication)")
 		}
 
 		return handler(ctx, parcel)

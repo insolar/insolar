@@ -154,6 +154,18 @@ func (m *PulseManager) processEndPulse(
 	// TODO: maybe move cleanup in the above cycle or process removal in separate job - 20.Dec.2018 @nordicdyno
 	untilPN := currentPulse.PulseNumber - m.options.storeLightPulses
 	for jetID := range jetIDs {
+		replicated, err := m.db.GetReplicatedPulse(ctx, jetID)
+		if err != nil {
+			return err
+		}
+		if untilPN >= replicated {
+			inslogger.FromContext(ctx).Errorf(
+				"light cleanup aborted (remove from: %v, replicated: %v)",
+				untilPN,
+				replicated,
+			)
+			return nil
+		}
 		if _, err := m.db.RemoveJetIndexesUntil(ctx, jetID, untilPN); err != nil {
 			return err
 		}
