@@ -1,35 +1,51 @@
+/*
+ *    Copyright 2018 Insolar
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
+
 package artifactmanager
 
 import (
 	"context"
-	"sync"
+		"sync"
 	"time"
 
 	"github.com/insolar/insolar/core"
 )
 
 type jetDropTimeoutProvider struct {
-	waiters          map[core.RecordID]*jetDropTimeout
-	waitersInitLocks map[core.RecordID]*sync.RWMutex
+	waitersMutex sync.RWMutex
+	waiters      map[core.RecordID]*jetDropTimeout
 
-	waitersLock          sync.RWMutex
-	waitersInitLocksLock sync.Mutex
+	waitersInitMutexesMutex sync.Mutex
+	waitersInitMutexes      map[core.RecordID]*sync.RWMutex
 }
 
-func (p *jetDropTimeoutProvider) getLock(jetID core.RecordID) *sync.RWMutex {
-	p.waitersInitLocksLock.Lock()
-	defer p.waitersInitLocksLock.Unlock()
+func (p *jetDropTimeoutProvider) getMutex(jetID core.RecordID) *sync.RWMutex {
+	p.waitersInitMutexesMutex.Lock()
+	defer p.waitersInitMutexesMutex.Unlock()
 
-	if _, ok := p.waitersInitLocks[jetID]; !ok {
-		p.waitersInitLocks[jetID] = &sync.RWMutex{}
+	if _, ok := p.waitersInitMutexes[jetID]; !ok {
+		p.waitersInitMutexes[jetID] = &sync.RWMutex{}
 	}
 
-	return p.waitersInitLocks[jetID]
+	return p.waitersInitMutexes[jetID]
 }
 
 func (p *jetDropTimeoutProvider) getWaiter(jetID core.RecordID) *jetDropTimeout {
-	p.waitersLock.RLock()
-	defer p.waitersLock.RUnlock()
+	p.waitersMutex.RLock()
+	defer p.waitersMutex.RUnlock()
 
 	return p.waiters[jetID]
 }
@@ -45,14 +61,14 @@ type jetDropTimeout struct {
 	isTimeoutRun     bool
 }
 
-func (jdw *jetDropTimeout) getLastJdPulse() core.PulseNumber {
+func (jdw *jetDropTimeout) getLastPulse() core.PulseNumber {
 	jdw.lastJdPulseLock.RLock()
 	defer jdw.lastJdPulseLock.RUnlock()
 
 	return jdw.lastJdPulse
 }
 
-func (jdw *jetDropTimeout) setLastJdPulse(pn core.PulseNumber) {
+func (jdw *jetDropTimeout) setLastPulse(pn core.PulseNumber) {
 	jdw.lastJdPulseLock.Lock()
 	defer jdw.lastJdPulseLock.Unlock()
 
@@ -62,7 +78,7 @@ func (jdw *jetDropTimeout) setLastJdPulse(pn core.PulseNumber) {
 func (m *middleware) waitForDrop(handler core.MessageHandler) core.MessageHandler {
 	return func(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
 		jetID := jetFromContext(ctx)
-		lock := m.jetDropTimeoutProvider.getLock(jetID)
+		lock := m.jetDropTimeoutProvider.getMutex(jetID)
 		waiter := m.jetDropTimeoutProvider.getWaiter(jetID)
 
 		lock.RLock()
@@ -72,7 +88,7 @@ func (m *middleware) waitForDrop(handler core.MessageHandler) core.MessageHandle
 		}
 		lock.RUnlock()
 
-		if waiter.getLastJdPulse() != parcel.Pulse() {
+		if waiter.getLastPulse() != parcel.Pulse() {
 			waiter.runDropWaitingTimeout()
 
 			select {
@@ -98,6 +114,7 @@ func (jdw *jetDropTimeout) runDropWaitingTimeout() {
 	}
 
 	jdw.isTimeoutRun = true
+
 	go func() {
 		time.Sleep(2 * time.Second)
 
@@ -113,7 +130,7 @@ func (jdw *jetDropTimeout) runDropWaitingTimeout() {
 func (m *middleware) unlockDropWaiters(handler core.MessageHandler) core.MessageHandler {
 	return func(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
 		jetID := jetFromContext(ctx)
-		lock := m.jetDropTimeoutProvider.getLock(jetID)
+		lock := m.jetDropTimeoutProvider.getMutex(jetID)
 		waiter := m.jetDropTimeoutProvider.getWaiter(jetID)
 
 		lock.Lock()
@@ -128,7 +145,7 @@ func (m *middleware) unlockDropWaiters(handler core.MessageHandler) core.Message
 		}
 		resp, err := handler(ctx, parcel)
 
-		waiter.setLastJdPulse(parcel.Pulse())
+		waiter.setLastPulse(parcel.Pulse())
 		close(waiter.jetDropLocker)
 		waiter.jetDropLocker = make(chan struct{})
 
