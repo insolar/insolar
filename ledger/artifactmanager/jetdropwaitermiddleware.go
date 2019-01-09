@@ -1,19 +1,35 @@
+/*
+ *    Copyright 2018 Insolar
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
+
 package artifactmanager
 
 import (
 	"context"
-	"sync"
+		"sync"
 	"time"
 
 	"github.com/insolar/insolar/core"
 )
 
 type jetDropTimeoutProvider struct {
-	waiters          map[core.RecordID]*jetDropTimeout
-	waitersInitLocks map[core.RecordID]*sync.RWMutex
+	waitersLock sync.RWMutex
+	waiters     map[core.RecordID]*jetDropTimeout
 
-	waitersLock          sync.RWMutex
 	waitersInitLocksLock sync.Mutex
+	waitersInitLocks     map[core.RecordID]*sync.RWMutex
 }
 
 func (p *jetDropTimeoutProvider) getLock(jetID core.RecordID) *sync.RWMutex {
@@ -45,14 +61,14 @@ type jetDropTimeout struct {
 	isTimeoutRun     bool
 }
 
-func (jdw *jetDropTimeout) getLastJdPulse() core.PulseNumber {
+func (jdw *jetDropTimeout) getLastPulse() core.PulseNumber {
 	jdw.lastJdPulseLock.RLock()
 	defer jdw.lastJdPulseLock.RUnlock()
 
 	return jdw.lastJdPulse
 }
 
-func (jdw *jetDropTimeout) setLastJdPulse(pn core.PulseNumber) {
+func (jdw *jetDropTimeout) setLastPulse(pn core.PulseNumber) {
 	jdw.lastJdPulseLock.Lock()
 	defer jdw.lastJdPulseLock.Unlock()
 
@@ -72,7 +88,7 @@ func (m *middleware) waitForDrop(handler core.MessageHandler) core.MessageHandle
 		}
 		lock.RUnlock()
 
-		if waiter.getLastJdPulse() != parcel.Pulse() {
+		if waiter.getLastPulse() != parcel.Pulse() {
 			waiter.runDropWaitingTimeout()
 
 			select {
@@ -98,11 +114,12 @@ func (jdw *jetDropTimeout) runDropWaitingTimeout() {
 	}
 
 	jdw.isTimeoutRun = true
+	jdw.timeoutLocker = make(chan struct{})
+
 	go func() {
 		time.Sleep(2 * time.Second)
 
 		close(jdw.timeoutLocker)
-		jdw.timeoutLocker = make(chan struct{})
 
 		jdw.isTimeoutRunLock.Lock()
 		jdw.isTimeoutRun = false
@@ -128,7 +145,7 @@ func (m *middleware) unlockDropWaiters(handler core.MessageHandler) core.Message
 		}
 		resp, err := handler(ctx, parcel)
 
-		waiter.setLastJdPulse(parcel.Pulse())
+		waiter.setLastPulse(parcel.Pulse())
 		close(waiter.jetDropLocker)
 		waiter.jetDropLocker = make(chan struct{})
 

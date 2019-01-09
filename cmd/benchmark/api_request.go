@@ -20,12 +20,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
-	"github.com/pkg/errors"
 )
 
 type response struct {
@@ -86,13 +86,19 @@ func createMembers(concurrent int) ([]memberInfo, error) {
 		params := []interface{}{memberName, string(memberPubKeyStr)}
 		ctx := inslogger.ContextWithTrace(context.Background(), fmt.Sprintf("createMemberNumber%d", i))
 
-		body := sendRequest(ctx, "CreateMember", params, rootMember)
+		var body []byte
+		var memberRef string
 
-		memberResponse := getResponse(body)
-		if memberResponse.Error != "" {
-			return nil, errors.New(memberResponse.Error)
+		for {
+			body = sendRequest(ctx, "CreateMember", params, rootMember)
+			memberResponse := getResponse(body)
+			if memberResponse.Error == "" {
+				memberRef = memberResponse.Result.(string)
+				break
+			}
+			fmt.Println("Create member error", memberResponse.Error, "retry")
+			time.Sleep(time.Second)
 		}
-		memberRef := memberResponse.Result.(string)
 
 		members = append(members, memberInfo{memberRef, string(memberPrivKeyStr)})
 	}
