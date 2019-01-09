@@ -24,12 +24,38 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 )
+
+var httpClient *http.Client
+
+const (
+	MaxConnections     int = 200
+	MaxIdleConnections int = 20
+	RequestTimeout     int = 5
+)
+
+func init() {
+	httpClient = createHTTPClient()
+}
+
+// createHTTPClient for connection re-use
+func createHTTPClient() *http.Client {
+	client := &http.Client{
+		Transport: &http.Transport{
+			MaxIdleConnsPerHost: MaxIdleConnections,
+			MaxConnsPerHost:     MaxConnections,
+		},
+		Timeout: time.Duration(RequestTimeout) * time.Second,
+	}
+
+	return client
+}
 
 // verbose switches on verbose mode
 var verbose = false
@@ -56,7 +82,12 @@ func GetResponseBody(url string, postP PostParams) ([]byte, error) {
 		return nil, errors.Wrap(err, "[ getResponseBody ] Problem with marshaling params")
 	}
 
-	postResp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonValue))
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonValue))
+	if err != nil {
+		return nil, errors.Wrap(err, "[ getResponseBody ] Problem with creating request")
+	}
+	req.Header.Set("Content-Type", "application/json")
+	postResp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ getResponseBody ] Problem with sending request")
 	}

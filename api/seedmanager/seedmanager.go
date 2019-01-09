@@ -25,7 +25,7 @@ import (
 type Expiration = int64
 
 // DefaultTTL is default time period for deleting expired seeds
-const DefaultTTL = time.Duration(1 * time.Second)
+const DefaultTTL = time.Duration(10 * time.Second)
 
 // DefaultCleanPeriod default time period for launching cleaning goroutine
 const DefaultCleanPeriod = time.Duration(1 * time.Second)
