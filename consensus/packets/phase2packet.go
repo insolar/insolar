@@ -20,6 +20,7 @@ import (
 	"crypto"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 )
 

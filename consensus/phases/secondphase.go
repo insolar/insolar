@@ -213,7 +213,6 @@ func (sp *SecondPhase) Execute21(ctx context.Context, state *SecondPhaseState) (
 		}
 		state.UnsyncList.AddNode(node, index)
 		state.UnsyncList.AddProof(node.ID(), &result.NodePulseProof)
-		state.UnsyncList.GlobuleHashSignatures()[node.ID()] = result.GlobuleHashSignature
 		state.ValidProofs[node] = merkleProof
 		bitsetChanges = append(bitsetChanges, packets.BitSetCell{})
 	}
