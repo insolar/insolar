@@ -65,7 +65,7 @@ func NewMessageHandler(
 
 // Init initializes handlers and middleware.
 func (h *MessageHandler) Init(ctx context.Context) error {
-	m := newMiddleware(h.db, h.JetCoordinator, h.Bus)
+	m := newMiddleware(h.conf, h.db, h.JetCoordinator, h.Bus)
 
 	// Generic.
 	h.replayHandlers[core.TypeGetCode] = m.checkJet(h.handleGetCode)
@@ -90,10 +90,10 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 	h.Bus.MustRegister(core.TypeGetObject, m.checkJet(m.waitForDrop(m.saveParcel(h.handleGetObject))))
 	h.Bus.MustRegister(core.TypeGetDelegate, m.checkJet(m.waitForDrop(m.saveParcel(h.handleGetDelegate))))
 	h.Bus.MustRegister(core.TypeGetChildren, m.checkJet(m.waitForDrop(m.saveParcel(h.handleGetChildren))))
-	h.Bus.MustRegister(core.TypeSetRecord, m.checkJet(m.waitForDrop(m.saveParcel(h.handleSetRecord))))
-	h.Bus.MustRegister(core.TypeUpdateObject, m.checkJet(m.waitForDrop(m.saveParcel(h.handleUpdateObject))))
-	h.Bus.MustRegister(core.TypeRegisterChild, m.checkJet(m.waitForDrop(m.saveParcel(h.handleRegisterChild))))
-	h.Bus.MustRegister(core.TypeSetBlob, m.checkJet(m.waitForDrop(m.saveParcel(h.handleSetBlob))))
+	h.Bus.MustRegister(core.TypeSetRecord, m.checkJet(m.checkHeavySync(m.waitForDrop(m.saveParcel(h.handleSetRecord)))))
+	h.Bus.MustRegister(core.TypeUpdateObject, m.checkJet(m.checkHeavySync(m.waitForDrop(m.saveParcel(h.handleUpdateObject)))))
+	h.Bus.MustRegister(core.TypeRegisterChild, m.checkJet(m.checkHeavySync(m.waitForDrop(m.saveParcel(h.handleRegisterChild)))))
+	h.Bus.MustRegister(core.TypeSetBlob, m.checkJet(m.checkHeavySync(m.waitForDrop(m.saveParcel(h.handleSetBlob)))))
 	h.Bus.MustRegister(core.TypeGetObjectIndex, m.checkJet(m.waitForDrop(m.saveParcel(h.handleGetObjectIndex))))
 	h.Bus.MustRegister(core.TypeGetPendingRequests, m.checkJet(m.waitForDrop(m.saveParcel(h.handleHasPendingRequests))))
 	h.Bus.MustRegister(core.TypeGetJet, h.handleGetJet)

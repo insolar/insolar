@@ -190,6 +190,15 @@ func (db *DB) Init(ctx context.Context) error {
 			return nil, err
 		}
 
+		err = db.SetReplicatedPulse(
+			ctx,
+			jetID,
+			lastPulse.Pulse.PulseNumber,
+		)
+		if err != nil {
+			return nil, err
+		}
+
 		genesisRef := core.NewRecordRef(*genesisID, *genesisID)
 		return genesisRef, db.set(ctx, prefixkey(scopeIDSystem, []byte{sysGenesis}), genesisRef[:])
 	}
