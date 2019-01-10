@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
-	"sync/atomic"
 	"time"
 
 	"github.com/insolar/insolar/application/extractor"
@@ -156,18 +155,6 @@ func processError(err error, extraMsg string, resp *answer, insLog core.Logger) 
 	insLog.Error(errors.Wrapf(err, "[ CallHandler ] %s", extraMsg))
 }
 
-func sendResponse(resp *answer, response http.ResponseWriter, insLog core.Logger) {
-	res, err := json.MarshalIndent(resp, "", "    ")
-	if err != nil {
-		res = []byte(`{"error": "can't marshal answer to json'"}`)
-	}
-	response.Header().Add("Content-Type", "application/json")
-	_, err = response.Write(res)
-	if err != nil {
-		insLog.Errorf("Can't write response\n")
-	}
-}
-
 func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 	return func(response http.ResponseWriter, req *http.Request) {
 		traceID := utils.RandTraceID()
@@ -182,11 +169,15 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 
 				insLog.Info("[ callHandler ] Incoming request: %s", req.RequestURI)
 
-				var sended uint32 = 0
 				defer func() {
-					if atomic.LoadUint32(&sended) == 0 {
-						atomic.StoreUint32(&sended, 1)
-						sendResponse(&resp, response, insLog)
+					res, err := json.MarshalIndent(resp, "", "    ")
+					if err != nil {
+						res = []byte(`{"error": "can't marshal answer to json'"}`)
+					}
+					response.Header().Add("Content-Type", "application/json")
+					_, err = response.Write(res)
+					if err != nil {
+						insLog.Errorf("Can't write response\n")
 					}
 				}()
 
@@ -211,20 +202,26 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 				var result interface{}
 				utils.MeasureExecutionTime(ctx, "callHandler makeCall",
 					func() {
+						c1 := make(chan interface{}, 1)
 						go func() {
-							time.Sleep(time.Duration(ar.cfg.Timeout) * time.Second)
-							atomic.StoreUint32(&sended, 1)
-							resp.Error = "Messagebus timeout exceeded"
-							sendResponse(&resp, response, insLog)
+							result, err = ar.makeCall(ctx, params)
+							c1 <- nil
 						}()
-						result, err = ar.makeCall(ctx, params)
-					})
-				if err != nil {
-					processError(err, "Can't makeCall", &resp, insLog)
-					return
-				}
+						select {
 
-				resp.Result = result
+						case <-c1:
+							if err != nil {
+								processError(err, "Can't makeCall", &resp, insLog)
+								return
+							}
+							resp.Result = result
+
+						case <-time.After(time.Duration(ar.cfg.Timeout) * time.Second):
+							resp.Error = "Messagebus timeout exceeded"
+							return
+
+						}
+					})
 			})
 	}
 }
