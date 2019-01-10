@@ -301,6 +301,10 @@ func (mb *MessageBus) checkPulse(ctx context.Context, parcel core.Parcel, locked
 	}
 
 	if parcel.Pulse() != pulse.PulseNumber {
+		// TODO: this should be more generic, some messages are ok to be from the past
+		if parcel.Type() == core.TypeReturnResults {
+			return nil
+		}
 		inslogger.FromContext(ctx).Error("[ checkPulse ] Incorrect message pulse")
 		return fmt.Errorf("[ checkPulse ] Incorrect message pulse %d %d", parcel.Pulse(), pulse.PulseNumber)
 	}
