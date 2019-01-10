@@ -862,14 +862,9 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 	messages := make([]core.Message, 0)
 
 	for ref, state := range lr.state {
-		// we are executor again - just continue working
-		// TODO we need to do something with validation
 		isAuthorized, _ := lr.JetCoordinator.IsAuthorized(
 			ctx, core.DynamicRoleVirtualExecutor, *ref.Record(), pulse.PulseNumber, lr.JetCoordinator.Me(),
 		)
-		if isAuthorized {
-			continue
-		}
 		state.Lock()
 
 		// some old stuff
@@ -878,32 +873,36 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 		if es := state.ExecutionState; es != nil {
 			es.Lock()
 
-			if es.Current != nil {
-				es.pending = InPending
-			}
+			// if we are executor again we just continue working
+			// without sending data on next executor (because we are next executor)
+			if !isAuthorized {
+				if es.Current != nil {
+					es.pending = InPending
+				}
 
-			queue := es.releaseQueue()
-			caseBind := es.Behaviour.(*ValidationSaver).caseBind
-			requests := caseBind.getCaseBindForMessage(ctx)
-			messages = append(
-				messages,
-				//&message.ValidateCaseBind{
-				//	RecordRef: ref,
-				//	Requests:  requests,
-				//	Pulse:     pulse,
-				//},
-				&message.ExecutorResults{
-					RecordRef: ref,
-					Pending:   es.pending == InPending,
-					Requests:  requests,
-					Queue:     convertQueueToMessageQueue(queue),
-				},
-			)
+				queue := es.releaseQueue()
+				caseBind := es.Behaviour.(*ValidationSaver).caseBind
+				requests := caseBind.getCaseBindForMessage(ctx)
+				messages = append(
+					messages,
+					//&message.ValidateCaseBind{
+					//	RecordRef: ref,
+					//	Requests:  requests,
+					//	Pulse:     pulse,
+					//},
+					&message.ExecutorResults{
+						RecordRef: ref,
+						Pending:   es.pending == InPending,
+						Requests:  requests,
+						Queue:     convertQueueToMessageQueue(queue),
+					},
+				)
+			}
 
 			// TODO: if Current is not nil then we should request here for a delegation token
 			// to continue execution of the current request
 
-			if es.Current == nil {
+			if es.Current == nil && len(state.ExecutionState.Queue) == 0 {
 				state.ExecutionState = nil
 			}
 			es.Unlock()
