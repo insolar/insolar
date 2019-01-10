@@ -13,7 +13,7 @@ service:
   service: {}
 ledger:
   storage:
-    datadirectory: scripts/insolard/nodes/5/data
+    datadirectory: scripts/insolard/discoverynodes/5/data
     txretriesonconflict: 3
   jetcoordinator:
     rolecounts:
@@ -33,7 +33,7 @@ logicrunner:
     runnerlisten: 127.0.0.1:58181
 apirunner:
   address: 127.0.0.1:19195
-keyspath: "scripts/insolard/nodes/5/keys.json"
-certificatepath: "scripts/insolard/nodes/5/cert.json"
+keyspath: "scripts/insolard/discoverynodes/5/keys.json"
+certificatepath: "scripts/insolard/discoverynodes/5/cert.json"
 metrics:
   listenaddress: :8085

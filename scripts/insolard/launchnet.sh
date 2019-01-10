@@ -14,13 +14,18 @@ CONFIGS_DIR=configs
 BASE_DIR=scripts/insolard
 KEYS_FILE=$BASE_DIR/$CONFIGS_DIR/bootstrap_keys.json
 ROOT_MEMBER_KEYS_FILE=$BASE_DIR/$CONFIGS_DIR/root_member_keys.json
+DISCOVERY_NODES_DATA=$BASE_DIR/discoverynodes/
 NODES_DATA=$BASE_DIR/nodes/
 GENESIS_CONFIG=$BASE_DIR/genesis.yaml
 
 insolar_log_level=Debug
 gorund_log_level=$insolar_log_level
 
-NUM_NODES=$(grep "host: " $GENESIS_CONFIG | grep -cv "#" )
+NUM_DISCOVERY_NODES=$(grep "discoveryhost: " $GENESIS_CONFIG | grep -cv "#" )
+for i in `seq 1 $NUM_DISCOVERY_NODES`
+do
+    DISCOVERY_NODES+=($DISCOVERY_NODES_DATA/$i)
+done
 
 for i in `seq 1 $NUM_NODES`
 do
@@ -58,7 +63,7 @@ clear_dirs()
     echo "clear_dirs() starts ..."
     rm -rfv $CONTRACT_STORAGE/*
     rm -rfv $LEDGER_DIR/*
-    rm -rfv $NODES_DATA/*
+    rm -rfv $DISCOVERY_NODES_DATA/*
     echo "clear_dirs() end."
 }
 
@@ -67,7 +72,12 @@ create_required_dirs()
     echo "create_required_dirs() starts ..."
     mkdir -vp $CONTRACT_STORAGE
     mkdir -vp $LEDGER_DIR
-    mkdir -vp $NODES_DATA/certs
+    mkdir -vp $DISCOVERY_NODES_DATA/certs
+
+    for node in "${DISCOVERY_NODES[@]}"
+    do
+        mkdir -vp $node/data
+    done
 
     for node in "${NODES[@]}"
     do
@@ -116,7 +126,7 @@ generate_root_member_keys()
 generate_discovery_nodes_keys()
 {
     echo "generate_discovery_nodes_keys() starts ..."
-    for node in "${NODES[@]}"
+    for node in "${DISCOVERY_NODES[@]}"
     do
         bin/insolar -c gen_keys > $node/keys.json
     done
@@ -172,7 +182,7 @@ launch_insgorund()
     host=127.0.0.1
     $INSGORUND -l $host:$INSGORUND_LISTEN_PORT --rpc $host:$INSGORUND_RPS_PORT --log-level=$gorund_log_level --metrics :18182 &
 
-    if [ "$NUM_NODES" == "5" ]
+    if [[ "$NUM_DISCOVERY_NODES" == "5" ]]
     then
         $INSGORUND -l $host:58181 --rpc $host:58182 --log-level=$gorund_log_level --metrics :58183 &
     fi
@@ -181,7 +191,7 @@ launch_insgorund()
 copy_data()
 {
     echo "copy_data() starts ..."
-    for node in "${NODES[@]}"
+    for node in "${DISCOVERY_NODES[@]}"
     do
         cp -v $LEDGER_DIR/* $node/data
     done
@@ -191,6 +201,12 @@ copy_data()
 copy_certs()
 {
     echo "copy_certs() starts ..."
+    i=0
+    for node in "${DISCOVERY_NODES[@]}"
+    do
+        i=$((i + 1))
+        cp -v $DISCOVERY_NODES_DATA/certs/discovery_cert_$i.json $node/cert.json
+    done
     i=0
     for node in "${NODES[@]}"
     do
@@ -209,7 +225,7 @@ genesis()
     generate_discovery_nodes_keys
 
     printf "start genesis ... \n"
-    $INSOLARD --config $BASE_DIR/insolar.yaml --genesis $GENESIS_CONFIG --keyout $NODES_DATA/certs
+    $INSOLARD --config $BASE_DIR/insolar.yaml --genesis $GENESIS_CONFIG --keyout $DISCOVERY_NODES_DATA/certs
     printf "genesis is done\n"
 
     copy_data
@@ -223,9 +239,9 @@ check_working_dir
 process_input_params $@
 
 printf "start pulsar ... \n"
-$PULSARD -c $BASE_DIR/pulsar.yaml &> $NODES_DATA/pulsar_output.txt &
+$PULSARD -c $BASE_DIR/pulsar.yaml &> $DISCOVERY_NODES_DATA/pulsar_output.txt &
 
-if [ "$run_insgorund" == "true" ]
+if [[ "$run_insgorund" == "true" ]]
 then
     printf "start insgorund ... \n"
     launch_insgorund
@@ -236,16 +252,18 @@ fi
 printf "start nodes ... \n"
 
 i=0
-for node in "${NODES[@]}"
+for node in "${DISCOVERY_NODES[@]}"
 do
     i=$((i + 1))
-    if [ "$i" -eq "$NUM_NODES" ]
+    if [[ "$i" -eq "$NUM_DISCOVERY_NODES" ]]
     then
-        echo "NODE $i STARTED in foreground"
+        echo "DISCOVERY NODE $i STARTED in foreground"
         INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $BASE_DIR/insolar_$i.yaml --measure $node/measure.txt &> $node/output.txt
         break
     fi
     INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $BASE_DIR/insolar_$i.yaml --measure $node/measure.txt &> $node/output.txt &
+    echo "DISCOVERY NODE $i STARTED in background"
+done
     echo "NODE $i STARTED in background"
 done
 

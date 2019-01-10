@@ -400,7 +400,10 @@ func teardown() {
 		fmt.Println("[ teardown ] insolard was successfully stoped")
 	}
 
-	stopAllInsgorunds()
+	err = stopAllInsgorunds()
+	if err != nil {
+		fmt.Println("[ teardown ]  failed to stop all insgrounds: ", err)
+	}
 	fmt.Println("[ teardown ] insgorund was successfully stoped")
 
 	err = deleteDirForContracts()

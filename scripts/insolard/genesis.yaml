@@ -9,27 +9,34 @@ pulsar_public_keys:
   - "pulsar_public_key"
 discovery_nodes:
   -
-    host: "127.0.0.1:13831"
+    discoveryhost: "127.0.0.1:13831"
     role: "virtual"
-    keys_file: "scripts/insolard/nodes/1/keys.json"
+    keys_file: "scripts/insolard/discoverynodes/1/keys.json"
     cert_name: "discovery_cert_1.json"
   -
-    host: "127.0.0.1:23832"
+    discoveryhost: "127.0.0.1:23832"
     role: "heavy_material"
-    keys_file: "scripts/insolard/nodes/2/keys.json"
+    keys_file: "scripts/insolard/discoverynodes/2/keys.json"
     cert_name: "discovery_cert_2.json"
   -
-    host: "127.0.0.1:33833"
+    discoveryhost: "127.0.0.1:33833"
     role: "light_material"
-    keys_file: "scripts/insolard/nodes/3/keys.json"
+    keys_file: "scripts/insolard/discoverynodes/3/keys.json"
     cert_name: "discovery_cert_3.json"
   -
-    host: "127.0.0.1:43834"
+    discoveryhost: "127.0.0.1:43834"
     role: "light_material"
-    keys_file: "scripts/insolard/nodes/4/keys.json"
+    keys_file: "scripts/insolard/discoverynodes/4/keys.json"
     cert_name: "discovery_cert_4.json"
   -
-    host: "127.0.0.1:53835"
+    discoveryhost: "127.0.0.1:53835"
     role: "virtual"
-    keys_file: "scripts/insolard/nodes/5/keys.json"
+    keys_file: "scripts/insolard/discoverynodes/5/keys.json"
     cert_name: "discovery_cert_5.json"
+
+nodes:
+  -
+    nodehost: "127.0.0.1:63831"
+    role: "virtual"
+    keys_file: "scripts/insolard/nodes/1/keys.json"
+    cert_name: "node_cert_1.json"
