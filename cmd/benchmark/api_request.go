@@ -49,12 +49,12 @@ func sendRequest(ctx context.Context, method string, params []interface{}, membe
 
 	userCfg, err := requester.CreateUserConfig(member.ref, member.privateKey)
 	if err != nil {
-		errors.Wrap(err, "can not create user config")
+		return nil, errors.Wrap(err, "can not create user config")
 	}
 
 	body, err := requester.Send(ctx, apiurls.Next(), userCfg, reqCfg)
 	if err != nil {
-		errors.Wrap(err, "can not send request")
+		return nil, errors.Wrap(err, "can not send request")
 	}
 
 	return body, nil
