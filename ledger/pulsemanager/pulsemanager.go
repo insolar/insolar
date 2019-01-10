@@ -19,6 +19,7 @@ package pulsemanager
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/pkg/errors"
 	"golang.org/x/sync/errgroup"
@@ -124,15 +125,20 @@ func (m *PulseManager) processEndPulse(
 				return errors.Wrapf(err, "create drop on pulse %v failed", currentPulse.PulseNumber)
 			}
 
-			msg, hotRecordsError := m.getExecutorData(
+			inslogger.FromContext(ctx).Debugf("[processEndPulse] before getExecutorHotData - %v", time.Now())
+			msg, hotRecordsError := m.getExecutorHotData(
 				ctx, jetID, currentPulse.PulseNumber, drop, dropSerialized)
 			if hotRecordsError != nil {
 				return errors.Wrapf(err, "getExecutorData failed for jet id %v", jetID)
 			}
+			inslogger.FromContext(ctx).Debugf("[processEndPulse] after getExecutorHotData - %v", time.Now())
+
+			inslogger.FromContext(ctx).Debugf("[processEndPulse] before sendExecutorData - %v", time.Now())
 			sendError := m.sendExecutorData(ctx, currentPulse, newPulse, jetID, msg)
 			if sendError != nil {
 				return err
 			}
+			inslogger.FromContext(ctx).Debugf("[processEndPulse] after sendExecutorData - %v", time.Now())
 
 			// FIXME: @andreyromancev. 09.01.2019. Temporary disabled validation. Uncomment when jet split works properly.
 			// dropErr := m.processDrop(ctx, jetID, currentPulse, dropSerialized, messages)
@@ -276,7 +282,7 @@ func (m *PulseManager) processDrop(
 	return nil
 }
 
-func (m *PulseManager) getExecutorData(
+func (m *PulseManager) getExecutorHotData(
 	ctx context.Context,
 	jetID core.RecordID,
 	pulse core.PulseNumber,
@@ -387,10 +393,12 @@ func (m *PulseManager) sendExecutorData(
 		}
 	} else {
 		msg.Jet = *core.NewRecordRef(core.DomainID, jetID)
+		inslogger.FromContext(ctx).Debugf("[sendExecutorData] before m.Bus.Send(ctx, msg, nil) - %v", time.Now())
 		_, err := m.Bus.Send(ctx, msg, nil)
 		if err != nil {
 			return errors.Wrap(err, "failed to send executor data")
 		}
+		inslogger.FromContext(ctx).Debugf("[sendExecutorData] after m.Bus.Send(ctx, msg, nil) - %v", time.Now())
 	}
 
 	return nil
