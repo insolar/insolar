@@ -35,9 +35,7 @@ import (
 var httpClient *http.Client
 
 const (
-	MaxConnections     int = 200
-	MaxIdleConnections int = 20
-	RequestTimeout     int = 5
+	RequestTimeout int = 5
 )
 
 func init() {
@@ -47,11 +45,8 @@ func init() {
 // createHTTPClient for connection re-use
 func createHTTPClient() *http.Client {
 	client := &http.Client{
-		Transport: &http.Transport{
-			MaxIdleConnsPerHost: MaxIdleConnections,
-			MaxConnsPerHost:     MaxConnections,
-		},
-		Timeout: time.Duration(RequestTimeout) * time.Second,
+		Transport: &http.Transport{},
+		Timeout:   time.Duration(RequestTimeout) * time.Second,
 	}
 
 	return client
