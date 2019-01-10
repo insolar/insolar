@@ -902,7 +902,7 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 			// TODO: if Current is not nil then we should request here for a delegation token
 			// to continue execution of the current request
 
-			if es.Current == nil && len(state.ExecutionState.Queue) == 0 {
+			if es.Current == nil && len(es.Queue) == 0 {
 				state.ExecutionState = nil
 			}
 			es.Unlock()
