@@ -156,6 +156,7 @@ func (m *middleware) saveParcel(handler core.MessageHandler) core.MessageHandler
 func (m *middleware) checkHeavySync(handler core.MessageHandler) core.MessageHandler {
 	return func(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
 		// TODO: @andreyromancev. 10.01.2019. Uncomment to enable backpressure for writing requests.
+		// Currently disabled due to big initial difference in pulse numbers, which prevents requests from being accepted.
 		// jetID := jetFromContext(ctx)
 		// replicated, err := m.db.GetReplicatedPulse(ctx, jetID)
 		// if err != nil {
