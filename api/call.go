@@ -21,6 +21,8 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
+	"sync/atomic"
+	"time"
 
 	"github.com/insolar/insolar/application/extractor"
 	"github.com/insolar/insolar/core/reply"
@@ -32,6 +34,10 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
+)
+
+const (
+	callTimeout int = 50 // seconds
 )
 
 var scheme = platformpolicy.NewPlatformCryptographyScheme()
@@ -154,6 +160,18 @@ func processError(err error, extraMsg string, resp *answer, insLog core.Logger) 
 	insLog.Error(errors.Wrapf(err, "[ CallHandler ] %s", extraMsg))
 }
 
+func sendResponse(resp *answer, response http.ResponseWriter, insLog core.Logger) {
+	res, err := json.MarshalIndent(resp, "", "    ")
+	if err != nil {
+		res = []byte(`{"error": "can't marshal answer to json'"}`)
+	}
+	response.Header().Add("Content-Type", "application/json")
+	_, err = response.Write(res)
+	if err != nil {
+		insLog.Errorf("Can't write response\n")
+	}
+}
+
 func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 	return func(response http.ResponseWriter, req *http.Request) {
 		traceID := utils.RandTraceID()
@@ -168,15 +186,11 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 
 				insLog.Info("[ callHandler ] Incoming request: %s", req.RequestURI)
 
+				var sended uint32 = 0
 				defer func() {
-					res, err := json.MarshalIndent(resp, "", "    ")
-					if err != nil {
-						res = []byte(`{"error": "can't marshal answer to json'"}`)
-					}
-					response.Header().Add("Content-Type", "application/json")
-					_, err = response.Write(res)
-					if err != nil {
-						insLog.Errorf("Can't write response\n")
+					if atomic.LoadUint32(&sended) == 0 {
+						atomic.StoreUint32(&sended, 1)
+						sendResponse(&resp, response, insLog)
 					}
 				}()
 
@@ -201,6 +215,12 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 				var result interface{}
 				utils.MeasureExecutionTime(ctx, "callHandler makeCall",
 					func() {
+						go func() {
+							time.Sleep(time.Duration(callTimeout) * time.Second)
+							atomic.StoreUint32(&sended, 1)
+							resp.Error = "Messagebus timeout exceeded"
+							sendResponse(&resp, response, insLog)
+						}()
 						result, err = ar.makeCall(ctx, params)
 					})
 				if err != nil {
