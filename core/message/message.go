@@ -49,6 +49,8 @@ func getEmptyMessage(mt core.MessageType) (core.Message, error) {
 		return &ValidationResults{}, nil
 	case core.TypePendingFinished:
 		return &PendingFinished{}, nil
+	case core.TypeStillExecuting:
+		return &StillExecuting{}, nil
 
 	// Ledger
 	case core.TypeGetCode:
@@ -199,6 +201,7 @@ func init() {
 	gob.Register(&ValidateCaseBind{})
 	gob.Register(&ValidationResults{})
 	gob.Register(&PendingFinished{})
+	gob.Register(&StillExecuting{})
 
 	// Ledger
 	gob.Register(&GetCode{})
