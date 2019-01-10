@@ -190,6 +190,15 @@ func (db *DB) Init(ctx context.Context) error {
 			return nil, err
 		}
 
+		err = db.SetReplicatedPulse(
+			ctx,
+			jetID,
+			lastPulse.Pulse.PulseNumber,
+		)
+		if err != nil {
+			return nil, err
+		}
+
 		genesisRef := core.NewRecordRef(*genesisID, *genesisID)
 		return genesisRef, db.set(ctx, prefixkey(scopeIDSystem, []byte{sysGenesis}), genesisRef[:])
 	}
@@ -676,6 +685,15 @@ func (db *DB) InitDBWithZeroJet(ctx context.Context) error {
 			jetID,
 			genesisID,
 			&index.ObjectLifeline{LatestState: genesisID, LatestStateApproved: genesisID},
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		err = db.SetReplicatedPulse(
+			ctx,
+			jetID,
+			lastPulse.Pulse.PulseNumber,
 		)
 		if err != nil {
 			return nil, err
