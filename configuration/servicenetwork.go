@@ -18,9 +18,12 @@ package configuration
 
 // ServiceNetwork is configuration for ServiceNetwork.
 type ServiceNetwork struct {
+	IsGenesis bool
 }
 
 // NewServiceNetwork creates a new ServiceNetwork configuration.
 func NewServiceNetwork() ServiceNetwork {
-	return ServiceNetwork{}
+	return ServiceNetwork{
+		IsGenesis: false,
+	}
 }

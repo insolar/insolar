@@ -182,7 +182,9 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "Failed to bootstrap network")
 	}
-	n.fakePulsar.Start(ctx, result.FirstPulseTime)
+	if !n.cfg.Service.IsGenesis {
+		n.fakePulsar.Start(ctx, result.FirstPulseTime)
+	}
 	logger.Info("Service network started")
 	return nil
 }

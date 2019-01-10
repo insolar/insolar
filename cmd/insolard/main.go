@@ -94,6 +94,7 @@ func main() {
 	}
 
 	cfg := &cfgHolder.Configuration
+	cfg.Service.IsGenesis = params.isGenesis
 	cfg.Metrics.Namespace = "insolard"
 
 	traceID := utils.RandTraceID()
