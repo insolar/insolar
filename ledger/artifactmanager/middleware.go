@@ -155,14 +155,15 @@ func (m *middleware) saveParcel(handler core.MessageHandler) core.MessageHandler
 
 func (m *middleware) checkHeavySync(handler core.MessageHandler) core.MessageHandler {
 	return func(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
-		jetID := jetFromContext(ctx)
-		replicated, err := m.db.GetReplicatedPulse(ctx, jetID)
-		if err != nil {
-			return nil, err
-		}
-		if parcel.Pulse()-replicated >= m.conf.LightChainLimit {
-			return nil, errors.New("failed to write data (waiting for heavy replication)")
-		}
+		// TODO: @andreyromancev. 10.01.2019. Uncomment to enable backpressure for writing requests.
+		// jetID := jetFromContext(ctx)
+		// replicated, err := m.db.GetReplicatedPulse(ctx, jetID)
+		// if err != nil {
+		// 	return nil, err
+		// }
+		// if parcel.Pulse()-replicated >= m.conf.LightChainLimit {
+		// 	return nil, errors.New("failed to write data (waiting for heavy replication)")
+		// }
 
 		return handler(ctx, parcel)
 	}
