@@ -70,6 +70,9 @@ func checkConfig(cfg *configuration.APIRunner) error {
 	if len(cfg.RPC) == 0 {
 		return errors.New("[ checkConfig ] RPC must exist")
 	}
+	if cfg.Timeout == 0 {
+		return errors.New("[ checkConfig ] Timeout must not be null")
+	}
 
 	return nil
 }

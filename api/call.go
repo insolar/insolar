@@ -36,10 +36,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-const (
-	callTimeout int = 50 // seconds
-)
-
 var scheme = platformpolicy.NewPlatformCryptographyScheme()
 
 // Request is a representation of request struct to api
@@ -216,7 +212,7 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 				utils.MeasureExecutionTime(ctx, "callHandler makeCall",
 					func() {
 						go func() {
-							time.Sleep(time.Duration(callTimeout) * time.Second)
+							time.Sleep(time.Duration(ar.cfg.Timeout) * time.Second)
 							atomic.StoreUint32(&sended, 1)
 							resp.Error = "Messagebus timeout exceeded"
 							sendResponse(&resp, response, insLog)
