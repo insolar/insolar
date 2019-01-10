@@ -88,7 +88,7 @@ func TmpLedger(t *testing.T, dir string, c core.Components) (*ledger.Ledger, fun
 		c.NodeNetwork = nodenetwork.NewNodeKeeper(nodenetwork.NewNode(core.RecordRef{}, core.StaticRoleUnknown, nil, "127.0.0.1:5432", ""))
 	}
 
-	handler := artifactmanager.NewMessageHandler(db, nil)
+	handler := artifactmanager.NewMessageHandler(db, &conf)
 	handler.PlatformCryptographyScheme = pcs
 	handler.JetCoordinator = jc
 
