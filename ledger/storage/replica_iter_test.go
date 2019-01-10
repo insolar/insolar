@@ -25,7 +25,6 @@ import (
 	"testing"
 
 	"github.com/dgraph-io/badger"
-	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -53,7 +52,7 @@ func Test_StoreKeyValues(t *testing.T) {
 	pulsescount := 3
 
 	func() {
-		db, cleaner := storagetest.TmpDB(ctx, t, storagetest.DisableBootstrap())
+		db, cleaner := storagetest.TmpDB(ctx, t)
 		defer cleaner()
 		for n := 0; n < pulsescount; n++ {
 			lastPulse := core.PulseNumber(pulseDelta(n))
@@ -84,7 +83,7 @@ func Test_StoreKeyValues(t *testing.T) {
 		gotidxs []key
 	)
 	func() {
-		db, cleaner := storagetest.TmpDB(ctx, t, storagetest.DisableBootstrap())
+		db, cleaner := storagetest.TmpDB(ctx, t)
 		defer cleaner()
 		err := db.StoreKeyValues(ctx, allKVs)
 		require.NoError(t, err)
@@ -98,19 +97,11 @@ func Test_StoreKeyValues(t *testing.T) {
 func Test_ReplicaIter_FirstPulse(t *testing.T) {
 	t.Parallel()
 	ctx := inslogger.TestContext(t)
-	db, cleaner := storagetest.TmpDB(ctx, t, storagetest.DisableBootstrap())
+	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
 
 	jetID := core.TODOJetID
 	addRecords(ctx, t, db, jetID, core.FirstPulseNumber)
-
-	err := db.AddPulse(ctx, *core.GenesisPulse)
-	require.NoError(t, err)
-	err = db.AddJets(ctx, jetID)
-	require.NoError(t, err)
-	err = db.SetDrop(ctx, jetID, &jet.JetDrop{})
-	require.NoError(t, err)
-
 	replicator := storage.NewReplicaIter(ctx, db, jetID, core.FirstPulseNumber, core.FirstPulseNumber+1, 100500)
 	var got []key
 	for i := 0; ; i++ {

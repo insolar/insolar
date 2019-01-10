@@ -52,7 +52,7 @@ func TmpLedger(t *testing.T, dir string, c core.Components) (*ledger.Ledger, fun
 	// Init subcomponents.
 	ctx := inslogger.TestContext(t)
 	conf := configuration.NewLedger()
-	db, dbcancel := storagetest.TmpDB(ctx, t, storagetest.Dir(dir), storagetest.ZeroJetBootstrap())
+	db, dbcancel := storagetest.TmpDB(ctx, t, storagetest.Dir(dir))
 	pulseStorage := storage.NewPulseStorage(db)
 
 	pulse, err := db.GetLatestPulse(ctx)
@@ -88,7 +88,7 @@ func TmpLedger(t *testing.T, dir string, c core.Components) (*ledger.Ledger, fun
 		c.NodeNetwork = nodenetwork.NewNodeKeeper(nodenetwork.NewNode(core.RecordRef{}, core.StaticRoleUnknown, nil, "", ""))
 	}
 
-	handler := artifactmanager.NewMessageHandler(db, nil)
+	handler := artifactmanager.NewMessageHandler(db, &conf)
 	handler.PlatformCryptographyScheme = pcs
 	handler.JetCoordinator = jc
 

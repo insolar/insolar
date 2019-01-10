@@ -253,23 +253,9 @@ func (mb *MessageBus) accuireMessagePoolItem() bool {
 
 func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Reply, error) {
 
-	pulse, err := mb.PulseStorage.Current(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ MessageBus ] Couldn't get current pulse number")
-	}
-
-	if msg.Pulse() == pulse.NextPulseNumber && mb.accuireMessagePoolItem() {
-		<-mb.NextPulseMessagePoolChan
-	}
-
-	pulse, err = mb.PulseStorage.Current(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ MessageBus ] Couldn't get current pulse number")
-	}
-
-	if msg.Pulse() != pulse.PulseNumber {
-		inslogger.FromContext(ctx).Error("[ MessageBus ] Incorrect message pulse")
-		return nil, fmt.Errorf("[ MessageBus ] Incorrect message pulse %d %d", msg.Pulse(), pulse.PulseNumber)
+	var err error
+	if err = mb.checkPulse(ctx, msg, false); err != nil {
+		return nil, errors.Wrap(err, "[ doDeliver ] error in checkPulse")
 	}
 
 	// We must check barrier just before exiting function
@@ -293,6 +279,34 @@ func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Repl
 	return resp, nil
 }
 
+func (mb *MessageBus) checkPulse(ctx context.Context, parcel core.Parcel, locked bool) error {
+	pulse, err := mb.PulseStorage.Current(ctx)
+	if err != nil {
+		return errors.Wrap(err, "[ checkPulse ] Couldn't get current pulse number")
+	}
+
+	if parcel.Pulse() == pulse.NextPulseNumber && mb.accuireMessagePoolItem() {
+		if locked {
+			mb.globalLock.RUnlock()
+		}
+		<-mb.NextPulseMessagePoolChan
+		if locked {
+			mb.globalLock.RLock()
+		}
+	}
+
+	pulse, err = mb.PulseStorage.Current(ctx)
+	if err != nil {
+		return errors.Wrap(err, "[ checkPulse ] Couldn't get current pulse number")
+	}
+
+	if parcel.Pulse() != pulse.PulseNumber {
+		inslogger.FromContext(ctx).Error("[ checkPulse ] Incorrect message pulse")
+		return fmt.Errorf("[ checkPulse ] Incorrect message pulse %d %d", parcel.Pulse(), pulse.PulseNumber)
+	}
+	return nil
+}
+
 // Deliver method calls LogicRunner.Execute on local host
 // this method is registered as RPC stub
 func (mb *MessageBus) deliver(ctx context.Context, args [][]byte) (result []byte, err error) {
@@ -309,6 +323,12 @@ func (mb *MessageBus) deliver(ctx context.Context, args [][]byte) (result []byte
 	inslogger.FromContext(ctx).Debugf("MessageBus.deliver after deserialize msg. Msg Type: %s", parcel.Type())
 
 	mb.globalLock.RLock()
+
+	if err = mb.checkPulse(ctx, parcel, true); err != nil {
+		mb.globalLock.RUnlock()
+		return nil, err
+	}
+
 	if err = mb.checkParcel(parcelCtx, parcel); err != nil {
 		mb.globalLock.RUnlock()
 		return nil, err
@@ -342,16 +362,17 @@ func (mb *MessageBus) checkParcel(ctx context.Context, parcel core.Parcel) error
 		}
 	}
 
-	if parcel.DelegationToken() != nil {
-		valid, err := mb.DelegationTokenFactory.Verify(parcel)
-		if err != nil {
-			return err
-		}
-		if !valid {
-			return errors.New("delegation token is not valid")
-		}
-		return nil
-	}
+	// FIXME: @andreyromancev. 09.01.2019. Implement verify method.
+	// if parcel.DelegationToken() != nil {
+	// 	valid, err := mb.DelegationTokenFactory.Verify(parcel)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	if !valid {
+	// 		return errors.New("delegation token is not valid")
+	// 	}
+	// 	return nil
+	// }
 
 	sendingObject, allowedSenderRole := parcel.AllowedSenderObjectAndRole()
 	if sendingObject == nil {
