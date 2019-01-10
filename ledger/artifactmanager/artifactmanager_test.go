@@ -74,7 +74,7 @@ func getTestData(t *testing.T) (
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
-	db, cleaner := storagetest.TmpDB(ctx, t, storagetest.ZeroJetBootstrap())
+	db, cleaner := storagetest.TmpDB(ctx, t)
 	pulseStorage := storage.NewPulseStorage(db)
 
 	pulse, err := db.GetLatestPulse(ctx)
@@ -90,7 +90,7 @@ func getTestData(t *testing.T) (
 		db:                         db,
 		replayHandlers:             map[core.MessageType]core.MessageHandler{},
 		PlatformCryptographyScheme: scheme,
-		conf: &configuration.Ledger{LightChainLimit: 3},
+		conf:                       &configuration.Ledger{LightChainLimit: 3},
 	}
 
 	recentStorageMock := recentstorage.NewRecentStorageMock(t)
@@ -728,7 +728,7 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 		db:                         db,
 		replayHandlers:             map[core.MessageType]core.MessageHandler{},
 		PlatformCryptographyScheme: scheme,
-		conf: &configuration.Ledger{LightChainLimit: 3},
+		conf:                       &configuration.Ledger{LightChainLimit: 3},
 	}
 
 	handler.Bus = mb
