@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
+	"github.com/pkg/errors"
 )
 
 type response struct {
@@ -40,31 +41,38 @@ func getResponse(body []byte) *response {
 	return res
 }
 
-func sendRequest(ctx context.Context, method string, params []interface{}, member memberInfo) []byte {
+func sendRequest(ctx context.Context, method string, params []interface{}, member memberInfo) ([]byte, error) {
 	reqCfg := &requester.RequestConfigJSON{
 		Params: params,
 		Method: method,
 	}
 
 	userCfg, err := requester.CreateUserConfig(member.ref, member.privateKey)
-	check("can not create user config:", err)
+	if err != nil {
+		errors.Wrap(err, "can not create user config")
+	}
 
 	body, err := requester.Send(ctx, apiurls.Next(), userCfg, reqCfg)
-	check("can not send request:", err)
+	if err != nil {
+		errors.Wrap(err, "can not send request")
+	}
 
-	return body
+	return body, nil
 }
 
-func transfer(ctx context.Context, amount uint, from memberInfo, to memberInfo) string {
+func transfer(ctx context.Context, amount uint, from memberInfo, to memberInfo) error {
 	params := []interface{}{amount, to.ref}
-	body := sendRequest(ctx, "Transfer", params, from)
+	body, err := sendRequest(ctx, "Transfer", params, from)
+	if err != nil {
+		return err
+	}
 	transferResponse := getResponse(body)
 
 	if transferResponse.Error != "" {
-		return transferResponse.Error
+		return errors.New(transferResponse.Error)
 	}
 
-	return "success"
+	return nil
 }
 
 func createMembers(concurrent int) ([]memberInfo, error) {
@@ -90,14 +98,18 @@ func createMembers(concurrent int) ([]memberInfo, error) {
 		var memberRef string
 
 		for {
-			body = sendRequest(ctx, "CreateMember", params, rootMember)
-			memberResponse := getResponse(body)
-			if memberResponse.Error == "" {
-				memberRef = memberResponse.Result.(string)
-				break
+			body, err = sendRequest(ctx, "CreateMember", params, rootMember)
+			if err != nil {
+				fmt.Println("Create member error", err.Error(), "retry")
+				time.Sleep(time.Second)
 			}
-			fmt.Println("Create member error", memberResponse.Error, "retry")
-			time.Sleep(time.Second)
+			memberResponse := getResponse(body)
+			if memberResponse.Error != "" {
+				fmt.Println("Create member error", memberResponse.Error, "retry")
+				time.Sleep(time.Second)
+			}
+			memberRef = memberResponse.Result.(string)
+			break
 		}
 
 		members = append(members, memberInfo{memberRef, string(memberPrivKeyStr)})
