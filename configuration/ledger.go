@@ -113,7 +113,7 @@ func NewLedger() Ledger {
 				Max:    2 * time.Second,
 				Factor: 2,
 			},
-			SplitThreshold: 10 * 1000 * 1000, // 10 megabytes.
+			SplitThreshold: 10 * 100, // 10 megabytes.
 		},
 
 		RecentStorage: RecentStorage{

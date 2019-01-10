@@ -385,7 +385,7 @@ type HotData struct {
 
 // AllowedSenderObjectAndRole implements interface method
 func (m *HotData) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
-	return &m.Jet, core.DynamicRoleLightExecutor
+	return nil, core.DynamicRoleUndefined
 }
 
 // DefaultRole returns role for this event

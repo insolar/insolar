@@ -26,6 +26,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/instrumentation/hack"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/configuration"
@@ -33,7 +34,6 @@ import (
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/core/utils"
-	"github.com/insolar/insolar/instrumentation/hack"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/metrics"
 )
@@ -267,7 +267,12 @@ func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Repl
 		return nil, errors.New("no handler for received message type")
 	}
 
-	ctx = hack.SetSkipValidation(ctx, true)
+	origin := mb.NodeNetwork.GetOrigin()
+	if msg.GetSender().Equal(origin.ID()) {
+		fmt.Println("msg.GetSender()", msg.GetSender())
+		fmt.Println("origin.ID()", origin.ID())
+		ctx = hack.SetSkipValidation(ctx, true)
+	}
 	// TODO: sergey.morozov 2018-12-21 there is potential race condition because of readBarrier. We must implement correct locking.
 	resp, err := handler(ctx, msg)
 	if err != nil {
@@ -374,25 +379,25 @@ func (mb *MessageBus) checkParcel(ctx context.Context, parcel core.Parcel) error
 	// 	return nil
 	// }
 
-	sendingObject, allowedSenderRole := parcel.AllowedSenderObjectAndRole()
-	if sendingObject == nil {
-		return nil
-	}
-
-	// TODO: temporary solution, this check should be removed after reimplementing token processing on VM side - @nordicdyno 19.Dec.2018
-	if allowedSenderRole.IsVirtualRole() {
-		return nil
-	}
-
-	validSender, err := mb.JetCoordinator.IsAuthorized(
-		ctx, allowedSenderRole, *sendingObject.Record(), parcel.Pulse(), sender,
-	)
-	if err != nil {
-		return err
-	}
-	if !validSender {
-		return errors.New("sender is not allowed to act on behalve of that object")
-	}
+	// sendingObject, allowedSenderRole := parcel.AllowedSenderObjectAndRole()
+	// if sendingObject == nil {
+	// 	return nil
+	// }
+	//
+	// // TODO: temporary solution, this check should be removed after reimplementing token processing on VM side - @nordicdyno 19.Dec.2018
+	// if allowedSenderRole.IsVirtualRole() {
+	// 	return nil
+	// }
+	//
+	// validSender, err := mb.JetCoordinator.IsAuthorized(
+	// 	ctx, allowedSenderRole, *sendingObject.Record(), parcel.Pulse(), sender,
+	// )
+	// if err != nil {
+	// 	return err
+	// }
+	// if !validSender {
+	// 	return errors.New("sender is not allowed to act on behalve of that object")
+	// }
 	return nil
 }
 

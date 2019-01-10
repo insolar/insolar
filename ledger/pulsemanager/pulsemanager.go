@@ -18,11 +18,9 @@ package pulsemanager
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
-
-	"github.com/pkg/errors"
-	"golang.org/x/sync/errgroup"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
@@ -34,6 +32,8 @@ import (
 	"github.com/insolar/insolar/ledger/storage/index"
 	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/record"
+	"github.com/pkg/errors"
+	"golang.org/x/sync/errgroup"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/pulsemanager.ActiveListSwapper -o ../../testutils -s _mock.go
@@ -107,18 +107,53 @@ func (m *PulseManager) processEndPulse(
 	prevPulseNumber core.PulseNumber,
 	currentPulse, newPulse *core.Pulse,
 ) error {
+	// TODO: @andreyromancev. 09.01.2019. Remove after multijet works properly.
+	// err := m.db.UpdateJetTree(
+	// 	ctx,
+	// 	currentPulse.PulseNumber,
+	// 	true,
+	// 	*jet.NewID(2, []byte{1 << 7}), // 10
+	// 	*jet.NewID(2, []byte{1 << 6}), // 01
+	// )
+	// if err != nil {
+	// 	fmt.Println("handleHotRecords: UpdateJetTree by andreyromancev with err, ", err)
+	// 	return err
+	// }
+	// err = m.db.AddJets(ctx, *jet.NewID(2, []byte{1 << 7}), *jet.NewID(2, []byte{1 << 6}))
+	// if err != nil {
+	// 	return err
+	// }
+
+	fmt.Println("processEndPulse start")
 	err := m.db.CloneJetTree(ctx, currentPulse.PulseNumber, newPulse.PulseNumber)
 	if err != nil {
+		fmt.Println("processEndPulse, err in CloneJetTree", err)
 		return errors.Wrap(err, "failed to clone jet tree into a new pulse")
 	}
 
 	jetIDs, err := m.db.GetJets(ctx)
 	if err != nil {
+		fmt.Println("processEndPulse, err in GetJets", err)
 		return errors.Wrap(err, "can't get jets from storage")
 	}
+
+	fmt.Println("Total jets: ", jetIDs)
+
 	var g errgroup.Group
 	for jetID := range jetIDs {
 		jetID := jetID
+
+		executor, err := m.JetCoordinator.LightExecutorForJet(ctx, jetID, currentPulse.PulseNumber)
+		if err != nil {
+			fmt.Println("processEndPulse, cant get executor")
+			return err
+		}
+		if *executor != m.JetCoordinator.Me() {
+			fmt.Printf("processEndPulse, executor was not me (%s), but it was %s", m.JetCoordinator.Me(), executor)
+			return nil
+		}
+
+		fmt.Printf("processEndPulse, jetID - %v, pulse - %v", jetID, currentPulse.PulseNumber)
 		g.Go(func() error {
 			drop, dropSerialized, _, err := m.createDrop(ctx, jetID, prevPulseNumber, currentPulse.PulseNumber)
 			if err != nil {
@@ -134,9 +169,15 @@ func (m *PulseManager) processEndPulse(
 			inslogger.FromContext(ctx).Debugf("[processEndPulse] after getExecutorHotData - %v", time.Now())
 
 			inslogger.FromContext(ctx).Debugf("[processEndPulse] before sendExecutorData - %v", time.Now())
-			sendError := m.sendExecutorData(ctx, currentPulse, newPulse, jetID, msg)
-			if sendError != nil {
+
+			nextExecutor, err := m.JetCoordinator.LightExecutorForJet(ctx, jetID, newPulse.PulseNumber)
+			if err != nil {
 				return err
+			}
+			sendError := m.sendExecutorData(ctx, currentPulse, newPulse, jetID, msg, nextExecutor)
+			fmt.Println("processEndPulse, jetID - (in message)", jetID, msg.DefaultTarget())
+			if sendError != nil {
+				return sendError
 			}
 			inslogger.FromContext(ctx).Debugf("[processEndPulse] after sendExecutorData - %v", time.Now())
 
@@ -172,9 +213,9 @@ func (m *PulseManager) processEndPulse(
 			)
 			return nil
 		}
-		if _, err := m.db.RemoveJetIndexesUntil(ctx, jetID, untilPN); err != nil {
-			return err
-		}
+		// if _, err := m.db.RemoveJetIndexesUntil(ctx, jetID, untilPN); err != nil {
+		// 	return err
+		// }
 	}
 	return nil
 }
@@ -221,6 +262,7 @@ func (m *PulseManager) createDrop(
 ) {
 	prevDrop, err := m.db.GetDrop(ctx, jetID, prevPulse)
 	if err != nil {
+		inslogger.FromContext(ctx).Debugf("[ createDrop ] prevPulse = %s", prevPulse)
 		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't GetDrop")
 	}
 	drop, messages, dropSize, err := m.db.CreateDrop(ctx, jetID, currentPulse, prevDrop.Hash)
@@ -350,6 +392,7 @@ func (m *PulseManager) sendExecutorData(
 	currentPulse, newPulse *core.Pulse,
 	jetID core.RecordID,
 	msg *message.HotData,
+	receiver *core.RecordRef,
 ) error {
 	// shouldSplit := func() bool {
 	// 	if len(msg.JetDropSizeHistory) < m.options.dropHistorySize {
@@ -365,7 +408,9 @@ func (m *PulseManager) sendExecutorData(
 
 	// FIXME: enable split
 	// if shouldSplit() {
-	if false {
+	if true {
+		fmt.Println("SPLIT HAPPENED")
+		// if false {
 		left, right, err := m.db.SplitJetTree(
 			ctx,
 			currentPulse.PulseNumber,
@@ -375,10 +420,10 @@ func (m *PulseManager) sendExecutorData(
 		if err != nil {
 			return errors.Wrap(err, "failed to split jet tree")
 		}
-		err = m.db.AddJets(ctx, *left, *right)
-		if err != nil {
-			return errors.Wrap(err, "failed to add jets")
-		}
+		// err = m.db.AddJets(ctx, *left, *right)
+		// if err != nil {
+		// 	return errors.Wrap(err, "failed to add jets")
+		// }
 		leftMsg := *msg
 		leftMsg.Jet = *core.NewRecordRef(core.DomainID, *left)
 		rightMsg := *msg
@@ -394,7 +439,7 @@ func (m *PulseManager) sendExecutorData(
 	} else {
 		msg.Jet = *core.NewRecordRef(core.DomainID, jetID)
 		inslogger.FromContext(ctx).Debugf("[sendExecutorData] before m.Bus.Send(ctx, msg, nil) - %v", time.Now())
-		_, err := m.Bus.Send(ctx, msg, nil)
+		_, err := m.Bus.Send(ctx, msg, &core.MessageSendOptions{Receiver: receiver})
 		if err != nil {
 			return errors.Wrap(err, "failed to send executor data")
 		}
@@ -452,11 +497,6 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 	m.PulseStorage.Set(&newPulse)
 	m.GIL.Release(ctx)
 
-	err = m.Bus.OnPulse(ctx, newPulse)
-	if err != nil {
-		inslogger.FromContext(ctx).Error(errors.Wrap(err, "MessageBus OnPulse() returns error"))
-	}
-
 	if !persist {
 		return nil
 	}
@@ -476,6 +516,11 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 			}
 			go m.sendTreeToHeavy(ctx, storagePulse.Pulse.PulseNumber)
 		}
+	}
+
+	err = m.Bus.OnPulse(ctx, newPulse)
+	if err != nil {
+		inslogger.FromContext(ctx).Error(errors.Wrap(err, "MessageBus OnPulse() returns error"))
 	}
 
 	return m.LR.OnPulse(ctx, newPulse)

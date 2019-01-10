@@ -19,6 +19,7 @@ package storage
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"sync"
 
 	"github.com/dgraph-io/badger"
@@ -133,6 +134,8 @@ func (db *DB) CreateDrop(ctx context.Context, jetID core.RecordID, pulse core.Pu
 
 // SetDrop saves provided JetDrop in db.
 func (db *DB) SetDrop(ctx context.Context, jetID core.RecordID, drop *jet.JetDrop) error {
+	fmt.Printf("SetDrop for jet: %v, pulse: %v", jetID, drop.Pulse)
+
 	k := prefixkey(scopeIDJetDrop, jetID[:], drop.Pulse.Bytes())
 
 	_, err := db.get(ctx, k)
@@ -198,7 +201,10 @@ func (db *DB) getJetTree(ctx context.Context, pulse core.PulseNumber) (*jet.Tree
 	k := prefixkey(scopeIDSystem, []byte{sysJetTree}, pulse.Bytes())
 	buff, err := db.get(ctx, k)
 	if err == ErrNotFound {
-		return jet.NewTree(), nil
+		fmt.Println("NewTree was created with pulse", pulse)
+		tree := jet.NewTree()
+		err := db.set(ctx, k, tree.Bytes())
+		return tree, err
 	}
 	if err != nil {
 		return nil, err

@@ -18,6 +18,7 @@ package artifactmanager
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"github.com/insolar/insolar/configuration"
@@ -102,6 +103,7 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 		if msg.DefaultTarget().Record().Pulse() == core.PulseNumberJet {
 			jetID = *msg.DefaultTarget().Record()
 		} else {
+			fmt.Println("checkJet, parcel.Pulse() - ", parcel.Pulse())
 			j, err := m.fetchJet(ctx, *msg.DefaultTarget().Record(), parcel.Pulse(), fetchJetReties)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to fetch jet tree")
@@ -144,6 +146,7 @@ func (m *middleware) saveParcel(handler core.MessageHandler) core.MessageHandler
 		if err != nil {
 			return nil, err
 		}
+		fmt.Println("saveParcel, pulse - ", pulse.Pulse.PulseNumber)
 		err = m.db.SetMessage(ctx, jetID, pulse.Pulse.PulseNumber, parcel)
 		if err != nil {
 			return nil, err
@@ -212,7 +215,7 @@ func (m *middleware) fetchJet(
 	// TODO: check if the same executor again or the same jet again. INS-1041
 
 	// Update local tree.
-	err = m.db.UpdateJetTree(ctx, pulse, true, r.ID)
+	err = m.db.UpdateJetTree(ctx, pulse, r.Actual, r.ID)
 	if err != nil {
 		return nil, err
 	}

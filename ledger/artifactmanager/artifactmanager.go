@@ -139,7 +139,7 @@ func (m *LedgerArtifactManager) GetCode(
 	}
 
 	utils.MeasureExecutionTime(ctx, "artifactmanager.GetCode m.bus(ctx).Send", func() {
-		genericReact, err = sendAndRetryJet(ctx, m.bus(ctx), m.db, &message.GetCode{Code: code}, *currentPulse, jetMissRetryCount)
+		genericReact, err = sendAndFollowRedirect(ctx, m.bus(ctx), m.db, &message.GetCode{Code: code}, *currentPulse)
 	})
 	if err != nil {
 		return nil, err

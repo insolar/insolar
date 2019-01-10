@@ -19,11 +19,11 @@ package artifactmanager
 import (
 	"bytes"
 	"context"
+	"fmt"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage/heavy"
-	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/configuration"
@@ -211,9 +211,11 @@ func (h *MessageHandler) handleGetObject(
 		}
 		// Add requested object to recent.
 		h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Head.Record())
+		fmt.Printf("redirect because index not found. jet: %v, to: %v \n", jetID.JetIDString(), heavy)
 		return reply.NewGetObjectRedirectReply(h.DelegationTokenFactory, parcel, heavy, msg.State)
 	}
 	if err != nil {
+		fmt.Println("handleGetObject: failed to fetch object index, error - ", err)
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
 	// Add requested object to recent.
@@ -242,6 +244,7 @@ func (h *MessageHandler) handleGetObject(
 		if err != nil {
 			return nil, err
 		}
+		fmt.Printf("redirect because index not found jet: %v, to: %v \n", jetID.JetIDString(), node)
 		return reply.NewGetObjectRedirectReply(h.DelegationTokenFactory, parcel, node, stateID)
 	}
 	if err != nil {
@@ -325,6 +328,7 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel core.Parc
 			return nil, err
 		}
 	} else if err != nil {
+		fmt.Println("handleGetDelegate: failed to fetch object index, error - ", err)
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
 
@@ -361,6 +365,7 @@ func (h *MessageHandler) handleGetChildren(
 		return reply.NewGetChildrenRedirect(h.DelegationTokenFactory, parcel, heavy)
 	}
 	if err != nil {
+		fmt.Println("handleGetChildren: failed to fetch object index, error - ", err)
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
 	h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Parent.Record())
@@ -436,15 +441,16 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 	var idx *index.ObjectLifeline
 	err := h.db.Update(ctx, func(tx *storage.TransactionManager) error {
 		var err error
-		inslog.Debugf("Get index for: %v, jet: %v", msg.Object.Record(), jetID)
+		inslog.Debugf("Get index for: %v, jet: %v", msg.Object.Record(), jetID.String())
 		idx, err = tx.GetObjectIndex(ctx, jetID, msg.Object.Record(), true)
 		// No index on our node.
 		if err == storage.ErrNotFound {
 			if state.State() == record.StateActivation {
 				// We are activating the object. There is no index for it anywhere.
+				fmt.Println("We are activating the object")
 				idx = &index.ObjectLifeline{State: record.StateUndefined}
 			} else {
-				inslog.Debugf("Not found index for: %v, jet: %v", msg.Object.Record(), jetID)
+				inslog.Debugf("Not found index for: %v, jet: %v", msg.Object.Record(), jetID.String())
 				// We are updating object. Index should be on the heavy executor.
 				heavy, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
 				if err != nil {
@@ -461,8 +467,12 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 		if err = validateState(idx.State, state.State()); err != nil {
 			return err
 		}
+		fmt.Println("handleUpdateObject: idx.LatestState", idx.LatestState, msg.Object.Record())
 		// Index exists and latest record id does not match (preserving chain consistency).
 		if idx.LatestState != nil && !state.PrevStateID().Equal(idx.LatestState) {
+			fmt.Println("handleUpdateObject: jetID", jetID)
+			fmt.Println("handleUpdateObject: state.PrevStateID()", state.PrevStateID())
+			fmt.Println("handleUpdateObject: ")
 			return errors.New("invalid state record")
 		}
 
@@ -477,7 +487,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 		if state.State() == record.StateActivation {
 			idx.Parent = state.(*record.ObjectActivateRecord).Parent
 		}
-		inslog.Debugf("Save index for: %v, jet: %v", msg.Object.Record(), jetID)
+		inslog.Debugf("Save index for: %v, jet: %v, latestState: %s", msg.Object.Record(), jetID, idx.LatestState)
 		return tx.SetObjectIndex(ctx, jetID, msg.Object.Record(), idx)
 	})
 	if err != nil {
@@ -568,7 +578,7 @@ func (h *MessageHandler) handleJetDrop(ctx context.Context, parcel core.Parcel) 
 			if err != nil {
 				return nil, err
 			}
-
+			fmt.Println("Hi, love. Type - ", parcel.Message().Type())
 			handler, ok := h.replayHandlers[parcel.Message().Type()]
 			if !ok {
 				return nil, errors.New("unknown message type")
@@ -666,8 +676,11 @@ func (h *MessageHandler) handleGetObjectIndex(ctx context.Context, parcel core.P
 	msg := parcel.Message().(*message.GetObjectIndex)
 	jetID := jetFromContext(ctx)
 
+	fmt.Println("handleGetObjectIndex: jetID", jetID)
+	fmt.Println("handleGetObjectIndex: msg.Object.Record()", msg.Object.Record())
 	idx, err := h.db.GetObjectIndex(ctx, jetID, msg.Object.Record(), true)
 	if err != nil {
+		fmt.Println("handleGetObjectIndex: failed to fetch object index, error - ", err)
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
 
@@ -737,6 +750,7 @@ func (h *MessageHandler) saveIndexFromHeavy(
 		Receiver: heavy,
 	})
 	if err != nil {
+		fmt.Println("saveIndexFromHeavy: failed to fetch object index, Send error - ", err)
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
 	rep, ok := genericReply.(*reply.ObjectIndex)
@@ -745,27 +759,35 @@ func (h *MessageHandler) saveIndexFromHeavy(
 	}
 	idx, err := index.DecodeObjectLifeline(rep.Index)
 	if err != nil {
+		fmt.Println("saveIndexFromHeavy: failed to fetch object index DecodeObjectLifeline, error - ", err)
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
 	err = s.SetObjectIndex(ctx, jetID, obj.Record(), idx)
 	if err != nil {
+		fmt.Println("saveIndexFromHeavy: failed to fetch object index SetObjectIndex, error - ", err)
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
 	return idx, nil
 }
 
 func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
+	fmt.Println("handleHotRecords starts")
 	inslog := inslogger.FromContext(ctx)
-	if hack.SkipValidation(ctx) {
-		return &reply.OK{}, nil
-	}
+	// if hack.SkipValidation(ctx) {
+	// 	fmt.Println("handleHotRecords: SkipValidation")
+	// 	return &reply.OK{}, nil
+	// }
 
 	msg := parcel.Message().(*message.HotData)
 	// FIXME: check split signatures.
 	jetID := *msg.Jet.Record()
 
 	err := h.db.SetDrop(ctx, jetID, &msg.Drop)
+	if err == storage.ErrOverride {
+		err = nil
+	}
 	if err != nil {
+		fmt.Println("handleHotRecords: SetDrop with err, ", err)
 		return nil, errors.Wrap(err, "[ handleHotRecords ] Can't SetDrop")
 	}
 	err = h.db.UpdateJetTree(
@@ -775,25 +797,38 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 		jetID,
 	)
 	if err != nil {
+		fmt.Println("handleHotRecords: UpdateJetTree with err, ", err)
+		return nil, err
+	}
+	err = h.db.AddJets(ctx, jetID)
+	if err != nil {
 		return nil, err
 	}
 
 	// TODO: @andreyromancev. 09.01.2019. Remove after multijet works properly.
-	err = h.db.UpdateJetTree(
-		ctx,
-		parcel.Pulse(),
-		true,
-		*jet.NewID(2, []byte{1 << 7}), // 10
-		*jet.NewID(2, []byte{1 << 6}), // 01
-	)
-	if err != nil {
-		return nil, err
-	}
+	// err = h.db.UpdateJetTree(
+	// 	ctx,
+	// 	parcel.Pulse(),
+	// 	true,
+	// 	*jet.NewID(2, []byte{1 << 7}), // 10
+	// 	*jet.NewID(2, []byte{1 << 6}), // 01
+	// )
+	// if err != nil {
+	// 	fmt.Println("handleHotRecords: UpdateJetTree by andreyromancev with err, ", err)
+	// 	return nil, err
+	// }
+	// err = h.db.AddJets(ctx, *jet.NewID(2, []byte{1 << 7}), *jet.NewID(2, []byte{1 << 6}))
+	// if err != nil {
+	// 	return nil, err
+	// }
 
 	recentStorage := h.RecentStorageProvider.GetStorage(jetID)
 	for objID, requests := range msg.PendingRequests {
 		for reqID, request := range requests {
 			newID, err := h.db.SetRecord(ctx, jetID, reqID.Pulse(), record.DeserializeRecord(request))
+			if err == storage.ErrOverride {
+				continue
+			}
 			if err != nil {
 				inslog.Error(err)
 				continue
@@ -810,6 +845,8 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 		}
 	}
 
+	fmt.Println("write indexes for jet ", jetID.JetIDString())
+	fmt.Println("handleHotRecords, love, - msg.RecentObjects", msg.RecentObjects)
 	for id, meta := range msg.RecentObjects {
 		decodedIndex, err := index.DecodeObjectLifeline(meta.Index)
 		if err != nil {
@@ -817,6 +854,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 			continue
 		}
 
+		fmt.Println("handleHotRecords, SetObjectIndex, id - ", id.String())
 		err = h.db.SetObjectIndex(ctx, jetID, &id, decodedIndex)
 		if err != nil {
 			inslog.Error(err)
@@ -827,16 +865,12 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 		recentStorage.AddObjectWithTLL(id, meta.TTL)
 	}
 
-	err = h.db.AddJets(ctx, jetID)
-	if err != nil {
-		return nil, err
-	}
-
 	err = h.db.SetDropSizeHistory(ctx, jetID, msg.JetDropSizeHistory)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ handleHotRecords ] Can't SetDropSizeHistory")
 	}
 
+	fmt.Println("handleHotRecords was done fine, love")
 	return &reply.OK{}, nil
 }
 

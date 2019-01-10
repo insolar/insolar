@@ -18,6 +18,7 @@ package storage
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/core"
@@ -167,6 +168,7 @@ func (m *TransactionManager) GetObjectIndex(
 		m.lockOnID(id)
 	}
 	k := prefixkey(scopeIDLifeline, jet[:], id[:])
+	fmt.Println("GetObjectIndex: key - ", k)
 	buf, err := m.get(ctx, k)
 	if err != nil {
 		return nil, err
@@ -182,6 +184,7 @@ func (m *TransactionManager) SetObjectIndex(
 	idx *index.ObjectLifeline,
 ) error {
 	k := prefixkey(scopeIDLifeline, jet[:], id[:])
+	fmt.Println("SetObjectIndex: key - ", k)
 	if idx.Delegates == nil {
 		idx.Delegates = map[core.RecordRef]core.RecordRef{}
 	}
@@ -200,13 +203,14 @@ func (m *TransactionManager) RemoveObjectIndex(
 ) error {
 	m.lockOnID(ref)
 	k := prefixkey(scopeIDLifeline, jet[:], ref[:])
+	fmt.Println("RemoveObjectIndex: key - ", k)
 	return m.remove(ctx, k)
 }
 
 // set stores value by key.
 func (m *TransactionManager) set(ctx context.Context, key, value []byte) error {
 	debugf(ctx, "set key %v", bytes2hex(key))
-
+	fmt.Println("set: key - ", key)
 	m.txupdates[string(key)] = keyval{k: key, v: value}
 	return nil
 }
