@@ -909,6 +909,10 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 			es.Unlock()
 		}
 
+		if state.ExecutionState == nil && state.Validation == nil && state.Consensus == nil {
+			delete(lr.state, ref)
+		}
+
 		state.Unlock()
 	}
 
