@@ -21,13 +21,13 @@ import (
 	"crypto"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/pkg/errors"
 	"github.com/spf13/pflag"
 )
 
@@ -124,12 +124,29 @@ func fetchCertificate(ref core.RecordRef) []byte {
 	return cert
 }
 
-func writeKeys(crypto.PublicKey, crypto.PrivateKey) error {
-	return errors.New("not implemented")
+func writeKeys(pubKey crypto.PublicKey, privKey crypto.PrivateKey) {
+	privKeyStr, err := ks.ExportPrivateKeyPEM(privKey)
+	checkError("Failed to deserialize private key:", err)
+
+	pubKeyStr, err := ks.ExportPublicKeyPEM(pubKey)
+	checkError("Failed to deserialize public key:", err)
+
+	result, err := json.MarshalIndent(map[string]interface{}{
+		"private_key": string(privKeyStr),
+		"public_key":  string(pubKeyStr),
+	}, "", "    ")
+	checkError("Failed to serialize file with private/public keys:", err)
+	f, err := openFile(keysFileOut)
+	checkError("Failed to open file with private/public keys:", err)
+	_, err = f.Write([]byte(result))
+	checkError("Failed to write file with private/public keys:", err)
 }
 
-func writeCertificate(cert []byte) error {
-	return errors.New("not implemented")
+func writeCertificate(cert []byte) {
+	f, err := openFile(certFileOut)
+	checkError("Failed to open file with certificate:", err)
+	_, err = f.Write(cert)
+	checkError("Failed to write file with certificate:", err)
 }
 
 func checkError(msg string, err error) {
@@ -137,6 +154,10 @@ func checkError(msg string, err error) {
 		fmt.Println(msg, err)
 		os.Exit(1)
 	}
+}
+
+func openFile(path string) (io.Writer, error) {
+	return os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 }
 
 func main() {
@@ -151,11 +172,7 @@ func main() {
 	ref := registerNode(pub, staticRole)
 	cert := fetchCertificate(ref)
 
-	err := writeKeys(pub, priv)
-	checkError("Failed to write file with public/private keys:", err)
-
-	err = writeCertificate(cert)
-	checkError("Failed to write file with node certificate:", err)
-
+	writeKeys(pub, priv)
+	writeCertificate(cert)
 	fmt.Println("Successfully generated files with keys and certificate")
 }
