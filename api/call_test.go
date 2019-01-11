@@ -44,8 +44,8 @@ type TimeoutSuite struct {
 }
 
 type APIresp struct {
-	Result *string
-	Error  *string
+	Result string
+	Error  string
 }
 
 func (suite *TimeoutSuite) TestRunner_callHandler() {
@@ -65,8 +65,8 @@ func (suite *TimeoutSuite) TestRunner_callHandler() {
 	var result APIresp
 	err = json.Unmarshal(resp, &result)
 	suite.NoError(err)
-	suite.Nil(result.Error)
-	suite.Equal("OK", *result.Result)
+	suite.Equal("", result.Error)
+	suite.Equal("OK", result.Result)
 }
 
 func (suite *TimeoutSuite) TestRunner_callHandlerTimeout() {
@@ -87,8 +87,8 @@ func (suite *TimeoutSuite) TestRunner_callHandlerTimeout() {
 	var result APIresp
 	err = json.Unmarshal(resp, &result)
 	suite.NoError(err)
-	suite.Equal("Messagebus timeout exceeded", *result.Error)
-	suite.Nil(result.Result)
+	suite.Equal("Messagebus timeout exceeded", result.Error)
+	suite.Equal("", result.Result)
 }
 
 func TestTimeoutSuite(t *testing.T) {
@@ -135,7 +135,7 @@ func TestTimeoutSuite(t *testing.T) {
 			}, nil
 		default:
 			if timeoutSuite.delay {
-				time.Sleep(time.Second * 10)
+				time.Sleep(time.Second * 20)
 			}
 			var result = "OK"
 			var contractErr *foundation.Error
