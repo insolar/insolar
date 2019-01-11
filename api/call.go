@@ -202,14 +202,14 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 				var result interface{}
 				utils.MeasureExecutionTime(ctx, "callHandler makeCall",
 					func() {
-						c1 := make(chan interface{}, 1)
+						ch := make(chan interface{}, 1)
 						go func() {
 							result, err = ar.makeCall(ctx, params)
-							c1 <- nil
+							ch <- nil
 						}()
 						select {
 
-						case <-c1:
+						case <-ch:
 							if err != nil {
 								processError(err, "Can't makeCall", &resp, insLog)
 								return
