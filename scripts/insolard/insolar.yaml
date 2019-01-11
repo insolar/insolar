@@ -35,7 +35,7 @@ logicrunner:
     runnerlisten: 127.0.0.1:18181
 pulsar:
   type: tcp
-  listenaddress: 0.0.0.0:8090
+  listenaddress: 127.0.0.1:8090
 genesis:
   rootkeys: "scripts/insolard/configs/root_member_keys.json"
   rootbalance: 10000

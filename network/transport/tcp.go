@@ -20,6 +20,9 @@ import (
 	"context"
 	"io"
 	"net"
+	"os"
+	"sync/atomic"
+	"syscall"
 	"time"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -35,17 +38,14 @@ type tcpTransport struct {
 
 	pool     pool.ConnectionPool
 	listener net.Listener
+	addr     string
+	stopped  uint32
 }
 
 func newTCPTransport(addr string, proxy relay.Proxy, publicAddress string) (*tcpTransport, error) {
-	listener, err := net.Listen("tcp", addr)
-	if err != nil {
-		return nil, err
-	}
-
 	transport := &tcpTransport{
 		baseTransport: newBaseTransport(proxy, publicAddress),
-		listener:      listener,
+		addr:          addr,
 		pool:          pool.NewConnectionPool(&tcpConnectionFactory{}),
 	}
 
@@ -71,7 +71,41 @@ func (t *tcpTransport) send(address string, data []byte) error {
 	logger.Debug("[ send ] len = ", len(data))
 
 	_, err = conn.Write(data)
+
+	if err != nil {
+		// All this to check is error EPIPE
+		if netErr, ok := err.(*net.OpError); ok {
+			switch realNetErr := netErr.Err.(type) {
+			case *os.SyscallError:
+				if realNetErr.Err == syscall.EPIPE {
+					t.pool.CloseConnection(ctx, addr)
+					conn, err = t.pool.GetConnection(ctx, addr)
+					if err != nil {
+						return errors.Wrap(err, "[ send ] Failed to get connection")
+					}
+					_, err = conn.Write(data)
+				}
+			}
+		}
+	}
+
 	return errors.Wrap(err, "[ send ] Failed to write data")
+}
+
+func (t *tcpTransport) prepareListen() {
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
+
+	t.stopped = 0
+	t.disconnectStarted = make(chan bool, 1)
+	t.disconnectFinished = make(chan bool, 1)
+	listener, err := net.Listen("tcp", t.addr)
+	if err != nil {
+		log.Error("[ prepareListen ]", err.Error())
+		return
+	}
+
+	t.listener = listener
 }
 
 // Start starts networking.
@@ -101,19 +135,39 @@ func (t *tcpTransport) Stop() {
 	log.Info("[ Stop ] Stop TCP transport")
 	t.prepareDisconnect()
 
+	t.stopped = 1
 	utils.CloseVerbose(t.listener)
-
 	t.pool.Reset()
 }
 
 func (t *tcpTransport) handleAcceptedConnection(conn net.Conn) {
+	defer utils.CloseVerbose(conn)
+	closed := false
+
 	for {
+		if atomic.LoadUint32(&t.stopped) == 1 && closed {
+			closed = true
+			log.Debugf("[ handleAcceptedConnection ] Stop handling connection: %s", conn.RemoteAddr().String())
+		}
+
+		err := conn.SetReadDeadline(time.Now().Add(1000 * time.Millisecond))
+		if err != nil {
+			log.Errorf("[ handleAcceptedConnection ] Failed to set read deadline", err.Error())
+		}
+
 		msg, err := t.serializer.DeserializePacket(conn)
 
 		if err != nil {
 			if err == io.EOF {
 				log.Warn("[ handleAcceptedConnection ] Connection closed by peer")
 				return
+			}
+
+			if netErr, ok := err.(*net.OpError); ok && netErr.Timeout() {
+				if closed {
+					return
+				}
+				continue
 			}
 
 			log.Error("[ handleAcceptedConnection ] Failed to deserialize packet: ", err.Error())
@@ -144,12 +198,6 @@ func (*tcpConnectionFactory) CreateConnection(ctx context.Context, address net.A
 	err = conn.SetKeepAlive(true)
 	if err != nil {
 		logger.Error("[ createConnection ] Failed to set keep alive")
-	}
-
-	// We don't wanna read from this connection
-	err = conn.SetReadDeadline(time.Now())
-	if err != nil {
-		logger.Errorln("[ createConnection ] Failed to set connection read deadline: ", err.Error())
 	}
 
 	err = conn.SetNoDelay(true)

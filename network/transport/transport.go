@@ -46,7 +46,7 @@ type Transport interface {
 	// Stop gracefully stops listening.
 	Stop()
 
-	// Close disposing all transport underlying structures after stop are called.
+	// Close disposing all transport underlying structures after stopped are called.
 	Close()
 
 	// Packets returns channel to listen incoming packets.

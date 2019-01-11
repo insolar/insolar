@@ -23,6 +23,7 @@ import (
 
 type ConnectionPool interface {
 	GetConnection(ctx context.Context, address net.Addr) (net.Conn, error)
+	CloseConnection(ctx context.Context, address net.Addr)
 	Reset()
 }
 

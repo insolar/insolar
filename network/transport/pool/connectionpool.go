@@ -48,13 +48,30 @@ func (cp *connectionPool) GetConnection(ctx context.Context, address net.Addr) (
 
 	logger.Debugf("[ GetConnection ] Finding connection to %s in pool: %s", address, ok)
 
-	if ok && !connectionClosedByPeer(ctx, conn) {
+	if ok {
 		return conn, nil
 	}
 
 	logger.Debugf("[ GetConnection ] Missing open connection to %s in pool ", address)
 
 	return cp.getOrCreateConnection(ctx, address)
+}
+
+func (cp *connectionPool) CloseConnection(ctx context.Context, address net.Addr) {
+	cp.mutex.Lock()
+	defer cp.mutex.Unlock()
+
+	logger := inslogger.FromContext(ctx)
+
+	conn, ok := cp.unsafeConnectionsHolder.Get(address)
+	logger.Debugf("[ CloseConnection ] Finding connection to %s in pool: %s", address, ok)
+
+	if ok {
+		utils.CloseVerbose(conn)
+
+		logger.Debugf("[ CloseConnection ] Delete connection to %s from pool: %s", address)
+		cp.unsafeConnectionsHolder.Delete(address)
+	}
 }
 
 func (cp *connectionPool) getConnection(address net.Addr) (net.Conn, bool) {
@@ -74,15 +91,7 @@ func (cp *connectionPool) getOrCreateConnection(ctx context.Context, address net
 	logger.Debugf("[ getOrCreateConnection ] Finding connection to %s in pool: %s", address, ok)
 
 	if ok {
-		if !connectionClosedByPeer(ctx, conn) {
-			return conn, nil
-		}
-
-		logger.Debugf("[ getOrCreateConnection ] Connection to %s closed by peer, closing it on our side", address)
-		utils.CloseVerbose(conn)
-
-		logger.Debugf("[ getOrCreateConnection ] Delete connection to %s from pool: %s", address)
-		cp.unsafeConnectionsHolder.Delete(address)
+		return conn, nil
 	}
 
 	logger.Debugf("[ getOrCreateConnection ] Failed to retrieve connection to %s, creating it", address)
