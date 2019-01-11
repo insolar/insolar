@@ -67,12 +67,14 @@ type ExecutionState struct {
 	nonce      uint64
 
 	Behaviour ValidationBehaviour
-	Current   *CurrentExecution
-	Queue     []ExecutionQueueElement
+
+	Current              *CurrentExecution
+	Queue                []ExecutionQueueElement
+	QueueProcessorActive bool
 
 	// TODO not using in validation, need separate ObjectState.ExecutionState and ObjectState.Validation from ExecutionState struct
-	pending              PendingState
-	QueueProcessorActive bool
+	pending          PendingState
+	PendingConfirmed bool
 }
 
 type CurrentExecution struct {
@@ -263,6 +265,7 @@ func (lr *LogicRunner) RegisterHandlers() {
 	lr.MessageBus.MustRegister(core.TypeValidateCaseBind, lr.HandleValidateCaseBindMessage)
 	lr.MessageBus.MustRegister(core.TypeValidationResults, lr.HandleValidationResultsMessage)
 	lr.MessageBus.MustRegister(core.TypePendingFinished, lr.HandlePendingFinishedMessage)
+	lr.MessageBus.MustRegister(core.TypeStillExecuting, lr.HandleStillExecutingMessage)
 }
 
 // Stop stops logic runner component and its executors
@@ -878,6 +881,22 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 			if !isAuthorized {
 				if es.Current != nil {
 					es.pending = InPending
+
+				// TODO: this should return delegation token to continue execution of the pending
+				messages = append(
+					messages,
+					&message.StillExecuting{
+						Reference: ref,
+					},
+				)
+			} else {
+				if es.pending == InPending && !es.PendingConfirmed {
+					inslogger.FromContext(ctx).Warn(
+						"looks like pending executor died, continuing execution",
+					)
+					es.pending = NotPending
+				}
+				state.ExecutionState = nil
 				}
 
 				queue := es.releaseQueue()
@@ -898,9 +917,6 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 					},
 				)
 			}
-
-			// TODO: if Current is not nil then we should request here for a delegation token
-			// to continue execution of the current request
 
 			if es.Current == nil && len(es.Queue) == 0 {
 				state.ExecutionState = nil
@@ -943,6 +959,43 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 	}
 
 	return nil
+}
+
+func (lr *LogicRunner) HandleStillExecutingMessage(
+	ctx context.Context, parcel core.Parcel,
+) (
+	core.Reply, error,
+) {
+	msg := parcel.Message().(*message.StillExecuting)
+	ref := msg.DefaultTarget()
+	os := lr.UpsertObjectState(*ref)
+
+	inslogger.FromContext(ctx).Debug("Got information that ", ref, " is still executing")
+
+	os.Lock()
+	if os.ExecutionState == nil {
+		// we are first, strange, soon ExecuteResults message should come
+		os.ExecutionState = &ExecutionState{
+			Queue:            make([]ExecutionQueueElement, 0),
+			Behaviour:        &ValidationSaver{lr: lr, caseBind: NewCaseBind()},
+			pending:          InPending,
+			PendingConfirmed: true,
+		}
+	} else {
+		es := os.ExecutionState
+		es.Lock()
+		if es.pending == NotPending {
+			inslogger.FromContext(ctx).Error(
+				"got StillExecuting message, but our state says that it's not in pending",
+			)
+		} else {
+			es.PendingConfirmed = true
+		}
+		es.Unlock()
+	}
+	os.Unlock()
+
+	return &reply.OK{}, nil
 }
 
 func (lr *LogicRunner) sendOnPulseMessagesAsync(ctx context.Context, msg core.Message, sendWg *sync.WaitGroup, errChan *chan error) {
