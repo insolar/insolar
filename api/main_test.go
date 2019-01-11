@@ -102,5 +102,9 @@ func TestNewApiRunnerNoRequiredParams(t *testing.T) {
 
 	cfg.RPC = "test"
 	_, err = NewRunner(&cfg)
+	require.Contains(t, err.Error(), "Timeout must not be null")
+
+	cfg.Timeout = 2
+	_, err = NewRunner(&cfg)
 	require.NoError(t, err)
 }
