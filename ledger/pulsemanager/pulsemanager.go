@@ -478,6 +478,20 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 	currentPulse := storagePulse.Pulse
 	prevPulseNumber := *storagePulse.Prev
 
+	fmt.Printf("Received pulse %v, time: %v", newPulse.PulseNumber, time.Now())
+	fmt.Println()
+	fmt.Printf("New entropy %v", newPulse.Entropy)
+	fmt.Println()
+	fmt.Println("Current active list:")
+	fmt.Println()
+	nodes, err := m.db.GetActiveNodesByRole(currentPulse.PulseNumber, core.StaticRoleLightMaterial)
+	if err != nil {
+		return err
+	}
+	for _, node := range nodes {
+		fmt.Println(node.ID())
+	}
+
 	// swap pulse
 	m.currentPulse = newPulse
 

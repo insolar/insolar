@@ -22,6 +22,7 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/core"
@@ -43,6 +44,7 @@ type LedgerArtifactManager struct {
 	DefaultBus                 core.MessageBus                 `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 	PulseStorage               core.PulseStorage               `inject:""`
+	JetCoordinator             core.JetCoordinator             `inject:""`
 
 	codeCacheLock *sync.Mutex
 	codeCache     map[core.RecordRef]*cacheEntry
@@ -93,7 +95,7 @@ func (m *LedgerArtifactManager) RegisterRequest(
 	}
 
 	rec := record.RequestRecord{
-		Payload: message.ParcelToBytes(parcel),
+		Payload: message.MustSerializeBytes(parcel.Message()),
 		Object:  *obj.Record(),
 	}
 	recID := record.NewRecordIDFromRecord(m.PlatformCryptographyScheme, currentPulse.PulseNumber, &rec)
@@ -132,15 +134,16 @@ func (m *LedgerArtifactManager) GetCode(
 		return entry.desc, nil
 	}
 
-	var genericReact core.Reply
-
-	currentPulse, err := m.PulseStorage.Current(ctx)
+	if code.Record().Pulse() != core.FirstPulseNumber {
+		fmt.Print("code wrong pulse!")
+	}
+	lightNode, err := m.JetCoordinator.LightExecutorForJet(ctx, *jet.NewID(0, nil), code.Record().Pulse())
 	if err != nil {
 		return nil, err
 	}
-
+	var genericReact core.Reply
 	utils.MeasureExecutionTime(ctx, "artifactmanager.GetCode m.bus(ctx).Send", func() {
-		genericReact, err = sendAndFollowRedirect(ctx, m.bus(ctx), m.db, &message.GetCode{Code: code}, *currentPulse)
+		genericReact, err = m.bus(ctx).Send(ctx, &message.GetCode{Code: code}, &core.MessageSendOptions{Receiver: lightNode})
 	})
 	if err != nil {
 		return nil, err
@@ -148,8 +151,7 @@ func (m *LedgerArtifactManager) GetCode(
 
 	react, ok := genericReact.(*reply.Code)
 	if !ok {
-		err = ErrUnexpectedReply
-		return nil, err
+		return nil, fmt.Errorf("unexpected reply: %#v", genericReact)
 	}
 
 	desc := CodeDescriptor{
@@ -225,7 +227,7 @@ func (m *LedgerArtifactManager) HasPendingRequests(
 		return false, err
 	}
 
-	rep, err := sendAndRetryJet(ctx, m.bus(ctx), m.db, &message.GetPendingRequests{Object: object}, *currentPulse, jetMissRetryCount)
+	rep, err := sendAndRetryJet(ctx, m.bus(ctx), m.db, &message.GetPendingRequests{Object: object}, *currentPulse, jetMissRetryCount, nil)
 	if err != nil {
 		return false, err
 	}
@@ -255,7 +257,7 @@ func (m *LedgerArtifactManager) GetDelegate(
 	genericReact, err := sendAndRetryJet(ctx, m.bus(ctx), m.db, &message.GetDelegate{
 		Head:   head,
 		AsType: asType,
-	}, *currentPulse, jetMissRetryCount)
+	}, *currentPulse, jetMissRetryCount, nil)
 
 	if err != nil {
 		return nil, err
@@ -329,6 +331,7 @@ func (m *LedgerArtifactManager) DeployCode(
 	var err error
 	defer instrument(ctx, "DeployCode").err(&err).end()
 
+	fmt.Println("deploy code")
 	currentPulse, err := m.PulseStorage.Current(ctx)
 	if err != nil {
 		return nil, err
@@ -343,43 +346,30 @@ func (m *LedgerArtifactManager) DeployCode(
 		MachineType: machineType,
 	}
 	codeID := record.NewRecordIDFromRecord(m.PlatformCryptographyScheme, currentPulse.PulseNumber, codeRec)
-
 	codeRef := core.NewRecordRef(*domain.Record(), *codeID)
+
+	_, err = m.setBlob(ctx, code, *codeRef, *currentPulse)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println("deploy code after blob")
+	id, err := m.setRecord(
+		ctx,
+		codeRec,
+		*codeRef,
+		*currentPulse,
+	)
 	if err != nil {
 		return nil, err
 	}
 
-	var wg sync.WaitGroup
-	wg.Add(2)
-	var setRecord *core.RecordID
-	var setRecordErr error
-	go func() {
-		setRecord, setRecordErr = m.setRecord(
-			ctx,
-			codeRec,
-			*codeRef,
-			*currentPulse,
-		)
-		wg.Done()
-	}()
-
-	var setBlobErr error
-	go func() {
-		_, setBlobErr = m.setBlob(ctx, code, *codeRef, *currentPulse)
-		wg.Done()
-	}()
-	wg.Wait()
-
-	if setRecordErr != nil {
-		err = setRecordErr
-	} else if setBlobErr != nil {
-		err = setBlobErr
-	}
-	if err != nil {
-		return nil, err
+	if id != codeID {
+		fmt.Println("Broken code ID!")
 	}
 
-	return setRecord, nil
+	fmt.Println("Code deployed ", id.Pulse())
+
+	return id, nil
 }
 
 // ActivatePrototype creates activate object record in storage. Provided prototype reference will be used as objects prototype
@@ -511,7 +501,7 @@ func (m *LedgerArtifactManager) RegisterValidation(
 		return err
 	}
 
-	_, err = sendAndRetryJet(ctx, m.bus(ctx), m.db, &msg, *currentPulse, jetMissRetryCount)
+	_, err = sendAndRetryJet(ctx, m.bus(ctx), m.db, &msg, *currentPulse, jetMissRetryCount, nil)
 	return err
 }
 
@@ -697,7 +687,7 @@ func (m *LedgerArtifactManager) setRecord(
 	genericReply, err := sendAndRetryJet(ctx, m.bus(ctx), m.db, &message.SetRecord{
 		Record:    record.SerializeRecord(rec),
 		TargetRef: target,
-	}, currentPulse, jetMissRetryCount)
+	}, currentPulse, jetMissRetryCount, nil)
 
 	if err != nil {
 		return nil, err
@@ -721,7 +711,7 @@ func (m *LedgerArtifactManager) setBlob(
 	genericReact, err := sendAndRetryJet(ctx, m.bus(ctx), m.db, &message.SetBlob{
 		Memory:    blob,
 		TargetRef: target,
-	}, currentPulse, jetMissRetryCount)
+	}, currentPulse, jetMissRetryCount, nil)
 
 	if err != nil {
 		return nil, err
@@ -754,7 +744,7 @@ func (m *LedgerArtifactManager) sendUpdateObject(
 	genericRep, err := sendAndRetryJet(ctx, m.bus(ctx), m.db, &message.UpdateObject{
 		Record: record.SerializeRecord(rec),
 		Object: object,
-	}, currentPulse, jetMissRetryCount)
+	}, currentPulse, jetMissRetryCount, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to update object")
 	}
@@ -827,7 +817,7 @@ func sendAndFollowRedirect(
 		}
 		return rep, nil
 	case *reply.JetMiss:
-		return sendAndRetryJet(ctx, bus, db, msg, pulse, jetMissRetryCount)
+		return sendAndRetryJet(ctx, bus, db, msg, pulse, jetMissRetryCount, nil)
 	}
 
 	return rep, err
@@ -840,11 +830,12 @@ func sendAndRetryJet(
 	msg core.Message,
 	pulse core.Pulse,
 	retries int,
+	ops *core.MessageSendOptions,
 ) (core.Reply, error) {
 	if retries <= 0 {
 		return nil, errors.New("failed to find jet (retry limit exceeded on client)")
 	}
-	rep, err := bus.Send(ctx, msg, nil)
+	rep, err := bus.Send(ctx, msg, ops)
 	if err != nil {
 		return nil, err
 	}
@@ -853,7 +844,7 @@ func sendAndRetryJet(
 		if err != nil {
 			return nil, err
 		}
-		return sendAndRetryJet(ctx, bus, db, msg, pulse, retries-1)
+		return sendAndRetryJet(ctx, bus, db, msg, pulse, retries-1, ops)
 	}
 
 	return rep, nil

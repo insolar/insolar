@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage/heavy"
+	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/configuration"
@@ -68,7 +69,7 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 	m := newMiddleware(h.conf, h.db, h.JetCoordinator, h.Bus)
 
 	// Generic.
-	h.replayHandlers[core.TypeGetCode] = m.checkJet(h.handleGetCode)
+	h.replayHandlers[core.TypeGetCode] = h.handleGetCode
 	h.replayHandlers[core.TypeGetObject] = m.checkJet(h.handleGetObject)
 	h.replayHandlers[core.TypeGetDelegate] = m.checkJet(h.handleGetDelegate)
 	h.replayHandlers[core.TypeGetChildren] = m.checkJet(h.handleGetChildren)
@@ -86,7 +87,7 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 	h.replayHandlers[core.TypeHotRecords] = h.handleHotRecords
 
 	// Generic.
-	h.Bus.MustRegister(core.TypeGetCode, m.checkJet(m.saveParcel(h.handleGetCode)))
+	h.Bus.MustRegister(core.TypeGetCode, h.handleGetCode)
 	h.Bus.MustRegister(core.TypeGetObject, m.checkJet(m.saveParcel(h.handleGetObject)))
 	h.Bus.MustRegister(core.TypeGetDelegate, m.checkJet(m.saveParcel(h.handleGetDelegate)))
 	h.Bus.MustRegister(core.TypeGetChildren, m.checkJet(m.saveParcel(h.handleGetChildren)))
@@ -159,17 +160,18 @@ func (h *MessageHandler) handleSetBlob(ctx context.Context, parcel core.Parcel) 
 
 func (h *MessageHandler) handleGetCode(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
 	msg := parcel.Message().(*message.GetCode)
-	jetID := jetFromContext(ctx)
+	jetID := *jet.NewID(0, nil)
 
-	codeRec, err := getCode(ctx, h.db, jetID, msg.Code.Record())
+	codeRec, err := getCode(ctx, h.db, msg.Code.Record())
 	if err == storage.ErrNotFound {
+		return nil, errors.New("failed to fetch code")
 		// The record wasn't found on the current node. Return redirect to the node that contains it.
-		var node *core.RecordRef
-		node, err := h.nodeForJet(ctx, jetID, parcel.Pulse(), msg.Code.Record().Pulse())
-		if err != nil {
-			return nil, err
-		}
-		return reply.NewGetCodeRedirect(h.DelegationTokenFactory, parcel, node)
+		// var node *core.RecordRef
+		// node, err := h.nodeForJet(ctx, jetID, parcel.Pulse(), msg.Code.Record().Pulse())
+		// if err != nil {
+		// 	return nil, err
+		// }
+		// return reply.NewGetCodeRedirect(h.DelegationTokenFactory, parcel, node)
 	}
 	if err != nil {
 		return nil, err
@@ -451,7 +453,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 		if err == storage.ErrNotFound {
 			if state.State() == record.StateActivation {
 				// We are activating the object. There is no index for it anywhere.
-				fmt.Printf("saved object jet: %v, id: %v", jetID, msg.Object.Record())
+				fmt.Printf("saved object jet: %v, id: %v", jetID.JetIDString(), msg.Object.Record())
 				fmt.Println()
 				idx = &index.ObjectLifeline{State: record.StateUndefined}
 			} else {
@@ -718,7 +720,8 @@ func (h *MessageHandler) handleValidationCheck(ctx context.Context, parcel core.
 	return &reply.OK{}, nil
 }
 
-func getCode(ctx context.Context, s storage.Store, jetID core.RecordID, id *core.RecordID) (*record.CodeRecord, error) {
+func getCode(ctx context.Context, s storage.Store, id *core.RecordID) (*record.CodeRecord, error) {
+	jetID := *jet.NewID(0, nil)
 
 	rec, err := s.GetRecord(ctx, jetID, id)
 	if err != nil {

@@ -75,16 +75,11 @@ func (f future) Response() <-chan network.Response {
 
 // GetResponse get response to sent request with `duration` timeout
 func (f future) GetResponse(duration time.Duration) (network.Response, error) {
-	select {
-	case result, ok := <-f.Result():
-		if !ok {
-			return nil, transport.ErrChannelClosed
-		}
-		return (*packetWrapper)(result), nil
-	case <-time.After(duration):
-		f.Cancel()
-		return nil, transport.ErrTimeout
+	result, err := f.GetResult(duration)
+	if err != nil {
+		return nil, err
 	}
+	return (*packetWrapper)(result), nil
 }
 
 // GetRequest get initiating request.
