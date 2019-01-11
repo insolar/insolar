@@ -98,7 +98,6 @@ func createMembers(concurrent int) ([]memberInfo, error) {
 
 		var body []byte
 		var memberRef string
-		var memberResponse *response
 
 		for j := 0; j < createMemberRetry; j++ {
 			body, err = sendRequest(ctx, "CreateMember", params, rootMember)
@@ -107,7 +106,7 @@ func createMembers(concurrent int) ([]memberInfo, error) {
 				time.Sleep(time.Second)
 				continue
 			}
-			memberResponse = getResponse(body)
+			memberResponse := getResponse(body)
 			if memberResponse.Error != "" {
 				fmt.Println("Create member error", memberResponse.Error, "retry")
 				time.Sleep(time.Second)
