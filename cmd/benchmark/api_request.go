@@ -29,6 +29,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+const createMemberRetry = 3
+
 type response struct {
 	Error  string
 	Result interface{}
@@ -98,7 +100,7 @@ func createMembers(concurrent int) ([]memberInfo, error) {
 		var memberRef string
 		var memberResponse *response
 
-		for j := 0; j < 3; j++ {
+		for j := 0; j < createMemberRetry; j++ {
 			body, err = sendRequest(ctx, "CreateMember", params, rootMember)
 			if err != nil {
 				fmt.Println("Create member error", err.Error(), "retry")
@@ -115,13 +117,7 @@ func createMembers(concurrent int) ([]memberInfo, error) {
 			break
 		}
 		if memberRef == "" {
-			check("Couldn't create member after 3 retries, last error:", err)
-
-			if memberResponse != nil {
-				check("Couldn't create member after 3 retries, last error in response:", errors.New(memberResponse.Error))
-			}
-
-			check("", errors.New("Couldn't create member after 3 retries"))
+			check("", fmt.Errorf("couldn't create member after %d retries", createMemberRetry))
 		}
 
 		members = append(members, memberInfo{memberRef, string(memberPrivKeyStr)})
