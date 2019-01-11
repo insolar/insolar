@@ -24,9 +24,6 @@ gorund_log_level=$insolar_log_level
 NUM_DISCOVERY_NODES=$(sed '/^nodes:/ q' $GENESIS_CONFIG | grep "host:" | grep -cv "#" )
 NUM_NODES=$(sed -n '/^nodes:/,$p' $GENESIS_CONFIG | grep "host:" | grep -cv "#" )
 
-echo $NUM_DISCOVERY_NODES
-echo $NUM_NODES
-
 for i in `seq 1 $NUM_DISCOVERY_NODES`
 do
     DISCOVERY_NODES+=($DISCOVERY_NODES_DATA/$i)
