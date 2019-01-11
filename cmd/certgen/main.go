@@ -93,8 +93,35 @@ func registerNode(key crypto.PublicKey, staticRole core.StaticRole) core.RecordR
 	return *ref
 }
 
-func fetchCertificate(ref core.RecordRef) ([]byte, error) {
-	return nil, errors.New("not implemented")
+type GetCertificateResult struct {
+	Cert json.RawMessage `json:"cert"`
+}
+
+type GetCertificateResponse struct {
+	Version string               `json:"jsonrpc"`
+	ID      string               `json:"id"`
+	Result  GetCertificateResult `json:"result"`
+}
+
+func fetchCertificate(ref core.RecordRef) []byte {
+	params := requester.PostParams{
+		"ref": ref.String(),
+	}
+	response, err := requester.GetResponseBody(api+"/rpc", requester.PostParams{
+		"jsonrpc": "2.0",
+		"method":  "cert.Get",
+		"id":      "",
+		"params":  params,
+	})
+	checkError("Failed to get certificate for the registered node:", err)
+
+	r := GetCertificateResponse{}
+	err = json.Unmarshal(response, &r)
+	checkError("Failed to parse response from get certificate request:", err)
+
+	cert, err := r.Result.Cert.MarshalJSON()
+	checkError("Failed to marshal certificate from API response:", err)
+	return cert
 }
 
 func writeKeys(crypto.PublicKey, crypto.PrivateKey) error {
@@ -122,11 +149,9 @@ func main() {
 
 	pub, priv := generateKeys()
 	ref := registerNode(pub, staticRole)
+	cert := fetchCertificate(ref)
 
-	cert, err := fetchCertificate(ref)
-	checkError("Failed to get certificate of the registered node:", err)
-
-	err = writeKeys(pub, priv)
+	err := writeKeys(pub, priv)
 	checkError("Failed to write file with public/private keys:", err)
 
 	err = writeCertificate(cert)
