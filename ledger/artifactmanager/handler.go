@@ -201,6 +201,7 @@ func (h *MessageHandler) handleGetObject(
 	// Fetch object index. If not found redirect.
 	idx, err = h.db.GetObjectIndex(ctx, jetID, msg.Head.Record(), false)
 	if err == storage.ErrNotFound {
+		fmt.Printf("[failed to fetch] pulse: %v, jet: %v", parcel.Pulse(), jetID.JetIDString())
 		heavy, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
 		if err != nil {
 			return nil, err
@@ -782,6 +783,9 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 	// FIXME: check split signatures.
 	jetID := *msg.Jet.Record()
 
+	fmt.Println("Received jet ", jetID.JetIDString())
+	fmt.Println("parcel pulse ", parcel.Pulse())
+
 	err := h.db.SetDrop(ctx, jetID, &msg.Drop)
 	if err == storage.ErrOverride {
 		err = nil
@@ -792,7 +796,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 	}
 	err = h.db.UpdateJetTree(
 		ctx,
-		parcel.Pulse(),
+		msg.PulseNumber,
 		true,
 		jetID,
 	)
@@ -845,7 +849,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 		}
 	}
 
-	fmt.Println("write indexes for jet ", jetID.JetIDString())
+	fmt.Printf("[write indexes] pulse: %v, jet: %v \n", parcel.Pulse(), jetID.JetIDString())
 	fmt.Println("handleHotRecords, love, - msg.RecentObjects", msg.RecentObjects)
 	for id, meta := range msg.RecentObjects {
 		decodedIndex, err := index.DecodeObjectLifeline(meta.Index)

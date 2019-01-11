@@ -20,10 +20,10 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
@@ -176,50 +176,52 @@ func (m *middleware) checkHeavySync(handler core.MessageHandler) core.MessageHan
 func (m *middleware) fetchJet(
 	ctx context.Context, target core.RecordID, pulse core.PulseNumber, retries int,
 ) (*core.RecordID, error) {
-	if retries < 0 {
-		return nil, errors.New("retries exceeded")
-	}
-
 	// Look in the local tree. Return if the actual jet found.
 	tree, err := m.db.GetJetTree(ctx, pulse)
 	if err != nil {
 		return nil, err
 	}
 	jetID, actual := tree.Find(target)
-	if actual {
+	if actual || retries < 0 {
+		if retries < 0 {
+			fmt.Println("not actual ", jetID.JetIDString())
+		}
 		return jetID, nil
 	}
 
+	time.Sleep(100 * time.Millisecond)
+
+	// TODO: uncomment to fetch tree from previous executor.
 	// Couldn't find the actual jet locally. Ask for the jet from the previous executor.
-	prevPulse, err := m.db.GetPreviousPulse(ctx, pulse)
-	if err != nil {
-		return nil, err
-	}
-	prevExecutor, err := m.jetCoordinator.LightExecutorForJet(ctx, *jetID, prevPulse.Pulse.PulseNumber)
-	if err != nil {
-		return nil, err
-	}
-	rep, err := m.messageBus.Send(
-		ctx,
-		&message.GetJet{Object: target},
-		&core.MessageSendOptions{Receiver: prevExecutor},
-	)
-	if err != nil {
-		return nil, err
-	}
-	r, ok := rep.(*reply.Jet)
-	if !ok {
-		return nil, ErrUnexpectedReply
-	}
-
-	// TODO: check if the same executor again or the same jet again. INS-1041
-
-	// Update local tree.
-	err = m.db.UpdateJetTree(ctx, pulse, r.Actual, r.ID)
-	if err != nil {
-		return nil, err
-	}
-
-	// Repeat the process again.
+	// prevPulse, err := m.db.GetPreviousPulse(ctx, pulse)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// prevExecutor, err := m.jetCoordinator.LightExecutorForJet(ctx, *jetID, prevPulse.Pulse.PulseNumber)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// rep, err := m.messageBus.Send(
+	// 	ctx,
+	// 	&message.GetJet{Object: target},
+	// 	&core.MessageSendOptions{Receiver: prevExecutor},
+	// )
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// r, ok := rep.(*reply.Jet)
+	// if !ok {
+	// 	return nil, ErrUnexpectedReply
+	// }
+	//
+	// // TODO: check if the same executor again or the same jet again. INS-1041
+	//
+	// // Update local tree.
+	// err = m.db.UpdateJetTree(ctx, pulse, r.Actual, r.ID)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	//
+	// // Repeat the process again.
 	return m.fetchJet(ctx, target, pulse, retries-1)
 }

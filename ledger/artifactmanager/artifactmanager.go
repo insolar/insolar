@@ -18,6 +18,7 @@ package artifactmanager
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -209,7 +210,7 @@ func (m *LedgerArtifactManager) GetObject(
 	case *reply.Error:
 		err = r.Error()
 	default:
-		err = ErrUnexpectedReply
+		err = fmt.Errorf("unexpected reply: %#v", rep)
 	}
 	return desc, err
 }
@@ -841,7 +842,7 @@ func sendAndRetryJet(
 	retries int,
 ) (core.Reply, error) {
 	if retries <= 0 {
-		return nil, errors.New("failed to find jet (retry limit exceeded)")
+		return nil, errors.New("failed to find jet (retry limit exceeded on client)")
 	}
 	rep, err := bus.Send(ctx, msg, nil)
 	if err != nil {

@@ -306,8 +306,16 @@ func (mb *MessageBus) checkPulse(ctx context.Context, parcel core.Parcel, locked
 	}
 
 	if parcel.Pulse() != pulse.PulseNumber {
-		inslogger.FromContext(ctx).Error("[ checkPulse ] Incorrect message pulse")
-		return fmt.Errorf("[ checkPulse ] Incorrect message pulse %d %d", parcel.Pulse(), pulse.PulseNumber)
+		switch parcel.Message().(type) {
+		case
+			*message.SetRecord,
+			*message.RegisterChild,
+			*message.ValidateRecord,
+			*message.SetBlob,
+			*message.UpdateObject:
+			inslogger.FromContext(ctx).Error("[ checkPulse ] Incorrect message pulse")
+			return fmt.Errorf("[ checkPulse ] Incorrect message pulse %d %d", parcel.Pulse(), pulse.PulseNumber)
+		}
 	}
 	return nil
 }

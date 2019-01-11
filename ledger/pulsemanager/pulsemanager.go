@@ -33,7 +33,6 @@ import (
 	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/pkg/errors"
-	"golang.org/x/sync/errgroup"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/pulsemanager.ActiveListSwapper -o ../../testutils -s _mock.go
@@ -139,7 +138,7 @@ func (m *PulseManager) processEndPulse(
 
 	fmt.Println("Total jets: ", jetIDs)
 
-	var g errgroup.Group
+	// var g errgroup.Group
 	for jetID := range jetIDs {
 		jetID := jetID
 
@@ -154,69 +153,69 @@ func (m *PulseManager) processEndPulse(
 		}
 
 		fmt.Printf("processEndPulse, jetID - %v, pulse - %v", jetID, currentPulse.PulseNumber)
-		g.Go(func() error {
-			drop, dropSerialized, _, err := m.createDrop(ctx, jetID, prevPulseNumber, currentPulse.PulseNumber)
-			if err != nil {
-				return errors.Wrapf(err, "create drop on pulse %v failed", currentPulse.PulseNumber)
-			}
+		// g.Go(func() error {
+		drop, dropSerialized, _, err := m.createDrop(ctx, jetID, prevPulseNumber, currentPulse.PulseNumber)
+		if err != nil {
+			return errors.Wrapf(err, "create drop on pulse %v failed", currentPulse.PulseNumber)
+		}
 
-			inslogger.FromContext(ctx).Debugf("[processEndPulse] before getExecutorHotData - %v", time.Now())
-			msg, hotRecordsError := m.getExecutorHotData(
-				ctx, jetID, currentPulse.PulseNumber, drop, dropSerialized)
-			if hotRecordsError != nil {
-				return errors.Wrapf(err, "getExecutorData failed for jet id %v", jetID)
-			}
-			inslogger.FromContext(ctx).Debugf("[processEndPulse] after getExecutorHotData - %v", time.Now())
+		inslogger.FromContext(ctx).Debugf("[processEndPulse] before getExecutorHotData - %v", time.Now())
+		msg, err := m.getExecutorHotData(
+			ctx, jetID, newPulse.PulseNumber, drop, dropSerialized)
+		if err != nil {
+			return errors.Wrapf(err, "getExecutorData failed for jet id %v", jetID)
+		}
+		inslogger.FromContext(ctx).Debugf("[processEndPulse] after getExecutorHotData - %v", time.Now())
 
-			inslogger.FromContext(ctx).Debugf("[processEndPulse] before sendExecutorData - %v", time.Now())
+		inslogger.FromContext(ctx).Debugf("[processEndPulse] before sendExecutorData - %v", time.Now())
 
-			nextExecutor, err := m.JetCoordinator.LightExecutorForJet(ctx, jetID, newPulse.PulseNumber)
-			if err != nil {
-				return err
-			}
-			sendError := m.sendExecutorData(ctx, currentPulse, newPulse, jetID, msg, nextExecutor)
-			fmt.Println("processEndPulse, jetID - (in message)", jetID, msg.DefaultTarget())
-			if sendError != nil {
-				return sendError
-			}
-			inslogger.FromContext(ctx).Debugf("[processEndPulse] after sendExecutorData - %v", time.Now())
-
-			// FIXME: @andreyromancev. 09.01.2019. Temporary disabled validation. Uncomment when jet split works properly.
-			// dropErr := m.processDrop(ctx, jetID, currentPulse, dropSerialized, messages)
-			// if dropErr != nil {
-			// 	return errors.Wrap(dropErr, "processDrop failed")
-			// }
-
-			// TODO: @andreyromancev. 20.12.18. uncomment me when pending notifications required.
-			// m.sendAbandonedRequests(ctx, newPulse, jetID)
-
-			return nil
-		})
-	}
-	err = g.Wait()
-	if err != nil {
-		return errors.Wrap(err, "got error on jets sync")
-	}
-
-	// TODO: maybe move cleanup in the above cycle or process removal in separate job - 20.Dec.2018 @nordicdyno
-	untilPN := currentPulse.PulseNumber - m.options.storeLightPulses
-	for jetID := range jetIDs {
-		replicated, err := m.db.GetReplicatedPulse(ctx, jetID)
+		nextExecutor, err := m.JetCoordinator.LightExecutorForJet(ctx, jetID, newPulse.PulseNumber)
 		if err != nil {
 			return err
 		}
-		if untilPN >= replicated {
-			inslogger.FromContext(ctx).Errorf(
-				"light cleanup aborted (remove from: %v, replicated: %v)",
-				untilPN,
-				replicated,
-			)
-			return nil
+		fmt.Printf("[send hot] pulse: %v, jet: %v, data: %v\n", currentPulse.PulseNumber, jetID.JetIDString(), msg.RecentObjects)
+		err = m.sendExecutorData(ctx, currentPulse, newPulse, jetID, msg, nextExecutor)
+		if err != nil {
+			return err
 		}
-		// if _, err := m.db.RemoveJetIndexesUntil(ctx, jetID, untilPN); err != nil {
-		// 	return err
+		inslogger.FromContext(ctx).Debugf("[processEndPulse] after sendExecutorData - %v", time.Now())
+
+		// FIXME: @andreyromancev. 09.01.2019. Temporary disabled validation. Uncomment when jet split works properly.
+		// dropErr := m.processDrop(ctx, jetID, currentPulse, dropSerialized, messages)
+		// if dropErr != nil {
+		// 	return errors.Wrap(dropErr, "processDrop failed")
 		// }
+
+		// TODO: @andreyromancev. 20.12.18. uncomment me when pending notifications required.
+		// m.sendAbandonedRequests(ctx, newPulse, jetID)
+
+		// return nil
+		// })
 	}
+	// err = g.Wait()
+	// if err != nil {
+	// 	return errors.Wrap(err, "got error on jets sync")
+	// }
+
+	// TODO: maybe move cleanup in the above cycle or process removal in separate job - 20.Dec.2018 @nordicdyno
+	// untilPN := currentPulse.PulseNumber - m.options.storeLightPulses
+	// for jetID := range jetIDs {
+	// 	replicated, err := m.db.GetReplicatedPulse(ctx, jetID)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	if untilPN >= replicated {
+	// 		inslogger.FromContext(ctx).Errorf(
+	// 			"light cleanup aborted (remove from: %v, replicated: %v)",
+	// 			untilPN,
+	// 			replicated,
+	// 		)
+	// 		return nil
+	// 	}
+	// 	if _, err := m.db.RemoveJetIndexesUntil(ctx, jetID, untilPN); err != nil {
+	// 		return err
+	// 	}
+	// }
 	return nil
 }
 
@@ -387,6 +386,8 @@ func (m *PulseManager) getExecutorHotData(
 	return msg, nil
 }
 
+var split = true
+
 func (m *PulseManager) sendExecutorData(
 	ctx context.Context,
 	currentPulse, newPulse *core.Pulse,
@@ -408,7 +409,8 @@ func (m *PulseManager) sendExecutorData(
 
 	// FIXME: enable split
 	// if shouldSplit() {
-	if true {
+	if split {
+		split = false
 		fmt.Println("SPLIT HAPPENED")
 		// if false {
 		left, right, err := m.db.SplitJetTree(
@@ -420,10 +422,10 @@ func (m *PulseManager) sendExecutorData(
 		if err != nil {
 			return errors.Wrap(err, "failed to split jet tree")
 		}
-		// err = m.db.AddJets(ctx, *left, *right)
-		// if err != nil {
-		// 	return errors.Wrap(err, "failed to add jets")
-		// }
+		err = m.db.AddJets(ctx, *left, *right)
+		if err != nil {
+			return errors.Wrap(err, "failed to add jets")
+		}
 		leftMsg := *msg
 		leftMsg.Jet = *core.NewRecordRef(core.DomainID, *left)
 		rightMsg := *msg
