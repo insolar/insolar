@@ -37,3 +37,6 @@ keyspath: "scripts/insolard/nodes/4/keys.json"
 certificatepath: "scripts/insolard/nodes/4/cert.json"
 metrics:
   listenaddress: :8084
+tracer:
+  jaeger:
+    agentendpoint: 127.0.0.1:6831

@@ -78,7 +78,7 @@ func GetBaggage(ctx context.Context) []Entry {
 }
 
 // StartSpan starts span with stored baggage and with parent span if find in context.
-func StartSpan(ctx context.Context, name string) (context.Context, *trace.Span) {
+func StartSpan(ctx context.Context, name string, e ...Entry) (context.Context, *trace.Span) {
 	parentSpan, haveParent := getParentSpan(ctx)
 	var (
 		spanctx context.Context
@@ -91,7 +91,7 @@ func StartSpan(ctx context.Context, name string) (context.Context, *trace.Span) 
 	} else {
 		spanctx, span = trace.StartSpan(ctx, name)
 	}
-	setSpanEntries(span, GetBaggage(spanctx)...)
+	setSpanEntries(span, append(e, GetBaggage(spanctx)...)...)
 	return spanctx, span
 }
 
