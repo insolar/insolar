@@ -23,16 +23,16 @@ import (
 )
 
 // SetReplicatedPulse saves last pulse successfully replicated to 'heavy material' node for given pulse number.
-func (db *DB) SetReplicatedPulse(ctx context.Context, jet core.RecordID, pulsenum core.PulseNumber) error {
+func (db *DB) SetReplicatedPulse(ctx context.Context, jetID core.RecordID, pulsenum core.PulseNumber) error {
 	return db.Update(ctx, func(tx *TransactionManager) error {
-		k := prefixkey(scopeIDSystem, jet[:], []byte{sysReplicatedPulse})
+		k := prefixkey(scopeIDSystem, jetID[:], []byte{sysReplicatedPulse})
 		return tx.set(ctx, k, pulsenum.Bytes())
 	})
 }
 
 // GetReplicatedPulse returns last pulse successfully replicated to 'heavy material' node for given pulse number.
-func (db *DB) GetReplicatedPulse(ctx context.Context, jet core.RecordID) (core.PulseNumber, error) {
-	k := prefixkey(scopeIDSystem, jet[:], []byte{sysReplicatedPulse})
+func (db *DB) GetReplicatedPulse(ctx context.Context, jetID core.RecordID) (core.PulseNumber, error) {
+	k := prefixkey(scopeIDSystem, jetID[:], []byte{sysReplicatedPulse})
 	buf, err := db.get(ctx, k)
 	if err != nil {
 		if err == ErrNotFound {

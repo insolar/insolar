@@ -21,29 +21,32 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/recentstorage"
+	"github.com/insolar/insolar/ledger/storage/jet"
 )
 
 // RecentStorageProvider provides a recent storage for jet
 type RecentStorageProvider struct {
-	storage    map[core.RecordID]*RecentStorage
+	storage    map[string]*RecentStorage
 	lock       sync.Mutex
 	DefaultTTL int
 }
 
 // NewRecentStorageProvider creates new provider
 func NewRecentStorageProvider(defaultTTL int) *RecentStorageProvider {
-	return &RecentStorageProvider{DefaultTTL: defaultTTL, storage: map[core.RecordID]*RecentStorage{}}
+	return &RecentStorageProvider{DefaultTTL: defaultTTL, storage: map[string]*RecentStorage{}}
 }
 
 // GetStorage returns a recent storage for jet
 func (p *RecentStorageProvider) GetStorage(jetID core.RecordID) recentstorage.RecentStorage {
 	p.lock.Lock()
 	defer p.lock.Unlock()
-	storage, ok := p.storage[jetID]
+	_, prefix := jet.Jet(jetID)
+	k := string(prefix)
+	storage, ok := p.storage[k]
 	if !ok {
-		if storage, ok = p.storage[jetID]; !ok {
+		if storage, ok = p.storage[k]; !ok {
 			storage = NewRecentStorage(p.DefaultTTL)
-			p.storage[jetID] = storage
+			p.storage[k] = storage
 		}
 	}
 	return storage

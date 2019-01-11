@@ -32,7 +32,8 @@ import (
 
 // GetDrop returns jet drop for a given pulse number and jet id.
 func (db *DB) GetDrop(ctx context.Context, jetID core.RecordID, pulse core.PulseNumber) (*jet.JetDrop, error) {
-	k := prefixkey(scopeIDJetDrop, jetID[:], pulse.Bytes())
+	_, jetPrefix := jet.Jet(jetID)
+	k := prefixkey(scopeIDJetDrop, jetPrefix, pulse.Bytes())
 
 	buf, err := db.get(ctx, k)
 	if err != nil {
@@ -69,8 +70,10 @@ func (db *DB) CreateDrop(ctx context.Context, jetID core.RecordID, pulse core.Pu
 	var messages [][]byte
 	var messagesError error
 
+	_, jetPrefix := jet.Jet(jetID)
+
 	go func() {
-		messagesPrefix := prefixkey(scopeIDMessage, jetID[:], pulse.Bytes())
+		messagesPrefix := prefixkey(scopeIDMessage, jetPrefix, pulse.Bytes())
 
 		messagesError = db.db.View(func(txn *badger.Txn) error {
 			it := txn.NewIterator(badger.DefaultIteratorOptions)
@@ -92,7 +95,7 @@ func (db *DB) CreateDrop(ctx context.Context, jetID core.RecordID, pulse core.Pu
 	var jetDropHashError error
 	var dropSize uint64
 	go func() {
-		recordPrefix := prefixkey(scopeIDRecord, jetID[:], pulse.Bytes())
+		recordPrefix := prefixkey(scopeIDRecord, jetPrefix, pulse.Bytes())
 
 		jetDropHashError = db.db.View(func(txn *badger.Txn) error {
 			it := txn.NewIterator(badger.DefaultIteratorOptions)
@@ -136,7 +139,8 @@ func (db *DB) CreateDrop(ctx context.Context, jetID core.RecordID, pulse core.Pu
 func (db *DB) SetDrop(ctx context.Context, jetID core.RecordID, drop *jet.JetDrop) error {
 	fmt.Printf("SetDrop for jet: %v, pulse: %v", jetID, drop.Pulse)
 
-	k := prefixkey(scopeIDJetDrop, jetID[:], drop.Pulse.Bytes())
+	_, jetPrefix := jet.Jet(jetID)
+	k := prefixkey(scopeIDJetDrop, jetPrefix, drop.Pulse.Bytes())
 
 	_, err := db.get(ctx, k)
 	if err == nil {

@@ -22,6 +22,7 @@ import (
 	"errors"
 
 	"github.com/dgraph-io/badger"
+	"github.com/insolar/insolar/ledger/storage/jet"
 
 	"github.com/insolar/insolar/core"
 )
@@ -68,15 +69,16 @@ func NewReplicaIter(
 	end core.PulseNumber,
 	limit int,
 ) *ReplicaIter {
-	newit := func(prefixbyte byte, jet *core.RecordID, start, end core.PulseNumber) *iterstate {
+	newit := func(prefixbyte byte, j *core.RecordID, start, end core.PulseNumber) *iterstate {
 		prefix := []byte{prefixbyte}
 		iter := &iterstate{prefix: prefix}
-		if jet == nil {
+		if j == nil {
 			iter.start = bytes.Join([][]byte{prefix, start.Bytes()}, nil)
 			iter.end = bytes.Join([][]byte{prefix, end.Bytes()}, nil)
 		} else {
-			iter.start = bytes.Join([][]byte{prefix, jet[:], start.Bytes()}, nil)
-			iter.end = bytes.Join([][]byte{prefix, jet[:], end.Bytes()}, nil)
+			_, jetPrefix := jet.Jet(*j)
+			iter.start = bytes.Join([][]byte{prefix, jetPrefix, start.Bytes()}, nil)
+			iter.end = bytes.Join([][]byte{prefix, jetPrefix, end.Bytes()}, nil)
 		}
 		return iter
 	}

@@ -332,13 +332,15 @@ func (m *PulseManager) getExecutorHotData(
 ) (*message.HotData, error) {
 	logger := inslogger.FromContext(ctx)
 	recentStorage := m.RecentStorageProvider.GetStorage(jetID)
-	recentStorage.ClearZeroTTLObjects()
+	// recentStorage.ClearZeroTTLObjects()
 	recentObjectsIds := recentStorage.GetObjects()
-	defer recentStorage.ClearObjects()
+	// defer recentStorage.ClearObjects()
 
 	recentObjects := map[core.RecordID]*message.HotIndex{}
 	pendingRequests := map[core.RecordID]map[core.RecordID][]byte{}
 
+	fmt.Println("[recent] for jet ", jetID.JetIDString())
+	fmt.Println("[recent] initial ", len(recentObjectsIds))
 	for id, ttl := range recentObjectsIds {
 		lifeline, err := m.db.GetObjectIndex(ctx, jetID, &id, false)
 		if err != nil {
@@ -356,6 +358,7 @@ func (m *PulseManager) getExecutorHotData(
 		}
 
 	}
+	fmt.Println("[recent] send ", len(recentObjects))
 
 	for objID, requests := range recentStorage.GetRequests() {
 		for reqID := range requests {
@@ -571,7 +574,20 @@ func (m *PulseManager) Start(ctx context.Context) error {
 			return err
 		}
 	}
-	return nil
+
+	return m.restoreGenesisRecentObjects(ctx)
+}
+
+func (m *PulseManager) restoreGenesisRecentObjects(ctx context.Context) error {
+	jetID := *jet.NewID(0, nil)
+	recent := m.RecentStorageProvider.GetStorage(jetID)
+
+	return m.db.IterateIndexIDs(ctx, jetID, func(id core.RecordID) error {
+		if id.Pulse() == core.FirstPulseNumber {
+			recent.AddObject(id)
+		}
+		return nil
+	})
 }
 
 // Stop stops PulseManager. Waits replication goroutine is done.

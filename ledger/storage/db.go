@@ -439,6 +439,7 @@ func (db *DB) GetBadgerDB() *badger.DB {
 
 // SetMessage persists message to the database
 func (db *DB) SetMessage(ctx context.Context, jetID core.RecordID, pulseNumber core.PulseNumber, genericMessage core.Message) error {
+	_, prefix := jet.Jet(jetID)
 	messageBytes := message.ToBytes(genericMessage)
 	hw := db.PlatformCryptographyScheme.ReferenceHasher()
 	_, err := hw.Write(messageBytes)
@@ -449,7 +450,7 @@ func (db *DB) SetMessage(ctx context.Context, jetID core.RecordID, pulseNumber c
 
 	return db.set(
 		ctx,
-		prefixkey(scopeIDMessage, jetID[:], pulseNumber.Bytes(), hw.Sum(nil)),
+		prefixkey(scopeIDMessage, prefix, pulseNumber.Bytes(), hw.Sum(nil)),
 		messageBytes,
 	)
 }
@@ -491,7 +492,8 @@ func (db *DB) IterateRecordsOnPulse(
 	pulse core.PulseNumber,
 	handler func(id core.RecordID, rec record.Record) error,
 ) error {
-	prefix := prefixkey(scopeIDRecord, jetID[:], pulse.Bytes())
+	_, jetPrefix := jet.Jet(jetID)
+	prefix := prefixkey(scopeIDRecord, jetPrefix, pulse.Bytes())
 
 	return db.iterate(ctx, prefix, func(k, v []byte) error {
 		id := core.NewRecordID(pulse, k)
@@ -510,7 +512,8 @@ func (db *DB) IterateIndexIDs(
 	jetID core.RecordID,
 	handler func(id core.RecordID) error,
 ) error {
-	prefix := prefixkey(scopeIDLifeline, jetID[:])
+	_, jetPrefix := jet.Jet(jetID)
+	prefix := prefixkey(scopeIDLifeline, jetPrefix)
 
 	return db.iterate(ctx, prefix, func(k, v []byte) error {
 		pn := pulseNumFromKey(0, k)
