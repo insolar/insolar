@@ -118,12 +118,10 @@ func createMembers(concurrent int) ([]memberInfo, error) {
 			check("Couldn't create member after 3 retries, last error:", err)
 
 			if memberResponse != nil {
-				err = fmt.Errorf("error in response: %s", memberResponse.Error)
-				check("Couldn't create member after 3 retries, last error:", err)
+				check("Couldn't create member after 3 retries, last error in response:", errors.New(memberResponse.Error))
 			}
 
-			err = fmt.Errorf("couldn't create member after 3 retries")
-			check("", err)
+			check("", errors.New("Couldn't create member after 3 retries"))
 		}
 
 		members = append(members, memberInfo{memberRef, string(memberPrivKeyStr)})
