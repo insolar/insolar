@@ -209,7 +209,7 @@ genesis()
     generate_discovery_nodes_keys
 
     printf "start genesis ... \n"
-    $INSOLARD --config $BASE_DIR/insolar.yaml --genesis $GENESIS_CONFIG --keyout $NODES_DATA/certs
+    $INSOLARD -t --config $BASE_DIR/insolar.yaml --genesis $GENESIS_CONFIG --keyout $NODES_DATA/certs
     printf "genesis is done\n"
 
     copy_data
@@ -242,10 +242,10 @@ do
     if [ "$i" -eq "$NUM_NODES" ]
     then
         echo "NODE $i STARTED in foreground"
-        INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $BASE_DIR/insolar_$i.yaml --measure $node/measure.txt &> $node/output.txt
+        INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD -t --config $BASE_DIR/insolar_$i.yaml --measure $node/measure.txt &> $node/output.txt
         break
     fi
-    INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $BASE_DIR/insolar_$i.yaml --measure $node/measure.txt &> $node/output.txt &
+    INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD -t --config $BASE_DIR/insolar_$i.yaml --measure $node/measure.txt &> $node/output.txt &
     echo "NODE $i STARTED in background"
 done
 

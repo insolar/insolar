@@ -25,12 +25,12 @@ import (
 	"github.com/insolar/insolar/application/extractor"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/core/utils"
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/platformpolicy"
 
 	"github.com/insolar/insolar/api/seedmanager"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/pkg/errors"
 )
 
@@ -116,28 +116,23 @@ func (ar *Runner) makeCall(ctx context.Context, params Request) (interface{}, er
 		return nil, errors.Wrap(err, "[ makeCall ] failed to parse params.Reference")
 	}
 
-	var res core.Reply
+	_, span := instracer.StartSpan(ctx, "makeCall", instracer.Entry{Key: "Method", Value: params.Method})
+	res, err := ar.ContractRequester.SendRequest(
+		ctx,
+		reference,
+		"Call",
+		[]interface{}{*ar.CertificateManager.GetCertificate().GetRootDomainReference(), params.Method, params.Params, params.Seed, params.Signature},
+	)
+	span.End()
 
-	utils.MeasureExecutionTime(ctx, "makeCall SendRequest, Method = "+params.Method,
-		func() {
-			res, err = ar.ContractRequester.SendRequest(
-				ctx,
-				reference,
-				"Call",
-				[]interface{}{*ar.CertificateManager.GetCertificate().GetRootDomainReference(), params.Method, params.Params, params.Seed, params.Signature},
-			)
-		})
 	if err != nil {
 		return nil, errors.Wrap(err, "[ makeCall ] Can't send request")
 	}
 
-	var result interface{}
-	var contractErr *foundation.Error
+	_, span2 := instracer.StartSpan(ctx, "CallResponse")
+	result, contractErr, err := extractor.CallResponse(res.(*reply.CallMethod).Result)
+	span2.End()
 
-	utils.MeasureExecutionTime(ctx, "makeCall CallResponse",
-		func() {
-			result, contractErr, err = extractor.CallResponse(res.(*reply.CallMethod).Result)
-		})
 	if err != nil {
 		return nil, errors.Wrap(err, "[ makeCall ] Can't extract response")
 	}
@@ -158,6 +153,10 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 	return func(response http.ResponseWriter, req *http.Request) {
 		traceID := utils.RandTraceID()
 		ctx, insLog := inslogger.WithTraceField(context.Background(), traceID)
+
+		ctx = instracer.SetBaggage(ctx, instracer.Entry{Key: "traceid", Value: traceID})
+		ctx, span := instracer.StartSpan(ctx, "callHandler")
+		defer span.End()
 
 		utils.MeasureExecutionTime(ctx, "NetRPC Request Processing",
 			func() {
