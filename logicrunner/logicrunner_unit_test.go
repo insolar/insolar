@@ -376,3 +376,75 @@ func TestLogicRunner_CheckExecutionLoop(
 	loop = lr.CheckExecutionLoop(ctxA, es, parcel)
 	require.False(t, loop)
 }
+
+func TestLogicRunner_HandleStillExecutingMessage(
+	t *testing.T,
+) {
+	t.Parallel()
+	ctx := inslogger.TestContext(t)
+	mc := minimock.NewController(t)
+	defer mc.Finish()
+
+	objectRef := testutils.RandomRef()
+
+	lr, _ := NewLogicRunner(&configuration.LogicRunner{})
+
+	parcel := testutils.NewParcelMock(t).MessageMock.Return(
+		&message.StillExecuting{Reference: objectRef},
+	)
+
+	re, err := lr.HandleStillExecutingMessage(ctx, parcel)
+	require.NoError(t, err)
+	require.Equal(t, &reply.OK{}, re)
+
+	st := lr.MustObjectState(objectRef)
+	require.NotNil(t, st.ExecutionState)
+	require.Equal(t, InPending, st.ExecutionState.pending)
+	require.Equal(t, true, st.ExecutionState.PendingConfirmed)
+
+	st.ExecutionState.pending = NotPending
+	st.ExecutionState.PendingConfirmed = false
+
+	re, err = lr.HandleStillExecutingMessage(ctx, parcel)
+	require.NoError(t, err)
+	require.Equal(t, &reply.OK{}, re)
+
+	st = lr.MustObjectState(objectRef)
+	require.NotNil(t, st.ExecutionState)
+	require.Equal(t, NotPending, st.ExecutionState.pending)
+	require.Equal(t, false, st.ExecutionState.PendingConfirmed)
+}
+
+func TestLogicRunner_OnPulse_StillExecuting(t *testing.T) {
+	t.Parallel()
+	ctx := inslogger.TestContext(t)
+	mc := minimock.NewController(t)
+	defer mc.Finish()
+
+	mb := testutils.NewMessageBusMock(t)
+	jc := testutils.NewJetCoordinatorMock(mc)
+
+	lr, _ := NewLogicRunner(&configuration.LogicRunner{})
+	lr.MessageBus = mb
+	lr.JetCoordinator = jc
+
+	jc.IsAuthorizedMock.Return(false, nil)
+	jc.MeMock.Return(core.RecordRef{})
+
+	// test empty lr
+	pulse := core.Pulse{}
+
+	objectRef := testutils.RandomRef()
+
+	lr.state[objectRef] = &ObjectState{
+		ExecutionState: &ExecutionState{
+			Behaviour: &ValidationSaver{},
+			Current: &CurrentExecution{},
+		},
+	}
+	mb.SendMock.Return(&reply.OK{}, nil)
+	err := lr.OnPulse(ctx, pulse)
+	require.NoError(t, err)
+	assert.NotNil(t, lr.state[objectRef].ExecutionState)
+	assert.Equal(t, uint64(2), mb.SendCounter)
+}
