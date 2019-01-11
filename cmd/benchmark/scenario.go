@@ -20,11 +20,13 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/pkg/errors"
 )
 
 type scenario interface {
@@ -34,6 +36,7 @@ type scenario interface {
 	getAverageOperationDuration() time.Duration
 	getName() string
 	getOut() io.Writer
+	printResult()
 }
 
 type transferDifferentMembersScenario struct {
@@ -43,6 +46,9 @@ type transferDifferentMembersScenario struct {
 	members     []memberInfo
 	out         io.Writer
 	totalTime   int64
+	successes   uint32
+	errors      uint32
+	timeouts    uint32
 }
 
 func (s *transferDifferentMembersScenario) getOperationsNumber() int {
@@ -86,11 +92,21 @@ func (s *transferDifferentMembersScenario) startMember(index int, wg *sync.WaitG
 		to := s.members[index+1]
 
 		start := time.Now()
-		response := transfer(ctx, 1, from, to)
+		err := transfer(ctx, 1, from, to)
 		atomic.AddInt64(&s.totalTime, int64(time.Since(start)))
 
-		if response != "success" {
-			writeToOutput(s.out, fmt.Sprintf("[Member №%d] Transfer from %s to %s. Response: %s.\n", index, from.ref, to.ref, response))
+		if err == nil {
+			atomic.AddUint32(&s.successes, 1)
+		} else if err, ok := errors.Cause(err).(net.Error); ok && err.Timeout() {
+			atomic.AddUint32(&s.timeouts, 1)
+			writeToOutput(s.out, fmt.Sprintf("[Member №%d] Transfer from %s to %s. Timeout.\n", index, from.ref, to.ref))
+		} else {
+			atomic.AddUint32(&s.errors, 1)
+			writeToOutput(s.out, fmt.Sprintf("[Member №%d] Transfer from %s to %s. Response: %s.\n", index, from.ref, to.ref, err.Error()))
 		}
 	}
+}
+
+func (s *transferDifferentMembersScenario) printResult() {
+	writeToOutput(s.out, fmt.Sprintf("Scenario result:\n\tSuccesses: %d\n\tErrors: %d\n\tTimeouts: %d\n", s.successes, s.errors, s.timeouts))
 }
