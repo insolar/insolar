@@ -145,9 +145,9 @@ func (t *tcpTransport) handleAcceptedConnection(conn net.Conn) {
 	closed := false
 
 	for {
-		if atomic.LoadUint32(&t.stopped) == 1 && closed {
+		if !closed && atomic.LoadUint32(&t.stopped) == 1 {
 			closed = true
-			log.Debugf("[ handleAcceptedConnection ] Stop handling connection: %s", conn.RemoteAddr().String())
+			log.Infof("[ handleAcceptedConnection ] Stop handling connection: %s", conn.RemoteAddr().String())
 		}
 
 		err := conn.SetReadDeadline(time.Now().Add(1000 * time.Millisecond))
