@@ -20,22 +20,83 @@ import (
 	"context"
 	"io/ioutil"
 	"net/http"
-	"os"
 	"reflect"
 	"testing"
 
 	"github.com/insolar/insolar/certificate"
-	"github.com/stretchr/testify/require"
-
-	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/stretchr/testify/suite"
+
+	"github.com/insolar/insolar/configuration"
 )
 
 const HOST = "http://localhost:19191"
 const TestUrl = HOST + "/api/call"
 
-func TestMain(m *testing.M) {
+type MainAPISuite struct {
+	suite.Suite
+}
+
+func (suite *MainAPISuite) TestGetRequest() {
+	resp, err := http.Get(TestUrl)
+	suite.NoError(err)
+	body, err := ioutil.ReadAll(resp.Body)
+	suite.NoError(err)
+	suite.Contains(string(body[:]), `"[ UnmarshalRequest ] Empty body"`)
+}
+
+func (suite *MainAPISuite) TestSerialization() {
+	var a uint = 1
+	var b bool = true
+	var c string = "test"
+
+	serArgs, err := core.MarshalArgs(a, b, c)
+	suite.NoError(err)
+	suite.NotNil(serArgs)
+
+	var aR uint
+	var bR bool
+	var cR string
+	rowResp, err := core.UnMarshalResponse(serArgs, []interface{}{aR, bR, cR})
+	suite.NoError(err)
+	suite.Len(rowResp, 3)
+	suite.Equal(reflect.TypeOf(a), reflect.TypeOf(rowResp[0]))
+	suite.Equal(reflect.TypeOf(b), reflect.TypeOf(rowResp[1]))
+	suite.Equal(reflect.TypeOf(c), reflect.TypeOf(rowResp[2]))
+	suite.Equal(a, rowResp[0].(uint))
+	suite.Equal(b, rowResp[1].(bool))
+	suite.Equal(c, rowResp[2].(string))
+}
+
+func (suite *MainAPISuite) TestNewApiRunnerNilConfig() {
+	_, err := NewRunner(nil)
+	suite.Contains(err.Error(), "config is nil")
+}
+
+func (suite *MainAPISuite) TestNewApiRunnerNoRequiredParams() {
+	cfg := configuration.APIRunner{}
+	_, err := NewRunner(&cfg)
+	suite.Contains(err.Error(), "Address must not be empty")
+
+	cfg.Address = "address:100"
+	_, err = NewRunner(&cfg)
+	suite.Contains(err.Error(), "Call must exist")
+
+	cfg.Call = "test"
+	_, err = NewRunner(&cfg)
+	suite.Contains(err.Error(), "RPC must exist")
+
+	cfg.RPC = "test"
+	_, err = NewRunner(&cfg)
+	suite.Contains(err.Error(), "Timeout must not be null")
+
+	cfg.Timeout = 2
+	_, err = NewRunner(&cfg)
+	suite.NoError(err)
+}
+
+func TestMainTestSuite(t *testing.T) {
 	ctx, _ := inslogger.WithTraceField(context.Background(), "APItests")
 	cfg := configuration.NewAPIRunner()
 	api, _ := NewRunner(&cfg)
@@ -44,67 +105,7 @@ func TestMain(m *testing.M) {
 	api.CertificateManager = cm
 	api.Start(ctx)
 
-	code := m.Run()
+	suite.Run(t, new(MainAPISuite))
 
 	api.Stop(ctx)
-
-	os.Exit(code)
-}
-
-func TestGetRequest(t *testing.T) {
-	resp, err := http.Get(TestUrl)
-	require.NoError(t, err)
-	body, err := ioutil.ReadAll(resp.Body)
-	require.NoError(t, err)
-	require.Contains(t, string(body[:]), `"[ UnmarshalRequest ] Empty body"`)
-}
-
-func TestSerialization(t *testing.T) {
-	var a uint = 1
-	var b bool = true
-	var c string = "test"
-
-	serArgs, err := core.MarshalArgs(a, b, c)
-	require.NoError(t, err)
-	require.NotNil(t, serArgs)
-
-	var aR uint
-	var bR bool
-	var cR string
-	rowResp, err := core.UnMarshalResponse(serArgs, []interface{}{aR, bR, cR})
-	require.NoError(t, err)
-	require.Len(t, rowResp, 3)
-	require.Equal(t, reflect.TypeOf(a), reflect.TypeOf(rowResp[0]))
-	require.Equal(t, reflect.TypeOf(b), reflect.TypeOf(rowResp[1]))
-	require.Equal(t, reflect.TypeOf(c), reflect.TypeOf(rowResp[2]))
-	require.Equal(t, a, rowResp[0].(uint))
-	require.Equal(t, b, rowResp[1].(bool))
-	require.Equal(t, c, rowResp[2].(string))
-}
-
-func TestNewApiRunnerNilConfig(t *testing.T) {
-	_, err := NewRunner(nil)
-	require.Contains(t, err.Error(), "config is nil")
-}
-
-func TestNewApiRunnerNoRequiredParams(t *testing.T) {
-	cfg := configuration.APIRunner{}
-	_, err := NewRunner(&cfg)
-	require.Contains(t, err.Error(), "Address must not be empty")
-
-	cfg.Address = "address:100"
-	_, err = NewRunner(&cfg)
-	require.Contains(t, err.Error(), "Call must exist")
-
-	cfg.Call = "test"
-	_, err = NewRunner(&cfg)
-	require.Contains(t, err.Error(), "RPC must exist")
-
-	cfg.RPC = "test"
-	_, err = NewRunner(&cfg)
-	require.Contains(t, err.Error(), "Timeout must not be null")
-
-	cfg.Timeout = 2
-	_, err = NewRunner(&cfg)
-	require.NoError(t, err)
 }
