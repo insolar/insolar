@@ -34,7 +34,7 @@ func NewAPIRunner() APIRunner {
 		Address: "localhost:19191",
 		Call:    "/api/call",
 		RPC:     "/api/rpc",
-		Timeout: 2,
+		Timeout: 5,
 	}
 }
 
