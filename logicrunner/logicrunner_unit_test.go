@@ -42,10 +42,23 @@ func TestOnPulse(t *testing.T) {
 
 	objectRef := testutils.RandomRef()
 
-	// test empty es
+	// test empty ExecutionState
 	lr.state[objectRef] = &ObjectState{ExecutionState: &ExecutionState{Behaviour: &ValidationSaver{}}}
 	err = lr.OnPulse(ctx, pulse)
 	require.NoError(t, err)
+	assert.Nil(t, lr.state[objectRef])
+
+	// test empty ExecutionState but not empty validation/consensus
+	lr.state[objectRef] = &ObjectState{
+		ExecutionState: &ExecutionState{
+			Behaviour: &ValidationSaver{},
+		},
+		Validation: &ExecutionState{},
+		Consensus:  &Consensus{},
+	}
+	err = lr.OnPulse(ctx, pulse)
+	require.NoError(t, err)
+	require.NotNil(t, lr.state[objectRef])
 	assert.Nil(t, lr.state[objectRef].ExecutionState)
 
 	// test empty es with query in current

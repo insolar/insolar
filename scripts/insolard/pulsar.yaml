@@ -1,6 +1,6 @@
 pulsar:
   connectiontype: tcp
-  mainlisteneraddress: 0.0.0.0:58090
+  mainlisteneraddress: 127.0.0.1:58090
   storage:
     datadirectory: ./data_pulsar
     txretriesonconflict: 0
@@ -10,14 +10,13 @@ pulsar:
   receivingvectortimeout: 1000
   receivingsignsforchosentimeout: 0
   neighbours: []
-  numberofrandomhosts: 1
+  numberofrandomhosts: 5
   numberdelta: 10
   distributiontransport:
     protocol: TCP
-    address: 0.0.0.0:58091
+    address: 127.0.0.1:58091
     behindnat: false
   pulsedistributor:
     bootstraphosts:
-#    if you want start system with real pulsar, change this to host of one of discovery nodes (for example, localhost:13831)
-    - localhost:11111
+    - 127.0.0.1:13831
 keyspath: "scripts/insolard/configs/bootstrap_keys.json"

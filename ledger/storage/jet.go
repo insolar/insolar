@@ -166,6 +166,8 @@ func (db *DB) UpdateJetTree(ctx context.Context, pulse core.PulseNumber, setActu
 
 // AppendJetTree append a jet tree for specified pulse.
 func (db *DB) AppendJetTree(ctx context.Context, pulse core.PulseNumber, tree *jet.Tree) error {
+	inslog := inslogger.FromContext(ctx)
+	inslog.Debugf("[ AppendJetTree ] start")
 	db.jetTreeLock.Lock()
 	defer db.jetTreeLock.Unlock()
 
@@ -173,10 +175,16 @@ func (db *DB) AppendJetTree(ctx context.Context, pulse core.PulseNumber, tree *j
 	if err != nil {
 		return err
 	}
+	inslog.Debugf("[ AppendJetTree ] successfully got saved tree")
 	mergedTree := savedTree.Merge(tree)
 
 	k := prefixkey(scopeIDSystem, []byte{sysJetTree}, pulse.Bytes())
-	return db.set(ctx, k, mergedTree.Bytes())
+	err = db.set(ctx, k, mergedTree.Bytes())
+	if err != nil {
+		return err
+	}
+	inslog.Debugf("[ AppendJetTree ] successfully updated tree in DB")
+	return nil
 }
 
 // GetJetTree fetches tree for specified pulse.

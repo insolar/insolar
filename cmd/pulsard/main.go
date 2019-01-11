@@ -28,9 +28,11 @@ import (
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/utils"
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/keystore"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/pulsenetwork"
 	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/network/transport/relay"
@@ -39,7 +41,6 @@ import (
 	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/insolar/insolar/pulsar/storage"
 	"github.com/insolar/insolar/version"
-	"github.com/satori/go.uuid"
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
 )
@@ -63,8 +64,6 @@ func parseInputParams() inputParams {
 // Need to fix problem with start pulsar
 func main() {
 	params := parseInputParams()
-	uniqueID := RandTraceID()
-	ctx, inslog := inslogger.WithTraceField(context.Background(), uniqueID)
 
 	jww.SetStdoutThreshold(jww.LevelDebug)
 	cfgHolder := configuration.NewHolder()
@@ -75,16 +74,20 @@ func main() {
 		err = cfgHolder.Load()
 	}
 	if err != nil {
-		inslog.Warnln("failed to load configuration from file: ", err.Error())
+		log.Warnln("failed to load configuration from file: ", err.Error())
 	}
 
 	err = cfgHolder.LoadEnv()
 	if err != nil {
-		inslog.Warnln("failed to load configuration from env:", err.Error())
+		log.Warnln("failed to load configuration from env:", err.Error())
 	}
 
+	traceID := utils.RandTraceID()
+	ctx, inslog := initLogger(context.Background(), cfgHolder.Configuration.Log, traceID)
+	log.SetGlobalLogger(inslog)
+
 	server, storage, tp := initPulsar(ctx, cfgHolder.Configuration)
-	server.ID = uniqueID
+	server.ID = traceID
 
 	go server.StartServer(ctx)
 	pulseTicker, refreshTicker := runPulsar(ctx, server, cfgHolder.Configuration.Pulsar)
@@ -205,11 +208,14 @@ func runPulsar(ctx context.Context, server *pulsar.Pulsar, cfg configuration.Pul
 	return
 }
 
-// RandTraceID returns random traceID in uuid format
-func RandTraceID() string {
-	traceID, err := uuid.NewV4()
+func initLogger(ctx context.Context, cfg configuration.Log, traceid string) (context.Context, core.Logger) {
+	inslog, err := log.NewLog(cfg)
 	if err != nil {
-		panic("createRandomTraceIDFailed:" + err.Error())
+		panic(err)
 	}
-	return traceID.String()
+	err = inslog.SetLevel(cfg.Level)
+	if err != nil {
+		inslog.Errorln(err.Error())
+	}
+	return inslogger.WithTraceField(inslogger.SetLogger(ctx, inslog), traceid)
 }

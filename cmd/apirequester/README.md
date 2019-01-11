@@ -14,7 +14,7 @@ Usage
    
 #### Start apirequester
 
-    ./bin/apirequester -k=scripts/insolard/root_member_keys.json
+    ./bin/apirequester -k=scripts/insolard/configs/root_member_keys.json
 
 ### Options
 
