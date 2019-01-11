@@ -19,6 +19,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"net/http"
 	"testing"
 	"time"
 
@@ -106,6 +107,7 @@ func TestTimeoutSuite(t *testing.T) {
 	userRef := testutils.RandomRef().String()
 	timeoutSuite.user, err = requester.CreateUserConfig(userRef, string(sKeyString))
 
+	http.DefaultServeMux = new(http.ServeMux)
 	cfg := configuration.NewAPIRunner()
 	timeoutSuite.api, err = NewRunner(&cfg)
 	require.NoError(t, err)

@@ -98,6 +98,7 @@ func (suite *MainAPISuite) TestNewApiRunnerNoRequiredParams() {
 
 func TestMainTestSuite(t *testing.T) {
 	ctx, _ := inslogger.WithTraceField(context.Background(), "APItests")
+	http.DefaultServeMux = new(http.ServeMux)
 	cfg := configuration.NewAPIRunner()
 	api, _ := NewRunner(&cfg)
 
