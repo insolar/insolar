@@ -20,6 +20,8 @@ import (
 	"context"
 	"errors"
 
+	"github.com/insolar/insolar/core"
+
 	"go.opencensus.io/exporter/jaeger"
 	"go.opencensus.io/trace"
 
@@ -120,6 +122,7 @@ func RegisterJaeger(
 	servicename string,
 	agentendpoint string,
 	collectorendpoint string,
+	nodeRef *core.RecordRef,
 ) (*jaeger.Exporter, error) {
 	if agentendpoint == "" && collectorendpoint == "" {
 		return nil, ErrJagerConfigEmpty
@@ -131,6 +134,7 @@ func RegisterJaeger(
 			ServiceName: servicename,
 			Tags: []jaeger.Tag{
 				jaeger.StringTag("hostname", hostname()),
+				jaeger.StringTag("nodeRef", nodeRef.String()),
 			},
 		},
 	})
@@ -150,11 +154,13 @@ func ShouldRegisterJaeger(
 	servicename string,
 	agentendpoint string,
 	collectorendpoint string,
+	nodeRef *core.RecordRef,
 ) (flusher func()) {
 	exporter, regerr := RegisterJaeger(
 		servicename,
 		agentendpoint,
 		collectorendpoint,
+		nodeRef,
 	)
 	inslog := inslogger.FromContext(ctx)
 	if regerr == nil {

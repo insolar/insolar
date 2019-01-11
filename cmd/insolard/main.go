@@ -128,7 +128,7 @@ func main() {
 	jaegerflush := func() {}
 	if params.traceEnabled {
 		jconf := cfg.Tracer.Jaeger
-		jaegerflush = instracer.ShouldRegisterJaeger(ctx, "insolard", jconf.AgentEndpoint, jconf.CollectorEndpoint)
+		jaegerflush = instracer.ShouldRegisterJaeger(ctx, "insolard", jconf.AgentEndpoint, jconf.CollectorEndpoint, certManager.GetCertificate().GetNodeRef())
 		ctx = instracer.SetBaggage(ctx, instracer.Entry{Key: "traceid", Value: traceID})
 	}
 	defer jaegerflush()
