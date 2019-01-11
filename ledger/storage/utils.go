@@ -42,5 +42,5 @@ func pulseFromKey(key []byte) core.PulseNumber {
 }
 
 func pulseBytesFromKey(key []byte) []byte {
-	return key[1+core.RecordIDSize : core.RecordIDSize+core.PulseNumberSize]
+	return key[core.RecordHashSize : core.RecordHashSize+core.PulseNumberSize]
 }

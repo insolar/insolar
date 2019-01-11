@@ -356,7 +356,7 @@ func (m *PulseManager) getExecutorHotData(
 			TTL:   ttl,
 			Index: encoded,
 		}
-
+		fmt.Println("sent ", id)
 	}
 	fmt.Println("[recent] send ", len(recentObjects))
 

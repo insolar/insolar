@@ -893,8 +893,10 @@ func (h *MessageHandler) nodeForJet(
 	if targetPulse == core.PulseNumberCurrent {
 		targetPulse = parcelPulse
 	}
-	if parcelPulse-targetPulse < h.conf.LightChainLimit {
-		return h.JetCoordinator.LightExecutorForJet(ctx, jetID, targetPulse)
-	}
-	return h.JetCoordinator.Heavy(ctx, parcelPulse)
+	// if parcelPulse-targetPulse < h.conf.LightChainLimit {
+	// 	return h.JetCoordinator.LightExecutorForJet(ctx, jetID, targetPulse)
+	// }
+	// return h.JetCoordinator.Heavy(ctx, parcelPulse)
+
+	return h.JetCoordinator.LightExecutorForJet(ctx, jetID, targetPulse)
 }
