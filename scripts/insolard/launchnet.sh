@@ -21,8 +21,11 @@ GENESIS_CONFIG=$BASE_DIR/genesis.yaml
 insolar_log_level=Debug
 gorund_log_level=$insolar_log_level
 
-NUM_DISCOVERY_NODES=$(grep "discoveryhost: " $GENESIS_CONFIG | grep -cv "#" )
-NUM_NODES=$(grep "nodehost: " $GENESIS_CONFIG | grep -cv "#" )
+NUM_DISCOVERY_NODES=$(sed '/^nodes:/ q' $GENESIS_CONFIG | grep "host:" | grep -cv "#" )
+NUM_NODES=$(sed -n '/^nodes:/,$p' $GENESIS_CONFIG | grep "host:" | grep -cv "#" )
+
+echo $NUM_DISCOVERY_NODES
+echo $NUM_NODES
 
 for i in `seq 1 $NUM_DISCOVERY_NODES`
 do
@@ -40,7 +43,7 @@ stop_listening()
 {
     echo "stop_listening() starts ..."
     stop_insgorund=$1
-    ports="13831 13832 23832 23833 33833 33834 43834 53835 58090 58182 63831"
+    ports="13831 13832 23832 23833 33833 33834 43834 53835 58090 58182"
     if [[ "$stop_insgorund" == "true" ]]
     then
         ports="$ports $INSGORUND_LISTEN_PORT $INSGORUND_RPS_PORT"
@@ -221,12 +224,12 @@ copy_certs()
         i=$((i + 1))
         cp -v $DISCOVERY_NODES_DATA/certs/discovery_cert_$i.json $node/cert.json
     done
-    i=0
-    for node in "${NODES[@]}"
-    do
-        i=$((i + 1))
-        cp -v $NODES_DATA/certs/node_cert_$i.json $node/cert.json
-    done
+#    i=0
+#    for node in "${NODES[@]}"
+#    do
+#        i=$((i + 1))
+#        cp -v $NODES_DATA/certs/node_cert_$i.json $node/cert.json
+#    done
     echo "copy_certs() end."
 }
 
@@ -280,18 +283,19 @@ do
     echo "DISCOVERY NODE $i STARTED in background"
 done
 
-i=0
-for node in "${NODES[@]}"
-do
-    i=$((i + 1))
-    if [[ "$i" -eq "$NUM_NODES" ]]
-    then
-        echo "NODE $i STARTED in foreground"
-        INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $BASE_DIR/insolar_${i+$NUM_DISCOVERY_NODES}.yaml --measure $node/measure.txt &> $node/output.txt
-        break
-    fi
-    INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $BASE_DIR/insolar_${i+$NUM_DISCOVERY_NODES}.yaml --measure $node/measure.txt &> $node/output.txt &
-    echo "NODE $i STARTED in background"
-done
+#i=0
+#for node in "${NODES[@]}"
+#do
+#    i=$((i + 1))
+#    echo curl -i -H "Accept: application/json" -H "Content-Type: application/json" -X POST --data "$(gen_get_node_ref)" "http://localhost:19191/api/call"
+#    if [[ "$i" -eq "$NUM_NODES" ]]
+#    then
+#        echo "NODE $i STARTED in foreground"
+#        INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $BASE_DIR/insolar_${i+$NUM_DISCOVERY_NODES}.yaml --measure $node/measure.txt &> $node/output.txt
+#        break
+#    fi
+#    INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $BASE_DIR/insolar_${i+$NUM_DISCOVERY_NODES}.yaml --measure $node/measure.txt &> $node/output.txt &
+#    echo "NODE $i STARTED in background"
+#done
 
 echo "FINISHING ..."

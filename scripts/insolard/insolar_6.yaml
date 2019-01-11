@@ -32,7 +32,7 @@ logicrunner:
   goplugin:
     runnerlisten: 127.0.0.1:68181
 apirunner:
-  address: 127.0.0.1:19195
+  address: 127.0.0.1:19196
 keyspath: "scripts/insolard/nodes/1/keys.json"
 certificatepath: "scripts/insolard/nodes/1/cert.json"
 metrics:
