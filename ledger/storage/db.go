@@ -138,9 +138,7 @@ func NewDB(conf configuration.Ledger, opts *badger.Options) (*DB, error) {
 func (db *DB) Init(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
 	inslog.Debug("start storage bootstrap")
-	jetID := *jet.NewID(2, []byte{})        // 00
-	jetID2 := *jet.NewID(2, []byte{1 << 6}) // 01
-	jetID3 := *jet.NewID(1, []byte{1 << 7}) // 10
+	jetID := *jet.NewID(0, nil)
 
 	getGenesisRef := func() (*core.RecordRef, error) {
 		buff, err := db.get(ctx, prefixkey(scopeIDSystem, []byte{sysGenesis}))
@@ -153,7 +151,12 @@ func (db *DB) Init(ctx context.Context) error {
 	}
 
 	createGenesisRecord := func() (*core.RecordRef, error) {
-		err := db.AddPulse(
+		err := db.AddJets(ctx, jetID)
+		if err != nil {
+			return nil, err
+		}
+
+		err = db.AddPulse(
 			ctx,
 			core.Pulse{
 				PulseNumber: core.GenesisPulse.PulseNumber,
@@ -168,28 +171,29 @@ func (db *DB) Init(ctx context.Context) error {
 		if err != nil {
 			return nil, err
 		}
-		err = db.SetDrop(ctx, jetID2, &jet.JetDrop{})
-		if err != nil {
-			return nil, err
-		}
-		err = db.SetDrop(ctx, jetID3, &jet.JetDrop{})
-		if err != nil {
-			return nil, err
-		}
 
 		lastPulse, err := db.GetLatestPulse(ctx)
 		if err != nil {
 			return nil, err
 		}
-		genesisID, err := db.SetRecord(ctx, jetID3, lastPulse.Pulse.PulseNumber, &record.GenesisRecord{})
+		genesisID, err := db.SetRecord(ctx, jetID, lastPulse.Pulse.PulseNumber, &record.GenesisRecord{})
 		if err != nil {
 			return nil, err
 		}
 		err = db.SetObjectIndex(
 			ctx,
-			jetID3,
+			jetID,
 			genesisID,
 			&index.ObjectLifeline{LatestState: genesisID, LatestStateApproved: genesisID},
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		err = db.SetReplicatedPulse(
+			ctx,
+			jetID,
+			lastPulse.Pulse.PulseNumber,
 		)
 		if err != nil {
 			return nil, err
@@ -208,16 +212,7 @@ func (db *DB) Init(ctx context.Context) error {
 		return errors.Wrap(err, "bootstrap failed")
 	}
 
-	// TODO: required for test passing, need figure out how to do init jets properly
-	err = db.AddJets(ctx, jetID, jetID2, jetID3)
-	if err != nil {
-		return err
-	}
-	lp, err := db.GetLatestPulse(ctx)
-	if err != nil {
-		return err
-	}
-	return db.UpdateJetTree(ctx, lp.Pulse.PulseNumber, true, jetID, jetID2, jetID3)
+	return nil
 }
 
 // GenesisRef returns the genesis record reference.
@@ -642,72 +637,4 @@ func (db *DB) iterate(
 		}
 		return nil
 	})
-}
-
-// InitDBWithZeroJet creates initial records in storage with zero jetID.
-func (db *DB) InitDBWithZeroJet(ctx context.Context) error {
-	inslog := inslogger.FromContext(ctx)
-	inslog.Debug("start storage bootstrap")
-	jetID := *jet.NewID(0, nil)
-
-	getGenesisRef := func() (*core.RecordRef, error) {
-		buff, err := db.get(ctx, prefixkey(scopeIDSystem, []byte{sysGenesis}))
-		if err != nil {
-			return nil, err
-		}
-		var genesisRef core.RecordRef
-		copy(genesisRef[:], buff)
-		return &genesisRef, nil
-	}
-
-	createGenesisRecord := func() (*core.RecordRef, error) {
-		err := db.AddPulse(
-			ctx,
-			core.Pulse{
-				PulseNumber: core.GenesisPulse.PulseNumber,
-				Entropy:     core.GenesisPulse.Entropy,
-			},
-		)
-		if err != nil {
-			return nil, err
-		}
-		// It should be 0. Becase pulse after 65537 will try to use a hash of drop between 0 - 65537
-		err = db.SetDrop(ctx, jetID, &jet.JetDrop{})
-		if err != nil {
-			return nil, err
-		}
-
-		lastPulse, err := db.GetLatestPulse(ctx)
-		if err != nil {
-			return nil, err
-		}
-		genesisID, err := db.SetRecord(ctx, jetID, lastPulse.Pulse.PulseNumber, &record.GenesisRecord{})
-		if err != nil {
-			return nil, err
-		}
-		err = db.SetObjectIndex(
-			ctx,
-			jetID,
-			genesisID,
-			&index.ObjectLifeline{LatestState: genesisID, LatestStateApproved: genesisID},
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		genesisRef := core.NewRecordRef(*genesisID, *genesisID)
-		return genesisRef, db.set(ctx, prefixkey(scopeIDSystem, []byte{sysGenesis}), genesisRef[:])
-	}
-
-	var err error
-	db.genesisRef, err = getGenesisRef()
-	if err == ErrNotFound {
-		db.genesisRef, err = createGenesisRecord()
-	}
-	if err != nil {
-		return errors.Wrap(err, "bootstrap failed")
-	}
-
-	// TODO: required for test passing, need figure out how to do init jets properly
-	return db.AddJets(ctx, jetID)
 }

@@ -27,15 +27,14 @@ import (
 	"time"
 
 	"github.com/dgraph-io/badger"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/heavyserver"
 	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
@@ -57,18 +56,10 @@ func TestPulseManager_SendToHeavyWithRetry(t *testing.T) {
 
 func sendToHeavy(t *testing.T, withretry bool) {
 	ctx := inslogger.TestContext(t)
-	db, cleaner := storagetest.TmpDB(ctx, t, storagetest.DisableBootstrap())
+	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
 	// TODO: test should work with any JetID (add new test?) - 14.Dec.2018 @nordicdyno
 	jetID := jet.ZeroJetID
-
-	err := db.AddPulse(ctx, *core.GenesisPulse)
-	require.NoError(t, err)
-	err = db.AddJets(ctx, jetID)
-	require.NoError(t, err)
-	err = db.SetDrop(ctx, jetID, &jet.JetDrop{})
-	require.NoError(t, err)
-
 	// Mock N1: LR mock do nothing
 	lrMock := testutils.NewLogicRunnerMock(t)
 	lrMock.OnPulseMock.Return(nil)
@@ -133,8 +124,10 @@ func sendToHeavy(t *testing.T, withretry bool) {
 		heavymsg, ok := msg.(*message.HeavyPayload)
 		if ok {
 			if withretry && atomic.AddInt32(&bussendfailed, 1) < 2 {
-				return heavyserver.ErrSyncInProgress,
-					errors.New("BusMock one send should be failed (test retry)")
+				return &reply.HeavyError{
+					SubType: reply.ErrHeavySyncInProgress,
+					Message: "retryable error",
+				}, nil
 			}
 
 			syncsended++
@@ -194,7 +187,7 @@ func sendToHeavy(t *testing.T, withretry bool) {
 
 	// Actial test logic
 	// start PulseManager
-	err = pm.Start(ctx)
+	err := pm.Start(ctx)
 	assert.NoError(t, err)
 
 	// store last pulse as light material and set next one

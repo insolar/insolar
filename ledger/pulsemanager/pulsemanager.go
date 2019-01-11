@@ -19,6 +19,7 @@ package pulsemanager
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/pkg/errors"
 	"golang.org/x/sync/errgroup"
@@ -119,25 +120,31 @@ func (m *PulseManager) processEndPulse(
 	for jetID := range jetIDs {
 		jetID := jetID
 		g.Go(func() error {
-			drop, dropSerialized, messages, err := m.createDrop(ctx, jetID, prevPulseNumber, currentPulse.PulseNumber)
+			drop, dropSerialized, _, err := m.createDrop(ctx, jetID, prevPulseNumber, currentPulse.PulseNumber)
 			if err != nil {
 				return errors.Wrapf(err, "create drop on pulse %v failed", currentPulse.PulseNumber)
 			}
 
-			msg, hotRecordsError := m.getExecutorData(
+			inslogger.FromContext(ctx).Debugf("[processEndPulse] before getExecutorHotData - %v", time.Now())
+			msg, hotRecordsError := m.getExecutorHotData(
 				ctx, jetID, currentPulse.PulseNumber, drop, dropSerialized)
 			if hotRecordsError != nil {
 				return errors.Wrapf(err, "getExecutorData failed for jet id %v", jetID)
 			}
+			inslogger.FromContext(ctx).Debugf("[processEndPulse] after getExecutorHotData - %v", time.Now())
+
+			inslogger.FromContext(ctx).Debugf("[processEndPulse] before sendExecutorData - %v", time.Now())
 			sendError := m.sendExecutorData(ctx, currentPulse, newPulse, jetID, msg)
 			if sendError != nil {
 				return err
 			}
+			inslogger.FromContext(ctx).Debugf("[processEndPulse] after sendExecutorData - %v", time.Now())
 
-			dropErr := m.processDrop(ctx, jetID, currentPulse, dropSerialized, messages)
-			if dropErr != nil {
-				return errors.Wrap(dropErr, "processDrop failed")
-			}
+			// FIXME: @andreyromancev. 09.01.2019. Temporary disabled validation. Uncomment when jet split works properly.
+			// dropErr := m.processDrop(ctx, jetID, currentPulse, dropSerialized, messages)
+			// if dropErr != nil {
+			// 	return errors.Wrap(dropErr, "processDrop failed")
+			// }
 
 			// TODO: @andreyromancev. 20.12.18. uncomment me when pending notifications required.
 			// m.sendAbandonedRequests(ctx, newPulse, jetID)
@@ -153,6 +160,18 @@ func (m *PulseManager) processEndPulse(
 	// TODO: maybe move cleanup in the above cycle or process removal in separate job - 20.Dec.2018 @nordicdyno
 	untilPN := currentPulse.PulseNumber - m.options.storeLightPulses
 	for jetID := range jetIDs {
+		replicated, err := m.db.GetReplicatedPulse(ctx, jetID)
+		if err != nil {
+			return err
+		}
+		if untilPN >= replicated {
+			inslogger.FromContext(ctx).Errorf(
+				"light cleanup aborted (remove from: %v, replicated: %v)",
+				untilPN,
+				replicated,
+			)
+			return nil
+		}
 		if _, err := m.db.RemoveJetIndexesUntil(ctx, jetID, untilPN); err != nil {
 			return err
 		}
@@ -263,7 +282,7 @@ func (m *PulseManager) processDrop(
 	return nil
 }
 
-func (m *PulseManager) getExecutorData(
+func (m *PulseManager) getExecutorHotData(
 	ctx context.Context,
 	jetID core.RecordID,
 	pulse core.PulseNumber,
@@ -332,19 +351,21 @@ func (m *PulseManager) sendExecutorData(
 	jetID core.RecordID,
 	msg *message.HotData,
 ) error {
-	shouldSplit := func() bool {
-		if len(msg.JetDropSizeHistory) < m.options.dropHistorySize {
-			return false
-		}
-		for _, info := range msg.JetDropSizeHistory {
-			if info.DropSize < m.options.splitThreshold {
-				return false
-			}
-		}
-		return true
-	}
+	// shouldSplit := func() bool {
+	// 	if len(msg.JetDropSizeHistory) < m.options.dropHistorySize {
+	// 		return false
+	// 	}
+	// 	for _, info := range msg.JetDropSizeHistory {
+	// 		if info.DropSize < m.options.splitThreshold {
+	// 			return false
+	// 		}
+	// 	}
+	// 	return true
+	// }
 
-	if shouldSplit() {
+	// FIXME: enable split
+	// if shouldSplit() {
+	if false {
 		left, right, err := m.db.SplitJetTree(
 			ctx,
 			currentPulse.PulseNumber,
@@ -372,10 +393,12 @@ func (m *PulseManager) sendExecutorData(
 		}
 	} else {
 		msg.Jet = *core.NewRecordRef(core.DomainID, jetID)
+		inslogger.FromContext(ctx).Debugf("[sendExecutorData] before m.Bus.Send(ctx, msg, nil) - %v", time.Now())
 		_, err := m.Bus.Send(ctx, msg, nil)
 		if err != nil {
 			return errors.Wrap(err, "failed to send executor data")
 		}
+		inslogger.FromContext(ctx).Debugf("[sendExecutorData] after m.Bus.Send(ctx, msg, nil) - %v", time.Now())
 	}
 
 	return nil
