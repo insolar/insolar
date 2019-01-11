@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/insolar/insolar/api/requester"
@@ -96,20 +97,35 @@ func createMembers(concurrent int) ([]memberInfo, error) {
 
 		var body []byte
 		var memberRef string
+		var memberResponse *response
 
-		for {
+		for j := 0; j < 3; j++ {
 			body, err = sendRequest(ctx, "CreateMember", params, rootMember)
 			if err != nil {
 				fmt.Println("Create member error", err.Error(), "retry")
 				time.Sleep(time.Second)
+				continue
 			}
-			memberResponse := getResponse(body)
+			memberResponse = getResponse(body)
 			if memberResponse.Error != "" {
 				fmt.Println("Create member error", memberResponse.Error, "retry")
 				time.Sleep(time.Second)
+				continue
 			}
 			memberRef = memberResponse.Result.(string)
 			break
+		}
+		if memberRef == "" {
+			if err != nil {
+				fmt.Println("Couldn't create member after 3 retries, last error:", err)
+				os.Exit(1)
+			}
+			if memberResponse != nil {
+				fmt.Printf("Couldn't create member after 3 retries, last error in response: %s \n", memberResponse.Error)
+				os.Exit(1)
+			}
+			fmt.Println("Couldn't create member after 3 retries")
+			os.Exit(1)
 		}
 
 		members = append(members, memberInfo{memberRef, string(memberPrivKeyStr)})
