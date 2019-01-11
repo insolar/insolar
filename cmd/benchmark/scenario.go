@@ -97,7 +97,7 @@ func (s *transferDifferentMembersScenario) startMember(index int, wg *sync.WaitG
 
 		if err == nil {
 			atomic.AddUint32(&s.successes, 1)
-		} else if err, ok := errors.Cause(err).(net.Error); ok && err.Timeout() {
+		} else if netErr, ok := errors.Cause(err).(net.Error); ok && netErr.Timeout() {
 			atomic.AddUint32(&s.timeouts, 1)
 			writeToOutput(s.out, fmt.Sprintf("[Member №%d] Transfer from %s to %s. Timeout.\n", index, from.ref, to.ref))
 		} else {
