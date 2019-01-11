@@ -8,6 +8,7 @@ BENCHMARK = benchmark
 EXPORTER = exporter
 APIREQUESTER = apirequester
 HEALTHCHECK = healthcheck
+CERTGEN = $(BIN_DIR)/certgen
 
 ALL_PACKAGES = ./...
 MOCKS_PACKAGE = github.com/insolar/insolar/testutils
@@ -91,6 +92,8 @@ $(EXPORTER):
 $(HEALTHCHECK):
 	go build -o $(BIN_DIR)/$(HEALTHCHECK) -ldflags "${LDFLAGS}" cmd/healthcheck/*.go
 
+$(CERTGEN):
+	go build -o $(CERTGEN) -ldflags "${LDFLAGS}" cmd/certgen/*.go
 
 functest:
 	CGO_ENABLED=1 go test -tags functest ./functest -count=1
