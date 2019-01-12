@@ -63,7 +63,7 @@ func (t *tcpTransport) send(address string, data []byte) error {
 		return errors.Wrap(err, "[ send ] Failed to resolve net address")
 	}
 
-	conn, err := t.pool.GetConnection(ctx, addr)
+	_, conn, err := t.pool.GetConnection(ctx, addr)
 	if err != nil {
 		return errors.Wrap(err, "[ send ] Failed to get connection")
 	}
@@ -79,7 +79,7 @@ func (t *tcpTransport) send(address string, data []byte) error {
 			case *os.SyscallError:
 				if realNetErr.Err == syscall.EPIPE {
 					t.pool.CloseConnection(ctx, addr)
-					conn, err = t.pool.GetConnection(ctx, addr)
+					_, conn, err = t.pool.GetConnection(ctx, addr)
 					if err != nil {
 						return errors.Wrap(err, "[ send ] Failed to get connection")
 					}

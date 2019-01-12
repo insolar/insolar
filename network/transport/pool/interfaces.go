@@ -22,7 +22,8 @@ import (
 )
 
 type ConnectionPool interface {
-	GetConnection(ctx context.Context, address net.Addr) (net.Conn, error)
+	GetConnection(ctx context.Context, address net.Addr) (bool, net.Conn, error)
+	RegisterConnection(ctx context.Context, address net.Addr, conn net.Conn) bool
 	CloseConnection(ctx context.Context, address net.Addr)
 	Reset()
 }

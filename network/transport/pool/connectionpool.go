@@ -41,7 +41,7 @@ func newConnectionPool(connectionFactory connectionFactory) *connectionPool {
 	}
 }
 
-func (cp *connectionPool) GetConnection(ctx context.Context, address net.Addr) (net.Conn, error) {
+func (cp *connectionPool) GetConnection(ctx context.Context, address net.Addr) (bool, net.Conn, error) {
 	logger := inslogger.FromContext(ctx)
 
 	conn, ok := cp.getConnection(address)
@@ -49,12 +49,32 @@ func (cp *connectionPool) GetConnection(ctx context.Context, address net.Addr) (
 	logger.Debugf("[ GetConnection ] Finding connection to %s in pool: %s", address, ok)
 
 	if ok {
-		return conn, nil
+		return false, conn, nil
 	}
 
 	logger.Debugf("[ GetConnection ] Missing open connection to %s in pool ", address)
 
 	return cp.getOrCreateConnection(ctx, address)
+}
+
+func (cp *connectionPool) RegisterConnection(ctx context.Context, address net.Addr, conn net.Conn) bool {
+	logger := inslogger.FromContext(ctx)
+
+	cp.mutex.Lock()
+	defer cp.mutex.Unlock()
+
+	_, ok := cp.unsafeConnectionsHolder.Get(address)
+
+	logger.Debugf("[ RegisterConnection ] Finding connection to %s in pool: %s", address, ok)
+
+	if ok {
+		return false
+	}
+
+	logger.Debugf("[ RegisterConnection ] Missing open connection to %s in pool ", address)
+
+	cp.unsafeConnectionsHolder.Add(address, conn)
+	return true
 }
 
 func (cp *connectionPool) CloseConnection(ctx context.Context, address net.Addr) {
@@ -81,7 +101,7 @@ func (cp *connectionPool) getConnection(address net.Addr) (net.Conn, bool) {
 	return cp.unsafeConnectionsHolder.Get(address)
 }
 
-func (cp *connectionPool) getOrCreateConnection(ctx context.Context, address net.Addr) (net.Conn, error) {
+func (cp *connectionPool) getOrCreateConnection(ctx context.Context, address net.Addr) (bool, net.Conn, error) {
 	logger := inslogger.FromContext(ctx)
 
 	cp.mutex.Lock()
@@ -91,14 +111,14 @@ func (cp *connectionPool) getOrCreateConnection(ctx context.Context, address net
 	logger.Debugf("[ getOrCreateConnection ] Finding connection to %s in pool: %s", address, ok)
 
 	if ok {
-		return conn, nil
+		return false, conn, nil
 	}
 
 	logger.Debugf("[ getOrCreateConnection ] Failed to retrieve connection to %s, creating it", address)
 
 	conn, err := cp.connectionFactory.CreateConnection(ctx, address)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ send ] Failed to create TCP connection")
+		return false, nil, errors.Wrap(err, "[ send ] Failed to create TCP connection")
 	}
 
 	cp.unsafeConnectionsHolder.Add(address, conn)
@@ -108,7 +128,7 @@ func (cp *connectionPool) getOrCreateConnection(ctx context.Context, address net
 		cp.unsafeConnectionsHolder.Size(),
 	)
 
-	return conn, nil
+	return true, conn, nil
 }
 
 func (cp *connectionPool) Reset() {
