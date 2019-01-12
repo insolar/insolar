@@ -88,7 +88,7 @@ func (t *tcpTransport) send(address string, data []byte) error {
 			case *os.SyscallError:
 				if realNetErr.Err == syscall.EPIPE {
 					t.pool.CloseConnection(ctx, addr)
-					conn, err := t.openConnection(ctx, addr)
+					conn, err = t.openConnection(ctx, addr)
 					if err != nil {
 						return err
 					}
