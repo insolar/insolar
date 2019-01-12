@@ -99,6 +99,13 @@ func (fp *FakePulsar) getPulseInfo() pulseInfo {
 }
 
 func (fp *FakePulsar) pulse(ctx context.Context) {
+	fp.mutex.Lock()
+	defer fp.mutex.Unlock()
+
+	if !fp.running {
+		return
+	}
+
 	fp.currentPulseNumber += fp.pulseNumberDelta
 	go fp.onPulse.HandlePulse(ctx, *fp.newPulse())
 }
