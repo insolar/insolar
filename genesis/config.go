@@ -39,7 +39,7 @@ func hasMinimumRolesSet(conf *genesisConfig) error {
 
 	if len(minRequiredRolesSet) != 0 {
 		var missingRoles string
-		for role, _ := range minRequiredRolesSet {
+		for role := range minRequiredRolesSet {
 			missingRoles += role + ", "
 		}
 		return errors.New("[ hasMinimumRolesSet ] No required roles in genesis config: " + missingRoles)
