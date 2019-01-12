@@ -103,7 +103,6 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 		if msg.DefaultTarget().Record().Pulse() == core.PulseNumberJet {
 			jetID = *msg.DefaultTarget().Record()
 		} else {
-			fmt.Println("checkJet, parcel.Pulse() - ", parcel.Pulse())
 			j, err := m.fetchJet(ctx, *msg.DefaultTarget().Record(), parcel.Pulse(), fetchJetReties)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to fetch jet tree")
@@ -114,7 +113,6 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 		// Check if jet is ours.
 		node, err := m.jetCoordinator.LightExecutorForJet(ctx, jetID, parcel.Pulse())
 		if err != nil {
-			logger.Debugf("checkJet: failed to check isMine: %s", err.Error())
 			return nil, errors.Wrap(err, "failed to calculate executor for jet")
 		}
 		if *node != m.jetCoordinator.Me() {
@@ -130,11 +128,9 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 				return handler(contextWithJet(ctx, jetID), parcel)
 			}
 
-			logger.Debugf("checkJet: not Mine")
 			return &reply.JetMiss{JetID: jetID}, nil
 		}
 
-		logger.Debugf("checkJet: done well")
 		return handler(contextWithJet(ctx, jetID), parcel)
 	}
 }
@@ -184,10 +180,11 @@ func (m *middleware) fetchJet(
 	jetID, actual := tree.Find(target)
 	if actual || retries < 0 {
 		if retries < 0 {
-			fmt.Println("not mine ", jetID.JetIDString(), target)
+			fmt.Printf("[not mine] %v, %v", jetID.JetIDString(), target)
+			fmt.Println()
 		}
 		if actual {
-			fmt.Println("mine ", jetID.JetIDString(), target)
+			fmt.Printf("[mine] %v, %v", jetID.JetIDString(), target)
 			fmt.Println()
 		}
 		return jetID, nil

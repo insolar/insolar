@@ -215,16 +215,12 @@ func (m *TransactionManager) RemoveObjectIndex(
 
 // set stores value by key.
 func (m *TransactionManager) set(ctx context.Context, key, value []byte) error {
-	debugf(ctx, "set key %v", bytes2hex(key))
-	fmt.Println("set: key - ", key)
 	m.txupdates[string(key)] = keyval{k: key, v: value}
 	return nil
 }
 
 // get returns value by key.
 func (m *TransactionManager) get(ctx context.Context, key []byte) ([]byte, error) {
-	debugf(ctx, "get key %v", bytes2hex(key))
-
 	if kv, ok := m.txupdates[string(key)]; ok {
 		return kv.v, nil
 	}

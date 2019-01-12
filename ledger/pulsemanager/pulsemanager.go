@@ -33,7 +33,6 @@ import (
 	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/pkg/errors"
-	"golang.org/x/sync/errgroup"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/pulsemanager.ActiveListSwapper -o ../../testutils -s _mock.go
@@ -114,7 +113,7 @@ func (m *PulseManager) processEndPulse(
 
 	jetIDs := tree.LeafIDs()
 
-	var g errgroup.Group
+	// var g errgroup.Group
 	for _, jetID := range jetIDs {
 		jetID := jetID
 
@@ -317,8 +316,6 @@ func (m *PulseManager) getExecutorHotData(
 	recentObjects := map[core.RecordID]*message.HotIndex{}
 	pendingRequests := map[core.RecordID]map[core.RecordID][]byte{}
 
-	fmt.Println("[recent] for jet ", jetID.JetIDString())
-	fmt.Println("[recent] initial ", len(recentObjectsIds))
 	for id, ttl := range recentObjectsIds {
 		lifeline, err := m.db.GetObjectIndex(ctx, jetID, &id, false)
 		if err != nil {
@@ -334,6 +331,7 @@ func (m *PulseManager) getExecutorHotData(
 			TTL:   ttl,
 			Index: encoded,
 		}
+		fmt.Println("[send id] ", id)
 	}
 
 	for objID, requests := range recentStorage.GetRequests() {
@@ -478,6 +476,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 	// swap active nodes
 	// TODO: fix network consensus and uncomment this (after NETD18-74)
 	// m.ActiveListSwapper.MoveSyncToActive()
+	fmt.Printf("Persist for pulse: %v is %v\n", newPulse.PulseNumber, persist)
 	if persist {
 		if err := m.db.AddPulse(ctx, newPulse); err != nil {
 			m.GIL.Release(ctx)
@@ -580,6 +579,7 @@ func (m *PulseManager) restoreGenesisRecentObjects(ctx context.Context) error {
 	return m.db.IterateIndexIDs(ctx, jetID, func(id core.RecordID) error {
 		if id.Pulse() == core.FirstPulseNumber {
 			recent.AddObject(id)
+			fmt.Println("[restored] id ", id)
 		}
 		return nil
 	})

@@ -856,6 +856,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 	}
 
 	for id, meta := range msg.RecentObjects {
+		fmt.Println("[got id] ", id)
 		decodedIndex, err := index.DecodeObjectLifeline(meta.Index)
 		if err != nil {
 			fmt.Print("hot index write error")
@@ -870,6 +871,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 			continue
 		}
 
+		fmt.Println("[saved id] ", id)
 		meta.TTL--
 		recentStorage.AddObjectWithTLL(id, meta.TTL)
 	}
