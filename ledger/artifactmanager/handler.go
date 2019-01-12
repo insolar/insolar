@@ -798,19 +798,13 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 	// FIXME: check split signatures.
 	jetID := *msg.Jet.Record()
 
-	fmt.Println("Received jet ", jetID.JetIDString())
-	fmt.Println("parcel pulse ", parcel.Pulse())
-
-	fmt.Println("hot set drop for jet ", msg.DropJet.JetIDString())
 	err := h.db.SetDrop(ctx, msg.DropJet, &msg.Drop)
 	if err == storage.ErrOverride {
 		err = nil
 	}
 	if err != nil {
-		fmt.Println("handleHotRecords: SetDrop with err, ", err)
 		return nil, errors.Wrap(err, "[ handleHotRecords ] Can't SetDrop")
 	}
-
 	err = h.db.SetDropSizeHistory(ctx, msg.DropJet, msg.JetDropSizeHistory)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ handleHotRecords ] Can't SetDropSizeHistory")
@@ -831,48 +825,29 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 		return nil, err
 	}
 
-	// TODO: @andreyromancev. 09.01.2019. Remove after multijet works properly.
-	// err = h.db.UpdateJetTree(
-	// 	ctx,
-	// 	parcel.Pulse(),
-	// 	true,
-	// 	*jet.NewID(2, []byte{1 << 7}), // 10
-	// 	*jet.NewID(2, []byte{1 << 6}), // 01
-	// )
-	// if err != nil {
-	// 	fmt.Println("handleHotRecords: UpdateJetTree by andreyromancev with err, ", err)
-	// 	return nil, err
-	// }
-	// err = h.db.AddJets(ctx, *jet.NewID(2, []byte{1 << 7}), *jet.NewID(2, []byte{1 << 6}))
-	// if err != nil {
-	// 	return nil, err
-	// }
-
 	recentStorage := h.RecentStorageProvider.GetStorage(jetID)
-	// for objID, requests := range msg.PendingRequests {
-	// 	for reqID, request := range requests {
-	// 		newID, err := h.db.SetRecord(ctx, jetID, reqID.Pulse(), record.DeserializeRecord(request))
-	// 		if err == storage.ErrOverride {
-	// 			continue
-	// 		}
-	// 		if err != nil {
-	// 			inslog.Error(err)
-	// 			continue
-	// 		}
-	// 		if !bytes.Equal(reqID.Bytes(), newID.Bytes()) {
-	// 			inslog.Errorf(
-	// 				"Problems with saving the pending request, ids don't match - %v  %v",
-	// 				reqID.Bytes(),
-	// 				newID.Bytes(),
-	// 			)
-	// 			continue
-	// 		}
-	// 		recentStorage.AddPendingRequest(objID, reqID)
-	// 	}
-	// }
+	for objID, requests := range msg.PendingRequests {
+		for reqID, request := range requests {
+			newID, err := h.db.SetRecord(ctx, jetID, reqID.Pulse(), record.DeserializeRecord(request))
+			if err == storage.ErrOverride {
+				continue
+			}
+			if err != nil {
+				inslog.Error(err)
+				continue
+			}
+			if !bytes.Equal(reqID.Bytes(), newID.Bytes()) {
+				inslog.Errorf(
+					"Problems with saving the pending request, ids don't match - %v  %v",
+					reqID.Bytes(),
+					newID.Bytes(),
+				)
+				continue
+			}
+			recentStorage.AddPendingRequest(objID, reqID)
+		}
+	}
 
-	fmt.Printf("[write indexes] pulse: %v, jet: %v \n", parcel.Pulse(), jetID.JetIDString())
-	fmt.Println("handleHotRecords, love, - msg.RecentObjects", msg.RecentObjects)
 	for id, meta := range msg.RecentObjects {
 		decodedIndex, err := index.DecodeObjectLifeline(meta.Index)
 		if err != nil {
@@ -881,7 +856,6 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 			continue
 		}
 
-		fmt.Println("handleHotRecords, SetObjectIndex, id - ", id.String())
 		err = h.db.SetObjectIndex(ctx, jetID, &id, decodedIndex)
 		if err != nil {
 			fmt.Print("hot index write error")
@@ -893,7 +867,6 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 		recentStorage.AddObjectWithTLL(id, meta.TTL)
 	}
 
-	fmt.Println("handleHotRecords was done fine, love")
 	return &reply.OK{}, nil
 }
 
@@ -903,6 +876,8 @@ func (h *MessageHandler) nodeForJet(
 	if targetPulse == core.PulseNumberCurrent {
 		targetPulse = parcelPulse
 	}
+
+	// TODO: @andreyromancev. 12.01.19. uncomment when heavy ready.
 	// if parcelPulse-targetPulse < h.conf.LightChainLimit {
 	// 	return h.JetCoordinator.LightExecutorForJet(ctx, jetID, targetPulse)
 	// }
