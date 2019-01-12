@@ -31,7 +31,8 @@ import (
 
 // GetDrop returns jet drop for a given pulse number and jet id.
 func (db *DB) GetDrop(ctx context.Context, jetID core.RecordID, pulse core.PulseNumber) (*jet.JetDrop, error) {
-	k := prefixkey(scopeIDJetDrop, jetID[:], pulse.Bytes())
+	_, prefix := jet.Jet(jetID)
+	k := prefixkey(scopeIDJetDrop, prefix, pulse.Bytes())
 
 	buf, err := db.get(ctx, k)
 	if err != nil {
@@ -118,7 +119,8 @@ func (db *DB) CreateDrop(ctx context.Context, jetID core.RecordID, pulse core.Pu
 func (db *DB) SetDrop(ctx context.Context, jetID core.RecordID, drop *jet.JetDrop) error {
 	fmt.Printf("SetDrop for jet: %v, pulse: %v", jetID.JetIDString(), drop.Pulse)
 
-	k := prefixkey(scopeIDJetDrop, jetID[:], drop.Pulse.Bytes())
+	_, prefix := jet.Jet(jetID)
+	k := prefixkey(scopeIDJetDrop, prefix, drop.Pulse.Bytes())
 	_, err := db.get(ctx, k)
 	if err == nil {
 		fmt.Println("override drop for pulse ", drop.Pulse)
