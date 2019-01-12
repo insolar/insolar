@@ -246,11 +246,18 @@ func (h *MessageHandler) handleGetObject(
 	rec, err := h.db.GetRecord(ctx, jetID, stateID)
 	if err == storage.ErrNotFound {
 		// The record wasn't found on the current node. Return redirect to the node that contains it.
-		node, err := h.nodeForJet(ctx, jetID, parcel.Pulse(), stateID.Pulse())
+		// We get Jet tree for pulse when given state was added.
+		stateTree, err := h.db.GetJetTree(ctx, stateID.Pulse())
 		if err != nil {
 			return nil, err
 		}
-		fmt.Printf("redirect because index not found jet: %v, to: %v \n", jetID.JetIDString(), node)
+		stateJet, _ := stateTree.Find(*msg.Head.Record())
+
+		node, err := h.nodeForJet(ctx, *stateJet, parcel.Pulse(), stateID.Pulse())
+		if err != nil {
+			return nil, err
+		}
+		fmt.Printf("redirect because record not found jet: %v, to: %v \n", jetID.JetIDString(), node)
 		return reply.NewGetObjectRedirectReply(h.DelegationTokenFactory, parcel, node, stateID)
 	}
 	if err != nil {
