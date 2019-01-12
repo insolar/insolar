@@ -33,6 +33,7 @@ import (
 	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/pkg/errors"
+	"golang.org/x/sync/errgroup"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/pulsemanager.ActiveListSwapper -o ../../testutils -s _mock.go
@@ -113,7 +114,7 @@ func (m *PulseManager) processEndPulse(
 
 	jetIDs := tree.LeafIDs()
 
-	// var g errgroup.Group
+	var g errgroup.Group
 	for _, jetID := range jetIDs {
 		jetID := jetID
 
