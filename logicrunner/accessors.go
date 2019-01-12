@@ -61,7 +61,9 @@ func (lr *LogicRunner) UpsertObjectState(ref Ref) *ObjectState {
 
 	lr.stateMutex.Lock()
 	defer lr.stateMutex.Unlock()
-	lr.state[ref] = &ObjectState{Ref: &ref}
+	if _, ok := lr.state[ref]; !ok {
+		lr.state[ref] = &ObjectState{Ref: &ref}
+	}
 	return lr.state[ref]
 }
 
