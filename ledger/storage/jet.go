@@ -31,8 +31,8 @@ import (
 
 // GetDrop returns jet drop for a given pulse number and jet id.
 func (db *DB) GetDrop(ctx context.Context, jetID core.RecordID, pulse core.PulseNumber) (*jet.JetDrop, error) {
-	_, jetPrefix := jet.Jet(jetID)
-	k := prefixkey(scopeIDJetDrop, jetPrefix, pulse.Bytes())
+	_, prefix := jet.Jet(jetID)
+	k := prefixkey(scopeIDJetDrop, prefix, pulse.Bytes())
 
 	buf, err := db.get(ctx, k)
 	if err != nil {
@@ -119,11 +119,11 @@ func (db *DB) CreateDrop(ctx context.Context, jetID core.RecordID, pulse core.Pu
 func (db *DB) SetDrop(ctx context.Context, jetID core.RecordID, drop *jet.JetDrop) error {
 	fmt.Printf("SetDrop for jet: %v, pulse: %v", jetID.JetIDString(), drop.Pulse)
 
-	_, jetPrefix := jet.Jet(jetID)
-	k := prefixkey(scopeIDJetDrop, jetPrefix, drop.Pulse.Bytes())
-
+	_, prefix := jet.Jet(jetID)
+	k := prefixkey(scopeIDJetDrop, prefix, drop.Pulse.Bytes())
 	_, err := db.get(ctx, k)
 	if err == nil {
+		fmt.Println("override drop for pulse ", drop.Pulse)
 		return ErrOverride
 	}
 
@@ -232,21 +232,26 @@ func (db *DB) SplitJetTree(
 // CloneJetTree copies tree from one pulse to another. Use it to copy past tree into new pulse.
 func (db *DB) CloneJetTree(
 	ctx context.Context, from, to core.PulseNumber,
-) error {
+) (*jet.Tree, error) {
 	db.jetTreeLock.Lock()
 	defer db.jetTreeLock.Unlock()
 
 	k := prefixkey(scopeIDSystem, []byte{sysJetTree}, to.Bytes())
 	tree, err := db.getJetTree(ctx, from)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if from != core.FirstPulseNumber {
 		tree.ResetActual()
 	}
 
-	return db.set(ctx, k, tree.Bytes())
+	err = db.set(ctx, k, tree.Bytes())
+	if err != nil {
+		return nil, err
+	}
+
+	return tree, nil
 }
 
 // AddJets stores a list of jets of the current node.
