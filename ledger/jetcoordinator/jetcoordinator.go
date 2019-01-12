@@ -218,6 +218,7 @@ func (jc *JetCoordinator) virtualsForObject(
 ) ([]core.RecordRef, error) {
 	pulseData, err := jc.db.GetPulse(ctx, pulse)
 	if err != nil {
+		curp, _ := jc.db.GetLatestPulse(ctx)
 		return nil, errors.Wrapf(err, "[virtualsForObject] failed to fetch pulse data for pulse %d (current pulse is %d)", pulse, curp.Pulse.PulseNumber)
 	}
 	candidates, err := jc.db.GetActiveNodesByRole(pulse, core.StaticRoleVirtual)
