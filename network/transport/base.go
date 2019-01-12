@@ -144,6 +144,8 @@ func (t *baseTransport) PublicAddress() string {
 }
 
 func (t *baseTransport) SendPacket(p *packet.Packet) error {
+	p.RemoteAddress = t.publicAddress
+
 	var recvAddress string
 	if t.proxy.ProxyHostsCount() > 0 {
 		recvAddress = t.proxy.GetNextProxyAddress()

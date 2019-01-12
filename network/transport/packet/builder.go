@@ -32,7 +32,6 @@ func NewBuilder(sender *host.Host) Builder {
 	cb := Builder{}
 	cb.actions = append(cb.actions, func(packet *Packet) {
 		packet.Sender = sender
-		packet.RemoteAddress = sender.Address.String()
 	})
 	return cb
 }
