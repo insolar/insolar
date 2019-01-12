@@ -173,9 +173,10 @@ func (m *PulseManager) processEndPulse(
 		if err != nil {
 			return err
 		}
-		fmt.Printf("[send hot] pulse: %v, jet: %v, data: %v\n", currentPulse.PulseNumber, jetID.JetIDString(), msg.RecentObjects)
+		// fmt.Printf("[send hot] pulse: %v, jet: %v, data: %v\n", currentPulse.PulseNumber, jetID.JetIDString(), msg.RecentObjects)
 		err = m.sendExecutorData(ctx, currentPulse, newPulse, jetID, msg, nextExecutor)
 		if err != nil {
+			fmt.Println("Failed to send hot data: ", err)
 			return err
 		}
 		inslogger.FromContext(ctx).Debugf("[processEndPulse] after sendExecutorData - %v", time.Now())
@@ -259,7 +260,16 @@ func (m *PulseManager) createDrop(
 	messages [][]byte,
 	err error,
 ) {
-	prevDrop, err := m.db.GetDrop(ctx, jetID, prevPulse)
+	var prevDrop *jet.JetDrop
+	prevDrop, err = m.db.GetDrop(ctx, jetID, prevPulse)
+	if err == storage.ErrNotFound {
+		fmt.Println("failed to get drop for pulse ", prevPulse)
+		prevDrop, err = m.db.GetDrop(ctx, jet.Parent(jetID), prevPulse)
+		if err != nil {
+			return nil, nil, nil, errors.Wrap(err, "[ createDrop ] failed to find parent")
+		}
+		err = nil
+	}
 	if err != nil {
 		inslogger.FromContext(ctx).Debugf("[ createDrop ] prevPulse = %s", prevPulse)
 		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't GetDrop")
@@ -269,6 +279,9 @@ func (m *PulseManager) createDrop(
 		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't CreateDrop")
 	}
 	err = m.db.SetDrop(ctx, jetID, drop)
+	if err == storage.ErrOverride {
+		err = nil
+	}
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't SetDrop")
 	}
@@ -381,6 +394,7 @@ func (m *PulseManager) getExecutorHotData(
 
 	msg := &message.HotData{
 		Drop:               *drop,
+		DropJet:            jetID,
 		PulseNumber:        pulse,
 		RecentObjects:      recentObjects,
 		PendingRequests:    pendingRequests,
@@ -433,10 +447,24 @@ func (m *PulseManager) sendExecutorData(
 		leftMsg.Jet = *core.NewRecordRef(core.DomainID, *left)
 		rightMsg := *msg
 		rightMsg.Jet = *core.NewRecordRef(core.DomainID, *right)
+		fmt.Printf(
+			"[send hot] dropPulse: %v, dropJet: %v, jet: %v",
+			leftMsg.Drop.Pulse,
+			leftMsg.DropJet.JetIDString(),
+			leftMsg.Jet.Record().JetIDString(),
+		)
+		fmt.Println("")
 		_, err = m.Bus.Send(ctx, &leftMsg, nil)
 		if err != nil {
 			return errors.Wrap(err, "failed to send executor data")
 		}
+		fmt.Printf(
+			"[send hot] dropPulse: %v, dropJet: %v, jet: %v",
+			rightMsg.Drop.Pulse,
+			rightMsg.DropJet.JetIDString(),
+			rightMsg.Jet.Record().JetIDString(),
+		)
+		fmt.Println("")
 		_, err = m.Bus.Send(ctx, &rightMsg, nil)
 		if err != nil {
 			return errors.Wrap(err, "failed to send executor data")
@@ -478,7 +506,12 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 	currentPulse := storagePulse.Pulse
 	prevPulseNumber := *storagePulse.Prev
 
-	fmt.Printf("Received pulse %v, time: %v", newPulse.PulseNumber, time.Now())
+	fmt.Printf(
+		"Received pulse %v, current: %v, time: %v",
+		newPulse.PulseNumber,
+		currentPulse.PulseNumber,
+		time.Now(),
+	)
 	fmt.Println()
 	fmt.Printf("New entropy %v", newPulse.Entropy)
 	fmt.Println()
@@ -526,6 +559,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 	if m.NodeNet.GetOrigin().Role() == core.StaticRoleLightMaterial {
 		err = m.processEndPulse(ctx, prevPulseNumber, &currentPulse, &newPulse)
 		if err != nil {
+			fmt.Println("process end pulse failed: ", err)
 			return err
 		}
 		if m.options.enableSync {

@@ -59,3 +59,12 @@ func Jet(id core.RecordID) (uint8, []byte) {
 	}
 	return id[core.PulseNumberSize], id[core.PulseNumberSize+1:]
 }
+
+func Parent(id core.RecordID) core.RecordID {
+	depth, prefix := Jet(id)
+	if depth == 0 {
+		return id
+	}
+
+	return *NewID(depth-1, resetBits(prefix, depth-1))
+}

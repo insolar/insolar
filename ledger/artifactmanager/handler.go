@@ -779,7 +779,6 @@ func (h *MessageHandler) saveIndexFromHeavy(
 }
 
 func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
-	fmt.Println("handleHotRecords starts")
 	inslog := inslogger.FromContext(ctx)
 	// if hack.SkipValidation(ctx) {
 	// 	fmt.Println("handleHotRecords: SkipValidation")
@@ -787,13 +786,23 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 	// }
 
 	msg := parcel.Message().(*message.HotData)
+
+	fmt.Printf(
+		"[got hot] dropPulse: %v, dropJet: %v, jet: %v",
+		msg.Drop.Pulse,
+		msg.DropJet.JetIDString(),
+		msg.Jet.Record().JetIDString(),
+	)
+	fmt.Println()
+
 	// FIXME: check split signatures.
 	jetID := *msg.Jet.Record()
 
 	fmt.Println("Received jet ", jetID.JetIDString())
 	fmt.Println("parcel pulse ", parcel.Pulse())
 
-	err := h.db.SetDrop(ctx, jetID, &msg.Drop)
+	fmt.Println("hot set drop for jet ", msg.DropJet.JetIDString())
+	err := h.db.SetDrop(ctx, msg.DropJet, &msg.Drop)
 	if err == storage.ErrOverride {
 		err = nil
 	}
@@ -801,6 +810,12 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 		fmt.Println("handleHotRecords: SetDrop with err, ", err)
 		return nil, errors.Wrap(err, "[ handleHotRecords ] Can't SetDrop")
 	}
+
+	err = h.db.SetDropSizeHistory(ctx, msg.DropJet, msg.JetDropSizeHistory)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ handleHotRecords ] Can't SetDropSizeHistory")
+	}
+
 	err = h.db.UpdateJetTree(
 		ctx,
 		msg.PulseNumber,
@@ -876,11 +891,6 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 
 		meta.TTL--
 		recentStorage.AddObjectWithTLL(id, meta.TTL)
-	}
-
-	err = h.db.SetDropSizeHistory(ctx, jetID, msg.JetDropSizeHistory)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ handleHotRecords ] Can't SetDropSizeHistory")
 	}
 
 	fmt.Println("handleHotRecords was done fine, love")

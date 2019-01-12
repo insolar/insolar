@@ -376,6 +376,7 @@ func (*ValidationCheck) Type() core.MessageType {
 type HotData struct {
 	ledgerMessage
 	Jet                core.RecordRef
+	DropJet            core.RecordID // If will be different in case of split.
 	Drop               jet.JetDrop
 	RecentObjects      map[core.RecordID]*HotIndex
 	PendingRequests    map[core.RecordID]map[core.RecordID][]byte

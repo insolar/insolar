@@ -247,6 +247,10 @@ func (t *Tree) Split(jetID core.RecordID) (*core.RecordID, *core.RecordID, error
 	depth, prefix := Jet(jetID)
 	j, foundDepth := t.Head.Find(prefix, 0)
 	if depth != foundDepth {
+		fmt.Println("split failed!")
+		fmt.Println("split depth ", depth)
+		fmt.Println("found depth ", foundDepth)
+		fmt.Println("jet ", jetID.JetIDString())
 		return nil, nil, errors.New("failed to split: jet is not present in the tree")
 	}
 	j.Right = &jet{}
