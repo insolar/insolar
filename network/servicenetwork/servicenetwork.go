@@ -213,15 +213,16 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
 	}
 	if (pulse.PulseNumber > currentPulse.PulseNumber) &&
 		(pulse.PulseNumber >= currentPulse.NextPulseNumber) {
-		err = n.PulseManager.Set(ctx, pulse, n.NetworkSwitcher.GetState() == core.CompleteNetworkState)
-		if err != nil {
-			logger.Error(errors.Wrap(err, "Failed to set pulse"))
-			return
-		}
 
 		err = n.NetworkSwitcher.OnPulse(ctx, pulse)
 		if err != nil {
 			logger.Error(errors.Wrap(err, "Failed to call OnPulse on NetworkSwitcher"))
+			return
+		}
+
+		err = n.PulseManager.Set(ctx, pulse, n.NetworkSwitcher.GetState() == core.CompleteNetworkState)
+		if err != nil {
+			logger.Error(errors.Wrap(err, "Failed to set pulse"))
 			return
 		}
 
