@@ -189,6 +189,8 @@ func TestNewHostTransport(t *testing.T) {
 		t2.Stop()
 	}()
 
+	time.Sleep(time.Second)
+
 	for i := 0; i < count; i++ {
 		request := t1.NewRequestBuilder().Type(types.Ping).Data(nil).Build()
 		ref, err := core.NewRefFromBase58(ID2 + DOMAIN)
@@ -258,6 +260,8 @@ func TestHostTransport_SendRequestPacket2(t *testing.T) {
 		t2.Stop()
 	}()
 
+	time.Sleep(time.Second)
+
 	request := t1.NewRequestBuilder().Type(types.Ping).Data(nil).Build()
 	ref, err := core.NewRefFromBase58(ID1 + DOMAIN)
 	require.NoError(t, err)
@@ -296,6 +300,8 @@ func TestHostTransport_SendRequestPacket3(t *testing.T) {
 		t1.Stop()
 		t2.Stop()
 	}()
+
+	time.Sleep(time.Second)
 
 	magicNumber := 42
 	request := t1.NewRequestBuilder().Type(types.Ping).Data(&Data{Number: magicNumber}).Build()
@@ -338,6 +344,8 @@ func TestHostTransport_SendRequestPacket_errors(t *testing.T) {
 	defer t2.Stop()
 	t1.Start(ctx2)
 
+	time.Sleep(time.Second)
+
 	request := t1.NewRequestBuilder().Type(types.Ping).Data(nil).Build()
 	ref, err := core.NewRefFromBase58(ID2 + DOMAIN)
 	require.NoError(t, err)
@@ -378,6 +386,8 @@ func TestHostTransport_WrongHandler(t *testing.T) {
 		t2.Stop()
 	}()
 
+	time.Sleep(time.Second)
+
 	request := t1.NewRequestBuilder().Type(types.Ping).Build()
 	ref, err := core.NewRefFromBase58(ID2 + DOMAIN)
 	require.NoError(t, err)
@@ -397,11 +407,14 @@ func TestDoubleStart(t *testing.T) {
 	wg.Add(2)
 
 	f := func(group *sync.WaitGroup, t network.InternalTransport) {
-		wg.Done()
 		t.Start(ctx)
+		wg.Done()
 	}
 	go f(&wg, tp)
 	go f(&wg, tp)
+
+	time.Sleep(time.Second)
+
 	wg.Wait()
 	defer tp.Stop()
 }
@@ -412,7 +425,7 @@ func TestHostTransport_RegisterPacketHandler(t *testing.T) {
 	i1, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID1+DOMAIN)
 	require.NoError(t, err)
 	tr1 := NewHostTransport(i1, m)
-	defer tr1.Stop()
+
 	handler := func(ctx context.Context, request network.Request) (network.Response, error) {
 		return tr1.BuildResponse(request, nil), nil
 	}
