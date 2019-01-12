@@ -18,6 +18,7 @@ package pulsenetwork
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/insolar/insolar/configuration"
@@ -85,30 +86,39 @@ func (d *distributor) Distribute(ctx context.Context, pulse *core.Pulse) {
 	d.resume(ctx)
 	defer d.pause(ctx)
 
+	wg := sync.WaitGroup{}
+	wg.Add(len(d.bootstrapHosts))
+
 	for _, bootstrapHost := range d.bootstrapHosts {
-		if bootstrapHost.NodeID.IsEmpty() {
-			err := d.pingHost(ctx, bootstrapHost)
-			if err != nil {
-				logger.Error("[ Distribute ] failed to ping and fill node id", err)
-				continue
+		go func(bootstrapHost host.Host) {
+			defer wg.Done()
+
+			if bootstrapHost.NodeID.IsEmpty() {
+				err := d.pingHost(ctx, &bootstrapHost)
+				if err != nil {
+					logger.Error("[ Distribute ] failed to ping and fill node id", err)
+					return
+				}
 			}
-		}
 
-		hosts, err := d.getRandomHosts(ctx, bootstrapHost)
-		if err != nil {
-			logger.Error("[ Distribute ] failed to get random hosts", err)
-		}
-
-		if len(hosts) == 0 {
-			err := d.sendPulseToHost(ctx, pulse, bootstrapHost)
+			hosts, err := d.getRandomHosts(ctx, &bootstrapHost)
 			if err != nil {
-				logger.Error(err)
+				logger.Error("[ Distribute ] failed to get random hosts", err)
 			}
-			continue
-		}
 
-		d.sendPulseToHosts(ctx, pulse, hosts)
+			if len(hosts) == 0 {
+				err := d.sendPulseToHost(ctx, pulse, &bootstrapHost)
+				if err != nil {
+					logger.Error(err)
+				}
+				return
+			}
+
+			d.sendPulseToHosts(ctx, pulse, hosts)
+		}(*bootstrapHost)
 	}
+
+	wg.Wait()
 }
 
 func (d *distributor) pingHost(ctx context.Context, host *host.Host) error {
@@ -182,12 +192,21 @@ func (d *distributor) getRandomHosts(ctx context.Context, host *host.Host) ([]ho
 func (d *distributor) sendPulseToHosts(ctx context.Context, pulse *core.Pulse, hosts []host.Host) {
 	logger := inslogger.FromContext(ctx)
 	logger.Debugf("Before sending pulse to nodes - %v", hosts)
+
+	wg := sync.WaitGroup{}
+	wg.Add(len(hosts))
+
 	for _, pulseReceiver := range hosts {
-		err := d.sendPulseToHost(ctx, pulse, &pulseReceiver)
-		if err != nil {
-			logger.Error(err)
-		}
+		go func(host host.Host) {
+			defer wg.Done()
+			err := d.sendPulseToHost(ctx, pulse, &host)
+			if err != nil {
+				logger.Error(err)
+			}
+		}(pulseReceiver)
 	}
+
+	wg.Wait()
 }
 
 func (d *distributor) sendPulseToHost(ctx context.Context, pulse *core.Pulse, host *host.Host) error {
