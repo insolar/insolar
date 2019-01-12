@@ -295,6 +295,7 @@ func (currentPulsar *Pulsar) StartConsensusProcess(ctx context.Context, pulseNum
 
 	if pulseNumber == currentPulsar.ProcessingPulseNumber {
 		logger.Debugf("[pulseNumber == currentPulsar.ProcessingPulseNumber] return nil")
+		currentPulsar.StartProcessLock.Unlock()
 		return nil
 	}
 
