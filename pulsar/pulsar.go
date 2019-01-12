@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"net"
 	"net/rpc"
+	"runtime/debug"
 	"sync"
 
 	"github.com/insolar/insolar/certificate"
@@ -288,6 +289,7 @@ func (currentPulsar *Pulsar) StartConsensusProcess(ctx context.Context, pulseNum
 	logger := inslogger.FromContext(ctx)
 	logger.Debugf("[StartConsensusProcess] pulse number - %v, host - %v", pulseNumber, currentPulsar.Config.MainListenerAddress)
 	logger.Debugf("[Before StartProcessLock]")
+	debug.PrintStack()
 	currentPulsar.StartProcessLock.Lock()
 	logger.Debugf("[After StartProcessLock]")
 
