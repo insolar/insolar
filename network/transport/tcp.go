@@ -40,8 +40,8 @@ const (
 type tcpTransport struct {
 	baseTransport
 
-	openConnections sync.WaitGroup
 	pool            pool.ConnectionPool
+	openConnections *sync.WaitGroup
 	listenAddr      *net.TCPAddr
 	listener        *net.TCPListener
 }
@@ -108,7 +108,7 @@ func (t *tcpTransport) Listen(ctx context.Context) error {
 
 	t.mutex.Lock()
 
-	t.openConnections = sync.WaitGroup{}
+	t.openConnections = &sync.WaitGroup{}
 	t.disconnectStarted = make(chan bool, 1)
 
 	listener, err := net.ListenTCP("tcp", t.listenAddr)
