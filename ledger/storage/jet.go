@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"sync"
 
 	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/core"
@@ -32,7 +31,8 @@ import (
 
 // GetDrop returns jet drop for a given pulse number and jet id.
 func (db *DB) GetDrop(ctx context.Context, jetID core.RecordID, pulse core.PulseNumber) (*jet.JetDrop, error) {
-	k := prefixkey(scopeIDJetDrop, jetID[:], pulse.Bytes())
+	_, jetPrefix := jet.Jet(jetID)
+	k := prefixkey(scopeIDJetDrop, jetPrefix, pulse.Bytes())
 
 	buf, err := db.get(ctx, k)
 	if err != nil {
@@ -63,65 +63,48 @@ func (db *DB) CreateDrop(ctx context.Context, jetID core.RecordID, pulse core.Pu
 		return nil, nil, 0, err
 	}
 
-	wg := sync.WaitGroup{}
-	wg.Add(2)
-
 	var messages [][]byte
-	var messagesError error
+	_, jetPrefix := jet.Jet(jetID)
+	// messagesPrefix := prefixkey(scopeIDMessage, jetPrefix, pulse.Bytes())
 
-	go func() {
-		messagesPrefix := prefixkey(scopeIDMessage, jetID[:], pulse.Bytes())
+	// err = db.db.View(func(txn *badger.Txn) error {
+	// 	it := txn.NewIterator(badger.DefaultIteratorOptions)
+	// 	defer it.Close()
+	//
+	// 	for it.Seek(messagesPrefix); it.ValidForPrefix(messagesPrefix); it.Next() {
+	// 		val, err := it.Item().ValueCopy(nil)
+	// 		if err != nil {
+	// 			return err
+	// 		}
+	// 		messages = append(messages, val)
+	// 	}
+	// 	return nil
+	// })
+	// if err != nil {
+	// 	return nil, nil, 0, err
+	// }
 
-		messagesError = db.db.View(func(txn *badger.Txn) error {
-			it := txn.NewIterator(badger.DefaultIteratorOptions)
-			defer it.Close()
-
-			for it.Seek(messagesPrefix); it.ValidForPrefix(messagesPrefix); it.Next() {
-				val, err := it.Item().ValueCopy(nil)
-				if err != nil {
-					return err
-				}
-				messages = append(messages, val)
-			}
-			return nil
-		})
-
-		wg.Done()
-	}()
-
-	var jetDropHashError error
 	var dropSize uint64
-	go func() {
-		recordPrefix := prefixkey(scopeIDRecord, jetID[:], pulse.Bytes())
+	recordPrefix := prefixkey(scopeIDRecord, jetPrefix, pulse.Bytes())
+	err = db.db.View(func(txn *badger.Txn) error {
+		it := txn.NewIterator(badger.DefaultIteratorOptions)
+		defer it.Close()
 
-		jetDropHashError = db.db.View(func(txn *badger.Txn) error {
-			it := txn.NewIterator(badger.DefaultIteratorOptions)
-			defer it.Close()
-
-			for it.Seek(recordPrefix); it.ValidForPrefix(recordPrefix); it.Next() {
-				val, err := it.Item().ValueCopy(nil)
-				if err != nil {
-					return err
-				}
-				_, err = hw.Write(val)
-				if err != nil {
-					return err
-				}
-				dropSize += uint64(len(val))
+		for it.Seek(recordPrefix); it.ValidForPrefix(recordPrefix); it.Next() {
+			val, err := it.Item().ValueCopy(nil)
+			if err != nil {
+				return err
 			}
-			return nil
-		})
-
-		wg.Done()
-	}()
-
-	wg.Wait()
-
-	if messagesError != nil {
-		return nil, nil, 0, messagesError
-	}
-	if jetDropHashError != nil {
-		return nil, nil, 0, jetDropHashError
+			_, err = hw.Write(val)
+			if err != nil {
+				return err
+			}
+			dropSize += uint64(len(val))
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, nil, 0, err
 	}
 
 	drop := jet.JetDrop{
@@ -134,9 +117,10 @@ func (db *DB) CreateDrop(ctx context.Context, jetID core.RecordID, pulse core.Pu
 
 // SetDrop saves provided JetDrop in db.
 func (db *DB) SetDrop(ctx context.Context, jetID core.RecordID, drop *jet.JetDrop) error {
-	fmt.Printf("SetDrop for jet: %v, pulse: %v", jetID, drop.Pulse)
+	fmt.Printf("SetDrop for jet: %v, pulse: %v", jetID.JetIDString(), drop.Pulse)
 
-	k := prefixkey(scopeIDJetDrop, jetID[:], drop.Pulse.Bytes())
+	_, jetPrefix := jet.Jet(jetID)
+	k := prefixkey(scopeIDJetDrop, jetPrefix, drop.Pulse.Bytes())
 
 	_, err := db.get(ctx, k)
 	if err == nil {

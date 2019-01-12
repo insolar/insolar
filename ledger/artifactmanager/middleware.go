@@ -184,7 +184,11 @@ func (m *middleware) fetchJet(
 	jetID, actual := tree.Find(target)
 	if actual || retries < 0 {
 		if retries < 0 {
-			fmt.Println("not actual ", jetID.JetIDString())
+			fmt.Println("not mine ", jetID.JetIDString(), target)
+		}
+		if actual {
+			fmt.Println("mine ", jetID.JetIDString(), target)
+			fmt.Println()
 		}
 		return jetID, nil
 	}
