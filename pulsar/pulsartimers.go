@@ -36,7 +36,8 @@ func (currentPulsar *Pulsar) waitForPulseSigns(ctx context.Context) {
 
 			if time.Now().After(currentTimeOut) {
 				ticker.Stop()
-				currentPulsar.StateSwitcher.SwitchToState(ctx, SendingPulse, nil)
+				go currentPulsar.StateSwitcher.SwitchToState(ctx, SendingPulse, nil)
+				return
 			}
 		}
 	}()
@@ -55,7 +56,8 @@ func (currentPulsar *Pulsar) waitForEntropy(ctx context.Context) {
 
 			if time.Now().After(timeout) {
 				ticker.Stop()
-				currentPulsar.StateSwitcher.SwitchToState(ctx, SendingVector, nil)
+				go currentPulsar.StateSwitcher.SwitchToState(ctx, SendingVector, nil)
+				return
 			}
 		}
 	}()
@@ -74,7 +76,8 @@ func (currentPulsar *Pulsar) waitForEntropySigns(ctx context.Context) {
 
 			if time.Now().After(currentTimeOut) {
 				ticker.Stop()
-				currentPulsar.StateSwitcher.SwitchToState(ctx, SendingEntropy, nil)
+				go currentPulsar.StateSwitcher.SwitchToState(ctx, SendingEntropy, nil)
+				return
 			}
 		}
 	}()
@@ -93,7 +96,8 @@ func (currentPulsar *Pulsar) waitForVectors(ctx context.Context) {
 
 			if time.Now().After(currentTimeOut) {
 				ticker.Stop()
-				currentPulsar.StateSwitcher.SwitchToState(ctx, Verifying, nil)
+				go currentPulsar.StateSwitcher.SwitchToState(ctx, Verifying, nil)
+				return
 			}
 		}
 	}()
