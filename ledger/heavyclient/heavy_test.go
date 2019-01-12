@@ -56,18 +56,10 @@ func TestPulseManager_SendToHeavyWithRetry(t *testing.T) {
 
 func sendToHeavy(t *testing.T, withretry bool) {
 	ctx := inslogger.TestContext(t)
-	db, cleaner := storagetest.TmpDB(ctx, t, storagetest.DisableBootstrap())
+	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
 	// TODO: test should work with any JetID (add new test?) - 14.Dec.2018 @nordicdyno
 	jetID := jet.ZeroJetID
-
-	err := db.AddPulse(ctx, *core.GenesisPulse)
-	require.NoError(t, err)
-	err = db.AddJets(ctx, jetID)
-	require.NoError(t, err)
-	err = db.SetDrop(ctx, jetID, &jet.JetDrop{})
-	require.NoError(t, err)
-
 	// Mock N1: LR mock do nothing
 	lrMock := testutils.NewLogicRunnerMock(t)
 	lrMock.OnPulseMock.Return(nil)
@@ -195,7 +187,7 @@ func sendToHeavy(t *testing.T, withretry bool) {
 
 	// Actial test logic
 	// start PulseManager
-	err = pm.Start(ctx)
+	err := pm.Start(ctx)
 	assert.NoError(t, err)
 
 	// store last pulse as light material and set next one

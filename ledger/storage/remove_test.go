@@ -42,7 +42,7 @@ func removeJetIndexesUntil(t *testing.T, skip bool) {
 	ctx := inslogger.TestContext(t)
 	jetID := testutils.RandomJet()
 
-	db, cleaner := storagetest.TmpDB(ctx, t, storagetest.DisableBootstrap())
+	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
 
 	pulsesCount := 10

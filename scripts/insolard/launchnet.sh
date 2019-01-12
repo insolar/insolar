@@ -47,7 +47,7 @@ stop_listening()
         for pid in $pids
         do
             echo "killing pid $pid"
-            kill -9 $pid
+            kill $pid
         done
     done
     echo "stop_listening() end."

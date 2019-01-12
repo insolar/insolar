@@ -160,12 +160,15 @@ func (t *tcpTransport) handleAcceptedConnection(
 	registered bool,
 	remoteAddr *net.TCPAddr) {
 
+	t.mutex.RLock()
+	wg := t.openConnections
+	t.mutex.RUnlock()
+
 	logger := inslogger.FromContext(ctx)
-	t.openConnections.Add(1)
+	wg.Add(1)
 
 	var alreadyClosed bool
 
-	defer t.openConnections.Done()
 	defer func() {
 		logger.Debugf("[ handleAcceptedConnection ] Closing connection %p - alreadyClosed: %v, registered: %v", conn, alreadyClosed, registered)
 
@@ -176,6 +179,7 @@ func (t *tcpTransport) handleAcceptedConnection(
 				utils.CloseVerbose(conn)
 			}
 		}
+		wg.Done()
 	}()
 
 	for {

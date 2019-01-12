@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@ import (
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/utils"
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/keystore"
@@ -40,7 +41,6 @@ import (
 	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/insolar/insolar/pulsar/storage"
 	"github.com/insolar/insolar/version"
-	"github.com/satori/go.uuid"
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
 )
@@ -64,8 +64,6 @@ func parseInputParams() inputParams {
 // Need to fix problem with start pulsar
 func main() {
 	params := parseInputParams()
-	uniqueID := RandTraceID()
-	ctx, inslog := inslogger.WithTraceField(context.Background(), uniqueID)
 
 	jww.SetStdoutThreshold(jww.LevelDebug)
 	cfgHolder := configuration.NewHolder()
@@ -84,10 +82,12 @@ func main() {
 		log.Warnln("failed to load configuration from env:", err.Error())
 	}
 
-	ctx, inslog = initLogger(ctx, cfgHolder.Configuration.Log, uniqueID)
+	traceID := utils.RandTraceID()
+	ctx, inslog := initLogger(context.Background(), cfgHolder.Configuration.Log, traceID)
+	log.SetGlobalLogger(inslog)
 
-	server, storage := initPulsar(ctx, cfgHolder.Configuration)
-	server.ID = uniqueID
+	server, storage, tp := initPulsar(ctx, cfgHolder.Configuration)
+	server.ID = traceID
 
 	go server.StartServer(ctx)
 	pulseTicker, refreshTicker := runPulsar(ctx, server, cfgHolder.Configuration.Pulsar)
@@ -100,6 +100,7 @@ func main() {
 			inslog.Error(err)
 		}
 		server.StopServer(ctx)
+		tp.Close()
 	}()
 
 	var gracefulStop = make(chan os.Signal, 1)
@@ -109,7 +110,7 @@ func main() {
 	<-gracefulStop
 }
 
-func initPulsar(ctx context.Context, cfg configuration.Configuration) (*pulsar.Pulsar, pulsarstorage.PulsarStorage) {
+func initPulsar(ctx context.Context, cfg configuration.Configuration) (*pulsar.Pulsar, pulsarstorage.PulsarStorage, transport.Transport) {
 	fmt.Print("Starts with configuration:\n", configuration.ToString(cfg))
 	fmt.Println("Version: ", version.GetFullVersion())
 
@@ -168,7 +169,7 @@ func initPulsar(ctx context.Context, cfg configuration.Configuration) (*pulsar.P
 	}
 	switcher.SetPulsar(server)
 
-	return server, storage
+	return server, storage, tp
 }
 
 func runPulsar(ctx context.Context, server *pulsar.Pulsar, cfg configuration.Pulsar) (pulseTicker *time.Ticker, refreshTicker *time.Ticker) {
@@ -205,15 +206,6 @@ func runPulsar(ctx context.Context, server *pulsar.Pulsar, cfg configuration.Pul
 	}()
 
 	return
-}
-
-// RandTraceID returns random traceID in uuid format
-func RandTraceID() string {
-	traceID, err := uuid.NewV4()
-	if err != nil {
-		panic("createRandomTraceIDFailed:" + err.Error())
-	}
-	return traceID.String()
 }
 
 func initLogger(ctx context.Context, cfg configuration.Log, traceid string) (context.Context, core.Logger) {

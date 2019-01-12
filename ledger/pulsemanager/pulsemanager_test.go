@@ -27,7 +27,6 @@ import (
 	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage/index"
-	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/testutils"
@@ -45,15 +44,8 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 	lr := testutils.NewLogicRunnerMock(t)
 	lr.OnPulseMock.Return(nil)
 
-	db, dbcancel := storagetest.TmpDB(ctx, t, storagetest.DisableBootstrap())
+	db, dbcancel := storagetest.TmpDB(ctx, t)
 	defer dbcancel()
-	err := db.AddPulse(ctx, *core.GenesisPulse)
-	require.NoError(t, err)
-	err = db.AddJets(ctx, jetID)
-	require.NoError(t, err)
-	err = db.SetDrop(ctx, jetID, &jet.JetDrop{})
-	require.NoError(t, err)
-
 	firstID, _ := db.SetRecord(
 		ctx,
 		jetID,
@@ -151,7 +143,7 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 	pm.PulseStorage = pulseStorageMock
 
 	// Act
-	err = pm.Set(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 1}, true)
+	err := pm.Set(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 1}, true)
 	require.NoError(t, err)
 	assert.Equal(t, uint64(1), mbMock.SendMinimockCounter()) // 1 validator drop (no split)
 	savedIndex, err := db.GetObjectIndex(ctx, jetID, firstID, false)
