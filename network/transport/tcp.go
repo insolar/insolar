@@ -33,6 +33,10 @@ import (
 	"github.com/pkg/errors"
 )
 
+const (
+	keepAlivePeriod = 10 * time.Second
+)
+
 type tcpTransport struct {
 	baseTransport
 
@@ -55,7 +59,7 @@ func newTCPTransport(addr string, proxy relay.Proxy, publicAddress string) (*tcp
 }
 
 func (t *tcpTransport) send(address string, data []byte) error {
-	ctx := context.Background()
+	ctx := context.TODO()
 	logger := inslogger.FromContext(ctx)
 
 	addr, err := net.ResolveTCPAddr("tcp", address)
@@ -179,6 +183,25 @@ func (t *tcpTransport) handleAcceptedConnection(conn net.Conn) {
 	}
 }
 
+func setupConnection(ctx context.Context, conn *net.TCPConn) {
+	logger := inslogger.FromContext(ctx)
+
+	err := conn.SetKeepAlivePeriod(keepAlivePeriod)
+	if err != nil {
+		logger.Error("[ setupConnection ] Failed to set keep alive")
+	}
+
+	err = conn.SetKeepAlive(true)
+	if err != nil {
+		logger.Error("[ setupConnection ] Failed to set keep alive")
+	}
+
+	err = conn.SetNoDelay(true)
+	if err != nil {
+		logger.Errorln("[ setupConnection ] Failed to set connection no delay: ", err.Error())
+	}
+}
+
 type tcpConnectionFactory struct{}
 
 func (*tcpConnectionFactory) CreateConnection(ctx context.Context, address net.Addr) (net.Conn, error) {
@@ -195,15 +218,7 @@ func (*tcpConnectionFactory) CreateConnection(ctx context.Context, address net.A
 		return nil, errors.Wrap(err, "[ createConnection ] Failed to open connection")
 	}
 
-	err = conn.SetKeepAlive(true)
-	if err != nil {
-		logger.Error("[ createConnection ] Failed to set keep alive")
-	}
-
-	err = conn.SetNoDelay(true)
-	if err != nil {
-		logger.Errorln("[ createConnection ] Failed to set connection no delay: ", err.Error())
-	}
+	setupConnection(ctx, conn)
 
 	return conn, nil
 }
