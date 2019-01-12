@@ -50,7 +50,7 @@ func SerializePacket(q *Packet) ([]byte, error) {
 	enc := gob.NewEncoder(&msgBuffer)
 	err := enc.Encode(q)
 	if err != nil {
-		return nil, errors.Wrap(err, "Failed to serialize packet")
+		return nil, errors.Wrap(err, "[ SerializePacket ] Failed to encode packet bytes")
 	}
 
 	length := msgBuffer.Len()
@@ -66,35 +66,25 @@ func SerializePacket(q *Packet) ([]byte, error) {
 }
 
 // DeserializePacket reads packet from io.Reader.
-func DeserializePacket(conn io.Reader) (*Packet, error) {
-
+func DeserializePacket(reader io.Reader) (*Packet, error) {
 	lengthBytes := make([]byte, 8)
-	//n, err := io.ReadFull(conn, lengthBytes)
-	n, err := conn.Read(lengthBytes)
+	_, err := io.ReadFull(reader, lengthBytes)
 	if err != nil {
 		return nil, err
 	}
 
-	log.Debugf("[ DeserializePacket ] read %d bytes", n)
-
 	lengthReader := bytes.NewBuffer(lengthBytes)
 	length, err := binary.ReadUvarint(lengthReader)
 	if err != nil {
-		return nil, errors.Wrap(err, "Failed to read variant")
+		return nil, errors.Wrap(err, "[ DeserializePacket ] Failed to parse length bytes")
 	}
 
 	log.Debugf("[ DeserializePacket ] packet length %d", length)
 
 	buf := make([]byte, length)
-
-	var readLength int
-	for readLength < int(length) {
-		n, err = conn.Read(buf[readLength:])
-		readLength = readLength + n
-		log.Debugf("read %d bytes", n)
-		if err != nil {
-			return nil, err
-		}
+	_, err = io.ReadFull(reader, buf)
+	if err != nil {
+		return nil, err
 	}
 
 	msg := &Packet{}
@@ -102,7 +92,7 @@ func DeserializePacket(conn io.Reader) (*Packet, error) {
 
 	err = dec.Decode(msg)
 	if err != nil {
-		return nil, errors.Wrap(err, "Failed to deserialize packet")
+		return nil, errors.Wrap(err, "[ DeserializePacket ] Failed to deserialize packet")
 	}
 
 	return msg, nil
