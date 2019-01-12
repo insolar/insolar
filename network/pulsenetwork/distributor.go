@@ -90,6 +90,7 @@ func (d *distributor) Distribute(ctx context.Context, pulse *core.Pulse) {
 	wg.Add(len(d.bootstrapHosts))
 
 	for _, bootstrapHost := range d.bootstrapHosts {
+		bootstrapHost := bootstrapHost
 		go func() {
 			defer wg.Done()
 
@@ -197,6 +198,7 @@ func (d *distributor) sendPulseToHosts(ctx context.Context, pulse *core.Pulse, h
 	wg.Add(len(hosts))
 
 	for _, pulseReceiver := range hosts {
+		pulseReceiver := pulseReceiver
 		go func() {
 			defer wg.Done()
 			err := d.sendPulseToHost(ctx, pulse, &pulseReceiver)
