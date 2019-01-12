@@ -24,7 +24,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -35,7 +34,7 @@ import (
 var httpClient *http.Client
 
 const (
-	RequestTimeout int = 5
+	RequestTimeout = 0 // 5 * time.Second
 )
 
 func init() {
@@ -46,7 +45,7 @@ func init() {
 func createHTTPClient() *http.Client {
 	client := &http.Client{
 		Transport: &http.Transport{},
-		Timeout:   time.Duration(RequestTimeout) * time.Second,
+		Timeout:   RequestTimeout,
 	}
 
 	return client

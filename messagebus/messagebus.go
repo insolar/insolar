@@ -239,7 +239,7 @@ func (mb *MessageBus) OnPulse(context.Context, core.Pulse) error {
 	return nil
 }
 
-func (mb *MessageBus) accuireMessagePoolItem() bool {
+func (mb *MessageBus) acquireMessagePoolItem() bool {
 	mb.NextPulseMessagePoolLock.Lock()
 	defer mb.NextPulseMessagePoolLock.Unlock()
 
@@ -296,7 +296,8 @@ func (mb *MessageBus) checkPulse(ctx context.Context, parcel core.Parcel, locked
 		return errors.Wrap(err, "[ checkPulse ] Couldn't get current pulse number")
 	}
 
-	if parcel.Pulse() == pulse.NextPulseNumber && mb.accuireMessagePoolItem() {
+	//TODO: check if parcel.Pulse() == pulse.NextPulseNumber
+	if parcel.Pulse() > pulse.PulseNumber && mb.acquireMessagePoolItem() {
 		if locked {
 			mb.globalLock.RUnlock()
 		}
@@ -311,7 +312,12 @@ func (mb *MessageBus) checkPulse(ctx context.Context, parcel core.Parcel, locked
 		return errors.Wrap(err, "[ checkPulse ] Couldn't get current pulse number")
 	}
 
-	if parcel.Pulse() != pulse.PulseNumber {
+	if parcel.Pulse() > pulse.PulseNumber {
+		// We waited for next pulse but parcel is still from future. Return error.
+		inslogger.FromContext(ctx).Errorf("[ checkPulse ] Incorrect message pulse (parcel: %d, current: %d)", parcel.Pulse(), pulse.PulseNumber)
+		return fmt.Errorf("[ checkPulse ] Incorrect message pulse (parcel: %d, current: %d)", parcel.Pulse(), pulse.PulseNumber)
+	} else if parcel.Pulse() < pulse.PulseNumber {
+		// Parcel is from past. Return error for some messages, allow for others.
 		switch parcel.Message().(type) {
 		case
 			*message.SetRecord,
@@ -319,8 +325,8 @@ func (mb *MessageBus) checkPulse(ctx context.Context, parcel core.Parcel, locked
 			*message.ValidateRecord,
 			*message.SetBlob,
 			*message.UpdateObject:
-			inslogger.FromContext(ctx).Error("[ checkPulse ] Incorrect message pulse")
-			return fmt.Errorf("[ checkPulse ] Incorrect message pulse %d %d", parcel.Pulse(), pulse.PulseNumber)
+			inslogger.FromContext(ctx).Errorf("[ checkPulse ] Incorrect message pulse (parcel: %d, current: %d)", parcel.Pulse(), pulse.PulseNumber)
+			return fmt.Errorf("[ checkPulse ] Incorrect message pulse (parcel: %d, current: %d)", parcel.Pulse(), pulse.PulseNumber)
 		}
 	}
 	return nil

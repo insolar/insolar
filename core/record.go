@@ -58,11 +58,19 @@ func (id *RecordID) JetIDString() string {
 		}
 	}
 
+	var prefixStr string
+	if depth == 0 {
+		prefixStr = "-"
+	} else {
+		for i := 0; i < int(depth); i++ {
+			prefixStr = fmt.Sprintf("%s%d", prefixStr, prefixBits[i])
+		}
+	}
 	str := fmt.Sprintf("depth=%d prefix=%s", depth, fmt.Sprint(prefixBits))
 	if !bytes.Equal(jetPN, PulseNumberJet.Bytes()) {
-		str = "[JET (BAD PULSE NUMBER)] " + str
+		str = fmt.Sprintf("[JET (BAD PULSE NUMBER) %d %s]", depth, prefixStr)
 	} else {
-		str = "[JET] " + str
+		str = fmt.Sprintf("[JET %d %s]", depth, prefixStr)
 	}
 	return str
 }

@@ -555,9 +555,9 @@ func (db *DB) GetActiveNodes(pulse core.PulseNumber) ([]core.Node, error) {
 	if !ok {
 		return nil, errors.New("no nodes for this pulse")
 	}
-	res := make([]core.Node, 0, len(nodes))
-	for _, n := range nodes {
-		res = append(res, n)
+	res := make([]core.Node, len(nodes))
+	for i, n := range nodes {
+		res[i] = n
 	}
 
 	return res, nil
