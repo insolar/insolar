@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -175,12 +175,7 @@ func initPulsar(ctx context.Context, cfg configuration.Configuration) (*pulsar.P
 func runPulsar(ctx context.Context, server *pulsar.Pulsar, cfg configuration.Pulsar) (pulseTicker *time.Ticker, refreshTicker *time.Ticker) {
 	server.CheckConnectionsToPulsars(ctx)
 
-	var nextPulseNumber core.PulseNumber
-	if server.GetLastPulse().PulseNumber == core.GenesisPulse.PulseNumber {
-		nextPulseNumber = core.CalculatePulseNumber(time.Now())
-	} else {
-		nextPulseNumber = server.GetLastPulse().PulseNumber + core.PulseNumber(cfg.NumberDelta)
-	}
+	nextPulseNumber := core.CalculatePulseNumber(time.Now())
 
 	err := server.StartConsensusProcess(ctx, nextPulseNumber)
 	if err != nil {
