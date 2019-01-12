@@ -40,17 +40,22 @@ const (
 type tcpTransport struct {
 	baseTransport
 
-	pool     pool.ConnectionPool
-	listener net.Listener
-	addr     string
-	stopped  uint32
+	stopped    uint32
+	pool       pool.ConnectionPool
+	listenAddr *net.TCPAddr
+	listener   *net.TCPListener
 }
 
-func newTCPTransport(addr string, proxy relay.Proxy, publicAddress string) (*tcpTransport, error) {
+func newTCPTransport(listenAddress string, proxy relay.Proxy, publicAddress string) (*tcpTransport, error) {
+	listenAddr, err := net.ResolveTCPAddr("tcp", listenAddress)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ newTCPTransport ] Failed to resolve listenAddress")
+	}
+
 	transport := &tcpTransport{
 		baseTransport: newBaseTransport(proxy, publicAddress),
-		addr:          addr,
 		pool:          pool.NewConnectionPool(&tcpConnectionFactory{}),
+		listenAddr:    listenAddr,
 	}
 
 	transport.sendFunc = transport.send
@@ -96,38 +101,39 @@ func (t *tcpTransport) send(address string, data []byte) error {
 	return errors.Wrap(err, "[ send ] Failed to write data")
 }
 
-func (t *tcpTransport) prepareListen() {
-	t.mutex.Lock()
-	defer t.mutex.Unlock()
-
-	t.stopped = 0
-	t.disconnectStarted = make(chan bool, 1)
-	t.disconnectFinished = make(chan bool, 1)
-	listener, err := net.Listen("tcp", t.addr)
-	if err != nil {
-		log.Error("[ prepareListen ]", err.Error())
-		return
-	}
-
-	t.listener = listener
-}
-
 // Start starts networking.
 func (t *tcpTransport) Listen(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
 	logger.Info("[ Listen ] Start TCP transport")
-	t.prepareListen()
+
+	t.mutex.Lock()
+
+	t.stopped = 0
+	t.disconnectStarted = make(chan bool, 1)
+	t.disconnectFinished = make(chan bool, 1)
+
+	listener, err := net.ListenTCP("tcp", t.listenAddr)
+	if err != nil {
+		return err
+	}
+	t.listener = listener
+
+	t.mutex.Unlock()
+
 	for {
-		conn, err := t.listener.Accept()
+		conn, err := t.listener.AcceptTCP()
 		if err != nil {
 			<-t.disconnectFinished
 			logger.Error("[ Listen ] Failed to accept connection: ", err.Error())
 			return errors.Wrap(err, "[ Listen ] Failed to accept connection")
 		}
 
-		logger.Debugf("[ Listen ] Accepted new connection from %s", conn.RemoteAddr())
+		go func(conn *net.TCPConn) {
+			logger.Debugf("[ Listen ] Accepted new connection from %s", conn.RemoteAddr())
 
-		go t.handleAcceptedConnection(conn)
+			setupConnection(ctx, conn)
+			t.handleAcceptedConnection(conn)
+		}(conn)
 	}
 }
 
