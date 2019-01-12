@@ -209,7 +209,7 @@ type LogicRunner struct {
 	Cfg          *configuration.LogicRunner
 
 	state      map[Ref]*ObjectState // if object exists, we are validating or executing it right now
-	stateMutex sync.Mutex
+	stateMutex sync.RWMutex
 
 	sock net.Listener
 }
