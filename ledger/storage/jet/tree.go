@@ -84,6 +84,26 @@ func (j *jet) ResetActual() {
 	}
 }
 
+func (j *jet) ExtractLeafIDs(ids *[]core.RecordID, path []byte, depth uint8) {
+	if j == nil {
+		return
+	}
+	if j.Left == nil && j.Right == nil {
+		*ids = append(*ids, *NewID(depth, path))
+		return
+	}
+
+	if j.Left != nil {
+		j.Left.ExtractLeafIDs(ids, path, depth+1)
+	}
+	if j.Right != nil {
+		rightPath := make([]byte, len(path))
+		copy(rightPath, path)
+		setBit(rightPath, depth)
+		j.Right.ExtractLeafIDs(ids, rightPath, depth+1)
+	}
+}
+
 // Tree stores jet in a binary tree.
 type Tree struct {
 	Head *jet
@@ -251,7 +271,7 @@ func (t *Tree) Split(jetID core.RecordID) (*core.RecordID, *core.RecordID, error
 		fmt.Println("split depth ", depth)
 		fmt.Println("found depth ", foundDepth)
 		fmt.Println("jet ", jetID.JetIDString())
-		return nil, nil, errors.New("failed to split: jet is not present in the tree")
+		return nil, nil, errors.New("failed to split: incorrect jet provided")
 	}
 	j.Right = &jet{}
 	j.Left = &jet{}
@@ -264,6 +284,12 @@ func (t *Tree) Split(jetID core.RecordID) (*core.RecordID, *core.RecordID, error
 // ResetActual resets actual mark, which will signify uncertain state on nodes and require actualization.
 func (t *Tree) ResetActual() {
 	t.Head.ResetActual()
+}
+
+func (t *Tree) LeafIDs() []core.RecordID {
+	var ids []core.RecordID
+	t.Head.ExtractLeafIDs(&ids, make([]byte, core.RecordHashSize), 0)
+	return ids
 }
 
 func getBit(value []byte, index uint8) bool {

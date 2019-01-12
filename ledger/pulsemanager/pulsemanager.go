@@ -124,22 +124,36 @@ func (m *PulseManager) processEndPulse(
 	// }
 
 	fmt.Println("processEndPulse start")
-	err := m.db.CloneJetTree(ctx, currentPulse.PulseNumber, newPulse.PulseNumber)
+	tree, err := m.db.CloneJetTree(ctx, currentPulse.PulseNumber, newPulse.PulseNumber)
 	if err != nil {
 		fmt.Println("processEndPulse, err in CloneJetTree", err)
 		return errors.Wrap(err, "failed to clone jet tree into a new pulse")
 	}
 
-	jetIDs, err := m.db.GetJets(ctx)
-	if err != nil {
-		fmt.Println("processEndPulse, err in GetJets", err)
-		return errors.Wrap(err, "can't get jets from storage")
-	}
+	jetIDs := tree.LeafIDs()
+	// jetIDs, err := m.db.GetJets(ctx)
+	// if err != nil {
+	// 	fmt.Println("processEndPulse, err in GetJets", err)
+	// 	return errors.Wrap(err, "can't get jets from storage")
+	// }
+	// jetSlice := make([]core.RecordID, 0, len(jetIDs))
+	// for jetID := range jetIDs {
+	// 	jetSlice = append(jetSlice, jetID)
+	// }
+	// sort.Slice(jetSlice, func(i, j int) bool {
+	// 	iDepth, _ := jet.Jet(jetSlice[i])
+	// 	jDepth, _ := jet.Jet(jetSlice[j])
+	// 	return iDepth >= jDepth
+	// })
+	// jetSliceSorted := make([]core.RecordID, 0, len(jetSlice))
+	// for _, jetID := range jetSlice {
+	// 	if _, ok := jetIDs[jetID]
+	// }
 
 	fmt.Println("Total jets: ", jetIDs)
 
 	// var g errgroup.Group
-	for jetID := range jetIDs {
+	for _, jetID := range jetIDs {
 		jetID := jetID
 
 		executor, err := m.JetCoordinator.LightExecutorForJet(ctx, jetID, currentPulse.PulseNumber)

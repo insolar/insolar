@@ -440,3 +440,28 @@ func TestTree_Merge(t *testing.T) {
 		require.Equal(t, savedTree.String(), result.String())
 	})
 }
+
+func TestTree_LeafIDs(t *testing.T) {
+	tree := Tree{
+		Head: &jet{
+			Right: &jet{
+				Right: &jet{
+					Left: &jet{
+						Right: &jet{},
+						Left:  &jet{},
+					},
+					Right: &jet{},
+				},
+			},
+			Left: &jet{},
+		},
+	}
+
+	leafIDs := tree.LeafIDs()
+
+	require.Equal(t, len(leafIDs), 4)
+	assert.Equal(t, leafIDs[0], *NewID(1, nil))          // 0000
+	assert.Equal(t, leafIDs[1], *NewID(4, []byte{0xC0})) // 1100
+	assert.Equal(t, leafIDs[2], *NewID(4, []byte{0xD0})) // 1101
+	assert.Equal(t, leafIDs[3], *NewID(3, []byte{0xE0})) // 1110
+}
