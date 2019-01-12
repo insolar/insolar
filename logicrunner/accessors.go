@@ -42,9 +42,9 @@ func (lr *LogicRunner) GetExecutor(t core.MachineType) (core.MachineLogicExecuto
 }
 
 func (lr *LogicRunner) GetObjectState(ref Ref) *ObjectState {
-	lr.stateMutex.Lock()
-	defer lr.stateMutex.Unlock()
+	lr.stateMutex.RLock()
 	res, ok := lr.state[ref]
+	lr.stateMutex.RUnlock()
 	if !ok {
 		return nil
 	}
@@ -52,11 +52,16 @@ func (lr *LogicRunner) GetObjectState(ref Ref) *ObjectState {
 }
 
 func (lr *LogicRunner) UpsertObjectState(ref Ref) *ObjectState {
+	lr.stateMutex.RLock()
+	if _, ok := lr.state[ref]; ok {
+		defer lr.stateMutex.RUnlock()
+		return lr.state[ref]
+	}
+	lr.stateMutex.RUnlock()
+
 	lr.stateMutex.Lock()
 	defer lr.stateMutex.Unlock()
-	if _, ok := lr.state[ref]; !ok {
-		lr.state[ref] = &ObjectState{Ref: &ref}
-	}
+	lr.state[ref] = &ObjectState{Ref: &ref}
 	return lr.state[ref]
 }
 
