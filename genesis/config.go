@@ -25,6 +25,29 @@ type genesisConfig struct {
 	DiscoveryNodes   []discovery `mapstructure:"discovery_nodes"`
 }
 
+// It's very light check. It's not about majority rule
+func hasMinimumRolesSet(conf *genesisConfig) error {
+	minRequiredRolesSet := map[string]bool{
+		"virtual":        true,
+		"heavy_material": true,
+		"light_material": true,
+	}
+
+	for _, discNode := range conf.DiscoveryNodes {
+		delete(minRequiredRolesSet, discNode.Role)
+	}
+
+	if len(minRequiredRolesSet) != 0 {
+		var missingRoles string
+		for role := range minRequiredRolesSet {
+			missingRoles += role + ", "
+		}
+		return errors.New("[ hasMinimumRolesSet ] No required roles in genesis config: " + missingRoles)
+	}
+
+	return nil
+}
+
 func parseGenesisConfig(path string) (*genesisConfig, error) {
 	var conf = &genesisConfig{}
 	v := viper.New()
@@ -37,5 +60,11 @@ func parseGenesisConfig(path string) (*genesisConfig, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "[ parseGenesisConfig ] couldn't unmarshal yaml to struct")
 	}
+
+	err = hasMinimumRolesSet(conf)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ parseGenesisConfig ]")
+	}
+
 	return conf, nil
 }

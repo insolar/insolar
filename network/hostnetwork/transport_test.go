@@ -416,7 +416,7 @@ func TestDoubleStart(t *testing.T) {
 	time.Sleep(time.Second)
 
 	wg.Wait()
-	defer tp.Stop()
+	tp.Stop()
 }
 
 func TestHostTransport_RegisterPacketHandler(t *testing.T) {
