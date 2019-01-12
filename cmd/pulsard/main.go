@@ -31,6 +31,7 @@ import (
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/keystore"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/pulsenetwork"
 	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/network/transport/relay"
@@ -75,15 +76,17 @@ func main() {
 		err = cfgHolder.Load()
 	}
 	if err != nil {
-		inslog.Warnln("failed to load configuration from file: ", err.Error())
+		log.Warnln("failed to load configuration from file: ", err.Error())
 	}
 
 	err = cfgHolder.LoadEnv()
 	if err != nil {
-		inslog.Warnln("failed to load configuration from env:", err.Error())
+		log.Warnln("failed to load configuration from env:", err.Error())
 	}
 
-	server, storage, tp := initPulsar(ctx, cfgHolder.Configuration)
+	ctx, inslog = initLogger(ctx, cfgHolder.Configuration.Log, uniqueID)
+
+	server, storage := initPulsar(ctx, cfgHolder.Configuration)
 	server.ID = uniqueID
 
 	go server.StartServer(ctx)
@@ -97,7 +100,6 @@ func main() {
 			inslog.Error(err)
 		}
 		server.StopServer(ctx)
-		tp.Close()
 	}()
 
 	var gracefulStop = make(chan os.Signal, 1)
@@ -107,7 +109,7 @@ func main() {
 	<-gracefulStop
 }
 
-func initPulsar(ctx context.Context, cfg configuration.Configuration) (*pulsar.Pulsar, pulsarstorage.PulsarStorage, transport.Transport) {
+func initPulsar(ctx context.Context, cfg configuration.Configuration) (*pulsar.Pulsar, pulsarstorage.PulsarStorage) {
 	fmt.Print("Starts with configuration:\n", configuration.ToString(cfg))
 	fmt.Println("Version: ", version.GetFullVersion())
 
@@ -166,7 +168,7 @@ func initPulsar(ctx context.Context, cfg configuration.Configuration) (*pulsar.P
 	}
 	switcher.SetPulsar(server)
 
-	return server, storage, tp
+	return server, storage
 }
 
 func runPulsar(ctx context.Context, server *pulsar.Pulsar, cfg configuration.Pulsar) (pulseTicker *time.Ticker, refreshTicker *time.Ticker) {
@@ -212,4 +214,16 @@ func RandTraceID() string {
 		panic("createRandomTraceIDFailed:" + err.Error())
 	}
 	return traceID.String()
+}
+
+func initLogger(ctx context.Context, cfg configuration.Log, traceid string) (context.Context, core.Logger) {
+	inslog, err := log.NewLog(cfg)
+	if err != nil {
+		panic(err)
+	}
+	err = inslog.SetLevel(cfg.Level)
+	if err != nil {
+		inslog.Errorln(err.Error())
+	}
+	return inslogger.WithTraceField(inslogger.SetLogger(ctx, inslog), traceid)
 }
