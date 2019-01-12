@@ -367,3 +367,28 @@ func (pf *PendingFinished) DefaultTarget() *core.RecordRef {
 func (pf *PendingFinished) Type() core.MessageType {
 	return core.TypePendingFinished
 }
+
+// StillExecuting
+type StillExecuting struct {
+	Reference core.RecordRef // object we still executing
+}
+
+func (se *StillExecuting) GetCaller() *core.RecordRef {
+	return &se.Reference
+}
+
+func (se *StillExecuting) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return nil, 0
+}
+
+func (se *StillExecuting) DefaultRole() core.DynamicRole {
+	return core.DynamicRoleVirtualExecutor
+}
+
+func (se *StillExecuting) DefaultTarget() *core.RecordRef {
+	return &se.Reference
+}
+
+func (se *StillExecuting) Type() core.MessageType {
+	return core.TypeStillExecuting
+}

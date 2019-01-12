@@ -67,12 +67,14 @@ type ExecutionState struct {
 	nonce      uint64
 
 	Behaviour ValidationBehaviour
-	Current   *CurrentExecution
-	Queue     []ExecutionQueueElement
+
+	Current              *CurrentExecution
+	Queue                []ExecutionQueueElement
+	QueueProcessorActive bool
 
 	// TODO not using in validation, need separate ObjectState.ExecutionState and ObjectState.Validation from ExecutionState struct
-	pending              PendingState
-	QueueProcessorActive bool
+	pending          PendingState
+	PendingConfirmed bool
 }
 
 type CurrentExecution struct {
@@ -263,6 +265,7 @@ func (lr *LogicRunner) RegisterHandlers() {
 	lr.MessageBus.MustRegister(core.TypeValidateCaseBind, lr.HandleValidateCaseBindMessage)
 	lr.MessageBus.MustRegister(core.TypeValidationResults, lr.HandleValidationResultsMessage)
 	lr.MessageBus.MustRegister(core.TypePendingFinished, lr.HandlePendingFinishedMessage)
+	lr.MessageBus.MustRegister(core.TypeStillExecuting, lr.HandleStillExecutingMessage)
 }
 
 // Stop stops logic runner component and its executors
@@ -862,14 +865,9 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 	messages := make([]core.Message, 0)
 
 	for ref, state := range lr.state {
-		// we are executor again - just continue working
-		// TODO we need to do something with validation
 		isAuthorized, _ := lr.JetCoordinator.IsAuthorized(
 			ctx, core.DynamicRoleVirtualExecutor, *ref.Record(), pulse.PulseNumber, lr.JetCoordinator.Me(),
 		)
-		if isAuthorized {
-			continue
-		}
 		state.Lock()
 
 		// some old stuff
@@ -878,35 +876,56 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 		if es := state.ExecutionState; es != nil {
 			es.Lock()
 
-			if es.Current != nil {
-				es.pending = InPending
+			// if we are executor again we just continue working
+			// without sending data on next executor (because we are next executor)
+			if !isAuthorized {
+				if es.Current != nil {
+					es.pending = InPending
+
+					// TODO: this should return delegation token to continue execution of the pending
+					messages = append(
+						messages,
+						&message.StillExecuting{
+							Reference: ref,
+						},
+					)
+				} else {
+					if es.pending == InPending && !es.PendingConfirmed {
+						inslogger.FromContext(ctx).Warn(
+							"looks like pending executor died, continuing execution",
+						)
+						es.pending = NotPending
+					}
+					state.ExecutionState = nil
+				}
+
+				queue := es.releaseQueue()
+				caseBind := es.Behaviour.(*ValidationSaver).caseBind
+				requests := caseBind.getCaseBindForMessage(ctx)
+				messages = append(
+					messages,
+					//&message.ValidateCaseBind{
+					//	RecordRef: ref,
+					//	Requests:  requests,
+					//	Pulse:     pulse,
+					//},
+					&message.ExecutorResults{
+						RecordRef: ref,
+						Pending:   es.pending == InPending,
+						Requests:  requests,
+						Queue:     convertQueueToMessageQueue(queue),
+					},
+				)
 			}
 
-			queue := es.releaseQueue()
-			caseBind := es.Behaviour.(*ValidationSaver).caseBind
-			requests := caseBind.getCaseBindForMessage(ctx)
-			messages = append(
-				messages,
-				//&message.ValidateCaseBind{
-				//	RecordRef: ref,
-				//	Requests:  requests,
-				//	Pulse:     pulse,
-				//},
-				&message.ExecutorResults{
-					RecordRef: ref,
-					Pending:   es.pending == InPending,
-					Requests:  requests,
-					Queue:     convertQueueToMessageQueue(queue),
-				},
-			)
-
-			// TODO: if Current is not nil then we should request here for a delegation token
-			// to continue execution of the current request
-
-			if es.Current == nil {
+			if es.Current == nil && len(es.Queue) == 0 {
 				state.ExecutionState = nil
 			}
 			es.Unlock()
+		}
+
+		if state.ExecutionState == nil && state.Validation == nil && state.Consensus == nil {
+			delete(lr.state, ref)
 		}
 
 		state.Unlock()
@@ -940,6 +959,43 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 	}
 
 	return nil
+}
+
+func (lr *LogicRunner) HandleStillExecutingMessage(
+	ctx context.Context, parcel core.Parcel,
+) (
+	core.Reply, error,
+) {
+	msg := parcel.Message().(*message.StillExecuting)
+	ref := msg.DefaultTarget()
+	os := lr.UpsertObjectState(*ref)
+
+	inslogger.FromContext(ctx).Debug("Got information that ", ref, " is still executing")
+
+	os.Lock()
+	if os.ExecutionState == nil {
+		// we are first, strange, soon ExecuteResults message should come
+		os.ExecutionState = &ExecutionState{
+			Queue:            make([]ExecutionQueueElement, 0),
+			Behaviour:        &ValidationSaver{lr: lr, caseBind: NewCaseBind()},
+			pending:          InPending,
+			PendingConfirmed: true,
+		}
+	} else {
+		es := os.ExecutionState
+		es.Lock()
+		if es.pending == NotPending {
+			inslogger.FromContext(ctx).Error(
+				"got StillExecuting message, but our state says that it's not in pending",
+			)
+		} else {
+			es.PendingConfirmed = true
+		}
+		es.Unlock()
+	}
+	os.Unlock()
+
+	return &reply.OK{}, nil
 }
 
 func (lr *LogicRunner) sendOnPulseMessagesAsync(ctx context.Context, msg core.Message, sendWg *sync.WaitGroup, errChan *chan error) {
