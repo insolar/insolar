@@ -90,25 +90,25 @@ func (d *distributor) Distribute(ctx context.Context, pulse *core.Pulse) {
 	wg.Add(len(d.bootstrapHosts))
 
 	for _, bootstrapHost := range d.bootstrapHosts {
-		bootstrapHost := bootstrapHost
+		clousureHost := bootstrapHost
 		go func() {
 			defer wg.Done()
 
-			if bootstrapHost.NodeID.IsEmpty() {
-				err := d.pingHost(ctx, bootstrapHost)
+			if clousureHost.NodeID.IsEmpty() {
+				err := d.pingHost(ctx, clousureHost)
 				if err != nil {
 					logger.Error("[ Distribute ] failed to ping and fill node id", err)
 					return
 				}
 			}
 
-			hosts, err := d.getRandomHosts(ctx, bootstrapHost)
+			hosts, err := d.getRandomHosts(ctx, clousureHost)
 			if err != nil {
 				logger.Error("[ Distribute ] failed to get random hosts", err)
 			}
 
 			if len(hosts) == 0 {
-				err := d.sendPulseToHost(ctx, pulse, bootstrapHost)
+				err := d.sendPulseToHost(ctx, pulse, clousureHost)
 				if err != nil {
 					logger.Error(err)
 				}
@@ -198,10 +198,10 @@ func (d *distributor) sendPulseToHosts(ctx context.Context, pulse *core.Pulse, h
 	wg.Add(len(hosts))
 
 	for _, pulseReceiver := range hosts {
-		pulseReceiver := pulseReceiver
+		receiver := pulseReceiver
 		go func() {
 			defer wg.Done()
-			err := d.sendPulseToHost(ctx, pulse, &pulseReceiver)
+			err := d.sendPulseToHost(ctx, pulse, &receiver)
 			if err != nil {
 				logger.Error(err)
 			}
