@@ -133,7 +133,13 @@ func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *gop
 	)
 
 	pulseStorage := l.PulseManager.(*pulsemanager.PulseManager).PulseStorage
-	recentMock := recentstorage.NewProviderMock(t)
+	providerMock := recentstorage.NewProviderMock(t)
+	recentStorageMock := recentstorage.NewRecentStorageMock(t)
+	recentStorageMock.AddObjectMock.Return()
+
+	providerMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
+		return recentStorageMock
+	}
 
 	parcelFactory := messagebus.NewParcelFactory()
 	cm := &component.Manager{}
@@ -142,7 +148,7 @@ func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *gop
 	cm.Register(am, l.GetPulseManager(), l.GetJetCoordinator())
 	cr, err := contractrequester.New()
 
-	cm.Inject(pulseStorage, nk, recentMock, l, lr, nw, mb, cr, delegationTokenFactory, parcelFactory, mock)
+	cm.Inject(pulseStorage, nk, providerMock, l, lr, nw, mb, cr, delegationTokenFactory, parcelFactory, mock)
 	err = cm.Init(ctx)
 	assert.NoError(t, err)
 	err = cm.Start(ctx)
