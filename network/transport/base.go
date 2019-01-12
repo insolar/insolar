@@ -103,10 +103,7 @@ func (t *baseTransport) SendResponse(requestID packet.RequestID, msg *packet.Pac
 
 // Close closes packet channels.
 func (t *baseTransport) Close() {
-	t.mutex.Lock()
-	defer t.mutex.Unlock()
-
-	close(t.disconnectFinished)
+	t.disconnectFinished <- true
 }
 
 // Packets returns incoming packets channel.
