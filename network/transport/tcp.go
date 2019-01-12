@@ -147,7 +147,7 @@ func (t *tcpTransport) Stop() {
 
 	t.stopped = 1
 	utils.CloseVerbose(t.listener)
-	t.pool.Reset()
+	t.pool.Reset(ctx)
 }
 
 func (t *tcpTransport) handleAcceptedConnection(conn net.Conn) {

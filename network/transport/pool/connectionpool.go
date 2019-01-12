@@ -74,6 +74,11 @@ func (cp *connectionPool) RegisterConnection(ctx context.Context, address net.Ad
 	logger.Debugf("[ RegisterConnection ] Missing open connection to %s in pool ", address)
 
 	cp.unsafeConnectionsHolder.Add(address, conn)
+	logger.Debugf(
+		"[ RegisterConnection ] Added connection to %s. Current pool size: %d",
+		conn.RemoteAddr(),
+		cp.unsafeConnectionsHolder.Size(),
+	)
 	return true
 }
 
@@ -89,7 +94,11 @@ func (cp *connectionPool) CloseConnection(ctx context.Context, address net.Addr)
 	if ok {
 		utils.CloseVerbose(conn)
 
-		logger.Debugf("[ CloseConnection ] Delete connection to %s from pool: %s", address)
+		logger.Debugf(
+			"[ CloseConnection ] Delete connection to %s. Current pool size: %d",
+			address,
+			cp.unsafeConnectionsHolder.Size(),
+		)
 		cp.unsafeConnectionsHolder.Delete(address)
 	}
 }
@@ -131,9 +140,13 @@ func (cp *connectionPool) getOrCreateConnection(ctx context.Context, address net
 	return true, conn, nil
 }
 
-func (cp *connectionPool) Reset() {
+func (cp *connectionPool) Reset(ctx context.Context) {
+	logger := inslogger.FromContext(ctx)
+
 	cp.mutex.Lock()
 	defer cp.mutex.Unlock()
+
+	logger.Debugf("[ Reset ] Reset pool of size: %d", cp.unsafeConnectionsHolder.Size())
 
 	cp.unsafeConnectionsHolder.Iterate(func(conn net.Conn) {
 		utils.CloseVerbose(conn)
