@@ -312,10 +312,9 @@ func (lr *LogicRunner) RegisterRequest(ctx context.Context, parcel core.Parcel) 
 		return nil, err
 	}
 
-	// TODO: use proper conversion
-	res := &Ref{}
+	res := obj
 	res.SetRecord(*id)
-	return res, nil
+	return &res, nil
 }
 
 // Execute runs a method on an object, ATM just thin proxy to `GoPlugin.Exec`

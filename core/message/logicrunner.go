@@ -191,11 +191,11 @@ func (cc *CallConstructor) DefaultTarget() *core.RecordRef {
 	if cc.SaveAs == Delegate {
 		return &cc.ParentRef
 	}
-	return genRequest(cc.PulseNum, MustSerializeBytes(cc))
+	return genRequest(cc.PulseNum, MustSerializeBytes(cc), cc.Request.Domain())
 }
 
 func (cc *CallConstructor) GetReference() core.RecordRef {
-	return *genRequest(cc.PulseNum, MustSerializeBytes(cc))
+	return *genRequest(cc.PulseNum, MustSerializeBytes(cc), cc.Request.Domain())
 }
 
 // Type returns TypeCallConstructor.
@@ -332,9 +332,9 @@ func (vr *ValidationResults) GetReference() core.RecordRef {
 var hasher = platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher() // TODO: create message factory
 
 // GenRequest calculates RecordRef for request message from pulse number and request's payload.
-func genRequest(pn core.PulseNumber, payload []byte) *core.RecordRef {
+func genRequest(pn core.PulseNumber, payload []byte, domain *core.RecordID) *core.RecordRef {
 	ref := core.NewRecordRef(
-		core.RecordID{},
+		*domain,
 		*core.NewRecordID(pn, hasher.Hash(payload)),
 	)
 	return ref
