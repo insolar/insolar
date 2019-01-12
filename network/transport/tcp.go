@@ -21,12 +21,12 @@ import (
 	"io"
 	"net"
 	"os"
-	"sync/atomic"
+	"strings"
+	"sync"
 	"syscall"
 	"time"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/transport/pool"
 	"github.com/insolar/insolar/network/transport/relay"
 	"github.com/insolar/insolar/network/utils"
@@ -40,10 +40,10 @@ const (
 type tcpTransport struct {
 	baseTransport
 
-	stopped    uint32
-	pool       pool.ConnectionPool
-	listenAddr *net.TCPAddr
-	listener   *net.TCPListener
+	openConnections sync.WaitGroup
+	pool            pool.ConnectionPool
+	listenAddr      *net.TCPAddr
+	listener        *net.TCPListener
 }
 
 func newTCPTransport(listenAddress string, proxy relay.Proxy, publicAddress string) (*tcpTransport, error) {
@@ -72,9 +72,9 @@ func (t *tcpTransport) send(address string, data []byte) error {
 		return errors.Wrap(err, "[ send ] Failed to resolve net address")
 	}
 
-	_, conn, err := t.pool.GetConnection(ctx, addr)
+	conn, err := t.openConnection(ctx, addr)
 	if err != nil {
-		return errors.Wrap(err, "[ send ] Failed to get connection")
+		return err
 	}
 
 	logger.Debug("[ send ] len = ", len(data))
@@ -88,9 +88,9 @@ func (t *tcpTransport) send(address string, data []byte) error {
 			case *os.SyscallError:
 				if realNetErr.Err == syscall.EPIPE {
 					t.pool.CloseConnection(ctx, addr)
-					_, conn, err = t.pool.GetConnection(ctx, addr)
+					conn, err := t.openConnection(ctx, addr)
 					if err != nil {
-						return errors.Wrap(err, "[ send ] Failed to get connection")
+						return err
 					}
 					_, err = conn.Write(data)
 				}
@@ -108,9 +108,8 @@ func (t *tcpTransport) Listen(ctx context.Context) error {
 
 	t.mutex.Lock()
 
-	t.stopped = 0
+	t.openConnections = sync.WaitGroup{}
 	t.disconnectStarted = make(chan bool, 1)
-	t.disconnectFinished = make(chan bool, 1)
 
 	listener, err := net.ListenTCP("tcp", t.listenAddr)
 	if err != nil {
@@ -123,8 +122,7 @@ func (t *tcpTransport) Listen(ctx context.Context) error {
 	for {
 		conn, err := t.listener.AcceptTCP()
 		if err != nil {
-			<-t.disconnectFinished
-			logger.Error("[ Listen ] Failed to accept connection: ", err.Error())
+			logger.Debugf("[ Listen ] Failed to accept connection: %s", err.Error())
 			return errors.Wrap(err, "[ Listen ] Failed to accept connection")
 		}
 
@@ -132,7 +130,7 @@ func (t *tcpTransport) Listen(ctx context.Context) error {
 			logger.Debugf("[ Listen ] Accepted new connection from %s", conn.RemoteAddr())
 
 			setupConnection(ctx, conn)
-			t.handleAcceptedConnection(conn)
+			t.handleAcceptedConnection(ctx, conn, false, nil)
 		}(conn)
 	}
 }
@@ -142,51 +140,109 @@ func (t *tcpTransport) Stop() {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 
-	log.Info("[ Stop ] Stop TCP transport")
-	t.prepareDisconnect()
+	ctx := context.TODO()
+	inslogger.FromContext(ctx).Info("[ Stop ] Stop TCP transport")
 
-	t.stopped = 1
+	t.prepareDisconnect()
 	utils.CloseVerbose(t.listener)
 	t.pool.Reset(ctx)
+	t.openConnections.Wait()
+
+	<-t.disconnectFinished
+	t.pool.Reset(ctx) // Second reset to ensure all connection is closed after transport clients are called close.
+
+	inslogger.FromContext(ctx).Info("[ Stop ] TCP transport stopped")
 }
 
-func (t *tcpTransport) handleAcceptedConnection(conn net.Conn) {
-	defer utils.CloseVerbose(conn)
-	closed := false
+func (t *tcpTransport) handleAcceptedConnection(
+	ctx context.Context,
+	conn *net.TCPConn,
+	registered bool,
+	remoteAddr *net.TCPAddr) {
+
+	logger := inslogger.FromContext(ctx)
+	t.openConnections.Add(1)
+
+	var alreadyClosed bool
+
+	defer t.openConnections.Done()
+	defer func() {
+		logger.Debugf("[ handleAcceptedConnection ] Closing connection %p - alreadyClosed: %v, registered: %v", conn, alreadyClosed, registered)
+
+		if !alreadyClosed {
+			if registered {
+				t.pool.CloseConnection(ctx, remoteAddr)
+			} else {
+				utils.CloseVerbose(conn)
+			}
+		}
+	}()
 
 	for {
-		if atomic.LoadUint32(&t.stopped) == 1 && closed {
-			closed = true
-			log.Debugf("[ handleAcceptedConnection ] Stop handling connection: %s", conn.RemoteAddr().String())
-		}
-
-		err := conn.SetReadDeadline(time.Now().Add(1000 * time.Millisecond))
-		if err != nil {
-			log.Errorf("[ handleAcceptedConnection ] Failed to set read deadline", err.Error())
-		}
-
-		msg, err := t.serializer.DeserializePacket(conn)
+		p, err := t.serializer.DeserializePacket(conn)
 
 		if err != nil {
-			if err == io.EOF {
-				log.Warn("[ handleAcceptedConnection ] Connection closed by peer")
+			if err == io.EOF || err == io.ErrUnexpectedEOF {
+				logger.Warn("[ handleAcceptedConnection ] Connection closed by peer")
 				return
 			}
 
-			if netErr, ok := err.(*net.OpError); ok && netErr.Timeout() {
-				if closed {
-					return
-				}
-				continue
+			if strings.Contains(err.Error(), "use of closed network connection") {
+				logger.Debug("[ handleAcceptedConnection ] Connection closed in another goroutine")
+				alreadyClosed = true
+				return
 			}
 
-			log.Error("[ handleAcceptedConnection ] Failed to deserialize packet: ", err.Error())
-		} else {
-			log.Debug("[ handleAcceptedConnection ] Handling packet: ", msg.RequestID)
+			logger.Error("[ handleAcceptedConnection ] Failed to deserialize packet: ", err.Error())
+			continue
+		}
 
-			go t.packetHandler.Handle(context.TODO(), msg)
+		logger.Debug("[ handleAcceptedConnection ] Handling packet: ", p.RequestID)
+		go t.packetHandler.Handle(ctx, p)
+
+		if registered {
+			continue
+		}
+
+		remoteAddr, err = net.ResolveTCPAddr("tcp", p.RemoteAddress)
+		if err != nil {
+			logger.Errorf("[ handleAcceptedConnection ] Failed to register connection: %s", err.Error())
+		}
+
+		var closeConnection bool
+		if closeConnection, registered = t.registerConnection(ctx, remoteAddr, conn); closeConnection {
+			return
 		}
 	}
+}
+
+func (t *tcpTransport) registerConnection(
+	ctx context.Context,
+	remoteAddr *net.TCPAddr,
+	conn *net.TCPConn,
+) (closeConnection bool, registered bool) {
+	logger := inslogger.FromContext(ctx)
+
+	if !t.pool.RegisterConnection(context.Background(), remoteAddr, conn) && remoteAddr.String() < t.publicAddress {
+		logger.Infof("[ registerConnection ] Connection %p to %s already registered", conn, remoteAddr)
+		closeConnection = true
+		return
+	}
+
+	registered = true
+	return
+}
+
+func (t *tcpTransport) openConnection(ctx context.Context, addr *net.TCPAddr) (net.Conn, error) {
+	created, conn, err := t.pool.GetConnection(ctx, addr)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ openConnection ] Failed to get connection")
+	}
+	if created {
+		go t.handleAcceptedConnection(ctx, conn.(*net.TCPConn), true, addr)
+	}
+
+	return conn, nil
 }
 
 func setupConnection(ctx context.Context, conn *net.TCPConn) {
