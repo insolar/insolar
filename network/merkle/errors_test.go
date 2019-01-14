@@ -148,7 +148,10 @@ func TestCalculatorError(t *testing.T) {
 	pulseManager := testutils.NewPulseStorageMock(t)
 
 	nk := nodekeeper.GetTestNodekeeper(service)
-	cm.Inject(nk, l.ArtifactManager, calculator, service, scheme, pulseManager)
+
+	jc := testutils.NewJetCoordinatorMock(t)
+
+	cm.Inject(nk, jc, l.ArtifactManager, calculator, service, scheme, pulseManager)
 
 	require.NotNil(t, calculator.ArtifactManager)
 	require.NotNil(t, calculator.NodeNetwork)
