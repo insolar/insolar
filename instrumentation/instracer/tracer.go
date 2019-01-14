@@ -61,7 +61,7 @@ func (ts TraceSpan) spanContext() (sc trace.SpanContext) {
 
 type baggageKey struct{}
 
-// SetBaggage stores provided entries as context baggage and returns new conext.
+// SetBaggage stores provided entries as context baggage and returns new context.
 //
 // Baggage is set of entries that should be attached to all new spans.
 func SetBaggage(ctx context.Context, e ...Entry) context.Context {

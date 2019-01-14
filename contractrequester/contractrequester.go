@@ -22,6 +22,9 @@ import (
 	"encoding/binary"
 	"sync"
 
+	"github.com/insolar/insolar/instrumentation/instracer"
+	"go.opencensus.io/trace"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
@@ -125,13 +128,13 @@ func (cr *ContractRequester) CallMethod(ctx context.Context, base core.Message, 
 		cr.ResultMutex.Unlock()
 	}
 
-	var res core.Reply
-	var err error
+	ctx, sendspan := instracer.StartSpan(ctx, "ContractRequester.CallMethod mb.Send")
+	sendspan.AddAttributes(
+		trace.StringAttribute("method", msg.Method),
+	)
+	res, err := mb.Send(ctx, msg, nil)
+	sendspan.End()
 
-	utils.MeasureExecutionTime(ctx, "ContractRequester.CallMethod mb.Send, msg.method="+msg.Method,
-		func() {
-			res, err = mb.Send(ctx, msg, nil)
-		})
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't dispatch event")
 	}
