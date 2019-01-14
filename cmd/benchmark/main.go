@@ -181,6 +181,7 @@ func startScenario(s scenario) {
 			s.getName(), s.getAverageOperationDuration(),
 		),
 	)
+	s.printResult()
 }
 
 func main() {

@@ -121,5 +121,5 @@ func TestMessageBus_doDeliverWrongPulse(t *testing.T) {
 	mb, _, parcel := prepare(t, ctx, 100, 200)
 
 	_, err := mb.doDeliver(ctx, parcel)
-	require.EqualError(t, err, "[ MessageBus ] Incorrect message pulse 200 100")
+	require.EqualError(t, err, "[ doDeliver ] error in checkPulse: [ checkPulse ] Incorrect message pulse 200 100")
 }

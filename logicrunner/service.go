@@ -20,13 +20,15 @@ package logicrunner
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"net/rpc"
 	"sync/atomic"
 
-	"github.com/insolar/insolar/core/utils"
+	"github.com/insolar/insolar/instrumentation/instracer"
+
 	"github.com/pkg/errors"
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
@@ -66,8 +68,22 @@ type RPC struct {
 	ps core.PulseStorage
 }
 
+func recoverRPC(err *error) {
+	if r := recover(); r != nil {
+		if err != nil {
+			if *err == nil {
+				*err = errors.New(fmt.Sprint(r))
+			} else {
+				*err = errors.New(fmt.Sprint(*err, r))
+			}
+		}
+	}
+}
+
 // GetCode is an RPC retrieving a code by its reference
-func (gpr *RPC) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp) error {
+func (gpr *RPC) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp) (err error) {
+	defer recoverRPC(&err)
+
 	os := gpr.lr.MustObjectState(req.Callee)
 	es := os.MustModeState(req.Mode)
 	ctx := es.Current.Context
@@ -76,13 +92,10 @@ func (gpr *RPC) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp
 	inslogger.FromContext(ctx).Debug("In RPC.GetCode ....")
 
 	am := gpr.lr.ArtifactManager
-	var (
-		codeDescriptor core.CodeDescriptor
-		err            error
-	)
-	utils.MeasureExecutionTime(ctx, "service.GetCode am.GetCode", func() {
-		codeDescriptor, err = am.GetCode(ctx, req.Code)
-	})
+
+	ctx, span := instracer.StartSpan(ctx, "service.GetCode am.GetCode")
+	codeDescriptor, err := am.GetCode(ctx, req.Code)
+	span.End()
 	if err != nil {
 		return err
 	}
@@ -105,7 +118,9 @@ func MakeBaseMessage(req rpctypes.UpBaseReq, es *ExecutionState) message.BaseLog
 }
 
 // RouteCall routes call from a contract to a contract through event bus.
-func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) error {
+func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) (err error) {
+	defer recoverRPC(&err)
+
 	os := gpr.lr.MustObjectState(req.Callee)
 	es := os.MustModeState(req.Mode)
 	ctx := es.Current.Context
@@ -131,7 +146,9 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) er
 }
 
 // SaveAsChild is an RPC saving data as memory of a contract as child a parent
-func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveAsChildResp) error {
+func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveAsChildResp) (err error) {
+	defer recoverRPC(&err)
+
 	os := gpr.lr.MustObjectState(req.Callee)
 	es := os.MustModeState(req.Mode)
 	ctx := es.Current.Context
@@ -145,7 +162,9 @@ func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveA
 }
 
 // SaveAsDelegate is an RPC saving data as memory of a contract as child a parent
-func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.UpSaveAsDelegateResp) error {
+func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.UpSaveAsDelegateResp) (err error) {
+	defer recoverRPC(&err)
+
 	os := gpr.lr.MustObjectState(req.Callee)
 	es := os.MustModeState(req.Mode)
 	ctx := es.Current.Context
@@ -161,7 +180,14 @@ var iteratorMap = make(map[string]*core.RefIterator)
 var iteratorBuffSize = 1000
 
 // GetObjChildrenIterator is an RPC returns an iterator over object children with specified prototype
-func (gpr *RPC) GetObjChildrenIterator(req rpctypes.UpGetObjChildrenIteratorReq, rep *rpctypes.UpGetObjChildrenIteratorResp) error {
+func (gpr *RPC) GetObjChildrenIterator(
+	req rpctypes.UpGetObjChildrenIteratorReq,
+	rep *rpctypes.UpGetObjChildrenIteratorResp,
+) (
+	err error,
+) {
+	defer recoverRPC(&err)
+
 	os := gpr.lr.MustObjectState(req.Callee)
 	es := os.MustModeState(req.Mode)
 	ctx := es.Current.Context
@@ -219,7 +245,9 @@ func (gpr *RPC) GetObjChildrenIterator(req rpctypes.UpGetObjChildrenIteratorReq,
 }
 
 // GetDelegate is an RPC saving data as memory of a contract as child a parent
-func (gpr *RPC) GetDelegate(req rpctypes.UpGetDelegateReq, rep *rpctypes.UpGetDelegateResp) error {
+func (gpr *RPC) GetDelegate(req rpctypes.UpGetDelegateReq, rep *rpctypes.UpGetDelegateResp) (err error) {
+	defer recoverRPC(&err)
+
 	os := gpr.lr.MustObjectState(req.Callee)
 	es := os.MustModeState(req.Mode)
 	ctx := es.Current.Context
@@ -234,7 +262,9 @@ func (gpr *RPC) GetDelegate(req rpctypes.UpGetDelegateReq, rep *rpctypes.UpGetDe
 }
 
 // DeactivateObject is an RPC saving data as memory of a contract as child a parent
-func (gpr *RPC) DeactivateObject(req rpctypes.UpDeactivateObjectReq, rep *rpctypes.UpDeactivateObjectResp) error {
+func (gpr *RPC) DeactivateObject(req rpctypes.UpDeactivateObjectReq, rep *rpctypes.UpDeactivateObjectResp) (err error) {
+	defer recoverRPC(&err)
+
 	os := gpr.lr.MustObjectState(req.Callee)
 	es := os.MustModeState(req.Mode)
 	es.deactivate = true
