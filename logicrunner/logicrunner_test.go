@@ -324,6 +324,7 @@ package main
 import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
 import "github.com/insolar/insolar/application/proxy/two"
 import "github.com/insolar/insolar/core"
+import "errors"
 
 type One struct {
 	foundation.BaseContract
@@ -358,6 +359,24 @@ func (r *One) Again(s string) (string, error) {
 func (r *One)GetFriend() (core.RecordRef, error) {
 	return r.Friend, nil
 }
+
+func (r *One)TestPayload() (two.Payload, error) {
+	f := two.GetObject(r.Friend)
+	err := f.SetPayload(two.Payload{Int: 10, Str: "HiHere"})
+	if err != nil { return two.Payload{}, err }
+
+	p, err := f.GetPayload()
+	if err != nil { return two.Payload{}, err }
+
+	str, err := f.GetPayloadString()	
+	if err != nil { return two.Payload{}, err }
+
+	if p.Str != str { return two.Payload{}, errors.New("Oops") }
+
+	return p, nil
+
+}
+
 `
 
 	var contractTwoCode = `
@@ -372,6 +391,12 @@ import (
 type Two struct {
 	foundation.BaseContract
 	X int
+	P Payload
+}
+
+type Payload struct {
+	Int int
+	Str string
 }
 
 func New() (*Two, error) {
@@ -381,6 +406,19 @@ func New() (*Two, error) {
 func (r *Two) Hello(s string) (string, error) {
 	r.X ++
 	return fmt.Sprintf("Hello you too, %s. %d times!", s, r.X), nil
+}
+
+func (r *Two) GetPayload() (Payload, error) {
+	return r.P, nil
+}
+
+func (r *Two) SetPayload(P Payload) (error) {
+	r.P = P
+	return nil
+}
+
+func (r *Two) GetPayloadString() (string, error) {
+	return r.P.Str, nil
 }
 `
 	ctx := context.Background()
@@ -421,6 +459,11 @@ func (r *Two) Hello(s string) (string, error) {
 		assert.NoError(t, err, "contract call")
 		assert.Equal(t, fmt.Sprintf("Hello you too, Insolar. %d times!", i), firstMethodRes(t, resp))
 	}
+
+	resp, err = executeMethod(ctx, lr, pm, *obj, *prototype, 7, "TestPayload")
+	assert.NoError(t, err, "contract call")
+	res := firstMethodRes(t, resp).(map[interface{}]interface{})["Str"]
+	assert.Equal(t, "HiHere", res)
 
 	ValidateAllResults(t, ctx, lr)
 }

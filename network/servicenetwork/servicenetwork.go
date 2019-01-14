@@ -213,11 +213,6 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
 	}
 	if (pulse.PulseNumber > currentPulse.PulseNumber) &&
 		(pulse.PulseNumber >= currentPulse.NextPulseNumber) {
-		err = n.PulseManager.Set(ctx, pulse, n.NetworkSwitcher.GetState() == core.CompleteNetworkState)
-		if err != nil {
-			logger.Error(errors.Wrap(err, "Failed to set pulse"))
-			return
-		}
 
 		err = n.NetworkSwitcher.OnPulse(ctx, pulse)
 		if err != nil {
@@ -225,24 +220,20 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
 			return
 		}
 
+		err = n.PulseManager.Set(ctx, pulse, n.NetworkSwitcher.GetState() == core.CompleteNetworkState)
+		if err != nil {
+			logger.Error(errors.Wrap(err, "Failed to set pulse"))
+			return
+		}
+
 		logger.Infof("Set new current pulse number: %d", pulse.PulseNumber)
-		go func(logger core.Logger, network *ServiceNetwork) {
-			if network.NetworkCoordinator == nil {
-				return
-			}
-			if !network.NetworkCoordinator.IsStarted() {
-				return
-			}
-			err := network.NetworkCoordinator.WriteActiveNodes(ctx, pulse.PulseNumber, network.NodeNetwork.GetActiveNodes())
-			if err != nil {
-				logger.Warn("Error writing active nodes to ledger: " + err.Error())
-			}
-			// TODO: make PhaseManager works and uncomment this (after NETD18-75)
-			// err = n.PhaseManager.OnPulse(ctx, &pulse)
-			// if err != nil {
-			// 	logger.Warn("phase manager fail: " + err.Error())
-			// }
-		}(logger, n)
+		// go func(logger core.Logger, network *ServiceNetwork) {
+		// 	TODO: make PhaseManager works and uncomment this (after NETD18-75)
+		// 	err = n.PhaseManager.OnPulse(ctx, &pulse)
+		// 	if err != nil {
+		// 		logger.Warn("phase manager fail: " + err.Error())
+		// 	}
+		// }(logger, n)
 	} else {
 		logger.Infof("Incorrect pulse number. Current: %d. New: %d", currentPulse.PulseNumber, pulse.PulseNumber)
 	}

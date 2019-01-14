@@ -34,12 +34,14 @@ import (
 
 var httpClient *http.Client
 
-const (
-	RequestTimeout int = 5
-)
+var RequestTimeout uint = 5
 
 func init() {
 	httpClient = createHTTPClient()
+}
+
+func SetTimeout(timeout uint) {
+	RequestTimeout = timeout
 }
 
 // createHTTPClient for connection re-use
