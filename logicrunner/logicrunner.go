@@ -881,21 +881,21 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 				if es.Current != nil {
 					es.pending = InPending
 
-				// TODO: this should return delegation token to continue execution of the pending
-				messages = append(
-					messages,
-					&message.StillExecuting{
-						Reference: ref,
-					},
-				)
-			} else {
-				if es.pending == InPending && !es.PendingConfirmed {
-					inslogger.FromContext(ctx).Warn(
-						"looks like pending executor died, continuing execution",
+					// TODO: this should return delegation token to continue execution of the pending
+					messages = append(
+						messages,
+						&message.StillExecuting{
+							Reference: ref,
+						},
 					)
-					es.pending = NotPending
-				}
-				state.ExecutionState = nil
+				} else {
+					if es.pending == InPending && !es.PendingConfirmed {
+						inslogger.FromContext(ctx).Warn(
+							"looks like pending executor died, continuing execution",
+						)
+						es.pending = NotPending
+					}
+					state.ExecutionState = nil
 				}
 
 				queue := es.releaseQueue()
