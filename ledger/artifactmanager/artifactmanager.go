@@ -20,13 +20,14 @@ import (
 	"context"
 	"sync"
 
+	"github.com/insolar/insolar/instrumentation/instracer"
+
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
-	"github.com/insolar/insolar/core/utils"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/record"
 )
@@ -138,9 +139,9 @@ func (m *LedgerArtifactManager) GetCode(
 		return nil, err
 	}
 
-	utils.MeasureExecutionTime(ctx, "artifactmanager.GetCode m.bus(ctx).Send", func() {
-		genericReact, err = sendAndRetryJet(ctx, m.bus(ctx), m.db, &message.GetCode{Code: code}, *currentPulse, jetMissRetryCount)
-	})
+	ctx, span := instracer.StartSpan(ctx, "artifactmanager.GetCode sendAndRetryJet")
+	genericReact, err = sendAndRetryJet(ctx, m.bus(ctx), m.db, &message.GetCode{Code: code}, *currentPulse, jetMissRetryCount)
+	span.End()
 	if err != nil {
 		return nil, err
 	}
