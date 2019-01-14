@@ -135,7 +135,7 @@ func (ar *Runner) makeCall(ctx context.Context, params Request) (interface{}, er
 		return nil, errors.Wrap(err, "[ makeCall ] Can't send request")
 	}
 
-	ctx, callspan := instracer.StartSpan(ctx, "makeCall CallResponse")
+	_, callspan := instracer.StartSpan(ctx, "makeCall CallResponse")
 	result, contractErr, err := extractor.CallResponse(res.(*reply.CallMethod).Result)
 	callspan.End()
 
