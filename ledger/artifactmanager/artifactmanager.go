@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/insolar/insolar/instrumentation/instracer"
+
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/pkg/errors"
@@ -28,7 +30,6 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
-	"github.com/insolar/insolar/core/utils"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/record"
 )
@@ -141,10 +142,10 @@ func (m *LedgerArtifactManager) GetCode(
 	if err != nil {
 		return nil, err
 	}
-	var genericReact core.Reply
-	utils.MeasureExecutionTime(ctx, "artifactmanager.GetCode m.bus(ctx).Send", func() {
-		genericReact, err = m.bus(ctx).Send(ctx, &message.GetCode{Code: code}, &core.MessageSendOptions{Receiver: lightNode})
-	})
+
+	ctx, span := instracer.StartSpan(ctx, "artifactmanager.GetCode sendAndRetryJet")
+	genericReact, err := m.bus(ctx).Send(ctx, &message.GetCode{Code: code}, &core.MessageSendOptions{Receiver: lightNode})
+	span.End()
 	if err != nil {
 		return nil, err
 	}
