@@ -123,7 +123,7 @@ func (m *PulseManager) processEndPulse(
 			return err
 		}
 		if *executor != m.JetCoordinator.Me() {
-			return nil
+			continue
 		}
 
 		g.Go(func() error {

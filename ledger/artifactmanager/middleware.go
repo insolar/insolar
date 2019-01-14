@@ -194,8 +194,6 @@ func (m *middleware) fetchJet(
 		return jetID, actual, nil
 	}
 
-	time.Sleep(100 * time.Millisecond)
-
 	// TODO: uncomment to fetch tree from previous executor.
 	// Couldn't find the actual jet locally. Ask for the jet from the previous executor.
 	// prevPulse, err := m.db.GetPreviousPulse(ctx, pulse)
@@ -228,5 +226,8 @@ func (m *middleware) fetchJet(
 	// }
 	//
 	// // Repeat the process again.
+
+	time.Sleep(100 * time.Millisecond)
+
 	return m.fetchJet(ctx, target, pulse, retries-1)
 }
