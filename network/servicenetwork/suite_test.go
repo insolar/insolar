@@ -363,9 +363,6 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	netCoordinator.ValidateCertMock.Set(func(p context.Context, p1 core.AuthorizationCertificate) (bool, error) {
 		return true, nil
 	})
-	netCoordinator.WriteActiveNodesMock.Set(func(p context.Context, p1 core.PulseNumber, p2 []core.Node) (r error) {
-		return nil
-	})
 
 	netCoordinator.IsStartedMock.Set(func() (r bool) {
 		return true
