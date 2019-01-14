@@ -73,10 +73,12 @@ func TestHeavy_SyncBasic(t *testing.T) {
 	err = sync.Stop(ctx, jetID, pnum)
 	require.NoError(t, err)
 
-	// start next
+	// start sparse next
 	pnumNextPlus := pnumNext + 1
 	err = sync.Start(ctx, jetID, pnumNextPlus)
-	require.Error(t, err, "start when previous pulses not synced")
+	require.NoError(t, err, "sparse sync is ok")
+	err = sync.Stop(ctx, jetID, pnumNextPlus)
+	require.NoError(t, err)
 
 	// prepare pulse helper
 	preparepulse := func(pn core.PulseNumber) {
@@ -85,6 +87,8 @@ func TestHeavy_SyncBasic(t *testing.T) {
 		err = db.AddPulse(ctx, pulse)
 		require.NoError(t, err)
 	}
+	pnum = pnumNextPlus + 1
+	pnumNext = pnum + 1
 	preparepulse(pnum)
 	preparepulse(pnumNext) // should set correct next for previous pulse
 
