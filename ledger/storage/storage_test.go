@@ -20,7 +20,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/jbenet/go-base58"
+	base58 "github.com/jbenet/go-base58"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
@@ -128,7 +128,8 @@ func TestDB_CreateDrop(t *testing.T) {
 	)
 	cs := platformpolicy.NewPlatformCryptographyScheme()
 
-	for i := 1; i < 4; i++ {
+	msgCount := 3
+	for i := 1; i < 1+msgCount; i++ {
 		setRecordMessage := message.SetRecord{
 			Record: record.SerializeRecord(&record.CodeRecord{
 				Code: record.CalculateIDForBlob(cs, pulse, []byte{byte(i)}),
@@ -141,7 +142,7 @@ func TestDB_CreateDrop(t *testing.T) {
 	drop, messages, dropSize, err := db.CreateDrop(ctx, jetID, pulse, []byte{4, 5, 6})
 	require.NoError(t, err)
 	require.NotEqual(t, 0, dropSize)
-	require.Equal(t, 3, len(messages))
+	require.Equal(t, msgCount, len(messages))
 	require.Equal(t, pulse, drop.Pulse)
 	require.Equal(t, "2aCdao6DhZSWQNTrtrxJW7QQZRb6UJ1ssRi9cg", base58.Encode(drop.Hash))
 

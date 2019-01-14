@@ -47,7 +47,7 @@ func (db *DB) GetDrop(ctx context.Context, jetID core.RecordID, pulse core.Pulse
 
 // CreateDrop creates and stores jet drop for given pulse number.
 //
-// Previous JetDrop hash should be provided. On success returns saved drop and slot records.
+// On success returns saved drop object, slot records, drop size.
 func (db *DB) CreateDrop(ctx context.Context, jetID core.RecordID, pulse core.PulseNumber, prevHash []byte) (
 	*jet.JetDrop,
 	[][]byte,
