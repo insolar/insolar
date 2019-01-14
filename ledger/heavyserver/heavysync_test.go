@@ -38,7 +38,7 @@ func TestHeavy_SyncBasic(t *testing.T) {
 	}
 
 	// TODO: call every case in subtest
-	jetID := testutils.RandomID()
+	jetID := testutils.RandomJet()
 
 	sync := NewSync(db)
 	err = sync.Start(ctx, jetID, pnum)
@@ -133,10 +133,11 @@ func TestHeavy_SyncByJet(t *testing.T) {
 	}
 
 	// TODO: call every case in subtest
-	jetID1 := testutils.RandomID()
+	jetID1 := testutils.RandomJet()
 	jetID2 := jetID1
 	// flip first bit of jetID2 for different prefix
-	jetID2[0] ^= jetID2[0]
+	lastidx := len(jetID1) - 1
+	jetID2[lastidx] ^= 0xFF
 
 	// prepare pulse helper
 	preparepulse := func(pn core.PulseNumber) {
