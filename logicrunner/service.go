@@ -25,9 +25,10 @@ import (
 	"net/rpc"
 	"sync/atomic"
 
-	"github.com/insolar/insolar/core/utils"
+	"github.com/insolar/insolar/instrumentation/instracer"
+
 	"github.com/pkg/errors"
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
@@ -91,10 +92,10 @@ func (gpr *RPC) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp
 	inslogger.FromContext(ctx).Debug("In RPC.GetCode ....")
 
 	am := gpr.lr.ArtifactManager
-	var codeDescriptor core.CodeDescriptor
-	utils.MeasureExecutionTime(ctx, "service.GetCode am.GetCode", func() {
-		codeDescriptor, err = am.GetCode(ctx, req.Code)
-	})
+
+	ctx, span := instracer.StartSpan(ctx, "service.GetCode am.GetCode")
+	codeDescriptor, err := am.GetCode(ctx, req.Code)
+	span.End()
 	if err != nil {
 		return err
 	}
