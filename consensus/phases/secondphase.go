@@ -76,8 +76,6 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 	origin := sp.NodeKeeper.GetOrigin().ID()
 	stateMatrix := NewStateMatrix(state.UnsyncList)
 
-	state.UnsyncList.GlobuleHashSignatures()[origin] = packet.GetGlobuleHashSignature()
-
 	for ref, packet := range packets {
 		err = nil
 		if !ref.Equal(origin) {
@@ -87,8 +85,7 @@ func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 			inslogger.FromContext(ctx).Warnf("Failed to check phase2 packet signature from %s: %s", ref, err.Error())
 			continue
 		}
-		ghs := packet.GetGlobuleHashSignature()
-		state.UnsyncList.GlobuleHashSignatures()[ref] = ghs
+		state.UnsyncList.SetGlobuleHashSignature(ref, packet.GetGlobuleHashSignature())
 		err = stateMatrix.ApplyBitSet(ref, packet.GetBitSet())
 		if err != nil {
 			log.Warnf("[ SecondPhase ] Could not apply bitset from node %s", ref)
@@ -262,7 +259,7 @@ func (sp *SecondPhase) Execute21(ctx context.Context, state *SecondPhaseState) (
 	}
 	var ghs packets.GlobuleHashSignature
 	copy(ghs[:], state.GlobuleProof.Signature.Bytes()[:packets.SignatureLength])
-	state.UnsyncList.GlobuleHashSignatures()[origin] = ghs
+	state.UnsyncList.SetGlobuleHashSignature(origin, ghs)
 
 	return state, nil
 }

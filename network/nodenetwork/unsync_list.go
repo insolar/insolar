@@ -45,15 +45,20 @@ type unsyncList struct {
 	cache       []byte
 }
 
+func (ul *unsyncList) GetGlobuleHashSignature(ref core.RecordRef) (consensus.GlobuleHashSignature, bool) {
+	ghs, ok := ul.ghs[ref]
+	return ghs, ok
+}
+
+func (ul *unsyncList) SetGlobuleHashSignature(ref core.RecordRef, ghs consensus.GlobuleHashSignature) {
+	ul.ghs[ref] = ghs
+}
+
 func (ul *unsyncList) RemoveNode(nodeID core.RecordRef) {
 	delete(ul.activeNodes, nodeID)
 	delete(ul.claims, nodeID)
 	delete(ul.proofs, nodeID)
 	delete(ul.ghs, nodeID)
-}
-
-func (ul *unsyncList) GlobuleHashSignatures() map[core.RecordRef]consensus.GlobuleHashSignature {
-	return ul.ghs
 }
 
 func (ul *unsyncList) ApproveSync(sync []core.RecordRef) {

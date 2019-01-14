@@ -23,6 +23,7 @@ import (
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/merkle"
 	"github.com/pkg/errors"
@@ -63,15 +64,16 @@ func (tp *ThirdPhase) Execute(ctx context.Context, state *SecondPhaseState) (*Th
 		// not needed until we implement fraud detection
 		// cells, err := packet.GetBitset().GetCells(state.UnsyncList)
 
-		state.UnsyncList.GlobuleHashSignatures()[ref] = packet.GetGlobuleHashSignature()
+		state.UnsyncList.SetGlobuleHashSignature(ref, packet.GetGlobuleHashSignature())
 	}
 
 	totalCount := state.UnsyncList.Length()
 	prevCloudHash := tp.NodeKeeper.GetCloudHash()
 	validNodes := make([]core.RecordRef, 0)
 	for _, node := range nodes {
-		ghs := state.UnsyncList.GlobuleHashSignatures()[node.ID()]
-		if node == nil {
+		ghs, ok := state.UnsyncList.GetGlobuleHashSignature(node.ID())
+		if !ok {
+			log.Warnf("[ Phase 3 ] No globule hash signature for node %s", node.ID())
 			continue
 		}
 		proof := &merkle.GlobuleProof{
