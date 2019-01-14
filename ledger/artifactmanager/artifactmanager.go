@@ -802,8 +802,11 @@ func sendAndFollowRedirect(
 		return nil, err
 	}
 
-	switch r := rep.(type) {
-	case core.RedirectReply:
+	if _, ok := rep.(*reply.JetMiss); ok {
+		rep, err = sendAndRetryJet(ctx, bus, db, msg, pulse, jetMissRetryCount, nil)
+	}
+
+	if r, ok := rep.(core.RedirectReply); ok {
 		redirected := r.Redirected(msg)
 		rep, err = bus.Send(ctx, redirected, &core.MessageSendOptions{
 			Token:    r.GetToken(),
@@ -816,8 +819,6 @@ func sendAndFollowRedirect(
 			return nil, errors.New("double redirects are forbidden")
 		}
 		return rep, nil
-	case *reply.JetMiss:
-		return sendAndRetryJet(ctx, bus, db, msg, pulse, jetMissRetryCount, nil)
 	}
 
 	return rep, err
