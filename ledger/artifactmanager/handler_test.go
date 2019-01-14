@@ -714,7 +714,7 @@ func addDropSizeToDB(ctx context.Context, t *testing.T, db *storage.DB, jetID co
 func TestMessageHandler_HandleHotRecords(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
-	jetID := *jet.NewID(0, nil)
+	jetID := testutils.RandomJet()
 
 	cs := testutils.NewPlatformCryptographyScheme()
 	db, cleaner := storagetest.TmpDB(ctx, t)
@@ -748,7 +748,7 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 
 	obj := core.RecordID{}
 	hotIndexes := &message.HotData{
-		Jet:         *core.NewRecordRef(core.DomainID, *jet.NewID(0, nil)),
+		Jet:         *core.NewRecordRef(core.DomainID, jetID),
 		PulseNumber: core.FirstPulseNumber,
 		RecentObjects: map[core.RecordID]*message.HotIndex{
 			*firstID: {
@@ -762,6 +762,7 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 			},
 		},
 		Drop:               jet.JetDrop{Pulse: core.FirstPulseNumber, Hash: []byte{88}},
+		DropJet:            jetID,
 		JetDropSizeHistory: dropSizeHistory,
 	}
 
