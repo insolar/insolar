@@ -19,6 +19,7 @@ package storage
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 
 	"github.com/insolar/insolar/core"
 	"github.com/ugorji/go/codec"
@@ -168,4 +169,28 @@ func (db *DB) GetLatestPulse(ctx context.Context) (*Pulse, error) {
 
 func pulseNumFromKey(from int, key []byte) core.PulseNumber {
 	return core.NewPulseNumber(key[from : from+core.PulseNumberSize])
+}
+
+// Key type for wrapping storage binary key.
+type Key []byte
+
+// PulseNumber returns pulse number for provided storage binary key.
+func (b Key) PulseNumber() core.PulseNumber {
+	// by default expect jetID after:
+	// offset in this case: is 1 + RecordHashSize (jet length) - 1 minus jet prefix
+	from := core.RecordHashSize
+	switch b[0] {
+	case scopeIDPulse:
+		from = 1
+	case scopeIDSystem:
+		// for specific system records is different rules
+		// pulse number could exist or not
+		return 0
+	}
+	return pulseNumFromKey(from, b)
+}
+
+// String string hex representation
+func (b Key) String() string {
+	return hex.EncodeToString(b)
 }

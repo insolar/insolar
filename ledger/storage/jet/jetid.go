@@ -18,6 +18,7 @@ package jet
 
 import (
 	"bytes"
+	"fmt"
 
 	"github.com/insolar/insolar/core"
 	"github.com/ugorji/go/codec"
@@ -55,7 +56,7 @@ func (j IDSet) Bytes() []byte {
 // Jet extracts depth and prefix from jet id.
 func Jet(id core.RecordID) (uint8, []byte) {
 	if id.Pulse() != core.PulseNumberJet {
-		panic("provided id in not a jet id")
+		panic(fmt.Sprintf("provided id %b is not a jet id", id))
 	}
 	return id[core.PulseNumberSize], id[core.PulseNumberSize+1:]
 }
