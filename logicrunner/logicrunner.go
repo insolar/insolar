@@ -747,18 +747,21 @@ func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState
 
 	am := lr.ArtifactManager
 	if es.deactivate {
-		_, err = am.DeactivateObject(
+		_, err := am.DeactivateObject(
 			ctx, Ref{}, *es.Current.Request, es.objectbody.objDescriptor,
 		)
-	} else {
-		od, e := am.UpdateObject(ctx, Ref{}, *es.Current.Request, es.objectbody.objDescriptor, newData)
-		err = e
-		if od != nil && e == nil {
-			es.objectbody.objDescriptor = od
+		if err != nil {
+			return nil, es.WrapError(err, "couldn't deactivate object")
 		}
-	}
-	if err != nil {
-		return nil, es.WrapError(err, "couldn't update object")
+	} else {
+		od, err := am.UpdateObject(ctx, Ref{}, *es.Current.Request, es.objectbody.objDescriptor, newData)
+		if err != nil {
+			return nil, es.WrapError(err, "couldn't update object")
+		}
+		if od == nil {
+			panic("unexpected situation, object descriptor - NIL,  err - NIL")
+		}
+		es.objectbody.objDescriptor = od
 	}
 	_, err = am.RegisterResult(ctx, m.ObjectRef, *es.Current.Request, result)
 	if err != nil {
