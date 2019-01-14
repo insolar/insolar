@@ -22,10 +22,12 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/ledger/storage"
 )
 
@@ -153,7 +155,17 @@ func (s *Sync) Store(ctx context.Context, jetID core.RecordID, pn core.PulseNumb
 		jetState.Unlock()
 	}()
 	// TODO: check jet in keys?
-	return s.db.StoreKeyValues(ctx, kvs)
+	err = s.db.StoreKeyValues(ctx, kvs)
+	if err != nil {
+		return errors.Wrapf(err, "heavyserver: store failed")
+	}
+
+	ctx = insmetrics.InsertTag(ctx, tagJet, jetID.String())
+	stats.Record(ctx,
+		statSyncedRecords.M(int64(len(kvs))),
+		statSyncedPulse.M(int64(pn)),
+	)
+	return nil
 }
 
 // Stop successfully stops replication for specified pulse.
