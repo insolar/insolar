@@ -332,7 +332,9 @@ func getallkeys(db *badger.DB) (records []key, indexes []key) {
 	for it.Rewind(); it.Valid(); it.Next() {
 		item := it.Item()
 		k := item.KeyCopy(nil)
-		if key(k).pulse() == 0 {
+		pn := storage.Key(k).PulseNumber()
+		// fmt.Printf(" : %v (%v)\n", storage.Key(k), pn)
+		if pn == 0 {
 			continue
 		}
 
@@ -352,23 +354,6 @@ func getallkeys(db *badger.DB) (records []key, indexes []key) {
 
 type key []byte
 
-func (b key) pulse() core.PulseNumber {
-	pulseStartsAt := 1
-	pulseEndsAt := 1 + core.PulseNumberSize
-	// if jet defined for record type
-	switch b[0] {
-	case
-		scopeIDRecord,
-		scopeIDBlob,
-		scopeIDJetDrop,
-		scopeIDLifeline:
-
-		pulseStartsAt += core.RecordIDSize
-		pulseEndsAt += core.RecordIDSize
-	}
-	return core.NewPulseNumber(b[pulseStartsAt:pulseEndsAt])
-}
-
 func (b key) String() string {
 	return hex.EncodeToString(b)
 }
@@ -382,6 +367,6 @@ func sortkeys(keys []key) []key {
 
 func printkeys(keys []key, prefix string) {
 	for _, k := range keys {
-		fmt.Printf("%v%v (%v)\n", prefix, k, k.pulse())
+		fmt.Printf("%v%v (%v)\n", prefix, k, storage.Key(k).PulseNumber())
 	}
 }
