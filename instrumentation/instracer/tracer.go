@@ -97,7 +97,7 @@ func StartSpan(ctx context.Context, name string) (context.Context, *trace.Span) 
 
 type parentSpanKey struct{}
 
-// WithParentSpan returns new conext with provided parent span.
+// WithParentSpan returns new context with provided parent span.
 func WithParentSpan(ctx context.Context, pspan TraceSpan) context.Context {
 	ctx = SetBaggage(ctx, pspan.Entries...)
 	return context.WithValue(ctx, parentSpanKey{}, pspan)
