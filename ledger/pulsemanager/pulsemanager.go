@@ -412,6 +412,11 @@ func (m *PulseManager) sendExecutorData(
 		if err != nil {
 			return errors.Wrap(err, "failed to add jets")
 		}
+		// Set actual because we performed split.
+		err = m.db.UpdateJetTree(ctx, newPulse.PulseNumber, true, *left, *right)
+		if err != nil {
+			return errors.Wrap(err, "failed to update tree")
+		}
 		leftMsg := *msg
 		leftMsg.Jet = *core.NewRecordRef(core.DomainID, *left)
 		rightMsg := *msg
@@ -439,8 +444,12 @@ func (m *PulseManager) sendExecutorData(
 			return errors.Wrap(err, "failed to send executor data")
 		}
 	} else {
+		err := m.db.UpdateJetTree(ctx, newPulse.PulseNumber, true, jetID)
+		if err != nil {
+			return errors.Wrap(err, "failed to update tree")
+		}
 		msg.Jet = *core.NewRecordRef(core.DomainID, jetID)
-		_, err := m.Bus.Send(ctx, msg, &core.MessageSendOptions{Receiver: receiver})
+		_, err = m.Bus.Send(ctx, msg, &core.MessageSendOptions{Receiver: receiver})
 		if err != nil {
 			return errors.Wrap(err, "failed to send executor data")
 		}
