@@ -41,7 +41,10 @@ func (tp *ThirdPhase) Execute(ctx context.Context, state *SecondPhaseState) (*Th
 	copy(gSign[:], state.GlobuleProof.Signature.Bytes()[:packets.SignatureLength])
 	packet := packets.NewPhase3Packet(gSign, state.BitSet)
 
-	nodes := state.FirstPhaseState.UnsyncList.GetActiveNodes()
+	nodes := make([]core.Node, 0)
+	for _, node := range state.MatrixState.Active {
+		nodes = append(nodes, state.UnsyncList.GetActiveNode(node))
+	}
 	responses, err := tp.Communicator.ExchangePhase3(ctx, nodes, packet)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Phase 3 ] Failed exchange packets on phase 3")
@@ -64,10 +67,10 @@ func (tp *ThirdPhase) Execute(ctx context.Context, state *SecondPhaseState) (*Th
 	}
 
 	totalCount := state.UnsyncList.Length()
-	validCount := 0
 	prevCloudHash := tp.NodeKeeper.GetCloudHash()
-	for ref, ghs := range state.UnsyncList.GlobuleHashSignatures() {
-		node := state.UnsyncList.GetActiveNode(ref)
+	validNodes := make([]core.RecordRef, 0)
+	for _, node := range nodes {
+		ghs := state.UnsyncList.GlobuleHashSignatures()[node.ID()]
 		if node == nil {
 			continue
 		}
@@ -82,18 +85,20 @@ func (tp *ThirdPhase) Execute(ctx context.Context, state *SecondPhaseState) (*Th
 		}
 		valid := tp.Calculator.IsValid(proof, state.GlobuleHash, node.PublicKey())
 		if valid {
-			validCount++
+			validNodes = append(validNodes, node.ID())
+		} else {
+			state.UnsyncList.RemoveNode(node.ID())
 		}
 	}
 
-	if !consensusReachedBFT(validCount, totalCount) {
-		return nil, errors.New(fmt.Sprintf("[ Phase 3 ] Failed to pass BFT consensus: %d/%d", validCount, totalCount))
+	if !consensusReachedBFT(len(validNodes), totalCount) {
+		return nil, errors.New(fmt.Sprintf("[ Phase 3 ] Failed to pass BFT consensus: %d/%d", len(validNodes), totalCount))
 	}
 
-	inslogger.FromContext(ctx).Infof("Network phase 3 BFT consensus passed: %d/%d", validCount, totalCount)
+	inslogger.FromContext(ctx).Infof("Network phase 3 BFT consensus passed: %d/%d", len(validNodes), totalCount)
 
 	return &ThirdPhaseState{
-		ActiveNodes:  state.MatrixState.Active,
+		ActiveNodes:  validNodes,
 		UnsyncList:   state.UnsyncList,
 		GlobuleProof: state.GlobuleProof,
 	}, nil
