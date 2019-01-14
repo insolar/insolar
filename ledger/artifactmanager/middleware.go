@@ -103,9 +103,12 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 		if msg.DefaultTarget().Record().Pulse() == core.PulseNumberJet {
 			jetID = *msg.DefaultTarget().Record()
 		} else {
-			j, err := m.fetchJet(ctx, *msg.DefaultTarget().Record(), parcel.Pulse(), fetchJetReties)
+			j, actual, err := m.fetchJet(ctx, *msg.DefaultTarget().Record(), parcel.Pulse(), fetchJetReties)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to fetch jet tree")
+			}
+			if !actual {
+				return &reply.JetMiss{JetID: *j}, nil
 			}
 			jetID = *j
 		}
@@ -115,6 +118,7 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to calculate executor for jet")
 		}
+		// FIXME: This probably will never happen, because we won't receive hot records.
 		if *node != m.jetCoordinator.Me() {
 			// TODO: sergey.morozov 2018-12-21 This is hack. Must implement correct Jet checking for HME.
 			logger.Debugf("checkJet: [ HACK ] checking if I am Heavy Material")
@@ -171,11 +175,11 @@ func (m *middleware) checkHeavySync(handler core.MessageHandler) core.MessageHan
 
 func (m *middleware) fetchJet(
 	ctx context.Context, target core.RecordID, pulse core.PulseNumber, retries int,
-) (*core.RecordID, error) {
+) (*core.RecordID, bool, error) {
 	// Look in the local tree. Return if the actual jet found.
 	tree, err := m.db.GetJetTree(ctx, pulse)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	jetID, actual := tree.Find(target)
 	if actual || retries < 0 {
@@ -187,7 +191,7 @@ func (m *middleware) fetchJet(
 			fmt.Printf("[mine] %v, %v", jetID.JetIDString(), target.String())
 			fmt.Println()
 		}
-		return jetID, nil
+		return jetID, actual, nil
 	}
 
 	time.Sleep(100 * time.Millisecond)
