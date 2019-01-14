@@ -78,26 +78,14 @@ func (s *Sync) checkIsNextPulse(ctx context.Context, jetID core.RecordID, jetsta
 	}
 
 	// just start sync on first sync
-	// (TODO: not sure how to handle this case properly)
 	if checkpoint == 0 {
 		return nil
 	}
 
 	if pn <= jetstate.lastok {
-		return fmt.Errorf("Pulse %v is not greater than last synced pulse %v", pn, jetstate.lastok)
+		return fmt.Errorf("heavyserver: pulse %v is not greater than last synced pulse %v", pn, jetstate.lastok)
 	}
 
-	pulse, err := s.db.GetPulse(ctx, checkpoint)
-	if err != nil {
-		return errors.Wrapf(err, "GetPulse with pulse num %v failed", checkpoint)
-	}
-	if pulse.Next == nil {
-		return fmt.Errorf("next pulse after %v not found", checkpoint)
-	}
-
-	if pn != *pulse.Next {
-		return fmt.Errorf("pulse %v is not next after %v", pn, *pulse.Next)
-	}
 	return nil
 }
 
