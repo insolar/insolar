@@ -52,7 +52,7 @@ func TestStore_Transaction_LockOnUpdate(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
-	jetID := testutils.RandomID()
+	jetID := testutils.RandomJet()
 
 	objid := core.NewRecordID(100500, nil)
 	idxid := core.NewRecordID(0, nil)

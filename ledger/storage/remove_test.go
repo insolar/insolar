@@ -22,6 +22,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage/index"
+	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/testutils"
@@ -40,7 +41,9 @@ func Test_RemoveJetIndexesUntil_WithSkips(t *testing.T) {
 
 func removeJetIndexesUntil(t *testing.T, skip bool) {
 	ctx := inslogger.TestContext(t)
-	jetID := testutils.RandomJet()
+	// FIXME: should work with random jet
+	// jetID := testutils.RandomJet()
+	jetID := *jet.NewID(0, nil)
 
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()

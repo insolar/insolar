@@ -19,7 +19,6 @@ package heavyclient_test
 import (
 	"bytes"
 	"context"
-	"encoding/hex"
 	"fmt"
 	"sort"
 	"sync/atomic"
@@ -87,6 +86,7 @@ func sendToHeavy(t *testing.T, withretry bool) {
 	recentMock.GetObjectsMock.Return(nil)
 	recentMock.GetRequestsMock.Return(nil)
 	recentMock.ClearObjectsMock.Return()
+	recentMock.AddObjectMock.Return()
 
 	// Mock6: JetCoordinatorMock
 	jcMock := testutils.NewJetCoordinatorMock(t)
@@ -231,7 +231,7 @@ func sendToHeavy(t *testing.T, withretry bool) {
 
 	recs := getallkeys(db.GetBadgerDB())
 	recs = filterkeys(recs, func(k key) bool {
-		return k.pulse() != 0
+		return storage.Key(k).PulseNumber() != 0
 	})
 
 	// fmt.Println("synckeys")
@@ -297,7 +297,7 @@ func getallkeys(db *badger.DB) (records []key) {
 	for it.Rewind(); it.Valid(); it.Next() {
 		item := it.Item()
 		k := item.KeyCopy(nil)
-		if key(k).pulse() == 0 {
+		if storage.Key(k).PulseNumber() == 0 {
 			continue
 		}
 		switch k[0] {
@@ -312,30 +312,10 @@ func getallkeys(db *badger.DB) (records []key) {
 	return
 }
 
-func (b key) pulse() core.PulseNumber {
-	pulseStartsAt := 1
-	pulseEndsAt := 1 + core.PulseNumberSize
-	// if jet defined for record type
-	switch b[0] {
-	case
-		scopeIDRecord,
-		scopeIDJetDrop,
-		scopeIDLifeline,
-		scopeIDBlob:
-
-		pulseStartsAt += core.RecordIDSize
-		pulseEndsAt += core.RecordIDSize
-	}
-	return core.NewPulseNumber(b[pulseStartsAt:pulseEndsAt])
-}
-
-func (b key) String() string {
-	return hex.EncodeToString(b)
-}
-
 func printkeys(keys []key, prefix string) {
 	for _, k := range keys {
-		fmt.Printf("%v%v (%v)\n", prefix, k, k.pulse())
+		sk := storage.Key(k)
+		fmt.Printf("%v%v (%v)\n", prefix, sk, sk.PulseNumber())
 	}
 }
 
