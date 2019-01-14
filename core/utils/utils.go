@@ -63,8 +63,10 @@ func SendGracefulStopSignal() error {
 }
 
 func MeasureExecutionTime(ctx context.Context, comment string, thefunction func()) {
-	// TODO FIXME
+	// TODO FIXME - should pass the new context
+	//_, span := instracer.StartSpan(ctx, comment)
 	thefunction()
+	//span.End()
 }
 
 /*var measurementsEnabled = false

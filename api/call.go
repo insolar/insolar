@@ -22,6 +22,8 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"github.com/insolar/insolar/instrumentation/instracer"
+
 	"github.com/insolar/insolar/application/extractor"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/core/utils"
@@ -157,58 +159,58 @@ func processError(err error, extraMsg string, resp *answer, insLog core.Logger) 
 func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 	return func(response http.ResponseWriter, req *http.Request) {
 		traceID := utils.RandTraceID()
-		ctx, insLog := inslogger.WithTraceField(context.Background(), traceID)
+		tmpctx, insLog := inslogger.WithTraceField(context.Background(), traceID)
 
-		utils.MeasureExecutionTime(ctx, "NetRPC Request Processing",
+		ctx, span := instracer.StartSpan(tmpctx, "NetRPC Request Processing")
+		defer span.End()
+
+		params := Request{}
+		resp := answer{}
+
+		resp.TraceID = traceID
+
+		insLog.Info("[ callHandler ] Incoming request: %s", req.RequestURI)
+
+		defer func() {
+			res, err := json.MarshalIndent(resp, "", "    ")
+			if err != nil {
+				res = []byte(`{"error": "can't marshal answer to json'"}`)
+			}
+			response.Header().Add("Content-Type", "application/json")
+			_, err = response.Write(res)
+			if err != nil {
+				insLog.Errorf("Can't write response\n")
+			}
+		}()
+
+		_, err := UnmarshalRequest(req, &params)
+		if err != nil {
+			processError(err, "Can't unmarshal request", &resp, insLog)
+			return
+		}
+
+		err = ar.checkSeed(params.Seed)
+		if err != nil {
+			processError(err, "Can't checkSeed", &resp, insLog)
+			return
+		}
+
+		err = ar.verifySignature(ctx, params)
+		if err != nil {
+			processError(err, "Can't verify signature", &resp, insLog)
+			return
+		}
+
+		var result interface{}
+		utils.MeasureExecutionTime(ctx, "callHandler makeCall",
 			func() {
-				params := Request{}
-				resp := answer{}
-
-				resp.TraceID = traceID
-
-				insLog.Info("[ callHandler ] Incoming request: %s", req.RequestURI)
-
-				defer func() {
-					res, err := json.MarshalIndent(resp, "", "    ")
-					if err != nil {
-						res = []byte(`{"error": "can't marshal answer to json'"}`)
-					}
-					response.Header().Add("Content-Type", "application/json")
-					_, err = response.Write(res)
-					if err != nil {
-						insLog.Errorf("Can't write response\n")
-					}
-				}()
-
-				_, err := UnmarshalRequest(req, &params)
-				if err != nil {
-					processError(err, "Can't unmarshal request", &resp, insLog)
-					return
-				}
-
-				err = ar.checkSeed(params.Seed)
-				if err != nil {
-					processError(err, "Can't checkSeed", &resp, insLog)
-					return
-				}
-
-				err = ar.verifySignature(ctx, params)
-				if err != nil {
-					processError(err, "Can't verify signature", &resp, insLog)
-					return
-				}
-
-				var result interface{}
-				utils.MeasureExecutionTime(ctx, "callHandler makeCall",
-					func() {
-						result, err = ar.makeCall(ctx, params)
-					})
-				if err != nil {
-					processError(err, "Can't makeCall", &resp, insLog)
-					return
-				}
-
-				resp.Result = result
+				result, err = ar.makeCall(ctx, params)
 			})
+		if err != nil {
+			processError(err, "Can't makeCall", &resp, insLog)
+			return
+		}
+
+		resp.Result = result
 	}
 }
