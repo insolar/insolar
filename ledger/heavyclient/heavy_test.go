@@ -86,6 +86,7 @@ func sendToHeavy(t *testing.T, withretry bool) {
 	recentMock.GetObjectsMock.Return(nil)
 	recentMock.GetRequestsMock.Return(nil)
 	recentMock.ClearObjectsMock.Return()
+	recentMock.AddObjectMock.Return()
 
 	// Mock6: JetCoordinatorMock
 	jcMock := testutils.NewJetCoordinatorMock(t)
