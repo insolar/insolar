@@ -390,6 +390,8 @@ func (m *PulseManager) sendExecutorData(
 
 	if split {
 		split = false
+
+		fmt.Println("SPLIT HAPPENED")
 		left, right, err := m.db.SplitJetTree(
 			ctx,
 			currentPulse.PulseNumber,

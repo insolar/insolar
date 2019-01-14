@@ -483,9 +483,8 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 		fmt.Println("handleUpdateObject: idx.LatestState", idx.LatestState, msg.Object.Record())
 		// Index exists and latest record id does not match (preserving chain consistency).
 		if idx.LatestState != nil && !state.PrevStateID().Equal(idx.LatestState) {
-			fmt.Println("handleUpdateObject: jetID", jetID)
-			fmt.Println("handleUpdateObject: state.PrevStateID()", state.PrevStateID())
-			fmt.Println("handleUpdateObject: ")
+			inslog.Debugf("Invalid index for: %v, jet: %v, provided state: %s", msg.Object.Record(), jetID.JetIDString(), state.PrevStateID())
+			inslog.Debugf("idx.LatestState: %s", idx.LatestState)
 			return errors.New("invalid state record")
 		}
 
@@ -500,7 +499,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 		if state.State() == record.StateActivation {
 			idx.Parent = state.(*record.ObjectActivateRecord).Parent
 		}
-		inslog.Debugf("Save index for: %v, jet: %v, latestState: %s", msg.Object.Record(), jetID, idx.LatestState)
+		inslog.Debugf("Save index for: %v, jet: %v, latestState: %s", msg.Object.Record(), jetID.JetIDString(), idx.LatestState)
 		return tx.SetObjectIndex(ctx, jetID, msg.Object.Record(), idx)
 	})
 	if err != nil {
@@ -816,21 +815,6 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 		return nil, errors.Wrap(err, "[ handleHotRecords ] Can't SetDropSizeHistory")
 	}
 
-	err = h.db.UpdateJetTree(
-		ctx,
-		msg.PulseNumber,
-		true,
-		jetID,
-	)
-	if err != nil {
-		fmt.Println("handleHotRecords: UpdateJetTree with err, ", err)
-		return nil, err
-	}
-	err = h.db.AddJets(ctx, jetID)
-	if err != nil {
-		return nil, err
-	}
-
 	recentStorage := h.RecentStorageProvider.GetStorage(jetID)
 	for objID, requests := range msg.PendingRequests {
 		for reqID, request := range requests {
@@ -855,7 +839,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 	}
 
 	for id, meta := range msg.RecentObjects {
-		fmt.Println("[got id] ", id)
+		fmt.Println("[got id] ", id.String())
 		decodedIndex, err := index.DecodeObjectLifeline(meta.Index)
 		if err != nil {
 			fmt.Print("hot index write error")
@@ -870,9 +854,24 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 			continue
 		}
 
-		fmt.Println("[saved id] ", id)
+		fmt.Println("[saved id] ", id.String())
 		meta.TTL--
 		recentStorage.AddObjectWithTLL(id, meta.TTL)
+	}
+
+	err = h.db.UpdateJetTree(
+		ctx,
+		msg.PulseNumber,
+		true,
+		jetID,
+	)
+	if err != nil {
+		fmt.Println("handleHotRecords: UpdateJetTree with err, ", err)
+		return nil, err
+	}
+	err = h.db.AddJets(ctx, jetID)
+	if err != nil {
+		return nil, err
 	}
 
 	return &reply.OK{}, nil

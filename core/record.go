@@ -223,3 +223,7 @@ func (ref *RecordRef) MarshalJSON() ([]byte, error) {
 	}
 	return json.Marshal(ref.String())
 }
+
+func (id *RecordID) DebugString() string {
+	return fmt.Sprintf("[%d | %s]", id.Pulse(), id.String())
+}
