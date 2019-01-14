@@ -20,7 +20,6 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/binary"
-	"fmt"
 	"sync"
 
 	"github.com/insolar/insolar/core"
@@ -178,7 +177,6 @@ func (cr *ContractRequester) CallMethod(ctx context.Context, base core.Message, 
 			}
 		})
 
-	utils.MeasureInfo(ctx, fmt.Sprintf("ContractRequester.CallMethod select returned result = %v, error = %v", result, err))
 	return result, err
 }
 

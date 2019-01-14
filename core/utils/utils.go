@@ -76,14 +76,27 @@ var measurementsLock sync.Mutex
 var measurementsWriter *bufio.Writer
 var measurementsEnabled = false
 
-func MeasureInfo(ctx context.Context, msg string) {
-	measureExecutionTimeInternal(ctx, msg, func() {}, true)
-}
-
 // MeasureExecutionTime writes execution time of given function to
 // the profile log (if profile logging is enabled).
 func MeasureExecutionTime(ctx context.Context, comment string, thefunction func()) {
-	measureExecutionTimeInternal(ctx, comment, thefunction, false)
+	if !measurementsEnabled {
+		thefunction()
+		return
+	}
+
+	traceID := TraceID(ctx)
+
+	start := TimestampMs()
+	err := writeMeasure("%f %s STARTED %s\n", start, traceID, comment)
+	if err != nil {
+		return
+	}
+
+	thefunction()
+
+	end := TimestampMs()
+	delta := end - start
+	_ = writeMeasure("%f %s ENDED %s, took: %v ms\n", end, traceID, comment, delta)
 }
 
 // write one measure to the log
@@ -136,32 +149,4 @@ func EnableExecutionTimeMeasurement(fname string) (func(), error) {
 		measurementsEnabled = false
 	}
 	return cleanup, nil
-}
-
-func measureExecutionTimeInternal(ctx context.Context, comment string, thefunction func(), info bool) {
-	if !measurementsEnabled {
-		thefunction()
-		return
-	}
-
-	traceID := TraceID(ctx)
-
-	start := TimestampMs()
-	var err error
-	if info {
-		err = writeMeasure("%f %s INFO %s\n", start, traceID, comment)
-	} else {
-		err = writeMeasure("%f %s STARTED %s\n", start, traceID, comment)
-	}
-	if err != nil {
-		return
-	}
-
-	thefunction()
-
-	if !info {
-		end := TimestampMs()
-		delta := end - start
-		_ = writeMeasure("%f %s ENDED %s, took: %v ms\n", end, traceID, comment, delta)
-	}
 }
