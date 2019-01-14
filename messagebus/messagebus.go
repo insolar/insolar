@@ -325,7 +325,9 @@ func (mb *MessageBus) checkPulse(ctx context.Context, parcel core.Parcel, locked
 			*message.RegisterChild,
 			*message.ValidateRecord,
 			*message.SetBlob,
-			*message.UpdateObject:
+			*message.UpdateObject,
+			*message.CallConstructor,
+			*message.CallMethod:
 			inslogger.FromContext(ctx).Errorf("[ checkPulse ] Incorrect message pulse (parcel: %d, current: %d)", parcel.Pulse(), pulse.PulseNumber)
 			return fmt.Errorf("[ checkPulse ] Incorrect message pulse (parcel: %d, current: %d)", parcel.Pulse(), pulse.PulseNumber)
 		}

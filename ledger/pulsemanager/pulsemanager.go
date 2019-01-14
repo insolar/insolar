@@ -236,6 +236,13 @@ func (m *PulseManager) createDrop(
 		err = nil
 	}
 	if err != nil {
+		parentJet := jet.Parent(jetID)
+		fmt.Printf(
+			"failed to fetch jet. pulse: %v, current jet: %v, parent jet: %v \n",
+			prevPulse,
+			jetID.JetIDString(),
+			parentJet.String(),
+		)
 		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't GetDrop")
 	}
 	drop, messages, dropSize, err := m.db.CreateDrop(ctx, jetID, currentPulse, prevDrop.Hash)

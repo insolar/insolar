@@ -733,15 +733,18 @@ func (m *LedgerArtifactManager) sendUpdateObject(
 	currentPulse core.Pulse,
 ) (*reply.Object, error) {
 	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.sendUpdateObject starts ...")
-	_, err := sendAndRetryJet(ctx, m.bus(ctx), m.db, &message.SetBlob{
+	genericRep, err := sendAndRetryJet(ctx, m.bus(ctx), m.db, &message.SetBlob{
 		TargetRef: object,
 		Memory:    memory,
 	}, currentPulse, jetMissRetryCount, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to save object's memory blob")
 	}
+	if _, ok := genericRep.(*reply.ID); !ok {
+		return nil, fmt.Errorf("unexpected reply: %#v\n", genericRep)
+	}
 
-	genericRep, err := sendAndRetryJet(ctx, m.bus(ctx), m.db, &message.UpdateObject{
+	genericRep, err = sendAndRetryJet(ctx, m.bus(ctx), m.db, &message.UpdateObject{
 		Record: record.SerializeRecord(rec),
 		Object: object,
 	}, currentPulse, jetMissRetryCount, nil)
