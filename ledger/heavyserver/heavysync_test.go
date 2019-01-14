@@ -136,7 +136,8 @@ func TestHeavy_SyncByJet(t *testing.T) {
 	jetID1 := testutils.RandomJet()
 	jetID2 := jetID1
 	// flip first bit of jetID2 for different prefix
-	jetID2[0] ^= jetID2[0]
+	lastidx := len(jetID1) - 1
+	jetID2[lastidx] ^= 0xFF
 
 	// prepare pulse helper
 	preparepulse := func(pn core.PulseNumber) {
