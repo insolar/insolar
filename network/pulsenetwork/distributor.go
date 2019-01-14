@@ -203,7 +203,7 @@ func (d *distributor) sendPulseToHosts(ctx context.Context, pulse *core.Pulse, h
 			if err != nil {
 				logger.Errorf(
 					"[ sendPulseToHosts ] Failed to send pulse to host: %s, error: %s",
-					pulseReceiver.String(),
+					host.String(),
 					err.Error(),
 				)
 			}
