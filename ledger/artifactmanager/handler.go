@@ -499,6 +499,14 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 		if state.State() == record.StateActivation {
 			idx.Parent = state.(*record.ObjectActivateRecord).Parent
 		}
+		_, err = h.db.SetBlob(ctx, jetID, parcel.Pulse(), msg.Memory)
+		if err == storage.ErrOverride {
+			err = nil
+		}
+		if err != nil {
+			return errors.Wrap(err, "failed to set blob")
+		}
+
 		inslog.Debugf("Save index for: %v, jet: %v, latestState: %s", msg.Object.Record(), jetID.JetIDString(), idx.LatestState)
 		return tx.SetObjectIndex(ctx, jetID, msg.Object.Record(), idx)
 	})

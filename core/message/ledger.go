@@ -145,6 +145,7 @@ type UpdateObject struct {
 
 	Record []byte
 	Object core.RecordRef
+	Memory []byte
 }
 
 // AllowedSenderObjectAndRole implements interface method
