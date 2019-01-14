@@ -273,10 +273,7 @@ func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Repl
 
 	ctx = hack.SetSkipValidation(ctx, true)
 	// TODO: sergey.morozov 2018-12-21 there is potential race condition because of readBarrier. We must implement correct locking.
-
-	ctx, span := instracer.StartSpan(ctx, "doDeliver.handler")
 	resp, err := handler(ctx, msg)
-	span.End()
 	if err != nil {
 		return nil, &serializableError{
 			S: err.Error(),
