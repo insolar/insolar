@@ -52,23 +52,22 @@ func (j *jet) Find(val []byte, depth uint8) (*jet, uint8) {
 
 // Update add missing tree branches for provided prefix.
 func (j *jet) Update(prefix []byte, setActual bool, maxDepth, depth uint8) {
-	if setActual {
-		j.Actual = true
-	}
-
-	if depth >= maxDepth {
+	if depth == maxDepth {
+		if setActual {
+			j.Actual = true
+		}
 		return
 	}
 
+	if j.Right == nil {
+		j.Right = &jet{}
+	}
+	if j.Left == nil {
+		j.Left = &jet{}
+	}
 	if getBit(prefix, depth) {
-		if j.Right == nil {
-			j.Right = &jet{}
-		}
 		j.Right.Update(prefix, setActual, maxDepth, depth+1)
 	} else {
-		if j.Left == nil {
-			j.Left = &jet{}
-		}
 		j.Left.Update(prefix, setActual, maxDepth, depth+1)
 	}
 }
