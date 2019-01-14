@@ -73,7 +73,7 @@ func (s *Sync) checkIsNextPulse(ctx context.Context, jetID core.RecordID, jetsta
 	if checkpoint == 0 {
 		checkpoint, err = s.db.GetHeavySyncedPulse(ctx, jetID)
 		if err != nil {
-			return errors.Wrap(err, "GetHeavySyncedPulse failed")
+			return errors.Wrap(err, "heavyserver: GetHeavySyncedPulse failed")
 		}
 	}
 
@@ -123,7 +123,7 @@ func (s *Sync) Start(ctx context.Context, jetID core.RecordID, pn core.PulseNumb
 	}
 
 	if pn <= core.FirstPulseNumber {
-		return fmt.Errorf("sync pulse should be greater than first pulse %v (got %v)", core.FirstPulseNumber, pn)
+		return fmt.Errorf("heavyserver: sync pulse should be greater than first pulse %v (got %v)", core.FirstPulseNumber, pn)
 	}
 
 	if err := s.checkIsNextPulse(ctx, jetID, jetState, pn); err != nil {
@@ -144,10 +144,10 @@ func (s *Sync) Store(ctx context.Context, jetID core.RecordID, pn core.PulseNumb
 		jetState.Lock()
 		defer jetState.Unlock()
 		if jetState.syncpulse == nil {
-			return fmt.Errorf("Jet %v not in sync mode", jetID)
+			return fmt.Errorf("heavyserver: jet %v not in sync mode", jetID)
 		}
 		if *jetState.syncpulse != pn {
-			return fmt.Errorf("Passed pulse %v doesn't math in-sync pulse %v", pn, *jetState.syncpulse)
+			return fmt.Errorf("heavyserver: passed pulse %v doesn't match in-sync pulse %v", pn, *jetState.syncpulse)
 		}
 		if jetState.insync {
 			return errSyncInProgress(jetID, pn)
@@ -181,7 +181,7 @@ func (s *Sync) Stop(ctx context.Context, jetID core.RecordID, pn core.PulseNumbe
 	}
 	if *jetState.syncpulse != pn {
 		return fmt.Errorf(
-			"Passed pulse %v doesn't match pulse %v current in sync for jet %v",
+			"heavyserver: Passed pulse %v doesn't match pulse %v current in sync for jet %v",
 			pn, *jetState.syncpulse, jetID)
 	}
 	if jetState.insync {
@@ -208,6 +208,7 @@ func (s *Sync) Reset(ctx context.Context, jetID core.RecordID, pn core.PulseNumb
 		return errSyncInProgress(jetID, pn)
 	}
 
+	inslogger.FromContext(ctx).Debugf("heavyserver: Reset sync: jetID=%v, pulse=%v", jetID, pn)
 	jetState.syncpulse = nil
 	return nil
 }
