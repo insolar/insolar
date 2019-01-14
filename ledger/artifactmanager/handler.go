@@ -203,6 +203,8 @@ func (h *MessageHandler) handleGetObject(
 	// Fetch object index. If not found redirect.
 	idx, err = h.db.GetObjectIndex(ctx, jetID, msg.Head.Record(), false)
 	if err == storage.ErrNotFound {
+		fmt.Printf("[failed to fetch] pulse: %v, jet: %v, id: %v", parcel.Pulse(), jetID.JetIDString(), msg.Head.Record())
+		fmt.Println()
 		return nil, errors.New("failed to fetch index")
 		// println()
 		// node, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
