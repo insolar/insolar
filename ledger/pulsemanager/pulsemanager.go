@@ -332,7 +332,7 @@ func (m *PulseManager) getExecutorHotData(
 			TTL:   ttl,
 			Index: encoded,
 		}
-		fmt.Println("[send id] ", id)
+		fmt.Printf("[send id] %v\n", id.String())
 	}
 
 	for objID, requests := range recentStorage.GetRequests() {
@@ -580,7 +580,7 @@ func (m *PulseManager) restoreGenesisRecentObjects(ctx context.Context) error {
 	return m.db.IterateIndexIDs(ctx, jetID, func(id core.RecordID) error {
 		if id.Pulse() == core.FirstPulseNumber {
 			recent.AddObject(id)
-			fmt.Println("[restored] id ", id)
+			fmt.Printf("[restored] id %v \n", id.String())
 		}
 		return nil
 	})

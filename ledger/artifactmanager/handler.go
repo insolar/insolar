@@ -203,8 +203,6 @@ func (h *MessageHandler) handleGetObject(
 	// Fetch object index. If not found redirect.
 	idx, err = h.db.GetObjectIndex(ctx, jetID, msg.Head.Record(), false)
 	if err == storage.ErrNotFound {
-		fmt.Printf("[failed to fetch] pulse: %v, jet: %v, id: %v", parcel.Pulse(), jetID.JetIDString(), msg.Head.Record())
-		fmt.Println()
 		return nil, errors.New("failed to fetch index")
 		// println()
 		// node, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
@@ -221,7 +219,6 @@ func (h *MessageHandler) handleGetObject(
 		// return reply.NewGetObjectRedirectReply(h.DelegationTokenFactory, parcel, node, msg.State)
 	}
 	if err != nil {
-		fmt.Println("handleGetObject: failed to fetch object index, error - ", err)
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
 	// Add requested object to recent.
@@ -242,17 +239,17 @@ func (h *MessageHandler) handleGetObject(
 		return &reply.Error{ErrType: reply.ErrStateNotAvailable}, nil
 	}
 
+	stateTree, err := h.db.GetJetTree(ctx, stateID.Pulse())
+	if err != nil {
+		return nil, err
+	}
+	stateJet, _ := stateTree.Find(*msg.Head.Record())
+
 	// Fetch state record.
-	rec, err := h.db.GetRecord(ctx, jetID, stateID)
+	rec, err := h.db.GetRecord(ctx, *stateJet, stateID)
 	if err == storage.ErrNotFound {
 		// The record wasn't found on the current node. Return redirect to the node that contains it.
 		// We get Jet tree for pulse when given state was added.
-		stateTree, err := h.db.GetJetTree(ctx, stateID.Pulse())
-		if err != nil {
-			return nil, err
-		}
-		stateJet, _ := stateTree.Find(*msg.Head.Record())
-
 		node, err := h.nodeForJet(ctx, *stateJet, parcel.Pulse(), stateID.Pulse())
 		if err != nil {
 			return nil, err
@@ -285,7 +282,7 @@ func (h *MessageHandler) handleGetObject(
 	}
 
 	if state.GetMemory() != nil {
-		rep.Memory, err = h.db.GetBlob(ctx, jetID, state.GetMemory())
+		rep.Memory, err = h.db.GetBlob(ctx, *stateJet, state.GetMemory())
 		if err != nil {
 			return nil, err
 		}
