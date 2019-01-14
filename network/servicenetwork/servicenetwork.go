@@ -252,21 +252,7 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse core.Pulse) {
 	// }
 
 	logger.Infof("Set new current pulse number: %d", newPulse.PulseNumber)
-	go n.networkCoordinatorOnPulse(ctx, newPulse)
 	go n.phaseManagerOnPulse(ctx, newPulse)
-}
-
-func (n *ServiceNetwork) networkCoordinatorOnPulse(ctx context.Context, newPulse core.Pulse) {
-	logger := inslogger.FromContext(ctx)
-
-	if !n.NetworkCoordinator.IsStarted() {
-		return
-	}
-	err := n.NetworkCoordinator.WriteActiveNodes(ctx, newPulse.PulseNumber, n.NodeKeeper.GetActiveNodes())
-	if err != nil {
-		logger.Warn("Error writing active nodes to ledger: " + err.Error())
-	}
-	logger.Info("ServiceNetwork call PhaseManager.OnPulse")
 }
 
 func (n *ServiceNetwork) phaseManagerOnPulse(ctx context.Context, newPulse core.Pulse) {
