@@ -32,6 +32,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/index"
+	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/testutils"
@@ -42,7 +43,8 @@ func pulseDelta(n int) core.PulseNumber { return core.PulseNumber(core.FirstPuls
 func Test_StoreKeyValues(t *testing.T) {
 	t.Parallel()
 	ctx := inslogger.TestContext(t)
-	jetID := testutils.RandomID()
+	jetID := testutils.RandomJet()
+	// fmt.Printf("random jetID: %v\n", jetID.JetIDString())
 
 	var (
 		expectedrecs []key
@@ -100,7 +102,8 @@ func Test_ReplicaIter_FirstPulse(t *testing.T) {
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
 
-	jetID := core.TODOJetID
+	jetID := *jet.NewID(0, nil)
+
 	addRecords(ctx, t, db, jetID, core.FirstPulseNumber)
 	replicator := storage.NewReplicaIter(ctx, db, jetID, core.FirstPulseNumber, core.FirstPulseNumber+1, 100500)
 	var got []key
@@ -143,7 +146,9 @@ func Test_ReplicaIter_Base(t *testing.T) {
 
 	var lastPulse core.PulseNumber
 	pulsescount := 2
-	jetID := core.TODOJetID
+	// FIXME: should work with random jet
+	// jetID := testutils.RandomJet()
+	jetID := *jet.NewID(0, nil)
 
 	recsBefore, idxBefore := getallkeys(db.GetBadgerDB())
 	require.Nil(t, recsBefore)
@@ -333,7 +338,6 @@ func getallkeys(db *badger.DB) (records []key, indexes []key) {
 		item := it.Item()
 		k := item.KeyCopy(nil)
 		pn := storage.Key(k).PulseNumber()
-		// fmt.Printf(" : %v (%v)\n", storage.Key(k), pn)
 		if pn == 0 {
 			continue
 		}

@@ -41,7 +41,7 @@ func TestDB_GetRecordNotFound(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
-	jet := testutils.RandomID()
+	jet := testutils.RandomJet()
 
 	rec, err := db.GetRecord(ctx, jet, &core.RecordID{})
 	assert.Equal(t, err, storage.ErrNotFound)
@@ -53,7 +53,7 @@ func TestDB_SetRecord(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
-	jet := testutils.RandomID()
+	jet := testutils.RandomJet()
 
 	rec := &record.RequestRecord{}
 	gotRef, err := db.SetRecord(ctx, jet, core.GenesisPulse.PulseNumber, rec)
@@ -72,7 +72,7 @@ func TestDB_SetObjectIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
-	jetID := testutils.RandomID()
+	jetID := testutils.RandomJet()
 
 	idx, err := db.GetObjectIndex(ctx, jetID, core.NewRecordID(0, hexhash("5000")), false)
 	assert.Equal(t, storage.ErrNotFound, err)
@@ -84,7 +84,7 @@ func TestDB_SetObjectIndex_StoresCorrectDataInStorage(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
-	jetID := testutils.RandomID()
+	jetID := testutils.RandomJet()
 
 	idx := index.ObjectLifeline{
 		LatestState: core.NewRecordID(0, hexhash("20")),
@@ -104,7 +104,7 @@ func TestDB_GetDrop_ReturnsNotFoundIfNoDrop(t *testing.T) {
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
 
-	drop, err := db.GetDrop(ctx, testutils.RandomID(), 1)
+	drop, err := db.GetDrop(ctx, testutils.RandomJet(), 1)
 	assert.Equal(t, err, storage.ErrNotFound)
 	assert.Nil(t, drop)
 }
@@ -114,7 +114,9 @@ func TestDB_CreateDrop(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
-	jetID := testutils.RandomID()
+	// FIXME: should work with random jet
+	// jetID := testutils.RandomJet()
+	jetID := *jet.NewID(0, nil)
 
 	pulse := core.PulseNumber(core.FirstPulseNumber + 10)
 	err := db.AddPulse(
@@ -160,7 +162,9 @@ func TestDB_SetDrop(t *testing.T) {
 		Pulse: 42,
 		Hash:  []byte{0xFF},
 	}
-	jetID := testutils.RandomID()
+	// FIXME: should work with random jet
+	// jetID := testutils.RandomJet()
+	jetID := *jet.NewID(0, nil)
 	err := db.SetDrop(ctx, jetID, &drop42)
 	assert.NoError(t, err)
 
@@ -242,7 +246,7 @@ func TestDB_Close(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	db, cleaner := storagetest.TmpDB(ctx, t)
 
-	jetID := testutils.RandomID()
+	jetID := testutils.RandomJet()
 
 	cleaner()
 
