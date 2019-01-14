@@ -53,9 +53,10 @@ func newTCPTransport(listenAddress string, proxy relay.Proxy, publicAddress stri
 	}
 
 	transport := &tcpTransport{
-		baseTransport: newBaseTransport(proxy, publicAddress),
-		pool:          pool.NewConnectionPool(&tcpConnectionFactory{}),
-		listenAddr:    listenAddr,
+		baseTransport:   newBaseTransport(proxy, publicAddress),
+		pool:            pool.NewConnectionPool(&tcpConnectionFactory{}),
+		listenAddr:      listenAddr,
+		openConnections: &sync.WaitGroup{},
 	}
 
 	transport.sendFunc = transport.send
