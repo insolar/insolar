@@ -27,9 +27,6 @@ type Coordinator interface {
 	// GetCert returns certificate object by node reference, using discovery nodes for signing
 	GetCert(context.Context, *core.RecordRef) (core.Certificate, error)
 
-	// TODO: Remove this method, use SetPulse instead
-	WriteActiveNodes(ctx context.Context, number core.PulseNumber, activeNodes []core.Node) error
-
 	// SetPulse uses PulseManager component for saving pulse info
 	SetPulse(ctx context.Context, pulse core.Pulse) error
 

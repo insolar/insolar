@@ -141,11 +141,6 @@ func (rnc *realNetworkCoordinator) getNodeInfo(ctx context.Context, nodeRef *cor
 	return pKey, role, nil
 }
 
-// TODO: remove and use SetPulse instead
-func (rnc *realNetworkCoordinator) WriteActiveNodes(ctx context.Context, number core.PulseNumber, activeNodes []core.Node) error {
-	return errors.New("not implemented")
-}
-
 // SetPulse uses PulseManager component for saving pulse info
 func (rnc *realNetworkCoordinator) SetPulse(ctx context.Context, pulse core.Pulse) error {
 	return errors.New("not implemented")

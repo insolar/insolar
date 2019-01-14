@@ -22,9 +22,12 @@ import (
 	"encoding/gob"
 	"fmt"
 	"io"
-	"strconv"
 	"sync"
 	"time"
+
+	"go.opencensus.io/trace"
+
+	"github.com/insolar/insolar/instrumentation/instracer"
 
 	"github.com/pkg/errors"
 
@@ -32,7 +35,6 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
-	"github.com/insolar/insolar/core/utils"
 	"github.com/insolar/insolar/instrumentation/hack"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/metrics"
@@ -150,11 +152,13 @@ func (mb *MessageBus) Send(ctx context.Context, msg core.Message, ops *core.Mess
 		return nil, err
 	}
 
-	var rep core.Reply
-	utils.MeasureExecutionTime(ctx, "MessageBus.Send mb.SendParcel, msg.Type = "+msg.Type().String()+", parcel.DefaultRole() = "+strconv.Itoa(int(parcel.DefaultRole())),
-		func() {
-			rep, err = mb.SendParcel(ctx, parcel, *currentPulse, ops)
-		})
+	ctx, span := instracer.StartSpan(ctx, "MessageBus.Send mb.SendParcel")
+	span.AddAttributes(
+		trace.StringAttribute("msgType", msg.Type().String()),
+		trace.Int64Attribute("parcel.DefaultRole", int64(parcel.DefaultRole())),
+	)
+	rep, err := mb.SendParcel(ctx, parcel, *currentPulse, ops)
+	span.End()
 	return rep, err
 }
 
@@ -270,12 +274,7 @@ func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Repl
 	ctx = hack.SetSkipValidation(ctx, true)
 	// TODO: sergey.morozov 2018-12-21 there is potential race condition because of readBarrier. We must implement correct locking.
 
-	var resp core.Reply
-
-	utils.MeasureExecutionTime(ctx, "doDeliver.handler", func() {
-		resp, err = handler(ctx, msg)
-	})
-
+	resp, err := handler(ctx, msg)
 	if err != nil {
 		return nil, &serializableError{
 			S: err.Error(),
