@@ -286,7 +286,7 @@ func (h *MessageHandler) handleGetObject(
 	if state.GetMemory() != nil {
 		rep.Memory, err = h.db.GetBlob(ctx, *stateJet, state.GetMemory())
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "failed to fetch blob")
 		}
 	}
 
