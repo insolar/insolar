@@ -333,6 +333,14 @@ func RandomRole() core.StaticRole {
 	return core.StaticRole(i)
 }
 
+type terminationHandler struct {
+	NodeID core.RecordRef
+}
+
+func (t *terminationHandler) Abort() {
+	log.Errorf("Abort node: %s", t.NodeID)
+}
+
 // preInitNode inits previously created node with mocks and external dependencies
 func (s *testSuite) preInitNode(node *networkNode) {
 	cfg := configuration.NewConfiguration()
@@ -378,18 +386,16 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	})
 
 	realKeeper := nodenetwork.NewNodeKeeper(origin)
+	terminationHandler := &terminationHandler{NodeID: origin.ID()}
 
 	realKeeper.SetState(network.Waiting)
 	if len(certManager.GetCertificate().GetDiscoveryNodes()) == 0 || utils.OriginIsDiscovery(certManager.GetCertificate()) {
 		realKeeper.SetState(network.Ready)
 		realKeeper.AddActiveNodes([]core.Node{origin})
 	}
-	realKeeper.SetExitHandler(func() {
-		log.Info("node exited, bye bye")
-	})
 
 	node.componentManager = &component.Manager{}
-	node.componentManager.Register(realKeeper, pulseManagerMock, pulseStorageMock, netCoordinator, amMock)
+	node.componentManager.Register(terminationHandler, realKeeper, pulseManagerMock, pulseStorageMock, netCoordinator, amMock)
 	node.componentManager.Register(certManager, cryptographyService)
 	node.componentManager.Inject(serviceNetwork, netSwitcher)
 	node.serviceNetwork = serviceNetwork

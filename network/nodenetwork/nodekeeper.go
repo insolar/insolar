@@ -125,12 +125,7 @@ type nodekeeper struct {
 	isBootstrapLock sync.RWMutex
 
 	Cryptography core.CryptographyService `inject:""`
-
-	exitHandler func()
-}
-
-func (nk *nodekeeper) SetExitHandler(handler func()) {
-	nk.exitHandler = handler
+	Handler      core.TerminationHandler  `inject:""`
 }
 
 func (nk *nodekeeper) AddTemporaryMapping(nodeID core.RecordRef, shortID core.ShortNodeID, address string) error {
@@ -374,12 +369,8 @@ func (nk *nodekeeper) MoveSyncToActive() error {
 }
 
 func (nk *nodekeeper) gracefullyStop() {
-	if nk.exitHandler == nil {
-		// TODO: graceful stop
-		panic("Node leave acknowledged by network. Goodbye!")
-	}
-	// awful workaround for tests
-	nk.exitHandler()
+	// TODO: graceful stop
+	nk.Handler.Abort()
 }
 
 func (nk *nodekeeper) reindex() {

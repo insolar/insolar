@@ -112,6 +112,8 @@ func initComponents(
 	genesisKeyOut string,
 
 ) (*component.Manager, error) {
+	terminationHandler := core.NewTerminationHandler()
+
 	nodeNetwork, err := nodenetwork.NewNodeNetwork(cfg.Host, certManager.GetCertificate())
 	checkError(ctx, err, "failed to start NodeNetwork")
 
@@ -160,6 +162,7 @@ func initComponents(
 
 	cm := component.Manager{}
 	cm.Register(
+		terminationHandler,
 		platformCryptographyScheme,
 		keyStore,
 		cryptographyService,
