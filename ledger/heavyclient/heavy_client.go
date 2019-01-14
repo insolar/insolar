@@ -161,7 +161,7 @@ func (c *JetClient) syncloop(ctx context.Context) {
 				break
 			}
 
-			inslog.Debug("syncronization waiting signal what new pulses happens")
+			inslog.Debug("synchronization waiting signal what new pulse happens")
 			_, ok := <-c.signal
 			if !ok {
 				inslog.Debug("stop is called, so we are should just stop syncronization loop")
@@ -173,7 +173,7 @@ func (c *JetClient) syncloop(ctx context.Context) {
 				// nothing to do
 				continue
 			}
-			inslog.Debugf("syncronization next sync pulse num: %v (left=%v)", syncPN, c.leftPulses)
+			inslog.Debugf("synchronization next sync pulse num: %v (left=%v)", syncPN, c.leftPulses)
 			break
 		}
 
@@ -182,7 +182,7 @@ func (c *JetClient) syncloop(ctx context.Context) {
 			finishpulse()
 			continue
 		}
-		inslog.Infof("start syncronization to heavy for pulse %v", syncPN)
+		inslog.Infof("start synchronization to heavy for pulse %v", syncPN)
 
 		shouldretry := false
 		isretry := c.syncbackoff.Attempt() > 0

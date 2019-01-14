@@ -117,7 +117,7 @@ func (db *DB) CreateDrop(ctx context.Context, jetID core.RecordID, pulse core.Pu
 
 // SetDrop saves provided JetDrop in db.
 func (db *DB) SetDrop(ctx context.Context, jetID core.RecordID, drop *jet.JetDrop) error {
-	fmt.Printf("SetDrop for jet: %v, pulse: %v", jetID.JetIDString(), drop.Pulse)
+	fmt.Printf("SetDrop for jet: %v, pulse: %v\n", jetID.JetIDString(), drop.Pulse)
 
 	_, prefix := jet.Jet(jetID)
 	k := prefixkey(scopeIDJetDrop, prefix, drop.Pulse.Bytes())
