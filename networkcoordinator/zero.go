@@ -38,10 +38,6 @@ func (znc *zeroNetworkCoordinator) signCertHandler(ctx context.Context, p core.P
 	return nil, errors.New("signCertHandler is not allowed in Zero Network")
 }
 
-func (znc *zeroNetworkCoordinator) WriteActiveNodes(ctx context.Context, number core.PulseNumber, activeNodes []core.Node) error {
-	return errors.New("not implemented")
-}
-
 func (znc *zeroNetworkCoordinator) SetPulse(ctx context.Context, pulse core.Pulse) error {
 	return errors.New("not implemented")
 }

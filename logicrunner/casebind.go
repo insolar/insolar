@@ -74,28 +74,31 @@ func NewCaseBindFromExecutorResultsMessage(msg *message.ExecutorResults) *CaseBi
 }
 
 func (cb *CaseBind) getCaseBindForMessage(ctx context.Context) []message.CaseBindRequest {
-	if cb == nil {
-		return make([]message.CaseBindRequest, 0)
-	}
-
-	requests := make([]message.CaseBindRequest, len(cb.Requests))
-
-	for i, req := range cb.Requests {
-		var buf bytes.Buffer
-		err := req.MessageBus.(core.TapeWriter).WriteTape(ctx, &buf)
-		if err != nil {
-			panic("couldn't write tape: " + err.Error())
-		}
-		requests[i] = message.CaseBindRequest{
-			Parcel:         req.Parcel,
-			Request:        req.Request,
-			MessageBusTape: buf.Bytes(),
-			Reply:          req.Reply,
-			Error:          req.Error,
-		}
-	}
-
-	return requests
+	return make([]message.CaseBindRequest, 0)
+	// TODO: we don't validate at the moment, just send empty case bind
+	//
+	//if cb == nil {
+	//	return make([]message.CaseBindRequest, 0)
+	//}
+	//
+	//requests := make([]message.CaseBindRequest, len(cb.Requests))
+	//
+	//for i, req := range cb.Requests {
+	//	var buf bytes.Buffer
+	//	err := req.MessageBus.(core.TapeWriter).WriteTape(ctx, &buf)
+	//	if err != nil {
+	//		panic("couldn't write tape: " + err.Error())
+	//	}
+	//	requests[i] = message.CaseBindRequest{
+	//		Parcel:         req.Parcel,
+	//		Request:        req.Request,
+	//		MessageBusTape: buf.Bytes(),
+	//		Reply:          req.Reply,
+	//		Error:          req.Error,
+	//	}
+	//}
+	//
+	//return requests
 }
 
 func (cb *CaseBind) ToValidateMessage(ctx context.Context, ref Ref, pulse core.Pulse) *message.ValidateCaseBind {

@@ -22,19 +22,19 @@ import (
 	"encoding/gob"
 	"fmt"
 	"io"
-	"strconv"
 	"sync"
 	"time"
 
-	"github.com/insolar/insolar/instrumentation/hack"
 	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
-	"github.com/insolar/insolar/core/utils"
+	"github.com/insolar/insolar/instrumentation/hack"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/metrics"
 )
 
@@ -151,11 +151,13 @@ func (mb *MessageBus) Send(ctx context.Context, msg core.Message, ops *core.Mess
 		return nil, err
 	}
 
-	var rep core.Reply
-	utils.MeasureExecutionTime(ctx, "MessageBus.Send mb.SendParcel, msg.Type = "+msg.Type().String()+", parcel.DefaultRole() = "+strconv.Itoa(int(parcel.DefaultRole())),
-		func() {
-			rep, err = mb.SendParcel(ctx, parcel, *currentPulse, ops)
-		})
+	ctx, span := instracer.StartSpan(ctx, "MessageBus.Send mb.SendParcel")
+	span.AddAttributes(
+		trace.StringAttribute("msgType", msg.Type().String()),
+		trace.Int64Attribute("parcel.DefaultRole", int64(parcel.DefaultRole())),
+	)
+	rep, err := mb.SendParcel(ctx, parcel, *currentPulse, ops)
+	span.End()
 	return rep, err
 }
 
@@ -276,12 +278,7 @@ func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Repl
 	}
 	// TODO: sergey.morozov 2018-12-21 there is potential race condition because of readBarrier. We must implement correct locking.
 
-	var resp core.Reply
-
-	utils.MeasureExecutionTime(ctx, "doDeliver.handler", func() {
-		resp, err = handler(ctx, msg)
-	})
-
+	resp, err := handler(ctx, msg)
 	if err != nil {
 		return nil, &serializableError{
 			S: err.Error(),
@@ -325,7 +322,9 @@ func (mb *MessageBus) checkPulse(ctx context.Context, parcel core.Parcel, locked
 			*message.RegisterChild,
 			*message.ValidateRecord,
 			*message.SetBlob,
-			*message.UpdateObject:
+			*message.UpdateObject,
+			*message.CallConstructor,
+			*message.CallMethod:
 			inslogger.FromContext(ctx).Errorf("[ checkPulse ] Incorrect message pulse (parcel: %d, current: %d)", parcel.Pulse(), pulse.PulseNumber)
 			return fmt.Errorf("[ checkPulse ] Incorrect message pulse (parcel: %d, current: %d)", parcel.Pulse(), pulse.PulseNumber)
 		}
