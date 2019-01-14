@@ -91,6 +91,15 @@ func StartSpan(ctx context.Context, name string) (context.Context, *trace.Span) 
 	} else {
 		spanctx, span = trace.StartSpan(ctx, name)
 	}
+
+	// This is probably not the best solution since we have two traceId's:
+	// inslogger TraceId and Jaeger TraceId. We could probably join them and
+	// use only one TraceId, although it could be difficult in some situations.
+	// At the time of writing we are not very concerned with extra traffic created
+	// by two TraceIds thus this seems to be not a major issue.
+	span.AddAttributes(
+		trace.StringAttribute("insTraceId", inslogger.TraceID(ctx)),
+	)
 	setSpanEntries(span, GetBaggage(spanctx)...)
 	return spanctx, span
 }

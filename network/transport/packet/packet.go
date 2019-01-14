@@ -69,6 +69,7 @@ func SerializePacket(q *Packet) ([]byte, error) {
 func DeserializePacket(conn io.Reader) (*Packet, error) {
 
 	lengthBytes := make([]byte, 8)
+	//n, err := io.ReadFull(conn, lengthBytes)
 	n, err := conn.Read(lengthBytes)
 	if err != nil {
 		return nil, err
@@ -91,8 +92,8 @@ func DeserializePacket(conn io.Reader) (*Packet, error) {
 		n, err = conn.Read(buf[readLength:])
 		readLength = readLength + n
 		log.Debugf("read %d bytes", n)
-		if err != nil && n == 0 {
-			log.Debugln(err.Error())
+		if err != nil {
+			return nil, err
 		}
 	}
 

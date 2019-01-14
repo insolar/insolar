@@ -86,7 +86,7 @@ func main() {
 	ctx, inslog := initLogger(context.Background(), cfgHolder.Configuration.Log, traceID)
 	log.SetGlobalLogger(inslog)
 
-	server, storage, tp := initPulsar(ctx, cfgHolder.Configuration)
+	cm, server, storage := initPulsar(ctx, cfgHolder.Configuration)
 	server.ID = traceID
 
 	go server.StartServer(ctx)
@@ -100,7 +100,7 @@ func main() {
 			inslog.Error(err)
 		}
 		server.StopServer(ctx)
-		tp.Close()
+		cm.Stop(ctx)
 	}()
 
 	var gracefulStop = make(chan os.Signal, 1)
@@ -110,7 +110,7 @@ func main() {
 	<-gracefulStop
 }
 
-func initPulsar(ctx context.Context, cfg configuration.Configuration) (*pulsar.Pulsar, pulsarstorage.PulsarStorage, transport.Transport) {
+func initPulsar(ctx context.Context, cfg configuration.Configuration) (*component.Manager, *pulsar.Pulsar, pulsarstorage.PulsarStorage) {
 	fmt.Print("Starts with configuration:\n", configuration.ToString(cfg))
 	fmt.Println("Version: ", version.GetFullVersion())
 
@@ -169,7 +169,7 @@ func initPulsar(ctx context.Context, cfg configuration.Configuration) (*pulsar.P
 	}
 	switcher.SetPulsar(server)
 
-	return server, storage, tp
+	return cm, server, storage
 }
 
 func runPulsar(ctx context.Context, server *pulsar.Pulsar, cfg configuration.Pulsar) (pulseTicker *time.Ticker, refreshTicker *time.Ticker) {
