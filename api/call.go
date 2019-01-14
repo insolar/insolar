@@ -159,10 +159,10 @@ func processError(err error, extraMsg string, resp *answer, insLog core.Logger) 
 func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 	return func(response http.ResponseWriter, req *http.Request) {
 		traceID := utils.RandTraceID()
-		tmpctx, insLog := inslogger.WithTraceField(context.Background(), traceID)
+		ctx, insLog := inslogger.WithTraceField(context.Background(), traceID)
 
-		ctx, span := instracer.StartSpan(tmpctx, "NetRPC Request Processing")
-		defer span.End()
+		ctx, rpcspan := instracer.StartSpan(ctx, "NetRPC Request Processing")
+		defer rpcspan.End()
 
 		params := Request{}
 		resp := answer{}
@@ -201,11 +201,9 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 			return
 		}
 
-		var result interface{}
-		utils.MeasureExecutionTime(ctx, "callHandler makeCall",
-			func() {
-				result, err = ar.makeCall(ctx, params)
-			})
+		ctx, callspan := instracer.StartSpan(ctx, "callHandler makeCall")
+		defer callspan.End()
+		result, err := ar.makeCall(ctx, params)
 		if err != nil {
 			processError(err, "Can't makeCall", &resp, insLog)
 			return
