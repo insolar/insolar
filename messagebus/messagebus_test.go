@@ -51,6 +51,13 @@ func prepare(t *testing.T, ctx context.Context, currentPulse int, msgPulse int) 
 	jc := testutils.NewJetCoordinatorMock(t)
 	ls := testutils.NewLocalStorageMock(t)
 	nn := network.NewNodeNetworkMock(t)
+
+	originID := core.NewRecordRef(testutils.RandomID(), testutils.RandomID())
+
+	node := network.NewNodeMock(t)
+	node.IDMock.Return(*originID)
+	nn.GetOriginMock.Return(node)
+
 	pcs := testutils.NewPlatformCryptographyScheme()
 	cs := testutils.NewCryptographyServiceMock(t)
 	dtf := testutils.NewDelegationTokenFactoryMock(t)
@@ -71,6 +78,9 @@ func prepare(t *testing.T, ctx context.Context, currentPulse int, msgPulse int) 
 
 	parcel := testutils.NewParcelMock(t)
 
+	parcel.GetSenderFunc = func() (r core.RecordRef) {
+		return *originID
+	}
 	parcel.PulseFunc = func() core.PulseNumber {
 		return core.PulseNumber(msgPulse)
 	}
@@ -104,9 +114,7 @@ func TestMessageBus_doDeliverNextPulse(t *testing.T) {
 			PulseNumber:     101,
 			NextPulseNumber: 102,
 		}
-		ps.CurrentFunc = func(ctx context.Context) (*core.Pulse, error) {
-			return newPulse, nil
-		}
+		ps.CurrentMock.Return(newPulse, nil)
 		pulseUpdated = true
 		mb.OnPulse(ctx, *newPulse)
 	}()

@@ -29,25 +29,20 @@ import (
 type jetDropTimeoutProvider struct {
 	waitersLock sync.RWMutex
 	waiters     map[core.RecordID]*jetDropTimeout
-
-	waitersInitLocksLock sync.Mutex
-	waitersInitLocks     map[core.RecordID]*sync.RWMutex
-}
-
-func (p *jetDropTimeoutProvider) getLock(jetID core.RecordID) *sync.RWMutex {
-	p.waitersInitLocksLock.Lock()
-	defer p.waitersInitLocksLock.Unlock()
-
-	if _, ok := p.waitersInitLocks[jetID]; !ok {
-		p.waitersInitLocks[jetID] = &sync.RWMutex{}
-	}
-
-	return p.waitersInitLocks[jetID]
 }
 
 func (p *jetDropTimeoutProvider) getWaiter(jetID core.RecordID) *jetDropTimeout {
 	p.waitersLock.RLock()
 	defer p.waitersLock.RUnlock()
+
+	if _, ok := p.waiters[jetID]; !ok {
+		p.waiters[jetID] = &jetDropTimeout{
+			jetDropLocker: make(chan struct{}),
+			timeoutLocker: make(chan struct{}),
+			lastJdPulse:   0,
+			isTimeoutRun:  false,
+		}
+	}
 
 	return p.waiters[jetID]
 }
@@ -79,28 +74,20 @@ func (jdw *jetDropTimeout) setLastPulse(pn core.PulseNumber) {
 
 func (m *middleware) waitForDrop(handler core.MessageHandler) core.MessageHandler {
 	return func(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
-		inslogger.FromContext(ctx).Debugf("[waitForDrop] pulse %v starts %v", parcel.Pulse(), time.Now())
+		logger := inslogger.FromContext(ctx)
+		logger.Debugf("[waitForDrop] pulse %v starts %v", parcel.Pulse(), time.Now())
 		// If the call is a call in redirect-chain
 		// skip waiting for the hot records
 		if parcel.DelegationToken() != nil {
-			inslogger.FromContext(ctx).Debugf("[waitForDrop] parcel.DelegationToken() != nil")
+			logger.Debugf("[waitForDrop] parcel.DelegationToken() != nil")
 			return handler(ctx, parcel)
 		}
 
 		jetID := jetFromContext(ctx)
-		lock := m.jetDropTimeoutProvider.getLock(jetID)
 		waiter := m.jetDropTimeoutProvider.getWaiter(jetID)
 
-		lock.RLock()
-		if waiter == nil {
-			inslogger.FromContext(ctx).Debugf("[waitForDrop] waiter is nil for %v", jetID)
-			lock.RUnlock()
-			return handler(ctx, parcel)
-		}
-		lock.RUnlock()
-
 		if waiter.getLastPulse() < parcel.Pulse() {
-			inslogger.FromContext(ctx).Debugf("[waitForDrop] waiter.getLastPulse() != parcel.Pulse(), %v - %v,", waiter.getLastPulse(), parcel.Pulse())
+			logger.Debugf("[waitForDrop] waiter.getLastPulse() != parcel.Pulse(), %v - %v,", waiter.getLastPulse(), parcel.Pulse())
 			waiter.runDropWaitingTimeout()
 
 			select {
@@ -108,14 +95,14 @@ func (m *middleware) waitForDrop(handler core.MessageHandler) core.MessageHandle
 			case <-waiter.timeoutLocker:
 			}
 
-			inslogger.FromContext(ctx).Debugf("[waitForDrop] after select - %v", time.Now())
+			logger.Debugf("[waitForDrop] after select - %v", time.Now())
 
 			waiter.isTimeoutRunLock.Lock()
 			waiter.isTimeoutRun = false
 			waiter.isTimeoutRunLock.Unlock()
 		}
 
-		inslogger.FromContext(ctx).Debugf("[waitForDrop] before handler exec - %v", time.Now())
+		logger.Debugf("[waitForDrop] before handler exec - %v", time.Now())
 		fmt.Println("waiter.getLastJdPulse() - ", waiter.getLastPulse())
 		fmt.Println("parcel.Pulse() - ", parcel.Pulse())
 		fmt.Println("jetID - ", jetID)
@@ -135,45 +122,32 @@ func (jdw *jetDropTimeout) runDropWaitingTimeout() {
 	jdw.isTimeoutRun = true
 	jdw.timeoutLocker = make(chan struct{})
 
-	go func() {
-		time.Sleep(2 * time.Second)
-
+	time.AfterFunc(2*time.Second, func() {
 		close(jdw.timeoutLocker)
 
 		jdw.isTimeoutRunLock.Lock()
 		jdw.isTimeoutRun = false
 		jdw.isTimeoutRunLock.Unlock()
-	}()
+	})
 }
 
 func (m *middleware) unlockDropWaiters(handler core.MessageHandler) core.MessageHandler {
 	return func(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
-		inslogger.FromContext(ctx).Debugf("[unlockDropWaiters] pulse %v starts %v", parcel.Pulse(), time.Now())
+		logger := inslogger.FromContext(ctx)
+		logger.Debugf("[unlockDropWaiters] pulse %v starts %v", parcel.Pulse(), time.Now())
 		jetID := jetFromContext(ctx)
-		lock := m.jetDropTimeoutProvider.getLock(jetID)
+
 		waiter := m.jetDropTimeoutProvider.getWaiter(jetID)
-		inslogger.FromContext(ctx).Debugf("[unlockDropWaiters] jetID %v", jetID)
+		logger.Debugf("[unlockDropWaiters] jetID %v", jetID)
 
-		lock.Lock()
-		defer lock.Unlock()
-
-		if waiter == nil {
-			inslogger.FromContext(ctx).Debugf("[unlockDropWaiters] waiter == nil, %v", jetID)
-			waiter = &jetDropTimeout{
-				jetDropLocker: make(chan struct{}),
-				timeoutLocker: make(chan struct{}),
-			}
-			m.jetDropTimeoutProvider.waiters[jetID] = waiter
-		}
-
-		inslogger.FromContext(ctx).Debugf("[unlockDropWaiters] before handler %v", time.Now())
+		logger.Debugf("[unlockDropWaiters] before handler %v", time.Now())
 		resp, err := handler(ctx, parcel)
-		inslogger.FromContext(ctx).Debugf("[unlockDropWaiters] after handler %v", time.Now())
+		logger.Debugf("[unlockDropWaiters] after handler %v", time.Now())
 
 		waiter.setLastPulse(parcel.Pulse())
 		close(waiter.jetDropLocker)
 
-		inslogger.FromContext(ctx).Debugf("[unlockDropWaiters] channel unlocked %v", time.Now())
+		logger.Debugf("[unlockDropWaiters] channel unlocked %v", time.Now())
 
 		waiter.jetDropLocker = make(chan struct{})
 
