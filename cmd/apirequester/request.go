@@ -55,9 +55,9 @@ func severalSimpleRequestToDifferentMembers(insSDK *sdk.SDK) {
 
 	for i := 0; i < 10; i++ {
 		fmt.Printf("Try to transfer money (%d):\n", i)
-		res, traceID, err := insSDK.Transfer(1, members[i], members[i+10])
+		traceID, err := insSDK.Transfer(1, members[i], members[i+10])
 		check("Can not transfer money, error: ", err)
-		fmt.Println("Result of transfer: ", res, ". TraceId: ", traceID)
+		fmt.Println("Transfer success. TraceId: ", traceID)
 	}
 	fmt.Print("severalSimpleRequestToDifferentMembers done just fine\n\n")
 }
@@ -95,9 +95,9 @@ func severalParallelRequestToDifferentMembers(insSDK *sdk.SDK) {
 		go func(i int) {
 			defer wg.Done()
 			fmt.Printf("Try to transfer money (%d):\n", i)
-			res, traceID, err := insSDK.Transfer(1, members[i], members[i+10])
+			traceID, err := insSDK.Transfer(1, members[i], members[i+10])
 			check("Can not transfer money, error: ", err)
-			fmt.Println("Result of transfer: ", res, ". TraceId: ", traceID)
+			fmt.Println("Transfer success. TraceId: ", traceID)
 		}(i)
 	}
 	wg.Wait()

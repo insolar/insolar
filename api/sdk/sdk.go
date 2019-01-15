@@ -158,27 +158,27 @@ func (sdk *SDK) CreateMember() (*Member, string, error) {
 	return NewMember(response.Result.(string), string(privateKeyStr)), response.TraceID, nil
 }
 
-func (sdk *SDK) Transfer(amount uint, from *Member, to *Member) (string, string, error) {
+func (sdk *SDK) Transfer(amount uint, from *Member, to *Member) (string, error) {
 	ctx := inslogger.ContextWithTrace(context.Background(), "Transfer")
 	params := []interface{}{amount, to.Reference}
 	config, err := requester.CreateUserConfig(from.Reference, from.PrivateKey)
 	if err != nil {
-		return "", "", errors.Wrap(err, "[ Transfer ] can't create user config")
+		return "", errors.Wrap(err, "[ Transfer ] can't create user config")
 	}
 
 	body, err := sdk.sendRequest(ctx, "Transfer", params, config)
 	if err != nil {
-		return "", "", errors.Wrap(err, "[ Transfer ] can't send request")
+		return "", errors.Wrap(err, "[ Transfer ] can't send request")
 	}
 
 	response, err := sdk.getResponse(body)
 	if err != nil {
-		return "", "", errors.Wrap(err, "[ Transfer ] can't get response")
+		return "", errors.Wrap(err, "[ Transfer ] can't get response")
 	}
 
 	if response.Error != "" {
-		return "", response.TraceID, errors.New(response.Error)
+		return response.TraceID, errors.New(response.Error)
 	}
 
-	return response.Result.(string), response.TraceID, nil
+	return response.TraceID, nil
 }
