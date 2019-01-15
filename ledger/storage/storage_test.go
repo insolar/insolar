@@ -142,7 +142,8 @@ func TestDB_CreateDrop(t *testing.T) {
 	drop, messages, dropSize, err := db.CreateDrop(ctx, jetID, pulse, []byte{4, 5, 6})
 	require.NoError(t, err)
 	require.NotEqual(t, 0, dropSize)
-	require.Equal(t, msgCount, len(messages))
+	// TODO: messages collection was disabled in ab46d01, validation is not active ATM
+	require.Equal(t, 0, len(messages))
 	require.Equal(t, pulse, drop.Pulse)
 	require.Equal(t, "2aCdao6DhZSWQNTrtrxJW7QQZRb6UJ1ssRi9cg", base58.Encode(drop.Hash))
 
