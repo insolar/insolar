@@ -80,7 +80,6 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 	h.replayHandlers[core.TypeGetObjectIndex] = m.checkJet(h.handleGetObjectIndex)
 	h.replayHandlers[core.TypeGetPendingRequests] = m.checkJet(h.handleHasPendingRequests)
 	h.replayHandlers[core.TypeGetJet] = h.handleGetJet
-	h.replayHandlers[core.TypeHotRecords] = h.handleHotRecords
 
 	// Validation.
 	h.replayHandlers[core.TypeValidateRecord] = m.checkJet(h.handleValidateRecord)
