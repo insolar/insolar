@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
@@ -142,7 +143,9 @@ func (m *middleware) unlockDropWaiters(handler core.MessageHandler) core.Message
 	return func(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
 		logger := inslogger.FromContext(ctx)
 		logger.Debugf("[unlockDropWaiters] pulse %v starts %v", parcel.Pulse(), time.Now())
-		jetID := jetFromContext(ctx)
+
+		hotDataMessage := parcel.Message().(*message.HotData)
+		jetID := hotDataMessage.DropJet
 
 		waiter := m.jetDropTimeoutProvider.getWaiter(jetID)
 		logger.Debugf("[unlockDropWaiters] jetID %v", jetID)
