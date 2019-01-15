@@ -75,8 +75,12 @@ func (p *RecentStorageProvider) CloneStorage(fromJetID, toJetID core.RecordID) {
 		clone.ttl--
 		toStorage.recentObjects[k] = clone
 	}
-	for k, v := range fromStorage.pendingRequests {
-		toStorage.pendingRequests[k] = v
+	for objID, objRequests := range fromStorage.pendingRequests {
+		clone := make(map[core.RecordID]struct{}, len(objRequests))
+		for reqID, v := range objRequests {
+			clone[reqID] = v
+		}
+		toStorage.pendingRequests[objID] = clone
 	}
 	p.storage[string(toPrefix)] = toStorage
 }
