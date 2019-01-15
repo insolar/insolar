@@ -294,7 +294,7 @@ func (t *Tree) LeafIDs() []core.RecordID {
 
 func getBit(value []byte, index uint8) bool {
 	if uint(index) >= uint(len(value)*8) {
-		panic("index overflow")
+		panic(fmt.Sprintf("index overflow: value=%08b, index=%v", value, index))
 	}
 	byteIndex := uint(index / 8)
 	bitIndex := uint(7 - index%8)
