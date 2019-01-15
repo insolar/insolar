@@ -206,13 +206,13 @@ func (db *DB) getJetTree(ctx context.Context, pulse core.PulseNumber) (*jet.Tree
 
 // SplitJetTree performs jet split and returns resulting jet ids.
 func (db *DB) SplitJetTree(
-	ctx context.Context, from, to core.PulseNumber, jetID core.RecordID,
+	ctx context.Context, pulse core.PulseNumber, jetID core.RecordID,
 ) (*core.RecordID, *core.RecordID, error) {
 	db.jetTreeLock.Lock()
 	defer db.jetTreeLock.Unlock()
 
-	k := prefixkey(scopeIDSystem, []byte{sysJetTree}, to.Bytes())
-	tree, err := db.getJetTree(ctx, from)
+	k := prefixkey(scopeIDSystem, []byte{sysJetTree}, pulse.Bytes())
+	tree, err := db.getJetTree(ctx, pulse)
 	if err != nil {
 		return nil, nil, err
 	}
