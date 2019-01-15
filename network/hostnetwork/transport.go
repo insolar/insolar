@@ -154,9 +154,6 @@ func NewInternalTransport(conf configuration.Configuration, nodeRef string) (net
 	}
 	origin, err := getOrigin(tp, nodeRef)
 	if err != nil {
-		go tp.Stop()
-		<-tp.Stopped()
-		tp.Close()
 		return nil, errors.Wrap(err, "error getting origin")
 	}
 	result := &hostTransport{handlers: make(map[types.PacketType]network.RequestHandler)}
