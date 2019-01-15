@@ -27,7 +27,14 @@ import (
 
 // Manager provide methods to manage components lifecycle
 type Manager struct {
+	parent     *Manager
 	components []interface{}
+	provides   []interface{}
+}
+
+// NewManager creates new component manager
+func NewManager(parent *Manager) *Manager {
+	return &Manager{parent: parent}
 }
 
 // Register components in Manager and inject required dependencies.
@@ -49,7 +56,10 @@ func (m *Manager) Inject(components ...interface{}) {
 
 		for i := 0; i < componentType.NumField(); i++ {
 			fieldMeta := componentType.Field(i)
-			if _, ok := fieldMeta.Tag.Lookup("inject"); ok && component.Field(i).IsNil() {
+			if value, ok := fieldMeta.Tag.Lookup("inject"); ok && component.Field(i).IsNil() {
+				if value == "subcomponent" && m.parent == nil {
+					continue
+				}
 				log.Debugf("ComponentManager: Component %s need inject: ", componentType.String(), fieldMeta.Name)
 				m.mustInject(component, fieldMeta)
 			}
