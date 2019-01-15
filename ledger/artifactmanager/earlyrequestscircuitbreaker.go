@@ -58,6 +58,8 @@ func (b *earlyRequestCircuitBreakerProvider) onTimeoutHappened() {
 	for _, breaker := range b.breakers {
 		close(breaker.timeoutChannel)
 	}
+
+	b.breakers = map[core.RecordID]*requestCircuitBreakerProvider{}
 }
 
 func (m *middleware) checkBreaker(handler core.MessageHandler) core.MessageHandler {

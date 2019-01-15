@@ -594,6 +594,11 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 		return errors.Wrap(err, "failed to process jets")
 	}
 
+	err = m.ArtifactManagerMessageHandler.OnPulse(ctx, newPulse)
+	if err != nil {
+		inslogger.FromContext(ctx).Error(errors.Wrap(err, "ArtifactManagerMessageHandler OnPulse() returns error"))
+	}
+
 	m.GIL.Release(ctx)
 
 	if !persist {
@@ -618,10 +623,15 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 		}
 	}
 
-	return m.handleOnPulses(ctx, newPulse)
+	err = m.Bus.OnPulse(ctx, newPulse)
+	if err != nil {
+		inslogger.FromContext(ctx).Error(errors.Wrap(err, "MessageBus OnPulse() returns error"))
+	}
+
+	return m.LR.OnPulse(ctx, newPulse)
 }
 
-func (m *PulseManager) handleOnPulses(ctx context.Context, newPulse core.Pulse) error{
+func (m *PulseManager) onPulse(ctx context.Context, newPulse core.Pulse) error {
 	err := m.Bus.OnPulse(ctx, newPulse)
 	if err != nil {
 		inslogger.FromContext(ctx).Error(errors.Wrap(err, "MessageBus OnPulse() returns error"))
