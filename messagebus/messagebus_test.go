@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/network"
 	"github.com/stretchr/testify/require"
@@ -51,6 +52,10 @@ func prepare(t *testing.T, ctx context.Context, currentPulse int, msgPulse int) 
 	jc := testutils.NewJetCoordinatorMock(t)
 	ls := testutils.NewLocalStorageMock(t)
 	nn := network.NewNodeNetworkMock(t)
+	nn.GetOriginFunc = func() (r core.Node) {
+		return storage.Node{}
+	}
+
 	pcs := testutils.NewPlatformCryptographyScheme()
 	cs := testutils.NewCryptographyServiceMock(t)
 	dtf := testutils.NewDelegationTokenFactoryMock(t)
@@ -76,6 +81,9 @@ func prepare(t *testing.T, ctx context.Context, currentPulse int, msgPulse int) 
 	}
 	parcel.TypeFunc = func() core.MessageType {
 		return testType
+	}
+	parcel.GetSenderFunc = func() (r core.RecordRef) {
+		return testutils.RandomRef()
 	}
 
 	mb.Unlock(ctx)
@@ -120,6 +128,7 @@ func TestMessageBus_doDeliverWrongPulse(t *testing.T) {
 	ctx := context.Background()
 	mb, _, parcel := prepare(t, ctx, 100, 200)
 
+	close(mb.NextPulseMessagePoolChan)
 	_, err := mb.doDeliver(ctx, parcel)
-	require.EqualError(t, err, "[ doDeliver ] error in checkPulse: [ checkPulse ] Incorrect message pulse 200 100")
+	require.EqualError(t, err, "[ doDeliver ] error in checkPulse: [ checkPulse ] Incorrect message pulse (parcel: 200, current: 100)")
 }
