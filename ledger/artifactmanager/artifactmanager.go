@@ -286,7 +286,7 @@ func (m *LedgerArtifactManager) GetChildren(
 		return nil, err
 	}
 
-	iter, err := NewChildIterator(ctx, m.bus(ctx), parent, pulse, m.getChildrenChunkSize, *latestPulse)
+	iter, err := NewChildIterator(ctx, m.bus(ctx), m.db, parent, pulse, m.getChildrenChunkSize, *latestPulse)
 	return iter, err
 }
 
