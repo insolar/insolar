@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
+	"time"
 
 	"go.opencensus.io/trace"
 
@@ -202,7 +203,28 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 
 		ctx, callspan := instracer.StartSpan(ctx, "callHandler makeCall")
 		defer callspan.End()
-		result, err := ar.makeCall(ctx, params)
+
+		var result interface{}
+		ch := make(chan interface{}, 1)
+		go func() {
+			result, err = ar.makeCall(ctx, params)
+			ch <- nil
+		}()
+		select {
+
+		case <-ch:
+			if err != nil {
+				processError(err, "Can't makeCall", &resp, insLog)
+				return
+			}
+			resp.Result = result
+
+		case <-time.After(time.Duration(ar.cfg.Timeout) * time.Second):
+			resp.Error = "Messagebus timeout exceeded"
+			return
+
+		}
+
 		if err != nil {
 			processError(err, "Can't makeCall", &resp, insLog)
 			return
