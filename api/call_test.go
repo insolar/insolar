@@ -135,7 +135,7 @@ func TestTimeoutSuite(t *testing.T) {
 			}, nil
 		default:
 			if timeoutSuite.delay {
-				time.Sleep(time.Second * 20)
+				time.Sleep(time.Second * 21)
 			}
 			var result = "OK"
 			var contractErr *foundation.Error
@@ -150,6 +150,7 @@ func TestTimeoutSuite(t *testing.T) {
 	timeoutSuite.api.CertificateManager = cm
 	timeoutSuite.api.Start(timeoutSuite.ctx)
 
+	requester.SetTimeout(25)
 	suite.Run(t, timeoutSuite)
 
 	timeoutSuite.api.Stop(timeoutSuite.ctx)

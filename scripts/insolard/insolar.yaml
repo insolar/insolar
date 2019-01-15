@@ -41,4 +41,4 @@ genesis:
   rootbalance: 10000
 keyspath: "scripts/insolard/configs/bootstrap_keys.json"
 apirunner:
-  timeout: 10
+  timeout: 15

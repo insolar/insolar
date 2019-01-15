@@ -42,6 +42,7 @@ func init() {
 
 func SetTimeout(timeout uint) {
 	RequestTimeout = timeout
+	httpClient.Timeout = time.Duration(RequestTimeout) * time.Second
 }
 
 // createHTTPClient for connection re-use
