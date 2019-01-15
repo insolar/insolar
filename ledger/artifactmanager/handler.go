@@ -80,11 +80,11 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 	h.replayHandlers[core.TypeGetObjectIndex] = m.checkJet(h.handleGetObjectIndex)
 	h.replayHandlers[core.TypeGetPendingRequests] = m.checkJet(h.handleHasPendingRequests)
 	h.replayHandlers[core.TypeGetJet] = h.handleGetJet
+	h.replayHandlers[core.TypeHotRecords] = h.handleHotRecords
 
 	// Validation.
 	h.replayHandlers[core.TypeValidateRecord] = m.checkJet(h.handleValidateRecord)
 	h.replayHandlers[core.TypeValidationCheck] = m.checkJet(h.handleValidationCheck)
-	h.replayHandlers[core.TypeHotRecords] = h.handleHotRecords
 
 	// Generic.
 	h.Bus.MustRegister(core.TypeGetCode, h.handleGetCode)
@@ -98,11 +98,11 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 	h.Bus.MustRegister(core.TypeGetObjectIndex, m.checkJet(m.saveParcel(h.handleGetObjectIndex)))
 	h.Bus.MustRegister(core.TypeGetPendingRequests, m.checkJet(m.saveParcel(h.handleHasPendingRequests)))
 	h.Bus.MustRegister(core.TypeGetJet, h.handleGetJet)
+	h.Bus.MustRegister(core.TypeHotRecords, h.handleHotRecords)
 
 	// Validation.
 	h.Bus.MustRegister(core.TypeValidateRecord, m.checkJet(m.saveParcel(h.handleValidateRecord)))
 	h.Bus.MustRegister(core.TypeValidationCheck, m.checkJet(m.saveParcel(h.handleValidationCheck)))
-	h.Bus.MustRegister(core.TypeHotRecords, m.checkJet(m.saveParcel(h.handleHotRecords)))
 	h.Bus.MustRegister(core.TypeJetDrop, m.checkJet(h.handleJetDrop))
 
 	// Heavy.

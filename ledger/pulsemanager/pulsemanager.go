@@ -135,6 +135,7 @@ func (m *PulseManager) processEndPulse(
 
 			if info.left == nil && info.right == nil {
 				// No split happened.
+				msg.Jet = *core.NewRecordRef(core.DomainID, jetID)
 				genericRep, err := m.Bus.Send(ctx, msg, nil)
 				if err != nil {
 					return errors.Wrap(err, "failed to send executor data")
@@ -398,7 +399,7 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse c
 		return nil, errors.Wrap(err, "failed to clone jet tree into a new pulse")
 	}
 
-	if m.NodeNet.GetOrigin().Role() == core.StaticRoleLightMaterial {
+	if m.NodeNet.GetOrigin().Role() != core.StaticRoleLightMaterial {
 		return nil, nil
 	}
 
