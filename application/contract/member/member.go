@@ -85,9 +85,9 @@ func (m *Member) Call(rootDomain core.RecordRef, method string, params []byte, s
 	case "CreateMember":
 		return m.createMemberCall(rootDomain, params)
 	case "GetMyBalance":
-		return m.getMyBalance()
+		return m.getMyBalanceCall()
 	case "GetBalance":
-		return m.getBalance(params)
+		return m.getBalanceCall(params)
 	case "Transfer":
 		return m.transferCall(params)
 	case "DumpUserInfo":
@@ -97,7 +97,7 @@ func (m *Member) Call(rootDomain core.RecordRef, method string, params []byte, s
 	case "RegisterNode":
 		return m.registerNodeCall(rootDomain, params)
 	case "GetNodeRef":
-		return m.getNodeRef(rootDomain, params)
+		return m.getNodeRefCall(rootDomain, params)
 	}
 	return nil, &foundation.Error{S: "Unknown method"}
 }
@@ -112,27 +112,27 @@ func (m *Member) createMemberCall(ref core.RecordRef, params []byte) (interface{
 	return rootDomain.CreateMember(name, key)
 }
 
-func (m *Member) getMyBalance() (interface{}, error) {
+func (m *Member) getMyBalanceCall() (interface{}, error) {
 	w, err := wallet.GetImplementationFrom(m.GetReference())
 	if err != nil {
-		return 0, fmt.Errorf("[ getMyBalance ]: %s", err.Error())
+		return 0, fmt.Errorf("[ getMyBalanceCall ]: %s", err.Error())
 	}
 
 	return w.GetBalance()
 }
 
-func (m *Member) getBalance(params []byte) (interface{}, error) {
+func (m *Member) getBalanceCall(params []byte) (interface{}, error) {
 	var member string
 	if err := signer.UnmarshalParams(params, &member); err != nil {
-		return nil, fmt.Errorf("[ getBalance ] : %s", err.Error())
+		return nil, fmt.Errorf("[ getBalanceCall ] : %s", err.Error())
 	}
 	memberRef, err := core.NewRefFromBase58(member)
 	if err != nil {
-		return nil, fmt.Errorf("[ getBalance ] : %s", err.Error())
+		return nil, fmt.Errorf("[ getBalanceCall ] : %s", err.Error())
 	}
 	w, err := wallet.GetImplementationFrom(*memberRef)
 	if err != nil {
-		return nil, fmt.Errorf("[ getBalance ] : %s", err.Error())
+		return nil, fmt.Errorf("[ getBalanceCall ] : %s", err.Error())
 	}
 
 	return w.GetBalance()
@@ -195,22 +195,22 @@ func (m *Member) registerNodeCall(ref core.RecordRef, params []byte) (interface{
 	return string(cert), nil
 }
 
-func (m *Member) getNodeRef(ref core.RecordRef, params []byte) (interface{}, error) {
+func (m *Member) getNodeRefCall(ref core.RecordRef, params []byte) (interface{}, error) {
 	var publicKey string
 	if err := signer.UnmarshalParams(params, &publicKey); err != nil {
-		return nil, fmt.Errorf("[ getNodeRef ] Can't unmarshal params: %s", err.Error())
+		return nil, fmt.Errorf("[ getNodeRefCall ] Can't unmarshal params: %s", err.Error())
 	}
 
 	rootDomain := rootdomain.GetObject(ref)
 	nodeDomainRef, err := rootDomain.GetNodeDomainRef()
 	if err != nil {
-		return nil, fmt.Errorf("[ getNodeRef ] Can't get nodeDmainRef: %s", err.Error())
+		return nil, fmt.Errorf("[ getNodeRefCall ] Can't get nodeDmainRef: %s", err.Error())
 	}
 
 	nd := nodedomain.GetObject(nodeDomainRef)
 	nodeRef, err := nd.GetNodeRefByPK(publicKey)
 	if err != nil {
-		return nil, fmt.Errorf("[ getNodeRef ] Node not found: %s", err.Error())
+		return nil, fmt.Errorf("[ getNodeRefCall ] Node not found: %s", err.Error())
 	}
 
 	return nodeRef, nil
