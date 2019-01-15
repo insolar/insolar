@@ -35,6 +35,8 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
+const CallUrl = "http://localhost:19192/api/call"
+
 type TimeoutSuite struct {
 	suite.Suite
 	ctx   context.Context
@@ -55,7 +57,7 @@ func (suite *TimeoutSuite) TestRunner_callHandler() {
 
 	resp, err := requester.SendWithSeed(
 		suite.ctx,
-		TestUrl,
+		CallUrl,
 		suite.user,
 		&requester.RequestConfigJSON{},
 		seed[:],
@@ -77,7 +79,7 @@ func (suite *TimeoutSuite) TestRunner_callHandlerTimeout() {
 	suite.delay = true
 	resp, err := requester.SendWithSeed(
 		suite.ctx,
-		TestUrl,
+		CallUrl,
 		suite.user,
 		&requester.RequestConfigJSON{},
 		seed[:],
@@ -109,6 +111,7 @@ func TestTimeoutSuite(t *testing.T) {
 
 	http.DefaultServeMux = new(http.ServeMux)
 	cfg := configuration.NewAPIRunner()
+	cfg.Address = "localhost:19192"
 	timeoutSuite.api, err = NewRunner(&cfg)
 	require.NoError(t, err)
 
