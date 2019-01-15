@@ -34,7 +34,6 @@ func oneSimpleRequest(insSDK *sdk.SDK) {
 func severalSimpleRequestToRootMember(insSDK *sdk.SDK) {
 	fmt.Println("Try to create several new members:")
 	for i := 0; i < 10; i++ {
-		fmt.Printf("Try to create member (%d):\n", i)
 		m, traceID, err := insSDK.CreateMember()
 		check("Can not create member, error: ", err)
 		fmt.Println("Success! New member ref: ", m.Reference, ". TraceId: ", traceID)
@@ -54,7 +53,6 @@ func severalSimpleRequestToDifferentMembers(insSDK *sdk.SDK) {
 	}
 
 	for i := 0; i < 10; i++ {
-		fmt.Printf("Try to transfer money (%d):\n", i)
 		traceID, err := insSDK.Transfer(1, members[i], members[i+10])
 		check("Can not transfer money, error: ", err)
 		fmt.Println("Transfer success. TraceId: ", traceID)
@@ -69,7 +67,6 @@ func severalParallelRequestToRootMember(insSDK *sdk.SDK) {
 	for i := 0; i < 10; i++ {
 		go func(i int) {
 			defer wg.Done()
-			fmt.Printf("Try to create member (%d):\n", i)
 			m, traceID, err := insSDK.CreateMember()
 			check("Can not create member, error: ", err)
 			fmt.Println("Success! New member ref: ", m.Reference, ". TraceId: ", traceID)
@@ -94,7 +91,6 @@ func severalParallelRequestToDifferentMembers(insSDK *sdk.SDK) {
 	for i := 0; i < 10; i++ {
 		go func(i int) {
 			defer wg.Done()
-			fmt.Printf("Try to transfer money (%d):\n", i)
 			traceID, err := insSDK.Transfer(1, members[i], members[i+10])
 			check("Can not transfer money, error: ", err)
 			fmt.Println("Transfer success. TraceId: ", traceID)
