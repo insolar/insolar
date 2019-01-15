@@ -926,10 +926,9 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 func (h *MessageHandler) nodeForJet(
 	ctx context.Context, jetID core.RecordID, parcelPulse, targetPulse core.PulseNumber,
 ) (*core.RecordRef, error) {
-	// TODO: @andreyromancev. 12.01.19. uncomment when heavy ready.
-	// if parcelPulse-targetPulse < h.conf.LightChainLimit {
-	// 	return h.JetCoordinator.LightExecutorForJet(ctx, jetID, targetPulse)
-	// }
+	if targetPulse == core.FirstPulseNumber || (parcelPulse-targetPulse < h.conf.LightChainLimit) {
+		return h.JetCoordinator.LightExecutorForJet(ctx, jetID, targetPulse)
+	}
 	// return h.JetCoordinator.Heavy(ctx, parcelPulse)
 
 	return h.JetCoordinator.LightExecutorForJet(ctx, jetID, targetPulse)
