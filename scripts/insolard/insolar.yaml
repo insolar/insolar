@@ -6,15 +6,10 @@ ledger:
     datadirectory: ./data
 log:
   level: Debug
-stats:
-  listenaddress: 0.0.0.0:8080
 logicrunner:
   rpclisten: 127.0.0.1:18182
   goplugin:
     runnerlisten: 127.0.0.1:18181
 pulsar:
   listenaddress: 0.0.0.0:8090
-genesis:
-  rootkeys: "scripts/insolard/configs/root_member_keys.json"
-  rootbalance: 10000
 keyspath: "scripts/insolard/configs/bootstrap_keys.json"
