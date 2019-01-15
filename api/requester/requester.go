@@ -35,7 +35,7 @@ import (
 var httpClient *http.Client
 
 const (
-	RequestTimeout int = 5
+	RequestTimeout int = 20
 )
 
 func init() {

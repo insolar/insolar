@@ -49,9 +49,20 @@ type response struct {
 
 type SDK struct {
 	apiUrls *ringBuffer
+	info    *requester.InfoResponse
 }
 
 func NewSDK(urls []string) (*SDK, error) {
+	buffer := &ringBuffer{urls: urls}
+	response, err := requester.Info(buffer.Next())
+	if err != nil {
+		err = errors.Wrap(err, "[ NewSDK ] cant get info")
+		return nil, err
+	}
+	return &SDK{
+		apiUrls: buffer,
+		info:    response,
+	}, nil
 
 }
 
@@ -96,11 +107,4 @@ func (sdk *SDK) getResponse(body []byte) (*response, error) {
 	}
 
 	return res, nil
-}
-
-// Constructor
-func (sdk *SDK) Info() (*requester.InfoResponse, error) {
-	info, err := requester.Info(apiurls.Next())
-	check("problem with request to info:", err)
-	return info, nil
 }
