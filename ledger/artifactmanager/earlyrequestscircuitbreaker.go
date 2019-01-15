@@ -18,7 +18,6 @@ package artifactmanager
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
@@ -29,7 +28,7 @@ import (
 )
 
 type earlyRequestCircuitBreakerProvider struct {
-	lock sync.Mutex
+	lock     sync.Mutex
 	breakers map[core.RecordID]*requestCircuitBreakerProvider
 }
 
@@ -38,7 +37,7 @@ type requestCircuitBreakerProvider struct {
 	timeoutChannel chan struct{}
 }
 
-func (b *earlyRequestCircuitBreakerProvider) getBreaker(jetID core.RecordID) *requestCircuitBreakerProvider{
+func (b *earlyRequestCircuitBreakerProvider) getBreaker(jetID core.RecordID) *requestCircuitBreakerProvider {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -56,7 +55,7 @@ func (b *earlyRequestCircuitBreakerProvider) onTimeoutHappened() {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	for _, breaker := range b.breakers{
+	for _, breaker := range b.breakers {
 		close(breaker.timeoutChannel)
 	}
 }
@@ -82,18 +81,16 @@ func (m *middleware) checkBreaker(handler core.MessageHandler) core.MessageHandl
 		jetID := jetFromContext(ctx)
 		requestBreaker := m.earlyRequestCircuitBreakerProvider.getBreaker(jetID)
 
-
 		select {
 		case <-requestBreaker.hotDataChannel:
 		case <-requestBreaker.timeoutChannel:
-			return &reply.Error{ErrType:reply.ErrHotDataTimeout}, nil
+			return &reply.Error{ErrType: reply.ErrHotDataTimeout}, nil
 		}
 
 		logger.Debugf("[waitForDrop] before handler exec - %v", time.Now())
 		return handler(ctx, parcel)
 	}
 }
-
 
 func (m *middleware) closeBreaker(handler core.MessageHandler) core.MessageHandler {
 	return func(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
@@ -102,7 +99,6 @@ func (m *middleware) closeBreaker(handler core.MessageHandler) core.MessageHandl
 
 		hotDataMessage := parcel.Message().(*message.HotData)
 		jetID := hotDataMessage.DropJet
-
 
 		breaker := m.earlyRequestCircuitBreakerProvider.getBreaker(jetID)
 
