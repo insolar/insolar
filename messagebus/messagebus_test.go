@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/network"
 	"github.com/stretchr/testify/require"
@@ -51,12 +52,9 @@ func prepare(t *testing.T, ctx context.Context, currentPulse int, msgPulse int) 
 	jc := testutils.NewJetCoordinatorMock(t)
 	ls := testutils.NewLocalStorageMock(t)
 	nn := network.NewNodeNetworkMock(t)
-
-	originID := core.NewRecordRef(testutils.RandomID(), testutils.RandomID())
-
-	node := network.NewNodeMock(t)
-	node.IDMock.Return(*originID)
-	nn.GetOriginMock.Return(node)
+	nn.GetOriginFunc = func() (r core.Node) {
+		return storage.Node{}
+	}
 
 	pcs := testutils.NewPlatformCryptographyScheme()
 	cs := testutils.NewCryptographyServiceMock(t)
@@ -78,14 +76,14 @@ func prepare(t *testing.T, ctx context.Context, currentPulse int, msgPulse int) 
 
 	parcel := testutils.NewParcelMock(t)
 
-	parcel.GetSenderFunc = func() (r core.RecordRef) {
-		return *originID
-	}
 	parcel.PulseFunc = func() core.PulseNumber {
 		return core.PulseNumber(msgPulse)
 	}
 	parcel.TypeFunc = func() core.MessageType {
 		return testType
+	}
+	parcel.GetSenderFunc = func() (r core.RecordRef) {
+		return testutils.RandomRef()
 	}
 
 	mb.Unlock(ctx)
@@ -114,9 +112,12 @@ func TestMessageBus_doDeliverNextPulse(t *testing.T) {
 			PulseNumber:     101,
 			NextPulseNumber: 102,
 		}
-		ps.CurrentMock.Return(newPulse, nil)
+		ps.CurrentFunc = func(ctx context.Context) (*core.Pulse, error) {
+			return newPulse, nil
+		}
 		pulseUpdated = true
-		mb.OnPulse(ctx, *newPulse)
+		err := mb.OnPulse(ctx, *newPulse)
+		require.NoError(t, err)
 	}()
 	result, err := mb.doDeliver(ctx, parcel)
 	require.NoError(t, err)
@@ -126,8 +127,21 @@ func TestMessageBus_doDeliverNextPulse(t *testing.T) {
 
 func TestMessageBus_doDeliverWrongPulse(t *testing.T) {
 	ctx := context.Background()
-	mb, _, parcel := prepare(t, ctx, 100, 200)
+	mb, ps, parcel := prepare(t, ctx, 100, 200)
+
+	go func() {
+		time.Sleep(time.Second)
+		newPulse := &core.Pulse{
+			PulseNumber:     101,
+			NextPulseNumber: 102,
+		}
+		ps.CurrentFunc = func(ctx context.Context) (*core.Pulse, error) {
+			return newPulse, nil
+		}
+		err := mb.OnPulse(ctx, *newPulse)
+		require.NoError(t, err)
+	}()
 
 	_, err := mb.doDeliver(ctx, parcel)
-	require.EqualError(t, err, "[ doDeliver ] error in checkPulse: [ checkPulse ] Incorrect message pulse 200 100")
+	require.EqualError(t, err, "[ doDeliver ] error in checkPulse: [ checkPulse ] Incorrect message pulse (parcel: 200, current: 101)")
 }
