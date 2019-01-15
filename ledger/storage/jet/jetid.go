@@ -67,5 +67,5 @@ func Parent(id core.RecordID) core.RecordID {
 		return id
 	}
 
-	return *NewID(depth-1, resetBits(prefix, depth-1))
+	return *NewID(depth-1, ResetBits(prefix, depth-1))
 }

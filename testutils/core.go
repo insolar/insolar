@@ -55,14 +55,15 @@ func RandomID() core.RecordID {
 	return id
 }
 
-// RandomJet generates random jet ID
-func RandomJet() (id core.RecordID) {
-	_, err := rand.Read(id[core.PulseNumberSize:])
+// RandomJet generates random jet with random depth (uint8) and
+func RandomJet() core.RecordID {
+	jetbuf := make([]byte, core.RecordHashSize+1)
+	_, err := rand.Read(jetbuf)
 	if err != nil {
 		panic(err)
 	}
-	copy(id[:core.PulseNumberSize], core.PulseNumberJet.Bytes())
-	return id
+	depth := uint8(jetbuf[0]) % (core.RecordHashSize * 8)
+	return *jet.NewID(depth, jet.ResetBits(jetbuf[1:], depth))
 }
 
 type cryptographySchemeMock struct{}
