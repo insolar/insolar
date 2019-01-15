@@ -144,11 +144,6 @@ func (m *PulseManager) processEndPulse(
 					if rep, ok := genericRep.(*reply.OK); !ok {
 						return fmt.Errorf("unexpected reply: %#v", rep)
 					}
-				} else {
-					err := m.ArtifactManagerMessageHandler.OnExecutorNotChanged(ctx, info.id)
-					if err != nil {
-						return errors.Wrap(err, "failed to notify ArtifactManagerMessageHandler")
-					}
 				}
 			} else {
 				// Split happened.
@@ -162,11 +157,6 @@ func (m *PulseManager) processEndPulse(
 					if rep, ok := genericRep.(*reply.OK); !ok {
 						return fmt.Errorf("unexpected reply: %#v", rep)
 					}
-				} else {
-					err := m.ArtifactManagerMessageHandler.OnExecutorNotChanged(ctx, info.left.id)
-					if err != nil {
-						return errors.Wrap(err, "failed to notify ArtifactManagerMessageHandler")
-					}
 				}
 				if !info.right.mineNext {
 					rightMsg := msg
@@ -179,13 +169,7 @@ func (m *PulseManager) processEndPulse(
 					if rep, ok := genericRep.(*reply.OK); !ok {
 						return fmt.Errorf("unexpected reply: %#v", rep)
 					}
-				} else {
-					err := m.ArtifactManagerMessageHandler.OnExecutorNotChanged(ctx, info.right.id)
-					if err != nil {
-						return errors.Wrap(err, "failed to notify ArtifactManagerMessageHandler")
-					}
 				}
-
 			}
 
 			// FIXME: @andreyromancev. 09.01.2019. Temporary disabled validation. Uncomment when jet split works properly.
@@ -612,6 +596,44 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 	err = m.ArtifactManagerMessageHandler.OnPulse(ctx, newPulse)
 	if err != nil {
 		inslogger.FromContext(ctx).Error(errors.Wrap(err, "ArtifactManagerMessageHandler OnPulse() returns error"))
+	}
+
+	if len(jets) > 0{
+		queue:= make([]jetInfo, 0)
+		queue = append(queue, jets[0])
+
+		for len(queue) > 0{
+			top := queue[0]
+			queue = queue[1:]
+			if top.left != nil{
+				queue = append(queue, *top.left)
+			}
+			if top.right != nil{
+				queue = append(queue, *top.right)
+			}
+			inslogger.FromContext(ctx).Debugf("JET TREE %v", top.id.JetIDString())
+		}
+	}
+
+	if len(jets) > 0{
+		queue:= make([]jetInfo, 0)
+		queue = append(queue, jets[0])
+
+		for len(queue) > 0{
+			top := queue[0]
+			queue = queue[1:]
+			if top.left != nil{
+				queue = append(queue, *top.left)
+			}
+			if top.right != nil{
+				queue = append(queue, *top.right)
+			}
+			inslogger.FromContext(ctx).Debugf("SET FROM JET TREE %v", top.id.JetIDString())
+
+			if top.mineNext {
+				_ = m.ArtifactManagerMessageHandler.OnExecutorNotChanged(ctx, top.id)
+			}
+		}
 	}
 
 	m.GIL.Release(ctx)

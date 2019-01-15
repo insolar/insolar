@@ -121,6 +121,7 @@ func (h *MessageHandler) OnPulse(context.Context, core.Pulse) error {
 }
 
 func (h *MessageHandler) OnExecutorNotChanged(ctx context.Context, jetID core.RecordID) error {
+	inslogger.FromContext(ctx).Debugf("[OnExecutorNotChanged] %v", jetID.JetIDString())
 	h.middleware.closeEarlyRequestBreakerForJet(jetID)
 	return nil
 }

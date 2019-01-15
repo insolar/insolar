@@ -59,7 +59,8 @@ func (b *earlyRequestCircuitBreakerProvider) onTimeoutHappened() {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	for _, breaker := range b.breakers {
+	for jetID, breaker := range b.breakers {
+		fmt.Printf("[onTimeoutHappened] %v", jetID.JetIDString())
 		close(breaker.timeoutChannel)
 	}
 
@@ -87,13 +88,13 @@ func (m *middleware) checkEarlyRequestBreaker(handler core.MessageHandler) core.
 		jetID := jetFromContext(ctx)
 		requestBreaker := m.earlyRequestCircuitBreakerProvider.getBreaker(jetID)
 
-		logger.Debugf("[checkEarlyRequestBreaker] wait jet - %v", jetID)
+		logger.Debugf("[checkEarlyRequestBreaker] wait jet - %v", jetID.JetIDString())
 		select {
 		case <-requestBreaker.hotDataChannel:
 			logger.Debugf("[checkEarlyRequestBreaker] before handler exec - %v", time.Now())
 			return handler(ctx, parcel)
 		case <-requestBreaker.timeoutChannel:
-			logger.Errorf("[checkEarlyRequestBreaker] Timeout %v, jetID %v, message type %v", parcel.Pulse(), parcel.Message().Type().String())
+			logger.Errorf("[checkEarlyRequestBreaker] Timeout %v, jetID %v", parcel.Pulse(), jetID.JetIDString())
 			return &reply.Error{ErrType: reply.ErrHotDataTimeout}, nil
 		}
 	}
@@ -106,7 +107,7 @@ func (m *middleware) closeEarlyRequestBreaker(handler core.MessageHandler) core.
 
 		hotDataMessage := parcel.Message().(*message.HotData)
 		jetID := hotDataMessage.Jet.Record()
-		logger.Debugf("[closeEarlyRequestBreaker] wait jet - %v", jetID)
+		logger.Debugf("[closeEarlyRequestBreaker] wait jet - %v", jetID.JetIDString())
 		breaker := m.earlyRequestCircuitBreakerProvider.getBreaker(*jetID)
 		defer close(breaker.hotDataChannel)
 
@@ -116,6 +117,12 @@ func (m *middleware) closeEarlyRequestBreaker(handler core.MessageHandler) core.
 }
 
 func (m *middleware) closeEarlyRequestBreakerForJet(jetID core.RecordID) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("Ya slomalas", r)
+		}
+	}()
+	//fmt.Printf("[closeEarlyRequestBreakerForJet] %v", jetID.JetIDString())
 	breaker := m.earlyRequestCircuitBreakerProvider.getBreaker(jetID)
-	defer close(breaker.hotDataChannel)
+	close(breaker.hotDataChannel)
 }
