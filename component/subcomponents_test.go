@@ -83,8 +83,7 @@ type BigComponent struct {
 }
 
 func (b *BigComponent) Init(ctx context.Context) error {
-	b.cm = NewManager(nil)
-	b.cm.Inject(&SubComponent1{}, &SubComponent2{})
+	b.cm.Inject(&SubComponent1{}, &SubComponent2{}, b)
 	return nil
 }
 
