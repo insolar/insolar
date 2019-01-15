@@ -21,6 +21,7 @@ import (
 	"crypto/rand"
 	"encoding/gob"
 	"testing"
+	"time"
 
 	"github.com/insolar/insolar/configuration"
 	consensus "github.com/insolar/insolar/consensus/packets"
@@ -72,6 +73,8 @@ func (t *transportSuite) BeforeTest(suiteName, testName string) {
 	ctx := context.Background()
 	go t.node1.transport.Listen(ctx)
 	go t.node2.transport.Listen(ctx)
+
+	time.Sleep(time.Second)
 }
 
 func (t *transportSuite) AfterTest(suiteName, testName string) {
@@ -82,6 +85,8 @@ func (t *transportSuite) AfterTest(suiteName, testName string) {
 	go t.node2.transport.Stop()
 	<-t.node2.transport.Stopped()
 	t.node2.transport.Close()
+
+	time.Sleep(time.Second)
 }
 
 func generateRandomBytes(n int) ([]byte, error) {
