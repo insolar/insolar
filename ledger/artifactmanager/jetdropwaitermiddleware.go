@@ -76,6 +76,13 @@ func (m *middleware) waitForDrop(handler core.MessageHandler) core.MessageHandle
 	return func(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
 		logger := inslogger.FromContext(ctx)
 		logger.Debugf("[waitForDrop] pulse %v starts %v", parcel.Pulse(), time.Now())
+
+		// TODO: 15.01.2019 @egorikas
+		// Hack is needed for genesis
+		if parcel.Pulse() == core.FirstPulseNumber {
+			return handler(ctx, parcel)
+		}
+
 		// If the call is a call in redirect-chain
 		// skip waiting for the hot records
 		if parcel.DelegationToken() != nil {

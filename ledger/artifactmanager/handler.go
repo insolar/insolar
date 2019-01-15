@@ -88,21 +88,21 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 
 	// Generic.
 	h.Bus.MustRegister(core.TypeGetCode, h.handleGetCode)
-	h.Bus.MustRegister(core.TypeGetObject, m.checkJet(m.saveParcel(h.handleGetObject)))
-	h.Bus.MustRegister(core.TypeGetDelegate, m.checkJet(m.saveParcel(h.handleGetDelegate)))
-	h.Bus.MustRegister(core.TypeGetChildren, m.checkJet(m.saveParcel(h.handleGetChildren)))
-	h.Bus.MustRegister(core.TypeSetRecord, m.checkJet(m.checkHeavySync(m.saveParcel(h.handleSetRecord))))
-	h.Bus.MustRegister(core.TypeUpdateObject, m.checkJet(m.checkHeavySync(m.saveParcel(h.handleUpdateObject))))
-	h.Bus.MustRegister(core.TypeRegisterChild, m.checkJet(m.checkHeavySync(m.saveParcel(h.handleRegisterChild))))
-	h.Bus.MustRegister(core.TypeSetBlob, m.checkJet(m.checkHeavySync(m.saveParcel(h.handleSetBlob))))
-	h.Bus.MustRegister(core.TypeGetObjectIndex, m.checkJet(m.saveParcel(h.handleGetObjectIndex)))
-	h.Bus.MustRegister(core.TypeGetPendingRequests, m.checkJet(m.saveParcel(h.handleHasPendingRequests)))
+	h.Bus.MustRegister(core.TypeGetObject, m.checkJet(m.waitForDrop(m.saveParcel(h.handleGetObject))))
+	h.Bus.MustRegister(core.TypeGetDelegate, m.checkJet(m.waitForDrop(m.saveParcel(h.handleGetDelegate))))
+	h.Bus.MustRegister(core.TypeGetChildren, m.checkJet(m.waitForDrop(m.saveParcel(h.handleGetChildren))))
+	h.Bus.MustRegister(core.TypeSetRecord, m.checkJet(m.waitForDrop(m.checkHeavySync(m.saveParcel(h.handleSetRecord)))))
+	h.Bus.MustRegister(core.TypeUpdateObject, m.checkJet(m.waitForDrop(m.checkHeavySync(m.saveParcel(h.handleUpdateObject)))))
+	h.Bus.MustRegister(core.TypeRegisterChild, m.checkJet(m.waitForDrop(m.checkHeavySync(m.saveParcel(h.handleRegisterChild)))))
+	h.Bus.MustRegister(core.TypeSetBlob, m.checkJet(m.waitForDrop(m.checkHeavySync(m.saveParcel(h.handleSetBlob)))))
+	h.Bus.MustRegister(core.TypeGetObjectIndex, m.checkJet(m.waitForDrop(m.saveParcel(h.handleGetObjectIndex))))
+	h.Bus.MustRegister(core.TypeGetPendingRequests, m.checkJet(m.waitForDrop(m.saveParcel(h.handleHasPendingRequests))))
 	h.Bus.MustRegister(core.TypeGetJet, h.handleGetJet)
 
 	// Validation.
-	h.Bus.MustRegister(core.TypeValidateRecord, m.checkJet(m.saveParcel(h.handleValidateRecord)))
-	h.Bus.MustRegister(core.TypeValidationCheck, m.checkJet(m.saveParcel(h.handleValidationCheck)))
-	h.Bus.MustRegister(core.TypeHotRecords, m.checkJet(m.saveParcel(h.handleHotRecords)))
+	h.Bus.MustRegister(core.TypeValidateRecord, m.checkJet(m.waitForDrop(m.saveParcel(h.handleValidateRecord))))
+	h.Bus.MustRegister(core.TypeValidationCheck, m.checkJet(m.waitForDrop(m.saveParcel(h.handleValidationCheck))))
+	h.Bus.MustRegister(core.TypeHotRecords, m.checkJet(m.unlockDropWaiters(m.saveParcel(h.handleHotRecords))))
 	h.Bus.MustRegister(core.TypeJetDrop, m.checkJet(h.handleJetDrop))
 
 	// Heavy.
