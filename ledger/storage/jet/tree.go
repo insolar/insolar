@@ -315,7 +315,7 @@ func setBit(value []byte, index uint8) {
 // ResetBits returns a new byte slice with all bits in 'value' reset, starting from 'start' number of bit. If 'start'
 // is bigger than len(value), the original slice will be returned.
 func ResetBits(value []byte, start uint8) []byte {
-	if int(start) > len(value)*8 {
+	if int(start) >= len(value)*8 {
 		return value
 	}
 
