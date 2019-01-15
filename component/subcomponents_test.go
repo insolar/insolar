@@ -90,8 +90,7 @@ func (b *BigComponent) Init(ctx context.Context) error {
 }
 
 func (b *BigComponent) Start(ctx context.Context) error {
-	// TODO: fix endless loop
-	// b.cm.Start(ctx)
+	b.cm.Start(ctx)
 	b.SubInterface1.Method3()
 	b.SubInterface2.Method4()
 	return nil

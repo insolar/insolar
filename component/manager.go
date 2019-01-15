@@ -103,9 +103,25 @@ func injectDependency(component reflect.Value, dependencyMeta reflect.StructFiel
 	return false
 }
 
+func (m *Manager) isManaged(component interface{}) bool {
+	// TODO: refactor this behavior
+	if m.parent == nil {
+		return true
+	}
+	for _, c := range m.parent.components {
+		if c == component {
+			return false
+		}
+	}
+	return true
+}
+
 // Start invokes Start method of all components which implements Starter interface
 func (m *Manager) Start(ctx context.Context) error {
 	for _, c := range m.components {
+		if !m.isManaged(c) {
+			continue
+		}
 		name := reflect.TypeOf(c).Elem().String()
 		if s, ok := c.(Starter); ok {
 			log.Debugln("ComponentManager: Start component: ", name)
@@ -124,6 +140,9 @@ func (m *Manager) Start(ctx context.Context) error {
 // Init invokes Init method of all components which implements Initer interface
 func (m *Manager) Init(ctx context.Context) error {
 	for _, c := range m.components {
+		if !m.isManaged(c) {
+			continue
+		}
 		name := reflect.TypeOf(c).Elem().String()
 		s, ok := c.(Initer)
 		if !ok {
@@ -143,6 +162,9 @@ func (m *Manager) Init(ctx context.Context) error {
 func (m *Manager) Stop(ctx context.Context) error {
 
 	for i := len(m.components) - 1; i >= 0; i-- {
+		if !m.isManaged(m.components[i]) {
+			continue
+		}
 		name := reflect.TypeOf(m.components[i]).Elem().String()
 		if s, ok := m.components[i].(Stopper); ok {
 			log.Debugln("ComponentManager: Stop component: ", name)
