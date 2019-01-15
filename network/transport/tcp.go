@@ -96,7 +96,7 @@ func (t *tcpTransport) prepareListen() {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 
-	t.stopped = 0
+	atomic.StoreUint32(&t.stopped, 0)
 	t.disconnectStarted = make(chan bool, 1)
 	t.disconnectFinished = make(chan bool, 1)
 	listener, err := net.Listen("tcp", t.addr)
@@ -135,7 +135,7 @@ func (t *tcpTransport) Stop() {
 	log.Info("[ Stop ] Stop TCP transport")
 	t.prepareDisconnect()
 
-	t.stopped = 1
+	atomic.StoreUint32(&t.stopped, 1)
 	utils.CloseVerbose(t.listener)
 	t.pool.Reset()
 }
