@@ -29,7 +29,6 @@ import (
 type Manager struct {
 	parent     *Manager
 	components []interface{}
-	provides   []interface{}
 }
 
 // NewManager creates new component manager
@@ -60,7 +59,7 @@ func (m *Manager) Inject(components ...interface{}) {
 				if value == "subcomponent" && m.parent == nil {
 					continue
 				}
-				log.Debugf("ComponentManager: Component %s need inject: ", componentType.String(), fieldMeta.Name)
+				log.Debugf("ComponentManager: Component %s need inject: %s", componentType.String(), fieldMeta.Name)
 				m.mustInject(component, fieldMeta)
 			}
 		}
