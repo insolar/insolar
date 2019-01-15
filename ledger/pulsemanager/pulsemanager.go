@@ -631,20 +631,6 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 	return m.LR.OnPulse(ctx, newPulse)
 }
 
-func (m *PulseManager) onPulse(ctx context.Context, newPulse core.Pulse) error {
-	err := m.Bus.OnPulse(ctx, newPulse)
-	if err != nil {
-		inslogger.FromContext(ctx).Error(errors.Wrap(err, "MessageBus OnPulse() returns error"))
-	}
-
-	err = m.ArtifactManagerMessageHandler.OnPulse(ctx, newPulse)
-	if err != nil {
-		inslogger.FromContext(ctx).Error(errors.Wrap(err, "ArtifactManagerMessageHandler OnPulse() returns error"))
-	}
-
-	return m.LR.OnPulse(ctx, newPulse)
-}
-
 func (m *PulseManager) sendTreeToHeavy(ctx context.Context, pn core.PulseNumber) {
 	jetTree, err := m.db.GetJetTree(ctx, pn)
 	if err != nil {

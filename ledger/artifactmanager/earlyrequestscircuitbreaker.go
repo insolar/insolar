@@ -86,6 +86,7 @@ func (m *middleware) checkBreaker(handler core.MessageHandler) core.MessageHandl
 		select {
 		case <-requestBreaker.hotDataChannel:
 		case <-requestBreaker.timeoutChannel:
+			logger.Errorf("[checkBreaker] Timeout %v, jetID %v, message type %v", parcel.Pulse(), parcel.Message().Type().String())
 			return &reply.Error{ErrType: reply.ErrHotDataTimeout}, nil
 		}
 
@@ -100,16 +101,12 @@ func (m *middleware) closeBreaker(handler core.MessageHandler) core.MessageHandl
 		logger.Debugf("[unlockDropWaiters] pulse %v starts %v", parcel.Pulse(), time.Now())
 
 		hotDataMessage := parcel.Message().(*message.HotData)
-		jetID := hotDataMessage.DropJet
+		jetID := hotDataMessage.Jet.Record()
 
-		breaker := m.earlyRequestCircuitBreakerProvider.getBreaker(jetID)
+		breaker := m.earlyRequestCircuitBreakerProvider.getBreaker(*jetID)
+		defer close(breaker.hotDataChannel)
 
 		logger.Debugf("[unlockDropWaiters] before handler %v", time.Now())
-		resp, err := handler(ctx, parcel)
-		logger.Debugf("[unlockDropWaiters] after handler %v", time.Now())
-
-		close(breaker.hotDataChannel)
-
-		return resp, err
+		return handler(ctx, parcel)
 	}
 }
