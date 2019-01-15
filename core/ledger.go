@@ -299,3 +299,8 @@ var (
 type PulseStorage interface {
 	Current(ctx context.Context) (*Pulse, error)
 }
+
+//go:generate minimock -i github.com/insolar/insolar/core.ArtifactManagerMessageHandler -o ../testutils -s _mock.go
+type ArtifactManagerMessageHandler interface {
+	OnPulse(context.Context, Pulse) error
+}

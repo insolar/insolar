@@ -34,11 +34,11 @@ const (
 )
 
 type middleware struct {
-	db                     *storage.DB
-	jetCoordinator         core.JetCoordinator
-	messageBus             core.MessageBus
-	jetDropTimeoutProvider jetDropTimeoutProvider
-	conf                   *configuration.Ledger
+	db                                 *storage.DB
+	jetCoordinator                     core.JetCoordinator
+	messageBus                         core.MessageBus
+	earlyRequestCircuitBreakerProvider *earlyRequestCircuitBreakerProvider
+	conf                               *configuration.Ledger
 }
 
 func newMiddleware(
@@ -48,13 +48,11 @@ func newMiddleware(
 	messageBus core.MessageBus,
 ) *middleware {
 	return &middleware{
-		db:             db,
-		jetCoordinator: jetCoordinator,
-		messageBus:     messageBus,
-		jetDropTimeoutProvider: jetDropTimeoutProvider{
-			waiters: map[core.RecordID]*jetDropTimeout{},
-		},
-		conf: conf,
+		db:                                 db,
+		jetCoordinator:                     jetCoordinator,
+		messageBus:                         messageBus,
+		earlyRequestCircuitBreakerProvider: &earlyRequestCircuitBreakerProvider{breakers: map[core.RecordID]*requestCircuitBreakerProvider{}},
+		conf:                               conf,
 	}
 }
 

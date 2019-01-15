@@ -44,16 +44,17 @@ type ActiveListSwapper interface {
 
 // PulseManager implements core.PulseManager.
 type PulseManager struct {
-	LR                         core.LogicRunner                `inject:""`
-	Bus                        core.MessageBus                 `inject:""`
-	NodeNet                    core.NodeNetwork                `inject:""`
-	JetCoordinator             core.JetCoordinator             `inject:""`
-	GIL                        core.GlobalInsolarLock          `inject:""`
-	CryptographyService        core.CryptographyService        `inject:""`
-	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
-	RecentStorageProvider      recentstorage.Provider          `inject:""`
-	ActiveListSwapper          ActiveListSwapper               `inject:""`
-	PulseStorage               pulseStoragePm                  `inject:""`
+	LR                            core.LogicRunner                   `inject:""`
+	Bus                           core.MessageBus                    `inject:""`
+	NodeNet                       core.NodeNetwork                   `inject:""`
+	JetCoordinator                core.JetCoordinator                `inject:""`
+	GIL                           core.GlobalInsolarLock             `inject:""`
+	CryptographyService           core.CryptographyService           `inject:""`
+	PlatformCryptographyScheme    core.PlatformCryptographyScheme    `inject:""`
+	RecentStorageProvider         recentstorage.Provider             `inject:""`
+	ActiveListSwapper             ActiveListSwapper                  `inject:""`
+	PulseStorage                  pulseStoragePm                     `inject:""`
+	ArtifactManagerMessageHandler core.ArtifactManagerMessageHandler `inject:""`
 	// TODO: move clients pool to component - @nordicdyno - 18.Dec.2018
 	syncClientsPool *heavyclient.Pool
 
@@ -617,9 +618,18 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 		}
 	}
 
-	err = m.Bus.OnPulse(ctx, newPulse)
+	return m.handleOnPulses(ctx, newPulse)
+}
+
+func (m *PulseManager) handleOnPulses(ctx context.Context, newPulse core.Pulse) error{
+	err := m.Bus.OnPulse(ctx, newPulse)
 	if err != nil {
 		inslogger.FromContext(ctx).Error(errors.Wrap(err, "MessageBus OnPulse() returns error"))
+	}
+
+	err = m.ArtifactManagerMessageHandler.OnPulse(ctx, newPulse)
+	if err != nil {
+		inslogger.FromContext(ctx).Error(errors.Wrap(err, "ArtifactManagerMessageHandler OnPulse() returns error"))
 	}
 
 	return m.LR.OnPulse(ctx, newPulse)
