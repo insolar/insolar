@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type SubInterface1 interface {
@@ -113,4 +114,6 @@ func TestManager_Subcomponents(t *testing.T) {
 	assert.NotNil(t, big.SubInterface1.(*SubComponent1).Interface1)
 	assert.NotNil(t, big.SubInterface1.(*SubComponent1).SubInterface2)
 
+	require.NoError(t, rootCm.Start(nil))
+	require.NoError(t, rootCm.Stop(nil))
 }
