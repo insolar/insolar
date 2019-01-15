@@ -180,11 +180,12 @@ func sendToHeavy(t *testing.T, withretry bool) {
 	pm.GIL = gilMock
 	pm.PulseStorage = storage.NewPulseStorage(db)
 
-	provideMock := recentstorage.NewProviderMock(t)
-	provideMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
+	providerMock := recentstorage.NewProviderMock(t)
+	providerMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
 		return recentMock
 	}
-	pm.RecentStorageProvider = provideMock
+	providerMock.CloneStorageMock.Return()
+	pm.RecentStorageProvider = providerMock
 
 	pm.ActiveListSwapper = alsMock
 	pm.CryptographyService = cryptoServiceMock

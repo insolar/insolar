@@ -74,6 +74,7 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 
 	providerMock := recentstorage.NewProviderMock(t)
 	providerMock.GetStorageMock.Return(recentMock)
+	providerMock.CloneStorageMock.Return()
 
 	mbMock := testutils.NewMessageBusMock(t)
 	mbMock.OnPulseFunc = func(context.Context, core.Pulse) error {
