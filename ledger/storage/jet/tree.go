@@ -241,8 +241,9 @@ func (t *Tree) Find(id core.RecordID) (*core.RecordID, bool) {
 	if id.Pulse() == core.PulseNumberJet {
 		return &id, true
 	}
-	j, depth := t.Head.Find(id.Hash(), 0)
-	return NewID(uint8(depth), resetBits(id.Hash(), depth)), j.Actual
+	hash := id.Hash()
+	j, depth := t.Head.Find(hash, 0)
+	return NewID(uint8(depth), resetBits(hash, depth)), j.Actual
 }
 
 // Update add missing tree branches for provided prefix. If 'setActual' is set, all encountered nodes will be marked as
