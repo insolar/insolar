@@ -34,7 +34,7 @@ import (
 
 var httpClient *http.Client
 
-var RequestTimeout uint = 5
+var RequestTimeout uint = 15
 
 func init() {
 	httpClient = createHTTPClient()
