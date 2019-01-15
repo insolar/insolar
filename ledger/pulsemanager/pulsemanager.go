@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/heavyclient"
 	"github.com/insolar/insolar/ledger/recentstorage"
@@ -69,6 +70,15 @@ type PulseManager struct {
 	options pmOptions
 }
 
+type jetInfo struct {
+	id          core.RecordID
+	mineCurrent bool
+	mineNext    bool
+	left        *jetInfo
+	right       *jetInfo
+}
+
+// TODO: @andreyromancev. 15.01.19. Just store ledger configuration in PM. This is not required.
 type pmOptions struct {
 	enableSync       bool
 	splitThreshold   uint64
@@ -104,28 +114,13 @@ func NewPulseManager(db *storage.DB, conf configuration.Ledger) *PulseManager {
 
 func (m *PulseManager) processEndPulse(
 	ctx context.Context,
+	jets []jetInfo,
 	prevPulseNumber core.PulseNumber,
 	currentPulse, newPulse *core.Pulse,
 ) error {
-	tree, err := m.db.CloneJetTree(ctx, currentPulse.PulseNumber, newPulse.PulseNumber)
-	if err != nil {
-		return errors.Wrap(err, "failed to clone jet tree into a new pulse")
-	}
-
-	jetIDs := tree.LeafIDs()
-
 	var g errgroup.Group
-	for _, jetID := range jetIDs {
-		jetID := jetID
-
-		executor, err := m.JetCoordinator.LightExecutorForJet(ctx, jetID, currentPulse.PulseNumber)
-		if err != nil {
-			return err
-		}
-		if *executor != m.JetCoordinator.Me() {
-			continue
-		}
-
+	for _, info := range jets {
+		jetID := info.id
 		g.Go(func() error {
 			drop, dropSerialized, _, err := m.createDrop(ctx, jetID, prevPulseNumber, currentPulse.PulseNumber)
 			if err != nil {
@@ -138,13 +133,35 @@ func (m *PulseManager) processEndPulse(
 				return errors.Wrapf(err, "getExecutorData failed for jet id %v", jetID)
 			}
 
-			nextExecutor, err := m.JetCoordinator.LightExecutorForJet(ctx, jetID, newPulse.PulseNumber)
-			if err != nil {
-				return err
-			}
-			err = m.sendExecutorData(ctx, currentPulse, newPulse, jetID, msg, nextExecutor)
-			if err != nil {
-				return err
+			if info.left == nil && info.right == nil {
+				// No split happened.
+				genericRep, err := m.Bus.Send(ctx, msg, nil)
+				if err != nil {
+					return errors.Wrap(err, "failed to send executor data")
+				}
+				if rep, ok := genericRep.(*reply.OK); !ok {
+					return fmt.Errorf("unexpected reply: %#v", rep)
+				}
+			} else {
+				// Split happened.
+				leftMsg := msg
+				leftMsg.Jet = *core.NewRecordRef(core.DomainID, info.left.id)
+				rightMsg := msg
+				rightMsg.Jet = *core.NewRecordRef(core.DomainID, info.right.id)
+				genericRep, err := m.Bus.Send(ctx, leftMsg, nil)
+				if err != nil {
+					return errors.Wrap(err, "failed to send executor data")
+				}
+				if rep, ok := genericRep.(*reply.OK); !ok {
+					return fmt.Errorf("unexpected reply: %#v", rep)
+				}
+				genericRep, err = m.Bus.Send(ctx, rightMsg, nil)
+				if err != nil {
+					return errors.Wrap(err, "failed to send executor data")
+				}
+				if rep, ok := genericRep.(*reply.OK); !ok {
+					return fmt.Errorf("unexpected reply: %#v", rep)
+				}
 			}
 
 			// FIXME: @andreyromancev. 09.01.2019. Temporary disabled validation. Uncomment when jet split works properly.
@@ -159,7 +176,7 @@ func (m *PulseManager) processEndPulse(
 			return nil
 		})
 	}
-	err = g.Wait()
+	err := g.Wait()
 	if err != nil {
 		return errors.Wrap(err, "got error on jets sync")
 	}
@@ -375,85 +392,131 @@ func (m *PulseManager) getExecutorHotData(
 // TODO: @andreyromancev. 12.01.19. Remove when dynamic split is working.
 var split = true
 
-func (m *PulseManager) sendExecutorData(
-	ctx context.Context,
-	currentPulse, newPulse *core.Pulse,
-	jetID core.RecordID,
-	msg *message.HotData,
-	receiver *core.RecordRef,
-) error {
-	// TODO: @andreyromancev. 12.01.19. Uncomment when split checking is ready.
-	// shouldSplit := func() bool {
-	// 	if len(msg.JetDropSizeHistory) < m.options.dropHistorySize {
-	// 		return false
-	// 	}
-	// 	for _, info := range msg.JetDropSizeHistory {
-	// 		if info.DropSize < m.options.splitThreshold {
-	// 			return false
-	// 		}
-	// 	}
-	// 	return true
-	// }
+func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse core.PulseNumber) ([]jetInfo, error) {
+	tree, err := m.db.CloneJetTree(ctx, currentPulse, newPulse)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to clone jet tree into a new pulse")
+	}
 
-	if split {
-		split = false
+	if m.NodeNet.GetOrigin().Role() == core.StaticRoleLightMaterial {
+		return nil, nil
+	}
 
-		fmt.Println("SPLIT HAPPENED")
-		left, right, err := m.db.SplitJetTree(
-			ctx,
-			currentPulse.PulseNumber,
-			newPulse.PulseNumber,
-			jetID,
-		)
+	var results []jetInfo
+	jetIDs := tree.LeafIDs()
+	for _, jetID := range jetIDs {
+		executor, err := m.JetCoordinator.LightExecutorForJet(ctx, jetID, currentPulse)
 		if err != nil {
-			return errors.Wrap(err, "failed to split jet tree")
+			return nil, err
 		}
-		err = m.db.AddJets(ctx, *left, *right)
-		if err != nil {
-			return errors.Wrap(err, "failed to add jets")
+		if *executor != m.JetCoordinator.Me() {
+			continue
 		}
-		// Set actual because we performed split.
-		err = m.db.UpdateJetTree(ctx, newPulse.PulseNumber, true, *left, *right)
-		if err != nil {
-			return errors.Wrap(err, "failed to update tree")
-		}
-		leftMsg := *msg
-		leftMsg.Jet = *core.NewRecordRef(core.DomainID, *left)
-		rightMsg := *msg
-		rightMsg.Jet = *core.NewRecordRef(core.DomainID, *right)
-		fmt.Printf(
-			"[send hot] dropPulse: %v, dropJet: %v, jet: %v",
-			leftMsg.Drop.Pulse,
-			leftMsg.DropJet.JetIDString(),
-			leftMsg.Jet.Record().JetIDString(),
-		)
-		fmt.Println("")
-		_, err = m.Bus.Send(ctx, &leftMsg, nil)
-		if err != nil {
-			return errors.Wrap(err, "failed to send executor data")
-		}
-		fmt.Printf(
-			"[send hot] dropPulse: %v, dropJet: %v, jet: %v",
-			rightMsg.Drop.Pulse,
-			rightMsg.DropJet.JetIDString(),
-			rightMsg.Jet.Record().JetIDString(),
-		)
-		fmt.Println("")
-		_, err = m.Bus.Send(ctx, &rightMsg, nil)
-		if err != nil {
-			return errors.Wrap(err, "failed to send executor data")
-		}
-	} else {
-		err := m.db.UpdateJetTree(ctx, newPulse.PulseNumber, true, jetID)
-		if err != nil {
-			return errors.Wrap(err, "failed to update tree")
-		}
-		msg.Jet = *core.NewRecordRef(core.DomainID, jetID)
-		_, err = m.Bus.Send(ctx, msg, &core.MessageSendOptions{Receiver: receiver})
-		if err != nil {
-			return errors.Wrap(err, "failed to send executor data")
+
+		info := jetInfo{id: jetID, mineCurrent: true}
+		results = append(results, info)
+		if split {
+			split = false
+
+			leftJetID, rightJetID, err := m.db.SplitJetTree(
+				ctx,
+				newPulse,
+				jetID,
+			)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to split jet tree")
+			}
+			err = m.db.AddJets(ctx, *leftJetID, *rightJetID)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to add jets")
+			}
+			// Set actual because we are the last executor for jet.
+			err = m.db.UpdateJetTree(ctx, newPulse, true, *leftJetID, *rightJetID)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to update tree")
+			}
+
+			info.left = &jetInfo{id: *leftJetID, mineCurrent: false}
+			info.right = &jetInfo{id: *rightJetID, mineCurrent: false}
+			nextLeftExecutor, err := m.JetCoordinator.LightExecutorForJet(ctx, *leftJetID, newPulse)
+			if err != nil {
+				return nil, err
+			}
+			if *nextLeftExecutor == m.JetCoordinator.Me() {
+				info.left.mineNext = true
+				err := m.rewriteHotData(ctx, jetID, *leftJetID)
+				if err != nil {
+					return nil, err
+				}
+			}
+			nextRightExecutor, err := m.JetCoordinator.LightExecutorForJet(ctx, *rightJetID, newPulse)
+			if err != nil {
+				return nil, err
+			}
+			if *nextRightExecutor == m.JetCoordinator.Me() {
+				info.right.mineNext = true
+				err := m.rewriteHotData(ctx, jetID, *rightJetID)
+				if err != nil {
+					return nil, err
+				}
+			}
+
+			inslogger.FromContext(ctx).Debugf(
+				"SPLIT HAPPENED parent: %v, left: %v, right: %v\n",
+				jetID.JetIDString(),
+				leftJetID.JetIDString(),
+				rightJetID.JetIDString(),
+			)
+		} else {
+			// Set actual because we are the last executor for jet.
+			err = m.db.UpdateJetTree(ctx, newPulse, true, jetID)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to update tree")
+			}
+			nextExecutor, err := m.JetCoordinator.LightExecutorForJet(ctx, jetID, newPulse)
+			if err != nil {
+				return nil, err
+			}
+			if *nextExecutor == m.JetCoordinator.Me() {
+				info.mineNext = true
+			}
 		}
 	}
+
+	return results, nil
+}
+
+func (m *PulseManager) rewriteHotData(ctx context.Context, fromJetID, toJetID core.RecordID) error {
+	recentStorage := m.RecentStorageProvider.GetStorage(fromJetID)
+
+	for id := range recentStorage.GetObjects() {
+		idx, err := m.db.GetObjectIndex(ctx, fromJetID, &id, false)
+		if err != nil {
+			return errors.Wrap(err, "failed to rewrite index")
+		}
+		err = m.db.SetObjectIndex(ctx, toJetID, &id, idx)
+		if err != nil {
+			return errors.Wrap(err, "failed to rewrite index")
+		}
+	}
+
+	for _, requests := range recentStorage.GetRequests() {
+		for fromReqID := range requests {
+			request, err := m.db.GetRecord(ctx, fromJetID, &fromReqID)
+			if err != nil {
+				return errors.Wrap(err, "failed to rewrite pending request")
+			}
+			toReqID, err := m.db.SetRecord(ctx, toJetID, fromReqID.Pulse(), request)
+			if err != nil {
+				return errors.Wrap(err, "failed to rewrite pending request")
+			}
+			if !fromReqID.Equal(toReqID) {
+				return errors.New("failed to rewrite pending request (wrong ID generated)")
+			}
+		}
+	}
+
+	m.RecentStorageProvider.CloneStorage(fromJetID, toJetID)
 
 	return nil
 }
@@ -468,7 +531,6 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 
 	var err error
 	m.GIL.Acquire(ctx)
-
 	m.PulseStorage.Lock()
 
 	// FIXME: @andreyromancev. 17.12.18. return core.Pulse here.
@@ -510,6 +572,12 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 		}
 	}
 
+	jets, err := m.processJets(ctx, currentPulse.PulseNumber, newPulse.PulseNumber)
+	if err != nil {
+		m.GIL.Release(ctx)
+		m.PulseStorage.Unlock()
+		return errors.Wrap(err, "failed to process jets")
+	}
 	m.PulseStorage.Unlock()
 	m.PulseStorage.Set(&newPulse)
 	m.GIL.Release(ctx)
@@ -522,7 +590,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 	// execute only on material executor
 	// TODO: do as much as possible async.
 	if m.NodeNet.GetOrigin().Role() == core.StaticRoleLightMaterial {
-		err = m.processEndPulse(ctx, prevPulseNumber, &currentPulse, &newPulse)
+		err = m.processEndPulse(ctx, jets, prevPulseNumber, &currentPulse, &newPulse)
 		if err != nil {
 			fmt.Println("process end pulse failed: ", err)
 			return err

@@ -99,6 +99,13 @@ func (jc *JetCoordinator) QueryRole(
 		return jc.VirtualValidatorsForObject(ctx, objID, pulse)
 
 	case core.DynamicRoleLightExecutor:
+		if objID.Pulse() == core.PulseNumberJet {
+			node, err := jc.LightExecutorForJet(ctx, objID, pulse)
+			if err != nil {
+				return nil, err
+			}
+			return []core.RecordRef{*node}, nil
+		}
 		node, err := jc.LightExecutorForObject(ctx, objID, pulse)
 		if err != nil {
 			return nil, err
