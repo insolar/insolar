@@ -119,24 +119,30 @@ func (m *PulseManager) processEndPulse(
 	currentPulse, newPulse *core.Pulse,
 ) error {
 	var g errgroup.Group
-	for _, info := range jets {
-		jetID := info.id
+	for _, i := range jets {
+		fmt.Printf(
+			"I process jet: %v, current pulse %v\n",
+			i.id.JetIDString(),
+			currentPulse.PulseNumber,
+		)
+		info := i
 		g.Go(func() error {
-			drop, dropSerialized, _, err := m.createDrop(ctx, jetID, prevPulseNumber, currentPulse.PulseNumber)
+			drop, dropSerialized, _, err := m.createDrop(ctx, info.id, prevPulseNumber, currentPulse.PulseNumber)
 			if err != nil {
 				return errors.Wrapf(err, "create drop on pulse %v failed", currentPulse.PulseNumber)
 			}
 
 			msg, err := m.getExecutorHotData(
-				ctx, jetID, newPulse.PulseNumber, drop, dropSerialized)
+				ctx, info.id, newPulse.PulseNumber, drop, dropSerialized)
 			if err != nil {
-				return errors.Wrapf(err, "getExecutorData failed for jet id %v", jetID)
+				return errors.Wrapf(err, "getExecutorData failed for jet id %v", info.id)
 			}
 
 			if info.left == nil && info.right == nil {
+				fmt.Printf("No split. jet: %v, mine next: %v", info.id, info.mineNext)
 				// No split happened.
 				if !info.mineNext {
-					msg.Jet = *core.NewRecordRef(core.DomainID, jetID)
+					msg.Jet = *core.NewRecordRef(core.DomainID, info.id)
 					genericRep, err := m.Bus.Send(ctx, msg, nil)
 					if err != nil {
 						return errors.Wrap(err, "failed to send executor data")
@@ -144,8 +150,10 @@ func (m *PulseManager) processEndPulse(
 					if rep, ok := genericRep.(*reply.OK); !ok {
 						return fmt.Errorf("unexpected reply: %#v", rep)
 					}
+					fmt.Printf("sent drop. pulse: %v, jet: %v\n", msg.Drop.Pulse, msg.DropJet.JetIDString())
 				}
 			} else {
+				fmt.Printf("Split. jet: %v, left mine next: %v", info.id, info.left.mineNext)
 				// Split happened.
 				if !info.left.mineNext {
 					leftMsg := msg
@@ -157,7 +165,9 @@ func (m *PulseManager) processEndPulse(
 					if rep, ok := genericRep.(*reply.OK); !ok {
 						return fmt.Errorf("unexpected reply: %#v", rep)
 					}
+					fmt.Printf("sent drop. pulse: %v, jet: %v\n", msg.Drop.Pulse, msg.DropJet.JetIDString())
 				}
+				fmt.Printf("Split. jet: %v, right mine next: %v", info.id, info.right.mineNext)
 				if !info.right.mineNext {
 					rightMsg := msg
 					rightMsg.Jet = *core.NewRecordRef(core.DomainID, info.right.id)
@@ -169,6 +179,7 @@ func (m *PulseManager) processEndPulse(
 					if rep, ok := genericRep.(*reply.OK); !ok {
 						return fmt.Errorf("unexpected reply: %#v", rep)
 					}
+					fmt.Printf("sent drop. pulse: %v, jet: %v\n", msg.Drop.Pulse, msg.DropJet.JetIDString())
 				}
 			}
 
@@ -275,12 +286,10 @@ func (m *PulseManager) createDrop(
 		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't CreateDrop")
 	}
 	err = m.db.SetDrop(ctx, jetID, drop)
-	if err == storage.ErrOverride {
-		err = nil
-	}
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't SetDrop")
 	}
+	fmt.Printf("saved drop. pulse: %v, jet: %v\n", drop.Pulse, jetID.JetIDString())
 
 	dropSerialized, err = jet.Encode(drop)
 	if err != nil {
@@ -659,6 +668,14 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 			go m.sendTreeToHeavy(ctx, storagePulse.Pulse.PulseNumber)
 		}
 	}
+
+	fmt.Printf(
+		"Finished pulse %v, current: %v, time: %v",
+		newPulse.PulseNumber,
+		currentPulse.PulseNumber,
+		time.Now(),
+	)
+	fmt.Println()
 
 	err = m.Bus.OnPulse(ctx, newPulse)
 	if err != nil {

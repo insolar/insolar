@@ -164,6 +164,7 @@ func (s *Sync) Store(ctx context.Context, jetID core.RecordID, pn core.PulseNumb
 	stats.Record(ctx,
 		statSyncedRecords.M(int64(len(kvs))),
 		statSyncedPulse.M(int64(pn)),
+		statSyncedBytes.M(core.KVSize(kvs)),
 	)
 	return nil
 }

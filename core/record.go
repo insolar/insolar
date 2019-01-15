@@ -23,7 +23,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/jbenet/go-base58"
+	base58 "github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 )
 
@@ -48,7 +48,7 @@ func (id *RecordID) String() string {
 
 func (id *RecordID) JetIDString() string {
 	jetPN := id[:PulseNumberSize]
-	depth := id[PulseNumberSize]
+	depth := int(uint8(id[PulseNumberSize]))
 	prefix := id[PulseNumberSize+1:]
 
 	prefixBits := make([]int, len(prefix)*8)
@@ -62,7 +62,10 @@ func (id *RecordID) JetIDString() string {
 	if depth == 0 {
 		prefixStr = "-"
 	} else {
-		for i := 0; i < int(depth); i++ {
+		if depth > len(prefixBits) {
+			return fmt.Sprintf("[JET: <wrong format> %d %b]", depth, prefix)
+		}
+		for i := 0; i < depth; i++ {
 			prefixStr = fmt.Sprintf("%s%d", prefixStr, prefixBits[i])
 		}
 	}

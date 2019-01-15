@@ -378,15 +378,18 @@ func (h *MessageHandler) handleGetChildren(
 
 	idx, err := h.db.GetObjectIndex(ctx, jetID, msg.Parent.Record(), false)
 	if err == storage.ErrNotFound {
-		heavy, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
-		if err != nil {
-			return nil, err
-		}
-		_, err = h.saveIndexFromHeavy(ctx, h.db, jetID, msg.Parent, heavy)
-		if err != nil {
-			return nil, err
-		}
-		return reply.NewGetChildrenRedirect(h.DelegationTokenFactory, parcel, heavy)
+		fmt.Printf("[failed to fetch children] pulse: %v, jet: %v, id: %v", parcel.Pulse(), jetID.JetIDString(), msg.Parent.Record())
+		fmt.Println()
+		return nil, errors.New("failed to fetch index")
+		// heavy, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
+		// if err != nil {
+		// 	return nil, err
+		// }
+		// _, err = h.saveIndexFromHeavy(ctx, h.db, jetID, msg.Parent, heavy)
+		// if err != nil {
+		// 	return nil, err
+		// }
+		// return reply.NewGetChildrenRedirect(h.DelegationTokenFactory, parcel, heavy)
 	}
 	if err != nil {
 		fmt.Println("handleGetChildren: failed to fetch object index, error - ", err)
@@ -406,13 +409,29 @@ func (h *MessageHandler) handleGetChildren(
 		currentChild = idx.ChildPointer
 	}
 
-	// We don't have this child reference.
-	if currentChild != nil && currentChild.Pulse() != parcel.Pulse() {
-		node, err := h.nodeForJet(ctx, jetID, parcel.Pulse(), currentChild.Pulse())
+	// The object has no children.
+	if currentChild == nil {
+		return &reply.Children{Refs: nil, NextFrom: nil}, nil
+	}
+
+	// Try to fetch the first child.
+	_, err = h.db.GetRecord(ctx, jetID, currentChild)
+	if err == storage.ErrNotFound {
+		// We don't have the first child record. It means, it was created on another node.
+		childTree, err := h.db.GetJetTree(ctx, currentChild.Pulse())
+		if err != nil {
+			return nil, err
+		}
+		childJet, _ := childTree.Find(*msg.Parent.Record())
+
+		node, err := h.nodeForJet(ctx, *childJet, parcel.Pulse(), currentChild.Pulse())
 		if err != nil {
 			return nil, err
 		}
 		return reply.NewGetChildrenRedirect(h.DelegationTokenFactory, parcel, node)
+	}
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to fetch child")
 	}
 
 	counter := 0
@@ -900,10 +919,6 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 func (h *MessageHandler) nodeForJet(
 	ctx context.Context, jetID core.RecordID, parcelPulse, targetPulse core.PulseNumber,
 ) (*core.RecordRef, error) {
-	if targetPulse == core.PulseNumberCurrent {
-		targetPulse = parcelPulse
-	}
-
 	// TODO: @andreyromancev. 12.01.19. uncomment when heavy ready.
 	// if parcelPulse-targetPulse < h.conf.LightChainLimit {
 	// 	return h.JetCoordinator.LightExecutorForJet(ctx, jetID, targetPulse)
