@@ -26,13 +26,12 @@ import (
 
 var (
 	tagJet = insmetrics.MustTagKey("jet")
-	// tagPulse = insmetrics.MustTagKey("result")
 )
 
 var (
-	statSyncedRecords = stats.Int64("heavyserver/synced/records", "The number synced records", stats.UnitDimensionless)
+	statSyncedRecords = stats.Int64("heavyserver/synced/count", "The number synced records", stats.UnitDimensionless)
 	statSyncedPulse   = stats.Int64("heavyserver/synced/pulse", "Last synced pulse", stats.UnitDimensionless)
-	// statLatency = stats.Int64("artifactmanager/latency", "The latency in milliseconds per AM call", stats.UnitMilliseconds)
+	statSyncedBytes   = stats.Int64("heavyserver/synced/bytes", "Amount of synced records in bytes", stats.UnitBytes)
 )
 
 func init() {
@@ -50,6 +49,13 @@ func init() {
 			Description: statSyncedPulse.Description(),
 			Measure:     statSyncedPulse,
 			Aggregation: view.LastValue(),
+			TagKeys:     commontags,
+		},
+		&view.View{
+			Name:        statSyncedBytes.Name(),
+			Description: statSyncedBytes.Description(),
+			Measure:     statSyncedBytes,
+			Aggregation: view.Count(),
 			TagKeys:     commontags,
 		},
 	)

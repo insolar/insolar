@@ -243,7 +243,7 @@ func (t *Tree) Find(id core.RecordID) (*core.RecordID, bool) {
 	}
 	hash := id.Hash()
 	j, depth := t.Head.Find(hash, 0)
-	return NewID(uint8(depth), resetBits(hash, depth)), j.Actual
+	return NewID(uint8(depth), ResetBits(hash, depth)), j.Actual
 }
 
 // Update add missing tree branches for provided prefix. If 'setActual' is set, all encountered nodes will be marked as
@@ -275,8 +275,8 @@ func (t *Tree) Split(jetID core.RecordID) (*core.RecordID, *core.RecordID, error
 	}
 	j.Right = &jet{}
 	j.Left = &jet{}
-	leftPrefix := resetBits(prefix, depth)
-	rightPrefix := resetBits(prefix, depth)
+	leftPrefix := ResetBits(prefix, depth)
+	rightPrefix := ResetBits(prefix, depth)
 	setBit(rightPrefix, depth)
 	return NewID(depth+1, leftPrefix), NewID(depth+1, rightPrefix), nil
 }
@@ -294,7 +294,7 @@ func (t *Tree) LeafIDs() []core.RecordID {
 
 func getBit(value []byte, index uint8) bool {
 	if uint(index) >= uint(len(value)*8) {
-		panic("index overflow")
+		panic(fmt.Sprintf("index overflow: value=%08b, index=%v", value, index))
 	}
 	byteIndex := uint(index / 8)
 	bitIndex := uint(7 - index%8)
@@ -314,8 +314,8 @@ func setBit(value []byte, index uint8) {
 
 // ResetBits returns a new byte slice with all bits in 'value' reset, starting from 'start' number of bit. If 'start'
 // is bigger than len(value), the original slice will be returned.
-func resetBits(value []byte, start uint8) []byte {
-	if int(start) > len(value)*8 {
+func ResetBits(value []byte, start uint8) []byte {
+	if int(start) >= len(value)*8 {
 		return value
 	}
 

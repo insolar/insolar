@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -111,6 +112,7 @@ func sendToHeavy(t *testing.T, withretry bool) {
 	cryptoScheme := testutils.NewPlatformCryptographyScheme()
 
 	// mock bus.Mock method, store synced records, and calls count with HeavyRecord
+	var statMutex sync.Mutex
 	var synckeys []key
 	var syncsended int
 	type messageStat struct {
@@ -138,11 +140,14 @@ func sendToHeavy(t *testing.T, withretry bool) {
 				keys = append(keys, rec.K)
 				size += len(rec.K) + len(rec.V)
 			}
+
+			statMutex.Lock()
 			synckeys = append(synckeys, keys...)
 			syncmessagesPerMessage[syncsended] = &messageStat{
 				size: size,
 				keys: keys,
 			}
+			statMutex.Unlock()
 		}
 		return nil, nil
 	}
@@ -175,11 +180,12 @@ func sendToHeavy(t *testing.T, withretry bool) {
 	pm.GIL = gilMock
 	pm.PulseStorage = storage.NewPulseStorage(db)
 
-	provideMock := recentstorage.NewProviderMock(t)
-	provideMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
+	providerMock := recentstorage.NewProviderMock(t)
+	providerMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
 		return recentMock
 	}
-	pm.RecentStorageProvider = provideMock
+	providerMock.CloneStorageMock.Return()
+	pm.RecentStorageProvider = providerMock
 
 	pm.ActiveListSwapper = alsMock
 	pm.CryptographyService = cryptoServiceMock

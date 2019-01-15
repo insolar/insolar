@@ -18,11 +18,12 @@ package testutils
 
 import (
 	"crypto"
-	"crypto/rand"
 	"hash"
+	"math/rand"
 
 	"github.com/insolar/insolar/core"
-	"github.com/satori/go.uuid"
+	"github.com/insolar/insolar/ledger/storage/jet"
+	uuid "github.com/satori/go.uuid"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -55,14 +56,16 @@ func RandomID() core.RecordID {
 	return id
 }
 
-// RandomJet generates random jet ID
-func RandomJet() (id core.RecordID) {
-	_, err := rand.Read(id[core.PulseNumberSize:])
+// RandomJet generates random jet with random depth (uint8) and
+func RandomJet() core.RecordID {
+	jetbuf := make([]byte, core.RecordHashSize)
+	_, err := rand.Read(jetbuf)
 	if err != nil {
 		panic(err)
 	}
-	copy(id[:core.PulseNumberSize], core.PulseNumberJet.Bytes())
-	return id
+	// don't be too huge (i.e. 255)
+	depth := uint8(rand.Intn(128))
+	return *jet.NewID(depth, jet.ResetBits(jetbuf[1:], depth))
 }
 
 type cryptographySchemeMock struct{}
