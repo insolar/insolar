@@ -37,11 +37,6 @@ import (
 )
 
 func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
-	// Error:      	Not equal:
-	// expected: 0x2
-	// actual  : 0x0
-	t.Skip()
-
 	// Arrange
 	ctx := inslogger.TestContext(t)
 	jetID := jet.ZeroJetID

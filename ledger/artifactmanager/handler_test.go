@@ -80,11 +80,6 @@ func TestMessageHandler_HandleGetObject_Redirects(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("fetches index from heavy when no index", func(t *testing.T) {
-		// Error Trace:	handler_test.go:116
-		// Error:      	Received unexpected error:
-		// failed to fetch index
-		t.Skip()
-
 		heavyRef := genRandomRef(0)
 		mb.SendFunc = func(c context.Context, gm core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
 			if m, ok := gm.(*message.GetObjectIndex); ok {
@@ -171,9 +166,6 @@ func TestMessageHandler_HandleGetObject_Redirects(t *testing.T) {
 }
 
 func TestMessageHandler_HandleGetChildren_Redirects(t *testing.T) {
-	// should be fixed when enable heavy redirect back
-	t.Skip()
-
 	t.Parallel()
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
@@ -540,10 +532,6 @@ func TestMessageHandler_HandleHasPendingRequests(t *testing.T) {
 }
 
 func TestMessageHandler_HandleGetCode_Redirects(t *testing.T) {
-	// Error:      	Received unexpected error:
-	// failed to fetch code
-	t.Skip()
-
 	t.Parallel()
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
@@ -553,12 +541,13 @@ func TestMessageHandler_HandleGetCode_Redirects(t *testing.T) {
 
 	tf := testutils.NewDelegationTokenFactoryMock(mc)
 	jc := testutils.NewJetCoordinatorMock(mc)
-	jc.MeMock.Return(core.RecordRef{})
 	mb := testutils.NewMessageBusMock(mc)
 	mb.MustRegisterMock.Return()
 
+	msgPulse := core.PulseNumber(core.FirstPulseNumber + 10)
+	lightChainLimit := core.PulseNumber(3 * 10)
 	msg := message.GetCode{
-		Code: *genRandomRef(core.FirstPulseNumber),
+		Code: *genRandomRef(msgPulse),
 	}
 	recentStorageMock := recentstorage.NewRecentStorageMock(t)
 	recentStorageMock.AddPendingRequestMock.Return()
@@ -568,7 +557,7 @@ func TestMessageHandler_HandleGetCode_Redirects(t *testing.T) {
 	tf.IssueGetCodeRedirectMock.Return(&delegationtoken.GetCodeRedirectToken{Signature: []byte{1, 2, 3}}, nil)
 
 	h := NewMessageHandler(db, &configuration.Ledger{
-		LightChainLimit: 3,
+		LightChainLimit: lightChainLimit,
 	})
 	h.JetCoordinator = jc
 	h.DelegationTokenFactory = tf
@@ -583,21 +572,23 @@ func TestMessageHandler_HandleGetCode_Redirects(t *testing.T) {
 
 	h.RecentStorageProvider = provideMock
 
-	t.Run("redirects to light when created after limit", func(t *testing.T) {
+	t.Run("redirects to light before limit threshold", func(t *testing.T) {
+		outPulse := msgPulse + lightChainLimit - 10
+
 		lightRef := genRandomRef(0)
 		jc.LightExecutorForJetMock.Set(nil)
 		jc.LightExecutorForJetFunc = func(c context.Context, j core.RecordID, p core.PulseNumber) (*core.RecordRef, error) {
 			switch p {
-			case core.FirstPulseNumber:
+			case msgPulse:
 				return lightRef, nil
-			case core.FirstPulseNumber + 1:
+			case outPulse:
 				return &core.RecordRef{}, nil
 			}
-			panic("unexpected call")
+			panic("@@@ unexpected call @@@")
 		}
 		rep, err := h.replayHandlers[core.TypeGetCode](ctx, &message.Parcel{
 			Msg:         &msg,
-			PulseNumber: core.FirstPulseNumber + 1,
+			PulseNumber: outPulse,
 		})
 		require.NoError(t, err)
 		redirect, ok := rep.(*reply.GetCodeRedirectReply)
@@ -607,13 +598,14 @@ func TestMessageHandler_HandleGetCode_Redirects(t *testing.T) {
 		assert.Equal(t, lightRef, redirect.GetReceiver())
 	})
 
-	t.Run("redirects to heavy when created before limit", func(t *testing.T) {
+	t.Run("redirects to heavy after limit threshold", func(t *testing.T) {
+		outPulse := msgPulse + lightChainLimit + 10
 		heavyRef := genRandomRef(0)
 		jc.LightExecutorForJetMock.Return(&core.RecordRef{}, nil)
 		jc.HeavyMock.Return(heavyRef, nil)
 		rep, err := h.replayHandlers[core.TypeGetCode](ctx, &message.Parcel{
 			Msg:         &msg,
-			PulseNumber: 5,
+			PulseNumber: outPulse,
 		})
 		require.NoError(t, err)
 		redirect, ok := rep.(*reply.GetCodeRedirectReply)

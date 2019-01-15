@@ -174,14 +174,14 @@ func (h *MessageHandler) handleGetCode(ctx context.Context, parcel core.Parcel) 
 
 	codeRec, err := getCode(ctx, h.db, msg.Code.Record())
 	if err == storage.ErrNotFound {
-		return nil, errors.New("failed to fetch code")
+		// return nil, errors.New("failed to fetch code")
 		// The record wasn't found on the current node. Return redirect to the node that contains it.
-		// var node *core.RecordRef
-		// node, err := h.nodeForJet(ctx, jetID, parcel.Pulse(), msg.Code.Record().Pulse())
-		// if err != nil {
-		// 	return nil, err
-		// }
-		// return reply.NewGetCodeRedirect(h.DelegationTokenFactory, parcel, node)
+		var node *core.RecordRef
+		node, err := h.nodeForJet(ctx, jetID, parcel.Pulse(), msg.Code.Record().Pulse())
+		if err != nil {
+			return nil, err
+		}
+		return reply.NewGetCodeRedirect(h.DelegationTokenFactory, parcel, node)
 	}
 	if err != nil {
 		return nil, err
@@ -213,22 +213,18 @@ func (h *MessageHandler) handleGetObject(
 	// Fetch object index. If not found redirect.
 	idx, err = h.db.GetObjectIndex(ctx, jetID, msg.Head.Record(), false)
 	if err == storage.ErrNotFound {
-		fmt.Printf("[failed to fetch] pulse: %v, jet: %v, id: %v", parcel.Pulse(), jetID.JetIDString(), msg.Head.Record())
-		fmt.Println()
-		return nil, errors.New("failed to fetch index")
-		// println()
-		// node, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
-		// if err != nil {
-		// 	return nil, err
-		// }
-		// _, err = h.saveIndexFromHeavy(ctx, h.db, jetID, msg.Head, node)
-		// if err != nil {
-		// 	return nil, err
-		// }
-		// // Add requested object to recent.
-		// h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Head.Record())
-		// fmt.Printf("redirect because index not found. jet: %v, to: %v \n", jetID.JetIDString(), node)
-		// return reply.NewGetObjectRedirectReply(h.DelegationTokenFactory, parcel, node, msg.State)
+		node, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
+		if err != nil {
+			return nil, err
+		}
+		_, err = h.saveIndexFromHeavy(ctx, h.db, jetID, msg.Head, node)
+		if err != nil {
+			return nil, err
+		}
+		// Add requested object to recent.
+		h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Head.Record())
+		fmt.Printf("redirect because index not found. jet: %v, to: %v \n", jetID.JetIDString(), node)
+		return reply.NewGetObjectRedirectReply(h.DelegationTokenFactory, parcel, node, msg.State)
 	}
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch object index")
@@ -376,18 +372,15 @@ func (h *MessageHandler) handleGetChildren(
 
 	idx, err := h.db.GetObjectIndex(ctx, jetID, msg.Parent.Record(), false)
 	if err == storage.ErrNotFound {
-		fmt.Printf("[failed to fetch children] pulse: %v, jet: %v, id: %v", parcel.Pulse(), jetID.JetIDString(), msg.Parent.Record())
-		fmt.Println()
-		return nil, errors.New("failed to fetch index")
-		// heavy, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
-		// if err != nil {
-		// 	return nil, err
-		// }
-		// _, err = h.saveIndexFromHeavy(ctx, h.db, jetID, msg.Parent, heavy)
-		// if err != nil {
-		// 	return nil, err
-		// }
-		// return reply.NewGetChildrenRedirect(h.DelegationTokenFactory, parcel, heavy)
+		heavy, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
+		if err != nil {
+			return nil, err
+		}
+		_, err = h.saveIndexFromHeavy(ctx, h.db, jetID, msg.Parent, heavy)
+		if err != nil {
+			return nil, err
+		}
+		return reply.NewGetChildrenRedirect(h.DelegationTokenFactory, parcel, heavy)
 	}
 	if err != nil {
 		fmt.Println("handleGetChildren: failed to fetch object index, error - ", err)
@@ -929,7 +922,5 @@ func (h *MessageHandler) nodeForJet(
 	if targetPulse == core.FirstPulseNumber || (parcelPulse-targetPulse < h.conf.LightChainLimit) {
 		return h.JetCoordinator.LightExecutorForJet(ctx, jetID, targetPulse)
 	}
-	// return h.JetCoordinator.Heavy(ctx, parcelPulse)
-
-	return h.JetCoordinator.LightExecutorForJet(ctx, jetID, targetPulse)
+	return h.JetCoordinator.Heavy(ctx, parcelPulse)
 }
