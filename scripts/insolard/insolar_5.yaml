@@ -37,3 +37,6 @@ keyspath: "scripts/insolard/discoverynodes/5/keys.json"
 certificatepath: "scripts/insolard/discoverynodes/5/cert.json"
 metrics:
   listenaddress: :8085
+tracer:
+  jaeger:
+    agentendpoint: localhost:6831
