@@ -111,13 +111,15 @@ func initComponents(
 	genesisKeyOut string,
 
 ) (*component.Manager, error) {
+	cm := component.Manager{}
+
 	nodeNetwork, err := nodenetwork.NewNodeNetwork(cfg.Host, certManager.GetCertificate())
 	checkError(ctx, err, "failed to start NodeNetwork")
 
 	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner)
 	checkError(ctx, err, "failed to start LogicRunner")
 
-	nw, err := servicenetwork.NewServiceNetwork(cfg, platformCryptographyScheme)
+	nw, err := servicenetwork.NewServiceNetwork(cfg, platformCryptographyScheme, &cm)
 	checkError(ctx, err, "failed to start Network")
 
 	delegationTokenFactory := delegationtoken.NewDelegationTokenFactory()
@@ -157,7 +159,6 @@ func initComponents(
 	err = logicRunner.OnPulse(ctx, *pulsar.NewPulse(cfg.Pulsar.NumberDelta, 0, &entropygenerator.StandardEntropyGenerator{}))
 	checkError(ctx, err, "failed init pulse for LogicRunner")
 
-	cm := component.Manager{}
 	cm.Register(
 		platformCryptographyScheme,
 		keyStore,

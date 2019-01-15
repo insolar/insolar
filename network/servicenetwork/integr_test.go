@@ -144,7 +144,7 @@ func (s *testSuite) getBootstrapNodes(t *testing.T) []certificate.BootstrapNode 
 			b.serviceNetwork.CertificateManager.GetCertificate().GetPublicKey(),
 			b.serviceNetwork.CertificateManager.GetCertificate().(*certificate.Certificate).PublicKey,
 			b.serviceNetwork.cfg.Host.Transport.Address,
-			b.serviceNetwork.NodeNetwork.GetOrigin().ID().String())
+			b.serviceNetwork.NodeKeeper.GetOrigin().ID().String())
 		result = append(result, *node)
 	}
 	return result
@@ -164,10 +164,6 @@ func (s *testSuite) createNetworkNode(t *testing.T) networkNode {
 	cfg := configuration.NewConfiguration()
 	cfg.Host.Transport.Address = address
 
-	scheme := platformpolicy.NewPlatformCryptographyScheme()
-	serviceNetwork, err := NewServiceNetwork(cfg, scheme)
-	assert.NoError(t, err)
-
 	pulseManagerMock := testutils.NewPulseManagerMock(t)
 	netCoordinator := testutils.NewNetworkCoordinatorMock(t)
 	netCoordinator.ValidateCertMock.Set(func(p context.Context, p1 core.AuthorizationCertificate) (bool, error) {
@@ -185,7 +181,11 @@ func (s *testSuite) createNetworkNode(t *testing.T) networkNode {
 	cm := &component.Manager{}
 	cm.Register(keeper, pulseManagerMock, netCoordinator, amMock, realKeeper)
 	cm.Register(certManager, cryptographyService)
-	cm.Inject(serviceNetwork, netSwitcher)
+	cm.Inject(netSwitcher)
+
+	scheme := platformpolicy.NewPlatformCryptographyScheme()
+	serviceNetwork, err := NewServiceNetwork(cfg, scheme, cm)
+	assert.NoError(t, err)
 
 	serviceNetwork.NodeKeeper = keeper
 
