@@ -18,6 +18,7 @@ package artifactmanager
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -41,7 +42,10 @@ func (b *earlyRequestCircuitBreakerProvider) getBreaker(jetID core.RecordID) *re
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
+	fmt.Printf("[getBreaker], %v", jetID)
+
 	if _, ok := b.breakers[jetID]; !ok {
+		fmt.Printf("[getBreaker] new , %v", jetID)
 		b.breakers[jetID] = &requestCircuitBreakerProvider{
 			hotDataChannel: make(chan struct{}),
 			timeoutChannel: make(chan struct{}),
@@ -62,10 +66,10 @@ func (b *earlyRequestCircuitBreakerProvider) onTimeoutHappened() {
 	b.breakers = map[core.RecordID]*requestCircuitBreakerProvider{}
 }
 
-func (m *middleware) checkBreaker(handler core.MessageHandler) core.MessageHandler {
+func (m *middleware) checkEarlyRequestBreaker(handler core.MessageHandler) core.MessageHandler {
 	return func(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
 		logger := inslogger.FromContext(ctx)
-		logger.Debugf("[waitForDrop] pulse %v starts %v", parcel.Pulse(), time.Now())
+		logger.Debugf("[checkEarlyRequestBreaker] pulse %v starts %v", parcel.Pulse(), time.Now())
 
 		// TODO: 15.01.2019 @egorikas
 		// Hack is needed for genesis
@@ -76,37 +80,42 @@ func (m *middleware) checkBreaker(handler core.MessageHandler) core.MessageHandl
 		// If the call is a call in redirect-chain
 		// skip waiting for the hot records
 		if parcel.DelegationToken() != nil {
-			logger.Debugf("[waitForDrop] parcel.DelegationToken() != nil")
+			logger.Debugf("[checkEarlyRequestBreaker] parcel.DelegationToken() != nil")
 			return handler(ctx, parcel)
 		}
 
 		jetID := jetFromContext(ctx)
 		requestBreaker := m.earlyRequestCircuitBreakerProvider.getBreaker(jetID)
 
+		logger.Debugf("[checkEarlyRequestBreaker] wait jet - %v", jetID)
 		select {
 		case <-requestBreaker.hotDataChannel:
+			logger.Debugf("[checkEarlyRequestBreaker] before handler exec - %v", time.Now())
+			return handler(ctx, parcel)
 		case <-requestBreaker.timeoutChannel:
-			logger.Errorf("[checkBreaker] Timeout %v, jetID %v, message type %v", parcel.Pulse(), parcel.Message().Type().String())
+			logger.Errorf("[checkEarlyRequestBreaker] Timeout %v, jetID %v, message type %v", parcel.Pulse(), parcel.Message().Type().String())
 			return &reply.Error{ErrType: reply.ErrHotDataTimeout}, nil
 		}
+	}
+}
 
-		logger.Debugf("[waitForDrop] before handler exec - %v", time.Now())
+func (m *middleware) closeEarlyRequestBreaker(handler core.MessageHandler) core.MessageHandler {
+	return func(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
+		logger := inslogger.FromContext(ctx)
+		logger.Debugf("[closeEarlyRequestBreaker] pulse %v starts %v", parcel.Pulse(), time.Now())
+
+		hotDataMessage := parcel.Message().(*message.HotData)
+		jetID := hotDataMessage.Jet.Record()
+		logger.Debugf("[closeEarlyRequestBreaker] wait jet - %v", jetID)
+		breaker := m.earlyRequestCircuitBreakerProvider.getBreaker(*jetID)
+		defer close(breaker.hotDataChannel)
+
+		logger.Debugf("[closeEarlyRequestBreaker] before handler %v", time.Now())
 		return handler(ctx, parcel)
 	}
 }
 
-func (m *middleware) closeBreaker(handler core.MessageHandler) core.MessageHandler {
-	return func(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
-		logger := inslogger.FromContext(ctx)
-		logger.Debugf("[unlockDropWaiters] pulse %v starts %v", parcel.Pulse(), time.Now())
-
-		hotDataMessage := parcel.Message().(*message.HotData)
-		jetID := hotDataMessage.Jet.Record()
-
-		breaker := m.earlyRequestCircuitBreakerProvider.getBreaker(*jetID)
-		defer close(breaker.hotDataChannel)
-
-		logger.Debugf("[unlockDropWaiters] before handler %v", time.Now())
-		return handler(ctx, parcel)
-	}
+func (m *middleware) closeEarlyRequestBreakerForJet(jetID core.RecordID) {
+	breaker := m.earlyRequestCircuitBreakerProvider.getBreaker(jetID)
+	defer close(breaker.hotDataChannel)
 }

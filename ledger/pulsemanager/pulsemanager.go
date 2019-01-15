@@ -144,6 +144,11 @@ func (m *PulseManager) processEndPulse(
 					if rep, ok := genericRep.(*reply.OK); !ok {
 						return fmt.Errorf("unexpected reply: %#v", rep)
 					}
+				} else {
+					err := m.ArtifactManagerMessageHandler.OnExecutorNotChanged(ctx, info.id)
+					if err != nil {
+						return errors.Wrap(err, "failed to notify ArtifactManagerMessageHandler")
+					}
 				}
 			} else {
 				// Split happened.
@@ -157,6 +162,11 @@ func (m *PulseManager) processEndPulse(
 					if rep, ok := genericRep.(*reply.OK); !ok {
 						return fmt.Errorf("unexpected reply: %#v", rep)
 					}
+				} else {
+					err := m.ArtifactManagerMessageHandler.OnExecutorNotChanged(ctx, info.left.id)
+					if err != nil {
+						return errors.Wrap(err, "failed to notify ArtifactManagerMessageHandler")
+					}
 				}
 				if !info.right.mineNext {
 					rightMsg := msg
@@ -168,6 +178,11 @@ func (m *PulseManager) processEndPulse(
 					}
 					if rep, ok := genericRep.(*reply.OK); !ok {
 						return fmt.Errorf("unexpected reply: %#v", rep)
+					}
+				} else {
+					err := m.ArtifactManagerMessageHandler.OnExecutorNotChanged(ctx, info.right.id)
+					if err != nil {
+						return errors.Wrap(err, "failed to notify ArtifactManagerMessageHandler")
 					}
 				}
 

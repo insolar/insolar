@@ -89,21 +89,21 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 
 	// Generic.
 	h.Bus.MustRegister(core.TypeGetCode, h.handleGetCode)
-	h.Bus.MustRegister(core.TypeGetObject, m.checkJet(m.checkBreaker(m.saveParcel(h.handleGetObject))))
-	h.Bus.MustRegister(core.TypeGetDelegate, m.checkJet(m.checkBreaker(m.saveParcel(h.handleGetDelegate))))
-	h.Bus.MustRegister(core.TypeGetChildren, m.checkJet(m.checkBreaker(m.saveParcel(h.handleGetChildren))))
-	h.Bus.MustRegister(core.TypeSetRecord, m.checkJet(m.checkBreaker(m.checkHeavySync(m.saveParcel(h.handleSetRecord)))))
-	h.Bus.MustRegister(core.TypeUpdateObject, m.checkJet(m.checkBreaker(m.checkHeavySync(m.saveParcel(h.handleUpdateObject)))))
-	h.Bus.MustRegister(core.TypeRegisterChild, m.checkJet(m.checkBreaker(m.checkHeavySync(m.saveParcel(h.handleRegisterChild)))))
-	h.Bus.MustRegister(core.TypeSetBlob, m.checkJet(m.checkBreaker(m.checkHeavySync(m.saveParcel(h.handleSetBlob)))))
-	h.Bus.MustRegister(core.TypeGetObjectIndex, m.checkJet(m.checkBreaker(m.saveParcel(h.handleGetObjectIndex))))
-	h.Bus.MustRegister(core.TypeGetPendingRequests, m.checkJet(m.checkBreaker(m.saveParcel(h.handleHasPendingRequests))))
+	h.Bus.MustRegister(core.TypeGetObject, m.checkJet(m.checkEarlyRequestBreaker(m.saveParcel(h.handleGetObject))))
+	h.Bus.MustRegister(core.TypeGetDelegate, m.checkJet(m.checkEarlyRequestBreaker(m.saveParcel(h.handleGetDelegate))))
+	h.Bus.MustRegister(core.TypeGetChildren, m.checkJet(m.checkEarlyRequestBreaker(m.saveParcel(h.handleGetChildren))))
+	h.Bus.MustRegister(core.TypeSetRecord, m.checkJet(m.checkEarlyRequestBreaker(m.checkHeavySync(m.saveParcel(h.handleSetRecord)))))
+	h.Bus.MustRegister(core.TypeUpdateObject, m.checkJet(m.checkEarlyRequestBreaker(m.checkHeavySync(m.saveParcel(h.handleUpdateObject)))))
+	h.Bus.MustRegister(core.TypeRegisterChild, m.checkJet(m.checkEarlyRequestBreaker(m.checkHeavySync(m.saveParcel(h.handleRegisterChild)))))
+	h.Bus.MustRegister(core.TypeSetBlob, m.checkJet(m.checkEarlyRequestBreaker(m.checkHeavySync(m.saveParcel(h.handleSetBlob)))))
+	h.Bus.MustRegister(core.TypeGetObjectIndex, m.checkJet(m.checkEarlyRequestBreaker(m.saveParcel(h.handleGetObjectIndex))))
+	h.Bus.MustRegister(core.TypeGetPendingRequests, m.checkJet(m.checkEarlyRequestBreaker(m.saveParcel(h.handleHasPendingRequests))))
 	h.Bus.MustRegister(core.TypeGetJet, h.handleGetJet)
-	h.Bus.MustRegister(core.TypeHotRecords, m.closeBreaker(h.handleHotRecords))
+	h.Bus.MustRegister(core.TypeHotRecords, m.closeEarlyRequestBreaker(h.handleHotRecords))
 
 	// Validation.
-	h.Bus.MustRegister(core.TypeValidateRecord, m.checkJet(m.checkBreaker(m.saveParcel(h.handleValidateRecord))))
-	h.Bus.MustRegister(core.TypeValidationCheck, m.checkJet(m.checkBreaker(m.saveParcel(h.handleValidationCheck))))
+	h.Bus.MustRegister(core.TypeValidateRecord, m.checkJet(m.checkEarlyRequestBreaker(m.saveParcel(h.handleValidateRecord))))
+	h.Bus.MustRegister(core.TypeValidationCheck, m.checkJet(m.checkEarlyRequestBreaker(m.saveParcel(h.handleValidationCheck))))
 	h.Bus.MustRegister(core.TypeJetDrop, m.checkJet(h.handleJetDrop))
 
 	// Heavy.
@@ -117,6 +117,11 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 
 func (h *MessageHandler) OnPulse(context.Context, core.Pulse) error {
 	h.middleware.earlyRequestCircuitBreakerProvider.onTimeoutHappened()
+	return nil
+}
+
+func (h *MessageHandler) OnExecutorNotChanged(ctx context.Context, jetID core.RecordID) error {
+	h.middleware.closeEarlyRequestBreakerForJet(jetID)
 	return nil
 }
 
