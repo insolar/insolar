@@ -71,11 +71,10 @@ type PulseManager struct {
 }
 
 type jetInfo struct {
-	id          core.RecordID
-	mineCurrent bool
-	mineNext    bool
-	left        *jetInfo
-	right       *jetInfo
+	id       core.RecordID
+	mineNext bool
+	left     *jetInfo
+	right    *jetInfo
 }
 
 // TODO: @andreyromancev. 15.01.19. Just store ledger configuration in PM. This is not required.
@@ -135,13 +134,15 @@ func (m *PulseManager) processEndPulse(
 
 			if info.left == nil && info.right == nil {
 				// No split happened.
-				msg.Jet = *core.NewRecordRef(core.DomainID, jetID)
-				genericRep, err := m.Bus.Send(ctx, msg, nil)
-				if err != nil {
-					return errors.Wrap(err, "failed to send executor data")
-				}
-				if rep, ok := genericRep.(*reply.OK); !ok {
-					return fmt.Errorf("unexpected reply: %#v", rep)
+				if !info.mineNext {
+					msg.Jet = *core.NewRecordRef(core.DomainID, jetID)
+					genericRep, err := m.Bus.Send(ctx, msg, nil)
+					if err != nil {
+						return errors.Wrap(err, "failed to send executor data")
+					}
+					if rep, ok := genericRep.(*reply.OK); !ok {
+						return fmt.Errorf("unexpected reply: %#v", rep)
+					}
 				}
 			} else {
 				// Split happened.
@@ -421,7 +422,7 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse c
 			continue
 		}
 
-		info := jetInfo{id: jetID, mineCurrent: true}
+		info := jetInfo{id: jetID}
 		if split {
 			split = false
 
@@ -443,8 +444,8 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse c
 				return nil, errors.Wrap(err, "failed to update tree")
 			}
 
-			info.left = &jetInfo{id: *leftJetID, mineCurrent: false}
-			info.right = &jetInfo{id: *rightJetID, mineCurrent: false}
+			info.left = &jetInfo{id: *leftJetID}
+			info.right = &jetInfo{id: *rightJetID}
 			nextLeftExecutor, err := m.JetCoordinator.LightExecutorForJet(ctx, *leftJetID, newPulse)
 			if err != nil {
 				return nil, err
