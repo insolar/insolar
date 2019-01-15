@@ -26,41 +26,42 @@ import (
 )
 
 type SubInterface1 interface {
-	Method1()
+	Method3()
 }
 
 type SubInterface2 interface {
-	Method2()
+	Method4()
 }
 
 type SubComponent1 struct {
 	field1        string
-	SubInterface2 SubInterface2 `inject:""`
+	SubInterface2 SubInterface2 `inject:"subcomponent"`
 	Interface1    Interface1    `inject:""`
 	asd           int
 	started       bool
 }
 
 func (s *SubComponent1) Start(ctx context.Context) error {
-	s.Method1()
-	s.SubInterface2.Method2()
+	s.Method3()
+	s.SubInterface2.Method4()
+	s.Interface1.Method1()
 	return nil
 }
 
-func (cm *SubComponent1) Method1() {
-	fmt.Println("Component1.Method1 called")
+func (cm *SubComponent1) Method3() {
+	fmt.Println("SubComponent1.Method3 called")
 }
 
 type SubComponent2 struct {
 	field2        string
-	SubInterface1 SubInterface1 `inject:""`
+	SubInterface1 SubInterface1 `inject:"subcomponent"`
 	dsa           string
 	started       bool
 }
 
 func (s *SubComponent2) Start(ctx context.Context) error {
-	s.SubInterface1.Method1()
-	s.Method2()
+	s.SubInterface1.Method3()
+	s.Method4()
 	return nil
 }
 
@@ -68,8 +69,8 @@ func (cm *SubComponent2) Stop(ctx context.Context) error {
 	return nil
 }
 
-func (cm *SubComponent2) Method2() {
-	fmt.Println("Component2.Method2 called")
+func (cm *SubComponent2) Method4() {
+	fmt.Println("SubComponent2.Method4 called")
 }
 
 type BigComponent struct {
@@ -85,6 +86,14 @@ type BigComponent struct {
 
 func (b *BigComponent) Init(ctx context.Context) error {
 	b.cm.Inject(&SubComponent1{}, &SubComponent2{}, b)
+	return nil
+}
+
+func (b *BigComponent) Start(ctx context.Context) error {
+	// TODO: fix endless loop
+	// b.cm.Start(ctx)
+	b.SubInterface1.Method3()
+	b.SubInterface2.Method4()
 	return nil
 }
 

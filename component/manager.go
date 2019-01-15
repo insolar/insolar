@@ -67,20 +67,13 @@ func (m *Manager) Inject(components ...interface{}) {
 }
 
 func (m *Manager) mustInject(component reflect.Value, fieldMeta reflect.StructField) {
-	for _, componentMeta := range m.components {
-		componentType := reflect.ValueOf(componentMeta).Type()
-
-		if componentType.Implements(fieldMeta.Type) {
-			field := component.FieldByName(fieldMeta.Name)
-			field.Set(reflect.ValueOf(componentMeta))
-
-			log.Debugf(
-				"ComponentManager: Inject interface %s with %s: ",
-				field.Type().String(),
-				componentType.String(),
-			)
-			return
-		}
+	found := false
+	if m.parent != nil {
+		found = injectDependency(component, fieldMeta, m.parent.components)
+	}
+	found = found || injectDependency(component, fieldMeta, m.components)
+	if found {
+		return
 	}
 
 	panic(fmt.Sprintf(
@@ -89,6 +82,25 @@ func (m *Manager) mustInject(component reflect.Value, fieldMeta reflect.StructFi
 		fieldMeta.Type.String(),
 		fieldMeta.Name,
 	))
+}
+
+func injectDependency(component reflect.Value, dependencyMeta reflect.StructField, components []interface{}) (injectFound bool) {
+	for _, componentMeta := range components {
+		componentType := reflect.ValueOf(componentMeta).Type()
+
+		if componentType.Implements(dependencyMeta.Type) {
+			field := component.FieldByName(dependencyMeta.Name)
+			field.Set(reflect.ValueOf(componentMeta))
+
+			log.Debugf(
+				"ComponentManager: Inject interface %s with %s: ",
+				field.Type().String(),
+				componentType.String(),
+			)
+			return true
+		}
+	}
+	return false
 }
 
 // Start invokes Start method of all components which implements Starter interface
