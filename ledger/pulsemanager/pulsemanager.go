@@ -145,24 +145,30 @@ func (m *PulseManager) processEndPulse(
 				}
 			} else {
 				// Split happened.
-				leftMsg := msg
-				leftMsg.Jet = *core.NewRecordRef(core.DomainID, info.left.id)
-				rightMsg := msg
-				rightMsg.Jet = *core.NewRecordRef(core.DomainID, info.right.id)
-				genericRep, err := m.Bus.Send(ctx, leftMsg, nil)
-				if err != nil {
-					return errors.Wrap(err, "failed to send executor data")
+				if !info.left.mineNext {
+					leftMsg := msg
+					leftMsg.Jet = *core.NewRecordRef(core.DomainID, info.left.id)
+					genericRep, err := m.Bus.Send(ctx, leftMsg, nil)
+					if err != nil {
+						return errors.Wrap(err, "failed to send executor data")
+					}
+					if rep, ok := genericRep.(*reply.OK); !ok {
+						return fmt.Errorf("unexpected reply: %#v", rep)
+					}
 				}
-				if rep, ok := genericRep.(*reply.OK); !ok {
-					return fmt.Errorf("unexpected reply: %#v", rep)
+				if !info.right.mineNext {
+					rightMsg := msg
+					rightMsg.Jet = *core.NewRecordRef(core.DomainID, info.right.id)
+
+					genericRep, err := m.Bus.Send(ctx, rightMsg, nil)
+					if err != nil {
+						return errors.Wrap(err, "failed to send executor data")
+					}
+					if rep, ok := genericRep.(*reply.OK); !ok {
+						return fmt.Errorf("unexpected reply: %#v", rep)
+					}
 				}
-				genericRep, err = m.Bus.Send(ctx, rightMsg, nil)
-				if err != nil {
-					return errors.Wrap(err, "failed to send executor data")
-				}
-				if rep, ok := genericRep.(*reply.OK); !ok {
-					return fmt.Errorf("unexpected reply: %#v", rep)
-				}
+
 			}
 
 			// FIXME: @andreyromancev. 09.01.2019. Temporary disabled validation. Uncomment when jet split works properly.
@@ -405,17 +411,17 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse c
 
 	var results []jetInfo
 	jetIDs := tree.LeafIDs()
+	me := m.JetCoordinator.Me()
 	for _, jetID := range jetIDs {
 		executor, err := m.JetCoordinator.LightExecutorForJet(ctx, jetID, currentPulse)
 		if err != nil {
 			return nil, err
 		}
-		if *executor != m.JetCoordinator.Me() {
+		if *executor != me {
 			continue
 		}
 
 		info := jetInfo{id: jetID, mineCurrent: true}
-		results = append(results, info)
 		if split {
 			split = false
 
@@ -443,7 +449,7 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse c
 			if err != nil {
 				return nil, err
 			}
-			if *nextLeftExecutor == m.JetCoordinator.Me() {
+			if *nextLeftExecutor == me {
 				info.left.mineNext = true
 				err := m.rewriteHotData(ctx, jetID, *leftJetID)
 				if err != nil {
@@ -454,7 +460,7 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse c
 			if err != nil {
 				return nil, err
 			}
-			if *nextRightExecutor == m.JetCoordinator.Me() {
+			if *nextRightExecutor == me {
 				info.right.mineNext = true
 				err := m.rewriteHotData(ctx, jetID, *rightJetID)
 				if err != nil {
@@ -478,10 +484,11 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse c
 			if err != nil {
 				return nil, err
 			}
-			if *nextExecutor == m.JetCoordinator.Me() {
+			if *nextExecutor == me {
 				info.mineNext = true
 			}
 		}
+		results = append(results, info)
 	}
 
 	return results, nil
@@ -508,6 +515,9 @@ func (m *PulseManager) rewriteHotData(ctx context.Context, fromJetID, toJetID co
 				return errors.Wrap(err, "failed to rewrite pending request")
 			}
 			toReqID, err := m.db.SetRecord(ctx, toJetID, fromReqID.Pulse(), request)
+			if err == storage.ErrOverride {
+				continue
+			}
 			if err != nil {
 				return errors.Wrap(err, "failed to rewrite pending request")
 			}
@@ -573,14 +583,15 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 		}
 	}
 
+	m.PulseStorage.Unlock()
+	m.PulseStorage.Set(&newPulse)
+
 	jets, err := m.processJets(ctx, currentPulse.PulseNumber, newPulse.PulseNumber)
 	if err != nil {
 		m.GIL.Release(ctx)
-		m.PulseStorage.Unlock()
 		return errors.Wrap(err, "failed to process jets")
 	}
-	m.PulseStorage.Unlock()
-	m.PulseStorage.Set(&newPulse)
+
 	m.GIL.Release(ctx)
 
 	if !persist {
