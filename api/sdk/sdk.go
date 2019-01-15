@@ -135,7 +135,7 @@ func (sdk *SDK) CreateMember() (*Member, string, error) {
 		return nil, "", errors.Wrap(err, "[ CreateMember ] can't export private key")
 	}
 
-	memberPubKeyStr, err := ks.ExportPublicKeyPEM(ks.ExtractPublicKey(privateKeyStr))
+	memberPubKeyStr, err := ks.ExportPublicKeyPEM(ks.ExtractPublicKey(privateKey))
 	if err != nil {
 		return nil, "", errors.Wrap(err, "[ CreateMember ] can't extract public key")
 	}
@@ -161,7 +161,7 @@ func (sdk *SDK) CreateMember() (*Member, string, error) {
 func (sdk *SDK) Transfer(amount uint, from *Member, to *Member) (string, string, error) {
 	ctx := inslogger.ContextWithTrace(context.Background(), "Transfer")
 	params := []interface{}{amount, to.Reference}
-	config, err := requester.CreateUserConfig(from.Reference, to.PrivateKey)
+	config, err := requester.CreateUserConfig(from.Reference, from.PrivateKey)
 	if err != nil {
 		return "", "", errors.Wrap(err, "[ Transfer ] can't create user config")
 	}
