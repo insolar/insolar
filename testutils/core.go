@@ -18,8 +18,8 @@ package testutils
 
 import (
 	"crypto"
-	"crypto/rand"
 	"hash"
+	"math/rand"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/storage/jet"
@@ -58,12 +58,13 @@ func RandomID() core.RecordID {
 
 // RandomJet generates random jet with random depth (uint8) and
 func RandomJet() core.RecordID {
-	jetbuf := make([]byte, core.RecordHashSize+1)
+	jetbuf := make([]byte, core.RecordHashSize)
 	_, err := rand.Read(jetbuf)
 	if err != nil {
 		panic(err)
 	}
-	depth := uint8(jetbuf[0]) % (core.RecordHashSize * 8)
+	// don't be too huge (i.e. 255)
+	depth := uint8(rand.Intn(128))
 	return *jet.NewID(depth, jet.ResetBits(jetbuf[1:], depth))
 }
 
