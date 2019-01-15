@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package inssdk
+package sdk
 
 import (
 	"context"
@@ -158,15 +158,23 @@ func (sdk *SDK) CreateMember() (*Member, string, error) {
 	return NewMember(response.Result.(string), string(privateKeyStr)), response.TraceID, nil
 }
 
-func (sdk *SDK) Transfer(ctx context.Context, amount uint, from *Member, to *Member) (string, string, error) {
-	params := []interface{}{amount, to.Ref}
-	config, err := requester.CreateUserConfig(from.Ref, to.PK)
+func (sdk *SDK) Transfer(amount uint, from *Member, to *Member) (string, string, error) {
+	ctx := inslogger.ContextWithTrace(context.Background(), "Transfer")
+	params := []interface{}{amount, to.Reference}
+	config, err := requester.CreateUserConfig(from.Reference, to.PrivateKey)
+	if err != nil {
+		return "", "", errors.Wrap(err, "[ Transfer ] can't create user config")
+	}
 
 	body, err := sdk.sendRequest(ctx, "Transfer", params, config)
 	if err != nil {
-		return "", "", err
+		return "", "", errors.Wrap(err, "[ Transfer ] can't send request")
 	}
+
 	response, err := sdk.getResponse(body)
+	if err != nil {
+		return "", "", errors.Wrap(err, "[ Transfer ] can't get response")
+	}
 
 	if response.Error != "" {
 		return "", response.TraceID, errors.New(response.Error)

@@ -14,16 +14,16 @@
  *    limitations under the License.
  */
 
-package inssdk
+package sdk
 
 type Member struct {
-	Ref string
-	PK  string
+	Reference  string
+	PrivateKey string
 }
 
-func NewMember(ref string, pk string) *Member {
+func NewMember(ref string, key string) *Member {
 	return &Member{
-		Ref: ref,
-		PK:  pk,
+		Reference:  ref,
+		PrivateKey: key,
 	}
 }
