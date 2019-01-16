@@ -29,7 +29,6 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller"
-	"github.com/insolar/insolar/network/fakepulsar"
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/merkle"
 	"github.com/insolar/insolar/network/routing"
@@ -63,7 +62,7 @@ type ServiceNetwork struct {
 	PulseHandler     network.PulseHandler
 	Communicator     phases.Communicator
 
-	fakePulsar *fakepulsar.FakePulsar
+	// fakePulsar *fakepulsar.FakePulsar
 }
 
 // NewServiceNetwork returns a new ServiceNetwork.
@@ -161,7 +160,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	n.hostNetwork = hostnetwork.NewHostTransport(internalTransport, n.routingTable)
 	options := controller.ConfigureOptions(n.cfg.Host)
 	n.controller = controller.NewNetworkController(n, options, n.CertificateManager.GetCertificate(), internalTransport, n.routingTable, n.hostNetwork, n.CryptographyScheme)
-	n.fakePulsar = fakepulsar.NewFakePulsar(n.HandlePulse, n.cfg.Pulsar.PulseTime)
+	// n.fakePulsar = fakepulsar.NewFakePulsar(n.HandlePulse, n.cfg.Pulsar.PulseTime)
 	return nil
 }
 
@@ -179,7 +178,7 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 		return errors.Wrap(err, "Failed to bootstrap network")
 	}
 
-	n.fakePulsar.Start(ctx)
+	// n.fakePulsar.Start(ctx)
 
 	return nil
 }
@@ -196,9 +195,9 @@ func (n *ServiceNetwork) Stop(ctx context.Context) error {
 }
 
 func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
-	if !n.isFakePulse(&pulse) {
-		n.fakePulsar.Stop(ctx)
-	}
+	// if !n.isFakePulse(&pulse) {
+	// 	n.fakePulsar.Stop(ctx)
+	// }
 	traceID := "pulse_" + strconv.FormatUint(uint64(pulse.PulseNumber), 10)
 	ctx, logger := inslogger.WithTraceField(ctx, traceID)
 	logger.Infof("Got new pulse number: %d", pulse.PulseNumber)
