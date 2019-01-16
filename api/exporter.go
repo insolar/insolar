@@ -26,6 +26,10 @@ import (
 	"github.com/pkg/errors"
 )
 
+const (
+	errCodePulseNotFound = 10404
+)
+
 // StorageExporterArgs is arguments that StorageExporter service accepts.
 type StorageExporterArgs struct {
 	From uint32
@@ -88,7 +92,7 @@ func (s *StorageExporterService) Export(r *http.Request, args *StorageExporterAr
 	if err != nil {
 		if strings.Contains(err.Error(), "failed to fetch pulse data") {
 			return &jsonrpc.Error{
-				Code:    10404,
+				Code:    errCodePulseNotFound,
 				Message: "[ Export ]: " + err.Error(),
 				Data:    nil,
 			}
