@@ -294,7 +294,7 @@ func (mb *MessageBus) checkPulse(ctx context.Context, parcel core.Parcel, locked
 		return errors.Wrap(err, "[ checkPulse ] Couldn't get current pulse number")
 	}
 
-	//TODO: check if parcel.Pulse() == pulse.NextPulseNumber
+	// TODO: check if parcel.Pulse() == pulse.NextPulseNumber
 	if parcel.Pulse() > pulse.PulseNumber && mb.acquireMessagePoolItem() {
 		if locked {
 			mb.globalLock.RUnlock()

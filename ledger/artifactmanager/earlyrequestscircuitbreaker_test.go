@@ -29,27 +29,6 @@ import (
 )
 
 func TestMiddleware_waitForDrop(t *testing.T) {
-	// there is a case, when there is only the first pulse (65537)
-	// when it happens, we have no data
-	// also the same case happens, when we don't know anything about the jet
-	t.Run("jetDropTimeout is nil.", func(t *testing.T) {
-		ctx := inslogger.TestContext(t)
-		jetID := core.NewRecordID(core.FirstPulseNumber, []byte{1})
-
-		middleware := newMiddleware(nil, nil, nil, nil)
-		expectedParcel := message.Parcel{PulseNumber: 8888}
-		handler := func(context context.Context, parcel core.Parcel) (rep core.Reply, e error) {
-			require.Equal(t, &expectedParcel, parcel)
-			return &reply.OK{}, nil
-		}
-
-		internal := middleware.waitForDrop(handler)
-		rep, err := internal(contextWithJet(ctx, *jetID), &expectedParcel)
-
-		require.Equal(t, &reply.OK{}, rep)
-		require.Nil(t, err)
-	})
-
 	t.Run("timeout works well", func(t *testing.T) {
 		ctx := inslogger.TestContext(t)
 		jetID := core.NewRecordID(core.FirstPulseNumber, []byte{1})
@@ -105,19 +84,19 @@ func TestMiddleware_waitForDrop(t *testing.T) {
 	})
 
 	t.Run("unlockDropWaiters", func(t *testing.T) {
-		t.Run("init if nil", func(t *testing.T) {
+		t.Run("init if jet isn't provided", func(t *testing.T) {
 			ctx := inslogger.TestContext(t)
 			jetID := core.NewRecordID(core.FirstPulseNumber, []byte{1})
 
 			middleware := newMiddleware(nil, nil, nil, nil)
-			expectedParcel := message.Parcel{PulseNumber: 8888}
+			expectedParcel := message.Parcel{PulseNumber: 8888, Msg: &message.HotData{DropJet: *jetID}}
 			handler := func(context context.Context, parcel core.Parcel) (rep core.Reply, e error) {
 				require.Equal(t, &expectedParcel, parcel)
 				return &reply.Object{IsPrototype: true}, nil
 			}
 
 			internal := middleware.unlockDropWaiters(handler)
-			rep, err := internal(contextWithJet(ctx, *jetID), &expectedParcel)
+			rep, err := internal(ctx, &expectedParcel)
 
 			require.Nil(t, err)
 			require.Equal(t, &reply.Object{IsPrototype: true}, rep)
@@ -139,14 +118,14 @@ func TestMiddleware_waitForDrop(t *testing.T) {
 				timeoutLocker: make(chan struct{}),
 				lastJdPulse:   core.PulseNumber(7777),
 			}
-			expectedParcel := message.Parcel{PulseNumber: 8888}
+			expectedParcel := message.Parcel{PulseNumber: 8888, Msg: &message.HotData{DropJet: *jetID}}
 			handler := func(context context.Context, parcel core.Parcel) (rep core.Reply, e error) {
 				require.Equal(t, &expectedParcel, parcel)
 				return &reply.Object{IsPrototype: true}, nil
 			}
 
 			internal := middleware.unlockDropWaiters(handler)
-			rep, err := internal(contextWithJet(ctx, *jetID), &expectedParcel)
+			rep, err := internal(ctx, &expectedParcel)
 
 			require.Nil(t, err)
 			require.Equal(t, &reply.Object{IsPrototype: true}, rep)

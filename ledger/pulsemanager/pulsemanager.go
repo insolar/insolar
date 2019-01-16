@@ -44,16 +44,17 @@ type ActiveListSwapper interface {
 
 // PulseManager implements core.PulseManager.
 type PulseManager struct {
-	LR                         core.LogicRunner                `inject:""`
-	Bus                        core.MessageBus                 `inject:""`
-	NodeNet                    core.NodeNetwork                `inject:""`
-	JetCoordinator             core.JetCoordinator             `inject:""`
-	GIL                        core.GlobalInsolarLock          `inject:""`
-	CryptographyService        core.CryptographyService        `inject:""`
-	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
-	RecentStorageProvider      recentstorage.Provider          `inject:""`
-	ActiveListSwapper          ActiveListSwapper               `inject:""`
-	PulseStorage               pulseStoragePm                  `inject:""`
+	LR                            core.LogicRunner                   `inject:""`
+	Bus                           core.MessageBus                    `inject:""`
+	NodeNet                       core.NodeNetwork                   `inject:""`
+	JetCoordinator                core.JetCoordinator                `inject:""`
+	GIL                           core.GlobalInsolarLock             `inject:""`
+	CryptographyService           core.CryptographyService           `inject:""`
+	PlatformCryptographyScheme    core.PlatformCryptographyScheme    `inject:""`
+	RecentStorageProvider         recentstorage.Provider             `inject:""`
+	ActiveListSwapper             ActiveListSwapper                  `inject:""`
+	PulseStorage                  pulseStoragePm                     `inject:""`
+	ArtifactManagerMessageHandler core.ArtifactManagerMessageHandler `inject:""`
 	// TODO: move clients pool to component - @nordicdyno - 18.Dec.2018
 	syncClientsPool *heavyclient.Pool
 
@@ -601,6 +602,8 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 		return errors.Wrap(err, "failed to process jets")
 	}
 
+	m.prepareArtifactManagerMessageHandlerForNextPulse(ctx, jets)
+
 	m.GIL.Release(ctx)
 
 	if !persist {
@@ -639,6 +642,34 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 	}
 
 	return m.LR.OnPulse(ctx, newPulse)
+}
+
+func (m *PulseManager) prepareArtifactManagerMessageHandlerForNextPulse(ctx context.Context, jets []jetInfo){
+	logger := inslogger.FromContext(ctx)
+	logger.Debugf("[prepareHandlerForNextPulse]")
+
+	m.ArtifactManagerMessageHandler.ResetEarlyRequestCircuitBreaker(ctx)
+
+	for _, jetInfo := range jets {
+
+		if jetInfo.left == nil && jetInfo.right == nil {
+			logger.Debugf("[prepareHandlerForNextPulse] fetch jetInfo root %v", jetInfo.id.JetIDString())
+			// No split happened.
+			if jetInfo.mineNext {
+				m.ArtifactManagerMessageHandler.CloseEarlyRequestCircuitBreakerForJet(ctx, jetInfo.id)
+			}
+		} else {
+			logger.Debugf("[prepareHandlerForNextPulse] fetch jetInfo left %v", jetInfo.left.id.JetIDString())
+			logger.Debugf("[prepareHandlerForNextPulse] fetch jetInfo right %v", jetInfo.right.id.JetIDString())
+			// Split happened.
+			if jetInfo.left.mineNext {
+				m.ArtifactManagerMessageHandler.CloseEarlyRequestCircuitBreakerForJet(ctx, jetInfo.left.id)
+			}
+			if jetInfo.right.mineNext {
+				m.ArtifactManagerMessageHandler.CloseEarlyRequestCircuitBreakerForJet(ctx, jetInfo.right.id)
+			}
+		}
+	}
 }
 
 func (m *PulseManager) sendTreeToHeavy(ctx context.Context, pn core.PulseNumber) {
