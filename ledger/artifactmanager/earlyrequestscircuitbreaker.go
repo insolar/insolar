@@ -57,13 +57,13 @@ func (b *earlyRequestCircuitBreakerProvider) getBreaker(ctx context.Context, jet
 
 func (b *earlyRequestCircuitBreakerProvider) onTimeoutHappened(ctx context.Context) {
 	logger := inslogger.FromContext(ctx)
-	logger.Debugf("[onTimeoutHappened]")
+	logger.Debugf("[onTimeoutHappened] start method. breakers should be cleared")
 
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
 	for jetID, breaker := range b.breakers {
-		logger.Debugf("[onTimeoutHappened] jetID - %v", jetID.JetIDString())
+		logger.Debugf("[onTimeoutHappened] shutdown timeout channel for jetID - %v", jetID.JetIDString())
 		close(breaker.timeoutChannel)
 	}
 
@@ -97,7 +97,7 @@ func (m *middleware) checkEarlyRequestBreaker(handler core.MessageHandler) core.
 			logger.Debugf("[checkEarlyRequestBreaker] before handler exec - %v", time.Now())
 			return handler(ctx, parcel)
 		case <-requestBreaker.timeoutChannel:
-			logger.Errorf("[checkEarlyRequestBreaker] Timeout %v, jetID %v", parcel.Pulse(), jetID.JetIDString())
+			logger.Errorf("[checkEarlyRequestBreaker] timeout happened for %v with pulse  %v", jetID.JetIDString(), parcel.Pulse())
 			return &reply.Error{ErrType: reply.ErrHotDataTimeout}, nil
 		}
 	}
