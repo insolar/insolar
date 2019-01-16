@@ -163,7 +163,16 @@ func (r *RecentStorage) GetRequests() map[core.RecordID]map[core.RecordID]struct
 	r.requestLock.RLock()
 	defer r.requestLock.RUnlock()
 
-	return r.pendingRequests
+	requestsClone := make(map[core.RecordID]map[core.RecordID]struct{})
+	for objID, objRequests := range r.pendingRequests {
+		objRequestsClone := make(map[core.RecordID]struct{}, len(objRequests))
+		for reqID, v := range objRequests {
+			objRequestsClone[reqID] = v
+		}
+		requestsClone[objID] = objRequestsClone
+	}
+
+	return requestsClone
 }
 
 // GetRequestsForObject returns request hot-indexes for object.
