@@ -19,6 +19,8 @@ package artifactmanager
 import (
 	"context"
 	"fmt"
+	"sync"
+
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
@@ -26,7 +28,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/pkg/errors"
-	"sync"
 )
 
 const (
@@ -288,6 +289,7 @@ func (m *middleware) fetchJet(
 		if r == nil {
 			continue
 		}
+		inslogger.FromContext(ctx).Debugf("Got jet %s Actual is %s", r.ID.JetIDString(), r.Actual)
 		if !r.Actual {
 			continue
 		}
