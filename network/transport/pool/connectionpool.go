@@ -41,7 +41,7 @@ func newConnectionPool(connectionFactory connectionFactory) *connectionPool {
 	}
 }
 
-func (cp *connectionPool) GetConnection(ctx context.Context, address net.Addr) (net.Conn, error) {
+func (cp *connectionPool) GetConnection(ctx context.Context, address net.Addr) (*LockableConnection, error) {
 	logger := inslogger.FromContext(ctx)
 
 	conn, ok := cp.getConnection(address)
@@ -49,12 +49,22 @@ func (cp *connectionPool) GetConnection(ctx context.Context, address net.Addr) (
 	logger.Debugf("[ GetConnection ] Finding connection to %s in pool: %s", address, ok)
 
 	if ok && !connectionClosedByPeer(ctx, conn) {
-		return conn, nil
+		return &LockableConnection{
+			Conn:   conn,
+			Locker: &sync.Mutex{},
+		}, nil
 	}
 
 	logger.Debugf("[ GetConnection ] Missing open connection to %s in pool ", address)
 
-	return cp.getOrCreateConnection(ctx, address)
+	conn, err := cp.getOrCreateConnection(ctx, address)
+	if err != nil {
+		return nil, err
+	}
+	return &LockableConnection{
+		Conn:   conn,
+		Locker: &sync.Mutex{},
+	}, nil
 }
 
 func (cp *connectionPool) getConnection(address net.Addr) (net.Conn, bool) {

@@ -69,8 +69,9 @@ func (t *tcpTransport) send(address string, data []byte) error {
 	}
 
 	logger.Debug("[ send ] len = ", len(data))
-
+	conn.Lock()
 	_, err = conn.Write(data)
+	conn.Unlock()
 	return errors.Wrap(err, "[ send ] Failed to write data")
 }
 

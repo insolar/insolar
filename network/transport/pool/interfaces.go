@@ -19,10 +19,16 @@ package pool
 import (
 	"context"
 	"net"
+	"sync"
 )
 
+type LockableConnection struct {
+	net.Conn
+	sync.Locker
+}
+
 type ConnectionPool interface {
-	GetConnection(ctx context.Context, address net.Addr) (net.Conn, error)
+	GetConnection(ctx context.Context, address net.Addr) (*LockableConnection, error)
 	Reset()
 }
 
