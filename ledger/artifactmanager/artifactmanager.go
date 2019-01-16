@@ -234,7 +234,7 @@ func (m *LedgerArtifactManager) HasPendingRequests(
 	}
 	requests, ok := rep.(*reply.HasPendingRequests)
 	if !ok {
-		return false, ErrUnexpectedReply
+		return false, fmt.Errorf("unexpected reply: %#v", rep)
 	}
 	return requests.Has, nil
 }
@@ -266,8 +266,7 @@ func (m *LedgerArtifactManager) GetDelegate(
 
 	react, ok := genericReact.(*reply.Delegate)
 	if !ok {
-		err = ErrUnexpectedReply
-		return nil, err
+		return nil, fmt.Errorf("unexpected reply: %#v", genericReact)
 	}
 	return &react.Head, nil
 }
@@ -696,7 +695,7 @@ func (m *LedgerArtifactManager) setRecord(
 
 	react, ok := genericReply.(*reply.ID)
 	if !ok {
-		return nil, ErrUnexpectedReply
+		return nil, fmt.Errorf("unexpected reply: %#v", genericReply)
 	}
 
 	return &react.ID, nil
@@ -720,7 +719,7 @@ func (m *LedgerArtifactManager) setBlob(
 
 	react, ok := genericReact.(*reply.ID)
 	if !ok {
-		return nil, ErrUnexpectedReply
+		return nil, fmt.Errorf("unexpected reply: %#v", genericReact)
 	}
 
 	return &react.ID, nil
@@ -757,7 +756,7 @@ func (m *LedgerArtifactManager) sendUpdateObject(
 
 	rep, ok := genericRep.(*reply.Object)
 	if !ok {
-		return nil, ErrUnexpectedReply
+		return nil, fmt.Errorf("unexpected reply: %#v", genericRep)
 	}
 
 	return rep, nil
@@ -785,7 +784,7 @@ func (m *LedgerArtifactManager) registerChild(
 
 	react, ok := genericReact.(*reply.ID)
 	if !ok {
-		return nil, ErrUnexpectedReply
+		return nil, fmt.Errorf("unexpected reply: %#v", genericReact)
 	}
 
 	return &react.ID, nil
