@@ -111,14 +111,14 @@ func startScenario(s scenario) {
 	s.printResult()
 }
 
-var createMemberRetry = 3
+var numRetries = 3
 
 func createMembers(insSDK *sdk.SDK, count int) []*sdk.Member {
 	var members []*sdk.Member
 	var err error
 	for i := 0; i < count; i++ {
 
-		for j := 0; j < createMemberRetry; j++ {
+		for j := 0; j < numRetries; j++ {
 			member, _, err := insSDK.CreateMember()
 			if err == nil {
 				members = append(members, member)
@@ -128,7 +128,7 @@ func createMembers(insSDK *sdk.SDK, count int) []*sdk.Member {
 			fmt.Println("Create member error", err.Error(), "retry")
 			time.Sleep(time.Second)
 		}
-		check(fmt.Sprintf("couldn't create member after retries: %d", createMemberRetry), err)
+		check(fmt.Sprintf("couldn't create member after retries: %d", numRetries), err)
 	}
 	return members
 }

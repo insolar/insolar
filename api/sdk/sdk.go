@@ -118,7 +118,7 @@ func (sdk *SDK) getResponse(body []byte) (*response, error) {
 	return res, nil
 }
 
-// CreateMember api request with new random keys creates member
+// CreateMember api request creates member with new random keys
 func (sdk *SDK) CreateMember() (*Member, string, error) {
 	ctx := inslogger.ContextWithTrace(context.Background(), "CreateMember")
 	memberName := testutils.RandomString()
@@ -157,6 +157,7 @@ func (sdk *SDK) CreateMember() (*Member, string, error) {
 	return NewMember(response.Result.(string), string(privateKeyStr)), response.TraceID, nil
 }
 
+// CreateMember api request with new random keys creates member
 func (sdk *SDK) Transfer(amount uint, from *Member, to *Member) (string, error) {
 	ctx := inslogger.ContextWithTrace(context.Background(), "Transfer")
 	params := []interface{}{amount, to.Reference}
