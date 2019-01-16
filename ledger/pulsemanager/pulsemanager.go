@@ -652,14 +652,13 @@ func (m *PulseManager) prepareArtifactManagerMessageHandlerForNextPulse(ctx cont
 
 	for _, jetInfo := range jets {
 
-		logger.Debugf("[prepareHandlerForNextPulse] fetch jetInfo root %v", jetInfo.id.JetIDString())
-		// No split happened.
-		if jetInfo.mineNext {
-			m.ArtifactManagerMessageHandler.CloseEarlyRequestCircuitBreakerForJet(ctx, jetInfo.id)
-		}
-
-		if jetInfo.left != nil && jetInfo.right != nil {
-
+		if jetInfo.left == nil && jetInfo.right == nil {
+			logger.Debugf("[prepareHandlerForNextPulse] fetch jetInfo root %v", jetInfo.id.JetIDString())
+			// No split happened.
+			if jetInfo.mineNext {
+				m.ArtifactManagerMessageHandler.CloseEarlyRequestCircuitBreakerForJet(ctx, jetInfo.id)
+			}
+		} else {
 			logger.Debugf("[prepareHandlerForNextPulse] fetch jetInfo left %v", jetInfo.left.id.JetIDString())
 			logger.Debugf("[prepareHandlerForNextPulse] fetch jetInfo right %v", jetInfo.right.id.JetIDString())
 			// Split happened.
@@ -669,7 +668,6 @@ func (m *PulseManager) prepareArtifactManagerMessageHandlerForNextPulse(ctx cont
 			if jetInfo.right.mineNext {
 				m.ArtifactManagerMessageHandler.CloseEarlyRequestCircuitBreakerForJet(ctx, jetInfo.right.id)
 			}
-
 		}
 	}
 }
