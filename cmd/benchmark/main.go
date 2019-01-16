@@ -115,20 +115,23 @@ var numRetries = 3
 
 func createMembers(insSDK *sdk.SDK, count int) []*sdk.Member {
 	var members []*sdk.Member
+	var member *sdk.Member
 	var err error
 	for i := 0; i < count; i++ {
 
 		for j := 0; j < numRetries; j++ {
-			member, _, err := insSDK.CreateMember()
+			member, _, err = insSDK.CreateMember()
+			fmt.Println(err)
 			if err == nil {
 				members = append(members, member)
 				break
 			}
 
-			fmt.Println("Create member error", err.Error(), "retry")
+			fmt.Println("Retry to create member. Error is: ", err.Error())
 			time.Sleep(time.Second)
 		}
-		check(fmt.Sprintf("couldn't create member after retries: %d", numRetries), err)
+		fmt.Println(err)
+		check(fmt.Sprintf("Couldn't create member after retries: %d", numRetries), err)
 	}
 	return members
 }
@@ -137,7 +140,7 @@ func main() {
 	parseInputParams()
 
 	err := log.SetLevel(logLevel)
-	check(fmt.Sprintf("can not set '%s' level on logger:", logLevel), err)
+	check(fmt.Sprintf("Can't set '%s' level on logger:", logLevel), err)
 
 	out, err := chooseOutput(output)
 	check("Problems with output file:", err)
