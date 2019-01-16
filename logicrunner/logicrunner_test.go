@@ -141,10 +141,6 @@ func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *gop
 		return recentStorageMock
 	}
 
-	artifactManagerMessageHandlerMock := testutils.NewArtifactManagerMessageHandlerMock(t)
-	artifactManagerMessageHandlerMock.ResetEarlyRequestCircuitBreakerMock.Return()
-	artifactManagerMessageHandlerMock.CloseEarlyRequestCircuitBreakerForJetMock.Return()
-
 	parcelFactory := messagebus.NewParcelFactory()
 	cm := &component.Manager{}
 	cm.Register(platformpolicy.NewPlatformCryptographyScheme())
@@ -152,7 +148,7 @@ func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *gop
 	cm.Register(am, l.GetPulseManager(), l.GetJetCoordinator())
 	cr, err := contractrequester.New()
 
-	cm.Inject(pulseStorage, artifactManagerMessageHandlerMock, nk, providerMock, l, lr, nw, mb, cr, delegationTokenFactory, parcelFactory, mock)
+	cm.Inject(pulseStorage, nk, providerMock, l, lr, nw, mb, cr, delegationTokenFactory, parcelFactory, mock)
 	err = cm.Init(ctx)
 	assert.NoError(t, err)
 	err = cm.Start(ctx)
