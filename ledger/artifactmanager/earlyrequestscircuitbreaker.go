@@ -57,13 +57,13 @@ func (b *earlyRequestCircuitBreakerProvider) getBreaker(ctx context.Context, jet
 
 func (b *earlyRequestCircuitBreakerProvider) onTimeoutHappened(ctx context.Context) {
 	logger := inslogger.FromContext(ctx)
-	logger.Debugf("[onTimeoutHappened]")
+	logger.Debugf("[onTimeoutHappened] start method. breakers should be cleared")
 
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
 	for jetID, breaker := range b.breakers {
-		logger.Debugf("[onTimeoutHappened] jetID - %v", jetID.JetIDString())
+		logger.Debugf("[onTimeoutHappened] throw timeout for jetID - %v", jetID.JetIDString())
 		close(breaker.timeoutChannel)
 	}
 
