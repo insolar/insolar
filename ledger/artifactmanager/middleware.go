@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/pkg/errors"
+	"sync"
 )
 
 const (
@@ -57,7 +58,7 @@ func newMiddleware(
 		messageBus:                         messageBus,
 		earlyRequestCircuitBreakerProvider: &earlyRequestCircuitBreakerProvider{breakers: map[core.RecordID]*requestCircuitBreakerProvider{}},
 		conf:                               conf,
-		sequencer:                          map[core.RecordID]*struct {
+		sequencer: map[core.RecordID]*struct {
 			sync.Mutex
 			done bool
 		}{},
