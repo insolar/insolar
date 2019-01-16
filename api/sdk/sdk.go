@@ -46,7 +46,7 @@ type memberKeys struct {
 	Public  string `json:"public_key"`
 }
 
-func (rb *ringBuffer) Next() string {
+func (rb *ringBuffer) next() string {
 	rb.Lock()
 	defer rb.Unlock()
 	rb.cursor++
@@ -77,7 +77,7 @@ func NewSDK(urls []string, rootMemberKeysPath string) (*SDK, error) {
 		return nil, errors.Wrap(err, "[ NewSDK ] can't unmarshal keys")
 	}
 
-	response, err := requester.Info(buffer.Next())
+	response, err := requester.Info(buffer.next())
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NewSDK ] can't get info")
 	}
@@ -100,7 +100,7 @@ func (sdk *SDK) sendRequest(ctx context.Context, method string, params []interfa
 		Method: method,
 	}
 
-	body, err := requester.Send(ctx, sdk.apiURLs.Next(), userCfg, reqCfg)
+	body, err := requester.Send(ctx, sdk.apiURLs.next(), userCfg, reqCfg)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ sendRequest ] can not send request")
 	}
