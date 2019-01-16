@@ -17,7 +17,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"net"
@@ -26,7 +25,6 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/api/sdk"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 )
 
@@ -89,7 +87,6 @@ func (s *transferDifferentMembersScenario) start() {
 func (s *transferDifferentMembersScenario) startMember(index int, wg *sync.WaitGroup) {
 	defer wg.Done()
 	for j := 0; j < s.repetitions; j = j + 1 {
-		ctx := inslogger.ContextWithTrace(context.Background(), fmt.Sprintf("transferFromMemberNumber%d", index))
 		from := s.members[index]
 		to := s.members[index+1]
 

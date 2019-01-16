@@ -144,7 +144,7 @@ func main() {
 
 	insSDK, err := sdk.NewSDK(apiUrls, rootMemberKeys)
 
-	members := createMembers(insSDK, concurrent)
+	members := createMembers(insSDK, concurrent*2)
 
-	runScenarios(out, members, concurrent, repetitions)
+	runScenarios(out, insSDK, members, concurrent, repetitions)
 }
