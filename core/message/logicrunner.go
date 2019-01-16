@@ -33,6 +33,14 @@ const (
 	// ReturnValidated
 )
 
+type PendingState int
+
+const (
+	PendingUnknown PendingState = iota
+	NotPending
+	InPending
+)
+
 type IBaseLogicMessage interface {
 	core.Message
 	GetBaseLogicMessage() *BaseLogicMessage
@@ -209,7 +217,7 @@ type ExecutorResults struct {
 	RecordRef core.RecordRef
 	Requests  []CaseBindRequest
 	Queue     []ExecutionQueueElement
-	Pending   bool
+	Pending   PendingState
 }
 
 type ExecutionQueueElement struct {
