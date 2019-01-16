@@ -44,7 +44,6 @@ func (b *earlyRequestCircuitBreakerProvider) getBreaker(ctx context.Context, jet
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-
 	if _, ok := b.breakers[jetID]; !ok {
 		logger.Debugf("[getBreaker] create new  - %v", jetID.JetIDString())
 		b.breakers[jetID] = &requestCircuitBreakerProvider{
@@ -124,5 +123,5 @@ func (m *middleware) closeEarlyRequestBreaker(handler core.MessageHandler) core.
 func (m *middleware) closeEarlyRequestBreakerForJet(ctx context.Context, jetID core.RecordID) {
 	inslogger.FromContext(ctx).Debugf("[closeEarlyRequestBreakerForJet] jetID - %v", jetID.JetIDString())
 	breaker := m.earlyRequestCircuitBreakerProvider.getBreaker(ctx, jetID)
-	defer close(breaker.hotDataChannel)
+	close(breaker.hotDataChannel)
 }
