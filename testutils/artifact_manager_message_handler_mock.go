@@ -20,10 +20,15 @@ import (
 type ArtifactManagerMessageHandlerMock struct {
 	t minimock.Tester
 
-	OnPulseFunc       func(p context.Context, p1 core.Pulse) (r error)
-	OnPulseCounter    uint64
-	OnPulsePreCounter uint64
-	OnPulseMock       mArtifactManagerMessageHandlerMockOnPulse
+	CloseEarlyRequestCircuitBreakerForJetFunc       func(p context.Context, p1 core.RecordID)
+	CloseEarlyRequestCircuitBreakerForJetCounter    uint64
+	CloseEarlyRequestCircuitBreakerForJetPreCounter uint64
+	CloseEarlyRequestCircuitBreakerForJetMock       mArtifactManagerMessageHandlerMockCloseEarlyRequestCircuitBreakerForJet
+
+	ResetEarlyRequestCircuitBreakerFunc       func(p context.Context)
+	ResetEarlyRequestCircuitBreakerCounter    uint64
+	ResetEarlyRequestCircuitBreakerPreCounter uint64
+	ResetEarlyRequestCircuitBreakerMock       mArtifactManagerMessageHandlerMockResetEarlyRequestCircuitBreaker
 }
 
 //NewArtifactManagerMessageHandlerMock returns a mock for github.com/insolar/insolar/core.ArtifactManagerMessageHandler
@@ -34,154 +39,254 @@ func NewArtifactManagerMessageHandlerMock(t minimock.Tester) *ArtifactManagerMes
 		controller.RegisterMocker(m)
 	}
 
-	m.OnPulseMock = mArtifactManagerMessageHandlerMockOnPulse{mock: m}
+	m.CloseEarlyRequestCircuitBreakerForJetMock = mArtifactManagerMessageHandlerMockCloseEarlyRequestCircuitBreakerForJet{mock: m}
+	m.ResetEarlyRequestCircuitBreakerMock = mArtifactManagerMessageHandlerMockResetEarlyRequestCircuitBreaker{mock: m}
 
 	return m
 }
 
-type mArtifactManagerMessageHandlerMockOnPulse struct {
+type mArtifactManagerMessageHandlerMockCloseEarlyRequestCircuitBreakerForJet struct {
 	mock              *ArtifactManagerMessageHandlerMock
-	mainExpectation   *ArtifactManagerMessageHandlerMockOnPulseExpectation
-	expectationSeries []*ArtifactManagerMessageHandlerMockOnPulseExpectation
+	mainExpectation   *ArtifactManagerMessageHandlerMockCloseEarlyRequestCircuitBreakerForJetExpectation
+	expectationSeries []*ArtifactManagerMessageHandlerMockCloseEarlyRequestCircuitBreakerForJetExpectation
 }
 
-type ArtifactManagerMessageHandlerMockOnPulseExpectation struct {
-	input  *ArtifactManagerMessageHandlerMockOnPulseInput
-	result *ArtifactManagerMessageHandlerMockOnPulseResult
+type ArtifactManagerMessageHandlerMockCloseEarlyRequestCircuitBreakerForJetExpectation struct {
+	input *ArtifactManagerMessageHandlerMockCloseEarlyRequestCircuitBreakerForJetInput
 }
 
-type ArtifactManagerMessageHandlerMockOnPulseInput struct {
+type ArtifactManagerMessageHandlerMockCloseEarlyRequestCircuitBreakerForJetInput struct {
 	p  context.Context
-	p1 core.Pulse
+	p1 core.RecordID
 }
 
-type ArtifactManagerMessageHandlerMockOnPulseResult struct {
-	r error
-}
-
-//Expect specifies that invocation of ArtifactManagerMessageHandler.OnPulse is expected from 1 to Infinity times
-func (m *mArtifactManagerMessageHandlerMockOnPulse) Expect(p context.Context, p1 core.Pulse) *mArtifactManagerMessageHandlerMockOnPulse {
-	m.mock.OnPulseFunc = nil
+//Expect specifies that invocation of ArtifactManagerMessageHandler.CloseEarlyRequestCircuitBreakerForJet is expected from 1 to Infinity times
+func (m *mArtifactManagerMessageHandlerMockCloseEarlyRequestCircuitBreakerForJet) Expect(p context.Context, p1 core.RecordID) *mArtifactManagerMessageHandlerMockCloseEarlyRequestCircuitBreakerForJet {
+	m.mock.CloseEarlyRequestCircuitBreakerForJetFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &ArtifactManagerMessageHandlerMockOnPulseExpectation{}
+		m.mainExpectation = &ArtifactManagerMessageHandlerMockCloseEarlyRequestCircuitBreakerForJetExpectation{}
 	}
-	m.mainExpectation.input = &ArtifactManagerMessageHandlerMockOnPulseInput{p, p1}
+	m.mainExpectation.input = &ArtifactManagerMessageHandlerMockCloseEarlyRequestCircuitBreakerForJetInput{p, p1}
 	return m
 }
 
-//Return specifies results of invocation of ArtifactManagerMessageHandler.OnPulse
-func (m *mArtifactManagerMessageHandlerMockOnPulse) Return(r error) *ArtifactManagerMessageHandlerMock {
-	m.mock.OnPulseFunc = nil
+//Return specifies results of invocation of ArtifactManagerMessageHandler.CloseEarlyRequestCircuitBreakerForJet
+func (m *mArtifactManagerMessageHandlerMockCloseEarlyRequestCircuitBreakerForJet) Return() *ArtifactManagerMessageHandlerMock {
+	m.mock.CloseEarlyRequestCircuitBreakerForJetFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &ArtifactManagerMessageHandlerMockOnPulseExpectation{}
+		m.mainExpectation = &ArtifactManagerMessageHandlerMockCloseEarlyRequestCircuitBreakerForJetExpectation{}
 	}
-	m.mainExpectation.result = &ArtifactManagerMessageHandlerMockOnPulseResult{r}
+
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of ArtifactManagerMessageHandler.OnPulse is expected once
-func (m *mArtifactManagerMessageHandlerMockOnPulse) ExpectOnce(p context.Context, p1 core.Pulse) *ArtifactManagerMessageHandlerMockOnPulseExpectation {
-	m.mock.OnPulseFunc = nil
+//ExpectOnce specifies that invocation of ArtifactManagerMessageHandler.CloseEarlyRequestCircuitBreakerForJet is expected once
+func (m *mArtifactManagerMessageHandlerMockCloseEarlyRequestCircuitBreakerForJet) ExpectOnce(p context.Context, p1 core.RecordID) *ArtifactManagerMessageHandlerMockCloseEarlyRequestCircuitBreakerForJetExpectation {
+	m.mock.CloseEarlyRequestCircuitBreakerForJetFunc = nil
 	m.mainExpectation = nil
 
-	expectation := &ArtifactManagerMessageHandlerMockOnPulseExpectation{}
-	expectation.input = &ArtifactManagerMessageHandlerMockOnPulseInput{p, p1}
+	expectation := &ArtifactManagerMessageHandlerMockCloseEarlyRequestCircuitBreakerForJetExpectation{}
+	expectation.input = &ArtifactManagerMessageHandlerMockCloseEarlyRequestCircuitBreakerForJetInput{p, p1}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
-func (e *ArtifactManagerMessageHandlerMockOnPulseExpectation) Return(r error) {
-	e.result = &ArtifactManagerMessageHandlerMockOnPulseResult{r}
-}
-
-//Set uses given function f as a mock of ArtifactManagerMessageHandler.OnPulse method
-func (m *mArtifactManagerMessageHandlerMockOnPulse) Set(f func(p context.Context, p1 core.Pulse) (r error)) *ArtifactManagerMessageHandlerMock {
+//Set uses given function f as a mock of ArtifactManagerMessageHandler.CloseEarlyRequestCircuitBreakerForJet method
+func (m *mArtifactManagerMessageHandlerMockCloseEarlyRequestCircuitBreakerForJet) Set(f func(p context.Context, p1 core.RecordID)) *ArtifactManagerMessageHandlerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
-	m.mock.OnPulseFunc = f
+	m.mock.CloseEarlyRequestCircuitBreakerForJetFunc = f
 	return m.mock
 }
 
-//OnPulse implements github.com/insolar/insolar/core.ArtifactManagerMessageHandler interface
-func (m *ArtifactManagerMessageHandlerMock) OnPulse(p context.Context, p1 core.Pulse) (r error) {
-	counter := atomic.AddUint64(&m.OnPulsePreCounter, 1)
-	defer atomic.AddUint64(&m.OnPulseCounter, 1)
+//CloseEarlyRequestCircuitBreakerForJet implements github.com/insolar/insolar/core.ArtifactManagerMessageHandler interface
+func (m *ArtifactManagerMessageHandlerMock) CloseEarlyRequestCircuitBreakerForJet(p context.Context, p1 core.RecordID) {
+	counter := atomic.AddUint64(&m.CloseEarlyRequestCircuitBreakerForJetPreCounter, 1)
+	defer atomic.AddUint64(&m.CloseEarlyRequestCircuitBreakerForJetCounter, 1)
 
-	if len(m.OnPulseMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.OnPulseMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to ArtifactManagerMessageHandlerMock.OnPulse. %v %v", p, p1)
+	if len(m.CloseEarlyRequestCircuitBreakerForJetMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.CloseEarlyRequestCircuitBreakerForJetMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to ArtifactManagerMessageHandlerMock.CloseEarlyRequestCircuitBreakerForJet. %v %v", p, p1)
 			return
 		}
 
-		input := m.OnPulseMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, ArtifactManagerMessageHandlerMockOnPulseInput{p, p1}, "ArtifactManagerMessageHandler.OnPulse got unexpected parameters")
-
-		result := m.OnPulseMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the ArtifactManagerMessageHandlerMock.OnPulse")
-			return
-		}
-
-		r = result.r
+		input := m.CloseEarlyRequestCircuitBreakerForJetMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, ArtifactManagerMessageHandlerMockCloseEarlyRequestCircuitBreakerForJetInput{p, p1}, "ArtifactManagerMessageHandler.CloseEarlyRequestCircuitBreakerForJet got unexpected parameters")
 
 		return
 	}
 
-	if m.OnPulseMock.mainExpectation != nil {
+	if m.CloseEarlyRequestCircuitBreakerForJetMock.mainExpectation != nil {
 
-		input := m.OnPulseMock.mainExpectation.input
+		input := m.CloseEarlyRequestCircuitBreakerForJetMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, ArtifactManagerMessageHandlerMockOnPulseInput{p, p1}, "ArtifactManagerMessageHandler.OnPulse got unexpected parameters")
+			testify_assert.Equal(m.t, *input, ArtifactManagerMessageHandlerMockCloseEarlyRequestCircuitBreakerForJetInput{p, p1}, "ArtifactManagerMessageHandler.CloseEarlyRequestCircuitBreakerForJet got unexpected parameters")
 		}
-
-		result := m.OnPulseMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the ArtifactManagerMessageHandlerMock.OnPulse")
-		}
-
-		r = result.r
 
 		return
 	}
 
-	if m.OnPulseFunc == nil {
-		m.t.Fatalf("Unexpected call to ArtifactManagerMessageHandlerMock.OnPulse. %v %v", p, p1)
+	if m.CloseEarlyRequestCircuitBreakerForJetFunc == nil {
+		m.t.Fatalf("Unexpected call to ArtifactManagerMessageHandlerMock.CloseEarlyRequestCircuitBreakerForJet. %v %v", p, p1)
 		return
 	}
 
-	return m.OnPulseFunc(p, p1)
+	m.CloseEarlyRequestCircuitBreakerForJetFunc(p, p1)
 }
 
-//OnPulseMinimockCounter returns a count of ArtifactManagerMessageHandlerMock.OnPulseFunc invocations
-func (m *ArtifactManagerMessageHandlerMock) OnPulseMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.OnPulseCounter)
+//CloseEarlyRequestCircuitBreakerForJetMinimockCounter returns a count of ArtifactManagerMessageHandlerMock.CloseEarlyRequestCircuitBreakerForJetFunc invocations
+func (m *ArtifactManagerMessageHandlerMock) CloseEarlyRequestCircuitBreakerForJetMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.CloseEarlyRequestCircuitBreakerForJetCounter)
 }
 
-//OnPulseMinimockPreCounter returns the value of ArtifactManagerMessageHandlerMock.OnPulse invocations
-func (m *ArtifactManagerMessageHandlerMock) OnPulseMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.OnPulsePreCounter)
+//CloseEarlyRequestCircuitBreakerForJetMinimockPreCounter returns the value of ArtifactManagerMessageHandlerMock.CloseEarlyRequestCircuitBreakerForJet invocations
+func (m *ArtifactManagerMessageHandlerMock) CloseEarlyRequestCircuitBreakerForJetMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.CloseEarlyRequestCircuitBreakerForJetPreCounter)
 }
 
-//OnPulseFinished returns true if mock invocations count is ok
-func (m *ArtifactManagerMessageHandlerMock) OnPulseFinished() bool {
+//CloseEarlyRequestCircuitBreakerForJetFinished returns true if mock invocations count is ok
+func (m *ArtifactManagerMessageHandlerMock) CloseEarlyRequestCircuitBreakerForJetFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.OnPulseMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.OnPulseCounter) == uint64(len(m.OnPulseMock.expectationSeries))
+	if len(m.CloseEarlyRequestCircuitBreakerForJetMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.CloseEarlyRequestCircuitBreakerForJetCounter) == uint64(len(m.CloseEarlyRequestCircuitBreakerForJetMock.expectationSeries))
 	}
 
 	// if main expectation was set then invocations count should be greater than zero
-	if m.OnPulseMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.OnPulseCounter) > 0
+	if m.CloseEarlyRequestCircuitBreakerForJetMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.CloseEarlyRequestCircuitBreakerForJetCounter) > 0
 	}
 
 	// if func was set then invocations count should be greater than zero
-	if m.OnPulseFunc != nil {
-		return atomic.LoadUint64(&m.OnPulseCounter) > 0
+	if m.CloseEarlyRequestCircuitBreakerForJetFunc != nil {
+		return atomic.LoadUint64(&m.CloseEarlyRequestCircuitBreakerForJetCounter) > 0
+	}
+
+	return true
+}
+
+type mArtifactManagerMessageHandlerMockResetEarlyRequestCircuitBreaker struct {
+	mock              *ArtifactManagerMessageHandlerMock
+	mainExpectation   *ArtifactManagerMessageHandlerMockResetEarlyRequestCircuitBreakerExpectation
+	expectationSeries []*ArtifactManagerMessageHandlerMockResetEarlyRequestCircuitBreakerExpectation
+}
+
+type ArtifactManagerMessageHandlerMockResetEarlyRequestCircuitBreakerExpectation struct {
+	input *ArtifactManagerMessageHandlerMockResetEarlyRequestCircuitBreakerInput
+}
+
+type ArtifactManagerMessageHandlerMockResetEarlyRequestCircuitBreakerInput struct {
+	p context.Context
+}
+
+//Expect specifies that invocation of ArtifactManagerMessageHandler.ResetEarlyRequestCircuitBreaker is expected from 1 to Infinity times
+func (m *mArtifactManagerMessageHandlerMockResetEarlyRequestCircuitBreaker) Expect(p context.Context) *mArtifactManagerMessageHandlerMockResetEarlyRequestCircuitBreaker {
+	m.mock.ResetEarlyRequestCircuitBreakerFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &ArtifactManagerMessageHandlerMockResetEarlyRequestCircuitBreakerExpectation{}
+	}
+	m.mainExpectation.input = &ArtifactManagerMessageHandlerMockResetEarlyRequestCircuitBreakerInput{p}
+	return m
+}
+
+//Return specifies results of invocation of ArtifactManagerMessageHandler.ResetEarlyRequestCircuitBreaker
+func (m *mArtifactManagerMessageHandlerMockResetEarlyRequestCircuitBreaker) Return() *ArtifactManagerMessageHandlerMock {
+	m.mock.ResetEarlyRequestCircuitBreakerFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &ArtifactManagerMessageHandlerMockResetEarlyRequestCircuitBreakerExpectation{}
+	}
+
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of ArtifactManagerMessageHandler.ResetEarlyRequestCircuitBreaker is expected once
+func (m *mArtifactManagerMessageHandlerMockResetEarlyRequestCircuitBreaker) ExpectOnce(p context.Context) *ArtifactManagerMessageHandlerMockResetEarlyRequestCircuitBreakerExpectation {
+	m.mock.ResetEarlyRequestCircuitBreakerFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &ArtifactManagerMessageHandlerMockResetEarlyRequestCircuitBreakerExpectation{}
+	expectation.input = &ArtifactManagerMessageHandlerMockResetEarlyRequestCircuitBreakerInput{p}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+//Set uses given function f as a mock of ArtifactManagerMessageHandler.ResetEarlyRequestCircuitBreaker method
+func (m *mArtifactManagerMessageHandlerMockResetEarlyRequestCircuitBreaker) Set(f func(p context.Context)) *ArtifactManagerMessageHandlerMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.ResetEarlyRequestCircuitBreakerFunc = f
+	return m.mock
+}
+
+//ResetEarlyRequestCircuitBreaker implements github.com/insolar/insolar/core.ArtifactManagerMessageHandler interface
+func (m *ArtifactManagerMessageHandlerMock) ResetEarlyRequestCircuitBreaker(p context.Context) {
+	counter := atomic.AddUint64(&m.ResetEarlyRequestCircuitBreakerPreCounter, 1)
+	defer atomic.AddUint64(&m.ResetEarlyRequestCircuitBreakerCounter, 1)
+
+	if len(m.ResetEarlyRequestCircuitBreakerMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.ResetEarlyRequestCircuitBreakerMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to ArtifactManagerMessageHandlerMock.ResetEarlyRequestCircuitBreaker. %v", p)
+			return
+		}
+
+		input := m.ResetEarlyRequestCircuitBreakerMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, ArtifactManagerMessageHandlerMockResetEarlyRequestCircuitBreakerInput{p}, "ArtifactManagerMessageHandler.ResetEarlyRequestCircuitBreaker got unexpected parameters")
+
+		return
+	}
+
+	if m.ResetEarlyRequestCircuitBreakerMock.mainExpectation != nil {
+
+		input := m.ResetEarlyRequestCircuitBreakerMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, ArtifactManagerMessageHandlerMockResetEarlyRequestCircuitBreakerInput{p}, "ArtifactManagerMessageHandler.ResetEarlyRequestCircuitBreaker got unexpected parameters")
+		}
+
+		return
+	}
+
+	if m.ResetEarlyRequestCircuitBreakerFunc == nil {
+		m.t.Fatalf("Unexpected call to ArtifactManagerMessageHandlerMock.ResetEarlyRequestCircuitBreaker. %v", p)
+		return
+	}
+
+	m.ResetEarlyRequestCircuitBreakerFunc(p)
+}
+
+//ResetEarlyRequestCircuitBreakerMinimockCounter returns a count of ArtifactManagerMessageHandlerMock.ResetEarlyRequestCircuitBreakerFunc invocations
+func (m *ArtifactManagerMessageHandlerMock) ResetEarlyRequestCircuitBreakerMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.ResetEarlyRequestCircuitBreakerCounter)
+}
+
+//ResetEarlyRequestCircuitBreakerMinimockPreCounter returns the value of ArtifactManagerMessageHandlerMock.ResetEarlyRequestCircuitBreaker invocations
+func (m *ArtifactManagerMessageHandlerMock) ResetEarlyRequestCircuitBreakerMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.ResetEarlyRequestCircuitBreakerPreCounter)
+}
+
+//ResetEarlyRequestCircuitBreakerFinished returns true if mock invocations count is ok
+func (m *ArtifactManagerMessageHandlerMock) ResetEarlyRequestCircuitBreakerFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.ResetEarlyRequestCircuitBreakerMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.ResetEarlyRequestCircuitBreakerCounter) == uint64(len(m.ResetEarlyRequestCircuitBreakerMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.ResetEarlyRequestCircuitBreakerMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.ResetEarlyRequestCircuitBreakerCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.ResetEarlyRequestCircuitBreakerFunc != nil {
+		return atomic.LoadUint64(&m.ResetEarlyRequestCircuitBreakerCounter) > 0
 	}
 
 	return true
@@ -191,8 +296,12 @@ func (m *ArtifactManagerMessageHandlerMock) OnPulseFinished() bool {
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *ArtifactManagerMessageHandlerMock) ValidateCallCounters() {
 
-	if !m.OnPulseFinished() {
-		m.t.Fatal("Expected call to ArtifactManagerMessageHandlerMock.OnPulse")
+	if !m.CloseEarlyRequestCircuitBreakerForJetFinished() {
+		m.t.Fatal("Expected call to ArtifactManagerMessageHandlerMock.CloseEarlyRequestCircuitBreakerForJet")
+	}
+
+	if !m.ResetEarlyRequestCircuitBreakerFinished() {
+		m.t.Fatal("Expected call to ArtifactManagerMessageHandlerMock.ResetEarlyRequestCircuitBreaker")
 	}
 
 }
@@ -212,8 +321,12 @@ func (m *ArtifactManagerMessageHandlerMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *ArtifactManagerMessageHandlerMock) MinimockFinish() {
 
-	if !m.OnPulseFinished() {
-		m.t.Fatal("Expected call to ArtifactManagerMessageHandlerMock.OnPulse")
+	if !m.CloseEarlyRequestCircuitBreakerForJetFinished() {
+		m.t.Fatal("Expected call to ArtifactManagerMessageHandlerMock.CloseEarlyRequestCircuitBreakerForJet")
+	}
+
+	if !m.ResetEarlyRequestCircuitBreakerFinished() {
+		m.t.Fatal("Expected call to ArtifactManagerMessageHandlerMock.ResetEarlyRequestCircuitBreaker")
 	}
 
 }
@@ -230,7 +343,8 @@ func (m *ArtifactManagerMessageHandlerMock) MinimockWait(timeout time.Duration) 
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
-		ok = ok && m.OnPulseFinished()
+		ok = ok && m.CloseEarlyRequestCircuitBreakerForJetFinished()
+		ok = ok && m.ResetEarlyRequestCircuitBreakerFinished()
 
 		if ok {
 			return
@@ -239,8 +353,12 @@ func (m *ArtifactManagerMessageHandlerMock) MinimockWait(timeout time.Duration) 
 		select {
 		case <-timeoutCh:
 
-			if !m.OnPulseFinished() {
-				m.t.Error("Expected call to ArtifactManagerMessageHandlerMock.OnPulse")
+			if !m.CloseEarlyRequestCircuitBreakerForJetFinished() {
+				m.t.Error("Expected call to ArtifactManagerMessageHandlerMock.CloseEarlyRequestCircuitBreakerForJet")
+			}
+
+			if !m.ResetEarlyRequestCircuitBreakerFinished() {
+				m.t.Error("Expected call to ArtifactManagerMessageHandlerMock.ResetEarlyRequestCircuitBreaker")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)
@@ -255,7 +373,11 @@ func (m *ArtifactManagerMessageHandlerMock) MinimockWait(timeout time.Duration) 
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *ArtifactManagerMessageHandlerMock) AllMocksCalled() bool {
 
-	if !m.OnPulseFinished() {
+	if !m.CloseEarlyRequestCircuitBreakerForJetFinished() {
+		return false
+	}
+
+	if !m.ResetEarlyRequestCircuitBreakerFinished() {
 		return false
 	}
 

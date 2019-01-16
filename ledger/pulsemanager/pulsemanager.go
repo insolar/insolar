@@ -602,31 +602,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 		return errors.Wrap(err, "failed to process jets")
 	}
 
-	err = m.ArtifactManagerMessageHandler.OnPulse(ctx, newPulse)
-	if err != nil {
-		inslogger.FromContext(ctx).Error(errors.Wrap(err, "ArtifactManagerMessageHandler OnPulse() returns error"))
-	}
-
-	for _, jetInfo := range jets {
-
-		if jetInfo.left == nil && jetInfo.right == nil {
-			inslogger.FromContext(ctx).Debugf("fetch jetInfo root %v", jetInfo.id.JetIDString())
-			// No split happened.
-			if jetInfo.mineNext {
-				_ = m.ArtifactManagerMessageHandler.OnExecutorNotChanged(ctx, jetInfo.id)
-			}
-		} else {
-			inslogger.FromContext(ctx).Debugf("fetch jetInfo left %v", jetInfo.left.id.JetIDString())
-			inslogger.FromContext(ctx).Debugf("fetch jetInfo right %v", jetInfo.right.id.JetIDString())
-			// Split happened.
-			if jetInfo.left.mineNext {
-				_ = m.ArtifactManagerMessageHandler.OnExecutorNotChanged(ctx, jetInfo.left.id)
-			}
-			if jetInfo.right.mineNext {
-				_ = m.ArtifactManagerMessageHandler.OnExecutorNotChanged(ctx, jetInfo.right.id)
-			}
-		}
-	}
+	m.prepareArtifactManagerMessageHandlerForNextPulse(ctx, jets)
 
 	m.GIL.Release(ctx)
 
@@ -666,6 +642,34 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 	}
 
 	return m.LR.OnPulse(ctx, newPulse)
+}
+
+func (m *PulseManager) prepareArtifactManagerMessageHandlerForNextPulse(ctx context.Context, jets []jetInfo){
+	logger := inslogger.FromContext(ctx)
+	logger.Debugf("[prepareHandlerForNextPulse]")
+
+	m.ArtifactManagerMessageHandler.ResetEarlyRequestCircuitBreaker(ctx)
+
+	for _, jetInfo := range jets {
+
+		if jetInfo.left == nil && jetInfo.right == nil {
+			logger.Debugf("[prepareHandlerForNextPulse] fetch jetInfo root %v", jetInfo.id.JetIDString())
+			// No split happened.
+			if jetInfo.mineNext {
+				m.ArtifactManagerMessageHandler.CloseEarlyRequestCircuitBreakerForJet(ctx, jetInfo.id)
+			}
+		} else {
+			logger.Debugf("[prepareHandlerForNextPulse] fetch jetInfo left %v", jetInfo.left.id.JetIDString())
+			logger.Debugf("[prepareHandlerForNextPulse] fetch jetInfo right %v", jetInfo.right.id.JetIDString())
+			// Split happened.
+			if jetInfo.left.mineNext {
+				m.ArtifactManagerMessageHandler.CloseEarlyRequestCircuitBreakerForJet(ctx, jetInfo.left.id)
+			}
+			if jetInfo.right.mineNext {
+				m.ArtifactManagerMessageHandler.CloseEarlyRequestCircuitBreakerForJet(ctx, jetInfo.right.id)
+			}
+		}
+	}
 }
 
 func (m *PulseManager) sendTreeToHeavy(ctx context.Context, pn core.PulseNumber) {

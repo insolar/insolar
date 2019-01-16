@@ -115,15 +115,13 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 	return nil
 }
 
-func (h *MessageHandler) OnPulse(context.Context, core.Pulse) error {
-	h.middleware.earlyRequestCircuitBreakerProvider.onTimeoutHappened()
-	return nil
+func (h *MessageHandler) ResetEarlyRequestCircuitBreaker(ctx context.Context) {
+	h.middleware.earlyRequestCircuitBreakerProvider.onTimeoutHappened(ctx)
 }
 
-func (h *MessageHandler) OnExecutorNotChanged(ctx context.Context, jetID core.RecordID) error {
-	inslogger.FromContext(ctx).Debugf("[OnExecutorNotChanged] %v", jetID.JetIDString())
-	h.middleware.closeEarlyRequestBreakerForJet(jetID)
-	return nil
+func (h *MessageHandler) CloseEarlyRequestCircuitBreakerForJet(ctx context.Context, jetID core.RecordID) {
+	inslogger.FromContext(ctx).Debugf("[CloseEarlyRequestCircuitBreakerForJet] %v", jetID.JetIDString())
+	h.middleware.closeEarlyRequestBreakerForJet(ctx, jetID)
 }
 
 func (h *MessageHandler) handleSetRecord(ctx context.Context, parcel core.Parcel) (core.Reply, error) {

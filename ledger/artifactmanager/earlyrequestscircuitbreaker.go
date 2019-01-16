@@ -18,7 +18,6 @@ package artifactmanager
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
@@ -38,14 +37,16 @@ type requestCircuitBreakerProvider struct {
 	timeoutChannel chan struct{}
 }
 
-func (b *earlyRequestCircuitBreakerProvider) getBreaker(jetID core.RecordID) *requestCircuitBreakerProvider {
+func (b *earlyRequestCircuitBreakerProvider) getBreaker(ctx context.Context, jetID core.RecordID) *requestCircuitBreakerProvider {
+	logger := inslogger.FromContext(ctx)
+	logger.Debugf("[getBreaker] jetID - %v", jetID.JetIDString())
+
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	fmt.Printf("[getBreaker], %v", jetID)
 
 	if _, ok := b.breakers[jetID]; !ok {
-		fmt.Printf("[getBreaker] new , %v", jetID)
+		logger.Debugf("[getBreaker] create new  - %v", jetID.JetIDString())
 		b.breakers[jetID] = &requestCircuitBreakerProvider{
 			hotDataChannel: make(chan struct{}),
 			timeoutChannel: make(chan struct{}),
@@ -55,12 +56,15 @@ func (b *earlyRequestCircuitBreakerProvider) getBreaker(jetID core.RecordID) *re
 	return b.breakers[jetID]
 }
 
-func (b *earlyRequestCircuitBreakerProvider) onTimeoutHappened() {
+func (b *earlyRequestCircuitBreakerProvider) onTimeoutHappened(ctx context.Context) {
+	logger := inslogger.FromContext(ctx)
+	logger.Debugf("[onTimeoutHappened]")
+
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
 	for jetID, breaker := range b.breakers {
-		fmt.Printf("[onTimeoutHappened] %v", jetID.JetIDString())
+		logger.Debugf("[onTimeoutHappened] jetID - %v", jetID.JetIDString())
 		close(breaker.timeoutChannel)
 	}
 
@@ -86,9 +90,9 @@ func (m *middleware) checkEarlyRequestBreaker(handler core.MessageHandler) core.
 		}
 
 		jetID := jetFromContext(ctx)
-		requestBreaker := m.earlyRequestCircuitBreakerProvider.getBreaker(jetID)
+		requestBreaker := m.earlyRequestCircuitBreakerProvider.getBreaker(ctx, jetID)
 
-		logger.Debugf("[checkEarlyRequestBreaker] wait jet - %v", jetID.JetIDString())
+		logger.Debugf("[checkEarlyRequestBreaker] before select, jet - %v", jetID.JetIDString())
 		select {
 		case <-requestBreaker.hotDataChannel:
 			logger.Debugf("[checkEarlyRequestBreaker] before handler exec - %v", time.Now())
@@ -107,8 +111,9 @@ func (m *middleware) closeEarlyRequestBreaker(handler core.MessageHandler) core.
 
 		hotDataMessage := parcel.Message().(*message.HotData)
 		jetID := hotDataMessage.Jet.Record()
+
 		logger.Debugf("[closeEarlyRequestBreaker] wait jet - %v", jetID.JetIDString())
-		breaker := m.earlyRequestCircuitBreakerProvider.getBreaker(*jetID)
+		breaker := m.earlyRequestCircuitBreakerProvider.getBreaker(ctx, *jetID)
 		defer close(breaker.hotDataChannel)
 
 		logger.Debugf("[closeEarlyRequestBreaker] before handler %v", time.Now())
@@ -116,13 +121,8 @@ func (m *middleware) closeEarlyRequestBreaker(handler core.MessageHandler) core.
 	}
 }
 
-func (m *middleware) closeEarlyRequestBreakerForJet(jetID core.RecordID) {
-	defer func() {
-		if r := recover(); r != nil {
-			fmt.Println("Ya slomalas", r)
-		}
-	}()
-	//fmt.Printf("[closeEarlyRequestBreakerForJet] %v", jetID.JetIDString())
-	breaker := m.earlyRequestCircuitBreakerProvider.getBreaker(jetID)
-	close(breaker.hotDataChannel)
+func (m *middleware) closeEarlyRequestBreakerForJet(ctx context.Context, jetID core.RecordID) {
+	inslogger.FromContext(ctx).Debugf("[closeEarlyRequestBreakerForJet] jetID - %v", jetID.JetIDString())
+	breaker := m.earlyRequestCircuitBreakerProvider.getBreaker(ctx, jetID)
+	defer close(breaker.hotDataChannel)
 }

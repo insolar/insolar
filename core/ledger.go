@@ -310,6 +310,6 @@ type PulseStorage interface {
 
 //go:generate minimock -i github.com/insolar/insolar/core.ArtifactManagerMessageHandler -o ../testutils -s _mock.go
 type ArtifactManagerMessageHandler interface {
-	OnPulse(context.Context, Pulse) error
-	OnExecutorNotChanged(context.Context, RecordID) error
+	ResetEarlyRequestCircuitBreaker(context.Context)
+	CloseEarlyRequestCircuitBreakerForJet(context.Context, RecordID)
 }
