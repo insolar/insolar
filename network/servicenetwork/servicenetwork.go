@@ -205,6 +205,10 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
 		logger.Error("PulseManager is not initialized")
 		return
 	}
+	if !n.NodeKeeper.IsBootstrapped() || n.controller.GetLastIgnoredPulse() > pulse.PulseNumber {
+		log.Info("Ignore pulse %d: network is not yet initialized")
+		return
+	}
 	currentPulse, err := n.PulseStorage.Current(ctx)
 	if err != nil {
 		logger.Error(errors.Wrap(err, "Could not get current pulse"))
@@ -219,7 +223,7 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
 			return
 		}
 
-		err = n.PulseManager.Set(ctx, pulse, n.NetworkSwitcher.GetState() == core.CompleteNetworkState)
+		err = n.PulseManager.Set(ctx, pulse, true)
 		if err != nil {
 			logger.Error(errors.Wrap(err, "Failed to set pulse"))
 			return
