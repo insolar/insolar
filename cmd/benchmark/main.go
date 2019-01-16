@@ -143,6 +143,7 @@ func main() {
 	check("Problems with output file:", err)
 
 	insSDK, err := sdk.NewSDK(apiUrls, rootMemberKeys)
+	check("SDK is not initialized: ", err)
 
 	members := createMembers(insSDK, concurrent*2)
 

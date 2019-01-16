@@ -104,7 +104,7 @@ func (sdk *SDK) sendRequest(ctx context.Context, method string, params []interfa
 
 	body, err := requester.Send(ctx, sdk.apiUrls.Next(), userCfg, reqCfg)
 	if err != nil {
-		errors.Wrap(err, "[ sendRequest ] can not send request")
+		return nil, errors.Wrap(err, "[ sendRequest ] can not send request")
 	}
 
 	return body, nil
