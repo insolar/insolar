@@ -38,7 +38,7 @@ func capture(f func()) string {
 }
 
 func assertHelloWorld(t *testing.T, out string) {
-	assert.Contains(t, out, " msg=HelloWorld")
+	assert.Contains(t, out, "HelloWorld")
 }
 
 func TestLog_GlobalLogger(t *testing.T) {
