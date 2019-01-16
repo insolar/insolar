@@ -102,7 +102,9 @@ func (future *future) Result() <-chan *packet.Packet {
 
 // SetResult write packet to the result channel.
 func (future *future) SetResult(msg *packet.Packet) {
-	future.result <- msg
+	if atomic.LoadUint32(&future.canceled) == 0 {
+		future.result <- msg
+	}
 }
 
 // GetResult gets the future result from Result() channel with a timeout set to `duration`.
