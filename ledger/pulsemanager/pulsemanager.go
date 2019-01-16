@@ -644,7 +644,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 	return m.LR.OnPulse(ctx, newPulse)
 }
 
-func (m *PulseManager) prepareArtifactManagerMessageHandlerForNextPulse(ctx context.Context, jets []jetInfo){
+func (m *PulseManager) prepareArtifactManagerMessageHandlerForNextPulse(ctx context.Context, jets []jetInfo) {
 	logger := inslogger.FromContext(ctx)
 	logger.Debugf("[prepareHandlerForNextPulse]")
 
@@ -652,13 +652,14 @@ func (m *PulseManager) prepareArtifactManagerMessageHandlerForNextPulse(ctx cont
 
 	for _, jetInfo := range jets {
 
-		if jetInfo.left == nil && jetInfo.right == nil {
-			logger.Debugf("[prepareHandlerForNextPulse] fetch jetInfo root %v", jetInfo.id.JetIDString())
-			// No split happened.
-			if jetInfo.mineNext {
-				m.ArtifactManagerMessageHandler.CloseEarlyRequestCircuitBreakerForJet(ctx, jetInfo.id)
-			}
-		} else {
+		logger.Debugf("[prepareHandlerForNextPulse] fetch jetInfo root %v", jetInfo.id.JetIDString())
+		// No split happened.
+		if jetInfo.mineNext {
+			m.ArtifactManagerMessageHandler.CloseEarlyRequestCircuitBreakerForJet(ctx, jetInfo.id)
+		}
+
+		if jetInfo.left != nil && jetInfo.right != nil {
+
 			logger.Debugf("[prepareHandlerForNextPulse] fetch jetInfo left %v", jetInfo.left.id.JetIDString())
 			logger.Debugf("[prepareHandlerForNextPulse] fetch jetInfo right %v", jetInfo.right.id.JetIDString())
 			// Split happened.
@@ -668,6 +669,7 @@ func (m *PulseManager) prepareArtifactManagerMessageHandlerForNextPulse(ctx cont
 			if jetInfo.right.mineNext {
 				m.ArtifactManagerMessageHandler.CloseEarlyRequestCircuitBreakerForJet(ctx, jetInfo.right.id)
 			}
+
 		}
 	}
 }

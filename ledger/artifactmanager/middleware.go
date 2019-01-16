@@ -275,9 +275,7 @@ func (m *middleware) fetchJet(
 
 			r, ok := rep.(*reply.Jet)
 			if !ok {
-				inslogger.FromContext(ctx).Error(
-					errors.Wrap(ErrUnexpectedReply, "couldn't get jet"),
-				)
+				inslogger.FromContext(ctx).Errorf("unexpected reply: %#v\n", rep)
 				return
 			}
 			res[i] = r
