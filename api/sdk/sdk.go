@@ -56,37 +56,35 @@ func (rb *ringBuffer) Next() string {
 	return rb.urls[rb.cursor]
 }
 
+// SDK is used to send messages to API
 type SDK struct {
 	apiUrls    *ringBuffer
 	rootMember *requester.UserConfigJSON
 }
 
+// NewSDK creates insSDK object
 func NewSDK(urls []string, rootMemberKeysPath string) (*SDK, error) {
 	buffer := &ringBuffer{urls: urls}
 
 	rawConf, err := ioutil.ReadFile(rootMemberKeysPath)
 	if err != nil {
-		err = errors.Wrap(err, "[ NewSDK ] can't read keys from file")
-		return nil, err
+		return nil, errors.Wrap(err, "[ NewSDK ] can't read keys from file")
 	}
 
 	keys := memberKeys{}
 	err = json.Unmarshal(rawConf, &keys)
 	if err != nil {
-		err = errors.Wrap(err, "[ NewSDK ] can't unmarshal keys")
-		return nil, err
+		return nil, errors.Wrap(err, "[ NewSDK ] can't unmarshal keys")
 	}
 
 	response, err := requester.Info(buffer.Next())
 	if err != nil {
-		err = errors.Wrap(err, "[ NewSDK ] can't get info")
-		return nil, err
+		return nil, errors.Wrap(err, "[ NewSDK ] can't get info")
 	}
 
 	rootMember, err := requester.CreateUserConfig(response.RootMember, keys.Private)
 	if err != nil {
-		err = errors.Wrap(err, "[ NewSDK ] can't create user config")
-		return nil, err
+		return nil, errors.Wrap(err, "[ NewSDK ] can't create user config")
 	}
 
 	return &SDK{
@@ -120,6 +118,7 @@ func (sdk *SDK) getResponse(body []byte) (*response, error) {
 	return res, nil
 }
 
+// CreateMember api request with new random keys creates member
 func (sdk *SDK) CreateMember() (*Member, string, error) {
 	ctx := inslogger.ContextWithTrace(context.Background(), "CreateMember")
 	memberName := testutils.RandomString()
