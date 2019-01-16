@@ -58,7 +58,7 @@ func (rb *ringBuffer) Next() string {
 
 // SDK is used to send messages to API
 type SDK struct {
-	apiUrls    *ringBuffer
+	apiURLs    *ringBuffer
 	rootMember *requester.UserConfigJSON
 }
 
@@ -88,7 +88,7 @@ func NewSDK(urls []string, rootMemberKeysPath string) (*SDK, error) {
 	}
 
 	return &SDK{
-		apiUrls:    buffer,
+		apiURLs:    buffer,
 		rootMember: rootMember,
 	}, nil
 
@@ -100,7 +100,7 @@ func (sdk *SDK) sendRequest(ctx context.Context, method string, params []interfa
 		Method: method,
 	}
 
-	body, err := requester.Send(ctx, sdk.apiUrls.Next(), userCfg, reqCfg)
+	body, err := requester.Send(ctx, sdk.apiURLs.Next(), userCfg, reqCfg)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ sendRequest ] can not send request")
 	}

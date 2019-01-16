@@ -35,7 +35,7 @@ var (
 	concurrent     int
 	repetitions    int
 	rootMemberKeys string
-	apiUrls        []string
+	apiURLs        []string
 	logLevel       string
 )
 
@@ -44,7 +44,7 @@ func parseInputParams() {
 	pflag.IntVarP(&concurrent, "concurrent", "c", 1, "concurrent users")
 	pflag.IntVarP(&repetitions, "repetitions", "r", 1, "repetitions for one user")
 	pflag.StringVarP(&rootMemberKeys, "rootmemberkeys", "k", "", "path to file with RootMember keys")
-	pflag.StringArrayVarP(&apiUrls, "apiurl", "u", []string{"http://localhost:19191/api"}, "url to api")
+	pflag.StringArrayVarP(&apiURLs, "apiurl", "u", []string{"http://localhost:19191/api"}, "url to api")
 	pflag.StringVarP(&logLevel, "loglevel", "l", "info", "log level for benchmark")
 	pflag.Parse()
 }
@@ -142,7 +142,7 @@ func main() {
 	out, err := chooseOutput(output)
 	check("Problems with output file:", err)
 
-	insSDK, err := sdk.NewSDK(apiUrls, rootMemberKeys)
+	insSDK, err := sdk.NewSDK(apiURLs, rootMemberKeys)
 	check("SDK is not initialized: ", err)
 
 	members := createMembers(insSDK, concurrent*2)
