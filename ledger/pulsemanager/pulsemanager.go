@@ -120,11 +120,6 @@ func (m *PulseManager) processEndPulse(
 ) error {
 	var g errgroup.Group
 	for _, i := range jets {
-		fmt.Printf(
-			"I process jet: %v, current pulse %v\n",
-			i.id.JetIDString(),
-			currentPulse.PulseNumber,
-		)
 		info := i
 		g.Go(func() error {
 			drop, dropSerialized, _, err := m.createDrop(ctx, info.id, prevPulseNumber, currentPulse.PulseNumber)
@@ -423,6 +418,7 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse c
 	jetIDs := tree.LeafIDs()
 	me := m.JetCoordinator.Me()
 	for _, jetID := range jetIDs {
+		fmt.Printf("I processed. jet: %v\n", jetID.JetIDString())
 		executor, err := m.JetCoordinator.LightExecutorForJet(ctx, jetID, currentPulse)
 		if err != nil {
 			return nil, err
@@ -430,6 +426,8 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse c
 		if *executor != me {
 			continue
 		}
+
+		fmt.Printf("I am executor. jet: %v\n", jetID.JetIDString())
 
 		info := jetInfo{id: jetID}
 		if split {
@@ -465,6 +463,8 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse c
 				if err != nil {
 					return nil, err
 				}
+				fmt.Printf("I am next executor for left. jet: %v\n", info.left.id.JetIDString())
+
 			}
 			nextRightExecutor, err := m.JetCoordinator.LightExecutorForJet(ctx, *rightJetID, newPulse)
 			if err != nil {
@@ -476,6 +476,7 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse c
 				if err != nil {
 					return nil, err
 				}
+				fmt.Printf("I am next executor for right. jet: %v\n", info.right.id.JetIDString())
 			}
 
 			inslogger.FromContext(ctx).Debugf(
@@ -496,6 +497,7 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse c
 			}
 			if *nextExecutor == me {
 				info.mineNext = true
+				fmt.Printf("I am next executor. jet: %v\n", info.id.JetIDString())
 			}
 		}
 		results = append(results, info)
@@ -653,19 +655,19 @@ func (m *PulseManager) prepareArtifactManagerMessageHandlerForNextPulse(ctx cont
 	for _, jetInfo := range jets {
 
 		if jetInfo.left == nil && jetInfo.right == nil {
-			logger.Debugf("[prepareHandlerForNextPulse] fetch jetInfo root %v", jetInfo.id.JetIDString())
 			// No split happened.
 			if jetInfo.mineNext {
+				logger.Debugf("[prepareHandlerForNextPulse] fetch jetInfo root %v", jetInfo.id.JetIDString())
 				m.ArtifactManagerMessageHandler.CloseEarlyRequestCircuitBreakerForJet(ctx, jetInfo.id)
 			}
 		} else {
-			logger.Debugf("[prepareHandlerForNextPulse] fetch jetInfo left %v", jetInfo.left.id.JetIDString())
-			logger.Debugf("[prepareHandlerForNextPulse] fetch jetInfo right %v", jetInfo.right.id.JetIDString())
 			// Split happened.
 			if jetInfo.left.mineNext {
+				logger.Debugf("[prepareHandlerForNextPulse] fetch jetInfo left %v", jetInfo.left.id.JetIDString())
 				m.ArtifactManagerMessageHandler.CloseEarlyRequestCircuitBreakerForJet(ctx, jetInfo.left.id)
 			}
 			if jetInfo.right.mineNext {
+				logger.Debugf("[prepareHandlerForNextPulse] fetch jetInfo right %v", jetInfo.right.id.JetIDString())
 				m.ArtifactManagerMessageHandler.CloseEarlyRequestCircuitBreakerForJet(ctx, jetInfo.right.id)
 			}
 		}

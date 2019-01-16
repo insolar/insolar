@@ -318,7 +318,7 @@ func (h *MessageHandler) handleHasPendingRequests(ctx context.Context, parcel co
 
 func (h *MessageHandler) handleGetJet(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
 	msg := parcel.Message().(*message.GetJet)
-	tree, err := h.db.GetJetTree(ctx, msg.Object.Pulse())
+	tree, err := h.db.GetJetTree(ctx, parcel.Pulse())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch jet tree")
 	}
@@ -327,6 +327,10 @@ func (h *MessageHandler) handleGetJet(ctx context.Context, parcel core.Parcel) (
 		return nil, err
 	}
 
+	pulse, err := h.db.GetLatestPulse(ctx)
+
+	fmt.Printf("sent jet info. jet: %v, actual: %v", jetID.JetIDString(), actual)
+	fmt.Printf("parcel pulse: %v. current pulse: %v", parcel.Pulse(), pulse.Pulse.PulseNumber)
 	return &reply.Jet{ID: *jetID, Actual: actual}, nil
 }
 
@@ -528,12 +532,18 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 		if state.State() == record.StateActivation {
 			idx.Parent = state.(*record.ObjectActivateRecord).Parent
 		}
-		_, err = h.db.SetBlob(ctx, jetID, parcel.Pulse(), msg.Memory)
-		if err == storage.ErrOverride {
-			err = nil
-		}
-		if err != nil {
-			return errors.Wrap(err, "failed to set blob")
+		if state.GetMemory() != nil {
+			blobID, err := h.db.SetBlob(ctx, jetID, parcel.Pulse(), msg.Memory)
+			if err != nil {
+				return errors.Wrap(err, "failed to set blob")
+			}
+			if !state.GetMemory().Equal(blobID) {
+				return fmt.Errorf(
+					"blob key conflict. from vm: %v, from set: %v",
+					state.GetMemory().DebugString(),
+					blobID.DebugString(),
+				)
+			}
 		}
 
 		inslog.Debugf("Save index for: %v, jet: %v, latestState: %s", msg.Object.Record(), jetID.JetIDString(), idx.LatestState)

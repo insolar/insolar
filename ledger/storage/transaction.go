@@ -105,16 +105,18 @@ func (m *TransactionManager) SetBlob(ctx context.Context, jetID core.RecordID, p
 	id := record.CalculateIDForBlob(m.db.PlatformCryptographyScheme, pulseNumber, blob)
 	_, jetPrefix := jet.Jet(jetID)
 	k := prefixkey(scopeIDBlob, jetPrefix, id[:])
-	geterr := m.db.db.View(func(tx *badger.Txn) error {
-		_, err := tx.Get(k)
-		return err
-	})
-	if geterr == nil {
-		return id, ErrOverride
-	}
-	if geterr != badger.ErrKeyNotFound {
-		return nil, ErrNotFound
-	}
+
+	// TODO: @andreyromancev. 16.01.19. Blob override is ok.
+	// geterr := m.db.db.View(func(tx *badger.Txn) error {
+	// 	_, err := tx.Get(k)
+	// 	return err
+	// })
+	// if geterr == nil {
+	// 	return id, ErrOverride
+	// }
+	// if geterr != badger.ErrKeyNotFound {
+	// 	return nil, ErrNotFound
+	// }
 
 	err := m.set(ctx, k, blob)
 	if err != nil {
