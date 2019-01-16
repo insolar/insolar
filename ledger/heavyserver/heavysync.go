@@ -128,6 +128,7 @@ func (s *Sync) Start(ctx context.Context, jetID core.RecordID, pn core.PulseNumb
 //
 // TODO: check actual jet and pulse in keys
 func (s *Sync) Store(ctx context.Context, jetID core.RecordID, pn core.PulseNumber, kvs []core.KV) error {
+	inslog := inslogger.FromContext(ctx)
 	jetState := s.getJetSyncState(ctx, jetID)
 
 	err := func() error {
@@ -160,11 +161,16 @@ func (s *Sync) Store(ctx context.Context, jetID core.RecordID, pn core.PulseNumb
 		return errors.Wrapf(err, "heavyserver: store failed")
 	}
 
+	// heavy stats
+	recordsCount := int64(len(kvs))
+	recordsSize := core.KVSize(kvs)
+	inslog.Debugf("heavy store stat: JetID=%v, recordsCount+=%v, recordsSize+=%v\n", jetID.String(), recordsCount, recordsSize)
+
 	ctx = insmetrics.InsertTag(ctx, tagJet, jetID.String())
 	stats.Record(ctx,
-		statSyncedRecords.M(int64(len(kvs))),
+		statSyncedRecords.M(recordsCount),
 		statSyncedPulse.M(int64(pn)),
-		statSyncedBytes.M(core.KVSize(kvs)),
+		statSyncedBytes.M(recordsSize),
 	)
 	return nil
 }
