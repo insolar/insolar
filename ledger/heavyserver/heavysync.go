@@ -168,6 +168,7 @@ func (s *Sync) Store(ctx context.Context, jetID core.RecordID, pn core.PulseNumb
 
 	ctx = insmetrics.InsertTag(ctx, tagJet, jetID.String())
 	stats.Record(ctx,
+		statSyncedCount.M(1),
 		statSyncedRecords.M(recordsCount),
 		statSyncedPulse.M(int64(pn)),
 		statSyncedBytes.M(recordsSize),
