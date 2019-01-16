@@ -19,7 +19,9 @@ package api
 import (
 	"context"
 	"net/http"
+	"strings"
 
+	jsonrpc "github.com/gorilla/rpc/v2/json2"
 	"github.com/insolar/insolar/core"
 	"github.com/pkg/errors"
 )
@@ -84,6 +86,13 @@ func (s *StorageExporterService) Export(r *http.Request, args *StorageExporterAr
 	ctx := context.TODO()
 	result, err := exp.Export(ctx, core.PulseNumber(args.From), args.Size)
 	if err != nil {
+		if strings.Contains(err.Error(), "failed to fetch pulse data") {
+			return &jsonrpc.Error{
+				Code:    10404,
+				Message: "[ Export ]: " + err.Error(),
+				Data:    nil,
+			}
+		}
 		return errors.Wrap(err, "[ Export ]")
 	}
 
