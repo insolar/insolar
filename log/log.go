@@ -33,6 +33,8 @@ func NewLog(cfg configuration.Log) (core.Logger, error) {
 	switch cfg.Adapter {
 	case "logrus":
 		logger = newLogrusAdapter()
+	case "zerolog":
+		logger = newZerologAdapter()
 	default:
 		return nil, errors.New("invalid logger config")
 	}
@@ -49,6 +51,7 @@ func NewLog(cfg configuration.Log) (core.Logger, error) {
 // TODO: make it private again
 var GlobalLogger = func() core.Logger {
 	logger := newLogrusAdapter()
+	//logger := newZerologAdapter()
 	logger.skipCallNumber = defaultSkipCallNumber + 1
 	holder := configuration.NewHolder().MustInit(false)
 	if err := logger.SetLevel(holder.Configuration.Log.Level); err != nil {
