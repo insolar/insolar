@@ -34,7 +34,6 @@ type Wallet struct {
 
 // Transfer transfers money to given wallet
 func (w *Wallet) Transfer(amount uint, to *core.RecordRef) error {
-
 	toWallet, err := wallet.GetImplementationFrom(*to)
 	if err != nil {
 		return fmt.Errorf("[ Transfer ] Can't get implementation: %s", err.Error())

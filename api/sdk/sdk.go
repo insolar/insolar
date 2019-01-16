@@ -157,7 +157,7 @@ func (sdk *SDK) CreateMember() (*Member, string, error) {
 	return NewMember(response.Result.(string), string(privateKeyStr)), response.TraceID, nil
 }
 
-// CreateMember api request with new random keys creates member
+// Transfer method send money from one member to another
 func (sdk *SDK) Transfer(amount uint, from *Member, to *Member) (string, error) {
 	ctx := inslogger.ContextWithTrace(context.Background(), "Transfer")
 	params := []interface{}{amount, to.Reference}

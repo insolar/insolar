@@ -16,11 +16,13 @@
 
 package sdk
 
+// Member model object
 type Member struct {
 	Reference  string
 	PrivateKey string
 }
 
+// NewMember creates new Member
 func NewMember(ref string, key string) *Member {
 	return &Member{
 		Reference:  ref,

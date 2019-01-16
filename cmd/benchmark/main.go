@@ -121,7 +121,6 @@ func createMembers(insSDK *sdk.SDK, count int) []*sdk.Member {
 
 		for j := 0; j < numRetries; j++ {
 			member, _, err = insSDK.CreateMember()
-			fmt.Println(err)
 			if err == nil {
 				members = append(members, member)
 				break
@@ -130,7 +129,6 @@ func createMembers(insSDK *sdk.SDK, count int) []*sdk.Member {
 			fmt.Println("Retry to create member. Error is: ", err.Error())
 			time.Sleep(time.Second)
 		}
-		fmt.Println(err)
 		check(fmt.Sprintf("Couldn't create member after retries: %d", numRetries), err)
 	}
 	return members
