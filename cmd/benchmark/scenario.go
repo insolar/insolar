@@ -25,6 +25,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/insolar/insolar/api/sdk"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 )
@@ -43,12 +44,13 @@ type transferDifferentMembersScenario struct {
 	name        string
 	concurrent  int
 	repetitions int
-	members     []memberInfo
 	out         io.Writer
 	totalTime   int64
 	successes   uint32
 	errors      uint32
 	timeouts    uint32
+	members     []*sdk.Member
+	insSDK      *sdk.SDK
 }
 
 func (s *transferDifferentMembersScenario) getOperationsNumber() int {
@@ -92,17 +94,17 @@ func (s *transferDifferentMembersScenario) startMember(index int, wg *sync.WaitG
 		to := s.members[index+1]
 
 		start := time.Now()
-		err := transfer(ctx, 1, from, to)
+		traceID, err := s.insSDK.Transfer(1, from, to)
 		atomic.AddInt64(&s.totalTime, int64(time.Since(start)))
 
 		if err == nil {
 			atomic.AddUint32(&s.successes, 1)
-		} else if err, ok := errors.Cause(err).(net.Error); ok && err.Timeout() {
+		} else if netErr, ok := errors.Cause(err).(net.Error); ok && netErr.Timeout() {
 			atomic.AddUint32(&s.timeouts, 1)
-			writeToOutput(s.out, fmt.Sprintf("[Member №%d] Transfer from %s to %s. Timeout.\n", index, from.ref, to.ref))
+			writeToOutput(s.out, fmt.Sprintf("[Member №%d] Transfer error with traceID: %s. Timeout.\n", index, traceID))
 		} else {
 			atomic.AddUint32(&s.errors, 1)
-			writeToOutput(s.out, fmt.Sprintf("[Member №%d] Transfer from %s to %s. Response: %s.\n", index, from.ref, to.ref, err.Error()))
+			writeToOutput(s.out, fmt.Sprintf("[Member №%d] Transfer error with traceID: %s. Response: %s.\n", index, traceID, err.Error()))
 		}
 	}
 }

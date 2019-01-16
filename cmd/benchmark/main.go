@@ -75,13 +75,14 @@ func check(msg string, err error) {
 	}
 }
 
-func runScenarios(out io.Writer, members []memberInfo, concurrent int, repetitions int) {
+func runScenarios(out io.Writer, insSDK *sdk.SDK, members []*sdk.Member, concurrent int, repetitions int) {
 	transferDifferentMembers := &transferDifferentMembersScenario{
 		concurrent:  concurrent,
 		repetitions: repetitions,
-		members:     members,
 		name:        "TransferDifferentMembers",
 		out:         out,
+		members:     members,
+		insSDK:      insSDK,
 	}
 	startScenario(transferDifferentMembers)
 }
@@ -110,12 +111,24 @@ func startScenario(s scenario) {
 	s.printResult()
 }
 
-func createMembers(insSDK *sdk.SDK, count uint) []*sdk.Member {
+var createMemberRetry = 3
+
+func createMembers(insSDK *sdk.SDK, count int) []*sdk.Member {
 	var members []*sdk.Member
-	for i := uint(0); i < count; i++ {
-		member, _, err := insSDK.CreateMember()
-		check("Member creation error", err)
-		members = append(members, member)
+	var err error
+	for i := 0; i < count; i++ {
+
+		for j := 0; j < createMemberRetry; j++ {
+			member, _, err := insSDK.CreateMember()
+			if err == nil {
+				members = append(members, member)
+				break
+			}
+
+			fmt.Println("Create member error", err.Error(), "retry")
+			time.Sleep(time.Second)
+		}
+		check(fmt.Sprintf("couldn't create member after retries: %d", createMemberRetry), err)
 	}
 	return members
 }
@@ -129,19 +142,9 @@ func main() {
 	out, err := chooseOutput(output)
 	check("Problems with output file:", err)
 
-
 	insSDK, err := sdk.NewSDK(apiUrls, rootMemberKeys)
 
-
-	for
-
-	if input != "" {
-		members, err = getMembersInfo(input)
-		check("Problems with parsing input:", err)
-	} else {
-		members, err = createMembers(concurrent)
-		check("Problems with create members. One of creating request ended with error: ", err)
-	}
+	members := createMembers(insSDK, concurrent)
 
 	runScenarios(out, members, concurrent, repetitions)
 }

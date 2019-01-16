@@ -149,3 +149,23 @@ func TestFuture_GetResult2(t *testing.T) {
 	_, err := f.GetResult(10 * time.Millisecond)
 	require.Error(t, err)
 }
+
+func TestFuture_SetResult_AfterCancel(t *testing.T) {
+	n, _ := host.NewHost("127.0.0.1:8080")
+
+	cbCalled := false
+
+	cb := func(f Future) { cbCalled = true }
+
+	m := &packet.Packet{}
+	f := NewFuture(packet.RequestID(1), n, m, cb)
+
+	f.Cancel()
+	f.SetResult(&packet.Packet{})
+
+	res, closed := <-f.Result()
+
+	require.Nil(t, res)
+	require.False(t, closed)
+	require.True(t, cbCalled)
+}

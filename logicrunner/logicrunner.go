@@ -25,13 +25,15 @@ import (
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/instrumentation/instracer"
+	"go.opencensus.io/trace"
+
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
-	"github.com/insolar/insolar/core/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/builtin"
 	"github.com/insolar/insolar/logicrunner/goplugin"
@@ -209,7 +211,7 @@ type LogicRunner struct {
 	Cfg          *configuration.LogicRunner
 
 	state      map[Ref]*ObjectState // if object exists, we are validating or executing it right now
-	stateMutex sync.Mutex
+	stateMutex sync.RWMutex
 
 	sock net.Listener
 }
@@ -322,12 +324,13 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Re
 		return nil, errors.New("Execute( ! message.IBaseLogicMessage )")
 	}
 
-	var rep core.Reply
-	var err error
-	utils.MeasureExecutionTime(ctx, "LogicRunner.Execute, Method = "+msg.Type().String(),
-		func() {
-			rep, err = lr.executeActual(ctx, parcel, msg)
-		})
+	ctx, span := instracer.StartSpan(ctx, "LogicRunner.Execute")
+	span.AddAttributes(
+		trace.StringAttribute("msg.Type", msg.Type().String()),
+	)
+	defer span.End()
+
+	rep, err := lr.executeActual(ctx, parcel, msg)
 	return rep, err
 }
 

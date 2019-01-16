@@ -39,11 +39,6 @@ type NetworkCoordinatorMock struct {
 	ValidateCertCounter    uint64
 	ValidateCertPreCounter uint64
 	ValidateCertMock       mNetworkCoordinatorMockValidateCert
-
-	WriteActiveNodesFunc       func(p context.Context, p1 core.PulseNumber, p2 []core.Node) (r error)
-	WriteActiveNodesCounter    uint64
-	WriteActiveNodesPreCounter uint64
-	WriteActiveNodesMock       mNetworkCoordinatorMockWriteActiveNodes
 }
 
 //NewNetworkCoordinatorMock returns a mock for github.com/insolar/insolar/core.NetworkCoordinator
@@ -58,7 +53,6 @@ func NewNetworkCoordinatorMock(t minimock.Tester) *NetworkCoordinatorMock {
 	m.IsStartedMock = mNetworkCoordinatorMockIsStarted{mock: m}
 	m.SetPulseMock = mNetworkCoordinatorMockSetPulse{mock: m}
 	m.ValidateCertMock = mNetworkCoordinatorMockValidateCert{mock: m}
-	m.WriteActiveNodesMock = mNetworkCoordinatorMockWriteActiveNodes{mock: m}
 
 	return m
 }
@@ -647,155 +641,6 @@ func (m *NetworkCoordinatorMock) ValidateCertFinished() bool {
 	return true
 }
 
-type mNetworkCoordinatorMockWriteActiveNodes struct {
-	mock              *NetworkCoordinatorMock
-	mainExpectation   *NetworkCoordinatorMockWriteActiveNodesExpectation
-	expectationSeries []*NetworkCoordinatorMockWriteActiveNodesExpectation
-}
-
-type NetworkCoordinatorMockWriteActiveNodesExpectation struct {
-	input  *NetworkCoordinatorMockWriteActiveNodesInput
-	result *NetworkCoordinatorMockWriteActiveNodesResult
-}
-
-type NetworkCoordinatorMockWriteActiveNodesInput struct {
-	p  context.Context
-	p1 core.PulseNumber
-	p2 []core.Node
-}
-
-type NetworkCoordinatorMockWriteActiveNodesResult struct {
-	r error
-}
-
-//Expect specifies that invocation of NetworkCoordinator.WriteActiveNodes is expected from 1 to Infinity times
-func (m *mNetworkCoordinatorMockWriteActiveNodes) Expect(p context.Context, p1 core.PulseNumber, p2 []core.Node) *mNetworkCoordinatorMockWriteActiveNodes {
-	m.mock.WriteActiveNodesFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &NetworkCoordinatorMockWriteActiveNodesExpectation{}
-	}
-	m.mainExpectation.input = &NetworkCoordinatorMockWriteActiveNodesInput{p, p1, p2}
-	return m
-}
-
-//Return specifies results of invocation of NetworkCoordinator.WriteActiveNodes
-func (m *mNetworkCoordinatorMockWriteActiveNodes) Return(r error) *NetworkCoordinatorMock {
-	m.mock.WriteActiveNodesFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &NetworkCoordinatorMockWriteActiveNodesExpectation{}
-	}
-	m.mainExpectation.result = &NetworkCoordinatorMockWriteActiveNodesResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of NetworkCoordinator.WriteActiveNodes is expected once
-func (m *mNetworkCoordinatorMockWriteActiveNodes) ExpectOnce(p context.Context, p1 core.PulseNumber, p2 []core.Node) *NetworkCoordinatorMockWriteActiveNodesExpectation {
-	m.mock.WriteActiveNodesFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &NetworkCoordinatorMockWriteActiveNodesExpectation{}
-	expectation.input = &NetworkCoordinatorMockWriteActiveNodesInput{p, p1, p2}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *NetworkCoordinatorMockWriteActiveNodesExpectation) Return(r error) {
-	e.result = &NetworkCoordinatorMockWriteActiveNodesResult{r}
-}
-
-//Set uses given function f as a mock of NetworkCoordinator.WriteActiveNodes method
-func (m *mNetworkCoordinatorMockWriteActiveNodes) Set(f func(p context.Context, p1 core.PulseNumber, p2 []core.Node) (r error)) *NetworkCoordinatorMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.WriteActiveNodesFunc = f
-	return m.mock
-}
-
-//WriteActiveNodes implements github.com/insolar/insolar/core.NetworkCoordinator interface
-func (m *NetworkCoordinatorMock) WriteActiveNodes(p context.Context, p1 core.PulseNumber, p2 []core.Node) (r error) {
-	counter := atomic.AddUint64(&m.WriteActiveNodesPreCounter, 1)
-	defer atomic.AddUint64(&m.WriteActiveNodesCounter, 1)
-
-	if len(m.WriteActiveNodesMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.WriteActiveNodesMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to NetworkCoordinatorMock.WriteActiveNodes. %v %v %v", p, p1, p2)
-			return
-		}
-
-		input := m.WriteActiveNodesMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, NetworkCoordinatorMockWriteActiveNodesInput{p, p1, p2}, "NetworkCoordinator.WriteActiveNodes got unexpected parameters")
-
-		result := m.WriteActiveNodesMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the NetworkCoordinatorMock.WriteActiveNodes")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.WriteActiveNodesMock.mainExpectation != nil {
-
-		input := m.WriteActiveNodesMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, NetworkCoordinatorMockWriteActiveNodesInput{p, p1, p2}, "NetworkCoordinator.WriteActiveNodes got unexpected parameters")
-		}
-
-		result := m.WriteActiveNodesMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the NetworkCoordinatorMock.WriteActiveNodes")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.WriteActiveNodesFunc == nil {
-		m.t.Fatalf("Unexpected call to NetworkCoordinatorMock.WriteActiveNodes. %v %v %v", p, p1, p2)
-		return
-	}
-
-	return m.WriteActiveNodesFunc(p, p1, p2)
-}
-
-//WriteActiveNodesMinimockCounter returns a count of NetworkCoordinatorMock.WriteActiveNodesFunc invocations
-func (m *NetworkCoordinatorMock) WriteActiveNodesMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.WriteActiveNodesCounter)
-}
-
-//WriteActiveNodesMinimockPreCounter returns the value of NetworkCoordinatorMock.WriteActiveNodes invocations
-func (m *NetworkCoordinatorMock) WriteActiveNodesMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.WriteActiveNodesPreCounter)
-}
-
-//WriteActiveNodesFinished returns true if mock invocations count is ok
-func (m *NetworkCoordinatorMock) WriteActiveNodesFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.WriteActiveNodesMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.WriteActiveNodesCounter) == uint64(len(m.WriteActiveNodesMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.WriteActiveNodesMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.WriteActiveNodesCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.WriteActiveNodesFunc != nil {
-		return atomic.LoadUint64(&m.WriteActiveNodesCounter) > 0
-	}
-
-	return true
-}
-
 //ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *NetworkCoordinatorMock) ValidateCallCounters() {
@@ -814,10 +659,6 @@ func (m *NetworkCoordinatorMock) ValidateCallCounters() {
 
 	if !m.ValidateCertFinished() {
 		m.t.Fatal("Expected call to NetworkCoordinatorMock.ValidateCert")
-	}
-
-	if !m.WriteActiveNodesFinished() {
-		m.t.Fatal("Expected call to NetworkCoordinatorMock.WriteActiveNodes")
 	}
 
 }
@@ -853,10 +694,6 @@ func (m *NetworkCoordinatorMock) MinimockFinish() {
 		m.t.Fatal("Expected call to NetworkCoordinatorMock.ValidateCert")
 	}
 
-	if !m.WriteActiveNodesFinished() {
-		m.t.Fatal("Expected call to NetworkCoordinatorMock.WriteActiveNodes")
-	}
-
 }
 
 //Wait waits for all mocked methods to be called at least once
@@ -875,7 +712,6 @@ func (m *NetworkCoordinatorMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.IsStartedFinished()
 		ok = ok && m.SetPulseFinished()
 		ok = ok && m.ValidateCertFinished()
-		ok = ok && m.WriteActiveNodesFinished()
 
 		if ok {
 			return
@@ -898,10 +734,6 @@ func (m *NetworkCoordinatorMock) MinimockWait(timeout time.Duration) {
 
 			if !m.ValidateCertFinished() {
 				m.t.Error("Expected call to NetworkCoordinatorMock.ValidateCert")
-			}
-
-			if !m.WriteActiveNodesFinished() {
-				m.t.Error("Expected call to NetworkCoordinatorMock.WriteActiveNodes")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)
@@ -929,10 +761,6 @@ func (m *NetworkCoordinatorMock) AllMocksCalled() bool {
 	}
 
 	if !m.ValidateCertFinished() {
-		return false
-	}
-
-	if !m.WriteActiveNodesFinished() {
 		return false
 	}
 
