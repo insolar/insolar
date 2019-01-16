@@ -41,7 +41,7 @@ func init() {
 			Name:        statSyncedRecords.Name(),
 			Description: statSyncedRecords.Description(),
 			Measure:     statSyncedRecords,
-			Aggregation: view.Count(),
+			Aggregation: view.Sum(),
 			TagKeys:     commontags,
 		},
 		&view.View{
@@ -55,7 +55,7 @@ func init() {
 			Name:        statSyncedBytes.Name(),
 			Description: statSyncedBytes.Description(),
 			Measure:     statSyncedBytes,
-			Aggregation: view.Count(),
+			Aggregation: view.Sum(),
 			TagKeys:     commontags,
 		},
 	)
