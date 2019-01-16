@@ -607,40 +607,23 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 		inslogger.FromContext(ctx).Error(errors.Wrap(err, "ArtifactManagerMessageHandler OnPulse() returns error"))
 	}
 
-	if len(jets) > 0{
-		queue:= make([]jetInfo, 0)
-		queue = append(queue, jets[0])
+	for _, jetInfo := range jets {
 
-		for len(queue) > 0{
-			top := queue[0]
-			queue = queue[1:]
-			if top.left != nil{
-				queue = append(queue, *top.left)
+		if jetInfo.left == nil && jetInfo.right == nil {
+			inslogger.FromContext(ctx).Debugf("fetch jetInfo root %v", jetInfo.id.JetIDString())
+			// No split happened.
+			if jetInfo.mineNext {
+				_ = m.ArtifactManagerMessageHandler.OnExecutorNotChanged(ctx, jetInfo.id)
 			}
-			if top.right != nil{
-				queue = append(queue, *top.right)
+		} else {
+			inslogger.FromContext(ctx).Debugf("fetch jetInfo left %v", jetInfo.left.id.JetIDString())
+			inslogger.FromContext(ctx).Debugf("fetch jetInfo right %v", jetInfo.right.id.JetIDString())
+			// Split happened.
+			if jetInfo.left.mineNext {
+				_ = m.ArtifactManagerMessageHandler.OnExecutorNotChanged(ctx, jetInfo.left.id)
 			}
-			inslogger.FromContext(ctx).Debugf("JET TREE %v", top.id.JetIDString())
-		}
-	}
-
-	if len(jets) > 0{
-		queue:= make([]jetInfo, 0)
-		queue = append(queue, jets[0])
-
-		for len(queue) > 0{
-			top := queue[0]
-			queue = queue[1:]
-			if top.left != nil{
-				queue = append(queue, *top.left)
-			}
-			if top.right != nil{
-				queue = append(queue, *top.right)
-			}
-			inslogger.FromContext(ctx).Debugf("SET FROM JET TREE %v", top.id.JetIDString())
-
-			if top.mineNext {
-				_ = m.ArtifactManagerMessageHandler.OnExecutorNotChanged(ctx, top.id)
+			if jetInfo.right.mineNext {
+				_ = m.ArtifactManagerMessageHandler.OnExecutorNotChanged(ctx, jetInfo.right.id)
 			}
 		}
 	}
