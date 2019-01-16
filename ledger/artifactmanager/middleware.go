@@ -305,5 +305,8 @@ func (m *middleware) fetchJet(
 	inslogger.FromContext(ctx).Error(
 		"All active light material nodes have no actual jet tree",
 	)
+	inslogger.FromContext(ctx).Error(
+		"My guess is: ", jetID.JetIDString(),
+	)
 	return nil, false, errors.New("impossible situation")
 }
