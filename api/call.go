@@ -111,7 +111,8 @@ func (ar *Runner) checkSeed(paramsSeed []byte) error {
 }
 
 func (ar *Runner) makeCall(ctx context.Context, params Request) (interface{}, error) {
-	reference, err := core.NewRefFromBase58(params.Reference)
+	// reference, err := core.NewRefFromBase58(params.Reference)
+	var err error
 	if err != nil {
 		return nil, errors.Wrap(err, "[ makeCall ] failed to parse params.Reference")
 	}
@@ -122,7 +123,7 @@ func (ar *Runner) makeCall(ctx context.Context, params Request) (interface{}, er
 		func() {
 			res, err = ar.ContractRequester.SendRequest(
 				ctx,
-				reference,
+				nil,
 				"Call",
 				[]interface{}{*ar.CertificateManager.GetCertificate().GetRootDomainReference(), params.Method, params.Params, params.Seed, params.Signature},
 			)
