@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -102,7 +103,11 @@ func (s *transferDifferentMembersScenario) startMember(index int, wg *sync.WaitG
 			writeToOutput(s.out, fmt.Sprintf("[Member №%d] Transfer from %s to %s. Timeout.\n", index, from.ref, to.ref))
 		} else {
 			atomic.AddUint32(&s.errors, 1)
-			writeToOutput(s.out, fmt.Sprintf("[Member №%d] Transfer from %s to %s. Response: %s.\n", index, from.ref, to.ref, err.Error()))
+			if strings.Contains(err.Error(), "Incorrect message pulse") {
+				writeToOutput(s.out, "Incorrect message pulse\n")
+			} else {
+				writeToOutput(s.out, fmt.Sprintf("[Member №%d] Transfer from %s to %s. Response: %s.\n", index, from.ref, to.ref, err.Error()))
+			}
 		}
 	}
 }

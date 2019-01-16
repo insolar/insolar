@@ -644,7 +644,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 	return m.LR.OnPulse(ctx, newPulse)
 }
 
-func (m *PulseManager) prepareArtifactManagerMessageHandlerForNextPulse(ctx context.Context, jets []jetInfo){
+func (m *PulseManager) prepareArtifactManagerMessageHandlerForNextPulse(ctx context.Context, jets []jetInfo) {
 	logger := inslogger.FromContext(ctx)
 	logger.Debugf("[prepareHandlerForNextPulse]")
 
