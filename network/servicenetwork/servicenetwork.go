@@ -63,11 +63,12 @@ type ServiceNetwork struct {
 	Communicator     phases.Communicator
 
 	// fakePulsar *fakepulsar.FakePulsar
+	isGenesis bool
 }
 
 // NewServiceNetwork returns a new ServiceNetwork.
-func NewServiceNetwork(conf configuration.Configuration, scheme core.PlatformCryptographyScheme) (*ServiceNetwork, error) {
-	serviceNetwork := &ServiceNetwork{cfg: conf, CryptographyScheme: scheme}
+func NewServiceNetwork(conf configuration.Configuration, scheme core.PlatformCryptographyScheme, isGenesis bool) (*ServiceNetwork, error) {
+	serviceNetwork := &ServiceNetwork{cfg: conf, CryptographyScheme: scheme, isGenesis: isGenesis}
 	return serviceNetwork, nil
 }
 
@@ -198,6 +199,10 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
 	// if !n.isFakePulse(&pulse) {
 	// 	n.fakePulsar.Stop(ctx)
 	// }
+	if n.isGenesis {
+		return
+	}
+
 	traceID := "pulse_" + strconv.FormatUint(uint64(pulse.PulseNumber), 10)
 	ctx, logger := inslogger.WithTraceField(ctx, traceID)
 	logger.Infof("Got new pulse number: %d", pulse.PulseNumber)
