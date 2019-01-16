@@ -26,6 +26,29 @@ import (
 	"github.com/pkg/errors"
 )
 
+type lockableConnection struct {
+	net.Conn
+	sync.Locker
+}
+
+func (lc *lockableConnection) Write(data []byte) (int, error) {
+	lc.Lock()
+	defer lc.Unlock()
+
+	// TODO: sergey.morozov 16.01.19: possible malformed packet fix; uncomment this when you meet errors ;)
+	// var written int
+	// for written < len(data) {
+	// 	n, err := lc.Conn.Write(data[written:])
+	// 	written += n
+	// 	if err != nil {
+	// 		return written, err
+	// 	}
+	// }
+	// return written, nil
+
+	return lc.Conn.Write(data)
+}
+
 type connectionPool struct {
 	connectionFactory connectionFactory
 
@@ -113,7 +136,12 @@ func (cp *connectionPool) getOrCreateConnection(ctx context.Context, address net
 		logger.Errorf("unexpected data on connection to %s", address)
 	}()
 
-	cp.unsafeConnectionsHolder.Add(address, conn)
+	lc := &lockableConnection{
+		Conn:   conn,
+		Locker: &sync.Mutex{},
+	}
+
+	cp.unsafeConnectionsHolder.Add(address, lc)
 	logger.Debugf(
 		"[ getOrCreateConnection ] Added connection to %s. Current pool size: %d",
 		conn.RemoteAddr(),
