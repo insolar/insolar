@@ -158,7 +158,7 @@ func (t *tcpTransport) handleAcceptedConnection(conn net.Conn) {
 		msg, err := t.serializer.DeserializePacket(conn)
 
 		if err != nil {
-			if err == io.EOF {
+			if err == io.EOF || err == io.ErrUnexpectedEOF {
 				log.Warn("[ handleAcceptedConnection ] Connection closed by peer")
 				return
 			}
