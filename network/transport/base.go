@@ -87,7 +87,7 @@ func (t *baseTransport) SendRequest(msg *packet.Packet) (Future, error) {
 		err := t.SendPacket(msg)
 		if err != nil {
 			f.Cancel()
-			log.Error(err)
+			log.Error(err.Error())
 		}
 	}(msg, future)
 
