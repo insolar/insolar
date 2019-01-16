@@ -41,11 +41,6 @@ type ringBuffer struct {
 	cursor int
 }
 
-type memberKeys struct {
-	Private string `json:"private_key"`
-	Public  string `json:"public_key"`
-}
-
 func (rb *ringBuffer) next() string {
 	rb.Lock()
 	defer rb.Unlock()
@@ -54,6 +49,11 @@ func (rb *ringBuffer) next() string {
 		rb.cursor = 0
 	}
 	return rb.urls[rb.cursor]
+}
+
+type memberKeys struct {
+	Private string `json:"private_key"`
+	Public  string `json:"public_key"`
 }
 
 // SDK is used to send messages to API
