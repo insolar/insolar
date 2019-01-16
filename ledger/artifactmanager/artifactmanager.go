@@ -650,7 +650,6 @@ func (m *LedgerArtifactManager) updateObject(
 				Request: request,
 			},
 			ObjectStateRecord: record.ObjectStateRecord{
-				Memory:      record.CalculateIDForBlob(m.PlatformCryptographyScheme, currentPulse.PulseNumber, memory),
 				Image:       *image,
 				IsPrototype: object.IsPrototype(),
 			},
