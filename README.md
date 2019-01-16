@@ -19,9 +19,9 @@ Insolar is a global team of 60+ people in North America and Europe, including a 
 
 ## Components
 
-### [Network](network/dhtnetwork)
+### [Network](network)
 
-Kademlia DHT based blockchain network layer.
+Blockchain network layer.
 
 * Support of heterogeneous network topology.
 * Network routing with a host or host group becoming relays for others hosts.
@@ -90,5 +90,4 @@ See [Contributing Guidelines](.github/CONTRIBUTING.md).
 
 ## License
 
-This project is licensed under the terms of the Apache license 2.0.
-Please see [LICENSE](LICENSE) for more information.
+This project is licensed under the terms of the [Apache license 2.0](LICENSE), except for the [Network](network) subdirectory, which is licensed under the terms of the BSD 3-Clause Clear License.
