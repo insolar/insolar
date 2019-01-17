@@ -128,7 +128,7 @@ func createMembers(insSDK *sdk.SDK, count int) []*sdk.Member {
 				break
 			}
 
-			fmt.Printf("Retry to create member. TraceID: %s Error is: %s", traceID, err.Error())
+			fmt.Printf("Retry to create member. TraceID: %s Error is: %s\n", traceID, err.Error())
 			time.Sleep(time.Second)
 		}
 		check(fmt.Sprintf("Couldn't create member after retries: %d", numRetries), err)
