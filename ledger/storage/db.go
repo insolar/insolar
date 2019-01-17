@@ -50,6 +50,7 @@ const (
 	sysJetTree                byte = 5
 	sysJetList                byte = 6
 	sysDropSizeHistory        byte = 7
+	sysHeavyClientState       byte = 8
 )
 
 // DB represents BadgerDB storage implementation.
@@ -71,7 +72,8 @@ type DB struct {
 
 	jetSizesHistoryDepth int
 
-	idlocker *IDLocker
+	idlocker             *IDLocker
+	jetHeavyClientLocker *IDLocker
 
 	// NodeHistory is an in-memory active node storage for each pulse. It's required to calculate node roles
 	// for past pulses to locate data.
@@ -129,6 +131,7 @@ func NewDB(conf configuration.Ledger, opts *badger.Options) (*DB, error) {
 		txretiries:           conf.Storage.TxRetriesOnConflict,
 		jetSizesHistoryDepth: conf.JetSizesHistoryDepth,
 		idlocker:             NewIDLocker(),
+		jetHeavyClientLocker: NewIDLocker(),
 		nodeHistory:          map[core.PulseNumber][]Node{},
 	}
 	return db, nil

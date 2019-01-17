@@ -62,3 +62,26 @@ func Test_ReplicatedPulse(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, expectHeavy, gotHeavy)
 }
+
+func Test_SyncClientJetPulses(t *testing.T) {
+	t.Parallel()
+	ctx := inslogger.TestContext(t)
+	jetID := testutils.RandomJet()
+
+	db, cleaner := storagetest.TmpDB(ctx, t)
+	defer cleaner()
+
+	// test {Set/Get}ReplicatedPulse methods pair
+	var expectEmpty []core.PulseNumber
+	gotEmpty, err := db.GetSyncClientJetPulses(ctx, jetID)
+	require.NoError(t, err)
+	assert.Equal(t, expectEmpty, gotEmpty)
+
+	expect := []core.PulseNumber{100, 500, 100500}
+	err = db.SetSyncClientJetPulses(ctx, jetID, expect)
+	require.NoError(t, err)
+
+	got, err := db.GetSyncClientJetPulses(ctx, jetID)
+	require.NoError(t, err)
+	assert.Equal(t, expect, got)
+}

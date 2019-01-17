@@ -17,7 +17,9 @@
 package storage
 
 import (
+	"bytes"
 	"context"
+	"encoding/gob"
 
 	"github.com/insolar/insolar/core"
 )
@@ -60,4 +62,50 @@ func (db *DB) GetHeavySyncedPulse(ctx context.Context, jetID core.RecordID) (pn 
 		err = nil
 	}
 	return
+}
+
+var sysHeavyClientStatePrefixBytes = []byte{sysHeavyClientState}
+
+func sysHeavyClientStateKeyForJet(jetID []byte) []byte {
+	return prefixkey(scopeIDSystem, sysHeavyClientStatePrefixBytes, jetID[:])
+}
+
+// GetSyncClientJetPulses returns all jet's pulses not synced to heavy.
+func (db *DB) GetSyncClientJetPulses(ctx context.Context, jetID core.RecordID) ([]core.PulseNumber, error) {
+	db.jetHeavyClientLocker.Lock(&jetID)
+	defer db.jetHeavyClientLocker.Unlock(&jetID)
+	return db.getSyncClientJetPulses(ctx, jetID)
+}
+
+func (db *DB) getSyncClientJetPulses(ctx context.Context, jetID core.RecordID) ([]core.PulseNumber, error) {
+	k := sysHeavyClientStateKeyForJet(jetID[:])
+	buf, err := db.get(ctx, k)
+	if err != nil {
+		if err == ErrNotFound {
+			err = nil
+		}
+		return nil, err
+	}
+	var pns []core.PulseNumber
+	enc := gob.NewDecoder(bytes.NewReader(buf))
+	err = enc.Decode(&pns)
+	return pns, err
+}
+
+// SetSyncClientJetPulses saves all jet's pulses not synced to heavy.
+func (db *DB) SetSyncClientJetPulses(ctx context.Context, jetID core.RecordID, pns []core.PulseNumber) error {
+	db.jetHeavyClientLocker.Lock(&jetID)
+	defer db.jetHeavyClientLocker.Unlock(&jetID)
+	return db.setSyncClientJetPulses(ctx, jetID, pns)
+}
+
+func (db *DB) setSyncClientJetPulses(ctx context.Context, jetID core.RecordID, pns []core.PulseNumber) error {
+	k := sysHeavyClientStateKeyForJet(jetID[:])
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
+	err := enc.Encode(pns)
+	if err != nil {
+		return err
+	}
+	return db.set(ctx, k, buf.Bytes())
 }
