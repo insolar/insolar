@@ -604,7 +604,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 		return errors.Wrap(err, "failed to process jets")
 	}
 
-	m.prepareArtifactManagerMessageHandlerForNextPulse(ctx, jets)
+	m.prepareArtifactManagerMessageHandlerForNextPulse(ctx, newPulse, jets)
 
 	m.GIL.Release(ctx)
 
@@ -646,9 +646,9 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 	return m.LR.OnPulse(ctx, newPulse)
 }
 
-func (m *PulseManager) prepareArtifactManagerMessageHandlerForNextPulse(ctx context.Context, jets []jetInfo) {
+func (m *PulseManager) prepareArtifactManagerMessageHandlerForNextPulse(ctx context.Context, newPulse core.Pulse, jets []jetInfo) {
 	logger := inslogger.FromContext(ctx)
-	logger.Debugf("[prepareHandlerForNextPulse]")
+	logger.Debugf("[breakermiddleware] [prepareHandlerForNextPulse] close breakers my jets for the next pulse - %v", newPulse.PulseNumber)
 
 	m.ArtifactManagerMessageHandler.ResetEarlyRequestCircuitBreaker(ctx)
 
@@ -657,17 +657,17 @@ func (m *PulseManager) prepareArtifactManagerMessageHandlerForNextPulse(ctx cont
 		if jetInfo.left == nil && jetInfo.right == nil {
 			// No split happened.
 			if jetInfo.mineNext {
-				logger.Debugf("[prepareHandlerForNextPulse] fetch jetInfo root %v", jetInfo.id.JetIDString())
+				logger.Debugf("[breakermiddleware] [prepareHandlerForNextPulse] fetch jetInfo root %v, pulse - %v", jetInfo.id.JetIDString(), newPulse.PulseNumber)
 				m.ArtifactManagerMessageHandler.CloseEarlyRequestCircuitBreakerForJet(ctx, jetInfo.id)
 			}
 		} else {
 			// Split happened.
 			if jetInfo.left.mineNext {
-				logger.Debugf("[prepareHandlerForNextPulse] fetch jetInfo left %v", jetInfo.left.id.JetIDString())
+				logger.Debugf("[breakermiddleware] [prepareHandlerForNextPulse] fetch jetInfo left %v, pulse - %v", jetInfo.left.id.JetIDString(), newPulse.PulseNumber)
 				m.ArtifactManagerMessageHandler.CloseEarlyRequestCircuitBreakerForJet(ctx, jetInfo.left.id)
 			}
 			if jetInfo.right.mineNext {
-				logger.Debugf("[prepareHandlerForNextPulse] fetch jetInfo right %v", jetInfo.right.id.JetIDString())
+				logger.Debugf("[breakermiddleware] [prepareHandlerForNextPulse] fetch jetInfo right %v, pulse - %v", jetInfo.right.id.JetIDString(), newPulse.PulseNumber)
 				m.ArtifactManagerMessageHandler.CloseEarlyRequestCircuitBreakerForJet(ctx, jetInfo.right.id)
 			}
 		}
