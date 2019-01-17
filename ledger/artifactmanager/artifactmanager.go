@@ -22,6 +22,7 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage/jet"
@@ -800,7 +801,8 @@ func sendAndFollowRedirect(
 	msg core.Message,
 	pulse core.Pulse,
 ) (core.Reply, error) {
-	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.sendAndFollowRedirect starts ...")
+	inslog := inslogger.FromContext(ctx)
+	inslog.Debug("LedgerArtifactManager.sendAndFollowRedirect starts ...")
 	rep, err := bus.Send(ctx, msg, nil)
 	if err != nil {
 		return nil, err
@@ -811,7 +813,11 @@ func sendAndFollowRedirect(
 	}
 
 	if r, ok := rep.(core.RedirectReply); ok {
+		stats.Record(ctx, statRedirects.M(1))
+
 		redirected := r.Redirected(msg)
+		inslog.Debugf("redirect reciever=%v", r.GetReceiver())
+
 		rep, err = bus.Send(ctx, redirected, &core.MessageSendOptions{
 			Token:    r.GetToken(),
 			Receiver: r.GetReceiver(),
