@@ -7,9 +7,9 @@ ledger:
 log:
   level: Debug
 logicrunner:
-  rpclisten: 127.0.0.1:18182
+  rpclisten: 127.0.0.1:28112
   goplugin:
-    runnerlisten: 127.0.0.1:18181
+    runnerlisten: 127.0.0.1:28111
 pulsar:
   listenaddress: 0.0.0.0:8090
 keyspath: "scripts/insolard/configs/bootstrap_keys.json"
