@@ -27,7 +27,7 @@ import (
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/record"
-	"github.com/jbenet/go-base58"
+	base58 "github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
 )
@@ -156,6 +156,23 @@ func (e *Exporter) getPayload(ctx context.Context, rec record.Record) (payload, 
 		if err != nil {
 			return payload{"PayloadBinary": r.GetPayload()}, nil
 		}
+		switch m := parcel.Message().(type) {
+		case *message.CallMethod:
+			res, err := m.ToMap()
+			if err != nil {
+				return payload{"Payload": m, "Type": parcel.Type().String()}, nil
+			}
+			return payload{"Payload": res, "Type": parcel.Type().String()}, nil
+		case *message.CallConstructor:
+			res, err := m.ToMap()
+			if err != nil {
+				return payload{"Payload": m, "Type": parcel.Type().String()}, nil
+			}
+			return payload{"Payload": res, "Type": parcel.Type().String()}, nil
+		case *message.GenesisRequest:
+			return payload{"Payload": m, "Type": parcel.Type().String()}, nil
+		}
+
 		return payload{"Payload": parcel, "Type": parcel.Type().String()}, nil
 	}
 
