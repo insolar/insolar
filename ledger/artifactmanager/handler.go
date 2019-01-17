@@ -978,10 +978,6 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 func (h *MessageHandler) nodeForJet(
 	ctx context.Context, jetID core.RecordID, parcelPN, targetPN core.PulseNumber,
 ) (*core.RecordRef, error) {
-
-	// FIXME: @andreyromancev. 17.01.19. Uncomment when heavy is ready.
-	return h.JetCoordinator.LightExecutorForJet(ctx, jetID, targetPN)
-
 	parcelPulse, err := h.db.GetPulse(ctx, parcelPN)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch pulse")
