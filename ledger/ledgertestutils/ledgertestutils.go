@@ -30,6 +30,7 @@ import (
 	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/messagebus"
@@ -126,6 +127,8 @@ func TmpLedger(t *testing.T, dir string, c core.Components) (*ledger.Ledger, fun
 	if err != nil {
 		panic(err)
 	}
+
+	handler.CloseEarlyRequestCircuitBreakerForJet(ctx, *jet.NewID(0, nil))
 
 	// Create ledger.
 	l := ledger.NewTestLedger(db, am, pm, jc, ls)

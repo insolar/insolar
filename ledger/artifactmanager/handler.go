@@ -327,10 +327,6 @@ func (h *MessageHandler) handleGetJet(ctx context.Context, parcel core.Parcel) (
 		return nil, err
 	}
 
-	pulse, err := h.db.GetLatestPulse(ctx)
-
-	fmt.Printf("sent jet info. jet: %v, actual: %v", jetID.JetIDString(), actual)
-	fmt.Printf("parcel pulse: %v. current pulse: %v", parcel.Pulse(), pulse.Pulse.PulseNumber)
 	return &reply.Jet{ID: *jetID, Actual: actual}, nil
 }
 
@@ -482,9 +478,25 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 		return nil, errors.New("wrong object state record")
 	}
 
+	// FIXME: temporary fix. If we calculate blob id on the client, pulse can change before message sending and this
+	//  id will not match the one calculated on the server.
+	// if msg.Memory != nil {
+	blobID, err := h.db.SetBlob(ctx, jetID, parcel.Pulse(), msg.Memory)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to set blob")
+	}
+
+	switch s := state.(type) {
+	case *record.ObjectActivateRecord:
+		s.Memory = blobID
+	case *record.ObjectAmendRecord:
+		s.Memory = blobID
+	}
+	// }
+
 	recentStorage := h.RecentStorageProvider.GetStorage(jetID)
 	var idx *index.ObjectLifeline
-	err := h.db.Update(ctx, func(tx *storage.TransactionManager) error {
+	err = h.db.Update(ctx, func(tx *storage.TransactionManager) error {
 		var err error
 		inslog.Debugf("Get index for: %v, jet: %v", msg.Object.Record(), jetID.String())
 		idx, err = tx.GetObjectIndex(ctx, jetID, msg.Object.Record(), true)
@@ -531,19 +543,6 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 		idx.State = state.State()
 		if state.State() == record.StateActivation {
 			idx.Parent = state.(*record.ObjectActivateRecord).Parent
-		}
-		if state.GetMemory() != nil {
-			blobID, err := h.db.SetBlob(ctx, jetID, parcel.Pulse(), msg.Memory)
-			if err != nil {
-				return errors.Wrap(err, "failed to set blob")
-			}
-			if !state.GetMemory().Equal(blobID) {
-				return fmt.Errorf(
-					"blob key conflict. from vm: %v, from set: %v",
-					state.GetMemory().DebugString(),
-					blobID.DebugString(),
-				)
-			}
 		}
 
 		inslog.Debugf("Save index for: %v, jet: %v, latestState: %s", msg.Object.Record(), jetID.JetIDString(), idx.LatestState)

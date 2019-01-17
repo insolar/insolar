@@ -236,7 +236,7 @@ func (m *middleware) fetchJet(
 	}
 
 	me := m.jetCoordinator.Me()
-	for i, _ := range nodes {
+	for i := range nodes {
 		if nodes[i].ID() == me {
 			nodes = append(nodes[:i], nodes[i+1:]...)
 			break

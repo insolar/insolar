@@ -111,8 +111,9 @@ func (t *udpTransport) send(recvAddress string, data []byte) error {
 }
 
 // Start starts networking.
-func (t *udpTransport) Listen(ctx context.Context) error {
+func (t *udpTransport) Listen(ctx context.Context, started chan struct{}) error {
 	inslogger.FromContext(ctx).Info("Start UDP transport")
+	started <- struct{}{}
 	for {
 		buf := make([]byte, udpMaxPacketSize)
 		n, addr, err := t.serverConn.ReadFrom(buf)

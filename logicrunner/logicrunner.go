@@ -51,14 +51,6 @@ type ObjectState struct {
 	Consensus      *Consensus
 }
 
-type PendingState int
-
-const (
-	PendingUnknown PendingState = iota
-	NotPending
-	InPending
-)
-
 type ExecutionState struct {
 	sync.Mutex
 
@@ -75,7 +67,7 @@ type ExecutionState struct {
 	QueueProcessorActive bool
 
 	// TODO not using in validation, need separate ObjectState.ExecutionState and ObjectState.Validation from ExecutionState struct
-	pending          PendingState
+	pending          message.PendingState
 	PendingConfirmed bool
 }
 
@@ -170,21 +162,21 @@ func (es *ExecutionState) WrapError(err error, message string) error {
 	return res
 }
 
-func (es *ExecutionState) CheckPendingRequests(ctx context.Context, inMsg core.Message) (PendingState, error) {
+func (es *ExecutionState) CheckPendingRequests(ctx context.Context, inMsg core.Message) (message.PendingState, error) {
 	msg, ok := inMsg.(*message.CallMethod)
 	if !ok {
-		return NotPending, nil
+		return message.NotPending, nil
 	}
 
 	has, err := es.ArtifactManager.HasPendingRequests(ctx, msg.ObjectRef)
 	if err != nil {
-		return NotPending, err
+		return message.NotPending, err
 	}
 	if has {
-		return InPending, nil
+		return message.InPending, nil
 	}
 
-	return NotPending, nil
+	return message.NotPending, nil
 }
 
 // releaseQueue must be calling only with es.Lock
@@ -440,7 +432,7 @@ func (lr *LogicRunner) HandlePendingFinishedMessage(
 		os.ExecutionState = &ExecutionState{
 			Queue:     make([]ExecutionQueueElement, 0),
 			Behaviour: &ValidationSaver{lr: lr, caseBind: NewCaseBind()},
-			pending:   NotPending,
+			pending:   message.NotPending,
 		}
 		os.Unlock()
 		return &reply.OK{}, nil
@@ -449,7 +441,7 @@ func (lr *LogicRunner) HandlePendingFinishedMessage(
 	os.Unlock()
 
 	es.Lock()
-	es.pending = NotPending
+	es.pending = message.NotPending
 	if es.Current != nil {
 		es.Unlock()
 		return nil, errors.New("received PendingFinished when we are already executing")
@@ -480,14 +472,14 @@ func (lr *LogicRunner) StartQueueProcessorIfNeeded(
 		return nil
 	}
 
-	if es.pending == PendingUnknown {
+	if es.pending == message.PendingUnknown {
 		pending, err := es.CheckPendingRequests(ctx, msg)
 		if err != nil {
 			return errors.Wrap(err, "couldn't check for pending requests")
 		}
 		es.pending = pending
 	}
-	if es.pending == InPending {
+	if es.pending == message.InPending {
 		inslogger.FromContext(ctx).Debug("object in pending. not starting queue processor")
 		return nil
 	}
@@ -559,19 +551,27 @@ func (lr *LogicRunner) finishPendingIfNeeded(ctx context.Context, es *ExecutionS
 	es.Lock()
 	defer es.Unlock()
 
-	if es.pending != InPending {
+	if es.pending != message.InPending {
 		return
 	}
 
-	es.pending = NotPending
+	es.pending = message.NotPending
+	es.PendingConfirmed = false
 
-	go func() {
-		msg := message.PendingFinished{Reference: currentRef}
-		_, err := lr.MessageBus.Send(ctx, &msg, nil)
-		if err != nil {
-			inslogger.FromContext(ctx).Error("Unable to send PendingFinished message:", err)
-		}
-	}()
+	pulse := lr.pulse(ctx)
+	meCurrent, _ := lr.JetCoordinator.IsAuthorized(
+		ctx, core.DynamicRoleVirtualExecutor, *currentRef.Record(), pulse.PulseNumber, lr.JetCoordinator.Me(),
+	)
+	if !meCurrent {
+		es.objectbody = nil
+		go func() {
+			msg := message.PendingFinished{Reference: currentRef}
+			_, err := lr.MessageBus.Send(ctx, &msg, nil)
+			if err != nil {
+				inslogger.FromContext(ctx).Error("Unable to send PendingFinished message:", err)
+			}
+		}()
+	}
 }
 
 func (lr *LogicRunner) executeOrValidate(
@@ -677,11 +677,20 @@ func (lr *LogicRunner) prepareObjectState(ctx context.Context, msg *message.Exec
 	es.Lock()
 
 	// prepare pending
-	if es.pending == PendingUnknown {
-		if msg.Pending {
-			es.pending = InPending
+	if es.pending == message.PendingUnknown {
+		es.pending = msg.Pending
+	}
+	if es.pending == message.InPending && msg.Pending == message.NotPending {
+		// ledger on request said that we are in pending
+		// previous executor said that we can continue
+		es.pending = message.NotPending
+		if es.Current != nil {
+			es.objectbody = nil
 		} else {
-			es.pending = NotPending
+			inslogger.FromContext(ctx).Error(
+				"we have object in pending state, but ",
+				"with currently executing contract. shouldn't happen",
+			)
 		}
 	}
 
@@ -870,7 +879,7 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 	messages := make([]core.Message, 0)
 
 	for ref, state := range lr.state {
-		isAuthorized, _ := lr.JetCoordinator.IsAuthorized(
+		meNext, _ := lr.JetCoordinator.IsAuthorized(
 			ctx, core.DynamicRoleVirtualExecutor, *ref.Record(), pulse.PulseNumber, lr.JetCoordinator.Me(),
 		)
 		state.Lock()
@@ -883,9 +892,9 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 
 			// if we are executor again we just continue working
 			// without sending data on next executor (because we are next executor)
-			if !isAuthorized {
+			if !meNext {
 				if es.Current != nil {
-					es.pending = InPending
+					es.pending = message.InPending
 
 					// TODO: this should return delegation token to continue execution of the pending
 					messages = append(
@@ -895,11 +904,11 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 						},
 					)
 				} else {
-					if es.pending == InPending && !es.PendingConfirmed {
+					if es.pending == message.InPending && !es.PendingConfirmed {
 						inslogger.FromContext(ctx).Warn(
 							"looks like pending executor died, continuing execution",
 						)
-						es.pending = NotPending
+						es.pending = message.NotPending
 					}
 					state.ExecutionState = nil
 				}
@@ -916,16 +925,43 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 					//},
 					&message.ExecutorResults{
 						RecordRef: ref,
-						Pending:   es.pending == InPending,
+						Pending:   es.pending,
 						Requests:  requests,
 						Queue:     convertQueueToMessageQueue(queue),
 					},
 				)
+
+				if es.Current == nil && len(es.Queue) == 0 {
+					state.ExecutionState = nil
+				}
+			} else {
+				if es.Current != nil {
+					// no pending should be as we are executing
+					if es.pending == message.InPending {
+						inslogger.FromContext(ctx).Warn(
+							"we are executing ATM, but ES marked as pending, shouldn't be",
+						)
+						es.pending = message.NotPending
+					}
+				} else if es.pending == message.InPending && !es.PendingConfirmed {
+					inslogger.FromContext(ctx).Warn(
+						"looks like pending executor died, continuing execution",
+					)
+					es.pending = message.NotPending
+					es.objectbody = nil
+					go func() {
+						err := lr.StartQueueProcessorIfNeeded(ctx, es, nil)
+						if err != nil {
+							inslogger.FromContext(ctx).Error(
+								errors.Wrap(err, "couldn't start queue processor"),
+							)
+
+						}
+					}()
+				}
+				es.PendingConfirmed = false
 			}
 
-			if es.Current == nil && len(es.Queue) == 0 {
-				state.ExecutionState = nil
-			}
 			es.Unlock()
 		}
 
@@ -983,13 +1019,13 @@ func (lr *LogicRunner) HandleStillExecutingMessage(
 		os.ExecutionState = &ExecutionState{
 			Queue:            make([]ExecutionQueueElement, 0),
 			Behaviour:        &ValidationSaver{lr: lr, caseBind: NewCaseBind()},
-			pending:          InPending,
+			pending:          message.InPending,
 			PendingConfirmed: true,
 		}
 	} else {
 		es := os.ExecutionState
 		es.Lock()
-		if es.pending == NotPending {
+		if es.pending == message.NotPending {
 			inslogger.FromContext(ctx).Error(
 				"got StillExecuting message, but our state says that it's not in pending",
 			)

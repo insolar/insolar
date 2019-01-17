@@ -89,7 +89,7 @@ func DeserializePacket(conn io.Reader) (*Packet, error) {
 
 	err = dec.Decode(msg)
 	if err != nil {
-		return nil, errors.Wrap(err, "Failed to deserialize packet")
+		return nil, err
 	}
 
 	return msg, nil

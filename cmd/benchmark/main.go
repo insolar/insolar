@@ -17,16 +17,12 @@
 package main
 
 import (
-	"bufio"
-	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
-	"strings"
-	"sync"
 	"time"
 
+	"github.com/insolar/insolar/api/sdk"
 	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 	"github.com/spf13/pflag"
@@ -34,42 +30,22 @@ import (
 
 const defaultStdoutPath = "-"
 
-type ringBuffer struct {
-	sync.Mutex
-	urls   []string
-	cursor int
-}
-
-func (rb *ringBuffer) Next() string {
-	rb.Lock()
-	defer rb.Unlock()
-	rb.cursor++
-	if rb.cursor >= len(rb.urls) {
-		rb.cursor = 0
-	}
-	return rb.urls[rb.cursor]
-}
-
 var (
-	input          string
 	output         string
 	concurrent     int
 	repetitions    int
-	rootmemberkeys string
-	apiurls        ringBuffer
-	loglevel       string
-
-	rootMember memberInfo
+	rootMemberKeys string
+	apiURLs        []string
+	logLevel       string
 )
 
 func parseInputParams() {
-	pflag.StringVarP(&input, "input", "i", "", "path to file with initial data for benchmark")
 	pflag.StringVarP(&output, "output", "o", defaultStdoutPath, "output file (use - for STDOUT)")
 	pflag.IntVarP(&concurrent, "concurrent", "c", 1, "concurrent users")
 	pflag.IntVarP(&repetitions, "repetitions", "r", 1, "repetitions for one user")
-	pflag.StringVarP(&rootmemberkeys, "rootmemberkeys", "k", "", "path to file with RootMember keys")
-	pflag.StringArrayVarP(&apiurls.urls, "apiurl", "u", []string{"http://localhost:19191/api"}, "url to api")
-	pflag.StringVarP(&loglevel, "loglevel", "l", "info", "log level for benchmark")
+	pflag.StringVarP(&rootMemberKeys, "rootmemberkeys", "k", "", "path to file with RootMember keys")
+	pflag.StringArrayVarP(&apiURLs, "apiurl", "u", []string{"http://localhost:19191/api"}, "url to api")
+	pflag.StringVarP(&logLevel, "loglevel", "l", "info", "log level for benchmark")
 	pflag.Parse()
 }
 
@@ -99,63 +75,14 @@ func check(msg string, err error) {
 	}
 }
 
-type memberInfo struct {
-	ref        string
-	privateKey string
-}
-
-const memberInfoFieldsNumber = 2
-
-func getMembersInfo(fileName string) ([]memberInfo, error) {
-	var members []memberInfo
-
-	file, err := os.OpenFile(fileName, os.O_RDONLY, 0)
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't open file for reading")
-	}
-	defer file.Close() //nolint: errcheck
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		info := strings.Fields(scanner.Text())
-		if len(info) != memberInfoFieldsNumber {
-			check("problem with getting member info", errors.New("not enough info for single member"))
-		}
-		members = append(members, memberInfo{ref: info[0], privateKey: info[1]})
-	}
-
-	return members, nil
-}
-
-type memberKeys struct {
-	Private string `json:"private_key"`
-	Public  string `json:"public_key"`
-}
-
-func getRootMemberRef() string {
-	infoResp := info()
-	return infoResp.RootMember
-}
-
-func getRootMemberInfo(fileName string) memberInfo {
-
-	rawConf, err := ioutil.ReadFile(fileName)
-	check("problem with reading root member keys file", err)
-
-	keys := memberKeys{}
-	err = json.Unmarshal(rawConf, &keys)
-	check("problem with unmarshaling root member keys", err)
-
-	return memberInfo{getRootMemberRef(), keys.Private}
-}
-
-func runScenarios(out io.Writer, members []memberInfo, concurrent int, repetitions int) {
+func runScenarios(out io.Writer, insSDK *sdk.SDK, members []*sdk.Member, concurrent int, repetitions int) {
 	transferDifferentMembers := &transferDifferentMembersScenario{
 		concurrent:  concurrent,
 		repetitions: repetitions,
-		members:     members,
 		name:        "TransferDifferentMembers",
 		out:         out,
+		members:     members,
+		insSDK:      insSDK,
 	}
 	startScenario(transferDifferentMembers)
 }
@@ -184,26 +111,42 @@ func startScenario(s scenario) {
 	s.printResult()
 }
 
+var numRetries = 3
+
+func createMembers(insSDK *sdk.SDK, count int) []*sdk.Member {
+	var members []*sdk.Member
+	var member *sdk.Member
+	var err error
+	for i := 0; i < count; i++ {
+
+		for j := 0; j < numRetries; j++ {
+			member, _, err = insSDK.CreateMember()
+			if err == nil {
+				members = append(members, member)
+				break
+			}
+
+			fmt.Println("Retry to create member. Error is: ", err.Error())
+			time.Sleep(time.Second)
+		}
+		check(fmt.Sprintf("Couldn't create member after retries: %d", numRetries), err)
+	}
+	return members
+}
+
 func main() {
 	parseInputParams()
 
-	err := log.SetLevel(loglevel)
-	check(fmt.Sprintf("can not set '%s' level on logger:", loglevel), err)
+	err := log.SetLevel(logLevel)
+	check(fmt.Sprintf("Can't set '%s' level on logger:", logLevel), err)
 
 	out, err := chooseOutput(output)
 	check("Problems with output file:", err)
 
-	var members []memberInfo
+	insSDK, err := sdk.NewSDK(apiURLs, rootMemberKeys)
+	check("SDK is not initialized: ", err)
 
-	rootMember = getRootMemberInfo(rootmemberkeys)
+	members := createMembers(insSDK, concurrent*2)
 
-	if input != "" {
-		members, err = getMembersInfo(input)
-		check("Problems with parsing input:", err)
-	} else {
-		members, err = createMembers(concurrent)
-		check("Problems with create members. One of creating request ended with error: ", err)
-	}
-
-	runScenarios(out, members, concurrent, repetitions)
+	runScenarios(out, insSDK, members, concurrent, repetitions)
 }

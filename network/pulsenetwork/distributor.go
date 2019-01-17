@@ -208,7 +208,7 @@ func (d *distributor) sendPulseToHosts(ctx context.Context, pulse *core.Pulse, h
 			if err != nil {
 				logger.Errorf(
 					"[ sendPulseToHosts ] Failed to send pulse to host: %s, error: %s",
-					pulseReceiver.String(),
+					host.String(),
 					err.Error(),
 				)
 			}
@@ -252,11 +252,5 @@ func (d *distributor) pause(ctx context.Context) {
 
 func (d *distributor) resume(ctx context.Context) {
 	inslogger.FromContext(ctx).Info("[ Resume ] Resume distribution, starting transport")
-
-	go func(ctx context.Context, t transport.Transport) {
-		err := t.Listen(ctx)
-		if err != nil {
-			inslogger.FromContext(ctx).Error(err)
-		}
-	}(ctx, d.Transport)
+	transport.ListenAndWaitUntilReady(ctx, d.Transport)
 }
