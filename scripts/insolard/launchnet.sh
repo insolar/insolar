@@ -38,7 +38,7 @@ stop_listening()
     then
         ports="$ports 28221 28222 28441 28442 28661 28662 28881 28882" # Insgornd
     fi
-    
+
     echo "Stop listening..."
     for port in $ports
     do

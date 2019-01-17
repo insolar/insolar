@@ -17,6 +17,7 @@
 package transport
 
 import (
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -150,7 +151,7 @@ func TestFuture_GetResult2(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestFuture_SetResult_AfterCancel(t *testing.T) {
+func TestFuture_SetResult_Cancel_Concurrency(t *testing.T) {
 	n, _ := host.NewHost("127.0.0.1:8080")
 
 	cbCalled := false
@@ -160,12 +161,24 @@ func TestFuture_SetResult_AfterCancel(t *testing.T) {
 	m := &packet.Packet{}
 	f := NewFuture(packet.RequestID(1), n, m, cb)
 
-	f.Cancel()
-	f.SetResult(&packet.Packet{})
+	wg := &sync.WaitGroup{}
+	wg.Add(2)
 
-	res, closed := <-f.Result()
+	go func() {
+		f.Cancel()
+		wg.Done()
+	}()
+	go func() {
+		f.SetResult(&packet.Packet{})
+		wg.Done()
+	}()
 
-	require.Nil(t, res)
-	require.False(t, closed)
+	wg.Wait()
+	res, ok := <-f.Result()
+
+	cancelDone := res == nil && !ok
+	resultDone := res != nil && ok
+
+	require.True(t, cancelDone || resultDone)
 	require.True(t, cbCalled)
 }

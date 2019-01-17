@@ -14,33 +14,28 @@
  *    limitations under the License.
  */
 
-package storage
+package artifactmanager
 
 import (
-	"bytes"
-	"encoding/hex"
+	"context"
+	"testing"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/testutils"
+	"github.com/stretchr/testify/require"
 )
 
-type bytes2hex []byte
+func TestEarlyRequestCircuitBreakerProvider_GetBreaker_CreateNew(t *testing.T) {
+	provider := &earlyRequestCircuitBreakerProvider{
+		breakers: map[core.RecordID]*requestCircuitBreakerProvider{},
+	}
+	expectedJet := testutils.RandomJet()
 
-func (h bytes2hex) String() string {
-	return hex.EncodeToString(h)
+	breaker := provider.getBreaker(context.TODO(), expectedJet)
+
+	require.Equal(t, 1, len(provider.breakers))
+	require.Equal(t, breaker, provider.breakers[expectedJet])
+	require.NotNil(t, provider.breakers[expectedJet].timeoutChannel)
+	require.NotNil(t, provider.breakers[expectedJet].hotDataChannel)
 }
 
-func prefixkey(prefix byte, parts ...[]byte) []byte {
-	tail := bytes.Join(parts, nil)
-	k := make([]byte, len(tail)+1)
-	k[0] = prefix
-	_ = copy(k[1:], tail)
-	return k
-}
-
-func pulseFromKey(key []byte) core.PulseNumber {
-	return core.NewPulseNumber(pulseBytesFromKey(key))
-}
-
-func pulseBytesFromKey(key []byte) []byte {
-	return key[core.RecordHashSize : core.RecordHashSize+core.PulseNumberSize]
-}
