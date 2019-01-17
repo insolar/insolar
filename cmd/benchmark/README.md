@@ -34,3 +34,7 @@ Usage
 
         -l loglevel
                 Log level (default - info).
+
+        -m usemembers
+                Use members from file scripts/insolard/benchmark/members.txt.
+                If false, wright info about created members in this file. Default is false. 
