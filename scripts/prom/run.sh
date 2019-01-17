@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # Starts prometheus server for launchnet metrics collection.
+# uses port 9990 (default 9090 mysteriously clash with default insolard metrics port)
 #
 # with argsument c (continue) removes previous collected data:
 # ./scripts/prom/run.sh c

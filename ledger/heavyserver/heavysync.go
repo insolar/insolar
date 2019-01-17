@@ -85,7 +85,8 @@ func (s *Sync) checkIsNextPulse(ctx context.Context, jetID core.RecordID, jetsta
 	}
 
 	if pn <= jetstate.lastok {
-		return fmt.Errorf("heavyserver: pulse %v is not greater than last synced pulse %v", pn, jetstate.lastok)
+		return fmt.Errorf("heavyserver: pulse %v is not greater than last synced pulse %v (jet=%v)",
+			pn, jetstate.lastok, jetID)
 	}
 
 	return nil

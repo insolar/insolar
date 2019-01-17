@@ -49,7 +49,6 @@ func (h *MessageHandler) handleHeavyPayload(ctx context.Context, genericMsg core
 
 func (h *MessageHandler) handleHeavyStartStop(ctx context.Context, genericMsg core.Parcel) (core.Reply, error) {
 	var err error
-	defer instrument(ctx, "handleHeavyStartStop").err(&err).end()
 
 	msg := genericMsg.Message().(*message.HeavyStartStop)
 
@@ -59,13 +58,17 @@ func (h *MessageHandler) handleHeavyStartStop(ctx context.Context, genericMsg co
 
 	// stop
 	if msg.Finished {
+		defer instrument(ctx, "handleHeavyStop").err(&err).end()
 		inslog.Debug("Heavy sync: get stop message")
-		if err := h.HeavySync.Stop(ctx, msg.JetID, msg.PulseNum); err != nil {
+
+		if err = h.HeavySync.Stop(ctx, msg.JetID, msg.PulseNum); err != nil {
 			return nil, err
 		}
 		return &reply.OK{}, nil
 	}
 	// start
+
+	defer instrument(ctx, "handleHeavyStart").err(&err).end()
 	inslog.Debug("Heavy sync: get start message")
 	if err = h.HeavySync.Start(ctx, msg.JetID, msg.PulseNum); err != nil {
 		return heavyerrreply(err)
