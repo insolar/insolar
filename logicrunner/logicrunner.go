@@ -22,6 +22,7 @@ import (
 	"context"
 	"encoding/gob"
 	"net"
+	"strings"
 	"sync"
 	"time"
 
@@ -775,6 +776,9 @@ func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState
 	} else {
 		od, err := am.UpdateObject(ctx, Ref{}, *current.Request, es.objectbody.objDescriptor, newData)
 		if err != nil {
+			if strings.Contains(err.Error(), "invalid state record") {
+				es.objectbody = nil
+			}
 			return nil, es.WrapError(err, "couldn't update object")
 		}
 		es.objectbody.objDescriptor = od
