@@ -42,6 +42,7 @@ var (
 	rootMemberKeys     string
 	apiURLs            []string
 	logLevel           string
+	saveMembersToFile  bool
 	useMembersFromFile bool
 )
 
@@ -52,6 +53,7 @@ func parseInputParams() {
 	pflag.StringVarP(&rootMemberKeys, "rootmemberkeys", "k", "", "path to file with RootMember keys")
 	pflag.StringArrayVarP(&apiURLs, "apiurl", "u", []string{"http://localhost:19191/api"}, "url to api")
 	pflag.StringVarP(&logLevel, "loglevel", "l", "info", "log level for benchmark")
+	pflag.BoolVarP(&saveMembersToFile, "savemembers", "s", false, "save members to file")
 	pflag.BoolVarP(&useMembersFromFile, "usemembers", "m", false, "use members from file")
 	pflag.Parse()
 }
@@ -153,6 +155,9 @@ func getMembers(insSDK *sdk.SDK) ([]*sdk.Member, error) {
 		}
 	} else {
 		members = createMembers(insSDK, concurrent*2)
+	}
+
+	if saveMembersToFile {
 		err = saveMembers(members)
 		if err != nil {
 			return nil, errors.Wrap(err, "save member done with error: ")
