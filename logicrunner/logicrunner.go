@@ -505,16 +505,17 @@ func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionS
 		es.Queue = q
 
 		sender := qe.parcel.GetSender()
-		es.Current = &CurrentExecution{
+		current := CurrentExecution{
 			Request:       qe.request,
 			RequesterNode: &sender,
 		}
+		es.Current = &current
 
 		if msg, ok := qe.parcel.Message().(*message.CallMethod); ok {
-			es.Current.ReturnMode = msg.ReturnMode
+			current.ReturnMode = msg.ReturnMode
 		}
 		if msg, ok := qe.parcel.Message().(message.IBaseLogicMessage); ok {
-			es.Current.Sequence = msg.GetBaseLogicMessage().Sequence
+			current.Sequence = msg.GetBaseLogicMessage().Sequence
 		}
 
 		es.Unlock()
@@ -527,12 +528,12 @@ func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionS
 			continue
 		}
 
-		es.Current.Context = core.ContextWithMessageBus(qe.ctx, recordingBus)
+		current.Context = core.ContextWithMessageBus(qe.ctx, recordingBus)
 
 		inslogger.FromContext(qe.ctx).Debug("Registering request within execution behaviour")
 		es.Behaviour.(*ValidationSaver).NewRequest(qe.parcel, *qe.request, recordingBus)
 
-		res.reply, res.err = lr.executeOrValidate(es.Current.Context, es, qe.parcel)
+		res.reply, res.err = lr.executeOrValidate(current.Context, es, qe.parcel)
 
 		inslogger.FromContext(qe.ctx).Debug("Registering result within execution behaviour")
 		err = es.Behaviour.Result(res.reply, res.err)
