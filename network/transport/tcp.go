@@ -20,9 +20,7 @@ import (
 	"context"
 	"io"
 	"net"
-	"os"
 	"sync/atomic"
-	"syscall"
 	"time"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -74,19 +72,19 @@ func (t *tcpTransport) send(address string, data []byte) error {
 
 	if err != nil {
 		// All this to check is error EPIPE
-		if netErr, ok := err.(*net.OpError); ok {
-			switch realNetErr := netErr.Err.(type) {
-			case *os.SyscallError:
-				if realNetErr.Err == syscall.EPIPE {
-					t.pool.CloseConnection(ctx, addr)
-					conn, err = t.pool.GetConnection(ctx, addr)
-					if err != nil {
-						return errors.Wrap(err, "[ send ] Failed to get connection")
-					}
-					_, err = conn.Write(data)
-				}
-			}
+		// if netErr, ok := err.(*net.OpError); ok {
+		// 	switch realNetErr := netErr.Err.(type) {
+		// 	case *os.SyscallError:
+		// 		if realNetErr.Err == syscall.EPIPE {
+		t.pool.CloseConnection(ctx, addr)
+		conn, err = t.pool.GetConnection(ctx, addr)
+		if err != nil {
+			return errors.Wrap(err, "[ send ] Failed to get connection")
 		}
+		_, err = conn.Write(data)
+		// 		}
+		// 	}
+		// }
 	}
 
 	return errors.Wrap(err, "[ send ] Failed to write data")
