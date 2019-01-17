@@ -34,7 +34,7 @@ func TestLedgerArtifactManager_handleHeavy(t *testing.T) {
 	t.Parallel()
 	ctx, db, _, cleaner := getTestData(t)
 	defer cleaner()
-	jetID := testutils.RandomID()
+	jetID := testutils.RandomJet()
 
 	// prepare mock
 	heavysync := testutils.NewHeavySyncMock(t)

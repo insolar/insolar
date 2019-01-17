@@ -19,6 +19,11 @@ import (
 type ProviderMock struct {
 	t minimock.Tester
 
+	CloneStorageFunc       func(p core.RecordID, p1 core.RecordID)
+	CloneStorageCounter    uint64
+	CloneStoragePreCounter uint64
+	CloneStorageMock       mProviderMockCloneStorage
+
 	GetStorageFunc       func(p core.RecordID) (r RecentStorage)
 	GetStorageCounter    uint64
 	GetStoragePreCounter uint64
@@ -33,9 +38,134 @@ func NewProviderMock(t minimock.Tester) *ProviderMock {
 		controller.RegisterMocker(m)
 	}
 
+	m.CloneStorageMock = mProviderMockCloneStorage{mock: m}
 	m.GetStorageMock = mProviderMockGetStorage{mock: m}
 
 	return m
+}
+
+type mProviderMockCloneStorage struct {
+	mock              *ProviderMock
+	mainExpectation   *ProviderMockCloneStorageExpectation
+	expectationSeries []*ProviderMockCloneStorageExpectation
+}
+
+type ProviderMockCloneStorageExpectation struct {
+	input *ProviderMockCloneStorageInput
+}
+
+type ProviderMockCloneStorageInput struct {
+	p  core.RecordID
+	p1 core.RecordID
+}
+
+//Expect specifies that invocation of Provider.CloneStorage is expected from 1 to Infinity times
+func (m *mProviderMockCloneStorage) Expect(p core.RecordID, p1 core.RecordID) *mProviderMockCloneStorage {
+	m.mock.CloneStorageFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &ProviderMockCloneStorageExpectation{}
+	}
+	m.mainExpectation.input = &ProviderMockCloneStorageInput{p, p1}
+	return m
+}
+
+//Return specifies results of invocation of Provider.CloneStorage
+func (m *mProviderMockCloneStorage) Return() *ProviderMock {
+	m.mock.CloneStorageFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &ProviderMockCloneStorageExpectation{}
+	}
+
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of Provider.CloneStorage is expected once
+func (m *mProviderMockCloneStorage) ExpectOnce(p core.RecordID, p1 core.RecordID) *ProviderMockCloneStorageExpectation {
+	m.mock.CloneStorageFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &ProviderMockCloneStorageExpectation{}
+	expectation.input = &ProviderMockCloneStorageInput{p, p1}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+//Set uses given function f as a mock of Provider.CloneStorage method
+func (m *mProviderMockCloneStorage) Set(f func(p core.RecordID, p1 core.RecordID)) *ProviderMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.CloneStorageFunc = f
+	return m.mock
+}
+
+//CloneStorage implements github.com/insolar/insolar/ledger/recentstorage.Provider interface
+func (m *ProviderMock) CloneStorage(p core.RecordID, p1 core.RecordID) {
+	counter := atomic.AddUint64(&m.CloneStoragePreCounter, 1)
+	defer atomic.AddUint64(&m.CloneStorageCounter, 1)
+
+	if len(m.CloneStorageMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.CloneStorageMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to ProviderMock.CloneStorage. %v %v", p, p1)
+			return
+		}
+
+		input := m.CloneStorageMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, ProviderMockCloneStorageInput{p, p1}, "Provider.CloneStorage got unexpected parameters")
+
+		return
+	}
+
+	if m.CloneStorageMock.mainExpectation != nil {
+
+		input := m.CloneStorageMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, ProviderMockCloneStorageInput{p, p1}, "Provider.CloneStorage got unexpected parameters")
+		}
+
+		return
+	}
+
+	if m.CloneStorageFunc == nil {
+		m.t.Fatalf("Unexpected call to ProviderMock.CloneStorage. %v %v", p, p1)
+		return
+	}
+
+	m.CloneStorageFunc(p, p1)
+}
+
+//CloneStorageMinimockCounter returns a count of ProviderMock.CloneStorageFunc invocations
+func (m *ProviderMock) CloneStorageMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.CloneStorageCounter)
+}
+
+//CloneStorageMinimockPreCounter returns the value of ProviderMock.CloneStorage invocations
+func (m *ProviderMock) CloneStorageMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.CloneStoragePreCounter)
+}
+
+//CloneStorageFinished returns true if mock invocations count is ok
+func (m *ProviderMock) CloneStorageFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.CloneStorageMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.CloneStorageCounter) == uint64(len(m.CloneStorageMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.CloneStorageMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.CloneStorageCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.CloneStorageFunc != nil {
+		return atomic.LoadUint64(&m.CloneStorageCounter) > 0
+	}
+
+	return true
 }
 
 type mProviderMockGetStorage struct {
@@ -189,6 +319,10 @@ func (m *ProviderMock) GetStorageFinished() bool {
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *ProviderMock) ValidateCallCounters() {
 
+	if !m.CloneStorageFinished() {
+		m.t.Fatal("Expected call to ProviderMock.CloneStorage")
+	}
+
 	if !m.GetStorageFinished() {
 		m.t.Fatal("Expected call to ProviderMock.GetStorage")
 	}
@@ -210,6 +344,10 @@ func (m *ProviderMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *ProviderMock) MinimockFinish() {
 
+	if !m.CloneStorageFinished() {
+		m.t.Fatal("Expected call to ProviderMock.CloneStorage")
+	}
+
 	if !m.GetStorageFinished() {
 		m.t.Fatal("Expected call to ProviderMock.GetStorage")
 	}
@@ -228,6 +366,7 @@ func (m *ProviderMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
+		ok = ok && m.CloneStorageFinished()
 		ok = ok && m.GetStorageFinished()
 
 		if ok {
@@ -236,6 +375,10 @@ func (m *ProviderMock) MinimockWait(timeout time.Duration) {
 
 		select {
 		case <-timeoutCh:
+
+			if !m.CloneStorageFinished() {
+				m.t.Error("Expected call to ProviderMock.CloneStorage")
+			}
 
 			if !m.GetStorageFinished() {
 				m.t.Error("Expected call to ProviderMock.GetStorage")
@@ -252,6 +395,10 @@ func (m *ProviderMock) MinimockWait(timeout time.Duration) {
 //AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *ProviderMock) AllMocksCalled() bool {
+
+	if !m.CloneStorageFinished() {
+		return false
+	}
 
 	if !m.GetStorageFinished() {
 		return false

@@ -23,10 +23,6 @@ Usage
         -r repetitions
                 Number of repetitions for one user. Default is one.
 
-        -i input
-                Path to file with initial data - references of members.
-                If you don't provide input file, new members will be generated automatically.
-
         -o output
                 Path to output file (use - for STDOUT).
 

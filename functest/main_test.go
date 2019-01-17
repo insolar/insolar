@@ -226,7 +226,7 @@ func stopAllInsgorunds() error {
 
 func waitForNet() error {
 	numAttempts := 90
-	ports := []string{"19191", "19192", "19193"}
+	ports := []string{"19191", "19192", "19193", "19194", "19195"}
 	numNodes := len(ports)
 	currentOk := 0
 	for i := 0; i < numAttempts; i++ {
@@ -304,7 +304,7 @@ func startNet() error {
 
 func waitForLaunch() error {
 	done := make(chan bool, 1)
-	timeout := 120 * time.Second
+	timeout := 240 * time.Second
 
 	go func() {
 		scanner := bufio.NewScanner(stdout)

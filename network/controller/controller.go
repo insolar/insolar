@@ -38,6 +38,14 @@ type Controller struct {
 	rpcController   *RPCController
 }
 
+func (c *Controller) SetLastIgnoredPulse(number core.PulseNumber) {
+	c.bootstrapper.SetLastPulse(number)
+}
+
+func (c *Controller) GetLastIgnoredPulse() core.PulseNumber {
+	return c.bootstrapper.GetLastPulse()
+}
+
 // SendParcel send message to nodeID.
 func (c *Controller) SendMessage(nodeID core.RecordRef, name string, msg core.Parcel) ([]byte, error) {
 	return c.rpcController.SendMessage(nodeID, name, msg)

@@ -34,22 +34,27 @@ import (
 
 var httpClient *http.Client
 
-var RequestTimeout uint = 15
+const (
+	RequestTimeout = 15 * time.Second
+)
 
 func init() {
 	httpClient = createHTTPClient()
 }
 
 func SetTimeout(timeout uint) {
-	RequestTimeout = timeout
-	httpClient.Timeout = time.Duration(RequestTimeout) * time.Second
+	if timeout > 0 {
+		httpClient.Timeout = time.Duration(timeout) * time.Second
+	} else {
+		httpClient.Timeout = RequestTimeout
+	}
 }
 
 // createHTTPClient for connection re-use
 func createHTTPClient() *http.Client {
 	client := &http.Client{
 		Transport: &http.Transport{},
-		Timeout:   time.Duration(RequestTimeout) * time.Second,
+		Timeout:   RequestTimeout,
 	}
 
 	return client

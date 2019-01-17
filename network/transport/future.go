@@ -66,7 +66,7 @@ type future struct {
 	request        *packet.Packet
 	requestID      packet.RequestID
 	cancelCallback CancelCallback
-	canceled       uint32
+	finished       uint32
 }
 
 // NewFuture creates new Future.
@@ -102,8 +102,9 @@ func (future *future) Result() <-chan *packet.Packet {
 
 // SetResult write packet to the result channel.
 func (future *future) SetResult(msg *packet.Packet) {
-	if atomic.LoadUint32(&future.canceled) == 0 {
+	if atomic.CompareAndSwapUint32(&future.finished, 0, 1) {
 		future.result <- msg
+		future.finish()
 	}
 }
 
@@ -123,8 +124,12 @@ func (future *future) GetResult(duration time.Duration) (*packet.Packet, error) 
 
 // Cancel allows to cancel Future processing.
 func (future *future) Cancel() {
-	if atomic.CompareAndSwapUint32(&future.canceled, 0, 1) {
-		close(future.result)
-		future.cancelCallback(future)
+	if atomic.CompareAndSwapUint32(&future.finished, 0, 1) {
+		future.finish()
 	}
+}
+
+func (future *future) finish() {
+	close(future.result)
+	future.cancelCallback(future)
 }

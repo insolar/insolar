@@ -26,6 +26,29 @@ import (
 	"github.com/pkg/errors"
 )
 
+type lockableConnection struct {
+	net.Conn
+	sync.Locker
+}
+
+func (lc *lockableConnection) Write(data []byte) (int, error) {
+	lc.Lock()
+	defer lc.Unlock()
+
+	// TODO: sergey.morozov 16.01.19: possible malformed packet fix; uncomment this when you meet errors ;)
+	// var written int
+	// for written < len(data) {
+	// 	n, err := lc.Conn.Write(data[written:])
+	// 	written += n
+	// 	if err != nil {
+	// 		return written, err
+	// 	}
+	// }
+	// return written, nil
+
+	return lc.Conn.Write(data)
+}
+
 type connectionPool struct {
 	connectionFactory connectionFactory
 
@@ -46,15 +69,32 @@ func (cp *connectionPool) GetConnection(ctx context.Context, address net.Addr) (
 
 	conn, ok := cp.getConnection(address)
 
-	logger.Debugf("[ GetConnection ] Finding connection to %s in pool: %s", address, ok)
+	logger.Debugf("[ GetConnection ] Finding connection to %s in pool: %t", address, ok)
 
-	if ok && !connectionClosedByPeer(ctx, conn) {
+	if ok {
 		return conn, nil
 	}
 
 	logger.Debugf("[ GetConnection ] Missing open connection to %s in pool ", address)
 
 	return cp.getOrCreateConnection(ctx, address)
+}
+
+func (cp *connectionPool) CloseConnection(ctx context.Context, address net.Addr) {
+	cp.mutex.Lock()
+	defer cp.mutex.Unlock()
+
+	logger := inslogger.FromContext(ctx)
+
+	conn, ok := cp.unsafeConnectionsHolder.Get(address)
+	logger.Debugf("[ CloseConnection ] Finding connection to %s in pool: %s", address, ok)
+
+	if ok {
+		utils.CloseVerbose(conn)
+
+		logger.Debugf("[ CloseConnection ] Delete connection to %s from pool: %s", address)
+		cp.unsafeConnectionsHolder.Delete(address)
+	}
 }
 
 func (cp *connectionPool) getConnection(address net.Addr) (net.Conn, bool) {
@@ -74,15 +114,7 @@ func (cp *connectionPool) getOrCreateConnection(ctx context.Context, address net
 	logger.Debugf("[ getOrCreateConnection ] Finding connection to %s in pool: %s", address, ok)
 
 	if ok {
-		if !connectionClosedByPeer(ctx, conn) {
-			return conn, nil
-		}
-
-		logger.Debugf("[ getOrCreateConnection ] Connection to %s closed by peer, closing it on our side", address)
-		utils.CloseVerbose(conn)
-
-		logger.Debugf("[ getOrCreateConnection ] Delete connection to %s from pool: %s", address)
-		cp.unsafeConnectionsHolder.Delete(address)
+		return conn, nil
 	}
 
 	logger.Debugf("[ getOrCreateConnection ] Failed to retrieve connection to %s, creating it", address)
@@ -92,7 +124,24 @@ func (cp *connectionPool) getOrCreateConnection(ctx context.Context, address net
 		return nil, errors.Wrap(err, "[ send ] Failed to create TCP connection")
 	}
 
-	cp.unsafeConnectionsHolder.Add(address, conn)
+	go func() {
+		b := make([]byte, 1)
+		_, err := conn.Read(b)
+		if err != nil {
+			logger.Infof("remote host 'closed' connection to %s: %s", address, err)
+			cp.CloseConnection(ctx, address)
+			return
+		}
+
+		logger.Errorf("unexpected data on connection to %s", address)
+	}()
+
+	lc := &lockableConnection{
+		Conn:   conn,
+		Locker: &sync.Mutex{},
+	}
+
+	cp.unsafeConnectionsHolder.Add(address, lc)
 	logger.Debugf(
 		"[ getOrCreateConnection ] Added connection to %s. Current pool size: %d",
 		conn.RemoteAddr(),

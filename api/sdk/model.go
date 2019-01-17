@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 INS Ecosystem
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -14,17 +14,18 @@
  *    limitations under the License.
  */
 
-package core
+package sdk
 
-import "github.com/pkg/errors"
+// Member model object
+type Member struct {
+	Reference  string
+	PrivateKey string
+}
 
-var (
-	// ErrUnknown returned when error type cannot be defined.
-	ErrUnknown = errors.New("unknown error")
-	// ErrDeactivated returned when requested object is deactivated.
-	ErrDeactivated = errors.New("object is deactivated")
-	// ErrStateNotAvailable returned when requested object is deactivated.
-	ErrStateNotAvailable = errors.New("object state is not available")
-	// ErrHotDataTimeout returned when no hot data received for a specific jet
-	ErrHotDataTimeout = errors.New("no hot data received for a specific jet")
-)
+// NewMember creates new Member
+func NewMember(ref string, key string) *Member {
+	return &Member{
+		Reference:  ref,
+		PrivateKey: key,
+	}
+}

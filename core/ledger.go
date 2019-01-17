@@ -273,6 +273,14 @@ type KV struct {
 	V []byte
 }
 
+// KVSize returns size of key/value array in bytes.
+func KVSize(kvs []KV) (amount int64) {
+	for _, kv := range kvs {
+		amount += int64(len(kv.K) + len(kv.V))
+	}
+	return
+}
+
 // StorageExportResult represents storage data view.
 type StorageExportResult struct {
 	Data     map[string]interface{}
@@ -298,4 +306,10 @@ var (
 //go:generate minimock -i github.com/insolar/insolar/core.PulseStorage -o ../testutils -s _mock.go
 type PulseStorage interface {
 	Current(ctx context.Context) (*Pulse, error)
+}
+
+//go:generate minimock -i github.com/insolar/insolar/core.ArtifactManagerMessageHandler -o ../testutils -s _mock.go
+type ArtifactManagerMessageHandler interface {
+	ResetEarlyRequestCircuitBreaker(context.Context)
+	CloseEarlyRequestCircuitBreakerForJet(context.Context, RecordID)
 }
