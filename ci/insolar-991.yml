@@ -16,19 +16,19 @@ resources:
   type: git
   source:
     uri: https://github.com/insolar/insolar.git
-    branch: master
+    branch: INS-991-real-pulsar-update-conf
 
 - name: insolard
   type: docker-image
   source:
-    repository: registry.insolar.io/insolard
+    repository: registry.ins.world/insolard
     username: ((meta.registry.username))
     password: ((meta.registry.password))
 
 - name: builder
   type: docker-image
   source:
-    repository: registry.insolar.io/builder
+    repository: registry.ins.world/builder
     username: ((meta.registry.username))
     password: ((meta.registry.password))
 
@@ -42,9 +42,7 @@ resources:
 - name: deploy
   type: kubernetes
   source:
-    server: https://kube.insolar.io:6443
-    token: ((meta.kubernetes.dev-token))
-    certificate_authority: ((meta.kubernetes.ca))
+    kubeconfig: ((meta.kubernetes.dev-config))
 
 jobs:
 - name: insolard
@@ -63,7 +61,9 @@ jobs:
       target: insolard
       load_base: builder
       tag_file: master/.git/short_ref
-      tag_as_latest: true
+      tag_as_latest: false
+    get_params:
+      skip_download: true
   - task: set-tag
     config:
       platform: linux
@@ -81,15 +81,18 @@ jobs:
           - -exc
           - |
             cp master/.git/short_ref deploy/tag
-            cp adm/manifests/dev/bootstrap-temporary.yaml deploy/bootstrap.yaml
-            ls -alh
-            sed -i "s/registry.insolar.io\/insolard/registry.insolar.io\/insolard:$(cat deploy/tag)/g" deploy/bootstrap.yaml
-            cat deploy/bootstrap.yaml
+            cat adm/manifests/dev/bootstrap-temporary.yaml > deploy/all.yaml
+            echo  >> deploy/all.yaml
+            echo "---" >> deploy/all.yaml
+            echo  >> deploy/all.yaml
+            cat adm/manifests/dev/pulsar.yaml >> deploy/all.yaml
+            sed -i "s/registry.ins.world\/insolard/registry.ins.world\/insolard:$(cat deploy/tag)/g" deploy/all.yaml
+            cat deploy/all.yaml
   - put: deploy
     params:
-      namespace: dev
-      wait_until_ready: 120
-      kubectl: apply -f deploy/bootstrap.yaml
+      namespace: dev-991
+      wait_until_ready: 240
+      kubectl: apply -f deploy/all.yaml
 
 - name: builder
   public: true
@@ -100,3 +103,5 @@ jobs:
     params:
       build: master
       dockerfile: master/docker/Dockerfile.builder
+    get_params:
+      skip_download: true
