@@ -72,7 +72,6 @@ type ExecutionState struct {
 }
 
 type CurrentExecution struct {
-	sync.Mutex
 	Context       context.Context
 	LogicContext  *core.LogicCallContext
 	Request       *Ref
