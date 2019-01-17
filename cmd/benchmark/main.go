@@ -116,17 +116,19 @@ var numRetries = 3
 func createMembers(insSDK *sdk.SDK, count int) []*sdk.Member {
 	var members []*sdk.Member
 	var member *sdk.Member
+	var traceID string
 	var err error
+
 	for i := 0; i < count; i++ {
 
 		for j := 0; j < numRetries; j++ {
-			member, _, err = insSDK.CreateMember()
+			member, traceID, err = insSDK.CreateMember()
 			if err == nil {
 				members = append(members, member)
 				break
 			}
 
-			fmt.Println("Retry to create member. Error is: ", err.Error())
+			fmt.Printf("Retry to create member. TraceID: %s Error is: %s\n", traceID, err.Error())
 			time.Sleep(time.Second)
 		}
 		check(fmt.Sprintf("Couldn't create member after retries: %d", numRetries), err)
@@ -136,6 +138,10 @@ func createMembers(insSDK *sdk.SDK, count int) []*sdk.Member {
 
 func main() {
 	parseInputParams()
+
+	// Start benchmark time
+	t := time.Now()
+	fmt.Printf("Start: %s\n\n", t.String())
 
 	err := log.SetLevel(logLevel)
 	check(fmt.Sprintf("Can't set '%s' level on logger:", logLevel), err)
@@ -149,4 +155,8 @@ func main() {
 	members := createMembers(insSDK, concurrent*2)
 
 	runScenarios(out, insSDK, members, concurrent, repetitions)
+
+	// Finish benchmark time
+	t = time.Now()
+	fmt.Printf("\nFinish: %s\n\n", t.String())
 }
