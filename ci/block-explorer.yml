@@ -36,12 +36,14 @@ resources:
 - name: deploy
   type: kubernetes
   source:
-    kubeconfig: ((meta.kubernetes.dev-config))
+    server: https://kube.insolar.io:6443
+    token: ((meta.kubernetes.block-explorer-token))
+    certificate_authority: ((meta.kubernetes.ca))
 
 - name: nexus
   type: maven-resource
   source:
-    url: https://nexus.ins.world/repository/insolar/
+    url: https://nexus.insolar.io/repository/insolar/
     artifact: io.insolar:insolar-sdk-java:jar
     username: ((meta.nexus.username))
     password: ((meta.nexus.password))
@@ -49,8 +51,8 @@ resources:
 - name: nexus-loader
   type: maven-resource
   source:
-    url: https://nexus.ins.world/repository/insolar/
-    snapshot_url: https://nexus.ins.world/repository/insolar/
+    url: https://nexus.insolar.io/repository/insolar/
+    snapshot_url: https://nexus.insolar.io/repository/insolar/
     artifact: io.insolar:db-loader:jar
     username: ((meta.nexus.username))
     password: ((meta.nexus.password))
@@ -58,8 +60,8 @@ resources:
 - name: nexus-unloader
   type: maven-resource
   source:
-    url: https://nexus.ins.world/repository/insolar/
-    snapshot_url: https://nexus.ins.world/repository/insolar/
+    url: https://nexus.insolar.io/repository/insolar/
+    snapshot_url: https://nexus.insolar.io/repository/insolar/
     artifact: io.insolar:db-unloader:jar
     username: ((meta.nexus.username))
     password: ((meta.nexus.password))
@@ -98,21 +100,21 @@ resources:
 - name: registry-explorer
   type: docker-image
   source:
-    repository: registry.ins.world/explorer
+    repository: registry.insolar.io/explorer
     username: ((meta.registry.username))
     password: ((meta.registry.password))
 
 - name: registry-db-unloader
   type: docker-image
   source:
-    repository: registry.ins.world/unloader
+    repository: registry.insolar.io/unloader
     username: ((meta.registry.username))
     password: ((meta.registry.password))
 
 - name: registry-db-loader
   type: docker-image
   source:
-    repository: registry.ins.world/loader
+    repository: registry.insolar.io/loader
     username: ((meta.registry.username))
     password: ((meta.registry.password))
 
@@ -156,7 +158,7 @@ jobs:
                  <repository>
                    <id>io.insolar</id>
                    <name>insolar</name>
-                   <url>https://nexus.ins.world/repository/insolar</url>
+                   <url>https://nexus.insolar.io/repository/insolar</url>
                    <releases>
                      <enabled>true</enabled>
                    </releases>
@@ -169,7 +171,7 @@ jobs:
                  <pluginRepository>
                    <id>io.insolar</id>
                    <name>insolar</name>
-                   <url>https://nexus.ins.world/repository/insolar</url>
+                   <url>https://nexus.insolar.io/repository/insolar</url>
                    <releases>
                      <enabled>true</enabled>
                    </releases>
@@ -235,7 +237,7 @@ jobs:
                  <repository>
                    <id>io.insolar</id>
                    <name>insolar</name>
-                   <url>https://nexus.ins.world/repository/insolar</url>
+                   <url>https://nexus.insolar.io/repository/insolar</url>
                    <releases>
                      <enabled>true</enabled>
                    </releases>
@@ -248,7 +250,7 @@ jobs:
                  <pluginRepository>
                    <id>io.insolar</id>
                    <name>insolar</name>
-                   <url>https://nexus.ins.world/repository/insolar</url>
+                   <url>https://nexus.insolar.io/repository/insolar</url>
                    <releases>
                      <enabled>true</enabled>
                    </releases>
@@ -264,7 +266,7 @@ jobs:
             </activeProfiles>
             </settings>
             EOF
-            sed -i 's/<version>0.0.2<\/version>/<version>0.0.2-SNAPSHOT<\/version>/' pom.xml
+            #sed -i 's/<version>0.0.2<\/version>/<version>0.0.2-SNAPSHOT<\/version>/' pom.xml
             mvn clean package
             ls -alh
             cp target/*.jar ../artifacts/
@@ -316,7 +318,7 @@ jobs:
                  <repository>
                    <id>io.insolar</id>
                    <name>insolar</name>
-                   <url>https://nexus.ins.world/repository/insolar</url>
+                   <url>https://nexus.insolar.io/repository/insolar</url>
                    <releases>
                      <enabled>true</enabled>
                    </releases>
@@ -329,7 +331,7 @@ jobs:
                  <pluginRepository>
                    <id>io.insolar</id>
                    <name>insolar</name>
-                   <url>https://nexus.ins.world/repository/insolar</url>
+                   <url>https://nexus.insolar.io/repository/insolar</url>
                    <releases>
                      <enabled>true</enabled>
                    </releases>
@@ -345,7 +347,7 @@ jobs:
             </activeProfiles>
             </settings>
             EOF
-            sed -i 's/<version>0.0.2<\/version>/<version>0.0.2-SNAPSHOT<\/version>/' pom.xml
+            #sed -i 's/<version>0.0.2<\/version>/<version>0.0.2-SNAPSHOT<\/version>/' pom.xml
             mvn clean package
             ls -alh
             cp target/*.jar ../artifacts/
@@ -385,7 +387,7 @@ jobs:
             cp git-db-unloader/.git/short_ref artifacts/docker-tag
             echo change image tag
             cp adm/manifests/block-explorer/db-unloader.yaml artifacts/db-unloader.yaml
-            sed -i "s/registry.ins.world\/unloader/registry.ins.world\/unloader:$(cat artifacts/docker-tag)/g" artifacts/db-unloader.yaml
+            sed -i "s/registry.insolar.io\/unloader/registry.insolar.io\/unloader:$(cat artifacts/docker-tag)/g" artifacts/db-unloader.yaml
             cp nexus-unloader/*.jar artifacts/unloader.jar
             cat << EOF > artifacts/Dockerfile
             FROM openjdk:8-jdk-alpine
@@ -433,7 +435,7 @@ jobs:
 
             echo change image tag
             cp adm/manifests/block-explorer/db-loader.yaml artifacts/db-loader.yaml
-            sed -i "s/registry.ins.world\/loader/registry.ins.world\/loader:$(cat artifacts/docker-tag)/g" artifacts/db-loader.yaml
+            sed -i "s/registry.insolar.io\/loader/registry.insolar.io\/loader:$(cat artifacts/docker-tag)/g" artifacts/db-loader.yaml
 
             cp nexus-loader/*.jar artifacts/loader.jar
             cat << EOF > artifacts/Dockerfile
@@ -477,7 +479,7 @@ jobs:
                cp git-explorer/nginx.conf artifacts/nginx.conf
                echo change image tag
                cp adm/manifests/block-explorer/explorer.yaml artifacts/explorer.yaml
-               sed -i "s/registry.ins.world\/explorer/registry.ins.world\/explorer:$(cat artifacts/docker-tag)/g" artifacts/explorer.yaml
+               sed -i "s/registry.insolar.io\/explorer/registry.insolar.io\/explorer:$(cat artifacts/docker-tag)/g" artifacts/explorer.yaml
 
                echo create Dockerfile
                cat << EOF > git-explorer/.env.production

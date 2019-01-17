@@ -16,7 +16,7 @@ resources:
   type: git
   source:
     uri: https://github.com/insolar/insolar.git
-    branch: INS-991-real-pulsar-update-conf 
+    branch: INS-991-real-pulsar-update-conf
 
 - name: insolard
   type: docker-image
