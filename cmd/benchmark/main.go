@@ -141,7 +141,7 @@ func main() {
 
 	// Start benchmark time
 	t := time.Now()
-	fmt.Printf("Start: %s\n", t.String())
+	fmt.Printf("Start: %s\n\n", t.String())
 
 	err := log.SetLevel(logLevel)
 	check(fmt.Sprintf("Can't set '%s' level on logger:", logLevel), err)
@@ -158,5 +158,5 @@ func main() {
 
 	// Finish benchmark time
 	t = time.Now()
-	fmt.Printf("Finish: %s\n", t.String())
+	fmt.Printf("\nFinish: %s\n\n", t.String())
 }
