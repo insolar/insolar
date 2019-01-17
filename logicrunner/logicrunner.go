@@ -737,9 +737,10 @@ func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState
 		inslogger.FromContext(ctx).Info("LogicRunner.executeMethodCall starts")
 	}
 
-	es.Current.LogicContext.Prototype = es.objectbody.Prototype
-	es.Current.LogicContext.Code = es.objectbody.CodeRef
-	es.Current.LogicContext.Parent = es.objectbody.Parent
+	current := *es.Current
+	current.LogicContext.Prototype = es.objectbody.Prototype
+	current.LogicContext.Code = es.objectbody.CodeRef
+	current.LogicContext.Parent = es.objectbody.Parent
 	// it's needed to assure that we call method on ref, that has same prototype as proxy, that we import in contract code
 	if !m.ProxyPrototype.IsEmpty() && !m.ProxyPrototype.Equal(*es.objectbody.Prototype) {
 		return nil, errors.New("proxy call error: try to call method of prototype as method of another prototype")
@@ -751,7 +752,7 @@ func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState
 	}
 
 	newData, result, err := executor.CallMethod(
-		ctx, es.Current.LogicContext, *es.objectbody.CodeRef, es.objectbody.Object, m.Method, m.Arguments,
+		ctx, current.LogicContext, *es.objectbody.CodeRef, es.objectbody.Object, m.Method, m.Arguments,
 	)
 	if err != nil {
 		return nil, es.WrapError(err, "executor error")
@@ -760,13 +761,13 @@ func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState
 	am := lr.ArtifactManager
 	if es.deactivate {
 		_, err := am.DeactivateObject(
-			ctx, Ref{}, *es.Current.Request, es.objectbody.objDescriptor,
+			ctx, Ref{}, *current.Request, es.objectbody.objDescriptor,
 		)
 		if err != nil {
 			return nil, es.WrapError(err, "couldn't deactivate object")
 		}
 	} else {
-		od, err := am.UpdateObject(ctx, Ref{}, *es.Current.Request, es.objectbody.objDescriptor, newData)
+		od, err := am.UpdateObject(ctx, Ref{}, *current.Request, es.objectbody.objDescriptor, newData)
 		if err != nil {
 			return nil, es.WrapError(err, "couldn't update object")
 		}
@@ -775,14 +776,14 @@ func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState
 		}
 		es.objectbody.objDescriptor = od
 	}
-	_, err = am.RegisterResult(ctx, m.ObjectRef, *es.Current.Request, result)
+	_, err = am.RegisterResult(ctx, m.ObjectRef, *current.Request, result)
 	if err != nil {
 		return nil, es.WrapError(err, "couldn't save results")
 	}
 
 	es.objectbody.Object = newData
 
-	return &reply.CallMethod{Result: result, Request: *es.Current.Request}, nil
+	return &reply.CallMethod{Result: result, Request: *current.Request}, nil
 }
 
 func (lr *LogicRunner) getDescriptorsByPrototypeRef(
@@ -836,7 +837,8 @@ func (lr *LogicRunner) executeConstructorCall(
 ) (
 	core.Reply, error,
 ) {
-	if es.Current.LogicContext.Caller.IsEmpty() {
+	current := *es.Current
+	if current.LogicContext.Caller.IsEmpty() {
 		return nil, es.WrapError(nil, "Call constructor from nowhere")
 	}
 
@@ -844,15 +846,15 @@ func (lr *LogicRunner) executeConstructorCall(
 	if err != nil {
 		return nil, es.WrapError(err, "couldn't descriptors")
 	}
-	es.Current.LogicContext.Prototype = protoDesc.HeadRef()
-	es.Current.LogicContext.Code = codeDesc.Ref()
+	current.LogicContext.Prototype = protoDesc.HeadRef()
+	current.LogicContext.Code = codeDesc.Ref()
 
 	executor, err := lr.GetExecutor(codeDesc.MachineType())
 	if err != nil {
 		return nil, es.WrapError(err, "no executer registered")
 	}
 
-	newData, err := executor.CallConstructor(ctx, es.Current.LogicContext, *codeDesc.Ref(), m.Name, m.Arguments)
+	newData, err := executor.CallConstructor(ctx, current.LogicContext, *codeDesc.Ref(), m.Name, m.Arguments)
 	if err != nil {
 		return nil, es.WrapError(err, "executer error")
 	}
@@ -861,13 +863,13 @@ func (lr *LogicRunner) executeConstructorCall(
 	case message.Child, message.Delegate:
 		_, err = lr.ArtifactManager.ActivateObject(
 			ctx,
-			Ref{}, *es.Current.Request, m.ParentRef, m.PrototypeRef, m.SaveAs == message.Delegate, newData,
+			Ref{}, *current.Request, m.ParentRef, m.PrototypeRef, m.SaveAs == message.Delegate, newData,
 		)
-		_, err = lr.ArtifactManager.RegisterResult(ctx, *es.Current.Request, *es.Current.Request, nil)
+		_, err = lr.ArtifactManager.RegisterResult(ctx, *current.Request, *current.Request, nil)
 		if err != nil {
 			return nil, es.WrapError(err, "couldn't save results")
 		}
-		return &reply.CallConstructor{Object: es.Current.Request}, err
+		return &reply.CallConstructor{Object: current.Request}, err
 
 	default:
 		return nil, es.WrapError(nil, "unsupported type of save object")
