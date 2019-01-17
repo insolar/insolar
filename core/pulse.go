@@ -23,7 +23,6 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/core/utils"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 )
 
@@ -44,6 +43,9 @@ type Entropy [EntropySize]byte
 // Valid Absolute PulseNum must be >65536.
 // If PulseNum <65536 it is a relative PulseNum
 type PulseNumber uint32
+type pulseNumberContextKeyType bool
+
+const pulseNumberContextKey pulseNumberContextKeyType = true
 
 // NewPulseNumber creates pulse number from bytes.
 func NewPulseNumber(buf []byte) PulseNumber {
@@ -55,25 +57,23 @@ func (pn PulseNumber) Bytes() []byte {
 	return utils.UInt32ToBytes(uint32(pn))
 }
 
-type pulseNumberContextKey struct{}
-
 // ToContext adds PulseNumber to context.
 func (pn *PulseNumber) ToContext(ctx context.Context) context.Context {
 	ctxPn, err := NewPulseNumberFromContext(ctx)
 	if err == nil {
-		inslogger.FromContext(ctx).Warnf(
+		fmt.Printf(
 			"[ Pulse ToContext ] Trying to set pulse %d to context. It already has one: %d",
 			pn,
 			ctxPn,
 		)
 	}
-	return context.WithValue(ctx, pulseNumberContextKey{}, pn)
+	return context.WithValue(ctx, pulseNumberContextKey, pn)
 }
 
 // NewPulseNumberFromContext returns PulseNumber stored in context or error.
 func NewPulseNumberFromContext(ctx context.Context) (PulseNumber, error) {
-	val := ctx.Value(pulseNumberContextKey{})
-	if pn, ok := val.(PulseNumber); !ok {
+	val := ctx.Value(pulseNumberContextKey)
+	if pn, ok := val.(PulseNumber); ok {
 		return pn, nil
 	}
 	return 0, errors.New("No pulse number in context")

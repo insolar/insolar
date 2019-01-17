@@ -39,32 +39,41 @@ func NewPulseStorage(db *DB) *PulseStorage {
 
 // Current returns current pulse of the system
 func (ps *PulseStorage) Current(ctx context.Context) (*core.Pulse, error) {
-	ps.rwLock.RLock()
-
 	pulse, err := ps.pulseFromContext(ctx)
 	if err == nil {
 		return pulse, nil
 	}
 
-	if ps.currentPulse == nil {
-		ps.rwLock.RUnlock()
-
-		ps.rwLock.Lock()
-		defer ps.rwLock.Unlock()
-
-		if ps.currentPulse == nil {
-			currentPulse, err := ps.db.GetLatestPulse(ctx)
-			if err != nil {
-				return nil, errors.Wrap(err, "[ PulseStorage.Current ] Can't GetLatestPulse")
-			}
-			ps.currentPulse = &currentPulse.Pulse
+	currentPulse := ps.getCachedPulse()
+	if currentPulse == nil {
+		if err = ps.updatePulseCache(ctx); err != nil {
+			return nil, err
 		}
-
-		return ps.currentPulse, nil
 	}
 
+	return currentPulse, nil
+}
+
+func (ps *PulseStorage) getCachedPulse() *core.Pulse {
+	ps.rwLock.RLock()
 	defer ps.rwLock.RUnlock()
-	return ps.currentPulse, nil
+
+	return ps.currentPulse
+}
+
+func (ps *PulseStorage) updatePulseCache(ctx context.Context) error {
+	ps.rwLock.Lock()
+	defer ps.rwLock.Unlock()
+
+	if ps.currentPulse == nil {
+		currentPulse, err := ps.db.GetLatestPulse(ctx)
+		if err != nil {
+			return errors.Wrap(err, "[ PulseStorage.updatePulseCache ] Can't GetLatestPulse")
+		}
+		ps.currentPulse = &currentPulse.Pulse
+	}
+
+	return nil
 }
 
 func (ps *PulseStorage) pulseFromContext(ctx context.Context) (*core.Pulse, error) {
@@ -73,14 +82,22 @@ func (ps *PulseStorage) pulseFromContext(ctx context.Context) (*core.Pulse, erro
 		return nil, err
 	}
 
-	inslogger.FromContext(ctx).Debugf("[ PulseStorage.Current ] Getting pulse %d from context", pulseNumber)
-	if ps.currentPulse.PulseNumber == pulseNumber {
-		return ps.currentPulse, nil
+	currentPulse := ps.getCachedPulse()
+	inslogger.FromContext(ctx).Debugf("[ PulseStorage.pulseFromContext ] Getting pulse %d from context", pulseNumber)
+	if currentPulse != nil {
+		if currentPulse.PulseNumber == pulseNumber {
+			return currentPulse, nil
+		}
+		inslogger.FromContext(ctx).Warnf(
+			"[ PulseStorage.pulseFromContext ] Current pulse (%d) differs from context pulse (%d)",
+			currentPulse.PulseNumber,
+			pulseNumber,
+		)
 	}
 
 	pulse, err := ps.db.GetPulse(ctx, pulseNumber)
 	if err != nil {
-		return nil, errors.Wrapf(err, "[ PulseStorage.Current ] Can't GetPulse %d from context", pulseNumber)
+		return nil, errors.Wrapf(err, "[ PulseStorage.pulseFromContext ] Can't GetPulse %d from context", pulseNumber)
 	}
 
 	return &pulse.Pulse, nil
