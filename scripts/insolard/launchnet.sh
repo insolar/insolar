@@ -8,8 +8,6 @@ INSGORUND=$BIN_DIR/insgorund
 PULSARD=$BIN_DIR/pulsard
 CONTRACT_STORAGE=contractstorage
 LEDGER_DIR=data
-INSGORUND_LISTEN_PORT=18181
-INSGORUND_RPS_PORT=18182
 CONFIGS_DIR=configs
 BASE_DIR=scripts/insolard
 KEYS_FILE=$BASE_DIR/$CONFIGS_DIR/bootstrap_keys.json
@@ -33,11 +31,12 @@ stop_listening()
 {
     echo "stop_listening() starts ..."
     stop_insgorund=$1
-    ports="13831 13832 23832 23833 33833 33834 43834 53835 58090"
+    ports="13831 13832 23832 23833 33833 33834 43834 43835 53835 53836 53866 53867 53877 53878 53888 53889 53899 53900"  # Network ports
+    ports="$ports 58090" # Pulsar
+    ports="$ports 53837" # Genesis
     if [ "$stop_insgorund" == "true" ]
     then
-        ports="$ports $INSGORUND_LISTEN_PORT $INSGORUND_RPS_PORT"
-        ports="$ports 58181 58182"
+        ports="$ports 28221 28222 28441 28442 28661 28662 28881 28882" # Insgornd
     fi
 
     echo "Stop listening..."
@@ -171,11 +170,21 @@ process_input_params()
 launch_insgorund()
 {
     host=127.0.0.1
-    $INSGORUND -l $host:$INSGORUND_LISTEN_PORT --rpc $host:$INSGORUND_RPS_PORT --log-level=$gorund_log_level --metrics :18182 &
+    $INSGORUND -l $host:28221 --rpc $host:28222 --log-level=$gorund_log_level --metrics :28223 &
 
-    if [ "$NUM_NODES" == "5" ]
+    if [ "$NUM_NODES" -ge 4 ]
     then
-        $INSGORUND -l $host:58181 --rpc $host:58182 --log-level=$gorund_log_level --metrics :58183 &
+        $INSGORUND -l $host:28441 --rpc $host:28442 --log-level=$gorund_log_level --metrics :28443 &
+    fi
+
+    if [ "$NUM_NODES" -ge 6 ]
+    then
+        $INSGORUND -l $host:28661 --rpc $host:28662 --log-level=$gorund_log_level --metrics :28663 &
+    fi
+
+    if [ "$NUM_NODES" -ge 8 ]
+    then
+        $INSGORUND -l $host:28881 --rpc $host:28882 --log-level=$gorund_log_level --metrics :28883 &
     fi
 }
 

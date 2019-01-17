@@ -13,7 +13,7 @@ Usage
    
 #### Start benchmark
 
-    ./bin/benchmark -c=3 -r=1 -k=scripts/insolard/configs/root_member_keys.json
+    ./bin/benchmark -c=4 -r=25 -k=scripts/insolard/configs/root_member_keys.json
 
 ### Options
 
