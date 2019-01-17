@@ -89,21 +89,21 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 
 	// Generic.
 	h.Bus.MustRegister(core.TypeGetCode, h.handleGetCode)
-	h.Bus.MustRegister(core.TypeGetObject, m.checkJet(m.checkEarlyRequestBreaker(m.saveParcel(h.handleGetObject))))
-	h.Bus.MustRegister(core.TypeGetDelegate, m.checkJet(m.checkEarlyRequestBreaker(m.saveParcel(h.handleGetDelegate))))
-	h.Bus.MustRegister(core.TypeGetChildren, m.checkJet(m.checkEarlyRequestBreaker(m.saveParcel(h.handleGetChildren))))
-	h.Bus.MustRegister(core.TypeSetRecord, m.checkJet(m.checkEarlyRequestBreaker(m.checkHeavySync(m.saveParcel(h.handleSetRecord)))))
-	h.Bus.MustRegister(core.TypeUpdateObject, m.checkJet(m.checkEarlyRequestBreaker(m.checkHeavySync(m.saveParcel(h.handleUpdateObject)))))
-	h.Bus.MustRegister(core.TypeRegisterChild, m.checkJet(m.checkEarlyRequestBreaker(m.checkHeavySync(m.saveParcel(h.handleRegisterChild)))))
-	h.Bus.MustRegister(core.TypeSetBlob, m.checkJet(m.checkEarlyRequestBreaker(m.checkHeavySync(m.saveParcel(h.handleSetBlob)))))
-	h.Bus.MustRegister(core.TypeGetObjectIndex, m.checkJet(m.checkEarlyRequestBreaker(m.saveParcel(h.handleGetObjectIndex))))
-	h.Bus.MustRegister(core.TypeGetPendingRequests, m.checkJet(m.checkEarlyRequestBreaker(m.saveParcel(h.handleHasPendingRequests))))
+	h.Bus.MustRegister(core.TypeGetObject, m.checkJet(m.checkEarlyRequestBreaker(h.handleGetObject)))
+	h.Bus.MustRegister(core.TypeGetDelegate, m.checkJet(m.checkEarlyRequestBreaker(h.handleGetDelegate)))
+	h.Bus.MustRegister(core.TypeGetChildren, m.checkJet(m.checkEarlyRequestBreaker(h.handleGetChildren)))
+	h.Bus.MustRegister(core.TypeSetRecord, m.checkJet(m.checkEarlyRequestBreaker(m.checkHeavySync(h.handleSetRecord))))
+	h.Bus.MustRegister(core.TypeUpdateObject, m.checkJet(m.checkEarlyRequestBreaker(m.checkHeavySync(h.handleUpdateObject))))
+	h.Bus.MustRegister(core.TypeRegisterChild, m.checkJet(m.checkEarlyRequestBreaker(m.checkHeavySync(h.handleRegisterChild))))
+	h.Bus.MustRegister(core.TypeSetBlob, m.checkJet(m.checkEarlyRequestBreaker(m.checkHeavySync(h.handleSetBlob))))
+	h.Bus.MustRegister(core.TypeGetObjectIndex, m.checkJet(m.checkEarlyRequestBreaker(h.handleGetObjectIndex)))
+	h.Bus.MustRegister(core.TypeGetPendingRequests, m.checkJet(m.checkEarlyRequestBreaker(h.handleHasPendingRequests)))
 	h.Bus.MustRegister(core.TypeGetJet, h.handleGetJet)
 	h.Bus.MustRegister(core.TypeHotRecords, m.closeEarlyRequestBreaker(h.handleHotRecords))
 
 	// Validation.
-	h.Bus.MustRegister(core.TypeValidateRecord, m.checkJet(m.saveParcel(h.handleValidateRecord)))
-	h.Bus.MustRegister(core.TypeValidationCheck, m.checkJet(m.saveParcel(h.handleValidationCheck)))
+	h.Bus.MustRegister(core.TypeValidateRecord, m.checkJet(h.handleValidateRecord))
+	h.Bus.MustRegister(core.TypeValidationCheck, m.checkJet(h.handleValidationCheck))
 	h.Bus.MustRegister(core.TypeJetDrop, m.checkJet(h.handleJetDrop))
 
 	// Heavy.
@@ -513,7 +513,6 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 
 	// FIXME: temporary fix. If we calculate blob id on the client, pulse can change before message sending and this
 	//  id will not match the one calculated on the server.
-	// if msg.Memory != nil {
 	blobID, err := h.db.SetBlob(ctx, jetID, parcel.Pulse(), msg.Memory)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to set blob")
@@ -525,7 +524,6 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 	case *record.ObjectAmendRecord:
 		s.Memory = blobID
 	}
-	// }
 
 	recentStorage := h.RecentStorageProvider.GetStorage(jetID)
 	var idx *index.ObjectLifeline

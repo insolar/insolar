@@ -7,9 +7,9 @@ ledger:
 log:
   level: Debug
 logicrunner:
-  rpclisten: 127.0.0.1:58182
+  rpclisten: 127.0.0.1:28552
   goplugin:
-    runnerlisten: 127.0.0.1:58181
+    runnerlisten: 127.0.0.1:28551
 apirunner:
   address: 127.0.0.1:19195
 keyspath: "scripts/insolard/nodes/5/keys.json"
