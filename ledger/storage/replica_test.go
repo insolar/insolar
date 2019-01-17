@@ -71,7 +71,6 @@ func Test_SyncClientJetPulses(t *testing.T) {
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
 
-	// test {Set/Get}ReplicatedPulse methods pair
 	var expectEmpty []core.PulseNumber
 	gotEmpty, err := db.GetSyncClientJetPulses(ctx, jetID)
 	require.NoError(t, err)
@@ -84,4 +83,52 @@ func Test_SyncClientJetPulses(t *testing.T) {
 	got, err := db.GetSyncClientJetPulses(ctx, jetID)
 	require.NoError(t, err)
 	assert.Equal(t, expect, got)
+}
+
+func Test_GetAllSyncClientJets(t *testing.T) {
+	t.Parallel()
+	ctx := inslogger.TestContext(t)
+
+	db, cleaner := storagetest.TmpDB(ctx, t)
+	defer cleaner()
+
+	tt := []struct {
+		jetID  core.RecordID
+		pulses []core.PulseNumber
+	}{
+		{
+			jetID:  testutils.RandomJet(),
+			pulses: []core.PulseNumber{100, 500, 100500},
+		},
+		{
+			jetID:  testutils.RandomJet(),
+			pulses: []core.PulseNumber{100, 500},
+		},
+		{
+			jetID: testutils.RandomJet(),
+		},
+		{
+			jetID:  testutils.RandomJet(),
+			pulses: []core.PulseNumber{100500},
+		},
+	}
+
+	for _, tCase := range tt {
+		err := db.SetSyncClientJetPulses(ctx, tCase.jetID, tCase.pulses)
+		require.NoError(t, err)
+	}
+
+	gotJets, err := db.GetAllSyncClientJets(ctx)
+	require.NoError(t, err)
+	// fmt.Printf("%#v\n", gotJets)
+
+	for i, tCase := range tt {
+		gotPulses, ok := gotJets[tCase.jetID]
+		if tCase.pulses == nil {
+			assert.Falsef(t, ok, "jet should not present jetID=%v", tCase.jetID)
+		} else {
+			require.Truef(t, ok, "jet should  present jetID=%v", tCase.jetID)
+			assert.Equalf(t, tCase.pulses, gotPulses, "pulses not found for jet number %v: %v", i, tCase.jetID)
+		}
+	}
 }

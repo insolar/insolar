@@ -64,10 +64,10 @@ func (db *DB) GetHeavySyncedPulse(ctx context.Context, jetID core.RecordID) (pn 
 	return
 }
 
-var sysHeavyClientStatePrefixBytes = []byte{sysHeavyClientState}
+var sysHeavyClientStatePrefix = prefixkey(scopeIDSystem, []byte{sysHeavyClientState})
 
 func sysHeavyClientStateKeyForJet(jetID []byte) []byte {
-	return prefixkey(scopeIDSystem, sysHeavyClientStatePrefixBytes, jetID[:])
+	return bytes.Join([][]byte{sysHeavyClientStatePrefix, jetID[:]}, nil)
 }
 
 // GetSyncClientJetPulses returns all jet's pulses not synced to heavy.
@@ -86,10 +86,13 @@ func (db *DB) getSyncClientJetPulses(ctx context.Context, jetID core.RecordID) (
 		}
 		return nil, err
 	}
-	var pns []core.PulseNumber
-	enc := gob.NewDecoder(bytes.NewReader(buf))
+	return decodePulsesList(bytes.NewReader(buf))
+}
+
+func decodePulsesList(r io.Reader) (pns []core.PulseNumber, err error) {
+	enc := gob.NewDecoder(r)
 	err = enc.Decode(&pns)
-	return pns, err
+	return
 }
 
 // SetSyncClientJetPulses saves all jet's pulses not synced to heavy.
@@ -108,4 +111,40 @@ func (db *DB) setSyncClientJetPulses(ctx context.Context, jetID core.RecordID, p
 		return err
 	}
 	return db.set(ctx, k, buf.Bytes())
+}
+
+// GetAllSyncClientJets returns map of all jet's if they have non empty list pulses to sync.
+func (db *DB) GetAllSyncClientJets(ctx context.Context) (map[core.RecordID][]core.PulseNumber, error) {
+	jets := map[core.RecordID][]core.PulseNumber{}
+	err := db.db.View(func(txn *badger.Txn) error {
+		it := txn.NewIterator(badger.DefaultIteratorOptions)
+		defer it.Close()
+
+		for it.Seek(sysHeavyClientStatePrefix); it.ValidForPrefix(sysHeavyClientStatePrefix); it.Next() {
+			item := it.Item()
+			if item == nil {
+				break
+			}
+			key := item.Key()
+			value, err := it.Item().Value()
+			if err != nil {
+				return err
+			}
+			syncPulses, err := decodePulsesList(bytes.NewReader(value))
+			if err != nil {
+				return err
+			}
+			if len(syncPulses) > 0 {
+				var jetID core.RecordID
+				offset := len(sysHeavyClientStatePrefix)
+				copy(jetID[:], key[offset:offset+len(jetID)])
+				jets[jetID] = syncPulses
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return jets, nil
 }
