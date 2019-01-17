@@ -117,8 +117,8 @@ func createMembers(insSDK *sdk.SDK, count int) []*sdk.Member {
 	var members []*sdk.Member
 	var member *sdk.Member
 	var err error
-	for i := 0; i < count; i++ {
 
+	for i := 0; i < count; i++ {
 		for j := 0; j < numRetries; j++ {
 			member, _, err = insSDK.CreateMember()
 			if err == nil {
@@ -134,6 +134,17 @@ func createMembers(insSDK *sdk.SDK, count int) []*sdk.Member {
 	return members
 }
 
+func getTotalBalance(insSDK *sdk.SDK, members []*sdk.Member) uint64 {
+	totalBalance := uint64(0)
+	nmembers := len(members)
+	for i := 0; i < nmembers; i++ {
+		balance, err := insSDK.GetBalance(members[i])
+		check(fmt.Sprintf("Can't get balance for %v-th member %v", i, members[i]), err)
+		totalBalance += balance
+	}
+	return totalBalance
+}
+
 func main() {
 	parseInputParams()
 
@@ -147,6 +158,11 @@ func main() {
 	check("SDK is not initialized: ", err)
 
 	members := createMembers(insSDK, concurrent*2)
+	totalBalanceBefore := getTotalBalance(insSDK, members)
 
 	runScenarios(out, insSDK, members, concurrent, repetitions)
+
+	totalBalanceAfter := getTotalBalance(insSDK, members)
+
+	fmt.Printf("Total balance before: %v and after: %v\n", totalBalanceBefore, totalBalanceAfter)
 }

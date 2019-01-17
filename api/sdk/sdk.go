@@ -182,3 +182,29 @@ func (sdk *SDK) Transfer(amount uint, from *Member, to *Member) (string, error) 
 
 	return response.TraceID, nil
 }
+
+func (sdk *SDK) GetBalance(m *Member) (uint64, error) {
+	ctx := inslogger.ContextWithTrace(context.Background(), "GetBalance")
+	params := []interface{}{m.Reference}
+	config, err := requester.CreateUserConfig(m.Reference, m.PrivateKey)
+	if err != nil {
+		return 0, errors.Wrap(err, "[ GetBalance ] can't create user config")
+	}
+
+	body, err := sdk.sendRequest(ctx, "GetBalance", params, config)
+	if err != nil {
+		return 0, errors.Wrap(err, "[ GetBalance ] can't send request")
+	}
+
+	response, err := sdk.getResponse(body)
+	if err != nil {
+		return 0, errors.Wrap(err, "[ GetBalance ] can't get response")
+	}
+
+	if response.Error != "" {
+		return 0, errors.New(response.Error)
+	}
+
+	// TODO FIXME don't transfer money in floats!
+	return uint64(response.Result.(float64)), nil
+}
