@@ -110,6 +110,10 @@ func (s *Sync) Start(ctx context.Context, jetID core.RecordID, pn core.PulseNumb
 	defer jetState.Unlock()
 
 	if jetState.syncpulse != nil {
+		if *jetState.syncpulse >= pn {
+			return fmt.Errorf("heavyserver: pulse %v is not greater than current in-sync pulse %v (jet=%v)",
+				pn, *jetState.syncpulse, jetID)
+		}
 		return errSyncInProgress(jetID, pn)
 	}
 
