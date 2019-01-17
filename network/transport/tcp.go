@@ -109,10 +109,11 @@ func (t *tcpTransport) prepareListen() {
 }
 
 // Start starts networking.
-func (t *tcpTransport) Listen(ctx context.Context) error {
+func (t *tcpTransport) Listen(ctx context.Context, started chan struct{}) error {
 	logger := inslogger.FromContext(ctx)
 	logger.Info("[ Listen ] Start TCP transport")
 	t.prepareListen()
+	started <- struct{}{}
 	for {
 		conn, err := t.listener.Accept()
 		if err != nil {
