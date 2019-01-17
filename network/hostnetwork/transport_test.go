@@ -404,8 +404,6 @@ func TestDoubleStart(t *testing.T) {
 	go f(&wg, tp)
 	wg.Wait()
 
-	time.Sleep(time.Second)
-
 	tp.Stop()
 }
 
