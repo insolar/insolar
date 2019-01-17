@@ -628,6 +628,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 			}
 			go m.sendTreeToHeavy(ctx, storagePulse.Pulse.PulseNumber)
 		}
+
 	}
 
 	fmt.Printf(
@@ -638,12 +639,39 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 	)
 	fmt.Println()
 
+	m.postProcessJets(ctx, newPulse, jets)
+
 	err = m.Bus.OnPulse(ctx, newPulse)
 	if err != nil {
 		inslogger.FromContext(ctx).Error(errors.Wrap(err, "MessageBus OnPulse() returns error"))
 	}
 
 	return m.LR.OnPulse(ctx, newPulse)
+}
+
+func (m *PulseManager) postProcessJets(ctx context.Context, newPulse core.Pulse, jets []jetInfo) {
+	logger := inslogger.FromContext(ctx)
+	logger.Debugf("[postProcessJets] post-process jets, pulse number - %v", newPulse.PulseNumber)
+
+	for _, jetInfo := range jets {
+		if jetInfo.left == nil && jetInfo.right == nil {
+			// No split happened.
+			if !jetInfo.mineNext {
+				logger.Debugf("[postProcessJets] clear recent storage for root jet - %v, pulse - %v", jetInfo.id, newPulse.PulseNumber)
+				m.RecentStorageProvider.GetStorage(jetInfo.id).ClearZeroTTLObjects()
+			}
+		} else {
+			// Split happened.
+			if !jetInfo.left.mineNext {
+				logger.Debugf("[postProcessJets] clear recent storage for left jet - %v, pulse - %v", jetInfo.left.id, newPulse.PulseNumber)
+				m.RecentStorageProvider.GetStorage(jetInfo.left.id).ClearZeroTTLObjects()
+			}
+			if !jetInfo.right.mineNext {
+				logger.Debugf("[postProcessJets] clear recent storage for right jet - %v, pulse - %v", jetInfo.right.id, newPulse.PulseNumber)
+				m.RecentStorageProvider.GetStorage(jetInfo.right.id).ClearZeroTTLObjects()
+			}
+		}
+	}
 }
 
 func (m *PulseManager) prepareArtifactManagerMessageHandlerForNextPulse(ctx context.Context, newPulse core.Pulse, jets []jetInfo) {
