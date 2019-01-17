@@ -135,6 +135,10 @@ func (m *PulseManager) processEndPulse(
 
 			if info.left == nil && info.right == nil {
 				fmt.Printf("No split. jet: %v, mine next: %v", info.id, info.mineNext)
+
+				// TODO: @andreyromancev. 12.01.19. uncomment when heavy ready.
+				// m.RecentStorageProvider.GetStorage(info.id).ClearZeroTTLObjects()
+
 				// No split happened.
 				if !info.mineNext {
 					msg.Jet = *core.NewRecordRef(core.DomainID, info.id)
@@ -150,6 +154,11 @@ func (m *PulseManager) processEndPulse(
 			} else {
 				fmt.Printf("Split. jet: %v, left mine next: %v", info.id, info.left.mineNext)
 				// Split happened.
+
+				// TODO: @andreyromancev. 12.01.19. uncomment when heavy ready.
+				// m.RecentStorageProvider.GetStorage(info.left.id).ClearZeroTTLObjects()
+				// m.RecentStorageProvider.GetStorage(info.right.id).ClearZeroTTLObjects()
+
 				if !info.left.mineNext {
 					leftMsg := msg
 					leftMsg.Jet = *core.NewRecordRef(core.DomainID, info.left.id)
@@ -639,7 +648,8 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 	)
 	fmt.Println()
 
-	m.postProcessJets(ctx, newPulse, jets)
+	// TODO: @andreyromancev. 12.01.19. uncomment when heavy ready.
+	// m.postProcessJets(ctx, newPulse, jets)
 
 	err = m.Bus.OnPulse(ctx, newPulse)
 	if err != nil {
@@ -658,17 +668,17 @@ func (m *PulseManager) postProcessJets(ctx context.Context, newPulse core.Pulse,
 			// No split happened.
 			if !jetInfo.mineNext {
 				logger.Debugf("[postProcessJets] clear recent storage for root jet - %v, pulse - %v", jetInfo.id, newPulse.PulseNumber)
-				m.RecentStorageProvider.GetStorage(jetInfo.id).ClearZeroTTLObjects()
+				m.RecentStorageProvider.GetStorage(jetInfo.id).ClearObjects()
 			}
 		} else {
 			// Split happened.
 			if !jetInfo.left.mineNext {
 				logger.Debugf("[postProcessJets] clear recent storage for left jet - %v, pulse - %v", jetInfo.left.id, newPulse.PulseNumber)
-				m.RecentStorageProvider.GetStorage(jetInfo.left.id).ClearZeroTTLObjects()
+				m.RecentStorageProvider.GetStorage(jetInfo.left.id).ClearObjects()
 			}
 			if !jetInfo.right.mineNext {
 				logger.Debugf("[postProcessJets] clear recent storage for right jet - %v, pulse - %v", jetInfo.right.id, newPulse.PulseNumber)
-				m.RecentStorageProvider.GetStorage(jetInfo.right.id).ClearZeroTTLObjects()
+				m.RecentStorageProvider.GetStorage(jetInfo.right.id).ClearObjects()
 			}
 		}
 	}
