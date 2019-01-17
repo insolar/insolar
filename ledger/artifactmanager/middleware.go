@@ -90,7 +90,7 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 			return nil, errors.New("unexpected message")
 		}
 
-		// FIXME: @andreyromancev. 17.01.19. Allow any genesis request.
+		// FIXME: @andreyromancev. 17.01.19. Temporary allow any genesis request. Remove it.
 		if parcel.Pulse() == core.FirstPulseNumber {
 			return handler(contextWithJet(ctx, *jet.NewID(0, nil)), parcel)
 		}
@@ -99,8 +99,14 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to calculate heavy")
 		}
+		if *heavy == m.jetCoordinator.Me() {
+			// Heavy always works with zero jet.
+			return handler(contextWithJet(ctx, *jet.NewID(0, nil)), parcel)
+		}
+
+		// Check token jet.
 		token := parcel.DelegationToken()
-		if token != nil || *heavy == m.jetCoordinator.Me() {
+		if token != nil {
 			// Calculate jet for target pulse.
 			target := *msg.DefaultTarget().Record()
 			tree, err := m.db.GetJetTree(ctx, target.Pulse())
