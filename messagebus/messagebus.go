@@ -318,11 +318,16 @@ func (mb *MessageBus) checkPulse(ctx context.Context, parcel core.Parcel, locked
 		// Parcel is from past. Return error for some messages, allow for others.
 		switch parcel.Message().(type) {
 		case
+			*message.GetObject,
+			*message.GetDelegate,
+			*message.GetChildren,
 			*message.SetRecord,
-			*message.RegisterChild,
-			*message.ValidateRecord,
-			*message.SetBlob,
 			*message.UpdateObject,
+			*message.RegisterChild,
+			*message.SetBlob,
+			*message.GetObjectIndex,
+			*message.GetPendingRequests,
+			*message.ValidateRecord,
 			*message.CallConstructor,
 			*message.CallMethod:
 			inslogger.FromContext(ctx).Errorf("[ checkPulse ] Incorrect message pulse (parcel: %d, current: %d)", parcel.Pulse(), pulse.PulseNumber)
