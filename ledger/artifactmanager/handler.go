@@ -327,10 +327,6 @@ func (h *MessageHandler) handleGetJet(ctx context.Context, parcel core.Parcel) (
 		return nil, err
 	}
 
-	pulse, err := h.db.GetLatestPulse(ctx)
-
-	fmt.Printf("sent jet info. jet: %v, actual: %v", jetID.JetIDString(), actual)
-	fmt.Printf("parcel pulse: %v. current pulse: %v", parcel.Pulse(), pulse.Pulse.PulseNumber)
 	return &reply.Jet{ID: *jetID, Actual: actual}, nil
 }
 
