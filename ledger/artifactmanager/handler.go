@@ -23,7 +23,6 @@ import (
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/recentstorage"
-	"github.com/insolar/insolar/ledger/storage/heavy"
 	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/pkg/errors"
 
@@ -46,7 +45,6 @@ type MessageHandler struct {
 	CryptographyService        core.CryptographyService        `inject:""`
 	DelegationTokenFactory     core.DelegationTokenFactory     `inject:""`
 	HeavySync                  core.HeavySync                  `inject:""`
-	HeavyJetTreeSync           heavy.JetTreeSync               `inject:""`
 
 	db             *storage.DB
 	replayHandlers map[core.MessageType]core.MessageHandler
@@ -110,7 +108,6 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 	h.Bus.MustRegister(core.TypeHeavyStartStop, h.handleHeavyStartStop)
 	h.Bus.MustRegister(core.TypeHeavyReset, h.handleHeavyReset)
 	h.Bus.MustRegister(core.TypeHeavyPayload, h.handleHeavyPayload)
-	h.Bus.MustRegister(core.TypeHeavyJetTree, h.handleHeavyJetTree)
 
 	return nil
 }
@@ -979,10 +976,24 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 }
 
 func (h *MessageHandler) nodeForJet(
-	ctx context.Context, jetID core.RecordID, parcelPulse, targetPulse core.PulseNumber,
+	ctx context.Context, jetID core.RecordID, parcelPN, targetPN core.PulseNumber,
 ) (*core.RecordRef, error) {
-	if targetPulse == core.FirstPulseNumber || (parcelPulse-targetPulse < h.conf.LightChainLimit) {
-		return h.JetCoordinator.LightExecutorForJet(ctx, jetID, targetPulse)
+
+	// FIXME: @andreyromancev. 17.01.19. Uncomment when heavy is ready.
+	return h.JetCoordinator.LightExecutorForJet(ctx, jetID, targetPN)
+
+	parcelPulse, err := h.db.GetPulse(ctx, parcelPN)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to fetch pulse")
 	}
-	return h.JetCoordinator.Heavy(ctx, parcelPulse)
+	targetPulse, err := h.db.GetPulse(ctx, targetPN)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to fetch pulse")
+	}
+
+	if parcelPulse.SerialNumber-targetPulse.SerialNumber < h.conf.LightChainLimit {
+		return h.JetCoordinator.LightExecutorForJet(ctx, jetID, targetPN)
+	}
+
+	return h.JetCoordinator.Heavy(ctx, parcelPN)
 }

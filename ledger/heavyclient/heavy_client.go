@@ -33,7 +33,7 @@ import (
 // Options contains heavy client configuration params.
 type Options struct {
 	SyncMessageLimit int
-	PulsesDeltaLimit core.PulseNumber
+	PulsesDeltaLimit int
 	BackoffConf      configuration.Backoff
 }
 
@@ -177,11 +177,6 @@ func (c *JetClient) syncloop(ctx context.Context) {
 			break
 		}
 
-		if pulseIsOutdated(ctx, c.PulseStorage, syncPN, c.opts.PulsesDeltaLimit) {
-			inslog.Infof("pulse %v on jet %v is outdated, skip it", syncPN, c.jetID)
-			finishpulse()
-			continue
-		}
 		inslog.Infof("start synchronization to heavy for pulse %v", syncPN)
 
 		shouldretry := false
@@ -214,14 +209,6 @@ func (c *JetClient) syncloop(ctx context.Context) {
 		finishpulse()
 	}
 
-}
-
-func pulseIsOutdated(ctx context.Context, pstore core.PulseStorage, pn core.PulseNumber, limit core.PulseNumber) bool {
-	current, err := pstore.Current(ctx)
-	if err != nil {
-		panic(err)
-	}
-	return current.PulseNumber-pn > limit
 }
 
 // Stop stops heavy client replication

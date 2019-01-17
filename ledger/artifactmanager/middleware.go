@@ -27,6 +27,7 @@ import (
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/pkg/errors"
 )
 
@@ -84,16 +85,22 @@ func jetFromContext(ctx context.Context) core.RecordID {
 
 func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 	return func(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
-		logger := inslogger.FromContext(ctx)
-
 		msg := parcel.Message()
 		if msg.DefaultTarget() == nil {
 			return nil, errors.New("unexpected message")
 		}
 
-		// Check token jet.
+		// FIXME: @andreyromancev. 17.01.19. Allow any genesis request.
+		if parcel.Pulse() == core.FirstPulseNumber {
+			return handler(contextWithJet(ctx, *jet.NewID(0, nil)), parcel)
+		}
+
+		heavy, err := m.jetCoordinator.Heavy(ctx, parcel.Pulse())
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to calculate heavy")
+		}
 		token := parcel.DelegationToken()
-		if token != nil {
+		if token != nil || *heavy == m.jetCoordinator.Me() {
 			// Calculate jet for target pulse.
 			target := *msg.DefaultTarget().Record()
 			tree, err := m.db.GetJetTree(ctx, target.Pulse())
@@ -124,20 +131,7 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to calculate executor for jet")
 		}
-		// FIXME: This probably will never happen, because we won't receive hot records.
 		if *node != m.jetCoordinator.Me() {
-			// TODO: sergey.morozov 2018-12-21 This is hack. Must implement correct Jet checking for HME.
-			logger.Debugf("checkJet: [ HACK ] checking if I am Heavy Material")
-			heavy, err := m.jetCoordinator.Heavy(ctx, parcel.Pulse())
-			if err != nil {
-				logger.Debugf("checkJet: [ HACK ] failed to check for Heavy role")
-				return nil, errors.Wrap(err, "[ HACK ] failed to check for heavy role")
-			}
-			if *heavy == m.jetCoordinator.Me() {
-				logger.Debugf("checkJet: [ HACK ] I am Heavy. Accept parcel.")
-				return handler(contextWithJet(ctx, jetID), parcel)
-			}
-
 			return &reply.JetMiss{JetID: jetID}, nil
 		}
 

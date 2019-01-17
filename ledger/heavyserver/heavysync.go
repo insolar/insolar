@@ -105,6 +105,11 @@ func (s *Sync) getJetSyncState(ctx context.Context, jetID core.RecordID) *syncst
 
 // Start try to start heavy sync for provided pulse.
 func (s *Sync) Start(ctx context.Context, jetID core.RecordID, pn core.PulseNumber) error {
+	err := s.db.UpdateJetTree(ctx, pn, true, jetID)
+	if err != nil {
+		return errors.Wrap(err, "failed to update jet tree")
+	}
+
 	jetState := s.getJetSyncState(ctx, jetID)
 	jetState.Lock()
 	defer jetState.Unlock()
