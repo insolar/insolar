@@ -75,9 +75,15 @@ func NewJetClient(jetID core.RecordID, opts Options) *JetClient {
 }
 
 // addPulses add pulse numbers for syncing.
-func (c *JetClient) addPulses(pns []core.PulseNumber) {
+func (c *JetClient) addPulses(ctx context.Context, pns []core.PulseNumber) {
 	c.muPulses.Lock()
 	c.leftPulses = append(c.leftPulses, pns...)
+
+	if err := c.db.SetSyncClientJetPulses(ctx, c.jetID, c.leftPulses); err != nil {
+		inslogger.FromContext(ctx).Errorf(
+			"attempt to persist jet sync state failed: jetID=%v: %v", c.jetID, err.Error())
+	}
+
 	c.muPulses.Unlock()
 }
 
@@ -88,7 +94,7 @@ func (c *JetClient) pulsesLeft() int {
 }
 
 // unshiftPulse removes and returns pulse number from head of processing queue.
-func (c *JetClient) unshiftPulse() *core.PulseNumber {
+func (c *JetClient) unshiftPulse(ctx context.Context) *core.PulseNumber {
 	c.muPulses.Lock()
 	defer c.muPulses.Unlock()
 
@@ -101,6 +107,11 @@ func (c *JetClient) unshiftPulse() *core.PulseNumber {
 	shifted := c.leftPulses[:len(c.leftPulses)-1]
 	copy(shifted, c.leftPulses[1:])
 	c.leftPulses = shifted
+
+	if err := c.db.SetSyncClientJetPulses(ctx, c.jetID, c.leftPulses); err != nil {
+		inslogger.FromContext(ctx).Errorf(
+			"attempt to persist jet sync state failed: jetID=%v: %v", c.jetID, err.Error())
+	}
 
 	return &result
 }
@@ -137,7 +148,7 @@ func (c *JetClient) syncloop(ctx context.Context) {
 	)
 
 	finishpulse := func() {
-		_ = c.unshiftPulse()
+		_ = c.unshiftPulse(ctx)
 		c.syncbackoff.Reset()
 		retrydelay = 0
 	}

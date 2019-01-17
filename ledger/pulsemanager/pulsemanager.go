@@ -631,11 +631,11 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 			return err
 		}
 		if m.options.enableSync {
-			err := m.AddPulseToSyncClients(ctx, storagePulse.Pulse.PulseNumber)
-			if err != nil {
-				return err
+			pn := currentPulse.PulseNumber
+			for _, jInfo := range jets {
+				m.syncClientsPool.AddPulsesToSyncClient(ctx, jInfo.id, true, pn)
 			}
-			go m.sendTreeToHeavy(ctx, storagePulse.Pulse.PulseNumber)
+			go m.sendTreeToHeavy(ctx, pn)
 		}
 
 	}
@@ -721,22 +721,6 @@ func (m *PulseManager) sendTreeToHeavy(ctx context.Context, pn core.PulseNumber)
 	if err != nil {
 		inslogger.FromContext(ctx).Error(err)
 	}
-}
-
-// AddPulseToSyncClients add pulse number to all sync clients in pool.
-func (m *PulseManager) AddPulseToSyncClients(ctx context.Context, pn core.PulseNumber) error {
-	// get all jets with drops (required sync)
-	allJets, err := m.db.GetJets(ctx)
-	if err != nil {
-		return err
-	}
-	for jetID := range allJets {
-		_, err := m.db.GetDrop(ctx, jetID, pn)
-		if err == nil {
-			m.syncClientsPool.AddPulsesToSyncClient(ctx, jetID, true, pn)
-		}
-	}
-	return nil
 }
 
 // Start starts pulse manager, spawns replication goroutine under a hood.

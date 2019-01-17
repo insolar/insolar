@@ -83,7 +83,7 @@ func (scp *Pool) AddPulsesToSyncClient(
 	}
 	scp.Unlock()
 
-	client.addPulses(pns)
+	client.addPulses(ctx, pns)
 
 	if shouldrun {
 		client.runOnce(ctx)
