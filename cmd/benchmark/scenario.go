@@ -17,14 +17,16 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"io"
+	"net"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/api/sdk"
+	"github.com/pkg/errors"
 )
 
 type scenario interface {
@@ -34,15 +36,20 @@ type scenario interface {
 	getAverageOperationDuration() time.Duration
 	getName() string
 	getOut() io.Writer
+	printResult()
 }
 
 type transferDifferentMembersScenario struct {
 	name        string
 	concurrent  int
 	repetitions int
-	members     []memberInfo
 	out         io.Writer
 	totalTime   int64
+	successes   uint32
+	errors      uint32
+	timeouts    uint32
+	members     []*sdk.Member
+	insSDK      *sdk.SDK
 }
 
 func (s *transferDifferentMembersScenario) getOperationsNumber() int {
@@ -50,7 +57,7 @@ func (s *transferDifferentMembersScenario) getOperationsNumber() int {
 }
 
 func (s *transferDifferentMembersScenario) getAverageOperationDuration() time.Duration {
-	return time.Duration(s.totalTime/int64(s.getOperationsNumber()))
+	return time.Duration(s.totalTime / int64(s.getOperationsNumber()))
 }
 
 func (s *transferDifferentMembersScenario) getName() string {
@@ -81,16 +88,29 @@ func (s *transferDifferentMembersScenario) start() {
 func (s *transferDifferentMembersScenario) startMember(index int, wg *sync.WaitGroup) {
 	defer wg.Done()
 	for j := 0; j < s.repetitions; j = j + 1 {
-		ctx := inslogger.ContextWithTrace(context.Background(), fmt.Sprintf("transferFromMemberNumber%d", index))
 		from := s.members[index]
 		to := s.members[index+1]
 
 		start := time.Now()
-		response := transfer(ctx, 1, from, to)
+		traceID, err := s.insSDK.Transfer(1, from, to)
 		atomic.AddInt64(&s.totalTime, int64(time.Since(start)))
 
-		if response != "success" {
-			writeToOutput(s.out, fmt.Sprintf("[Member №%d] Transfer from %s to %s. Response: %s.\n", index, from.ref, to.ref, response))
+		if err == nil {
+			atomic.AddUint32(&s.successes, 1)
+		} else if netErr, ok := errors.Cause(err).(net.Error); ok && netErr.Timeout() {
+			atomic.AddUint32(&s.timeouts, 1)
+			writeToOutput(s.out, fmt.Sprintf("[Member №%d] Transfer error with traceID: %s. Timeout.\n", index, traceID))
+		} else {
+			atomic.AddUint32(&s.errors, 1)
+			if strings.Contains(err.Error(), "Incorrect message pulse") {
+				writeToOutput(s.out, "Incorrect message pulse\n")
+			} else {
+				writeToOutput(s.out, fmt.Sprintf("[Member №%d] Transfer error with traceID: %s. Response: %s.\n", index, traceID, err.Error()))
+			}
 		}
 	}
+}
+
+func (s *transferDifferentMembersScenario) printResult() {
+	writeToOutput(s.out, fmt.Sprintf("Scenario result:\n\tSuccesses: %d\n\tErrors: %d\n\tTimeouts: %d\n", s.successes, s.errors, s.timeouts))
 }

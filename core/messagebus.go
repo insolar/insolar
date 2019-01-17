@@ -171,6 +171,9 @@ const (
 	TypeValidationResults
 	// TypePendingFinished is sent by the old executor to the current executor when pending execution finishes
 	TypePendingFinished
+	// TypeStillExecuting is sent by an old executor on pulse switch if it wants to continue executing
+	// to the current executor
+	TypeStillExecuting
 
 	// Ledger
 

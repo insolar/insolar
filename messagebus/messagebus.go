@@ -22,19 +22,19 @@ import (
 	"encoding/gob"
 	"fmt"
 	"io"
-	"strconv"
 	"sync"
 	"time"
 
 	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
-	"github.com/insolar/insolar/core/utils"
 	"github.com/insolar/insolar/instrumentation/hack"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/metrics"
 )
 
@@ -141,6 +141,7 @@ func (mb *MessageBus) MustRegister(p core.MessageType, handler core.MessageHandl
 // Send an `Message` and get a `Value` or error from remote host.
 func (mb *MessageBus) Send(ctx context.Context, msg core.Message, ops *core.MessageSendOptions) (core.Reply, error) {
 	currentPulse, err := mb.PulseStorage.Current(ctx)
+	fmt.Println("[mb.send] ", currentPulse.PulseNumber)
 	if err != nil {
 		return nil, err
 	}
@@ -150,11 +151,13 @@ func (mb *MessageBus) Send(ctx context.Context, msg core.Message, ops *core.Mess
 		return nil, err
 	}
 
-	var rep core.Reply
-	utils.MeasureExecutionTime(ctx, "MessageBus.Send mb.SendParcel, msg.Type = "+msg.Type().String()+", parcel.DefaultRole() = "+strconv.Itoa(int(parcel.DefaultRole())),
-		func() {
-			rep, err = mb.SendParcel(ctx, parcel, *currentPulse, ops)
-		})
+	ctx, span := instracer.StartSpan(ctx, "MessageBus.Send mb.SendParcel")
+	span.AddAttributes(
+		trace.StringAttribute("msgType", msg.Type().String()),
+		trace.Int64Attribute("parcel.DefaultRole", int64(parcel.DefaultRole())),
+	)
+	rep, err := mb.SendParcel(ctx, parcel, *currentPulse, ops)
+	span.End()
 	return rep, err
 }
 
@@ -239,7 +242,7 @@ func (mb *MessageBus) OnPulse(context.Context, core.Pulse) error {
 	return nil
 }
 
-func (mb *MessageBus) accuireMessagePoolItem() bool {
+func (mb *MessageBus) acquireMessagePoolItem() bool {
 	mb.NextPulseMessagePoolLock.Lock()
 	defer mb.NextPulseMessagePoolLock.Unlock()
 
@@ -267,8 +270,14 @@ func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Repl
 		return nil, errors.New("no handler for received message type")
 	}
 
-	ctx = hack.SetSkipValidation(ctx, true)
+	origin := mb.NodeNetwork.GetOrigin()
+	if msg.GetSender().Equal(origin.ID()) {
+		fmt.Println("msg.GetSender()", msg.GetSender())
+		fmt.Println("origin.ID()", origin.ID())
+		ctx = hack.SetSkipValidation(ctx, true)
+	}
 	// TODO: sergey.morozov 2018-12-21 there is potential race condition because of readBarrier. We must implement correct locking.
+
 	resp, err := handler(ctx, msg)
 	if err != nil {
 		return nil, &serializableError{
@@ -285,7 +294,8 @@ func (mb *MessageBus) checkPulse(ctx context.Context, parcel core.Parcel, locked
 		return errors.Wrap(err, "[ checkPulse ] Couldn't get current pulse number")
 	}
 
-	if parcel.Pulse() == pulse.NextPulseNumber && mb.accuireMessagePoolItem() {
+	// TODO: check if parcel.Pulse() == pulse.NextPulseNumber
+	if parcel.Pulse() > pulse.PulseNumber && mb.acquireMessagePoolItem() {
 		if locked {
 			mb.globalLock.RUnlock()
 		}
@@ -300,9 +310,29 @@ func (mb *MessageBus) checkPulse(ctx context.Context, parcel core.Parcel, locked
 		return errors.Wrap(err, "[ checkPulse ] Couldn't get current pulse number")
 	}
 
-	if parcel.Pulse() != pulse.PulseNumber {
-		inslogger.FromContext(ctx).Error("[ checkPulse ] Incorrect message pulse")
-		return fmt.Errorf("[ checkPulse ] Incorrect message pulse %d %d", parcel.Pulse(), pulse.PulseNumber)
+	if parcel.Pulse() > pulse.PulseNumber {
+		// We waited for next pulse but parcel is still from future. Return error.
+		inslogger.FromContext(ctx).Errorf("[ checkPulse ] Incorrect message pulse (parcel: %d, current: %d)", parcel.Pulse(), pulse.PulseNumber)
+		return fmt.Errorf("[ checkPulse ] Incorrect message pulse (parcel: %d, current: %d)", parcel.Pulse(), pulse.PulseNumber)
+	} else if parcel.Pulse() < pulse.PulseNumber {
+		// Parcel is from past. Return error for some messages, allow for others.
+		switch parcel.Message().(type) {
+		case
+			*message.GetObject,
+			*message.GetDelegate,
+			*message.GetChildren,
+			*message.SetRecord,
+			*message.UpdateObject,
+			*message.RegisterChild,
+			*message.SetBlob,
+			*message.GetObjectIndex,
+			*message.GetPendingRequests,
+			*message.ValidateRecord,
+			*message.CallConstructor,
+			*message.CallMethod:
+			inslogger.FromContext(ctx).Errorf("[ checkPulse ] Incorrect message pulse (parcel: %d, current: %d)", parcel.Pulse(), pulse.PulseNumber)
+			return fmt.Errorf("[ checkPulse ] Incorrect message pulse (parcel: %d, current: %d)", parcel.Pulse(), pulse.PulseNumber)
+		}
 	}
 	return nil
 }
@@ -374,25 +404,25 @@ func (mb *MessageBus) checkParcel(ctx context.Context, parcel core.Parcel) error
 	// 	return nil
 	// }
 
-	sendingObject, allowedSenderRole := parcel.AllowedSenderObjectAndRole()
-	if sendingObject == nil {
-		return nil
-	}
-
-	// TODO: temporary solution, this check should be removed after reimplementing token processing on VM side - @nordicdyno 19.Dec.2018
-	if allowedSenderRole.IsVirtualRole() {
-		return nil
-	}
-
-	validSender, err := mb.JetCoordinator.IsAuthorized(
-		ctx, allowedSenderRole, *sendingObject.Record(), parcel.Pulse(), sender,
-	)
-	if err != nil {
-		return err
-	}
-	if !validSender {
-		return errors.New("sender is not allowed to act on behalve of that object")
-	}
+	// sendingObject, allowedSenderRole := parcel.AllowedSenderObjectAndRole()
+	// if sendingObject == nil {
+	// 	return nil
+	// }
+	//
+	// // TODO: temporary solution, this check should be removed after reimplementing token processing on VM side - @nordicdyno 19.Dec.2018
+	// if allowedSenderRole.IsVirtualRole() {
+	// 	return nil
+	// }
+	//
+	// validSender, err := mb.JetCoordinator.IsAuthorized(
+	// 	ctx, allowedSenderRole, *sendingObject.Record(), parcel.Pulse(), sender,
+	// )
+	// if err != nil {
+	// 	return err
+	// }
+	// if !validSender {
+	// 	return errors.New("sender is not allowed to act on behalve of that object")
+	// }
 	return nil
 }
 

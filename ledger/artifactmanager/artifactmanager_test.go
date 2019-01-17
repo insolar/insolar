@@ -122,7 +122,7 @@ func getTestData(t *testing.T) (
 	return ctx, db, &am, cleaner
 }
 
-func TestLedgerArtifactManager_RegisterRequest(t *testing.T) {
+func пTestLedgerArtifactManager_RegisterRequest(t *testing.T) {
 	t.Parallel()
 	ctx, db, am, cleaner := getTestData(t)
 	defer cleaner()
@@ -149,6 +149,10 @@ func TestLedgerArtifactManager_GetCodeWithCache(t *testing.T) {
 		}, nil
 	}
 
+	jc := testutils.NewJetCoordinatorMock(t)
+	jc.LightExecutorForJetMock.Return(&core.RecordRef{}, nil)
+	jc.MeMock.Return(core.RecordRef{})
+
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
 
@@ -165,6 +169,7 @@ func TestLedgerArtifactManager_GetCodeWithCache(t *testing.T) {
 		codeCacheLock: &sync.Mutex{},
 		codeCache:     make(map[core.RecordRef]*cacheEntry),
 		PulseStorage:  amPulseStorageMock,
+		JetCoordinator: jc,
 	}
 
 	desc, err := am.GetCode(ctx, codeRef)

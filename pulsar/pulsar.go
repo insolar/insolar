@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"net"
 	"net/rpc"
+	"runtime/debug"
 	"sync"
 
 	"github.com/insolar/insolar/certificate"
@@ -56,7 +57,7 @@ type Pulsar struct {
 	Storage          pulsarstorage.PulsarStorage
 	EntropyGenerator entropygenerator.EntropyGenerator
 
-	// StartProcessLock sync.Mutex
+	StartProcessLock sync.Mutex
 
 	generatedEntropy     *core.Entropy
 	generatedEntropyLock sync.RWMutex
@@ -288,18 +289,20 @@ func (currentPulsar *Pulsar) StartConsensusProcess(ctx context.Context, pulseNum
 	logger := inslogger.FromContext(ctx)
 	logger.Debugf("[StartConsensusProcess] pulse number - %v, host - %v", pulseNumber, currentPulsar.Config.MainListenerAddress)
 	logger.Debugf("[Before StartProcessLock]")
-	// currentPulsar.StartProcessLock.Lock()
+	debug.PrintStack()
+	currentPulsar.StartProcessLock.Lock()
 	logger.Debugf("[After StartProcessLock]")
 
 	if pulseNumber == currentPulsar.ProcessingPulseNumber {
 		logger.Debugf("[pulseNumber == currentPulsar.ProcessingPulseNumber] return nil")
+		currentPulsar.StartProcessLock.Unlock()
 		return nil
 	}
 
 	logger.Debugf("currentPulsar.StateSwitcher.GetState() > WaitingForStart")
 	if currentPulsar.StateSwitcher.GetState() > WaitingForStart || (currentPulsar.ProcessingPulseNumber != 0 && pulseNumber < currentPulsar.ProcessingPulseNumber) {
 		logger.Debugf("currentPulsar.StartProcessLock.Unlock()")
-		// currentPulsar.StartProcessLock.Unlock()
+		currentPulsar.StartProcessLock.Unlock()
 		err := fmt.Errorf(
 			"wrong state status or pulse number, state - %v, received pulse - %v, last pulse - %v, processing pulse - %v",
 			currentPulsar.StateSwitcher.GetState().String(),
@@ -319,7 +322,7 @@ func (currentPulsar *Pulsar) StartConsensusProcess(ctx context.Context, pulseNum
 	err := currentPulsar.generateNewEntropyAndSign()
 	if err != nil {
 		logger.Debugf("currentPulsar.StartProcessLock.Unlock() && currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)")
-		// currentPulsar.StartProcessLock.Unlock()
+		currentPulsar.StartProcessLock.Unlock()
 		currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)
 		return err
 	}
@@ -332,7 +335,7 @@ func (currentPulsar *Pulsar) StartConsensusProcess(ctx context.Context, pulseNum
 		Sign:              currentPulsar.GeneratedEntropySign,
 	})
 
-	// currentPulsar.StartProcessLock.Unlock()
+	currentPulsar.StartProcessLock.Unlock()
 
 	currentPulsar.broadcastSignatureOfEntropy(ctx)
 	currentPulsar.StateSwitcher.SwitchToState(ctx, WaitingForEntropySigns, nil)

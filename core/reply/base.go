@@ -83,6 +83,7 @@ const (
 	// ErrDeactivated returned when requested object is deactivated.
 	ErrDeactivated = iota + 1
 	ErrStateNotAvailable
+	ErrHotDataTimeout
 )
 
 func getEmptyReply(t core.ReplyType) (core.Reply, error) {

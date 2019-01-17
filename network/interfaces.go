@@ -40,6 +40,13 @@ type Controller interface {
 	// Inject inject components.
 	Inject(cryptographyService core.CryptographyService,
 		networkCoordinator core.NetworkCoordinator, nodeKeeper NodeKeeper)
+
+	// TODO: workaround methods, should be deleted once network consensus is alive
+
+	// SetLastIgnoredPulse set pulse number after which we will begin setting new pulses to PulseManager
+	SetLastIgnoredPulse(number core.PulseNumber)
+	// GetLastIgnoredPulse get last pulse that will be ignored
+	GetLastIgnoredPulse() core.PulseNumber
 }
 
 // RequestHandler handler function to process incoming requests from network.

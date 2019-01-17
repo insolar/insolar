@@ -18,14 +18,14 @@ package log
 
 import (
 	"bytes"
+	"io"
 	"os"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/testutils"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func capture(f func()) string {
@@ -133,15 +133,26 @@ func TestLog_AddFields(t *testing.T) {
 
 	for _, tItem := range tt {
 		t.Run(tItem.name, func(t *testing.T) {
-			recorder := testutils.NewRecoder()
-
 			la := newLogrusAdapter()
-			la.SetOutput(recorder)
+			var b bytes.Buffer
+			la.SetOutput(&b)
 
 			tItem.fieldfn(la).Error(errtxt1)
 			la.Error(errtxt2)
 
-			recitems := recorder.Items()
+			var recitems []string
+			for {
+				line, err := b.ReadBytes('\n')
+				if err != nil && err != io.EOF {
+
+					require.NoError(t, err)
+				}
+
+				recitems = append(recitems, string(line))
+				if err == io.EOF {
+					break
+				}
+			}
 			assert.Contains(t, recitems[0], errtxt1)
 			assert.Contains(t, recitems[1], errtxt2)
 			assert.Contains(t, recitems[0], fieldvalue)

@@ -23,7 +23,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/jbenet/go-base58"
+	base58 "github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 )
 
@@ -48,7 +48,7 @@ func (id *RecordID) String() string {
 
 func (id *RecordID) JetIDString() string {
 	jetPN := id[:PulseNumberSize]
-	depth := id[PulseNumberSize]
+	depth := int(uint8(id[PulseNumberSize]))
 	prefix := id[PulseNumberSize+1:]
 
 	prefixBits := make([]int, len(prefix)*8)
@@ -58,11 +58,22 @@ func (id *RecordID) JetIDString() string {
 		}
 	}
 
+	var prefixStr string
+	if depth == 0 {
+		prefixStr = "-"
+	} else {
+		if depth > len(prefixBits) {
+			return fmt.Sprintf("[JET: <wrong format> %d %b]", depth, prefix)
+		}
+		for i := 0; i < depth; i++ {
+			prefixStr = fmt.Sprintf("%s%d", prefixStr, prefixBits[i])
+		}
+	}
 	str := fmt.Sprintf("depth=%d prefix=%s", depth, fmt.Sprint(prefixBits))
 	if !bytes.Equal(jetPN, PulseNumberJet.Bytes()) {
-		str = "[JET (BAD PULSE NUMBER)] " + str
+		str = fmt.Sprintf("[JET (BAD PULSE NUMBER) %d %s]", depth, prefixStr)
 	} else {
-		str = "[JET] " + str
+		str = fmt.Sprintf("[JET %d %s]", depth, prefixStr)
 	}
 	return str
 }
@@ -214,4 +225,8 @@ func (ref *RecordRef) MarshalJSON() ([]byte, error) {
 		return json.Marshal(nil)
 	}
 	return json.Marshal(ref.String())
+}
+
+func (id *RecordID) DebugString() string {
+	return fmt.Sprintf("[%d | %s]", id.Pulse(), id.String())
 }
