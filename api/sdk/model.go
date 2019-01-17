@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 INS Ecosystem
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -14,29 +14,18 @@
  *    limitations under the License.
  */
 
-package heavyclient
+package sdk
 
-import (
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/reply"
-)
-
-// HeavyErr holds core.Reply and implements core.Retryable and error interfaces.
-type HeavyErr struct {
-	reply core.Reply
-	err   error
+// Member model object
+type Member struct {
+	Reference  string
+	PrivateKey string
 }
 
-// Error implements error interface.
-func (he HeavyErr) Error() string {
-	return he.err.Error()
-}
-
-// IsRetryable checks retryability of message.
-func (he HeavyErr) IsRetryable() bool {
-	herr, ok := he.reply.(*reply.HeavyError)
-	if !ok {
-		return false
+// NewMember creates new Member
+func NewMember(ref string, key string) *Member {
+	return &Member{
+		Reference:  ref,
+		PrivateKey: key,
 	}
-	return herr.ConcreteType() == reply.ErrHeavySyncInProgress
 }

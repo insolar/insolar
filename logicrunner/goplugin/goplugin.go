@@ -171,7 +171,7 @@ func (gp *GoPlugin) CallMethod(
 	select {
 	case callResult := <-resultChan:
 		callTime := time.Since(start)
-		metrics.GopluginContractExecutionTime.Observe(callTime.Seconds())
+		metrics.GopluginContractExecutionTime.WithLabelValues(method).Observe(callTime.Seconds())
 		inslogger.FromContext(ctx).Debugf("CallMethod done work, time spend in here - %s", callTime)
 		if callResult.Error != nil {
 			return nil, nil, errors.Wrap(callResult.Error, "problem with API call")

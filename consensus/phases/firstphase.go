@@ -223,7 +223,7 @@ func (fp *FirstPhase) getSignedClaims(claims []packets.ReferendumClaim) []packet
 
 func (fp *FirstPhase) claimSignIsOk(claim *packets.NodeJoinClaim) (bool, error) {
 	keyProc := platformpolicy.NewKeyProcessor()
-	key, err := keyProc.ImportPublicKey(claim.NodePK[:])
+	key, err := keyProc.ImportPublicKeyPEM(claim.NodePK[:])
 	if err != nil {
 		return false, errors.Wrap(err, "[ claimSignIsOk ] failed to import a key")
 	}

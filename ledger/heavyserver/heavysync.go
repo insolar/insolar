@@ -22,16 +22,22 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/ledger/storage"
 )
 
-// ErrSyncInProgress indicates that sync for provided jet is in sync
-var ErrSyncInProgress = &reply.HeavyError{
-	Message: "Heavy node sync in progress",
-	SubType: reply.ErrHeavySyncInProgress,
+func errSyncInProgress(jetID core.RecordID, pn core.PulseNumber) *reply.HeavyError {
+	return &reply.HeavyError{
+		Message:  "Heavy node sync in progress",
+		SubType:  reply.ErrHeavySyncInProgress,
+		JetID:    jetID,
+		PulseNum: pn,
+	}
 }
 
 // in testnet we start with only one jet
@@ -69,33 +75,19 @@ func (s *Sync) checkIsNextPulse(ctx context.Context, jetID core.RecordID, jetsta
 	if checkpoint == 0 {
 		checkpoint, err = s.db.GetHeavySyncedPulse(ctx, jetID)
 		if err != nil {
-			return errors.Wrap(err, "GetHeavySyncedPulse failed")
+			return errors.Wrap(err, "heavyserver: GetHeavySyncedPulse failed")
 		}
 	}
 
-	// TODO: not sure how to handle this case properly
+	// just start sync on first sync
 	if checkpoint == 0 {
-		if pn != core.FirstPulseNumber {
-			return errors.New("Pulse should be equal first pulse number if sync checkpoint on heavy not found")
-		}
 		return nil
 	}
 
 	if pn <= jetstate.lastok {
-		return fmt.Errorf("Pulse %v is not greater than last synced pulse %v", pn, jetstate.lastok)
+		return fmt.Errorf("heavyserver: pulse %v is not greater than last synced pulse %v", pn, jetstate.lastok)
 	}
 
-	pulse, err := s.db.GetPulse(ctx, checkpoint)
-	if err != nil {
-		return errors.Wrapf(err, "GetPulse with pulse num %v failed", checkpoint)
-	}
-	if pulse.Next == nil {
-		return fmt.Errorf("next pulse after %v not found", checkpoint)
-	}
-
-	if pn != *pulse.Next {
-		return fmt.Errorf("pulse %v is not next after %v", pn, *pulse.Next)
-	}
 	return nil
 }
 
@@ -117,7 +109,11 @@ func (s *Sync) Start(ctx context.Context, jetID core.RecordID, pn core.PulseNumb
 	defer jetState.Unlock()
 
 	if jetState.syncpulse != nil {
-		return ErrSyncInProgress
+		return errSyncInProgress(jetID, pn)
+	}
+
+	if pn <= core.FirstPulseNumber {
+		return fmt.Errorf("heavyserver: sync pulse should be greater than first pulse %v (got %v)", core.FirstPulseNumber, pn)
 	}
 
 	if err := s.checkIsNextPulse(ctx, jetID, jetState, pn); err != nil {
@@ -138,13 +134,13 @@ func (s *Sync) Store(ctx context.Context, jetID core.RecordID, pn core.PulseNumb
 		jetState.Lock()
 		defer jetState.Unlock()
 		if jetState.syncpulse == nil {
-			return fmt.Errorf("Jet %v not in sync mode", jetID)
+			return fmt.Errorf("heavyserver: jet %v not in sync mode", jetID)
 		}
 		if *jetState.syncpulse != pn {
-			return fmt.Errorf("Passed pulse %v doesn't math in-sync pulse %v", pn, *jetState.syncpulse)
+			return fmt.Errorf("heavyserver: passed pulse %v doesn't match in-sync pulse %v", pn, *jetState.syncpulse)
 		}
 		if jetState.insync {
-			return ErrSyncInProgress
+			return errSyncInProgress(jetID, pn)
 		}
 		jetState.insync = true
 		return nil
@@ -159,7 +155,18 @@ func (s *Sync) Store(ctx context.Context, jetID core.RecordID, pn core.PulseNumb
 		jetState.Unlock()
 	}()
 	// TODO: check jet in keys?
-	return s.db.StoreKeyValues(ctx, kvs)
+	err = s.db.StoreKeyValues(ctx, kvs)
+	if err != nil {
+		return errors.Wrapf(err, "heavyserver: store failed")
+	}
+
+	ctx = insmetrics.InsertTag(ctx, tagJet, jetID.String())
+	stats.Record(ctx,
+		statSyncedRecords.M(int64(len(kvs))),
+		statSyncedPulse.M(int64(pn)),
+		statSyncedBytes.M(core.KVSize(kvs)),
+	)
+	return nil
 }
 
 // Stop successfully stops replication for specified pulse.
@@ -175,11 +182,11 @@ func (s *Sync) Stop(ctx context.Context, jetID core.RecordID, pn core.PulseNumbe
 	}
 	if *jetState.syncpulse != pn {
 		return fmt.Errorf(
-			"Passed pulse %v doesn't match pulse %v current in sync for jet %v",
+			"heavyserver: Passed pulse %v doesn't match pulse %v current in sync for jet %v",
 			pn, *jetState.syncpulse, jetID)
 	}
 	if jetState.insync {
-		return ErrSyncInProgress
+		return errSyncInProgress(jetID, pn)
 	}
 	jetState.syncpulse = nil
 
@@ -187,6 +194,7 @@ func (s *Sync) Stop(ctx context.Context, jetID core.RecordID, pn core.PulseNumbe
 	if err != nil {
 		return err
 	}
+	inslogger.FromContext(ctx).Debugf("heavyserver: Fin sync: jetID=%v, pulse=%v", jetID, pn)
 	jetState.lastok = pn
 	return nil
 }
@@ -198,9 +206,10 @@ func (s *Sync) Reset(ctx context.Context, jetID core.RecordID, pn core.PulseNumb
 	defer jetState.Unlock()
 
 	if jetState.insync {
-		return ErrSyncInProgress
+		return errSyncInProgress(jetID, pn)
 	}
 
+	inslogger.FromContext(ctx).Debugf("heavyserver: Reset sync: jetID=%v, pulse=%v", jetID, pn)
 	jetState.syncpulse = nil
 	return nil
 }

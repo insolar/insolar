@@ -200,7 +200,7 @@ func (ul *sparseUnsyncList) AddClaims(claims map[core.RecordRef][]consensus.Refe
 
 func claimToNode(address, version string, claim *consensus.NodeJoinClaim) (core.Node, error) {
 	keyProc := platformpolicy.NewKeyProcessor()
-	key, err := keyProc.ImportPublicKey(claim.NodePK[:])
+	key, err := keyProc.ImportPublicKeyPEM(claim.NodePK[:])
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ClaimToNode ] failed to import a public key")
 	}

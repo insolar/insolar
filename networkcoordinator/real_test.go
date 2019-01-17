@@ -30,7 +30,7 @@ func mockContractRequester(t *testing.T, nodeRef core.RecordRef, ok bool, r []by
 }
 
 func TestRealNetworkCoordinator_New(t *testing.T) {
-	coord := newRealNetworkCoordinator(nil, nil, nil, nil, nil)
+	coord := newRealNetworkCoordinator(nil, nil, nil, nil)
 	require.Equal(t, &realNetworkCoordinator{}, coord)
 }
 
@@ -49,7 +49,7 @@ func TestRealNetworkCoordinator_GetCert(t *testing.T) {
 	cm := mockCertificateManager(t, &certNodeRef, &certNodeRef, true)
 	cs := mockCryptographyService(t, true)
 
-	coord := newRealNetworkCoordinator(cm, cr, mb, cs, nil)
+	coord := newRealNetworkCoordinator(cm, cr, mb, cs)
 	ctx := context.Background()
 	result, err := coord.GetCert(ctx, &nodeRef)
 	require.NoError(t, err)
@@ -77,7 +77,7 @@ func TestRealNetworkCoordinator_GetCert_getNodeInfoError(t *testing.T) {
 
 	cr := mockContractRequester(t, nodeRef, false, nil)
 
-	coord := newRealNetworkCoordinator(nil, cr, nil, nil, nil)
+	coord := newRealNetworkCoordinator(nil, cr, nil, nil)
 	ctx := context.Background()
 	_, err := coord.GetCert(ctx, &nodeRef)
 	require.EqualError(t, err, "[ GetCert ] Couldn't get node info: [ GetCert ] Couldn't call GetNodeInfo: test_error")
@@ -88,7 +88,7 @@ func TestRealNetworkCoordinator_GetCert_DeserializeError(t *testing.T) {
 
 	cr := mockContractRequester(t, nodeRef, true, []byte(""))
 
-	coord := newRealNetworkCoordinator(nil, cr, nil, nil, nil)
+	coord := newRealNetworkCoordinator(nil, cr, nil, nil)
 	ctx := context.Background()
 	_, err := coord.GetCert(ctx, &nodeRef)
 	require.EqualError(t, err, "[ GetCert ] Couldn't get node info: [ GetCert ] Couldn't extract response: [ NodeInfoResponse ] Can't unmarshal response: [ UnMarshalResponse ]: [ Deserialize ]: EOF")
@@ -106,7 +106,7 @@ func TestRealNetworkCoordinator_GetCert_UnsignedCertificateError(t *testing.T) {
 	}
 
 	cm := mockCertificateManager(t, &certNodeRef, &certNodeRef, false)
-	coord := newRealNetworkCoordinator(cm, cr, nil, nil, nil)
+	coord := newRealNetworkCoordinator(cm, cr, nil, nil)
 	ctx := context.Background()
 	_, err := coord.GetCert(ctx, &nodeRef)
 	require.EqualError(t, err, "[ GetCert ] Couldn't create certificate: test_error")
@@ -126,7 +126,7 @@ func TestRealNetworkCoordinator_GetCert_SignCertError(t *testing.T) {
 	cm := mockCertificateManager(t, &certNodeRef, &certNodeRef, true)
 	cs := mockCryptographyService(t, false)
 
-	coord := newRealNetworkCoordinator(cm, cr, nil, cs, nil)
+	coord := newRealNetworkCoordinator(cm, cr, nil, cs)
 	ctx := context.Background()
 	_, err := coord.GetCert(ctx, &nodeRef)
 	require.EqualError(t, err, "[ GetCert ] Couldn't request cert sign: [ SignCert ] Couldn't sign: test_error")
@@ -148,7 +148,7 @@ func TestRealNetworkCoordinator_requestCertSignSelfDiscoveryNode(t *testing.T) {
 	cm := mockCertificateManager(t, &certNodeRef, &certNodeRef, true)
 	cs := mockCryptographyService(t, true)
 
-	coord := newRealNetworkCoordinator(cm, cr, mb, cs, nil)
+	coord := newRealNetworkCoordinator(cm, cr, mb, cs)
 	ctx := context.Background()
 	dNode := certificate.BootstrapNode{
 		PublicKey:   "test_discovery_public_key",
@@ -181,7 +181,7 @@ func TestRealNetworkCoordinator_requestCertSignOtherDiscoveryNode(t *testing.T) 
 		return &core.Pulse{}, nil
 	}
 
-	coord := newRealNetworkCoordinator(cm, cr, mb, nil, ps)
+	coord := newRealNetworkCoordinator(cm, cr, mb, nil)
 	ctx := context.Background()
 	dNode := certificate.BootstrapNode{
 		PublicKey:   "test_discovery_public_key",
@@ -206,7 +206,7 @@ func TestRealNetworkCoordinator_requestCertSignSelfDiscoveryNode_signCertError(t
 	}
 
 	cm := mockCertificateManager(t, &certNodeRef, &certNodeRef, true)
-	coord := newRealNetworkCoordinator(cm, cr, nil, nil, nil)
+	coord := newRealNetworkCoordinator(cm, cr, nil, nil)
 	ctx := context.Background()
 	dNode := certificate.BootstrapNode{
 		PublicKey:   "test_discovery_public_key",
@@ -230,15 +230,10 @@ func TestRealNetworkCoordinator_requestCertSignOtherDiscoveryNode_CurrentPulseEr
 		return core.CompleteNetworkState
 	}
 
-	mb := mockMessageBus(t, true, &nodeRef, nil)
-
+	mb := mockMessageBus(t, false, &nodeRef, &discoveryNodeRef)
 	cm := mockCertificateManager(t, &certNodeRef, &certNodeRef, true)
-	ps := testutils.NewPulseStorageMock(t)
-	ps.CurrentFunc = func(ctx context.Context) (*core.Pulse, error) {
-		return nil, errors.New("test_error")
-	}
 
-	coord := newRealNetworkCoordinator(cm, cr, mb, nil, ps)
+	coord := newRealNetworkCoordinator(cm, cr, mb, nil)
 	ctx := context.Background()
 	dNode := certificate.BootstrapNode{
 		PublicKey:   "test_discovery_public_key",
@@ -271,7 +266,7 @@ func TestRealNetworkCoordinator_requestCertSignOtherDiscoveryNode_SendError(t *t
 		return &core.Pulse{}, nil
 	}
 
-	coord := newRealNetworkCoordinator(cm, cr, mb, nil, ps)
+	coord := newRealNetworkCoordinator(cm, cr, mb, nil)
 	ctx := context.Background()
 	dNode := certificate.BootstrapNode{
 		PublicKey:   "test_discovery_public_key",
@@ -289,7 +284,7 @@ func TestRealNetworkCoordinator_signCertHandler(t *testing.T) {
 	cr := mockContractRequester(t, nodeRef, true, mockReply(t))
 	cs := mockCryptographyService(t, true)
 
-	coord := newRealNetworkCoordinator(nil, cr, nil, cs, nil)
+	coord := newRealNetworkCoordinator(nil, cr, nil, cs)
 	ctx := context.Background()
 	result, err := coord.signCertHandler(ctx, &message.Parcel{Msg: &message.NodeSignPayload{NodeRef: &nodeRef}})
 	require.NoError(t, err)
@@ -301,7 +296,7 @@ func TestRealNetworkCoordinator_signCertHandler_NodeInfoError(t *testing.T) {
 
 	cr := mockContractRequester(t, nodeRef, false, nil)
 
-	coord := newRealNetworkCoordinator(nil, cr, nil, nil, nil)
+	coord := newRealNetworkCoordinator(nil, cr, nil, nil)
 	ctx := context.Background()
 	_, err := coord.signCertHandler(ctx, &message.Parcel{Msg: &message.NodeSignPayload{NodeRef: &nodeRef}})
 	require.EqualError(t, err, "[ SignCert ] Couldn't extract response: [ SignCert ] Couldn't extract response: [ GetCert ] Couldn't call GetNodeInfo: test_error")
@@ -313,7 +308,7 @@ func TestRealNetworkCoordinator_signCertHandler_SignError(t *testing.T) {
 	cr := mockContractRequester(t, nodeRef, true, mockReply(t))
 	cs := mockCryptographyService(t, false)
 
-	coord := newRealNetworkCoordinator(nil, cr, nil, cs, nil)
+	coord := newRealNetworkCoordinator(nil, cr, nil, cs)
 	ctx := context.Background()
 	_, err := coord.signCertHandler(ctx, &message.Parcel{Msg: &message.NodeSignPayload{NodeRef: &nodeRef}})
 	require.EqualError(t, err, "[ SignCert ] Couldn't extract response: [ SignCert ] Couldn't sign: test_error")
@@ -325,7 +320,7 @@ func TestRealNetworkCoordinator_signCert(t *testing.T) {
 	cr := mockContractRequester(t, nodeRef, true, mockReply(t))
 	cs := mockCryptographyService(t, true)
 
-	coord := newRealNetworkCoordinator(nil, cr, nil, cs, nil)
+	coord := newRealNetworkCoordinator(nil, cr, nil, cs)
 	ctx := context.Background()
 	result, err := coord.signCert(ctx, &nodeRef)
 	require.NoError(t, err)
@@ -337,7 +332,7 @@ func TestRealNetworkCoordinator_signCert_NodeInfoError(t *testing.T) {
 
 	cr := mockContractRequester(t, nodeRef, false, nil)
 
-	coord := newRealNetworkCoordinator(nil, cr, nil, nil, nil)
+	coord := newRealNetworkCoordinator(nil, cr, nil, nil)
 	ctx := context.Background()
 	_, err := coord.signCert(ctx, &nodeRef)
 	require.EqualError(t, err, "[ SignCert ] Couldn't extract response: [ GetCert ] Couldn't call GetNodeInfo: test_error")
@@ -349,7 +344,7 @@ func TestRealNetworkCoordinator_signCert_SignError(t *testing.T) {
 	cr := mockContractRequester(t, nodeRef, true, mockReply(t))
 	cs := mockCryptographyService(t, false)
 
-	coord := newRealNetworkCoordinator(nil, cr, nil, cs, nil)
+	coord := newRealNetworkCoordinator(nil, cr, nil, cs)
 	ctx := context.Background()
 	_, err := coord.signCert(ctx, &nodeRef)
 	require.EqualError(t, err, "[ SignCert ] Couldn't sign: test_error")
@@ -360,7 +355,7 @@ func TestRealNetworkCoordinator_getNodeInfo(t *testing.T) {
 
 	cr := mockContractRequester(t, nodeRef, true, mockReply(t))
 
-	coord := newRealNetworkCoordinator(nil, cr, nil, nil, nil)
+	coord := newRealNetworkCoordinator(nil, cr, nil, nil)
 	ctx := context.Background()
 	key, role, err := coord.getNodeInfo(ctx, &nodeRef)
 	require.NoError(t, err)
@@ -373,7 +368,7 @@ func TestRealNetworkCoordinator_getNodeInfo_SendRequestError(t *testing.T) {
 
 	cr := mockContractRequester(t, nodeRef, false, nil)
 
-	coord := newRealNetworkCoordinator(nil, cr, nil, nil, nil)
+	coord := newRealNetworkCoordinator(nil, cr, nil, nil)
 	ctx := context.Background()
 	_, _, err := coord.getNodeInfo(ctx, &nodeRef)
 	require.EqualError(t, err, "[ GetCert ] Couldn't call GetNodeInfo: test_error")
@@ -384,7 +379,7 @@ func TestRealNetworkCoordinator_getNodeInfo_ExtractError(t *testing.T) {
 
 	cr := mockContractRequester(t, nodeRef, true, []byte(""))
 
-	coord := newRealNetworkCoordinator(nil, cr, nil, nil, nil)
+	coord := newRealNetworkCoordinator(nil, cr, nil, nil)
 	ctx := context.Background()
 	_, _, err := coord.getNodeInfo(ctx, &nodeRef)
 	require.EqualError(t, err, "[ GetCert ] Couldn't extract response: [ NodeInfoResponse ] Can't unmarshal response: [ UnMarshalResponse ]: [ Deserialize ]: EOF")

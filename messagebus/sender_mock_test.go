@@ -41,12 +41,17 @@ type senderMock struct {
 	NewRecorderPreCounter uint64
 	NewRecorderMock       msenderMockNewRecorder
 
+	OnPulseFunc       func(p context.Context, p1 core.Pulse) (r error)
+	OnPulseCounter    uint64
+	OnPulsePreCounter uint64
+	OnPulseMock       msenderMockOnPulse
+
 	RegisterFunc       func(p core.MessageType, p1 core.MessageHandler) (r error)
 	RegisterCounter    uint64
 	RegisterPreCounter uint64
 	RegisterMock       msenderMockRegister
 
-	SendFunc       func(p context.Context, p1 core.Message, p2 core.Pulse, p3 *core.MessageSendOptions) (r core.Reply, r1 error)
+	SendFunc       func(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) (r core.Reply, r1 error)
 	SendCounter    uint64
 	SendPreCounter uint64
 	SendMock       msenderMockSend
@@ -55,11 +60,6 @@ type senderMock struct {
 	SendParcelCounter    uint64
 	SendParcelPreCounter uint64
 	SendParcelMock       msenderMockSendParcel
-
-	WriteTapeFunc       func(p context.Context, p1 io.Writer) (r error)
-	WriteTapeCounter    uint64
-	WriteTapePreCounter uint64
-	WriteTapeMock       msenderMockWriteTape
 }
 
 //NewsenderMock returns a mock for github.com/insolar/insolar/messagebus.sender
@@ -74,10 +74,10 @@ func NewsenderMock(t minimock.Tester) *senderMock {
 	m.MustRegisterMock = msenderMockMustRegister{mock: m}
 	m.NewPlayerMock = msenderMockNewPlayer{mock: m}
 	m.NewRecorderMock = msenderMockNewRecorder{mock: m}
+	m.OnPulseMock = msenderMockOnPulse{mock: m}
 	m.RegisterMock = msenderMockRegister{mock: m}
 	m.SendMock = msenderMockSend{mock: m}
 	m.SendParcelMock = msenderMockSendParcel{mock: m}
-	m.WriteTapeMock = msenderMockWriteTape{mock: m}
 
 	return m
 }
@@ -661,6 +661,154 @@ func (m *senderMock) NewRecorderFinished() bool {
 	return true
 }
 
+type msenderMockOnPulse struct {
+	mock              *senderMock
+	mainExpectation   *senderMockOnPulseExpectation
+	expectationSeries []*senderMockOnPulseExpectation
+}
+
+type senderMockOnPulseExpectation struct {
+	input  *senderMockOnPulseInput
+	result *senderMockOnPulseResult
+}
+
+type senderMockOnPulseInput struct {
+	p  context.Context
+	p1 core.Pulse
+}
+
+type senderMockOnPulseResult struct {
+	r error
+}
+
+//Expect specifies that invocation of sender.OnPulse is expected from 1 to Infinity times
+func (m *msenderMockOnPulse) Expect(p context.Context, p1 core.Pulse) *msenderMockOnPulse {
+	m.mock.OnPulseFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &senderMockOnPulseExpectation{}
+	}
+	m.mainExpectation.input = &senderMockOnPulseInput{p, p1}
+	return m
+}
+
+//Return specifies results of invocation of sender.OnPulse
+func (m *msenderMockOnPulse) Return(r error) *senderMock {
+	m.mock.OnPulseFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &senderMockOnPulseExpectation{}
+	}
+	m.mainExpectation.result = &senderMockOnPulseResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of sender.OnPulse is expected once
+func (m *msenderMockOnPulse) ExpectOnce(p context.Context, p1 core.Pulse) *senderMockOnPulseExpectation {
+	m.mock.OnPulseFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &senderMockOnPulseExpectation{}
+	expectation.input = &senderMockOnPulseInput{p, p1}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *senderMockOnPulseExpectation) Return(r error) {
+	e.result = &senderMockOnPulseResult{r}
+}
+
+//Set uses given function f as a mock of sender.OnPulse method
+func (m *msenderMockOnPulse) Set(f func(p context.Context, p1 core.Pulse) (r error)) *senderMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.OnPulseFunc = f
+	return m.mock
+}
+
+//OnPulse implements github.com/insolar/insolar/messagebus.sender interface
+func (m *senderMock) OnPulse(p context.Context, p1 core.Pulse) (r error) {
+	counter := atomic.AddUint64(&m.OnPulsePreCounter, 1)
+	defer atomic.AddUint64(&m.OnPulseCounter, 1)
+
+	if len(m.OnPulseMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.OnPulseMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to senderMock.OnPulse. %v %v", p, p1)
+			return
+		}
+
+		input := m.OnPulseMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, senderMockOnPulseInput{p, p1}, "sender.OnPulse got unexpected parameters")
+
+		result := m.OnPulseMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the senderMock.OnPulse")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.OnPulseMock.mainExpectation != nil {
+
+		input := m.OnPulseMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, senderMockOnPulseInput{p, p1}, "sender.OnPulse got unexpected parameters")
+		}
+
+		result := m.OnPulseMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the senderMock.OnPulse")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.OnPulseFunc == nil {
+		m.t.Fatalf("Unexpected call to senderMock.OnPulse. %v %v", p, p1)
+		return
+	}
+
+	return m.OnPulseFunc(p, p1)
+}
+
+//OnPulseMinimockCounter returns a count of senderMock.OnPulseFunc invocations
+func (m *senderMock) OnPulseMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.OnPulseCounter)
+}
+
+//OnPulseMinimockPreCounter returns the value of senderMock.OnPulse invocations
+func (m *senderMock) OnPulseMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.OnPulsePreCounter)
+}
+
+//OnPulseFinished returns true if mock invocations count is ok
+func (m *senderMock) OnPulseFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.OnPulseMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.OnPulseCounter) == uint64(len(m.OnPulseMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.OnPulseMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.OnPulseCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.OnPulseFunc != nil {
+		return atomic.LoadUint64(&m.OnPulseCounter) > 0
+	}
+
+	return true
+}
+
 type msenderMockRegister struct {
 	mock              *senderMock
 	mainExpectation   *senderMockRegisterExpectation
@@ -823,8 +971,7 @@ type senderMockSendExpectation struct {
 type senderMockSendInput struct {
 	p  context.Context
 	p1 core.Message
-	p2 core.Pulse
-	p3 *core.MessageSendOptions
+	p2 *core.MessageSendOptions
 }
 
 type senderMockSendResult struct {
@@ -833,14 +980,14 @@ type senderMockSendResult struct {
 }
 
 //Expect specifies that invocation of sender.Send is expected from 1 to Infinity times
-func (m *msenderMockSend) Expect(p context.Context, p1 core.Message, p2 core.Pulse, p3 *core.MessageSendOptions) *msenderMockSend {
+func (m *msenderMockSend) Expect(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) *msenderMockSend {
 	m.mock.SendFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &senderMockSendExpectation{}
 	}
-	m.mainExpectation.input = &senderMockSendInput{p, p1, p2, p3}
+	m.mainExpectation.input = &senderMockSendInput{p, p1, p2}
 	return m
 }
 
@@ -857,12 +1004,12 @@ func (m *msenderMockSend) Return(r core.Reply, r1 error) *senderMock {
 }
 
 //ExpectOnce specifies that invocation of sender.Send is expected once
-func (m *msenderMockSend) ExpectOnce(p context.Context, p1 core.Message, p2 core.Pulse, p3 *core.MessageSendOptions) *senderMockSendExpectation {
+func (m *msenderMockSend) ExpectOnce(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) *senderMockSendExpectation {
 	m.mock.SendFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &senderMockSendExpectation{}
-	expectation.input = &senderMockSendInput{p, p1, p2, p3}
+	expectation.input = &senderMockSendInput{p, p1, p2}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
@@ -872,7 +1019,7 @@ func (e *senderMockSendExpectation) Return(r core.Reply, r1 error) {
 }
 
 //Set uses given function f as a mock of sender.Send method
-func (m *msenderMockSend) Set(f func(p context.Context, p1 core.Message, p2 core.Pulse, p3 *core.MessageSendOptions) (r core.Reply, r1 error)) *senderMock {
+func (m *msenderMockSend) Set(f func(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) (r core.Reply, r1 error)) *senderMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -881,18 +1028,18 @@ func (m *msenderMockSend) Set(f func(p context.Context, p1 core.Message, p2 core
 }
 
 //Send implements github.com/insolar/insolar/messagebus.sender interface
-func (m *senderMock) Send(p context.Context, p1 core.Message, p2 core.Pulse, p3 *core.MessageSendOptions) (r core.Reply, r1 error) {
+func (m *senderMock) Send(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) (r core.Reply, r1 error) {
 	counter := atomic.AddUint64(&m.SendPreCounter, 1)
 	defer atomic.AddUint64(&m.SendCounter, 1)
 
 	if len(m.SendMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.SendMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to senderMock.Send. %v %v %v %v", p, p1, p2, p3)
+			m.t.Fatalf("Unexpected call to senderMock.Send. %v %v %v", p, p1, p2)
 			return
 		}
 
 		input := m.SendMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, senderMockSendInput{p, p1, p2, p3}, "sender.Send got unexpected parameters")
+		testify_assert.Equal(m.t, *input, senderMockSendInput{p, p1, p2}, "sender.Send got unexpected parameters")
 
 		result := m.SendMock.expectationSeries[counter-1].result
 		if result == nil {
@@ -910,7 +1057,7 @@ func (m *senderMock) Send(p context.Context, p1 core.Message, p2 core.Pulse, p3 
 
 		input := m.SendMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, senderMockSendInput{p, p1, p2, p3}, "sender.Send got unexpected parameters")
+			testify_assert.Equal(m.t, *input, senderMockSendInput{p, p1, p2}, "sender.Send got unexpected parameters")
 		}
 
 		result := m.SendMock.mainExpectation.result
@@ -925,11 +1072,11 @@ func (m *senderMock) Send(p context.Context, p1 core.Message, p2 core.Pulse, p3 
 	}
 
 	if m.SendFunc == nil {
-		m.t.Fatalf("Unexpected call to senderMock.Send. %v %v %v %v", p, p1, p2, p3)
+		m.t.Fatalf("Unexpected call to senderMock.Send. %v %v %v", p, p1, p2)
 		return
 	}
 
-	return m.SendFunc(p, p1, p2, p3)
+	return m.SendFunc(p, p1, p2)
 }
 
 //SendMinimockCounter returns a count of senderMock.SendFunc invocations
@@ -1115,154 +1262,6 @@ func (m *senderMock) SendParcelFinished() bool {
 	return true
 }
 
-type msenderMockWriteTape struct {
-	mock              *senderMock
-	mainExpectation   *senderMockWriteTapeExpectation
-	expectationSeries []*senderMockWriteTapeExpectation
-}
-
-type senderMockWriteTapeExpectation struct {
-	input  *senderMockWriteTapeInput
-	result *senderMockWriteTapeResult
-}
-
-type senderMockWriteTapeInput struct {
-	p  context.Context
-	p1 io.Writer
-}
-
-type senderMockWriteTapeResult struct {
-	r error
-}
-
-//Expect specifies that invocation of sender.WriteTape is expected from 1 to Infinity times
-func (m *msenderMockWriteTape) Expect(p context.Context, p1 io.Writer) *msenderMockWriteTape {
-	m.mock.WriteTapeFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &senderMockWriteTapeExpectation{}
-	}
-	m.mainExpectation.input = &senderMockWriteTapeInput{p, p1}
-	return m
-}
-
-//Return specifies results of invocation of sender.WriteTape
-func (m *msenderMockWriteTape) Return(r error) *senderMock {
-	m.mock.WriteTapeFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &senderMockWriteTapeExpectation{}
-	}
-	m.mainExpectation.result = &senderMockWriteTapeResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of sender.WriteTape is expected once
-func (m *msenderMockWriteTape) ExpectOnce(p context.Context, p1 io.Writer) *senderMockWriteTapeExpectation {
-	m.mock.WriteTapeFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &senderMockWriteTapeExpectation{}
-	expectation.input = &senderMockWriteTapeInput{p, p1}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *senderMockWriteTapeExpectation) Return(r error) {
-	e.result = &senderMockWriteTapeResult{r}
-}
-
-//Set uses given function f as a mock of sender.WriteTape method
-func (m *msenderMockWriteTape) Set(f func(p context.Context, p1 io.Writer) (r error)) *senderMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.WriteTapeFunc = f
-	return m.mock
-}
-
-//WriteTape implements github.com/insolar/insolar/messagebus.sender interface
-func (m *senderMock) WriteTape(p context.Context, p1 io.Writer) (r error) {
-	counter := atomic.AddUint64(&m.WriteTapePreCounter, 1)
-	defer atomic.AddUint64(&m.WriteTapeCounter, 1)
-
-	if len(m.WriteTapeMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.WriteTapeMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to senderMock.WriteTape. %v %v", p, p1)
-			return
-		}
-
-		input := m.WriteTapeMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, senderMockWriteTapeInput{p, p1}, "sender.WriteTape got unexpected parameters")
-
-		result := m.WriteTapeMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the senderMock.WriteTape")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.WriteTapeMock.mainExpectation != nil {
-
-		input := m.WriteTapeMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, senderMockWriteTapeInput{p, p1}, "sender.WriteTape got unexpected parameters")
-		}
-
-		result := m.WriteTapeMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the senderMock.WriteTape")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.WriteTapeFunc == nil {
-		m.t.Fatalf("Unexpected call to senderMock.WriteTape. %v %v", p, p1)
-		return
-	}
-
-	return m.WriteTapeFunc(p, p1)
-}
-
-//WriteTapeMinimockCounter returns a count of senderMock.WriteTapeFunc invocations
-func (m *senderMock) WriteTapeMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.WriteTapeCounter)
-}
-
-//WriteTapeMinimockPreCounter returns the value of senderMock.WriteTape invocations
-func (m *senderMock) WriteTapeMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.WriteTapePreCounter)
-}
-
-//WriteTapeFinished returns true if mock invocations count is ok
-func (m *senderMock) WriteTapeFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.WriteTapeMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.WriteTapeCounter) == uint64(len(m.WriteTapeMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.WriteTapeMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.WriteTapeCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.WriteTapeFunc != nil {
-		return atomic.LoadUint64(&m.WriteTapeCounter) > 0
-	}
-
-	return true
-}
-
 //ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *senderMock) ValidateCallCounters() {
@@ -1283,6 +1282,10 @@ func (m *senderMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to senderMock.NewRecorder")
 	}
 
+	if !m.OnPulseFinished() {
+		m.t.Fatal("Expected call to senderMock.OnPulse")
+	}
+
 	if !m.RegisterFinished() {
 		m.t.Fatal("Expected call to senderMock.Register")
 	}
@@ -1293,10 +1296,6 @@ func (m *senderMock) ValidateCallCounters() {
 
 	if !m.SendParcelFinished() {
 		m.t.Fatal("Expected call to senderMock.SendParcel")
-	}
-
-	if !m.WriteTapeFinished() {
-		m.t.Fatal("Expected call to senderMock.WriteTape")
 	}
 
 }
@@ -1332,6 +1331,10 @@ func (m *senderMock) MinimockFinish() {
 		m.t.Fatal("Expected call to senderMock.NewRecorder")
 	}
 
+	if !m.OnPulseFinished() {
+		m.t.Fatal("Expected call to senderMock.OnPulse")
+	}
+
 	if !m.RegisterFinished() {
 		m.t.Fatal("Expected call to senderMock.Register")
 	}
@@ -1342,10 +1345,6 @@ func (m *senderMock) MinimockFinish() {
 
 	if !m.SendParcelFinished() {
 		m.t.Fatal("Expected call to senderMock.SendParcel")
-	}
-
-	if !m.WriteTapeFinished() {
-		m.t.Fatal("Expected call to senderMock.WriteTape")
 	}
 
 }
@@ -1366,10 +1365,10 @@ func (m *senderMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.MustRegisterFinished()
 		ok = ok && m.NewPlayerFinished()
 		ok = ok && m.NewRecorderFinished()
+		ok = ok && m.OnPulseFinished()
 		ok = ok && m.RegisterFinished()
 		ok = ok && m.SendFinished()
 		ok = ok && m.SendParcelFinished()
-		ok = ok && m.WriteTapeFinished()
 
 		if ok {
 			return
@@ -1394,6 +1393,10 @@ func (m *senderMock) MinimockWait(timeout time.Duration) {
 				m.t.Error("Expected call to senderMock.NewRecorder")
 			}
 
+			if !m.OnPulseFinished() {
+				m.t.Error("Expected call to senderMock.OnPulse")
+			}
+
 			if !m.RegisterFinished() {
 				m.t.Error("Expected call to senderMock.Register")
 			}
@@ -1404,10 +1407,6 @@ func (m *senderMock) MinimockWait(timeout time.Duration) {
 
 			if !m.SendParcelFinished() {
 				m.t.Error("Expected call to senderMock.SendParcel")
-			}
-
-			if !m.WriteTapeFinished() {
-				m.t.Error("Expected call to senderMock.WriteTape")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)
@@ -1438,6 +1437,10 @@ func (m *senderMock) AllMocksCalled() bool {
 		return false
 	}
 
+	if !m.OnPulseFinished() {
+		return false
+	}
+
 	if !m.RegisterFinished() {
 		return false
 	}
@@ -1447,10 +1450,6 @@ func (m *senderMock) AllMocksCalled() bool {
 	}
 
 	if !m.SendParcelFinished() {
-		return false
-	}
-
-	if !m.WriteTapeFinished() {
 		return false
 	}
 

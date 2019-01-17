@@ -4,9 +4,9 @@ package core
 
 import "strconv"
 
-const _MessageType_name = "TypeCallMethodTypeCallConstructorTypeReturnResultsTypeExecutorResultsTypeValidateCaseBindTypeValidationResultsTypePendingFinishedTypeGetCodeTypeGetObjectTypeGetDelegateTypeGetChildrenTypeUpdateObjectTypeRegisterChildTypeJetDropTypeSetRecordTypeValidateRecordTypeSetBlobTypeGetObjectIndexTypeGetPendingRequestsTypeHotRecordsTypeValidationCheckTypeHeavyStartStopTypeHeavyPayloadTypeHeavyResetTypeBootstrapRequestTypeNodeSignRequest"
+const _MessageType_name = "TypeCallMethodTypeCallConstructorTypeReturnResultsTypeExecutorResultsTypeValidateCaseBindTypeValidationResultsTypePendingFinishedTypeStillExecutingTypeGetCodeTypeGetObjectTypeGetDelegateTypeGetChildrenTypeUpdateObjectTypeRegisterChildTypeJetDropTypeSetRecordTypeValidateRecordTypeSetBlobTypeGetObjectIndexTypeGetPendingRequestsTypeHotRecordsTypeGetJetTypeAbandonedRequestsNotificationTypeValidationCheckTypeHeavyStartStopTypeHeavyPayloadTypeHeavyResetTypeHeavyJetTreeTypeBootstrapRequestTypeNodeSignRequest"
 
-var _MessageType_index = [...]uint16{0, 14, 33, 50, 69, 89, 110, 129, 140, 153, 168, 183, 199, 216, 227, 240, 258, 269, 287, 309, 323, 342, 360, 376, 390, 410, 429}
+var _MessageType_index = [...]uint16{0, 14, 33, 50, 69, 89, 110, 129, 147, 158, 171, 186, 201, 217, 234, 245, 258, 276, 287, 305, 327, 341, 351, 384, 403, 421, 437, 451, 467, 487, 506}
 
 func (i MessageType) String() string {
 	if i >= MessageType(len(_MessageType_index)-1) {

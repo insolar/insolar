@@ -449,24 +449,28 @@ func (g *Genesis) makeCertificates(nodes []genesisNode) error {
 		for j, node := range nodes {
 			certs[i].BootstrapNodes[j].NetworkSign, err = certs[i].SignNetworkPart(node.privKey)
 			if err != nil {
-				return errors.Wrap(err, "[ makeCertificates ]")
+				return errors.Wrapf(err, "[ makeCertificates ] Can't SignNetworkPart for %s", node.ref.String())
 			}
 
 			certs[i].BootstrapNodes[j].NodeSign, err = certs[i].SignNodePart(node.privKey)
 			if err != nil {
-				return errors.Wrap(err, "[ makeCertificates ]")
+				return errors.Wrapf(err, "[ makeCertificates ] Can't SignNodePart for %s", node.ref.String())
 			}
 		}
 
 		// save cert to disk
 		cert, err := json.MarshalIndent(certs[i], "", "  ")
 		if err != nil {
-			return errors.Wrap(err, "[ makeCertificates ]")
+			return errors.Wrapf(err, "[ makeCertificates ] Can't MarshalIndent")
+		}
+
+		if len(g.config.DiscoveryNodes[i].CertName) == 0 {
+			return errors.New("[ makeCertificates ] cert_name must not be empty for node " + strconv.Itoa(i+1))
 		}
 
 		err = ioutil.WriteFile(path.Join(g.keyOut, g.config.DiscoveryNodes[i].CertName), cert, 0644)
 		if err != nil {
-			return errors.Wrap(err, "[ makeCertificates ]")
+			return errors.Wrap(err, "[ makeCertificates ] WriteFile")
 		}
 	}
 	return nil

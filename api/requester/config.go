@@ -63,7 +63,7 @@ func ReadUserConfigFromFile(path string) (*UserConfigJSON, error) {
 	}
 
 	ks := platformpolicy.NewKeyProcessor()
-	cfgJSON.privateKeyObject, err = ks.ImportPrivateKey([]byte(cfgJSON.PrivateKey))
+	cfgJSON.privateKeyObject, err = ks.ImportPrivateKeyPEM([]byte(cfgJSON.PrivateKey))
 	if err != nil {
 		return nil, errors.Wrap(err, "[ readUserConfigFromFile ] Problem with reading private key")
 	}
@@ -88,6 +88,6 @@ func CreateUserConfig(caller string, privKey string) (*UserConfigJSON, error) {
 	var err error
 
 	ks := platformpolicy.NewKeyProcessor()
-	userConfig.privateKeyObject, err = ks.ImportPrivateKey([]byte(privKey))
+	userConfig.privateKeyObject, err = ks.ImportPrivateKeyPEM([]byte(privKey))
 	return &userConfig, err
 }

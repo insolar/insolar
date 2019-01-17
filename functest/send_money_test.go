@@ -93,7 +93,7 @@ func TestTransferNegativeAmount(t *testing.T) {
 	amount := -111
 
 	_, err := signedRequest(firstMember, "Transfer", amount, secondMember.ref)
-	require.Contains(t, err.Error(), "[ transferCall ] Amount must be positive")
+	require.EqualError(t, err, "[ makeCall ] Error in called method: [ transferCall ] Can't unmarshal params: [ Deserialize ]: cbor decode error [pos 2]: assigning negative signed value to unsigned type")
 
 	newFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
 	newSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)

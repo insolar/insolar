@@ -17,6 +17,7 @@
 package artifactmanager
 
 import (
+	"context"
 	"testing"
 
 	"github.com/gojuno/minimock"
@@ -25,6 +26,7 @@ import (
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/testmessagebus"
@@ -40,21 +42,34 @@ func TestLedgerArtifactManager_PendingRequest(t *testing.T) {
 	defer cleaner()
 	defer mc.Finish()
 
+	amPulseStorageMock := testutils.NewPulseStorageMock(t)
+	amPulseStorageMock.CurrentFunc = func(p context.Context) (r *core.Pulse, r1 error) {
+		pulse, err := db.GetLatestPulse(p)
+		require.NoError(t, err)
+		return &pulse.Pulse, err
+	}
+
 	cs := testutils.NewPlatformCryptographyScheme()
 	mb := testmessagebus.NewTestMessageBus(t)
+	mb.PulseStorage = amPulseStorageMock
 	jc := testutils.NewJetCoordinatorMock(mc)
-	jc.AmIMock.Return(true, nil)
+	jc.LightExecutorForJetMock.Return(&core.RecordRef{}, nil)
+	jc.MeMock.Return(core.RecordRef{})
 	am := NewArtifactManger(db)
+	am.PulseStorage = amPulseStorageMock
 	am.PlatformCryptographyScheme = cs
 	am.DefaultBus = mb
 	provider := storage.NewRecentStorageProvider(0)
-	handler := NewMessageHandler(db, &configuration.Ledger{})
+	handler := NewMessageHandler(db, &configuration.Ledger{
+		LightChainLimit: 10,
+	})
 	handler.Bus = mb
 	handler.JetCoordinator = jc
 	handler.RecentStorageProvider = provider
 	err := handler.Init(ctx)
 	require.NoError(t, err)
 	objRef := *genRandomRef(0)
+	handler.CloseEarlyRequestCircuitBreakerForJet(ctx, *jet.NewID(0, nil))
 
 	// Register request
 	reqID, err := am.RegisterRequest(ctx, objRef, &message.Parcel{Msg: &message.CallMethod{}, PulseNumber: core.FirstPulseNumber})

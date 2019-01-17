@@ -17,26 +17,30 @@
 package storage
 
 import (
-	"bytes"
 	"context"
 
 	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/ledger/storage/jet"
 )
+
+var rmScanFromPulse = core.PulseNumber(core.FirstPulseNumber + 1).Bytes()
 
 // RemoveJetIndexesUntil removes for provided JetID all lifelines older than provided pulse number.
 func (db *DB) RemoveJetIndexesUntil(ctx context.Context, jetID core.RecordID, pn core.PulseNumber) (int, error) {
-	count := 0
-	prefix := prefixkey(scopeIDLifeline, jetID[:])
-	untilBytes := pn.Bytes()
+	// FIXME: uncomment when heavy is ready.
+	return 0, nil
+	_, prefix := jet.Jet(jetID)
+	jetprefix := prefixkey(scopeIDLifeline, prefix)
+	startprefix := prefixkey(scopeIDLifeline, prefix, rmScanFromPulse)
 
+	count := 0
 	return count, db.db.Update(func(txn *badger.Txn) error {
 		it := txn.NewIterator(badger.DefaultIteratorOptions)
 		defer it.Close()
-		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
+		for it.Seek(startprefix); it.ValidForPrefix(jetprefix); it.Next() {
 			key := it.Item().Key()
-			pulseBytes := key[len(prefix) : len(prefix)+core.PulseNumberSize]
-			if bytes.Compare(pulseBytes, untilBytes) >= 0 {
+			if pulseFromKey(key) >= pn {
 				break
 			}
 			if err := txn.Delete(key); err != nil {

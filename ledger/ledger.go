@@ -101,6 +101,7 @@ func GetLedgerComponents(conf configuration.Ledger) []interface{} {
 		artifactmanager.NewMessageHandler(db, &conf),
 		localstorage.NewLocalStorage(db),
 		heavyserver.NewSync(db),
+		heavyserver.NewHeavyJetSync(db),
 		exporter.NewExporter(db),
 	}
 }

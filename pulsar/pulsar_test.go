@@ -98,10 +98,10 @@ func TestNewPulsar_WithNeighbours(t *testing.T) {
 	keyProcessor := platformpolicy.NewKeyProcessor()
 
 	firstPrivateKey, _ := keyProcessor.GeneratePrivateKey()
-	firstExpectedKey, _ := keyProcessor.ExportPublicKey(keyProcessor.ExtractPublicKey(firstPrivateKey))
+	firstExpectedKey, _ := keyProcessor.ExportPublicKeyPEM(keyProcessor.ExtractPublicKey(firstPrivateKey))
 
 	secondPrivateKey, _ := keyProcessor.GeneratePrivateKey()
-	secondExpectedKey, _ := keyProcessor.ExportPublicKey(keyProcessor.ExtractPublicKey(secondPrivateKey))
+	secondExpectedKey, _ := keyProcessor.ExportPublicKeyPEM(keyProcessor.ExtractPublicKey(secondPrivateKey))
 
 	pulsarPrivateKey, _ := keyProcessor.GeneratePrivateKey()
 	pulsarCryptoService := cryptography.NewKeyBoundCryptographyService(pulsarPrivateKey)
@@ -154,7 +154,7 @@ func TestPulsar_EstablishConnection_IsInitialised(t *testing.T) {
 
 	keyProcessor := platformpolicy.NewKeyProcessor()
 	firstPrivateKey, _ := keyProcessor.GeneratePrivateKey()
-	expectedNeighbourKey, _ := keyProcessor.ExportPublicKey(keyProcessor.ExtractPublicKey(firstPrivateKey))
+	expectedNeighbourKey, _ := keyProcessor.ExportPublicKeyPEM(keyProcessor.ExtractPublicKey(firstPrivateKey))
 	expectedNeighbour := &Neighbour{OutgoingClient: mockClientWrapper}
 	pulsar.Neighbours[string(expectedNeighbourKey)] = expectedNeighbour
 
@@ -180,7 +180,7 @@ func TestPulsar_EstablishConnection_IsNotInitialised_ProblemsCreateConnection(t 
 
 	keyProcessor := platformpolicy.NewKeyProcessor()
 	firstPrivateKey, _ := keyProcessor.GeneratePrivateKey()
-	expectedNeighbourKey, _ := keyProcessor.ExportPublicKey(keyProcessor.ExtractPublicKey(firstPrivateKey))
+	expectedNeighbourKey, _ := keyProcessor.ExportPublicKeyPEM(keyProcessor.ExtractPublicKey(firstPrivateKey))
 	expectedNeighbour := &Neighbour{OutgoingClient: clientMock}
 	pulsar.Neighbours[string(expectedNeighbourKey)] = expectedNeighbour
 
@@ -216,7 +216,7 @@ func TestPulsar_EstablishConnection_IsNotInitialised_ProblemsWithRequest(t *test
 
 	secondKeyProcessor := platformpolicy.NewKeyProcessor()
 	secondPrivateKey, _ := secondKeyProcessor.GeneratePrivateKey()
-	expectedNeighbourKey, _ := secondKeyProcessor.ExportPublicKey(secondKeyProcessor.ExtractPublicKey(secondPrivateKey))
+	expectedNeighbourKey, _ := secondKeyProcessor.ExportPublicKeyPEM(secondKeyProcessor.ExtractPublicKey(secondPrivateKey))
 	expectedNeighbour := &Neighbour{OutgoingClient: mockClientWrapper}
 	pulsar.Neighbours[string(expectedNeighbourKey)] = expectedNeighbour
 
@@ -250,7 +250,7 @@ func TestPulsar_EstablishConnection_IsNotInitialised_SignatureFailed(t *testing.
 
 	secondKeyProcessor := platformpolicy.NewKeyProcessor()
 	secondPrivateKey, _ := secondKeyProcessor.GeneratePrivateKey()
-	expectedNeighbourKey, err := secondKeyProcessor.ExportPublicKey(secondKeyProcessor.ExtractPublicKey(secondPrivateKey))
+	expectedNeighbourKey, err := secondKeyProcessor.ExportPublicKeyPEM(secondKeyProcessor.ExtractPublicKey(secondPrivateKey))
 	require.NoError(t, err)
 	expectedNeighbour := &Neighbour{OutgoingClient: mockClientWrapper}
 	pulsar.Neighbours[string(expectedNeighbourKey)] = expectedNeighbour
@@ -279,7 +279,7 @@ func TestPulsar_EstablishConnection_IsNotInitialised_Success(t *testing.T) {
 	secondPrivateKey, err := secondKeyProcessor.GeneratePrivateKey()
 	require.NoError(t, err)
 	secondCryptoService := cryptography.NewKeyBoundCryptographyService(secondPrivateKey)
-	expectedNeighbourKey, err := secondKeyProcessor.ExportPublicKey(secondKeyProcessor.ExtractPublicKey(secondPrivateKey))
+	expectedNeighbourKey, err := secondKeyProcessor.ExportPublicKeyPEM(secondKeyProcessor.ExtractPublicKey(secondPrivateKey))
 	require.NoError(t, err)
 
 	secondScheme := platformpolicy.NewPlatformCryptographyScheme()
@@ -326,7 +326,7 @@ func TestPulsar_CheckConnectionsToPulsars_NoProblems(t *testing.T) {
 	keyProcessor := platformpolicy.NewKeyProcessor()
 	firstNeighbourPrivateKey, _ := keyProcessor.GeneratePrivateKey()
 	firstNeighbourPublicKey := keyProcessor.ExtractPublicKey(firstNeighbourPrivateKey)
-	firstNeighbourExpectedKey, _ := keyProcessor.ExportPublicKey(firstNeighbourPublicKey)
+	firstNeighbourExpectedKey, _ := keyProcessor.ExportPublicKeyPEM(firstNeighbourPublicKey)
 	pulsar.Neighbours[string(firstNeighbourExpectedKey)] = &Neighbour{
 		PublicKey:      firstNeighbourPublicKey,
 		OutgoingClient: clientMock,
@@ -442,7 +442,7 @@ func TestPulsar_StartConsensusProcess_Success(t *testing.T) {
 		EntropyGenerator:           pulsartestutils.MockEntropyGenerator{},
 		CryptographyService:        cryptoService,
 		PlatformCryptographyScheme: scheme,
-		OwnedBftRow:                map[string]*BftCell{},
+		ownedBftRow:                map[string]*BftCell{},
 	}
 	pulsar.ProcessingPulseNumber = core.PulseNumber(120)
 	pulsar.SetLastPulse(&core.Pulse{PulseNumber: core.PulseNumber(2)})
@@ -523,7 +523,7 @@ func TestPulsar_broadcastVector_StateFailed(t *testing.T) {
 		Neighbours: map[string]*Neighbour{
 			"1": {},
 		},
-		OwnedBftRow:           map[string]*BftCell{},
+		ownedBftRow:           map[string]*BftCell{},
 		StateSwitcher:         mockSwitcher,
 		ProcessingPulseNumber: core.PulseNumber(123),
 	}
@@ -555,7 +555,7 @@ func TestPulsar_broadcastVector_SendToNeighbours(t *testing.T) {
 			"2": {OutgoingClient: mockClientWrapper, ConnectionAddress: "second"},
 		},
 		CryptographyService:        cryptoService,
-		OwnedBftRow:                map[string]*BftCell{},
+		ownedBftRow:                map[string]*BftCell{},
 		StateSwitcher:              mockSwitcher,
 		GeneratedEntropySign:       pulsartestutils.MockEntropy[:],
 		generatedEntropy:           &generatedEntropy,
@@ -583,7 +583,7 @@ func TestPulsar_broadcastEntropy_StateFailed(t *testing.T) {
 		Neighbours: map[string]*Neighbour{
 			"1": {},
 		},
-		OwnedBftRow:           map[string]*BftCell{},
+		ownedBftRow:           map[string]*BftCell{},
 		StateSwitcher:         mockSwitcher,
 		ProcessingPulseNumber: core.PulseNumber(123),
 	}
@@ -676,7 +676,7 @@ func TestPulsar_sendVector_TwoPulsars(t *testing.T) {
 		Neighbours:                 map[string]*Neighbour{},
 		CryptographyService:        cryptoService,
 		PlatformCryptographyScheme: scheme,
-		OwnedBftRow:                map[string]*BftCell{},
+		ownedBftRow:                map[string]*BftCell{},
 		bftGrid:                    map[string]map[string]*BftCell{},
 	}
 
@@ -725,7 +725,7 @@ func TestPulsar_sendEntropy_TwoPulsars(t *testing.T) {
 	pulsar := Pulsar{
 		Neighbours:                 map[string]*Neighbour{},
 		CryptographyService:        cryptoService,
-		OwnedBftRow:                map[string]*BftCell{},
+		ownedBftRow:                map[string]*BftCell{},
 		PlatformCryptographyScheme: scheme,
 	}
 	generatedEntropy := core.Entropy(pulsartestutils.MockEntropy)
@@ -751,7 +751,7 @@ func TestPulsar_verify_failedState(t *testing.T) {
 	switcherMock.GetStateMock.Return(Failed)
 	pulsar := &Pulsar{StateSwitcher: switcherMock}
 	pulsar.PublicKeyRaw = "testKey"
-	pulsar.OwnedBftRow = map[string]*BftCell{}
+	pulsar.ownedBftRow = map[string]*BftCell{}
 	pulsar.bftGrid = map[string]map[string]*BftCell{}
 
 	pulsar.verify(ctx)
@@ -766,7 +766,7 @@ func TestPulsar_verify_Standalone_Success(t *testing.T) {
 	pulsar.PublicKeyRaw = "testKey"
 	generatedEntropy := core.Entropy(pulsartestutils.MockEntropy)
 	pulsar.generatedEntropy = &generatedEntropy
-	pulsar.OwnedBftRow = map[string]*BftCell{}
+	pulsar.ownedBftRow = map[string]*BftCell{}
 	pulsar.bftGrid = map[string]map[string]*BftCell{}
 
 	pulsar.verify(ctx)
@@ -791,7 +791,7 @@ func TestPulsar_verify_NotEnoughForConsensus_Success(t *testing.T) {
 		StateSwitcher:       mockSwitcher,
 		PublicKeyRaw:        "testKey",
 		CryptographyService: cryptoService,
-		OwnedBftRow:         map[string]*BftCell{},
+		ownedBftRow:         map[string]*BftCell{},
 		bftGrid:             map[string]map[string]*BftCell{},
 		Neighbours: map[string]*Neighbour{
 			"1": {},
@@ -828,7 +828,7 @@ func TestPulsar_verify_Success(t *testing.T) {
 		kp := platformpolicy.NewKeyProcessor()
 		key, _ := kp.GeneratePrivateKey()
 		publicKey := kp.ExtractPublicKey(key)
-		pubKeyString, _ := kp.ExportPublicKey(publicKey)
+		pubKeyString, _ := kp.ExportPublicKeyPEM(publicKey)
 
 		return key, publicKey, string(pubKeyString)
 	}
@@ -846,13 +846,13 @@ func TestPulsar_verify_Success(t *testing.T) {
 	thirdCryptoService := cryptography.NewKeyBoundCryptographyService(thirdPrivate)
 
 	pulsar := &Pulsar{
-		KeyProcessor:                   platformpolicy.NewKeyProcessor(),
-		StateSwitcher:                  mockSwitcher,
-		CryptographyService:            pulsarCryptoService,
-		PlatformCryptographyScheme:     platformpolicy.NewPlatformCryptographyScheme(),
-		PublicKeyRaw:                   currentPulsarPublicKey,
-		OwnedBftRow:                    map[string]*BftCell{},
-		bftGrid:                        map[string]map[string]*BftCell{},
+		KeyProcessor:               platformpolicy.NewKeyProcessor(),
+		StateSwitcher:              mockSwitcher,
+		CryptographyService:        pulsarCryptoService,
+		PlatformCryptographyScheme: platformpolicy.NewPlatformCryptographyScheme(),
+		PublicKeyRaw:               currentPulsarPublicKey,
+		ownedBftRow:                map[string]*BftCell{},
+		bftGrid:                    map[string]map[string]*BftCell{},
 		CurrentSlotSenderConfirmations: map[string]core.PulseSenderConfirmation{},
 		Neighbours: map[string]*Neighbour{
 			publicKeySecond: {PublicKey: pub2, OutgoingClient: &clientMock},

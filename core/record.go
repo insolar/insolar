@@ -20,9 +20,10 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/json"
+	"fmt"
 	"strings"
 
-	"github.com/jbenet/go-base58"
+	base58 "github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 )
 
@@ -43,6 +44,38 @@ type RecordID [RecordIDSize]byte
 // String implements stringer on RecordID and returns base58 encoded value
 func (id *RecordID) String() string {
 	return base58.Encode(id[:])
+}
+
+func (id *RecordID) JetIDString() string {
+	jetPN := id[:PulseNumberSize]
+	depth := int(uint8(id[PulseNumberSize]))
+	prefix := id[PulseNumberSize+1:]
+
+	prefixBits := make([]int, len(prefix)*8)
+	for i, b := range prefix {
+		for j := 0; j < 8; j++ {
+			prefixBits[i*8+j] = int(b >> uint(7-j) & 0x01)
+		}
+	}
+
+	var prefixStr string
+	if depth == 0 {
+		prefixStr = "-"
+	} else {
+		if depth > len(prefixBits) {
+			return fmt.Sprintf("[JET: <wrong format> %d %b]", depth, prefix)
+		}
+		for i := 0; i < depth; i++ {
+			prefixStr = fmt.Sprintf("%s%d", prefixStr, prefixBits[i])
+		}
+	}
+	str := fmt.Sprintf("depth=%d prefix=%s", depth, fmt.Sprint(prefixBits))
+	if !bytes.Equal(jetPN, PulseNumberJet.Bytes()) {
+		str = fmt.Sprintf("[JET (BAD PULSE NUMBER) %d %s]", depth, prefixStr)
+	} else {
+		str = fmt.Sprintf("[JET %d %s]", depth, prefixStr)
+	}
+	return str
 }
 
 // NewRecordID generates RecordID byte representation.
@@ -192,4 +225,8 @@ func (ref *RecordRef) MarshalJSON() ([]byte, error) {
 		return json.Marshal(nil)
 	}
 	return json.Marshal(ref.String())
+}
+
+func (id *RecordID) DebugString() string {
+	return fmt.Sprintf("[%d | %s]", id.Pulse(), id.String())
 }

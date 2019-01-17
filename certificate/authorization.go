@@ -83,7 +83,7 @@ func Deserialize(data []byte, keyProc core.KeyProcessor) (core.AuthorizationCert
 		return nil, errors.Wrap(err, "[ AuthorizatonCertificate::Deserialize ] failed to deserialize a data")
 	}
 
-	key, err := keyProc.ImportPublicKey([]byte(cert.PublicKey))
+	key, err := keyProc.ImportPublicKeyPEM([]byte(cert.PublicKey))
 
 	if err != nil {
 		return nil, errors.Wrap(err, "[ AuthorizationCertificate::Deserialize ] failed to import a public key")

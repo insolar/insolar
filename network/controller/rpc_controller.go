@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/gob"
 	"fmt"
+	"github.com/insolar/insolar/metrics"
 	"strings"
 	"time"
 
@@ -172,9 +173,12 @@ func (rpc *RPCController) SendMessage(nodeID core.RecordRef, name string, msg co
 	ctx := msg.Context(context.Background())
 	inslogger.FromContext(ctx).Debugf("SendParcel with nodeID = %s method = %s, message reference = %s", nodeID.String(),
 		name, msg.DefaultTarget().String())
+
+	msgBytes := message.ParcelToBytes(msg)
+	metrics.ParcelsSentSizeBytes.WithLabelValues(msg.Type().String()).Observe(float64(len(msgBytes)))
 	request := rpc.hostNetwork.NewRequestBuilder().Type(types.RPC).Data(&RequestRPC{
 		Method: name,
-		Data:   [][]byte{message.ParcelToBytes(msg)},
+		Data:   [][]byte{msgBytes},
 	}).Build()
 	future, err := rpc.hostNetwork.SendRequest(request, nodeID)
 	if err != nil {
@@ -190,6 +194,7 @@ func (rpc *RPCController) SendMessage(nodeID core.RecordRef, name string, msg co
 	if !data.Success {
 		return nil, errors.New("RPC call returned error: " + data.Error)
 	}
+	metrics.ParcelsReplySizeBytes.WithLabelValues(msg.Type().String()).Observe(float64(len(data.Result)))
 	return data.Result, nil
 }
 

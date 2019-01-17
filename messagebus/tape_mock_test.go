@@ -21,15 +21,15 @@ import (
 type tapeMock struct {
 	t minimock.Tester
 
-	GetReplyFunc       func(p context.Context, p1 []byte) (r core.Reply, r1 error)
-	GetReplyCounter    uint64
-	GetReplyPreCounter uint64
-	GetReplyMock       mtapeMockGetReply
+	GetFunc       func(p context.Context, p1 []byte) (r *TapeItem, r1 error)
+	GetCounter    uint64
+	GetPreCounter uint64
+	GetMock       mtapeMockGet
 
-	SetReplyFunc       func(p context.Context, p1 []byte, p2 core.Reply) (r error)
-	SetReplyCounter    uint64
-	SetReplyPreCounter uint64
-	SetReplyMock       mtapeMockSetReply
+	SetFunc       func(p context.Context, p1 []byte, p2 core.Reply, p3 error) (r error)
+	SetCounter    uint64
+	SetPreCounter uint64
+	SetMock       mtapeMockSet
 
 	WriteFunc       func(p context.Context, p1 io.Writer) (r error)
 	WriteCounter    uint64
@@ -45,99 +45,99 @@ func NewtapeMock(t minimock.Tester) *tapeMock {
 		controller.RegisterMocker(m)
 	}
 
-	m.GetReplyMock = mtapeMockGetReply{mock: m}
-	m.SetReplyMock = mtapeMockSetReply{mock: m}
+	m.GetMock = mtapeMockGet{mock: m}
+	m.SetMock = mtapeMockSet{mock: m}
 	m.WriteMock = mtapeMockWrite{mock: m}
 
 	return m
 }
 
-type mtapeMockGetReply struct {
+type mtapeMockGet struct {
 	mock              *tapeMock
-	mainExpectation   *tapeMockGetReplyExpectation
-	expectationSeries []*tapeMockGetReplyExpectation
+	mainExpectation   *tapeMockGetExpectation
+	expectationSeries []*tapeMockGetExpectation
 }
 
-type tapeMockGetReplyExpectation struct {
-	input  *tapeMockGetReplyInput
-	result *tapeMockGetReplyResult
+type tapeMockGetExpectation struct {
+	input  *tapeMockGetInput
+	result *tapeMockGetResult
 }
 
-type tapeMockGetReplyInput struct {
+type tapeMockGetInput struct {
 	p  context.Context
 	p1 []byte
 }
 
-type tapeMockGetReplyResult struct {
-	r  core.Reply
+type tapeMockGetResult struct {
+	r  *TapeItem
 	r1 error
 }
 
-//Expect specifies that invocation of tape.GetReply is expected from 1 to Infinity times
-func (m *mtapeMockGetReply) Expect(p context.Context, p1 []byte) *mtapeMockGetReply {
-	m.mock.GetReplyFunc = nil
+//Expect specifies that invocation of tape.Get is expected from 1 to Infinity times
+func (m *mtapeMockGet) Expect(p context.Context, p1 []byte) *mtapeMockGet {
+	m.mock.GetFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &tapeMockGetReplyExpectation{}
+		m.mainExpectation = &tapeMockGetExpectation{}
 	}
-	m.mainExpectation.input = &tapeMockGetReplyInput{p, p1}
+	m.mainExpectation.input = &tapeMockGetInput{p, p1}
 	return m
 }
 
-//Return specifies results of invocation of tape.GetReply
-func (m *mtapeMockGetReply) Return(r core.Reply, r1 error) *tapeMock {
-	m.mock.GetReplyFunc = nil
+//Return specifies results of invocation of tape.Get
+func (m *mtapeMockGet) Return(r *TapeItem, r1 error) *tapeMock {
+	m.mock.GetFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &tapeMockGetReplyExpectation{}
+		m.mainExpectation = &tapeMockGetExpectation{}
 	}
-	m.mainExpectation.result = &tapeMockGetReplyResult{r, r1}
+	m.mainExpectation.result = &tapeMockGetResult{r, r1}
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of tape.GetReply is expected once
-func (m *mtapeMockGetReply) ExpectOnce(p context.Context, p1 []byte) *tapeMockGetReplyExpectation {
-	m.mock.GetReplyFunc = nil
+//ExpectOnce specifies that invocation of tape.Get is expected once
+func (m *mtapeMockGet) ExpectOnce(p context.Context, p1 []byte) *tapeMockGetExpectation {
+	m.mock.GetFunc = nil
 	m.mainExpectation = nil
 
-	expectation := &tapeMockGetReplyExpectation{}
-	expectation.input = &tapeMockGetReplyInput{p, p1}
+	expectation := &tapeMockGetExpectation{}
+	expectation.input = &tapeMockGetInput{p, p1}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
-func (e *tapeMockGetReplyExpectation) Return(r core.Reply, r1 error) {
-	e.result = &tapeMockGetReplyResult{r, r1}
+func (e *tapeMockGetExpectation) Return(r *TapeItem, r1 error) {
+	e.result = &tapeMockGetResult{r, r1}
 }
 
-//Set uses given function f as a mock of tape.GetReply method
-func (m *mtapeMockGetReply) Set(f func(p context.Context, p1 []byte) (r core.Reply, r1 error)) *tapeMock {
+//Set uses given function f as a mock of tape.Get method
+func (m *mtapeMockGet) Set(f func(p context.Context, p1 []byte) (r *TapeItem, r1 error)) *tapeMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
-	m.mock.GetReplyFunc = f
+	m.mock.GetFunc = f
 	return m.mock
 }
 
-//GetReply implements github.com/insolar/insolar/messagebus.tape interface
-func (m *tapeMock) GetReply(p context.Context, p1 []byte) (r core.Reply, r1 error) {
-	counter := atomic.AddUint64(&m.GetReplyPreCounter, 1)
-	defer atomic.AddUint64(&m.GetReplyCounter, 1)
+//Get implements github.com/insolar/insolar/messagebus.tape interface
+func (m *tapeMock) Get(p context.Context, p1 []byte) (r *TapeItem, r1 error) {
+	counter := atomic.AddUint64(&m.GetPreCounter, 1)
+	defer atomic.AddUint64(&m.GetCounter, 1)
 
-	if len(m.GetReplyMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.GetReplyMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to tapeMock.GetReply. %v %v", p, p1)
+	if len(m.GetMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.GetMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to tapeMock.Get. %v %v", p, p1)
 			return
 		}
 
-		input := m.GetReplyMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, tapeMockGetReplyInput{p, p1}, "tape.GetReply got unexpected parameters")
+		input := m.GetMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, tapeMockGetInput{p, p1}, "tape.Get got unexpected parameters")
 
-		result := m.GetReplyMock.expectationSeries[counter-1].result
+		result := m.GetMock.expectationSeries[counter-1].result
 		if result == nil {
-			m.t.Fatal("No results are set for the tapeMock.GetReply")
+			m.t.Fatal("No results are set for the tapeMock.Get")
 			return
 		}
 
@@ -147,16 +147,16 @@ func (m *tapeMock) GetReply(p context.Context, p1 []byte) (r core.Reply, r1 erro
 		return
 	}
 
-	if m.GetReplyMock.mainExpectation != nil {
+	if m.GetMock.mainExpectation != nil {
 
-		input := m.GetReplyMock.mainExpectation.input
+		input := m.GetMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, tapeMockGetReplyInput{p, p1}, "tape.GetReply got unexpected parameters")
+			testify_assert.Equal(m.t, *input, tapeMockGetInput{p, p1}, "tape.Get got unexpected parameters")
 		}
 
-		result := m.GetReplyMock.mainExpectation.result
+		result := m.GetMock.mainExpectation.result
 		if result == nil {
-			m.t.Fatal("No results are set for the tapeMock.GetReply")
+			m.t.Fatal("No results are set for the tapeMock.Get")
 		}
 
 		r = result.r
@@ -165,130 +165,131 @@ func (m *tapeMock) GetReply(p context.Context, p1 []byte) (r core.Reply, r1 erro
 		return
 	}
 
-	if m.GetReplyFunc == nil {
-		m.t.Fatalf("Unexpected call to tapeMock.GetReply. %v %v", p, p1)
+	if m.GetFunc == nil {
+		m.t.Fatalf("Unexpected call to tapeMock.Get. %v %v", p, p1)
 		return
 	}
 
-	return m.GetReplyFunc(p, p1)
+	return m.GetFunc(p, p1)
 }
 
-//GetReplyMinimockCounter returns a count of tapeMock.GetReplyFunc invocations
-func (m *tapeMock) GetReplyMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.GetReplyCounter)
+//GetMinimockCounter returns a count of tapeMock.GetFunc invocations
+func (m *tapeMock) GetMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.GetCounter)
 }
 
-//GetReplyMinimockPreCounter returns the value of tapeMock.GetReply invocations
-func (m *tapeMock) GetReplyMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.GetReplyPreCounter)
+//GetMinimockPreCounter returns the value of tapeMock.Get invocations
+func (m *tapeMock) GetMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.GetPreCounter)
 }
 
-//GetReplyFinished returns true if mock invocations count is ok
-func (m *tapeMock) GetReplyFinished() bool {
+//GetFinished returns true if mock invocations count is ok
+func (m *tapeMock) GetFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.GetReplyMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.GetReplyCounter) == uint64(len(m.GetReplyMock.expectationSeries))
+	if len(m.GetMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.GetCounter) == uint64(len(m.GetMock.expectationSeries))
 	}
 
 	// if main expectation was set then invocations count should be greater than zero
-	if m.GetReplyMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.GetReplyCounter) > 0
+	if m.GetMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.GetCounter) > 0
 	}
 
 	// if func was set then invocations count should be greater than zero
-	if m.GetReplyFunc != nil {
-		return atomic.LoadUint64(&m.GetReplyCounter) > 0
+	if m.GetFunc != nil {
+		return atomic.LoadUint64(&m.GetCounter) > 0
 	}
 
 	return true
 }
 
-type mtapeMockSetReply struct {
+type mtapeMockSet struct {
 	mock              *tapeMock
-	mainExpectation   *tapeMockSetReplyExpectation
-	expectationSeries []*tapeMockSetReplyExpectation
+	mainExpectation   *tapeMockSetExpectation
+	expectationSeries []*tapeMockSetExpectation
 }
 
-type tapeMockSetReplyExpectation struct {
-	input  *tapeMockSetReplyInput
-	result *tapeMockSetReplyResult
+type tapeMockSetExpectation struct {
+	input  *tapeMockSetInput
+	result *tapeMockSetResult
 }
 
-type tapeMockSetReplyInput struct {
+type tapeMockSetInput struct {
 	p  context.Context
 	p1 []byte
 	p2 core.Reply
+	p3 error
 }
 
-type tapeMockSetReplyResult struct {
+type tapeMockSetResult struct {
 	r error
 }
 
-//Expect specifies that invocation of tape.SetReply is expected from 1 to Infinity times
-func (m *mtapeMockSetReply) Expect(p context.Context, p1 []byte, p2 core.Reply) *mtapeMockSetReply {
-	m.mock.SetReplyFunc = nil
+//Expect specifies that invocation of tape.Set is expected from 1 to Infinity times
+func (m *mtapeMockSet) Expect(p context.Context, p1 []byte, p2 core.Reply, p3 error) *mtapeMockSet {
+	m.mock.SetFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &tapeMockSetReplyExpectation{}
+		m.mainExpectation = &tapeMockSetExpectation{}
 	}
-	m.mainExpectation.input = &tapeMockSetReplyInput{p, p1, p2}
+	m.mainExpectation.input = &tapeMockSetInput{p, p1, p2, p3}
 	return m
 }
 
-//Return specifies results of invocation of tape.SetReply
-func (m *mtapeMockSetReply) Return(r error) *tapeMock {
-	m.mock.SetReplyFunc = nil
+//Return specifies results of invocation of tape.Set
+func (m *mtapeMockSet) Return(r error) *tapeMock {
+	m.mock.SetFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &tapeMockSetReplyExpectation{}
+		m.mainExpectation = &tapeMockSetExpectation{}
 	}
-	m.mainExpectation.result = &tapeMockSetReplyResult{r}
+	m.mainExpectation.result = &tapeMockSetResult{r}
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of tape.SetReply is expected once
-func (m *mtapeMockSetReply) ExpectOnce(p context.Context, p1 []byte, p2 core.Reply) *tapeMockSetReplyExpectation {
-	m.mock.SetReplyFunc = nil
+//ExpectOnce specifies that invocation of tape.Set is expected once
+func (m *mtapeMockSet) ExpectOnce(p context.Context, p1 []byte, p2 core.Reply, p3 error) *tapeMockSetExpectation {
+	m.mock.SetFunc = nil
 	m.mainExpectation = nil
 
-	expectation := &tapeMockSetReplyExpectation{}
-	expectation.input = &tapeMockSetReplyInput{p, p1, p2}
+	expectation := &tapeMockSetExpectation{}
+	expectation.input = &tapeMockSetInput{p, p1, p2, p3}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
-func (e *tapeMockSetReplyExpectation) Return(r error) {
-	e.result = &tapeMockSetReplyResult{r}
+func (e *tapeMockSetExpectation) Return(r error) {
+	e.result = &tapeMockSetResult{r}
 }
 
-//Set uses given function f as a mock of tape.SetReply method
-func (m *mtapeMockSetReply) Set(f func(p context.Context, p1 []byte, p2 core.Reply) (r error)) *tapeMock {
+//Set uses given function f as a mock of tape.Set method
+func (m *mtapeMockSet) Set(f func(p context.Context, p1 []byte, p2 core.Reply, p3 error) (r error)) *tapeMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
-	m.mock.SetReplyFunc = f
+	m.mock.SetFunc = f
 	return m.mock
 }
 
-//SetReply implements github.com/insolar/insolar/messagebus.tape interface
-func (m *tapeMock) SetReply(p context.Context, p1 []byte, p2 core.Reply) (r error) {
-	counter := atomic.AddUint64(&m.SetReplyPreCounter, 1)
-	defer atomic.AddUint64(&m.SetReplyCounter, 1)
+//Set implements github.com/insolar/insolar/messagebus.tape interface
+func (m *tapeMock) Set(p context.Context, p1 []byte, p2 core.Reply, p3 error) (r error) {
+	counter := atomic.AddUint64(&m.SetPreCounter, 1)
+	defer atomic.AddUint64(&m.SetCounter, 1)
 
-	if len(m.SetReplyMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.SetReplyMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to tapeMock.SetReply. %v %v %v", p, p1, p2)
+	if len(m.SetMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.SetMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to tapeMock.Set. %v %v %v %v", p, p1, p2, p3)
 			return
 		}
 
-		input := m.SetReplyMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, tapeMockSetReplyInput{p, p1, p2}, "tape.SetReply got unexpected parameters")
+		input := m.SetMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, tapeMockSetInput{p, p1, p2, p3}, "tape.Set got unexpected parameters")
 
-		result := m.SetReplyMock.expectationSeries[counter-1].result
+		result := m.SetMock.expectationSeries[counter-1].result
 		if result == nil {
-			m.t.Fatal("No results are set for the tapeMock.SetReply")
+			m.t.Fatal("No results are set for the tapeMock.Set")
 			return
 		}
 
@@ -297,16 +298,16 @@ func (m *tapeMock) SetReply(p context.Context, p1 []byte, p2 core.Reply) (r erro
 		return
 	}
 
-	if m.SetReplyMock.mainExpectation != nil {
+	if m.SetMock.mainExpectation != nil {
 
-		input := m.SetReplyMock.mainExpectation.input
+		input := m.SetMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, tapeMockSetReplyInput{p, p1, p2}, "tape.SetReply got unexpected parameters")
+			testify_assert.Equal(m.t, *input, tapeMockSetInput{p, p1, p2, p3}, "tape.Set got unexpected parameters")
 		}
 
-		result := m.SetReplyMock.mainExpectation.result
+		result := m.SetMock.mainExpectation.result
 		if result == nil {
-			m.t.Fatal("No results are set for the tapeMock.SetReply")
+			m.t.Fatal("No results are set for the tapeMock.Set")
 		}
 
 		r = result.r
@@ -314,39 +315,39 @@ func (m *tapeMock) SetReply(p context.Context, p1 []byte, p2 core.Reply) (r erro
 		return
 	}
 
-	if m.SetReplyFunc == nil {
-		m.t.Fatalf("Unexpected call to tapeMock.SetReply. %v %v %v", p, p1, p2)
+	if m.SetFunc == nil {
+		m.t.Fatalf("Unexpected call to tapeMock.Set. %v %v %v %v", p, p1, p2, p3)
 		return
 	}
 
-	return m.SetReplyFunc(p, p1, p2)
+	return m.SetFunc(p, p1, p2, p3)
 }
 
-//SetReplyMinimockCounter returns a count of tapeMock.SetReplyFunc invocations
-func (m *tapeMock) SetReplyMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.SetReplyCounter)
+//SetMinimockCounter returns a count of tapeMock.SetFunc invocations
+func (m *tapeMock) SetMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.SetCounter)
 }
 
-//SetReplyMinimockPreCounter returns the value of tapeMock.SetReply invocations
-func (m *tapeMock) SetReplyMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.SetReplyPreCounter)
+//SetMinimockPreCounter returns the value of tapeMock.Set invocations
+func (m *tapeMock) SetMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.SetPreCounter)
 }
 
-//SetReplyFinished returns true if mock invocations count is ok
-func (m *tapeMock) SetReplyFinished() bool {
+//SetFinished returns true if mock invocations count is ok
+func (m *tapeMock) SetFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.SetReplyMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.SetReplyCounter) == uint64(len(m.SetReplyMock.expectationSeries))
+	if len(m.SetMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.SetCounter) == uint64(len(m.SetMock.expectationSeries))
 	}
 
 	// if main expectation was set then invocations count should be greater than zero
-	if m.SetReplyMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.SetReplyCounter) > 0
+	if m.SetMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.SetCounter) > 0
 	}
 
 	// if func was set then invocations count should be greater than zero
-	if m.SetReplyFunc != nil {
-		return atomic.LoadUint64(&m.SetReplyCounter) > 0
+	if m.SetFunc != nil {
+		return atomic.LoadUint64(&m.SetCounter) > 0
 	}
 
 	return true
@@ -504,12 +505,12 @@ func (m *tapeMock) WriteFinished() bool {
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *tapeMock) ValidateCallCounters() {
 
-	if !m.GetReplyFinished() {
-		m.t.Fatal("Expected call to tapeMock.GetReply")
+	if !m.GetFinished() {
+		m.t.Fatal("Expected call to tapeMock.Get")
 	}
 
-	if !m.SetReplyFinished() {
-		m.t.Fatal("Expected call to tapeMock.SetReply")
+	if !m.SetFinished() {
+		m.t.Fatal("Expected call to tapeMock.Set")
 	}
 
 	if !m.WriteFinished() {
@@ -533,12 +534,12 @@ func (m *tapeMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *tapeMock) MinimockFinish() {
 
-	if !m.GetReplyFinished() {
-		m.t.Fatal("Expected call to tapeMock.GetReply")
+	if !m.GetFinished() {
+		m.t.Fatal("Expected call to tapeMock.Get")
 	}
 
-	if !m.SetReplyFinished() {
-		m.t.Fatal("Expected call to tapeMock.SetReply")
+	if !m.SetFinished() {
+		m.t.Fatal("Expected call to tapeMock.Set")
 	}
 
 	if !m.WriteFinished() {
@@ -559,8 +560,8 @@ func (m *tapeMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
-		ok = ok && m.GetReplyFinished()
-		ok = ok && m.SetReplyFinished()
+		ok = ok && m.GetFinished()
+		ok = ok && m.SetFinished()
 		ok = ok && m.WriteFinished()
 
 		if ok {
@@ -570,12 +571,12 @@ func (m *tapeMock) MinimockWait(timeout time.Duration) {
 		select {
 		case <-timeoutCh:
 
-			if !m.GetReplyFinished() {
-				m.t.Error("Expected call to tapeMock.GetReply")
+			if !m.GetFinished() {
+				m.t.Error("Expected call to tapeMock.Get")
 			}
 
-			if !m.SetReplyFinished() {
-				m.t.Error("Expected call to tapeMock.SetReply")
+			if !m.SetFinished() {
+				m.t.Error("Expected call to tapeMock.Set")
 			}
 
 			if !m.WriteFinished() {
@@ -594,11 +595,11 @@ func (m *tapeMock) MinimockWait(timeout time.Duration) {
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *tapeMock) AllMocksCalled() bool {
 
-	if !m.GetReplyFinished() {
+	if !m.GetFinished() {
 		return false
 	}
 
-	if !m.SetReplyFinished() {
+	if !m.SetFinished() {
 		return false
 	}
 

@@ -59,6 +59,8 @@ type DB struct {
 	db         *badger.DB
 	genesisRef *core.RecordRef
 
+	// dropLock protects dropWG from concurrent calls to Add and Wait
+	dropLock sync.Mutex
 	// dropWG guards inflight updates before jet drop calculated.
 	dropWG sync.WaitGroup
 
@@ -74,8 +76,8 @@ type DB struct {
 	// NodeHistory is an in-memory active node storage for each pulse. It's required to calculate node roles
 	// for past pulses to locate data.
 	// It should only contain previous N pulses. It should be stored on disk.
-	nodeHistory     map[core.PulseNumber][]core.Node
-	nodeHistoryLock sync.Mutex
+	nodeHistory     map[core.PulseNumber][]Node
+	nodeHistoryLock sync.RWMutex
 
 	addJetLock       sync.RWMutex
 	addBlockSizeLock sync.RWMutex
@@ -127,7 +129,7 @@ func NewDB(conf configuration.Ledger, opts *badger.Options) (*DB, error) {
 		txretiries:           conf.Storage.TxRetriesOnConflict,
 		jetSizesHistoryDepth: conf.JetSizesHistoryDepth,
 		idlocker:             NewIDLocker(),
-		nodeHistory:          map[core.PulseNumber][]core.Node{},
+		nodeHistory:          map[core.PulseNumber][]Node{},
 	}
 	return db, nil
 }
@@ -149,7 +151,12 @@ func (db *DB) Init(ctx context.Context) error {
 	}
 
 	createGenesisRecord := func() (*core.RecordRef, error) {
-		err := db.AddPulse(
+		err := db.AddJets(ctx, jetID)
+		if err != nil {
+			return nil, err
+		}
+
+		err = db.AddPulse(
 			ctx,
 			core.Pulse{
 				PulseNumber: core.GenesisPulse.PulseNumber,
@@ -183,6 +190,15 @@ func (db *DB) Init(ctx context.Context) error {
 			return nil, err
 		}
 
+		err = db.SetReplicatedPulse(
+			ctx,
+			jetID,
+			lastPulse.Pulse.PulseNumber,
+		)
+		if err != nil {
+			return nil, err
+		}
+
 		genesisRef := core.NewRecordRef(*genesisID, *genesisID)
 		return genesisRef, db.set(ctx, prefixkey(scopeIDSystem, []byte{sysGenesis}), genesisRef[:])
 	}
@@ -196,8 +212,7 @@ func (db *DB) Init(ctx context.Context) error {
 		return errors.Wrap(err, "bootstrap failed")
 	}
 
-	// TODO: required for test passing, need figure out how to do init jets properly
-	return db.AddJets(ctx, jetID)
+	return nil
 }
 
 // GenesisRef returns the genesis record reference.
@@ -339,7 +354,9 @@ func (db *DB) RemoveObjectIndex(
 }
 
 func (db *DB) waitinflight() {
+	db.dropLock.Lock()
 	db.dropWG.Wait()
+	db.dropLock.Unlock()
 }
 
 // BeginTransaction opens a new transaction.
@@ -353,7 +370,9 @@ func (db *DB) BeginTransaction(update bool) (*TransactionManager, error) {
 	}
 
 	if update {
+		db.dropLock.Lock()
 		db.dropWG.Add(1)
+		db.dropLock.Unlock()
 	}
 	return &TransactionManager{
 		db:        db,
@@ -420,6 +439,7 @@ func (db *DB) GetBadgerDB() *badger.DB {
 
 // SetMessage persists message to the database
 func (db *DB) SetMessage(ctx context.Context, jetID core.RecordID, pulseNumber core.PulseNumber, genericMessage core.Message) error {
+	_, prefix := jet.Jet(jetID)
 	messageBytes := message.ToBytes(genericMessage)
 	hw := db.PlatformCryptographyScheme.ReferenceHasher()
 	_, err := hw.Write(messageBytes)
@@ -430,7 +450,7 @@ func (db *DB) SetMessage(ctx context.Context, jetID core.RecordID, pulseNumber c
 
 	return db.set(
 		ctx,
-		prefixkey(scopeIDMessage, jetID[:], pulseNumber.Bytes(), hw.Sum(nil)),
+		prefixkey(scopeIDMessage, prefix, pulseNumber.Bytes(), hw.Sum(nil)),
 		messageBytes,
 	)
 }
@@ -472,7 +492,8 @@ func (db *DB) IterateRecordsOnPulse(
 	pulse core.PulseNumber,
 	handler func(id core.RecordID, rec record.Record) error,
 ) error {
-	prefix := prefixkey(scopeIDRecord, jetID[:], pulse.Bytes())
+	_, jetPrefix := jet.Jet(jetID)
+	prefix := prefixkey(scopeIDRecord, jetPrefix, pulse.Bytes())
 
 	return db.iterate(ctx, prefix, func(k, v []byte) error {
 		id := core.NewRecordID(pulse, k)
@@ -491,7 +512,8 @@ func (db *DB) IterateIndexIDs(
 	jetID core.RecordID,
 	handler func(id core.RecordID) error,
 ) error {
-	prefix := prefixkey(scopeIDLifeline, jetID[:])
+	_, jetPrefix := jet.Jet(jetID)
+	prefix := prefixkey(scopeIDLifeline, jetPrefix)
 
 	return db.iterate(ctx, prefix, func(k, v []byte) error {
 		pn := pulseNumFromKey(0, k)
@@ -510,22 +532,54 @@ func (db *DB) SetActiveNodes(pulse core.PulseNumber, nodes []core.Node) error {
 	defer db.nodeHistoryLock.Unlock()
 
 	if _, ok := db.nodeHistory[pulse]; ok {
-		return errors.New("node history override is forbidden")
+		return ErrOverride
 	}
 
-	db.nodeHistory[pulse] = nodes
+	db.nodeHistory[pulse] = []Node{}
+	for _, n := range nodes {
+		db.nodeHistory[pulse] = append(db.nodeHistory[pulse], Node{
+			FID:   n.ID(),
+			FRole: n.Role(),
+		})
+	}
 
 	return nil
 }
 
 // GetActiveNodes return active nodes for specified pulse.
 func (db *DB) GetActiveNodes(pulse core.PulseNumber) ([]core.Node, error) {
+	db.nodeHistoryLock.RLock()
+	defer db.nodeHistoryLock.RUnlock()
+
 	nodes, ok := db.nodeHistory[pulse]
 	if !ok {
 		return nil, errors.New("no nodes for this pulse")
 	}
+	res := make([]core.Node, len(nodes))
+	for i, n := range nodes {
+		res[i] = n
+	}
 
-	return nodes, nil
+	return res, nil
+}
+
+// GetActiveNodesByRole return active nodes for specified pulse and role.
+func (db *DB) GetActiveNodesByRole(pulse core.PulseNumber, role core.StaticRole) ([]core.Node, error) {
+	db.nodeHistoryLock.RLock()
+	defer db.nodeHistoryLock.RUnlock()
+
+	nodes, ok := db.nodeHistory[pulse]
+	if !ok {
+		return nil, errors.New("no nodes for this pulse")
+	}
+	var inRole []core.Node
+	for _, n := range nodes {
+		if n.Role() == role {
+			inRole = append(inRole, n)
+		}
+	}
+
+	return inRole, nil
 }
 
 // StoreKeyValues stores provided key/value pairs.

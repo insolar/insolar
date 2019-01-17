@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+read -r -d '' help <<'EOF'
+#
+# Helper for searching inside launchnet nodes logs
+#
+# Usage:
+#
+# ./scripts/glogs "PATTERN" [grep flags]
+#
+# Examples:
+#
+# ./scripts/glogs "synchronize" -C1
+#
+# ./scripts/glogs "panic|error" -E -A10
+#
+EOF
+# echo '"$#" =' "$#"
+if [ $# -lt 1 ]; then
+    echo "Error: wrong usage"
+    echo "$help"
+    exit 1
+fi
+
+SEARCH_PATTERN=$1
+shift
+
+set -x
+grep $@ "$SEARCH_PATTERN" ./scripts/insolard/nodes/{1,2,3}/output.txt

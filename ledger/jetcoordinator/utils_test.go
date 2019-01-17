@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/utils/entropy"
 )
@@ -93,11 +94,11 @@ func benchSelectByEntropyWrapped(b *testing.B, valuescount int, count int) {
 	var e core.Entropy
 	copy(e[:], randslice(64))
 
-	values := make([]core.RecordRef, 0, valuescount)
+	values := make([]core.Node, 0, valuescount)
 	for i := 0; i < valuescount; i++ {
 		var coreref core.RecordRef
 		copy(coreref[:], randslice(64))
-		values = append(values, coreref)
+		values = append(values, storage.Node{FID: coreref})
 	}
 
 	b.ResetTimer()

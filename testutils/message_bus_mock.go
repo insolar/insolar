@@ -36,20 +36,20 @@ type MessageBusMock struct {
 	NewRecorderPreCounter uint64
 	NewRecorderMock       mMessageBusMockNewRecorder
 
+	OnPulseFunc       func(p context.Context, p1 core.Pulse) (r error)
+	OnPulseCounter    uint64
+	OnPulsePreCounter uint64
+	OnPulseMock       mMessageBusMockOnPulse
+
 	RegisterFunc       func(p core.MessageType, p1 core.MessageHandler) (r error)
 	RegisterCounter    uint64
 	RegisterPreCounter uint64
 	RegisterMock       mMessageBusMockRegister
 
-	SendFunc       func(p context.Context, p1 core.Message, p2 core.Pulse, p3 *core.MessageSendOptions) (r core.Reply, r1 error)
+	SendFunc       func(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) (r core.Reply, r1 error)
 	SendCounter    uint64
 	SendPreCounter uint64
 	SendMock       mMessageBusMockSend
-
-	WriteTapeFunc       func(p context.Context, p1 io.Writer) (r error)
-	WriteTapeCounter    uint64
-	WriteTapePreCounter uint64
-	WriteTapeMock       mMessageBusMockWriteTape
 }
 
 //NewMessageBusMock returns a mock for github.com/insolar/insolar/core.MessageBus
@@ -63,9 +63,9 @@ func NewMessageBusMock(t minimock.Tester) *MessageBusMock {
 	m.MustRegisterMock = mMessageBusMockMustRegister{mock: m}
 	m.NewPlayerMock = mMessageBusMockNewPlayer{mock: m}
 	m.NewRecorderMock = mMessageBusMockNewRecorder{mock: m}
+	m.OnPulseMock = mMessageBusMockOnPulse{mock: m}
 	m.RegisterMock = mMessageBusMockRegister{mock: m}
 	m.SendMock = mMessageBusMockSend{mock: m}
-	m.WriteTapeMock = mMessageBusMockWriteTape{mock: m}
 
 	return m
 }
@@ -496,6 +496,154 @@ func (m *MessageBusMock) NewRecorderFinished() bool {
 	return true
 }
 
+type mMessageBusMockOnPulse struct {
+	mock              *MessageBusMock
+	mainExpectation   *MessageBusMockOnPulseExpectation
+	expectationSeries []*MessageBusMockOnPulseExpectation
+}
+
+type MessageBusMockOnPulseExpectation struct {
+	input  *MessageBusMockOnPulseInput
+	result *MessageBusMockOnPulseResult
+}
+
+type MessageBusMockOnPulseInput struct {
+	p  context.Context
+	p1 core.Pulse
+}
+
+type MessageBusMockOnPulseResult struct {
+	r error
+}
+
+//Expect specifies that invocation of MessageBus.OnPulse is expected from 1 to Infinity times
+func (m *mMessageBusMockOnPulse) Expect(p context.Context, p1 core.Pulse) *mMessageBusMockOnPulse {
+	m.mock.OnPulseFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &MessageBusMockOnPulseExpectation{}
+	}
+	m.mainExpectation.input = &MessageBusMockOnPulseInput{p, p1}
+	return m
+}
+
+//Return specifies results of invocation of MessageBus.OnPulse
+func (m *mMessageBusMockOnPulse) Return(r error) *MessageBusMock {
+	m.mock.OnPulseFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &MessageBusMockOnPulseExpectation{}
+	}
+	m.mainExpectation.result = &MessageBusMockOnPulseResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of MessageBus.OnPulse is expected once
+func (m *mMessageBusMockOnPulse) ExpectOnce(p context.Context, p1 core.Pulse) *MessageBusMockOnPulseExpectation {
+	m.mock.OnPulseFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &MessageBusMockOnPulseExpectation{}
+	expectation.input = &MessageBusMockOnPulseInput{p, p1}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *MessageBusMockOnPulseExpectation) Return(r error) {
+	e.result = &MessageBusMockOnPulseResult{r}
+}
+
+//Set uses given function f as a mock of MessageBus.OnPulse method
+func (m *mMessageBusMockOnPulse) Set(f func(p context.Context, p1 core.Pulse) (r error)) *MessageBusMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.OnPulseFunc = f
+	return m.mock
+}
+
+//OnPulse implements github.com/insolar/insolar/core.MessageBus interface
+func (m *MessageBusMock) OnPulse(p context.Context, p1 core.Pulse) (r error) {
+	counter := atomic.AddUint64(&m.OnPulsePreCounter, 1)
+	defer atomic.AddUint64(&m.OnPulseCounter, 1)
+
+	if len(m.OnPulseMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.OnPulseMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to MessageBusMock.OnPulse. %v %v", p, p1)
+			return
+		}
+
+		input := m.OnPulseMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, MessageBusMockOnPulseInput{p, p1}, "MessageBus.OnPulse got unexpected parameters")
+
+		result := m.OnPulseMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the MessageBusMock.OnPulse")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.OnPulseMock.mainExpectation != nil {
+
+		input := m.OnPulseMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, MessageBusMockOnPulseInput{p, p1}, "MessageBus.OnPulse got unexpected parameters")
+		}
+
+		result := m.OnPulseMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the MessageBusMock.OnPulse")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.OnPulseFunc == nil {
+		m.t.Fatalf("Unexpected call to MessageBusMock.OnPulse. %v %v", p, p1)
+		return
+	}
+
+	return m.OnPulseFunc(p, p1)
+}
+
+//OnPulseMinimockCounter returns a count of MessageBusMock.OnPulseFunc invocations
+func (m *MessageBusMock) OnPulseMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.OnPulseCounter)
+}
+
+//OnPulseMinimockPreCounter returns the value of MessageBusMock.OnPulse invocations
+func (m *MessageBusMock) OnPulseMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.OnPulsePreCounter)
+}
+
+//OnPulseFinished returns true if mock invocations count is ok
+func (m *MessageBusMock) OnPulseFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.OnPulseMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.OnPulseCounter) == uint64(len(m.OnPulseMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.OnPulseMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.OnPulseCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.OnPulseFunc != nil {
+		return atomic.LoadUint64(&m.OnPulseCounter) > 0
+	}
+
+	return true
+}
+
 type mMessageBusMockRegister struct {
 	mock              *MessageBusMock
 	mainExpectation   *MessageBusMockRegisterExpectation
@@ -658,8 +806,7 @@ type MessageBusMockSendExpectation struct {
 type MessageBusMockSendInput struct {
 	p  context.Context
 	p1 core.Message
-	p2 core.Pulse
-	p3 *core.MessageSendOptions
+	p2 *core.MessageSendOptions
 }
 
 type MessageBusMockSendResult struct {
@@ -668,14 +815,14 @@ type MessageBusMockSendResult struct {
 }
 
 //Expect specifies that invocation of MessageBus.Send is expected from 1 to Infinity times
-func (m *mMessageBusMockSend) Expect(p context.Context, p1 core.Message, p2 core.Pulse, p3 *core.MessageSendOptions) *mMessageBusMockSend {
+func (m *mMessageBusMockSend) Expect(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) *mMessageBusMockSend {
 	m.mock.SendFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &MessageBusMockSendExpectation{}
 	}
-	m.mainExpectation.input = &MessageBusMockSendInput{p, p1, p2, p3}
+	m.mainExpectation.input = &MessageBusMockSendInput{p, p1, p2}
 	return m
 }
 
@@ -692,12 +839,12 @@ func (m *mMessageBusMockSend) Return(r core.Reply, r1 error) *MessageBusMock {
 }
 
 //ExpectOnce specifies that invocation of MessageBus.Send is expected once
-func (m *mMessageBusMockSend) ExpectOnce(p context.Context, p1 core.Message, p2 core.Pulse, p3 *core.MessageSendOptions) *MessageBusMockSendExpectation {
+func (m *mMessageBusMockSend) ExpectOnce(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) *MessageBusMockSendExpectation {
 	m.mock.SendFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &MessageBusMockSendExpectation{}
-	expectation.input = &MessageBusMockSendInput{p, p1, p2, p3}
+	expectation.input = &MessageBusMockSendInput{p, p1, p2}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
@@ -707,7 +854,7 @@ func (e *MessageBusMockSendExpectation) Return(r core.Reply, r1 error) {
 }
 
 //Set uses given function f as a mock of MessageBus.Send method
-func (m *mMessageBusMockSend) Set(f func(p context.Context, p1 core.Message, p2 core.Pulse, p3 *core.MessageSendOptions) (r core.Reply, r1 error)) *MessageBusMock {
+func (m *mMessageBusMockSend) Set(f func(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) (r core.Reply, r1 error)) *MessageBusMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -716,18 +863,18 @@ func (m *mMessageBusMockSend) Set(f func(p context.Context, p1 core.Message, p2 
 }
 
 //Send implements github.com/insolar/insolar/core.MessageBus interface
-func (m *MessageBusMock) Send(p context.Context, p1 core.Message, p2 core.Pulse, p3 *core.MessageSendOptions) (r core.Reply, r1 error) {
+func (m *MessageBusMock) Send(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) (r core.Reply, r1 error) {
 	counter := atomic.AddUint64(&m.SendPreCounter, 1)
 	defer atomic.AddUint64(&m.SendCounter, 1)
 
 	if len(m.SendMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.SendMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to MessageBusMock.Send. %v %v %v %v", p, p1, p2, p3)
+			m.t.Fatalf("Unexpected call to MessageBusMock.Send. %v %v %v", p, p1, p2)
 			return
 		}
 
 		input := m.SendMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, MessageBusMockSendInput{p, p1, p2, p3}, "MessageBus.Send got unexpected parameters")
+		testify_assert.Equal(m.t, *input, MessageBusMockSendInput{p, p1, p2}, "MessageBus.Send got unexpected parameters")
 
 		result := m.SendMock.expectationSeries[counter-1].result
 		if result == nil {
@@ -745,7 +892,7 @@ func (m *MessageBusMock) Send(p context.Context, p1 core.Message, p2 core.Pulse,
 
 		input := m.SendMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, MessageBusMockSendInput{p, p1, p2, p3}, "MessageBus.Send got unexpected parameters")
+			testify_assert.Equal(m.t, *input, MessageBusMockSendInput{p, p1, p2}, "MessageBus.Send got unexpected parameters")
 		}
 
 		result := m.SendMock.mainExpectation.result
@@ -760,11 +907,11 @@ func (m *MessageBusMock) Send(p context.Context, p1 core.Message, p2 core.Pulse,
 	}
 
 	if m.SendFunc == nil {
-		m.t.Fatalf("Unexpected call to MessageBusMock.Send. %v %v %v %v", p, p1, p2, p3)
+		m.t.Fatalf("Unexpected call to MessageBusMock.Send. %v %v %v", p, p1, p2)
 		return
 	}
 
-	return m.SendFunc(p, p1, p2, p3)
+	return m.SendFunc(p, p1, p2)
 }
 
 //SendMinimockCounter returns a count of MessageBusMock.SendFunc invocations
@@ -797,154 +944,6 @@ func (m *MessageBusMock) SendFinished() bool {
 	return true
 }
 
-type mMessageBusMockWriteTape struct {
-	mock              *MessageBusMock
-	mainExpectation   *MessageBusMockWriteTapeExpectation
-	expectationSeries []*MessageBusMockWriteTapeExpectation
-}
-
-type MessageBusMockWriteTapeExpectation struct {
-	input  *MessageBusMockWriteTapeInput
-	result *MessageBusMockWriteTapeResult
-}
-
-type MessageBusMockWriteTapeInput struct {
-	p  context.Context
-	p1 io.Writer
-}
-
-type MessageBusMockWriteTapeResult struct {
-	r error
-}
-
-//Expect specifies that invocation of MessageBus.WriteTape is expected from 1 to Infinity times
-func (m *mMessageBusMockWriteTape) Expect(p context.Context, p1 io.Writer) *mMessageBusMockWriteTape {
-	m.mock.WriteTapeFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &MessageBusMockWriteTapeExpectation{}
-	}
-	m.mainExpectation.input = &MessageBusMockWriteTapeInput{p, p1}
-	return m
-}
-
-//Return specifies results of invocation of MessageBus.WriteTape
-func (m *mMessageBusMockWriteTape) Return(r error) *MessageBusMock {
-	m.mock.WriteTapeFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &MessageBusMockWriteTapeExpectation{}
-	}
-	m.mainExpectation.result = &MessageBusMockWriteTapeResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of MessageBus.WriteTape is expected once
-func (m *mMessageBusMockWriteTape) ExpectOnce(p context.Context, p1 io.Writer) *MessageBusMockWriteTapeExpectation {
-	m.mock.WriteTapeFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &MessageBusMockWriteTapeExpectation{}
-	expectation.input = &MessageBusMockWriteTapeInput{p, p1}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *MessageBusMockWriteTapeExpectation) Return(r error) {
-	e.result = &MessageBusMockWriteTapeResult{r}
-}
-
-//Set uses given function f as a mock of MessageBus.WriteTape method
-func (m *mMessageBusMockWriteTape) Set(f func(p context.Context, p1 io.Writer) (r error)) *MessageBusMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.WriteTapeFunc = f
-	return m.mock
-}
-
-//WriteTape implements github.com/insolar/insolar/core.MessageBus interface
-func (m *MessageBusMock) WriteTape(p context.Context, p1 io.Writer) (r error) {
-	counter := atomic.AddUint64(&m.WriteTapePreCounter, 1)
-	defer atomic.AddUint64(&m.WriteTapeCounter, 1)
-
-	if len(m.WriteTapeMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.WriteTapeMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to MessageBusMock.WriteTape. %v %v", p, p1)
-			return
-		}
-
-		input := m.WriteTapeMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, MessageBusMockWriteTapeInput{p, p1}, "MessageBus.WriteTape got unexpected parameters")
-
-		result := m.WriteTapeMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the MessageBusMock.WriteTape")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.WriteTapeMock.mainExpectation != nil {
-
-		input := m.WriteTapeMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, MessageBusMockWriteTapeInput{p, p1}, "MessageBus.WriteTape got unexpected parameters")
-		}
-
-		result := m.WriteTapeMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the MessageBusMock.WriteTape")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.WriteTapeFunc == nil {
-		m.t.Fatalf("Unexpected call to MessageBusMock.WriteTape. %v %v", p, p1)
-		return
-	}
-
-	return m.WriteTapeFunc(p, p1)
-}
-
-//WriteTapeMinimockCounter returns a count of MessageBusMock.WriteTapeFunc invocations
-func (m *MessageBusMock) WriteTapeMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.WriteTapeCounter)
-}
-
-//WriteTapeMinimockPreCounter returns the value of MessageBusMock.WriteTape invocations
-func (m *MessageBusMock) WriteTapeMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.WriteTapePreCounter)
-}
-
-//WriteTapeFinished returns true if mock invocations count is ok
-func (m *MessageBusMock) WriteTapeFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.WriteTapeMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.WriteTapeCounter) == uint64(len(m.WriteTapeMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.WriteTapeMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.WriteTapeCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.WriteTapeFunc != nil {
-		return atomic.LoadUint64(&m.WriteTapeCounter) > 0
-	}
-
-	return true
-}
-
 //ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *MessageBusMock) ValidateCallCounters() {
@@ -961,16 +960,16 @@ func (m *MessageBusMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to MessageBusMock.NewRecorder")
 	}
 
+	if !m.OnPulseFinished() {
+		m.t.Fatal("Expected call to MessageBusMock.OnPulse")
+	}
+
 	if !m.RegisterFinished() {
 		m.t.Fatal("Expected call to MessageBusMock.Register")
 	}
 
 	if !m.SendFinished() {
 		m.t.Fatal("Expected call to MessageBusMock.Send")
-	}
-
-	if !m.WriteTapeFinished() {
-		m.t.Fatal("Expected call to MessageBusMock.WriteTape")
 	}
 
 }
@@ -1002,16 +1001,16 @@ func (m *MessageBusMock) MinimockFinish() {
 		m.t.Fatal("Expected call to MessageBusMock.NewRecorder")
 	}
 
+	if !m.OnPulseFinished() {
+		m.t.Fatal("Expected call to MessageBusMock.OnPulse")
+	}
+
 	if !m.RegisterFinished() {
 		m.t.Fatal("Expected call to MessageBusMock.Register")
 	}
 
 	if !m.SendFinished() {
 		m.t.Fatal("Expected call to MessageBusMock.Send")
-	}
-
-	if !m.WriteTapeFinished() {
-		m.t.Fatal("Expected call to MessageBusMock.WriteTape")
 	}
 
 }
@@ -1031,9 +1030,9 @@ func (m *MessageBusMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.MustRegisterFinished()
 		ok = ok && m.NewPlayerFinished()
 		ok = ok && m.NewRecorderFinished()
+		ok = ok && m.OnPulseFinished()
 		ok = ok && m.RegisterFinished()
 		ok = ok && m.SendFinished()
-		ok = ok && m.WriteTapeFinished()
 
 		if ok {
 			return
@@ -1054,16 +1053,16 @@ func (m *MessageBusMock) MinimockWait(timeout time.Duration) {
 				m.t.Error("Expected call to MessageBusMock.NewRecorder")
 			}
 
+			if !m.OnPulseFinished() {
+				m.t.Error("Expected call to MessageBusMock.OnPulse")
+			}
+
 			if !m.RegisterFinished() {
 				m.t.Error("Expected call to MessageBusMock.Register")
 			}
 
 			if !m.SendFinished() {
 				m.t.Error("Expected call to MessageBusMock.Send")
-			}
-
-			if !m.WriteTapeFinished() {
-				m.t.Error("Expected call to MessageBusMock.WriteTape")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)
@@ -1090,15 +1089,15 @@ func (m *MessageBusMock) AllMocksCalled() bool {
 		return false
 	}
 
+	if !m.OnPulseFinished() {
+		return false
+	}
+
 	if !m.RegisterFinished() {
 		return false
 	}
 
 	if !m.SendFinished() {
-		return false
-	}
-
-	if !m.WriteTapeFinished() {
 		return false
 	}
 

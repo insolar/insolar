@@ -197,7 +197,7 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]*pre
 		}
 		_, err = cb.ArtifactManager.RegisterResult(ctx, *domainRef, *cb.Prototypes[name], nil)
 		if err != nil {
-			return errors.Wrap(err, "[ Build ] Can't ActivatePrototype")
+			return errors.Wrap(err, "[ Build ] Can't RegisterResult of prototype")
 		}
 	}
 

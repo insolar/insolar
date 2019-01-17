@@ -44,12 +44,13 @@ func main() {
 	rpcProtocol := pflag.String("rpc-proto", "tcp", "protocol of RPC API")
 	metricsAddress := pflag.String("metrics", "", "address and port of prometheus metrics")
 	code := pflag.String("code", "", "add pre-compiled code to cache (<ref>:</path/to/plugin.so>)")
+	logLevel := pflag.String("log-level", "debug", "log level")
 
 	pflag.Parse()
 
-	err := log.SetLevel("Debug")
+	err := log.SetLevel(*logLevel)
 	if err != nil {
-		log.Errorln(err.Error())
+		log.Fatalf("Couldn't set log level to %q: %s", *logLevel, err)
 	}
 
 	if *path == "" {
@@ -101,11 +102,12 @@ func main() {
 	signal.Notify(gracefulStop, syscall.SIGTERM)
 	signal.Notify(gracefulStop, syscall.SIGINT)
 
+	var waitChannel = make(chan bool)
+
 	go func() {
 		sig := <-gracefulStop
-
-		log.Info("ginsider get signal: ", sig.String())
-		os.Exit(1)
+		log.Info("ginsider get signal: ", sig)
+		close(waitChannel)
 	}()
 
 	if *metricsAddress != "" {
@@ -132,7 +134,8 @@ func main() {
 	}
 
 	log.Debug("ginsider launched, listens " + *listen)
-	rpc.Accept(listener)
+	go rpc.Accept(listener)
 
+	<-waitChannel
 	log.Debug("bye\n")
 }

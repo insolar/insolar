@@ -18,11 +18,59 @@ package core
 
 import (
 	"context"
+	"encoding/json"
 	"io"
+
+	"github.com/pkg/errors"
+	"github.com/ugorji/go/codec"
 )
 
-// Arguments is a dedicated type for arguments, that represented as bynary cbored blob
+// Arguments is a dedicated type for arguments, that represented as binary cbored blob
 type Arguments []byte
+
+// MarshalJSON uncbor Arguments slice recursively
+func (args *Arguments) MarshalJSON() ([]byte, error) {
+	result := make([]interface{}, 0)
+
+	err := convertArgs(*args, &result)
+	if err != nil {
+		return nil, err
+	}
+
+	return json.Marshal(&result)
+}
+
+func convertArgs(args []byte, result *[]interface{}) error {
+	var value interface{}
+	err := codec.NewDecoderBytes(args, &codec.CborHandle{}).Decode(&value)
+	if err != nil {
+		return errors.Wrap(err, "Can't deserialize record")
+	}
+
+	tmp, ok := value.([]interface{})
+	if !ok {
+		*result = append(*result, value)
+		return nil
+	}
+
+	inner := make([]interface{}, 0)
+
+	for _, slItem := range tmp {
+		switch v := slItem.(type) {
+		case []byte:
+			err := convertArgs(v, result)
+			if err != nil {
+				return err
+			}
+		default:
+			inner = append(inner, v)
+		}
+	}
+
+	*result = append(*result, inner)
+
+	return nil
+}
 
 // MessageType is an enum type of message.
 type MessageType byte
@@ -104,7 +152,7 @@ func (o *MessageSendOptions) Safe() *MessageSendOptions {
 //go:generate minimock -i github.com/insolar/insolar/core.MessageBus -o ../testutils -s _mock.go
 type MessageBus interface {
 	// Send an `Message` and get a `Reply` or error from remote host.
-	Send(context.Context, Message, Pulse, *MessageSendOptions) (Reply, error)
+	Send(context.Context, Message, *MessageSendOptions) (Reply, error)
 	// Register saves message handler in the registry. Only one handler can be registered for a message type.
 	Register(p MessageType, handler MessageHandler) error
 	// MustRegister is a Register wrapper that panics if an error was returned.
@@ -120,6 +168,11 @@ type MessageBus interface {
 	// Recorder can be created from MessageBus and passed as MessageBus instance.s
 	NewRecorder(ctx context.Context, currentPulse Pulse) (MessageBus, error)
 
+	// Called each new pulse, cleans next pulse messages buffer
+	OnPulse(context.Context, Pulse) error
+}
+
+type TapeWriter interface {
 	// WriteTape writes recorder's tape to the provided writer.
 	WriteTape(ctx context.Context, writer io.Writer) error
 }
@@ -166,6 +219,9 @@ const (
 	TypeValidationResults
 	// TypePendingFinished is sent by the old executor to the current executor when pending execution finishes
 	TypePendingFinished
+	// TypeStillExecuting is sent by an old executor on pulse switch if it wants to continue executing
+	// to the current executor
+	TypeStillExecuting
 
 	// Ledger
 
@@ -195,6 +251,10 @@ const (
 	TypeGetPendingRequests
 	// TypeHotRecords saves hot-records in storage.
 	TypeHotRecords
+	// TypeGetJet requests to calculate a jet for provided object.
+	TypeGetJet
+	// TypeAbandonedRequestsNotification informs virtual node about unclosed requests.
+	TypeAbandonedRequestsNotification
 
 	// TypeValidationCheck checks if validation of a particular record can be performed.
 	TypeValidationCheck
@@ -207,6 +267,8 @@ const (
 	TypeHeavyPayload
 	// TypeHeavyReset resets current sync (on errors)
 	TypeHeavyReset
+	// TypeHeavyJetTree sync jet trees
+	TypeHeavyJetTree
 
 	// Bootstrap
 

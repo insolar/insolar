@@ -19,10 +19,12 @@ package artifactmanager
 import (
 	"context"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
-	"github.com/pkg/errors"
+	"github.com/insolar/insolar/ledger/storage"
 )
 
 // CodeDescriptor represents meta info required to fetch all code data.
@@ -143,6 +145,7 @@ func (d *ObjectDescriptor) Parent() *core.RecordRef {
 type ChildIterator struct {
 	ctx          context.Context
 	messageBus   core.MessageBus
+	db           *storage.DB
 	currentPulse core.Pulse
 	parent       core.RecordRef
 	chunkSize    int
@@ -157,6 +160,7 @@ type ChildIterator struct {
 func NewChildIterator(
 	ctx context.Context,
 	mb core.MessageBus,
+	db *storage.DB,
 	parent core.RecordRef,
 	fromPulse *core.PulseNumber,
 	chunkSize int,
@@ -165,6 +169,7 @@ func NewChildIterator(
 	iter := ChildIterator{
 		ctx:          ctx,
 		messageBus:   mb,
+		db:           db,
 		parent:       parent,
 		fromPulse:    fromPulse,
 		chunkSize:    chunkSize,
@@ -214,8 +219,10 @@ func (i *ChildIterator) fetch() error {
 	if !i.canFetch {
 		return errors.New("failed to fetch record")
 	}
-	genericReply, err := i.sendAndFollowRedirect(
+	genericReply, err := sendAndFollowRedirect(
 		i.ctx,
+		i.messageBus,
+		i.db,
 		&message.GetChildren{
 			Parent:    i.parent,
 			FromPulse: i.fromPulse,
@@ -244,33 +251,4 @@ func (i *ChildIterator) fetch() error {
 
 func (i *ChildIterator) hasInBuffer() bool {
 	return i.buffIndex < len(i.buff)
-}
-
-func (i *ChildIterator) sendAndFollowRedirect(ctx context.Context, msg core.Message, currentPulse core.Pulse) (core.Reply, error) {
-	rep, err := i.messageBus.Send(ctx, msg, currentPulse, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	if redirect, ok := rep.(core.RedirectReply); ok {
-		redirected := redirect.Redirected(msg)
-		rep, err = i.messageBus.Send(
-			ctx,
-			redirected,
-			currentPulse,
-			&core.MessageSendOptions{
-				Token:    redirect.GetToken(),
-				Receiver: redirect.GetReceiver(),
-			},
-		)
-		if err != nil {
-			return nil, err
-		}
-		if _, ok = rep.(core.RedirectReply); ok {
-			return nil, errors.New("double redirects are forbidden")
-		}
-		return rep, nil
-	}
-
-	return rep, err
 }

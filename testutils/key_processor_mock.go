@@ -19,15 +19,20 @@ import (
 type KeyProcessorMock struct {
 	t minimock.Tester
 
-	ExportPrivateKeyFunc       func(p crypto.PrivateKey) (r []byte, r1 error)
-	ExportPrivateKeyCounter    uint64
-	ExportPrivateKeyPreCounter uint64
-	ExportPrivateKeyMock       mKeyProcessorMockExportPrivateKey
+	ExportPrivateKeyPEMFunc       func(p crypto.PrivateKey) (r []byte, r1 error)
+	ExportPrivateKeyPEMCounter    uint64
+	ExportPrivateKeyPEMPreCounter uint64
+	ExportPrivateKeyPEMMock       mKeyProcessorMockExportPrivateKeyPEM
 
-	ExportPublicKeyFunc       func(p crypto.PublicKey) (r []byte, r1 error)
-	ExportPublicKeyCounter    uint64
-	ExportPublicKeyPreCounter uint64
-	ExportPublicKeyMock       mKeyProcessorMockExportPublicKey
+	ExportPublicKeyBinaryFunc       func(p crypto.PublicKey) (r []byte, r1 error)
+	ExportPublicKeyBinaryCounter    uint64
+	ExportPublicKeyBinaryPreCounter uint64
+	ExportPublicKeyBinaryMock       mKeyProcessorMockExportPublicKeyBinary
+
+	ExportPublicKeyPEMFunc       func(p crypto.PublicKey) (r []byte, r1 error)
+	ExportPublicKeyPEMCounter    uint64
+	ExportPublicKeyPEMPreCounter uint64
+	ExportPublicKeyPEMMock       mKeyProcessorMockExportPublicKeyPEM
 
 	ExtractPublicKeyFunc       func(p crypto.PrivateKey) (r crypto.PublicKey)
 	ExtractPublicKeyCounter    uint64
@@ -39,15 +44,20 @@ type KeyProcessorMock struct {
 	GeneratePrivateKeyPreCounter uint64
 	GeneratePrivateKeyMock       mKeyProcessorMockGeneratePrivateKey
 
-	ImportPrivateKeyFunc       func(p []byte) (r crypto.PrivateKey, r1 error)
-	ImportPrivateKeyCounter    uint64
-	ImportPrivateKeyPreCounter uint64
-	ImportPrivateKeyMock       mKeyProcessorMockImportPrivateKey
+	ImportPrivateKeyPEMFunc       func(p []byte) (r crypto.PrivateKey, r1 error)
+	ImportPrivateKeyPEMCounter    uint64
+	ImportPrivateKeyPEMPreCounter uint64
+	ImportPrivateKeyPEMMock       mKeyProcessorMockImportPrivateKeyPEM
 
-	ImportPublicKeyFunc       func(p []byte) (r crypto.PublicKey, r1 error)
-	ImportPublicKeyCounter    uint64
-	ImportPublicKeyPreCounter uint64
-	ImportPublicKeyMock       mKeyProcessorMockImportPublicKey
+	ImportPublicKeyBinaryFunc       func(p []byte) (r crypto.PublicKey, r1 error)
+	ImportPublicKeyBinaryCounter    uint64
+	ImportPublicKeyBinaryPreCounter uint64
+	ImportPublicKeyBinaryMock       mKeyProcessorMockImportPublicKeyBinary
+
+	ImportPublicKeyPEMFunc       func(p []byte) (r crypto.PublicKey, r1 error)
+	ImportPublicKeyPEMCounter    uint64
+	ImportPublicKeyPEMPreCounter uint64
+	ImportPublicKeyPEMMock       mKeyProcessorMockImportPublicKeyPEM
 }
 
 //NewKeyProcessorMock returns a mock for github.com/insolar/insolar/core.KeyProcessor
@@ -58,101 +68,103 @@ func NewKeyProcessorMock(t minimock.Tester) *KeyProcessorMock {
 		controller.RegisterMocker(m)
 	}
 
-	m.ExportPrivateKeyMock = mKeyProcessorMockExportPrivateKey{mock: m}
-	m.ExportPublicKeyMock = mKeyProcessorMockExportPublicKey{mock: m}
+	m.ExportPrivateKeyPEMMock = mKeyProcessorMockExportPrivateKeyPEM{mock: m}
+	m.ExportPublicKeyBinaryMock = mKeyProcessorMockExportPublicKeyBinary{mock: m}
+	m.ExportPublicKeyPEMMock = mKeyProcessorMockExportPublicKeyPEM{mock: m}
 	m.ExtractPublicKeyMock = mKeyProcessorMockExtractPublicKey{mock: m}
 	m.GeneratePrivateKeyMock = mKeyProcessorMockGeneratePrivateKey{mock: m}
-	m.ImportPrivateKeyMock = mKeyProcessorMockImportPrivateKey{mock: m}
-	m.ImportPublicKeyMock = mKeyProcessorMockImportPublicKey{mock: m}
+	m.ImportPrivateKeyPEMMock = mKeyProcessorMockImportPrivateKeyPEM{mock: m}
+	m.ImportPublicKeyBinaryMock = mKeyProcessorMockImportPublicKeyBinary{mock: m}
+	m.ImportPublicKeyPEMMock = mKeyProcessorMockImportPublicKeyPEM{mock: m}
 
 	return m
 }
 
-type mKeyProcessorMockExportPrivateKey struct {
+type mKeyProcessorMockExportPrivateKeyPEM struct {
 	mock              *KeyProcessorMock
-	mainExpectation   *KeyProcessorMockExportPrivateKeyExpectation
-	expectationSeries []*KeyProcessorMockExportPrivateKeyExpectation
+	mainExpectation   *KeyProcessorMockExportPrivateKeyPEMExpectation
+	expectationSeries []*KeyProcessorMockExportPrivateKeyPEMExpectation
 }
 
-type KeyProcessorMockExportPrivateKeyExpectation struct {
-	input  *KeyProcessorMockExportPrivateKeyInput
-	result *KeyProcessorMockExportPrivateKeyResult
+type KeyProcessorMockExportPrivateKeyPEMExpectation struct {
+	input  *KeyProcessorMockExportPrivateKeyPEMInput
+	result *KeyProcessorMockExportPrivateKeyPEMResult
 }
 
-type KeyProcessorMockExportPrivateKeyInput struct {
+type KeyProcessorMockExportPrivateKeyPEMInput struct {
 	p crypto.PrivateKey
 }
 
-type KeyProcessorMockExportPrivateKeyResult struct {
+type KeyProcessorMockExportPrivateKeyPEMResult struct {
 	r  []byte
 	r1 error
 }
 
-//Expect specifies that invocation of KeyProcessor.ExportPrivateKey is expected from 1 to Infinity times
-func (m *mKeyProcessorMockExportPrivateKey) Expect(p crypto.PrivateKey) *mKeyProcessorMockExportPrivateKey {
-	m.mock.ExportPrivateKeyFunc = nil
+//Expect specifies that invocation of KeyProcessor.ExportPrivateKeyPEM is expected from 1 to Infinity times
+func (m *mKeyProcessorMockExportPrivateKeyPEM) Expect(p crypto.PrivateKey) *mKeyProcessorMockExportPrivateKeyPEM {
+	m.mock.ExportPrivateKeyPEMFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &KeyProcessorMockExportPrivateKeyExpectation{}
+		m.mainExpectation = &KeyProcessorMockExportPrivateKeyPEMExpectation{}
 	}
-	m.mainExpectation.input = &KeyProcessorMockExportPrivateKeyInput{p}
+	m.mainExpectation.input = &KeyProcessorMockExportPrivateKeyPEMInput{p}
 	return m
 }
 
-//Return specifies results of invocation of KeyProcessor.ExportPrivateKey
-func (m *mKeyProcessorMockExportPrivateKey) Return(r []byte, r1 error) *KeyProcessorMock {
-	m.mock.ExportPrivateKeyFunc = nil
+//Return specifies results of invocation of KeyProcessor.ExportPrivateKeyPEM
+func (m *mKeyProcessorMockExportPrivateKeyPEM) Return(r []byte, r1 error) *KeyProcessorMock {
+	m.mock.ExportPrivateKeyPEMFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &KeyProcessorMockExportPrivateKeyExpectation{}
+		m.mainExpectation = &KeyProcessorMockExportPrivateKeyPEMExpectation{}
 	}
-	m.mainExpectation.result = &KeyProcessorMockExportPrivateKeyResult{r, r1}
+	m.mainExpectation.result = &KeyProcessorMockExportPrivateKeyPEMResult{r, r1}
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of KeyProcessor.ExportPrivateKey is expected once
-func (m *mKeyProcessorMockExportPrivateKey) ExpectOnce(p crypto.PrivateKey) *KeyProcessorMockExportPrivateKeyExpectation {
-	m.mock.ExportPrivateKeyFunc = nil
+//ExpectOnce specifies that invocation of KeyProcessor.ExportPrivateKeyPEM is expected once
+func (m *mKeyProcessorMockExportPrivateKeyPEM) ExpectOnce(p crypto.PrivateKey) *KeyProcessorMockExportPrivateKeyPEMExpectation {
+	m.mock.ExportPrivateKeyPEMFunc = nil
 	m.mainExpectation = nil
 
-	expectation := &KeyProcessorMockExportPrivateKeyExpectation{}
-	expectation.input = &KeyProcessorMockExportPrivateKeyInput{p}
+	expectation := &KeyProcessorMockExportPrivateKeyPEMExpectation{}
+	expectation.input = &KeyProcessorMockExportPrivateKeyPEMInput{p}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
-func (e *KeyProcessorMockExportPrivateKeyExpectation) Return(r []byte, r1 error) {
-	e.result = &KeyProcessorMockExportPrivateKeyResult{r, r1}
+func (e *KeyProcessorMockExportPrivateKeyPEMExpectation) Return(r []byte, r1 error) {
+	e.result = &KeyProcessorMockExportPrivateKeyPEMResult{r, r1}
 }
 
-//Set uses given function f as a mock of KeyProcessor.ExportPrivateKey method
-func (m *mKeyProcessorMockExportPrivateKey) Set(f func(p crypto.PrivateKey) (r []byte, r1 error)) *KeyProcessorMock {
+//Set uses given function f as a mock of KeyProcessor.ExportPrivateKeyPEM method
+func (m *mKeyProcessorMockExportPrivateKeyPEM) Set(f func(p crypto.PrivateKey) (r []byte, r1 error)) *KeyProcessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
-	m.mock.ExportPrivateKeyFunc = f
+	m.mock.ExportPrivateKeyPEMFunc = f
 	return m.mock
 }
 
-//ExportPrivateKey implements github.com/insolar/insolar/core.KeyProcessor interface
-func (m *KeyProcessorMock) ExportPrivateKey(p crypto.PrivateKey) (r []byte, r1 error) {
-	counter := atomic.AddUint64(&m.ExportPrivateKeyPreCounter, 1)
-	defer atomic.AddUint64(&m.ExportPrivateKeyCounter, 1)
+//ExportPrivateKeyPEM implements github.com/insolar/insolar/core.KeyProcessor interface
+func (m *KeyProcessorMock) ExportPrivateKeyPEM(p crypto.PrivateKey) (r []byte, r1 error) {
+	counter := atomic.AddUint64(&m.ExportPrivateKeyPEMPreCounter, 1)
+	defer atomic.AddUint64(&m.ExportPrivateKeyPEMCounter, 1)
 
-	if len(m.ExportPrivateKeyMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.ExportPrivateKeyMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to KeyProcessorMock.ExportPrivateKey. %v", p)
+	if len(m.ExportPrivateKeyPEMMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.ExportPrivateKeyPEMMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to KeyProcessorMock.ExportPrivateKeyPEM. %v", p)
 			return
 		}
 
-		input := m.ExportPrivateKeyMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, KeyProcessorMockExportPrivateKeyInput{p}, "KeyProcessor.ExportPrivateKey got unexpected parameters")
+		input := m.ExportPrivateKeyPEMMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, KeyProcessorMockExportPrivateKeyPEMInput{p}, "KeyProcessor.ExportPrivateKeyPEM got unexpected parameters")
 
-		result := m.ExportPrivateKeyMock.expectationSeries[counter-1].result
+		result := m.ExportPrivateKeyPEMMock.expectationSeries[counter-1].result
 		if result == nil {
-			m.t.Fatal("No results are set for the KeyProcessorMock.ExportPrivateKey")
+			m.t.Fatal("No results are set for the KeyProcessorMock.ExportPrivateKeyPEM")
 			return
 		}
 
@@ -162,16 +174,16 @@ func (m *KeyProcessorMock) ExportPrivateKey(p crypto.PrivateKey) (r []byte, r1 e
 		return
 	}
 
-	if m.ExportPrivateKeyMock.mainExpectation != nil {
+	if m.ExportPrivateKeyPEMMock.mainExpectation != nil {
 
-		input := m.ExportPrivateKeyMock.mainExpectation.input
+		input := m.ExportPrivateKeyPEMMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, KeyProcessorMockExportPrivateKeyInput{p}, "KeyProcessor.ExportPrivateKey got unexpected parameters")
+			testify_assert.Equal(m.t, *input, KeyProcessorMockExportPrivateKeyPEMInput{p}, "KeyProcessor.ExportPrivateKeyPEM got unexpected parameters")
 		}
 
-		result := m.ExportPrivateKeyMock.mainExpectation.result
+		result := m.ExportPrivateKeyPEMMock.mainExpectation.result
 		if result == nil {
-			m.t.Fatal("No results are set for the KeyProcessorMock.ExportPrivateKey")
+			m.t.Fatal("No results are set for the KeyProcessorMock.ExportPrivateKeyPEM")
 		}
 
 		r = result.r
@@ -180,129 +192,129 @@ func (m *KeyProcessorMock) ExportPrivateKey(p crypto.PrivateKey) (r []byte, r1 e
 		return
 	}
 
-	if m.ExportPrivateKeyFunc == nil {
-		m.t.Fatalf("Unexpected call to KeyProcessorMock.ExportPrivateKey. %v", p)
+	if m.ExportPrivateKeyPEMFunc == nil {
+		m.t.Fatalf("Unexpected call to KeyProcessorMock.ExportPrivateKeyPEM. %v", p)
 		return
 	}
 
-	return m.ExportPrivateKeyFunc(p)
+	return m.ExportPrivateKeyPEMFunc(p)
 }
 
-//ExportPrivateKeyMinimockCounter returns a count of KeyProcessorMock.ExportPrivateKeyFunc invocations
-func (m *KeyProcessorMock) ExportPrivateKeyMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.ExportPrivateKeyCounter)
+//ExportPrivateKeyPEMMinimockCounter returns a count of KeyProcessorMock.ExportPrivateKeyPEMFunc invocations
+func (m *KeyProcessorMock) ExportPrivateKeyPEMMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.ExportPrivateKeyPEMCounter)
 }
 
-//ExportPrivateKeyMinimockPreCounter returns the value of KeyProcessorMock.ExportPrivateKey invocations
-func (m *KeyProcessorMock) ExportPrivateKeyMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.ExportPrivateKeyPreCounter)
+//ExportPrivateKeyPEMMinimockPreCounter returns the value of KeyProcessorMock.ExportPrivateKeyPEM invocations
+func (m *KeyProcessorMock) ExportPrivateKeyPEMMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.ExportPrivateKeyPEMPreCounter)
 }
 
-//ExportPrivateKeyFinished returns true if mock invocations count is ok
-func (m *KeyProcessorMock) ExportPrivateKeyFinished() bool {
+//ExportPrivateKeyPEMFinished returns true if mock invocations count is ok
+func (m *KeyProcessorMock) ExportPrivateKeyPEMFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.ExportPrivateKeyMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.ExportPrivateKeyCounter) == uint64(len(m.ExportPrivateKeyMock.expectationSeries))
+	if len(m.ExportPrivateKeyPEMMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.ExportPrivateKeyPEMCounter) == uint64(len(m.ExportPrivateKeyPEMMock.expectationSeries))
 	}
 
 	// if main expectation was set then invocations count should be greater than zero
-	if m.ExportPrivateKeyMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.ExportPrivateKeyCounter) > 0
+	if m.ExportPrivateKeyPEMMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.ExportPrivateKeyPEMCounter) > 0
 	}
 
 	// if func was set then invocations count should be greater than zero
-	if m.ExportPrivateKeyFunc != nil {
-		return atomic.LoadUint64(&m.ExportPrivateKeyCounter) > 0
+	if m.ExportPrivateKeyPEMFunc != nil {
+		return atomic.LoadUint64(&m.ExportPrivateKeyPEMCounter) > 0
 	}
 
 	return true
 }
 
-type mKeyProcessorMockExportPublicKey struct {
+type mKeyProcessorMockExportPublicKeyBinary struct {
 	mock              *KeyProcessorMock
-	mainExpectation   *KeyProcessorMockExportPublicKeyExpectation
-	expectationSeries []*KeyProcessorMockExportPublicKeyExpectation
+	mainExpectation   *KeyProcessorMockExportPublicKeyBinaryExpectation
+	expectationSeries []*KeyProcessorMockExportPublicKeyBinaryExpectation
 }
 
-type KeyProcessorMockExportPublicKeyExpectation struct {
-	input  *KeyProcessorMockExportPublicKeyInput
-	result *KeyProcessorMockExportPublicKeyResult
+type KeyProcessorMockExportPublicKeyBinaryExpectation struct {
+	input  *KeyProcessorMockExportPublicKeyBinaryInput
+	result *KeyProcessorMockExportPublicKeyBinaryResult
 }
 
-type KeyProcessorMockExportPublicKeyInput struct {
+type KeyProcessorMockExportPublicKeyBinaryInput struct {
 	p crypto.PublicKey
 }
 
-type KeyProcessorMockExportPublicKeyResult struct {
+type KeyProcessorMockExportPublicKeyBinaryResult struct {
 	r  []byte
 	r1 error
 }
 
-//Expect specifies that invocation of KeyProcessor.ExportPublicKey is expected from 1 to Infinity times
-func (m *mKeyProcessorMockExportPublicKey) Expect(p crypto.PublicKey) *mKeyProcessorMockExportPublicKey {
-	m.mock.ExportPublicKeyFunc = nil
+//Expect specifies that invocation of KeyProcessor.ExportPublicKeyBinary is expected from 1 to Infinity times
+func (m *mKeyProcessorMockExportPublicKeyBinary) Expect(p crypto.PublicKey) *mKeyProcessorMockExportPublicKeyBinary {
+	m.mock.ExportPublicKeyBinaryFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &KeyProcessorMockExportPublicKeyExpectation{}
+		m.mainExpectation = &KeyProcessorMockExportPublicKeyBinaryExpectation{}
 	}
-	m.mainExpectation.input = &KeyProcessorMockExportPublicKeyInput{p}
+	m.mainExpectation.input = &KeyProcessorMockExportPublicKeyBinaryInput{p}
 	return m
 }
 
-//Return specifies results of invocation of KeyProcessor.ExportPublicKey
-func (m *mKeyProcessorMockExportPublicKey) Return(r []byte, r1 error) *KeyProcessorMock {
-	m.mock.ExportPublicKeyFunc = nil
+//Return specifies results of invocation of KeyProcessor.ExportPublicKeyBinary
+func (m *mKeyProcessorMockExportPublicKeyBinary) Return(r []byte, r1 error) *KeyProcessorMock {
+	m.mock.ExportPublicKeyBinaryFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &KeyProcessorMockExportPublicKeyExpectation{}
+		m.mainExpectation = &KeyProcessorMockExportPublicKeyBinaryExpectation{}
 	}
-	m.mainExpectation.result = &KeyProcessorMockExportPublicKeyResult{r, r1}
+	m.mainExpectation.result = &KeyProcessorMockExportPublicKeyBinaryResult{r, r1}
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of KeyProcessor.ExportPublicKey is expected once
-func (m *mKeyProcessorMockExportPublicKey) ExpectOnce(p crypto.PublicKey) *KeyProcessorMockExportPublicKeyExpectation {
-	m.mock.ExportPublicKeyFunc = nil
+//ExpectOnce specifies that invocation of KeyProcessor.ExportPublicKeyBinary is expected once
+func (m *mKeyProcessorMockExportPublicKeyBinary) ExpectOnce(p crypto.PublicKey) *KeyProcessorMockExportPublicKeyBinaryExpectation {
+	m.mock.ExportPublicKeyBinaryFunc = nil
 	m.mainExpectation = nil
 
-	expectation := &KeyProcessorMockExportPublicKeyExpectation{}
-	expectation.input = &KeyProcessorMockExportPublicKeyInput{p}
+	expectation := &KeyProcessorMockExportPublicKeyBinaryExpectation{}
+	expectation.input = &KeyProcessorMockExportPublicKeyBinaryInput{p}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
-func (e *KeyProcessorMockExportPublicKeyExpectation) Return(r []byte, r1 error) {
-	e.result = &KeyProcessorMockExportPublicKeyResult{r, r1}
+func (e *KeyProcessorMockExportPublicKeyBinaryExpectation) Return(r []byte, r1 error) {
+	e.result = &KeyProcessorMockExportPublicKeyBinaryResult{r, r1}
 }
 
-//Set uses given function f as a mock of KeyProcessor.ExportPublicKey method
-func (m *mKeyProcessorMockExportPublicKey) Set(f func(p crypto.PublicKey) (r []byte, r1 error)) *KeyProcessorMock {
+//Set uses given function f as a mock of KeyProcessor.ExportPublicKeyBinary method
+func (m *mKeyProcessorMockExportPublicKeyBinary) Set(f func(p crypto.PublicKey) (r []byte, r1 error)) *KeyProcessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
-	m.mock.ExportPublicKeyFunc = f
+	m.mock.ExportPublicKeyBinaryFunc = f
 	return m.mock
 }
 
-//ExportPublicKey implements github.com/insolar/insolar/core.KeyProcessor interface
-func (m *KeyProcessorMock) ExportPublicKey(p crypto.PublicKey) (r []byte, r1 error) {
-	counter := atomic.AddUint64(&m.ExportPublicKeyPreCounter, 1)
-	defer atomic.AddUint64(&m.ExportPublicKeyCounter, 1)
+//ExportPublicKeyBinary implements github.com/insolar/insolar/core.KeyProcessor interface
+func (m *KeyProcessorMock) ExportPublicKeyBinary(p crypto.PublicKey) (r []byte, r1 error) {
+	counter := atomic.AddUint64(&m.ExportPublicKeyBinaryPreCounter, 1)
+	defer atomic.AddUint64(&m.ExportPublicKeyBinaryCounter, 1)
 
-	if len(m.ExportPublicKeyMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.ExportPublicKeyMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to KeyProcessorMock.ExportPublicKey. %v", p)
+	if len(m.ExportPublicKeyBinaryMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.ExportPublicKeyBinaryMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to KeyProcessorMock.ExportPublicKeyBinary. %v", p)
 			return
 		}
 
-		input := m.ExportPublicKeyMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, KeyProcessorMockExportPublicKeyInput{p}, "KeyProcessor.ExportPublicKey got unexpected parameters")
+		input := m.ExportPublicKeyBinaryMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, KeyProcessorMockExportPublicKeyBinaryInput{p}, "KeyProcessor.ExportPublicKeyBinary got unexpected parameters")
 
-		result := m.ExportPublicKeyMock.expectationSeries[counter-1].result
+		result := m.ExportPublicKeyBinaryMock.expectationSeries[counter-1].result
 		if result == nil {
-			m.t.Fatal("No results are set for the KeyProcessorMock.ExportPublicKey")
+			m.t.Fatal("No results are set for the KeyProcessorMock.ExportPublicKeyBinary")
 			return
 		}
 
@@ -312,16 +324,16 @@ func (m *KeyProcessorMock) ExportPublicKey(p crypto.PublicKey) (r []byte, r1 err
 		return
 	}
 
-	if m.ExportPublicKeyMock.mainExpectation != nil {
+	if m.ExportPublicKeyBinaryMock.mainExpectation != nil {
 
-		input := m.ExportPublicKeyMock.mainExpectation.input
+		input := m.ExportPublicKeyBinaryMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, KeyProcessorMockExportPublicKeyInput{p}, "KeyProcessor.ExportPublicKey got unexpected parameters")
+			testify_assert.Equal(m.t, *input, KeyProcessorMockExportPublicKeyBinaryInput{p}, "KeyProcessor.ExportPublicKeyBinary got unexpected parameters")
 		}
 
-		result := m.ExportPublicKeyMock.mainExpectation.result
+		result := m.ExportPublicKeyBinaryMock.mainExpectation.result
 		if result == nil {
-			m.t.Fatal("No results are set for the KeyProcessorMock.ExportPublicKey")
+			m.t.Fatal("No results are set for the KeyProcessorMock.ExportPublicKeyBinary")
 		}
 
 		r = result.r
@@ -330,39 +342,189 @@ func (m *KeyProcessorMock) ExportPublicKey(p crypto.PublicKey) (r []byte, r1 err
 		return
 	}
 
-	if m.ExportPublicKeyFunc == nil {
-		m.t.Fatalf("Unexpected call to KeyProcessorMock.ExportPublicKey. %v", p)
+	if m.ExportPublicKeyBinaryFunc == nil {
+		m.t.Fatalf("Unexpected call to KeyProcessorMock.ExportPublicKeyBinary. %v", p)
 		return
 	}
 
-	return m.ExportPublicKeyFunc(p)
+	return m.ExportPublicKeyBinaryFunc(p)
 }
 
-//ExportPublicKeyMinimockCounter returns a count of KeyProcessorMock.ExportPublicKeyFunc invocations
-func (m *KeyProcessorMock) ExportPublicKeyMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.ExportPublicKeyCounter)
+//ExportPublicKeyBinaryMinimockCounter returns a count of KeyProcessorMock.ExportPublicKeyBinaryFunc invocations
+func (m *KeyProcessorMock) ExportPublicKeyBinaryMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.ExportPublicKeyBinaryCounter)
 }
 
-//ExportPublicKeyMinimockPreCounter returns the value of KeyProcessorMock.ExportPublicKey invocations
-func (m *KeyProcessorMock) ExportPublicKeyMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.ExportPublicKeyPreCounter)
+//ExportPublicKeyBinaryMinimockPreCounter returns the value of KeyProcessorMock.ExportPublicKeyBinary invocations
+func (m *KeyProcessorMock) ExportPublicKeyBinaryMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.ExportPublicKeyBinaryPreCounter)
 }
 
-//ExportPublicKeyFinished returns true if mock invocations count is ok
-func (m *KeyProcessorMock) ExportPublicKeyFinished() bool {
+//ExportPublicKeyBinaryFinished returns true if mock invocations count is ok
+func (m *KeyProcessorMock) ExportPublicKeyBinaryFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.ExportPublicKeyMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.ExportPublicKeyCounter) == uint64(len(m.ExportPublicKeyMock.expectationSeries))
+	if len(m.ExportPublicKeyBinaryMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.ExportPublicKeyBinaryCounter) == uint64(len(m.ExportPublicKeyBinaryMock.expectationSeries))
 	}
 
 	// if main expectation was set then invocations count should be greater than zero
-	if m.ExportPublicKeyMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.ExportPublicKeyCounter) > 0
+	if m.ExportPublicKeyBinaryMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.ExportPublicKeyBinaryCounter) > 0
 	}
 
 	// if func was set then invocations count should be greater than zero
-	if m.ExportPublicKeyFunc != nil {
-		return atomic.LoadUint64(&m.ExportPublicKeyCounter) > 0
+	if m.ExportPublicKeyBinaryFunc != nil {
+		return atomic.LoadUint64(&m.ExportPublicKeyBinaryCounter) > 0
+	}
+
+	return true
+}
+
+type mKeyProcessorMockExportPublicKeyPEM struct {
+	mock              *KeyProcessorMock
+	mainExpectation   *KeyProcessorMockExportPublicKeyPEMExpectation
+	expectationSeries []*KeyProcessorMockExportPublicKeyPEMExpectation
+}
+
+type KeyProcessorMockExportPublicKeyPEMExpectation struct {
+	input  *KeyProcessorMockExportPublicKeyPEMInput
+	result *KeyProcessorMockExportPublicKeyPEMResult
+}
+
+type KeyProcessorMockExportPublicKeyPEMInput struct {
+	p crypto.PublicKey
+}
+
+type KeyProcessorMockExportPublicKeyPEMResult struct {
+	r  []byte
+	r1 error
+}
+
+//Expect specifies that invocation of KeyProcessor.ExportPublicKeyPEM is expected from 1 to Infinity times
+func (m *mKeyProcessorMockExportPublicKeyPEM) Expect(p crypto.PublicKey) *mKeyProcessorMockExportPublicKeyPEM {
+	m.mock.ExportPublicKeyPEMFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &KeyProcessorMockExportPublicKeyPEMExpectation{}
+	}
+	m.mainExpectation.input = &KeyProcessorMockExportPublicKeyPEMInput{p}
+	return m
+}
+
+//Return specifies results of invocation of KeyProcessor.ExportPublicKeyPEM
+func (m *mKeyProcessorMockExportPublicKeyPEM) Return(r []byte, r1 error) *KeyProcessorMock {
+	m.mock.ExportPublicKeyPEMFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &KeyProcessorMockExportPublicKeyPEMExpectation{}
+	}
+	m.mainExpectation.result = &KeyProcessorMockExportPublicKeyPEMResult{r, r1}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of KeyProcessor.ExportPublicKeyPEM is expected once
+func (m *mKeyProcessorMockExportPublicKeyPEM) ExpectOnce(p crypto.PublicKey) *KeyProcessorMockExportPublicKeyPEMExpectation {
+	m.mock.ExportPublicKeyPEMFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &KeyProcessorMockExportPublicKeyPEMExpectation{}
+	expectation.input = &KeyProcessorMockExportPublicKeyPEMInput{p}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *KeyProcessorMockExportPublicKeyPEMExpectation) Return(r []byte, r1 error) {
+	e.result = &KeyProcessorMockExportPublicKeyPEMResult{r, r1}
+}
+
+//Set uses given function f as a mock of KeyProcessor.ExportPublicKeyPEM method
+func (m *mKeyProcessorMockExportPublicKeyPEM) Set(f func(p crypto.PublicKey) (r []byte, r1 error)) *KeyProcessorMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.ExportPublicKeyPEMFunc = f
+	return m.mock
+}
+
+//ExportPublicKeyPEM implements github.com/insolar/insolar/core.KeyProcessor interface
+func (m *KeyProcessorMock) ExportPublicKeyPEM(p crypto.PublicKey) (r []byte, r1 error) {
+	counter := atomic.AddUint64(&m.ExportPublicKeyPEMPreCounter, 1)
+	defer atomic.AddUint64(&m.ExportPublicKeyPEMCounter, 1)
+
+	if len(m.ExportPublicKeyPEMMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.ExportPublicKeyPEMMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to KeyProcessorMock.ExportPublicKeyPEM. %v", p)
+			return
+		}
+
+		input := m.ExportPublicKeyPEMMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, KeyProcessorMockExportPublicKeyPEMInput{p}, "KeyProcessor.ExportPublicKeyPEM got unexpected parameters")
+
+		result := m.ExportPublicKeyPEMMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the KeyProcessorMock.ExportPublicKeyPEM")
+			return
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.ExportPublicKeyPEMMock.mainExpectation != nil {
+
+		input := m.ExportPublicKeyPEMMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, KeyProcessorMockExportPublicKeyPEMInput{p}, "KeyProcessor.ExportPublicKeyPEM got unexpected parameters")
+		}
+
+		result := m.ExportPublicKeyPEMMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the KeyProcessorMock.ExportPublicKeyPEM")
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.ExportPublicKeyPEMFunc == nil {
+		m.t.Fatalf("Unexpected call to KeyProcessorMock.ExportPublicKeyPEM. %v", p)
+		return
+	}
+
+	return m.ExportPublicKeyPEMFunc(p)
+}
+
+//ExportPublicKeyPEMMinimockCounter returns a count of KeyProcessorMock.ExportPublicKeyPEMFunc invocations
+func (m *KeyProcessorMock) ExportPublicKeyPEMMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.ExportPublicKeyPEMCounter)
+}
+
+//ExportPublicKeyPEMMinimockPreCounter returns the value of KeyProcessorMock.ExportPublicKeyPEM invocations
+func (m *KeyProcessorMock) ExportPublicKeyPEMMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.ExportPublicKeyPEMPreCounter)
+}
+
+//ExportPublicKeyPEMFinished returns true if mock invocations count is ok
+func (m *KeyProcessorMock) ExportPublicKeyPEMFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.ExportPublicKeyPEMMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.ExportPublicKeyPEMCounter) == uint64(len(m.ExportPublicKeyPEMMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.ExportPublicKeyPEMMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.ExportPublicKeyPEMCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.ExportPublicKeyPEMFunc != nil {
+		return atomic.LoadUint64(&m.ExportPublicKeyPEMCounter) > 0
 	}
 
 	return true
@@ -652,91 +814,91 @@ func (m *KeyProcessorMock) GeneratePrivateKeyFinished() bool {
 	return true
 }
 
-type mKeyProcessorMockImportPrivateKey struct {
+type mKeyProcessorMockImportPrivateKeyPEM struct {
 	mock              *KeyProcessorMock
-	mainExpectation   *KeyProcessorMockImportPrivateKeyExpectation
-	expectationSeries []*KeyProcessorMockImportPrivateKeyExpectation
+	mainExpectation   *KeyProcessorMockImportPrivateKeyPEMExpectation
+	expectationSeries []*KeyProcessorMockImportPrivateKeyPEMExpectation
 }
 
-type KeyProcessorMockImportPrivateKeyExpectation struct {
-	input  *KeyProcessorMockImportPrivateKeyInput
-	result *KeyProcessorMockImportPrivateKeyResult
+type KeyProcessorMockImportPrivateKeyPEMExpectation struct {
+	input  *KeyProcessorMockImportPrivateKeyPEMInput
+	result *KeyProcessorMockImportPrivateKeyPEMResult
 }
 
-type KeyProcessorMockImportPrivateKeyInput struct {
+type KeyProcessorMockImportPrivateKeyPEMInput struct {
 	p []byte
 }
 
-type KeyProcessorMockImportPrivateKeyResult struct {
+type KeyProcessorMockImportPrivateKeyPEMResult struct {
 	r  crypto.PrivateKey
 	r1 error
 }
 
-//Expect specifies that invocation of KeyProcessor.ImportPrivateKey is expected from 1 to Infinity times
-func (m *mKeyProcessorMockImportPrivateKey) Expect(p []byte) *mKeyProcessorMockImportPrivateKey {
-	m.mock.ImportPrivateKeyFunc = nil
+//Expect specifies that invocation of KeyProcessor.ImportPrivateKeyPEM is expected from 1 to Infinity times
+func (m *mKeyProcessorMockImportPrivateKeyPEM) Expect(p []byte) *mKeyProcessorMockImportPrivateKeyPEM {
+	m.mock.ImportPrivateKeyPEMFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &KeyProcessorMockImportPrivateKeyExpectation{}
+		m.mainExpectation = &KeyProcessorMockImportPrivateKeyPEMExpectation{}
 	}
-	m.mainExpectation.input = &KeyProcessorMockImportPrivateKeyInput{p}
+	m.mainExpectation.input = &KeyProcessorMockImportPrivateKeyPEMInput{p}
 	return m
 }
 
-//Return specifies results of invocation of KeyProcessor.ImportPrivateKey
-func (m *mKeyProcessorMockImportPrivateKey) Return(r crypto.PrivateKey, r1 error) *KeyProcessorMock {
-	m.mock.ImportPrivateKeyFunc = nil
+//Return specifies results of invocation of KeyProcessor.ImportPrivateKeyPEM
+func (m *mKeyProcessorMockImportPrivateKeyPEM) Return(r crypto.PrivateKey, r1 error) *KeyProcessorMock {
+	m.mock.ImportPrivateKeyPEMFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &KeyProcessorMockImportPrivateKeyExpectation{}
+		m.mainExpectation = &KeyProcessorMockImportPrivateKeyPEMExpectation{}
 	}
-	m.mainExpectation.result = &KeyProcessorMockImportPrivateKeyResult{r, r1}
+	m.mainExpectation.result = &KeyProcessorMockImportPrivateKeyPEMResult{r, r1}
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of KeyProcessor.ImportPrivateKey is expected once
-func (m *mKeyProcessorMockImportPrivateKey) ExpectOnce(p []byte) *KeyProcessorMockImportPrivateKeyExpectation {
-	m.mock.ImportPrivateKeyFunc = nil
+//ExpectOnce specifies that invocation of KeyProcessor.ImportPrivateKeyPEM is expected once
+func (m *mKeyProcessorMockImportPrivateKeyPEM) ExpectOnce(p []byte) *KeyProcessorMockImportPrivateKeyPEMExpectation {
+	m.mock.ImportPrivateKeyPEMFunc = nil
 	m.mainExpectation = nil
 
-	expectation := &KeyProcessorMockImportPrivateKeyExpectation{}
-	expectation.input = &KeyProcessorMockImportPrivateKeyInput{p}
+	expectation := &KeyProcessorMockImportPrivateKeyPEMExpectation{}
+	expectation.input = &KeyProcessorMockImportPrivateKeyPEMInput{p}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
-func (e *KeyProcessorMockImportPrivateKeyExpectation) Return(r crypto.PrivateKey, r1 error) {
-	e.result = &KeyProcessorMockImportPrivateKeyResult{r, r1}
+func (e *KeyProcessorMockImportPrivateKeyPEMExpectation) Return(r crypto.PrivateKey, r1 error) {
+	e.result = &KeyProcessorMockImportPrivateKeyPEMResult{r, r1}
 }
 
-//Set uses given function f as a mock of KeyProcessor.ImportPrivateKey method
-func (m *mKeyProcessorMockImportPrivateKey) Set(f func(p []byte) (r crypto.PrivateKey, r1 error)) *KeyProcessorMock {
+//Set uses given function f as a mock of KeyProcessor.ImportPrivateKeyPEM method
+func (m *mKeyProcessorMockImportPrivateKeyPEM) Set(f func(p []byte) (r crypto.PrivateKey, r1 error)) *KeyProcessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
-	m.mock.ImportPrivateKeyFunc = f
+	m.mock.ImportPrivateKeyPEMFunc = f
 	return m.mock
 }
 
-//ImportPrivateKey implements github.com/insolar/insolar/core.KeyProcessor interface
-func (m *KeyProcessorMock) ImportPrivateKey(p []byte) (r crypto.PrivateKey, r1 error) {
-	counter := atomic.AddUint64(&m.ImportPrivateKeyPreCounter, 1)
-	defer atomic.AddUint64(&m.ImportPrivateKeyCounter, 1)
+//ImportPrivateKeyPEM implements github.com/insolar/insolar/core.KeyProcessor interface
+func (m *KeyProcessorMock) ImportPrivateKeyPEM(p []byte) (r crypto.PrivateKey, r1 error) {
+	counter := atomic.AddUint64(&m.ImportPrivateKeyPEMPreCounter, 1)
+	defer atomic.AddUint64(&m.ImportPrivateKeyPEMCounter, 1)
 
-	if len(m.ImportPrivateKeyMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.ImportPrivateKeyMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to KeyProcessorMock.ImportPrivateKey. %v", p)
+	if len(m.ImportPrivateKeyPEMMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.ImportPrivateKeyPEMMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to KeyProcessorMock.ImportPrivateKeyPEM. %v", p)
 			return
 		}
 
-		input := m.ImportPrivateKeyMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, KeyProcessorMockImportPrivateKeyInput{p}, "KeyProcessor.ImportPrivateKey got unexpected parameters")
+		input := m.ImportPrivateKeyPEMMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, KeyProcessorMockImportPrivateKeyPEMInput{p}, "KeyProcessor.ImportPrivateKeyPEM got unexpected parameters")
 
-		result := m.ImportPrivateKeyMock.expectationSeries[counter-1].result
+		result := m.ImportPrivateKeyPEMMock.expectationSeries[counter-1].result
 		if result == nil {
-			m.t.Fatal("No results are set for the KeyProcessorMock.ImportPrivateKey")
+			m.t.Fatal("No results are set for the KeyProcessorMock.ImportPrivateKeyPEM")
 			return
 		}
 
@@ -746,16 +908,16 @@ func (m *KeyProcessorMock) ImportPrivateKey(p []byte) (r crypto.PrivateKey, r1 e
 		return
 	}
 
-	if m.ImportPrivateKeyMock.mainExpectation != nil {
+	if m.ImportPrivateKeyPEMMock.mainExpectation != nil {
 
-		input := m.ImportPrivateKeyMock.mainExpectation.input
+		input := m.ImportPrivateKeyPEMMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, KeyProcessorMockImportPrivateKeyInput{p}, "KeyProcessor.ImportPrivateKey got unexpected parameters")
+			testify_assert.Equal(m.t, *input, KeyProcessorMockImportPrivateKeyPEMInput{p}, "KeyProcessor.ImportPrivateKeyPEM got unexpected parameters")
 		}
 
-		result := m.ImportPrivateKeyMock.mainExpectation.result
+		result := m.ImportPrivateKeyPEMMock.mainExpectation.result
 		if result == nil {
-			m.t.Fatal("No results are set for the KeyProcessorMock.ImportPrivateKey")
+			m.t.Fatal("No results are set for the KeyProcessorMock.ImportPrivateKeyPEM")
 		}
 
 		r = result.r
@@ -764,129 +926,129 @@ func (m *KeyProcessorMock) ImportPrivateKey(p []byte) (r crypto.PrivateKey, r1 e
 		return
 	}
 
-	if m.ImportPrivateKeyFunc == nil {
-		m.t.Fatalf("Unexpected call to KeyProcessorMock.ImportPrivateKey. %v", p)
+	if m.ImportPrivateKeyPEMFunc == nil {
+		m.t.Fatalf("Unexpected call to KeyProcessorMock.ImportPrivateKeyPEM. %v", p)
 		return
 	}
 
-	return m.ImportPrivateKeyFunc(p)
+	return m.ImportPrivateKeyPEMFunc(p)
 }
 
-//ImportPrivateKeyMinimockCounter returns a count of KeyProcessorMock.ImportPrivateKeyFunc invocations
-func (m *KeyProcessorMock) ImportPrivateKeyMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.ImportPrivateKeyCounter)
+//ImportPrivateKeyPEMMinimockCounter returns a count of KeyProcessorMock.ImportPrivateKeyPEMFunc invocations
+func (m *KeyProcessorMock) ImportPrivateKeyPEMMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.ImportPrivateKeyPEMCounter)
 }
 
-//ImportPrivateKeyMinimockPreCounter returns the value of KeyProcessorMock.ImportPrivateKey invocations
-func (m *KeyProcessorMock) ImportPrivateKeyMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.ImportPrivateKeyPreCounter)
+//ImportPrivateKeyPEMMinimockPreCounter returns the value of KeyProcessorMock.ImportPrivateKeyPEM invocations
+func (m *KeyProcessorMock) ImportPrivateKeyPEMMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.ImportPrivateKeyPEMPreCounter)
 }
 
-//ImportPrivateKeyFinished returns true if mock invocations count is ok
-func (m *KeyProcessorMock) ImportPrivateKeyFinished() bool {
+//ImportPrivateKeyPEMFinished returns true if mock invocations count is ok
+func (m *KeyProcessorMock) ImportPrivateKeyPEMFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.ImportPrivateKeyMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.ImportPrivateKeyCounter) == uint64(len(m.ImportPrivateKeyMock.expectationSeries))
+	if len(m.ImportPrivateKeyPEMMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.ImportPrivateKeyPEMCounter) == uint64(len(m.ImportPrivateKeyPEMMock.expectationSeries))
 	}
 
 	// if main expectation was set then invocations count should be greater than zero
-	if m.ImportPrivateKeyMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.ImportPrivateKeyCounter) > 0
+	if m.ImportPrivateKeyPEMMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.ImportPrivateKeyPEMCounter) > 0
 	}
 
 	// if func was set then invocations count should be greater than zero
-	if m.ImportPrivateKeyFunc != nil {
-		return atomic.LoadUint64(&m.ImportPrivateKeyCounter) > 0
+	if m.ImportPrivateKeyPEMFunc != nil {
+		return atomic.LoadUint64(&m.ImportPrivateKeyPEMCounter) > 0
 	}
 
 	return true
 }
 
-type mKeyProcessorMockImportPublicKey struct {
+type mKeyProcessorMockImportPublicKeyBinary struct {
 	mock              *KeyProcessorMock
-	mainExpectation   *KeyProcessorMockImportPublicKeyExpectation
-	expectationSeries []*KeyProcessorMockImportPublicKeyExpectation
+	mainExpectation   *KeyProcessorMockImportPublicKeyBinaryExpectation
+	expectationSeries []*KeyProcessorMockImportPublicKeyBinaryExpectation
 }
 
-type KeyProcessorMockImportPublicKeyExpectation struct {
-	input  *KeyProcessorMockImportPublicKeyInput
-	result *KeyProcessorMockImportPublicKeyResult
+type KeyProcessorMockImportPublicKeyBinaryExpectation struct {
+	input  *KeyProcessorMockImportPublicKeyBinaryInput
+	result *KeyProcessorMockImportPublicKeyBinaryResult
 }
 
-type KeyProcessorMockImportPublicKeyInput struct {
+type KeyProcessorMockImportPublicKeyBinaryInput struct {
 	p []byte
 }
 
-type KeyProcessorMockImportPublicKeyResult struct {
+type KeyProcessorMockImportPublicKeyBinaryResult struct {
 	r  crypto.PublicKey
 	r1 error
 }
 
-//Expect specifies that invocation of KeyProcessor.ImportPublicKey is expected from 1 to Infinity times
-func (m *mKeyProcessorMockImportPublicKey) Expect(p []byte) *mKeyProcessorMockImportPublicKey {
-	m.mock.ImportPublicKeyFunc = nil
+//Expect specifies that invocation of KeyProcessor.ImportPublicKeyBinary is expected from 1 to Infinity times
+func (m *mKeyProcessorMockImportPublicKeyBinary) Expect(p []byte) *mKeyProcessorMockImportPublicKeyBinary {
+	m.mock.ImportPublicKeyBinaryFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &KeyProcessorMockImportPublicKeyExpectation{}
+		m.mainExpectation = &KeyProcessorMockImportPublicKeyBinaryExpectation{}
 	}
-	m.mainExpectation.input = &KeyProcessorMockImportPublicKeyInput{p}
+	m.mainExpectation.input = &KeyProcessorMockImportPublicKeyBinaryInput{p}
 	return m
 }
 
-//Return specifies results of invocation of KeyProcessor.ImportPublicKey
-func (m *mKeyProcessorMockImportPublicKey) Return(r crypto.PublicKey, r1 error) *KeyProcessorMock {
-	m.mock.ImportPublicKeyFunc = nil
+//Return specifies results of invocation of KeyProcessor.ImportPublicKeyBinary
+func (m *mKeyProcessorMockImportPublicKeyBinary) Return(r crypto.PublicKey, r1 error) *KeyProcessorMock {
+	m.mock.ImportPublicKeyBinaryFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &KeyProcessorMockImportPublicKeyExpectation{}
+		m.mainExpectation = &KeyProcessorMockImportPublicKeyBinaryExpectation{}
 	}
-	m.mainExpectation.result = &KeyProcessorMockImportPublicKeyResult{r, r1}
+	m.mainExpectation.result = &KeyProcessorMockImportPublicKeyBinaryResult{r, r1}
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of KeyProcessor.ImportPublicKey is expected once
-func (m *mKeyProcessorMockImportPublicKey) ExpectOnce(p []byte) *KeyProcessorMockImportPublicKeyExpectation {
-	m.mock.ImportPublicKeyFunc = nil
+//ExpectOnce specifies that invocation of KeyProcessor.ImportPublicKeyBinary is expected once
+func (m *mKeyProcessorMockImportPublicKeyBinary) ExpectOnce(p []byte) *KeyProcessorMockImportPublicKeyBinaryExpectation {
+	m.mock.ImportPublicKeyBinaryFunc = nil
 	m.mainExpectation = nil
 
-	expectation := &KeyProcessorMockImportPublicKeyExpectation{}
-	expectation.input = &KeyProcessorMockImportPublicKeyInput{p}
+	expectation := &KeyProcessorMockImportPublicKeyBinaryExpectation{}
+	expectation.input = &KeyProcessorMockImportPublicKeyBinaryInput{p}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
-func (e *KeyProcessorMockImportPublicKeyExpectation) Return(r crypto.PublicKey, r1 error) {
-	e.result = &KeyProcessorMockImportPublicKeyResult{r, r1}
+func (e *KeyProcessorMockImportPublicKeyBinaryExpectation) Return(r crypto.PublicKey, r1 error) {
+	e.result = &KeyProcessorMockImportPublicKeyBinaryResult{r, r1}
 }
 
-//Set uses given function f as a mock of KeyProcessor.ImportPublicKey method
-func (m *mKeyProcessorMockImportPublicKey) Set(f func(p []byte) (r crypto.PublicKey, r1 error)) *KeyProcessorMock {
+//Set uses given function f as a mock of KeyProcessor.ImportPublicKeyBinary method
+func (m *mKeyProcessorMockImportPublicKeyBinary) Set(f func(p []byte) (r crypto.PublicKey, r1 error)) *KeyProcessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
-	m.mock.ImportPublicKeyFunc = f
+	m.mock.ImportPublicKeyBinaryFunc = f
 	return m.mock
 }
 
-//ImportPublicKey implements github.com/insolar/insolar/core.KeyProcessor interface
-func (m *KeyProcessorMock) ImportPublicKey(p []byte) (r crypto.PublicKey, r1 error) {
-	counter := atomic.AddUint64(&m.ImportPublicKeyPreCounter, 1)
-	defer atomic.AddUint64(&m.ImportPublicKeyCounter, 1)
+//ImportPublicKeyBinary implements github.com/insolar/insolar/core.KeyProcessor interface
+func (m *KeyProcessorMock) ImportPublicKeyBinary(p []byte) (r crypto.PublicKey, r1 error) {
+	counter := atomic.AddUint64(&m.ImportPublicKeyBinaryPreCounter, 1)
+	defer atomic.AddUint64(&m.ImportPublicKeyBinaryCounter, 1)
 
-	if len(m.ImportPublicKeyMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.ImportPublicKeyMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to KeyProcessorMock.ImportPublicKey. %v", p)
+	if len(m.ImportPublicKeyBinaryMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.ImportPublicKeyBinaryMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to KeyProcessorMock.ImportPublicKeyBinary. %v", p)
 			return
 		}
 
-		input := m.ImportPublicKeyMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, KeyProcessorMockImportPublicKeyInput{p}, "KeyProcessor.ImportPublicKey got unexpected parameters")
+		input := m.ImportPublicKeyBinaryMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, KeyProcessorMockImportPublicKeyBinaryInput{p}, "KeyProcessor.ImportPublicKeyBinary got unexpected parameters")
 
-		result := m.ImportPublicKeyMock.expectationSeries[counter-1].result
+		result := m.ImportPublicKeyBinaryMock.expectationSeries[counter-1].result
 		if result == nil {
-			m.t.Fatal("No results are set for the KeyProcessorMock.ImportPublicKey")
+			m.t.Fatal("No results are set for the KeyProcessorMock.ImportPublicKeyBinary")
 			return
 		}
 
@@ -896,16 +1058,16 @@ func (m *KeyProcessorMock) ImportPublicKey(p []byte) (r crypto.PublicKey, r1 err
 		return
 	}
 
-	if m.ImportPublicKeyMock.mainExpectation != nil {
+	if m.ImportPublicKeyBinaryMock.mainExpectation != nil {
 
-		input := m.ImportPublicKeyMock.mainExpectation.input
+		input := m.ImportPublicKeyBinaryMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, KeyProcessorMockImportPublicKeyInput{p}, "KeyProcessor.ImportPublicKey got unexpected parameters")
+			testify_assert.Equal(m.t, *input, KeyProcessorMockImportPublicKeyBinaryInput{p}, "KeyProcessor.ImportPublicKeyBinary got unexpected parameters")
 		}
 
-		result := m.ImportPublicKeyMock.mainExpectation.result
+		result := m.ImportPublicKeyBinaryMock.mainExpectation.result
 		if result == nil {
-			m.t.Fatal("No results are set for the KeyProcessorMock.ImportPublicKey")
+			m.t.Fatal("No results are set for the KeyProcessorMock.ImportPublicKeyBinary")
 		}
 
 		r = result.r
@@ -914,39 +1076,189 @@ func (m *KeyProcessorMock) ImportPublicKey(p []byte) (r crypto.PublicKey, r1 err
 		return
 	}
 
-	if m.ImportPublicKeyFunc == nil {
-		m.t.Fatalf("Unexpected call to KeyProcessorMock.ImportPublicKey. %v", p)
+	if m.ImportPublicKeyBinaryFunc == nil {
+		m.t.Fatalf("Unexpected call to KeyProcessorMock.ImportPublicKeyBinary. %v", p)
 		return
 	}
 
-	return m.ImportPublicKeyFunc(p)
+	return m.ImportPublicKeyBinaryFunc(p)
 }
 
-//ImportPublicKeyMinimockCounter returns a count of KeyProcessorMock.ImportPublicKeyFunc invocations
-func (m *KeyProcessorMock) ImportPublicKeyMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.ImportPublicKeyCounter)
+//ImportPublicKeyBinaryMinimockCounter returns a count of KeyProcessorMock.ImportPublicKeyBinaryFunc invocations
+func (m *KeyProcessorMock) ImportPublicKeyBinaryMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.ImportPublicKeyBinaryCounter)
 }
 
-//ImportPublicKeyMinimockPreCounter returns the value of KeyProcessorMock.ImportPublicKey invocations
-func (m *KeyProcessorMock) ImportPublicKeyMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.ImportPublicKeyPreCounter)
+//ImportPublicKeyBinaryMinimockPreCounter returns the value of KeyProcessorMock.ImportPublicKeyBinary invocations
+func (m *KeyProcessorMock) ImportPublicKeyBinaryMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.ImportPublicKeyBinaryPreCounter)
 }
 
-//ImportPublicKeyFinished returns true if mock invocations count is ok
-func (m *KeyProcessorMock) ImportPublicKeyFinished() bool {
+//ImportPublicKeyBinaryFinished returns true if mock invocations count is ok
+func (m *KeyProcessorMock) ImportPublicKeyBinaryFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.ImportPublicKeyMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.ImportPublicKeyCounter) == uint64(len(m.ImportPublicKeyMock.expectationSeries))
+	if len(m.ImportPublicKeyBinaryMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.ImportPublicKeyBinaryCounter) == uint64(len(m.ImportPublicKeyBinaryMock.expectationSeries))
 	}
 
 	// if main expectation was set then invocations count should be greater than zero
-	if m.ImportPublicKeyMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.ImportPublicKeyCounter) > 0
+	if m.ImportPublicKeyBinaryMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.ImportPublicKeyBinaryCounter) > 0
 	}
 
 	// if func was set then invocations count should be greater than zero
-	if m.ImportPublicKeyFunc != nil {
-		return atomic.LoadUint64(&m.ImportPublicKeyCounter) > 0
+	if m.ImportPublicKeyBinaryFunc != nil {
+		return atomic.LoadUint64(&m.ImportPublicKeyBinaryCounter) > 0
+	}
+
+	return true
+}
+
+type mKeyProcessorMockImportPublicKeyPEM struct {
+	mock              *KeyProcessorMock
+	mainExpectation   *KeyProcessorMockImportPublicKeyPEMExpectation
+	expectationSeries []*KeyProcessorMockImportPublicKeyPEMExpectation
+}
+
+type KeyProcessorMockImportPublicKeyPEMExpectation struct {
+	input  *KeyProcessorMockImportPublicKeyPEMInput
+	result *KeyProcessorMockImportPublicKeyPEMResult
+}
+
+type KeyProcessorMockImportPublicKeyPEMInput struct {
+	p []byte
+}
+
+type KeyProcessorMockImportPublicKeyPEMResult struct {
+	r  crypto.PublicKey
+	r1 error
+}
+
+//Expect specifies that invocation of KeyProcessor.ImportPublicKeyPEM is expected from 1 to Infinity times
+func (m *mKeyProcessorMockImportPublicKeyPEM) Expect(p []byte) *mKeyProcessorMockImportPublicKeyPEM {
+	m.mock.ImportPublicKeyPEMFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &KeyProcessorMockImportPublicKeyPEMExpectation{}
+	}
+	m.mainExpectation.input = &KeyProcessorMockImportPublicKeyPEMInput{p}
+	return m
+}
+
+//Return specifies results of invocation of KeyProcessor.ImportPublicKeyPEM
+func (m *mKeyProcessorMockImportPublicKeyPEM) Return(r crypto.PublicKey, r1 error) *KeyProcessorMock {
+	m.mock.ImportPublicKeyPEMFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &KeyProcessorMockImportPublicKeyPEMExpectation{}
+	}
+	m.mainExpectation.result = &KeyProcessorMockImportPublicKeyPEMResult{r, r1}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of KeyProcessor.ImportPublicKeyPEM is expected once
+func (m *mKeyProcessorMockImportPublicKeyPEM) ExpectOnce(p []byte) *KeyProcessorMockImportPublicKeyPEMExpectation {
+	m.mock.ImportPublicKeyPEMFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &KeyProcessorMockImportPublicKeyPEMExpectation{}
+	expectation.input = &KeyProcessorMockImportPublicKeyPEMInput{p}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *KeyProcessorMockImportPublicKeyPEMExpectation) Return(r crypto.PublicKey, r1 error) {
+	e.result = &KeyProcessorMockImportPublicKeyPEMResult{r, r1}
+}
+
+//Set uses given function f as a mock of KeyProcessor.ImportPublicKeyPEM method
+func (m *mKeyProcessorMockImportPublicKeyPEM) Set(f func(p []byte) (r crypto.PublicKey, r1 error)) *KeyProcessorMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.ImportPublicKeyPEMFunc = f
+	return m.mock
+}
+
+//ImportPublicKeyPEM implements github.com/insolar/insolar/core.KeyProcessor interface
+func (m *KeyProcessorMock) ImportPublicKeyPEM(p []byte) (r crypto.PublicKey, r1 error) {
+	counter := atomic.AddUint64(&m.ImportPublicKeyPEMPreCounter, 1)
+	defer atomic.AddUint64(&m.ImportPublicKeyPEMCounter, 1)
+
+	if len(m.ImportPublicKeyPEMMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.ImportPublicKeyPEMMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to KeyProcessorMock.ImportPublicKeyPEM. %v", p)
+			return
+		}
+
+		input := m.ImportPublicKeyPEMMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, KeyProcessorMockImportPublicKeyPEMInput{p}, "KeyProcessor.ImportPublicKeyPEM got unexpected parameters")
+
+		result := m.ImportPublicKeyPEMMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the KeyProcessorMock.ImportPublicKeyPEM")
+			return
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.ImportPublicKeyPEMMock.mainExpectation != nil {
+
+		input := m.ImportPublicKeyPEMMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, KeyProcessorMockImportPublicKeyPEMInput{p}, "KeyProcessor.ImportPublicKeyPEM got unexpected parameters")
+		}
+
+		result := m.ImportPublicKeyPEMMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the KeyProcessorMock.ImportPublicKeyPEM")
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.ImportPublicKeyPEMFunc == nil {
+		m.t.Fatalf("Unexpected call to KeyProcessorMock.ImportPublicKeyPEM. %v", p)
+		return
+	}
+
+	return m.ImportPublicKeyPEMFunc(p)
+}
+
+//ImportPublicKeyPEMMinimockCounter returns a count of KeyProcessorMock.ImportPublicKeyPEMFunc invocations
+func (m *KeyProcessorMock) ImportPublicKeyPEMMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.ImportPublicKeyPEMCounter)
+}
+
+//ImportPublicKeyPEMMinimockPreCounter returns the value of KeyProcessorMock.ImportPublicKeyPEM invocations
+func (m *KeyProcessorMock) ImportPublicKeyPEMMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.ImportPublicKeyPEMPreCounter)
+}
+
+//ImportPublicKeyPEMFinished returns true if mock invocations count is ok
+func (m *KeyProcessorMock) ImportPublicKeyPEMFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.ImportPublicKeyPEMMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.ImportPublicKeyPEMCounter) == uint64(len(m.ImportPublicKeyPEMMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.ImportPublicKeyPEMMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.ImportPublicKeyPEMCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.ImportPublicKeyPEMFunc != nil {
+		return atomic.LoadUint64(&m.ImportPublicKeyPEMCounter) > 0
 	}
 
 	return true
@@ -956,12 +1268,16 @@ func (m *KeyProcessorMock) ImportPublicKeyFinished() bool {
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *KeyProcessorMock) ValidateCallCounters() {
 
-	if !m.ExportPrivateKeyFinished() {
-		m.t.Fatal("Expected call to KeyProcessorMock.ExportPrivateKey")
+	if !m.ExportPrivateKeyPEMFinished() {
+		m.t.Fatal("Expected call to KeyProcessorMock.ExportPrivateKeyPEM")
 	}
 
-	if !m.ExportPublicKeyFinished() {
-		m.t.Fatal("Expected call to KeyProcessorMock.ExportPublicKey")
+	if !m.ExportPublicKeyBinaryFinished() {
+		m.t.Fatal("Expected call to KeyProcessorMock.ExportPublicKeyBinary")
+	}
+
+	if !m.ExportPublicKeyPEMFinished() {
+		m.t.Fatal("Expected call to KeyProcessorMock.ExportPublicKeyPEM")
 	}
 
 	if !m.ExtractPublicKeyFinished() {
@@ -972,12 +1288,16 @@ func (m *KeyProcessorMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to KeyProcessorMock.GeneratePrivateKey")
 	}
 
-	if !m.ImportPrivateKeyFinished() {
-		m.t.Fatal("Expected call to KeyProcessorMock.ImportPrivateKey")
+	if !m.ImportPrivateKeyPEMFinished() {
+		m.t.Fatal("Expected call to KeyProcessorMock.ImportPrivateKeyPEM")
 	}
 
-	if !m.ImportPublicKeyFinished() {
-		m.t.Fatal("Expected call to KeyProcessorMock.ImportPublicKey")
+	if !m.ImportPublicKeyBinaryFinished() {
+		m.t.Fatal("Expected call to KeyProcessorMock.ImportPublicKeyBinary")
+	}
+
+	if !m.ImportPublicKeyPEMFinished() {
+		m.t.Fatal("Expected call to KeyProcessorMock.ImportPublicKeyPEM")
 	}
 
 }
@@ -997,12 +1317,16 @@ func (m *KeyProcessorMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *KeyProcessorMock) MinimockFinish() {
 
-	if !m.ExportPrivateKeyFinished() {
-		m.t.Fatal("Expected call to KeyProcessorMock.ExportPrivateKey")
+	if !m.ExportPrivateKeyPEMFinished() {
+		m.t.Fatal("Expected call to KeyProcessorMock.ExportPrivateKeyPEM")
 	}
 
-	if !m.ExportPublicKeyFinished() {
-		m.t.Fatal("Expected call to KeyProcessorMock.ExportPublicKey")
+	if !m.ExportPublicKeyBinaryFinished() {
+		m.t.Fatal("Expected call to KeyProcessorMock.ExportPublicKeyBinary")
+	}
+
+	if !m.ExportPublicKeyPEMFinished() {
+		m.t.Fatal("Expected call to KeyProcessorMock.ExportPublicKeyPEM")
 	}
 
 	if !m.ExtractPublicKeyFinished() {
@@ -1013,12 +1337,16 @@ func (m *KeyProcessorMock) MinimockFinish() {
 		m.t.Fatal("Expected call to KeyProcessorMock.GeneratePrivateKey")
 	}
 
-	if !m.ImportPrivateKeyFinished() {
-		m.t.Fatal("Expected call to KeyProcessorMock.ImportPrivateKey")
+	if !m.ImportPrivateKeyPEMFinished() {
+		m.t.Fatal("Expected call to KeyProcessorMock.ImportPrivateKeyPEM")
 	}
 
-	if !m.ImportPublicKeyFinished() {
-		m.t.Fatal("Expected call to KeyProcessorMock.ImportPublicKey")
+	if !m.ImportPublicKeyBinaryFinished() {
+		m.t.Fatal("Expected call to KeyProcessorMock.ImportPublicKeyBinary")
+	}
+
+	if !m.ImportPublicKeyPEMFinished() {
+		m.t.Fatal("Expected call to KeyProcessorMock.ImportPublicKeyPEM")
 	}
 
 }
@@ -1035,12 +1363,14 @@ func (m *KeyProcessorMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
-		ok = ok && m.ExportPrivateKeyFinished()
-		ok = ok && m.ExportPublicKeyFinished()
+		ok = ok && m.ExportPrivateKeyPEMFinished()
+		ok = ok && m.ExportPublicKeyBinaryFinished()
+		ok = ok && m.ExportPublicKeyPEMFinished()
 		ok = ok && m.ExtractPublicKeyFinished()
 		ok = ok && m.GeneratePrivateKeyFinished()
-		ok = ok && m.ImportPrivateKeyFinished()
-		ok = ok && m.ImportPublicKeyFinished()
+		ok = ok && m.ImportPrivateKeyPEMFinished()
+		ok = ok && m.ImportPublicKeyBinaryFinished()
+		ok = ok && m.ImportPublicKeyPEMFinished()
 
 		if ok {
 			return
@@ -1049,12 +1379,16 @@ func (m *KeyProcessorMock) MinimockWait(timeout time.Duration) {
 		select {
 		case <-timeoutCh:
 
-			if !m.ExportPrivateKeyFinished() {
-				m.t.Error("Expected call to KeyProcessorMock.ExportPrivateKey")
+			if !m.ExportPrivateKeyPEMFinished() {
+				m.t.Error("Expected call to KeyProcessorMock.ExportPrivateKeyPEM")
 			}
 
-			if !m.ExportPublicKeyFinished() {
-				m.t.Error("Expected call to KeyProcessorMock.ExportPublicKey")
+			if !m.ExportPublicKeyBinaryFinished() {
+				m.t.Error("Expected call to KeyProcessorMock.ExportPublicKeyBinary")
+			}
+
+			if !m.ExportPublicKeyPEMFinished() {
+				m.t.Error("Expected call to KeyProcessorMock.ExportPublicKeyPEM")
 			}
 
 			if !m.ExtractPublicKeyFinished() {
@@ -1065,12 +1399,16 @@ func (m *KeyProcessorMock) MinimockWait(timeout time.Duration) {
 				m.t.Error("Expected call to KeyProcessorMock.GeneratePrivateKey")
 			}
 
-			if !m.ImportPrivateKeyFinished() {
-				m.t.Error("Expected call to KeyProcessorMock.ImportPrivateKey")
+			if !m.ImportPrivateKeyPEMFinished() {
+				m.t.Error("Expected call to KeyProcessorMock.ImportPrivateKeyPEM")
 			}
 
-			if !m.ImportPublicKeyFinished() {
-				m.t.Error("Expected call to KeyProcessorMock.ImportPublicKey")
+			if !m.ImportPublicKeyBinaryFinished() {
+				m.t.Error("Expected call to KeyProcessorMock.ImportPublicKeyBinary")
+			}
+
+			if !m.ImportPublicKeyPEMFinished() {
+				m.t.Error("Expected call to KeyProcessorMock.ImportPublicKeyPEM")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)
@@ -1085,11 +1423,15 @@ func (m *KeyProcessorMock) MinimockWait(timeout time.Duration) {
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *KeyProcessorMock) AllMocksCalled() bool {
 
-	if !m.ExportPrivateKeyFinished() {
+	if !m.ExportPrivateKeyPEMFinished() {
 		return false
 	}
 
-	if !m.ExportPublicKeyFinished() {
+	if !m.ExportPublicKeyBinaryFinished() {
+		return false
+	}
+
+	if !m.ExportPublicKeyPEMFinished() {
 		return false
 	}
 
@@ -1101,11 +1443,15 @@ func (m *KeyProcessorMock) AllMocksCalled() bool {
 		return false
 	}
 
-	if !m.ImportPrivateKeyFinished() {
+	if !m.ImportPrivateKeyPEMFinished() {
 		return false
 	}
 
-	if !m.ImportPublicKeyFinished() {
+	if !m.ImportPublicKeyBinaryFinished() {
+		return false
+	}
+
+	if !m.ImportPublicKeyPEMFinished() {
 		return false
 	}
 

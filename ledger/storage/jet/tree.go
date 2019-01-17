@@ -18,6 +18,8 @@ package jet
 
 import (
 	"bytes"
+	"fmt"
+	"strings"
 
 	"github.com/insolar/insolar/core"
 	"github.com/pkg/errors"
@@ -25,8 +27,9 @@ import (
 )
 
 type jet struct {
-	Left  *jet
-	Right *jet
+	Left   *jet
+	Right  *jet
+	Actual bool
 }
 
 // Find returns jet for provided reference.
@@ -48,21 +51,55 @@ func (j *jet) Find(val []byte, depth uint8) (*jet, uint8) {
 }
 
 // Update add missing tree branches for provided prefix.
-func (j *jet) Update(prefix []byte, maxDepth, depth uint8) {
-	if depth >= maxDepth {
+func (j *jet) Update(prefix []byte, setActual bool, maxDepth, depth uint8) {
+	if depth == maxDepth {
+		if setActual {
+			j.Actual = true
+		}
 		return
 	}
 
+	if j.Right == nil {
+		j.Right = &jet{}
+	}
+	if j.Left == nil {
+		j.Left = &jet{}
+	}
 	if getBit(prefix, depth) {
-		if j.Right == nil {
-			j.Right = &jet{}
-		}
-		j.Right.Update(prefix, maxDepth, depth+1)
+		j.Right.Update(prefix, setActual, maxDepth, depth+1)
 	} else {
-		if j.Left == nil {
-			j.Left = &jet{}
-		}
-		j.Left.Update(prefix, maxDepth, depth+1)
+		j.Left.Update(prefix, setActual, maxDepth, depth+1)
+	}
+}
+
+// ResetActual resets actual mark, which will signify uncertain state on nodes and require actualization.
+func (j *jet) ResetActual() {
+	if j.Left != nil {
+		j.Left.ResetActual()
+	}
+	j.Actual = false
+	if j.Right != nil {
+		j.Right.ResetActual()
+	}
+}
+
+func (j *jet) ExtractLeafIDs(ids *[]core.RecordID, path []byte, depth uint8) {
+	if j == nil {
+		return
+	}
+	if j.Left == nil && j.Right == nil {
+		*ids = append(*ids, *NewID(depth, path))
+		return
+	}
+
+	if j.Left != nil {
+		j.Left.ExtractLeafIDs(ids, path, depth+1)
+	}
+	if j.Right != nil {
+		rightPath := make([]byte, len(path))
+		copy(rightPath, path)
+		setBit(rightPath, depth)
+		j.Right.ExtractLeafIDs(ids, rightPath, depth+1)
 	}
 }
 
@@ -71,24 +108,149 @@ type Tree struct {
 	Head *jet
 }
 
+// String visualizes Jet's tree.
+func (t Tree) String() string {
+	if t.Head == nil {
+		return "<nil>"
+	}
+	return nodeDeepFmt(0, "", t.Head)
+}
+
+func (t *Tree) toArray() []*jet {
+	queue := []*jet{t.Head}
+	queueIndex := 0
+	lastElementIndex := 0
+
+	for queueIndex <= lastElementIndex {
+		currentNode := queue[queueIndex]
+		if currentNode == nil {
+			queueIndex++
+			continue
+		}
+		nextLeftIndex := (queueIndex * 2) + 1
+		nextRightIndex := (queueIndex * 2) + 2
+
+		if nextRightIndex >= len(queue) {
+			for nextRightIndex >= len(queue) {
+				queue = append(queue, nil)
+			}
+		}
+
+		queue[nextLeftIndex] = queue[queueIndex].Left
+		queue[nextRightIndex] = queue[queueIndex].Right
+
+		if queue[nextLeftIndex] != nil && nextLeftIndex > lastElementIndex {
+			lastElementIndex = nextLeftIndex
+		}
+
+		if queue[nextRightIndex] != nil && nextRightIndex > lastElementIndex {
+			lastElementIndex = nextRightIndex
+		}
+		queueIndex++
+	}
+
+	return queue[:lastElementIndex+1]
+}
+
+// Merge merges two trees to one
+func (t *Tree) Merge(newTree *Tree) *Tree {
+	maxLengthFunc := func(left int, right int) int {
+		if left > right {
+			return left
+		}
+
+		return right
+	}
+
+	savedTree := t.toArray()
+	inputTree := newTree.toArray()
+
+	maxLength := maxLengthFunc(len(savedTree), len(inputTree))
+
+	result := make([]*jet, maxLength)
+
+	for index := 0; index < maxLength; index++ {
+		var savedItem *jet
+		var newItem *jet
+
+		if index < len(savedTree) {
+			savedItem = savedTree[index]
+		}
+		if index < len(inputTree) {
+			newItem = inputTree[index]
+		}
+
+		if savedItem == nil {
+			result[index] = newItem
+			continue
+		}
+		if newItem == nil {
+			result[index] = savedItem
+			continue
+		}
+
+		if !savedItem.Actual && newItem.Actual {
+			result[index] = newItem
+		} else {
+			result[index] = savedItem
+		}
+	}
+
+	for index := 0; index < (maxLength/2)+1; index++ {
+		current := result[index]
+		if current != nil {
+			leftIndex := index*2 + 1
+			if leftIndex < len(result) {
+				current.Left = result[index*2+1]
+			}
+
+			rightIndex := index*2 + 2
+			if rightIndex < len(result) {
+				current.Right = result[index*2+2]
+			}
+		}
+	}
+
+	return &Tree{Head: result[0]}
+}
+
+func nodeDeepFmt(deep int, binPrefix string, node *jet) string {
+	prefix := strings.Repeat(" ", deep)
+	if deep == 0 {
+		prefix = "root"
+	}
+	s := fmt.Sprintf("%s%v (level=%v actual=%v)\n", prefix, binPrefix, deep, node.Actual)
+
+	if node.Left != nil {
+		s += nodeDeepFmt(deep+1, binPrefix+"0", node.Left)
+	}
+	if node.Right != nil {
+		s += nodeDeepFmt(deep+1, binPrefix+"1", node.Right)
+	}
+	return s
+}
+
 // NewTree creates new tree.
 func NewTree() *Tree {
-	return &Tree{Head: &jet{}}
+	fmt.Println("NewTree was created, love")
+	return &Tree{Head: &jet{Actual: true}}
 }
 
-// Find returns jet for provided reference.
-func (t *Tree) Find(id core.RecordID) *core.RecordID {
+// Find returns jet for provided reference. If found jet is actual, the second argument will be true.
+func (t *Tree) Find(id core.RecordID) (*core.RecordID, bool) {
 	if id.Pulse() == core.PulseNumberJet {
-		return &id
+		return &id, true
 	}
-	_, depth := t.Head.Find(id.Hash(), 0)
-	return NewID(uint8(depth), resetBits(id.Hash(), depth))
+	hash := id.Hash()
+	j, depth := t.Head.Find(hash, 0)
+	return NewID(uint8(depth), ResetBits(hash, depth)), j.Actual
 }
 
-// Update add missing tree branches for provided prefix.
-func (t *Tree) Update(id core.RecordID) {
+// Update add missing tree branches for provided prefix. If 'setActual' is set, all encountered nodes will be marked as
+// actual.
+func (t *Tree) Update(id core.RecordID, setActual bool) {
 	maxDepth, prefix := Jet(id)
-	t.Head.Update(prefix, maxDepth, 0)
+	t.Head.Update(prefix, setActual, maxDepth, 0)
 }
 
 // Bytes serializes pulse.
@@ -105,19 +267,34 @@ func (t *Tree) Split(jetID core.RecordID) (*core.RecordID, *core.RecordID, error
 	depth, prefix := Jet(jetID)
 	j, foundDepth := t.Head.Find(prefix, 0)
 	if depth != foundDepth {
-		return nil, nil, errors.New("failed to split: jet is not present in the tree")
+		fmt.Println("split failed!")
+		fmt.Println("split depth ", depth)
+		fmt.Println("found depth ", foundDepth)
+		fmt.Println("jet ", jetID.JetIDString())
+		return nil, nil, errors.New("failed to split: incorrect jet provided")
 	}
 	j.Right = &jet{}
 	j.Left = &jet{}
-	leftPrefix := resetBits(prefix, depth)
-	rightPrefix := resetBits(prefix, depth)
+	leftPrefix := ResetBits(prefix, depth)
+	rightPrefix := ResetBits(prefix, depth)
 	setBit(rightPrefix, depth)
 	return NewID(depth+1, leftPrefix), NewID(depth+1, rightPrefix), nil
 }
 
+// ResetActual resets actual mark, which will signify uncertain state on nodes and require actualization.
+func (t *Tree) ResetActual() {
+	t.Head.ResetActual()
+}
+
+func (t *Tree) LeafIDs() []core.RecordID {
+	var ids []core.RecordID
+	t.Head.ExtractLeafIDs(&ids, make([]byte, core.RecordHashSize), 0)
+	return ids
+}
+
 func getBit(value []byte, index uint8) bool {
 	if uint(index) >= uint(len(value)*8) {
-		panic("index overflow")
+		panic(fmt.Sprintf("index overflow: value=%08b, index=%v", value, index))
 	}
 	byteIndex := uint(index / 8)
 	bitIndex := uint(7 - index%8)
@@ -137,8 +314,8 @@ func setBit(value []byte, index uint8) {
 
 // ResetBits returns a new byte slice with all bits in 'value' reset, starting from 'start' number of bit. If 'start'
 // is bigger than len(value), the original slice will be returned.
-func resetBits(value []byte, start uint8) []byte {
-	if int(start) > len(value)*8 {
+func ResetBits(value []byte, start uint8) []byte {
+	if int(start) >= len(value)*8 {
 		return value
 	}
 

@@ -21,6 +21,11 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
+	"time"
+
+	"go.opencensus.io/trace"
+
+	"github.com/insolar/insolar/instrumentation/instracer"
 
 	"github.com/insolar/insolar/application/extractor"
 	"github.com/insolar/insolar/core/reply"
@@ -114,17 +119,27 @@ func (ar *Runner) makeCall(ctx context.Context, params Request) (interface{}, er
 	if err != nil {
 		return nil, errors.Wrap(err, "[ makeCall ] failed to parse params.Reference")
 	}
+
+	ctx, reqspan := instracer.StartSpan(ctx, "makeCall SendRequest")
+	reqspan.AddAttributes(
+		trace.StringAttribute("method", params.Method),
+	)
 	res, err := ar.ContractRequester.SendRequest(
 		ctx,
 		reference,
 		"Call",
 		[]interface{}{*ar.CertificateManager.GetCertificate().GetRootDomainReference(), params.Method, params.Params, params.Seed, params.Signature},
 	)
+	reqspan.End()
+
 	if err != nil {
 		return nil, errors.Wrap(err, "[ makeCall ] Can't send request")
 	}
 
+	_, callspan := instracer.StartSpan(ctx, "makeCall CallResponse")
 	result, contractErr, err := extractor.CallResponse(res.(*reply.CallMethod).Result)
+	callspan.End()
+
 	if err != nil {
 		return nil, errors.Wrap(err, "[ makeCall ] Can't extract response")
 	}
@@ -146,52 +161,75 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 		traceID := utils.RandTraceID()
 		ctx, insLog := inslogger.WithTraceField(context.Background(), traceID)
 
-		utils.MeasureExecutionTime(ctx, "NetRPC Request Processing",
-			func() {
-				params := Request{}
-				resp := answer{}
+		ctx, rpcspan := instracer.StartSpan(ctx, "NetRPC Request Processing")
+		defer rpcspan.End()
 
-				resp.TraceID = traceID
+		params := Request{}
+		resp := answer{}
 
-				insLog.Info("[ callHandler ] Incoming request: %s", req.RequestURI)
+		resp.TraceID = traceID
 
-				defer func() {
-					res, err := json.MarshalIndent(resp, "", "    ")
-					if err != nil {
-						res = []byte(`{"error": "can't marshal answer to json'"}`)
-					}
-					response.Header().Add("Content-Type", "application/json")
-					_, err = response.Write(res)
-					if err != nil {
-						insLog.Errorf("Can't write response\n")
-					}
-				}()
+		insLog.Info("[ callHandler ] Incoming request: %s", req.RequestURI)
 
-				_, err := UnmarshalRequest(req, &params)
-				if err != nil {
-					processError(err, "Can't unmarshal request", &resp, insLog)
-					return
-				}
+		defer func() {
+			res, err := json.MarshalIndent(resp, "", "    ")
+			if err != nil {
+				res = []byte(`{"error": "can't marshal answer to json'"}`)
+			}
+			response.Header().Add("Content-Type", "application/json")
+			_, err = response.Write(res)
+			if err != nil {
+				insLog.Errorf("Can't write response\n")
+			}
+		}()
 
-				err = ar.checkSeed(params.Seed)
-				if err != nil {
-					processError(err, "Can't checkSeed", &resp, insLog)
-					return
-				}
+		_, err := UnmarshalRequest(req, &params)
+		if err != nil {
+			processError(err, "Can't unmarshal request", &resp, insLog)
+			return
+		}
 
-				err = ar.verifySignature(ctx, params)
-				if err != nil {
-					processError(err, "Can't verify signature", &resp, insLog)
-					return
-				}
+		err = ar.checkSeed(params.Seed)
+		if err != nil {
+			processError(err, "Can't checkSeed", &resp, insLog)
+			return
+		}
 
-				result, err := ar.makeCall(ctx, params)
-				if err != nil {
-					processError(err, "Can't makeCall", &resp, insLog)
-					return
-				}
+		err = ar.verifySignature(ctx, params)
+		if err != nil {
+			processError(err, "Can't verify signature", &resp, insLog)
+			return
+		}
 
-				resp.Result = result
-			})
+		ctx, callspan := instracer.StartSpan(ctx, "callHandler makeCall")
+		defer callspan.End()
+
+		var result interface{}
+		ch := make(chan interface{}, 1)
+		go func() {
+			result, err = ar.makeCall(ctx, params)
+			ch <- nil
+		}()
+		select {
+
+		case <-ch:
+			if err != nil {
+				processError(err, "Can't makeCall", &resp, insLog)
+				return
+			}
+			resp.Result = result
+
+		case <-time.After(time.Duration(ar.cfg.Timeout) * time.Second):
+			resp.Error = "Messagebus timeout exceeded"
+			return
+
+		}
+
+		if err != nil {
+			processError(err, "Can't makeCall", &resp, insLog)
+			return
+		}
+
+		resp.Result = result
 	}
 }

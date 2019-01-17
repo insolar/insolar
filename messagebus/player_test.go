@@ -22,6 +22,7 @@ import (
 
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/core"
@@ -45,19 +46,24 @@ func TestPlayer_Send(t *testing.T) {
 		return &parcel, nil
 	}
 	tape := NewtapeMock(mc)
-	player := newPlayer(s, tape, pcs)
+	pulseStorageMock := testutils.NewPulseStorageMock(t)
+	pulseStorageMock.CurrentMock.Return(core.GenesisPulse, nil)
+	player := newPlayer(s, tape, pcs, pulseStorageMock)
 
-	t.Run("with no reply on the storageTape doesn't send the message and returns an error", func(t *testing.T) {
-		tape.GetReplyMock.Expect(ctx, msgHash).Return(nil, ErrNoReply)
+	t.Run("with no reply on the Tape doesn't send the message and returns an error", func(t *testing.T) {
+		tape.GetMock.Expect(ctx, msgHash).Return(nil, ErrNoReply)
 
-		_, err := player.Send(ctx, &msg, *core.GenesisPulse, nil)
+		_, err := player.Send(ctx, &msg, nil)
 		require.Equal(t, ErrNoReply, err)
 	})
 
-	t.Run("with reply on the storageTape doesn't send the message and returns reply from the storageTape", func(t *testing.T) {
+	t.Run("with reply on the Tape doesn't send the message and returns reply from the storageTape", func(t *testing.T) {
 		expectedRep := reply.Object{Memory: []byte{1, 2, 3}}
-		tape.GetReplyMock.Expect(ctx, msgHash).Return(&expectedRep, nil)
-		rep, err := player.Send(ctx, &msg, *core.GenesisPulse, nil)
+		item := TapeItem{
+			Reply: &expectedRep,
+		}
+		tape.GetMock.Expect(ctx, msgHash).Return(&item, nil)
+		rep, err := player.Send(ctx, &msg, nil)
 
 		require.NoError(t, err)
 		require.Equal(t, &expectedRep, rep)

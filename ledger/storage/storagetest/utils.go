@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/platformpolicy"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -59,7 +60,7 @@ func TmpDB(ctx context.Context, t testing.TB, options ...Option) (*storage.DB, f
 		o(opts)
 	}
 	tmpdir, err := ioutil.TempDir(opts.dir, "bdb-test-")
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
 	db, err := storage.NewDB(configuration.Ledger{
 		JetSizesHistoryDepth: 10,
@@ -71,10 +72,9 @@ func TmpDB(ctx context.Context, t testing.TB, options ...Option) (*storage.DB, f
 
 	db.PlatformCryptographyScheme = platformpolicy.NewPlatformCryptographyScheme()
 
-	// Bootstrap
 	if !opts.nobootstrap {
 		err = db.Init(ctx)
-		require.NoError(t, err)
+		assert.NoError(t, err)
 	}
 
 	return db, func() {

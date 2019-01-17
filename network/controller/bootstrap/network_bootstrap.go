@@ -69,6 +69,14 @@ func (nb *NetworkBootstrapper) Start(cryptographyService core.CryptographyServic
 	}
 }
 
+func (nb *NetworkBootstrapper) SetLastPulse(number core.PulseNumber) {
+	nb.bootstrapper.SetLastPulse(number)
+}
+
+func (nb *NetworkBootstrapper) GetLastPulse() core.PulseNumber {
+	return nb.bootstrapper.GetLastPulse()
+}
+
 type DiscoveryNode struct {
 	Host *host.Host
 	Node core.DiscoveryNode

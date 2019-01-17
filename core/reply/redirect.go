@@ -5,20 +5,20 @@ import (
 	"github.com/insolar/insolar/core/message"
 )
 
-// GetObjectRedirect is a redirect-reply for get object
-type GetObjectRedirect struct {
+// GetObjectRedirectReply is a redirect-reply for get object
+type GetObjectRedirectReply struct {
 	Receiver *core.RecordRef
 	Token    core.DelegationToken
 
 	StateID *core.RecordID
 }
 
-// NewGetObjectRedirectReply return new GetObjectRedirect
+// NewGetObjectRedirectReply return new GetObjectRedirectReply
 func NewGetObjectRedirectReply(
 	factory core.DelegationTokenFactory, parcel core.Parcel, receiver *core.RecordRef, state *core.RecordID,
-) (*GetObjectRedirect, error) {
+) (*GetObjectRedirectReply, error) {
 	var err error
-	rep := GetObjectRedirect{
+	rep := GetObjectRedirectReply{
 		Receiver: receiver,
 		StateID:  state,
 	}
@@ -32,22 +32,22 @@ func NewGetObjectRedirectReply(
 }
 
 // GetReceiver returns node reference to send message to.
-func (r *GetObjectRedirect) GetReceiver() *core.RecordRef {
+func (r *GetObjectRedirectReply) GetReceiver() *core.RecordRef {
 	return r.Receiver
 }
 
 // GetToken returns delegation token.
-func (r *GetObjectRedirect) GetToken() core.DelegationToken {
+func (r *GetObjectRedirectReply) GetToken() core.DelegationToken {
 	return r.Token
 }
 
 // Type returns type of the reply
-func (r *GetObjectRedirect) Type() core.ReplyType {
+func (r *GetObjectRedirectReply) Type() core.ReplyType {
 	return TypeGetObjectRedirect
 }
 
 // Redirected creates redirected message from redirect data.
-func (r *GetObjectRedirect) Redirected(genericMsg core.Message) core.Message {
+func (r *GetObjectRedirectReply) Redirected(genericMsg core.Message) core.Message {
 	msg := genericMsg.(*message.GetObject)
 	return &message.GetObject{
 		State:    r.StateID,
@@ -56,18 +56,18 @@ func (r *GetObjectRedirect) Redirected(genericMsg core.Message) core.Message {
 	}
 }
 
-// GetChildrenRedirect is a redirect reply for get children.
-type GetChildrenRedirect struct {
+// GetChildrenRedirectReply is a redirect reply for get children.
+type GetChildrenRedirectReply struct {
 	Receiver *core.RecordRef
 	Token    core.DelegationToken
 }
 
-// NewGetChildrenRedirect creates a new instance of GetChildrenRedirect.
+// NewGetChildrenRedirect creates a new instance of GetChildrenRedirectReply.
 func NewGetChildrenRedirect(
 	factory core.DelegationTokenFactory, parcel core.Parcel, receiver *core.RecordRef,
-) (*GetChildrenRedirect, error) {
+) (*GetChildrenRedirectReply, error) {
 	var err error
-	rep := GetChildrenRedirect{
+	rep := GetChildrenRedirectReply{
 		Receiver: receiver,
 	}
 	redirectedMessage := rep.Redirected(parcel.Message())
@@ -80,37 +80,37 @@ func NewGetChildrenRedirect(
 }
 
 // GetReceiver returns node reference to send message to.
-func (r *GetChildrenRedirect) GetReceiver() *core.RecordRef {
+func (r *GetChildrenRedirectReply) GetReceiver() *core.RecordRef {
 	return r.Receiver
 }
 
 // GetToken returns delegation token.
-func (r *GetChildrenRedirect) GetToken() core.DelegationToken {
+func (r *GetChildrenRedirectReply) GetToken() core.DelegationToken {
 	return r.Token
 }
 
 // Type returns type of the reply
-func (r *GetChildrenRedirect) Type() core.ReplyType {
+func (r *GetChildrenRedirectReply) Type() core.ReplyType {
 	return TypeGetChildrenRedirect
 }
 
 // Redirected creates redirected message from redirect data.
-func (r *GetChildrenRedirect) Redirected(genericMsg core.Message) core.Message {
+func (r *GetChildrenRedirectReply) Redirected(genericMsg core.Message) core.Message {
 	return genericMsg
 }
 
-// GetCodeRedirect is a redirect reply for get children.
-type GetCodeRedirect struct {
+// GetCodeRedirectReply is a redirect reply for get children.
+type GetCodeRedirectReply struct {
 	Receiver *core.RecordRef
 	Token    core.DelegationToken
 }
 
-// NewGetCodeRedirect creates a new instance of GetChildrenRedirect.
+// NewGetCodeRedirect creates a new instance of GetChildrenRedirectReply.
 func NewGetCodeRedirect(
 	factory core.DelegationTokenFactory, parcel core.Parcel, receiver *core.RecordRef,
-) (*GetCodeRedirect, error) {
+) (*GetCodeRedirectReply, error) {
 	var err error
-	rep := GetCodeRedirect{
+	rep := GetCodeRedirectReply{
 		Receiver: receiver,
 	}
 	redirectedMessage := rep.Redirected(parcel.Message())
@@ -123,21 +123,21 @@ func NewGetCodeRedirect(
 }
 
 // GetReceiver returns node reference to send message to.
-func (r *GetCodeRedirect) GetReceiver() *core.RecordRef {
+func (r *GetCodeRedirectReply) GetReceiver() *core.RecordRef {
 	return r.Receiver
 }
 
 // GetToken returns delegation token.
-func (r *GetCodeRedirect) GetToken() core.DelegationToken {
+func (r *GetCodeRedirectReply) GetToken() core.DelegationToken {
 	return r.Token
 }
 
 // Type returns type of the reply
-func (r *GetCodeRedirect) Type() core.ReplyType {
+func (r *GetCodeRedirectReply) Type() core.ReplyType {
 	return TypeGetCodeRedirect
 }
 
 // Redirected creates redirected message from redirect data.
-func (r *GetCodeRedirect) Redirected(genericMsg core.Message) core.Message {
+func (r *GetCodeRedirectReply) Redirected(genericMsg core.Message) core.Message {
 	return genericMsg
 }

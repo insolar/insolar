@@ -21,7 +21,6 @@ import (
 	"bytes"
 	"encoding/gob"
 	"io"
-	"io/ioutil"
 
 	"github.com/insolar/insolar/core"
 	"github.com/pkg/errors"
@@ -68,6 +67,8 @@ const (
 	TypeJetMiss
 	// TypePendingRequests contains unclosed requests for an object.
 	TypePendingRequests
+	// TypeJet contains jet.
+	TypeJet
 
 	// TypeHeavyError carries heavy record sync
 	TypeHeavyError
@@ -82,6 +83,7 @@ const (
 	// ErrDeactivated returned when requested object is deactivated.
 	ErrDeactivated = iota + 1
 	ErrStateNotAvailable
+	ErrHotDataTimeout
 )
 
 func getEmptyReply(t core.ReplyType) (core.Reply, error) {
@@ -111,15 +113,17 @@ func getEmptyReply(t core.ReplyType) (core.Reply, error) {
 	case TypeObjectIndex:
 		return &ObjectIndex{}, nil
 	case TypeGetCodeRedirect:
-		return &GetCodeRedirect{}, nil
+		return &GetCodeRedirectReply{}, nil
 	case TypeGetObjectRedirect:
-		return &GetObjectRedirect{}, nil
+		return &GetObjectRedirectReply{}, nil
 	case TypeGetChildrenRedirect:
-		return &GetChildrenRedirect{}, nil
+		return &GetChildrenRedirectReply{}, nil
 	case TypeJetMiss:
 		return &JetMiss{}, nil
 	case TypePendingRequests:
 		return &HasPendingRequests{}, nil
+	case TypeJet:
+		return &Jet{}, nil
 
 	case TypeNodeSign:
 		return &NodeSign{}, nil
@@ -165,11 +169,7 @@ func ToBytes(rep core.Reply) []byte {
 	if err != nil {
 		panic("failed to serialize reply")
 	}
-	buff, err := ioutil.ReadAll(repBuff)
-	if err != nil {
-		panic("failed to serialize reply")
-	}
-	return buff
+	return repBuff.(*bytes.Buffer).Bytes()
 }
 
 func init() {
@@ -184,9 +184,9 @@ func init() {
 	gob.Register(&Error{})
 	gob.Register(&OK{})
 	gob.Register(&ObjectIndex{})
-	gob.Register(&GetCodeRedirect{})
-	gob.Register(&GetObjectRedirect{})
-	gob.Register(&GetChildrenRedirect{})
+	gob.Register(&GetCodeRedirectReply{})
+	gob.Register(&GetObjectRedirectReply{})
+	gob.Register(&GetChildrenRedirectReply{})
 	gob.Register(&HeavyError{})
 	gob.Register(&JetMiss{})
 	gob.Register(&NodeSign{})

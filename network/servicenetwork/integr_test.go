@@ -106,7 +106,7 @@ type networkNode struct {
 
 func initCertificate(t *testing.T, nodes []certificate.BootstrapNode, key crypto.PublicKey, ref core.RecordRef) *certificate.CertificateManager {
 	proc := platformpolicy.NewKeyProcessor()
-	publicKey, err := proc.ExportPublicKey(key)
+	publicKey, err := proc.ExportPublicKeyPEM(key)
 	assert.NoError(t, err)
 	bytes.NewReader(publicKey)
 
@@ -165,7 +165,7 @@ func (s *testSuite) createNetworkNode(t *testing.T) networkNode {
 	cfg.Host.Transport.Address = address
 
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
-	serviceNetwork, err := NewServiceNetwork(cfg, scheme)
+	serviceNetwork, err := NewServiceNetwork(cfg, scheme, false)
 	assert.NoError(t, err)
 
 	pulseManagerMock := testutils.NewPulseManagerMock(t)

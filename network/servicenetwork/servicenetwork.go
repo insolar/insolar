@@ -18,7 +18,6 @@ package servicenetwork
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -30,7 +29,6 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller"
-	"github.com/insolar/insolar/network/fakepulsar"
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/merkle"
 	"github.com/insolar/insolar/network/routing"
@@ -64,12 +62,13 @@ type ServiceNetwork struct {
 	PulseHandler     network.PulseHandler
 	Communicator     phases.Communicator
 
-	fakePulsar *fakepulsar.FakePulsar
+	// fakePulsar *fakepulsar.FakePulsar
+	isGenesis bool
 }
 
 // NewServiceNetwork returns a new ServiceNetwork.
-func NewServiceNetwork(conf configuration.Configuration, scheme core.PlatformCryptographyScheme) (*ServiceNetwork, error) {
-	serviceNetwork := &ServiceNetwork{cfg: conf, CryptographyScheme: scheme}
+func NewServiceNetwork(conf configuration.Configuration, scheme core.PlatformCryptographyScheme, isGenesis bool) (*ServiceNetwork, error) {
+	serviceNetwork := &ServiceNetwork{cfg: conf, CryptographyScheme: scheme, isGenesis: isGenesis}
 	return serviceNetwork, nil
 }
 
@@ -91,10 +90,10 @@ func (n *ServiceNetwork) RemoteProcedureRegister(name string, method core.Remote
 // incrementPort increments port number if it not equals 0
 func incrementPort(address string) (string, error) {
 	parts := strings.Split(address, ":")
-	if len(parts) != 2 {
+	if len(parts) < 2 {
 		return address, errors.New("failed to get port from address")
 	}
-	port, err := strconv.Atoi(parts[1])
+	port, err := strconv.Atoi(parts[len(parts)-1])
 	if err != nil {
 		return address, err
 	}
@@ -102,7 +101,9 @@ func incrementPort(address string) (string, error) {
 	if port != 0 {
 		port++
 	}
-	return fmt.Sprintf("%s:%d", parts[0], port), nil
+
+	parts = append(parts[:len(parts)-1], strconv.Itoa(port))
+	return strings.Join(parts, ":"), nil
 }
 
 // Start implements component.Initer
@@ -160,7 +161,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	n.hostNetwork = hostnetwork.NewHostTransport(internalTransport, n.routingTable)
 	options := controller.ConfigureOptions(n.cfg.Host)
 	n.controller = controller.NewNetworkController(n, options, n.CertificateManager.GetCertificate(), internalTransport, n.routingTable, n.hostNetwork, n.CryptographyScheme)
-	n.fakePulsar = fakepulsar.NewFakePulsar(n.HandlePulse, n.cfg.Pulsar.PulseTime)
+	// n.fakePulsar = fakepulsar.NewFakePulsar(n.HandlePulse, n.cfg.Pulsar.PulseTime)
 	return nil
 }
 
@@ -178,7 +179,7 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 		return errors.Wrap(err, "Failed to bootstrap network")
 	}
 
-	n.fakePulsar.Start(ctx)
+	// n.fakePulsar.Start(ctx)
 
 	return nil
 }
@@ -195,14 +196,22 @@ func (n *ServiceNetwork) Stop(ctx context.Context) error {
 }
 
 func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
-	if !n.isFakePulse(&pulse) {
-		n.fakePulsar.Stop(ctx)
+	// if !n.isFakePulse(&pulse) {
+	// 	n.fakePulsar.Stop(ctx)
+	// }
+	if n.isGenesis {
+		return
 	}
+
 	traceID := "pulse_" + strconv.FormatUint(uint64(pulse.PulseNumber), 10)
 	ctx, logger := inslogger.WithTraceField(ctx, traceID)
 	logger.Infof("Got new pulse number: %d", pulse.PulseNumber)
 	if n.PulseManager == nil {
 		logger.Error("PulseManager is not initialized")
+		return
+	}
+	if !n.NodeKeeper.IsBootstrapped() || n.controller.GetLastIgnoredPulse() > pulse.PulseNumber {
+		log.Info("Ignore pulse %d: network is not yet initialized")
 		return
 	}
 	currentPulse, err := n.PulseStorage.Current(ctx)
@@ -212,11 +221,6 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
 	}
 	if (pulse.PulseNumber > currentPulse.PulseNumber) &&
 		(pulse.PulseNumber >= currentPulse.NextPulseNumber) {
-		err = n.PulseManager.Set(ctx, pulse, n.NetworkSwitcher.GetState() == core.CompleteNetworkState)
-		if err != nil {
-			logger.Error(errors.Wrap(err, "Failed to set pulse"))
-			return
-		}
 
 		err = n.NetworkSwitcher.OnPulse(ctx, pulse)
 		if err != nil {
@@ -224,20 +228,20 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
 			return
 		}
 
+		err = n.PulseManager.Set(ctx, pulse, n.NetworkSwitcher.GetState() == core.CompleteNetworkState)
+		if err != nil {
+			logger.Error(errors.Wrap(err, "Failed to set pulse"))
+			return
+		}
+
 		logger.Infof("Set new current pulse number: %d", pulse.PulseNumber)
-		go func(logger core.Logger, network *ServiceNetwork) {
-			if network.NetworkCoordinator == nil {
-				return
-			}
-			err := network.NetworkCoordinator.WriteActiveNodes(ctx, pulse.PulseNumber, network.NodeNetwork.GetActiveNodes())
-			if err != nil {
-				logger.Warn("Error writing active nodes to ledger: " + err.Error())
-			}
-			err = n.PhaseManager.OnPulse(ctx, &pulse)
-			if err != nil {
-				logger.Warn("phase manager fail: " + err.Error())
-			}
-		}(logger, n)
+		// go func(logger core.Logger, network *ServiceNetwork) {
+		// 	TODO: make PhaseManager works and uncomment this (after NETD18-75)
+		// 	err = n.PhaseManager.OnPulse(ctx, &pulse)
+		// 	if err != nil {
+		// 		logger.Warn("phase manager fail: " + err.Error())
+		// 	}
+		// }(logger, n)
 	} else {
 		logger.Infof("Incorrect pulse number. Current: %d. New: %d", currentPulse.PulseNumber, pulse.PulseNumber)
 	}

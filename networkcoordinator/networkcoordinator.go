@@ -33,6 +33,7 @@ type NetworkCoordinator struct {
 
 	realCoordinator Coordinator
 	zeroCoordinator Coordinator
+	isStarted       bool
 }
 
 // New creates new NetworkCoordinator
@@ -50,8 +51,8 @@ func (nc *NetworkCoordinator) Start(ctx context.Context) error {
 		nc.ContractRequester,
 		nc.MessageBus,
 		nc.CS,
-		nc.PS,
 	)
+	nc.isStarted = true
 	return nil
 }
 
@@ -60,6 +61,11 @@ func (nc *NetworkCoordinator) getCoordinator() Coordinator {
 		return nc.realCoordinator
 	}
 	return nc.zeroCoordinator
+}
+
+// IsStarted returns true if component was started and false in other way
+func (nc *NetworkCoordinator) IsStarted() bool {
+	return nc.isStarted
 }
 
 // GetCert method returns node certificate by requesting sign from discovery nodes
@@ -75,11 +81,6 @@ func (nc *NetworkCoordinator) ValidateCert(ctx context.Context, certificate core
 // signCertHandler is MsgBus handler that signs certificate for some node with node own key
 func (nc *NetworkCoordinator) signCertHandler(ctx context.Context, p core.Parcel) (core.Reply, error) {
 	return nc.getCoordinator().signCertHandler(ctx, p)
-}
-
-// WriteActiveNodes writes active nodes to ledger
-func (nc *NetworkCoordinator) WriteActiveNodes(ctx context.Context, number core.PulseNumber, activeNodes []core.Node) error {
-	return nc.getCoordinator().WriteActiveNodes(ctx, number, activeNodes)
 }
 
 // SetPulse writes pulse data on local storage

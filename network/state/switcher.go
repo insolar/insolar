@@ -51,16 +51,6 @@ func NewNetworkSwitcher() (*NetworkSwitcher, error) {
 	}, nil
 }
 
-// TODO: after INS-923 remove this func
-func (ns *NetworkSwitcher) Start(ctx context.Context) error {
-	ns.stateLock.Lock()
-	defer ns.stateLock.Unlock()
-
-	ns.Release(ctx)
-	ns.state = core.CompleteNetworkState
-	return nil
-}
-
 // GetState method returns current network state
 func (ns *NetworkSwitcher) GetState() core.NetworkState {
 	ns.stateLock.RLock()

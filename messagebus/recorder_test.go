@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/require"
 )
 
@@ -46,14 +47,16 @@ func TestRecorder_Send(t *testing.T) {
 	}
 
 	tape := NewtapeMock(mc)
-	recorder := newRecorder(s, tape, pcs)
+	pulseStorageMock := testutils.NewPulseStorageMock(t)
+	pulseStorageMock.CurrentMock.Return(core.GenesisPulse, nil)
+	recorder := newRecorder(s, tape, pcs, pulseStorageMock)
 
 	t.Run("with no reply on the tape sends the message and returns reply", func(t *testing.T) {
-		tape.SetReplyMock.Expect(ctx, msgHash, &expectedRep).Return(nil)
+		tape.SetMock.Expect(ctx, msgHash, &expectedRep, nil).Return(nil)
 		s.SendParcelMock.Expect(ctx, &parcel, *core.GenesisPulse, nil).Return(&expectedRep, nil)
 
-		reply, err := recorder.Send(ctx, &msg, *core.GenesisPulse, nil)
+		recorderReply, err := recorder.Send(ctx, &msg, nil)
 		require.NoError(t, err)
-		require.Equal(t, &expectedRep, reply)
+		require.Equal(t, &expectedRep, recorderReply)
 	})
 }

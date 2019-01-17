@@ -51,7 +51,7 @@ func checkKeys(cert *Certificate, cs core.CryptographyService, t *testing.T) {
 	pubKey, err := cs.GetPublicKey()
 	require.NoError(t, err)
 
-	pubKeyString, err := kp.ExportPublicKey(pubKey)
+	pubKeyString, err := kp.ExportPublicKeyPEM(pubKey)
 	require.NoError(t, err)
 
 	require.Equal(t, string(pubKeyString), cert.PublicKey)
@@ -72,7 +72,7 @@ func TestReadCertificate(t *testing.T) {
 	require.Equal(t, "0987654321", cert.RootDomainReference)
 
 	testPubKey := "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEG1XfrtnhPKqO2zSywoi2G8nQG6y8\nyIU7a3NeGzc06ygEaXzWK+DdyeBpeRhop4eUKJdfKFm1mHvZdvEiQwzx4A==\n-----END PUBLIC KEY-----\n"
-	key, err := kp.ImportPublicKey([]byte(testPubKey))
+	key, err := kp.ImportPublicKeyPEM([]byte(testPubKey))
 	require.NoError(t, err)
 
 	bootstrapNodes := []BootstrapNode{
@@ -127,7 +127,7 @@ func TestReadCertificateFromReader(t *testing.T) {
 	kp := platformpolicy.NewKeyProcessor()
 	privateKey, _ := kp.GeneratePrivateKey()
 	nodePublicKey := kp.ExtractPublicKey(privateKey)
-	publicKey, _ := kp.ExportPublicKey(nodePublicKey)
+	publicKey, _ := kp.ExportPublicKeyPEM(nodePublicKey)
 
 	type сertInfo map[string]interface{}
 	info := сertInfo{
@@ -175,7 +175,7 @@ func TestReadCertificateFromReader(t *testing.T) {
 	require.Equal(t, nodePublicKey, cert.nodePublicKey)
 
 	testPubKey := "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEG1XfrtnhPKqO2zSywoi2G8nQG6y8\nyIU7a3NeGzc06ygEaXzWK+DdyeBpeRhop4eUKJdfKFm1mHvZdvEiQwzx4A==\n-----END PUBLIC KEY-----\n"
-	key, err := kp.ImportPublicKey([]byte(testPubKey))
+	key, err := kp.ImportPublicKeyPEM([]byte(testPubKey))
 	require.NoError(t, err)
 
 	bootstrapNodes := []BootstrapNode{
@@ -207,7 +207,7 @@ func TestSerializeDeserialize(t *testing.T) {
 	}
 
 	keyProc := platformpolicy.NewKeyProcessor()
-	key, err := keyProc.ImportPublicKey([]byte(cert.PublicKey))
+	key, err := keyProc.ImportPublicKeyPEM([]byte(cert.PublicKey))
 	require.NoError(t, err)
 
 	cert.nodePublicKey = key

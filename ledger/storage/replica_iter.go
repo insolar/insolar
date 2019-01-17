@@ -22,6 +22,7 @@ import (
 	"errors"
 
 	"github.com/dgraph-io/badger"
+	"github.com/insolar/insolar/ledger/storage/jet"
 
 	"github.com/insolar/insolar/core"
 )
@@ -68,15 +69,16 @@ func NewReplicaIter(
 	end core.PulseNumber,
 	limit int,
 ) *ReplicaIter {
-	newit := func(prefixbyte byte, jet *core.RecordID, start, end core.PulseNumber) *iterstate {
+	newit := func(prefixbyte byte, j *core.RecordID, start, end core.PulseNumber) *iterstate {
 		prefix := []byte{prefixbyte}
 		iter := &iterstate{prefix: prefix}
-		if jet == nil {
+		if j == nil {
 			iter.start = bytes.Join([][]byte{prefix, start.Bytes()}, nil)
 			iter.end = bytes.Join([][]byte{prefix, end.Bytes()}, nil)
 		} else {
-			iter.start = bytes.Join([][]byte{prefix, jet[:], start.Bytes()}, nil)
-			iter.end = bytes.Join([][]byte{prefix, jet[:], end.Bytes()}, nil)
+			_, jetPrefix := jet.Jet(*j)
+			iter.start = bytes.Join([][]byte{prefix, jetPrefix, start.Bytes()}, nil)
+			iter.end = bytes.Join([][]byte{prefix, jetPrefix, end.Bytes()}, nil)
 		}
 		return iter
 	}
@@ -122,7 +124,7 @@ func (r *ReplicaIter) NextRecords() ([]core.KV, error) {
 }
 
 // LastPulse returns maximum pulse number of returned keys after each fetch.
-func (r *ReplicaIter) LastPulse() core.PulseNumber {
+func (r *ReplicaIter) LastSeenPulse() core.PulseNumber {
 	return r.lastpulse
 }
 
@@ -179,7 +181,7 @@ func (fc *fetchchunk) fetch(
 				return nil
 			}
 
-			lastpulse = core.NewPulseNumber(key[1 : 1+core.PulseNumberSize])
+			lastpulse = pulseFromKey(key)
 			// fmt.Printf("key: %v (pulse=%v)\n", hex.EncodeToString(key), lastpulse)
 
 			value, err := it.Item().ValueCopy(nil)

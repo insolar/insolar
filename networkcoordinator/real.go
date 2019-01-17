@@ -32,7 +32,6 @@ type realNetworkCoordinator struct {
 	ContractRequester  core.ContractRequester
 	MessageBus         core.MessageBus
 	CS                 core.CryptographyService
-	PS                 core.PulseStorage
 }
 
 func newRealNetworkCoordinator(
@@ -40,14 +39,12 @@ func newRealNetworkCoordinator(
 	requester core.ContractRequester,
 	msgBus core.MessageBus,
 	cs core.CryptographyService,
-	ps core.PulseStorage,
 ) *realNetworkCoordinator {
 	return &realNetworkCoordinator{
 		CertificateManager: manager,
 		ContractRequester:  requester,
 		MessageBus:         msgBus,
 		CS:                 cs,
-		PS:                 ps,
 	}
 }
 
@@ -93,11 +90,7 @@ func (rnc *realNetworkCoordinator) requestCertSign(ctx context.Context, discover
 		opts := &core.MessageSendOptions{
 			Receiver: discoveryNode.GetNodeRef(),
 		}
-		currentPulse, err := rnc.PS.Current(ctx)
-		if err != nil {
-			return nil, err
-		}
-		r, err := rnc.MessageBus.Send(ctx, msg, *currentPulse, opts)
+		r, err := rnc.MessageBus.Send(ctx, msg, opts)
 		if err != nil {
 			return nil, err
 		}
@@ -146,11 +139,6 @@ func (rnc *realNetworkCoordinator) getNodeInfo(ctx context.Context, nodeRef *cor
 		return "", "", errors.Wrap(err, "[ GetCert ] Couldn't extract response")
 	}
 	return pKey, role, nil
-}
-
-// TODO: remove and use SetPulse instead
-func (rnc *realNetworkCoordinator) WriteActiveNodes(ctx context.Context, number core.PulseNumber, activeNodes []core.Node) error {
-	return errors.New("not implemented")
 }
 
 // SetPulse uses PulseManager component for saving pulse info

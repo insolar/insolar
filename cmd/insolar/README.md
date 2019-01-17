@@ -1,17 +1,16 @@
-Insolar
-===============
+# Insolar
 
-Usage
-----------
-#### Build
+## Usage
+
+### Build
 
     make insolar
-   
-#### Start insolard
+
+### Start insolard
 
     ./scripts/insolard/launchnet.sh -g
-   
-#### Send request example (RegisterNode)
+
+### Send request example (RegisterNode)
 
 You should have ```params.json``` with something like this:
 
@@ -32,7 +31,7 @@ Than use send_request command with this file:
 ### Options
 
         -c cmd
-                Command. Available commands: default_config | random_ref | version | gen_keys | gen_certificate | send_request | gen_send_configs. 
+                Command. Available commands: default_config | random_ref | version | gen_keys | gen_certificate | send_request | gen_send_configs.
 
         -v verbose
                 Be verbose (default false).

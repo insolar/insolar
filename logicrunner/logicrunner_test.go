@@ -28,9 +28,9 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/contractrequester"
-
 	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/insolar/insolar/ledger/recentstorage"
+	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/logicrunner/goplugin"
 
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
@@ -84,9 +84,9 @@ func TestMain(m *testing.M) {
 func MessageBusTrivialBehavior(mb *testmessagebus.TestMessageBus, lr core.LogicRunner) {
 	mb.ReRegister(core.TypeCallMethod, lr.Execute)
 	mb.ReRegister(core.TypeCallConstructor, lr.Execute)
-	mb.ReRegister(core.TypeValidateCaseBind, lr.ValidateCaseBind)
-	mb.ReRegister(core.TypeValidationResults, lr.ProcessValidationResults)
-	mb.ReRegister(core.TypeExecutorResults, lr.ExecutorResults)
+	mb.ReRegister(core.TypeValidateCaseBind, lr.HandleValidateCaseBindMessage)
+	mb.ReRegister(core.TypeValidationResults, lr.HandleValidationResultsMessage)
+	mb.ReRegister(core.TypeExecutorResults, lr.HandleExecutorResultsMessage)
 }
 
 func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *goplugintestutils.ContractsBuilder, core.PulseManager, func()) {
@@ -120,7 +120,6 @@ func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *gop
 	nk := nodekeeper.GetTestNodekeeper(mock)
 
 	mb := testmessagebus.NewTestMessageBus(t)
-	mb.PulseNumber = 0
 
 	nw := network.GetTestNetwork()
 	// FIXME: TmpLedger is deprecated. Use mocks instead.
@@ -135,7 +134,13 @@ func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *gop
 	)
 
 	pulseStorage := l.PulseManager.(*pulsemanager.PulseManager).PulseStorage
-	recentMock := recentstorage.NewProviderMock(t)
+	providerMock := recentstorage.NewProviderMock(t)
+	recentStorageMock := recentstorage.NewRecentStorageMock(t)
+	recentStorageMock.AddObjectMock.Return()
+
+	providerMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
+		return recentStorageMock
+	}
 
 	parcelFactory := messagebus.NewParcelFactory()
 	cm := &component.Manager{}
@@ -144,7 +149,7 @@ func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *gop
 	cm.Register(am, l.GetPulseManager(), l.GetJetCoordinator())
 	cr, err := contractrequester.New()
 
-	cm.Inject(pulseStorage, nk, recentMock, l, lr, nw, mb, cr, delegationTokenFactory, parcelFactory, mock)
+	cm.Inject(pulseStorage, nk, providerMock, l, lr, nw, mb, cr, delegationTokenFactory, parcelFactory, mock)
 	err = cm.Init(ctx)
 	assert.NoError(t, err)
 	err = cm.Start(ctx)
@@ -161,8 +166,9 @@ func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *gop
 		true,
 	)
 	require.NoError(t, err)
-
-	mb.PulseNumber = newPulseNumber
+	pm.(*pulsemanager.PulseManager).ArtifactManagerMessageHandler.CloseEarlyRequestCircuitBreakerForJet(
+		ctx, *jet.NewID(0, nil),
+	)
 
 	assert.NoError(t, err)
 	if err != nil {
@@ -328,6 +334,7 @@ package main
 import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
 import "github.com/insolar/insolar/application/proxy/two"
 import "github.com/insolar/insolar/core"
+import "errors"
 
 type One struct {
 	foundation.BaseContract
@@ -362,6 +369,24 @@ func (r *One) Again(s string) (string, error) {
 func (r *One)GetFriend() (core.RecordRef, error) {
 	return r.Friend, nil
 }
+
+func (r *One)TestPayload() (two.Payload, error) {
+	f := two.GetObject(r.Friend)
+	err := f.SetPayload(two.Payload{Int: 10, Str: "HiHere"})
+	if err != nil { return two.Payload{}, err }
+
+	p, err := f.GetPayload()
+	if err != nil { return two.Payload{}, err }
+
+	str, err := f.GetPayloadString()	
+	if err != nil { return two.Payload{}, err }
+
+	if p.Str != str { return two.Payload{}, errors.New("Oops") }
+
+	return p, nil
+
+}
+
 `
 
 	var contractTwoCode = `
@@ -376,6 +401,12 @@ import (
 type Two struct {
 	foundation.BaseContract
 	X int
+	P Payload
+}
+
+type Payload struct {
+	Int int
+	Str string
 }
 
 func New() (*Two, error) {
@@ -385,6 +416,19 @@ func New() (*Two, error) {
 func (r *Two) Hello(s string) (string, error) {
 	r.X ++
 	return fmt.Sprintf("Hello you too, %s. %d times!", s, r.X), nil
+}
+
+func (r *Two) GetPayload() (Payload, error) {
+	return r.P, nil
+}
+
+func (r *Two) SetPayload(P Payload) (error) {
+	r.P = P
+	return nil
+}
+
+func (r *Two) GetPayloadString() (string, error) {
+	return r.P.Str, nil
 }
 `
 	ctx := context.Background()
@@ -425,6 +469,11 @@ func (r *Two) Hello(s string) (string, error) {
 		assert.NoError(t, err, "contract call")
 		assert.Equal(t, fmt.Sprintf("Hello you too, Insolar. %d times!", i), firstMethodRes(t, resp))
 	}
+
+	resp, err = executeMethod(ctx, lr, pm, *obj, *prototype, 7, "TestPayload")
+	assert.NoError(t, err, "contract call")
+	res := firstMethodRes(t, resp).(map[interface{}]interface{})["Str"]
+	assert.Equal(t, "HiHere", res)
 
 	ValidateAllResults(t, ctx, lr)
 }
@@ -1082,7 +1131,7 @@ func TestRootDomainContract(t *testing.T) {
 	// Creating Root member
 	rootKey, err := kp.GeneratePrivateKey()
 	assert.NoError(t, err)
-	rootPubKey, err := kp.ExportPublicKey(kp.ExtractPublicKey(rootKey))
+	rootPubKey, err := kp.ExportPublicKeyPEM(kp.ExtractPublicKey(rootKey))
 	assert.NoError(t, err)
 
 	rootMemberID, err := am.RegisterRequest(
@@ -1121,7 +1170,7 @@ func TestRootDomainContract(t *testing.T) {
 	// Creating Member1
 	member1Key, err := kp.GeneratePrivateKey()
 	assert.NoError(t, err)
-	member1PubKey, err := kp.ExportPublicKey(kp.ExtractPublicKey(member1Key))
+	member1PubKey, err := kp.ExportPublicKeyPEM(kp.ExtractPublicKey(member1Key))
 	assert.NoError(t, err)
 
 	res1 := root.SignedCall(ctx, pm, *rootDomainRef, "CreateMember", *cb.Prototypes["member"], []interface{}{"Member1", member1PubKey})
@@ -1131,7 +1180,7 @@ func TestRootDomainContract(t *testing.T) {
 	// Creating Member2
 	member2Key, err := kp.GeneratePrivateKey()
 	assert.NoError(t, err)
-	member2PubKey, err := kp.ExportPublicKey(kp.ExtractPublicKey(member2Key))
+	member2PubKey, err := kp.ExportPublicKeyPEM(kp.ExtractPublicKey(member2Key))
 	assert.NoError(t, err)
 
 	res2 := root.SignedCall(ctx, pm, *rootDomainRef, "CreateMember", *cb.Prototypes["member"], []interface{}{"Member2", member2PubKey})
@@ -1264,15 +1313,15 @@ func New(n int) (*Child, error) {
 	assert.NoError(t, err)
 
 	for _, m := range toValidate {
-		lr.ValidateCaseBind(ctx, m)
+		lr.HandleValidateCaseBindMessage(ctx, m)
 	}
 
 	for _, m := range toExecute {
-		lr.ExecutorResults(ctx, m)
+		lr.HandleExecutorResultsMessage(ctx, m)
 	}
 
 	for _, m := range toCheckValidate {
-		lr.ProcessValidationResults(ctx, m)
+		lr.HandleValidationResultsMessage(ctx, m)
 	}
 }
 
@@ -1472,7 +1521,7 @@ func (r *One) CreateAllowance(member string) (error) {
 	// Creating Root member
 	rootKey, err := kp.GeneratePrivateKey()
 	assert.NoError(t, err)
-	rootPubKey, err := kp.ExportPublicKey(kp.ExtractPublicKey(rootKey))
+	rootPubKey, err := kp.ExportPublicKeyPEM(kp.ExtractPublicKey(rootKey))
 	assert.NoError(t, err)
 
 	rootMemberID, err := am.RegisterRequest(
@@ -1511,7 +1560,7 @@ func (r *One) CreateAllowance(member string) (error) {
 	// Creating Member
 	memberKey, err := kp.GeneratePrivateKey()
 	assert.NoError(t, err)
-	memberPubKey, err := kp.ExportPublicKey(kp.ExtractPublicKey(memberKey))
+	memberPubKey, err := kp.ExportPublicKeyPEM(kp.ExtractPublicKey(memberKey))
 	assert.NoError(t, err)
 
 	res1 := root.SignedCall(ctx, pm, *rootDomainRef, "CreateMember", *cb.Prototypes["member"], []interface{}{"Member", string(memberPubKey)})
@@ -1769,11 +1818,19 @@ func (r *One) EmptyMethod() (error) {
 	// emulate death
 	err = rlr.sock.Close()
 	require.NoError(t, err)
-	// wait for gorund try to send answer back, it will see closing connection, after that it needs to die
-	time.Sleep(1 * time.Second)
 
+	// wait for gorund try to send answer back, it will see closing connection, after that it needs to die
 	// ping to goPlugin, it has to be dead
-	_, err = rpc.Dial(gp.Cfg.GoPlugin.RunnerProtocol, gp.Cfg.GoPlugin.RunnerListen)
+	for start := time.Now(); time.Since(start) < time.Minute; {
+		time.Sleep(100 * time.Millisecond)
+		_, err = rpc.Dial(gp.Cfg.GoPlugin.RunnerProtocol, gp.Cfg.GoPlugin.RunnerListen)
+		if err != nil {
+			break
+		}
+
+		log.Debug("TestGinsiderMustDieAfterInsolard: gorund still alive")
+	}
+
 	require.Error(t, err, "rpc Dial")
 	assert.Contains(t, err.Error(), "connect: connection refused")
 }

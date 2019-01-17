@@ -98,7 +98,7 @@ func getKeysFromFile(ctx context.Context, file string) (crypto.PrivateKey, strin
 		return nil, "", errors.New("[ getKeyFromFile ] empty public key")
 	}
 	kp := platformpolicy.NewKeyProcessor()
-	key, err := kp.ImportPrivateKey([]byte(keys["private_key"]))
+	key, err := kp.ImportPrivateKeyPEM([]byte(keys["private_key"]))
 	if err != nil {
 		return nil, "", errors.Wrapf(err, "[ getKeyFromFile ] couldn't import private key")
 	}

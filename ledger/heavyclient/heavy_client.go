@@ -23,6 +23,7 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/utils/backoff"
@@ -160,7 +161,7 @@ func (c *JetClient) syncloop(ctx context.Context) {
 				break
 			}
 
-			inslog.Debug("syncronization waiting signal what new pulses happens")
+			inslog.Debug("synchronization waiting signal what new pulse happens")
 			_, ok := <-c.signal
 			if !ok {
 				inslog.Debug("stop is called, so we are should just stop syncronization loop")
@@ -172,7 +173,7 @@ func (c *JetClient) syncloop(ctx context.Context) {
 				// nothing to do
 				continue
 			}
-			inslog.Debugf("syncronization next sync pulse num: %v (left=%v)", syncPN, c.leftPulses)
+			inslog.Debugf("synchronization next sync pulse num: %v (left=%v)", syncPN, c.leftPulses)
 			break
 		}
 
@@ -181,14 +182,14 @@ func (c *JetClient) syncloop(ctx context.Context) {
 			finishpulse()
 			continue
 		}
-		inslog.Infof("start syncronization to heavy for pulse %v", syncPN)
+		inslog.Infof("start synchronization to heavy for pulse %v", syncPN)
 
 		shouldretry := false
 		isretry := c.syncbackoff.Attempt() > 0
 
 		syncerr := c.HeavySync(ctx, syncPN, isretry)
 		if syncerr != nil {
-			if heavyerr, ok := syncerr.(HeavyErr); ok {
+			if heavyerr, ok := syncerr.(*reply.HeavyError); ok {
 				shouldretry = heavyerr.IsRetryable()
 			}
 

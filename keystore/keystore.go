@@ -19,7 +19,6 @@ package keystore
 import (
 	"context"
 	"crypto"
-	"sync"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/core"
@@ -48,32 +47,20 @@ func (ks *keyStore) Start(ctx context.Context) error {
 type cachedKeyStore struct {
 	keyStore core.KeyStore
 
-	mutex      sync.RWMutex
 	privateKey crypto.PrivateKey
 }
 
 func (ks *cachedKeyStore) getCachedPrivateKey(identifier string) crypto.PublicKey {
-	ks.mutex.RLock()
-	defer ks.mutex.RUnlock()
-
 	if ks.privateKey != nil {
 		return ks.privateKey
 	}
-
 	return nil
 }
 
 func (ks *cachedKeyStore) loadPrivateKey(identifier string) (crypto.PrivateKey, error) {
-	ks.mutex.Lock()
-	defer ks.mutex.Unlock()
-
-	if ks.privateKey != nil {
-		return ks.privateKey, nil
-	}
-
 	privateKey, err := ks.keyStore.GetPrivateKey(identifier)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "[ loadPrivateKey ] Can't GetPrivateKey")
 	}
 
 	ks.privateKey = privateKey
@@ -82,16 +69,13 @@ func (ks *cachedKeyStore) loadPrivateKey(identifier string) (crypto.PrivateKey, 
 
 func (ks *cachedKeyStore) GetPrivateKey(identifier string) (crypto.PrivateKey, error) {
 	privateKey := ks.getCachedPrivateKey(identifier)
-	if privateKey != nil {
-		return privateKey, nil
-	}
 
-	return ks.loadPrivateKey(identifier)
+	return privateKey, nil
 }
 
 func (ks *cachedKeyStore) Start(ctx context.Context) error {
 	// TODO: ugly hack; do proper checks
-	if _, err := ks.GetPrivateKey(""); err != nil {
+	if _, err := ks.loadPrivateKey(""); err != nil {
 		return errors.Wrap(err, "[ Start ] Failed to start keyStore")
 	}
 
@@ -109,6 +93,7 @@ func NewKeyStore(path string) (core.KeyStore, error) {
 
 	manager := component.Manager{}
 	manager.Inject(
+		cachedKeyStore,
 		keyStore,
 		privatekey.NewLoader(),
 	)

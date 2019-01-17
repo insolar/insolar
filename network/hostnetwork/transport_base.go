@@ -44,12 +44,8 @@ func (h *transportBase) Start(ctx context.Context) {
 		return
 	}
 	go h.listen(ctx)
-	go func(ctx context.Context) {
-		err := h.transport.Listen(ctx)
-		if err != nil {
-			inslogger.FromContext(ctx).Error(err)
-		}
-	}(ctx)
+
+	transport.ListenAndWaitUntilReady(ctx, h.transport)
 }
 
 func (h *transportBase) listen(ctx context.Context) {
@@ -75,8 +71,8 @@ func (h *transportBase) listen(ctx context.Context) {
 
 // Disconnect stop listening to network requests.
 func (h *transportBase) Stop() {
-	go h.transport.Stop()
 	if atomic.CompareAndSwapUint32(&h.started, 1, 0) {
+		go h.transport.Stop()
 		<-h.transport.Stopped()
 		h.transport.Close()
 	}

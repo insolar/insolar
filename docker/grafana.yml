@@ -1,0 +1,31 @@
+ # docker-compose -f docker/grafana.yml up
+ # localhost:3000 admin:pass
+ 
+version: '3'
+services:
+  prometheus:
+    image: "prom/prometheus:v2.6.0"
+    volumes:
+      - ./conf/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    ports:
+      - '9090:9090'
+
+  node-exporter:
+    image: prom/node-exporter:v0.17.0
+    ports:
+      - '9100:9100'
+
+  grafana:
+    image: grafana/grafana:5.4.2
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - ./conf/grafana/provisioning:/etc/grafana/provisioning
+      - ./conf/grafana/config.ini:/etc/grafana/config.ini
+      - ./conf/grafana/dashboards:/var/lib/grafana/dashboards   
+    depends_on:
+      - prometheus
+    ports:
+      - "3000:3000"

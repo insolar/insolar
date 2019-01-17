@@ -70,6 +70,9 @@ func checkConfig(cfg *configuration.APIRunner) error {
 	if len(cfg.RPC) == 0 {
 		return errors.New("[ checkConfig ] RPC must exist")
 	}
+	if cfg.Timeout == 0 {
+		return errors.New("[ checkConfig ] Timeout must not be null")
+	}
 
 	return nil
 }
@@ -193,7 +196,7 @@ func (ar *Runner) getMemberPubKey(ctx context.Context, ref string) (crypto.Publi
 	}
 
 	kp := platformpolicy.NewKeyProcessor()
-	publicKey, err = kp.ImportPublicKey([]byte(publicKeyString))
+	publicKey, err = kp.ImportPublicKeyPEM([]byte(publicKeyString))
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to convert public key")
 	}

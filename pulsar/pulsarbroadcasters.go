@@ -33,7 +33,7 @@ func (currentPulsar *Pulsar) broadcastSignatureOfEntropy(ctx context.Context) {
 	}
 
 	payload, err := currentPulsar.preparePayload(&EntropySignaturePayload{
-		PulseNumber: currentPulsar.ProcessingPulseNumber,
+		PulseNumber:      currentPulsar.ProcessingPulseNumber,
 		EntropySignature: currentPulsar.GeneratedEntropySign,
 	})
 	if err != nil {
@@ -63,7 +63,7 @@ func (currentPulsar *Pulsar) broadcastVector(ctx context.Context) {
 	}
 	payload, err := currentPulsar.preparePayload(&VectorPayload{
 		PulseNumber: currentPulsar.ProcessingPulseNumber,
-		Vector:      currentPulsar.OwnedBftRow,
+		Vector:      currentPulsar.CreateVectorCopy(),
 	})
 
 	if err != nil {
@@ -91,9 +91,9 @@ func (currentPulsar *Pulsar) broadcastEntropy(ctx context.Context) {
 	}
 
 	payload, err := currentPulsar.preparePayload(&EntropyPayload{
-			PulseNumber: currentPulsar.ProcessingPulseNumber,
-			Entropy: *currentPulsar.GetGeneratedEntropy(),
-		})
+		PulseNumber: currentPulsar.ProcessingPulseNumber,
+		Entropy:     *currentPulsar.GetGeneratedEntropy(),
+	})
 	if err != nil {
 		currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)
 		return
@@ -152,7 +152,7 @@ func (currentPulsar *Pulsar) sendVector(ctx context.Context) {
 
 	currentPulsar.broadcastVector(ctx)
 
-	currentPulsar.SetBftGridItem(currentPulsar.PublicKeyRaw, currentPulsar.OwnedBftRow)
+	currentPulsar.SetBftGridItem(currentPulsar.PublicKeyRaw, currentPulsar.CreateVectorCopy())
 	currentPulsar.StateSwitcher.SwitchToState(ctx, WaitingForVectors, nil)
 }
 
@@ -192,7 +192,6 @@ func (currentPulsar *Pulsar) sendPulseSign(ctx context.Context) {
 		return
 	}
 
-
 	signature, err := currentPulsar.CryptographyService.Sign(hash)
 	if err != nil {
 		currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)
@@ -217,8 +216,8 @@ func (currentPulsar *Pulsar) sendPulseSign(ctx context.Context) {
 	reply := <-call.Done
 	if reply.Error != nil {
 		// Here should be retry
-		log.Error(reply.Error)
-		currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, log.Error)
+		currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, reply.Error)
+		return
 	}
 
 	currentPulsar.StateSwitcher.SwitchToState(ctx, WaitingForStart, nil)

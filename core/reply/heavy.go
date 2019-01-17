@@ -17,6 +17,8 @@
 package reply
 
 import (
+	"fmt"
+
 	"github.com/insolar/insolar/core"
 )
 
@@ -25,10 +27,12 @@ const (
 	ErrHeavySyncInProgress ErrType = iota + 1
 )
 
-// HeavyError carries heavy record information
+// HeavyError carries heavy sync error information.
 type HeavyError struct {
-	Message string
-	SubType ErrType
+	Message  string
+	SubType  ErrType
+	JetID    core.RecordID
+	PulseNum core.PulseNumber
 }
 
 // Type implementation of Reply interface.
@@ -43,5 +47,10 @@ func (e *HeavyError) ConcreteType() ErrType {
 
 // Error returns error message for stored type.
 func (e *HeavyError) Error() string {
-	return e.Message
+	return fmt.Sprintf("%v (JetID=%v, PulseNum=%v)", e.Message, e.JetID, e.PulseNum)
+}
+
+// IsRetryable returns true if retry could be performed.
+func (e *HeavyError) IsRetryable() bool {
+	return e.SubType == ErrHeavySyncInProgress
 }

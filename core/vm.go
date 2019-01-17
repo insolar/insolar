@@ -55,9 +55,9 @@ type MachineLogicExecutor interface {
 //go:generate minimock -i github.com/insolar/insolar/core.LogicRunner -o ../testutils -s _mock.go
 type LogicRunner interface {
 	Execute(context.Context, Parcel) (res Reply, err error)
-	ValidateCaseBind(context.Context, Parcel) (res Reply, err error)
-	ProcessValidationResults(context.Context, Parcel) (res Reply, err error)
-	ExecutorResults(context.Context, Parcel) (res Reply, err error)
+	HandleValidateCaseBindMessage(context.Context, Parcel) (res Reply, err error)
+	HandleValidationResultsMessage(context.Context, Parcel) (res Reply, err error)
+	HandleExecutorResultsMessage(context.Context, Parcel) (res Reply, err error)
 	OnPulse(context.Context, Pulse) error
 }
 

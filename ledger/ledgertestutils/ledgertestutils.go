@@ -30,16 +30,19 @@ import (
 	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/messagebus"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/testmessagebus"
+	"github.com/stretchr/testify/require"
 )
 
 // TmpLedger crteates ledger on top of temporary database.
-// Returns *ledger.Ledger andh cleanup function.
+// Returns *ledger.Ledger and cleanup function.
 // FIXME: THIS METHOD IS DEPRECATED. USE MOCKS.
 func TmpLedger(t *testing.T, dir string, c core.Components) (*ledger.Ledger, func()) {
 	log.Warn("TmpLedger is deprecated. Use mocks.")
@@ -51,6 +54,11 @@ func TmpLedger(t *testing.T, dir string, c core.Components) (*ledger.Ledger, fun
 	ctx := inslogger.TestContext(t)
 	conf := configuration.NewLedger()
 	db, dbcancel := storagetest.TmpDB(ctx, t, storagetest.Dir(dir))
+	pulseStorage := storage.NewPulseStorage(db)
+
+	pulse, err := db.GetLatestPulse(ctx)
+	require.NoError(t, err)
+	pulseStorage.Set(&pulse.Pulse)
 
 	am := artifactmanager.NewArtifactManger(db)
 	am.PlatformCryptographyScheme = pcs
@@ -58,18 +66,30 @@ func TmpLedger(t *testing.T, dir string, c core.Components) (*ledger.Ledger, fun
 	pm := pulsemanager.NewPulseManager(db, conf)
 	ls := localstorage.NewLocalStorage(db)
 	jc := testutils.NewJetCoordinatorMock(mc)
-	jc.AmIMock.Return(true, nil)
 	jc.IsAuthorizedMock.Return(true, nil)
+	jc.LightExecutorForJetMock.Return(&core.RecordRef{}, nil)
+	jc.MeMock.Return(core.RecordRef{})
 
 	// Init components.
 	if c.MessageBus == nil {
-		c.MessageBus = testmessagebus.NewTestMessageBus(t)
+		mb := testmessagebus.NewTestMessageBus(t)
+		mb.PulseStorage = pulseStorage
+		c.MessageBus = mb
+	} else {
+		switch mb := c.MessageBus.(type) {
+		case *messagebus.MessageBus:
+			mb.PulseStorage = pulseStorage
+		case *testmessagebus.TestMessageBus:
+			mb.PulseStorage = pulseStorage
+		default:
+			panic("unknown message bus")
+		}
 	}
 	if c.NodeNetwork == nil {
 		c.NodeNetwork = nodenetwork.NewNodeKeeper(nodenetwork.NewNode(core.RecordRef{}, core.StaticRoleUnknown, nil, "", ""))
 	}
 
-	handler := artifactmanager.NewMessageHandler(db, nil)
+	handler := artifactmanager.NewMessageHandler(db, &conf)
 	handler.PlatformCryptographyScheme = pcs
 	handler.JetCoordinator = jc
 
@@ -87,7 +107,8 @@ func TmpLedger(t *testing.T, dir string, c core.Components) (*ledger.Ledger, fun
 	pm.Bus = c.MessageBus
 	pm.LR = c.LogicRunner
 	pm.ActiveListSwapper = alsMock
-	pm.PulseStorage = storage.NewPulseStorage(db)
+	pm.PulseStorage = pulseStorage
+	pm.ArtifactManagerMessageHandler = handler
 
 	recentStorageMock := recentstorage.NewRecentStorageMock(t)
 	recentStorageMock.AddPendingRequestMock.Return()
@@ -102,10 +123,12 @@ func TmpLedger(t *testing.T, dir string, c core.Components) (*ledger.Ledger, fun
 
 	handler.RecentStorageProvider = provideMock
 
-	err := handler.Init(ctx)
+	err = handler.Init(ctx)
 	if err != nil {
 		panic(err)
 	}
+
+	handler.CloseEarlyRequestCircuitBreakerForJet(ctx, *jet.NewID(0, nil))
 
 	// Create ledger.
 	l := ledger.NewTestLedger(db, am, pm, jc, ls)

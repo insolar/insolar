@@ -34,7 +34,7 @@ func TestCreateMember(t *testing.T) {
 
 func TestCreateMemberWrongNameType(t *testing.T) {
 	_, err := signedRequest(&root, "CreateMember", 111, "000")
-	require.EqualError(t, err, "[ makeCall ] Error in called method: [ createMemberCall ]: [ Deserialize ]: unexpected EOF")
+	require.EqualError(t, err, "[ makeCall ] Error in called method: [ createMemberCall ]: [ Deserialize ]: EOF")
 }
 
 func TestCreateMemberWrongKeyType(t *testing.T) {

@@ -29,6 +29,7 @@ import (
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils/network"
 	"github.com/insolar/insolar/testutils/nodekeeper"
+	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/core/delegationtoken"
 	"github.com/insolar/insolar/core/reply"
@@ -71,7 +72,6 @@ func TestBareHelloworld(t *testing.T) {
 	nk := nodekeeper.GetTestNodekeeper(mock)
 
 	mb := testmessagebus.NewTestMessageBus(t)
-	mb.PulseNumber = 0
 
 	// FIXME: TmpLedger is deprecated. Use mocks instead.
 	l, cleaner := ledgertestutils.TmpLedger(
@@ -92,9 +92,12 @@ func TestBareHelloworld(t *testing.T) {
 
 	l.PulseManager.(*pulsemanager.PulseManager).GIL = gil
 
+	currentPulse, err := mb.PulseStorage.Current(ctx)
+	require.NoError(t, err)
+
 	_ = l.GetPulseManager().Set(
 		ctx,
-		core.Pulse{PulseNumber: mb.PulseNumber, Entropy: core.Entropy{}},
+		core.Pulse{PulseNumber: currentPulse.PulseNumber, Entropy: core.Entropy{}},
 		true,
 	)
 

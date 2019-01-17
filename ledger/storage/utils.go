@@ -14,31 +14,33 @@
  *    limitations under the License.
  */
 
-package pool
+package storage
 
 import (
-	"context"
-	"io"
-	"net"
+	"bytes"
+	"encoding/hex"
 
-	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/core"
 )
 
-// Consuming 1 byte; only usable for outgoing connections.
-func connectionClosedByPeer(ctx context.Context, conn net.Conn) bool {
-	logger := inslogger.FromContext(ctx)
+type bytes2hex []byte
 
-	n, err := conn.Read(make([]byte, 1))
+func (h bytes2hex) String() string {
+	return hex.EncodeToString(h)
+}
 
-	if err == io.EOF || n > 0 {
-		if err != nil {
-			logger.Errorln("[ connectionClosedByPeer ] Failed to close connection: ", err.Error())
-		} else {
-			logger.Debug("[ connectionClosedByPeer ] Close connection to %s", conn.RemoteAddr())
-		}
+func prefixkey(prefix byte, parts ...[]byte) []byte {
+	tail := bytes.Join(parts, nil)
+	k := make([]byte, len(tail)+1)
+	k[0] = prefix
+	_ = copy(k[1:], tail)
+	return k
+}
 
-		return true
-	}
+func pulseFromKey(key []byte) core.PulseNumber {
+	return core.NewPulseNumber(pulseBytesFromKey(key))
+}
 
-	return false
+func pulseBytesFromKey(key []byte) []byte {
+	return key[core.RecordHashSize : core.RecordHashSize+core.PulseNumberSize]
 }

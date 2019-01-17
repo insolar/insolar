@@ -38,7 +38,7 @@ func TestHeavy_SyncBasic(t *testing.T) {
 	}
 
 	// TODO: call every case in subtest
-	jetID := testutils.RandomID()
+	jetID := testutils.RandomJet()
 
 	sync := NewSync(db)
 	err = sync.Start(ctx, jetID, pnum)
@@ -54,13 +54,13 @@ func TestHeavy_SyncBasic(t *testing.T) {
 	err = sync.Start(ctx, jetID, pnum)
 	require.Error(t, err, "last synced pulse is less when 'first pulse number'")
 
-	pnum = core.FirstPulseNumber + 1
-	err = sync.Start(ctx, jetID, pnum)
-	require.Error(t, err, "start sync on empty store with non first pulse number")
-
 	pnum = core.FirstPulseNumber
 	err = sync.Start(ctx, jetID, pnum)
-	require.NoError(t, err, "start from first pulse on empty storage")
+	require.Error(t, err, "start from first pulse on empty storage")
+
+	pnum = core.FirstPulseNumber + 1
+	err = sync.Start(ctx, jetID, pnum)
+	require.NoError(t, err, "start sync on empty heavy jet with non first pulse number")
 
 	err = sync.Start(ctx, jetID, pnum)
 	require.Error(t, err, "double start")
@@ -73,10 +73,12 @@ func TestHeavy_SyncBasic(t *testing.T) {
 	err = sync.Stop(ctx, jetID, pnum)
 	require.NoError(t, err)
 
-	// start next
+	// start sparse next
 	pnumNextPlus := pnumNext + 1
 	err = sync.Start(ctx, jetID, pnumNextPlus)
-	require.Error(t, err, "start when previous pulses not synced")
+	require.NoError(t, err, "sparse sync is ok")
+	err = sync.Stop(ctx, jetID, pnumNextPlus)
+	require.NoError(t, err)
 
 	// prepare pulse helper
 	preparepulse := func(pn core.PulseNumber) {
@@ -85,6 +87,8 @@ func TestHeavy_SyncBasic(t *testing.T) {
 		err = db.AddPulse(ctx, pulse)
 		require.NoError(t, err)
 	}
+	pnum = pnumNextPlus + 1
+	pnumNext = pnum + 1
 	preparepulse(pnum)
 	preparepulse(pnumNext) // should set correct next for previous pulse
 
@@ -129,10 +133,11 @@ func TestHeavy_SyncByJet(t *testing.T) {
 	}
 
 	// TODO: call every case in subtest
-	jetID1 := testutils.RandomID()
+	jetID1 := testutils.RandomJet()
 	jetID2 := jetID1
 	// flip first bit of jetID2 for different prefix
-	jetID2[0] ^= jetID2[0]
+	lastidx := len(jetID1) - 1
+	jetID2[lastidx] ^= 0xFF
 
 	// prepare pulse helper
 	preparepulse := func(pn core.PulseNumber) {
@@ -144,16 +149,19 @@ func TestHeavy_SyncByJet(t *testing.T) {
 
 	sync := NewSync(db)
 
-	pnum = core.FirstPulseNumber
+	pnum = core.FirstPulseNumber + 1
 	pnumNext := pnum + 1
 	preparepulse(pnum)
 	preparepulse(pnumNext) // should set correct next for previous pulse
 
+	err = sync.Start(ctx, jetID1, core.FirstPulseNumber)
+	require.Error(t, err)
+
 	err = sync.Start(ctx, jetID1, pnum)
-	require.NoError(t, err, "start from first pulse on empty storage, jet1")
+	require.NoError(t, err, "start from first+1 pulse on empty storage, jet1")
 
 	err = sync.Start(ctx, jetID2, pnum)
-	require.NoError(t, err, "start from first pulse on empty storage, jet2")
+	require.NoError(t, err, "start from first+1 pulse on empty storage, jet2")
 
 	err = sync.Store(ctx, jetID2, pnum, kvalues2)
 	require.NoError(t, err, "store jet2 pulse")

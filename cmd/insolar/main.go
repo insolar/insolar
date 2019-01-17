@@ -144,10 +144,10 @@ func generateKeysPair(out io.Writer) {
 	privKey, err := ks.GeneratePrivateKey()
 	check("Problems with generating of private key:", err)
 
-	privKeyStr, err := ks.ExportPrivateKey(privKey)
+	privKeyStr, err := ks.ExportPrivateKeyPEM(privKey)
 	check("Problems with serialization of private key:", err)
 
-	pubKeyStr, err := ks.ExportPublicKey(ks.ExtractPublicKey(privKey))
+	pubKeyStr, err := ks.ExportPublicKeyPEM(ks.ExtractPublicKey(privKey))
 	check("Problems with serialization of public key:", err)
 
 	result, err := json.MarshalIndent(map[string]interface{}{

@@ -107,3 +107,14 @@ type HasPendingRequests struct {
 func (e *HasPendingRequests) Type() core.ReplyType {
 	return TypePendingRequests
 }
+
+// Jet contains jet.
+type Jet struct {
+	ID     core.RecordID
+	Actual bool
+}
+
+// Type implementation of Reply interface.
+func (r *Jet) Type() core.ReplyType {
+	return TypeJet
+}

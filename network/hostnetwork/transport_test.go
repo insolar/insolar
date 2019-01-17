@@ -397,13 +397,14 @@ func TestDoubleStart(t *testing.T) {
 	wg.Add(2)
 
 	f := func(group *sync.WaitGroup, t network.InternalTransport) {
-		wg.Done()
 		t.Start(ctx)
+		wg.Done()
 	}
 	go f(&wg, tp)
 	go f(&wg, tp)
 	wg.Wait()
-	defer tp.Stop()
+
+	tp.Stop()
 }
 
 func TestHostTransport_RegisterPacketHandler(t *testing.T) {
@@ -412,7 +413,6 @@ func TestHostTransport_RegisterPacketHandler(t *testing.T) {
 	i1, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID1+DOMAIN)
 	require.NoError(t, err)
 	tr1 := NewHostTransport(i1, m)
-	defer tr1.Stop()
 	handler := func(ctx context.Context, request network.Request) (network.Response, error) {
 		return tr1.BuildResponse(request, nil), nil
 	}
