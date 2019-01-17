@@ -21,6 +21,7 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 )
 
@@ -39,6 +40,11 @@ func NewPulseStorage(db *DB) *PulseStorage {
 // Current returns current pulse of the system
 func (ps *PulseStorage) Current(ctx context.Context) (*core.Pulse, error) {
 	ps.rwLock.RLock()
+
+	pulse, err := ps.pulseFromContext(ctx)
+	if err == nil {
+		return pulse, nil
+	}
 
 	if ps.currentPulse == nil {
 		ps.rwLock.RUnlock()
@@ -59,6 +65,25 @@ func (ps *PulseStorage) Current(ctx context.Context) (*core.Pulse, error) {
 
 	defer ps.rwLock.RUnlock()
 	return ps.currentPulse, nil
+}
+
+func (ps *PulseStorage) pulseFromContext(ctx context.Context) (*core.Pulse, error) {
+	pulseNumber, err := core.NewPulseNumberFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	inslogger.FromContext(ctx).Debugf("[ PulseStorage.Current ] Getting pulse %d from context", pulseNumber)
+	if ps.currentPulse.PulseNumber == pulseNumber {
+		return ps.currentPulse, nil
+	}
+
+	pulse, err := ps.db.GetPulse(ctx, pulseNumber)
+	if err != nil {
+		return nil, errors.Wrapf(err, "[ PulseStorage.Current ] Can't GetPulse %d from context", pulseNumber)
+	}
+
+	return &pulse.Pulse, nil
 }
 
 func (ps *PulseStorage) Set(pulse *core.Pulse) {

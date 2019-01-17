@@ -103,7 +103,7 @@ func (s *transferDifferentMembersScenario) startMember(index int, wg *sync.WaitG
 		} else {
 			atomic.AddUint32(&s.errors, 1)
 			if strings.Contains(err.Error(), "Incorrect message pulse") {
-				writeToOutput(s.out, "Incorrect message pulse\n")
+				writeToOutput(s.out, fmt.Sprintf("[Member №%d] Incorrect message pulse [its ok]: %s. Response: %s.\n", index, traceID, err.Error()))
 			} else {
 				writeToOutput(s.out, fmt.Sprintf("[Member №%d] Transfer error with traceID: %s. Response: %s.\n", index, traceID, err.Error()))
 			}
