@@ -244,10 +244,6 @@ func (db *DB) CloneJetTree(
 
 	tree.ResetActual()
 
-	// if from != core.FirstPulseNumber {
-	// 	tree.ResetActual()
-	// }
-
 	err = db.set(ctx, k, tree.Bytes())
 	if err != nil {
 		return nil, err
