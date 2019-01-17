@@ -17,9 +17,12 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/insolar/insolar/api/sdk"
@@ -29,14 +32,18 @@ import (
 )
 
 const defaultStdoutPath = "-"
+const defaultMemberFileDir = "scripts/insolard/benchmark"
+const defaultMemberFileName = "members.txt"
 
 var (
-	output         string
-	concurrent     int
-	repetitions    int
-	rootMemberKeys string
-	apiURLs        []string
-	logLevel       string
+	output             string
+	concurrent         int
+	repetitions        int
+	rootMemberKeys     string
+	apiURLs            []string
+	logLevel           string
+	saveMembersToFile  bool
+	useMembersFromFile bool
 )
 
 func parseInputParams() {
@@ -46,6 +53,8 @@ func parseInputParams() {
 	pflag.StringVarP(&rootMemberKeys, "rootmemberkeys", "k", "", "path to file with RootMember keys")
 	pflag.StringArrayVarP(&apiURLs, "apiurl", "u", []string{"http://localhost:19191/api"}, "url to api")
 	pflag.StringVarP(&logLevel, "loglevel", "l", "info", "log level for benchmark")
+	pflag.BoolVarP(&saveMembersToFile, "savemembers", "s", false, "save members to file")
+	pflag.BoolVarP(&useMembersFromFile, "usemembers", "m", false, "use members from file")
 	pflag.Parse()
 }
 
@@ -136,6 +145,65 @@ func createMembers(insSDK *sdk.SDK, count int) []*sdk.Member {
 	return members
 }
 
+func getMembers(insSDK *sdk.SDK) ([]*sdk.Member, error) {
+	var members []*sdk.Member
+	var err error
+	if useMembersFromFile {
+		members, err = loadMembers(concurrent * 2)
+		if err != nil {
+			return nil, errors.Wrap(err, "error while loading members: ")
+		}
+	} else {
+		members = createMembers(insSDK, concurrent*2)
+	}
+
+	if saveMembersToFile {
+		err = saveMembers(members)
+		if err != nil {
+			return nil, errors.Wrap(err, "save member done with error: ")
+		}
+	}
+	return members, nil
+}
+
+func saveMembers(members []*sdk.Member) error {
+	err := os.MkdirAll(defaultMemberFileDir, 0777)
+	if err != nil {
+		return errors.Wrap(err, "couldn't create dir for file")
+	}
+	file, err := os.Create(filepath.Join(defaultMemberFileDir, defaultMemberFileName))
+	if err != nil {
+		return errors.Wrap(err, "couldn't create file")
+	}
+	defer file.Close() //nolint: errcheck
+
+	result, err := json.MarshalIndent(members, "", "    ")
+	if err != nil {
+		return errors.Wrap(err, "couldn't marshal members in json")
+	}
+	_, err = file.Write([]byte(result))
+	return errors.Wrap(err, "couldn't save members in file")
+}
+
+func loadMembers(count int) ([]*sdk.Member, error) {
+	var members []*sdk.Member
+
+	rawMembers, err := ioutil.ReadFile(filepath.Join(defaultMemberFileDir, defaultMemberFileName))
+	if err != nil {
+		return nil, errors.Wrap(err, "can't read members from file")
+	}
+
+	err = json.Unmarshal(rawMembers, &members)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't unmarshal members from file")
+	}
+
+	if count > len(members) {
+		return nil, errors.Errorf("Not enough members in file: got %d, needs %d", len(members), count)
+	}
+	return members, nil
+}
+
 func main() {
 	parseInputParams()
 
@@ -152,7 +220,8 @@ func main() {
 	insSDK, err := sdk.NewSDK(apiURLs, rootMemberKeys)
 	check("SDK is not initialized: ", err)
 
-	members := createMembers(insSDK, concurrent*2)
+	members, err := getMembers(insSDK)
+	check("Error while loading members: ", err)
 
 	runScenarios(out, insSDK, members, concurrent, repetitions)
 
