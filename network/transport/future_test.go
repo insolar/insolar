@@ -82,12 +82,13 @@ func TestFuture_SetResult(t *testing.T) {
 
 	go f.SetResult(m)
 
-	m2 := <-f.Result()
+	m2 := <-f.Result() // Result() call closes channel
 
 	require.Equal(t, m, m2)
 
 	m3, err := f.GetResult(10 * time.Millisecond)
-	require.EqualError(t, err, "channel closed") // legal behavior
+	// legal behavior, the channel is closed because of the previous f.Result() call finished the Future
+	require.EqualError(t, err, "channel closed")
 	require.Nil(t, m3)
 }
 
