@@ -777,9 +777,6 @@ func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState
 		if err != nil {
 			return nil, es.WrapError(err, "couldn't update object")
 		}
-		if od == nil {
-			panic("unexpected situation, object descriptor - NIL,  err - NIL")
-		}
 		es.objectbody.objDescriptor = od
 	}
 	_, err = am.RegisterResult(ctx, m.ObjectRef, *current.Request, result)
