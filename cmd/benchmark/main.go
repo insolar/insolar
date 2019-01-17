@@ -141,6 +141,24 @@ func createMembers(insSDK *sdk.SDK, count int) []*sdk.Member {
 	return members
 }
 
+func getMembers(insSDK *sdk.SDK) ([]*sdk.Member, error) {
+	var members []*sdk.Member
+	var err error
+	if useMembersFromFile {
+		members, err = loadMembers(concurrent * 2)
+		if err != nil {
+			return nil, errors.Wrap(err, "error while loading members: ")
+		}
+	} else {
+		members = createMembers(insSDK, concurrent*2)
+		err = saveMembers(members)
+		if err != nil {
+			return nil, errors.Wrap(err, "save member done with error: ")
+		}
+	}
+	return members, nil
+}
+
 func saveMembers(members []*sdk.Member) error {
 	err := os.MkdirAll(defaultMemberFileDir, 0777)
 	if err != nil {
@@ -165,12 +183,12 @@ func loadMembers(count int) ([]*sdk.Member, error) {
 
 	rawMemmbers, err := ioutil.ReadFile(filepath.Join(defaultMemberFileDir, defaultMemberFileName))
 	if err != nil {
-		return nil, errors.Wrap(err, "Can't read members from file")
+		return nil, errors.Wrap(err, "can't read members from file")
 	}
 
 	err = json.Unmarshal(rawMemmbers, &members)
 	if err != nil {
-		return nil, errors.Wrap(err, "Can't unmarshal members from file")
+		return nil, errors.Wrap(err, "can't unmarshal members from file")
 	}
 
 	if count > len(members) {
@@ -191,15 +209,8 @@ func main() {
 	insSDK, err := sdk.NewSDK(apiURLs, rootMemberKeys)
 	check("SDK is not initialized: ", err)
 
-	var members []*sdk.Member
-	if useMembersFromFile {
-		members, err = loadMembers(concurrent * 2)
-		check("Error while loading members: ", err)
-	} else {
-		members = createMembers(insSDK, concurrent*2)
-		err = saveMembers(members)
-		check("Save member done with error: ", err)
-	}
+	members, err := getMembers(insSDK)
+	check("Error while loading members: ", err)
 
 	runScenarios(out, insSDK, members, concurrent, repetitions)
 }
