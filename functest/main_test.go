@@ -304,7 +304,7 @@ func startNet() error {
 
 func waitForLaunch() error {
 	done := make(chan bool, 1)
-	timeout := 120 * time.Second
+	timeout := 240 * time.Second
 
 	go func() {
 		scanner := bufio.NewScanner(stdout)

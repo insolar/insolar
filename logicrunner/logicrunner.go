@@ -684,7 +684,14 @@ func (lr *LogicRunner) prepareObjectState(ctx context.Context, msg *message.Exec
 		// ledger on request said that we are in pending
 		// previous executor said that we can continue
 		es.pending = message.NotPending
-		es.objectbody = nil
+		if es.Current != nil {
+			es.objectbody = nil
+		} else {
+			inslogger.FromContext(ctx).Error(
+				"we have object in pending state, but ",
+				"with currently executing contract. shouldn't happen",
+			)
+		}
 	}
 
 	//prepare Queue
