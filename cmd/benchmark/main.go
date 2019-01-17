@@ -147,11 +147,11 @@ func saveMembers(members []*sdk.Member) error {
 		return errors.Wrap(err, "couldn't create dir for file")
 	}
 	file, err := os.Create(filepath.Join(defaultMemberFileDir, defaultMemberFileName))
-	defer file.Close() //nolint: errcheck
-
 	if err != nil {
 		return errors.Wrap(err, "couldn't create file")
 	}
+	defer file.Close() //nolint: errcheck
+
 	result, err := json.MarshalIndent(members, "", "    ")
 	if err != nil {
 		return errors.Wrap(err, "couldn't marshal members in json")
@@ -169,6 +169,9 @@ func loadMembers(count int) ([]*sdk.Member, error) {
 	}
 
 	err = json.Unmarshal(rawMemmbers, &members)
+	if err != nil {
+		return nil, errors.Wrap(err, "Can't unmarshal members from file")
+	}
 
 	if count > len(members) {
 		return nil, errors.Errorf("Not enough members in file: got %d, needs %d", len(members), count)
