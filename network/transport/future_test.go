@@ -82,19 +82,14 @@ func TestFuture_SetResult(t *testing.T) {
 
 	go f.SetResult(m)
 
-	m2 := <-f.Result()
+	m2 := <-f.Result() // Result() call closes channel
 
 	require.Equal(t, m, m2)
 
-	go f.SetResult(m)
-
 	m3, err := f.GetResult(10 * time.Millisecond)
-	require.NoError(t, err)
-	require.Equal(t, m, m3)
-
-	// no result, timeout
-	_, err = f.GetResult(10 * time.Millisecond)
-	require.Error(t, err)
+	// legal behavior, the channel is closed because of the previous f.Result() call finished the Future
+	require.EqualError(t, err, "channel closed")
+	require.Nil(t, m3)
 }
 
 func TestFuture_Cancel(t *testing.T) {
