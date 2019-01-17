@@ -59,7 +59,6 @@ func init() {
 			Description: statRedirects.Description(),
 			Measure:     statRedirects,
 			Aggregation: view.Count(),
-			TagKeys:     commontags,
 		},
 	)
 	if err != nil {
