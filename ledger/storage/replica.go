@@ -20,7 +20,9 @@ import (
 	"bytes"
 	"context"
 	"encoding/gob"
+	"io"
 
+	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/core"
 )
 
