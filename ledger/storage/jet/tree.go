@@ -52,23 +52,22 @@ func (j *jet) Find(val []byte, depth uint8) (*jet, uint8) {
 
 // Update add missing tree branches for provided prefix.
 func (j *jet) Update(prefix []byte, setActual bool, maxDepth, depth uint8) {
-	if setActual {
-		j.Actual = true
-	}
-
-	if depth >= maxDepth {
+	if depth == maxDepth {
+		if setActual {
+			j.Actual = true
+		}
 		return
 	}
 
+	if j.Right == nil {
+		j.Right = &jet{}
+	}
+	if j.Left == nil {
+		j.Left = &jet{}
+	}
 	if getBit(prefix, depth) {
-		if j.Right == nil {
-			j.Right = &jet{}
-		}
 		j.Right.Update(prefix, setActual, maxDepth, depth+1)
 	} else {
-		if j.Left == nil {
-			j.Left = &jet{}
-		}
 		j.Left.Update(prefix, setActual, maxDepth, depth+1)
 	}
 }
@@ -81,6 +80,26 @@ func (j *jet) ResetActual() {
 	j.Actual = false
 	if j.Right != nil {
 		j.Right.ResetActual()
+	}
+}
+
+func (j *jet) ExtractLeafIDs(ids *[]core.RecordID, path []byte, depth uint8) {
+	if j == nil {
+		return
+	}
+	if j.Left == nil && j.Right == nil {
+		*ids = append(*ids, *NewID(depth, path))
+		return
+	}
+
+	if j.Left != nil {
+		j.Left.ExtractLeafIDs(ids, path, depth+1)
+	}
+	if j.Right != nil {
+		rightPath := make([]byte, len(path))
+		copy(rightPath, path)
+		setBit(rightPath, depth)
+		j.Right.ExtractLeafIDs(ids, rightPath, depth+1)
 	}
 }
 
@@ -213,6 +232,7 @@ func nodeDeepFmt(deep int, binPrefix string, node *jet) string {
 
 // NewTree creates new tree.
 func NewTree() *Tree {
+	fmt.Println("NewTree was created, love")
 	return &Tree{Head: &jet{Actual: true}}
 }
 
@@ -221,8 +241,9 @@ func (t *Tree) Find(id core.RecordID) (*core.RecordID, bool) {
 	if id.Pulse() == core.PulseNumberJet {
 		return &id, true
 	}
-	j, depth := t.Head.Find(id.Hash(), 0)
-	return NewID(uint8(depth), resetBits(id.Hash(), depth)), j.Actual
+	hash := id.Hash()
+	j, depth := t.Head.Find(hash, 0)
+	return NewID(uint8(depth), ResetBits(hash, depth)), j.Actual
 }
 
 // Update add missing tree branches for provided prefix. If 'setActual' is set, all encountered nodes will be marked as
@@ -246,12 +267,16 @@ func (t *Tree) Split(jetID core.RecordID) (*core.RecordID, *core.RecordID, error
 	depth, prefix := Jet(jetID)
 	j, foundDepth := t.Head.Find(prefix, 0)
 	if depth != foundDepth {
-		return nil, nil, errors.New("failed to split: jet is not present in the tree")
+		fmt.Println("split failed!")
+		fmt.Println("split depth ", depth)
+		fmt.Println("found depth ", foundDepth)
+		fmt.Println("jet ", jetID.JetIDString())
+		return nil, nil, errors.New("failed to split: incorrect jet provided")
 	}
 	j.Right = &jet{}
 	j.Left = &jet{}
-	leftPrefix := resetBits(prefix, depth)
-	rightPrefix := resetBits(prefix, depth)
+	leftPrefix := ResetBits(prefix, depth)
+	rightPrefix := ResetBits(prefix, depth)
 	setBit(rightPrefix, depth)
 	return NewID(depth+1, leftPrefix), NewID(depth+1, rightPrefix), nil
 }
@@ -261,9 +286,15 @@ func (t *Tree) ResetActual() {
 	t.Head.ResetActual()
 }
 
+func (t *Tree) LeafIDs() []core.RecordID {
+	var ids []core.RecordID
+	t.Head.ExtractLeafIDs(&ids, make([]byte, core.RecordHashSize), 0)
+	return ids
+}
+
 func getBit(value []byte, index uint8) bool {
 	if uint(index) >= uint(len(value)*8) {
-		panic("index overflow")
+		panic(fmt.Sprintf("index overflow: value=%08b, index=%v", value, index))
 	}
 	byteIndex := uint(index / 8)
 	bitIndex := uint(7 - index%8)
@@ -283,8 +314,8 @@ func setBit(value []byte, index uint8) {
 
 // ResetBits returns a new byte slice with all bits in 'value' reset, starting from 'start' number of bit. If 'start'
 // is bigger than len(value), the original slice will be returned.
-func resetBits(value []byte, start uint8) []byte {
-	if int(start) > len(value)*8 {
+func ResetBits(value []byte, start uint8) []byte {
+	if int(start) >= len(value)*8 {
 		return value
 	}
 

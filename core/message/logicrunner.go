@@ -33,6 +33,14 @@ const (
 	// ReturnValidated
 )
 
+type PendingState int
+
+const (
+	PendingUnknown PendingState = iota
+	NotPending
+	InPending
+)
+
 type IBaseLogicMessage interface {
 	core.Message
 	GetBaseLogicMessage() *BaseLogicMessage
@@ -191,11 +199,11 @@ func (cc *CallConstructor) DefaultTarget() *core.RecordRef {
 	if cc.SaveAs == Delegate {
 		return &cc.ParentRef
 	}
-	return genRequest(cc.PulseNum, MustSerializeBytes(cc))
+	return genRequest(cc.PulseNum, MustSerializeBytes(cc), cc.Request.Domain())
 }
 
 func (cc *CallConstructor) GetReference() core.RecordRef {
-	return *genRequest(cc.PulseNum, MustSerializeBytes(cc))
+	return *genRequest(cc.PulseNum, MustSerializeBytes(cc), cc.Request.Domain())
 }
 
 // Type returns TypeCallConstructor.
@@ -209,7 +217,7 @@ type ExecutorResults struct {
 	RecordRef core.RecordRef
 	Requests  []CaseBindRequest
 	Queue     []ExecutionQueueElement
-	Pending   bool
+	Pending   PendingState
 }
 
 type ExecutionQueueElement struct {
@@ -332,9 +340,9 @@ func (vr *ValidationResults) GetReference() core.RecordRef {
 var hasher = platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher() // TODO: create message factory
 
 // GenRequest calculates RecordRef for request message from pulse number and request's payload.
-func genRequest(pn core.PulseNumber, payload []byte) *core.RecordRef {
+func genRequest(pn core.PulseNumber, payload []byte, domain *core.RecordID) *core.RecordRef {
 	ref := core.NewRecordRef(
-		core.RecordID{},
+		*domain,
 		*core.NewRecordID(pn, hasher.Hash(payload)),
 	)
 	return ref
@@ -366,4 +374,29 @@ func (pf *PendingFinished) DefaultTarget() *core.RecordRef {
 
 func (pf *PendingFinished) Type() core.MessageType {
 	return core.TypePendingFinished
+}
+
+// StillExecuting
+type StillExecuting struct {
+	Reference core.RecordRef // object we still executing
+}
+
+func (se *StillExecuting) GetCaller() *core.RecordRef {
+	return &se.Reference
+}
+
+func (se *StillExecuting) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return nil, 0
+}
+
+func (se *StillExecuting) DefaultRole() core.DynamicRole {
+	return core.DynamicRoleVirtualExecutor
+}
+
+func (se *StillExecuting) DefaultTarget() *core.RecordRef {
+	return &se.Reference
+}
+
+func (se *StillExecuting) Type() core.MessageType {
+	return core.TypeStillExecuting
 }
