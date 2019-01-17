@@ -215,13 +215,6 @@ func (c *JetClient) syncloop(ctx context.Context) {
 			// TODO: write some info to dust - 14.Dec.2018 @nordicdyno
 		}
 
-		err := c.db.SetReplicatedPulse(ctx, c.jetID, syncPN)
-		if err != nil {
-			err = errors.Wrap(err, "SetReplicatedPulse failed")
-			inslog.Error(err)
-			panic(err)
-		}
-
 		finishpulse()
 	}
 

@@ -36,19 +36,6 @@ func Test_ReplicatedPulse(t *testing.T) {
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
 
-	// test {Set/Get}ReplicatedPulse methods pair
-	got0, err := db.GetReplicatedPulse(ctx, jetID)
-	require.NoError(t, err)
-	assert.Equal(t, core.PulseNumber(0), got0)
-
-	expect := core.PulseNumber(100500)
-	err = db.SetReplicatedPulse(ctx, jetID, expect)
-	require.NoError(t, err)
-
-	got, err := db.GetReplicatedPulse(ctx, jetID)
-	require.NoError(t, err)
-	assert.Equal(t, expect, got)
-
 	// test {Set/Get}HeavySyncedPulse methods pair
 	heavyGot0, err := db.GetHeavySyncedPulse(ctx, jetID)
 	require.NoError(t, err)

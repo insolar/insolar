@@ -45,12 +45,11 @@ const (
 
 	sysGenesis                byte = 1
 	sysLatestPulse            byte = 2
-	sysReplicatedPulse        byte = 3
+	sysHeavyClientState       byte = 3
 	sysLastSyncedPulseOnHeavy byte = 4
 	sysJetTree                byte = 5
 	sysJetList                byte = 6
 	sysDropSizeHistory        byte = 7
-	sysHeavyClientState       byte = 8
 )
 
 // DB represents BadgerDB storage implementation.
@@ -188,15 +187,6 @@ func (db *DB) Init(ctx context.Context) error {
 			jetID,
 			genesisID,
 			&index.ObjectLifeline{LatestState: genesisID, LatestStateApproved: genesisID},
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		err = db.SetReplicatedPulse(
-			ctx,
-			jetID,
-			lastPulse.Pulse.PulseNumber,
 		)
 		if err != nil {
 			return nil, err
