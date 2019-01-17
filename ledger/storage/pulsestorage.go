@@ -18,6 +18,7 @@ package storage
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"github.com/insolar/insolar/core"
@@ -40,15 +41,22 @@ func NewPulseStorage(db *DB) *PulseStorage {
 // Current returns current pulse of the system
 func (ps *PulseStorage) Current(ctx context.Context) (*core.Pulse, error) {
 	pulse, err := ps.pulseFromContext(ctx)
-	if err == nil {
+	if err != nil {
+		return nil, err
+	}
+	if pulse != nil {
+		fmt.Println("*********FROMCTX Err is nil. Pulse is: ", pulse)
 		return pulse, nil
 	}
 
 	currentPulse := ps.getCachedPulse()
-	if currentPulse == nil {
-		if err = ps.updatePulseCache(ctx); err != nil {
-			return nil, err
-		}
+	if currentPulse != nil {
+		return currentPulse, nil
+	}
+
+	currentPulse, err = ps.reloadPulse(ctx)
+	if err != nil {
+		return nil, err
 	}
 
 	return currentPulse, nil
@@ -61,24 +69,27 @@ func (ps *PulseStorage) getCachedPulse() *core.Pulse {
 	return ps.currentPulse
 }
 
-func (ps *PulseStorage) updatePulseCache(ctx context.Context) error {
+func (ps *PulseStorage) reloadPulse(ctx context.Context) (*core.Pulse, error) {
 	ps.rwLock.Lock()
 	defer ps.rwLock.Unlock()
 
 	if ps.currentPulse == nil {
 		currentPulse, err := ps.db.GetLatestPulse(ctx)
 		if err != nil {
-			return errors.Wrap(err, "[ PulseStorage.updatePulseCache ] Can't GetLatestPulse")
+			return nil, errors.Wrap(err, "[ PulseStorage.reloadPulse ] Can't GetLatestPulse")
 		}
 		ps.currentPulse = &currentPulse.Pulse
 	}
 
-	return nil
+	return ps.currentPulse, nil
 }
 
 func (ps *PulseStorage) pulseFromContext(ctx context.Context) (*core.Pulse, error) {
 	pulseNumber, err := core.NewPulseNumberFromContext(ctx)
 	if err != nil {
+		if err == core.ErrNoPulseInContext {
+			return nil, nil
+		}
 		return nil, err
 	}
 

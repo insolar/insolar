@@ -47,6 +47,8 @@ type pulseNumberContextKeyType bool
 
 const pulseNumberContextKey pulseNumberContextKeyType = true
 
+var ErrNoPulseInContext = errors.New("No pulse number in context")
+
 // NewPulseNumber creates pulse number from bytes.
 func NewPulseNumber(buf []byte) PulseNumber {
 	return PulseNumber(binary.BigEndian.Uint32(buf))
@@ -76,7 +78,7 @@ func NewPulseNumberFromContext(ctx context.Context) (PulseNumber, error) {
 	if pn, ok := val.(PulseNumber); ok {
 		return pn, nil
 	}
-	return 0, errors.New("No pulse number in context")
+	return 0, ErrNoPulseInContext
 }
 
 // PulseRange represents range of pulses.
