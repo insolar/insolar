@@ -676,13 +676,17 @@ func (lr *LogicRunner) prepareObjectState(ctx context.Context, msg *message.Exec
 
 	es.Lock()
 
-	// prepare pending
-	if es.pending == message.PendingUnknown {
-		es.pending = msg.Pending
-	}
-	if es.pending == message.InPending && msg.Pending == message.NotPending {
-		// ledger on request said that we are in pending
-		// previous executor said that we can continue
+	if es.pending == message.InPending && es.Current != nil {
+		inslogger.FromContext(ctx).Debug(
+			"execution returned to node that is still executing pending",
+		)
+		es.pending = message.NotPending
+		es.PendingConfirmed = false
+	} else if es.pending == message.InPending && msg.Pending == message.NotPending {
+		inslogger.FromContext(ctx).Debug(
+			"executor we came to thinks that execution pending, but previous said to continue",
+		)
+
 		es.pending = message.NotPending
 		if es.Current != nil {
 			es.objectbody = nil
@@ -692,6 +696,8 @@ func (lr *LogicRunner) prepareObjectState(ctx context.Context, msg *message.Exec
 				"with currently executing contract. shouldn't happen",
 			)
 		}
+	} else if es.pending == message.PendingUnknown {
+		es.pending = msg.Pending
 	}
 
 	//prepare Queue
