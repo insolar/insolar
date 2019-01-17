@@ -183,9 +183,7 @@ func (h *MessageHandler) handleGetCode(ctx context.Context, parcel core.Parcel) 
 
 	codeRec, err := getCode(ctx, h.db, msg.Code.Record())
 	if err == storage.ErrNotFound {
-		// return nil, errors.New("failed to fetch code")
-		// The record wasn't found on the current node. Return redirect to the node that contains it.
-		var node *core.RecordRef
+		// We don't have code record. Must be on another node.
 		node, err := h.nodeForJet(ctx, jetID, parcel.Pulse(), msg.Code.Record().Pulse())
 		if err != nil {
 			return nil, err
