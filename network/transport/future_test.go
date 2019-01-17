@@ -86,15 +86,9 @@ func TestFuture_SetResult(t *testing.T) {
 
 	require.Equal(t, m, m2)
 
-	go f.SetResult(m)
-
 	m3, err := f.GetResult(10 * time.Millisecond)
-	require.NoError(t, err)
-	require.Equal(t, m, m3)
-
-	// no result, timeout
-	_, err = f.GetResult(10 * time.Millisecond)
-	require.Error(t, err)
+	require.EqualError(t, err, "channel closed") // legal behavior
+	require.Nil(t, m3)
 }
 
 func TestFuture_Cancel(t *testing.T) {
