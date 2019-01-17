@@ -181,12 +181,12 @@ func saveMembers(members []*sdk.Member) error {
 func loadMembers(count int) ([]*sdk.Member, error) {
 	var members []*sdk.Member
 
-	rawMemmbers, err := ioutil.ReadFile(filepath.Join(defaultMemberFileDir, defaultMemberFileName))
+	rawMembers, err := ioutil.ReadFile(filepath.Join(defaultMemberFileDir, defaultMemberFileName))
 	if err != nil {
 		return nil, errors.Wrap(err, "can't read members from file")
 	}
 
-	err = json.Unmarshal(rawMemmbers, &members)
+	err = json.Unmarshal(rawMembers, &members)
 	if err != nil {
 		return nil, errors.Wrap(err, "can't unmarshal members from file")
 	}
