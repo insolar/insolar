@@ -123,11 +123,11 @@ func loadRootKeys() error {
 }
 
 func setInfo() error {
-	response, err := requester.Info(TestAPIURL)
+	var err error
+	info, err = requester.Info(TestAPIURL)
 	if err != nil {
 		return errors.Wrap(err, "[ setInfo ] error sending request")
 	}
-	info = response
 	return nil
 }
 
