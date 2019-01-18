@@ -65,7 +65,6 @@ func (s *transferDifferentMembersScenario) getAverageOperationDuration() time.Du
 func (s *transferDifferentMembersScenario) getOperationPerSecond() float64 {
 	max := s.goroutineTimes[0]
 	for _, t := range s.goroutineTimes {
-		fmt.Println("goroutineTimes - ", t)
 		if max < t {
 			max = t
 		}
