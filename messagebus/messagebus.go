@@ -21,6 +21,7 @@ import (
 	"context"
 	"encoding/gob"
 	"fmt"
+	"github.com/insolar/insolar/core/utils"
 	"io"
 	"sync"
 	"time"
@@ -61,7 +62,7 @@ type MessageBus struct {
 	globalLock                  sync.RWMutex
 	NextPulseMessagePoolChan    chan interface{}
 	NextPulseMessagePoolCounter uint32
-	NextPulseMessagePoolLock    sync.Mutex
+	NextPulseMessagePoolLock    sync.RWMutex
 }
 
 // NewMessageBus creates plain MessageBus instance. It can be used to create Player and Recorder instances that
@@ -233,12 +234,13 @@ func (e *serializableError) Error() string {
 }
 
 func (mb *MessageBus) OnPulse(context.Context, core.Pulse) error {
-	tmp := mb.NextPulseMessagePoolChan
-	mb.NextPulseMessagePoolChan = make(chan interface{})
 	mb.NextPulseMessagePoolLock.Lock()
+	defer mb.NextPulseMessagePoolLock.Unlock()
+
+	close(mb.NextPulseMessagePoolChan)
+	mb.NextPulseMessagePoolChan = make(chan interface{})
 	mb.NextPulseMessagePoolCounter = 0
-	mb.NextPulseMessagePoolLock.Unlock()
-	close(tmp)
+
 	return nil
 }
 
@@ -301,11 +303,29 @@ func (mb *MessageBus) checkPulse(ctx context.Context, parcel core.Parcel, locked
 		if locked {
 			mb.globalLock.RUnlock()
 		}
-		<-mb.NextPulseMessagePoolChan
+
+		mb.NextPulseMessagePoolLock.RLock()
+		pulse, err := mb.PulseStorage.Current(
+			inslogger.ContextWithTrace(context.Background(), utils.TraceID(ctx)),
+		)
+		if err != nil {
+			mb.NextPulseMessagePoolLock.RUnlock()
+			if locked {
+				mb.globalLock.RLock()
+			}
+			return errors.Wrap(err, "[ checkPulse ] Couldn't get current pulse number")
+		}
+		if parcel.Pulse() > pulse.PulseNumber {
+			<-mb.NextPulseMessagePoolChan
+		}
+		mb.NextPulseMessagePoolLock.RUnlock()
+
 		if locked {
 			mb.globalLock.RLock()
 		}
 	}
+
+	ctx = inslogger.ContextWithTrace(context.Background(), utils.TraceID(ctx))
 
 	pulse, err = mb.PulseStorage.Current(ctx)
 	if err != nil {
