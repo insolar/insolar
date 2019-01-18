@@ -17,11 +17,13 @@
 package core
 
 import (
+	"context"
 	"encoding/binary"
 	"fmt"
 	"time"
 
 	"github.com/insolar/insolar/core/utils"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -41,6 +43,11 @@ type Entropy [EntropySize]byte
 // Valid Absolute PulseNum must be >65536.
 // If PulseNum <65536 it is a relative PulseNum
 type PulseNumber uint32
+type pulseNumberContextKeyType bool
+
+const pulseNumberContextKey pulseNumberContextKeyType = true
+
+var ErrNoPulseInContext = errors.New("No pulse number in context")
 
 // NewPulseNumber creates pulse number from bytes.
 func NewPulseNumber(buf []byte) PulseNumber {
@@ -50,6 +57,28 @@ func NewPulseNumber(buf []byte) PulseNumber {
 // Bytes serializes pulse number.
 func (pn PulseNumber) Bytes() []byte {
 	return utils.UInt32ToBytes(uint32(pn))
+}
+
+// ToContext adds PulseNumber to context.
+func (pn *PulseNumber) ToContext(ctx context.Context) context.Context {
+	ctxPn, err := NewPulseNumberFromContext(ctx)
+	if err == nil {
+		fmt.Printf(
+			"[ Pulse ToContext ] Trying to set pulse %d to context. It already has one: %d",
+			pn,
+			ctxPn,
+		)
+	}
+	return context.WithValue(ctx, pulseNumberContextKey, pn)
+}
+
+// NewPulseNumberFromContext returns PulseNumber stored in context or error.
+func NewPulseNumberFromContext(ctx context.Context) (PulseNumber, error) {
+	val := ctx.Value(pulseNumberContextKey)
+	if pn, ok := val.(PulseNumber); ok {
+		return pn, nil
+	}
+	return 0, ErrNoPulseInContext
 }
 
 // PulseRange represents range of pulses.
