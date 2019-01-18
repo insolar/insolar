@@ -45,7 +45,7 @@ const (
 
 	sysGenesis                byte = 1
 	sysLatestPulse            byte = 2
-	sysReplicatedPulse        byte = 3
+	sysHeavyClientState       byte = 3
 	sysLastSyncedPulseOnHeavy byte = 4
 	sysJetTree                byte = 5
 	sysJetList                byte = 6
@@ -71,7 +71,8 @@ type DB struct {
 
 	jetSizesHistoryDepth int
 
-	idlocker *IDLocker
+	idlocker             *IDLocker
+	jetHeavyClientLocker *IDLocker
 
 	// NodeHistory is an in-memory active node storage for each pulse. It's required to calculate node roles
 	// for past pulses to locate data.
@@ -129,6 +130,7 @@ func NewDB(conf configuration.Ledger, opts *badger.Options) (*DB, error) {
 		txretiries:           conf.Storage.TxRetriesOnConflict,
 		jetSizesHistoryDepth: conf.JetSizesHistoryDepth,
 		idlocker:             NewIDLocker(),
+		jetHeavyClientLocker: NewIDLocker(),
 		nodeHistory:          map[core.PulseNumber][]Node{},
 	}
 	return db, nil
@@ -185,15 +187,6 @@ func (db *DB) Init(ctx context.Context) error {
 			jetID,
 			genesisID,
 			&index.ObjectLifeline{LatestState: genesisID, LatestStateApproved: genesisID},
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		err = db.SetReplicatedPulse(
-			ctx,
-			jetID,
-			lastPulse.Pulse.PulseNumber,
 		)
 		if err != nil {
 			return nil, err

@@ -22,9 +22,9 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/core"
@@ -136,16 +136,8 @@ func (m *LedgerArtifactManager) GetCode(
 		return entry.desc, nil
 	}
 
-	if code.Record().Pulse() != core.FirstPulseNumber {
-		fmt.Print("code wrong pulse!")
-	}
-	lightNode, err := m.JetCoordinator.LightExecutorForJet(ctx, *jet.NewID(0, nil), code.Record().Pulse())
-	if err != nil {
-		return nil, err
-	}
-
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.GetCode sendAndRetryJet")
-	genericReact, err := m.bus(ctx).Send(ctx, &message.GetCode{Code: code}, &core.MessageSendOptions{Receiver: lightNode})
+	genericReact, err := m.bus(ctx).Send(ctx, &message.GetCode{Code: code}, nil)
 	span.End()
 	if err != nil {
 		return nil, err
@@ -153,7 +145,7 @@ func (m *LedgerArtifactManager) GetCode(
 
 	react, ok := genericReact.(*reply.Code)
 	if !ok {
-		return nil, fmt.Errorf("unexpected reply: %#v", genericReact)
+		return nil, fmt.Errorf("GetCode: unexpected reply: %#v", genericReact)
 	}
 
 	desc := CodeDescriptor{
@@ -214,7 +206,7 @@ func (m *LedgerArtifactManager) GetObject(
 	case *reply.Error:
 		err = r.Error()
 	default:
-		err = fmt.Errorf("unexpected reply: %#v", rep)
+		err = fmt.Errorf("GetObject: unexpected reply: %#v", rep)
 	}
 	return desc, err
 }
@@ -235,7 +227,7 @@ func (m *LedgerArtifactManager) HasPendingRequests(
 	}
 	requests, ok := rep.(*reply.HasPendingRequests)
 	if !ok {
-		return false, fmt.Errorf("unexpected reply: %#v", rep)
+		return false, fmt.Errorf("HasPendingRequests: unexpected reply: %#v", rep)
 	}
 	return requests.Has, nil
 }
@@ -267,7 +259,7 @@ func (m *LedgerArtifactManager) GetDelegate(
 
 	react, ok := genericReact.(*reply.Delegate)
 	if !ok {
-		return nil, fmt.Errorf("unexpected reply: %#v", genericReact)
+		return nil, fmt.Errorf("GetDelegate: unexpected reply: %#v", genericReact)
 	}
 	return &react.Head, nil
 }
@@ -695,7 +687,7 @@ func (m *LedgerArtifactManager) setRecord(
 
 	react, ok := genericReply.(*reply.ID)
 	if !ok {
-		return nil, fmt.Errorf("unexpected reply: %#v", genericReply)
+		return nil, fmt.Errorf("setRecord: unexpected reply: %#v", genericReply)
 	}
 
 	return &react.ID, nil
@@ -719,7 +711,7 @@ func (m *LedgerArtifactManager) setBlob(
 
 	react, ok := genericReact.(*reply.ID)
 	if !ok {
-		return nil, fmt.Errorf("unexpected reply: %#v", genericReact)
+		return nil, fmt.Errorf("setBlob: unexpected reply: %#v", genericReact)
 	}
 
 	return &react.ID, nil
@@ -756,7 +748,7 @@ func (m *LedgerArtifactManager) sendUpdateObject(
 
 	rep, ok := genericRep.(*reply.Object)
 	if !ok {
-		return nil, fmt.Errorf("unexpected reply: %#v", genericRep)
+		return nil, fmt.Errorf("sendUpdateObject: unexpected reply: %#v", genericRep)
 	}
 
 	return rep, nil
@@ -784,7 +776,7 @@ func (m *LedgerArtifactManager) registerChild(
 
 	react, ok := genericReact.(*reply.ID)
 	if !ok {
-		return nil, fmt.Errorf("unexpected reply: %#v", genericReact)
+		return nil, fmt.Errorf("registerChild: unexpected reply: %#v", genericReact)
 	}
 
 	return &react.ID, nil
@@ -801,7 +793,8 @@ func sendAndFollowRedirect(
 	msg core.Message,
 	pulse core.Pulse,
 ) (core.Reply, error) {
-	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.sendAndFollowRedirect starts ...")
+	inslog := inslogger.FromContext(ctx)
+	inslog.Debug("LedgerArtifactManager.sendAndFollowRedirect starts ...")
 	rep, err := bus.Send(ctx, msg, nil)
 	if err != nil {
 		return nil, err
@@ -812,7 +805,11 @@ func sendAndFollowRedirect(
 	}
 
 	if r, ok := rep.(core.RedirectReply); ok {
+		stats.Record(ctx, statRedirects.M(1))
+
 		redirected := r.Redirected(msg)
+		inslog.Debugf("redirect reciever=%v", r.GetReceiver())
+
 		rep, err = bus.Send(ctx, redirected, &core.MessageSendOptions{
 			Token:    r.GetToken(),
 			Receiver: r.GetReceiver(),
