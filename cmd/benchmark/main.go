@@ -23,6 +23,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/insolar/insolar/api/sdk"
@@ -129,7 +130,6 @@ func createMembers(insSDK *sdk.SDK, count int) []*sdk.Member {
 	var err error
 
 	for i := 0; i < count; i++ {
-
 		for j := 0; j < numRetries; j++ {
 			member, traceID, err = insSDK.CreateMember()
 			if err == nil {
@@ -143,6 +143,49 @@ func createMembers(insSDK *sdk.SDK, count int) []*sdk.Member {
 		check(fmt.Sprintf("Couldn't create member after retries: %d", numRetries), err)
 	}
 	return members
+}
+
+func getTotalBalance(insSDK *sdk.SDK, members []*sdk.Member) uint64 {
+	type Result struct {
+		num     int
+		balance uint64
+		err     error
+	}
+
+	nmembers := len(members)
+	var wg sync.WaitGroup
+	wg.Add(nmembers)
+	results := make(chan Result, nmembers)
+
+	// execute all queries in parallel
+	for i := 0; i < nmembers; i++ {
+		go func(m *sdk.Member, num int) {
+			res := Result{num: num}
+			for attempt := 0; attempt < 5; attempt++ {
+				res.balance, res.err = insSDK.GetBalance(m)
+				if res.err == nil {
+					break
+				}
+				// retry
+				time.Sleep(1 * time.Second)
+			}
+			results <- res
+			wg.Done()
+		}(members[i], i)
+	}
+
+	wg.Wait()
+	totalBalance := uint64(0)
+	for i := 0; i < nmembers; i++ {
+		res := <-results
+		if res.err != nil {
+			fmt.Printf("Can't get balance for %v-th member: %v\n", res.num, res.err)
+			continue
+		}
+		totalBalance += res.balance
+	}
+
+	return totalBalance
 }
 
 func getMembers(insSDK *sdk.SDK) ([]*sdk.Member, error) {
@@ -222,10 +265,27 @@ func main() {
 
 	members, err := getMembers(insSDK)
 	check("Error while loading members: ", err)
+	totalBalanceBefore := getTotalBalance(insSDK, members)
 
 	runScenarios(out, insSDK, members, concurrent, repetitions)
 
 	// Finish benchmark time
 	t = time.Now()
 	fmt.Printf("\nFinish: %s\n\n", t.String())
+
+	totalBalanceAfter := uint64(0)
+	for nretries := 0; nretries < 5; nretries++ {
+		totalBalanceAfter = getTotalBalance(insSDK, members)
+		if totalBalanceAfter == totalBalanceBefore {
+			break
+		}
+		fmt.Printf("Total balance before and after don't match: %v vs %v - retrying in 3 seconds...\n",
+			totalBalanceBefore, totalBalanceAfter)
+		time.Sleep(3 * time.Second)
+
+	}
+	fmt.Printf("Total balance before: %v and after: %v\n", totalBalanceBefore, totalBalanceAfter)
+	if totalBalanceBefore != totalBalanceAfter {
+		panic("Total balance mismatch!\n")
+	}
 }
