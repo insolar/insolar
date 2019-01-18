@@ -149,7 +149,10 @@ func getTotalBalance(insSDK *sdk.SDK, members []*sdk.Member) uint64 {
 	nmembers := len(members)
 	for i := 0; i < nmembers; i++ {
 		balance, err := insSDK.GetBalance(members[i])
-		check(fmt.Sprintf("Can't get balance for %v-th member %v", i, members[i]), err)
+		if err != nil {
+			fmt.Printf("ERROR: Can't get balance for %v-th member %v, err: %v\n", i, members[i], err)
+			continue
+		}
 		totalBalance += balance
 	}
 	return totalBalance
@@ -240,7 +243,19 @@ func main() {
 	t = time.Now()
 	fmt.Printf("\nFinish: %s\n\n", t.String())
 
-	totalBalanceAfter := getTotalBalance(insSDK, members)
+	totalBalanceAfter := uint64(0)
+	for nretries := 0; nretries < 5; nretries++ {
+		totalBalanceAfter = getTotalBalance(insSDK, members)
+		if totalBalanceAfter == totalBalanceBefore {
+			break
+		}
+		fmt.Printf("Total balance before and after don't match: %v vs %v - retrying in 3 seconds...\n",
+			totalBalanceBefore, totalBalanceAfter)
+		time.Sleep(3 * time.Second)
 
+	}
 	fmt.Printf("Total balance before: %v and after: %v\n", totalBalanceBefore, totalBalanceAfter)
+	if totalBalanceBefore != totalBalanceAfter {
+		panic("Total balance mismatch!\n")
+	}
 }
