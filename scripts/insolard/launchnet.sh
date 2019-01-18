@@ -58,6 +58,8 @@ stop_listening()
 
         done < "$INSGORUND_PORT_FILE"
 
+        pgrep insgorund | xargs kill 
+
         ports="$ports $lgorund_ports"
 
     fi
