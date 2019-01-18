@@ -34,7 +34,7 @@ type transportBase struct {
 	started          uint32
 	transport        transport.Transport
 	origin           *host.Host
-	messageProcessor func(ctx context.Context, msg *packet.Packet)
+	messageProcessor func(msg *packet.Packet)
 }
 
 // Listen start listening to network requests, should be started in goroutine.
@@ -59,7 +59,7 @@ func (h *transportBase) listen(ctx context.Context) {
 			if msg.Error != nil {
 				log.Warnf("Received error response: %s", msg.Error.Error())
 			}
-			go h.messageProcessor(ctx, msg)
+			go h.messageProcessor(msg)
 		case <-h.transport.Stopped():
 			if atomic.CompareAndSwapUint32(&h.started, 1, 0) {
 				h.transport.Close()
@@ -78,9 +78,9 @@ func (h *transportBase) Stop() {
 	}
 }
 
-func (h *transportBase) buildRequest(request network.Request, receiver *host.Host) *packet.Packet {
-	return packet.NewBuilder(h.origin).Receiver(receiver).
-		Type(request.GetType()).Request(request.GetData()).Build()
+func (h *transportBase) buildRequest(ctx context.Context, request network.Request, receiver *host.Host) *packet.Packet {
+	return packet.NewBuilder(h.origin).Receiver(receiver).Type(request.GetType()).
+		Request(request.GetData()).TraceID(inslogger.TraceID(ctx)).Build()
 }
 
 // PublicAddress returns public address that can be published for all nodes.

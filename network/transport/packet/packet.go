@@ -39,6 +39,7 @@ type Packet struct {
 	RequestID     RequestID
 	RemoteAddress string
 
+	TraceID    string
 	Data       interface{}
 	Error      error
 	IsResponse bool

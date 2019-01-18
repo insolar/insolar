@@ -70,6 +70,13 @@ func (cb Builder) Request(request interface{}) Builder {
 	return cb
 }
 
+func (cb Builder) TraceID(traceID string) Builder {
+	cb.actions = append(cb.actions, func(packet *Packet) {
+		packet.TraceID = traceID
+	})
+	return cb
+}
+
 // Response adds response data to packet
 func (cb Builder) Response(response interface{}) Builder {
 	cb.actions = append(cb.actions, func(packet *Packet) {

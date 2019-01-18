@@ -53,11 +53,11 @@ func (tc *transportConsensus) SendRequest(request network.Request, receiver core
 		return errors.Wrapf(err, "Failed to send %s request to node %s",
 			request.GetType().String(), receiver.String())
 	}
-	p := tc.buildRequest(request, receiverHost)
+	p := tc.buildRequest(context.Background(), request, receiverHost)
 	return tc.transport.SendPacket(p)
 }
 
-func (tc *transportConsensus) processMessage(ctx context.Context, msg *packet.Packet) {
+func (tc *transportConsensus) processMessage(msg *packet.Packet) {
 	log.Debugf("Got %s request from host, shortID: %d", msg.Type.String(), msg.Sender.ShortID)
 	sender, err := tc.resolver.ResolveS(msg.Sender.ShortID)
 	if err != nil {

@@ -23,6 +23,7 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/transport"
@@ -88,7 +89,7 @@ func (f future) GetRequest() network.Request {
 	return (*packetWrapper)(request)
 }
 
-func (h *hostTransport) processMessage(ctx context.Context, msg *packet.Packet) {
+func (h *hostTransport) processMessage(msg *packet.Packet) {
 	log.Debugf("Got %s request from host %s", msg.Type.String(), msg.Sender.String())
 	handler, exist := h.handlers[msg.Type]
 	if !exist {
@@ -96,9 +97,10 @@ func (h *hostTransport) processMessage(ctx context.Context, msg *packet.Packet) 
 			msg.Type.String(), msg.Sender.NodeID.String())
 		return
 	}
+	ctx, _ := inslogger.WithTraceField(context.Background(), msg.TraceID)
 	response, err := handler(ctx, (*packetWrapper)(msg))
 	if err != nil {
-		log.Errorf("Error handling request %s from node %s: %s",
+		inslogger.FromContext(ctx).Errorf("Error handling request %s from node %s: %s",
 			msg.Type.String(), msg.Sender.NodeID.String(), err)
 		return
 	}
@@ -110,9 +112,9 @@ func (h *hostTransport) processMessage(ctx context.Context, msg *packet.Packet) 
 }
 
 // SendRequestPacket send request packet to a remote node.
-func (h *hostTransport) SendRequestPacket(request network.Request, receiver *host.Host) (network.Future, error) {
+func (h *hostTransport) SendRequestPacket(ctx context.Context, request network.Request, receiver *host.Host) (network.Future, error) {
 	log.Debugf("Send %s request to host %s", request.GetType().String(), receiver.String())
-	f, err := h.transport.SendRequest(h.buildRequest(request, receiver))
+	f, err := h.transport.SendRequest(h.buildRequest(ctx, request, receiver))
 	if err != nil {
 		return nil, err
 	}
@@ -129,9 +131,10 @@ func (h *hostTransport) RegisterPacketHandler(t types.PacketType, handler networ
 }
 
 // BuildResponse create response to an incoming request with Data set to responseData.
-func (h *hostTransport) BuildResponse(request network.Request, responseData interface{}) network.Response {
+func (h *hostTransport) BuildResponse(ctx context.Context, request network.Request, responseData interface{}) network.Response {
 	sender := request.(*packetWrapper).Sender
-	p := packet.NewBuilder(h.origin).Type(request.GetType()).Receiver(sender).Response(responseData).Build()
+	p := packet.NewBuilder(h.origin).Type(request.GetType()).Receiver(sender).
+		Response(responseData).TraceID(inslogger.TraceID(ctx)).Build()
 	return (*packetWrapper)(p)
 }
 
