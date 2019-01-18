@@ -21,7 +21,7 @@ import (
 	"encoding/binary"
 	"os"
 
-	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/pkg/errors"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -36,12 +36,11 @@ func TraceID(ctx context.Context) string {
 	return val.(string)
 }
 
-func SetTraceID(ctx context.Context, traceid string) context.Context {
+func SetTraceID(ctx context.Context, traceid string) (context.Context, error) {
 	if TraceID(ctx) != "" {
-		log := inslogger.FromContext(ctx)
-		log.Warnf("TraceID already set: old: %s new: %s", TraceID(ctx), traceid)
+		return ctx, errors.Errorf("TraceID already set: old: %s new: %s", TraceID(ctx), traceid)
 	}
-	return context.WithValue(ctx, traceIDKey{}, traceid)
+	return context.WithValue(ctx, traceIDKey{}, traceid), nil
 }
 
 // RandTraceID returns random traceID in uuid format.

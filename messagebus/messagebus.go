@@ -349,7 +349,7 @@ func (mb *MessageBus) deliver(ctx context.Context, args [][]byte) (result []byte
 		return nil, err
 	}
 
-	parcelCtx := parcel.Context(ctx)
+	parcelCtx := parcel.Context(context.Background()) // use ctx when network provide context
 	inslogger.FromContext(ctx).Debugf("MessageBus.deliver after deserialize msg. Msg Type: %s", parcel.Type())
 
 	mb.globalLock.RLock()
