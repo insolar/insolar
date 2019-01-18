@@ -83,6 +83,7 @@ func getTestData(t *testing.T) (
 	jc := testutils.NewJetCoordinatorMock(mc)
 	jc.LightExecutorForJetMock.Return(&core.RecordRef{}, nil)
 	jc.MeMock.Return(core.RecordRef{})
+	jc.HeavyMock.Return(&core.RecordRef{}, nil)
 	mb := testmessagebus.NewTestMessageBus(t)
 	mb.PulseStorage = pulseStorage
 	db.PlatformCryptographyScheme = scheme
@@ -132,7 +133,7 @@ func TestLedgerArtifactManager_RegisterRequest(t *testing.T) {
 	assert.NoError(t, err)
 	rec, err := db.GetRecord(ctx, *jet.NewID(0, nil), id)
 	assert.NoError(t, err)
-	assert.Equal(t, message.ParcelToBytes(&parcel), rec.(*record.RequestRecord).Payload)
+	assert.Equal(t, message.MustSerializeBytes(parcel.Msg), rec.(*record.RequestRecord).Payload)
 }
 
 func TestLedgerArtifactManager_GetCodeWithCache(t *testing.T) {
@@ -164,11 +165,11 @@ func TestLedgerArtifactManager_GetCodeWithCache(t *testing.T) {
 	}
 
 	am := LedgerArtifactManager{
-		DefaultBus:    mb,
-		db:            db,
-		codeCacheLock: &sync.Mutex{},
-		codeCache:     make(map[core.RecordRef]*cacheEntry),
-		PulseStorage:  amPulseStorageMock,
+		DefaultBus:     mb,
+		db:             db,
+		codeCacheLock:  &sync.Mutex{},
+		codeCache:      make(map[core.RecordRef]*cacheEntry),
+		PulseStorage:   amPulseStorageMock,
 		JetCoordinator: jc,
 	}
 
@@ -721,7 +722,6 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 	mb.PulseStorage = makePulseStorage(db, ctx, t)
 	jc := testutils.NewJetCoordinatorMock(mc)
 	jc.LightExecutorForJetMock.Return(&core.RecordRef{}, nil)
-	jc.MeMock.Return(core.RecordRef{})
 
 	recentStorageMock := recentstorage.NewRecentStorageMock(t)
 	recentStorageMock.AddPendingRequestMock.Return()

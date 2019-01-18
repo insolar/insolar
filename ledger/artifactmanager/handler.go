@@ -218,15 +218,6 @@ func (h *MessageHandler) handleGetObject(
 	msg := parcel.Message().(*message.GetObject)
 	jetID := jetFromContext(ctx)
 
-	// only for debug:
-	isHeavy := func(node *core.RecordRef) bool {
-		heavy, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
-		if err != nil {
-			logger.Debugf("checkJet: [ HACK2 ] failed to check for Heavy role")
-		}
-		return *heavy == *node
-	}
-
 	// Fetch object index. If not found redirect.
 	idx, err := h.db.GetObjectIndex(ctx, jetID, msg.Head.Record(), false)
 	if err == storage.ErrNotFound {
@@ -240,8 +231,8 @@ func (h *MessageHandler) handleGetObject(
 		}
 		// Add requested object to recent.
 		h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Head.Record())
-		logger.Debugf("redirect because index not found. jet: %v, to: %v (is_heavy=%v)\n",
-			jetID.JetIDString(), node, isHeavy(node))
+		logger.Debugf("redirect because index not found. jet: %v, to: %v\n",
+			jetID.JetIDString(), node)
 		return reply.NewGetObjectRedirectReply(h.DelegationTokenFactory, parcel, node, msg.State)
 	}
 	if err != nil {
@@ -281,8 +272,8 @@ func (h *MessageHandler) handleGetObject(
 			return nil, err
 		}
 
-		logger.Debugf("redirect because record not found jet: %v, to: %v (is_heavy=%v)\n",
-			jetID.JetIDString(), node, isHeavy(node))
+		logger.Debugf("redirect because record not found jet: %v, to: %v\n",
+			jetID.JetIDString(), node)
 		return reply.NewGetObjectRedirectReply(h.DelegationTokenFactory, parcel, node, stateID)
 	}
 	if err != nil {
