@@ -58,7 +58,7 @@ stop_listening()
 
         done < "$INSGORUND_PORT_FILE"
 
-        pgrep insgorund | xargs kill 
+        pgrep insgorund | xargs kill
 
         ports="$ports $lgorund_ports"
 
@@ -74,6 +74,7 @@ stop_listening()
         echo "port: $port"
         kill_port $port
     done
+    pgrep insolard | xargs kill
     echo "stop_listening() end."
 }
 
