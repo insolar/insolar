@@ -168,7 +168,6 @@ func (fc *fetchchunk) fetch(
 			}
 
 			key := item.KeyCopy(nil)
-			nullifyJet(key)
 			if fc.size > fc.limit {
 				nextstart = key
 				// inslogger.FromContext(ctx).Warnf("size > r.limit: %v > %v (nextstart=%v)",
@@ -183,6 +182,8 @@ func (fc *fetchchunk) fetch(
 			if err != nil {
 				return err
 			}
+
+			NullifyJetInKey(key)
 			fc.records = append(fc.records, core.KV{K: key, V: value})
 			fc.size += len(key) + len(value)
 		}
@@ -192,7 +193,8 @@ func (fc *fetchchunk) fetch(
 	return nextstart, lastpulse, err
 }
 
-func nullifyJet(key []byte) {
+// NullifyJetInKey nullify jet part in record.
+func NullifyJetInKey(key []byte) {
 	for i := 1; i < core.RecordHashSize; i++ {
 		key[i] = 0
 	}
