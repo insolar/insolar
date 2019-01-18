@@ -183,6 +183,7 @@ func (sdk *SDK) Transfer(amount uint, from *Member, to *Member) (string, error) 
 	return response.TraceID, nil
 }
 
+// GetBalance returns current balance of the given member.
 func (sdk *SDK) GetBalance(m *Member) (uint64, error) {
 	ctx := inslogger.ContextWithTrace(context.Background(), "GetBalance")
 	params := []interface{}{m.Reference}
