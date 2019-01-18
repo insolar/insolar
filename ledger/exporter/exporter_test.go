@@ -26,7 +26,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
-	base58 "github.com/jbenet/go-base58"
+	"github.com/jbenet/go-base58"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/ugorji/go/codec"
@@ -66,7 +66,7 @@ func TestExporter_Export(t *testing.T) {
 		},
 		IsDelegate: true,
 	})
-	pl := message.ParcelToBytes(&message.Parcel{LogTraceID: "callRequest", Msg: &message.CallConstructor{}})
+	pl := message.ToBytes(&message.CallConstructor{})
 	requestID, err := db.SetRecord(ctx, jetID, core.FirstPulseNumber+1, &record.RequestRecord{
 		Payload: pl,
 	})

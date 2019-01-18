@@ -21,12 +21,13 @@ import (
 	"crypto"
 	"crypto/rand"
 	"fmt"
-	"github.com/insolar/insolar/ledger/storage/jet"
 	"io/ioutil"
 	"net/rpc"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/insolar/insolar/ledger/storage/jet"
 
 	"github.com/insolar/insolar/contractrequester"
 	"github.com/insolar/insolar/ledger/pulsemanager"
@@ -1209,11 +1210,11 @@ func TestRootDomainContract(t *testing.T) {
 
 	// Verify Member1 balance
 	res3 := root.SignedCall(ctx, pm, *rootDomainRef, "GetBalance", *cb.Prototypes["member"], []interface{}{member1Ref})
-	assert.Equal(t, 999, int(res3.(uint64)))
+	assert.Equal(t, 999999999, int(res3.(uint64)))
 
 	// Verify Member2 balance
 	res4 := root.SignedCall(ctx, pm, *rootDomainRef, "GetBalance", *cb.Prototypes["member"], []interface{}{member2Ref})
-	assert.Equal(t, 1001, int(res4.(uint64)))
+	assert.Equal(t, 1000000001, int(res4.(uint64)))
 }
 
 func TestFullValidationCycle(t *testing.T) {
@@ -1610,7 +1611,7 @@ func (r *One) CreateAllowance(member string) (error) {
 
 	// Verify Member balance
 	res3 := root.SignedCall(ctx, pm, *rootDomainRef, "GetBalance", *cb.Prototypes["member"], []interface{}{memberRef})
-	assert.Equal(t, 1000, int(res3.(uint64)))
+	assert.Equal(t, 1000000000, int(res3.(uint64)))
 }
 
 func TestGetParent(t *testing.T) {

@@ -144,7 +144,7 @@ func Deserialize(buff io.Reader) (core.Message, error) {
 	return msg, nil
 }
 
-// ToBytes deserialize a core.Message to bytes.
+// ToBytes serialize a core.Message to bytes.
 func ToBytes(msg core.Message) []byte {
 	reqBuff, err := Serialize(msg)
 	if err != nil {
