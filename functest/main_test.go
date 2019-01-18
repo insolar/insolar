@@ -180,7 +180,7 @@ func startInsgorund(listenPort string, upstreamPort string) (func(), error) {
 func startAllInsgorunds() (err error) {
 	insgorundCleaner, err = startInsgorund("33305", "33306")
 	if err != nil {
-		return errors.Wrap(err, "[ setup ]  could't start insgorund: ")
+		return errors.Wrap(err, "[ setup ] could't start insgorund: ")
 	}
 	fmt.Println("[ startAllInsgorunds ] insgorund was successfully started")
 

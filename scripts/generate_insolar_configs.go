@@ -21,6 +21,7 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/genesis"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
@@ -67,48 +68,6 @@ func parseInputParams() {
 	}
 }
 
-type insConfig struct {
-	Host struct {
-		Transport struct {
-			Address string
-		}
-	}
-
-	Ledger struct {
-		Storage struct {
-			DataDirectory string
-		}
-	}
-
-	Log struct {
-		Level string
-	}
-
-	LogicRunner struct {
-		RPCListen string
-		GoPlugin  struct {
-			RunnerListen string
-		}
-	}
-
-	APIRunner struct {
-		Address string
-	}
-
-	Metrics struct {
-		ListenAddress string
-	}
-
-	Tracer struct {
-		Jaeger struct {
-			AgentEndpoint string
-		}
-	}
-
-	KeysPath        string
-	CertificatePath string
-}
-
 func writeGorundPorts(gorundPorts [][]string) {
 	var portsData string
 	for _, ports := range gorundPorts {
@@ -118,7 +77,7 @@ func writeGorundPorts(gorundPorts [][]string) {
 	check("Can't WriteFile: "+gorundPortsPath, err)
 }
 
-func writeInsolarConfigs(insolarConfigs []insConfig) {
+func writeInsolarConfigs(insolarConfigs []configuration.Configuration) {
 	for index, conf := range insolarConfigs {
 		data, err := yaml.Marshal(conf)
 		check("Can't Marshal insolard config", err)
@@ -134,17 +93,19 @@ func main() {
 	genesisConf, err := genesis.ParseGenesisConfig(genesisFile)
 	check("Can't read genesis config", err)
 
-	insolarConfigs := make([]insConfig, 0, len(genesisConf.DiscoveryNodes))
+	insolarConfigs := make([]configuration.Configuration, 0, len(genesisConf.DiscoveryNodes))
 
 	gorundPorts := [][]string{}
 
 	for index, node := range genesisConf.DiscoveryNodes {
 		nodeIndex := index + 1
-		conf := insConfig{}
+		conf := configuration.NewConfiguration()
 
 		conf.Host.Transport.Address = node.Host
+		conf.Host.Transport.Protocol = "TCP"
 
 		rpcListenPort := 33300 + (index+nodeIndex)*nodeIndex
+		conf.LogicRunner = configuration.NewLogicRunner()
 		conf.LogicRunner.GoPlugin.RunnerListen = fmt.Sprintf(defaultHost+":%d", rpcListenPort-1)
 		conf.LogicRunner.RPCListen = fmt.Sprintf(defaultHost+":%d", rpcListenPort)
 		if node.Role == "virtual" {
@@ -156,6 +117,7 @@ func main() {
 
 		conf.Tracer.Jaeger.AgentEndpoint = defaultJaegerEndPoint
 		conf.Log.Level = debugLevel
+		conf.Log.Adapter = "logrus"
 		conf.KeysPath = node.KeysFile
 		conf.Ledger.Storage.DataDirectory = fmt.Sprintf(dataDirectoryTemplate, nodeIndex)
 		conf.CertificatePath = fmt.Sprintf(certificatePathTemplate, nodeIndex)
