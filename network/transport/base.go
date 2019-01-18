@@ -82,15 +82,11 @@ func (t *baseTransport) SendRequest(msg *packet.Packet) (Future, error) {
 	msg.RequestID = packet.RequestID(t.sequenceGenerator.Generate())
 
 	future := t.futureManager.Create(msg)
-
-	go func(msg *packet.Packet, f Future) {
-		err := t.SendPacket(msg)
-		if err != nil {
-			f.Cancel()
-			log.Error(err)
-		}
-	}(msg, future)
-
+	err := t.SendPacket(msg)
+	if err != nil {
+		future.Cancel()
+		return nil, errors.Wrap(err, "Failed to send transport packet")
+	}
 	return future, nil
 }
 
