@@ -170,17 +170,17 @@ func (rpc *RPCController) requestCascadeSendMessage(ctx context.Context, data co
 }
 
 func (rpc *RPCController) SendMessage(nodeID core.RecordRef, name string, msg core.Parcel) ([]byte, error) {
-	start := time.Now()
-	ctx := msg.Context(context.Background())
-	inslogger.FromContext(ctx).Debugf("SendParcel with nodeID = %s method = %s, message reference = %s", nodeID.String(),
-		name, msg.DefaultTarget().String())
-
 	msgBytes := message.ParcelToBytes(msg)
 	metrics.ParcelsSentSizeBytes.WithLabelValues(msg.Type().String()).Observe(float64(len(msgBytes)))
 	request := rpc.hostNetwork.NewRequestBuilder().Type(types.RPC).Data(&RequestRPC{
 		Method: name,
 		Data:   [][]byte{msgBytes},
 	}).Build()
+
+	start := time.Now()
+	ctx := msg.Context(context.Background())
+	inslogger.FromContext(ctx).Debugf("SendParcel with nodeID = %s method = %s, message reference = %s, RequestID = %d", nodeID.String(),
+		name, msg.DefaultTarget().String(), request.GetRequestID())
 	future, err := rpc.hostNetwork.SendRequest(ctx, request, nodeID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Error sending RPC request to node %s", nodeID.String())
