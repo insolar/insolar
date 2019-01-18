@@ -20,9 +20,10 @@ import (
 	"context"
 	"encoding/gob"
 	"fmt"
-	"github.com/insolar/insolar/metrics"
 	"strings"
 	"time"
+
+	"github.com/insolar/insolar/metrics"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
@@ -209,7 +210,7 @@ func (rpc *RPCController) processMessage(ctx context.Context, request network.Re
 
 func (rpc *RPCController) processCascade(ctx context.Context, request network.Request) (network.Response, error) {
 	payload := request.GetData().(*RequestCascade)
-	ctx, logger := inslogger.WithTraceField(ctx, payload.TraceID)
+	ctx, logger := inslogger.WithTraceField(context.Background(), payload.TraceID)
 
 	generalError := ""
 	_, invokeErr := rpc.invoke(ctx, payload.RPC.Method, payload.RPC.Data)

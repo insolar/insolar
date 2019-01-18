@@ -21,6 +21,7 @@ import (
 	"encoding/binary"
 	"os"
 
+	"github.com/pkg/errors"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -35,8 +36,12 @@ func TraceID(ctx context.Context) string {
 	return val.(string)
 }
 
-func SetTraceID(ctx context.Context, traceid string) context.Context {
-	return context.WithValue(ctx, traceIDKey{}, traceid)
+func SetTraceID(ctx context.Context, traceid string) (context.Context, error) {
+	if TraceID(ctx) != "" {
+		return context.WithValue(ctx, traceIDKey{}, traceid),
+			errors.Errorf("TraceID already set: old: %s new: %s", TraceID(ctx), traceid)
+	}
+	return context.WithValue(ctx, traceIDKey{}, traceid), nil
 }
 
 // RandTraceID returns random traceID in uuid format.
