@@ -1,0 +1,21 @@
+host:
+  transport:
+    address: 127.0.0.1:53877
+ledger:
+  storage:
+    datadirectory: scripts/insolard/nodes/7/data
+log:
+  level: Debug
+logicrunner:
+  rpclisten: 127.0.0.1:28772
+  goplugin:
+    runnerlisten: 127.0.0.1:28771
+apirunner:
+  address: 127.0.0.1:19197
+keyspath: "scripts/insolard/nodes/7/keys.json"
+certificatepath: "scripts/insolard/nodes/7/cert.json"
+metrics:
+  listenaddress: :8087
+tracer:
+  jaeger:
+    agentendpoint: localhost:6831

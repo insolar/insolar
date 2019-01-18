@@ -13,7 +13,7 @@ Usage
    
 #### Start benchmark
 
-    ./bin/benchmark -c=3 -r=1 -k=scripts/insolard/configs/root_member_keys.json
+    ./bin/benchmark -c=4 -r=25 -k=scripts/insolard/configs/root_member_keys.json
 
 ### Options
 
@@ -34,3 +34,11 @@ Usage
 
         -l loglevel
                 Log level (default - info).
+
+        -s savemembers
+                Saves members to file scripts/insolard/benchmark/members.txt.
+                If false, file wont be updated. Default is false.
+
+        -m usemembers
+                Use members from file scripts/insolard/benchmark/members.txt.
+                If false, wright info about created members in this file. Default is false. 

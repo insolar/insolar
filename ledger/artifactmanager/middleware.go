@@ -38,6 +38,7 @@ type middleware struct {
 	db                                 *storage.DB
 	jetCoordinator                     core.JetCoordinator
 	messageBus                         core.MessageBus
+	pulseStorage                       core.PulseStorage
 	earlyRequestCircuitBreakerProvider *earlyRequestCircuitBreakerProvider
 	conf                               *configuration.Ledger
 	seqMutex                           sync.Mutex
@@ -52,11 +53,13 @@ func newMiddleware(
 	db *storage.DB,
 	jetCoordinator core.JetCoordinator,
 	messageBus core.MessageBus,
+	pulseStorage core.PulseStorage,
 ) *middleware {
 	return &middleware{
 		db:                                 db,
 		jetCoordinator:                     jetCoordinator,
 		messageBus:                         messageBus,
+		pulseStorage:                       pulseStorage,
 		earlyRequestCircuitBreakerProvider: &earlyRequestCircuitBreakerProvider{breakers: map[core.RecordID]*requestCircuitBreakerProvider{}},
 		conf:                               conf,
 		sequencer: map[core.RecordID]*struct {
@@ -148,12 +151,12 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 func (m *middleware) saveParcel(handler core.MessageHandler) core.MessageHandler {
 	return func(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
 		jetID := jetFromContext(ctx)
-		pulse, err := m.db.GetLatestPulse(ctx)
+		pulse, err := m.pulseStorage.Current(ctx)
 		if err != nil {
 			return nil, err
 		}
-		fmt.Println("saveParcel, pulse - ", pulse.Pulse.PulseNumber)
-		err = m.db.SetMessage(ctx, jetID, pulse.Pulse.PulseNumber, parcel)
+		fmt.Println("saveParcel, pulse - ", pulse.PulseNumber)
+		err = m.db.SetMessage(ctx, jetID, pulse.PulseNumber, parcel)
 		if err != nil {
 			return nil, err
 		}
@@ -224,38 +227,41 @@ func (m *middleware) fetchJet(
 		m.seqMutex.Unlock()
 	}()
 
-	// Couldn't find the actual jet locally. Ask for the jet from the previous executor.
-	prevPulse, err := m.db.GetPreviousPulse(ctx, pulse)
+	jets, err := m.fetchJetFromOtherNodes(ctx, target, pulse)
 	if err != nil {
 		return nil, false, err
 	}
 
-	nodes, err := m.db.GetActiveNodesByRole(prevPulse.Pulse.PulseNumber, core.StaticRoleLightMaterial)
-	if err != nil {
-		return nil, false, err
+	if len(jets) == 1 {
+		return jets[0], true, nil
+	} else if len(jets) == 0 {
+		inslogger.FromContext(ctx).Error(
+			"All active light material nodes have no actual jet tree",
+		)
+		inslogger.FromContext(ctx).Error(
+			"My guess is: ", jetID.JetIDString(),
+		)
+		return nil, false, errors.New("impossible situation")
+	} else {
+		return nil, false, errors.New("nodes returned more than one unique jet")
 	}
+}
 
-	me := m.jetCoordinator.Me()
-	for i := range nodes {
-		if nodes[i].ID() == me {
-			nodes = append(nodes[:i], nodes[i+1:]...)
-			break
-		}
+func (m *middleware) fetchJetFromOtherNodes(
+	ctx context.Context, target core.RecordID, pulse core.PulseNumber,
+) ([]*core.RecordID, error) {
+
+	nodes, err := m.otherNodesForPrevPulse(ctx, pulse)
+	if err != nil {
+		return nil, err
 	}
 
 	num := len(nodes)
-	if num == 0 {
-		inslogger.FromContext(ctx).Error(
-			"This shouldn't happen. We're solo active light material and have no active jet tree",
-		)
-
-		return nil, false, errors.New("impossible situation")
-	}
 
 	wg := sync.WaitGroup{}
 	wg.Add(num)
 
-	res := make([]*reply.Jet, num)
+	replies := make([]*reply.Jet, num)
 	for i, node := range nodes {
 		go func(i int, node core.Node) {
 			defer wg.Done()
@@ -278,33 +284,65 @@ func (m *middleware) fetchJet(
 				inslogger.FromContext(ctx).Errorf("unexpected reply: %#v\n", rep)
 				return
 			}
-			res[i] = r
+
+			inslogger.FromContext(ctx).Debugf(
+				"Got jet %s from %s node, actual is %s",
+				r.ID.JetIDString(), node.ID().String(), r.Actual,
+			)
+			replies[i] = r
 		}(i, node)
 	}
 	wg.Wait()
 
-	for _, r := range res {
+	seen := make(map [core.RecordID]struct{})
+	res := make([]*core.RecordID, 0)
+	for _, r := range replies {
 		if r == nil {
 			continue
 		}
-		inslogger.FromContext(ctx).Debugf("Got jet %s Actual is %s", r.ID.JetIDString(), r.Actual)
 		if !r.Actual {
 			continue
 		}
-
-		err = m.db.UpdateJetTree(ctx, pulse, r.Actual, r.ID)
-		if err != nil {
-			return nil, false, err
+		if _, ok := seen[r.ID]; ok {
+			continue
 		}
 
-		return &r.ID, true, nil
+		seen[r.ID]=struct{}{}
+		res = append(res, &r.ID)
 	}
 
-	inslogger.FromContext(ctx).Error(
-		"All active light material nodes have no actual jet tree",
-	)
-	inslogger.FromContext(ctx).Error(
-		"My guess is: ", jetID.JetIDString(),
-	)
-	return nil, false, errors.New("impossible situation")
+	return res, nil
+}
+
+func (m *middleware) otherNodesForPrevPulse(
+	ctx context.Context, pulse core.PulseNumber,
+) ([]core.Node, error) {
+	prevPulse, err := m.db.GetPreviousPulse(ctx, pulse)
+	if err != nil {
+		return nil, err
+	}
+
+	nodes, err := m.db.GetActiveNodesByRole(prevPulse.Pulse.PulseNumber, core.StaticRoleLightMaterial)
+	if err != nil {
+		return nil, err
+	}
+
+	me := m.jetCoordinator.Me()
+	for i := range nodes {
+		if nodes[i].ID() == me {
+			nodes = append(nodes[:i], nodes[i+1:]...)
+			break
+		}
+	}
+
+	num := len(nodes)
+	if num == 0 {
+		inslogger.FromContext(ctx).Error(
+			"This shouldn't happen. We're solo active light material",
+		)
+
+		return nil, errors.New("impossible situation")
+	}
+
+	return nodes, nil
 }

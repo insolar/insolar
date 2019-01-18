@@ -17,9 +17,13 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
+	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/insolar/insolar/api/sdk"
@@ -29,14 +33,18 @@ import (
 )
 
 const defaultStdoutPath = "-"
+const defaultMemberFileDir = "scripts/insolard/benchmark"
+const defaultMemberFileName = "members.txt"
 
 var (
-	output         string
-	concurrent     int
-	repetitions    int
-	rootMemberKeys string
-	apiURLs        []string
-	logLevel       string
+	output             string
+	concurrent         int
+	repetitions        int
+	rootMemberKeys     string
+	apiURLs            []string
+	logLevel           string
+	saveMembersToFile  bool
+	useMembersFromFile bool
 )
 
 func parseInputParams() {
@@ -46,6 +54,8 @@ func parseInputParams() {
 	pflag.StringVarP(&rootMemberKeys, "rootmemberkeys", "k", "", "path to file with RootMember keys")
 	pflag.StringArrayVarP(&apiURLs, "apiurl", "u", []string{"http://localhost:19191/api"}, "url to api")
 	pflag.StringVarP(&logLevel, "loglevel", "l", "info", "log level for benchmark")
+	pflag.BoolVarP(&saveMembersToFile, "savemembers", "s", false, "save members to file")
+	pflag.BoolVarP(&useMembersFromFile, "usemembers", "m", false, "use members from file")
 	pflag.Parse()
 }
 
@@ -116,17 +126,18 @@ var numRetries = 3
 func createMembers(insSDK *sdk.SDK, count int) []*sdk.Member {
 	var members []*sdk.Member
 	var member *sdk.Member
+	var traceID string
 	var err error
-	for i := 0; i < count; i++ {
 
+	for i := 0; i < count; i++ {
 		for j := 0; j < numRetries; j++ {
-			member, _, err = insSDK.CreateMember()
+			member, traceID, err = insSDK.CreateMember()
 			if err == nil {
 				members = append(members, member)
 				break
 			}
 
-			fmt.Println("Retry to create member. Error is: ", err.Error())
+			fmt.Printf("Retry to create member. TraceID: %s Error is: %s\n", traceID, err.Error())
 			time.Sleep(time.Second)
 		}
 		check(fmt.Sprintf("Couldn't create member after retries: %d", numRetries), err)
@@ -134,8 +145,114 @@ func createMembers(insSDK *sdk.SDK, count int) []*sdk.Member {
 	return members
 }
 
+func getTotalBalance(insSDK *sdk.SDK, members []*sdk.Member) uint64 {
+	type Result struct {
+		num     int
+		balance uint64
+		err     error
+	}
+
+	nmembers := len(members)
+	var wg sync.WaitGroup
+	wg.Add(nmembers)
+	results := make(chan Result, nmembers)
+
+	// execute all queries in parallel
+	for i := 0; i < nmembers; i++ {
+		go func(m *sdk.Member, num int) {
+			res := Result{num: num}
+			for attempt := 0; attempt < 5; attempt++ {
+				res.balance, res.err = insSDK.GetBalance(m)
+				if res.err == nil {
+					break
+				}
+				// retry
+				time.Sleep(1 * time.Second)
+			}
+			results <- res
+			wg.Done()
+		}(members[i], i)
+	}
+
+	wg.Wait()
+	totalBalance := uint64(0)
+	for i := 0; i < nmembers; i++ {
+		res := <-results
+		if res.err != nil {
+			fmt.Printf("Can't get balance for %v-th member: %v\n", res.num, res.err)
+			continue
+		}
+		totalBalance += res.balance
+	}
+
+	return totalBalance
+}
+
+func getMembers(insSDK *sdk.SDK) ([]*sdk.Member, error) {
+	var members []*sdk.Member
+	var err error
+	if useMembersFromFile {
+		members, err = loadMembers(concurrent * 2)
+		if err != nil {
+			return nil, errors.Wrap(err, "error while loading members: ")
+		}
+	} else {
+		members = createMembers(insSDK, concurrent*2)
+	}
+
+	if saveMembersToFile {
+		err = saveMembers(members)
+		if err != nil {
+			return nil, errors.Wrap(err, "save member done with error: ")
+		}
+	}
+	return members, nil
+}
+
+func saveMembers(members []*sdk.Member) error {
+	err := os.MkdirAll(defaultMemberFileDir, 0777)
+	if err != nil {
+		return errors.Wrap(err, "couldn't create dir for file")
+	}
+	file, err := os.Create(filepath.Join(defaultMemberFileDir, defaultMemberFileName))
+	if err != nil {
+		return errors.Wrap(err, "couldn't create file")
+	}
+	defer file.Close() //nolint: errcheck
+
+	result, err := json.MarshalIndent(members, "", "    ")
+	if err != nil {
+		return errors.Wrap(err, "couldn't marshal members in json")
+	}
+	_, err = file.Write([]byte(result))
+	return errors.Wrap(err, "couldn't save members in file")
+}
+
+func loadMembers(count int) ([]*sdk.Member, error) {
+	var members []*sdk.Member
+
+	rawMembers, err := ioutil.ReadFile(filepath.Join(defaultMemberFileDir, defaultMemberFileName))
+	if err != nil {
+		return nil, errors.Wrap(err, "can't read members from file")
+	}
+
+	err = json.Unmarshal(rawMembers, &members)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't unmarshal members from file")
+	}
+
+	if count > len(members) {
+		return nil, errors.Errorf("Not enough members in file: got %d, needs %d", len(members), count)
+	}
+	return members, nil
+}
+
 func main() {
 	parseInputParams()
+
+	// Start benchmark time
+	t := time.Now()
+	fmt.Printf("Start: %s\n\n", t.String())
 
 	err := log.SetLevel(logLevel)
 	check(fmt.Sprintf("Can't set '%s' level on logger:", logLevel), err)
@@ -146,7 +263,29 @@ func main() {
 	insSDK, err := sdk.NewSDK(apiURLs, rootMemberKeys)
 	check("SDK is not initialized: ", err)
 
-	members := createMembers(insSDK, concurrent*2)
+	members, err := getMembers(insSDK)
+	check("Error while loading members: ", err)
+	totalBalanceBefore := getTotalBalance(insSDK, members)
 
 	runScenarios(out, insSDK, members, concurrent, repetitions)
+
+	// Finish benchmark time
+	t = time.Now()
+	fmt.Printf("\nFinish: %s\n\n", t.String())
+
+	totalBalanceAfter := uint64(0)
+	for nretries := 0; nretries < 5; nretries++ {
+		totalBalanceAfter = getTotalBalance(insSDK, members)
+		if totalBalanceAfter == totalBalanceBefore {
+			break
+		}
+		fmt.Printf("Total balance before and after don't match: %v vs %v - retrying in 3 seconds...\n",
+			totalBalanceBefore, totalBalanceAfter)
+		time.Sleep(3 * time.Second)
+
+	}
+	fmt.Printf("Total balance before: %v and after: %v\n", totalBalanceBefore, totalBalanceAfter)
+	if totalBalanceBefore != totalBalanceAfter {
+		panic("Total balance mismatch!\n")
+	}
 }
