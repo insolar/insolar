@@ -22,9 +22,8 @@ import (
 	"errors"
 
 	"github.com/dgraph-io/badger"
-	"github.com/insolar/insolar/ledger/storage/jet"
-
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/ledger/storage/jet"
 )
 
 // iterstate stores iterator state
@@ -69,17 +68,12 @@ func NewReplicaIter(
 	end core.PulseNumber,
 	limit int,
 ) *ReplicaIter {
-	newit := func(prefixbyte byte, j *core.RecordID, start, end core.PulseNumber) *iterstate {
+	newit := func(prefixbyte byte, jetID core.RecordID, start, end core.PulseNumber) *iterstate {
 		prefix := []byte{prefixbyte}
+		_, jetPrefix := jet.Jet(jetID)
 		iter := &iterstate{prefix: prefix}
-		if j == nil {
-			iter.start = bytes.Join([][]byte{prefix, start.Bytes()}, nil)
-			iter.end = bytes.Join([][]byte{prefix, end.Bytes()}, nil)
-		} else {
-			_, jetPrefix := jet.Jet(*j)
-			iter.start = bytes.Join([][]byte{prefix, jetPrefix, start.Bytes()}, nil)
-			iter.end = bytes.Join([][]byte{prefix, jetPrefix, end.Bytes()}, nil)
-		}
+		iter.start = bytes.Join([][]byte{prefix, jetPrefix[:], start.Bytes()}, nil)
+		iter.end = bytes.Join([][]byte{prefix, jetPrefix[:], end.Bytes()}, nil)
 		return iter
 	}
 
@@ -89,10 +83,10 @@ func NewReplicaIter(
 		limitBytes: limit,
 		// record iterators (order matters for heavy node consistency)
 		istates: []*iterstate{
-			newit(scopeIDRecord, &jetID, start, end),
-			newit(scopeIDBlob, &jetID, start, end),
-			newit(scopeIDLifeline, &jetID, core.FirstPulseNumber, end),
-			newit(scopeIDJetDrop, &jetID, start, end),
+			newit(scopeIDRecord, jetID, start, end),
+			newit(scopeIDBlob, jetID, start, end),
+			newit(scopeIDLifeline, jetID, core.FirstPulseNumber, end),
+			newit(scopeIDJetDrop, jetID, start, end),
 		},
 	}
 }
@@ -174,6 +168,7 @@ func (fc *fetchchunk) fetch(
 			}
 
 			key := item.KeyCopy(nil)
+			nullifyJet(key)
 			if fc.size > fc.limit {
 				nextstart = key
 				// inslogger.FromContext(ctx).Warnf("size > r.limit: %v > %v (nextstart=%v)",
@@ -195,4 +190,10 @@ func (fc *fetchchunk) fetch(
 		return nil
 	})
 	return nextstart, lastpulse, err
+}
+
+func nullifyJet(key []byte) {
+	for i := 1; i < core.RecordHashSize; i++ {
+		key[i] = 0
+	}
 }

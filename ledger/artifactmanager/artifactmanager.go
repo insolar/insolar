@@ -25,7 +25,6 @@ import (
 	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/core"
@@ -136,16 +135,8 @@ func (m *LedgerArtifactManager) GetCode(
 		return entry.desc, nil
 	}
 
-	if code.Record().Pulse() != core.FirstPulseNumber {
-		fmt.Print("code wrong pulse!")
-	}
-	lightNode, err := m.JetCoordinator.LightExecutorForJet(ctx, *jet.NewID(0, nil), code.Record().Pulse())
-	if err != nil {
-		return nil, err
-	}
-
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.GetCode sendAndRetryJet")
-	genericReact, err := m.bus(ctx).Send(ctx, &message.GetCode{Code: code}, &core.MessageSendOptions{Receiver: lightNode})
+	genericReact, err := m.bus(ctx).Send(ctx, &message.GetCode{Code: code}, nil)
 	span.End()
 	if err != nil {
 		return nil, err

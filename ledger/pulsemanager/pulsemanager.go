@@ -83,7 +83,7 @@ type pmOptions struct {
 	enableSync       bool
 	splitThreshold   uint64
 	dropHistorySize  int
-	storeLightPulses core.PulseNumber
+	storeLightPulses int
 }
 
 // NewPulseManager creates PulseManager instance.
@@ -635,9 +635,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 			for _, jInfo := range jets {
 				m.syncClientsPool.AddPulsesToSyncClient(ctx, jInfo.id, true, pn)
 			}
-			go m.sendTreeToHeavy(ctx, pn)
 		}
-
 	}
 
 	fmt.Printf(
@@ -709,17 +707,6 @@ func (m *PulseManager) prepareArtifactManagerMessageHandlerForNextPulse(ctx cont
 				m.ArtifactManagerMessageHandler.CloseEarlyRequestCircuitBreakerForJet(ctx, jetInfo.right.id)
 			}
 		}
-	}
-}
-
-func (m *PulseManager) sendTreeToHeavy(ctx context.Context, pn core.PulseNumber) {
-	jetTree, err := m.db.GetJetTree(ctx, pn)
-	if err != nil {
-		inslogger.FromContext(ctx).Error(err)
-	}
-	_, err = m.Bus.Send(ctx, &message.HeavyJetTree{PulseNum: pn, JetTree: *jetTree}, nil)
-	if err != nil {
-		inslogger.FromContext(ctx).Error(err)
 	}
 }
 
