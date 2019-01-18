@@ -109,7 +109,7 @@ func (h *hostTransport) processMessage(msg *packet.Packet) {
 		return
 	}
 	r := response.(*packetWrapper)
-	err = h.transport.SendResponse(msg.RequestID, (*packet.Packet)(r))
+	err = h.transport.SendResponse(ctx, msg.RequestID, (*packet.Packet)(r))
 	if err != nil {
 		logger.Error(err)
 	}
@@ -118,7 +118,7 @@ func (h *hostTransport) processMessage(msg *packet.Packet) {
 // SendRequestPacket send request packet to a remote node.
 func (h *hostTransport) SendRequestPacket(ctx context.Context, request network.Request, receiver *host.Host) (network.Future, error) {
 	inslogger.FromContext(ctx).Debugf("Send %s request to host %s", request.GetType().String(), receiver.String())
-	f, err := h.transport.SendRequest(h.buildRequest(ctx, request, receiver))
+	f, err := h.transport.SendRequest(ctx, h.buildRequest(ctx, request, receiver))
 	if err != nil {
 		return nil, err
 	}
