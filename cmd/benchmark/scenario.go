@@ -53,8 +53,6 @@ type transferDifferentMembersScenario struct {
 	timeouts       uint32
 	members        []*sdk.Member
 	insSDK         *sdk.SDK
-
-	mutex sync.Mutex
 }
 
 func (s *transferDifferentMembersScenario) getOperationsNumber() int {
