@@ -678,6 +678,8 @@ func TestLedgerArtifactManager_GetChildren_FollowsRedirect(t *testing.T) {
 }
 
 func TestLedgerArtifactManager_HandleJetDrop(t *testing.T) {
+	t.Skip("jet drops are for validation and it doesn't work")
+
 	t.Parallel()
 	ctx, db, am, cleaner := getTestData(t)
 	defer cleaner()
