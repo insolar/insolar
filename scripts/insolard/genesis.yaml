@@ -1,5 +1,5 @@
 root_keys_file: "scripts/insolard/configs/root_member_keys.json"
-root_balance: 10000
+root_balance: 1000000000
 majority_rule: 0
 min_roles:
   virtual:  1

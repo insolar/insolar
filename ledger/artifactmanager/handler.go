@@ -47,6 +47,7 @@ type MessageHandler struct {
 	DelegationTokenFactory     core.DelegationTokenFactory     `inject:""`
 	HeavySync                  core.HeavySync                  `inject:""`
 	HeavyJetTreeSync           heavy.JetTreeSync               `inject:""`
+	PulseStorage               core.PulseStorage               `inject:""`
 
 	db             *storage.DB
 	replayHandlers map[core.MessageType]core.MessageHandler
@@ -67,7 +68,7 @@ func NewMessageHandler(
 
 // Init initializes handlers and middleware.
 func (h *MessageHandler) Init(ctx context.Context) error {
-	m := newMiddleware(h.conf, h.db, h.JetCoordinator, h.Bus)
+	m := newMiddleware(h.conf, h.db, h.JetCoordinator, h.Bus, h.PulseStorage)
 	h.middleware = m
 
 	// Generic.
