@@ -224,6 +224,18 @@ genesis()
 
     copy_data
     copy_certs
+
+    which jq
+    if [ $? -eq 0 ] ; then
+        NL=$BASE_DIR/loglinks
+        mkdir  $NL || \
+        rm -f $NL/*.log
+        for node in "${NODES[@]}" ; do
+            ref=`jq -r '.reference' $node/cert.json`
+            [[ $ref =~ .+\. ]]
+            ln -s `pwd`/$node/output.txt $NL/${BASH_REMATCH[0]}log
+        done
+    fi
 }
 
 trap 'stop_listening true' INT TERM EXIT
