@@ -280,7 +280,7 @@ func main() {
 
 	s := newScenarios(out, insSDK, members, concurrent, repetitions)
 	go func() {
-		stopGracefully := false
+		stopGracefully := true
 		for {
 			sig := <-sigChan
 
@@ -288,11 +288,11 @@ func main() {
 			case syscall.SIGHUP:
 				printResults(s)
 			case syscall.SIGTERM, syscall.SIGINT:
-				if stopGracefully {
+				if !stopGracefully {
 					log.Fatal("Force exit: ", sig.String())
 				}
 
-				stopGracefully = true
+				stopGracefully = false
 				cancel()
 			}
 		}
