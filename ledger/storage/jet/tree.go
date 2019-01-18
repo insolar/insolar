@@ -231,9 +231,9 @@ func nodeDeepFmt(deep int, binPrefix string, node *jet) string {
 }
 
 // NewTree creates new tree.
-func NewTree() *Tree {
+func NewTree(isActual bool) *Tree {
 	fmt.Println("NewTree was created, love")
-	return &Tree{Head: &jet{Actual: true}}
+	return &Tree{Head: &jet{Actual: isActual}}
 }
 
 // Find returns jet for provided reference. If found jet is actual, the second argument will be true.
