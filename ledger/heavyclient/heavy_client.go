@@ -169,6 +169,7 @@ func (c *JetClient) syncloop(ctx context.Context) {
 			// if we have pulses to sync, process it
 			syncPN, hasNext = c.nextPulseNumber()
 			if hasNext {
+				inslog.Debugf("synchronization next sync pulse num: %v (left=%v)", syncPN, c.leftPulses)
 				break
 			}
 
@@ -178,14 +179,6 @@ func (c *JetClient) syncloop(ctx context.Context) {
 				inslog.Debug("stop is called, so we are should just stop syncronization loop")
 				return
 			}
-			// get latest RP
-			syncPN, hasNext = c.nextPulseNumber()
-			if hasNext {
-				// nothing to do
-				continue
-			}
-			inslog.Debugf("synchronization next sync pulse num: %v (left=%v)", syncPN, c.leftPulses)
-			break
 		}
 
 		inslog.Infof("start synchronization to heavy for pulse %v", syncPN)

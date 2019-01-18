@@ -68,6 +68,7 @@ func NewReplicaIter(
 	end core.PulseNumber,
 	limit int,
 ) *ReplicaIter {
+	// fmt.Printf("CALL NewReplicaIter [%v:%v] (jet=%v)\n", start, end, jetID)
 	newit := func(prefixbyte byte, jetID core.RecordID, start, end core.PulseNumber) *iterstate {
 		prefix := []byte{prefixbyte}
 		_, jetPrefix := jet.Jet(jetID)
@@ -168,7 +169,6 @@ func (fc *fetchchunk) fetch(
 			}
 
 			key := item.KeyCopy(nil)
-			nullifyJet(key)
 			if fc.size > fc.limit {
 				nextstart = key
 				// inslogger.FromContext(ctx).Warnf("size > r.limit: %v > %v (nextstart=%v)",
@@ -177,12 +177,14 @@ func (fc *fetchchunk) fetch(
 			}
 
 			lastpulse = pulseFromKey(key)
-			// fmt.Printf("key: %v (pulse=%v)\n", hex.EncodeToString(key), lastpulse)
+			// fmt.Printf("Replica> key: %v (pulse=%v)\n", hex.EncodeToString(key), lastpulse)
 
 			value, err := it.Item().ValueCopy(nil)
 			if err != nil {
 				return err
 			}
+
+			NullifyJetInKey(key)
 			fc.records = append(fc.records, core.KV{K: key, V: value})
 			fc.size += len(key) + len(value)
 		}
@@ -192,7 +194,13 @@ func (fc *fetchchunk) fetch(
 	return nextstart, lastpulse, err
 }
 
-func nullifyJet(key []byte) {
+// NullifyJetInKey nullify jet part in record.
+func NullifyJetInKey(key []byte) {
+	// if we remove jet part from drop, different drops from same pulses collapsed
+	// TODO: figure out how we want to send jet drops on heavy nodes - @Alexander Orlovsky 18.01.2019
+	if key[0] == scopeIDJetDrop {
+		return
+	}
 	for i := 1; i < core.RecordHashSize; i++ {
 		key[i] = 0
 	}
