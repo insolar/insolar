@@ -227,10 +227,13 @@ genesis()
 
     which jq
     if [ $? -eq 0 ] ; then
-        rm -f $BASE_DIR/*.log
+        NL=$BASE_DIR/loglinks
+        mkdir  $NL || \
+        rm -f $NL/*.log
         for node in "${NODES[@]}" ; do
             ref=`jq -r '.reference' $node/cert.json`
-            ln -s `pwd`/$node/output.txt $BASE_DIR/$ref.log
+            [[ $ref =~ .+\. ]]
+            ln -s `pwd`/$node/output.txt $NL/${BASH_REMATCH[0]}log
         done
     fi
 }
