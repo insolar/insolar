@@ -68,8 +68,8 @@ func (sm *Parcel) Message() core.Message {
 }
 
 // Context returns initialized context with propagated data with ctx as parent.
-func (sm *Parcel) Context(ctx context.Context) context.Context {
-	ctx = inslogger.ContextWithTrace(ctx, sm.LogTraceID)
+func (sm *Parcel) Context(context.Context) context.Context {
+	ctx := inslogger.ContextWithTrace(context.Background(), sm.LogTraceID)
 	parentspan := instracer.MustDeserialize(sm.TraceSpanData)
 	return instracer.WithParentSpan(ctx, parentspan)
 }
