@@ -155,28 +155,28 @@ func (e *Exporter) getPayload(ctx context.Context, jetID core.RecordID, rec reco
 		if r.GetPayload() == nil {
 			break
 		}
-		parcel, err := message.DeserializeParcel(bytes.NewBuffer(r.GetPayload()))
+		msg, err := message.Deserialize(bytes.NewBuffer(r.GetPayload()))
 		if err != nil {
 			return payload{"PayloadBinary": r.GetPayload()}, nil
 		}
-		switch m := parcel.Message().(type) {
+		switch m := msg.(type) {
 		case *message.CallMethod:
 			res, err := m.ToMap()
 			if err != nil {
-				return payload{"Payload": m, "Type": parcel.Type().String()}, nil
+				return payload{"Payload": m, "Type": msg.Type().String()}, nil
 			}
-			return payload{"Payload": res, "Type": parcel.Type().String()}, nil
+			return payload{"Payload": res, "Type": msg.Type().String()}, nil
 		case *message.CallConstructor:
 			res, err := m.ToMap()
 			if err != nil {
-				return payload{"Payload": m, "Type": parcel.Type().String()}, nil
+				return payload{"Payload": m, "Type": msg.Type().String()}, nil
 			}
-			return payload{"Payload": res, "Type": parcel.Type().String()}, nil
+			return payload{"Payload": res, "Type": msg.Type().String()}, nil
 		case *message.GenesisRequest:
-			return payload{"Payload": m, "Type": parcel.Type().String()}, nil
+			return payload{"Payload": m, "Type": msg.Type().String()}, nil
 		}
 
-		return payload{"Payload": parcel, "Type": parcel.Type().String()}, nil
+		return payload{"Payload": msg, "Type": msg.Type().String()}, nil
 	}
 
 	return nil, nil

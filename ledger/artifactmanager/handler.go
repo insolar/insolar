@@ -631,17 +631,16 @@ func (h *MessageHandler) handleJetDrop(ctx context.Context, parcel core.Parcel) 
 
 	if !hack.SkipValidation(ctx) {
 		for _, parcelBuff := range msg.Messages {
-			parcel, err := message.Deserialize(bytes.NewBuffer(parcelBuff))
+			jetDropMsg, err := message.Deserialize(bytes.NewBuffer(parcelBuff))
 			if err != nil {
 				return nil, err
 			}
-			fmt.Println("Hi, love. Type - ", parcel.Message().Type())
-			handler, ok := h.replayHandlers[parcel.Message().Type()]
+			handler, ok := h.replayHandlers[jetDropMsg.Type()]
 			if !ok {
 				return nil, errors.New("unknown message type")
 			}
 
-			_, err = handler(ctx, parcel)
+			_, err = handler(ctx, &message.Parcel{Msg: jetDropMsg})
 			if err != nil {
 				return nil, err
 			}
