@@ -68,6 +68,7 @@ func NewReplicaIter(
 	end core.PulseNumber,
 	limit int,
 ) *ReplicaIter {
+	// fmt.Printf("CALL NewReplicaIter [%v:%v] (jet=%v)\n", start, end, jetID)
 	newit := func(prefixbyte byte, jetID core.RecordID, start, end core.PulseNumber) *iterstate {
 		prefix := []byte{prefixbyte}
 		_, jetPrefix := jet.Jet(jetID)
@@ -176,7 +177,7 @@ func (fc *fetchchunk) fetch(
 			}
 
 			lastpulse = pulseFromKey(key)
-			// fmt.Printf("key: %v (pulse=%v)\n", hex.EncodeToString(key), lastpulse)
+			// fmt.Printf("Replica> key: %v (pulse=%v)\n", hex.EncodeToString(key), lastpulse)
 
 			value, err := it.Item().ValueCopy(nil)
 			if err != nil {

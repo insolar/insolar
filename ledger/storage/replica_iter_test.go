@@ -19,7 +19,6 @@ package storage_test
 import (
 	"bytes"
 	"context"
-	"encoding/hex"
 	"fmt"
 	"sort"
 	"testing"
@@ -365,8 +364,8 @@ func getallkeys(db *badger.DB) (records []key, indexes []key) {
 
 type key storage.Key
 
-func (b key) String() string {
-	return hex.EncodeToString(b)
+func (k key) String() string {
+	return storage.Key(k).String()
 }
 
 func sortkeys(keys []key) []key {
