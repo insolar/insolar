@@ -171,9 +171,10 @@ func (t *tcpTransport) handleAcceptedConnection(conn net.Conn) {
 
 			log.Error("[ handleAcceptedConnection ] Failed to deserialize packet: ", err.Error())
 		} else {
-			log.Debug("[ handleAcceptedConnection ] Handling packet: ", msg.RequestID)
+			ctx, logger := inslogger.WithTraceField(context.Background(), msg.TraceID)
+			logger.Debug("[ handleAcceptedConnection ] Handling packet: ", msg.RequestID)
 
-			go t.packetHandler.Handle(context.TODO(), msg)
+			go t.packetHandler.Handle(ctx, msg)
 		}
 	}
 }

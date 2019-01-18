@@ -179,7 +179,8 @@ func (rpc *RPCController) SendMessage(nodeID core.RecordRef, name string, msg co
 
 	start := time.Now()
 	ctx := msg.Context(context.Background())
-	inslogger.FromContext(ctx).Debugf("SendParcel with nodeID = %s method = %s, message reference = %s, RequestID = %d", nodeID.String(),
+	logger := inslogger.FromContext(ctx)
+	logger.Debugf("SendParcel with nodeID = %s method = %s, message reference = %s, RequestID = %d", nodeID.String(),
 		name, msg.DefaultTarget().String(), request.GetRequestID())
 	future, err := rpc.hostNetwork.SendRequest(ctx, request, nodeID)
 	if err != nil {
@@ -190,7 +191,7 @@ func (rpc *RPCController) SendMessage(nodeID core.RecordRef, name string, msg co
 		return nil, errors.Wrapf(err, "Error getting RPC response from node %s", nodeID.String())
 	}
 	data := response.GetData().(*ResponseRPC)
-	inslogger.FromContext(ctx).Debugf("Inside SendParcel: type - '%s', target - %s, caller - %s, targetRole - %s, time - %s",
+	logger.Debugf("Inside SendParcel: type - '%s', target - %s, caller - %s, targetRole - %s, time - %s",
 		msg.Type(), msg.DefaultTarget(), msg.GetCaller(), msg.DefaultRole(), time.Since(start))
 	if !data.Success {
 		return nil, errors.New("RPC call returned error: " + data.Error)
