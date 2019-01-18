@@ -142,14 +142,14 @@ func (m *PulseManager) processEndPulse(
 				msg.Jet = *core.NewRecordRef(core.DomainID, jetID)
 				genericRep, err := m.Bus.Send(ctx, &msg, nil)
 				if err != nil {
-					logger.Debugf("[jet]: %v send hot. Pulse: %v, Error: %s", info.id.JetIDString(), currentPulse.PulseNumber, err)
+					logger.Debugf("[jet]: %v send hot. Pulse: %v, DropJet: %v, Error: %s", jetID.JetIDString(), currentPulse.PulseNumber, msg.DropJet.JetIDString(), err)
 					return
 				}
 				if _, ok := genericRep.(*reply.OK); !ok {
-					logger.Debugf("[jet]: %v send hot. Pulse: %v, Unexpected reply: %#v", info.id.JetIDString(), currentPulse.PulseNumber, genericRep)
+					logger.Debugf("[jet]: %v send hot. Pulse: %v, DropJet: %v, Unexpected reply: %#v", jetID.JetIDString(), currentPulse.PulseNumber, msg.DropJet.JetIDString(), genericRep)
 					return
 				}
-				logger.Debugf("[jet]: %v send hot. Pulse: %v, Success", info.id.JetIDString(), currentPulse.PulseNumber)
+				logger.Debugf("[jet]: %v send hot. Pulse: %v, DropJet: %v, Success", jetID.JetIDString(), currentPulse.PulseNumber, msg.DropJet.JetIDString())
 			}
 
 			if info.left == nil && info.right == nil {
@@ -265,7 +265,7 @@ func (m *PulseManager) createDrop(
 	if err != nil {
 		parentJet := jet.Parent(jetID)
 		fmt.Printf(
-			"failed to fetch jet. pulse: %v, current jet: %v, parent jet: %v ",
+			"failed to fetch jet. pulse: %v, current jet: %v, parent jet: %v\n",
 			prevPulse,
 			jetID.JetIDString(),
 			parentJet.String(),
@@ -280,7 +280,7 @@ func (m *PulseManager) createDrop(
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't SetDrop")
 	}
-	fmt.Printf("saved drop. pulse: %v, jet: %v", drop.Pulse, jetID.JetIDString())
+	fmt.Printf("saved drop. pulse: %v, jet: %v\n", drop.Pulse, jetID.JetIDString())
 
 	dropSerialized, err = jet.Encode(drop)
 	if err != nil {
@@ -364,7 +364,7 @@ func (m *PulseManager) getExecutorHotData(
 			TTL:   ttl,
 			Index: encoded,
 		}
-		fmt.Printf("[send id] %v", id.String())
+		fmt.Printf("[send id] %v\n", id.String())
 	}
 
 	for objID, requests := range recentStorage.GetRequests() {
@@ -575,7 +575,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 	// swap active nodes
 	// TODO: fix network consensus and uncomment this (after NETD18-74)
 	// m.ActiveListSwapper.MoveSyncToActive()
-	fmt.Printf("Persist for pulse: %v is %v", newPulse.PulseNumber, persist)
+	fmt.Printf("Persist for pulse: %v is %v\n", newPulse.PulseNumber, persist)
 	if persist {
 		if err := m.db.AddPulse(ctx, newPulse); err != nil {
 			m.GIL.Release(ctx)
@@ -723,7 +723,7 @@ func (m *PulseManager) restoreGenesisRecentObjects(ctx context.Context) error {
 	return m.db.IterateIndexIDs(ctx, jetID, func(id core.RecordID) error {
 		if id.Pulse() == core.FirstPulseNumber {
 			recent.AddObject(id)
-			fmt.Printf("[restored] id %v ", id.String())
+			fmt.Printf("[restored] id %v\n", id.String())
 		}
 		return nil
 	})
