@@ -23,6 +23,7 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/transport/packet"
 	"github.com/insolar/insolar/network/transport/relay"
 	"github.com/pkg/errors"
@@ -44,11 +45,10 @@ func (b *baseSerializer) DeserializePacket(conn io.Reader) (*packet.Packet, erro
 }
 
 type baseTransport struct {
-	sequenceGenerator sequenceGenerator
-	futureManager     futureManager
-	serializer        transportSerializer
-	proxy             relay.Proxy
-	packetHandler     packetHandler
+	futureManager futureManager
+	serializer    transportSerializer
+	proxy         relay.Proxy
+	packetHandler packetHandler
 
 	disconnectStarted  chan bool
 	disconnectFinished chan bool
@@ -62,11 +62,10 @@ type baseTransport struct {
 func newBaseTransport(proxy relay.Proxy, publicAddress string) baseTransport {
 	futureManager := newFutureManager()
 	return baseTransport{
-		sequenceGenerator: newSequenceGenerator(),
-		futureManager:     futureManager,
-		packetHandler:     newPacketHandler(futureManager),
-		proxy:             proxy,
-		serializer:        &baseSerializer{},
+		futureManager: futureManager,
+		packetHandler: newPacketHandler(futureManager),
+		proxy:         proxy,
+		serializer:    &baseSerializer{},
 
 		mutex: &sync.RWMutex{},
 
@@ -79,8 +78,6 @@ func newBaseTransport(proxy relay.Proxy, publicAddress string) baseTransport {
 
 // SendRequest sends request packet and returns future.
 func (t *baseTransport) SendRequest(msg *packet.Packet) (Future, error) {
-	msg.RequestID = packet.RequestID(t.sequenceGenerator.Generate())
-
 	future := t.futureManager.Create(msg)
 	err := t.SendPacket(msg)
 	if err != nil {
@@ -91,7 +88,7 @@ func (t *baseTransport) SendRequest(msg *packet.Packet) (Future, error) {
 }
 
 // SendResponse sends response packet.
-func (t *baseTransport) SendResponse(requestID packet.RequestID, msg *packet.Packet) error {
+func (t *baseTransport) SendResponse(requestID network.RequestID, msg *packet.Packet) error {
 	msg.RequestID = requestID
 
 	return t.SendPacket(msg)

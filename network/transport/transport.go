@@ -22,6 +22,7 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/transport/connection"
 	"github.com/insolar/insolar/network/transport/packet"
 	"github.com/insolar/insolar/network/transport/relay"
@@ -36,7 +37,7 @@ type Transport interface {
 	SendRequest(*packet.Packet) (Future, error)
 
 	// SendResponse sends response packet for request with passed request id.
-	SendResponse(packet.RequestID, *packet.Packet) error
+	SendResponse(network.RequestID, *packet.Packet) error
 
 	// SendPacket low-level send packet without requestId and without spawning a waiting future
 	SendPacket(p *packet.Packet) error

@@ -65,13 +65,13 @@ type HostNetwork interface {
 	GetNodeID() core.RecordRef
 
 	// SendRequest send request to a remote node.
-	SendRequest(request Request, receiver core.RecordRef) (Future, error)
+	SendRequest(ctx context.Context, request Request, receiver core.RecordRef) (Future, error)
 	// RegisterRequestHandler register a handler function to process incoming requests of a specific type.
 	RegisterRequestHandler(t types.PacketType, handler RequestHandler)
 	// NewRequestBuilder create packet builder for an outgoing request with sender set to current node.
 	NewRequestBuilder() RequestBuilder
 	// BuildResponse create response to an incoming request with Data set to responseData.
-	BuildResponse(request Request, responseData interface{}) Response
+	BuildResponse(ctx context.Context, request Request, responseData interface{}) Response
 }
 
 type ConsensusRequestHandler func(Request)
@@ -95,12 +95,16 @@ type ConsensusNetwork interface {
 	NewRequestBuilder() RequestBuilder
 }
 
+// RequestID is 64 bit unsigned int request id.
+type RequestID uint64
+
 // Packet is a packet that is transported via network by HostNetwork.
 type Packet interface {
 	GetSender() core.RecordRef
 	GetSenderHost() *host.Host
 	GetType() types.PacketType
 	GetData() interface{}
+	GetRequestID() RequestID
 }
 
 // Request is a packet that is sent from the current node.
@@ -228,13 +232,13 @@ type InternalTransport interface {
 	GetNodeID() core.RecordRef
 
 	// SendRequestPacket send request packet to a remote node.
-	SendRequestPacket(request Request, receiver *host.Host) (Future, error)
+	SendRequestPacket(ctx context.Context, request Request, receiver *host.Host) (Future, error)
 	// RegisterPacketHandler register a handler function to process incoming requests of a specific type.
 	RegisterPacketHandler(t types.PacketType, handler RequestHandler)
 	// NewRequestBuilder create packet builder for an outgoing request with sender set to current node.
 	NewRequestBuilder() RequestBuilder
 	// BuildResponse create response to an incoming request with Data set to responseData.
-	BuildResponse(request Request, responseData interface{}) Response
+	BuildResponse(ctx context.Context, request Request, responseData interface{}) Response
 }
 
 // ClaimQueue is the queue that contains consensus claims.

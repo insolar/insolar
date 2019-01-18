@@ -71,7 +71,7 @@ func (c *Controller) Inject(cryptographyService core.CryptographyService,
 	networkCoordinator core.NetworkCoordinator, nodeKeeper network.NodeKeeper) {
 
 	c.network.RegisterRequestHandler(types.Ping, func(ctx context.Context, request network.Request) (network.Response, error) {
-		return c.network.BuildResponse(request, nil), nil
+		return c.network.BuildResponse(ctx, request, nil), nil
 	})
 	c.bootstrapper.Start(cryptographyService, networkCoordinator, nodeKeeper)
 	c.pulseController.Start()
