@@ -181,17 +181,26 @@ func TestDB_AddPulse(t *testing.T) {
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
 
-	err := db.AddPulse(
-		ctx,
-		core.Pulse{PulseNumber: 42, Entropy: core.Entropy{1, 2, 3}},
-	)
-	assert.NoError(t, err)
+	pulse42 := core.Pulse{PulseNumber: 42, Entropy: core.Entropy{1, 2, 3}}
+	err := db.AddPulse(ctx, pulse42)
+	require.NoError(t, err)
+
 	latestPulse, err := db.GetLatestPulse(ctx)
 	assert.Equal(t, core.PulseNumber(42), latestPulse.Pulse.PulseNumber)
+
 	pulse, err := db.GetPulse(ctx, latestPulse.Pulse.PulseNumber)
-	assert.NoError(t, err)
-	prev := core.PulseNumber(core.FirstPulseNumber)
-	assert.Equal(t, storage.Pulse{Prev: &prev, Pulse: core.Pulse{Entropy: core.Entropy{1, 2, 3}, PulseNumber: 42}}, *pulse)
+	require.NoError(t, err)
+
+	prevPulse, err := db.GetPulse(ctx, *latestPulse.Prev)
+	require.NoError(t, err)
+
+	prevPN := core.PulseNumber(core.FirstPulseNumber)
+	expectPulse := storage.Pulse{
+		Prev:         &prevPN,
+		Pulse:        pulse42,
+		SerialNumber: prevPulse.SerialNumber + 1,
+	}
+	assert.Equal(t, expectPulse, *pulse)
 }
 
 func TestDB_SetLocalData(t *testing.T) {

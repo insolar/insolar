@@ -74,7 +74,7 @@ func NewMetrics(ctx context.Context, cfg configuration.Metrics, registry *promet
 
 // ErrBind special case for Start method.
 // We can use it for easier check in metrics creation code.
-var ErrBind = errors.New("failed to bind")
+var ErrBind = errors.New("Failed to bind")
 
 // Start is implementation of core.Component interface.
 func (m *Metrics) Start(ctx context.Context) error {
@@ -84,7 +84,7 @@ func (m *Metrics) Start(ctx context.Context) error {
 	if err != nil {
 		if opErr, ok := err.(*net.OpError); ok {
 			if opErr.Op == "listen" && IsAddrInUse(opErr) {
-				return ErrBind
+				return errors.Wrapf(ErrBind, "addr=%v", m.server.Addr)
 			}
 		}
 		return errors.Wrap(err, "Failed to listen at address")

@@ -33,7 +33,7 @@ import (
 // Options contains heavy client configuration params.
 type Options struct {
 	SyncMessageLimit int
-	PulsesDeltaLimit core.PulseNumber
+	PulsesDeltaLimit int
 	BackoffConf      configuration.Backoff
 }
 
@@ -75,9 +75,15 @@ func NewJetClient(jetID core.RecordID, opts Options) *JetClient {
 }
 
 // addPulses add pulse numbers for syncing.
-func (c *JetClient) addPulses(pns []core.PulseNumber) {
+func (c *JetClient) addPulses(ctx context.Context, pns []core.PulseNumber) {
 	c.muPulses.Lock()
 	c.leftPulses = append(c.leftPulses, pns...)
+
+	if err := c.db.SetSyncClientJetPulses(ctx, c.jetID, c.leftPulses); err != nil {
+		inslogger.FromContext(ctx).Errorf(
+			"attempt to persist jet sync state failed: jetID=%v: %v", c.jetID, err.Error())
+	}
+
 	c.muPulses.Unlock()
 }
 
@@ -88,7 +94,7 @@ func (c *JetClient) pulsesLeft() int {
 }
 
 // unshiftPulse removes and returns pulse number from head of processing queue.
-func (c *JetClient) unshiftPulse() *core.PulseNumber {
+func (c *JetClient) unshiftPulse(ctx context.Context) *core.PulseNumber {
 	c.muPulses.Lock()
 	defer c.muPulses.Unlock()
 
@@ -101,6 +107,11 @@ func (c *JetClient) unshiftPulse() *core.PulseNumber {
 	shifted := c.leftPulses[:len(c.leftPulses)-1]
 	copy(shifted, c.leftPulses[1:])
 	c.leftPulses = shifted
+
+	if err := c.db.SetSyncClientJetPulses(ctx, c.jetID, c.leftPulses); err != nil {
+		inslogger.FromContext(ctx).Errorf(
+			"attempt to persist jet sync state failed: jetID=%v: %v", c.jetID, err.Error())
+	}
 
 	return &result
 }
@@ -137,7 +148,7 @@ func (c *JetClient) syncloop(ctx context.Context) {
 	)
 
 	finishpulse := func() {
-		_ = c.unshiftPulse()
+		_ = c.unshiftPulse(ctx)
 		c.syncbackoff.Reset()
 		retrydelay = 0
 	}
@@ -158,6 +169,7 @@ func (c *JetClient) syncloop(ctx context.Context) {
 			// if we have pulses to sync, process it
 			syncPN, hasNext = c.nextPulseNumber()
 			if hasNext {
+				inslog.Debugf("synchronization next sync pulse num: %v (left=%v)", syncPN, c.leftPulses)
 				break
 			}
 
@@ -167,21 +179,8 @@ func (c *JetClient) syncloop(ctx context.Context) {
 				inslog.Debug("stop is called, so we are should just stop syncronization loop")
 				return
 			}
-			// get latest RP
-			syncPN, hasNext = c.nextPulseNumber()
-			if hasNext {
-				// nothing to do
-				continue
-			}
-			inslog.Debugf("synchronization next sync pulse num: %v (left=%v)", syncPN, c.leftPulses)
-			break
 		}
 
-		if pulseIsOutdated(ctx, c.PulseStorage, syncPN, c.opts.PulsesDeltaLimit) {
-			inslog.Infof("pulse %v on jet %v is outdated, skip it", syncPN, c.jetID)
-			finishpulse()
-			continue
-		}
 		inslog.Infof("start synchronization to heavy for pulse %v", syncPN)
 
 		shouldretry := false
@@ -204,24 +203,9 @@ func (c *JetClient) syncloop(ctx context.Context) {
 			// TODO: write some info to dust - 14.Dec.2018 @nordicdyno
 		}
 
-		err := c.db.SetReplicatedPulse(ctx, c.jetID, syncPN)
-		if err != nil {
-			err = errors.Wrap(err, "SetReplicatedPulse failed")
-			inslog.Error(err)
-			panic(err)
-		}
-
 		finishpulse()
 	}
 
-}
-
-func pulseIsOutdated(ctx context.Context, pstore core.PulseStorage, pn core.PulseNumber, limit core.PulseNumber) bool {
-	current, err := pstore.Current(ctx)
-	if err != nil {
-		panic(err)
-	}
-	return current.PulseNumber-pn > limit
 }
 
 // Stop stops heavy client replication

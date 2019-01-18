@@ -68,6 +68,7 @@ func TmpLedger(t *testing.T, dir string, c core.Components) (*ledger.Ledger, fun
 	jc := testutils.NewJetCoordinatorMock(mc)
 	jc.IsAuthorizedMock.Return(true, nil)
 	jc.LightExecutorForJetMock.Return(&core.RecordRef{}, nil)
+	jc.HeavyMock.Return(&core.RecordRef{}, nil)
 	jc.MeMock.Return(core.RecordRef{})
 
 	// Init components.
