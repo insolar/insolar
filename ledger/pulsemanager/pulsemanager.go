@@ -128,9 +128,26 @@ func (m *PulseManager) processEndPulse(
 			}
 
 			msg, err := m.getExecutorHotData(
-				ctx, info.id, newPulse.PulseNumber, drop, dropSerialized)
+				ctx, info.id, newPulse.PulseNumber, drop, dropSerialized,
+			)
 			if err != nil {
 				return errors.Wrapf(err, "getExecutorData failed for jet id %v", info.id)
+			}
+
+			logger := inslogger.FromContext(ctx)
+
+			sender := func(msg message.HotData, jetID core.RecordID) {
+				msg.Jet = *core.NewRecordRef(core.DomainID, jetID)
+				genericRep, err := m.Bus.Send(ctx, &msg, nil)
+				if err != nil {
+					logger.Errorf("failed to send executor hot data: %s", err.Error())
+					return
+				}
+				if rep, ok := genericRep.(*reply.OK); !ok {
+					logger.Errorf("unexpected reply: %s", rep)
+					return
+				}
+				logger.Debugf("sent hot data of pulse %v for jet %s\n", msg.Drop.Pulse, msg.DropJet.JetIDString())
 			}
 
 			if info.left == nil && info.right == nil {
@@ -141,15 +158,7 @@ func (m *PulseManager) processEndPulse(
 
 				// No split happened.
 				if !info.mineNext {
-					msg.Jet = *core.NewRecordRef(core.DomainID, info.id)
-					genericRep, err := m.Bus.Send(ctx, msg, nil)
-					if err != nil {
-						return errors.Wrap(err, "failed to send executor data")
-					}
-					if rep, ok := genericRep.(*reply.OK); !ok {
-						return fmt.Errorf("PM.processEndPulse: unexpected reply: %#v", rep)
-					}
-					fmt.Printf("sent drop. pulse: %v, jet: %v\n", msg.Drop.Pulse, msg.DropJet.JetIDString())
+					go sender(*msg, info.id)
 				}
 			} else {
 				fmt.Printf("Split. jet: %v, left mine next: %v", info.id, info.left.mineNext)
@@ -158,32 +167,13 @@ func (m *PulseManager) processEndPulse(
 				// TODO: @andreyromancev. 12.01.19. uncomment when heavy ready.
 				// m.RecentStorageProvider.GetStorage(info.left.id).ClearZeroTTLObjects()
 				// m.RecentStorageProvider.GetStorage(info.right.id).ClearZeroTTLObjects()
-
 				if !info.left.mineNext {
-					leftMsg := msg
-					leftMsg.Jet = *core.NewRecordRef(core.DomainID, info.left.id)
-					genericRep, err := m.Bus.Send(ctx, leftMsg, nil)
-					if err != nil {
-						return errors.Wrap(err, "failed to send executor data")
-					}
-					if rep, ok := genericRep.(*reply.OK); !ok {
-						return fmt.Errorf("PM.processEndPulse: unexpected reply: %#v", rep)
-					}
-					fmt.Printf("sent drop. pulse: %v, jet: %v\n", msg.Drop.Pulse, msg.DropJet.JetIDString())
+					go sender(*msg, info.left.id)
 				}
+
 				fmt.Printf("Split. jet: %v, right mine next: %v", info.id, info.right.mineNext)
 				if !info.right.mineNext {
-					rightMsg := msg
-					rightMsg.Jet = *core.NewRecordRef(core.DomainID, info.right.id)
-
-					genericRep, err := m.Bus.Send(ctx, rightMsg, nil)
-					if err != nil {
-						return errors.Wrap(err, "failed to send executor data")
-					}
-					if rep, ok := genericRep.(*reply.OK); !ok {
-						return fmt.Errorf("PM.processEndPulse: unexpected reply: %#v", rep)
-					}
-					fmt.Printf("sent drop. pulse: %v, jet: %v\n", msg.Drop.Pulse, msg.DropJet.JetIDString())
+					go sender(*msg, info.right.id)
 				}
 			}
 
