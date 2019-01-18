@@ -43,7 +43,8 @@ func main() {
 		panic(err)
 	}
 	db.PlatformCryptographyScheme = platformpolicy.NewPlatformCryptographyScheme()
-	exp := exporter.NewExporter(db)
+	ps := storage.NewPulseStorage(db)
+	exp := exporter.NewExporter(db, ps)
 	err = db.Init(ctx)
 	if err != nil {
 		panic(err)

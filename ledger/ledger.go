@@ -91,9 +91,11 @@ func GetLedgerComponents(conf configuration.Ledger) []interface{} {
 		panic(errors.Wrap(err, "failed to initialize DB"))
 	}
 
+	ps := storage.NewPulseStorage(db)
+
 	return []interface{}{
 		db,
-		storage.NewPulseStorage(db),
+		ps,
 		storage.NewRecentStorageProvider(conf.RecentStorage.DefaultTTL),
 		artifactmanager.NewArtifactManger(db),
 		jetcoordinator.NewJetCoordinator(db, conf.JetCoordinator),
@@ -101,7 +103,8 @@ func GetLedgerComponents(conf configuration.Ledger) []interface{} {
 		artifactmanager.NewMessageHandler(db, &conf),
 		localstorage.NewLocalStorage(db),
 		heavyserver.NewSync(db),
-		exporter.NewExporter(db),
+		heavyserver.NewHeavyJetSync(db),
+		exporter.NewExporter(db, ps),
 	}
 }
 
