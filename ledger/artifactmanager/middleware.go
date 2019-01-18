@@ -39,6 +39,7 @@ type middleware struct {
 	db                                 *storage.DB
 	jetCoordinator                     core.JetCoordinator
 	messageBus                         core.MessageBus
+	pulseStorage                       core.PulseStorage
 	earlyRequestCircuitBreakerProvider *earlyRequestCircuitBreakerProvider
 	conf                               *configuration.Ledger
 	seqMutex                           sync.Mutex
@@ -53,11 +54,13 @@ func newMiddleware(
 	db *storage.DB,
 	jetCoordinator core.JetCoordinator,
 	messageBus core.MessageBus,
+	pulseStorage core.PulseStorage,
 ) *middleware {
 	return &middleware{
 		db:                                 db,
 		jetCoordinator:                     jetCoordinator,
 		messageBus:                         messageBus,
+		pulseStorage:                       pulseStorage,
 		earlyRequestCircuitBreakerProvider: &earlyRequestCircuitBreakerProvider{breakers: map[core.RecordID]*requestCircuitBreakerProvider{}},
 		conf:                               conf,
 		sequencer: map[core.RecordID]*struct {
@@ -148,12 +151,12 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 func (m *middleware) saveParcel(handler core.MessageHandler) core.MessageHandler {
 	return func(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
 		jetID := jetFromContext(ctx)
-		pulse, err := m.db.GetLatestPulse(ctx)
+		pulse, err := m.pulseStorage.Current(ctx)
 		if err != nil {
 			return nil, err
 		}
-		fmt.Println("saveParcel, pulse - ", pulse.Pulse.PulseNumber)
-		err = m.db.SetMessage(ctx, jetID, pulse.Pulse.PulseNumber, parcel)
+		fmt.Println("saveParcel, pulse - ", pulse.PulseNumber)
+		err = m.db.SetMessage(ctx, jetID, pulse.PulseNumber, parcel)
 		if err != nil {
 			return nil, err
 		}

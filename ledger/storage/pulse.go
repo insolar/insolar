@@ -162,8 +162,12 @@ func (m *TransactionManager) GetLatestPulse(ctx context.Context) (*Pulse, error)
 	return toPulse(buf)
 }
 
-// GetLatestPulse returns the latest pulse
+// Deprecated: use core.PulseStorage.Current() instead (or private getLatestPulse if applicable).
 func (db *DB) GetLatestPulse(ctx context.Context) (*Pulse, error) {
+	return db.getLatestPulse(ctx)
+}
+
+func (db *DB) getLatestPulse(ctx context.Context) (*Pulse, error) {
 	tx, err := db.BeginTransaction(false)
 	if err != nil {
 		return nil, err

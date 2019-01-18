@@ -98,7 +98,7 @@ func (w *Wallet) GetBalance() (uint, error) {
 
 			w.Balance, err = safemath.Add(w.Balance, balance)
 			if err != nil {
-				return 0, fmt.Errorf("[ GetTotalBalance ] Couldn't add expired allowance to balance: %s", err.Error())
+				return 0, fmt.Errorf("[ GetBalance ] Couldn't add expired allowance to balance: %s", err.Error())
 			}
 		}
 	}
