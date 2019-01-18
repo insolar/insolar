@@ -95,12 +95,16 @@ type ConsensusNetwork interface {
 	NewRequestBuilder() RequestBuilder
 }
 
+// RequestID is 64 bit unsigned int request id.
+type RequestID uint64
+
 // Packet is a packet that is transported via network by HostNetwork.
 type Packet interface {
 	GetSender() core.RecordRef
 	GetSenderHost() *host.Host
 	GetType() types.PacketType
 	GetData() interface{}
+	GetRequestID() RequestID
 }
 
 // Request is a packet that is sent from the current node.

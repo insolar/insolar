@@ -19,17 +19,18 @@ package transport
 import (
 	"sync"
 
+	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/transport/packet"
 )
 
 type futureManagerImpl struct {
 	mutex   sync.RWMutex
-	futures map[packet.RequestID]Future
+	futures map[network.RequestID]Future
 }
 
 func newFutureManagerImpl() *futureManagerImpl {
 	return &futureManagerImpl{
-		futures: make(map[packet.RequestID]Future),
+		futures: make(map[network.RequestID]Future),
 	}
 }
 
@@ -53,7 +54,7 @@ func (fm *futureManagerImpl) Get(msg *packet.Packet) Future {
 	return fm.futures[msg.RequestID]
 }
 
-func (fm *futureManagerImpl) delete(id packet.RequestID) {
+func (fm *futureManagerImpl) delete(id network.RequestID) {
 	fm.mutex.Lock()
 	defer fm.mutex.Unlock()
 

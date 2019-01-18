@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/sequence"
 	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet"
@@ -55,6 +56,10 @@ func (p *packetWrapper) GetType() types.PacketType {
 
 func (p *packetWrapper) GetData() interface{} {
 	return p.Data
+}
+
+func (p *packetWrapper) GetRequestID() network.RequestID {
+	return p.RequestID
 }
 
 type future struct {
@@ -133,7 +138,7 @@ func (h *hostTransport) RegisterPacketHandler(t types.PacketType, handler networ
 // BuildResponse create response to an incoming request with Data set to responseData.
 func (h *hostTransport) BuildResponse(ctx context.Context, request network.Request, responseData interface{}) network.Response {
 	sender := request.(*packetWrapper).Sender
-	p := packet.NewBuilder(h.origin).Type(request.GetType()).Receiver(sender).
+	p := packet.NewBuilder(h.origin).Type(request.GetType()).Receiver(sender).RequestID(request.GetRequestID()).
 		Response(responseData).TraceID(inslogger.TraceID(ctx)).Build()
 	return (*packetWrapper)(p)
 }
@@ -148,6 +153,7 @@ func NewInternalTransport(conf configuration.Configuration, nodeRef string) (net
 		return nil, errors.Wrap(err, "error getting origin")
 	}
 	result := &hostTransport{handlers: make(map[types.PacketType]network.RequestHandler)}
+	result.sequenceGenerator = sequence.NewGeneratorImpl()
 	result.transport = tp
 	result.origin = origin
 	result.messageProcessor = result.processMessage

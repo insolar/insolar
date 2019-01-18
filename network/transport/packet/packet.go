@@ -23,20 +23,18 @@ import (
 	"io"
 
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/pkg/errors"
 )
-
-// RequestID is 64 bit unsigned int request id.
-type RequestID uint64
 
 // Packet is DHT packet object.
 type Packet struct {
 	Sender        *host.Host
 	Receiver      *host.Host
 	Type          types.PacketType
-	RequestID     RequestID
+	RequestID     network.RequestID
 	RemoteAddress string
 
 	TraceID    string

@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/sequence"
 	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/network/transport/packet"
 	"github.com/insolar/insolar/network/transport/packet/types"
@@ -97,6 +98,7 @@ func NewConsensusNetwork(address, nodeID string, shortID core.ShortNodeID,
 	result := &transportConsensus{handlers: make(map[types.PacketType]network.ConsensusRequestHandler)}
 
 	result.transport = tp
+	result.sequenceGenerator = sequence.NewGeneratorImpl()
 	result.resolver = resolver
 	result.origin = origin
 	result.messageProcessor = result.processMessage
