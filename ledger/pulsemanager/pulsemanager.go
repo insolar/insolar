@@ -594,8 +594,8 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 		}
 	}
 
-	m.PulseStorage.Unlock()
 	m.PulseStorage.Set(&newPulse)
+	m.PulseStorage.Unlock()
 
 	jets, err := m.processJets(ctx, currentPulse.PulseNumber, newPulse.PulseNumber)
 	if err != nil {
