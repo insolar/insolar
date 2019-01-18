@@ -38,7 +38,8 @@ func TraceID(ctx context.Context) string {
 
 func SetTraceID(ctx context.Context, traceid string) (context.Context, error) {
 	if TraceID(ctx) != "" {
-		return ctx, errors.Errorf("TraceID already set: old: %s new: %s", TraceID(ctx), traceid)
+		return context.WithValue(ctx, traceIDKey{}, traceid),
+			errors.Errorf("TraceID already set: old: %s new: %s", TraceID(ctx), traceid)
 	}
 	return context.WithValue(ctx, traceIDKey{}, traceid), nil
 }
