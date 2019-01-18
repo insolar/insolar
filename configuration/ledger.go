@@ -120,7 +120,7 @@ func NewLedger() Ledger {
 			DefaultTTL: 50,
 		},
 
-		LightChainLimit: 3, // 3 pulses
+		LightChainLimit: 100, // 100 pulses
 
 		JetSizesHistoryDepth: 10,
 	}
