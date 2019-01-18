@@ -41,7 +41,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-const HOST = "http://localhost:19191"
+const HOST = "http://localhost:19101"
 const TestAPIURL = HOST + "/api"
 const TestRPCUrl = TestAPIURL + "/rpc"
 const TestCallUrl = TestAPIURL + "/call"
@@ -178,13 +178,13 @@ func startInsgorund(listenPort string, upstreamPort string) (func(), error) {
 }
 
 func startAllInsgorunds() (err error) {
-	insgorundCleaner, err = startInsgorund("28221", "28222")
+	insgorundCleaner, err = startInsgorund("33305", "33306")
 	if err != nil {
-		return errors.Wrap(err, "[ setup ] could't start insgorund: ")
+		return errors.Wrap(err, "[ setup ]  could't start insgorund: ")
 	}
 	fmt.Println("[ startAllInsgorunds ] insgorund was successfully started")
 
-	secondInsgorundCleaner, err = startInsgorund("28441", "28442")
+	secondInsgorundCleaner, err = startInsgorund("33327", "33328")
 	if err != nil {
 		return errors.Wrap(err, "[ setup ] could't start second insgorund: ")
 	}
@@ -204,7 +204,7 @@ func stopAllInsgorunds() error {
 
 func waitForNet() error {
 	numAttempts := 90
-	ports := []string{"19191", "19192", "19193", "19194", "19195"}
+	ports := []string{"19101", "19102", "19103", "19104", "19105"}
 	numNodes := len(ports)
 	currentOk := 0
 	for i := 0; i < numAttempts; i++ {

@@ -22,4 +22,4 @@ Usage
                 Path to file with RootMember keys.
 
         -u url
-                API url for requests (default - http://localhost:19191/api).
+                API url for requests (default - http://localhost:19101/api).

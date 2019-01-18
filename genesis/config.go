@@ -5,14 +5,16 @@ import (
 	"github.com/spf13/viper"
 )
 
-type discovery struct {
+// Discovery contains info about discovery nodes
+type Discovery struct {
 	Host     string `mapstructure:"host"`
 	Role     string `mapstructure:"role"`
 	KeysFile string `mapstructure:"keys_file"`
 	CertName string `mapstructure:"cert_name"`
 }
 
-type genesisConfig struct {
+// GenesisConfig contains all genesis config
+type GenesisConfig struct {
 	RootKeysFile string `mapstructure:"root_keys_file"`
 	RootBalance  uint   `mapstructure:"root_balance"`
 	MajorityRule int    `mapstructure:"majority_rule"`
@@ -22,11 +24,11 @@ type genesisConfig struct {
 		LightMaterial uint `mapstructure:"light_material"`
 	} `mapstructure:"min_roles"`
 	PulsarPublicKeys []string    `mapstructure:"pulsar_public_keys"`
-	DiscoveryNodes   []discovery `mapstructure:"discovery_nodes"`
+	DiscoveryNodes   []Discovery `mapstructure:"discovery_nodes"`
 }
 
 // It's very light check. It's not about majority rule
-func hasMinimumRolesSet(conf *genesisConfig) error {
+func hasMinimumRolesSet(conf *GenesisConfig) error {
 	minRequiredRolesSet := map[string]bool{
 		"virtual":        true,
 		"heavy_material": true,
@@ -48,8 +50,9 @@ func hasMinimumRolesSet(conf *genesisConfig) error {
 	return nil
 }
 
-func parseGenesisConfig(path string) (*genesisConfig, error) {
-	var conf = &genesisConfig{}
+// ParseGenesisConfig parse genesis config
+func ParseGenesisConfig(path string) (*GenesisConfig, error) {
+	var conf = &GenesisConfig{}
 	v := viper.New()
 	v.SetConfigFile(path)
 	err := v.ReadInConfig()

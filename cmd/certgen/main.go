@@ -31,7 +31,7 @@ import (
 	"github.com/spf13/pflag"
 )
 
-const defaultURL = "http://localhost:19191/api"
+const defaultURL = "http://localhost:19101/api"
 
 var ks = platformpolicy.NewKeyProcessor()
 
