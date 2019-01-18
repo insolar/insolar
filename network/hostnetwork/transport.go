@@ -95,24 +95,24 @@ func (f future) GetRequest() network.Request {
 }
 
 func (h *hostTransport) processMessage(msg *packet.Packet) {
-	ctx, _ := inslogger.WithTraceField(context.Background(), msg.TraceID)
-	inslogger.FromContext(ctx).Debugf("Got %s request from host %s; RequestID: %d", msg.Type.String(), msg.Sender.String(), msg.RequestID)
+	ctx, logger := inslogger.WithTraceField(context.Background(), msg.TraceID)
+	logger.Debugf("Got %s request from host %s; RequestID: %d", msg.Type.String(), msg.Sender.String(), msg.RequestID)
 	handler, exist := h.handlers[msg.Type]
 	if !exist {
-		log.Errorf("No handler set for packet type %s from node %s",
+		logger.Errorf("No handler set for packet type %s from node %s",
 			msg.Type.String(), msg.Sender.NodeID.String())
 		return
 	}
 	response, err := handler(ctx, (*packetWrapper)(msg))
 	if err != nil {
-		inslogger.FromContext(ctx).Errorf("Error handling request %s from node %s: %s",
+		logger.Errorf("Error handling request %s from node %s: %s",
 			msg.Type.String(), msg.Sender.NodeID.String(), err)
 		return
 	}
 	r := response.(*packetWrapper)
 	err = h.transport.SendResponse(msg.RequestID, (*packet.Packet)(r))
 	if err != nil {
-		log.Error(err)
+		logger.Error(err)
 	}
 }
 
