@@ -23,6 +23,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/insolar/insolar/api/sdk"
@@ -145,16 +146,38 @@ func createMembers(insSDK *sdk.SDK, count int) []*sdk.Member {
 }
 
 func getTotalBalance(insSDK *sdk.SDK, members []*sdk.Member) uint64 {
-	totalBalance := uint64(0)
+	type Result struct {
+		num     int
+		balance uint64
+		err     error
+	}
+
 	nmembers := len(members)
+	var wg sync.WaitGroup
+	wg.Add(nmembers)
+	results := make(chan Result, nmembers)
+
+	// execute all queries in parallel
 	for i := 0; i < nmembers; i++ {
-		balance, err := insSDK.GetBalance(members[i])
-		if err != nil {
-			fmt.Printf("ERROR: Can't get balance for %v-th member %v, err: %v\n", i, members[i], err)
+		go func(m *sdk.Member, num int) {
+			balance, err := insSDK.GetBalance(m)
+			res := Result{num: num, balance: balance, err: err}
+			results <- res
+			wg.Done()
+		}(members[i], i)
+	}
+
+	wg.Wait()
+	totalBalance := uint64(0)
+	for i := 0; i < nmembers; i++ {
+		res := <-results
+		if res.err != nil {
+			fmt.Printf("Can't get balance for %v-th member: %v\n", res.num, res.err)
 			continue
 		}
-		totalBalance += balance
+		totalBalance += res.balance
 	}
+
 	return totalBalance
 }
 
