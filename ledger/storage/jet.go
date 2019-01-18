@@ -163,7 +163,7 @@ func (db *DB) getJetTree(ctx context.Context, pulse core.PulseNumber) (*jet.Tree
 	buff, err := db.get(ctx, k)
 	if err == ErrNotFound {
 		fmt.Println("NewTree was created with pulse", pulse)
-		tree := jet.NewTree()
+		tree := jet.NewTree(pulse == core.GenesisPulse.PulseNumber)
 		err := db.set(ctx, k, tree.Bytes())
 		return tree, err
 	}
@@ -219,9 +219,7 @@ func (db *DB) CloneJetTree(
 		return nil, err
 	}
 
-	if from != core.FirstPulseNumber {
-		tree.ResetActual()
-	}
+	tree.ResetActual()
 
 	err = db.set(ctx, k, tree.Bytes())
 	if err != nil {
