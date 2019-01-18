@@ -126,7 +126,7 @@ func Serialize(msg core.Message) (io.Reader, error) {
 }
 
 // Deserialize returns decoded message.
-func Deserialize(buff io.Reader) (core.Parcel, error) {
+func Deserialize(buff io.Reader) (core.Message, error) {
 	b := make([]byte, 1)
 	_, err := buff.Read(b)
 	if err != nil {
@@ -141,7 +141,7 @@ func Deserialize(buff io.Reader) (core.Parcel, error) {
 	if err = enc.Decode(msg); err != nil {
 		return nil, err
 	}
-	return &Parcel{Msg: msg}, nil
+	return msg, nil
 }
 
 // ToBytes deserialize a core.Message to bytes.

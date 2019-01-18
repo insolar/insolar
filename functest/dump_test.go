@@ -51,7 +51,7 @@ func TestDumpUser(t *testing.T) {
 	err = json.Unmarshal(data, &result)
 	require.NoError(t, err)
 	require.Equal(t, "Member", result.Member)
-	require.Equal(t, 1000, result.Wallet)
+	require.Equal(t, 1000*1000*1000, result.Wallet)
 }
 
 func TestDumpUserWrongRef(t *testing.T) {
