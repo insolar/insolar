@@ -204,25 +204,6 @@ func (m *PulseManager) processEndPulse(
 		return errors.Wrap(err, "got error on jets sync")
 	}
 
-	// TODO: @andreyromancev. 12.01.19. Uncomment when heavy is ready.
-	// untilPN := currentPulse.PulseNumber - m.options.storeLightPulses
-	// for jetID := range jetIDs {
-	// 	replicated, err := m.db.GetReplicatedPulse(ctx, jetID)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	if untilPN >= replicated {
-	// 		inslogger.FromContext(ctx).Errorf(
-	// 			"light cleanup aborted (remove from: %v, replicated: %v)",
-	// 			untilPN,
-	// 			replicated,
-	// 		)
-	// 		return nil
-	// 	}
-	// 	if _, err := m.db.RemoveJetIndexesUntil(ctx, jetID, untilPN); err != nil {
-	// 		return err
-	// 	}
-	// }
 	return nil
 }
 
@@ -647,7 +628,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 	fmt.Println()
 
 	// TODO: @andreyromancev. 12.01.19. uncomment when heavy ready.
-	// m.postProcessJets(ctx, newPulse, jets)
+	m.postProcessJets(ctx, newPulse, jets)
 
 	err = m.Bus.OnPulse(ctx, newPulse)
 	if err != nil {
@@ -678,6 +659,45 @@ func (m *PulseManager) postProcessJets(ctx context.Context, newPulse core.Pulse,
 				logger.Debugf("[postProcessJets] clear recent storage for right jet - %v, pulse - %v", jetInfo.right.id, newPulse.PulseNumber)
 				m.RecentStorageProvider.GetStorage(jetInfo.right.id).ClearObjects()
 			}
+		}
+	}
+	m.cleanJetsData(ctx, newPulse)
+}
+
+func (m *PulseManager) cleanJetsData(ctx context.Context, newPulse core.Pulse) {
+	delta := m.options.storeLightPulses
+	if delta == 0 {
+		return
+	}
+
+	pn := newPulse.PulseNumber
+	newPulseWithSerial, err := m.db.GetPulse(ctx, pn)
+	if err != nil {
+		inslogger.FromContext(ctx).Error("Can't get new pulse by pulse number: %v", pn)
+		return
+	}
+
+	for i := 0; i < delta; i++ {
+		prevPulse, err := m.db.GetPreviousPulse(ctx, pn)
+		if err != nil {
+			inslogger.FromContext(ctx).Error("Can't get previous pulse by pulse number: %v", pn)
+			break
+		}
+		pn = prevPulse.Pulse.PulseNumber
+		if newPulseWithSerial.SerialNumber-delta > prevPulse.SerialNumber {
+			break
+		}
+	}
+
+	// we are remove records from 'pn' pulse number here
+	jetSyncState, err := m.db.GetAllSyncClientJets(ctx)
+	if err != nil {
+		inslogger.FromContext(ctx).Errorf("Can't get jet clients state: %v", err)
+		return
+	}
+	for jetID, _ := range jetSyncState {
+		if _, err := m.db.RemoveJetIndexesUntil(ctx, jetID, pn); err != nil {
+			inslogger.FromContext(ctx).Errorf("Error light cleanup, until pulse = %v, jet = %v: %v", pn, jetID, err)
 		}
 	}
 }
