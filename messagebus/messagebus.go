@@ -285,14 +285,18 @@ func (mb *MessageBus) checkPulse(ctx context.Context, parcel core.Parcel, locked
 
 	// TODO: check if parcel.Pulse() == pulse.NextPulseNumber
 	if parcel.Pulse() > pulse.PulseNumber {
+		inslogger.FromContext(ctx).Debug(
+			"message from the future, our pulse: ", pulse.PulseNumber, " msg pulse: ", parcel.Pulse(),
+		)
 		if locked {
 			mb.globalLock.RUnlock()
 		}
 
 		mb.NextPulseMessagePoolLock.RLock()
-		pulse, err := mb.PulseStorage.Current(
-			inslogger.ContextWithTrace(context.Background(), utils.TraceID(ctx)),
-		)
+
+		ctx := inslogger.ContextWithTrace(context.Background(), utils.TraceID(ctx))
+
+		pulse, err := mb.PulseStorage.Current(ctx)
 		if err != nil {
 			mb.NextPulseMessagePoolLock.RUnlock()
 			if locked {
@@ -300,7 +304,9 @@ func (mb *MessageBus) checkPulse(ctx context.Context, parcel core.Parcel, locked
 			}
 			return errors.Wrap(err, "[ checkPulse ] Couldn't get current pulse number")
 		}
+		inslogger.FromContext(ctx).Debug("rechecking pulse after lock, pulse: ", pulse.PulseNumber)
 		if parcel.Pulse() > pulse.PulseNumber {
+			inslogger.FromContext(ctx).Debug("still in future")
 			<-mb.NextPulseMessagePoolChan
 		}
 		mb.NextPulseMessagePoolLock.RUnlock()
