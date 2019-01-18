@@ -147,7 +147,7 @@ func (m *PulseManager) processEndPulse(
 						return errors.Wrap(err, "failed to send executor data")
 					}
 					if rep, ok := genericRep.(*reply.OK); !ok {
-						return fmt.Errorf("unexpected reply: %#v", rep)
+						return fmt.Errorf("PM.processEndPulse: unexpected reply: %#v", rep)
 					}
 					fmt.Printf("sent drop. pulse: %v, jet: %v\n", msg.Drop.Pulse, msg.DropJet.JetIDString())
 				}
@@ -167,7 +167,7 @@ func (m *PulseManager) processEndPulse(
 						return errors.Wrap(err, "failed to send executor data")
 					}
 					if rep, ok := genericRep.(*reply.OK); !ok {
-						return fmt.Errorf("unexpected reply: %#v", rep)
+						return fmt.Errorf("PM.processEndPulse: unexpected reply: %#v", rep)
 					}
 					fmt.Printf("sent drop. pulse: %v, jet: %v\n", msg.Drop.Pulse, msg.DropJet.JetIDString())
 				}
@@ -181,7 +181,7 @@ func (m *PulseManager) processEndPulse(
 						return errors.Wrap(err, "failed to send executor data")
 					}
 					if rep, ok := genericRep.(*reply.OK); !ok {
-						return fmt.Errorf("unexpected reply: %#v", rep)
+						return fmt.Errorf("PM.processEndPulse: unexpected reply: %#v", rep)
 					}
 					fmt.Printf("sent drop. pulse: %v, jet: %v\n", msg.Drop.Pulse, msg.DropJet.JetIDString())
 				}

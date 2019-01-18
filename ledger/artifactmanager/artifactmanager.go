@@ -145,7 +145,7 @@ func (m *LedgerArtifactManager) GetCode(
 
 	react, ok := genericReact.(*reply.Code)
 	if !ok {
-		return nil, fmt.Errorf("unexpected reply: %#v", genericReact)
+		return nil, fmt.Errorf("GetCode: unexpected reply: %#v", genericReact)
 	}
 
 	desc := CodeDescriptor{
@@ -206,7 +206,7 @@ func (m *LedgerArtifactManager) GetObject(
 	case *reply.Error:
 		err = r.Error()
 	default:
-		err = fmt.Errorf("unexpected reply: %#v", rep)
+		err = fmt.Errorf("GetObject: unexpected reply: %#v", rep)
 	}
 	return desc, err
 }
@@ -227,7 +227,7 @@ func (m *LedgerArtifactManager) HasPendingRequests(
 	}
 	requests, ok := rep.(*reply.HasPendingRequests)
 	if !ok {
-		return false, fmt.Errorf("unexpected reply: %#v", rep)
+		return false, fmt.Errorf("HasPendingRequests: unexpected reply: %#v", rep)
 	}
 	return requests.Has, nil
 }
@@ -259,7 +259,7 @@ func (m *LedgerArtifactManager) GetDelegate(
 
 	react, ok := genericReact.(*reply.Delegate)
 	if !ok {
-		return nil, fmt.Errorf("unexpected reply: %#v", genericReact)
+		return nil, fmt.Errorf("GetDelegate: unexpected reply: %#v", genericReact)
 	}
 	return &react.Head, nil
 }
@@ -687,7 +687,7 @@ func (m *LedgerArtifactManager) setRecord(
 
 	react, ok := genericReply.(*reply.ID)
 	if !ok {
-		return nil, fmt.Errorf("unexpected reply: %#v", genericReply)
+		return nil, fmt.Errorf("setRecord: unexpected reply: %#v", genericReply)
 	}
 
 	return &react.ID, nil
@@ -711,7 +711,7 @@ func (m *LedgerArtifactManager) setBlob(
 
 	react, ok := genericReact.(*reply.ID)
 	if !ok {
-		return nil, fmt.Errorf("unexpected reply: %#v", genericReact)
+		return nil, fmt.Errorf("setBlob: unexpected reply: %#v", genericReact)
 	}
 
 	return &react.ID, nil
@@ -748,7 +748,7 @@ func (m *LedgerArtifactManager) sendUpdateObject(
 
 	rep, ok := genericRep.(*reply.Object)
 	if !ok {
-		return nil, fmt.Errorf("unexpected reply: %#v", genericRep)
+		return nil, fmt.Errorf("sendUpdateObject: unexpected reply: %#v", genericRep)
 	}
 
 	return rep, nil
@@ -776,7 +776,7 @@ func (m *LedgerArtifactManager) registerChild(
 
 	react, ok := genericReact.(*reply.ID)
 	if !ok {
-		return nil, fmt.Errorf("unexpected reply: %#v", genericReact)
+		return nil, fmt.Errorf("registerChild: unexpected reply: %#v", genericReact)
 	}
 
 	return &react.ID, nil

@@ -744,7 +744,7 @@ func (h *MessageHandler) handleValidateRecord(ctx context.Context, parcel core.P
 		case *reply.NotOK:
 			return errors.New("validation sequence integrity failure")
 		default:
-			return errors.New("unexpected reply")
+			return errors.New("handleValidateRecord: unexpected reply")
 		}
 
 		return nil
