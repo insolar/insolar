@@ -13,8 +13,8 @@ type Discovery struct {
 	CertName string `mapstructure:"cert_name"`
 }
 
-// GenesisConfig contains all genesis config
-type GenesisConfig struct {
+// Config contains all genesis config
+type Config struct {
 	RootKeysFile string `mapstructure:"root_keys_file"`
 	RootBalance  uint   `mapstructure:"root_balance"`
 	MajorityRule int    `mapstructure:"majority_rule"`
@@ -28,7 +28,7 @@ type GenesisConfig struct {
 }
 
 // It's very light check. It's not about majority rule
-func hasMinimumRolesSet(conf *GenesisConfig) error {
+func hasMinimumRolesSet(conf *Config) error {
 	minRequiredRolesSet := map[string]bool{
 		"virtual":        true,
 		"heavy_material": true,
@@ -51,8 +51,8 @@ func hasMinimumRolesSet(conf *GenesisConfig) error {
 }
 
 // ParseGenesisConfig parse genesis config
-func ParseGenesisConfig(path string) (*GenesisConfig, error) {
-	var conf = &GenesisConfig{}
+func ParseGenesisConfig(path string) (*Config, error) {
+	var conf = &Config{}
 	v := viper.New()
 	v.SetConfigFile(path)
 	err := v.ReadInConfig()

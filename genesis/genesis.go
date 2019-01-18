@@ -61,7 +61,7 @@ type Genesis struct {
 	rootMemberRef   *core.RecordRef
 	prototypeRefs   map[string]*core.RecordRef
 	isGenesis       bool
-	config          *GenesisConfig
+	config          *Config
 	keyOut          string
 	ArtifactManager core.ArtifactManager `inject:""`
 	MBLock          messageBusLocker     `inject:""`
