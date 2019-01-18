@@ -20,13 +20,11 @@ package functest
 
 import (
 	"bufio"
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"go/build"
 	"io"
 	"io/ioutil"
-	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -60,7 +58,7 @@ var stderr io.ReadCloser
 
 var insolarRootMemberKeysPath = filepath.Join(conf_dir+"/configs", insolarRootMemberKeys)
 
-var info infoResponse
+var info *requester.InfoResponse
 var root user
 
 type user struct {
@@ -125,31 +123,11 @@ func loadRootKeys() error {
 }
 
 func setInfo() error {
-	jsonValue, err := json.Marshal(postParams{
-		"jsonrpc": "2.0",
-		"method":  "info.Get",
-		"id":      "",
-	})
+	var err error
+	info, err = requester.Info(TestAPIURL)
 	if err != nil {
-		return errors.Wrap(err, "[ setInfo ] couldn't marshal post params")
+		return errors.Wrap(err, "[ setInfo ] error sending request")
 	}
-	postResp, err := http.Post(TestRPCUrl, "application/json", bytes.NewBuffer(jsonValue))
-	if err != nil {
-		return errors.Wrapf(err, "[ setInfo ] couldn't send request to %s", TestRPCUrl)
-	}
-	body, err := ioutil.ReadAll(postResp.Body)
-	if err != nil {
-		return errors.Wrapf(err, "[ setInfo ] couldn't read answer")
-	}
-	infoResp := &rpcInfoResponse{}
-	err = json.Unmarshal(body, infoResp)
-	if err != nil {
-		return errors.Wrapf(err, "[ setInfo ] couldn't unmarshall answer")
-	}
-	if infoResp.Error != nil {
-		return errors.New(fmt.Sprintf("[ setInfo ] error in get.Info request: %s", infoResp.Error))
-	}
-	info = infoResp.Result
 	return nil
 }
 
@@ -200,13 +178,13 @@ func startInsgorund(listenPort string, upstreamPort string) (func(), error) {
 }
 
 func startAllInsgorunds() (err error) {
-	insgorundCleaner, err = startInsgorund("18181", "18182")
+	insgorundCleaner, err = startInsgorund("28221", "28222")
 	if err != nil {
 		return errors.Wrap(err, "[ setup ] could't start insgorund: ")
 	}
 	fmt.Println("[ startAllInsgorunds ] insgorund was successfully started")
 
-	secondInsgorundCleaner, err = startInsgorund("58181", "58182")
+	secondInsgorundCleaner, err = startInsgorund("28441", "28442")
 	if err != nil {
 		return errors.Wrap(err, "[ setup ] could't start second insgorund: ")
 	}
@@ -226,7 +204,7 @@ func stopAllInsgorunds() error {
 
 func waitForNet() error {
 	numAttempts := 90
-	ports := []string{"19191", "19192", "19193"}
+	ports := []string{"19191", "19192", "19193", "19194", "19195"}
 	numNodes := len(ports)
 	currentOk := 0
 	for i := 0; i < numAttempts; i++ {
@@ -371,7 +349,7 @@ func setup() error {
 	for i := 0; i < numAttempts; i++ {
 		err = setInfo()
 		if err != nil {
-			fmt.Printf("[ setup ] Couldn't setInfo. Attempt %d/%d. Err: %s", i, numAttempts, err)
+			fmt.Printf("[ setup ] Couldn't setInfo. Attempt %d/%d. Err: %s\n", i, numAttempts, err)
 		} else {
 			break
 		}

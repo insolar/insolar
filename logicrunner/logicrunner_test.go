@@ -30,6 +30,7 @@ import (
 	"github.com/insolar/insolar/contractrequester"
 	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/insolar/insolar/ledger/recentstorage"
+	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/logicrunner/goplugin"
 
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
@@ -133,7 +134,13 @@ func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *gop
 	)
 
 	pulseStorage := l.PulseManager.(*pulsemanager.PulseManager).PulseStorage
-	recentMock := recentstorage.NewProviderMock(t)
+	providerMock := recentstorage.NewProviderMock(t)
+	recentStorageMock := recentstorage.NewRecentStorageMock(t)
+	recentStorageMock.AddObjectMock.Return()
+
+	providerMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
+		return recentStorageMock
+	}
 
 	parcelFactory := messagebus.NewParcelFactory()
 	cm := &component.Manager{}
@@ -142,7 +149,7 @@ func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *gop
 	cm.Register(am, l.GetPulseManager(), l.GetJetCoordinator())
 	cr, err := contractrequester.New()
 
-	cm.Inject(pulseStorage, nk, recentMock, l, lr, nw, mb, cr, delegationTokenFactory, parcelFactory, mock)
+	cm.Inject(pulseStorage, nk, providerMock, l, lr, nw, mb, cr, delegationTokenFactory, parcelFactory, mock)
 	err = cm.Init(ctx)
 	assert.NoError(t, err)
 	err = cm.Start(ctx)
@@ -159,6 +166,9 @@ func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *gop
 		true,
 	)
 	require.NoError(t, err)
+	pm.(*pulsemanager.PulseManager).ArtifactManagerMessageHandler.CloseEarlyRequestCircuitBreakerForJet(
+		ctx, *jet.NewID(0, nil),
+	)
 
 	assert.NoError(t, err)
 	if err != nil {

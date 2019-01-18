@@ -18,6 +18,7 @@ package artifactmanager
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"github.com/insolar/insolar/configuration"
@@ -34,11 +35,16 @@ const (
 )
 
 type middleware struct {
-	db                     *storage.DB
-	jetCoordinator         core.JetCoordinator
-	messageBus             core.MessageBus
-	jetDropTimeoutProvider jetDropTimeoutProvider
-	conf                   *configuration.Ledger
+	db                                 *storage.DB
+	jetCoordinator                     core.JetCoordinator
+	messageBus                         core.MessageBus
+	earlyRequestCircuitBreakerProvider *earlyRequestCircuitBreakerProvider
+	conf                               *configuration.Ledger
+	seqMutex                           sync.Mutex
+	sequencer                          map[core.RecordID]*struct {
+		sync.Mutex
+		done bool
+	}
 }
 
 func newMiddleware(
@@ -48,14 +54,15 @@ func newMiddleware(
 	messageBus core.MessageBus,
 ) *middleware {
 	return &middleware{
-		db:             db,
-		jetCoordinator: jetCoordinator,
-		messageBus:     messageBus,
-		jetDropTimeoutProvider: jetDropTimeoutProvider{
-			waiters:          map[core.RecordID]*jetDropTimeout{},
-			waitersInitLocks: map[core.RecordID]*sync.RWMutex{},
-		},
-		conf: conf,
+		db:                                 db,
+		jetCoordinator:                     jetCoordinator,
+		messageBus:                         messageBus,
+		earlyRequestCircuitBreakerProvider: &earlyRequestCircuitBreakerProvider{breakers: map[core.RecordID]*requestCircuitBreakerProvider{}},
+		conf:                               conf,
+		sequencer: map[core.RecordID]*struct {
+			sync.Mutex
+			done bool
+		}{},
 	}
 }
 
@@ -102,9 +109,12 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 		if msg.DefaultTarget().Record().Pulse() == core.PulseNumberJet {
 			jetID = *msg.DefaultTarget().Record()
 		} else {
-			j, err := m.fetchJet(ctx, *msg.DefaultTarget().Record(), parcel.Pulse(), fetchJetReties)
+			j, actual, err := m.fetchJet(ctx, *msg.DefaultTarget().Record(), parcel.Pulse(), fetchJetReties)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to fetch jet tree")
+			}
+			if !actual {
+				return &reply.JetMiss{JetID: *j}, nil
 			}
 			jetID = *j
 		}
@@ -112,9 +122,9 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 		// Check if jet is ours.
 		node, err := m.jetCoordinator.LightExecutorForJet(ctx, jetID, parcel.Pulse())
 		if err != nil {
-			logger.Debugf("checkJet: failed to check isMine: %s", err.Error())
 			return nil, errors.Wrap(err, "failed to calculate executor for jet")
 		}
+		// FIXME: This probably will never happen, because we won't receive hot records.
 		if *node != m.jetCoordinator.Me() {
 			// TODO: sergey.morozov 2018-12-21 This is hack. Must implement correct Jet checking for HME.
 			logger.Debugf("checkJet: [ HACK ] checking if I am Heavy Material")
@@ -128,11 +138,9 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 				return handler(contextWithJet(ctx, jetID), parcel)
 			}
 
-			logger.Debugf("checkJet: not Mine")
 			return &reply.JetMiss{JetID: jetID}, nil
 		}
 
-		logger.Debugf("checkJet: done well")
 		return handler(contextWithJet(ctx, jetID), parcel)
 	}
 }
@@ -144,6 +152,7 @@ func (m *middleware) saveParcel(handler core.MessageHandler) core.MessageHandler
 		if err != nil {
 			return nil, err
 		}
+		fmt.Println("saveParcel, pulse - ", pulse.Pulse.PulseNumber)
 		err = m.db.SetMessage(ctx, jetID, pulse.Pulse.PulseNumber, parcel)
 		if err != nil {
 			return nil, err
@@ -172,51 +181,165 @@ func (m *middleware) checkHeavySync(handler core.MessageHandler) core.MessageHan
 
 func (m *middleware) fetchJet(
 	ctx context.Context, target core.RecordID, pulse core.PulseNumber, retries int,
-) (*core.RecordID, error) {
-	if retries < 0 {
-		return nil, errors.New("retries exceeded")
-	}
-
+) (*core.RecordID, bool, error) {
 	// Look in the local tree. Return if the actual jet found.
 	tree, err := m.db.GetJetTree(ctx, pulse)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	jetID, actual := tree.Find(target)
-	if actual {
-		return jetID, nil
+	if actual || retries < 0 {
+		if retries < 0 {
+			fmt.Printf("[not mine] %v, %v", jetID.JetIDString(), target.String())
+			fmt.Println()
+		}
+		if actual {
+			fmt.Printf("[mine] %v, %v", jetID.JetIDString(), target.String())
+			fmt.Println()
+		}
+		return jetID, actual, nil
 	}
 
-	// Couldn't find the actual jet locally. Ask for the jet from the previous executor.
+	m.seqMutex.Lock()
+	if _, ok := m.sequencer[*jetID]; !ok {
+		m.sequencer[*jetID] = &struct {
+			sync.Mutex
+			done bool
+		}{}
+	}
+	mu := m.sequencer[*jetID]
+	m.seqMutex.Unlock()
+
+	mu.Lock()
+	if mu.done {
+		mu.Unlock()
+		return m.fetchJet(ctx, target, pulse, retries-1)
+	}
+	defer func() {
+		mu.done = true
+		mu.Unlock()
+
+		m.seqMutex.Lock()
+		delete(m.sequencer, *jetID)
+		m.seqMutex.Unlock()
+	}()
+
+	jets, err := m.fetchJetFromOtherNodes(ctx, target, pulse)
+	if err != nil {
+		return nil, false, err
+	}
+
+	if len(jets) == 1 {
+		return jets[0], true, nil
+	} else if len(jets) == 0 {
+		inslogger.FromContext(ctx).Error(
+			"All active light material nodes have no actual jet tree",
+		)
+		inslogger.FromContext(ctx).Error(
+			"My guess is: ", jetID.JetIDString(),
+		)
+		return nil, false, errors.New("impossible situation")
+	} else {
+		return nil, false, errors.New("nodes returned more than one unique jet")
+	}
+}
+
+func (m *middleware) fetchJetFromOtherNodes(
+	ctx context.Context, target core.RecordID, pulse core.PulseNumber,
+) ([]*core.RecordID, error) {
+
+	nodes, err := m.otherNodesForPrevPulse(ctx, pulse)
+	if err != nil {
+		return nil, err
+	}
+
+	num := len(nodes)
+
+	wg := sync.WaitGroup{}
+	wg.Add(num)
+
+	replies := make([]*reply.Jet, num)
+	for i, node := range nodes {
+		go func(i int, node core.Node) {
+			defer wg.Done()
+
+			nodeID := node.ID()
+			rep, err := m.messageBus.Send(
+				ctx,
+				&message.GetJet{Object: target},
+				&core.MessageSendOptions{Receiver: &nodeID},
+			)
+			if err != nil {
+				inslogger.FromContext(ctx).Error(
+					errors.Wrap(err, "couldn't get jet"),
+				)
+				return
+			}
+
+			r, ok := rep.(*reply.Jet)
+			if !ok {
+				inslogger.FromContext(ctx).Errorf("unexpected reply: %#v\n", rep)
+				return
+			}
+
+			inslogger.FromContext(ctx).Debugf(
+				"Got jet %s from %s node, actual is %s",
+				r.ID.JetIDString(), node.ID().String(), r.Actual,
+			)
+			replies[i] = r
+		}(i, node)
+	}
+	wg.Wait()
+
+	seen := make(map [core.RecordID]struct{})
+	res := make([]*core.RecordID, 0)
+	for _, r := range replies {
+		if r == nil {
+			continue
+		}
+		if !r.Actual {
+			continue
+		}
+		if _, ok := seen[r.ID]; ok {
+			continue
+		}
+
+		seen[r.ID]=struct{}{}
+		res = append(res, &r.ID)
+	}
+
+	return res, nil
+}
+
+func (m *middleware) otherNodesForPrevPulse(
+	ctx context.Context, pulse core.PulseNumber,
+) ([]core.Node, error) {
 	prevPulse, err := m.db.GetPreviousPulse(ctx, pulse)
 	if err != nil {
 		return nil, err
 	}
-	prevExecutor, err := m.jetCoordinator.LightExecutorForJet(ctx, *jetID, prevPulse.Pulse.PulseNumber)
-	if err != nil {
-		return nil, err
-	}
-	rep, err := m.messageBus.Send(
-		ctx,
-		&message.GetJet{Object: target},
-		&core.MessageSendOptions{Receiver: prevExecutor},
-	)
-	if err != nil {
-		return nil, err
-	}
-	r, ok := rep.(*reply.Jet)
-	if !ok {
-		return nil, ErrUnexpectedReply
-	}
 
-	// TODO: check if the same executor again or the same jet again. INS-1041
-
-	// Update local tree.
-	err = m.db.UpdateJetTree(ctx, pulse, true, r.ID)
+	nodes, err := m.db.GetActiveNodesByRole(prevPulse.Pulse.PulseNumber, core.StaticRoleLightMaterial)
 	if err != nil {
 		return nil, err
 	}
 
-	// Repeat the process again.
-	return m.fetchJet(ctx, target, pulse, retries-1)
+	me := m.jetCoordinator.Me()
+	for i := range nodes {
+		if nodes[i].ID() == me {
+			nodes = append(nodes[:i], nodes[i+1:]...)
+			break
+		}
+	}
+
+	num := len(nodes)
+	if num == 0 {
+		inslogger.FromContext(ctx).Error(
+			"This shouldn't happen. We're solo active light material",
+		)
+
+		return nil, errors.New("impossible situation")
+	}
+
+	return nodes, nil
 }

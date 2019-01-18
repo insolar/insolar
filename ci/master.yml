@@ -21,14 +21,14 @@ resources:
 - name: insolard
   type: docker-image
   source:
-    repository: registry.ins.world/insolard
+    repository: registry.insolar.io/insolard
     username: ((meta.registry.username))
     password: ((meta.registry.password))
 
 - name: builder
   type: docker-image
   source:
-    repository: registry.ins.world/builder
+    repository: registry.insolar.io/builder
     username: ((meta.registry.username))
     password: ((meta.registry.password))
 
@@ -42,7 +42,9 @@ resources:
 - name: deploy
   type: kubernetes
   source:
-    kubeconfig: ((meta.kubernetes.dev-config))
+    server: https://kube.insolar.io:6443
+    token: ((meta.kubernetes.dev-token))
+    certificate_authority: ((meta.kubernetes.ca))
 
 jobs:
 - name: insolard
@@ -79,13 +81,14 @@ jobs:
           - -exc
           - |
             cp master/.git/short_ref deploy/tag
-            cp adm/manifests/dev/bootstrap-ss.yaml deploy/bootstrap.yaml
+            cp adm/manifests/dev/bootstrap-temporary.yaml deploy/bootstrap.yaml
             ls -alh
-            sed -i "s/registry.ins.world\/insolard/registry.ins.world\/insolard:$(cat deploy/tag)/g" deploy/bootstrap.yaml
+            sed -i "s/registry.insolar.io\/insolard/registry.insolar.io\/insolard:$(cat deploy/tag)/g" deploy/bootstrap.yaml
             cat deploy/bootstrap.yaml
   - put: deploy
     params:
       namespace: dev
+      wait_until_ready: 120
       kubectl: apply -f deploy/bootstrap.yaml
 
 - name: builder

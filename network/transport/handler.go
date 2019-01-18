@@ -53,7 +53,7 @@ func (ph *packetHandlerImpl) Received() <-chan *packet.Packet {
 func (ph *packetHandlerImpl) processResponse(ctx context.Context, msg *packet.Packet) {
 	logger := inslogger.FromContext(ctx)
 
-	logger.Debugf("[ processResponse ] Process response %s with RequestID = %d", msg.RemoteAddress, msg.RequestID)
+	logger.Debugf("[ processResponse ] Process response %s from %s with RequestID = %d", msg.Type, msg.RemoteAddress, msg.RequestID)
 
 	future := ph.futureManager.Get(msg)
 	if future != nil {
@@ -69,7 +69,7 @@ func (ph *packetHandlerImpl) processResponse(ctx context.Context, msg *packet.Pa
 
 func (ph *packetHandlerImpl) processRequest(ctx context.Context, msg *packet.Packet) {
 	logger := inslogger.FromContext(ctx)
-	logger.Debugf("[ processRequest ] Process request %s with RequestID = %d", msg.RemoteAddress, msg.RequestID)
+	logger.Debugf("[ processRequest ] Process request %s from %s with RequestID = %d", msg.Type, msg.RemoteAddress, msg.RequestID)
 
 	ph.received <- msg
 }

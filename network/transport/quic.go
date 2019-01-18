@@ -90,8 +90,9 @@ func (t *quicTransport) send(recvAddress string, data []byte) error {
 }
 
 // Start starts networking.
-func (t *quicTransport) Listen(ctx context.Context) error {
+func (t *quicTransport) Listen(ctx context.Context, started chan struct{}) error {
 	log.Debug("Start QUIC transport")
+	started <- struct{}{}
 	for {
 		session, err := t.l.Accept()
 		if err != nil {

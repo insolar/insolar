@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"net"
 	"net/rpc"
+	"runtime/debug"
 	"sync"
 
 	"github.com/insolar/insolar/certificate"
@@ -287,7 +288,10 @@ func (currentPulsar *Pulsar) CheckConnectionsToPulsars(ctx context.Context) {
 func (currentPulsar *Pulsar) StartConsensusProcess(ctx context.Context, pulseNumber core.PulseNumber) error {
 	logger := inslogger.FromContext(ctx)
 	logger.Debugf("[StartConsensusProcess] pulse number - %v, host - %v", pulseNumber, currentPulsar.Config.MainListenerAddress)
+	logger.Debugf("[Before StartProcessLock]")
+	debug.PrintStack()
 	currentPulsar.StartProcessLock.Lock()
+	logger.Debugf("[After StartProcessLock]")
 
 	if pulseNumber == currentPulsar.ProcessingPulseNumber {
 		logger.Debugf("[pulseNumber == currentPulsar.ProcessingPulseNumber] return nil")
@@ -295,7 +299,9 @@ func (currentPulsar *Pulsar) StartConsensusProcess(ctx context.Context, pulseNum
 		return nil
 	}
 
+	logger.Debugf("currentPulsar.StateSwitcher.GetState() > WaitingForStart")
 	if currentPulsar.StateSwitcher.GetState() > WaitingForStart || (currentPulsar.ProcessingPulseNumber != 0 && pulseNumber < currentPulsar.ProcessingPulseNumber) {
+		logger.Debugf("currentPulsar.StartProcessLock.Unlock()")
 		currentPulsar.StartProcessLock.Unlock()
 		err := fmt.Errorf(
 			"wrong state status or pulse number, state - %v, received pulse - %v, last pulse - %v, processing pulse - %v",
@@ -309,10 +315,13 @@ func (currentPulsar *Pulsar) StartConsensusProcess(ctx context.Context, pulseNum
 
 	ctx, inslog := inslogger.WithTraceField(ctx, fmt.Sprintf("%v_%d", currentPulsar.ID, pulseNumber))
 
+	logger.Debugf("before GenerateEntropy")
 	currentPulsar.StateSwitcher.setState(GenerateEntropy)
 
+	logger.Debugf("before generateNewEntropyAndSign")
 	err := currentPulsar.generateNewEntropyAndSign()
 	if err != nil {
+		logger.Debugf("currentPulsar.StartProcessLock.Unlock() && currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)")
 		currentPulsar.StartProcessLock.Unlock()
 		currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)
 		return err

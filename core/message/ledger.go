@@ -145,6 +145,7 @@ type UpdateObject struct {
 
 	Record []byte
 	Object core.RecordRef
+	Memory []byte
 }
 
 // AllowedSenderObjectAndRole implements interface method
@@ -376,6 +377,7 @@ func (*ValidationCheck) Type() core.MessageType {
 type HotData struct {
 	ledgerMessage
 	Jet                core.RecordRef
+	DropJet            core.RecordID // If will be different in case of split.
 	Drop               jet.JetDrop
 	RecentObjects      map[core.RecordID]*HotIndex
 	PendingRequests    map[core.RecordID]map[core.RecordID][]byte
@@ -385,7 +387,7 @@ type HotData struct {
 
 // AllowedSenderObjectAndRole implements interface method
 func (m *HotData) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
-	return &m.Jet, core.DynamicRoleLightExecutor
+	return nil, core.DynamicRoleUndefined
 }
 
 // DefaultRole returns role for this event

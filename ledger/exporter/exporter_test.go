@@ -26,7 +26,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
-	"github.com/jbenet/go-base58"
+	base58 "github.com/jbenet/go-base58"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/ugorji/go/codec"
@@ -105,7 +105,6 @@ func TestExporter_Export(t *testing.T) {
 	if assert.True(t, ok, "request not found by ID") {
 		assert.Equal(t, "TypeCallRequest", request.Type)
 		assert.Equal(t, pl, request.Data.(*record.RequestRecord).Payload)
-		assert.Equal(t, "callRequest", request.Payload["Payload"].(*message.Parcel).LogTraceID)
 		assert.Equal(t, core.TypeCallConstructor.String(), request.Payload["Type"])
 	}
 }

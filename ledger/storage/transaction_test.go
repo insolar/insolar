@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/core"
@@ -28,7 +29,6 @@ import (
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/index"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
-	"github.com/insolar/insolar/testutils"
 )
 
 /*
@@ -52,7 +52,7 @@ func TestStore_Transaction_LockOnUpdate(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
-	jetID := testutils.RandomID()
+	jetID := *jet.NewID(0, nil)
 
 	objid := core.NewRecordID(100500, nil)
 	idxid := core.NewRecordID(0, nil)
