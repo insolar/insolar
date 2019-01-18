@@ -225,8 +225,8 @@ genesis()
     copy_data
     copy_certs
 
-    which jq
-    if [ $? -eq 0 ] ; then
+
+    if which jq ; then
         NL=$BASE_DIR/loglinks
         mkdir  $NL || \
         rm -f $NL/*.log
@@ -235,6 +235,8 @@ genesis()
             [[ $ref =~ .+\. ]]
             ln -s `pwd`/$node/output.txt $NL/${BASH_REMATCH[0]}log
         done
+    else
+        echo "no jq =("
     fi
 }
 
