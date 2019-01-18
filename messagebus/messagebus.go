@@ -41,8 +41,6 @@ import (
 
 const deliverRPCMethodName = "MessageBus.Deliver"
 
-const MaxNextPulseMessagePool = 1000
-
 // MessageBus is component that routes application logic requests,
 // e.g. glue between network and logic runner
 type MessageBus struct {
@@ -239,21 +237,8 @@ func (mb *MessageBus) OnPulse(context.Context, core.Pulse) error {
 
 	close(mb.NextPulseMessagePoolChan)
 	mb.NextPulseMessagePoolChan = make(chan interface{})
-	mb.NextPulseMessagePoolCounter = 0
 
 	return nil
-}
-
-func (mb *MessageBus) acquireMessagePoolItem() bool {
-	mb.NextPulseMessagePoolLock.Lock()
-	defer mb.NextPulseMessagePoolLock.Unlock()
-
-	if mb.NextPulseMessagePoolCounter > MaxNextPulseMessagePool {
-		return false
-	}
-
-	mb.NextPulseMessagePoolCounter++
-	return true
 }
 
 func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Reply, error) {
@@ -299,7 +284,7 @@ func (mb *MessageBus) checkPulse(ctx context.Context, parcel core.Parcel, locked
 	}
 
 	// TODO: check if parcel.Pulse() == pulse.NextPulseNumber
-	if parcel.Pulse() > pulse.PulseNumber && mb.acquireMessagePoolItem() {
+	if parcel.Pulse() > pulse.PulseNumber {
 		if locked {
 			mb.globalLock.RUnlock()
 		}
