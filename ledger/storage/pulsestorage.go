@@ -74,7 +74,7 @@ func (ps *PulseStorage) reloadPulse(ctx context.Context) (*core.Pulse, error) {
 	defer ps.rwLock.Unlock()
 
 	if ps.currentPulse == nil {
-		currentPulse, err := ps.db.GetLatestPulse(ctx)
+		currentPulse, err := ps.db.getLatestPulse(ctx)
 		if err != nil {
 			return nil, errors.Wrap(err, "[ PulseStorage.reloadPulse ] Can't GetLatestPulse")
 		}
