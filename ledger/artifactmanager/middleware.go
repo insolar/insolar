@@ -281,7 +281,7 @@ func (m *middleware) fetchJetFromOtherNodes(
 
 			r, ok := rep.(*reply.Jet)
 			if !ok {
-				inslogger.FromContext(ctx).Errorf("unexpected reply: %#v\n", rep)
+				inslogger.FromContext(ctx).Errorf("middleware.fetchJetFromOtherNodes: unexpected reply: %#v\n", rep)
 				return
 			}
 
@@ -294,7 +294,7 @@ func (m *middleware) fetchJetFromOtherNodes(
 	}
 	wg.Wait()
 
-	seen := make(map [core.RecordID]struct{})
+	seen := make(map[core.RecordID]struct{})
 	res := make([]*core.RecordID, 0)
 	for _, r := range replies {
 		if r == nil {
@@ -307,7 +307,7 @@ func (m *middleware) fetchJetFromOtherNodes(
 			continue
 		}
 
-		seen[r.ID]=struct{}{}
+		seen[r.ID] = struct{}{}
 		res = append(res, &r.ID)
 	}
 
