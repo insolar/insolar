@@ -878,17 +878,10 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 	// }
 
 	msg := parcel.Message().(*message.HotData)
-
-	fmt.Printf(
-		"[got hot] dropPulse: %v, dropJet: %v, jet: %v",
-		msg.Drop.Pulse,
-		msg.DropJet.JetIDString(),
-		msg.Jet.Record().JetIDString(),
-	)
-	fmt.Println()
-
 	// FIXME: check split signatures.
 	jetID := *msg.Jet.Record()
+
+	inslog.Debugf("[jet]: %v got hot. Pulse: %v, DropPulse: %v, DropJet: %v\n", jetID.JetIDString(), parcel.Pulse(), msg.Drop.Pulse, msg.DropJet)
 
 	err = h.db.SetDrop(ctx, msg.DropJet, &msg.Drop)
 	if err == storage.ErrOverride {
