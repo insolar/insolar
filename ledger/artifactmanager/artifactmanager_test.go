@@ -122,7 +122,7 @@ func getTestData(t *testing.T) (
 	return ctx, db, &am, cleaner
 }
 
-func пTestLedgerArtifactManager_RegisterRequest(t *testing.T) {
+func TestLedgerArtifactManager_RegisterRequest(t *testing.T) {
 	t.Parallel()
 	ctx, db, am, cleaner := getTestData(t)
 	defer cleaner()

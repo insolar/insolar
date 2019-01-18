@@ -545,7 +545,7 @@ func TestMessageHandler_HandleGetCode_Redirects(t *testing.T) {
 	mb.MustRegisterMock.Return()
 
 	msgPulse := core.PulseNumber(core.FirstPulseNumber + 10)
-	lightChainLimit := core.PulseNumber(3 * 10)
+	lightChainLimit := 3
 	msg := message.GetCode{
 		Code: *genRandomRef(msgPulse),
 	}
@@ -573,7 +573,7 @@ func TestMessageHandler_HandleGetCode_Redirects(t *testing.T) {
 	h.RecentStorageProvider = provideMock
 
 	t.Run("redirects to light before limit threshold", func(t *testing.T) {
-		outPulse := msgPulse + lightChainLimit - 10
+		outPulse := core.PulseNumber(int(msgPulse) + lightChainLimit - 1)
 
 		lightRef := genRandomRef(0)
 		jc.LightExecutorForJetMock.Set(nil)
@@ -599,7 +599,7 @@ func TestMessageHandler_HandleGetCode_Redirects(t *testing.T) {
 	})
 
 	t.Run("redirects to heavy after limit threshold", func(t *testing.T) {
-		outPulse := msgPulse + lightChainLimit + 10
+		outPulse := core.PulseNumber(int(msgPulse) + lightChainLimit + 1)
 		heavyRef := genRandomRef(0)
 		jc.LightExecutorForJetMock.Return(&core.RecordRef{}, nil)
 		jc.HeavyMock.Return(heavyRef, nil)
