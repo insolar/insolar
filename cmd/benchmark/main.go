@@ -160,8 +160,15 @@ func getTotalBalance(insSDK *sdk.SDK, members []*sdk.Member) uint64 {
 	// execute all queries in parallel
 	for i := 0; i < nmembers; i++ {
 		go func(m *sdk.Member, num int) {
-			balance, err := insSDK.GetBalance(m)
-			res := Result{num: num, balance: balance, err: err}
+			res := Result{num: num}
+			for attempt := 0; attempt < 5; attempt++ {
+				res.balance, res.err = insSDK.GetBalance(m)
+				if res.err == nil {
+					break
+				}
+				// retry
+				time.Sleep(1 * time.Second)
+			}
 			results <- res
 			wg.Done()
 		}(members[i], i)
