@@ -29,7 +29,8 @@ var (
 )
 
 var (
-	statSyncedRecords = stats.Int64("heavyserver/synced/count", "The number synced records", stats.UnitDimensionless)
+	statSyncedCount   = stats.Int64("heavyserver/synced/count", "StoreKeyValues successful calls", stats.UnitDimensionless)
+	statSyncedRecords = stats.Int64("heavyserver/synced/records", "The number synced records", stats.UnitDimensionless)
 	statSyncedPulse   = stats.Int64("heavyserver/synced/pulse", "Last synced pulse", stats.UnitDimensionless)
 	statSyncedBytes   = stats.Int64("heavyserver/synced/bytes", "Amount of synced records in bytes", stats.UnitBytes)
 )
@@ -38,10 +39,17 @@ func init() {
 	commontags := []tag.Key{tagJet}
 	err := view.Register(
 		&view.View{
+			Name:        statSyncedCount.Name(),
+			Description: statSyncedCount.Description(),
+			Measure:     statSyncedCount,
+			Aggregation: view.Count(),
+			TagKeys:     commontags,
+		},
+		&view.View{
 			Name:        statSyncedRecords.Name(),
 			Description: statSyncedRecords.Description(),
 			Measure:     statSyncedRecords,
-			Aggregation: view.Count(),
+			Aggregation: view.Sum(),
 			TagKeys:     commontags,
 		},
 		&view.View{
@@ -55,7 +63,7 @@ func init() {
 			Name:        statSyncedBytes.Name(),
 			Description: statSyncedBytes.Description(),
 			Measure:     statSyncedBytes,
-			Aggregation: view.Count(),
+			Aggregation: view.Sum(),
 			TagKeys:     commontags,
 		},
 	)

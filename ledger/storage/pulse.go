@@ -27,9 +27,10 @@ import (
 
 // Pulse is a record containing pulse info.
 type Pulse struct {
-	Prev  *core.PulseNumber
-	Next  *core.PulseNumber
-	Pulse core.Pulse
+	Prev         *core.PulseNumber
+	Next         *core.PulseNumber
+	SerialNumber int
+	Pulse        core.Pulse
 }
 
 // Bytes serializes pulse.
@@ -69,7 +70,10 @@ func (m *TransactionManager) GetPulse(ctx context.Context, num core.PulseNumber)
 // AddPulse saves new pulse data and updates index.
 func (db *DB) AddPulse(ctx context.Context, pulse core.Pulse) error {
 	return db.Update(ctx, func(tx *TransactionManager) error {
-		var previousPulseNumber core.PulseNumber
+		var (
+			previousPulseNumber  core.PulseNumber
+			previousSerialNumber int
+		)
 		previousPulse, err := tx.GetLatestPulse(ctx)
 		if err != nil && err != ErrNotFound {
 			return err
@@ -79,6 +83,7 @@ func (db *DB) AddPulse(ctx context.Context, pulse core.Pulse) error {
 		if err == nil {
 			if previousPulse != nil {
 				previousPulseNumber = previousPulse.Pulse.PulseNumber
+				previousSerialNumber = previousPulse.SerialNumber
 			}
 
 			prevPulse, err := tx.GetPulse(ctx, previousPulseNumber)
@@ -94,8 +99,9 @@ func (db *DB) AddPulse(ctx context.Context, pulse core.Pulse) error {
 
 		// Save new pulse.
 		p := Pulse{
-			Prev:  &previousPulseNumber,
-			Pulse: pulse,
+			Prev:         &previousPulseNumber,
+			SerialNumber: previousSerialNumber + 1,
+			Pulse:        pulse,
 		}
 		err = tx.set(ctx, prefixkey(scopeIDPulse, pulse.PulseNumber.Bytes()), p.Bytes())
 		if err != nil {

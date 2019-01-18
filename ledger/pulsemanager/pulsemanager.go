@@ -83,7 +83,7 @@ type pmOptions struct {
 	enableSync       bool
 	splitThreshold   uint64
 	dropHistorySize  int
-	storeLightPulses core.PulseNumber
+	storeLightPulses int
 }
 
 // NewPulseManager creates PulseManager instance.
@@ -147,7 +147,7 @@ func (m *PulseManager) processEndPulse(
 						return errors.Wrap(err, "failed to send executor data")
 					}
 					if rep, ok := genericRep.(*reply.OK); !ok {
-						return fmt.Errorf("unexpected reply: %#v", rep)
+						return fmt.Errorf("PM.processEndPulse: unexpected reply: %#v", rep)
 					}
 					fmt.Printf("sent drop. pulse: %v, jet: %v\n", msg.Drop.Pulse, msg.DropJet.JetIDString())
 				}
@@ -167,7 +167,7 @@ func (m *PulseManager) processEndPulse(
 						return errors.Wrap(err, "failed to send executor data")
 					}
 					if rep, ok := genericRep.(*reply.OK); !ok {
-						return fmt.Errorf("unexpected reply: %#v", rep)
+						return fmt.Errorf("PM.processEndPulse: unexpected reply: %#v", rep)
 					}
 					fmt.Printf("sent drop. pulse: %v, jet: %v\n", msg.Drop.Pulse, msg.DropJet.JetIDString())
 				}
@@ -181,7 +181,7 @@ func (m *PulseManager) processEndPulse(
 						return errors.Wrap(err, "failed to send executor data")
 					}
 					if rep, ok := genericRep.(*reply.OK); !ok {
-						return fmt.Errorf("unexpected reply: %#v", rep)
+						return fmt.Errorf("PM.processEndPulse: unexpected reply: %#v", rep)
 					}
 					fmt.Printf("sent drop. pulse: %v, jet: %v\n", msg.Drop.Pulse, msg.DropJet.JetIDString())
 				}
@@ -631,13 +631,11 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 			return err
 		}
 		if m.options.enableSync {
-			err := m.AddPulseToSyncClients(ctx, storagePulse.Pulse.PulseNumber)
-			if err != nil {
-				return err
+			pn := currentPulse.PulseNumber
+			for _, jInfo := range jets {
+				m.syncClientsPool.AddPulsesToSyncClient(ctx, jInfo.id, true, pn)
 			}
-			go m.sendTreeToHeavy(ctx, storagePulse.Pulse.PulseNumber)
 		}
-
 	}
 
 	fmt.Printf(
@@ -710,33 +708,6 @@ func (m *PulseManager) prepareArtifactManagerMessageHandlerForNextPulse(ctx cont
 			}
 		}
 	}
-}
-
-func (m *PulseManager) sendTreeToHeavy(ctx context.Context, pn core.PulseNumber) {
-	jetTree, err := m.db.GetJetTree(ctx, pn)
-	if err != nil {
-		inslogger.FromContext(ctx).Error(err)
-	}
-	_, err = m.Bus.Send(ctx, &message.HeavyJetTree{PulseNum: pn, JetTree: *jetTree}, nil)
-	if err != nil {
-		inslogger.FromContext(ctx).Error(err)
-	}
-}
-
-// AddPulseToSyncClients add pulse number to all sync clients in pool.
-func (m *PulseManager) AddPulseToSyncClients(ctx context.Context, pn core.PulseNumber) error {
-	// get all jets with drops (required sync)
-	allJets, err := m.db.GetJets(ctx)
-	if err != nil {
-		return err
-	}
-	for jetID := range allJets {
-		_, err := m.db.GetDrop(ctx, jetID, pn)
-		if err == nil {
-			m.syncClientsPool.AddPulsesToSyncClient(ctx, jetID, true, pn)
-		}
-	}
-	return nil
 }
 
 // Start starts pulse manager, spawns replication goroutine under a hood.

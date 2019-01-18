@@ -246,10 +246,10 @@ func sendToHeavy(t *testing.T, withretry bool) {
 		return storage.Key(k).PulseNumber() != 0
 	})
 
-	// fmt.Println("synckeys")
-	// printkeys(synckeys, "  ")
-	// fmt.Println("getallkeys")
+	// fmt.Println("getallkeys: ", len(recs))
 	// printkeys(recs, "  ")
+	// fmt.Println("synckeys:", len(synckeys))
+	// printkeys(synckeys, "  ")
 	require.Equal(t, len(recs), len(synckeys), "synced keys count are the same as records count in storage")
 	assert.Equal(t, recs, synckeys, "synced keys are the same as records in storage")
 }
@@ -299,6 +299,10 @@ var (
 )
 
 type key []byte
+
+func (k key) String() string {
+	return storage.Key(k).String()
+}
 
 func getallkeys(db *badger.DB) (records []key) {
 	txn := db.NewTransaction(true)

@@ -94,7 +94,7 @@ func main() {
 	cfg := &cfgHolder.Configuration
 	cfg.Metrics.Namespace = "insolard"
 
-	traceID := utils.RandTraceID()
+	traceID := "main_" + utils.RandTraceID()
 	ctx, inslog := initLogger(context.Background(), cfg.Log, traceID)
 	log.SetGlobalLogger(inslog)
 
@@ -136,6 +136,10 @@ func main() {
 		params.genesisKeyOut,
 	)
 	checkError(ctx, err, "failed to init components")
+
+	ctx, inslog = inslogger.WithField(ctx, "nodeid", certManager.GetCertificate().GetNodeRef().String())
+	ctx = inslogger.SetLogger(ctx, inslog)
+	log.SetGlobalLogger(inslog)
 
 	err = cm.Init(ctx)
 	checkError(ctx, err, "failed to init components")

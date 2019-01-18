@@ -53,7 +53,7 @@ func TestLedgerArtifactManager_PendingRequest(t *testing.T) {
 	mb := testmessagebus.NewTestMessageBus(t)
 	mb.PulseStorage = amPulseStorageMock
 	jc := testutils.NewJetCoordinatorMock(mc)
-	jc.LightExecutorForJetMock.Return(&core.RecordRef{}, nil)
+	jc.HeavyMock.Return(&core.RecordRef{}, nil)
 	jc.MeMock.Return(core.RecordRef{})
 	am := NewArtifactManger(db)
 	am.PulseStorage = amPulseStorageMock

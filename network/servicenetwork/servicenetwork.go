@@ -204,6 +204,7 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
 	}
 
 	traceID := "pulse_" + strconv.FormatUint(uint64(pulse.PulseNumber), 10)
+
 	ctx, logger := inslogger.WithTraceField(ctx, traceID)
 	logger.Infof("Got new pulse number: %d", pulse.PulseNumber)
 	if n.PulseManager == nil {

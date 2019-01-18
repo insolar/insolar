@@ -19,7 +19,6 @@ package storage_test
 import (
 	"bytes"
 	"context"
-	"encoding/hex"
 	"fmt"
 	"sort"
 	"testing"
@@ -78,6 +77,10 @@ func Test_StoreKeyValues(t *testing.T) {
 			}
 		}
 		expectedrecs, expectedidxs = getallkeys(db.GetBadgerDB())
+		nullifyJetInKeys(expectedrecs)
+		nullifyJetInKeys(expectedidxs)
+		sortkeys(expectedrecs)
+		sortkeys(expectedidxs)
 	}()
 
 	var (
@@ -92,6 +95,9 @@ func Test_StoreKeyValues(t *testing.T) {
 		gotrecs, gotidxs = getallkeys(db.GetBadgerDB())
 	}()
 
+	assert.Equal(t, len(expectedrecs), len(gotrecs), "records counts are the same after restore")
+	assert.Equal(t, len(expectedidxs), len(gotidxs), "indexes count are the same after restore")
+
 	require.Equal(t, expectedrecs, gotrecs, "records are the same after restore")
 	require.Equal(t, expectedidxs, gotidxs, "indexes are the same after restore")
 }
@@ -102,6 +108,7 @@ func Test_ReplicaIter_FirstPulse(t *testing.T) {
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
 
+	// it's easy to test simple case with zero Jet
 	jetID := *jet.NewID(0, nil)
 
 	addRecords(ctx, t, db, jetID, core.FirstPulseNumber)
@@ -146,8 +153,7 @@ func Test_ReplicaIter_Base(t *testing.T) {
 
 	var lastPulse core.PulseNumber
 	pulsescount := 2
-	// FIXME: should work with random jet
-	// jetID := testutils.RandomJet()
+	// it's easy to test simple case with zero Jet
 	jetID := *jet.NewID(0, nil)
 
 	recsBefore, idxBefore := getallkeys(db.GetBadgerDB())
@@ -356,10 +362,10 @@ func getallkeys(db *badger.DB) (records []key, indexes []key) {
 	return
 }
 
-type key []byte
+type key storage.Key
 
-func (b key) String() string {
-	return hex.EncodeToString(b)
+func (k key) String() string {
+	return storage.Key(k).String()
 }
 
 func sortkeys(keys []key) []key {
@@ -372,5 +378,11 @@ func sortkeys(keys []key) []key {
 func printkeys(keys []key, prefix string) {
 	for _, k := range keys {
 		fmt.Printf("%v%v (%v)\n", prefix, k, storage.Key(k).PulseNumber())
+	}
+}
+
+func nullifyJetInKeys(keys []key) {
+	for _, k := range keys {
+		storage.NullifyJetInKey(k)
 	}
 }

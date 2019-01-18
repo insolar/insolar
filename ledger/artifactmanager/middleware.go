@@ -27,6 +27,7 @@ import (
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/pkg/errors"
 )
 
@@ -87,11 +88,23 @@ func jetFromContext(ctx context.Context) core.RecordID {
 
 func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 	return func(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
-		logger := inslogger.FromContext(ctx)
-
 		msg := parcel.Message()
 		if msg.DefaultTarget() == nil {
 			return nil, errors.New("unexpected message")
+		}
+
+		// FIXME: @andreyromancev. 17.01.19. Temporary allow any genesis request. Remove it.
+		if parcel.Pulse() == core.FirstPulseNumber {
+			return handler(contextWithJet(ctx, *jet.NewID(0, nil)), parcel)
+		}
+
+		heavy, err := m.jetCoordinator.Heavy(ctx, parcel.Pulse())
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to calculate heavy")
+		}
+		if *heavy == m.jetCoordinator.Me() {
+			// Heavy always works with zero jet.
+			return handler(contextWithJet(ctx, *jet.NewID(0, nil)), parcel)
 		}
 
 		// Check token jet.
@@ -127,20 +140,7 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to calculate executor for jet")
 		}
-		// FIXME: This probably will never happen, because we won't receive hot records.
 		if *node != m.jetCoordinator.Me() {
-			// TODO: sergey.morozov 2018-12-21 This is hack. Must implement correct Jet checking for HME.
-			logger.Debugf("checkJet: [ HACK ] checking if I am Heavy Material")
-			heavy, err := m.jetCoordinator.Heavy(ctx, parcel.Pulse())
-			if err != nil {
-				logger.Debugf("checkJet: [ HACK ] failed to check for Heavy role")
-				return nil, errors.Wrap(err, "[ HACK ] failed to check for heavy role")
-			}
-			if *heavy == m.jetCoordinator.Me() {
-				logger.Debugf("checkJet: [ HACK ] I am Heavy. Accept parcel.")
-				return handler(contextWithJet(ctx, jetID), parcel)
-			}
-
 			return &reply.JetMiss{JetID: jetID}, nil
 		}
 
@@ -281,7 +281,7 @@ func (m *middleware) fetchJetFromOtherNodes(
 
 			r, ok := rep.(*reply.Jet)
 			if !ok {
-				inslogger.FromContext(ctx).Errorf("unexpected reply: %#v\n", rep)
+				inslogger.FromContext(ctx).Errorf("middleware.fetchJetFromOtherNodes: unexpected reply: %#v\n", rep)
 				return
 			}
 
@@ -294,7 +294,7 @@ func (m *middleware) fetchJetFromOtherNodes(
 	}
 	wg.Wait()
 
-	seen := make(map [core.RecordID]struct{})
+	seen := make(map[core.RecordID]struct{})
 	res := make([]*core.RecordID, 0)
 	for _, r := range replies {
 		if r == nil {
@@ -307,7 +307,7 @@ func (m *middleware) fetchJetFromOtherNodes(
 			continue
 		}
 
-		seen[r.ID]=struct{}{}
+		seen[r.ID] = struct{}{}
 		res = append(res, &r.ID)
 	}
 

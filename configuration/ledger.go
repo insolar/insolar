@@ -80,7 +80,7 @@ type Ledger struct {
 	// between current and the latest replicated on heavy.
 	//
 	// IMPORTANT: It should be the same on ALL nodes.
-	LightChainLimit core.PulseNumber
+	LightChainLimit int
 
 	// JetSizesHistoryDepth holds maximum number of drop sizes
 	JetSizesHistoryDepth int
@@ -120,7 +120,7 @@ func NewLedger() Ledger {
 			DefaultTTL: 50,
 		},
 
-		LightChainLimit: 10 * 30 * 10000, // 30 pulses
+		LightChainLimit: 3, // 3 pulses
 
 		JetSizesHistoryDepth: 10,
 	}

@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package instracer_test
+package examples_test
 
 import (
 	"context"
