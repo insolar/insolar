@@ -24,6 +24,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/insolar/insolar/core/utils"
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
 
@@ -93,7 +94,7 @@ func main() {
 	cfg := &cfgHolder.Configuration
 	cfg.Metrics.Namespace = "insolard"
 
-	traceID := "main_process"
+	traceID := "main_" + utils.RandTraceID()
 	ctx, inslog := initLogger(context.Background(), cfg.Log, traceID)
 	log.SetGlobalLogger(inslog)
 

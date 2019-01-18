@@ -21,6 +21,7 @@ import (
 	"encoding/binary"
 	"os"
 
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -37,7 +38,8 @@ func TraceID(ctx context.Context) string {
 
 func SetTraceID(ctx context.Context, traceid string) context.Context {
 	if TraceID(ctx) != "" {
-		panic("TraceID already set")
+		log := inslogger.FromContext(ctx)
+		log.Warnf("TraceID already set: old: %s new: %s", TraceID(ctx), traceid)
 	}
 	return context.WithValue(ctx, traceIDKey{}, traceid)
 }
