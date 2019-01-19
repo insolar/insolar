@@ -276,7 +276,7 @@ func main() {
 	defer cancel()
 
 	var sigChan = make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGTERM, syscall.SIGINT, syscall.SIGHUP)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGHUP)
 
 	s := newScenarios(out, insSDK, members, concurrent, repetitions)
 	go func() {
@@ -287,9 +287,11 @@ func main() {
 			switch sig {
 			case syscall.SIGHUP:
 				printResults(s)
-			case syscall.SIGTERM, syscall.SIGINT:
+			case syscall.SIGINT:
 				if !stopGracefully {
-					log.Fatal("Force exit: ", sig.String())
+					log.Fatal("Force quiting.")
+				} else {
+					log.Info("Gracefully finishing benchmark. Press Ctrl+C again to force quit.")
 				}
 
 				stopGracefully = false
