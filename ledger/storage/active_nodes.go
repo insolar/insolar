@@ -76,3 +76,15 @@ func (db *DB) GetActiveNodesByRole(pulse core.PulseNumber, role core.StaticRole)
 
 	return inRole, nil
 }
+
+// RemoveActiveNodesUntil removes active nodes for all nodes less than provided pulse.
+func (db *DB) RemoveActiveNodesUntil(pulse core.PulseNumber) {
+	db.nodeHistoryLock.Lock()
+	defer db.nodeHistoryLock.Unlock()
+
+	for pn := range db.nodeHistory {
+		if pn < pulse {
+			delete(db.nodeHistory, pulse)
+		}
+	}
+}

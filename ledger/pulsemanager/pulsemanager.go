@@ -681,6 +681,8 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse core.Pulse) 
 		}
 	}
 
+	m.db.RemoveActiveNodesUntil(pn)
+
 	// we are remove records from 'pn' pulse number here
 	jetSyncState, err := m.db.GetAllSyncClientJets(ctx)
 	if err != nil {
