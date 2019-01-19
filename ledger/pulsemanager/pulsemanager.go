@@ -155,9 +155,8 @@ func (m *PulseManager) processEndPulse(
 				fmt.Printf("Split. jet: %v, left mine next: %v", info.id, info.left.mineNext)
 				// Split happened.
 
-				// TODO: @andreyromancev. 12.01.19. uncomment when heavy ready.
-				// m.RecentStorageProvider.GetStorage(info.left.id).ClearZeroTTLObjects()
-				// m.RecentStorageProvider.GetStorage(info.right.id).ClearZeroTTLObjects()
+				m.RecentStorageProvider.GetStorage(info.left.id).ClearZeroTTLObjects()
+				m.RecentStorageProvider.GetStorage(info.right.id).ClearZeroTTLObjects()
 
 				if !info.left.mineNext {
 					leftMsg := msg
@@ -335,9 +334,6 @@ func (m *PulseManager) getExecutorHotData(
 ) (*message.HotData, error) {
 	logger := inslogger.FromContext(ctx)
 	recentStorage := m.RecentStorageProvider.GetStorage(jetID)
-	// TODO: @andreyromancev. 12.01.19. Uncomment to check if this doesn't delete indexes it should not.
-	// recentStorage.ClearZeroTTLObjects()
-	// defer recentStorage.ClearObjects()
 	recentObjectsIds := recentStorage.GetObjects()
 
 	recentObjects := map[core.RecordID]*message.HotIndex{}
