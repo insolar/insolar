@@ -142,7 +142,7 @@ func (m *PulseManager) processEndPulse(
 				msg.Jet = *core.NewRecordRef(core.DomainID, jetID)
 				start := time.Now()
 				genericRep, err := m.Bus.Send(ctx, &msg, nil)
-				sendTime := time.Now().Sub(start)
+				sendTime := time.Since(start)
 				if sendTime > time.Second {
 					logger.Debugf("[send] jet: %v, long send: %s. Success: %v", jetID.JetIDString(), sendTime, err == nil)
 				}
