@@ -626,7 +626,7 @@ func (lr *LogicRunner) executeOrValidate(
 	go func() {
 		inslogger.FromContext(ctx).Debugf("Sending Method Results for ", request)
 
-		_, err = core.MessageBusFromContext(ctx, nil).Send(
+		_, err := core.MessageBusFromContext(ctx, nil).Send(
 			ctx,
 			&message.ReturnResults{
 				Caller:   lr.NodeNetwork.GetOrigin().ID(),
