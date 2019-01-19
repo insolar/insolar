@@ -74,6 +74,16 @@ func (db *DB) AddPulse(ctx context.Context, pulse core.Pulse) error {
 			previousPulseNumber  core.PulseNumber
 			previousSerialNumber int
 		)
+
+		_, err := tx.get(ctx, prefixkey(scopeIDPulse, pulse.PulseNumber.Bytes()))
+		if err == nil {
+			return ErrOverride
+		} else if err == ErrNotFound {
+			err = nil // nolint: ineffassign
+		} else {
+			return err
+		}
+
 		previousPulse, err := tx.GetLatestPulse(ctx)
 		if err != nil && err != ErrNotFound {
 			return err

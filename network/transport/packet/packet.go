@@ -80,16 +80,21 @@ func DeserializePacket(conn io.Reader) (*Packet, error) {
 	log.Debugf("[ DeserializePacket ] packet length %d", length)
 	buf := make([]byte, length)
 	if _, err := io.ReadFull(conn, buf); err != nil {
+		log.Error("[ DeserializePacket ] couldn't read packet: ", err)
 		return nil, err
 	}
+	log.Debugf("[ DeserializePacket ] read packet")
 
 	msg := &Packet{}
 	dec := gob.NewDecoder(bytes.NewReader(buf))
 
 	err = dec.Decode(msg)
 	if err != nil {
+		log.Error("[ DeserializePacket ] couldn't decode packet: ", err)
 		return nil, err
 	}
+
+	log.Debugf("[ DeserializePacket ] decoded packet to %#v", msg)
 
 	return msg, nil
 }
