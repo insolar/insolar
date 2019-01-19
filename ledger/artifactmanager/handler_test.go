@@ -141,8 +141,6 @@ func TestMessageHandler_HandleGetObject_Redirects(t *testing.T) {
 	})
 
 	t.Run("redirect to heavy when has index and state earlier than limit", func(t *testing.T) {
-		err := db.AddPulse(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 1})
-		require.NoError(t, err)
 		err = db.AddPulse(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 2})
 		require.NoError(t, err)
 		heavyRef := genRandomRef(0)
@@ -268,8 +266,6 @@ func TestMessageHandler_HandleGetChildren_Redirects(t *testing.T) {
 	})
 
 	t.Run("redirect to heavy when has index and child earlier than limit", func(t *testing.T) {
-		err := db.AddPulse(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 1})
-		require.NoError(t, err)
 		err = db.AddPulse(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 2})
 		require.NoError(t, err)
 		heavyRef := genRandomRef(0)
@@ -591,8 +587,6 @@ func TestMessageHandler_HandleGetCode_Redirects(t *testing.T) {
 	})
 
 	t.Run("redirects to heavy after limit threshold", func(t *testing.T) {
-		err := db.AddPulse(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 1})
-		require.NoError(t, err)
 		err = db.AddPulse(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 2})
 		require.NoError(t, err)
 		heavyRef := genRandomRef(0)

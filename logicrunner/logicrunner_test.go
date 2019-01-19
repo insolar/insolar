@@ -189,7 +189,7 @@ func incrementPulseHelper(t *testing.T, ctx context.Context, lr core.LogicRunner
 		&message.HotData{
 			Jet:                *core.NewRecordRef(core.DomainID, rootJetId),
 			DropJet:            rootJetId,
-			Drop:               jet.JetDrop{},
+			Drop:               jet.JetDrop{Pulse: 1},
 			RecentObjects:      nil,
 			PendingRequests:    nil,
 			PulseNumber:        newPulseNumber,
