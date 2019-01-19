@@ -79,7 +79,7 @@ func (db *DB) AddPulse(ctx context.Context, pulse core.Pulse) error {
 		if err == nil {
 			return ErrOverride
 		} else if err == ErrNotFound {
-			err = nil
+			err = nil // nolint: ineffassign
 		} else {
 			return err
 		}
