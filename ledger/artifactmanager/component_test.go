@@ -29,6 +29,7 @@ import (
 	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/testutils"
+	"github.com/insolar/insolar/testutils/network"
 	"github.com/insolar/insolar/testutils/testmessagebus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -49,6 +50,11 @@ func TestLedgerArtifactManager_PendingRequest(t *testing.T) {
 		return &pulse.Pulse, err
 	}
 
+	nodeMock := network.NewNodeMock(t)
+	nodeMock.RoleMock.Return(core.StaticRoleLightMaterial)
+	nodeNetworkMock := network.NewNodeNetworkMock(t)
+	nodeNetworkMock.GetOriginMock.Return(nodeMock)
+
 	cs := testutils.NewPlatformCryptographyScheme()
 	mb := testmessagebus.NewTestMessageBus(t)
 	mb.PulseStorage = amPulseStorageMock
@@ -66,6 +72,7 @@ func TestLedgerArtifactManager_PendingRequest(t *testing.T) {
 	handler.Bus = mb
 	handler.JetCoordinator = jc
 	handler.RecentStorageProvider = provider
+	handler.NodeNet = nodeNetworkMock
 	err := handler.Init(ctx)
 	require.NoError(t, err)
 	objRef := *genRandomRef(0)

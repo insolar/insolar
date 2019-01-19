@@ -738,6 +738,11 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 	recentStorageMock.AddObjectMock.Return()
 	recentStorageMock.GetRequestsMock.Return(nil)
 
+	nodeMock := network.NewNodeMock(t)
+	nodeMock.RoleMock.Return(core.StaticRoleLightMaterial)
+	nodeNetworkMock := network.NewNodeNetworkMock(t)
+	nodeNetworkMock.GetOriginMock.Return(nodeMock)
+
 	handler := MessageHandler{
 		db:                         db,
 		replayHandlers:             map[core.MessageType]core.MessageHandler{},
@@ -747,6 +752,7 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 
 	handler.Bus = mb
 	handler.JetCoordinator = jc
+	handler.NodeNet = nodeNetworkMock
 
 	provideMock := recentstorage.NewProviderMock(t)
 	provideMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {

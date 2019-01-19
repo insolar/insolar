@@ -34,6 +34,7 @@ import (
 	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/testutils"
+	"github.com/insolar/insolar/testutils/network"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -63,6 +64,11 @@ func TestMessageHandler_HandleGetObject_Redirects(t *testing.T) {
 	recentStorageMock.AddObjectMock.Return()
 	recentStorageMock.RemovePendingRequestMock.Return()
 
+	nodeMock := network.NewNodeMock(t)
+	nodeMock.RoleMock.Return(core.StaticRoleLightMaterial)
+	nodeNetworkMock := network.NewNodeNetworkMock(t)
+	nodeNetworkMock.GetOriginMock.Return(nodeMock)
+
 	mb := testutils.NewMessageBusMock(mc)
 	mb.MustRegisterMock.Return()
 
@@ -75,6 +81,8 @@ func TestMessageHandler_HandleGetObject_Redirects(t *testing.T) {
 	h.JetCoordinator = jc
 	h.DelegationTokenFactory = tf
 	h.Bus = mb
+	h.NodeNet = nodeNetworkMock
+
 	err := h.Init(ctx)
 	require.NoError(t, err)
 
@@ -186,6 +194,11 @@ func TestMessageHandler_HandleGetChildren_Redirects(t *testing.T) {
 	recentStorageMock.AddObjectMock.Return()
 	recentStorageMock.RemovePendingRequestMock.Return()
 
+	nodeMock := network.NewNodeMock(t)
+	nodeMock.RoleMock.Return(core.StaticRoleLightMaterial)
+	nodeNetworkMock := network.NewNodeNetworkMock(t)
+	nodeNetworkMock.GetOriginMock.Return(nodeMock)
+
 	msg := message.GetChildren{
 		Parent: *genRandomRef(0),
 	}
@@ -196,6 +209,8 @@ func TestMessageHandler_HandleGetChildren_Redirects(t *testing.T) {
 	h.JetCoordinator = jc
 	h.DelegationTokenFactory = tf
 	h.Bus = mb
+	h.NodeNet = nodeNetworkMock
+
 	err := h.Init(ctx)
 	require.NoError(t, err)
 	provideMock := recentstorage.NewProviderMock(t)
@@ -302,6 +317,11 @@ func TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeavy(t *testing.T) {
 	recentStorageMock.AddObjectMock.Return()
 	recentStorageMock.RemovePendingRequestMock.Return()
 
+	nodeMock := network.NewNodeMock(t)
+	nodeMock.RoleMock.Return(core.StaticRoleLightMaterial)
+	nodeNetworkMock := network.NewNodeNetworkMock(t)
+	nodeNetworkMock.GetOriginMock.Return(nodeMock)
+
 	mb := testutils.NewMessageBusMock(mc)
 	mb.MustRegisterMock.Return()
 	jc := testutils.NewJetCoordinatorMock(mc)
@@ -316,6 +336,7 @@ func TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeavy(t *testing.T) {
 	}
 
 	h.RecentStorageProvider = provideMock
+	h.NodeNet = nodeNetworkMock
 
 	delegateType := *genRandomRef(0)
 	delegate := *genRandomRef(0)
@@ -370,6 +391,11 @@ func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 	recentStorageMock.AddObjectMock.Return()
 	recentStorageMock.RemovePendingRequestMock.Return()
 
+	nodeMock := network.NewNodeMock(t)
+	nodeMock.RoleMock.Return(core.StaticRoleLightMaterial)
+	nodeNetworkMock := network.NewNodeNetworkMock(t)
+	nodeNetworkMock.GetOriginMock.Return(nodeMock)
+
 	mb := testutils.NewMessageBusMock(mc)
 	mb.MustRegisterMock.Return()
 	jc := testutils.NewJetCoordinatorMock(mc)
@@ -377,6 +403,7 @@ func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 	h := NewMessageHandler(db, &configuration.Ledger{
 		LightChainLimit: 3,
 	})
+	h.NodeNet = nodeNetworkMock
 
 	provideMock := recentstorage.NewProviderMock(t)
 	provideMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
@@ -618,12 +645,18 @@ func TestMessageHandler_HandleRegisterChild_FetchesIndexFromHeavy(t *testing.T) 
 	recentStorageMock.AddObjectMock.Return()
 	recentStorageMock.RemovePendingRequestMock.Return()
 
+	nodeMock := network.NewNodeMock(t)
+	nodeMock.RoleMock.Return(core.StaticRoleLightMaterial)
+	nodeNetworkMock := network.NewNodeNetworkMock(t)
+	nodeNetworkMock.GetOriginMock.Return(nodeMock)
+
 	mb := testutils.NewMessageBusMock(mc)
 	mb.MustRegisterMock.Return()
 	jc := testutils.NewJetCoordinatorMock(mc)
 	h := NewMessageHandler(db, &configuration.Ledger{
 		LightChainLimit: 2,
 	})
+	h.NodeNet = nodeNetworkMock
 
 	provideMock := recentstorage.NewProviderMock(t)
 	provideMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {

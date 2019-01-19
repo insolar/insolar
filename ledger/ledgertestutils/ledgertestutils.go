@@ -93,6 +93,7 @@ func TmpLedger(t *testing.T, dir string, c core.Components) (*ledger.Ledger, fun
 	handler := artifactmanager.NewMessageHandler(db, &conf)
 	handler.PlatformCryptographyScheme = pcs
 	handler.JetCoordinator = jc
+	handler.NodeNet = c.NodeNetwork
 
 	gilMock := testutils.NewGlobalInsolarLockMock(t)
 	gilMock.AcquireFunc = func(context.Context) {}
