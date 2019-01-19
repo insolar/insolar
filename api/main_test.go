@@ -31,7 +31,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 )
 
-const HOST = "http://localhost:19191"
+const HOST = "http://localhost:19101"
 const TestUrl = HOST + "/api/call"
 
 type MainAPISuite struct {

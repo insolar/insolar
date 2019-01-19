@@ -38,7 +38,7 @@ import (
 )
 
 const defaultStdoutPath = "-"
-const defaultURL = "http://localhost:19191/api"
+const defaultURL = "http://localhost:19101/api"
 
 func genDefaultConfig(r interface{}) ([]byte, error) {
 	t := reflect.TypeOf(r)
