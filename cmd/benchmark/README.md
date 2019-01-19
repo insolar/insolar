@@ -30,7 +30,7 @@ Usage
                 Path to file with RootMember keys.
 
         -u apiurl (may be specified multiple times for roundrobin requests)
-                API url for requests (default - http://localhost:19191/api).
+                API url for requests (default - http://localhost:19101/api).
 
         -l loglevel
                 Log level (default - info).

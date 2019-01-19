@@ -61,7 +61,7 @@ type Genesis struct {
 	rootMemberRef   *core.RecordRef
 	prototypeRefs   map[string]*core.RecordRef
 	isGenesis       bool
-	config          *genesisConfig
+	config          *Config
 	keyOut          string
 	ArtifactManager core.ArtifactManager `inject:""`
 	MBLock          messageBusLocker     `inject:""`
@@ -74,7 +74,7 @@ func NewGenesis(isGenesis bool, genesisConfigPath string, genesisKeyOut string) 
 	genesis.rootDomainRef = &core.RecordRef{}
 	genesis.isGenesis = isGenesis
 	if isGenesis {
-		genesis.config, err = parseGenesisConfig(genesisConfigPath)
+		genesis.config, err = ParseGenesisConfig(genesisConfigPath)
 		genesis.keyOut = genesisKeyOut
 	}
 	return genesis, err
