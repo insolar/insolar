@@ -218,6 +218,7 @@ func (gpr *RPC) GetObjChildrenIterator(
 		iterator, ok = iteratorMap[iteratorID]
 		if !ok {
 			iteratorMap[iteratorID] = &newIterator
+			iterator = &newIterator
 		}
 		iteratorMapLock.Unlock()
 	}
