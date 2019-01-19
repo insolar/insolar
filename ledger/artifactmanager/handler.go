@@ -70,23 +70,19 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 	m := newMiddleware(h.conf, h.db, h.JetCoordinator, h.Bus, h.PulseStorage)
 	h.middleware = m
 
-	// Generic.
-	h.replayHandlers[core.TypeGetCode] = h.handleGetCode
-	h.replayHandlers[core.TypeGetObject] = m.checkJet(h.handleGetObject)
-	h.replayHandlers[core.TypeGetDelegate] = m.checkJet(h.handleGetDelegate)
-	h.replayHandlers[core.TypeGetChildren] = m.checkJet(h.handleGetChildren)
-	h.replayHandlers[core.TypeSetRecord] = m.checkJet(h.handleSetRecord)
-	h.replayHandlers[core.TypeUpdateObject] = m.checkJet(h.handleUpdateObject)
-	h.replayHandlers[core.TypeRegisterChild] = m.checkJet(h.handleRegisterChild)
-	h.replayHandlers[core.TypeSetBlob] = m.checkJet(h.handleSetBlob)
-	h.replayHandlers[core.TypeGetObjectIndex] = m.checkJet(h.handleGetObjectIndex)
-	h.replayHandlers[core.TypeGetPendingRequests] = m.checkJet(h.handleHasPendingRequests)
-	h.replayHandlers[core.TypeGetJet] = h.handleGetJet
+	if h.NodeNet.GetOrigin().Role() == core.StaticRoleLightMaterial {
+		h.setHandlersForLight(m)
+		h.setReplayHandlers(m)
+	}
 
-	// Validation.
-	h.replayHandlers[core.TypeValidateRecord] = m.checkJet(h.handleValidateRecord)
-	h.replayHandlers[core.TypeValidationCheck] = m.checkJet(h.handleValidationCheck)
+	if h.NodeNet.GetOrigin().Role() == core.StaticRoleHeavyMaterial {
+		h.setHandlersForHeavy(m)
+	}
 
+	return nil
+}
+
+func (h *MessageHandler) setHandlersForLight(m *middleware) {
 	// Generic.
 	h.Bus.MustRegister(core.TypeGetCode, h.handleGetCode)
 	h.Bus.MustRegister(core.TypeGetObject, m.checkJet(m.checkEarlyRequestBreaker(h.handleGetObject)))
@@ -105,19 +101,46 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 	h.Bus.MustRegister(core.TypeValidateRecord, m.checkJet(h.handleValidateRecord))
 	h.Bus.MustRegister(core.TypeValidationCheck, m.checkJet(h.handleValidationCheck))
 	h.Bus.MustRegister(core.TypeJetDrop, m.checkJet(h.handleJetDrop))
+}
+func (h *MessageHandler) setReplayHandlers(m *middleware) {
+	// Generic.
+	h.replayHandlers[core.TypeGetCode] = h.handleGetCode
+	h.replayHandlers[core.TypeGetObject] = m.checkJet(h.handleGetObject)
+	h.replayHandlers[core.TypeGetDelegate] = m.checkJet(h.handleGetDelegate)
+	h.replayHandlers[core.TypeGetChildren] = m.checkJet(h.handleGetChildren)
+	h.replayHandlers[core.TypeSetRecord] = m.checkJet(h.handleSetRecord)
+	h.replayHandlers[core.TypeUpdateObject] = m.checkJet(h.handleUpdateObject)
+	h.replayHandlers[core.TypeRegisterChild] = m.checkJet(h.handleRegisterChild)
+	h.replayHandlers[core.TypeSetBlob] = m.checkJet(h.handleSetBlob)
+	h.replayHandlers[core.TypeGetObjectIndex] = m.checkJet(h.handleGetObjectIndex)
+	h.replayHandlers[core.TypeGetPendingRequests] = m.checkJet(h.handleHasPendingRequests)
+	h.replayHandlers[core.TypeGetJet] = h.handleGetJet
 
+	// Validation.
+	h.replayHandlers[core.TypeValidateRecord] = m.checkJet(h.handleValidateRecord)
+	h.replayHandlers[core.TypeValidationCheck] = m.checkJet(h.handleValidationCheck)
+}
+func (h *MessageHandler) setHandlersForHeavy(m *middleware) {
 	// Heavy.
 	h.Bus.MustRegister(core.TypeHeavyStartStop, h.handleHeavyStartStop)
 	h.Bus.MustRegister(core.TypeHeavyReset, h.handleHeavyReset)
 	h.Bus.MustRegister(core.TypeHeavyPayload, h.handleHeavyPayload)
 
-	return nil
+	// Generic.
+	h.Bus.MustRegister(core.TypeGetCode, h.handleGetCode)
+	h.Bus.MustRegister(core.TypeGetObject, m.zeroJetForHeavy(h.handleGetObject))
+	h.Bus.MustRegister(core.TypeGetDelegate, m.zeroJetForHeavy(h.handleGetDelegate))
+	h.Bus.MustRegister(core.TypeGetChildren, m.zeroJetForHeavy(h.handleGetChildren))
+	h.Bus.MustRegister(core.TypeGetObjectIndex, m.zeroJetForHeavy(h.handleGetObjectIndex))
+	h.Bus.MustRegister(core.TypeGetJet, m.zeroJetForHeavy(h.handleGetJet))
 }
 
+// ResetEarlyRequestCircuitBreaker throws timeouts at the end of a pulse
 func (h *MessageHandler) ResetEarlyRequestCircuitBreaker(ctx context.Context) {
 	h.middleware.earlyRequestCircuitBreakerProvider.onTimeoutHappened(ctx)
 }
 
+// CloseEarlyRequestCircuitBreakerForJet close circuit breaker for a specific jet
 func (h *MessageHandler) CloseEarlyRequestCircuitBreakerForJet(ctx context.Context, jetID core.RecordID) {
 	inslogger.FromContext(ctx).Debugf("[CloseEarlyRequestCircuitBreakerForJet] %v", jetID.JetIDString())
 	h.middleware.closeEarlyRequestBreakerForJet(ctx, jetID)
