@@ -696,7 +696,8 @@ func (m *PulseManager) cleanJetsData(ctx context.Context, newPulse core.Pulse) {
 		return
 	}
 	for jetID, _ := range jetSyncState {
-		inslogger.FromContext(ctx).Debugf("Start light indexes cleanup, until pulse = %v, jet = %v", pn, jetID)
+		inslogger.FromContext(ctx).Debugf("Start light indexes cleanup, until pulse = %v (new=%v, delta=%v), jet = %v",
+			pn, newPulse, delta, jetID)
 		if _, err := m.db.RemoveJetIndexesUntil(ctx, jetID, pn); err != nil {
 			inslogger.FromContext(ctx).Errorf("Error on light cleanup, until pulse = %v, jet = %v: %v", pn, jetID, err)
 		}
