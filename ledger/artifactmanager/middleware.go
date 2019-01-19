@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
@@ -28,7 +30,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/jet"
-	"github.com/pkg/errors"
 )
 
 type middleware struct {
@@ -188,12 +189,16 @@ func (m *middleware) fetchJet(
 	}
 	jetID, actual := tree.Find(target)
 	if actual {
-		if actual {
-			fmt.Printf("[mine] %v, %v\n", jetID.JetIDString(), target.String())
-			fmt.Println()
-		}
+		inslogger.FromContext(ctx).Debug(
+			"we believe object %s is in JET %s", target.String(), jetID.JetIDString(),
+		)
 		return jetID, actual, nil
 	}
+
+	inslogger.FromContext(ctx).Debug(
+		"jet %s is not actual in our tree, asking neighbors for jet of object %s",
+		jetID.JetIDString(), target.String(),
+	)
 
 	m.seqMutex.Lock()
 	if _, ok := m.sequencer[*jetID]; !ok {
@@ -208,13 +213,20 @@ func (m *middleware) fetchJet(
 	mu.Lock()
 	if mu.done {
 		mu.Unlock()
+		inslogger.FromContext(ctx).Debug(
+			"somebody else updated actuality of jet %s, rechecking our DB",
+			jetID.JetIDString(),
+		)
 		return m.fetchJet(ctx, target, pulse)
 	}
 	defer func() {
+		inslogger.FromContext(ctx).Debug("done fetching jet, cleaning")
+
 		mu.done = true
 		mu.Unlock()
 
 		m.seqMutex.Lock()
+		inslogger.FromContext(ctx).Debug("deleting sequencer for jet %s", jetID.JetIDString())
 		delete(m.sequencer, *jetID)
 		m.seqMutex.Unlock()
 	}()
@@ -225,6 +237,10 @@ func (m *middleware) fetchJet(
 	}
 
 	if len(jets) == 1 {
+		inslogger.FromContext(ctx).Debug(
+			"got one actual jet %s for object %s",
+			jetID.JetIDString(), target.String(),
+		)
 		return jets[0], true, nil
 	} else if len(jets) == 0 {
 		inslogger.FromContext(ctx).Error(
@@ -235,6 +251,10 @@ func (m *middleware) fetchJet(
 		)
 		return nil, false, errors.New("impossible situation")
 	} else {
+		inslogger.FromContext(ctx).Error(
+			"Active light materials said different actual jets for object %s",
+			target.String(),
+		)
 		return nil, false, errors.New("nodes returned more than one unique jet")
 	}
 }
