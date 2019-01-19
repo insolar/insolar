@@ -31,18 +31,18 @@ func TestDB_AddPulse_IncrementsSerialNumber(t *testing.T) {
 	db, cleaner := TmpDB(ctx, t)
 	defer cleaner()
 
-	err := db.AddPulse(ctx, core.Pulse{})
+	err := db.AddPulse(ctx, core.Pulse{PulseNumber: 1})
 	require.NoError(t, err)
-	pulse, err := db.GetLatestPulse(ctx)
+	pulse, err := db.GetPulse(ctx, 1)
 	assert.Equal(t, 2, pulse.SerialNumber)
 
-	err = db.AddPulse(ctx, core.Pulse{})
+	err = db.AddPulse(ctx, core.Pulse{PulseNumber: 2})
 	require.NoError(t, err)
-	pulse, err = db.GetLatestPulse(ctx)
+	pulse, err = db.GetPulse(ctx, 2)
 	assert.Equal(t, 3, pulse.SerialNumber)
 
-	err = db.AddPulse(ctx, core.Pulse{})
+	err = db.AddPulse(ctx, core.Pulse{PulseNumber: 3})
 	require.NoError(t, err)
-	pulse, err = db.GetLatestPulse(ctx)
+	pulse, err = db.GetPulse(ctx, 3)
 	assert.Equal(t, 4, pulse.SerialNumber)
 }

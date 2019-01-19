@@ -231,7 +231,7 @@ func (h *MessageHandler) handleGetObject(
 		}
 		_, err = h.saveIndexFromHeavy(ctx, h.db, jetID, msg.Head, node)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "failed to fetch index from heavy")
 		}
 		// Add requested object to recent.
 		if h.NodeNet.GetOrigin().Role() != core.StaticRoleHeavyMaterial {
@@ -375,10 +375,9 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel core.Parc
 		}
 		idx, err = h.saveIndexFromHeavy(ctx, h.db, jetID, msg.Head, heavy)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "failed to fetch index from heavy")
 		}
 	} else if err != nil {
-		fmt.Println("handleGetDelegate: failed to fetch object index, error - ", err)
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
 
@@ -418,7 +417,7 @@ func (h *MessageHandler) handleGetChildren(
 		}
 		_, err = h.saveIndexFromHeavy(ctx, h.db, jetID, msg.Parent, heavy)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "failed to fetch index from heavy")
 		}
 		return reply.NewGetChildrenRedirect(h.DelegationTokenFactory, parcel, heavy)
 	}
@@ -552,7 +551,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 				}
 				idx, err = h.saveIndexFromHeavy(ctx, h.db, jetID, msg.Object, heavy)
 				if err != nil {
-					return err
+					return errors.Wrap(err, "failed to fetch index from heavy")
 				}
 			}
 		} else if err != nil {
@@ -633,7 +632,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel core.Pa
 			}
 			idx, err = h.saveIndexFromHeavy(ctx, h.db, jetID, msg.Parent, heavy)
 			if err != nil {
-				return err
+				return errors.Wrap(err, "failed to fetch index from heavy")
 			}
 		} else if err != nil {
 			return err
@@ -733,7 +732,7 @@ func (h *MessageHandler) handleValidateRecord(ctx context.Context, parcel core.P
 			}
 			idx, err = h.saveIndexFromHeavy(ctx, h.db, jetID, msg.Object, heavy)
 			if err != nil {
-				return err
+				return errors.Wrap(err, "failed to fetch index from heavy")
 			}
 		} else if err != nil {
 			return err
@@ -874,8 +873,7 @@ func (h *MessageHandler) saveIndexFromHeavy(
 		Receiver: heavy,
 	})
 	if err != nil {
-		fmt.Println("saveIndexFromHeavy: failed to fetch object index, Send error - ", err)
-		return nil, errors.Wrap(err, "failed to fetch object index")
+		return nil, errors.Wrap(err, "failed to send")
 	}
 	rep, ok := genericReply.(*reply.ObjectIndex)
 	if !ok {
@@ -883,13 +881,11 @@ func (h *MessageHandler) saveIndexFromHeavy(
 	}
 	idx, err := index.DecodeObjectLifeline(rep.Index)
 	if err != nil {
-		fmt.Println("saveIndexFromHeavy: failed to fetch object index DecodeObjectLifeline, error - ", err)
-		return nil, errors.Wrap(err, "failed to fetch object index")
+		return nil, errors.Wrap(err, "failed to decode")
 	}
 	err = s.SetObjectIndex(ctx, jetID, obj.Record(), idx)
 	if err != nil {
-		fmt.Println("saveIndexFromHeavy: failed to fetch object index SetObjectIndex, error - ", err)
-		return nil, errors.Wrap(err, "failed to fetch object index")
+		return nil, errors.Wrap(err, "failed to save")
 	}
 	return idx, nil
 }
@@ -912,7 +908,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 
 	err = h.db.SetDrop(ctx, msg.DropJet, &msg.Drop)
 	if err != nil {
-		return nil, errors.Wrap(err, "[jet]: drop error")
+		return nil, errors.Wrapf(err, "[jet]: drop error (pulse: %v)", msg.Drop.Pulse)
 	}
 	err = h.db.SetDropSizeHistory(ctx, msg.DropJet, msg.JetDropSizeHistory)
 	if err != nil {

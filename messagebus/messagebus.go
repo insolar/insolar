@@ -25,6 +25,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/core/utils"
+
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 
@@ -39,8 +41,6 @@ import (
 )
 
 const deliverRPCMethodName = "MessageBus.Deliver"
-
-const MaxNextPulseMessagePool = 1000
 
 // MessageBus is component that routes application logic requests,
 // e.g. glue between network and logic runner
@@ -61,7 +61,7 @@ type MessageBus struct {
 	globalLock                  sync.RWMutex
 	NextPulseMessagePoolChan    chan interface{}
 	NextPulseMessagePoolCounter uint32
-	NextPulseMessagePoolLock    sync.Mutex
+	NextPulseMessagePoolLock    sync.RWMutex
 }
 
 // NewMessageBus creates plain MessageBus instance. It can be used to create Player and Recorder instances that
@@ -233,25 +233,14 @@ func (e *serializableError) Error() string {
 }
 
 func (mb *MessageBus) OnPulse(context.Context, core.Pulse) error {
-	tmp := mb.NextPulseMessagePoolChan
-	mb.NextPulseMessagePoolChan = make(chan interface{})
-	mb.NextPulseMessagePoolLock.Lock()
-	mb.NextPulseMessagePoolCounter = 0
-	mb.NextPulseMessagePoolLock.Unlock()
-	close(tmp)
-	return nil
-}
+	close(mb.NextPulseMessagePoolChan)
 
-func (mb *MessageBus) acquireMessagePoolItem() bool {
 	mb.NextPulseMessagePoolLock.Lock()
 	defer mb.NextPulseMessagePoolLock.Unlock()
 
-	if mb.NextPulseMessagePoolCounter > MaxNextPulseMessagePool {
-		return false
-	}
+	mb.NextPulseMessagePoolChan = make(chan interface{})
 
-	mb.NextPulseMessagePoolCounter++
-	return true
+	return nil
 }
 
 func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Reply, error) {
@@ -297,31 +286,54 @@ func (mb *MessageBus) checkPulse(ctx context.Context, parcel core.Parcel, locked
 	}
 
 	// TODO: check if parcel.Pulse() == pulse.NextPulseNumber
-	if parcel.Pulse() > pulse.PulseNumber && mb.acquireMessagePoolItem() {
+	if parcel.Pulse() > pulse.PulseNumber {
+		inslogger.FromContext(ctx).Debug(
+			"message from the future, our pulse: ", pulse.PulseNumber, " msg pulse: ", parcel.Pulse(),
+		)
 		if locked {
 			mb.globalLock.RUnlock()
 		}
-		<-mb.NextPulseMessagePoolChan
+
+		mb.NextPulseMessagePoolLock.RLock()
+
+		ctx := inslogger.ContextWithTrace(context.Background(), utils.TraceID(ctx))
+		pulse, err = mb.PulseStorage.Current(ctx)
+		if err != nil {
+			mb.NextPulseMessagePoolLock.RUnlock()
+			if locked {
+				mb.globalLock.RLock()
+			}
+			return errors.Wrap(err, "[ checkPulse ] Couldn't get current pulse number")
+		}
+		inslogger.FromContext(ctx).Debug("rechecking pulse after lock, pulse: ", pulse.PulseNumber)
+		if parcel.Pulse() > pulse.PulseNumber {
+			inslogger.FromContext(ctx).Debug("still in future")
+			<-mb.NextPulseMessagePoolChan
+			pulse, err = mb.PulseStorage.Current(ctx)
+			if err != nil {
+				mb.NextPulseMessagePoolLock.RUnlock()
+				if locked {
+					mb.globalLock.RLock()
+				}
+				return errors.Wrap(err, "[ checkPulse ] Couldn't get current pulse number")
+			}
+
+		}
+		mb.NextPulseMessagePoolLock.RUnlock()
+
 		if locked {
 			mb.globalLock.RLock()
 		}
-	}
-
-	pulse, err = mb.PulseStorage.Current(ctx)
-	if err != nil {
-		return errors.Wrap(err, "[ checkPulse ] Couldn't get current pulse number")
-	}
-
-	// TODO: remove me after old pulses problem will be solved
-	if parcel.Pulse() < pulse.PrevPulseNumber {
+	} else if parcel.Pulse() < pulse.PrevPulseNumber {
 		inslogger.FromContext(ctx).Errorf("[ checkPulse ] Pulse is TOO OLD: (parcel: %d, current: %d) Parcel is: %#v", parcel.Pulse(), pulse.PulseNumber, parcel.Message())
 	}
 
 	if parcel.Pulse() > pulse.PulseNumber {
 		// We waited for next pulse but parcel is still from future. Return error.
-		inslogger.FromContext(ctx).Errorf("[ checkPulse ] Incorrect message pulse (parcel: %d, current: %d)", parcel.Pulse(), pulse.PulseNumber)
+		inslogger.FromContext(ctx).Errorf("[ checkPulse ] After all checks, message pulse is still bigger then current (parcel: %d, current: %d)", parcel.Pulse(), pulse.PulseNumber)
 		return fmt.Errorf("[ checkPulse ] Incorrect message pulse (parcel: %d, current: %d)", parcel.Pulse(), pulse.PulseNumber)
-	} else if parcel.Pulse() < pulse.PulseNumber {
+	}
+	if parcel.Pulse() < pulse.PulseNumber {
 		// Parcel is from past. Return error for some messages, allow for others.
 		switch parcel.Message().(type) {
 		case
@@ -341,6 +353,7 @@ func (mb *MessageBus) checkPulse(ctx context.Context, parcel core.Parcel, locked
 			return fmt.Errorf("[ checkPulse ] Incorrect message pulse (parcel: %d, current: %d)", parcel.Pulse(), pulse.PulseNumber)
 		}
 	}
+
 	return nil
 }
 
