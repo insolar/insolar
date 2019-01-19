@@ -20,7 +20,6 @@ import (
 	"context"
 	"io"
 	"net"
-	"sync/atomic"
 
 	"github.com/pkg/errors"
 
@@ -37,7 +36,6 @@ type tcpTransport struct {
 	pool     pool.ConnectionPool
 	listener net.Listener
 	addr     string
-	stopped  uint32
 }
 
 func newTCPTransport(addr string, proxy relay.Proxy, publicAddress string) (*tcpTransport, error) {
@@ -94,7 +92,6 @@ func (t *tcpTransport) prepareListen() {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 
-	atomic.StoreUint32(&t.stopped, 0)
 	t.disconnectStarted = make(chan bool, 1)
 	t.disconnectFinished = make(chan bool, 1)
 	listener, err := net.Listen("tcp", t.addr)
@@ -134,21 +131,14 @@ func (t *tcpTransport) Stop() {
 	log.Info("[ Stop ] Stop TCP transport")
 	t.prepareDisconnect()
 
-	atomic.StoreUint32(&t.stopped, 1)
 	utils.CloseVerbose(t.listener)
 	t.pool.Reset()
 }
 
 func (t *tcpTransport) handleAcceptedConnection(conn net.Conn) {
 	defer utils.CloseVerbose(conn)
-	closed := false
 
 	for {
-		if !closed && atomic.LoadUint32(&t.stopped) == 1 {
-			closed = true
-			log.Infof("[ handleAcceptedConnection ] Stop handling connection: %s", conn.RemoteAddr().String())
-		}
-
 		msg, err := t.serializer.DeserializePacket(conn)
 
 		if err != nil {
