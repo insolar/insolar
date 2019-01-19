@@ -107,8 +107,6 @@ func NewPulseManager(db *storage.DB, conf configuration.Ledger) *PulseManager {
 		},
 		syncClientsPool: heavySyncPool,
 	}
-
-	// TODO: untie this circular dependency after moving sync client to separate component - 17.Dec.2018 @nordicdyno
 	return pm
 }
 
@@ -158,8 +156,7 @@ func (m *PulseManager) processEndPulse(
 			}
 
 			if info.left == nil && info.right == nil {
-				// TODO: @andreyromancev. 12.01.19. uncomment when heavy ready.
-				// m.RecentStorageProvider.GetStorage(info.id).ClearZeroTTLObjects()
+				m.RecentStorageProvider.GetStorage(info.id).ClearZeroTTLObjects()
 
 				// No split happened.
 				if !info.mineNext {
@@ -614,7 +611,6 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 	)
 	fmt.Println()
 
-	// TODO: @andreyromancev. 12.01.19. uncomment when heavy ready.
 	m.postProcessJets(ctx, newPulse, jets)
 
 	err = m.Bus.OnPulse(ctx, newPulse)
