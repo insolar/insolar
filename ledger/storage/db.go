@@ -419,9 +419,6 @@ func (db *DB) Update(ctx context.Context, fn func(*TransactionManager) error) er
 	}
 	tx.Discard()
 
-	if err != nil {
-		inslogger.FromContext(ctx).Errorln("DB Update error:", err)
-	}
 	return err
 }
 

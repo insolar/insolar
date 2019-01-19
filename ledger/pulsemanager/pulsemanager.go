@@ -140,7 +140,12 @@ func (m *PulseManager) processEndPulse(
 
 			sender := func(msg message.HotData, jetID core.RecordID) {
 				msg.Jet = *core.NewRecordRef(core.DomainID, jetID)
+				start := time.Now()
 				genericRep, err := m.Bus.Send(ctx, &msg, nil)
+				sendTime := time.Now().Sub(start)
+				if sendTime > time.Second {
+					logger.Debugf("[send] jet: %v, long send: %s. Success: %v", jetID.JetIDString(), sendTime, err == nil)
+				}
 				if err != nil {
 					logger.Debugf("[jet]: %v send hot. Pulse: %v, DropJet: %v, Error: %s", jetID.JetIDString(), currentPulse.PulseNumber, msg.DropJet.JetIDString(), err)
 					return
