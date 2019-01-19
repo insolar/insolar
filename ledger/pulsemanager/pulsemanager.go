@@ -689,16 +689,17 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse core.Pulse) 
 		inslogger.FromContext(ctx).Errorf("Can't get jet clients state: %v", err)
 		return
 	}
+
 	for jetID := range jetSyncState {
 		inslogger.FromContext(ctx).Debugf("Start light indexes cleanup, until pulse = %v (new=%v, delta=%v), jet = %v",
 			pn, newPulse.PulseNumber, delta, jetID)
-		rmCount, err := m.db.RemoveJetIndexesUntil(ctx, jetID, pn)
+		rmStat, err := m.db.RemoveAllForJetUntilPulse(ctx, jetID, pn)
 		if err != nil {
 			inslogger.FromContext(ctx).Errorf("Error on light indexes cleanup, until pulse = %v, jet = %v: %v", pn, jetID, err)
-			continue
+			// continue
 		}
-		inslogger.FromContext(ctx).Debugf("End light indexes cleanup, removed=%v indexes (until pulse = %v, jet = %v)",
-			rmCount, pn, jetID)
+		inslogger.FromContext(ctx).Debugf("End light indexes cleanup, rm stat=%#v indexes (until pulse = %v, jet = %v)",
+			rmStat, pn, jetID)
 	}
 }
 
