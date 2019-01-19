@@ -297,8 +297,7 @@ func (mb *MessageBus) checkPulse(ctx context.Context, parcel core.Parcel, locked
 		mb.NextPulseMessagePoolLock.RLock()
 
 		ctx := inslogger.ContextWithTrace(context.Background(), utils.TraceID(ctx))
-
-		pulse, err := mb.PulseStorage.Current(ctx)
+		pulse, err = mb.PulseStorage.Current(ctx)
 		if err != nil {
 			mb.NextPulseMessagePoolLock.RUnlock()
 			if locked {
@@ -310,6 +309,15 @@ func (mb *MessageBus) checkPulse(ctx context.Context, parcel core.Parcel, locked
 		if parcel.Pulse() > pulse.PulseNumber {
 			inslogger.FromContext(ctx).Debug("still in future")
 			<-mb.NextPulseMessagePoolChan
+			pulse, err = mb.PulseStorage.Current(ctx)
+			if err != nil {
+				mb.NextPulseMessagePoolLock.RUnlock()
+				if locked {
+					mb.globalLock.RLock()
+				}
+				return errors.Wrap(err, "[ checkPulse ] Couldn't get current pulse number")
+			}
+
 		}
 		mb.NextPulseMessagePoolLock.RUnlock()
 
@@ -320,6 +328,11 @@ func (mb *MessageBus) checkPulse(ctx context.Context, parcel core.Parcel, locked
 		inslogger.FromContext(ctx).Errorf("[ checkPulse ] Pulse is TOO OLD: (parcel: %d, current: %d) Parcel is: %#v", parcel.Pulse(), pulse.PulseNumber, parcel.Message())
 	}
 
+	if parcel.Pulse() > pulse.PulseNumber {
+		// We waited for next pulse but parcel is still from future. Return error.
+		inslogger.FromContext(ctx).Errorf("[ checkPulse ] After all checks, message pulse is still bigger then current (parcel: %d, current: %d)", parcel.Pulse(), pulse.PulseNumber)
+		return fmt.Errorf("[ checkPulse ] Incorrect message pulse (parcel: %d, current: %d)", parcel.Pulse(), pulse.PulseNumber)
+	}
 	if parcel.Pulse() < pulse.PulseNumber {
 		// Parcel is from past. Return error for some messages, allow for others.
 		switch parcel.Message().(type) {
