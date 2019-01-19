@@ -884,9 +884,6 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 	inslog.Debugf("[jet]: %v got hot. Pulse: %v, DropPulse: %v, DropJet: %v\n", jetID.JetIDString(), parcel.Pulse(), msg.Drop.Pulse, msg.DropJet.JetIDString())
 
 	err = h.db.SetDrop(ctx, msg.DropJet, &msg.Drop)
-	if err == storage.ErrOverride {
-		err = nil
-	}
 	if err != nil {
 		return nil, errors.Wrap(err, "[ handleHotRecords ] Can't SetDrop")
 	}

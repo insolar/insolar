@@ -24,6 +24,7 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/utils/entropy"
@@ -158,6 +159,7 @@ func (jc *JetCoordinator) LightExecutorForJet(
 	if err != nil {
 		return nil, err
 	}
+	inslogger.FromContext(ctx).Debugf("selected light for jet: %v, node: %v", jetID.JetIDString(), nodes[0])
 	return &nodes[0], nil
 }
 
