@@ -260,7 +260,7 @@ genesis()
         for node in "${NODES[@]}" ; do
             ref=`jq -r '.reference' $node/cert.json`
             [[ $ref =~ .+\. ]]
-            ln -s `pwd`/$node/output.txt $NL/${BASH_REMATCH[0]}log
+            ln -s `pwd`/$node/output.log $NL/${BASH_REMATCH[0]}log
         done
     else
         echo "no jq =("
@@ -274,7 +274,7 @@ check_working_dir
 process_input_params $@
 
 printf "start pulsar ... \n"
-$PULSARD -c $BASE_DIR/pulsar.yaml &> $NODES_DATA/pulsar_output.txt &
+$PULSARD -c $BASE_DIR/pulsar.yaml &> $NODES_DATA/pulsar_output.log &
 
 if [ "$run_insgorund" == "true" ]
 then
@@ -293,10 +293,10 @@ do
     if [ "$i" -eq "$NUM_NODES" ]
     then
         echo "NODE $i STARTED in foreground"
-        INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $GENERATED_CONFIGS_DIR/insolar_$i.yaml --trace &> $node/output.txt
+        INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $GENERATED_CONFIGS_DIR/insolar_$i.yaml --trace &> $node/output.log
         break
     fi
-    INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $GENERATED_CONFIGS_DIR/insolar_$i.yaml --trace &> $node/output.txt &
+    INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $GENERATED_CONFIGS_DIR/insolar_$i.yaml --trace &> $node/output.log &
     echo "NODE $i STARTED in background"
 done
 

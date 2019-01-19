@@ -54,8 +54,9 @@ func (tc *transportConsensus) SendRequest(request network.Request, receiver core
 		return errors.Wrapf(err, "Failed to send %s request to node %s",
 			request.GetType().String(), receiver.String())
 	}
-	p := tc.buildRequest(context.Background(), request, receiverHost)
-	return tc.transport.SendPacket(p)
+	ctx := context.Background()
+	p := tc.buildRequest(ctx, request, receiverHost)
+	return tc.transport.SendPacket(ctx, p)
 }
 
 func (tc *transportConsensus) processMessage(msg *packet.Packet) {
