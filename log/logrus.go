@@ -30,7 +30,11 @@ type logrusAdapter struct {
 }
 
 func newLogrusAdapter() logrusAdapter {
-	return logrusAdapter{entry: logrus.NewEntry(logrus.New()), skipCallNumber: defaultSkipCallNumber}
+	log := logrus.New()
+	formatter := new(logrus.TextFormatter)
+	formatter.TimestampFormat = "2006-01-02 15:04:05.000000"
+	log.SetFormatter(formatter)
+	return logrusAdapter{entry: logrus.NewEntry(log), skipCallNumber: defaultSkipCallNumber}
 }
 
 // sourced adds a source info fields that contains
