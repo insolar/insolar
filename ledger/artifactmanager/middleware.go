@@ -31,10 +31,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-const (
-	fetchJetReties = 10
-)
-
 type middleware struct {
 	db                                 *storage.DB
 	jetCoordinator                     core.JetCoordinator
@@ -125,7 +121,7 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 		if msg.DefaultTarget().Record().Pulse() == core.PulseNumberJet {
 			jetID = *msg.DefaultTarget().Record()
 		} else {
-			j, actual, err := m.fetchJet(ctx, *msg.DefaultTarget().Record(), parcel.Pulse(), fetchJetReties)
+			j, actual, err := m.fetchJet(ctx, *msg.DefaultTarget().Record(), parcel.Pulse())
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to fetch jet tree")
 			}
@@ -183,7 +179,7 @@ func (m *middleware) checkHeavySync(handler core.MessageHandler) core.MessageHan
 }
 
 func (m *middleware) fetchJet(
-	ctx context.Context, target core.RecordID, pulse core.PulseNumber, retries int,
+	ctx context.Context, target core.RecordID, pulse core.PulseNumber,
 ) (*core.RecordID, bool, error) {
 	// Look in the local tree. Return if the actual jet found.
 	tree, err := m.db.GetJetTree(ctx, pulse)
@@ -191,11 +187,7 @@ func (m *middleware) fetchJet(
 		return nil, false, err
 	}
 	jetID, actual := tree.Find(target)
-	if actual || retries < 0 {
-		if retries < 0 {
-			fmt.Printf("[not mine] %v, %v\n", jetID.JetIDString(), target.String())
-			fmt.Println()
-		}
+	if actual {
 		if actual {
 			fmt.Printf("[mine] %v, %v\n", jetID.JetIDString(), target.String())
 			fmt.Println()
@@ -216,7 +208,7 @@ func (m *middleware) fetchJet(
 	mu.Lock()
 	if mu.done {
 		mu.Unlock()
-		return m.fetchJet(ctx, target, pulse, retries-1)
+		return m.fetchJet(ctx, target, pulse)
 	}
 	defer func() {
 		mu.done = true
