@@ -275,7 +275,7 @@ func (h *MessageHandler) handleGetObject(
 
 		logger.Debugf(
 			"redirect (record not found). jet: %v, id: %v, state: %v, to: %v",
-			jetID.JetIDString(),
+			stateJet.JetIDString(),
 			msg.Head.Record().DebugString(),
 			stateID.DebugString(),
 			node.String(),
