@@ -241,6 +241,12 @@ func (m *middleware) fetchJet(
 			"got one actual jet %s for object %s",
 			jetID.JetIDString(), target.String(),
 		)
+		err := m.db.UpdateJetTree(ctx, pulse, true, *jets[0])
+		if err != nil {
+			inslogger.FromContext(ctx).Error(
+				errors.Wrapf(err, "couldn't actualize jet %s", jets[0].JetIDString()),
+			)
+		}
 		return jets[0], true, nil
 	} else if len(jets) == 0 {
 		inslogger.FromContext(ctx).Error(
