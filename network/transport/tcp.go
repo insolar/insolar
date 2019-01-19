@@ -21,14 +21,14 @@ import (
 	"io"
 	"net"
 	"sync/atomic"
-	"time"
+
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/transport/pool"
 	"github.com/insolar/insolar/network/transport/relay"
 	"github.com/insolar/insolar/network/utils"
-	"github.com/pkg/errors"
 )
 
 type tcpTransport struct {
@@ -149,24 +149,12 @@ func (t *tcpTransport) handleAcceptedConnection(conn net.Conn) {
 			log.Infof("[ handleAcceptedConnection ] Stop handling connection: %s", conn.RemoteAddr().String())
 		}
 
-		err := conn.SetReadDeadline(time.Now().Add(1000 * time.Millisecond))
-		if err != nil {
-			log.Errorf("[ handleAcceptedConnection ] Failed to set read deadline", err.Error())
-		}
-
 		msg, err := t.serializer.DeserializePacket(conn)
 
 		if err != nil {
 			if err == io.EOF || err == io.ErrUnexpectedEOF {
 				log.Warn("[ handleAcceptedConnection ] Connection closed by peer")
 				return
-			}
-
-			if netErr, ok := err.(*net.OpError); ok && netErr.Timeout() {
-				if closed {
-					return
-				}
-				continue
 			}
 
 			log.Error("[ handleAcceptedConnection ] Failed to deserialize packet: ", err.Error())
