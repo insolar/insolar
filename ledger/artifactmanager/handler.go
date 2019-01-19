@@ -522,7 +522,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 		if err == storage.ErrNotFound {
 			if state.State() == record.StateActivation {
 				// We are activating the object. There is no index for it anywhere.
-				fmt.Printf("saved object jet: %v, id: %v", jetID.JetIDString(), msg.Object.Record())
+				fmt.Printf("saved object jet: %v, id: %v\n", jetID.JetIDString(), msg.Object.Record())
 				fmt.Println()
 				idx = &index.ObjectLifeline{State: record.StateUndefined}
 			} else {
@@ -878,17 +878,10 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 	// }
 
 	msg := parcel.Message().(*message.HotData)
-
-	fmt.Printf(
-		"[got hot] dropPulse: %v, dropJet: %v, jet: %v",
-		msg.Drop.Pulse,
-		msg.DropJet.JetIDString(),
-		msg.Jet.Record().JetIDString(),
-	)
-	fmt.Println()
-
 	// FIXME: check split signatures.
 	jetID := *msg.Jet.Record()
+
+	inslog.Debugf("[jet]: %v got hot. Pulse: %v, DropPulse: %v, DropJet: %v\n", jetID.JetIDString(), parcel.Pulse(), msg.Drop.Pulse, msg.DropJet.JetIDString())
 
 	err = h.db.SetDrop(ctx, msg.DropJet, &msg.Drop)
 	if err == storage.ErrOverride {

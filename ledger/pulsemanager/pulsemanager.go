@@ -119,71 +119,58 @@ func (m *PulseManager) processEndPulse(
 	currentPulse, newPulse *core.Pulse,
 ) error {
 	var g errgroup.Group
+	logger := inslogger.FromContext(ctx)
 	for _, i := range jets {
 		info := i
 		g.Go(func() error {
 			drop, dropSerialized, _, err := m.createDrop(ctx, info.id, prevPulseNumber, currentPulse.PulseNumber)
+			logger.Debugf("[jet]: %v create drop. Pulse: %v, Error: %s", info.id.JetIDString(), currentPulse.PulseNumber, err)
 			if err != nil {
 				return errors.Wrapf(err, "create drop on pulse %v failed", currentPulse.PulseNumber)
 			}
 
 			msg, err := m.getExecutorHotData(
-				ctx, info.id, newPulse.PulseNumber, drop, dropSerialized)
+				ctx, info.id, newPulse.PulseNumber, drop, dropSerialized,
+			)
 			if err != nil {
 				return errors.Wrapf(err, "getExecutorData failed for jet id %v", info.id)
 			}
 
-			if info.left == nil && info.right == nil {
-				fmt.Printf("No split. jet: %v, mine next: %v", info.id, info.mineNext)
+			logger := inslogger.FromContext(ctx)
 
+			sender := func(msg message.HotData, jetID core.RecordID) {
+				msg.Jet = *core.NewRecordRef(core.DomainID, jetID)
+				genericRep, err := m.Bus.Send(ctx, &msg, nil)
+				if err != nil {
+					logger.Debugf("[jet]: %v send hot. Pulse: %v, DropJet: %v, Error: %s", jetID.JetIDString(), currentPulse.PulseNumber, msg.DropJet.JetIDString(), err)
+					return
+				}
+				if _, ok := genericRep.(*reply.OK); !ok {
+					logger.Debugf("[jet]: %v send hot. Pulse: %v, DropJet: %v, Unexpected reply: %#v", jetID.JetIDString(), currentPulse.PulseNumber, msg.DropJet.JetIDString(), genericRep)
+					return
+				}
+				logger.Debugf("[jet]: %v send hot. Pulse: %v, DropJet: %v, Success", jetID.JetIDString(), currentPulse.PulseNumber, msg.DropJet.JetIDString())
+			}
+
+			if info.left == nil && info.right == nil {
 				// TODO: @andreyromancev. 12.01.19. uncomment when heavy ready.
 				// m.RecentStorageProvider.GetStorage(info.id).ClearZeroTTLObjects()
 
 				// No split happened.
 				if !info.mineNext {
-					msg.Jet = *core.NewRecordRef(core.DomainID, info.id)
-					genericRep, err := m.Bus.Send(ctx, msg, nil)
-					if err != nil {
-						return errors.Wrap(err, "failed to send executor data")
-					}
-					if rep, ok := genericRep.(*reply.OK); !ok {
-						return fmt.Errorf("PM.processEndPulse: unexpected reply: %#v", rep)
-					}
-					fmt.Printf("sent drop. pulse: %v, jet: %v\n", msg.Drop.Pulse, msg.DropJet.JetIDString())
+					go sender(*msg, info.id)
 				}
 			} else {
-				fmt.Printf("Split. jet: %v, left mine next: %v", info.id, info.left.mineNext)
 				// Split happened.
 
 				// TODO: @andreyromancev. 12.01.19. uncomment when heavy ready.
 				// m.RecentStorageProvider.GetStorage(info.left.id).ClearZeroTTLObjects()
 				// m.RecentStorageProvider.GetStorage(info.right.id).ClearZeroTTLObjects()
-
 				if !info.left.mineNext {
-					leftMsg := msg
-					leftMsg.Jet = *core.NewRecordRef(core.DomainID, info.left.id)
-					genericRep, err := m.Bus.Send(ctx, leftMsg, nil)
-					if err != nil {
-						return errors.Wrap(err, "failed to send executor data")
-					}
-					if rep, ok := genericRep.(*reply.OK); !ok {
-						return fmt.Errorf("PM.processEndPulse: unexpected reply: %#v", rep)
-					}
-					fmt.Printf("sent drop. pulse: %v, jet: %v\n", msg.Drop.Pulse, msg.DropJet.JetIDString())
+					go sender(*msg, info.left.id)
 				}
-				fmt.Printf("Split. jet: %v, right mine next: %v", info.id, info.right.mineNext)
 				if !info.right.mineNext {
-					rightMsg := msg
-					rightMsg.Jet = *core.NewRecordRef(core.DomainID, info.right.id)
-
-					genericRep, err := m.Bus.Send(ctx, rightMsg, nil)
-					if err != nil {
-						return errors.Wrap(err, "failed to send executor data")
-					}
-					if rep, ok := genericRep.(*reply.OK); !ok {
-						return fmt.Errorf("PM.processEndPulse: unexpected reply: %#v", rep)
-					}
-					fmt.Printf("sent drop. pulse: %v, jet: %v\n", msg.Drop.Pulse, msg.DropJet.JetIDString())
+					go sender(*msg, info.right.id)
 				}
 			}
 
@@ -278,7 +265,7 @@ func (m *PulseManager) createDrop(
 	if err != nil {
 		parentJet := jet.Parent(jetID)
 		fmt.Printf(
-			"failed to fetch jet. pulse: %v, current jet: %v, parent jet: %v \n",
+			"failed to fetch jet. pulse: %v, current jet: %v, parent jet: %v\n",
 			prevPulse,
 			jetID.JetIDString(),
 			parentJet.String(),
@@ -426,17 +413,17 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse c
 	var results []jetInfo
 	jetIDs := tree.LeafIDs()
 	me := m.JetCoordinator.Me()
+	logger := inslogger.FromContext(ctx)
 	for _, jetID := range jetIDs {
-		fmt.Printf("I processed. jet: %v\n", jetID.JetIDString())
 		executor, err := m.JetCoordinator.LightExecutorForJet(ctx, jetID, currentPulse)
 		if err != nil {
 			return nil, err
 		}
-		if *executor != me {
+		imExecutor := *executor == me
+		logger.Debugf("[jet]: %v process. Pulse: %v, Executor: %v", jetID.JetIDString(), currentPulse, imExecutor)
+		if !imExecutor {
 			continue
 		}
-
-		fmt.Printf("I am executor. jet: %v\n", jetID.JetIDString())
 
 		info := jetInfo{id: jetID}
 		if split {
@@ -469,11 +456,10 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse c
 			if *nextLeftExecutor == me {
 				info.left.mineNext = true
 				err := m.rewriteHotData(ctx, jetID, *leftJetID)
+				logger.Debugf("[jet]: %v rewrite hot left. Pulse: %v, Error: %s", info.left.id.JetIDString(), currentPulse, err)
 				if err != nil {
 					return nil, err
 				}
-				fmt.Printf("I am next executor for left. jet: %v\n", info.left.id.JetIDString())
-
 			}
 			nextRightExecutor, err := m.JetCoordinator.LightExecutorForJet(ctx, *rightJetID, newPulse)
 			if err != nil {
@@ -482,14 +468,14 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse c
 			if *nextRightExecutor == me {
 				info.right.mineNext = true
 				err := m.rewriteHotData(ctx, jetID, *rightJetID)
+				logger.Debugf("[jet]: %v rewrite hot right. Pulse: %v, Error: %s", info.right.id.JetIDString(), currentPulse, err)
 				if err != nil {
 					return nil, err
 				}
-				fmt.Printf("I am next executor for right. jet: %v\n", info.right.id.JetIDString())
 			}
 
-			inslogger.FromContext(ctx).Debugf(
-				"SPLIT HAPPENED parent: %v, left: %v, right: %v\n",
+			logger.Debugf(
+				"SPLIT HAPPENED parent: %v, left: %v, right: %v",
 				jetID.JetIDString(),
 				leftJetID.JetIDString(),
 				rightJetID.JetIDString(),
@@ -506,7 +492,7 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse c
 			}
 			if *nextExecutor == me {
 				info.mineNext = true
-				fmt.Printf("I am next executor. jet: %v\n", info.id.JetIDString())
+				logger.Debugf("[jet]: %v preserve hot. Pulse: %v", info.id.JetIDString(), currentPulse)
 			}
 		}
 		results = append(results, info)
@@ -604,8 +590,8 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 		}
 	}
 
-	m.PulseStorage.Unlock()
 	m.PulseStorage.Set(&newPulse)
+	m.PulseStorage.Unlock()
 
 	jets, err := m.processJets(ctx, currentPulse.PulseNumber, newPulse.PulseNumber)
 	if err != nil {
@@ -737,7 +723,7 @@ func (m *PulseManager) restoreGenesisRecentObjects(ctx context.Context) error {
 	return m.db.IterateIndexIDs(ctx, jetID, func(id core.RecordID) error {
 		if id.Pulse() == core.FirstPulseNumber {
 			recent.AddObject(id)
-			fmt.Printf("[restored] id %v \n", id.String())
+			fmt.Printf("[restored] id %v\n", id.String())
 		}
 		return nil
 	})
