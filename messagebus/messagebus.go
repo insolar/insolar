@@ -21,10 +21,11 @@ import (
 	"context"
 	"encoding/gob"
 	"fmt"
-	"github.com/insolar/insolar/core/utils"
 	"io"
 	"sync"
 	"time"
+
+	"github.com/insolar/insolar/core/utils"
 
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
@@ -232,10 +233,11 @@ func (e *serializableError) Error() string {
 }
 
 func (mb *MessageBus) OnPulse(context.Context, core.Pulse) error {
+	close(mb.NextPulseMessagePoolChan)
+
 	mb.NextPulseMessagePoolLock.Lock()
 	defer mb.NextPulseMessagePoolLock.Unlock()
 
-	close(mb.NextPulseMessagePoolChan)
 	mb.NextPulseMessagePoolChan = make(chan interface{})
 
 	return nil
