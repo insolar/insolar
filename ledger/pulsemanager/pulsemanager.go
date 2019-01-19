@@ -657,10 +657,18 @@ func (m *PulseManager) postProcessJets(ctx context.Context, newPulse core.Pulse,
 			}
 		}
 	}
-	m.cleanJetsData(ctx, newPulse)
+	// TODO: make it asynchronious - @aorlovsky 19.01.2019
+	m.cleanLightData(ctx, newPulse)
 }
 
-func (m *PulseManager) cleanJetsData(ctx context.Context, newPulse core.Pulse) {
+func (m *PulseManager) cleanLightData(ctx context.Context, newPulse core.Pulse) {
+	inslog := inslogger.FromContext(ctx)
+	start := time.Now()
+	defer func() {
+		latency := time.Since(start)
+		inslog.Debugf("cleanLightData time spend=%v", latency)
+	}()
+
 	delta := m.options.storeLightPulses
 	if delta == 0 {
 		return
@@ -680,6 +688,7 @@ func (m *PulseManager) cleanJetsData(ctx context.Context, newPulse core.Pulse) {
 			break
 		}
 		pn = prevPulse.Pulse.PulseNumber
+		// fmt.Printf("cleanLightData: [%v] prev pulse = %v\n", i, pn)
 		if newPulseWithSerial.SerialNumber-delta > prevPulse.SerialNumber {
 			break
 		}
@@ -691,12 +700,16 @@ func (m *PulseManager) cleanJetsData(ctx context.Context, newPulse core.Pulse) {
 		inslogger.FromContext(ctx).Errorf("Can't get jet clients state: %v", err)
 		return
 	}
-	for jetID, _ := range jetSyncState {
+	for jetID := range jetSyncState {
 		inslogger.FromContext(ctx).Debugf("Start light indexes cleanup, until pulse = %v (new=%v, delta=%v), jet = %v",
-			pn, newPulse, delta, jetID)
-		if _, err := m.db.RemoveJetIndexesUntil(ctx, jetID, pn); err != nil {
-			inslogger.FromContext(ctx).Errorf("Error on light cleanup, until pulse = %v, jet = %v: %v", pn, jetID, err)
+			pn, newPulse.PulseNumber, delta, jetID)
+		rmCount, err := m.db.RemoveJetIndexesUntil(ctx, jetID, pn)
+		if err != nil {
+			inslogger.FromContext(ctx).Errorf("Error on light indexes cleanup, until pulse = %v, jet = %v: %v", pn, jetID, err)
+			continue
 		}
+		inslogger.FromContext(ctx).Debugf("End light indexes cleanup, removed=%v indexes (until pulse = %v, jet = %v)",
+			rmCount, pn, jetID)
 	}
 }
 
