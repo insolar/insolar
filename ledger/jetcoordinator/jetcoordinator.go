@@ -159,7 +159,12 @@ func (jc *JetCoordinator) LightExecutorForJet(
 	if err != nil {
 		return nil, err
 	}
-	inslogger.FromContext(ctx).Debugf("selected light for jet: %v, node: %v", jetID.JetIDString(), nodes[0])
+	inslogger.FromContext(ctx).Debugf(
+		"selected light for jet: %v, pulse: %v, node: %v",
+		jetID.JetIDString(),
+		pulse,
+		nodes[0],
+	)
 	return &nodes[0], nil
 }
 
