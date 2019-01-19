@@ -852,7 +852,7 @@ func (h *MessageHandler) saveIndexFromHeavy(
 	}
 	rep, ok := genericReply.(*reply.ObjectIndex)
 	if !ok {
-		return nil, errors.New("failed to fetch object index: unexpected reply")
+		return nil, fmt.Errorf("failed to fetch object index: unexpected reply type %T (reply=%+v)", genericReply, genericReply)
 	}
 	idx, err := index.DecodeObjectLifeline(rep.Index)
 	if err != nil {
