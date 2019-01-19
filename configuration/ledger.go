@@ -117,10 +117,10 @@ func NewLedger() Ledger {
 		},
 
 		RecentStorage: RecentStorage{
-			DefaultTTL: 5,
+			DefaultTTL: 10,
 		},
 
-		LightChainLimit: 3, // 3 pulses
+		LightChainLimit: 5, // 5 pulses
 
 		JetSizesHistoryDepth: 10,
 	}
