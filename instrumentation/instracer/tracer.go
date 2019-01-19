@@ -127,6 +127,7 @@ var ErrJagerConfigEmpty = errors.New("can't create jaeger exporter, config not p
 // RegisterJaeger creates jaeger exporter and registers it in opencensus trace lib.
 func RegisterJaeger(
 	servicename string,
+	nodeRef string,
 	agentendpoint string,
 	collectorendpoint string,
 ) (*jaeger.Exporter, error) {
@@ -140,6 +141,7 @@ func RegisterJaeger(
 			ServiceName: servicename,
 			Tags: []jaeger.Tag{
 				jaeger.StringTag("hostname", hostname()),
+				jaeger.StringTag("nodeRef", nodeRef),
 			},
 		},
 	})
@@ -157,11 +159,13 @@ func RegisterJaeger(
 func ShouldRegisterJaeger(
 	ctx context.Context,
 	servicename string,
+	nodeRef string,
 	agentendpoint string,
 	collectorendpoint string,
 ) (flusher func()) {
 	exporter, regerr := RegisterJaeger(
 		servicename,
+		nodeRef,
 		agentendpoint,
 		collectorendpoint,
 	)

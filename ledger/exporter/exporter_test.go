@@ -41,9 +41,7 @@ func TestExporter_Export(t *testing.T) {
 	ps := storage.NewPulseStorage(db)
 	exporter := NewExporter(db, ps)
 
-	err := db.AddPulse(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber, PulseTimestamp: 1})
-	require.NoError(t, err)
-	err = db.AddPulse(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 1, PulseTimestamp: 2})
+	err := db.AddPulse(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 1, PulseTimestamp: 2})
 	require.NoError(t, err)
 	err = db.AddPulse(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 2, PulseTimestamp: 3})
 	require.NoError(t, err)
@@ -90,7 +88,7 @@ func TestExporter_Export(t *testing.T) {
 
 	pulse := result.Data[strconv.FormatUint(uint64(core.FirstPulseNumber), 10)].([]*pulseData)[0].Pulse
 	assert.Equal(t, core.FirstPulseNumber, int(pulse.PulseNumber))
-	assert.Equal(t, int64(1), pulse.PulseTimestamp)
+	assert.Equal(t, int64(0), pulse.PulseTimestamp)
 	pulse = result.Data[strconv.FormatUint(uint64(core.FirstPulseNumber+1), 10)].([]*pulseData)[0].Pulse
 	assert.Equal(t, core.FirstPulseNumber+1, int(pulse.PulseNumber))
 	assert.Equal(t, int64(2), pulse.PulseTimestamp)
