@@ -749,6 +749,10 @@ func (m *PulseManager) Start(ctx context.Context) error {
 }
 
 func (m *PulseManager) restoreGenesisRecentObjects(ctx context.Context) error {
+	if m.NodeNet.GetOrigin().Role() == core.StaticRoleHeavyMaterial {
+		return nil
+	}
+
 	jetID := *jet.NewID(0, nil)
 	recent := m.RecentStorageProvider.GetStorage(jetID)
 

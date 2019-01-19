@@ -46,6 +46,7 @@ type MessageHandler struct {
 	DelegationTokenFactory     core.DelegationTokenFactory     `inject:""`
 	HeavySync                  core.HeavySync                  `inject:""`
 	PulseStorage               core.PulseStorage               `inject:""`
+	NodeNet                    core.NodeNetwork                `inject:""`
 
 	db             *storage.DB
 	replayHandlers map[core.MessageType]core.MessageHandler
@@ -135,12 +136,14 @@ func (h *MessageHandler) handleSetRecord(ctx context.Context, parcel core.Parcel
 		return nil, err
 	}
 
-	recentStorage := h.RecentStorageProvider.GetStorage(jetID)
-	if request, ok := rec.(record.Request); ok {
-		recentStorage.AddPendingRequest(request.GetObject(), *id)
-	}
-	if result, ok := rec.(*record.ResultRecord); ok {
-		recentStorage.RemovePendingRequest(result.Object, *result.Request.Record())
+	if h.NodeNet.GetOrigin().Role() != core.StaticRoleHeavyMaterial {
+		recentStorage := h.RecentStorageProvider.GetStorage(jetID)
+		if request, ok := rec.(record.Request); ok {
+			recentStorage.AddPendingRequest(request.GetObject(), *id)
+		}
+		if result, ok := rec.(*record.ResultRecord); ok {
+			recentStorage.RemovePendingRequest(result.Object, *result.Request.Record())
+		}
 	}
 
 	return &reply.ID{ID: *id}, nil
@@ -231,16 +234,22 @@ func (h *MessageHandler) handleGetObject(
 			return nil, err
 		}
 		// Add requested object to recent.
-		h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Head.Record())
+		if h.NodeNet.GetOrigin().Role() != core.StaticRoleHeavyMaterial {
+			h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Head.Record())
+		}
+
 		logger.Debugf("redirect because index not found. jet: %v, to: %v\n",
 			jetID.JetIDString(), node)
+
 		return reply.NewGetObjectRedirectReply(h.DelegationTokenFactory, parcel, node, msg.State)
 	}
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
 	// Add requested object to recent.
-	h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Head.Record())
+	if h.NodeNet.GetOrigin().Role() != core.StaticRoleHeavyMaterial {
+		h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Head.Record())
+	}
 
 	// Determine object state id.
 	var stateID *core.RecordID
@@ -373,7 +382,9 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel core.Parc
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
 
-	h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Head.Record())
+	if h.NodeNet.GetOrigin().Role() != core.StaticRoleHeavyMaterial {
+		h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Head.Record())
+	}
 
 	delegateRef, ok := idx.Delegates[msg.AsType]
 	if !ok {
@@ -415,7 +426,10 @@ func (h *MessageHandler) handleGetChildren(
 		fmt.Println("handleGetChildren: failed to fetch object index, error - ", err)
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
-	h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Parent.Record())
+
+	if h.NodeNet.GetOrigin().Role() != core.StaticRoleHeavyMaterial {
+		h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Parent.Record())
+	}
 
 	var (
 		refs         []core.RecordRef
@@ -517,7 +531,6 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 		s.Memory = blobID
 	}
 
-	recentStorage := h.RecentStorageProvider.GetStorage(jetID)
 	var idx *index.ObjectLifeline
 	err = h.db.Update(ctx, func(tx *storage.TransactionManager) error {
 		var err error
@@ -556,7 +569,9 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 			return errors.New("invalid state record")
 		}
 
-		recentStorage.AddObject(*msg.Object.Record())
+		if h.NodeNet.GetOrigin().Role() != core.StaticRoleHeavyMaterial {
+			h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Object.Record())
+		}
 
 		id, err := tx.SetRecord(ctx, jetID, parcel.Pulse(), rec)
 		if err != nil {
@@ -579,7 +594,9 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 		return nil, err
 	}
 
-	recentStorage.AddObject(*msg.Object.Record())
+	if h.NodeNet.GetOrigin().Role() != core.StaticRoleHeavyMaterial {
+		h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Object.Record())
+	}
 
 	rep := reply.Object{
 		Head:         msg.Object,
@@ -606,7 +623,6 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel core.Pa
 		return nil, errors.New("wrong child record")
 	}
 
-	recentStorage := h.RecentStorageProvider.GetStorage(jetID)
 	var child *core.RecordID
 	err = h.db.Update(ctx, func(tx *storage.TransactionManager) error {
 		idx, err := h.db.GetObjectIndex(ctx, jetID, msg.Parent.Record(), false)
@@ -622,7 +638,10 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel core.Pa
 		} else if err != nil {
 			return err
 		}
-		recentStorage.AddObject(*msg.Parent.Record())
+
+		if h.NodeNet.GetOrigin().Role() != core.StaticRoleHeavyMaterial {
+			h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Parent.Record())
+		}
 
 		// Children exist and pointer does not match (preserving chain consistency).
 		if idx.ChildPointer != nil && !childRec.PrevChild.Equal(idx.ChildPointer) {
@@ -649,7 +668,9 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel core.Pa
 		return nil, err
 	}
 
-	recentStorage.AddObject(*msg.Parent.Record())
+	if h.NodeNet.GetOrigin().Role() != core.StaticRoleHeavyMaterial {
+		h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Parent.Record())
+	}
 
 	return &reply.ID{ID: *child}, nil
 }
