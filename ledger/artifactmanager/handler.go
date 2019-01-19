@@ -885,7 +885,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 
 	err = h.db.SetDrop(ctx, msg.DropJet, &msg.Drop)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ handleHotRecords ] Can't SetDrop")
+		return nil, errors.Wrap(err, "[jet]: drop error")
 	}
 	err = h.db.SetDropSizeHistory(ctx, msg.DropJet, msg.JetDropSizeHistory)
 	if err != nil {
