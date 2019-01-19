@@ -28,7 +28,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/record"
-	base58 "github.com/jbenet/go-base58"
+	"github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
 )
@@ -36,11 +36,12 @@ import (
 // Exporter provides methods for fetching data view from storage.
 type Exporter struct {
 	db *storage.DB
+	ps *storage.PulseStorage
 }
 
 // NewExporter creates new StorageExporter instance.
-func NewExporter(db *storage.DB) *Exporter {
-	return &Exporter{db: db}
+func NewExporter(db *storage.DB, ps *storage.PulseStorage) *Exporter {
+	return &Exporter{db: db, ps: ps}
 }
 
 type payload map[string]interface{}
@@ -78,13 +79,25 @@ func (e *Exporter) Export(ctx context.Context, fromPulse core.PulseNumber, size 
 		return nil, err
 	}
 
+	currentPulse, err := e.ps.Current(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get current pulse data")
+	}
+
 	counter := 0
-	currentPN := core.PulseNumber(math.Max(float64(fromPulse), float64(core.GenesisPulse.PulseNumber)))
-	current := &currentPN
-	for current != nil && counter < size {
-		pulse, err := e.db.GetPulse(ctx, *current)
+	fromPulsePN := core.PulseNumber(math.Max(float64(fromPulse), float64(core.GenesisPulse.PulseNumber)))
+	iterPulse := &fromPulsePN
+	for iterPulse != nil && counter < size {
+		pulse, err := e.db.GetPulse(ctx, *iterPulse)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to fetch pulse data")
+		}
+
+		// We don't need data from current pulse, because of
+		// not all data for this pulse is persisted at this moment
+		if pulse.Pulse.PulseNumber == currentPulse.PulseNumber {
+			iterPulse = nil
+			break
 		}
 
 		var data []*pulseData
@@ -98,12 +111,12 @@ func (e *Exporter) Export(ctx context.Context, fromPulse core.PulseNumber, size 
 
 		result.Data[strconv.FormatUint(uint64(pulse.Pulse.PulseNumber), 10)] = data
 
-		current = pulse.Next
+		iterPulse = pulse.Next
 		counter++
 	}
 
 	result.Size = counter
-	result.NextFrom = current
+	result.NextFrom = iterPulse
 
 	return &result, nil
 }
