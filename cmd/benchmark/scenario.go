@@ -17,6 +17,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net"
@@ -31,7 +32,7 @@ import (
 
 type scenario interface {
 	canBeStarted() error
-	start()
+	start(ctx context.Context)
 	getOperationsNumber() int
 	getAverageOperationDuration() time.Duration
 	getOperationPerSecond() float64
@@ -63,6 +64,10 @@ func (s *transferDifferentMembersScenario) getAverageOperationDuration() time.Du
 }
 
 func (s *transferDifferentMembersScenario) getOperationPerSecond() float64 {
+	if len(s.goroutineTimes) == 0 {
+		return 0
+	}
+
 	max := s.goroutineTimes[0]
 	for _, t := range s.goroutineTimes {
 		if max < t {
@@ -89,19 +94,25 @@ func (s *transferDifferentMembersScenario) canBeStarted() error {
 	return nil
 }
 
-func (s *transferDifferentMembersScenario) start() {
+func (s *transferDifferentMembersScenario) start(ctx context.Context) {
 	var wg sync.WaitGroup
 	for i := 0; i < s.concurrent*2; i = i + 2 {
 		wg.Add(1)
-		go s.startMember(i, &wg)
+		go s.startMember(ctx, i, &wg)
 	}
 	wg.Wait()
 }
 
-func (s *transferDifferentMembersScenario) startMember(index int, wg *sync.WaitGroup) {
+func (s *transferDifferentMembersScenario) startMember(ctx context.Context, index int, wg *sync.WaitGroup) {
 	defer wg.Done()
 	goroutineTime := time.Duration(0)
 	for j := 0; j < s.repetitions; j = j + 1 {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
 		from := s.members[index]
 		to := s.members[index+1]
 

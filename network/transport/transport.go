@@ -34,13 +34,13 @@ import (
 // Transport is an interface for network transport.
 type Transport interface {
 	// SendRequest sends packet to destination. Sequence number is generated automatically.
-	SendRequest(*packet.Packet) (Future, error)
+	SendRequest(context.Context, *packet.Packet) (Future, error)
 
 	// SendResponse sends response packet for request with passed request id.
-	SendResponse(network.RequestID, *packet.Packet) error
+	SendResponse(context.Context, network.RequestID, *packet.Packet) error
 
 	// SendPacket low-level send packet without requestId and without spawning a waiting future
-	SendPacket(p *packet.Packet) error
+	SendPacket(ctx context.Context, p *packet.Packet) error
 
 	// Listen starts thread to listen incoming packets.
 	Listen(ctx context.Context, started chan struct{}) error
