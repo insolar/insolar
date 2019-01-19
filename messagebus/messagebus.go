@@ -27,9 +27,6 @@ import (
 
 	"github.com/insolar/insolar/core/utils"
 
-	"github.com/pkg/errors"
-	"go.opencensus.io/trace"
-
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
@@ -38,6 +35,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/metrics"
+	"github.com/pkg/errors"
 )
 
 const deliverRPCMethodName = "MessageBus.Deliver"
@@ -140,6 +138,9 @@ func (mb *MessageBus) MustRegister(p core.MessageType, handler core.MessageHandl
 
 // Send an `Message` and get a `Value` or error from remote host.
 func (mb *MessageBus) Send(ctx context.Context, msg core.Message, ops *core.MessageSendOptions) (core.Reply, error) {
+	ctx, span := instracer.StartSpan(ctx, "MessageBus.Send "+msg.Type().String())
+	defer span.End()
+
 	currentPulse, err := mb.PulseStorage.Current(ctx)
 	fmt.Println("[mb.send] ", currentPulse.PulseNumber)
 	if err != nil {
@@ -151,13 +152,7 @@ func (mb *MessageBus) Send(ctx context.Context, msg core.Message, ops *core.Mess
 		return nil, err
 	}
 
-	ctx, span := instracer.StartSpan(ctx, "MessageBus.Send mb.SendParcel")
-	span.AddAttributes(
-		trace.StringAttribute("msgType", msg.Type().String()),
-		trace.Int64Attribute("parcel.DefaultRole", int64(parcel.DefaultRole())),
-	)
 	rep, err := mb.SendParcel(ctx, parcel, *currentPulse, ops)
-	span.End()
 	return rep, err
 }
 
@@ -173,6 +168,9 @@ func (mb *MessageBus) SendParcel(
 	currentPulse core.Pulse,
 	options *core.MessageSendOptions,
 ) (core.Reply, error) {
+	ctx, span := instracer.StartSpan(ctx, "MessageBus.SendParcel")
+	defer span.End()
+
 	readBarrier(ctx, &mb.globalLock)
 
 	var (

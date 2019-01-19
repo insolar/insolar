@@ -22,13 +22,11 @@ import (
 	"encoding/binary"
 	"sync"
 
-	"github.com/insolar/insolar/instrumentation/instracer"
-	"go.opencensus.io/trace"
-
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 
 	"github.com/pkg/errors"
 )
@@ -66,6 +64,9 @@ func randomUint64() uint64 {
 
 // SendRequest makes synchronously call to method of contract by its ref without additional information
 func (cr *ContractRequester) SendRequest(ctx context.Context, ref *core.RecordRef, method string, argsIn []interface{}) (core.Reply, error) {
+	ctx, span := instracer.StartSpan(ctx, "SendRequest "+method)
+	defer span.End()
+
 	args, err := core.MarshalArgs(argsIn...)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ContractRequester::SendRequest ] Can't marshal")
@@ -83,6 +84,9 @@ func (cr *ContractRequester) SendRequest(ctx context.Context, ref *core.RecordRe
 }
 
 func (cr *ContractRequester) CallMethod(ctx context.Context, base core.Message, async bool, ref *core.RecordRef, method string, argsIn core.Arguments, mustPrototype *core.RecordRef) (core.Reply, error) {
+	ctx, span := instracer.StartSpan(ctx, "ContractRequester.CallMethod "+method)
+	defer span.End()
+
 	baseMessage, ok := base.(*message.BaseLogicMessage)
 	if !ok {
 		return nil, errors.New("Wrong type for BaseMessage")
@@ -127,12 +131,7 @@ func (cr *ContractRequester) CallMethod(ctx context.Context, base core.Message, 
 		cr.ResultMutex.Unlock()
 	}
 
-	ctx, sendspan := instracer.StartSpan(ctx, "ContractRequester.CallMethod mb.Send")
-	sendspan.AddAttributes(
-		trace.StringAttribute("method", msg.Method),
-	)
 	res, err := mb.Send(ctx, msg, nil)
-	sendspan.End()
 
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't dispatch event")
@@ -150,8 +149,7 @@ func (cr *ContractRequester) CallMethod(ctx context.Context, base core.Message, 
 	inslogger.FromContext(ctx).Debug("Waiting for Method results ref=", r.Request)
 
 	var result *reply.CallMethod
-	ctx, selectspan := instracer.StartSpan(ctx, "ContractRequester.CallMethod select")
-	defer selectspan.End()
+
 	select {
 	case ret := <-ch:
 		inslogger.FromContext(ctx).Debug("GOT Method results")
