@@ -131,7 +131,7 @@ func (d *distributor) pingHost(ctx context.Context, host *host.Host) error {
 
 	builder := packet.NewBuilder(d.pulsarHost)
 	pingPacket := builder.Receiver(host).Type(types.Ping).Build()
-	pingCall, err := d.Transport.SendRequest(pingPacket)
+	pingCall, err := d.Transport.SendRequest(ctx, pingPacket)
 	if err != nil {
 		logger.Error(err)
 		return errors.Wrap(err, "[ pingHost ] failed to send ping request")
@@ -166,7 +166,7 @@ func (d *distributor) getRandomHosts(ctx context.Context, host *host.Host) ([]ho
 		Build()
 
 	logger.Debugf("[ getRandomHosts ] before get random hosts request")
-	call, err := d.Transport.SendRequest(request)
+	call, err := d.Transport.SendRequest(ctx, request)
 	if err != nil {
 		logger.Errorf("[ getRandomHosts ] Failed to send request to host: %s, error: %s", host.String(), err)
 		return nil, errors.Wrap(err, "[ getRandomHosts ] failed to send getRandomHosts request")
@@ -228,7 +228,7 @@ func (d *distributor) sendPulseToHost(ctx context.Context, pulse *core.Pulse, ho
 
 	pb := packet.NewBuilder(d.pulsarHost)
 	pulseRequest := pb.Receiver(host).Request(&packet.RequestPulse{Pulse: *pulse}).Type(types.Pulse).Build()
-	call, err := d.Transport.SendRequest(pulseRequest)
+	call, err := d.Transport.SendRequest(ctx, pulseRequest)
 	if err != nil {
 		return err
 	}

@@ -312,6 +312,11 @@ func (mb *MessageBus) checkPulse(ctx context.Context, parcel core.Parcel, locked
 		return errors.Wrap(err, "[ checkPulse ] Couldn't get current pulse number")
 	}
 
+	// TODO: remove me after old pulses problem will be solved
+	if parcel.Pulse() < pulse.PrevPulseNumber {
+		inslogger.FromContext(ctx).Errorf("[ checkPulse ] Pulse is TOO OLD: (parcel: %d, current: %d) Parcel is: %#v", parcel.Pulse(), pulse.PulseNumber, parcel.Message())
+	}
+
 	if parcel.Pulse() > pulse.PulseNumber {
 		// We waited for next pulse but parcel is still from future. Return error.
 		inslogger.FromContext(ctx).Errorf("[ checkPulse ] Incorrect message pulse (parcel: %d, current: %d)", parcel.Pulse(), pulse.PulseNumber)

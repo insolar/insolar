@@ -22,6 +22,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet"
 	"github.com/stretchr/testify/require"
@@ -31,7 +32,7 @@ func TestNewFuture(t *testing.T) {
 	n, _ := host.NewHost("127.0.0.1:8080")
 	cb := func(f Future) {}
 	m := &packet.Packet{}
-	f := NewFuture(packet.RequestID(1), n, m, cb)
+	f := NewFuture(network.RequestID(1), n, m, cb)
 
 	require.Implements(t, (*Future)(nil), f)
 }
@@ -40,16 +41,16 @@ func TestFuture_ID(t *testing.T) {
 	n, _ := host.NewHost("127.0.0.1:8080")
 	cb := func(f Future) {}
 	m := &packet.Packet{}
-	f := NewFuture(packet.RequestID(1), n, m, cb)
+	f := NewFuture(network.RequestID(1), n, m, cb)
 
-	require.Equal(t, f.ID(), packet.RequestID(1))
+	require.Equal(t, f.ID(), network.RequestID(1))
 }
 
 func TestFuture_Actor(t *testing.T) {
 	n, _ := host.NewHost("127.0.0.1:8080")
 	cb := func(f Future) {}
 	m := &packet.Packet{}
-	f := NewFuture(packet.RequestID(1), n, m, cb)
+	f := NewFuture(network.RequestID(1), n, m, cb)
 
 	require.Equal(t, f.Actor(), n)
 }
@@ -58,7 +59,7 @@ func TestFuture_Result(t *testing.T) {
 	n, _ := host.NewHost("127.0.0.1:8080")
 	cb := func(f Future) {}
 	m := &packet.Packet{}
-	f := NewFuture(packet.RequestID(1), n, m, cb)
+	f := NewFuture(network.RequestID(1), n, m, cb)
 
 	require.Empty(t, f.Result())
 }
@@ -67,7 +68,7 @@ func TestFuture_Request(t *testing.T) {
 	n, _ := host.NewHost("127.0.0.1:8080")
 	cb := func(f Future) {}
 	m := &packet.Packet{}
-	f := NewFuture(packet.RequestID(1), n, m, cb)
+	f := NewFuture(network.RequestID(1), n, m, cb)
 
 	require.Equal(t, f.Request(), m)
 }
@@ -76,7 +77,7 @@ func TestFuture_SetResult(t *testing.T) {
 	n, _ := host.NewHost("127.0.0.1:8080")
 	cb := func(f Future) {}
 	m := &packet.Packet{}
-	f := NewFuture(packet.RequestID(1), n, m, cb)
+	f := NewFuture(network.RequestID(1), n, m, cb)
 
 	require.Empty(t, f.Result())
 
@@ -100,7 +101,7 @@ func TestFuture_Cancel(t *testing.T) {
 	cb := func(f Future) { cbCalled = true }
 
 	m := &packet.Packet{}
-	f := NewFuture(packet.RequestID(1), n, m, cb)
+	f := NewFuture(network.RequestID(1), n, m, cb)
 
 	f.Cancel()
 
@@ -117,7 +118,7 @@ func TestFuture_GetResult(t *testing.T) {
 	cancelCallback := func(f Future) {
 		atomic.StoreUint32(&cancelled, 1)
 	}
-	f := NewFuture(packet.RequestID(1), n, m, cancelCallback)
+	f := NewFuture(network.RequestID(1), n, m, cancelCallback)
 	go func() {
 		time.Sleep(time.Millisecond)
 		f.Cancel()
@@ -135,7 +136,7 @@ func TestFuture_GetResult2(t *testing.T) {
 		result:         c,
 		actor:          n,
 		request:        &packet.Packet{},
-		requestID:      packet.RequestID(1),
+		requestID:      network.RequestID(1),
 		cancelCallback: func(f Future) {},
 	}
 	go func() {
@@ -154,7 +155,7 @@ func TestFuture_SetResult_Cancel_Concurrency(t *testing.T) {
 	cb := func(f Future) { cbCalled = true }
 
 	m := &packet.Packet{}
-	f := NewFuture(packet.RequestID(1), n, m, cb)
+	f := NewFuture(network.RequestID(1), n, m, cb)
 
 	wg := &sync.WaitGroup{}
 	wg.Add(2)

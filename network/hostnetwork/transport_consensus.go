@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/sequence"
 	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/network/transport/packet"
 	"github.com/insolar/insolar/network/transport/packet/types"
@@ -53,11 +54,12 @@ func (tc *transportConsensus) SendRequest(request network.Request, receiver core
 		return errors.Wrapf(err, "Failed to send %s request to node %s",
 			request.GetType().String(), receiver.String())
 	}
-	p := tc.buildRequest(request, receiverHost)
-	return tc.transport.SendPacket(p)
+	ctx := context.Background()
+	p := tc.buildRequest(ctx, request, receiverHost)
+	return tc.transport.SendPacket(ctx, p)
 }
 
-func (tc *transportConsensus) processMessage(ctx context.Context, msg *packet.Packet) {
+func (tc *transportConsensus) processMessage(msg *packet.Packet) {
 	log.Debugf("Got %s request from host, shortID: %d", msg.Type.String(), msg.Sender.ShortID)
 	sender, err := tc.resolver.ResolveS(msg.Sender.ShortID)
 	if err != nil {
@@ -97,6 +99,7 @@ func NewConsensusNetwork(address, nodeID string, shortID core.ShortNodeID,
 	result := &transportConsensus{handlers: make(map[types.PacketType]network.ConsensusRequestHandler)}
 
 	result.transport = tp
+	result.sequenceGenerator = sequence.NewGeneratorImpl()
 	result.resolver = resolver
 	result.origin = origin
 	result.messageProcessor = result.processMessage

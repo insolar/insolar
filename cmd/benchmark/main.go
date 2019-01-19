@@ -17,13 +17,16 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/insolar/insolar/api/sdk"
@@ -52,7 +55,7 @@ func parseInputParams() {
 	pflag.IntVarP(&concurrent, "concurrent", "c", 1, "concurrent users")
 	pflag.IntVarP(&repetitions, "repetitions", "r", 1, "repetitions for one user")
 	pflag.StringVarP(&rootMemberKeys, "rootmemberkeys", "k", "", "path to file with RootMember keys")
-	pflag.StringArrayVarP(&apiURLs, "apiurl", "u", []string{"http://localhost:19191/api"}, "url to api")
+	pflag.StringArrayVarP(&apiURLs, "apiurl", "u", []string{"http://localhost:19101/api"}, "url to api")
 	pflag.StringVarP(&logLevel, "loglevel", "l", "info", "log level for benchmark")
 	pflag.BoolVarP(&saveMembersToFile, "savemembers", "s", false, "save members to file")
 	pflag.BoolVarP(&useMembersFromFile, "usemembers", "m", false, "use members from file")
@@ -85,8 +88,8 @@ func check(msg string, err error) {
 	}
 }
 
-func runScenarios(out io.Writer, insSDK *sdk.SDK, members []*sdk.Member, concurrent int, repetitions int) {
-	transferDifferentMembers := &transferDifferentMembersScenario{
+func newScenarios(out io.Writer, insSDK *sdk.SDK, members []*sdk.Member, concurrent int, repetitions int) scenario {
+	return &transferDifferentMembersScenario{
 		concurrent:  concurrent,
 		repetitions: repetitions,
 		name:        "TransferDifferentMembers",
@@ -94,20 +97,23 @@ func runScenarios(out io.Writer, insSDK *sdk.SDK, members []*sdk.Member, concurr
 		members:     members,
 		insSDK:      insSDK,
 	}
-	startScenario(transferDifferentMembers)
 }
 
-func startScenario(s scenario) {
+func startScenario(ctx context.Context, s scenario) {
 	err := s.canBeStarted()
 	check(fmt.Sprintf("Scenario %s can not be started:", s.getName()), err)
 
 	writeToOutput(s.getOut(), fmt.Sprintf("Scenario %s: Start to transfer\n", s.getName()))
 
 	start := time.Now()
-	s.start()
+	s.start(ctx)
 	elapsed := time.Since(start)
-
 	writeToOutput(s.getOut(), fmt.Sprintf("Scenario %s: Transferring took %s \n", s.getName(), elapsed))
+
+	printResults(s)
+}
+
+func printResults(s scenario) {
 	speed := s.getOperationPerSecond()
 	writeToOutput(s.getOut(), fmt.Sprintf("Scenario %s: Speed - %f resp/s \n", s.getName(), speed))
 	writeToOutput(
@@ -266,7 +272,35 @@ func main() {
 	check("Error while loading members: ", err)
 	totalBalanceBefore := getTotalBalance(insSDK, members)
 
-	runScenarios(out, insSDK, members, concurrent, repetitions)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	var sigChan = make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGHUP)
+
+	s := newScenarios(out, insSDK, members, concurrent, repetitions)
+	go func() {
+		stopGracefully := true
+		for {
+			sig := <-sigChan
+
+			switch sig {
+			case syscall.SIGHUP:
+				printResults(s)
+			case syscall.SIGINT:
+				if !stopGracefully {
+					log.Fatal("Force quiting.")
+				} else {
+					log.Info("Gracefully finishing benchmark. Press Ctrl+C again to force quit.")
+				}
+
+				stopGracefully = false
+				cancel()
+			}
+		}
+	}()
+
+	startScenario(ctx, s)
 
 	// Finish benchmark time
 	t = time.Now()
@@ -285,6 +319,6 @@ func main() {
 	}
 	fmt.Printf("Total balance before: %v and after: %v\n", totalBalanceBefore, totalBalanceAfter)
 	if totalBalanceBefore != totalBalanceAfter {
-		panic("Total balance mismatch!\n")
+		log.Fatal("Total balance mismatch!\n")
 	}
 }

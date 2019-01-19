@@ -20,15 +20,14 @@ import (
 	"context"
 	"io"
 	"net"
-	"sync/atomic"
-	"time"
+
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/transport/pool"
 	"github.com/insolar/insolar/network/transport/relay"
 	"github.com/insolar/insolar/network/utils"
-	"github.com/pkg/errors"
 )
 
 type tcpTransport struct {
@@ -37,7 +36,6 @@ type tcpTransport struct {
 	pool     pool.ConnectionPool
 	listener net.Listener
 	addr     string
-	stopped  uint32
 }
 
 func newTCPTransport(addr string, proxy relay.Proxy, publicAddress string) (*tcpTransport, error) {
@@ -90,27 +88,32 @@ func (t *tcpTransport) send(address string, data []byte) error {
 	return errors.Wrap(err, "[ send ] Failed to write data")
 }
 
-func (t *tcpTransport) prepareListen() {
+func (t *tcpTransport) prepareListen() error {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 
-	atomic.StoreUint32(&t.stopped, 0)
 	t.disconnectStarted = make(chan bool, 1)
 	t.disconnectFinished = make(chan bool, 1)
 	listener, err := net.Listen("tcp", t.addr)
 	if err != nil {
-		log.Error("[ prepareListen ]", err.Error())
-		return
+		return err
 	}
 
 	t.listener = listener
+
+	return nil
 }
 
 // Start starts networking.
 func (t *tcpTransport) Listen(ctx context.Context, started chan struct{}) error {
 	logger := inslogger.FromContext(ctx)
 	logger.Info("[ Listen ] Start TCP transport")
-	t.prepareListen()
+
+	if err := t.prepareListen(); err != nil {
+		logger.Info("[ Listen ] Failed to prepare TCP transport")
+		return err
+	}
+
 	started <- struct{}{}
 	for {
 		conn, err := t.listener.Accept()
@@ -134,26 +137,14 @@ func (t *tcpTransport) Stop() {
 	log.Info("[ Stop ] Stop TCP transport")
 	t.prepareDisconnect()
 
-	atomic.StoreUint32(&t.stopped, 1)
 	utils.CloseVerbose(t.listener)
 	t.pool.Reset()
 }
 
 func (t *tcpTransport) handleAcceptedConnection(conn net.Conn) {
 	defer utils.CloseVerbose(conn)
-	closed := false
 
 	for {
-		if !closed && atomic.LoadUint32(&t.stopped) == 1 {
-			closed = true
-			log.Infof("[ handleAcceptedConnection ] Stop handling connection: %s", conn.RemoteAddr().String())
-		}
-
-		err := conn.SetReadDeadline(time.Now().Add(1000 * time.Millisecond))
-		if err != nil {
-			log.Errorf("[ handleAcceptedConnection ] Failed to set read deadline", err.Error())
-		}
-
 		msg, err := t.serializer.DeserializePacket(conn)
 
 		if err != nil {
@@ -162,18 +153,12 @@ func (t *tcpTransport) handleAcceptedConnection(conn net.Conn) {
 				return
 			}
 
-			if netErr, ok := err.(*net.OpError); ok && netErr.Timeout() {
-				if closed {
-					return
-				}
-				continue
-			}
-
 			log.Error("[ handleAcceptedConnection ] Failed to deserialize packet: ", err.Error())
 		} else {
-			log.Debug("[ handleAcceptedConnection ] Handling packet: ", msg.RequestID)
+			ctx, logger := inslogger.WithTraceField(context.Background(), msg.TraceID)
+			logger.Debug("[ handleAcceptedConnection ] Handling packet: ", msg.RequestID)
 
-			go t.packetHandler.Handle(context.TODO(), msg)
+			go t.packetHandler.Handle(ctx, msg)
 		}
 	}
 }

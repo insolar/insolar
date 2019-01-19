@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/sequence"
 	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet"
@@ -31,10 +32,11 @@ import (
 )
 
 type transportBase struct {
-	started          uint32
-	transport        transport.Transport
-	origin           *host.Host
-	messageProcessor func(ctx context.Context, msg *packet.Packet)
+	started           uint32
+	transport         transport.Transport
+	origin            *host.Host
+	messageProcessor  func(msg *packet.Packet)
+	sequenceGenerator sequence.Generator
 }
 
 // Listen start listening to network requests, should be started in goroutine.
@@ -59,7 +61,7 @@ func (h *transportBase) listen(ctx context.Context) {
 			if msg.Error != nil {
 				log.Warnf("Received error response: %s", msg.Error.Error())
 			}
-			go h.messageProcessor(ctx, msg)
+			go h.messageProcessor(msg)
 		case <-h.transport.Stopped():
 			if atomic.CompareAndSwapUint32(&h.started, 1, 0) {
 				h.transport.Close()
@@ -78,9 +80,9 @@ func (h *transportBase) Stop() {
 	}
 }
 
-func (h *transportBase) buildRequest(request network.Request, receiver *host.Host) *packet.Packet {
-	return packet.NewBuilder(h.origin).Receiver(receiver).
-		Type(request.GetType()).Request(request.GetData()).Build()
+func (h *transportBase) buildRequest(ctx context.Context, request network.Request, receiver *host.Host) *packet.Packet {
+	return packet.NewBuilder(h.origin).Receiver(receiver).Type(request.GetType()).RequestID(request.GetRequestID()).
+		Request(request.GetData()).TraceID(inslogger.TraceID(ctx)).Build()
 }
 
 // PublicAddress returns public address that can be published for all nodes.
@@ -95,7 +97,7 @@ func (h *transportBase) GetNodeID() core.RecordRef {
 
 // NewRequestBuilder create packet Builder for an outgoing request with sender set to current node.
 func (h *transportBase) NewRequestBuilder() network.RequestBuilder {
-	return &Builder{sender: h.origin}
+	return &Builder{sender: h.origin, id: network.RequestID(h.sequenceGenerator.Generate())}
 }
 
 func getOrigin(tp transport.Transport, id string) (*host.Host, error) {

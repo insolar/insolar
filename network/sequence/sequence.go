@@ -14,22 +14,28 @@
  *    limitations under the License.
  */
 
-package transport
+package sequence
 
 import (
 	"github.com/insolar/insolar/network/utils"
 )
 
-type sequenceGeneratorImpl struct {
+type Sequence uint64
+
+type Generator interface {
+	Generate() Sequence
+}
+
+type generatorImpl struct {
 	sequence *uint64
 }
 
-func newSequenceGeneratorImpl() *sequenceGeneratorImpl {
-	return &sequenceGeneratorImpl{
+func NewGeneratorImpl() Generator {
+	return &generatorImpl{
 		sequence: new(uint64),
 	}
 }
 
-func (sg *sequenceGeneratorImpl) Generate() Sequence {
+func (sg *generatorImpl) Generate() Sequence {
 	return Sequence(utils.AtomicLoadAndIncrementUint64(sg.sequence))
 }

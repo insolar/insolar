@@ -273,8 +273,13 @@ func (h *MessageHandler) handleGetObject(
 			return nil, err
 		}
 
-		logger.Debugf("redirect because record not found jet: %v, to: %v\n",
-			jetID.JetIDString(), node)
+		logger.Debugf(
+			"redirect (record not found). jet: %v, id: %v, state: %v, to: %v",
+			jetID.JetIDString(),
+			msg.Head.Record().DebugString(),
+			stateID.DebugString(),
+			node.String(),
+		)
 		return reply.NewGetObjectRedirectReply(h.DelegationTokenFactory, parcel, node, stateID)
 	}
 	if err != nil {
@@ -372,7 +377,7 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel core.Parc
 
 	delegateRef, ok := idx.Delegates[msg.AsType]
 	if !ok {
-		return nil, ErrNotFound
+		return nil, errors.New("the object has no delegate for this type")
 	}
 
 	rep := reply.Delegate{
@@ -487,7 +492,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 	var err error
 	defer instrument(ctx, "handleUpdateObject").err(&err).end()
 
-	inslog := inslogger.FromContext(ctx)
+	logger := inslogger.FromContext(ctx)
 
 	msg := parcel.Message().(*message.UpdateObject)
 	jetID := jetFromContext(ctx)
@@ -516,17 +521,17 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 	var idx *index.ObjectLifeline
 	err = h.db.Update(ctx, func(tx *storage.TransactionManager) error {
 		var err error
-		inslog.Debugf("Get index for: %v, jet: %v", msg.Object.Record(), jetID.String())
+		logger.Debugf("Get index for: %v, jet: %v", msg.Object.Record(), jetID.String())
 		idx, err = tx.GetObjectIndex(ctx, jetID, msg.Object.Record(), true)
 		// No index on our node.
 		if err == storage.ErrNotFound {
 			if state.State() == record.StateActivation {
 				// We are activating the object. There is no index for it anywhere.
-				fmt.Printf("saved object jet: %v, id: %v", jetID.JetIDString(), msg.Object.Record())
+				fmt.Printf("saved object jet: %v, id: %v\n", jetID.JetIDString(), msg.Object.Record())
 				fmt.Println()
 				idx = &index.ObjectLifeline{State: record.StateUndefined}
 			} else {
-				inslog.Debugf("Not found index for: %v, jet: %v", msg.Object.Record(), jetID.String())
+				logger.Debugf("Not found index for: %v, jet: %v", msg.Object.Record(), jetID.String())
 				// We are updating object. Index should be on the heavy executor.
 				heavy, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
 				if err != nil {
@@ -546,8 +551,8 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 		fmt.Println("handleUpdateObject: idx.LatestState", idx.LatestState, msg.Object.Record())
 		// Index exists and latest record id does not match (preserving chain consistency).
 		if idx.LatestState != nil && !state.PrevStateID().Equal(idx.LatestState) {
-			inslog.Debugf("Invalid index for: %v, jet: %v, provided state: %s", msg.Object.Record(), jetID.JetIDString(), state.PrevStateID())
-			inslog.Debugf("idx.LatestState: %s", idx.LatestState)
+			logger.Errorf("Invalid index for: %v, jet: %v, provided state: %s", msg.Object.Record(), jetID.JetIDString(), state.PrevStateID())
+			logger.Errorf("idx.LatestState: %s", idx.LatestState)
 			return errors.New("invalid state record")
 		}
 
@@ -563,7 +568,8 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 			idx.Parent = state.(*record.ObjectActivateRecord).Parent
 		}
 
-		inslog.Debugf("Save index for: %v, jet: %v, latestState: %s", msg.Object.Record(), jetID.JetIDString(), idx.LatestState)
+		logger.Debugf("saved object. jet: %v, id: %v, state: %v", jetID.JetIDString(), msg.Object.Record().DebugString(), id.DebugString())
+
 		return tx.SetObjectIndex(ctx, jetID, msg.Object.Record(), idx)
 	})
 	if err != nil {
@@ -878,24 +884,14 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 	// }
 
 	msg := parcel.Message().(*message.HotData)
-
-	fmt.Printf(
-		"[got hot] dropPulse: %v, dropJet: %v, jet: %v",
-		msg.Drop.Pulse,
-		msg.DropJet.JetIDString(),
-		msg.Jet.Record().JetIDString(),
-	)
-	fmt.Println()
-
 	// FIXME: check split signatures.
 	jetID := *msg.Jet.Record()
 
+	inslog.Debugf("[jet]: %v got hot. Pulse: %v, DropPulse: %v, DropJet: %v\n", jetID.JetIDString(), parcel.Pulse(), msg.Drop.Pulse, msg.DropJet.JetIDString())
+
 	err = h.db.SetDrop(ctx, msg.DropJet, &msg.Drop)
-	if err == storage.ErrOverride {
-		err = nil
-	}
 	if err != nil {
-		return nil, errors.Wrap(err, "[ handleHotRecords ] Can't SetDrop")
+		return nil, errors.Wrap(err, "[jet]: drop error")
 	}
 	err = h.db.SetDropSizeHistory(ctx, msg.DropJet, msg.JetDropSizeHistory)
 	if err != nil {

@@ -23,22 +23,21 @@ import (
 	"io"
 
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/pkg/errors"
 )
-
-// RequestID is 64 bit unsigned int request id.
-type RequestID uint64
 
 // Packet is DHT packet object.
 type Packet struct {
 	Sender        *host.Host
 	Receiver      *host.Host
 	Type          types.PacketType
-	RequestID     RequestID
+	RequestID     network.RequestID
 	RemoteAddress string
 
+	TraceID    string
 	Data       interface{}
 	Error      error
 	IsResponse bool
@@ -81,16 +80,21 @@ func DeserializePacket(conn io.Reader) (*Packet, error) {
 	log.Debugf("[ DeserializePacket ] packet length %d", length)
 	buf := make([]byte, length)
 	if _, err := io.ReadFull(conn, buf); err != nil {
+		log.Error("[ DeserializePacket ] couldn't read packet: ", err)
 		return nil, err
 	}
+	log.Debugf("[ DeserializePacket ] read packet")
 
 	msg := &Packet{}
 	dec := gob.NewDecoder(bytes.NewReader(buf))
 
 	err = dec.Decode(msg)
 	if err != nil {
+		log.Error("[ DeserializePacket ] couldn't decode packet: ", err)
 		return nil, err
 	}
+
+	log.Debugf("[ DeserializePacket ] decoded packet to %#v", msg)
 
 	return msg, nil
 }

@@ -14,6 +14,8 @@ KEYS_FILE=$BASE_DIR/$CONFIGS_DIR/bootstrap_keys.json
 ROOT_MEMBER_KEYS_FILE=$BASE_DIR/$CONFIGS_DIR/root_member_keys.json
 NODES_DATA=$BASE_DIR/nodes/
 GENESIS_CONFIG=$BASE_DIR/genesis.yaml
+GENERATED_CONFIGS_DIR=$BASE_DIR/$CONFIGS_DIR/generated_configs
+INSGORUND_PORT_FILE=$BASE_DIR/$CONFIGS_DIR/insgorund_ports.txt
 
 insolar_log_level=Debug
 gorund_log_level=$insolar_log_level
@@ -27,28 +29,50 @@ done
 
 DISCOVERY_NODES_KEYS_DIR=$TEST_DATA/scripts/discovery_nodes
 
+kill_port()
+{
+    port=$1
+    pids=$(lsof -i :$port | grep "LISTEN\|UDP" | awk '{print $2}')
+    for pid in $pids
+    do
+        echo "killing pid $pid"
+        kill -9 $pid
+    done
+}
+
 stop_listening()
 {
     echo "stop_listening() starts ..."
     stop_insgorund=$1
-    ports="13831 13832 23832 23833 33833 33834 43834 43835 53835 53836 53866 53867 53877 53878 53888 53889 53899 53900"  # Network ports
     ports="$ports 58090" # Pulsar
     ports="$ports 53837" # Genesis
     if [ "$stop_insgorund" == "true" ]
     then
-        ports="$ports 28221 28222 28441 28442 28661 28662 28881 28882" # Insgornd
+        gorund_ports=
+        while read -r line; do
+
+            listen_port=$( echo "$line" | awk '{print $1}' )
+            rpc_port=$( echo "$line" | awk '{print $2}' )
+
+            gorund_ports="$gorund_ports $listen_port $rpc_port"
+
+        done < "$INSGORUND_PORT_FILE"
+
+        gorund_ports="$gorund_ports $(echo $(pgrep insgorund ))"
+
+        ports="$ports $gorund_ports"
+
     fi
 
+    transport_ports=$( grep "host:" $GENESIS_CONFIG | grep -o ":\d\+" | grep -o "\d\+" | tr '\n' ' ' )
+    ports="$ports $transport_ports"
+
     echo "Stop listening..."
+    
     for port in $ports
     do
         echo "port: $port"
-        pids=$(lsof -i :$port | grep "LISTEN\|UDP" | awk '{print $2}')
-        for pid in $pids
-        do
-            echo "killing pid $pid"
-            kill -9 $pid
-        done
+        kill_port $port
     done
     echo "stop_listening() end."
 }
@@ -59,6 +83,7 @@ clear_dirs()
     rm -rfv $CONTRACT_STORAGE/*
     rm -rfv $LEDGER_DIR/*
     rm -rfv $NODES_DATA/*
+    rm -rfv $GENERATED_CONFIGS_DIR/*
     echo "clear_dirs() end."
 }
 
@@ -68,6 +93,8 @@ create_required_dirs()
     mkdir -vp $CONTRACT_STORAGE
     mkdir -vp $LEDGER_DIR
     mkdir -vp $NODES_DATA/certs
+    mkdir -vp $GENERATED_CONFIGS_DIR
+    touch $INSGORUND_PORT_FILE
 
     for node in "${NODES[@]}"
     do
@@ -77,6 +104,11 @@ create_required_dirs()
     mkdir -p scripts/insolard/$CONFIGS_DIR
 
     echo "create_required_dirs() end."
+}
+
+generate_insolard_configs()
+{
+    go run scripts/generate_insolar_configs.go -o $GENERATED_CONFIGS_DIR -p $INSGORUND_PORT_FILE -g $GENESIS_CONFIG
 }
 
 prepare()
@@ -170,22 +202,16 @@ process_input_params()
 launch_insgorund()
 {
     host=127.0.0.1
-    $INSGORUND -l $host:28221 --rpc $host:28222 --log-level=$gorund_log_level --metrics :28223 &
+    metrics_port=28223
+    while read -r line; do
 
-    if [ "$NUM_NODES" -ge 4 ]
-    then
-        $INSGORUND -l $host:28441 --rpc $host:28442 --log-level=$gorund_log_level --metrics :28443 &
-    fi
+        metrics_port=$((metrics_port + 20))
+        listen_port=$( echo "$line" | awk '{print $1}' )
+        rpc_port=$( echo "$line" | awk '{print $2}' )
 
-    if [ "$NUM_NODES" -ge 6 ]
-    then
-        $INSGORUND -l $host:28661 --rpc $host:28662 --log-level=$gorund_log_level --metrics :28663 &
-    fi
+        $INSGORUND -l $host:$listen_port --rpc $host:$rpc_port --log-level=$gorund_log_level --metrics :$metrics_port &
 
-    if [ "$NUM_NODES" -ge 8 ]
-    then
-        $INSGORUND -l $host:28881 --rpc $host:28882 --log-level=$gorund_log_level --metrics :28883 &
-    fi
+    done < "$INSGORUND_PORT_FILE"
 }
 
 copy_data()
@@ -217,6 +243,7 @@ genesis()
     generate_bootstrap_keys
     generate_root_member_keys
     generate_discovery_nodes_keys
+    generate_insolard_configs
 
     printf "start genesis ... \n"
     $INSOLARD --config $BASE_DIR/insolar.yaml --genesis $GENESIS_CONFIG --keyout $NODES_DATA/certs
@@ -233,7 +260,7 @@ genesis()
         for node in "${NODES[@]}" ; do
             ref=`jq -r '.reference' $node/cert.json`
             [[ $ref =~ .+\. ]]
-            ln -s `pwd`/$node/output.txt $NL/${BASH_REMATCH[0]}log
+            ln -s `pwd`/$node/output.log $NL/${BASH_REMATCH[0]}log
         done
     else
         echo "no jq =("
@@ -247,7 +274,7 @@ check_working_dir
 process_input_params $@
 
 printf "start pulsar ... \n"
-$PULSARD -c $BASE_DIR/pulsar.yaml &> $NODES_DATA/pulsar_output.txt &
+$PULSARD -c $BASE_DIR/pulsar.yaml &> $NODES_DATA/pulsar_output.log &
 
 if [ "$run_insgorund" == "true" ]
 then
@@ -266,10 +293,10 @@ do
     if [ "$i" -eq "$NUM_NODES" ]
     then
         echo "NODE $i STARTED in foreground"
-        INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $BASE_DIR/insolar_$i.yaml --trace &> $node/output.txt
+        INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $GENERATED_CONFIGS_DIR/insolar_$i.yaml --trace &> $node/output.log
         break
     fi
-    INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $BASE_DIR/insolar_$i.yaml --trace &> $node/output.txt &
+    INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $GENERATED_CONFIGS_DIR/insolar_$i.yaml --trace &> $node/output.log &
     echo "NODE $i STARTED in background"
 done
 

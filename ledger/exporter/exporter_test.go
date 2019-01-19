@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/jbenet/go-base58"
@@ -37,7 +38,8 @@ func TestExporter_Export(t *testing.T) {
 	db, clean := storagetest.TmpDB(ctx, t)
 	defer clean()
 	jetID := core.TODOJetID
-	exporter := NewExporter(db)
+	ps := storage.NewPulseStorage(db)
+	exporter := NewExporter(db, ps)
 
 	err := db.AddPulse(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber, PulseTimestamp: 1})
 	require.NoError(t, err)
@@ -74,8 +76,8 @@ func TestExporter_Export(t *testing.T) {
 
 	result, err := exporter.Export(ctx, 0, 10)
 	require.NoError(t, err)
-	assert.Equal(t, 3, len(result.Data))
-	assert.Equal(t, 3, result.Size)
+	assert.Equal(t, 2, len(result.Data))
+	assert.Equal(t, 2, result.Size)
 	assert.Nil(t, result.NextFrom)
 
 	result, err = exporter.Export(ctx, 0, 2)

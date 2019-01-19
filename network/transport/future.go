@@ -21,6 +21,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet"
 )
@@ -36,7 +37,7 @@ var (
 type Future interface {
 
 	// ID returns packet sequence number.
-	ID() packet.RequestID
+	ID() network.RequestID
 
 	// Actor returns the initiator of the packet.
 	Actor() *host.Host
@@ -64,13 +65,13 @@ type future struct {
 	result         chan *packet.Packet
 	actor          *host.Host
 	request        *packet.Packet
-	requestID      packet.RequestID
+	requestID      network.RequestID
 	cancelCallback CancelCallback
 	finished       uint32
 }
 
 // NewFuture creates new Future.
-func NewFuture(requestID packet.RequestID, actor *host.Host, msg *packet.Packet, cancelCallback CancelCallback) Future {
+func NewFuture(requestID network.RequestID, actor *host.Host, msg *packet.Packet, cancelCallback CancelCallback) Future {
 	return &future{
 		result:         make(chan *packet.Packet, 1),
 		actor:          actor,
@@ -81,7 +82,7 @@ func NewFuture(requestID packet.RequestID, actor *host.Host, msg *packet.Packet,
 }
 
 // ID returns RequestID of packet.
-func (future *future) ID() packet.RequestID {
+func (future *future) ID() network.RequestID {
 	return future.requestID
 }
 
