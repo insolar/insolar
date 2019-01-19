@@ -1,5 +1,9 @@
- # docker-compose -f docker/grafana.yml up
- # localhost:3000 admin:pass
+# docker-compose -f docker/compose.yml up grafana kibana
+# Start jaeger only after kibana has been started
+# docker-compose -f docker/compose.yml up jaeger 
+# localhost:3000 admin:pass - graphana
+# localhost:16686 - jaeger
+# localhost:5601 - kibana
  
 version: '3'
 services:
