@@ -572,10 +572,13 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 	m.PulseStorage.Set(&newPulse)
 	m.PulseStorage.Unlock()
 
-	jets, err := m.processJets(ctx, currentPulse.PulseNumber, newPulse.PulseNumber)
-	if err != nil {
-		m.GIL.Release(ctx)
-		return errors.Wrap(err, "failed to process jets")
+	var jets []jetInfo
+	if persist {
+		jets, err = m.processJets(ctx, currentPulse.PulseNumber, newPulse.PulseNumber)
+		if err != nil {
+			m.GIL.Release(ctx)
+			return errors.Wrap(err, "failed to process jets")
+		}
 	}
 
 	m.prepareArtifactManagerMessageHandlerForNextPulse(ctx, newPulse, jets)

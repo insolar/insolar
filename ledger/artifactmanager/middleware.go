@@ -39,6 +39,7 @@ type middleware struct {
 	pulseStorage                       core.PulseStorage
 	earlyRequestCircuitBreakerProvider *earlyRequestCircuitBreakerProvider
 	conf                               *configuration.Ledger
+	handler                            *MessageHandler
 	seqMutex                           sync.Mutex
 	sequencer                          map[core.RecordID]*struct {
 		sync.Mutex
@@ -49,15 +50,14 @@ type middleware struct {
 func newMiddleware(
 	conf *configuration.Ledger,
 	db *storage.DB,
-	jetCoordinator core.JetCoordinator,
-	messageBus core.MessageBus,
-	pulseStorage core.PulseStorage,
+	h *MessageHandler,
 ) *middleware {
 	return &middleware{
 		db:                                 db,
-		jetCoordinator:                     jetCoordinator,
-		messageBus:                         messageBus,
-		pulseStorage:                       pulseStorage,
+		handler:                            h,
+		jetCoordinator:                     h.JetCoordinator,
+		messageBus:                         h.Bus,
+		pulseStorage:                       h.PulseStorage,
 		earlyRequestCircuitBreakerProvider: &earlyRequestCircuitBreakerProvider{breakers: map[core.RecordID]*requestCircuitBreakerProvider{}},
 		conf:                               conf,
 		sequencer: map[core.RecordID]*struct {
@@ -96,27 +96,52 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 			return nil, errors.New("unexpected message")
 		}
 
+		logger := inslogger.FromContext(ctx)
+		logger.Debugf("checking jet for %v", parcel.Type().String())
+
 		// FIXME: @andreyromancev. 17.01.19. Temporary allow any genesis request. Remove it.
 		if parcel.Pulse() == core.FirstPulseNumber {
+			logger.Debugf("genesis pulse shortcut")
 			return handler(contextWithJet(ctx, *jet.NewID(0, nil)), parcel)
 		}
 
 		// Check token jet.
 		token := parcel.DelegationToken()
 		if token != nil {
+			logger.Debugf("received token. returning any jet")
 			// Calculate jet for target pulse.
 			target := *msg.DefaultTarget().Record()
-			tree, err := m.db.GetJetTree(ctx, target.Pulse())
+			pulse := target.Pulse()
+			switch tm := msg.(type) {
+			case *message.GetObject:
+				pulse = tm.State.Pulse()
+			case *message.GetChildren:
+				if tm.FromChild == nil {
+					return nil, errors.New("fetching children without child pointer is forbidden")
+				}
+				pulse = tm.FromChild.Pulse()
+			}
+			tree, err := m.db.GetJetTree(ctx, pulse)
 			if err != nil {
 				return nil, err
 			}
-			jetID, _ := tree.Find(target)
+
+			jetID, actual := tree.Find(target)
+			if !actual {
+				inslogger.FromContext(ctx).Errorf(
+					"got message of type %s with redirect token,"+
+						" but jet %s for pulse %d is not actual",
+					msg.Type(), jetID.JetIDString(), pulse,
+				)
+			}
+
 			return handler(contextWithJet(ctx, *jetID), parcel)
 		}
 
 		// Calculate jet for current pulse.
 		var jetID core.RecordID
 		if msg.DefaultTarget().Record().Pulse() == core.PulseNumberJet {
+			logger.Debugf("special pulse number (jet). returning jet from message")
 			jetID = *msg.DefaultTarget().Record()
 		} else {
 			j, actual, err := m.fetchJet(ctx, *msg.DefaultTarget().Record(), parcel.Pulse())
@@ -186,13 +211,13 @@ func (m *middleware) fetchJet(
 	}
 	jetID, actual := tree.Find(target)
 	if actual {
-		inslogger.FromContext(ctx).Debug(
+		inslogger.FromContext(ctx).Debugf(
 			"we believe object %s is in JET %s", target.String(), jetID.JetIDString(),
 		)
 		return jetID, actual, nil
 	}
 
-	inslogger.FromContext(ctx).Debug(
+	inslogger.FromContext(ctx).Debugf(
 		"jet %s is not actual in our tree, asking neighbors for jet of object %s",
 		jetID.JetIDString(), target.String(),
 	)
@@ -210,154 +235,35 @@ func (m *middleware) fetchJet(
 	mu.Lock()
 	if mu.done {
 		mu.Unlock()
-		inslogger.FromContext(ctx).Debug(
+		inslogger.FromContext(ctx).Debugf(
 			"somebody else updated actuality of jet %s, rechecking our DB",
 			jetID.JetIDString(),
 		)
 		return m.fetchJet(ctx, target, pulse)
 	}
 	defer func() {
-		inslogger.FromContext(ctx).Debug("done fetching jet, cleaning")
+		inslogger.FromContext(ctx).Debugf("done fetching jet, cleaning")
 
 		mu.done = true
 		mu.Unlock()
 
 		m.seqMutex.Lock()
-		inslogger.FromContext(ctx).Debug("deleting sequencer for jet %s", jetID.JetIDString())
+		inslogger.FromContext(ctx).Debugf("deleting sequencer for jet %s", jetID.JetIDString())
 		delete(m.sequencer, *jetID)
 		m.seqMutex.Unlock()
 	}()
 
-	jets, err := m.fetchJetFromOtherNodes(ctx, target, pulse)
+	resJet, err := m.handler.fetchActualJetFromOtherNodes(ctx, target, pulse)
 	if err != nil {
 		return nil, false, err
 	}
 
-	if len(jets) == 1 {
-		inslogger.FromContext(ctx).Debug(
-			"got one actual jet %s for object %s",
-			jetID.JetIDString(), target.String(),
-		)
-		err := m.db.UpdateJetTree(ctx, pulse, true, *jets[0])
-		if err != nil {
-			inslogger.FromContext(ctx).Error(
-				errors.Wrapf(err, "couldn't actualize jet %s", jets[0].JetIDString()),
-			)
-		}
-		return jets[0], true, nil
-	} else if len(jets) == 0 {
-		inslogger.FromContext(ctx).Error(
-			"All active light material nodes have no actual jet tree",
-		)
-		inslogger.FromContext(ctx).Error(
-			"My guess is: ", jetID.JetIDString(),
-		)
-		return nil, false, errors.New("impossible situation")
-	} else {
-		inslogger.FromContext(ctx).Error(
-			"Active light materials said different actual jets for object %s",
-			target.String(),
-		)
-		return nil, false, errors.New("nodes returned more than one unique jet")
-	}
-}
-
-func (m *middleware) fetchJetFromOtherNodes(
-	ctx context.Context, target core.RecordID, pulse core.PulseNumber,
-) ([]*core.RecordID, error) {
-
-	nodes, err := m.otherNodesForPrevPulse(ctx, pulse)
+	err = m.db.UpdateJetTree(ctx, pulse, true, *resJet)
 	if err != nil {
-		return nil, err
-	}
-
-	num := len(nodes)
-
-	wg := sync.WaitGroup{}
-	wg.Add(num)
-
-	replies := make([]*reply.Jet, num)
-	for i, node := range nodes {
-		go func(i int, node core.Node) {
-			defer wg.Done()
-
-			nodeID := node.ID()
-			rep, err := m.messageBus.Send(
-				ctx,
-				&message.GetJet{Object: target},
-				&core.MessageSendOptions{Receiver: &nodeID},
-			)
-			if err != nil {
-				inslogger.FromContext(ctx).Error(
-					errors.Wrap(err, "couldn't get jet"),
-				)
-				return
-			}
-
-			r, ok := rep.(*reply.Jet)
-			if !ok {
-				inslogger.FromContext(ctx).Errorf("middleware.fetchJetFromOtherNodes: unexpected reply: %#v\n", rep)
-				return
-			}
-
-			inslogger.FromContext(ctx).Debugf(
-				"Got jet %s from %s node, actual is %s",
-				r.ID.JetIDString(), node.ID().String(), r.Actual,
-			)
-			replies[i] = r
-		}(i, node)
-	}
-	wg.Wait()
-
-	seen := make(map[core.RecordID]struct{})
-	res := make([]*core.RecordID, 0)
-	for _, r := range replies {
-		if r == nil {
-			continue
-		}
-		if !r.Actual {
-			continue
-		}
-		if _, ok := seen[r.ID]; ok {
-			continue
-		}
-
-		seen[r.ID] = struct{}{}
-		res = append(res, &r.ID)
-	}
-
-	return res, nil
-}
-
-func (m *middleware) otherNodesForPrevPulse(
-	ctx context.Context, pulse core.PulseNumber,
-) ([]core.Node, error) {
-	prevPulse, err := m.db.GetPreviousPulse(ctx, pulse)
-	if err != nil {
-		return nil, err
-	}
-
-	nodes, err := m.db.GetActiveNodesByRole(prevPulse.Pulse.PulseNumber, core.StaticRoleLightMaterial)
-	if err != nil {
-		return nil, err
-	}
-
-	me := m.jetCoordinator.Me()
-	for i := range nodes {
-		if nodes[i].ID() == me {
-			nodes = append(nodes[:i], nodes[i+1:]...)
-			break
-		}
-	}
-
-	num := len(nodes)
-	if num == 0 {
 		inslogger.FromContext(ctx).Error(
-			"This shouldn't happen. We're solo active light material",
+			errors.Wrapf(err, "couldn't actualize jet %s", resJet.JetIDString()),
 		)
-
-		return nil, errors.New("impossible situation")
 	}
 
-	return nodes, nil
+	return resJet, true, nil
 }
