@@ -202,7 +202,11 @@ func getMembers(insSDK *sdk.SDK) ([]*sdk.Member, error) {
 			return nil, errors.Wrap(err, "error while loading members: ")
 		}
 	} else {
+		start := time.Now()
 		members = createMembers(insSDK, concurrent*2)
+		creationTime := time.Since(start)
+		fmt.Printf("Members were created in %s\n", creationTime)
+		fmt.Printf("Average creation of member time - %s\n", time.Duration(int64(creationTime)/int64(concurrent*2)))
 	}
 
 	if saveMembersToFile {
