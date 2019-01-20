@@ -675,20 +675,42 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse core.Pulse) 
 		return
 	}
 
-	for i := 0; i < delta; i++ {
+	newSerial := newPulseWithSerial.SerialNumber
+	// shuldBeGreater := newSerial - delta
+
+	var (
+		activeNodesUtilPN    core.PulseNumber
+		storageRecordsUtilPN core.PulseNumber
+	)
+	for i := 0; i < delta*2+1; i++ {
 		prevPulse, err := m.db.GetPreviousPulse(ctx, pn)
 		if err != nil {
-			inslogger.FromContext(ctx).Error("Can't get previous pulse by pulse number: %v", pn)
+			inslogger.FromContext(ctx).Errorf("Can't get previous Nth %v pulse by pulse number: %v", i, pn)
 			break
 		}
 		pn = prevPulse.Pulse.PulseNumber
+		ps := prevPulse.SerialNumber
 		// fmt.Printf("cleanLightData: [%v] prev pulse = %v\n", i, pn)
-		if newPulseWithSerial.SerialNumber-delta > prevPulse.SerialNumber {
-			break
+
+		if activeNodesUtilPN == 0 && (newSerial-delta*2) > ps {
+			fmt.Printf("cleanLightData: activeNodesUtilPN == 0 && (%v - %v*2) > %v\n",
+				newSerial, delta, ps)
+			activeNodesUtilPN = pn
+		}
+		if storageRecordsUtilPN == 0 && (newSerial-delta) > ps {
+			fmt.Printf("cleanLightData: storageRecordsUtilPN == 0 && (%v - %v) > %v\n",
+				newSerial, delta, ps)
+			storageRecordsUtilPN = pn
 		}
 	}
 
-	m.db.RemoveActiveNodesUntil(pn)
+	if activeNodesUtilPN > 0 {
+		m.db.RemoveActiveNodesUntil(pn)
+	}
+
+	if storageRecordsUtilPN == 0 {
+		return
+	}
 
 	m.cleanupGroup.Do("lightcleanup", func() (interface{}, error) {
 		startAsync := time.Now()
@@ -697,7 +719,7 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse core.Pulse) 
 			inslog.Debugf("cleanLightData async phase time spend=%v", latency)
 		}()
 
-		// we are remove records from 'pn' pulse number here
+		// we are remove records from 'storageRecordsUtilPN' pulse number here
 		jetSyncState, err := m.db.GetAllSyncClientJets(ctx)
 		if err != nil {
 			inslogger.FromContext(ctx).Errorf("Can't get jet clients state: %v", err)
@@ -706,14 +728,14 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse core.Pulse) 
 
 		for jetID := range jetSyncState {
 			inslogger.FromContext(ctx).Debugf("Start light indexes cleanup, until pulse = %v (new=%v, delta=%v), jet = %v",
-				pn, newPulse.PulseNumber, delta, jetID)
-			rmStat, err := m.db.RemoveAllForJetUntilPulse(ctx, jetID, pn)
+				storageRecordsUtilPN, newPulse.PulseNumber, delta, jetID)
+			rmStat, err := m.db.RemoveAllForJetUntilPulse(ctx, jetID, storageRecordsUtilPN)
 			if err != nil {
 				inslogger.FromContext(ctx).Errorf("Error on light indexes cleanup, until pulse = %v, jet = %v: %v", pn, jetID, err)
 				// continue
 			}
 			inslogger.FromContext(ctx).Debugf("End light indexes cleanup, rm stat=%#v indexes (until pulse = %v, jet = %v)",
-				rmStat, pn, jetID)
+				rmStat, storageRecordsUtilPN, jetID)
 		}
 		return nil, nil
 	})
