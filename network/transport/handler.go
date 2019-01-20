@@ -58,10 +58,10 @@ func (ph *packetHandlerImpl) processResponse(ctx context.Context, msg *packet.Pa
 	future := ph.futureManager.Get(msg)
 	if future != nil {
 		if shouldProcessPacket(future, msg) {
-			logger.Debugf("[ processResponse ] Processing future with RequestID = %s", msg.RequestID)
+			logger.Debugf("[ processResponse ] Processing future with RequestID = %v", msg.RequestID)
 			future.SetResult(msg)
 		} else {
-			logger.Debugf("[ processResponse ] Canceling future with RequestID = %s", msg.RequestID)
+			logger.Debugf("[ processResponse ] Canceling future with RequestID = %v", msg.RequestID)
 		}
 		future.Cancel()
 	}

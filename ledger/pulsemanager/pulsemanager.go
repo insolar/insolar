@@ -697,7 +697,7 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse core.Pulse) 
 		// fmt.Printf("cleanLightData: [%v] prev pulse = %v\n", i, pn)
 
 		if activeNodesUtilPN == 0 && (newSerial-(delta+1)) > ps {
-			fmt.Printf("cleanLightData: activeNodesUtilPN == 0 && (%v - (%v+1)) > %v => activeNodesUtilPN=%v\n", newSerial, delta, ps, activeNodesUtilPN)
+			fmt.Printf("cleanLightData: activeNodesUtilPN == 0 && (%v - (%v+1)) > %v => activeNodesUtilPN=%v\n", newSerial, delta, ps, pn)
 			activeNodesUtilPN = pn
 		}
 		if storageRecordsUtilPN == 0 && (newSerial-delta) > ps {
