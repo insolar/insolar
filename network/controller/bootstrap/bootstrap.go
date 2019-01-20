@@ -21,7 +21,7 @@ import (
 	"encoding/gob"
 	"fmt"
 	"strings"
-	"sync/atomic"
+	"sync"
 	"time"
 
 	"github.com/insolar/insolar/certificate"
@@ -45,7 +45,9 @@ type Bootstrapper struct {
 	cert      core.Certificate
 	keeper    network.NodeKeeper
 
-	lastPulse uint32
+	lastPulse      core.PulseNumber
+	pulsePersisted bool
+	lastPulseLock  sync.Mutex
 }
 
 type NodeBootstrapRequest struct{}
@@ -139,15 +141,34 @@ func (bc *Bootstrapper) Bootstrap(ctx context.Context) (*DiscoveryNode, error) {
 }
 
 func (bc *Bootstrapper) SetLastPulse(number core.PulseNumber) {
-	if bc.keeper.IsBootstrapped() {
+	bc.lastPulseLock.Lock()
+	defer bc.lastPulseLock.Unlock()
+
+	if bc.pulsePersisted {
 		return
 	}
-	atomic.StoreUint32(&bc.lastPulse, uint32(number))
+	bc.lastPulse = number
+}
+
+func (bc *Bootstrapper) forceSetLastPulse(number core.PulseNumber) {
+	bc.lastPulseLock.Lock()
+	defer bc.lastPulseLock.Unlock()
+
+	bc.lastPulse = number
 }
 
 func (bc *Bootstrapper) GetLastPulse() core.PulseNumber {
-	pulse := atomic.LoadUint32(&bc.lastPulse)
-	return core.PulseNumber(pulse)
+	return bc.getLastPulse(false)
+}
+
+func (bc *Bootstrapper) getLastPulse(persistLastPulse bool) core.PulseNumber {
+	bc.lastPulseLock.Lock()
+	defer bc.lastPulseLock.Unlock()
+
+	if persistLastPulse {
+		bc.pulsePersisted = true
+	}
+	return bc.lastPulse
 }
 
 func (bc *Bootstrapper) checkActiveNode(node core.Node) error {
@@ -192,7 +213,7 @@ func (bc *Bootstrapper) BootstrapDiscovery(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	bc.SetLastPulse(lastPulse)
+	bc.forceSetLastPulse(lastPulse)
 	for _, activeNode := range activeNodes {
 		err = bc.checkActiveNode(activeNode)
 		if err != nil {
@@ -382,7 +403,7 @@ func (bc *Bootstrapper) processGenesis(ctx context.Context, request network.Requ
 	if err != nil {
 		return bc.transport.BuildResponse(ctx, request, &GenesisResponse{Error: err.Error()}), nil
 	}
-	return bc.transport.BuildResponse(ctx, request, &GenesisResponse{Discovery: discovery, LastPulse: bc.GetLastPulse()}), nil
+	return bc.transport.BuildResponse(ctx, request, &GenesisResponse{Discovery: discovery, LastPulse: bc.getLastPulse(true)}), nil
 }
 
 func (bc *Bootstrapper) Start(keeper network.NodeKeeper) {
