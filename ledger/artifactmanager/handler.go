@@ -112,7 +112,8 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 	m := newMiddleware(h.conf, h.db, h)
 	h.middleware = m
 
-	if h.certificate.GetRole() == core.StaticRoleLightMaterial {
+	// core.StaticRoleUnknown - genesis
+	if h.certificate.GetRole() == core.StaticRoleLightMaterial || h.certificate.GetRole() == core.StaticRoleUnknown {
 		h.setHandlersForLight(m)
 		h.setReplayHandlers(m)
 	}
