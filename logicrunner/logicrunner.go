@@ -525,11 +525,12 @@ func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionS
 
 		res := ExecutionQueueResult{}
 
-		recordingBus, err := lr.MessageBus.NewRecorder(qe.ctx, *lr.pulse(qe.ctx))
-		if err != nil {
-			res.err = err
-			continue
-		}
+		recordingBus := lr.MessageBus
+		//recordingBus, err := lr.MessageBus.NewRecorder(qe.ctx, *lr.pulse(qe.ctx))
+		//if err != nil {
+		//	res.err = err
+		//	continue
+		//}
 
 		current.Context = core.ContextWithMessageBus(qe.ctx, recordingBus)
 
@@ -539,7 +540,7 @@ func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionS
 		res.reply, res.err = lr.executeOrValidate(current.Context, es, qe.parcel)
 
 		inslogger.FromContext(qe.ctx).Debug("Registering result within execution behaviour")
-		err = es.Behaviour.Result(res.reply, res.err)
+		err := es.Behaviour.Result(res.reply, res.err)
 		if err != nil {
 			res.err = err
 		}

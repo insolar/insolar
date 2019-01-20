@@ -443,6 +443,7 @@ type GetJet struct {
 	ledgerMessage
 
 	Object core.RecordID
+	Pulse  core.PulseNumber
 }
 
 // Type implementation of Message interface.
