@@ -169,7 +169,7 @@ func (mb *MessageBus) SendParcel(
 	currentPulse core.Pulse,
 	options *core.MessageSendOptions,
 ) (core.Reply, error) {
-	ctx, span := instracer.StartSpan(ctx, "MessageBus.SendParcel")
+	ctx, span := instracer.StartSpan(ctx, "MessageBus.SendParcel "+parcel.Type().String())
 	defer span.End()
 
 	readBarrier(ctx, &mb.globalLock)
