@@ -17,8 +17,9 @@
 package storage
 
 import (
+	"fmt"
+
 	"github.com/insolar/insolar/core"
-	"github.com/pkg/errors"
 )
 
 // SetActiveNodes saves active nodes for pulse in memory.
@@ -48,7 +49,7 @@ func (db *DB) GetActiveNodes(pulse core.PulseNumber) ([]core.Node, error) {
 
 	nodes, ok := db.nodeHistory[pulse]
 	if !ok {
-		return nil, errors.New("no nodes for this pulse")
+		return nil, fmt.Errorf("GetActiveNodes: no nodes for pulse %v", pulse)
 	}
 	res := make([]core.Node, len(nodes))
 	for i, n := range nodes {
@@ -65,7 +66,7 @@ func (db *DB) GetActiveNodesByRole(pulse core.PulseNumber, role core.StaticRole)
 
 	nodes, ok := db.nodeHistory[pulse]
 	if !ok {
-		return nil, errors.New("no nodes for this pulse")
+		return nil, fmt.Errorf("GetActiveNodesByRole: no nodes for pulse", pulse)
 	}
 	var inRole []core.Node
 	for _, n := range nodes {
