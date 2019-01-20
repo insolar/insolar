@@ -71,10 +71,6 @@ func NewMessageHandler(
 	}
 }
 
-func checkJetAndInstrument(name string, m *middleware, handler core.MessageHandler) core.MessageHandler {
-	return m.checkJet(handler)
-}
-
 func checkJetAndInstrumentWithBreaker(name string, m *middleware, handler core.MessageHandler) core.MessageHandler {
 	return instrumentHandler(name, m.checkJet(m.checkEarlyRequestBreaker(handler)))
 }
@@ -175,7 +171,6 @@ func (h *MessageHandler) setHandlersForHeavy(m *middleware) {
 	h.Bus.MustRegister(core.TypeGetDelegate, instrumentHandler("handleGetDelegate", m.zeroJetForHeavy(h.handleGetDelegate)))
 	h.Bus.MustRegister(core.TypeGetChildren, instrumentHandler("handleGetChildren", m.zeroJetForHeavy(h.handleGetChildren)))
 	h.Bus.MustRegister(core.TypeGetObjectIndex, instrumentHandler("handleGetObjectIndex", m.zeroJetForHeavy(h.handleGetObjectIndex)))
-	h.Bus.MustRegister(core.TypeGetJet, instrumentHandler("handleGetJet", m.zeroJetForHeavy(h.handleGetJet)))
 }
 
 // ResetEarlyRequestCircuitBreaker throws timeouts at the end of a pulse
