@@ -899,6 +899,10 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 	logger.Debugf("[jet]: %v got hot. Pulse: %v, DropPulse: %v, DropJet: %v\n", jetID.JetIDString(), parcel.Pulse(), msg.Drop.Pulse, msg.DropJet.JetIDString())
 
 	err := h.db.SetDrop(ctx, msg.DropJet, &msg.Drop)
+	if err == storage.ErrOverride {
+		logger.Debugf("received drop duplicate for. jet: %v, pulse: %v", msg.DropJet.JetIDString(), msg.Drop.Pulse)
+		err = nil
+	}
 	if err != nil {
 		return nil, errors.Wrapf(err, "[jet]: drop error (pulse: %v)", msg.Drop.Pulse)
 	}
