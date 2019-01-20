@@ -300,6 +300,9 @@ func (lr *LogicRunner) CheckOurRole(ctx context.Context, msg core.Message, role 
 }
 
 func (lr *LogicRunner) RegisterRequest(ctx context.Context, parcel core.Parcel) (*Ref, error) {
+	ctx, span := instracer.StartSpan(ctx, "LogicRunner.RegisterRequest")
+	defer span.End()
+
 	obj := parcel.Message().(message.IBaseLogicMessage).GetReference()
 	id, err := lr.ArtifactManager.RegisterRequest(ctx, obj, parcel)
 	if err != nil {
@@ -821,6 +824,9 @@ func (lr *LogicRunner) getDescriptorsByObjectRef(
 ) (
 	core.ObjectDescriptor, core.ObjectDescriptor, core.CodeDescriptor, error,
 ) {
+	ctx, span := instracer.StartSpan(ctx, "LogicRunner.getDescriptorsByObjectRef")
+	defer span.End()
+
 	objDesc, err := lr.ArtifactManager.GetObject(ctx, objRef, nil, false)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "couldn't get object")
