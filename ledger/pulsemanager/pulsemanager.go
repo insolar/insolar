@@ -693,20 +693,20 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse core.Pulse) 
 		// fmt.Printf("cleanLightData: [%v] prev pulse = %v\n", i, pn)
 
 		if activeNodesUtilPN == 0 && (newSerial-(delta+1)) > ps {
-			fmt.Printf("cleanLightData: activeNodesUtilPN == 0 && (%v - (%v+1)) > %v\n", newSerial, delta, ps)
+			fmt.Printf("cleanLightData: activeNodesUtilPN == 0 && (%v - (%v+1)) > %v => activeNodesUtilPN=%v\n", newSerial, delta, ps, activeNodesUtilPN)
 			activeNodesUtilPN = pn
 		}
 		if storageRecordsUtilPN == 0 && (newSerial-delta) > ps {
-			fmt.Printf("cleanLightData: storageRecordsUtilPN == 0 && (%v - %v) > %v\n", newSerial, delta, ps)
+			fmt.Printf("cleanLightData: storageRecordsUtilPN == 0 && (%v - %v) > %v => storageRecordsUtilPN=%v\n", newSerial, delta, ps, pn)
 			storageRecordsUtilPN = pn
 		}
 	}
 
-	if activeNodesUtilPN > 0 {
+	if activeNodesUtilPN > 0 && activeNodesUtilPN > core.FirstPulseNumber {
 		m.db.RemoveActiveNodesUntil(pn)
 	}
 
-	if storageRecordsUtilPN == 0 {
+	if storageRecordsUtilPN <= core.FirstPulseNumber {
 		return
 	}
 
