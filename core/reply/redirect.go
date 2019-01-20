@@ -60,15 +60,18 @@ func (r *GetObjectRedirectReply) Redirected(genericMsg core.Message) core.Messag
 type GetChildrenRedirectReply struct {
 	Receiver *core.RecordRef
 	Token    core.DelegationToken
+
+	FromChild core.RecordID
 }
 
 // NewGetChildrenRedirect creates a new instance of GetChildrenRedirectReply.
 func NewGetChildrenRedirect(
-	factory core.DelegationTokenFactory, parcel core.Parcel, receiver *core.RecordRef,
+	factory core.DelegationTokenFactory, parcel core.Parcel, receiver *core.RecordRef, fromChild core.RecordID,
 ) (*GetChildrenRedirectReply, error) {
 	var err error
 	rep := GetChildrenRedirectReply{
-		Receiver: receiver,
+		Receiver:  receiver,
+		FromChild: fromChild,
 	}
 	redirectedMessage := rep.Redirected(parcel.Message())
 	sender := parcel.GetSender()
@@ -96,7 +99,13 @@ func (r *GetChildrenRedirectReply) Type() core.ReplyType {
 
 // Redirected creates redirected message from redirect data.
 func (r *GetChildrenRedirectReply) Redirected(genericMsg core.Message) core.Message {
-	return genericMsg
+	msg := genericMsg.(*message.GetChildren)
+	return &message.GetChildren{
+		Parent:    msg.Parent,
+		FromChild: &r.FromChild,
+		FromPulse: msg.FromPulse,
+		Amount:    msg.Amount,
+	}
 }
 
 // GetCodeRedirectReply is a redirect reply for get children.
