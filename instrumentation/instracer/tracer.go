@@ -130,6 +130,7 @@ func RegisterJaeger(
 	nodeRef string,
 	agentendpoint string,
 	collectorendpoint string,
+	probabilityRate float64,
 ) (*jaeger.Exporter, error) {
 	if agentendpoint == "" && collectorendpoint == "" {
 		return nil, ErrJagerConfigEmpty
@@ -150,7 +151,7 @@ func RegisterJaeger(
 	}
 	trace.RegisterExporter(exporter)
 	trace.ApplyConfig(trace.Config{
-		DefaultSampler: trace.AlwaysSample(),
+		DefaultSampler: trace.ProbabilitySampler(1 / probabilityRate),
 	})
 	return exporter, nil
 }
@@ -162,12 +163,14 @@ func ShouldRegisterJaeger(
 	nodeRef string,
 	agentendpoint string,
 	collectorendpoint string,
+	probabilityRate float64,
 ) (flusher func()) {
 	exporter, regerr := RegisterJaeger(
 		servicename,
 		nodeRef,
 		agentendpoint,
 		collectorendpoint,
+		probabilityRate,
 	)
 	inslog := inslogger.FromContext(ctx)
 	if regerr == nil {
