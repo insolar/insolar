@@ -339,6 +339,13 @@ func (h *MessageHandler) handleGetObject(
 			if err != nil {
 				return nil, err
 			}
+			logger.Debugf(
+				"redirect (on heavy). pulse: %v, id: %v, state: %v, to: %v",
+				parcel.Pulse(),
+				msg.Head.Record().DebugString(),
+				stateID.DebugString(),
+				node.String(),
+			)
 			return reply.NewGetObjectRedirectReply(h.DelegationTokenFactory, parcel, node, msg.State)
 		}
 
@@ -405,7 +412,12 @@ func (h *MessageHandler) handleGetObject(
 	if state.GetMemory() != nil {
 		rep.Memory, err = h.db.GetBlob(ctx, *stateJet, state.GetMemory())
 		if err != nil {
-			inslogger.FromContext(ctx).Errorf("fetch blob failed id - %v", state.GetMemory().String())
+			logger.Errorf(
+				"failed to fetch blob. pulse: %v, jet: %v, id: %v",
+				parcel.Pulse(),
+				stateJet.JetIDString(),
+				state.GetMemory().DebugString(),
+			)
 			return nil, errors.Wrap(err, "failed to fetch blob")
 		}
 	}
@@ -634,6 +646,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to set blob")
 	}
+	logger.Debugf("save blob. pulse: %v, jet: %v, id: %v", parcel.Pulse(), jetID.JetIDString(), blobID.DebugString())
 
 	switch s := state.(type) {
 	case *record.ObjectActivateRecord:

@@ -585,8 +585,9 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 		}
 	}
 
-	m.prepareArtifactManagerMessageHandlerForNextPulse(ctx, newPulse, jets)
-
+	if m.NodeNet.GetOrigin().Role() == core.StaticRoleLightMaterial {
+		m.prepareArtifactManagerMessageHandlerForNextPulse(ctx, newPulse, jets)
+	}
 	m.GIL.Release(ctx)
 
 	if !persist {
@@ -608,17 +609,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 				m.syncClientsPool.AddPulsesToSyncClient(ctx, jInfo.id, true, pn)
 			}
 		}
-	}
 
-	fmt.Printf(
-		"Finished pulse %v, current: %v, time: %v",
-		newPulse.PulseNumber,
-		currentPulse.PulseNumber,
-		time.Now(),
-	)
-	fmt.Println()
-
-	if m.NodeNet.GetOrigin().Role() == core.StaticRoleLightMaterial {
 		m.postProcessJets(ctx, newPulse, jets)
 		// TODO: make it asynchronious - @aorlovsky 19.01.2019
 		m.cleanLightData(ctx, newPulse)
