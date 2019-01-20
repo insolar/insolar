@@ -681,9 +681,9 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse core.Pulse) 
 		pn = prevPulse.Pulse.PulseNumber
 		sn := prevPulse.SerialNumber
 
-		fmt.Printf("cleanLightData: [%v] prev pulse num=%v, sn=%sn\n", i, pn, sn)
+		fmt.Printf("cleanLightData: [%v] prev pulse num=%v, sn=%v\n", i, pn, sn)
 		if pn <= core.FirstPulseNumber {
-			fmt.Printf("cleanLightData: [%v] reached first pulse, no clean num=%v, sn=%sn\n", i, pn, sn)
+			fmt.Printf("cleanLightData: [%v] reached first pulse, no clean num=%v, sn=%v\n", i, pn, sn)
 			return
 		}
 	}
