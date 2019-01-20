@@ -679,11 +679,11 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse core.Pulse) 
 	m.db.RemoveActiveNodesUntil(pn)
 
 	fmt.Printf("cleanLightData: RemoveAllForJetUntilPulse: %v\n", pn)
-	m.cleanupGroup.Do("lightcleanup", func() (interface{}, error) {
+	_, err, _ := m.cleanupGroup.Do("lightcleanup", func() (interface{}, error) {
 		startAsync := time.Now()
 		defer func() {
 			latency := time.Since(startAsync)
-			inslog.Debugf("cleanLightData async phase time spend=%v", latency)
+			inslog.Debugf("cleanLightData potential async phase time spend=%v", latency)
 		}()
 
 		// we are remove records from 'storageRecordsUtilPN' pulse number here
@@ -706,6 +706,9 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse core.Pulse) 
 		}
 		return nil, nil
 	})
+	if err != nil {
+		inslogger.FromContext(ctx).Errorf("Error on light indexes cleanup, until pulse = %v, singlefligt err = %v", pn, err)
+	}
 }
 
 func (m *PulseManager) prepareArtifactManagerMessageHandlerForNextPulse(ctx context.Context, newPulse core.Pulse, jets []jetInfo) {
