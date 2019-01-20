@@ -35,6 +35,7 @@ import (
 	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/pkg/errors"
 	"golang.org/x/sync/errgroup"
+	"golang.org/x/sync/singleflight"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/pulsemanager.ActiveListSwapper -o ../../testutils -s _mock.go
@@ -55,8 +56,11 @@ type PulseManager struct {
 	ActiveListSwapper             ActiveListSwapper                  `inject:""`
 	PulseStorage                  pulseStoragePm                     `inject:""`
 	ArtifactManagerMessageHandler core.ArtifactManagerMessageHandler `inject:""`
+
 	// TODO: move clients pool to component - @nordicdyno - 18.Dec.2018
 	syncClientsPool *heavyclient.Pool
+	// cleanupGroup limits cleanup process, avoid queuing on mutexes
+	cleanupGroup singleflight.Group
 
 	currentPulse core.Pulse
 
@@ -653,10 +657,10 @@ func (m *PulseManager) postProcessJets(ctx context.Context, newPulse core.Pulse,
 
 func (m *PulseManager) cleanLightData(ctx context.Context, newPulse core.Pulse) {
 	inslog := inslogger.FromContext(ctx)
-	start := time.Now()
+	startSync := time.Now()
 	defer func() {
-		latency := time.Since(start)
-		inslog.Debugf("cleanLightData time spend=%v", latency)
+		latency := time.Since(startSync)
+		inslog.Debugf("cleanLightData sync phase time spend=%v", latency)
 	}()
 
 	delta := m.options.storeLightPulses
@@ -686,24 +690,33 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse core.Pulse) 
 
 	m.db.RemoveActiveNodesUntil(pn)
 
-	// we are remove records from 'pn' pulse number here
-	jetSyncState, err := m.db.GetAllSyncClientJets(ctx)
-	if err != nil {
-		inslogger.FromContext(ctx).Errorf("Can't get jet clients state: %v", err)
-		return
-	}
+	m.cleanupGroup.Do("lightcleanup", func() (interface{}, error) {
+		startAsync := time.Now()
+		defer func() {
+			latency := time.Since(startAsync)
+			inslog.Debugf("cleanLightData async phase time spend=%v", latency)
+		}()
 
-	for jetID := range jetSyncState {
-		inslogger.FromContext(ctx).Debugf("Start light indexes cleanup, until pulse = %v (new=%v, delta=%v), jet = %v",
-			pn, newPulse.PulseNumber, delta, jetID)
-		rmStat, err := m.db.RemoveAllForJetUntilPulse(ctx, jetID, pn)
+		// we are remove records from 'pn' pulse number here
+		jetSyncState, err := m.db.GetAllSyncClientJets(ctx)
 		if err != nil {
-			inslogger.FromContext(ctx).Errorf("Error on light indexes cleanup, until pulse = %v, jet = %v: %v", pn, jetID, err)
-			// continue
+			inslogger.FromContext(ctx).Errorf("Can't get jet clients state: %v", err)
+			return nil, nil
 		}
-		inslogger.FromContext(ctx).Debugf("End light indexes cleanup, rm stat=%#v indexes (until pulse = %v, jet = %v)",
-			rmStat, pn, jetID)
-	}
+
+		for jetID := range jetSyncState {
+			inslogger.FromContext(ctx).Debugf("Start light indexes cleanup, until pulse = %v (new=%v, delta=%v), jet = %v",
+				pn, newPulse.PulseNumber, delta, jetID)
+			rmStat, err := m.db.RemoveAllForJetUntilPulse(ctx, jetID, pn)
+			if err != nil {
+				inslogger.FromContext(ctx).Errorf("Error on light indexes cleanup, until pulse = %v, jet = %v: %v", pn, jetID, err)
+				// continue
+			}
+			inslogger.FromContext(ctx).Debugf("End light indexes cleanup, rm stat=%#v indexes (until pulse = %v, jet = %v)",
+				rmStat, pn, jetID)
+		}
+		return nil, nil
+	})
 }
 
 func (m *PulseManager) prepareArtifactManagerMessageHandlerForNextPulse(ctx context.Context, newPulse core.Pulse, jets []jetInfo) {
