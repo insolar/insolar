@@ -324,35 +324,43 @@ func (h *MessageHandler) handleGetObject(
 		return &reply.Error{ErrType: reply.ErrStateNotAvailable}, nil
 	}
 
-	onHeavy, err := h.isBeyondLimit(ctx, parcel.Pulse(), stateID.Pulse())
-	if err != nil {
-		return nil, err
-	}
-	if onHeavy {
-		node, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
+	var stateJet *core.RecordID
+	if h.certificate.GetRole() == core.StaticRoleHeavyMaterial {
+		stateJet = &jetID
+	} else {
+		var actual bool
+		onHeavy, err := h.isBeyondLimit(ctx, parcel.Pulse(), stateID.Pulse())
 		if err != nil {
 			return nil, err
 		}
-		return reply.NewGetObjectRedirectReply(h.DelegationTokenFactory, parcel, node, msg.State)
-	}
+		if onHeavy {
+			node, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
+			if err != nil {
+				return nil, err
+			}
+			return reply.NewGetObjectRedirectReply(h.DelegationTokenFactory, parcel, node, msg.State)
+		}
 
-	stateTree, err := h.db.GetJetTree(ctx, stateID.Pulse())
-	if err != nil {
-		return nil, err
-	}
-	stateJet, actual := stateTree.Find(*msg.Head.Record())
-	if !actual {
-		actualJet, err := h.fetchActualJetFromOtherNodes(ctx, *msg.Head.Record(), stateID.Pulse())
+		stateTree, err := h.db.GetJetTree(ctx, stateID.Pulse())
 		if err != nil {
 			return nil, err
 		}
-
-		stateJet = actualJet
+		stateJet, actual = stateTree.Find(*msg.Head.Record())
+		if !actual {
+			actualJet, err := h.fetchActualJetFromOtherNodes(ctx, *msg.Head.Record(), stateID.Pulse())
+			if err != nil {
+				return nil, err
+			}
+			stateJet = actualJet
+		}
 	}
 
 	// Fetch state record.
 	rec, err := h.db.GetRecord(ctx, *stateJet, stateID)
 	if err == storage.ErrNotFound {
+		if h.certificate.GetRole() == core.StaticRoleHeavyMaterial {
+			return nil, fmt.Errorf("failed to fetch state for %v. jet: %v, state: %v", msg.Head.Record(), stateJet.JetIDString(), stateID.DebugString())
+		}
 		// The record wasn't found on the current node. Return redirect to the node that contains it.
 		// We get Jet tree for pulse when given state was added.
 		node, err := h.nodeForJet(ctx, *stateJet, parcel.Pulse(), stateID.Pulse())
@@ -525,36 +533,43 @@ func (h *MessageHandler) handleGetChildren(
 		return &reply.Children{Refs: nil, NextFrom: nil}, nil
 	}
 
-	onHeavy, err := h.isBeyondLimit(ctx, parcel.Pulse(), currentChild.Pulse())
-	if err != nil {
-		return nil, err
-	}
-	if onHeavy {
-		node, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
+	var childJet *core.RecordID
+	if h.certificate.GetRole() == core.StaticRoleHeavyMaterial {
+		childJet = &jetID
+	} else {
+		var actual bool
+		onHeavy, err := h.isBeyondLimit(ctx, parcel.Pulse(), currentChild.Pulse())
 		if err != nil {
 			return nil, err
 		}
-		return reply.NewGetChildrenRedirect(h.DelegationTokenFactory, parcel, node, *idx.ChildPointer)
-	}
+		if onHeavy {
+			node, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
+			if err != nil {
+				return nil, err
+			}
+			return reply.NewGetChildrenRedirect(h.DelegationTokenFactory, parcel, node, *idx.ChildPointer)
+		}
 
-	// We don't have the first child record. It means, it was created on another node.
-	childTree, err := h.db.GetJetTree(ctx, currentChild.Pulse())
-	if err != nil {
-		return nil, err
-	}
-	childJet, actual := childTree.Find(*msg.Parent.Record())
-	if !actual {
-		actualJet, err := h.fetchActualJetFromOtherNodes(ctx, *msg.Parent.Record(), currentChild.Pulse())
+		childTree, err := h.db.GetJetTree(ctx, currentChild.Pulse())
 		if err != nil {
 			return nil, err
 		}
-
-		childJet = actualJet
+		childJet, actual = childTree.Find(*msg.Parent.Record())
+		if !actual {
+			actualJet, err := h.fetchActualJetFromOtherNodes(ctx, *msg.Parent.Record(), currentChild.Pulse())
+			if err != nil {
+				return nil, err
+			}
+			childJet = actualJet
+		}
 	}
 
 	// Try to fetch the first child.
 	_, err = h.db.GetRecord(ctx, *childJet, currentChild)
 	if err == storage.ErrNotFound {
+		if h.certificate.GetRole() == core.StaticRoleHeavyMaterial {
+			return nil, fmt.Errorf("failed to fetch child for %v. jet: %v, state: %v", msg.Parent.Record(), childJet.JetIDString(), currentChild.DebugString())
+		}
 		node, err := h.nodeForJet(ctx, *childJet, parcel.Pulse(), currentChild.Pulse())
 		if err != nil {
 			return nil, err
