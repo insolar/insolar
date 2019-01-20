@@ -21,13 +21,14 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
-	"github.com/jbenet/go-base58"
+	base58 "github.com/jbenet/go-base58"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/ugorji/go/codec"
@@ -39,12 +40,19 @@ func TestExporter_Export(t *testing.T) {
 	defer clean()
 	jetID := core.TODOJetID
 	ps := storage.NewPulseStorage(db)
-	exporter := NewExporter(db, ps)
+	exporter := NewExporter(db, ps, configuration.Exporter{ExportLag: 0})
 
-	err := db.AddPulse(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 1, PulseTimestamp: 2})
-	require.NoError(t, err)
-	err = db.AddPulse(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 2, PulseTimestamp: 3})
-	require.NoError(t, err)
+	for i := 1; i <= 3; i++ {
+		err := db.AddPulse(
+			ctx,
+			core.Pulse{
+				PulseNumber:     core.FirstPulseNumber + 10*core.PulseNumber(i),
+				PrevPulseNumber: core.FirstPulseNumber + 10*core.PulseNumber(i-1),
+				PulseTimestamp:  10 * int64(i+1),
+			},
+		)
+		require.NoError(t, err)
+	}
 
 	type testData struct {
 		Field string
@@ -56,23 +64,23 @@ func TestExporter_Export(t *testing.T) {
 	blobData := testData{Field: "objectValue"}
 	blobData.Data.Field = "anotherValue"
 	codec.NewEncoderBytes(&mem, &codec.CborHandle{}).MustEncode(blobData)
-	blobID, err := db.SetBlob(ctx, jetID, core.FirstPulseNumber+1, mem)
+	blobID, err := db.SetBlob(ctx, jetID, core.FirstPulseNumber+10, mem)
 	require.NoError(t, err)
-	_, err = db.SetRecord(ctx, jetID, core.FirstPulseNumber+1, &record.GenesisRecord{})
+	_, err = db.SetRecord(ctx, jetID, core.FirstPulseNumber+10, &record.GenesisRecord{})
 	require.NoError(t, err)
-	objectID, err := db.SetRecord(ctx, jetID, core.FirstPulseNumber+1, &record.ObjectActivateRecord{
+	objectID, err := db.SetRecord(ctx, jetID, core.FirstPulseNumber+10, &record.ObjectActivateRecord{
 		ObjectStateRecord: record.ObjectStateRecord{
 			Memory: blobID,
 		},
 		IsDelegate: true,
 	})
 	pl := message.ToBytes(&message.CallConstructor{})
-	requestID, err := db.SetRecord(ctx, jetID, core.FirstPulseNumber+1, &record.RequestRecord{
+	requestID, err := db.SetRecord(ctx, jetID, core.FirstPulseNumber+10, &record.RequestRecord{
 		Payload: pl,
 	})
 	require.NoError(t, err)
 
-	result, err := exporter.Export(ctx, 0, 10)
+	result, err := exporter.Export(ctx, 0, 15)
 	require.NoError(t, err)
 	assert.Equal(t, 2, len(result.Data))
 	assert.Equal(t, 2, result.Size)
@@ -82,18 +90,18 @@ func TestExporter_Export(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 2, len(result.Data))
 	assert.Equal(t, 2, result.Size)
-	assert.Equal(t, core.FirstPulseNumber+2, int(*result.NextFrom))
+	assert.Equal(t, core.FirstPulseNumber+20, int(*result.NextFrom))
 	_, err = json.Marshal(result)
 	assert.NoError(t, err)
 
 	pulse := result.Data[strconv.FormatUint(uint64(core.FirstPulseNumber), 10)].([]*pulseData)[0].Pulse
 	assert.Equal(t, core.FirstPulseNumber, int(pulse.PulseNumber))
 	assert.Equal(t, int64(0), pulse.PulseTimestamp)
-	pulse = result.Data[strconv.FormatUint(uint64(core.FirstPulseNumber+1), 10)].([]*pulseData)[0].Pulse
-	assert.Equal(t, core.FirstPulseNumber+1, int(pulse.PulseNumber))
-	assert.Equal(t, int64(2), pulse.PulseTimestamp)
+	pulse = result.Data[strconv.FormatUint(uint64(core.FirstPulseNumber+10), 10)].([]*pulseData)[0].Pulse
+	assert.Equal(t, core.FirstPulseNumber+10, int(pulse.PulseNumber))
+	assert.Equal(t, int64(20), pulse.PulseTimestamp)
 
-	records := result.Data[strconv.FormatUint(uint64(core.FirstPulseNumber+1), 10)].([]*pulseData)[0].Records
+	records := result.Data[strconv.FormatUint(uint64(core.FirstPulseNumber+10), 10)].([]*pulseData)[0].Records
 	object, ok := records[base58.Encode(objectID[:])]
 	if assert.True(t, ok, "object not found by ID") {
 		assert.Equal(t, "TypeActivate", object.Type)
