@@ -223,6 +223,11 @@ func (h *MessageHandler) handleGetObject(
 	// Fetch object index. If not found redirect.
 	idx, err := h.db.GetObjectIndex(ctx, jetID, msg.Head.Record(), false)
 	if err == storage.ErrNotFound {
+		logger.Errorf(
+			"failed to fetch index (going to heavy). jet: %v, obj: %v",
+			jetID.JetIDString(),
+			msg.Head.Record().DebugString(),
+		)
 		node, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
 		if err != nil {
 			return nil, err
@@ -882,7 +887,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 	var err error
 	defer instrument(ctx, "handleHotRecords").err(&err).end()
 
-	inslog := inslogger.FromContext(ctx)
+	logger := inslogger.FromContext(ctx)
 	// if hack.SkipValidation(ctx) {
 	// 	fmt.Println("handleHotRecords: SkipValidation")
 	// 	return &reply.OK{}, nil
@@ -892,7 +897,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 	// FIXME: check split signatures.
 	jetID := *msg.Jet.Record()
 
-	inslog.Debugf("[jet]: %v got hot. Pulse: %v, DropPulse: %v, DropJet: %v\n", jetID.JetIDString(), parcel.Pulse(), msg.Drop.Pulse, msg.DropJet.JetIDString())
+	logger.Debugf("[jet]: %v got hot. Pulse: %v, DropPulse: %v, DropJet: %v\n", jetID.JetIDString(), parcel.Pulse(), msg.Drop.Pulse, msg.DropJet.JetIDString())
 
 	err = h.db.SetDrop(ctx, msg.DropJet, &msg.Drop)
 	if err != nil {
@@ -911,11 +916,11 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 				continue
 			}
 			if err != nil {
-				inslog.Error(err)
+				logger.Error(err)
 				continue
 			}
 			if !bytes.Equal(reqID.Bytes(), newID.Bytes()) {
-				inslog.Errorf(
+				logger.Errorf(
 					"Problems with saving the pending request, ids don't match - %v  %v",
 					reqID.Bytes(),
 					newID.Bytes(),
@@ -927,18 +932,18 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 	}
 
 	for id, meta := range msg.RecentObjects {
-		fmt.Println("[got id] ", id.String())
+		logger.Debugf("[got id] jet: %v, id: %v", jetID.JetIDString(), id.DebugString())
 		decodedIndex, err := index.DecodeObjectLifeline(meta.Index)
 		if err != nil {
 			fmt.Print("hot index write error")
-			inslog.Error(err)
+			logger.Error(err)
 			continue
 		}
 
 		err = h.db.SetObjectIndex(ctx, jetID, &id, decodedIndex)
 		if err != nil {
 			fmt.Print("hot index write error")
-			inslog.Error(err)
+			logger.Error(err)
 			continue
 		}
 

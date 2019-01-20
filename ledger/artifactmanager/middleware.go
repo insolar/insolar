@@ -89,8 +89,12 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 			return nil, errors.New("unexpected message")
 		}
 
+		logger := inslogger.FromContext(ctx)
+		logger.Debugf("checking jet for %v", parcel.Type().String())
+
 		// FIXME: @andreyromancev. 17.01.19. Temporary allow any genesis request. Remove it.
 		if parcel.Pulse() == core.FirstPulseNumber {
+			logger.Debugf("genesis pulse shortcut")
 			return handler(contextWithJet(ctx, *jet.NewID(0, nil)), parcel)
 		}
 
@@ -99,6 +103,7 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 			return nil, errors.Wrap(err, "failed to calculate heavy")
 		}
 		if *heavy == m.jetCoordinator.Me() {
+			logger.Debugf("i am heavy. returning any jet")
 			// Heavy always works with zero jet.
 			return handler(contextWithJet(ctx, *jet.NewID(0, nil)), parcel)
 		}
@@ -106,6 +111,7 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 		// Check token jet.
 		token := parcel.DelegationToken()
 		if token != nil {
+			logger.Debugf("received token. returning any jet")
 			// Calculate jet for target pulse.
 			target := *msg.DefaultTarget().Record()
 			tree, err := m.db.GetJetTree(ctx, target.Pulse())
@@ -119,6 +125,7 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 		// Calculate jet for current pulse.
 		var jetID core.RecordID
 		if msg.DefaultTarget().Record().Pulse() == core.PulseNumberJet {
+			logger.Debugf("special pulse number (jet). returning jet from message")
 			jetID = *msg.DefaultTarget().Record()
 		} else {
 			j, actual, err := m.fetchJet(ctx, *msg.DefaultTarget().Record(), parcel.Pulse())
@@ -188,13 +195,13 @@ func (m *middleware) fetchJet(
 	}
 	jetID, actual := tree.Find(target)
 	if actual {
-		inslogger.FromContext(ctx).Debug(
+		inslogger.FromContext(ctx).Debugf(
 			"we believe object %s is in JET %s", target.String(), jetID.JetIDString(),
 		)
 		return jetID, actual, nil
 	}
 
-	inslogger.FromContext(ctx).Debug(
+	inslogger.FromContext(ctx).Debugf(
 		"jet %s is not actual in our tree, asking neighbors for jet of object %s",
 		jetID.JetIDString(), target.String(),
 	)
@@ -212,20 +219,20 @@ func (m *middleware) fetchJet(
 	mu.Lock()
 	if mu.done {
 		mu.Unlock()
-		inslogger.FromContext(ctx).Debug(
+		inslogger.FromContext(ctx).Debugf(
 			"somebody else updated actuality of jet %s, rechecking our DB",
 			jetID.JetIDString(),
 		)
 		return m.fetchJet(ctx, target, pulse)
 	}
 	defer func() {
-		inslogger.FromContext(ctx).Debug("done fetching jet, cleaning")
+		inslogger.FromContext(ctx).Debugf("done fetching jet, cleaning")
 
 		mu.done = true
 		mu.Unlock()
 
 		m.seqMutex.Lock()
-		inslogger.FromContext(ctx).Debug("deleting sequencer for jet %s", jetID.JetIDString())
+		inslogger.FromContext(ctx).Debugf("deleting sequencer for jet %s", jetID.JetIDString())
 		delete(m.sequencer, *jetID)
 		m.seqMutex.Unlock()
 	}()
