@@ -54,6 +54,7 @@ type MessageHandler struct {
 	NodeNet                    core.NodeNetwork                `inject:""`
 
 	db             *storage.DB
+	certificate    core.Certificate
 	replayHandlers map[core.MessageType]core.MessageHandler
 	conf           *configuration.Ledger
 	middleware     *middleware
@@ -61,10 +62,11 @@ type MessageHandler struct {
 
 // NewMessageHandler creates new handler.
 func NewMessageHandler(
-	db *storage.DB, conf *configuration.Ledger,
+	db *storage.DB, conf *configuration.Ledger, certificate core.Certificate,
 ) *MessageHandler {
 	return &MessageHandler{
 		db:             db,
+		certificate:    certificate,
 		replayHandlers: map[core.MessageType]core.MessageHandler{},
 		conf:           conf,
 	}
@@ -111,12 +113,12 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 	m := newMiddleware(h.conf, h.db, h)
 	h.middleware = m
 
-	if h.NodeNet.GetOrigin().Role() == core.StaticRoleLightMaterial {
+	if h.certificate.GetRole() == core.StaticRoleLightMaterial {
 		h.setHandlersForLight(m)
 		h.setReplayHandlers(m)
 	}
 
-	if h.NodeNet.GetOrigin().Role() == core.StaticRoleHeavyMaterial {
+	if h.certificate.GetRole() == core.StaticRoleHeavyMaterial {
 		h.setHandlersForHeavy(m)
 	}
 
