@@ -23,25 +23,27 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/record"
-	"github.com/jbenet/go-base58"
+	base58 "github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
 )
 
 // Exporter provides methods for fetching data view from storage.
 type Exporter struct {
-	db *storage.DB
-	ps *storage.PulseStorage
+	db  *storage.DB
+	ps  *storage.PulseStorage
+	cfg configuration.Exporter
 }
 
 // NewExporter creates new StorageExporter instance.
-func NewExporter(db *storage.DB, ps *storage.PulseStorage) *Exporter {
-	return &Exporter{db: db, ps: ps}
+func NewExporter(db *storage.DB, ps *storage.PulseStorage, cfg configuration.Exporter) *Exporter {
+	return &Exporter{db: db, ps: ps, cfg: cfg}
 }
 
 type payload map[string]interface{}
@@ -95,7 +97,9 @@ func (e *Exporter) Export(ctx context.Context, fromPulse core.PulseNumber, size 
 
 		// We don't need data from current pulse, because of
 		// not all data for this pulse is persisted at this moment
-		if pulse.Pulse.PulseNumber == currentPulse.PulseNumber {
+		// @sergey.morozov 20.01.18 - Blocks are synced to Heavy node with a lag.
+		// We can't reliably predict this lag so we add threshold of N seconds.
+		if pulse.Pulse.PulseNumber >= (currentPulse.PrevPulseNumber - core.PulseNumber(e.cfg.ExportLag)) {
 			iterPulse = nil
 			break
 		}
