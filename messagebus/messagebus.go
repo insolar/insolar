@@ -180,11 +180,26 @@ func (mb *MessageBus) Send(ctx context.Context, msg core.Message, ops *core.Mess
 		if currentPulse.PulseNumber == newPulse.PulseNumber {
 			<-npmpc
 			ctx = inslogger.ContextWithTrace(context.Background(), utils.TraceID(ctx))
+			newPulse, err := mb.PulseStorage.Current(ctx)
+			if err != nil {
+				return nil, err
+			}
+
+			inslogger.FromContext(ctx).Debugf("[ Send ] Waited for new pulse")
+
+			rep, err := mb.send(ctx, msg, ops, newPulse)
+			if err != nil {
+				return nil, errors.Wrap(err, "[ Send ] Waited for new pulse")
+			}
+
+			return rep, nil
 		}
+
+		inslogger.FromContext(ctx).Debugf("[ Send ] Retried with new pulse")
 
 		rep, err := mb.send(ctx, msg, ops, newPulse)
 		if err != nil {
-			return nil, errors.Wrap(err, "[ Send ] Retried")
+			return nil, errors.Wrap(err, "[ Send ] Retried with new pulse")
 		}
 
 		return rep, nil
