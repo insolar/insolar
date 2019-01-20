@@ -25,6 +25,7 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
@@ -106,13 +107,35 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 		// Check token jet.
 		token := parcel.DelegationToken()
 		if token != nil {
+			inslogger.FromContext(ctx).Debugf(
+				"message of type %s for object %s with delegation token",
+				msg.Type(), msg.DefaultTarget().String(),
+			)
 			// Calculate jet for target pulse.
 			target := *msg.DefaultTarget().Record()
-			tree, err := m.db.GetJetTree(ctx, target.Pulse())
+			pulse := target.Pulse()
+			switch tm := msg.(type) {
+			case *message.GetObject:
+				pulse = tm.State.Pulse()
+			case *message.GetChildren:
+				inslogger.FromContext(ctx).Error(
+					"redirect for get children is broken",
+				)
+			}
+			tree, err := m.db.GetJetTree(ctx, pulse)
 			if err != nil {
 				return nil, err
 			}
-			jetID, _ := tree.Find(target)
+
+			jetID, actual := tree.Find(target)
+			if !actual {
+				inslogger.FromContext(ctx).Errorf(
+					"got message of type %s with redirect token,"+
+						" but jet %s for pulse %d is not actual",
+					msg.Type(), jetID.JetIDString(), pulse,
+				)
+			}
+
 			return handler(contextWithJet(ctx, *jetID), parcel)
 		}
 
