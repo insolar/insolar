@@ -22,6 +22,7 @@ import (
 	"encoding/gob"
 	"fmt"
 	"io"
+	"strings"
 	"sync"
 	"time"
 
@@ -138,26 +139,57 @@ func (mb *MessageBus) MustRegister(p core.MessageType, handler core.MessageHandl
 	}
 }
 
-// Send an `Message` and get a `Value` or error from remote host.
-func (mb *MessageBus) Send(ctx context.Context, msg core.Message, ops *core.MessageSendOptions) (core.Reply, error) {
-	currentPulse, err := mb.PulseStorage.Current(ctx)
-	fmt.Println("[mb.send] ", currentPulse.PulseNumber)
-	if err != nil {
-		return nil, err
-	}
-
+func (mb *MessageBus) send(ctx context.Context, msg core.Message, ops *core.MessageSendOptions, currentPulse *core.Pulse) (core.Reply, error) {
 	parcel, err := mb.CreateParcel(ctx, msg, ops.Safe().Token, *currentPulse)
 	if err != nil {
 		return nil, err
 	}
 
 	ctx, span := instracer.StartSpan(ctx, "MessageBus.Send mb.SendParcel")
+	defer span.End()
 	span.AddAttributes(
 		trace.StringAttribute("msgType", msg.Type().String()),
 		trace.Int64Attribute("parcel.DefaultRole", int64(parcel.DefaultRole())),
 	)
-	rep, err := mb.SendParcel(ctx, parcel, *currentPulse, ops)
-	span.End()
+
+	return mb.SendParcel(ctx, parcel, *currentPulse, ops)
+}
+
+// Send an `Message` and get a `Value` or error from remote host.
+func (mb *MessageBus) Send(ctx context.Context, msg core.Message, ops *core.MessageSendOptions) (core.Reply, error) {
+	mb.NextPulseMessagePoolLock.RLock()
+	npmpc := mb.NextPulseMessagePoolChan
+	mb.NextPulseMessagePoolLock.RUnlock()
+
+	currentPulse, err := mb.PulseStorage.Current(ctx)
+	fmt.Println("[mb.send] ", currentPulse.PulseNumber)
+	if err != nil {
+		return nil, err
+	}
+
+	rep, err := mb.send(ctx, msg, ops, currentPulse)
+
+	if err != nil && strings.Contains(err.Error(), "checkPulse.past") {
+		ctx = inslogger.ContextWithTrace(context.Background(), utils.TraceID(ctx))
+
+		newPulse, err := mb.PulseStorage.Current(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		if currentPulse.PulseNumber == newPulse.PulseNumber {
+			<-npmpc
+			ctx = inslogger.ContextWithTrace(context.Background(), utils.TraceID(ctx))
+		}
+
+		rep, err := mb.send(ctx, msg, ops, newPulse)
+		if err != nil {
+			return nil, errors.Wrap(err, "[ Send ] Retried")
+		}
+
+		return rep, nil
+	}
+
 	return rep, err
 }
 
@@ -349,8 +381,8 @@ func (mb *MessageBus) checkPulse(ctx context.Context, parcel core.Parcel, locked
 			*message.ValidateRecord,
 			*message.CallConstructor,
 			*message.CallMethod:
-			inslogger.FromContext(ctx).Errorf("[ checkPulse ] Incorrect message pulse (parcel: %d, current: %d)", parcel.Pulse(), pulse.PulseNumber)
-			return fmt.Errorf("[ checkPulse ] Incorrect message pulse (parcel: %d, current: %d)", parcel.Pulse(), pulse.PulseNumber)
+			inslogger.FromContext(ctx).Errorf("[ checkPulse.past ] Incorrect message pulse (parcel: %d, current: %d)", parcel.Pulse(), pulse.PulseNumber)
+			return fmt.Errorf("[ checkPulse.past ] Incorrect message pulse (parcel: %d, current: %d)", parcel.Pulse(), pulse.PulseNumber)
 		}
 	}
 
