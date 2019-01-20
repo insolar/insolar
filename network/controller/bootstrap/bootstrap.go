@@ -38,8 +38,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-type none struct{}
-
 type Bootstrapper struct {
 	options   *common.Options
 	transport network.InternalTransport
@@ -48,11 +46,10 @@ type Bootstrapper struct {
 	keeper    network.NodeKeeper
 
 	lastPulse      core.PulseNumber
-	pulsePersisted bool
 	lastPulseLock  sync.Mutex
+	pulsePersisted bool
 
-	bootstrapStarted bool
-	bootstrapLock    chan none
+	bootstrapLock chan struct{}
 }
 
 type NodeBootstrapRequest struct{}
@@ -65,6 +62,7 @@ type NodeBootstrapResponse struct {
 
 type GenesisRequest struct {
 	Certificate []byte
+	LastPulse   core.PulseNumber
 }
 
 type GenesisResponse struct {
@@ -149,14 +147,10 @@ func (bc *Bootstrapper) SetLastPulse(number core.PulseNumber) {
 	bc.lastPulseLock.Lock()
 	defer bc.lastPulseLock.Unlock()
 
-	if !bc.bootstrapStarted {
-		bc.bootstrapLock <- none{}
-		close(bc.bootstrapLock)
-		bc.bootstrapStarted = true
-	}
-
 	if !bc.pulsePersisted {
 		bc.lastPulse = number
+		close(bc.bootstrapLock)
+		bc.pulsePersisted = true
 	}
 }
 
@@ -168,16 +162,9 @@ func (bc *Bootstrapper) forceSetLastPulse(number core.PulseNumber) {
 }
 
 func (bc *Bootstrapper) GetLastPulse() core.PulseNumber {
-	return bc.getLastPulse(false)
-}
-
-func (bc *Bootstrapper) getLastPulse(persistLastPulse bool) core.PulseNumber {
 	bc.lastPulseLock.Lock()
 	defer bc.lastPulseLock.Unlock()
 
-	if persistLastPulse {
-		bc.pulsePersisted = true
-	}
 	return bc.lastPulse
 }
 
@@ -241,7 +228,7 @@ func (bc *Bootstrapper) BootstrapDiscovery(ctx context.Context) error {
 }
 
 func (bc *Bootstrapper) calculateLastIgnoredPulse(ctx context.Context, lastPulses []core.PulseNumber) core.PulseNumber {
-	maxLastPulse := bc.getLastPulse(true)
+	maxLastPulse := bc.GetLastPulse()
 	inslogger.FromContext(ctx).Debugf("Node %s (origin) LastIgnoredPulse: %d", bc.keeper.GetOrigin().ID(), maxLastPulse)
 	for _, pulse := range lastPulses {
 		if pulse > maxLastPulse {
@@ -258,6 +245,7 @@ func (bc *Bootstrapper) sendGenesisRequest(ctx context.Context, h *host.Host) (*
 	}
 	request := bc.transport.NewRequestBuilder().Type(types.Genesis).Data(&GenesisRequest{
 		Certificate: serializedCert,
+		LastPulse:   bc.GetLastPulse(),
 	}).Build()
 	future, err := bc.transport.SendRequestPacket(ctx, request, h)
 	if err != nil {
@@ -423,7 +411,8 @@ func (bc *Bootstrapper) processGenesis(ctx context.Context, request network.Requ
 	if err != nil {
 		return bc.transport.BuildResponse(ctx, request, &GenesisResponse{Error: err.Error()}), nil
 	}
-	return bc.transport.BuildResponse(ctx, request, &GenesisResponse{Discovery: discovery, LastPulse: bc.getLastPulse(true)}), nil
+	bc.SetLastPulse(data.LastPulse)
+	return bc.transport.BuildResponse(ctx, request, &GenesisResponse{Discovery: discovery, LastPulse: bc.GetLastPulse()}), nil
 }
 
 func (bc *Bootstrapper) Start(keeper network.NodeKeeper) {
@@ -438,6 +427,6 @@ func NewBootstrapper(options *common.Options, certificate core.Certificate, tran
 		cert:          certificate,
 		transport:     transport,
 		pinger:        pinger.NewPinger(transport),
-		bootstrapLock: make(chan none, 1),
+		bootstrapLock: make(chan struct{}),
 	}
 }
