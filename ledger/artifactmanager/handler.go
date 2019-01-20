@@ -324,6 +324,15 @@ func (h *MessageHandler) handleGetObject(
 		return &reply.Error{ErrType: reply.ErrStateNotAvailable}, nil
 	}
 
+	onHeavy, err := h.isBeyondLimit(ctx, parcel.Pulse(), stateID.Pulse())
+	if onHeavy {
+		node, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
+		if err != nil {
+			return nil, err
+		}
+		return reply.NewGetObjectRedirectReply(h.DelegationTokenFactory, parcel, node, msg.State)
+	}
+
 	stateTree, err := h.db.GetJetTree(ctx, stateID.Pulse())
 	if err != nil {
 		return nil, err
@@ -513,24 +522,33 @@ func (h *MessageHandler) handleGetChildren(
 		return &reply.Children{Refs: nil, NextFrom: nil}, nil
 	}
 
-	// Try to fetch the first child.
-	_, err = h.db.GetRecord(ctx, jetID, currentChild)
-	if err == storage.ErrNotFound {
-		// We don't have the first child record. It means, it was created on another node.
-		childTree, err := h.db.GetJetTree(ctx, currentChild.Pulse())
+	onHeavy, err := h.isBeyondLimit(ctx, parcel.Pulse(), currentChild.Pulse())
+	if onHeavy {
+		node, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
 		if err != nil {
 			return nil, err
 		}
-		childJet, actual := childTree.Find(*msg.Parent.Record())
-		if !actual {
-			actualJet, err := h.fetchActualJetFromOtherNodes(ctx, *msg.Parent.Record(), currentChild.Pulse())
-			if err != nil {
-				return nil, err
-			}
+		return reply.NewGetChildrenRedirect(h.DelegationTokenFactory, parcel, node, *idx.ChildPointer)
+	}
 
-			childJet = actualJet
+	// We don't have the first child record. It means, it was created on another node.
+	childTree, err := h.db.GetJetTree(ctx, currentChild.Pulse())
+	if err != nil {
+		return nil, err
+	}
+	childJet, actual := childTree.Find(*msg.Parent.Record())
+	if !actual {
+		actualJet, err := h.fetchActualJetFromOtherNodes(ctx, *msg.Parent.Record(), currentChild.Pulse())
+		if err != nil {
+			return nil, err
 		}
 
+		childJet = actualJet
+	}
+
+	// Try to fetch the first child.
+	_, err = h.db.GetRecord(ctx, *childJet, currentChild)
+	if err == storage.ErrNotFound {
 		node, err := h.nodeForJet(ctx, *childJet, parcel.Pulse(), currentChild.Pulse())
 		if err != nil {
 			return nil, err
@@ -1028,20 +1046,15 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 func (h *MessageHandler) nodeForJet(
 	ctx context.Context, jetID core.RecordID, parcelPN, targetPN core.PulseNumber,
 ) (*core.RecordRef, error) {
-	parcelPulse, err := h.db.GetPulse(ctx, parcelPN)
+	toHeavy, err := h.isBeyondLimit(ctx, parcelPN, targetPN)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to fetch pulse")
-	}
-	targetPulse, err := h.db.GetPulse(ctx, targetPN)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to fetch pulse")
+		return nil, err
 	}
 
-	if parcelPulse.SerialNumber-targetPulse.SerialNumber < h.conf.LightChainLimit {
-		return h.JetCoordinator.LightExecutorForJet(ctx, jetID, targetPN)
+	if toHeavy {
+		return h.JetCoordinator.Heavy(ctx, parcelPN)
 	}
-
-	return h.JetCoordinator.Heavy(ctx, parcelPN)
+	return h.JetCoordinator.LightExecutorForJet(ctx, jetID, targetPN)
 }
 
 func (h *MessageHandler) fetchActualJetFromOtherNodes(
@@ -1159,4 +1172,23 @@ func (h *MessageHandler) otherNodesForPrevPulse(
 	}
 
 	return nodes, nil
+}
+
+func (h *MessageHandler) isBeyondLimit(
+	ctx context.Context, currentPN, targetPN core.PulseNumber,
+) (bool, error) {
+	currentPulse, err := h.db.GetPulse(ctx, currentPN)
+	if err != nil {
+		return false, errors.Wrap(err, "failed to fetch pulse")
+	}
+	targetPulse, err := h.db.GetPulse(ctx, targetPN)
+	if err != nil {
+		return false, errors.Wrap(err, "failed to fetch pulse")
+	}
+
+	if currentPulse.SerialNumber-targetPulse.SerialNumber < h.conf.LightChainLimit {
+		return false, nil
+	}
+
+	return true, nil
 }
