@@ -279,6 +279,10 @@ func (h *MessageHandler) handleGetObject(
 	// Fetch object index. If not found redirect.
 	idx, err := h.db.GetObjectIndex(ctx, jetID, msg.Head.Record(), false)
 	if err == storage.ErrNotFound {
+		if h.certificate.GetRole() == core.StaticRoleHeavyMaterial {
+			return nil, fmt.Errorf("failed to fetch index for %v", msg.Head.Record())
+		}
+
 		logger.Errorf(
 			"failed to fetch index (going to heavy). jet: %v, obj: %v",
 			jetID.JetIDString(),
@@ -428,6 +432,10 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel core.Parc
 
 	idx, err := h.db.GetObjectIndex(ctx, jetID, msg.Head.Record(), false)
 	if err == storage.ErrNotFound {
+		if h.certificate.GetRole() == core.StaticRoleHeavyMaterial {
+			return nil, fmt.Errorf("failed to fetch index for %v", msg.Head.Record())
+		}
+
 		heavy, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
 		if err != nil {
 			return nil, err
@@ -467,6 +475,10 @@ func (h *MessageHandler) handleGetChildren(
 
 	idx, err := h.db.GetObjectIndex(ctx, jetID, msg.Parent.Record(), false)
 	if err == storage.ErrNotFound {
+		if h.certificate.GetRole() == core.StaticRoleHeavyMaterial {
+			return nil, fmt.Errorf("failed to fetch index for %v", msg.Parent.Record())
+		}
+
 		heavy, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
 		if err != nil {
 			return nil, err
