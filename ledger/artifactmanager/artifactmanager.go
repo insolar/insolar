@@ -136,8 +136,14 @@ func (m *LedgerArtifactManager) GetCode(
 		return entry.desc, nil
 	}
 
+	currentPulse, err := m.PulseStorage.Current(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.GetCode sendAndRetryJet")
-	genericReact, err := m.bus(ctx).Send(ctx, &message.GetCode{Code: code}, nil)
+	genericReact, err := sendAndFollowRedirect(ctx, m.bus(ctx), m.db, &message.GetCode{Code: code}, *currentPulse)
+
 	span.End()
 	if err != nil {
 		return nil, err
