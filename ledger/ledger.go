@@ -103,7 +103,7 @@ func GetLedgerComponents(conf configuration.Ledger, certificate core.Certificate
 		artifactmanager.NewMessageHandler(db, &conf, certificate),
 		localstorage.NewLocalStorage(db),
 		heavyserver.NewSync(db),
-		exporter.NewExporter(db, ps),
+		exporter.NewExporter(db, ps, conf.Exporter),
 	}
 }
 
