@@ -53,6 +53,7 @@ type MessageHandler struct {
 	PulseStorage               core.PulseStorage               `inject:""`
 
 	db             *storage.DB
+	certificate    core.Certificate
 	replayHandlers map[core.MessageType]core.MessageHandler
 	conf           *configuration.Ledger
 	middleware     *middleware
@@ -60,17 +61,14 @@ type MessageHandler struct {
 
 // NewMessageHandler creates new handler.
 func NewMessageHandler(
-	db *storage.DB, conf *configuration.Ledger,
+	db *storage.DB, conf *configuration.Ledger, certificate core.Certificate,
 ) *MessageHandler {
 	return &MessageHandler{
 		db:             db,
+		certificate:    certificate,
 		replayHandlers: map[core.MessageType]core.MessageHandler{},
 		conf:           conf,
 	}
-}
-
-func checkJetAndInstrument(name string, m *middleware, handler core.MessageHandler) core.MessageHandler {
-	return m.checkJet(handler)
 }
 
 func checkJetAndInstrumentWithBreaker(name string, m *middleware, handler core.MessageHandler) core.MessageHandler {
@@ -110,35 +108,31 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 	m := newMiddleware(h.conf, h.db, h)
 	h.middleware = m
 
-	// Generic.
-	h.replayHandlers[core.TypeGetCode] = h.handleGetCode
-	h.replayHandlers[core.TypeGetObject] = checkJetAndInstrument("handleGetObject", m, h.handleGetObject)
-	h.replayHandlers[core.TypeGetDelegate] = checkJetAndInstrument("handleGetDelegate", m, h.handleGetDelegate)
-	h.replayHandlers[core.TypeGetChildren] = checkJetAndInstrument("handleGetChildren", m, h.handleGetChildren)
-	h.replayHandlers[core.TypeSetRecord] = checkJetAndInstrument("handleSetRecord", m, h.handleSetRecord)
-	h.replayHandlers[core.TypeUpdateObject] = checkJetAndInstrument("handleUpdateObject", m, h.handleUpdateObject)
-	h.replayHandlers[core.TypeRegisterChild] = checkJetAndInstrument("handleRegisterChild", m, h.handleRegisterChild)
-	h.replayHandlers[core.TypeSetBlob] = checkJetAndInstrument("handleSetBlob", m, h.handleSetBlob)
-	h.replayHandlers[core.TypeGetObjectIndex] = checkJetAndInstrument("handleGetObjectIndex", m, h.handleGetObjectIndex)
-	h.replayHandlers[core.TypeGetPendingRequests] = checkJetAndInstrument("handleHasPendingRequests", m, h.handleHasPendingRequests)
-	h.replayHandlers[core.TypeGetJet] = instrumentHandler("handleGetJet", h.handleGetJet)
+	// core.StaticRoleUnknown - genesis
+	if h.certificate.GetRole() == core.StaticRoleLightMaterial || h.certificate.GetRole() == core.StaticRoleUnknown {
+		h.setHandlersForLight(m)
+		h.setReplayHandlers(m)
+	}
 
-	// Validation.
-	h.replayHandlers[core.TypeValidateRecord] = m.checkJet(h.handleValidateRecord)
-	h.replayHandlers[core.TypeValidationCheck] = m.checkJet(h.handleValidationCheck)
+	if h.certificate.GetRole() == core.StaticRoleHeavyMaterial {
+		h.setHandlersForHeavy(m)
+	}
 
+	return nil
+}
+
+func (h *MessageHandler) setHandlersForLight(m *middleware) {
 	// Generic.
 	h.Bus.MustRegister(core.TypeGetCode, h.handleGetCode)
-	h.Bus.MustRegister(core.TypeGetObject, m.checkJet(m.checkEarlyRequestBreaker(h.handleGetObject)))
-	h.Bus.MustRegister(core.TypeGetDelegate, m.checkJet(m.checkEarlyRequestBreaker(h.handleGetDelegate)))
-	h.Bus.MustRegister(core.TypeGetChildren, m.checkJet(m.checkEarlyRequestBreaker(h.handleGetChildren)))
-	h.Bus.MustRegister(core.TypeSetRecord, m.checkJet(m.checkEarlyRequestBreaker(m.checkHeavySync(h.handleSetRecord))))
-	h.Bus.MustRegister(core.TypeUpdateObject, m.checkJet(m.checkEarlyRequestBreaker(m.checkHeavySync(h.handleUpdateObject))))
-	h.Bus.MustRegister(core.TypeRegisterChild, m.checkJet(m.checkEarlyRequestBreaker(m.checkHeavySync(h.handleRegisterChild))))
-	h.Bus.MustRegister(core.TypeSetBlob, m.checkJet(m.checkEarlyRequestBreaker(m.checkHeavySync(h.handleSetBlob))))
-	h.Bus.MustRegister(core.TypeGetObjectIndex, m.checkJet(m.checkEarlyRequestBreaker(h.handleGetObjectIndex)))
-	h.Bus.MustRegister(core.TypeGetPendingRequests, checkJetAndInstrumentWithBreaker(
-		"handleHasPendingRequests", m, h.handleHasPendingRequests))
+	h.Bus.MustRegister(core.TypeGetObject, checkJetAndInstrumentWithBreaker("handleGetObject", m, h.handleGetObject))
+	h.Bus.MustRegister(core.TypeGetDelegate, checkJetAndInstrumentWithBreaker("handleGetDelegate", m, h.handleGetDelegate))
+	h.Bus.MustRegister(core.TypeGetChildren, checkJetAndInstrumentWithBreaker("handleGetChildren", m, h.handleGetChildren))
+	h.Bus.MustRegister(core.TypeSetRecord, checkJetAndInstrumentWithBreaker("handleSetRecord", m, m.checkHeavySync(h.handleSetRecord)))
+	h.Bus.MustRegister(core.TypeUpdateObject, checkJetAndInstrumentWithBreaker("handleUpdateObject", m, m.checkHeavySync(h.handleUpdateObject)))
+	h.Bus.MustRegister(core.TypeRegisterChild, checkJetAndInstrumentWithBreaker("handleRegisterChild", m, m.checkHeavySync(h.handleRegisterChild)))
+	h.Bus.MustRegister(core.TypeSetBlob, checkJetAndInstrumentWithBreaker("handleSetBlob", m, m.checkHeavySync(h.handleSetBlob)))
+	h.Bus.MustRegister(core.TypeGetObjectIndex, checkJetAndInstrumentWithBreaker("handleGetObjectIndex", m, h.handleGetObjectIndex))
+	h.Bus.MustRegister(core.TypeGetPendingRequests, checkJetAndInstrumentWithBreaker("handleHasPendingRequests", m, h.handleHasPendingRequests))
 	h.Bus.MustRegister(core.TypeGetJet, instrumentHandler("handleGetJet", h.handleGetJet))
 	h.Bus.MustRegister(core.TypeHotRecords, instrumentHandler("handleHotRecords", m.closeEarlyRequestBreaker(h.handleHotRecords)))
 
@@ -146,19 +140,45 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 	h.Bus.MustRegister(core.TypeValidateRecord, m.checkJet(h.handleValidateRecord))
 	h.Bus.MustRegister(core.TypeValidationCheck, m.checkJet(h.handleValidationCheck))
 	h.Bus.MustRegister(core.TypeJetDrop, m.checkJet(h.handleJetDrop))
+}
+func (h *MessageHandler) setReplayHandlers(m *middleware) {
+	// Generic.
+	h.replayHandlers[core.TypeGetCode] = h.handleGetCode
+	h.replayHandlers[core.TypeGetObject] = m.checkJet(h.handleGetObject)
+	h.replayHandlers[core.TypeGetDelegate] = m.checkJet(h.handleGetDelegate)
+	h.replayHandlers[core.TypeGetChildren] = m.checkJet(h.handleGetChildren)
+	h.replayHandlers[core.TypeSetRecord] = m.checkJet(h.handleSetRecord)
+	h.replayHandlers[core.TypeUpdateObject] = m.checkJet(h.handleUpdateObject)
+	h.replayHandlers[core.TypeRegisterChild] = m.checkJet(h.handleRegisterChild)
+	h.replayHandlers[core.TypeSetBlob] = m.checkJet(h.handleSetBlob)
+	h.replayHandlers[core.TypeGetObjectIndex] = m.checkJet(h.handleGetObjectIndex)
+	h.replayHandlers[core.TypeGetPendingRequests] = m.checkJet(h.handleHasPendingRequests)
+	h.replayHandlers[core.TypeGetJet] = h.handleGetJet
 
+	// Validation.
+	h.replayHandlers[core.TypeValidateRecord] = m.checkJet(h.handleValidateRecord)
+	h.replayHandlers[core.TypeValidationCheck] = m.checkJet(h.handleValidationCheck)
+}
+func (h *MessageHandler) setHandlersForHeavy(m *middleware) {
 	// Heavy.
 	h.Bus.MustRegister(core.TypeHeavyStartStop, instrumentHandler("handleHeavyStartStop", h.handleHeavyStartStop))
 	h.Bus.MustRegister(core.TypeHeavyReset, instrumentHandler("handleHeavyReset", h.handleHeavyReset))
 	h.Bus.MustRegister(core.TypeHeavyPayload, instrumentHandler("handleHeavyPayload", h.handleHeavyPayload))
 
-	return nil
+	// Generic.
+	h.Bus.MustRegister(core.TypeGetCode, h.handleGetCode)
+	h.Bus.MustRegister(core.TypeGetObject, instrumentHandler("handleGetObject", m.zeroJetForHeavy(h.handleGetObject)))
+	h.Bus.MustRegister(core.TypeGetDelegate, instrumentHandler("handleGetDelegate", m.zeroJetForHeavy(h.handleGetDelegate)))
+	h.Bus.MustRegister(core.TypeGetChildren, instrumentHandler("handleGetChildren", m.zeroJetForHeavy(h.handleGetChildren)))
+	h.Bus.MustRegister(core.TypeGetObjectIndex, instrumentHandler("handleGetObjectIndex", m.zeroJetForHeavy(h.handleGetObjectIndex)))
 }
 
+// ResetEarlyRequestCircuitBreaker throws timeouts at the end of a pulse
 func (h *MessageHandler) ResetEarlyRequestCircuitBreaker(ctx context.Context) {
 	h.middleware.earlyRequestCircuitBreakerProvider.onTimeoutHappened(ctx)
 }
 
+// CloseEarlyRequestCircuitBreakerForJet close circuit breaker for a specific jet
 func (h *MessageHandler) CloseEarlyRequestCircuitBreakerForJet(ctx context.Context, jetID core.RecordID) {
 	inslogger.FromContext(ctx).Debugf("[CloseEarlyRequestCircuitBreakerForJet] %v", jetID.JetIDString())
 	h.middleware.closeEarlyRequestBreakerForJet(ctx, jetID)
@@ -174,12 +194,14 @@ func (h *MessageHandler) handleSetRecord(ctx context.Context, parcel core.Parcel
 		return nil, err
 	}
 
-	recentStorage := h.RecentStorageProvider.GetStorage(jetID)
-	if request, ok := rec.(record.Request); ok {
-		recentStorage.AddPendingRequest(request.GetObject(), *id)
-	}
-	if result, ok := rec.(*record.ResultRecord); ok {
-		recentStorage.RemovePendingRequest(result.Object, *result.Request.Record())
+	if h.certificate.GetRole() != core.StaticRoleHeavyMaterial {
+		recentStorage := h.RecentStorageProvider.GetStorage(jetID)
+		if request, ok := rec.(record.Request); ok {
+			recentStorage.AddPendingRequest(request.GetObject(), *id)
+		}
+		if result, ok := rec.(*record.ResultRecord); ok {
+			recentStorage.RemovePendingRequest(result.Object, *result.Request.Record())
+		}
 	}
 
 	return &reply.ID{ID: *id}, nil
@@ -200,6 +222,7 @@ func (h *MessageHandler) handleSetBlob(ctx context.Context, parcel core.Parcel) 
 
 	id, err := h.db.SetBlob(ctx, jetID, parcel.Pulse(), msg.Memory)
 	if err == nil {
+		inslogger.FromContext(ctx).Debugf("RM-ISSUE: set blob - %v", id.String())
 		return &reply.ID{ID: *id}, nil
 	}
 	if err == storage.ErrOverride {
@@ -252,6 +275,10 @@ func (h *MessageHandler) handleGetObject(
 	// Fetch object index. If not found redirect.
 	idx, err := h.db.GetObjectIndex(ctx, jetID, msg.Head.Record(), false)
 	if err == storage.ErrNotFound {
+		if h.certificate.GetRole() == core.StaticRoleHeavyMaterial {
+			return nil, fmt.Errorf("failed to fetch index for %s", msg.Head.Record().String())
+		}
+
 		logger.Errorf(
 			"failed to fetch index (going to heavy). jet: %v, obj: %v",
 			jetID.JetIDString(),
@@ -266,16 +293,22 @@ func (h *MessageHandler) handleGetObject(
 			return nil, errors.Wrap(err, "failed to fetch index from heavy")
 		}
 		// Add requested object to recent.
-		h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Head.Record())
+		if h.certificate.GetRole() != core.StaticRoleHeavyMaterial {
+			h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Head.Record())
+		}
+
 		logger.Debugf("redirect because index not found. jet: %v, to: %v\n",
 			jetID.JetIDString(), node)
+
 		return reply.NewGetObjectRedirectReply(h.DelegationTokenFactory, parcel, node, msg.State)
 	}
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to fetch object index")
+		return nil, errors.Wrapf(err, "failed to fetch object index %s", msg.Head.Record().String())
 	}
 	// Add requested object to recent.
-	h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Head.Record())
+	if h.certificate.GetRole() != core.StaticRoleHeavyMaterial {
+		h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Head.Record())
+	}
 
 	// Determine object state id.
 	var stateID *core.RecordID
@@ -292,23 +325,50 @@ func (h *MessageHandler) handleGetObject(
 		return &reply.Error{ErrType: reply.ErrStateNotAvailable}, nil
 	}
 
-	stateTree, err := h.db.GetJetTree(ctx, stateID.Pulse())
-	if err != nil {
-		return nil, err
-	}
-	stateJet, actual := stateTree.Find(*msg.Head.Record())
-	if !actual {
-		actualJet, err := h.fetchActualJetFromOtherNodes(ctx, *msg.Head.Record(), stateID.Pulse())
+	var stateJet *core.RecordID
+	if h.certificate.GetRole() == core.StaticRoleHeavyMaterial {
+		stateJet = &jetID
+	} else {
+		var actual bool
+		onHeavy, err := h.isBeyondLimit(ctx, parcel.Pulse(), stateID.Pulse())
 		if err != nil {
 			return nil, err
 		}
+		if onHeavy {
+			node, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
+			if err != nil {
+				return nil, err
+			}
+			logger.Debugf(
+				"redirect (on heavy). pulse: %v, id: %v, state: %v, to: %v",
+				parcel.Pulse(),
+				msg.Head.Record().DebugString(),
+				stateID.DebugString(),
+				node.String(),
+			)
+			return reply.NewGetObjectRedirectReply(h.DelegationTokenFactory, parcel, node, msg.State)
+		}
 
-		stateJet = actualJet
+		stateTree, err := h.db.GetJetTree(ctx, stateID.Pulse())
+		if err != nil {
+			return nil, err
+		}
+		stateJet, actual = stateTree.Find(*msg.Head.Record())
+		if !actual {
+			actualJet, err := h.fetchActualJetFromOtherNodes(ctx, *msg.Head.Record(), stateID.Pulse())
+			if err != nil {
+				return nil, err
+			}
+			stateJet = actualJet
+		}
 	}
 
 	// Fetch state record.
 	rec, err := h.db.GetRecord(ctx, *stateJet, stateID)
 	if err == storage.ErrNotFound {
+		if h.certificate.GetRole() == core.StaticRoleHeavyMaterial {
+			return nil, fmt.Errorf("failed to fetch state for %v. jet: %v, state: %v", msg.Head.Record(), stateJet.JetIDString(), stateID.DebugString())
+		}
 		// The record wasn't found on the current node. Return redirect to the node that contains it.
 		// We get Jet tree for pulse when given state was added.
 		node, err := h.nodeForJet(ctx, *stateJet, parcel.Pulse(), stateID.Pulse())
@@ -352,6 +412,12 @@ func (h *MessageHandler) handleGetObject(
 	if state.GetMemory() != nil {
 		rep.Memory, err = h.db.GetBlob(ctx, *stateJet, state.GetMemory())
 		if err != nil {
+			logger.Errorf(
+				"failed to fetch blob. pulse: %v, jet: %v, id: %v",
+				parcel.Pulse(),
+				stateJet.JetIDString(),
+				state.GetMemory().DebugString(),
+			)
 			return nil, errors.Wrap(err, "failed to fetch blob")
 		}
 	}
@@ -395,6 +461,10 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel core.Parc
 
 	idx, err := h.db.GetObjectIndex(ctx, jetID, msg.Head.Record(), false)
 	if err == storage.ErrNotFound {
+		if h.certificate.GetRole() == core.StaticRoleHeavyMaterial {
+			return nil, fmt.Errorf("failed to fetch index for %v", msg.Head.Record())
+		}
+
 		heavy, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
 		if err != nil {
 			return nil, err
@@ -407,7 +477,9 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel core.Parc
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
 
-	h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Head.Record())
+	if h.certificate.GetRole() != core.StaticRoleHeavyMaterial {
+		h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Head.Record())
+	}
 
 	delegateRef, ok := idx.Delegates[msg.AsType]
 	if !ok {
@@ -432,6 +504,10 @@ func (h *MessageHandler) handleGetChildren(
 
 	idx, err := h.db.GetObjectIndex(ctx, jetID, msg.Parent.Record(), false)
 	if err == storage.ErrNotFound {
+		if h.certificate.GetRole() == core.StaticRoleHeavyMaterial {
+			return nil, fmt.Errorf("failed to fetch index for %v", msg.Parent.Record())
+		}
+
 		heavy, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
 		if err != nil {
 			return nil, err
@@ -449,7 +525,10 @@ func (h *MessageHandler) handleGetChildren(
 		fmt.Println("handleGetChildren: failed to fetch object index, error - ", err)
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
-	h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Parent.Record())
+
+	if h.certificate.GetRole() != core.StaticRoleHeavyMaterial {
+		h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Parent.Record())
+	}
 
 	var (
 		refs         []core.RecordRef
@@ -468,24 +547,43 @@ func (h *MessageHandler) handleGetChildren(
 		return &reply.Children{Refs: nil, NextFrom: nil}, nil
 	}
 
-	// Try to fetch the first child.
-	_, err = h.db.GetRecord(ctx, jetID, currentChild)
-	if err == storage.ErrNotFound {
-		// We don't have the first child record. It means, it was created on another node.
+	var childJet *core.RecordID
+	if h.certificate.GetRole() == core.StaticRoleHeavyMaterial {
+		childJet = &jetID
+	} else {
+		var actual bool
+		onHeavy, err := h.isBeyondLimit(ctx, parcel.Pulse(), currentChild.Pulse())
+		if err != nil {
+			return nil, err
+		}
+		if onHeavy {
+			node, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
+			if err != nil {
+				return nil, err
+			}
+			return reply.NewGetChildrenRedirect(h.DelegationTokenFactory, parcel, node, *idx.ChildPointer)
+		}
+
 		childTree, err := h.db.GetJetTree(ctx, currentChild.Pulse())
 		if err != nil {
 			return nil, err
 		}
-		childJet, actual := childTree.Find(*msg.Parent.Record())
+		childJet, actual = childTree.Find(*msg.Parent.Record())
 		if !actual {
 			actualJet, err := h.fetchActualJetFromOtherNodes(ctx, *msg.Parent.Record(), currentChild.Pulse())
 			if err != nil {
 				return nil, err
 			}
-
 			childJet = actualJet
 		}
+	}
 
+	// Try to fetch the first child.
+	_, err = h.db.GetRecord(ctx, *childJet, currentChild)
+	if err == storage.ErrNotFound {
+		if h.certificate.GetRole() == core.StaticRoleHeavyMaterial {
+			return nil, fmt.Errorf("failed to fetch child for %v. jet: %v, state: %v", msg.Parent.Record(), childJet.JetIDString(), currentChild.DebugString())
+		}
 		node, err := h.nodeForJet(ctx, *childJet, parcel.Pulse(), currentChild.Pulse())
 		if err != nil {
 			return nil, err
@@ -548,6 +646,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to set blob")
 	}
+	logger.Debugf("save blob. pulse: %v, jet: %v, id: %v", parcel.Pulse(), jetID.JetIDString(), blobID.DebugString())
 
 	switch s := state.(type) {
 	case *record.ObjectActivateRecord:
@@ -556,7 +655,6 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 		s.Memory = blobID
 	}
 
-	recentStorage := h.RecentStorageProvider.GetStorage(jetID)
 	var idx *index.ObjectLifeline
 	err = h.db.Update(ctx, func(tx *storage.TransactionManager) error {
 		var err error
@@ -595,7 +693,9 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 			return errors.New("invalid state record")
 		}
 
-		recentStorage.AddObject(*msg.Object.Record())
+		if h.certificate.GetRole() != core.StaticRoleHeavyMaterial {
+			h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Object.Record())
+		}
 
 		id, err := tx.SetRecord(ctx, jetID, parcel.Pulse(), rec)
 		if err != nil {
@@ -618,7 +718,9 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 		return nil, err
 	}
 
-	recentStorage.AddObject(*msg.Object.Record())
+	if h.certificate.GetRole() != core.StaticRoleHeavyMaterial {
+		h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Object.Record())
+	}
 
 	rep := reply.Object{
 		Head:         msg.Object,
@@ -640,7 +742,6 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel core.Pa
 		return nil, errors.New("wrong child record")
 	}
 
-	recentStorage := h.RecentStorageProvider.GetStorage(jetID)
 	var child *core.RecordID
 	err := h.db.Update(ctx, func(tx *storage.TransactionManager) error {
 		idx, err := h.db.GetObjectIndex(ctx, jetID, msg.Parent.Record(), false)
@@ -656,7 +757,10 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel core.Pa
 		} else if err != nil {
 			return err
 		}
-		recentStorage.AddObject(*msg.Parent.Record())
+
+		if h.certificate.GetRole() != core.StaticRoleHeavyMaterial {
+			h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Parent.Record())
+		}
 
 		// Children exist and pointer does not match (preserving chain consistency).
 		if idx.ChildPointer != nil && !childRec.PrevChild.Equal(idx.ChildPointer) {
@@ -683,7 +787,9 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel core.Pa
 		return nil, err
 	}
 
-	recentStorage.AddObject(*msg.Parent.Record())
+	if h.certificate.GetRole() != core.StaticRoleHeavyMaterial {
+		h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Parent.Record())
+	}
 
 	return &reply.ID{ID: *child}, nil
 }
@@ -872,7 +978,7 @@ func (h *MessageHandler) saveIndexFromHeavy(
 	}
 	rep, ok := genericReply.(*reply.ObjectIndex)
 	if !ok {
-		return nil, fmt.Errorf("unexpected reply %#v", genericReply)
+		return nil, fmt.Errorf("failed to fetch object index: unexpected reply type %T (reply=%+v)", genericReply, genericReply)
 	}
 	idx, err := index.DecodeObjectLifeline(rep.Index)
 	if err != nil {
@@ -976,20 +1082,15 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 func (h *MessageHandler) nodeForJet(
 	ctx context.Context, jetID core.RecordID, parcelPN, targetPN core.PulseNumber,
 ) (*core.RecordRef, error) {
-	parcelPulse, err := h.db.GetPulse(ctx, parcelPN)
+	toHeavy, err := h.isBeyondLimit(ctx, parcelPN, targetPN)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to fetch pulse")
-	}
-	targetPulse, err := h.db.GetPulse(ctx, targetPN)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to fetch pulse")
+		return nil, err
 	}
 
-	if parcelPulse.SerialNumber-targetPulse.SerialNumber < h.conf.LightChainLimit {
-		return h.JetCoordinator.LightExecutorForJet(ctx, jetID, targetPN)
+	if toHeavy {
+		return h.JetCoordinator.Heavy(ctx, parcelPN)
 	}
-
-	return h.JetCoordinator.Heavy(ctx, parcelPN)
+	return h.JetCoordinator.LightExecutorForJet(ctx, jetID, targetPN)
 }
 
 func (h *MessageHandler) fetchActualJetFromOtherNodes(
@@ -1107,4 +1208,23 @@ func (h *MessageHandler) otherNodesForPrevPulse(
 	}
 
 	return nodes, nil
+}
+
+func (h *MessageHandler) isBeyondLimit(
+	ctx context.Context, currentPN, targetPN core.PulseNumber,
+) (bool, error) {
+	currentPulse, err := h.db.GetPulse(ctx, currentPN)
+	if err != nil {
+		return false, errors.Wrap(err, "failed to fetch pulse")
+	}
+	targetPulse, err := h.db.GetPulse(ctx, targetPN)
+	if err != nil {
+		return false, errors.Wrap(err, "failed to fetch pulse")
+	}
+
+	if currentPulse.SerialNumber-targetPulse.SerialNumber < h.conf.LightChainLimit {
+		return false, nil
+	}
+
+	return true, nil
 }

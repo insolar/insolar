@@ -105,7 +105,7 @@ func Test_GetAllSyncClientJets(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	gotJets, err := db.GetAllSyncClientJets(ctx)
+	gotJets, err := db.GetAllNonEmptySyncClientJets(ctx)
 	require.NoError(t, err)
 	// fmt.Printf("%#v\n", gotJets)
 
@@ -117,5 +117,15 @@ func Test_GetAllSyncClientJets(t *testing.T) {
 			require.Truef(t, ok, "jet should  present jetID=%v", tCase.jetID)
 			assert.Equalf(t, tCase.pulses, gotPulses, "pulses not found for jet number %v: %v", i, tCase.jetID)
 		}
+	}
+
+	gotJets, err = db.GetAllSyncClientJets(ctx)
+	require.NoError(t, err)
+	// fmt.Printf("%#v\n", gotJets)
+
+	for i, tCase := range tt {
+		gotPulses, ok := gotJets[tCase.jetID]
+		require.Truef(t, ok, "jet should  present jetID=%v", tCase.jetID)
+		assert.Equalf(t, tCase.pulses, gotPulses, "pulses not found for jet number %v: %v", i, tCase.jetID)
 	}
 }

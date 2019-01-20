@@ -54,6 +54,7 @@ func (p *RecentStorageProvider) GetStorage(jetID core.RecordID) recentstorage.Re
 	return storage
 }
 
+// CloneStorage clones a recent storage from one jet to another
 func (p *RecentStorageProvider) CloneStorage(fromJetID, toJetID core.RecordID) {
 	p.lock.Lock()
 	defer p.lock.Unlock()

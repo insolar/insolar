@@ -516,67 +516,22 @@ func (db *DB) IterateIndexIDs(
 	})
 }
 
-// SetActiveNodes saves active nodes for pulse in memory.
-func (db *DB) SetActiveNodes(pulse core.PulseNumber, nodes []core.Node) error {
-	db.nodeHistoryLock.Lock()
-	defer db.nodeHistoryLock.Unlock()
-
-	if _, ok := db.nodeHistory[pulse]; ok {
-		return ErrOverride
-	}
-
-	db.nodeHistory[pulse] = []Node{}
-	for _, n := range nodes {
-		db.nodeHistory[pulse] = append(db.nodeHistory[pulse], Node{
-			FID:   n.ID(),
-			FRole: n.Role(),
-		})
-	}
-
-	return nil
-}
-
-// GetActiveNodes return active nodes for specified pulse.
-func (db *DB) GetActiveNodes(pulse core.PulseNumber) ([]core.Node, error) {
-	db.nodeHistoryLock.RLock()
-	defer db.nodeHistoryLock.RUnlock()
-
-	nodes, ok := db.nodeHistory[pulse]
-	if !ok {
-		return nil, errors.New("no nodes for this pulse")
-	}
-	res := make([]core.Node, len(nodes))
-	for i, n := range nodes {
-		res[i] = n
-	}
-
-	return res, nil
-}
-
-// GetActiveNodesByRole return active nodes for specified pulse and role.
-func (db *DB) GetActiveNodesByRole(pulse core.PulseNumber, role core.StaticRole) ([]core.Node, error) {
-	db.nodeHistoryLock.RLock()
-	defer db.nodeHistoryLock.RUnlock()
-
-	nodes, ok := db.nodeHistory[pulse]
-	if !ok {
-		return nil, errors.New("no nodes for this pulse")
-	}
-	var inRole []core.Node
-	for _, n := range nodes {
-		if n.Role() == role {
-			inRole = append(inRole, n)
-		}
-	}
-
-	return inRole, nil
-}
-
 // StoreKeyValues stores provided key/value pairs.
 func (db *DB) StoreKeyValues(ctx context.Context, kvs []core.KV) error {
 	return db.Update(ctx, func(tx *TransactionManager) error {
 		for _, rec := range kvs {
 			err := tx.set(ctx, rec.K, rec.V)
+			namespace := rec.K[0]
+			// if namespace == scopeIDBlob {
+			// core.PulseNumberSize+1
+			var id core.RecordID
+			offset := core.RecordHashSize
+			recordBuf := rec.K[offset:]
+			copy(id[:], recordBuf)
+			inslogger.FromContext(ctx).Debugf(
+				"RM-ISSUE: Add record %v - %v (len(recordBuf)=%v, offset=%v, key=%x, recordBuf=%x, pulse=%v)",
+				namespace, id.String(), len(recordBuf), offset, rec.K, recordBuf, pulseFromKey(rec.K))
+			// }
 			if err != nil {
 				return err
 			}
