@@ -166,7 +166,7 @@ func getTotalBalance(insSDK *sdk.SDK, members []*sdk.Member) uint64 {
 	for i := 0; i < nmembers; i++ {
 		go func(m *sdk.Member, num int) {
 			res := Result{num: num}
-			for attempt := 0; attempt < 5; attempt++ {
+			for attempt := 0; attempt < 3; attempt++ {
 				res.balance, res.err = insSDK.GetBalance(m)
 				if res.err == nil {
 					break
@@ -307,7 +307,7 @@ func main() {
 	fmt.Printf("\nFinish: %s\n\n", t.String())
 
 	totalBalanceAfter := uint64(0)
-	for nretries := 0; nretries < 5; nretries++ {
+	for nretries := 0; nretries < 3; nretries++ {
 		totalBalanceAfter = getTotalBalance(insSDK, members)
 		if totalBalanceAfter == totalBalanceBefore {
 			break
