@@ -93,12 +93,17 @@ func (db *DB) removeJetRecordsUntil(ctx context.Context, namespace byte, jetID c
 			if err := txn.Delete(key); err != nil {
 				return err
 			}
-			if namespace == scopeIDBlob {
-				var id core.RecordID
-				copy(id[:], key[len(jetprefix):])
-				inslogger.FromContext(ctx).Debugf("Removing blob - %v", id.String())
+			// if namespace == scopeIDBlob {
+			var id core.RecordID
+			offset := len(jetprefix)
+			recordBuf := key[offset:]
 
-			}
+			copy(id[:], key[offset:])
+			inslogger.FromContext(ctx).Debugf(
+				"RM-ISSUE: Removing record, type=%v - %v, len(recordBuf)=%v, offset=%v, key=%x, recordBuf=%x, pulse=%v",
+				namespace, id.String(), len(recordBuf), offset, key, recordBuf, pulseFromKey(key))
+			// }
+			// else {}
 			count++
 		}
 		return nil
