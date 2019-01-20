@@ -682,7 +682,7 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse core.Pulse) 
 		activeNodesUtilPN    core.PulseNumber
 		storageRecordsUtilPN core.PulseNumber
 	)
-	for i := 0; i < delta*2+1; i++ {
+	for i := 0; i < delta+2; i++ {
 		prevPulse, err := m.db.GetPreviousPulse(ctx, pn)
 		if err != nil {
 			inslogger.FromContext(ctx).Errorf("Can't get previous Nth %v pulse by pulse number: %v", i, pn)
@@ -692,14 +692,12 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse core.Pulse) 
 		ps := prevPulse.SerialNumber
 		// fmt.Printf("cleanLightData: [%v] prev pulse = %v\n", i, pn)
 
-		if activeNodesUtilPN == 0 && (newSerial-delta*2) > ps {
-			fmt.Printf("cleanLightData: activeNodesUtilPN == 0 && (%v - %v*2) > %v\n",
-				newSerial, delta, ps)
+		if activeNodesUtilPN == 0 && (newSerial-(delta+1)) > ps {
+			fmt.Printf("cleanLightData: activeNodesUtilPN == 0 && (%v - (%v+1)) > %v\n", newSerial, delta, ps)
 			activeNodesUtilPN = pn
 		}
 		if storageRecordsUtilPN == 0 && (newSerial-delta) > ps {
-			fmt.Printf("cleanLightData: storageRecordsUtilPN == 0 && (%v - %v) > %v\n",
-				newSerial, delta, ps)
+			fmt.Printf("cleanLightData: storageRecordsUtilPN == 0 && (%v - %v) > %v\n", newSerial, delta, ps)
 			storageRecordsUtilPN = pn
 		}
 	}
