@@ -21,7 +21,6 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
@@ -43,8 +42,15 @@ func TestExporter_Export(t *testing.T) {
 	ps := storage.NewPulseStorage(db)
 	exporter := NewExporter(db, ps, configuration.Exporter{ExportLag: 0})
 
-	for i := 1; i <= 15; i++ {
-		err := db.AddPulse(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 10*core.PulseNumber(i), PulseTimestamp: 10 * int64(i+1)})
+	for i := 1; i <= 3; i++ {
+		err := db.AddPulse(
+			ctx,
+			core.Pulse{
+				PulseNumber:     core.FirstPulseNumber + 10*core.PulseNumber(i),
+				PrevPulseNumber: core.FirstPulseNumber + 10*core.PulseNumber(i-1),
+				PulseTimestamp:  10 * int64(i+1),
+			},
+		)
 		require.NoError(t, err)
 	}
 
@@ -75,7 +81,6 @@ func TestExporter_Export(t *testing.T) {
 	require.NoError(t, err)
 
 	result, err := exporter.Export(ctx, 0, 15)
-	spew.Dump(result)
 	require.NoError(t, err)
 	assert.Equal(t, 2, len(result.Data))
 	assert.Equal(t, 2, result.Size)
@@ -92,11 +97,11 @@ func TestExporter_Export(t *testing.T) {
 	pulse := result.Data[strconv.FormatUint(uint64(core.FirstPulseNumber), 10)].([]*pulseData)[0].Pulse
 	assert.Equal(t, core.FirstPulseNumber, int(pulse.PulseNumber))
 	assert.Equal(t, int64(0), pulse.PulseTimestamp)
-	pulse = result.Data[strconv.FormatUint(uint64(core.FirstPulseNumber+1), 10)].([]*pulseData)[0].Pulse
-	assert.Equal(t, core.FirstPulseNumber+1, int(pulse.PulseNumber))
-	assert.Equal(t, int64(2), pulse.PulseTimestamp)
+	pulse = result.Data[strconv.FormatUint(uint64(core.FirstPulseNumber+10), 10)].([]*pulseData)[0].Pulse
+	assert.Equal(t, core.FirstPulseNumber+10, int(pulse.PulseNumber))
+	assert.Equal(t, int64(20), pulse.PulseTimestamp)
 
-	records := result.Data[strconv.FormatUint(uint64(core.FirstPulseNumber+1), 10)].([]*pulseData)[0].Records
+	records := result.Data[strconv.FormatUint(uint64(core.FirstPulseNumber+10), 10)].([]*pulseData)[0].Records
 	object, ok := records[base58.Encode(objectID[:])]
 	if assert.True(t, ok, "object not found by ID") {
 		assert.Equal(t, "TypeActivate", object.Type)
