@@ -521,15 +521,6 @@ func (db *DB) StoreKeyValues(ctx context.Context, kvs []core.KV) error {
 	return db.Update(ctx, func(tx *TransactionManager) error {
 		for _, rec := range kvs {
 			err := tx.set(ctx, rec.K, rec.V)
-			// namespace := rec.K[0]
-			// slice bounds out of range
-			// var id core.RecordID
-			// offset := core.RecordHashSize
-			// recordBuf := rec.K[offset:]
-			// copy(id[:], recordBuf)
-			// inslogger.FromContext(ctx).Debugf(
-			// 	"RM-ISSUE: Add record %v - %v (len(recordBuf)=%v, offset=%v, key=%x, recordBuf=%x, pulse=%v)",
-			// 	namespace, id.String(), len(recordBuf), offset, rec.K, recordBuf, pulseFromKey(rec.K))
 			if err != nil {
 				return err
 			}
