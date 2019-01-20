@@ -67,7 +67,7 @@ import (
 
 var icc = ""
 var runnerbin = ""
-var parallel = false
+var parallel = true
 
 func TestMain(m *testing.M) {
 	var err error

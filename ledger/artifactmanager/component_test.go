@@ -58,9 +58,9 @@ func TestLedgerArtifactManager_PendingRequest(t *testing.T) {
 	cs := testutils.NewPlatformCryptographyScheme()
 	mb := testmessagebus.NewTestMessageBus(t)
 	mb.PulseStorage = amPulseStorageMock
-	jc := testutils.NewJetCoordinatorMock(mc)
-	jc.HeavyMock.Return(&core.RecordRef{}, nil)
-	jc.MeMock.Return(core.RecordRef{})
+	// jc := testutils.NewJetCoordinatorMock(mc)
+	// jc.HeavyMock.Return(&core.RecordRef{}, nil)
+	// jc.MeMock.Return(core.RecordRef{})
 	am := NewArtifactManger(db)
 	am.PulseStorage = amPulseStorageMock
 	am.PlatformCryptographyScheme = cs
@@ -70,7 +70,7 @@ func TestLedgerArtifactManager_PendingRequest(t *testing.T) {
 		LightChainLimit: 10,
 	})
 	handler.Bus = mb
-	handler.JetCoordinator = jc
+	// handler.JetCoordinator = jc
 	handler.RecentStorageProvider = provider
 	handler.NodeNet = nodeNetworkMock
 	err := handler.Init(ctx)

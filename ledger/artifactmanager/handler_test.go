@@ -471,6 +471,11 @@ func TestMessageHandler_HandleGetObjectIndex(t *testing.T) {
 	recentStorageMock.AddObjectMock.Return()
 	recentStorageMock.RemovePendingRequestMock.Return()
 
+	nodeMock := network.NewNodeMock(t)
+	nodeMock.RoleMock.Return(core.StaticRoleLightMaterial)
+	nodeNetworkMock := network.NewNodeNetworkMock(t)
+	nodeNetworkMock.GetOriginMock.Return(nodeMock)
+
 	jc := testutils.NewJetCoordinatorMock(mc)
 
 	mb := testutils.NewMessageBusMock(mc)
@@ -481,6 +486,8 @@ func TestMessageHandler_HandleGetObjectIndex(t *testing.T) {
 	})
 	h.JetCoordinator = jc
 	h.Bus = mb
+	h.NodeNet = nodeNetworkMock
+
 	err := h.Init(ctx)
 	require.NoError(t, err)
 
@@ -524,6 +531,11 @@ func TestMessageHandler_HandleHasPendingRequests(t *testing.T) {
 	recentStorageMock := recentstorage.NewRecentStorageMock(t)
 	recentStorageMock.GetRequestsForObjectMock.Return(pendingRequests)
 
+	nodeMock := network.NewNodeMock(t)
+	nodeMock.RoleMock.Return(core.StaticRoleLightMaterial)
+	nodeNetworkMock := network.NewNodeNetworkMock(t)
+	nodeNetworkMock.GetOriginMock.Return(nodeMock)
+
 	jetID := *jet.NewID(0, nil)
 	jc := testutils.NewJetCoordinatorMock(mc)
 	mb := testutils.NewMessageBusMock(mc)
@@ -532,6 +544,8 @@ func TestMessageHandler_HandleHasPendingRequests(t *testing.T) {
 	h := NewMessageHandler(db, &configuration.Ledger{})
 	h.JetCoordinator = jc
 	h.Bus = mb
+	h.NodeNet = nodeNetworkMock
+
 	err := h.Init(ctx)
 	require.NoError(t, err)
 
@@ -570,6 +584,11 @@ func TestMessageHandler_HandleGetCode_Redirects(t *testing.T) {
 	recentStorageMock.AddObjectMock.Return()
 	recentStorageMock.RemovePendingRequestMock.Return()
 
+	nodeMock := network.NewNodeMock(t)
+	nodeMock.RoleMock.Return(core.StaticRoleLightMaterial)
+	nodeNetworkMock := network.NewNodeNetworkMock(t)
+	nodeNetworkMock.GetOriginMock.Return(nodeMock)
+
 	tf.IssueGetCodeRedirectMock.Return(&delegationtoken.GetCodeRedirectToken{Signature: []byte{1, 2, 3}}, nil)
 
 	h := NewMessageHandler(db, &configuration.Ledger{
@@ -578,6 +597,7 @@ func TestMessageHandler_HandleGetCode_Redirects(t *testing.T) {
 	h.JetCoordinator = jc
 	h.DelegationTokenFactory = tf
 	h.Bus = mb
+	h.NodeNet = nodeNetworkMock
 	err := h.Init(ctx)
 	require.NoError(t, err)
 
@@ -855,6 +875,11 @@ func TestMessageHandler_HandleValidationCheck(t *testing.T) {
 	recentStorageMock.AddObjectMock.Return()
 	recentStorageMock.RemovePendingRequestMock.Return()
 
+	nodeMock := network.NewNodeMock(t)
+	nodeMock.RoleMock.Return(core.StaticRoleLightMaterial)
+	nodeNetworkMock := network.NewNodeNetworkMock(t)
+	nodeNetworkMock.GetOriginMock.Return(nodeMock)
+
 	jc := testutils.NewJetCoordinatorMock(mc)
 
 	mb := testutils.NewMessageBusMock(mc)
@@ -864,6 +889,7 @@ func TestMessageHandler_HandleValidationCheck(t *testing.T) {
 	})
 	h.JetCoordinator = jc
 	h.Bus = mb
+	h.NodeNet = nodeNetworkMock
 	err := h.Init(ctx)
 	require.NoError(t, err)
 
