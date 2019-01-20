@@ -37,7 +37,6 @@ import (
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
-	"github.com/insolar/insolar/testutils/network"
 	"github.com/insolar/insolar/testutils/testmessagebus"
 	"github.com/stretchr/testify/require"
 )
@@ -91,15 +90,12 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 		c.NodeNetwork = nodenetwork.NewNodeKeeper(nodenetwork.NewNode(core.RecordRef{}, core.StaticRoleLightMaterial, nil, "", ""))
 	}
 
-	handler := artifactmanager.NewMessageHandler(db, &conf)
+	certificate := testutils.NewCertificateMock(t)
+	certificate.GetRoleMock.Return(handlersRole)
+
+	handler := artifactmanager.NewMessageHandler(db, &conf, certificate)
 	handler.PlatformCryptographyScheme = pcs
 	handler.JetCoordinator = jc
-
-	handlerNodeNetwork := network.NewNodeNetworkMock(t)
-	handlerNode := network.NewNodeMock(t)
-	handlerNode.RoleMock.Return(handlersRole)
-	handlerNodeNetwork.GetOriginMock.Return(handlerNode)
-	handler.NodeNet = handlerNodeNetwork
 
 	gilMock := testutils.NewGlobalInsolarLockMock(t)
 	gilMock.AcquireFunc = func(context.Context) {}

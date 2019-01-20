@@ -55,19 +55,17 @@ func TestMessageHandler_HandleGetObject_Redirects(t *testing.T) {
 	}
 	objIndex := index.ObjectLifeline{LatestState: genRandomID(0)}
 
+	certificate := testutils.NewCertificateMock(t)
+	certificate.GetRoleMock.Return(core.StaticRoleLightMaterial)
+
 	tf.IssueGetObjectRedirectMock.Return(&delegationtoken.GetObjectRedirectToken{Signature: []byte{1, 2, 3}}, nil)
 	h := NewMessageHandler(db, &configuration.Ledger{
 		LightChainLimit: 2,
-	})
+	}, certificate)
 	recentStorageMock := recentstorage.NewRecentStorageMock(t)
 	recentStorageMock.AddPendingRequestMock.Return()
 	recentStorageMock.AddObjectMock.Return()
 	recentStorageMock.RemovePendingRequestMock.Return()
-
-	nodeMock := network.NewNodeMock(t)
-	nodeMock.RoleMock.Return(core.StaticRoleLightMaterial)
-	nodeNetworkMock := network.NewNodeNetworkMock(t)
-	nodeNetworkMock.GetOriginMock.Return(nodeMock)
 
 	mb := testutils.NewMessageBusMock(mc)
 	mb.MustRegisterMock.Return()
@@ -81,7 +79,6 @@ func TestMessageHandler_HandleGetObject_Redirects(t *testing.T) {
 	h.JetCoordinator = jc
 	h.DelegationTokenFactory = tf
 	h.Bus = mb
-	h.NodeNet = nodeNetworkMock
 
 	err := h.Init(ctx)
 	require.NoError(t, err)
@@ -194,10 +191,8 @@ func TestMessageHandler_HandleGetChildren_Redirects(t *testing.T) {
 	recentStorageMock.AddObjectMock.Return()
 	recentStorageMock.RemovePendingRequestMock.Return()
 
-	nodeMock := network.NewNodeMock(t)
-	nodeMock.RoleMock.Return(core.StaticRoleLightMaterial)
-	nodeNetworkMock := network.NewNodeNetworkMock(t)
-	nodeNetworkMock.GetOriginMock.Return(nodeMock)
+	certificate := testutils.NewCertificateMock(t)
+	certificate.GetRoleMock.Return(core.StaticRoleLightMaterial)
 
 	msg := message.GetChildren{
 		Parent: *genRandomRef(0),
@@ -205,11 +200,10 @@ func TestMessageHandler_HandleGetChildren_Redirects(t *testing.T) {
 	objIndex := index.ObjectLifeline{LatestState: genRandomID(0)}
 	h := NewMessageHandler(db, &configuration.Ledger{
 		LightChainLimit: 2,
-	})
+	}, certificate)
 	h.JetCoordinator = jc
 	h.DelegationTokenFactory = tf
 	h.Bus = mb
-	h.NodeNet = nodeNetworkMock
 
 	err := h.Init(ctx)
 	require.NoError(t, err)
@@ -317,10 +311,8 @@ func TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeavy(t *testing.T) {
 	recentStorageMock.AddObjectMock.Return()
 	recentStorageMock.RemovePendingRequestMock.Return()
 
-	nodeMock := network.NewNodeMock(t)
-	nodeMock.RoleMock.Return(core.StaticRoleLightMaterial)
-	nodeNetworkMock := network.NewNodeNetworkMock(t)
-	nodeNetworkMock.GetOriginMock.Return(nodeMock)
+	certificate := testutils.NewCertificateMock(t)
+	certificate.GetRoleMock.Return(core.StaticRoleLightMaterial)
 
 	mb := testutils.NewMessageBusMock(mc)
 	mb.MustRegisterMock.Return()
@@ -328,7 +320,7 @@ func TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeavy(t *testing.T) {
 
 	h := NewMessageHandler(db, &configuration.Ledger{
 		LightChainLimit: 3,
-	})
+	}, certificate)
 
 	provideMock := recentstorage.NewProviderMock(t)
 	provideMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
@@ -336,7 +328,6 @@ func TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeavy(t *testing.T) {
 	}
 
 	h.RecentStorageProvider = provideMock
-	h.NodeNet = nodeNetworkMock
 
 	delegateType := *genRandomRef(0)
 	delegate := *genRandomRef(0)
@@ -391,10 +382,8 @@ func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 	recentStorageMock.AddObjectMock.Return()
 	recentStorageMock.RemovePendingRequestMock.Return()
 
-	nodeMock := network.NewNodeMock(t)
-	nodeMock.RoleMock.Return(core.StaticRoleLightMaterial)
-	nodeNetworkMock := network.NewNodeNetworkMock(t)
-	nodeNetworkMock.GetOriginMock.Return(nodeMock)
+	certificate := testutils.NewCertificateMock(t)
+	certificate.GetRoleMock.Return(core.StaticRoleLightMaterial)
 
 	mb := testutils.NewMessageBusMock(mc)
 	mb.MustRegisterMock.Return()
@@ -402,8 +391,7 @@ func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 
 	h := NewMessageHandler(db, &configuration.Ledger{
 		LightChainLimit: 3,
-	})
-	h.NodeNet = nodeNetworkMock
+	}, certificate)
 
 	provideMock := recentstorage.NewProviderMock(t)
 	provideMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
@@ -471,10 +459,8 @@ func TestMessageHandler_HandleGetObjectIndex(t *testing.T) {
 	recentStorageMock.AddObjectMock.Return()
 	recentStorageMock.RemovePendingRequestMock.Return()
 
-	nodeMock := network.NewNodeMock(t)
-	nodeMock.RoleMock.Return(core.StaticRoleLightMaterial)
-	nodeNetworkMock := network.NewNodeNetworkMock(t)
-	nodeNetworkMock.GetOriginMock.Return(nodeMock)
+	certificate := testutils.NewCertificateMock(t)
+	certificate.GetRoleMock.Return(core.StaticRoleLightMaterial)
 
 	jc := testutils.NewJetCoordinatorMock(mc)
 
@@ -483,10 +469,9 @@ func TestMessageHandler_HandleGetObjectIndex(t *testing.T) {
 
 	h := NewMessageHandler(db, &configuration.Ledger{
 		LightChainLimit: 3,
-	})
+	}, certificate)
 	h.JetCoordinator = jc
 	h.Bus = mb
-	h.NodeNet = nodeNetworkMock
 
 	err := h.Init(ctx)
 	require.NoError(t, err)
@@ -531,21 +516,17 @@ func TestMessageHandler_HandleHasPendingRequests(t *testing.T) {
 	recentStorageMock := recentstorage.NewRecentStorageMock(t)
 	recentStorageMock.GetRequestsForObjectMock.Return(pendingRequests)
 
-	nodeMock := network.NewNodeMock(t)
-	nodeMock.RoleMock.Return(core.StaticRoleLightMaterial)
-	nodeNetworkMock := network.NewNodeNetworkMock(t)
-	nodeNetworkMock.GetOriginMock.Return(nodeMock)
+	certificate := testutils.NewCertificateMock(t)
+	certificate.GetRoleMock.Return(core.StaticRoleLightMaterial)
 
 	jetID := *jet.NewID(0, nil)
 	jc := testutils.NewJetCoordinatorMock(mc)
 	mb := testutils.NewMessageBusMock(mc)
 	mb.MustRegisterMock.Return()
 
-	h := NewMessageHandler(db, &configuration.Ledger{})
+	h := NewMessageHandler(db, &configuration.Ledger{}, certificate)
 	h.JetCoordinator = jc
 	h.Bus = mb
-	h.NodeNet = nodeNetworkMock
-
 	err := h.Init(ctx)
 	require.NoError(t, err)
 
@@ -584,20 +565,17 @@ func TestMessageHandler_HandleGetCode_Redirects(t *testing.T) {
 	recentStorageMock.AddObjectMock.Return()
 	recentStorageMock.RemovePendingRequestMock.Return()
 
-	nodeMock := network.NewNodeMock(t)
-	nodeMock.RoleMock.Return(core.StaticRoleLightMaterial)
-	nodeNetworkMock := network.NewNodeNetworkMock(t)
-	nodeNetworkMock.GetOriginMock.Return(nodeMock)
+	certificate := testutils.NewCertificateMock(t)
+	certificate.GetRoleMock.Return(core.StaticRoleLightMaterial)
 
 	tf.IssueGetCodeRedirectMock.Return(&delegationtoken.GetCodeRedirectToken{Signature: []byte{1, 2, 3}}, nil)
 
 	h := NewMessageHandler(db, &configuration.Ledger{
 		LightChainLimit: 2,
-	})
+	}, certificate)
 	h.JetCoordinator = jc
 	h.DelegationTokenFactory = tf
 	h.Bus = mb
-	h.NodeNet = nodeNetworkMock
 	err := h.Init(ctx)
 	require.NoError(t, err)
 
@@ -665,18 +643,15 @@ func TestMessageHandler_HandleRegisterChild_FetchesIndexFromHeavy(t *testing.T) 
 	recentStorageMock.AddObjectMock.Return()
 	recentStorageMock.RemovePendingRequestMock.Return()
 
-	nodeMock := network.NewNodeMock(t)
-	nodeMock.RoleMock.Return(core.StaticRoleLightMaterial)
-	nodeNetworkMock := network.NewNodeNetworkMock(t)
-	nodeNetworkMock.GetOriginMock.Return(nodeMock)
+	certificate := testutils.NewCertificateMock(t)
+	certificate.GetRoleMock.Return(core.StaticRoleLightMaterial)
 
 	mb := testutils.NewMessageBusMock(mc)
 	mb.MustRegisterMock.Return()
 	jc := testutils.NewJetCoordinatorMock(mc)
 	h := NewMessageHandler(db, &configuration.Ledger{
 		LightChainLimit: 2,
-	})
-	h.NodeNet = nodeNetworkMock
+	}, certificate)
 
 	provideMock := recentstorage.NewProviderMock(t)
 	provideMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
@@ -827,16 +802,13 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 		return recentStorageMock
 	}
 
-	nodeMock := network.NewNodeMock(t)
-	nodeMock.RoleMock.Return(core.StaticRoleLightMaterial)
-	nodeNetworkMock := network.NewNodeNetworkMock(t)
-	nodeNetworkMock.GetOriginMock.Return(nodeMock)
+	certificate := testutils.NewCertificateMock(t)
+	certificate.GetRoleMock.Return(core.StaticRoleLightMaterial)
 
-	h := NewMessageHandler(db, &configuration.Ledger{})
+	h := NewMessageHandler(db, &configuration.Ledger{}, certificate)
 	h.JetCoordinator = jc
 	h.RecentStorageProvider = provideMock
 	h.Bus = mb
-	h.NodeNet = nodeNetworkMock
 
 	err = h.Init(ctx)
 	require.NoError(t, err)
@@ -882,14 +854,16 @@ func TestMessageHandler_HandleValidationCheck(t *testing.T) {
 
 	jc := testutils.NewJetCoordinatorMock(mc)
 
+	certificate := testutils.NewCertificateMock(t)
+	certificate.GetRoleMock.Return(core.StaticRoleLightMaterial)
+
 	mb := testutils.NewMessageBusMock(mc)
 	mb.MustRegisterMock.Return()
 	h := NewMessageHandler(db, &configuration.Ledger{
 		LightChainLimit: 3,
-	})
+	}, certificate)
 	h.JetCoordinator = jc
 	h.Bus = mb
-	h.NodeNet = nodeNetworkMock
 	err := h.Init(ctx)
 	require.NoError(t, err)
 
@@ -958,9 +932,12 @@ func TestMessageHandler_HandleJetDrop_SaveJet(t *testing.T) {
 		*jetID: struct{}{},
 	}
 
+	certificate := testutils.NewCertificateMock(t)
+	certificate.GetRoleMock.Return(core.StaticRoleLightMaterial)
+
 	h := NewMessageHandler(db, &configuration.Ledger{
 		LightChainLimit: 3,
-	})
+	}, certificate)
 
 	// Act
 	response, err := h.handleJetDrop(ctx, &message.Parcel{Msg: &msg})
@@ -1000,9 +977,12 @@ func TestMessageHandler_HandleJetDrop_SaveJet_ExistingMap(t *testing.T) {
 		*secondJetID: struct{}{},
 	}
 
+	certificate := testutils.NewCertificateMock(t)
+	certificate.GetRoleMock.Return(core.StaticRoleLightMaterial)
+
 	h := NewMessageHandler(db, &configuration.Ledger{
 		LightChainLimit: 3,
-	})
+	}, certificate)
 
 	// Act
 	response, err := h.handleJetDrop(ctx, &message.Parcel{Msg: &msg})

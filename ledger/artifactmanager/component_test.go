@@ -29,7 +29,6 @@ import (
 	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/testutils"
-	"github.com/insolar/insolar/testutils/network"
 	"github.com/insolar/insolar/testutils/testmessagebus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -56,10 +55,8 @@ func TestLedgerArtifactManager_PendingRequest(t *testing.T) {
 	jcMock.LightExecutorForJetMock.Return(&core.RecordRef{}, nil)
 	jcMock.MeMock.Return(core.RecordRef{})
 
-	nodeMock := network.NewNodeMock(t)
-	nodeMock.RoleMock.Return(core.StaticRoleLightMaterial)
-	nodeNetworkMock := network.NewNodeNetworkMock(t)
-	nodeNetworkMock.GetOriginMock.Return(nodeMock)
+	certificate := testutils.NewCertificateMock(t)
+	certificate.GetRoleMock.Return(core.StaticRoleLightMaterial)
 
 	cs := testutils.NewPlatformCryptographyScheme()
 	mb := testmessagebus.NewTestMessageBus(t)
@@ -72,11 +69,10 @@ func TestLedgerArtifactManager_PendingRequest(t *testing.T) {
 	provider := storage.NewRecentStorageProvider(0)
 	handler := NewMessageHandler(db, &configuration.Ledger{
 		LightChainLimit: 10,
-	})
+	}, certificate)
 	handler.Bus = mb
 	// handler.JetCoordinator = jc
 	handler.RecentStorageProvider = provider
-	handler.NodeNet = nodeNetworkMock
 	handler.JetCoordinator = jcMock
 	err := handler.Init(ctx)
 	require.NoError(t, err)

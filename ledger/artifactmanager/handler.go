@@ -51,7 +51,6 @@ type MessageHandler struct {
 	DelegationTokenFactory     core.DelegationTokenFactory     `inject:""`
 	HeavySync                  core.HeavySync                  `inject:""`
 	PulseStorage               core.PulseStorage               `inject:""`
-	NodeNet                    core.NodeNetwork                `inject:""`
 
 	db             *storage.DB
 	certificate    core.Certificate
@@ -199,7 +198,7 @@ func (h *MessageHandler) handleSetRecord(ctx context.Context, parcel core.Parcel
 		return nil, err
 	}
 
-	if h.NodeNet.GetOrigin().Role() != core.StaticRoleHeavyMaterial {
+	if h.certificate.GetRole() != core.StaticRoleHeavyMaterial {
 		recentStorage := h.RecentStorageProvider.GetStorage(jetID)
 		if request, ok := rec.(record.Request); ok {
 			recentStorage.AddPendingRequest(request.GetObject(), *id)
@@ -293,7 +292,7 @@ func (h *MessageHandler) handleGetObject(
 			return nil, errors.Wrap(err, "failed to fetch index from heavy")
 		}
 		// Add requested object to recent.
-		if h.NodeNet.GetOrigin().Role() != core.StaticRoleHeavyMaterial {
+		if h.certificate.GetRole() != core.StaticRoleHeavyMaterial {
 			h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Head.Record())
 		}
 
@@ -306,7 +305,7 @@ func (h *MessageHandler) handleGetObject(
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
 	// Add requested object to recent.
-	if h.NodeNet.GetOrigin().Role() != core.StaticRoleHeavyMaterial {
+	if h.certificate.GetRole() != core.StaticRoleHeavyMaterial {
 		h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Head.Record())
 	}
 
@@ -440,7 +439,7 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel core.Parc
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
 
-	if h.NodeNet.GetOrigin().Role() != core.StaticRoleHeavyMaterial {
+	if h.certificate.GetRole() != core.StaticRoleHeavyMaterial {
 		h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Head.Record())
 	}
 
@@ -482,7 +481,7 @@ func (h *MessageHandler) handleGetChildren(
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
 
-	if h.NodeNet.GetOrigin().Role() != core.StaticRoleHeavyMaterial {
+	if h.certificate.GetRole() != core.StaticRoleHeavyMaterial {
 		h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Parent.Record())
 	}
 
@@ -629,7 +628,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 			return errors.New("invalid state record")
 		}
 
-		if h.NodeNet.GetOrigin().Role() != core.StaticRoleHeavyMaterial {
+		if h.certificate.GetRole() != core.StaticRoleHeavyMaterial {
 			h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Object.Record())
 		}
 
@@ -654,7 +653,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 		return nil, err
 	}
 
-	if h.NodeNet.GetOrigin().Role() != core.StaticRoleHeavyMaterial {
+	if h.certificate.GetRole() != core.StaticRoleHeavyMaterial {
 		h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Object.Record())
 	}
 
@@ -694,7 +693,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel core.Pa
 			return err
 		}
 
-		if h.NodeNet.GetOrigin().Role() != core.StaticRoleHeavyMaterial {
+		if h.certificate.GetRole() != core.StaticRoleHeavyMaterial {
 			h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Parent.Record())
 		}
 
@@ -723,7 +722,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel core.Pa
 		return nil, err
 	}
 
-	if h.NodeNet.GetOrigin().Role() != core.StaticRoleHeavyMaterial {
+	if h.certificate.GetRole() != core.StaticRoleHeavyMaterial {
 		h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Parent.Record())
 	}
 

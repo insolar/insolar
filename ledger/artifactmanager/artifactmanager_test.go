@@ -37,7 +37,6 @@ import (
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
-	"github.com/insolar/insolar/testutils/network"
 	"github.com/insolar/insolar/testutils/testmessagebus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -88,17 +87,16 @@ func getTestData(t *testing.T) (
 	mb := testmessagebus.NewTestMessageBus(t)
 	mb.PulseStorage = pulseStorage
 	db.PlatformCryptographyScheme = scheme
-	nodeNetworkMock := network.NewNodeNetworkMock(t)
-	nodeMock := network.NewNodeMock(t)
-	nodeMock.RoleMock.Return(core.StaticRoleLightMaterial)
-	nodeNetworkMock.GetOriginMock.Return(nodeMock)
+
+	certificate := testutils.NewCertificateMock(t)
+	certificate.GetRoleMock.Return(core.StaticRoleLightMaterial)
 
 	handler := MessageHandler{
 		db:                         db,
 		replayHandlers:             map[core.MessageType]core.MessageHandler{},
 		PlatformCryptographyScheme: scheme,
 		conf:                       &configuration.Ledger{LightChainLimit: 3},
-		NodeNet:                    nodeNetworkMock,
+		certificate:                certificate,
 	}
 
 	recentStorageMock := recentstorage.NewRecentStorageMock(t)
@@ -738,21 +736,19 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 	recentStorageMock.AddObjectMock.Return()
 	recentStorageMock.GetRequestsMock.Return(nil)
 
-	nodeMock := network.NewNodeMock(t)
-	nodeMock.RoleMock.Return(core.StaticRoleLightMaterial)
-	nodeNetworkMock := network.NewNodeNetworkMock(t)
-	nodeNetworkMock.GetOriginMock.Return(nodeMock)
+	certificate := testutils.NewCertificateMock(t)
+	certificate.GetRoleMock.Return(core.StaticRoleLightMaterial)
 
 	handler := MessageHandler{
 		db:                         db,
 		replayHandlers:             map[core.MessageType]core.MessageHandler{},
 		PlatformCryptographyScheme: scheme,
 		conf:                       &configuration.Ledger{LightChainLimit: 3},
+		certificate:                certificate,
 	}
 
 	handler.Bus = mb
 	handler.JetCoordinator = jc
-	handler.NodeNet = nodeNetworkMock
 
 	provideMock := recentstorage.NewProviderMock(t)
 	provideMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
