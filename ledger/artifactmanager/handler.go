@@ -325,6 +325,9 @@ func (h *MessageHandler) handleGetObject(
 	}
 
 	onHeavy, err := h.isBeyondLimit(ctx, parcel.Pulse(), stateID.Pulse())
+	if err != nil {
+		return nil, err
+	}
 	if onHeavy {
 		node, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
 		if err != nil {
@@ -523,6 +526,9 @@ func (h *MessageHandler) handleGetChildren(
 	}
 
 	onHeavy, err := h.isBeyondLimit(ctx, parcel.Pulse(), currentChild.Pulse())
+	if err != nil {
+		return nil, err
+	}
 	if onHeavy {
 		node, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
 		if err != nil {
