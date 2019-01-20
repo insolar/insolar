@@ -197,7 +197,7 @@ func TestMessageHandler_HandleGetChildren_Redirects(t *testing.T) {
 	msg := message.GetChildren{
 		Parent: *genRandomRef(0),
 	}
-	objIndex := index.ObjectLifeline{LatestState: genRandomID(0)}
+	objIndex := index.ObjectLifeline{LatestState: genRandomID(0), ChildPointer: genRandomID(0)}
 	h := NewMessageHandler(db, &configuration.Ledger{
 		LightChainLimit: 2,
 	}, certificate)
