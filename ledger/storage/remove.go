@@ -22,6 +22,7 @@ import (
 	"github.com/dgraph-io/badger"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage/jet"
 )
 
@@ -91,6 +92,12 @@ func (db *DB) removeJetRecordsUntil(ctx context.Context, namespace byte, jetID c
 			}
 			if err := txn.Delete(key); err != nil {
 				return err
+			}
+			if namespace == scopeIDBlob {
+				var id core.RecordID
+				copy(id[:], key[len(jetprefix):])
+				inslogger.FromContext(ctx).Debugf("Removing blob - %v", id.String())
+
 			}
 			count++
 		}

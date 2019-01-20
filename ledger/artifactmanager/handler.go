@@ -227,6 +227,7 @@ func (h *MessageHandler) handleSetBlob(ctx context.Context, parcel core.Parcel) 
 	if err == storage.ErrOverride {
 		return &reply.ID{ID: *calculatedID}, nil
 	}
+	inslogger.FromContext(ctx).Debugf("set blob - %v", id.String())
 	return nil, err
 }
 
@@ -404,6 +405,7 @@ func (h *MessageHandler) handleGetObject(
 	if state.GetMemory() != nil {
 		rep.Memory, err = h.db.GetBlob(ctx, *stateJet, state.GetMemory())
 		if err != nil {
+			inslogger.FromContext(ctx).Errorf("fetch blob failed id - %v", state.GetMemory().String())
 			return nil, errors.Wrap(err, "failed to fetch blob")
 		}
 	}
