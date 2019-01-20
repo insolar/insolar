@@ -337,7 +337,7 @@ func (h *MessageHandler) handleGetObject(
 				stateID.DebugString(),
 				node.String(),
 			)
-			return reply.NewGetObjectRedirectReply(h.DelegationTokenFactory, parcel, node, msg.State)
+			return reply.NewGetObjectRedirectReply(h.DelegationTokenFactory, parcel, node, stateID)
 		}
 
 		stateTree, err := h.db.GetJetTree(ctx, stateID.Pulse())

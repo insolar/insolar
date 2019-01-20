@@ -113,9 +113,10 @@ func TestMessageHandler_HandleGetObject_Redirects(t *testing.T) {
 		assert.Equal(t, objIndex.LatestState, idx.LatestState)
 	})
 
+	// next tests expect this pulse is presented
+	err = db.AddPulse(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 1})
+	require.NoError(t, err)
 	t.Run("redirect to light when has index and state later than limit", func(t *testing.T) {
-		err := db.AddPulse(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 1})
-		require.NoError(t, err)
 		lightRef := genRandomRef(0)
 		jc.LightExecutorForJetMock.Set(nil)
 		jc.LightExecutorForJetFunc = func(c context.Context, j core.RecordID, p core.PulseNumber) (*core.RecordRef, error) {
@@ -145,9 +146,11 @@ func TestMessageHandler_HandleGetObject_Redirects(t *testing.T) {
 		assert.Equal(t, stateID, redirect.StateID)
 	})
 
+	err = db.AddPulse(ctx, core.Pulse{
+		PulseNumber: core.FirstPulseNumber + 2,
+	})
+	require.NoError(t, err)
 	t.Run("redirect to heavy when has index and state earlier than limit", func(t *testing.T) {
-		err = db.AddPulse(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 2})
-		require.NoError(t, err)
 		heavyRef := genRandomRef(0)
 		jc.LightExecutorForJetMock.Return(&core.RecordRef{}, nil)
 		jc.HeavyMock.Return(heavyRef, nil)
