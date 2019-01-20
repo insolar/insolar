@@ -222,12 +222,12 @@ func (h *MessageHandler) handleSetBlob(ctx context.Context, parcel core.Parcel) 
 
 	id, err := h.db.SetBlob(ctx, jetID, parcel.Pulse(), msg.Memory)
 	if err == nil {
+		inslogger.FromContext(ctx).Debugf("RM-ISSUE: set blob - %v", id.String())
 		return &reply.ID{ID: *id}, nil
 	}
 	if err == storage.ErrOverride {
 		return &reply.ID{ID: *calculatedID}, nil
 	}
-	inslogger.FromContext(ctx).Debugf("set blob - %v", id.String())
 	return nil, err
 }
 

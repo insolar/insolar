@@ -22,6 +22,7 @@ import (
 
 	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage/index"
 	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/record"
@@ -105,6 +106,8 @@ func (m *TransactionManager) SetBlob(ctx context.Context, jetID core.RecordID, p
 	id := record.CalculateIDForBlob(m.db.PlatformCryptographyScheme, pulseNumber, blob)
 	_, jetPrefix := jet.Jet(jetID)
 	k := prefixkey(scopeIDBlob, jetPrefix, id[:])
+	inslogger.FromContext(ctx).Debugf("RM-ISSUE: db.SetBlob: key=%v %x + %x + %x (pulseNumber=%v)",
+		scopeIDBlob, k, jetPrefix, id[:], pulseNumber)
 
 	// TODO: @andreyromancev. 16.01.19. Blob override is ok.
 	// geterr := m.db.db.View(func(tx *badger.Txn) error {
