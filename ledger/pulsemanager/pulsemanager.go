@@ -683,6 +683,10 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse core.Pulse) 
 		storageRecordsUtilPN core.PulseNumber
 	)
 	for i := 0; i < delta+2; i++ {
+		if pn <= core.FirstPulseNumber {
+			break
+		}
+
 		prevPulse, err := m.db.GetPreviousPulse(ctx, pn)
 		if err != nil {
 			inslogger.FromContext(ctx).Errorf("Can't get previous Nth %v pulse by pulse number: %v", i, pn)
@@ -702,14 +706,15 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse core.Pulse) 
 		}
 	}
 
-	if activeNodesUtilPN > 0 && activeNodesUtilPN > core.FirstPulseNumber {
+	if activeNodesUtilPN > 0 {
 		m.db.RemoveActiveNodesUntil(pn)
 	}
 
-	if storageRecordsUtilPN <= core.FirstPulseNumber {
+	if storageRecordsUtilPN == 0 {
 		return
 	}
 
+	fmt.Printf("cleanLightData: RemoveAllForJetUntilPulse: %v\n", storageRecordsUtilPN)
 	m.cleanupGroup.Do("lightcleanup", func() (interface{}, error) {
 		startAsync := time.Now()
 		defer func() {
