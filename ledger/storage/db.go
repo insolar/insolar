@@ -530,7 +530,7 @@ func (db *DB) StoreKeyValues(ctx context.Context, kvs []core.KV) error {
 			copy(id[:], recordBuf)
 			inslogger.FromContext(ctx).Debugf(
 				"RM-ISSUE: Add record %v - %v (len(recordBuf)=%v, offset=%v, key=%x, recordBuf=%x, pulse=%v)",
-				namespace, id.String(), len(recordBuf), offset, rec.K, recordBuf, pulseFromKey(key))
+				namespace, id.String(), len(recordBuf), offset, rec.K, recordBuf, pulseFromKey(rec.K))
 			// }
 			if err != nil {
 				return err
