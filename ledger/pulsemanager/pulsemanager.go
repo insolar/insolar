@@ -707,7 +707,7 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse core.Pulse) 
 	}
 
 	if activeNodesUtilPN > 0 {
-		m.db.RemoveActiveNodesUntil(pn)
+		// m.db.RemoveActiveNodesUntil(pn)
 	}
 
 	if storageRecordsUtilPN == 0 {
