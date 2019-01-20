@@ -450,7 +450,15 @@ func (h *MessageHandler) handleGetChildren(
 		if err != nil {
 			return nil, err
 		}
-		childJet, _ := childTree.Find(*msg.Parent.Record())
+		childJet, actual := childTree.Find(*msg.Parent.Record())
+		if !actual {
+			actualJet, err := h.fetchActualJetFromOtherNodes(ctx, *msg.Parent.Record(), currentChild.Pulse())
+			if err != nil {
+				return nil, err
+			}
+
+			childJet = actualJet
+		}
 
 		node, err := h.nodeForJet(ctx, *childJet, parcel.Pulse(), currentChild.Pulse())
 		if err != nil {
