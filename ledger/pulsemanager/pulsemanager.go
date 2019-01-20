@@ -618,7 +618,11 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 	)
 	fmt.Println()
 
-	m.postProcessJets(ctx, newPulse, jets)
+	if m.NodeNet.GetOrigin().Role() == core.StaticRoleLightMaterial {
+		m.postProcessJets(ctx, newPulse, jets)
+		// TODO: make it asynchronious - @aorlovsky 19.01.2019
+		m.cleanLightData(ctx, newPulse)
+	}
 
 	err = m.Bus.OnPulse(ctx, newPulse)
 	if err != nil {
@@ -651,8 +655,6 @@ func (m *PulseManager) postProcessJets(ctx context.Context, newPulse core.Pulse,
 			}
 		}
 	}
-	// TODO: make it asynchronious - @aorlovsky 19.01.2019
-	m.cleanLightData(ctx, newPulse)
 }
 
 func (m *PulseManager) cleanLightData(ctx context.Context, newPulse core.Pulse) {

@@ -276,7 +276,7 @@ func (h *MessageHandler) handleGetObject(
 	idx, err := h.db.GetObjectIndex(ctx, jetID, msg.Head.Record(), false)
 	if err == storage.ErrNotFound {
 		if h.certificate.GetRole() == core.StaticRoleHeavyMaterial {
-			return nil, fmt.Errorf("failed to fetch index for %v", msg.Head.Record())
+			return nil, fmt.Errorf("failed to fetch index for %s", msg.Head.Record().String())
 		}
 
 		logger.Errorf(
@@ -303,7 +303,7 @@ func (h *MessageHandler) handleGetObject(
 		return reply.NewGetObjectRedirectReply(h.DelegationTokenFactory, parcel, node, msg.State)
 	}
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to fetch object index")
+		return nil, errors.Wrapf(err, "failed to fetch object index %s", msg.Head.Record().String())
 	}
 	// Add requested object to recent.
 	if h.certificate.GetRole() != core.StaticRoleHeavyMaterial {
