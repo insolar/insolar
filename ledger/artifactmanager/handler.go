@@ -140,7 +140,7 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 	h.Bus.MustRegister(core.TypeGetPendingRequests, checkJetAndInstrumentWithBreaker(
 		"handleHasPendingRequests", m, h.handleHasPendingRequests))
 	h.Bus.MustRegister(core.TypeGetJet, instrumentHandler("handleGetJet", h.handleGetJet))
-	h.Bus.MustRegister(core.TypeHotRecords, checkJetAndInstrumentWithBreaker("handleHotRecords", m, h.handleHotRecords))
+	h.Bus.MustRegister(core.TypeHotRecords, instrumentHandler("handleHotRecords", m.closeEarlyRequestBreaker(h.handleHotRecords)))
 
 	// Validation.
 	h.Bus.MustRegister(core.TypeValidateRecord, m.checkJet(h.handleValidateRecord))
