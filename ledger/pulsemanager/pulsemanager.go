@@ -656,10 +656,7 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse core.Pulse) 
 		inslog.Debugf("cleanLightData sync phase time spend=%v", latency)
 	}()
 
-	delta := m.options.storeLightPulses
-	if delta == 0 {
-		return
-	}
+	delta := m.options.storeLightPulses + 2
 
 	pn := newPulse.PulseNumber
 	for i := 0; i <= delta; i++ {

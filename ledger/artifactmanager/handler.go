@@ -288,19 +288,11 @@ func (h *MessageHandler) handleGetObject(
 		if err != nil {
 			return nil, err
 		}
-		_, err = h.saveIndexFromHeavy(ctx, h.db, jetID, msg.Head, node)
+		idx, err = h.saveIndexFromHeavy(ctx, h.db, jetID, msg.Head, node)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to fetch index from heavy")
 		}
-		// Add requested object to recent.
-		if h.certificate.GetRole() != core.StaticRoleHeavyMaterial {
-			h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Head.Record())
-		}
-
-		logger.Debugf("redirect because index not found. jet: %v, to: %v\n",
-			jetID.JetIDString(), node)
-
-		return reply.NewGetObjectRedirectReply(h.DelegationTokenFactory, parcel, node, msg.State)
+		err = nil
 	}
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch object index %s", msg.Head.Record().String())
@@ -519,7 +511,7 @@ func (h *MessageHandler) handleGetChildren(
 		if idx.ChildPointer == nil {
 			return &reply.Children{Refs: nil, NextFrom: nil}, nil
 		}
-		return reply.NewGetChildrenRedirect(h.DelegationTokenFactory, parcel, heavy, *idx.ChildPointer)
+		err = nil
 	}
 	if err != nil {
 		fmt.Println("handleGetChildren: failed to fetch object index, error - ", err)
