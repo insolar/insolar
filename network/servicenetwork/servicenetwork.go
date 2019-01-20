@@ -211,7 +211,11 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
 		logger.Error("PulseManager is not initialized")
 		return
 	}
-	if !n.NodeKeeper.IsBootstrapped() || n.controller.GetLastIgnoredPulse() > pulse.NextPulseNumber {
+	if !n.NodeKeeper.IsBootstrapped() {
+		n.controller.SetLastIgnoredPulse(pulse.NextPulseNumber)
+		return
+	}
+	if n.controller.GetLastIgnoredPulse() > pulse.PulseNumber {
 		log.Info("Ignore pulse %d: network is not yet initialized")
 		return
 	}
