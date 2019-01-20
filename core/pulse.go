@@ -69,7 +69,7 @@ func (pn *PulseNumber) ToContext(ctx context.Context) context.Context {
 			ctxPn,
 		)
 	}
-	return context.WithValue(ctx, pulseNumberContextKey, pn)
+	return context.WithValue(ctx, pulseNumberContextKey, *pn)
 }
 
 // NewPulseNumberFromContext returns PulseNumber stored in context or error.

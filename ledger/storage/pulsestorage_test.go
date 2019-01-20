@@ -14,14 +14,13 @@
  *    limitations under the License.
  */
 
-package storage_test
+package storage
 
 import (
 	"testing"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/storage"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
 )
@@ -30,8 +29,8 @@ func TestNewPulseStorage(t *testing.T) {
 	t.Parallel()
 
 	// Act
-	testDb := &storage.DB{}
-	pStorage := storage.NewPulseStorage(testDb)
+	testDb := &DB{}
+	pStorage := NewPulseStorage(testDb)
 
 	// Assert
 	require.NotNil(t, pStorage)
@@ -40,12 +39,28 @@ func TestNewPulseStorage(t *testing.T) {
 func TestLockUnlock(t *testing.T) {
 	t.Parallel()
 
-	testDb := &storage.DB{}
-	pStorage := storage.NewPulseStorage(testDb)
+	testDb := &DB{}
+	pStorage := NewPulseStorage(testDb)
 
 	// Act
 	pStorage.Lock()
 	pStorage.Unlock()
+}
+
+func TestCurrentFromContext(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+
+	testDb := &DB{}
+	pStorage := NewPulseStorage(testDb)
+	pStorage.Set(core.GenesisPulse)
+
+	ctx = core.GenesisPulse.PulseNumber.ToContext(ctx)
+
+	pulse, err := pStorage.pulseFromContext(ctx)
+	require.NoError(t, err)
+	require.Equal(t, core.GenesisPulse, pulse)
 }
 
 func TestCurrent_OneThread(t *testing.T) {
@@ -54,8 +69,8 @@ func TestCurrent_OneThread(t *testing.T) {
 	// Arrange
 	ctx := inslogger.TestContext(t)
 
-	testDb := &storage.DB{}
-	pStorage := storage.NewPulseStorage(testDb)
+	testDb := &DB{}
+	pStorage := NewPulseStorage(testDb)
 	pStorage.Set(core.GenesisPulse)
 
 	// Act
@@ -71,8 +86,8 @@ func TestCurrent_ThreeThreads(t *testing.T) {
 
 	// Arrange
 	ctx := inslogger.TestContext(t)
-	testDb := &storage.DB{}
-	pStorage := storage.NewPulseStorage(testDb)
+	testDb := &DB{}
+	pStorage := NewPulseStorage(testDb)
 	pStorage.Set(&core.Pulse{PulseNumber: core.FirstPulseNumber})
 
 	// Act
