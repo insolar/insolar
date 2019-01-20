@@ -120,9 +120,10 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 			case *message.GetObject:
 				pulse = tm.State.Pulse()
 			case *message.GetChildren:
-				inslogger.FromContext(ctx).Error(
-					"redirect for get children is broken",
-				)
+				if tm.FromChild == nil {
+					return nil, errors.New("fetching children without child pointer is forbidden")
+				}
+				pulse = tm.FromChild.Pulse()
 			}
 			tree, err := m.db.GetJetTree(ctx, pulse)
 			if err != nil {
