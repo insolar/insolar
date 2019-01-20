@@ -231,9 +231,7 @@ func (e *serializableError) Error() string {
 	return e.S
 }
 
-func (mb *MessageBus) OnPulse(ctx context.Context, _ core.Pulse) error {
-	_, span := instracer.StartSpan(ctx, "MessageBus.OnPulse")
-	defer span.End()
+func (mb *MessageBus) OnPulse(context.Context, core.Pulse) error {
 	close(mb.NextPulseMessagePoolChan)
 
 	mb.NextPulseMessagePoolLock.Lock()
