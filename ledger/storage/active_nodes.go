@@ -66,7 +66,7 @@ func (db *DB) GetActiveNodesByRole(pulse core.PulseNumber, role core.StaticRole)
 
 	nodes, ok := db.nodeHistory[pulse]
 	if !ok {
-		return nil, fmt.Errorf("GetActiveNodesByRole: no nodes for pulse", pulse)
+		return nil, fmt.Errorf("GetActiveNodesByRole: no nodes for pulse %v", pulse)
 	}
 	var inRole []core.Node
 	for _, n := range nodes {
