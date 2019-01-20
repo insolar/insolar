@@ -215,7 +215,7 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
 		n.controller.SetLastIgnoredPulse(pulse.NextPulseNumber)
 		return
 	}
-	if n.controller.GetLastIgnoredPulse() > pulse.PulseNumber {
+	if pulse.PulseNumber <= n.controller.GetLastIgnoredPulse() {
 		log.Info("Ignore pulse %d: network is not yet initialized")
 		return
 	}
