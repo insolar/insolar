@@ -134,22 +134,6 @@
   version = "v1.2.0"
 
 [[projects]]
-  digest = "1:c79fb010be38a59d657c48c6ba1d003a8aa651fa56b579d959d74573b7dff8e1"
-  name = "github.com/gorilla/context"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "08b5f424b9271eedf6f9f0ce86cb9396ed337a42"
-  version = "v1.1.1"
-
-[[projects]]
-  digest = "1:e73f5b0152105f18bc131fba127d9949305c8693f8a762588a82a48f61756f5f"
-  name = "github.com/gorilla/mux"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "e3702bed27f0d39777b0b37b664b6280e8ef8fbf"
-  version = "v1.6.2"
-
-[[projects]]
   digest = "1:9fe4b4f866007c9981c6c44c02d5533b1fb78ca408355eb64e767ef416eb9dfb"
   name = "github.com/gorilla/rpc"
   packages = [
@@ -312,14 +296,6 @@
   pruneopts = "UT"
   revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
   version = "v0.8.0"
-
-[[projects]]
-  digest = "1:cfa0d7741863a0e1d30e0ccdd4b48a96a471cdb47892303de8b92c3713af3e77"
-  name = "github.com/pkg/profile"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "5b67d428864e92711fcbd2f8629456121a56d91f"
-  version = "v1.2.1"
 
 [[projects]]
   digest = "1:0028cb19b2e4c3112225cd871870f2d9cf49b9b4276531f03438a88e94be86fe"
@@ -613,7 +589,6 @@
     "github.com/ccding/go-stun/stun",
     "github.com/dgraph-io/badger",
     "github.com/gojuno/minimock",
-    "github.com/gorilla/mux",
     "github.com/gorilla/rpc/v2",
     "github.com/gorilla/rpc/v2/json2",
     "github.com/hashicorp/go-multierror",
@@ -621,7 +596,6 @@
     "github.com/lucas-clemente/quic-go",
     "github.com/onrik/gomerkle",
     "github.com/pkg/errors",
-    "github.com/pkg/profile",
     "github.com/prometheus/client_golang/prometheus",
     "github.com/prometheus/client_golang/prometheus/promhttp",
     "github.com/satori/go.uuid",
