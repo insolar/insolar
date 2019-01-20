@@ -22,6 +22,7 @@ import (
 	"encoding/gob"
 	"fmt"
 	"io"
+	"strconv"
 	"sync"
 	"time"
 
@@ -230,7 +231,9 @@ func (e *serializableError) Error() string {
 	return e.S
 }
 
-func (mb *MessageBus) OnPulse(context.Context, core.Pulse) error {
+func (mb *MessageBus) OnPulse(ctx context.Context, _ core.Pulse) error {
+	_, span := instracer.StartSpan(ctx, "MessageBus.OnPulse")
+	defer span.End()
 	close(mb.NextPulseMessagePoolChan)
 
 	mb.NextPulseMessagePoolLock.Lock()
@@ -244,6 +247,8 @@ func (mb *MessageBus) OnPulse(context.Context, core.Pulse) error {
 func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Reply, error) {
 
 	var err error
+	ctx, span := instracer.StartSpan(ctx, "MessageBus.doDeliver")
+	defer span.End()
 	if err = mb.checkPulse(ctx, msg, false); err != nil {
 		return nil, errors.Wrap(err, "[ doDeliver ] error in checkPulse")
 	}
@@ -283,6 +288,9 @@ func (mb *MessageBus) checkPulse(ctx context.Context, parcel core.Parcel, locked
 		return errors.Wrap(err, "[ checkPulse ] Couldn't get current pulse number")
 	}
 
+	ctx, span := instracer.StartSpan(ctx, "MessageBus.checkPulse")
+	defer span.End()
+
 	// TODO: check if parcel.Pulse() == pulse.NextPulseNumber
 	if parcel.Pulse() > pulse.PulseNumber {
 		inslogger.FromContext(ctx).Debug(
@@ -306,7 +314,10 @@ func (mb *MessageBus) checkPulse(ctx context.Context, parcel core.Parcel, locked
 		inslogger.FromContext(ctx).Debug("rechecking pulse after lock, pulse: ", pulse.PulseNumber)
 		if parcel.Pulse() > pulse.PulseNumber {
 			inslogger.FromContext(ctx).Debug("still in future")
+			_, span := instracer.StartSpan(ctx, "MessageBus.checkPulse waiting: current: "+
+				strconv.Itoa(int(pulse.PulseNumber))+" parcel: "+strconv.Itoa(int(parcel.Pulse())))
 			<-mb.NextPulseMessagePoolChan
+			span.End()
 			pulse, err = mb.PulseStorage.Current(ctx)
 			if err != nil {
 				mb.NextPulseMessagePoolLock.RUnlock()
@@ -372,7 +383,7 @@ func (mb *MessageBus) deliver(ctx context.Context, args [][]byte) (result []byte
 
 	mb.globalLock.RLock()
 
-	if err = mb.checkPulse(ctx, parcel, true); err != nil {
+	if err = mb.checkPulse(parcelCtx, parcel, true); err != nil {
 		mb.globalLock.RUnlock()
 		return nil, err
 	}
