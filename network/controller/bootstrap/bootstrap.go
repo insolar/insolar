@@ -38,6 +38,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+type none struct{}
+
 type Bootstrapper struct {
 	options   *common.Options
 	transport network.InternalTransport
@@ -48,6 +50,9 @@ type Bootstrapper struct {
 	lastPulse      core.PulseNumber
 	pulsePersisted bool
 	lastPulseLock  sync.Mutex
+
+	bootstrapStarted bool
+	bootstrapLock    chan none
 }
 
 type NodeBootstrapRequest struct{}
@@ -144,10 +149,15 @@ func (bc *Bootstrapper) SetLastPulse(number core.PulseNumber) {
 	bc.lastPulseLock.Lock()
 	defer bc.lastPulseLock.Unlock()
 
-	if bc.pulsePersisted {
-		return
+	if !bc.bootstrapStarted {
+		bc.bootstrapLock <- none{}
+		close(bc.bootstrapLock)
+		bc.bootstrapStarted = true
 	}
-	bc.lastPulse = number
+
+	if !bc.pulsePersisted {
+		bc.lastPulse = number
+	}
 }
 
 func (bc *Bootstrapper) forceSetLastPulse(number core.PulseNumber) {
@@ -184,7 +194,8 @@ func (bc *Bootstrapper) checkActiveNode(node core.Node) error {
 }
 
 func (bc *Bootstrapper) BootstrapDiscovery(ctx context.Context) error {
-	inslogger.FromContext(ctx).Info("Network bootstrap between discovery nodes")
+	logger := inslogger.FromContext(ctx)
+	logger.Info("Network bootstrap between discovery nodes")
 	discoveryNodes := bc.cert.GetDiscoveryNodes()
 	var err error
 	discoveryNodes, err = RemoveOrigin(discoveryNodes, *bc.cert.GetNodeRef())
@@ -208,6 +219,9 @@ func (bc *Bootstrapper) BootstrapDiscovery(ctx context.Context) error {
 	activeNodes := make([]core.Node, 0)
 	activeNodesStr := make([]string, 0)
 
+	<-bc.bootstrapLock
+	logger.Debugf("After bootstrap lock")
+
 	ch := bc.getGenesisRequestsChannel(ctx, hosts)
 	activeNodes, lastPulses, err := bc.waitGenesisResults(ctx, ch, len(hosts))
 	if err != nil {
@@ -222,7 +236,7 @@ func (bc *Bootstrapper) BootstrapDiscovery(ctx context.Context) error {
 		activeNodesStr = append(activeNodesStr, activeNode.ID().String())
 	}
 	bc.keeper.AddActiveNodes(activeNodes)
-	inslogger.FromContext(ctx).Infof("Added active nodes: %s", strings.Join(activeNodesStr, ", "))
+	logger.Infof("Added active nodes: %s", strings.Join(activeNodesStr, ", "))
 	return nil
 }
 
@@ -420,9 +434,10 @@ func (bc *Bootstrapper) Start(keeper network.NodeKeeper) {
 
 func NewBootstrapper(options *common.Options, certificate core.Certificate, transport network.InternalTransport) *Bootstrapper {
 	return &Bootstrapper{
-		options:   options,
-		cert:      certificate,
-		transport: transport,
-		pinger:    pinger.NewPinger(transport),
+		options:       options,
+		cert:          certificate,
+		transport:     transport,
+		pinger:        pinger.NewPinger(transport),
+		bootstrapLock: make(chan none, 1),
 	}
 }
