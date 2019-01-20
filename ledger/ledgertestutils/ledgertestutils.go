@@ -37,6 +37,7 @@ import (
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
+	"github.com/insolar/insolar/testutils/network"
 	"github.com/insolar/insolar/testutils/testmessagebus"
 	"github.com/stretchr/testify/require"
 )
@@ -44,7 +45,7 @@ import (
 // TmpLedger crteates ledger on top of temporary database.
 // Returns *ledger.Ledger and cleanup function.
 // FIXME: THIS METHOD IS DEPRECATED. USE MOCKS.
-func TmpLedger(t *testing.T, dir string, c core.Components) (*ledger.Ledger, func()) {
+func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Components) (*ledger.Ledger, func()) {
 	log.Warn("TmpLedger is deprecated. Use mocks.")
 
 	pcs := platformpolicy.NewPlatformCryptographyScheme()
@@ -87,13 +88,18 @@ func TmpLedger(t *testing.T, dir string, c core.Components) (*ledger.Ledger, fun
 		}
 	}
 	if c.NodeNetwork == nil {
-		c.NodeNetwork = nodenetwork.NewNodeKeeper(nodenetwork.NewNode(core.RecordRef{}, core.StaticRoleUnknown, nil, "", ""))
+		c.NodeNetwork = nodenetwork.NewNodeKeeper(nodenetwork.NewNode(core.RecordRef{}, core.StaticRoleLightMaterial, nil, "", ""))
 	}
 
 	handler := artifactmanager.NewMessageHandler(db, &conf)
 	handler.PlatformCryptographyScheme = pcs
 	handler.JetCoordinator = jc
-	handler.NodeNet = c.NodeNetwork
+
+	handlerNodeNetwork := network.NewNodeNetworkMock(t)
+	handlerNode := network.NewNodeMock(t)
+	handlerNode.RoleMock.Return(handlersRole)
+	handlerNodeNetwork.GetOriginMock.Return(handlerNode)
+	handler.NodeNet = handlerNodeNetwork
 
 	gilMock := testutils.NewGlobalInsolarLockMock(t)
 	gilMock.AcquireFunc = func(context.Context) {}

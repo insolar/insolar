@@ -125,7 +125,7 @@ func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *gop
 	nw := network.GetTestNetwork()
 	// FIXME: TmpLedger is deprecated. Use mocks instead.
 	l, cleaner := ledgertestutils.TmpLedger(
-		t, "",
+		t, "", core.StaticRoleLightMaterial,
 		core.Components{
 			LogicRunner: lr,
 			NodeNetwork: nk,

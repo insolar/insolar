@@ -807,10 +807,17 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 		return recentStorageMock
 	}
 
+	nodeMock := network.NewNodeMock(t)
+	nodeMock.RoleMock.Return(core.StaticRoleLightMaterial)
+	nodeNetworkMock := network.NewNodeNetworkMock(t)
+	nodeNetworkMock.GetOriginMock.Return(nodeMock)
+
 	h := NewMessageHandler(db, &configuration.Ledger{})
 	h.JetCoordinator = jc
 	h.RecentStorageProvider = provideMock
 	h.Bus = mb
+	h.NodeNet = nodeNetworkMock
+
 	err = h.Init(ctx)
 	require.NoError(t, err)
 
