@@ -209,11 +209,11 @@ func (bc *Bootstrapper) BootstrapDiscovery(ctx context.Context) error {
 	activeNodesStr := make([]string, 0)
 
 	ch := bc.getGenesisRequestsChannel(ctx, hosts)
-	activeNodes, lastPulse, err := bc.waitGenesisResults(ctx, ch, len(hosts))
+	activeNodes, lastPulses, err := bc.waitGenesisResults(ctx, ch, len(hosts))
 	if err != nil {
 		return err
 	}
-	bc.forceSetLastPulse(lastPulse)
+	bc.forceSetLastPulse(bc.calculateLastIgnoredPulse(ctx, lastPulses))
 	for _, activeNode := range activeNodes {
 		err = bc.checkActiveNode(activeNode)
 		if err != nil {
@@ -224,6 +224,17 @@ func (bc *Bootstrapper) BootstrapDiscovery(ctx context.Context) error {
 	bc.keeper.AddActiveNodes(activeNodes)
 	inslogger.FromContext(ctx).Infof("Added active nodes: %s", strings.Join(activeNodesStr, ", "))
 	return nil
+}
+
+func (bc *Bootstrapper) calculateLastIgnoredPulse(ctx context.Context, lastPulses []core.PulseNumber) core.PulseNumber {
+	maxLastPulse := bc.getLastPulse(true)
+	inslogger.FromContext(ctx).Debugf("Node %s (origin) LastIgnoredPulse: %d", bc.keeper.GetOrigin().ID(), maxLastPulse)
+	for _, pulse := range lastPulses {
+		if pulse > maxLastPulse {
+			maxLastPulse = pulse
+		}
+	}
+	return maxLastPulse
 }
 
 func (bc *Bootstrapper) sendGenesisRequest(ctx context.Context, h *host.Host) (*GenesisResponse, error) {
@@ -310,7 +321,7 @@ func (bc *Bootstrapper) waitResultsFromChannel(ctx context.Context, ch <-chan *h
 	}
 }
 
-func (bc *Bootstrapper) waitGenesisResults(ctx context.Context, ch <-chan *GenesisResponse, count int) ([]core.Node, core.PulseNumber, error) {
+func (bc *Bootstrapper) waitGenesisResults(ctx context.Context, ch <-chan *GenesisResponse, count int) ([]core.Node, []core.PulseNumber, error) {
 	result := make([]core.Node, 0)
 	lastPulses := make([]core.PulseNumber, 0)
 	for {
@@ -318,21 +329,16 @@ func (bc *Bootstrapper) waitGenesisResults(ctx context.Context, ch <-chan *Genes
 		case res := <-ch:
 			discovery, err := newNode(res.Discovery)
 			if err != nil {
-				return nil, 0, errors.Wrap(err, "Error deserializing node from discovery node")
+				return nil, nil, errors.Wrap(err, "Error deserializing node from discovery node")
 			}
 			result = append(result, discovery)
 			lastPulses = append(lastPulses, res.LastPulse)
+			inslogger.FromContext(ctx).Debugf("Node %s LastIgnoredPulse: %d", discovery.ID(), res.LastPulse)
 			if len(result) == count {
-				maxLastPulse := core.PulseNumber(0)
-				for _, pulse := range lastPulses {
-					if pulse > maxLastPulse {
-						maxLastPulse = pulse
-					}
-				}
-				return result, maxLastPulse, nil
+				return result, lastPulses, nil
 			}
 		case <-time.After(bc.options.BootstrapTimeout):
-			return nil, 0, errors.New(fmt.Sprintf("Genesis bootstrap timeout, successful genesis requests: %d/%d", len(result), count))
+			return nil, nil, errors.New(fmt.Sprintf("Genesis bootstrap timeout, successful genesis requests: %d/%d", len(result), count))
 		}
 	}
 }
