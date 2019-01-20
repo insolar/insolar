@@ -169,11 +169,11 @@ func (h *MessageHandler) setHandlersForHeavy(m *middleware) {
 
 	// Generic.
 	h.Bus.MustRegister(core.TypeGetCode, h.handleGetCode)
-	h.Bus.MustRegister(core.TypeGetObject, m.zeroJetForHeavy(h.handleGetObject))
-	h.Bus.MustRegister(core.TypeGetDelegate, m.zeroJetForHeavy(h.handleGetDelegate))
-	h.Bus.MustRegister(core.TypeGetChildren, m.zeroJetForHeavy(h.handleGetChildren))
-	h.Bus.MustRegister(core.TypeGetObjectIndex, m.zeroJetForHeavy(h.handleGetObjectIndex))
-	h.Bus.MustRegister(core.TypeGetJet, m.zeroJetForHeavy(h.handleGetJet))
+	h.Bus.MustRegister(core.TypeGetObject, instrumentHandler("handleGetObject", m.zeroJetForHeavy(h.handleGetObject)))
+	h.Bus.MustRegister(core.TypeGetDelegate, instrumentHandler("handleGetDelegate", m.zeroJetForHeavy(h.handleGetDelegate)))
+	h.Bus.MustRegister(core.TypeGetChildren, instrumentHandler("handleGetChildren", m.zeroJetForHeavy(h.handleGetChildren)))
+	h.Bus.MustRegister(core.TypeGetObjectIndex, instrumentHandler("handleGetObjectIndex", m.zeroJetForHeavy(h.handleGetObjectIndex)))
+	h.Bus.MustRegister(core.TypeGetJet, instrumentHandler("handleGetJet", m.zeroJetForHeavy(h.handleGetJet)))
 }
 
 // ResetEarlyRequestCircuitBreaker throws timeouts at the end of a pulse
