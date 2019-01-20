@@ -43,12 +43,18 @@ func TestLedgerArtifactManager_PendingRequest(t *testing.T) {
 	defer cleaner()
 	defer mc.Finish()
 
+	jetID := *jet.NewID(0, nil)
+
 	amPulseStorageMock := testutils.NewPulseStorageMock(t)
 	amPulseStorageMock.CurrentFunc = func(p context.Context) (r *core.Pulse, r1 error) {
 		pulse, err := db.GetLatestPulse(p)
 		require.NoError(t, err)
 		return &pulse.Pulse, err
 	}
+
+	jcMock := testutils.NewJetCoordinatorMock(t)
+	jcMock.LightExecutorForJetMock.Return(&core.RecordRef{}, nil)
+	jcMock.MeMock.Return(core.RecordRef{})
 
 	nodeMock := network.NewNodeMock(t)
 	nodeMock.RoleMock.Return(core.StaticRoleLightMaterial)
@@ -58,9 +64,7 @@ func TestLedgerArtifactManager_PendingRequest(t *testing.T) {
 	cs := testutils.NewPlatformCryptographyScheme()
 	mb := testmessagebus.NewTestMessageBus(t)
 	mb.PulseStorage = amPulseStorageMock
-	// jc := testutils.NewJetCoordinatorMock(mc)
-	// jc.HeavyMock.Return(&core.RecordRef{}, nil)
-	// jc.MeMock.Return(core.RecordRef{})
+
 	am := NewArtifactManger(db)
 	am.PulseStorage = amPulseStorageMock
 	am.PlatformCryptographyScheme = cs
@@ -73,10 +77,16 @@ func TestLedgerArtifactManager_PendingRequest(t *testing.T) {
 	// handler.JetCoordinator = jc
 	handler.RecentStorageProvider = provider
 	handler.NodeNet = nodeNetworkMock
+	handler.JetCoordinator = jcMock
 	err := handler.Init(ctx)
 	require.NoError(t, err)
 	objRef := *genRandomRef(0)
-	handler.CloseEarlyRequestCircuitBreakerForJet(ctx, *jet.NewID(0, nil))
+	handler.CloseEarlyRequestCircuitBreakerForJet(ctx, jetID)
+
+	err = db.UpdateJetTree(ctx, core.FirstPulseNumber, true, jetID)
+	require.NoError(t, err)
+	err = db.UpdateJetTree(ctx, core.FirstPulseNumber+1, true, jetID)
+	require.NoError(t, err)
 
 	// Register request
 	reqID, err := am.RegisterRequest(ctx, objRef, &message.Parcel{Msg: &message.CallMethod{}, PulseNumber: core.FirstPulseNumber})
