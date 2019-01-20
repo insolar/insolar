@@ -471,11 +471,14 @@ func (h *MessageHandler) handleGetChildren(
 		if err != nil {
 			return nil, err
 		}
-		_, err = h.saveIndexFromHeavy(ctx, h.db, jetID, msg.Parent, heavy)
+		idx, err = h.saveIndexFromHeavy(ctx, h.db, jetID, msg.Parent, heavy)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to fetch index from heavy")
 		}
-		return reply.NewGetChildrenRedirect(h.DelegationTokenFactory, parcel, heavy)
+		if idx.ChildPointer == nil {
+			return &reply.Children{Refs: nil, NextFrom: nil}, nil
+		}
+		return reply.NewGetChildrenRedirect(h.DelegationTokenFactory, parcel, heavy, *idx.ChildPointer)
 	}
 	if err != nil {
 		fmt.Println("handleGetChildren: failed to fetch object index, error - ", err)
@@ -525,7 +528,7 @@ func (h *MessageHandler) handleGetChildren(
 		if err != nil {
 			return nil, err
 		}
-		return reply.NewGetChildrenRedirect(h.DelegationTokenFactory, parcel, node)
+		return reply.NewGetChildrenRedirect(h.DelegationTokenFactory, parcel, node, *currentChild)
 	}
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch child")
