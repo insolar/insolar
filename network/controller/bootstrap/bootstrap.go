@@ -46,7 +46,7 @@ type Bootstrapper struct {
 	keeper    network.NodeKeeper
 
 	lastPulse      core.PulseNumber
-	lastPulseLock  sync.Mutex
+	lastPulseLock  sync.RWMutex
 	pulsePersisted bool
 
 	bootstrapLock chan struct{}
@@ -162,8 +162,8 @@ func (bc *Bootstrapper) forceSetLastPulse(number core.PulseNumber) {
 }
 
 func (bc *Bootstrapper) GetLastPulse() core.PulseNumber {
-	bc.lastPulseLock.Lock()
-	defer bc.lastPulseLock.Unlock()
+	bc.lastPulseLock.RLock()
+	defer bc.lastPulseLock.RUnlock()
 
 	return bc.lastPulse
 }
