@@ -158,6 +158,7 @@ func (bc *Bootstrapper) forceSetLastPulse(number core.PulseNumber) {
 	bc.lastPulseLock.Lock()
 	defer bc.lastPulseLock.Unlock()
 
+	log.Debugf("Network will start from pulse %d", number)
 	bc.lastPulse = number
 }
 
