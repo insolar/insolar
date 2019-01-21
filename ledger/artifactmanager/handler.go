@@ -189,10 +189,7 @@ func (h *MessageHandler) handleSetRecord(ctx context.Context, parcel core.Parcel
 	rec := record.DeserializeRecord(msg.Record)
 	jetID := jetFromContext(ctx)
 
-	id, err := h.db.SetRecord(ctx, jetID, parcel.Pulse(), rec)
-	if err != nil {
-		return nil, err
-	}
+	id := record.NewRecordIDFromRecord(h.PlatformCryptographyScheme, parcel.Pulse(), rec)
 
 	if h.certificate.GetRole() != core.StaticRoleHeavyMaterial {
 		recentStorage := h.RecentStorageProvider.GetStorage(jetID)
@@ -202,6 +199,11 @@ func (h *MessageHandler) handleSetRecord(ctx context.Context, parcel core.Parcel
 		if result, ok := rec.(*record.ResultRecord); ok {
 			recentStorage.RemovePendingRequest(result.Object, *result.Request.Record())
 		}
+	}
+
+	id, err := h.db.SetRecord(ctx, jetID, parcel.Pulse(), rec)
+	if err != nil {
+		return nil, err
 	}
 
 	return &reply.ID{ID: *id}, nil
@@ -293,10 +295,11 @@ func (h *MessageHandler) handleGetObject(
 		}
 	} else if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch object index %s", msg.Head.Record().String())
-	}
-	// Add requested object to recent.
-	if h.certificate.GetRole() != core.StaticRoleHeavyMaterial {
-		h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Head.Record())
+	} else {
+		// Add requested object to recent.
+		if h.certificate.GetRole() != core.StaticRoleHeavyMaterial {
+			h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Head.Record())
+		}
 	}
 
 	// Determine object state id.
@@ -668,7 +671,12 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 			}
 		} else if err != nil {
 			return err
+		} else {
+			if h.certificate.GetRole() != core.StaticRoleHeavyMaterial {
+				h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Object.Record())
+			}
 		}
+
 		if err = validateState(idx.State, state.State()); err != nil {
 			return err
 		}
@@ -678,10 +686,6 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 			logger.Errorf("Invalid index for: %v, jet: %v, provided state: %s", msg.Object.Record(), jetID.JetIDString(), state.PrevStateID())
 			logger.Errorf("idx.LatestState: %s", idx.LatestState)
 			return errors.New("invalid state record")
-		}
-
-		if h.certificate.GetRole() != core.StaticRoleHeavyMaterial {
-			h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Object.Record())
 		}
 
 		id, err := tx.SetRecord(ctx, jetID, parcel.Pulse(), rec)
@@ -703,10 +707,6 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 			return &reply.Error{ErrType: reply.ErrDeactivated}, nil
 		}
 		return nil, err
-	}
-
-	if h.certificate.GetRole() != core.StaticRoleHeavyMaterial {
-		h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Object.Record())
 	}
 
 	rep := reply.Object{
