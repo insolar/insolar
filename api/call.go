@@ -23,16 +23,16 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/insolar/insolar/instrumentation/instracer"
-
+	"github.com/insolar/insolar/api/seedmanager"
 	"github.com/insolar/insolar/application/extractor"
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/core/utils"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/platformpolicy"
 
-	"github.com/insolar/insolar/api/seedmanager"
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 )
 
@@ -160,6 +160,15 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 
 		params := Request{}
 		resp := answer{}
+
+		startTime := time.Now()
+		defer func() {
+			success := "success"
+			if resp.Error != "" {
+				success = "fail"
+			}
+			metrics.APIContractExecutionTime.WithLabelValues(params.Method, success).Observe(time.Since(startTime).Seconds())
+		}()
 
 		resp.TraceID = traceID
 

@@ -18,7 +18,6 @@ package storage
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/core"
@@ -211,7 +210,6 @@ func (m *TransactionManager) RemoveObjectIndex(
 	m.lockOnID(ref)
 	_, prefix := jet.Jet(j)
 	k := prefixkey(scopeIDLifeline, prefix, ref[:])
-	fmt.Println("RemoveObjectIndex: key - ", k)
 	return m.remove(ctx, k)
 }
 

@@ -43,7 +43,7 @@ func Test_StoreKeyValues(t *testing.T) {
 	t.Parallel()
 	ctx := inslogger.TestContext(t)
 	jetID := testutils.RandomJet()
-	// fmt.Printf("random jetID: %v\n", jetID.JetIDString())
+	// fmt.Printf("random jetID: %v\n", jetID.DebugString())
 
 	var (
 		expectedrecs []key
