@@ -98,7 +98,7 @@ func main() {
 		}
 		wg.Wait()
 		fmt.Println("\033[2J")
-		fmt.Println(time.Now(), "\n")
+		fmt.Printf("%v\n\n", time.Now())
 		lock.Lock()
 		for _, result := range results {
 			fmt.Println(result)
