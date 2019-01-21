@@ -193,6 +193,22 @@ func (r *RecentStorage) GetRequestsForObject(obj core.RecordID) []core.RecordID 
 	return results
 }
 
+// IsRecordIdCached check recordid inside caches
+func (r *RecentStorage) IsRecordIdCached(obj core.RecordID) bool {
+	r.objectLock.Lock()
+	_, ok := r.recentObjects[obj]
+	if ok {
+		r.objectLock.Unlock()
+		return ok
+	}
+	r.objectLock.Unlock()
+
+	r.requestLock.RLock()
+	_, ok = r.pendingRequests[obj]
+	r.requestLock.RUnlock()
+	return ok
+}
+
 // ClearZeroTTLObjects clears objects with zero TTL
 func (r *RecentStorage) ClearZeroTTLObjects() {
 	r.objectLock.Lock()

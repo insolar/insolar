@@ -41,6 +41,8 @@ type RecentStorage interface {
 	GetRequests() map[core.RecordID]map[core.RecordID]struct{}
 	GetRequestsForObject(obj core.RecordID) []core.RecordID
 
+	IsRecordIdCached(obj core.RecordID) bool
+
 	ClearZeroTTLObjects()
 	ClearObjects()
 }

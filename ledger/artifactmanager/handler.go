@@ -971,6 +971,8 @@ func (h *MessageHandler) saveIndexFromHeavy(
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to decode")
 	}
+
+	h.RecentStorageProvider.GetStorage(jetID).AddObject(*obj.Record())
 	err = s.SetObjectIndex(ctx, jetID, obj.Record(), idx)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to save")
