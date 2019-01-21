@@ -59,3 +59,11 @@ var NetworkFutures = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 	Namespace: insolarNamespace,
 	Subsystem: "network",
 }, []string{"packetType"})
+
+// NetworkConnections is current network transport connections count metric
+var NetworkConnections = prometheus.NewGauge(prometheus.GaugeOpts{
+	Name:      "connections",
+	Help:      "Current network transport connections count",
+	Namespace: insolarNamespace,
+	Subsystem: "network",
+})
