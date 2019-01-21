@@ -551,7 +551,7 @@ func (h *MessageHandler) handleGetChildren(
 			if err != nil {
 				return nil, err
 			}
-			return reply.NewGetChildrenRedirect(h.DelegationTokenFactory, parcel, node, *idx.ChildPointer)
+			return reply.NewGetChildrenRedirect(h.DelegationTokenFactory, parcel, node, *currentChild)
 		}
 
 		childTree, err := h.db.GetJetTree(ctx, currentChild.Pulse())
