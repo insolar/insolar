@@ -539,13 +539,12 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 	span.AddAttributes(
 		trace.Int64Attribute("pulse.PulseNumber", int64(newPulse.PulseNumber)),
 	)
-	defer span.End()
-
 	// FIXME: @andreyromancev. 17.12.18. return core.Pulse here.
 	storagePulse, err := m.db.GetLatestPulse(ctx)
 	if err != nil {
 		m.PulseStorage.Unlock()
 		m.GIL.Release(ctx)
+		span.End()
 		return errors.Wrap(err, "call of GetLatestPulseNumber failed")
 	}
 	currentPulse := storagePulse.Pulse
@@ -569,12 +568,14 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 	if persist {
 		if err := m.db.AddPulse(ctx, newPulse); err != nil {
 			m.GIL.Release(ctx)
+			span.End()
 			m.PulseStorage.Unlock()
 			return errors.Wrap(err, "call of AddPulse failed")
 		}
 		err = m.db.SetActiveNodes(newPulse.PulseNumber, m.NodeNet.GetActiveNodes())
 		if err != nil {
 			m.GIL.Release(ctx)
+			span.End()
 			m.PulseStorage.Unlock()
 			return errors.Wrap(err, "call of SetActiveNodes failed")
 		}
@@ -588,6 +589,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 		jets, err = m.processJets(ctx, currentPulse.PulseNumber, newPulse.PulseNumber)
 		if err != nil {
 			m.GIL.Release(ctx)
+			span.End()
 			return errors.Wrap(err, "failed to process jets")
 		}
 	}
@@ -596,6 +598,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 		m.prepareArtifactManagerMessageHandlerForNextPulse(ctx, newPulse, jets)
 	}
 	m.GIL.Release(ctx)
+	span.End()
 
 	if !persist {
 		return nil
