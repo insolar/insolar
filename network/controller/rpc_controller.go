@@ -197,14 +197,14 @@ func (rpc *RPCController) SendMessage(nodeID core.RecordRef, name string, msg co
 		return nil, errors.New("RPC call returned error: " + data.Error)
 	}
 	metrics.ParcelsReplySizeBytes.WithLabelValues(msg.Type().String()).Observe(float64(len(data.Result)))
-	metrics.NetworkParcelsSentTotal.WithLabelValues(msg.Type().String()).Inc()
+	metrics.NetworkParcelSentTotal.WithLabelValues(msg.Type().String()).Inc()
 	return data.Result, nil
 }
 
 func (rpc *RPCController) processMessage(ctx context.Context, request network.Request) (network.Response, error) {
 	payload := request.GetData().(*RequestRPC)
 	result, err := rpc.invoke(ctx, payload.Method, payload.Data)
-	metrics.NetworkParcelsReceivedTotal.WithLabelValues(request.GetType().String()).Inc()
+	metrics.NetworkParcelReceivedTotal.WithLabelValues(request.GetType().String()).Inc()
 	if err != nil {
 		return rpc.hostNetwork.BuildResponse(ctx, request, &ResponseRPC{Success: false, Error: err.Error()}), nil
 	}
