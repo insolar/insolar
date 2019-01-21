@@ -27,6 +27,7 @@ import (
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/heavyclient"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
@@ -34,6 +35,7 @@ import (
 	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -555,6 +557,11 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 	var err error
 	m.GIL.Acquire(ctx)
 	m.PulseStorage.Lock()
+	ctx, span := instracer.StartSpan(context.Background(), "PulseManager.Set GIL Lock")
+	span.AddAttributes(
+		trace.Int64Attribute("pulse.PulseNumber", int64(newPulse.PulseNumber)),
+	)
+	defer span.End()
 
 	// FIXME: @andreyromancev. 17.12.18. return core.Pulse here.
 	storagePulse, err := m.db.GetLatestPulse(ctx)
