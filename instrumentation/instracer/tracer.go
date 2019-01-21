@@ -150,9 +150,15 @@ func RegisterJaeger(
 		return nil, err
 	}
 	trace.RegisterExporter(exporter)
-	trace.ApplyConfig(trace.Config{
-		DefaultSampler: trace.ProbabilitySampler(1 / probabilityRate),
-	})
+	if probabilityRate > 0 {
+		trace.ApplyConfig(trace.Config{
+			DefaultSampler: trace.ProbabilitySampler(1 / probabilityRate),
+		})
+	} else {
+		trace.ApplyConfig(trace.Config{
+			DefaultSampler: trace.NeverSample(),
+		})
+	}
 	return exporter, nil
 }
 
