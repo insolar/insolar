@@ -464,10 +464,10 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel core.Parc
 		}
 	} else if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch object index")
-	}
-
-	if h.certificate.GetRole() != core.StaticRoleHeavyMaterial {
-		h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Head.Record())
+	} else {
+		if h.certificate.GetRole() != core.StaticRoleHeavyMaterial {
+			h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Head.Record())
+		}
 	}
 
 	delegateRef, ok := idx.Delegates[msg.AsType]
@@ -511,10 +511,10 @@ func (h *MessageHandler) handleGetChildren(
 	} else if err != nil {
 		fmt.Println("handleGetChildren: failed to fetch object index, error - ", err)
 		return nil, errors.Wrap(err, "failed to fetch object index")
-	}
-
-	if h.certificate.GetRole() != core.StaticRoleHeavyMaterial {
-		h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Parent.Record())
+	} else {
+		if h.certificate.GetRole() != core.StaticRoleHeavyMaterial {
+			h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Parent.Record())
+		}
 	}
 
 	var (
@@ -743,10 +743,10 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel core.Pa
 			}
 		} else if err != nil {
 			return err
-		}
-
-		if h.certificate.GetRole() != core.StaticRoleHeavyMaterial {
-			h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Parent.Record())
+		} else {
+			if h.certificate.GetRole() != core.StaticRoleHeavyMaterial {
+				h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Parent.Record())
+			}
 		}
 
 		// Children exist and pointer does not match (preserving chain consistency).
