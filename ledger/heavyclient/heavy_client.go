@@ -25,9 +25,11 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/utils/backoff"
 	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
 )
 
 // Options contains heavy client configuration params.
@@ -74,6 +76,20 @@ func NewJetClient(jetID core.RecordID, opts Options) *JetClient {
 	return jsc
 }
 
+// should be called from protected by mutex code
+func (c *JetClient) updateLeftPulsesMetrics(ctx context.Context) {
+	// instrumentation
+	var pn core.PulseNumber
+	if len(c.leftPulses) > 0 {
+		pn = c.leftPulses[0]
+	}
+	ctx = insmetrics.InsertTag(ctx, tagJet, c.jetID.String())
+	stats.Record(ctx,
+		statUnsyncedPulsesCount.M(int64(len(c.leftPulses))),
+		statFirstUnsyncedPulse.M(int64(pn)),
+	)
+}
+
 // addPulses add pulse numbers for syncing.
 func (c *JetClient) addPulses(ctx context.Context, pns []core.PulseNumber) {
 	c.muPulses.Lock()
@@ -84,6 +100,7 @@ func (c *JetClient) addPulses(ctx context.Context, pns []core.PulseNumber) {
 			"attempt to persist jet sync state failed: jetID=%v: %v", c.jetID, err.Error())
 	}
 
+	c.updateLeftPulsesMetrics(ctx)
 	c.muPulses.Unlock()
 }
 
@@ -113,6 +130,7 @@ func (c *JetClient) unshiftPulse(ctx context.Context) *core.PulseNumber {
 			"attempt to persist jet sync state failed: jetID=%v: %v", c.jetID, err.Error())
 	}
 
+	c.updateLeftPulsesMetrics(ctx)
 	return &result
 }
 
@@ -181,6 +199,12 @@ func (c *JetClient) syncloop(ctx context.Context) {
 			}
 		}
 
+		if isPulseNumberOutdated(ctx, c.db, c.PulseStorage, syncPN, c.opts.PulsesDeltaLimit) {
+			inslog.Infof("pulse %v on jet %v is outdated, skip it", syncPN, c.jetID)
+			finishpulse()
+			continue
+		}
+
 		inslog.Infof("start synchronization to heavy for pulse %v", syncPN)
 
 		shouldretry := false
@@ -227,4 +251,24 @@ func backoffFromConfig(bconf configuration.Backoff) *backoff.Backoff {
 		Max:    bconf.Max,
 		Factor: bconf.Factor,
 	}
+}
+
+func isPulseNumberOutdated(ctx context.Context, db *storage.DB, pstore core.PulseStorage, pn core.PulseNumber, delta int) bool {
+	current, err := pstore.Current(ctx)
+	if err != nil {
+		panic(err)
+	}
+
+	currentPulse, err := db.GetPulse(ctx, current.PulseNumber)
+	if err != nil {
+		panic(err)
+	}
+
+	pnPulse, err := db.GetPulse(ctx, pn)
+	if err != nil {
+		inslogger.FromContext(ctx).Errorf("Can't get pulse by pulse number: %v", pn)
+		return true
+	}
+
+	return currentPulse.SerialNumber-delta > pnPulse.SerialNumber
 }

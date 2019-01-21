@@ -83,6 +83,12 @@ func jetFromContext(ctx context.Context) core.RecordID {
 	return j
 }
 
+func (m *middleware) zeroJetForHeavy(handler core.MessageHandler) core.MessageHandler {
+	return func(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
+		return handler(contextWithJet(ctx, *jet.NewID(0, nil)), parcel)
+	}
+}
+
 func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 	return func(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
 		msg := parcel.Message()
@@ -96,16 +102,6 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 		// FIXME: @andreyromancev. 17.01.19. Temporary allow any genesis request. Remove it.
 		if parcel.Pulse() == core.FirstPulseNumber {
 			logger.Debugf("genesis pulse shortcut")
-			return handler(contextWithJet(ctx, *jet.NewID(0, nil)), parcel)
-		}
-
-		heavy, err := m.jetCoordinator.Heavy(ctx, parcel.Pulse())
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to calculate heavy")
-		}
-		if *heavy == m.jetCoordinator.Me() {
-			logger.Debugf("i am heavy. returning any jet")
-			// Heavy always works with zero jet.
 			return handler(contextWithJet(ctx, *jet.NewID(0, nil)), parcel)
 		}
 
