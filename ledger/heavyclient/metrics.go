@@ -31,6 +31,8 @@ var (
 var (
 	statUnsyncedPulsesCount = stats.Int64("heavyclient/unsynced/count", "How many pulses unsynced", stats.UnitDimensionless)
 	statFirstUnsyncedPulse  = stats.Int64("heavyclient/unsynced/firstpulse", "First unsynced pulse number", stats.UnitDimensionless)
+
+	statSyncedPulsesCount = stats.Int64("heavyclient/synced/count", "How many pulses unsynced", stats.UnitDimensionless)
 )
 
 func init() {
@@ -48,6 +50,13 @@ func init() {
 			Description: statFirstUnsyncedPulse.Description(),
 			Measure:     statFirstUnsyncedPulse,
 			Aggregation: view.LastValue(),
+			TagKeys:     commontags,
+		},
+		&view.View{
+			Name:        statSyncedPulsesCount.Name(),
+			Description: statSyncedPulsesCount.Description(),
+			Measure:     statSyncedPulsesCount,
+			Aggregation: view.Count(),
 			TagKeys:     commontags,
 		},
 	)
