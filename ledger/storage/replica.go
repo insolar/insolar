@@ -55,10 +55,7 @@ func sysHeavyClientStateKeyForJet(jetID []byte) []byte {
 func (db *DB) GetSyncClientJetPulses(ctx context.Context, jetID core.RecordID) ([]core.PulseNumber, error) {
 	k := sysHeavyClientStateKeyForJet(jetID[:])
 	buf, err := db.get(ctx, k)
-	if err != nil {
-		if err == ErrNotFound {
-			err = nil
-		}
+	if err != nil && err != ErrNotFound {
 		return nil, err
 	}
 	return decodePulsesList(bytes.NewReader(buf))
