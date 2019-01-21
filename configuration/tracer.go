@@ -27,13 +27,15 @@ type Tracer struct {
 type JaegerConfig struct {
 	CollectorEndpoint string
 	AgentEndpoint     string
+	ProbabilityRate   float64
 }
 
 // NewTracer creates new default Tracer configuration.
 func NewTracer() Tracer {
 	return Tracer{
 		Jaeger: JaegerConfig{
-			AgentEndpoint: "",
+			AgentEndpoint:   "",
+			ProbabilityRate: 1,
 		},
 	}
 }
