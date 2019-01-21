@@ -19,6 +19,7 @@ package pulsemanager
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"sync"
 	"time"
 
@@ -381,7 +382,7 @@ func (m *PulseManager) getExecutorHotData(
 }
 
 // TODO: @andreyromancev. 12.01.19. Remove when dynamic split is working.
-var split = true
+var splitCount = 5
 
 func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse core.PulseNumber) ([]jetInfo, error) {
 	tree, err := m.db.CloneJetTree(ctx, currentPulse, newPulse)
@@ -397,7 +398,8 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse c
 	jetIDs := tree.LeafIDs()
 	me := m.JetCoordinator.Me()
 	logger := inslogger.FromContext(ctx)
-	for _, jetID := range jetIDs {
+	indexToSplit := rand.Intn(len(jetIDs))
+	for i, jetID := range jetIDs {
 		executor, err := m.JetCoordinator.LightExecutorForJet(ctx, jetID, currentPulse)
 		if err != nil {
 			return nil, err
@@ -409,8 +411,8 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse c
 		}
 
 		info := jetInfo{id: jetID}
-		if split {
-			split = false
+		if indexToSplit == i && splitCount > 0 {
+			splitCount--
 
 			leftJetID, rightJetID, err := m.db.SplitJetTree(
 				ctx,
