@@ -169,7 +169,7 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 
 		resp.TraceID = traceID
 
-		insLog.Info("[ callHandler ] Incoming request: %s", req.RequestURI)
+		insLog.Infof("[ callHandler ] Incoming request: %s", req.RequestURI)
 
 		defer func() {
 			res, err := json.MarshalIndent(resp, "", "    ")

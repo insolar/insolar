@@ -89,7 +89,7 @@ func removeJetIndexesUntil(t *testing.T, skip bool) {
 			expectedRmCount += 1
 		}
 	}
-	rmcount, err := db.RemoveJetIndexesUntil(ctx, jetID, until)
+	rmcount, err := db.RemoveJetIndexesUntil(ctx, jetID, until, nil)
 	require.NoError(t, err)
 
 	var foundIDs []core.RecordID

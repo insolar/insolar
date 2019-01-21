@@ -53,12 +53,6 @@ func sysHeavyClientStateKeyForJet(jetID []byte) []byte {
 
 // GetSyncClientJetPulses returns all jet's pulses not synced to heavy.
 func (db *DB) GetSyncClientJetPulses(ctx context.Context, jetID core.RecordID) ([]core.PulseNumber, error) {
-	db.jetHeavyClientLocker.Lock(&jetID)
-	defer db.jetHeavyClientLocker.Unlock(&jetID)
-	return db.getSyncClientJetPulses(ctx, jetID)
-}
-
-func (db *DB) getSyncClientJetPulses(ctx context.Context, jetID core.RecordID) ([]core.PulseNumber, error) {
 	k := sysHeavyClientStateKeyForJet(jetID[:])
 	buf, err := db.get(ctx, k)
 	if err != nil {
@@ -78,12 +72,6 @@ func decodePulsesList(r io.Reader) (pns []core.PulseNumber, err error) {
 
 // SetSyncClientJetPulses saves all jet's pulses not synced to heavy.
 func (db *DB) SetSyncClientJetPulses(ctx context.Context, jetID core.RecordID, pns []core.PulseNumber) error {
-	db.jetHeavyClientLocker.Lock(&jetID)
-	defer db.jetHeavyClientLocker.Unlock(&jetID)
-	return db.setSyncClientJetPulses(ctx, jetID, pns)
-}
-
-func (db *DB) setSyncClientJetPulses(ctx context.Context, jetID core.RecordID, pns []core.PulseNumber) error {
 	k := sysHeavyClientStateKeyForJet(jetID[:])
 	var buf bytes.Buffer
 	enc := gob.NewEncoder(&buf)
@@ -94,7 +82,7 @@ func (db *DB) setSyncClientJetPulses(ctx context.Context, jetID core.RecordID, p
 	return db.set(ctx, k, buf.Bytes())
 }
 
-// GetAllSyncClientJets returns map of all jet's if they have non empty list pulses to sync.
+// GetAllSyncClientJets returns map of all jet's processed by node.
 func (db *DB) GetAllSyncClientJets(ctx context.Context) (map[core.RecordID][]core.PulseNumber, error) {
 	jets := map[core.RecordID][]core.PulseNumber{}
 	err := db.db.View(func(txn *badger.Txn) error {
@@ -115,12 +103,11 @@ func (db *DB) GetAllSyncClientJets(ctx context.Context) (map[core.RecordID][]cor
 			if err != nil {
 				return err
 			}
-			if len(syncPulses) > 0 {
-				var jetID core.RecordID
-				offset := len(sysHeavyClientStatePrefix)
-				copy(jetID[:], key[offset:offset+len(jetID)])
-				jets[jetID] = syncPulses
-			}
+
+			var jetID core.RecordID
+			offset := len(sysHeavyClientStatePrefix)
+			copy(jetID[:], key[offset:offset+len(jetID)])
+			jets[jetID] = syncPulses
 		}
 		return nil
 	})
@@ -128,4 +115,18 @@ func (db *DB) GetAllSyncClientJets(ctx context.Context) (map[core.RecordID][]cor
 		return nil, err
 	}
 	return jets, nil
+}
+
+// GetAllNonEmptySyncClientJets returns map of all jet's if they have non empty list pulses to sync.
+func (db *DB) GetAllNonEmptySyncClientJets(ctx context.Context) (map[core.RecordID][]core.PulseNumber, error) {
+	states, err := db.GetAllSyncClientJets(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for jetID, syncPulses := range states {
+		if len(syncPulses) == 0 {
+			delete(states, jetID)
+		}
+	}
+	return states, nil
 }
