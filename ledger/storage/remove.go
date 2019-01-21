@@ -108,7 +108,7 @@ func (db *DB) removeJetRecordsUntil(
 
 			if recent != nil {
 				copy(id[:], key[len(jetprefix):])
-				if recent.IsRecordIdCached(id) {
+				if recent.IsRecordIDCached(id) {
 					continue
 				}
 			}

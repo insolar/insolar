@@ -193,8 +193,8 @@ func (r *RecentStorage) GetRequestsForObject(obj core.RecordID) []core.RecordID 
 	return results
 }
 
-// IsRecordIdCached check recordid inside caches
-func (r *RecentStorage) IsRecordIdCached(obj core.RecordID) bool {
+// IsRecordIDCached check recordid inside caches
+func (r *RecentStorage) IsRecordIDCached(obj core.RecordID) bool {
 	r.objectLock.Lock()
 	_, ok := r.recentObjects[obj]
 	if ok {

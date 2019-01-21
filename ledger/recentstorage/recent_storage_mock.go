@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	core "github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -1172,7 +1172,7 @@ func (m *mRecentStorageMockIsRecordIdCached) Set(f func(p core.RecordID) (r bool
 }
 
 //IsRecordIdCached implements github.com/insolar/insolar/ledger/recentstorage.RecentStorage interface
-func (m *RecentStorageMock) IsRecordIdCached(p core.RecordID) (r bool) {
+func (m *RecentStorageMock) IsRecordIDCached(p core.RecordID) (r bool) {
 	counter := atomic.AddUint64(&m.IsRecordIdCachedPreCounter, 1)
 	defer atomic.AddUint64(&m.IsRecordIdCachedCounter, 1)
 
