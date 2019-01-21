@@ -60,10 +60,10 @@ type RecentStorageMock struct {
 	GetRequestsForObjectPreCounter uint64
 	GetRequestsForObjectMock       mRecentStorageMockGetRequestsForObject
 
-	IsRecordIdCachedFunc       func(p core.RecordID) (r bool)
-	IsRecordIdCachedCounter    uint64
-	IsRecordIdCachedPreCounter uint64
-	IsRecordIdCachedMock       mRecentStorageMockIsRecordIdCached
+	IsRecordIDCachedFunc       func(p core.RecordID) (r bool)
+	IsRecordIDCachedCounter    uint64
+	IsRecordIDCachedPreCounter uint64
+	IsRecordIDCachedMock       mRecentStorageMockIsRecordIDCached
 
 	RemovePendingRequestFunc       func(p core.RecordID, p1 core.RecordID)
 	RemovePendingRequestCounter    uint64
@@ -87,7 +87,7 @@ func NewRecentStorageMock(t minimock.Tester) *RecentStorageMock {
 	m.GetObjectsMock = mRecentStorageMockGetObjects{mock: m}
 	m.GetRequestsMock = mRecentStorageMockGetRequests{mock: m}
 	m.GetRequestsForObjectMock = mRecentStorageMockGetRequestsForObject{mock: m}
-	m.IsRecordIdCachedMock = mRecentStorageMockIsRecordIdCached{mock: m}
+	m.IsRecordIDCachedMock = mRecentStorageMockIsRecordIDCached{mock: m}
 	m.RemovePendingRequestMock = mRecentStorageMockRemovePendingRequest{mock: m}
 
 	return m
@@ -1104,90 +1104,90 @@ func (m *RecentStorageMock) GetRequestsForObjectFinished() bool {
 	return true
 }
 
-type mRecentStorageMockIsRecordIdCached struct {
+type mRecentStorageMockIsRecordIDCached struct {
 	mock              *RecentStorageMock
-	mainExpectation   *RecentStorageMockIsRecordIdCachedExpectation
-	expectationSeries []*RecentStorageMockIsRecordIdCachedExpectation
+	mainExpectation   *RecentStorageMockIsRecordIDCachedExpectation
+	expectationSeries []*RecentStorageMockIsRecordIDCachedExpectation
 }
 
-type RecentStorageMockIsRecordIdCachedExpectation struct {
-	input  *RecentStorageMockIsRecordIdCachedInput
-	result *RecentStorageMockIsRecordIdCachedResult
+type RecentStorageMockIsRecordIDCachedExpectation struct {
+	input  *RecentStorageMockIsRecordIDCachedInput
+	result *RecentStorageMockIsRecordIDCachedResult
 }
 
-type RecentStorageMockIsRecordIdCachedInput struct {
+type RecentStorageMockIsRecordIDCachedInput struct {
 	p core.RecordID
 }
 
-type RecentStorageMockIsRecordIdCachedResult struct {
+type RecentStorageMockIsRecordIDCachedResult struct {
 	r bool
 }
 
-//Expect specifies that invocation of RecentStorage.IsRecordIdCached is expected from 1 to Infinity times
-func (m *mRecentStorageMockIsRecordIdCached) Expect(p core.RecordID) *mRecentStorageMockIsRecordIdCached {
-	m.mock.IsRecordIdCachedFunc = nil
+// Expect specifies that invocation of RecentStorage.IsRecordIDCached is expected from 1 to Infinity times
+func (m *mRecentStorageMockIsRecordIDCached) Expect(p core.RecordID) *mRecentStorageMockIsRecordIDCached {
+	m.mock.IsRecordIDCachedFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &RecentStorageMockIsRecordIdCachedExpectation{}
+		m.mainExpectation = &RecentStorageMockIsRecordIDCachedExpectation{}
 	}
-	m.mainExpectation.input = &RecentStorageMockIsRecordIdCachedInput{p}
+	m.mainExpectation.input = &RecentStorageMockIsRecordIDCachedInput{p}
 	return m
 }
 
-//Return specifies results of invocation of RecentStorage.IsRecordIdCached
-func (m *mRecentStorageMockIsRecordIdCached) Return(r bool) *RecentStorageMock {
-	m.mock.IsRecordIdCachedFunc = nil
+// Return specifies results of invocation of RecentStorage.IsRecordIDCached
+func (m *mRecentStorageMockIsRecordIDCached) Return(r bool) *RecentStorageMock {
+	m.mock.IsRecordIDCachedFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &RecentStorageMockIsRecordIdCachedExpectation{}
+		m.mainExpectation = &RecentStorageMockIsRecordIDCachedExpectation{}
 	}
-	m.mainExpectation.result = &RecentStorageMockIsRecordIdCachedResult{r}
+	m.mainExpectation.result = &RecentStorageMockIsRecordIDCachedResult{r}
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of RecentStorage.IsRecordIdCached is expected once
-func (m *mRecentStorageMockIsRecordIdCached) ExpectOnce(p core.RecordID) *RecentStorageMockIsRecordIdCachedExpectation {
-	m.mock.IsRecordIdCachedFunc = nil
+// ExpectOnce specifies that invocation of RecentStorage.IsRecordIDCached is expected once
+func (m *mRecentStorageMockIsRecordIDCached) ExpectOnce(p core.RecordID) *RecentStorageMockIsRecordIDCachedExpectation {
+	m.mock.IsRecordIDCachedFunc = nil
 	m.mainExpectation = nil
 
-	expectation := &RecentStorageMockIsRecordIdCachedExpectation{}
-	expectation.input = &RecentStorageMockIsRecordIdCachedInput{p}
+	expectation := &RecentStorageMockIsRecordIDCachedExpectation{}
+	expectation.input = &RecentStorageMockIsRecordIDCachedInput{p}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
-func (e *RecentStorageMockIsRecordIdCachedExpectation) Return(r bool) {
-	e.result = &RecentStorageMockIsRecordIdCachedResult{r}
+func (e *RecentStorageMockIsRecordIDCachedExpectation) Return(r bool) {
+	e.result = &RecentStorageMockIsRecordIDCachedResult{r}
 }
 
-//Set uses given function f as a mock of RecentStorage.IsRecordIdCached method
-func (m *mRecentStorageMockIsRecordIdCached) Set(f func(p core.RecordID) (r bool)) *RecentStorageMock {
+// Set uses given function f as a mock of RecentStorage.IsRecordIDCached method
+func (m *mRecentStorageMockIsRecordIDCached) Set(f func(p core.RecordID) (r bool)) *RecentStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
-	m.mock.IsRecordIdCachedFunc = f
+	m.mock.IsRecordIDCachedFunc = f
 	return m.mock
 }
 
-//IsRecordIdCached implements github.com/insolar/insolar/ledger/recentstorage.RecentStorage interface
+// IsRecordIDCached implements github.com/insolar/insolar/ledger/recentstorage.RecentStorage interface
 func (m *RecentStorageMock) IsRecordIDCached(p core.RecordID) (r bool) {
-	counter := atomic.AddUint64(&m.IsRecordIdCachedPreCounter, 1)
-	defer atomic.AddUint64(&m.IsRecordIdCachedCounter, 1)
+	counter := atomic.AddUint64(&m.IsRecordIDCachedPreCounter, 1)
+	defer atomic.AddUint64(&m.IsRecordIDCachedCounter, 1)
 
-	if len(m.IsRecordIdCachedMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.IsRecordIdCachedMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to RecentStorageMock.IsRecordIdCached. %v", p)
+	if len(m.IsRecordIDCachedMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.IsRecordIDCachedMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to RecentStorageMock.IsRecordIDCached. %v", p)
 			return
 		}
 
-		input := m.IsRecordIdCachedMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, RecentStorageMockIsRecordIdCachedInput{p}, "RecentStorage.IsRecordIdCached got unexpected parameters")
+		input := m.IsRecordIDCachedMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, RecentStorageMockIsRecordIDCachedInput{p}, "RecentStorage.IsRecordIDCached got unexpected parameters")
 
-		result := m.IsRecordIdCachedMock.expectationSeries[counter-1].result
+		result := m.IsRecordIDCachedMock.expectationSeries[counter-1].result
 		if result == nil {
-			m.t.Fatal("No results are set for the RecentStorageMock.IsRecordIdCached")
+			m.t.Fatal("No results are set for the RecentStorageMock.IsRecordIDCached")
 			return
 		}
 
@@ -1196,16 +1196,16 @@ func (m *RecentStorageMock) IsRecordIDCached(p core.RecordID) (r bool) {
 		return
 	}
 
-	if m.IsRecordIdCachedMock.mainExpectation != nil {
+	if m.IsRecordIDCachedMock.mainExpectation != nil {
 
-		input := m.IsRecordIdCachedMock.mainExpectation.input
+		input := m.IsRecordIDCachedMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, RecentStorageMockIsRecordIdCachedInput{p}, "RecentStorage.IsRecordIdCached got unexpected parameters")
+			testify_assert.Equal(m.t, *input, RecentStorageMockIsRecordIDCachedInput{p}, "RecentStorage.IsRecordIDCached got unexpected parameters")
 		}
 
-		result := m.IsRecordIdCachedMock.mainExpectation.result
+		result := m.IsRecordIDCachedMock.mainExpectation.result
 		if result == nil {
-			m.t.Fatal("No results are set for the RecentStorageMock.IsRecordIdCached")
+			m.t.Fatal("No results are set for the RecentStorageMock.IsRecordIDCached")
 		}
 
 		r = result.r
@@ -1213,39 +1213,39 @@ func (m *RecentStorageMock) IsRecordIDCached(p core.RecordID) (r bool) {
 		return
 	}
 
-	if m.IsRecordIdCachedFunc == nil {
-		m.t.Fatalf("Unexpected call to RecentStorageMock.IsRecordIdCached. %v", p)
+	if m.IsRecordIDCachedFunc == nil {
+		m.t.Fatalf("Unexpected call to RecentStorageMock.IsRecordIDCached. %v", p)
 		return
 	}
 
-	return m.IsRecordIdCachedFunc(p)
+	return m.IsRecordIDCachedFunc(p)
 }
 
-//IsRecordIdCachedMinimockCounter returns a count of RecentStorageMock.IsRecordIdCachedFunc invocations
-func (m *RecentStorageMock) IsRecordIdCachedMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.IsRecordIdCachedCounter)
+// IsRecordIDCachedMinimockCounter returns a count of RecentStorageMock.IsRecordIDCachedFunc invocations
+func (m *RecentStorageMock) IsRecordIDCachedMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.IsRecordIDCachedCounter)
 }
 
-//IsRecordIdCachedMinimockPreCounter returns the value of RecentStorageMock.IsRecordIdCached invocations
-func (m *RecentStorageMock) IsRecordIdCachedMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.IsRecordIdCachedPreCounter)
+// IsRecordIDCachedMinimockPreCounter returns the value of RecentStorageMock.IsRecordIDCached invocations
+func (m *RecentStorageMock) IsRecordIDCachedMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.IsRecordIDCachedPreCounter)
 }
 
-//IsRecordIdCachedFinished returns true if mock invocations count is ok
-func (m *RecentStorageMock) IsRecordIdCachedFinished() bool {
+// IsRecordIDCachedFinished returns true if mock invocations count is ok
+func (m *RecentStorageMock) IsRecordIDCachedFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.IsRecordIdCachedMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.IsRecordIdCachedCounter) == uint64(len(m.IsRecordIdCachedMock.expectationSeries))
+	if len(m.IsRecordIDCachedMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.IsRecordIDCachedCounter) == uint64(len(m.IsRecordIDCachedMock.expectationSeries))
 	}
 
 	// if main expectation was set then invocations count should be greater than zero
-	if m.IsRecordIdCachedMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.IsRecordIdCachedCounter) > 0
+	if m.IsRecordIDCachedMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.IsRecordIDCachedCounter) > 0
 	}
 
 	// if func was set then invocations count should be greater than zero
-	if m.IsRecordIdCachedFunc != nil {
-		return atomic.LoadUint64(&m.IsRecordIdCachedCounter) > 0
+	if m.IsRecordIDCachedFunc != nil {
+		return atomic.LoadUint64(&m.IsRecordIDCachedCounter) > 0
 	}
 
 	return true
@@ -1411,8 +1411,8 @@ func (m *RecentStorageMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to RecentStorageMock.GetRequestsForObject")
 	}
 
-	if !m.IsRecordIdCachedFinished() {
-		m.t.Fatal("Expected call to RecentStorageMock.IsRecordIdCached")
+	if !m.IsRecordIDCachedFinished() {
+		m.t.Fatal("Expected call to RecentStorageMock.IsRecordIDCached")
 	}
 
 	if !m.RemovePendingRequestFinished() {
@@ -1468,8 +1468,8 @@ func (m *RecentStorageMock) MinimockFinish() {
 		m.t.Fatal("Expected call to RecentStorageMock.GetRequestsForObject")
 	}
 
-	if !m.IsRecordIdCachedFinished() {
-		m.t.Fatal("Expected call to RecentStorageMock.IsRecordIdCached")
+	if !m.IsRecordIDCachedFinished() {
+		m.t.Fatal("Expected call to RecentStorageMock.IsRecordIDCached")
 	}
 
 	if !m.RemovePendingRequestFinished() {
@@ -1498,7 +1498,7 @@ func (m *RecentStorageMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.GetObjectsFinished()
 		ok = ok && m.GetRequestsFinished()
 		ok = ok && m.GetRequestsForObjectFinished()
-		ok = ok && m.IsRecordIdCachedFinished()
+		ok = ok && m.IsRecordIDCachedFinished()
 		ok = ok && m.RemovePendingRequestFinished()
 
 		if ok {
@@ -1540,8 +1540,8 @@ func (m *RecentStorageMock) MinimockWait(timeout time.Duration) {
 				m.t.Error("Expected call to RecentStorageMock.GetRequestsForObject")
 			}
 
-			if !m.IsRecordIdCachedFinished() {
-				m.t.Error("Expected call to RecentStorageMock.IsRecordIdCached")
+			if !m.IsRecordIDCachedFinished() {
+				m.t.Error("Expected call to RecentStorageMock.IsRecordIDCached")
 			}
 
 			if !m.RemovePendingRequestFinished() {
@@ -1592,7 +1592,7 @@ func (m *RecentStorageMock) AllMocksCalled() bool {
 		return false
 	}
 
-	if !m.IsRecordIdCachedFinished() {
+	if !m.IsRecordIDCachedFinished() {
 		return false
 	}
 
