@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/transport/packet"
 	"github.com/insolar/insolar/network/transport/packet/types"
 )
@@ -38,6 +39,7 @@ func newPacketHandlerImpl(futureManager futureManager) *packetHandlerImpl {
 }
 
 func (ph *packetHandlerImpl) Handle(ctx context.Context, msg *packet.Packet) {
+	metrics.NetworkPacketReceivedTotal.WithLabelValues(msg.Type.String()).Inc()
 	if msg.IsResponse {
 		ph.processResponse(ctx, msg)
 		return

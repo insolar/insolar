@@ -24,6 +24,7 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/transport/packet"
 	"github.com/insolar/insolar/network/transport/relay"
@@ -85,6 +86,7 @@ func (t *baseTransport) SendRequest(ctx context.Context, msg *packet.Packet) (Fu
 		future.Cancel()
 		return nil, errors.Wrap(err, "Failed to send transport packet")
 	}
+	metrics.NetworkPacketSentTotal.WithLabelValues(msg.Type.String()).Inc()
 	return future, nil
 }
 
