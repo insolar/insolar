@@ -23,6 +23,7 @@ import (
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/utils"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
@@ -96,6 +97,7 @@ func (cp *connectionPool) CloseConnection(ctx context.Context, address net.Addr)
 
 		logger.Debugf("[ CloseConnection ] Delete connection to %s from pool: %s", address)
 		cp.unsafeConnectionsHolder.Delete(address)
+		metrics.NetworkConnections.Set(float64(cp.unsafeConnectionsHolder.Size()))
 	}
 }
 
@@ -149,11 +151,13 @@ func (cp *connectionPool) getOrCreateConnection(ctx context.Context, address net
 	}
 
 	cp.unsafeConnectionsHolder.Add(address, lc)
+	size := cp.unsafeConnectionsHolder.Size()
 	logger.Debugf(
 		"[ getOrCreateConnection ] Added connection to %s. Current pool size: %d",
 		conn.RemoteAddr(),
-		cp.unsafeConnectionsHolder.Size(),
+		size,
 	)
+	metrics.NetworkConnections.Set(float64(size))
 
 	return conn, nil
 }
@@ -166,4 +170,5 @@ func (cp *connectionPool) Reset() {
 		utils.CloseVerbose(conn)
 	})
 	cp.unsafeConnectionsHolder.Clear()
+	metrics.NetworkConnections.Set(float64(cp.unsafeConnectionsHolder.Size()))
 }

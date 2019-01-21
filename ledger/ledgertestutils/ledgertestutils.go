@@ -44,7 +44,7 @@ import (
 // TmpLedger crteates ledger on top of temporary database.
 // Returns *ledger.Ledger and cleanup function.
 // FIXME: THIS METHOD IS DEPRECATED. USE MOCKS.
-func TmpLedger(t *testing.T, dir string, c core.Components) (*ledger.Ledger, func()) {
+func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Components, closeJets bool) (*ledger.Ledger, func()) {
 	log.Warn("TmpLedger is deprecated. Use mocks.")
 
 	pcs := platformpolicy.NewPlatformCryptographyScheme()
@@ -87,10 +87,13 @@ func TmpLedger(t *testing.T, dir string, c core.Components) (*ledger.Ledger, fun
 		}
 	}
 	if c.NodeNetwork == nil {
-		c.NodeNetwork = nodenetwork.NewNodeKeeper(nodenetwork.NewNode(core.RecordRef{}, core.StaticRoleUnknown, nil, "", ""))
+		c.NodeNetwork = nodenetwork.NewNodeKeeper(nodenetwork.NewNode(core.RecordRef{}, core.StaticRoleLightMaterial, nil, "", ""))
 	}
 
-	handler := artifactmanager.NewMessageHandler(db, &conf)
+	certificate := testutils.NewCertificateMock(t)
+	certificate.GetRoleMock.Return(handlersRole)
+
+	handler := artifactmanager.NewMessageHandler(db, &conf, certificate)
 	handler.PlatformCryptographyScheme = pcs
 	handler.JetCoordinator = jc
 
@@ -129,7 +132,9 @@ func TmpLedger(t *testing.T, dir string, c core.Components) (*ledger.Ledger, fun
 		panic(err)
 	}
 
-	handler.CloseEarlyRequestCircuitBreakerForJet(ctx, *jet.NewID(0, nil))
+	if closeJets {
+		handler.CloseEarlyRequestCircuitBreakerForJet(ctx, *jet.NewID(0, nil))
+	}
 
 	// Create ledger.
 	l := ledger.NewTestLedger(db, am, pm, jc, ls)

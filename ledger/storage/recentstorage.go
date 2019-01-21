@@ -54,6 +54,7 @@ func (p *RecentStorageProvider) GetStorage(jetID core.RecordID) recentstorage.Re
 	return storage
 }
 
+// CloneStorage clones a recent storage from one jet to another
 func (p *RecentStorageProvider) CloneStorage(fromJetID, toJetID core.RecordID) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
@@ -190,6 +191,22 @@ func (r *RecentStorage) GetRequestsForObject(obj core.RecordID) []core.RecordID 
 	}
 
 	return results
+}
+
+// IsRecordIDCached check recordid inside caches
+func (r *RecentStorage) IsRecordIDCached(obj core.RecordID) bool {
+	r.objectLock.Lock()
+	_, ok := r.recentObjects[obj]
+	if ok {
+		r.objectLock.Unlock()
+		return ok
+	}
+	r.objectLock.Unlock()
+
+	r.requestLock.RLock()
+	_, ok = r.pendingRequests[obj]
+	r.requestLock.RUnlock()
+	return ok
 }
 
 // ClearZeroTTLObjects clears objects with zero TTL

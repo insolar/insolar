@@ -168,7 +168,7 @@ func initComponents(
 		nw,
 	)
 
-	components := ledger.GetLedgerComponents(cfg.Ledger)
+	components := ledger.GetLedgerComponents(cfg.Ledger, certManager.GetCertificate())
 	ld := ledger.Ledger{} // TODO: remove me with cmOld
 
 	components = append(components, []interface{}{

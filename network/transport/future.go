@@ -21,6 +21,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet"
@@ -72,6 +73,7 @@ type future struct {
 
 // NewFuture creates new Future.
 func NewFuture(requestID network.RequestID, actor *host.Host, msg *packet.Packet, cancelCallback CancelCallback) Future {
+	metrics.NetworkFutures.WithLabelValues(msg.Type.String()).Inc()
 	return &future{
 		result:         make(chan *packet.Packet, 1),
 		actor:          actor,
@@ -127,6 +129,7 @@ func (future *future) GetResult(duration time.Duration) (*packet.Packet, error) 
 func (future *future) Cancel() {
 	if atomic.CompareAndSwapUint32(&future.finished, 0, 1) {
 		future.finish()
+		metrics.NetworkFutures.WithLabelValues(future.request.Type.String()).Dec()
 	}
 }
 
