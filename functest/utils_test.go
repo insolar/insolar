@@ -24,7 +24,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"net"
 	"net/http"
 	"strings"
 	"testing"
@@ -224,15 +223,14 @@ func signedRequest(user *user, method string, params ...interface{}) (interface{
 			continue
 		}
 
-		err = errors.New(resp.Error)
-		if netErr, ok := errors.Cause(err).(net.Error); ok && netErr.Timeout() {
+		if strings.Contains(resp.Error, "Client.Timeout exceeded") {
 			fmt.Println("Timeout, retry")
 			fmt.Printf("Method: %s\n", method)
 			time.Sleep(time.Second)
 			continue
 		}
 
-		return resp.Result, err
+		break
 	}
 	return resp.Result, errors.New(resp.Error)
 }
