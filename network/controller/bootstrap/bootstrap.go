@@ -27,6 +27,7 @@ import (
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller/common"
@@ -36,6 +37,7 @@ import (
 	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
 )
 
 type Bootstrapper struct {
@@ -134,12 +136,14 @@ func init() {
 // Bootstrap on the discovery node (step 1 of the bootstrap process)
 func (bc *Bootstrapper) Bootstrap(ctx context.Context) (*DiscoveryNode, error) {
 	log.Info("Bootstrapping to discovery node")
+	ctx, span := instracer.StartSpan(ctx, "Bootstrapper.Bootstrap")
 	ch := bc.getDiscoveryNodesChannel(ctx, bc.cert.GetDiscoveryNodes(), 1)
 	host := bc.waitResultFromChannel(ctx, ch)
 	if host == nil {
 		return nil, errors.New("Failed to bootstrap to any of discovery nodes")
 	}
 	discovery := FindDiscovery(bc.cert, host.NodeID)
+	span.End()
 	return &DiscoveryNode{Host: host, Node: discovery}, nil
 }
 
@@ -268,7 +272,12 @@ func (bc *Bootstrapper) getDiscoveryNodesChannel(ctx context.Context, discoveryN
 	for _, discoveryNode := range discoveryNodes {
 		go func(ctx context.Context, address string, ch chan<- *host.Host) {
 			inslogger.FromContext(ctx).Infof("Starting bootstrap to address %s", address)
+			ctx, span := instracer.StartSpan(ctx, "Bootstrapper.getDiscoveryNodesChannel")
+			span.AddAttributes(
+				trace.StringAttribute("Bootstrap node", address),
+			)
 			bootstrapHost, err := bootstrap(ctx, address, bc.options, bc.startBootstrap)
+			span.End()
 			if err != nil {
 				inslogger.FromContext(ctx).Errorf("Error bootstrapping to address %s: %s", address, err.Error())
 				return
@@ -284,7 +293,12 @@ func (bc *Bootstrapper) getGenesisRequestsChannel(ctx context.Context, discovery
 	for _, discoveryHost := range discoveryHosts {
 		go func(ctx context.Context, address *host.Host, ch chan<- *GenesisResponse) {
 			inslogger.FromContext(ctx).Infof("Sending genesis bootstrap request to address %s", address)
+			ctx, span := instracer.StartSpan(ctx, "Bootsytrapper.getGenesisRequestChannel")
+			span.AddAttributes(
+				trace.StringAttribute("genesis request to", address.String()),
+			)
 			response, err := bc.sendGenesisRequest(ctx, address)
+			span.End()
 			if err != nil {
 				inslogger.FromContext(ctx).Warnf("Discovery bootstrap to host %s failed: %s", address, err)
 				return
