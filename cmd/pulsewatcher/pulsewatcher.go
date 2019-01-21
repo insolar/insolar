@@ -32,6 +32,8 @@ import (
 	"github.com/spf13/pflag"
 )
 
+var client http.Client
+
 func main() {
 	var configFile string
 	pflag.StringVarP(&configFile, "config", "c", "", "config file")
@@ -48,6 +50,11 @@ func main() {
 		conf.Interval = 100 * time.Millisecond
 	}
 
+	client = http.Client{
+		Transport: &http.Transport{},
+		Timeout:   conf.Timeout,
+	}
+
 	for {
 		results := make([]string, len(conf.Nodes))
 		lock := &sync.Mutex{}
@@ -55,10 +62,14 @@ func main() {
 		wg.Add(len(conf.Nodes))
 		for i, url := range conf.Nodes {
 			go func(url string, i int) {
-				res, err := http.Post("http://"+url+"/api/rpc", "application/json",
+				res, err := client.Post("http://"+url+"/api/rpc", "application/json",
 					strings.NewReader(`{"jsonrpc": "2.0", "method": "status.Get", "id": 0}`))
 				if err != nil {
-					log.Fatal(err)
+					lock.Lock()
+					results[i] = url + " : " + err.Error()
+					lock.Unlock()
+					wg.Done()
+					return
 				}
 				defer res.Body.Close()
 				data, err := ioutil.ReadAll(res.Body)
@@ -67,8 +78,9 @@ func main() {
 				}
 				var out struct {
 					Result struct {
-						PulseNumber uint32
-						Origin      struct {
+						PulseNumber  uint32
+						NetworkState string
+						Origin       struct {
 							Role string
 						}
 					}
@@ -79,7 +91,7 @@ func main() {
 					log.Fatal(err)
 				}
 				lock.Lock()
-				results[i] = url + " : " + strconv.Itoa(int(out.Result.PulseNumber)) + " : " + out.Result.Origin.Role
+				results[i] = url + " : " + out.Result.NetworkState + " : " + strconv.Itoa(int(out.Result.PulseNumber)) + " : " + out.Result.Origin.Role
 				lock.Unlock()
 				wg.Done()
 			}(url, i)

@@ -135,6 +135,7 @@ func main() {
 	writeGorundPorts(gorundPorts)
 
 	pwConfig.Interval = 100 * time.Millisecond
+	pwConfig.Timeout = 1 * time.Second
 	err = pulsewatcher.WriteConfig(outputDir+"/utils", pulsewatcherFileName, pwConfig)
 	check("couldn't write pulsewatcher config file", err)
 }

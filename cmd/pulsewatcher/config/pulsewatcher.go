@@ -28,6 +28,7 @@ import (
 type Config struct {
 	Nodes    []string
 	Interval time.Duration
+	Timeout  time.Duration
 }
 
 func WriteConfig(dir string, file string, conf Config) error {
