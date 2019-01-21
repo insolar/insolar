@@ -508,9 +508,7 @@ func (h *MessageHandler) handleGetChildren(
 		if idx.ChildPointer == nil {
 			return &reply.Children{Refs: nil, NextFrom: nil}, nil
 		}
-		err = nil
-	}
-	if err != nil {
+	} else if err != nil {
 		fmt.Println("handleGetChildren: failed to fetch object index, error - ", err)
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}

@@ -207,7 +207,6 @@ func TestMessageHandler_HandleGetChildren_Redirects(t *testing.T) {
 	msg := message.GetChildren{
 		Parent: *genRandomRef(0),
 	}
-	objIndex := index.ObjectLifeline{LatestState: genRandomID(0), ChildPointer: genRandomID(0)}
 	h := NewMessageHandler(db, &configuration.Ledger{
 		LightChainLimit: 2,
 	}, certificate)
@@ -224,7 +223,14 @@ func TestMessageHandler_HandleGetChildren_Redirects(t *testing.T) {
 
 	h.RecentStorageProvider = provideMock
 
+	err = db.AddPulse(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 1})
+	require.NoError(t, err)
+
 	t.Run("redirects to heavy when no index", func(t *testing.T) {
+		objIndex := index.ObjectLifeline{
+			LatestState:  genRandomID(core.FirstPulseNumber),
+			ChildPointer: genRandomID(core.FirstPulseNumber),
+		}
 		mb.SendFunc = func(c context.Context, gm core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
 			if m, ok := gm.(*message.GetObjectIndex); ok {
 				assert.Equal(t, msg.Parent, m.Object)
@@ -237,7 +243,10 @@ func TestMessageHandler_HandleGetChildren_Redirects(t *testing.T) {
 		}
 		jc.LightExecutorForJetMock.Return(&core.RecordRef{}, nil)
 		heavyRef := genRandomRef(0)
+		lightRef := genRandomRef(1)
+
 		jc.HeavyMock.Return(heavyRef, nil)
+		jc.LightExecutorForJetMock.Return(lightRef, nil)
 		rep, err := h.handleGetChildren(contextWithJet(ctx, jetID), &message.Parcel{
 			Msg:         &msg,
 			PulseNumber: core.FirstPulseNumber + 1,
@@ -247,7 +256,7 @@ func TestMessageHandler_HandleGetChildren_Redirects(t *testing.T) {
 		require.True(t, ok)
 		token, ok := redirect.Token.(*delegationtoken.GetChildrenRedirectToken)
 		assert.Equal(t, []byte{1, 2, 3}, token.Signature)
-		assert.Equal(t, heavyRef, redirect.GetReceiver())
+		assert.Equal(t, lightRef, redirect.GetReceiver())
 
 		idx, err := db.GetObjectIndex(ctx, jetID, msg.Parent.Record(), false)
 		require.NoError(t, err)
@@ -255,8 +264,6 @@ func TestMessageHandler_HandleGetChildren_Redirects(t *testing.T) {
 	})
 
 	t.Run("redirect to light when has index and child later than limit", func(t *testing.T) {
-		err := db.AddPulse(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 1})
-		require.NoError(t, err)
 		lightRef := genRandomRef(0)
 		jc.LightExecutorForJetMock.Set(nil)
 		jc.LightExecutorForJetFunc = func(c context.Context, j core.RecordID, p core.PulseNumber) (*core.RecordRef, error) {
