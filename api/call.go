@@ -23,18 +23,17 @@ import (
 	"net/http"
 	"time"
 
-  "github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/api/seedmanager"
 	"github.com/insolar/insolar/application/extractor"
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/core/utils"
-	"github.com/insolar/insolar/platformpolicy"
-  "github.com/insolar/insolar/metrics"
-	"github.com/insolar/insolar/api/seedmanager"
-	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/metrics"
+	"github.com/insolar/insolar/platformpolicy"
 
-  "github.com/pkg/errors"
-	"go.opencensus.io/trace"
+	"github.com/pkg/errors"
 )
 
 var scheme = platformpolicy.NewPlatformCryptographyScheme()
