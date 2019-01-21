@@ -20,13 +20,13 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-// NetworkMessageSentTotal is total number of sent messages metric
-var NetworkMessageSentTotal = prometheus.NewCounter(prometheus.CounterOpts{
-	Name:      "message_sent_total",
-	Help:      "Total number of sent messages",
+// NetworkParcelsSentTotal is total number of sent messages metric
+var NetworkParcelsSentTotal = prometheus.NewCounterVec(prometheus.CounterOpts{
+	Name:      "parcel_sent_total",
+	Help:      "Total number of sent parcels",
 	Namespace: insolarNamespace,
 	Subsystem: "network",
-})
+}, []string{"messageType"})
 
 // NetworkPacketSentTotal is total number of sent packets metric
 var NetworkPacketSentTotal = prometheus.NewCounterVec(prometheus.CounterOpts{
