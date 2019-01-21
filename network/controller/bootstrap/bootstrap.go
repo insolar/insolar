@@ -24,7 +24,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
@@ -50,6 +49,23 @@ type Bootstrapper struct {
 	pulsePersisted bool
 
 	bootstrapLock chan struct{}
+
+	genesisRequestsReceived map[core.RecordRef]*GenesisRequest
+	genesisLock             sync.Mutex
+}
+
+func (bc *Bootstrapper) getRequest(ref core.RecordRef) *GenesisRequest {
+	bc.genesisLock.Lock()
+	defer bc.genesisLock.Unlock()
+
+	return bc.genesisRequestsReceived[ref]
+}
+
+func (bc *Bootstrapper) setRequest(ref core.RecordRef, req *GenesisRequest) {
+	bc.genesisLock.Lock()
+	defer bc.genesisLock.Unlock()
+
+	bc.genesisRequestsReceived[ref] = req
 }
 
 type NodeBootstrapRequest struct{}
@@ -61,14 +77,13 @@ type NodeBootstrapResponse struct {
 }
 
 type GenesisRequest struct {
-	Certificate []byte
-	LastPulse   core.PulseNumber
+	LastPulse core.PulseNumber
+	Discovery *NodeStruct
 }
 
 type GenesisResponse struct {
-	Discovery *NodeStruct
-	LastPulse core.PulseNumber
-	Error     string
+	Response GenesisRequest
+	Error    string
 }
 
 type StartSessionRequest struct{}
@@ -240,13 +255,13 @@ func (bc *Bootstrapper) calculateLastIgnoredPulse(ctx context.Context, lastPulse
 }
 
 func (bc *Bootstrapper) sendGenesisRequest(ctx context.Context, h *host.Host) (*GenesisResponse, error) {
-	serializedCert, err := certificate.Serialize(bc.cert)
+	discovery, err := newNodeStruct(bc.keeper.GetOrigin())
 	if err != nil {
-		return nil, errors.Wrap(err, "Failed to serialize certificate")
+		return nil, errors.Wrapf(err, "Failed to prepare genesis request to address %s", h)
 	}
 	request := bc.transport.NewRequestBuilder().Type(types.Genesis).Data(&GenesisRequest{
-		Certificate: serializedCert,
-		LastPulse:   bc.GetLastPulse(),
+		LastPulse: bc.GetLastPulse(),
+		Discovery: discovery,
 	}).Build()
 	future, err := bc.transport.SendRequestPacket(ctx, request, h)
 	if err != nil {
@@ -257,7 +272,7 @@ func (bc *Bootstrapper) sendGenesisRequest(ctx context.Context, h *host.Host) (*
 		return nil, errors.Wrapf(err, "Failed to get response to genesis request from address %s", h)
 	}
 	data := response.GetData().(*GenesisResponse)
-	if data.Discovery == nil {
+	if data.Response.Discovery == nil {
 		return nil, errors.New("Error genesis response from discovery node: " + data.Error)
 	}
 	return data, nil
@@ -284,10 +299,18 @@ func (bc *Bootstrapper) getGenesisRequestsChannel(ctx context.Context, discovery
 	result := make(chan *GenesisResponse)
 	for _, discoveryHost := range discoveryHosts {
 		go func(ctx context.Context, address *host.Host, ch chan<- *GenesisResponse) {
-			inslogger.FromContext(ctx).Infof("Sending genesis bootstrap request to address %s", address)
+			logger := inslogger.FromContext(ctx)
+			cachedReq := bc.getRequest(address.NodeID)
+			if cachedReq != nil {
+				logger.Infof("Got genesis info of node %s from cache", address)
+				ch <- &GenesisResponse{Response: *cachedReq}
+				return
+			}
+
+			logger.Infof("Sending genesis bootstrap request to address %s", address)
 			response, err := bc.sendGenesisRequest(ctx, address)
 			if err != nil {
-				inslogger.FromContext(ctx).Warnf("Discovery bootstrap to host %s failed: %s", address, err)
+				logger.Warnf("Discovery bootstrap to host %s failed: %s", address, err)
 				return
 			}
 			result <- response
@@ -330,13 +353,13 @@ func (bc *Bootstrapper) waitGenesisResults(ctx context.Context, ch <-chan *Genes
 	for {
 		select {
 		case res := <-ch:
-			discovery, err := newNode(res.Discovery)
+			discovery, err := newNode(res.Response.Discovery)
 			if err != nil {
 				return nil, nil, errors.Wrap(err, "Error deserializing node from discovery node")
 			}
 			result = append(result, discovery)
-			lastPulses = append(lastPulses, res.LastPulse)
-			inslogger.FromContext(ctx).Debugf("Node %s LastIgnoredPulse: %d", discovery.ID(), res.LastPulse)
+			lastPulses = append(lastPulses, res.Response.LastPulse)
+			inslogger.FromContext(ctx).Debugf("Node %s LastIgnoredPulse: %d", discovery.ID(), res.Response.LastPulse)
 			if len(result) == count {
 				return result, lastPulses, nil
 			}
@@ -393,27 +416,17 @@ func (bc *Bootstrapper) processBootstrap(ctx context.Context, request network.Re
 	return bc.transport.BuildResponse(ctx, request, &NodeBootstrapResponse{Code: Accepted}), nil
 }
 
-func (bc *Bootstrapper) checkGenesisCert(cert core.AuthorizationCertificate) error {
-	// TODO: check certificate
-	return nil
-}
-
 func (bc *Bootstrapper) processGenesis(ctx context.Context, request network.Request) (network.Response, error) {
 	data := request.GetData().(*GenesisRequest)
-	genesisCert, err := certificate.Deserialize(data.Certificate, platformpolicy.NewKeyProcessor())
-	if err != nil {
-		return bc.transport.BuildResponse(ctx, request, &GenesisResponse{Error: err.Error()}), nil
-	}
-	err = bc.checkGenesisCert(genesisCert)
-	if err != nil {
-		return bc.transport.BuildResponse(ctx, request, &GenesisResponse{Error: err.Error()}), nil
-	}
 	discovery, err := newNodeStruct(bc.keeper.GetOrigin())
 	if err != nil {
 		return bc.transport.BuildResponse(ctx, request, &GenesisResponse{Error: err.Error()}), nil
 	}
 	bc.SetLastPulse(data.LastPulse)
-	return bc.transport.BuildResponse(ctx, request, &GenesisResponse{Discovery: discovery, LastPulse: bc.GetLastPulse()}), nil
+	bc.setRequest(request.GetSender(), data)
+	return bc.transport.BuildResponse(ctx, request, &GenesisResponse{
+		Response: GenesisRequest{Discovery: discovery, LastPulse: bc.GetLastPulse()},
+	}), nil
 }
 
 func (bc *Bootstrapper) Start(keeper network.NodeKeeper) {
@@ -424,10 +437,11 @@ func (bc *Bootstrapper) Start(keeper network.NodeKeeper) {
 
 func NewBootstrapper(options *common.Options, certificate core.Certificate, transport network.InternalTransport) *Bootstrapper {
 	return &Bootstrapper{
-		options:       options,
-		cert:          certificate,
-		transport:     transport,
-		pinger:        pinger.NewPinger(transport),
-		bootstrapLock: make(chan struct{}),
+		options:                 options,
+		cert:                    certificate,
+		transport:               transport,
+		pinger:                  pinger.NewPinger(transport),
+		bootstrapLock:           make(chan struct{}),
+		genesisRequestsReceived: make(map[core.RecordRef]*GenesisRequest),
 	}
 }
