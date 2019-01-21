@@ -28,7 +28,7 @@ import (
 func TestGetBalance(t *testing.T) {
 	firstMember := createMember(t, "Member1")
 	firstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
-	require.NotEqual(t, 1000*1000*1000, firstBalance)
+	require.Equal(t, 1000*1000*1000, firstBalance)
 }
 
 func TestGetBalanceWrongRef(t *testing.T) {
