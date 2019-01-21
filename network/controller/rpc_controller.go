@@ -23,7 +23,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/metrics"
+	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
@@ -73,6 +75,11 @@ func init() {
 }
 
 func (rpc *RPCController) RemoteProcedureRegister(name string, method core.RemoteProcedure) {
+	_, span := instracer.StartSpan(context.Background(), "RPCController.RemoteProcedureRegister")
+	span.AddAttributes(
+		trace.StringAttribute("method", name),
+	)
+	defer span.End()
 	rpc.methodTable[name] = method
 }
 
