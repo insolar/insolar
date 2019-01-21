@@ -291,9 +291,7 @@ func (h *MessageHandler) handleGetObject(
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to fetch index from heavy")
 		}
-		err = nil
-	}
-	if err != nil {
+	} else if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch object index %s", msg.Head.Record().String())
 	}
 	// Add requested object to recent.
@@ -1206,11 +1204,11 @@ func (h *MessageHandler) isBeyondLimit(
 ) (bool, error) {
 	currentPulse, err := h.db.GetPulse(ctx, currentPN)
 	if err != nil {
-		return false, errors.Wrap(err, "failed to fetch pulse")
+		return false, errors.Wrapf(err, "failed to fetch pulse %v", currentPN)
 	}
 	targetPulse, err := h.db.GetPulse(ctx, targetPN)
 	if err != nil {
-		return false, errors.Wrap(err, "failed to fetch pulse")
+		return false, errors.Wrapf(err, "failed to fetch pulse %v", targetPN)
 	}
 
 	if currentPulse.SerialNumber-targetPulse.SerialNumber < h.conf.LightChainLimit {
