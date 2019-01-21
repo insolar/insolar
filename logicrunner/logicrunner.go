@@ -300,6 +300,9 @@ func (lr *LogicRunner) CheckOurRole(ctx context.Context, msg core.Message, role 
 }
 
 func (lr *LogicRunner) RegisterRequest(ctx context.Context, parcel core.Parcel) (*Ref, error) {
+	ctx, span := instracer.StartSpan(ctx, "LogicRunner.RegisterRequest")
+	defer span.End()
+
 	obj := parcel.Message().(message.IBaseLogicMessage).GetReference()
 	id, err := lr.ArtifactManager.RegisterRequest(ctx, obj, parcel)
 	if err != nil {
@@ -367,6 +370,12 @@ func (lr *LogicRunner) executeActual(ctx context.Context, parcel core.Parcel, ms
 		es.Unlock()
 		return nil, os.WrapError(err, "[ Execute ] can't create request")
 	}
+
+	_, span := instracer.StartSpan(ctx, "LogicRunner.QueueCall")
+
+	// Attention! Do not refactor this line if no sure. Here is no bug. Many specialists spend lots of time
+	// to write it as it is.
+	span.End()
 
 	qElement := ExecutionQueueElement{
 		ctx:     ctx,
@@ -581,6 +590,9 @@ func (lr *LogicRunner) executeOrValidate(
 ) (
 	core.Reply, error,
 ) {
+	ctx, span := instracer.StartSpan(ctx, "LogicRunner.ExecuteOrValidate")
+	defer span.End()
+
 	msg := parcel.Message().(message.IBaseLogicMessage)
 	ref := msg.GetReference()
 
@@ -822,6 +834,9 @@ func (lr *LogicRunner) getDescriptorsByObjectRef(
 ) (
 	core.ObjectDescriptor, core.ObjectDescriptor, core.CodeDescriptor, error,
 ) {
+	ctx, span := instracer.StartSpan(ctx, "LogicRunner.getDescriptorsByObjectRef")
+	defer span.End()
+
 	objDesc, err := lr.ArtifactManager.GetObject(ctx, objRef, nil, false)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "couldn't get object")

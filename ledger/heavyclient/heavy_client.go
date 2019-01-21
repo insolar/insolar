@@ -225,6 +225,11 @@ func (c *JetClient) syncloop(ctx context.Context) {
 				continue
 			}
 			// TODO: write some info to dust - 14.Dec.2018 @nordicdyno
+		} else {
+			ctx = insmetrics.InsertTag(ctx, tagJet, c.jetID.String())
+			stats.Record(ctx,
+				statSyncedPulsesCount.M(1),
+			)
 		}
 
 		finishpulse()

@@ -50,7 +50,7 @@ func init() {
 			Name:        "artifactmanager_latency",
 			Description: statLatency.Description(),
 			Measure:     statLatency,
-			Aggregation: view.Distribution(0, 25, 50, 75, 100, 200, 400, 600, 800, 1000, 2000, 4000, 6000),
+			Aggregation: view.Distribution(25, 50, 75, 100, 200, 400, 600, 800, 1000, 2000, 4000, 6000),
 			TagKeys:     commontags,
 		},
 

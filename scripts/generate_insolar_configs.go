@@ -20,7 +20,9 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"time"
 
+	"github.com/insolar/insolar/cmd/pulsewatcher/config"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/genesis"
 	"github.com/spf13/cobra"
@@ -42,6 +44,7 @@ const (
 	defaultGenesisFile          = "genesis.yaml"
 	dataDirectoryTemplate       = "scripts/insolard/nodes/%d/data"
 	certificatePathTemplate     = "scripts/insolard/nodes/%d/cert.json"
+	pulsewatcherFileName        = "pulsewatcher.yaml"
 )
 
 var (
@@ -93,6 +96,7 @@ func main() {
 	genesisConf, err := genesis.ParseGenesisConfig(genesisFile)
 	check("Can't read genesis config", err)
 
+	pwConfig := pulsewatcher.Config{}
 	insolarConfigs := make([]configuration.Configuration, 0, len(genesisConf.DiscoveryNodes))
 
 	gorundPorts := [][]string{}
@@ -123,9 +127,15 @@ func main() {
 		conf.CertificatePath = fmt.Sprintf(certificatePathTemplate, nodeIndex)
 
 		insolarConfigs = append(insolarConfigs, conf)
+
+		pwConfig.Nodes = append(pwConfig.Nodes, conf.APIRunner.Address)
 	}
 
 	writeInsolarConfigs(insolarConfigs)
 	writeGorundPorts(gorundPorts)
 
+	pwConfig.Interval = 100 * time.Millisecond
+	pwConfig.Timeout = 1 * time.Second
+	err = pulsewatcher.WriteConfig(outputDir+"/utils", pulsewatcherFileName, pwConfig)
+	check("couldn't write pulsewatcher config file", err)
 }

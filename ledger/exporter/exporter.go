@@ -88,6 +88,27 @@ func (e *Exporter) Export(ctx context.Context, fromPulse core.PulseNumber, size 
 
 	counter := 0
 	fromPulsePN := core.PulseNumber(math.Max(float64(fromPulse), float64(core.GenesisPulse.PulseNumber)))
+
+	if fromPulsePN >= currentPulse.PulseNumber {
+		fromPulsePN = currentPulse.PulseNumber
+	} else {
+		_, err = e.db.GetPulse(ctx, fromPulsePN)
+		if err != nil {
+			tryPulse, err := e.db.GetPulse(ctx, core.GenesisPulse.PulseNumber)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to fetch genesis pulse data")
+			}
+
+			for fromPulsePN > *tryPulse.Next {
+				tryPulse, err = e.db.GetPulse(ctx, *tryPulse.Next)
+				if err != nil {
+					return nil, errors.Wrap(err, "failed to iterate through first pulses")
+				}
+			}
+			fromPulsePN = *tryPulse.Next
+		}
+	}
+
 	iterPulse := &fromPulsePN
 	for iterPulse != nil && counter < size {
 		pulse, err := e.db.GetPulse(ctx, *iterPulse)
