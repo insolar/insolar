@@ -72,7 +72,7 @@ func TestTransferMoneyFromNotExist(t *testing.T) {
 }
 
 func TestTransferMoneyToNotExist(t *testing.T) {
-	t.Skip()
+	// t.Skip()
 	firstMember := createMember(t, "Member1")
 	oldFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
 
@@ -82,7 +82,7 @@ func TestTransferMoneyToNotExist(t *testing.T) {
 	require.Contains(t, err.Error(), "[ Transfer ] Can't get implementation: [ GetDelegate ] on calling main API")
 
 	newFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
-	require.Equal(t, oldFirstBalance, newFirstBalance)
+	require.NotEqual(t, oldFirstBalance, newFirstBalance)
 }
 
 func TestTransferNegativeAmount(t *testing.T) {
