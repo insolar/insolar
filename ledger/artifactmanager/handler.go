@@ -580,6 +580,7 @@ func (h *MessageHandler) handleGetChildren(
 		}
 		return reply.NewGetChildrenRedirect(h.DelegationTokenFactory, parcel, node, *currentChild)
 	}
+
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch child")
 	}
