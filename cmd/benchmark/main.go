@@ -17,6 +17,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -49,6 +50,7 @@ var (
 	saveMembersToFile  bool
 	useMembersFromFile bool
 	noCheckBalance     bool
+	delayedRun         bool
 )
 
 func parseInputParams() {
@@ -61,6 +63,7 @@ func parseInputParams() {
 	pflag.BoolVarP(&saveMembersToFile, "savemembers", "s", false, "save members to file")
 	pflag.BoolVarP(&useMembersFromFile, "usemembers", "m", false, "use members from file")
 	pflag.BoolVarP(&noCheckBalance, "nocheckbalance", "b", false, "don't check balance at the end")
+	pflag.BoolVarP(&delayedRun, "delayedrun", "d", false, "start transferring after pressing Enter ")
 	pflag.Parse()
 }
 
@@ -305,6 +308,15 @@ func main() {
 			}
 		}
 	}()
+
+	if delayedRun {
+		fmt.Println("\nPress Enter to continue ...")
+		buf := bufio.NewReader(os.Stdin)
+		_, err := buf.ReadBytes('\n')
+		if err != nil {
+			fmt.Println("Error during reading stdin: " + err.Error())
+		}
+	}
 
 	startScenario(ctx, s)
 

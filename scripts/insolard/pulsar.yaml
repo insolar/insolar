@@ -4,7 +4,7 @@ pulsar:
   storage:
     datadirectory: ./data_pulsar
     txretriesonconflict: 0
-  pulsetime: 10000
+  pulsetime: 3000
   receivingsigntimeout: 1000
   receivingnumbertimeout: 1000
   receivingvectortimeout: 1000
