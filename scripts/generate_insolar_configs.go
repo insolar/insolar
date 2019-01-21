@@ -90,10 +90,6 @@ func writeInsolarConfigs(insolarConfigs []configuration.Configuration) {
 	}
 }
 
-func writePulseWatcherConfig(config pulsewatcher.Config) {
-
-}
-
 func main() {
 	parseInputParams()
 
