@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/core"
+	core "github.com/insolar/insolar/core"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -1123,7 +1123,7 @@ type RecentStorageMockIsRecordIDCachedResult struct {
 	r bool
 }
 
-// Expect specifies that invocation of RecentStorage.IsRecordIDCached is expected from 1 to Infinity times
+//Expect specifies that invocation of RecentStorage.IsRecordIDCached is expected from 1 to Infinity times
 func (m *mRecentStorageMockIsRecordIDCached) Expect(p core.RecordID) *mRecentStorageMockIsRecordIDCached {
 	m.mock.IsRecordIDCachedFunc = nil
 	m.expectationSeries = nil
@@ -1135,7 +1135,7 @@ func (m *mRecentStorageMockIsRecordIDCached) Expect(p core.RecordID) *mRecentSto
 	return m
 }
 
-// Return specifies results of invocation of RecentStorage.IsRecordIDCached
+//Return specifies results of invocation of RecentStorage.IsRecordIDCached
 func (m *mRecentStorageMockIsRecordIDCached) Return(r bool) *RecentStorageMock {
 	m.mock.IsRecordIDCachedFunc = nil
 	m.expectationSeries = nil
@@ -1147,7 +1147,7 @@ func (m *mRecentStorageMockIsRecordIDCached) Return(r bool) *RecentStorageMock {
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of RecentStorage.IsRecordIDCached is expected once
+//ExpectOnce specifies that invocation of RecentStorage.IsRecordIDCached is expected once
 func (m *mRecentStorageMockIsRecordIDCached) ExpectOnce(p core.RecordID) *RecentStorageMockIsRecordIDCachedExpectation {
 	m.mock.IsRecordIDCachedFunc = nil
 	m.mainExpectation = nil
@@ -1162,7 +1162,7 @@ func (e *RecentStorageMockIsRecordIDCachedExpectation) Return(r bool) {
 	e.result = &RecentStorageMockIsRecordIDCachedResult{r}
 }
 
-// Set uses given function f as a mock of RecentStorage.IsRecordIDCached method
+//Set uses given function f as a mock of RecentStorage.IsRecordIDCached method
 func (m *mRecentStorageMockIsRecordIDCached) Set(f func(p core.RecordID) (r bool)) *RecentStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -1171,7 +1171,7 @@ func (m *mRecentStorageMockIsRecordIDCached) Set(f func(p core.RecordID) (r bool
 	return m.mock
 }
 
-// IsRecordIDCached implements github.com/insolar/insolar/ledger/recentstorage.RecentStorage interface
+//IsRecordIDCached implements github.com/insolar/insolar/ledger/recentstorage.RecentStorage interface
 func (m *RecentStorageMock) IsRecordIDCached(p core.RecordID) (r bool) {
 	counter := atomic.AddUint64(&m.IsRecordIDCachedPreCounter, 1)
 	defer atomic.AddUint64(&m.IsRecordIDCachedCounter, 1)
@@ -1221,17 +1221,17 @@ func (m *RecentStorageMock) IsRecordIDCached(p core.RecordID) (r bool) {
 	return m.IsRecordIDCachedFunc(p)
 }
 
-// IsRecordIDCachedMinimockCounter returns a count of RecentStorageMock.IsRecordIDCachedFunc invocations
+//IsRecordIDCachedMinimockCounter returns a count of RecentStorageMock.IsRecordIDCachedFunc invocations
 func (m *RecentStorageMock) IsRecordIDCachedMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.IsRecordIDCachedCounter)
 }
 
-// IsRecordIDCachedMinimockPreCounter returns the value of RecentStorageMock.IsRecordIDCached invocations
+//IsRecordIDCachedMinimockPreCounter returns the value of RecentStorageMock.IsRecordIDCached invocations
 func (m *RecentStorageMock) IsRecordIDCachedMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.IsRecordIDCachedPreCounter)
 }
 
-// IsRecordIDCachedFinished returns true if mock invocations count is ok
+//IsRecordIDCachedFinished returns true if mock invocations count is ok
 func (m *RecentStorageMock) IsRecordIDCachedFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.IsRecordIDCachedMock.expectationSeries) > 0 {
