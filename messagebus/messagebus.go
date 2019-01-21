@@ -22,13 +22,11 @@ import (
 	"encoding/gob"
 	"fmt"
 	"io"
+	"strconv"
 	"sync"
 	"time"
 
 	"github.com/insolar/insolar/core/utils"
-
-	"github.com/pkg/errors"
-	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
@@ -38,6 +36,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/metrics"
+	"github.com/pkg/errors"
 )
 
 const deliverRPCMethodName = "MessageBus.Deliver"
@@ -140,6 +139,9 @@ func (mb *MessageBus) MustRegister(p core.MessageType, handler core.MessageHandl
 
 // Send an `Message` and get a `Value` or error from remote host.
 func (mb *MessageBus) Send(ctx context.Context, msg core.Message, ops *core.MessageSendOptions) (core.Reply, error) {
+	ctx, span := instracer.StartSpan(ctx, "MessageBus.Send "+msg.Type().String())
+	defer span.End()
+
 	currentPulse, err := mb.PulseStorage.Current(ctx)
 	fmt.Println("[mb.send] ", currentPulse.PulseNumber)
 	if err != nil {
@@ -151,13 +153,7 @@ func (mb *MessageBus) Send(ctx context.Context, msg core.Message, ops *core.Mess
 		return nil, err
 	}
 
-	ctx, span := instracer.StartSpan(ctx, "MessageBus.Send mb.SendParcel")
-	span.AddAttributes(
-		trace.StringAttribute("msgType", msg.Type().String()),
-		trace.Int64Attribute("parcel.DefaultRole", int64(parcel.DefaultRole())),
-	)
 	rep, err := mb.SendParcel(ctx, parcel, *currentPulse, ops)
-	span.End()
 	return rep, err
 }
 
@@ -173,6 +169,9 @@ func (mb *MessageBus) SendParcel(
 	currentPulse core.Pulse,
 	options *core.MessageSendOptions,
 ) (core.Reply, error) {
+	ctx, span := instracer.StartSpan(ctx, "MessageBus.SendParcel "+parcel.Type().String())
+	defer span.End()
+
 	readBarrier(ctx, &mb.globalLock)
 
 	var (
@@ -246,6 +245,8 @@ func (mb *MessageBus) OnPulse(context.Context, core.Pulse) error {
 func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Reply, error) {
 
 	var err error
+	ctx, span := instracer.StartSpan(ctx, "MessageBus.doDeliver")
+	defer span.End()
 	if err = mb.checkPulse(ctx, msg, false); err != nil {
 		return nil, errors.Wrap(err, "[ doDeliver ] error in checkPulse")
 	}
@@ -285,6 +286,9 @@ func (mb *MessageBus) checkPulse(ctx context.Context, parcel core.Parcel, locked
 		return errors.Wrap(err, "[ checkPulse ] Couldn't get current pulse number")
 	}
 
+	ctx, span := instracer.StartSpan(ctx, "MessageBus.checkPulse")
+	defer span.End()
+
 	// TODO: check if parcel.Pulse() == pulse.NextPulseNumber
 	if parcel.Pulse() > pulse.PulseNumber {
 		inslogger.FromContext(ctx).Debug(
@@ -308,7 +312,10 @@ func (mb *MessageBus) checkPulse(ctx context.Context, parcel core.Parcel, locked
 		inslogger.FromContext(ctx).Debug("rechecking pulse after lock, pulse: ", pulse.PulseNumber)
 		if parcel.Pulse() > pulse.PulseNumber {
 			inslogger.FromContext(ctx).Debug("still in future")
+			_, span := instracer.StartSpan(ctx, "MessageBus.checkPulse waiting: current: "+
+				strconv.Itoa(int(pulse.PulseNumber))+" parcel: "+strconv.Itoa(int(parcel.Pulse())))
 			<-mb.NextPulseMessagePoolChan
+			span.End()
 			pulse, err = mb.PulseStorage.Current(ctx)
 			if err != nil {
 				mb.NextPulseMessagePoolLock.RUnlock()
@@ -374,7 +381,7 @@ func (mb *MessageBus) deliver(ctx context.Context, args [][]byte) (result []byte
 
 	mb.globalLock.RLock()
 
-	if err = mb.checkPulse(ctx, parcel, true); err != nil {
+	if err = mb.checkPulse(parcelCtx, parcel, true); err != nil {
 		mb.globalLock.RUnlock()
 		return nil, err
 	}

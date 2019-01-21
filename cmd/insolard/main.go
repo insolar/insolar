@@ -123,7 +123,8 @@ func main() {
 			certManager.GetCertificate().GetRole().String(),
 			certManager.GetCertificate().GetNodeRef().String(),
 			jconf.AgentEndpoint,
-			jconf.CollectorEndpoint)
+			jconf.CollectorEndpoint,
+			jconf.ProbabilityRate)
 		ctx = instracer.SetBaggage(ctx, instracer.Entry{Key: "traceid", Value: traceID})
 	}
 	defer jaegerflush()

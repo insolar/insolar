@@ -84,7 +84,6 @@ func recoverRPC(err *error) {
 // GetCode is an RPC retrieving a code by its reference
 func (gpr *RPC) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp) (err error) {
 	defer recoverRPC(&err)
-
 	os := gpr.lr.MustObjectState(req.Callee)
 	es := os.MustModeState(req.Mode)
 	ctx := es.Current.Context
@@ -94,9 +93,10 @@ func (gpr *RPC) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp
 
 	am := gpr.lr.ArtifactManager
 
-	ctx, span := instracer.StartSpan(ctx, "service.GetCode am.GetCode")
+	ctx, span := instracer.StartSpan(ctx, "service.GetCode")
+	defer span.End()
+
 	codeDescriptor, err := am.GetCode(ctx, req.Code)
-	span.End()
 	if err != nil {
 		return err
 	}

@@ -23,21 +23,18 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/insolar/insolar/metrics"
-
-	"go.opencensus.io/trace"
-
-	"github.com/insolar/insolar/instrumentation/instracer"
-
+  "github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/application/extractor"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/core/utils"
 	"github.com/insolar/insolar/platformpolicy"
-
+  "github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/api/seedmanager"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/pkg/errors"
+
+  "github.com/pkg/errors"
+	"go.opencensus.io/trace"
 )
 
 var scheme = platformpolicy.NewPlatformCryptographyScheme()
@@ -117,30 +114,26 @@ func (ar *Runner) checkSeed(paramsSeed []byte) error {
 }
 
 func (ar *Runner) makeCall(ctx context.Context, params Request) (interface{}, error) {
+	ctx, span := instracer.StartSpan(ctx, "SendRequest "+params.Method)
+	defer span.End()
+
 	reference, err := core.NewRefFromBase58(params.Reference)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ makeCall ] failed to parse params.Reference")
 	}
 
-	ctx, reqspan := instracer.StartSpan(ctx, "makeCall SendRequest")
-	reqspan.AddAttributes(
-		trace.StringAttribute("method", params.Method),
-	)
 	res, err := ar.ContractRequester.SendRequest(
 		ctx,
 		reference,
 		"Call",
 		[]interface{}{*ar.CertificateManager.GetCertificate().GetRootDomainReference(), params.Method, params.Params, params.Seed, params.Signature},
 	)
-	reqspan.End()
 
 	if err != nil {
 		return nil, errors.Wrap(err, "[ makeCall ] Can't send request")
 	}
 
-	_, callspan := instracer.StartSpan(ctx, "makeCall CallResponse")
 	result, contractErr, err := extractor.CallResponse(res.(*reply.CallMethod).Result)
-	callspan.End()
 
 	if err != nil {
 		return nil, errors.Wrap(err, "[ makeCall ] Can't extract response")
@@ -163,8 +156,8 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 		traceID := utils.RandTraceID()
 		ctx, insLog := inslogger.WithTraceField(context.Background(), traceID)
 
-		ctx, rpcspan := instracer.StartSpan(ctx, "NetRPC Request Processing")
-		defer rpcspan.End()
+		ctx, span := instracer.StartSpan(ctx, "callHandler")
+		defer span.End()
 
 		params := Request{}
 		resp := answer{}
@@ -180,7 +173,7 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 
 		resp.TraceID = traceID
 
-		insLog.Info("[ callHandler ] Incoming request: %s", req.RequestURI)
+		insLog.Infof("[ callHandler ] Incoming request: %s", req.RequestURI)
 
 		defer func() {
 			res, err := json.MarshalIndent(resp, "", "    ")
@@ -211,9 +204,6 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 			processError(err, "Can't verify signature", &resp, insLog)
 			return
 		}
-
-		ctx, callspan := instracer.StartSpan(ctx, "callHandler makeCall")
-		defer callspan.End()
 
 		var result interface{}
 		ch := make(chan interface{}, 1)
