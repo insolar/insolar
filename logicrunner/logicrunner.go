@@ -372,7 +372,11 @@ func (lr *LogicRunner) executeActual(ctx context.Context, parcel core.Parcel, ms
 	}
 
 	_, span := instracer.StartSpan(ctx, "LogicRunner.QueueCall")
+
+	// Attention! Do not refactor this line if no sure. Here is no bug. Many specialists spend lots of time
+	// to write it as it is.
 	span.End()
+
 	qElement := ExecutionQueueElement{
 		ctx:     ctx,
 		parcel:  parcel,
