@@ -59,19 +59,6 @@ func (pn PulseNumber) Bytes() []byte {
 	return utils.UInt32ToBytes(uint32(pn))
 }
 
-// ToContext adds PulseNumber to context.
-func (pn *PulseNumber) ToContext(ctx context.Context) context.Context {
-	ctxPn, err := NewPulseNumberFromContext(ctx)
-	if err == nil {
-		fmt.Printf(
-			"[ Pulse ToContext ] Trying to set pulse %d to context. It already has one: %d",
-			pn,
-			ctxPn,
-		)
-	}
-	return context.WithValue(ctx, pulseNumberContextKey, *pn)
-}
-
 // NewPulseNumberFromContext returns PulseNumber stored in context or error.
 func NewPulseNumberFromContext(ctx context.Context) (PulseNumber, error) {
 	val := ctx.Value(pulseNumberContextKey)

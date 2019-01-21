@@ -272,7 +272,6 @@ func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Repl
 	// TODO: sergey.morozov 2018-12-21 there is potential race condition because of readBarrier. We must implement correct locking.
 
 	msgPulse := msg.Pulse()
-	ctx = msgPulse.ToContext(ctx)
 	resp, err := handler(ctx, msg)
 	if err != nil {
 		return nil, &serializableError{

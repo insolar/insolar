@@ -18,11 +18,9 @@ package storage
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 )
 
@@ -40,21 +38,12 @@ func NewPulseStorage(db *DB) *PulseStorage {
 
 // Current returns current pulse of the system
 func (ps *PulseStorage) Current(ctx context.Context) (*core.Pulse, error) {
-	pulse, err := ps.pulseFromContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-	if pulse != nil {
-		fmt.Println("*********FROMCTX Err is nil. Pulse is: ", pulse)
-		return pulse, nil
-	}
-
 	currentPulse := ps.getCachedPulse()
 	if currentPulse != nil {
 		return currentPulse, nil
 	}
 
-	currentPulse, err = ps.reloadPulse(ctx)
+	currentPulse, err := ps.reloadPulse(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -82,36 +71,6 @@ func (ps *PulseStorage) reloadPulse(ctx context.Context) (*core.Pulse, error) {
 	}
 
 	return ps.currentPulse, nil
-}
-
-func (ps *PulseStorage) pulseFromContext(ctx context.Context) (*core.Pulse, error) {
-	pulseNumber, err := core.NewPulseNumberFromContext(ctx)
-	if err != nil {
-		if err == core.ErrNoPulseInContext {
-			return nil, nil
-		}
-		return nil, err
-	}
-
-	currentPulse := ps.getCachedPulse()
-	inslogger.FromContext(ctx).Debugf("[ PulseStorage.pulseFromContext ] Getting pulse %d from context", pulseNumber)
-	if currentPulse != nil {
-		if currentPulse.PulseNumber == pulseNumber {
-			return currentPulse, nil
-		}
-		inslogger.FromContext(ctx).Warnf(
-			"[ PulseStorage.pulseFromContext ] Current pulse (%d) differs from context pulse (%d)",
-			currentPulse.PulseNumber,
-			pulseNumber,
-		)
-	}
-
-	pulse, err := ps.db.GetPulse(ctx, pulseNumber)
-	if err != nil {
-		return nil, errors.Wrapf(err, "[ PulseStorage.pulseFromContext ] Can't GetPulse %d from context", pulseNumber)
-	}
-
-	return &pulse.Pulse, nil
 }
 
 func (ps *PulseStorage) Set(pulse *core.Pulse) {
