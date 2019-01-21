@@ -37,7 +37,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const sendRetryCount = 20
+const sendRetryCount = 3
 
 type postParams map[string]interface{}
 
@@ -213,14 +213,14 @@ func signedRequest(user *user, method string, params ...interface{}) (interface{
 		if strings.Contains(resp.Error, "Incorrect message pulse") {
 			fmt.Printf("Incorrect message pulse, retry (error - %s)\n", resp.Error)
 			fmt.Printf("Method: %s\n", method)
-			time.Sleep(time.Second * 3)
+			time.Sleep(time.Second)
 			continue
 		}
 
 		if strings.Contains(resp.Error, "Messagebus timeout exceeded") {
 			fmt.Println("Messagebus timeout exceeded, retry")
 			fmt.Printf("Method: %s\n", method)
-			time.Sleep(time.Second * 3)
+			time.Sleep(time.Second)
 			continue
 		}
 
@@ -228,7 +228,7 @@ func signedRequest(user *user, method string, params ...interface{}) (interface{
 		if netErr, ok := errors.Cause(err).(net.Error); ok && netErr.Timeout() {
 			fmt.Println("Timeout, retry")
 			fmt.Printf("Method: %s\n", method)
-			time.Sleep(time.Second * 3)
+			time.Sleep(time.Second)
 			continue
 		}
 
