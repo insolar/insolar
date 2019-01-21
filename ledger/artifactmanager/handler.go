@@ -57,6 +57,7 @@ type MessageHandler struct {
 	replayHandlers map[core.MessageType]core.MessageHandler
 	conf           *configuration.Ledger
 	middleware     *middleware
+	isHeavy        bool
 }
 
 // NewMessageHandler creates new handler.
@@ -83,7 +84,7 @@ func instrumentHandler(name string, handler core.MessageHandler) core.MessageHan
 		code := "2xx"
 		ctx = insmetrics.InsertTag(ctx, tagMethod, name)
 
-		reply, err := handler(ctx, p)
+		repl, err := handler(ctx, p)
 
 		latency := time.Since(start)
 		if err != nil {
@@ -99,7 +100,7 @@ func instrumentHandler(name string, handler core.MessageHandler) core.MessageHan
 		)
 		stats.Record(ctx, statCalls.M(1), statLatency.M(latency.Nanoseconds()/1e6))
 
-		return reply, err
+		return repl, err
 	}
 }
 
@@ -108,13 +109,15 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 	m := newMiddleware(h.conf, h.db, h)
 	h.middleware = m
 
+	h.isHeavy = h.certificate.GetRole() == core.StaticRoleHeavyMaterial
+
 	// core.StaticRoleUnknown - genesis
 	if h.certificate.GetRole() == core.StaticRoleLightMaterial || h.certificate.GetRole() == core.StaticRoleUnknown {
 		h.setHandlersForLight(m)
 		h.setReplayHandlers(m)
 	}
 
-	if h.certificate.GetRole() == core.StaticRoleHeavyMaterial {
+	if h.isHeavy {
 		h.setHandlersForHeavy(m)
 	}
 
@@ -191,7 +194,7 @@ func (h *MessageHandler) handleSetRecord(ctx context.Context, parcel core.Parcel
 
 	id := record.NewRecordIDFromRecord(h.PlatformCryptographyScheme, parcel.Pulse(), rec)
 
-	if h.certificate.GetRole() != core.StaticRoleHeavyMaterial {
+	if !h.isHeavy {
 		recentStorage := h.RecentStorageProvider.GetStorage(jetID)
 		if request, ok := rec.(record.Request); ok {
 			recentStorage.AddPendingRequest(request.GetObject(), *id)
@@ -276,7 +279,7 @@ func (h *MessageHandler) handleGetObject(
 	// Fetch object index. If not found redirect.
 	idx, err := h.db.GetObjectIndex(ctx, jetID, msg.Head.Record(), false)
 	if err == storage.ErrNotFound {
-		if h.certificate.GetRole() == core.StaticRoleHeavyMaterial {
+		if h.isHeavy {
 			return nil, fmt.Errorf("failed to fetch index for %s", msg.Head.Record().String())
 		}
 
@@ -297,7 +300,7 @@ func (h *MessageHandler) handleGetObject(
 		return nil, errors.Wrapf(err, "failed to fetch object index %s", msg.Head.Record().String())
 	} else {
 		// Add requested object to recent.
-		if h.certificate.GetRole() != core.StaticRoleHeavyMaterial {
+		if !h.isHeavy {
 			h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Head.Record())
 		}
 	}
@@ -318,7 +321,7 @@ func (h *MessageHandler) handleGetObject(
 	}
 
 	var stateJet *core.RecordID
-	if h.certificate.GetRole() == core.StaticRoleHeavyMaterial {
+	if h.isHeavy {
 		stateJet = &jetID
 	} else {
 		var actual bool
@@ -358,7 +361,7 @@ func (h *MessageHandler) handleGetObject(
 	// Fetch state record.
 	rec, err := h.db.GetRecord(ctx, *stateJet, stateID)
 	if err == storage.ErrNotFound {
-		if h.certificate.GetRole() == core.StaticRoleHeavyMaterial {
+		if h.isHeavy {
 			return nil, fmt.Errorf("failed to fetch state for %v. jet: %v, state: %v", msg.Head.Record(), stateJet.JetIDString(), stateID.DebugString())
 		}
 		// The record wasn't found on the current node. Return redirect to the node that contains it.
@@ -453,7 +456,7 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel core.Parc
 
 	idx, err := h.db.GetObjectIndex(ctx, jetID, msg.Head.Record(), false)
 	if err == storage.ErrNotFound {
-		if h.certificate.GetRole() == core.StaticRoleHeavyMaterial {
+		if h.isHeavy {
 			return nil, fmt.Errorf("failed to fetch index for %v", msg.Head.Record())
 		}
 
@@ -468,7 +471,7 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel core.Parc
 	} else if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	} else {
-		if h.certificate.GetRole() != core.StaticRoleHeavyMaterial {
+		if !h.isHeavy {
 			h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Head.Record())
 		}
 	}
@@ -496,7 +499,7 @@ func (h *MessageHandler) handleGetChildren(
 
 	idx, err := h.db.GetObjectIndex(ctx, jetID, msg.Parent.Record(), false)
 	if err == storage.ErrNotFound {
-		if h.certificate.GetRole() == core.StaticRoleHeavyMaterial {
+		if h.isHeavy {
 			return nil, fmt.Errorf("failed to fetch index for %v", msg.Parent.Record())
 		}
 
@@ -515,7 +518,7 @@ func (h *MessageHandler) handleGetChildren(
 		fmt.Println("handleGetChildren: failed to fetch object index, error - ", err)
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	} else {
-		if h.certificate.GetRole() != core.StaticRoleHeavyMaterial {
+		if !h.isHeavy {
 			h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Parent.Record())
 		}
 	}
@@ -538,7 +541,7 @@ func (h *MessageHandler) handleGetChildren(
 	}
 
 	var childJet *core.RecordID
-	if h.certificate.GetRole() == core.StaticRoleHeavyMaterial {
+	if h.isHeavy {
 		childJet = &jetID
 	} else {
 		var actual bool
@@ -571,7 +574,7 @@ func (h *MessageHandler) handleGetChildren(
 	// Try to fetch the first child.
 	_, err = h.db.GetRecord(ctx, *childJet, currentChild)
 	if err == storage.ErrNotFound {
-		if h.certificate.GetRole() == core.StaticRoleHeavyMaterial {
+		if h.isHeavy {
 			return nil, fmt.Errorf("failed to fetch child for %v. jet: %v, state: %v", msg.Parent.Record(), childJet.JetIDString(), currentChild.DebugString())
 		}
 		node, err := h.nodeForJet(ctx, *childJet, parcel.Pulse(), currentChild.Pulse())
@@ -673,7 +676,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 		} else if err != nil {
 			return err
 		} else {
-			if h.certificate.GetRole() != core.StaticRoleHeavyMaterial {
+			if !h.isHeavy {
 				h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Object.Record())
 			}
 		}
@@ -745,7 +748,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel core.Pa
 		} else if err != nil {
 			return err
 		} else {
-			if h.certificate.GetRole() != core.StaticRoleHeavyMaterial {
+			if !h.isHeavy {
 				h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Parent.Record())
 			}
 		}
@@ -775,7 +778,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel core.Pa
 		return nil, err
 	}
 
-	if h.certificate.GetRole() != core.StaticRoleHeavyMaterial {
+	if !h.isHeavy {
 		h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Parent.Record())
 	}
 
