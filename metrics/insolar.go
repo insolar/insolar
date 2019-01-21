@@ -31,5 +31,7 @@ func GetInsolarRegistry() *prometheus.Registry {
 
 	registry.MustRegister(GopluginContractExecutionTime)
 
+	registry.MustRegister(APIContractExecutionTime)
+
 	return registry
 }
