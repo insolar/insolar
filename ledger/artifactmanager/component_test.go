@@ -28,6 +28,7 @@ import (
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/testmessagebus"
 	"github.com/stretchr/testify/assert"
@@ -67,9 +68,14 @@ func TestLedgerArtifactManager_PendingRequest(t *testing.T) {
 	am.PlatformCryptographyScheme = cs
 	am.DefaultBus = mb
 	provider := storage.NewRecentStorageProvider(0)
+
+	cryptoScheme := platformpolicy.NewPlatformCryptographyScheme()
+
 	handler := NewMessageHandler(db, &configuration.Ledger{
 		LightChainLimit: 10,
 	}, certificate)
+
+	handler.PlatformCryptographyScheme = cryptoScheme
 	handler.Bus = mb
 	// handler.JetCoordinator = jc
 	handler.RecentStorageProvider = provider
