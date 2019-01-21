@@ -48,6 +48,7 @@ var (
 	logLevel           string
 	saveMembersToFile  bool
 	useMembersFromFile bool
+	noCheckBalance     bool
 )
 
 func parseInputParams() {
@@ -59,6 +60,7 @@ func parseInputParams() {
 	pflag.StringVarP(&logLevel, "loglevel", "l", "info", "log level for benchmark")
 	pflag.BoolVarP(&saveMembersToFile, "savemembers", "s", false, "save members to file")
 	pflag.BoolVarP(&useMembersFromFile, "usemembers", "m", false, "use members from file")
+	pflag.BoolVarP(&noCheckBalance, "nocheckbalance", "b", false, "don't check balance at the end")
 	pflag.Parse()
 }
 
@@ -310,19 +312,21 @@ func main() {
 	t = time.Now()
 	fmt.Printf("\nFinish: %s\n\n", t.String())
 
-	totalBalanceAfter := uint64(0)
-	for nretries := 0; nretries < 3; nretries++ {
-		totalBalanceAfter = getTotalBalance(insSDK, members)
-		if totalBalanceAfter == totalBalanceBefore {
-			break
-		}
-		fmt.Printf("Total balance before and after don't match: %v vs %v - retrying in 3 seconds...\n",
-			totalBalanceBefore, totalBalanceAfter)
-		time.Sleep(3 * time.Second)
+	if !noCheckBalance {
+		totalBalanceAfter := uint64(0)
+		for nretries := 0; nretries < 3; nretries++ {
+			totalBalanceAfter = getTotalBalance(insSDK, members)
+			if totalBalanceAfter == totalBalanceBefore {
+				break
+			}
+			fmt.Printf("Total balance before and after don't match: %v vs %v - retrying in 3 seconds...\n",
+				totalBalanceBefore, totalBalanceAfter)
+			time.Sleep(3 * time.Second)
 
-	}
-	fmt.Printf("Total balance before: %v and after: %v\n", totalBalanceBefore, totalBalanceAfter)
-	if totalBalanceBefore != totalBalanceAfter {
-		log.Fatal("Total balance mismatch!\n")
+		}
+		fmt.Printf("Total balance before: %v and after: %v\n", totalBalanceBefore, totalBalanceAfter)
+		if totalBalanceBefore != totalBalanceAfter {
+			log.Fatal("Total balance mismatch!\n")
+		}
 	}
 }
