@@ -949,10 +949,6 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 						},
 					)
 				}
-
-				if es.Current == nil && len(es.Queue) == 0 {
-					state.ExecutionState = nil
-				}
 			} else {
 				if es.Current != nil {
 					// no pending should be as we are executing
