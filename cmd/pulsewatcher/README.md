@@ -13,7 +13,7 @@ Usage
 
 #### Start pulsewatcher
 
-    ./bin/benchmark -c scripts/insolard/configs/generated_configs/utils/pulsewatcher.yaml
+    ./bin/pulsewatcher -c scripts/insolard/configs/generated_configs/utils/pulsewatcher.yaml
 
 ### Options
 
