@@ -371,6 +371,8 @@ func (lr *LogicRunner) executeActual(ctx context.Context, parcel core.Parcel, ms
 		return nil, os.WrapError(err, "[ Execute ] can't create request")
 	}
 
+	_, span := instracer.StartSpan(ctx, "LogicRunner.QueueCall")
+	span.End()
 	qElement := ExecutionQueueElement{
 		ctx:     ctx,
 		parcel:  parcel,
@@ -584,6 +586,9 @@ func (lr *LogicRunner) executeOrValidate(
 ) (
 	core.Reply, error,
 ) {
+	ctx, span := instracer.StartSpan(ctx, "LogicRunner.ExecuteOrValidate")
+	defer span.End()
+
 	msg := parcel.Message().(message.IBaseLogicMessage)
 	ref := msg.GetReference()
 
