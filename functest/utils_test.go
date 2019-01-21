@@ -210,13 +210,15 @@ func signedRequest(user *user, method string, params ...interface{}) (interface{
 			return resp.Result, nil
 		}
 		if strings.Contains(resp.Error, "Incorrect message pulse") {
-			fmt.Println("Incorrect message pulse, retry")
+			fmt.Printf("Incorrect message pulse, retry (error - %s)\n", resp.Error)
+			fmt.Printf("Method: %s\n", method)
 			time.Sleep(time.Second * 3)
 			continue
 		}
 
 		if strings.Contains(resp.Error, "Messagebus timeout exceeded") {
 			fmt.Println("Messagebus timeout exceeded, retry")
+			fmt.Printf("Method: %s\n", method)
 			time.Sleep(time.Second * 3)
 			continue
 		}
@@ -224,6 +226,7 @@ func signedRequest(user *user, method string, params ...interface{}) (interface{
 		err = errors.New(resp.Error)
 		if netErr, ok := errors.Cause(err).(net.Error); ok && netErr.Timeout() {
 			fmt.Println("Timeout, retry")
+			fmt.Printf("Method: %s\n", method)
 			time.Sleep(time.Second * 3)
 			continue
 		}
