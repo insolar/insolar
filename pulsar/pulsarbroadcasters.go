@@ -22,11 +22,15 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
 )
 
 func (currentPulsar *Pulsar) broadcastSignatureOfEntropy(ctx context.Context) {
 	logger := inslogger.FromContext(ctx)
+	ctx, span := instracer.StartSpan(ctx, "Pulsar.broadcastSignatureOfEntropy")
+	defer span.End()
+
 	logger.Debug("[broadcastSignatureOfEntropy]")
 	if currentPulsar.IsStateFailed() {
 		return
@@ -57,6 +61,9 @@ func (currentPulsar *Pulsar) broadcastSignatureOfEntropy(ctx context.Context) {
 
 func (currentPulsar *Pulsar) broadcastVector(ctx context.Context) {
 	logger := inslogger.FromContext(ctx)
+	ctx, span := instracer.StartSpan(ctx, "Pulsar.broadcastVector")
+	defer span.End()
+
 	logger.Debug("[broadcastVector]")
 	if currentPulsar.IsStateFailed() {
 		return
@@ -85,6 +92,9 @@ func (currentPulsar *Pulsar) broadcastVector(ctx context.Context) {
 
 func (currentPulsar *Pulsar) broadcastEntropy(ctx context.Context) {
 	logger := inslogger.FromContext(ctx)
+	ctx, span := instracer.StartSpan(ctx, "Pulsar.broadcastEntropy")
+	defer span.End()
+
 	logger.Debug("[broadcastEntropy]")
 	if currentPulsar.IsStateFailed() {
 		return
@@ -113,6 +123,9 @@ func (currentPulsar *Pulsar) broadcastEntropy(ctx context.Context) {
 
 func (currentPulsar *Pulsar) sendPulseToPulsars(ctx context.Context, pulse core.Pulse) {
 	logger := inslogger.FromContext(ctx)
+	ctx, span := instracer.StartSpan(ctx, "Pulsar.sendPulseToPulsars")
+	defer span.End()
+
 	logger.Debug("[sendPulseToPulsars]")
 	if currentPulsar.IsStateFailed() {
 		return
@@ -141,6 +154,9 @@ func (currentPulsar *Pulsar) sendPulseToPulsars(ctx context.Context, pulse core.
 
 func (currentPulsar *Pulsar) sendVector(ctx context.Context) {
 	inslogger.FromContext(ctx).Debug("[sendVector]")
+	ctx, span := instracer.StartSpan(ctx, "Pulsar.sendVector")
+	defer span.End()
+
 	if currentPulsar.IsStateFailed() {
 		return
 	}
@@ -158,6 +174,9 @@ func (currentPulsar *Pulsar) sendVector(ctx context.Context) {
 
 func (currentPulsar *Pulsar) sendEntropy(ctx context.Context) {
 	inslogger.FromContext(ctx).Debug("[sendEntropy]")
+	ctx, span := instracer.StartSpan(ctx, "Pulsar.sendEntropy")
+	defer span.End()
+
 	if currentPulsar.IsStateFailed() {
 		return
 	}
@@ -174,6 +193,9 @@ func (currentPulsar *Pulsar) sendEntropy(ctx context.Context) {
 
 func (currentPulsar *Pulsar) sendPulseSign(ctx context.Context) {
 	inslogger.FromContext(ctx).Debug("[sendPulseSign]")
+	ctx, span := instracer.StartSpan(ctx, "Pulsar.sendPulseSign")
+	defer span.End()
+
 	if currentPulsar.IsStateFailed() {
 		return
 	}
@@ -225,6 +247,9 @@ func (currentPulsar *Pulsar) sendPulseSign(ctx context.Context) {
 
 func (currentPulsar *Pulsar) sendPulseToNodesAndPulsars(ctx context.Context) {
 	logger := inslogger.FromContext(ctx)
+	ctx, span := instracer.StartSpan(ctx, "Pulsar.sendPulseToNodesAndPulsars")
+	defer span.End()
+
 	logger.Debug("[sendPulseToNodesAndPulsars]. Pulse - %v", time.Now())
 
 	if currentPulsar.IsStateFailed() {
