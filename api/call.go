@@ -23,6 +23,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/insolar/insolar/metrics"
+
 	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/instrumentation/instracer"
@@ -166,6 +168,15 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 
 		params := Request{}
 		resp := answer{}
+
+		startTime := time.Now()
+		defer func() {
+			success := "success"
+			if resp.Error != "" {
+				success = "fail"
+			}
+			metrics.APIContractExecutionTime.WithLabelValues(params.Method, success).Observe(time.Since(startTime).Seconds())
+		}()
 
 		resp.TraceID = traceID
 
