@@ -108,7 +108,7 @@ create_required_dirs()
 
 generate_insolard_configs()
 {
-    go run scripts/generate_insolar_configs.go -o $GENERATED_CONFIGS_DIR -p $INSGORUND_PORT_FILE -g $GENESIS_CONFIG
+    go run scripts/generate_insolar_configs.go -o $GENERATED_CONFIGS_DIR -p $INSGORUND_PORT_FILE -g $GENESIS_CONFIG -t $BASE_DIR/pulsar_template.yaml
 }
 
 prepare()
@@ -274,7 +274,7 @@ check_working_dir
 process_input_params $@
 
 printf "start pulsar ... \n"
-$PULSARD -c $BASE_DIR/pulsar.yaml &> $NODES_DATA/pulsar_output.log &
+$PULSARD -c $GENERATED_CONFIGS_DIR/pulsar.yaml &> $NODES_DATA/pulsar_output.log &
 
 if [ "$run_insgorund" == "true" ]
 then
