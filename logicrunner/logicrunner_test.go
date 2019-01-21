@@ -132,6 +132,7 @@ func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *gop
 			MessageBus:  mb,
 			Network:     nw,
 		},
+		false,
 	)
 
 	providerMock := recentstorage.NewProviderMock(t)

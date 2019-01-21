@@ -44,7 +44,7 @@ import (
 // TmpLedger crteates ledger on top of temporary database.
 // Returns *ledger.Ledger and cleanup function.
 // FIXME: THIS METHOD IS DEPRECATED. USE MOCKS.
-func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Components) (*ledger.Ledger, func()) {
+func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Components, closeJets bool) (*ledger.Ledger, func()) {
 	log.Warn("TmpLedger is deprecated. Use mocks.")
 
 	pcs := platformpolicy.NewPlatformCryptographyScheme()
@@ -132,7 +132,9 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 		panic(err)
 	}
 
-	handler.CloseEarlyRequestCircuitBreakerForJet(ctx, *jet.NewID(0, nil))
+	if closeJets {
+		handler.CloseEarlyRequestCircuitBreakerForJet(ctx, *jet.NewID(0, nil))
+	}
 
 	// Create ledger.
 	l := ledger.NewTestLedger(db, am, pm, jc, ls)

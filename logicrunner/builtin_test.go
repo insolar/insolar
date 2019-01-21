@@ -81,6 +81,7 @@ func TestBareHelloworld(t *testing.T) {
 			NodeNetwork: nk,
 			MessageBus:  mb,
 		},
+		true,
 	)
 	defer cleaner()
 
