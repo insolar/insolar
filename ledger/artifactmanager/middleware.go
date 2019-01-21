@@ -131,7 +131,7 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 				inslogger.FromContext(ctx).Errorf(
 					"got message of type %s with redirect token,"+
 						" but jet %s for pulse %d is not actual",
-					msg.Type(), jetID.JetIDString(), pulse,
+					msg.Type(), jetID.DebugString(), pulse,
 				)
 			}
 
@@ -212,14 +212,14 @@ func (m *middleware) fetchJet(
 	jetID, actual := tree.Find(target)
 	if actual {
 		inslogger.FromContext(ctx).Debugf(
-			"we believe object %s is in JET %s", target.String(), jetID.JetIDString(),
+			"we believe object %s is in JET %s", target.String(), jetID.DebugString(),
 		)
 		return jetID, actual, nil
 	}
 
 	inslogger.FromContext(ctx).Debugf(
 		"jet %s is not actual in our tree, asking neighbors for jet of object %s",
-		jetID.JetIDString(), target.String(),
+		jetID.DebugString(), target.String(),
 	)
 
 	m.seqMutex.Lock()
@@ -237,7 +237,7 @@ func (m *middleware) fetchJet(
 		mu.Unlock()
 		inslogger.FromContext(ctx).Debugf(
 			"somebody else updated actuality of jet %s, rechecking our DB",
-			jetID.JetIDString(),
+			jetID.DebugString(),
 		)
 		return m.fetchJet(ctx, target, pulse)
 	}
@@ -248,7 +248,7 @@ func (m *middleware) fetchJet(
 		mu.Unlock()
 
 		m.seqMutex.Lock()
-		inslogger.FromContext(ctx).Debugf("deleting sequencer for jet %s", jetID.JetIDString())
+		inslogger.FromContext(ctx).Debugf("deleting sequencer for jet %s", jetID.DebugString())
 		delete(m.sequencer, *jetID)
 		m.seqMutex.Unlock()
 	}()
@@ -261,7 +261,7 @@ func (m *middleware) fetchJet(
 	err = m.db.UpdateJetTree(ctx, pulse, true, *resJet)
 	if err != nil {
 		inslogger.FromContext(ctx).Error(
-			errors.Wrapf(err, "couldn't actualize jet %s", resJet.JetIDString()),
+			errors.Wrapf(err, "couldn't actualize jet %s", resJet.DebugString()),
 		)
 	}
 

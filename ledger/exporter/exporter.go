@@ -160,7 +160,7 @@ func (e *Exporter) getPayload(ctx context.Context, jetID core.RecordID, rec reco
 		}
 		blob, err := e.db.GetBlob(ctx, jetID, r.GetMemory())
 		if err != nil {
-			return nil, errors.Wrapf(err, "getPayload failed to GetBlob (jet: %s)", jetID.JetIDString())
+			return nil, errors.Wrapf(err, "getPayload failed to GetBlob (jet: %s)", jetID.DebugString())
 		}
 		memory := payload{}
 		err = codec.NewDecoderBytes(blob, &codec.CborHandle{}).Decode(&memory)
