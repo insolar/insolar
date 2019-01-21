@@ -48,9 +48,10 @@ func (c *JetClient) HeavySync(
 	pn core.PulseNumber,
 	retry bool,
 ) error {
-	inslog := inslogger.FromContext(ctx)
 	jetID := c.jetID
-	inslog = inslog.WithField("jetID", jetID).WithField("pulseNum", pn)
+	inslog := inslogger.FromContext(ctx)
+	inslog = inslog.WithField("jetID", jetID.JetIDString())
+	inslog = inslog.WithField("pulseNum", pn)
 
 	inslog.Debug("JetClient.HeavySync")
 	if retry {

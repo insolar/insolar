@@ -87,11 +87,16 @@ func getTestData(t *testing.T) (
 	mb := testmessagebus.NewTestMessageBus(t)
 	mb.PulseStorage = pulseStorage
 	db.PlatformCryptographyScheme = scheme
+
+	certificate := testutils.NewCertificateMock(t)
+	certificate.GetRoleMock.Return(core.StaticRoleLightMaterial)
+
 	handler := MessageHandler{
 		db:                         db,
 		replayHandlers:             map[core.MessageType]core.MessageHandler{},
 		PlatformCryptographyScheme: scheme,
 		conf:                       &configuration.Ledger{LightChainLimit: 3},
+		certificate:                certificate,
 	}
 
 	recentStorageMock := recentstorage.NewRecentStorageMock(t)
@@ -731,11 +736,15 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 	recentStorageMock.AddObjectMock.Return()
 	recentStorageMock.GetRequestsMock.Return(nil)
 
+	certificate := testutils.NewCertificateMock(t)
+	certificate.GetRoleMock.Return(core.StaticRoleLightMaterial)
+
 	handler := MessageHandler{
 		db:                         db,
 		replayHandlers:             map[core.MessageType]core.MessageHandler{},
 		PlatformCryptographyScheme: scheme,
 		conf:                       &configuration.Ledger{LightChainLimit: 3},
+		certificate:                certificate,
 	}
 
 	handler.Bus = mb

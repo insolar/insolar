@@ -18,6 +18,7 @@ package messagebus
 
 import (
 	"context"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -106,19 +107,28 @@ func TestMessageBus_doDeliverNextPulse(t *testing.T) {
 
 	pulseUpdated := false
 
-	go func() {
-		time.Sleep(time.Second)
-		newPulse := &core.Pulse{
-			PulseNumber:     101,
-			NextPulseNumber: 102,
-		}
-		ps.CurrentFunc = func(ctx context.Context) (*core.Pulse, error) {
+	var triggerUnlock int32
+	newPulse := &core.Pulse{
+		PulseNumber:     101,
+		NextPulseNumber: 102,
+	}
+	fn := ps.CurrentFunc
+	ps.CurrentFunc = func(ctx context.Context) (*core.Pulse, error) {
+		if atomic.LoadInt32(&triggerUnlock) > 0 {
 			return newPulse, nil
 		}
+		return fn(ctx)
+	}
+	go func() {
+		// should unlock
+		time.Sleep(time.Second)
+		atomic.AddInt32(&triggerUnlock, 1)
+
 		pulseUpdated = true
 		err := mb.OnPulse(ctx, *newPulse)
 		require.NoError(t, err)
 	}()
+	// blocks until newPulse returns
 	result, err := mb.doDeliver(ctx, parcel)
 	require.NoError(t, err)
 	require.Equal(t, testReply, result)
@@ -129,15 +139,22 @@ func TestMessageBus_doDeliverWrongPulse(t *testing.T) {
 	ctx := context.Background()
 	mb, ps, parcel := prepare(t, ctx, 100, 200)
 
-	go func() {
-		time.Sleep(time.Second)
-		newPulse := &core.Pulse{
-			PulseNumber:     101,
-			NextPulseNumber: 102,
-		}
-		ps.CurrentFunc = func(ctx context.Context) (*core.Pulse, error) {
+	var triggerUnlock int32
+	fn := ps.CurrentFunc
+	newPulse := &core.Pulse{
+		PulseNumber:     101,
+		NextPulseNumber: 102,
+	}
+	ps.CurrentFunc = func(ctx context.Context) (*core.Pulse, error) {
+		if atomic.LoadInt32(&triggerUnlock) > 0 {
 			return newPulse, nil
 		}
+		return fn(ctx)
+	}
+	go func() {
+		time.Sleep(time.Second)
+		atomic.AddInt32(&triggerUnlock, 1)
+
 		err := mb.OnPulse(ctx, *newPulse)
 		require.NoError(t, err)
 	}()

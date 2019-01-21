@@ -903,8 +903,11 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 			// if we are executor again we just continue working
 			// without sending data on next executor (because we are next executor)
 			if !meNext {
+				sendExecResults := false
+
 				if es.Current != nil {
 					es.pending = message.InPending
+					sendExecResults = true
 
 					// TODO: this should return delegation token to continue execution of the pending
 					messages = append(
@@ -919,30 +922,32 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 							"looks like pending executor died, continuing execution",
 						)
 						es.pending = message.NotPending
+						sendExecResults = true
 					}
+
 					state.ExecutionState = nil
 				}
 
 				queue := es.releaseQueue()
-				caseBind := es.Behaviour.(*ValidationSaver).caseBind
-				requests := caseBind.getCaseBindForMessage(ctx)
-				messages = append(
-					messages,
-					//&message.ValidateCaseBind{
-					//	RecordRef: ref,
-					//	Requests:  requests,
-					//	Pulse:     pulse,
-					//},
-					&message.ExecutorResults{
-						RecordRef: ref,
-						Pending:   es.pending,
-						Requests:  requests,
-						Queue:     convertQueueToMessageQueue(queue),
-					},
-				)
-
-				if es.Current == nil && len(es.Queue) == 0 {
-					state.ExecutionState = nil
+				if len(queue) > 0 || sendExecResults {
+					// TODO: we also should send when executed something for validation
+					// TODO: now validation is disabled
+					caseBind := es.Behaviour.(*ValidationSaver).caseBind
+					requests := caseBind.getCaseBindForMessage(ctx)
+					messages = append(
+						messages,
+						//&message.ValidateCaseBind{
+						//	RecordRef: ref,
+						//	Requests:  requests,
+						//	Pulse:     pulse,
+						//},
+						&message.ExecutorResults{
+							RecordRef: ref,
+							Pending:   es.pending,
+							Requests:  requests,
+							Queue:     convertQueueToMessageQueue(queue),
+						},
+					)
 				}
 			} else {
 				if es.Current != nil {

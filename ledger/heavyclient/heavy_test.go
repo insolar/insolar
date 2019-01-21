@@ -119,12 +119,12 @@ func sendToHeavy(t *testing.T, withretry bool) {
 	// mock bus.Mock method, store synced records, and calls count with HeavyRecord
 	var statMutex sync.Mutex
 	var synckeys []key
-	var syncsended int
+	var syncsended int32
 	type messageStat struct {
 		size int
 		keys []key
 	}
-	syncmessagesPerMessage := map[int]*messageStat{}
+	syncmessagesPerMessage := map[int32]*messageStat{}
 	var bussendfailed int32
 	busMock.SendFunc = func(ctx context.Context, msg core.Message, ops *core.MessageSendOptions) (core.Reply, error) {
 		// fmt.Printf("got msg: %T (%s)\n", msg, msg.Type())
@@ -137,7 +137,7 @@ func sendToHeavy(t *testing.T, withretry bool) {
 				}, nil
 			}
 
-			syncsended++
+			syncsendedNewVal := atomic.AddInt32(&syncsended, 1)
 			var size int
 			var keys []key
 
@@ -148,7 +148,7 @@ func sendToHeavy(t *testing.T, withretry bool) {
 
 			statMutex.Lock()
 			synckeys = append(synckeys, keys...)
-			syncmessagesPerMessage[syncsended] = &messageStat{
+			syncmessagesPerMessage[syncsendedNewVal] = &messageStat{
 				size: size,
 				keys: keys,
 			}
