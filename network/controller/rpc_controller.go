@@ -88,7 +88,14 @@ func (rpc *RPCController) SendCascadeMessage(data core.Cascade, method string, m
 	if msg == nil {
 		return errors.New("message is nil")
 	}
-	ctx := msg.Context(context.Background())
+	ctx, span := instracer.StartSpan(context.Background(), "RPCController.SendCascadeMessage")
+	span.AddAttributes(
+		trace.StringAttribute("method", method),
+		trace.StringAttribute("msg.Type", msg.Type().String()),
+		trace.StringAttribute("msg.DefaultTarget", msg.DefaultTarget().String()),
+	)
+	defer span.End()
+	ctx = msg.Context(ctx)
 	return rpc.initCascadeSendMessage(ctx, data, false, method, [][]byte{message.ParcelToBytes(msg)})
 }
 
