@@ -18,7 +18,6 @@ package pulsar
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/insolar/insolar/core"
@@ -26,6 +25,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
+	"github.com/pkg/errors"
 )
 
 // Handler is a wrapper for rpc-calls
@@ -138,7 +138,7 @@ func (handler *Handler) ReceiveSignatureForEntropy(request *Payload, response *P
 
 	requestBody := request.Body.(*EntropySignaturePayload)
 	if requestBody.PulseNumber <= handler.Pulsar.GetLastPulse().PulseNumber {
-		return fmt.Errorf("last pulse number is bigger than received one")
+		return errors.New("last pulse number is bigger than received one")
 	}
 
 	if handler.Pulsar.StateSwitcher.GetState() < GenerateEntropy {
@@ -173,7 +173,7 @@ func (handler *Handler) ReceiveEntropy(request *Payload, response *Payload) erro
 
 	requestBody := request.Body.(*EntropyPayload)
 	if requestBody.PulseNumber != handler.Pulsar.ProcessingPulseNumber {
-		return fmt.Errorf("processing pulse number is bigger than received one")
+		return errors.New("processing pulse number is bigger than received one")
 	}
 
 	if btfCell, ok := handler.Pulsar.GetItemFromVector(request.PublicKey); ok {
@@ -215,12 +215,12 @@ func (handler *Handler) ReceiveVector(request *Payload, response *Payload) error
 
 	state := handler.Pulsar.StateSwitcher.GetState()
 	if state >= Verifying {
-		return fmt.Errorf("pulsar is in the bft state")
+		return errors.New("pulsar is in the bft state")
 	}
 
 	requestBody := request.Body.(*VectorPayload)
 	if requestBody.PulseNumber != handler.Pulsar.ProcessingPulseNumber {
-		return fmt.Errorf("processing pulse number is bigger than received one")
+		return errors.New("processing pulse number is bigger than received one")
 	}
 
 	handler.Pulsar.SetBftGridItem(request.PublicKey, requestBody.Vector)
@@ -245,7 +245,7 @@ func (handler *Handler) ReceiveChosenSignature(request *Payload, response *Paylo
 
 	requestBody := request.Body.(*PulseSenderConfirmationPayload)
 	if requestBody.PulseNumber != handler.Pulsar.ProcessingPulseNumber {
-		return fmt.Errorf("processing pulse number is bigger than received one")
+		return errors.New("processing pulse number is bigger than received one")
 	}
 
 	publicKey, err := handler.Pulsar.KeyProcessor.ImportPublicKeyPEM([]byte(request.PublicKey))
@@ -304,11 +304,11 @@ func (handler *Handler) ReceivePulse(request *Payload, response *Payload) error 
 
 	requestBody := request.Body.(*PulsePayload)
 	if handler.Pulsar.ProcessingPulseNumber != 0 && requestBody.Pulse.PulseNumber != handler.Pulsar.ProcessingPulseNumber {
-		return fmt.Errorf("processing pulse number is not zero and received number is not the same")
+		return errors.Errorf("processing pulse number is not zero and received number is not the same")
 	}
 
 	if handler.Pulsar.ProcessingPulseNumber == 0 && requestBody.Pulse.PulseNumber < handler.Pulsar.GetLastPulse().PulseNumber {
-		return fmt.Errorf("last pulse number is bigger than received one")
+		return errors.Errorf("last pulse number is bigger than received one")
 	}
 
 	err = handler.Pulsar.Storage.SetLastPulse(&requestBody.Pulse)

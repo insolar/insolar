@@ -20,8 +20,6 @@ import (
 	"context"
 	"crypto"
 	"encoding/gob"
-	"errors"
-	"fmt"
 	"net"
 	"net/rpc"
 	"runtime/debug"
@@ -31,6 +29,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
@@ -313,12 +312,12 @@ func (currentPulsar *Pulsar) StartConsensusProcess(ctx context.Context, pulseNum
 	if currentPulsar.StateSwitcher.GetState() > WaitingForStart || (currentPulsar.ProcessingPulseNumber != 0 && pulseNumber < currentPulsar.ProcessingPulseNumber) {
 		logger.Debugf("currentPulsar.StartProcessLock.Unlock()")
 		currentPulsar.StartProcessLock.Unlock()
-		err := fmt.Errorf(
+		err := errors.Errorf(
 			"wrong state status or pulse number, state - %v, received pulse - %v, last pulse - %v, processing pulse - %v",
 			currentPulsar.StateSwitcher.GetState().String(),
 			pulseNumber, currentPulsar.GetLastPulse().PulseNumber,
 			currentPulsar.ProcessingPulseNumber)
-		logger.Warn(err)
+		logger.Error(err)
 		return err
 	}
 	currentPulsar.ProcessingPulseNumber = pulseNumber

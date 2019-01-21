@@ -19,12 +19,12 @@ package pulsar
 import (
 	"context"
 	"crypto"
-	"fmt"
 	"sync"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/pkg/errors"
 )
 
 // SetBftGridItem set item of the bftGrid in the thread-safe way
@@ -174,7 +174,7 @@ func (currentPulsar *Pulsar) verify(ctx context.Context) {
 		currentPulsar.StateSwitcher.SwitchToState(
 			ctx,
 			Failed,
-			fmt.Errorf("bft is broken. len(finalEntropySet) == %v, wrongVectors - %v", len(finalEntropySet), wrongVectors),
+			errors.Errorf("bft is broken. len(finalEntropySet) == %v, wrongVectors - %v", len(finalEntropySet), wrongVectors),
 		)
 		return
 	}

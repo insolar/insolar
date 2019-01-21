@@ -18,7 +18,6 @@ package pulsar
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -107,7 +106,7 @@ func (switcher *StateSwitcherImpl) SwitchToState(ctx context.Context, state Stat
 	logger := inslogger.FromContext(ctx)
 	logger.Debugf("Switch state from %v to %v, node - %v", switcher.GetState().String(), state.String(), switcher.pulsar.Config.MainListenerAddress)
 	if state < switcher.GetState() && (state != WaitingForStart && state != Failed) {
-		panic(fmt.Sprintf("Attempt to set a backward step. %v", switcher.pulsar.Config.MainListenerAddress))
+		logger.Panic("Attempt to set a backward step. %v", switcher.pulsar.Config.MainListenerAddress)
 	}
 
 	logger.Debug(".setState(state)")
