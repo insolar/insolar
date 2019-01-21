@@ -133,7 +133,7 @@ func (cr *ContractRequester) CallMethod(ctx context.Context, base core.Message, 
 	res, err := mb.Send(ctx, msg, nil)
 
 	if err != nil {
-		return nil, errors.Wrap(err, "couldn't dispatch event")
+		return nil, errors.Wrap(err, "couldn't dispatch event!")
 	}
 
 	r, ok := res.(*reply.RegisterRequest)
