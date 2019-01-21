@@ -204,6 +204,7 @@ func (rpc *RPCController) SendMessage(nodeID core.RecordRef, name string, msg co
 func (rpc *RPCController) processMessage(ctx context.Context, request network.Request) (network.Response, error) {
 	payload := request.GetData().(*RequestRPC)
 	result, err := rpc.invoke(ctx, payload.Method, payload.Data)
+	metrics.NetworkParcelsReceivedTotal.WithLabelValues(request.GetType().String()).Inc()
 	if err != nil {
 		return rpc.hostNetwork.BuildResponse(ctx, request, &ResponseRPC{Success: false, Error: err.Error()}), nil
 	}
