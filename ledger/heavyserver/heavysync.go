@@ -169,9 +169,9 @@ func (s *Sync) Store(ctx context.Context, jetID core.RecordID, pn core.PulseNumb
 	// heavy stats
 	recordsCount := int64(len(kvs))
 	recordsSize := core.KVSize(kvs)
-	inslog.Debugf("heavy store stat: JetID=%v, recordsCount+=%v, recordsSize+=%v\n", jetID.JetIDString(), recordsCount, recordsSize)
+	inslog.Debugf("heavy store stat: JetID=%v, recordsCount+=%v, recordsSize+=%v\n", jetID.DebugString(), recordsCount, recordsSize)
 
-	ctx = insmetrics.InsertTag(ctx, tagJet, jetID.JetIDString())
+	ctx = insmetrics.InsertTag(ctx, tagJet, jetID.DebugString())
 	stats.Record(ctx,
 		statSyncedCount.M(1),
 		statSyncedRecords.M(recordsCount),

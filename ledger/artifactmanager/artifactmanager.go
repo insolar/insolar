@@ -328,7 +328,6 @@ func (m *LedgerArtifactManager) DeployCode(
 	var err error
 	defer instrument(ctx, "DeployCode").err(&err).end()
 
-	fmt.Println("deploy code")
 	currentPulse, err := m.PulseStorage.Current(ctx)
 	if err != nil {
 		return nil, err
@@ -349,7 +348,6 @@ func (m *LedgerArtifactManager) DeployCode(
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("deploy code after blob")
 	id, err := m.setRecord(
 		ctx,
 		codeRec,
@@ -359,12 +357,6 @@ func (m *LedgerArtifactManager) DeployCode(
 	if err != nil {
 		return nil, err
 	}
-
-	if id != codeID {
-		fmt.Println("Broken code ID!")
-	}
-
-	fmt.Println("Code deployed ", id.Pulse())
 
 	return id, nil
 }

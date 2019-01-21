@@ -270,7 +270,7 @@ func (t *Tree) Split(jetID core.RecordID) (*core.RecordID, *core.RecordID, error
 		fmt.Println("split failed!")
 		fmt.Println("split depth ", depth)
 		fmt.Println("found depth ", foundDepth)
-		fmt.Println("jet ", jetID.JetIDString())
+		fmt.Println("jet ", jetID.DebugString())
 		return nil, nil, errors.New("failed to split: incorrect jet provided")
 	}
 	j.Right = &jet{}
