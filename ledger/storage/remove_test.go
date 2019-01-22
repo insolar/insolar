@@ -100,7 +100,7 @@ func removeJetIndexesUntil(t *testing.T, skip bool) {
 	require.NoError(t, err)
 
 	assert.Equal(t, expectedRmCount, rmcount)
-	assert.Equalf(t, sortIDS(expectLeftIDs), sortIDS(foundIDs), "expected keys and found indexes, doesn't match, jetID=%v", jetID.JetIDString())
+	assert.Equalf(t, sortIDS(expectLeftIDs), sortIDS(foundIDs), "expected keys and found indexes, doesn't match, jetID=%v", jetID.DebugString())
 }
 
 func sortIDS(ids []core.RecordID) []core.RecordID {

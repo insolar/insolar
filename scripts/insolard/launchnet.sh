@@ -274,7 +274,7 @@ check_working_dir
 process_input_params $@
 
 printf "start pulsar ... \n"
-$PULSARD -c $GENERATED_CONFIGS_DIR/pulsar.yaml &> $NODES_DATA/pulsar_output.log &
+$PULSARD -c $GENERATED_CONFIGS_DIR/pulsar.yaml --trace &> $NODES_DATA/pulsar_output.log &
 
 if [ "$run_insgorund" == "true" ]
 then

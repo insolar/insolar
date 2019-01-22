@@ -1,5 +1,3 @@
-// +build functest
-
 /*
  *    Copyright 2018 Insolar
  *
@@ -16,22 +14,27 @@
  *    limitations under the License.
  */
 
-package functest
+package pulsar
 
 import (
-	"testing"
-
-	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/require"
+	"go.opencensus.io/stats"
+	"go.opencensus.io/stats/view"
 )
 
-func TestGetBalance(t *testing.T) {
-	firstMember := createMember(t, "Member1")
-	firstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
-	require.Equal(t, 1000*1000*1000, firstBalance)
-}
+var (
+	statPulseGenerated = stats.Int64("pulsar/pulse/generated", "count of generated pulses", stats.UnitDimensionless)
+)
 
-func TestGetBalanceWrongRef(t *testing.T) {
-	_, err := getBalance(&root, testutils.RandomRef().String())
-	require.Contains(t, err.Error(), "[ getBalanceCall ] : [ GetDelegate ] on calling main API")
+func init() {
+	err := view.Register(
+		&view.View{
+			Name:        statPulseGenerated.Name(),
+			Description: statPulseGenerated.Description(),
+			Measure:     statPulseGenerated,
+			Aggregation: view.Sum(),
+		},
+	)
+	if err != nil {
+		panic(err)
+	}
 }
