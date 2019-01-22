@@ -21,37 +21,74 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/recentstorage"
+	"github.com/insolar/insolar/ledger/storage/jet"
 )
 
 // RecentStorageProvider provides a recent storage for jet
 type RecentStorageProvider struct {
-	storage    map[core.RecordID]*RecentStorage
+	// TODO: @andreyromancev. 15.01.19. Use byte array for key.
+	storage    map[string]*RecentStorage
 	lock       sync.Mutex
 	DefaultTTL int
 }
 
 // NewRecentStorageProvider creates new provider
 func NewRecentStorageProvider(defaultTTL int) *RecentStorageProvider {
-	return &RecentStorageProvider{DefaultTTL: defaultTTL, storage: map[core.RecordID]*RecentStorage{}}
+	return &RecentStorageProvider{DefaultTTL: defaultTTL, storage: map[string]*RecentStorage{}}
 }
 
 // GetStorage returns a recent storage for jet
 func (p *RecentStorageProvider) GetStorage(jetID core.RecordID) recentstorage.RecentStorage {
 	p.lock.Lock()
 	defer p.lock.Unlock()
-	storage, ok := p.storage[jetID]
+
+	_, prefix := jet.Jet(jetID)
+	k := string(prefix)
+	storage, ok := p.storage[k]
 	if !ok {
-		if storage, ok = p.storage[jetID]; !ok {
+		if storage, ok = p.storage[k]; !ok {
 			storage = NewRecentStorage(p.DefaultTTL)
-			p.storage[jetID] = storage
+			p.storage[k] = storage
 		}
 	}
 	return storage
 }
 
+// CloneStorage clones a recent storage from one jet to another
+func (p *RecentStorageProvider) CloneStorage(fromJetID, toJetID core.RecordID) {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
+	_, fromPrefix := jet.Jet(fromJetID)
+	_, toPrefix := jet.Jet(toJetID)
+	fromStorage, ok := p.storage[string(fromPrefix)]
+	if !ok {
+		return
+	}
+	toStorage := &RecentStorage{
+		recentObjects:   make(map[core.RecordID]recentObjectMeta, len(fromStorage.recentObjects)),
+		pendingRequests: make(map[core.RecordID]map[core.RecordID]struct{}, len(fromStorage.pendingRequests)),
+		DefaultTTL:      p.DefaultTTL,
+		objectLock:      sync.Mutex{},
+	}
+	for k, v := range fromStorage.recentObjects {
+		clone := v
+		clone.ttl--
+		toStorage.recentObjects[k] = clone
+	}
+	for objID, objRequests := range fromStorage.pendingRequests {
+		clone := make(map[core.RecordID]struct{}, len(objRequests))
+		for reqID, v := range objRequests {
+			clone[reqID] = v
+		}
+		toStorage.pendingRequests[objID] = clone
+	}
+	p.storage[string(toPrefix)] = toStorage
+}
+
 // RecentStorage is a base structure
 type RecentStorage struct {
-	recentObjects   map[core.RecordID]*recentObjectMeta
+	recentObjects   map[core.RecordID]recentObjectMeta
 	objectLock      sync.Mutex
 	pendingRequests map[core.RecordID]map[core.RecordID]struct{}
 	requestLock     sync.RWMutex
@@ -65,7 +102,7 @@ type recentObjectMeta struct {
 // NewRecentStorage creates default RecentStorage object
 func NewRecentStorage(defaultTTL int) *RecentStorage {
 	return &RecentStorage{
-		recentObjects:   map[core.RecordID]*recentObjectMeta{},
+		recentObjects:   map[core.RecordID]recentObjectMeta{},
 		pendingRequests: map[core.RecordID]map[core.RecordID]struct{}{},
 		DefaultTTL:      defaultTTL,
 		objectLock:      sync.Mutex{},
@@ -81,7 +118,7 @@ func (r *RecentStorage) AddObject(id core.RecordID) {
 func (r *RecentStorage) AddObjectWithTLL(id core.RecordID, ttl int) {
 	r.objectLock.Lock()
 	defer r.objectLock.Unlock()
-	r.recentObjects[id] = &recentObjectMeta{ttl: r.DefaultTTL}
+	r.recentObjects[id] = recentObjectMeta{ttl: r.DefaultTTL}
 }
 
 // AddPendingRequest adds request to cache.
@@ -127,7 +164,16 @@ func (r *RecentStorage) GetRequests() map[core.RecordID]map[core.RecordID]struct
 	r.requestLock.RLock()
 	defer r.requestLock.RUnlock()
 
-	return r.pendingRequests
+	requestsClone := make(map[core.RecordID]map[core.RecordID]struct{})
+	for objID, objRequests := range r.pendingRequests {
+		objRequestsClone := make(map[core.RecordID]struct{}, len(objRequests))
+		for reqID, v := range objRequests {
+			objRequestsClone[reqID] = v
+		}
+		requestsClone[objID] = objRequestsClone
+	}
+
+	return requestsClone
 }
 
 // GetRequestsForObject returns request hot-indexes for object.
@@ -147,6 +193,22 @@ func (r *RecentStorage) GetRequestsForObject(obj core.RecordID) []core.RecordID 
 	return results
 }
 
+// IsRecordIDCached check recordid inside caches
+func (r *RecentStorage) IsRecordIDCached(obj core.RecordID) bool {
+	r.objectLock.Lock()
+	_, ok := r.recentObjects[obj]
+	if ok {
+		r.objectLock.Unlock()
+		return ok
+	}
+	r.objectLock.Unlock()
+
+	r.requestLock.RLock()
+	_, ok = r.pendingRequests[obj]
+	r.requestLock.RUnlock()
+	return ok
+}
+
 // ClearZeroTTLObjects clears objects with zero TTL
 func (r *RecentStorage) ClearZeroTTLObjects() {
 	r.objectLock.Lock()
@@ -164,6 +226,6 @@ func (r *RecentStorage) ClearObjects() {
 	r.objectLock.Lock()
 	defer r.objectLock.Unlock()
 
-	r.recentObjects = map[core.RecordID]*recentObjectMeta{}
+	r.recentObjects = map[core.RecordID]recentObjectMeta{}
 	r.pendingRequests = map[core.RecordID]map[core.RecordID]struct{}{}
 }

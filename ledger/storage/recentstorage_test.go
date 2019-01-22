@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/require"
 )
 
@@ -180,10 +181,9 @@ func TestRecentStorageProvider_GetStorage(t *testing.T) {
 	wg.Add(8)
 
 	for i := 0; i < 8; i++ {
-		i := i
 		go func() {
-			id := core.NewRecordID(core.FirstPulseNumber, []byte{byte(i)})
-			storage := provider.GetStorage(*id)
+			id := testutils.RandomJet()
+			storage := provider.GetStorage(id)
 			require.NotNil(t, storage)
 			wg.Done()
 		}()

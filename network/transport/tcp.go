@@ -20,14 +20,14 @@ import (
 	"context"
 	"io"
 	"net"
-	"time"
+
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/transport/pool"
 	"github.com/insolar/insolar/network/transport/relay"
 	"github.com/insolar/insolar/network/utils"
-	"github.com/pkg/errors"
 )
 
 type tcpTransport struct {
@@ -35,17 +35,13 @@ type tcpTransport struct {
 
 	pool     pool.ConnectionPool
 	listener net.Listener
+	addr     string
 }
 
 func newTCPTransport(addr string, proxy relay.Proxy, publicAddress string) (*tcpTransport, error) {
-	listener, err := net.Listen("tcp", addr)
-	if err != nil {
-		return nil, err
-	}
-
 	transport := &tcpTransport{
 		baseTransport: newBaseTransport(proxy, publicAddress),
-		listener:      listener,
+		addr:          addr,
 		pool:          pool.NewConnectionPool(&tcpConnectionFactory{}),
 	}
 
@@ -71,14 +67,54 @@ func (t *tcpTransport) send(address string, data []byte) error {
 	logger.Debug("[ send ] len = ", len(data))
 
 	_, err = conn.Write(data)
+
+	if err != nil {
+		// All this to check is error EPIPE
+		// if netErr, ok := err.(*net.OpError); ok {
+		// 	switch realNetErr := netErr.Err.(type) {
+		// 	case *os.SyscallError:
+		// 		if realNetErr.Err == syscall.EPIPE {
+		t.pool.CloseConnection(ctx, addr)
+		conn, err = t.pool.GetConnection(ctx, addr)
+		if err != nil {
+			return errors.Wrap(err, "[ send ] Failed to get connection")
+		}
+		_, err = conn.Write(data)
+		// 		}
+		// 	}
+		// }
+	}
+
 	return errors.Wrap(err, "[ send ] Failed to write data")
 }
 
+func (t *tcpTransport) prepareListen() error {
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
+
+	t.disconnectStarted = make(chan bool, 1)
+	t.disconnectFinished = make(chan bool, 1)
+	listener, err := net.Listen("tcp", t.addr)
+	if err != nil {
+		return err
+	}
+
+	t.listener = listener
+
+	return nil
+}
+
 // Start starts networking.
-func (t *tcpTransport) Listen(ctx context.Context) error {
+func (t *tcpTransport) Listen(ctx context.Context, started chan struct{}) error {
 	logger := inslogger.FromContext(ctx)
 	logger.Info("[ Listen ] Start TCP transport")
-	t.prepareListen()
+
+	if err := t.prepareListen(); err != nil {
+		logger.Info("[ Listen ] Failed to prepare TCP transport")
+		return err
+	}
+
+	started <- struct{}{}
 	for {
 		conn, err := t.listener.Accept()
 		if err != nil {
@@ -102,25 +138,27 @@ func (t *tcpTransport) Stop() {
 	t.prepareDisconnect()
 
 	utils.CloseVerbose(t.listener)
-
 	t.pool.Reset()
 }
 
 func (t *tcpTransport) handleAcceptedConnection(conn net.Conn) {
+	defer utils.CloseVerbose(conn)
+
 	for {
 		msg, err := t.serializer.DeserializePacket(conn)
 
 		if err != nil {
-			if err == io.EOF {
+			if err == io.EOF || err == io.ErrUnexpectedEOF {
 				log.Warn("[ handleAcceptedConnection ] Connection closed by peer")
 				return
 			}
 
 			log.Error("[ handleAcceptedConnection ] Failed to deserialize packet: ", err.Error())
 		} else {
-			log.Debug("[ handleAcceptedConnection ] Handling packet: ", msg.RequestID)
+			ctx, logger := inslogger.WithTraceField(context.Background(), msg.TraceID)
+			logger.Debug("[ handleAcceptedConnection ] Handling packet: ", msg.RequestID)
 
-			go t.packetHandler.Handle(context.TODO(), msg)
+			go t.packetHandler.Handle(ctx, msg)
 		}
 	}
 }
@@ -144,12 +182,6 @@ func (*tcpConnectionFactory) CreateConnection(ctx context.Context, address net.A
 	err = conn.SetKeepAlive(true)
 	if err != nil {
 		logger.Error("[ createConnection ] Failed to set keep alive")
-	}
-
-	// We don't wanna read from this connection
-	err = conn.SetReadDeadline(time.Now())
-	if err != nil {
-		logger.Errorln("[ createConnection ] Failed to set connection read deadline: ", err.Error())
 	}
 
 	err = conn.SetNoDelay(true)

@@ -29,7 +29,6 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller"
-	"github.com/insolar/insolar/network/fakepulsar"
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/merkle"
 	"github.com/insolar/insolar/network/routing"
@@ -58,12 +57,13 @@ type ServiceNetwork struct {
 	// subcomponents
 	PhaseManager phases.PhaseManager `inject:"subcomponent"`
 
-	fakePulsar *fakepulsar.FakePulsar
+	// fakePulsar *fakepulsar.FakePulsar
+	isGenesis bool
 }
 
 // NewServiceNetwork returns a new ServiceNetwork.
-func NewServiceNetwork(conf configuration.Configuration, scheme core.PlatformCryptographyScheme, rootCm *component.Manager) (*ServiceNetwork, error) {
-	serviceNetwork := &ServiceNetwork{cm: component.NewManager(rootCm), cfg: conf, CryptographyScheme: scheme}
+func NewServiceNetwork(conf configuration.Configuration, scheme core.PlatformCryptographyScheme, rootCm *component.Manager, isGenesis bool) (*ServiceNetwork, error) {
+	serviceNetwork := &ServiceNetwork{cm: component.NewManager(rootCm), cfg: conf, CryptographyScheme: scheme, isGenesis: isGenesis}
 	return serviceNetwork, nil
 }
 
@@ -139,7 +139,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	n.hostNetwork = hostnetwork.NewHostTransport(internalTransport, n.routingTable)
 	options := controller.ConfigureOptions(n.cfg.Host)
 	n.controller = controller.NewNetworkController(n, options, n.CertificateManager.GetCertificate(), internalTransport, n.routingTable, n.hostNetwork, n.CryptographyScheme)
-	n.fakePulsar = fakepulsar.NewFakePulsar(n.HandlePulse, n.cfg.Pulsar.PulseTime)
+	// n.fakePulsar = fakepulsar.NewFakePulsar(n.HandlePulse, n.cfg.Pulsar.PulseTime)
 	return nil
 }
 
@@ -163,7 +163,7 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 		return errors.Wrap(err, "Failed to bootstrap network")
 	}
 
-	n.fakePulsar.Start(ctx)
+	// n.fakePulsar.Start(ctx)
 
 	return nil
 }
@@ -180,14 +180,27 @@ func (n *ServiceNetwork) Stop(ctx context.Context) error {
 }
 
 func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
-	if !n.isFakePulse(&pulse) {
-		n.fakePulsar.Stop(ctx)
+	// if !n.isFakePulse(&pulse) {
+	// 	n.fakePulsar.Stop(ctx)
+	// }
+	if n.isGenesis {
+		return
 	}
+
 	traceID := "pulse_" + strconv.FormatUint(uint64(pulse.PulseNumber), 10)
+
 	ctx, logger := inslogger.WithTraceField(ctx, traceID)
 	logger.Infof("Got new pulse number: %d", pulse.PulseNumber)
 	if n.PulseManager == nil {
 		logger.Error("PulseManager is not initialized")
+		return
+	}
+	if !n.NodeKeeper.IsBootstrapped() {
+		n.controller.SetLastIgnoredPulse(pulse.NextPulseNumber)
+		return
+	}
+	if pulse.PulseNumber <= n.controller.GetLastIgnoredPulse() {
+		log.Info("Ignore pulse %d: network is not yet initialized")
 		return
 	}
 	currentPulse, err := n.PulseStorage.Current(ctx)

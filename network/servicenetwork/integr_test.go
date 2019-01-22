@@ -184,7 +184,7 @@ func (s *testSuite) createNetworkNode(t *testing.T) networkNode {
 	cm.Inject(netSwitcher)
 
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
-	serviceNetwork, err := NewServiceNetwork(cfg, scheme, cm)
+	serviceNetwork, err := NewServiceNetwork(cfg, scheme, cm, false)
 	assert.NoError(t, err)
 
 	serviceNetwork.NodeKeeper = keeper

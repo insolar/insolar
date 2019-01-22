@@ -23,23 +23,27 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/record"
-	"github.com/jbenet/go-base58"
+	base58 "github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
 )
 
 // Exporter provides methods for fetching data view from storage.
 type Exporter struct {
-	db *storage.DB
+	db  *storage.DB
+	ps  *storage.PulseStorage
+	cfg configuration.Exporter
 }
 
 // NewExporter creates new StorageExporter instance.
-func NewExporter(db *storage.DB) *Exporter {
-	return &Exporter{db: db}
+func NewExporter(db *storage.DB, ps *storage.PulseStorage, cfg configuration.Exporter) *Exporter {
+	return &Exporter{db: db, ps: ps, cfg: cfg}
 }
 
 type payload map[string]interface{}
@@ -68,19 +72,57 @@ type pulseData struct {
 // Export returns data view from storage.
 func (e *Exporter) Export(ctx context.Context, fromPulse core.PulseNumber, size int) (*core.StorageExportResult, error) {
 	result := core.StorageExportResult{Data: map[string]interface{}{}}
+	inslog := inslogger.FromContext(ctx)
+	inslog.Debugf("[ API Export ] start")
 
 	jetIDs, err := e.db.GetJets(ctx)
 	if err != nil {
+		inslog.Debugf("[ API Export ] error getting jets: %s", err.Error())
 		return nil, err
 	}
 
+	currentPulse, err := e.ps.Current(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get current pulse data")
+	}
+
 	counter := 0
-	currentPN := core.PulseNumber(math.Max(float64(fromPulse), float64(core.GenesisPulse.PulseNumber)))
-	current := &currentPN
-	for current != nil && counter < size {
-		pulse, err := e.db.GetPulse(ctx, *current)
+	fromPulsePN := core.PulseNumber(math.Max(float64(fromPulse), float64(core.GenesisPulse.PulseNumber)))
+
+	if fromPulsePN >= currentPulse.PulseNumber {
+		fromPulsePN = currentPulse.PulseNumber
+	} else {
+		_, err = e.db.GetPulse(ctx, fromPulsePN)
+		if err != nil {
+			tryPulse, err := e.db.GetPulse(ctx, core.GenesisPulse.PulseNumber)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to fetch genesis pulse data")
+			}
+
+			for fromPulsePN > *tryPulse.Next {
+				tryPulse, err = e.db.GetPulse(ctx, *tryPulse.Next)
+				if err != nil {
+					return nil, errors.Wrap(err, "failed to iterate through first pulses")
+				}
+			}
+			fromPulsePN = *tryPulse.Next
+		}
+	}
+
+	iterPulse := &fromPulsePN
+	for iterPulse != nil && counter < size {
+		pulse, err := e.db.GetPulse(ctx, *iterPulse)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to fetch pulse data")
+		}
+
+		// We don't need data from current pulse, because of
+		// not all data for this pulse is persisted at this moment
+		// @sergey.morozov 20.01.18 - Blocks are synced to Heavy node with a lag.
+		// We can't reliably predict this lag so we add threshold of N seconds.
+		if pulse.Pulse.PulseNumber >= (currentPulse.PrevPulseNumber - core.PulseNumber(e.cfg.ExportLag)) {
+			iterPulse = nil
+			break
 		}
 
 		var data []*pulseData
@@ -94,12 +136,12 @@ func (e *Exporter) Export(ctx context.Context, fromPulse core.PulseNumber, size 
 
 		result.Data[strconv.FormatUint(uint64(pulse.Pulse.PulseNumber), 10)] = data
 
-		current = pulse.Next
+		iterPulse = pulse.Next
 		counter++
 	}
 
 	result.Size = counter
-	result.NextFrom = current
+	result.NextFrom = iterPulse
 
 	return &result, nil
 }
@@ -107,9 +149,9 @@ func (e *Exporter) Export(ctx context.Context, fromPulse core.PulseNumber, size 
 func (e *Exporter) exportPulse(ctx context.Context, jetID core.RecordID, pulse *core.Pulse) (*pulseData, error) {
 	records := recordsData{}
 	err := e.db.IterateRecordsOnPulse(ctx, jetID, pulse.PulseNumber, func(id core.RecordID, rec record.Record) error {
-		pl, err := e.getPayload(ctx, rec)
+		pl, err := e.getPayload(ctx, jetID, rec)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "exportPulse failed to getPayload")
 		}
 		records[string(base58.Encode(id[:]))] = recordData{
 			Type:    strings.Title(rec.Type().String()),
@@ -119,7 +161,7 @@ func (e *Exporter) exportPulse(ctx context.Context, jetID core.RecordID, pulse *
 		return nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "exportPulse failed to IterateRecordsOnPulse")
 	}
 
 	data := pulseData{
@@ -131,8 +173,7 @@ func (e *Exporter) exportPulse(ctx context.Context, jetID core.RecordID, pulse *
 	return &data, nil
 }
 
-func (e *Exporter) getPayload(ctx context.Context, rec record.Record) (payload, error) {
-	jetID := core.TODOJetID
+func (e *Exporter) getPayload(ctx context.Context, jetID core.RecordID, rec record.Record) (payload, error) {
 	switch r := rec.(type) {
 	case record.ObjectState:
 		if r.GetMemory() == nil {
@@ -140,7 +181,7 @@ func (e *Exporter) getPayload(ctx context.Context, rec record.Record) (payload, 
 		}
 		blob, err := e.db.GetBlob(ctx, jetID, r.GetMemory())
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrapf(err, "getPayload failed to GetBlob (jet: %s)", jetID.DebugString())
 		}
 		memory := payload{}
 		err = codec.NewDecoderBytes(blob, &codec.CborHandle{}).Decode(&memory)
@@ -152,11 +193,28 @@ func (e *Exporter) getPayload(ctx context.Context, rec record.Record) (payload, 
 		if r.GetPayload() == nil {
 			break
 		}
-		parcel, err := message.DeserializeParcel(bytes.NewBuffer(r.GetPayload()))
+		msg, err := message.Deserialize(bytes.NewBuffer(r.GetPayload()))
 		if err != nil {
 			return payload{"PayloadBinary": r.GetPayload()}, nil
 		}
-		return payload{"Payload": parcel, "Type": parcel.Type().String()}, nil
+		switch m := msg.(type) {
+		case *message.CallMethod:
+			res, err := m.ToMap()
+			if err != nil {
+				return payload{"Payload": m, "Type": msg.Type().String()}, nil
+			}
+			return payload{"Payload": res, "Type": msg.Type().String()}, nil
+		case *message.CallConstructor:
+			res, err := m.ToMap()
+			if err != nil {
+				return payload{"Payload": m, "Type": msg.Type().String()}, nil
+			}
+			return payload{"Payload": res, "Type": msg.Type().String()}, nil
+		case *message.GenesisRequest:
+			return payload{"Payload": m, "Type": msg.Type().String()}, nil
+		}
+
+		return payload{"Payload": msg, "Type": msg.Type().String()}, nil
 	}
 
 	return nil, nil

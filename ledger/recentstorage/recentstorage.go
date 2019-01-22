@@ -24,6 +24,8 @@ import (
 //go:generate minimock -i github.com/insolar/insolar/ledger/recentstorage.Provider -o ./ -s _mock.go
 type Provider interface {
 	GetStorage(jetID core.RecordID) RecentStorage
+	CloneStorage(fromJetID, toJetID core.RecordID)
+	// TODO: @andreyromancev. 15.01.19. Add RemoveStorage method. Use it instead of ClearObjects. Potential memory leak.
 }
 
 // RecentStorage is a base interface for the storage of recent objects and indexes
@@ -38,6 +40,8 @@ type RecentStorage interface {
 	GetObjects() map[core.RecordID]int
 	GetRequests() map[core.RecordID]map[core.RecordID]struct{}
 	GetRequestsForObject(obj core.RecordID) []core.RecordID
+
+	IsRecordIDCached(obj core.RecordID) bool
 
 	ClearZeroTTLObjects()
 	ClearObjects()

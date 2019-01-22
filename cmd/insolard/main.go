@@ -94,7 +94,7 @@ func main() {
 	cfg := &cfgHolder.Configuration
 	cfg.Metrics.Namespace = "insolard"
 
-	traceID := utils.RandTraceID()
+	traceID := "main_" + utils.RandTraceID()
 	ctx, inslog := initLogger(context.Background(), cfg.Log, traceID)
 	log.SetGlobalLogger(inslog)
 
@@ -118,7 +118,13 @@ func main() {
 	if params.traceEnabled {
 		jconf := cfg.Tracer.Jaeger
 		log.Infof("Tracing enabled. Agent endpoint: '%s', collector endpoint: '%s'\n", jconf.AgentEndpoint, jconf.CollectorEndpoint)
-		jaegerflush = instracer.ShouldRegisterJaeger(ctx, "insolard", jconf.AgentEndpoint, jconf.CollectorEndpoint)
+		jaegerflush = instracer.ShouldRegisterJaeger(
+			ctx,
+			certManager.GetCertificate().GetRole().String(),
+			certManager.GetCertificate().GetNodeRef().String(),
+			jconf.AgentEndpoint,
+			jconf.CollectorEndpoint,
+			jconf.ProbabilityRate)
 		ctx = instracer.SetBaggage(ctx, instracer.Entry{Key: "traceid", Value: traceID})
 	}
 	defer jaegerflush()
@@ -136,6 +142,11 @@ func main() {
 		params.genesisKeyOut,
 	)
 	checkError(ctx, err, "failed to init components")
+
+	ctx, inslog = inslogger.WithField(ctx, "nodeid", certManager.GetCertificate().GetNodeRef().String())
+	ctx, inslog = inslogger.WithField(ctx, "role", certManager.GetCertificate().GetRole().String())
+	ctx = inslogger.SetLogger(ctx, inslog)
+	log.SetGlobalLogger(inslog)
 
 	err = cm.Init(ctx)
 	checkError(ctx, err, "failed to init components")

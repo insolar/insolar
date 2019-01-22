@@ -14,16 +14,27 @@
  *    limitations under the License.
  */
 
-package heavy
+package artifactmanager
 
 import (
 	"context"
+	"testing"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/storage/jet"
+	"github.com/insolar/insolar/testutils"
+	"github.com/stretchr/testify/require"
 )
 
-// JetTreeSync is used for sync jets on heavy
-type JetTreeSync interface {
-	SyncTree(ctx context.Context, tree jet.Tree, pulse core.PulseNumber) error
+func TestEarlyRequestCircuitBreakerProvider_GetBreaker_CreateNew(t *testing.T) {
+	provider := &earlyRequestCircuitBreakerProvider{
+		breakers: map[core.RecordID]*requestCircuitBreakerProvider{},
+	}
+	expectedJet := testutils.RandomJet()
+
+	breaker := provider.getBreaker(context.TODO(), expectedJet)
+
+	require.Equal(t, 1, len(provider.breakers))
+	require.Equal(t, breaker, provider.breakers[expectedJet])
+	require.NotNil(t, provider.breakers[expectedJet].timeoutChannel)
+	require.NotNil(t, provider.breakers[expectedJet].hotDataChannel)
 }

@@ -119,7 +119,7 @@ func initComponents(
 	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner)
 	checkError(ctx, err, "failed to start LogicRunner")
 
-	nw, err := servicenetwork.NewServiceNetwork(cfg, platformCryptographyScheme, &cm)
+	nw, err := servicenetwork.NewServiceNetwork(cfg, platformCryptographyScheme, &cm, isGenesis)
 	checkError(ctx, err, "failed to start Network")
 
 	delegationTokenFactory := delegationtoken.NewDelegationTokenFactory()
@@ -169,7 +169,7 @@ func initComponents(
 		nw,
 	)
 
-	components := ledger.GetLedgerComponents(cfg.Ledger)
+	components := ledger.GetLedgerComponents(cfg.Ledger, certManager.GetCertificate())
 	ld := ledger.Ledger{} // TODO: remove me with cmOld
 
 	components = append(components, []interface{}{

@@ -35,6 +35,7 @@ type Store interface {
 	SetObjectIndex(ctx context.Context, jetID core.RecordID, ref *core.RecordID, idx *index.ObjectLifeline) error
 	RemoveObjectIndex(ctx context.Context, jetID core.RecordID, ref *core.RecordID) error
 
+	// Deprecated: use core.PulseStorage.Current() instead
 	GetLatestPulse(ctx context.Context) (*Pulse, error)
 	GetPulse(ctx context.Context, num core.PulseNumber) (*Pulse, error)
 }

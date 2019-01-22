@@ -22,6 +22,7 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/utils/entropy"
 	"github.com/pkg/errors"
 )
@@ -61,19 +62,28 @@ func (currentPulsar *Pulsar) handleErrorState(ctx context.Context, err error) {
 }
 
 func (currentPulsar *Pulsar) clearState() {
+	log.Debug("currentPulsar.SetGeneratedEntropy(nil)")
 	currentPulsar.SetGeneratedEntropy(nil)
+	log.Debug("currentPulsar.GeneratedEntropySign")
 	currentPulsar.GeneratedEntropySign = []byte{}
-
+	log.Debug("currentPulsar.SetCurrentSlotEntropy(nil)")
 	currentPulsar.SetCurrentSlotEntropy(nil)
+	log.Debug("currentPulsar.CurrentSlotPulseSender = ")
 	currentPulsar.CurrentSlotPulseSender = ""
-
+	log.Debug("currentPulsar.currentSlotSenderConfirmationsLock.Lock()")
 	currentPulsar.currentSlotSenderConfirmationsLock.Lock()
+	log.Debug("currentPulsar.CurrentSlotSenderConfirmations = map[string]core.PulseSenderConfirmation{}")
 	currentPulsar.CurrentSlotSenderConfirmations = map[string]core.PulseSenderConfirmation{}
+	log.Debug("currentPulsar.currentSlotSenderConfirmationsLock.Unlock()")
 	currentPulsar.currentSlotSenderConfirmationsLock.Unlock()
 
+	log.Debug("currentPulsar.ClearVector()")
 	currentPulsar.ClearVector()
+	log.Debug("currentPulsar.BftGridLock.Lock(")
 	currentPulsar.BftGridLock.Lock()
+	log.Debug("currentPulsar.bftGrid = map[string]map[string]*BftCell{}")
 	currentPulsar.bftGrid = map[string]map[string]*BftCell{}
+	log.Debug("currentPulsar.BftGridLock.Unlock()")
 	currentPulsar.BftGridLock.Unlock()
 }
 
@@ -186,39 +196,38 @@ func (currentPulsar *Pulsar) SetGeneratedEntropy(currentSlotEntropy *core.Entrop
 	currentPulsar.generatedEntropy = currentSlotEntropy
 }
 
-
 func (currentPulsar *Pulsar) CreateVectorCopy() map[string]*BftCell {
 	currentPulsar.ownedBtfRowLock.Lock()
-	defer 	currentPulsar.ownedBtfRowLock.Unlock()
+	defer currentPulsar.ownedBtfRowLock.Unlock()
 
 	newMap := map[string]*BftCell{}
 
-	for key, value := range currentPulsar.ownedBftRow{
-		newMap[key]= &BftCell{
-			Entropy:value.GetEntropy(),
-			IsEntropyReceived:value.GetIsEntropyReceived(),
-			Sign:value.GetSign(),
+	for key, value := range currentPulsar.ownedBftRow {
+		newMap[key] = &BftCell{
+			Entropy:           value.GetEntropy(),
+			IsEntropyReceived: value.GetIsEntropyReceived(),
+			Sign:              value.GetSign(),
 		}
 	}
 
 	return newMap
 }
 
-func (currentPulsar *Pulsar) AddItemToVector(pubKey string, cell *BftCell){
+func (currentPulsar *Pulsar) AddItemToVector(pubKey string, cell *BftCell) {
 	currentPulsar.ownedBtfRowLock.Lock()
-	defer 	currentPulsar.ownedBtfRowLock.Unlock()
+	defer currentPulsar.ownedBtfRowLock.Unlock()
 	currentPulsar.ownedBftRow[pubKey] = cell
 }
 
-func (currentPulsar *Pulsar) GetItemFromVector(pubKey string) (*BftCell, bool){
+func (currentPulsar *Pulsar) GetItemFromVector(pubKey string) (*BftCell, bool) {
 	currentPulsar.ownedBtfRowLock.RLock()
-	defer 	currentPulsar.ownedBtfRowLock.RUnlock()
+	defer currentPulsar.ownedBtfRowLock.RUnlock()
 	btfCell, ok := currentPulsar.ownedBftRow[pubKey]
 	return btfCell, ok
 }
 
-func (currentPulsar *Pulsar) ClearVector(){
+func (currentPulsar *Pulsar) ClearVector() {
 	currentPulsar.ownedBtfRowLock.Lock()
-	defer 	currentPulsar.ownedBtfRowLock.Unlock()
+	defer currentPulsar.ownedBtfRowLock.Unlock()
 	currentPulsar.ownedBftRow = map[string]*BftCell{}
 }

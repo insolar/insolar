@@ -21,6 +21,7 @@ import "github.com/prometheus/client_golang/prometheus"
 var ParcelsSentTotal = prometheus.NewCounterVec(
 	prometheus.CounterOpts{
 		Namespace: insolarNamespace,
+		Subsystem: "messagebus",
 		Name:      "parcels_sent_total",
 		Help:      "Total number of parcels sent",
 	},
@@ -29,11 +30,11 @@ var ParcelsSentTotal = prometheus.NewCounterVec(
 
 var ParcelsTime = prometheus.NewSummaryVec(
 	prometheus.SummaryOpts{
-		Namespace: insolarNamespace,
-		Name:      "parcels_time",
-		Help:      "Time spent on sending parcels",
+		Namespace:  insolarNamespace,
+		Subsystem:  "messagebus",
+		Name:       "parcels_time",
+		Help:       "Time spent on sending parcels",
 		Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.95: 0.005, 0.99: 0.001},
-
 	},
 	[]string{"messageType"},
 )
@@ -41,6 +42,7 @@ var ParcelsTime = prometheus.NewSummaryVec(
 var LocallyDeliveredParcelsTotal = prometheus.NewCounterVec(
 	prometheus.CounterOpts{
 		Namespace: insolarNamespace,
+		Subsystem: "messagebus",
 		Name:      "locally_delivered_parcels_total",
 		Help:      "Total number of parcels delivered to the same machine",
 	},
@@ -50,6 +52,7 @@ var LocallyDeliveredParcelsTotal = prometheus.NewCounterVec(
 var ParcelsSentSizeBytes = prometheus.NewSummaryVec(
 	prometheus.SummaryOpts{
 		Namespace:  insolarNamespace,
+		Subsystem:  "messagebus",
 		Name:       "parcels_sent_size_bytes",
 		Help:       "Size of sent parcels",
 		Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.95: 0.005, 0.99: 0.001},
@@ -60,6 +63,7 @@ var ParcelsSentSizeBytes = prometheus.NewSummaryVec(
 var ParcelsReplySizeBytes = prometheus.NewSummaryVec(
 	prometheus.SummaryOpts{
 		Namespace:  insolarNamespace,
+		Subsystem:  "messagebus",
 		Name:       "parcels_reply_size_bytes",
 		Help:       "Size of replies to parcels",
 		Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.95: 0.005, 0.99: 0.001},

@@ -13,7 +13,7 @@ Usage
    
 #### Start benchmark
 
-    ./bin/benchmark -c=3 -r=1 -k=scripts/insolard/configs/root_member_keys.json
+    ./bin/benchmark -c=4 -r=25 -k=scripts/insolard/configs/root_member_keys.json
 
 ### Options
 
@@ -23,10 +23,6 @@ Usage
         -r repetitions
                 Number of repetitions for one user. Default is one.
 
-        -i input
-                Path to file with initial data - references of members.
-                If you don't provide input file, new members will be generated automatically.
-
         -o output
                 Path to output file (use - for STDOUT).
 
@@ -34,7 +30,15 @@ Usage
                 Path to file with RootMember keys.
 
         -u apiurl (may be specified multiple times for roundrobin requests)
-                API url for requests (default - http://localhost:19191/api).
+                API url for requests (default - http://localhost:19101/api).
 
         -l loglevel
                 Log level (default - info).
+
+        -s savemembers
+                Saves members to file scripts/insolard/benchmark/members.txt.
+                If false, file wont be updated. Default is false.
+
+        -m usemembers
+                Use members from file scripts/insolard/benchmark/members.txt.
+                If false, wright info about created members in this file. Default is false. 

@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/transport/packet"
 	"github.com/insolar/insolar/network/transport/packet/types"
 )
@@ -38,6 +39,7 @@ func newPacketHandlerImpl(futureManager futureManager) *packetHandlerImpl {
 }
 
 func (ph *packetHandlerImpl) Handle(ctx context.Context, msg *packet.Packet) {
+	metrics.NetworkPacketReceivedTotal.WithLabelValues(msg.Type.String()).Inc()
 	if msg.IsResponse {
 		ph.processResponse(ctx, msg)
 		return
@@ -53,15 +55,15 @@ func (ph *packetHandlerImpl) Received() <-chan *packet.Packet {
 func (ph *packetHandlerImpl) processResponse(ctx context.Context, msg *packet.Packet) {
 	logger := inslogger.FromContext(ctx)
 
-	logger.Debugf("[ processResponse ] Process response %s with RequestID = %d", msg.RemoteAddress, msg.RequestID)
+	logger.Debugf("[ processResponse ] Process response %s from %s with RequestID = %d", msg.Type, msg.RemoteAddress, msg.RequestID)
 
 	future := ph.futureManager.Get(msg)
 	if future != nil {
 		if shouldProcessPacket(future, msg) {
-			logger.Debugf("[ processResponse ] Processing future with RequestID = %s", msg.RequestID)
+			logger.Debugf("[ processResponse ] Processing future with RequestID = %v", msg.RequestID)
 			future.SetResult(msg)
 		} else {
-			logger.Debugf("[ processResponse ] Canceling future with RequestID = %s", msg.RequestID)
+			logger.Debugf("[ processResponse ] Canceling future with RequestID = %v", msg.RequestID)
 		}
 		future.Cancel()
 	}
@@ -69,7 +71,7 @@ func (ph *packetHandlerImpl) processResponse(ctx context.Context, msg *packet.Pa
 
 func (ph *packetHandlerImpl) processRequest(ctx context.Context, msg *packet.Packet) {
 	logger := inslogger.FromContext(ctx)
-	logger.Debugf("[ processRequest ] Process request %s with RequestID = %d", msg.RemoteAddress, msg.RequestID)
+	logger.Debugf("[ processRequest ] Process request %s from %s with RequestID = %d", msg.Type, msg.RemoteAddress, msg.RequestID)
 
 	ph.received <- msg
 }

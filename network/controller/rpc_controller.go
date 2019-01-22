@@ -20,9 +20,10 @@ import (
 	"context"
 	"encoding/gob"
 	"fmt"
-	"github.com/insolar/insolar/metrics"
 	"strings"
 	"time"
+
+	"github.com/insolar/insolar/metrics"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
@@ -145,7 +146,7 @@ func (rpc *RPCController) requestCascadeSendMessage(ctx context.Context, data co
 		Cascade: data,
 	}).Build()
 
-	future, err := rpc.hostNetwork.SendRequest(request, nodeID)
+	future, err := rpc.hostNetwork.SendRequest(ctx, request, nodeID)
 	if err != nil {
 		return err
 	}
@@ -169,18 +170,19 @@ func (rpc *RPCController) requestCascadeSendMessage(ctx context.Context, data co
 }
 
 func (rpc *RPCController) SendMessage(nodeID core.RecordRef, name string, msg core.Parcel) ([]byte, error) {
-	start := time.Now()
-	ctx := msg.Context(context.Background())
-	inslogger.FromContext(ctx).Debugf("SendParcel with nodeID = %s method = %s, message reference = %s", nodeID.String(),
-		name, msg.DefaultTarget().String())
-
 	msgBytes := message.ParcelToBytes(msg)
 	metrics.ParcelsSentSizeBytes.WithLabelValues(msg.Type().String()).Observe(float64(len(msgBytes)))
 	request := rpc.hostNetwork.NewRequestBuilder().Type(types.RPC).Data(&RequestRPC{
 		Method: name,
 		Data:   [][]byte{msgBytes},
 	}).Build()
-	future, err := rpc.hostNetwork.SendRequest(request, nodeID)
+
+	start := time.Now()
+	ctx := msg.Context(context.Background())
+	logger := inslogger.FromContext(ctx)
+	logger.Debugf("SendParcel with nodeID = %s method = %s, message reference = %s, RequestID = %d", nodeID.String(),
+		name, msg.DefaultTarget().String(), request.GetRequestID())
+	future, err := rpc.hostNetwork.SendRequest(ctx, request, nodeID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Error sending RPC request to node %s", nodeID.String())
 	}
@@ -189,27 +191,29 @@ func (rpc *RPCController) SendMessage(nodeID core.RecordRef, name string, msg co
 		return nil, errors.Wrapf(err, "Error getting RPC response from node %s", nodeID.String())
 	}
 	data := response.GetData().(*ResponseRPC)
-	inslogger.FromContext(ctx).Debugf("Inside SendParcel: type - '%s', target - %s, caller - %s, targetRole - %s, time - %s",
+	logger.Debugf("Inside SendParcel: type - '%s', target - %s, caller - %s, targetRole - %s, time - %s",
 		msg.Type(), msg.DefaultTarget(), msg.GetCaller(), msg.DefaultRole(), time.Since(start))
 	if !data.Success {
 		return nil, errors.New("RPC call returned error: " + data.Error)
 	}
 	metrics.ParcelsReplySizeBytes.WithLabelValues(msg.Type().String()).Observe(float64(len(data.Result)))
+	metrics.NetworkParcelSentTotal.WithLabelValues(msg.Type().String()).Inc()
 	return data.Result, nil
 }
 
 func (rpc *RPCController) processMessage(ctx context.Context, request network.Request) (network.Response, error) {
 	payload := request.GetData().(*RequestRPC)
 	result, err := rpc.invoke(ctx, payload.Method, payload.Data)
+	metrics.NetworkParcelReceivedTotal.WithLabelValues(request.GetType().String()).Inc()
 	if err != nil {
-		return rpc.hostNetwork.BuildResponse(request, &ResponseRPC{Success: false, Error: err.Error()}), nil
+		return rpc.hostNetwork.BuildResponse(ctx, request, &ResponseRPC{Success: false, Error: err.Error()}), nil
 	}
-	return rpc.hostNetwork.BuildResponse(request, &ResponseRPC{Success: true, Result: result}), nil
+	return rpc.hostNetwork.BuildResponse(ctx, request, &ResponseRPC{Success: true, Result: result}), nil
 }
 
 func (rpc *RPCController) processCascade(ctx context.Context, request network.Request) (network.Response, error) {
 	payload := request.GetData().(*RequestCascade)
-	ctx, logger := inslogger.WithTraceField(ctx, payload.TraceID)
+	ctx, logger := inslogger.WithTraceField(context.Background(), payload.TraceID)
 
 	generalError := ""
 	_, invokeErr := rpc.invoke(ctx, payload.RPC.Method, payload.RPC.Data)
@@ -224,9 +228,9 @@ func (rpc *RPCController) processCascade(ctx context.Context, request network.Re
 	}
 
 	if generalError != "" {
-		return rpc.hostNetwork.BuildResponse(request, &ResponseCascade{Success: false, Error: generalError}), nil
+		return rpc.hostNetwork.BuildResponse(ctx, request, &ResponseCascade{Success: false, Error: generalError}), nil
 	}
-	return rpc.hostNetwork.BuildResponse(request, &ResponseCascade{Success: true}), nil
+	return rpc.hostNetwork.BuildResponse(ctx, request, &ResponseCascade{Success: true}), nil
 }
 
 func (rpc *RPCController) Start() {
