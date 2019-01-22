@@ -36,7 +36,6 @@ func newLogrusAdapter(cfg configuration.Log) (*logrusAdapter, error) {
 	log := logrus.New()
 
 	var formatter logrus.Formatter
-	timestampFormat := "2006-01-02 15:04:05.000000"
 
 	switch strings.ToLower(cfg.Formatter) {
 	case "text":

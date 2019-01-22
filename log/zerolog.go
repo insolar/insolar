@@ -20,8 +20,8 @@ import (
 	"io"
 	"os"
 	"strings"
-	"time"
 
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
@@ -33,10 +33,20 @@ type zerologAdapter struct {
 	logLevel       string
 }
 
-func newZerologAdapter() zerologAdapter {
+func newZerologAdapter(cfg configuration.Log) (*zerologAdapter, error) {
+
+	var output io.Writer
+	switch strings.ToLower(cfg.Formatter) {
+	case "text":
+		output = zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: timestampFormat}
+	case "json":
+		output = os.Stdout
+	default:
+		return nil, errors.New("unknown formatter " + cfg.Formatter)
+	}
+
 	zerolog.CallerSkipFrameCount = 4
-	output := zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: time.RFC3339}
-	return zerologAdapter{logger: zerolog.New(output).With().Timestamp().Caller().Logger(), logLevel: "debug"}
+	return &zerologAdapter{logger: zerolog.New(output).With().Timestamp().Caller().Logger()}, nil
 }
 
 // WithFields return copy of adapter with predefined fields.
