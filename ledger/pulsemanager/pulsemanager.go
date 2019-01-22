@@ -602,7 +602,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 
 		m.postProcessJets(ctx, newPulse, jets)
 		// TODO: make it asynchronious - @aorlovsky 19.01.2019
-		m.cleanLightData(ctx, newPulse)
+		go m.cleanLightData(ctx, newPulse)
 	}
 
 	err = m.Bus.OnPulse(ctx, newPulse)
