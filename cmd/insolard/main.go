@@ -112,7 +112,7 @@ func main() {
 		bootstrapComponents.KeyProcessor,
 	)
 
-	log.Infof("Starts with configuration:\n", configuration.ToString(cfgHolder.Configuration))
+	fmt.Println("Starts with configuration:\n", configuration.ToString(cfgHolder.Configuration))
 
 	jaegerflush := func() {}
 	if params.traceEnabled {
