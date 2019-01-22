@@ -37,7 +37,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const sendRetryCount = 3
+const sendRetryCount = 5
 
 type postParams map[string]interface{}
 
