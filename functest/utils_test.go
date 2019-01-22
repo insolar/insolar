@@ -185,54 +185,73 @@ type response struct {
 	Error  string
 }
 
-func signedRequest(user *user, method string, params ...interface{}) (interface{}, error) {
+func signedRequestNoRetry(user *user, method string, params ...interface{}) (interface{}, error) {
 	ctx := context.TODO()
 	rootCfg, err := requester.CreateUserConfig(user.ref, user.privKey)
 	if err != nil {
 		return nil, err
 	}
 	var resp response
+
+	res, err := requester.Send(ctx, TestAPIURL, rootCfg, &requester.RequestConfigJSON{
+		Method: method,
+		Params: params,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	resp = response{}
+	err = json.Unmarshal(res, &resp)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.Error == "" {
+		return resp.Result, nil
+	}
+
+	return resp.Result, errors.New(resp.Error)
+}
+
+func shouldRetry(err error) bool {
+	if err == nil {
+		return false
+	}
+	if netErr, ok := errors.Cause(err).(net.Error); ok && netErr.Timeout() {
+		fmt.Println("Timeout, retry")
+		fmt.Println("Method: Transfer")
+		return true
+	}
+	if strings.Contains(err.Error(), "Incorrect message pulse") {
+		fmt.Printf("Incorrect message pulse, retry (error - %s)\n", err.Error())
+		fmt.Println("Method: Transfer")
+		return true
+	}
+
+	if strings.Contains(err.Error(), "Messagebus timeout exceeded") {
+		fmt.Println("Messagebus timeout exceeded, retry")
+		fmt.Println("Method: Transfer")
+		return true
+	}
+
+	return false
+}
+
+func signedRequest(user *user, method string, params ...interface{}) (interface{}, error) {
+	var res interface{}
+	var err error
 	for i := 0; i < sendRetryCount; i++ {
-		res, err := requester.Send(ctx, TestAPIURL, rootCfg, &requester.RequestConfigJSON{
-			Method: method,
-			Params: params,
-		})
-
-		if netErr, ok := errors.Cause(err).(net.Error); ok && netErr.Timeout() {
-			fmt.Println("Timeout, retry")
-			fmt.Printf("Method: %s\n", method)
-			time.Sleep(time.Second)
-			continue
-		} else if err != nil {
-			return nil, err
-		}
-
-		resp = response{}
-		err = json.Unmarshal(res, &resp)
-		if err != nil {
-			return nil, err
-		}
-
-		if resp.Error == "" {
-			return resp.Result, nil
-		}
-		if strings.Contains(resp.Error, "Incorrect message pulse") {
-			fmt.Printf("Incorrect message pulse, retry (error - %s)\n", resp.Error)
-			fmt.Printf("Method: %s\n", method)
+		res, err = signedRequestNoRetry(user, method, params...)
+		r := shouldRetry(err)
+		if r {
 			time.Sleep(time.Second)
 			continue
 		}
-
-		if strings.Contains(resp.Error, "Messagebus timeout exceeded") {
-			fmt.Println("Messagebus timeout exceeded, retry")
-			fmt.Printf("Method: %s\n", method)
-			time.Sleep(time.Second)
-			continue
-		}
-
 		break
 	}
-	return resp.Result, errors.New(resp.Error)
+	return res, err
 }
 
 func newUserWithKeys() (*user, error) {

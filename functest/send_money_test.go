@@ -27,6 +27,7 @@ import (
 )
 
 const times = 5
+const transferRetry = 5
 
 func checkBalanceFewTimes(t *testing.T, caller *user, ref string, expected int) {
 	for i := 0; i < times; i++ {
@@ -40,15 +41,27 @@ func checkBalanceFewTimes(t *testing.T, caller *user, ref string, expected int) 
 }
 
 func TestTransferMoney(t *testing.T) {
-	firstMember := createMember(t, "Member1")
-	secondMember := createMember(t, "Member2")
-	oldFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
-	oldSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)
-
+	var firstMember *user
+	var secondMember *user
+	var oldFirstBalance int
+	var oldSecondBalance int
+	var err error
 	amount := 111
 
-	_, err := signedRequest(firstMember, "Transfer", amount, secondMember.ref)
-	require.NoError(t, err)
+	for i := 0; i < transferRetry; i++ {
+		firstMember = createMember(t, "Member1")
+		secondMember = createMember(t, "Member2")
+		oldFirstBalance = getBalanceNoErr(t, firstMember, firstMember.ref)
+		oldSecondBalance = getBalanceNoErr(t, secondMember, secondMember.ref)
+
+		_, err = signedRequestNoRetry(firstMember, "Transfer", amount, secondMember.ref)
+		r := shouldRetry(err)
+		if r {
+			time.Sleep(time.Second)
+			continue
+		}
+		require.NoError(t, err)
+	}
 
 	checkBalanceFewTimes(t, secondMember, secondMember.ref, oldSecondBalance+amount)
 	newFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
@@ -102,15 +115,28 @@ func TestTransferNegativeAmount(t *testing.T) {
 }
 
 func TestTransferAllAmount(t *testing.T) {
-	firstMember := createMember(t, "Member1")
-	secondMember := createMember(t, "Member2")
-	oldFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
-	oldSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)
+	var firstMember *user
+	var secondMember *user
+	var oldFirstBalance int
+	var oldSecondBalance int
+	var err error
+	var amount int
 
-	amount := oldFirstBalance
+	for i := 0; i < transferRetry; i++ {
+		firstMember = createMember(t, "Member1")
+		secondMember = createMember(t, "Member2")
+		oldFirstBalance = getBalanceNoErr(t, firstMember, firstMember.ref)
+		oldSecondBalance = getBalanceNoErr(t, secondMember, secondMember.ref)
+		amount = oldFirstBalance
 
-	_, err := signedRequest(firstMember, "Transfer", amount, secondMember.ref)
-	require.NoError(t, err)
+		_, err = signedRequestNoRetry(firstMember, "Transfer", amount, secondMember.ref)
+		r := shouldRetry(err)
+		if r {
+			time.Sleep(time.Second)
+			continue
+		}
+		require.NoError(t, err)
+	}
 
 	checkBalanceFewTimes(t, secondMember, secondMember.ref, oldSecondBalance+oldFirstBalance)
 	newFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
@@ -151,17 +177,35 @@ func TestTransferToMyself(t *testing.T) {
 // TODO: check transfer zero amount
 
 func TestTransferTwoTimes(t *testing.T) {
-	firstMember := createMember(t, "Member1")
-	secondMember := createMember(t, "Member2")
-	oldFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
-	oldSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)
-
+	var firstMember *user
+	var secondMember *user
+	var oldFirstBalance int
+	var oldSecondBalance int
+	var err error
 	amount := 100
 
-	_, err := signedRequest(firstMember, "Transfer", amount, secondMember.ref)
-	require.NoError(t, err)
-	_, err = signedRequest(firstMember, "Transfer", amount, secondMember.ref)
-	require.NoError(t, err)
+	for i := 0; i < transferRetry*2; i++ {
+		firstMember = createMember(t, "Member1")
+		secondMember = createMember(t, "Member2")
+		oldFirstBalance = getBalanceNoErr(t, firstMember, firstMember.ref)
+		oldSecondBalance = getBalanceNoErr(t, secondMember, secondMember.ref)
+
+		_, err = signedRequestNoRetry(firstMember, "Transfer", amount, secondMember.ref)
+		r := shouldRetry(err)
+		if r {
+			time.Sleep(time.Second)
+			continue
+		}
+		require.NoError(t, err)
+
+		_, err = signedRequestNoRetry(firstMember, "Transfer", amount, secondMember.ref)
+		r = shouldRetry(err)
+		if r {
+			time.Sleep(time.Second)
+			continue
+		}
+		require.NoError(t, err)
+	}
 
 	checkBalanceFewTimes(t, secondMember, secondMember.ref, oldSecondBalance+2*amount)
 	newFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
