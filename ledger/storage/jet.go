@@ -19,7 +19,7 @@ package storage
 import (
 	"bytes"
 	"context"
-	"sync"
+	"fmt"
 
 	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/core"
@@ -31,7 +31,8 @@ import (
 
 // GetDrop returns jet drop for a given pulse number and jet id.
 func (db *DB) GetDrop(ctx context.Context, jetID core.RecordID, pulse core.PulseNumber) (*jet.JetDrop, error) {
-	k := prefixkey(scopeIDJetDrop, jetID[:], pulse.Bytes())
+	_, prefix := jet.Jet(jetID)
+	k := prefixkey(scopeIDJetDrop, prefix, pulse.Bytes())
 
 	buf, err := db.get(ctx, k)
 	if err != nil {
@@ -46,7 +47,7 @@ func (db *DB) GetDrop(ctx context.Context, jetID core.RecordID, pulse core.Pulse
 
 // CreateDrop creates and stores jet drop for given pulse number.
 //
-// Previous JetDrop hash should be provided. On success returns saved drop and slot records.
+// On success returns saved drop object, slot records, drop size.
 func (db *DB) CreateDrop(ctx context.Context, jetID core.RecordID, pulse core.PulseNumber, prevHash []byte) (
 	*jet.JetDrop,
 	[][]byte,
@@ -62,65 +63,48 @@ func (db *DB) CreateDrop(ctx context.Context, jetID core.RecordID, pulse core.Pu
 		return nil, nil, 0, err
 	}
 
-	wg := sync.WaitGroup{}
-	wg.Add(2)
-
 	var messages [][]byte
-	var messagesError error
+	_, jetPrefix := jet.Jet(jetID)
+	// messagesPrefix := prefixkey(scopeIDMessage, jetPrefix, pulse.Bytes())
 
-	go func() {
-		messagesPrefix := prefixkey(scopeIDMessage, jetID[:], pulse.Bytes())
+	// err = db.db.View(func(txn *badger.Txn) error {
+	// 	it := txn.NewIterator(badger.DefaultIteratorOptions)
+	// 	defer it.Close()
+	//
+	// 	for it.Seek(messagesPrefix); it.ValidForPrefix(messagesPrefix); it.Next() {
+	// 		val, err := it.Item().ValueCopy(nil)
+	// 		if err != nil {
+	// 			return err
+	// 		}
+	// 		messages = append(messages, val)
+	// 	}
+	// 	return nil
+	// })
+	// if err != nil {
+	// 	return nil, nil, 0, err
+	// }
 
-		messagesError = db.db.View(func(txn *badger.Txn) error {
-			it := txn.NewIterator(badger.DefaultIteratorOptions)
-			defer it.Close()
-
-			for it.Seek(messagesPrefix); it.ValidForPrefix(messagesPrefix); it.Next() {
-				val, err := it.Item().ValueCopy(nil)
-				if err != nil {
-					return err
-				}
-				messages = append(messages, val)
-			}
-			return nil
-		})
-
-		wg.Done()
-	}()
-
-	var jetDropHashError error
 	var dropSize uint64
-	go func() {
-		recordPrefix := prefixkey(scopeIDRecord, jetID[:], pulse.Bytes())
+	recordPrefix := prefixkey(scopeIDRecord, jetPrefix, pulse.Bytes())
+	err = db.db.View(func(txn *badger.Txn) error {
+		it := txn.NewIterator(badger.DefaultIteratorOptions)
+		defer it.Close()
 
-		jetDropHashError = db.db.View(func(txn *badger.Txn) error {
-			it := txn.NewIterator(badger.DefaultIteratorOptions)
-			defer it.Close()
-
-			for it.Seek(recordPrefix); it.ValidForPrefix(recordPrefix); it.Next() {
-				val, err := it.Item().ValueCopy(nil)
-				if err != nil {
-					return err
-				}
-				_, err = hw.Write(val)
-				if err != nil {
-					return err
-				}
-				dropSize += uint64(len(val))
+		for it.Seek(recordPrefix); it.ValidForPrefix(recordPrefix); it.Next() {
+			val, err := it.Item().ValueCopy(nil)
+			if err != nil {
+				return err
 			}
-			return nil
-		})
-
-		wg.Done()
-	}()
-
-	wg.Wait()
-
-	if messagesError != nil {
-		return nil, nil, 0, messagesError
-	}
-	if jetDropHashError != nil {
-		return nil, nil, 0, jetDropHashError
+			_, err = hw.Write(val)
+			if err != nil {
+				return err
+			}
+			dropSize += uint64(len(val))
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, nil, 0, err
 	}
 
 	drop := jet.JetDrop{
@@ -133,10 +117,13 @@ func (db *DB) CreateDrop(ctx context.Context, jetID core.RecordID, pulse core.Pu
 
 // SetDrop saves provided JetDrop in db.
 func (db *DB) SetDrop(ctx context.Context, jetID core.RecordID, drop *jet.JetDrop) error {
-	k := prefixkey(scopeIDJetDrop, jetID[:], drop.Pulse.Bytes())
+	fmt.Printf("SetDrop for jet: %v, pulse: %v\n", jetID.DebugString(), drop.Pulse)
 
+	_, prefix := jet.Jet(jetID)
+	k := prefixkey(scopeIDJetDrop, prefix, drop.Pulse.Bytes())
 	_, err := db.get(ctx, k)
 	if err == nil {
+		fmt.Println("override drop for pulse ", drop.Pulse)
 		return ErrOverride
 	}
 
@@ -164,21 +151,6 @@ func (db *DB) UpdateJetTree(ctx context.Context, pulse core.PulseNumber, setActu
 	return db.set(ctx, k, tree.Bytes())
 }
 
-// AppendJetTree append a jet tree for specified pulse.
-func (db *DB) AppendJetTree(ctx context.Context, pulse core.PulseNumber, tree *jet.Tree) error {
-	db.jetTreeLock.Lock()
-	defer db.jetTreeLock.Unlock()
-
-	savedTree, err := db.getJetTree(ctx, pulse)
-	if err != nil {
-		return err
-	}
-	mergedTree := savedTree.Merge(tree)
-
-	k := prefixkey(scopeIDSystem, []byte{sysJetTree}, pulse.Bytes())
-	return db.set(ctx, k, mergedTree.Bytes())
-}
-
 // GetJetTree fetches tree for specified pulse.
 func (db *DB) GetJetTree(ctx context.Context, pulse core.PulseNumber) (*jet.Tree, error) {
 	db.jetTreeLock.RLock()
@@ -190,7 +162,10 @@ func (db *DB) getJetTree(ctx context.Context, pulse core.PulseNumber) (*jet.Tree
 	k := prefixkey(scopeIDSystem, []byte{sysJetTree}, pulse.Bytes())
 	buff, err := db.get(ctx, k)
 	if err == ErrNotFound {
-		return jet.NewTree(), nil
+		fmt.Println("NewTree was created with pulse", pulse)
+		tree := jet.NewTree(pulse == core.GenesisPulse.PulseNumber)
+		err := db.set(ctx, k, tree.Bytes())
+		return tree, err
 	}
 	if err != nil {
 		return nil, err
@@ -208,13 +183,13 @@ func (db *DB) getJetTree(ctx context.Context, pulse core.PulseNumber) (*jet.Tree
 
 // SplitJetTree performs jet split and returns resulting jet ids.
 func (db *DB) SplitJetTree(
-	ctx context.Context, from, to core.PulseNumber, jetID core.RecordID,
+	ctx context.Context, pulse core.PulseNumber, jetID core.RecordID,
 ) (*core.RecordID, *core.RecordID, error) {
 	db.jetTreeLock.Lock()
 	defer db.jetTreeLock.Unlock()
 
-	k := prefixkey(scopeIDSystem, []byte{sysJetTree}, to.Bytes())
-	tree, err := db.getJetTree(ctx, from)
+	k := prefixkey(scopeIDSystem, []byte{sysJetTree}, pulse.Bytes())
+	tree, err := db.getJetTree(ctx, pulse)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -234,21 +209,24 @@ func (db *DB) SplitJetTree(
 // CloneJetTree copies tree from one pulse to another. Use it to copy past tree into new pulse.
 func (db *DB) CloneJetTree(
 	ctx context.Context, from, to core.PulseNumber,
-) error {
+) (*jet.Tree, error) {
 	db.jetTreeLock.Lock()
 	defer db.jetTreeLock.Unlock()
 
 	k := prefixkey(scopeIDSystem, []byte{sysJetTree}, to.Bytes())
 	tree, err := db.getJetTree(ctx, from)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	if from != core.FirstPulseNumber {
-		tree.ResetActual()
+	tree.ResetActual()
+
+	err = db.set(ctx, k, tree.Bytes())
+	if err != nil {
+		return nil, err
 	}
 
-	return db.set(ctx, k, tree.Bytes())
+	return tree, nil
 }
 
 // AddJets stores a list of jets of the current node.

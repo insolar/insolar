@@ -34,7 +34,7 @@ func TestLedgerArtifactManager_handleHeavy(t *testing.T) {
 	t.Parallel()
 	ctx, db, _, cleaner := getTestData(t)
 	defer cleaner()
-	jetID := testutils.RandomID()
+	jetID := testutils.RandomJet()
 
 	// prepare mock
 	heavysync := testutils.NewHeavySyncMock(t)
@@ -49,8 +49,11 @@ func TestLedgerArtifactManager_handleHeavy(t *testing.T) {
 	recentStorageMock.AddObjectMock.Return()
 	recentStorageMock.RemovePendingRequestMock.Return()
 
+	certificate := testutils.NewCertificateMock(t)
+	certificate.GetRoleMock.Return(core.StaticRoleHeavyMaterial)
+
 	// message hanler with mok
-	mh := NewMessageHandler(db, nil)
+	mh := NewMessageHandler(db, nil, certificate)
 
 	provideMock := recentstorage.NewProviderMock(t)
 	provideMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {

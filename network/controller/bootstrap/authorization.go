@@ -90,7 +90,7 @@ func (ac *AuthorizationController) Authorize(ctx context.Context, discoveryNode 
 	request := ac.transport.NewRequestBuilder().Type(types.Authorize).Data(&AuthorizationRequest{
 		Certificate: serializedCert,
 	}).Build()
-	future, err := ac.transport.SendRequestPacket(request, discoveryNode.Host)
+	future, err := ac.transport.SendRequestPacket(ctx, request, discoveryNode.Host)
 	if err != nil {
 		return 0, errors.Wrapf(err, "Error sending authorize request")
 	}
@@ -117,7 +117,7 @@ func (ac *AuthorizationController) Register(ctx context.Context, discoveryNode *
 		SessionID: sessionID,
 		JoinClaim: originClaim,
 	}).Build()
-	future, err := ac.transport.SendRequestPacket(request, discoveryNode.Host)
+	future, err := ac.transport.SendRequestPacket(ctx, request, discoveryNode.Host)
 	if err != nil {
 		return errors.Wrapf(err, "Error sending register request")
 	}
@@ -149,27 +149,27 @@ func (ac *AuthorizationController) processRegisterRequest(ctx context.Context, r
 	err := ac.checkClaim(data.SessionID, data.JoinClaim)
 	if err != nil {
 		responseAuthorize := &RegistrationResponse{Code: OpRejected, Error: err.Error()}
-		return ac.transport.BuildResponse(request, responseAuthorize), nil
+		return ac.transport.BuildResponse(ctx, request, responseAuthorize), nil
 	}
 	ac.keeper.AddPendingClaim(data.JoinClaim)
-	return ac.transport.BuildResponse(request, &RegistrationResponse{Code: OpConfirmed}), nil
+	return ac.transport.BuildResponse(ctx, request, &RegistrationResponse{Code: OpConfirmed}), nil
 }
 
 func (ac *AuthorizationController) processAuthorizeRequest(ctx context.Context, request network.Request) (network.Response, error) {
 	data := request.GetData().(*AuthorizationRequest)
 	cert, err := certificate.Deserialize(data.Certificate, platformpolicy.NewKeyProcessor())
 	if err != nil {
-		return ac.transport.BuildResponse(request, &AuthorizationResponse{Code: OpRejected, Error: err.Error()}), nil
+		return ac.transport.BuildResponse(ctx, request, &AuthorizationResponse{Code: OpRejected, Error: err.Error()}), nil
 	}
 	valid, err := ac.coordinator.ValidateCert(context.Background(), cert)
 	if !valid {
 		if err == nil {
 			err = errors.New("Certificate validation failed")
 		}
-		return ac.transport.BuildResponse(request, &AuthorizationResponse{Code: OpRejected, Error: err.Error()}), nil
+		return ac.transport.BuildResponse(ctx, request, &AuthorizationResponse{Code: OpRejected, Error: err.Error()}), nil
 	}
 	session := ac.sessionManager.NewSession(request.GetSender(), cert, ac.options.HandshakeSessionTTL)
-	return ac.transport.BuildResponse(request, &AuthorizationResponse{Code: OpConfirmed, SessionID: session}), nil
+	return ac.transport.BuildResponse(ctx, request, &AuthorizationResponse{Code: OpConfirmed, SessionID: session}), nil
 }
 
 func (ac *AuthorizationController) Start(networkCoordinator core.NetworkCoordinator, nodeKeeper network.NodeKeeper) {

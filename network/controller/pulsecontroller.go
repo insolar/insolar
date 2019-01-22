@@ -38,13 +38,13 @@ func (pc *PulseController) Start() {
 func (pc *PulseController) processPulse(ctx context.Context, request network.Request) (network.Response, error) {
 	data := request.GetData().(*packet.RequestPulse)
 	go pc.pulseHandler.HandlePulse(context.Background(), data.Pulse)
-	return pc.hostNetwork.BuildResponse(request, &packet.ResponsePulse{Success: true, Error: ""}), nil
+	return pc.hostNetwork.BuildResponse(ctx, request, &packet.ResponsePulse{Success: true, Error: ""}), nil
 }
 
 func (pc *PulseController) processGetRandomHosts(ctx context.Context, request network.Request) (network.Response, error) {
 	data := request.GetData().(*packet.RequestGetRandomHosts)
 	randomHosts := pc.routingTable.GetRandomNodes(data.HostsNumber)
-	return pc.hostNetwork.BuildResponse(request, &packet.ResponseGetRandomHosts{Hosts: randomHosts}), nil
+	return pc.hostNetwork.BuildResponse(ctx, request, &packet.ResponseGetRandomHosts{Hosts: randomHosts}), nil
 }
 
 func NewPulseController(pulseHandler network.PulseHandler, hostNetwork network.HostNetwork,

@@ -19,6 +19,7 @@ package storage
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 
 	"github.com/insolar/insolar/core"
 	"github.com/ugorji/go/codec"
@@ -26,9 +27,10 @@ import (
 
 // Pulse is a record containing pulse info.
 type Pulse struct {
-	Prev  *core.PulseNumber
-	Next  *core.PulseNumber
-	Pulse core.Pulse
+	Prev         *core.PulseNumber
+	Next         *core.PulseNumber
+	SerialNumber int
+	Pulse        core.Pulse
 }
 
 // Bytes serializes pulse.
@@ -68,7 +70,20 @@ func (m *TransactionManager) GetPulse(ctx context.Context, num core.PulseNumber)
 // AddPulse saves new pulse data and updates index.
 func (db *DB) AddPulse(ctx context.Context, pulse core.Pulse) error {
 	return db.Update(ctx, func(tx *TransactionManager) error {
-		var previousPulseNumber core.PulseNumber
+		var (
+			previousPulseNumber  core.PulseNumber
+			previousSerialNumber int
+		)
+
+		_, err := tx.get(ctx, prefixkey(scopeIDPulse, pulse.PulseNumber.Bytes()))
+		if err == nil {
+			return ErrOverride
+		} else if err == ErrNotFound {
+			err = nil // nolint: ineffassign
+		} else {
+			return err
+		}
+
 		previousPulse, err := tx.GetLatestPulse(ctx)
 		if err != nil && err != ErrNotFound {
 			return err
@@ -78,6 +93,7 @@ func (db *DB) AddPulse(ctx context.Context, pulse core.Pulse) error {
 		if err == nil {
 			if previousPulse != nil {
 				previousPulseNumber = previousPulse.Pulse.PulseNumber
+				previousSerialNumber = previousPulse.SerialNumber
 			}
 
 			prevPulse, err := tx.GetPulse(ctx, previousPulseNumber)
@@ -93,8 +109,9 @@ func (db *DB) AddPulse(ctx context.Context, pulse core.Pulse) error {
 
 		// Save new pulse.
 		p := Pulse{
-			Prev:  &previousPulseNumber,
-			Pulse: pulse,
+			Prev:         &previousPulseNumber,
+			SerialNumber: previousSerialNumber + 1,
+			Pulse:        pulse,
 		}
 		err = tx.set(ctx, prefixkey(scopeIDPulse, pulse.PulseNumber.Bytes()), p.Bytes())
 		if err != nil {
@@ -155,8 +172,12 @@ func (m *TransactionManager) GetLatestPulse(ctx context.Context) (*Pulse, error)
 	return toPulse(buf)
 }
 
-// GetLatestPulse returns the latest pulse
+// Deprecated: use core.PulseStorage.Current() instead (or private getLatestPulse if applicable).
 func (db *DB) GetLatestPulse(ctx context.Context) (*Pulse, error) {
+	return db.getLatestPulse(ctx)
+}
+
+func (db *DB) getLatestPulse(ctx context.Context) (*Pulse, error) {
 	tx, err := db.BeginTransaction(false)
 	if err != nil {
 		return nil, err
@@ -168,4 +189,28 @@ func (db *DB) GetLatestPulse(ctx context.Context) (*Pulse, error) {
 
 func pulseNumFromKey(from int, key []byte) core.PulseNumber {
 	return core.NewPulseNumber(key[from : from+core.PulseNumberSize])
+}
+
+// Key type for wrapping storage binary key.
+type Key []byte
+
+// PulseNumber returns pulse number for provided storage binary key.
+func (b Key) PulseNumber() core.PulseNumber {
+	// by default expect jetID after:
+	// offset in this case: is 1 + RecordHashSize (jet length) - 1 minus jet prefix
+	from := core.RecordHashSize
+	switch b[0] {
+	case scopeIDPulse:
+		from = 1
+	case scopeIDSystem:
+		// for specific system records is different rules
+		// pulse number could exist or not
+		return 0
+	}
+	return pulseNumFromKey(from, b)
+}
+
+// String string hex representation
+func (b Key) String() string {
+	return hex.EncodeToString(b)
 }

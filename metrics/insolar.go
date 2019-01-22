@@ -6,6 +6,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+// GetInsolarRegistry creates and registers Insolar global metrics
 func GetInsolarRegistry() *prometheus.Registry {
 	registry := prometheus.NewRegistry()
 
@@ -15,10 +16,12 @@ func GetInsolarRegistry() *prometheus.Registry {
 	registry.MustRegister(prometheus.NewProcessCollector(os.Getpid(), insolarNamespace))
 	registry.MustRegister(prometheus.NewGoCollector())
 	// insolar collectors
-	registry.MustRegister(NetworkMessageSentTotal)
+	registry.MustRegister(NetworkParcelSentTotal)
 	registry.MustRegister(NetworkFutures)
+	registry.MustRegister(NetworkConnections)
 	registry.MustRegister(NetworkPacketSentTotal)
 	registry.MustRegister(NetworkPacketReceivedTotal)
+	registry.MustRegister(NetworkParcelReceivedTotal)
 
 	registry.MustRegister(ParcelsSentTotal)
 	registry.MustRegister(ParcelsTime)
@@ -27,6 +30,8 @@ func GetInsolarRegistry() *prometheus.Registry {
 	registry.MustRegister(LocallyDeliveredParcelsTotal)
 
 	registry.MustRegister(GopluginContractExecutionTime)
+
+	registry.MustRegister(APIContractExecutionTime)
 
 	return registry
 }

@@ -14,31 +14,28 @@
  *    limitations under the License.
  */
 
-package pool
+package sequence
 
 import (
-	"context"
-	"io"
-	"net"
-
-	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/network/utils"
 )
 
-// Consuming 1 byte; only usable for outgoing connections.
-func connectionClosedByPeer(ctx context.Context, conn net.Conn) bool {
-	logger := inslogger.FromContext(ctx)
+type Sequence uint64
 
-	n, err := conn.Read(make([]byte, 1))
+type Generator interface {
+	Generate() Sequence
+}
 
-	if err == io.EOF || n > 0 {
-		if err != nil {
-			logger.Errorln("[ connectionClosedByPeer ] Failed to close connection: ", err.Error())
-		} else {
-			logger.Debug("[ connectionClosedByPeer ] Close connection to %s", conn.RemoteAddr())
-		}
+type generatorImpl struct {
+	sequence *uint64
+}
 
-		return true
+func NewGeneratorImpl() Generator {
+	return &generatorImpl{
+		sequence: new(uint64),
 	}
+}
 
-	return false
+func (sg *generatorImpl) Generate() Sequence {
+	return Sequence(utils.AtomicLoadAndIncrementUint64(sg.sequence))
 }

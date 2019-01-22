@@ -18,6 +18,7 @@ package pulsenetwork
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -103,7 +104,11 @@ func (d *distributor) Distribute(ctx context.Context, pulse *core.Pulse) {
 
 			hosts, err := d.getRandomHosts(ctx, &bootstrapHost)
 			if err != nil {
-				logger.Error("[ Distribute ] failed to get random hosts", err)
+				logger.Errorf(
+					"[ Distribute ] Failed to send pulse to host: %s, error: %s",
+					bootstrapHost.String(),
+					err.Error(),
+				)
 			}
 
 			if len(hosts) == 0 {
@@ -126,7 +131,7 @@ func (d *distributor) pingHost(ctx context.Context, host *host.Host) error {
 
 	builder := packet.NewBuilder(d.pulsarHost)
 	pingPacket := builder.Receiver(host).Type(types.Ping).Build()
-	pingCall, err := d.Transport.SendRequest(pingPacket)
+	pingCall, err := d.Transport.SendRequest(ctx, pingPacket)
 	if err != nil {
 		logger.Error(err)
 		return errors.Wrap(err, "[ pingHost ] failed to send ping request")
@@ -160,30 +165,30 @@ func (d *distributor) getRandomHosts(ctx context.Context, host *host.Host) ([]ho
 		Type(types.GetRandomHosts).
 		Build()
 
-	logger.Debugf("before get random hosts request")
-	call, err := d.Transport.SendRequest(request)
+	logger.Debugf("[ getRandomHosts ] before get random hosts request")
+	call, err := d.Transport.SendRequest(ctx, request)
 	if err != nil {
-		logger.Error(err)
+		logger.Errorf("[ getRandomHosts ] Failed to send request to host: %s, error: %s", host.String(), err)
 		return nil, errors.Wrap(err, "[ getRandomHosts ] failed to send getRandomHosts request")
 	}
 
 	result, err := call.GetResult(d.randomHostsRequestTimeout)
 	if err != nil {
-		logger.Error(err)
+		logger.Errorf("[ getRandomHosts ] Failed to get result from host: %s, error: %s", host.String(), err)
 		return nil, errors.Wrap(err, "[ getRandomHosts ] failed to get getRandomHosts result")
 	}
 
 	if result.Error != nil {
-		logger.Error(result.Error)
-		return nil, errors.Wrap(err, "[ getRandomHosts ] getRandomHosts result returned error")
+		logger.Errorf("[ getRandomHosts ] Host %s returned error: %s", host.String(), result.Error.Error())
+		return nil, errors.Wrap(result.Error, "[ getRandomHosts ] getRandomHosts result returned error")
 	}
 
-	logger.Debugf("getRandomHosts request is done")
+	logger.Debugf("[ getRandomHosts ] getRandomHosts request is done")
 
 	body := result.Data.(*packet.ResponseGetRandomHosts)
 	if len(body.Error) != 0 {
-		logger.Error(body.Error)
-		return nil, errors.Wrap(err, "[ getRandomHosts ] getRandomHosts data returned error")
+		logger.Errorf("[ getRandomHosts ] Body result from host %s is error %s", host.String(), body.Error)
+		return nil, fmt.Errorf("[ getRandomHosts ] getRandomHosts data returned error: %s", body.Error)
 	}
 
 	return body.Hosts, nil
@@ -201,7 +206,11 @@ func (d *distributor) sendPulseToHosts(ctx context.Context, pulse *core.Pulse, h
 			defer wg.Done()
 			err := d.sendPulseToHost(ctx, pulse, &host)
 			if err != nil {
-				logger.Error(err)
+				logger.Errorf(
+					"[ sendPulseToHosts ] Failed to send pulse to host: %s, error: %s",
+					host.String(),
+					err.Error(),
+				)
 			}
 		}(pulseReceiver)
 	}
@@ -219,7 +228,7 @@ func (d *distributor) sendPulseToHost(ctx context.Context, pulse *core.Pulse, ho
 
 	pb := packet.NewBuilder(d.pulsarHost)
 	pulseRequest := pb.Receiver(host).Request(&packet.RequestPulse{Pulse: *pulse}).Type(types.Pulse).Build()
-	call, err := d.Transport.SendRequest(pulseRequest)
+	call, err := d.Transport.SendRequest(ctx, pulseRequest)
 	if err != nil {
 		return err
 	}
@@ -238,15 +247,10 @@ func (d *distributor) pause(ctx context.Context) {
 	inslogger.FromContext(ctx).Info("[ Pause ] Pause distribution, stopping transport")
 	go d.Transport.Stop()
 	<-d.Transport.Stopped()
+	d.Transport.Close()
 }
 
 func (d *distributor) resume(ctx context.Context) {
 	inslogger.FromContext(ctx).Info("[ Resume ] Resume distribution, starting transport")
-
-	go func(ctx context.Context, t transport.Transport) {
-		err := t.Listen(ctx)
-		if err != nil {
-			inslogger.FromContext(ctx).Error(err)
-		}
-	}(ctx, d.Transport)
+	transport.ListenAndWaitUntilReady(ctx, d.Transport)
 }

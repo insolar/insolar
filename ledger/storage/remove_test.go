@@ -17,6 +17,8 @@
 package storage_test
 
 import (
+	"bytes"
+	"sort"
 	"testing"
 
 	"github.com/insolar/insolar/core"
@@ -25,6 +27,7 @@ import (
 	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/testutils"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -40,17 +43,28 @@ func Test_RemoveJetIndexesUntil_WithSkips(t *testing.T) {
 
 func removeJetIndexesUntil(t *testing.T, skip bool) {
 	ctx := inslogger.TestContext(t)
+	// TODO: just use two cases: zero and non zero jetID
 	jetID := testutils.RandomJet()
+	var err error
 
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
+
+	// if we operate on zero jetID
+	var expectLeftIDs []core.RecordID
+	err = db.IterateIndexIDs(ctx, jetID, func(id core.RecordID) error {
+		if id.Pulse() == core.FirstPulseNumber {
+			expectLeftIDs = append(expectLeftIDs, id)
+		}
+		return nil
+	})
+	require.NoError(t, err)
 
 	pulsesCount := 10
 	untilIdx := pulsesCount / 2
 	var until core.PulseNumber
 
 	pulses := []core.PulseNumber{}
-	var expectLeftIDs []core.RecordID
 	expectedRmCount := 0
 	for i := 0; i < pulsesCount; i++ {
 		pn := core.FirstPulseNumber + core.PulseNumber(i)
@@ -69,24 +83,29 @@ func removeJetIndexesUntil(t *testing.T, skip bool) {
 			LatestState: &objID,
 		})
 		require.NoError(t, err)
-		// fmt.Println("..save", objID, "on pulse", pn)
 		if (pn == core.FirstPulseNumber) || (i >= untilIdx) {
 			expectLeftIDs = append(expectLeftIDs, objID)
 		} else {
 			expectedRmCount += 1
 		}
 	}
-	rmcount, err := db.RemoveJetIndexesUntil(ctx, jetID, until)
+	rmcount, err := db.RemoveJetIndexesUntil(ctx, jetID, until, nil)
 	require.NoError(t, err)
 
-	// fmt.Println("expectLeftIDs:", expectLeftIDs)
 	var foundIDs []core.RecordID
-	db.IterateIndexIDs(ctx, jetID, func(id core.RecordID) error {
-		// fmt.Println("found:", id)
+	err = db.IterateIndexIDs(ctx, jetID, func(id core.RecordID) error {
 		foundIDs = append(foundIDs, id)
 		return nil
 	})
+	require.NoError(t, err)
 
-	require.Equal(t, expectedRmCount, rmcount)
-	require.Equal(t, expectLeftIDs, foundIDs)
+	assert.Equal(t, expectedRmCount, rmcount)
+	assert.Equalf(t, sortIDS(expectLeftIDs), sortIDS(foundIDs), "expected keys and found indexes, doesn't match, jetID=%v", jetID.DebugString())
+}
+
+func sortIDS(ids []core.RecordID) []core.RecordID {
+	sort.Slice(ids, func(i, j int) bool {
+		return bytes.Compare(ids[i][:], ids[j][:]) < 0
+	})
+	return ids
 }

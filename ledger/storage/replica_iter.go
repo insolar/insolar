@@ -22,8 +22,8 @@ import (
 	"errors"
 
 	"github.com/dgraph-io/badger"
-
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/ledger/storage/jet"
 )
 
 // iterstate stores iterator state
@@ -68,16 +68,13 @@ func NewReplicaIter(
 	end core.PulseNumber,
 	limit int,
 ) *ReplicaIter {
-	newit := func(prefixbyte byte, jet *core.RecordID, start, end core.PulseNumber) *iterstate {
+	// fmt.Printf("CALL NewReplicaIter [%v:%v] (jet=%v)\n", start, end, jetID)
+	newit := func(prefixbyte byte, jetID core.RecordID, start, end core.PulseNumber) *iterstate {
 		prefix := []byte{prefixbyte}
+		_, jetPrefix := jet.Jet(jetID)
 		iter := &iterstate{prefix: prefix}
-		if jet == nil {
-			iter.start = bytes.Join([][]byte{prefix, start.Bytes()}, nil)
-			iter.end = bytes.Join([][]byte{prefix, end.Bytes()}, nil)
-		} else {
-			iter.start = bytes.Join([][]byte{prefix, jet[:], start.Bytes()}, nil)
-			iter.end = bytes.Join([][]byte{prefix, jet[:], end.Bytes()}, nil)
-		}
+		iter.start = bytes.Join([][]byte{prefix, jetPrefix[:], start.Bytes()}, nil)
+		iter.end = bytes.Join([][]byte{prefix, jetPrefix[:], end.Bytes()}, nil)
 		return iter
 	}
 
@@ -87,10 +84,10 @@ func NewReplicaIter(
 		limitBytes: limit,
 		// record iterators (order matters for heavy node consistency)
 		istates: []*iterstate{
-			newit(scopeIDRecord, &jetID, start, end),
-			newit(scopeIDBlob, &jetID, start, end),
-			newit(scopeIDLifeline, &jetID, core.FirstPulseNumber, end),
-			newit(scopeIDJetDrop, &jetID, start, end),
+			newit(scopeIDRecord, jetID, start, end),
+			newit(scopeIDBlob, jetID, start, end),
+			newit(scopeIDLifeline, jetID, core.FirstPulseNumber, end),
+			newit(scopeIDJetDrop, jetID, start, end),
 		},
 	}
 }
@@ -180,12 +177,14 @@ func (fc *fetchchunk) fetch(
 			}
 
 			lastpulse = pulseFromKey(key)
-			// fmt.Printf("key: %v (pulse=%v)\n", hex.EncodeToString(key), lastpulse)
+			// fmt.Printf("Replica> key: %v (pulse=%v)\n", hex.EncodeToString(key), lastpulse)
 
 			value, err := it.Item().ValueCopy(nil)
 			if err != nil {
 				return err
 			}
+
+			NullifyJetInKey(key)
 			fc.records = append(fc.records, core.KV{K: key, V: value})
 			fc.size += len(key) + len(value)
 		}
@@ -193,4 +192,16 @@ func (fc *fetchchunk) fetch(
 		return nil
 	})
 	return nextstart, lastpulse, err
+}
+
+// NullifyJetInKey nullify jet part in record.
+func NullifyJetInKey(key []byte) {
+	// if we remove jet part from drop, different drops from same pulses collapsed
+	// TODO: figure out how we want to send jet drops on heavy nodes - @Alexander Orlovsky 18.01.2019
+	if key[0] == scopeIDJetDrop {
+		return
+	}
+	for i := 1; i < core.RecordHashSize; i++ {
+		key[i] = 0
+	}
 }

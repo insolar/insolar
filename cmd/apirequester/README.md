@@ -14,7 +14,7 @@ Usage
    
 #### Start apirequester
 
-    ./bin/apirequester -k=scripts/insolard/root_member_keys.json
+    ./bin/apirequester -k=scripts/insolard/configs/root_member_keys.json
 
 ### Options
 
@@ -22,4 +22,4 @@ Usage
                 Path to file with RootMember keys.
 
         -u url
-                API url for requests (default - http://localhost:19191/api).
+                API url for requests (default - http://localhost:19101/api).

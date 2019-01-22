@@ -45,7 +45,7 @@ const (
 
 	sysGenesis                byte = 1
 	sysLatestPulse            byte = 2
-	sysReplicatedPulse        byte = 3
+	sysHeavyClientState       byte = 3
 	sysLastSyncedPulseOnHeavy byte = 4
 	sysJetTree                byte = 5
 	sysJetList                byte = 6
@@ -71,7 +71,8 @@ type DB struct {
 
 	jetSizesHistoryDepth int
 
-	idlocker *IDLocker
+	idlocker             *IDLocker
+	jetHeavyClientLocker *IDLocker
 
 	// NodeHistory is an in-memory active node storage for each pulse. It's required to calculate node roles
 	// for past pulses to locate data.
@@ -129,6 +130,7 @@ func NewDB(conf configuration.Ledger, opts *badger.Options) (*DB, error) {
 		txretiries:           conf.Storage.TxRetriesOnConflict,
 		jetSizesHistoryDepth: conf.JetSizesHistoryDepth,
 		idlocker:             NewIDLocker(),
+		jetHeavyClientLocker: NewIDLocker(),
 		nodeHistory:          map[core.PulseNumber][]Node{},
 	}
 	return db, nil
@@ -185,15 +187,6 @@ func (db *DB) Init(ctx context.Context) error {
 			jetID,
 			genesisID,
 			&index.ObjectLifeline{LatestState: genesisID, LatestStateApproved: genesisID},
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		err = db.SetReplicatedPulse(
-			ctx,
-			jetID,
-			lastPulse.Pulse.PulseNumber,
 		)
 		if err != nil {
 			return nil, err
@@ -426,9 +419,6 @@ func (db *DB) Update(ctx context.Context, fn func(*TransactionManager) error) er
 	}
 	tx.Discard()
 
-	if err != nil {
-		inslogger.FromContext(ctx).Errorln("DB Update error:", err)
-	}
 	return err
 }
 
@@ -439,6 +429,7 @@ func (db *DB) GetBadgerDB() *badger.DB {
 
 // SetMessage persists message to the database
 func (db *DB) SetMessage(ctx context.Context, jetID core.RecordID, pulseNumber core.PulseNumber, genericMessage core.Message) error {
+	_, prefix := jet.Jet(jetID)
 	messageBytes := message.ToBytes(genericMessage)
 	hw := db.PlatformCryptographyScheme.ReferenceHasher()
 	_, err := hw.Write(messageBytes)
@@ -449,7 +440,7 @@ func (db *DB) SetMessage(ctx context.Context, jetID core.RecordID, pulseNumber c
 
 	return db.set(
 		ctx,
-		prefixkey(scopeIDMessage, jetID[:], pulseNumber.Bytes(), hw.Sum(nil)),
+		prefixkey(scopeIDMessage, prefix, pulseNumber.Bytes(), hw.Sum(nil)),
 		messageBytes,
 	)
 }
@@ -491,7 +482,8 @@ func (db *DB) IterateRecordsOnPulse(
 	pulse core.PulseNumber,
 	handler func(id core.RecordID, rec record.Record) error,
 ) error {
-	prefix := prefixkey(scopeIDRecord, jetID[:], pulse.Bytes())
+	_, jetPrefix := jet.Jet(jetID)
+	prefix := prefixkey(scopeIDRecord, jetPrefix, pulse.Bytes())
 
 	return db.iterate(ctx, prefix, func(k, v []byte) error {
 		id := core.NewRecordID(pulse, k)
@@ -510,7 +502,8 @@ func (db *DB) IterateIndexIDs(
 	jetID core.RecordID,
 	handler func(id core.RecordID) error,
 ) error {
-	prefix := prefixkey(scopeIDLifeline, jetID[:])
+	_, jetPrefix := jet.Jet(jetID)
+	prefix := prefixkey(scopeIDLifeline, jetPrefix)
 
 	return db.iterate(ctx, prefix, func(k, v []byte) error {
 		pn := pulseNumFromKey(0, k)
@@ -521,62 +514,6 @@ func (db *DB) IterateIndexIDs(
 		}
 		return nil
 	})
-}
-
-// SetActiveNodes saves active nodes for pulse in memory.
-func (db *DB) SetActiveNodes(pulse core.PulseNumber, nodes []core.Node) error {
-	db.nodeHistoryLock.Lock()
-	defer db.nodeHistoryLock.Unlock()
-
-	if _, ok := db.nodeHistory[pulse]; ok {
-		return ErrOverride
-	}
-
-	db.nodeHistory[pulse] = []Node{}
-	for _, n := range nodes {
-		db.nodeHistory[pulse] = append(db.nodeHistory[pulse], Node{
-			FID:   n.ID(),
-			FRole: n.Role(),
-		})
-	}
-
-	return nil
-}
-
-// GetActiveNodes return active nodes for specified pulse.
-func (db *DB) GetActiveNodes(pulse core.PulseNumber) ([]core.Node, error) {
-	db.nodeHistoryLock.RLock()
-	defer db.nodeHistoryLock.RUnlock()
-
-	nodes, ok := db.nodeHistory[pulse]
-	if !ok {
-		return nil, errors.New("no nodes for this pulse")
-	}
-	res := make([]core.Node, 0, len(nodes))
-	for _, n := range nodes {
-		res = append(res, n)
-	}
-
-	return res, nil
-}
-
-// GetActiveNodesByRole return active nodes for specified pulse and role.
-func (db *DB) GetActiveNodesByRole(pulse core.PulseNumber, role core.StaticRole) ([]core.Node, error) {
-	db.nodeHistoryLock.RLock()
-	defer db.nodeHistoryLock.RUnlock()
-
-	nodes, ok := db.nodeHistory[pulse]
-	if !ok {
-		return nil, errors.New("no nodes for this pulse")
-	}
-	var inRole []core.Node
-	for _, n := range nodes {
-		if n.Role() == role {
-			inRole = append(inRole, n)
-		}
-	}
-
-	return inRole, nil
 }
 
 // StoreKeyValues stores provided key/value pairs.

@@ -19,6 +19,7 @@ package log
 import (
 	"io"
 	stdlog "log"
+	"strings"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
@@ -30,16 +31,22 @@ const defaultSkipCallNumber = 3
 // NewLog creates logger instance with particular configuration
 func NewLog(cfg configuration.Log) (core.Logger, error) {
 	var logger core.Logger
-	switch cfg.Adapter {
+	var err error
+
+	switch strings.ToLower(cfg.Adapter) {
 	case "logrus":
-		logger = newLogrusAdapter()
+		logger, err = newLogrusAdapter(cfg)
 	case "zerolog":
 		logger = newZerologAdapter()
 	default:
-		return nil, errors.New("invalid logger config")
+		err = errors.New("unknown adapter")
 	}
 
-	err := logger.SetLevel(cfg.Level)
+	if err != nil {
+		return nil, errors.Wrap(err, "invalid logger config")
+	}
+
+	err = logger.SetLevel(cfg.Level)
 	if err != nil {
 		return nil, errors.Wrap(err, "invalid logger config")
 	}
@@ -50,8 +57,12 @@ func NewLog(cfg configuration.Log) (core.Logger, error) {
 // GlobalLogger creates global logger with correct skipCallNumber
 // TODO: make it private again
 var GlobalLogger = func() core.Logger {
-	logger := newLogrusAdapter()
-	//logger := newZerologAdapter()
+	holder := configuration.NewHolder().MustInit(false)
+	logger, err := newLogrusAdapter(holder.Configuration.Log)
+	if err != nil {
+		stdlog.Println("warning:", err.Error())
+	}
+
 	logger.skipCallNumber = defaultSkipCallNumber + 1
 	holder := configuration.NewHolder().MustInit(false)
 	if err := logger.SetLevel(holder.Configuration.Log.Level); err != nil {

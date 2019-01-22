@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package instracer_test
+package examples_test
 
 import (
 	"context"
@@ -59,7 +59,7 @@ func Example_ClientServer() {
 	if tracedata := os.Getenv("TRACE_SERVER"); len(tracedata) > 0 {
 		servctx, tracespanbin := dataForServer(tracedata)
 		donefn := instracer.ShouldRegisterJaeger(
-			servctx, "server", jconf.AgentEndpoint, jconf.CollectorEndpoint)
+			servctx, "server", "nodeRef", jconf.AgentEndpoint, jconf.CollectorEndpoint, jconf.ProbabilityRate)
 		defer donefn()
 		time.Sleep(time.Millisecond * 10)
 		serverHandler(servctx, tracespanbin)
@@ -70,7 +70,7 @@ func Example_ClientServer() {
 	traceid := fmt.Sprintf("%v", time.Now().Unix())
 	ctx = inslogger.ContextWithTrace(ctx, traceid)
 	donefn := instracer.ShouldRegisterJaeger(
-		ctx, "client", jconf.AgentEndpoint, jconf.CollectorEndpoint)
+		ctx, "client", "nodeRef", jconf.AgentEndpoint, jconf.CollectorEndpoint, jconf.ProbabilityRate)
 	defer donefn()
 
 	ctx = instracer.SetBaggage(

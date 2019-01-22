@@ -25,6 +25,6 @@ Usage
     
         --root-conf string   Config that contains public/private keys of root member
     
-    -h, --url string         Insolar API URL (default "http://localhost:19191/api")
+    -h, --url string         Insolar API URL (default "http://localhost:19101/api")
     
     -v, --verbose            Be verbose (default false)

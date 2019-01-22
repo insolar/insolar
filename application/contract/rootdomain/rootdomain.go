@@ -44,7 +44,7 @@ func (rd *RootDomain) CreateMember(name string, key string) (string, error) {
 		return "", fmt.Errorf("[ CreateMember ] Can't save as child: %s", err.Error())
 	}
 
-	wHolder := wallet.New(1000)
+	wHolder := wallet.New(1000 * 1000 * 1000)
 	_, err = wHolder.AsDelegate(m.GetReference())
 	if err != nil {
 		return "", fmt.Errorf("[ CreateMember ] Can't save as delegate: %s", err.Error())

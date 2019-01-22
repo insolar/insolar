@@ -40,7 +40,7 @@ Than use send_request command with this file:
             Path to output file (use - for STDOUT).
 
         -u url
-            API url (default http://localhost:19191/api).
+            API url (default http://localhost:19101/api).
 
         -g config
                 Path to file with caller config or caller+params config.

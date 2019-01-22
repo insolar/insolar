@@ -17,6 +17,7 @@
 package bootstrap
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -42,11 +43,11 @@ var BootstrapError = errors.New("bootstrap without repeat")
 var InfinityBootstrapError = errors.New("infinity bootstrap")
 var bootstrapRetries = 0
 
-func mockBoostrap(string) (*host.Host, error) {
+func mockBoostrap(context.Context, string) (*host.Host, error) {
 	return nil, BootstrapError
 }
 
-func mockInfinityBootstrap(string) (*host.Host, error) {
+func mockInfinityBootstrap(context.Context, string) (*host.Host, error) {
 	bootstrapRetries++
 	if bootstrapRetries >= 5 {
 		return nil, nil
@@ -55,12 +56,13 @@ func mockInfinityBootstrap(string) (*host.Host, error) {
 }
 
 func TestBootstrap(t *testing.T) {
-	_, err := bootstrap("192.180.0.1:1234", getOptions(false), mockBoostrap)
+	ctx := context.Background()
+	_, err := bootstrap(ctx, "192.180.0.1:1234", getOptions(false), mockBoostrap)
 	assert.Error(t, err, BootstrapError)
 
 	startTime := time.Now()
 	expectedTime := startTime.Add(time.Millisecond * 700) // 100ms, 200ms, 200ms, 200ms, return nil error
-	_, err = bootstrap("192.180.0.1:1234", getOptions(true), mockInfinityBootstrap)
+	_, err = bootstrap(ctx, "192.180.0.1:1234", getOptions(true), mockInfinityBootstrap)
 	endTime := time.Now()
 	assert.NoError(t, err)
 	assert.WithinDuration(t, expectedTime.Round(time.Millisecond), endTime.Round(time.Millisecond), time.Millisecond*100)

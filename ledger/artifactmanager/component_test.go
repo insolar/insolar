@@ -26,7 +26,9 @@ import (
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/testmessagebus"
 	"github.com/stretchr/testify/assert"
@@ -41,6 +43,8 @@ func TestLedgerArtifactManager_PendingRequest(t *testing.T) {
 	defer cleaner()
 	defer mc.Finish()
 
+	jetID := *jet.NewID(0, nil)
+
 	amPulseStorageMock := testutils.NewPulseStorageMock(t)
 	amPulseStorageMock.CurrentFunc = func(p context.Context) (r *core.Pulse, r1 error) {
 		pulse, err := db.GetLatestPulse(p)
@@ -48,26 +52,43 @@ func TestLedgerArtifactManager_PendingRequest(t *testing.T) {
 		return &pulse.Pulse, err
 	}
 
+	jcMock := testutils.NewJetCoordinatorMock(t)
+	jcMock.LightExecutorForJetMock.Return(&core.RecordRef{}, nil)
+	jcMock.MeMock.Return(core.RecordRef{})
+
+	certificate := testutils.NewCertificateMock(t)
+	certificate.GetRoleMock.Return(core.StaticRoleLightMaterial)
+
 	cs := testutils.NewPlatformCryptographyScheme()
 	mb := testmessagebus.NewTestMessageBus(t)
 	mb.PulseStorage = amPulseStorageMock
-	jc := testutils.NewJetCoordinatorMock(mc)
-	jc.LightExecutorForJetMock.Return(&core.RecordRef{}, nil)
-	jc.MeMock.Return(core.RecordRef{})
+
 	am := NewArtifactManger(db)
 	am.PulseStorage = amPulseStorageMock
 	am.PlatformCryptographyScheme = cs
 	am.DefaultBus = mb
 	provider := storage.NewRecentStorageProvider(0)
+
+	cryptoScheme := platformpolicy.NewPlatformCryptographyScheme()
+
 	handler := NewMessageHandler(db, &configuration.Ledger{
 		LightChainLimit: 10,
-	})
+	}, certificate)
+
+	handler.PlatformCryptographyScheme = cryptoScheme
 	handler.Bus = mb
-	handler.JetCoordinator = jc
+	// handler.JetCoordinator = jc
 	handler.RecentStorageProvider = provider
+	handler.JetCoordinator = jcMock
 	err := handler.Init(ctx)
 	require.NoError(t, err)
 	objRef := *genRandomRef(0)
+	handler.CloseEarlyRequestCircuitBreakerForJet(ctx, jetID)
+
+	err = db.UpdateJetTree(ctx, core.FirstPulseNumber, true, jetID)
+	require.NoError(t, err)
+	err = db.UpdateJetTree(ctx, core.FirstPulseNumber+1, true, jetID)
+	require.NoError(t, err)
 
 	// Register request
 	reqID, err := am.RegisterRequest(ctx, objRef, &message.Parcel{Msg: &message.CallMethod{}, PulseNumber: core.FirstPulseNumber})

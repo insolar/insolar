@@ -19,7 +19,6 @@ package storage_test
 import (
 	"bytes"
 	"context"
-	"encoding/hex"
 	"fmt"
 	"sort"
 	"testing"
@@ -32,6 +31,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/index"
+	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/testutils"
@@ -42,7 +42,8 @@ func pulseDelta(n int) core.PulseNumber { return core.PulseNumber(core.FirstPuls
 func Test_StoreKeyValues(t *testing.T) {
 	t.Parallel()
 	ctx := inslogger.TestContext(t)
-	jetID := testutils.RandomID()
+	jetID := testutils.RandomJet()
+	// fmt.Printf("random jetID: %v\n", jetID.DebugString())
 
 	var (
 		expectedrecs []key
@@ -76,6 +77,10 @@ func Test_StoreKeyValues(t *testing.T) {
 			}
 		}
 		expectedrecs, expectedidxs = getallkeys(db.GetBadgerDB())
+		nullifyJetInKeys(expectedrecs)
+		nullifyJetInKeys(expectedidxs)
+		sortkeys(expectedrecs)
+		sortkeys(expectedidxs)
 	}()
 
 	var (
@@ -90,6 +95,9 @@ func Test_StoreKeyValues(t *testing.T) {
 		gotrecs, gotidxs = getallkeys(db.GetBadgerDB())
 	}()
 
+	assert.Equal(t, len(expectedrecs), len(gotrecs), "records counts are the same after restore")
+	assert.Equal(t, len(expectedidxs), len(gotidxs), "indexes count are the same after restore")
+
 	require.Equal(t, expectedrecs, gotrecs, "records are the same after restore")
 	require.Equal(t, expectedidxs, gotidxs, "indexes are the same after restore")
 }
@@ -100,7 +108,9 @@ func Test_ReplicaIter_FirstPulse(t *testing.T) {
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
 
-	jetID := core.TODOJetID
+	// it's easy to test simple case with zero Jet
+	jetID := *jet.NewID(0, nil)
+
 	addRecords(ctx, t, db, jetID, core.FirstPulseNumber)
 	replicator := storage.NewReplicaIter(ctx, db, jetID, core.FirstPulseNumber, core.FirstPulseNumber+1, 100500)
 	var got []key
@@ -143,7 +153,8 @@ func Test_ReplicaIter_Base(t *testing.T) {
 
 	var lastPulse core.PulseNumber
 	pulsescount := 2
-	jetID := core.TODOJetID
+	// it's easy to test simple case with zero Jet
+	jetID := *jet.NewID(0, nil)
 
 	recsBefore, idxBefore := getallkeys(db.GetBadgerDB())
 	require.Nil(t, recsBefore)
@@ -332,7 +343,8 @@ func getallkeys(db *badger.DB) (records []key, indexes []key) {
 	for it.Rewind(); it.Valid(); it.Next() {
 		item := it.Item()
 		k := item.KeyCopy(nil)
-		if key(k).pulse() == 0 {
+		pn := storage.Key(k).PulseNumber()
+		if pn == 0 {
 			continue
 		}
 
@@ -350,27 +362,10 @@ func getallkeys(db *badger.DB) (records []key, indexes []key) {
 	return
 }
 
-type key []byte
+type key storage.Key
 
-func (b key) pulse() core.PulseNumber {
-	pulseStartsAt := 1
-	pulseEndsAt := 1 + core.PulseNumberSize
-	// if jet defined for record type
-	switch b[0] {
-	case
-		scopeIDRecord,
-		scopeIDBlob,
-		scopeIDJetDrop,
-		scopeIDLifeline:
-
-		pulseStartsAt += core.RecordIDSize
-		pulseEndsAt += core.RecordIDSize
-	}
-	return core.NewPulseNumber(b[pulseStartsAt:pulseEndsAt])
-}
-
-func (b key) String() string {
-	return hex.EncodeToString(b)
+func (k key) String() string {
+	return storage.Key(k).String()
 }
 
 func sortkeys(keys []key) []key {
@@ -382,6 +377,12 @@ func sortkeys(keys []key) []key {
 
 func printkeys(keys []key, prefix string) {
 	for _, k := range keys {
-		fmt.Printf("%v%v (%v)\n", prefix, k, k.pulse())
+		fmt.Printf("%v%v (%v)\n", prefix, k, storage.Key(k).PulseNumber())
+	}
+}
+
+func nullifyJetInKeys(keys []key) {
+	for _, k := range keys {
+		storage.NullifyJetInKey(k)
 	}
 }

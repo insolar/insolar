@@ -17,6 +17,7 @@
 package pinger
 
 import (
+	"context"
 	"time"
 
 	"github.com/insolar/insolar/network"
@@ -31,13 +32,13 @@ type Pinger struct {
 }
 
 // PingWithTimeout ping remote host with timeout
-func (p *Pinger) Ping(address string, timeout time.Duration) (*host.Host, error) {
+func (p *Pinger) Ping(ctx context.Context, address string, timeout time.Duration) (*host.Host, error) {
 	request := p.transport.NewRequestBuilder().Type(types.Ping).Build()
 	h, err := host.NewHost(address)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to resolve address %s", address)
 	}
-	future, err := p.transport.SendRequestPacket(request, h)
+	future, err := p.transport.SendRequestPacket(ctx, request, h)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to ping address %s", address)
 	}

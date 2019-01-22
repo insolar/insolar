@@ -25,4 +25,4 @@ SEARCH_PATTERN=$1
 shift
 
 set -x
-grep $@ "$SEARCH_PATTERN" ./scripts/insolard/nodes/{1,2,3}/output.txt
+grep $@ "$SEARCH_PATTERN" ./scripts/insolard/nodes/{1,2,3,4,5}/output.log
