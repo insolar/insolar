@@ -27,7 +27,7 @@ import (
 )
 
 const times = 5
-const transferRetry = 5
+const transferRetry = 15
 
 func checkBalanceFewTimes(t *testing.T, caller *user, ref string, expected int) {
 	for i := 0; i < times; i++ {
