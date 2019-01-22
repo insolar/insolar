@@ -643,7 +643,7 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse core.Pulse) 
 	startSync := time.Now()
 	defer func() {
 		latency := time.Since(startSync)
-		inslog.Debugf("cleanLightData sync phase time spend=%v", latency)
+		inslog.Debugf("cleanLightData all time spend=%v", latency)
 	}()
 
 	delta := m.options.storeLightPulses
@@ -668,7 +668,7 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse core.Pulse) 
 		startAsync := time.Now()
 		defer func() {
 			latency := time.Since(startAsync)
-			inslog.Debugf("cleanLightData potential async phase time spend=%v", latency)
+			inslog.Debugf("cleanLightData db clean phase time spend=%v", latency)
 		}()
 
 		// we are remove records from 'storageRecordsUtilPN' pulse number here
