@@ -118,6 +118,9 @@ func (m *LedgerArtifactManager) GetCode(
 	ctx context.Context, code core.RecordRef,
 ) (core.CodeDescriptor, error) {
 	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.GetCode starts ...")
+	ctx, span := instracer.StartSpan(ctx, "artifactmanager.GetCode sendAndRetryJet")
+	defer span.End()
+
 	var err error
 	defer instrument(ctx, "GetCode").err(&err).end()
 
@@ -136,15 +139,10 @@ func (m *LedgerArtifactManager) GetCode(
 		return entry.desc, nil
 	}
 
-	currentPulse, err := m.PulseStorage.Current(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	ctx, span := instracer.StartSpan(ctx, "artifactmanager.GetCode sendAndRetryJet")
-	genericReact, err := sendAndFollowRedirect(ctx, m.bus(ctx), m.db, &message.GetCode{Code: code}, *currentPulse)
-
+	ctx, span = instracer.StartSpan(ctx, "artifactmanager.GetCode sendAndRetryJet")
+	genericReact, err := m.bus(ctx).Send(ctx, &message.GetCode{Code: code}, nil)
 	span.End()
+
 	if err != nil {
 		return nil, err
 	}
@@ -330,7 +328,6 @@ func (m *LedgerArtifactManager) DeployCode(
 	var err error
 	defer instrument(ctx, "DeployCode").err(&err).end()
 
-	fmt.Println("deploy code")
 	currentPulse, err := m.PulseStorage.Current(ctx)
 	if err != nil {
 		return nil, err
@@ -351,7 +348,6 @@ func (m *LedgerArtifactManager) DeployCode(
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("deploy code after blob")
 	id, err := m.setRecord(
 		ctx,
 		codeRec,
@@ -361,12 +357,6 @@ func (m *LedgerArtifactManager) DeployCode(
 	if err != nil {
 		return nil, err
 	}
-
-	if id != codeID {
-		fmt.Println("Broken code ID!")
-	}
-
-	fmt.Println("Code deployed ", id.Pulse())
 
 	return id, nil
 }

@@ -50,7 +50,7 @@ func (c *JetClient) HeavySync(
 ) error {
 	jetID := c.jetID
 	inslog := inslogger.FromContext(ctx)
-	inslog = inslog.WithField("jetID", jetID.JetIDString())
+	inslog = inslog.WithField("jetID", jetID.DebugString())
 	inslog = inslog.WithField("pulseNum", pn)
 
 	inslog.Debug("JetClient.HeavySync")
