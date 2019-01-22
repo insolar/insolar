@@ -23,3 +23,9 @@ keyspath: "scripts/insolard/configs/bootstrap_keys.json"
 log:
   level: Debug
   adapter: logrus
+tracer:
+  jaeger:
+    collectorendpoint: ""
+    agentendpoint: 127.0.0.1:6831
+    probabilityrate: 1
+  samplingrules: {}
