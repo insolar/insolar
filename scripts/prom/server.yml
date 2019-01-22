@@ -9,8 +9,8 @@ scrape_configs:
 # metrics_path:
   static_configs:
   - targets:
-    - "localhost:8081"
-    - "localhost:8082"
-    - "localhost:8083"
-    - "localhost:8084"
-    - "localhost:8085"
+    - "localhost:8001"
+    - "localhost:8002"
+    - "localhost:8003"
+    - "localhost:8004"
+    - "localhost:8005"
