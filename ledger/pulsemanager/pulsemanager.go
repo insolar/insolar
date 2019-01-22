@@ -508,6 +508,7 @@ func (m *PulseManager) rewriteHotData(ctx context.Context, fromJetID, toJetID co
 		}
 	}
 
+	inslogger.FromContext(ctx).Debugf("{LEAK} CloneStorage from - %v, to - %v", fromJetID, toJetID)
 	m.RecentStorageProvider.CloneStorage(fromJetID, toJetID)
 
 	return nil
@@ -622,16 +623,22 @@ func (m *PulseManager) postProcessJets(ctx context.Context, newPulse core.Pulse,
 			if !jetInfo.mineNext {
 				logger.Debugf("[postProcessJets] clear recent storage for root jet - %v, pulse - %v", jetInfo.id, newPulse.PulseNumber)
 				m.RecentStorageProvider.GetStorage(jetInfo.id).ClearObjects(ctx)
+			} else {
+				m.RecentStorageProvider.GetStorage(jetInfo.id).DecreaseTTL(ctx)
 			}
 		} else {
 			// Split happened.
 			if !jetInfo.left.mineNext {
 				logger.Debugf("[postProcessJets] clear recent storage for left jet - %v, pulse - %v", jetInfo.left.id, newPulse.PulseNumber)
 				m.RecentStorageProvider.GetStorage(jetInfo.left.id).ClearObjects(ctx)
+			} else {
+				m.RecentStorageProvider.GetStorage(jetInfo.left.id).DecreaseTTL(ctx)
 			}
 			if !jetInfo.right.mineNext {
 				logger.Debugf("[postProcessJets] clear recent storage for right jet - %v, pulse - %v", jetInfo.right.id, newPulse.PulseNumber)
 				m.RecentStorageProvider.GetStorage(jetInfo.right.id).ClearObjects(ctx)
+			} else {
+				m.RecentStorageProvider.GetStorage(jetInfo.right.id).DecreaseTTL(ctx)
 			}
 		}
 	}

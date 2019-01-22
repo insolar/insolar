@@ -224,6 +224,16 @@ func (r *RecentStorage) IsRecordIDCached(obj core.RecordID) bool {
 	return ok
 }
 
+// DecreaseTTL ttl and clear objects if their ttl is zero
+func (r *RecentStorage) DecreaseTTL(ctx context.Context) {
+	r.objectLock.Lock()
+	defer r.objectLock.Unlock()
+
+	for _, value := range r.recentObjects {
+		value.ttl--
+	}
+}
+
 // ClearZeroTTLObjects clears objects with zero TTL
 func (r *RecentStorage) ClearZeroTTLObjects(ctx context.Context) {
 	r.objectLock.Lock()

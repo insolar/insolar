@@ -45,6 +45,8 @@ type RecentStorage interface {
 
 	IsRecordIDCached(obj core.RecordID) bool
 
+	DecreaseTTL(ctx context.Context)
+
 	ClearZeroTTLObjects(ctx context.Context)
 	ClearObjects(ctx context.Context)
 }
