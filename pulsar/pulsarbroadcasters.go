@@ -273,7 +273,7 @@ func (currentPulsar *Pulsar) sendPulseToNodesAndPulsars(ctx context.Context) {
 	logger.Debug("Start a process of sending pulse")
 	go func() {
 		logger.Debug("Before sending to network")
-		currentPulsar.PulseDistributor.Distribute(ctx, &pulseForSending)
+		currentPulsar.PulseDistributor.Distribute(ctx, pulseForSending)
 	}()
 	go currentPulsar.sendPulseToPulsars(ctx, pulseForSending)
 

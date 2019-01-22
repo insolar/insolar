@@ -16,16 +16,14 @@
 
 package configuration
 
-// Service is configuration struct for servicenetwork.Service.
-type Service struct {
-}
-
 // ServiceNetwork is configuration for ServiceNetwork.
 type ServiceNetwork struct {
-	Service Service
+	Skip int // magic number that indicates what delta after last ignored pulse we should wait
 }
 
 // NewServiceNetwork creates a new ServiceNetwork configuration.
 func NewServiceNetwork() ServiceNetwork {
-	return ServiceNetwork{}
+	return ServiceNetwork{
+		Skip: 10,
+	}
 }

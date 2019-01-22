@@ -129,7 +129,7 @@ func TestPulsar_SendPulseToNode(t *testing.T) {
 	stateSwitcher := &StateSwitcherImpl{}
 
 	pulseDistributor := testutils.NewPulseDistributorMock(t)
-	pulseDistributor.DistributeFunc = func(p context.Context, p1 *core.Pulse) {
+	pulseDistributor.DistributeFunc = func(p context.Context, p1 core.Pulse) {
 		require.Equal(t, core.FirstPulseNumber+1, int(p1.PulseNumber))
 	}
 
@@ -189,7 +189,7 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 	}
 
 	pulseDistributor := testutils.NewPulseDistributorMock(t)
-	pulseDistributor.DistributeFunc = func(p context.Context, p1 *core.Pulse) {
+	pulseDistributor.DistributeFunc = func(p context.Context, p1 core.Pulse) {
 		require.Equal(t, core.FirstPulseNumber+1, int(p1.PulseNumber))
 	}
 
@@ -335,7 +335,7 @@ func TestSevenPulsars_Full_Consensus(t *testing.T) {
 	}
 
 	pulseDistributorMock := testutils.NewPulseDistributorMock(t)
-	pulseDistributorMock.DistributeFunc = func(p context.Context, p1 *core.Pulse) {
+	pulseDistributorMock.DistributeFunc = func(p context.Context, p1 core.Pulse) {
 		require.Equal(t, core.FirstPulseNumber+1, int(p1.PulseNumber))
 	}
 
