@@ -77,7 +77,7 @@ func (handler *Handler) HealthCheck(request *Payload, response *Payload) error {
 // MakeHandshake is a handler of call with handshake purpose
 func (handler *Handler) MakeHandshake(request *Payload, response *Payload) error {
 	ctx, inslog := inslogger.WithTraceField(context.Background(), handler.Pulsar.ID)
-	ctx, span := instracer.StartSpan(ctx, "Pulsar.Handler.MakeHandshake")
+	_, span := instracer.StartSpan(ctx, "Pulsar.Handler.MakeHandshake")
 	defer span.End()
 
 	inslog.Infof("[MakeHandshake] from %v", request.PublicKey)
