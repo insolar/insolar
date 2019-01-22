@@ -160,7 +160,7 @@ func (m *PulseManager) processEndPulse(
 			}
 
 			if info.left == nil && info.right == nil {
-				m.RecentStorageProvider.GetStorage(info.id).ClearZeroTTLObjects()
+				m.RecentStorageProvider.GetStorage(info.id).ClearZeroTTLObjects(ctx)
 
 				// No split happened.
 				if !info.mineNext {
@@ -168,8 +168,8 @@ func (m *PulseManager) processEndPulse(
 				}
 			} else {
 				// Split happened.
-				m.RecentStorageProvider.GetStorage(info.left.id).ClearZeroTTLObjects()
-				m.RecentStorageProvider.GetStorage(info.right.id).ClearZeroTTLObjects()
+				m.RecentStorageProvider.GetStorage(info.left.id).ClearZeroTTLObjects(ctx)
+				m.RecentStorageProvider.GetStorage(info.right.id).ClearZeroTTLObjects(ctx)
 
 				if !info.left.mineNext {
 					go sender(*msg, info.left.id)
@@ -622,17 +622,17 @@ func (m *PulseManager) postProcessJets(ctx context.Context, newPulse core.Pulse,
 			// No split happened.
 			if !jetInfo.mineNext {
 				logger.Debugf("[postProcessJets] clear recent storage for root jet - %v, pulse - %v", jetInfo.id, newPulse.PulseNumber)
-				m.RecentStorageProvider.GetStorage(jetInfo.id).ClearObjects()
+				m.RecentStorageProvider.GetStorage(jetInfo.id).ClearObjects(ctx)
 			}
 		} else {
 			// Split happened.
 			if !jetInfo.left.mineNext {
 				logger.Debugf("[postProcessJets] clear recent storage for left jet - %v, pulse - %v", jetInfo.left.id, newPulse.PulseNumber)
-				m.RecentStorageProvider.GetStorage(jetInfo.left.id).ClearObjects()
+				m.RecentStorageProvider.GetStorage(jetInfo.left.id).ClearObjects(ctx)
 			}
 			if !jetInfo.right.mineNext {
 				logger.Debugf("[postProcessJets] clear recent storage for right jet - %v, pulse - %v", jetInfo.right.id, newPulse.PulseNumber)
-				m.RecentStorageProvider.GetStorage(jetInfo.right.id).ClearObjects()
+				m.RecentStorageProvider.GetStorage(jetInfo.right.id).ClearObjects(ctx)
 			}
 		}
 	}
@@ -754,7 +754,7 @@ func (m *PulseManager) restoreGenesisRecentObjects(ctx context.Context) error {
 
 	return m.db.IterateIndexIDs(ctx, jetID, func(id core.RecordID) error {
 		if id.Pulse() == core.FirstPulseNumber {
-			recent.AddObject(id)
+			recent.AddObject(ctx, id)
 		}
 		return nil
 	})

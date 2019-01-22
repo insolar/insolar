@@ -17,11 +17,14 @@
 package storage
 
 import (
+	"context"
 	"sync"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage/jet"
+	"go.opencensus.io/stats"
 )
 
 // RecentStorageProvider provides a recent storage for jet
@@ -47,7 +50,7 @@ func (p *RecentStorageProvider) GetStorage(jetID core.RecordID) recentstorage.Re
 	storage, ok := p.storage[k]
 	if !ok {
 		if storage, ok = p.storage[k]; !ok {
-			storage = NewRecentStorage(p.DefaultTTL)
+			storage = NewRecentStorage(jetID, p.DefaultTTL)
 			p.storage[k] = storage
 		}
 	}
@@ -66,6 +69,7 @@ func (p *RecentStorageProvider) CloneStorage(fromJetID, toJetID core.RecordID) {
 		return
 	}
 	toStorage := &RecentStorage{
+		jetID:           toJetID,
 		recentObjects:   make(map[core.RecordID]recentObjectMeta, len(fromStorage.recentObjects)),
 		pendingRequests: make(map[core.RecordID]map[core.RecordID]struct{}, len(fromStorage.pendingRequests)),
 		DefaultTTL:      p.DefaultTTL,
@@ -88,6 +92,7 @@ func (p *RecentStorageProvider) CloneStorage(fromJetID, toJetID core.RecordID) {
 
 // RecentStorage is a base structure
 type RecentStorage struct {
+	jetID           core.RecordID
 	recentObjects   map[core.RecordID]recentObjectMeta
 	objectLock      sync.Mutex
 	pendingRequests map[core.RecordID]map[core.RecordID]struct{}
@@ -100,8 +105,9 @@ type recentObjectMeta struct {
 }
 
 // NewRecentStorage creates default RecentStorage object
-func NewRecentStorage(defaultTTL int) *RecentStorage {
+func NewRecentStorage(jetID core.RecordID, defaultTTL int) *RecentStorage {
 	return &RecentStorage{
+		jetID:           jetID,
 		recentObjects:   map[core.RecordID]recentObjectMeta{},
 		pendingRequests: map[core.RecordID]map[core.RecordID]struct{}{},
 		DefaultTTL:      defaultTTL,
@@ -110,19 +116,22 @@ func NewRecentStorage(defaultTTL int) *RecentStorage {
 }
 
 // AddObject adds object to cache
-func (r *RecentStorage) AddObject(id core.RecordID) {
-	r.AddObjectWithTLL(id, r.DefaultTTL)
+func (r *RecentStorage) AddObject(ctx context.Context, id core.RecordID) {
+	r.AddObjectWithTLL(ctx, id, r.DefaultTTL)
 }
 
 // AddObjectWithTLL adds object with specified TTL to the cache
-func (r *RecentStorage) AddObjectWithTLL(id core.RecordID, ttl int) {
+func (r *RecentStorage) AddObjectWithTLL(ctx context.Context, id core.RecordID, ttl int) {
 	r.objectLock.Lock()
 	defer r.objectLock.Unlock()
 	r.recentObjects[id] = recentObjectMeta{ttl: r.DefaultTTL}
+
+	ctx = insmetrics.InsertTag(ctx, tagJet, r.jetID.DebugString())
+	stats.Record(ctx, statRecentStorageObjectsAdded.M(1))
 }
 
 // AddPendingRequest adds request to cache.
-func (r *RecentStorage) AddPendingRequest(obj, req core.RecordID) {
+func (r *RecentStorage) AddPendingRequest(ctx context.Context, obj, req core.RecordID) {
 	r.requestLock.Lock()
 	defer r.requestLock.Unlock()
 
@@ -130,10 +139,13 @@ func (r *RecentStorage) AddPendingRequest(obj, req core.RecordID) {
 		r.pendingRequests[obj] = map[core.RecordID]struct{}{}
 	}
 	r.pendingRequests[obj][req] = struct{}{}
+
+	ctx = insmetrics.InsertTag(ctx, tagJet, r.jetID.DebugString())
+	stats.Record(ctx, statRecentStoragePendingsAdded.M(1))
 }
 
 // RemovePendingRequest removes request from cache.
-func (r *RecentStorage) RemovePendingRequest(obj, req core.RecordID) {
+func (r *RecentStorage) RemovePendingRequest(ctx context.Context, obj, req core.RecordID) {
 	r.requestLock.Lock()
 	defer r.requestLock.Unlock()
 
@@ -144,6 +156,9 @@ func (r *RecentStorage) RemovePendingRequest(obj, req core.RecordID) {
 	if len(r.pendingRequests[obj]) == 0 {
 		delete(r.pendingRequests, obj)
 	}
+
+	ctx = insmetrics.InsertTag(ctx, tagJet, r.jetID.DebugString())
+	stats.Record(ctx, statRecentStoragePendingsRemoved.M(1))
 }
 
 // GetObjects returns object hot-indexes.
@@ -210,21 +225,32 @@ func (r *RecentStorage) IsRecordIDCached(obj core.RecordID) bool {
 }
 
 // ClearZeroTTLObjects clears objects with zero TTL
-func (r *RecentStorage) ClearZeroTTLObjects() {
+func (r *RecentStorage) ClearZeroTTLObjects(ctx context.Context) {
 	r.objectLock.Lock()
 	defer r.objectLock.Unlock()
 
+	var removed int64
 	for key, value := range r.recentObjects {
 		if value.ttl == 0 {
 			delete(r.recentObjects, key)
+			removed++
 		}
 	}
+
+	ctx = insmetrics.InsertTag(ctx, tagJet, r.jetID.DebugString())
+	stats.Record(ctx, statRecentStorageObjectsRemoved.M(removed))
 }
 
 // ClearObjects clears the whole cache
-func (r *RecentStorage) ClearObjects() {
+func (r *RecentStorage) ClearObjects(ctx context.Context) {
 	r.objectLock.Lock()
 	defer r.objectLock.Unlock()
+
+	ctx = insmetrics.InsertTag(ctx, tagJet, r.jetID.DebugString())
+	stats.Record(ctx,
+		statRecentStorageObjectsRemoved.M(int64(len(r.recentObjects))),
+		statRecentStoragePendingsRemoved.M(int64(len(r.pendingRequests))),
+	)
 
 	r.recentObjects = map[core.RecordID]recentObjectMeta{}
 	r.pendingRequests = map[core.RecordID]map[core.RecordID]struct{}{}
