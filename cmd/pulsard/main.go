@@ -55,6 +55,7 @@ func parseInputParams() inputParams {
 	var rootCmd = &cobra.Command{Use: "insolard"}
 	var result inputParams
 	rootCmd.Flags().StringVarP(&result.configPath, "config", "c", "", "path to config file")
+	rootCmd.Flags().BoolVarP(&result.traceEnabled, "trace", "t", false, "enable tracing")
 	err := rootCmd.Execute()
 	if err != nil {
 		fmt.Println("Wrong input params:", err.Error())
@@ -66,7 +67,6 @@ func parseInputParams() inputParams {
 // Need to fix problem with start pulsar
 func main() {
 	params := parseInputParams()
-	params.traceEnabled = true
 
 	jww.SetStdoutThreshold(jww.LevelDebug)
 	cfgHolder := configuration.NewHolder()
@@ -90,7 +90,7 @@ func main() {
 	log.SetGlobalLogger(inslog)
 
 	jaegerflush := func() {}
-	if true {
+	if params.traceEnabled {
 		jconf := cfgHolder.Configuration.Tracer.Jaeger
 		log.Infof("Tracing enabled. Agent endpoint: '%s', collector endpoint: '%s'", jconf.AgentEndpoint, jconf.CollectorEndpoint)
 		jaegerflush = instracer.ShouldRegisterJaeger(
