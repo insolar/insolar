@@ -37,7 +37,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const sendRetryCount = 3
+const sendRetryCount = 5
 
 type postParams map[string]interface{}
 
@@ -191,16 +191,23 @@ func signedRequest(user *user, method string, params ...interface{}) (interface{
 	if err != nil {
 		return nil, err
 	}
-	var resp = response{}
+	var resp response
 	for i := 0; i < sendRetryCount; i++ {
 		res, err := requester.Send(ctx, TestAPIURL, rootCfg, &requester.RequestConfigJSON{
 			Method: method,
 			Params: params,
 		})
-		if err != nil {
+
+		if netErr, ok := errors.Cause(err).(net.Error); ok && netErr.Timeout() {
+			fmt.Println("Timeout, retry")
+			fmt.Printf("Method: %s\n", method)
+			time.Sleep(time.Second)
+			continue
+		} else if err != nil {
 			return nil, err
 		}
 
+		resp = response{}
 		err = json.Unmarshal(res, &resp)
 		if err != nil {
 			return nil, err
@@ -210,19 +217,20 @@ func signedRequest(user *user, method string, params ...interface{}) (interface{
 			return resp.Result, nil
 		}
 		if strings.Contains(resp.Error, "Incorrect message pulse") {
-			fmt.Println("Incorrect message pulse, retry")
+			fmt.Printf("Incorrect message pulse, retry (error - %s)\n", resp.Error)
+			fmt.Printf("Method: %s\n", method)
 			time.Sleep(time.Second)
 			continue
 		}
 
-		err = errors.New(resp.Error)
-		if netErr, ok := errors.Cause(err).(net.Error); ok && netErr.Timeout() {
-			fmt.Println("Timeout, retry")
+		if strings.Contains(resp.Error, "Messagebus timeout exceeded") {
+			fmt.Println("Messagebus timeout exceeded, retry")
+			fmt.Printf("Method: %s\n", method)
 			time.Sleep(time.Second)
 			continue
 		}
 
-		return resp.Result, err
+		break
 	}
 	return resp.Result, errors.New(resp.Error)
 }
