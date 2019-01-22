@@ -235,7 +235,7 @@ func signedRequest(user *user, method string, params ...interface{}) (interface{
 	return resp.Result, errors.New(resp.Error)
 }
 
-// test
+// test 1
 func newUserWithKeys() (*user, error) {
 	ks := platformpolicy.NewKeyProcessor()
 
