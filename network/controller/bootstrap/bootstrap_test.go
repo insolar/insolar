@@ -43,7 +43,7 @@ var BootstrapError = errors.New("bootstrap without repeat")
 var InfinityBootstrapError = errors.New("infinity bootstrap")
 var bootstrapRetries = 0
 
-func mockBoostrap(context.Context, string) (*host.Host, error) {
+func mockBootstrap(context.Context, string) (*host.Host, error) {
 	return nil, BootstrapError
 }
 
@@ -57,7 +57,7 @@ func mockInfinityBootstrap(context.Context, string) (*host.Host, error) {
 
 func TestBootstrap(t *testing.T) {
 	ctx := context.Background()
-	_, err := bootstrap(ctx, "192.180.0.1:1234", getOptions(false), mockBoostrap)
+	_, err := bootstrap(ctx, "192.180.0.1:1234", getOptions(false), mockBootstrap)
 	assert.Error(t, err, BootstrapError)
 
 	startTime := time.Now()
