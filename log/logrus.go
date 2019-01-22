@@ -17,9 +17,12 @@
 package log
 
 import (
+	"errors"
 	"fmt"
 	"io"
+	"strings"
 
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/sirupsen/logrus"
 )
@@ -29,12 +32,23 @@ type logrusAdapter struct {
 	entry          *logrus.Entry
 }
 
-func newLogrusAdapter() logrusAdapter {
+func newLogrusAdapter(cfg configuration.Log) (*logrusAdapter, error) {
 	log := logrus.New()
-	formatter := new(logrus.TextFormatter)
-	formatter.TimestampFormat = "2006-01-02 15:04:05.000000"
+
+	var formatter logrus.Formatter
+	timestampFormat := "2006-01-02 15:04:05.000000"
+
+	switch strings.ToLower(cfg.Formatter) {
+	case "text":
+		formatter = &logrus.TextFormatter{TimestampFormat: timestampFormat}
+	case "json":
+		formatter = &logrus.JSONFormatter{TimestampFormat: timestampFormat}
+	default:
+		return nil, errors.New("unknown formatter " + cfg.Formatter)
+	}
+
 	log.SetFormatter(formatter)
-	return logrusAdapter{entry: logrus.NewEntry(log), skipCallNumber: defaultSkipCallNumber}
+	return &logrusAdapter{entry: logrus.NewEntry(log), skipCallNumber: defaultSkipCallNumber}, nil
 }
 
 // sourced adds a source info fields that contains
