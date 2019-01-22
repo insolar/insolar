@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
+	"go.opencensus.io/stats"
 )
 
 func (currentPulsar *Pulsar) broadcastSignatureOfEntropy(ctx context.Context) {
@@ -286,6 +287,8 @@ func (currentPulsar *Pulsar) sendPulseToNodesAndPulsars(ctx context.Context) {
 	}
 	currentPulsar.SetLastPulse(&pulseForSending)
 	logger.Infof("Latest pulse is %v", pulseForSending.PulseNumber)
+
+	stats.Record(ctx, statPulseGenerated.M(1))
 
 	currentPulsar.StateSwitcher.SwitchToState(ctx, WaitingForStart, nil)
 }
