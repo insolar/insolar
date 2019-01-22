@@ -347,6 +347,17 @@ func (lr *LogicRunner) executeActual(ctx context.Context, parcel core.Parcel, ms
 	es := os.ExecutionState
 	os.Unlock()
 
+	// We register the request before acquiring es.Lock() to prevent holding the lock
+	// during the slow network request. Otherwise OnPulse can be locked for a long time.
+	// This sequence of operations is not quite correct because actually we had to call
+	// CheckOurRole before calling RegisterRequest. However since we are making a byzantine
+	// fault tolerant system we should handle a registered and abandoned requests correctly
+	// anyway.
+	request, err := lr.RegisterRequest(ctx, parcel)
+	if err != nil {
+		return nil, os.WrapError(err, "[ Execute ] can't create request")
+	}
+
 	// ExecutionState should be locked between CheckOurRole and
 	// appending ExecutionQueueElement to the queue to prevent a race condition.
 	// Otherwise it's possible that OnPulse will clean up the queue and set
@@ -354,7 +365,7 @@ func (lr *LogicRunner) executeActual(ctx context.Context, parcel core.Parcel, ms
 	// queue afterwards. In this case cross-pulse execution will break.
 	es.Lock()
 
-	err := lr.CheckOurRole(ctx, msg, core.DynamicRoleVirtualExecutor)
+	err = lr.CheckOurRole(ctx, msg, core.DynamicRoleVirtualExecutor)
 	if err != nil {
 		es.Unlock()
 		return nil, errors.Wrap(err, "[ Execute ] can't play role")
@@ -363,12 +374,6 @@ func (lr *LogicRunner) executeActual(ctx context.Context, parcel core.Parcel, ms
 	if lr.CheckExecutionLoop(ctx, es, parcel) {
 		es.Unlock()
 		return nil, os.WrapError(nil, "loop detected")
-	}
-
-	request, err := lr.RegisterRequest(ctx, parcel)
-	if err != nil {
-		es.Unlock()
-		return nil, os.WrapError(err, "[ Execute ] can't create request")
 	}
 
 	_, span := instracer.StartSpan(ctx, "LogicRunner.QueueCall")
