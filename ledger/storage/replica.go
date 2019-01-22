@@ -24,6 +24,7 @@ import (
 
 	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/core"
+	"github.com/pkg/errors"
 )
 
 // SetHeavySyncedPulse saves last successfuly synced pulse number on heavy node.
@@ -55,8 +56,10 @@ func sysHeavyClientStateKeyForJet(jetID []byte) []byte {
 func (db *DB) GetSyncClientJetPulses(ctx context.Context, jetID core.RecordID) ([]core.PulseNumber, error) {
 	k := sysHeavyClientStateKeyForJet(jetID[:])
 	buf, err := db.get(ctx, k)
-	if err != nil && err != ErrNotFound {
-		return nil, err
+	if err == ErrNotFound {
+		return nil, nil
+	} else if err != nil {
+		return nil, errors.Wrap(err, "GetSyncClientJetPulses failed")
 	}
 	return decodePulsesList(bytes.NewReader(buf))
 }
