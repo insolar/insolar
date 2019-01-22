@@ -151,7 +151,7 @@ func (handler *Handler) ReceiveSignatureForEntropy(request *Payload, response *P
 
 	bftCell := &BftCell{}
 	bftCell.SetSign(requestBody.EntropySignature)
-	handler.Pulsar.AddItemToVector(request.PublicKey, bftCell) // .OwnedBftRow[request.PublicKey] = bftCell
+	handler.Pulsar.AddItemToVector(request.PublicKey, bftCell)
 
 	return nil
 }
@@ -173,7 +173,7 @@ func (handler *Handler) ReceiveEntropy(request *Payload, response *Payload) erro
 
 	requestBody := request.Body.(*EntropyPayload)
 	if requestBody.PulseNumber != handler.Pulsar.ProcessingPulseNumber {
-		return errors.New("processing pulse number is bigger than received one")
+		return errors.Errorf("processing pulse number - %v is bigger than received one - %v", requestBody.PulseNumber, handler.Pulsar.ProcessingPulseNumber)
 	}
 
 	if btfCell, ok := handler.Pulsar.GetItemFromVector(request.PublicKey); ok {
@@ -220,7 +220,7 @@ func (handler *Handler) ReceiveVector(request *Payload, response *Payload) error
 
 	requestBody := request.Body.(*VectorPayload)
 	if requestBody.PulseNumber != handler.Pulsar.ProcessingPulseNumber {
-		return errors.New("processing pulse number is bigger than received one")
+		return errors.Errorf("processing pulse number - %v is bigger than received one - %v", requestBody.PulseNumber, handler.Pulsar.ProcessingPulseNumber)
 	}
 
 	handler.Pulsar.SetBftGridItem(request.PublicKey, requestBody.Vector)
@@ -245,7 +245,7 @@ func (handler *Handler) ReceiveChosenSignature(request *Payload, response *Paylo
 
 	requestBody := request.Body.(*PulseSenderConfirmationPayload)
 	if requestBody.PulseNumber != handler.Pulsar.ProcessingPulseNumber {
-		return errors.New("processing pulse number is bigger than received one")
+		return errors.Errorf("processing pulse number - %v is bigger than received one - %v", requestBody.PulseNumber, handler.Pulsar.ProcessingPulseNumber)
 	}
 
 	publicKey, err := handler.Pulsar.KeyProcessor.ImportPublicKeyPEM([]byte(request.PublicKey))
@@ -308,7 +308,7 @@ func (handler *Handler) ReceivePulse(request *Payload, response *Payload) error 
 	}
 
 	if handler.Pulsar.ProcessingPulseNumber == 0 && requestBody.Pulse.PulseNumber < handler.Pulsar.GetLastPulse().PulseNumber {
-		return errors.Errorf("last pulse number is bigger than received one")
+		return errors.Errorf("last pulse number - %v is bigger than received one - %v", handler.Pulsar.GetLastPulse().PulseNumber, requestBody.Pulse.PulseNumber)
 	}
 
 	err = handler.Pulsar.Storage.SetLastPulse(&requestBody.Pulse)
