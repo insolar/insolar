@@ -20,6 +20,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/insolar/insolar/component"
 	consensus "github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/transport/host"
@@ -28,6 +29,7 @@ import (
 
 // Controller contains network logic.
 type Controller interface {
+	component.Starter
 	// SendParcel send message to nodeID.
 	SendMessage(nodeID core.RecordRef, name string, msg core.Parcel) ([]byte, error)
 	// RemoteProcedureRegister register remote procedure that will be executed when message is received.
@@ -36,10 +38,6 @@ type Controller interface {
 	SendCascadeMessage(data core.Cascade, method string, msg core.Parcel) error
 	// Bootstrap init complex bootstrap process. Blocks until bootstrap is complete.
 	Bootstrap(ctx context.Context) error
-
-	// Inject inject components.
-	Inject(cryptographyService core.CryptographyService,
-		networkCoordinator core.NetworkCoordinator, nodeKeeper NodeKeeper)
 
 	// TODO: workaround methods, should be deleted once network consensus is alive
 

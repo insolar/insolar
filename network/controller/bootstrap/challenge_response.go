@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/gob"
 
+	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
@@ -31,12 +32,19 @@ import (
 	"github.com/pkg/errors"
 )
 
-type ChallengeResponseController struct {
-	options        *common.Options
-	transport      network.InternalTransport
-	cryptoSrv      core.CryptographyService
-	sessionManager *SessionManager
-	keeper         network.NodeKeeper
+type ChallengeResponseController interface {
+	component.Starter
+
+	Execute(ctx context.Context, discoveryNode *DiscoveryNode, sessionID SessionID) (*ChallengePayload, error)
+}
+
+type challengeResponseController struct {
+	SessionManager SessionManager           `inject:"subcomponent"`
+	Cryptography   core.CryptographyService `inject:"subcomponent"`
+	NodeKeeper     network.NodeKeeper       `inject:"subcomponent"`
+
+	options   *common.Options
+	transport network.InternalTransport
 }
 
 type Nonce []byte
@@ -96,10 +104,10 @@ func init() {
 	gob.Register(&ChallengeResponse{})
 }
 
-func (cr *ChallengeResponseController) processChallenge1(ctx context.Context, request network.Request) (network.Response, error) {
+func (cr *challengeResponseController) processChallenge1(ctx context.Context, request network.Request) (network.Response, error) {
 	data := request.GetData().(*ChallengeRequest)
 	// CheckSession is performed in SetDiscoveryNonce too, but we want to return early if the request is invalid
-	err := cr.sessionManager.CheckSession(data.SessionID, Authorized)
+	err := cr.SessionManager.CheckSession(data.SessionID, Authorized)
 	if err != nil {
 		return cr.buildChallenge1ErrorResponse(ctx, request, err.Error()), nil
 	}
@@ -107,7 +115,7 @@ func (cr *ChallengeResponseController) processChallenge1(ctx context.Context, re
 	if err != nil {
 		return cr.buildChallenge1ErrorResponse(ctx, request, "error generating discovery xor nonce: "+err.Error()), nil
 	}
-	sign, err := cr.cryptoSrv.Sign(Xor(data.Nonce, xorNonce))
+	sign, err := cr.Cryptography.Sign(Xor(data.Nonce, xorNonce))
 	if err != nil {
 		return cr.buildChallenge1ErrorResponse(ctx, request, "error signing nonce: "+err.Error()), nil
 	}
@@ -115,7 +123,7 @@ func (cr *ChallengeResponseController) processChallenge1(ctx context.Context, re
 	if err != nil {
 		return cr.buildChallenge1ErrorResponse(ctx, request, "error generating discovery nonce: "+err.Error()), nil
 	}
-	err = cr.sessionManager.SetDiscoveryNonce(data.SessionID, discoveryNonce)
+	err = cr.SessionManager.SetDiscoveryNonce(data.SessionID, discoveryNonce)
 	if err != nil {
 		return cr.buildChallenge1ErrorResponse(ctx, request, err.Error()), nil
 	}
@@ -132,7 +140,7 @@ func (cr *ChallengeResponseController) processChallenge1(ctx context.Context, re
 	return response, nil
 }
 
-func (cr *ChallengeResponseController) buildChallenge1ErrorResponse(ctx context.Context, request network.Request, err string) network.Response {
+func (cr *challengeResponseController) buildChallenge1ErrorResponse(ctx context.Context, request network.Request, err string) network.Response {
 	log.Warn(err)
 	return cr.transport.BuildResponse(ctx, request, &ChallengeResponse{
 		Header: ChallengeResponseHeader{
@@ -142,18 +150,18 @@ func (cr *ChallengeResponseController) buildChallenge1ErrorResponse(ctx context.
 	})
 }
 
-func (cr *ChallengeResponseController) processChallenge2(ctx context.Context, request network.Request) (network.Response, error) {
+func (cr *challengeResponseController) processChallenge2(ctx context.Context, request network.Request) (network.Response, error) {
 	data := request.GetData().(*SignedChallengeRequest)
-	cert, discoveryNonce, err := cr.sessionManager.GetChallengeData(data.SessionID)
+	cert, discoveryNonce, err := cr.SessionManager.GetChallengeData(data.SessionID)
 	if err != nil {
 		return cr.buildChallenge2ErrorResponse(ctx, request, err.Error()), nil
 	}
 	sign := core.SignatureFromBytes(data.SignedDiscoveryNonce)
-	success := cr.cryptoSrv.Verify(cert.GetPublicKey(), sign, Xor(data.XorNonce, discoveryNonce))
+	success := cr.Cryptography.Verify(cert.GetPublicKey(), sign, Xor(data.XorNonce, discoveryNonce))
 	if !success {
 		return cr.buildChallenge2ErrorResponse(ctx, request, "node %s signature check failed"), nil
 	}
-	err = cr.sessionManager.ChallengePassed(data.SessionID)
+	err = cr.SessionManager.ChallengePassed(data.SessionID)
 	if err != nil {
 		return cr.buildChallenge2ErrorResponse(ctx, request, err.Error()), nil
 	}
@@ -162,13 +170,13 @@ func (cr *ChallengeResponseController) processChallenge2(ctx context.Context, re
 			Success: true,
 		},
 		Payload: &ChallengePayload{
-			AssignShortID: GenerateShortID(cr.keeper, *cert.GetNodeRef()),
+			AssignShortID: GenerateShortID(cr.NodeKeeper, *cert.GetNodeRef()),
 		},
 	})
 	return response, nil
 }
 
-func (cr *ChallengeResponseController) buildChallenge2ErrorResponse(ctx context.Context, request network.Request, err string) network.Response {
+func (cr *challengeResponseController) buildChallenge2ErrorResponse(ctx context.Context, request network.Request, err string) network.Response {
 	log.Warn(err)
 	return cr.transport.BuildResponse(ctx, request, &SignedChallengeResponse{
 		Header: ChallengeResponseHeader{
@@ -178,14 +186,13 @@ func (cr *ChallengeResponseController) buildChallenge2ErrorResponse(ctx context.
 	})
 }
 
-func (cr *ChallengeResponseController) Start(cryptoSrv core.CryptographyService, keeper network.NodeKeeper) {
-	cr.keeper = keeper
-	cr.cryptoSrv = cryptoSrv
+func (cr *challengeResponseController) Start(ctx context.Context) error {
 	cr.transport.RegisterPacketHandler(types.Challenge1, cr.processChallenge1)
 	cr.transport.RegisterPacketHandler(types.Challenge2, cr.processChallenge2)
+	return nil
 }
 
-func (cr *ChallengeResponseController) sendRequest1(ctx context.Context, discoveryHost *host.Host,
+func (cr *challengeResponseController) sendRequest1(ctx context.Context, discoveryHost *host.Host,
 	sessionID SessionID, nonce Nonce) (*SignedChallengePayload, error) {
 
 	request := cr.transport.NewRequestBuilder().Type(types.Challenge1).Data(&ChallengeRequest{
@@ -205,7 +212,7 @@ func (cr *ChallengeResponseController) sendRequest1(ctx context.Context, discove
 	return data.Payload, nil
 }
 
-func (cr *ChallengeResponseController) sendRequest2(ctx context.Context, discoveryHost *host.Host,
+func (cr *challengeResponseController) sendRequest2(ctx context.Context, discoveryHost *host.Host,
 	sessionID SessionID, signedDiscoveryNonce SignedNonce, xorNonce Nonce) (*ChallengePayload, error) {
 
 	request := cr.transport.NewRequestBuilder().Type(types.Challenge2).Data(&SignedChallengeRequest{
@@ -226,7 +233,7 @@ func (cr *ChallengeResponseController) sendRequest2(ctx context.Context, discove
 }
 
 // Execute double challenge response between the node and the discovery node (step 3 of the bootstrap process)
-func (cr *ChallengeResponseController) Execute(ctx context.Context, discoveryNode *DiscoveryNode, sessionID SessionID) (*ChallengePayload, error) {
+func (cr *challengeResponseController) Execute(ctx context.Context, discoveryNode *DiscoveryNode, sessionID SessionID) (*ChallengePayload, error) {
 	nonce, err := GenerateNonce()
 	if err != nil {
 		return nil, errors.Wrap(err, "error generating nonce")
@@ -243,7 +250,7 @@ func (cr *ChallengeResponseController) Execute(ctx context.Context, discoveryNod
 	inslogger.FromContext(ctx).Debugf("Discovery XorDiscoveryNonce: %s", base58.Encode(data.XorDiscoveryNonce))
 
 	sign := core.SignatureFromBytes(data.SignedNonce)
-	success := cr.cryptoSrv.Verify(discoveryNode.Node.GetPublicKey(), sign, Xor(nonce, data.XorDiscoveryNonce))
+	success := cr.Cryptography.Verify(discoveryNode.Node.GetPublicKey(), sign, Xor(nonce, data.XorDiscoveryNonce))
 	if !success {
 		return nil, errors.New("Error checking signed nonce from discovery node")
 	}
@@ -252,7 +259,7 @@ func (cr *ChallengeResponseController) Execute(ctx context.Context, discoveryNod
 	if err != nil {
 		return nil, errors.Wrap(err, "error generating xor nonce")
 	}
-	signedDiscoveryNonce, err := cr.cryptoSrv.Sign(Xor(xorNonce, data.DiscoveryNonce))
+	signedDiscoveryNonce, err := cr.Cryptography.Sign(Xor(xorNonce, data.DiscoveryNonce))
 	if err != nil {
 		return nil, errors.Wrap(err, "error signing discovery nonce")
 	}
@@ -263,12 +270,9 @@ func (cr *ChallengeResponseController) Execute(ctx context.Context, discoveryNod
 	return payload, nil
 }
 
-func NewChallengeResponseController(options *common.Options, transport network.InternalTransport,
-	sessionManager *SessionManager) *ChallengeResponseController {
-
-	return &ChallengeResponseController{
-		options:        options,
-		transport:      transport,
-		sessionManager: sessionManager,
+func NewChallengeResponseController(options *common.Options, transport network.InternalTransport) *challengeResponseController {
+	return &challengeResponseController{
+		options:   options,
+		transport: transport,
 	}
 }

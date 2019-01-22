@@ -29,6 +29,7 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller"
+	"github.com/insolar/insolar/network/controller/bootstrap"
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/merkle"
 	"github.com/insolar/insolar/network/routing"
@@ -41,7 +42,6 @@ type ServiceNetwork struct {
 	cm  *component.Manager
 
 	hostNetwork  network.HostNetwork  // TODO: should be injected
-	controller   network.Controller   // TODO: should be injected
 	routingTable network.RoutingTable // TODO: should be injected
 
 	// dependencies
@@ -56,6 +56,7 @@ type ServiceNetwork struct {
 
 	// subcomponents
 	PhaseManager phases.PhaseManager `inject:"subcomponent"`
+	Controller   network.Controller  `inject:"subcomponent"`
 
 	// fakePulsar *fakepulsar.FakePulsar
 	isGenesis bool
@@ -69,17 +70,17 @@ func NewServiceNetwork(conf configuration.Configuration, scheme core.PlatformCry
 
 // SendMessage sends a message from MessageBus.
 func (n *ServiceNetwork) SendMessage(nodeID core.RecordRef, method string, msg core.Parcel) ([]byte, error) {
-	return n.controller.SendMessage(nodeID, method, msg)
+	return n.Controller.SendMessage(nodeID, method, msg)
 }
 
 // SendCascadeMessage sends a message from MessageBus to a cascade of nodes
 func (n *ServiceNetwork) SendCascadeMessage(data core.Cascade, method string, msg core.Parcel) error {
-	return n.controller.SendCascadeMessage(data, method, msg)
+	return n.Controller.SendCascadeMessage(data, method, msg)
 }
 
 // RemoteProcedureRegister registers procedure for remote call on this host.
 func (n *ServiceNetwork) RemoteProcedureRegister(name string, method core.RemoteProcedure) {
-	n.controller.RemoteProcedureRegister(name, method)
+	n.Controller.RemoteProcedureRegister(name, method)
 }
 
 // incrementPort increments port number if it not equals 0
@@ -125,7 +126,11 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		return errors.Wrap(err, "Failed to create consensus network.")
 	}
 
+	n.hostNetwork = hostnetwork.NewHostTransport(internalTransport, n.routingTable)
+	options := controller.ConfigureOptions(n.cfg.Host)
+
 	n.cm.Inject(n,
+		n.CertificateManager.GetCertificate(),
 		n.NodeKeeper,
 		merkle.NewCalculator(),
 		consensusNetwork,
@@ -134,11 +139,16 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		phases.NewSecondPhase(),
 		phases.NewThirdPhase(),
 		phases.NewPhaseManager(),
+		bootstrap.NewSessionManager(),
+		controller.NewNetworkController(n.hostNetwork),
+		controller.NewRPCController(options, n.hostNetwork),
+		controller.NewPulseController(n.hostNetwork, n.routingTable),
+		bootstrap.NewBootstrapper(options, internalTransport),
+		bootstrap.NewAuthorizationController(options, internalTransport),
+		bootstrap.NewChallengeResponseController(options, internalTransport),
+		bootstrap.NewNetworkBootstrapper(options),
 	)
 
-	n.hostNetwork = hostnetwork.NewHostTransport(internalTransport, n.routingTable)
-	options := controller.ConfigureOptions(n.cfg.Host)
-	n.controller = controller.NewNetworkController(n, options, n.CertificateManager.GetCertificate(), internalTransport, n.routingTable, n.hostNetwork, n.CryptographyScheme)
 	// n.fakePulsar = fakepulsar.NewFakePulsar(n.HandlePulse, n.cfg.Pulsar.PulseTime)
 	return nil
 }
@@ -147,6 +157,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 func (n *ServiceNetwork) Start(ctx context.Context) error {
 	log.Infoln("Network starts listening...")
 	n.hostNetwork.Start(ctx)
+	n.routingTable.Inject(n.NodeKeeper)
 
 	log.Info("Starting network component manager...")
 	err := n.cm.Start(ctx)
@@ -154,11 +165,8 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 		return errors.Wrap(err, "Failed to bootstrap network")
 	}
 
-	n.controller.Inject(n.CryptographyService, n.NetworkCoordinator, n.NodeKeeper)
-	n.routingTable.Inject(n.NodeKeeper)
-
 	log.Infoln("Bootstrapping network...")
-	err = n.controller.Bootstrap(ctx)
+	err = n.Controller.Bootstrap(ctx)
 	if err != nil {
 		return errors.Wrap(err, "Failed to bootstrap network")
 	}
@@ -196,10 +204,10 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
 		return
 	}
 	if !n.NodeKeeper.IsBootstrapped() {
-		n.controller.SetLastIgnoredPulse(pulse.NextPulseNumber)
+		n.Controller.SetLastIgnoredPulse(pulse.NextPulseNumber)
 		return
 	}
-	if pulse.PulseNumber <= n.controller.GetLastIgnoredPulse() {
+	if pulse.PulseNumber <= n.Controller.GetLastIgnoredPulse() {
 		log.Info("Ignore pulse %d: network is not yet initialized")
 		return
 	}
@@ -236,6 +244,6 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
 	}
 }
 
-func (n *ServiceNetwork) isFakePulse(pulse *core.Pulse) bool {
-	return (pulse.NextPulseNumber == 0) && (pulse.PulseNumber == 0)
-}
+// func (n *ServiceNetwork) isFakePulse(pulse *core.Pulse) bool {
+// 	return (pulse.NextPulseNumber == 0) && (pulse.PulseNumber == 0)
+// }
