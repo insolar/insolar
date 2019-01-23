@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/sequence"
 	"github.com/insolar/insolar/network/transport"
@@ -88,6 +89,8 @@ func (d *distributor) Distribute(ctx context.Context, pulse core.Pulse) {
 		}
 	}()
 
+	ctx, span := instracer.StartSpan(ctx, "distributor.Distribute")
+	defer span.End()
 	d.resume(ctx)
 	defer d.pause(ctx)
 
@@ -125,6 +128,8 @@ func (d *distributor) generateID() network.RequestID {
 func (d *distributor) pingHost(ctx context.Context, host *host.Host) error {
 	logger := inslogger.FromContext(ctx)
 
+	ctx, span := instracer.StartSpan(ctx, "distributor.pingHost")
+	defer span.End()
 	builder := packet.NewBuilder(d.pulsarHost)
 	pingPacket := builder.Receiver(host).Type(types.Ping).RequestID(d.generateID()).Build()
 	pingCall, err := d.Transport.SendRequest(ctx, pingPacket)
@@ -155,6 +160,8 @@ func (d *distributor) sendPulseToHosts(ctx context.Context, pulse *core.Pulse, h
 	logger := inslogger.FromContext(ctx)
 	logger.Debugf("Before sending pulse to nodes - %v", hosts)
 
+	ctx, span := instracer.StartSpan(ctx, "distributor.sendPulseToHosts")
+	defer span.End()
 	wg := sync.WaitGroup{}
 	wg.Add(len(hosts))
 
@@ -183,6 +190,8 @@ func (d *distributor) sendPulseToHost(ctx context.Context, pulse *core.Pulse, ho
 		}
 	}()
 
+	ctx, span := instracer.StartSpan(ctx, "distributor.sendPulseToHosts")
+	defer span.End()
 	pb := packet.NewBuilder(d.pulsarHost)
 	pulseRequest := pb.Receiver(host).Request(&packet.RequestPulse{Pulse: *pulse}).RequestID(d.generateID()).Type(types.Pulse).Build()
 	call, err := d.Transport.SendRequest(ctx, pulseRequest)
@@ -202,6 +211,8 @@ func (d *distributor) sendPulseToHost(ctx context.Context, pulse *core.Pulse, ho
 
 func (d *distributor) pause(ctx context.Context) {
 	inslogger.FromContext(ctx).Info("[ Pause ] Pause distribution, stopping transport")
+	ctx, span := instracer.StartSpan(ctx, "distributor.pause")
+	defer span.End()
 	go d.Transport.Stop()
 	<-d.Transport.Stopped()
 	d.Transport.Close()
@@ -209,5 +220,7 @@ func (d *distributor) pause(ctx context.Context) {
 
 func (d *distributor) resume(ctx context.Context) {
 	inslogger.FromContext(ctx).Info("[ Resume ] Resume distribution, starting transport")
+	ctx, span := instracer.StartSpan(ctx, "distributor.resume")
+	defer span.End()
 	transport.ListenAndWaitUntilReady(ctx, d.Transport)
 }
