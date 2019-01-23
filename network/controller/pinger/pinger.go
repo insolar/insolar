@@ -20,6 +20,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet/types"
@@ -33,6 +34,8 @@ type Pinger struct {
 
 // PingWithTimeout ping remote host with timeout
 func (p *Pinger) Ping(ctx context.Context, address string, timeout time.Duration) (*host.Host, error) {
+	ctx, span := instracer.StartSpan(ctx, "Pinger.Ping")
+	defer span.End()
 	request := p.transport.NewRequestBuilder().Type(types.Ping).Build()
 	h, err := host.NewHost(address)
 	if err != nil {

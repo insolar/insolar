@@ -109,6 +109,11 @@ func (rpc *RPCController) SendCascadeMessage(data core.Cascade, method string, m
 func (rpc *RPCController) initCascadeSendMessage(ctx context.Context, data core.Cascade,
 	findCurrentNode bool, method string, args [][]byte) error {
 
+	_, span := instracer.StartSpan(context.Background(), "RPCController.initCascadeSendMessage")
+	span.AddAttributes(
+		trace.StringAttribute("method", method),
+	)
+	defer span.End()
 	if len(data.NodeIds) == 0 {
 		return errors.New("node IDs list should not be empty")
 	}
@@ -151,6 +156,8 @@ func (rpc *RPCController) initCascadeSendMessage(ctx context.Context, data core.
 func (rpc *RPCController) requestCascadeSendMessage(ctx context.Context, data core.Cascade, nodeID core.RecordRef,
 	method string, args [][]byte) error {
 
+	_, span := instracer.StartSpan(context.Background(), "RPCController.requestCascadeSendMessage")
+	defer span.End()
 	request := rpc.hostNetwork.NewRequestBuilder().Type(types.Cascade).Data(&RequestCascade{
 		TraceID: inslogger.TraceID(ctx),
 		RPC: RequestRPC{
