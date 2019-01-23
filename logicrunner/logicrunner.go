@@ -901,6 +901,10 @@ func (lr *LogicRunner) executeConstructorCall(
 
 func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 	lr.stateMutex.Lock()
+
+	ctx, span := instracer.StartSpan(ctx, "pulse.logicrunner")
+	defer span.End()
+
 	messages := make([]core.Message, 0)
 
 	for ref, state := range lr.state {
