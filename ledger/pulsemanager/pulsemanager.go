@@ -606,7 +606,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 			return err
 		}
 		m.postProcessJets(ctx, newPulse, jets)
-		go m.addSync(context.Background(), jets, currentPulse.PulseNumber)
+		m.addSync(ctx, jets, currentPulse.PulseNumber)
 		go m.cleanLightData(context.Background(), newPulse)
 	}
 
