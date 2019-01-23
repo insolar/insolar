@@ -42,6 +42,14 @@ func (hc *HandlersChain) Append(handlers ...Handler) *HandlersChain {
 	return &HandlersChain{handlers: newCons}
 }
 
+func (hc *HandlersChain) PrependAndCopy(handler Handler) *HandlersChain {
+	result := make([]Handler, len(hc.handlers)+1)
+	copy(result[1:], hc.handlers)
+	result[0] = handler
+
+	return &HandlersChain{handlers: result}
+}
+
 func (hc *HandlersChain) Then(mh core.MessageHandler) core.MessageHandler {
 	if mh == nil {
 		panic("MessageHandler in Then function-call can't be nil")
