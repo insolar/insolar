@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/transport/relay"
 	"github.com/insolar/insolar/network/utils"
-	"github.com/lucas-clemente/quic-go"
+	quic "github.com/lucas-clemente/quic-go"
 	"github.com/pkg/errors"
 )
 

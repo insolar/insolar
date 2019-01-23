@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -38,4 +38,3 @@ func TestEarlyRequestCircuitBreakerProvider_GetBreaker_CreateNew(t *testing.T) {
 	require.NotNil(t, provider.breakers[expectedJet].timeoutChannel)
 	require.NotNil(t, provider.breakers[expectedJet].hotDataChannel)
 }
-

@@ -1,7 +1,5 @@
-// +build functest
-
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -15,6 +13,8 @@
  *    See the License for the specific language governing permissions and
  *    limitations under the License.
  */
+
+// +build functest
 
 package functest
 
@@ -33,7 +33,7 @@ import (
 	"testing"
 	"time"
 
-	"gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v2"
 
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/core"
