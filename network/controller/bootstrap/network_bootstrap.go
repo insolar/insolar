@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller/common"
@@ -40,6 +41,8 @@ type NetworkBootstrapper struct {
 }
 
 func (nb *NetworkBootstrapper) Bootstrap(ctx context.Context) error {
+	ctx, span := instracer.StartSpan(ctx, "NetworkBoostrapper.Bootstrap")
+	defer span.End()
 	if len(nb.certificate.GetDiscoveryNodes()) == 0 {
 		log.Info("Zero bootstrap")
 		return nil
@@ -83,6 +86,8 @@ type DiscoveryNode struct {
 }
 
 func (nb *NetworkBootstrapper) bootstrapJoiner(ctx context.Context) error {
+	ctx, span := instracer.StartSpan(ctx, "NetworkBoostrapper.bootstrapJoiner")
+	defer span.End()
 	discoveryNode, err := nb.bootstrapper.Bootstrap(ctx)
 	if err != nil {
 		return errors.Wrap(err, "Error bootstrapping to discovery node")
