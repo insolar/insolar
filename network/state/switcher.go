@@ -19,9 +19,11 @@ package state
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/metrics"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/network/state.messageBusLocker -o ./ -s _mock.go
@@ -69,6 +71,7 @@ func (ns *NetworkSwitcher) OnPulse(ctx context.Context, pulse core.Pulse) error 
 	if ns.SwitcherWorkAround.IsBootstrapped() && ns.state != core.CompleteNetworkState {
 		ns.state = core.CompleteNetworkState
 		ns.Release(ctx)
+		metrics.NetworkComplete.Set(float64(time.Now().Unix()))
 		inslogger.FromContext(ctx).Infof("Current NetworkSwitcher state switched to: %s", ns.state)
 	}
 

@@ -78,9 +78,7 @@ func (db *DB) AddPulse(ctx context.Context, pulse core.Pulse) error {
 		_, err := tx.get(ctx, prefixkey(scopeIDPulse, pulse.PulseNumber.Bytes()))
 		if err == nil {
 			return ErrOverride
-		} else if err == ErrNotFound {
-			err = nil // nolint: ineffassign
-		} else {
+		} else if err != ErrNotFound {
 			return err
 		}
 

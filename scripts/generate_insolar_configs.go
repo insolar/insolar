@@ -42,6 +42,7 @@ const (
 	defaultJaegerEndPoint       = defaultHost + ":6831"
 	defaultLogLevel             = "Debug"
 	defaultGenesisFile          = "genesis.yaml"
+	defaultPulsarTemplate       = "scripts/insolard/pulsar_template.yaml"
 	dataDirectoryTemplate       = "scripts/insolard/nodes/%d/data"
 	certificatePathTemplate     = "scripts/insolard/nodes/%d/cert.json"
 	pulsewatcherFileName        = "pulsewatcher.yaml"
@@ -52,12 +53,14 @@ var (
 	outputDir       string
 	debugLevel      string
 	gorundPortsPath string
+	pulsarTemplate  string
 )
 
 func parseInputParams() {
 	var rootCmd = &cobra.Command{}
 
 	rootCmd.Flags().StringVarP(&genesisFile, "genesis", "g", defaultGenesisFile, "input genesis file")
+	rootCmd.Flags().StringVarP(&pulsarTemplate, "pulsar-template", "t", defaultPulsarTemplate, "path to pulsar template file")
 	rootCmd.Flags().StringVarP(&outputDir, "output", "o", "", "output directory ( required )")
 	rootCmd.Flags().StringVarP(&debugLevel, "debuglevel", "d", defaultLogLevel, "debug level")
 	rootCmd.Flags().StringVarP(&gorundPortsPath, "gorundports", "p", "", "path to insgorund ports ( required )")
@@ -88,6 +91,13 @@ func writeInsolarConfigs(insolarConfigs []configuration.Configuration) {
 		err = genesis.WriteFile(outputDir, fileName, string(data))
 		check("Can't WriteFile: "+fileName, err)
 	}
+}
+
+func writePulsarConfig(conf configuration.Configuration) {
+	data, err := yaml.Marshal(conf)
+	check("Can't Marshal pulsard config", err)
+	err = genesis.WriteFile(outputDir, "pulsar.yaml", string(data))
+	check("Can't WriteFile: "+gorundPortsPath, err)
 }
 
 func main() {
@@ -131,8 +141,22 @@ func main() {
 		pwConfig.Nodes = append(pwConfig.Nodes, conf.APIRunner.Address)
 	}
 
+	cfgHolder := configuration.NewHolder()
+	err = cfgHolder.LoadFromFile(pulsarTemplate)
+	check("Can't read pulsar template config", err)
+	err = cfgHolder.LoadEnv()
+	check("Can't read pulsar template config", err)
+	fmt.Println("pulsar template config: " + pulsarTemplate)
+
+	pulsarConfig := cfgHolder.Configuration
+	pulsarConfig.Pulsar.PulseDistributor.BootstrapHosts = []string{}
+	for _, node := range genesisConf.DiscoveryNodes {
+		pulsarConfig.Pulsar.PulseDistributor.BootstrapHosts = append(pulsarConfig.Pulsar.PulseDistributor.BootstrapHosts, node.Host)
+	}
+
 	writeInsolarConfigs(insolarConfigs)
 	writeGorundPorts(gorundPorts)
+	writePulsarConfig(pulsarConfig)
 
 	pwConfig.Interval = 100 * time.Millisecond
 	pwConfig.Timeout = 1 * time.Second

@@ -64,11 +64,12 @@ type ServiceNetwork struct {
 
 	// fakePulsar *fakepulsar.FakePulsar
 	isGenesis bool
+	skip      int
 }
 
 // NewServiceNetwork returns a new ServiceNetwork.
 func NewServiceNetwork(conf configuration.Configuration, scheme core.PlatformCryptographyScheme, isGenesis bool) (*ServiceNetwork, error) {
-	serviceNetwork := &ServiceNetwork{cfg: conf, CryptographyScheme: scheme, isGenesis: isGenesis}
+	serviceNetwork := &ServiceNetwork{cfg: conf, CryptographyScheme: scheme, isGenesis: isGenesis, skip: conf.Service.Skip}
 	return serviceNetwork, nil
 }
 
@@ -215,8 +216,8 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
 		n.controller.SetLastIgnoredPulse(pulse.NextPulseNumber)
 		return
 	}
-	if pulse.PulseNumber <= n.controller.GetLastIgnoredPulse() {
-		log.Info("Ignore pulse %d: network is not yet initialized")
+	if pulse.PulseNumber <= n.controller.GetLastIgnoredPulse()+core.PulseNumber(n.skip) {
+		log.Infof("Ignore pulse %d: network is not yet initialized", pulse.PulseNumber)
 		return
 	}
 	currentPulse, err := n.PulseStorage.Current(ctx)
