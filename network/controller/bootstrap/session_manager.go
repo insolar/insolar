@@ -65,7 +65,7 @@ type notification struct{}
 
 type SessionManager interface {
 	component.Starter
-	component.Stopper
+	// component.Stopper
 
 	NewSession(ref core.RecordRef, cert core.AuthorizationCertificate, ttl time.Duration) SessionID
 	CheckSession(id SessionID, expected SessionState) error
@@ -100,13 +100,14 @@ func (sm *sessionManager) Start(ctx context.Context) error {
 	return nil
 }
 
-func (sm *sessionManager) Stop(ctx context.Context) error {
-	inslogger.FromContext(ctx).Debug("[ sessionManager::Stop ] stop cleaning up sessions")
-
-	sm.stopCleanupNotification <- notification{}
-
-	return nil
-}
+// TODO: fix bug. If we uncomment Stop, we get deadlock on genesis stopping
+// func (sm *sessionManager) Stop(ctx context.Context) error {
+// 	inslogger.FromContext(ctx).Debug("[ sessionManager::Stop ] stop cleaning up sessions")
+//
+// 	sm.stopCleanupNotification <- notification{}
+//
+// 	return nil
+// }
 
 func (sm *sessionManager) NewSession(ref core.RecordRef, cert core.AuthorizationCertificate, ttl time.Duration) SessionID {
 	id := utils.AtomicLoadAndIncrementUint64(&sm.sequence)

@@ -180,10 +180,10 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 func (n *ServiceNetwork) Stop(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
 
-	logger.Info("Stopping host network")
-	n.hostNetwork.Stop()
 	logger.Info("Stopping consensus network")
 	n.cm.Stop(ctx)
+	logger.Info("Stopping host network")
+	n.hostNetwork.Stop()
 	return nil
 }
 
