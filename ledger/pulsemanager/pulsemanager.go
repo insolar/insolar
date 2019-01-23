@@ -27,6 +27,7 @@ import (
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/heavyclient"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
@@ -122,6 +123,9 @@ func (m *PulseManager) processEndPulse(
 ) error {
 	var g errgroup.Group
 	logger := inslogger.FromContext(ctx)
+	ctx, span := instracer.StartSpan(ctx, "pulse.process_end")
+	defer span.End()
+
 	for _, i := range jets {
 		info := i
 		g.Go(func() error {
@@ -141,6 +145,8 @@ func (m *PulseManager) processEndPulse(
 			logger := inslogger.FromContext(ctx)
 
 			sender := func(msg message.HotData, jetID core.RecordID) {
+				ctx, span := instracer.StartSpan(context.Background(), "pulse.send_hot")
+				defer span.End()
 				msg.Jet = *core.NewRecordRef(core.DomainID, jetID)
 				start := time.Now()
 				genericRep, err := m.Bus.Send(ctx, &msg, nil)
@@ -316,6 +322,9 @@ func (m *PulseManager) getExecutorHotData(
 	drop *jet.JetDrop,
 	dropSerialized []byte,
 ) (*message.HotData, error) {
+	ctx, span := instracer.StartSpan(ctx, "pulse.prepare_hot_data")
+	defer span.End()
+
 	logger := inslogger.FromContext(ctx)
 	recentStorage := m.RecentStorageProvider.GetStorage(jetID)
 	recentObjectsIds := recentStorage.GetObjects()
@@ -374,6 +383,9 @@ func (m *PulseManager) getExecutorHotData(
 var splitCount = 5
 
 func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse core.PulseNumber) ([]jetInfo, error) {
+	ctx, span := instracer.StartSpan(ctx, "jets.process")
+	defer span.End()
+
 	tree, err := m.db.CloneJetTree(ctx, currentPulse, newPulse)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to clone jet tree into a new pulse")
@@ -521,6 +533,9 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 		return errors.New("can't call Set method on PulseManager after stop")
 	}
 
+	ctx, span := instracer.StartSpan(ctx, "pulse.process")
+	defer span.End()
+
 	logger := inslogger.FromContext(ctx)
 
 	var err error
@@ -592,16 +607,9 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 		if err != nil {
 			return err
 		}
-		if m.options.enableSync {
-			pn := currentPulse.PulseNumber
-			for _, jInfo := range jets {
-				m.syncClientsPool.AddPulsesToSyncClient(ctx, jInfo.id, true, pn)
-			}
-		}
-
 		m.postProcessJets(ctx, newPulse, jets)
-		// TODO: make it asynchronious - @aorlovsky 19.01.2019
-		m.cleanLightData(ctx, newPulse)
+		go m.addSync(context.Background(), jets, currentPulse.PulseNumber)
+		go m.cleanLightData(context.Background(), newPulse)
 	}
 
 	err = m.Bus.OnPulse(ctx, newPulse)
@@ -612,9 +620,25 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 	return m.LR.OnPulse(ctx, newPulse)
 }
 
+func (m *PulseManager) addSync(ctx context.Context, jets []jetInfo, pulse core.PulseNumber) {
+	ctx, span := instracer.StartSpan(ctx, "pulse.add_sync")
+	defer span.End()
+
+	if !m.options.enableSync {
+		return
+	}
+
+	for _, jInfo := range jets {
+		m.syncClientsPool.AddPulsesToSyncClient(ctx, jInfo.id, true, pulse)
+	}
+}
+
 func (m *PulseManager) postProcessJets(ctx context.Context, newPulse core.Pulse, jets []jetInfo) {
 	logger := inslogger.FromContext(ctx)
 	logger.Debugf("[postProcessJets] post-process jets, pulse number - %v", newPulse.PulseNumber)
+
+	ctx, span := instracer.StartSpan(ctx, "jets.post_process")
+	defer span.End()
 
 	for _, jetInfo := range jets {
 		if jetInfo.left == nil && jetInfo.right == nil {
@@ -638,6 +662,9 @@ func (m *PulseManager) postProcessJets(ctx context.Context, newPulse core.Pulse,
 }
 
 func (m *PulseManager) cleanLightData(ctx context.Context, newPulse core.Pulse) {
+	ctx, span := instracer.StartSpan(ctx, "pulse.clean")
+	defer span.End()
+
 	inslog := inslogger.FromContext(ctx)
 	startSync := time.Now()
 	defer func() {
@@ -698,6 +725,9 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse core.Pulse) 
 func (m *PulseManager) prepareArtifactManagerMessageHandlerForNextPulse(ctx context.Context, newPulse core.Pulse, jets []jetInfo) {
 	logger := inslogger.FromContext(ctx)
 	logger.Debugf("[breakermiddleware] [prepareHandlerForNextPulse] close breakers my jets for the next pulse - %v", newPulse.PulseNumber)
+
+	ctx, span := instracer.StartSpan(ctx, "early.close")
+	defer span.End()
 
 	m.ArtifactManagerMessageHandler.ResetEarlyRequestCircuitBreaker(ctx)
 
