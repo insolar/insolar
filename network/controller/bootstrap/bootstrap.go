@@ -152,13 +152,13 @@ func init() {
 func (bc *Bootstrapper) Bootstrap(ctx context.Context) (*DiscoveryNode, error) {
 	log.Info("Bootstrapping to discovery node")
 	ctx, span := instracer.StartSpan(ctx, "Bootstrapper.Bootstrap")
+	defer span.End()
 	ch := bc.getDiscoveryNodesChannel(ctx, bc.cert.GetDiscoveryNodes(), 1)
 	host := bc.waitResultFromChannel(ctx, ch)
 	if host == nil {
 		return nil, errors.New("Failed to bootstrap to any of discovery nodes")
 	}
 	discovery := FindDiscovery(bc.cert, host.NodeID)
-	span.End()
 	return &DiscoveryNode{Host: host, Node: discovery}, nil
 }
 
@@ -289,11 +289,11 @@ func (bc *Bootstrapper) getDiscoveryNodesChannel(ctx context.Context, discoveryN
 		go func(ctx context.Context, address string, ch chan<- *host.Host) {
 			inslogger.FromContext(ctx).Infof("Starting bootstrap to address %s", address)
 			ctx, span := instracer.StartSpan(ctx, "Bootstrapper.getDiscoveryNodesChannel")
+			defer span.End()
 			span.AddAttributes(
 				trace.StringAttribute("Bootstrap node", address),
 			)
 			bootstrapHost, err := bootstrap(ctx, address, bc.options, bc.startBootstrap)
-			span.End()
 			if err != nil {
 				inslogger.FromContext(ctx).Errorf("Error bootstrapping to address %s: %s", address, err.Error())
 				return

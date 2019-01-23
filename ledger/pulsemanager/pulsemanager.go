@@ -35,7 +35,6 @@ import (
 	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/pkg/errors"
-	"go.opencensus.io/trace"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/singleflight"
 )
@@ -542,16 +541,11 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 	var err error
 	m.GIL.Acquire(ctx)
 	m.PulseStorage.Lock()
-	ctx, span := instracer.StartSpan(context.Background(), "PulseManager.Set GIL Lock")
-	span.AddAttributes(
-		trace.Int64Attribute("pulse.PulseNumber", int64(newPulse.PulseNumber)),
-	)
 	// FIXME: @andreyromancev. 17.12.18. return core.Pulse here.
 	storagePulse, err := m.db.GetLatestPulse(ctx)
 	if err != nil {
 		m.PulseStorage.Unlock()
 		m.GIL.Release(ctx)
-		span.End()
 		return errors.Wrap(err, "call of GetLatestPulseNumber failed")
 	}
 	currentPulse := storagePulse.Pulse
@@ -572,14 +566,12 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 	if persist {
 		if err := m.db.AddPulse(ctx, newPulse); err != nil {
 			m.GIL.Release(ctx)
-			span.End()
 			m.PulseStorage.Unlock()
 			return errors.Wrap(err, "call of AddPulse failed")
 		}
 		err = m.db.SetActiveNodes(newPulse.PulseNumber, m.NodeNet.GetActiveNodes())
 		if err != nil {
 			m.GIL.Release(ctx)
-			span.End()
 			m.PulseStorage.Unlock()
 			return errors.Wrap(err, "call of SetActiveNodes failed")
 		}
@@ -593,7 +585,6 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 		jets, err = m.processJets(ctx, currentPulse.PulseNumber, newPulse.PulseNumber)
 		if err != nil {
 			m.GIL.Release(ctx)
-			span.End()
 			return errors.Wrap(err, "failed to process jets")
 		}
 	}
@@ -602,7 +593,6 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 		m.prepareArtifactManagerMessageHandlerForNextPulse(ctx, newPulse, jets)
 	}
 	m.GIL.Release(ctx)
-	span.End()
 
 	if !persist {
 		return nil
