@@ -149,7 +149,7 @@ func (c *JetClient) runOnce(ctx context.Context) {
 	c.startOnce.Do(func() {
 		// TODO: reset TraceID from context, or just don't use context?
 		// (TraceID not meaningful in async sync loop)
-		ctx, cancel := context.WithCancel(ctx)
+		ctx, cancel := context.WithCancel(context.Background())
 		c.cancel = cancel
 		go c.syncloop(ctx)
 	})
