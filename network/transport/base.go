@@ -146,6 +146,6 @@ func (t *baseTransport) SendPacket(ctx context.Context, p *packet.Packet) error 
 		return errors.Wrap(err, "Failed to serialize packet")
 	}
 
-	inslogger.FromContext(ctx).Debugf("Send packet to %s with RequestID = %d", recvAddress, p.RequestID)
+	inslogger.FromContext(ctx).Debugf("Send %s packet to %s with RequestID = %d", p.Type, recvAddress, p.RequestID)
 	return t.sendFunc(recvAddress, data)
 }

@@ -17,6 +17,8 @@
 package recentstorage
 
 import (
+	"context"
+
 	"github.com/insolar/insolar/core"
 )
 
@@ -31,11 +33,11 @@ type Provider interface {
 // RecentStorage is a base interface for the storage of recent objects and indexes
 //go:generate minimock -i github.com/insolar/insolar/ledger/recentstorage.RecentStorage -o ./ -s _mock.go
 type RecentStorage interface {
-	AddObject(id core.RecordID)
-	AddObjectWithTLL(id core.RecordID, ttl int)
+	AddObject(ctx context.Context, id core.RecordID)
+	AddObjectWithTLL(ctx context.Context, id core.RecordID, ttl int)
 
-	AddPendingRequest(obj, req core.RecordID)
-	RemovePendingRequest(obj, req core.RecordID)
+	AddPendingRequest(ctx context.Context, obj, req core.RecordID)
+	RemovePendingRequest(ctx context.Context, obj, req core.RecordID)
 
 	GetObjects() map[core.RecordID]int
 	GetRequests() map[core.RecordID]map[core.RecordID]struct{}
@@ -43,6 +45,6 @@ type RecentStorage interface {
 
 	IsRecordIDCached(obj core.RecordID) bool
 
-	ClearZeroTTLObjects()
-	ClearObjects()
+	ClearZeroTTLObjects(ctx context.Context)
+	ClearObjects(ctx context.Context)
 }

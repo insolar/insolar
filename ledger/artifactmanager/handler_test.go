@@ -806,11 +806,11 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 	}
 
 	recentStorageMock := recentstorage.NewRecentStorageMock(t)
-	recentStorageMock.AddPendingRequestFunc = func(o, p core.RecordID) {
+	recentStorageMock.AddPendingRequestFunc = func(ctx context.Context, o, p core.RecordID) {
 		require.Equal(t, o, obj)
 		require.Equal(t, p, *secondId)
 	}
-	recentStorageMock.AddObjectWithTLLFunc = func(p core.RecordID, ttl int) {
+	recentStorageMock.AddObjectWithTLLFunc = func(ctx context.Context, p core.RecordID, ttl int) {
 		require.Equal(t, p, *firstID)
 		require.Equal(t, 320, ttl)
 	}

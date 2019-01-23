@@ -88,6 +88,5 @@ func ConfigureOptions(config configuration.HostNetwork) *common.Options {
 
 // NewNetworkController create new network controller.
 func NewNetworkController(net network.HostNetwork) network.Controller {
-	c := Controller{network: net}
-	return &c
+	return &Controller{network: net}
 }

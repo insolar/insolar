@@ -197,10 +197,10 @@ func (h *MessageHandler) handleSetRecord(ctx context.Context, parcel core.Parcel
 	if !h.isHeavy {
 		recentStorage := h.RecentStorageProvider.GetStorage(jetID)
 		if request, ok := rec.(record.Request); ok {
-			recentStorage.AddPendingRequest(request.GetObject(), *id)
+			recentStorage.AddPendingRequest(ctx, request.GetObject(), *id)
 		}
 		if result, ok := rec.(*record.ResultRecord); ok {
-			recentStorage.RemovePendingRequest(result.Object, *result.Request.Record())
+			recentStorage.RemovePendingRequest(ctx, result.Object, *result.Request.Record())
 		}
 	}
 
@@ -301,7 +301,7 @@ func (h *MessageHandler) handleGetObject(
 	} else {
 		// Add requested object to recent.
 		if !h.isHeavy {
-			h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Head.Record())
+			h.RecentStorageProvider.GetStorage(jetID).AddObject(ctx, *msg.Head.Record())
 		}
 	}
 
@@ -472,7 +472,7 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel core.Parc
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	} else {
 		if !h.isHeavy {
-			h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Head.Record())
+			h.RecentStorageProvider.GetStorage(jetID).AddObject(ctx, *msg.Head.Record())
 		}
 	}
 
@@ -518,7 +518,7 @@ func (h *MessageHandler) handleGetChildren(
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	} else {
 		if !h.isHeavy {
-			h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Parent.Record())
+			h.RecentStorageProvider.GetStorage(jetID).AddObject(ctx, *msg.Parent.Record())
 		}
 	}
 
@@ -651,7 +651,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 	var idx *index.ObjectLifeline
 	err = h.db.Update(ctx, func(tx *storage.TransactionManager) error {
 		var err error
-		logger.Debugf("Get index for: %v, jet: %v", msg.Object.Record(), jetID.String())
+		logger.Debugf("Get index for: %v, jet: %v", msg.Object.Record(), jetID.DebugString())
 		idx, err = tx.GetObjectIndex(ctx, jetID, msg.Object.Record(), true)
 		// No index on our node.
 		if err == storage.ErrNotFound {
@@ -659,7 +659,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 				// We are activating the object. There is no index for it anywhere.
 				idx = &index.ObjectLifeline{State: record.StateUndefined}
 			} else {
-				logger.Debugf("Not found index for: %v, jet: %v", msg.Object.Record(), jetID.String())
+				logger.Debugf("Not found index for: %v, jet: %v", msg.Object.Record(), jetID.DebugString())
 				// We are updating object. Index should be on the heavy executor.
 				heavy, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
 				if err != nil {
@@ -674,7 +674,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 			return err
 		} else {
 			if !h.isHeavy {
-				h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Object.Record())
+				h.RecentStorageProvider.GetStorage(jetID).AddObject(ctx, *msg.Object.Record())
 			}
 		}
 
@@ -743,7 +743,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel core.Pa
 			return err
 		} else {
 			if !h.isHeavy {
-				h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Parent.Record())
+				h.RecentStorageProvider.GetStorage(jetID).AddObject(ctx, *msg.Parent.Record())
 			}
 		}
 
@@ -773,7 +773,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel core.Pa
 	}
 
 	if !h.isHeavy {
-		h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Parent.Record())
+		h.RecentStorageProvider.GetStorage(jetID).AddObject(ctx, *msg.Parent.Record())
 	}
 
 	return &reply.ID{ID: *child}, nil
@@ -970,7 +970,7 @@ func (h *MessageHandler) saveIndexFromHeavy(
 		return nil, errors.Wrap(err, "failed to decode")
 	}
 
-	h.RecentStorageProvider.GetStorage(jetID).AddObject(*obj.Record())
+	h.RecentStorageProvider.GetStorage(jetID).AddObject(ctx, *obj.Record())
 	err = s.SetObjectIndex(ctx, jetID, obj.Record(), idx)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to save")
@@ -1023,7 +1023,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 				)
 				continue
 			}
-			recentStorage.AddPendingRequest(objID, reqID)
+			recentStorage.AddPendingRequest(ctx, objID, reqID)
 		}
 	}
 
@@ -1045,7 +1045,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 
 		fmt.Println("[saved id] ", id.String())
 		meta.TTL--
-		recentStorage.AddObjectWithTLL(id, meta.TTL)
+		recentStorage.AddObjectWithTLL(ctx, id, meta.TTL)
 	}
 
 	err = h.db.UpdateJetTree(
