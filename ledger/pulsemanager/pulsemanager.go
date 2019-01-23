@@ -160,17 +160,12 @@ func (m *PulseManager) processEndPulse(
 			}
 
 			if info.left == nil && info.right == nil {
-				m.RecentStorageProvider.GetStorage(info.id).ClearZeroTTLObjects(ctx)
-
 				// No split happened.
 				if !info.mineNext {
 					go sender(*msg, info.id)
 				}
 			} else {
 				// Split happened.
-				m.RecentStorageProvider.GetStorage(info.left.id).ClearZeroTTLObjects(ctx)
-				m.RecentStorageProvider.GetStorage(info.right.id).ClearZeroTTLObjects(ctx)
-
 				if !info.left.mineNext {
 					go sender(*msg, info.left.id)
 				}
@@ -399,6 +394,8 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse c
 			continue
 		}
 
+		m.RecentStorageProvider.GetStorage(jetID).DecreaseTTL(ctx)
+
 		info := jetInfo{id: jetID}
 		if indexToSplit == i && splitCount > 0 {
 			splitCount--
@@ -623,22 +620,17 @@ func (m *PulseManager) postProcessJets(ctx context.Context, newPulse core.Pulse,
 			if !jetInfo.mineNext {
 				logger.Debugf("[postProcessJets] clear recent storage for root jet - %v, pulse - %v", jetInfo.id, newPulse.PulseNumber)
 				m.RecentStorageProvider.GetStorage(jetInfo.id).ClearObjects(ctx)
-			} else {
-				m.RecentStorageProvider.GetStorage(jetInfo.id).DecreaseTTL(ctx)
 			}
 		} else {
 			// Split happened.
+			m.RecentStorageProvider.GetStorage(jetInfo.id).ClearObjects(ctx)
 			if !jetInfo.left.mineNext {
 				logger.Debugf("[postProcessJets] clear recent storage for left jet - %v, pulse - %v", jetInfo.left.id, newPulse.PulseNumber)
 				m.RecentStorageProvider.GetStorage(jetInfo.left.id).ClearObjects(ctx)
-			} else {
-				m.RecentStorageProvider.GetStorage(jetInfo.left.id).DecreaseTTL(ctx)
 			}
 			if !jetInfo.right.mineNext {
 				logger.Debugf("[postProcessJets] clear recent storage for right jet - %v, pulse - %v", jetInfo.right.id, newPulse.PulseNumber)
 				m.RecentStorageProvider.GetStorage(jetInfo.right.id).ClearObjects(ctx)
-			} else {
-				m.RecentStorageProvider.GetStorage(jetInfo.right.id).DecreaseTTL(ctx)
 			}
 		}
 	}

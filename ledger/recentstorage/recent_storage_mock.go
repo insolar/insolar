@@ -40,10 +40,10 @@ type RecentStorageMock struct {
 	ClearObjectsPreCounter uint64
 	ClearObjectsMock       mRecentStorageMockClearObjects
 
-	ClearZeroTTLObjectsFunc       func(p context.Context)
-	ClearZeroTTLObjectsCounter    uint64
-	ClearZeroTTLObjectsPreCounter uint64
-	ClearZeroTTLObjectsMock       mRecentStorageMockClearZeroTTLObjects
+	DecreaseTTLFunc       func(p context.Context)
+	DecreaseTTLCounter    uint64
+	DecreaseTTLPreCounter uint64
+	DecreaseTTLMock       mRecentStorageMockDecreaseTTL
 
 	GetObjectsFunc       func() (r map[core.RecordID]int)
 	GetObjectsCounter    uint64
@@ -84,7 +84,7 @@ func NewRecentStorageMock(t minimock.Tester) *RecentStorageMock {
 	m.AddObjectWithTLLMock = mRecentStorageMockAddObjectWithTLL{mock: m}
 	m.AddPendingRequestMock = mRecentStorageMockAddPendingRequest{mock: m}
 	m.ClearObjectsMock = mRecentStorageMockClearObjects{mock: m}
-	m.ClearZeroTTLObjectsMock = mRecentStorageMockClearZeroTTLObjects{mock: m}
+	m.DecreaseTTLMock = mRecentStorageMockDecreaseTTL{mock: m}
 	m.GetObjectsMock = mRecentStorageMockGetObjects{mock: m}
 	m.GetRequestsMock = mRecentStorageMockGetRequests{mock: m}
 	m.GetRequestsForObjectMock = mRecentStorageMockGetRequestsForObject{mock: m}
@@ -591,124 +591,124 @@ func (m *RecentStorageMock) ClearObjectsFinished() bool {
 	return true
 }
 
-type mRecentStorageMockClearZeroTTLObjects struct {
+type mRecentStorageMockDecreaseTTL struct {
 	mock              *RecentStorageMock
-	mainExpectation   *RecentStorageMockClearZeroTTLObjectsExpectation
-	expectationSeries []*RecentStorageMockClearZeroTTLObjectsExpectation
+	mainExpectation   *RecentStorageMockDecreaseTTLExpectation
+	expectationSeries []*RecentStorageMockDecreaseTTLExpectation
 }
 
-type RecentStorageMockClearZeroTTLObjectsExpectation struct {
-	input *RecentStorageMockClearZeroTTLObjectsInput
+type RecentStorageMockDecreaseTTLExpectation struct {
+	input *RecentStorageMockDecreaseTTLInput
 }
 
-type RecentStorageMockClearZeroTTLObjectsInput struct {
+type RecentStorageMockDecreaseTTLInput struct {
 	p context.Context
 }
 
-//Expect specifies that invocation of RecentStorage.ClearZeroTTLObjects is expected from 1 to Infinity times
-func (m *mRecentStorageMockClearZeroTTLObjects) Expect(p context.Context) *mRecentStorageMockClearZeroTTLObjects {
-	m.mock.ClearZeroTTLObjectsFunc = nil
+//Expect specifies that invocation of RecentStorage.DecreaseTTL is expected from 1 to Infinity times
+func (m *mRecentStorageMockDecreaseTTL) Expect(p context.Context) *mRecentStorageMockDecreaseTTL {
+	m.mock.DecreaseTTLFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &RecentStorageMockClearZeroTTLObjectsExpectation{}
+		m.mainExpectation = &RecentStorageMockDecreaseTTLExpectation{}
 	}
-	m.mainExpectation.input = &RecentStorageMockClearZeroTTLObjectsInput{p}
+	m.mainExpectation.input = &RecentStorageMockDecreaseTTLInput{p}
 	return m
 }
 
-//Return specifies results of invocation of RecentStorage.ClearZeroTTLObjects
-func (m *mRecentStorageMockClearZeroTTLObjects) Return() *RecentStorageMock {
-	m.mock.ClearZeroTTLObjectsFunc = nil
+//Return specifies results of invocation of RecentStorage.DecreaseTTL
+func (m *mRecentStorageMockDecreaseTTL) Return() *RecentStorageMock {
+	m.mock.DecreaseTTLFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &RecentStorageMockClearZeroTTLObjectsExpectation{}
+		m.mainExpectation = &RecentStorageMockDecreaseTTLExpectation{}
 	}
 
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of RecentStorage.ClearZeroTTLObjects is expected once
-func (m *mRecentStorageMockClearZeroTTLObjects) ExpectOnce(p context.Context) *RecentStorageMockClearZeroTTLObjectsExpectation {
-	m.mock.ClearZeroTTLObjectsFunc = nil
+//ExpectOnce specifies that invocation of RecentStorage.DecreaseTTL is expected once
+func (m *mRecentStorageMockDecreaseTTL) ExpectOnce(p context.Context) *RecentStorageMockDecreaseTTLExpectation {
+	m.mock.DecreaseTTLFunc = nil
 	m.mainExpectation = nil
 
-	expectation := &RecentStorageMockClearZeroTTLObjectsExpectation{}
-	expectation.input = &RecentStorageMockClearZeroTTLObjectsInput{p}
+	expectation := &RecentStorageMockDecreaseTTLExpectation{}
+	expectation.input = &RecentStorageMockDecreaseTTLInput{p}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
-//Set uses given function f as a mock of RecentStorage.ClearZeroTTLObjects method
-func (m *mRecentStorageMockClearZeroTTLObjects) Set(f func(p context.Context)) *RecentStorageMock {
+//Set uses given function f as a mock of RecentStorage.DecreaseTTL method
+func (m *mRecentStorageMockDecreaseTTL) Set(f func(p context.Context)) *RecentStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
-	m.mock.ClearZeroTTLObjectsFunc = f
+	m.mock.DecreaseTTLFunc = f
 	return m.mock
 }
 
-//ClearZeroTTLObjects implements github.com/insolar/insolar/ledger/recentstorage.RecentStorage interface
-func (m *RecentStorageMock) ClearZeroTTLObjects(p context.Context) {
-	counter := atomic.AddUint64(&m.ClearZeroTTLObjectsPreCounter, 1)
-	defer atomic.AddUint64(&m.ClearZeroTTLObjectsCounter, 1)
+//DecreaseTTL implements github.com/insolar/insolar/ledger/recentstorage.RecentStorage interface
+func (m *RecentStorageMock) DecreaseTTL(p context.Context) {
+	counter := atomic.AddUint64(&m.DecreaseTTLPreCounter, 1)
+	defer atomic.AddUint64(&m.DecreaseTTLCounter, 1)
 
-	if len(m.ClearZeroTTLObjectsMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.ClearZeroTTLObjectsMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to RecentStorageMock.ClearZeroTTLObjects. %v", p)
+	if len(m.DecreaseTTLMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.DecreaseTTLMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to RecentStorageMock.DecreaseTTL. %v", p)
 			return
 		}
 
-		input := m.ClearZeroTTLObjectsMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, RecentStorageMockClearZeroTTLObjectsInput{p}, "RecentStorage.ClearZeroTTLObjects got unexpected parameters")
+		input := m.DecreaseTTLMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, RecentStorageMockDecreaseTTLInput{p}, "RecentStorage.DecreaseTTL got unexpected parameters")
 
 		return
 	}
 
-	if m.ClearZeroTTLObjectsMock.mainExpectation != nil {
+	if m.DecreaseTTLMock.mainExpectation != nil {
 
-		input := m.ClearZeroTTLObjectsMock.mainExpectation.input
+		input := m.DecreaseTTLMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, RecentStorageMockClearZeroTTLObjectsInput{p}, "RecentStorage.ClearZeroTTLObjects got unexpected parameters")
+			testify_assert.Equal(m.t, *input, RecentStorageMockDecreaseTTLInput{p}, "RecentStorage.DecreaseTTL got unexpected parameters")
 		}
 
 		return
 	}
 
-	if m.ClearZeroTTLObjectsFunc == nil {
-		m.t.Fatalf("Unexpected call to RecentStorageMock.ClearZeroTTLObjects. %v", p)
+	if m.DecreaseTTLFunc == nil {
+		m.t.Fatalf("Unexpected call to RecentStorageMock.DecreaseTTL. %v", p)
 		return
 	}
 
-	m.ClearZeroTTLObjectsFunc(p)
+	m.DecreaseTTLFunc(p)
 }
 
-//ClearZeroTTLObjectsMinimockCounter returns a count of RecentStorageMock.ClearZeroTTLObjectsFunc invocations
-func (m *RecentStorageMock) ClearZeroTTLObjectsMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.ClearZeroTTLObjectsCounter)
+//DecreaseTTLMinimockCounter returns a count of RecentStorageMock.DecreaseTTLFunc invocations
+func (m *RecentStorageMock) DecreaseTTLMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.DecreaseTTLCounter)
 }
 
-//ClearZeroTTLObjectsMinimockPreCounter returns the value of RecentStorageMock.ClearZeroTTLObjects invocations
-func (m *RecentStorageMock) ClearZeroTTLObjectsMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.ClearZeroTTLObjectsPreCounter)
+//DecreaseTTLMinimockPreCounter returns the value of RecentStorageMock.DecreaseTTL invocations
+func (m *RecentStorageMock) DecreaseTTLMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.DecreaseTTLPreCounter)
 }
 
-//ClearZeroTTLObjectsFinished returns true if mock invocations count is ok
-func (m *RecentStorageMock) ClearZeroTTLObjectsFinished() bool {
+//DecreaseTTLFinished returns true if mock invocations count is ok
+func (m *RecentStorageMock) DecreaseTTLFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.ClearZeroTTLObjectsMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.ClearZeroTTLObjectsCounter) == uint64(len(m.ClearZeroTTLObjectsMock.expectationSeries))
+	if len(m.DecreaseTTLMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.DecreaseTTLCounter) == uint64(len(m.DecreaseTTLMock.expectationSeries))
 	}
 
 	// if main expectation was set then invocations count should be greater than zero
-	if m.ClearZeroTTLObjectsMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.ClearZeroTTLObjectsCounter) > 0
+	if m.DecreaseTTLMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.DecreaseTTLCounter) > 0
 	}
 
 	// if func was set then invocations count should be greater than zero
-	if m.ClearZeroTTLObjectsFunc != nil {
-		return atomic.LoadUint64(&m.ClearZeroTTLObjectsCounter) > 0
+	if m.DecreaseTTLFunc != nil {
+		return atomic.LoadUint64(&m.DecreaseTTLCounter) > 0
 	}
 
 	return true
@@ -1426,8 +1426,8 @@ func (m *RecentStorageMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to RecentStorageMock.ClearObjects")
 	}
 
-	if !m.ClearZeroTTLObjectsFinished() {
-		m.t.Fatal("Expected call to RecentStorageMock.ClearZeroTTLObjects")
+	if !m.DecreaseTTLFinished() {
+		m.t.Fatal("Expected call to RecentStorageMock.DecreaseTTL")
 	}
 
 	if !m.GetObjectsFinished() {
@@ -1483,8 +1483,8 @@ func (m *RecentStorageMock) MinimockFinish() {
 		m.t.Fatal("Expected call to RecentStorageMock.ClearObjects")
 	}
 
-	if !m.ClearZeroTTLObjectsFinished() {
-		m.t.Fatal("Expected call to RecentStorageMock.ClearZeroTTLObjects")
+	if !m.DecreaseTTLFinished() {
+		m.t.Fatal("Expected call to RecentStorageMock.DecreaseTTL")
 	}
 
 	if !m.GetObjectsFinished() {
@@ -1525,7 +1525,7 @@ func (m *RecentStorageMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.AddObjectWithTLLFinished()
 		ok = ok && m.AddPendingRequestFinished()
 		ok = ok && m.ClearObjectsFinished()
-		ok = ok && m.ClearZeroTTLObjectsFinished()
+		ok = ok && m.DecreaseTTLFinished()
 		ok = ok && m.GetObjectsFinished()
 		ok = ok && m.GetRequestsFinished()
 		ok = ok && m.GetRequestsForObjectFinished()
@@ -1555,8 +1555,8 @@ func (m *RecentStorageMock) MinimockWait(timeout time.Duration) {
 				m.t.Error("Expected call to RecentStorageMock.ClearObjects")
 			}
 
-			if !m.ClearZeroTTLObjectsFinished() {
-				m.t.Error("Expected call to RecentStorageMock.ClearZeroTTLObjects")
+			if !m.DecreaseTTLFinished() {
+				m.t.Error("Expected call to RecentStorageMock.DecreaseTTL")
 			}
 
 			if !m.GetObjectsFinished() {
@@ -1607,7 +1607,7 @@ func (m *RecentStorageMock) AllMocksCalled() bool {
 		return false
 	}
 
-	if !m.ClearZeroTTLObjectsFinished() {
+	if !m.DecreaseTTLFinished() {
 		return false
 	}
 

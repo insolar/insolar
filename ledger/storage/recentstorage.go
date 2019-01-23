@@ -80,7 +80,6 @@ func (p *RecentStorageProvider) CloneStorage(fromJetID, toJetID core.RecordID) {
 	}
 	for k, v := range fromStorage.recentObjects {
 		clone := v
-		clone.ttl--
 		toStorage.recentObjects[k] = clone
 	}
 	for objID, objRequests := range fromStorage.pendingRequests {
@@ -131,7 +130,7 @@ func (r *RecentStorage) AddObjectWithTLL(ctx context.Context, id core.RecordID, 
 	defer r.objectLock.Unlock()
 
 	inslogger.FromContext(ctx).Debugf("DecreaseTTL AddObjectWithTLL  id - %v, jet - %v", id, r.jetID.DebugString())
-	r.recentObjects[id] = recentObjectMeta{ttl: r.DefaultTTL}
+	r.recentObjects[id] = recentObjectMeta{ttl: ttl}
 
 	ctx = insmetrics.InsertTag(ctx, tagJet, r.jetID.DebugString())
 	stats.Record(ctx, statRecentStorageObjectsAdded.M(1))
@@ -239,28 +238,13 @@ func (r *RecentStorage) DecreaseTTL(ctx context.Context) {
 	for key, value := range r.recentObjects {
 		inslogger.FromContext(ctx).Debugf("DecreaseTTL before ttl - %v, key - %v, jet - %v, idst - %v", value.ttl, key, r.jetID.DebugString(), r.id)
 		value.ttl--
+		if value.ttl == 0 {
+			delete(r.recentObjects, key)
+			continue
+		}
 		r.recentObjects[key] = value
 		inslogger.FromContext(ctx).Debugf("DecreaseTTL after ttl - %v, key - %v, jet - %v, idst - %v", r.recentObjects[key].ttl, key, r.jetID.DebugString(), r.id)
 	}
-}
-
-// ClearZeroTTLObjects clears objects with zero TTL
-func (r *RecentStorage) ClearZeroTTLObjects(ctx context.Context) {
-	r.objectLock.Lock()
-	defer r.objectLock.Unlock()
-
-	inslogger.FromContext(ctx).Debugf("DecreaseTTL ClearZeroTTLObjects before cycle, jetID - %v", r.jetID.DebugString())
-	var removed int64
-	for key, value := range r.recentObjects {
-		if value.ttl == 0 {
-			inslogger.FromContext(ctx).Debugf("DecreaseTTL ClearZeroTTLObjects id - %v, jetID - %v", key, r.jetID.DebugString())
-			delete(r.recentObjects, key)
-			removed++
-		}
-	}
-
-	ctx = insmetrics.InsertTag(ctx, tagJet, r.jetID.DebugString())
-	stats.Record(ctx, statRecentStorageObjectsRemoved.M(removed))
 }
 
 // ClearObjects clears the whole cache

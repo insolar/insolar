@@ -47,6 +47,5 @@ type RecentStorage interface {
 
 	DecreaseTTL(ctx context.Context)
 
-	ClearZeroTTLObjects(ctx context.Context)
 	ClearObjects(ctx context.Context)
 }

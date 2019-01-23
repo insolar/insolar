@@ -1004,6 +1004,10 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 		return nil, errors.Wrap(err, "[ handleHotRecords ] Can't SetDropSizeHistory")
 	}
 
+	logger.WithFields(map[string]interface{}{
+		"len": len(msg.RecentObjects),
+		"jet": jetID.DebugString(),
+	}).Debugf("received pending requests")
 	recentStorage := h.RecentStorageProvider.GetStorage(jetID)
 	for objID, requests := range msg.PendingRequests {
 		for reqID, request := range requests {
@@ -1027,6 +1031,10 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 		}
 	}
 
+	logger.WithFields(map[string]interface{}{
+		"len": len(msg.RecentObjects),
+		"jet": jetID.DebugString(),
+	}).Debugf("received recent objects")
 	for id, meta := range msg.RecentObjects {
 		logger.Debugf("[got id] jet: %v, id: %v", jetID.DebugString(), id.DebugString())
 		decodedIndex, err := index.DecodeObjectLifeline(meta.Index)
@@ -1044,7 +1052,6 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 		}
 
 		fmt.Println("[saved id] ", id.String())
-		meta.TTL--
 		recentStorage.AddObjectWithTLL(ctx, id, meta.TTL)
 	}
 
