@@ -451,7 +451,7 @@ func (bc *bootstrapper) Start(ctx context.Context) error {
 	return nil
 }
 
-func NewBootstrapper(options *common.Options, transport network.InternalTransport) *bootstrapper {
+func NewBootstrapper(options *common.Options, transport network.InternalTransport) Bootstrapper {
 	return &bootstrapper{
 		options:       options,
 		transport:     transport,

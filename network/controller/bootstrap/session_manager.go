@@ -84,7 +84,7 @@ type sessionManager struct {
 	stopCleanupNotification chan notification
 }
 
-func NewSessionManager() *sessionManager {
+func NewSessionManager() SessionManager {
 	return &sessionManager{
 		sessions:                make(map[SessionID]*Session),
 		newSessionNotification:  make(chan notification),

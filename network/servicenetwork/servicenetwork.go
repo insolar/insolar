@@ -147,7 +147,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		bootstrap.NewBootstrapper(options, internalTransport),
 		bootstrap.NewAuthorizationController(options, internalTransport),
 		bootstrap.NewChallengeResponseController(options, internalTransport),
-		bootstrap.NewNetworkBootstrapper(options),
+		bootstrap.NewNetworkBootstrapper(),
 	)
 
 	// n.fakePulsar = fakepulsar.NewFakePulsar(n.HandlePulse, n.cfg.Pulsar.PulseTime)
@@ -181,8 +181,10 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 func (n *ServiceNetwork) Stop(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
 
-	logger.Info("Stopping consensus network")
-	n.cm.Stop(ctx)
+	logger.Info("Stopping network components")
+	if err := n.cm.Stop(ctx); err != nil {
+		log.Errorf("Error while stopping network components: %s", err.Error())
+	}
 	logger.Info("Stopping host network")
 	n.hostNetwork.Stop()
 	return nil

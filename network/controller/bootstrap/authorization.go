@@ -186,7 +186,7 @@ func (ac *authorizationController) Start(ctx context.Context) error {
 	return nil
 }
 
-func NewAuthorizationController(options *common.Options, transport network.InternalTransport) *authorizationController {
+func NewAuthorizationController(options *common.Options, transport network.InternalTransport) AuthorizationController {
 	return &authorizationController{
 		options:   options,
 		transport: transport,

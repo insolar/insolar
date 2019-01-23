@@ -22,7 +22,6 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/controller/common"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/utils"
 	"github.com/pkg/errors"
@@ -90,6 +89,6 @@ func (nb *networkBootstrapper) bootstrapDiscovery(ctx context.Context) error {
 	return nb.Bootstrapper.BootstrapDiscovery(ctx)
 }
 
-func NewNetworkBootstrapper(options *common.Options) *networkBootstrapper {
+func NewNetworkBootstrapper() NetworkBootstrapper {
 	return &networkBootstrapper{}
 }

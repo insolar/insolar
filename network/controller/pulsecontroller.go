@@ -54,6 +54,6 @@ func (pc *pulseController) processGetRandomHosts(ctx context.Context, request ne
 	return pc.hostNetwork.BuildResponse(ctx, request, &packet.ResponseGetRandomHosts{Hosts: randomHosts}), nil
 }
 
-func NewPulseController(hostNetwork network.HostNetwork, routingTable network.RoutingTable) *pulseController {
+func NewPulseController(hostNetwork network.HostNetwork, routingTable network.RoutingTable) PulseController {
 	return &pulseController{hostNetwork: hostNetwork, routingTable: routingTable}
 }

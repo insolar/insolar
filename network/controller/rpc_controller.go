@@ -40,7 +40,7 @@ type RPCController interface {
 	component.Starter
 
 	// hack for DI, else we receive ServiceNetwork injection in RPCController instead of rpcController that leads to stack overflow
-	IAmRpcController()
+	IAmRPCController()
 
 	SendMessage(nodeID core.RecordRef, name string, msg core.Parcel) ([]byte, error)
 	SendCascadeMessage(data core.Cascade, method string, msg core.Parcel) error
@@ -84,7 +84,7 @@ func init() {
 	gob.Register(&ResponseCascade{})
 }
 
-func (rpc *rpcController) IAmRpcController() {
+func (rpc *rpcController) IAmRPCController() {
 	// hack for DI, else we receive ServiceNetwork injection in RPCController instead of rpcController that leads to stack overflow
 }
 
@@ -229,7 +229,7 @@ func (rpc *rpcController) processMessage(ctx context.Context, request network.Re
 
 func (rpc *rpcController) processCascade(ctx context.Context, request network.Request) (network.Response, error) {
 	payload := request.GetData().(*RequestCascade)
-	ctx, logger := inslogger.WithTraceField(context.Background(), payload.TraceID)
+	ctx, logger := inslogger.WithTraceField(ctx, payload.TraceID)
 
 	generalError := ""
 	_, invokeErr := rpc.invoke(ctx, payload.RPC.Method, payload.RPC.Data)
@@ -255,7 +255,7 @@ func (rpc *rpcController) Start(ctx context.Context) error {
 	return nil
 }
 
-func NewRPCController(options *common.Options, hostNetwork network.HostNetwork) *rpcController {
+func NewRPCController(options *common.Options, hostNetwork network.HostNetwork) RPCController {
 	return &rpcController{options: options,
 		hostNetwork: hostNetwork,
 		methodTable: make(map[string]core.RemoteProcedure),

@@ -270,7 +270,7 @@ func (cr *challengeResponseController) Execute(ctx context.Context, discoveryNod
 	return payload, nil
 }
 
-func NewChallengeResponseController(options *common.Options, transport network.InternalTransport) *challengeResponseController {
+func NewChallengeResponseController(options *common.Options, transport network.InternalTransport) ChallengeResponseController {
 	return &challengeResponseController{
 		options:   options,
 		transport: transport,
