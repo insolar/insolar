@@ -124,11 +124,9 @@ type nodekeeper struct {
 // IsBootstrapped method returns true when bootstrapNodes are connected to each other
 // TODO: remove this method when bootstrap mechanism completed
 func (nk *nodekeeper) IsBootstrapped() bool {
-	ctx, span := instracer.StartSpan(context.Background(), "nodekeeper.IsBootstrapped wait lock")
+	_, span := instracer.StartSpan(context.Background(), "nodekeeper.IsBootstrapped wait lock")
 	nk.isBootstrapLock.RLock()
 	span.End()
-	_, span = instracer.StartSpan(ctx, "nodekeeper.IsBootstrapped lock")
-	defer span.End()
 	defer nk.isBootstrapLock.RUnlock()
 
 	return nk.isBootstrap
@@ -137,53 +135,45 @@ func (nk *nodekeeper) IsBootstrapped() bool {
 // SetIsBootstrapped method set is bootstrap completed
 // TODO: remove this method when bootstrap mechanism completed
 func (nk *nodekeeper) SetIsBootstrapped(isBootstrap bool) {
-	ctx, span := instracer.StartSpan(context.Background(), "nodekeeper.SetIsBootstrapped wait lock")
+	_, span := instracer.StartSpan(context.Background(), "nodekeeper.SetIsBootstrapped wait lock")
 	nk.isBootstrapLock.Lock()
 	span.End()
-	_, span = instracer.StartSpan(ctx, "nodekeeper.SetIsBootstrapped lock")
-	defer span.End()
 	defer nk.isBootstrapLock.Unlock()
 
 	nk.isBootstrap = isBootstrap
 }
 
 func (nk *nodekeeper) GetOrigin() core.Node {
-	ctx, span := instracer.StartSpan(context.Background(), "nodekeeper.GetOrigin wait lock")
+	_, span := instracer.StartSpan(context.Background(), "nodekeeper.GetOrigin wait lock")
 	nk.activeLock.RLock()
 	span.End()
-	_, span = instracer.StartSpan(ctx, "nodekeeper.GetOrigin lock")
-	defer span.End()
 	defer nk.activeLock.RUnlock()
 
 	return nk.origin
 }
 
 func (nk *nodekeeper) GetCloudHash() []byte {
-	ctx, span := instracer.StartSpan(context.Background(), "nodekeeper.GetCloudHash wait lock")
+	_, span := instracer.StartSpan(context.Background(), "nodekeeper.GetCloudHash wait lock")
 	nk.cloudHashLock.RLock()
 	span.End()
-	_, span = instracer.StartSpan(ctx, "nodekeeper.GetCloudHash lock")
-	defer span.End()
 	defer nk.cloudHashLock.RUnlock()
 
 	return nk.cloudHash
 }
 
 func (nk *nodekeeper) SetCloudHash(cloudHash []byte) {
-	ctx, span := instracer.StartSpan(context.Background(), "nodekeeper.SetCloudHash wait lock")
+	_, span := instracer.StartSpan(context.Background(), "nodekeeper.SetCloudHash wait lock")
 	nk.cloudHashLock.Lock()
 	span.End()
-	_, span = instracer.StartSpan(ctx, "nodekeeper.SetCloudHash lock")
 	defer nk.cloudHashLock.Unlock()
 
 	nk.cloudHash = cloudHash
 }
 
 func (nk *nodekeeper) GetActiveNodes() []core.Node {
-	ctx, span := instracer.StartSpan(context.Background(), "nodekeeper.GetActiveNodes wait lock")
+	_, span := instracer.StartSpan(context.Background(), "nodekeeper.GetActiveNodes wait lock")
 	nk.activeLock.RLock()
 	span.End()
-	_, span = instracer.StartSpan(ctx, "nodekeeper.GetActiveNodes lock")
 	result := make([]core.Node, len(nk.active))
 	index := 0
 	for _, node := range nk.active {
@@ -191,7 +181,6 @@ func (nk *nodekeeper) GetActiveNodes() []core.Node {
 		index++
 	}
 	nk.activeLock.RUnlock()
-	span.End()
 	// Sort active nodes to return list with determinate order on every node.
 	// If we have more than 10k nodes, we need to optimize this
 	sort.Slice(result, func(i, j int) bool {
@@ -201,12 +190,10 @@ func (nk *nodekeeper) GetActiveNodes() []core.Node {
 }
 
 func (nk *nodekeeper) GetActiveNodesByRole(role core.DynamicRole) []core.RecordRef {
-	ctx, span := instracer.StartSpan(context.Background(), "nodekeeper.GetActiveNodesByRole wait lock")
+	_, span := instracer.StartSpan(context.Background(), "nodekeeper.GetActiveNodesByRole wait lock")
 	nk.activeLock.RLock()
 	span.End()
-	_, span = instracer.StartSpan(ctx, "nodekeeper.GetActiveNodesByRole lock")
 	defer nk.activeLock.RUnlock()
-	defer span.End()
 
 	list, exists := nk.indexNode[jetRoleToNodeRole(role)]
 	if !exists {
@@ -216,12 +203,10 @@ func (nk *nodekeeper) GetActiveNodesByRole(role core.DynamicRole) []core.RecordR
 }
 
 func (nk *nodekeeper) AddActiveNodes(nodes []core.Node) {
-	ctx, span := instracer.StartSpan(context.Background(), "nodekeeper.AddActiveNodes wait lock")
+	_, span := instracer.StartSpan(context.Background(), "nodekeeper.AddActiveNodes wait lock")
 	nk.activeLock.Lock()
 	span.End()
-	_, span = instracer.StartSpan(ctx, "nodekeeper.AddActiveNodes lock")
 	defer nk.activeLock.Unlock()
-	defer span.End()
 
 	activeNodes := make([]string, len(nodes))
 	for i, node := range nodes {
@@ -232,23 +217,19 @@ func (nk *nodekeeper) AddActiveNodes(nodes []core.Node) {
 }
 
 func (nk *nodekeeper) GetActiveNode(ref core.RecordRef) core.Node {
-	ctx, span := instracer.StartSpan(context.Background(), "nodekeeper.GetActiveNode wait lock")
+	_, span := instracer.StartSpan(context.Background(), "nodekeeper.GetActiveNode wait lock")
 	nk.activeLock.RLock()
 	span.End()
-	_, span = instracer.StartSpan(ctx, "nodekeeper.GetActiveNode lock")
 	defer nk.activeLock.RUnlock()
-	defer span.End()
 
 	return nk.active[ref]
 }
 
 func (nk *nodekeeper) GetActiveNodeByShortID(shortID core.ShortNodeID) core.Node {
-	ctx, span := instracer.StartSpan(context.Background(), "nodekeeper.GetActiveNodeByShortID wait lock")
+	_, span := instracer.StartSpan(context.Background(), "nodekeeper.GetActiveNodeByShortID wait lock")
 	nk.activeLock.RLock()
 	span.End()
-	_, span = instracer.StartSpan(ctx, "nodekeeper.GetActiveNodesByShortID lock")
 	defer nk.activeLock.RUnlock()
-	defer span.End()
 
 	return nk.indexShortID[shortID]
 }
@@ -299,12 +280,10 @@ func (nk *nodekeeper) GetState() network.NodeKeeperState {
 }
 
 func (nk *nodekeeper) GetOriginClaim() (*consensus.NodeJoinClaim, error) {
-	ctx, span := instracer.StartSpan(context.Background(), "nodekeeper.GetOriginClaim wait lock")
+	_, span := instracer.StartSpan(context.Background(), "nodekeeper.GetOriginClaim wait lock")
 	nk.originLock.RLock()
 	span.End()
-	_, span = instracer.StartSpan(ctx, "nodekeeper.GetOriginClaim lock")
 	defer nk.originLock.RUnlock()
-	defer span.End()
 
 	return nk.nodeToClaim()
 }
@@ -331,12 +310,10 @@ func (nk *nodekeeper) GetSparseUnsyncList(length int) network.UnsyncList {
 }
 
 func (nk *nodekeeper) Sync(list network.UnsyncList) {
-	ctx, span := instracer.StartSpan(context.Background(), "nodekeeper.Sync wait lock")
+	_, span := instracer.StartSpan(context.Background(), "nodekeeper.Sync wait lock")
 	nk.syncLock.Lock()
 	span.End()
-	_, span = instracer.StartSpan(ctx, "nodekeeper.Sync lock")
 	defer nk.syncLock.Unlock()
-	defer span.End()
 
 	nk.sync = list
 }

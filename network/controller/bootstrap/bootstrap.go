@@ -163,7 +163,9 @@ func (bc *Bootstrapper) Bootstrap(ctx context.Context) (*DiscoveryNode, error) {
 }
 
 func (bc *Bootstrapper) SetLastPulse(number core.PulseNumber) {
+	_, span := instracer.StartSpan(context.Background(), "Bootstrapper.SetLastPulse wait lastPulseLock")
 	bc.lastPulseLock.Lock()
+	span.End()
 	defer bc.lastPulseLock.Unlock()
 
 	if !bc.pulsePersisted {
@@ -174,7 +176,9 @@ func (bc *Bootstrapper) SetLastPulse(number core.PulseNumber) {
 }
 
 func (bc *Bootstrapper) forceSetLastPulse(number core.PulseNumber) {
+	_, span := instracer.StartSpan(context.Background(), "Bootstrapper.forceSetLastPulse wait lastPulseLock")
 	bc.lastPulseLock.Lock()
+	span.End()
 	defer bc.lastPulseLock.Unlock()
 
 	log.Debugf("Network will start from pulse %d", number)
@@ -182,7 +186,9 @@ func (bc *Bootstrapper) forceSetLastPulse(number core.PulseNumber) {
 }
 
 func (bc *Bootstrapper) GetLastPulse() core.PulseNumber {
+	_, span := instracer.StartSpan(context.Background(), "Bootstrapper.GetLastPulse wait lastPulseLock")
 	bc.lastPulseLock.RLock()
+	span.End()
 	defer bc.lastPulseLock.RUnlock()
 
 	return bc.lastPulse
@@ -203,6 +209,8 @@ func (bc *Bootstrapper) checkActiveNode(node core.Node) error {
 func (bc *Bootstrapper) BootstrapDiscovery(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
 	logger.Info("Network bootstrap between discovery nodes")
+	ctx, span := instracer.StartSpan(ctx, "Bootstrapper.BootstrapDiscovery")
+	defer span.End()
 	discoveryNodes := bc.cert.GetDiscoveryNodes()
 	var err error
 	discoveryNodes, err = RemoveOrigin(discoveryNodes, *bc.cert.GetNodeRef())
@@ -259,6 +267,8 @@ func (bc *Bootstrapper) calculateLastIgnoredPulse(ctx context.Context, lastPulse
 }
 
 func (bc *Bootstrapper) sendGenesisRequest(ctx context.Context, h *host.Host) (*GenesisResponse, error) {
+	ctx, span := instracer.StartSpan(ctx, "Bootstrapper.sendGenesisRequest")
+	defer span.End()
 	discovery, err := newNodeStruct(bc.keeper.GetOrigin())
 	if err != nil {
 		return nil, errors.Wrapf(err, "Failed to prepare genesis request to address %s", h)
@@ -402,6 +412,8 @@ func bootstrap(ctx context.Context, address string, options *common.Options, boo
 }
 
 func (bc *Bootstrapper) startBootstrap(ctx context.Context, address string) (*host.Host, error) {
+	ctx, span := instracer.StartSpan(ctx, "Bootstrapper.startBootstrap")
+	defer span.End()
 	bootstrapHost, err := bc.pinger.Ping(ctx, address, bc.options.PingTimeout)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Failed to ping address %s", address)
