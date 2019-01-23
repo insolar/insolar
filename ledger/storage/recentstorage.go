@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -21,8 +21,6 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/utils"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"go.opencensus.io/stats"
@@ -64,7 +62,6 @@ func (p *RecentStorageProvider) CloneStorage(ctx context.Context, fromJetID, toJ
 		return
 	}
 	toStorage := &RecentStorage{
-		id:              utils.RandTraceID(),
 		jetID:           toJetID,
 		recentObjects:   make(map[core.RecordID]recentObjectMeta, len(fromStorage.recentObjects)),
 		pendingRequests: make(map[core.RecordID]map[core.RecordID]struct{}, len(fromStorage.pendingRequests)),
@@ -91,14 +88,21 @@ func (p *RecentStorageProvider) RemoveStorage(ctx context.Context, id core.Recor
 	defer p.lock.Unlock()
 
 	if storage, ok := p.storage[id]; ok {
-		storage.clearObjects(ctx)
+		storage.objectLock.Lock()
+		defer storage.objectLock.Unlock()
+
+		ctx = insmetrics.InsertTag(ctx, tagJet, storage.jetID.DebugString())
+		stats.Record(ctx,
+			statRecentStorageObjectsRemoved.M(int64(len(storage.recentObjects))),
+			statRecentStoragePendingsRemoved.M(int64(len(storage.pendingRequests))),
+		)
+
 		delete(p.storage, id)
 	}
 }
 
 // RecentStorage is a base structure
 type RecentStorage struct {
-	id              string
 	jetID           core.RecordID
 	recentObjects   map[core.RecordID]recentObjectMeta
 	objectLock      sync.Mutex
@@ -114,7 +118,6 @@ type recentObjectMeta struct {
 // NewRecentStorage creates default RecentStorage object
 func NewRecentStorage(jetID core.RecordID, defaultTTL int) *RecentStorage {
 	return &RecentStorage{
-		id:              utils.RandTraceID(),
 		jetID:           jetID,
 		recentObjects:   map[core.RecordID]recentObjectMeta{},
 		pendingRequests: map[core.RecordID]map[core.RecordID]struct{}{},
@@ -133,7 +136,6 @@ func (r *RecentStorage) AddObjectWithTLL(ctx context.Context, id core.RecordID, 
 	r.objectLock.Lock()
 	defer r.objectLock.Unlock()
 
-	inslogger.FromContext(ctx).Debugf("DecreaseTTL AddObjectWithTLL  id - %v, jet - %v", id, r.jetID.DebugString())
 	r.recentObjects[id] = recentObjectMeta{ttl: ttl}
 
 	ctx = insmetrics.InsertTag(ctx, tagJet, r.jetID.DebugString())
@@ -247,19 +249,4 @@ func (r *RecentStorage) DecreaseTTL(ctx context.Context) {
 		}
 		r.recentObjects[key] = value
 	}
-}
-
-// ClearObjects clears the whole cache
-func (r *RecentStorage) clearObjects(ctx context.Context) {
-	r.objectLock.Lock()
-	defer r.objectLock.Unlock()
-
-	ctx = insmetrics.InsertTag(ctx, tagJet, r.jetID.DebugString())
-	stats.Record(ctx,
-		statRecentStorageObjectsRemoved.M(int64(len(r.recentObjects))),
-		statRecentStoragePendingsRemoved.M(int64(len(r.pendingRequests))),
-	)
-
-	r.recentObjects = map[core.RecordID]recentObjectMeta{}
-	r.pendingRequests = map[core.RecordID]map[core.RecordID]struct{}{}
 }
