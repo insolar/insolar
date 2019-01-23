@@ -5,7 +5,7 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/testutils"
-	"github.com/jbenet/go-base58"
+	base58 "github.com/jbenet/go-base58"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -45,4 +45,11 @@ func TestRecordRef_String(t *testing.T) {
 	expectedRefStr := ref.Record().String() + core.RecordRefIDSeparator + ref.Domain().String()
 
 	assert.Equal(t, expectedRefStr, ref.String())
+}
+
+func BenchmarkRecordID_DebugString(b *testing.B) {
+	jet := testutils.RandomJet()
+	for n := 0; n < b.N; n++ {
+		jet.DebugString()
+	}
 }
