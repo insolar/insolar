@@ -21,6 +21,8 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/utils"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage/jet"
@@ -69,6 +71,7 @@ func (p *RecentStorageProvider) CloneStorage(fromJetID, toJetID core.RecordID) {
 		return
 	}
 	toStorage := &RecentStorage{
+		id:              utils.RandTraceID(),
 		jetID:           toJetID,
 		recentObjects:   make(map[core.RecordID]recentObjectMeta, len(fromStorage.recentObjects)),
 		pendingRequests: make(map[core.RecordID]map[core.RecordID]struct{}, len(fromStorage.pendingRequests)),
@@ -92,6 +95,7 @@ func (p *RecentStorageProvider) CloneStorage(fromJetID, toJetID core.RecordID) {
 
 // RecentStorage is a base structure
 type RecentStorage struct {
+	id              string
 	jetID           core.RecordID
 	recentObjects   map[core.RecordID]recentObjectMeta
 	objectLock      sync.Mutex
@@ -107,6 +111,7 @@ type recentObjectMeta struct {
 // NewRecentStorage creates default RecentStorage object
 func NewRecentStorage(jetID core.RecordID, defaultTTL int) *RecentStorage {
 	return &RecentStorage{
+		id:              utils.RandTraceID(),
 		jetID:           jetID,
 		recentObjects:   map[core.RecordID]recentObjectMeta{},
 		pendingRequests: map[core.RecordID]map[core.RecordID]struct{}{},
@@ -124,6 +129,8 @@ func (r *RecentStorage) AddObject(ctx context.Context, id core.RecordID) {
 func (r *RecentStorage) AddObjectWithTLL(ctx context.Context, id core.RecordID, ttl int) {
 	r.objectLock.Lock()
 	defer r.objectLock.Unlock()
+
+	inslogger.FromContext(ctx).Debugf("DecreaseTTL AddObjectWithTLL  id - %v, jet - %v", id, r.jetID.DebugString())
 	r.recentObjects[id] = recentObjectMeta{ttl: r.DefaultTTL}
 
 	ctx = insmetrics.InsertTag(ctx, tagJet, r.jetID.DebugString())
@@ -228,9 +235,12 @@ func (r *RecentStorage) IsRecordIDCached(obj core.RecordID) bool {
 func (r *RecentStorage) DecreaseTTL(ctx context.Context) {
 	r.objectLock.Lock()
 	defer r.objectLock.Unlock()
-
-	for _, value := range r.recentObjects {
+	inslogger.FromContext(ctx).Debugf("DecreaseTTL  length - %v, jet - %v, idst - %v", len(r.recentObjects), r.jetID.DebugString(), r.id)
+	for key, value := range r.recentObjects {
+		inslogger.FromContext(ctx).Debugf("DecreaseTTL before ttl - %v, key - %v, jet - %v, idst - %v", value.ttl, key, r.jetID.DebugString(), r.id)
 		value.ttl--
+		r.recentObjects[key] = value
+		inslogger.FromContext(ctx).Debugf("DecreaseTTL after ttl - %v, key - %v, jet - %v, idst - %v", r.recentObjects[key].ttl, key, r.jetID.DebugString(), r.id)
 	}
 }
 
@@ -239,9 +249,11 @@ func (r *RecentStorage) ClearZeroTTLObjects(ctx context.Context) {
 	r.objectLock.Lock()
 	defer r.objectLock.Unlock()
 
+	inslogger.FromContext(ctx).Debugf("DecreaseTTL ClearZeroTTLObjects before cycle, jetID - %v", r.jetID.DebugString())
 	var removed int64
 	for key, value := range r.recentObjects {
 		if value.ttl == 0 {
+			inslogger.FromContext(ctx).Debugf("DecreaseTTL ClearZeroTTLObjects id - %v, jetID - %v", key, r.jetID.DebugString())
 			delete(r.recentObjects, key)
 			removed++
 		}
