@@ -19,80 +19,71 @@ package main
 import (
 	"fmt"
 	"sync"
+
+	"github.com/insolar/insolar/api/sdk"
 )
 
-func oneSimpleRequest() {
+func oneSimpleRequest(insSDK *sdk.SDK) {
 	fmt.Println("Try to create new member:")
-	m, err := createMember()
-	if err != nil {
-		fmt.Println("Can not create member, error:", err)
-	} else {
-		fmt.Println("Success! New member ref:", m.ref, ". TraceId: ", m.traceId)
-	}
+	m, traceID, err := insSDK.CreateMember()
+	check("Can not create member, error: ", err)
+	fmt.Println("Success! New member ref: ", m.Reference, ". TraceId: ", traceID)
 	fmt.Print("oneSimpleRequest done just fine\n\n")
 }
 
-func severalSimpleRequestToRootMember() {
+func severalSimpleRequestToRootMember(insSDK *sdk.SDK) {
 	fmt.Println("Try to create several new members:")
 	for i := 0; i < 10; i++ {
-		fmt.Printf("Try to create member (%d):\n", i)
-		m, err := createMember()
-		if err != nil {
-			fmt.Println("Can not create member, error:", err)
-		} else {
-			fmt.Println("Success!")
-			fmt.Println("New member ref:", m.ref)
-		}
+		m, traceID, err := insSDK.CreateMember()
+		check("Can not create member, error: ", err)
+		fmt.Println("Success! New member ref: ", m.Reference, ". TraceId: ", traceID)
 	}
 	fmt.Print("severalSimpleRequestToRootMember done just fine\n\n")
 }
 
-func severalSimpleRequestToDifferentMembers() {
+func severalSimpleRequestToDifferentMembers(insSDK *sdk.SDK) {
 	fmt.Println("Try to transfer:")
 	fmt.Println("Creating some members for transfer ...")
-	var members []*memberInfo
+	var members []*sdk.Member
 	for i := 0; i < 20; i++ {
-		m, err := createMember()
-		check("Can not create member, error:", err)
+		m, traceID, err := insSDK.CreateMember()
+		check("Can not create member, error: ", err)
 		members = append(members, m)
+		fmt.Println("Success! New member ref: ", m.Reference, ". TraceId: ", traceID)
 	}
 
 	for i := 0; i < 10; i++ {
-		fmt.Printf("Try to transfer money (%d):\n", i)
-		res := transfer(1, *members[i], *members[i+10])
-		fmt.Println("Result of transfer:", res)
+		traceID, err := insSDK.Transfer(1, members[i], members[i+10])
+		check("Can not transfer money, error: ", err)
+		fmt.Println("Transfer success. TraceId: ", traceID)
 	}
 	fmt.Print("severalSimpleRequestToDifferentMembers done just fine\n\n")
 }
 
-func severalParallelRequestToRootMember() {
+func severalParallelRequestToRootMember(insSDK *sdk.SDK) {
 	fmt.Println("Try to create several new members in parallel:")
 	var wg sync.WaitGroup
 	wg.Add(10)
 	for i := 0; i < 10; i++ {
 		go func(i int) {
 			defer wg.Done()
-			fmt.Printf("Try to create member (%d):\n", i)
-			m, err := createMember()
-			if err != nil {
-				fmt.Printf("Can not create member (%d), error: %s\n", i, err)
-			} else {
-				fmt.Printf("Success!")
-				fmt.Printf("New member (%d) ref: %s\n", i, m.ref)
-			}
+			m, traceID, err := insSDK.CreateMember()
+			check("Can not create member, error: ", err)
+			fmt.Println("Success! New member ref: ", m.Reference, ". TraceId: ", traceID)
 		}(i)
 	}
 	wg.Wait()
 	fmt.Print("severalParallelRequestToRootMember done just fine\n\n")
 }
 
-func severalParallelRequestToDifferentMembers() {
+func severalParallelRequestToDifferentMembers(insSDK *sdk.SDK) {
 	fmt.Println("Try to transfer in parallel:")
 	fmt.Println("Creating some members for transfer ...")
-	var members []*memberInfo
+	var members []*sdk.Member
 	for i := 0; i < 20; i++ {
-		m, err := createMember()
-		check("Can not create member, error:", err)
+		m, traceID, err := insSDK.CreateMember()
+		check("Can not create member, error: ", err)
+		fmt.Println("Success! New member ref: ", m.Reference, ". TraceId: ", traceID)
 		members = append(members, m)
 	}
 	var wg sync.WaitGroup
@@ -100,9 +91,9 @@ func severalParallelRequestToDifferentMembers() {
 	for i := 0; i < 10; i++ {
 		go func(i int) {
 			defer wg.Done()
-			fmt.Printf("Try to transfer money (%d):\n", i)
-			res := transfer(1, *members[i], *members[i+10])
-			fmt.Println("Result of transfer:", res)
+			traceID, err := insSDK.Transfer(1, members[i], members[i+10])
+			check("Can not transfer money, error: ", err)
+			fmt.Println("Transfer success. TraceId: ", traceID)
 		}(i)
 	}
 	wg.Wait()

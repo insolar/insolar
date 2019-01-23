@@ -20,15 +20,13 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/binary"
-	"fmt"
 	"sync"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
-	"github.com/insolar/insolar/core/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/pkg/errors"
 )
 
@@ -65,6 +63,9 @@ func randomUint64() uint64 {
 
 // SendRequest makes synchronously call to method of contract by its ref without additional information
 func (cr *ContractRequester) SendRequest(ctx context.Context, ref *core.RecordRef, method string, argsIn []interface{}) (core.Reply, error) {
+	ctx, span := instracer.StartSpan(ctx, "SendRequest "+method)
+	defer span.End()
+
 	args, err := core.MarshalArgs(argsIn...)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ContractRequester::SendRequest ] Can't marshal")
@@ -82,6 +83,9 @@ func (cr *ContractRequester) SendRequest(ctx context.Context, ref *core.RecordRe
 }
 
 func (cr *ContractRequester) CallMethod(ctx context.Context, base core.Message, async bool, ref *core.RecordRef, method string, argsIn core.Arguments, mustPrototype *core.RecordRef) (core.Reply, error) {
+	ctx, span := instracer.StartSpan(ctx, "ContractRequester.CallMethod "+method)
+	defer span.End()
+
 	baseMessage, ok := base.(*message.BaseLogicMessage)
 	if !ok {
 		return nil, errors.New("Wrong type for BaseMessage")
@@ -126,13 +130,8 @@ func (cr *ContractRequester) CallMethod(ctx context.Context, base core.Message, 
 		cr.ResultMutex.Unlock()
 	}
 
-	var res core.Reply
-	var err error
+	res, err := mb.Send(ctx, msg, nil)
 
-	utils.MeasureExecutionTime(ctx, "ContractRequester.CallMethod mb.Send, msg.method="+msg.Method,
-		func() {
-			res, err = mb.Send(ctx, msg, nil)
-		})
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't dispatch event")
 	}
@@ -149,37 +148,29 @@ func (cr *ContractRequester) CallMethod(ctx context.Context, base core.Message, 
 	inslogger.FromContext(ctx).Debug("Waiting for Method results ref=", r.Request)
 
 	var result *reply.CallMethod
-	err = nil
 
-	utils.MeasureExecutionTime(ctx, "ContractRequester.CallMethod select",
-		func() {
-			select {
-			case ret := <-ch:
-				inslogger.FromContext(ctx).Debug("GOT Method results")
-				if ret.Error != "" {
-					err = errors.New(ret.Error)
-					return
-				}
-				retReply, ok := ret.Reply.(*reply.CallMethod)
-				if !ok {
-					err = errors.New("Reply is not CallMethod")
-					return
+	select {
+	case ret := <-ch:
+		inslogger.FromContext(ctx).Debug("GOT Method results")
+		if ret.Error != "" {
+			return nil, errors.New(ret.Error)
+		}
+		retReply, ok := ret.Reply.(*reply.CallMethod)
+		if !ok {
+			return nil, errors.New("Reply is not CallMethod")
+		}
+		result = &reply.CallMethod{
+			Request: r.Request,
+			Result:  retReply.Result,
+		}
+	case <-ctx.Done():
+		cr.ResultMutex.Lock()
+		delete(cr.ResultMap, seq)
+		cr.ResultMutex.Unlock()
+		return nil, errors.New("canceled")
+	}
 
-				}
-				result = &reply.CallMethod{
-					Request: r.Request,
-					Result:  retReply.Result,
-				}
-			case <-ctx.Done():
-				cr.ResultMutex.Lock()
-				delete(cr.ResultMap, seq)
-				cr.ResultMutex.Unlock()
-				err = errors.New("canceled")
-			}
-		})
-
-	utils.MeasureInfo(ctx, fmt.Sprintf("ContractRequester.CallMethod select returned result = %v, error = %v", result, err))
-	return result, err
+	return result, nil
 }
 
 func (cr *ContractRequester) CallConstructor(ctx context.Context, base core.Message, async bool,
@@ -257,22 +248,22 @@ func (cr *ContractRequester) ReceiveResult(ctx context.Context, parcel core.Parc
 		return nil, errors.New("ReceiveResult() accepts only message.ReturnResults")
 	}
 
-	utils.MeasureExecutionTime(ctx, "ContractRequester.ReceiveResult",
-		func() {
-			cr.ResultMutex.Lock()
-			defer cr.ResultMutex.Unlock()
+	ctx, span := instracer.StartSpan(ctx, "ContractRequester.ReceiveResult")
+	defer span.End()
 
-			log := inslogger.FromContext(ctx)
-			c, ok := cr.ResultMap[msg.Sequence]
-			if !ok {
-				log.Info("oops unwaited results seq=", msg.Sequence)
-				return
-			}
-			inslogger.FromContext(ctx).Debug("Got wanted results seq=", msg.Sequence)
+	cr.ResultMutex.Lock()
+	defer cr.ResultMutex.Unlock()
 
-			c <- msg
-			delete(cr.ResultMap, msg.Sequence)
-		})
+	log := inslogger.FromContext(ctx)
+	c, ok := cr.ResultMap[msg.Sequence]
+	if !ok {
+		log.Info("oops unwaited results seq=", msg.Sequence)
+		return &reply.OK{}, nil
+	}
+	inslogger.FromContext(ctx).Debug("Got wanted results seq=", msg.Sequence)
+
+	c <- msg
+	delete(cr.ResultMap, msg.Sequence)
 
 	return &reply.OK{}, nil
 }

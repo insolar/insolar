@@ -22,9 +22,33 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/utils"
 	"github.com/pkg/errors"
 )
+
+type lockableConnection struct {
+	net.Conn
+	sync.Locker
+}
+
+func (lc *lockableConnection) Write(data []byte) (int, error) {
+	lc.Lock()
+	defer lc.Unlock()
+
+	// TODO: sergey.morozov 16.01.19: possible malformed packet fix; uncomment this when you meet errors ;)
+	// var written int
+	// for written < len(data) {
+	// 	n, err := lc.Conn.Write(data[written:])
+	// 	written += n
+	// 	if err != nil {
+	// 		return written, err
+	// 	}
+	// }
+	// return written, nil
+
+	return lc.Conn.Write(data)
+}
 
 type connectionPool struct {
 	connectionFactory connectionFactory
@@ -46,7 +70,7 @@ func (cp *connectionPool) GetConnection(ctx context.Context, address net.Addr) (
 
 	conn, ok := cp.getConnection(address)
 
-	logger.Debugf("[ GetConnection ] Finding connection to %s in pool: %s", address, ok)
+	logger.Debugf("[ GetConnection ] Finding connection to %s in pool: %t", address, ok)
 
 	if ok {
 		return false, conn, nil
@@ -100,6 +124,7 @@ func (cp *connectionPool) CloseConnection(ctx context.Context, address net.Addr)
 			cp.unsafeConnectionsHolder.Size(),
 		)
 		cp.unsafeConnectionsHolder.Delete(address)
+		metrics.NetworkConnections.Set(float64(cp.unsafeConnectionsHolder.Size()))
 	}
 }
 
@@ -130,12 +155,31 @@ func (cp *connectionPool) getOrCreateConnection(ctx context.Context, address net
 		return false, nil, errors.Wrap(err, "[ send ] Failed to create TCP connection")
 	}
 
-	cp.unsafeConnectionsHolder.Add(address, conn)
+	go func() {
+		b := make([]byte, 1)
+		_, err := conn.Read(b)
+		if err != nil {
+			logger.Infof("remote host 'closed' connection to %s: %s", address, err)
+			cp.CloseConnection(ctx, address)
+			return
+		}
+
+		logger.Errorf("unexpected data on connection to %s", address)
+	}()
+
+	lc := &lockableConnection{
+		Conn:   conn,
+		Locker: &sync.Mutex{},
+	}
+
+	cp.unsafeConnectionsHolder.Add(address, lc)
+	size := cp.unsafeConnectionsHolder.Size()
 	logger.Debugf(
 		"[ getOrCreateConnection ] Added connection to %s. Current pool size: %d",
 		conn.RemoteAddr(),
-		cp.unsafeConnectionsHolder.Size(),
+		size,
 	)
+	metrics.NetworkConnections.Set(float64(size))
 
 	return true, conn, nil
 }
@@ -152,4 +196,5 @@ func (cp *connectionPool) Reset(ctx context.Context) {
 		utils.CloseVerbose(conn)
 	})
 	cp.unsafeConnectionsHolder.Clear()
+	metrics.NetworkConnections.Set(float64(cp.unsafeConnectionsHolder.Size()))
 }

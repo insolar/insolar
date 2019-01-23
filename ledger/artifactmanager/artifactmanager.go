@@ -18,7 +18,11 @@ package artifactmanager
 
 import (
 	"context"
+	"fmt"
 	"sync"
+
+	"github.com/insolar/insolar/instrumentation/instracer"
+	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
@@ -26,7 +30,6 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
-	"github.com/insolar/insolar/core/utils"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/record"
 )
@@ -42,6 +45,7 @@ type LedgerArtifactManager struct {
 	DefaultBus                 core.MessageBus                 `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 	PulseStorage               core.PulseStorage               `inject:""`
+	JetCoordinator             core.JetCoordinator             `inject:""`
 
 	codeCacheLock *sync.Mutex
 	codeCache     map[core.RecordRef]*cacheEntry
@@ -92,10 +96,11 @@ func (m *LedgerArtifactManager) RegisterRequest(
 	}
 
 	rec := record.RequestRecord{
-		Payload: message.ParcelToBytes(parcel),
+		Payload: message.MustSerializeBytes(parcel.Message()),
 		Object:  *obj.Record(),
 	}
-	recID := record.NewRecordIDFromRecord(m.PlatformCryptographyScheme, currentPulse.PulseNumber, &rec)
+	number := currentPulse.PulseNumber
+	recID := record.NewRecordIDFromRecord(m.PlatformCryptographyScheme, number, &rec)
 	recRef := core.NewRecordRef(*parcel.DefaultTarget().Domain(), *recID)
 	id, err := m.setRecord(
 		ctx,
@@ -113,6 +118,9 @@ func (m *LedgerArtifactManager) GetCode(
 	ctx context.Context, code core.RecordRef,
 ) (core.CodeDescriptor, error) {
 	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.GetCode starts ...")
+	ctx, span := instracer.StartSpan(ctx, "artifactmanager.GetCode sendAndRetryJet")
+	defer span.End()
+
 	var err error
 	defer instrument(ctx, "GetCode").err(&err).end()
 
@@ -131,24 +139,17 @@ func (m *LedgerArtifactManager) GetCode(
 		return entry.desc, nil
 	}
 
-	var genericReact core.Reply
+	ctx, span = instracer.StartSpan(ctx, "artifactmanager.GetCode sendAndRetryJet")
+	genericReact, err := m.bus(ctx).Send(ctx, &message.GetCode{Code: code}, nil)
+	span.End()
 
-	currentPulse, err := m.PulseStorage.Current(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	utils.MeasureExecutionTime(ctx, "artifactmanager.GetCode m.bus(ctx).Send", func() {
-		genericReact, err = sendAndRetryJet(ctx, m.bus(ctx), m.db, &message.GetCode{Code: code}, *currentPulse, jetMissRetryCount)
-	})
 	if err != nil {
 		return nil, err
 	}
 
 	react, ok := genericReact.(*reply.Code)
 	if !ok {
-		err = ErrUnexpectedReply
-		return nil, err
+		return nil, fmt.Errorf("GetCode: unexpected reply: %#v", genericReact)
 	}
 
 	desc := CodeDescriptor{
@@ -209,7 +210,7 @@ func (m *LedgerArtifactManager) GetObject(
 	case *reply.Error:
 		err = r.Error()
 	default:
-		err = ErrUnexpectedReply
+		err = fmt.Errorf("GetObject: unexpected reply: %#v", rep)
 	}
 	return desc, err
 }
@@ -224,13 +225,13 @@ func (m *LedgerArtifactManager) HasPendingRequests(
 		return false, err
 	}
 
-	rep, err := sendAndRetryJet(ctx, m.bus(ctx), m.db, &message.GetPendingRequests{Object: object}, *currentPulse, jetMissRetryCount)
+	rep, err := sendAndRetryJet(ctx, m.bus(ctx), m.db, &message.GetPendingRequests{Object: object}, *currentPulse, jetMissRetryCount, nil)
 	if err != nil {
 		return false, err
 	}
 	requests, ok := rep.(*reply.HasPendingRequests)
 	if !ok {
-		return false, ErrUnexpectedReply
+		return false, fmt.Errorf("HasPendingRequests: unexpected reply: %#v", rep)
 	}
 	return requests.Has, nil
 }
@@ -254,7 +255,7 @@ func (m *LedgerArtifactManager) GetDelegate(
 	genericReact, err := sendAndRetryJet(ctx, m.bus(ctx), m.db, &message.GetDelegate{
 		Head:   head,
 		AsType: asType,
-	}, *currentPulse, jetMissRetryCount)
+	}, *currentPulse, jetMissRetryCount, nil)
 
 	if err != nil {
 		return nil, err
@@ -262,8 +263,7 @@ func (m *LedgerArtifactManager) GetDelegate(
 
 	react, ok := genericReact.(*reply.Delegate)
 	if !ok {
-		err = ErrUnexpectedReply
-		return nil, err
+		return nil, fmt.Errorf("GetDelegate: unexpected reply: %#v", genericReact)
 	}
 	return &react.Head, nil
 }
@@ -282,7 +282,7 @@ func (m *LedgerArtifactManager) GetChildren(
 		return nil, err
 	}
 
-	iter, err := NewChildIterator(ctx, m.bus(ctx), parent, pulse, m.getChildrenChunkSize, *latestPulse)
+	iter, err := NewChildIterator(ctx, m.bus(ctx), m.db, parent, pulse, m.getChildrenChunkSize, *latestPulse)
 	return iter, err
 }
 
@@ -342,43 +342,23 @@ func (m *LedgerArtifactManager) DeployCode(
 		MachineType: machineType,
 	}
 	codeID := record.NewRecordIDFromRecord(m.PlatformCryptographyScheme, currentPulse.PulseNumber, codeRec)
-
 	codeRef := core.NewRecordRef(*domain.Record(), *codeID)
+
+	_, err = m.setBlob(ctx, code, *codeRef, *currentPulse)
+	if err != nil {
+		return nil, err
+	}
+	id, err := m.setRecord(
+		ctx,
+		codeRec,
+		*codeRef,
+		*currentPulse,
+	)
 	if err != nil {
 		return nil, err
 	}
 
-	var wg sync.WaitGroup
-	wg.Add(2)
-	var setRecord *core.RecordID
-	var setRecordErr error
-	go func() {
-		setRecord, setRecordErr = m.setRecord(
-			ctx,
-			codeRec,
-			*codeRef,
-			*currentPulse,
-		)
-		wg.Done()
-	}()
-
-	var setBlobErr error
-	go func() {
-		_, setBlobErr = m.setBlob(ctx, code, *codeRef, *currentPulse)
-		wg.Done()
-	}()
-	wg.Wait()
-
-	if setRecordErr != nil {
-		err = setRecordErr
-	} else if setBlobErr != nil {
-		err = setBlobErr
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	return setRecord, nil
+	return id, nil
 }
 
 // ActivatePrototype creates activate object record in storage. Provided prototype reference will be used as objects prototype
@@ -510,7 +490,7 @@ func (m *LedgerArtifactManager) RegisterValidation(
 		return err
 	}
 
-	_, err = sendAndRetryJet(ctx, m.bus(ctx), m.db, &msg, *currentPulse, jetMissRetryCount)
+	_, err = sendAndRetryJet(ctx, m.bus(ctx), m.db, &msg, *currentPulse, jetMissRetryCount, nil)
 	return err
 }
 
@@ -659,7 +639,6 @@ func (m *LedgerArtifactManager) updateObject(
 				Request: request,
 			},
 			ObjectStateRecord: record.ObjectStateRecord{
-				Memory:      record.CalculateIDForBlob(m.PlatformCryptographyScheme, currentPulse.PulseNumber, memory),
 				Image:       *image,
 				IsPrototype: object.IsPrototype(),
 			},
@@ -696,7 +675,7 @@ func (m *LedgerArtifactManager) setRecord(
 	genericReply, err := sendAndRetryJet(ctx, m.bus(ctx), m.db, &message.SetRecord{
 		Record:    record.SerializeRecord(rec),
 		TargetRef: target,
-	}, currentPulse, jetMissRetryCount)
+	}, currentPulse, jetMissRetryCount, nil)
 
 	if err != nil {
 		return nil, err
@@ -704,7 +683,7 @@ func (m *LedgerArtifactManager) setRecord(
 
 	react, ok := genericReply.(*reply.ID)
 	if !ok {
-		return nil, ErrUnexpectedReply
+		return nil, fmt.Errorf("setRecord: unexpected reply: %#v", genericReply)
 	}
 
 	return &react.ID, nil
@@ -720,7 +699,7 @@ func (m *LedgerArtifactManager) setBlob(
 	genericReact, err := sendAndRetryJet(ctx, m.bus(ctx), m.db, &message.SetBlob{
 		Memory:    blob,
 		TargetRef: target,
-	}, currentPulse, jetMissRetryCount)
+	}, currentPulse, jetMissRetryCount, nil)
 
 	if err != nil {
 		return nil, err
@@ -728,7 +707,7 @@ func (m *LedgerArtifactManager) setBlob(
 
 	react, ok := genericReact.(*reply.ID)
 	if !ok {
-		return nil, ErrUnexpectedReply
+		return nil, fmt.Errorf("setBlob: unexpected reply: %#v", genericReact)
 	}
 
 	return &react.ID, nil
@@ -742,25 +721,30 @@ func (m *LedgerArtifactManager) sendUpdateObject(
 	currentPulse core.Pulse,
 ) (*reply.Object, error) {
 	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.sendUpdateObject starts ...")
-	_, err := m.bus(ctx).Send(ctx, &message.SetBlob{
-		TargetRef: object,
-		Memory:    memory,
-	}, nil)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to save object's memory blob")
-	}
+	// TODO: @andreyromancev. 14.01.19. Uncomment when message streaming or validation is ready.
+	// genericRep, err := sendAndRetryJet(ctx, m.bus(ctx), m.db, &message.SetBlob{
+	// 	TargetRef: object,
+	// 	Memory:    memory,
+	// }, currentPulse, jetMissRetryCount, nil)
+	// if err != nil {
+	// 	return nil, errors.Wrap(err, "failed to save object's memory blob")
+	// }
+	// if _, ok := genericRep.(*reply.ID); !ok {
+	// 	return nil, fmt.Errorf("unexpected reply: %#v\n", genericRep)
+	// }
 
 	genericRep, err := sendAndRetryJet(ctx, m.bus(ctx), m.db, &message.UpdateObject{
 		Record: record.SerializeRecord(rec),
 		Object: object,
-	}, currentPulse, jetMissRetryCount)
+		Memory: memory,
+	}, currentPulse, jetMissRetryCount, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to update object")
 	}
 
 	rep, ok := genericRep.(*reply.Object)
 	if !ok {
-		return nil, ErrUnexpectedReply
+		return nil, fmt.Errorf("sendUpdateObject: unexpected reply: %#v", genericRep)
 	}
 
 	return rep, nil
@@ -788,7 +772,7 @@ func (m *LedgerArtifactManager) registerChild(
 
 	react, ok := genericReact.(*reply.ID)
 	if !ok {
-		return nil, ErrUnexpectedReply
+		return nil, fmt.Errorf("registerChild: unexpected reply: %#v", genericReact)
 	}
 
 	return &react.ID, nil
@@ -805,15 +789,23 @@ func sendAndFollowRedirect(
 	msg core.Message,
 	pulse core.Pulse,
 ) (core.Reply, error) {
-	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.sendAndFollowRedirect starts ...")
+	inslog := inslogger.FromContext(ctx)
+	inslog.Debug("LedgerArtifactManager.sendAndFollowRedirect starts ...")
 	rep, err := bus.Send(ctx, msg, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	switch r := rep.(type) {
-	case core.RedirectReply:
+	if _, ok := rep.(*reply.JetMiss); ok {
+		rep, err = sendAndRetryJet(ctx, bus, db, msg, pulse, jetMissRetryCount, nil)
+	}
+
+	if r, ok := rep.(core.RedirectReply); ok {
+		stats.Record(ctx, statRedirects.M(1))
+
 		redirected := r.Redirected(msg)
+		inslog.Debugf("redirect reciever=%v", r.GetReceiver())
+
 		rep, err = bus.Send(ctx, redirected, &core.MessageSendOptions{
 			Token:    r.GetToken(),
 			Receiver: r.GetReceiver(),
@@ -825,8 +817,6 @@ func sendAndFollowRedirect(
 			return nil, errors.New("double redirects are forbidden")
 		}
 		return rep, nil
-	case *reply.JetMiss:
-		return sendAndRetryJet(ctx, bus, db, msg, pulse, jetMissRetryCount)
 	}
 
 	return rep, err
@@ -839,11 +829,12 @@ func sendAndRetryJet(
 	msg core.Message,
 	pulse core.Pulse,
 	retries int,
+	ops *core.MessageSendOptions,
 ) (core.Reply, error) {
 	if retries <= 0 {
-		return nil, errors.New("failed to find jet (retry limit exceeded)")
+		return nil, errors.New("failed to find jet (retry limit exceeded on client)")
 	}
-	rep, err := bus.Send(ctx, msg, nil)
+	rep, err := bus.Send(ctx, msg, ops)
 	if err != nil {
 		return nil, err
 	}
@@ -852,7 +843,7 @@ func sendAndRetryJet(
 		if err != nil {
 			return nil, err
 		}
-		return sendAndRetryJet(ctx, bus, db, msg, pulse, retries-1)
+		return sendAndRetryJet(ctx, bus, db, msg, pulse, retries-1, ops)
 	}
 
 	return rep, nil

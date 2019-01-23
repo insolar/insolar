@@ -21,32 +21,37 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/require"
 )
 
 func TestNewRecentObjectsIndex(t *testing.T) {
-	index := NewRecentStorage(123)
+	jetID := testutils.RandomID()
+	index := NewRecentStorage(jetID, 123)
 	require.NotNil(t, index)
 	require.NotNil(t, index.recentObjects)
 	require.Equal(t, 123, index.DefaultTTL)
 }
 
 func TestRecentObjectsIndex_AddId(t *testing.T) {
-	s := NewRecentStorage(123)
+	ctx := inslogger.TestContext(t)
+	jetID := testutils.RandomID()
+	s := NewRecentStorage(jetID, 123)
 
 	wg := sync.WaitGroup{}
 	wg.Add(3)
 
 	go func() {
-		s.AddObject(*core.NewRecordID(123, []byte{1}))
+		s.AddObject(ctx, *core.NewRecordID(123, []byte{1}))
 		wg.Done()
 	}()
 	go func() {
-		s.AddObject(*core.NewRecordID(123, []byte{2}))
+		s.AddObject(ctx, *core.NewRecordID(123, []byte{2}))
 		wg.Done()
 	}()
 	go func() {
-		s.AddObject(*core.NewRecordID(123, []byte{3}))
+		s.AddObject(ctx, *core.NewRecordID(123, []byte{3}))
 		wg.Done()
 	}()
 
@@ -55,7 +60,10 @@ func TestRecentObjectsIndex_AddId(t *testing.T) {
 }
 
 func TestRecentObjectsIndex_AddPendingRequest(t *testing.T) {
-	s := NewRecentStorage(123)
+	ctx := inslogger.TestContext(t)
+	jetID := testutils.RandomID()
+
+	s := NewRecentStorage(jetID, 123)
 
 	obj1 := *core.NewRecordID(0, nil)
 	obj2 := *core.NewRecordID(1, nil)
@@ -69,15 +77,15 @@ func TestRecentObjectsIndex_AddPendingRequest(t *testing.T) {
 		*core.NewRecordID(123, []byte{3}),
 	}
 	go func() {
-		s.AddPendingRequest(obj1, expectedIDs[0])
+		s.AddPendingRequest(ctx, obj1, expectedIDs[0])
 		wg.Done()
 	}()
 	go func() {
-		s.AddPendingRequest(obj1, expectedIDs[1])
+		s.AddPendingRequest(ctx, obj1, expectedIDs[1])
 		wg.Done()
 	}()
 	go func() {
-		s.AddPendingRequest(obj2, expectedIDs[2])
+		s.AddPendingRequest(ctx, obj2, expectedIDs[2])
 		wg.Done()
 	}()
 	wg.Wait()
@@ -94,12 +102,12 @@ func TestRecentObjectsIndex_AddPendingRequest(t *testing.T) {
 }
 
 func TestRecentObjectsIndex_RemovePendingRequest(t *testing.T) {
-	s := NewRecentStorage(123)
+	ctx := inslogger.TestContext(t)
+	jetID := testutils.RandomID()
+
+	s := NewRecentStorage(jetID, 123)
 
 	obj := *core.NewRecordID(0, nil)
-
-	wg := sync.WaitGroup{}
-	wg.Add(3)
 
 	expectedIDs := []core.RecordID{
 		*core.NewRecordID(123, []byte{1}),
@@ -118,16 +126,18 @@ func TestRecentObjectsIndex_RemovePendingRequest(t *testing.T) {
 		},
 	}
 
+	wg := sync.WaitGroup{}
+	wg.Add(3)
 	go func() {
-		s.RemovePendingRequest(obj, extraIDs[0])
+		s.RemovePendingRequest(ctx, obj, extraIDs[0])
 		wg.Done()
 	}()
 	go func() {
-		s.RemovePendingRequest(obj, extraIDs[1])
+		s.RemovePendingRequest(ctx, obj, extraIDs[1])
 		wg.Done()
 	}()
 	go func() {
-		s.RemovePendingRequest(obj, extraIDs[2])
+		s.RemovePendingRequest(ctx, obj, extraIDs[2])
 		wg.Done()
 	}()
 	wg.Wait()
@@ -140,24 +150,27 @@ func TestRecentObjectsIndex_RemovePendingRequest(t *testing.T) {
 }
 
 func TestRecentObjectsIndex_ClearObjects(t *testing.T) {
-	index := NewRecentStorage(123)
+	ctx := inslogger.TestContext(t)
+	jetID := testutils.RandomID()
+
+	index := NewRecentStorage(jetID, 123)
 	wg := sync.WaitGroup{}
 	wg.Add(3)
 	go func() {
-		index.AddObject(*core.NewRecordID(123, []byte{1}))
+		index.AddObject(ctx, *core.NewRecordID(123, []byte{1}))
 		wg.Done()
 	}()
 	go func() {
-		index.AddObject(*core.NewRecordID(123, []byte{2}))
+		index.AddObject(ctx, *core.NewRecordID(123, []byte{2}))
 		wg.Done()
 	}()
 	go func() {
-		index.AddObject(*core.NewRecordID(123, []byte{3}))
+		index.AddObject(ctx, *core.NewRecordID(123, []byte{3}))
 		wg.Done()
 	}()
 	wg.Wait()
 
-	index.ClearObjects()
+	index.ClearObjects(ctx)
 
 	require.Equal(t, 0, len(index.GetObjects()))
 }
@@ -180,10 +193,9 @@ func TestRecentStorageProvider_GetStorage(t *testing.T) {
 	wg.Add(8)
 
 	for i := 0; i < 8; i++ {
-		i := i
 		go func() {
-			id := core.NewRecordID(core.FirstPulseNumber, []byte{byte(i)})
-			storage := provider.GetStorage(*id)
+			id := testutils.RandomJet()
+			storage := provider.GetStorage(id)
 			require.NotNil(t, storage)
 			wg.Done()
 		}()

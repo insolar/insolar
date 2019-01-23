@@ -23,11 +23,13 @@ import (
 	"fmt"
 	"net"
 	"net/rpc"
+	"sync"
 	"sync/atomic"
 
-	"github.com/insolar/insolar/core/utils"
+	"github.com/insolar/insolar/instrumentation/instracer"
+
 	"github.com/pkg/errors"
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
@@ -82,7 +84,6 @@ func recoverRPC(err *error) {
 // GetCode is an RPC retrieving a code by its reference
 func (gpr *RPC) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp) (err error) {
 	defer recoverRPC(&err)
-
 	os := gpr.lr.MustObjectState(req.Callee)
 	es := os.MustModeState(req.Mode)
 	ctx := es.Current.Context
@@ -91,10 +92,11 @@ func (gpr *RPC) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp
 	inslogger.FromContext(ctx).Debug("In RPC.GetCode ....")
 
 	am := gpr.lr.ArtifactManager
-	var codeDescriptor core.CodeDescriptor
-	utils.MeasureExecutionTime(ctx, "service.GetCode am.GetCode", func() {
-		codeDescriptor, err = am.GetCode(ctx, req.Code)
-	})
+
+	ctx, span := instracer.StartSpan(ctx, "service.GetCode")
+	defer span.End()
+
+	codeDescriptor, err := am.GetCode(ctx, req.Code)
 	if err != nil {
 		return err
 	}
@@ -176,6 +178,7 @@ func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.U
 }
 
 var iteratorMap = make(map[string]*core.RefIterator)
+var iteratorMapLock = sync.RWMutex{}
 var iteratorBuffSize = 1000
 
 // GetObjChildrenIterator is an RPC returns an iterator over object children with specified prototype
@@ -193,8 +196,13 @@ func (gpr *RPC) GetObjChildrenIterator(
 
 	am := gpr.lr.ArtifactManager
 	iteratorID := req.IteratorID
-	if _, ok := iteratorMap[iteratorID]; !ok {
-		i, err := am.GetChildren(ctx, req.Obj, nil)
+
+	iteratorMapLock.RLock()
+	iterator, ok := iteratorMap[iteratorID]
+	iteratorMapLock.RUnlock()
+
+	if !ok {
+		newIterator, err := am.GetChildren(ctx, req.Obj, nil)
 		if err != nil {
 			return errors.Wrap(err, "[ GetObjChildrenIterator ] Can't get children")
 		}
@@ -205,18 +213,26 @@ func (gpr *RPC) GetObjChildrenIterator(
 		}
 
 		iteratorID = id.String()
-		iteratorMap[iteratorID] = &i
+
+		iteratorMapLock.Lock()
+		iterator, ok = iteratorMap[iteratorID]
+		if !ok {
+			iteratorMap[iteratorID] = &newIterator
+			iterator = &newIterator
+		}
+		iteratorMapLock.Unlock()
 	}
 
-	i := *iteratorMap[iteratorID]
+	iter := *iterator
+
 	rep.Iterator.ID = iteratorID
-	rep.Iterator.CanFetch = i.HasNext()
-	for len(rep.Iterator.Buff) < iteratorBuffSize && i.HasNext() {
-		r, err := i.Next()
+	rep.Iterator.CanFetch = iter.HasNext()
+	for len(rep.Iterator.Buff) < iteratorBuffSize && iter.HasNext() {
+		r, err := iter.Next()
 		if err != nil {
 			return errors.Wrap(err, "[ GetObjChildrenIterator ] Can't get Next")
 		}
-		rep.Iterator.CanFetch = i.HasNext()
+		rep.Iterator.CanFetch = iter.HasNext()
 
 		o, err := am.GetObject(ctx, *r, nil, false)
 
@@ -236,8 +252,10 @@ func (gpr *RPC) GetObjChildrenIterator(
 		}
 	}
 
-	if !i.HasNext() {
+	if !iter.HasNext() {
+		iteratorMapLock.Lock()
 		delete(iteratorMap, rep.Iterator.ID)
+		iteratorMapLock.Unlock()
 	}
 
 	return nil

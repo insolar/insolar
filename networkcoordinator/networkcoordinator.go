@@ -83,11 +83,6 @@ func (nc *NetworkCoordinator) signCertHandler(ctx context.Context, p core.Parcel
 	return nc.getCoordinator().signCertHandler(ctx, p)
 }
 
-// WriteActiveNodes writes active nodes to ledger
-func (nc *NetworkCoordinator) WriteActiveNodes(ctx context.Context, number core.PulseNumber, activeNodes []core.Node) error {
-	return nc.getCoordinator().WriteActiveNodes(ctx, number, activeNodes)
-}
-
 // SetPulse writes pulse data on local storage
 func (nc *NetworkCoordinator) SetPulse(ctx context.Context, pulse core.Pulse) error {
 	return nc.getCoordinator().SetPulse(ctx, pulse)

@@ -64,5 +64,5 @@ func TestGetNodeRefInvalidParams(t *testing.T) {
 
 	nodeRef, err := getNodeRefSignedCall(123)
 	require.Equal(t, "", nodeRef)
-	require.Contains(t, err.Error(), "[ getNodeRef ] Can't unmarshal params: ")
+	require.Contains(t, err.Error(), "[ getNodeRefCall ] Can't unmarshal params: ")
 }

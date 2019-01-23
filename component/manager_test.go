@@ -70,7 +70,7 @@ func (cm *Component2) Method2() {
 	fmt.Println("Component2.Method2 called")
 }
 
-func TestComponentManager_Register(t *testing.T) {
+func TestComponentManager_Inject(t *testing.T) {
 	cm := Manager{}
 	cm.Inject(&Component1{}, &Component2{})
 

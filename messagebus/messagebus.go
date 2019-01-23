@@ -26,21 +26,20 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pkg/errors"
+	"github.com/insolar/insolar/core/utils"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
-	"github.com/insolar/insolar/core/utils"
 	"github.com/insolar/insolar/instrumentation/hack"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/metrics"
+	"github.com/pkg/errors"
 )
 
 const deliverRPCMethodName = "MessageBus.Deliver"
-
-const MaxNextPulseMessagePool = 1000
 
 // MessageBus is component that routes application logic requests,
 // e.g. glue between network and logic runner
@@ -61,7 +60,7 @@ type MessageBus struct {
 	globalLock                  sync.RWMutex
 	NextPulseMessagePoolChan    chan interface{}
 	NextPulseMessagePoolCounter uint32
-	NextPulseMessagePoolLock    sync.Mutex
+	NextPulseMessagePoolLock    sync.RWMutex
 }
 
 // NewMessageBus creates plain MessageBus instance. It can be used to create Player and Recorder instances that
@@ -140,7 +139,11 @@ func (mb *MessageBus) MustRegister(p core.MessageType, handler core.MessageHandl
 
 // Send an `Message` and get a `Value` or error from remote host.
 func (mb *MessageBus) Send(ctx context.Context, msg core.Message, ops *core.MessageSendOptions) (core.Reply, error) {
+	ctx, span := instracer.StartSpan(ctx, "MessageBus.Send "+msg.Type().String())
+	defer span.End()
+
 	currentPulse, err := mb.PulseStorage.Current(ctx)
+	fmt.Println("[mb.send] ", currentPulse.PulseNumber)
 	if err != nil {
 		return nil, err
 	}
@@ -150,11 +153,7 @@ func (mb *MessageBus) Send(ctx context.Context, msg core.Message, ops *core.Mess
 		return nil, err
 	}
 
-	var rep core.Reply
-	utils.MeasureExecutionTime(ctx, "MessageBus.Send mb.SendParcel, msg.Type = "+msg.Type().String()+", parcel.DefaultRole() = "+strconv.Itoa(int(parcel.DefaultRole())),
-		func() {
-			rep, err = mb.SendParcel(ctx, parcel, *currentPulse, ops)
-		})
+	rep, err := mb.SendParcel(ctx, parcel, *currentPulse, ops)
 	return rep, err
 }
 
@@ -170,6 +169,10 @@ func (mb *MessageBus) SendParcel(
 	currentPulse core.Pulse,
 	options *core.MessageSendOptions,
 ) (core.Reply, error) {
+	parcelType := parcel.Type().String()
+	ctx, span := instracer.StartSpan(ctx, "MessageBus.SendParcel "+parcelType)
+	defer span.End()
+
 	readBarrier(ctx, &mb.globalLock)
 
 	var (
@@ -192,9 +195,11 @@ func (mb *MessageBus) SendParcel(
 	}
 
 	start := time.Now()
-	defer metrics.ParcelsTime.WithLabelValues(parcel.Type().String()).Observe(time.Since(start).Seconds())
+	defer func() {
+		metrics.ParcelsTime.WithLabelValues(parcelType).Observe(time.Since(start).Seconds())
+	}()
 
-	metrics.ParcelsSentTotal.WithLabelValues(parcel.Type().String()).Inc()
+	metrics.ParcelsSentTotal.WithLabelValues(parcelType).Inc()
 
 	if len(nodes) > 1 {
 		cascade := core.Cascade{
@@ -209,7 +214,7 @@ func (mb *MessageBus) SendParcel(
 	// Short path when sending to self node. Skip serialization
 	origin := mb.NodeNetwork.GetOrigin()
 	if nodes[0].Equal(origin.ID()) {
-		metrics.LocallyDeliveredParcelsTotal.WithLabelValues(parcel.Type().String()).Inc()
+		metrics.LocallyDeliveredParcelsTotal.WithLabelValues(parcelType).Inc()
 		return mb.doDeliver(parcel.Context(context.Background()), parcel)
 	}
 
@@ -230,30 +235,21 @@ func (e *serializableError) Error() string {
 }
 
 func (mb *MessageBus) OnPulse(context.Context, core.Pulse) error {
-	tmp := mb.NextPulseMessagePoolChan
-	mb.NextPulseMessagePoolChan = make(chan interface{})
-	mb.NextPulseMessagePoolLock.Lock()
-	mb.NextPulseMessagePoolCounter = 0
-	mb.NextPulseMessagePoolLock.Unlock()
-	close(tmp)
-	return nil
-}
+	close(mb.NextPulseMessagePoolChan)
 
-func (mb *MessageBus) accuireMessagePoolItem() bool {
 	mb.NextPulseMessagePoolLock.Lock()
 	defer mb.NextPulseMessagePoolLock.Unlock()
 
-	if mb.NextPulseMessagePoolCounter > MaxNextPulseMessagePool {
-		return false
-	}
+	mb.NextPulseMessagePoolChan = make(chan interface{})
 
-	mb.NextPulseMessagePoolCounter++
-	return true
+	return nil
 }
 
 func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Reply, error) {
 
 	var err error
+	ctx, span := instracer.StartSpan(ctx, "MessageBus.doDeliver")
+	defer span.End()
 	if err = mb.checkPulse(ctx, msg, false); err != nil {
 		return nil, errors.Wrap(err, "[ doDeliver ] error in checkPulse")
 	}
@@ -267,15 +263,17 @@ func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Repl
 		return nil, errors.New("no handler for received message type")
 	}
 
-	ctx = hack.SetSkipValidation(ctx, true)
+	origin := mb.NodeNetwork.GetOrigin()
+	if msg.GetSender().Equal(origin.ID()) {
+		fmt.Println("msg.GetSender()", msg.GetSender())
+		fmt.Println("origin.ID()", origin.ID())
+		ctx = hack.SetSkipValidation(ctx, true)
+	}
 	// TODO: sergey.morozov 2018-12-21 there is potential race condition because of readBarrier. We must implement correct locking.
 
-	var resp core.Reply
-
-	utils.MeasureExecutionTime(ctx, "doDeliver.handler", func() {
-		resp, err = handler(ctx, msg)
-	})
-
+	msgPulse := msg.Pulse()
+	ctx = msgPulse.ToContext(ctx)
+	resp, err := handler(ctx, msg)
 	if err != nil {
 		return nil, &serializableError{
 			S: err.Error(),
@@ -291,25 +289,81 @@ func (mb *MessageBus) checkPulse(ctx context.Context, parcel core.Parcel, locked
 		return errors.Wrap(err, "[ checkPulse ] Couldn't get current pulse number")
 	}
 
-	if parcel.Pulse() == pulse.NextPulseNumber && mb.accuireMessagePoolItem() {
+	ctx, span := instracer.StartSpan(ctx, "MessageBus.checkPulse")
+	defer span.End()
+
+	// TODO: check if parcel.Pulse() == pulse.NextPulseNumber
+	if parcel.Pulse() > pulse.PulseNumber {
+		inslogger.FromContext(ctx).Debug(
+			"message from the future, our pulse: ", pulse.PulseNumber, " msg pulse: ", parcel.Pulse(),
+		)
 		if locked {
 			mb.globalLock.RUnlock()
 		}
-		<-mb.NextPulseMessagePoolChan
+
+		mb.NextPulseMessagePoolLock.RLock()
+
+		ctx := inslogger.ContextWithTrace(context.Background(), utils.TraceID(ctx))
+		pulse, err = mb.PulseStorage.Current(ctx)
+		if err != nil {
+			mb.NextPulseMessagePoolLock.RUnlock()
+			if locked {
+				mb.globalLock.RLock()
+			}
+			return errors.Wrap(err, "[ checkPulse ] Couldn't get current pulse number")
+		}
+		inslogger.FromContext(ctx).Debug("rechecking pulse after lock, pulse: ", pulse.PulseNumber)
+		if parcel.Pulse() > pulse.PulseNumber {
+			inslogger.FromContext(ctx).Debug("still in future")
+			_, span := instracer.StartSpan(ctx, "MessageBus.checkPulse waiting: current: "+
+				strconv.Itoa(int(pulse.PulseNumber))+" parcel: "+strconv.Itoa(int(parcel.Pulse())))
+			<-mb.NextPulseMessagePoolChan
+			span.End()
+			pulse, err = mb.PulseStorage.Current(ctx)
+			if err != nil {
+				mb.NextPulseMessagePoolLock.RUnlock()
+				if locked {
+					mb.globalLock.RLock()
+				}
+				return errors.Wrap(err, "[ checkPulse ] Couldn't get current pulse number")
+			}
+
+		}
+		mb.NextPulseMessagePoolLock.RUnlock()
+
 		if locked {
 			mb.globalLock.RLock()
 		}
+	} else if parcel.Pulse() < pulse.PrevPulseNumber {
+		inslogger.FromContext(ctx).Errorf("[ checkPulse ] Pulse is TOO OLD: (parcel: %d, current: %d) Parcel is: %#v", parcel.Pulse(), pulse.PulseNumber, parcel.Message())
 	}
 
-	pulse, err = mb.PulseStorage.Current(ctx)
-	if err != nil {
-		return errors.Wrap(err, "[ checkPulse ] Couldn't get current pulse number")
+	if parcel.Pulse() > pulse.PulseNumber {
+		// We waited for next pulse but parcel is still from future. Return error.
+		inslogger.FromContext(ctx).Errorf("[ checkPulse ] After all checks, message pulse is still bigger then current (parcel: %d, current: %d)", parcel.Pulse(), pulse.PulseNumber)
+		return fmt.Errorf("[ checkPulse ] Incorrect message pulse (parcel: %d, current: %d)", parcel.Pulse(), pulse.PulseNumber)
+	}
+	if parcel.Pulse() < pulse.PulseNumber {
+		// Parcel is from past. Return error for some messages, allow for others.
+		switch parcel.Message().(type) {
+		case
+			*message.GetObject,
+			*message.GetDelegate,
+			*message.GetChildren,
+			*message.SetRecord,
+			*message.UpdateObject,
+			*message.RegisterChild,
+			*message.SetBlob,
+			*message.GetObjectIndex,
+			*message.GetPendingRequests,
+			*message.ValidateRecord,
+			*message.CallConstructor,
+			*message.CallMethod:
+			inslogger.FromContext(ctx).Errorf("[ checkPulse ] Incorrect message pulse (parcel: %d, current: %d)", parcel.Pulse(), pulse.PulseNumber)
+			return fmt.Errorf("[ checkPulse ] Incorrect message pulse (parcel: %d, current: %d)", parcel.Pulse(), pulse.PulseNumber)
+		}
 	}
 
-	if parcel.Pulse() != pulse.PulseNumber {
-		inslogger.FromContext(ctx).Error("[ checkPulse ] Incorrect message pulse")
-		return fmt.Errorf("[ checkPulse ] Incorrect message pulse %d %d", parcel.Pulse(), pulse.PulseNumber)
-	}
 	return nil
 }
 
@@ -325,12 +379,12 @@ func (mb *MessageBus) deliver(ctx context.Context, args [][]byte) (result []byte
 		return nil, err
 	}
 
-	parcelCtx := parcel.Context(ctx)
+	parcelCtx := parcel.Context(context.Background()) // use ctx when network provide context
 	inslogger.FromContext(ctx).Debugf("MessageBus.deliver after deserialize msg. Msg Type: %s", parcel.Type())
 
 	mb.globalLock.RLock()
 
-	if err = mb.checkPulse(ctx, parcel, true); err != nil {
+	if err = mb.checkPulse(parcelCtx, parcel, true); err != nil {
 		mb.globalLock.RUnlock()
 		return nil, err
 	}
@@ -380,25 +434,25 @@ func (mb *MessageBus) checkParcel(ctx context.Context, parcel core.Parcel) error
 	// 	return nil
 	// }
 
-	sendingObject, allowedSenderRole := parcel.AllowedSenderObjectAndRole()
-	if sendingObject == nil {
-		return nil
-	}
-
-	// TODO: temporary solution, this check should be removed after reimplementing token processing on VM side - @nordicdyno 19.Dec.2018
-	if allowedSenderRole.IsVirtualRole() {
-		return nil
-	}
-
-	validSender, err := mb.JetCoordinator.IsAuthorized(
-		ctx, allowedSenderRole, *sendingObject.Record(), parcel.Pulse(), sender,
-	)
-	if err != nil {
-		return err
-	}
-	if !validSender {
-		return errors.New("sender is not allowed to act on behalve of that object")
-	}
+	// sendingObject, allowedSenderRole := parcel.AllowedSenderObjectAndRole()
+	// if sendingObject == nil {
+	// 	return nil
+	// }
+	//
+	// // TODO: temporary solution, this check should be removed after reimplementing token processing on VM side - @nordicdyno 19.Dec.2018
+	// if allowedSenderRole.IsVirtualRole() {
+	// 	return nil
+	// }
+	//
+	// validSender, err := mb.JetCoordinator.IsAuthorized(
+	// 	ctx, allowedSenderRole, *sendingObject.Record(), parcel.Pulse(), sender,
+	// )
+	// if err != nil {
+	// 	return err
+	// }
+	// if !validSender {
+	// 	return errors.New("sender is not allowed to act on behalve of that object")
+	// }
 	return nil
 }
 

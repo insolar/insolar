@@ -19,9 +19,11 @@ package state
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/metrics"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/network/state.messageBusLocker -o ./ -s _mock.go
@@ -51,16 +53,6 @@ func NewNetworkSwitcher() (*NetworkSwitcher, error) {
 	}, nil
 }
 
-// TODO: if you work with real pulsar, you can remove this func
-func (ns *NetworkSwitcher) Start(ctx context.Context) error {
-	ns.stateLock.Lock()
-	defer ns.stateLock.Unlock()
-
-	ns.Release(ctx)
-	ns.state = core.CompleteNetworkState
-	return nil
-}
-
 // GetState method returns current network state
 func (ns *NetworkSwitcher) GetState() core.NetworkState {
 	ns.stateLock.RLock()
@@ -74,12 +66,13 @@ func (ns *NetworkSwitcher) OnPulse(ctx context.Context, pulse core.Pulse) error 
 	ns.stateLock.Lock()
 	defer ns.stateLock.Unlock()
 
-	inslogger.FromContext(ctx).Info("Current NetworkSwitcher state is: %s", ns.state)
+	inslogger.FromContext(ctx).Infof("Current NetworkSwitcher state is: %s", ns.state)
 
 	if ns.SwitcherWorkAround.IsBootstrapped() && ns.state != core.CompleteNetworkState {
 		ns.state = core.CompleteNetworkState
 		ns.Release(ctx)
-		inslogger.FromContext(ctx).Info("Current NetworkSwitcher state switched to: %s", ns.state)
+		metrics.NetworkComplete.Set(float64(time.Now().Unix()))
+		inslogger.FromContext(ctx).Infof("Current NetworkSwitcher state switched to: %s", ns.state)
 	}
 
 	return nil

@@ -23,8 +23,9 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/sequence"
 	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet"
@@ -56,6 +57,10 @@ func (p *packetWrapper) GetData() interface{} {
 	return p.Data
 }
 
+func (p *packetWrapper) GetRequestID() network.RequestID {
+	return p.RequestID
+}
+
 type future struct {
 	transport.Future
 }
@@ -75,16 +80,11 @@ func (f future) Response() <-chan network.Response {
 
 // GetResponse get response to sent request with `duration` timeout
 func (f future) GetResponse(duration time.Duration) (network.Response, error) {
-	select {
-	case result, ok := <-f.Result():
-		if !ok {
-			return nil, transport.ErrChannelClosed
-		}
-		return (*packetWrapper)(result), nil
-	case <-time.After(duration):
-		f.Cancel()
-		return nil, transport.ErrTimeout
+	result, err := f.GetResult(duration)
+	if err != nil {
+		return nil, err
 	}
+	return (*packetWrapper)(result), nil
 }
 
 // GetRequest get initiating request.
@@ -93,31 +93,32 @@ func (f future) GetRequest() network.Request {
 	return (*packetWrapper)(request)
 }
 
-func (h *hostTransport) processMessage(ctx context.Context, msg *packet.Packet) {
-	log.Debugf("Got %s request from host %s", msg.Type.String(), msg.Sender.String())
+func (h *hostTransport) processMessage(msg *packet.Packet) {
+	ctx, logger := inslogger.WithTraceField(context.Background(), msg.TraceID)
+	logger.Debugf("Got %s request from host %s; RequestID: %d", msg.Type.String(), msg.Sender.String(), msg.RequestID)
 	handler, exist := h.handlers[msg.Type]
 	if !exist {
-		log.Errorf("No handler set for packet type %s from node %s",
+		logger.Errorf("No handler set for packet type %s from node %s",
 			msg.Type.String(), msg.Sender.NodeID.String())
 		return
 	}
 	response, err := handler(ctx, (*packetWrapper)(msg))
 	if err != nil {
-		log.Errorf("Error handling request %s from node %s: %s",
+		logger.Errorf("Error handling request %s from node %s: %s",
 			msg.Type.String(), msg.Sender.NodeID.String(), err)
 		return
 	}
 	r := response.(*packetWrapper)
-	err = h.transport.SendResponse(msg.RequestID, (*packet.Packet)(r))
+	err = h.transport.SendResponse(ctx, msg.RequestID, (*packet.Packet)(r))
 	if err != nil {
-		log.Error(err)
+		logger.Error(err)
 	}
 }
 
 // SendRequestPacket send request packet to a remote node.
-func (h *hostTransport) SendRequestPacket(request network.Request, receiver *host.Host) (network.Future, error) {
-	log.Debugf("Send %s request to host %s", request.GetType().String(), receiver.String())
-	f, err := h.transport.SendRequest(h.buildRequest(request, receiver))
+func (h *hostTransport) SendRequestPacket(ctx context.Context, request network.Request, receiver *host.Host) (network.Future, error) {
+	inslogger.FromContext(ctx).Debugf("Send %s request to host %s", request.GetType().String(), receiver.String())
+	f, err := h.transport.SendRequest(ctx, h.buildRequest(ctx, request, receiver))
 	if err != nil {
 		return nil, err
 	}
@@ -134,9 +135,10 @@ func (h *hostTransport) RegisterPacketHandler(t types.PacketType, handler networ
 }
 
 // BuildResponse create response to an incoming request with Data set to responseData.
-func (h *hostTransport) BuildResponse(request network.Request, responseData interface{}) network.Response {
+func (h *hostTransport) BuildResponse(ctx context.Context, request network.Request, responseData interface{}) network.Response {
 	sender := request.(*packetWrapper).Sender
-	p := packet.NewBuilder(h.origin).Type(request.GetType()).Receiver(sender).Response(responseData).Build()
+	p := packet.NewBuilder(h.origin).Type(request.GetType()).Receiver(sender).RequestID(request.GetRequestID()).
+		Response(responseData).TraceID(inslogger.TraceID(ctx)).Build()
 	return (*packetWrapper)(p)
 }
 
@@ -150,6 +152,7 @@ func NewInternalTransport(conf configuration.Configuration, nodeRef string) (net
 		return nil, errors.Wrap(err, "error getting origin")
 	}
 	result := &hostTransport{handlers: make(map[types.PacketType]network.RequestHandler)}
+	result.sequenceGenerator = sequence.NewGeneratorImpl()
 	result.transport = tp
 	result.origin = origin
 	result.messageProcessor = result.processMessage

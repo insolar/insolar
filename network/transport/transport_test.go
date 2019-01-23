@@ -21,7 +21,6 @@ import (
 	"crypto/rand"
 	"encoding/gob"
 	"testing"
-	"time"
 
 	"github.com/insolar/insolar/configuration"
 	consensus "github.com/insolar/insolar/consensus/packets"
@@ -44,11 +43,21 @@ type transportSuite struct {
 	node2 node
 }
 
+type consensusSuite struct {
+	*transportSuite
+}
+
 func NewSuite(cfg1 configuration.Transport, cfg2 configuration.Transport) *transportSuite {
 	return &transportSuite{
 		Suite: suite.Suite{},
 		node1: node{config: cfg1},
 		node2: node{config: cfg2},
+	}
+}
+
+func NewConsensusSuite(cfg1 configuration.Transport, cfg2 configuration.Transport) *consensusSuite {
+	return &consensusSuite{
+		transportSuite: NewSuite(cfg1, cfg2),
 	}
 }
 
@@ -71,10 +80,14 @@ func (t *transportSuite) SetupTest() {
 
 func (t *transportSuite) BeforeTest(suiteName, testName string) {
 	ctx := context.Background()
-	go t.node1.transport.Listen(ctx)
-	go t.node2.transport.Listen(ctx)
+	started1 := make(chan struct{}, 1)
+	started2 := make(chan struct{}, 1)
 
-	time.Sleep(time.Second)
+	go t.node1.transport.Listen(ctx, started1)
+	go t.node2.transport.Listen(ctx, started2)
+
+	<-started1
+	<-started2
 }
 
 func (t *transportSuite) AfterTest(suiteName, testName string) {
@@ -85,8 +98,6 @@ func (t *transportSuite) AfterTest(suiteName, testName string) {
 	go t.node2.transport.Stop()
 	<-t.node2.transport.Stopped()
 	t.node2.transport.Close()
-
-	time.Sleep(time.Second)
 }
 
 func generateRandomBytes(n int) ([]byte, error) {
@@ -102,8 +113,9 @@ func (t *transportSuite) TestPingPong() {
 	if t.node1.config.Protocol == "PURE_UDP" {
 		t.T().Skip("Skipping TestPingPong for PURE_UDP")
 	}
+	ctx := context.Background()
 	p := packet.NewBuilder(t.node1.host).Type(types.Ping).Receiver(t.node2.host).Build()
-	future, err := t.node1.transport.SendRequest(p)
+	future, err := t.node1.transport.SendRequest(ctx, p)
 	t.Assert().NoError(err)
 
 	requestMsg := <-t.node2.transport.Packets()
@@ -112,7 +124,7 @@ func (t *transportSuite) TestPingPong() {
 	t.Assert().False(requestMsg.IsResponse)
 
 	builder := packet.NewBuilder(t.node2.host).Receiver(requestMsg.Sender).Type(types.Ping)
-	err = t.node2.transport.SendResponse(requestMsg.RequestID, builder.Response(nil).Build())
+	err = t.node2.transport.SendResponse(ctx, requestMsg.RequestID, builder.Response(nil).Build())
 	t.Assert().NoError(err)
 
 	responseMsg := <-future.Result()
@@ -127,11 +139,12 @@ func (t *transportSuite) TestSendBigPacket() {
 	if t.node1.config.Protocol == "PURE_UDP" {
 		t.T().Skip("Skipping TestSendBigPacket for PURE_UDP")
 	}
+	ctx := context.Background()
 	data, _ := generateRandomBytes(1024 * 1024 * 2)
 	builder := packet.NewBuilder(t.node1.host).Receiver(t.node2.host).Type(packet.TestPacket)
 	requestMsg := builder.Request(&packet.RequestTest{Data: data}).Build()
 
-	_, err := t.node1.transport.SendRequest(requestMsg)
+	_, err := t.node1.transport.SendRequest(ctx, requestMsg)
 	t.Assert().NoError(err)
 
 	msg := <-t.node2.transport.Packets()
@@ -140,14 +153,11 @@ func (t *transportSuite) TestSendBigPacket() {
 	t.Assert().Equal(data, receivedData)
 }
 
-func (t *transportSuite) TestSendPacketConsensus() {
-	if t.node1.config.Protocol != "PURE_UDP" {
-		t.T().Skip("Skipping TestSendPacketConsensus for non-UDP transports")
-	}
-
+func (t *consensusSuite) TestSendPacketConsensus() {
+	ctx := context.Background()
 	builder := packet.NewBuilder(t.node1.host).Receiver(t.node2.host).Type(types.Phase1)
 	requestMsg := builder.Request(consensus.NewPhase1Packet()).Build()
-	_, err := t.node1.transport.SendRequest(requestMsg)
+	_, err := t.node1.transport.SendRequest(ctx, requestMsg)
 	t.Assert().NoError(err)
 
 	msg := <-t.node2.transport.Packets()
@@ -158,7 +168,7 @@ func TestUDPTransport(t *testing.T) {
 	cfg1 := configuration.Transport{Protocol: "PURE_UDP", Address: "127.0.0.1:17014", BehindNAT: false}
 	cfg2 := configuration.Transport{Protocol: "PURE_UDP", Address: "127.0.0.1:17015", BehindNAT: false}
 
-	suite.Run(t, NewSuite(cfg1, cfg2))
+	suite.Run(t, NewConsensusSuite(cfg1, cfg2))
 }
 
 func TestTCPTransport(t *testing.T) {
@@ -169,6 +179,8 @@ func TestTCPTransport(t *testing.T) {
 }
 
 func TestQuicTransport(t *testing.T) {
+	t.Skip("QUIC internals racing atm. Skip until we want to use it in production")
+
 	cfg1 := configuration.Transport{Protocol: "QUIC", Address: "127.0.0.1:17018", BehindNAT: false}
 	cfg2 := configuration.Transport{Protocol: "QUIC", Address: "127.0.0.1:17019", BehindNAT: false}
 

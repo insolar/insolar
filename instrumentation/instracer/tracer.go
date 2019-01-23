@@ -61,7 +61,7 @@ func (ts TraceSpan) spanContext() (sc trace.SpanContext) {
 
 type baggageKey struct{}
 
-// SetBaggage stores provided entries as context baggage and returns new conext.
+// SetBaggage stores provided entries as context baggage and returns new context.
 //
 // Baggage is set of entries that should be attached to all new spans.
 func SetBaggage(ctx context.Context, e ...Entry) context.Context {
@@ -91,13 +91,22 @@ func StartSpan(ctx context.Context, name string) (context.Context, *trace.Span) 
 	} else {
 		spanctx, span = trace.StartSpan(ctx, name)
 	}
+
+	// This is probably not the best solution since we have two traceId's:
+	// inslogger TraceId and Jaeger TraceId. We could probably join them and
+	// use only one TraceId, although it could be difficult in some situations.
+	// At the time of writing we are not very concerned with extra traffic created
+	// by two TraceIds thus this seems to be not a major issue.
+	span.AddAttributes(
+		trace.StringAttribute("insTraceId", inslogger.TraceID(ctx)),
+	)
 	setSpanEntries(span, GetBaggage(spanctx)...)
 	return spanctx, span
 }
 
 type parentSpanKey struct{}
 
-// WithParentSpan returns new conext with provided parent span.
+// WithParentSpan returns new context with provided parent span.
 func WithParentSpan(ctx context.Context, pspan TraceSpan) context.Context {
 	ctx = SetBaggage(ctx, pspan.Entries...)
 	return context.WithValue(ctx, parentSpanKey{}, pspan)
@@ -118,8 +127,10 @@ var ErrJagerConfigEmpty = errors.New("can't create jaeger exporter, config not p
 // RegisterJaeger creates jaeger exporter and registers it in opencensus trace lib.
 func RegisterJaeger(
 	servicename string,
+	nodeRef string,
 	agentendpoint string,
 	collectorendpoint string,
+	probabilityRate float64,
 ) (*jaeger.Exporter, error) {
 	if agentendpoint == "" && collectorendpoint == "" {
 		return nil, ErrJagerConfigEmpty
@@ -131,6 +142,7 @@ func RegisterJaeger(
 			ServiceName: servicename,
 			Tags: []jaeger.Tag{
 				jaeger.StringTag("hostname", hostname()),
+				jaeger.StringTag("nodeRef", nodeRef),
 			},
 		},
 	})
@@ -138,9 +150,15 @@ func RegisterJaeger(
 		return nil, err
 	}
 	trace.RegisterExporter(exporter)
-	trace.ApplyConfig(trace.Config{
-		DefaultSampler: trace.AlwaysSample(),
-	})
+	if probabilityRate > 0 {
+		trace.ApplyConfig(trace.Config{
+			DefaultSampler: trace.ProbabilitySampler(1 / probabilityRate),
+		})
+	} else {
+		trace.ApplyConfig(trace.Config{
+			DefaultSampler: trace.NeverSample(),
+		})
+	}
 	return exporter, nil
 }
 
@@ -148,13 +166,17 @@ func RegisterJaeger(
 func ShouldRegisterJaeger(
 	ctx context.Context,
 	servicename string,
+	nodeRef string,
 	agentendpoint string,
 	collectorendpoint string,
+	probabilityRate float64,
 ) (flusher func()) {
 	exporter, regerr := RegisterJaeger(
 		servicename,
+		nodeRef,
 		agentendpoint,
 		collectorendpoint,
+		probabilityRate,
 	)
 	inslog := inslogger.FromContext(ctx)
 	if regerr == nil {

@@ -33,6 +33,14 @@ const (
 	// ReturnValidated
 )
 
+type PendingState int
+
+const (
+	PendingUnknown PendingState = iota
+	NotPending
+	InPending
+)
+
 type IBaseLogicMessage interface {
 	core.Message
 	GetBaseLogicMessage() *BaseLogicMessage
@@ -126,6 +134,33 @@ type CallMethod struct {
 	ProxyPrototype core.RecordRef
 }
 
+// ToMap returns map representation of CallMethod.
+// Temporary until ledger.exporter api response reorganization
+func (cm *CallMethod) ToMap() (map[string]interface{}, error) {
+	msg := make(map[string]interface{})
+
+	// BaseLogicMessage fields
+	msg["Caller"] = cm.BaseLogicMessage.Caller.String()
+	msg["Request"] = cm.BaseLogicMessage.Request.String()
+	msg["CallerPrototype"] = cm.BaseLogicMessage.CallerPrototype.String()
+	msg["Nonce"] = cm.BaseLogicMessage.Nonce
+	msg["Sequence"] = cm.BaseLogicMessage.Sequence
+
+	// CallMethod fields
+	msg["ReturnMode"] = cm.ReturnMode
+	msg["ObjectRef"] = cm.ObjectRef.String()
+	msg["Method"] = cm.Method
+	msg["ProxyPrototype"] = cm.ProxyPrototype.String()
+	args, err := cm.Arguments.MarshalJSON()
+	if err != nil {
+		msg["Arguments"] = cm.Arguments
+	} else {
+		msg["Arguments"] = string(args)
+	}
+
+	return msg, nil
+}
+
 // AllowedSenderObjectAndRole implements interface method
 func (cm *CallMethod) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
 	c := cm.GetCaller()
@@ -145,12 +180,12 @@ func (cm *CallMethod) DefaultTarget() *core.RecordRef {
 	return &cm.ObjectRef
 }
 
-func (m *CallMethod) GetReference() core.RecordRef {
-	return m.ObjectRef
+func (cm *CallMethod) GetReference() core.RecordRef {
+	return cm.ObjectRef
 }
 
 // Type returns TypeCallMethod.
-func (m *CallMethod) Type() core.MessageType {
+func (cm *CallMethod) Type() core.MessageType {
 	return core.TypeCallMethod
 }
 
@@ -172,6 +207,34 @@ type CallConstructor struct {
 	PulseNum     core.PulseNumber
 }
 
+// ToMap returns map representation of CallConstructor.
+// Temporary until ledger.exporter api response reorganization
+func (cc *CallConstructor) ToMap() (map[string]interface{}, error) {
+	msg := make(map[string]interface{})
+
+	// BaseLogicMessage fields
+	msg["Caller"] = cc.BaseLogicMessage.Caller.String()
+	msg["Request"] = cc.BaseLogicMessage.Request.String()
+	msg["CallerPrototype"] = cc.BaseLogicMessage.CallerPrototype.String()
+	msg["Nonce"] = cc.BaseLogicMessage.Nonce
+	msg["Sequence"] = cc.BaseLogicMessage.Sequence
+
+	// CallConstructor fields
+	msg["ParentRef"] = cc.ParentRef.String()
+	msg["SaveAs"] = cc.SaveAs
+	msg["PrototypeRef"] = cc.PrototypeRef.String()
+	msg["Name"] = cc.Name
+	msg["PulseNum"] = cc.PulseNum
+	args, err := cc.Arguments.MarshalJSON()
+	if err != nil {
+		msg["Arguments"] = cc.Arguments
+	} else {
+		msg["Arguments"] = string(args)
+	}
+
+	return msg, nil
+}
+
 //
 func (cc *CallConstructor) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
 	c := cc.GetCaller()
@@ -191,11 +254,11 @@ func (cc *CallConstructor) DefaultTarget() *core.RecordRef {
 	if cc.SaveAs == Delegate {
 		return &cc.ParentRef
 	}
-	return genRequest(cc.PulseNum, MustSerializeBytes(cc))
+	return genRequest(cc.PulseNum, MustSerializeBytes(cc), cc.Request.Domain())
 }
 
 func (cc *CallConstructor) GetReference() core.RecordRef {
-	return *genRequest(cc.PulseNum, MustSerializeBytes(cc))
+	return *genRequest(cc.PulseNum, MustSerializeBytes(cc), cc.Request.Domain())
 }
 
 // Type returns TypeCallConstructor.
@@ -209,7 +272,7 @@ type ExecutorResults struct {
 	RecordRef core.RecordRef
 	Requests  []CaseBindRequest
 	Queue     []ExecutionQueueElement
-	Pending   bool
+	Pending   PendingState
 }
 
 type ExecutionQueueElement struct {
@@ -332,9 +395,9 @@ func (vr *ValidationResults) GetReference() core.RecordRef {
 var hasher = platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher() // TODO: create message factory
 
 // GenRequest calculates RecordRef for request message from pulse number and request's payload.
-func genRequest(pn core.PulseNumber, payload []byte) *core.RecordRef {
+func genRequest(pn core.PulseNumber, payload []byte, domain *core.RecordID) *core.RecordRef {
 	ref := core.NewRecordRef(
-		core.RecordID{},
+		*domain,
 		*core.NewRecordID(pn, hasher.Hash(payload)),
 	)
 	return ref
@@ -366,4 +429,29 @@ func (pf *PendingFinished) DefaultTarget() *core.RecordRef {
 
 func (pf *PendingFinished) Type() core.MessageType {
 	return core.TypePendingFinished
+}
+
+// StillExecuting
+type StillExecuting struct {
+	Reference core.RecordRef // object we still executing
+}
+
+func (se *StillExecuting) GetCaller() *core.RecordRef {
+	return &se.Reference
+}
+
+func (se *StillExecuting) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return nil, 0
+}
+
+func (se *StillExecuting) DefaultRole() core.DynamicRole {
+	return core.DynamicRoleVirtualExecutor
+}
+
+func (se *StillExecuting) DefaultTarget() *core.RecordRef {
+	return &se.Reference
+}
+
+func (se *StillExecuting) Type() core.MessageType {
+	return core.TypeStillExecuting
 }

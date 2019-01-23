@@ -28,10 +28,10 @@ import (
 func TestGetBalance(t *testing.T) {
 	firstMember := createMember(t, "Member1")
 	firstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
-	require.Equal(t, 1000, firstBalance)
+	require.Equal(t, 1000*1000*1000, firstBalance)
 }
 
 func TestGetBalanceWrongRef(t *testing.T) {
 	_, err := getBalance(&root, testutils.RandomRef().String())
-	require.Contains(t, err.Error(), "[ getBalance ] : [ GetDelegate ] on calling main API")
+	require.Contains(t, err.Error(), "[ getBalanceCall ] : [ GetDelegate ] on calling main API")
 }

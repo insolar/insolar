@@ -20,21 +20,22 @@ import (
 	"context"
 	"crypto"
 	"encoding/gob"
-	"errors"
-	"fmt"
 	"net"
 	"net/rpc"
+	"runtime/debug"
 	"sync"
 
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/pulsar/storage"
+	pulsarstorage "github.com/insolar/insolar/pulsar/storage"
 )
 
 // Pulsar is a base struct for pulsar's node
@@ -214,6 +215,9 @@ func (currentPulsar *Pulsar) StopServer(ctx context.Context) {
 
 // EstablishConnectionToPulsar is a method for creating connection to another pulsar
 func (currentPulsar *Pulsar) EstablishConnectionToPulsar(ctx context.Context, pubKey string) error {
+	ctx, span := instracer.StartSpan(ctx, "Pulsar.EstablishConnectionToPulsar")
+	defer span.End()
+
 	inslogger.FromContext(ctx).Debug("[EstablishConnectionToPulsar]")
 	neighbour, err := currentPulsar.FetchNeighbour(pubKey)
 	if err != nil {
@@ -257,6 +261,9 @@ func (currentPulsar *Pulsar) EstablishConnectionToPulsar(ctx context.Context, pu
 
 // CheckConnectionsToPulsars is a method refreshing connections between pulsars
 func (currentPulsar *Pulsar) CheckConnectionsToPulsars(ctx context.Context) {
+	ctx, span := instracer.StartSpan(ctx, "Pulsar.CheckConnectionsToPulsars")
+	defer span.End()
+
 	logger := inslogger.FromContext(ctx)
 	for pubKey, neighbour := range currentPulsar.Neighbours {
 		logger.Debugf("[CheckConnectionsToPulsars] refresh with %v", neighbour.ConnectionAddress)
@@ -285,9 +292,15 @@ func (currentPulsar *Pulsar) CheckConnectionsToPulsars(ctx context.Context) {
 
 // StartConsensusProcess starts process of calculating consensus between pulsars
 func (currentPulsar *Pulsar) StartConsensusProcess(ctx context.Context, pulseNumber core.PulseNumber) error {
+	ctx, span := instracer.StartSpan(ctx, "Pulsar.StartConsensusProcess")
+	defer span.End()
+
 	logger := inslogger.FromContext(ctx)
 	logger.Debugf("[StartConsensusProcess] pulse number - %v, host - %v", pulseNumber, currentPulsar.Config.MainListenerAddress)
+	logger.Debugf("[Before StartProcessLock]")
+	debug.PrintStack()
 	currentPulsar.StartProcessLock.Lock()
+	logger.Debugf("[After StartProcessLock]")
 
 	if pulseNumber == currentPulsar.ProcessingPulseNumber {
 		logger.Debugf("[pulseNumber == currentPulsar.ProcessingPulseNumber] return nil")
@@ -295,24 +308,29 @@ func (currentPulsar *Pulsar) StartConsensusProcess(ctx context.Context, pulseNum
 		return nil
 	}
 
+	logger.Debugf("currentPulsar.StateSwitcher.GetState() > WaitingForStart")
 	if currentPulsar.StateSwitcher.GetState() > WaitingForStart || (currentPulsar.ProcessingPulseNumber != 0 && pulseNumber < currentPulsar.ProcessingPulseNumber) {
+		logger.Debugf("currentPulsar.StartProcessLock.Unlock()")
 		currentPulsar.StartProcessLock.Unlock()
-		err := fmt.Errorf(
+		err := errors.Errorf(
 			"wrong state status or pulse number, state - %v, received pulse - %v, last pulse - %v, processing pulse - %v",
 			currentPulsar.StateSwitcher.GetState().String(),
 			pulseNumber, currentPulsar.GetLastPulse().PulseNumber,
 			currentPulsar.ProcessingPulseNumber)
-		logger.Warn(err)
+		logger.Error(err)
 		return err
 	}
 	currentPulsar.ProcessingPulseNumber = pulseNumber
 
-	ctx, inslog := inslogger.WithTraceField(ctx, fmt.Sprintf("%v_%d", currentPulsar.ID, pulseNumber))
+	inslog := inslogger.FromContext(ctx)
 
+	logger.Debugf("before GenerateEntropy")
 	currentPulsar.StateSwitcher.setState(GenerateEntropy)
 
+	logger.Debugf("before generateNewEntropyAndSign")
 	err := currentPulsar.generateNewEntropyAndSign()
 	if err != nil {
+		logger.Debugf("currentPulsar.StartProcessLock.Unlock() && currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)")
 		currentPulsar.StartProcessLock.Unlock()
 		currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)
 		return err

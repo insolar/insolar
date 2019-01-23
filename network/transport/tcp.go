@@ -20,17 +20,17 @@ import (
 	"context"
 	"io"
 	"net"
-	"os"
+
 	"strings"
 	"sync"
-	"syscall"
 	"time"
+
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/transport/pool"
 	"github.com/insolar/insolar/network/transport/relay"
 	"github.com/insolar/insolar/network/utils"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -65,7 +65,7 @@ func newTCPTransport(listenAddress string, proxy relay.Proxy, publicAddress stri
 }
 
 func (t *tcpTransport) send(address string, data []byte) error {
-	ctx := context.TODO()
+	ctx := context.Background()
 	logger := inslogger.FromContext(ctx)
 
 	addr, err := net.ResolveTCPAddr("tcp", address)
@@ -83,31 +83,27 @@ func (t *tcpTransport) send(address string, data []byte) error {
 	_, err = conn.Write(data)
 
 	if err != nil {
-		// All this to check is error EPIPE
-		if netErr, ok := err.(*net.OpError); ok {
-			switch realNetErr := netErr.Err.(type) {
-			case *os.SyscallError:
-				if realNetErr.Err == syscall.EPIPE {
-					t.pool.CloseConnection(ctx, addr)
-					conn, err = t.openConnection(ctx, addr)
-					if err != nil {
-						return err
-					}
-					_, err = conn.Write(data)
-				}
-			}
+		// if netErr, ok := err.(*net.OpError); ok {
+		// 	switch realNetErr := netErr.Err.(type) {
+		// 	case *os.SyscallError:
+		// 		if realNetErr.Err == syscall.EPIPE {
+		t.pool.CloseConnection(ctx, addr)
+		conn, err = t.openConnection(ctx, addr)
+		if err != nil {
+			return errors.Wrap(err, "[ send ] Failed to get connection")
 		}
+		_, err = conn.Write(data)
+		// 		}
+		// 	}
+		// }
 	}
 
 	return errors.Wrap(err, "[ send ] Failed to write data")
 }
 
-// Start starts networking.
-func (t *tcpTransport) Listen(ctx context.Context) error {
-	logger := inslogger.FromContext(ctx)
-	logger.Info("[ Listen ] Start TCP transport")
-
+func (t *tcpTransport) prepareListen() error {
 	t.mutex.Lock()
+	defer t.mutex.Unlock()
 
 	t.openConnections = &sync.WaitGroup{}
 	t.disconnectStarted = make(chan bool, 1)
@@ -118,8 +114,20 @@ func (t *tcpTransport) Listen(ctx context.Context) error {
 	}
 	t.listener = listener
 
-	t.mutex.Unlock()
+	return nil
+}
 
+// Start starts networking.
+func (t *tcpTransport) Listen(ctx context.Context, started chan struct{}) error {
+	logger := inslogger.FromContext(ctx)
+	logger.Info("[ Listen ] Start TCP transport")
+
+	if err := t.prepareListen(); err != nil {
+		logger.Info("[ Listen ] Failed to prepare TCP transport")
+		return err
+	}
+
+	started <- struct{}{}
 	for {
 		conn, err := t.listener.AcceptTCP()
 		if err != nil {
@@ -145,6 +153,7 @@ func (t *tcpTransport) Stop() {
 	inslogger.FromContext(ctx).Info("[ Stop ] Stop TCP transport")
 
 	t.prepareDisconnect()
+
 	utils.CloseVerbose(t.listener)
 	t.pool.Reset(ctx)
 	t.openConnections.Wait()
@@ -202,6 +211,7 @@ func (t *tcpTransport) handleAcceptedConnection(
 			continue
 		}
 
+		ctx, logger := inslogger.WithTraceField(context.Background(), p.TraceID)
 		logger.Debug("[ handleAcceptedConnection ] Handling packet: ", p.RequestID)
 		go t.packetHandler.Handle(ctx, p)
 

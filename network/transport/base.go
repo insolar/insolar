@@ -17,12 +17,15 @@
 package transport
 
 import (
+	"context"
 	"io"
 	"net"
 	"strings"
 	"sync"
 
-	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/metrics"
+	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/transport/packet"
 	"github.com/insolar/insolar/network/transport/relay"
 	"github.com/pkg/errors"
@@ -44,11 +47,10 @@ func (b *baseSerializer) DeserializePacket(conn io.Reader) (*packet.Packet, erro
 }
 
 type baseTransport struct {
-	sequenceGenerator sequenceGenerator
-	futureManager     futureManager
-	serializer        transportSerializer
-	proxy             relay.Proxy
-	packetHandler     packetHandler
+	futureManager futureManager
+	serializer    transportSerializer
+	proxy         relay.Proxy
+	packetHandler packetHandler
 
 	disconnectStarted  chan bool
 	disconnectFinished chan bool
@@ -62,11 +64,10 @@ type baseTransport struct {
 func newBaseTransport(proxy relay.Proxy, publicAddress string) baseTransport {
 	futureManager := newFutureManager()
 	return baseTransport{
-		sequenceGenerator: newSequenceGenerator(),
-		futureManager:     futureManager,
-		packetHandler:     newPacketHandler(futureManager),
-		proxy:             proxy,
-		serializer:        &baseSerializer{},
+		futureManager: futureManager,
+		packetHandler: newPacketHandler(futureManager),
+		proxy:         proxy,
+		serializer:    &baseSerializer{},
 
 		mutex: &sync.RWMutex{},
 
@@ -78,27 +79,22 @@ func newBaseTransport(proxy relay.Proxy, publicAddress string) baseTransport {
 }
 
 // SendRequest sends request packet and returns future.
-func (t *baseTransport) SendRequest(msg *packet.Packet) (Future, error) {
-	msg.RequestID = packet.RequestID(t.sequenceGenerator.Generate())
-
+func (t *baseTransport) SendRequest(ctx context.Context, msg *packet.Packet) (Future, error) {
 	future := t.futureManager.Create(msg)
-
-	go func(msg *packet.Packet, f Future) {
-		err := t.SendPacket(msg)
-		if err != nil {
-			f.Cancel()
-			log.Error(err)
-		}
-	}(msg, future)
-
+	err := t.SendPacket(ctx, msg)
+	if err != nil {
+		future.Cancel()
+		return nil, errors.Wrap(err, "Failed to send transport packet")
+	}
+	metrics.NetworkPacketSentTotal.WithLabelValues(msg.Type.String()).Inc()
 	return future, nil
 }
 
 // SendResponse sends response packet.
-func (t *baseTransport) SendResponse(requestID packet.RequestID, msg *packet.Packet) error {
+func (t *baseTransport) SendResponse(ctx context.Context, requestID network.RequestID, msg *packet.Packet) error {
 	msg.RequestID = requestID
 
-	return t.SendPacket(msg)
+	return t.SendPacket(ctx, msg)
 }
 
 // Close closes packet channels.
@@ -119,13 +115,6 @@ func (t *baseTransport) Stopped() <-chan bool {
 	return t.disconnectStarted
 }
 
-func (t *baseTransport) prepareListen() {
-	t.mutex.Lock()
-	defer t.mutex.Unlock()
-
-	t.disconnectStarted = make(chan bool, 1)
-}
-
 func (t *baseTransport) prepareDisconnect() {
 	t.disconnectStarted <- true
 	close(t.disconnectStarted)
@@ -140,7 +129,7 @@ func (t *baseTransport) PublicAddress() string {
 	return t.publicAddress
 }
 
-func (t *baseTransport) SendPacket(p *packet.Packet) error {
+func (t *baseTransport) SendPacket(ctx context.Context, p *packet.Packet) error {
 	p.RemoteAddress = t.publicAddress
 
 	var recvAddress string
@@ -156,6 +145,6 @@ func (t *baseTransport) SendPacket(p *packet.Packet) error {
 		return errors.Wrap(err, "Failed to serialize packet")
 	}
 
-	log.Debugf("Send packet to %s with RequestID = %d", recvAddress, p.RequestID)
+	inslogger.FromContext(ctx).Debugf("Send %s packet to %s with RequestID = %d", p.Type, recvAddress, p.RequestID)
 	return t.sendFunc(recvAddress, data)
 }

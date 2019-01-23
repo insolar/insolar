@@ -31,6 +31,7 @@ import (
 	"github.com/insolar/insolar/core/utils"
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/keystore"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/pulsenetwork"
@@ -39,20 +40,22 @@ import (
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
-	"github.com/insolar/insolar/pulsar/storage"
+	pulsarstorage "github.com/insolar/insolar/pulsar/storage"
 	"github.com/insolar/insolar/version"
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
 )
 
 type inputParams struct {
-	configPath string
+	configPath   string
+	traceEnabled bool
 }
 
 func parseInputParams() inputParams {
 	var rootCmd = &cobra.Command{Use: "insolard"}
 	var result inputParams
 	rootCmd.Flags().StringVarP(&result.configPath, "config", "c", "", "path to config file")
+	rootCmd.Flags().BoolVarP(&result.traceEnabled, "trace", "t", false, "enable tracing")
 	err := rootCmd.Execute()
 	if err != nil {
 		fmt.Println("Wrong input params:", err.Error())
@@ -86,7 +89,22 @@ func main() {
 	ctx, inslog := initLogger(context.Background(), cfgHolder.Configuration.Log, traceID)
 	log.SetGlobalLogger(inslog)
 
-	server, storage, tp := initPulsar(ctx, cfgHolder.Configuration)
+	jaegerflush := func() {}
+	if params.traceEnabled {
+		jconf := cfgHolder.Configuration.Tracer.Jaeger
+		log.Infof("Tracing enabled. Agent endpoint: '%s', collector endpoint: '%s'", jconf.AgentEndpoint, jconf.CollectorEndpoint)
+		jaegerflush = instracer.ShouldRegisterJaeger(
+			ctx,
+			"pulsar",
+			core.RecordRef{}.String(),
+			jconf.AgentEndpoint,
+			jconf.CollectorEndpoint,
+			jconf.ProbabilityRate)
+		ctx = instracer.SetBaggage(ctx, instracer.Entry{Key: "traceid", Value: traceID})
+	}
+	defer jaegerflush()
+
+	cm, server, storage := initPulsar(ctx, cfgHolder.Configuration)
 	server.ID = traceID
 
 	go server.StartServer(ctx)
@@ -100,7 +118,10 @@ func main() {
 			inslog.Error(err)
 		}
 		server.StopServer(ctx)
-		tp.Close()
+		err = cm.Stop(ctx)
+		if err != nil {
+			inslog.Error(err)
+		}
 	}()
 
 	var gracefulStop = make(chan os.Signal, 1)
@@ -110,8 +131,8 @@ func main() {
 	<-gracefulStop
 }
 
-func initPulsar(ctx context.Context, cfg configuration.Configuration) (*pulsar.Pulsar, pulsarstorage.PulsarStorage, transport.Transport) {
-	fmt.Print("Starts with configuration:\n", configuration.ToString(cfg))
+func initPulsar(ctx context.Context, cfg configuration.Configuration) (*component.Manager, *pulsar.Pulsar, pulsarstorage.PulsarStorage) {
+	fmt.Println("Starts with configuration:\n", configuration.ToString(cfg))
 	fmt.Println("Version: ", version.GetFullVersion())
 
 	keyStore, err := keystore.NewKeyStore(cfg.KeysPath)
@@ -169,7 +190,7 @@ func initPulsar(ctx context.Context, cfg configuration.Configuration) (*pulsar.P
 	}
 	switcher.SetPulsar(server)
 
-	return server, storage, tp
+	return cm, server, storage
 }
 
 func runPulsar(ctx context.Context, server *pulsar.Pulsar, cfg configuration.Pulsar) (pulseTicker *time.Ticker, refreshTicker *time.Ticker) {

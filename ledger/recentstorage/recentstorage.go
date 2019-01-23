@@ -17,6 +17,8 @@
 package recentstorage
 
 import (
+	"context"
+
 	"github.com/insolar/insolar/core"
 )
 
@@ -24,21 +26,25 @@ import (
 //go:generate minimock -i github.com/insolar/insolar/ledger/recentstorage.Provider -o ./ -s _mock.go
 type Provider interface {
 	GetStorage(jetID core.RecordID) RecentStorage
+	CloneStorage(fromJetID, toJetID core.RecordID)
+	// TODO: @andreyromancev. 15.01.19. Add RemoveStorage method. Use it instead of ClearObjects. Potential memory leak.
 }
 
 // RecentStorage is a base interface for the storage of recent objects and indexes
 //go:generate minimock -i github.com/insolar/insolar/ledger/recentstorage.RecentStorage -o ./ -s _mock.go
 type RecentStorage interface {
-	AddObject(id core.RecordID)
-	AddObjectWithTLL(id core.RecordID, ttl int)
+	AddObject(ctx context.Context, id core.RecordID)
+	AddObjectWithTLL(ctx context.Context, id core.RecordID, ttl int)
 
-	AddPendingRequest(obj, req core.RecordID)
-	RemovePendingRequest(obj, req core.RecordID)
+	AddPendingRequest(ctx context.Context, obj, req core.RecordID)
+	RemovePendingRequest(ctx context.Context, obj, req core.RecordID)
 
 	GetObjects() map[core.RecordID]int
 	GetRequests() map[core.RecordID]map[core.RecordID]struct{}
 	GetRequestsForObject(obj core.RecordID) []core.RecordID
 
-	ClearZeroTTLObjects()
-	ClearObjects()
+	IsRecordIDCached(obj core.RecordID) bool
+
+	ClearZeroTTLObjects(ctx context.Context)
+	ClearObjects(ctx context.Context)
 }

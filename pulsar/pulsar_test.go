@@ -687,7 +687,9 @@ func TestPulsar_sendVector_TwoPulsars(t *testing.T) {
 
 	switcher := NewStateSwitcherMock(t)
 	switcher.GetStateMock.Return(WaitingForStart)
-	switcher.SwitchToStateMock.Expect(ctx, WaitingForVectors, nil).Return()
+	switcher.SwitchToStateFunc = func(p context.Context, p1 State, p2 interface{}) {
+		require.Equal(t, WaitingForVectors, p1)
+	}
 	pulsar.StateSwitcher = switcher
 
 	// Act
@@ -702,12 +704,15 @@ func TestPulsar_sendEntropy_OnePulsar(t *testing.T) {
 	pulsar := Pulsar{Neighbours: map[string]*Neighbour{}}
 	switcher := NewStateSwitcherMock(t)
 	switcher.GetStateMock.Return(WaitingForStart)
-	switcher.SwitchToStateMock.Expect(ctx, Verifying, nil).Return()
+	switcher.SwitchToStateFunc = func(p context.Context, p1 State, p2 interface{}) {
+		require.Equal(t, Verifying, p1)
+	}
 	pulsar.StateSwitcher = switcher
 
 	pulsar.sendEntropy(ctx)
 
 	require.Equal(t, uint64(1), switcher.SwitchToStateCounter)
+	switcher.MinimockFinish()
 }
 
 func TestPulsar_sendEntropy_TwoPulsars(t *testing.T) {
@@ -735,7 +740,9 @@ func TestPulsar_sendEntropy_TwoPulsars(t *testing.T) {
 
 	switcher := NewStateSwitcherMock(t)
 	switcher.GetStateMock.Return(WaitingForStart)
-	switcher.SwitchToStateMock.Expect(ctx, WaitingForEntropy, nil).Return()
+	switcher.SwitchToStateFunc = func(p context.Context, p1 State, p2 interface{}) {
+		require.Equal(t, WaitingForEntropy, p1)
+	}
 	pulsar.StateSwitcher = switcher
 
 	// Act
@@ -761,7 +768,9 @@ func TestPulsar_verify_Standalone_Success(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	mockSwitcher := NewStateSwitcherMock(t)
 	mockSwitcher.GetStateMock.Return(Verifying)
-	mockSwitcher.SwitchToStateMock.Expect(ctx, SendingPulse, nil).Return()
+	mockSwitcher.SwitchToStateFunc = func(p context.Context, p1 State, p2 interface{}) {
+		require.Equal(t, SendingPulse, p1)
+	}
 	pulsar := &Pulsar{StateSwitcher: mockSwitcher}
 	pulsar.PublicKeyRaw = "testKey"
 	generatedEntropy := core.Entropy(pulsartestutils.MockEntropy)
@@ -774,6 +783,7 @@ func TestPulsar_verify_Standalone_Success(t *testing.T) {
 	require.Equal(t, uint64(1), mockSwitcher.SwitchToStateCounter)
 	require.Equal(t, "testKey", pulsar.PublicKeyRaw)
 	require.Equal(t, core.Entropy(pulsartestutils.MockEntropy), *pulsar.GetGeneratedEntropy())
+	mockSwitcher.MinimockFinish()
 }
 
 func TestPulsar_verify_NotEnoughForConsensus_Success(t *testing.T) {
@@ -846,13 +856,13 @@ func TestPulsar_verify_Success(t *testing.T) {
 	thirdCryptoService := cryptography.NewKeyBoundCryptographyService(thirdPrivate)
 
 	pulsar := &Pulsar{
-		KeyProcessor:               platformpolicy.NewKeyProcessor(),
-		StateSwitcher:              mockSwitcher,
-		CryptographyService:        pulsarCryptoService,
-		PlatformCryptographyScheme: platformpolicy.NewPlatformCryptographyScheme(),
-		PublicKeyRaw:               currentPulsarPublicKey,
-		ownedBftRow:                map[string]*BftCell{},
-		bftGrid:                    map[string]map[string]*BftCell{},
+		KeyProcessor:                   platformpolicy.NewKeyProcessor(),
+		StateSwitcher:                  mockSwitcher,
+		CryptographyService:            pulsarCryptoService,
+		PlatformCryptographyScheme:     platformpolicy.NewPlatformCryptographyScheme(),
+		PublicKeyRaw:                   currentPulsarPublicKey,
+		ownedBftRow:                    map[string]*BftCell{},
+		bftGrid:                        map[string]map[string]*BftCell{},
 		CurrentSlotSenderConfirmations: map[string]core.PulseSenderConfirmation{},
 		Neighbours: map[string]*Neighbour{
 			publicKeySecond: {PublicKey: pub2, OutgoingClient: &clientMock},

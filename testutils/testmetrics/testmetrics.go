@@ -23,7 +23,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/insolar/insolar/configuration"
@@ -37,18 +36,11 @@ type TestMetrics struct {
 	Metrics *metrics.Metrics
 }
 
-var (
-	oncecfg sync.Once
-	cfg     configuration.Metrics
-)
-
 // Start configures, creates and starts metrics server,
 // returns initialized TestMetrics object.
 func Start(ctx context.Context) TestMetrics {
 	inslog := inslogger.FromContext(ctx)
-	oncecfg.Do(func() {
-		cfg = configuration.NewMetrics()
-	})
+	cfg := configuration.NewMetrics()
 	host, _ := parseAddr(cfg.ListenAddress)
 
 	// just use any available port

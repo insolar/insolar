@@ -18,12 +18,14 @@ package messagebus
 
 import (
 	"context"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/network"
 	"github.com/stretchr/testify/require"
@@ -51,6 +53,10 @@ func prepare(t *testing.T, ctx context.Context, currentPulse int, msgPulse int) 
 	jc := testutils.NewJetCoordinatorMock(t)
 	ls := testutils.NewLocalStorageMock(t)
 	nn := network.NewNodeNetworkMock(t)
+	nn.GetOriginFunc = func() (r core.Node) {
+		return storage.Node{}
+	}
+
 	pcs := testutils.NewPlatformCryptographyScheme()
 	cs := testutils.NewCryptographyServiceMock(t)
 	dtf := testutils.NewDelegationTokenFactoryMock(t)
@@ -77,6 +83,9 @@ func prepare(t *testing.T, ctx context.Context, currentPulse int, msgPulse int) 
 	parcel.TypeFunc = func() core.MessageType {
 		return testType
 	}
+	parcel.GetSenderFunc = func() (r core.RecordRef) {
+		return testutils.RandomRef()
+	}
 
 	mb.Unlock(ctx)
 
@@ -98,18 +107,28 @@ func TestMessageBus_doDeliverNextPulse(t *testing.T) {
 
 	pulseUpdated := false
 
-	go func() {
-		time.Sleep(time.Second)
-		newPulse := &core.Pulse{
-			PulseNumber:     101,
-			NextPulseNumber: 102,
-		}
-		ps.CurrentFunc = func(ctx context.Context) (*core.Pulse, error) {
+	var triggerUnlock int32
+	newPulse := &core.Pulse{
+		PulseNumber:     101,
+		NextPulseNumber: 102,
+	}
+	fn := ps.CurrentFunc
+	ps.CurrentFunc = func(ctx context.Context) (*core.Pulse, error) {
+		if atomic.LoadInt32(&triggerUnlock) > 0 {
 			return newPulse, nil
 		}
+		return fn(ctx)
+	}
+	go func() {
+		// should unlock
+		time.Sleep(time.Second)
+		atomic.AddInt32(&triggerUnlock, 1)
+
 		pulseUpdated = true
-		mb.OnPulse(ctx, *newPulse)
+		err := mb.OnPulse(ctx, *newPulse)
+		require.NoError(t, err)
 	}()
+	// blocks until newPulse returns
 	result, err := mb.doDeliver(ctx, parcel)
 	require.NoError(t, err)
 	require.Equal(t, testReply, result)
@@ -118,8 +137,28 @@ func TestMessageBus_doDeliverNextPulse(t *testing.T) {
 
 func TestMessageBus_doDeliverWrongPulse(t *testing.T) {
 	ctx := context.Background()
-	mb, _, parcel := prepare(t, ctx, 100, 200)
+	mb, ps, parcel := prepare(t, ctx, 100, 200)
+
+	var triggerUnlock int32
+	fn := ps.CurrentFunc
+	newPulse := &core.Pulse{
+		PulseNumber:     101,
+		NextPulseNumber: 102,
+	}
+	ps.CurrentFunc = func(ctx context.Context) (*core.Pulse, error) {
+		if atomic.LoadInt32(&triggerUnlock) > 0 {
+			return newPulse, nil
+		}
+		return fn(ctx)
+	}
+	go func() {
+		time.Sleep(time.Second)
+		atomic.AddInt32(&triggerUnlock, 1)
+
+		err := mb.OnPulse(ctx, *newPulse)
+		require.NoError(t, err)
+	}()
 
 	_, err := mb.doDeliver(ctx, parcel)
-	require.EqualError(t, err, "[ doDeliver ] error in checkPulse: [ checkPulse ] Incorrect message pulse 200 100")
+	require.EqualError(t, err, "[ doDeliver ] error in checkPulse: [ checkPulse ] Incorrect message pulse (parcel: 200, current: 101)")
 }

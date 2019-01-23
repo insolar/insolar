@@ -27,6 +27,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/ledger/storage/jet"
+
 	"github.com/insolar/insolar/contractrequester"
 	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/insolar/insolar/ledger/recentstorage"
@@ -123,17 +125,23 @@ func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *gop
 	nw := network.GetTestNetwork()
 	// FIXME: TmpLedger is deprecated. Use mocks instead.
 	l, cleaner := ledgertestutils.TmpLedger(
-		t, "",
+		t, "", core.StaticRoleLightMaterial,
 		core.Components{
 			LogicRunner: lr,
 			NodeNetwork: nk,
 			MessageBus:  mb,
 			Network:     nw,
 		},
+		false,
 	)
 
-	pulseStorage := l.PulseManager.(*pulsemanager.PulseManager).PulseStorage
-	recentMock := recentstorage.NewProviderMock(t)
+	providerMock := recentstorage.NewProviderMock(t)
+	recentStorageMock := recentstorage.NewRecentStorageMock(t)
+	recentStorageMock.AddObjectMock.Return()
+
+	providerMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
+		return recentStorageMock
+	}
 
 	parcelFactory := messagebus.NewParcelFactory()
 	cm := &component.Manager{}
@@ -141,8 +149,9 @@ func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *gop
 	am := l.GetArtifactManager()
 	cm.Register(am, l.GetPulseManager(), l.GetJetCoordinator())
 	cr, err := contractrequester.New()
+	pulseStorage := l.PulseManager.(*pulsemanager.PulseManager).PulseStorage
 
-	cm.Inject(pulseStorage, nk, recentMock, l, lr, nw, mb, cr, delegationTokenFactory, parcelFactory, mock)
+	cm.Inject(pulseStorage, nk, providerMock, l, lr, nw, mb, cr, delegationTokenFactory, parcelFactory, mock)
 	err = cm.Init(ctx)
 	assert.NoError(t, err)
 	err = cm.Start(ctx)
@@ -151,19 +160,8 @@ func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *gop
 	MessageBusTrivialBehavior(mb, lr)
 	pm := l.GetPulseManager()
 
-	currentPulse, _ := pulseStorage.Current(ctx)
-	newPulseNumber := currentPulse.PulseNumber + 1
-	err = lr.Ledger.GetPulseManager().Set(
-		ctx,
-		core.Pulse{PulseNumber: newPulseNumber, Entropy: core.Entropy{}},
-		true,
-	)
-	require.NoError(t, err)
+	incrementPulseHelper(t, ctx, lr, pm)
 
-	assert.NoError(t, err)
-	if err != nil {
-		t.Fatal("pulse set died, ", err)
-	}
 	cb := goplugintestutils.NewContractBuilder(am, icc)
 
 	return lr, am, cb, pm, func() {
@@ -172,6 +170,34 @@ func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *gop
 		cleaner()
 		rundCleaner()
 	}
+}
+
+func incrementPulseHelper(t *testing.T, ctx context.Context, lr core.LogicRunner, pm core.PulseManager) {
+	pulseStorage := pm.(*pulsemanager.PulseManager).PulseStorage
+	currentPulse, _ := pulseStorage.Current(ctx)
+
+	newPulseNumber := currentPulse.PulseNumber + 1
+	err := lr.(*LogicRunner).Ledger.GetPulseManager().Set(
+		ctx,
+		core.Pulse{PulseNumber: newPulseNumber, Entropy: core.Entropy{}},
+		true,
+	)
+	require.NoError(t, err)
+
+	rootJetId := *jet.NewID(0, nil)
+	_, err = lr.(*LogicRunner).MessageBus.Send(
+		ctx,
+		&message.HotData{
+			Jet:                *core.NewRecordRef(core.DomainID, rootJetId),
+			DropJet:            rootJetId,
+			Drop:               jet.JetDrop{Pulse: 1},
+			RecentObjects:      nil,
+			PendingRequests:    nil,
+			PulseNumber:        newPulseNumber,
+			JetDropSizeHistory: nil,
+		}, nil,
+	)
+	require.NoError(t, err)
 }
 
 func mockCryptographyService(t *testing.T) core.CryptographyService {
@@ -324,6 +350,7 @@ package main
 import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
 import "github.com/insolar/insolar/application/proxy/two"
 import "github.com/insolar/insolar/core"
+import "errors"
 
 type One struct {
 	foundation.BaseContract
@@ -358,6 +385,24 @@ func (r *One) Again(s string) (string, error) {
 func (r *One)GetFriend() (core.RecordRef, error) {
 	return r.Friend, nil
 }
+
+func (r *One)TestPayload() (two.Payload, error) {
+	f := two.GetObject(r.Friend)
+	err := f.SetPayload(two.Payload{Int: 10, Str: "HiHere"})
+	if err != nil { return two.Payload{}, err }
+
+	p, err := f.GetPayload()
+	if err != nil { return two.Payload{}, err }
+
+	str, err := f.GetPayloadString()	
+	if err != nil { return two.Payload{}, err }
+
+	if p.Str != str { return two.Payload{}, errors.New("Oops") }
+
+	return p, nil
+
+}
+
 `
 
 	var contractTwoCode = `
@@ -372,6 +417,12 @@ import (
 type Two struct {
 	foundation.BaseContract
 	X int
+	P Payload
+}
+
+type Payload struct {
+	Int int
+	Str string
 }
 
 func New() (*Two, error) {
@@ -381,6 +432,19 @@ func New() (*Two, error) {
 func (r *Two) Hello(s string) (string, error) {
 	r.X ++
 	return fmt.Sprintf("Hello you too, %s. %d times!", s, r.X), nil
+}
+
+func (r *Two) GetPayload() (Payload, error) {
+	return r.P, nil
+}
+
+func (r *Two) SetPayload(P Payload) (error) {
+	r.P = P
+	return nil
+}
+
+func (r *Two) GetPayloadString() (string, error) {
+	return r.P.Str, nil
 }
 `
 	ctx := context.Background()
@@ -421,6 +485,11 @@ func (r *Two) Hello(s string) (string, error) {
 		assert.NoError(t, err, "contract call")
 		assert.Equal(t, fmt.Sprintf("Hello you too, Insolar. %d times!", i), firstMethodRes(t, resp))
 	}
+
+	resp, err = executeMethod(ctx, lr, pm, *obj, *prototype, 7, "TestPayload")
+	assert.NoError(t, err, "contract call")
+	res := firstMethodRes(t, resp).(map[interface{}]interface{})["Str"]
+	assert.Equal(t, "HiHere", res)
 
 	ValidateAllResults(t, ctx, lr)
 }
@@ -1142,11 +1211,11 @@ func TestRootDomainContract(t *testing.T) {
 
 	// Verify Member1 balance
 	res3 := root.SignedCall(ctx, pm, *rootDomainRef, "GetBalance", *cb.Prototypes["member"], []interface{}{member1Ref})
-	assert.Equal(t, 999, int(res3.(uint64)))
+	assert.Equal(t, 999999999, int(res3.(uint64)))
 
 	// Verify Member2 balance
 	res4 := root.SignedCall(ctx, pm, *rootDomainRef, "GetBalance", *cb.Prototypes["member"], []interface{}{member2Ref})
-	assert.Equal(t, 1001, int(res4.(uint64)))
+	assert.Equal(t, 1000000001, int(res4.(uint64)))
 }
 
 func TestFullValidationCycle(t *testing.T) {
@@ -1252,10 +1321,9 @@ func New(n int) (*Child, error) {
 		return nil, nil
 	})
 
+	newPulse := core.Pulse{PulseNumber: 1231234, Entropy: core.Entropy{}}
 	err = lr.(*LogicRunner).Ledger.GetPulseManager().Set(
-		ctx,
-		core.Pulse{PulseNumber: 1231234, Entropy: core.Entropy{}},
-		true,
+		ctx, newPulse, true,
 	)
 	assert.NoError(t, err)
 
@@ -1544,7 +1612,7 @@ func (r *One) CreateAllowance(member string) (error) {
 
 	// Verify Member balance
 	res3 := root.SignedCall(ctx, pm, *rootDomainRef, "GetBalance", *cb.Prototypes["member"], []interface{}{memberRef})
-	assert.Equal(t, 1000, int(res3.(uint64)))
+	assert.Equal(t, 1000000000, int(res3.(uint64)))
 }
 
 func TestGetParent(t *testing.T) {
