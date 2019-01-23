@@ -53,8 +53,8 @@ type Bootstrapper interface {
 }
 
 type bootstrapper struct {
-	Certificate core.Certificate   `inject:"subcomponent"`
-	NodeKeeper  network.NodeKeeper `inject:"subcomponent"`
+	Certificate core.Certificate   `inject:""`
+	NodeKeeper  network.NodeKeeper `inject:""`
 
 	options   *common.Options
 	transport network.InternalTransport

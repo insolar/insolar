@@ -39,9 +39,9 @@ type ChallengeResponseController interface {
 }
 
 type challengeResponseController struct {
-	SessionManager SessionManager           `inject:"subcomponent"`
-	Cryptography   core.CryptographyService `inject:"subcomponent"`
-	NodeKeeper     network.NodeKeeper       `inject:"subcomponent"`
+	SessionManager SessionManager           `inject:""`
+	Cryptography   core.CryptographyService `inject:""`
+	NodeKeeper     network.NodeKeeper       `inject:""`
 
 	options   *common.Options
 	transport network.InternalTransport

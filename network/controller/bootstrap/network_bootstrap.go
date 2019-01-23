@@ -35,12 +35,12 @@ type NetworkBootstrapper interface {
 }
 
 type networkBootstrapper struct {
-	Certificate         core.Certificate            `inject:"subcomponent"`
-	Bootstrapper        Bootstrapper                `inject:"subcomponent"`
-	NodeKeeper          network.NodeKeeper          `inject:"subcomponent"`
-	SessionManager      SessionManager              `inject:"subcomponent"`
-	AuthController      AuthorizationController     `inject:"subcomponent"`
-	ChallengeController ChallengeResponseController `inject:"subcomponent"`
+	Certificate         core.Certificate            `inject:""`
+	Bootstrapper        Bootstrapper                `inject:""`
+	NodeKeeper          network.NodeKeeper          `inject:""`
+	SessionManager      SessionManager              `inject:""`
+	AuthController      AuthorizationController     `inject:""`
+	ChallengeController ChallengeResponseController `inject:""`
 }
 
 func (nb *networkBootstrapper) Bootstrap(ctx context.Context) error {

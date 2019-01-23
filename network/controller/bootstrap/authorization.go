@@ -40,9 +40,9 @@ type AuthorizationController interface {
 }
 
 type authorizationController struct {
-	NodeKeeper         network.NodeKeeper      `inject:"subcomponent"`
-	NetworkCoordinator core.NetworkCoordinator `inject:"subcomponent"`
-	SessionManager     SessionManager          `inject:"subcomponent"`
+	NodeKeeper         network.NodeKeeper      `inject:""`
+	NetworkCoordinator core.NetworkCoordinator `inject:""`
+	SessionManager     SessionManager          `inject:""`
 
 	options   *common.Options
 	transport network.InternalTransport

@@ -37,8 +37,8 @@ func NewSecondPhase() SecondPhase {
 
 type secondPhase struct {
 	NodeKeeper   network.NodeKeeper       `inject:""`
-	Calculator   merkle.Calculator        `inject:"subcomponent"`
-	Communicator Communicator             `inject:"subcomponent"`
+	Calculator   merkle.Calculator        `inject:""`
+	Communicator Communicator             `inject:""`
 	Cryptography core.CryptographyService `inject:""`
 }
 

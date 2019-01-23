@@ -46,8 +46,8 @@ func NewFirstPhase() FirstPhase {
 }
 
 type firstPhase struct {
-	Calculator   merkle.Calculator        `inject:"subcomponent"`
-	Communicator Communicator             `inject:"subcomponent"`
+	Calculator   merkle.Calculator        `inject:""`
+	Communicator Communicator             `inject:""`
 	Cryptography core.CryptographyService `inject:""`
 	NodeKeeper   network.NodeKeeper       `inject:""`
 	State        *FirstPhaseState

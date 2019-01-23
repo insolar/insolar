@@ -48,7 +48,7 @@ type RPCController interface {
 }
 
 type rpcController struct {
-	Scheme core.PlatformCryptographyScheme `inject:"subcomponent"`
+	Scheme core.PlatformCryptographyScheme `inject:""`
 
 	options     *common.Options
 	hostNetwork network.HostNetwork

@@ -30,8 +30,8 @@ import (
 
 // Controller contains network logic.
 type Controller struct {
-	Bootstrapper  bootstrap.NetworkBootstrapper `inject:"subcomponent"`
-	RPCController RPCController                 `inject:"subcomponent"`
+	Bootstrapper  bootstrap.NetworkBootstrapper `inject:""`
+	RPCController RPCController                 `inject:""`
 
 	network network.HostNetwork
 }

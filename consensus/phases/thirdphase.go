@@ -35,7 +35,7 @@ func NewThirdPhase() ThirdPhase {
 
 type thirdPhase struct {
 	Cryptography core.CryptographyService `inject:""`
-	Communicator Communicator             `inject:"subcomponent"`
+	Communicator Communicator             `inject:""`
 	NodeKeeper   network.NodeKeeper       `inject:""`
 
 	newActiveNodeList []core.Node

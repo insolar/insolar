@@ -30,7 +30,7 @@ type PulseController interface {
 }
 
 type pulseController struct {
-	PulseHandler network.PulseHandler `inject:"subcomponent"`
+	PulseHandler network.PulseHandler `inject:""`
 
 	hostNetwork  network.HostNetwork
 	routingTable network.RoutingTable
