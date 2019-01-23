@@ -37,7 +37,7 @@ func (cq *claimQueue) Pop() packets.ReferendumClaim {
 	ctx, span := instracer.StartSpan(context.Background(), "claimQueue.Pop wait lock")
 	cq.lock.Lock()
 	span.End()
-	ctx, span = instracer.StartSpan(ctx, "claimQueue.Pop lock")
+	_, span = instracer.StartSpan(ctx, "claimQueue.Pop lock")
 	defer span.End()
 	defer cq.lock.Unlock()
 
@@ -53,7 +53,7 @@ func (cq *claimQueue) Front() packets.ReferendumClaim {
 	ctx, span := instracer.StartSpan(context.Background(), "claimQueue.Front wait lock")
 	cq.lock.RLock()
 	span.End()
-	ctx, span = instracer.StartSpan(ctx, "claimQueue.Front lock")
+	_, span = instracer.StartSpan(ctx, "claimQueue.Front lock")
 	defer span.End()
 	defer cq.lock.RUnlock()
 
@@ -67,7 +67,7 @@ func (cq *claimQueue) Length() int {
 	ctx, span := instracer.StartSpan(context.Background(), "claimQueue.Length wait lock")
 	cq.lock.RLock()
 	span.End()
-	ctx, span = instracer.StartSpan(ctx, "claimQueue.Length lock")
+	_, span = instracer.StartSpan(ctx, "claimQueue.Length lock")
 	defer span.End()
 	defer cq.lock.RUnlock()
 
@@ -78,7 +78,7 @@ func (cq *claimQueue) Push(claim packets.ReferendumClaim) {
 	ctx, span := instracer.StartSpan(context.Background(), "claimQueue.Push wait lock")
 	cq.lock.Lock()
 	span.End()
-	ctx, span = instracer.StartSpan(ctx, "claimQueue.Push lock")
+	_, span = instracer.StartSpan(ctx, "claimQueue.Push lock")
 	defer span.End()
 	defer cq.lock.Unlock()
 
