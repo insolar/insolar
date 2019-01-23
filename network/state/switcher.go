@@ -23,8 +23,12 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/metrics"
+	"go.opencensus.io/trace"
 )
+
+var span *trace.Span
 
 //go:generate minimock -i github.com/insolar/insolar/network/state.messageBusLocker -o ./ -s _mock.go
 type messageBusLocker interface {
@@ -84,6 +88,7 @@ func (ns *NetworkSwitcher) Acquire(ctx context.Context) {
 	ns.counter = ns.counter + 1
 	if ns.counter-1 == 0 {
 		inslogger.FromContext(ctx).Info("Lock MB")
+		ctx, span = instracer.StartSpan(context.Background(), "GIL Lock (Lock MB)")
 		ns.MBLocker.Lock(ctx)
 	}
 }
@@ -97,6 +102,7 @@ func (ns *NetworkSwitcher) Release(ctx context.Context) {
 	ns.counter = ns.counter - 1
 	if ns.counter == 0 {
 		inslogger.FromContext(ctx).Info("Unlock MB")
+		span.End()
 		ns.MBLocker.Unlock(ctx)
 	}
 }

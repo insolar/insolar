@@ -35,6 +35,7 @@ import (
 	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/singleflight"
 )
@@ -539,6 +540,10 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 	logger := inslogger.FromContext(ctx)
 
 	var err error
+	ctx, spanGIL := instracer.StartSpan(context.Background(), "PulseManager.Set GIL Lock")
+	span.AddAttributes(
+		trace.Int64Attribute("pulse.PulseNumber", int64(newPulse.PulseNumber)),
+	)
 	m.GIL.Acquire(ctx)
 	m.PulseStorage.Lock()
 
@@ -547,6 +552,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 	if err != nil {
 		m.PulseStorage.Unlock()
 		m.GIL.Release(ctx)
+		spanGIL.End()
 		return errors.Wrap(err, "call of GetLatestPulseNumber failed")
 	}
 	currentPulse := storagePulse.Pulse
@@ -567,12 +573,14 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 	if persist {
 		if err := m.db.AddPulse(ctx, newPulse); err != nil {
 			m.GIL.Release(ctx)
+			spanGIL.End()
 			m.PulseStorage.Unlock()
 			return errors.Wrap(err, "call of AddPulse failed")
 		}
 		err = m.db.SetActiveNodes(newPulse.PulseNumber, m.NodeNet.GetActiveNodes())
 		if err != nil {
 			m.GIL.Release(ctx)
+			spanGIL.End()
 			m.PulseStorage.Unlock()
 			return errors.Wrap(err, "call of SetActiveNodes failed")
 		}
@@ -586,6 +594,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 		jets, err = m.processJets(ctx, currentPulse.PulseNumber, newPulse.PulseNumber)
 		if err != nil {
 			m.GIL.Release(ctx)
+			spanGIL.End()
 			return errors.Wrap(err, "failed to process jets")
 		}
 	}
@@ -594,6 +603,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 		m.prepareArtifactManagerMessageHandlerForNextPulse(ctx, newPulse, jets)
 	}
 	m.GIL.Release(ctx)
+	spanGIL.End()
 
 	if !persist {
 		return nil
@@ -691,10 +701,12 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse core.Pulse) 
 	m.db.RemoveActiveNodesUntil(pn)
 
 	_, err, _ := m.cleanupGroup.Do("lightcleanup", func() (interface{}, error) {
+		ctx, span := instracer.StartSpan(ctx, "pulse.cleanAsync")
 		startAsync := time.Now()
 		defer func() {
 			latency := time.Since(startAsync)
 			inslog.Debugf("cleanLightData db clean phase time spend=%v", latency)
+			span.End()
 		}()
 
 		// we are remove records from 'storageRecordsUtilPN' pulse number here
