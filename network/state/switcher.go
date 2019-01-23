@@ -23,7 +23,9 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/metrics"
+	"go.opencensus.io/trace"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/network/state.messageBusLocker -o ./ -s _mock.go
@@ -66,6 +68,11 @@ func (ns *NetworkSwitcher) OnPulse(ctx context.Context, pulse core.Pulse) error 
 	ns.stateLock.Lock()
 	defer ns.stateLock.Unlock()
 
+	ctx, span := instracer.StartSpan(ctx, "NetworkSwitcher.OnPulse")
+	span.AddAttributes(
+		trace.StringAttribute("NetworkSwitcher state: ", ns.state.String()),
+	)
+	defer span.End()
 	inslogger.FromContext(ctx).Infof("Current NetworkSwitcher state is: %s", ns.state)
 
 	if ns.SwitcherWorkAround.IsBootstrapped() && ns.state != core.CompleteNetworkState {
@@ -80,6 +87,8 @@ func (ns *NetworkSwitcher) OnPulse(ctx context.Context, pulse core.Pulse) error 
 
 // Acquire increases lock counter and locks message bus if it wasn't lock before
 func (ns *NetworkSwitcher) Acquire(ctx context.Context) {
+	ctx, span := instracer.StartSpan(ctx, "NetworkSwitcher.Acquire")
+	defer span.End()
 	inslogger.FromContext(ctx).Info("Call Acquire in NetworkSwitcher: ", ns.counter)
 	ns.counter = ns.counter + 1
 	if ns.counter-1 == 0 {
@@ -90,6 +99,8 @@ func (ns *NetworkSwitcher) Acquire(ctx context.Context) {
 
 // Release decreases lock counter and unlocks message bus if it wasn't lock by someone else
 func (ns *NetworkSwitcher) Release(ctx context.Context) {
+	ctx, span := instracer.StartSpan(ctx, "NetworkSwitcher.Release")
+	defer span.End()
 	inslogger.FromContext(ctx).Info("Call Release in NetworkSwitcher: ", ns.counter)
 	if ns.counter == 0 {
 		panic("Trying to unlock without locking")
