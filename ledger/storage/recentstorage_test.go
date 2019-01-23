@@ -195,7 +195,7 @@ func TestRecentStorageProvider_GetStorage(t *testing.T) {
 	for i := 0; i < 8; i++ {
 		go func() {
 			id := testutils.RandomJet()
-			storage := provider.GetStorage(id)
+			storage := provider.GetStorage(ctx, id)
 			require.NotNil(t, storage)
 			wg.Done()
 		}()

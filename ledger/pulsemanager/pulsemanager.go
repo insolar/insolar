@@ -312,7 +312,7 @@ func (m *PulseManager) getExecutorHotData(
 	dropSerialized []byte,
 ) (*message.HotData, error) {
 	logger := inslogger.FromContext(ctx)
-	recentStorage := m.RecentStorageProvider.GetStorage(jetID)
+	recentStorage := m.RecentStorageProvider.GetStorage(ctx, jetID)
 	recentObjectsIds := recentStorage.GetObjects()
 
 	recentObjects := map[core.RecordID]*message.HotIndex{}
@@ -394,7 +394,7 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse c
 			continue
 		}
 
-		m.RecentStorageProvider.GetStorage(jetID).DecreaseTTL(ctx)
+		m.RecentStorageProvider.GetStorage(ctx, jetID).DecreaseTTL(ctx)
 
 		info := jetInfo{id: jetID}
 		if indexToSplit == i && splitCount > 0 {
@@ -473,7 +473,7 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse c
 }
 
 func (m *PulseManager) rewriteHotData(ctx context.Context, fromJetID, toJetID core.RecordID) error {
-	recentStorage := m.RecentStorageProvider.GetStorage(fromJetID)
+	recentStorage := m.RecentStorageProvider.GetStorage(ctx, fromJetID)
 
 	for id := range recentStorage.GetObjects() {
 		idx, err := m.db.GetObjectIndex(ctx, fromJetID, &id, false)
@@ -506,7 +506,7 @@ func (m *PulseManager) rewriteHotData(ctx context.Context, fromJetID, toJetID co
 	}
 
 	inslogger.FromContext(ctx).Debugf("{LEAK} CloneStorage from - %v, to - %v", fromJetID, toJetID)
-	m.RecentStorageProvider.CloneStorage(fromJetID, toJetID)
+	m.RecentStorageProvider.CloneStorage(ctx, fromJetID, toJetID)
 
 	return nil
 }
@@ -619,18 +619,18 @@ func (m *PulseManager) postProcessJets(ctx context.Context, newPulse core.Pulse,
 			// No split happened.
 			if !jetInfo.mineNext {
 				logger.Debugf("[postProcessJets] clear recent storage for root jet - %v, pulse - %v", jetInfo.id, newPulse.PulseNumber)
-				m.RecentStorageProvider.GetStorage(jetInfo.id).ClearObjects(ctx)
+				m.RecentStorageProvider.RemoveStorage(ctx, jetInfo.id)
 			}
 		} else {
 			// Split happened.
-			m.RecentStorageProvider.GetStorage(jetInfo.id).ClearObjects(ctx)
+			m.RecentStorageProvider.RemoveStorage(ctx, jetInfo.id)
 			if !jetInfo.left.mineNext {
 				logger.Debugf("[postProcessJets] clear recent storage for left jet - %v, pulse - %v", jetInfo.left.id, newPulse.PulseNumber)
-				m.RecentStorageProvider.GetStorage(jetInfo.left.id).ClearObjects(ctx)
+				m.RecentStorageProvider.RemoveStorage(ctx, jetInfo.left.id)
 			}
 			if !jetInfo.right.mineNext {
 				logger.Debugf("[postProcessJets] clear recent storage for right jet - %v, pulse - %v", jetInfo.right.id, newPulse.PulseNumber)
-				m.RecentStorageProvider.GetStorage(jetInfo.right.id).ClearObjects(ctx)
+				m.RecentStorageProvider.RemoveStorage(ctx, jetInfo.right.id)
 			}
 		}
 	}
@@ -679,7 +679,7 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse core.Pulse) 
 		for jetID := range jetSyncState {
 			inslogger.FromContext(ctx).Debugf("Start light indexes cleanup, until pulse = %v (new=%v, delta=%v), jet = %v",
 				pn, newPulse.PulseNumber, delta, jetID.DebugString())
-			rmStat, err := m.db.RemoveAllForJetUntilPulse(ctx, jetID, pn, m.RecentStorageProvider.GetStorage(jetID))
+			rmStat, err := m.db.RemoveAllForJetUntilPulse(ctx, jetID, pn, m.RecentStorageProvider.GetStorage(ctx, jetID))
 			if err != nil {
 				inslogger.FromContext(ctx).Errorf("Error on light indexes cleanup, until pulse = %v, jet = %v: %v", pn, jetID.DebugString(), err)
 				continue
@@ -748,7 +748,7 @@ func (m *PulseManager) restoreGenesisRecentObjects(ctx context.Context) error {
 	}
 
 	jetID := *jet.NewID(0, nil)
-	recent := m.RecentStorageProvider.GetStorage(jetID)
+	recent := m.RecentStorageProvider.GetStorage(ctx, jetID)
 
 	return m.db.IterateIndexIDs(ctx, jetID, func(id core.RecordID) error {
 		if id.Pulse() == core.FirstPulseNumber {

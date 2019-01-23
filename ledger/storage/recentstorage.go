@@ -25,48 +25,41 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/ledger/recentstorage"
-	"github.com/insolar/insolar/ledger/storage/jet"
 	"go.opencensus.io/stats"
 )
 
 // RecentStorageProvider provides a recent storage for jet
 type RecentStorageProvider struct {
 	// TODO: @andreyromancev. 15.01.19. Use byte array for key.
-	storage    map[string]*RecentStorage
+	storage    map[core.RecordID]*RecentStorage
 	lock       sync.Mutex
 	DefaultTTL int
 }
 
 // NewRecentStorageProvider creates new provider
 func NewRecentStorageProvider(defaultTTL int) *RecentStorageProvider {
-	return &RecentStorageProvider{DefaultTTL: defaultTTL, storage: map[string]*RecentStorage{}}
+	return &RecentStorageProvider{DefaultTTL: defaultTTL, storage: map[core.RecordID]*RecentStorage{}}
 }
 
 // GetStorage returns a recent storage for jet
-func (p *RecentStorageProvider) GetStorage(jetID core.RecordID) recentstorage.RecentStorage {
+func (p *RecentStorageProvider) GetStorage(ctx context.Context, jetID core.RecordID) recentstorage.RecentStorage {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
-	_, prefix := jet.Jet(jetID)
-	k := string(prefix)
-	storage, ok := p.storage[k]
+	storage, ok := p.storage[jetID]
 	if !ok {
-		if storage, ok = p.storage[k]; !ok {
-			storage = NewRecentStorage(jetID, p.DefaultTTL)
-			p.storage[k] = storage
-		}
+		storage = NewRecentStorage(jetID, p.DefaultTTL)
+		p.storage[jetID] = storage
 	}
 	return storage
 }
 
 // CloneStorage clones a recent storage from one jet to another
-func (p *RecentStorageProvider) CloneStorage(fromJetID, toJetID core.RecordID) {
+func (p *RecentStorageProvider) CloneStorage(ctx context.Context, fromJetID, toJetID core.RecordID) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
-	_, fromPrefix := jet.Jet(fromJetID)
-	_, toPrefix := jet.Jet(toJetID)
-	fromStorage, ok := p.storage[string(fromPrefix)]
+	fromStorage, ok := p.storage[fromJetID]
 	if !ok {
 		return
 	}
@@ -89,7 +82,18 @@ func (p *RecentStorageProvider) CloneStorage(fromJetID, toJetID core.RecordID) {
 		}
 		toStorage.pendingRequests[objID] = clone
 	}
-	p.storage[string(toPrefix)] = toStorage
+	p.storage[toJetID] = toStorage
+}
+
+// RemoveStorage removes storage from provider
+func (p *RecentStorageProvider) RemoveStorage(ctx context.Context, id core.RecordID) {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
+	if storage, ok := p.storage[id]; ok {
+		storage.clearObjects(ctx)
+		delete(p.storage, id)
+	}
 }
 
 // RecentStorage is a base structure
@@ -214,7 +218,7 @@ func (r *RecentStorage) GetRequestsForObject(obj core.RecordID) []core.RecordID 
 	return results
 }
 
-// IsRecordIDCached check recordid inside caches
+// IsRecordIDCached checks recordID inside caches
 func (r *RecentStorage) IsRecordIDCached(obj core.RecordID) bool {
 	r.objectLock.Lock()
 	_, ok := r.recentObjects[obj]
@@ -230,25 +234,23 @@ func (r *RecentStorage) IsRecordIDCached(obj core.RecordID) bool {
 	return ok
 }
 
-// DecreaseTTL ttl and clear objects if their ttl is zero
+// DecreaseTTL decreases ttl and clears objects if their ttl is zero
 func (r *RecentStorage) DecreaseTTL(ctx context.Context) {
 	r.objectLock.Lock()
 	defer r.objectLock.Unlock()
-	inslogger.FromContext(ctx).Debugf("DecreaseTTL  length - %v, jet - %v, idst - %v", len(r.recentObjects), r.jetID.DebugString(), r.id)
+
 	for key, value := range r.recentObjects {
-		inslogger.FromContext(ctx).Debugf("DecreaseTTL before ttl - %v, key - %v, jet - %v, idst - %v", value.ttl, key, r.jetID.DebugString(), r.id)
 		value.ttl--
 		if value.ttl == 0 {
 			delete(r.recentObjects, key)
 			continue
 		}
 		r.recentObjects[key] = value
-		inslogger.FromContext(ctx).Debugf("DecreaseTTL after ttl - %v, key - %v, jet - %v, idst - %v", r.recentObjects[key].ttl, key, r.jetID.DebugString(), r.id)
 	}
 }
 
 // ClearObjects clears the whole cache
-func (r *RecentStorage) ClearObjects(ctx context.Context) {
+func (r *RecentStorage) clearObjects(ctx context.Context) {
 	r.objectLock.Lock()
 	defer r.objectLock.Unlock()
 
