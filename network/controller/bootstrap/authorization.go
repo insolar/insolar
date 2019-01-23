@@ -24,11 +24,13 @@ import (
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller/common"
 	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
 )
 
 // AuthorizationController is intended
@@ -82,6 +84,11 @@ func init() {
 func (ac *AuthorizationController) Authorize(ctx context.Context, discoveryNode *DiscoveryNode, cert core.AuthorizationCertificate) (SessionID, error) {
 	inslogger.FromContext(ctx).Infof("Authorizing on host: %s", discoveryNode)
 
+	ctx, span := instracer.StartSpan(ctx, "AuthorizationController.Authorize")
+	span.AddAttributes(
+		trace.StringAttribute("node", discoveryNode.Node.GetNodeRef().String()),
+	)
+	defer span.End()
 	serializedCert, err := certificate.Serialize(cert)
 	if err != nil {
 		return 0, errors.Wrap(err, "Error serializing certificate")
@@ -109,6 +116,11 @@ func (ac *AuthorizationController) Authorize(ctx context.Context, discoveryNode 
 func (ac *AuthorizationController) Register(ctx context.Context, discoveryNode *DiscoveryNode, sessionID SessionID) error {
 	inslogger.FromContext(ctx).Infof("Registering on host: %s", discoveryNode)
 
+	ctx, span := instracer.StartSpan(ctx, "AuthorizationController.Register")
+	span.AddAttributes(
+		trace.StringAttribute("node", discoveryNode.Node.GetNodeRef().String()),
+	)
+	defer span.End()
 	originClaim, err := ac.keeper.GetOriginClaim()
 	if err != nil {
 		return errors.Wrap(err, "[ Register ] failed to get origin claim")
