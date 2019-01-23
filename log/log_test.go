@@ -71,8 +71,9 @@ func TestLog_GlobalLogger(t *testing.T) {
 
 func TestLog_NewLog_Config(t *testing.T) {
 	invalidtests := map[string]configuration.Log{
-		"InvalidAdapter": configuration.Log{Level: "Debug", Adapter: "invalid"},
-		"InvalidLevel":   configuration.Log{Level: "Invalid", Adapter: "logrus"},
+		"InvalidAdapter":   configuration.Log{Level: "Debug", Adapter: "invalid", Formatter: "text"},
+		"InvalidLevel":     configuration.Log{Level: "Invalid", Adapter: "logrus", Formatter: "text"},
+		"InvalidFormatter": configuration.Log{Level: "Debug", Adapter: "logrus", Formatter: "invalid"},
 	}
 
 	for name, test := range invalidtests {
@@ -84,7 +85,7 @@ func TestLog_NewLog_Config(t *testing.T) {
 	}
 
 	validtests := map[string]configuration.Log{
-		"WithAdapter": configuration.Log{Level: "Debug", Adapter: "logrus"},
+		"WithAdapter": configuration.Log{Level: "Debug", Adapter: "logrus", Formatter: "text"},
 	}
 	for name, test := range validtests {
 		t.Run(name, func(t *testing.T) {
@@ -133,11 +134,13 @@ func TestLog_AddFields(t *testing.T) {
 
 	for _, tItem := range tt {
 		t.Run(tItem.name, func(t *testing.T) {
-			la := newLogrusAdapter()
+			la, err := newLogrusAdapter(configuration.NewLog())
+			assert.NoError(t, err)
+
 			var b bytes.Buffer
 			la.SetOutput(&b)
 
-			tItem.fieldfn(la).Error(errtxt1)
+			tItem.fieldfn(*la).Error(errtxt1)
 			la.Error(errtxt2)
 
 			var recitems []string

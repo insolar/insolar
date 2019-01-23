@@ -84,7 +84,7 @@ func TestContractRequester_SendRequest(t *testing.T) {
 		for k, v := range cReq.ResultMap {
 			v <- &message.ReturnResults{
 				Sequence: k,
-				Reply:   &reply.CallMethod{},
+				Reply:    &reply.CallMethod{},
 			}
 		}
 		cReq.ResultMutex.Unlock()
@@ -111,16 +111,21 @@ func TestContractRequester_SendRequest_RouteError(t *testing.T) {
 	mbm.MustRegisterMock.Return()
 	cReq.Start(ctx)
 
-	go func() {
-		for len(cReq.ResultMap) == 0 {
-			runtime.Gosched()
+	ifResultMapEmpty := func() bool {
+		cReq.ResultMutex.Lock()
+		defer cReq.ResultMutex.Unlock()
+		return len(cReq.ResultMap) == 0
+	}
 
+	go func() {
+		for ifResultMapEmpty() {
+			runtime.Gosched()
 		}
 		cReq.ResultMutex.Lock()
 		for k, v := range cReq.ResultMap {
 			v <- &message.ReturnResults{
 				Sequence: k,
-				Reply:   nil,
+				Reply:    nil,
 			}
 		}
 		cReq.ResultMutex.Unlock()

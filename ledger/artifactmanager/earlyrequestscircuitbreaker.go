@@ -39,13 +39,13 @@ type requestCircuitBreakerProvider struct {
 
 func (b *earlyRequestCircuitBreakerProvider) getBreaker(ctx context.Context, jetID core.RecordID) *requestCircuitBreakerProvider {
 	logger := inslogger.FromContext(ctx)
-	logger.Debugf("[breakermiddleware] [getBreaker] jetID - %v", jetID.JetIDString())
+	logger.Debugf("[breakermiddleware] [getBreaker] jetID - %v", jetID.DebugString())
 
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
 	if _, ok := b.breakers[jetID]; !ok {
-		logger.Debugf("[breakermiddleware] [getBreaker] create new  - %v", jetID.JetIDString())
+		logger.Debugf("[breakermiddleware] [getBreaker] create new  - %v", jetID.DebugString())
 		b.breakers[jetID] = &requestCircuitBreakerProvider{
 			hotDataChannel: make(chan struct{}),
 			timeoutChannel: make(chan struct{}),
@@ -63,7 +63,7 @@ func (b *earlyRequestCircuitBreakerProvider) onTimeoutHappened(ctx context.Conte
 	defer b.lock.Unlock()
 
 	for jetID, breaker := range b.breakers {
-		logger.Debugf("[breakermiddleware] [onTimeoutHappened] shutdown timeout channel for jetID - %v", jetID.JetIDString())
+		logger.Debugf("[breakermiddleware] [onTimeoutHappened] shutdown timeout channel for jetID - %v", jetID.DebugString())
 		close(breaker.timeoutChannel)
 	}
 
@@ -93,7 +93,7 @@ func (m *middleware) checkEarlyRequestBreaker(handler core.MessageHandler) core.
 
 		logger.Debugf(
 			"[breakermiddleware] [checkEarlyRequestBreaker] before pause of request with jet - %v, pulse - %v, type - %v",
-			jetID.JetIDString(),
+			jetID.DebugString(),
 			parcel.Pulse(),
 			parcel.Message().Type(),
 		)
@@ -102,7 +102,7 @@ func (m *middleware) checkEarlyRequestBreaker(handler core.MessageHandler) core.
 			logger.Debugf("[breakermiddleware] [checkEarlyRequestBreaker] before handler exec - %v", time.Now())
 			return handler(ctx, parcel)
 		case <-requestBreaker.timeoutChannel:
-			logger.Errorf("[breakermiddleware] [checkEarlyRequestBreaker] timeout happened for %v with pulse  %v", jetID.JetIDString(), parcel.Pulse())
+			logger.Errorf("[breakermiddleware] [checkEarlyRequestBreaker] timeout happened for %v with pulse  %v", jetID.DebugString(), parcel.Pulse())
 			return &reply.Error{ErrType: reply.ErrHotDataTimeout}, nil
 		}
 	}
@@ -116,17 +116,17 @@ func (m *middleware) closeEarlyRequestBreaker(handler core.MessageHandler) core.
 		hotDataMessage := parcel.Message().(*message.HotData)
 		jetID := hotDataMessage.Jet.Record()
 
-		logger.Debugf("[breakermiddleware] [closeEarlyRequestBreaker] hot data for jet happens - %v, pulse - %v", jetID.JetIDString(), parcel.Pulse())
+		logger.Debugf("[breakermiddleware] [closeEarlyRequestBreaker] hot data for jet happens - %v, pulse - %v", jetID.DebugString(), parcel.Pulse())
 		breaker := m.earlyRequestCircuitBreakerProvider.getBreaker(ctx, *jetID)
 		defer close(breaker.hotDataChannel)
 
-		logger.Debugf("[breakermiddleware] [closeEarlyRequestBreaker] before handler for jet - %v, pulse - %v", jetID.JetIDString(), parcel.Pulse())
+		logger.Debugf("[breakermiddleware] [closeEarlyRequestBreaker] before handler for jet - %v, pulse - %v", jetID.DebugString(), parcel.Pulse())
 		return handler(ctx, parcel)
 	}
 }
 
 func (m *middleware) closeEarlyRequestBreakerForJet(ctx context.Context, jetID core.RecordID) {
-	inslogger.FromContext(ctx).Debugf("[breakermiddleware] [closeEarlyRequestBreakerForJet] jetID - %v", jetID.JetIDString())
+	inslogger.FromContext(ctx).Debugf("[breakermiddleware] [closeEarlyRequestBreakerForJet] jetID - %v", jetID.DebugString())
 	breaker := m.earlyRequestCircuitBreakerProvider.getBreaker(ctx, jetID)
 	close(breaker.hotDataChannel)
 }

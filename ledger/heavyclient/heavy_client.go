@@ -83,7 +83,7 @@ func (c *JetClient) updateLeftPulsesMetrics(ctx context.Context) {
 	if len(c.leftPulses) > 0 {
 		pn = c.leftPulses[0]
 	}
-	ctx = insmetrics.InsertTag(ctx, tagJet, c.jetID.String())
+	ctx = insmetrics.InsertTag(ctx, tagJet, c.jetID.DebugString())
 	stats.Record(ctx,
 		statUnsyncedPulsesCount.M(int64(len(c.leftPulses))),
 		statFirstUnsyncedPulse.M(int64(pn)),
@@ -149,7 +149,7 @@ func (c *JetClient) runOnce(ctx context.Context) {
 	c.startOnce.Do(func() {
 		// TODO: reset TraceID from context, or just don't use context?
 		// (TraceID not meaningful in async sync loop)
-		ctx, cancel := context.WithCancel(ctx)
+		ctx, cancel := context.WithCancel(context.Background())
 		c.cancel = cancel
 		go c.syncloop(ctx)
 	})
@@ -225,6 +225,11 @@ func (c *JetClient) syncloop(ctx context.Context) {
 				continue
 			}
 			// TODO: write some info to dust - 14.Dec.2018 @nordicdyno
+		} else {
+			ctx = insmetrics.InsertTag(ctx, tagJet, c.jetID.DebugString())
+			stats.Record(ctx,
+				statSyncedPulsesCount.M(1),
+			)
 		}
 
 		finishpulse()

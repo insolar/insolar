@@ -5,6 +5,7 @@ INSGOCC = $(BIN_DIR)/insgocc
 PULSARD = pulsard
 INSGORUND = insgorund
 BENCHMARK = benchmark
+PULSEWATCHER = pulsewatcher
 EXPORTER = exporter
 APIREQUESTER = apirequester
 HEALTHCHECK = healthcheck
@@ -63,7 +64,7 @@ ensure:
 
 build:
 	mkdir -p $(BIN_DIR)
-	make $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(INSGORUND) $(HEALTHCHECK) $(BENCHMARK)
+	make $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(INSGORUND) $(HEALTHCHECK) $(BENCHMARK) $(PULSEWATCHER)
 
 $(INSOLARD):
 	go build -o $(BIN_DIR)/$(INSOLARD) -ldflags "${LDFLAGS}" cmd/insolard/*.go
@@ -82,6 +83,9 @@ $(INSGORUND):
 
 $(BENCHMARK):
 	go build -o $(BIN_DIR)/$(BENCHMARK) -ldflags "${LDFLAGS}" cmd/benchmark/*.go
+
+$(PULSEWATCHER):
+	go build -o $(BIN_DIR)/$(PULSEWATCHER) -ldflags "${LDFLAGS}" cmd/pulsewatcher/*.go
 
 $(APIREQUESTER):
 	go build -o $(BIN_DIR)/$(APIREQUESTER) -ldflags "${LDFLAGS}" cmd/apirequester/*.go

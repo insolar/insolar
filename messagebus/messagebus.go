@@ -169,7 +169,8 @@ func (mb *MessageBus) SendParcel(
 	currentPulse core.Pulse,
 	options *core.MessageSendOptions,
 ) (core.Reply, error) {
-	ctx, span := instracer.StartSpan(ctx, "MessageBus.SendParcel "+parcel.Type().String())
+	parcelType := parcel.Type().String()
+	ctx, span := instracer.StartSpan(ctx, "MessageBus.SendParcel "+parcelType)
 	defer span.End()
 
 	readBarrier(ctx, &mb.globalLock)
@@ -194,9 +195,11 @@ func (mb *MessageBus) SendParcel(
 	}
 
 	start := time.Now()
-	defer metrics.ParcelsTime.WithLabelValues(parcel.Type().String()).Observe(time.Since(start).Seconds())
+	defer func() {
+		metrics.ParcelsTime.WithLabelValues(parcelType).Observe(time.Since(start).Seconds())
+	}()
 
-	metrics.ParcelsSentTotal.WithLabelValues(parcel.Type().String()).Inc()
+	metrics.ParcelsSentTotal.WithLabelValues(parcelType).Inc()
 
 	if len(nodes) > 1 {
 		cascade := core.Cascade{
@@ -211,7 +214,7 @@ func (mb *MessageBus) SendParcel(
 	// Short path when sending to self node. Skip serialization
 	origin := mb.NodeNetwork.GetOrigin()
 	if nodes[0].Equal(origin.ID()) {
-		metrics.LocallyDeliveredParcelsTotal.WithLabelValues(parcel.Type().String()).Inc()
+		metrics.LocallyDeliveredParcelsTotal.WithLabelValues(parcelType).Inc()
 		return mb.doDeliver(parcel.Context(context.Background()), parcel)
 	}
 
