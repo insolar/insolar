@@ -170,7 +170,7 @@ func TestRecentObjectsIndex_ClearObjects(t *testing.T) {
 	}()
 	wg.Wait()
 
-	index.ClearObjects(ctx)
+	index.clearObjects(ctx)
 
 	require.Equal(t, 0, len(index.GetObjects()))
 }
@@ -195,7 +195,7 @@ func TestRecentStorageProvider_GetStorage(t *testing.T) {
 	for i := 0; i < 8; i++ {
 		go func() {
 			id := testutils.RandomJet()
-			storage := provider.GetStorage(ctx, id)
+			storage := provider.GetStorage(inslogger.TestContext(t), id)
 			require.NotNil(t, storage)
 			wg.Done()
 		}()

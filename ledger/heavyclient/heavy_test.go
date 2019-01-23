@@ -83,11 +83,10 @@ func sendToHeavy(t *testing.T, withretry bool) {
 
 	// Mock5: RecentStorageMock
 	recentMock := recentstorage.NewRecentStorageMock(t)
-	recentMock.ClearZeroTTLObjectsMock.Return()
 	recentMock.GetObjectsMock.Return(nil)
 	recentMock.GetRequestsMock.Return(nil)
-	recentMock.ClearObjectsMock.Return()
 	recentMock.AddObjectMock.Return()
+	recentMock.DecreaseTTLMock.Return()
 
 	// Mock6: JetCoordinatorMock
 	jcMock := testutils.NewJetCoordinatorMock(t)
@@ -187,10 +186,11 @@ func sendToHeavy(t *testing.T, withretry bool) {
 	pm.ArtifactManagerMessageHandler = artifactManagerMessageHandlerMock
 
 	providerMock := recentstorage.NewProviderMock(t)
-	providerMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
+	providerMock.GetStorageFunc = func(ctx context.Context, p core.RecordID) (r recentstorage.RecentStorage) {
 		return recentMock
 	}
 	providerMock.CloneStorageMock.Return()
+	providerMock.RemoveStorageMock.Return()
 	pm.RecentStorageProvider = providerMock
 
 	pm.ActiveListSwapper = alsMock

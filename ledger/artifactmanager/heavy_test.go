@@ -56,7 +56,7 @@ func TestLedgerArtifactManager_handleHeavy(t *testing.T) {
 	mh := NewMessageHandler(db, nil, certificate)
 
 	provideMock := recentstorage.NewProviderMock(t)
-	provideMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
+	provideMock.GetStorageFunc = func(ctx context.Context, p core.RecordID) (r recentstorage.RecentStorage) {
 		return recentStorageMock
 	}
 
