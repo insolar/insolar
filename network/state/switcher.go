@@ -101,7 +101,7 @@ func (ns *NetworkSwitcher) Release(ctx context.Context) {
 	ns.counter = ns.counter - 1
 	if ns.counter == 0 {
 		inslogger.FromContext(ctx).Info("Unlock MB")
-		ns.span.End()
 		ns.MBLocker.Unlock(ctx)
+		ns.span.End()
 	}
 }
