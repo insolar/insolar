@@ -61,6 +61,7 @@ type PulseManager struct {
 	JetStorage                    storage.JetStorage                 `inject:""`
 	ObjectStorage                 storage.ObjectStorage              `inject:""`
 	storage.ActiveNodesStorage    `inject:""`
+	storage.PulseTracker          `inject:""`
 
 	// TODO: move clients pool to component - @nordicdyno - 18.Dec.2018
 	syncClientsPool *heavyclient.Pool
@@ -549,7 +550,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 	m.PulseStorage.Lock()
 
 	// FIXME: @andreyromancev. 17.12.18. return core.Pulse here.
-	storagePulse, err := m.db.GetLatestPulse(ctx)
+	storagePulse, err := m.PulseTracker.GetLatestPulse(ctx)
 	if err != nil {
 		m.PulseStorage.Unlock()
 		m.GIL.Release(ctx)
@@ -572,7 +573,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 	// TODO: fix network consensus and uncomment this (after NETD18-74)
 	// m.ActiveListSwapper.MoveSyncToActive()
 	if persist {
-		if err := m.db.AddPulse(ctx, newPulse); err != nil {
+		if err := m.PulseTracker.AddPulse(ctx, newPulse); err != nil {
 			m.GIL.Release(ctx)
 			spanGIL.End()
 			m.PulseStorage.Unlock()
@@ -688,7 +689,7 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse core.Pulse) 
 
 	pn := newPulse.PulseNumber
 	for i := 0; i <= delta; i++ {
-		prevPulse, err := m.db.GetPreviousPulse(ctx, pn)
+		prevPulse, err := m.PulseTracker.GetPreviousPulse(ctx, pn)
 		if err != nil {
 			inslogger.FromContext(ctx).Errorf("Can't get previous Nth %v pulse by pulse number: %v", i, pn)
 			return

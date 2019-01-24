@@ -55,6 +55,7 @@ type MessageHandler struct {
 	JetStorage                 storage.JetStorage              `inject:""`
 	ObjectStorage              storage.ObjectStorage           `inject:""`
 	storage.ActiveNodesStorage `inject:""`
+	storage.PulseTracker       `inject:""`
 
 	db             *storage.DB
 	certificate    core.Certificate
@@ -1261,7 +1262,7 @@ func (h *MessageHandler) fetchActualJetFromOtherNodes(
 func (h *MessageHandler) otherNodesForPrevPulse(
 	ctx context.Context, pulse core.PulseNumber,
 ) ([]core.Node, error) {
-	prevPulse, err := h.db.GetPreviousPulse(ctx, pulse)
+	prevPulse, err := h.PulseTracker.GetPreviousPulse(ctx, pulse)
 	if err != nil {
 		return nil, err
 	}
@@ -1294,11 +1295,11 @@ func (h *MessageHandler) otherNodesForPrevPulse(
 func (h *MessageHandler) isBeyondLimit(
 	ctx context.Context, currentPN, targetPN core.PulseNumber,
 ) (bool, error) {
-	currentPulse, err := h.db.GetPulse(ctx, currentPN)
+	currentPulse, err := h.PulseTracker.GetPulse(ctx, currentPN)
 	if err != nil {
 		return false, errors.Wrapf(err, "failed to fetch pulse %v", currentPN)
 	}
-	targetPulse, err := h.db.GetPulse(ctx, targetPN)
+	targetPulse, err := h.PulseTracker.GetPulse(ctx, targetPN)
 	if err != nil {
 		return false, errors.Wrapf(err, "failed to fetch pulse %v", targetPN)
 	}

@@ -258,18 +258,18 @@ func backoffFromConfig(bconf configuration.Backoff) *backoff.Backoff {
 	}
 }
 
-func isPulseNumberOutdated(ctx context.Context, db *storage.DB, pstore core.PulseStorage, pn core.PulseNumber, delta int) bool {
+func isPulseNumberOutdated(ctx context.Context, pulseTracker storage.PulseTracker, pstore core.PulseStorage, pn core.PulseNumber, delta int) bool {
 	current, err := pstore.Current(ctx)
 	if err != nil {
 		panic(err)
 	}
 
-	currentPulse, err := db.GetPulse(ctx, current.PulseNumber)
+	currentPulse, err := pulseTracker.GetPulse(ctx, current.PulseNumber)
 	if err != nil {
 		panic(err)
 	}
 
-	pnPulse, err := db.GetPulse(ctx, pn)
+	pnPulse, err := pulseTracker.GetPulse(ctx, pn)
 	if err != nil {
 		inslogger.FromContext(ctx).Errorf("Can't get pulse by pulse number: %v", pn)
 		return true
