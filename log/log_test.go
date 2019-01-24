@@ -18,6 +18,7 @@ package log
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"os"
 	"testing"
@@ -162,4 +163,21 @@ func TestLog_AddFields(t *testing.T) {
 			assert.NotContains(t, recitems[1], fieldvalue)
 		})
 	}
+}
+
+type myStringerType struct {
+	s string
+}
+
+func (m *myStringerType) String() string {
+	return m.s
+}
+
+func TestLog_toString(t *testing.T) {
+	assert.Equal(t, "", toString(""))
+	assert.Equal(t, "", toString())
+	assert.Equal(t, "test", toString("test"))
+	assert.Equal(t, "error text", toString(errors.New("error text")))
+	assert.Equal(t, "myString", toString(&myStringerType{s: "myString"}))
+	assert.Equal(t, " invalid argument ", toString(5))
 }
