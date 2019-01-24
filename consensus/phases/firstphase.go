@@ -52,10 +52,10 @@ type FirstPhase interface {
 }
 
 func NewFirstPhase() FirstPhase {
-	return &firstPhase{}
+	return &FirstPhaseImpl{}
 }
 
-type firstPhase struct {
+type FirstPhaseImpl struct {
 	Calculator   merkle.Calculator        `inject:""`
 	Communicator Communicator             `inject:""`
 	Cryptography core.CryptographyService `inject:""`
@@ -63,7 +63,7 @@ type firstPhase struct {
 }
 
 // Execute do first phase
-func (fp *firstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPhaseState, error) {
+func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPhaseState, error) {
 	entry := &merkle.PulseEntry{Pulse: pulse}
 	logger := inslogger.FromContext(ctx)
 
@@ -180,7 +180,7 @@ func (fp *firstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 	}, nil
 }
 
-func (fp *firstPhase) checkPacketSignature(packet *packets.Phase1Packet, recordRef core.RecordRef) error {
+func (fp *FirstPhaseImpl) checkPacketSignature(packet *packets.Phase1Packet, recordRef core.RecordRef) error {
 	if fp.NodeKeeper.GetState() == network.Waiting {
 		return fp.checkPacketSignatureFromClaim(packet, recordRef)
 	}
@@ -193,7 +193,7 @@ func (fp *firstPhase) checkPacketSignature(packet *packets.Phase1Packet, recordR
 	return packet.Verify(fp.Cryptography, key)
 }
 
-func (fp *firstPhase) checkPacketSignatureFromClaim(packet *packets.Phase1Packet, recordRef core.RecordRef) error {
+func (fp *FirstPhaseImpl) checkPacketSignatureFromClaim(packet *packets.Phase1Packet, recordRef core.RecordRef) error {
 	announceClaim := packet.GetAnnounceClaim()
 	if announceClaim == nil {
 		return errors.New("could not find announce claim")
@@ -223,7 +223,7 @@ func detectSparseBitsetLength(claims map[core.RecordRef][]packets.ReferendumClai
 	return 0, errors.New("no announce claims were received")
 }
 
-func (fp *firstPhase) filterClaims(nodeID core.RecordRef, claims []packets.ReferendumClaim) []packets.ReferendumClaim {
+func (fp *FirstPhaseImpl) filterClaims(nodeID core.RecordRef, claims []packets.ReferendumClaim) []packets.ReferendumClaim {
 	result := make([]packets.ReferendumClaim, 0)
 	for _, claim := range claims {
 		signedClaim, ok := claim.(packets.SignedClaim)
@@ -243,7 +243,7 @@ func (fp *firstPhase) filterClaims(nodeID core.RecordRef, claims []packets.Refer
 	return result
 }
 
-func (fp *firstPhase) checkClaimSignature(claim packets.SignedClaim) error {
+func (fp *FirstPhaseImpl) checkClaimSignature(claim packets.SignedClaim) error {
 	key, err := claim.GetPublicKey()
 	if err != nil {
 		return errors.Wrap(err, "[ checkClaimSignature ] Failed to import a key")

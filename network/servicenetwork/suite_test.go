@@ -347,9 +347,9 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	cfg.Pulsar.PulseTime = 5000 // pulse 5 sec for faster tests
 	cfg.Host.Transport.Address = node.host
 
-	scheme := platformpolicy.NewPlatformCryptographyScheme()
 	node.componentManager = &component.Manager{}
-	serviceNetwork, err := NewServiceNetwork(cfg, scheme, node.componentManager, false)
+	node.componentManager.Register(platformpolicy.NewPlatformCryptographyScheme())
+	serviceNetwork, err := NewServiceNetwork(cfg, node.componentManager, false)
 	s.NoError(err)
 
 	pulseStorageMock := testutils.NewPulseStorageMock(s.T())

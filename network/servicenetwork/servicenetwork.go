@@ -66,8 +66,8 @@ type ServiceNetwork struct {
 }
 
 // NewServiceNetwork returns a new ServiceNetwork.
-func NewServiceNetwork(conf configuration.Configuration, scheme core.PlatformCryptographyScheme, rootCm *component.Manager, isGenesis bool) (*ServiceNetwork, error) {
-	serviceNetwork := &ServiceNetwork{cm: component.NewManager(rootCm), cfg: conf, CryptographyScheme: scheme, isGenesis: isGenesis, skip: conf.Service.Skip}
+func NewServiceNetwork(conf configuration.Configuration, rootCm *component.Manager, isGenesis bool) (*ServiceNetwork, error) {
+	serviceNetwork := &ServiceNetwork{cm: component.NewManager(rootCm), cfg: conf, isGenesis: isGenesis, skip: conf.Service.Skip}
 	return serviceNetwork, nil
 }
 

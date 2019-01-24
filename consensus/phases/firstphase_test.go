@@ -31,7 +31,7 @@ import (
 )
 
 func TestFirstPhase_HandlePulse(t *testing.T) {
-	firstPhase := &firstPhase{}
+	firstPhase := &FirstPhaseImpl{}
 	nodeKeeperMock := network.NewNodeKeeperMock(t)
 	pulseCalculatorMock := merkle.NewCalculatorMock(t)
 	communicatorMock := NewCommunicatorMock(t)

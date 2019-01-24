@@ -119,7 +119,7 @@ func initComponents(
 	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner)
 	checkError(ctx, err, "failed to start LogicRunner")
 
-	nw, err := servicenetwork.NewServiceNetwork(cfg, platformCryptographyScheme, &cm, isGenesis)
+	nw, err := servicenetwork.NewServiceNetwork(cfg, &cm, isGenesis)
 	checkError(ctx, err, "failed to start Network")
 
 	delegationTokenFactory := delegationtoken.NewDelegationTokenFactory()

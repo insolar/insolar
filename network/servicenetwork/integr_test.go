@@ -187,8 +187,8 @@ func setCommunicatorMock(nodes []*networkNode, opt CommunicatorTestOpt) {
 	}
 	// TODO: make these set operations thread-safe somehow (race detector does not like this code)
 	for i := 1; i <= timedOutNodesCount; i++ {
-		comm := nodes[i].serviceNetwork.PhaseManager.(*phaseManagerWrapper).original.(*phases.Phases).FirstPhase.Communicator
+		comm := nodes[i].serviceNetwork.PhaseManager.(*phaseManagerWrapper).original.(*phases.Phases).FirstPhase.(*phases.FirstPhaseImpl).Communicator
 		wrapper := &CommunicatorMock{communicator: comm, ignoreFrom: ref, testOpt: opt}
-		nodes[i].serviceNetwork.PhaseManager.(*phaseManagerWrapper).original.(*phases.Phases).FirstPhase.Communicator = wrapper
+		nodes[i].serviceNetwork.PhaseManager.(*phaseManagerWrapper).original.(*phases.Phases).FirstPhase.(*phases.FirstPhaseImpl).Communicator = wrapper
 	}
 }
