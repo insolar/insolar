@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
@@ -34,28 +33,26 @@ import (
 // JetCoordinator is responsible for all jet interactions
 type JetCoordinator struct {
 	db                         *storage.DB
-	roleCounts                 map[core.DynamicRole]int
 	NodeNet                    core.NodeNetwork                `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 	PulseStorage               core.PulseStorage               `inject:""`
 }
 
 // NewJetCoordinator creates new coordinator instance.
-func NewJetCoordinator(db *storage.DB, conf configuration.JetCoordinator) *JetCoordinator {
+func NewJetCoordinator(db *storage.DB) *JetCoordinator {
 	jc := JetCoordinator{db: db}
-	jc.loadConfig(conf)
 
 	return &jc
 }
 
-func (jc *JetCoordinator) loadConfig(conf configuration.JetCoordinator) {
-	jc.roleCounts = map[core.DynamicRole]int{}
+// Hardcoded roles count for validation and execution
+const (
+	VirtualValidatorCount  = 3
+	MaterialValidatorCount = 3
 
-	for intRole, count := range conf.RoleCounts {
-		role := core.DynamicRole(intRole)
-		jc.roleCounts[role] = count
-	}
-}
+	VirtualExecutorCount  = 1
+	MaterialExecutorCount = 1
+)
 
 // Me returns current node.
 func (jc *JetCoordinator) Me() core.RecordRef {
@@ -131,7 +128,7 @@ func (jc *JetCoordinator) QueryRole(
 func (jc *JetCoordinator) VirtualExecutorForObject(
 	ctx context.Context, objID core.RecordID, pulse core.PulseNumber,
 ) (*core.RecordRef, error) {
-	nodes, err := jc.virtualsForObject(ctx, objID, pulse, 1)
+	nodes, err := jc.virtualsForObject(ctx, objID, pulse, VirtualExecutorCount)
 	if err != nil {
 		return nil, err
 	}
@@ -141,21 +138,19 @@ func (jc *JetCoordinator) VirtualExecutorForObject(
 func (jc *JetCoordinator) VirtualValidatorsForObject(
 	ctx context.Context, objID core.RecordID, pulse core.PulseNumber,
 ) ([]core.RecordRef, error) {
-	count, ok := jc.roleCounts[core.DynamicRoleVirtualValidator]
-	if !ok {
-		return nil, errors.New(fmt.Sprintf("no candidates for role %d", core.DynamicRoleVirtualValidator))
-	}
-	nodes, err := jc.virtualsForObject(ctx, objID, pulse, count+1)
+	nodes, err := jc.virtualsForObject(ctx, objID, pulse, VirtualValidatorCount+VirtualExecutorCount)
 	if err != nil {
 		return nil, err
 	}
-	return nodes[1:], nil
+	// Skipping `VirtualExecutorCount` for validators
+	// because it will be selected as the executor(s) for the same pulse.
+	return nodes[VirtualExecutorCount:], nil
 }
 
 func (jc *JetCoordinator) LightExecutorForJet(
 	ctx context.Context, jetID core.RecordID, pulse core.PulseNumber,
 ) (*core.RecordRef, error) {
-	nodes, err := jc.lightMaterialsForJet(ctx, jetID, pulse, 1)
+	nodes, err := jc.lightMaterialsForJet(ctx, jetID, pulse, MaterialExecutorCount)
 	if err != nil {
 		return nil, err
 	}
@@ -171,15 +166,13 @@ func (jc *JetCoordinator) LightExecutorForJet(
 func (jc *JetCoordinator) LightValidatorsForJet(
 	ctx context.Context, jetID core.RecordID, pulse core.PulseNumber,
 ) ([]core.RecordRef, error) {
-	count, ok := jc.roleCounts[core.DynamicRoleLightValidator]
-	if !ok {
-		return nil, errors.New(fmt.Sprintf("no candidates for role %d", core.DynamicRoleLightValidator))
-	}
-	nodes, err := jc.lightMaterialsForJet(ctx, jetID, pulse, count+1)
+	nodes, err := jc.lightMaterialsForJet(ctx, jetID, pulse, MaterialValidatorCount+MaterialExecutorCount)
 	if err != nil {
 		return nil, err
 	}
-	return nodes[1:], nil
+	// Skipping `MaterialExecutorCount` for validators
+	// because it will be selected as the executor(s) for the same pulse.
+	return nodes[MaterialExecutorCount:], nil
 }
 
 func (jc *JetCoordinator) LightExecutorForObject(
