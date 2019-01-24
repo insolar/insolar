@@ -22,6 +22,7 @@ import (
 	"context"
 	"encoding/gob"
 	"net"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -1010,32 +1011,22 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 
 	lr.stateMutex.Unlock()
 
-	var errorCounter int
 	var sendWg sync.WaitGroup
 	ctx, spanMessages := instracer.StartSpan(ctx, "pulse.logicrunner sending messages")
+	spanMessages.AddAttributes(trace.StringAttribute("numMessages", strconv.Itoa(len(messages))))
+
 	if len(messages) > 0 {
-		errChan := make(chan error, len(messages))
 		sendWg.Add(len(messages))
 
 		for _, msg := range messages {
-			go lr.sendOnPulseMessagesAsync(ctx, msg, &sendWg, &errChan)
-		}
-
-		sendWg.Wait()
-		close(errChan)
-
-		for err := range errChan {
-			if err != nil {
-				errorCounter++
-				inslogger.FromContext(ctx).Error(errors.Wrap(err, "error while sending validation data on pulse"))
-			}
-		}
-
-		if errorCounter > 0 {
-			return errors.New("error while sending executor data in OnPulse, see logs for more information")
+			go lr.sendOnPulseMessagesAsync(ctx, msg, &sendWg)
 		}
 	}
-	spanMessages.End()
+
+	go func() {
+		sendWg.Wait()
+		spanMessages.End()
+	}()
 
 	return nil
 }
@@ -1077,12 +1068,12 @@ func (lr *LogicRunner) HandleStillExecutingMessage(
 	return &reply.OK{}, nil
 }
 
-func (lr *LogicRunner) sendOnPulseMessagesAsync(ctx context.Context, msg core.Message, sendWg *sync.WaitGroup, errChan *chan error) {
+func (lr *LogicRunner) sendOnPulseMessagesAsync(ctx context.Context, msg core.Message, sendWg *sync.WaitGroup) {
 	defer sendWg.Done()
-	ctx, span := instracer.StartSpan(ctx, "pulse.sendOnPulseMessagesAsync")
 	_, err := lr.MessageBus.Send(ctx, msg, nil)
-	*errChan <- err
-	span.End()
+	if err != nil {
+		inslogger.FromContext(ctx).Error(errors.Wrap(err, "error while sending validation data on pulse"))
+	}
 }
 func convertQueueToMessageQueue(queue []ExecutionQueueElement) []message.ExecutionQueueElement {
 	mq := make([]message.ExecutionQueueElement, 0)
