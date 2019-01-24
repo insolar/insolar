@@ -29,7 +29,7 @@ type RecordInfo struct {
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = core.NewRefFromBase58("11112rJdjdVwCCkc9tvLdJwKkV16m6iryEJ7tWLNRPK.11111111111111111111111111111111")
+var PrototypeReference, _ = core.NewRefFromBase58("11112KF5hHpUWJa1pfPHejhgjA24pNaXfPjDfkz7qxC.11111111111111111111111111111111")
 
 // NodeRecord holds proxy type
 type NodeRecord struct {
