@@ -72,35 +72,33 @@ func NewMessageHandler(
 	}
 }
 
-func checkJetAndInstrumentWithBreaker(name string, m *middleware, handler core.MessageHandler) core.MessageHandler {
-	return instrumentHandler(name, m.checkJet(m.checkEarlyRequestBreaker(handler)))
-}
+func instrumentHandler(name string) Handler {
+	return func(handler core.MessageHandler) core.MessageHandler {
+		return func(ctx context.Context, p core.Parcel) (core.Reply, error) {
+			// TODO: add tags to log
+			inslog := inslogger.FromContext(ctx)
+			start := time.Now()
+			code := "2xx"
+			ctx = insmetrics.InsertTag(ctx, tagMethod, name)
 
-func instrumentHandler(name string, handler core.MessageHandler) core.MessageHandler {
-	return func(ctx context.Context, p core.Parcel) (core.Reply, error) {
-		// TODO: add tags to log
-		inslog := inslogger.FromContext(ctx)
-		start := time.Now()
-		code := "2xx"
-		ctx = insmetrics.InsertTag(ctx, tagMethod, name)
+			repl, err := handler(ctx, p)
 
-		repl, err := handler(ctx, p)
+			latency := time.Since(start)
+			if err != nil {
+				code = "5xx"
+				inslog.Errorf("AM's handler %v returns error: %v", name, err)
+			}
+			inslog.Debugf("measured time of AM method %v is %v", name, latency)
 
-		latency := time.Since(start)
-		if err != nil {
-			code = "5xx"
-			inslog.Errorf("AM's handler %v returns error: %v", name, err)
+			ctx = insmetrics.ChangeTags(
+				ctx,
+				tag.Insert(tagMethod, name),
+				tag.Insert(tagResult, code),
+			)
+			stats.Record(ctx, statCalls.M(1), statLatency.M(latency.Nanoseconds()/1e6))
+
+			return repl, err
 		}
-		inslog.Debugf("measured time of AM method %v is %v", name, latency)
-
-		ctx = insmetrics.ChangeTags(
-			ctx,
-			tag.Insert(tagMethod, name),
-			tag.Insert(tagResult, code),
-		)
-		stats.Record(ctx, statCalls.M(1), statLatency.M(latency.Nanoseconds()/1e6))
-
-		return repl, err
 	}
 }
 
@@ -126,54 +124,139 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 
 func (h *MessageHandler) setHandlersForLight(m *middleware) {
 	// Generic.
-	h.Bus.MustRegister(core.TypeGetCode, h.handleGetCode)
-	h.Bus.MustRegister(core.TypeGetObject, checkJetAndInstrumentWithBreaker("handleGetObject", m, h.handleGetObject))
-	h.Bus.MustRegister(core.TypeGetDelegate, checkJetAndInstrumentWithBreaker("handleGetDelegate", m, h.handleGetDelegate))
-	h.Bus.MustRegister(core.TypeGetChildren, checkJetAndInstrumentWithBreaker("handleGetChildren", m, h.handleGetChildren))
-	h.Bus.MustRegister(core.TypeSetRecord, checkJetAndInstrumentWithBreaker("handleSetRecord", m, m.checkHeavySync(h.handleSetRecord)))
-	h.Bus.MustRegister(core.TypeUpdateObject, checkJetAndInstrumentWithBreaker("handleUpdateObject", m, m.checkHeavySync(h.handleUpdateObject)))
-	h.Bus.MustRegister(core.TypeRegisterChild, checkJetAndInstrumentWithBreaker("handleRegisterChild", m, m.checkHeavySync(h.handleRegisterChild)))
-	h.Bus.MustRegister(core.TypeSetBlob, checkJetAndInstrumentWithBreaker("handleSetBlob", m, m.checkHeavySync(h.handleSetBlob)))
-	h.Bus.MustRegister(core.TypeGetObjectIndex, checkJetAndInstrumentWithBreaker("handleGetObjectIndex", m, h.handleGetObjectIndex))
-	h.Bus.MustRegister(core.TypeGetPendingRequests, checkJetAndInstrumentWithBreaker("handleHasPendingRequests", m, h.handleHasPendingRequests))
-	h.Bus.MustRegister(core.TypeGetJet, instrumentHandler("handleGetJet", h.handleGetJet))
-	h.Bus.MustRegister(core.TypeHotRecords, instrumentHandler("handleHotRecords", m.closeEarlyRequestBreaker(h.handleHotRecords)))
+	h.Bus.MustRegister(core.TypeGetCode, Build(h.handleGetCode))
+
+	h.Bus.MustRegister(core.TypeGetObject,
+		Build(h.handleGetObject,
+			instrumentHandler("handleGetObject"),
+			m.checkJet,
+			m.checkEarlyRequestBreaker))
+
+	h.Bus.MustRegister(core.TypeGetDelegate,
+		Build(h.handleGetDelegate,
+			instrumentHandler("handleGetDelegate"),
+			m.checkJet,
+			m.checkEarlyRequestBreaker))
+
+	h.Bus.MustRegister(core.TypeGetChildren,
+		Build(h.handleGetChildren,
+			instrumentHandler("handleGetChildren"),
+			m.checkJet,
+			m.checkEarlyRequestBreaker))
+
+	h.Bus.MustRegister(core.TypeSetRecord,
+		Build(h.handleSetRecord,
+			instrumentHandler("handleSetRecord"),
+			m.checkJet,
+			m.checkEarlyRequestBreaker))
+
+	h.Bus.MustRegister(core.TypeUpdateObject,
+		Build(h.handleUpdateObject,
+			instrumentHandler("handleUpdateObject"),
+			m.checkJet,
+			m.checkEarlyRequestBreaker))
+
+	h.Bus.MustRegister(core.TypeRegisterChild,
+		Build(h.handleRegisterChild,
+			instrumentHandler("handleRegisterChild"),
+			m.checkJet,
+			m.checkEarlyRequestBreaker))
+
+	h.Bus.MustRegister(core.TypeSetBlob,
+		Build(h.handleSetBlob,
+			instrumentHandler("handleSetBlob"),
+			m.checkJet,
+			m.checkEarlyRequestBreaker))
+
+	h.Bus.MustRegister(core.TypeGetObjectIndex,
+		Build(h.handleGetObjectIndex,
+			instrumentHandler("handleGetObjectIndex"),
+			m.checkJet,
+			m.checkEarlyRequestBreaker))
+
+	h.Bus.MustRegister(core.TypeGetPendingRequests,
+		Build(h.handleHasPendingRequests,
+			instrumentHandler("handleHasPendingRequests"),
+			m.checkJet,
+			m.checkEarlyRequestBreaker))
+
+	h.Bus.MustRegister(core.TypeGetJet,
+		Build(h.handleGetJet,
+			instrumentHandler("handleGetJet")))
+
+	h.Bus.MustRegister(core.TypeHotRecords,
+		Build(h.handleHotRecords,
+			instrumentHandler("handleHotRecords"),
+			m.closeEarlyRequestBreaker))
 
 	// Validation.
-	h.Bus.MustRegister(core.TypeValidateRecord, m.checkJet(h.handleValidateRecord))
-	h.Bus.MustRegister(core.TypeValidationCheck, m.checkJet(h.handleValidationCheck))
-	h.Bus.MustRegister(core.TypeJetDrop, m.checkJet(h.handleJetDrop))
+	h.Bus.MustRegister(core.TypeValidateRecord,
+		Build(h.handleValidateRecord,
+			m.checkJet))
+
+	h.Bus.MustRegister(core.TypeValidationCheck,
+		Build(h.handleValidationCheck,
+			m.checkJet))
+
+	h.Bus.MustRegister(core.TypeJetDrop,
+		Build(h.handleJetDrop,
+			m.checkJet))
 }
 func (h *MessageHandler) setReplayHandlers(m *middleware) {
 	// Generic.
-	h.replayHandlers[core.TypeGetCode] = h.handleGetCode
-	h.replayHandlers[core.TypeGetObject] = m.checkJet(h.handleGetObject)
-	h.replayHandlers[core.TypeGetDelegate] = m.checkJet(h.handleGetDelegate)
-	h.replayHandlers[core.TypeGetChildren] = m.checkJet(h.handleGetChildren)
-	h.replayHandlers[core.TypeSetRecord] = m.checkJet(h.handleSetRecord)
-	h.replayHandlers[core.TypeUpdateObject] = m.checkJet(h.handleUpdateObject)
-	h.replayHandlers[core.TypeRegisterChild] = m.checkJet(h.handleRegisterChild)
-	h.replayHandlers[core.TypeSetBlob] = m.checkJet(h.handleSetBlob)
-	h.replayHandlers[core.TypeGetObjectIndex] = m.checkJet(h.handleGetObjectIndex)
-	h.replayHandlers[core.TypeGetPendingRequests] = m.checkJet(h.handleHasPendingRequests)
-	h.replayHandlers[core.TypeGetJet] = h.handleGetJet
+	h.replayHandlers[core.TypeGetCode] = Build(h.handleGetCode)
+	h.replayHandlers[core.TypeGetObject] = Build(h.handleGetObject, m.checkJet)
+	h.replayHandlers[core.TypeGetDelegate] = Build(h.handleGetDelegate, m.checkJet)
+	h.replayHandlers[core.TypeGetChildren] = Build(h.handleGetChildren, m.checkJet)
+	h.replayHandlers[core.TypeSetRecord] = Build(h.handleSetRecord, m.checkJet)
+	h.replayHandlers[core.TypeUpdateObject] = Build(h.handleUpdateObject, m.checkJet)
+	h.replayHandlers[core.TypeRegisterChild] = Build(h.handleRegisterChild, m.checkJet)
+	h.replayHandlers[core.TypeSetBlob] = Build(h.handleSetBlob, m.checkJet)
+	h.replayHandlers[core.TypeGetObjectIndex] = Build(h.handleGetObjectIndex, m.checkJet)
+	h.replayHandlers[core.TypeGetPendingRequests] = Build(h.handleHasPendingRequests, m.checkJet)
+	h.replayHandlers[core.TypeGetJet] = Build(h.handleGetJet)
 
 	// Validation.
-	h.replayHandlers[core.TypeValidateRecord] = m.checkJet(h.handleValidateRecord)
-	h.replayHandlers[core.TypeValidationCheck] = m.checkJet(h.handleValidationCheck)
+	h.replayHandlers[core.TypeValidateRecord] = Build(h.handleValidateRecord, m.checkJet)
+	h.replayHandlers[core.TypeValidationCheck] = Build(h.handleValidationCheck, m.checkJet)
 }
 func (h *MessageHandler) setHandlersForHeavy(m *middleware) {
 	// Heavy.
-	h.Bus.MustRegister(core.TypeHeavyStartStop, instrumentHandler("handleHeavyStartStop", h.handleHeavyStartStop))
-	h.Bus.MustRegister(core.TypeHeavyReset, instrumentHandler("handleHeavyReset", h.handleHeavyReset))
-	h.Bus.MustRegister(core.TypeHeavyPayload, instrumentHandler("handleHeavyPayload", h.handleHeavyPayload))
+	h.Bus.MustRegister(core.TypeHeavyStartStop,
+		Build(h.handleHeavyStartStop,
+			instrumentHandler("handleHeavyStartStop")))
+
+	h.Bus.MustRegister(core.TypeHeavyReset,
+		Build(h.handleHeavyReset,
+			instrumentHandler("handleHeavyReset")))
+
+	h.Bus.MustRegister(core.TypeHeavyPayload,
+		Build(h.handleHeavyPayload,
+			instrumentHandler("handleHeavyPayload")))
 
 	// Generic.
-	h.Bus.MustRegister(core.TypeGetCode, h.handleGetCode)
-	h.Bus.MustRegister(core.TypeGetObject, instrumentHandler("handleGetObject", m.zeroJetForHeavy(h.handleGetObject)))
-	h.Bus.MustRegister(core.TypeGetDelegate, instrumentHandler("handleGetDelegate", m.zeroJetForHeavy(h.handleGetDelegate)))
-	h.Bus.MustRegister(core.TypeGetChildren, instrumentHandler("handleGetChildren", m.zeroJetForHeavy(h.handleGetChildren)))
-	h.Bus.MustRegister(core.TypeGetObjectIndex, instrumentHandler("handleGetObjectIndex", m.zeroJetForHeavy(h.handleGetObjectIndex)))
+	h.Bus.MustRegister(core.TypeGetCode,
+		Build(h.handleGetCode))
+
+	h.Bus.MustRegister(core.TypeGetObject,
+		Build(h.handleGetObject,
+			instrumentHandler("handleGetObject"),
+			m.zeroJetForHeavy))
+
+	h.Bus.MustRegister(core.TypeGetDelegate,
+		Build(h.handleGetDelegate,
+			instrumentHandler("handleGetDelegate"),
+			m.zeroJetForHeavy))
+
+	h.Bus.MustRegister(core.TypeGetChildren,
+		Build(h.handleGetChildren,
+			instrumentHandler("handleGetChildren"),
+			m.zeroJetForHeavy))
+
+	h.Bus.MustRegister(core.TypeGetObjectIndex,
+		Build(h.handleGetObjectIndex,
+			instrumentHandler("handleGetObjectIndex"),
+			m.zeroJetForHeavy))
 }
 
 // ResetEarlyRequestCircuitBreaker throws timeouts at the end of a pulse
