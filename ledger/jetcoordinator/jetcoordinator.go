@@ -39,6 +39,7 @@ type JetCoordinator struct {
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 	PulseStorage               core.PulseStorage               `inject:""`
 	JetStorage                 storage.JetStorage              `inject:""`
+	storage.ActiveNodesStorage `inject:""`
 }
 
 // NewJetCoordinator creates new coordinator instance.
@@ -210,7 +211,7 @@ func (jc *JetCoordinator) Heavy(ctx context.Context, pulse core.PulseNumber) (*c
 	if err != nil {
 		return nil, errors.Wrapf(err, "[lightMaterialsForJet] failed to fetch pulse data for pulse %v", pulse)
 	}
-	candidates, err := jc.db.GetActiveNodesByRole(pulse, core.StaticRoleHeavyMaterial)
+	candidates, err := jc.ActiveNodesStorage.GetActiveNodesByRole(pulse, core.StaticRoleHeavyMaterial)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch active heavy nodes for pulse %v", pulse)
 	}
@@ -237,7 +238,7 @@ func (jc *JetCoordinator) virtualsForObject(
 		curp, _ := jc.PulseStorage.Current(ctx)
 		return nil, errors.Wrapf(err, "[virtualsForObject] failed to fetch pulse data for pulse %d (current pulse is %d)", pulse, curp.PulseNumber)
 	}
-	candidates, err := jc.db.GetActiveNodesByRole(pulse, core.StaticRoleVirtual)
+	candidates, err := jc.ActiveNodesStorage.GetActiveNodesByRole(pulse, core.StaticRoleVirtual)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch active virtual nodes for pulse %v", pulse)
 	}
@@ -261,7 +262,7 @@ func (jc *JetCoordinator) lightMaterialsForJet(
 	if err != nil {
 		return nil, errors.Wrapf(err, "[lightMaterialsForJet] failed to fetch pulse data for pulse %v", pulse)
 	}
-	candidates, err := jc.db.GetActiveNodesByRole(pulse, core.StaticRoleLightMaterial)
+	candidates, err := jc.ActiveNodesStorage.GetActiveNodesByRole(pulse, core.StaticRoleLightMaterial)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch active light nodes for pulse %v", pulse)
 	}

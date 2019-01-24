@@ -54,6 +54,7 @@ type MessageHandler struct {
 	PulseStorage               core.PulseStorage               `inject:""`
 	JetStorage                 storage.JetStorage              `inject:""`
 	ObjectStorage              storage.ObjectStorage           `inject:""`
+	storage.ActiveNodesStorage `inject:""`
 
 	db             *storage.DB
 	certificate    core.Certificate
@@ -1265,7 +1266,7 @@ func (h *MessageHandler) otherNodesForPrevPulse(
 		return nil, err
 	}
 
-	nodes, err := h.db.GetActiveNodesByRole(prevPulse.Pulse.PulseNumber, core.StaticRoleLightMaterial)
+	nodes, err := h.ActiveNodesStorage.GetActiveNodesByRole(prevPulse.Pulse.PulseNumber, core.StaticRoleLightMaterial)
 	if err != nil {
 		return nil, err
 	}

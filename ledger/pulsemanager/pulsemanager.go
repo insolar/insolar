@@ -60,6 +60,7 @@ type PulseManager struct {
 	ArtifactManagerMessageHandler core.ArtifactManagerMessageHandler `inject:""`
 	JetStorage                    storage.JetStorage                 `inject:""`
 	ObjectStorage                 storage.ObjectStorage              `inject:""`
+	storage.ActiveNodesStorage    `inject:""`
 
 	// TODO: move clients pool to component - @nordicdyno - 18.Dec.2018
 	syncClientsPool *heavyclient.Pool
@@ -577,7 +578,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 			m.PulseStorage.Unlock()
 			return errors.Wrap(err, "call of AddPulse failed")
 		}
-		err = m.db.SetActiveNodes(newPulse.PulseNumber, m.NodeNet.GetActiveNodes())
+		err = m.ActiveNodesStorage.SetActiveNodes(newPulse.PulseNumber, m.NodeNet.GetActiveNodes())
 		if err != nil {
 			m.GIL.Release(ctx)
 			spanGIL.End()
@@ -699,7 +700,7 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse core.Pulse) 
 		}
 	}
 
-	m.db.RemoveActiveNodesUntil(pn)
+	m.ActiveNodesStorage.RemoveActiveNodesUntil(pn)
 
 	_, err, _ := m.cleanupGroup.Do("lightcleanup", func() (interface{}, error) {
 		ctx, span := instracer.StartSpan(ctx, "pulse.cleanAsync")
@@ -769,7 +770,7 @@ func (m *PulseManager) prepareArtifactManagerMessageHandlerForNextPulse(ctx cont
 // Start starts pulse manager, spawns replication goroutine under a hood.
 func (m *PulseManager) Start(ctx context.Context) error {
 	// FIXME: @andreyromancev. 21.12.18. Find a proper place for me. Somewhere at the genesis.
-	err := m.db.SetActiveNodes(core.FirstPulseNumber, m.NodeNet.GetActiveNodes())
+	err := m.ActiveNodesStorage.SetActiveNodes(core.FirstPulseNumber, m.NodeNet.GetActiveNodes())
 	if err != nil && err != storage.ErrOverride {
 		return err
 	}

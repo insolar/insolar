@@ -22,6 +22,14 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
+// ActiveNodesStorage provides info about active nodes
+type ActiveNodesStorage interface {
+	SetActiveNodes(pulse core.PulseNumber, nodes []core.Node) error
+	GetActiveNodes(pulse core.PulseNumber) ([]core.Node, error)
+	GetActiveNodesByRole(pulse core.PulseNumber, role core.StaticRole) ([]core.Node, error)
+	RemoveActiveNodesUntil(pulse core.PulseNumber)
+}
+
 // SetActiveNodes saves active nodes for pulse in memory.
 func (db *DB) SetActiveNodes(pulse core.PulseNumber, nodes []core.Node) error {
 	db.nodeHistoryLock.Lock()
