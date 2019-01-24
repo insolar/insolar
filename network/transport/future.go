@@ -121,6 +121,7 @@ func (future *future) GetResult(duration time.Duration) (*packet.Packet, error) 
 		return result, nil
 	case <-time.After(duration):
 		future.Cancel()
+		metrics.NetworkPacketTimeoutTotal.WithLabelValues(future.request.Type.String()).Inc()
 		return nil, ErrTimeout
 	}
 }

@@ -278,7 +278,7 @@ func (h *MessageHandler) handleSetRecord(ctx context.Context, parcel core.Parcel
 	id := record.NewRecordIDFromRecord(h.PlatformCryptographyScheme, parcel.Pulse(), rec)
 
 	if !h.isHeavy {
-		recentStorage := h.RecentStorageProvider.GetStorage(jetID)
+		recentStorage := h.RecentStorageProvider.GetStorage(ctx, jetID)
 		if request, ok := rec.(record.Request); ok {
 			recentStorage.AddPendingRequest(ctx, request.GetObject(), *id)
 		}
@@ -384,7 +384,7 @@ func (h *MessageHandler) handleGetObject(
 	} else {
 		// Add requested object to recent.
 		if !h.isHeavy {
-			h.RecentStorageProvider.GetStorage(jetID).AddObject(ctx, *msg.Head.Record())
+			h.RecentStorageProvider.GetStorage(ctx, jetID).AddObject(ctx, *msg.Head.Record())
 		}
 	}
 
@@ -507,7 +507,7 @@ func (h *MessageHandler) handleHasPendingRequests(ctx context.Context, parcel co
 	msg := parcel.Message().(*message.GetPendingRequests)
 	jetID := jetFromContext(ctx)
 
-	for _, reqID := range h.RecentStorageProvider.GetStorage(jetID).GetRequestsForObject(*msg.Object.Record()) {
+	for _, reqID := range h.RecentStorageProvider.GetStorage(ctx, jetID).GetRequestsForObject(*msg.Object.Record()) {
 		if reqID.Pulse() < parcel.Pulse() {
 			return &reply.HasPendingRequests{Has: true}, nil
 		}
@@ -555,7 +555,7 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel core.Parc
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	} else {
 		if !h.isHeavy {
-			h.RecentStorageProvider.GetStorage(jetID).AddObject(ctx, *msg.Head.Record())
+			h.RecentStorageProvider.GetStorage(ctx, jetID).AddObject(ctx, *msg.Head.Record())
 		}
 	}
 
@@ -601,7 +601,7 @@ func (h *MessageHandler) handleGetChildren(
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	} else {
 		if !h.isHeavy {
-			h.RecentStorageProvider.GetStorage(jetID).AddObject(ctx, *msg.Parent.Record())
+			h.RecentStorageProvider.GetStorage(ctx, jetID).AddObject(ctx, *msg.Parent.Record())
 		}
 	}
 
@@ -757,7 +757,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 			return err
 		} else {
 			if !h.isHeavy {
-				h.RecentStorageProvider.GetStorage(jetID).AddObject(ctx, *msg.Object.Record())
+				h.RecentStorageProvider.GetStorage(ctx, jetID).AddObject(ctx, *msg.Object.Record())
 			}
 		}
 
@@ -826,7 +826,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel core.Pa
 			return err
 		} else {
 			if !h.isHeavy {
-				h.RecentStorageProvider.GetStorage(jetID).AddObject(ctx, *msg.Parent.Record())
+				h.RecentStorageProvider.GetStorage(ctx, jetID).AddObject(ctx, *msg.Parent.Record())
 			}
 		}
 
@@ -856,7 +856,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel core.Pa
 	}
 
 	if !h.isHeavy {
-		h.RecentStorageProvider.GetStorage(jetID).AddObject(ctx, *msg.Parent.Record())
+		h.RecentStorageProvider.GetStorage(ctx, jetID).AddObject(ctx, *msg.Parent.Record())
 	}
 
 	return &reply.ID{ID: *child}, nil
@@ -1053,7 +1053,7 @@ func (h *MessageHandler) saveIndexFromHeavy(
 		return nil, errors.Wrap(err, "failed to decode")
 	}
 
-	h.RecentStorageProvider.GetStorage(jetID).AddObject(ctx, *obj.Record())
+	h.RecentStorageProvider.GetStorage(ctx, jetID).AddObject(ctx, *obj.Record())
 	err = s.SetObjectIndex(ctx, jetID, obj.Record(), idx)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to save")
@@ -1087,7 +1087,11 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 		return nil, errors.Wrap(err, "[ handleHotRecords ] Can't SetDropSizeHistory")
 	}
 
-	recentStorage := h.RecentStorageProvider.GetStorage(jetID)
+	logger.WithFields(map[string]interface{}{
+		"len": len(msg.RecentObjects),
+		"jet": jetID.DebugString(),
+	}).Debugf("received pending requests")
+	recentStorage := h.RecentStorageProvider.GetStorage(ctx, jetID)
 	for objID, requests := range msg.PendingRequests {
 		for reqID, request := range requests {
 			newID, err := h.db.SetRecord(ctx, jetID, reqID.Pulse(), record.DeserializeRecord(request))
@@ -1110,6 +1114,10 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 		}
 	}
 
+	logger.WithFields(map[string]interface{}{
+		"len": len(msg.RecentObjects),
+		"jet": jetID.DebugString(),
+	}).Debugf("received recent objects")
 	for id, meta := range msg.RecentObjects {
 		logger.Debugf("[got id] jet: %v, id: %v", jetID.DebugString(), id.DebugString())
 		decodedIndex, err := index.DecodeObjectLifeline(meta.Index)
@@ -1127,7 +1135,6 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 		}
 
 		fmt.Println("[saved id] ", id.String())
-		meta.TTL--
 		recentStorage.AddObjectWithTLL(ctx, id, meta.TTL)
 	}
 
