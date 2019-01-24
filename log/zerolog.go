@@ -174,10 +174,11 @@ func (z zerologAdapter) SetOutput(w io.Writer) {
 
 func toString(args ...interface{}) string {
 	result := ""
-	var arg interface{}
-	for arg = range args {
+	for _, arg := range args {
 		if s, ok := arg.(string); ok {
 			result += s
+		} else if s, ok := arg.(error); ok {
+			result += s.Error()
 		} else if s, ok := arg.(fmt.Stringer); ok {
 			result += s.String()
 		} else {
