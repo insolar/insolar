@@ -33,18 +33,18 @@ import (
 
 // JetCoordinator is responsible for all jet interactions
 type JetCoordinator struct {
-	db                         *storage.DB
 	roleCounts                 map[core.DynamicRole]int
 	NodeNet                    core.NodeNetwork                `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 	PulseStorage               core.PulseStorage               `inject:""`
 	JetStorage                 storage.JetStorage              `inject:""`
+	PulseTracker               storage.PulseTracker            `inject:""`
 	storage.ActiveNodesStorage `inject:""`
 }
 
 // NewJetCoordinator creates new coordinator instance.
-func NewJetCoordinator(db *storage.DB, conf configuration.JetCoordinator) *JetCoordinator {
-	jc := JetCoordinator{db: db}
+func NewJetCoordinator(conf configuration.JetCoordinator) *JetCoordinator {
+	jc := JetCoordinator{}
 	jc.loadConfig(conf)
 
 	return &jc
@@ -207,7 +207,7 @@ func (jc *JetCoordinator) LightValidatorsForObject(
 }
 
 func (jc *JetCoordinator) Heavy(ctx context.Context, pulse core.PulseNumber) (*core.RecordRef, error) {
-	pulseData, err := jc.db.GetPulse(ctx, pulse)
+	pulseData, err := jc.PulseTracker.GetPulse(ctx, pulse)
 	if err != nil {
 		return nil, errors.Wrapf(err, "[lightMaterialsForJet] failed to fetch pulse data for pulse %v", pulse)
 	}
@@ -233,7 +233,7 @@ func (jc *JetCoordinator) Heavy(ctx context.Context, pulse core.PulseNumber) (*c
 func (jc *JetCoordinator) virtualsForObject(
 	ctx context.Context, objID core.RecordID, pulse core.PulseNumber, count int,
 ) ([]core.RecordRef, error) {
-	pulseData, err := jc.db.GetPulse(ctx, pulse)
+	pulseData, err := jc.PulseTracker.GetPulse(ctx, pulse)
 	if err != nil {
 		curp, _ := jc.PulseStorage.Current(ctx)
 		return nil, errors.Wrapf(err, "[virtualsForObject] failed to fetch pulse data for pulse %d (current pulse is %d)", pulse, curp.PulseNumber)
@@ -258,7 +258,7 @@ func (jc *JetCoordinator) lightMaterialsForJet(
 	ctx context.Context, jetID core.RecordID, pulse core.PulseNumber, count int,
 ) ([]core.RecordRef, error) {
 	_, prefix := jet.Jet(jetID)
-	pulseData, err := jc.db.GetPulse(ctx, pulse)
+	pulseData, err := jc.PulseTracker.GetPulse(ctx, pulse)
 	if err != nil {
 		return nil, errors.Wrapf(err, "[lightMaterialsForJet] failed to fetch pulse data for pulse %v", pulse)
 	}
