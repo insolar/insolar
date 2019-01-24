@@ -95,16 +95,15 @@ func GetLedgerComponents(conf configuration.Ledger, certificate core.Certificate
 
 	return []interface{}{
 		db,
-		pulseTracker,
 		storage.NewPulseStorage(),
 		storage.NewRecentStorageProvider(conf.RecentStorage.DefaultTTL),
 		artifactmanager.NewArtifactManger(db),
 		jetcoordinator.NewJetCoordinator(db, conf.JetCoordinator),
 		pulsemanager.NewPulseManager(conf),
-		artifactmanager.NewMessageHandler(db, &conf, certificate),
+		artifactmanager.NewMessageHandler(&conf, certificate),
 		localstorage.NewLocalStorage(db),
 		heavyserver.NewSync(db),
-		exporter.NewExporter(db, ps, conf.Exporter),
+		exporter.NewExporter(db, pulseTracker, conf.Exporter),
 	}
 }
 

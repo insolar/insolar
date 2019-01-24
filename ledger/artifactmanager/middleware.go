@@ -32,7 +32,7 @@ import (
 )
 
 type middleware struct {
-	db                                 *storage.DB
+	objectStorage                      storage.ObjectStorage
 	jetStorage                         storage.JetStorage
 	jetCoordinator                     core.JetCoordinator
 	messageBus                         core.MessageBus
@@ -48,19 +48,17 @@ type middleware struct {
 }
 
 func newMiddleware(
-	conf *configuration.Ledger,
-	db *storage.DB,
 	h *MessageHandler,
 ) *middleware {
 	return &middleware{
-		db:                                 db,
-		jetStorage:                         db,
-		handler:                            h,
+		objectStorage:                      h.ObjectStorage,
+		jetStorage:                         h.JetStorage,
 		jetCoordinator:                     h.JetCoordinator,
 		messageBus:                         h.Bus,
 		pulseStorage:                       h.PulseStorage,
 		earlyRequestCircuitBreakerProvider: &earlyRequestCircuitBreakerProvider{breakers: map[core.RecordID]*requestCircuitBreakerProvider{}},
-		conf:                               conf,
+		handler:                            h,
+		conf:                               h.conf,
 		sequencer: map[core.RecordID]*struct {
 			sync.Mutex
 			done bool
@@ -177,7 +175,7 @@ func (m *middleware) saveParcel(handler core.MessageHandler) core.MessageHandler
 			return nil, err
 		}
 		logger.Debugf("saveParcel, pulse - %v", pulse.PulseNumber)
-		err = m.db.SetMessage(ctx, jetID, pulse.PulseNumber, parcel)
+		err = m.objectStorage.SetMessage(ctx, jetID, pulse.PulseNumber, parcel)
 		if err != nil {
 			return nil, err
 		}

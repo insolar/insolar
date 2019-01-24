@@ -54,10 +54,10 @@ type MessageHandler struct {
 	PulseStorage               core.PulseStorage               `inject:""`
 	JetStorage                 storage.JetStorage              `inject:""`
 	ObjectStorage              storage.ObjectStorage           `inject:""`
-	storage.ActiveNodesStorage `inject:""`
-	storage.PulseTracker       `inject:""`
+	ActiveNodesStorage         storage.ActiveNodesStorage      `inject:""`
+	PulseTracker               storage.PulseTracker            `inject:""`
+	DBContext                  storage.DBContext               `inject:""`
 
-	db             *storage.DB
 	certificate    core.Certificate
 	replayHandlers map[core.MessageType]core.MessageHandler
 	conf           *configuration.Ledger
@@ -66,11 +66,8 @@ type MessageHandler struct {
 }
 
 // NewMessageHandler creates new handler.
-func NewMessageHandler(
-	db *storage.DB, conf *configuration.Ledger, certificate core.Certificate,
-) *MessageHandler {
+func NewMessageHandler(conf *configuration.Ledger, certificate core.Certificate) *MessageHandler {
 	return &MessageHandler{
-		db:             db,
 		certificate:    certificate,
 		replayHandlers: map[core.MessageType]core.MessageHandler{},
 		conf:           conf,
@@ -109,7 +106,7 @@ func instrumentHandler(name string) Handler {
 
 // Init initializes handlers and middleware.
 func (h *MessageHandler) Init(ctx context.Context) error {
-	m := newMiddleware(h.conf, h.db, h)
+	m := newMiddleware(h)
 	h.middleware = m
 
 	h.isHeavy = h.certificate.GetRole() == core.StaticRoleHeavyMaterial
@@ -380,7 +377,7 @@ func (h *MessageHandler) handleGetObject(
 		if err != nil {
 			return nil, err
 		}
-		idx, err = h.saveIndexFromHeavy(ctx, h.db, jetID, msg.Head, node)
+		idx, err = h.saveIndexFromHeavy(ctx, jetID, msg.Head, node)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to fetch index from heavy")
 		}
@@ -552,7 +549,7 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel core.Parc
 		if err != nil {
 			return nil, err
 		}
-		idx, err = h.saveIndexFromHeavy(ctx, h.db, jetID, msg.Head, heavy)
+		idx, err = h.saveIndexFromHeavy(ctx, jetID, msg.Head, heavy)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to fetch index from heavy")
 		}
@@ -595,7 +592,7 @@ func (h *MessageHandler) handleGetChildren(
 		if err != nil {
 			return nil, err
 		}
-		idx, err = h.saveIndexFromHeavy(ctx, h.db, jetID, msg.Parent, heavy)
+		idx, err = h.saveIndexFromHeavy(ctx, jetID, msg.Parent, heavy)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to fetch index from heavy")
 		}
@@ -737,7 +734,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 	}
 
 	var idx *index.ObjectLifeline
-	err = h.db.Update(ctx, func(tx *storage.TransactionManager) error {
+	err = h.DBContext.Update(ctx, func(tx *storage.TransactionManager) error {
 		var err error
 		logger.Debugf("Get index for: %v, jet: %v", msg.Object.Record(), jetID.DebugString())
 		idx, err = tx.GetObjectIndex(ctx, jetID, msg.Object.Record(), true)
@@ -753,7 +750,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 				if err != nil {
 					return err
 				}
-				idx, err = h.saveIndexFromHeavy(ctx, h.db, jetID, msg.Object, heavy)
+				idx, err = h.saveIndexFromHeavy(ctx, jetID, msg.Object, heavy)
 				if err != nil {
 					return errors.Wrap(err, "failed to fetch index from heavy")
 				}
@@ -816,14 +813,14 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel core.Pa
 	}
 
 	var child *core.RecordID
-	err := h.db.Update(ctx, func(tx *storage.TransactionManager) error {
+	err := h.DBContext.Update(ctx, func(tx *storage.TransactionManager) error {
 		idx, err := h.ObjectStorage.GetObjectIndex(ctx, jetID, msg.Parent.Record(), false)
 		if err == storage.ErrNotFound {
 			heavy, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
 			if err != nil {
 				return err
 			}
-			idx, err = h.saveIndexFromHeavy(ctx, h.db, jetID, msg.Parent, heavy)
+			idx, err = h.saveIndexFromHeavy(ctx, jetID, msg.Parent, heavy)
 			if err != nil {
 				return errors.Wrap(err, "failed to fetch index from heavy")
 			}
@@ -910,14 +907,14 @@ func (h *MessageHandler) handleValidateRecord(ctx context.Context, parcel core.P
 	msg := parcel.Message().(*message.ValidateRecord)
 	jetID := jetFromContext(ctx)
 
-	err := h.db.Update(ctx, func(tx *storage.TransactionManager) error {
+	err := h.DBContext.Update(ctx, func(tx *storage.TransactionManager) error {
 		idx, err := tx.GetObjectIndex(ctx, jetID, msg.Object.Record(), true)
 		if err == storage.ErrNotFound {
 			heavy, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
 			if err != nil {
 				return err
 			}
-			idx, err = h.saveIndexFromHeavy(ctx, h.db, jetID, msg.Object, heavy)
+			idx, err = h.saveIndexFromHeavy(ctx, jetID, msg.Object, heavy)
 			if err != nil {
 				return errors.Wrap(err, "failed to fetch index from heavy")
 			}
@@ -1039,7 +1036,7 @@ func validateState(old record.State, new record.State) error {
 }
 
 func (h *MessageHandler) saveIndexFromHeavy(
-	ctx context.Context, os storage.ObjectStorage, jetID core.RecordID, obj core.RecordRef, heavy *core.RecordRef,
+	ctx context.Context, jetID core.RecordID, obj core.RecordRef, heavy *core.RecordRef,
 ) (*index.ObjectLifeline, error) {
 	genericReply, err := h.Bus.Send(ctx, &message.GetObjectIndex{
 		Object: obj,
@@ -1059,7 +1056,7 @@ func (h *MessageHandler) saveIndexFromHeavy(
 	}
 
 	h.RecentStorageProvider.GetStorage(ctx, jetID).AddObject(ctx, *obj.Record())
-	err = os.SetObjectIndex(ctx, jetID, obj.Record(), idx)
+	err = h.ObjectStorage.SetObjectIndex(ctx, jetID, obj.Record(), idx)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to save")
 	}
