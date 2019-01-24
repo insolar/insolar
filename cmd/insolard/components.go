@@ -23,7 +23,6 @@ import (
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/consensus/phases"
 	"github.com/insolar/insolar/contractrequester"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/delegationtoken"
@@ -35,7 +34,6 @@ import (
 	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/messagebus"
 	"github.com/insolar/insolar/metrics"
-	"github.com/insolar/insolar/network/merkle"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/insolar/insolar/network/state"
@@ -112,6 +110,7 @@ func initComponents(
 	genesisKeyOut string,
 
 ) (*component.Manager, error) {
+	cm := component.Manager{}
 	terminationHandler := core.NewTerminationHandler()
 
 	nodeNetwork, err := nodenetwork.NewNodeNetwork(cfg.Host, certManager.GetCertificate())
@@ -120,7 +119,7 @@ func initComponents(
 	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner)
 	checkError(ctx, err, "failed to start LogicRunner")
 
-	nw, err := servicenetwork.NewServiceNetwork(cfg, platformCryptographyScheme)
+	nw, err := servicenetwork.NewServiceNetwork(cfg, platformCryptographyScheme, &cm, isGenesis)
 	checkError(ctx, err, "failed to start Network")
 
 	delegationTokenFactory := delegationtoken.NewDelegationTokenFactory()
@@ -160,7 +159,6 @@ func initComponents(
 	err = logicRunner.OnPulse(ctx, *pulsar.NewPulse(cfg.Pulsar.NumberDelta, 0, &entropygenerator.StandardEntropyGenerator{}))
 	checkError(ctx, err, "failed init pulse for LogicRunner")
 
-	cm := component.Manager{}
 	cm.Register(
 		terminationHandler,
 		platformCryptographyScheme,
@@ -172,7 +170,7 @@ func initComponents(
 		nw,
 	)
 
-	components := ledger.GetLedgerComponents(cfg.Ledger)
+	components := ledger.GetLedgerComponents(cfg.Ledger, certManager.GetCertificate())
 	ld := ledger.Ledger{} // TODO: remove me with cmOld
 
 	components = append(components, []interface{}{
@@ -192,9 +190,7 @@ func initComponents(
 		metricsHandler,
 		networkSwitcher,
 		networkCoordinator,
-		phases.NewPhaseManager(),
 		cryptographyService,
-		merkle.NewCalculator(),
 	}...)
 
 	cm.Inject(components...)

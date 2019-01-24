@@ -62,9 +62,6 @@ func (ps *PulseStorage) Current(ctx context.Context) (*core.Pulse, error) {
 }
 
 func (ps *PulseStorage) Set(pulse *core.Pulse) {
-	ps.rwLock.Lock()
-	defer ps.rwLock.Unlock()
-
 	ps.currentPulse = pulse
 }
 

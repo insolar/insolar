@@ -53,6 +53,9 @@ func (e *Error) Error() error {
 		return core.ErrDeactivated
 	case ErrStateNotAvailable:
 		return core.ErrStateNotAvailable
+	case ErrHotDataTimeout:
+		return core.ErrHotDataTimeout
 	}
+
 	return core.ErrUnknown
 }

@@ -17,6 +17,7 @@
 package packet
 
 import (
+	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet/types"
 )
@@ -32,6 +33,7 @@ func NewBuilder(sender *host.Host) Builder {
 	cb := Builder{}
 	cb.actions = append(cb.actions, func(packet *Packet) {
 		packet.Sender = sender
+		packet.RemoteAddress = sender.Address.String()
 	})
 	return cb
 }
@@ -65,6 +67,20 @@ func (cb Builder) Type(packetType types.PacketType) Builder {
 func (cb Builder) Request(request interface{}) Builder {
 	cb.actions = append(cb.actions, func(packet *Packet) {
 		packet.Data = request
+	})
+	return cb
+}
+
+func (cb Builder) RequestID(id network.RequestID) Builder {
+	cb.actions = append(cb.actions, func(packet *Packet) {
+		packet.RequestID = id
+	})
+	return cb
+}
+
+func (cb Builder) TraceID(traceID string) Builder {
+	cb.actions = append(cb.actions, func(packet *Packet) {
+		packet.TraceID = traceID
 	})
 	return cb
 }

@@ -52,12 +52,12 @@ func (tr *TransportResolvable) GetNodeID() core.RecordRef {
 }
 
 // SendRequest send request to a remote node.
-func (tr *TransportResolvable) SendRequest(request network.Request, receiver core.RecordRef) (network.Future, error) {
+func (tr *TransportResolvable) SendRequest(ctx context.Context, request network.Request, receiver core.RecordRef) (network.Future, error) {
 	h, err := tr.resolver.Resolve(receiver)
 	if err != nil {
 		return nil, errors.Wrap(err, "error resolving NodeID -> Address")
 	}
-	return tr.internalTransport.SendRequestPacket(request, h)
+	return tr.internalTransport.SendRequestPacket(ctx, request, h)
 }
 
 // RegisterPacketHandler register a handler function to process incoming requests of a specific type.
@@ -75,8 +75,8 @@ func (tr *TransportResolvable) NewRequestBuilder() network.RequestBuilder {
 }
 
 // BuildResponse create response to an incoming request with Data set to responseData.
-func (tr *TransportResolvable) BuildResponse(request network.Request, responseData interface{}) network.Response {
-	return tr.internalTransport.BuildResponse(request, responseData)
+func (tr *TransportResolvable) BuildResponse(ctx context.Context, request network.Request, responseData interface{}) network.Response {
+	return tr.internalTransport.BuildResponse(ctx, request, responseData)
 }
 
 func NewHostTransport(transport network.InternalTransport, resolver network.RoutingTable) network.HostNetwork {

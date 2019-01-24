@@ -29,15 +29,22 @@ import (
 	"github.com/pkg/errors"
 )
 
-type ThirdPhase struct {
+type ThirdPhase interface {
+	Execute(ctx context.Context, state *SecondPhaseState) (*ThirdPhaseState, error)
+}
+
+func NewThirdPhase() ThirdPhase {
+	return &thirdPhase{}
+}
+
+type thirdPhase struct {
 	Cryptography core.CryptographyService `inject:""`
-	NodeNetwork  core.NodeNetwork         `inject:""`
 	Communicator Communicator             `inject:""`
 	NodeKeeper   network.NodeKeeper       `inject:""`
 	Calculator   merkle.Calculator        `inject:""`
 }
 
-func (tp *ThirdPhase) Execute(ctx context.Context, state *SecondPhaseState) (*ThirdPhaseState, error) {
+func (tp *thirdPhase) Execute(ctx context.Context, state *SecondPhaseState) (*ThirdPhaseState, error) {
 	var gSign [packets.SignatureLength]byte
 	copy(gSign[:], state.GlobuleProof.Signature.Bytes()[:packets.SignatureLength])
 	packet := packets.NewPhase3Packet(gSign, state.BitSet)
@@ -106,7 +113,7 @@ func (tp *ThirdPhase) Execute(ctx context.Context, state *SecondPhaseState) (*Th
 	}, nil
 }
 
-func (tp *ThirdPhase) checkPacketSignature(packet *packets.Phase3Packet, recordRef core.RecordRef, unsyncList network.UnsyncList) error {
+func (tp *thirdPhase) checkPacketSignature(packet *packets.Phase3Packet, recordRef core.RecordRef, unsyncList network.UnsyncList) error {
 	activeNode := unsyncList.GetActiveNode(recordRef)
 	if activeNode == nil {
 		return errors.New("failed to get active node")

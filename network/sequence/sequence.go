@@ -14,16 +14,28 @@
  *    limitations under the License.
  */
 
-package heavy
+package sequence
 
 import (
-	"context"
-
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/storage/jet"
+	"github.com/insolar/insolar/network/utils"
 )
 
-// JetTreeSync is used for sync jets on heavy
-type JetTreeSync interface {
-	SyncTree(ctx context.Context, tree jet.Tree, pulse core.PulseNumber) error
+type Sequence uint64
+
+type Generator interface {
+	Generate() Sequence
+}
+
+type generatorImpl struct {
+	sequence *uint64
+}
+
+func NewGeneratorImpl() Generator {
+	return &generatorImpl{
+		sequence: new(uint64),
+	}
+}
+
+func (sg *generatorImpl) Generate() Sequence {
+	return Sequence(utils.AtomicLoadAndIncrementUint64(sg.sequence))
 }

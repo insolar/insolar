@@ -85,24 +85,25 @@ func NewTestLedger(
 }
 
 // GetLedgerComponents returns ledger components.
-func GetLedgerComponents(conf configuration.Ledger) []interface{} {
+func GetLedgerComponents(conf configuration.Ledger, certificate core.Certificate) []interface{} {
 	db, err := storage.NewDB(conf, nil)
 	if err != nil {
 		panic(errors.Wrap(err, "failed to initialize DB"))
 	}
 
+	ps := storage.NewPulseStorage(db)
+
 	return []interface{}{
 		db,
-		storage.NewPulseStorage(db),
+		ps,
 		storage.NewRecentStorageProvider(conf.RecentStorage.DefaultTTL),
 		artifactmanager.NewArtifactManger(db),
 		jetcoordinator.NewJetCoordinator(db, conf.JetCoordinator),
 		pulsemanager.NewPulseManager(db, conf),
-		artifactmanager.NewMessageHandler(db, &conf),
+		artifactmanager.NewMessageHandler(db, &conf, certificate),
 		localstorage.NewLocalStorage(db),
 		heavyserver.NewSync(db),
-		heavyserver.NewHeavyJetSync(db),
-		exporter.NewExporter(db),
+		exporter.NewExporter(db, ps, conf.Exporter),
 	}
 }
 

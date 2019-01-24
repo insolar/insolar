@@ -92,10 +92,9 @@ func main() {
 	}
 
 	cfg := &cfgHolder.Configuration
-	cfg.Service.IsGenesis = params.isGenesis
 	cfg.Metrics.Namespace = "insolard"
 
-	traceID := utils.RandTraceID()
+	traceID := "main_" + utils.RandTraceID()
 	ctx, inslog := initLogger(context.Background(), cfg.Log, traceID)
 	log.SetGlobalLogger(inslog)
 
@@ -113,13 +112,19 @@ func main() {
 		bootstrapComponents.KeyProcessor,
 	)
 
-	fmt.Print("Starts with configuration:\n", configuration.ToString(cfgHolder.Configuration))
+	fmt.Println("Starts with configuration:\n", configuration.ToString(cfgHolder.Configuration))
 
 	jaegerflush := func() {}
 	if params.traceEnabled {
 		jconf := cfg.Tracer.Jaeger
 		log.Infof("Tracing enabled. Agent endpoint: '%s', collector endpoint: '%s'\n", jconf.AgentEndpoint, jconf.CollectorEndpoint)
-		jaegerflush = instracer.ShouldRegisterJaeger(ctx, "insolard", jconf.AgentEndpoint, jconf.CollectorEndpoint)
+		jaegerflush = instracer.ShouldRegisterJaeger(
+			ctx,
+			certManager.GetCertificate().GetRole().String(),
+			certManager.GetCertificate().GetNodeRef().String(),
+			jconf.AgentEndpoint,
+			jconf.CollectorEndpoint,
+			jconf.ProbabilityRate)
 		ctx = instracer.SetBaggage(ctx, instracer.Entry{Key: "traceid", Value: traceID})
 	}
 	defer jaegerflush()
@@ -138,6 +143,11 @@ func main() {
 	)
 	checkError(ctx, err, "failed to init components")
 
+	ctx, inslog = inslogger.WithField(ctx, "nodeid", certManager.GetCertificate().GetNodeRef().String())
+	ctx, inslog = inslogger.WithField(ctx, "role", certManager.GetCertificate().GetRole().String())
+	ctx = inslogger.SetLogger(ctx, inslog)
+	log.SetGlobalLogger(inslog)
+
 	err = cm.Init(ctx)
 	checkError(ctx, err, "failed to init components")
 
@@ -153,7 +163,6 @@ func main() {
 
 		inslog.Warn("GRACEFULL STOP APP")
 		err = cm.Stop(ctx)
-		jaegerflush()
 		checkError(ctx, err, "failed to graceful stop components")
 		close(waitChannel)
 	}()

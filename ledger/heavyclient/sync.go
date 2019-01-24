@@ -48,9 +48,10 @@ func (c *JetClient) HeavySync(
 	pn core.PulseNumber,
 	retry bool,
 ) error {
-	inslog := inslogger.FromContext(ctx)
 	jetID := c.jetID
-	inslog = inslog.WithField("jetID", jetID).WithField("pulseNum", pn)
+	inslog := inslogger.FromContext(ctx)
+	inslog = inslog.WithField("jetID", jetID.DebugString())
+	inslog = inslog.WithField("pulseNum", pn)
 
 	inslog.Debug("JetClient.HeavySync")
 	if retry {
@@ -60,6 +61,7 @@ func (c *JetClient) HeavySync(
 			PulseNum: pn,
 		}
 		if err := messageToHeavy(ctx, c.Bus, resetMsg); err != nil {
+			inslog.Error("synchronize: reset failed")
 			return err
 		}
 	}
@@ -69,6 +71,7 @@ func (c *JetClient) HeavySync(
 		PulseNum: pn,
 	}
 	if err := messageToHeavy(ctx, c.Bus, signalMsg); err != nil {
+		inslog.Error("synchronize: start failed")
 		return err
 	}
 	inslog.Debug("synchronize: sucessfully send start message")
@@ -89,6 +92,7 @@ func (c *JetClient) HeavySync(
 			Records:  recs,
 		}
 		if err := messageToHeavy(ctx, c.Bus, msg); err != nil {
+			inslog.Error("synchronize: payload failed")
 			return err
 		}
 		inslog.Debug("synchronize: sucessfully send save message")
@@ -96,7 +100,7 @@ func (c *JetClient) HeavySync(
 
 	signalMsg.Finished = true
 	if err := messageToHeavy(ctx, c.Bus, signalMsg); err != nil {
-		inslog.Error("synchronize: finish send error", err.Error())
+		inslog.Error("synchronize: finish failed")
 		return err
 	}
 	inslog.Debug("synchronize: sucessfully send finish message")

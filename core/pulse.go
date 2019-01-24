@@ -76,10 +76,6 @@ type Pulse struct {
 	Signs   map[string]PulseSenderConfirmation
 }
 
-func (p *Pulse) PulseDuration() time.Duration {
-	return time.Second * time.Duration(p.NextPulseNumber-p.PulseNumber)
-}
-
 // PulseSenderConfirmation contains confirmations of the pulse from other pulsars
 // Because the system is using BFT for consensus between pulsars, because of it
 // All pulsar send to the chosen pulsar their confirmations

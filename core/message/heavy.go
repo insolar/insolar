@@ -18,7 +18,6 @@ package message
 
 import (
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/storage/jet"
 )
 
 // HeavyPayload carries Key/Value records and pulse number
@@ -115,34 +114,4 @@ func (HeavyReset) GetCaller() *core.RecordRef {
 // Type implementation of Message interface.
 func (e *HeavyReset) Type() core.MessageType {
 	return core.TypeHeavyReset
-}
-
-// HeavyJetTree brings JetTree to heavy
-type HeavyJetTree struct {
-	JetTree  jet.Tree
-	PulseNum core.PulseNumber
-}
-
-// Type implementation of Message interface.
-func (*HeavyJetTree) Type() core.MessageType {
-	return core.TypeHeavyJetTree
-}
-
-// GetCaller implementation of Message interface.
-func (*HeavyJetTree) GetCaller() *core.RecordRef {
-	return nil
-}
-
-// DefaultTarget implementation of Message interface.
-func (*HeavyJetTree) DefaultTarget() *core.RecordRef {
-	return &core.RecordRef{}
-}
-
-// DefaultRole implementation of Message interface.
-func (*HeavyJetTree) DefaultRole() core.DynamicRole {
-	return core.DynamicRoleHeavyExecutor
-}
-
-func (*HeavyJetTree) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
-	return nil, core.DynamicRoleLightExecutor
 }

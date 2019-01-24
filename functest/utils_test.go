@@ -22,15 +22,22 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
+	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
+	"strings"
 	"testing"
+	"time"
+
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/stretchr/testify/require"
 )
+
+const sendRetryCount = 5
 
 type postParams map[string]interface{}
 
@@ -184,23 +191,48 @@ func signedRequest(user *user, method string, params ...interface{}) (interface{
 	if err != nil {
 		return nil, err
 	}
-	res, err := requester.Send(ctx, TestAPIURL, rootCfg, &requester.RequestConfigJSON{
-		Method: method,
-		Params: params,
-	})
-	if err != nil {
-		return nil, err
-	}
-	var resp = response{}
-	err = json.Unmarshal(res, &resp)
+	var resp response
+	for i := 0; i < sendRetryCount; i++ {
+		res, err := requester.Send(ctx, TestAPIURL, rootCfg, &requester.RequestConfigJSON{
+			Method: method,
+			Params: params,
+		})
 
-	if err != nil {
-		return nil, err
+		if netErr, ok := errors.Cause(err).(net.Error); ok && netErr.Timeout() {
+			fmt.Println("Timeout, retry")
+			fmt.Printf("Method: %s\n", method)
+			time.Sleep(time.Second)
+			continue
+		} else if err != nil {
+			return nil, err
+		}
+
+		resp = response{}
+		err = json.Unmarshal(res, &resp)
+		if err != nil {
+			return nil, err
+		}
+
+		if resp.Error == "" {
+			return resp.Result, nil
+		}
+		if strings.Contains(resp.Error, "Incorrect message pulse") {
+			fmt.Printf("Incorrect message pulse, retry (error - %s)\n", resp.Error)
+			fmt.Printf("Method: %s\n", method)
+			time.Sleep(time.Second)
+			continue
+		}
+
+		if strings.Contains(resp.Error, "Messagebus timeout exceeded") {
+			fmt.Println("Messagebus timeout exceeded, retry")
+			fmt.Printf("Method: %s\n", method)
+			time.Sleep(time.Second)
+			continue
+		}
+
+		break
 	}
-	if resp.Error != "" {
-		return resp.Result, errors.New(resp.Error)
-	}
-	return resp.Result, nil
+	return resp.Result, errors.New(resp.Error)
 }
 
 func newUserWithKeys() (*user, error) {

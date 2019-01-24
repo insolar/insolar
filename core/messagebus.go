@@ -18,11 +18,59 @@ package core
 
 import (
 	"context"
+	"encoding/json"
 	"io"
+
+	"github.com/pkg/errors"
+	"github.com/ugorji/go/codec"
 )
 
-// Arguments is a dedicated type for arguments, that represented as bynary cbored blob
+// Arguments is a dedicated type for arguments, that represented as binary cbored blob
 type Arguments []byte
+
+// MarshalJSON uncbor Arguments slice recursively
+func (args *Arguments) MarshalJSON() ([]byte, error) {
+	result := make([]interface{}, 0)
+
+	err := convertArgs(*args, &result)
+	if err != nil {
+		return nil, err
+	}
+
+	return json.Marshal(&result)
+}
+
+func convertArgs(args []byte, result *[]interface{}) error {
+	var value interface{}
+	err := codec.NewDecoderBytes(args, &codec.CborHandle{}).Decode(&value)
+	if err != nil {
+		return errors.Wrap(err, "Can't deserialize record")
+	}
+
+	tmp, ok := value.([]interface{})
+	if !ok {
+		*result = append(*result, value)
+		return nil
+	}
+
+	inner := make([]interface{}, 0)
+
+	for _, slItem := range tmp {
+		switch v := slItem.(type) {
+		case []byte:
+			err := convertArgs(v, result)
+			if err != nil {
+				return err
+			}
+		default:
+			inner = append(inner, v)
+		}
+	}
+
+	*result = append(*result, inner)
+
+	return nil
+}
 
 // MessageType is an enum type of message.
 type MessageType byte
@@ -219,8 +267,6 @@ const (
 	TypeHeavyPayload
 	// TypeHeavyReset resets current sync (on errors)
 	TypeHeavyReset
-	// TypeHeavyJetTree sync jet trees
-	TypeHeavyJetTree
 
 	// Bootstrap
 

@@ -24,6 +24,8 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/sequence"
 	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet"
@@ -32,7 +34,8 @@ import (
 )
 
 type distributor struct {
-	Transport transport.Transport `inject:""`
+	Transport   transport.Transport `inject:""`
+	idGenerator sequence.Generator
 
 	pingRequestTimeout        time.Duration
 	randomHostsRequestTimeout time.Duration
@@ -55,6 +58,8 @@ func NewDistributor(conf configuration.PulseDistributor) (core.PulseDistributor,
 	}
 
 	return &distributor{
+		idGenerator: sequence.NewGeneratorImpl(),
+
 		pingRequestTimeout:        time.Duration(conf.PingRequestTimeout) * time.Millisecond,
 		randomHostsRequestTimeout: time.Duration(conf.RandomHostsRequestTimeout) * time.Millisecond,
 		pulseRequestTimeout:       time.Duration(conf.PulseRequestTimeout) * time.Millisecond,
@@ -75,7 +80,7 @@ func (d *distributor) Start(ctx context.Context) error {
 	return nil
 }
 
-func (d *distributor) Distribute(ctx context.Context, pulse *core.Pulse) {
+func (d *distributor) Distribute(ctx context.Context, pulse core.Pulse) {
 	logger := inslogger.FromContext(ctx)
 	defer func() {
 		if r := recover(); r != nil {
@@ -90,43 +95,39 @@ func (d *distributor) Distribute(ctx context.Context, pulse *core.Pulse) {
 	wg.Add(len(d.bootstrapHosts))
 
 	for _, bootstrapHost := range d.bootstrapHosts {
-		go func(bootstrapHost host.Host) {
+		go func(ctx context.Context, pulse core.Pulse, bootstrapHost *host.Host) {
 			defer wg.Done()
 
 			if bootstrapHost.NodeID.IsEmpty() {
-				err := d.pingHost(ctx, &bootstrapHost)
+				err := d.pingHost(ctx, bootstrapHost)
 				if err != nil {
-					logger.Error("[ Distribute ] failed to ping and fill node id", err)
+					logger.Errorf("[ Distribute pulse %d ] Failed to ping and fill node id: %s", pulse.PulseNumber, err)
 					return
 				}
 			}
 
-			hosts, err := d.getRandomHosts(ctx, &bootstrapHost)
+			err := d.sendPulseToHost(ctx, &pulse, bootstrapHost)
 			if err != nil {
-				logger.Error("[ Distribute ] failed to get random hosts", err)
-			}
-
-			if len(hosts) == 0 {
-				err := d.sendPulseToHost(ctx, pulse, &bootstrapHost)
-				if err != nil {
-					logger.Error(err)
-				}
+				logger.Errorf("[ Distribute pulse %d ] Failed to send pulse: %s", pulse.PulseNumber, err)
 				return
 			}
-
-			d.sendPulseToHosts(ctx, pulse, hosts)
-		}(*bootstrapHost)
+			logger.Infof("[ Distribute pulse %d ] Successfully sent pulse to node %s", pulse.PulseNumber, bootstrapHost)
+		}(ctx, pulse, bootstrapHost)
 	}
 
 	wg.Wait()
+}
+
+func (d *distributor) generateID() network.RequestID {
+	return network.RequestID(d.idGenerator.Generate())
 }
 
 func (d *distributor) pingHost(ctx context.Context, host *host.Host) error {
 	logger := inslogger.FromContext(ctx)
 
 	builder := packet.NewBuilder(d.pulsarHost)
-	pingPacket := builder.Receiver(host).Type(types.Ping).Build()
-	pingCall, err := d.Transport.SendRequest(pingPacket)
+	pingPacket := builder.Receiver(host).Type(types.Ping).RequestID(d.generateID()).Build()
+	pingCall, err := d.Transport.SendRequest(ctx, pingPacket)
 	if err != nil {
 		logger.Error(err)
 		return errors.Wrap(err, "[ pingHost ] failed to send ping request")
@@ -150,45 +151,6 @@ func (d *distributor) pingHost(ctx context.Context, host *host.Host) error {
 	return nil
 }
 
-func (d *distributor) getRandomHosts(ctx context.Context, host *host.Host) ([]host.Host, error) {
-	logger := inslogger.FromContext(ctx)
-
-	builder := packet.NewBuilder(d.pulsarHost)
-	request := builder.
-		Receiver(host).
-		Request(&packet.RequestGetRandomHosts{HostsNumber: d.randomNodesCount}).
-		Type(types.GetRandomHosts).
-		Build()
-
-	logger.Debugf("before get random hosts request")
-	call, err := d.Transport.SendRequest(request)
-	if err != nil {
-		logger.Error(err)
-		return nil, errors.Wrap(err, "[ getRandomHosts ] failed to send getRandomHosts request")
-	}
-
-	result, err := call.GetResult(d.randomHostsRequestTimeout)
-	if err != nil {
-		logger.Error(err)
-		return nil, errors.Wrap(err, "[ getRandomHosts ] failed to get getRandomHosts result")
-	}
-
-	if result.Error != nil {
-		logger.Error(result.Error)
-		return nil, errors.Wrap(err, "[ getRandomHosts ] getRandomHosts result returned error")
-	}
-
-	logger.Debugf("getRandomHosts request is done")
-
-	body := result.Data.(*packet.ResponseGetRandomHosts)
-	if len(body.Error) != 0 {
-		logger.Error(body.Error)
-		return nil, errors.Wrap(err, "[ getRandomHosts ] getRandomHosts data returned error")
-	}
-
-	return body.Hosts, nil
-}
-
 func (d *distributor) sendPulseToHosts(ctx context.Context, pulse *core.Pulse, hosts []host.Host) {
 	logger := inslogger.FromContext(ctx)
 	logger.Debugf("Before sending pulse to nodes - %v", hosts)
@@ -201,7 +163,11 @@ func (d *distributor) sendPulseToHosts(ctx context.Context, pulse *core.Pulse, h
 			defer wg.Done()
 			err := d.sendPulseToHost(ctx, pulse, &host)
 			if err != nil {
-				logger.Error(err)
+				logger.Errorf(
+					"[ sendPulseToHosts ] Failed to send pulse to host: %s, error: %s",
+					host.String(),
+					err.Error(),
+				)
 			}
 		}(pulseReceiver)
 	}
@@ -218,8 +184,8 @@ func (d *distributor) sendPulseToHost(ctx context.Context, pulse *core.Pulse, ho
 	}()
 
 	pb := packet.NewBuilder(d.pulsarHost)
-	pulseRequest := pb.Receiver(host).Request(&packet.RequestPulse{Pulse: *pulse}).Type(types.Pulse).Build()
-	call, err := d.Transport.SendRequest(pulseRequest)
+	pulseRequest := pb.Receiver(host).Request(&packet.RequestPulse{Pulse: *pulse}).RequestID(d.generateID()).Type(types.Pulse).Build()
+	call, err := d.Transport.SendRequest(ctx, pulseRequest)
 	if err != nil {
 		return err
 	}
@@ -238,15 +204,10 @@ func (d *distributor) pause(ctx context.Context) {
 	inslogger.FromContext(ctx).Info("[ Pause ] Pause distribution, stopping transport")
 	go d.Transport.Stop()
 	<-d.Transport.Stopped()
+	d.Transport.Close()
 }
 
 func (d *distributor) resume(ctx context.Context) {
 	inslogger.FromContext(ctx).Info("[ Resume ] Resume distribution, starting transport")
-
-	go func(ctx context.Context, t transport.Transport) {
-		err := t.Listen(ctx)
-		if err != nil {
-			inslogger.FromContext(ctx).Error(err)
-		}
-	}(ctx, d.Transport)
+	transport.ListenAndWaitUntilReady(ctx, d.Transport)
 }

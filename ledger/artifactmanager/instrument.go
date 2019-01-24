@@ -35,7 +35,6 @@ type methodInstrumenter struct {
 }
 
 func instrument(ctx context.Context, name string) *methodInstrumenter {
-	inslogger.FromContext(ctx).Debugf("instrument starts ... ctx: %v, name: %s", ctx, name)
 	return &methodInstrumenter{
 		ctx:   ctx,
 		start: time.Now(),

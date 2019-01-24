@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/sequence"
 	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet"
@@ -60,15 +61,16 @@ func (tc *transportConsensus) SignAndSendPacket(packet consensus.ConsensusPacket
 	if err != nil {
 		return errors.Wrapf(err, "Failed to sign %s request to node %s", packet.GetType(), receiver.String())
 	}
+	ctx := context.Background()
 	p := tc.buildPacket(packet, receiverHost)
-	return tc.transport.SendPacket(p)
+	return tc.transport.SendPacket(ctx, p)
 }
 
 func (tc *transportConsensus) buildPacket(p consensus.ConsensusPacket, receiver *host.Host) *packet.Packet {
 	return packet.NewBuilder(tc.origin).Receiver(receiver).Request(p).Build()
 }
 
-func (tc *transportConsensus) processMessage(ctx context.Context, msg *packet.Packet) {
+func (tc *transportConsensus) processMessage(msg *packet.Packet) {
 	p, ok := msg.Data.(consensus.ConsensusPacket)
 	if !ok {
 		log.Error("Error processing incoming message: failed to convert to ConsensusPacket")
@@ -124,6 +126,7 @@ func NewConsensusNetwork(address, nodeID string, shortID core.ShortNodeID,
 	result := &transportConsensus{handlers: make(map[consensus.PacketType]network.ConsensusPacketHandler)}
 
 	result.transport = tp
+	result.sequenceGenerator = sequence.NewGeneratorImpl()
 	result.resolver = resolver
 	result.origin = origin
 	result.messageProcessor = result.processMessage

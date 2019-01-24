@@ -21,34 +21,38 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/api/sdk"
 	"github.com/pkg/errors"
 )
 
 type scenario interface {
 	canBeStarted() error
-	start()
+	start(ctx context.Context)
 	getOperationsNumber() int
 	getAverageOperationDuration() time.Duration
+	getOperationPerSecond() float64
 	getName() string
 	getOut() io.Writer
 	printResult()
 }
 
 type transferDifferentMembersScenario struct {
-	name        string
-	concurrent  int
-	repetitions int
-	members     []memberInfo
-	out         io.Writer
-	totalTime   int64
-	successes   uint32
-	errors      uint32
-	timeouts    uint32
+	name           string
+	concurrent     int
+	repetitions    int
+	out            io.Writer
+	totalTime      int64
+	goroutineTimes []time.Duration
+	successes      uint32
+	errors         uint32
+	timeouts       uint32
+	members        []*sdk.Member
+	insSDK         *sdk.SDK
 }
 
 func (s *transferDifferentMembersScenario) getOperationsNumber() int {
@@ -57,6 +61,21 @@ func (s *transferDifferentMembersScenario) getOperationsNumber() int {
 
 func (s *transferDifferentMembersScenario) getAverageOperationDuration() time.Duration {
 	return time.Duration(s.totalTime / int64(s.getOperationsNumber()))
+}
+
+func (s *transferDifferentMembersScenario) getOperationPerSecond() float64 {
+	if len(s.goroutineTimes) == 0 {
+		return 0
+	}
+
+	max := s.goroutineTimes[0]
+	for _, t := range s.goroutineTimes {
+		if max < t {
+			max = t
+		}
+	}
+	elapsedInSeconds := float64(max) / float64(time.Second)
+	return float64(s.getOperationsNumber()-int(s.timeouts)) / elapsedInSeconds
 }
 
 func (s *transferDifferentMembersScenario) getName() string {
@@ -75,36 +94,53 @@ func (s *transferDifferentMembersScenario) canBeStarted() error {
 	return nil
 }
 
-func (s *transferDifferentMembersScenario) start() {
+func (s *transferDifferentMembersScenario) start(ctx context.Context) {
 	var wg sync.WaitGroup
 	for i := 0; i < s.concurrent*2; i = i + 2 {
 		wg.Add(1)
-		go s.startMember(i, &wg)
+		go s.startMember(ctx, i, &wg)
 	}
 	wg.Wait()
 }
 
-func (s *transferDifferentMembersScenario) startMember(index int, wg *sync.WaitGroup) {
+func (s *transferDifferentMembersScenario) startMember(ctx context.Context, index int, wg *sync.WaitGroup) {
 	defer wg.Done()
+	goroutineTime := time.Duration(0)
 	for j := 0; j < s.repetitions; j = j + 1 {
-		ctx := inslogger.ContextWithTrace(context.Background(), fmt.Sprintf("transferFromMemberNumber%d", index))
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
 		from := s.members[index]
 		to := s.members[index+1]
 
 		start := time.Now()
-		err := transfer(ctx, 1, from, to)
-		atomic.AddInt64(&s.totalTime, int64(time.Since(start)))
+		traceID, err := s.insSDK.Transfer(1, from, to)
+		stop := time.Since(start)
 
 		if err == nil {
 			atomic.AddUint32(&s.successes, 1)
+			atomic.AddInt64(&s.totalTime, int64(stop))
+			goroutineTime += stop
 		} else if netErr, ok := errors.Cause(err).(net.Error); ok && netErr.Timeout() {
 			atomic.AddUint32(&s.timeouts, 1)
-			writeToOutput(s.out, fmt.Sprintf("[Member №%d] Transfer from %s to %s. Timeout.\n", index, from.ref, to.ref))
+			writeToOutput(s.out, fmt.Sprintf("[Member №%d] Transfer error with traceID: %s. Timeout.\n", index, traceID))
 		} else {
 			atomic.AddUint32(&s.errors, 1)
-			writeToOutput(s.out, fmt.Sprintf("[Member №%d] Transfer from %s to %s. Response: %s.\n", index, from.ref, to.ref, err.Error()))
+			atomic.AddInt64(&s.totalTime, int64(stop))
+			goroutineTime += stop
+			if strings.Contains(err.Error(), "Incorrect message pulse") {
+				writeToOutput(s.out, fmt.Sprintf("[ OK ] Incorrect message pulse. Trace: %s.\n", traceID))
+			} else if strings.Contains(err.Error(), "invalid state record") {
+				writeToOutput(s.out, fmt.Sprintf("[ OK ] Invalid state record.    Trace: %s.\n", traceID))
+			} else {
+				writeToOutput(s.out, fmt.Sprintf("[Member №%d] Transfer error with traceID: %s. Response: %s.\n", index, traceID, err.Error()))
+			}
 		}
 	}
+	s.goroutineTimes = append(s.goroutineTimes, goroutineTime)
 }
 
 func (s *transferDifferentMembersScenario) printResult() {

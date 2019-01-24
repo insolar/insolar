@@ -20,6 +20,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/insolar/insolar/component"
 	consensus "github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network/transport/host"
@@ -33,6 +34,7 @@ type BootstrapResult struct {
 
 // Controller contains network logic.
 type Controller interface {
+	component.Starter
 	// SendParcel send message to nodeID.
 	SendMessage(nodeID core.RecordRef, name string, msg core.Parcel) ([]byte, error)
 	// RemoteProcedureRegister register remote procedure that will be executed when message is received.
@@ -42,9 +44,12 @@ type Controller interface {
 	// Bootstrap init complex bootstrap process. Blocks until bootstrap is complete.
 	Bootstrap(ctx context.Context) (*BootstrapResult, error)
 
-	// Inject inject components.
-	Inject(cryptographyService core.CryptographyService,
-		networkCoordinator core.NetworkCoordinator, nodeKeeper NodeKeeper)
+	// TODO: workaround methods, should be deleted once network consensus is alive
+
+	// SetLastIgnoredPulse set pulse number after which we will begin setting new pulses to PulseManager
+	SetLastIgnoredPulse(number core.PulseNumber)
+	// GetLastIgnoredPulse get last pulse that will be ignored
+	GetLastIgnoredPulse() core.PulseNumber
 }
 
 // RequestHandler handler function to process incoming requests from network.
@@ -63,13 +68,13 @@ type HostNetwork interface {
 	GetNodeID() core.RecordRef
 
 	// SendRequest send request to a remote node.
-	SendRequest(request Request, receiver core.RecordRef) (Future, error)
+	SendRequest(ctx context.Context, request Request, receiver core.RecordRef) (Future, error)
 	// RegisterRequestHandler register a handler function to process incoming requests of a specific type.
 	RegisterRequestHandler(t types.PacketType, handler RequestHandler)
 	// NewRequestBuilder create packet builder for an outgoing request with sender set to current node.
 	NewRequestBuilder() RequestBuilder
 	// BuildResponse create response to an incoming request with Data set to responseData.
-	BuildResponse(request Request, responseData interface{}) Response
+	BuildResponse(ctx context.Context, request Request, responseData interface{}) Response
 }
 
 type ConsensusPacketHandler func(incomingPacket consensus.ConsensusPacket, sender core.RecordRef)
@@ -91,12 +96,16 @@ type ConsensusNetwork interface {
 	RegisterPacketHandler(t consensus.PacketType, handler ConsensusPacketHandler)
 }
 
+// RequestID is 64 bit unsigned int request id.
+type RequestID uint64
+
 // Packet is a packet that is transported via network by HostNetwork.
 type Packet interface {
 	GetSender() core.RecordRef
 	GetSenderHost() *host.Host
 	GetType() types.PacketType
 	GetData() interface{}
+	GetRequestID() RequestID
 }
 
 // Request is a packet that is sent from the current node.
@@ -262,13 +271,13 @@ type InternalTransport interface {
 	GetNodeID() core.RecordRef
 
 	// SendRequestPacket send request packet to a remote node.
-	SendRequestPacket(request Request, receiver *host.Host) (Future, error)
+	SendRequestPacket(ctx context.Context, request Request, receiver *host.Host) (Future, error)
 	// RegisterPacketHandler register a handler function to process incoming requests of a specific type.
 	RegisterPacketHandler(t types.PacketType, handler RequestHandler)
 	// NewRequestBuilder create packet builder for an outgoing request with sender set to current node.
 	NewRequestBuilder() RequestBuilder
 	// BuildResponse create response to an incoming request with Data set to responseData.
-	BuildResponse(request Request, responseData interface{}) Response
+	BuildResponse(ctx context.Context, request Request, responseData interface{}) Response
 }
 
 // ClaimQueue is the queue that contains consensus claims.

@@ -19,9 +19,13 @@ package state
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/metrics"
+	"go.opencensus.io/trace"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/network/state.messageBusLocker -o ./ -s _mock.go
@@ -40,6 +44,7 @@ type NetworkSwitcher struct {
 
 	state     core.NetworkState
 	stateLock sync.RWMutex
+	span      *trace.Span
 }
 
 // NewNetworkSwitcher creates new NetworkSwitcher
@@ -64,12 +69,13 @@ func (ns *NetworkSwitcher) OnPulse(ctx context.Context, pulse core.Pulse) error 
 	ns.stateLock.Lock()
 	defer ns.stateLock.Unlock()
 
-	inslogger.FromContext(ctx).Info("Current NetworkSwitcher state is: %s", ns.state)
+	inslogger.FromContext(ctx).Infof("Current NetworkSwitcher state is: %s", ns.state)
 
 	if ns.SwitcherWorkAround.IsBootstrapped() && ns.state != core.CompleteNetworkState {
 		ns.state = core.CompleteNetworkState
 		ns.Release(ctx)
-		inslogger.FromContext(ctx).Info("Current NetworkSwitcher state switched to: %s", ns.state)
+		metrics.NetworkComplete.Set(float64(time.Now().Unix()))
+		inslogger.FromContext(ctx).Infof("Current NetworkSwitcher state switched to: %s", ns.state)
 	}
 
 	return nil
@@ -81,6 +87,7 @@ func (ns *NetworkSwitcher) Acquire(ctx context.Context) {
 	ns.counter = ns.counter + 1
 	if ns.counter-1 == 0 {
 		inslogger.FromContext(ctx).Info("Lock MB")
+		ctx, ns.span = instracer.StartSpan(context.Background(), "GIL Lock (Lock MB)")
 		ns.MBLocker.Lock(ctx)
 	}
 }
@@ -95,5 +102,6 @@ func (ns *NetworkSwitcher) Release(ctx context.Context) {
 	if ns.counter == 0 {
 		inslogger.FromContext(ctx).Info("Unlock MB")
 		ns.MBLocker.Unlock(ctx)
+		ns.span.End()
 	}
 }

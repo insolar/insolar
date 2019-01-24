@@ -21,6 +21,8 @@ import (
 	"net"
 
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/transport/connection"
 	"github.com/insolar/insolar/network/transport/packet"
 	"github.com/insolar/insolar/network/transport/relay"
@@ -32,21 +34,21 @@ import (
 // Transport is an interface for network transport.
 type Transport interface {
 	// SendRequest sends packet to destination. Sequence number is generated automatically.
-	SendRequest(*packet.Packet) (Future, error)
+	SendRequest(context.Context, *packet.Packet) (Future, error)
 
 	// SendResponse sends response packet for request with passed request id.
-	SendResponse(packet.RequestID, *packet.Packet) error
+	SendResponse(context.Context, network.RequestID, *packet.Packet) error
 
 	// SendPacket low-level send packet without requestId and without spawning a waiting future
-	SendPacket(p *packet.Packet) error
+	SendPacket(ctx context.Context, p *packet.Packet) error
 
 	// Listen starts thread to listen incoming packets.
-	Listen(ctx context.Context) error
+	Listen(ctx context.Context, started chan struct{}) error
 
 	// Stop gracefully stops listening.
 	Stop()
 
-	// Close disposing all transport underlying structures after stop are called.
+	// Close disposing all transport underlying structures after stopped are called.
 	Close()
 
 	// Packets returns channel to listen incoming packets.
@@ -102,4 +104,15 @@ func createResolver(stun bool) resolver.PublicAddressResolver {
 		return resolver.NewStunResolver("")
 	}
 	return resolver.NewExactResolver()
+}
+
+func ListenAndWaitUntilReady(ctx context.Context, transport Transport) {
+	started := make(chan struct{}, 1)
+	go func(ctx context.Context, t Transport, started chan struct{}) {
+		err := t.Listen(ctx, started)
+		if err != nil {
+			inslogger.FromContext(ctx).Error(err)
+		}
+	}(ctx, transport, started)
+	<-started
 }

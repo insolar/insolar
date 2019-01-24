@@ -28,7 +28,7 @@ import (
 
 func TestTracerBasics(t *testing.T) {
 	ctx := inslogger.ContextWithTrace(context.Background(), "tracenotdefined")
-	_, err := instracer.RegisterJaeger("server", "localhost:6831", "")
+	_, err := instracer.RegisterJaeger("server", "nodeRef", "localhost:6831", "", 1)
 	assert.NoError(t, err)
 	_, span := instracer.StartSpan(ctx, "root")
 	assert.NotNil(t, span)

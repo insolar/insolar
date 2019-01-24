@@ -348,7 +348,8 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	cfg.Host.Transport.Address = node.host
 
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
-	serviceNetwork, err := NewServiceNetwork(cfg, scheme)
+	node.componentManager = &component.Manager{}
+	serviceNetwork, err := NewServiceNetwork(cfg, scheme, node.componentManager, false)
 	s.NoError(err)
 
 	pulseStorageMock := testutils.NewPulseStorageMock(s.T())
@@ -391,7 +392,6 @@ func (s *testSuite) preInitNode(node *networkNode) {
 		realKeeper.AddActiveNodes([]core.Node{origin})
 	}
 
-	node.componentManager = &component.Manager{}
 	node.componentManager.Register(terminationHandler, realKeeper, pulseManagerMock, pulseStorageMock, netCoordinator, amMock)
 	node.componentManager.Register(certManager, cryptographyService)
 	node.componentManager.Inject(serviceNetwork, netSwitcher)

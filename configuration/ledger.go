@@ -63,6 +63,12 @@ type RecentStorage struct {
 	DefaultTTL int
 }
 
+// Exporter holds configuration of Exporter
+type Exporter struct {
+	// ExportLag is lag in second before we start to export pulse
+	ExportLag uint32
+}
+
 // Ledger holds configuration for ledger.
 type Ledger struct {
 	// Storage defines storage configuration.
@@ -80,10 +86,13 @@ type Ledger struct {
 	// between current and the latest replicated on heavy.
 	//
 	// IMPORTANT: It should be the same on ALL nodes.
-	LightChainLimit core.PulseNumber
+	LightChainLimit int
 
 	// JetSizesHistoryDepth holds maximum number of drop sizes
 	JetSizesHistoryDepth int
+
+	// Exporter holds configuration of Exporter
+	Exporter Exporter
 }
 
 // NewLedger creates new default Ledger configuration.
@@ -113,15 +122,19 @@ func NewLedger() Ledger {
 				Max:    2 * time.Second,
 				Factor: 2,
 			},
-			SplitThreshold: 10 * 1000 * 1000, // 10 megabytes.
+			SplitThreshold: 10 * 100, // 10 megabytes.
 		},
 
 		RecentStorage: RecentStorage{
-			DefaultTTL: 50,
+			DefaultTTL: 10,
 		},
 
-		LightChainLimit: 10 * 30 * 10000, // 30 pulses
+		LightChainLimit: 5, // 5 pulses
 
 		JetSizesHistoryDepth: 10,
+
+		Exporter: Exporter{
+			ExportLag: 40, // 40 seconds
+		},
 	}
 }

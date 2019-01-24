@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -14,31 +14,24 @@
  *    limitations under the License.
  */
 
-package pool
+package artifactmanager
 
 import (
-	"context"
-	"io"
-	"net"
-
-	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/core"
 )
 
-// Consuming 1 byte; only usable for outgoing connections.
-func connectionClosedByPeer(ctx context.Context, conn net.Conn) bool {
-	logger := inslogger.FromContext(ctx)
+// Alias for wrapping func-s
+type Handler func(core.MessageHandler) core.MessageHandler
 
-	n, err := conn.Read(make([]byte, 1))
+// Build return wrapping core.MessageHandler
+// If want call wrapHandler1(wrapHandler2(wrapHandler3(handler))),
+// we should use Build(handler, wrapHandler1, wrapHandler2, wrapHandler3).
+func Build(handler core.MessageHandler, wrapHandlers ...Handler) core.MessageHandler {
+	result := handler
 
-	if err == io.EOF || n > 0 {
-		if err != nil {
-			logger.Errorln("[ connectionClosedByPeer ] Failed to close connection: ", err.Error())
-		} else {
-			logger.Debug("[ connectionClosedByPeer ] Close connection to %s", conn.RemoteAddr())
-		}
-
-		return true
+	for i := range wrapHandlers {
+		result = wrapHandlers[len(wrapHandlers)-1-i](result)
 	}
 
-	return false
+	return result
 }

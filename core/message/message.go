@@ -87,9 +87,6 @@ func getEmptyMessage(mt core.MessageType) (core.Message, error) {
 		return &HeavyPayload{}, nil
 	case core.TypeHeavyReset:
 		return &HeavyReset{}, nil
-	case core.TypeHeavyJetTree:
-		return &HeavyJetTree{}, nil
-
 	// Bootstrap
 	case core.TypeBootstrapRequest:
 		return &GenesisRequest{}, nil
@@ -129,7 +126,7 @@ func Serialize(msg core.Message) (io.Reader, error) {
 }
 
 // Deserialize returns decoded message.
-func Deserialize(buff io.Reader) (core.Parcel, error) {
+func Deserialize(buff io.Reader) (core.Message, error) {
 	b := make([]byte, 1)
 	_, err := buff.Read(b)
 	if err != nil {
@@ -144,10 +141,10 @@ func Deserialize(buff io.Reader) (core.Parcel, error) {
 	if err = enc.Decode(msg); err != nil {
 		return nil, err
 	}
-	return &Parcel{Msg: msg}, nil
+	return msg, nil
 }
 
-// ToBytes deserialize a core.Message to bytes.
+// ToBytes serialize a core.Message to bytes.
 func ToBytes(msg core.Message) []byte {
 	reqBuff, err := Serialize(msg)
 	if err != nil {
@@ -224,7 +221,6 @@ func init() {
 	gob.Register(&HeavyStartStop{})
 	gob.Register(&HeavyPayload{})
 	gob.Register(&HeavyReset{})
-	gob.Register(&HeavyJetTree{})
 
 	// Bootstrap
 	gob.Register(&GenesisRequest{})

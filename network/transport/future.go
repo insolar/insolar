@@ -21,6 +21,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/insolar/insolar/metrics"
+	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet"
 )
@@ -36,7 +38,7 @@ var (
 type Future interface {
 
 	// ID returns packet sequence number.
-	ID() packet.RequestID
+	ID() network.RequestID
 
 	// Actor returns the initiator of the packet.
 	Actor() *host.Host
@@ -64,13 +66,14 @@ type future struct {
 	result         chan *packet.Packet
 	actor          *host.Host
 	request        *packet.Packet
-	requestID      packet.RequestID
+	requestID      network.RequestID
 	cancelCallback CancelCallback
-	canceled       uint32
+	finished       uint32
 }
 
 // NewFuture creates new Future.
-func NewFuture(requestID packet.RequestID, actor *host.Host, msg *packet.Packet, cancelCallback CancelCallback) Future {
+func NewFuture(requestID network.RequestID, actor *host.Host, msg *packet.Packet, cancelCallback CancelCallback) Future {
+	metrics.NetworkFutures.WithLabelValues(msg.Type.String()).Inc()
 	return &future{
 		result:         make(chan *packet.Packet, 1),
 		actor:          actor,
@@ -81,7 +84,7 @@ func NewFuture(requestID packet.RequestID, actor *host.Host, msg *packet.Packet,
 }
 
 // ID returns RequestID of packet.
-func (future *future) ID() packet.RequestID {
+func (future *future) ID() network.RequestID {
 	return future.requestID
 }
 
@@ -102,7 +105,10 @@ func (future *future) Result() <-chan *packet.Packet {
 
 // SetResult write packet to the result channel.
 func (future *future) SetResult(msg *packet.Packet) {
-	future.result <- msg
+	if atomic.CompareAndSwapUint32(&future.finished, 0, 1) {
+		future.result <- msg
+		future.finish()
+	}
 }
 
 // GetResult gets the future result from Result() channel with a timeout set to `duration`.
@@ -115,14 +121,20 @@ func (future *future) GetResult(duration time.Duration) (*packet.Packet, error) 
 		return result, nil
 	case <-time.After(duration):
 		future.Cancel()
+		metrics.NetworkPacketTimeoutTotal.WithLabelValues(future.request.Type.String()).Inc()
 		return nil, ErrTimeout
 	}
 }
 
 // Cancel allows to cancel Future processing.
 func (future *future) Cancel() {
-	if atomic.CompareAndSwapUint32(&future.canceled, 0, 1) {
-		close(future.result)
-		future.cancelCallback(future)
+	if atomic.CompareAndSwapUint32(&future.finished, 0, 1) {
+		future.finish()
+		metrics.NetworkFutures.WithLabelValues(future.request.Type.String()).Dec()
 	}
+}
+
+func (future *future) finish() {
+	close(future.result)
+	future.cancelCallback(future)
 }

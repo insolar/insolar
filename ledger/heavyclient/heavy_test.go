@@ -19,9 +19,9 @@ package heavyclient_test
 import (
 	"bytes"
 	"context"
-	"encoding/hex"
 	"fmt"
 	"sort"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -83,10 +83,10 @@ func sendToHeavy(t *testing.T, withretry bool) {
 
 	// Mock5: RecentStorageMock
 	recentMock := recentstorage.NewRecentStorageMock(t)
-	recentMock.ClearZeroTTLObjectsMock.Return()
 	recentMock.GetObjectsMock.Return(nil)
 	recentMock.GetRequestsMock.Return(nil)
-	recentMock.ClearObjectsMock.Return()
+	recentMock.AddObjectMock.Return()
+	recentMock.DecreaseTTLMock.Return()
 
 	// Mock6: JetCoordinatorMock
 	jcMock := testutils.NewJetCoordinatorMock(t)
@@ -102,7 +102,7 @@ func sendToHeavy(t *testing.T, withretry bool) {
 	alsMock := testutils.NewActiveListSwapperMock(t)
 	alsMock.MoveSyncToActiveFunc = func() error { return nil }
 
-	// Mock N8: Crypto things mock
+	// Mock N9: Crypto things mock
 	cryptoServiceMock := testutils.NewCryptographyServiceMock(t)
 	cryptoServiceMock.SignFunc = func(p []byte) (r *core.Signature, r1 error) {
 		signature := core.SignatureFromBytes(nil)
@@ -110,14 +110,20 @@ func sendToHeavy(t *testing.T, withretry bool) {
 	}
 	cryptoScheme := testutils.NewPlatformCryptographyScheme()
 
+	// Mock N10: ArtifactManagerMessageHandler
+	artifactManagerMessageHandlerMock := testutils.NewArtifactManagerMessageHandlerMock(t)
+	artifactManagerMessageHandlerMock.ResetEarlyRequestCircuitBreakerMock.Return()
+	artifactManagerMessageHandlerMock.CloseEarlyRequestCircuitBreakerForJetMock.Return()
+
 	// mock bus.Mock method, store synced records, and calls count with HeavyRecord
+	var statMutex sync.Mutex
 	var synckeys []key
-	var syncsended int
+	var syncsended int32
 	type messageStat struct {
 		size int
 		keys []key
 	}
-	syncmessagesPerMessage := map[int]*messageStat{}
+	syncmessagesPerMessage := map[int32]*messageStat{}
 	var bussendfailed int32
 	busMock.SendFunc = func(ctx context.Context, msg core.Message, ops *core.MessageSendOptions) (core.Reply, error) {
 		// fmt.Printf("got msg: %T (%s)\n", msg, msg.Type())
@@ -130,7 +136,7 @@ func sendToHeavy(t *testing.T, withretry bool) {
 				}, nil
 			}
 
-			syncsended++
+			syncsendedNewVal := atomic.AddInt32(&syncsended, 1)
 			var size int
 			var keys []key
 
@@ -138,11 +144,14 @@ func sendToHeavy(t *testing.T, withretry bool) {
 				keys = append(keys, rec.K)
 				size += len(rec.K) + len(rec.V)
 			}
+
+			statMutex.Lock()
 			synckeys = append(synckeys, keys...)
-			syncmessagesPerMessage[syncsended] = &messageStat{
+			syncmessagesPerMessage[syncsendedNewVal] = &messageStat{
 				size: size,
 				keys: keys,
 			}
+			statMutex.Unlock()
 		}
 		return nil, nil
 	}
@@ -174,12 +183,15 @@ func sendToHeavy(t *testing.T, withretry bool) {
 	pm.JetCoordinator = jcMock
 	pm.GIL = gilMock
 	pm.PulseStorage = storage.NewPulseStorage(db)
+	pm.ArtifactManagerMessageHandler = artifactManagerMessageHandlerMock
 
-	provideMock := recentstorage.NewProviderMock(t)
-	provideMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
+	providerMock := recentstorage.NewProviderMock(t)
+	providerMock.GetStorageFunc = func(ctx context.Context, p core.RecordID) (r recentstorage.RecentStorage) {
 		return recentMock
 	}
-	pm.RecentStorageProvider = provideMock
+	providerMock.CloneStorageMock.Return()
+	providerMock.RemoveStorageMock.Return()
+	pm.RecentStorageProvider = providerMock
 
 	pm.ActiveListSwapper = alsMock
 	pm.CryptographyService = cryptoServiceMock
@@ -231,13 +243,13 @@ func sendToHeavy(t *testing.T, withretry bool) {
 
 	recs := getallkeys(db.GetBadgerDB())
 	recs = filterkeys(recs, func(k key) bool {
-		return k.pulse() != 0
+		return storage.Key(k).PulseNumber() != 0
 	})
 
-	// fmt.Println("synckeys")
-	// printkeys(synckeys, "  ")
-	// fmt.Println("getallkeys")
+	// fmt.Println("getallkeys: ", len(recs))
 	// printkeys(recs, "  ")
+	// fmt.Println("synckeys:", len(synckeys))
+	// printkeys(synckeys, "  ")
 	require.Equal(t, len(recs), len(synckeys), "synced keys count are the same as records count in storage")
 	assert.Equal(t, recs, synckeys, "synced keys are the same as records in storage")
 }
@@ -288,6 +300,10 @@ var (
 
 type key []byte
 
+func (k key) String() string {
+	return storage.Key(k).String()
+}
+
 func getallkeys(db *badger.DB) (records []key) {
 	txn := db.NewTransaction(true)
 	defer txn.Discard()
@@ -297,7 +313,7 @@ func getallkeys(db *badger.DB) (records []key) {
 	for it.Rewind(); it.Valid(); it.Next() {
 		item := it.Item()
 		k := item.KeyCopy(nil)
-		if key(k).pulse() == 0 {
+		if storage.Key(k).PulseNumber() == 0 {
 			continue
 		}
 		switch k[0] {
@@ -312,30 +328,10 @@ func getallkeys(db *badger.DB) (records []key) {
 	return
 }
 
-func (b key) pulse() core.PulseNumber {
-	pulseStartsAt := 1
-	pulseEndsAt := 1 + core.PulseNumberSize
-	// if jet defined for record type
-	switch b[0] {
-	case
-		scopeIDRecord,
-		scopeIDJetDrop,
-		scopeIDLifeline,
-		scopeIDBlob:
-
-		pulseStartsAt += core.RecordIDSize
-		pulseEndsAt += core.RecordIDSize
-	}
-	return core.NewPulseNumber(b[pulseStartsAt:pulseEndsAt])
-}
-
-func (b key) String() string {
-	return hex.EncodeToString(b)
-}
-
 func printkeys(keys []key, prefix string) {
 	for _, k := range keys {
-		fmt.Printf("%v%v (%v)\n", prefix, k, k.pulse())
+		sk := storage.Key(k)
+		fmt.Printf("%v%v (%v)\n", prefix, sk, sk.PulseNumber())
 	}
 }
 

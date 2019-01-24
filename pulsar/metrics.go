@@ -14,27 +14,27 @@
  *    limitations under the License.
  */
 
-package heavyserver
+package pulsar
 
 import (
-	"context"
-
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/jet"
+	"go.opencensus.io/stats"
+	"go.opencensus.io/stats/view"
 )
 
-// HeavyJetSync is used for sync jets on heavy
-type HeavyJetSync struct {
-	db *storage.DB
-}
+var (
+	statPulseGenerated = stats.Int64("pulsar/pulse/generated", "count of generated pulses", stats.UnitDimensionless)
+)
 
-// NewHeavyJetSync creates HeavyJetTreeSync
-func NewHeavyJetSync(db *storage.DB) *HeavyJetSync {
-	return &HeavyJetSync{db: db}
-}
-
-// SyncTree updates state of the heavy's jet tree
-func (hs *HeavyJetSync) SyncTree(ctx context.Context, tree jet.Tree, pulse core.PulseNumber) error {
-	return hs.db.AppendJetTree(ctx, pulse, &tree)
+func init() {
+	err := view.Register(
+		&view.View{
+			Name:        statPulseGenerated.Name(),
+			Description: statPulseGenerated.Description(),
+			Measure:     statPulseGenerated,
+			Aggregation: view.Sum(),
+		},
+	)
+	if err != nil {
+		panic(err)
+	}
 }

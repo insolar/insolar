@@ -8,8 +8,6 @@ INSGORUND=$BIN_DIR/insgorund
 PULSARD=$BIN_DIR/pulsard
 CONTRACT_STORAGE=contractstorage
 LEDGER_DIR=data
-INSGORUND_LISTEN_PORT=18181
-INSGORUND_RPS_PORT=18182
 CONFIGS_DIR=configs
 BASE_DIR=scripts/insolard
 KEYS_FILE=$BASE_DIR/$CONFIGS_DIR/bootstrap_keys.json
@@ -17,6 +15,8 @@ ROOT_MEMBER_KEYS_FILE=$BASE_DIR/$CONFIGS_DIR/root_member_keys.json
 DISCOVERY_NODES_DATA=$BASE_DIR/discoverynodes/
 NODES_DATA=$BASE_DIR/nodes/
 GENESIS_CONFIG=$BASE_DIR/genesis.yaml
+GENERATED_CONFIGS_DIR=$BASE_DIR/$CONFIGS_DIR/generated_configs
+INSGORUND_PORT_FILE=$BASE_DIR/$CONFIGS_DIR/insgorund_ports.txt
 
 insolar_log_level=Debug
 gorund_log_level=$insolar_log_level
@@ -36,26 +36,50 @@ done
 
 DISCOVERY_NODES_KEYS_DIR=$TEST_DATA/scripts/discovery_nodes
 
+kill_port()
+{
+    port=$1
+    pids=$(lsof -i :$port | grep "LISTEN\|UDP" | awk '{print $2}')
+    for pid in $pids
+    do
+        echo "killing pid $pid"
+        kill -9 $pid
+    done
+}
+
 stop_listening()
 {
     echo "stop_listening() starts ..."
     stop_insgorund=$1
-    ports="13831 13832 23832 23833 33833 33834 43834 53835 58090 58182 58181"
+    ports="$ports 58090" # Pulsar
+    ports="$ports 53837" # Genesis
     if [[ "$stop_insgorund" == "true" ]]
     then
-        ports="$ports $INSGORUND_LISTEN_PORT $INSGORUND_RPS_PORT"
+        gorund_ports=
+        while read -r line; do
+
+            listen_port=$( echo "$line" | awk '{print $1}' )
+            rpc_port=$( echo "$line" | awk '{print $2}' )
+
+            gorund_ports="$gorund_ports $listen_port $rpc_port"
+
+        done < "$INSGORUND_PORT_FILE"
+
+        gorund_ports="$gorund_ports $(echo $(pgrep insgorund ))"
+
+        ports="$ports $gorund_ports"
+
     fi
 
+    transport_ports=$( grep "host:" $GENESIS_CONFIG | grep -o ":\d\+" | grep -o "\d\+" | tr '\n' ' ' )
+    ports="$ports $transport_ports"
+
     echo "Stop listening..."
+
     for port in $ports
     do
         echo "port: $port"
-        pids=$(lsof -i :$port | grep "LISTEN\|UDP" | awk '{print $2}')
-        for pid in $pids
-        do
-            echo "killing pid $pid"
-            kill -9 $pid
-        done
+        kill_port $port
     done
     echo "stop_listening() end."
 }
@@ -67,6 +91,7 @@ clear_dirs()
     rm -rfv $LEDGER_DIR/*
     rm -rfv $DISCOVERY_NODES_DATA/*
     rm -rfv $NODES_DATA/*
+    rm -rfv $GENERATED_CONFIGS_DIR/*
     echo "clear_dirs() end."
 }
 
@@ -77,6 +102,8 @@ create_required_dirs()
     mkdir -vp $LEDGER_DIR
     mkdir -vp $DISCOVERY_NODES_DATA/certs
     mkdir -vp $NODES_DATA/certs
+    mkdir -vp $GENERATED_CONFIGS_DIR
+    touch $INSGORUND_PORT_FILE
 
     for node in "${DISCOVERY_NODES[@]}"
     do
@@ -91,6 +118,11 @@ create_required_dirs()
     mkdir -p scripts/insolard/$CONFIGS_DIR
 
     echo "create_required_dirs() end."
+}
+
+generate_insolard_configs()
+{
+    go run scripts/generate_insolar_configs.go -o $GENERATED_CONFIGS_DIR -p $INSGORUND_PORT_FILE -g $GENESIS_CONFIG -t $BASE_DIR/pulsar_template.yaml
 }
 
 prepare()
@@ -194,8 +226,16 @@ process_input_params()
 launch_insgorund()
 {
     host=127.0.0.1
-    $INSGORUND -l $host:$INSGORUND_LISTEN_PORT --rpc $host:$INSGORUND_RPS_PORT --log-level=$gorund_log_level --metrics :18182 &
+    metrics_port=28223
+    while read -r line; do
 
+        metrics_port=$((metrics_port + 20))
+        listen_port=$( echo "$line" | awk '{print $1}' )
+        rpc_port=$( echo "$line" | awk '{print $2}' )
+
+        $INSGORUND -l $host:$listen_port --rpc $host:$rpc_port --log-level=$gorund_log_level --metrics :$metrics_port &
+
+    done < "$INSGORUND_PORT_FILE"
     if [[ "$NUM_DISCOVERY_NODES" == "5" ]]
     then
         $INSGORUND -l $host:58181 --rpc $host:58182 --log-level=$gorund_log_level --metrics :58183 &
@@ -238,6 +278,7 @@ genesis()
     generate_root_member_keys
     generate_discovery_nodes_keys
     generate_nodes_keys
+    generate_insolard_configs
 
     printf "start genesis ... \n"
     $INSOLARD --config $BASE_DIR/insolar.yaml --genesis $GENESIS_CONFIG --keyout $DISCOVERY_NODES_DATA/certs
@@ -245,6 +286,20 @@ genesis()
 
     copy_data
     copy_certs
+
+
+    if which jq ; then
+        NL=$BASE_DIR/loglinks
+        mkdir  $NL || \
+        rm -f $NL/*.log
+        for node in "${NODES[@]}" ; do
+            ref=`jq -r '.reference' $node/cert.json`
+            [[ $ref =~ .+\. ]]
+            ln -s `pwd`/$node/output.log $NL/${BASH_REMATCH[0]}log
+        done
+    else
+        echo "no jq =("
+    fi
 }
 
 trap 'stop_listening true' INT TERM EXIT
@@ -254,7 +309,7 @@ check_working_dir
 process_input_params $@
 
 printf "start pulsar ... \n"
-$PULSARD -c $BASE_DIR/pulsar.yaml &> $DISCOVERY_NODES_DATA/pulsar_output.txt &
+$PULSARD -c $GENERATED_CONFIGS_DIR/pulsar.yaml --trace &> $DISCOVERY_NODES_DATA/pulsar_output.log &
 
 if [[ "$run_insgorund" == "true" ]]
 then
@@ -273,10 +328,10 @@ do
     if [[ "$i" -eq "$NUM_DISCOVERY_NODES" ]]
     then
         echo "DISCOVERY NODE $i STARTED in foreground"
-        INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $BASE_DIR/insolar_$i.yaml --trace &> $node/output.txt
+        INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $GENERATED_CONFIGS_DIR/insolar_$i.yaml --trace &> $node/output.log
         break
     fi
-    INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $BASE_DIR/insolar_$i.yaml --trace &> $node/output.txt &
+    INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $GENERATED_CONFIGS_DIR/insolar_$i.yaml --trace &> $node/output.log &
     echo "DISCOVERY NODE $i STARTED in background"
 done
 

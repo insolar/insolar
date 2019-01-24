@@ -31,9 +31,9 @@ type PhaseManager interface {
 }
 
 type Phases struct {
-	FirstPhase  *FirstPhase  // `inject:""`
-	SecondPhase *SecondPhase // `inject:""`
-	ThirdPhase  *ThirdPhase  // `inject:""`
+	FirstPhase  FirstPhase  `inject:"subcomponent"`
+	SecondPhase SecondPhase `inject:"subcomponent"`
+	ThirdPhase  ThirdPhase  `inject:"subcomponent"`
 
 	PulseManager core.PulseManager  `inject:""`
 	NodeKeeper   network.NodeKeeper `inject:""`

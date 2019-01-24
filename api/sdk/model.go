@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 INS Ecosystem
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -14,22 +14,18 @@
  *    limitations under the License.
  */
 
-package transport
+package sdk
 
-import (
-	"github.com/insolar/insolar/network/utils"
-)
-
-type sequenceGeneratorImpl struct {
-	sequence *uint64
+// Member model object
+type Member struct {
+	Reference  string
+	PrivateKey string
 }
 
-func newSequenceGeneratorImpl() *sequenceGeneratorImpl {
-	return &sequenceGeneratorImpl{
-		sequence: new(uint64),
+// NewMember creates new Member
+func NewMember(ref string, key string) *Member {
+	return &Member{
+		Reference:  ref,
+		PrivateKey: key,
 	}
-}
-
-func (sg *sequenceGeneratorImpl) Generate() Sequence {
-	return Sequence(utils.AtomicLoadAndIncrementUint64(sg.sequence))
 }

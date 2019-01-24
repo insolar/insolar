@@ -20,13 +20,21 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-// NetworkMessageSentTotal is total number of sent messages metric
-var NetworkMessageSentTotal = prometheus.NewCounter(prometheus.CounterOpts{
-	Name:      "message_sent_total",
-	Help:      "Total number of sent messages",
+// NetworkParcelSentTotal is total number of sent messages metric
+var NetworkParcelSentTotal = prometheus.NewCounterVec(prometheus.CounterOpts{
+	Name:      "parcel_sent_total",
+	Help:      "Total number of sent parcels",
 	Namespace: insolarNamespace,
 	Subsystem: "network",
-})
+}, []string{"messageType"})
+
+// NetworkParcelReceivedTotal is total number of received messages metric
+var NetworkParcelReceivedTotal = prometheus.NewCounterVec(prometheus.CounterOpts{
+	Name:      "parcel_received_total",
+	Help:      "Total number of received parcels",
+	Namespace: insolarNamespace,
+	Subsystem: "network",
+}, []string{"messageType"})
 
 // NetworkPacketSentTotal is total number of sent packets metric
 var NetworkPacketSentTotal = prometheus.NewCounterVec(prometheus.CounterOpts{
@@ -44,6 +52,14 @@ var NetworkPacketReceivedTotal = prometheus.NewCounterVec(prometheus.CounterOpts
 	Subsystem: "network",
 }, []string{"packetType"})
 
+// NetworkPacketTimeoutTotal is is total number of timed out packets metric
+var NetworkPacketTimeoutTotal = prometheus.NewCounterVec(prometheus.CounterOpts{
+	Name:      "packet_timeout_total",
+	Help:      "Total number of timed out packets",
+	Namespace: insolarNamespace,
+	Subsystem: "network",
+}, []string{"packetType"})
+
 // NetworkFutures is current network transport futures count metric
 var NetworkFutures = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 	Name:      "futures",
@@ -51,3 +67,19 @@ var NetworkFutures = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 	Namespace: insolarNamespace,
 	Subsystem: "network",
 }, []string{"packetType"})
+
+// NetworkConnections is current network transport connections count metric
+var NetworkConnections = prometheus.NewGauge(prometheus.GaugeOpts{
+	Name:      "connections",
+	Help:      "Current network transport connections count",
+	Namespace: insolarNamespace,
+	Subsystem: "network",
+})
+
+// NetworkComplete is metric that is committed when the node reaches complete network state
+var NetworkComplete = prometheus.NewGauge(prometheus.GaugeOpts{
+	Name:      "complete_network_state",
+	Help:      "Timestamp when the node reaches complete network state",
+	Namespace: insolarNamespace,
+	Subsystem: "network",
+})

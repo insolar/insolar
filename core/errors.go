@@ -25,4 +25,6 @@ var (
 	ErrDeactivated = errors.New("object is deactivated")
 	// ErrStateNotAvailable returned when requested object is deactivated.
 	ErrStateNotAvailable = errors.New("object state is not available")
+	// ErrHotDataTimeout returned when no hot data received for a specific jet
+	ErrHotDataTimeout = errors.New("no hot data received for a specific jet")
 )

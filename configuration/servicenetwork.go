@@ -18,12 +18,12 @@ package configuration
 
 // ServiceNetwork is configuration for ServiceNetwork.
 type ServiceNetwork struct {
-	IsGenesis bool
+	Skip int // magic number that indicates what delta after last ignored pulse we should wait
 }
 
 // NewServiceNetwork creates a new ServiceNetwork configuration.
 func NewServiceNetwork() ServiceNetwork {
 	return ServiceNetwork{
-		IsGenesis: false,
+		Skip: 10,
 	}
 }
