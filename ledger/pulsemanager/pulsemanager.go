@@ -59,6 +59,7 @@ type PulseManager struct {
 	PulseStorage                  pulseStoragePm                     `inject:""`
 	ArtifactManagerMessageHandler core.ArtifactManagerMessageHandler `inject:""`
 	JetStorage                    storage.JetStorage                 `inject:""`
+	ObjectStorage                 storage.ObjectStorage              `inject:""`
 
 	// TODO: move clients pool to component - @nordicdyno - 18.Dec.2018
 	syncClientsPool *heavyclient.Pool
@@ -330,7 +331,7 @@ func (m *PulseManager) getExecutorHotData(
 	pendingRequests := map[core.RecordID]map[core.RecordID][]byte{}
 
 	for id, ttl := range recentObjectsIds {
-		lifeline, err := m.db.GetObjectIndex(ctx, jetID, &id, false)
+		lifeline, err := m.ObjectStorage.GetObjectIndex(ctx, jetID, &id, false)
 		if err != nil {
 			logger.Error(err)
 			continue
@@ -348,7 +349,7 @@ func (m *PulseManager) getExecutorHotData(
 
 	for objID, requests := range recentStorage.GetRequests() {
 		for reqID := range requests {
-			pendingRecord, err := m.db.GetRecord(ctx, jetID, &reqID)
+			pendingRecord, err := m.ObjectStorage.GetRecord(ctx, jetID, &reqID)
 			if err != nil {
 				inslogger.FromContext(ctx).Error(err)
 				continue
@@ -490,11 +491,11 @@ func (m *PulseManager) rewriteHotData(ctx context.Context, fromJetID, toJetID co
 	recentStorage := m.RecentStorageProvider.GetStorage(ctx, fromJetID)
 
 	for id := range recentStorage.GetObjects() {
-		idx, err := m.db.GetObjectIndex(ctx, fromJetID, &id, false)
+		idx, err := m.ObjectStorage.GetObjectIndex(ctx, fromJetID, &id, false)
 		if err != nil {
 			return errors.Wrap(err, "failed to rewrite index")
 		}
-		err = m.db.SetObjectIndex(ctx, toJetID, &id, idx)
+		err = m.ObjectStorage.SetObjectIndex(ctx, toJetID, &id, idx)
 		if err != nil {
 			return errors.Wrap(err, "failed to rewrite index")
 		}
@@ -502,11 +503,11 @@ func (m *PulseManager) rewriteHotData(ctx context.Context, fromJetID, toJetID co
 
 	for _, requests := range recentStorage.GetRequests() {
 		for fromReqID := range requests {
-			request, err := m.db.GetRecord(ctx, fromJetID, &fromReqID)
+			request, err := m.ObjectStorage.GetRecord(ctx, fromJetID, &fromReqID)
 			if err != nil {
 				return errors.Wrap(err, "failed to rewrite pending request")
 			}
-			toReqID, err := m.db.SetRecord(ctx, toJetID, fromReqID.Pulse(), request)
+			toReqID, err := m.ObjectStorage.SetRecord(ctx, toJetID, fromReqID.Pulse(), request)
 			if err == storage.ErrOverride {
 				continue
 			}

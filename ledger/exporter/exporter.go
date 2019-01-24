@@ -36,15 +36,22 @@ import (
 
 // Exporter provides methods for fetching data view from storage.
 type Exporter struct {
-	db         *storage.DB
-	jetStorage storage.JetStorage
-	ps         *storage.PulseStorage
-	cfg        configuration.Exporter
+	db            *storage.DB
+	jetStorage    storage.JetStorage
+	objectStorage storage.ObjectStorage
+	ps            *storage.PulseStorage
+	cfg           configuration.Exporter
 }
 
 // NewExporter creates new StorageExporter instance.
 func NewExporter(db *storage.DB, ps *storage.PulseStorage, cfg configuration.Exporter) *Exporter {
-	return &Exporter{db: db, jetStorage: db, ps: ps, cfg: cfg}
+	return &Exporter{
+		db:            db,
+		jetStorage:    db,
+		objectStorage: db,
+		ps:            ps,
+		cfg:           cfg,
+	}
 }
 
 type payload map[string]interface{}
