@@ -22,11 +22,10 @@ import (
 	"encoding/gob"
 	"fmt"
 	"io"
-	"strconv"
 	"sync"
 	"time"
 
-	"github.com/insolar/insolar/core/utils"
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
@@ -36,7 +35,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/metrics"
-	"github.com/pkg/errors"
 )
 
 const deliverRPCMethodName = "MessageBus.Deliver"
@@ -292,56 +290,15 @@ func (mb *MessageBus) checkPulse(ctx context.Context, parcel core.Parcel, locked
 
 	ppn := parcel.Pulse()
 	if ppn > pulse.PulseNumber {
-		inslogger.FromContext(ctx).Debug(
-			"message from the future, our pulse: ", pulse.PulseNumber, " msg pulse: ", ppn,
-		)
-		if locked {
-			mb.globalLock.RUnlock()
+		return mb.handleParcelFromTheFuture(ctx, parcel, locked)
+	} else if ppn < pulse.PulseNumber {
+		if ppn < pulse.PrevPulseNumber {
+			inslogger.FromContext(ctx).Errorf(
+				"[ checkPulse ] Pulse is TOO OLD: (parcel: %d, current: %d) Parcel is: %#v",
+				ppn, pulse.PulseNumber, parcel.Message(),
+			)
 		}
 
-		mb.NextPulseMessagePoolLock.RLock()
-
-		ctx := inslogger.ContextWithTrace(context.Background(), utils.TraceID(ctx))
-		pulse, err = mb.PulseStorage.Current(ctx)
-		if err != nil {
-			mb.NextPulseMessagePoolLock.RUnlock()
-			if locked {
-				mb.globalLock.RLock()
-			}
-			return errors.Wrap(err, "[ checkPulse ] Couldn't get current pulse number")
-		}
-		inslogger.FromContext(ctx).Debug("rechecking pulse after lock, pulse: ", pulse.PulseNumber)
-		if ppn > pulse.PulseNumber {
-			inslogger.FromContext(ctx).Debug("still in future")
-			_, span := instracer.StartSpan(ctx, "MessageBus.checkPulse waiting: current: "+
-				strconv.Itoa(int(pulse.PulseNumber))+" parcel: "+strconv.Itoa(int(ppn)))
-			<-mb.NextPulseMessagePoolChan
-			span.End()
-			pulse, err = mb.PulseStorage.Current(ctx)
-			if err != nil {
-				mb.NextPulseMessagePoolLock.RUnlock()
-				if locked {
-					mb.globalLock.RLock()
-				}
-				return errors.Wrap(err, "[ checkPulse ] Couldn't get current pulse number")
-			}
-
-		}
-		mb.NextPulseMessagePoolLock.RUnlock()
-
-		if locked {
-			mb.globalLock.RLock()
-		}
-	} else if ppn < pulse.PrevPulseNumber {
-		inslogger.FromContext(ctx).Errorf("[ checkPulse ] Pulse is TOO OLD: (parcel: %d, current: %d) Parcel is: %#v", ppn, pulse.PulseNumber, parcel.Message())
-	}
-
-	if ppn > pulse.PulseNumber {
-		// We waited for next pulse but parcel is still from future. Return error.
-		inslogger.FromContext(ctx).Errorf("[ checkPulse ] After all checks, message pulse is still bigger then current (parcel: %d, current: %d)", ppn, pulse.PulseNumber)
-		return fmt.Errorf("[ checkPulse ] Incorrect message pulse (parcel: %d, current: %d)", ppn, pulse.PulseNumber)
-	}
-	if ppn < pulse.PulseNumber {
 		// Parcel is from past. Return error for some messages, allow for others.
 		switch parcel.Message().(type) {
 		case
@@ -363,6 +320,52 @@ func (mb *MessageBus) checkPulse(ctx context.Context, parcel core.Parcel, locked
 	}
 
 	return nil
+}
+
+func (mb *MessageBus) handleParcelFromTheFuture(ctx context.Context, parcel core.Parcel, locked bool) error {
+	ctx, span := instracer.StartSpan(ctx, "MessageBus.handleParcelFromTheFuture")
+	defer span.End()
+
+	ppn := parcel.Pulse()
+	inslogger.FromContext(ctx).Debug(
+		"message from the future, msg pulse: ", ppn,
+	)
+	if locked {
+		mb.globalLock.RUnlock()
+		defer mb.globalLock.RLock()
+	}
+
+	for {
+		mb.NextPulseMessagePoolLock.RLock()
+
+		pulse, err := mb.PulseStorage.Current(ctx)
+		if err != nil {
+			mb.NextPulseMessagePoolLock.RUnlock()
+			return errors.Wrap(err, "couldn't get current pulse number")
+		}
+		if ppn > pulse.PulseNumber {
+			inslogger.FromContext(ctx).Debug("still in future")
+
+			_, span := instracer.StartSpan(
+				ctx, fmt.Sprintf("waiting pulse switch from %d to %d", pulse.PulseNumber, ppn),
+			)
+			<-mb.NextPulseMessagePoolChan
+			span.End()
+
+			pulse, err = mb.PulseStorage.Current(ctx)
+			if err != nil {
+				mb.NextPulseMessagePoolLock.RUnlock()
+				return errors.Wrap(err, "couldn't get current pulse number")
+			}
+		}
+
+		mb.NextPulseMessagePoolLock.RUnlock()
+
+		if ppn <= pulse.PulseNumber {
+			inslogger.FromContext(ctx).Debug("releasing message after waiting for pulse")
+			return nil
+		}
+	}
 }
 
 // Deliver method calls LogicRunner.Execute on local host
