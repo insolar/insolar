@@ -18,7 +18,6 @@ package artifactmanager
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/pkg/errors"
@@ -169,12 +168,13 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 
 func (m *middleware) saveParcel(handler core.MessageHandler) core.MessageHandler {
 	return func(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
+		logger := inslogger.FromContext(ctx)
 		jetID := jetFromContext(ctx)
 		pulse, err := m.pulseStorage.Current(ctx)
 		if err != nil {
 			return nil, err
 		}
-		fmt.Println("saveParcel, pulse - ", pulse.PulseNumber)
+		logger.Debugf("saveParcel, pulse - %v", pulse.PulseNumber)
 		err = m.db.SetMessage(ctx, jetID, pulse.PulseNumber, parcel)
 		if err != nil {
 			return nil, err

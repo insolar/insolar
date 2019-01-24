@@ -907,6 +907,7 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 
 	messages := make([]core.Message, 0)
 
+	ctx, spanStates := instracer.StartSpan(ctx, "pulse.logicrunner processing of states")
 	for ref, state := range lr.state {
 		meNext, _ := lr.JetCoordinator.IsAuthorized(
 			ctx, core.DynamicRoleVirtualExecutor, *ref.Record(), pulse.PulseNumber, lr.JetCoordinator.Me(),
@@ -1005,11 +1006,13 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 
 		state.Unlock()
 	}
+	spanStates.End()
 
 	lr.stateMutex.Unlock()
 
 	var errorCounter int
 	var sendWg sync.WaitGroup
+	ctx, spanMessages := instracer.StartSpan(ctx, "pulse.logicrunner sending messages")
 	if len(messages) > 0 {
 		errChan := make(chan error, len(messages))
 		sendWg.Add(len(messages))
@@ -1032,6 +1035,7 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 			return errors.New("error while sending executor data in OnPulse, see logs for more information")
 		}
 	}
+	spanMessages.End()
 
 	return nil
 }
@@ -1075,8 +1079,10 @@ func (lr *LogicRunner) HandleStillExecutingMessage(
 
 func (lr *LogicRunner) sendOnPulseMessagesAsync(ctx context.Context, msg core.Message, sendWg *sync.WaitGroup, errChan *chan error) {
 	defer sendWg.Done()
+	ctx, span := instracer.StartSpan(ctx, "pulse.sendOnPulseMessagesAsync")
 	_, err := lr.MessageBus.Send(ctx, msg, nil)
 	*errChan <- err
+	span.End()
 }
 func convertQueueToMessageQueue(queue []ExecutionQueueElement) []message.ExecutionQueueElement {
 	mq := make([]message.ExecutionQueueElement, 0)
