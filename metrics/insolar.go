@@ -20,8 +20,10 @@ func GetInsolarRegistry() *prometheus.Registry {
 	registry.MustRegister(NetworkFutures)
 	registry.MustRegister(NetworkConnections)
 	registry.MustRegister(NetworkPacketSentTotal)
+	registry.MustRegister(NetworkPacketTimeoutTotal)
 	registry.MustRegister(NetworkPacketReceivedTotal)
 	registry.MustRegister(NetworkParcelReceivedTotal)
+	registry.MustRegister(NetworkComplete)
 
 	registry.MustRegister(ParcelsSentTotal)
 	registry.MustRegister(ParcelsTime)

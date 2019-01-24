@@ -14,16 +14,27 @@
  *    limitations under the License.
  */
 
-package configuration
+package pulsar
 
-// ServiceNetwork is configuration for ServiceNetwork.
-type ServiceNetwork struct {
-	Skip int // magic number that indicates what delta after last ignored pulse we should wait
-}
+import (
+	"go.opencensus.io/stats"
+	"go.opencensus.io/stats/view"
+)
 
-// NewServiceNetwork creates a new ServiceNetwork configuration.
-func NewServiceNetwork() ServiceNetwork {
-	return ServiceNetwork{
-		Skip: 10,
+var (
+	statPulseGenerated = stats.Int64("pulsar/pulse/generated", "count of generated pulses", stats.UnitDimensionless)
+)
+
+func init() {
+	err := view.Register(
+		&view.View{
+			Name:        statPulseGenerated.Name(),
+			Description: statPulseGenerated.Description(),
+			Measure:     statPulseGenerated,
+			Aggregation: view.Sum(),
+		},
+	)
+	if err != nil {
+		panic(err)
 	}
 }

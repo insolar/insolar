@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -14,16 +14,24 @@
  *    limitations under the License.
  */
 
-package configuration
+package artifactmanager
 
-// ServiceNetwork is configuration for ServiceNetwork.
-type ServiceNetwork struct {
-	Skip int // magic number that indicates what delta after last ignored pulse we should wait
-}
+import (
+	"github.com/insolar/insolar/core"
+)
 
-// NewServiceNetwork creates a new ServiceNetwork configuration.
-func NewServiceNetwork() ServiceNetwork {
-	return ServiceNetwork{
-		Skip: 10,
+// Alias for wrapping func-s
+type Handler func(core.MessageHandler) core.MessageHandler
+
+// Build return wrapping core.MessageHandler
+// If want call wrapHandler1(wrapHandler2(wrapHandler3(handler))),
+// we should use Build(handler, wrapHandler1, wrapHandler2, wrapHandler3).
+func Build(handler core.MessageHandler, wrapHandlers ...Handler) core.MessageHandler {
+	result := handler
+
+	for i := range wrapHandlers {
+		result = wrapHandlers[len(wrapHandlers)-1-i](result)
 	}
+
+	return result
 }

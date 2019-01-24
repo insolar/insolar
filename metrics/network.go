@@ -52,6 +52,14 @@ var NetworkPacketReceivedTotal = prometheus.NewCounterVec(prometheus.CounterOpts
 	Subsystem: "network",
 }, []string{"packetType"})
 
+// NetworkPacketTimeoutTotal is is total number of timed out packets metric
+var NetworkPacketTimeoutTotal = prometheus.NewCounterVec(prometheus.CounterOpts{
+	Name:      "packet_timeout_total",
+	Help:      "Total number of timed out packets",
+	Namespace: insolarNamespace,
+	Subsystem: "network",
+}, []string{"packetType"})
+
 // NetworkFutures is current network transport futures count metric
 var NetworkFutures = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 	Name:      "futures",
@@ -64,6 +72,14 @@ var NetworkFutures = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 var NetworkConnections = prometheus.NewGauge(prometheus.GaugeOpts{
 	Name:      "connections",
 	Help:      "Current network transport connections count",
+	Namespace: insolarNamespace,
+	Subsystem: "network",
+})
+
+// NetworkComplete is metric that is committed when the node reaches complete network state
+var NetworkComplete = prometheus.NewGauge(prometheus.GaugeOpts{
+	Name:      "complete_network_state",
+	Help:      "Timestamp when the node reaches complete network state",
 	Namespace: insolarNamespace,
 	Subsystem: "network",
 })

@@ -70,7 +70,7 @@ func TestMessageHandler_HandleGetObject_Redirects(t *testing.T) {
 	mb.MustRegisterMock.Return()
 
 	provideMock := recentstorage.NewProviderMock(t)
-	provideMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
+	provideMock.GetStorageFunc = func(ctx context.Context, p core.RecordID) (r recentstorage.RecentStorage) {
 		return recentStorageMock
 	}
 
@@ -217,7 +217,7 @@ func TestMessageHandler_HandleGetChildren_Redirects(t *testing.T) {
 	err := h.Init(ctx)
 	require.NoError(t, err)
 	provideMock := recentstorage.NewProviderMock(t)
-	provideMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
+	provideMock.GetStorageFunc = func(ctx context.Context, p core.RecordID) (r recentstorage.RecentStorage) {
 		return recentStorageMock
 	}
 
@@ -340,7 +340,7 @@ func TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeavy(t *testing.T) {
 	}, certificate)
 
 	provideMock := recentstorage.NewProviderMock(t)
-	provideMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
+	provideMock.GetStorageFunc = func(ctx context.Context, p core.RecordID) (r recentstorage.RecentStorage) {
 		return recentStorageMock
 	}
 
@@ -411,7 +411,7 @@ func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 	}, certificate)
 
 	provideMock := recentstorage.NewProviderMock(t)
-	provideMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
+	provideMock.GetStorageFunc = func(ctx context.Context, p core.RecordID) (r recentstorage.RecentStorage) {
 		return recentStorageMock
 	}
 
@@ -494,7 +494,7 @@ func TestMessageHandler_HandleGetObjectIndex(t *testing.T) {
 	require.NoError(t, err)
 
 	provideMock := recentstorage.NewProviderMock(t)
-	provideMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
+	provideMock.GetStorageFunc = func(ctx context.Context, p core.RecordID) (r recentstorage.RecentStorage) {
 		return recentStorageMock
 	}
 
@@ -548,7 +548,7 @@ func TestMessageHandler_HandleHasPendingRequests(t *testing.T) {
 	require.NoError(t, err)
 
 	provideMock := recentstorage.NewProviderMock(t)
-	provideMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
+	provideMock.GetStorageFunc = func(ctx context.Context, p core.RecordID) (r recentstorage.RecentStorage) {
 		return recentStorageMock
 	}
 
@@ -597,7 +597,7 @@ func TestMessageHandler_HandleGetCode_Redirects(t *testing.T) {
 	require.NoError(t, err)
 
 	provideMock := recentstorage.NewProviderMock(t)
-	provideMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
+	provideMock.GetStorageFunc = func(ctx context.Context, p core.RecordID) (r recentstorage.RecentStorage) {
 		return recentStorageMock
 	}
 
@@ -671,7 +671,7 @@ func TestMessageHandler_HandleRegisterChild_FetchesIndexFromHeavy(t *testing.T) 
 	}, certificate)
 
 	provideMock := recentstorage.NewProviderMock(t)
-	provideMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
+	provideMock.GetStorageFunc = func(ctx context.Context, p core.RecordID) (r recentstorage.RecentStorage) {
 		return recentStorageMock
 	}
 
@@ -792,7 +792,7 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 		RecentObjects: map[core.RecordID]*message.HotIndex{
 			*firstID: {
 				Index: firstIndex,
-				TTL:   321,
+				TTL:   320,
 			},
 		},
 		PendingRequests: map[core.RecordID]map[core.RecordID][]byte{
@@ -806,16 +806,16 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 	}
 
 	recentStorageMock := recentstorage.NewRecentStorageMock(t)
-	recentStorageMock.AddPendingRequestFunc = func(o, p core.RecordID) {
+	recentStorageMock.AddPendingRequestFunc = func(ctx context.Context, o, p core.RecordID) {
 		require.Equal(t, o, obj)
 		require.Equal(t, p, *secondId)
 	}
-	recentStorageMock.AddObjectWithTLLFunc = func(p core.RecordID, ttl int) {
+	recentStorageMock.AddObjectWithTLLFunc = func(ctx context.Context, p core.RecordID, ttl int) {
 		require.Equal(t, p, *firstID)
 		require.Equal(t, 320, ttl)
 	}
 	provideMock := recentstorage.NewProviderMock(t)
-	provideMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
+	provideMock.GetStorageFunc = func(ctx context.Context, p core.RecordID) (r recentstorage.RecentStorage) {
 		return recentStorageMock
 	}
 
@@ -885,7 +885,7 @@ func TestMessageHandler_HandleValidationCheck(t *testing.T) {
 	require.NoError(t, err)
 
 	provideMock := recentstorage.NewProviderMock(t)
-	provideMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
+	provideMock.GetStorageFunc = func(ctx context.Context, p core.RecordID) (r recentstorage.RecentStorage) {
 		return recentStorageMock
 	}
 

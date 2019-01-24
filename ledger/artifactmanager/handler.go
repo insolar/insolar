@@ -72,35 +72,33 @@ func NewMessageHandler(
 	}
 }
 
-func checkJetAndInstrumentWithBreaker(name string, m *middleware, handler core.MessageHandler) core.MessageHandler {
-	return instrumentHandler(name, m.checkJet(m.checkEarlyRequestBreaker(handler)))
-}
+func instrumentHandler(name string) Handler {
+	return func(handler core.MessageHandler) core.MessageHandler {
+		return func(ctx context.Context, p core.Parcel) (core.Reply, error) {
+			// TODO: add tags to log
+			inslog := inslogger.FromContext(ctx)
+			start := time.Now()
+			code := "2xx"
+			ctx = insmetrics.InsertTag(ctx, tagMethod, name)
 
-func instrumentHandler(name string, handler core.MessageHandler) core.MessageHandler {
-	return func(ctx context.Context, p core.Parcel) (core.Reply, error) {
-		// TODO: add tags to log
-		inslog := inslogger.FromContext(ctx)
-		start := time.Now()
-		code := "2xx"
-		ctx = insmetrics.InsertTag(ctx, tagMethod, name)
+			repl, err := handler(ctx, p)
 
-		repl, err := handler(ctx, p)
+			latency := time.Since(start)
+			if err != nil {
+				code = "5xx"
+				inslog.Errorf("AM's handler %v returns error: %v", name, err)
+			}
+			inslog.Debugf("measured time of AM method %v is %v", name, latency)
 
-		latency := time.Since(start)
-		if err != nil {
-			code = "5xx"
-			inslog.Errorf("AM's handler %v returns error: %v", name, err)
+			ctx = insmetrics.ChangeTags(
+				ctx,
+				tag.Insert(tagMethod, name),
+				tag.Insert(tagResult, code),
+			)
+			stats.Record(ctx, statCalls.M(1), statLatency.M(latency.Nanoseconds()/1e6))
+
+			return repl, err
 		}
-		inslog.Debugf("measured time of AM method %v is %v", name, latency)
-
-		ctx = insmetrics.ChangeTags(
-			ctx,
-			tag.Insert(tagMethod, name),
-			tag.Insert(tagResult, code),
-		)
-		stats.Record(ctx, statCalls.M(1), statLatency.M(latency.Nanoseconds()/1e6))
-
-		return repl, err
 	}
 }
 
@@ -126,54 +124,139 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 
 func (h *MessageHandler) setHandlersForLight(m *middleware) {
 	// Generic.
-	h.Bus.MustRegister(core.TypeGetCode, h.handleGetCode)
-	h.Bus.MustRegister(core.TypeGetObject, checkJetAndInstrumentWithBreaker("handleGetObject", m, h.handleGetObject))
-	h.Bus.MustRegister(core.TypeGetDelegate, checkJetAndInstrumentWithBreaker("handleGetDelegate", m, h.handleGetDelegate))
-	h.Bus.MustRegister(core.TypeGetChildren, checkJetAndInstrumentWithBreaker("handleGetChildren", m, h.handleGetChildren))
-	h.Bus.MustRegister(core.TypeSetRecord, checkJetAndInstrumentWithBreaker("handleSetRecord", m, m.checkHeavySync(h.handleSetRecord)))
-	h.Bus.MustRegister(core.TypeUpdateObject, checkJetAndInstrumentWithBreaker("handleUpdateObject", m, m.checkHeavySync(h.handleUpdateObject)))
-	h.Bus.MustRegister(core.TypeRegisterChild, checkJetAndInstrumentWithBreaker("handleRegisterChild", m, m.checkHeavySync(h.handleRegisterChild)))
-	h.Bus.MustRegister(core.TypeSetBlob, checkJetAndInstrumentWithBreaker("handleSetBlob", m, m.checkHeavySync(h.handleSetBlob)))
-	h.Bus.MustRegister(core.TypeGetObjectIndex, checkJetAndInstrumentWithBreaker("handleGetObjectIndex", m, h.handleGetObjectIndex))
-	h.Bus.MustRegister(core.TypeGetPendingRequests, checkJetAndInstrumentWithBreaker("handleHasPendingRequests", m, h.handleHasPendingRequests))
-	h.Bus.MustRegister(core.TypeGetJet, instrumentHandler("handleGetJet", h.handleGetJet))
-	h.Bus.MustRegister(core.TypeHotRecords, instrumentHandler("handleHotRecords", m.closeEarlyRequestBreaker(h.handleHotRecords)))
+	h.Bus.MustRegister(core.TypeGetCode, Build(h.handleGetCode))
+
+	h.Bus.MustRegister(core.TypeGetObject,
+		Build(h.handleGetObject,
+			instrumentHandler("handleGetObject"),
+			m.checkJet,
+			m.checkEarlyRequestBreaker))
+
+	h.Bus.MustRegister(core.TypeGetDelegate,
+		Build(h.handleGetDelegate,
+			instrumentHandler("handleGetDelegate"),
+			m.checkJet,
+			m.checkEarlyRequestBreaker))
+
+	h.Bus.MustRegister(core.TypeGetChildren,
+		Build(h.handleGetChildren,
+			instrumentHandler("handleGetChildren"),
+			m.checkJet,
+			m.checkEarlyRequestBreaker))
+
+	h.Bus.MustRegister(core.TypeSetRecord,
+		Build(h.handleSetRecord,
+			instrumentHandler("handleSetRecord"),
+			m.checkJet,
+			m.checkEarlyRequestBreaker))
+
+	h.Bus.MustRegister(core.TypeUpdateObject,
+		Build(h.handleUpdateObject,
+			instrumentHandler("handleUpdateObject"),
+			m.checkJet,
+			m.checkEarlyRequestBreaker))
+
+	h.Bus.MustRegister(core.TypeRegisterChild,
+		Build(h.handleRegisterChild,
+			instrumentHandler("handleRegisterChild"),
+			m.checkJet,
+			m.checkEarlyRequestBreaker))
+
+	h.Bus.MustRegister(core.TypeSetBlob,
+		Build(h.handleSetBlob,
+			instrumentHandler("handleSetBlob"),
+			m.checkJet,
+			m.checkEarlyRequestBreaker))
+
+	h.Bus.MustRegister(core.TypeGetObjectIndex,
+		Build(h.handleGetObjectIndex,
+			instrumentHandler("handleGetObjectIndex"),
+			m.checkJet,
+			m.checkEarlyRequestBreaker))
+
+	h.Bus.MustRegister(core.TypeGetPendingRequests,
+		Build(h.handleHasPendingRequests,
+			instrumentHandler("handleHasPendingRequests"),
+			m.checkJet,
+			m.checkEarlyRequestBreaker))
+
+	h.Bus.MustRegister(core.TypeGetJet,
+		Build(h.handleGetJet,
+			instrumentHandler("handleGetJet")))
+
+	h.Bus.MustRegister(core.TypeHotRecords,
+		Build(h.handleHotRecords,
+			instrumentHandler("handleHotRecords"),
+			m.closeEarlyRequestBreaker))
 
 	// Validation.
-	h.Bus.MustRegister(core.TypeValidateRecord, m.checkJet(h.handleValidateRecord))
-	h.Bus.MustRegister(core.TypeValidationCheck, m.checkJet(h.handleValidationCheck))
-	h.Bus.MustRegister(core.TypeJetDrop, m.checkJet(h.handleJetDrop))
+	h.Bus.MustRegister(core.TypeValidateRecord,
+		Build(h.handleValidateRecord,
+			m.checkJet))
+
+	h.Bus.MustRegister(core.TypeValidationCheck,
+		Build(h.handleValidationCheck,
+			m.checkJet))
+
+	h.Bus.MustRegister(core.TypeJetDrop,
+		Build(h.handleJetDrop,
+			m.checkJet))
 }
 func (h *MessageHandler) setReplayHandlers(m *middleware) {
 	// Generic.
-	h.replayHandlers[core.TypeGetCode] = h.handleGetCode
-	h.replayHandlers[core.TypeGetObject] = m.checkJet(h.handleGetObject)
-	h.replayHandlers[core.TypeGetDelegate] = m.checkJet(h.handleGetDelegate)
-	h.replayHandlers[core.TypeGetChildren] = m.checkJet(h.handleGetChildren)
-	h.replayHandlers[core.TypeSetRecord] = m.checkJet(h.handleSetRecord)
-	h.replayHandlers[core.TypeUpdateObject] = m.checkJet(h.handleUpdateObject)
-	h.replayHandlers[core.TypeRegisterChild] = m.checkJet(h.handleRegisterChild)
-	h.replayHandlers[core.TypeSetBlob] = m.checkJet(h.handleSetBlob)
-	h.replayHandlers[core.TypeGetObjectIndex] = m.checkJet(h.handleGetObjectIndex)
-	h.replayHandlers[core.TypeGetPendingRequests] = m.checkJet(h.handleHasPendingRequests)
-	h.replayHandlers[core.TypeGetJet] = h.handleGetJet
+	h.replayHandlers[core.TypeGetCode] = Build(h.handleGetCode)
+	h.replayHandlers[core.TypeGetObject] = Build(h.handleGetObject, m.checkJet)
+	h.replayHandlers[core.TypeGetDelegate] = Build(h.handleGetDelegate, m.checkJet)
+	h.replayHandlers[core.TypeGetChildren] = Build(h.handleGetChildren, m.checkJet)
+	h.replayHandlers[core.TypeSetRecord] = Build(h.handleSetRecord, m.checkJet)
+	h.replayHandlers[core.TypeUpdateObject] = Build(h.handleUpdateObject, m.checkJet)
+	h.replayHandlers[core.TypeRegisterChild] = Build(h.handleRegisterChild, m.checkJet)
+	h.replayHandlers[core.TypeSetBlob] = Build(h.handleSetBlob, m.checkJet)
+	h.replayHandlers[core.TypeGetObjectIndex] = Build(h.handleGetObjectIndex, m.checkJet)
+	h.replayHandlers[core.TypeGetPendingRequests] = Build(h.handleHasPendingRequests, m.checkJet)
+	h.replayHandlers[core.TypeGetJet] = Build(h.handleGetJet)
 
 	// Validation.
-	h.replayHandlers[core.TypeValidateRecord] = m.checkJet(h.handleValidateRecord)
-	h.replayHandlers[core.TypeValidationCheck] = m.checkJet(h.handleValidationCheck)
+	h.replayHandlers[core.TypeValidateRecord] = Build(h.handleValidateRecord, m.checkJet)
+	h.replayHandlers[core.TypeValidationCheck] = Build(h.handleValidationCheck, m.checkJet)
 }
 func (h *MessageHandler) setHandlersForHeavy(m *middleware) {
 	// Heavy.
-	h.Bus.MustRegister(core.TypeHeavyStartStop, instrumentHandler("handleHeavyStartStop", h.handleHeavyStartStop))
-	h.Bus.MustRegister(core.TypeHeavyReset, instrumentHandler("handleHeavyReset", h.handleHeavyReset))
-	h.Bus.MustRegister(core.TypeHeavyPayload, instrumentHandler("handleHeavyPayload", h.handleHeavyPayload))
+	h.Bus.MustRegister(core.TypeHeavyStartStop,
+		Build(h.handleHeavyStartStop,
+			instrumentHandler("handleHeavyStartStop")))
+
+	h.Bus.MustRegister(core.TypeHeavyReset,
+		Build(h.handleHeavyReset,
+			instrumentHandler("handleHeavyReset")))
+
+	h.Bus.MustRegister(core.TypeHeavyPayload,
+		Build(h.handleHeavyPayload,
+			instrumentHandler("handleHeavyPayload")))
 
 	// Generic.
-	h.Bus.MustRegister(core.TypeGetCode, h.handleGetCode)
-	h.Bus.MustRegister(core.TypeGetObject, instrumentHandler("handleGetObject", m.zeroJetForHeavy(h.handleGetObject)))
-	h.Bus.MustRegister(core.TypeGetDelegate, instrumentHandler("handleGetDelegate", m.zeroJetForHeavy(h.handleGetDelegate)))
-	h.Bus.MustRegister(core.TypeGetChildren, instrumentHandler("handleGetChildren", m.zeroJetForHeavy(h.handleGetChildren)))
-	h.Bus.MustRegister(core.TypeGetObjectIndex, instrumentHandler("handleGetObjectIndex", m.zeroJetForHeavy(h.handleGetObjectIndex)))
+	h.Bus.MustRegister(core.TypeGetCode,
+		Build(h.handleGetCode))
+
+	h.Bus.MustRegister(core.TypeGetObject,
+		Build(h.handleGetObject,
+			instrumentHandler("handleGetObject"),
+			m.zeroJetForHeavy))
+
+	h.Bus.MustRegister(core.TypeGetDelegate,
+		Build(h.handleGetDelegate,
+			instrumentHandler("handleGetDelegate"),
+			m.zeroJetForHeavy))
+
+	h.Bus.MustRegister(core.TypeGetChildren,
+		Build(h.handleGetChildren,
+			instrumentHandler("handleGetChildren"),
+			m.zeroJetForHeavy))
+
+	h.Bus.MustRegister(core.TypeGetObjectIndex,
+		Build(h.handleGetObjectIndex,
+			instrumentHandler("handleGetObjectIndex"),
+			m.zeroJetForHeavy))
 }
 
 // ResetEarlyRequestCircuitBreaker throws timeouts at the end of a pulse
@@ -195,12 +278,12 @@ func (h *MessageHandler) handleSetRecord(ctx context.Context, parcel core.Parcel
 	id := record.NewRecordIDFromRecord(h.PlatformCryptographyScheme, parcel.Pulse(), rec)
 
 	if !h.isHeavy {
-		recentStorage := h.RecentStorageProvider.GetStorage(jetID)
+		recentStorage := h.RecentStorageProvider.GetStorage(ctx, jetID)
 		if request, ok := rec.(record.Request); ok {
-			recentStorage.AddPendingRequest(request.GetObject(), *id)
+			recentStorage.AddPendingRequest(ctx, request.GetObject(), *id)
 		}
 		if result, ok := rec.(*record.ResultRecord); ok {
-			recentStorage.RemovePendingRequest(result.Object, *result.Request.Record())
+			recentStorage.RemovePendingRequest(ctx, result.Object, *result.Request.Record())
 		}
 	}
 
@@ -301,7 +384,7 @@ func (h *MessageHandler) handleGetObject(
 	} else {
 		// Add requested object to recent.
 		if !h.isHeavy {
-			h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Head.Record())
+			h.RecentStorageProvider.GetStorage(ctx, jetID).AddObject(ctx, *msg.Head.Record())
 		}
 	}
 
@@ -424,7 +507,7 @@ func (h *MessageHandler) handleHasPendingRequests(ctx context.Context, parcel co
 	msg := parcel.Message().(*message.GetPendingRequests)
 	jetID := jetFromContext(ctx)
 
-	for _, reqID := range h.RecentStorageProvider.GetStorage(jetID).GetRequestsForObject(*msg.Object.Record()) {
+	for _, reqID := range h.RecentStorageProvider.GetStorage(ctx, jetID).GetRequestsForObject(*msg.Object.Record()) {
 		if reqID.Pulse() < parcel.Pulse() {
 			return &reply.HasPendingRequests{Has: true}, nil
 		}
@@ -472,7 +555,7 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel core.Parc
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	} else {
 		if !h.isHeavy {
-			h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Head.Record())
+			h.RecentStorageProvider.GetStorage(ctx, jetID).AddObject(ctx, *msg.Head.Record())
 		}
 	}
 
@@ -518,7 +601,7 @@ func (h *MessageHandler) handleGetChildren(
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	} else {
 		if !h.isHeavy {
-			h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Parent.Record())
+			h.RecentStorageProvider.GetStorage(ctx, jetID).AddObject(ctx, *msg.Parent.Record())
 		}
 	}
 
@@ -651,7 +734,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 	var idx *index.ObjectLifeline
 	err = h.db.Update(ctx, func(tx *storage.TransactionManager) error {
 		var err error
-		logger.Debugf("Get index for: %v, jet: %v", msg.Object.Record(), jetID.String())
+		logger.Debugf("Get index for: %v, jet: %v", msg.Object.Record(), jetID.DebugString())
 		idx, err = tx.GetObjectIndex(ctx, jetID, msg.Object.Record(), true)
 		// No index on our node.
 		if err == storage.ErrNotFound {
@@ -659,7 +742,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 				// We are activating the object. There is no index for it anywhere.
 				idx = &index.ObjectLifeline{State: record.StateUndefined}
 			} else {
-				logger.Debugf("Not found index for: %v, jet: %v", msg.Object.Record(), jetID.String())
+				logger.Debugf("Not found index for: %v, jet: %v", msg.Object.Record(), jetID.DebugString())
 				// We are updating object. Index should be on the heavy executor.
 				heavy, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
 				if err != nil {
@@ -674,7 +757,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 			return err
 		} else {
 			if !h.isHeavy {
-				h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Object.Record())
+				h.RecentStorageProvider.GetStorage(ctx, jetID).AddObject(ctx, *msg.Object.Record())
 			}
 		}
 
@@ -743,7 +826,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel core.Pa
 			return err
 		} else {
 			if !h.isHeavy {
-				h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Parent.Record())
+				h.RecentStorageProvider.GetStorage(ctx, jetID).AddObject(ctx, *msg.Parent.Record())
 			}
 		}
 
@@ -773,7 +856,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel core.Pa
 	}
 
 	if !h.isHeavy {
-		h.RecentStorageProvider.GetStorage(jetID).AddObject(*msg.Parent.Record())
+		h.RecentStorageProvider.GetStorage(ctx, jetID).AddObject(ctx, *msg.Parent.Record())
 	}
 
 	return &reply.ID{ID: *child}, nil
@@ -970,7 +1053,7 @@ func (h *MessageHandler) saveIndexFromHeavy(
 		return nil, errors.Wrap(err, "failed to decode")
 	}
 
-	h.RecentStorageProvider.GetStorage(jetID).AddObject(*obj.Record())
+	h.RecentStorageProvider.GetStorage(ctx, jetID).AddObject(ctx, *obj.Record())
 	err = s.SetObjectIndex(ctx, jetID, obj.Record(), idx)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to save")
@@ -1004,7 +1087,11 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 		return nil, errors.Wrap(err, "[ handleHotRecords ] Can't SetDropSizeHistory")
 	}
 
-	recentStorage := h.RecentStorageProvider.GetStorage(jetID)
+	logger.WithFields(map[string]interface{}{
+		"len": len(msg.RecentObjects),
+		"jet": jetID.DebugString(),
+	}).Debugf("received pending requests")
+	recentStorage := h.RecentStorageProvider.GetStorage(ctx, jetID)
 	for objID, requests := range msg.PendingRequests {
 		for reqID, request := range requests {
 			newID, err := h.db.SetRecord(ctx, jetID, reqID.Pulse(), record.DeserializeRecord(request))
@@ -1023,10 +1110,14 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 				)
 				continue
 			}
-			recentStorage.AddPendingRequest(objID, reqID)
+			recentStorage.AddPendingRequest(ctx, objID, reqID)
 		}
 	}
 
+	logger.WithFields(map[string]interface{}{
+		"len": len(msg.RecentObjects),
+		"jet": jetID.DebugString(),
+	}).Debugf("received recent objects")
 	for id, meta := range msg.RecentObjects {
 		logger.Debugf("[got id] jet: %v, id: %v", jetID.DebugString(), id.DebugString())
 		decodedIndex, err := index.DecodeObjectLifeline(meta.Index)
@@ -1044,8 +1135,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 		}
 
 		fmt.Println("[saved id] ", id.String())
-		meta.TTL--
-		recentStorage.AddObjectWithTLL(id, meta.TTL)
+		recentStorage.AddObjectWithTLL(ctx, id, meta.TTL)
 	}
 
 	err = h.db.UpdateJetTree(

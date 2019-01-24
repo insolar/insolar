@@ -139,7 +139,7 @@ func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *gop
 	recentStorageMock := recentstorage.NewRecentStorageMock(t)
 	recentStorageMock.AddObjectMock.Return()
 
-	providerMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
+	providerMock.GetStorageFunc = func(ctx context.Context, p core.RecordID) (r recentstorage.RecentStorage) {
 		return recentStorageMock
 	}
 

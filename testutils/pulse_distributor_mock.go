@@ -20,7 +20,7 @@ import (
 type PulseDistributorMock struct {
 	t minimock.Tester
 
-	DistributeFunc       func(p context.Context, p1 *core.Pulse)
+	DistributeFunc       func(p context.Context, p1 core.Pulse)
 	DistributeCounter    uint64
 	DistributePreCounter uint64
 	DistributeMock       mPulseDistributorMockDistribute
@@ -51,11 +51,11 @@ type PulseDistributorMockDistributeExpectation struct {
 
 type PulseDistributorMockDistributeInput struct {
 	p  context.Context
-	p1 *core.Pulse
+	p1 core.Pulse
 }
 
 //Expect specifies that invocation of PulseDistributor.Distribute is expected from 1 to Infinity times
-func (m *mPulseDistributorMockDistribute) Expect(p context.Context, p1 *core.Pulse) *mPulseDistributorMockDistribute {
+func (m *mPulseDistributorMockDistribute) Expect(p context.Context, p1 core.Pulse) *mPulseDistributorMockDistribute {
 	m.mock.DistributeFunc = nil
 	m.expectationSeries = nil
 
@@ -79,7 +79,7 @@ func (m *mPulseDistributorMockDistribute) Return() *PulseDistributorMock {
 }
 
 //ExpectOnce specifies that invocation of PulseDistributor.Distribute is expected once
-func (m *mPulseDistributorMockDistribute) ExpectOnce(p context.Context, p1 *core.Pulse) *PulseDistributorMockDistributeExpectation {
+func (m *mPulseDistributorMockDistribute) ExpectOnce(p context.Context, p1 core.Pulse) *PulseDistributorMockDistributeExpectation {
 	m.mock.DistributeFunc = nil
 	m.mainExpectation = nil
 
@@ -90,7 +90,7 @@ func (m *mPulseDistributorMockDistribute) ExpectOnce(p context.Context, p1 *core
 }
 
 //Set uses given function f as a mock of PulseDistributor.Distribute method
-func (m *mPulseDistributorMockDistribute) Set(f func(p context.Context, p1 *core.Pulse)) *PulseDistributorMock {
+func (m *mPulseDistributorMockDistribute) Set(f func(p context.Context, p1 core.Pulse)) *PulseDistributorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -99,7 +99,7 @@ func (m *mPulseDistributorMockDistribute) Set(f func(p context.Context, p1 *core
 }
 
 //Distribute implements github.com/insolar/insolar/core.PulseDistributor interface
-func (m *PulseDistributorMock) Distribute(p context.Context, p1 *core.Pulse) {
+func (m *PulseDistributorMock) Distribute(p context.Context, p1 core.Pulse) {
 	counter := atomic.AddUint64(&m.DistributePreCounter, 1)
 	defer atomic.AddUint64(&m.DistributeCounter, 1)
 
