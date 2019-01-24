@@ -58,6 +58,7 @@ type PulseManager struct {
 	ActiveListSwapper             ActiveListSwapper                  `inject:""`
 	PulseStorage                  pulseStoragePm                     `inject:""`
 	ArtifactManagerMessageHandler core.ArtifactManagerMessageHandler `inject:""`
+	JetStorage                    storage.JetStorage                 `inject:""`
 
 	// TODO: move clients pool to component - @nordicdyno - 18.Dec.2018
 	syncClientsPool *heavyclient.Pool
@@ -242,9 +243,9 @@ func (m *PulseManager) createDrop(
 	err error,
 ) {
 	var prevDrop *jet.JetDrop
-	prevDrop, err = m.db.GetDrop(ctx, jetID, prevPulse)
+	prevDrop, err = m.JetStorage.GetDrop(ctx, jetID, prevPulse)
 	if err == storage.ErrNotFound {
-		prevDrop, err = m.db.GetDrop(ctx, jet.Parent(jetID), prevPulse)
+		prevDrop, err = m.JetStorage.GetDrop(ctx, jet.Parent(jetID), prevPulse)
 		if err != nil {
 			return nil, nil, nil, errors.Wrap(err, "[ createDrop ] failed to find parent")
 		}
@@ -252,11 +253,11 @@ func (m *PulseManager) createDrop(
 		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't GetDrop")
 	}
 
-	drop, messages, dropSize, err := m.db.CreateDrop(ctx, jetID, currentPulse, prevDrop.Hash)
+	drop, messages, dropSize, err := m.JetStorage.CreateDrop(ctx, jetID, currentPulse, prevDrop.Hash)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't CreateDrop")
 	}
-	err = m.db.SetDrop(ctx, jetID, drop)
+	err = m.JetStorage.SetDrop(ctx, jetID, drop)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't SetDrop")
 	}
@@ -283,7 +284,7 @@ func (m *PulseManager) createDrop(
 		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't Sign")
 	}
 
-	err = m.db.AddDropSize(ctx, dropSizeData)
+	err = m.JetStorage.AddDropSize(ctx, dropSizeData)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't AddDropSize")
 	}
@@ -359,7 +360,7 @@ func (m *PulseManager) getExecutorHotData(
 		}
 	}
 
-	dropSizeHistory, err := m.db.GetDropSizeHistory(ctx, jetID)
+	dropSizeHistory, err := m.JetStorage.GetDropSizeHistory(ctx, jetID)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ processRecentObjects ] Can't GetDropSizeHistory")
 	}
@@ -382,7 +383,7 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse c
 	ctx, span := instracer.StartSpan(ctx, "jets.process")
 	defer span.End()
 
-	tree, err := m.db.CloneJetTree(ctx, currentPulse, newPulse)
+	tree, err := m.JetStorage.CloneJetTree(ctx, currentPulse, newPulse)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to clone jet tree into a new pulse")
 	}
@@ -413,7 +414,7 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse c
 		if indexToSplit == i && splitCount > 0 {
 			splitCount--
 
-			leftJetID, rightJetID, err := m.db.SplitJetTree(
+			leftJetID, rightJetID, err := m.JetStorage.SplitJetTree(
 				ctx,
 				newPulse,
 				jetID,
@@ -421,12 +422,12 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse c
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to split jet tree")
 			}
-			err = m.db.AddJets(ctx, *leftJetID, *rightJetID)
+			err = m.JetStorage.AddJets(ctx, *leftJetID, *rightJetID)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to add jets")
 			}
 			// Set actual because we are the last executor for jet.
-			err = m.db.UpdateJetTree(ctx, newPulse, true, *leftJetID, *rightJetID)
+			err = m.JetStorage.UpdateJetTree(ctx, newPulse, true, *leftJetID, *rightJetID)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to update tree")
 			}
@@ -466,7 +467,7 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse c
 			)
 		} else {
 			// Set actual because we are the last executor for jet.
-			err = m.db.UpdateJetTree(ctx, newPulse, true, jetID)
+			err = m.JetStorage.UpdateJetTree(ctx, newPulse, true, jetID)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to update tree")
 			}

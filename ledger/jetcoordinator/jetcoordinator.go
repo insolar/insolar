@@ -38,6 +38,7 @@ type JetCoordinator struct {
 	NodeNet                    core.NodeNetwork                `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 	PulseStorage               core.PulseStorage               `inject:""`
+	JetStorage                 storage.JetStorage              `inject:""`
 }
 
 // NewJetCoordinator creates new coordinator instance.
@@ -185,7 +186,7 @@ func (jc *JetCoordinator) LightValidatorsForJet(
 func (jc *JetCoordinator) LightExecutorForObject(
 	ctx context.Context, objID core.RecordID, pulse core.PulseNumber,
 ) (*core.RecordRef, error) {
-	tree, err := jc.db.GetJetTree(ctx, pulse)
+	tree, err := jc.JetStorage.GetJetTree(ctx, pulse)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch jet tree")
 	}
@@ -196,7 +197,7 @@ func (jc *JetCoordinator) LightExecutorForObject(
 func (jc *JetCoordinator) LightValidatorsForObject(
 	ctx context.Context, objID core.RecordID, pulse core.PulseNumber,
 ) ([]core.RecordRef, error) {
-	tree, err := jc.db.GetJetTree(ctx, pulse)
+	tree, err := jc.JetStorage.GetJetTree(ctx, pulse)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch jet tree for pulse %v", pulse)
 	}

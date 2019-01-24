@@ -29,6 +29,30 @@ import (
 	"github.com/ugorji/go/codec"
 )
 
+// JetStorage provides methods for working with jets and their drops
+type JetStorage interface {
+	GetDrop(ctx context.Context, jetID core.RecordID, pulse core.PulseNumber) (*jet.JetDrop, error)
+	CreateDrop(ctx context.Context, jetID core.RecordID, pulse core.PulseNumber, prevHash []byte) (
+		*jet.JetDrop,
+		[][]byte,
+		uint64,
+		error,
+	)
+	SetDrop(ctx context.Context, jetID core.RecordID, drop *jet.JetDrop) error
+
+	UpdateJetTree(ctx context.Context, pulse core.PulseNumber, setActual bool, ids ...core.RecordID) error
+	GetJetTree(ctx context.Context, pulse core.PulseNumber) (*jet.Tree, error)
+	SplitJetTree(ctx context.Context, pulse core.PulseNumber, jetID core.RecordID) (*core.RecordID, *core.RecordID, error)
+	CloneJetTree(ctx context.Context, from, to core.PulseNumber) (*jet.Tree, error)
+
+	AddJets(ctx context.Context, jetIDs ...core.RecordID) error
+	GetJets(ctx context.Context) (jet.IDSet, error)
+
+	AddDropSize(ctx context.Context, dropSize *jet.DropSize) error
+	SetDropSizeHistory(ctx context.Context, jetID core.RecordID, dropSizeHistory jet.DropSizeHistory) error
+	GetDropSizeHistory(ctx context.Context, jetID core.RecordID) (jet.DropSizeHistory, error)
+}
+
 // GetDrop returns jet drop for a given pulse number and jet id.
 func (db *DB) GetDrop(ctx context.Context, jetID core.RecordID, pulse core.PulseNumber) (*jet.JetDrop, error) {
 	_, prefix := jet.Jet(jetID)

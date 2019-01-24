@@ -52,6 +52,7 @@ type MessageHandler struct {
 	DelegationTokenFactory     core.DelegationTokenFactory     `inject:""`
 	HeavySync                  core.HeavySync                  `inject:""`
 	PulseStorage               core.PulseStorage               `inject:""`
+	JetStorage                 storage.JetStorage              `inject:""`
 
 	db             *storage.DB
 	certificate    core.Certificate
@@ -428,7 +429,7 @@ func (h *MessageHandler) handleGetObject(
 			return reply.NewGetObjectRedirectReply(h.DelegationTokenFactory, parcel, node, stateID)
 		}
 
-		stateTree, err := h.db.GetJetTree(ctx, stateID.Pulse())
+		stateTree, err := h.JetStorage.GetJetTree(ctx, stateID.Pulse())
 		if err != nil {
 			return nil, err
 		}
@@ -519,7 +520,7 @@ func (h *MessageHandler) handleHasPendingRequests(ctx context.Context, parcel co
 
 func (h *MessageHandler) handleGetJet(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
 	msg := parcel.Message().(*message.GetJet)
-	tree, err := h.db.GetJetTree(ctx, msg.Pulse)
+	tree, err := h.JetStorage.GetJetTree(ctx, msg.Pulse)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch jet tree")
 	}
@@ -640,7 +641,7 @@ func (h *MessageHandler) handleGetChildren(
 			return reply.NewGetChildrenRedirect(h.DelegationTokenFactory, parcel, node, *currentChild)
 		}
 
-		childTree, err := h.db.GetJetTree(ctx, currentChild.Pulse())
+		childTree, err := h.JetStorage.GetJetTree(ctx, currentChild.Pulse())
 		if err != nil {
 			return nil, err
 		}
@@ -884,12 +885,12 @@ func (h *MessageHandler) handleJetDrop(ctx context.Context, parcel core.Parcel) 
 		}
 	}
 
-	err := h.db.AddJets(ctx, msg.JetID)
+	err := h.JetStorage.AddJets(ctx, msg.JetID)
 	if err != nil {
 		return nil, err
 	}
 
-	err = h.db.UpdateJetTree(
+	err = h.JetStorage.UpdateJetTree(
 		ctx,
 		parcel.Pulse(),
 		true,
@@ -1075,7 +1076,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 
 	logger.Debugf("[jet]: %v got hot. Pulse: %v, DropPulse: %v, DropJet: %v\n", jetID.DebugString(), parcel.Pulse(), msg.Drop.Pulse, msg.DropJet.DebugString())
 
-	err := h.db.SetDrop(ctx, msg.DropJet, &msg.Drop)
+	err := h.JetStorage.SetDrop(ctx, msg.DropJet, &msg.Drop)
 	if err == storage.ErrOverride {
 		logger.Debugf("received drop duplicate for. jet: %v, pulse: %v", msg.DropJet.DebugString(), msg.Drop.Pulse)
 		err = nil
@@ -1083,7 +1084,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 	if err != nil {
 		return nil, errors.Wrapf(err, "[jet]: drop error (pulse: %v)", msg.Drop.Pulse)
 	}
-	err = h.db.SetDropSizeHistory(ctx, msg.DropJet, msg.JetDropSizeHistory)
+	err = h.JetStorage.SetDropSizeHistory(ctx, msg.DropJet, msg.JetDropSizeHistory)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ handleHotRecords ] Can't SetDropSizeHistory")
 	}
@@ -1139,7 +1140,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 		recentStorage.AddObjectWithTLL(ctx, id, meta.TTL)
 	}
 
-	err = h.db.UpdateJetTree(
+	err = h.JetStorage.UpdateJetTree(
 		ctx,
 		msg.PulseNumber,
 		true,
@@ -1149,7 +1150,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 		fmt.Println("handleHotRecords: UpdateJetTree with err, ", err)
 		return nil, err
 	}
-	err = h.db.AddJets(ctx, jetID)
+	err = h.JetStorage.AddJets(ctx, jetID)
 	if err != nil {
 		return nil, err
 	}

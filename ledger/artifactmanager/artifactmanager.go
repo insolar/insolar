@@ -824,7 +824,7 @@ func sendAndFollowRedirect(
 func sendAndRetryJet(
 	ctx context.Context,
 	bus core.MessageBus,
-	db *storage.DB,
+	jetStorage storage.JetStorage,
 	msg core.Message,
 	pulse core.Pulse,
 	retries int,
@@ -838,11 +838,11 @@ func sendAndRetryJet(
 		return nil, err
 	}
 	if r, ok := rep.(*reply.JetMiss); ok {
-		err := db.UpdateJetTree(ctx, pulse.PulseNumber, true, r.JetID)
+		err := jetStorage.UpdateJetTree(ctx, pulse.PulseNumber, true, r.JetID)
 		if err != nil {
 			return nil, err
 		}
-		return sendAndRetryJet(ctx, bus, db, msg, pulse, retries-1, ops)
+		return sendAndRetryJet(ctx, bus, jetStorage, msg, pulse, retries-1, ops)
 	}
 
 	return rep, nil

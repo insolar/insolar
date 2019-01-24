@@ -36,14 +36,15 @@ import (
 
 // Exporter provides methods for fetching data view from storage.
 type Exporter struct {
-	db  *storage.DB
-	ps  *storage.PulseStorage
-	cfg configuration.Exporter
+	db         *storage.DB
+	jetStorage storage.JetStorage
+	ps         *storage.PulseStorage
+	cfg        configuration.Exporter
 }
 
 // NewExporter creates new StorageExporter instance.
 func NewExporter(db *storage.DB, ps *storage.PulseStorage, cfg configuration.Exporter) *Exporter {
-	return &Exporter{db: db, ps: ps, cfg: cfg}
+	return &Exporter{db: db, jetStorage: db, ps: ps, cfg: cfg}
 }
 
 type payload map[string]interface{}
@@ -75,7 +76,7 @@ func (e *Exporter) Export(ctx context.Context, fromPulse core.PulseNumber, size 
 	inslog := inslogger.FromContext(ctx)
 	inslog.Debugf("[ API Export ] start")
 
-	jetIDs, err := e.db.GetJets(ctx)
+	jetIDs, err := e.jetStorage.GetJets(ctx)
 	if err != nil {
 		inslog.Debugf("[ API Export ] error getting jets: %s", err.Error())
 		return nil, err
