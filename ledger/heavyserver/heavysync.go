@@ -51,8 +51,8 @@ type syncstate struct {
 
 // Sync provides methods for syncing records to heavy storage.
 type Sync struct {
-	db *storage.DB
-	storage.ReplicaStorage
+	ReplicaStorage storage.ReplicaStorage
+	DBContext      storage.DBContext
 
 	sync.Mutex
 	jetSyncStates map[core.RecordID]*syncstate
@@ -62,6 +62,7 @@ type Sync struct {
 func NewSync(db *storage.DB) *Sync {
 	return &Sync{
 		ReplicaStorage: db,
+		DBContext:      db,
 		jetSyncStates:  map[core.RecordID]*syncstate{},
 	}
 }
@@ -162,7 +163,7 @@ func (s *Sync) Store(ctx context.Context, jetID core.RecordID, pn core.PulseNumb
 		jetState.Unlock()
 	}()
 	// TODO: check jet in keys?
-	err = s.db.StoreKeyValues(ctx, kvs)
+	err = s.DBContext.StoreKeyValues(ctx, kvs)
 	if err != nil {
 		return errors.Wrapf(err, "heavyserver: store failed")
 	}

@@ -64,7 +64,9 @@ type DBContext interface {
 	SetLocalData(ctx context.Context, pulse core.PulseNumber, key []byte, data []byte) error
 	GetLocalData(ctx context.Context, pulse core.PulseNumber, key []byte) ([]byte, error)
 
-	StoreKeyValues(ctx context.Context, kvs []core.KV)
+	StoreKeyValues(ctx context.Context, kvs []core.KV) error
+
+	GetBadgerDB() *badger.DB
 
 	Close() error
 }

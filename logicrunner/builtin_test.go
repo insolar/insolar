@@ -74,7 +74,7 @@ func TestBareHelloworld(t *testing.T) {
 	mb := testmessagebus.NewTestMessageBus(t)
 
 	// FIXME: TmpLedger is deprecated. Use mocks instead.
-	l, cleaner := ledgertestutils.TmpLedger(
+	l, db, cleaner := ledgertestutils.TmpLedger(
 		t, "", core.StaticRoleLightMaterial,
 		core.Components{
 			LogicRunner: lr,
@@ -108,7 +108,7 @@ func TestBareHelloworld(t *testing.T) {
 	cm := &component.Manager{}
 	cm.Register(scheme)
 	cm.Register(l.GetPulseManager(), l.GetArtifactManager(), l.GetJetCoordinator())
-	cm.Inject(nk, recent, l, lr, nw, mb, delegationTokenFactory, parcelFactory, mock)
+	cm.Inject(db, nk, recent, l, lr, nw, mb, delegationTokenFactory, parcelFactory, mock)
 	err = cm.Init(ctx)
 	assert.NoError(t, err)
 	err = cm.Start(ctx)

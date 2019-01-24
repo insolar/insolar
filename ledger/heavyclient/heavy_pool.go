@@ -30,6 +30,7 @@ type Pool struct {
 	pulseStorage   core.PulseStorage
 	pulseTracker   storage.PulseTracker
 	replicaStorage storage.ReplicaStorage
+	dbContext      storage.DBContext
 
 	clientDefaults Options
 
@@ -43,6 +44,7 @@ func NewPool(
 	pulseStorage core.PulseStorage,
 	tracker storage.PulseTracker,
 	replicaStorage storage.ReplicaStorage,
+	dbContext storage.DBContext,
 	clientDefaults Options,
 ) *Pool {
 	return &Pool{
@@ -51,6 +53,7 @@ func NewPool(
 		pulseTracker:   tracker,
 		replicaStorage: replicaStorage,
 		clientDefaults: clientDefaults,
+		dbContext:      dbContext,
 		clients:        map[core.RecordID]*JetClient{},
 	}
 }
@@ -89,6 +92,7 @@ func (scp *Pool) AddPulsesToSyncClient(
 			scp.bus,
 			scp.pulseStorage,
 			scp.pulseTracker,
+			scp.dbContext,
 			jetID,
 			scp.clientDefaults,
 		)

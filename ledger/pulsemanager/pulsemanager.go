@@ -63,6 +63,7 @@ type PulseManager struct {
 	ActiveNodesStorage            storage.ActiveNodesStorage         `inject:""`
 	PulseTracker                  storage.PulseTracker               `inject:""`
 	ReplicaStorage                storage.ReplicaStorage             `inject:""`
+	DBContext                     storage.DBContext                  `inject:""`
 	StorageCleaner                storage.Cleaner                    `inject:""`
 
 	// TODO: move clients pool to component - @nordicdyno - 18.Dec.2018
@@ -778,6 +779,7 @@ func (m *PulseManager) Start(ctx context.Context) error {
 			m.PulseStorage,
 			m.PulseTracker,
 			m.ReplicaStorage,
+			m.DBContext,
 			heavyclient.Options{
 				SyncMessageLimit: m.options.heavySyncMessageLimit,
 				PulsesDeltaLimit: m.options.lightChainLimit,

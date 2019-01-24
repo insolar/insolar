@@ -124,7 +124,7 @@ func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *gop
 
 	nw := network.GetTestNetwork()
 	// FIXME: TmpLedger is deprecated. Use mocks instead.
-	l, cleaner := ledgertestutils.TmpLedger(
+	l, db, cleaner := ledgertestutils.TmpLedger(
 		t, "", core.StaticRoleLightMaterial,
 		core.Components{
 			LogicRunner: lr,
@@ -151,7 +151,7 @@ func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *gop
 	cr, err := contractrequester.New()
 	pulseStorage := l.PulseManager.(*pulsemanager.PulseManager).PulseStorage
 
-	cm.Inject(pulseStorage, nk, providerMock, l, lr, nw, mb, cr, delegationTokenFactory, parcelFactory, mock)
+	cm.Inject(db, pulseStorage, nk, providerMock, l, lr, nw, mb, cr, delegationTokenFactory, parcelFactory, mock)
 	err = cm.Init(ctx)
 	assert.NoError(t, err)
 	err = cm.Start(ctx)

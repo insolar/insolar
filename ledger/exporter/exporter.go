@@ -45,14 +45,14 @@ type Exporter struct {
 }
 
 // NewExporter creates new StorageExporter instance.
-func NewExporter(db *storage.DB, pulseTracker storage.PulseTracker, cfg configuration.Exporter) *Exporter {
+func NewExporter(db *storage.DB, cfg configuration.Exporter) *Exporter {
 	ps := storage.NewPulseStorage()
-	ps.PulseTracker = pulseTracker
+	ps.PulseTracker = db
 	return &Exporter{
 		db:            db,
 		jetStorage:    db,
 		objectStorage: db,
-		pulseTracker:  pulseTracker,
+		pulseTracker:  db,
 		ps:            ps,
 		cfg:           cfg,
 	}

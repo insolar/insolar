@@ -45,6 +45,7 @@ type JetClient struct {
 	pulseStorage   core.PulseStorage
 	replicaStorage storage.ReplicaStorage
 	pulseTracker   storage.PulseTracker
+	dbContext      storage.DBContext
 
 	opts Options
 
@@ -71,6 +72,7 @@ func NewJetClient(
 	mb core.MessageBus,
 	pulseStorage core.PulseStorage,
 	pulseTracker storage.PulseTracker,
+	dbContext storage.DBContext,
 	jetID core.RecordID,
 	opts Options,
 ) *JetClient {
@@ -79,6 +81,7 @@ func NewJetClient(
 		pulseStorage:   pulseStorage,
 		replicaStorage: replicaStorage,
 		pulseTracker:   pulseTracker,
+		dbContext:      dbContext,
 		jetID:          jetID,
 		syncbackoff:    backoffFromConfig(opts.BackoffConf),
 		signal:         make(chan struct{}, 1),

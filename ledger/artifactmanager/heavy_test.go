@@ -53,7 +53,12 @@ func TestLedgerArtifactManager_handleHeavy(t *testing.T) {
 	certificate.GetRoleMock.Return(core.StaticRoleHeavyMaterial)
 
 	// message hanler with mok
-	mh := NewMessageHandler(db, nil, certificate)
+	mh := NewMessageHandler(nil, certificate)
+	mh.JetStorage = db
+	mh.ActiveNodesStorage = db
+	mh.DBContext = db
+	mh.PulseTracker = db
+	mh.ObjectStorage = db
 
 	provideMock := recentstorage.NewProviderMock(t)
 	provideMock.GetStorageFunc = func(ctx context.Context, p core.RecordID) (r recentstorage.RecentStorage) {

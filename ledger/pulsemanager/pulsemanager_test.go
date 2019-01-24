@@ -121,7 +121,7 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 	jetCoordinatorMock.LightExecutorForJetMock.Return(executor, nil)
 	jetCoordinatorMock.MeMock.Return(*executor)
 
-	pm := pulsemanager.NewPulseManager(db, configuration.Ledger{
+	pm := pulsemanager.NewPulseManager(configuration.Ledger{
 		JetSizesHistoryDepth: 5,
 	})
 
