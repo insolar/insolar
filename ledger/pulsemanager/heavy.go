@@ -23,7 +23,7 @@ import (
 )
 
 func (m *PulseManager) initJetSyncState(ctx context.Context) error {
-	allJets, err := m.db.GetAllNonEmptySyncClientJets(ctx)
+	allJets, err := m.ReplicaStorage.GetAllNonEmptySyncClientJets(ctx)
 	if err != nil {
 		return errors.Wrap(err, "failed get heavy client jets' sync state")
 	}

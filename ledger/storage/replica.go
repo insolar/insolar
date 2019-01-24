@@ -27,6 +27,16 @@ import (
 	"github.com/pkg/errors"
 )
 
+// ReplicaStorage is a heavy-based storage
+type ReplicaStorage interface {
+	SetHeavySyncedPulse(ctx context.Context, jetID core.RecordID, pulsenum core.PulseNumber) error
+	GetHeavySyncedPulse(ctx context.Context, jetID core.RecordID) (pn core.PulseNumber, err error)
+	GetSyncClientJetPulses(ctx context.Context, jetID core.RecordID) ([]core.PulseNumber, error)
+	SetSyncClientJetPulses(ctx context.Context, jetID core.RecordID, pns []core.PulseNumber) error
+	GetAllSyncClientJets(ctx context.Context) (map[core.RecordID][]core.PulseNumber, error)
+	GetAllNonEmptySyncClientJets(ctx context.Context) (map[core.RecordID][]core.PulseNumber, error)
+}
+
 // SetHeavySyncedPulse saves last successfuly synced pulse number on heavy node.
 func (db *DB) SetHeavySyncedPulse(ctx context.Context, jetID core.RecordID, pulsenum core.PulseNumber) error {
 	return db.Update(ctx, func(tx *TransactionManager) error {

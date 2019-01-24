@@ -26,6 +26,21 @@ import (
 	"github.com/insolar/insolar/ledger/storage/jet"
 )
 
+// Cleaner cleans lights after sync to heavy
+type Cleaner interface {
+	RemoveAllForJetUntilPulse(
+		ctx context.Context,
+		jetID core.RecordID,
+		pn core.PulseNumber,
+		recent recentstorage.RecentStorage,
+	) (map[string]int, error)
+
+	RemoveJetIndexesUntil(ctx context.Context, jetID core.RecordID, pn core.PulseNumber, recent recentstorage.RecentStorage) (int, error)
+	RemoveJetBlobsUntil(ctx context.Context, jetID core.RecordID, pn core.PulseNumber) (int, error)
+	RemoveJetRecordsUntil(ctx context.Context, jetID core.RecordID, pn core.PulseNumber, recent recentstorage.RecentStorage) (int, error)
+	RemoveJetDropsUntil(ctx context.Context, jetID core.RecordID, pn core.PulseNumber) (int, error)
+}
+
 var rmScanFromPulse = core.PulseNumber(core.FirstPulseNumber + 1).Bytes()
 
 // RemoveAllForJetUntilPulse removes all syncing on heavy records until pulse number for provided jetID

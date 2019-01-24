@@ -60,8 +60,10 @@ type PulseManager struct {
 	ArtifactManagerMessageHandler core.ArtifactManagerMessageHandler `inject:""`
 	JetStorage                    storage.JetStorage                 `inject:""`
 	ObjectStorage                 storage.ObjectStorage              `inject:""`
-	storage.ActiveNodesStorage    `inject:""`
-	storage.PulseTracker          `inject:""`
+	ActiveNodesStorage            storage.ActiveNodesStorage         `inject:""`
+	PulseTracker                  storage.PulseTracker               `inject:""`
+	ReplicaStorage                storage.ReplicaStorage             `inject:""`
+	StorageCleaner                storage.Cleaner                    `inject:""`
 
 	// TODO: move clients pool to component - @nordicdyno - 18.Dec.2018
 	syncClientsPool *heavyclient.Pool
@@ -70,8 +72,6 @@ type PulseManager struct {
 
 	currentPulse core.Pulse
 
-	// internal stuff
-	db *storage.DB
 	// setLock locks Set method call.
 	setLock sync.RWMutex
 	// saves PM stopping mode
@@ -90,32 +90,28 @@ type jetInfo struct {
 
 // TODO: @andreyromancev. 15.01.19. Just store ledger configuration in PM. This is not required.
 type pmOptions struct {
-	enableSync       bool
-	splitThreshold   uint64
-	dropHistorySize  int
-	storeLightPulses int
+	enableSync            bool
+	splitThreshold        uint64
+	dropHistorySize       int
+	storeLightPulses      int
+	heavySyncMessageLimit int
+	lightChainLimit       int
 }
 
 // NewPulseManager creates PulseManager instance.
-func NewPulseManager(db *storage.DB, conf configuration.Ledger) *PulseManager {
+func NewPulseManager(conf configuration.Ledger) *PulseManager {
 	pmconf := conf.PulseManager
-	heavySyncPool := heavyclient.NewPool(
-		db,
-		heavyclient.Options{
-			SyncMessageLimit: pmconf.HeavySyncMessageLimit,
-			PulsesDeltaLimit: conf.LightChainLimit,
-		},
-	)
+
 	pm := &PulseManager{
-		db:           db,
 		currentPulse: *core.GenesisPulse,
 		options: pmOptions{
-			enableSync:       pmconf.HeavySyncEnabled,
-			splitThreshold:   pmconf.SplitThreshold,
-			dropHistorySize:  conf.JetSizesHistoryDepth,
-			storeLightPulses: conf.LightChainLimit,
+			enableSync:            pmconf.HeavySyncEnabled,
+			splitThreshold:        pmconf.SplitThreshold,
+			dropHistorySize:       conf.JetSizesHistoryDepth,
+			storeLightPulses:      conf.LightChainLimit,
+			heavySyncMessageLimit: pmconf.HeavySyncMessageLimit,
+			lightChainLimit:       conf.LightChainLimit,
 		},
-		syncClientsPool: heavySyncPool,
 	}
 	return pm
 }
@@ -713,7 +709,7 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse core.Pulse) 
 		}()
 
 		// we are remove records from 'storageRecordsUtilPN' pulse number here
-		jetSyncState, err := m.db.GetAllSyncClientJets(ctx)
+		jetSyncState, err := m.ReplicaStorage.GetAllSyncClientJets(ctx)
 		if err != nil {
 			inslogger.FromContext(ctx).Errorf("Can't get jet clients state: %v", err)
 			return nil, nil
@@ -722,7 +718,7 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse core.Pulse) 
 		for jetID := range jetSyncState {
 			inslogger.FromContext(ctx).Debugf("Start light indexes cleanup, until pulse = %v (new=%v, delta=%v), jet = %v",
 				pn, newPulse.PulseNumber, delta, jetID.DebugString())
-			rmStat, err := m.db.RemoveAllForJetUntilPulse(ctx, jetID, pn, m.RecentStorageProvider.GetStorage(ctx, jetID))
+			rmStat, err := m.StorageCleaner.RemoveAllForJetUntilPulse(ctx, jetID, pn, m.RecentStorageProvider.GetStorage(ctx, jetID))
 			if err != nil {
 				inslogger.FromContext(ctx).Errorf("Error on light indexes cleanup, until pulse = %v, jet = %v: %v", pn, jetID.DebugString(), err)
 				continue
@@ -777,8 +773,18 @@ func (m *PulseManager) Start(ctx context.Context) error {
 	}
 
 	if m.options.enableSync {
-		m.syncClientsPool.Bus = m.Bus
-		m.syncClientsPool.PulseStorage = m.PulseStorage
+		heavySyncPool := heavyclient.NewPool(
+			m.Bus,
+			m.PulseStorage,
+			m.PulseTracker,
+			m.ReplicaStorage,
+			heavyclient.Options{
+				SyncMessageLimit: m.options.heavySyncMessageLimit,
+				PulsesDeltaLimit: m.options.lightChainLimit,
+			},
+		)
+		m.syncClientsPool = heavySyncPool
+
 		err := m.initJetSyncState(ctx)
 		if err != nil {
 			return err
@@ -796,7 +802,7 @@ func (m *PulseManager) restoreGenesisRecentObjects(ctx context.Context) error {
 	jetID := *jet.NewID(0, nil)
 	recent := m.RecentStorageProvider.GetStorage(ctx, jetID)
 
-	return m.db.IterateIndexIDs(ctx, jetID, func(id core.RecordID) error {
+	return m.ObjectStorage.IterateIndexIDs(ctx, jetID, func(id core.RecordID) error {
 		if id.Pulse() == core.FirstPulseNumber {
 			recent.AddObject(ctx, id)
 		}

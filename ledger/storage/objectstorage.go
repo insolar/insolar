@@ -16,6 +16,12 @@ type ObjectStorage interface {
 	GetRecord(ctx context.Context, jetID core.RecordID, id *core.RecordID) (record.Record, error)
 	SetRecord(ctx context.Context, jetID core.RecordID, pulseNumber core.PulseNumber, rec record.Record) (*core.RecordID, error)
 
+	IterateIndexIDs(
+		ctx context.Context,
+		jetID core.RecordID,
+		handler func(id core.RecordID) error,
+	) error
+
 	GetObjectIndex(
 		ctx context.Context,
 		jetID core.RecordID,

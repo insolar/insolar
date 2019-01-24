@@ -41,10 +41,11 @@ type Options struct {
 
 // JetClient heavy replication client. Replicates records for one jet.
 type JetClient struct {
-	Bus          core.MessageBus
-	PulseStorage core.PulseStorage
+	bus            core.MessageBus
+	pulseStorage   core.PulseStorage
+	replicaStorage storage.ReplicaStorage
+	pulseTracker   storage.PulseTracker
 
-	db   *storage.DB
 	opts Options
 
 	// life cycle control
@@ -65,13 +66,24 @@ type JetClient struct {
 // NewJetClient heavy replication client constructor.
 //
 // First argument defines what jet it serve.
-func NewJetClient(jetID core.RecordID, opts Options) *JetClient {
+func NewJetClient(
+	replicaStorage storage.ReplicaStorage,
+	mb core.MessageBus,
+	pulseStorage core.PulseStorage,
+	pulseTracker storage.PulseTracker,
+	jetID core.RecordID,
+	opts Options,
+) *JetClient {
 	jsc := &JetClient{
-		jetID:       jetID,
-		syncbackoff: backoffFromConfig(opts.BackoffConf),
-		signal:      make(chan struct{}, 1),
-		syncdone:    make(chan struct{}),
-		opts:        opts,
+		bus:            mb,
+		pulseStorage:   pulseStorage,
+		replicaStorage: replicaStorage,
+		pulseTracker:   pulseTracker,
+		jetID:          jetID,
+		syncbackoff:    backoffFromConfig(opts.BackoffConf),
+		signal:         make(chan struct{}, 1),
+		syncdone:       make(chan struct{}),
+		opts:           opts,
 	}
 	return jsc
 }
@@ -95,7 +107,7 @@ func (c *JetClient) addPulses(ctx context.Context, pns []core.PulseNumber) {
 	c.muPulses.Lock()
 	c.leftPulses = append(c.leftPulses, pns...)
 
-	if err := c.db.SetSyncClientJetPulses(ctx, c.jetID, c.leftPulses); err != nil {
+	if err := c.replicaStorage.SetSyncClientJetPulses(ctx, c.jetID, c.leftPulses); err != nil {
 		inslogger.FromContext(ctx).Errorf(
 			"attempt to persist jet sync state failed: jetID=%v: %v", c.jetID, err.Error())
 	}
@@ -125,7 +137,7 @@ func (c *JetClient) unshiftPulse(ctx context.Context) *core.PulseNumber {
 	copy(shifted, c.leftPulses[1:])
 	c.leftPulses = shifted
 
-	if err := c.db.SetSyncClientJetPulses(ctx, c.jetID, c.leftPulses); err != nil {
+	if err := c.replicaStorage.SetSyncClientJetPulses(ctx, c.jetID, c.leftPulses); err != nil {
 		inslogger.FromContext(ctx).Errorf(
 			"attempt to persist jet sync state failed: jetID=%v: %v", c.jetID, err.Error())
 	}
@@ -199,7 +211,7 @@ func (c *JetClient) syncloop(ctx context.Context) {
 			}
 		}
 
-		if isPulseNumberOutdated(ctx, c.db, c.PulseStorage, syncPN, c.opts.PulsesDeltaLimit) {
+		if isPulseNumberOutdated(ctx, c.pulseTracker, c.pulseStorage, syncPN, c.opts.PulsesDeltaLimit) {
 			inslog.Infof("pulse %v on jet %v is outdated, skip it", syncPN, c.jetID)
 			finishpulse()
 			continue

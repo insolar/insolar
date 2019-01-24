@@ -26,21 +26,31 @@ import (
 
 // Pool manages state of heavy sync clients (one client per jet id).
 type Pool struct {
-	Bus          core.MessageBus
-	PulseStorage core.PulseStorage
-	db           *storage.DB
+	bus            core.MessageBus
+	pulseStorage   core.PulseStorage
+	pulseTracker   storage.PulseTracker
+	replicaStorage storage.ReplicaStorage
 
-	ClientDefaults Options
+	clientDefaults Options
 
 	sync.Mutex
 	clients map[core.RecordID]*JetClient
 }
 
 // NewPool constructor of new pool.
-func NewPool(db *storage.DB, clientDefaults Options) *Pool {
+func NewPool(
+	bus core.MessageBus,
+	pulseStorage core.PulseStorage,
+	tracker storage.PulseTracker,
+	replicaStorage storage.ReplicaStorage,
+	clientDefaults Options,
+) *Pool {
 	return &Pool{
-		db:             db,
-		ClientDefaults: clientDefaults,
+		bus:            bus,
+		pulseStorage:   pulseStorage,
+		pulseTracker:   tracker,
+		replicaStorage: replicaStorage,
+		clientDefaults: clientDefaults,
 		clients:        map[core.RecordID]*JetClient{},
 	}
 }
@@ -74,10 +84,14 @@ func (scp *Pool) AddPulsesToSyncClient(
 	scp.Lock()
 	client, ok := scp.clients[jetID]
 	if !ok {
-		client = NewJetClient(jetID, scp.ClientDefaults)
-		client.db = scp.db
-		client.Bus = scp.Bus
-		client.PulseStorage = scp.PulseStorage
+		client = NewJetClient(
+			scp.replicaStorage,
+			scp.bus,
+			scp.pulseStorage,
+			scp.pulseTracker,
+			jetID,
+			scp.clientDefaults,
+		)
 
 		scp.clients[jetID] = client
 	}
