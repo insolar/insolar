@@ -23,6 +23,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/utils"
@@ -62,7 +63,19 @@ type sessionWithID struct {
 
 type notification struct{}
 
-type SessionManager struct {
+type SessionManager interface {
+	component.Starter
+	// component.Stopper
+
+	NewSession(ref core.RecordRef, cert core.AuthorizationCertificate, ttl time.Duration) SessionID
+	CheckSession(id SessionID, expected SessionState) error
+	SetDiscoveryNonce(id SessionID, discoveryNonce Nonce) error
+	GetChallengeData(id SessionID) (core.AuthorizationCertificate, Nonce, error)
+	ChallengePassed(id SessionID) error
+	ReleaseSession(id SessionID) (*Session, error)
+}
+
+type sessionManager struct {
 	sequence uint64
 	lock     sync.RWMutex
 	sessions map[SessionID]*Session
@@ -71,31 +84,32 @@ type SessionManager struct {
 	stopCleanupNotification chan notification
 }
 
-func NewSessionManager() *SessionManager {
-	return &SessionManager{
+func NewSessionManager() SessionManager {
+	return &sessionManager{
 		sessions:                make(map[SessionID]*Session),
 		newSessionNotification:  make(chan notification),
 		stopCleanupNotification: make(chan notification),
 	}
 }
 
-func (sm *SessionManager) Start(ctx context.Context) error {
-	inslogger.FromContext(ctx).Debug("[ SessionManager::Start ] start cleaning up sessions")
+func (sm *sessionManager) Start(ctx context.Context) error {
+	inslogger.FromContext(ctx).Debug("[ sessionManager::Start ] start cleaning up sessions")
 
 	go sm.cleanupExpiredSessions()
 
 	return nil
 }
 
-func (sm *SessionManager) Stop(ctx context.Context) error {
-	inslogger.FromContext(ctx).Debug("[ SessionManager::Stop ] stop cleaning up sessions")
+// TODO: fix bug. If we uncomment Stop, we get deadlock on genesis stopping
+// func (sm *sessionManager) Stop(ctx context.Context) error {
+// 	inslogger.FromContext(ctx).Debug("[ sessionManager::Stop ] stop cleaning up sessions")
+//
+// 	sm.stopCleanupNotification <- notification{}
+//
+// 	return nil
+// }
 
-	sm.stopCleanupNotification <- notification{}
-
-	return nil
-}
-
-func (sm *SessionManager) NewSession(ref core.RecordRef, cert core.AuthorizationCertificate, ttl time.Duration) SessionID {
+func (sm *sessionManager) NewSession(ref core.RecordRef, cert core.AuthorizationCertificate, ttl time.Duration) SessionID {
 	id := utils.AtomicLoadAndIncrementUint64(&sm.sequence)
 	session := &Session{
 		NodeID: ref,
@@ -115,7 +129,7 @@ func (sm *SessionManager) NewSession(ref core.RecordRef, cert core.Authorization
 	return sessionID
 }
 
-func (sm *SessionManager) CheckSession(id SessionID, expected SessionState) error {
+func (sm *sessionManager) CheckSession(id SessionID, expected SessionState) error {
 	sm.lock.RLock()
 	defer sm.lock.RUnlock()
 
@@ -123,7 +137,7 @@ func (sm *SessionManager) CheckSession(id SessionID, expected SessionState) erro
 	return err
 }
 
-func (sm *SessionManager) checkSession(id SessionID, expected SessionState) (*Session, error) {
+func (sm *sessionManager) checkSession(id SessionID, expected SessionState) (*Session, error) {
 	session := sm.sessions[id]
 	if session == nil {
 		return nil, errors.New(fmt.Sprintf("no such session ID: %d", id))
@@ -134,7 +148,7 @@ func (sm *SessionManager) checkSession(id SessionID, expected SessionState) (*Se
 	return session, nil
 }
 
-func (sm *SessionManager) SetDiscoveryNonce(id SessionID, discoveryNonce Nonce) error {
+func (sm *sessionManager) SetDiscoveryNonce(id SessionID, discoveryNonce Nonce) error {
 	sm.lock.Lock()
 	defer sm.lock.Unlock()
 
@@ -147,7 +161,7 @@ func (sm *SessionManager) SetDiscoveryNonce(id SessionID, discoveryNonce Nonce) 
 	return nil
 }
 
-func (sm *SessionManager) GetChallengeData(id SessionID) (core.AuthorizationCertificate, Nonce, error) {
+func (sm *sessionManager) GetChallengeData(id SessionID) (core.AuthorizationCertificate, Nonce, error) {
 	sm.lock.Lock()
 	defer sm.lock.Unlock()
 
@@ -158,7 +172,7 @@ func (sm *SessionManager) GetChallengeData(id SessionID) (core.AuthorizationCert
 	return session.Cert, session.DiscoveryNonce, nil
 }
 
-func (sm *SessionManager) ChallengePassed(id SessionID) error {
+func (sm *sessionManager) ChallengePassed(id SessionID) error {
 	sm.lock.Lock()
 	defer sm.lock.Unlock()
 
@@ -170,7 +184,7 @@ func (sm *SessionManager) ChallengePassed(id SessionID) error {
 	return nil
 }
 
-func (sm *SessionManager) ReleaseSession(id SessionID) (*Session, error) {
+func (sm *sessionManager) ReleaseSession(id SessionID) (*Session, error) {
 	sm.lock.Lock()
 	defer sm.lock.Unlock()
 
@@ -182,7 +196,7 @@ func (sm *SessionManager) ReleaseSession(id SessionID) (*Session, error) {
 	return session, nil
 }
 
-func (sm *SessionManager) cleanupExpiredSessions() {
+func (sm *sessionManager) cleanupExpiredSessions() {
 	var sessionsByExpirationTime []*sessionWithID
 	for {
 		sm.lock.RLock()
@@ -226,7 +240,7 @@ func (sm *SessionManager) cleanupExpiredSessions() {
 	}
 }
 
-func (sm *SessionManager) sortSessionsByExpirationTime() []*sessionWithID {
+func (sm *sessionManager) sortSessionsByExpirationTime() []*sessionWithID {
 	sm.lock.RLock()
 
 	// Read active session with their ids. We have to store them as a slice to keep ordering by expiration time.
@@ -250,7 +264,7 @@ func (sm *SessionManager) sortSessionsByExpirationTime() []*sessionWithID {
 	return sessionsByExpirationTime
 }
 
-func (sm *SessionManager) expireSessions(sessionsByExpirationTime []*sessionWithID) []*sessionWithID {
+func (sm *sessionManager) expireSessions(sessionsByExpirationTime []*sessionWithID) []*sessionWithID {
 	var shift int
 
 	sm.lock.Lock()

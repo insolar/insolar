@@ -26,18 +26,22 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func sessionMapLen(sm *SessionManager) int {
-	sm.lock.RLock()
-	defer sm.lock.RUnlock()
+func sessionMapLen(sm SessionManager) int {
+	s := sm.(*sessionManager)
 
-	return len(sm.sessions)
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+
+	return len(s.sessions)
 }
 
-func sessionMapDelete(sm *SessionManager, id SessionID) {
-	sm.lock.Lock()
-	defer sm.lock.Unlock()
+func sessionMapDelete(sm SessionManager, id SessionID) {
+	s := sm.(*sessionManager)
 
-	delete(sm.sessions, id)
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	delete(s.sessions, id)
 }
 
 func TestSessionManager_CleanupSimple(t *testing.T) {

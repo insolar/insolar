@@ -38,4 +38,3 @@ func TestEarlyRequestCircuitBreakerProvider_GetBreaker_CreateNew(t *testing.T) {
 	require.NotNil(t, provider.breakers[expectedJet].timeoutChannel)
 	require.NotNil(t, provider.breakers[expectedJet].hotDataChannel)
 }
-

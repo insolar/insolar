@@ -27,15 +27,22 @@ import (
 	"github.com/pkg/errors"
 )
 
-// SecondPhase is a second phase.
-type SecondPhase struct {
+type SecondPhase interface {
+	Execute(ctx context.Context, state *FirstPhaseState) (*SecondPhaseState, error)
+}
+
+func NewSecondPhase() SecondPhase {
+	return &secondPhase{}
+}
+
+type secondPhase struct {
 	NodeKeeper   network.NodeKeeper       `inject:""`
 	Calculator   merkle.Calculator        `inject:""`
 	Communicator Communicator             `inject:""`
 	Cryptography core.CryptographyService `inject:""`
 }
 
-func (sp *SecondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*SecondPhaseState, error) {
+func (sp *secondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*SecondPhaseState, error) {
 	prevCloudHash := sp.NodeKeeper.GetCloudHash()
 
 	entry := &merkle.GlobuleEntry{
@@ -129,7 +136,7 @@ func generatePhase2Bitset(list network.UnsyncList, proofs map[core.Node]*merkle.
 	return bitset, nil
 }
 
-func (sp *SecondPhase) signPhase2Packet(p *packets.Phase2Packet) error {
+func (sp *secondPhase) signPhase2Packet(p *packets.Phase2Packet) error {
 	data, err := p.RawFirstPart()
 	if err != nil {
 		return errors.Wrap(err, "failed to get raw bytes")
@@ -144,7 +151,7 @@ func (sp *SecondPhase) signPhase2Packet(p *packets.Phase2Packet) error {
 	return nil
 }
 
-func (sp *SecondPhase) isSignPhase2PacketRight(packet *packets.Phase2Packet, recordRef core.RecordRef) (bool, error) {
+func (sp *secondPhase) isSignPhase2PacketRight(packet *packets.Phase2Packet, recordRef core.RecordRef) (bool, error) {
 	key := sp.NodeKeeper.GetActiveNode(recordRef).PublicKey()
 
 	raw, err := packet.RawFirstPart()

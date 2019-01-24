@@ -19,35 +19,41 @@ package controller
 import (
 	"context"
 
+	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/transport/packet"
 	"github.com/insolar/insolar/network/transport/packet/types"
 )
 
-type PulseController struct {
-	pulseHandler network.PulseHandler
+type PulseController interface {
+	component.Starter
+}
+
+type pulseController struct {
+	PulseHandler network.PulseHandler `inject:""`
+
 	hostNetwork  network.HostNetwork
 	routingTable network.RoutingTable
 }
 
-func (pc *PulseController) Start() {
+func (pc *pulseController) Start(ctx context.Context) error {
 	pc.hostNetwork.RegisterRequestHandler(types.Pulse, pc.processPulse)
 	pc.hostNetwork.RegisterRequestHandler(types.GetRandomHosts, pc.processGetRandomHosts)
+	return nil
 }
 
-func (pc *PulseController) processPulse(ctx context.Context, request network.Request) (network.Response, error) {
+func (pc *pulseController) processPulse(ctx context.Context, request network.Request) (network.Response, error) {
 	data := request.GetData().(*packet.RequestPulse)
-	go pc.pulseHandler.HandlePulse(context.Background(), data.Pulse)
+	go pc.PulseHandler.HandlePulse(context.Background(), data.Pulse)
 	return pc.hostNetwork.BuildResponse(ctx, request, &packet.ResponsePulse{Success: true, Error: ""}), nil
 }
 
-func (pc *PulseController) processGetRandomHosts(ctx context.Context, request network.Request) (network.Response, error) {
+func (pc *pulseController) processGetRandomHosts(ctx context.Context, request network.Request) (network.Response, error) {
 	data := request.GetData().(*packet.RequestGetRandomHosts)
 	randomHosts := pc.routingTable.GetRandomNodes(data.HostsNumber)
 	return pc.hostNetwork.BuildResponse(ctx, request, &packet.ResponseGetRandomHosts{Hosts: randomHosts}), nil
 }
 
-func NewPulseController(pulseHandler network.PulseHandler, hostNetwork network.HostNetwork,
-	routingTable network.RoutingTable) *PulseController {
-	return &PulseController{pulseHandler: pulseHandler, hostNetwork: hostNetwork, routingTable: routingTable}
+func NewPulseController(hostNetwork network.HostNetwork, routingTable network.RoutingTable) PulseController {
+	return &pulseController{hostNetwork: hostNetwork, routingTable: routingTable}
 }
