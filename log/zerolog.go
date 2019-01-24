@@ -17,6 +17,7 @@
 package log
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -61,12 +62,12 @@ func (z zerologAdapter) WithField(key string, value interface{}) core.Logger {
 
 // Debug logs a message at level Debug on the stdout.
 func (z zerologAdapter) Debug(args ...interface{}) {
-	z.logger.Debug().Msg(args[0].(string))
+	z.logger.Debug().Msg(toString(args))
 }
 
 // Debugln logs a message at level Debug on the stdout.
 func (z zerologAdapter) Debugln(args ...interface{}) {
-	z.logger.Debug().Msg(args[0].(string))
+	z.logger.Debug().Msg(toString(args))
 }
 
 // Debugf formatted logs a message at level Debug on the stdout.
@@ -76,12 +77,12 @@ func (z zerologAdapter) Debugf(format string, args ...interface{}) {
 
 // Info logs a message at level Info on the stdout.
 func (z zerologAdapter) Info(args ...interface{}) {
-	z.logger.Info().Msg(args[0].(string))
+	z.logger.Info().Msg(toString(args))
 }
 
 // Infoln logs a message at level Info on the stdout.
 func (z zerologAdapter) Infoln(args ...interface{}) {
-	z.logger.Info().Msg(args[0].(string))
+	z.logger.Info().Msg(toString(args))
 }
 
 // Infof formatted logs a message at level Info on the stdout.
@@ -91,12 +92,12 @@ func (z zerologAdapter) Infof(format string, args ...interface{}) {
 
 // Warn logs a message at level Warn on the stdout.
 func (z zerologAdapter) Warn(args ...interface{}) {
-	z.logger.Warn().Msg(args[0].(string))
+	z.logger.Warn().Msg(toString(args))
 }
 
 // Warnln logs a message at level Warn on the stdout.
 func (z zerologAdapter) Warnln(args ...interface{}) {
-	z.logger.Warn().Msg(args[0].(string))
+	z.logger.Warn().Msg(toString(args))
 }
 
 // Warnf formatted logs a message at level Warn on the stdout.
@@ -106,12 +107,12 @@ func (z zerologAdapter) Warnf(format string, args ...interface{}) {
 
 // Error logs a message at level Error on the stdout.
 func (z zerologAdapter) Error(args ...interface{}) {
-	z.logger.Error().Msg(args[0].(string))
+	z.logger.Error().Msg(toString(args))
 }
 
 // Errorln logs a message at level Error on the stdout.
 func (z zerologAdapter) Errorln(args ...interface{}) {
-	z.logger.Error().Msg(args[0].(string))
+	z.logger.Error().Msg(toString(args))
 }
 
 // Errorf formatted logs a message at level Error on the stdout.
@@ -121,27 +122,27 @@ func (z zerologAdapter) Errorf(format string, args ...interface{}) {
 
 // Fatal logs a message at level Fatal on the stdout.
 func (z zerologAdapter) Fatal(args ...interface{}) {
-	z.logger.Fatal().Msg(args[0].(string))
+	z.logger.Fatal().Msg(toString(args))
 }
 
 // Fatalln logs a message at level Fatal on the stdout.
 func (z zerologAdapter) Fatalln(args ...interface{}) {
-	z.logger.Fatal().Msg(args[0].(string))
+	z.logger.Fatal().Msg(toString(args))
 }
 
 // Fatalf formatted logs a message at level Fatal on the stdout.
 func (z zerologAdapter) Fatalf(format string, args ...interface{}) {
-	z.logger.Fatal().Msg(args[0].(string))
+	z.logger.Fatal().Msg(toString(args))
 }
 
 // Panic logs a message at level Panic on the stdout.
 func (z zerologAdapter) Panic(args ...interface{}) {
-	z.logger.Panic().Msg(args[0].(string))
+	z.logger.Panic().Msg(toString(args))
 }
 
 // Panicln logs a message at level Panic on the stdout.
 func (z zerologAdapter) Panicln(args ...interface{}) {
-	z.logger.Panic().Msg(args[0].(string))
+	z.logger.Panic().Msg(toString(args))
 }
 
 // Panicf formatted logs a message at level Panic on the stdout.
@@ -169,4 +170,19 @@ func (z zerologAdapter) GetLevel() string {
 // SetOutput sets the output destination for the logger.
 func (z zerologAdapter) SetOutput(w io.Writer) {
 	z.logger = z.logger.Output(w)
+}
+
+func toString(args ...interface{}) string {
+	result := ""
+	var arg interface{}
+	for arg = range args {
+		if s, ok := arg.(string); ok {
+			result += s
+		} else if s, ok := arg.(fmt.Stringer); ok {
+			result += s.String()
+		} else {
+			result += " invalid argument "
+		}
+	}
+	return result
 }
