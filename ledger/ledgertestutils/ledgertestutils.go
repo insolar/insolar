@@ -121,7 +121,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 	recentStorageMock.GetRequestsForObjectMock.Return(nil)
 
 	provideMock := recentstorage.NewProviderMock(t)
-	provideMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
+	provideMock.GetStorageFunc = func(ctx context.Context, p core.RecordID) (r recentstorage.RecentStorage) {
 		return recentStorageMock
 	}
 

@@ -166,17 +166,12 @@ func (m *PulseManager) processEndPulse(
 			}
 
 			if info.left == nil && info.right == nil {
-				m.RecentStorageProvider.GetStorage(info.id).ClearZeroTTLObjects(ctx)
-
 				// No split happened.
 				if !info.mineNext {
 					go sender(*msg, info.id)
 				}
 			} else {
 				// Split happened.
-				m.RecentStorageProvider.GetStorage(info.left.id).ClearZeroTTLObjects(ctx)
-				m.RecentStorageProvider.GetStorage(info.right.id).ClearZeroTTLObjects(ctx)
-
 				if !info.left.mineNext {
 					go sender(*msg, info.left.id)
 				}
@@ -326,7 +321,7 @@ func (m *PulseManager) getExecutorHotData(
 	defer span.End()
 
 	logger := inslogger.FromContext(ctx)
-	recentStorage := m.RecentStorageProvider.GetStorage(jetID)
+	recentStorage := m.RecentStorageProvider.GetStorage(ctx, jetID)
 	recentObjectsIds := recentStorage.GetObjects()
 
 	recentObjects := map[core.RecordID]*message.HotIndex{}
@@ -411,6 +406,8 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse c
 			continue
 		}
 
+		m.RecentStorageProvider.GetStorage(ctx, jetID).DecreaseTTL(ctx)
+
 		info := jetInfo{id: jetID}
 		if indexToSplit == i && splitCount > 0 {
 			splitCount--
@@ -488,7 +485,7 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse c
 }
 
 func (m *PulseManager) rewriteHotData(ctx context.Context, fromJetID, toJetID core.RecordID) error {
-	recentStorage := m.RecentStorageProvider.GetStorage(fromJetID)
+	recentStorage := m.RecentStorageProvider.GetStorage(ctx, fromJetID)
 
 	for id := range recentStorage.GetObjects() {
 		idx, err := m.db.GetObjectIndex(ctx, fromJetID, &id, false)
@@ -520,7 +517,8 @@ func (m *PulseManager) rewriteHotData(ctx context.Context, fromJetID, toJetID co
 		}
 	}
 
-	m.RecentStorageProvider.CloneStorage(fromJetID, toJetID)
+	inslogger.FromContext(ctx).Debugf("{LEAK} CloneStorage from - %v, to - %v", fromJetID, toJetID)
+	m.RecentStorageProvider.CloneStorage(ctx, fromJetID, toJetID)
 
 	return nil
 }
@@ -608,7 +606,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 			return err
 		}
 		m.postProcessJets(ctx, newPulse, jets)
-		go m.addSync(context.Background(), jets, currentPulse.PulseNumber)
+		m.addSync(ctx, jets, currentPulse.PulseNumber)
 		go m.cleanLightData(context.Background(), newPulse)
 	}
 
@@ -645,17 +643,18 @@ func (m *PulseManager) postProcessJets(ctx context.Context, newPulse core.Pulse,
 			// No split happened.
 			if !jetInfo.mineNext {
 				logger.Debugf("[postProcessJets] clear recent storage for root jet - %v, pulse - %v", jetInfo.id, newPulse.PulseNumber)
-				m.RecentStorageProvider.GetStorage(jetInfo.id).ClearObjects(ctx)
+				m.RecentStorageProvider.RemoveStorage(ctx, jetInfo.id)
 			}
 		} else {
 			// Split happened.
+			m.RecentStorageProvider.RemoveStorage(ctx, jetInfo.id)
 			if !jetInfo.left.mineNext {
 				logger.Debugf("[postProcessJets] clear recent storage for left jet - %v, pulse - %v", jetInfo.left.id, newPulse.PulseNumber)
-				m.RecentStorageProvider.GetStorage(jetInfo.left.id).ClearObjects(ctx)
+				m.RecentStorageProvider.RemoveStorage(ctx, jetInfo.left.id)
 			}
 			if !jetInfo.right.mineNext {
 				logger.Debugf("[postProcessJets] clear recent storage for right jet - %v, pulse - %v", jetInfo.right.id, newPulse.PulseNumber)
-				m.RecentStorageProvider.GetStorage(jetInfo.right.id).ClearObjects(ctx)
+				m.RecentStorageProvider.RemoveStorage(ctx, jetInfo.right.id)
 			}
 		}
 	}
@@ -707,7 +706,7 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse core.Pulse) 
 		for jetID := range jetSyncState {
 			inslogger.FromContext(ctx).Debugf("Start light indexes cleanup, until pulse = %v (new=%v, delta=%v), jet = %v",
 				pn, newPulse.PulseNumber, delta, jetID.DebugString())
-			rmStat, err := m.db.RemoveAllForJetUntilPulse(ctx, jetID, pn, m.RecentStorageProvider.GetStorage(jetID))
+			rmStat, err := m.db.RemoveAllForJetUntilPulse(ctx, jetID, pn, m.RecentStorageProvider.GetStorage(ctx, jetID))
 			if err != nil {
 				inslogger.FromContext(ctx).Errorf("Error on light indexes cleanup, until pulse = %v, jet = %v: %v", pn, jetID.DebugString(), err)
 				continue
@@ -779,7 +778,7 @@ func (m *PulseManager) restoreGenesisRecentObjects(ctx context.Context) error {
 	}
 
 	jetID := *jet.NewID(0, nil)
-	recent := m.RecentStorageProvider.GetStorage(jetID)
+	recent := m.RecentStorageProvider.GetStorage(ctx, jetID)
 
 	return m.db.IterateIndexIDs(ctx, jetID, func(id core.RecordID) error {
 		if id.Pulse() == core.FirstPulseNumber {
