@@ -29,9 +29,8 @@ import (
 )
 
 type zerologAdapter struct {
-	skipCallNumber int
-	logger         zerolog.Logger
-	logLevel       string
+	logger   zerolog.Logger
+	logLevel string
 }
 
 func newZerologAdapter(cfg configuration.Log) (*zerologAdapter, error) {
