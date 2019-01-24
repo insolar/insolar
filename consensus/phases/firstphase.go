@@ -37,9 +37,15 @@ func consensusReached(resultLen, participanstLen int) bool {
 	return resultLen >= minParticipants
 }
 
-// FirstPhase is a first phase.
-type FirstPhase struct {
-	NodeNetwork  core.NodeNetwork         `inject:""`
+type FirstPhase interface {
+	Execute(ctx context.Context, pulse *core.Pulse) (*FirstPhaseState, error)
+}
+
+func NewFirstPhase() FirstPhase {
+	return &firstPhase{}
+}
+
+type firstPhase struct {
 	Calculator   merkle.Calculator        `inject:""`
 	Communicator Communicator             `inject:""`
 	Cryptography core.CryptographyService `inject:""`
@@ -49,7 +55,7 @@ type FirstPhase struct {
 }
 
 // Execute do first phase
-func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPhaseState, error) {
+func (fp *firstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPhaseState, error) {
 	entry := &merkle.PulseEntry{Pulse: pulse}
 	pulseHash, pulseProof, err := fp.Calculator.GetPulseProof(entry)
 	if fp.NodeKeeper.GetState() == network.Ready {
@@ -136,7 +142,7 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 	}, nil
 }
 
-func (fp *FirstPhase) signPhase1Packet(packet *packets.Phase1Packet) error {
+func (fp *firstPhase) signPhase1Packet(packet *packets.Phase1Packet) error {
 	data, err := packet.RawBytes()
 	if err != nil {
 		return errors.Wrap(err, "failed to get raw bytes")
@@ -149,8 +155,8 @@ func (fp *FirstPhase) signPhase1Packet(packet *packets.Phase1Packet) error {
 	return nil
 }
 
-func (fp *FirstPhase) isSignPhase1PacketRight(packet *packets.Phase1Packet, recordRef core.RecordRef) (bool, error) {
-	key := fp.NodeNetwork.GetActiveNode(recordRef).PublicKey()
+func (fp *firstPhase) isSignPhase1PacketRight(packet *packets.Phase1Packet, recordRef core.RecordRef) (bool, error) {
+	key := fp.NodeKeeper.GetActiveNode(recordRef).PublicKey()
 	raw, err := packet.RawBytes()
 
 	if err != nil {
@@ -159,7 +165,7 @@ func (fp *FirstPhase) isSignPhase1PacketRight(packet *packets.Phase1Packet, reco
 	return fp.Cryptography.Verify(key, core.SignatureFromBytes(raw), raw), nil
 }
 
-func (fp *FirstPhase) validateProofs(
+func (fp *firstPhase) validateProofs(
 	pulseHash merkle.OriginHash,
 	proofs map[core.RecordRef]*merkle.PulseProof,
 ) (valid map[core.Node]*merkle.PulseProof, fault map[core.RecordRef]*merkle.PulseProof) {
@@ -177,7 +183,7 @@ func (fp *FirstPhase) validateProofs(
 	return validProofs, faultProofs
 }
 
-func (fp *FirstPhase) validateProof(pulseHash merkle.OriginHash, nodeID core.RecordRef, proof *merkle.PulseProof) bool {
+func (fp *firstPhase) validateProof(pulseHash merkle.OriginHash, nodeID core.RecordRef, proof *merkle.PulseProof) bool {
 	node := fp.UnsyncList.GetActiveNode(nodeID)
 	if node == nil {
 		return false
@@ -201,7 +207,7 @@ func detectSparseBitsetLength(claims map[core.RecordRef][]packets.ReferendumClai
 	return 0, errors.New("no announce claims were received")
 }
 
-func (fp *FirstPhase) getSignedClaims(claims []packets.ReferendumClaim) []packets.ReferendumClaim {
+func (fp *firstPhase) getSignedClaims(claims []packets.ReferendumClaim) []packets.ReferendumClaim {
 	result := make([]packets.ReferendumClaim, 0)
 	for _, claim := range claims {
 		joinClaim, ok := claim.(*packets.NodeJoinClaim)
@@ -221,7 +227,7 @@ func (fp *FirstPhase) getSignedClaims(claims []packets.ReferendumClaim) []packet
 	return result
 }
 
-func (fp *FirstPhase) claimSignIsOk(claim *packets.NodeJoinClaim) (bool, error) {
+func (fp *firstPhase) claimSignIsOk(claim *packets.NodeJoinClaim) (bool, error) {
 	keyProc := platformpolicy.NewKeyProcessor()
 	key, err := keyProc.ImportPublicKeyPEM(claim.NodePK[:])
 	if err != nil {

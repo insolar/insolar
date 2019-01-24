@@ -111,7 +111,6 @@ func TestPendingFinished(t *testing.T) {
 	mc := minimock.NewController(t)
 	defer mc.Finish()
 
-
 	jc := testutils.NewJetCoordinatorMock(mc)
 	mb := testutils.NewMessageBusMock(mc)
 	ps := testutils.NewPulseStorageMock(mc)
@@ -458,7 +457,7 @@ func TestLogicRunner_OnPulse_StillExecuting(t *testing.T) {
 	lr.state[objectRef] = &ObjectState{
 		ExecutionState: &ExecutionState{
 			Behaviour: &ValidationSaver{},
-			Current: &CurrentExecution{},
+			Current:   &CurrentExecution{},
 		},
 	}
 	mb.SendMock.Return(&reply.OK{}, nil)

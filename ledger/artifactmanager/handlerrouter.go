@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -17,24 +17,21 @@
 package artifactmanager
 
 import (
-	"context"
-	"testing"
-
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/require"
 )
 
-func TestEarlyRequestCircuitBreakerProvider_GetBreaker_CreateNew(t *testing.T) {
-	provider := &earlyRequestCircuitBreakerProvider{
-		breakers: map[core.RecordID]*requestCircuitBreakerProvider{},
+// Alias for wrapping func-s
+type Handler func(core.MessageHandler) core.MessageHandler
+
+// Build return wrapping core.MessageHandler
+// If want call wrapHandler1(wrapHandler2(wrapHandler3(handler))),
+// we should use Build(handler, wrapHandler1, wrapHandler2, wrapHandler3).
+func Build(handler core.MessageHandler, wrapHandlers ...Handler) core.MessageHandler {
+	result := handler
+
+	for i := range wrapHandlers {
+		result = wrapHandlers[len(wrapHandlers)-1-i](result)
 	}
-	expectedJet := testutils.RandomJet()
 
-	breaker := provider.getBreaker(context.TODO(), expectedJet)
-
-	require.Equal(t, 1, len(provider.breakers))
-	require.Equal(t, breaker, provider.breakers[expectedJet])
-	require.NotNil(t, provider.breakers[expectedJet].timeoutChannel)
-	require.NotNil(t, provider.breakers[expectedJet].hotDataChannel)
+	return result
 }

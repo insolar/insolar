@@ -25,9 +25,16 @@ import (
 	"github.com/pkg/errors"
 )
 
-type ThirdPhase struct {
+type ThirdPhase interface {
+	Execute(ctx context.Context, state *SecondPhaseState) error
+}
+
+func NewThirdPhase() ThirdPhase {
+	return &thirdPhase{}
+}
+
+type thirdPhase struct {
 	Cryptography core.CryptographyService `inject:""`
-	NodeNetwork  core.NodeNetwork         `inject:""`
 	Communicator Communicator             `inject:""`
 	NodeKeeper   network.NodeKeeper       `inject:""`
 
@@ -36,7 +43,7 @@ type ThirdPhase struct {
 	mapper packets.BitSetMapper
 }
 
-func (tp *ThirdPhase) Execute(ctx context.Context, state *SecondPhaseState) error {
+func (tp *thirdPhase) Execute(ctx context.Context, state *SecondPhaseState) error {
 	var gSign [packets.SignatureLength]byte
 	copy(gSign[:], state.GlobuleProof.Signature.Bytes()[:packets.SignatureLength])
 	packet := packets.NewPhase3Packet(gSign, state.DBitSet)
@@ -87,7 +94,7 @@ func getNode(ref core.RecordRef, nodes []core.Node) (core.Node, error) {
 	return nil, errors.New("[ getNode] failed to find a node on phase 3")
 }
 
-func (tp *ThirdPhase) signPhase3Packet(p *packets.Phase3Packet) error {
+func (tp *thirdPhase) signPhase3Packet(p *packets.Phase3Packet) error {
 	data, err := p.RawBytes()
 	if err != nil {
 		return errors.Wrap(err, "failed to get raw bytes")
@@ -102,8 +109,8 @@ func (tp *ThirdPhase) signPhase3Packet(p *packets.Phase3Packet) error {
 	return nil
 }
 
-func (tp *ThirdPhase) isSignPhase3PacketRight(packet *packets.Phase3Packet, recordRef core.RecordRef) (bool, error) {
-	key := tp.NodeNetwork.GetActiveNode(recordRef).PublicKey()
+func (tp *thirdPhase) isSignPhase3PacketRight(packet *packets.Phase3Packet, recordRef core.RecordRef) (bool, error) {
+	key := tp.NodeKeeper.GetActiveNode(recordRef).PublicKey()
 
 	raw, err := packet.RawBytes()
 	if err != nil {

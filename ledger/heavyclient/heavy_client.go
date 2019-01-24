@@ -69,7 +69,7 @@ func NewJetClient(jetID core.RecordID, opts Options) *JetClient {
 	jsc := &JetClient{
 		jetID:       jetID,
 		syncbackoff: backoffFromConfig(opts.BackoffConf),
-		signal:      make(chan struct{}),
+		signal:      make(chan struct{}, 1),
 		syncdone:    make(chan struct{}),
 		opts:        opts,
 	}

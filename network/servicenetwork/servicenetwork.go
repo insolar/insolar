@@ -30,6 +30,7 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller"
+	"github.com/insolar/insolar/network/controller/bootstrap"
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/merkle"
 	"github.com/insolar/insolar/network/routing"
@@ -40,29 +41,24 @@ import (
 // ServiceNetwork is facade for network.
 type ServiceNetwork struct {
 	cfg configuration.Configuration
+	cm  *component.Manager
 
 	hostNetwork  network.HostNetwork  // TODO: should be injected
-	controller   network.Controller   // TODO: should be injected
 	routingTable network.RoutingTable // TODO: should be injected
 
 	// dependencies
 	CertificateManager  core.CertificateManager         `inject:""`
-	NodeNetwork         core.NodeNetwork                `inject:""`
 	PulseManager        core.PulseManager               `inject:""`
 	PulseStorage        core.PulseStorage               `inject:""`
 	CryptographyService core.CryptographyService        `inject:""`
 	NetworkCoordinator  core.NetworkCoordinator         `inject:""`
-	ArtifactManager     core.ArtifactManager            `inject:""`
 	CryptographyScheme  core.PlatformCryptographyScheme `inject:""`
 	NodeKeeper          network.NodeKeeper              `inject:""`
 	NetworkSwitcher     core.NetworkSwitcher            `inject:""`
 
 	// subcomponents
-	PhaseManager     phases.PhaseManager      // `inject:""`
-	MerkleCalculator merkle.Calculator        // `inject:""`
-	ConsensusNetwork network.ConsensusNetwork // `inject:""`
-	PulseHandler     network.PulseHandler
-	Communicator     phases.Communicator
+	PhaseManager phases.PhaseManager `inject:"subcomponent"`
+	Controller   network.Controller  `inject:"subcomponent"`
 
 	// fakePulsar *fakepulsar.FakePulsar
 	isGenesis bool
@@ -70,24 +66,24 @@ type ServiceNetwork struct {
 }
 
 // NewServiceNetwork returns a new ServiceNetwork.
-func NewServiceNetwork(conf configuration.Configuration, scheme core.PlatformCryptographyScheme, isGenesis bool) (*ServiceNetwork, error) {
-	serviceNetwork := &ServiceNetwork{cfg: conf, CryptographyScheme: scheme, isGenesis: isGenesis, skip: conf.Service.Skip}
+func NewServiceNetwork(conf configuration.Configuration, scheme core.PlatformCryptographyScheme, rootCm *component.Manager, isGenesis bool) (*ServiceNetwork, error) {
+	serviceNetwork := &ServiceNetwork{cm: component.NewManager(rootCm), cfg: conf, CryptographyScheme: scheme, isGenesis: isGenesis, skip: conf.Service.Skip}
 	return serviceNetwork, nil
 }
 
 // SendMessage sends a message from MessageBus.
 func (n *ServiceNetwork) SendMessage(nodeID core.RecordRef, method string, msg core.Parcel) ([]byte, error) {
-	return n.controller.SendMessage(nodeID, method, msg)
+	return n.Controller.SendMessage(nodeID, method, msg)
 }
 
 // SendCascadeMessage sends a message from MessageBus to a cascade of nodes
 func (n *ServiceNetwork) SendCascadeMessage(data core.Cascade, method string, msg core.Parcel) error {
-	return n.controller.SendCascadeMessage(data, method, msg)
+	return n.Controller.SendCascadeMessage(data, method, msg)
 }
 
 // RemoteProcedureRegister registers procedure for remote call on this host.
 func (n *ServiceNetwork) RemoteProcedureRegister(name string, method core.RemoteProcedure) {
-	n.controller.RemoteProcedureRegister(name, method)
+	n.Controller.RemoteProcedureRegister(name, method)
 }
 
 // incrementPort increments port number if it not equals 0
@@ -111,21 +107,6 @@ func incrementPort(address string) (string, error) {
 
 // Start implements component.Initer
 func (n *ServiceNetwork) Init(ctx context.Context) error {
-
-	n.PhaseManager = phases.NewPhaseManager()
-	n.MerkleCalculator = merkle.NewCalculator()
-	n.Communicator = phases.NewNaiveCommunicator()
-	n.PulseHandler = n // self
-
-	firstPhase := &phases.FirstPhase{}
-	secondPhase := &phases.SecondPhase{}
-	thirdPhase := &phases.ThirdPhase{}
-
-	// inject workaround
-	n.PhaseManager.(*phases.Phases).FirstPhase = firstPhase
-	n.PhaseManager.(*phases.Phases).SecondPhase = secondPhase
-	n.PhaseManager.(*phases.Phases).ThirdPhase = thirdPhase
-
 	n.routingTable = &routing.Table{}
 	internalTransport, err := hostnetwork.NewInternalTransport(n.cfg, n.CertificateManager.GetCertificate().GetNodeRef().String())
 	if err != nil {
@@ -138,32 +119,39 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		return errors.Wrap(err, "failed to increment port.")
 	}
 
-	n.ConsensusNetwork, err = hostnetwork.NewConsensusNetwork(
+	consensusNetwork, err := hostnetwork.NewConsensusNetwork(
 		n.cfg.Host.Transport.Address,
 		n.CertificateManager.GetCertificate().GetNodeRef().String(),
-		n.NodeNetwork.GetOrigin().ShortID(),
+		n.NodeKeeper.GetOrigin().ShortID(),
 		n.routingTable,
 	)
 	if err != nil {
 		return errors.Wrap(err, "Failed to create consensus network.")
 	}
 
-	cm := component.Manager{}
-	cm.Register(n.CertificateManager, n.NodeNetwork, n.PulseManager, n.CryptographyService, n.NetworkCoordinator,
-		n.ArtifactManager, n.CryptographyScheme, n.PulseHandler)
-
-	cm.Inject(n.NodeKeeper,
-		n.MerkleCalculator,
-		n.ConsensusNetwork,
-		n.Communicator,
-		firstPhase,
-		secondPhase,
-		thirdPhase,
-	)
-
 	n.hostNetwork = hostnetwork.NewHostTransport(internalTransport, n.routingTable)
 	options := controller.ConfigureOptions(n.cfg.Host)
-	n.controller = controller.NewNetworkController(n, options, n.CertificateManager.GetCertificate(), internalTransport, n.routingTable, n.hostNetwork, n.CryptographyScheme)
+
+	n.cm.Inject(n,
+		n.CertificateManager.GetCertificate(),
+		n.NodeKeeper,
+		merkle.NewCalculator(),
+		consensusNetwork,
+		phases.NewNaiveCommunicator(),
+		phases.NewFirstPhase(),
+		phases.NewSecondPhase(),
+		phases.NewThirdPhase(),
+		phases.NewPhaseManager(),
+		bootstrap.NewSessionManager(),
+		controller.NewNetworkController(n.hostNetwork),
+		controller.NewRPCController(options, n.hostNetwork),
+		controller.NewPulseController(n.hostNetwork, n.routingTable),
+		bootstrap.NewBootstrapper(options, internalTransport),
+		bootstrap.NewAuthorizationController(options, internalTransport),
+		bootstrap.NewChallengeResponseController(options, internalTransport),
+		bootstrap.NewNetworkBootstrapper(),
+	)
+
 	// n.fakePulsar = fakepulsar.NewFakePulsar(n.HandlePulse, n.cfg.Pulsar.PulseTime)
 	return nil
 }
@@ -172,12 +160,16 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 func (n *ServiceNetwork) Start(ctx context.Context) error {
 	log.Infoln("Network starts listening...")
 	n.hostNetwork.Start(ctx)
-
-	n.controller.Inject(n.CryptographyService, n.NetworkCoordinator, n.NodeKeeper)
 	n.routingTable.Inject(n.NodeKeeper)
 
+	log.Info("Starting network component manager...")
+	err := n.cm.Start(ctx)
+	if err != nil {
+		return errors.Wrap(err, "Failed to bootstrap network")
+	}
+
 	log.Infoln("Bootstrapping network...")
-	err := n.controller.Bootstrap(ctx)
+	err = n.Controller.Bootstrap(ctx)
 	if err != nil {
 		return errors.Wrap(err, "Failed to bootstrap network")
 	}
@@ -191,10 +183,12 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 func (n *ServiceNetwork) Stop(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
 
+	logger.Info("Stopping network components")
+	if err := n.cm.Stop(ctx); err != nil {
+		log.Errorf("Error while stopping network components: %s", err.Error())
+	}
 	logger.Info("Stopping host network")
 	n.hostNetwork.Stop()
-	logger.Info("Stopping consensus network")
-	n.ConsensusNetwork.Stop()
 	return nil
 }
 
@@ -220,10 +214,10 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
 		return
 	}
 	if !n.NodeKeeper.IsBootstrapped() {
-		n.controller.SetLastIgnoredPulse(pulse.NextPulseNumber)
+		n.Controller.SetLastIgnoredPulse(pulse.NextPulseNumber)
 		return
 	}
-	if pulse.PulseNumber <= n.controller.GetLastIgnoredPulse()+core.PulseNumber(n.skip) {
+	if pulse.PulseNumber <= n.Controller.GetLastIgnoredPulse()+core.PulseNumber(n.skip) {
 		log.Infof("Ignore pulse %d: network is not yet initialized", pulse.PulseNumber)
 		return
 	}
@@ -260,6 +254,6 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
 	}
 }
 
-func (n *ServiceNetwork) isFakePulse(pulse *core.Pulse) bool {
-	return (pulse.NextPulseNumber == 0) && (pulse.PulseNumber == 0)
-}
+// func (n *ServiceNetwork) isFakePulse(pulse *core.Pulse) bool {
+// 	return (pulse.NextPulseNumber == 0) && (pulse.PulseNumber == 0)
+// }

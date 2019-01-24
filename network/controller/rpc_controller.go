@@ -23,6 +23,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/metrics"
 	"go.opencensus.io/trace"
@@ -34,15 +35,26 @@ import (
 	"github.com/insolar/insolar/network/cascade"
 	"github.com/insolar/insolar/network/controller/common"
 	"github.com/insolar/insolar/network/transport/packet/types"
-	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 )
 
-type RPCController struct {
+type RPCController interface {
+	component.Starter
+
+	// hack for DI, else we receive ServiceNetwork injection in RPCController instead of rpcController that leads to stack overflow
+	IAmRPCController()
+
+	SendMessage(nodeID core.RecordRef, name string, msg core.Parcel) ([]byte, error)
+	SendCascadeMessage(data core.Cascade, method string, msg core.Parcel) error
+	RemoteProcedureRegister(name string, method core.RemoteProcedure)
+}
+
+type rpcController struct {
+	Scheme core.PlatformCryptographyScheme `inject:""`
+
 	options     *common.Options
 	hostNetwork network.HostNetwork
 	methodTable map[string]core.RemoteProcedure
-	scheme      core.PlatformCryptographyScheme
 }
 
 type RequestRPC struct {
@@ -74,7 +86,11 @@ func init() {
 	gob.Register(&ResponseCascade{})
 }
 
-func (rpc *RPCController) RemoteProcedureRegister(name string, method core.RemoteProcedure) {
+func (rpc *rpcController) IAmRPCController() {
+	// hack for DI, else we receive ServiceNetwork injection in RPCController instead of rpcController that leads to stack overflow
+}
+
+func (rpc *rpcController) RemoteProcedureRegister(name string, method core.RemoteProcedure) {
 	_, span := instracer.StartSpan(context.Background(), "RPCController.RemoteProcedureRegister")
 	span.AddAttributes(
 		trace.StringAttribute("method", name),
@@ -83,7 +99,7 @@ func (rpc *RPCController) RemoteProcedureRegister(name string, method core.Remot
 	rpc.methodTable[name] = method
 }
 
-func (rpc *RPCController) invoke(ctx context.Context, name string, data [][]byte) ([]byte, error) {
+func (rpc *rpcController) invoke(ctx context.Context, name string, data [][]byte) ([]byte, error) {
 	method, exists := rpc.methodTable[name]
 	if !exists {
 		return nil, errors.New(fmt.Sprintf("RPC with name %s is not registered", name))
@@ -91,7 +107,7 @@ func (rpc *RPCController) invoke(ctx context.Context, name string, data [][]byte
 	return method(ctx, data)
 }
 
-func (rpc *RPCController) SendCascadeMessage(data core.Cascade, method string, msg core.Parcel) error {
+func (rpc *rpcController) SendCascadeMessage(data core.Cascade, method string, msg core.Parcel) error {
 	if msg == nil {
 		return errors.New("message is nil")
 	}
@@ -106,7 +122,7 @@ func (rpc *RPCController) SendCascadeMessage(data core.Cascade, method string, m
 	return rpc.initCascadeSendMessage(ctx, data, false, method, [][]byte{message.ParcelToBytes(msg)})
 }
 
-func (rpc *RPCController) initCascadeSendMessage(ctx context.Context, data core.Cascade,
+func (rpc *rpcController) initCascadeSendMessage(ctx context.Context, data core.Cascade,
 	findCurrentNode bool, method string, args [][]byte) error {
 
 	_, span := instracer.StartSpan(context.Background(), "RPCController.initCascadeSendMessage")
@@ -126,9 +142,9 @@ func (rpc *RPCController) initCascadeSendMessage(ctx context.Context, data core.
 
 	if findCurrentNode {
 		nodeID := rpc.hostNetwork.GetNodeID()
-		nextNodes, err = cascade.CalculateNextNodes(rpc.scheme, data, &nodeID)
+		nextNodes, err = cascade.CalculateNextNodes(rpc.Scheme, data, &nodeID)
 	} else {
-		nextNodes, err = cascade.CalculateNextNodes(rpc.scheme, data, nil)
+		nextNodes, err = cascade.CalculateNextNodes(rpc.Scheme, data, nil)
 	}
 	if err != nil {
 		return errors.Wrap(err, "Failed to CalculateNextNodes")
@@ -153,7 +169,7 @@ func (rpc *RPCController) initCascadeSendMessage(ctx context.Context, data core.
 	return nil
 }
 
-func (rpc *RPCController) requestCascadeSendMessage(ctx context.Context, data core.Cascade, nodeID core.RecordRef,
+func (rpc *rpcController) requestCascadeSendMessage(ctx context.Context, data core.Cascade, nodeID core.RecordRef,
 	method string, args [][]byte) error {
 
 	_, span := instracer.StartSpan(context.Background(), "RPCController.requestCascadeSendMessage")
@@ -190,7 +206,7 @@ func (rpc *RPCController) requestCascadeSendMessage(ctx context.Context, data co
 	return nil
 }
 
-func (rpc *RPCController) SendMessage(nodeID core.RecordRef, name string, msg core.Parcel) ([]byte, error) {
+func (rpc *rpcController) SendMessage(nodeID core.RecordRef, name string, msg core.Parcel) ([]byte, error) {
 	msgBytes := message.ParcelToBytes(msg)
 	metrics.ParcelsSentSizeBytes.WithLabelValues(msg.Type().String()).Observe(float64(len(msgBytes)))
 	request := rpc.hostNetwork.NewRequestBuilder().Type(types.RPC).Data(&RequestRPC{
@@ -222,7 +238,7 @@ func (rpc *RPCController) SendMessage(nodeID core.RecordRef, name string, msg co
 	return data.Result, nil
 }
 
-func (rpc *RPCController) processMessage(ctx context.Context, request network.Request) (network.Response, error) {
+func (rpc *rpcController) processMessage(ctx context.Context, request network.Request) (network.Response, error) {
 	payload := request.GetData().(*RequestRPC)
 	result, err := rpc.invoke(ctx, payload.Method, payload.Data)
 	metrics.NetworkParcelReceivedTotal.WithLabelValues(request.GetType().String()).Inc()
@@ -232,9 +248,9 @@ func (rpc *RPCController) processMessage(ctx context.Context, request network.Re
 	return rpc.hostNetwork.BuildResponse(ctx, request, &ResponseRPC{Success: true, Result: result}), nil
 }
 
-func (rpc *RPCController) processCascade(ctx context.Context, request network.Request) (network.Response, error) {
+func (rpc *rpcController) processCascade(ctx context.Context, request network.Request) (network.Response, error) {
 	payload := request.GetData().(*RequestCascade)
-	ctx, logger := inslogger.WithTraceField(context.Background(), payload.TraceID)
+	ctx, logger := inslogger.WithTraceField(ctx, payload.TraceID)
 
 	generalError := ""
 	_, invokeErr := rpc.invoke(ctx, payload.RPC.Method, payload.RPC.Data)
@@ -254,14 +270,15 @@ func (rpc *RPCController) processCascade(ctx context.Context, request network.Re
 	return rpc.hostNetwork.BuildResponse(ctx, request, &ResponseCascade{Success: true}), nil
 }
 
-func (rpc *RPCController) Start() {
+func (rpc *rpcController) Start(ctx context.Context) error {
 	rpc.hostNetwork.RegisterRequestHandler(types.RPC, rpc.processMessage)
 	rpc.hostNetwork.RegisterRequestHandler(types.Cascade, rpc.processCascade)
+	return nil
 }
 
-func NewRPCController(options *common.Options, hostNetwork network.HostNetwork, scheme core.PlatformCryptographyScheme) *RPCController {
-	return &RPCController{options: options,
+func NewRPCController(options *common.Options, hostNetwork network.HostNetwork) RPCController {
+	return &rpcController{options: options,
 		hostNetwork: hostNetwork,
 		methodTable: make(map[string]core.RemoteProcedure),
-		scheme:      platformpolicy.NewPlatformCryptographyScheme()}
+	}
 }

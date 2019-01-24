@@ -44,6 +44,7 @@ type NetworkSwitcher struct {
 
 	state     core.NetworkState
 	stateLock sync.RWMutex
+	span      *trace.Span
 }
 
 // NewNetworkSwitcher creates new NetworkSwitcher
@@ -93,6 +94,7 @@ func (ns *NetworkSwitcher) Acquire(ctx context.Context) {
 	ns.counter = ns.counter + 1
 	if ns.counter-1 == 0 {
 		inslogger.FromContext(ctx).Info("Lock MB")
+		ctx, ns.span = instracer.StartSpan(context.Background(), "GIL Lock (Lock MB)")
 		ns.MBLocker.Lock(ctx)
 	}
 }
@@ -109,5 +111,6 @@ func (ns *NetworkSwitcher) Release(ctx context.Context) {
 	if ns.counter == 0 {
 		inslogger.FromContext(ctx).Info("Unlock MB")
 		ns.MBLocker.Unlock(ctx)
+		ns.span.End()
 	}
 }
