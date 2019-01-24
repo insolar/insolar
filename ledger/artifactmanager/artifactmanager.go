@@ -147,19 +147,22 @@ func (m *LedgerArtifactManager) GetCode(
 		return nil, err
 	}
 
-	react, ok := genericReact.(*reply.Code)
-	if !ok {
-		return nil, fmt.Errorf("GetCode: unexpected reply: %#v", genericReact)
+	switch rep := genericReact.(type) {
+	case *reply.Code:
+		desc := CodeDescriptor{
+			ctx:         ctx,
+			ref:         code,
+			machineType: rep.MachineType,
+			code:        rep.Code,
+		}
+		entry.desc = &desc
+		return &desc, nil
+	case *reply.Error:
+		err = rep.Error()
+	default:
+		err = fmt.Errorf("GetCode: unexpected reply: %#v", rep)
 	}
-
-	desc := CodeDescriptor{
-		ctx:         ctx,
-		ref:         code,
-		machineType: react.MachineType,
-		code:        react.Code,
-	}
-	entry.desc = &desc
-	return &desc, nil
+	return nil, err
 }
 
 // GetObject returns descriptor for provided state.
@@ -229,11 +232,16 @@ func (m *LedgerArtifactManager) HasPendingRequests(
 	if err != nil {
 		return false, err
 	}
-	requests, ok := rep.(*reply.HasPendingRequests)
-	if !ok {
-		return false, fmt.Errorf("HasPendingRequests: unexpected reply: %#v", rep)
+
+	switch rep := rep.(type) {
+	case *reply.HasPendingRequests:
+		return rep.Has, nil
+	case *reply.Error:
+		err = rep.Error()
+	default:
+		err = fmt.Errorf("HasPendingRequests: unexpected reply: %#v", rep)
 	}
-	return requests.Has, nil
+	return false, err
 }
 
 // GetDelegate returns provided object's delegate reference for provided prototype.
@@ -261,11 +269,15 @@ func (m *LedgerArtifactManager) GetDelegate(
 		return nil, err
 	}
 
-	react, ok := genericReact.(*reply.Delegate)
-	if !ok {
-		return nil, fmt.Errorf("GetDelegate: unexpected reply: %#v", genericReact)
+	switch rep := genericReact.(type) {
+	case *reply.Delegate:
+		return &rep.Head, nil
+	case *reply.Error:
+		err = rep.Error()
+	default:
+		err = fmt.Errorf("GetDelegate: unexpected reply: %#v", rep)
 	}
-	return &react.Head, nil
+	return nil, err
 }
 
 // GetChildren returns children iterator.
@@ -681,12 +693,15 @@ func (m *LedgerArtifactManager) setRecord(
 		return nil, err
 	}
 
-	react, ok := genericReply.(*reply.ID)
-	if !ok {
-		return nil, fmt.Errorf("setRecord: unexpected reply: %#v", genericReply)
+	switch rep := genericReply.(type) {
+	case *reply.ID:
+		return &rep.ID, nil
+	case *reply.Error:
+		err = rep.Error()
+	default:
+		err = fmt.Errorf("setRecord: unexpected reply: %#v", rep)
 	}
-
-	return &react.ID, nil
+	return nil, err
 }
 
 func (m *LedgerArtifactManager) setBlob(
@@ -705,12 +720,15 @@ func (m *LedgerArtifactManager) setBlob(
 		return nil, err
 	}
 
-	react, ok := genericReact.(*reply.ID)
-	if !ok {
-		return nil, fmt.Errorf("setBlob: unexpected reply: %#v", genericReact)
+	switch rep := genericReact.(type) {
+	case *reply.ID:
+		return &rep.ID, nil
+	case *reply.Error:
+		err = rep.Error()
+	default:
+		err = fmt.Errorf("setBlob: unexpected reply: %#v", rep)
 	}
-
-	return &react.ID, nil
+	return nil, err
 }
 
 func (m *LedgerArtifactManager) sendUpdateObject(
@@ -742,12 +760,15 @@ func (m *LedgerArtifactManager) sendUpdateObject(
 		return nil, errors.Wrap(err, "failed to update object")
 	}
 
-	rep, ok := genericRep.(*reply.Object)
-	if !ok {
-		return nil, fmt.Errorf("sendUpdateObject: unexpected reply: %#v", genericRep)
+	switch rep := genericRep.(type) {
+	case *reply.Object:
+		return rep, nil
+	case *reply.Error:
+		err = rep.Error()
+	default:
+		err = fmt.Errorf("sendUpdateObject: unexpected reply: %#v", rep)
 	}
-
-	return rep, nil
+	return nil, err
 }
 
 func (m *LedgerArtifactManager) registerChild(
@@ -770,12 +791,15 @@ func (m *LedgerArtifactManager) registerChild(
 		return nil, err
 	}
 
-	react, ok := genericReact.(*reply.ID)
-	if !ok {
-		return nil, fmt.Errorf("registerChild: unexpected reply: %#v", genericReact)
+	switch rep := genericReact.(type) {
+	case *reply.ID:
+		return &rep.ID, nil
+	case *reply.Error:
+		err = rep.Error()
+	default:
+		err = fmt.Errorf("registerChild: unexpected reply: %#v", rep)
 	}
-
-	return &react.ID, nil
+	return nil, err
 }
 
 func (m *LedgerArtifactManager) bus(ctx context.Context) core.MessageBus {
