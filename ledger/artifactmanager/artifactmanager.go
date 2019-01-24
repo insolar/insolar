@@ -145,8 +145,9 @@ func (m *LedgerArtifactManager) GetCode(
 	}
 
 	ctx, span = instracer.StartSpan(ctx, "artifactmanager.GetCode sendAndFollowRedirect")
-	genericReact, err := m.sendAndFollowRedirect(
+	genericReact, err := sendAndFollowRedirect(
 		ctx,
+		m.db,
 		m.bus(ctx),
 		&message.GetCode{Code: code},
 		*currentPulse,
@@ -201,7 +202,7 @@ func (m *LedgerArtifactManager) GetObject(
 		State:    state,
 		Approved: approved,
 	}
-	rep, err := m.sendAndFollowRedirect(ctx, m.bus(ctx), getObjectMsg, *currentPulse)
+	rep, err := sendAndFollowRedirect(ctx, m.db, m.bus(ctx), getObjectMsg, *currentPulse)
 	if err != nil {
 		return nil, err
 	}
@@ -237,8 +238,9 @@ func (m *LedgerArtifactManager) HasPendingRequests(
 		return false, err
 	}
 
-	rep, err := m.sendAndRetryJet(
+	rep, err := sendAndRetryJet(
 		ctx,
+		m.db,
 		m.bus(ctx),
 		&message.GetPendingRequests{Object: object},
 		*currentPulse,
@@ -275,8 +277,9 @@ func (m *LedgerArtifactManager) GetDelegate(
 		return nil, err
 	}
 
-	genericReact, err := m.sendAndFollowRedirect(
+	genericReact, err := sendAndFollowRedirect(
 		ctx,
+		m.db,
 		m.bus(ctx),
 		&message.GetDelegate{
 			Head:   head,
@@ -521,7 +524,7 @@ func (m *LedgerArtifactManager) RegisterValidation(
 		return err
 	}
 
-	_, err = m.sendAndRetryJet(ctx, m.bus(ctx), &msg, *currentPulse, jetMissRetryCount, nil)
+	_, err = sendAndRetryJet(ctx, m.db, m.bus(ctx), &msg, *currentPulse, jetMissRetryCount, nil)
 	return err
 }
 
@@ -703,10 +706,18 @@ func (m *LedgerArtifactManager) setRecord(
 ) (*core.RecordID, error) {
 	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.setRecord starts ...")
 
-	genericReply, err := m.sendAndRetryJet(ctx, m.bus(ctx), &message.SetRecord{
-		Record:    record.SerializeRecord(rec),
-		TargetRef: target,
-	}, currentPulse, jetMissRetryCount, nil)
+	genericReply, err := sendAndRetryJet(
+		ctx,
+		m.db,
+		m.bus(ctx),
+		&message.SetRecord{
+			Record:    record.SerializeRecord(rec),
+			TargetRef: target,
+		},
+		currentPulse,
+		jetMissRetryCount,
+		nil,
+	)
 
 	if err != nil {
 		return nil, err
@@ -729,10 +740,18 @@ func (m *LedgerArtifactManager) setBlob(
 	currentPulse core.Pulse,
 ) (*core.RecordID, error) {
 	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.setBlob starts ...")
-	genericReact, err := m.sendAndRetryJet(ctx, m.bus(ctx), &message.SetBlob{
-		Memory:    blob,
-		TargetRef: target,
-	}, currentPulse, jetMissRetryCount, nil)
+	genericReact, err := sendAndRetryJet(
+		ctx,
+		m.db,
+		m.bus(ctx),
+		&message.SetBlob{
+			Memory:    blob,
+			TargetRef: target,
+		},
+		currentPulse,
+		jetMissRetryCount,
+		nil,
+	)
 
 	if err != nil {
 		return nil, err
@@ -768,11 +787,19 @@ func (m *LedgerArtifactManager) sendUpdateObject(
 	// 	return nil, fmt.Errorf("unexpected reply: %#v\n", genericRep)
 	// }
 
-	genericRep, err := m.sendAndRetryJet(ctx, m.bus(ctx), &message.UpdateObject{
-		Record: record.SerializeRecord(rec),
-		Object: object,
-		Memory: memory,
-	}, currentPulse, jetMissRetryCount, nil)
+	genericRep, err := sendAndRetryJet(
+		ctx,
+		m.db,
+		m.bus(ctx),
+		&message.UpdateObject{
+			Record: record.SerializeRecord(rec),
+			Object: object,
+			Memory: memory,
+		},
+		currentPulse,
+		jetMissRetryCount,
+		nil,
+	)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to update object")
 	}
@@ -797,8 +824,10 @@ func (m *LedgerArtifactManager) registerChild(
 ) (*core.RecordID, error) {
 	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.registerChild starts ...")
 
-	genericReact, err := m.sendAndRetryJet(
-		ctx, m.bus(ctx),
+	genericReact, err := sendAndRetryJet(
+		ctx,
+		m.db,
+		m.bus(ctx),
 		&message.RegisterChild{
 			Record: record.SerializeRecord(rec),
 			Parent: parent,
@@ -824,8 +853,9 @@ func (m *LedgerArtifactManager) bus(ctx context.Context) core.MessageBus {
 	return core.MessageBusFromContext(ctx, m.DefaultBus)
 }
 
-func (m *LedgerArtifactManager) sendAndFollowRedirect(
+func sendAndFollowRedirect(
 	ctx context.Context,
+	db *storage.DB,
 	bus core.MessageBus,
 	msg core.Message,
 	pulse core.Pulse,
@@ -839,7 +869,7 @@ func (m *LedgerArtifactManager) sendAndFollowRedirect(
 	}
 
 	if _, ok := rep.(*reply.JetMiss); ok {
-		rep, err = m.sendAndRetryJet(ctx, bus, msg, pulse, jetMissRetryCount, nil)
+		rep, err = sendAndRetryJet(ctx, db, bus, msg, pulse, jetMissRetryCount, nil)
 	}
 
 	if r, ok := rep.(core.RedirectReply); ok {
@@ -864,8 +894,9 @@ func (m *LedgerArtifactManager) sendAndFollowRedirect(
 	return rep, err
 }
 
-func (m *LedgerArtifactManager) sendAndRetryJet(
+func sendAndRetryJet(
 	ctx context.Context,
+	db *storage.DB,
 	bus core.MessageBus,
 	msg core.Message,
 	pulse core.Pulse,
@@ -880,11 +911,11 @@ func (m *LedgerArtifactManager) sendAndRetryJet(
 		return nil, err
 	}
 	if r, ok := rep.(*reply.JetMiss); ok {
-		err := m.db.UpdateJetTree(ctx, pulse.PulseNumber, true, r.JetID)
+		err := db.UpdateJetTree(ctx, pulse.PulseNumber, true, r.JetID)
 		if err != nil {
 			return nil, err
 		}
-		return m.sendAndRetryJet(ctx, bus, msg, pulse, retries-1, ops)
+		return sendAndRetryJet(ctx, db, bus, msg, pulse, retries-1, ops)
 	}
 
 	return rep, nil
