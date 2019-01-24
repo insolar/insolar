@@ -282,13 +282,13 @@ func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Repl
 }
 
 func (mb *MessageBus) checkPulse(ctx context.Context, parcel core.Parcel, locked bool) error {
+	ctx, span := instracer.StartSpan(ctx, "MessageBus.checkPulse")
+	defer span.End()
+
 	pulse, err := mb.PulseStorage.Current(ctx)
 	if err != nil {
 		return errors.Wrap(err, "[ checkPulse ] Couldn't get current pulse number")
 	}
-
-	ctx, span := instracer.StartSpan(ctx, "MessageBus.checkPulse")
-	defer span.End()
 
 	// TODO: check if parcel.Pulse() == pulse.NextPulseNumber
 	if parcel.Pulse() > pulse.PulseNumber {
