@@ -1008,28 +1008,9 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 
 	lr.stateMutex.Unlock()
 
-	var errorCounter int
-	var sendWg sync.WaitGroup
 	if len(messages) > 0 {
-		errChan := make(chan error, len(messages))
-		sendWg.Add(len(messages))
-
 		for _, msg := range messages {
-			go lr.sendOnPulseMessagesAsync(ctx, msg, &sendWg, &errChan)
-		}
-
-		sendWg.Wait()
-		close(errChan)
-
-		for err := range errChan {
-			if err != nil {
-				errorCounter++
-				inslogger.FromContext(ctx).Error(errors.Wrap(err, "error while sending validation data on pulse"))
-			}
-		}
-
-		if errorCounter > 0 {
-			return errors.New("error while sending executor data in OnPulse, see logs for more information")
+			go lr.sendOnPulseMessagesAsync(ctx, msg)
 		}
 	}
 
@@ -1073,10 +1054,11 @@ func (lr *LogicRunner) HandleStillExecutingMessage(
 	return &reply.OK{}, nil
 }
 
-func (lr *LogicRunner) sendOnPulseMessagesAsync(ctx context.Context, msg core.Message, sendWg *sync.WaitGroup, errChan *chan error) {
-	defer sendWg.Done()
+func (lr *LogicRunner) sendOnPulseMessagesAsync(ctx context.Context, msg core.Message) {
 	_, err := lr.MessageBus.Send(ctx, msg, nil)
-	*errChan <- err
+	if err != nil {
+		inslogger.FromContext(ctx).Error(errors.Wrap(err, "error while sending validation data on pulse"))
+	}
 }
 func convertQueueToMessageQueue(queue []ExecutionQueueElement) []message.ExecutionQueueElement {
 	mq := make([]message.ExecutionQueueElement, 0)

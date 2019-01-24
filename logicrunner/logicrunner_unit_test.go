@@ -458,12 +458,11 @@ func TestLogicRunner_OnPulse_StillExecuting(t *testing.T) {
 	lr.state[objectRef] = &ObjectState{
 		ExecutionState: &ExecutionState{
 			Behaviour: &ValidationSaver{},
-			Current: &CurrentExecution{},
+			Current:   &CurrentExecution{},
 		},
 	}
 	mb.SendMock.Return(&reply.OK{}, nil)
 	err := lr.OnPulse(ctx, pulse)
 	require.NoError(t, err)
 	assert.NotNil(t, lr.state[objectRef].ExecutionState)
-	assert.Equal(t, uint64(2), mb.SendCounter)
 }
