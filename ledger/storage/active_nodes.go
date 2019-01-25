@@ -23,7 +23,7 @@ import (
 )
 
 // ActiveNodesStorage provides info about active nodes
-//go:generate minimock -i github.com/insolar/insolar/ledger/storage.ActiveNodesStorage -o ../../testutils -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage.ActiveNodesStorage -o ./ -s _mock.go
 type ActiveNodesStorage interface {
 	SetActiveNodes(pulse core.PulseNumber, nodes []core.Node) error
 	GetActiveNodes(pulse core.PulseNumber) ([]core.Node, error)

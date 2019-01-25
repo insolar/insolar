@@ -27,7 +27,7 @@ import (
 )
 
 // Cleaner cleans lights after sync to heavy
-//go:generate minimock -i github.com/insolar/insolar/ledger/storage.Cleaner -o ../../testutils -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage.Cleaner -o ./ -s _mock.go
 type Cleaner interface {
 	RemoveAllForJetUntilPulse(
 		ctx context.Context,

@@ -1,3 +1,19 @@
+/*
+ *    Copyright 2019 Insolar
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
+
 package storage
 
 import (
@@ -9,7 +25,7 @@ import (
 )
 
 // ObjectStorage returns objects and their meta
-//go:generate minimock -i github.com/insolar/insolar/ledger/storage.ObjectStorage -o ../../testutils -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage.ObjectStorage -o ./ -s _mock.go
 type ObjectStorage interface {
 	GetBlob(ctx context.Context, jetID core.RecordID, id *core.RecordID) ([]byte, error)
 	SetBlob(ctx context.Context, jetID core.RecordID, pulseNumber core.PulseNumber, blob []byte) (*core.RecordID, error)
