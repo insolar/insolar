@@ -87,10 +87,13 @@ func TestLedgerArtifactManager_PendingRequest(t *testing.T) {
 	// handler.JetCoordinator = jc
 	handler.RecentStorageProvider = provider
 	handler.JetCoordinator = jcMock
+
+	handler.HotDataWaiter = NewHotDataWaiterConcrete()
+	handler.HotDataWaiter.Unlock(ctx, jetID)
+
 	err := handler.Init(ctx)
 	require.NoError(t, err)
 	objRef := *genRandomRef(0)
-	handler.CloseEarlyRequestCircuitBreakerForJet(ctx, jetID)
 
 	err = db.UpdateJetTree(ctx, core.FirstPulseNumber, true, jetID)
 	require.NoError(t, err)

@@ -27,7 +27,7 @@ type HotDataWaiterConcrete struct {
 
 // NewHotDataWaiterConcrete is a constructor
 func NewHotDataWaiterConcrete() *HotDataWaiterConcrete {
-	return &HotDataWaiterConcrete{}
+	return &HotDataWaiterConcrete{waiters: map[core.RecordID]*waiter{}}
 }
 
 type waiter struct {
