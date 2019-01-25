@@ -42,24 +42,28 @@ type Ledger struct {
 	LocalStorage    core.LocalStorage    `inject:""`
 }
 
+// Deprecated: remove after deleting TmpLedger
 // GetPulseManager returns PulseManager.
 func (l *Ledger) GetPulseManager() core.PulseManager {
 	log.Warn("GetPulseManager is deprecated. Use component injection.")
 	return l.PulseManager
 }
 
+// Deprecated: remove after deleting TmpLedger
 // GetJetCoordinator returns JetCoordinator.
 func (l *Ledger) GetJetCoordinator() core.JetCoordinator {
 	log.Warn("GetJetCoordinator is deprecated. Use component injection.")
 	return l.JetCoordinator
 }
 
+// Deprecated: remove after deleting TmpLedger
 // GetArtifactManager returns artifact manager to work with.
 func (l *Ledger) GetArtifactManager() core.ArtifactManager {
 	log.Warn("GetArtifactManager is deprecated. Use component injection.")
 	return l.ArtifactManager
 }
 
+// Deprecated: remove after deleting TmpLedger
 // GetLocalStorage returns local storage to work with.
 func (l *Ledger) GetLocalStorage() core.LocalStorage {
 	log.Warn("GetLocalStorage is deprecated. Use component injection.")
@@ -96,7 +100,7 @@ func GetLedgerComponents(conf configuration.Ledger, certificate core.Certificate
 		storage.NewPulseStorage(),
 		storage.NewRecentStorageProvider(conf.RecentStorage.DefaultTTL),
 		artifactmanager.NewArtifactManger(db),
-		jetcoordinator.NewJetCoordinator(conf.JetCoordinator),
+		jetcoordinator.NewJetCoordinator(),
 		pulsemanager.NewPulseManager(conf),
 		artifactmanager.NewMessageHandler(&conf, certificate),
 		localstorage.NewLocalStorage(db),

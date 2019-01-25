@@ -61,7 +61,6 @@ func TestJetCoordinator_QueryRole(t *testing.T) {
 	require.NoError(t, err)
 
 	objID := core.NewRecordID(0, []byte{1, 42, 123})
-	jc.roleCounts = map[core.DynamicRole]int{core.DynamicRoleLightValidator: 3}
 	err = db.UpdateJetTree(ctx, 0, true, *jet.NewID(50, []byte{1, 42, 123}))
 	require.NoError(t, err)
 

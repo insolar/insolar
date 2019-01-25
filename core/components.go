@@ -21,7 +21,7 @@ import (
 )
 
 // Component controller methods
-// DEPRECATED and should be removed
+// Deprecated: and should be removed
 type Component interface {
 	Start(ctx context.Context, components Components) error
 	Stop(ctx context.Context) error
@@ -29,7 +29,7 @@ type Component interface {
 
 // Components is a registry for other core interfaces
 // Fields order are important and represent start and stop order in the daemon
-// DEPRECATED and should be removed after drop TmpLedger, DO NOT EDIT
+// Deprecated: and should be removed after drop TmpLedger, DO NOT EDIT
 type Components struct {
 	NodeNetwork NodeNetwork
 	LogicRunner LogicRunner
