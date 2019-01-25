@@ -98,7 +98,7 @@ func GetLedgerComponents(conf configuration.Ledger, certificate core.Certificate
 		ps,
 		storage.NewRecentStorageProvider(conf.RecentStorage.DefaultTTL),
 		artifactmanager.NewArtifactManger(db),
-		jetcoordinator.NewJetCoordinator(db, conf.JetCoordinator),
+		jetcoordinator.NewJetCoordinator(db),
 		pulsemanager.NewPulseManager(db, conf),
 		artifactmanager.NewMessageHandler(db, &conf, certificate),
 		localstorage.NewLocalStorage(db),
