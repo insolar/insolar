@@ -27,7 +27,9 @@ import (
 // HotDataWaiter provides waiting system for a specific jet
 // We tend to think, that it will be used for waiting hot-data in handler
 // Also, because of the some jet pitfalls, we need to have an instrument
-// to handler edge-cases from pulse manager
+// to handler edge-cases from pulse manager.
+// The main case is when a light material executes a jet for more then 1 pulse
+// If it happens, we need to stop waiters from raising and waiting
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage.HotDataWaiter -o ./ -s _mock.go
 type HotDataWaiter interface {
 	Wait(ctx context.Context, jetID core.RecordID) error

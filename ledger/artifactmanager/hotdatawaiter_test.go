@@ -28,6 +28,8 @@ import (
 )
 
 func TestNewHotDataWaiterConcrete(t *testing.T) {
+	t.Parallel()
+
 	// Act
 	hdw := NewHotDataWaiterConcrete()
 
@@ -37,6 +39,8 @@ func TestNewHotDataWaiterConcrete(t *testing.T) {
 }
 
 func TestHotDataWaiterConcrete_Get_CreateIfNil(t *testing.T) {
+	t.Parallel()
+
 	// Arrange
 	hdw := NewHotDataWaiterConcrete()
 	jetID := testutils.RandomID()
@@ -53,6 +57,8 @@ func TestHotDataWaiterConcrete_Get_CreateIfNil(t *testing.T) {
 }
 
 func TestHotDataWaiterConcrete_Wait_UnlockHotData(t *testing.T) {
+	t.Parallel()
+
 	// Arrange
 	syncChannel := make(chan struct{})
 	hdw := NewHotDataWaiterConcrete()
@@ -81,6 +87,8 @@ func TestHotDataWaiterConcrete_Wait_UnlockHotData(t *testing.T) {
 }
 
 func TestHotDataWaiterConcrete_Wait_ThrowTimeout(t *testing.T) {
+	t.Parallel()
+
 	// Arrange
 	syncChannel := make(chan struct{})
 	hdw := NewHotDataWaiterConcrete()
@@ -117,6 +125,8 @@ func TestHotDataWaiterConcrete_Wait_ThrowTimeout(t *testing.T) {
 }
 
 func TestHotDataWaiterConcrete_Wait_ThrowTimeout_MultipleMembers(t *testing.T) {
+	t.Parallel()
+
 	// Arrange
 	syncChannel := make(chan struct{})
 	hdw := NewHotDataWaiterConcrete()
