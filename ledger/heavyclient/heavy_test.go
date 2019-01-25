@@ -171,7 +171,6 @@ func sendToHeavy(t *testing.T, withretry bool) {
 		SplitThreshold: 10 * 1000 * 1000,
 	}
 	pm := pulsemanager.NewPulseManager(
-		db,
 		configuration.Ledger{
 			PulseManager:    pmconf,
 			LightChainLimit: 10,
@@ -182,7 +181,18 @@ func sendToHeavy(t *testing.T, withretry bool) {
 	pm.Bus = busMock
 	pm.JetCoordinator = jcMock
 	pm.GIL = gilMock
-	pm.PulseStorage = storage.NewPulseStorage(db)
+	pm.JetStorage = db
+	pm.ActiveNodesStorage = db
+	pm.DBContext = db
+	pm.PulseTracker = db
+	pm.ReplicaStorage = db
+	pm.StorageCleaner = db
+	pm.ObjectStorage = db
+
+	ps := storage.NewPulseStorage()
+	ps.PulseTracker = db
+	pm.PulseStorage = ps
+
 	pm.ArtifactManagerMessageHandler = artifactManagerMessageHandlerMock
 
 	providerMock := recentstorage.NewProviderMock(t)

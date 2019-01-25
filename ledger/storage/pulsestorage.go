@@ -26,14 +26,14 @@ import (
 
 // PulseStorage implements core.PulseStorage
 type PulseStorage struct {
-	db           *DB
+	PulseTracker PulseTracker `inject:""`
 	rwLock       sync.RWMutex
 	currentPulse *core.Pulse
 }
 
 // NewPulseStorage creates new pulse storage
-func NewPulseStorage(db *DB) *PulseStorage {
-	return &PulseStorage{db: db}
+func NewPulseStorage() *PulseStorage {
+	return &PulseStorage{}
 }
 
 // Current returns current pulse of the system
@@ -47,7 +47,7 @@ func (ps *PulseStorage) Current(ctx context.Context) (*core.Pulse, error) {
 		defer ps.rwLock.Unlock()
 
 		if ps.currentPulse == nil {
-			currentPulse, err := ps.db.GetLatestPulse(ctx)
+			currentPulse, err := ps.PulseTracker.GetLatestPulse(ctx)
 			if err != nil {
 				return nil, errors.Wrap(err, "[ PulseStorage.Current ] Can't GetLatestPulse")
 			}

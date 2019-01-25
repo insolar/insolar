@@ -51,7 +51,8 @@ type syncstate struct {
 
 // Sync provides methods for syncing records to heavy storage.
 type Sync struct {
-	db *storage.DB
+	ReplicaStorage storage.ReplicaStorage
+	DBContext      storage.DBContext
 
 	sync.Mutex
 	jetSyncStates map[core.RecordID]*syncstate
@@ -60,8 +61,9 @@ type Sync struct {
 // NewSync creates new Sync instance.
 func NewSync(db *storage.DB) *Sync {
 	return &Sync{
-		db:            db,
-		jetSyncStates: map[core.RecordID]*syncstate{},
+		ReplicaStorage: db,
+		DBContext:      db,
+		jetSyncStates:  map[core.RecordID]*syncstate{},
 	}
 }
 
@@ -73,7 +75,7 @@ func (s *Sync) checkIsNextPulse(ctx context.Context, jetID core.RecordID, jetsta
 
 	checkpoint = jetstate.lastok
 	if checkpoint == 0 {
-		checkpoint, err = s.db.GetHeavySyncedPulse(ctx, jetID)
+		checkpoint, err = s.ReplicaStorage.GetHeavySyncedPulse(ctx, jetID)
 		if err != nil {
 			return errors.Wrap(err, "heavyserver: GetHeavySyncedPulse failed")
 		}
@@ -161,7 +163,7 @@ func (s *Sync) Store(ctx context.Context, jetID core.RecordID, pn core.PulseNumb
 		jetState.Unlock()
 	}()
 	// TODO: check jet in keys?
-	err = s.db.StoreKeyValues(ctx, kvs)
+	err = s.DBContext.StoreKeyValues(ctx, kvs)
 	if err != nil {
 		return errors.Wrapf(err, "heavyserver: store failed")
 	}
@@ -202,7 +204,7 @@ func (s *Sync) Stop(ctx context.Context, jetID core.RecordID, pn core.PulseNumbe
 	}
 	jetState.syncpulse = nil
 
-	err := s.db.SetHeavySyncedPulse(ctx, jetID, pn)
+	err := s.ReplicaStorage.SetHeavySyncedPulse(ctx, jetID, pn)
 	if err != nil {
 		return err
 	}

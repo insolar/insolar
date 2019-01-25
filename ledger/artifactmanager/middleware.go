@@ -32,7 +32,8 @@ import (
 )
 
 type middleware struct {
-	db                                 *storage.DB
+	objectStorage                      storage.ObjectStorage
+	jetStorage                         storage.JetStorage
 	jetCoordinator                     core.JetCoordinator
 	messageBus                         core.MessageBus
 	pulseStorage                       core.PulseStorage
@@ -47,18 +48,17 @@ type middleware struct {
 }
 
 func newMiddleware(
-	conf *configuration.Ledger,
-	db *storage.DB,
 	h *MessageHandler,
 ) *middleware {
 	return &middleware{
-		db:                                 db,
-		handler:                            h,
+		objectStorage:                      h.ObjectStorage,
+		jetStorage:                         h.JetStorage,
 		jetCoordinator:                     h.JetCoordinator,
 		messageBus:                         h.Bus,
 		pulseStorage:                       h.PulseStorage,
 		earlyRequestCircuitBreakerProvider: &earlyRequestCircuitBreakerProvider{breakers: map[core.RecordID]*requestCircuitBreakerProvider{}},
-		conf:                               conf,
+		handler:                            h,
+		conf:                               h.conf,
 		sequencer: map[core.RecordID]*struct {
 			sync.Mutex
 			done bool
@@ -120,7 +120,7 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 				}
 				pulse = tm.FromChild.Pulse()
 			}
-			tree, err := m.db.GetJetTree(ctx, pulse)
+			tree, err := m.jetStorage.GetJetTree(ctx, pulse)
 			if err != nil {
 				return nil, err
 			}
@@ -175,7 +175,7 @@ func (m *middleware) saveParcel(handler core.MessageHandler) core.MessageHandler
 			return nil, err
 		}
 		logger.Debugf("saveParcel, pulse - %v", pulse.PulseNumber)
-		err = m.db.SetMessage(ctx, jetID, pulse.PulseNumber, parcel)
+		err = m.objectStorage.SetMessage(ctx, jetID, pulse.PulseNumber, parcel)
 		if err != nil {
 			return nil, err
 		}
@@ -205,7 +205,7 @@ func (m *middleware) fetchJet(
 	ctx context.Context, target core.RecordID, pulse core.PulseNumber,
 ) (*core.RecordID, bool, error) {
 	// Look in the local tree. Return if the actual jet found.
-	tree, err := m.db.GetJetTree(ctx, pulse)
+	tree, err := m.jetStorage.GetJetTree(ctx, pulse)
 	if err != nil {
 		return nil, false, err
 	}
@@ -258,7 +258,7 @@ func (m *middleware) fetchJet(
 		return nil, false, err
 	}
 
-	err = m.db.UpdateJetTree(ctx, pulse, true, *resJet)
+	err = m.jetStorage.UpdateJetTree(ctx, pulse, true, *resJet)
 	if err != nil {
 		inslogger.FromContext(ctx).Error(
 			errors.Wrapf(err, "couldn't actualize jet %s", resJet.DebugString()),
