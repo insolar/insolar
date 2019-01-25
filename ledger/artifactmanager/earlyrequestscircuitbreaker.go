@@ -39,13 +39,13 @@ type requestCircuitBreakerProvider struct {
 
 func (b *earlyRequestCircuitBreakerProvider) getBreaker(ctx context.Context, jetID core.RecordID) *requestCircuitBreakerProvider {
 	logger := inslogger.FromContext(ctx)
-	logger.Debugf("[breakermiddleware] [getBreaker] jetID - %v", jetID.DebugString())
+	logger.Debugf("[breakermiddleware] [getWaiter] jetID - %v", jetID.DebugString())
 
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
 	if _, ok := b.breakers[jetID]; !ok {
-		logger.Debugf("[breakermiddleware] [getBreaker] create new  - %v", jetID.DebugString())
+		logger.Debugf("[breakermiddleware] [getWaiter] create new  - %v", jetID.DebugString())
 		b.breakers[jetID] = &requestCircuitBreakerProvider{
 			hotDataChannel: make(chan struct{}),
 			timeoutChannel: make(chan struct{}),
