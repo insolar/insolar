@@ -82,7 +82,7 @@ func (fp *FakePulsar) Start(ctx context.Context, firstPulseTime time.Time) {
 		for {
 			pulseInfo := fp.getPulseInfo()
 
-			logger.Debug("Pulse scheduled for: %s", time.Now().Add(pulseInfo.nextPulseAfter))
+			logger.Debug("Pulse scheduled for: ", time.Now().Add(pulseInfo.nextPulseAfter))
 
 			select {
 			case <-time.After(pulseInfo.nextPulseAfter):
