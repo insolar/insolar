@@ -18,8 +18,6 @@ package configuration
 
 import (
 	"time"
-
-	"github.com/insolar/insolar/core"
 )
 
 // Storage configures Ledger's storage.
@@ -29,11 +27,6 @@ type Storage struct {
 	// TxRetriesOnConflict defines how many retries on transaction conflicts
 	// storage update methods should do.
 	TxRetriesOnConflict int
-}
-
-// JetCoordinator holds configuration for JetCoordinator.
-type JetCoordinator struct {
-	RoleCounts map[int]int
 }
 
 // PulseManager holds configuration for PulseManager.
@@ -51,9 +44,9 @@ type PulseManager struct {
 // Backoff configures retry backoff algorithm
 type Backoff struct {
 	Factor float64
-	//Jitter eases contention by randomizing backoff steps
+	// Jitter eases contention by randomizing backoff steps
 	Jitter bool
-	//Min and Max are the minimum and maximum values of the counter
+	// Min and Max are the minimum and maximum values of the counter
 	Min, Max time.Duration
 }
 
@@ -73,8 +66,6 @@ type Exporter struct {
 type Ledger struct {
 	// Storage defines storage configuration.
 	Storage Storage
-	// JetCoordinator defines jet coordinator configuration.
-	JetCoordinator JetCoordinator
 	// PulseManager holds configuration for PulseManager.
 	PulseManager PulseManager
 	// RecentStorage holds configuration for RecentStorage
@@ -101,16 +92,6 @@ func NewLedger() Ledger {
 		Storage: Storage{
 			DataDirectory:       "./data",
 			TxRetriesOnConflict: 3,
-		},
-
-		JetCoordinator: JetCoordinator{
-			RoleCounts: map[int]int{
-				int(core.DynamicRoleVirtualExecutor):  1,
-				int(core.DynamicRoleHeavyExecutor):    1,
-				int(core.DynamicRoleLightExecutor):    1,
-				int(core.DynamicRoleVirtualValidator): 1,
-				int(core.DynamicRoleLightValidator):   1,
-			},
 		},
 
 		PulseManager: PulseManager{

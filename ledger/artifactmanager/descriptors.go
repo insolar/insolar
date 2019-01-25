@@ -221,8 +221,8 @@ func (i *ChildIterator) fetch() error {
 	}
 	genericReply, err := sendAndFollowRedirect(
 		i.ctx,
-		i.messageBus,
 		i.db,
+		i.messageBus,
 		&message.GetChildren{
 			Parent:    i.parent,
 			FromPulse: i.fromPulse,

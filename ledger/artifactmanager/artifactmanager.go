@@ -99,8 +99,7 @@ func (m *LedgerArtifactManager) RegisterRequest(
 		Payload: message.MustSerializeBytes(parcel.Message()),
 		Object:  *obj.Record(),
 	}
-	number := currentPulse.PulseNumber
-	recID := record.NewRecordIDFromRecord(m.PlatformCryptographyScheme, number, &rec)
+	recID := record.NewRecordIDFromRecord(m.PlatformCryptographyScheme, currentPulse.PulseNumber, &rec)
 	recRef := core.NewRecordRef(*parcel.DefaultTarget().Domain(), *recID)
 	id, err := m.setRecord(
 		ctx,
@@ -139,27 +138,40 @@ func (m *LedgerArtifactManager) GetCode(
 		return entry.desc, nil
 	}
 
-	ctx, span = instracer.StartSpan(ctx, "artifactmanager.GetCode sendAndRetryJet")
-	genericReact, err := m.bus(ctx).Send(ctx, &message.GetCode{Code: code}, nil)
+	currentPulse, err := m.PulseStorage.Current(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	ctx, span = instracer.StartSpan(ctx, "artifactmanager.GetCode sendAndFollowRedirect")
+	genericReact, err := sendAndFollowRedirect(
+		ctx,
+		m.db,
+		m.bus(ctx),
+		&message.GetCode{Code: code},
+		*currentPulse,
+	)
 	span.End()
 
 	if err != nil {
 		return nil, err
 	}
 
-	react, ok := genericReact.(*reply.Code)
-	if !ok {
-		return nil, fmt.Errorf("GetCode: unexpected reply: %#v", genericReact)
+	switch rep := genericReact.(type) {
+	case *reply.Code:
+		desc := CodeDescriptor{
+			ctx:         ctx,
+			ref:         code,
+			machineType: rep.MachineType,
+			code:        rep.Code,
+		}
+		entry.desc = &desc
+		return &desc, nil
+	case *reply.Error:
+		return nil, rep.Error()
+	default:
+		return nil, fmt.Errorf("GetCode: unexpected reply: %#v", rep)
 	}
-
-	desc := CodeDescriptor{
-		ctx:         ctx,
-		ref:         code,
-		machineType: react.MachineType,
-		code:        react.Code,
-	}
-	entry.desc = &desc
-	return &desc, nil
 }
 
 // GetObject returns descriptor for provided state.
@@ -189,7 +201,7 @@ func (m *LedgerArtifactManager) GetObject(
 		State:    state,
 		Approved: approved,
 	}
-	rep, err := sendAndFollowRedirect(ctx, m.bus(ctx), m.db, getObjectMsg, *currentPulse)
+	rep, err := sendAndFollowRedirect(ctx, m.db, m.bus(ctx), getObjectMsg, *currentPulse)
 	if err != nil {
 		return nil, err
 	}
@@ -207,12 +219,12 @@ func (m *LedgerArtifactManager) GetObject(
 			memory:       r.Memory,
 			parent:       r.Parent,
 		}
+		return desc, err
 	case *reply.Error:
-		err = r.Error()
+		return nil, r.Error()
 	default:
-		err = fmt.Errorf("GetObject: unexpected reply: %#v", rep)
+		return nil, fmt.Errorf("GetObject: unexpected reply: %#v", rep)
 	}
-	return desc, err
 }
 
 // HasPendingRequests returns true if object has unclosed requests.
@@ -225,15 +237,27 @@ func (m *LedgerArtifactManager) HasPendingRequests(
 		return false, err
 	}
 
-	rep, err := sendAndRetryJet(ctx, m.bus(ctx), m.db, &message.GetPendingRequests{Object: object}, *currentPulse, jetMissRetryCount, nil)
+	rep, err := sendAndRetryJet(
+		ctx,
+		m.db,
+		m.bus(ctx),
+		&message.GetPendingRequests{Object: object},
+		*currentPulse,
+		jetMissRetryCount,
+		nil,
+	)
 	if err != nil {
 		return false, err
 	}
-	requests, ok := rep.(*reply.HasPendingRequests)
-	if !ok {
+
+	switch rep := rep.(type) {
+	case *reply.HasPendingRequests:
+		return rep.Has, nil
+	case *reply.Error:
+		return false, rep.Error()
+	default:
 		return false, fmt.Errorf("HasPendingRequests: unexpected reply: %#v", rep)
 	}
-	return requests.Has, nil
 }
 
 // GetDelegate returns provided object's delegate reference for provided prototype.
@@ -252,20 +276,29 @@ func (m *LedgerArtifactManager) GetDelegate(
 		return nil, err
 	}
 
-	genericReact, err := sendAndRetryJet(ctx, m.bus(ctx), m.db, &message.GetDelegate{
-		Head:   head,
-		AsType: asType,
-	}, *currentPulse, jetMissRetryCount, nil)
+	genericReact, err := sendAndFollowRedirect(
+		ctx,
+		m.db,
+		m.bus(ctx),
+		&message.GetDelegate{
+			Head:   head,
+			AsType: asType,
+		},
+		*currentPulse,
+	)
 
 	if err != nil {
 		return nil, err
 	}
 
-	react, ok := genericReact.(*reply.Delegate)
-	if !ok {
-		return nil, fmt.Errorf("GetDelegate: unexpected reply: %#v", genericReact)
+	switch rep := genericReact.(type) {
+	case *reply.Delegate:
+		return &rep.Head, nil
+	case *reply.Error:
+		return nil, rep.Error()
+	default:
+		return nil, fmt.Errorf("GetDelegate: unexpected reply: %#v", rep)
 	}
-	return &react.Head, nil
 }
 
 // GetChildren returns children iterator.
@@ -490,7 +523,7 @@ func (m *LedgerArtifactManager) RegisterValidation(
 		return err
 	}
 
-	_, err = sendAndRetryJet(ctx, m.bus(ctx), m.db, &msg, *currentPulse, jetMissRetryCount, nil)
+	_, err = sendAndRetryJet(ctx, m.db, m.bus(ctx), &msg, *currentPulse, jetMissRetryCount, nil)
 	return err
 }
 
@@ -672,21 +705,31 @@ func (m *LedgerArtifactManager) setRecord(
 ) (*core.RecordID, error) {
 	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.setRecord starts ...")
 
-	genericReply, err := sendAndRetryJet(ctx, m.bus(ctx), m.db, &message.SetRecord{
-		Record:    record.SerializeRecord(rec),
-		TargetRef: target,
-	}, currentPulse, jetMissRetryCount, nil)
+	genericReply, err := sendAndRetryJet(
+		ctx,
+		m.db,
+		m.bus(ctx),
+		&message.SetRecord{
+			Record:    record.SerializeRecord(rec),
+			TargetRef: target,
+		},
+		currentPulse,
+		jetMissRetryCount,
+		nil,
+	)
 
 	if err != nil {
 		return nil, err
 	}
 
-	react, ok := genericReply.(*reply.ID)
-	if !ok {
-		return nil, fmt.Errorf("setRecord: unexpected reply: %#v", genericReply)
+	switch rep := genericReply.(type) {
+	case *reply.ID:
+		return &rep.ID, nil
+	case *reply.Error:
+		return nil, rep.Error()
+	default:
+		return nil, fmt.Errorf("setRecord: unexpected reply: %#v", rep)
 	}
-
-	return &react.ID, nil
 }
 
 func (m *LedgerArtifactManager) setBlob(
@@ -696,21 +739,31 @@ func (m *LedgerArtifactManager) setBlob(
 	currentPulse core.Pulse,
 ) (*core.RecordID, error) {
 	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.setBlob starts ...")
-	genericReact, err := sendAndRetryJet(ctx, m.bus(ctx), m.db, &message.SetBlob{
-		Memory:    blob,
-		TargetRef: target,
-	}, currentPulse, jetMissRetryCount, nil)
+	genericReact, err := sendAndRetryJet(
+		ctx,
+		m.db,
+		m.bus(ctx),
+		&message.SetBlob{
+			Memory:    blob,
+			TargetRef: target,
+		},
+		currentPulse,
+		jetMissRetryCount,
+		nil,
+	)
 
 	if err != nil {
 		return nil, err
 	}
 
-	react, ok := genericReact.(*reply.ID)
-	if !ok {
-		return nil, fmt.Errorf("setBlob: unexpected reply: %#v", genericReact)
+	switch rep := genericReact.(type) {
+	case *reply.ID:
+		return &rep.ID, nil
+	case *reply.Error:
+		return nil, rep.Error()
+	default:
+		return nil, fmt.Errorf("setBlob: unexpected reply: %#v", rep)
 	}
-
-	return &react.ID, nil
 }
 
 func (m *LedgerArtifactManager) sendUpdateObject(
@@ -733,21 +786,31 @@ func (m *LedgerArtifactManager) sendUpdateObject(
 	// 	return nil, fmt.Errorf("unexpected reply: %#v\n", genericRep)
 	// }
 
-	genericRep, err := sendAndRetryJet(ctx, m.bus(ctx), m.db, &message.UpdateObject{
-		Record: record.SerializeRecord(rec),
-		Object: object,
-		Memory: memory,
-	}, currentPulse, jetMissRetryCount, nil)
+	genericRep, err := sendAndRetryJet(
+		ctx,
+		m.db,
+		m.bus(ctx),
+		&message.UpdateObject{
+			Record: record.SerializeRecord(rec),
+			Object: object,
+			Memory: memory,
+		},
+		currentPulse,
+		jetMissRetryCount,
+		nil,
+	)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to update object")
 	}
 
-	rep, ok := genericRep.(*reply.Object)
-	if !ok {
-		return nil, fmt.Errorf("sendUpdateObject: unexpected reply: %#v", genericRep)
+	switch rep := genericRep.(type) {
+	case *reply.Object:
+		return rep, nil
+	case *reply.Error:
+		return nil, rep.Error()
+	default:
+		return nil, fmt.Errorf("sendUpdateObject: unexpected reply: %#v", rep)
 	}
-
-	return rep, nil
 }
 
 func (m *LedgerArtifactManager) registerChild(
@@ -759,23 +822,30 @@ func (m *LedgerArtifactManager) registerChild(
 	currentPulse core.Pulse,
 ) (*core.RecordID, error) {
 	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.registerChild starts ...")
-	genericReact, err := m.bus(ctx).Send(ctx, &message.RegisterChild{
-		Record: record.SerializeRecord(rec),
-		Parent: parent,
-		Child:  child,
-		AsType: asType,
-	}, nil)
+
+	genericReact, err := sendAndRetryJet(
+		ctx,
+		m.db,
+		m.bus(ctx),
+		&message.RegisterChild{
+			Record: record.SerializeRecord(rec),
+			Parent: parent,
+			Child:  child,
+			AsType: asType,
+		}, currentPulse, jetMissRetryCount, nil)
 
 	if err != nil {
 		return nil, err
 	}
 
-	react, ok := genericReact.(*reply.ID)
-	if !ok {
-		return nil, fmt.Errorf("registerChild: unexpected reply: %#v", genericReact)
+	switch rep := genericReact.(type) {
+	case *reply.ID:
+		return &rep.ID, nil
+	case *reply.Error:
+		return nil, rep.Error()
+	default:
+		return nil, fmt.Errorf("registerChild: unexpected reply: %#v", rep)
 	}
-
-	return &react.ID, nil
 }
 
 func (m *LedgerArtifactManager) bus(ctx context.Context) core.MessageBus {
@@ -784,20 +854,21 @@ func (m *LedgerArtifactManager) bus(ctx context.Context) core.MessageBus {
 
 func sendAndFollowRedirect(
 	ctx context.Context,
-	bus core.MessageBus,
 	db *storage.DB,
+	bus core.MessageBus,
 	msg core.Message,
 	pulse core.Pulse,
 ) (core.Reply, error) {
 	inslog := inslogger.FromContext(ctx)
 	inslog.Debug("LedgerArtifactManager.sendAndFollowRedirect starts ...")
+
 	rep, err := bus.Send(ctx, msg, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	if _, ok := rep.(*reply.JetMiss); ok {
-		rep, err = sendAndRetryJet(ctx, bus, db, msg, pulse, jetMissRetryCount, nil)
+		rep, err = sendAndRetryJet(ctx, db, bus, msg, pulse, jetMissRetryCount, nil)
 	}
 
 	if r, ok := rep.(core.RedirectReply); ok {
@@ -824,8 +895,8 @@ func sendAndFollowRedirect(
 
 func sendAndRetryJet(
 	ctx context.Context,
-	bus core.MessageBus,
 	db *storage.DB,
+	bus core.MessageBus,
 	msg core.Message,
 	pulse core.Pulse,
 	retries int,
@@ -843,7 +914,7 @@ func sendAndRetryJet(
 		if err != nil {
 			return nil, err
 		}
-		return sendAndRetryJet(ctx, bus, db, msg, pulse, retries-1, ops)
+		return sendAndRetryJet(ctx, db, bus, msg, pulse, retries-1, ops)
 	}
 
 	return rep, nil

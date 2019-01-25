@@ -48,22 +48,6 @@ func TestLockUnlock(t *testing.T) {
 	pStorage.Unlock()
 }
 
-func TestCurrentFromContext(t *testing.T) {
-	t.Parallel()
-
-	ctx := inslogger.TestContext(t)
-
-	testDb := &DB{}
-	pStorage := NewPulseStorage(testDb)
-	pStorage.Set(core.GenesisPulse)
-
-	ctx = core.GenesisPulse.PulseNumber.ToContext(ctx)
-
-	pulse, err := pStorage.pulseFromContext(ctx)
-	require.NoError(t, err)
-	require.Equal(t, core.GenesisPulse, pulse)
-}
-
 func TestCurrent_OneThread(t *testing.T) {
 	t.Parallel()
 

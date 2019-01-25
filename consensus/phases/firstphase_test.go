@@ -28,10 +28,11 @@ import (
 	"github.com/insolar/insolar/testutils/merkle"
 	"github.com/insolar/insolar/testutils/network"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestFirstPhase_HandlePulse(t *testing.T) {
-	firstPhase := &FirstPhase{}
+	firstPhase := &firstPhase{}
 	nodeKeeperMock := network.NewNodeKeeperMock(t)
 	pulseCalculatorMock := merkle.NewCalculatorMock(t)
 	communicatorMock := NewCommunicatorMock(t)
@@ -54,8 +55,8 @@ func TestFirstPhase_HandlePulse(t *testing.T) {
 	cm := component.Manager{}
 	cm.Inject(cryptoServ, nodeKeeperMock, firstPhase, pulseCalculatorMock, communicatorMock, consensusNetworkMock)
 
-	assert.NotNil(t, firstPhase.Calculator)
-	assert.NotNil(t, firstPhase.NodeKeeper)
+	require.NotNil(t, firstPhase.Calculator)
+	require.NotNil(t, firstPhase.NodeKeeper)
 	activeNodes := firstPhase.NodeKeeper.GetActiveNodes()
 	assert.Equal(t, 1, len(activeNodes))
 }
