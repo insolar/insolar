@@ -152,6 +152,10 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		bootstrap.NewChallengeResponseController(options, internalTransport),
 		bootstrap.NewNetworkBootstrapper(),
 	)
+	err = n.cm.Init(ctx)
+	if err != nil {
+		return errors.Wrap(err, "Failed to init internal components")
+	}
 
 	n.fakePulsar = fakepulsar.NewFakePulsar(n, time.Duration(n.cfg.Pulsar.PulseTime)*time.Millisecond)
 	return nil
