@@ -52,6 +52,8 @@ const (
 	sysDropSizeHistory        byte = 7
 )
 
+// DBContext provides base db methods
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage.DBContext -o ../../testutils -s _mock.go
 type DBContext interface {
 	SetTxRetiries(n int)
 	GetJetSizesHistoryDepth() int

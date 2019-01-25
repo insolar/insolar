@@ -30,6 +30,7 @@ import (
 )
 
 // JetStorage provides methods for working with jets and their drops
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage.JetStorage -o ../../testutils -s _mock.go
 type JetStorage interface {
 	GetDrop(ctx context.Context, jetID core.RecordID, pulse core.PulseNumber) (*jet.JetDrop, error)
 	CreateDrop(ctx context.Context, jetID core.RecordID, pulse core.PulseNumber, prevHash []byte) (

@@ -9,6 +9,7 @@ import (
 )
 
 // ObjectStorage returns objects and their meta
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage.ObjectStorage -o ../../testutils -s _mock.go
 type ObjectStorage interface {
 	GetBlob(ctx context.Context, jetID core.RecordID, id *core.RecordID) ([]byte, error)
 	SetBlob(ctx context.Context, jetID core.RecordID, pulseNumber core.PulseNumber, blob []byte) (*core.RecordID, error)

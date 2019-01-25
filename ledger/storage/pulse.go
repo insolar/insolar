@@ -34,6 +34,7 @@ type Pulse struct {
 }
 
 // PulseTracker allows to modify state of the pulse inside db
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage.PulseTracker -o ../../testutils -s _mock.go
 type PulseTracker interface {
 	GetPulse(ctx context.Context, num core.PulseNumber) (*Pulse, error)
 	GetPreviousPulse(ctx context.Context, num core.PulseNumber) (*Pulse, error)
