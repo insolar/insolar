@@ -19,6 +19,7 @@ package artifactmanager
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/pkg/errors"
 
@@ -32,16 +33,16 @@ import (
 )
 
 type middleware struct {
-	objectStorage                      storage.ObjectStorage
-	jetStorage                         storage.JetStorage
-	jetCoordinator                     core.JetCoordinator
-	messageBus                         core.MessageBus
-	pulseStorage                       core.PulseStorage
-	earlyRequestCircuitBreakerProvider *earlyRequestCircuitBreakerProvider
-	conf                               *configuration.Ledger
-	handler                            *MessageHandler
-	seqMutex                           sync.Mutex
-	sequencer                          map[core.RecordID]*struct {
+	objectStorage  storage.ObjectStorage
+	jetStorage     storage.JetStorage
+	jetCoordinator core.JetCoordinator
+	messageBus     core.MessageBus
+	pulseStorage   core.PulseStorage
+	hotDataWaiter  HotDataWaiter
+	conf           *configuration.Ledger
+	handler        *MessageHandler
+	seqMutex       sync.Mutex
+	sequencer      map[core.RecordID]*struct {
 		sync.Mutex
 		done bool
 	}
@@ -51,14 +52,14 @@ func newMiddleware(
 	h *MessageHandler,
 ) *middleware {
 	return &middleware{
-		objectStorage:                      h.ObjectStorage,
-		jetStorage:                         h.JetStorage,
-		jetCoordinator:                     h.JetCoordinator,
-		messageBus:                         h.Bus,
-		pulseStorage:                       h.PulseStorage,
-		earlyRequestCircuitBreakerProvider: &earlyRequestCircuitBreakerProvider{breakers: map[core.RecordID]*requestCircuitBreakerProvider{}},
-		handler:                            h,
-		conf:                               h.conf,
+		objectStorage:  h.ObjectStorage,
+		jetStorage:     h.JetStorage,
+		jetCoordinator: h.JetCoordinator,
+		messageBus:     h.Bus,
+		pulseStorage:   h.PulseStorage,
+		hotDataWaiter:  h.HotDataWaiter,
+		handler:        h,
+		conf:           h.conf,
 		sequencer: map[core.RecordID]*struct {
 			sync.Mutex
 			done bool
@@ -266,4 +267,47 @@ func (m *middleware) fetchJet(
 	}
 
 	return resJet, true, nil
+}
+
+func (m *middleware) waitForHotData(handler core.MessageHandler) core.MessageHandler {
+	return func(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
+		logger := inslogger.FromContext(ctx)
+		logger.Debugf("[waitForHotData] for parcel with pulse %v", parcel.Pulse())
+
+		// TODO: 15.01.2019 @egorikas
+		// Hack is needed for genesis
+		if parcel.Pulse() == core.FirstPulseNumber {
+			return handler(ctx, parcel)
+		}
+
+		// If the call is a call in redirect-chain
+		// skip waiting for the hot records
+		if parcel.DelegationToken() != nil {
+			logger.Debugf("[waitForHotData] parcel.DelegationToken() != nil")
+			return handler(ctx, parcel)
+		}
+
+		jetID := jetFromContext(ctx)
+		err := m.hotDataWaiter.Wait(ctx, jetID)
+		if err != nil {
+			return &reply.Error{ErrType: reply.ErrHotDataTimeout}, nil
+		}
+		return handler(ctx, parcel)
+	}
+}
+
+func (m *middleware) releaseHotDataWaiters(handler core.MessageHandler) core.MessageHandler {
+	return func(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
+		logger := inslogger.FromContext(ctx)
+		logger.Debugf("[releaseHotDataWaiters] pulse %v starts %v", parcel.Pulse(), time.Now())
+
+		hotDataMessage := parcel.Message().(*message.HotData)
+		jetID := hotDataMessage.Jet.Record()
+
+		logger.Debugf("[releaseHotDataWaiters] hot data for jet happens - %v, pulse - %v", jetID.DebugString(), parcel.Pulse())
+		defer m.hotDataWaiter.Unlock(ctx, *jetID)
+
+		logger.Debugf("[releaseHotDataWaiters] before handler for jet - %v, pulse - %v", jetID.DebugString(), parcel.Pulse())
+		return handler(ctx, parcel)
+	}
 }

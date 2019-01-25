@@ -28,6 +28,7 @@ import (
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/ledger/artifactmanager"
 	"github.com/insolar/insolar/ledger/heavyclient"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
@@ -47,24 +48,24 @@ type ActiveListSwapper interface {
 
 // PulseManager implements core.PulseManager.
 type PulseManager struct {
-	LR                            core.LogicRunner                   `inject:""`
-	Bus                           core.MessageBus                    `inject:""`
-	NodeNet                       core.NodeNetwork                   `inject:""`
-	JetCoordinator                core.JetCoordinator                `inject:""`
-	GIL                           core.GlobalInsolarLock             `inject:""`
-	CryptographyService           core.CryptographyService           `inject:""`
-	PlatformCryptographyScheme    core.PlatformCryptographyScheme    `inject:""`
-	RecentStorageProvider         recentstorage.Provider             `inject:""`
-	ActiveListSwapper             ActiveListSwapper                  `inject:""`
-	PulseStorage                  pulseStoragePm                     `inject:""`
-	ArtifactManagerMessageHandler core.ArtifactManagerMessageHandler `inject:""`
-	JetStorage                    storage.JetStorage                 `inject:""`
-	ObjectStorage                 storage.ObjectStorage              `inject:""`
-	ActiveNodesStorage            storage.ActiveNodesStorage         `inject:""`
-	PulseTracker                  storage.PulseTracker               `inject:""`
-	ReplicaStorage                storage.ReplicaStorage             `inject:""`
-	DBContext                     storage.DBContext                  `inject:""`
-	StorageCleaner                storage.Cleaner                    `inject:""`
+	LR                         core.LogicRunner                `inject:""`
+	Bus                        core.MessageBus                 `inject:""`
+	NodeNet                    core.NodeNetwork                `inject:""`
+	JetCoordinator             core.JetCoordinator             `inject:""`
+	GIL                        core.GlobalInsolarLock          `inject:""`
+	CryptographyService        core.CryptographyService        `inject:""`
+	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
+	RecentStorageProvider      recentstorage.Provider          `inject:""`
+	ActiveListSwapper          ActiveListSwapper               `inject:""`
+	PulseStorage               pulseStoragePm                  `inject:""`
+	HotDataWaiter              artifactmanager.HotDataWaiter   `inject:""`
+	JetStorage                 storage.JetStorage              `inject:""`
+	ObjectStorage              storage.ObjectStorage           `inject:""`
+	ActiveNodesStorage         storage.ActiveNodesStorage      `inject:""`
+	PulseTracker               storage.PulseTracker            `inject:""`
+	ReplicaStorage             storage.ReplicaStorage          `inject:""`
+	DBContext                  storage.DBContext               `inject:""`
+	StorageCleaner             storage.Cleaner                 `inject:""`
 
 	// TODO: move clients pool to component - @nordicdyno - 18.Dec.2018
 	syncClientsPool *heavyclient.Pool
@@ -741,7 +742,7 @@ func (m *PulseManager) prepareArtifactManagerMessageHandlerForNextPulse(ctx cont
 	ctx, span := instracer.StartSpan(ctx, "early.close")
 	defer span.End()
 
-	m.ArtifactManagerMessageHandler.ResetEarlyRequestCircuitBreaker(ctx)
+	m.HotDataWaiter.ThrowTimeout(ctx)
 
 	for _, jetInfo := range jets {
 
@@ -749,17 +750,17 @@ func (m *PulseManager) prepareArtifactManagerMessageHandlerForNextPulse(ctx cont
 			// No split happened.
 			if jetInfo.mineNext {
 				logger.Debugf("[breakermiddleware] [prepareHandlerForNextPulse] fetch jetInfo root %v, pulse - %v", jetInfo.id.DebugString(), newPulse.PulseNumber)
-				m.ArtifactManagerMessageHandler.CloseEarlyRequestCircuitBreakerForJet(ctx, jetInfo.id)
+				m.HotDataWaiter.Unlock(ctx, jetInfo.id)
 			}
 		} else {
 			// Split happened.
 			if jetInfo.left.mineNext {
 				logger.Debugf("[breakermiddleware] [prepareHandlerForNextPulse] fetch jetInfo left %v, pulse - %v", jetInfo.left.id.DebugString(), newPulse.PulseNumber)
-				m.ArtifactManagerMessageHandler.CloseEarlyRequestCircuitBreakerForJet(ctx, jetInfo.left.id)
+				m.HotDataWaiter.Unlock(ctx, jetInfo.left.id)
 			}
 			if jetInfo.right.mineNext {
 				logger.Debugf("[breakermiddleware] [prepareHandlerForNextPulse] fetch jetInfo right %v, pulse - %v", jetInfo.right.id.DebugString(), newPulse.PulseNumber)
-				m.ArtifactManagerMessageHandler.CloseEarlyRequestCircuitBreakerForJet(ctx, jetInfo.right.id)
+				m.HotDataWaiter.Unlock(ctx, jetInfo.right.id)
 			}
 		}
 	}

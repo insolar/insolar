@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/dgraph-io/badger"
+	"github.com/insolar/insolar/ledger/artifactmanager"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -193,7 +194,7 @@ func sendToHeavy(t *testing.T, withretry bool) {
 	ps.PulseTracker = db
 	pm.PulseStorage = ps
 
-	pm.ArtifactManagerMessageHandler = artifactManagerMessageHandlerMock
+	pm.HotDataWaiter = artifactmanager.NewHotDataWaiterConcrete()
 
 	providerMock := recentstorage.NewProviderMock(t)
 	providerMock.GetStorageFunc = func(ctx context.Context, p core.RecordID) (r recentstorage.RecentStorage) {

@@ -120,7 +120,11 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 	pm.LR = c.LogicRunner
 	pm.ActiveListSwapper = alsMock
 	pm.PulseStorage = pulseStorage
-	pm.ArtifactManagerMessageHandler = handler
+
+	hdw := artifactmanager.NewHotDataWaiterConcrete()
+
+	pm.HotDataWaiter = hdw
+	handler.HotDataWaiter = hdw
 
 	recentStorageMock := recentstorage.NewRecentStorageMock(t)
 	recentStorageMock.AddPendingRequestMock.Return()
@@ -141,7 +145,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 	}
 
 	if closeJets {
-		handler.CloseEarlyRequestCircuitBreakerForJet(ctx, *jet.NewID(0, nil))
+		pm.HotDataWaiter.Unlock(ctx, *jet.NewID(0, nil))
 	}
 
 	// Create ledger.
