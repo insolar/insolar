@@ -44,7 +44,7 @@ import (
 // TmpLedger crteates ledger on top of temporary database.
 // Returns *ledger.Ledger and cleanup function.
 // FIXME: THIS METHOD IS DEPRECATED. USE MOCKS.
-func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Components, closeJets bool) (*ledger.Ledger, func()) {
+func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Components, closeJets bool) (*ledger.Ledger, *storage.DB, func()) {
 	log.Warn("TmpLedger is deprecated. Use mocks.")
 
 	pcs := platformpolicy.NewPlatformCryptographyScheme()
@@ -54,7 +54,8 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 	ctx := inslogger.TestContext(t)
 	conf := configuration.NewLedger()
 	db, dbcancel := storagetest.TmpDB(ctx, t, storagetest.Dir(dir))
-	pulseStorage := storage.NewPulseStorage(db)
+	pulseStorage := storage.NewPulseStorage()
+	pulseStorage.PulseTracker = db
 
 	pulse, err := db.GetLatestPulse(ctx)
 	require.NoError(t, err)
@@ -63,7 +64,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 	am := artifactmanager.NewArtifactManger(db)
 	am.PlatformCryptographyScheme = pcs
 	conf.PulseManager.HeavySyncEnabled = false
-	pm := pulsemanager.NewPulseManager(db, conf)
+	pm := pulsemanager.NewPulseManager(conf)
 	ls := localstorage.NewLocalStorage(db)
 	jc := testutils.NewJetCoordinatorMock(mc)
 	jc.IsAuthorizedMock.Return(true, nil)
@@ -93,7 +94,14 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 	certificate := testutils.NewCertificateMock(t)
 	certificate.GetRoleMock.Return(handlersRole)
 
-	handler := artifactmanager.NewMessageHandler(db, &conf, certificate)
+	handler := artifactmanager.NewMessageHandler(&conf, certificate)
+	handler.PulseTracker = db
+	handler.JetStorage = db
+	handler.ActiveNodesStorage = db
+	handler.DBContext = db
+	handler.PulseTracker = db
+	handler.ObjectStorage = db
+
 	handler.PlatformCryptographyScheme = pcs
 	handler.JetCoordinator = jc
 
@@ -139,5 +147,5 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 	// Create ledger.
 	l := ledger.NewTestLedger(db, am, pm, jc, ls)
 
-	return l, dbcancel
+	return l, db, dbcancel
 }

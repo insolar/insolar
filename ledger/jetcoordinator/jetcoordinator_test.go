@@ -36,11 +36,18 @@ func TestJetCoordinator_QueryRole(t *testing.T) {
 	defer mc.Finish()
 
 	db, cleaner := storagetest.TmpDB(ctx, t)
+
 	defer cleaner()
 	jc := JetCoordinator{
-		db:                         db,
+		JetStorage:                 db,
+		PulseTracker:               db,
+		ActiveNodesStorage:         db,
 		PlatformCryptographyScheme: testutils.NewPlatformCryptographyScheme(),
 	}
+	ps := storage.NewPulseStorage()
+	ps.PulseTracker = db
+	jc.PulseStorage = ps
+
 	err := db.AddPulse(ctx, core.Pulse{PulseNumber: 0, Entropy: core.Entropy{1, 2, 3}})
 	require.NoError(t, err)
 	var nodes []core.Node

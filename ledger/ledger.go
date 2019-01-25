@@ -95,19 +95,17 @@ func GetLedgerComponents(conf configuration.Ledger, certificate core.Certificate
 		panic(errors.Wrap(err, "failed to initialize DB"))
 	}
 
-	ps := storage.NewPulseStorage(db)
-
 	return []interface{}{
 		db,
-		ps,
+		storage.NewPulseStorage(),
 		storage.NewRecentStorageProvider(conf.RecentStorage.DefaultTTL),
 		artifactmanager.NewArtifactManger(db),
-		jetcoordinator.NewJetCoordinator(db),
-		pulsemanager.NewPulseManager(db, conf),
-		artifactmanager.NewMessageHandler(db, &conf, certificate),
+		jetcoordinator.NewJetCoordinator(),
+		pulsemanager.NewPulseManager(conf),
+		artifactmanager.NewMessageHandler(&conf, certificate),
 		localstorage.NewLocalStorage(db),
 		heavyserver.NewSync(db),
-		exporter.NewExporter(db, ps, conf.Exporter),
+		exporter.NewExporter(db, conf.Exporter),
 	}
 }
 

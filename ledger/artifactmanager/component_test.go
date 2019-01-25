@@ -71,9 +71,16 @@ func TestLedgerArtifactManager_PendingRequest(t *testing.T) {
 
 	cryptoScheme := platformpolicy.NewPlatformCryptographyScheme()
 
-	handler := NewMessageHandler(db, &configuration.Ledger{
+	handler := NewMessageHandler(&configuration.Ledger{
 		LightChainLimit: 10,
-	}, certificate)
+	},
+		certificate)
+
+	handler.JetStorage = db
+	handler.ActiveNodesStorage = db
+	handler.DBContext = db
+	handler.PulseTracker = db
+	handler.ObjectStorage = db
 
 	handler.PlatformCryptographyScheme = cryptoScheme
 	handler.Bus = mb

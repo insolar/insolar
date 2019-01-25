@@ -46,7 +46,7 @@ type iterstate struct {
 // Better implementation is for the future work.
 type ReplicaIter struct {
 	ctx        context.Context
-	db         *DB
+	dbContext  DBContext
 	limitBytes int
 	istates    []*iterstate
 	lastpulse  core.PulseNumber
@@ -62,7 +62,7 @@ type ReplicaIter struct {
 // Param 'limit' sets per message limit.
 func NewReplicaIter(
 	ctx context.Context,
-	db *DB,
+	dbContext DBContext,
 	jetID core.RecordID,
 	start core.PulseNumber,
 	end core.PulseNumber,
@@ -80,7 +80,7 @@ func NewReplicaIter(
 
 	return &ReplicaIter{
 		ctx:        ctx,
-		db:         db,
+		dbContext:  dbContext,
 		limitBytes: limit,
 		// record iterators (order matters for heavy node consistency)
 		istates: []*iterstate{
@@ -98,7 +98,7 @@ func (r *ReplicaIter) NextRecords() ([]core.KV, error) {
 		return nil, ErrReplicatorDone
 	}
 	fc := &fetchchunk{
-		db:    r.db.db,
+		db:    r.dbContext.GetBadgerDB(),
 		limit: r.limitBytes,
 	}
 	for _, is := range r.istates {

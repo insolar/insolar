@@ -52,6 +52,27 @@ const (
 	sysDropSizeHistory        byte = 7
 )
 
+// DBContext provides base db methods
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage.DBContext -o ./ -s _mock.go
+type DBContext interface {
+	SetTxRetiries(n int)
+	GetJetSizesHistoryDepth() int
+	GenesisRef() *core.RecordRef
+
+	BeginTransaction(update bool) (*TransactionManager, error)
+	View(ctx context.Context, fn func(*TransactionManager) error) error
+	Update(ctx context.Context, fn func(*TransactionManager) error) error
+
+	SetLocalData(ctx context.Context, pulse core.PulseNumber, key []byte, data []byte) error
+	GetLocalData(ctx context.Context, pulse core.PulseNumber, key []byte) ([]byte, error)
+
+	StoreKeyValues(ctx context.Context, kvs []core.KV) error
+
+	GetBadgerDB() *badger.DB
+
+	Close() error
+}
+
 // DB represents BadgerDB storage implementation.
 type DB struct {
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
