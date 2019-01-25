@@ -57,6 +57,7 @@ type MessageHandler struct {
 	ActiveNodesStorage         storage.ActiveNodesStorage      `inject:""`
 	PulseTracker               storage.PulseTracker            `inject:""`
 	DBContext                  storage.DBContext               `inject:""`
+	HotDataWaiter              HotDataWaiter                   `inject:""`
 
 	certificate    core.Certificate
 	replayHandlers map[core.MessageType]core.MessageHandler
@@ -132,55 +133,55 @@ func (h *MessageHandler) setHandlersForLight(m *middleware) {
 		Build(h.handleGetObject,
 			instrumentHandler("handleGetObject"),
 			m.checkJet,
-			m.checkEarlyRequestBreaker))
+			m.waitForHotData))
 
 	h.Bus.MustRegister(core.TypeGetDelegate,
 		Build(h.handleGetDelegate,
 			instrumentHandler("handleGetDelegate"),
 			m.checkJet,
-			m.checkEarlyRequestBreaker))
+			m.waitForHotData))
 
 	h.Bus.MustRegister(core.TypeGetChildren,
 		Build(h.handleGetChildren,
 			instrumentHandler("handleGetChildren"),
 			m.checkJet,
-			m.checkEarlyRequestBreaker))
+			m.waitForHotData))
 
 	h.Bus.MustRegister(core.TypeSetRecord,
 		Build(h.handleSetRecord,
 			instrumentHandler("handleSetRecord"),
 			m.checkJet,
-			m.checkEarlyRequestBreaker))
+			m.waitForHotData))
 
 	h.Bus.MustRegister(core.TypeUpdateObject,
 		Build(h.handleUpdateObject,
 			instrumentHandler("handleUpdateObject"),
 			m.checkJet,
-			m.checkEarlyRequestBreaker))
+			m.waitForHotData))
 
 	h.Bus.MustRegister(core.TypeRegisterChild,
 		Build(h.handleRegisterChild,
 			instrumentHandler("handleRegisterChild"),
 			m.checkJet,
-			m.checkEarlyRequestBreaker))
+			m.waitForHotData))
 
 	h.Bus.MustRegister(core.TypeSetBlob,
 		Build(h.handleSetBlob,
 			instrumentHandler("handleSetBlob"),
 			m.checkJet,
-			m.checkEarlyRequestBreaker))
+			m.waitForHotData))
 
 	h.Bus.MustRegister(core.TypeGetObjectIndex,
 		Build(h.handleGetObjectIndex,
 			instrumentHandler("handleGetObjectIndex"),
 			m.checkJet,
-			m.checkEarlyRequestBreaker))
+			m.waitForHotData))
 
 	h.Bus.MustRegister(core.TypeGetPendingRequests,
 		Build(h.handleHasPendingRequests,
 			instrumentHandler("handleHasPendingRequests"),
 			m.checkJet,
-			m.checkEarlyRequestBreaker))
+			m.waitForHotData))
 
 	h.Bus.MustRegister(core.TypeGetJet,
 		Build(h.handleGetJet,
@@ -189,7 +190,7 @@ func (h *MessageHandler) setHandlersForLight(m *middleware) {
 	h.Bus.MustRegister(core.TypeHotRecords,
 		Build(h.handleHotRecords,
 			instrumentHandler("handleHotRecords"),
-			m.closeEarlyRequestBreaker))
+			m.releaseHotDataWaiters))
 
 	// Validation.
 	h.Bus.MustRegister(core.TypeValidateRecord,
@@ -259,17 +260,6 @@ func (h *MessageHandler) setHandlersForHeavy(m *middleware) {
 		Build(h.handleGetObjectIndex,
 			instrumentHandler("handleGetObjectIndex"),
 			m.zeroJetForHeavy))
-}
-
-// ResetEarlyRequestCircuitBreaker throws timeouts at the end of a pulse
-func (h *MessageHandler) ResetEarlyRequestCircuitBreaker(ctx context.Context) {
-	h.middleware.earlyRequestCircuitBreakerProvider.onTimeoutHappened(ctx)
-}
-
-// CloseEarlyRequestCircuitBreakerForJet close circuit breaker for a specific jet
-func (h *MessageHandler) CloseEarlyRequestCircuitBreakerForJet(ctx context.Context, jetID core.RecordID) {
-	inslogger.FromContext(ctx).Debugf("[CloseEarlyRequestCircuitBreakerForJet] %v", jetID.DebugString())
-	h.middleware.closeEarlyRequestBreakerForJet(ctx, jetID)
 }
 
 func (h *MessageHandler) handleSetRecord(ctx context.Context, parcel core.Parcel) (core.Reply, error) {

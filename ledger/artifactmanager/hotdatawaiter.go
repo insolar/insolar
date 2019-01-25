@@ -12,8 +12,9 @@ import (
 // We tend to think, that it will be used for waiting hot-data in handler
 // Also, because of the some jet pitfalls, we need to have an instrument
 // to handler edge-cases from pulse manager
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage.HotDataWaiter -o ./ -s _mock.go
 type HotDataWaiter interface {
-	Wait(ctx context.Context, jetID core.RecordID) (bool, error)
+	Wait(ctx context.Context, jetID core.RecordID) error
 	Unlock(ctx context.Context, jetID core.RecordID)
 	ThrowTimeout(ctx context.Context)
 }
@@ -22,6 +23,11 @@ type HotDataWaiter interface {
 type HotDataWaiterConcrete struct {
 	waitersMapLock sync.Mutex
 	waiters        map[core.RecordID]*waiter
+}
+
+// NewHotDataWaiterConcrete is a constructor
+func NewHotDataWaiterConcrete() *HotDataWaiterConcrete {
+	return &HotDataWaiterConcrete{}
 }
 
 type waiter struct {
@@ -49,8 +55,8 @@ func (hdw *HotDataWaiterConcrete) getWaiter(ctx context.Context, jetID core.Reco
 
 // Wait waits for the raising one of two channels.
 // If hotDataChannel or timeoutChannel was raised, the method returns error
-// Either true, nil or false, ErrHotDataTimeout
-func (hdw *HotDataWaiterConcrete) Wait(ctx context.Context, jetID core.RecordID) (bool, error) {
+// Either nil or ErrHotDataTimeout
+func (hdw *HotDataWaiterConcrete) Wait(ctx context.Context, jetID core.RecordID) error {
 	logger := inslogger.FromContext(ctx)
 	waiter := hdw.getWaiter(ctx, jetID)
 
@@ -58,10 +64,10 @@ func (hdw *HotDataWaiterConcrete) Wait(ctx context.Context, jetID core.RecordID)
 	select {
 	case <-waiter.hotDataChannel:
 		logger.Debugf("[Wait] hotDataChannel's events was raised")
-		return true, nil
+		return nil
 	case <-waiter.timeoutChannel:
 		logger.Errorf("[Wait] timeout was raised for jet - %v", jetID.DebugString())
-		return false, core.ErrHotDataTimeout
+		return core.ErrHotDataTimeout
 	}
 }
 
