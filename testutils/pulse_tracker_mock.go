@@ -6,18 +6,18 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "PulseTracker" can be found in github.com/insolar/insolar/ledger/storage
 */
 import (
-	"context"
+	context "context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/storage"
+	core "github.com/insolar/insolar/core"
+	storage "github.com/insolar/insolar/ledger/storage"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-// PulseTrackerMock implements github.com/insolar/insolar/ledger/storage.PulseTracker
+//PulseTrackerMock implements github.com/insolar/insolar/ledger/storage.PulseTracker
 type PulseTrackerMock struct {
 	t minimock.Tester
 
@@ -42,7 +42,7 @@ type PulseTrackerMock struct {
 	GetPulseMock       mPulseTrackerMockGetPulse
 }
 
-// NewPulseTrackerMock returns a mock for github.com/insolar/insolar/ledger/storage.PulseTracker
+//NewPulseTrackerMock returns a mock for github.com/insolar/insolar/ledger/storage.PulseTracker
 func NewPulseTrackerMock(t minimock.Tester) *PulseTrackerMock {
 	m := &PulseTrackerMock{t: t}
 
@@ -78,7 +78,7 @@ type PulseTrackerMockAddPulseResult struct {
 	r error
 }
 
-// Expect specifies that invocation of PulseTracker.AddPulse is expected from 1 to Infinity times
+//Expect specifies that invocation of PulseTracker.AddPulse is expected from 1 to Infinity times
 func (m *mPulseTrackerMockAddPulse) Expect(p context.Context, p1 core.Pulse) *mPulseTrackerMockAddPulse {
 	m.mock.AddPulseFunc = nil
 	m.expectationSeries = nil
@@ -90,7 +90,7 @@ func (m *mPulseTrackerMockAddPulse) Expect(p context.Context, p1 core.Pulse) *mP
 	return m
 }
 
-// Return specifies results of invocation of PulseTracker.AddPulse
+//Return specifies results of invocation of PulseTracker.AddPulse
 func (m *mPulseTrackerMockAddPulse) Return(r error) *PulseTrackerMock {
 	m.mock.AddPulseFunc = nil
 	m.expectationSeries = nil
@@ -102,7 +102,7 @@ func (m *mPulseTrackerMockAddPulse) Return(r error) *PulseTrackerMock {
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of PulseTracker.AddPulse is expected once
+//ExpectOnce specifies that invocation of PulseTracker.AddPulse is expected once
 func (m *mPulseTrackerMockAddPulse) ExpectOnce(p context.Context, p1 core.Pulse) *PulseTrackerMockAddPulseExpectation {
 	m.mock.AddPulseFunc = nil
 	m.mainExpectation = nil
@@ -117,7 +117,7 @@ func (e *PulseTrackerMockAddPulseExpectation) Return(r error) {
 	e.result = &PulseTrackerMockAddPulseResult{r}
 }
 
-// Set uses given function f as a mock of PulseTracker.AddPulse method
+//Set uses given function f as a mock of PulseTracker.AddPulse method
 func (m *mPulseTrackerMockAddPulse) Set(f func(p context.Context, p1 core.Pulse) (r error)) *PulseTrackerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -126,7 +126,7 @@ func (m *mPulseTrackerMockAddPulse) Set(f func(p context.Context, p1 core.Pulse)
 	return m.mock
 }
 
-// AddPulse implements github.com/insolar/insolar/ledger/storage.PulseTracker interface
+//AddPulse implements github.com/insolar/insolar/ledger/storage.PulseTracker interface
 func (m *PulseTrackerMock) AddPulse(p context.Context, p1 core.Pulse) (r error) {
 	counter := atomic.AddUint64(&m.AddPulsePreCounter, 1)
 	defer atomic.AddUint64(&m.AddPulseCounter, 1)
@@ -176,17 +176,17 @@ func (m *PulseTrackerMock) AddPulse(p context.Context, p1 core.Pulse) (r error) 
 	return m.AddPulseFunc(p, p1)
 }
 
-// AddPulseMinimockCounter returns a count of PulseTrackerMock.AddPulseFunc invocations
+//AddPulseMinimockCounter returns a count of PulseTrackerMock.AddPulseFunc invocations
 func (m *PulseTrackerMock) AddPulseMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.AddPulseCounter)
 }
 
-// AddPulseMinimockPreCounter returns the value of PulseTrackerMock.AddPulse invocations
+//AddPulseMinimockPreCounter returns the value of PulseTrackerMock.AddPulse invocations
 func (m *PulseTrackerMock) AddPulseMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.AddPulsePreCounter)
 }
 
-// AddPulseFinished returns true if mock invocations count is ok
+//AddPulseFinished returns true if mock invocations count is ok
 func (m *PulseTrackerMock) AddPulseFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.AddPulseMock.expectationSeries) > 0 {
@@ -226,7 +226,7 @@ type PulseTrackerMockGetLatestPulseResult struct {
 	r1 error
 }
 
-// Expect specifies that invocation of PulseTracker.GetLatestPulse is expected from 1 to Infinity times
+//Expect specifies that invocation of PulseTracker.GetLatestPulse is expected from 1 to Infinity times
 func (m *mPulseTrackerMockGetLatestPulse) Expect(p context.Context) *mPulseTrackerMockGetLatestPulse {
 	m.mock.GetLatestPulseFunc = nil
 	m.expectationSeries = nil
@@ -238,7 +238,7 @@ func (m *mPulseTrackerMockGetLatestPulse) Expect(p context.Context) *mPulseTrack
 	return m
 }
 
-// Return specifies results of invocation of PulseTracker.GetLatestPulse
+//Return specifies results of invocation of PulseTracker.GetLatestPulse
 func (m *mPulseTrackerMockGetLatestPulse) Return(r *storage.Pulse, r1 error) *PulseTrackerMock {
 	m.mock.GetLatestPulseFunc = nil
 	m.expectationSeries = nil
@@ -250,7 +250,7 @@ func (m *mPulseTrackerMockGetLatestPulse) Return(r *storage.Pulse, r1 error) *Pu
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of PulseTracker.GetLatestPulse is expected once
+//ExpectOnce specifies that invocation of PulseTracker.GetLatestPulse is expected once
 func (m *mPulseTrackerMockGetLatestPulse) ExpectOnce(p context.Context) *PulseTrackerMockGetLatestPulseExpectation {
 	m.mock.GetLatestPulseFunc = nil
 	m.mainExpectation = nil
@@ -265,7 +265,7 @@ func (e *PulseTrackerMockGetLatestPulseExpectation) Return(r *storage.Pulse, r1 
 	e.result = &PulseTrackerMockGetLatestPulseResult{r, r1}
 }
 
-// Set uses given function f as a mock of PulseTracker.GetLatestPulse method
+//Set uses given function f as a mock of PulseTracker.GetLatestPulse method
 func (m *mPulseTrackerMockGetLatestPulse) Set(f func(p context.Context) (r *storage.Pulse, r1 error)) *PulseTrackerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -274,7 +274,7 @@ func (m *mPulseTrackerMockGetLatestPulse) Set(f func(p context.Context) (r *stor
 	return m.mock
 }
 
-// GetLatestPulse implements github.com/insolar/insolar/ledger/storage.PulseTracker interface
+//GetLatestPulse implements github.com/insolar/insolar/ledger/storage.PulseTracker interface
 func (m *PulseTrackerMock) GetLatestPulse(p context.Context) (r *storage.Pulse, r1 error) {
 	counter := atomic.AddUint64(&m.GetLatestPulsePreCounter, 1)
 	defer atomic.AddUint64(&m.GetLatestPulseCounter, 1)
@@ -326,17 +326,17 @@ func (m *PulseTrackerMock) GetLatestPulse(p context.Context) (r *storage.Pulse, 
 	return m.GetLatestPulseFunc(p)
 }
 
-// GetLatestPulseMinimockCounter returns a count of PulseTrackerMock.GetLatestPulseFunc invocations
+//GetLatestPulseMinimockCounter returns a count of PulseTrackerMock.GetLatestPulseFunc invocations
 func (m *PulseTrackerMock) GetLatestPulseMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.GetLatestPulseCounter)
 }
 
-// GetLatestPulseMinimockPreCounter returns the value of PulseTrackerMock.GetLatestPulse invocations
+//GetLatestPulseMinimockPreCounter returns the value of PulseTrackerMock.GetLatestPulse invocations
 func (m *PulseTrackerMock) GetLatestPulseMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.GetLatestPulsePreCounter)
 }
 
-// GetLatestPulseFinished returns true if mock invocations count is ok
+//GetLatestPulseFinished returns true if mock invocations count is ok
 func (m *PulseTrackerMock) GetLatestPulseFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.GetLatestPulseMock.expectationSeries) > 0 {
@@ -377,7 +377,7 @@ type PulseTrackerMockGetPreviousPulseResult struct {
 	r1 error
 }
 
-// Expect specifies that invocation of PulseTracker.GetPreviousPulse is expected from 1 to Infinity times
+//Expect specifies that invocation of PulseTracker.GetPreviousPulse is expected from 1 to Infinity times
 func (m *mPulseTrackerMockGetPreviousPulse) Expect(p context.Context, p1 core.PulseNumber) *mPulseTrackerMockGetPreviousPulse {
 	m.mock.GetPreviousPulseFunc = nil
 	m.expectationSeries = nil
@@ -389,7 +389,7 @@ func (m *mPulseTrackerMockGetPreviousPulse) Expect(p context.Context, p1 core.Pu
 	return m
 }
 
-// Return specifies results of invocation of PulseTracker.GetPreviousPulse
+//Return specifies results of invocation of PulseTracker.GetPreviousPulse
 func (m *mPulseTrackerMockGetPreviousPulse) Return(r *storage.Pulse, r1 error) *PulseTrackerMock {
 	m.mock.GetPreviousPulseFunc = nil
 	m.expectationSeries = nil
@@ -401,7 +401,7 @@ func (m *mPulseTrackerMockGetPreviousPulse) Return(r *storage.Pulse, r1 error) *
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of PulseTracker.GetPreviousPulse is expected once
+//ExpectOnce specifies that invocation of PulseTracker.GetPreviousPulse is expected once
 func (m *mPulseTrackerMockGetPreviousPulse) ExpectOnce(p context.Context, p1 core.PulseNumber) *PulseTrackerMockGetPreviousPulseExpectation {
 	m.mock.GetPreviousPulseFunc = nil
 	m.mainExpectation = nil
@@ -416,7 +416,7 @@ func (e *PulseTrackerMockGetPreviousPulseExpectation) Return(r *storage.Pulse, r
 	e.result = &PulseTrackerMockGetPreviousPulseResult{r, r1}
 }
 
-// Set uses given function f as a mock of PulseTracker.GetPreviousPulse method
+//Set uses given function f as a mock of PulseTracker.GetPreviousPulse method
 func (m *mPulseTrackerMockGetPreviousPulse) Set(f func(p context.Context, p1 core.PulseNumber) (r *storage.Pulse, r1 error)) *PulseTrackerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -425,7 +425,7 @@ func (m *mPulseTrackerMockGetPreviousPulse) Set(f func(p context.Context, p1 cor
 	return m.mock
 }
 
-// GetPreviousPulse implements github.com/insolar/insolar/ledger/storage.PulseTracker interface
+//GetPreviousPulse implements github.com/insolar/insolar/ledger/storage.PulseTracker interface
 func (m *PulseTrackerMock) GetPreviousPulse(p context.Context, p1 core.PulseNumber) (r *storage.Pulse, r1 error) {
 	counter := atomic.AddUint64(&m.GetPreviousPulsePreCounter, 1)
 	defer atomic.AddUint64(&m.GetPreviousPulseCounter, 1)
@@ -477,17 +477,17 @@ func (m *PulseTrackerMock) GetPreviousPulse(p context.Context, p1 core.PulseNumb
 	return m.GetPreviousPulseFunc(p, p1)
 }
 
-// GetPreviousPulseMinimockCounter returns a count of PulseTrackerMock.GetPreviousPulseFunc invocations
+//GetPreviousPulseMinimockCounter returns a count of PulseTrackerMock.GetPreviousPulseFunc invocations
 func (m *PulseTrackerMock) GetPreviousPulseMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.GetPreviousPulseCounter)
 }
 
-// GetPreviousPulseMinimockPreCounter returns the value of PulseTrackerMock.GetPreviousPulse invocations
+//GetPreviousPulseMinimockPreCounter returns the value of PulseTrackerMock.GetPreviousPulse invocations
 func (m *PulseTrackerMock) GetPreviousPulseMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.GetPreviousPulsePreCounter)
 }
 
-// GetPreviousPulseFinished returns true if mock invocations count is ok
+//GetPreviousPulseFinished returns true if mock invocations count is ok
 func (m *PulseTrackerMock) GetPreviousPulseFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.GetPreviousPulseMock.expectationSeries) > 0 {
@@ -528,7 +528,7 @@ type PulseTrackerMockGetPulseResult struct {
 	r1 error
 }
 
-// Expect specifies that invocation of PulseTracker.GetPulse is expected from 1 to Infinity times
+//Expect specifies that invocation of PulseTracker.GetPulse is expected from 1 to Infinity times
 func (m *mPulseTrackerMockGetPulse) Expect(p context.Context, p1 core.PulseNumber) *mPulseTrackerMockGetPulse {
 	m.mock.GetPulseFunc = nil
 	m.expectationSeries = nil
@@ -540,7 +540,7 @@ func (m *mPulseTrackerMockGetPulse) Expect(p context.Context, p1 core.PulseNumbe
 	return m
 }
 
-// Return specifies results of invocation of PulseTracker.GetPulse
+//Return specifies results of invocation of PulseTracker.GetPulse
 func (m *mPulseTrackerMockGetPulse) Return(r *storage.Pulse, r1 error) *PulseTrackerMock {
 	m.mock.GetPulseFunc = nil
 	m.expectationSeries = nil
@@ -552,7 +552,7 @@ func (m *mPulseTrackerMockGetPulse) Return(r *storage.Pulse, r1 error) *PulseTra
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of PulseTracker.GetPulse is expected once
+//ExpectOnce specifies that invocation of PulseTracker.GetPulse is expected once
 func (m *mPulseTrackerMockGetPulse) ExpectOnce(p context.Context, p1 core.PulseNumber) *PulseTrackerMockGetPulseExpectation {
 	m.mock.GetPulseFunc = nil
 	m.mainExpectation = nil
@@ -567,7 +567,7 @@ func (e *PulseTrackerMockGetPulseExpectation) Return(r *storage.Pulse, r1 error)
 	e.result = &PulseTrackerMockGetPulseResult{r, r1}
 }
 
-// Set uses given function f as a mock of PulseTracker.GetPulse method
+//Set uses given function f as a mock of PulseTracker.GetPulse method
 func (m *mPulseTrackerMockGetPulse) Set(f func(p context.Context, p1 core.PulseNumber) (r *storage.Pulse, r1 error)) *PulseTrackerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -576,7 +576,7 @@ func (m *mPulseTrackerMockGetPulse) Set(f func(p context.Context, p1 core.PulseN
 	return m.mock
 }
 
-// GetPulse implements github.com/insolar/insolar/ledger/storage.PulseTracker interface
+//GetPulse implements github.com/insolar/insolar/ledger/storage.PulseTracker interface
 func (m *PulseTrackerMock) GetPulse(p context.Context, p1 core.PulseNumber) (r *storage.Pulse, r1 error) {
 	counter := atomic.AddUint64(&m.GetPulsePreCounter, 1)
 	defer atomic.AddUint64(&m.GetPulseCounter, 1)
@@ -628,17 +628,17 @@ func (m *PulseTrackerMock) GetPulse(p context.Context, p1 core.PulseNumber) (r *
 	return m.GetPulseFunc(p, p1)
 }
 
-// GetPulseMinimockCounter returns a count of PulseTrackerMock.GetPulseFunc invocations
+//GetPulseMinimockCounter returns a count of PulseTrackerMock.GetPulseFunc invocations
 func (m *PulseTrackerMock) GetPulseMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.GetPulseCounter)
 }
 
-// GetPulseMinimockPreCounter returns the value of PulseTrackerMock.GetPulse invocations
+//GetPulseMinimockPreCounter returns the value of PulseTrackerMock.GetPulse invocations
 func (m *PulseTrackerMock) GetPulseMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.GetPulsePreCounter)
 }
 
-// GetPulseFinished returns true if mock invocations count is ok
+//GetPulseFinished returns true if mock invocations count is ok
 func (m *PulseTrackerMock) GetPulseFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.GetPulseMock.expectationSeries) > 0 {
@@ -658,8 +658,8 @@ func (m *PulseTrackerMock) GetPulseFinished() bool {
 	return true
 }
 
-// ValidateCallCounters checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//ValidateCallCounters checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *PulseTrackerMock) ValidateCallCounters() {
 
 	if !m.AddPulseFinished() {
@@ -680,19 +680,19 @@ func (m *PulseTrackerMock) ValidateCallCounters() {
 
 }
 
-// CheckMocksCalled checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//CheckMocksCalled checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *PulseTrackerMock) CheckMocksCalled() {
 	m.Finish()
 }
 
-// Finish checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
+//Finish checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
 func (m *PulseTrackerMock) Finish() {
 	m.MinimockFinish()
 }
 
-// MinimockFinish checks that all mocked methods of the interface have been called at least once
+//MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *PulseTrackerMock) MinimockFinish() {
 
 	if !m.AddPulseFinished() {
@@ -713,14 +713,14 @@ func (m *PulseTrackerMock) MinimockFinish() {
 
 }
 
-// Wait waits for all mocked methods to be called at least once
-// Deprecated: please use MinimockWait or use Wait method of minimock.Controller
+//Wait waits for all mocked methods to be called at least once
+//Deprecated: please use MinimockWait or use Wait method of minimock.Controller
 func (m *PulseTrackerMock) Wait(timeout time.Duration) {
 	m.MinimockWait(timeout)
 }
 
-// MinimockWait waits for all mocked methods to be called at least once
-// this method is called by minimock.Controller
+//MinimockWait waits for all mocked methods to be called at least once
+//this method is called by minimock.Controller
 func (m *PulseTrackerMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
@@ -761,8 +761,8 @@ func (m *PulseTrackerMock) MinimockWait(timeout time.Duration) {
 	}
 }
 
-// AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
-// it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
+//AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
+//it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *PulseTrackerMock) AllMocksCalled() bool {
 
 	if !m.AddPulseFinished() {

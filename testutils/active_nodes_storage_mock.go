@@ -10,12 +10,12 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/core"
+	core "github.com/insolar/insolar/core"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-// ActiveNodesStorageMock implements github.com/insolar/insolar/ledger/storage.ActiveNodesStorage
+//ActiveNodesStorageMock implements github.com/insolar/insolar/ledger/storage.ActiveNodesStorage
 type ActiveNodesStorageMock struct {
 	t minimock.Tester
 
@@ -40,7 +40,7 @@ type ActiveNodesStorageMock struct {
 	SetActiveNodesMock       mActiveNodesStorageMockSetActiveNodes
 }
 
-// NewActiveNodesStorageMock returns a mock for github.com/insolar/insolar/ledger/storage.ActiveNodesStorage
+//NewActiveNodesStorageMock returns a mock for github.com/insolar/insolar/ledger/storage.ActiveNodesStorage
 func NewActiveNodesStorageMock(t minimock.Tester) *ActiveNodesStorageMock {
 	m := &ActiveNodesStorageMock{t: t}
 
@@ -76,7 +76,7 @@ type ActiveNodesStorageMockGetActiveNodesResult struct {
 	r1 error
 }
 
-// Expect specifies that invocation of ActiveNodesStorage.GetActiveNodes is expected from 1 to Infinity times
+//Expect specifies that invocation of ActiveNodesStorage.GetActiveNodes is expected from 1 to Infinity times
 func (m *mActiveNodesStorageMockGetActiveNodes) Expect(p core.PulseNumber) *mActiveNodesStorageMockGetActiveNodes {
 	m.mock.GetActiveNodesFunc = nil
 	m.expectationSeries = nil
@@ -88,7 +88,7 @@ func (m *mActiveNodesStorageMockGetActiveNodes) Expect(p core.PulseNumber) *mAct
 	return m
 }
 
-// Return specifies results of invocation of ActiveNodesStorage.GetActiveNodes
+//Return specifies results of invocation of ActiveNodesStorage.GetActiveNodes
 func (m *mActiveNodesStorageMockGetActiveNodes) Return(r []core.Node, r1 error) *ActiveNodesStorageMock {
 	m.mock.GetActiveNodesFunc = nil
 	m.expectationSeries = nil
@@ -100,7 +100,7 @@ func (m *mActiveNodesStorageMockGetActiveNodes) Return(r []core.Node, r1 error) 
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of ActiveNodesStorage.GetActiveNodes is expected once
+//ExpectOnce specifies that invocation of ActiveNodesStorage.GetActiveNodes is expected once
 func (m *mActiveNodesStorageMockGetActiveNodes) ExpectOnce(p core.PulseNumber) *ActiveNodesStorageMockGetActiveNodesExpectation {
 	m.mock.GetActiveNodesFunc = nil
 	m.mainExpectation = nil
@@ -115,7 +115,7 @@ func (e *ActiveNodesStorageMockGetActiveNodesExpectation) Return(r []core.Node, 
 	e.result = &ActiveNodesStorageMockGetActiveNodesResult{r, r1}
 }
 
-// Set uses given function f as a mock of ActiveNodesStorage.GetActiveNodes method
+//Set uses given function f as a mock of ActiveNodesStorage.GetActiveNodes method
 func (m *mActiveNodesStorageMockGetActiveNodes) Set(f func(p core.PulseNumber) (r []core.Node, r1 error)) *ActiveNodesStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -124,7 +124,7 @@ func (m *mActiveNodesStorageMockGetActiveNodes) Set(f func(p core.PulseNumber) (
 	return m.mock
 }
 
-// GetActiveNodes implements github.com/insolar/insolar/ledger/storage.ActiveNodesStorage interface
+//GetActiveNodes implements github.com/insolar/insolar/ledger/storage.ActiveNodesStorage interface
 func (m *ActiveNodesStorageMock) GetActiveNodes(p core.PulseNumber) (r []core.Node, r1 error) {
 	counter := atomic.AddUint64(&m.GetActiveNodesPreCounter, 1)
 	defer atomic.AddUint64(&m.GetActiveNodesCounter, 1)
@@ -176,17 +176,17 @@ func (m *ActiveNodesStorageMock) GetActiveNodes(p core.PulseNumber) (r []core.No
 	return m.GetActiveNodesFunc(p)
 }
 
-// GetActiveNodesMinimockCounter returns a count of ActiveNodesStorageMock.GetActiveNodesFunc invocations
+//GetActiveNodesMinimockCounter returns a count of ActiveNodesStorageMock.GetActiveNodesFunc invocations
 func (m *ActiveNodesStorageMock) GetActiveNodesMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.GetActiveNodesCounter)
 }
 
-// GetActiveNodesMinimockPreCounter returns the value of ActiveNodesStorageMock.GetActiveNodes invocations
+//GetActiveNodesMinimockPreCounter returns the value of ActiveNodesStorageMock.GetActiveNodes invocations
 func (m *ActiveNodesStorageMock) GetActiveNodesMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.GetActiveNodesPreCounter)
 }
 
-// GetActiveNodesFinished returns true if mock invocations count is ok
+//GetActiveNodesFinished returns true if mock invocations count is ok
 func (m *ActiveNodesStorageMock) GetActiveNodesFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.GetActiveNodesMock.expectationSeries) > 0 {
@@ -227,7 +227,7 @@ type ActiveNodesStorageMockGetActiveNodesByRoleResult struct {
 	r1 error
 }
 
-// Expect specifies that invocation of ActiveNodesStorage.GetActiveNodesByRole is expected from 1 to Infinity times
+//Expect specifies that invocation of ActiveNodesStorage.GetActiveNodesByRole is expected from 1 to Infinity times
 func (m *mActiveNodesStorageMockGetActiveNodesByRole) Expect(p core.PulseNumber, p1 core.StaticRole) *mActiveNodesStorageMockGetActiveNodesByRole {
 	m.mock.GetActiveNodesByRoleFunc = nil
 	m.expectationSeries = nil
@@ -239,7 +239,7 @@ func (m *mActiveNodesStorageMockGetActiveNodesByRole) Expect(p core.PulseNumber,
 	return m
 }
 
-// Return specifies results of invocation of ActiveNodesStorage.GetActiveNodesByRole
+//Return specifies results of invocation of ActiveNodesStorage.GetActiveNodesByRole
 func (m *mActiveNodesStorageMockGetActiveNodesByRole) Return(r []core.Node, r1 error) *ActiveNodesStorageMock {
 	m.mock.GetActiveNodesByRoleFunc = nil
 	m.expectationSeries = nil
@@ -251,7 +251,7 @@ func (m *mActiveNodesStorageMockGetActiveNodesByRole) Return(r []core.Node, r1 e
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of ActiveNodesStorage.GetActiveNodesByRole is expected once
+//ExpectOnce specifies that invocation of ActiveNodesStorage.GetActiveNodesByRole is expected once
 func (m *mActiveNodesStorageMockGetActiveNodesByRole) ExpectOnce(p core.PulseNumber, p1 core.StaticRole) *ActiveNodesStorageMockGetActiveNodesByRoleExpectation {
 	m.mock.GetActiveNodesByRoleFunc = nil
 	m.mainExpectation = nil
@@ -266,7 +266,7 @@ func (e *ActiveNodesStorageMockGetActiveNodesByRoleExpectation) Return(r []core.
 	e.result = &ActiveNodesStorageMockGetActiveNodesByRoleResult{r, r1}
 }
 
-// Set uses given function f as a mock of ActiveNodesStorage.GetActiveNodesByRole method
+//Set uses given function f as a mock of ActiveNodesStorage.GetActiveNodesByRole method
 func (m *mActiveNodesStorageMockGetActiveNodesByRole) Set(f func(p core.PulseNumber, p1 core.StaticRole) (r []core.Node, r1 error)) *ActiveNodesStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -275,7 +275,7 @@ func (m *mActiveNodesStorageMockGetActiveNodesByRole) Set(f func(p core.PulseNum
 	return m.mock
 }
 
-// GetActiveNodesByRole implements github.com/insolar/insolar/ledger/storage.ActiveNodesStorage interface
+//GetActiveNodesByRole implements github.com/insolar/insolar/ledger/storage.ActiveNodesStorage interface
 func (m *ActiveNodesStorageMock) GetActiveNodesByRole(p core.PulseNumber, p1 core.StaticRole) (r []core.Node, r1 error) {
 	counter := atomic.AddUint64(&m.GetActiveNodesByRolePreCounter, 1)
 	defer atomic.AddUint64(&m.GetActiveNodesByRoleCounter, 1)
@@ -327,17 +327,17 @@ func (m *ActiveNodesStorageMock) GetActiveNodesByRole(p core.PulseNumber, p1 cor
 	return m.GetActiveNodesByRoleFunc(p, p1)
 }
 
-// GetActiveNodesByRoleMinimockCounter returns a count of ActiveNodesStorageMock.GetActiveNodesByRoleFunc invocations
+//GetActiveNodesByRoleMinimockCounter returns a count of ActiveNodesStorageMock.GetActiveNodesByRoleFunc invocations
 func (m *ActiveNodesStorageMock) GetActiveNodesByRoleMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.GetActiveNodesByRoleCounter)
 }
 
-// GetActiveNodesByRoleMinimockPreCounter returns the value of ActiveNodesStorageMock.GetActiveNodesByRole invocations
+//GetActiveNodesByRoleMinimockPreCounter returns the value of ActiveNodesStorageMock.GetActiveNodesByRole invocations
 func (m *ActiveNodesStorageMock) GetActiveNodesByRoleMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.GetActiveNodesByRolePreCounter)
 }
 
-// GetActiveNodesByRoleFinished returns true if mock invocations count is ok
+//GetActiveNodesByRoleFinished returns true if mock invocations count is ok
 func (m *ActiveNodesStorageMock) GetActiveNodesByRoleFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.GetActiveNodesByRoleMock.expectationSeries) > 0 {
@@ -371,7 +371,7 @@ type ActiveNodesStorageMockRemoveActiveNodesUntilInput struct {
 	p core.PulseNumber
 }
 
-// Expect specifies that invocation of ActiveNodesStorage.RemoveActiveNodesUntil is expected from 1 to Infinity times
+//Expect specifies that invocation of ActiveNodesStorage.RemoveActiveNodesUntil is expected from 1 to Infinity times
 func (m *mActiveNodesStorageMockRemoveActiveNodesUntil) Expect(p core.PulseNumber) *mActiveNodesStorageMockRemoveActiveNodesUntil {
 	m.mock.RemoveActiveNodesUntilFunc = nil
 	m.expectationSeries = nil
@@ -383,7 +383,7 @@ func (m *mActiveNodesStorageMockRemoveActiveNodesUntil) Expect(p core.PulseNumbe
 	return m
 }
 
-// Return specifies results of invocation of ActiveNodesStorage.RemoveActiveNodesUntil
+//Return specifies results of invocation of ActiveNodesStorage.RemoveActiveNodesUntil
 func (m *mActiveNodesStorageMockRemoveActiveNodesUntil) Return() *ActiveNodesStorageMock {
 	m.mock.RemoveActiveNodesUntilFunc = nil
 	m.expectationSeries = nil
@@ -395,7 +395,7 @@ func (m *mActiveNodesStorageMockRemoveActiveNodesUntil) Return() *ActiveNodesSto
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of ActiveNodesStorage.RemoveActiveNodesUntil is expected once
+//ExpectOnce specifies that invocation of ActiveNodesStorage.RemoveActiveNodesUntil is expected once
 func (m *mActiveNodesStorageMockRemoveActiveNodesUntil) ExpectOnce(p core.PulseNumber) *ActiveNodesStorageMockRemoveActiveNodesUntilExpectation {
 	m.mock.RemoveActiveNodesUntilFunc = nil
 	m.mainExpectation = nil
@@ -406,7 +406,7 @@ func (m *mActiveNodesStorageMockRemoveActiveNodesUntil) ExpectOnce(p core.PulseN
 	return expectation
 }
 
-// Set uses given function f as a mock of ActiveNodesStorage.RemoveActiveNodesUntil method
+//Set uses given function f as a mock of ActiveNodesStorage.RemoveActiveNodesUntil method
 func (m *mActiveNodesStorageMockRemoveActiveNodesUntil) Set(f func(p core.PulseNumber)) *ActiveNodesStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -415,7 +415,7 @@ func (m *mActiveNodesStorageMockRemoveActiveNodesUntil) Set(f func(p core.PulseN
 	return m.mock
 }
 
-// RemoveActiveNodesUntil implements github.com/insolar/insolar/ledger/storage.ActiveNodesStorage interface
+//RemoveActiveNodesUntil implements github.com/insolar/insolar/ledger/storage.ActiveNodesStorage interface
 func (m *ActiveNodesStorageMock) RemoveActiveNodesUntil(p core.PulseNumber) {
 	counter := atomic.AddUint64(&m.RemoveActiveNodesUntilPreCounter, 1)
 	defer atomic.AddUint64(&m.RemoveActiveNodesUntilCounter, 1)
@@ -450,17 +450,17 @@ func (m *ActiveNodesStorageMock) RemoveActiveNodesUntil(p core.PulseNumber) {
 	m.RemoveActiveNodesUntilFunc(p)
 }
 
-// RemoveActiveNodesUntilMinimockCounter returns a count of ActiveNodesStorageMock.RemoveActiveNodesUntilFunc invocations
+//RemoveActiveNodesUntilMinimockCounter returns a count of ActiveNodesStorageMock.RemoveActiveNodesUntilFunc invocations
 func (m *ActiveNodesStorageMock) RemoveActiveNodesUntilMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.RemoveActiveNodesUntilCounter)
 }
 
-// RemoveActiveNodesUntilMinimockPreCounter returns the value of ActiveNodesStorageMock.RemoveActiveNodesUntil invocations
+//RemoveActiveNodesUntilMinimockPreCounter returns the value of ActiveNodesStorageMock.RemoveActiveNodesUntil invocations
 func (m *ActiveNodesStorageMock) RemoveActiveNodesUntilMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.RemoveActiveNodesUntilPreCounter)
 }
 
-// RemoveActiveNodesUntilFinished returns true if mock invocations count is ok
+//RemoveActiveNodesUntilFinished returns true if mock invocations count is ok
 func (m *ActiveNodesStorageMock) RemoveActiveNodesUntilFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.RemoveActiveNodesUntilMock.expectationSeries) > 0 {
@@ -500,7 +500,7 @@ type ActiveNodesStorageMockSetActiveNodesResult struct {
 	r error
 }
 
-// Expect specifies that invocation of ActiveNodesStorage.SetActiveNodes is expected from 1 to Infinity times
+//Expect specifies that invocation of ActiveNodesStorage.SetActiveNodes is expected from 1 to Infinity times
 func (m *mActiveNodesStorageMockSetActiveNodes) Expect(p core.PulseNumber, p1 []core.Node) *mActiveNodesStorageMockSetActiveNodes {
 	m.mock.SetActiveNodesFunc = nil
 	m.expectationSeries = nil
@@ -512,7 +512,7 @@ func (m *mActiveNodesStorageMockSetActiveNodes) Expect(p core.PulseNumber, p1 []
 	return m
 }
 
-// Return specifies results of invocation of ActiveNodesStorage.SetActiveNodes
+//Return specifies results of invocation of ActiveNodesStorage.SetActiveNodes
 func (m *mActiveNodesStorageMockSetActiveNodes) Return(r error) *ActiveNodesStorageMock {
 	m.mock.SetActiveNodesFunc = nil
 	m.expectationSeries = nil
@@ -524,7 +524,7 @@ func (m *mActiveNodesStorageMockSetActiveNodes) Return(r error) *ActiveNodesStor
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of ActiveNodesStorage.SetActiveNodes is expected once
+//ExpectOnce specifies that invocation of ActiveNodesStorage.SetActiveNodes is expected once
 func (m *mActiveNodesStorageMockSetActiveNodes) ExpectOnce(p core.PulseNumber, p1 []core.Node) *ActiveNodesStorageMockSetActiveNodesExpectation {
 	m.mock.SetActiveNodesFunc = nil
 	m.mainExpectation = nil
@@ -539,7 +539,7 @@ func (e *ActiveNodesStorageMockSetActiveNodesExpectation) Return(r error) {
 	e.result = &ActiveNodesStorageMockSetActiveNodesResult{r}
 }
 
-// Set uses given function f as a mock of ActiveNodesStorage.SetActiveNodes method
+//Set uses given function f as a mock of ActiveNodesStorage.SetActiveNodes method
 func (m *mActiveNodesStorageMockSetActiveNodes) Set(f func(p core.PulseNumber, p1 []core.Node) (r error)) *ActiveNodesStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -548,7 +548,7 @@ func (m *mActiveNodesStorageMockSetActiveNodes) Set(f func(p core.PulseNumber, p
 	return m.mock
 }
 
-// SetActiveNodes implements github.com/insolar/insolar/ledger/storage.ActiveNodesStorage interface
+//SetActiveNodes implements github.com/insolar/insolar/ledger/storage.ActiveNodesStorage interface
 func (m *ActiveNodesStorageMock) SetActiveNodes(p core.PulseNumber, p1 []core.Node) (r error) {
 	counter := atomic.AddUint64(&m.SetActiveNodesPreCounter, 1)
 	defer atomic.AddUint64(&m.SetActiveNodesCounter, 1)
@@ -598,17 +598,17 @@ func (m *ActiveNodesStorageMock) SetActiveNodes(p core.PulseNumber, p1 []core.No
 	return m.SetActiveNodesFunc(p, p1)
 }
 
-// SetActiveNodesMinimockCounter returns a count of ActiveNodesStorageMock.SetActiveNodesFunc invocations
+//SetActiveNodesMinimockCounter returns a count of ActiveNodesStorageMock.SetActiveNodesFunc invocations
 func (m *ActiveNodesStorageMock) SetActiveNodesMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.SetActiveNodesCounter)
 }
 
-// SetActiveNodesMinimockPreCounter returns the value of ActiveNodesStorageMock.SetActiveNodes invocations
+//SetActiveNodesMinimockPreCounter returns the value of ActiveNodesStorageMock.SetActiveNodes invocations
 func (m *ActiveNodesStorageMock) SetActiveNodesMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.SetActiveNodesPreCounter)
 }
 
-// SetActiveNodesFinished returns true if mock invocations count is ok
+//SetActiveNodesFinished returns true if mock invocations count is ok
 func (m *ActiveNodesStorageMock) SetActiveNodesFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.SetActiveNodesMock.expectationSeries) > 0 {
@@ -628,8 +628,8 @@ func (m *ActiveNodesStorageMock) SetActiveNodesFinished() bool {
 	return true
 }
 
-// ValidateCallCounters checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//ValidateCallCounters checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *ActiveNodesStorageMock) ValidateCallCounters() {
 
 	if !m.GetActiveNodesFinished() {
@@ -650,19 +650,19 @@ func (m *ActiveNodesStorageMock) ValidateCallCounters() {
 
 }
 
-// CheckMocksCalled checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//CheckMocksCalled checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *ActiveNodesStorageMock) CheckMocksCalled() {
 	m.Finish()
 }
 
-// Finish checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
+//Finish checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
 func (m *ActiveNodesStorageMock) Finish() {
 	m.MinimockFinish()
 }
 
-// MinimockFinish checks that all mocked methods of the interface have been called at least once
+//MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *ActiveNodesStorageMock) MinimockFinish() {
 
 	if !m.GetActiveNodesFinished() {
@@ -683,14 +683,14 @@ func (m *ActiveNodesStorageMock) MinimockFinish() {
 
 }
 
-// Wait waits for all mocked methods to be called at least once
-// Deprecated: please use MinimockWait or use Wait method of minimock.Controller
+//Wait waits for all mocked methods to be called at least once
+//Deprecated: please use MinimockWait or use Wait method of minimock.Controller
 func (m *ActiveNodesStorageMock) Wait(timeout time.Duration) {
 	m.MinimockWait(timeout)
 }
 
-// MinimockWait waits for all mocked methods to be called at least once
-// this method is called by minimock.Controller
+//MinimockWait waits for all mocked methods to be called at least once
+//this method is called by minimock.Controller
 func (m *ActiveNodesStorageMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
@@ -731,8 +731,8 @@ func (m *ActiveNodesStorageMock) MinimockWait(timeout time.Duration) {
 	}
 }
 
-// AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
-// it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
+//AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
+//it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *ActiveNodesStorageMock) AllMocksCalled() bool {
 
 	if !m.GetActiveNodesFinished() {

@@ -6,19 +6,19 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "DBContext" can be found in github.com/insolar/insolar/ledger/storage
 */
 import (
-	"context"
+	context "context"
 	"sync/atomic"
 	"time"
 
-	"github.com/dgraph-io/badger"
+	badger "github.com/dgraph-io/badger"
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/storage"
+	core "github.com/insolar/insolar/core"
+	storage "github.com/insolar/insolar/ledger/storage"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-// DBContextMock implements github.com/insolar/insolar/ledger/storage.DBContext
+//DBContextMock implements github.com/insolar/insolar/ledger/storage.DBContext
 type DBContextMock struct {
 	t minimock.Tester
 
@@ -78,7 +78,7 @@ type DBContextMock struct {
 	ViewMock       mDBContextMockView
 }
 
-// NewDBContextMock returns a mock for github.com/insolar/insolar/ledger/storage.DBContext
+//NewDBContextMock returns a mock for github.com/insolar/insolar/ledger/storage.DBContext
 func NewDBContextMock(t minimock.Tester) *DBContextMock {
 	m := &DBContextMock{t: t}
 
@@ -121,7 +121,7 @@ type DBContextMockBeginTransactionResult struct {
 	r1 error
 }
 
-// Expect specifies that invocation of DBContext.BeginTransaction is expected from 1 to Infinity times
+//Expect specifies that invocation of DBContext.BeginTransaction is expected from 1 to Infinity times
 func (m *mDBContextMockBeginTransaction) Expect(p bool) *mDBContextMockBeginTransaction {
 	m.mock.BeginTransactionFunc = nil
 	m.expectationSeries = nil
@@ -133,7 +133,7 @@ func (m *mDBContextMockBeginTransaction) Expect(p bool) *mDBContextMockBeginTran
 	return m
 }
 
-// Return specifies results of invocation of DBContext.BeginTransaction
+//Return specifies results of invocation of DBContext.BeginTransaction
 func (m *mDBContextMockBeginTransaction) Return(r *storage.TransactionManager, r1 error) *DBContextMock {
 	m.mock.BeginTransactionFunc = nil
 	m.expectationSeries = nil
@@ -145,7 +145,7 @@ func (m *mDBContextMockBeginTransaction) Return(r *storage.TransactionManager, r
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of DBContext.BeginTransaction is expected once
+//ExpectOnce specifies that invocation of DBContext.BeginTransaction is expected once
 func (m *mDBContextMockBeginTransaction) ExpectOnce(p bool) *DBContextMockBeginTransactionExpectation {
 	m.mock.BeginTransactionFunc = nil
 	m.mainExpectation = nil
@@ -160,7 +160,7 @@ func (e *DBContextMockBeginTransactionExpectation) Return(r *storage.Transaction
 	e.result = &DBContextMockBeginTransactionResult{r, r1}
 }
 
-// Set uses given function f as a mock of DBContext.BeginTransaction method
+//Set uses given function f as a mock of DBContext.BeginTransaction method
 func (m *mDBContextMockBeginTransaction) Set(f func(p bool) (r *storage.TransactionManager, r1 error)) *DBContextMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -169,7 +169,7 @@ func (m *mDBContextMockBeginTransaction) Set(f func(p bool) (r *storage.Transact
 	return m.mock
 }
 
-// BeginTransaction implements github.com/insolar/insolar/ledger/storage.DBContext interface
+//BeginTransaction implements github.com/insolar/insolar/ledger/storage.DBContext interface
 func (m *DBContextMock) BeginTransaction(p bool) (r *storage.TransactionManager, r1 error) {
 	counter := atomic.AddUint64(&m.BeginTransactionPreCounter, 1)
 	defer atomic.AddUint64(&m.BeginTransactionCounter, 1)
@@ -221,17 +221,17 @@ func (m *DBContextMock) BeginTransaction(p bool) (r *storage.TransactionManager,
 	return m.BeginTransactionFunc(p)
 }
 
-// BeginTransactionMinimockCounter returns a count of DBContextMock.BeginTransactionFunc invocations
+//BeginTransactionMinimockCounter returns a count of DBContextMock.BeginTransactionFunc invocations
 func (m *DBContextMock) BeginTransactionMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.BeginTransactionCounter)
 }
 
-// BeginTransactionMinimockPreCounter returns the value of DBContextMock.BeginTransaction invocations
+//BeginTransactionMinimockPreCounter returns the value of DBContextMock.BeginTransaction invocations
 func (m *DBContextMock) BeginTransactionMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.BeginTransactionPreCounter)
 }
 
-// BeginTransactionFinished returns true if mock invocations count is ok
+//BeginTransactionFinished returns true if mock invocations count is ok
 func (m *DBContextMock) BeginTransactionFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.BeginTransactionMock.expectationSeries) > 0 {
@@ -265,7 +265,7 @@ type DBContextMockCloseResult struct {
 	r error
 }
 
-// Expect specifies that invocation of DBContext.Close is expected from 1 to Infinity times
+//Expect specifies that invocation of DBContext.Close is expected from 1 to Infinity times
 func (m *mDBContextMockClose) Expect() *mDBContextMockClose {
 	m.mock.CloseFunc = nil
 	m.expectationSeries = nil
@@ -277,7 +277,7 @@ func (m *mDBContextMockClose) Expect() *mDBContextMockClose {
 	return m
 }
 
-// Return specifies results of invocation of DBContext.Close
+//Return specifies results of invocation of DBContext.Close
 func (m *mDBContextMockClose) Return(r error) *DBContextMock {
 	m.mock.CloseFunc = nil
 	m.expectationSeries = nil
@@ -289,7 +289,7 @@ func (m *mDBContextMockClose) Return(r error) *DBContextMock {
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of DBContext.Close is expected once
+//ExpectOnce specifies that invocation of DBContext.Close is expected once
 func (m *mDBContextMockClose) ExpectOnce() *DBContextMockCloseExpectation {
 	m.mock.CloseFunc = nil
 	m.mainExpectation = nil
@@ -304,7 +304,7 @@ func (e *DBContextMockCloseExpectation) Return(r error) {
 	e.result = &DBContextMockCloseResult{r}
 }
 
-// Set uses given function f as a mock of DBContext.Close method
+//Set uses given function f as a mock of DBContext.Close method
 func (m *mDBContextMockClose) Set(f func() (r error)) *DBContextMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -313,7 +313,7 @@ func (m *mDBContextMockClose) Set(f func() (r error)) *DBContextMock {
 	return m.mock
 }
 
-// Close implements github.com/insolar/insolar/ledger/storage.DBContext interface
+//Close implements github.com/insolar/insolar/ledger/storage.DBContext interface
 func (m *DBContextMock) Close() (r error) {
 	counter := atomic.AddUint64(&m.ClosePreCounter, 1)
 	defer atomic.AddUint64(&m.CloseCounter, 1)
@@ -355,17 +355,17 @@ func (m *DBContextMock) Close() (r error) {
 	return m.CloseFunc()
 }
 
-// CloseMinimockCounter returns a count of DBContextMock.CloseFunc invocations
+//CloseMinimockCounter returns a count of DBContextMock.CloseFunc invocations
 func (m *DBContextMock) CloseMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.CloseCounter)
 }
 
-// CloseMinimockPreCounter returns the value of DBContextMock.Close invocations
+//CloseMinimockPreCounter returns the value of DBContextMock.Close invocations
 func (m *DBContextMock) CloseMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.ClosePreCounter)
 }
 
-// CloseFinished returns true if mock invocations count is ok
+//CloseFinished returns true if mock invocations count is ok
 func (m *DBContextMock) CloseFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.CloseMock.expectationSeries) > 0 {
@@ -399,7 +399,7 @@ type DBContextMockGenesisRefResult struct {
 	r *core.RecordRef
 }
 
-// Expect specifies that invocation of DBContext.GenesisRef is expected from 1 to Infinity times
+//Expect specifies that invocation of DBContext.GenesisRef is expected from 1 to Infinity times
 func (m *mDBContextMockGenesisRef) Expect() *mDBContextMockGenesisRef {
 	m.mock.GenesisRefFunc = nil
 	m.expectationSeries = nil
@@ -411,7 +411,7 @@ func (m *mDBContextMockGenesisRef) Expect() *mDBContextMockGenesisRef {
 	return m
 }
 
-// Return specifies results of invocation of DBContext.GenesisRef
+//Return specifies results of invocation of DBContext.GenesisRef
 func (m *mDBContextMockGenesisRef) Return(r *core.RecordRef) *DBContextMock {
 	m.mock.GenesisRefFunc = nil
 	m.expectationSeries = nil
@@ -423,7 +423,7 @@ func (m *mDBContextMockGenesisRef) Return(r *core.RecordRef) *DBContextMock {
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of DBContext.GenesisRef is expected once
+//ExpectOnce specifies that invocation of DBContext.GenesisRef is expected once
 func (m *mDBContextMockGenesisRef) ExpectOnce() *DBContextMockGenesisRefExpectation {
 	m.mock.GenesisRefFunc = nil
 	m.mainExpectation = nil
@@ -438,7 +438,7 @@ func (e *DBContextMockGenesisRefExpectation) Return(r *core.RecordRef) {
 	e.result = &DBContextMockGenesisRefResult{r}
 }
 
-// Set uses given function f as a mock of DBContext.GenesisRef method
+//Set uses given function f as a mock of DBContext.GenesisRef method
 func (m *mDBContextMockGenesisRef) Set(f func() (r *core.RecordRef)) *DBContextMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -447,7 +447,7 @@ func (m *mDBContextMockGenesisRef) Set(f func() (r *core.RecordRef)) *DBContextM
 	return m.mock
 }
 
-// GenesisRef implements github.com/insolar/insolar/ledger/storage.DBContext interface
+//GenesisRef implements github.com/insolar/insolar/ledger/storage.DBContext interface
 func (m *DBContextMock) GenesisRef() (r *core.RecordRef) {
 	counter := atomic.AddUint64(&m.GenesisRefPreCounter, 1)
 	defer atomic.AddUint64(&m.GenesisRefCounter, 1)
@@ -489,17 +489,17 @@ func (m *DBContextMock) GenesisRef() (r *core.RecordRef) {
 	return m.GenesisRefFunc()
 }
 
-// GenesisRefMinimockCounter returns a count of DBContextMock.GenesisRefFunc invocations
+//GenesisRefMinimockCounter returns a count of DBContextMock.GenesisRefFunc invocations
 func (m *DBContextMock) GenesisRefMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.GenesisRefCounter)
 }
 
-// GenesisRefMinimockPreCounter returns the value of DBContextMock.GenesisRef invocations
+//GenesisRefMinimockPreCounter returns the value of DBContextMock.GenesisRef invocations
 func (m *DBContextMock) GenesisRefMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.GenesisRefPreCounter)
 }
 
-// GenesisRefFinished returns true if mock invocations count is ok
+//GenesisRefFinished returns true if mock invocations count is ok
 func (m *DBContextMock) GenesisRefFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.GenesisRefMock.expectationSeries) > 0 {
@@ -533,7 +533,7 @@ type DBContextMockGetBadgerDBResult struct {
 	r *badger.DB
 }
 
-// Expect specifies that invocation of DBContext.GetBadgerDB is expected from 1 to Infinity times
+//Expect specifies that invocation of DBContext.GetBadgerDB is expected from 1 to Infinity times
 func (m *mDBContextMockGetBadgerDB) Expect() *mDBContextMockGetBadgerDB {
 	m.mock.GetBadgerDBFunc = nil
 	m.expectationSeries = nil
@@ -545,7 +545,7 @@ func (m *mDBContextMockGetBadgerDB) Expect() *mDBContextMockGetBadgerDB {
 	return m
 }
 
-// Return specifies results of invocation of DBContext.GetBadgerDB
+//Return specifies results of invocation of DBContext.GetBadgerDB
 func (m *mDBContextMockGetBadgerDB) Return(r *badger.DB) *DBContextMock {
 	m.mock.GetBadgerDBFunc = nil
 	m.expectationSeries = nil
@@ -557,7 +557,7 @@ func (m *mDBContextMockGetBadgerDB) Return(r *badger.DB) *DBContextMock {
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of DBContext.GetBadgerDB is expected once
+//ExpectOnce specifies that invocation of DBContext.GetBadgerDB is expected once
 func (m *mDBContextMockGetBadgerDB) ExpectOnce() *DBContextMockGetBadgerDBExpectation {
 	m.mock.GetBadgerDBFunc = nil
 	m.mainExpectation = nil
@@ -572,7 +572,7 @@ func (e *DBContextMockGetBadgerDBExpectation) Return(r *badger.DB) {
 	e.result = &DBContextMockGetBadgerDBResult{r}
 }
 
-// Set uses given function f as a mock of DBContext.GetBadgerDB method
+//Set uses given function f as a mock of DBContext.GetBadgerDB method
 func (m *mDBContextMockGetBadgerDB) Set(f func() (r *badger.DB)) *DBContextMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -581,7 +581,7 @@ func (m *mDBContextMockGetBadgerDB) Set(f func() (r *badger.DB)) *DBContextMock 
 	return m.mock
 }
 
-// GetBadgerDB implements github.com/insolar/insolar/ledger/storage.DBContext interface
+//GetBadgerDB implements github.com/insolar/insolar/ledger/storage.DBContext interface
 func (m *DBContextMock) GetBadgerDB() (r *badger.DB) {
 	counter := atomic.AddUint64(&m.GetBadgerDBPreCounter, 1)
 	defer atomic.AddUint64(&m.GetBadgerDBCounter, 1)
@@ -623,17 +623,17 @@ func (m *DBContextMock) GetBadgerDB() (r *badger.DB) {
 	return m.GetBadgerDBFunc()
 }
 
-// GetBadgerDBMinimockCounter returns a count of DBContextMock.GetBadgerDBFunc invocations
+//GetBadgerDBMinimockCounter returns a count of DBContextMock.GetBadgerDBFunc invocations
 func (m *DBContextMock) GetBadgerDBMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.GetBadgerDBCounter)
 }
 
-// GetBadgerDBMinimockPreCounter returns the value of DBContextMock.GetBadgerDB invocations
+//GetBadgerDBMinimockPreCounter returns the value of DBContextMock.GetBadgerDB invocations
 func (m *DBContextMock) GetBadgerDBMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.GetBadgerDBPreCounter)
 }
 
-// GetBadgerDBFinished returns true if mock invocations count is ok
+//GetBadgerDBFinished returns true if mock invocations count is ok
 func (m *DBContextMock) GetBadgerDBFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.GetBadgerDBMock.expectationSeries) > 0 {
@@ -667,7 +667,7 @@ type DBContextMockGetJetSizesHistoryDepthResult struct {
 	r int
 }
 
-// Expect specifies that invocation of DBContext.GetJetSizesHistoryDepth is expected from 1 to Infinity times
+//Expect specifies that invocation of DBContext.GetJetSizesHistoryDepth is expected from 1 to Infinity times
 func (m *mDBContextMockGetJetSizesHistoryDepth) Expect() *mDBContextMockGetJetSizesHistoryDepth {
 	m.mock.GetJetSizesHistoryDepthFunc = nil
 	m.expectationSeries = nil
@@ -679,7 +679,7 @@ func (m *mDBContextMockGetJetSizesHistoryDepth) Expect() *mDBContextMockGetJetSi
 	return m
 }
 
-// Return specifies results of invocation of DBContext.GetJetSizesHistoryDepth
+//Return specifies results of invocation of DBContext.GetJetSizesHistoryDepth
 func (m *mDBContextMockGetJetSizesHistoryDepth) Return(r int) *DBContextMock {
 	m.mock.GetJetSizesHistoryDepthFunc = nil
 	m.expectationSeries = nil
@@ -691,7 +691,7 @@ func (m *mDBContextMockGetJetSizesHistoryDepth) Return(r int) *DBContextMock {
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of DBContext.GetJetSizesHistoryDepth is expected once
+//ExpectOnce specifies that invocation of DBContext.GetJetSizesHistoryDepth is expected once
 func (m *mDBContextMockGetJetSizesHistoryDepth) ExpectOnce() *DBContextMockGetJetSizesHistoryDepthExpectation {
 	m.mock.GetJetSizesHistoryDepthFunc = nil
 	m.mainExpectation = nil
@@ -706,7 +706,7 @@ func (e *DBContextMockGetJetSizesHistoryDepthExpectation) Return(r int) {
 	e.result = &DBContextMockGetJetSizesHistoryDepthResult{r}
 }
 
-// Set uses given function f as a mock of DBContext.GetJetSizesHistoryDepth method
+//Set uses given function f as a mock of DBContext.GetJetSizesHistoryDepth method
 func (m *mDBContextMockGetJetSizesHistoryDepth) Set(f func() (r int)) *DBContextMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -715,7 +715,7 @@ func (m *mDBContextMockGetJetSizesHistoryDepth) Set(f func() (r int)) *DBContext
 	return m.mock
 }
 
-// GetJetSizesHistoryDepth implements github.com/insolar/insolar/ledger/storage.DBContext interface
+//GetJetSizesHistoryDepth implements github.com/insolar/insolar/ledger/storage.DBContext interface
 func (m *DBContextMock) GetJetSizesHistoryDepth() (r int) {
 	counter := atomic.AddUint64(&m.GetJetSizesHistoryDepthPreCounter, 1)
 	defer atomic.AddUint64(&m.GetJetSizesHistoryDepthCounter, 1)
@@ -757,17 +757,17 @@ func (m *DBContextMock) GetJetSizesHistoryDepth() (r int) {
 	return m.GetJetSizesHistoryDepthFunc()
 }
 
-// GetJetSizesHistoryDepthMinimockCounter returns a count of DBContextMock.GetJetSizesHistoryDepthFunc invocations
+//GetJetSizesHistoryDepthMinimockCounter returns a count of DBContextMock.GetJetSizesHistoryDepthFunc invocations
 func (m *DBContextMock) GetJetSizesHistoryDepthMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.GetJetSizesHistoryDepthCounter)
 }
 
-// GetJetSizesHistoryDepthMinimockPreCounter returns the value of DBContextMock.GetJetSizesHistoryDepth invocations
+//GetJetSizesHistoryDepthMinimockPreCounter returns the value of DBContextMock.GetJetSizesHistoryDepth invocations
 func (m *DBContextMock) GetJetSizesHistoryDepthMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.GetJetSizesHistoryDepthPreCounter)
 }
 
-// GetJetSizesHistoryDepthFinished returns true if mock invocations count is ok
+//GetJetSizesHistoryDepthFinished returns true if mock invocations count is ok
 func (m *DBContextMock) GetJetSizesHistoryDepthFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.GetJetSizesHistoryDepthMock.expectationSeries) > 0 {
@@ -809,7 +809,7 @@ type DBContextMockGetLocalDataResult struct {
 	r1 error
 }
 
-// Expect specifies that invocation of DBContext.GetLocalData is expected from 1 to Infinity times
+//Expect specifies that invocation of DBContext.GetLocalData is expected from 1 to Infinity times
 func (m *mDBContextMockGetLocalData) Expect(p context.Context, p1 core.PulseNumber, p2 []byte) *mDBContextMockGetLocalData {
 	m.mock.GetLocalDataFunc = nil
 	m.expectationSeries = nil
@@ -821,7 +821,7 @@ func (m *mDBContextMockGetLocalData) Expect(p context.Context, p1 core.PulseNumb
 	return m
 }
 
-// Return specifies results of invocation of DBContext.GetLocalData
+//Return specifies results of invocation of DBContext.GetLocalData
 func (m *mDBContextMockGetLocalData) Return(r []byte, r1 error) *DBContextMock {
 	m.mock.GetLocalDataFunc = nil
 	m.expectationSeries = nil
@@ -833,7 +833,7 @@ func (m *mDBContextMockGetLocalData) Return(r []byte, r1 error) *DBContextMock {
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of DBContext.GetLocalData is expected once
+//ExpectOnce specifies that invocation of DBContext.GetLocalData is expected once
 func (m *mDBContextMockGetLocalData) ExpectOnce(p context.Context, p1 core.PulseNumber, p2 []byte) *DBContextMockGetLocalDataExpectation {
 	m.mock.GetLocalDataFunc = nil
 	m.mainExpectation = nil
@@ -848,7 +848,7 @@ func (e *DBContextMockGetLocalDataExpectation) Return(r []byte, r1 error) {
 	e.result = &DBContextMockGetLocalDataResult{r, r1}
 }
 
-// Set uses given function f as a mock of DBContext.GetLocalData method
+//Set uses given function f as a mock of DBContext.GetLocalData method
 func (m *mDBContextMockGetLocalData) Set(f func(p context.Context, p1 core.PulseNumber, p2 []byte) (r []byte, r1 error)) *DBContextMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -857,7 +857,7 @@ func (m *mDBContextMockGetLocalData) Set(f func(p context.Context, p1 core.Pulse
 	return m.mock
 }
 
-// GetLocalData implements github.com/insolar/insolar/ledger/storage.DBContext interface
+//GetLocalData implements github.com/insolar/insolar/ledger/storage.DBContext interface
 func (m *DBContextMock) GetLocalData(p context.Context, p1 core.PulseNumber, p2 []byte) (r []byte, r1 error) {
 	counter := atomic.AddUint64(&m.GetLocalDataPreCounter, 1)
 	defer atomic.AddUint64(&m.GetLocalDataCounter, 1)
@@ -909,17 +909,17 @@ func (m *DBContextMock) GetLocalData(p context.Context, p1 core.PulseNumber, p2 
 	return m.GetLocalDataFunc(p, p1, p2)
 }
 
-// GetLocalDataMinimockCounter returns a count of DBContextMock.GetLocalDataFunc invocations
+//GetLocalDataMinimockCounter returns a count of DBContextMock.GetLocalDataFunc invocations
 func (m *DBContextMock) GetLocalDataMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.GetLocalDataCounter)
 }
 
-// GetLocalDataMinimockPreCounter returns the value of DBContextMock.GetLocalData invocations
+//GetLocalDataMinimockPreCounter returns the value of DBContextMock.GetLocalData invocations
 func (m *DBContextMock) GetLocalDataMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.GetLocalDataPreCounter)
 }
 
-// GetLocalDataFinished returns true if mock invocations count is ok
+//GetLocalDataFinished returns true if mock invocations count is ok
 func (m *DBContextMock) GetLocalDataFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.GetLocalDataMock.expectationSeries) > 0 {
@@ -961,7 +961,7 @@ type DBContextMockSetLocalDataResult struct {
 	r error
 }
 
-// Expect specifies that invocation of DBContext.SetLocalData is expected from 1 to Infinity times
+//Expect specifies that invocation of DBContext.SetLocalData is expected from 1 to Infinity times
 func (m *mDBContextMockSetLocalData) Expect(p context.Context, p1 core.PulseNumber, p2 []byte, p3 []byte) *mDBContextMockSetLocalData {
 	m.mock.SetLocalDataFunc = nil
 	m.expectationSeries = nil
@@ -973,7 +973,7 @@ func (m *mDBContextMockSetLocalData) Expect(p context.Context, p1 core.PulseNumb
 	return m
 }
 
-// Return specifies results of invocation of DBContext.SetLocalData
+//Return specifies results of invocation of DBContext.SetLocalData
 func (m *mDBContextMockSetLocalData) Return(r error) *DBContextMock {
 	m.mock.SetLocalDataFunc = nil
 	m.expectationSeries = nil
@@ -985,7 +985,7 @@ func (m *mDBContextMockSetLocalData) Return(r error) *DBContextMock {
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of DBContext.SetLocalData is expected once
+//ExpectOnce specifies that invocation of DBContext.SetLocalData is expected once
 func (m *mDBContextMockSetLocalData) ExpectOnce(p context.Context, p1 core.PulseNumber, p2 []byte, p3 []byte) *DBContextMockSetLocalDataExpectation {
 	m.mock.SetLocalDataFunc = nil
 	m.mainExpectation = nil
@@ -1000,7 +1000,7 @@ func (e *DBContextMockSetLocalDataExpectation) Return(r error) {
 	e.result = &DBContextMockSetLocalDataResult{r}
 }
 
-// Set uses given function f as a mock of DBContext.SetLocalData method
+//Set uses given function f as a mock of DBContext.SetLocalData method
 func (m *mDBContextMockSetLocalData) Set(f func(p context.Context, p1 core.PulseNumber, p2 []byte, p3 []byte) (r error)) *DBContextMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -1009,7 +1009,7 @@ func (m *mDBContextMockSetLocalData) Set(f func(p context.Context, p1 core.Pulse
 	return m.mock
 }
 
-// SetLocalData implements github.com/insolar/insolar/ledger/storage.DBContext interface
+//SetLocalData implements github.com/insolar/insolar/ledger/storage.DBContext interface
 func (m *DBContextMock) SetLocalData(p context.Context, p1 core.PulseNumber, p2 []byte, p3 []byte) (r error) {
 	counter := atomic.AddUint64(&m.SetLocalDataPreCounter, 1)
 	defer atomic.AddUint64(&m.SetLocalDataCounter, 1)
@@ -1059,17 +1059,17 @@ func (m *DBContextMock) SetLocalData(p context.Context, p1 core.PulseNumber, p2 
 	return m.SetLocalDataFunc(p, p1, p2, p3)
 }
 
-// SetLocalDataMinimockCounter returns a count of DBContextMock.SetLocalDataFunc invocations
+//SetLocalDataMinimockCounter returns a count of DBContextMock.SetLocalDataFunc invocations
 func (m *DBContextMock) SetLocalDataMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.SetLocalDataCounter)
 }
 
-// SetLocalDataMinimockPreCounter returns the value of DBContextMock.SetLocalData invocations
+//SetLocalDataMinimockPreCounter returns the value of DBContextMock.SetLocalData invocations
 func (m *DBContextMock) SetLocalDataMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.SetLocalDataPreCounter)
 }
 
-// SetLocalDataFinished returns true if mock invocations count is ok
+//SetLocalDataFinished returns true if mock invocations count is ok
 func (m *DBContextMock) SetLocalDataFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.SetLocalDataMock.expectationSeries) > 0 {
@@ -1103,7 +1103,7 @@ type DBContextMockSetTxRetiriesInput struct {
 	p int
 }
 
-// Expect specifies that invocation of DBContext.SetTxRetiries is expected from 1 to Infinity times
+//Expect specifies that invocation of DBContext.SetTxRetiries is expected from 1 to Infinity times
 func (m *mDBContextMockSetTxRetiries) Expect(p int) *mDBContextMockSetTxRetiries {
 	m.mock.SetTxRetiriesFunc = nil
 	m.expectationSeries = nil
@@ -1115,7 +1115,7 @@ func (m *mDBContextMockSetTxRetiries) Expect(p int) *mDBContextMockSetTxRetiries
 	return m
 }
 
-// Return specifies results of invocation of DBContext.SetTxRetiries
+//Return specifies results of invocation of DBContext.SetTxRetiries
 func (m *mDBContextMockSetTxRetiries) Return() *DBContextMock {
 	m.mock.SetTxRetiriesFunc = nil
 	m.expectationSeries = nil
@@ -1127,7 +1127,7 @@ func (m *mDBContextMockSetTxRetiries) Return() *DBContextMock {
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of DBContext.SetTxRetiries is expected once
+//ExpectOnce specifies that invocation of DBContext.SetTxRetiries is expected once
 func (m *mDBContextMockSetTxRetiries) ExpectOnce(p int) *DBContextMockSetTxRetiriesExpectation {
 	m.mock.SetTxRetiriesFunc = nil
 	m.mainExpectation = nil
@@ -1138,7 +1138,7 @@ func (m *mDBContextMockSetTxRetiries) ExpectOnce(p int) *DBContextMockSetTxRetir
 	return expectation
 }
 
-// Set uses given function f as a mock of DBContext.SetTxRetiries method
+//Set uses given function f as a mock of DBContext.SetTxRetiries method
 func (m *mDBContextMockSetTxRetiries) Set(f func(p int)) *DBContextMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -1147,7 +1147,7 @@ func (m *mDBContextMockSetTxRetiries) Set(f func(p int)) *DBContextMock {
 	return m.mock
 }
 
-// SetTxRetiries implements github.com/insolar/insolar/ledger/storage.DBContext interface
+//SetTxRetiries implements github.com/insolar/insolar/ledger/storage.DBContext interface
 func (m *DBContextMock) SetTxRetiries(p int) {
 	counter := atomic.AddUint64(&m.SetTxRetiriesPreCounter, 1)
 	defer atomic.AddUint64(&m.SetTxRetiriesCounter, 1)
@@ -1182,17 +1182,17 @@ func (m *DBContextMock) SetTxRetiries(p int) {
 	m.SetTxRetiriesFunc(p)
 }
 
-// SetTxRetiriesMinimockCounter returns a count of DBContextMock.SetTxRetiriesFunc invocations
+//SetTxRetiriesMinimockCounter returns a count of DBContextMock.SetTxRetiriesFunc invocations
 func (m *DBContextMock) SetTxRetiriesMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.SetTxRetiriesCounter)
 }
 
-// SetTxRetiriesMinimockPreCounter returns the value of DBContextMock.SetTxRetiries invocations
+//SetTxRetiriesMinimockPreCounter returns the value of DBContextMock.SetTxRetiries invocations
 func (m *DBContextMock) SetTxRetiriesMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.SetTxRetiriesPreCounter)
 }
 
-// SetTxRetiriesFinished returns true if mock invocations count is ok
+//SetTxRetiriesFinished returns true if mock invocations count is ok
 func (m *DBContextMock) SetTxRetiriesFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.SetTxRetiriesMock.expectationSeries) > 0 {
@@ -1232,7 +1232,7 @@ type DBContextMockStoreKeyValuesResult struct {
 	r error
 }
 
-// Expect specifies that invocation of DBContext.StoreKeyValues is expected from 1 to Infinity times
+//Expect specifies that invocation of DBContext.StoreKeyValues is expected from 1 to Infinity times
 func (m *mDBContextMockStoreKeyValues) Expect(p context.Context, p1 []core.KV) *mDBContextMockStoreKeyValues {
 	m.mock.StoreKeyValuesFunc = nil
 	m.expectationSeries = nil
@@ -1244,7 +1244,7 @@ func (m *mDBContextMockStoreKeyValues) Expect(p context.Context, p1 []core.KV) *
 	return m
 }
 
-// Return specifies results of invocation of DBContext.StoreKeyValues
+//Return specifies results of invocation of DBContext.StoreKeyValues
 func (m *mDBContextMockStoreKeyValues) Return(r error) *DBContextMock {
 	m.mock.StoreKeyValuesFunc = nil
 	m.expectationSeries = nil
@@ -1256,7 +1256,7 @@ func (m *mDBContextMockStoreKeyValues) Return(r error) *DBContextMock {
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of DBContext.StoreKeyValues is expected once
+//ExpectOnce specifies that invocation of DBContext.StoreKeyValues is expected once
 func (m *mDBContextMockStoreKeyValues) ExpectOnce(p context.Context, p1 []core.KV) *DBContextMockStoreKeyValuesExpectation {
 	m.mock.StoreKeyValuesFunc = nil
 	m.mainExpectation = nil
@@ -1271,7 +1271,7 @@ func (e *DBContextMockStoreKeyValuesExpectation) Return(r error) {
 	e.result = &DBContextMockStoreKeyValuesResult{r}
 }
 
-// Set uses given function f as a mock of DBContext.StoreKeyValues method
+//Set uses given function f as a mock of DBContext.StoreKeyValues method
 func (m *mDBContextMockStoreKeyValues) Set(f func(p context.Context, p1 []core.KV) (r error)) *DBContextMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -1280,7 +1280,7 @@ func (m *mDBContextMockStoreKeyValues) Set(f func(p context.Context, p1 []core.K
 	return m.mock
 }
 
-// StoreKeyValues implements github.com/insolar/insolar/ledger/storage.DBContext interface
+//StoreKeyValues implements github.com/insolar/insolar/ledger/storage.DBContext interface
 func (m *DBContextMock) StoreKeyValues(p context.Context, p1 []core.KV) (r error) {
 	counter := atomic.AddUint64(&m.StoreKeyValuesPreCounter, 1)
 	defer atomic.AddUint64(&m.StoreKeyValuesCounter, 1)
@@ -1330,17 +1330,17 @@ func (m *DBContextMock) StoreKeyValues(p context.Context, p1 []core.KV) (r error
 	return m.StoreKeyValuesFunc(p, p1)
 }
 
-// StoreKeyValuesMinimockCounter returns a count of DBContextMock.StoreKeyValuesFunc invocations
+//StoreKeyValuesMinimockCounter returns a count of DBContextMock.StoreKeyValuesFunc invocations
 func (m *DBContextMock) StoreKeyValuesMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.StoreKeyValuesCounter)
 }
 
-// StoreKeyValuesMinimockPreCounter returns the value of DBContextMock.StoreKeyValues invocations
+//StoreKeyValuesMinimockPreCounter returns the value of DBContextMock.StoreKeyValues invocations
 func (m *DBContextMock) StoreKeyValuesMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.StoreKeyValuesPreCounter)
 }
 
-// StoreKeyValuesFinished returns true if mock invocations count is ok
+//StoreKeyValuesFinished returns true if mock invocations count is ok
 func (m *DBContextMock) StoreKeyValuesFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.StoreKeyValuesMock.expectationSeries) > 0 {
@@ -1380,7 +1380,7 @@ type DBContextMockUpdateResult struct {
 	r error
 }
 
-// Expect specifies that invocation of DBContext.Update is expected from 1 to Infinity times
+//Expect specifies that invocation of DBContext.Update is expected from 1 to Infinity times
 func (m *mDBContextMockUpdate) Expect(p context.Context, p1 func(p *storage.TransactionManager) (r error)) *mDBContextMockUpdate {
 	m.mock.UpdateFunc = nil
 	m.expectationSeries = nil
@@ -1392,7 +1392,7 @@ func (m *mDBContextMockUpdate) Expect(p context.Context, p1 func(p *storage.Tran
 	return m
 }
 
-// Return specifies results of invocation of DBContext.Update
+//Return specifies results of invocation of DBContext.Update
 func (m *mDBContextMockUpdate) Return(r error) *DBContextMock {
 	m.mock.UpdateFunc = nil
 	m.expectationSeries = nil
@@ -1404,7 +1404,7 @@ func (m *mDBContextMockUpdate) Return(r error) *DBContextMock {
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of DBContext.Update is expected once
+//ExpectOnce specifies that invocation of DBContext.Update is expected once
 func (m *mDBContextMockUpdate) ExpectOnce(p context.Context, p1 func(p *storage.TransactionManager) (r error)) *DBContextMockUpdateExpectation {
 	m.mock.UpdateFunc = nil
 	m.mainExpectation = nil
@@ -1419,7 +1419,7 @@ func (e *DBContextMockUpdateExpectation) Return(r error) {
 	e.result = &DBContextMockUpdateResult{r}
 }
 
-// Set uses given function f as a mock of DBContext.Update method
+//Set uses given function f as a mock of DBContext.Update method
 func (m *mDBContextMockUpdate) Set(f func(p context.Context, p1 func(p *storage.TransactionManager) (r error)) (r error)) *DBContextMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -1428,7 +1428,7 @@ func (m *mDBContextMockUpdate) Set(f func(p context.Context, p1 func(p *storage.
 	return m.mock
 }
 
-// Update implements github.com/insolar/insolar/ledger/storage.DBContext interface
+//Update implements github.com/insolar/insolar/ledger/storage.DBContext interface
 func (m *DBContextMock) Update(p context.Context, p1 func(p *storage.TransactionManager) (r error)) (r error) {
 	counter := atomic.AddUint64(&m.UpdatePreCounter, 1)
 	defer atomic.AddUint64(&m.UpdateCounter, 1)
@@ -1478,17 +1478,17 @@ func (m *DBContextMock) Update(p context.Context, p1 func(p *storage.Transaction
 	return m.UpdateFunc(p, p1)
 }
 
-// UpdateMinimockCounter returns a count of DBContextMock.UpdateFunc invocations
+//UpdateMinimockCounter returns a count of DBContextMock.UpdateFunc invocations
 func (m *DBContextMock) UpdateMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.UpdateCounter)
 }
 
-// UpdateMinimockPreCounter returns the value of DBContextMock.Update invocations
+//UpdateMinimockPreCounter returns the value of DBContextMock.Update invocations
 func (m *DBContextMock) UpdateMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.UpdatePreCounter)
 }
 
-// UpdateFinished returns true if mock invocations count is ok
+//UpdateFinished returns true if mock invocations count is ok
 func (m *DBContextMock) UpdateFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.UpdateMock.expectationSeries) > 0 {
@@ -1528,7 +1528,7 @@ type DBContextMockViewResult struct {
 	r error
 }
 
-// Expect specifies that invocation of DBContext.View is expected from 1 to Infinity times
+//Expect specifies that invocation of DBContext.View is expected from 1 to Infinity times
 func (m *mDBContextMockView) Expect(p context.Context, p1 func(p *storage.TransactionManager) (r error)) *mDBContextMockView {
 	m.mock.ViewFunc = nil
 	m.expectationSeries = nil
@@ -1540,7 +1540,7 @@ func (m *mDBContextMockView) Expect(p context.Context, p1 func(p *storage.Transa
 	return m
 }
 
-// Return specifies results of invocation of DBContext.View
+//Return specifies results of invocation of DBContext.View
 func (m *mDBContextMockView) Return(r error) *DBContextMock {
 	m.mock.ViewFunc = nil
 	m.expectationSeries = nil
@@ -1552,7 +1552,7 @@ func (m *mDBContextMockView) Return(r error) *DBContextMock {
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of DBContext.View is expected once
+//ExpectOnce specifies that invocation of DBContext.View is expected once
 func (m *mDBContextMockView) ExpectOnce(p context.Context, p1 func(p *storage.TransactionManager) (r error)) *DBContextMockViewExpectation {
 	m.mock.ViewFunc = nil
 	m.mainExpectation = nil
@@ -1567,7 +1567,7 @@ func (e *DBContextMockViewExpectation) Return(r error) {
 	e.result = &DBContextMockViewResult{r}
 }
 
-// Set uses given function f as a mock of DBContext.View method
+//Set uses given function f as a mock of DBContext.View method
 func (m *mDBContextMockView) Set(f func(p context.Context, p1 func(p *storage.TransactionManager) (r error)) (r error)) *DBContextMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -1576,7 +1576,7 @@ func (m *mDBContextMockView) Set(f func(p context.Context, p1 func(p *storage.Tr
 	return m.mock
 }
 
-// View implements github.com/insolar/insolar/ledger/storage.DBContext interface
+//View implements github.com/insolar/insolar/ledger/storage.DBContext interface
 func (m *DBContextMock) View(p context.Context, p1 func(p *storage.TransactionManager) (r error)) (r error) {
 	counter := atomic.AddUint64(&m.ViewPreCounter, 1)
 	defer atomic.AddUint64(&m.ViewCounter, 1)
@@ -1626,17 +1626,17 @@ func (m *DBContextMock) View(p context.Context, p1 func(p *storage.TransactionMa
 	return m.ViewFunc(p, p1)
 }
 
-// ViewMinimockCounter returns a count of DBContextMock.ViewFunc invocations
+//ViewMinimockCounter returns a count of DBContextMock.ViewFunc invocations
 func (m *DBContextMock) ViewMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.ViewCounter)
 }
 
-// ViewMinimockPreCounter returns the value of DBContextMock.View invocations
+//ViewMinimockPreCounter returns the value of DBContextMock.View invocations
 func (m *DBContextMock) ViewMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.ViewPreCounter)
 }
 
-// ViewFinished returns true if mock invocations count is ok
+//ViewFinished returns true if mock invocations count is ok
 func (m *DBContextMock) ViewFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.ViewMock.expectationSeries) > 0 {
@@ -1656,8 +1656,8 @@ func (m *DBContextMock) ViewFinished() bool {
 	return true
 }
 
-// ValidateCallCounters checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//ValidateCallCounters checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *DBContextMock) ValidateCallCounters() {
 
 	if !m.BeginTransactionFinished() {
@@ -1706,19 +1706,19 @@ func (m *DBContextMock) ValidateCallCounters() {
 
 }
 
-// CheckMocksCalled checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//CheckMocksCalled checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *DBContextMock) CheckMocksCalled() {
 	m.Finish()
 }
 
-// Finish checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
+//Finish checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
 func (m *DBContextMock) Finish() {
 	m.MinimockFinish()
 }
 
-// MinimockFinish checks that all mocked methods of the interface have been called at least once
+//MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *DBContextMock) MinimockFinish() {
 
 	if !m.BeginTransactionFinished() {
@@ -1767,14 +1767,14 @@ func (m *DBContextMock) MinimockFinish() {
 
 }
 
-// Wait waits for all mocked methods to be called at least once
-// Deprecated: please use MinimockWait or use Wait method of minimock.Controller
+//Wait waits for all mocked methods to be called at least once
+//Deprecated: please use MinimockWait or use Wait method of minimock.Controller
 func (m *DBContextMock) Wait(timeout time.Duration) {
 	m.MinimockWait(timeout)
 }
 
-// MinimockWait waits for all mocked methods to be called at least once
-// this method is called by minimock.Controller
+//MinimockWait waits for all mocked methods to be called at least once
+//this method is called by minimock.Controller
 func (m *DBContextMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
@@ -1850,8 +1850,8 @@ func (m *DBContextMock) MinimockWait(timeout time.Duration) {
 	}
 }
 
-// AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
-// it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
+//AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
+//it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *DBContextMock) AllMocksCalled() bool {
 
 	if !m.BeginTransactionFinished() {

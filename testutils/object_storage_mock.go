@@ -6,19 +6,19 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "ObjectStorage" can be found in github.com/insolar/insolar/ledger/storage
 */
 import (
-	"context"
+	context "context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/storage/index"
-	"github.com/insolar/insolar/ledger/storage/record"
+	core "github.com/insolar/insolar/core"
+	index "github.com/insolar/insolar/ledger/storage/index"
+	record "github.com/insolar/insolar/ledger/storage/record"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-// ObjectStorageMock implements github.com/insolar/insolar/ledger/storage.ObjectStorage
+//ObjectStorageMock implements github.com/insolar/insolar/ledger/storage.ObjectStorage
 type ObjectStorageMock struct {
 	t minimock.Tester
 
@@ -68,7 +68,7 @@ type ObjectStorageMock struct {
 	SetRecordMock       mObjectStorageMockSetRecord
 }
 
-// NewObjectStorageMock returns a mock for github.com/insolar/insolar/ledger/storage.ObjectStorage
+//NewObjectStorageMock returns a mock for github.com/insolar/insolar/ledger/storage.ObjectStorage
 func NewObjectStorageMock(t minimock.Tester) *ObjectStorageMock {
 	m := &ObjectStorageMock{t: t}
 
@@ -111,7 +111,7 @@ type ObjectStorageMockGetBlobResult struct {
 	r1 error
 }
 
-// Expect specifies that invocation of ObjectStorage.GetBlob is expected from 1 to Infinity times
+//Expect specifies that invocation of ObjectStorage.GetBlob is expected from 1 to Infinity times
 func (m *mObjectStorageMockGetBlob) Expect(p context.Context, p1 core.RecordID, p2 *core.RecordID) *mObjectStorageMockGetBlob {
 	m.mock.GetBlobFunc = nil
 	m.expectationSeries = nil
@@ -123,7 +123,7 @@ func (m *mObjectStorageMockGetBlob) Expect(p context.Context, p1 core.RecordID, 
 	return m
 }
 
-// Return specifies results of invocation of ObjectStorage.GetBlob
+//Return specifies results of invocation of ObjectStorage.GetBlob
 func (m *mObjectStorageMockGetBlob) Return(r []byte, r1 error) *ObjectStorageMock {
 	m.mock.GetBlobFunc = nil
 	m.expectationSeries = nil
@@ -135,7 +135,7 @@ func (m *mObjectStorageMockGetBlob) Return(r []byte, r1 error) *ObjectStorageMoc
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of ObjectStorage.GetBlob is expected once
+//ExpectOnce specifies that invocation of ObjectStorage.GetBlob is expected once
 func (m *mObjectStorageMockGetBlob) ExpectOnce(p context.Context, p1 core.RecordID, p2 *core.RecordID) *ObjectStorageMockGetBlobExpectation {
 	m.mock.GetBlobFunc = nil
 	m.mainExpectation = nil
@@ -150,7 +150,7 @@ func (e *ObjectStorageMockGetBlobExpectation) Return(r []byte, r1 error) {
 	e.result = &ObjectStorageMockGetBlobResult{r, r1}
 }
 
-// Set uses given function f as a mock of ObjectStorage.GetBlob method
+//Set uses given function f as a mock of ObjectStorage.GetBlob method
 func (m *mObjectStorageMockGetBlob) Set(f func(p context.Context, p1 core.RecordID, p2 *core.RecordID) (r []byte, r1 error)) *ObjectStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -159,7 +159,7 @@ func (m *mObjectStorageMockGetBlob) Set(f func(p context.Context, p1 core.Record
 	return m.mock
 }
 
-// GetBlob implements github.com/insolar/insolar/ledger/storage.ObjectStorage interface
+//GetBlob implements github.com/insolar/insolar/ledger/storage.ObjectStorage interface
 func (m *ObjectStorageMock) GetBlob(p context.Context, p1 core.RecordID, p2 *core.RecordID) (r []byte, r1 error) {
 	counter := atomic.AddUint64(&m.GetBlobPreCounter, 1)
 	defer atomic.AddUint64(&m.GetBlobCounter, 1)
@@ -211,17 +211,17 @@ func (m *ObjectStorageMock) GetBlob(p context.Context, p1 core.RecordID, p2 *cor
 	return m.GetBlobFunc(p, p1, p2)
 }
 
-// GetBlobMinimockCounter returns a count of ObjectStorageMock.GetBlobFunc invocations
+//GetBlobMinimockCounter returns a count of ObjectStorageMock.GetBlobFunc invocations
 func (m *ObjectStorageMock) GetBlobMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.GetBlobCounter)
 }
 
-// GetBlobMinimockPreCounter returns the value of ObjectStorageMock.GetBlob invocations
+//GetBlobMinimockPreCounter returns the value of ObjectStorageMock.GetBlob invocations
 func (m *ObjectStorageMock) GetBlobMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.GetBlobPreCounter)
 }
 
-// GetBlobFinished returns true if mock invocations count is ok
+//GetBlobFinished returns true if mock invocations count is ok
 func (m *ObjectStorageMock) GetBlobFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.GetBlobMock.expectationSeries) > 0 {
@@ -264,7 +264,7 @@ type ObjectStorageMockGetObjectIndexResult struct {
 	r1 error
 }
 
-// Expect specifies that invocation of ObjectStorage.GetObjectIndex is expected from 1 to Infinity times
+//Expect specifies that invocation of ObjectStorage.GetObjectIndex is expected from 1 to Infinity times
 func (m *mObjectStorageMockGetObjectIndex) Expect(p context.Context, p1 core.RecordID, p2 *core.RecordID, p3 bool) *mObjectStorageMockGetObjectIndex {
 	m.mock.GetObjectIndexFunc = nil
 	m.expectationSeries = nil
@@ -276,7 +276,7 @@ func (m *mObjectStorageMockGetObjectIndex) Expect(p context.Context, p1 core.Rec
 	return m
 }
 
-// Return specifies results of invocation of ObjectStorage.GetObjectIndex
+//Return specifies results of invocation of ObjectStorage.GetObjectIndex
 func (m *mObjectStorageMockGetObjectIndex) Return(r *index.ObjectLifeline, r1 error) *ObjectStorageMock {
 	m.mock.GetObjectIndexFunc = nil
 	m.expectationSeries = nil
@@ -288,7 +288,7 @@ func (m *mObjectStorageMockGetObjectIndex) Return(r *index.ObjectLifeline, r1 er
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of ObjectStorage.GetObjectIndex is expected once
+//ExpectOnce specifies that invocation of ObjectStorage.GetObjectIndex is expected once
 func (m *mObjectStorageMockGetObjectIndex) ExpectOnce(p context.Context, p1 core.RecordID, p2 *core.RecordID, p3 bool) *ObjectStorageMockGetObjectIndexExpectation {
 	m.mock.GetObjectIndexFunc = nil
 	m.mainExpectation = nil
@@ -303,7 +303,7 @@ func (e *ObjectStorageMockGetObjectIndexExpectation) Return(r *index.ObjectLifel
 	e.result = &ObjectStorageMockGetObjectIndexResult{r, r1}
 }
 
-// Set uses given function f as a mock of ObjectStorage.GetObjectIndex method
+//Set uses given function f as a mock of ObjectStorage.GetObjectIndex method
 func (m *mObjectStorageMockGetObjectIndex) Set(f func(p context.Context, p1 core.RecordID, p2 *core.RecordID, p3 bool) (r *index.ObjectLifeline, r1 error)) *ObjectStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -312,7 +312,7 @@ func (m *mObjectStorageMockGetObjectIndex) Set(f func(p context.Context, p1 core
 	return m.mock
 }
 
-// GetObjectIndex implements github.com/insolar/insolar/ledger/storage.ObjectStorage interface
+//GetObjectIndex implements github.com/insolar/insolar/ledger/storage.ObjectStorage interface
 func (m *ObjectStorageMock) GetObjectIndex(p context.Context, p1 core.RecordID, p2 *core.RecordID, p3 bool) (r *index.ObjectLifeline, r1 error) {
 	counter := atomic.AddUint64(&m.GetObjectIndexPreCounter, 1)
 	defer atomic.AddUint64(&m.GetObjectIndexCounter, 1)
@@ -364,17 +364,17 @@ func (m *ObjectStorageMock) GetObjectIndex(p context.Context, p1 core.RecordID, 
 	return m.GetObjectIndexFunc(p, p1, p2, p3)
 }
 
-// GetObjectIndexMinimockCounter returns a count of ObjectStorageMock.GetObjectIndexFunc invocations
+//GetObjectIndexMinimockCounter returns a count of ObjectStorageMock.GetObjectIndexFunc invocations
 func (m *ObjectStorageMock) GetObjectIndexMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.GetObjectIndexCounter)
 }
 
-// GetObjectIndexMinimockPreCounter returns the value of ObjectStorageMock.GetObjectIndex invocations
+//GetObjectIndexMinimockPreCounter returns the value of ObjectStorageMock.GetObjectIndex invocations
 func (m *ObjectStorageMock) GetObjectIndexMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.GetObjectIndexPreCounter)
 }
 
-// GetObjectIndexFinished returns true if mock invocations count is ok
+//GetObjectIndexFinished returns true if mock invocations count is ok
 func (m *ObjectStorageMock) GetObjectIndexFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.GetObjectIndexMock.expectationSeries) > 0 {
@@ -416,7 +416,7 @@ type ObjectStorageMockGetRecordResult struct {
 	r1 error
 }
 
-// Expect specifies that invocation of ObjectStorage.GetRecord is expected from 1 to Infinity times
+//Expect specifies that invocation of ObjectStorage.GetRecord is expected from 1 to Infinity times
 func (m *mObjectStorageMockGetRecord) Expect(p context.Context, p1 core.RecordID, p2 *core.RecordID) *mObjectStorageMockGetRecord {
 	m.mock.GetRecordFunc = nil
 	m.expectationSeries = nil
@@ -428,7 +428,7 @@ func (m *mObjectStorageMockGetRecord) Expect(p context.Context, p1 core.RecordID
 	return m
 }
 
-// Return specifies results of invocation of ObjectStorage.GetRecord
+//Return specifies results of invocation of ObjectStorage.GetRecord
 func (m *mObjectStorageMockGetRecord) Return(r record.Record, r1 error) *ObjectStorageMock {
 	m.mock.GetRecordFunc = nil
 	m.expectationSeries = nil
@@ -440,7 +440,7 @@ func (m *mObjectStorageMockGetRecord) Return(r record.Record, r1 error) *ObjectS
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of ObjectStorage.GetRecord is expected once
+//ExpectOnce specifies that invocation of ObjectStorage.GetRecord is expected once
 func (m *mObjectStorageMockGetRecord) ExpectOnce(p context.Context, p1 core.RecordID, p2 *core.RecordID) *ObjectStorageMockGetRecordExpectation {
 	m.mock.GetRecordFunc = nil
 	m.mainExpectation = nil
@@ -455,7 +455,7 @@ func (e *ObjectStorageMockGetRecordExpectation) Return(r record.Record, r1 error
 	e.result = &ObjectStorageMockGetRecordResult{r, r1}
 }
 
-// Set uses given function f as a mock of ObjectStorage.GetRecord method
+//Set uses given function f as a mock of ObjectStorage.GetRecord method
 func (m *mObjectStorageMockGetRecord) Set(f func(p context.Context, p1 core.RecordID, p2 *core.RecordID) (r record.Record, r1 error)) *ObjectStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -464,7 +464,7 @@ func (m *mObjectStorageMockGetRecord) Set(f func(p context.Context, p1 core.Reco
 	return m.mock
 }
 
-// GetRecord implements github.com/insolar/insolar/ledger/storage.ObjectStorage interface
+//GetRecord implements github.com/insolar/insolar/ledger/storage.ObjectStorage interface
 func (m *ObjectStorageMock) GetRecord(p context.Context, p1 core.RecordID, p2 *core.RecordID) (r record.Record, r1 error) {
 	counter := atomic.AddUint64(&m.GetRecordPreCounter, 1)
 	defer atomic.AddUint64(&m.GetRecordCounter, 1)
@@ -516,17 +516,17 @@ func (m *ObjectStorageMock) GetRecord(p context.Context, p1 core.RecordID, p2 *c
 	return m.GetRecordFunc(p, p1, p2)
 }
 
-// GetRecordMinimockCounter returns a count of ObjectStorageMock.GetRecordFunc invocations
+//GetRecordMinimockCounter returns a count of ObjectStorageMock.GetRecordFunc invocations
 func (m *ObjectStorageMock) GetRecordMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.GetRecordCounter)
 }
 
-// GetRecordMinimockPreCounter returns the value of ObjectStorageMock.GetRecord invocations
+//GetRecordMinimockPreCounter returns the value of ObjectStorageMock.GetRecord invocations
 func (m *ObjectStorageMock) GetRecordMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.GetRecordPreCounter)
 }
 
-// GetRecordFinished returns true if mock invocations count is ok
+//GetRecordFinished returns true if mock invocations count is ok
 func (m *ObjectStorageMock) GetRecordFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.GetRecordMock.expectationSeries) > 0 {
@@ -567,7 +567,7 @@ type ObjectStorageMockIterateIndexIDsResult struct {
 	r error
 }
 
-// Expect specifies that invocation of ObjectStorage.IterateIndexIDs is expected from 1 to Infinity times
+//Expect specifies that invocation of ObjectStorage.IterateIndexIDs is expected from 1 to Infinity times
 func (m *mObjectStorageMockIterateIndexIDs) Expect(p context.Context, p1 core.RecordID, p2 func(p core.RecordID) (r error)) *mObjectStorageMockIterateIndexIDs {
 	m.mock.IterateIndexIDsFunc = nil
 	m.expectationSeries = nil
@@ -579,7 +579,7 @@ func (m *mObjectStorageMockIterateIndexIDs) Expect(p context.Context, p1 core.Re
 	return m
 }
 
-// Return specifies results of invocation of ObjectStorage.IterateIndexIDs
+//Return specifies results of invocation of ObjectStorage.IterateIndexIDs
 func (m *mObjectStorageMockIterateIndexIDs) Return(r error) *ObjectStorageMock {
 	m.mock.IterateIndexIDsFunc = nil
 	m.expectationSeries = nil
@@ -591,7 +591,7 @@ func (m *mObjectStorageMockIterateIndexIDs) Return(r error) *ObjectStorageMock {
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of ObjectStorage.IterateIndexIDs is expected once
+//ExpectOnce specifies that invocation of ObjectStorage.IterateIndexIDs is expected once
 func (m *mObjectStorageMockIterateIndexIDs) ExpectOnce(p context.Context, p1 core.RecordID, p2 func(p core.RecordID) (r error)) *ObjectStorageMockIterateIndexIDsExpectation {
 	m.mock.IterateIndexIDsFunc = nil
 	m.mainExpectation = nil
@@ -606,7 +606,7 @@ func (e *ObjectStorageMockIterateIndexIDsExpectation) Return(r error) {
 	e.result = &ObjectStorageMockIterateIndexIDsResult{r}
 }
 
-// Set uses given function f as a mock of ObjectStorage.IterateIndexIDs method
+//Set uses given function f as a mock of ObjectStorage.IterateIndexIDs method
 func (m *mObjectStorageMockIterateIndexIDs) Set(f func(p context.Context, p1 core.RecordID, p2 func(p core.RecordID) (r error)) (r error)) *ObjectStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -615,7 +615,7 @@ func (m *mObjectStorageMockIterateIndexIDs) Set(f func(p context.Context, p1 cor
 	return m.mock
 }
 
-// IterateIndexIDs implements github.com/insolar/insolar/ledger/storage.ObjectStorage interface
+//IterateIndexIDs implements github.com/insolar/insolar/ledger/storage.ObjectStorage interface
 func (m *ObjectStorageMock) IterateIndexIDs(p context.Context, p1 core.RecordID, p2 func(p core.RecordID) (r error)) (r error) {
 	counter := atomic.AddUint64(&m.IterateIndexIDsPreCounter, 1)
 	defer atomic.AddUint64(&m.IterateIndexIDsCounter, 1)
@@ -665,17 +665,17 @@ func (m *ObjectStorageMock) IterateIndexIDs(p context.Context, p1 core.RecordID,
 	return m.IterateIndexIDsFunc(p, p1, p2)
 }
 
-// IterateIndexIDsMinimockCounter returns a count of ObjectStorageMock.IterateIndexIDsFunc invocations
+//IterateIndexIDsMinimockCounter returns a count of ObjectStorageMock.IterateIndexIDsFunc invocations
 func (m *ObjectStorageMock) IterateIndexIDsMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.IterateIndexIDsCounter)
 }
 
-// IterateIndexIDsMinimockPreCounter returns the value of ObjectStorageMock.IterateIndexIDs invocations
+//IterateIndexIDsMinimockPreCounter returns the value of ObjectStorageMock.IterateIndexIDs invocations
 func (m *ObjectStorageMock) IterateIndexIDsMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.IterateIndexIDsPreCounter)
 }
 
-// IterateIndexIDsFinished returns true if mock invocations count is ok
+//IterateIndexIDsFinished returns true if mock invocations count is ok
 func (m *ObjectStorageMock) IterateIndexIDsFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.IterateIndexIDsMock.expectationSeries) > 0 {
@@ -716,7 +716,7 @@ type ObjectStorageMockRemoveObjectIndexResult struct {
 	r error
 }
 
-// Expect specifies that invocation of ObjectStorage.RemoveObjectIndex is expected from 1 to Infinity times
+//Expect specifies that invocation of ObjectStorage.RemoveObjectIndex is expected from 1 to Infinity times
 func (m *mObjectStorageMockRemoveObjectIndex) Expect(p context.Context, p1 core.RecordID, p2 *core.RecordID) *mObjectStorageMockRemoveObjectIndex {
 	m.mock.RemoveObjectIndexFunc = nil
 	m.expectationSeries = nil
@@ -728,7 +728,7 @@ func (m *mObjectStorageMockRemoveObjectIndex) Expect(p context.Context, p1 core.
 	return m
 }
 
-// Return specifies results of invocation of ObjectStorage.RemoveObjectIndex
+//Return specifies results of invocation of ObjectStorage.RemoveObjectIndex
 func (m *mObjectStorageMockRemoveObjectIndex) Return(r error) *ObjectStorageMock {
 	m.mock.RemoveObjectIndexFunc = nil
 	m.expectationSeries = nil
@@ -740,7 +740,7 @@ func (m *mObjectStorageMockRemoveObjectIndex) Return(r error) *ObjectStorageMock
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of ObjectStorage.RemoveObjectIndex is expected once
+//ExpectOnce specifies that invocation of ObjectStorage.RemoveObjectIndex is expected once
 func (m *mObjectStorageMockRemoveObjectIndex) ExpectOnce(p context.Context, p1 core.RecordID, p2 *core.RecordID) *ObjectStorageMockRemoveObjectIndexExpectation {
 	m.mock.RemoveObjectIndexFunc = nil
 	m.mainExpectation = nil
@@ -755,7 +755,7 @@ func (e *ObjectStorageMockRemoveObjectIndexExpectation) Return(r error) {
 	e.result = &ObjectStorageMockRemoveObjectIndexResult{r}
 }
 
-// Set uses given function f as a mock of ObjectStorage.RemoveObjectIndex method
+//Set uses given function f as a mock of ObjectStorage.RemoveObjectIndex method
 func (m *mObjectStorageMockRemoveObjectIndex) Set(f func(p context.Context, p1 core.RecordID, p2 *core.RecordID) (r error)) *ObjectStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -764,7 +764,7 @@ func (m *mObjectStorageMockRemoveObjectIndex) Set(f func(p context.Context, p1 c
 	return m.mock
 }
 
-// RemoveObjectIndex implements github.com/insolar/insolar/ledger/storage.ObjectStorage interface
+//RemoveObjectIndex implements github.com/insolar/insolar/ledger/storage.ObjectStorage interface
 func (m *ObjectStorageMock) RemoveObjectIndex(p context.Context, p1 core.RecordID, p2 *core.RecordID) (r error) {
 	counter := atomic.AddUint64(&m.RemoveObjectIndexPreCounter, 1)
 	defer atomic.AddUint64(&m.RemoveObjectIndexCounter, 1)
@@ -814,17 +814,17 @@ func (m *ObjectStorageMock) RemoveObjectIndex(p context.Context, p1 core.RecordI
 	return m.RemoveObjectIndexFunc(p, p1, p2)
 }
 
-// RemoveObjectIndexMinimockCounter returns a count of ObjectStorageMock.RemoveObjectIndexFunc invocations
+//RemoveObjectIndexMinimockCounter returns a count of ObjectStorageMock.RemoveObjectIndexFunc invocations
 func (m *ObjectStorageMock) RemoveObjectIndexMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.RemoveObjectIndexCounter)
 }
 
-// RemoveObjectIndexMinimockPreCounter returns the value of ObjectStorageMock.RemoveObjectIndex invocations
+//RemoveObjectIndexMinimockPreCounter returns the value of ObjectStorageMock.RemoveObjectIndex invocations
 func (m *ObjectStorageMock) RemoveObjectIndexMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.RemoveObjectIndexPreCounter)
 }
 
-// RemoveObjectIndexFinished returns true if mock invocations count is ok
+//RemoveObjectIndexFinished returns true if mock invocations count is ok
 func (m *ObjectStorageMock) RemoveObjectIndexFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.RemoveObjectIndexMock.expectationSeries) > 0 {
@@ -867,7 +867,7 @@ type ObjectStorageMockSetBlobResult struct {
 	r1 error
 }
 
-// Expect specifies that invocation of ObjectStorage.SetBlob is expected from 1 to Infinity times
+//Expect specifies that invocation of ObjectStorage.SetBlob is expected from 1 to Infinity times
 func (m *mObjectStorageMockSetBlob) Expect(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 []byte) *mObjectStorageMockSetBlob {
 	m.mock.SetBlobFunc = nil
 	m.expectationSeries = nil
@@ -879,7 +879,7 @@ func (m *mObjectStorageMockSetBlob) Expect(p context.Context, p1 core.RecordID, 
 	return m
 }
 
-// Return specifies results of invocation of ObjectStorage.SetBlob
+//Return specifies results of invocation of ObjectStorage.SetBlob
 func (m *mObjectStorageMockSetBlob) Return(r *core.RecordID, r1 error) *ObjectStorageMock {
 	m.mock.SetBlobFunc = nil
 	m.expectationSeries = nil
@@ -891,7 +891,7 @@ func (m *mObjectStorageMockSetBlob) Return(r *core.RecordID, r1 error) *ObjectSt
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of ObjectStorage.SetBlob is expected once
+//ExpectOnce specifies that invocation of ObjectStorage.SetBlob is expected once
 func (m *mObjectStorageMockSetBlob) ExpectOnce(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 []byte) *ObjectStorageMockSetBlobExpectation {
 	m.mock.SetBlobFunc = nil
 	m.mainExpectation = nil
@@ -906,7 +906,7 @@ func (e *ObjectStorageMockSetBlobExpectation) Return(r *core.RecordID, r1 error)
 	e.result = &ObjectStorageMockSetBlobResult{r, r1}
 }
 
-// Set uses given function f as a mock of ObjectStorage.SetBlob method
+//Set uses given function f as a mock of ObjectStorage.SetBlob method
 func (m *mObjectStorageMockSetBlob) Set(f func(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 []byte) (r *core.RecordID, r1 error)) *ObjectStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -915,7 +915,7 @@ func (m *mObjectStorageMockSetBlob) Set(f func(p context.Context, p1 core.Record
 	return m.mock
 }
 
-// SetBlob implements github.com/insolar/insolar/ledger/storage.ObjectStorage interface
+//SetBlob implements github.com/insolar/insolar/ledger/storage.ObjectStorage interface
 func (m *ObjectStorageMock) SetBlob(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 []byte) (r *core.RecordID, r1 error) {
 	counter := atomic.AddUint64(&m.SetBlobPreCounter, 1)
 	defer atomic.AddUint64(&m.SetBlobCounter, 1)
@@ -967,17 +967,17 @@ func (m *ObjectStorageMock) SetBlob(p context.Context, p1 core.RecordID, p2 core
 	return m.SetBlobFunc(p, p1, p2, p3)
 }
 
-// SetBlobMinimockCounter returns a count of ObjectStorageMock.SetBlobFunc invocations
+//SetBlobMinimockCounter returns a count of ObjectStorageMock.SetBlobFunc invocations
 func (m *ObjectStorageMock) SetBlobMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.SetBlobCounter)
 }
 
-// SetBlobMinimockPreCounter returns the value of ObjectStorageMock.SetBlob invocations
+//SetBlobMinimockPreCounter returns the value of ObjectStorageMock.SetBlob invocations
 func (m *ObjectStorageMock) SetBlobMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.SetBlobPreCounter)
 }
 
-// SetBlobFinished returns true if mock invocations count is ok
+//SetBlobFinished returns true if mock invocations count is ok
 func (m *ObjectStorageMock) SetBlobFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.SetBlobMock.expectationSeries) > 0 {
@@ -1019,7 +1019,7 @@ type ObjectStorageMockSetMessageResult struct {
 	r error
 }
 
-// Expect specifies that invocation of ObjectStorage.SetMessage is expected from 1 to Infinity times
+//Expect specifies that invocation of ObjectStorage.SetMessage is expected from 1 to Infinity times
 func (m *mObjectStorageMockSetMessage) Expect(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 core.Message) *mObjectStorageMockSetMessage {
 	m.mock.SetMessageFunc = nil
 	m.expectationSeries = nil
@@ -1031,7 +1031,7 @@ func (m *mObjectStorageMockSetMessage) Expect(p context.Context, p1 core.RecordI
 	return m
 }
 
-// Return specifies results of invocation of ObjectStorage.SetMessage
+//Return specifies results of invocation of ObjectStorage.SetMessage
 func (m *mObjectStorageMockSetMessage) Return(r error) *ObjectStorageMock {
 	m.mock.SetMessageFunc = nil
 	m.expectationSeries = nil
@@ -1043,7 +1043,7 @@ func (m *mObjectStorageMockSetMessage) Return(r error) *ObjectStorageMock {
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of ObjectStorage.SetMessage is expected once
+//ExpectOnce specifies that invocation of ObjectStorage.SetMessage is expected once
 func (m *mObjectStorageMockSetMessage) ExpectOnce(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 core.Message) *ObjectStorageMockSetMessageExpectation {
 	m.mock.SetMessageFunc = nil
 	m.mainExpectation = nil
@@ -1058,7 +1058,7 @@ func (e *ObjectStorageMockSetMessageExpectation) Return(r error) {
 	e.result = &ObjectStorageMockSetMessageResult{r}
 }
 
-// Set uses given function f as a mock of ObjectStorage.SetMessage method
+//Set uses given function f as a mock of ObjectStorage.SetMessage method
 func (m *mObjectStorageMockSetMessage) Set(f func(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 core.Message) (r error)) *ObjectStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -1067,7 +1067,7 @@ func (m *mObjectStorageMockSetMessage) Set(f func(p context.Context, p1 core.Rec
 	return m.mock
 }
 
-// SetMessage implements github.com/insolar/insolar/ledger/storage.ObjectStorage interface
+//SetMessage implements github.com/insolar/insolar/ledger/storage.ObjectStorage interface
 func (m *ObjectStorageMock) SetMessage(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 core.Message) (r error) {
 	counter := atomic.AddUint64(&m.SetMessagePreCounter, 1)
 	defer atomic.AddUint64(&m.SetMessageCounter, 1)
@@ -1117,17 +1117,17 @@ func (m *ObjectStorageMock) SetMessage(p context.Context, p1 core.RecordID, p2 c
 	return m.SetMessageFunc(p, p1, p2, p3)
 }
 
-// SetMessageMinimockCounter returns a count of ObjectStorageMock.SetMessageFunc invocations
+//SetMessageMinimockCounter returns a count of ObjectStorageMock.SetMessageFunc invocations
 func (m *ObjectStorageMock) SetMessageMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.SetMessageCounter)
 }
 
-// SetMessageMinimockPreCounter returns the value of ObjectStorageMock.SetMessage invocations
+//SetMessageMinimockPreCounter returns the value of ObjectStorageMock.SetMessage invocations
 func (m *ObjectStorageMock) SetMessageMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.SetMessagePreCounter)
 }
 
-// SetMessageFinished returns true if mock invocations count is ok
+//SetMessageFinished returns true if mock invocations count is ok
 func (m *ObjectStorageMock) SetMessageFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.SetMessageMock.expectationSeries) > 0 {
@@ -1169,7 +1169,7 @@ type ObjectStorageMockSetObjectIndexResult struct {
 	r error
 }
 
-// Expect specifies that invocation of ObjectStorage.SetObjectIndex is expected from 1 to Infinity times
+//Expect specifies that invocation of ObjectStorage.SetObjectIndex is expected from 1 to Infinity times
 func (m *mObjectStorageMockSetObjectIndex) Expect(p context.Context, p1 core.RecordID, p2 *core.RecordID, p3 *index.ObjectLifeline) *mObjectStorageMockSetObjectIndex {
 	m.mock.SetObjectIndexFunc = nil
 	m.expectationSeries = nil
@@ -1181,7 +1181,7 @@ func (m *mObjectStorageMockSetObjectIndex) Expect(p context.Context, p1 core.Rec
 	return m
 }
 
-// Return specifies results of invocation of ObjectStorage.SetObjectIndex
+//Return specifies results of invocation of ObjectStorage.SetObjectIndex
 func (m *mObjectStorageMockSetObjectIndex) Return(r error) *ObjectStorageMock {
 	m.mock.SetObjectIndexFunc = nil
 	m.expectationSeries = nil
@@ -1193,7 +1193,7 @@ func (m *mObjectStorageMockSetObjectIndex) Return(r error) *ObjectStorageMock {
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of ObjectStorage.SetObjectIndex is expected once
+//ExpectOnce specifies that invocation of ObjectStorage.SetObjectIndex is expected once
 func (m *mObjectStorageMockSetObjectIndex) ExpectOnce(p context.Context, p1 core.RecordID, p2 *core.RecordID, p3 *index.ObjectLifeline) *ObjectStorageMockSetObjectIndexExpectation {
 	m.mock.SetObjectIndexFunc = nil
 	m.mainExpectation = nil
@@ -1208,7 +1208,7 @@ func (e *ObjectStorageMockSetObjectIndexExpectation) Return(r error) {
 	e.result = &ObjectStorageMockSetObjectIndexResult{r}
 }
 
-// Set uses given function f as a mock of ObjectStorage.SetObjectIndex method
+//Set uses given function f as a mock of ObjectStorage.SetObjectIndex method
 func (m *mObjectStorageMockSetObjectIndex) Set(f func(p context.Context, p1 core.RecordID, p2 *core.RecordID, p3 *index.ObjectLifeline) (r error)) *ObjectStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -1217,7 +1217,7 @@ func (m *mObjectStorageMockSetObjectIndex) Set(f func(p context.Context, p1 core
 	return m.mock
 }
 
-// SetObjectIndex implements github.com/insolar/insolar/ledger/storage.ObjectStorage interface
+//SetObjectIndex implements github.com/insolar/insolar/ledger/storage.ObjectStorage interface
 func (m *ObjectStorageMock) SetObjectIndex(p context.Context, p1 core.RecordID, p2 *core.RecordID, p3 *index.ObjectLifeline) (r error) {
 	counter := atomic.AddUint64(&m.SetObjectIndexPreCounter, 1)
 	defer atomic.AddUint64(&m.SetObjectIndexCounter, 1)
@@ -1267,17 +1267,17 @@ func (m *ObjectStorageMock) SetObjectIndex(p context.Context, p1 core.RecordID, 
 	return m.SetObjectIndexFunc(p, p1, p2, p3)
 }
 
-// SetObjectIndexMinimockCounter returns a count of ObjectStorageMock.SetObjectIndexFunc invocations
+//SetObjectIndexMinimockCounter returns a count of ObjectStorageMock.SetObjectIndexFunc invocations
 func (m *ObjectStorageMock) SetObjectIndexMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.SetObjectIndexCounter)
 }
 
-// SetObjectIndexMinimockPreCounter returns the value of ObjectStorageMock.SetObjectIndex invocations
+//SetObjectIndexMinimockPreCounter returns the value of ObjectStorageMock.SetObjectIndex invocations
 func (m *ObjectStorageMock) SetObjectIndexMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.SetObjectIndexPreCounter)
 }
 
-// SetObjectIndexFinished returns true if mock invocations count is ok
+//SetObjectIndexFinished returns true if mock invocations count is ok
 func (m *ObjectStorageMock) SetObjectIndexFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.SetObjectIndexMock.expectationSeries) > 0 {
@@ -1320,7 +1320,7 @@ type ObjectStorageMockSetRecordResult struct {
 	r1 error
 }
 
-// Expect specifies that invocation of ObjectStorage.SetRecord is expected from 1 to Infinity times
+//Expect specifies that invocation of ObjectStorage.SetRecord is expected from 1 to Infinity times
 func (m *mObjectStorageMockSetRecord) Expect(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 record.Record) *mObjectStorageMockSetRecord {
 	m.mock.SetRecordFunc = nil
 	m.expectationSeries = nil
@@ -1332,7 +1332,7 @@ func (m *mObjectStorageMockSetRecord) Expect(p context.Context, p1 core.RecordID
 	return m
 }
 
-// Return specifies results of invocation of ObjectStorage.SetRecord
+//Return specifies results of invocation of ObjectStorage.SetRecord
 func (m *mObjectStorageMockSetRecord) Return(r *core.RecordID, r1 error) *ObjectStorageMock {
 	m.mock.SetRecordFunc = nil
 	m.expectationSeries = nil
@@ -1344,7 +1344,7 @@ func (m *mObjectStorageMockSetRecord) Return(r *core.RecordID, r1 error) *Object
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of ObjectStorage.SetRecord is expected once
+//ExpectOnce specifies that invocation of ObjectStorage.SetRecord is expected once
 func (m *mObjectStorageMockSetRecord) ExpectOnce(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 record.Record) *ObjectStorageMockSetRecordExpectation {
 	m.mock.SetRecordFunc = nil
 	m.mainExpectation = nil
@@ -1359,7 +1359,7 @@ func (e *ObjectStorageMockSetRecordExpectation) Return(r *core.RecordID, r1 erro
 	e.result = &ObjectStorageMockSetRecordResult{r, r1}
 }
 
-// Set uses given function f as a mock of ObjectStorage.SetRecord method
+//Set uses given function f as a mock of ObjectStorage.SetRecord method
 func (m *mObjectStorageMockSetRecord) Set(f func(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 record.Record) (r *core.RecordID, r1 error)) *ObjectStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -1368,7 +1368,7 @@ func (m *mObjectStorageMockSetRecord) Set(f func(p context.Context, p1 core.Reco
 	return m.mock
 }
 
-// SetRecord implements github.com/insolar/insolar/ledger/storage.ObjectStorage interface
+//SetRecord implements github.com/insolar/insolar/ledger/storage.ObjectStorage interface
 func (m *ObjectStorageMock) SetRecord(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 record.Record) (r *core.RecordID, r1 error) {
 	counter := atomic.AddUint64(&m.SetRecordPreCounter, 1)
 	defer atomic.AddUint64(&m.SetRecordCounter, 1)
@@ -1420,17 +1420,17 @@ func (m *ObjectStorageMock) SetRecord(p context.Context, p1 core.RecordID, p2 co
 	return m.SetRecordFunc(p, p1, p2, p3)
 }
 
-// SetRecordMinimockCounter returns a count of ObjectStorageMock.SetRecordFunc invocations
+//SetRecordMinimockCounter returns a count of ObjectStorageMock.SetRecordFunc invocations
 func (m *ObjectStorageMock) SetRecordMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.SetRecordCounter)
 }
 
-// SetRecordMinimockPreCounter returns the value of ObjectStorageMock.SetRecord invocations
+//SetRecordMinimockPreCounter returns the value of ObjectStorageMock.SetRecord invocations
 func (m *ObjectStorageMock) SetRecordMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.SetRecordPreCounter)
 }
 
-// SetRecordFinished returns true if mock invocations count is ok
+//SetRecordFinished returns true if mock invocations count is ok
 func (m *ObjectStorageMock) SetRecordFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.SetRecordMock.expectationSeries) > 0 {
@@ -1450,8 +1450,8 @@ func (m *ObjectStorageMock) SetRecordFinished() bool {
 	return true
 }
 
-// ValidateCallCounters checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//ValidateCallCounters checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *ObjectStorageMock) ValidateCallCounters() {
 
 	if !m.GetBlobFinished() {
@@ -1492,19 +1492,19 @@ func (m *ObjectStorageMock) ValidateCallCounters() {
 
 }
 
-// CheckMocksCalled checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//CheckMocksCalled checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *ObjectStorageMock) CheckMocksCalled() {
 	m.Finish()
 }
 
-// Finish checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
+//Finish checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
 func (m *ObjectStorageMock) Finish() {
 	m.MinimockFinish()
 }
 
-// MinimockFinish checks that all mocked methods of the interface have been called at least once
+//MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *ObjectStorageMock) MinimockFinish() {
 
 	if !m.GetBlobFinished() {
@@ -1545,14 +1545,14 @@ func (m *ObjectStorageMock) MinimockFinish() {
 
 }
 
-// Wait waits for all mocked methods to be called at least once
-// Deprecated: please use MinimockWait or use Wait method of minimock.Controller
+//Wait waits for all mocked methods to be called at least once
+//Deprecated: please use MinimockWait or use Wait method of minimock.Controller
 func (m *ObjectStorageMock) Wait(timeout time.Duration) {
 	m.MinimockWait(timeout)
 }
 
-// MinimockWait waits for all mocked methods to be called at least once
-// this method is called by minimock.Controller
+//MinimockWait waits for all mocked methods to be called at least once
+//this method is called by minimock.Controller
 func (m *ObjectStorageMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
@@ -1618,8 +1618,8 @@ func (m *ObjectStorageMock) MinimockWait(timeout time.Duration) {
 	}
 }
 
-// AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
-// it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
+//AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
+//it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *ObjectStorageMock) AllMocksCalled() bool {
 
 	if !m.GetBlobFinished() {

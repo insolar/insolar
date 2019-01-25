@@ -6,18 +6,18 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "Cleaner" can be found in github.com/insolar/insolar/ledger/storage
 */
 import (
-	"context"
+	context "context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/recentstorage"
+	core "github.com/insolar/insolar/core"
+	recentstorage "github.com/insolar/insolar/ledger/recentstorage"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-// CleanerMock implements github.com/insolar/insolar/ledger/storage.Cleaner
+//CleanerMock implements github.com/insolar/insolar/ledger/storage.Cleaner
 type CleanerMock struct {
 	t minimock.Tester
 
@@ -47,7 +47,7 @@ type CleanerMock struct {
 	RemoveJetRecordsUntilMock       mCleanerMockRemoveJetRecordsUntil
 }
 
-// NewCleanerMock returns a mock for github.com/insolar/insolar/ledger/storage.Cleaner
+//NewCleanerMock returns a mock for github.com/insolar/insolar/ledger/storage.Cleaner
 func NewCleanerMock(t minimock.Tester) *CleanerMock {
 	m := &CleanerMock{t: t}
 
@@ -87,7 +87,7 @@ type CleanerMockRemoveAllForJetUntilPulseResult struct {
 	r1 error
 }
 
-// Expect specifies that invocation of Cleaner.RemoveAllForJetUntilPulse is expected from 1 to Infinity times
+//Expect specifies that invocation of Cleaner.RemoveAllForJetUntilPulse is expected from 1 to Infinity times
 func (m *mCleanerMockRemoveAllForJetUntilPulse) Expect(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 recentstorage.RecentStorage) *mCleanerMockRemoveAllForJetUntilPulse {
 	m.mock.RemoveAllForJetUntilPulseFunc = nil
 	m.expectationSeries = nil
@@ -99,7 +99,7 @@ func (m *mCleanerMockRemoveAllForJetUntilPulse) Expect(p context.Context, p1 cor
 	return m
 }
 
-// Return specifies results of invocation of Cleaner.RemoveAllForJetUntilPulse
+//Return specifies results of invocation of Cleaner.RemoveAllForJetUntilPulse
 func (m *mCleanerMockRemoveAllForJetUntilPulse) Return(r map[string]int, r1 error) *CleanerMock {
 	m.mock.RemoveAllForJetUntilPulseFunc = nil
 	m.expectationSeries = nil
@@ -111,7 +111,7 @@ func (m *mCleanerMockRemoveAllForJetUntilPulse) Return(r map[string]int, r1 erro
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of Cleaner.RemoveAllForJetUntilPulse is expected once
+//ExpectOnce specifies that invocation of Cleaner.RemoveAllForJetUntilPulse is expected once
 func (m *mCleanerMockRemoveAllForJetUntilPulse) ExpectOnce(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 recentstorage.RecentStorage) *CleanerMockRemoveAllForJetUntilPulseExpectation {
 	m.mock.RemoveAllForJetUntilPulseFunc = nil
 	m.mainExpectation = nil
@@ -126,7 +126,7 @@ func (e *CleanerMockRemoveAllForJetUntilPulseExpectation) Return(r map[string]in
 	e.result = &CleanerMockRemoveAllForJetUntilPulseResult{r, r1}
 }
 
-// Set uses given function f as a mock of Cleaner.RemoveAllForJetUntilPulse method
+//Set uses given function f as a mock of Cleaner.RemoveAllForJetUntilPulse method
 func (m *mCleanerMockRemoveAllForJetUntilPulse) Set(f func(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 recentstorage.RecentStorage) (r map[string]int, r1 error)) *CleanerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -135,7 +135,7 @@ func (m *mCleanerMockRemoveAllForJetUntilPulse) Set(f func(p context.Context, p1
 	return m.mock
 }
 
-// RemoveAllForJetUntilPulse implements github.com/insolar/insolar/ledger/storage.Cleaner interface
+//RemoveAllForJetUntilPulse implements github.com/insolar/insolar/ledger/storage.Cleaner interface
 func (m *CleanerMock) RemoveAllForJetUntilPulse(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 recentstorage.RecentStorage) (r map[string]int, r1 error) {
 	counter := atomic.AddUint64(&m.RemoveAllForJetUntilPulsePreCounter, 1)
 	defer atomic.AddUint64(&m.RemoveAllForJetUntilPulseCounter, 1)
@@ -187,17 +187,17 @@ func (m *CleanerMock) RemoveAllForJetUntilPulse(p context.Context, p1 core.Recor
 	return m.RemoveAllForJetUntilPulseFunc(p, p1, p2, p3)
 }
 
-// RemoveAllForJetUntilPulseMinimockCounter returns a count of CleanerMock.RemoveAllForJetUntilPulseFunc invocations
+//RemoveAllForJetUntilPulseMinimockCounter returns a count of CleanerMock.RemoveAllForJetUntilPulseFunc invocations
 func (m *CleanerMock) RemoveAllForJetUntilPulseMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.RemoveAllForJetUntilPulseCounter)
 }
 
-// RemoveAllForJetUntilPulseMinimockPreCounter returns the value of CleanerMock.RemoveAllForJetUntilPulse invocations
+//RemoveAllForJetUntilPulseMinimockPreCounter returns the value of CleanerMock.RemoveAllForJetUntilPulse invocations
 func (m *CleanerMock) RemoveAllForJetUntilPulseMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.RemoveAllForJetUntilPulsePreCounter)
 }
 
-// RemoveAllForJetUntilPulseFinished returns true if mock invocations count is ok
+//RemoveAllForJetUntilPulseFinished returns true if mock invocations count is ok
 func (m *CleanerMock) RemoveAllForJetUntilPulseFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.RemoveAllForJetUntilPulseMock.expectationSeries) > 0 {
@@ -239,7 +239,7 @@ type CleanerMockRemoveJetBlobsUntilResult struct {
 	r1 error
 }
 
-// Expect specifies that invocation of Cleaner.RemoveJetBlobsUntil is expected from 1 to Infinity times
+//Expect specifies that invocation of Cleaner.RemoveJetBlobsUntil is expected from 1 to Infinity times
 func (m *mCleanerMockRemoveJetBlobsUntil) Expect(p context.Context, p1 core.RecordID, p2 core.PulseNumber) *mCleanerMockRemoveJetBlobsUntil {
 	m.mock.RemoveJetBlobsUntilFunc = nil
 	m.expectationSeries = nil
@@ -251,7 +251,7 @@ func (m *mCleanerMockRemoveJetBlobsUntil) Expect(p context.Context, p1 core.Reco
 	return m
 }
 
-// Return specifies results of invocation of Cleaner.RemoveJetBlobsUntil
+//Return specifies results of invocation of Cleaner.RemoveJetBlobsUntil
 func (m *mCleanerMockRemoveJetBlobsUntil) Return(r int, r1 error) *CleanerMock {
 	m.mock.RemoveJetBlobsUntilFunc = nil
 	m.expectationSeries = nil
@@ -263,7 +263,7 @@ func (m *mCleanerMockRemoveJetBlobsUntil) Return(r int, r1 error) *CleanerMock {
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of Cleaner.RemoveJetBlobsUntil is expected once
+//ExpectOnce specifies that invocation of Cleaner.RemoveJetBlobsUntil is expected once
 func (m *mCleanerMockRemoveJetBlobsUntil) ExpectOnce(p context.Context, p1 core.RecordID, p2 core.PulseNumber) *CleanerMockRemoveJetBlobsUntilExpectation {
 	m.mock.RemoveJetBlobsUntilFunc = nil
 	m.mainExpectation = nil
@@ -278,7 +278,7 @@ func (e *CleanerMockRemoveJetBlobsUntilExpectation) Return(r int, r1 error) {
 	e.result = &CleanerMockRemoveJetBlobsUntilResult{r, r1}
 }
 
-// Set uses given function f as a mock of Cleaner.RemoveJetBlobsUntil method
+//Set uses given function f as a mock of Cleaner.RemoveJetBlobsUntil method
 func (m *mCleanerMockRemoveJetBlobsUntil) Set(f func(p context.Context, p1 core.RecordID, p2 core.PulseNumber) (r int, r1 error)) *CleanerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -287,7 +287,7 @@ func (m *mCleanerMockRemoveJetBlobsUntil) Set(f func(p context.Context, p1 core.
 	return m.mock
 }
 
-// RemoveJetBlobsUntil implements github.com/insolar/insolar/ledger/storage.Cleaner interface
+//RemoveJetBlobsUntil implements github.com/insolar/insolar/ledger/storage.Cleaner interface
 func (m *CleanerMock) RemoveJetBlobsUntil(p context.Context, p1 core.RecordID, p2 core.PulseNumber) (r int, r1 error) {
 	counter := atomic.AddUint64(&m.RemoveJetBlobsUntilPreCounter, 1)
 	defer atomic.AddUint64(&m.RemoveJetBlobsUntilCounter, 1)
@@ -339,17 +339,17 @@ func (m *CleanerMock) RemoveJetBlobsUntil(p context.Context, p1 core.RecordID, p
 	return m.RemoveJetBlobsUntilFunc(p, p1, p2)
 }
 
-// RemoveJetBlobsUntilMinimockCounter returns a count of CleanerMock.RemoveJetBlobsUntilFunc invocations
+//RemoveJetBlobsUntilMinimockCounter returns a count of CleanerMock.RemoveJetBlobsUntilFunc invocations
 func (m *CleanerMock) RemoveJetBlobsUntilMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.RemoveJetBlobsUntilCounter)
 }
 
-// RemoveJetBlobsUntilMinimockPreCounter returns the value of CleanerMock.RemoveJetBlobsUntil invocations
+//RemoveJetBlobsUntilMinimockPreCounter returns the value of CleanerMock.RemoveJetBlobsUntil invocations
 func (m *CleanerMock) RemoveJetBlobsUntilMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.RemoveJetBlobsUntilPreCounter)
 }
 
-// RemoveJetBlobsUntilFinished returns true if mock invocations count is ok
+//RemoveJetBlobsUntilFinished returns true if mock invocations count is ok
 func (m *CleanerMock) RemoveJetBlobsUntilFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.RemoveJetBlobsUntilMock.expectationSeries) > 0 {
@@ -391,7 +391,7 @@ type CleanerMockRemoveJetDropsUntilResult struct {
 	r1 error
 }
 
-// Expect specifies that invocation of Cleaner.RemoveJetDropsUntil is expected from 1 to Infinity times
+//Expect specifies that invocation of Cleaner.RemoveJetDropsUntil is expected from 1 to Infinity times
 func (m *mCleanerMockRemoveJetDropsUntil) Expect(p context.Context, p1 core.RecordID, p2 core.PulseNumber) *mCleanerMockRemoveJetDropsUntil {
 	m.mock.RemoveJetDropsUntilFunc = nil
 	m.expectationSeries = nil
@@ -403,7 +403,7 @@ func (m *mCleanerMockRemoveJetDropsUntil) Expect(p context.Context, p1 core.Reco
 	return m
 }
 
-// Return specifies results of invocation of Cleaner.RemoveJetDropsUntil
+//Return specifies results of invocation of Cleaner.RemoveJetDropsUntil
 func (m *mCleanerMockRemoveJetDropsUntil) Return(r int, r1 error) *CleanerMock {
 	m.mock.RemoveJetDropsUntilFunc = nil
 	m.expectationSeries = nil
@@ -415,7 +415,7 @@ func (m *mCleanerMockRemoveJetDropsUntil) Return(r int, r1 error) *CleanerMock {
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of Cleaner.RemoveJetDropsUntil is expected once
+//ExpectOnce specifies that invocation of Cleaner.RemoveJetDropsUntil is expected once
 func (m *mCleanerMockRemoveJetDropsUntil) ExpectOnce(p context.Context, p1 core.RecordID, p2 core.PulseNumber) *CleanerMockRemoveJetDropsUntilExpectation {
 	m.mock.RemoveJetDropsUntilFunc = nil
 	m.mainExpectation = nil
@@ -430,7 +430,7 @@ func (e *CleanerMockRemoveJetDropsUntilExpectation) Return(r int, r1 error) {
 	e.result = &CleanerMockRemoveJetDropsUntilResult{r, r1}
 }
 
-// Set uses given function f as a mock of Cleaner.RemoveJetDropsUntil method
+//Set uses given function f as a mock of Cleaner.RemoveJetDropsUntil method
 func (m *mCleanerMockRemoveJetDropsUntil) Set(f func(p context.Context, p1 core.RecordID, p2 core.PulseNumber) (r int, r1 error)) *CleanerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -439,7 +439,7 @@ func (m *mCleanerMockRemoveJetDropsUntil) Set(f func(p context.Context, p1 core.
 	return m.mock
 }
 
-// RemoveJetDropsUntil implements github.com/insolar/insolar/ledger/storage.Cleaner interface
+//RemoveJetDropsUntil implements github.com/insolar/insolar/ledger/storage.Cleaner interface
 func (m *CleanerMock) RemoveJetDropsUntil(p context.Context, p1 core.RecordID, p2 core.PulseNumber) (r int, r1 error) {
 	counter := atomic.AddUint64(&m.RemoveJetDropsUntilPreCounter, 1)
 	defer atomic.AddUint64(&m.RemoveJetDropsUntilCounter, 1)
@@ -491,17 +491,17 @@ func (m *CleanerMock) RemoveJetDropsUntil(p context.Context, p1 core.RecordID, p
 	return m.RemoveJetDropsUntilFunc(p, p1, p2)
 }
 
-// RemoveJetDropsUntilMinimockCounter returns a count of CleanerMock.RemoveJetDropsUntilFunc invocations
+//RemoveJetDropsUntilMinimockCounter returns a count of CleanerMock.RemoveJetDropsUntilFunc invocations
 func (m *CleanerMock) RemoveJetDropsUntilMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.RemoveJetDropsUntilCounter)
 }
 
-// RemoveJetDropsUntilMinimockPreCounter returns the value of CleanerMock.RemoveJetDropsUntil invocations
+//RemoveJetDropsUntilMinimockPreCounter returns the value of CleanerMock.RemoveJetDropsUntil invocations
 func (m *CleanerMock) RemoveJetDropsUntilMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.RemoveJetDropsUntilPreCounter)
 }
 
-// RemoveJetDropsUntilFinished returns true if mock invocations count is ok
+//RemoveJetDropsUntilFinished returns true if mock invocations count is ok
 func (m *CleanerMock) RemoveJetDropsUntilFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.RemoveJetDropsUntilMock.expectationSeries) > 0 {
@@ -544,7 +544,7 @@ type CleanerMockRemoveJetIndexesUntilResult struct {
 	r1 error
 }
 
-// Expect specifies that invocation of Cleaner.RemoveJetIndexesUntil is expected from 1 to Infinity times
+//Expect specifies that invocation of Cleaner.RemoveJetIndexesUntil is expected from 1 to Infinity times
 func (m *mCleanerMockRemoveJetIndexesUntil) Expect(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 recentstorage.RecentStorage) *mCleanerMockRemoveJetIndexesUntil {
 	m.mock.RemoveJetIndexesUntilFunc = nil
 	m.expectationSeries = nil
@@ -556,7 +556,7 @@ func (m *mCleanerMockRemoveJetIndexesUntil) Expect(p context.Context, p1 core.Re
 	return m
 }
 
-// Return specifies results of invocation of Cleaner.RemoveJetIndexesUntil
+//Return specifies results of invocation of Cleaner.RemoveJetIndexesUntil
 func (m *mCleanerMockRemoveJetIndexesUntil) Return(r int, r1 error) *CleanerMock {
 	m.mock.RemoveJetIndexesUntilFunc = nil
 	m.expectationSeries = nil
@@ -568,7 +568,7 @@ func (m *mCleanerMockRemoveJetIndexesUntil) Return(r int, r1 error) *CleanerMock
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of Cleaner.RemoveJetIndexesUntil is expected once
+//ExpectOnce specifies that invocation of Cleaner.RemoveJetIndexesUntil is expected once
 func (m *mCleanerMockRemoveJetIndexesUntil) ExpectOnce(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 recentstorage.RecentStorage) *CleanerMockRemoveJetIndexesUntilExpectation {
 	m.mock.RemoveJetIndexesUntilFunc = nil
 	m.mainExpectation = nil
@@ -583,7 +583,7 @@ func (e *CleanerMockRemoveJetIndexesUntilExpectation) Return(r int, r1 error) {
 	e.result = &CleanerMockRemoveJetIndexesUntilResult{r, r1}
 }
 
-// Set uses given function f as a mock of Cleaner.RemoveJetIndexesUntil method
+//Set uses given function f as a mock of Cleaner.RemoveJetIndexesUntil method
 func (m *mCleanerMockRemoveJetIndexesUntil) Set(f func(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 recentstorage.RecentStorage) (r int, r1 error)) *CleanerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -592,7 +592,7 @@ func (m *mCleanerMockRemoveJetIndexesUntil) Set(f func(p context.Context, p1 cor
 	return m.mock
 }
 
-// RemoveJetIndexesUntil implements github.com/insolar/insolar/ledger/storage.Cleaner interface
+//RemoveJetIndexesUntil implements github.com/insolar/insolar/ledger/storage.Cleaner interface
 func (m *CleanerMock) RemoveJetIndexesUntil(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 recentstorage.RecentStorage) (r int, r1 error) {
 	counter := atomic.AddUint64(&m.RemoveJetIndexesUntilPreCounter, 1)
 	defer atomic.AddUint64(&m.RemoveJetIndexesUntilCounter, 1)
@@ -644,17 +644,17 @@ func (m *CleanerMock) RemoveJetIndexesUntil(p context.Context, p1 core.RecordID,
 	return m.RemoveJetIndexesUntilFunc(p, p1, p2, p3)
 }
 
-// RemoveJetIndexesUntilMinimockCounter returns a count of CleanerMock.RemoveJetIndexesUntilFunc invocations
+//RemoveJetIndexesUntilMinimockCounter returns a count of CleanerMock.RemoveJetIndexesUntilFunc invocations
 func (m *CleanerMock) RemoveJetIndexesUntilMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.RemoveJetIndexesUntilCounter)
 }
 
-// RemoveJetIndexesUntilMinimockPreCounter returns the value of CleanerMock.RemoveJetIndexesUntil invocations
+//RemoveJetIndexesUntilMinimockPreCounter returns the value of CleanerMock.RemoveJetIndexesUntil invocations
 func (m *CleanerMock) RemoveJetIndexesUntilMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.RemoveJetIndexesUntilPreCounter)
 }
 
-// RemoveJetIndexesUntilFinished returns true if mock invocations count is ok
+//RemoveJetIndexesUntilFinished returns true if mock invocations count is ok
 func (m *CleanerMock) RemoveJetIndexesUntilFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.RemoveJetIndexesUntilMock.expectationSeries) > 0 {
@@ -697,7 +697,7 @@ type CleanerMockRemoveJetRecordsUntilResult struct {
 	r1 error
 }
 
-// Expect specifies that invocation of Cleaner.RemoveJetRecordsUntil is expected from 1 to Infinity times
+//Expect specifies that invocation of Cleaner.RemoveJetRecordsUntil is expected from 1 to Infinity times
 func (m *mCleanerMockRemoveJetRecordsUntil) Expect(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 recentstorage.RecentStorage) *mCleanerMockRemoveJetRecordsUntil {
 	m.mock.RemoveJetRecordsUntilFunc = nil
 	m.expectationSeries = nil
@@ -709,7 +709,7 @@ func (m *mCleanerMockRemoveJetRecordsUntil) Expect(p context.Context, p1 core.Re
 	return m
 }
 
-// Return specifies results of invocation of Cleaner.RemoveJetRecordsUntil
+//Return specifies results of invocation of Cleaner.RemoveJetRecordsUntil
 func (m *mCleanerMockRemoveJetRecordsUntil) Return(r int, r1 error) *CleanerMock {
 	m.mock.RemoveJetRecordsUntilFunc = nil
 	m.expectationSeries = nil
@@ -721,7 +721,7 @@ func (m *mCleanerMockRemoveJetRecordsUntil) Return(r int, r1 error) *CleanerMock
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of Cleaner.RemoveJetRecordsUntil is expected once
+//ExpectOnce specifies that invocation of Cleaner.RemoveJetRecordsUntil is expected once
 func (m *mCleanerMockRemoveJetRecordsUntil) ExpectOnce(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 recentstorage.RecentStorage) *CleanerMockRemoveJetRecordsUntilExpectation {
 	m.mock.RemoveJetRecordsUntilFunc = nil
 	m.mainExpectation = nil
@@ -736,7 +736,7 @@ func (e *CleanerMockRemoveJetRecordsUntilExpectation) Return(r int, r1 error) {
 	e.result = &CleanerMockRemoveJetRecordsUntilResult{r, r1}
 }
 
-// Set uses given function f as a mock of Cleaner.RemoveJetRecordsUntil method
+//Set uses given function f as a mock of Cleaner.RemoveJetRecordsUntil method
 func (m *mCleanerMockRemoveJetRecordsUntil) Set(f func(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 recentstorage.RecentStorage) (r int, r1 error)) *CleanerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -745,7 +745,7 @@ func (m *mCleanerMockRemoveJetRecordsUntil) Set(f func(p context.Context, p1 cor
 	return m.mock
 }
 
-// RemoveJetRecordsUntil implements github.com/insolar/insolar/ledger/storage.Cleaner interface
+//RemoveJetRecordsUntil implements github.com/insolar/insolar/ledger/storage.Cleaner interface
 func (m *CleanerMock) RemoveJetRecordsUntil(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 recentstorage.RecentStorage) (r int, r1 error) {
 	counter := atomic.AddUint64(&m.RemoveJetRecordsUntilPreCounter, 1)
 	defer atomic.AddUint64(&m.RemoveJetRecordsUntilCounter, 1)
@@ -797,17 +797,17 @@ func (m *CleanerMock) RemoveJetRecordsUntil(p context.Context, p1 core.RecordID,
 	return m.RemoveJetRecordsUntilFunc(p, p1, p2, p3)
 }
 
-// RemoveJetRecordsUntilMinimockCounter returns a count of CleanerMock.RemoveJetRecordsUntilFunc invocations
+//RemoveJetRecordsUntilMinimockCounter returns a count of CleanerMock.RemoveJetRecordsUntilFunc invocations
 func (m *CleanerMock) RemoveJetRecordsUntilMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.RemoveJetRecordsUntilCounter)
 }
 
-// RemoveJetRecordsUntilMinimockPreCounter returns the value of CleanerMock.RemoveJetRecordsUntil invocations
+//RemoveJetRecordsUntilMinimockPreCounter returns the value of CleanerMock.RemoveJetRecordsUntil invocations
 func (m *CleanerMock) RemoveJetRecordsUntilMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.RemoveJetRecordsUntilPreCounter)
 }
 
-// RemoveJetRecordsUntilFinished returns true if mock invocations count is ok
+//RemoveJetRecordsUntilFinished returns true if mock invocations count is ok
 func (m *CleanerMock) RemoveJetRecordsUntilFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.RemoveJetRecordsUntilMock.expectationSeries) > 0 {
@@ -827,8 +827,8 @@ func (m *CleanerMock) RemoveJetRecordsUntilFinished() bool {
 	return true
 }
 
-// ValidateCallCounters checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//ValidateCallCounters checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *CleanerMock) ValidateCallCounters() {
 
 	if !m.RemoveAllForJetUntilPulseFinished() {
@@ -853,19 +853,19 @@ func (m *CleanerMock) ValidateCallCounters() {
 
 }
 
-// CheckMocksCalled checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//CheckMocksCalled checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *CleanerMock) CheckMocksCalled() {
 	m.Finish()
 }
 
-// Finish checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
+//Finish checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
 func (m *CleanerMock) Finish() {
 	m.MinimockFinish()
 }
 
-// MinimockFinish checks that all mocked methods of the interface have been called at least once
+//MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *CleanerMock) MinimockFinish() {
 
 	if !m.RemoveAllForJetUntilPulseFinished() {
@@ -890,14 +890,14 @@ func (m *CleanerMock) MinimockFinish() {
 
 }
 
-// Wait waits for all mocked methods to be called at least once
-// Deprecated: please use MinimockWait or use Wait method of minimock.Controller
+//Wait waits for all mocked methods to be called at least once
+//Deprecated: please use MinimockWait or use Wait method of minimock.Controller
 func (m *CleanerMock) Wait(timeout time.Duration) {
 	m.MinimockWait(timeout)
 }
 
-// MinimockWait waits for all mocked methods to be called at least once
-// this method is called by minimock.Controller
+//MinimockWait waits for all mocked methods to be called at least once
+//this method is called by minimock.Controller
 func (m *CleanerMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
@@ -943,8 +943,8 @@ func (m *CleanerMock) MinimockWait(timeout time.Duration) {
 	}
 }
 
-// AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
-// it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
+//AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
+//it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *CleanerMock) AllMocksCalled() bool {
 
 	if !m.RemoveAllForJetUntilPulseFinished() {

@@ -6,17 +6,17 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "ReplicaStorage" can be found in github.com/insolar/insolar/ledger/storage
 */
 import (
-	"context"
+	context "context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/core"
+	core "github.com/insolar/insolar/core"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-// ReplicaStorageMock implements github.com/insolar/insolar/ledger/storage.ReplicaStorage
+//ReplicaStorageMock implements github.com/insolar/insolar/ledger/storage.ReplicaStorage
 type ReplicaStorageMock struct {
 	t minimock.Tester
 
@@ -51,7 +51,7 @@ type ReplicaStorageMock struct {
 	SetSyncClientJetPulsesMock       mReplicaStorageMockSetSyncClientJetPulses
 }
 
-// NewReplicaStorageMock returns a mock for github.com/insolar/insolar/ledger/storage.ReplicaStorage
+//NewReplicaStorageMock returns a mock for github.com/insolar/insolar/ledger/storage.ReplicaStorage
 func NewReplicaStorageMock(t minimock.Tester) *ReplicaStorageMock {
 	m := &ReplicaStorageMock{t: t}
 
@@ -89,7 +89,7 @@ type ReplicaStorageMockGetAllNonEmptySyncClientJetsResult struct {
 	r1 error
 }
 
-// Expect specifies that invocation of ReplicaStorage.GetAllNonEmptySyncClientJets is expected from 1 to Infinity times
+//Expect specifies that invocation of ReplicaStorage.GetAllNonEmptySyncClientJets is expected from 1 to Infinity times
 func (m *mReplicaStorageMockGetAllNonEmptySyncClientJets) Expect(p context.Context) *mReplicaStorageMockGetAllNonEmptySyncClientJets {
 	m.mock.GetAllNonEmptySyncClientJetsFunc = nil
 	m.expectationSeries = nil
@@ -101,7 +101,7 @@ func (m *mReplicaStorageMockGetAllNonEmptySyncClientJets) Expect(p context.Conte
 	return m
 }
 
-// Return specifies results of invocation of ReplicaStorage.GetAllNonEmptySyncClientJets
+//Return specifies results of invocation of ReplicaStorage.GetAllNonEmptySyncClientJets
 func (m *mReplicaStorageMockGetAllNonEmptySyncClientJets) Return(r map[core.RecordID][]core.PulseNumber, r1 error) *ReplicaStorageMock {
 	m.mock.GetAllNonEmptySyncClientJetsFunc = nil
 	m.expectationSeries = nil
@@ -113,7 +113,7 @@ func (m *mReplicaStorageMockGetAllNonEmptySyncClientJets) Return(r map[core.Reco
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of ReplicaStorage.GetAllNonEmptySyncClientJets is expected once
+//ExpectOnce specifies that invocation of ReplicaStorage.GetAllNonEmptySyncClientJets is expected once
 func (m *mReplicaStorageMockGetAllNonEmptySyncClientJets) ExpectOnce(p context.Context) *ReplicaStorageMockGetAllNonEmptySyncClientJetsExpectation {
 	m.mock.GetAllNonEmptySyncClientJetsFunc = nil
 	m.mainExpectation = nil
@@ -128,7 +128,7 @@ func (e *ReplicaStorageMockGetAllNonEmptySyncClientJetsExpectation) Return(r map
 	e.result = &ReplicaStorageMockGetAllNonEmptySyncClientJetsResult{r, r1}
 }
 
-// Set uses given function f as a mock of ReplicaStorage.GetAllNonEmptySyncClientJets method
+//Set uses given function f as a mock of ReplicaStorage.GetAllNonEmptySyncClientJets method
 func (m *mReplicaStorageMockGetAllNonEmptySyncClientJets) Set(f func(p context.Context) (r map[core.RecordID][]core.PulseNumber, r1 error)) *ReplicaStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -137,7 +137,7 @@ func (m *mReplicaStorageMockGetAllNonEmptySyncClientJets) Set(f func(p context.C
 	return m.mock
 }
 
-// GetAllNonEmptySyncClientJets implements github.com/insolar/insolar/ledger/storage.ReplicaStorage interface
+//GetAllNonEmptySyncClientJets implements github.com/insolar/insolar/ledger/storage.ReplicaStorage interface
 func (m *ReplicaStorageMock) GetAllNonEmptySyncClientJets(p context.Context) (r map[core.RecordID][]core.PulseNumber, r1 error) {
 	counter := atomic.AddUint64(&m.GetAllNonEmptySyncClientJetsPreCounter, 1)
 	defer atomic.AddUint64(&m.GetAllNonEmptySyncClientJetsCounter, 1)
@@ -189,17 +189,17 @@ func (m *ReplicaStorageMock) GetAllNonEmptySyncClientJets(p context.Context) (r 
 	return m.GetAllNonEmptySyncClientJetsFunc(p)
 }
 
-// GetAllNonEmptySyncClientJetsMinimockCounter returns a count of ReplicaStorageMock.GetAllNonEmptySyncClientJetsFunc invocations
+//GetAllNonEmptySyncClientJetsMinimockCounter returns a count of ReplicaStorageMock.GetAllNonEmptySyncClientJetsFunc invocations
 func (m *ReplicaStorageMock) GetAllNonEmptySyncClientJetsMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.GetAllNonEmptySyncClientJetsCounter)
 }
 
-// GetAllNonEmptySyncClientJetsMinimockPreCounter returns the value of ReplicaStorageMock.GetAllNonEmptySyncClientJets invocations
+//GetAllNonEmptySyncClientJetsMinimockPreCounter returns the value of ReplicaStorageMock.GetAllNonEmptySyncClientJets invocations
 func (m *ReplicaStorageMock) GetAllNonEmptySyncClientJetsMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.GetAllNonEmptySyncClientJetsPreCounter)
 }
 
-// GetAllNonEmptySyncClientJetsFinished returns true if mock invocations count is ok
+//GetAllNonEmptySyncClientJetsFinished returns true if mock invocations count is ok
 func (m *ReplicaStorageMock) GetAllNonEmptySyncClientJetsFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.GetAllNonEmptySyncClientJetsMock.expectationSeries) > 0 {
@@ -239,7 +239,7 @@ type ReplicaStorageMockGetAllSyncClientJetsResult struct {
 	r1 error
 }
 
-// Expect specifies that invocation of ReplicaStorage.GetAllSyncClientJets is expected from 1 to Infinity times
+//Expect specifies that invocation of ReplicaStorage.GetAllSyncClientJets is expected from 1 to Infinity times
 func (m *mReplicaStorageMockGetAllSyncClientJets) Expect(p context.Context) *mReplicaStorageMockGetAllSyncClientJets {
 	m.mock.GetAllSyncClientJetsFunc = nil
 	m.expectationSeries = nil
@@ -251,7 +251,7 @@ func (m *mReplicaStorageMockGetAllSyncClientJets) Expect(p context.Context) *mRe
 	return m
 }
 
-// Return specifies results of invocation of ReplicaStorage.GetAllSyncClientJets
+//Return specifies results of invocation of ReplicaStorage.GetAllSyncClientJets
 func (m *mReplicaStorageMockGetAllSyncClientJets) Return(r map[core.RecordID][]core.PulseNumber, r1 error) *ReplicaStorageMock {
 	m.mock.GetAllSyncClientJetsFunc = nil
 	m.expectationSeries = nil
@@ -263,7 +263,7 @@ func (m *mReplicaStorageMockGetAllSyncClientJets) Return(r map[core.RecordID][]c
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of ReplicaStorage.GetAllSyncClientJets is expected once
+//ExpectOnce specifies that invocation of ReplicaStorage.GetAllSyncClientJets is expected once
 func (m *mReplicaStorageMockGetAllSyncClientJets) ExpectOnce(p context.Context) *ReplicaStorageMockGetAllSyncClientJetsExpectation {
 	m.mock.GetAllSyncClientJetsFunc = nil
 	m.mainExpectation = nil
@@ -278,7 +278,7 @@ func (e *ReplicaStorageMockGetAllSyncClientJetsExpectation) Return(r map[core.Re
 	e.result = &ReplicaStorageMockGetAllSyncClientJetsResult{r, r1}
 }
 
-// Set uses given function f as a mock of ReplicaStorage.GetAllSyncClientJets method
+//Set uses given function f as a mock of ReplicaStorage.GetAllSyncClientJets method
 func (m *mReplicaStorageMockGetAllSyncClientJets) Set(f func(p context.Context) (r map[core.RecordID][]core.PulseNumber, r1 error)) *ReplicaStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -287,7 +287,7 @@ func (m *mReplicaStorageMockGetAllSyncClientJets) Set(f func(p context.Context) 
 	return m.mock
 }
 
-// GetAllSyncClientJets implements github.com/insolar/insolar/ledger/storage.ReplicaStorage interface
+//GetAllSyncClientJets implements github.com/insolar/insolar/ledger/storage.ReplicaStorage interface
 func (m *ReplicaStorageMock) GetAllSyncClientJets(p context.Context) (r map[core.RecordID][]core.PulseNumber, r1 error) {
 	counter := atomic.AddUint64(&m.GetAllSyncClientJetsPreCounter, 1)
 	defer atomic.AddUint64(&m.GetAllSyncClientJetsCounter, 1)
@@ -339,17 +339,17 @@ func (m *ReplicaStorageMock) GetAllSyncClientJets(p context.Context) (r map[core
 	return m.GetAllSyncClientJetsFunc(p)
 }
 
-// GetAllSyncClientJetsMinimockCounter returns a count of ReplicaStorageMock.GetAllSyncClientJetsFunc invocations
+//GetAllSyncClientJetsMinimockCounter returns a count of ReplicaStorageMock.GetAllSyncClientJetsFunc invocations
 func (m *ReplicaStorageMock) GetAllSyncClientJetsMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.GetAllSyncClientJetsCounter)
 }
 
-// GetAllSyncClientJetsMinimockPreCounter returns the value of ReplicaStorageMock.GetAllSyncClientJets invocations
+//GetAllSyncClientJetsMinimockPreCounter returns the value of ReplicaStorageMock.GetAllSyncClientJets invocations
 func (m *ReplicaStorageMock) GetAllSyncClientJetsMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.GetAllSyncClientJetsPreCounter)
 }
 
-// GetAllSyncClientJetsFinished returns true if mock invocations count is ok
+//GetAllSyncClientJetsFinished returns true if mock invocations count is ok
 func (m *ReplicaStorageMock) GetAllSyncClientJetsFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.GetAllSyncClientJetsMock.expectationSeries) > 0 {
@@ -390,7 +390,7 @@ type ReplicaStorageMockGetHeavySyncedPulseResult struct {
 	r1 error
 }
 
-// Expect specifies that invocation of ReplicaStorage.GetHeavySyncedPulse is expected from 1 to Infinity times
+//Expect specifies that invocation of ReplicaStorage.GetHeavySyncedPulse is expected from 1 to Infinity times
 func (m *mReplicaStorageMockGetHeavySyncedPulse) Expect(p context.Context, p1 core.RecordID) *mReplicaStorageMockGetHeavySyncedPulse {
 	m.mock.GetHeavySyncedPulseFunc = nil
 	m.expectationSeries = nil
@@ -402,7 +402,7 @@ func (m *mReplicaStorageMockGetHeavySyncedPulse) Expect(p context.Context, p1 co
 	return m
 }
 
-// Return specifies results of invocation of ReplicaStorage.GetHeavySyncedPulse
+//Return specifies results of invocation of ReplicaStorage.GetHeavySyncedPulse
 func (m *mReplicaStorageMockGetHeavySyncedPulse) Return(r core.PulseNumber, r1 error) *ReplicaStorageMock {
 	m.mock.GetHeavySyncedPulseFunc = nil
 	m.expectationSeries = nil
@@ -414,7 +414,7 @@ func (m *mReplicaStorageMockGetHeavySyncedPulse) Return(r core.PulseNumber, r1 e
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of ReplicaStorage.GetHeavySyncedPulse is expected once
+//ExpectOnce specifies that invocation of ReplicaStorage.GetHeavySyncedPulse is expected once
 func (m *mReplicaStorageMockGetHeavySyncedPulse) ExpectOnce(p context.Context, p1 core.RecordID) *ReplicaStorageMockGetHeavySyncedPulseExpectation {
 	m.mock.GetHeavySyncedPulseFunc = nil
 	m.mainExpectation = nil
@@ -429,7 +429,7 @@ func (e *ReplicaStorageMockGetHeavySyncedPulseExpectation) Return(r core.PulseNu
 	e.result = &ReplicaStorageMockGetHeavySyncedPulseResult{r, r1}
 }
 
-// Set uses given function f as a mock of ReplicaStorage.GetHeavySyncedPulse method
+//Set uses given function f as a mock of ReplicaStorage.GetHeavySyncedPulse method
 func (m *mReplicaStorageMockGetHeavySyncedPulse) Set(f func(p context.Context, p1 core.RecordID) (r core.PulseNumber, r1 error)) *ReplicaStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -438,7 +438,7 @@ func (m *mReplicaStorageMockGetHeavySyncedPulse) Set(f func(p context.Context, p
 	return m.mock
 }
 
-// GetHeavySyncedPulse implements github.com/insolar/insolar/ledger/storage.ReplicaStorage interface
+//GetHeavySyncedPulse implements github.com/insolar/insolar/ledger/storage.ReplicaStorage interface
 func (m *ReplicaStorageMock) GetHeavySyncedPulse(p context.Context, p1 core.RecordID) (r core.PulseNumber, r1 error) {
 	counter := atomic.AddUint64(&m.GetHeavySyncedPulsePreCounter, 1)
 	defer atomic.AddUint64(&m.GetHeavySyncedPulseCounter, 1)
@@ -490,17 +490,17 @@ func (m *ReplicaStorageMock) GetHeavySyncedPulse(p context.Context, p1 core.Reco
 	return m.GetHeavySyncedPulseFunc(p, p1)
 }
 
-// GetHeavySyncedPulseMinimockCounter returns a count of ReplicaStorageMock.GetHeavySyncedPulseFunc invocations
+//GetHeavySyncedPulseMinimockCounter returns a count of ReplicaStorageMock.GetHeavySyncedPulseFunc invocations
 func (m *ReplicaStorageMock) GetHeavySyncedPulseMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.GetHeavySyncedPulseCounter)
 }
 
-// GetHeavySyncedPulseMinimockPreCounter returns the value of ReplicaStorageMock.GetHeavySyncedPulse invocations
+//GetHeavySyncedPulseMinimockPreCounter returns the value of ReplicaStorageMock.GetHeavySyncedPulse invocations
 func (m *ReplicaStorageMock) GetHeavySyncedPulseMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.GetHeavySyncedPulsePreCounter)
 }
 
-// GetHeavySyncedPulseFinished returns true if mock invocations count is ok
+//GetHeavySyncedPulseFinished returns true if mock invocations count is ok
 func (m *ReplicaStorageMock) GetHeavySyncedPulseFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.GetHeavySyncedPulseMock.expectationSeries) > 0 {
@@ -541,7 +541,7 @@ type ReplicaStorageMockGetSyncClientJetPulsesResult struct {
 	r1 error
 }
 
-// Expect specifies that invocation of ReplicaStorage.GetSyncClientJetPulses is expected from 1 to Infinity times
+//Expect specifies that invocation of ReplicaStorage.GetSyncClientJetPulses is expected from 1 to Infinity times
 func (m *mReplicaStorageMockGetSyncClientJetPulses) Expect(p context.Context, p1 core.RecordID) *mReplicaStorageMockGetSyncClientJetPulses {
 	m.mock.GetSyncClientJetPulsesFunc = nil
 	m.expectationSeries = nil
@@ -553,7 +553,7 @@ func (m *mReplicaStorageMockGetSyncClientJetPulses) Expect(p context.Context, p1
 	return m
 }
 
-// Return specifies results of invocation of ReplicaStorage.GetSyncClientJetPulses
+//Return specifies results of invocation of ReplicaStorage.GetSyncClientJetPulses
 func (m *mReplicaStorageMockGetSyncClientJetPulses) Return(r []core.PulseNumber, r1 error) *ReplicaStorageMock {
 	m.mock.GetSyncClientJetPulsesFunc = nil
 	m.expectationSeries = nil
@@ -565,7 +565,7 @@ func (m *mReplicaStorageMockGetSyncClientJetPulses) Return(r []core.PulseNumber,
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of ReplicaStorage.GetSyncClientJetPulses is expected once
+//ExpectOnce specifies that invocation of ReplicaStorage.GetSyncClientJetPulses is expected once
 func (m *mReplicaStorageMockGetSyncClientJetPulses) ExpectOnce(p context.Context, p1 core.RecordID) *ReplicaStorageMockGetSyncClientJetPulsesExpectation {
 	m.mock.GetSyncClientJetPulsesFunc = nil
 	m.mainExpectation = nil
@@ -580,7 +580,7 @@ func (e *ReplicaStorageMockGetSyncClientJetPulsesExpectation) Return(r []core.Pu
 	e.result = &ReplicaStorageMockGetSyncClientJetPulsesResult{r, r1}
 }
 
-// Set uses given function f as a mock of ReplicaStorage.GetSyncClientJetPulses method
+//Set uses given function f as a mock of ReplicaStorage.GetSyncClientJetPulses method
 func (m *mReplicaStorageMockGetSyncClientJetPulses) Set(f func(p context.Context, p1 core.RecordID) (r []core.PulseNumber, r1 error)) *ReplicaStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -589,7 +589,7 @@ func (m *mReplicaStorageMockGetSyncClientJetPulses) Set(f func(p context.Context
 	return m.mock
 }
 
-// GetSyncClientJetPulses implements github.com/insolar/insolar/ledger/storage.ReplicaStorage interface
+//GetSyncClientJetPulses implements github.com/insolar/insolar/ledger/storage.ReplicaStorage interface
 func (m *ReplicaStorageMock) GetSyncClientJetPulses(p context.Context, p1 core.RecordID) (r []core.PulseNumber, r1 error) {
 	counter := atomic.AddUint64(&m.GetSyncClientJetPulsesPreCounter, 1)
 	defer atomic.AddUint64(&m.GetSyncClientJetPulsesCounter, 1)
@@ -641,17 +641,17 @@ func (m *ReplicaStorageMock) GetSyncClientJetPulses(p context.Context, p1 core.R
 	return m.GetSyncClientJetPulsesFunc(p, p1)
 }
 
-// GetSyncClientJetPulsesMinimockCounter returns a count of ReplicaStorageMock.GetSyncClientJetPulsesFunc invocations
+//GetSyncClientJetPulsesMinimockCounter returns a count of ReplicaStorageMock.GetSyncClientJetPulsesFunc invocations
 func (m *ReplicaStorageMock) GetSyncClientJetPulsesMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.GetSyncClientJetPulsesCounter)
 }
 
-// GetSyncClientJetPulsesMinimockPreCounter returns the value of ReplicaStorageMock.GetSyncClientJetPulses invocations
+//GetSyncClientJetPulsesMinimockPreCounter returns the value of ReplicaStorageMock.GetSyncClientJetPulses invocations
 func (m *ReplicaStorageMock) GetSyncClientJetPulsesMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.GetSyncClientJetPulsesPreCounter)
 }
 
-// GetSyncClientJetPulsesFinished returns true if mock invocations count is ok
+//GetSyncClientJetPulsesFinished returns true if mock invocations count is ok
 func (m *ReplicaStorageMock) GetSyncClientJetPulsesFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.GetSyncClientJetPulsesMock.expectationSeries) > 0 {
@@ -692,7 +692,7 @@ type ReplicaStorageMockSetHeavySyncedPulseResult struct {
 	r error
 }
 
-// Expect specifies that invocation of ReplicaStorage.SetHeavySyncedPulse is expected from 1 to Infinity times
+//Expect specifies that invocation of ReplicaStorage.SetHeavySyncedPulse is expected from 1 to Infinity times
 func (m *mReplicaStorageMockSetHeavySyncedPulse) Expect(p context.Context, p1 core.RecordID, p2 core.PulseNumber) *mReplicaStorageMockSetHeavySyncedPulse {
 	m.mock.SetHeavySyncedPulseFunc = nil
 	m.expectationSeries = nil
@@ -704,7 +704,7 @@ func (m *mReplicaStorageMockSetHeavySyncedPulse) Expect(p context.Context, p1 co
 	return m
 }
 
-// Return specifies results of invocation of ReplicaStorage.SetHeavySyncedPulse
+//Return specifies results of invocation of ReplicaStorage.SetHeavySyncedPulse
 func (m *mReplicaStorageMockSetHeavySyncedPulse) Return(r error) *ReplicaStorageMock {
 	m.mock.SetHeavySyncedPulseFunc = nil
 	m.expectationSeries = nil
@@ -716,7 +716,7 @@ func (m *mReplicaStorageMockSetHeavySyncedPulse) Return(r error) *ReplicaStorage
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of ReplicaStorage.SetHeavySyncedPulse is expected once
+//ExpectOnce specifies that invocation of ReplicaStorage.SetHeavySyncedPulse is expected once
 func (m *mReplicaStorageMockSetHeavySyncedPulse) ExpectOnce(p context.Context, p1 core.RecordID, p2 core.PulseNumber) *ReplicaStorageMockSetHeavySyncedPulseExpectation {
 	m.mock.SetHeavySyncedPulseFunc = nil
 	m.mainExpectation = nil
@@ -731,7 +731,7 @@ func (e *ReplicaStorageMockSetHeavySyncedPulseExpectation) Return(r error) {
 	e.result = &ReplicaStorageMockSetHeavySyncedPulseResult{r}
 }
 
-// Set uses given function f as a mock of ReplicaStorage.SetHeavySyncedPulse method
+//Set uses given function f as a mock of ReplicaStorage.SetHeavySyncedPulse method
 func (m *mReplicaStorageMockSetHeavySyncedPulse) Set(f func(p context.Context, p1 core.RecordID, p2 core.PulseNumber) (r error)) *ReplicaStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -740,7 +740,7 @@ func (m *mReplicaStorageMockSetHeavySyncedPulse) Set(f func(p context.Context, p
 	return m.mock
 }
 
-// SetHeavySyncedPulse implements github.com/insolar/insolar/ledger/storage.ReplicaStorage interface
+//SetHeavySyncedPulse implements github.com/insolar/insolar/ledger/storage.ReplicaStorage interface
 func (m *ReplicaStorageMock) SetHeavySyncedPulse(p context.Context, p1 core.RecordID, p2 core.PulseNumber) (r error) {
 	counter := atomic.AddUint64(&m.SetHeavySyncedPulsePreCounter, 1)
 	defer atomic.AddUint64(&m.SetHeavySyncedPulseCounter, 1)
@@ -790,17 +790,17 @@ func (m *ReplicaStorageMock) SetHeavySyncedPulse(p context.Context, p1 core.Reco
 	return m.SetHeavySyncedPulseFunc(p, p1, p2)
 }
 
-// SetHeavySyncedPulseMinimockCounter returns a count of ReplicaStorageMock.SetHeavySyncedPulseFunc invocations
+//SetHeavySyncedPulseMinimockCounter returns a count of ReplicaStorageMock.SetHeavySyncedPulseFunc invocations
 func (m *ReplicaStorageMock) SetHeavySyncedPulseMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.SetHeavySyncedPulseCounter)
 }
 
-// SetHeavySyncedPulseMinimockPreCounter returns the value of ReplicaStorageMock.SetHeavySyncedPulse invocations
+//SetHeavySyncedPulseMinimockPreCounter returns the value of ReplicaStorageMock.SetHeavySyncedPulse invocations
 func (m *ReplicaStorageMock) SetHeavySyncedPulseMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.SetHeavySyncedPulsePreCounter)
 }
 
-// SetHeavySyncedPulseFinished returns true if mock invocations count is ok
+//SetHeavySyncedPulseFinished returns true if mock invocations count is ok
 func (m *ReplicaStorageMock) SetHeavySyncedPulseFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.SetHeavySyncedPulseMock.expectationSeries) > 0 {
@@ -841,7 +841,7 @@ type ReplicaStorageMockSetSyncClientJetPulsesResult struct {
 	r error
 }
 
-// Expect specifies that invocation of ReplicaStorage.SetSyncClientJetPulses is expected from 1 to Infinity times
+//Expect specifies that invocation of ReplicaStorage.SetSyncClientJetPulses is expected from 1 to Infinity times
 func (m *mReplicaStorageMockSetSyncClientJetPulses) Expect(p context.Context, p1 core.RecordID, p2 []core.PulseNumber) *mReplicaStorageMockSetSyncClientJetPulses {
 	m.mock.SetSyncClientJetPulsesFunc = nil
 	m.expectationSeries = nil
@@ -853,7 +853,7 @@ func (m *mReplicaStorageMockSetSyncClientJetPulses) Expect(p context.Context, p1
 	return m
 }
 
-// Return specifies results of invocation of ReplicaStorage.SetSyncClientJetPulses
+//Return specifies results of invocation of ReplicaStorage.SetSyncClientJetPulses
 func (m *mReplicaStorageMockSetSyncClientJetPulses) Return(r error) *ReplicaStorageMock {
 	m.mock.SetSyncClientJetPulsesFunc = nil
 	m.expectationSeries = nil
@@ -865,7 +865,7 @@ func (m *mReplicaStorageMockSetSyncClientJetPulses) Return(r error) *ReplicaStor
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of ReplicaStorage.SetSyncClientJetPulses is expected once
+//ExpectOnce specifies that invocation of ReplicaStorage.SetSyncClientJetPulses is expected once
 func (m *mReplicaStorageMockSetSyncClientJetPulses) ExpectOnce(p context.Context, p1 core.RecordID, p2 []core.PulseNumber) *ReplicaStorageMockSetSyncClientJetPulsesExpectation {
 	m.mock.SetSyncClientJetPulsesFunc = nil
 	m.mainExpectation = nil
@@ -880,7 +880,7 @@ func (e *ReplicaStorageMockSetSyncClientJetPulsesExpectation) Return(r error) {
 	e.result = &ReplicaStorageMockSetSyncClientJetPulsesResult{r}
 }
 
-// Set uses given function f as a mock of ReplicaStorage.SetSyncClientJetPulses method
+//Set uses given function f as a mock of ReplicaStorage.SetSyncClientJetPulses method
 func (m *mReplicaStorageMockSetSyncClientJetPulses) Set(f func(p context.Context, p1 core.RecordID, p2 []core.PulseNumber) (r error)) *ReplicaStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -889,7 +889,7 @@ func (m *mReplicaStorageMockSetSyncClientJetPulses) Set(f func(p context.Context
 	return m.mock
 }
 
-// SetSyncClientJetPulses implements github.com/insolar/insolar/ledger/storage.ReplicaStorage interface
+//SetSyncClientJetPulses implements github.com/insolar/insolar/ledger/storage.ReplicaStorage interface
 func (m *ReplicaStorageMock) SetSyncClientJetPulses(p context.Context, p1 core.RecordID, p2 []core.PulseNumber) (r error) {
 	counter := atomic.AddUint64(&m.SetSyncClientJetPulsesPreCounter, 1)
 	defer atomic.AddUint64(&m.SetSyncClientJetPulsesCounter, 1)
@@ -939,17 +939,17 @@ func (m *ReplicaStorageMock) SetSyncClientJetPulses(p context.Context, p1 core.R
 	return m.SetSyncClientJetPulsesFunc(p, p1, p2)
 }
 
-// SetSyncClientJetPulsesMinimockCounter returns a count of ReplicaStorageMock.SetSyncClientJetPulsesFunc invocations
+//SetSyncClientJetPulsesMinimockCounter returns a count of ReplicaStorageMock.SetSyncClientJetPulsesFunc invocations
 func (m *ReplicaStorageMock) SetSyncClientJetPulsesMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.SetSyncClientJetPulsesCounter)
 }
 
-// SetSyncClientJetPulsesMinimockPreCounter returns the value of ReplicaStorageMock.SetSyncClientJetPulses invocations
+//SetSyncClientJetPulsesMinimockPreCounter returns the value of ReplicaStorageMock.SetSyncClientJetPulses invocations
 func (m *ReplicaStorageMock) SetSyncClientJetPulsesMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.SetSyncClientJetPulsesPreCounter)
 }
 
-// SetSyncClientJetPulsesFinished returns true if mock invocations count is ok
+//SetSyncClientJetPulsesFinished returns true if mock invocations count is ok
 func (m *ReplicaStorageMock) SetSyncClientJetPulsesFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.SetSyncClientJetPulsesMock.expectationSeries) > 0 {
@@ -969,8 +969,8 @@ func (m *ReplicaStorageMock) SetSyncClientJetPulsesFinished() bool {
 	return true
 }
 
-// ValidateCallCounters checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//ValidateCallCounters checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *ReplicaStorageMock) ValidateCallCounters() {
 
 	if !m.GetAllNonEmptySyncClientJetsFinished() {
@@ -999,19 +999,19 @@ func (m *ReplicaStorageMock) ValidateCallCounters() {
 
 }
 
-// CheckMocksCalled checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//CheckMocksCalled checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *ReplicaStorageMock) CheckMocksCalled() {
 	m.Finish()
 }
 
-// Finish checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
+//Finish checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
 func (m *ReplicaStorageMock) Finish() {
 	m.MinimockFinish()
 }
 
-// MinimockFinish checks that all mocked methods of the interface have been called at least once
+//MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *ReplicaStorageMock) MinimockFinish() {
 
 	if !m.GetAllNonEmptySyncClientJetsFinished() {
@@ -1040,14 +1040,14 @@ func (m *ReplicaStorageMock) MinimockFinish() {
 
 }
 
-// Wait waits for all mocked methods to be called at least once
-// Deprecated: please use MinimockWait or use Wait method of minimock.Controller
+//Wait waits for all mocked methods to be called at least once
+//Deprecated: please use MinimockWait or use Wait method of minimock.Controller
 func (m *ReplicaStorageMock) Wait(timeout time.Duration) {
 	m.MinimockWait(timeout)
 }
 
-// MinimockWait waits for all mocked methods to be called at least once
-// this method is called by minimock.Controller
+//MinimockWait waits for all mocked methods to be called at least once
+//this method is called by minimock.Controller
 func (m *ReplicaStorageMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
@@ -1098,8 +1098,8 @@ func (m *ReplicaStorageMock) MinimockWait(timeout time.Duration) {
 	}
 }
 
-// AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
-// it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
+//AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
+//it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *ReplicaStorageMock) AllMocksCalled() bool {
 
 	if !m.GetAllNonEmptySyncClientJetsFinished() {
