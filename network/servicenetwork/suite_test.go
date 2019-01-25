@@ -383,6 +383,10 @@ func (s *testSuite) preInitNode(node *networkNode) {
 		return core.VoidNetworkState
 	})
 
+	netSwitcher.OnPulseMock.Set(func(p context.Context, p1 core.Pulse) (r error) {
+		return nil
+	})
+
 	realKeeper := nodenetwork.NewNodeKeeper(origin)
 	terminationHandler := &terminationHandler{NodeID: origin.ID()}
 
