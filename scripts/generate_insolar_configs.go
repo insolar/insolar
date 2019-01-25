@@ -1,5 +1,5 @@
 /*
- *    Copyright 2019 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -22,11 +22,11 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/insolar/insolar/cmd/pulsewatcher/config"
+	pulsewatcher "github.com/insolar/insolar/cmd/pulsewatcher/config"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/genesis"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v2"
 )
 
 func check(msg string, err error) {
