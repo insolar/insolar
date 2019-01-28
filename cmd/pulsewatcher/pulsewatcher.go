@@ -1,5 +1,5 @@
 /*
- *    Copyright 2019 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/insolar/insolar/cmd/pulsewatcher/config"
+	pulsewatcher "github.com/insolar/insolar/cmd/pulsewatcher/config"
 	"github.com/pkg/errors"
 	"github.com/spf13/pflag"
 )

@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -31,6 +31,16 @@ type Pulse struct {
 	Next         *core.PulseNumber
 	SerialNumber int
 	Pulse        core.Pulse
+}
+
+// PulseTracker allows to modify state of the pulse inside db
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage.PulseTracker -o ./ -s _mock.go
+type PulseTracker interface {
+	GetPulse(ctx context.Context, num core.PulseNumber) (*Pulse, error)
+	GetPreviousPulse(ctx context.Context, num core.PulseNumber) (*Pulse, error)
+	GetLatestPulse(ctx context.Context) (*Pulse, error)
+
+	AddPulse(ctx context.Context, pulse core.Pulse) error
 }
 
 // Bytes serializes pulse.

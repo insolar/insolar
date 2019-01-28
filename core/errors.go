@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -26,5 +26,5 @@ var (
 	// ErrStateNotAvailable returned when requested object is deactivated.
 	ErrStateNotAvailable = errors.New("object state is not available")
 	// ErrHotDataTimeout returned when no hot data received for a specific jet
-	ErrHotDataTimeout = errors.New("no hot data received for a specific jet")
+	ErrHotDataTimeout = errors.New("requests were abandoned due to hot-data timeout")
 )
