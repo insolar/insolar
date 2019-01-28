@@ -221,14 +221,6 @@ func (s *testSuite) getNodesCount() int {
 	return len(s.fixture().bootstrapNodes) + len(s.fixture().networkNodes)
 }
 
-type PhaseTimeOut uint8
-
-const (
-	Disable = PhaseTimeOut(iota + 1)
-	Partial
-	Full
-)
-
 func (s *testSuite) InitTestNode() {
 	if s.fixture().testNode.componentManager != nil {
 		err := s.fixture().testNode.init(s.fixture().ctx)
