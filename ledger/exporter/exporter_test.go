@@ -113,4 +113,10 @@ func TestExporter_Export(t *testing.T) {
 		assert.Equal(t, pl, request.Data.(*record.RequestRecord).Payload)
 		assert.Equal(t, core.TypeCallConstructor.String(), request.Payload["Type"])
 	}
+
+	_, err = exporter.Export(ctx, 100000, 2)
+	require.Error(t, err, "From-pulse should be smaller (or equal) current-pulse")
+
+	_, err = exporter.Export(ctx, 60000, 2)
+	require.NoError(t, err, "From-pulse should be smaller (or equal) current-pulse")
 }

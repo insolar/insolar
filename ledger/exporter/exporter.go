@@ -102,7 +102,8 @@ func (e *Exporter) Export(ctx context.Context, fromPulse core.PulseNumber, size 
 	fromPulsePN := core.PulseNumber(math.Max(float64(fromPulse), float64(core.GenesisPulse.PulseNumber)))
 
 	if fromPulsePN > currentPulse.PulseNumber {
-		return nil, errors.New("failed to fetch data: from-pulse > current-pulse")
+		return nil, errors.Errorf("failed to fetch data: from-pulse[%v] > current-pulse[%v]",
+			fromPulsePN, currentPulse.PulseNumber)
 	}
 
 	_, err = e.pulseTracker.GetPulse(ctx, fromPulsePN)
