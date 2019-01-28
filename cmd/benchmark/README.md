@@ -42,3 +42,6 @@ Usage
         -m usemembers
                 Use members from file scripts/insolard/benchmark/members.txt.
                 If false, wright info about created members in this file. Default is false. 
+
+        -b nocheckbalance
+                If true, don't check balance at the start/end of transfers. Default is false. 

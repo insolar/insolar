@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -121,7 +121,7 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 	jetCoordinatorMock.LightExecutorForJetMock.Return(executor, nil)
 	jetCoordinatorMock.MeMock.Return(*executor)
 
-	pm := pulsemanager.NewPulseManager(db, configuration.Ledger{
+	pm := pulsemanager.NewPulseManager(configuration.Ledger{
 		JetSizesHistoryDepth: 5,
 	})
 

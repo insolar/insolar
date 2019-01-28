@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -25,7 +25,6 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	base58 "github.com/jbenet/go-base58"
@@ -39,8 +38,7 @@ func TestExporter_Export(t *testing.T) {
 	db, clean := storagetest.TmpDB(ctx, t)
 	defer clean()
 	jetID := core.TODOJetID
-	ps := storage.NewPulseStorage(db)
-	exporter := NewExporter(db, ps, configuration.Exporter{ExportLag: 0})
+	exporter := NewExporter(db, configuration.Exporter{ExportLag: 0})
 
 	for i := 1; i <= 3; i++ {
 		err := db.AddPulse(
