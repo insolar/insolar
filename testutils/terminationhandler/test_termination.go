@@ -1,4 +1,4 @@
-package termination_handler
+package terminationhandler
 
 import (
 	"github.com/insolar/insolar/core"

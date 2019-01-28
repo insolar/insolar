@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -25,6 +25,22 @@ import (
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage/jet"
 )
+
+// Cleaner cleans lights after sync to heavy
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage.Cleaner -o ./ -s _mock.go
+type Cleaner interface {
+	RemoveAllForJetUntilPulse(
+		ctx context.Context,
+		jetID core.RecordID,
+		pn core.PulseNumber,
+		recent recentstorage.RecentStorage,
+	) (map[string]int, error)
+
+	RemoveJetIndexesUntil(ctx context.Context, jetID core.RecordID, pn core.PulseNumber, recent recentstorage.RecentStorage) (int, error)
+	RemoveJetBlobsUntil(ctx context.Context, jetID core.RecordID, pn core.PulseNumber) (int, error)
+	RemoveJetRecordsUntil(ctx context.Context, jetID core.RecordID, pn core.PulseNumber, recent recentstorage.RecentStorage) (int, error)
+	RemoveJetDropsUntil(ctx context.Context, jetID core.RecordID, pn core.PulseNumber) (int, error)
+}
 
 var rmScanFromPulse = core.PulseNumber(core.FirstPulseNumber + 1).Bytes()
 

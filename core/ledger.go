@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -49,18 +49,23 @@ func (r DynamicRole) IsVirtualRole() bool {
 	return false
 }
 
+// Deprecated: remove after deleting TmpLedger
 // Ledger is the global ledger handler. Other system parts communicate with ledger through it.
 // FIXME: THIS INTERFACE IS DEPRECATED. USE DI.
 type Ledger interface {
+	// Deprecated: remove after deleting TmpLedger
 	// GetArtifactManager returns artifact manager to work with.
 	GetArtifactManager() ArtifactManager
 
+	// Deprecated: remove after deleting TmpLedger
 	// GetJetCoordinator returns jet coordinator to work with.
 	GetJetCoordinator() JetCoordinator
 
+	// Deprecated: remove after deleting TmpLedger
 	// GetPulseManager returns pulse manager to work with.
 	GetPulseManager() PulseManager
 
+	// Deprecated: remove after deleting TmpLedger
 	// GetLocalStorage returns local storage to work with.
 	GetLocalStorage() LocalStorage
 }

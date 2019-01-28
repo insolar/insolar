@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -75,7 +75,8 @@ func getTestData(t *testing.T) (
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
 	db, cleaner := storagetest.TmpDB(ctx, t)
-	pulseStorage := storage.NewPulseStorage(db)
+	pulseStorage := storage.NewPulseStorage()
+	pulseStorage.PulseTracker = db
 
 	pulse, err := db.GetLatestPulse(ctx)
 	require.NoError(t, err)
@@ -92,12 +93,17 @@ func getTestData(t *testing.T) (
 	certificate.GetRoleMock.Return(core.StaticRoleLightMaterial)
 
 	handler := MessageHandler{
-		db:                         db,
 		replayHandlers:             map[core.MessageType]core.MessageHandler{},
 		PlatformCryptographyScheme: scheme,
 		conf:                       &configuration.Ledger{LightChainLimit: 3},
 		certificate:                certificate,
 	}
+
+	handler.ActiveNodesStorage = db
+	handler.ObjectStorage = db
+	handler.PulseTracker = db
+	handler.DBContext = db
+	handler.JetStorage = db
 
 	recentStorageMock := recentstorage.NewRecentStorageMock(t)
 	recentStorageMock.AddPendingRequestMock.Return()
@@ -639,7 +645,8 @@ func TestLedgerArtifactManager_GetChildren(t *testing.T) {
 }
 
 func makePulseStorage(db *storage.DB, ctx context.Context, t *testing.T) core.PulseStorage {
-	pulseStorage := storage.NewPulseStorage(db)
+	pulseStorage := storage.NewPulseStorage()
+	pulseStorage.PulseTracker = db
 	pulse, err := db.GetLatestPulse(ctx)
 	require.NoError(t, err)
 	pulseStorage.Set(&pulse.Pulse)
@@ -740,7 +747,6 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 	certificate.GetRoleMock.Return(core.StaticRoleLightMaterial)
 
 	handler := MessageHandler{
-		db:                         db,
 		replayHandlers:             map[core.MessageType]core.MessageHandler{},
 		PlatformCryptographyScheme: scheme,
 		conf:                       &configuration.Ledger{LightChainLimit: 3},
@@ -749,6 +755,11 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 
 	handler.Bus = mb
 	handler.JetCoordinator = jc
+	handler.DBContext = db
+	handler.ObjectStorage = db
+	handler.PulseTracker = db
+	handler.ActiveNodesStorage = db
+	handler.JetStorage = db
 
 	provideMock := recentstorage.NewProviderMock(t)
 	provideMock.GetStorageFunc = func(ctx context.Context, p core.RecordID) (r recentstorage.RecentStorage) {
