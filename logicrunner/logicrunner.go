@@ -315,8 +315,6 @@ func (lr *LogicRunner) RegisterRequest(ctx context.Context, parcel core.Parcel) 
 	return &res, nil
 }
 
-type objectID struct{}
-
 func loggerWithTarget(ctx context.Context, msg core.Parcel) context.Context {
 	context, _ := inslogger.WithField(ctx, "target", msg.DefaultTarget().String())
 	return context
