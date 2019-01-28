@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -71,19 +71,29 @@ func TestLedgerArtifactManager_PendingRequest(t *testing.T) {
 
 	cryptoScheme := platformpolicy.NewPlatformCryptographyScheme()
 
-	handler := NewMessageHandler(db, &configuration.Ledger{
+	handler := NewMessageHandler(&configuration.Ledger{
 		LightChainLimit: 10,
-	}, certificate)
+	},
+		certificate)
+
+	handler.JetStorage = db
+	handler.ActiveNodesStorage = db
+	handler.DBContext = db
+	handler.PulseTracker = db
+	handler.ObjectStorage = db
 
 	handler.PlatformCryptographyScheme = cryptoScheme
 	handler.Bus = mb
 	// handler.JetCoordinator = jc
 	handler.RecentStorageProvider = provider
 	handler.JetCoordinator = jcMock
+
+	handler.HotDataWaiter = NewHotDataWaiterConcrete()
+	handler.HotDataWaiter.Unlock(ctx, jetID)
+
 	err := handler.Init(ctx)
 	require.NoError(t, err)
 	objRef := *genRandomRef(0)
-	handler.CloseEarlyRequestCircuitBreakerForJet(ctx, jetID)
 
 	err = db.UpdateJetTree(ctx, core.FirstPulseNumber, true, jetID)
 	require.NoError(t, err)

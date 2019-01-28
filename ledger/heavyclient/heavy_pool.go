@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -26,21 +26,34 @@ import (
 
 // Pool manages state of heavy sync clients (one client per jet id).
 type Pool struct {
-	Bus          core.MessageBus
-	PulseStorage core.PulseStorage
-	db           *storage.DB
+	bus            core.MessageBus
+	pulseStorage   core.PulseStorage
+	pulseTracker   storage.PulseTracker
+	replicaStorage storage.ReplicaStorage
+	dbContext      storage.DBContext
 
-	ClientDefaults Options
+	clientDefaults Options
 
 	sync.Mutex
 	clients map[core.RecordID]*JetClient
 }
 
 // NewPool constructor of new pool.
-func NewPool(db *storage.DB, clientDefaults Options) *Pool {
+func NewPool(
+	bus core.MessageBus,
+	pulseStorage core.PulseStorage,
+	tracker storage.PulseTracker,
+	replicaStorage storage.ReplicaStorage,
+	dbContext storage.DBContext,
+	clientDefaults Options,
+) *Pool {
 	return &Pool{
-		db:             db,
-		ClientDefaults: clientDefaults,
+		bus:            bus,
+		pulseStorage:   pulseStorage,
+		pulseTracker:   tracker,
+		replicaStorage: replicaStorage,
+		clientDefaults: clientDefaults,
+		dbContext:      dbContext,
 		clients:        map[core.RecordID]*JetClient{},
 	}
 }
@@ -74,10 +87,15 @@ func (scp *Pool) AddPulsesToSyncClient(
 	scp.Lock()
 	client, ok := scp.clients[jetID]
 	if !ok {
-		client = NewJetClient(jetID, scp.ClientDefaults)
-		client.db = scp.db
-		client.Bus = scp.Bus
-		client.PulseStorage = scp.PulseStorage
+		client = NewJetClient(
+			scp.replicaStorage,
+			scp.bus,
+			scp.pulseStorage,
+			scp.pulseTracker,
+			scp.dbContext,
+			jetID,
+			scp.clientDefaults,
+		)
 
 		scp.clients[jetID] = client
 	}

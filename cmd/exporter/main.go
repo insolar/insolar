@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -43,8 +43,9 @@ func main() {
 		panic(err)
 	}
 	db.PlatformCryptographyScheme = platformpolicy.NewPlatformCryptographyScheme()
-	ps := storage.NewPulseStorage(db)
-	exp := exporter.NewExporter(db, ps, ledgerConf.Exporter)
+	ps := storage.NewPulseStorage()
+	ps.PulseTracker = db
+	exp := exporter.NewExporter(db, ledgerConf.Exporter)
 	err = db.Init(ctx)
 	if err != nil {
 		panic(err)

@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -36,11 +36,18 @@ func TestJetCoordinator_QueryRole(t *testing.T) {
 	defer mc.Finish()
 
 	db, cleaner := storagetest.TmpDB(ctx, t)
+
 	defer cleaner()
 	jc := JetCoordinator{
-		db:                         db,
+		JetStorage:                 db,
+		PulseTracker:               db,
+		ActiveNodesStorage:         db,
 		PlatformCryptographyScheme: testutils.NewPlatformCryptographyScheme(),
 	}
+	ps := storage.NewPulseStorage()
+	ps.PulseTracker = db
+	jc.PulseStorage = ps
+
 	err := db.AddPulse(ctx, core.Pulse{PulseNumber: 0, Entropy: core.Entropy{1, 2, 3}})
 	require.NoError(t, err)
 	var nodes []core.Node
@@ -54,7 +61,6 @@ func TestJetCoordinator_QueryRole(t *testing.T) {
 	require.NoError(t, err)
 
 	objID := core.NewRecordID(0, []byte{1, 42, 123})
-	jc.roleCounts = map[core.DynamicRole]int{core.DynamicRoleLightValidator: 3}
 	err = db.UpdateJetTree(ctx, 0, true, *jet.NewID(50, []byte{1, 42, 123}))
 	require.NoError(t, err)
 

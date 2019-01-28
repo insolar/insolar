@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package artifactmanager
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 
@@ -200,7 +201,7 @@ func (i *ChildIterator) Next() (*core.RecordRef, error) {
 
 	ref := i.nextFromBuffer()
 	if ref == nil {
-		return nil, errors.New("failed to fetch record")
+		return nil, errors.New("failed to retrieve a child from buffer")
 	}
 
 	return ref, nil
@@ -217,12 +218,12 @@ func (i *ChildIterator) nextFromBuffer() *core.RecordRef {
 
 func (i *ChildIterator) fetch() error {
 	if !i.canFetch {
-		return errors.New("failed to fetch record")
+		return errors.New("failed to fetch a children chunk")
 	}
 	genericReply, err := sendAndFollowRedirect(
 		i.ctx,
-		i.messageBus,
 		i.db,
+		i.messageBus,
 		&message.GetChildren{
 			Parent:    i.parent,
 			FromPulse: i.fromPulse,
@@ -236,7 +237,7 @@ func (i *ChildIterator) fetch() error {
 	}
 	rep, ok := genericReply.(*reply.Children)
 	if !ok {
-		return errors.New("failed to fetch record")
+		return fmt.Errorf("unexpected reply: %#v", genericReply)
 	}
 
 	if rep.NextFrom == nil {
