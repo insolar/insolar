@@ -67,16 +67,9 @@ func newMiddleware(
 	}
 }
 
-// In Build it should follow after checkJet, since it expects jet key
 func (m *middleware) addFieldsToLogger(handler core.MessageHandler) core.MessageHandler {
 	return func(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
 		context, _ := inslogger.WithField(ctx, "targetid", parcel.DefaultTarget().String())
-
-		val := ctx.Value(jetKey{})
-		j, ok := val.(core.RecordID)
-		if ok {
-			context, _ = inslogger.WithField(context, "jetid", j.DebugString())
-		}
 
 		return handler(context, parcel)
 	}
@@ -102,6 +95,12 @@ func (m *middleware) zeroJetForHeavy(handler core.MessageHandler) core.MessageHa
 	return func(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
 		return handler(contextWithJet(ctx, *jet.NewID(0, nil)), parcel)
 	}
+}
+
+func addJetIDToLogger(ctx context.Context, jetID core.RecordID) context.Context {
+	ctx, _ = inslogger.WithField(ctx, "jetid", jetID.DebugString())
+
+	return ctx
 }
 
 func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
@@ -174,9 +173,12 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to calculate executor for jet")
 		}
+
 		if *node != m.jetCoordinator.Me() {
 			return &reply.JetMiss{JetID: jetID}, nil
 		}
+
+		ctx = addJetIDToLogger(ctx, jetID)
 
 		return handler(contextWithJet(ctx, jetID), parcel)
 	}
