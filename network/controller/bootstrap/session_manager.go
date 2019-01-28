@@ -228,7 +228,8 @@ func (sm *sessionManager) cleanupExpiredSessions() {
 
 		// Session count is zero - wait for first session added.
 		if len(sessionsByExpirationTime) == 0 {
-			// Have no active sessions. Block till sessions will be added.
+			// Have no active sessions.
+			// Block until sessions will be added or session manager begins to stop.
 			select {
 			case <-sm.newSessionNotification:
 				sessionsByExpirationTime = sm.sortSessionsByExpirationTime()
