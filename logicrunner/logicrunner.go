@@ -315,14 +315,14 @@ func (lr *LogicRunner) RegisterRequest(ctx context.Context, parcel core.Parcel) 
 	return &res, nil
 }
 
-func loggerWithTargetId(ctx context.Context, msg core.Parcel) context.Context {
+func loggerWithTargetID(ctx context.Context, msg core.Parcel) context.Context {
 	context, _ := inslogger.WithField(ctx, "targetid", msg.DefaultTarget().String())
 	return context
 }
 
 // Execute runs a method on an object, ATM just thin proxy to `GoPlugin.Exec`
 func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
-	ctx = loggerWithTargetId(ctx, parcel)
+	ctx = loggerWithTargetID(ctx, parcel)
 	inslogger.FromContext(ctx).Debug("LogicRunner.Execute starts ...")
 
 	msg, ok := parcel.Message().(message.IBaseLogicMessage)
@@ -440,7 +440,7 @@ func (lr *LogicRunner) HandlePendingFinishedMessage(
 ) (
 	core.Reply, error,
 ) {
-	ctx = loggerWithTargetId(ctx, parcel)
+	ctx = loggerWithTargetID(ctx, parcel)
 	inslogger.FromContext(ctx).Debug("LogicRunner.HandlePendingFinishedMessage starts ...")
 
 	msg := parcel.Message().(*message.PendingFinished)
@@ -1047,7 +1047,7 @@ func (lr *LogicRunner) HandleStillExecutingMessage(
 ) (
 	core.Reply, error,
 ) {
-	ctx = loggerWithTargetId(ctx, parcel)
+	ctx = loggerWithTargetID(ctx, parcel)
 	inslogger.FromContext(ctx).Debug("LogicRunner.HandleStillExecutingMessage starts ...")
 
 	msg := parcel.Message().(*message.StillExecuting)
