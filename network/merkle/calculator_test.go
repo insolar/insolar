@@ -29,7 +29,7 @@ import (
 	"github.com/insolar/insolar/pulsar/pulsartestutils"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/nodekeeper"
-	"github.com/insolar/insolar/testutils/termination_handler"
+	"github.com/insolar/insolar/testutils/terminationhandler"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
@@ -135,7 +135,7 @@ func TestCalculator(t *testing.T) {
 	service := cryptography.NewKeyBoundCryptographyService(key)
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
 	nk := nodekeeper.GetTestNodekeeper(service)
-	th := termination_handler.NewTestTerminationHandler()
+	th := terminationhandler.NewTestTerminationHandler()
 
 	am := testutils.NewArtifactManagerMock(t)
 	am.StateFunc = func() (r []byte, r1 error) {
