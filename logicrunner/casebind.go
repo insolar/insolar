@@ -190,6 +190,8 @@ func (lr *LogicRunner) Validate(ctx context.Context, ref Ref, p core.Pulse, cb C
 }
 
 func (lr *LogicRunner) HandleValidateCaseBindMessage(ctx context.Context, inmsg core.Parcel) (core.Reply, error) {
+	ctx = loggerWithObjectId(ctx, inmsg)
+	inslogger.FromContext(ctx).Debug("LogicRunner.HandleValidateCaseBindMessage starts ...")
 	msg, ok := inmsg.Message().(*message.ValidateCaseBind)
 	if !ok {
 		return nil, errors.New("Execute( ! message.ValidateCaseBindInterface )")
@@ -218,6 +220,8 @@ func (lr *LogicRunner) HandleValidateCaseBindMessage(ctx context.Context, inmsg 
 }
 
 func (lr *LogicRunner) HandleValidationResultsMessage(ctx context.Context, inmsg core.Parcel) (core.Reply, error) {
+	ctx = loggerWithObjectId(ctx, inmsg)
+	inslogger.FromContext(ctx).Debug("LogicRunner.HandleValidationResultsMessage starts ...")
 	msg, ok := inmsg.Message().(*message.ValidationResults)
 	if !ok {
 		return nil, errors.Errorf("HandleValidationResultsMessage got argument typed %t", inmsg)
@@ -231,6 +235,8 @@ func (lr *LogicRunner) HandleValidationResultsMessage(ctx context.Context, inmsg
 }
 
 func (lr *LogicRunner) HandleExecutorResultsMessage(ctx context.Context, inmsg core.Parcel) (core.Reply, error) {
+	ctx = loggerWithObjectId(ctx, inmsg)
+	inslogger.FromContext(ctx).Debug("LogicRunner.HandleExecutorResultsMessage starts ...")
 	msg, ok := inmsg.Message().(*message.ExecutorResults)
 	if !ok {
 		return nil, errors.Errorf("HandleValidationResultsMessage got argument typed %t", inmsg)

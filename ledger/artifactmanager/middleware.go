@@ -67,6 +67,21 @@ func newMiddleware(
 	}
 }
 
+// In Build it should follow after checkJet, since it expects jet key
+func (m *middleware) addFieldsToLogger(handler core.MessageHandler) core.MessageHandler {
+	return func(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
+		context, _ := inslogger.WithField(ctx, "target", parcel.DefaultTarget().String())
+
+		val := ctx.Value(jetKey{})
+		j, ok := val.(core.RecordID)
+		if ok {
+			context, _ = inslogger.WithField(context, "jetid", j.DebugString())
+		}
+
+		return handler(context, parcel)
+	}
+}
+
 type jetKey struct{}
 
 func contextWithJet(ctx context.Context, jetID core.RecordID) context.Context {
