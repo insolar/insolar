@@ -45,6 +45,12 @@ func sessionMapDelete(sm SessionManager, id SessionID) {
 	delete(s.sessions, id)
 }
 
+func TestNewSessionManager(t *testing.T) {
+	sm := NewSessionManager().(*sessionManager)
+
+	assert.Equal(t, sm.state, stateIdle)
+}
+
 func TestSessionManager_CleanupSimple(t *testing.T) {
 	sm := NewSessionManager()
 
@@ -56,6 +62,9 @@ func TestSessionManager_CleanupSimple(t *testing.T) {
 
 	time.Sleep(1500 * time.Millisecond)
 	assert.Equal(t, sessionMapLen(sm), 0)
+
+	err = sm.Stop(context.Background())
+	require.NoError(t, err)
 }
 
 func TestSessionManager_CleanupConcurrent(t *testing.T) {
@@ -72,6 +81,9 @@ func TestSessionManager_CleanupConcurrent(t *testing.T) {
 
 	time.Sleep(1500 * time.Millisecond)
 	assert.Equal(t, sessionMapLen(sm), 0)
+
+	err = sm.Stop(context.Background())
+	require.NoError(t, err)
 }
 
 func TestSessionManager_CleanupOrder(t *testing.T) {
@@ -87,4 +99,40 @@ func TestSessionManager_CleanupOrder(t *testing.T) {
 
 	time.Sleep(1500 * time.Millisecond)
 	assert.Equal(t, sessionMapLen(sm), 2)
+
+	err = sm.Stop(context.Background())
+	require.NoError(t, err)
+}
+
+func TestSessionManager_ImmediatelyStop(t *testing.T) {
+	sm := NewSessionManager()
+
+	err := sm.Start(context.Background())
+	require.NoError(t, err)
+
+	err = sm.Stop(context.Background())
+	require.NoError(t, err)
+}
+
+func TestSessionManager_DoubleStart(t *testing.T) {
+	sm := NewSessionManager()
+
+	err := sm.Start(context.Background())
+	require.NoError(t, err)
+
+	err = sm.Start(context.Background())
+	require.NoError(t, err)
+}
+
+func TestSessionManager_DoubleStop(t *testing.T) {
+	sm := NewSessionManager()
+
+	err := sm.Start(context.Background())
+	require.NoError(t, err)
+
+	err = sm.Stop(context.Background())
+	require.NoError(t, err)
+
+	err = sm.Stop(context.Background())
+	require.NoError(t, err)
 }
