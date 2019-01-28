@@ -354,8 +354,8 @@ done
 #    echo "NODE $i STARTED in background"
 #done
 
-sleep 20s
-kill lastNodePID
+#sleep 20s
+#kill lastNodePID
 
 kill -CONT $lastDiscoveryPID
 
