@@ -21,7 +21,6 @@ import (
 	"context"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
@@ -33,7 +32,6 @@ import (
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller"
 	"github.com/insolar/insolar/network/controller/bootstrap"
-	"github.com/insolar/insolar/network/fakepulsar"
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/merkle"
 	"github.com/insolar/insolar/network/routing"
@@ -62,9 +60,9 @@ type ServiceNetwork struct {
 	PhaseManager phases.PhaseManager `inject:"subcomponent"`
 	Controller   network.Controller  `inject:"subcomponent"`
 
-	fakePulsar *fakepulsar.FakePulsar
-	isGenesis  bool
-	skip       int
+	// fakePulsar *fakepulsar.FakePulsar
+	isGenesis bool
+	skip      int
 }
 
 // NewServiceNetwork returns a new ServiceNetwork.
@@ -158,7 +156,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		return errors.Wrap(err, "Failed to init internal components")
 	}
 
-	n.fakePulsar = fakepulsar.NewFakePulsar(n, time.Duration(n.cfg.Pulsar.PulseTime)*time.Millisecond)
+	// n.fakePulsar = fakepulsar.NewFakePulsar(n, time.Duration(n.cfg.Pulsar.PulseTime)*time.Millisecond)
 	return nil
 }
 
@@ -177,13 +175,13 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 	}
 
 	log.Infoln("Bootstrapping network...")
-	result, err := n.Controller.Bootstrap(ctx)
+	_, err = n.Controller.Bootstrap(ctx)
 	if err != nil {
 		return errors.Wrap(err, "Failed to bootstrap network")
 	}
-	if !n.isGenesis {
-		n.fakePulsar.Start(ctx, result.FirstPulseTime)
-	}
+	// if !n.isGenesis {
+	// 	n.fakePulsar.Start(ctx, result.FirstPulseTime)
+	// }
 	logger.Info("Service network started")
 	return nil
 }
@@ -238,15 +236,15 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse core.Pulse) {
 	// 	return
 	// }
 
-	if !isNextPulse(currentPulse, &newPulse) && !isNewEpoch(currentPulse, &newPulse) && !fakePulseStarted(currentPulse, &newPulse) {
+	if !isNextPulse(currentPulse, &newPulse) {
 		logger.Infof("Incorrect newPulse number. Current: %+v. New: %+v", currentPulse, newPulse)
 		return
 	}
 
 	// Got real pulse
-	if isFakePulse(currentPulse) && !isFakePulse(&newPulse) {
-		n.fakePulsar.Stop(ctx)
-	}
+	// if isFakePulse(currentPulse) && !isFakePulse(&newPulse) {
+	// 	n.fakePulsar.Stop(ctx)
+	// }
 
 	err = n.NetworkSwitcher.OnPulse(ctx, newPulse)
 	if err != nil {
