@@ -101,24 +101,25 @@ func (e *Exporter) Export(ctx context.Context, fromPulse core.PulseNumber, size 
 	counter := 0
 	fromPulsePN := core.PulseNumber(math.Max(float64(fromPulse), float64(core.GenesisPulse.PulseNumber)))
 
-	if fromPulsePN >= currentPulse.PulseNumber {
-		fromPulsePN = currentPulse.PulseNumber
-	} else {
-		_, err = e.pulseTracker.GetPulse(ctx, fromPulsePN)
-		if err != nil {
-			tryPulse, err := e.pulseTracker.GetPulse(ctx, core.GenesisPulse.PulseNumber)
-			if err != nil {
-				return nil, errors.Wrap(err, "failed to fetch genesis pulse data")
-			}
+	if fromPulsePN > currentPulse.PulseNumber {
+		return nil, errors.Errorf("failed to fetch data: from-pulse[%v] > current-pulse[%v]",
+			fromPulsePN, currentPulse.PulseNumber)
+	}
 
-			for fromPulsePN > *tryPulse.Next {
-				tryPulse, err = e.pulseTracker.GetPulse(ctx, *tryPulse.Next)
-				if err != nil {
-					return nil, errors.Wrap(err, "failed to iterate through first pulses")
-				}
-			}
-			fromPulsePN = *tryPulse.Next
+	_, err = e.pulseTracker.GetPulse(ctx, fromPulsePN)
+	if err != nil {
+		tryPulse, err := e.pulseTracker.GetPulse(ctx, core.GenesisPulse.PulseNumber)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to fetch genesis pulse data")
 		}
+
+		for fromPulsePN > *tryPulse.Next {
+			tryPulse, err = e.pulseTracker.GetPulse(ctx, *tryPulse.Next)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to iterate through first pulses")
+			}
+		}
+		fromPulsePN = *tryPulse.Next
 	}
 
 	iterPulse := &fromPulsePN
