@@ -29,11 +29,11 @@ do
     DISCOVERY_NODES+=($DISCOVERY_NODES_DATA/$i)
 done
 
-for i in `seq 1 $NUM_NODES`
-do
-    NODES+=($NODES_DATA/$i)
-done
-
+#for i in `seq 1 $NUM_NODES`
+#do
+#    NODES+=($NODES_DATA/$i)
+#done
+#
 DISCOVERY_NODES_KEYS_DIR=$TEST_DATA/scripts/discovery_nodes
 
 kill_port()
@@ -261,12 +261,12 @@ copy_certs()
         i=$((i + 1))
         cp -v $DISCOVERY_NODES_DATA/certs/discovery_cert_$i.json $node/cert.json
     done
-#    i=0
-#    for node in "${NODES[@]}"
-#    do
-#        i=$((i + 1))
-#        cp -v $NODES_DATA/certs/node_cert_$i.json $node/cert.json
-#    done
+    i=0
+    for node in "${NODES[@]}"
+    do
+        i=$((i + 1))
+        cp -v $NODES_DATA/certs/node_cert_$i.json $node/cert.json
+    done
     echo "copy_certs() end."
 }
 
@@ -277,7 +277,7 @@ genesis()
     generate_bootstrap_keys
     generate_root_member_keys
     generate_discovery_nodes_keys
-    generate_nodes_keys
+#    generate_nodes_keys
     generate_insolard_configs
 
     printf "start genesis ... \n"
@@ -321,6 +321,9 @@ fi
 
 printf "start nodes ... \n"
 
+lastDiscoveryPID=0
+#lastNodePID=0
+
 i=0
 for node in "${DISCOVERY_NODES[@]}"
 do
@@ -328,7 +331,8 @@ do
     if [[ "$i" -eq "$NUM_DISCOVERY_NODES" ]]
     then
         echo "DISCOVERY NODE $i STARTED in foreground"
-        INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $GENERATED_CONFIGS_DIR/insolar_$i.yaml --trace &> $node/output.log
+        INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $GENERATED_CONFIGS_DIR/insolar_$i.yaml --trace &> $node/output.log &
+        lastDiscoveryPID=`echo \$!`
         break
     fi
     INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $GENERATED_CONFIGS_DIR/insolar_$i.yaml --trace &> $node/output.log &
@@ -339,15 +343,20 @@ done
 #for node in "${NODES[@]}"
 #do
 #    i=$((i + 1))
-#    echo curl -i -H "Accept: application/json" -H "Content-Type: application/json" -X POST --data "$(gen_get_node_ref)" "http://localhost:19191/api/call"
 #    if [[ "$i" -eq "$NUM_NODES" ]]
 #    then
 #        echo "NODE $i STARTED in foreground"
-#        INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $BASE_DIR/insolar_${i+$NUM_DISCOVERY_NODES}.yaml --trace &> $node/output.txt
+#        INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $BASE_DIR/insolar_${i+$NUM_DISCOVERY_NODES}.yaml --trace &> $node/output.txt &
+#        lastNodePID=`echo \$!`
 #        break
 #    fi
 #    INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $BASE_DIR/insolar_${i+$NUM_DISCOVERY_NODES}.yaml --trace &> $node/output.txt &
 #    echo "NODE $i STARTED in background"
 #done
+
+sleep 20s
+kill lastNodePID
+
+kill -CONT $lastDiscoveryPID
 
 echo "FINISHING ..."
