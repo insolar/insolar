@@ -63,6 +63,11 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 
 	am := artifactmanager.NewArtifactManger(db)
 	am.PlatformCryptographyScheme = pcs
+	am.JetStorage = db
+	am.DBContext = db
+	am.PulseStorage = pulseStorage
+	_ = am.Start(ctx)
+
 	conf.PulseManager.HeavySyncEnabled = false
 	pm := pulsemanager.NewPulseManager(conf)
 	ls := localstorage.NewLocalStorage(db)

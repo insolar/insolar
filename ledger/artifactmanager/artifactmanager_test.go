@@ -19,7 +19,6 @@ package artifactmanager
 import (
 	"context"
 	"math/rand"
-	"sync"
 	"testing"
 
 	"github.com/gojuno/minimock"
@@ -124,12 +123,14 @@ func getTestData(t *testing.T) (
 	require.NoError(t, err)
 
 	am := LedgerArtifactManager{
-		db:                         db,
+		JetStorage:                 db,
+		DBContext:                  db,
 		DefaultBus:                 mb,
 		getChildrenChunkSize:       100,
 		PlatformCryptographyScheme: scheme,
 		PulseStorage:               pulseStorage,
 	}
+	_ = am.Start(ctx)
 
 	return ctx, db, &am, cleaner
 }
@@ -177,12 +178,12 @@ func TestLedgerArtifactManager_GetCodeWithCache(t *testing.T) {
 
 	am := LedgerArtifactManager{
 		DefaultBus:     mb,
-		db:             db,
-		codeCacheLock:  &sync.Mutex{},
-		codeCache:      make(map[core.RecordRef]*cacheEntry),
+		DBContext:      db,
+		JetStorage:     db,
 		PulseStorage:   amPulseStorageMock,
 		JetCoordinator: jc,
 	}
+	_ = am.Start(ctx)
 
 	desc, err := am.GetCode(ctx, codeRef)
 	receivedCode, err := desc.Code()
@@ -504,8 +505,10 @@ func TestLedgerArtifactManager_GetObject_FollowsRedirect(t *testing.T) {
 		}
 	}
 	am.DefaultBus = mb
-	am.db = db
+	am.JetStorage = db
+	am.DBContext = db
 	am.PulseStorage = makePulseStorage(db, ctx, t)
+	_ = am.Start(ctx)
 
 	_, err := am.GetObject(ctx, *objRef, nil, false)
 
@@ -664,8 +667,11 @@ func TestLedgerArtifactManager_GetChildren_FollowsRedirect(t *testing.T) {
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
 
-	am.db = db
+	am.JetStorage = db
+	am.DBContext = db
 	am.PulseStorage = makePulseStorage(db, ctx, t)
+	am.DBContext = db
+	am.JetStorage = db
 
 	objRef := genRandomRef(0)
 	nodeRef := genRandomRef(0)
@@ -685,6 +691,7 @@ func TestLedgerArtifactManager_GetChildren_FollowsRedirect(t *testing.T) {
 		return &reply.Children{}, nil
 	}
 	am.DefaultBus = mb
+	_ = am.Start(ctx)
 
 	_, err := am.GetChildren(ctx, *objRef, nil)
 	require.NoError(t, err)
@@ -779,12 +786,14 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 	}
 
 	am := LedgerArtifactManager{
-		db:                         db,
+		JetStorage:                 db,
+		DBContext:                  db,
 		DefaultBus:                 mb,
 		getChildrenChunkSize:       100,
 		PlatformCryptographyScheme: scheme,
 		PulseStorage:               amPulseStorageMock,
 	}
+	_ = am.Start(ctx)
 
 	objID, err := am.RegisterRequest(
 		ctx,
@@ -869,6 +878,9 @@ func TestLedgerArtifactManager_RegisterRequest_JetMiss(t *testing.T) {
 	cs := testutils.NewPlatformCryptographyScheme()
 	am := NewArtifactManger(db)
 	am.PlatformCryptographyScheme = cs
+	am.JetStorage = db
+	am.DBContext = db
+
 	pulseStorageMock := testutils.NewPulseStorageMock(t)
 	pulseStorageMock.CurrentFunc = func(ctx context.Context) (*core.Pulse, error) {
 		return &core.Pulse{PulseNumber: core.FirstPulseNumber}, nil
@@ -876,9 +888,12 @@ func TestLedgerArtifactManager_RegisterRequest_JetMiss(t *testing.T) {
 
 	am.PulseStorage = pulseStorageMock
 
+	_ = am.Start(ctx)
+
 	t.Run("returns error on exceeding retry limit", func(t *testing.T) {
 		mb := testutils.NewMessageBusMock(mc)
 		am.DefaultBus = mb
+		am.senders.defaultBus = mb
 		mb.SendMock.Return(&reply.JetMiss{JetID: *jet.NewID(5, []byte{1, 2, 3})}, nil)
 		_, err := am.RegisterRequest(ctx, *am.GenesisRef(), &message.Parcel{Msg: &message.CallMethod{}})
 		require.Error(t, err)
@@ -887,6 +902,7 @@ func TestLedgerArtifactManager_RegisterRequest_JetMiss(t *testing.T) {
 	t.Run("returns no error and updates tree when jet miss", func(t *testing.T) {
 		mb := testutils.NewMessageBusMock(mc)
 		am.DefaultBus = mb
+		am.senders.defaultBus = mb
 		retries := 3
 		mb.SendFunc = func(c context.Context, m core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
 			if retries == 0 {
