@@ -64,7 +64,7 @@ ensure:
 
 build:
 	mkdir -p $(BIN_DIR)
-	make $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(INSGORUND) $(HEALTHCHECK) $(BENCHMARK) $(PULSEWATCHER)
+	make $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(INSGORUND) $(HEALTHCHECK) $(BENCHMARK) $(PULSEWATCHER) $(CERTGEN)
 
 $(INSOLARD):
 	go build -o $(BIN_DIR)/$(INSOLARD) -ldflags "${LDFLAGS}" cmd/insolard/*.go
