@@ -32,29 +32,26 @@ import (
 )
 
 type TestPulsar interface {
-	component.Starter
+	Start(ctx context.Context, bootstrapHosts []string) error
 	component.Stopper
 }
 
-func NewTestPulsar(pulseTimeMs, requestsTimeoutMs, pulseDelta int, bootstrapHosts []string) (TestPulsar, error) {
-	transportCfg := configuration.Transport{}
+func NewTestPulsar(pulseTimeMs, requestsTimeoutMs, pulseDelta int32) (TestPulsar, error) {
+	transportCfg := configuration.Transport{
+		Protocol:  "TCP",
+		Address:   "127.0.0.1:0",
+		BehindNAT: false,
+	}
 	tp, err := transport.NewTransport(transportCfg, relay.NewProxy())
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to create distributor transport")
 	}
-
-	distributorCfg := configuration.PulseDistributor{}
-	distributor, err := pulsenetwork.NewDistributor(distributorCfg)
-	if err != nil {
-		return nil, errors.Wrap(err, "Failed to create pulse distributor")
-	}
 	return &testPulsar{
 		transport:         tp,
-		distributor:       distributor,
 		generator:         &entropygenerator.StandardEntropyGenerator{},
 		pulseTimeMs:       pulseTimeMs,
+		reqTimeoutMs:      requestsTimeoutMs,
 		pulseDelta:        pulseDelta,
-		bootstrapHosts:    bootstrapHosts,
 		cancellationToken: make(chan struct{}),
 	}, nil
 }
@@ -65,24 +62,37 @@ type testPulsar struct {
 	generator   entropygenerator.EntropyGenerator
 	cm          *component.Manager
 
-	pulseTimeMs    int
-	reqTimeMs      int
-	pulseDelta     int
-	bootstrapHosts []string
+	pulseTimeMs  int32
+	reqTimeoutMs int32
+	pulseDelta   int32
 
 	cancellationToken chan struct{}
 }
 
-func (tp *testPulsar) Start(ctx context.Context) error {
+func (tp *testPulsar) Start(ctx context.Context, bootstrapHosts []string) error {
+	var err error
+	distributorCfg := configuration.PulseDistributor{
+		BootstrapHosts:            bootstrapHosts,
+		PingRequestTimeout:        tp.reqTimeoutMs,
+		RandomHostsRequestTimeout: tp.reqTimeoutMs,
+		PulseRequestTimeout:       tp.reqTimeoutMs,
+		RandomNodesCount:          1,
+	}
+	tp.distributor, err = pulsenetwork.NewDistributor(distributorCfg)
+	if err != nil {
+		return errors.Wrap(err, "Failed to create pulse distributor")
+	}
+
 	tp.cm = &component.Manager{}
 	tp.cm.Inject(tp.transport, tp.distributor)
 
-	if err := tp.cm.Init(ctx); err != nil {
+	if err = tp.cm.Init(ctx); err != nil {
 		return errors.Wrap(err, "Failed to init test pulsar components")
 	}
-	if err := tp.cm.Start(ctx); err != nil {
+	if err = tp.cm.Start(ctx); err != nil {
 		return errors.Wrap(err, "Failed to start test pulsar components")
 	}
+
 	go tp.distribute(ctx)
 	return nil
 }
