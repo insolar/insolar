@@ -105,13 +105,14 @@ func (s *testSuite) SetupTest() {
 
 	s.fixture().testNode = newNetworkNode()
 
-	bootstrapNodes := make([]string, 0)
+	pulseReceivers := make([]string, 0)
 	for _, node := range s.fixture().bootstrapNodes {
-		bootstrapNodes = append(bootstrapNodes, node.host)
+		pulseReceivers = append(pulseReceivers, node.host)
 	}
+	pulseReceivers = append(pulseReceivers, s.fixture().testNode.host)
 
 	log.Info("Start test pulsar")
-	err = s.fixture().pulsar.Start(s.fixture().ctx, bootstrapNodes)
+	err = s.fixture().pulsar.Start(s.fixture().ctx, pulseReceivers)
 	require.NoError(s.T(), err)
 
 	log.Infoln("Setup bootstrap nodes")

@@ -35,6 +35,7 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/merkle"
 	"github.com/insolar/insolar/network/routing"
+	"github.com/insolar/insolar/network/utils"
 	"github.com/pkg/errors"
 )
 
@@ -61,8 +62,9 @@ type ServiceNetwork struct {
 	Controller   network.Controller  `inject:"subcomponent"`
 
 	// fakePulsar *fakepulsar.FakePulsar
-	isGenesis bool
-	skip      int
+	isGenesis   bool
+	isDiscovery bool
+	skip        int
 }
 
 // NewServiceNetwork returns a new ServiceNetwork.
@@ -132,8 +134,11 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	n.hostNetwork = hostnetwork.NewHostTransport(internalTransport, n.routingTable)
 	options := controller.ConfigureOptions(n.cfg)
 
+	cert := n.CertificateManager.GetCertificate()
+	n.isDiscovery = utils.OriginIsDiscovery(cert)
+
 	n.cm.Inject(n,
-		n.CertificateManager.GetCertificate(),
+		cert,
 		n.NodeKeeper,
 		merkle.NewCalculator(),
 		consensusNetwork,
@@ -218,7 +223,7 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse core.Pulse) {
 		n.Controller.SetLastIgnoredPulse(newPulse.NextPulseNumber)
 		return
 	}
-	if newPulse.PulseNumber <= n.Controller.GetLastIgnoredPulse()+core.PulseNumber(n.skip) {
+	if n.isDiscovery && newPulse.PulseNumber <= n.Controller.GetLastIgnoredPulse()+core.PulseNumber(n.skip) {
 		log.Infof("Ignore pulse %d: network is not yet initialized", newPulse.PulseNumber)
 		return
 	}
