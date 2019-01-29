@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import (
 	"context"
 	"encoding/gob"
 	"net"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -907,6 +908,7 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 
 	messages := make([]core.Message, 0)
 
+	ctx, spanStates := instracer.StartSpan(ctx, "pulse.logicrunner processing of states")
 	for ref, state := range lr.state {
 		meNext, _ := lr.JetCoordinator.IsAuthorized(
 			ctx, core.DynamicRoleVirtualExecutor, *ref.Record(), pulse.PulseNumber, lr.JetCoordinator.Me(),
@@ -1005,33 +1007,26 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 
 		state.Unlock()
 	}
+	spanStates.End()
 
 	lr.stateMutex.Unlock()
 
-	var errorCounter int
 	var sendWg sync.WaitGroup
+	ctx, spanMessages := instracer.StartSpan(ctx, "pulse.logicrunner sending messages")
+	spanMessages.AddAttributes(trace.StringAttribute("numMessages", strconv.Itoa(len(messages))))
+
 	if len(messages) > 0 {
-		errChan := make(chan error, len(messages))
 		sendWg.Add(len(messages))
 
 		for _, msg := range messages {
-			go lr.sendOnPulseMessagesAsync(ctx, msg, &sendWg, &errChan)
-		}
-
-		sendWg.Wait()
-		close(errChan)
-
-		for err := range errChan {
-			if err != nil {
-				errorCounter++
-				inslogger.FromContext(ctx).Error(errors.Wrap(err, "error while sending validation data on pulse"))
-			}
-		}
-
-		if errorCounter > 0 {
-			return errors.New("error while sending executor data in OnPulse, see logs for more information")
+			go lr.sendOnPulseMessagesAsync(ctx, msg, &sendWg)
 		}
 	}
+
+	go func() {
+		sendWg.Wait()
+		spanMessages.End()
+	}()
 
 	return nil
 }
@@ -1073,10 +1068,12 @@ func (lr *LogicRunner) HandleStillExecutingMessage(
 	return &reply.OK{}, nil
 }
 
-func (lr *LogicRunner) sendOnPulseMessagesAsync(ctx context.Context, msg core.Message, sendWg *sync.WaitGroup, errChan *chan error) {
+func (lr *LogicRunner) sendOnPulseMessagesAsync(ctx context.Context, msg core.Message, sendWg *sync.WaitGroup) {
 	defer sendWg.Done()
 	_, err := lr.MessageBus.Send(ctx, msg, nil)
-	*errChan <- err
+	if err != nil {
+		inslogger.FromContext(ctx).Error(errors.Wrap(err, "error while sending validation data on pulse"))
+	}
 }
 func convertQueueToMessageQueue(queue []ExecutionQueueElement) []message.ExecutionQueueElement {
 	mq := make([]message.ExecutionQueueElement, 0)

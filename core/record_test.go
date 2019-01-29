@@ -1,11 +1,28 @@
+/*
+ *    Copyright 2019 Insolar Technologies
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
+
 package core_test
 
 import (
 	"testing"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/testutils"
-	"github.com/jbenet/go-base58"
+	base58 "github.com/jbenet/go-base58"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -45,4 +62,27 @@ func TestRecordRef_String(t *testing.T) {
 	expectedRefStr := ref.Record().String() + core.RecordRefIDSeparator + ref.Domain().String()
 
 	assert.Equal(t, expectedRefStr, ref.String())
+}
+
+func TestRecordID_DebugString_Jet(t *testing.T) {
+	j := jet.NewID(0, []byte{})
+	assert.Equal(t, "[JET 0 -]", j.DebugString())
+
+	j = jet.NewID(1, []byte{})
+	assert.Equal(t, "[JET 1 0]", j.DebugString())
+	j = jet.NewID(2, []byte{})
+	assert.Equal(t, "[JET 2 00]", j.DebugString())
+
+	j = jet.NewID(1, []byte{128})
+	assert.Equal(t, "[JET 1 1]", j.DebugString())
+	j = jet.NewID(2, []byte{192})
+	assert.Equal(t, "[JET 2 11]", j.DebugString())
+}
+
+
+func BenchmarkRecordID_DebugString(b *testing.B) {
+	jet := testutils.RandomJet()
+	for n := 0; n < b.N; n++ {
+		jet.DebugString()
+	}
 }

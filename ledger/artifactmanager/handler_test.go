@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -58,9 +58,16 @@ func TestMessageHandler_HandleGetObject_Redirects(t *testing.T) {
 	certificate.GetRoleMock.Return(core.StaticRoleLightMaterial)
 
 	tf.IssueGetObjectRedirectMock.Return(&delegationtoken.GetObjectRedirectToken{Signature: []byte{1, 2, 3}}, nil)
-	h := NewMessageHandler(db, &configuration.Ledger{
+
+	h := NewMessageHandler(&configuration.Ledger{
 		LightChainLimit: 2,
 	}, certificate)
+	h.JetStorage = db
+	h.ActiveNodesStorage = db
+	h.DBContext = db
+	h.PulseTracker = db
+	h.ObjectStorage = db
+
 	recentStorageMock := recentstorage.NewRecentStorageMock(t)
 	recentStorageMock.AddPendingRequestMock.Return()
 	recentStorageMock.AddObjectMock.Return()
@@ -70,7 +77,7 @@ func TestMessageHandler_HandleGetObject_Redirects(t *testing.T) {
 	mb.MustRegisterMock.Return()
 
 	provideMock := recentstorage.NewProviderMock(t)
-	provideMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
+	provideMock.GetStorageFunc = func(ctx context.Context, p core.RecordID) (r recentstorage.RecentStorage) {
 		return recentStorageMock
 	}
 
@@ -207,17 +214,22 @@ func TestMessageHandler_HandleGetChildren_Redirects(t *testing.T) {
 	msg := message.GetChildren{
 		Parent: *genRandomRef(0),
 	}
-	h := NewMessageHandler(db, &configuration.Ledger{
+	h := NewMessageHandler(&configuration.Ledger{
 		LightChainLimit: 2,
 	}, certificate)
 	h.JetCoordinator = jc
 	h.DelegationTokenFactory = tf
 	h.Bus = mb
+	h.JetStorage = db
+	h.ActiveNodesStorage = db
+	h.DBContext = db
+	h.PulseTracker = db
+	h.ObjectStorage = db
 
 	err := h.Init(ctx)
 	require.NoError(t, err)
 	provideMock := recentstorage.NewProviderMock(t)
-	provideMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
+	provideMock.GetStorageFunc = func(ctx context.Context, p core.RecordID) (r recentstorage.RecentStorage) {
 		return recentStorageMock
 	}
 
@@ -335,12 +347,17 @@ func TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeavy(t *testing.T) {
 	mb.MustRegisterMock.Return()
 	jc := testutils.NewJetCoordinatorMock(mc)
 
-	h := NewMessageHandler(db, &configuration.Ledger{
+	h := NewMessageHandler(&configuration.Ledger{
 		LightChainLimit: 3,
 	}, certificate)
+	h.JetStorage = db
+	h.ActiveNodesStorage = db
+	h.DBContext = db
+	h.PulseTracker = db
+	h.ObjectStorage = db
 
 	provideMock := recentstorage.NewProviderMock(t)
-	provideMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
+	provideMock.GetStorageFunc = func(ctx context.Context, p core.RecordID) (r recentstorage.RecentStorage) {
 		return recentStorageMock
 	}
 
@@ -406,12 +423,17 @@ func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 	mb.MustRegisterMock.Return()
 	jc := testutils.NewJetCoordinatorMock(mc)
 
-	h := NewMessageHandler(db, &configuration.Ledger{
+	h := NewMessageHandler(&configuration.Ledger{
 		LightChainLimit: 3,
 	}, certificate)
+	h.JetStorage = db
+	h.ActiveNodesStorage = db
+	h.DBContext = db
+	h.PulseTracker = db
+	h.ObjectStorage = db
 
 	provideMock := recentstorage.NewProviderMock(t)
-	provideMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
+	provideMock.GetStorageFunc = func(ctx context.Context, p core.RecordID) (r recentstorage.RecentStorage) {
 		return recentStorageMock
 	}
 
@@ -484,17 +506,22 @@ func TestMessageHandler_HandleGetObjectIndex(t *testing.T) {
 	mb := testutils.NewMessageBusMock(mc)
 	mb.MustRegisterMock.Return()
 
-	h := NewMessageHandler(db, &configuration.Ledger{
+	h := NewMessageHandler(&configuration.Ledger{
 		LightChainLimit: 3,
 	}, certificate)
 	h.JetCoordinator = jc
 	h.Bus = mb
+	h.JetStorage = db
+	h.ActiveNodesStorage = db
+	h.DBContext = db
+	h.PulseTracker = db
+	h.ObjectStorage = db
 
 	err := h.Init(ctx)
 	require.NoError(t, err)
 
 	provideMock := recentstorage.NewProviderMock(t)
-	provideMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
+	provideMock.GetStorageFunc = func(ctx context.Context, p core.RecordID) (r recentstorage.RecentStorage) {
 		return recentStorageMock
 	}
 
@@ -541,14 +568,20 @@ func TestMessageHandler_HandleHasPendingRequests(t *testing.T) {
 	mb := testutils.NewMessageBusMock(mc)
 	mb.MustRegisterMock.Return()
 
-	h := NewMessageHandler(db, &configuration.Ledger{}, certificate)
+	h := NewMessageHandler(&configuration.Ledger{}, certificate)
 	h.JetCoordinator = jc
 	h.Bus = mb
+	h.JetStorage = db
+	h.ActiveNodesStorage = db
+	h.DBContext = db
+	h.PulseTracker = db
+	h.ObjectStorage = db
+
 	err := h.Init(ctx)
 	require.NoError(t, err)
 
 	provideMock := recentstorage.NewProviderMock(t)
-	provideMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
+	provideMock.GetStorageFunc = func(ctx context.Context, p core.RecordID) (r recentstorage.RecentStorage) {
 		return recentStorageMock
 	}
 
@@ -587,17 +620,22 @@ func TestMessageHandler_HandleGetCode_Redirects(t *testing.T) {
 
 	tf.IssueGetCodeRedirectMock.Return(&delegationtoken.GetCodeRedirectToken{Signature: []byte{1, 2, 3}}, nil)
 
-	h := NewMessageHandler(db, &configuration.Ledger{
+	h := NewMessageHandler(&configuration.Ledger{
 		LightChainLimit: 2,
 	}, certificate)
 	h.JetCoordinator = jc
 	h.DelegationTokenFactory = tf
 	h.Bus = mb
+	h.JetStorage = db
+	h.ActiveNodesStorage = db
+	h.DBContext = db
+	h.PulseTracker = db
+	h.ObjectStorage = db
 	err := h.Init(ctx)
 	require.NoError(t, err)
 
 	provideMock := recentstorage.NewProviderMock(t)
-	provideMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
+	provideMock.GetStorageFunc = func(ctx context.Context, p core.RecordID) (r recentstorage.RecentStorage) {
 		return recentStorageMock
 	}
 
@@ -666,12 +704,17 @@ func TestMessageHandler_HandleRegisterChild_FetchesIndexFromHeavy(t *testing.T) 
 	mb := testutils.NewMessageBusMock(mc)
 	mb.MustRegisterMock.Return()
 	jc := testutils.NewJetCoordinatorMock(mc)
-	h := NewMessageHandler(db, &configuration.Ledger{
+	h := NewMessageHandler(&configuration.Ledger{
 		LightChainLimit: 2,
 	}, certificate)
+	h.JetStorage = db
+	h.ActiveNodesStorage = db
+	h.DBContext = db
+	h.PulseTracker = db
+	h.ObjectStorage = db
 
 	provideMock := recentstorage.NewProviderMock(t)
-	provideMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
+	provideMock.GetStorageFunc = func(ctx context.Context, p core.RecordID) (r recentstorage.RecentStorage) {
 		return recentStorageMock
 	}
 
@@ -792,7 +835,7 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 		RecentObjects: map[core.RecordID]*message.HotIndex{
 			*firstID: {
 				Index: firstIndex,
-				TTL:   321,
+				TTL:   320,
 			},
 		},
 		PendingRequests: map[core.RecordID]map[core.RecordID][]byte{
@@ -815,17 +858,22 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 		require.Equal(t, 320, ttl)
 	}
 	provideMock := recentstorage.NewProviderMock(t)
-	provideMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
+	provideMock.GetStorageFunc = func(ctx context.Context, p core.RecordID) (r recentstorage.RecentStorage) {
 		return recentStorageMock
 	}
 
 	certificate := testutils.NewCertificateMock(t)
 	certificate.GetRoleMock.Return(core.StaticRoleLightMaterial)
 
-	h := NewMessageHandler(db, &configuration.Ledger{}, certificate)
+	h := NewMessageHandler(&configuration.Ledger{}, certificate)
 	h.JetCoordinator = jc
 	h.RecentStorageProvider = provideMock
 	h.Bus = mb
+	h.JetStorage = db
+	h.ActiveNodesStorage = db
+	h.DBContext = db
+	h.PulseTracker = db
+	h.ObjectStorage = db
 
 	err = h.Init(ctx)
 	require.NoError(t, err)
@@ -835,7 +883,7 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, res, &reply.OK{})
 
-	savedDrop, err := h.db.GetDrop(ctx, jetID, core.FirstPulseNumber)
+	savedDrop, err := h.JetStorage.GetDrop(ctx, jetID, core.FirstPulseNumber)
 	require.NoError(t, err)
 	require.Equal(t, &jet.JetDrop{Pulse: core.FirstPulseNumber, Hash: []byte{88}}, savedDrop)
 
@@ -876,16 +924,22 @@ func TestMessageHandler_HandleValidationCheck(t *testing.T) {
 
 	mb := testutils.NewMessageBusMock(mc)
 	mb.MustRegisterMock.Return()
-	h := NewMessageHandler(db, &configuration.Ledger{
+	h := NewMessageHandler(&configuration.Ledger{
 		LightChainLimit: 3,
 	}, certificate)
 	h.JetCoordinator = jc
 	h.Bus = mb
+	h.JetStorage = db
+	h.ActiveNodesStorage = db
+	h.DBContext = db
+	h.PulseTracker = db
+	h.ObjectStorage = db
+
 	err := h.Init(ctx)
 	require.NoError(t, err)
 
 	provideMock := recentstorage.NewProviderMock(t)
-	provideMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
+	provideMock.GetStorageFunc = func(ctx context.Context, p core.RecordID) (r recentstorage.RecentStorage) {
 		return recentStorageMock
 	}
 
@@ -952,9 +1006,14 @@ func TestMessageHandler_HandleJetDrop_SaveJet(t *testing.T) {
 	certificate := testutils.NewCertificateMock(t)
 	certificate.GetRoleMock.Return(core.StaticRoleLightMaterial)
 
-	h := NewMessageHandler(db, &configuration.Ledger{
+	h := NewMessageHandler(&configuration.Ledger{
 		LightChainLimit: 3,
 	}, certificate)
+	h.JetStorage = db
+	h.ActiveNodesStorage = db
+	h.DBContext = db
+	h.PulseTracker = db
+	h.ObjectStorage = db
 
 	// Act
 	response, err := h.handleJetDrop(ctx, &message.Parcel{Msg: &msg})
@@ -997,9 +1056,14 @@ func TestMessageHandler_HandleJetDrop_SaveJet_ExistingMap(t *testing.T) {
 	certificate := testutils.NewCertificateMock(t)
 	certificate.GetRoleMock.Return(core.StaticRoleLightMaterial)
 
-	h := NewMessageHandler(db, &configuration.Ledger{
+	h := NewMessageHandler(&configuration.Ledger{
 		LightChainLimit: 3,
 	}, certificate)
+	h.JetStorage = db
+	h.ActiveNodesStorage = db
+	h.DBContext = db
+	h.PulseTracker = db
+	h.ObjectStorage = db
 
 	// Act
 	response, err := h.handleJetDrop(ctx, &message.Parcel{Msg: &msg})

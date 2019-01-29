@@ -1,17 +1,18 @@
 /*
- *    Copyright 2018 Insolar
+ * The Clear BSD License
  *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
+ * Copyright (c) 2019 Insolar Technologies
  *
- *        http://www.apache.org/licenses/LICENSE-2.0
+ * All rights reserved.
  *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
+ * Redistribution and use in source and binary forms, with or without modification, are permitted (subject to the limitations in the disclaimer below) provided that the following conditions are met:
+ *
+ *  Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+ *  Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+ *  Neither the name of Insolar Technologies nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+ *
+ * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
  */
 
 package servicenetwork
@@ -29,6 +30,7 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller"
+	"github.com/insolar/insolar/network/controller/bootstrap"
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/merkle"
 	"github.com/insolar/insolar/network/routing"
@@ -38,29 +40,24 @@ import (
 // ServiceNetwork is facade for network.
 type ServiceNetwork struct {
 	cfg configuration.Configuration
+	cm  *component.Manager
 
 	hostNetwork  network.HostNetwork  // TODO: should be injected
-	controller   network.Controller   // TODO: should be injected
 	routingTable network.RoutingTable // TODO: should be injected
 
 	// dependencies
 	CertificateManager  core.CertificateManager         `inject:""`
-	NodeNetwork         core.NodeNetwork                `inject:""`
 	PulseManager        core.PulseManager               `inject:""`
 	PulseStorage        core.PulseStorage               `inject:""`
 	CryptographyService core.CryptographyService        `inject:""`
 	NetworkCoordinator  core.NetworkCoordinator         `inject:""`
-	ArtifactManager     core.ArtifactManager            `inject:""`
 	CryptographyScheme  core.PlatformCryptographyScheme `inject:""`
 	NodeKeeper          network.NodeKeeper              `inject:""`
 	NetworkSwitcher     core.NetworkSwitcher            `inject:""`
 
 	// subcomponents
-	PhaseManager     phases.PhaseManager      // `inject:""`
-	MerkleCalculator merkle.Calculator        // `inject:""`
-	ConsensusNetwork network.ConsensusNetwork // `inject:""`
-	PulseHandler     network.PulseHandler
-	Communicator     phases.Communicator
+	PhaseManager phases.PhaseManager `inject:"subcomponent"`
+	Controller   network.Controller  `inject:"subcomponent"`
 
 	// fakePulsar *fakepulsar.FakePulsar
 	isGenesis bool
@@ -68,24 +65,24 @@ type ServiceNetwork struct {
 }
 
 // NewServiceNetwork returns a new ServiceNetwork.
-func NewServiceNetwork(conf configuration.Configuration, scheme core.PlatformCryptographyScheme, isGenesis bool) (*ServiceNetwork, error) {
-	serviceNetwork := &ServiceNetwork{cfg: conf, CryptographyScheme: scheme, isGenesis: isGenesis, skip: conf.Service.Skip}
+func NewServiceNetwork(conf configuration.Configuration, scheme core.PlatformCryptographyScheme, rootCm *component.Manager, isGenesis bool) (*ServiceNetwork, error) {
+	serviceNetwork := &ServiceNetwork{cm: component.NewManager(rootCm), cfg: conf, CryptographyScheme: scheme, isGenesis: isGenesis, skip: conf.Service.Skip}
 	return serviceNetwork, nil
 }
 
 // SendMessage sends a message from MessageBus.
 func (n *ServiceNetwork) SendMessage(nodeID core.RecordRef, method string, msg core.Parcel) ([]byte, error) {
-	return n.controller.SendMessage(nodeID, method, msg)
+	return n.Controller.SendMessage(nodeID, method, msg)
 }
 
 // SendCascadeMessage sends a message from MessageBus to a cascade of nodes
 func (n *ServiceNetwork) SendCascadeMessage(data core.Cascade, method string, msg core.Parcel) error {
-	return n.controller.SendCascadeMessage(data, method, msg)
+	return n.Controller.SendCascadeMessage(data, method, msg)
 }
 
 // RemoteProcedureRegister registers procedure for remote call on this host.
 func (n *ServiceNetwork) RemoteProcedureRegister(name string, method core.RemoteProcedure) {
-	n.controller.RemoteProcedureRegister(name, method)
+	n.Controller.RemoteProcedureRegister(name, method)
 }
 
 // incrementPort increments port number if it not equals 0
@@ -109,21 +106,6 @@ func incrementPort(address string) (string, error) {
 
 // Start implements component.Initer
 func (n *ServiceNetwork) Init(ctx context.Context) error {
-
-	n.PhaseManager = phases.NewPhaseManager()
-	n.MerkleCalculator = merkle.NewCalculator()
-	n.Communicator = phases.NewNaiveCommunicator()
-	n.PulseHandler = n // self
-
-	firstPhase := &phases.FirstPhase{}
-	secondPhase := &phases.SecondPhase{}
-	thirdPhase := &phases.ThirdPhase{}
-
-	// inject workaround
-	n.PhaseManager.(*phases.Phases).FirstPhase = firstPhase
-	n.PhaseManager.(*phases.Phases).SecondPhase = secondPhase
-	n.PhaseManager.(*phases.Phases).ThirdPhase = thirdPhase
-
 	n.routingTable = &routing.Table{}
 	internalTransport, err := hostnetwork.NewInternalTransport(n.cfg, n.CertificateManager.GetCertificate().GetNodeRef().String())
 	if err != nil {
@@ -136,32 +118,39 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		return errors.Wrap(err, "failed to increment port.")
 	}
 
-	n.ConsensusNetwork, err = hostnetwork.NewConsensusNetwork(
+	consensusNetwork, err := hostnetwork.NewConsensusNetwork(
 		n.cfg.Host.Transport.Address,
 		n.CertificateManager.GetCertificate().GetNodeRef().String(),
-		n.NodeNetwork.GetOrigin().ShortID(),
+		n.NodeKeeper.GetOrigin().ShortID(),
 		n.routingTable,
 	)
 	if err != nil {
 		return errors.Wrap(err, "Failed to create consensus network.")
 	}
 
-	cm := component.Manager{}
-	cm.Register(n.CertificateManager, n.NodeNetwork, n.PulseManager, n.CryptographyService, n.NetworkCoordinator,
-		n.ArtifactManager, n.CryptographyScheme, n.PulseHandler)
-
-	cm.Inject(n.NodeKeeper,
-		n.MerkleCalculator,
-		n.ConsensusNetwork,
-		n.Communicator,
-		firstPhase,
-		secondPhase,
-		thirdPhase,
-	)
-
 	n.hostNetwork = hostnetwork.NewHostTransport(internalTransport, n.routingTable)
 	options := controller.ConfigureOptions(n.cfg.Host)
-	n.controller = controller.NewNetworkController(n, options, n.CertificateManager.GetCertificate(), internalTransport, n.routingTable, n.hostNetwork, n.CryptographyScheme)
+
+	n.cm.Inject(n,
+		n.CertificateManager.GetCertificate(),
+		n.NodeKeeper,
+		merkle.NewCalculator(),
+		consensusNetwork,
+		phases.NewNaiveCommunicator(),
+		phases.NewFirstPhase(),
+		phases.NewSecondPhase(),
+		phases.NewThirdPhase(),
+		phases.NewPhaseManager(),
+		bootstrap.NewSessionManager(),
+		controller.NewNetworkController(n.hostNetwork),
+		controller.NewRPCController(options, n.hostNetwork),
+		controller.NewPulseController(n.hostNetwork, n.routingTable),
+		bootstrap.NewBootstrapper(options, internalTransport),
+		bootstrap.NewAuthorizationController(options, internalTransport),
+		bootstrap.NewChallengeResponseController(options, internalTransport),
+		bootstrap.NewNetworkBootstrapper(),
+	)
+
 	// n.fakePulsar = fakepulsar.NewFakePulsar(n.HandlePulse, n.cfg.Pulsar.PulseTime)
 	return nil
 }
@@ -170,12 +159,16 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 func (n *ServiceNetwork) Start(ctx context.Context) error {
 	log.Infoln("Network starts listening...")
 	n.hostNetwork.Start(ctx)
-
-	n.controller.Inject(n.CryptographyService, n.NetworkCoordinator, n.NodeKeeper)
 	n.routingTable.Inject(n.NodeKeeper)
 
+	log.Info("Starting network component manager...")
+	err := n.cm.Start(ctx)
+	if err != nil {
+		return errors.Wrap(err, "Failed to bootstrap network")
+	}
+
 	log.Infoln("Bootstrapping network...")
-	err := n.controller.Bootstrap(ctx)
+	err = n.Controller.Bootstrap(ctx)
 	if err != nil {
 		return errors.Wrap(err, "Failed to bootstrap network")
 	}
@@ -189,10 +182,12 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 func (n *ServiceNetwork) Stop(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
 
+	logger.Info("Stopping network components")
+	if err := n.cm.Stop(ctx); err != nil {
+		log.Errorf("Error while stopping network components: %s", err.Error())
+	}
 	logger.Info("Stopping host network")
 	n.hostNetwork.Stop()
-	logger.Info("Stopping consensus network")
-	n.ConsensusNetwork.Stop()
 	return nil
 }
 
@@ -213,10 +208,10 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
 		return
 	}
 	if !n.NodeKeeper.IsBootstrapped() {
-		n.controller.SetLastIgnoredPulse(pulse.NextPulseNumber)
+		n.Controller.SetLastIgnoredPulse(pulse.NextPulseNumber)
 		return
 	}
-	if pulse.PulseNumber <= n.controller.GetLastIgnoredPulse()+core.PulseNumber(n.skip) {
+	if pulse.PulseNumber <= n.Controller.GetLastIgnoredPulse()+core.PulseNumber(n.skip) {
 		log.Infof("Ignore pulse %d: network is not yet initialized", pulse.PulseNumber)
 		return
 	}
@@ -253,6 +248,6 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
 	}
 }
 
-func (n *ServiceNetwork) isFakePulse(pulse *core.Pulse) bool {
-	return (pulse.NextPulseNumber == 0) && (pulse.PulseNumber == 0)
-}
+// func (n *ServiceNetwork) isFakePulse(pulse *core.Pulse) bool {
+// 	return (pulse.NextPulseNumber == 0) && (pulse.PulseNumber == 0)
+// }
