@@ -28,29 +28,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-type lockableConnection struct {
-	net.Conn
-	sync.Locker
-}
-
-func (lc *lockableConnection) Write(data []byte) (int, error) {
-	lc.Lock()
-	defer lc.Unlock()
-
-	// TODO: sergey.morozov 16.01.19: possible malformed packet fix; uncomment this when you meet errors ;)
-	// var written int
-	// for written < len(data) {
-	// 	n, err := lc.Conn.Write(data[written:])
-	// 	written += n
-	// 	if err != nil {
-	// 		return written, err
-	// 	}
-	// }
-	// return written, nil
-
-	return lc.Conn.Write(data)
-}
-
 type connectionPool struct {
 	connectionFactory connectionFactory
 
@@ -108,10 +85,10 @@ func (cp *connectionPool) RegisterConnection(ctx context.Context, address net.Ad
 }
 
 func (cp *connectionPool) CloseConnection(ctx context.Context, address net.Addr) {
+	logger := inslogger.FromContext(ctx)
+
 	cp.mutex.Lock()
 	defer cp.mutex.Unlock()
-
-	logger := inslogger.FromContext(ctx)
 
 	conn, ok := cp.unsafeConnectionsHolder.Get(address)
 	logger.Debugf("[ CloseConnection ] Finding connection to %s in pool: %s", address, ok)
@@ -156,13 +133,7 @@ func (cp *connectionPool) getOrCreateConnection(ctx context.Context, address net
 		return false, nil, errors.Wrap(err, "[ send ] Failed to create TCP connection")
 	}
 
-
-	lc := &lockableConnection{
-		Conn:   conn,
-		Locker: &sync.Mutex{},
-	}
-
-	cp.unsafeConnectionsHolder.Add(address, lc)
+	cp.unsafeConnectionsHolder.Add(address, conn)
 	size := cp.unsafeConnectionsHolder.Size()
 	logger.Debugf(
 		"[ getOrCreateConnection ] Added connection to %s. Current pool size: %d",
