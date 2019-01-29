@@ -17,20 +17,36 @@
 package artifactmanager
 
 import (
+	"context"
+
 	"github.com/insolar/insolar/core"
 )
 
-// Alias for wrapping func-s
+// Handler is an alias for wrapping func-s
 type Handler func(core.MessageHandler) core.MessageHandler
 
-// Build return wrapping core.MessageHandler
+// BuildMiddleware return wrapping core.MessageHandler
 // If want call wrapHandler1(wrapHandler2(wrapHandler3(handler))),
 // we should use Build(handler, wrapHandler1, wrapHandler2, wrapHandler3).
-func Build(handler core.MessageHandler, wrapHandlers ...Handler) core.MessageHandler {
+func BuildMiddleware(handler core.MessageHandler, wrapHandlers ...Handler) core.MessageHandler {
 	result := handler
 
 	for i := range wrapHandlers {
 		result = wrapHandlers[len(wrapHandlers)-1-i](result)
+	}
+
+	return result
+}
+
+type PreSender func(Sender) Sender
+
+type Sender func(context.Context, core.Message, *core.MessageSendOptions) (core.Reply, error)
+
+func BuildSender(sender Sender, preSenders ...PreSender) Sender {
+	result := sender
+
+	for i := range preSenders {
+		result = preSenders[len(preSenders)-1-i](result)
 	}
 
 	return result

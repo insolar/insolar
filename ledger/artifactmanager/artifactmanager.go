@@ -55,7 +55,7 @@ type LedgerArtifactManager struct {
 
 type cacheEntry struct {
 	sync.Mutex
-	desc core.CodeDescriptor
+	code *reply.Code
 }
 
 // State returns hash state for artifact manager.
@@ -110,6 +110,106 @@ func (m *LedgerArtifactManager) RegisterRequest(
 	return id, errors.Wrap(err, "[ RegisterRequest ] ")
 }
 
+func (m *LedgerArtifactManager) CachedSender(sender Sender) Sender {
+	return func(ctx context.Context, msg core.Message, options *core.MessageSendOptions) (core.Reply, error) {
+		codeMsg := msg.(*message.GetCode)
+
+		m.codeCacheLock.Lock()
+		entry, ok := m.codeCache[codeMsg.Code]
+		if !ok {
+			entry = &cacheEntry{}
+			m.codeCache[codeMsg.Code] = entry
+		}
+		m.codeCacheLock.Unlock()
+
+		entry.Lock()
+		defer entry.Unlock()
+
+		if entry.code != nil {
+			return entry.code, nil
+		}
+
+		response, err := sender(ctx, msg, options)
+		if err != nil {
+			return nil, err
+		}
+		castedResp, ok := response.(*reply.Code)
+		if !ok {
+			return response, err
+		}
+
+		entry.code = castedResp
+		return response, err
+	}
+}
+
+func (m *LedgerArtifactManager) FollowRedirectSender(sender Sender) Sender {
+	return func(ctx context.Context, msg core.Message, options *core.MessageSendOptions) (core.Reply, error) {
+		inslog := inslogger.FromContext(ctx)
+		inslog.Debug("LedgerArtifactManager.SendAndFollowRedirectSender starts ...")
+
+		rep, err := sender(ctx, msg, options)
+		if err != nil {
+			return nil, err
+		}
+
+		if r, ok := rep.(core.RedirectReply); ok {
+			stats.Record(ctx, statRedirects.M(1))
+
+			redirected := r.Redirected(msg)
+			inslog.Debugf("redirect reciever=%v", r.GetReceiver())
+
+			rep, err = m.bus(ctx).Send(ctx, redirected, &core.MessageSendOptions{
+				Token:    r.GetToken(),
+				Receiver: r.GetReceiver(),
+			})
+			if err != nil {
+				return nil, err
+			}
+			if _, ok := rep.(core.RedirectReply); ok {
+				return nil, errors.New("double redirects are forbidden")
+			}
+			return rep, nil
+		}
+
+		return rep, err
+	}
+}
+
+func (m *LedgerArtifactManager) RetryJetSender(sender Sender) Sender {
+	return func(ctx context.Context, msg core.Message, options *core.MessageSendOptions) (core.Reply, error) {
+		inslog := inslogger.FromContext(ctx)
+		inslog.Debug("LedgerArtifactManager.RetryJetSender starts ...")
+
+		retries := jetMissRetryCount
+
+		currentPulse, err := m.PulseStorage.Current(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		for retries > 0 {
+			rep, err := sender(ctx, msg, options)
+			if err != nil {
+				return nil, err
+			}
+
+			if r, ok := rep.(*reply.JetMiss); ok {
+				err := m.db.UpdateJetTree(ctx, currentPulse.PulseNumber, true, r.JetID)
+				if err != nil {
+					return nil, err
+				}
+			} else {
+				return rep, err
+			}
+
+			retries--
+		}
+
+		return nil, errors.New("failed to find jet (retry limit exceeded on client)")
+	}
+}
+
 // GetCode returns code from code record by provided reference according to provided machine preference.
 //
 // This method is used by VM to fetch code for execution.
@@ -123,34 +223,11 @@ func (m *LedgerArtifactManager) GetCode(
 	var err error
 	defer instrument(ctx, "GetCode").err(&err).end()
 
-	m.codeCacheLock.Lock()
-	entry, ok := m.codeCache[code]
-	if !ok {
-		entry = &cacheEntry{}
-		m.codeCache[code] = entry
-	}
-	m.codeCacheLock.Unlock()
-
-	entry.Lock()
-	defer entry.Unlock()
-
-	if entry.desc != nil {
-		return entry.desc, nil
-	}
-
-	currentPulse, err := m.PulseStorage.Current(ctx)
-	if err != nil {
-		return nil, err
-	}
-
 	ctx, span = instracer.StartSpan(ctx, "artifactmanager.GetCode sendAndFollowRedirect")
-	genericReact, err := sendAndFollowRedirect(
-		ctx,
-		m.db,
-		m.bus(ctx),
-		&message.GetCode{Code: code},
-		*currentPulse,
-	)
+
+	sender := BuildSender(m.bus(ctx).Send, m.CachedSender, m.FollowRedirectSender, m.RetryJetSender)
+	genericReact, err := sender(ctx, &message.GetCode{Code: code}, nil)
+
 	span.End()
 
 	if err != nil {
@@ -165,7 +242,6 @@ func (m *LedgerArtifactManager) GetCode(
 			machineType: rep.MachineType,
 			code:        rep.Code,
 		}
-		entry.desc = &desc
 		return &desc, nil
 	case *reply.Error:
 		return nil, rep.Error()
