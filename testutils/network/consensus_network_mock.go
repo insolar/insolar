@@ -42,12 +42,12 @@ type ConsensusNetworkMock struct {
 	SignAndSendPacketPreCounter uint64
 	SignAndSendPacketMock       mConsensusNetworkMockSignAndSendPacket
 
-	StartFunc       func(p context.Context)
+	StartFunc       func(p context.Context) (r error)
 	StartCounter    uint64
 	StartPreCounter uint64
 	StartMock       mConsensusNetworkMockStart
 
-	StopFunc       func()
+	StopFunc       func(p context.Context) (r error)
 	StopCounter    uint64
 	StopPreCounter uint64
 	StopMock       mConsensusNetworkMockStop
@@ -619,11 +619,16 @@ type mConsensusNetworkMockStart struct {
 }
 
 type ConsensusNetworkMockStartExpectation struct {
-	input *ConsensusNetworkMockStartInput
+	input  *ConsensusNetworkMockStartInput
+	result *ConsensusNetworkMockStartResult
 }
 
 type ConsensusNetworkMockStartInput struct {
 	p context.Context
+}
+
+type ConsensusNetworkMockStartResult struct {
+	r error
 }
 
 //Expect specifies that invocation of ConsensusNetwork.Start is expected from 1 to Infinity times
@@ -639,14 +644,14 @@ func (m *mConsensusNetworkMockStart) Expect(p context.Context) *mConsensusNetwor
 }
 
 //Return specifies results of invocation of ConsensusNetwork.Start
-func (m *mConsensusNetworkMockStart) Return() *ConsensusNetworkMock {
+func (m *mConsensusNetworkMockStart) Return(r error) *ConsensusNetworkMock {
 	m.mock.StartFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &ConsensusNetworkMockStartExpectation{}
 	}
-
+	m.mainExpectation.result = &ConsensusNetworkMockStartResult{r}
 	return m.mock
 }
 
@@ -661,8 +666,12 @@ func (m *mConsensusNetworkMockStart) ExpectOnce(p context.Context) *ConsensusNet
 	return expectation
 }
 
+func (e *ConsensusNetworkMockStartExpectation) Return(r error) {
+	e.result = &ConsensusNetworkMockStartResult{r}
+}
+
 //Set uses given function f as a mock of ConsensusNetwork.Start method
-func (m *mConsensusNetworkMockStart) Set(f func(p context.Context)) *ConsensusNetworkMock {
+func (m *mConsensusNetworkMockStart) Set(f func(p context.Context) (r error)) *ConsensusNetworkMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -671,7 +680,7 @@ func (m *mConsensusNetworkMockStart) Set(f func(p context.Context)) *ConsensusNe
 }
 
 //Start implements github.com/insolar/insolar/network.ConsensusNetwork interface
-func (m *ConsensusNetworkMock) Start(p context.Context) {
+func (m *ConsensusNetworkMock) Start(p context.Context) (r error) {
 	counter := atomic.AddUint64(&m.StartPreCounter, 1)
 	defer atomic.AddUint64(&m.StartCounter, 1)
 
@@ -684,6 +693,14 @@ func (m *ConsensusNetworkMock) Start(p context.Context) {
 		input := m.StartMock.expectationSeries[counter-1].input
 		testify_assert.Equal(m.t, *input, ConsensusNetworkMockStartInput{p}, "ConsensusNetwork.Start got unexpected parameters")
 
+		result := m.StartMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the ConsensusNetworkMock.Start")
+			return
+		}
+
+		r = result.r
+
 		return
 	}
 
@@ -694,6 +711,13 @@ func (m *ConsensusNetworkMock) Start(p context.Context) {
 			testify_assert.Equal(m.t, *input, ConsensusNetworkMockStartInput{p}, "ConsensusNetwork.Start got unexpected parameters")
 		}
 
+		result := m.StartMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the ConsensusNetworkMock.Start")
+		}
+
+		r = result.r
+
 		return
 	}
 
@@ -702,7 +726,7 @@ func (m *ConsensusNetworkMock) Start(p context.Context) {
 		return
 	}
 
-	m.StartFunc(p)
+	return m.StartFunc(p)
 }
 
 //StartMinimockCounter returns a count of ConsensusNetworkMock.StartFunc invocations
@@ -742,45 +766,59 @@ type mConsensusNetworkMockStop struct {
 }
 
 type ConsensusNetworkMockStopExpectation struct {
+	input  *ConsensusNetworkMockStopInput
+	result *ConsensusNetworkMockStopResult
+}
+
+type ConsensusNetworkMockStopInput struct {
+	p context.Context
+}
+
+type ConsensusNetworkMockStopResult struct {
+	r error
 }
 
 //Expect specifies that invocation of ConsensusNetwork.Stop is expected from 1 to Infinity times
-func (m *mConsensusNetworkMockStop) Expect() *mConsensusNetworkMockStop {
+func (m *mConsensusNetworkMockStop) Expect(p context.Context) *mConsensusNetworkMockStop {
 	m.mock.StopFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &ConsensusNetworkMockStopExpectation{}
 	}
-
+	m.mainExpectation.input = &ConsensusNetworkMockStopInput{p}
 	return m
 }
 
 //Return specifies results of invocation of ConsensusNetwork.Stop
-func (m *mConsensusNetworkMockStop) Return() *ConsensusNetworkMock {
+func (m *mConsensusNetworkMockStop) Return(r error) *ConsensusNetworkMock {
 	m.mock.StopFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &ConsensusNetworkMockStopExpectation{}
 	}
-
+	m.mainExpectation.result = &ConsensusNetworkMockStopResult{r}
 	return m.mock
 }
 
 //ExpectOnce specifies that invocation of ConsensusNetwork.Stop is expected once
-func (m *mConsensusNetworkMockStop) ExpectOnce() *ConsensusNetworkMockStopExpectation {
+func (m *mConsensusNetworkMockStop) ExpectOnce(p context.Context) *ConsensusNetworkMockStopExpectation {
 	m.mock.StopFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &ConsensusNetworkMockStopExpectation{}
-
+	expectation.input = &ConsensusNetworkMockStopInput{p}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
+func (e *ConsensusNetworkMockStopExpectation) Return(r error) {
+	e.result = &ConsensusNetworkMockStopResult{r}
+}
+
 //Set uses given function f as a mock of ConsensusNetwork.Stop method
-func (m *mConsensusNetworkMockStop) Set(f func()) *ConsensusNetworkMock {
+func (m *mConsensusNetworkMockStop) Set(f func(p context.Context) (r error)) *ConsensusNetworkMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -789,30 +827,53 @@ func (m *mConsensusNetworkMockStop) Set(f func()) *ConsensusNetworkMock {
 }
 
 //Stop implements github.com/insolar/insolar/network.ConsensusNetwork interface
-func (m *ConsensusNetworkMock) Stop() {
+func (m *ConsensusNetworkMock) Stop(p context.Context) (r error) {
 	counter := atomic.AddUint64(&m.StopPreCounter, 1)
 	defer atomic.AddUint64(&m.StopCounter, 1)
 
 	if len(m.StopMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.StopMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to ConsensusNetworkMock.Stop.")
+			m.t.Fatalf("Unexpected call to ConsensusNetworkMock.Stop. %v", p)
 			return
 		}
+
+		input := m.StopMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, ConsensusNetworkMockStopInput{p}, "ConsensusNetwork.Stop got unexpected parameters")
+
+		result := m.StopMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the ConsensusNetworkMock.Stop")
+			return
+		}
+
+		r = result.r
 
 		return
 	}
 
 	if m.StopMock.mainExpectation != nil {
 
+		input := m.StopMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, ConsensusNetworkMockStopInput{p}, "ConsensusNetwork.Stop got unexpected parameters")
+		}
+
+		result := m.StopMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the ConsensusNetworkMock.Stop")
+		}
+
+		r = result.r
+
 		return
 	}
 
 	if m.StopFunc == nil {
-		m.t.Fatalf("Unexpected call to ConsensusNetworkMock.Stop.")
+		m.t.Fatalf("Unexpected call to ConsensusNetworkMock.Stop. %v", p)
 		return
 	}
 
-	m.StopFunc()
+	return m.StopFunc(p)
 }
 
 //StopMinimockCounter returns a count of ConsensusNetworkMock.StopFunc invocations
