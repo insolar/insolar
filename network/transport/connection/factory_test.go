@@ -41,4 +41,6 @@ func TestUdpConnectionFactory_Create(t *testing.T) {
 	require.IsType(t, &net.UDPConn{}, conn)
 	require.Equal(t, addrStr, conn.LocalAddr().String())
 
+	err = conn.Close()
+	require.NoError(t, err)
 }
