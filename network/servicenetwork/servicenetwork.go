@@ -274,22 +274,22 @@ func (n *ServiceNetwork) phaseManagerOnPulse(ctx context.Context, newPulse core.
 	}
 }
 
-func isFakePulse(newPulse *core.Pulse) bool {
-	return newPulse.EpochPulseNumber == -1
-}
-
-func isNewEpoch(currentPulse, newPulse *core.Pulse) bool {
-	return newPulse.EpochPulseNumber > currentPulse.EpochPulseNumber
-}
+// func isFakePulse(newPulse *core.Pulse) bool {
+// 	return newPulse.EpochPulseNumber == -1
+// }
+//
+// func isNewEpoch(currentPulse, newPulse *core.Pulse) bool {
+// 	return newPulse.EpochPulseNumber > currentPulse.EpochPulseNumber
+// }
 
 func isNextPulse(currentPulse, newPulse *core.Pulse) bool {
 	return newPulse.PulseNumber > currentPulse.PulseNumber && newPulse.PulseNumber >= currentPulse.NextPulseNumber
 }
 
-func fakePulseStarted(currentPulse, newPulse *core.Pulse) bool {
-	return isFakePulse(newPulse) && currentPulse.EpochPulseNumber > -1
-}
-
-func fakePulseAllowed(state core.NetworkState) bool {
-	return state == core.VoidNetworkState || state == core.NoNetworkState
-}
+// func fakePulseStarted(currentPulse, newPulse *core.Pulse) bool {
+// 	return isFakePulse(newPulse) && currentPulse.EpochPulseNumber > -1
+// }
+//
+// func fakePulseAllowed(state core.NetworkState) bool {
+// 	return state == core.VoidNetworkState || state == core.NoNetworkState
+// }
