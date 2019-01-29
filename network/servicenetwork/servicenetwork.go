@@ -235,7 +235,6 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse core.Pulse) {
 	}
 
 	// Working on early network state, ready for fake pulses
-	// TODO: !!!
 	// if isFakePulse(&newPulse) && !fakePulseAllowed(n.NetworkSwitcher.GetState()) {
 	// 	logger.Infof("Got fake pulse on invalid network state. Current: %+v. New: %+v", currentPulse, newPulse)
 	// 	return
