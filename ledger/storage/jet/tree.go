@@ -232,7 +232,6 @@ func nodeDeepFmt(deep int, binPrefix string, node *jet) string {
 
 // NewTree creates new tree.
 func NewTree(isActual bool) *Tree {
-	fmt.Println("NewTree was created, love")
 	return &Tree{Head: &jet{Actual: isActual}}
 }
 
