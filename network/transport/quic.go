@@ -30,7 +30,7 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/transport/relay"
 	"github.com/insolar/insolar/network/utils"
-	quic "github.com/lucas-clemente/quic-go"
+	"github.com/lucas-clemente/quic-go"
 	"github.com/pkg/errors"
 )
 
