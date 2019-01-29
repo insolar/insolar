@@ -1176,7 +1176,6 @@ func (h *MessageHandler) nodeForJet(
 	return h.JetCoordinator.LightExecutorForJet(ctx, jetID, targetPN)
 }
 
-
 func (h *MessageHandler) isBeyondLimit(
 	ctx context.Context, currentPN, targetPN core.PulseNumber,
 ) (bool, error) {
