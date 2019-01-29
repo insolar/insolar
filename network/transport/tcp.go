@@ -21,7 +21,6 @@ import (
 	"context"
 	"io"
 	"net"
-
 	"strings"
 	"sync"
 	"time"
@@ -84,19 +83,12 @@ func (t *tcpTransport) send(address string, data []byte) error {
 	_, err = conn.Write(data)
 
 	if err != nil {
-		// if netErr, ok := err.(*net.OpError); ok {
-		// 	switch realNetErr := netErr.Err.(type) {
-		// 	case *os.SyscallError:
-		// 		if realNetErr.Err == syscall.EPIPE {
 		t.pool.CloseConnection(ctx, addr)
 		conn, err = t.openConnection(ctx, addr)
 		if err != nil {
 			return errors.Wrap(err, "[ send ] Failed to get connection")
 		}
 		_, err = conn.Write(data)
-		// 		}
-		// 	}
-		// }
 	}
 
 	return errors.Wrap(err, "[ send ] Failed to write data")
