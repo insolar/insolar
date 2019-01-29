@@ -40,6 +40,16 @@ type transportConsensus struct {
 	handlers map[consensus.PacketType]network.ConsensusPacketHandler
 }
 
+func (tc *transportConsensus) Start(ctx context.Context) error {
+	tc.transportBase.Start(ctx)
+	return nil
+}
+
+func (tc *transportConsensus) Stop(ctx context.Context) error {
+	tc.transportBase.Stop()
+	return nil
+}
+
 // RegisterPacketHandler register a handler function to process incoming requests of a specific type.
 func (tc *transportConsensus) RegisterPacketHandler(t consensus.PacketType, handler network.ConsensusPacketHandler) {
 	_, exists := tc.handlers[t]
@@ -52,11 +62,11 @@ func (tc *transportConsensus) RegisterPacketHandler(t consensus.PacketType, hand
 func (tc *transportConsensus) SignAndSendPacket(packet consensus.ConsensusPacket,
 	receiver core.RecordRef, service core.CryptographyService) error {
 
-	log.Debugf("Send %s request to host %s", packet.GetType(), receiver.String())
 	receiverHost, err := tc.resolver.ResolveConsensusRef(receiver)
 	if err != nil {
 		return errors.Wrapf(err, "Failed to resolve %s request to node %s", packet.GetType(), receiver.String())
 	}
+	log.Debugf("Send %s request to host %s", packet.GetType(), receiverHost)
 	packet.SetRouting(tc.origin.ShortID, receiverHost.ShortID)
 	err = packet.Sign(service)
 	if err != nil {
