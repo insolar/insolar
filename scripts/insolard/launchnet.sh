@@ -324,8 +324,8 @@ do
     if [[ "$i" -eq "$NUM_DISCOVERY_NODES" ]]
     then
         echo "DISCOVERY NODE $i STARTED in foreground"
-        INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $GENERATED_CONFIGS_DIR/insolar_$i.yaml --trace &> $node/output.log &
-        lastDiscoveryPID=`echo \$!`
+        INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $GENERATED_CONFIGS_DIR/insolar_$i.yaml --trace &> $node/output.log
+#        lastDiscoveryPID=`echo \$!`
         break
     fi
     INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $GENERATED_CONFIGS_DIR/insolar_$i.yaml --trace &> $node/output.log &
@@ -360,6 +360,6 @@ done
 #printf "nodes started ... \n"
 #
 #kill $lastNodePID
-kill -CONT $lastDiscoveryPID
+#kill -CONT $lastDiscoveryPID
 
 echo "FINISHING ..."
