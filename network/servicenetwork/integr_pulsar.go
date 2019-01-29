@@ -19,6 +19,7 @@ package servicenetwork
 
 import (
 	"context"
+	"time"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
@@ -35,7 +36,7 @@ type TestPulsar interface {
 	component.Stopper
 }
 
-func NewTestPulsar(pulseTimeMs int, bootstrapHosts []string) (TestPulsar, error) {
+func NewTestPulsar(pulseTimeMs, requestsTimeoutMs, pulseDelta int, bootstrapHosts []string) (TestPulsar, error) {
 	transportCfg := configuration.Transport{}
 	tp, err := transport.NewTransport(transportCfg, relay.NewProxy())
 	if err != nil {
@@ -48,11 +49,13 @@ func NewTestPulsar(pulseTimeMs int, bootstrapHosts []string) (TestPulsar, error)
 		return nil, errors.Wrap(err, "Failed to create pulse distributor")
 	}
 	return &testPulsar{
-		transport:      tp,
-		distributor:    distributor,
-		generator:      &entropygenerator.StandardEntropyGenerator{},
-		pulseTimeMs:    pulseTimeMs,
-		bootstrapHosts: bootstrapHosts,
+		transport:         tp,
+		distributor:       distributor,
+		generator:         &entropygenerator.StandardEntropyGenerator{},
+		pulseTimeMs:       pulseTimeMs,
+		pulseDelta:        pulseDelta,
+		bootstrapHosts:    bootstrapHosts,
+		cancellationToken: make(chan struct{}),
 	}, nil
 }
 
@@ -63,7 +66,11 @@ type testPulsar struct {
 	cm          *component.Manager
 
 	pulseTimeMs    int
+	reqTimeMs      int
+	pulseDelta     int
 	bootstrapHosts []string
+
+	cancellationToken chan struct{}
 }
 
 func (tp *testPulsar) Start(ctx context.Context) error {
@@ -76,17 +83,51 @@ func (tp *testPulsar) Start(ctx context.Context) error {
 	if err := tp.cm.Start(ctx); err != nil {
 		return errors.Wrap(err, "Failed to start test pulsar components")
 	}
-	go tp.distribute()
+	go tp.distribute(ctx)
 	return nil
 }
 
-func (tp *testPulsar) distribute() {
-	// TODO: distribute pulse
+func (tp *testPulsar) distribute(ctx context.Context) {
+	timeNow := time.Now()
+	pulseNumber := core.CalculatePulseNumber(timeNow)
+	pulse := core.Pulse{
+		PulseNumber:      pulseNumber,
+		Entropy:          tp.generator.GenerateEntropy(),
+		NextPulseNumber:  pulseNumber + core.PulseNumber(tp.pulseDelta),
+		PrevPulseNumber:  core.GenesisPulse.PulseNumber,
+		EpochPulseNumber: 1,
+		OriginID:         [16]byte{206, 41, 229, 190, 7, 240, 162, 155, 121, 245, 207, 56, 161, 67, 189, 0},
+		PulseTimestamp:   timeNow.Unix(),
+	}
+
+	for {
+		select {
+		case <-time.After(time.Duration(tp.pulseTimeMs) * time.Millisecond):
+			go tp.distributor.Distribute(ctx, pulse)
+			pulse = tp.incrementPulse(pulse)
+		case <-tp.cancellationToken:
+			return
+		}
+	}
+}
+
+func (tp *testPulsar) incrementPulse(pulse core.Pulse) core.Pulse {
+	newPulse := pulse.PulseNumber + core.PulseNumber(tp.pulseDelta)
+	return core.Pulse{
+		PulseNumber:      newPulse,
+		Entropy:          tp.generator.GenerateEntropy(),
+		NextPulseNumber:  newPulse + core.PulseNumber(tp.pulseDelta),
+		PrevPulseNumber:  pulse.PulseNumber,
+		EpochPulseNumber: pulse.EpochPulseNumber,
+		OriginID:         pulse.OriginID,
+		PulseTimestamp:   time.Now().Unix(),
+	}
 }
 
 func (tp *testPulsar) Stop(ctx context.Context) error {
 	if err := tp.cm.Stop(ctx); err != nil {
 		return errors.Wrap(err, "Failed to stop test pulsar components")
 	}
+	close(tp.cancellationToken)
 	return nil
 }
