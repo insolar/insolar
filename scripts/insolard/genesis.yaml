@@ -126,7 +126,7 @@ discovery_nodes:
 
 nodes:
   -
-    host: "127.0.0.1:63831"
+    host: "127.0.0.1:63836"
     role: "virtual"
     keys_file: "scripts/insolard/nodes/1/keys.json"
     cert_name: "node_cert_1.json"
