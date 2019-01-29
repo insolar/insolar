@@ -26,6 +26,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestBuilder_Build_EmptyPacket(t *testing.T) {
+	builder := NewBuilder(nil)
+
+	require.Equal(t, builder.Build(), &Packet{})
+}
+
 func TestBuilder_Build_RequestPacket(t *testing.T) {
 	sender, _ := host.NewHostN("127.0.0.1:31337", testutils.RandomRef())
 	receiver, _ := host.NewHostN("127.0.0.2:31338", testutils.RandomRef())
@@ -33,13 +39,12 @@ func TestBuilder_Build_RequestPacket(t *testing.T) {
 	m := builder.Receiver(receiver).Type(TestPacket).Request(&RequestTest{[]byte{0, 1, 2, 3}}).Build()
 
 	expectedPacket := &Packet{
-		Sender:        sender,
-		RemoteAddress: sender.Address.String(),
-		Receiver:      receiver,
-		Type:          TestPacket,
-		Data:          &RequestTest{[]byte{0, 1, 2, 3}},
-		IsResponse:    false,
-		Error:         nil,
+		Sender:     sender,
+		Receiver:   receiver,
+		Type:       TestPacket,
+		Data:       &RequestTest{[]byte{0, 1, 2, 3}},
+		IsResponse: false,
+		Error:      nil,
 	}
 	require.Equal(t, expectedPacket, m)
 }
@@ -51,13 +56,12 @@ func TestBuilder_Build_ResponsePacket(t *testing.T) {
 	m := builder.Receiver(receiver).Type(TestPacket).Response(&ResponseTest{42}).Build()
 
 	expectedPacket := &Packet{
-		Sender:        sender,
-		RemoteAddress: sender.Address.String(),
-		Receiver:      receiver,
-		Type:          TestPacket,
-		Data:          &ResponseTest{42},
-		IsResponse:    true,
-		Error:         nil,
+		Sender:     sender,
+		Receiver:   receiver,
+		Type:       TestPacket,
+		Data:       &ResponseTest{42},
+		IsResponse: true,
+		Error:      nil,
 	}
 	require.Equal(t, expectedPacket, m)
 }
@@ -69,13 +73,12 @@ func TestBuilder_Build_ErrorPacket(t *testing.T) {
 	m := builder.Receiver(receiver).Type(TestPacket).Response(&ResponseTest{}).Error(errors.New("test error")).Build()
 
 	expectedPacket := &Packet{
-		Sender:        sender,
-		RemoteAddress: sender.Address.String(),
-		Receiver:      receiver,
-		Type:          TestPacket,
-		Data:          &ResponseTest{},
-		IsResponse:    true,
-		Error:         errors.New("test error"),
+		Sender:     sender,
+		Receiver:   receiver,
+		Type:       TestPacket,
+		Data:       &ResponseTest{},
+		IsResponse: true,
+		Error:      errors.New("test error"),
 	}
 	require.Equal(t, expectedPacket, m)
 }
