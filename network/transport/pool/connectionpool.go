@@ -156,17 +156,6 @@ func (cp *connectionPool) getOrCreateConnection(ctx context.Context, address net
 		return false, nil, errors.Wrap(err, "[ send ] Failed to create TCP connection")
 	}
 
-	go func() {
-		b := make([]byte, 1)
-		_, err := conn.Read(b)
-		if err != nil {
-			logger.Infof("remote host 'closed' connection to %s: %s", address, err)
-			cp.CloseConnection(ctx, address)
-			return
-		}
-
-		logger.Errorf("unexpected data on connection to %s", address)
-	}()
 
 	lc := &lockableConnection{
 		Conn:   conn,
