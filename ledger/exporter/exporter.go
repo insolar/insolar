@@ -36,25 +36,20 @@ import (
 
 // Exporter provides methods for fetching data view from storage.
 type Exporter struct {
-	db            *storage.DB
-	jetStorage    storage.JetStorage
-	objectStorage storage.ObjectStorage
-	pulseTracker  storage.PulseTracker
-	ps            *storage.PulseStorage
-	cfg           configuration.Exporter
+	JetStorage    storage.JetStorage    `inject:""`
+	ObjectStorage storage.ObjectStorage `inject:""`
+	PulseTracker  storage.PulseTracker  `inject:""`
+	PulseStorage  core.PulseStorage     `inject:""`
+
+	db  *storage.DB
+	cfg configuration.Exporter
 }
 
 // NewExporter creates new StorageExporter instance.
 func NewExporter(db *storage.DB, cfg configuration.Exporter) *Exporter {
-	ps := storage.NewPulseStorage()
-	ps.PulseTracker = db
 	return &Exporter{
-		db:            db,
-		jetStorage:    db,
-		objectStorage: db,
-		pulseTracker:  db,
-		ps:            ps,
-		cfg:           cfg,
+		db:  db,
+		cfg: cfg,
 	}
 }
 
@@ -87,13 +82,13 @@ func (e *Exporter) Export(ctx context.Context, fromPulse core.PulseNumber, size 
 	inslog := inslogger.FromContext(ctx)
 	inslog.Debugf("[ API Export ] start")
 
-	jetIDs, err := e.jetStorage.GetJets(ctx)
+	jetIDs, err := e.JetStorage.GetJets(ctx)
 	if err != nil {
 		inslog.Debugf("[ API Export ] error getting jets: %s", err.Error())
 		return nil, err
 	}
 
-	currentPulse, err := e.ps.Current(ctx)
+	currentPulse, err := e.PulseStorage.Current(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get current pulse data")
 	}
@@ -106,15 +101,15 @@ func (e *Exporter) Export(ctx context.Context, fromPulse core.PulseNumber, size 
 			fromPulsePN, currentPulse.PulseNumber)
 	}
 
-	_, err = e.pulseTracker.GetPulse(ctx, fromPulsePN)
+	_, err = e.PulseTracker.GetPulse(ctx, fromPulsePN)
 	if err != nil {
-		tryPulse, err := e.pulseTracker.GetPulse(ctx, core.GenesisPulse.PulseNumber)
+		tryPulse, err := e.PulseTracker.GetPulse(ctx, core.GenesisPulse.PulseNumber)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to fetch genesis pulse data")
 		}
 
 		for fromPulsePN > *tryPulse.Next {
-			tryPulse, err = e.pulseTracker.GetPulse(ctx, *tryPulse.Next)
+			tryPulse, err = e.PulseTracker.GetPulse(ctx, *tryPulse.Next)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to iterate through first pulses")
 			}
@@ -124,7 +119,7 @@ func (e *Exporter) Export(ctx context.Context, fromPulse core.PulseNumber, size 
 
 	iterPulse := &fromPulsePN
 	for iterPulse != nil && counter < size {
-		pulse, err := e.pulseTracker.GetPulse(ctx, *iterPulse)
+		pulse, err := e.PulseTracker.GetPulse(ctx, *iterPulse)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to fetch pulse data")
 		}
