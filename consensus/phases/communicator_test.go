@@ -72,6 +72,8 @@ func (s *communicatorSuite) SetupTest() {
 
 	})
 
+	s.consensusNetworkMock.StartMock.Set(func(context.Context) error { return nil })
+
 	s.consensusNetworkMock.GetNodeIDMock.Set(func() (r core.RecordRef) {
 		return s.originNode.ID()
 	})
