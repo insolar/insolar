@@ -24,6 +24,8 @@ import (
 
 	"github.com/insolar/insolar/consensus/phases"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/log"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -188,6 +190,28 @@ func (s *testSuite) TestDiscoveryDown() {
 	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
 	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetActiveNodes()
 	s.Equal(s.getNodesCount()-1, len(activeNodes))
+}
+
+func (s *testSuite) TestDiscoveryRestart() {
+	if len(s.fixture().bootstrapNodes) < consensusMin {
+		s.T().Skip(consensusMinMsg)
+	}
+
+	err := s.fixture().bootstrapNodes[0].serviceNetwork.Stop(context.Background())
+	require.NoError(s.T(), err)
+
+	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
+	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount()-1, len(activeNodes))
+
+	log.Info("Discovery node restarting...")
+	err = s.fixture().bootstrapNodes[0].serviceNetwork.Start(context.Background())
+	log.Info("Discovery node restarted")
+	require.NoError(s.T(), err)
+
+	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
+	activeNodes = s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount(), len(activeNodes))
 }
 
 func setCommunicatorMock(nodes []*networkNode, opt CommunicatorTestOpt) {
