@@ -12,22 +12,6 @@ check () {
 DOCKER=./ci/local-dev/docker/
 K8S=./ci/local-dev/manifests/
 
-PID=/tmp/kubectl-pid
-LOG=/tmp/test-watch
-
-
-
-pause () {
-  STR=$1
-  while ! $(grep -q "$STR" $LOG) ; do
-    sleep 1
-  done
-  kill $(cat $PID)
-  rm $PID
-  rm $LOG
-}
-
-
 full-rebuild () {
   echo start full rebuild
   docker build --rm --tag pre -f $DOCKER/Dockerfile.pre .
@@ -42,20 +26,14 @@ rebuild () {
 
 start-dev () {
   echo start dev
-  kubectl apply -f $K8S/environments.yaml
-  kubectl -n dev apply -f $K8S/bootstrap.yaml
-  (kubectl -n dev get pods -w & echo $! >$PID ) | tee $LOG &
-  pause 'seed-0.*Running'
-  kubectl -n dev apply -f $K8S/pulsar.yaml
-  kubectl -n dev apply -f $K8S/virtual.yaml
+  kubectl apply -f $K8S/bootstrap-ss.yaml
+  kubectl apply -f $K8S/pulsar.yaml
 }
 
 stop-dev () {
   echo stop dev
-  kubectl delete ns dev || echo don\'t have dev namespace
-  while $(kubectl get ns | grep -q 'dev   ') ; do
-    sleep 1
-  done
+  kubectl delete -f $K8S/pulsar.yaml
+  kubectl delete -f $K8S/bootstrap-ss.yaml
 }
 
 restart-dev () {

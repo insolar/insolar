@@ -1,8 +1,46 @@
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pulsar-config
+data:
+  pulsar.yaml: |
+    pulsar:
+      connectiontype: tcp
+      mainlisteneraddress: 0.0.0.0:58090
+      storage:
+        datadirectory: /opt/insolar/pulsar
+        txretriesonconflict: 0
+      pulsetime: 10000
+      receivingsigntimeout: 1000
+      receivingnumbertimeout: 1000
+      receivingvectortimeout: 1000
+      receivingsignsforchosentimeout: 0
+      neighbours: []
+      numberofrandomhosts: 1
+      numberdelta: 10
+      distributiontransport:
+        protocol: TCP
+        address: 0.0.0.0:58091
+        behindnat: false
+      pulsedistributor:
+        bootstraphosts:
+          - seed-0.bootstrap:7900
+          - seed-1.bootstrap:7900
+          - seed-2.bootstrap:7900
+          - seed-3.bootstrap:7900
+          - seed-4.bootstrap:7900
+    keyspath: "/opt/insolar/config/bootstrap_keys.json"
+    log:
+      level: Debug
+      adapter: logrus
+ 
+---
+
 apiVersion: apps/v1beta1
 kind: StatefulSet
 metadata:
   name: pulsar
-  namespace: dev
   labels:
     app: pulsar
 
@@ -14,7 +52,6 @@ spec:
       labels:
         app: pulsar
     spec:
-      terminationGracePeriodSeconds: 0
       initContainers:
         - name: init-register
           imagePullPolicy: Never
@@ -25,37 +62,13 @@ spec:
             - /bin/sh
             - -c
             - |
-              /go/bin/insolar -c default_config > /opt/insolar/config/config.yaml;
-              /go/bin/insolar -c gen_keys > /opt/insolar/config/keys.json;
+              /go/bin/insolar -c gen_keys > /opt/insolar/config/bootstrap_keys.json;
           env:
             - name: HOME
               value: /opt/insolar
-            - name: INSOLAR_KEYSPATH
-              value: "/opt/insolar/config/keys.json"
-            - name: INSOLAR_GENESIS_ROOTKEYS
-              value: "/opt/insolar/config/rootkeys.json"
-            - name: INSOLAR_PULSAR_STORAGE_DATADIRECTORY
-              value: "/opt/insolar/pulsar"
-            - name: INSOLAR_LEDGER_STORAGE_DATADIRECTORY
-              value: "/opt/insolar/data"
-            - name: POD_IP
-              valueFrom:
-                fieldRef:
-                  fieldPath: status.podIP
-            - name: INSOLAR_HOST_TRANSPORT_ADDRESS
-              value: "$(POD_IP):7900"
           volumeMounts:
             - name: config
               mountPath: /opt/insolar/config
-            - name: data
-              mountPath: /opt/insolar/data
-            - name: pulsar
-              mountPath: /opt/insolar/pulsar
-            - name: code
-              mountPath: /tmp/code
-            - name: root-keys
-              mountPath: /opt/insolar/config/rootkeys.json
-              subPath: rootkeys.json
       containers:
         - name: pulsar
           imagePullPolicy: Never
@@ -66,28 +79,22 @@ spec:
           command: 
             - /go/bin/pulsard
             - -c
-            - /opt/insolar/config/config.yaml
+            - /opt/insolar/config/pulsar.yaml
           env:
             - name: HOME
               value: /opt/insolar
-            - name: INSOLAR_PULSAR_BOOTSTRAPNODES
-              value: "seed-0.bootstrap:7900"
-            - name: INSOLAR_LOG_LEVEL
-              value: "debug"
             - name: INSOLAR_KEYSPATH
-              value: "/opt/insolar/config/keys.json"
+              value: "/opt/insolar/config/bootstrap_keys.json"
             - name: INSOLAR_PULSAR_STORAGE_DATADIRECTORY
               value: "/opt/insolar/pulsar"
-            - name: INSOLAR_LEDGER_STORAGE_DATADIRECTORY
-              value: "/opt/insolar/data"
             - name: POD_IP
               valueFrom:
                 fieldRef:
                   fieldPath: status.podIP
-            - name: INSOLAR_HOST_TRANSPORT_ADDRESS
-              value: "$(POD_IP):7900"
-            - name: INSOLAR_PULSAR_BOOTSTRAPLISTENER_ADDRESS
-              value: "$(POD_IP):18091"
+            - name: INSOLAR_PULSAR_MAINLISTENERADDRESS
+              value: "$(POD_IP):58090"
+            - name: INSOLAR_PULSAR_DISTRIBUTIONTRANSPORT_ADDRESS
+              value: "$(POD_IP):58091"
           resources:
             requests:
               cpu: 300m
@@ -95,27 +102,26 @@ spec:
           volumeMounts:
             - name: config
               mountPath: /opt/insolar/config
-            - name: data
-              mountPath: /opt/insolar/data
             - name: pulsar
               mountPath: /opt/insolar/pulsar
             - name: code
               mountPath: /tmp/code
-            - name: root-keys
-              mountPath: /opt/insolar/config/rootkeys.json
-              subPath: rootkeys.json
+            - name: pulsar-config
+              mountPath: /opt/insolar/config/pulsar.yaml
+              subPath: pulsar.yaml
       volumes:
       - name: config
-        emptyDir: {}
-      - name: data
         emptyDir: {}
       - name: pulsar
         emptyDir: {}
       - name: code
         emptyDir: {}
-      - name: root-keys
+      - name: pulsar-config
         configMap:
-          name: root-keys
+          name: pulsar-config
+      imagePullSecrets:
+      - name: registry-insolar-io
   updateStrategy:
     type: RollingUpdate
   podManagementPolicy: Parallel
+
