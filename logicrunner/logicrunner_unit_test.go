@@ -333,6 +333,8 @@ func TestHandlePendingFinishedMessage(
 		&message.PendingFinished{Reference: objectRef},
 	)
 
+	parcel.DefaultTargetMock.Return(&core.RecordRef{})
+
 	re, err := lr.HandlePendingFinishedMessage(ctx, parcel)
 	require.NoError(t, err)
 	require.Equal(t, &reply.OK{}, re)
@@ -426,6 +428,8 @@ func TestLogicRunner_HandleStillExecutingMessage(
 	parcel := testutils.NewParcelMock(t).MessageMock.Return(
 		&message.StillExecuting{Reference: objectRef},
 	)
+
+	parcel.DefaultTargetMock.Return(&core.RecordRef{})
 
 	re, err := lr.HandleStillExecutingMessage(ctx, parcel)
 	require.NoError(t, err)

@@ -18,7 +18,6 @@ package artifactmanager
 
 import (
 	"context"
-	"sync"
 	"time"
 
 	"github.com/pkg/errors"
@@ -41,11 +40,6 @@ type middleware struct {
 	hotDataWaiter  HotDataWaiter
 	conf           *configuration.Ledger
 	handler        *MessageHandler
-	seqMutex       sync.Mutex
-	sequencer      map[core.RecordID]*struct {
-		sync.Mutex
-		done bool
-	}
 }
 
 func newMiddleware(
@@ -60,10 +54,14 @@ func newMiddleware(
 		hotDataWaiter:  h.HotDataWaiter,
 		handler:        h,
 		conf:           h.conf,
-		sequencer: map[core.RecordID]*struct {
-			sync.Mutex
-			done bool
-		}{},
+	}
+}
+
+func (m *middleware) addFieldsToLogger(handler core.MessageHandler) core.MessageHandler {
+	return func(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
+		context, _ := inslogger.WithField(ctx, "targetid", parcel.DefaultTarget().String())
+
+		return handler(context, parcel)
 	}
 }
 
@@ -87,6 +85,12 @@ func (m *middleware) zeroJetForHeavy(handler core.MessageHandler) core.MessageHa
 	return func(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
 		return handler(contextWithJet(ctx, *jet.NewID(0, nil)), parcel)
 	}
+}
+
+func addJetIDToLogger(ctx context.Context, jetID core.RecordID) context.Context {
+	ctx, _ = inslogger.WithField(ctx, "jetid", jetID.DebugString())
+
+	return ctx
 }
 
 func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
@@ -144,13 +148,11 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 			logger.Debugf("special pulse number (jet). returning jet from message")
 			jetID = *msg.DefaultTarget().Record()
 		} else {
-			j, actual, err := m.fetchJet(ctx, *msg.DefaultTarget().Record(), parcel.Pulse())
+			j, err := m.handler.jetTreeUpdater.fetchJet(ctx, *msg.DefaultTarget().Record(), parcel.Pulse())
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to fetch jet tree")
 			}
-			if !actual {
-				return &reply.JetMiss{JetID: *j}, nil
-			}
+
 			jetID = *j
 		}
 
@@ -159,9 +161,12 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to calculate executor for jet")
 		}
+
 		if *node != m.jetCoordinator.Me() {
 			return &reply.JetMiss{JetID: jetID}, nil
 		}
+
+		ctx = addJetIDToLogger(ctx, jetID)
 
 		return handler(contextWithJet(ctx, jetID), parcel)
 	}
@@ -200,73 +205,6 @@ func (m *middleware) checkHeavySync(handler core.MessageHandler) core.MessageHan
 
 		return handler(ctx, parcel)
 	}
-}
-
-func (m *middleware) fetchJet(
-	ctx context.Context, target core.RecordID, pulse core.PulseNumber,
-) (*core.RecordID, bool, error) {
-	// Look in the local tree. Return if the actual jet found.
-	tree, err := m.jetStorage.GetJetTree(ctx, pulse)
-	if err != nil {
-		return nil, false, err
-	}
-	jetID, actual := tree.Find(target)
-	if actual {
-		inslogger.FromContext(ctx).Debugf(
-			"we believe object %s is in JET %s", target.String(), jetID.DebugString(),
-		)
-		return jetID, actual, nil
-	}
-
-	inslogger.FromContext(ctx).Debugf(
-		"jet %s is not actual in our tree, asking neighbors for jet of object %s",
-		jetID.DebugString(), target.String(),
-	)
-
-	m.seqMutex.Lock()
-	if _, ok := m.sequencer[*jetID]; !ok {
-		m.sequencer[*jetID] = &struct {
-			sync.Mutex
-			done bool
-		}{}
-	}
-	mu := m.sequencer[*jetID]
-	m.seqMutex.Unlock()
-
-	mu.Lock()
-	if mu.done {
-		mu.Unlock()
-		inslogger.FromContext(ctx).Debugf(
-			"somebody else updated actuality of jet %s, rechecking our DB",
-			jetID.DebugString(),
-		)
-		return m.fetchJet(ctx, target, pulse)
-	}
-	defer func() {
-		inslogger.FromContext(ctx).Debugf("done fetching jet, cleaning")
-
-		mu.done = true
-		mu.Unlock()
-
-		m.seqMutex.Lock()
-		inslogger.FromContext(ctx).Debugf("deleting sequencer for jet %s", jetID.DebugString())
-		delete(m.sequencer, *jetID)
-		m.seqMutex.Unlock()
-	}()
-
-	resJet, err := m.handler.fetchActualJetFromOtherNodes(ctx, target, pulse)
-	if err != nil {
-		return nil, false, err
-	}
-
-	err = m.jetStorage.UpdateJetTree(ctx, pulse, true, *resJet)
-	if err != nil {
-		inslogger.FromContext(ctx).Error(
-			errors.Wrapf(err, "couldn't actualize jet %s", resJet.DebugString()),
-		)
-	}
-
-	return resJet, true, nil
 }
 
 func (m *middleware) waitForHotData(handler core.MessageHandler) core.MessageHandler {
