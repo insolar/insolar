@@ -292,7 +292,7 @@ genesis()
         NL=$BASE_DIR/loglinks
         mkdir  $NL || \
         rm -f $NL/*.log
-        for node in "${NODES[@]}" ; do
+        for node in "${DISCOVERY_NODES[@]}" ; do
             ref=`jq -r '.reference' $node/cert.json`
             [[ $ref =~ .+\. ]]
             ln -s `pwd`/$node/output.log $NL/${BASH_REMATCH[0]}log
