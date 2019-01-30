@@ -19,11 +19,17 @@ package servicenetwork
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/insolar/insolar/consensus/phases"
 	"github.com/insolar/insolar/core"
 	"github.com/stretchr/testify/suite"
+)
+
+var (
+	consensusMin    = 5 // minimum count of participants that can survive when one node leaves
+	consensusMinMsg = fmt.Sprintf("skip test for bootstrap nodes < %d", consensusMin)
 )
 
 func (s *testSuite) TestNetworkConsensus3Times() {
@@ -108,8 +114,8 @@ func (ftpm *FullTimeoutPhaseManager) OnPulse(ctx context.Context, pulse *core.Pu
 }
 
 func (s *testSuite) TestFullTimeOut() {
-	if len(s.fixture().bootstrapNodes) < 3 {
-		s.T().Skip("skip test for bootstrap nodes < 3")
+	if len(s.fixture().bootstrapNodes) < consensusMin {
+		s.T().Skip(consensusMinMsg)
 	}
 
 	// TODO: make this set operation thread-safe somehow (race detector does not like this code)
@@ -126,8 +132,8 @@ func (s *testSuite) TestFullTimeOut() {
 // Partial timeout
 
 func (s *testSuite) TestPartialPositive1PhaseTimeOut() {
-	if len(s.fixture().bootstrapNodes) < 3 {
-		s.T().Skip("skip test for bootstrap nodes < 3")
+	if len(s.fixture().bootstrapNodes) < consensusMin {
+		s.T().Skip(consensusMinMsg)
 	}
 
 	setCommunicatorMock(s.fixture().bootstrapNodes, PartialPositive1Phase)
@@ -138,8 +144,8 @@ func (s *testSuite) TestPartialPositive1PhaseTimeOut() {
 }
 
 func (s *testSuite) TestPartialPositive2PhaseTimeOut() {
-	if len(s.fixture().bootstrapNodes) < 3 {
-		s.T().Skip("skip test for bootstrap nodes < 3")
+	if len(s.fixture().bootstrapNodes) < consensusMin {
+		s.T().Skip(consensusMinMsg)
 	}
 
 	setCommunicatorMock(s.fixture().bootstrapNodes, PartialPositive2Phase)
@@ -150,8 +156,8 @@ func (s *testSuite) TestPartialPositive2PhaseTimeOut() {
 }
 
 func (s *testSuite) TestPartialNegative1PhaseTimeOut() {
-	if len(s.fixture().bootstrapNodes) < 3 {
-		s.T().Skip("skip test for bootstrap nodes < 3")
+	if len(s.fixture().bootstrapNodes) < consensusMin {
+		s.T().Skip(consensusMinMsg)
 	}
 
 	setCommunicatorMock(s.fixture().bootstrapNodes, PartialNegative1Phase)
@@ -162,8 +168,8 @@ func (s *testSuite) TestPartialNegative1PhaseTimeOut() {
 }
 
 func (s *testSuite) TestPartialNegative2PhaseTimeOut() {
-	if len(s.fixture().bootstrapNodes) < 3 {
-		s.T().Skip("skip test for bootstrap nodes < 3")
+	if len(s.fixture().bootstrapNodes) < consensusMin {
+		s.T().Skip(consensusMinMsg)
 	}
 
 	setCommunicatorMock(s.fixture().bootstrapNodes, PartialNegative2Phase)
@@ -171,6 +177,17 @@ func (s *testSuite) TestPartialNegative2PhaseTimeOut() {
 	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
 	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetActiveNodes()
 	s.Equal(s.getNodesCount(), len(activeNodes))
+}
+
+func (s *testSuite) TestDiscoveryDown() {
+	if len(s.fixture().bootstrapNodes) < consensusMin {
+		s.T().Skip(consensusMinMsg)
+	}
+
+	s.fixture().bootstrapNodes[0].serviceNetwork.Stop(context.Background())
+	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
+	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount()-1, len(activeNodes))
 }
 
 func setCommunicatorMock(nodes []*networkNode, opt CommunicatorTestOpt) {
