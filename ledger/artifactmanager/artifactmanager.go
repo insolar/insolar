@@ -116,12 +116,17 @@ func (m *LedgerArtifactManager) GetCode(
 
 	ctx, span = instracer.StartSpan(ctx, "artifactmanager.GetCode sendAndFollowRedirect")
 
+	currentPulse, err := m.PulseStorage.Current(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	bus := core.MessageBusFromContext(ctx, m.DefaultBus)
 	sender := BuildSender(
 		bus.Send,
 		m.senders.cachedSender(),
 		followRedirectSender(bus),
-		retryJetSender(m.PulseStorage, m.JetStorage),
+		retryJetSender(currentPulse.PulseNumber, m.JetStorage),
 	)
 
 	genericReact, err := sender(ctx, &message.GetCode{Code: code}, nil)
@@ -171,11 +176,16 @@ func (m *LedgerArtifactManager) GetObject(
 		Approved: approved,
 	}
 
+	currentPulse, err := m.PulseStorage.Current(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	bus := core.MessageBusFromContext(ctx, m.DefaultBus)
 	sender := BuildSender(
 		bus.Send,
 		followRedirectSender(bus),
-		retryJetSender(m.PulseStorage, m.JetStorage),
+		retryJetSender(currentPulse.PulseNumber, m.JetStorage),
 	)
 
 	genericReact, err := sender(ctx, getObjectMsg, nil)
@@ -210,10 +220,15 @@ func (m *LedgerArtifactManager) HasPendingRequests(
 	object core.RecordRef,
 ) (bool, error) {
 
+	currentPulse, err := m.PulseStorage.Current(ctx)
+	if err != nil {
+		return false, err
+	}
+
 	bus := core.MessageBusFromContext(ctx, m.DefaultBus)
 	sender := BuildSender(
 		bus.Send,
-		retryJetSender(m.PulseStorage, m.JetStorage),
+		retryJetSender(currentPulse.PulseNumber, m.JetStorage),
 	)
 
 	genericReact, err := sender(ctx, &message.GetPendingRequests{Object: object}, nil)
@@ -243,8 +258,13 @@ func (m *LedgerArtifactManager) GetDelegate(
 	var err error
 	defer instrument(ctx, "GetDelegate").err(&err).end()
 
+	currentPulse, err := m.PulseStorage.Current(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	bus := core.MessageBusFromContext(ctx, m.DefaultBus)
-	sender := BuildSender(bus.Send, followRedirectSender(bus), retryJetSender(m.PulseStorage, m.JetStorage))
+	sender := BuildSender(bus.Send, followRedirectSender(bus), retryJetSender(currentPulse.PulseNumber, m.JetStorage))
 	genericReact, err := sender(ctx, &message.GetDelegate{
 		Head:   head,
 		AsType: asType,
@@ -272,8 +292,13 @@ func (m *LedgerArtifactManager) GetChildren(
 	var err error
 	defer instrument(ctx, "GetChildren").err(&err).end()
 
+	currentPulse, err := m.PulseStorage.Current(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	bus := core.MessageBusFromContext(ctx, m.DefaultBus)
-	sender := BuildSender(bus.Send, followRedirectSender(bus), retryJetSender(m.PulseStorage, m.JetStorage))
+	sender := BuildSender(bus.Send, followRedirectSender(bus), retryJetSender(currentPulse.PulseNumber, m.JetStorage))
 	iter, err := NewChildIterator(ctx, sender, parent, pulse, m.getChildrenChunkSize)
 	return iter, err
 }
@@ -477,8 +502,13 @@ func (m *LedgerArtifactManager) RegisterValidation(
 		ValidationMessages: validationMessages,
 	}
 
+	currentPulse, err := m.PulseStorage.Current(ctx)
+	if err != nil {
+		return err
+	}
+
 	bus := core.MessageBusFromContext(ctx, m.DefaultBus)
-	sender := BuildSender(bus.Send, retryJetSender(m.PulseStorage, m.JetStorage))
+	sender := BuildSender(bus.Send, retryJetSender(currentPulse.PulseNumber, m.JetStorage))
 	_, err = sender(ctx, &msg, nil)
 
 	return err
@@ -663,7 +693,8 @@ func (m *LedgerArtifactManager) setRecord(
 	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.setRecord starts ...")
 
 	bus := core.MessageBusFromContext(ctx, m.DefaultBus)
-	sender := BuildSender(bus.Send, retryJetSender(m.PulseStorage, m.JetStorage))
+
+	sender := BuildSender(bus.Send, retryJetSender(currentPulse.PulseNumber, m.JetStorage))
 	genericReply, err := sender(ctx, &message.SetRecord{
 		Record:    record.SerializeRecord(rec),
 		TargetRef: target,
@@ -692,7 +723,7 @@ func (m *LedgerArtifactManager) setBlob(
 	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.setBlob starts ...")
 
 	bus := core.MessageBusFromContext(ctx, m.DefaultBus)
-	sender := BuildSender(bus.Send, retryJetSender(m.PulseStorage, m.JetStorage))
+	sender := BuildSender(bus.Send, retryJetSender(currentPulse.PulseNumber, m.JetStorage))
 	genericReact, err := sender(ctx, &message.SetBlob{
 		Memory:    blob,
 		TargetRef: target,
@@ -733,7 +764,7 @@ func (m *LedgerArtifactManager) sendUpdateObject(
 	// }
 
 	bus := core.MessageBusFromContext(ctx, m.DefaultBus)
-	sender := BuildSender(bus.Send, retryJetSender(m.PulseStorage, m.JetStorage))
+	sender := BuildSender(bus.Send, retryJetSender(currentPulse.PulseNumber, m.JetStorage))
 	genericReply, err := sender(
 		ctx,
 		&message.UpdateObject{
@@ -767,7 +798,7 @@ func (m *LedgerArtifactManager) registerChild(
 	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.registerChild starts ...")
 
 	bus := core.MessageBusFromContext(ctx, m.DefaultBus)
-	sender := BuildSender(bus.Send, retryJetSender(m.PulseStorage, m.JetStorage))
+	sender := BuildSender(bus.Send, retryJetSender(currentPulse.PulseNumber, m.JetStorage))
 	genericReact, err := sender(ctx, &message.RegisterChild{
 		Record: record.SerializeRecord(rec),
 		Parent: parent,

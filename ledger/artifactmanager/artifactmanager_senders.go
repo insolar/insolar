@@ -72,12 +72,8 @@ func (m *ledgerArtifactSenders) cachedSender() PreSender {
 			if err != nil {
 				return nil, err
 			}
-			castedResp, ok := response.(*reply.Code)
-			if !ok {
-				return response, err
-			}
 
-			entry.reply = castedResp
+			entry.reply = response
 			return response, err
 		}
 	}
@@ -120,18 +116,13 @@ func followRedirectSender(bus core.MessageBus) PreSender {
 }
 
 // retryJetSender is using for refreshing jet-tree, if destination has no idea about a jet from message
-func retryJetSender(pulseStorage core.PulseStorage, jetStorage storage.JetStorage) PreSender {
+func retryJetSender(pulseNumber core.PulseNumber, jetStorage storage.JetStorage) PreSender {
 	return func(sender Sender) Sender {
 		return func(ctx context.Context, msg core.Message, options *core.MessageSendOptions) (core.Reply, error) {
 			inslog := inslogger.FromContext(ctx)
 			inslog.Debug("LedgerArtifactManager.RetryJetSender starts ...")
 
 			retries := jetMissRetryCount
-
-			currentPulse, err := pulseStorage.Current(ctx)
-			if err != nil {
-				return nil, err
-			}
 
 			for retries > 0 {
 				rep, err := sender(ctx, msg, options)
@@ -140,7 +131,7 @@ func retryJetSender(pulseStorage core.PulseStorage, jetStorage storage.JetStorag
 				}
 
 				if r, ok := rep.(*reply.JetMiss); ok {
-					err := jetStorage.UpdateJetTree(ctx, currentPulse.PulseNumber, true, r.JetID)
+					err := jetStorage.UpdateJetTree(ctx, pulseNumber, true, r.JetID)
 					if err != nil {
 						return nil, err
 					}
