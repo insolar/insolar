@@ -176,12 +176,13 @@ func TestLedgerArtifactManager_GetCodeWithCache(t *testing.T) {
 	}
 
 	am := LedgerArtifactManager{
-		DefaultBus:     mb,
-		DBContext:      db,
-		JetStorage:     db,
-		PulseStorage:   amPulseStorageMock,
-		JetCoordinator: jc,
-		senders:        newLedgerArtifactSenders(),
+		DefaultBus:                 mb,
+		DBContext:                  db,
+		JetStorage:                 db,
+		PulseStorage:               amPulseStorageMock,
+		JetCoordinator:             jc,
+		senders:                    newLedgerArtifactSenders(),
+		PlatformCryptographyScheme: platformpolicy.NewPlatformCryptographyScheme(),
 	}
 
 	desc, err := am.GetCode(ctx, codeRef)

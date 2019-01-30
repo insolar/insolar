@@ -124,7 +124,7 @@ func (m *LedgerArtifactManager) GetCode(
 	bus := core.MessageBusFromContext(ctx, m.DefaultBus)
 	sender := BuildSender(
 		bus.Send,
-		m.senders.cachedSender(),
+		m.senders.cachedSender(m.PlatformCryptographyScheme),
 		followRedirectSender(bus),
 		retryJetSender(currentPulse.PulseNumber, m.JetStorage),
 	)

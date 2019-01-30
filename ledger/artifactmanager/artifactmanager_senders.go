@@ -32,7 +32,6 @@ import (
 // ledgerArtifactSenders is a some kind of a middleware layer
 // it contains cache meta-data for calls
 type ledgerArtifactSenders struct {
-	scheme    core.PlatformCryptographyScheme
 	cacheLock sync.Mutex
 	caches    map[string]*cacheEntry
 }
@@ -49,11 +48,11 @@ func newLedgerArtifactSenders() *ledgerArtifactSenders {
 }
 
 // cachedSender is using for caching replies
-func (m *ledgerArtifactSenders) cachedSender() PreSender {
+func (m *ledgerArtifactSenders) cachedSender(scheme core.PlatformCryptographyScheme) PreSender {
 	return func(sender Sender) Sender {
 		return func(ctx context.Context, msg core.Message, options *core.MessageSendOptions) (core.Reply, error) {
 
-			msgHash := string(m.scheme.IntegrityHasher().Hash(message.ToBytes(msg)))
+			msgHash := string(scheme.IntegrityHasher().Hash(message.ToBytes(msg)))
 
 			m.cacheLock.Lock()
 			entry, ok := m.caches[msgHash]
