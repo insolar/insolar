@@ -101,10 +101,6 @@ func (m *LedgerArtifactManager) RegisterRequest(
 	return id, errors.Wrap(err, "[ RegisterRequest ] ")
 }
 
-// func (m *ledgerArtifactSenders) bus(ctx context.Context) core.MessageBus {
-// 	return core.MessageBusFromContext(ctx, m.defaultBus)
-// }
-
 // GetCode returns code from code record by provided reference according to provided machine preference.
 //
 // This method is used by VM to fetch code for execution.
@@ -248,7 +244,7 @@ func (m *LedgerArtifactManager) GetDelegate(
 	defer instrument(ctx, "GetDelegate").err(&err).end()
 
 	bus := core.MessageBusFromContext(ctx, m.DefaultBus)
-	sender := BuildSender(bus.Send, followRedirectSender(bus))
+	sender := BuildSender(bus.Send, followRedirectSender(bus), retryJetSender(m.PulseStorage, m.JetStorage))
 	genericReact, err := sender(ctx, &message.GetDelegate{
 		Head:   head,
 		AsType: asType,
@@ -277,7 +273,7 @@ func (m *LedgerArtifactManager) GetChildren(
 	defer instrument(ctx, "GetChildren").err(&err).end()
 
 	bus := core.MessageBusFromContext(ctx, m.DefaultBus)
-	sender := BuildSender(bus.Send, followRedirectSender(bus))
+	sender := BuildSender(bus.Send, followRedirectSender(bus), retryJetSender(m.PulseStorage, m.JetStorage))
 	iter, err := NewChildIterator(ctx, sender, parent, pulse, m.getChildrenChunkSize)
 	return iter, err
 }
