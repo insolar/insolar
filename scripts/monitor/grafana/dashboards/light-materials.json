@@ -15,7 +15,6 @@
     "editable": true,
     "gnetId": null,
     "graphTooltip": 0,
-    "id": 2,
     "links": [],
     "panels": [
       {
@@ -294,6 +293,124 @@
           "align": false,
           "alignLevel": null
         }
+      },
+      {
+        "cards": {
+          "cardPadding": null,
+          "cardRound": null
+        },
+        "color": {
+          "cardColor": "#b4ff00",
+          "colorScale": "sqrt",
+          "colorScheme": "interpolateOranges",
+          "exponent": 0.5,
+          "mode": "opacity"
+        },
+        "dataFormat": "tsbuckets",
+        "gridPos": {
+          "h": 7,
+          "w": 12,
+          "x": 0,
+          "y": 6
+        },
+        "heatmap": {},
+        "highlightCards": true,
+        "id": 8,
+        "legend": {
+          "show": false
+        },
+        "links": [],
+        "targets": [
+          {
+            "expr": "sum by(le) (increase(insolard_lightcleanup_latency_db_bucket[1m]))",
+            "format": "heatmap",
+            "intervalFactor": 1,
+            "legendFormat": "{{ le }}",
+            "refId": "A"
+          }
+        ],
+        "title": "DB cleanup latency",
+        "tooltip": {
+          "show": true,
+          "showHistogram": false
+        },
+        "type": "heatmap",
+        "xAxis": {
+          "show": true
+        },
+        "xBucketNumber": null,
+        "xBucketSize": null,
+        "yAxis": {
+          "decimals": null,
+          "format": "ms",
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true,
+          "splitFactor": null
+        },
+        "yBucketBound": "auto",
+        "yBucketNumber": null,
+        "yBucketSize": null
+      },
+      {
+        "cards": {
+          "cardPadding": null,
+          "cardRound": null
+        },
+        "color": {
+          "cardColor": "#b4ff00",
+          "colorScale": "sqrt",
+          "colorScheme": "interpolateOranges",
+          "exponent": 0.5,
+          "mode": "opacity"
+        },
+        "dataFormat": "tsbuckets",
+        "gridPos": {
+          "h": 7,
+          "w": 12,
+          "x": 12,
+          "y": 6
+        },
+        "heatmap": {},
+        "highlightCards": true,
+        "id": 10,
+        "legend": {
+          "show": false
+        },
+        "links": [],
+        "targets": [
+          {
+            "expr": "sum by(le) (increase(insolard_lightcleanup_latency_total_bucket[1m]))",
+            "format": "heatmap",
+            "intervalFactor": 1,
+            "legendFormat": "{{ le }}",
+            "refId": "A"
+          }
+        ],
+        "title": "Total cleanup latency",
+        "tooltip": {
+          "show": true,
+          "showHistogram": false
+        },
+        "type": "heatmap",
+        "xAxis": {
+          "show": true
+        },
+        "xBucketNumber": null,
+        "xBucketSize": null,
+        "yAxis": {
+          "decimals": null,
+          "format": "ms",
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true,
+          "splitFactor": null
+        },
+        "yBucketBound": "auto",
+        "yBucketNumber": null,
+        "yBucketSize": null
       }
     ],
     "schemaVersion": 16,
@@ -334,5 +451,5 @@
     "timezone": "",
     "title": "LM storage",
     "uid": "XGisdx_ik",
-    "version": 3
-  }
+    "version": 4
+}
