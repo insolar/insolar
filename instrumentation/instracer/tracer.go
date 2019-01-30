@@ -78,7 +78,7 @@ func GetBaggage(ctx context.Context) []Entry {
 }
 
 // StartSpan starts span with stored baggage and with parent span if find in context.
-func StartSpan(ctx context.Context, name string) (context.Context, *trace.Span) {
+func StartSpan(ctx context.Context, name string, o ...trace.StartOption) (context.Context, *trace.Span) {
 	parentSpan, haveParent := getParentSpan(ctx)
 	var (
 		spanctx context.Context
@@ -86,10 +86,10 @@ func StartSpan(ctx context.Context, name string) (context.Context, *trace.Span) 
 	)
 	if haveParent {
 		spanctx, span = trace.StartSpanWithRemoteParent(
-			ctx, name, parentSpan.spanContext())
+			ctx, name, parentSpan.spanContext(), o...)
 		spanctx = context.WithValue(spanctx, parentSpanKey{}, nil)
 	} else {
-		spanctx, span = trace.StartSpan(ctx, name)
+		spanctx, span = trace.StartSpan(ctx, name, o...)
 	}
 
 	// This is probably not the best solution since we have two traceId's:
