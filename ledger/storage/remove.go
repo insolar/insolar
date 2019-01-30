@@ -132,15 +132,16 @@ func (db *DB) removeJetRecordsUntil(
 
 	return stat, db.db.Update(func(txn *badger.Txn) error {
 		var id core.RecordID
-
-		it := txn.NewIterator(badger.DefaultIteratorOptions)
+		opts := badger.DefaultIteratorOptions
+		opts.PrefetchSize = 0
+		it := txn.NewIterator(opts)
 		defer it.Close()
 		for it.Seek(startprefix); it.ValidForPrefix(jetprefix); it.Next() {
-			stat.Scanned++
 			key := it.Item().KeyCopy(nil)
 			if pulseFromKey(key) >= pn {
 				break
 			}
+			stat.Scanned++
 
 			if recent != nil {
 				copy(id[:], key[len(jetprefix):])
