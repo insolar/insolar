@@ -23,9 +23,9 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
 	"go.opencensus.io/trace"
 	"golang.org/x/sync/errgroup"
-	"golang.org/x/sync/singleflight"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
@@ -70,8 +70,6 @@ type PulseManager struct {
 
 	// TODO: move clients pool to component - @nordicdyno - 18.Dec.2018
 	syncClientsPool *heavyclient.Pool
-	// cleanupGroup limits cleanup process, avoid queuing on mutexes
-	cleanupGroup singleflight.Group
 
 	currentPulse core.Pulse
 
@@ -681,13 +679,13 @@ func (m *PulseManager) postProcessJets(ctx context.Context, newPulse core.Pulse,
 }
 
 func (m *PulseManager) cleanLightData(ctx context.Context, newPulse core.Pulse) {
-	ctx, span := instracer.StartSpan(ctx, "pulse.clean")
-	defer span.End()
-
-	inslog := inslogger.FromContext(ctx)
 	startSync := time.Now()
+	inslog := inslogger.FromContext(ctx)
+	ctx, span := instracer.StartSpan(ctx, "pulse.clean")
 	defer func() {
 		latency := time.Since(startSync)
+		stats.Record(ctx, statCleanLatencyTotal.M(latency.Nanoseconds()/1e6))
+		span.End()
 		inslog.Infof("cleanLightData all time spend=%v", latency)
 	}()
 
@@ -718,7 +716,7 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse core.Pulse) 
 	err := m.syncClientsPool.LightCleanup(ctx, pn, m.RecentStorageProvider)
 	if err != nil {
 		inslogger.FromContext(ctx).Errorf(
-			"Error on light indexes cleanup, until pulse = %v, singlefligt err = %v", pn, err)
+			"Error on light cleanup, until pulse = %v, singlefligt err = %v", pn, err)
 	}
 }
 

@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
+	"go.opencensus.io/stats"
 	"golang.org/x/sync/singleflight"
 )
 
@@ -131,17 +132,19 @@ func (scp *Pool) AllClients(ctx context.Context) []*JetClient {
 
 func (scp *Pool) LightCleanup(ctx context.Context, untilPN core.PulseNumber, rsp recentstorage.Provider) error {
 	inslog := inslogger.FromContext(ctx)
-	startAsync := time.Now()
+	start := time.Now()
 	defer func() {
-		latency := time.Since(startAsync)
-		inslog.Debugf("cleanLightData db clean phase time spend=%v", latency)
+		latency := time.Since(start)
+		inslog.Infof("cleanLightData db clean phase time spend=%v", latency)
+		stats.Record(ctx, statCleanLatencyDB.M(latency.Nanoseconds()/1e6))
+
 	}()
 
 	_, err, _ := scp.cleanupGroup.Do("lightcleanup", func() (interface{}, error) {
 		startCleanup := time.Now()
 		defer func() {
 			latency := time.Since(startCleanup)
-			inslog.Debugf("cleanLightData db clean phase job time spend=%v", latency)
+			inslog.Infof("cleanLightData db clean phase job time spend=%v", latency)
 		}()
 
 		// This is how we can get all jets served by
@@ -149,15 +152,15 @@ func (scp *Pool) LightCleanup(ctx context.Context, untilPN core.PulseNumber, rsp
 
 		for _, c := range scp.AllClients(ctx) {
 			jetID := c.jetID
-			inslogger.FromContext(ctx).Debugf("Start light indexes cleanup, until pulse = %v, jet = %v",
+			inslogger.FromContext(ctx).Debugf("Start light cleanup, until pulse = %v, jet = %v",
 				untilPN, jetID.DebugString())
 			rmStat, err := scp.dbContext.RemoveAllForJetUntilPulse(ctx, jetID, untilPN, rsp.GetStorage(ctx, jetID))
 			if err != nil {
-				inslogger.FromContext(ctx).Errorf("Error on light indexes cleanup, until pulse = %v, jet = %v: %v",
+				inslogger.FromContext(ctx).Errorf("Error on light cleanup, until pulse = %v, jet = %v: %v",
 					untilPN, jetID.DebugString(), err)
 				continue
 			}
-			inslogger.FromContext(ctx).Debugf("End light indexes cleanup, rm stat=%#v indexes (until pulse = %v, jet = %v)",
+			inslogger.FromContext(ctx).Debugf("End light cleanup, rm stat=%#v (until pulse = %v, jet = %v)",
 				rmStat, untilPN, jetID.DebugString())
 		}
 		return nil, nil

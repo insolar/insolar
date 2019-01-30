@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage/jet"
+	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 )
 
@@ -75,19 +76,19 @@ func (db *DB) RemoveAllForJetUntilPulse(
 	var err error
 	var stat RmStat
 	if stat, err = db.RemoveJetIndexesUntil(ctx, jetID, pn, recent); err != nil {
-		result = multierror.Append(result, err)
+		result = multierror.Append(result, errors.Wrap(err, "RemoveJetIndexesUntil"))
 	}
 	allstat["indexes"] = stat
 	if stat, err = db.RemoveJetBlobsUntil(ctx, jetID, pn); err != nil {
-		result = multierror.Append(result, err)
+		result = multierror.Append(result, errors.Wrap(err, "RemoveJetBlobsUntil"))
 	}
 	allstat["blobs"] = stat
 	if stat, err = db.RemoveJetRecordsUntil(ctx, jetID, pn, recent); err != nil {
-		result = multierror.Append(result, err)
+		result = multierror.Append(result, errors.Wrap(err, "RemoveJetRecordsUntil"))
 	}
 	allstat["records"] = stat
 	if stat, err = db.RemoveJetDropsUntil(ctx, jetID, pn); err != nil {
-		result = multierror.Append(result, err)
+		result = multierror.Append(result, errors.Wrap(err, "RemoveJetDropsUntil"))
 	}
 	allstat["drops"] = stat
 	recordCleanupMetrics(ctx, allstat)

@@ -34,7 +34,7 @@ var (
 
 	statSyncedPulsesCount = stats.Int64("heavyclient/synced/count", "How many pulses unsynced", stats.UnitDimensionless)
 
-	statCleanLatency = stats.Int64("lightcleanup/latency", "Light storage cleanup time in milliseconds", stats.UnitMilliseconds)
+	statCleanLatencyDB = stats.Int64("lightcleanup/latency/db", "Light storage db cleanup time in milliseconds", stats.UnitMilliseconds)
 )
 
 func init() {
@@ -62,9 +62,9 @@ func init() {
 		},
 
 		&view.View{
-			Name:        statCleanLatency.Name(),
-			Description: statCleanLatency.Description(),
-			Measure:     statCleanLatency,
+			Name:        statCleanLatencyDB.Name(),
+			Description: statCleanLatencyDB.Description(),
+			Measure:     statCleanLatencyDB,
 			Aggregation: view.Distribution(100, 500, 1000, 5000, 10000),
 		},
 	)
