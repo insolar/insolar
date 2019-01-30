@@ -1022,22 +1022,9 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 
 	lr.stateMutex.Unlock()
 
-	var sendWg sync.WaitGroup
-	ctx, spanMessages := instracer.StartSpan(ctx, "pulse.logicrunner sending messages")
-	spanMessages.AddAttributes(trace.StringAttribute("numMessages", strconv.Itoa(len(messages))))
-
 	if len(messages) > 0 {
-		sendWg.Add(len(messages))
-
-		for _, msg := range messages {
-			go lr.sendOnPulseMessagesAsync(ctx, msg, &sendWg)
-		}
+		go lr.sendOnPulseMessagesAsync(ctx, messages)
 	}
-
-	go func() {
-		sendWg.Wait()
-		spanMessages.End()
-	}()
 
 	return nil
 }
@@ -1082,7 +1069,22 @@ func (lr *LogicRunner) HandleStillExecutingMessage(
 	return &reply.OK{}, nil
 }
 
-func (lr *LogicRunner) sendOnPulseMessagesAsync(ctx context.Context, msg core.Message, sendWg *sync.WaitGroup) {
+func (lr *LogicRunner) sendOnPulseMessagesAsync(ctx context.Context, messages []core.Message) {
+	ctx, spanMessages := instracer.StartSpan(ctx, "pulse.logicrunner sending messages")
+	spanMessages.AddAttributes(trace.StringAttribute("numMessages", strconv.Itoa(len(messages))))
+
+	var sendWg sync.WaitGroup
+	sendWg.Add(len(messages))
+
+	for _, msg := range messages {
+		go lr.sendOnPulseMessage(ctx, msg, &sendWg)
+	}
+
+	sendWg.Wait()
+	spanMessages.End()
+}
+
+func (lr *LogicRunner) sendOnPulseMessage(ctx context.Context, msg core.Message, sendWg *sync.WaitGroup) {
 	defer sendWg.Done()
 	_, err := lr.MessageBus.Send(ctx, msg, nil)
 	if err != nil {
