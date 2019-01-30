@@ -110,7 +110,7 @@ func (db *DB) RemoveJetBlobsUntil(ctx context.Context, jetID core.RecordID, pn c
 // RemoveJetRecordsUntil removes for provided JetID all records older than provided pulse number.
 // In recods pending requests live, so we need recent storage here
 func (db *DB) RemoveJetRecordsUntil(ctx context.Context, jetID core.RecordID, pn core.PulseNumber, recent recentstorage.RecentStorage) (RmStat, error) {
-	return db.removeJetRecordsUntil(ctx, scopeIDRecord, jetID, pn, recent)
+	return db.removeJetRecordsUntil(ctx, scopeIDRecord, jetID, pn, nil)
 }
 
 // RemoveJetDropsUntil removes for provided JetID all jet drops older than provided pulse number.
