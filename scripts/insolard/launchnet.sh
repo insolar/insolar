@@ -236,10 +236,6 @@ launch_insgorund()
         $INSGORUND -l $host:$listen_port --rpc $host:$rpc_port --log-level=$gorund_log_level --metrics :$metrics_port &
 
     done < "$INSGORUND_PORT_FILE"
-    if [[ "$NUM_DISCOVERY_NODES" == "5" ]]
-    then
-        $INSGORUND -l $host:58181 --rpc $host:58182 --log-level=$gorund_log_level --metrics :58183 &
-    fi
 }
 
 copy_data()
