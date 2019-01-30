@@ -19,9 +19,13 @@ package heavyclient
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
+	"golang.org/x/sync/singleflight"
 )
 
 // Pool manages state of heavy sync clients (one client per jet id).
@@ -36,6 +40,8 @@ type Pool struct {
 
 	sync.Mutex
 	clients map[core.RecordID]*JetClient
+
+	cleanupGroup singleflight.Group
 }
 
 // NewPool constructor of new pool.
@@ -111,4 +117,50 @@ func (scp *Pool) AddPulsesToSyncClient(
 		}
 	}
 	return client
+}
+
+func (scp *Pool) AllClients(ctx context.Context) []*JetClient {
+	scp.Lock()
+	defer scp.Unlock()
+	clients := make([]*JetClient, 0, len(scp.clients))
+	for _, c := range scp.clients {
+		clients = append(clients, c)
+	}
+	return clients
+}
+
+func (scp *Pool) LightCleanup(ctx context.Context, untilPN core.PulseNumber, rsp recentstorage.Provider) error {
+	inslog := inslogger.FromContext(ctx)
+	startAsync := time.Now()
+	defer func() {
+		latency := time.Since(startAsync)
+		inslog.Debugf("cleanLightData db clean phase time spend=%v", latency)
+	}()
+
+	_, err, _ := scp.cleanupGroup.Do("lightcleanup", func() (interface{}, error) {
+		startCleanup := time.Now()
+		defer func() {
+			latency := time.Since(startCleanup)
+			inslog.Debugf("cleanLightData db clean phase job time spend=%v", latency)
+		}()
+
+		// This is how we can get all jets served by
+		// jets, err := scp.db.GetAllSyncClientJets(ctx)
+
+		for _, c := range scp.AllClients(ctx) {
+			jetID := c.jetID
+			inslogger.FromContext(ctx).Debugf("Start light indexes cleanup, until pulse = %v, jet = %v",
+				untilPN, jetID.DebugString())
+			rmStat, err := scp.dbContext.RemoveAllForJetUntilPulse(ctx, jetID, untilPN, rsp.GetStorage(ctx, jetID))
+			if err != nil {
+				inslogger.FromContext(ctx).Errorf("Error on light indexes cleanup, until pulse = %v, jet = %v: %v",
+					untilPN, jetID.DebugString(), err)
+				continue
+			}
+			inslogger.FromContext(ctx).Debugf("End light indexes cleanup, rm stat=%#v indexes (until pulse = %v, jet = %v)",
+				rmStat, untilPN, jetID.DebugString())
+		}
+		return nil, nil
+	})
+	return err
 }

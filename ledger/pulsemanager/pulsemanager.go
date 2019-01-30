@@ -688,58 +688,37 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse core.Pulse) 
 	startSync := time.Now()
 	defer func() {
 		latency := time.Since(startSync)
-		inslog.Debugf("cleanLightData all time spend=%v", latency)
+		inslog.Infof("cleanLightData all time spend=%v", latency)
 	}()
 
 	delta := m.options.storeLightPulses
 
 	pn := newPulse.PulseNumber
-	for i := 0; i <= delta; i++ {
-		prevPulse, err := m.PulseTracker.GetPreviousPulse(ctx, pn)
-		if err != nil {
-			inslogger.FromContext(ctx).Errorf("Can't get previous Nth %v pulse by pulse number: %v", i, pn)
-			return
-		}
-
-		pn = prevPulse.Pulse.PulseNumber
-		if pn <= core.FirstPulseNumber {
-			return
-		}
-	}
-
-	m.ActiveNodesStorage.RemoveActiveNodesUntil(pn)
-
-	_, err, _ := m.cleanupGroup.Do("lightcleanup", func() (interface{}, error) {
-		ctx, span := instracer.StartSpan(ctx, "pulse.cleanAsync")
-		startAsync := time.Now()
+	func() {
+		startLookup := time.Now()
 		defer func() {
-			latency := time.Since(startAsync)
-			inslog.Debugf("cleanLightData db clean phase time spend=%v", latency)
-			span.End()
+			inslog.Infof("cleanLightData pulse lookup time spend=%v", time.Since(startLookup))
 		}()
-
-		// we are remove records from 'storageRecordsUtilPN' pulse number here
-		jetSyncState, err := m.ReplicaStorage.GetAllSyncClientJets(ctx)
-		if err != nil {
-			inslogger.FromContext(ctx).Errorf("Can't get jet clients state: %v", err)
-			return nil, nil
-		}
-
-		for jetID := range jetSyncState {
-			inslogger.FromContext(ctx).Debugf("Start light indexes cleanup, until pulse = %v (new=%v, delta=%v), jet = %v",
-				pn, newPulse.PulseNumber, delta, jetID.DebugString())
-			rmStat, err := m.StorageCleaner.RemoveAllForJetUntilPulse(ctx, jetID, pn, m.RecentStorageProvider.GetStorage(ctx, jetID))
+		for i := 0; i <= delta; i++ {
+			prevPulse, err := m.db.GetPreviousPulse(ctx, pn)
 			if err != nil {
-				inslogger.FromContext(ctx).Errorf("Error on light indexes cleanup, until pulse = %v, jet = %v: %v", pn, jetID.DebugString(), err)
-				continue
+				inslogger.FromContext(ctx).Errorf("Can't get previous Nth %v pulse by pulse number: %v", i, pn)
+				return
 			}
-			inslogger.FromContext(ctx).Debugf("End light indexes cleanup, rm stat=%#v indexes (until pulse = %v, jet = %v)",
-				rmStat, pn, jetID.DebugString())
+
+			pn = prevPulse.Pulse.PulseNumber
+			if pn <= core.FirstPulseNumber {
+				return
+			}
 		}
-		return nil, nil
-	})
+	}()
+
+	m.db.RemoveActiveNodesUntil(pn)
+
+	err := m.syncClientsPool.LightCleanup(ctx, pn, m.RecentStorageProvider)
 	if err != nil {
-		inslogger.FromContext(ctx).Errorf("Error on light indexes cleanup, until pulse = %v, singlefligt err = %v", pn, err)
+		inslogger.FromContext(ctx).Errorf(
+			"Error on light indexes cleanup, until pulse = %v, singlefligt err = %v", pn, err)
 	}
 }
 

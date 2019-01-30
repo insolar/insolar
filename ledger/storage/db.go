@@ -27,6 +27,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage/index"
 	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/record"
@@ -69,6 +70,8 @@ type DBContext interface {
 	StoreKeyValues(ctx context.Context, kvs []core.KV) error
 
 	GetBadgerDB() *badger.DB
+
+	RemoveAllForJetUntilPulse(ctx context.Context, jetID core.RecordID, pn core.PulseNumber, recent recentstorage.RecentStorage) (map[string]int, error)
 
 	Close() error
 }
