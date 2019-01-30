@@ -32,9 +32,9 @@ type PhaseManager interface {
 }
 
 type Phases struct {
-	FirstPhase  FirstPhase  `inject:"subcomponent"`
-	SecondPhase SecondPhase `inject:"subcomponent"`
-	ThirdPhase  ThirdPhase  `inject:"subcomponent"`
+	FirstPhase  FirstPhase  `inject:""`
+	SecondPhase SecondPhase `inject:""`
+	ThirdPhase  ThirdPhase  `inject:""`
 
 	PulseManager core.PulseManager  `inject:""`
 	NodeKeeper   network.NodeKeeper `inject:""`
@@ -107,7 +107,7 @@ func (pm *Phases) OnPulse(ctx context.Context, pulse *core.Pulse) error {
 }
 
 func getPulseDuration(pulse *core.Pulse) (*time.Duration, error) {
-	duration := time.Duration(pulse.PulseNumber-pulse.PrevPulseNumber) * time.Second
+	duration := time.Duration(pulse.NextPulseNumber-pulse.PulseNumber) * time.Second
 	return &duration, nil
 }
 

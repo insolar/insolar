@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller/common"
 	"github.com/insolar/insolar/network/transport/packet/types"
@@ -89,7 +90,7 @@ func init() {
 
 // Authorize node on the discovery node (step 2 of the bootstrap process)
 func (ac *authorizationController) Authorize(ctx context.Context, discoveryNode *DiscoveryNode, cert core.AuthorizationCertificate) (SessionID, error) {
-	inslogger.FromContext(ctx).Infof("Authorizing on host: %s", discoveryNode)
+	inslogger.FromContext(ctx).Infof("Authorizing on host: %s", discoveryNode.Host)
 
 	serializedCert, err := certificate.Serialize(cert)
 	if err != nil {
@@ -116,7 +117,7 @@ func (ac *authorizationController) Authorize(ctx context.Context, discoveryNode 
 
 // Register node on the discovery node (step 4 of the bootstrap process)
 func (ac *authorizationController) Register(ctx context.Context, discoveryNode *DiscoveryNode, sessionID SessionID) error {
-	inslogger.FromContext(ctx).Infof("Registering on host: %s", discoveryNode)
+	inslogger.FromContext(ctx).Infof("Registering on host: %s", discoveryNode.Host)
 
 	originClaim, err := ac.NodeKeeper.GetOriginJoinClaim()
 	if err != nil {
@@ -160,6 +161,7 @@ func (ac *authorizationController) processRegisterRequest(ctx context.Context, r
 		responseAuthorize := &RegistrationResponse{Code: OpRejected, Error: err.Error()}
 		return ac.transport.BuildResponse(ctx, request, responseAuthorize), nil
 	}
+	log.Infof("Added join claim from node %s", request.GetSender())
 	ac.NodeKeeper.AddPendingClaim(data.JoinClaim)
 	return ac.transport.BuildResponse(ctx, request, &RegistrationResponse{Code: OpConfirmed}), nil
 }

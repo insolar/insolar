@@ -126,6 +126,7 @@ func (sp *secondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 			}
 			newProofs[node] = proof
 		}
+		newProofs[sp.NodeKeeper.GetOrigin()] = state.PulseProof
 
 		state.ValidProofs = newProofs
 

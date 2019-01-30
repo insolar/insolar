@@ -43,13 +43,19 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-var testNetworkPort = 10010
+var (
+	testNetworkPort       = 10010
+	pulseTimeMs     int32 = 5000
+	reqTimeoutMs    int32 = 2000
+	pulseDelta      int32 = 5
+)
 
 type fixture struct {
 	ctx            context.Context
 	bootstrapNodes []*networkNode
 	networkNodes   []*networkNode
 	testNode       *networkNode
+	pulsar         TestPulsar
 }
 
 func newFixture() *fixture {
@@ -83,6 +89,9 @@ func (s *testSuite) fixture() *fixture {
 // SetupSuite creates and run network with bootstrap and common nodes once before run all tests in the suite
 func (s *testSuite) SetupTest() {
 	s.fixtureMap[s.T().Name()] = newFixture()
+	var err error
+	s.fixture().pulsar, err = NewTestPulsar(pulseTimeMs, reqTimeoutMs, pulseDelta)
+	require.NoError(s.T(), err)
 
 	log.Infoln("SetupTest")
 
@@ -95,6 +104,16 @@ func (s *testSuite) SetupTest() {
 	}
 
 	s.fixture().testNode = newNetworkNode()
+
+	pulseReceivers := make([]string, 0)
+	for _, node := range s.fixture().bootstrapNodes {
+		pulseReceivers = append(pulseReceivers, node.host)
+	}
+	pulseReceivers = append(pulseReceivers, s.fixture().testNode.host)
+
+	log.Info("Start test pulsar")
+	err = s.fixture().pulsar.Start(s.fixture().ctx, pulseReceivers)
+	require.NoError(s.T(), err)
 
 	log.Infoln("Setup bootstrap nodes")
 	s.SetupNodesNetwork(s.fixture().bootstrapNodes)
@@ -143,7 +162,7 @@ func (s *testSuite) SetupNodesNetwork(nodes []*networkNode) {
 				if count == expected {
 					return nil
 				}
-			case <-time.After(time.Second * 5):
+			case <-time.After(time.Second * 20):
 				return errors.New("timeout")
 			}
 		}
@@ -178,8 +197,9 @@ func (s *testSuite) TearDownTest() {
 	for _, n := range s.fixture().bootstrapNodes {
 		err := n.componentManager.Stop(s.fixture().ctx)
 		s.NoError(err)
-
 	}
+	log.Info("Stop test pulsar")
+	s.fixture().pulsar.Stop(s.fixture().ctx)
 }
 
 func (s *testSuite) waitForConsensus(consensusCount int) {
@@ -220,14 +240,6 @@ func (s *testSuite) waitForConsensusExcept(consensusCount int, exception core.Re
 func (s *testSuite) getNodesCount() int {
 	return len(s.fixture().bootstrapNodes) + len(s.fixture().networkNodes)
 }
-
-type PhaseTimeOut uint8
-
-const (
-	Disable = PhaseTimeOut(iota + 1)
-	Partial
-	Full
-)
 
 func (s *testSuite) InitTestNode() {
 	if s.fixture().testNode.componentManager != nil {
@@ -345,8 +357,9 @@ func (t *terminationHandler) Abort() {
 // preInitNode inits previously created node with mocks and external dependencies
 func (s *testSuite) preInitNode(node *networkNode) {
 	cfg := configuration.NewConfiguration()
-	cfg.Pulsar.PulseTime = 5000 // pulse 5 sec for faster tests
+	cfg.Pulsar.PulseTime = pulseTimeMs // pulse 5 sec for faster tests
 	cfg.Host.Transport.Address = node.host
+	cfg.Service.Skip = 5
 
 	node.componentManager = &component.Manager{}
 	node.componentManager.Register(platformpolicy.NewPlatformCryptographyScheme())

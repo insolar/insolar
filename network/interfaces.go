@@ -82,10 +82,8 @@ type ConsensusPacketHandler func(incomingPacket consensus.ConsensusPacket, sende
 
 //go:generate minimock -i github.com/insolar/insolar/network.ConsensusNetwork -o ../testutils/network -s _mock.go
 type ConsensusNetwork interface {
-	// Start listening to network requests.
-	Start(ctx context.Context)
-	// Stop listening to network requests.
-	Stop()
+	component.Starter
+	component.Stopper
 	// PublicAddress returns public address that can be published for all nodes.
 	PublicAddress() string
 	// GetNodeID get current node ID.

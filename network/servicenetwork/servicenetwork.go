@@ -21,7 +21,6 @@ import (
 	"context"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
@@ -33,10 +32,10 @@ import (
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller"
 	"github.com/insolar/insolar/network/controller/bootstrap"
-	"github.com/insolar/insolar/network/fakepulsar"
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/merkle"
 	"github.com/insolar/insolar/network/routing"
+	"github.com/insolar/insolar/network/utils"
 	"github.com/pkg/errors"
 )
 
@@ -62,9 +61,10 @@ type ServiceNetwork struct {
 	PhaseManager phases.PhaseManager `inject:"subcomponent"`
 	Controller   network.Controller  `inject:"subcomponent"`
 
-	fakePulsar *fakepulsar.FakePulsar
-	isGenesis  bool
-	skip       int
+	// fakePulsar *fakepulsar.FakePulsar
+	isGenesis   bool
+	isDiscovery bool
+	skip        int
 }
 
 // NewServiceNetwork returns a new ServiceNetwork.
@@ -134,8 +134,11 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	n.hostNetwork = hostnetwork.NewHostTransport(internalTransport, n.routingTable)
 	options := controller.ConfigureOptions(n.cfg)
 
+	cert := n.CertificateManager.GetCertificate()
+	n.isDiscovery = utils.OriginIsDiscovery(cert)
+
 	n.cm.Inject(n,
-		n.CertificateManager.GetCertificate(),
+		cert,
 		n.NodeKeeper,
 		merkle.NewCalculator(),
 		consensusNetwork,
@@ -158,7 +161,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		return errors.Wrap(err, "Failed to init internal components")
 	}
 
-	n.fakePulsar = fakepulsar.NewFakePulsar(n, time.Duration(n.cfg.Pulsar.PulseTime)*time.Millisecond)
+	// n.fakePulsar = fakepulsar.NewFakePulsar(n, time.Duration(n.cfg.Pulsar.PulseTime)*time.Millisecond)
 	return nil
 }
 
@@ -177,13 +180,13 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 	}
 
 	log.Infoln("Bootstrapping network...")
-	result, err := n.Controller.Bootstrap(ctx)
+	_, err = n.Controller.Bootstrap(ctx)
 	if err != nil {
 		return errors.Wrap(err, "Failed to bootstrap network")
 	}
-	if !n.isGenesis {
-		n.fakePulsar.Start(ctx, result.FirstPulseTime)
-	}
+	// if !n.isGenesis {
+	// 	n.fakePulsar.Start(ctx, result.FirstPulseTime)
+	// }
 	logger.Info("Service network started")
 	return nil
 }
@@ -220,7 +223,7 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse core.Pulse) {
 		n.Controller.SetLastIgnoredPulse(newPulse.NextPulseNumber)
 		return
 	}
-	if newPulse.PulseNumber <= n.Controller.GetLastIgnoredPulse()+core.PulseNumber(n.skip) {
+	if n.isDiscovery && newPulse.PulseNumber <= n.Controller.GetLastIgnoredPulse()+core.PulseNumber(n.skip) {
 		log.Infof("Ignore pulse %d: network is not yet initialized", newPulse.PulseNumber)
 		return
 	}
@@ -232,21 +235,20 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse core.Pulse) {
 	}
 
 	// Working on early network state, ready for fake pulses
-	// TODO: !!!
 	// if isFakePulse(&newPulse) && !fakePulseAllowed(n.NetworkSwitcher.GetState()) {
 	// 	logger.Infof("Got fake pulse on invalid network state. Current: %+v. New: %+v", currentPulse, newPulse)
 	// 	return
 	// }
 
-	if !isNextPulse(currentPulse, &newPulse) && !isNewEpoch(currentPulse, &newPulse) && !fakePulseStarted(currentPulse, &newPulse) {
+	if !isNextPulse(currentPulse, &newPulse) {
 		logger.Infof("Incorrect newPulse number. Current: %+v. New: %+v", currentPulse, newPulse)
 		return
 	}
 
 	// Got real pulse
-	if isFakePulse(currentPulse) && !isFakePulse(&newPulse) {
-		n.fakePulsar.Stop(ctx)
-	}
+	// if isFakePulse(currentPulse) && !isFakePulse(&newPulse) {
+	// 	n.fakePulsar.Stop(ctx)
+	// }
 
 	err = n.NetworkSwitcher.OnPulse(ctx, newPulse)
 	if err != nil {
@@ -272,22 +274,22 @@ func (n *ServiceNetwork) phaseManagerOnPulse(ctx context.Context, newPulse core.
 	}
 }
 
-func isFakePulse(newPulse *core.Pulse) bool {
-	return newPulse.EpochPulseNumber == -1
-}
-
-func isNewEpoch(currentPulse, newPulse *core.Pulse) bool {
-	return newPulse.EpochPulseNumber > currentPulse.EpochPulseNumber
-}
+// func isFakePulse(newPulse *core.Pulse) bool {
+// 	return newPulse.EpochPulseNumber == -1
+// }
+//
+// func isNewEpoch(currentPulse, newPulse *core.Pulse) bool {
+// 	return newPulse.EpochPulseNumber > currentPulse.EpochPulseNumber
+// }
 
 func isNextPulse(currentPulse, newPulse *core.Pulse) bool {
 	return newPulse.PulseNumber > currentPulse.PulseNumber && newPulse.PulseNumber >= currentPulse.NextPulseNumber
 }
 
-func fakePulseStarted(currentPulse, newPulse *core.Pulse) bool {
-	return isFakePulse(newPulse) && currentPulse.EpochPulseNumber > -1
-}
-
-func fakePulseAllowed(state core.NetworkState) bool {
-	return state == core.VoidNetworkState || state == core.NoNetworkState
-}
+// func fakePulseStarted(currentPulse, newPulse *core.Pulse) bool {
+// 	return isFakePulse(newPulse) && currentPulse.EpochPulseNumber > -1
+// }
+//
+// func fakePulseAllowed(state core.NetworkState) bool {
+// 	return state == core.VoidNetworkState || state == core.NoNetworkState
+// }

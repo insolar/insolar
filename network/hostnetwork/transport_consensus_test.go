@@ -92,11 +92,11 @@ func (t *consensusTransportSuite) sendPacket(packet consensus.ConsensusPacket) (
 	}
 	cn2.RegisterPacketHandler(packet.GetType(), handler)
 
-	cn2.Start(ctx)
-	cn1.Start(ctx2)
+	cn2.Start(ctx2)
+	cn1.Start(ctx)
 	defer func() {
-		cn1.Stop()
-		cn2.Stop()
+		cn1.Stop(ctx)
+		cn2.Stop(ctx2)
 	}()
 
 	err = cn1.SignAndSendPacket(packet, cn2.GetNodeID(), t.crypto)
@@ -180,11 +180,11 @@ func (t *consensusTransportSuite) sendPacketAndVerify(packet consensus.Consensus
 	}
 	cn2.RegisterPacketHandler(packet.GetType(), handler)
 
-	cn2.Start(ctx)
-	cn1.Start(ctx2)
+	cn2.Start(ctx2)
+	cn1.Start(ctx)
 	defer func() {
-		cn1.Stop()
-		cn2.Stop()
+		cn1.Stop(ctx)
+		cn2.Stop(ctx2)
 	}()
 
 	err = cn1.SignAndSendPacket(packet, cn2.GetNodeID(), t.crypto)
@@ -229,7 +229,7 @@ func (t *consensusTransportSuite) TestRegisterPacketHandler() {
 
 	cn, err := NewConsensusNetwork("127.0.0.1:0", ID1+DOMAIN, 0, m)
 	require.NoError(t.T(), err)
-	defer cn.Stop()
+	defer cn.Stop(context.Background())
 	handler := func(incomingPacket consensus.ConsensusPacket, sender core.RecordRef) {
 		// do nothing
 	}

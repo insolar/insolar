@@ -56,15 +56,18 @@ func (nb *networkBootstrapper) Bootstrap(ctx context.Context) (*network.Bootstra
 			FirstPulseTime: nb.Bootstrapper.GetFirstFakePulseTime(),
 		}, nil
 	}
+	var err error
+	var result *network.BootstrapResult
 	if utils.OriginIsDiscovery(nb.Certificate) {
-		result, err := nb.bootstrapDiscovery(ctx)
-		if err != nil {
-			return nil, errors.Wrap(err, "[ Bootstrap ] Couldn't OriginIsDiscovery")
-		}
-		nb.NodeKeeper.SetIsBootstrapped(true)
-		return result, nil
+		result, err = nb.bootstrapDiscovery(ctx)
+	} else {
+		result, err = nb.bootstrapJoiner(ctx)
 	}
-	return nb.bootstrapJoiner(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Bootstrap ] failed to bootstrap")
+	}
+	nb.NodeKeeper.SetIsBootstrapped(true)
+	return result, nil
 }
 
 func (nb *networkBootstrapper) SetLastPulse(number core.PulseNumber) {
