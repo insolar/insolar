@@ -22,7 +22,7 @@ import (
 )
 
 // Discovery contains info about discovery nodes
-type Discovery struct {
+type Node struct {
 	Host     string `mapstructure:"host"`
 	Role     string `mapstructure:"role"`
 	KeysFile string `mapstructure:"keys_file"`
@@ -39,8 +39,9 @@ type Config struct {
 		HeavyMaterial uint `mapstructure:"heavy_material"`
 		LightMaterial uint `mapstructure:"light_material"`
 	} `mapstructure:"min_roles"`
-	PulsarPublicKeys []string    `mapstructure:"pulsar_public_keys"`
-	DiscoveryNodes   []Discovery `mapstructure:"discovery_nodes"`
+	PulsarPublicKeys []string `mapstructure:"pulsar_public_keys"`
+	DiscoveryNodes   []Node   `mapstructure:"discovery_nodes"`
+	Nodes            []Node   `mapstructure:"nodes"`
 }
 
 // It's very light check. It's not about majority rule

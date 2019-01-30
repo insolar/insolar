@@ -37,15 +37,17 @@ func check(msg string, err error) {
 }
 
 const (
-	defaultOutputConfigNameTmpl = "insolar_%d.yaml"
-	defaultHost                 = "127.0.0.1"
-	defaultJaegerEndPoint       = defaultHost + ":6831"
-	defaultLogLevel             = "Debug"
-	defaultGenesisFile          = "genesis.yaml"
-	defaultPulsarTemplate       = "scripts/insolard/pulsar_template.yaml"
-	dataDirectoryTemplate       = "scripts/insolard/nodes/%d/data"
-	certificatePathTemplate     = "scripts/insolard/nodes/%d/cert.json"
-	pulsewatcherFileName        = "pulsewatcher.yaml"
+	defaultOutputConfigNameTmpl      = "insolar_%d.yaml"
+	defaultHost                      = "127.0.0.1"
+	defaultJaegerEndPoint            = defaultHost + ":6831"
+	defaultLogLevel                  = "Debug"
+	defaultGenesisFile               = "genesis.yaml"
+	defaultPulsarTemplate            = "scripts/insolard/pulsar_template.yaml"
+	discoveryDataDirectoryTemplate   = "scripts/insolard/discoverynodes/%d/data"
+	discoveryCertificatePathTemplate = "scripts/insolard/discoverynodes/%d/cert.json"
+	nodeDataDirectoryTemplate        = "scripts/insolard/nodes/%d/data"
+	nodeCertificatePathTemplate      = "scripts/insolard/nodes/%d/cert.json"
+	pulsewatcherFileName             = "pulsewatcher.yaml"
 )
 
 var (
@@ -133,8 +135,38 @@ func main() {
 		conf.Log.Level = debugLevel
 		conf.Log.Adapter = "logrus"
 		conf.KeysPath = node.KeysFile
-		conf.Ledger.Storage.DataDirectory = fmt.Sprintf(dataDirectoryTemplate, nodeIndex)
-		conf.CertificatePath = fmt.Sprintf(certificatePathTemplate, nodeIndex)
+		conf.Ledger.Storage.DataDirectory = fmt.Sprintf(discoveryDataDirectoryTemplate, nodeIndex)
+		conf.CertificatePath = fmt.Sprintf(discoveryCertificatePathTemplate, nodeIndex)
+
+		insolarConfigs = append(insolarConfigs, conf)
+
+		pwConfig.Nodes = append(pwConfig.Nodes, conf.APIRunner.Address)
+	}
+
+	for index, node := range genesisConf.Nodes {
+		nodeIndex := index + 1
+
+		conf := configuration.NewConfiguration()
+		conf.Host.Transport.Address = node.Host
+		conf.Host.Transport.Protocol = "TCP"
+
+		rpcListenPort := 34300 + (index+nodeIndex+len(genesisConf.DiscoveryNodes)+1)*nodeIndex
+		conf.LogicRunner = configuration.NewLogicRunner()
+		conf.LogicRunner.GoPlugin.RunnerListen = fmt.Sprintf(defaultHost+":%d", rpcListenPort-1)
+		conf.LogicRunner.RPCListen = fmt.Sprintf(defaultHost+":%d", rpcListenPort)
+		if node.Role == "virtual" {
+			gorundPorts = append(gorundPorts, []string{strconv.Itoa(rpcListenPort - 1), strconv.Itoa(rpcListenPort)})
+		}
+
+		conf.APIRunner.Address = fmt.Sprintf(defaultHost+":191%02d", nodeIndex+len(genesisConf.DiscoveryNodes))
+		conf.Metrics.ListenAddress = fmt.Sprintf(defaultHost+":80%02d", nodeIndex+len(genesisConf.DiscoveryNodes))
+
+		conf.Tracer.Jaeger.AgentEndpoint = defaultJaegerEndPoint
+		conf.Log.Level = debugLevel
+		conf.Log.Adapter = "logrus"
+		conf.KeysPath = node.KeysFile
+		conf.Ledger.Storage.DataDirectory = fmt.Sprintf(nodeDataDirectoryTemplate, nodeIndex)
+		conf.CertificatePath = fmt.Sprintf(nodeCertificatePathTemplate, nodeIndex)
 
 		insolarConfigs = append(insolarConfigs, conf)
 
