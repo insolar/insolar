@@ -1,0 +1,62 @@
+# Grafana: http://localhost:3000 admin:pass
+# Jaeger: http://localhost:16686
+# Prometheus: http://localhost:9090/targets
+
+version: '3'
+services:
+  prometheus:
+    image: "prom/prometheus:v2.7.0"
+    volumes:
+      - ./insolard/configs/generated_configs/prometheus.yaml:/etc/prometheus/prometheus.yml:ro
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    ports:
+      - '9090:9090'
+
+  # node-exporter:
+  #   image: prom/node-exporter:v0.17.0
+  #   ports:
+  #     - '9100:9100'
+
+  grafana:
+    image: grafana/grafana:5.4.2
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=pass
+      - GF_EXPLORE_ENABLED=true
+    volumes:
+      - ./monitor/grafana/provisioning:/etc/grafana/provisioning
+      - ./monitor/grafana/config.ini:/etc/grafana/config.ini
+      - ./monitor/grafana/dashboards:/var/lib/grafana/dashboards
+    depends_on:
+      - prometheus
+    ports:
+      - "3000:3000"
+
+  # elasticsearch:
+  #   image: "docker.elastic.co/elasticsearch/elasticsearch:6.5.4"
+  #   ports:
+  #     - "9200:9200"
+  #     - "9300:9300"
+  #   environment:
+  #     ES_JAVA_OPTS: "-Xmx256m -Xms256m"
+  #     discovery.type: "single-node"
+  #     xpack.security.enabled: "false"
+
+  # kibana:
+  #   image: "docker.elastic.co/kibana/kibana:6.5.4"
+  #   ports:
+  #     - "5601:5601"
+  #   depends_on:
+  #     - elasticsearch
+
+  jaeger:
+    image: "jaegertracing/all-in-one:1.8"
+    ports:
+      - "6831:6831/udp"
+      - "16686:16686"
+    # environment:
+    #   SPAN_STORAGE_TYPE: "elasticsearch"
+    #   ES_SERVER_URLS: "http://elasticsearch:9200"
+    #   ES_TAGS_AS_FIELDS: "true"
+    # depends_on:
+    #   - elasticsearch
