@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"sync"
 
+	"go.opencensus.io/trace"
+
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"go.opencensus.io/stats"
 
@@ -88,7 +90,13 @@ func (m *LedgerArtifactManager) RegisterRequest(
 ) (*core.RecordID, error) {
 	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.RegisterRequest starts ...")
 	var err error
-	defer instrument(ctx, "RegisterRequest").err(&err).end()
+	ctx, span := instracer.StartSpan(ctx, "artifactmanager.RegisterRequest")
+	defer func() {
+		if err != nil {
+			span.AddAttributes(trace.StringAttribute("error", err.Error()))
+		}
+		span.End()
+	}()
 
 	currentPulse, err := m.PulseStorage.Current(ctx)
 	if err != nil {
@@ -118,11 +126,16 @@ func (m *LedgerArtifactManager) GetCode(
 	ctx context.Context, code core.RecordRef,
 ) (core.CodeDescriptor, error) {
 	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.GetCode starts ...")
-	ctx, span := instracer.StartSpan(ctx, "artifactmanager.GetCode sendAndRetryJet")
-	defer span.End()
 
 	var err error
-	defer instrument(ctx, "GetCode").err(&err).end()
+
+	ctx, span := instracer.StartSpan(ctx, "artifactmanager.GetCode")
+	defer func() {
+		if err != nil {
+			span.AddAttributes(trace.StringAttribute("error", err.Error()))
+		}
+		span.End()
+	}()
 
 	m.codeCacheLock.Lock()
 	entry, ok := m.codeCache[code]
@@ -177,7 +190,13 @@ func (m *LedgerArtifactManager) GetObject(
 		desc *ObjectDescriptor
 		err  error
 	)
-	defer instrument(ctx, "GetObject").err(&err).end()
+	ctx, span := instracer.StartSpan(ctx, "artifactmanager.Getobject")
+	defer func() {
+		if err != nil {
+			span.AddAttributes(trace.StringAttribute("error", err.Error()))
+		}
+		span.End()
+	}()
 
 	currentPulse, err := m.PulseStorage.Current(ctx)
 	if err != nil {
@@ -244,8 +263,15 @@ func (m *LedgerArtifactManager) GetDelegate(
 	ctx context.Context, head, asType core.RecordRef,
 ) (*core.RecordRef, error) {
 	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.GetDelegate starts ...")
+
 	var err error
-	defer instrument(ctx, "GetDelegate").err(&err).end()
+	ctx, span := instracer.StartSpan(ctx, "artifactmanager.GetDelegate")
+	defer func() {
+		if err != nil {
+			span.AddAttributes(trace.StringAttribute("error", err.Error()))
+		}
+		span.End()
+	}()
 
 	currentPulse, err := m.PulseStorage.Current(ctx)
 	if err != nil {
@@ -275,7 +301,14 @@ func (m *LedgerArtifactManager) GetChildren(
 	ctx context.Context, parent core.RecordRef, pulse *core.PulseNumber,
 ) (core.RefIterator, error) {
 	var err error
-	defer instrument(ctx, "GetChildren").err(&err).end()
+
+	ctx, span := instracer.StartSpan(ctx, "artifactmanager.GetChildren")
+	defer func() {
+		if err != nil {
+			span.AddAttributes(trace.StringAttribute("error", err.Error()))
+		}
+		span.End()
+	}()
 
 	latestPulse, err := m.PulseStorage.Current(ctx)
 	if err != nil {
@@ -293,7 +326,13 @@ func (m *LedgerArtifactManager) DeclareType(
 	ctx context.Context, domain, request core.RecordRef, typeDec []byte,
 ) (*core.RecordID, error) {
 	var err error
-	defer instrument(ctx, "DeclareType").err(&err).end()
+	ctx, span := instracer.StartSpan(ctx, "artifactmanager.DeclareType")
+	defer func() {
+		if err != nil {
+			span.AddAttributes(trace.StringAttribute("error", err.Error()))
+		}
+		span.End()
+	}()
 
 	currentPulse, err := m.PulseStorage.Current(ctx)
 	if err != nil {
@@ -326,7 +365,13 @@ func (m *LedgerArtifactManager) DeployCode(
 	machineType core.MachineType,
 ) (*core.RecordID, error) {
 	var err error
-	defer instrument(ctx, "DeployCode").err(&err).end()
+	ctx, span := instracer.StartSpan(ctx, "artifactmanager.DeployCode")
+	defer func() {
+		if err != nil {
+			span.AddAttributes(trace.StringAttribute("error", err.Error()))
+		}
+		span.End()
+	}()
 
 	currentPulse, err := m.PulseStorage.Current(ctx)
 	if err != nil {
@@ -371,7 +416,13 @@ func (m *LedgerArtifactManager) ActivatePrototype(
 	memory []byte,
 ) (core.ObjectDescriptor, error) {
 	var err error
-	defer instrument(ctx, "ActivatePrototype").err(&err).end()
+	ctx, span := instracer.StartSpan(ctx, "artifactmanager.ActivatePrototype")
+	defer func() {
+		if err != nil {
+			span.AddAttributes(trace.StringAttribute("error", err.Error()))
+		}
+		span.End()
+	}()
 	desc, err := m.activateObject(ctx, domain, object, code, true, parent, false, memory)
 	return desc, err
 }
@@ -387,7 +438,13 @@ func (m *LedgerArtifactManager) ActivateObject(
 	memory []byte,
 ) (core.ObjectDescriptor, error) {
 	var err error
-	defer instrument(ctx, "ActivateObject").err(&err).end()
+	ctx, span := instracer.StartSpan(ctx, "artifactmanager.ActivateObject")
+	defer func() {
+		if err != nil {
+			span.AddAttributes(trace.StringAttribute("error", err.Error()))
+		}
+		span.End()
+	}()
 	desc, err := m.activateObject(ctx, domain, object, prototype, false, parent, asDelegate, memory)
 	return desc, err
 }
@@ -400,7 +457,13 @@ func (m *LedgerArtifactManager) DeactivateObject(
 	ctx context.Context, domain, request core.RecordRef, object core.ObjectDescriptor,
 ) (*core.RecordID, error) {
 	var err error
-	defer instrument(ctx, "DeactivateObject").err(&err).end()
+	ctx, span := instracer.StartSpan(ctx, "artifactmanager.DeactivateObject")
+	defer func() {
+		if err != nil {
+			span.AddAttributes(trace.StringAttribute("error", err.Error()))
+		}
+		span.End()
+	}()
 
 	currentPulse, err := m.PulseStorage.Current(ctx)
 
@@ -435,7 +498,14 @@ func (m *LedgerArtifactManager) UpdatePrototype(
 	code *core.RecordRef,
 ) (core.ObjectDescriptor, error) {
 	var err error
-	defer instrument(ctx, "UpdatePrototype").err(&err).end()
+	ctx, span := instracer.StartSpan(ctx, "artifactmanager.UpdatePrototype")
+	defer func() {
+		if err != nil {
+			span.AddAttributes(trace.StringAttribute("error", err.Error()))
+		}
+		span.End()
+	}()
+
 	if !object.IsPrototype() {
 		err = errors.New("object is not a prototype")
 		return nil, err
@@ -455,7 +525,14 @@ func (m *LedgerArtifactManager) UpdateObject(
 	memory []byte,
 ) (core.ObjectDescriptor, error) {
 	var err error
-	defer instrument(ctx, "UpdateObject").err(&err).end()
+	ctx, span := instracer.StartSpan(ctx, "artifactmanager.UpdateObject")
+	defer func() {
+		if err != nil {
+			span.AddAttributes(trace.StringAttribute("error", err.Error()))
+		}
+		span.End()
+	}()
+
 	if object.IsPrototype() {
 		err = errors.New("object is not an instance")
 		return nil, err
@@ -476,7 +553,13 @@ func (m *LedgerArtifactManager) RegisterValidation(
 ) error {
 	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.RegisterValidation starts ...")
 	var err error
-	defer instrument(ctx, "RegisterValidation").err(&err).end()
+	ctx, span := instracer.StartSpan(ctx, "artifactmanager.RegisterValidation")
+	defer func() {
+		if err != nil {
+			span.AddAttributes(trace.StringAttribute("error", err.Error()))
+		}
+		span.End()
+	}()
 
 	msg := message.ValidateRecord{
 		Object:             object,
@@ -499,7 +582,13 @@ func (m *LedgerArtifactManager) RegisterResult(
 	ctx context.Context, object, request core.RecordRef, payload []byte,
 ) (*core.RecordID, error) {
 	var err error
-	defer instrument(ctx, "RegisterResult").err(&err).end()
+	ctx, span := instracer.StartSpan(ctx, "artifactmanager.RegisterResult")
+	defer func() {
+		if err != nil {
+			span.AddAttributes(trace.StringAttribute("error", err.Error()))
+		}
+		span.End()
+	}()
 
 	currentPulse, err := m.PulseStorage.Current(ctx)
 	if err != nil {
