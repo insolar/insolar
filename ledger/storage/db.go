@@ -71,7 +71,7 @@ type DBContext interface {
 
 	GetBadgerDB() *badger.DB
 
-	RemoveAllForJetUntilPulse(ctx context.Context, jetID core.RecordID, pn core.PulseNumber, recent recentstorage.RecentStorage) (map[string]int, error)
+	RemoveAllForJetUntilPulse(ctx context.Context, jetID core.RecordID, pn core.PulseNumber, recent recentstorage.RecentStorage) (map[string]RmStat, error)
 
 	Close() error
 }

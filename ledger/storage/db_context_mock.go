@@ -52,7 +52,7 @@ type DBContextMock struct {
 	GetLocalDataPreCounter uint64
 	GetLocalDataMock       mDBContextMockGetLocalData
 
-	RemoveAllForJetUntilPulseFunc       func(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 recentstorage.RecentStorage) (r map[string]int, r1 error)
+	RemoveAllForJetUntilPulseFunc       func(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 recentstorage.RecentStorage) (r map[string]RmStat, r1 error)
 	RemoveAllForJetUntilPulseCounter    uint64
 	RemoveAllForJetUntilPulsePreCounter uint64
 	RemoveAllForJetUntilPulseMock       mDBContextMockRemoveAllForJetUntilPulse
@@ -964,7 +964,7 @@ type DBContextMockRemoveAllForJetUntilPulseInput struct {
 }
 
 type DBContextMockRemoveAllForJetUntilPulseResult struct {
-	r  map[string]int
+	r  map[string]RmStat
 	r1 error
 }
 
@@ -981,7 +981,7 @@ func (m *mDBContextMockRemoveAllForJetUntilPulse) Expect(p context.Context, p1 c
 }
 
 //Return specifies results of invocation of DBContext.RemoveAllForJetUntilPulse
-func (m *mDBContextMockRemoveAllForJetUntilPulse) Return(r map[string]int, r1 error) *DBContextMock {
+func (m *mDBContextMockRemoveAllForJetUntilPulse) Return(r map[string]RmStat, r1 error) *DBContextMock {
 	m.mock.RemoveAllForJetUntilPulseFunc = nil
 	m.expectationSeries = nil
 
@@ -1003,12 +1003,12 @@ func (m *mDBContextMockRemoveAllForJetUntilPulse) ExpectOnce(p context.Context, 
 	return expectation
 }
 
-func (e *DBContextMockRemoveAllForJetUntilPulseExpectation) Return(r map[string]int, r1 error) {
+func (e *DBContextMockRemoveAllForJetUntilPulseExpectation) Return(r map[string]RmStat, r1 error) {
 	e.result = &DBContextMockRemoveAllForJetUntilPulseResult{r, r1}
 }
 
 //Set uses given function f as a mock of DBContext.RemoveAllForJetUntilPulse method
-func (m *mDBContextMockRemoveAllForJetUntilPulse) Set(f func(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 recentstorage.RecentStorage) (r map[string]int, r1 error)) *DBContextMock {
+func (m *mDBContextMockRemoveAllForJetUntilPulse) Set(f func(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 recentstorage.RecentStorage) (r map[string]RmStat, r1 error)) *DBContextMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1017,7 +1017,7 @@ func (m *mDBContextMockRemoveAllForJetUntilPulse) Set(f func(p context.Context, 
 }
 
 //RemoveAllForJetUntilPulse implements github.com/insolar/insolar/ledger/storage.DBContext interface
-func (m *DBContextMock) RemoveAllForJetUntilPulse(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 recentstorage.RecentStorage) (r map[string]int, r1 error) {
+func (m *DBContextMock) RemoveAllForJetUntilPulse(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 recentstorage.RecentStorage) (r map[string]RmStat, r1 error) {
 	counter := atomic.AddUint64(&m.RemoveAllForJetUntilPulsePreCounter, 1)
 	defer atomic.AddUint64(&m.RemoveAllForJetUntilPulseCounter, 1)
 

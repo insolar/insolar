@@ -36,12 +36,12 @@ type Cleaner interface {
 		jetID core.RecordID,
 		pn core.PulseNumber,
 		recent recentstorage.RecentStorage,
-	) (map[string]int, error)
+	) (map[string]RmStat, error)
 
-	RemoveJetIndexesUntil(ctx context.Context, jetID core.RecordID, pn core.PulseNumber, recent recentstorage.RecentStorage) (int, error)
-	RemoveJetBlobsUntil(ctx context.Context, jetID core.RecordID, pn core.PulseNumber) (int, error)
-	RemoveJetRecordsUntil(ctx context.Context, jetID core.RecordID, pn core.PulseNumber, recent recentstorage.RecentStorage) (int, error)
-	RemoveJetDropsUntil(ctx context.Context, jetID core.RecordID, pn core.PulseNumber) (int, error)
+	RemoveJetIndexesUntil(ctx context.Context, jetID core.RecordID, pn core.PulseNumber, recent recentstorage.RecentStorage) (RmStat, error)
+	RemoveJetBlobsUntil(ctx context.Context, jetID core.RecordID, pn core.PulseNumber) (RmStat, error)
+	RemoveJetRecordsUntil(ctx context.Context, jetID core.RecordID, pn core.PulseNumber, recent recentstorage.RecentStorage) (RmStat, error)
+	RemoveJetDropsUntil(ctx context.Context, jetID core.RecordID, pn core.PulseNumber) (RmStat, error)
 }
 
 var rmScanFromPulse = core.PulseNumber(core.FirstPulseNumber + 1).Bytes()
