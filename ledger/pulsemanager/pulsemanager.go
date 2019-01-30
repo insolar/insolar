@@ -700,7 +700,7 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse core.Pulse) 
 			inslog.Infof("cleanLightData pulse lookup time spend=%v", time.Since(startLookup))
 		}()
 		for i := 0; i <= delta; i++ {
-			prevPulse, err := m.db.GetPreviousPulse(ctx, pn)
+			prevPulse, err := m.PulseTracker.GetPreviousPulse(ctx, pn)
 			if err != nil {
 				inslogger.FromContext(ctx).Errorf("Can't get previous Nth %v pulse by pulse number: %v", i, pn)
 				return
@@ -713,7 +713,7 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse core.Pulse) 
 		}
 	}()
 
-	m.db.RemoveActiveNodesUntil(pn)
+	m.ActiveNodesStorage.RemoveActiveNodesUntil(pn)
 
 	err := m.syncClientsPool.LightCleanup(ctx, pn, m.RecentStorageProvider)
 	if err != nil {
