@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 confs=$( dirname $0 )"/configs/generated_configs/"
-api_ports=$( grep -A 1 "apirunner" $confs/*  | grep address  |  grep -o ":\d\+" | grep -o "\d\+" | tr '\n' ' ' )
+api_ports=$( grep -A 1 "apirunner" $confs/insolar_*.yaml  | grep address  |  grep -o ":\d\+" | grep -o "\d\+" | tr '\n' ' ' )
 
 for port in $api_ports
 do
