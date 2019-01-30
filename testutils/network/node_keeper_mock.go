@@ -141,6 +141,11 @@ type NodeKeeperMock struct {
 	SyncCounter    uint64
 	SyncPreCounter uint64
 	SyncMock       mNodeKeeperMockSync
+
+	WipeFunc       func(p bool)
+	WipeCounter    uint64
+	WipePreCounter uint64
+	WipeMock       mNodeKeeperMockWipe
 }
 
 //NewNodeKeeperMock returns a mock for github.com/insolar/insolar/network.NodeKeeper
@@ -175,6 +180,7 @@ func NewNodeKeeperMock(t minimock.Tester) *NodeKeeperMock {
 	m.SetIsBootstrappedMock = mNodeKeeperMockSetIsBootstrapped{mock: m}
 	m.SetStateMock = mNodeKeeperMockSetState{mock: m}
 	m.SyncMock = mNodeKeeperMockSync{mock: m}
+	m.WipeMock = mNodeKeeperMockWipe{mock: m}
 
 	return m
 }
@@ -3465,6 +3471,129 @@ func (m *NodeKeeperMock) SyncFinished() bool {
 	return true
 }
 
+type mNodeKeeperMockWipe struct {
+	mock              *NodeKeeperMock
+	mainExpectation   *NodeKeeperMockWipeExpectation
+	expectationSeries []*NodeKeeperMockWipeExpectation
+}
+
+type NodeKeeperMockWipeExpectation struct {
+	input *NodeKeeperMockWipeInput
+}
+
+type NodeKeeperMockWipeInput struct {
+	p bool
+}
+
+//Expect specifies that invocation of NodeKeeper.Wipe is expected from 1 to Infinity times
+func (m *mNodeKeeperMockWipe) Expect(p bool) *mNodeKeeperMockWipe {
+	m.mock.WipeFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &NodeKeeperMockWipeExpectation{}
+	}
+	m.mainExpectation.input = &NodeKeeperMockWipeInput{p}
+	return m
+}
+
+//Return specifies results of invocation of NodeKeeper.Wipe
+func (m *mNodeKeeperMockWipe) Return() *NodeKeeperMock {
+	m.mock.WipeFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &NodeKeeperMockWipeExpectation{}
+	}
+
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of NodeKeeper.Wipe is expected once
+func (m *mNodeKeeperMockWipe) ExpectOnce(p bool) *NodeKeeperMockWipeExpectation {
+	m.mock.WipeFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &NodeKeeperMockWipeExpectation{}
+	expectation.input = &NodeKeeperMockWipeInput{p}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+//Set uses given function f as a mock of NodeKeeper.Wipe method
+func (m *mNodeKeeperMockWipe) Set(f func(p bool)) *NodeKeeperMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.WipeFunc = f
+	return m.mock
+}
+
+//Wipe implements github.com/insolar/insolar/network.NodeKeeper interface
+func (m *NodeKeeperMock) Wipe(p bool) {
+	counter := atomic.AddUint64(&m.WipePreCounter, 1)
+	defer atomic.AddUint64(&m.WipeCounter, 1)
+
+	if len(m.WipeMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.WipeMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to NodeKeeperMock.Wipe. %v", p)
+			return
+		}
+
+		input := m.WipeMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, NodeKeeperMockWipeInput{p}, "NodeKeeper.Wipe got unexpected parameters")
+
+		return
+	}
+
+	if m.WipeMock.mainExpectation != nil {
+
+		input := m.WipeMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, NodeKeeperMockWipeInput{p}, "NodeKeeper.Wipe got unexpected parameters")
+		}
+
+		return
+	}
+
+	if m.WipeFunc == nil {
+		m.t.Fatalf("Unexpected call to NodeKeeperMock.Wipe. %v", p)
+		return
+	}
+
+	m.WipeFunc(p)
+}
+
+//WipeMinimockCounter returns a count of NodeKeeperMock.WipeFunc invocations
+func (m *NodeKeeperMock) WipeMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.WipeCounter)
+}
+
+//WipeMinimockPreCounter returns the value of NodeKeeperMock.Wipe invocations
+func (m *NodeKeeperMock) WipeMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.WipePreCounter)
+}
+
+//WipeFinished returns true if mock invocations count is ok
+func (m *NodeKeeperMock) WipeFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.WipeMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.WipeCounter) == uint64(len(m.WipeMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.WipeMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.WipeCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.WipeFunc != nil {
+		return atomic.LoadUint64(&m.WipeCounter) > 0
+	}
+
+	return true
+}
+
 //ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *NodeKeeperMock) ValidateCallCounters() {
@@ -3563,6 +3692,10 @@ func (m *NodeKeeperMock) ValidateCallCounters() {
 
 	if !m.SyncFinished() {
 		m.t.Fatal("Expected call to NodeKeeperMock.Sync")
+	}
+
+	if !m.WipeFinished() {
+		m.t.Fatal("Expected call to NodeKeeperMock.Wipe")
 	}
 
 }
@@ -3678,6 +3811,10 @@ func (m *NodeKeeperMock) MinimockFinish() {
 		m.t.Fatal("Expected call to NodeKeeperMock.Sync")
 	}
 
+	if !m.WipeFinished() {
+		m.t.Fatal("Expected call to NodeKeeperMock.Wipe")
+	}
+
 }
 
 //Wait waits for all mocked methods to be called at least once
@@ -3716,6 +3853,7 @@ func (m *NodeKeeperMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.SetIsBootstrappedFinished()
 		ok = ok && m.SetStateFinished()
 		ok = ok && m.SyncFinished()
+		ok = ok && m.WipeFinished()
 
 		if ok {
 			return
@@ -3818,6 +3956,10 @@ func (m *NodeKeeperMock) MinimockWait(timeout time.Duration) {
 
 			if !m.SyncFinished() {
 				m.t.Error("Expected call to NodeKeeperMock.Sync")
+			}
+
+			if !m.WipeFinished() {
+				m.t.Error("Expected call to NodeKeeperMock.Wipe")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)
@@ -3925,6 +4067,10 @@ func (m *NodeKeeperMock) AllMocksCalled() bool {
 	}
 
 	if !m.SyncFinished() {
+		return false
+	}
+
+	if !m.WipeFinished() {
 		return false
 	}
 

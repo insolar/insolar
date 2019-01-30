@@ -31,6 +31,10 @@ type nodeKeeperWrapper struct {
 	original network.NodeKeeper
 }
 
+func (n *nodeKeeperWrapper) Wipe(isDiscovery bool) {
+	n.original.Wipe(isDiscovery)
+}
+
 func (n *nodeKeeperWrapper) AddTemporaryMapping(nodeID core.RecordRef, shortID core.ShortNodeID, address string) error {
 	return n.original.AddTemporaryMapping(nodeID, shortID, address)
 }

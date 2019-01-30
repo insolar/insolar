@@ -191,6 +191,8 @@ type NodeKeeper interface {
 	ResolveConsensus(shortID core.ShortNodeID) *host.Host
 	// ResolveConsensusRef get temporary mapping by node ID
 	ResolveConsensusRef(nodeID core.RecordRef) *host.Host
+	// Wipe all active nodes for test purposes
+	Wipe(isDiscovery bool)
 }
 
 // UnsyncList is interface to manage unsync list

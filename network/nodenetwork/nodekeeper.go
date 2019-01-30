@@ -101,7 +101,6 @@ func NewNodeKeeper(origin core.Node) network.NodeKeeper {
 
 type nodekeeper struct {
 	origin     core.Node
-	originLock sync.RWMutex
 	state      network.NodeKeeperState
 	claimQueue *claimQueue
 
@@ -127,6 +126,38 @@ type nodekeeper struct {
 
 	Cryptography core.CryptographyService `inject:""`
 	Handler      core.TerminationHandler  `inject:""`
+}
+
+func (nk *nodekeeper) Wipe(isDiscovery bool) {
+	log.Warn("don't use it in production")
+
+	nk.isBootstrapLock.Lock()
+	nk.isBootstrap = false
+	nk.isBootstrapLock.Unlock()
+
+	nk.tempLock.Lock()
+	nk.tempMapR = make(map[core.RecordRef]*host.Host)
+	nk.tempMapS = make(map[core.ShortNodeID]*host.Host)
+	nk.tempLock.Unlock()
+
+	nk.cloudHashLock.Lock()
+	nk.cloudHash = nil
+	nk.cloudHashLock.Unlock()
+
+	nk.activeLock.Lock()
+	defer nk.activeLock.Unlock()
+
+	nk.claimQueue = newClaimQueue()
+	nk.nodesJoinedDuringPrevPulse = false
+	nk.active = make(map[core.RecordRef]core.Node)
+	nk.reindex()
+	if isDiscovery {
+		nk.addActiveNode(nk.origin)
+		nk.state = network.Ready
+	}
+	nk.syncLock.Lock()
+	nk.sync = newUnsyncList(nk.origin, []core.Node{})
+	nk.syncLock.Unlock()
 }
 
 func (nk *nodekeeper) AddTemporaryMapping(nodeID core.RecordRef, shortID core.ShortNodeID, address string) error {
@@ -285,15 +316,15 @@ func (nk *nodekeeper) GetState() network.NodeKeeperState {
 }
 
 func (nk *nodekeeper) GetOriginJoinClaim() (*consensus.NodeJoinClaim, error) {
-	nk.originLock.RLock()
-	defer nk.originLock.RUnlock()
+	nk.activeLock.RLock()
+	defer nk.activeLock.RUnlock()
 
 	return nk.nodeToSignedClaim()
 }
 
 func (nk *nodekeeper) GetOriginAnnounceClaim(mapper consensus.BitSetMapper) (*consensus.NodeAnnounceClaim, error) {
-	nk.originLock.RLock()
-	defer nk.originLock.RUnlock()
+	nk.activeLock.RLock()
+	defer nk.activeLock.RUnlock()
 
 	return nk.nodeToAnnounceClaim(mapper)
 }
