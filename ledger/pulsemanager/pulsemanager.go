@@ -22,6 +22,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
+	"golang.org/x/sync/errgroup"
+	"golang.org/x/sync/singleflight"
+
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
@@ -35,10 +40,6 @@ import (
 	"github.com/insolar/insolar/ledger/storage/index"
 	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/record"
-	"github.com/pkg/errors"
-	"go.opencensus.io/trace"
-	"golang.org/x/sync/errgroup"
-	"golang.org/x/sync/singleflight"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/pulsemanager.ActiveListSwapper -o ../../testutils -s _mock.go
@@ -148,7 +149,7 @@ func (m *PulseManager) processEndPulse(
 			logger := inslogger.FromContext(ctx)
 
 			sender := func(msg message.HotData, jetID core.RecordID) {
-				ctx, span := instracer.StartSpan(context.Background(), "pulse.send_hot")
+				ctx, span := instracer.StartSpan(ctx, "pulse.send_hot")
 				defer span.End()
 				msg.Jet = *core.NewRecordRef(core.DomainID, jetID)
 				start := time.Now()
@@ -534,33 +535,70 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 		return errors.New("can't call Set method on PulseManager after stop")
 	}
 
-	ctx, span := instracer.StartSpan(ctx, "pulse.process")
-	defer span.End()
-
-	logger := inslogger.FromContext(ctx)
-
-	var err error
-	ctx, spanGIL := instracer.StartSpan(context.Background(), "PulseManager.Set GIL Lock")
+	ctx, span := instracer.StartSpan(
+		ctx, "pulse.process", trace.WithSampler(trace.AlwaysSample()),
+	)
 	span.AddAttributes(
 		trace.Int64Attribute("pulse.PulseNumber", int64(newPulse.PulseNumber)),
 	)
+	defer span.End()
+
+	jets, oldPulse, prevPulseNumber, err := m.setUnderGilSection(ctx, newPulse, persist)
+	if err != nil {
+		return err
+	}
+
+	if !persist {
+		return nil
+	}
+
+	// Run only on material executor.
+	// execute only on material executor
+	// TODO: do as much as possible async.
+	if m.NodeNet.GetOrigin().Role() == core.StaticRoleLightMaterial {
+		err = m.processEndPulse(ctx, jets, *prevPulseNumber, oldPulse, &newPulse)
+		if err != nil {
+			return err
+		}
+		m.postProcessJets(ctx, newPulse, jets)
+		m.addSync(ctx, jets, oldPulse.PulseNumber)
+		go m.cleanLightData(ctx, newPulse)
+	}
+
+	err = m.Bus.OnPulse(ctx, newPulse)
+	if err != nil {
+		inslogger.FromContext(ctx).Error(errors.Wrap(err, "MessageBus OnPulse() returns error"))
+	}
+
+	return m.LR.OnPulse(ctx, newPulse)
+}
+
+func (m *PulseManager) setUnderGilSection(
+	ctx context.Context, newPulse core.Pulse, persist bool,
+) (
+	[]jetInfo, *core.Pulse, *core.PulseNumber, error,
+) {
 	m.GIL.Acquire(ctx)
+	ctx, span := instracer.StartSpan(ctx, "pulse.gil_locked")
+	defer span.End()
+	defer m.GIL.Release(ctx)
+
 	m.PulseStorage.Lock()
 
 	// FIXME: @andreyromancev. 17.12.18. return core.Pulse here.
 	storagePulse, err := m.PulseTracker.GetLatestPulse(ctx)
 	if err != nil {
 		m.PulseStorage.Unlock()
-		m.GIL.Release(ctx)
-		spanGIL.End()
-		return errors.Wrap(err, "call of GetLatestPulseNumber failed")
+		return nil, nil, nil, errors.Wrap(err, "call of GetLatestPulseNumber failed")
 	}
-	currentPulse := storagePulse.Pulse
-	prevPulseNumber := *storagePulse.Prev
 
+	oldPulse := storagePulse.Pulse
+	prevPulseNumber := storagePulse.Prev
+
+	logger := inslogger.FromContext(ctx)
 	logger.WithFields(map[string]interface{}{
 		"new_pulse":     newPulse.PulseNumber,
-		"current_pulse": currentPulse.PulseNumber,
+		"current_pulse": oldPulse.PulseNumber,
 		"persist":       persist,
 	}).Debugf("received pulse")
 
@@ -572,17 +610,13 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 	// m.ActiveListSwapper.MoveSyncToActive()
 	if persist {
 		if err := m.PulseTracker.AddPulse(ctx, newPulse); err != nil {
-			m.GIL.Release(ctx)
-			spanGIL.End()
 			m.PulseStorage.Unlock()
-			return errors.Wrap(err, "call of AddPulse failed")
+			return nil, nil, nil, errors.Wrap(err, "call of AddPulse failed")
 		}
 		err = m.ActiveNodesStorage.SetActiveNodes(newPulse.PulseNumber, m.NodeNet.GetActiveNodes())
 		if err != nil {
-			m.GIL.Release(ctx)
-			spanGIL.End()
 			m.PulseStorage.Unlock()
-			return errors.Wrap(err, "call of SetActiveNodes failed")
+			return nil, nil, nil, errors.Wrap(err, "call of SetActiveNodes failed")
 		}
 	}
 
@@ -591,43 +625,17 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 
 	var jets []jetInfo
 	if persist {
-		jets, err = m.processJets(ctx, currentPulse.PulseNumber, newPulse.PulseNumber)
+		jets, err = m.processJets(ctx, oldPulse.PulseNumber, newPulse.PulseNumber)
 		if err != nil {
-			m.GIL.Release(ctx)
-			spanGIL.End()
-			return errors.Wrap(err, "failed to process jets")
+			return nil, nil, nil, errors.Wrap(err, "failed to process jets")
 		}
 	}
 
 	if m.NodeNet.GetOrigin().Role() == core.StaticRoleLightMaterial {
 		m.prepareArtifactManagerMessageHandlerForNextPulse(ctx, newPulse, jets)
 	}
-	m.GIL.Release(ctx)
-	spanGIL.End()
 
-	if !persist {
-		return nil
-	}
-
-	// Run only on material executor.
-	// execute only on material executor
-	// TODO: do as much as possible async.
-	if m.NodeNet.GetOrigin().Role() == core.StaticRoleLightMaterial {
-		err = m.processEndPulse(ctx, jets, prevPulseNumber, &currentPulse, &newPulse)
-		if err != nil {
-			return err
-		}
-		m.postProcessJets(ctx, newPulse, jets)
-		m.addSync(ctx, jets, currentPulse.PulseNumber)
-		go m.cleanLightData(context.Background(), newPulse)
-	}
-
-	err = m.Bus.OnPulse(ctx, newPulse)
-	if err != nil {
-		inslogger.FromContext(ctx).Error(errors.Wrap(err, "MessageBus OnPulse() returns error"))
-	}
-
-	return m.LR.OnPulse(ctx, newPulse)
+	return jets, &oldPulse, prevPulseNumber, nil
 }
 
 func (m *PulseManager) addSync(ctx context.Context, jets []jetInfo, pulse core.PulseNumber) {
