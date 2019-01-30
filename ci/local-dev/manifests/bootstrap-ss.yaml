@@ -154,11 +154,11 @@ spec:
     spec:
       initContainers:
         - name: init-bootstrap
-          image: base
           imagePullPolicy: Never
+          image: "base"
           tty: true
           stdin: true
-          command: 
+          command:
             - /bin/sh
             - -ec
             - |
@@ -217,38 +217,34 @@ spec:
               mountPath: /opt/work
       containers:
         - name: insgorund
-          image: base
           imagePullPolicy: Never
+          image: "base"
           workingDir: "/opt/insolar"
           tty: true
           stdin: true
-          command: 
-            - insgorund 
-            - -l 
-            - 127.0.0.1:18181 
-            - --rpc 
-            - 127.0.0.1:18182 
+          command:
+            - insgorund
+            - -l
+            - 127.0.0.1:18181
+            - --rpc
+            - 127.0.0.1:18182
             - -d
             - /tmp/code
           env:
             - name: HOME
               value: /opt/insolar
-          #resources:
-          #  #requests:
-          #  #  cpu: 300m
-          #  #  memory: 200M
           volumeMounts:
             - name: work
               mountPath: /opt/insolar
             - name: code
               mountPath: /tmp/code
         - name: insolard
-          image: base
           imagePullPolicy: Never
+          image: "base"
           workingDir: "/opt/insolar"
           tty: true
           stdin: true
-          command: 
+          command:
             - /go/bin/insolard
             - --config
             - /opt/insolar/config/node-insolar.yaml
@@ -267,10 +263,6 @@ spec:
               value: "$(POD_IP):7900"
             - name: INSOLAR_APIRUNNER_ADDRESS
               value: "$(POD_IP):19191"
-          #resources:
-          #  #requests:
-          #  #  cpu: 1
-          #  #  memory: 1024M
           volumeMounts:
             - name: work
               mountPath: /opt/insolar
@@ -295,18 +287,6 @@ spec:
           name: node-config
       - name: work
         emptyDir: {}
-        #imagePullSecrets:
-        #- name: registry-insolar-io
-        #  volumeClaimTemplates:
-        #    - metadata:
-        #        name: work
-        #      spec:
-        #        accessModes:
-        #          - "ReadWriteOnce"
-        #        resources:
-        #          requests:
-        #            storage: "2Gi"
   updateStrategy:
-    type: RollingUpdate
-  podManagementPolicy: OrderedReady
-
+    type: OnDelete
+  podManagementPolicy: Parallel
