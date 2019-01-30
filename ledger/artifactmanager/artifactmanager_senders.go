@@ -29,6 +29,8 @@ import (
 	"go.opencensus.io/stats"
 )
 
+// ledgerArtifactSenders is a some kind of a middleware layer
+// it contains cache meta-data for calls
 type ledgerArtifactSenders struct {
 	codeCacheLock sync.Mutex
 	codeCache     map[core.RecordRef]*cacheEntry
@@ -45,6 +47,7 @@ func newLedgerArtifactSenders() *ledgerArtifactSenders {
 	}
 }
 
+// cachedSender is using for caching replies
 func (m *ledgerArtifactSenders) cachedSender() PreSender {
 	return func(sender Sender) Sender {
 		return func(ctx context.Context, msg core.Message, options *core.MessageSendOptions) (core.Reply, error) {
@@ -80,6 +83,7 @@ func (m *ledgerArtifactSenders) cachedSender() PreSender {
 	}
 }
 
+// followRedirectSender is using for redirecting responses with delegation token
 func followRedirectSender(bus core.MessageBus) PreSender {
 	return func(sender Sender) Sender {
 		return func(ctx context.Context, msg core.Message, options *core.MessageSendOptions) (core.Reply, error) {
@@ -115,6 +119,7 @@ func followRedirectSender(bus core.MessageBus) PreSender {
 	}
 }
 
+// retryJetSender is using for refreshing jet-tree, if destination has no idea about a jet from message
 func retryJetSender(pulseStorage core.PulseStorage, jetStorage storage.JetStorage) PreSender {
 	return func(sender Sender) Sender {
 		return func(ctx context.Context, msg core.Message, options *core.MessageSendOptions) (core.Reply, error) {

@@ -38,10 +38,16 @@ func BuildMiddleware(handler core.MessageHandler, wrapHandlers ...Handler) core.
 	return result
 }
 
+// PreSender is an alias for a function
+// which is working like a `middleware` for messagebus.Send
 type PreSender func(Sender) Sender
 
+// Sender is an alias for signature of messagebus.Send
 type Sender func(context.Context, core.Message, *core.MessageSendOptions) (core.Reply, error)
 
+// BuildSender allows us to build a chain of PreSender before calling Sender
+// The main idea of it is ability to make a different things before sending message
+// For example we can cache some replies. Another example is the sendAndFollow redirect method
 func BuildSender(sender Sender, preSenders ...PreSender) Sender {
 	result := sender
 
