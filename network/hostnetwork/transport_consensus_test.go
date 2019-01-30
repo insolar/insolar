@@ -224,22 +224,6 @@ func (t *consensusTransportSuite) TestVerifySignPhase3() {
 	assert.True(t.T(), success)
 }
 
-func (t *consensusTransportSuite) TestRegisterPacketHandler() {
-	m := newMockResolver()
-
-	cn, err := NewConsensusNetwork("127.0.0.1:0", ID1+DOMAIN, 0, m)
-	require.NoError(t.T(), err)
-	defer cn.Stop(context.Background())
-	handler := func(incomingPacket consensus.ConsensusPacket, sender core.RecordRef) {
-		// do nothing
-	}
-	f := func() {
-		cn.RegisterPacketHandler(consensus.Phase1, handler)
-	}
-	assert.NotPanics(t.T(), f, "first request handler register should not panic")
-	assert.Panics(t.T(), f, "second request handler register should panic because it is already registered")
-}
-
 func NewSuite() (*consensusTransportSuite, error) {
 	kp := platformpolicy.NewKeyProcessor()
 	sk, err := kp.GeneratePrivateKey()

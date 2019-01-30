@@ -19,12 +19,12 @@ package hostnetwork
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/sequence"
 	"github.com/insolar/insolar/network/transport"
@@ -130,7 +130,7 @@ func (h *hostTransport) SendRequestPacket(ctx context.Context, request network.R
 func (h *hostTransport) RegisterPacketHandler(t types.PacketType, handler network.RequestHandler) {
 	_, exists := h.handlers[t]
 	if exists {
-		panic(fmt.Sprintf("multiple handlers for packet type %s are not supported!", t.String()))
+		log.Warnf("Multiple handlers for packet type %s are not supported! New handler will replace the old one!", t)
 	}
 	h.handlers[t] = handler
 }

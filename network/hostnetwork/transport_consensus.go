@@ -19,7 +19,6 @@ package hostnetwork
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/insolar/insolar/configuration"
 	consensus "github.com/insolar/insolar/consensus/packets"
@@ -54,7 +53,7 @@ func (tc *transportConsensus) Stop(ctx context.Context) error {
 func (tc *transportConsensus) RegisterPacketHandler(t consensus.PacketType, handler network.ConsensusPacketHandler) {
 	_, exists := tc.handlers[t]
 	if exists {
-		panic(fmt.Sprintf("multiple handlers for packet type %s are not supported!", t.String()))
+		log.Warnf("Multiple handlers for packet type %s are not supported! New handler will replace the old one!", t)
 	}
 	tc.handlers[t] = handler
 }
