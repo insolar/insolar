@@ -22,8 +22,10 @@ import (
 	"github.com/dgraph-io/badger"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage/jet"
+	"go.opencensus.io/stats"
 )
 
 // Cleaner cleans lights after sync to heavy
@@ -44,6 +46,21 @@ type Cleaner interface {
 
 var rmScanFromPulse = core.PulseNumber(core.FirstPulseNumber + 1).Bytes()
 
+type RmStat struct {
+	Scanned int64
+	Removed int64
+}
+
+func recordCleanupMetrics(ctx context.Context, stat map[string]RmStat) {
+	for name, value := range stat {
+		mctx := insmetrics.InsertTag(ctx, recordType, name)
+		stats.Record(mctx,
+			statCleanScanned.M(value.Scanned),
+			statCleanRemoved.M(value.Removed),
+		)
+	}
+}
+
 // RemoveAllForJetUntilPulse removes all syncing on heavy records until pulse number for provided jetID
 // returns removal stat and cummulative error
 func (db *DB) RemoveAllForJetUntilPulse(
@@ -51,51 +68,52 @@ func (db *DB) RemoveAllForJetUntilPulse(
 	jetID core.RecordID,
 	pn core.PulseNumber,
 	recent recentstorage.RecentStorage,
-) (map[string]int, error) {
-	stat := map[string]int{}
+) (map[string]RmStat, error) {
+	allstat := map[string]RmStat{}
 	var result error
 
 	var err error
-	var removed int
-	if removed, err = db.RemoveJetIndexesUntil(ctx, jetID, pn, recent); err != nil {
+	var stat RmStat
+	if stat, err = db.RemoveJetIndexesUntil(ctx, jetID, pn, recent); err != nil {
 		result = multierror.Append(result, err)
 	}
-	stat["indexes"] = removed
-	if removed, err = db.RemoveJetBlobsUntil(ctx, jetID, pn); err != nil {
+	allstat["indexes"] = stat
+	if stat, err = db.RemoveJetBlobsUntil(ctx, jetID, pn); err != nil {
 		result = multierror.Append(result, err)
 	}
-	stat["blobs"] = removed
-	if removed, err = db.RemoveJetRecordsUntil(ctx, jetID, pn, recent); err != nil {
+	allstat["blobs"] = stat
+	if stat, err = db.RemoveJetRecordsUntil(ctx, jetID, pn, recent); err != nil {
 		result = multierror.Append(result, err)
 	}
-	stat["records"] = removed
-	if removed, err = db.RemoveJetDropsUntil(ctx, jetID, pn); err != nil {
+	allstat["records"] = stat
+	if stat, err = db.RemoveJetDropsUntil(ctx, jetID, pn); err != nil {
 		result = multierror.Append(result, err)
 	}
-	stat["drops"] = removed
+	allstat["drops"] = stat
+	recordCleanupMetrics(ctx, allstat)
 
-	return stat, result
+	return allstat, result
 }
 
 // RemoveJetIndexesUntil removes for provided JetID all lifelines older than provided pulse number.
 // Indexes caches by recent storage, we should avoid them deletion.
-func (db *DB) RemoveJetIndexesUntil(ctx context.Context, jetID core.RecordID, pn core.PulseNumber, recent recentstorage.RecentStorage) (int, error) {
+func (db *DB) RemoveJetIndexesUntil(ctx context.Context, jetID core.RecordID, pn core.PulseNumber, recent recentstorage.RecentStorage) (RmStat, error) {
 	return db.removeJetRecordsUntil(ctx, scopeIDLifeline, jetID, pn, recent)
 }
 
 // RemoveJetBlobsUntil removes for provided JetID all blobs older than provided pulse number.
-func (db *DB) RemoveJetBlobsUntil(ctx context.Context, jetID core.RecordID, pn core.PulseNumber) (int, error) {
+func (db *DB) RemoveJetBlobsUntil(ctx context.Context, jetID core.RecordID, pn core.PulseNumber) (RmStat, error) {
 	return db.removeJetRecordsUntil(ctx, scopeIDBlob, jetID, pn, nil)
 }
 
 // RemoveJetRecordsUntil removes for provided JetID all records older than provided pulse number.
 // In recods pending requests live, so we need recent storage here
-func (db *DB) RemoveJetRecordsUntil(ctx context.Context, jetID core.RecordID, pn core.PulseNumber, recent recentstorage.RecentStorage) (int, error) {
+func (db *DB) RemoveJetRecordsUntil(ctx context.Context, jetID core.RecordID, pn core.PulseNumber, recent recentstorage.RecentStorage) (RmStat, error) {
 	return db.removeJetRecordsUntil(ctx, scopeIDRecord, jetID, pn, recent)
 }
 
 // RemoveJetDropsUntil removes for provided JetID all jet drops older than provided pulse number.
-func (db *DB) RemoveJetDropsUntil(ctx context.Context, jetID core.RecordID, pn core.PulseNumber) (int, error) {
+func (db *DB) RemoveJetDropsUntil(ctx context.Context, jetID core.RecordID, pn core.PulseNumber) (RmStat, error) {
 	return db.removeJetRecordsUntil(ctx, scopeIDJetDrop, jetID, pn, nil)
 }
 
@@ -105,18 +123,19 @@ func (db *DB) removeJetRecordsUntil(
 	jetID core.RecordID,
 	pn core.PulseNumber,
 	recent recentstorage.RecentStorage,
-) (int, error) {
+) (RmStat, error) {
+	var stat RmStat
 	_, prefix := jet.Jet(jetID)
 	jetprefix := prefixkey(namespace, prefix)
 	startprefix := prefixkey(namespace, prefix, rmScanFromPulse)
 
-	count := 0
-	return count, db.db.Update(func(txn *badger.Txn) error {
+	return stat, db.db.Update(func(txn *badger.Txn) error {
 		var id core.RecordID
 
 		it := txn.NewIterator(badger.DefaultIteratorOptions)
 		defer it.Close()
 		for it.Seek(startprefix); it.ValidForPrefix(jetprefix); it.Next() {
+			stat.Scanned++
 			key := it.Item().KeyCopy(nil)
 			if pulseFromKey(key) >= pn {
 				break
@@ -132,7 +151,7 @@ func (db *DB) removeJetRecordsUntil(
 			if err := txn.Delete(key); err != nil {
 				return err
 			}
-			count++
+			stat.Removed++
 		}
 		return nil
 	})

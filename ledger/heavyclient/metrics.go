@@ -33,31 +33,39 @@ var (
 	statFirstUnsyncedPulse  = stats.Int64("heavyclient/unsynced/firstpulse", "First unsynced pulse number", stats.UnitDimensionless)
 
 	statSyncedPulsesCount = stats.Int64("heavyclient/synced/count", "How many pulses unsynced", stats.UnitDimensionless)
+
+	statCleanLatency = stats.Int64("lightcleanup/latency", "Light storage cleanup time in milliseconds", stats.UnitMilliseconds)
 )
 
 func init() {
-	commontags := []tag.Key{tagJet}
 	err := view.Register(
 		&view.View{
 			Name:        statUnsyncedPulsesCount.Name(),
 			Description: statUnsyncedPulsesCount.Description(),
 			Measure:     statUnsyncedPulsesCount,
 			Aggregation: view.LastValue(),
-			TagKeys:     commontags,
+			TagKeys:     []tag.Key{tagJet},
 		},
 		&view.View{
 			Name:        statFirstUnsyncedPulse.Name(),
 			Description: statFirstUnsyncedPulse.Description(),
 			Measure:     statFirstUnsyncedPulse,
 			Aggregation: view.LastValue(),
-			TagKeys:     commontags,
+			TagKeys:     []tag.Key{tagJet},
 		},
 		&view.View{
 			Name:        statSyncedPulsesCount.Name(),
 			Description: statSyncedPulsesCount.Description(),
 			Measure:     statSyncedPulsesCount,
 			Aggregation: view.Count(),
-			TagKeys:     commontags,
+			TagKeys:     []tag.Key{tagJet},
+		},
+
+		&view.View{
+			Name:        statCleanLatency.Name(),
+			Description: statCleanLatency.Description(),
+			Measure:     statCleanLatency,
+			Aggregation: view.Distribution(100, 500, 1000, 5000, 10000),
 		},
 	)
 	if err != nil {
