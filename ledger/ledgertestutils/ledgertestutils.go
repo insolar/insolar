@@ -66,7 +66,6 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 	am.JetStorage = db
 	am.DBContext = db
 	am.PulseStorage = pulseStorage
-	_ = am.Start(ctx)
 
 	conf.PulseManager.HeavySyncEnabled = false
 	pm := pulsemanager.NewPulseManager(conf)

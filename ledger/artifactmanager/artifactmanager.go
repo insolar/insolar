@@ -19,7 +19,6 @@ package artifactmanager
 import (
 	"context"
 	"fmt"
-	"sync"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
@@ -52,16 +51,6 @@ type LedgerArtifactManager struct {
 	senders              *ledgerArtifactSenders
 }
 
-func (m *LedgerArtifactManager) Start(ctx context.Context) error {
-	m.senders = newLedgerArtifactSenders(m.PulseStorage, m.JetStorage, m.DefaultBus)
-	return nil
-}
-
-type cacheEntry struct {
-	sync.Mutex
-	code *reply.Code
-}
-
 // State returns hash state for artifact manager.
 func (m *LedgerArtifactManager) State() ([]byte, error) {
 	// This is a temporary stab to simulate real hash.
@@ -72,6 +61,7 @@ func (m *LedgerArtifactManager) State() ([]byte, error) {
 func NewArtifactManger(db *storage.DB) *LedgerArtifactManager {
 	return &LedgerArtifactManager{
 		getChildrenChunkSize: getChildrenChunkSize,
+		senders:              newLedgerArtifactSenders(),
 	}
 }
 
@@ -111,6 +101,10 @@ func (m *LedgerArtifactManager) RegisterRequest(
 	return id, errors.Wrap(err, "[ RegisterRequest ] ")
 }
 
+// func (m *ledgerArtifactSenders) bus(ctx context.Context) core.MessageBus {
+// 	return core.MessageBusFromContext(ctx, m.defaultBus)
+// }
+
 // GetCode returns code from code record by provided reference according to provided machine preference.
 //
 // This method is used by VM to fetch code for execution.
@@ -126,7 +120,14 @@ func (m *LedgerArtifactManager) GetCode(
 
 	ctx, span = instracer.StartSpan(ctx, "artifactmanager.GetCode sendAndFollowRedirect")
 
-	sender := BuildSender(m.senders.bus(ctx).Send, m.senders.cachedSender, m.senders.followRedirectSender, m.senders.retryJetSender)
+	bus := core.MessageBusFromContext(ctx, m.DefaultBus)
+	sender := BuildSender(
+		bus.Send,
+		m.senders.cachedSender(),
+		followRedirectSender(bus),
+		retryJetSender(m.PulseStorage, m.JetStorage),
+	)
+
 	genericReact, err := sender(ctx, &message.GetCode{Code: code}, nil)
 
 	span.End()
@@ -174,7 +175,13 @@ func (m *LedgerArtifactManager) GetObject(
 		Approved: approved,
 	}
 
-	sender := BuildSender(m.senders.bus(ctx).Send, m.senders.followRedirectSender, m.senders.retryJetSender)
+	bus := core.MessageBusFromContext(ctx, m.DefaultBus)
+	sender := BuildSender(
+		bus.Send,
+		followRedirectSender(bus),
+		retryJetSender(m.PulseStorage, m.JetStorage),
+	)
+
 	genericReact, err := sender(ctx, getObjectMsg, nil)
 	if err != nil {
 		return nil, err
@@ -206,7 +213,13 @@ func (m *LedgerArtifactManager) HasPendingRequests(
 	ctx context.Context,
 	object core.RecordRef,
 ) (bool, error) {
-	sender := BuildSender(m.senders.bus(ctx).Send, m.senders.retryJetSender)
+
+	bus := core.MessageBusFromContext(ctx, m.DefaultBus)
+	sender := BuildSender(
+		bus.Send,
+		retryJetSender(m.PulseStorage, m.JetStorage),
+	)
+
 	genericReact, err := sender(ctx, &message.GetPendingRequests{Object: object}, nil)
 
 	if err != nil {
@@ -234,7 +247,8 @@ func (m *LedgerArtifactManager) GetDelegate(
 	var err error
 	defer instrument(ctx, "GetDelegate").err(&err).end()
 
-	sender := BuildSender(m.senders.bus(ctx).Send, m.senders.followRedirectSender)
+	bus := core.MessageBusFromContext(ctx, m.DefaultBus)
+	sender := BuildSender(bus.Send, followRedirectSender(bus))
 	genericReact, err := sender(ctx, &message.GetDelegate{
 		Head:   head,
 		AsType: asType,
@@ -262,7 +276,8 @@ func (m *LedgerArtifactManager) GetChildren(
 	var err error
 	defer instrument(ctx, "GetChildren").err(&err).end()
 
-	sender := BuildSender(m.senders.bus(ctx).Send, m.senders.followRedirectSender)
+	bus := core.MessageBusFromContext(ctx, m.DefaultBus)
+	sender := BuildSender(bus.Send, followRedirectSender(bus))
 	iter, err := NewChildIterator(ctx, sender, parent, pulse, m.getChildrenChunkSize)
 	return iter, err
 }
@@ -466,7 +481,8 @@ func (m *LedgerArtifactManager) RegisterValidation(
 		ValidationMessages: validationMessages,
 	}
 
-	sender := BuildSender(m.senders.bus(ctx).Send, m.senders.retryJetSender)
+	bus := core.MessageBusFromContext(ctx, m.DefaultBus)
+	sender := BuildSender(bus.Send, retryJetSender(m.PulseStorage, m.JetStorage))
 	_, err = sender(ctx, &msg, nil)
 
 	return err
@@ -650,7 +666,8 @@ func (m *LedgerArtifactManager) setRecord(
 ) (*core.RecordID, error) {
 	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.setRecord starts ...")
 
-	sender := BuildSender(m.senders.bus(ctx).Send, m.senders.retryJetSender)
+	bus := core.MessageBusFromContext(ctx, m.DefaultBus)
+	sender := BuildSender(bus.Send, retryJetSender(m.PulseStorage, m.JetStorage))
 	genericReply, err := sender(ctx, &message.SetRecord{
 		Record:    record.SerializeRecord(rec),
 		TargetRef: target,
@@ -678,7 +695,8 @@ func (m *LedgerArtifactManager) setBlob(
 ) (*core.RecordID, error) {
 	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.setBlob starts ...")
 
-	sender := BuildSender(m.senders.bus(ctx).Send, m.senders.retryJetSender)
+	bus := core.MessageBusFromContext(ctx, m.DefaultBus)
+	sender := BuildSender(bus.Send, retryJetSender(m.PulseStorage, m.JetStorage))
 	genericReact, err := sender(ctx, &message.SetBlob{
 		Memory:    blob,
 		TargetRef: target,
@@ -718,7 +736,8 @@ func (m *LedgerArtifactManager) sendUpdateObject(
 	// 	return nil, fmt.Errorf("unexpected reply: %#v\n", genericRep)
 	// }
 
-	sender := BuildSender(m.senders.bus(ctx).Send, m.senders.retryJetSender)
+	bus := core.MessageBusFromContext(ctx, m.DefaultBus)
+	sender := BuildSender(bus.Send, retryJetSender(m.PulseStorage, m.JetStorage))
 	genericReply, err := sender(
 		ctx,
 		&message.UpdateObject{
@@ -751,7 +770,8 @@ func (m *LedgerArtifactManager) registerChild(
 ) (*core.RecordID, error) {
 	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.registerChild starts ...")
 
-	sender := BuildSender(m.senders.bus(ctx).Send, m.senders.retryJetSender)
+	bus := core.MessageBusFromContext(ctx, m.DefaultBus)
+	sender := BuildSender(bus.Send, retryJetSender(m.PulseStorage, m.JetStorage))
 	genericReact, err := sender(ctx, &message.RegisterChild{
 		Record: record.SerializeRecord(rec),
 		Parent: parent,

@@ -30,127 +30,123 @@ import (
 )
 
 type ledgerArtifactSenders struct {
-	pulseStorage core.PulseStorage
-	jetStorage   storage.JetStorage
-	defaultBus   core.MessageBus
-
 	codeCacheLock sync.Mutex
 	codeCache     map[core.RecordRef]*cacheEntry
 }
 
-func newLedgerArtifactSenders(
-	pulseStorage core.PulseStorage,
-	jetStorage storage.JetStorage,
-	defaultBus core.MessageBus,
-) *ledgerArtifactSenders {
+type cacheEntry struct {
+	sync.Mutex
+	reply core.Reply
+}
+
+func newLedgerArtifactSenders() *ledgerArtifactSenders {
 	return &ledgerArtifactSenders{
-		pulseStorage: pulseStorage,
-		jetStorage:   jetStorage,
-		defaultBus:   defaultBus,
-		codeCache:    map[core.RecordRef]*cacheEntry{},
+		codeCache: map[core.RecordRef]*cacheEntry{},
 	}
 }
 
-func (m *ledgerArtifactSenders) bus(ctx context.Context) core.MessageBus {
-	return core.MessageBusFromContext(ctx, m.defaultBus)
-}
+func (m *ledgerArtifactSenders) cachedSender() PreSender {
+	return func(sender Sender) Sender {
+		return func(ctx context.Context, msg core.Message, options *core.MessageSendOptions) (core.Reply, error) {
+			codeMsg := msg.(*message.GetCode)
 
-func (m *ledgerArtifactSenders) cachedSender(sender Sender) Sender {
-	return func(ctx context.Context, msg core.Message, options *core.MessageSendOptions) (core.Reply, error) {
-		codeMsg := msg.(*message.GetCode)
+			m.codeCacheLock.Lock()
+			entry, ok := m.codeCache[codeMsg.Code]
+			if !ok {
+				entry = &cacheEntry{}
+				m.codeCache[codeMsg.Code] = entry
+			}
+			m.codeCacheLock.Unlock()
 
-		m.codeCacheLock.Lock()
-		entry, ok := m.codeCache[codeMsg.Code]
-		if !ok {
-			entry = &cacheEntry{}
-			m.codeCache[codeMsg.Code] = entry
-		}
-		m.codeCacheLock.Unlock()
+			entry.Lock()
+			defer entry.Unlock()
 
-		entry.Lock()
-		defer entry.Unlock()
+			if entry.reply != nil {
+				return entry.reply, nil
+			}
 
-		if entry.code != nil {
-			return entry.code, nil
-		}
-
-		response, err := sender(ctx, msg, options)
-		if err != nil {
-			return nil, err
-		}
-		castedResp, ok := response.(*reply.Code)
-		if !ok {
-			return response, err
-		}
-
-		entry.code = castedResp
-		return response, err
-	}
-}
-
-func (m *ledgerArtifactSenders) followRedirectSender(sender Sender) Sender {
-	return func(ctx context.Context, msg core.Message, options *core.MessageSendOptions) (core.Reply, error) {
-		inslog := inslogger.FromContext(ctx)
-		inslog.Debug("LedgerArtifactManager.SendAndFollowRedirectSender starts ...")
-
-		rep, err := sender(ctx, msg, options)
-		if err != nil {
-			return nil, err
-		}
-
-		if r, ok := rep.(core.RedirectReply); ok {
-			stats.Record(ctx, statRedirects.M(1))
-
-			redirected := r.Redirected(msg)
-			inslog.Debugf("redirect reciever=%v", r.GetReceiver())
-
-			rep, err = m.bus(ctx).Send(ctx, redirected, &core.MessageSendOptions{
-				Token:    r.GetToken(),
-				Receiver: r.GetReceiver(),
-			})
+			response, err := sender(ctx, msg, options)
 			if err != nil {
 				return nil, err
 			}
-			if _, ok := rep.(core.RedirectReply); ok {
-				return nil, errors.New("double redirects are forbidden")
+			castedResp, ok := response.(*reply.Code)
+			if !ok {
+				return response, err
 			}
-			return rep, nil
-		}
 
-		return rep, err
+			entry.reply = castedResp
+			return response, err
+		}
 	}
 }
 
-func (m *ledgerArtifactSenders) retryJetSender(sender Sender) Sender {
-	return func(ctx context.Context, msg core.Message, options *core.MessageSendOptions) (core.Reply, error) {
-		inslog := inslogger.FromContext(ctx)
-		inslog.Debug("LedgerArtifactManager.RetryJetSender starts ...")
+func followRedirectSender(bus core.MessageBus) PreSender {
+	return func(sender Sender) Sender {
+		return func(ctx context.Context, msg core.Message, options *core.MessageSendOptions) (core.Reply, error) {
+			inslog := inslogger.FromContext(ctx)
+			inslog.Debug("LedgerArtifactManager.SendAndFollowRedirectSender starts ...")
 
-		retries := jetMissRetryCount
-
-		currentPulse, err := m.pulseStorage.Current(ctx)
-		if err != nil {
-			return nil, err
-		}
-
-		for retries > 0 {
 			rep, err := sender(ctx, msg, options)
 			if err != nil {
 				return nil, err
 			}
 
-			if r, ok := rep.(*reply.JetMiss); ok {
-				err := m.jetStorage.UpdateJetTree(ctx, currentPulse.PulseNumber, true, r.JetID)
+			if r, ok := rep.(core.RedirectReply); ok {
+				stats.Record(ctx, statRedirects.M(1))
+
+				redirected := r.Redirected(msg)
+				inslog.Debugf("redirect reciever=%v", r.GetReceiver())
+
+				rep, err = bus.Send(ctx, redirected, &core.MessageSendOptions{
+					Token:    r.GetToken(),
+					Receiver: r.GetReceiver(),
+				})
 				if err != nil {
 					return nil, err
 				}
-			} else {
-				return rep, err
+				if _, ok := rep.(core.RedirectReply); ok {
+					return nil, errors.New("double redirects are forbidden")
+				}
+				return rep, nil
 			}
 
-			retries--
+			return rep, err
 		}
+	}
+}
 
-		return nil, errors.New("failed to find jet (retry limit exceeded on client)")
+func retryJetSender(pulseStorage core.PulseStorage, jetStorage storage.JetStorage) PreSender {
+	return func(sender Sender) Sender {
+		return func(ctx context.Context, msg core.Message, options *core.MessageSendOptions) (core.Reply, error) {
+			inslog := inslogger.FromContext(ctx)
+			inslog.Debug("LedgerArtifactManager.RetryJetSender starts ...")
+
+			retries := jetMissRetryCount
+
+			currentPulse, err := pulseStorage.Current(ctx)
+			if err != nil {
+				return nil, err
+			}
+
+			for retries > 0 {
+				rep, err := sender(ctx, msg, options)
+				if err != nil {
+					return nil, err
+				}
+
+				if r, ok := rep.(*reply.JetMiss); ok {
+					err := jetStorage.UpdateJetTree(ctx, currentPulse.PulseNumber, true, r.JetID)
+					if err != nil {
+						return nil, err
+					}
+				} else {
+					return rep, err
+				}
+
+				retries--
+			}
+
+			return nil, errors.New("failed to find jet (retry limit exceeded on client)")
+		}
 	}
 }

@@ -64,7 +64,6 @@ func TestLedgerArtifactManager_Metrics(t *testing.T) {
 	am.PulseStorage = amPulseStorageMock
 	am.JetStorage = db
 	am.DBContext = db
-	_ = am.Start(ctx)
 
 	tmetrics := testmetrics.Start(ctx)
 	defer tmetrics.Stop()
