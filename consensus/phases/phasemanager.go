@@ -107,7 +107,7 @@ func (pm *Phases) OnPulse(ctx context.Context, pulse *core.Pulse) error {
 }
 
 func getPulseDuration(pulse *core.Pulse) (*time.Duration, error) {
-	duration := time.Duration(pulse.PulseNumber-pulse.PrevPulseNumber) * time.Second
+	duration := time.Duration(pulse.NextPulseNumber-pulse.PulseNumber) * time.Second
 	return &duration, nil
 }
 

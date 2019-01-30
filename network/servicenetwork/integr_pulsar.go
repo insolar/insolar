@@ -104,7 +104,7 @@ func (tp *testPulsar) distribute(ctx context.Context) {
 		PulseNumber:      pulseNumber,
 		Entropy:          tp.generator.GenerateEntropy(),
 		NextPulseNumber:  pulseNumber + core.PulseNumber(tp.pulseDelta),
-		PrevPulseNumber:  core.GenesisPulse.PulseNumber,
+		PrevPulseNumber:  pulseNumber - core.PulseNumber(tp.pulseDelta),
 		EpochPulseNumber: 1,
 		OriginID:         [16]byte{206, 41, 229, 190, 7, 240, 162, 155, 121, 245, 207, 56, 161, 67, 189, 0},
 		PulseTimestamp:   timeNow.Unix(),
