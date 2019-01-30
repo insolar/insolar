@@ -134,54 +134,63 @@ func (h *MessageHandler) setHandlersForLight(m *middleware) {
 	h.Bus.MustRegister(core.TypeGetObject,
 		Build(h.handleGetObject,
 			instrumentHandler("handleGetObject"),
+			m.addFieldsToLogger,
 			m.checkJet,
 			m.waitForHotData))
 
 	h.Bus.MustRegister(core.TypeGetDelegate,
 		Build(h.handleGetDelegate,
 			instrumentHandler("handleGetDelegate"),
+			m.addFieldsToLogger,
 			m.checkJet,
 			m.waitForHotData))
 
 	h.Bus.MustRegister(core.TypeGetChildren,
 		Build(h.handleGetChildren,
 			instrumentHandler("handleGetChildren"),
+			m.addFieldsToLogger,
 			m.checkJet,
 			m.waitForHotData))
 
 	h.Bus.MustRegister(core.TypeSetRecord,
 		Build(h.handleSetRecord,
 			instrumentHandler("handleSetRecord"),
+			m.addFieldsToLogger,
 			m.checkJet,
 			m.waitForHotData))
 
 	h.Bus.MustRegister(core.TypeUpdateObject,
 		Build(h.handleUpdateObject,
 			instrumentHandler("handleUpdateObject"),
+			m.addFieldsToLogger,
 			m.checkJet,
 			m.waitForHotData))
 
 	h.Bus.MustRegister(core.TypeRegisterChild,
 		Build(h.handleRegisterChild,
 			instrumentHandler("handleRegisterChild"),
+			m.addFieldsToLogger,
 			m.checkJet,
 			m.waitForHotData))
 
 	h.Bus.MustRegister(core.TypeSetBlob,
 		Build(h.handleSetBlob,
 			instrumentHandler("handleSetBlob"),
+			m.addFieldsToLogger,
 			m.checkJet,
 			m.waitForHotData))
 
 	h.Bus.MustRegister(core.TypeGetObjectIndex,
 		Build(h.handleGetObjectIndex,
 			instrumentHandler("handleGetObjectIndex"),
+			m.addFieldsToLogger,
 			m.checkJet,
 			m.waitForHotData))
 
 	h.Bus.MustRegister(core.TypeGetPendingRequests,
 		Build(h.handleHasPendingRequests,
 			instrumentHandler("handleHasPendingRequests"),
+			m.addFieldsToLogger,
 			m.checkJet,
 			m.waitForHotData))
 
@@ -197,33 +206,36 @@ func (h *MessageHandler) setHandlersForLight(m *middleware) {
 	// Validation.
 	h.Bus.MustRegister(core.TypeValidateRecord,
 		Build(h.handleValidateRecord,
+			m.addFieldsToLogger,
 			m.checkJet))
 
 	h.Bus.MustRegister(core.TypeValidationCheck,
 		Build(h.handleValidationCheck,
+			m.addFieldsToLogger,
 			m.checkJet))
 
 	h.Bus.MustRegister(core.TypeJetDrop,
 		Build(h.handleJetDrop,
+			m.addFieldsToLogger,
 			m.checkJet))
 }
 func (h *MessageHandler) setReplayHandlers(m *middleware) {
 	// Generic.
-	h.replayHandlers[core.TypeGetCode] = Build(h.handleGetCode)
-	h.replayHandlers[core.TypeGetObject] = Build(h.handleGetObject, m.checkJet)
-	h.replayHandlers[core.TypeGetDelegate] = Build(h.handleGetDelegate, m.checkJet)
-	h.replayHandlers[core.TypeGetChildren] = Build(h.handleGetChildren, m.checkJet)
-	h.replayHandlers[core.TypeSetRecord] = Build(h.handleSetRecord, m.checkJet)
-	h.replayHandlers[core.TypeUpdateObject] = Build(h.handleUpdateObject, m.checkJet)
-	h.replayHandlers[core.TypeRegisterChild] = Build(h.handleRegisterChild, m.checkJet)
-	h.replayHandlers[core.TypeSetBlob] = Build(h.handleSetBlob, m.checkJet)
-	h.replayHandlers[core.TypeGetObjectIndex] = Build(h.handleGetObjectIndex, m.checkJet)
-	h.replayHandlers[core.TypeGetPendingRequests] = Build(h.handleHasPendingRequests, m.checkJet)
+	h.replayHandlers[core.TypeGetCode] = Build(h.handleGetCode, m.addFieldsToLogger)
+	h.replayHandlers[core.TypeGetObject] = Build(h.handleGetObject, m.addFieldsToLogger, m.checkJet)
+	h.replayHandlers[core.TypeGetDelegate] = Build(h.handleGetDelegate, m.addFieldsToLogger, m.checkJet)
+	h.replayHandlers[core.TypeGetChildren] = Build(h.handleGetChildren, m.addFieldsToLogger, m.checkJet)
+	h.replayHandlers[core.TypeSetRecord] = Build(h.handleSetRecord, m.addFieldsToLogger, m.checkJet)
+	h.replayHandlers[core.TypeUpdateObject] = Build(h.handleUpdateObject, m.addFieldsToLogger, m.checkJet)
+	h.replayHandlers[core.TypeRegisterChild] = Build(h.handleRegisterChild, m.addFieldsToLogger, m.checkJet)
+	h.replayHandlers[core.TypeSetBlob] = Build(h.handleSetBlob, m.addFieldsToLogger, m.checkJet)
+	h.replayHandlers[core.TypeGetObjectIndex] = Build(h.handleGetObjectIndex, m.addFieldsToLogger, m.checkJet)
+	h.replayHandlers[core.TypeGetPendingRequests] = Build(h.handleHasPendingRequests, m.addFieldsToLogger, m.checkJet)
 	h.replayHandlers[core.TypeGetJet] = Build(h.handleGetJet)
 
 	// Validation.
-	h.replayHandlers[core.TypeValidateRecord] = Build(h.handleValidateRecord, m.checkJet)
-	h.replayHandlers[core.TypeValidationCheck] = Build(h.handleValidationCheck, m.checkJet)
+	h.replayHandlers[core.TypeValidateRecord] = Build(h.handleValidateRecord, m.addFieldsToLogger, m.checkJet)
+	h.replayHandlers[core.TypeValidationCheck] = Build(h.handleValidationCheck, m.addFieldsToLogger, m.checkJet)
 }
 func (h *MessageHandler) setHandlersForHeavy(m *middleware) {
 	// Heavy.
