@@ -133,39 +133,6 @@ func (m *PulseManager) processEndPulse(
 	for _, i := range jets {
 		info := i
 
-		if info.left == nil && info.right == nil {
-			requests := m.RecentStorageProvider.GetStorage(ctx, info.id).GetRequests()
-
-			go func() {
-				err := m.sendAbandonedRequests(
-					ctx,
-					newPulse,
-					requests,
-				)
-				logger.Error(err)
-			}()
-		} else {
-			leftRequests := m.RecentStorageProvider.GetStorage(ctx, info.left.id).GetRequests()
-			rightRequests := m.RecentStorageProvider.GetStorage(ctx, info.right.id).GetRequests()
-
-			go func() {
-				err := m.sendAbandonedRequests(
-					ctx,
-					newPulse,
-					leftRequests,
-				)
-				logger.Error(err)
-			}()
-			go func() {
-				err := m.sendAbandonedRequests(
-					ctx,
-					newPulse,
-					rightRequests,
-				)
-				logger.Error(err)
-			}()
-		}
-
 		g.Go(func() error {
 			drop, dropSerialized, _, err := m.createDrop(ctx, info.id, prevPulseNumber, currentPulse.PulseNumber)
 			logger.Debugf("[jet]: %v create drop. Pulse: %v, Error: %s", info.id.DebugString(), currentPulse.PulseNumber, err)
@@ -204,6 +171,17 @@ func (m *PulseManager) processEndPulse(
 			}
 
 			if info.left == nil && info.right == nil {
+
+				requests := m.RecentStorageProvider.GetStorage(ctx, info.id).GetRequests()
+				go func() {
+					err := m.sendAbandonedRequests(
+						ctx,
+						newPulse,
+						requests,
+					)
+					logger.Error(err)
+				}()
+
 				if err != nil {
 					logger.Errorf("problems with notification about pending requests jet - %v, err - %v", info.id.DebugString(), err)
 				}
@@ -212,6 +190,26 @@ func (m *PulseManager) processEndPulse(
 					go sender(*msg, info.id)
 				}
 			} else {
+				leftRequests := m.RecentStorageProvider.GetStorage(ctx, info.left.id).GetRequests()
+				rightRequests := m.RecentStorageProvider.GetStorage(ctx, info.right.id).GetRequests()
+
+				go func() {
+					err := m.sendAbandonedRequests(
+						ctx,
+						newPulse,
+						leftRequests,
+					)
+					logger.Error(err)
+				}()
+				go func() {
+					err := m.sendAbandonedRequests(
+						ctx,
+						newPulse,
+						rightRequests,
+					)
+					logger.Error(err)
+				}()
+
 				// Split happened.
 				if !info.left.mineNext {
 					go sender(*msg, info.left.id)
