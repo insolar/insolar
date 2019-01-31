@@ -18,7 +18,7 @@ local make_min_roles() = {
       local discovery_nodes_tmpl() = {
         host: "%s-%d.%s:7900",
         role: "%s",
-        keys_file: "/opt/insolar/config/nodes/%s-%d/keys.json",
+        keys_file: "/opt/insolar/config/nodes/keys/%s-%d.json",
         cert_name: "%s-%d-cert.json"
       },
 
