@@ -486,7 +486,6 @@ func TestLogicRunner_OnPulse_StillExecuting(t *testing.T) {
 	assert.NotNil(t, lr.state[objectRef].ExecutionState)
 }
 
-// TODO check queue of different length
 func TestReleaseQueue(t *testing.T) {
 	t.Parallel()
 	type expected struct {
@@ -512,7 +511,6 @@ func TestReleaseQueue(t *testing.T) {
 	}
 }
 
-// mc.Wait(time.Second)
 func TestOnPulseLightMaterialHasMore(t *testing.T) {
 	t.Parallel()
 
