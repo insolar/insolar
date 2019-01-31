@@ -736,7 +736,11 @@ func (lr *LogicRunner) prepareObjectState(ctx context.Context, msg *message.Exec
 		es.pending = msg.Pending
 	}
 
-	es.LightMaterialHasMore = msg.LightMaterialHasMore
+	// set false to true is good, set true to false may be wrong, better make unnecessary call
+	if !es.LightMaterialHasMore && msg.LightMaterialHasMore {
+		es.LightMaterialHasMore = msg.LightMaterialHasMore
+	}
+
 	//prepare Queue
 	if msg.Queue != nil {
 		queueFromMessage := make([]ExecutionQueueElement, 0)
