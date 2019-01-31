@@ -268,12 +268,12 @@ func (cc *CallConstructor) Type() core.MessageType {
 
 // TODO rename to executorObjectResult (results?)
 type ExecutorResults struct {
-	Caller               core.RecordRef
-	RecordRef            core.RecordRef
-	Requests             []CaseBindRequest
-	Queue                []ExecutionQueueElement
-	LightMaterialHasMore bool
-	Pending              PendingState
+	Caller                core.RecordRef
+	RecordRef             core.RecordRef
+	Requests              []CaseBindRequest
+	Queue                 []ExecutionQueueElement
+	LedgerHasMoreRequests bool
+	Pending               PendingState
 }
 
 type ExecutionQueueElement struct {

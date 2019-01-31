@@ -737,8 +737,8 @@ func (lr *LogicRunner) prepareObjectState(ctx context.Context, msg *message.Exec
 	}
 
 	// set false to true is good, set true to false may be wrong, better make unnecessary call
-	if !es.LedgerHasMoreRequests && msg.LightMaterialHasMore {
-		es.LedgerHasMoreRequests = msg.LightMaterialHasMore
+	if !es.LedgerHasMoreRequests && msg.LedgerHasMoreRequests {
+		es.LedgerHasMoreRequests = msg.LedgerHasMoreRequests
 	}
 
 	//prepare Queue
@@ -992,11 +992,11 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 						//	Pulse:     pulse,
 						//},
 						&message.ExecutorResults{
-							RecordRef:            ref,
-							Pending:              es.pending,
-							Requests:             requests,
-							Queue:                messagesQueue,
-							LightMaterialHasMore: es.LedgerHasMoreRequests || ledgerHasMoreRequest,
+							RecordRef:             ref,
+							Pending:               es.pending,
+							Requests:              requests,
+							Queue:                 messagesQueue,
+							LedgerHasMoreRequests: es.LedgerHasMoreRequests || ledgerHasMoreRequest,
 						},
 					)
 				}

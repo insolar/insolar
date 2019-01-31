@@ -543,10 +543,10 @@ func TestOnPulseLightMaterialHasMore(t *testing.T) {
 	pulse := core.Pulse{}
 
 	expectedMessage := &message.ExecutorResults{
-		RecordRef:            ref,
-		Requests:             make([]message.CaseBindRequest, 0),
-		Queue:                messagesQueue,
-		LightMaterialHasMore: true,
+		RecordRef:             ref,
+		Requests:              make([]message.CaseBindRequest, 0),
+		Queue:                 messagesQueue,
+		LedgerHasMoreRequests: true,
 	}
 
 	// defer new SendFunc before calling OnPulse
