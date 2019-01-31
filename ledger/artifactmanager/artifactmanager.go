@@ -155,11 +155,9 @@ func (m *LedgerArtifactManager) GetCode(
 		return entry.desc, nil
 	}
 
-	backCtx := ctx
-	ctx, span = instracer.StartSpan(ctx, "artifactmanager.GetCode sendAndRetryJet")
-	genericReact, err := m.bus(ctx).Send(ctx, &message.GetCode{Code: code}, nil)
-	span.End()
-	ctx = backCtx
+	sendCtx, sendSpan := instracer.StartSpan(ctx, "artifactmanager.GetCode sendAndRetryJet")
+	genericReact, err := m.bus(sendCtx).Send(ctx, &message.GetCode{Code: code}, nil)
+	sendSpan.End()
 
 	if err != nil {
 		return nil, err
