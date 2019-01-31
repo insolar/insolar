@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -315,8 +315,16 @@ func (lr *LogicRunner) RegisterRequest(ctx context.Context, parcel core.Parcel) 
 	return &res, nil
 }
 
+func loggerWithTargetID(ctx context.Context, msg core.Parcel) context.Context {
+	context, _ := inslogger.WithField(ctx, "targetid", msg.DefaultTarget().String())
+	return context
+}
+
 // Execute runs a method on an object, ATM just thin proxy to `GoPlugin.Exec`
 func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
+	ctx = loggerWithTargetID(ctx, parcel)
+	inslogger.FromContext(ctx).Debug("LogicRunner.Execute starts ...")
+
 	msg, ok := parcel.Message().(message.IBaseLogicMessage)
 	if !ok {
 		return nil, errors.New("Execute( ! message.IBaseLogicMessage )")
@@ -432,6 +440,9 @@ func (lr *LogicRunner) HandlePendingFinishedMessage(
 ) (
 	core.Reply, error,
 ) {
+	ctx = loggerWithTargetID(ctx, parcel)
+	inslogger.FromContext(ctx).Debug("LogicRunner.HandlePendingFinishedMessage starts ...")
+
 	msg := parcel.Message().(*message.PendingFinished)
 	ref := msg.DefaultTarget()
 	os := lr.UpsertObjectState(*ref)
@@ -787,7 +798,7 @@ func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState
 		if err != nil {
 			return nil, es.WrapError(err, "couldn't deactivate object")
 		}
-	} else {
+	} else if !bytes.Equal(es.objectbody.Object, newData) {
 		od, err := am.UpdateObject(ctx, Ref{}, *current.Request, es.objectbody.objDescriptor, newData)
 		if err != nil {
 			if strings.Contains(err.Error(), "invalid state record") {
@@ -1011,22 +1022,9 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 
 	lr.stateMutex.Unlock()
 
-	var sendWg sync.WaitGroup
-	ctx, spanMessages := instracer.StartSpan(ctx, "pulse.logicrunner sending messages")
-	spanMessages.AddAttributes(trace.StringAttribute("numMessages", strconv.Itoa(len(messages))))
-
 	if len(messages) > 0 {
-		sendWg.Add(len(messages))
-
-		for _, msg := range messages {
-			go lr.sendOnPulseMessagesAsync(ctx, msg, &sendWg)
-		}
+		go lr.sendOnPulseMessagesAsync(ctx, messages)
 	}
-
-	go func() {
-		sendWg.Wait()
-		spanMessages.End()
-	}()
 
 	return nil
 }
@@ -1036,6 +1034,9 @@ func (lr *LogicRunner) HandleStillExecutingMessage(
 ) (
 	core.Reply, error,
 ) {
+	ctx = loggerWithTargetID(ctx, parcel)
+	inslogger.FromContext(ctx).Debug("LogicRunner.HandleStillExecutingMessage starts ...")
+
 	msg := parcel.Message().(*message.StillExecuting)
 	ref := msg.DefaultTarget()
 	os := lr.UpsertObjectState(*ref)
@@ -1068,7 +1069,22 @@ func (lr *LogicRunner) HandleStillExecutingMessage(
 	return &reply.OK{}, nil
 }
 
-func (lr *LogicRunner) sendOnPulseMessagesAsync(ctx context.Context, msg core.Message, sendWg *sync.WaitGroup) {
+func (lr *LogicRunner) sendOnPulseMessagesAsync(ctx context.Context, messages []core.Message) {
+	ctx, spanMessages := instracer.StartSpan(ctx, "pulse.logicrunner sending messages")
+	spanMessages.AddAttributes(trace.StringAttribute("numMessages", strconv.Itoa(len(messages))))
+
+	var sendWg sync.WaitGroup
+	sendWg.Add(len(messages))
+
+	for _, msg := range messages {
+		go lr.sendOnPulseMessage(ctx, msg, &sendWg)
+	}
+
+	sendWg.Wait()
+	spanMessages.End()
+}
+
+func (lr *LogicRunner) sendOnPulseMessage(ctx context.Context, msg core.Message, sendWg *sync.WaitGroup) {
 	defer sendWg.Done()
 	_, err := lr.MessageBus.Send(ctx, msg, nil)
 	if err != nil {

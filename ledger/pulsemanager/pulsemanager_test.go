@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -14,18 +14,20 @@
  *    limitations under the License.
  */
 
-package pulsemanager_test
+package pulsemanager
 
 import (
 	"context"
 	"testing"
 
+	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/insolar/insolar/ledger/recentstorage"
+	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/index"
 	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/record"
@@ -121,7 +123,7 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 	jetCoordinatorMock.LightExecutorForJetMock.Return(executor, nil)
 	jetCoordinatorMock.MeMock.Return(*executor)
 
-	pm := pulsemanager.NewPulseManager(db, configuration.Ledger{
+	pm := NewPulseManager(configuration.Ledger{
 		JetSizesHistoryDepth: 5,
 	})
 
@@ -138,7 +140,7 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 		return &signature, nil
 	}
 
-	pulseStorageMock := pulsemanager.NewpulseStoragePmMock(t)
+	pulseStorageMock := NewpulseStoragePmMock(t)
 	pulseStorageMock.CurrentMock.Return(core.GenesisPulse, nil)
 	pulseStorageMock.LockMock.Return()
 	pulseStorageMock.UnlockMock.Return()
@@ -168,4 +170,59 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 	require.NotNil(t, savedIndex)
 	require.NotNil(t, firstIndex, savedIndex)
 	recentMock.MinimockFinish()
+}
+
+func TestPulseManager_Set_SendAbandonedRequests(t *testing.T) {
+	// Arrange
+	ctx := inslogger.TestContext(t)
+	mc := minimock.NewController(t)
+
+	randomRoot := testutils.RandomJet()
+	firstPending := core.NewRecordID(9, []byte{1, 2, 3})
+	secondPending := core.NewRecordID(8, []byte{3, 2, 1})
+
+	currentPulse := storage.Pulse{SerialNumber: 10, Pulse: core.Pulse{PulseNumber: 10}}
+	firstPendingPulse := storage.Pulse{SerialNumber: 9, Pulse: core.Pulse{PulseNumber: 9}}
+	secondPendingPulse := storage.Pulse{SerialNumber: 8, Pulse: core.Pulse{PulseNumber: 8}}
+
+	pulseTracker := storage.NewPulseTrackerMock(mc)
+	mb := testutils.NewMessageBusMock(mc)
+
+	pm := &PulseManager{
+		PulseTracker: pulseTracker,
+		Bus:          mb,
+	}
+
+	pulseTracker.GetPulseFunc = func(p context.Context, p1 core.PulseNumber) (r *storage.Pulse, r1 error) {
+		switch p1 {
+		case 10:
+			return &currentPulse, nil
+		case 9:
+			return &firstPendingPulse, nil
+		case 8:
+			return &secondPendingPulse, nil
+		}
+		panic("test is totally broken")
+	}
+
+	mb.SendFunc = func(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) (r core.Reply, r1 error) {
+		arn, ok := p1.(*message.AbandonedRequestsNotification)
+		require.Equal(t, true, ok)
+		require.Equal(t, randomRoot, arn.Object)
+		return &reply.OK{}, nil
+	}
+
+	// Act
+	err := pm.sendAbandonedRequests(ctx, currentPulse.Pulse, map[core.RecordID]map[core.RecordID]struct{}{
+		randomRoot: {
+			*firstPending:  {},
+			*secondPending: {},
+		},
+	})
+	require.NoError(t, err)
+
+	// Assert
+	mc.Finish()
+	require.Equal(t, uint64(1), mb.SendCounter)
+
 }

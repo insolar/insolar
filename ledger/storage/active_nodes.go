@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -21,6 +21,15 @@ import (
 
 	"github.com/insolar/insolar/core"
 )
+
+// ActiveNodesStorage provides info about active nodes
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage.ActiveNodesStorage -o ./ -s _mock.go
+type ActiveNodesStorage interface {
+	SetActiveNodes(pulse core.PulseNumber, nodes []core.Node) error
+	GetActiveNodes(pulse core.PulseNumber) ([]core.Node, error)
+	GetActiveNodesByRole(pulse core.PulseNumber, role core.StaticRole) ([]core.Node, error)
+	RemoveActiveNodesUntil(pulse core.PulseNumber)
+}
 
 // SetActiveNodes saves active nodes for pulse in memory.
 func (db *DB) SetActiveNodes(pulse core.PulseNumber, nodes []core.Node) error {

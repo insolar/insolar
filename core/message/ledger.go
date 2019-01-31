@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -470,8 +470,7 @@ func (m *GetJet) DefaultTarget() *core.RecordRef {
 type AbandonedRequestsNotification struct {
 	ledgerMessage
 
-	Object   core.RecordID
-	Requests []core.RecordID
+	Object core.RecordID
 }
 
 // Type implementation of Message interface.

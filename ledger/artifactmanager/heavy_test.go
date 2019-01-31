@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -53,7 +53,12 @@ func TestLedgerArtifactManager_handleHeavy(t *testing.T) {
 	certificate.GetRoleMock.Return(core.StaticRoleHeavyMaterial)
 
 	// message hanler with mok
-	mh := NewMessageHandler(db, nil, certificate)
+	mh := NewMessageHandler(nil, certificate)
+	mh.JetStorage = db
+	mh.ActiveNodesStorage = db
+	mh.DBContext = db
+	mh.PulseTracker = db
+	mh.ObjectStorage = db
 
 	provideMock := recentstorage.NewProviderMock(t)
 	provideMock.GetStorageFunc = func(ctx context.Context, p core.RecordID) (r recentstorage.RecentStorage) {

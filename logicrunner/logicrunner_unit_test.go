@@ -1,3 +1,19 @@
+/*
+ *    Copyright 2019 Insolar Technologies
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
+
 package logicrunner
 
 import (
@@ -317,6 +333,8 @@ func TestHandlePendingFinishedMessage(
 		&message.PendingFinished{Reference: objectRef},
 	)
 
+	parcel.DefaultTargetMock.Return(&core.RecordRef{})
+
 	re, err := lr.HandlePendingFinishedMessage(ctx, parcel)
 	require.NoError(t, err)
 	require.Equal(t, &reply.OK{}, re)
@@ -411,6 +429,8 @@ func TestLogicRunner_HandleStillExecutingMessage(
 		&message.StillExecuting{Reference: objectRef},
 	)
 
+	parcel.DefaultTargetMock.Return(&core.RecordRef{})
+
 	re, err := lr.HandleStillExecutingMessage(ctx, parcel)
 	require.NoError(t, err)
 	require.Equal(t, &reply.OK{}, re)
@@ -464,4 +484,54 @@ func TestLogicRunner_OnPulse_StillExecuting(t *testing.T) {
 	err := lr.OnPulse(ctx, pulse)
 	require.NoError(t, err)
 	assert.NotNil(t, lr.state[objectRef].ExecutionState)
+}
+
+func TestLogicRunner_NoExcessiveAmends(t *testing.T) {
+	t.Parallel()
+	ctx := inslogger.TestContext(t)
+	mc := minimock.NewController(t)
+	defer mc.Finish()
+
+	am := testutils.NewArtifactManagerMock(t)
+	lr, _ := NewLogicRunner(&configuration.LogicRunner{})
+	lr.ArtifactManager = am
+	am.UpdateObjectMock.Return(nil, nil)
+
+	randRef := testutils.RandomRef()
+
+	es := &ExecutionState{ArtifactManager: am, Queue: make([]ExecutionQueueElement, 0)}
+	es.Queue = append(es.Queue, ExecutionQueueElement{})
+	es.objectbody = &ObjectBody{}
+	es.objectbody.CodeMachineType = core.MachineTypeBuiltin
+	es.Current = &CurrentExecution{}
+	es.Current.LogicContext = &core.LogicCallContext{}
+	es.Current.Request = &randRef
+	es.objectbody.CodeRef = &randRef
+
+	data := []byte(testutils.RandomString())
+	es.objectbody.Object = data
+
+	mle := testutils.NewMachineLogicExecutorMock(t)
+	lr.Executors[core.MachineTypeBuiltin] = mle
+	mle.CallMethodMock.Return(data, nil, nil)
+
+	msg := &message.CallMethod{
+		ObjectRef: randRef,
+		Method:    "some",
+	}
+
+	// In this case Update isn't send to ledger (objects data/newData are the same)
+	am.RegisterResultMock.Return(nil, nil)
+
+	_, err := lr.executeMethodCall(ctx, es, msg)
+	require.NoError(t, err)
+	require.Equal(t, uint64(0), am.UpdateObjectCounter)
+
+	// In this case Update is send to ledger (objects data/newData are different)
+	newData := make([]byte, 5, 5)
+	mle.CallMethodMock.Return(newData, nil, nil)
+
+	_, err = lr.executeMethodCall(ctx, es, msg)
+	require.NoError(t, err)
+	require.Equal(t, uint64(1), am.UpdateObjectCounter)
 }
