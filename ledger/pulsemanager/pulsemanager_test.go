@@ -177,7 +177,6 @@ func TestPulseManager_Set_SendAbandonedRequests(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
 
-	expectedJetID := testutils.RandomJet()
 	firstPending := core.NewRecordID(9, []byte{1, 2, 3})
 	secondPending := core.NewRecordID(8, []byte{3, 2, 1})
 
@@ -186,26 +185,13 @@ func TestPulseManager_Set_SendAbandonedRequests(t *testing.T) {
 	secondPendingPulse := storage.Pulse{SerialNumber: 8, Pulse: core.Pulse{PulseNumber: 8}}
 
 	pulseTracker := storage.NewPulseTrackerMock(mc)
-	recentStorage := recentstorage.NewRecentStorageMock(mc)
-	recentStorageProvider := recentstorage.NewProviderMock(mc)
 	mb := testutils.NewMessageBusMock(mc)
 
 	pm := &PulseManager{
-		PulseTracker:          pulseTracker,
-		RecentStorageProvider: recentStorageProvider,
-		Bus:                   mb,
+		PulseTracker: pulseTracker,
+		Bus:          mb,
 	}
 
-	recentStorageProvider.GetStorageFunc = func(p context.Context, jetID core.RecordID) (r recentstorage.RecentStorage) {
-		require.Equal(t, expectedJetID, jetID)
-		return recentStorage
-	}
-	recentStorage.GetRequestsFunc = func() (r map[core.RecordID]map[core.RecordID]struct{}) {
-		return map[core.RecordID]map[core.RecordID]struct{}{
-			*firstPending:  {},
-			*secondPending: {},
-		}
-	}
 	pulseTracker.GetPulseFunc = func(p context.Context, p1 core.PulseNumber) (r *storage.Pulse, r1 error) {
 		switch p1 {
 		case 10:
@@ -226,7 +212,10 @@ func TestPulseManager_Set_SendAbandonedRequests(t *testing.T) {
 	}
 
 	// Act
-	err := pm.sendAbandonedRequests(ctx, &currentPulse.Pulse, expectedJetID)
+	err := pm.sendAbandonedRequests(ctx, &currentPulse.Pulse, map[core.RecordID]map[core.RecordID]struct{}{
+		*firstPending:  {},
+		*secondPending: {},
+	})
 	require.NoError(t, err)
 
 	// Assert
