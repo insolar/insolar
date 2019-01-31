@@ -66,10 +66,10 @@ type ExecutionState struct {
 
 	Behaviour ValidationBehaviour
 
-	Current              *CurrentExecution
-	Queue                []ExecutionQueueElement
-	QueueProcessorActive bool
-	LightMaterialHasMore bool
+	Current               *CurrentExecution
+	Queue                 []ExecutionQueueElement
+	QueueProcessorActive  bool
+	LedgerHasMoreRequests bool
 
 	// TODO not using in validation, need separate ObjectState.ExecutionState and ObjectState.Validation from ExecutionState struct
 	pending          message.PendingState
@@ -185,17 +185,17 @@ func (es *ExecutionState) CheckPendingRequests(ctx context.Context, inMsg core.M
 
 // releaseQueue must be calling only with es.Lock
 func (es *ExecutionState) releaseQueue() ([]ExecutionQueueElement, bool) {
-	lightMaterialHasMore := false
+	ledgerHasMoreRequest := false
 	q := es.Queue
 
 	if len(q) > maxQueueLength {
 		q = q[:maxQueueLength]
-		lightMaterialHasMore = true
+		ledgerHasMoreRequest = true
 	}
 
 	es.Queue = make([]ExecutionQueueElement, 0)
 
-	return q, lightMaterialHasMore
+	return q, ledgerHasMoreRequest
 }
 
 // LogicRunner is a general interface of contract executor
@@ -737,8 +737,8 @@ func (lr *LogicRunner) prepareObjectState(ctx context.Context, msg *message.Exec
 	}
 
 	// set false to true is good, set true to false may be wrong, better make unnecessary call
-	if !es.LightMaterialHasMore && msg.LightMaterialHasMore {
-		es.LightMaterialHasMore = msg.LightMaterialHasMore
+	if !es.LedgerHasMoreRequests && msg.LightMaterialHasMore {
+		es.LedgerHasMoreRequests = msg.LightMaterialHasMore
 	}
 
 	//prepare Queue
@@ -970,13 +970,13 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 						)
 						es.pending = message.NotPending
 						sendExecResults = true
-						es.LightMaterialHasMore = true
+						es.LedgerHasMoreRequests = true
 					}
 
 					state.ExecutionState = nil
 				}
 
-				queue, lightMaterialHasMore := es.releaseQueue()
+				queue, ledgerHasMoreRequest := es.releaseQueue()
 				if len(queue) > 0 || sendExecResults {
 					// TODO: we also should send when executed something for validation
 					// TODO: now validation is disabled
@@ -996,7 +996,7 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 							Pending:              es.pending,
 							Requests:             requests,
 							Queue:                messagesQueue,
-							LightMaterialHasMore: es.LightMaterialHasMore || lightMaterialHasMore,
+							LightMaterialHasMore: es.LedgerHasMoreRequests || ledgerHasMoreRequest,
 						},
 					)
 				}
