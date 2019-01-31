@@ -224,13 +224,9 @@ spec:
           tty: true
           stdin: true
           command:
-            - insgorund
-            - -l
-            - 127.0.0.1:18181
-            - --rpc
-            - 127.0.0.1:18182
-            - -d
-            - /tmp/code
+            - bash
+            - -c
+            - "/go/bin/insgorund -l 127.0.0.1:18181 --rpc 127.0.0.1:18182 -d /tmp/code > /logs/$(POD_NAME).insgorund.log 2>&1"
           env:
             - name: HOME
               value: /opt/insolar
@@ -292,7 +288,7 @@ spec:
         emptyDir: {}
       - name: node-log
         hostPath:
-          path: /Users/ilyapetrusenko/Documents/_work/src/github.com/insolar/insolar/ci/local-dev/logs/
+          path: /Users/ilyapetrusenko/go/src/github.com/insolar/insolar/ci/local-dev/logs/
           type: DirectoryOrCreate
   updateStrategy:
     type: OnDelete
