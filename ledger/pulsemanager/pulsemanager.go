@@ -248,7 +248,7 @@ func (m *PulseManager) sendAbandonedRequests(ctx context.Context, pulse *core.Pu
 				return
 			}
 
-			if pulse.SerialNumber-currentDBPulse.SerialNumber < 2 {
+			if currentDBPulse.SerialNumber-pulse.SerialNumber < 2 {
 				return
 			}
 
