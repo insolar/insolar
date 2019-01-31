@@ -123,7 +123,7 @@ func (m *PulseManager) processEndPulse(
 	ctx context.Context,
 	jets []jetInfo,
 	prevPulseNumber core.PulseNumber,
-	currentPulse, newPulse *core.Pulse,
+	currentPulse, newPulse core.Pulse,
 ) error {
 	var g errgroup.Group
 	logger := inslogger.FromContext(ctx)
@@ -132,6 +132,7 @@ func (m *PulseManager) processEndPulse(
 
 	for _, i := range jets {
 		info := i
+
 		g.Go(func() error {
 			drop, dropSerialized, _, err := m.createDrop(ctx, info.id, prevPulseNumber, currentPulse.PulseNumber)
 			logger.Debugf("[jet]: %v create drop. Pulse: %v, Error: %s", info.id.DebugString(), currentPulse.PulseNumber, err)
@@ -147,7 +148,6 @@ func (m *PulseManager) processEndPulse(
 			}
 
 			logger := inslogger.FromContext(ctx)
-
 			sender := func(msg message.HotData, jetID core.RecordID) {
 				ctx, span := instracer.StartSpan(ctx, "pulse.send_hot")
 				defer span.End()
@@ -184,14 +184,21 @@ func (m *PulseManager) processEndPulse(
 				}
 			}
 
+			requests := m.RecentStorageProvider.GetStorage(ctx, info.id).GetRequests()
+			go func() {
+				err := m.sendAbandonedRequests(
+					ctx,
+					newPulse,
+					requests,
+				)
+				logger.Error(err)
+			}()
+
 			// FIXME: @andreyromancev. 09.01.2019. Temporary disabled validation. Uncomment when jet split works properly.
 			// dropErr := m.processDrop(ctx, jetID, currentPulse, dropSerialized, messages)
 			// if dropErr != nil {
 			// 	return errors.Wrap(dropErr, "processDrop failed")
 			// }
-
-			// TODO: @andreyromancev. 20.12.18. uncomment me when pending notifications required.
-			// m.sendAbandonedRequests(ctx, newPulse, jetID)
 
 			return nil
 		})
@@ -204,35 +211,59 @@ func (m *PulseManager) processEndPulse(
 	return nil
 }
 
-// TODO: @andreyromancev. 20.12.18. uncomment me when pending notifications required.
-// func (m *PulseManager) sendAbandonedRequests(ctx context.Context, pulse *core.Pulse, jetID core.RecordID) {
-// 	pendingRequests := m.RecentStorageProvider.GetStorage(jetID).GetRequests()
-// 	wg := sync.WaitGroup{}
-// 	wg.Add(len(pendingRequests))
-// 	for objID, requests := range pendingRequests {
-// 		go func(object core.RecordID, objectRequests map[core.RecordID]struct{}) {
-// 			defer wg.Done()
-//
-// 			var toSend []core.RecordID
-// 			for reqID := range objectRequests {
-// 				toSend = append(toSend, reqID)
-// 			}
-// 			rep, err := m.Bus.Send(ctx, &message.AbandonedRequestsNotification{
-// 				Object:   object,
-// 				Requests: toSend,
-// 			}, *pulse, nil)
-// 			if err != nil {
-// 				inslogger.FromContext(ctx).Error("failed to notify about pending requests")
-// 				return
-// 			}
-// 			if _, ok := rep.(*reply.OK); !ok {
-// 				inslogger.FromContext(ctx).Error("received unexpected reply on pending notification")
-// 			}
-// 		}(objID, requests)
-// 	}
-//
-// 	wg.Wait()
-// }
+func (m *PulseManager) sendAbandonedRequests(
+	ctx context.Context,
+	pulse core.Pulse,
+	pendingRequests map[core.RecordID]map[core.RecordID]struct{},
+) error {
+	ctx, span := instracer.StartSpan(ctx, "pulse.sendAbandonedRequests")
+	defer span.End()
+
+	logger := inslogger.FromContext(ctx)
+	currentDBPulse, err := m.PulseTracker.GetPulse(ctx, pulse.PulseNumber)
+	if err != nil {
+		return err
+	}
+
+	wg := sync.WaitGroup{}
+	wg.Add(len(pendingRequests))
+	for objID, requests := range pendingRequests {
+		go func(object core.RecordID, requests map[core.RecordID]struct{}) {
+			defer wg.Done()
+			for request := range requests {
+				pulse, err := m.PulseTracker.GetPulse(ctx, request.Pulse())
+				if err != nil {
+					logger.Error("failed to notify about pending requests. failed to calculate pulse")
+					return
+				}
+
+				if currentDBPulse.SerialNumber-pulse.SerialNumber < 2 {
+					continue
+				}
+
+				rep, err := m.Bus.Send(
+					ctx,
+					&message.AbandonedRequestsNotification{
+						Object: object,
+					},
+					nil,
+				)
+				if err != nil {
+					logger.Error("failed to notify about pending requests")
+					return
+				}
+				if _, ok := rep.(*reply.OK); !ok {
+					logger.Error("received unexpected reply on pending notification")
+				}
+
+				return
+			}
+		}(objID, requests)
+	}
+
+	wg.Wait()
+	return nil
+}
 
 func (m *PulseManager) createDrop(
 	ctx context.Context,
@@ -556,7 +587,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 	// execute only on material executor
 	// TODO: do as much as possible async.
 	if m.NodeNet.GetOrigin().Role() == core.StaticRoleLightMaterial {
-		err = m.processEndPulse(ctx, jets, *prevPulseNumber, oldPulse, &newPulse)
+		err = m.processEndPulse(ctx, jets, *prevPulseNumber, *oldPulse, newPulse)
 		if err != nil {
 			return err
 		}

@@ -470,8 +470,7 @@ func (m *GetJet) DefaultTarget() *core.RecordRef {
 type AbandonedRequestsNotification struct {
 	ledgerMessage
 
-	Object   core.RecordID
-	Requests []core.RecordID
+	Object core.RecordID
 }
 
 // Type implementation of Message interface.
