@@ -787,6 +787,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 
 		logger.WithFields(map[string]interface{}{"jet": jetID.DebugString()}).Debugf("saved object. jet: %v, id: %v, state: %v", jetID.DebugString(), msg.Object.Record().DebugString(), id.DebugString())
 
+		idx.LatestUpdate = parcel.Pulse()
 		return tx.SetObjectIndex(ctx, jetID, msg.Object.Record(), idx)
 	})
 	if err != nil {
@@ -849,6 +850,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel core.Pa
 		if msg.AsType != nil {
 			idx.Delegates[*msg.AsType] = msg.Child
 		}
+		idx.LatestUpdate = parcel.Pulse()
 		err = tx.SetObjectIndex(ctx, jetID, msg.Parent.Record(), idx)
 		if err != nil {
 			return err
@@ -950,6 +952,7 @@ func (h *MessageHandler) handleValidateRecord(ctx context.Context, parcel core.P
 			} else {
 				idx.LatestState = idx.LatestStateApproved
 			}
+			idx.LatestUpdate = parcel.Pulse()
 			err = tx.SetObjectIndex(ctx, jetID, msg.Object.Record(), idx)
 			if err != nil {
 				return errors.Wrap(err, "failed to save object index")

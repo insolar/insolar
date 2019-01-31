@@ -482,6 +482,73 @@ func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 	assert.Equal(t, objRep.State, *idx.LatestState)
 }
 
+func TestMessageHandler_HandleUpdateObject_UpdateIndexState(t *testing.T) {
+	t.Parallel()
+	// Arrange
+	ctx := inslogger.TestContext(t)
+	mc := minimock.NewController(t)
+	db, cleaner := storagetest.TmpDB(ctx, t)
+	defer cleaner()
+	defer mc.Finish()
+	jetID := *jet.NewID(0, nil)
+
+	recentStorageMock := recentstorage.NewRecentStorageMock(t)
+	recentStorageMock.AddPendingRequestMock.Return()
+	recentStorageMock.AddObjectMock.Return()
+	recentStorageMock.RemovePendingRequestMock.Return()
+
+	provideMock := recentstorage.NewProviderMock(t)
+	provideMock.GetStorageFunc = func(ctx context.Context, p core.RecordID) (r recentstorage.RecentStorage) {
+		return recentStorageMock
+	}
+
+	certificate := testutils.NewCertificateMock(t)
+	certificate.GetRoleMock.Return(core.StaticRoleLightMaterial)
+
+	h := NewMessageHandler(&configuration.Ledger{
+		LightChainLimit: 3,
+	}, certificate)
+	h.JetStorage = db
+	h.ActiveNodesStorage = db
+	h.DBContext = db
+	h.PulseTracker = db
+	h.ObjectStorage = db
+	h.RecentStorageProvider = provideMock
+
+	objIndex := index.ObjectLifeline{
+		LatestState:  genRandomID(0),
+		State:        record.StateActivation,
+		LatestUpdate: 0,
+	}
+	amendRecord := record.ObjectAmendRecord{
+		PrevState: *objIndex.LatestState,
+	}
+	amendHash := db.PlatformCryptographyScheme.ReferenceHasher()
+	_, err := amendRecord.WriteHashData(amendHash)
+	require.NoError(t, err)
+
+	msg := message.UpdateObject{
+		Record: record.SerializeRecord(&amendRecord),
+		Object: *genRandomRef(0),
+	}
+	err = db.SetObjectIndex(ctx, jetID, msg.Object.Record(), &objIndex)
+	require.NoError(t, err)
+
+	// Act
+	rep, err := h.handleUpdateObject(contextWithJet(ctx, jetID), &message.Parcel{
+		Msg:         &msg,
+		PulseNumber: core.FirstPulseNumber,
+	})
+	require.NoError(t, err)
+	_, ok := rep.(*reply.Object)
+	require.True(t, ok)
+
+	// Arrange
+	idx, err := db.GetObjectIndex(ctx, jetID, msg.Object.Record(), false)
+	require.NoError(t, err)
+	require.Equal(t, core.FirstPulseNumber, int(idx.LatestUpdate))
+}
+
 func TestMessageHandler_HandleGetObjectIndex(t *testing.T) {
 	t.Parallel()
 	ctx := inslogger.TestContext(t)
@@ -763,6 +830,70 @@ func TestMessageHandler_HandleRegisterChild_FetchesIndexFromHeavy(t *testing.T) 
 	idx, err := db.GetObjectIndex(ctx, jetID, msg.Parent.Record(), false)
 	require.NoError(t, err)
 	assert.Equal(t, childID, idx.ChildPointer)
+}
+
+func TestMessageHandler_HandleRegisterChild_IndexStateUpdated(t *testing.T) {
+	t.Parallel()
+
+	// Arrange
+	ctx := inslogger.TestContext(t)
+	mc := minimock.NewController(t)
+	db, cleaner := storagetest.TmpDB(ctx, t)
+	defer cleaner()
+	defer mc.Finish()
+	jetID := *jet.NewID(0, nil)
+
+	recentStorageMock := recentstorage.NewRecentStorageMock(t)
+	recentStorageMock.AddPendingRequestMock.Return()
+	recentStorageMock.AddObjectMock.Return()
+	recentStorageMock.RemovePendingRequestMock.Return()
+
+	provideMock := recentstorage.NewProviderMock(t)
+	provideMock.GetStorageFunc = func(ctx context.Context, p core.RecordID) (r recentstorage.RecentStorage) {
+		return recentStorageMock
+	}
+
+	certificate := testutils.NewCertificateMock(t)
+	certificate.GetRoleMock.Return(core.StaticRoleLightMaterial)
+
+	h := NewMessageHandler(&configuration.Ledger{
+		LightChainLimit: 2,
+	}, certificate)
+	h.JetStorage = db
+	h.ActiveNodesStorage = db
+	h.DBContext = db
+	h.PulseTracker = db
+	h.ObjectStorage = db
+	h.RecentStorageProvider = provideMock
+
+	objIndex := index.ObjectLifeline{
+		LatestState:  genRandomID(0),
+		State:        record.StateActivation,
+		LatestUpdate: core.FirstPulseNumber,
+	}
+	childRecord := record.ChildRecord{
+		Ref:       *genRandomRef(0),
+		PrevChild: nil,
+	}
+	msg := message.RegisterChild{
+		Record: record.SerializeRecord(&childRecord),
+		Parent: *genRandomRef(0),
+	}
+
+	err := db.SetObjectIndex(ctx, jetID, msg.Parent.Record(), &objIndex)
+	require.NoError(t, err)
+
+	// Act
+	_, err = h.handleRegisterChild(contextWithJet(ctx, jetID), &message.Parcel{
+		Msg:         &msg,
+		PulseNumber: core.FirstPulseNumber + 100,
+	})
+	require.NoError(t, err)
+
+	// Assert
+	idx, err := db.GetObjectIndex(ctx, jetID, msg.Parent.Record(), false)
+	require.NoError(t, err)
+	require.Equal(t, int(idx.LatestUpdate), core.FirstPulseNumber+100)
 }
 
 const testDropSize uint64 = 100
