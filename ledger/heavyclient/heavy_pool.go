@@ -150,19 +150,26 @@ func (scp *Pool) LightCleanup(ctx context.Context, untilPN core.PulseNumber, rsp
 		// This is how we can get all jets served by
 		// jets, err := scp.db.GetAllSyncClientJets(ctx)
 
-		for _, c := range scp.AllClients(ctx) {
+		allClients := scp.AllClients(ctx)
+		var wg sync.WaitGroup
+		wg.Add(len(allClients))
+		for _, c := range allClients {
 			jetID := c.jetID
-			inslogger.FromContext(ctx).Debugf("Start light cleanup, until pulse = %v, jet = %v",
-				untilPN, jetID.DebugString())
-			rmStat, err := scp.dbContext.RemoveAllForJetUntilPulse(ctx, jetID, untilPN, rsp.GetStorage(ctx, jetID))
-			if err != nil {
-				inslogger.FromContext(ctx).Errorf("Error on light cleanup, until pulse = %v, jet = %v: %v",
-					untilPN, jetID.DebugString(), err)
-				continue
-			}
-			inslogger.FromContext(ctx).Debugf("End light cleanup, rm stat=%#v (until pulse = %v, jet = %v)",
-				rmStat, untilPN, jetID.DebugString())
+			go func() {
+				defer wg.Done()
+				inslogger.FromContext(ctx).Debugf("Start light cleanup, until pulse = %v, jet = %v",
+					untilPN, jetID.DebugString())
+				rmStat, err := scp.dbContext.RemoveAllForJetUntilPulse(ctx, jetID, untilPN, rsp.GetStorage(ctx, jetID))
+				if err != nil {
+					inslogger.FromContext(ctx).Errorf("Error on light cleanup, until pulse = %v, jet = %v: %v",
+						untilPN, jetID.DebugString(), err)
+					return
+				}
+				inslogger.FromContext(ctx).Debugf("End light cleanup, rm stat=%#v (until pulse = %v, jet = %v)",
+					rmStat, untilPN, jetID.DebugString())
+			}()
 		}
+		wg.Wait()
 		return nil, nil
 	})
 	return err
