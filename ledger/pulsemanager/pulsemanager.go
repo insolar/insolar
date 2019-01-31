@@ -226,6 +226,9 @@ func (m *PulseManager) processEndPulse(
 }
 
 func (m *PulseManager) sendAbandonedRequests(ctx context.Context, pulse *core.Pulse, jetID core.RecordID) error {
+	ctx, span := instracer.StartSpan(ctx, "pulse.sendAbandonedRequests")
+	defer span.End()
+
 	logger := inslogger.FromContext(ctx)
 	currentDBPulse, err := m.PulseTracker.GetPulse(ctx, pulse.PulseNumber)
 	if err != nil {
