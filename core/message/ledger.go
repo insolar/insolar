@@ -480,7 +480,7 @@ func (*AbandonedRequestsNotification) Type() core.MessageType {
 
 // AllowedSenderObjectAndRole implements interface method
 func (m *AbandonedRequestsNotification) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
-	return nil, core.DynamicRoleLightExecutor
+	return nil, core.DynamicRoleUndefined
 }
 
 // DefaultRole returns role for this event

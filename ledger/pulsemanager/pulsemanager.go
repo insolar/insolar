@@ -170,11 +170,35 @@ func (m *PulseManager) processEndPulse(
 			}
 
 			if info.left == nil && info.right == nil {
+				err := m.sendAbandonedRequests(ctx, newPulse, info.id)
+				if err != nil {
+					logger.Errorf("problems with notification about pending requests jet - %v, err - %v", info.id.DebugString(), err)
+				}
 				// No split happened.
 				if !info.mineNext {
 					go sender(*msg, info.id)
 				}
 			} else {
+				wg := sync.WaitGroup{}
+				wg.Add(2)
+
+				go func() {
+					err := m.sendAbandonedRequests(ctx, newPulse, info.left.id)
+					if err != nil {
+						logger.Errorf("problems with notification about pending requests jet - %v, err - %v", info.left.id.DebugString(), err)
+					}
+					wg.Done()
+				}()
+
+				go func() {
+					err := m.sendAbandonedRequests(ctx, newPulse, info.right.id)
+					if err != nil {
+						logger.Errorf("problems with notification about pending requests jet - %v, err - %v", info.right.id.DebugString(), err)
+					}
+					wg.Done()
+				}()
+				wg.Wait()
+
 				// Split happened.
 				if !info.left.mineNext {
 					go sender(*msg, info.left.id)
@@ -190,8 +214,6 @@ func (m *PulseManager) processEndPulse(
 			// 	return errors.Wrap(dropErr, "processDrop failed")
 			// }
 
-			m.sendAbandonedRequests(ctx, newPulse, jetID)
-
 			return nil
 		})
 	}
@@ -203,13 +225,29 @@ func (m *PulseManager) processEndPulse(
 	return nil
 }
 
-func (m *PulseManager) sendAbandonedRequests(ctx context.Context, pulse *core.Pulse, jetID core.RecordID) {
+func (m *PulseManager) sendAbandonedRequests(ctx context.Context, pulse *core.Pulse, jetID core.RecordID) error {
+	logger := inslogger.FromContext(ctx)
+	currentDBPulse, err := m.PulseTracker.GetPulse(ctx, pulse.PulseNumber)
+	if err != nil {
+		return err
+	}
+
 	pendingRequests := m.RecentStorageProvider.GetStorage(ctx, jetID).GetRequests()
 	wg := sync.WaitGroup{}
 	wg.Add(len(pendingRequests))
 	for objID := range pendingRequests {
 		go func(object core.RecordID) {
 			defer wg.Done()
+
+			pulse, err := m.PulseTracker.GetPulse(ctx, object.Pulse())
+			if err != nil {
+				logger.Error("failed to notify about pending requests. failed to calculate pulse")
+				return
+			}
+
+			if pulse.SerialNumber-currentDBPulse.SerialNumber < 2 {
+				return
+			}
 
 			rep, err := m.Bus.Send(
 				ctx,
@@ -219,16 +257,17 @@ func (m *PulseManager) sendAbandonedRequests(ctx context.Context, pulse *core.Pu
 				nil,
 			)
 			if err != nil {
-				inslogger.FromContext(ctx).Error("failed to notify about pending requests")
+				logger.Error("failed to notify about pending requests")
 				return
 			}
 			if _, ok := rep.(*reply.OK); !ok {
-				inslogger.FromContext(ctx).Error("received unexpected reply on pending notification")
+				logger.Error("received unexpected reply on pending notification")
 			}
 		}(objID)
 	}
 
 	wg.Wait()
+	return nil
 }
 
 func (m *PulseManager) createDrop(
