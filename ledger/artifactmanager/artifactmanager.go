@@ -19,20 +19,15 @@ package artifactmanager
 import (
 	"context"
 	"fmt"
-	"sync"
 
-	"go.opencensus.io/trace"
-
-	"github.com/insolar/insolar/instrumentation/instracer"
-	"go.opencensus.io/stats"
-
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/record"
 )
@@ -148,7 +143,6 @@ func (m *LedgerArtifactManager) GetCode(
 	)
 
 	genericReact, err := sender(ctx, &message.GetCode{Code: code}, nil)
-
 
 	if err != nil {
 		return nil, err
