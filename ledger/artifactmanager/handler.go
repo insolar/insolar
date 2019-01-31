@@ -205,7 +205,7 @@ func (h *MessageHandler) setHandlersForLight(m *middleware) {
 
 	h.Bus.MustRegister(
 		core.TypeGetRequest,
-		Build(
+		BuildMiddleware(
 			h.handleGetRequest,
 			m.checkJet,
 			instrumentHandler("handleGetRequest"),
@@ -723,7 +723,7 @@ func (h *MessageHandler) handleGetRequest(ctx context.Context, parcel core.Parce
 	jetID := jetFromContext(ctx)
 	msg := parcel.Message().(*message.GetRequest)
 
-	rec, err := h.db.GetRecord(ctx, jetID, &msg.Request)
+	rec, err := h.ObjectStorage.GetRecord(ctx, jetID, &msg.Request)
 	if err != nil {
 		return nil, errors.New("failed to fetch request")
 	}
