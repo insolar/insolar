@@ -96,6 +96,7 @@ func (m *LedgerArtifactManager) RegisterRequest(
 			span.AddAttributes(trace.StringAttribute("error", err.Error()))
 		}
 		span.End()
+		instrument(ctx, "RegisterRequest").err(&err).end()
 	}()
 
 	currentPulse, err := m.PulseStorage.Current(ctx)
@@ -135,6 +136,7 @@ func (m *LedgerArtifactManager) GetCode(
 			span.AddAttributes(trace.StringAttribute("error", err.Error()))
 		}
 		span.End()
+		instrument(ctx, "GetCode").err(&err).end()
 	}()
 
 	m.codeCacheLock.Lock()
@@ -152,9 +154,11 @@ func (m *LedgerArtifactManager) GetCode(
 		return entry.desc, nil
 	}
 
+	backCtx := ctx
 	ctx, span = instracer.StartSpan(ctx, "artifactmanager.GetCode sendAndRetryJet")
 	genericReact, err := m.bus(ctx).Send(ctx, &message.GetCode{Code: code}, nil)
 	span.End()
+	ctx = backCtx
 
 	if err != nil {
 		return nil, err
@@ -196,6 +200,10 @@ func (m *LedgerArtifactManager) GetObject(
 			span.AddAttributes(trace.StringAttribute("error", err.Error()))
 		}
 		span.End()
+		if err != nil && err == ErrObjectDeactivated {
+			err = nil // megahack: threat it 2xx
+		}
+		instrument(ctx, "GetObject").err(&err).end()
 	}()
 
 	currentPulse, err := m.PulseStorage.Current(ctx)
@@ -271,6 +279,7 @@ func (m *LedgerArtifactManager) GetDelegate(
 			span.AddAttributes(trace.StringAttribute("error", err.Error()))
 		}
 		span.End()
+		instrument(ctx, "GetDelegate").err(&err).end()
 	}()
 
 	currentPulse, err := m.PulseStorage.Current(ctx)
@@ -308,6 +317,7 @@ func (m *LedgerArtifactManager) GetChildren(
 			span.AddAttributes(trace.StringAttribute("error", err.Error()))
 		}
 		span.End()
+		instrument(ctx, "GetChildren").err(&err).end()
 	}()
 
 	latestPulse, err := m.PulseStorage.Current(ctx)
@@ -332,6 +342,7 @@ func (m *LedgerArtifactManager) DeclareType(
 			span.AddAttributes(trace.StringAttribute("error", err.Error()))
 		}
 		span.End()
+		instrument(ctx, "DeclareType").err(&err).end()
 	}()
 
 	currentPulse, err := m.PulseStorage.Current(ctx)
@@ -371,6 +382,7 @@ func (m *LedgerArtifactManager) DeployCode(
 			span.AddAttributes(trace.StringAttribute("error", err.Error()))
 		}
 		span.End()
+		instrument(ctx, "DeployCode").err(&err).end()
 	}()
 
 	currentPulse, err := m.PulseStorage.Current(ctx)
@@ -422,6 +434,7 @@ func (m *LedgerArtifactManager) ActivatePrototype(
 			span.AddAttributes(trace.StringAttribute("error", err.Error()))
 		}
 		span.End()
+		instrument(ctx, "ActivatePrototype").err(&err).end()
 	}()
 	desc, err := m.activateObject(ctx, domain, object, code, true, parent, false, memory)
 	return desc, err
@@ -444,6 +457,7 @@ func (m *LedgerArtifactManager) ActivateObject(
 			span.AddAttributes(trace.StringAttribute("error", err.Error()))
 		}
 		span.End()
+		instrument(ctx, "ActivateObject").err(&err).end()
 	}()
 	desc, err := m.activateObject(ctx, domain, object, prototype, false, parent, asDelegate, memory)
 	return desc, err
@@ -463,6 +477,7 @@ func (m *LedgerArtifactManager) DeactivateObject(
 			span.AddAttributes(trace.StringAttribute("error", err.Error()))
 		}
 		span.End()
+		instrument(ctx, "DeactivateObject").err(&err).end()
 	}()
 
 	currentPulse, err := m.PulseStorage.Current(ctx)
@@ -504,6 +519,7 @@ func (m *LedgerArtifactManager) UpdatePrototype(
 			span.AddAttributes(trace.StringAttribute("error", err.Error()))
 		}
 		span.End()
+		instrument(ctx, "UpdatePrototype").err(&err).end()
 	}()
 
 	if !object.IsPrototype() {
@@ -531,6 +547,7 @@ func (m *LedgerArtifactManager) UpdateObject(
 			span.AddAttributes(trace.StringAttribute("error", err.Error()))
 		}
 		span.End()
+		instrument(ctx, "UpdateObject").err(&err).end()
 	}()
 
 	if object.IsPrototype() {
@@ -559,6 +576,7 @@ func (m *LedgerArtifactManager) RegisterValidation(
 			span.AddAttributes(trace.StringAttribute("error", err.Error()))
 		}
 		span.End()
+		instrument(ctx, "RegisterValidation").err(&err).end()
 	}()
 
 	msg := message.ValidateRecord{
@@ -588,6 +606,7 @@ func (m *LedgerArtifactManager) RegisterResult(
 			span.AddAttributes(trace.StringAttribute("error", err.Error()))
 		}
 		span.End()
+		instrument(ctx, "RegisterResult").err(&err).end()
 	}()
 
 	currentPulse, err := m.PulseStorage.Current(ctx)
