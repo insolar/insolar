@@ -966,6 +966,7 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 						)
 						es.pending = message.NotPending
 						sendExecResults = true
+						es.LightMaterialHasMore = true
 					}
 
 					state.ExecutionState = nil
