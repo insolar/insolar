@@ -227,35 +227,38 @@ func (m *PulseManager) sendAbandonedRequests(
 
 	wg := sync.WaitGroup{}
 	wg.Add(len(pendingRequests))
-	for objID := range pendingRequests {
-		go func(object core.RecordID) {
+	for objID, requests := range pendingRequests {
+		go func(object core.RecordID, requests map[core.RecordID]struct{}) {
 			defer wg.Done()
+			for request := range requests {
+				pulse, err := m.PulseTracker.GetPulse(ctx, request.Pulse())
+				if err != nil {
+					logger.Error("failed to notify about pending requests. failed to calculate pulse")
+					return
+				}
 
-			pulse, err := m.PulseTracker.GetPulse(ctx, object.Pulse())
-			if err != nil {
-				logger.Error("failed to notify about pending requests. failed to calculate pulse")
+				if currentDBPulse.SerialNumber-pulse.SerialNumber < 2 {
+					continue
+				}
+
+				rep, err := m.Bus.Send(
+					ctx,
+					&message.AbandonedRequestsNotification{
+						Object: object,
+					},
+					nil,
+				)
+				if err != nil {
+					logger.Error("failed to notify about pending requests")
+					return
+				}
+				if _, ok := rep.(*reply.OK); !ok {
+					logger.Error("received unexpected reply on pending notification")
+				}
+
 				return
 			}
-
-			if currentDBPulse.SerialNumber-pulse.SerialNumber < 2 {
-				return
-			}
-
-			rep, err := m.Bus.Send(
-				ctx,
-				&message.AbandonedRequestsNotification{
-					Object: object,
-				},
-				nil,
-			)
-			if err != nil {
-				logger.Error("failed to notify about pending requests")
-				return
-			}
-			if _, ok := rep.(*reply.OK); !ok {
-				logger.Error("received unexpected reply on pending notification")
-			}
-		}(objID)
+		}(objID, requests)
 	}
 
 	wg.Wait()

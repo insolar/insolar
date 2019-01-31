@@ -177,6 +177,7 @@ func TestPulseManager_Set_SendAbandonedRequests(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
 
+	randomRoot := testutils.RandomJet()
 	firstPending := core.NewRecordID(9, []byte{1, 2, 3})
 	secondPending := core.NewRecordID(8, []byte{3, 2, 1})
 
@@ -207,18 +208,21 @@ func TestPulseManager_Set_SendAbandonedRequests(t *testing.T) {
 	mb.SendFunc = func(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) (r core.Reply, r1 error) {
 		arn, ok := p1.(*message.AbandonedRequestsNotification)
 		require.Equal(t, true, ok)
-		require.Equal(t, *secondPending, arn.Object)
+		require.Equal(t, randomRoot, arn.Object)
 		return &reply.OK{}, nil
 	}
 
 	// Act
 	err := pm.sendAbandonedRequests(ctx, currentPulse.Pulse, map[core.RecordID]map[core.RecordID]struct{}{
-		*firstPending:  {},
-		*secondPending: {},
+		randomRoot: {
+			*firstPending:  {},
+			*secondPending: {},
+		},
 	})
 	require.NoError(t, err)
 
 	// Assert
 	mc.Finish()
+	require.Equal(t, uint64(1), mb.SendCounter)
 
 }
