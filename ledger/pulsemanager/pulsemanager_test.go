@@ -212,7 +212,7 @@ func TestPulseManager_Set_SendAbandonedRequests(t *testing.T) {
 	}
 
 	// Act
-	err := pm.sendAbandonedRequests(ctx, &currentPulse.Pulse, map[core.RecordID]map[core.RecordID]struct{}{
+	err := pm.sendAbandonedRequests(ctx, currentPulse.Pulse, map[core.RecordID]map[core.RecordID]struct{}{
 		*firstPending:  {},
 		*secondPending: {},
 	})

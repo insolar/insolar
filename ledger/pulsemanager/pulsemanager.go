@@ -123,7 +123,7 @@ func (m *PulseManager) processEndPulse(
 	ctx context.Context,
 	jets []jetInfo,
 	prevPulseNumber core.PulseNumber,
-	currentPulse, newPulse *core.Pulse,
+	currentPulse, newPulse core.Pulse,
 ) error {
 	var g errgroup.Group
 	logger := inslogger.FromContext(ctx)
@@ -148,7 +148,6 @@ func (m *PulseManager) processEndPulse(
 			}
 
 			logger := inslogger.FromContext(ctx)
-
 			sender := func(msg message.HotData, jetID core.RecordID) {
 				ctx, span := instracer.StartSpan(ctx, "pulse.send_hot")
 				defer span.End()
@@ -171,45 +170,11 @@ func (m *PulseManager) processEndPulse(
 			}
 
 			if info.left == nil && info.right == nil {
-
-				requests := m.RecentStorageProvider.GetStorage(ctx, info.id).GetRequests()
-				go func() {
-					err := m.sendAbandonedRequests(
-						ctx,
-						newPulse,
-						requests,
-					)
-					logger.Error(err)
-				}()
-
-				if err != nil {
-					logger.Errorf("problems with notification about pending requests jet - %v, err - %v", info.id.DebugString(), err)
-				}
 				// No split happened.
 				if !info.mineNext {
 					go sender(*msg, info.id)
 				}
 			} else {
-				leftRequests := m.RecentStorageProvider.GetStorage(ctx, info.left.id).GetRequests()
-				rightRequests := m.RecentStorageProvider.GetStorage(ctx, info.right.id).GetRequests()
-
-				go func() {
-					err := m.sendAbandonedRequests(
-						ctx,
-						newPulse,
-						leftRequests,
-					)
-					logger.Error(err)
-				}()
-				go func() {
-					err := m.sendAbandonedRequests(
-						ctx,
-						newPulse,
-						rightRequests,
-					)
-					logger.Error(err)
-				}()
-
 				// Split happened.
 				if !info.left.mineNext {
 					go sender(*msg, info.left.id)
@@ -218,6 +183,16 @@ func (m *PulseManager) processEndPulse(
 					go sender(*msg, info.right.id)
 				}
 			}
+
+			requests := m.RecentStorageProvider.GetStorage(ctx, info.id).GetRequests()
+			go func() {
+				err := m.sendAbandonedRequests(
+					ctx,
+					newPulse,
+					requests,
+				)
+				logger.Error(err)
+			}()
 
 			// FIXME: @andreyromancev. 09.01.2019. Temporary disabled validation. Uncomment when jet split works properly.
 			// dropErr := m.processDrop(ctx, jetID, currentPulse, dropSerialized, messages)
@@ -238,7 +213,7 @@ func (m *PulseManager) processEndPulse(
 
 func (m *PulseManager) sendAbandonedRequests(
 	ctx context.Context,
-	pulse *core.Pulse,
+	pulse core.Pulse,
 	pendingRequests map[core.RecordID]map[core.RecordID]struct{},
 ) error {
 	ctx, span := instracer.StartSpan(ctx, "pulse.sendAbandonedRequests")
@@ -609,7 +584,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 	// execute only on material executor
 	// TODO: do as much as possible async.
 	if m.NodeNet.GetOrigin().Role() == core.StaticRoleLightMaterial {
-		err = m.processEndPulse(ctx, jets, *prevPulseNumber, oldPulse, &newPulse)
+		err = m.processEndPulse(ctx, jets, *prevPulseNumber, *oldPulse, newPulse)
 		if err != nil {
 			return err
 		}
