@@ -17,20 +17,42 @@
 package artifactmanager
 
 import (
+	"context"
+
 	"github.com/insolar/insolar/core"
 )
 
-// Alias for wrapping func-s
+// Handler is an alias for wrapping func-s
 type Handler func(core.MessageHandler) core.MessageHandler
 
-// Build return wrapping core.MessageHandler
+// BuildMiddleware return wrapping core.MessageHandler
 // If want call wrapHandler1(wrapHandler2(wrapHandler3(handler))),
 // we should use Build(handler, wrapHandler1, wrapHandler2, wrapHandler3).
-func Build(handler core.MessageHandler, wrapHandlers ...Handler) core.MessageHandler {
+func BuildMiddleware(handler core.MessageHandler, wrapHandlers ...Handler) core.MessageHandler {
 	result := handler
 
 	for i := range wrapHandlers {
 		result = wrapHandlers[len(wrapHandlers)-1-i](result)
+	}
+
+	return result
+}
+
+// PreSender is an alias for a function
+// which is working like a `middleware` for messagebus.Send
+type PreSender func(Sender) Sender
+
+// Sender is an alias for signature of messagebus.Send
+type Sender func(context.Context, core.Message, *core.MessageSendOptions) (core.Reply, error)
+
+// BuildSender allows us to build a chain of PreSender before calling Sender
+// The main idea of it is ability to make a different things before sending message
+// For example we can cache some replies. Another example is the sendAndFollow redirect method
+func BuildSender(sender Sender, preSenders ...PreSender) Sender {
+	result := sender
+
+	for i := range preSenders {
+		result = preSenders[len(preSenders)-1-i](result)
 	}
 
 	return result

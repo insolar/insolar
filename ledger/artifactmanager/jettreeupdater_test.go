@@ -31,6 +31,18 @@ func TestJetTreeUpdater_otherNodesForPulse(t *testing.T) {
 		JetCoordinator:     jc,
 	}
 
+	t.Run("active nodes storage returns error", func(t *testing.T) {
+		ans.GetActiveNodesByRoleMock.Expect(
+			100, core.StaticRoleLightMaterial,
+		).Return(
+			nil, errors.New("some"),
+		)
+
+		nodes, err := jtu.otherNodesForPulse(ctx, core.PulseNumber(100))
+		require.Error(t, err)
+		require.Empty(t, nodes)
+	})
+
 	meRef := testutils.RandomRef()
 	jc.MeMock.Return(meRef)
 
