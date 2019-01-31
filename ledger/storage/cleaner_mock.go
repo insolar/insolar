@@ -41,7 +41,7 @@ type CleanerMock struct {
 	RemoveJetIndexesUntilPreCounter uint64
 	RemoveJetIndexesUntilMock       mCleanerMockRemoveJetIndexesUntil
 
-	RemoveJetRecordsUntilFunc       func(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 recentstorage.RecentStorage) (r RmStat, r1 error)
+	RemoveJetRecordsUntilFunc       func(p context.Context, p1 core.RecordID, p2 core.PulseNumber) (r RmStat, r1 error)
 	RemoveJetRecordsUntilCounter    uint64
 	RemoveJetRecordsUntilPreCounter uint64
 	RemoveJetRecordsUntilMock       mCleanerMockRemoveJetRecordsUntil
@@ -689,7 +689,6 @@ type CleanerMockRemoveJetRecordsUntilInput struct {
 	p  context.Context
 	p1 core.RecordID
 	p2 core.PulseNumber
-	p3 recentstorage.RecentStorage
 }
 
 type CleanerMockRemoveJetRecordsUntilResult struct {
@@ -698,14 +697,14 @@ type CleanerMockRemoveJetRecordsUntilResult struct {
 }
 
 //Expect specifies that invocation of Cleaner.RemoveJetRecordsUntil is expected from 1 to Infinity times
-func (m *mCleanerMockRemoveJetRecordsUntil) Expect(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 recentstorage.RecentStorage) *mCleanerMockRemoveJetRecordsUntil {
+func (m *mCleanerMockRemoveJetRecordsUntil) Expect(p context.Context, p1 core.RecordID, p2 core.PulseNumber) *mCleanerMockRemoveJetRecordsUntil {
 	m.mock.RemoveJetRecordsUntilFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &CleanerMockRemoveJetRecordsUntilExpectation{}
 	}
-	m.mainExpectation.input = &CleanerMockRemoveJetRecordsUntilInput{p, p1, p2, p3}
+	m.mainExpectation.input = &CleanerMockRemoveJetRecordsUntilInput{p, p1, p2}
 	return m
 }
 
@@ -722,12 +721,12 @@ func (m *mCleanerMockRemoveJetRecordsUntil) Return(r RmStat, r1 error) *CleanerM
 }
 
 //ExpectOnce specifies that invocation of Cleaner.RemoveJetRecordsUntil is expected once
-func (m *mCleanerMockRemoveJetRecordsUntil) ExpectOnce(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 recentstorage.RecentStorage) *CleanerMockRemoveJetRecordsUntilExpectation {
+func (m *mCleanerMockRemoveJetRecordsUntil) ExpectOnce(p context.Context, p1 core.RecordID, p2 core.PulseNumber) *CleanerMockRemoveJetRecordsUntilExpectation {
 	m.mock.RemoveJetRecordsUntilFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &CleanerMockRemoveJetRecordsUntilExpectation{}
-	expectation.input = &CleanerMockRemoveJetRecordsUntilInput{p, p1, p2, p3}
+	expectation.input = &CleanerMockRemoveJetRecordsUntilInput{p, p1, p2}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
@@ -737,7 +736,7 @@ func (e *CleanerMockRemoveJetRecordsUntilExpectation) Return(r RmStat, r1 error)
 }
 
 //Set uses given function f as a mock of Cleaner.RemoveJetRecordsUntil method
-func (m *mCleanerMockRemoveJetRecordsUntil) Set(f func(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 recentstorage.RecentStorage) (r RmStat, r1 error)) *CleanerMock {
+func (m *mCleanerMockRemoveJetRecordsUntil) Set(f func(p context.Context, p1 core.RecordID, p2 core.PulseNumber) (r RmStat, r1 error)) *CleanerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -746,18 +745,18 @@ func (m *mCleanerMockRemoveJetRecordsUntil) Set(f func(p context.Context, p1 cor
 }
 
 //RemoveJetRecordsUntil implements github.com/insolar/insolar/ledger/storage.Cleaner interface
-func (m *CleanerMock) RemoveJetRecordsUntil(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 recentstorage.RecentStorage) (r RmStat, r1 error) {
+func (m *CleanerMock) RemoveJetRecordsUntil(p context.Context, p1 core.RecordID, p2 core.PulseNumber) (r RmStat, r1 error) {
 	counter := atomic.AddUint64(&m.RemoveJetRecordsUntilPreCounter, 1)
 	defer atomic.AddUint64(&m.RemoveJetRecordsUntilCounter, 1)
 
 	if len(m.RemoveJetRecordsUntilMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.RemoveJetRecordsUntilMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to CleanerMock.RemoveJetRecordsUntil. %v %v %v %v", p, p1, p2, p3)
+			m.t.Fatalf("Unexpected call to CleanerMock.RemoveJetRecordsUntil. %v %v %v", p, p1, p2)
 			return
 		}
 
 		input := m.RemoveJetRecordsUntilMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, CleanerMockRemoveJetRecordsUntilInput{p, p1, p2, p3}, "Cleaner.RemoveJetRecordsUntil got unexpected parameters")
+		testify_assert.Equal(m.t, *input, CleanerMockRemoveJetRecordsUntilInput{p, p1, p2}, "Cleaner.RemoveJetRecordsUntil got unexpected parameters")
 
 		result := m.RemoveJetRecordsUntilMock.expectationSeries[counter-1].result
 		if result == nil {
@@ -775,7 +774,7 @@ func (m *CleanerMock) RemoveJetRecordsUntil(p context.Context, p1 core.RecordID,
 
 		input := m.RemoveJetRecordsUntilMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, CleanerMockRemoveJetRecordsUntilInput{p, p1, p2, p3}, "Cleaner.RemoveJetRecordsUntil got unexpected parameters")
+			testify_assert.Equal(m.t, *input, CleanerMockRemoveJetRecordsUntilInput{p, p1, p2}, "Cleaner.RemoveJetRecordsUntil got unexpected parameters")
 		}
 
 		result := m.RemoveJetRecordsUntilMock.mainExpectation.result
@@ -790,11 +789,11 @@ func (m *CleanerMock) RemoveJetRecordsUntil(p context.Context, p1 core.RecordID,
 	}
 
 	if m.RemoveJetRecordsUntilFunc == nil {
-		m.t.Fatalf("Unexpected call to CleanerMock.RemoveJetRecordsUntil. %v %v %v %v", p, p1, p2, p3)
+		m.t.Fatalf("Unexpected call to CleanerMock.RemoveJetRecordsUntil. %v %v %v", p, p1, p2)
 		return
 	}
 
-	return m.RemoveJetRecordsUntilFunc(p, p1, p2, p3)
+	return m.RemoveJetRecordsUntilFunc(p, p1, p2)
 }
 
 //RemoveJetRecordsUntilMinimockCounter returns a count of CleanerMock.RemoveJetRecordsUntilFunc invocations

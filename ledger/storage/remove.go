@@ -41,7 +41,7 @@ type Cleaner interface {
 
 	RemoveJetIndexesUntil(ctx context.Context, jetID core.RecordID, pn core.PulseNumber, recent recentstorage.RecentStorage) (RmStat, error)
 	RemoveJetBlobsUntil(ctx context.Context, jetID core.RecordID, pn core.PulseNumber) (RmStat, error)
-	RemoveJetRecordsUntil(ctx context.Context, jetID core.RecordID, pn core.PulseNumber, recent recentstorage.RecentStorage) (RmStat, error)
+	RemoveJetRecordsUntil(ctx context.Context, jetID core.RecordID, pn core.PulseNumber) (RmStat, error)
 	RemoveJetDropsUntil(ctx context.Context, jetID core.RecordID, pn core.PulseNumber) (RmStat, error)
 }
 
@@ -83,7 +83,7 @@ func (db *DB) RemoveAllForJetUntilPulse(
 		result = multierror.Append(result, errors.Wrap(err, "RemoveJetBlobsUntil"))
 	}
 	allstat["blobs"] = stat
-	if stat, err = db.RemoveJetRecordsUntil(ctx, jetID, pn, recent); err != nil {
+	if stat, err = db.RemoveJetRecordsUntil(ctx, jetID, pn); err != nil {
 		result = multierror.Append(result, errors.Wrap(err, "RemoveJetRecordsUntil"))
 	}
 	allstat["records"] = stat
@@ -109,7 +109,7 @@ func (db *DB) RemoveJetBlobsUntil(ctx context.Context, jetID core.RecordID, pn c
 
 // RemoveJetRecordsUntil removes for provided JetID all records older than provided pulse number.
 // In recods pending requests live, so we need recent storage here
-func (db *DB) RemoveJetRecordsUntil(ctx context.Context, jetID core.RecordID, pn core.PulseNumber, recent recentstorage.RecentStorage) (RmStat, error) {
+func (db *DB) RemoveJetRecordsUntil(ctx context.Context, jetID core.RecordID, pn core.PulseNumber) (RmStat, error) {
 	return db.removeJetRecordsUntil(ctx, scopeIDRecord, jetID, pn, nil)
 }
 
