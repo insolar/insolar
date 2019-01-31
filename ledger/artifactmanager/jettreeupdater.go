@@ -11,6 +11,7 @@ import (
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/storage"
 )
 
@@ -46,6 +47,8 @@ func newJetTreeUpdater(
 func (jtu *jetTreeUpdater) fetchJet(
 	ctx context.Context, target core.RecordID, pulse core.PulseNumber,
 ) (*core.RecordID, error) {
+	ctx, span := instracer.StartSpan(ctx, "jet_tree_updater.fetch_jet")
+	defer span.End()
 
 	// Look in the local tree. Return if the actual jet found.
 	tree, err := jtu.JetStorage.GetJetTree(ctx, pulse)
@@ -61,6 +64,7 @@ func (jtu *jetTreeUpdater) fetchJet(
 		return jetID, nil
 	}
 
+	span.Annotate(nil, "tree in DB is not actual")
 	inslogger.FromContext(ctx).Debugf(
 		"jet %s is not actual in our tree, asking neighbors for jet of object %s",
 		jetID.DebugString(), target.String(),
@@ -78,9 +82,12 @@ func (jtu *jetTreeUpdater) fetchJet(
 	mu := jtu.sequencer[key]
 	jtu.seqMutex.Unlock()
 
+	span.Annotate(nil, "got sequencer entry")
+
 	mu.Lock()
 	if mu.done {
 		mu.Unlock()
+		span.Annotate(nil, "somebody else updated actuality")
 		inslogger.FromContext(ctx).Debugf(
 			"somebody else updated actuality of jet %s, rechecking our DB",
 			jetID.DebugString(),
@@ -117,6 +124,9 @@ func (jtu *jetTreeUpdater) fetchJet(
 func (jtu *jetTreeUpdater) fetchActualJetFromOtherNodes(
 	ctx context.Context, target core.RecordID, pulse core.PulseNumber,
 ) (*core.RecordID, error) {
+	ctx, span := instracer.StartSpan(ctx, "jet_tree_updater.fetch_jet_from_other_nodes")
+	defer span.End()
+
 	nodes, err := jtu.otherNodesForPulse(ctx, pulse)
 	if err != nil {
 		return nil, err
@@ -130,6 +140,9 @@ func (jtu *jetTreeUpdater) fetchActualJetFromOtherNodes(
 	replies := make([]*reply.Jet, num)
 	for i, node := range nodes {
 		go func(i int, node core.Node) {
+			ctx, span := instracer.StartSpan(ctx, "jet_tree_updater.one_node_get_jet")
+			defer span.End()
+
 			defer wg.Done()
 
 			nodeID := node.ID()
@@ -201,6 +214,9 @@ func (jtu *jetTreeUpdater) fetchActualJetFromOtherNodes(
 func (jtu *jetTreeUpdater) otherNodesForPulse(
 	ctx context.Context, pulse core.PulseNumber,
 ) ([]core.Node, error) {
+	ctx, span := instracer.StartSpan(ctx, "jet_tree_updater.other_nodes_for_pulse")
+	defer span.End()
+
 	nodes, err := jtu.ActiveNodesStorage.GetActiveNodesByRole(pulse, core.StaticRoleLightMaterial)
 	if err != nil {
 		return nil, err
