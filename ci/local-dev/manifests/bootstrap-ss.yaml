@@ -230,11 +230,17 @@ spec:
           env:
             - name: HOME
               value: /opt/insolar
+            - name: POD_NAME
+              valueFrom:
+                  fieldRef:
+                      fieldPath: metadata.name
           volumeMounts:
             - name: work
               mountPath: /opt/insolar
             - name: code
               mountPath: /tmp/code
+            - name: node-log
+              mountPath: /logs
         - name: insolard
           imagePullPolicy: Never
           image: "base"
