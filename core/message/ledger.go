@@ -493,3 +493,30 @@ func (*AbandonedRequestsNotification) DefaultRole() core.DynamicRole {
 func (m *AbandonedRequestsNotification) DefaultTarget() *core.RecordRef {
 	return core.NewRecordRef(core.DomainID, m.Object)
 }
+
+// GetRequest fetches request from ledger.
+type GetRequest struct {
+	ledgerMessage
+
+	Request core.RecordID
+}
+
+// Type implementation of Message interface.
+func (*GetRequest) Type() core.MessageType {
+	return core.TypeGetRequest
+}
+
+// AllowedSenderObjectAndRole implements interface method
+func (m *GetRequest) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return nil, core.DynamicRoleUndefined
+}
+
+// DefaultRole returns role for this event
+func (*GetRequest) DefaultRole() core.DynamicRole {
+	return core.DynamicRoleLightExecutor
+}
+
+// DefaultTarget returns of target of this event.
+func (m *GetRequest) DefaultTarget() *core.RecordRef {
+	return core.NewRecordRef(core.DomainID, m.Request)
+}

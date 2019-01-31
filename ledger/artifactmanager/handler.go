@@ -190,6 +190,15 @@ func (h *MessageHandler) setHandlersForLight(m *middleware) {
 			instrumentHandler("handleHotRecords"),
 			m.closeEarlyRequestBreaker))
 
+	h.Bus.MustRegister(
+		core.TypeGetRequest,
+		Build(
+			h.handleGetRequest,
+			m.checkJet,
+			instrumentHandler("handleGetRequest"),
+		),
+	)
+
 	// Validation.
 	h.Bus.MustRegister(core.TypeValidateRecord,
 		Build(h.handleValidateRecord,
@@ -703,6 +712,28 @@ func (h *MessageHandler) handleGetChildren(
 	}
 
 	return &reply.Children{Refs: refs, NextFrom: nil}, nil
+}
+
+func (h *MessageHandler) handleGetRequest(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
+	jetID := jetFromContext(ctx)
+	msg := parcel.Message().(*message.GetRequest)
+
+	rec, err := h.db.GetRecord(ctx, jetID, &msg.Request)
+	if err != nil {
+		return nil, errors.New("failed to fetch request")
+	}
+
+	req, ok := rec.(*record.RequestRecord)
+	if !ok {
+		return nil, errors.New("failed to decode request")
+	}
+
+	rep := reply.Request{
+		ID:     msg.Request,
+		Record: record.SerializeRecord(req),
+	}
+
+	return &rep, nil
 }
 
 func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Parcel) (core.Reply, error) {

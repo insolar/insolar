@@ -118,3 +118,14 @@ type Jet struct {
 func (r *Jet) Type() core.ReplyType {
 	return TypeJet
 }
+
+// Request contains jet.
+type Request struct {
+	ID     core.RecordID
+	Record []byte
+}
+
+// Type implementation of Reply interface.
+func (r *Request) Type() core.ReplyType {
+	return TypeRequest
+}

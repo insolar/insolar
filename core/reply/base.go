@@ -69,6 +69,8 @@ const (
 	TypePendingRequests
 	// TypeJet contains jet.
 	TypeJet
+	// TypeRequest contains request.
+	TypeRequest
 
 	// TypeHeavyError carries heavy record sync
 	TypeHeavyError

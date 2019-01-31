@@ -255,6 +255,8 @@ const (
 	TypeGetJet
 	// TypeAbandonedRequestsNotification informs virtual node about unclosed requests.
 	TypeAbandonedRequestsNotification
+	// TypeGetRequest fetches request from ledger.
+	TypeGetRequest
 
 	// TypeValidationCheck checks if validation of a particular record can be performed.
 	TypeValidationCheck
