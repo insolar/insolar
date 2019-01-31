@@ -452,11 +452,11 @@ func TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors(t *testing.T)
 	)
 
 	objDesc, err := am.GetObject(ctx, *objRef, nil, false)
+	rObjDesc := objDesc.(*ObjectDescriptor)
 	assert.NoError(t, err)
 	expectedObjDesc := &ObjectDescriptor{
-		ctx: ctx,
-		am:  am,
-
+		ctx:          rObjDesc.ctx,
+		am:           am,
 		head:         *objRef,
 		state:        *objectAmendID,
 		prototype:    prototypeRef,
@@ -465,8 +465,7 @@ func TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors(t *testing.T)
 		memory:       []byte{4},
 		parent:       *parentRef,
 	}
-
-	assert.Equal(t, *expectedObjDesc, *objDesc.(*ObjectDescriptor))
+	assert.Equal(t, *expectedObjDesc, *rObjDesc)
 }
 
 func TestLedgerArtifactManager_GetObject_FollowsRedirect(t *testing.T) {
