@@ -511,55 +511,70 @@ func TestReleaseQueue(t *testing.T) {
 	}
 }
 
-func TestOnPulseLightMaterialHasMore(t *testing.T) {
+func TestOnPulseLedgerHasMoreRequests(t *testing.T) {
 	t.Parallel()
 
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
 	defer mc.Finish()
 
-	mb := testutils.NewMessageBusMock(mc)
-	jc := testutils.NewJetCoordinatorMock(mc)
-
-	ref := testutils.RandomRef()
-	lr, _ := NewLogicRunner(&configuration.LogicRunner{})
-
-	queue := make([]ExecutionQueueElement, 11)
-	messagesQueue := convertQueueToMessageQueue(queue[:maxQueueLength])
-
-	lr.state[ref] = &ObjectState{
-		ExecutionState: &ExecutionState{
-			Behaviour: &ValidationSaver{},
-			Queue:     queue,
-		},
+	type testCase struct {
+		queue                         []ExecutionQueueElement
+		mbMock                        *testutils.MessageBusMock
+		ExpectedLedgerHasMoreRequests bool
+	}
+	testCases := []testCase{
+		{make([]ExecutionQueueElement, maxQueueLength+1), testutils.NewMessageBusMock(mc), true},
+		{make([]ExecutionQueueElement, maxQueueLength), testutils.NewMessageBusMock(mc), false},
 	}
 
-	lr.MessageBus = mb
-	lr.JetCoordinator = jc
-
+	jc := testutils.NewJetCoordinatorMock(mc)
 	jc.IsAuthorizedMock.Return(false, nil)
 	jc.MeMock.Return(core.RecordRef{})
 
 	pulse := core.Pulse{}
 
-	expectedMessage := &message.ExecutorResults{
-		RecordRef:             ref,
-		Requests:              make([]message.CaseBindRequest, 0),
-		Queue:                 messagesQueue,
-		LedgerHasMoreRequests: true,
+	for _, test := range testCases {
+		queue := test.queue
+		messagesQueue := convertQueueToMessageQueue(queue[:maxQueueLength])
+
+		ref := testutils.RandomRef()
+
+		lr, _ := NewLogicRunner(&configuration.LogicRunner{})
+		lr.JetCoordinator = jc
+
+		lr.state[ref] = &ObjectState{
+			ExecutionState: &ExecutionState{
+				Behaviour: &ValidationSaver{},
+				Queue:     queue,
+			},
+		}
+
+		mb := test.mbMock
+		lr.MessageBus = mb
+
+		expectedMessage := &message.ExecutorResults{
+			RecordRef:             ref,
+			Requests:              make([]message.CaseBindRequest, 0),
+			Queue:                 messagesQueue,
+			LedgerHasMoreRequests: test.ExpectedLedgerHasMoreRequests,
+		}
+
+		// defer new SendFunc before calling OnPulse
+		mb.SendFunc = func(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) (r core.Reply, r1 error) {
+			assert.Equal(t, expectedMessage, p1)
+			return nil, nil
+		}
+
+		err := lr.OnPulse(ctx, pulse)
+		require.NoError(t, err)
 	}
 
-	// defer new SendFunc before calling OnPulse
-	mb.SendFunc = func(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) (r core.Reply, r1 error) {
-		require.Equal(t, expectedMessage, p1)
-		return nil, nil
-	}
-
-	err := lr.OnPulse(ctx, pulse)
-	require.NoError(t, err)
-
+	// waiting for all goroutines with Send() processing
 	mc.Wait(10 * time.Second)
-	require.Equal(t, 1, int(mb.SendCounter))
+	for _, test := range testCases {
+		assert.Equal(t, 1, int(test.mbMock.SendCounter))
+	}
 }
 
 func TestLogicRunner_NoExcessiveAmends(t *testing.T) {
