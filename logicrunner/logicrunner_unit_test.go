@@ -536,7 +536,11 @@ func TestOnPulseLedgerHasMoreRequests(t *testing.T) {
 
 	for _, test := range testCases {
 		queue := test.queue
-		messagesQueue := convertQueueToMessageQueue(queue[:maxQueueLength])
+
+		// waiting for ledger implement fetch method
+		// waiting for us implement fetching
+		messagesQueue := convertQueueToMessageQueue(queue)
+		//messagesQueue := convertQueueToMessageQueue(queue[:maxQueueLength])
 
 		ref := testutils.RandomRef()
 

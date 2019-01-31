@@ -189,7 +189,9 @@ func (es *ExecutionState) releaseQueue() ([]ExecutionQueueElement, bool) {
 	q := es.Queue
 
 	if len(q) > maxQueueLength {
-		q = q[:maxQueueLength]
+		// waiting for ledger implement fetch method
+		// waiting for us implement fetching
+		//q = q[:maxQueueLength]
 		ledgerHasMoreRequest = true
 	}
 
