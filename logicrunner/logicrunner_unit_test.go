@@ -485,3 +485,81 @@ func TestLogicRunner_OnPulse_StillExecuting(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotNil(t, lr.state[objectRef].ExecutionState)
 }
+
+// TODO check queue of different length
+func TestReleaseQueue(t *testing.T) {
+	t.Parallel()
+	type expected struct {
+		Length  int
+		HasMore bool
+	}
+	type testCase struct {
+		QueueLength int
+		Expected    expected
+	}
+	var testCases = []testCase{
+		{0, expected{0, false}},
+		{1, expected{1, false}},
+		{maxQueueLength, expected{maxQueueLength, false}},
+		{maxQueueLength + 1, expected{maxQueueLength, true}},
+	}
+
+	for _, tc := range testCases {
+		es := ExecutionState{Queue: make([]ExecutionQueueElement, tc.QueueLength)}
+		mq, hasMore := es.releaseQueue()
+		assert.Equal(t, tc.Expected.Length, len(mq))
+		assert.Equal(t, tc.Expected.HasMore, hasMore)
+	}
+}
+
+// mc.Wait(time.Second)
+func TestOnPulseLightMaterialHasMore(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+	mc := minimock.NewController(t)
+	defer mc.Finish()
+
+	mb := testutils.NewMessageBusMock(mc)
+	jc := testutils.NewJetCoordinatorMock(mc)
+
+	ref := testutils.RandomRef()
+	lr, _ := NewLogicRunner(&configuration.LogicRunner{})
+
+	queue := make([]ExecutionQueueElement, 11)
+	messagesQueue := convertQueueToMessageQueue(queue[:maxQueueLength])
+
+	lr.state[ref] = &ObjectState{
+		ExecutionState: &ExecutionState{
+			Behaviour: &ValidationSaver{},
+			Queue:     queue,
+		},
+	}
+
+	lr.MessageBus = mb
+	lr.JetCoordinator = jc
+
+	jc.IsAuthorizedMock.Return(false, nil)
+	jc.MeMock.Return(core.RecordRef{})
+
+	pulse := core.Pulse{}
+
+	expectedMessage := &message.ExecutorResults{
+		RecordRef:            ref,
+		Requests:             make([]message.CaseBindRequest, 0),
+		Queue:                messagesQueue,
+		LightMaterialHasMore: true,
+	}
+
+	// defer new SendFunc before calling OnPulse
+	mb.SendFunc = func(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) (r core.Reply, r1 error) {
+		require.Equal(t, expectedMessage, p1)
+		return nil, nil
+	}
+
+	err := lr.OnPulse(ctx, pulse)
+	require.NoError(t, err)
+
+	mc.Wait(10 * time.Second)
+	require.Equal(t, 1, int(mb.SendCounter))
+}
