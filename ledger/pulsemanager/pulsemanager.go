@@ -132,6 +132,40 @@ func (m *PulseManager) processEndPulse(
 
 	for _, i := range jets {
 		info := i
+
+		if info.left == nil && info.right == nil {
+			requests := m.RecentStorageProvider.GetStorage(ctx, info.id).GetRequests()
+
+			go func() {
+				err := m.sendAbandonedRequests(
+					ctx,
+					newPulse,
+					requests,
+				)
+				logger.Error(err)
+			}()
+		} else {
+			leftRequests := m.RecentStorageProvider.GetStorage(ctx, info.left.id).GetRequests()
+			rightRequests := m.RecentStorageProvider.GetStorage(ctx, info.right.id).GetRequests()
+
+			go func() {
+				err := m.sendAbandonedRequests(
+					ctx,
+					newPulse,
+					leftRequests,
+				)
+				logger.Error(err)
+			}()
+			go func() {
+				err := m.sendAbandonedRequests(
+					ctx,
+					newPulse,
+					rightRequests,
+				)
+				logger.Error(err)
+			}()
+		}
+
 		g.Go(func() error {
 			drop, dropSerialized, _, err := m.createDrop(ctx, info.id, prevPulseNumber, currentPulse.PulseNumber)
 			logger.Debugf("[jet]: %v create drop. Pulse: %v, Error: %s", info.id.DebugString(), currentPulse.PulseNumber, err)
@@ -170,7 +204,6 @@ func (m *PulseManager) processEndPulse(
 			}
 
 			if info.left == nil && info.right == nil {
-				err := m.sendAbandonedRequests(ctx, newPulse, info.id)
 				if err != nil {
 					logger.Errorf("problems with notification about pending requests jet - %v, err - %v", info.id.DebugString(), err)
 				}
@@ -179,26 +212,6 @@ func (m *PulseManager) processEndPulse(
 					go sender(*msg, info.id)
 				}
 			} else {
-				wg := sync.WaitGroup{}
-				wg.Add(2)
-
-				go func() {
-					err := m.sendAbandonedRequests(ctx, newPulse, info.left.id)
-					if err != nil {
-						logger.Errorf("problems with notification about pending requests jet - %v, err - %v", info.left.id.DebugString(), err)
-					}
-					wg.Done()
-				}()
-
-				go func() {
-					err := m.sendAbandonedRequests(ctx, newPulse, info.right.id)
-					if err != nil {
-						logger.Errorf("problems with notification about pending requests jet - %v, err - %v", info.right.id.DebugString(), err)
-					}
-					wg.Done()
-				}()
-				wg.Wait()
-
 				// Split happened.
 				if !info.left.mineNext {
 					go sender(*msg, info.left.id)
@@ -225,7 +238,11 @@ func (m *PulseManager) processEndPulse(
 	return nil
 }
 
-func (m *PulseManager) sendAbandonedRequests(ctx context.Context, pulse *core.Pulse, jetID core.RecordID) error {
+func (m *PulseManager) sendAbandonedRequests(
+	ctx context.Context,
+	pulse *core.Pulse,
+	pendingRequests map[core.RecordID]map[core.RecordID]struct{},
+) error {
 	ctx, span := instracer.StartSpan(ctx, "pulse.sendAbandonedRequests")
 	defer span.End()
 
@@ -235,7 +252,6 @@ func (m *PulseManager) sendAbandonedRequests(ctx context.Context, pulse *core.Pu
 		return err
 	}
 
-	pendingRequests := m.RecentStorageProvider.GetStorage(ctx, jetID).GetRequests()
 	wg := sync.WaitGroup{}
 	wg.Add(len(pendingRequests))
 	for objID := range pendingRequests {
