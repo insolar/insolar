@@ -1,5 +1,3 @@
-
----
 kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
@@ -14,6 +12,7 @@ spec:
       storage: "2Gi"
 
 ---
+
 apiVersion: v1
 kind: Service
 metadata:
@@ -152,6 +151,8 @@ spec:
       labels:
         app: bootstrap
     spec:
+      nodeSelector:
+        kubernetes.io/hostname: docker-for-desktop
       initContainers:
         - name: init-bootstrap
           imagePullPolicy: Never
@@ -245,9 +246,9 @@ spec:
           tty: true
           stdin: true
           command:
-            - /go/bin/insolard
-            - --config
-            - /opt/insolar/config/node-insolar.yaml
+          - bash
+          - -c
+          - "/go/bin/insolard --config /opt/insolar/config/node-insolar.yaml > /logs/$(POD_NAME).insolard.log 2>&1"
           env:
             - name: HOME
               value: /opt/insolar
@@ -273,6 +274,8 @@ spec:
             - name: node-config
               mountPath: /opt/insolar/config/node-insolar.yaml
               subPath: insolar.yaml
+            - name: node-log
+              mountPath: /logs
       volumes:
       - name: bootstrap-config
         persistentVolumeClaim:
@@ -287,6 +290,10 @@ spec:
           name: node-config
       - name: work
         emptyDir: {}
+      - name: node-log
+        hostPath:
+          path: /Users/ilyapetrusenko/Documents/_work/src/github.com/insolar/insolar/ci/local-dev/logs/
+          type: DirectoryOrCreate
   updateStrategy:
     type: OnDelete
   podManagementPolicy: Parallel

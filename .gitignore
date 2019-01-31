@@ -49,3 +49,5 @@ data_pulsar
 /scripts/insolard/nodes
 /scripts/insolard/loglinks
 /scripts/insolard/benchmark
+
+/ci/local-dev/logs
