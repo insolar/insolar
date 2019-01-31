@@ -290,7 +290,7 @@ func waitForLaunch() error {
 		for scanner.Scan() {
 			line := scanner.Text()
 			fmt.Println(line)
-			if strings.Contains(line, "start nodes ...") {
+			if strings.Contains(line, "start discovery nodes ...") {
 				done <- true
 			}
 		}
