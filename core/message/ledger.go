@@ -470,8 +470,7 @@ func (m *GetJet) DefaultTarget() *core.RecordRef {
 type AbandonedRequestsNotification struct {
 	ledgerMessage
 
-	Object   core.RecordID
-	Requests []core.RecordID
+	Object core.RecordID
 }
 
 // Type implementation of Message interface.
@@ -481,7 +480,7 @@ func (*AbandonedRequestsNotification) Type() core.MessageType {
 
 // AllowedSenderObjectAndRole implements interface method
 func (m *AbandonedRequestsNotification) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
-	return nil, core.DynamicRoleUndefined
+	return nil, core.DynamicRoleLightExecutor
 }
 
 // DefaultRole returns role for this event
