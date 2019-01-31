@@ -5,7 +5,7 @@ local make_min_roles() = {
 };
 
 {
-    generate_genesis( num_heavies = 5, num_lights=1, num_virtuals=1, hostname = "seed", domain = "bootstrap" ) :: {
+    generate_genesis( num_heavies = 1, num_lights=2, num_virtuals=2, hostname = "seed", domain = "bootstrap" ) :: {
 
       // common fields
       root_keys_file: "/opt/insolar/config/root_member_keys.json",
@@ -36,8 +36,6 @@ local make_min_roles() = {
          }
          for id in std.range(0, num_heavies + num_lights + num_virtuals - 1)
       ]
-
     }
-
 }
 

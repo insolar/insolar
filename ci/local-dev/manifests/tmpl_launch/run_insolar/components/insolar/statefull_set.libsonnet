@@ -48,8 +48,8 @@
 							},
 							{
 								"name": "seed-config",
-								"mountPath": "/opt/insolar/config/insolar.yaml",
-								"subPath": "insolar.yaml"
+								"mountPath": "/opt/insolar/config/insolar-genesis.yaml",
+								"subPath": "insolar-genesis.yaml"
 							},
 							{
 								"name": "seed-config",
