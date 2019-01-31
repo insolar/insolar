@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -48,6 +48,14 @@ var NetworkPacketSentTotal = prometheus.NewCounterVec(prometheus.CounterOpts{
 var NetworkPacketReceivedTotal = prometheus.NewCounterVec(prometheus.CounterOpts{
 	Name:      "packet_received_total",
 	Help:      "Total number of received packets",
+	Namespace: insolarNamespace,
+	Subsystem: "network",
+}, []string{"packetType"})
+
+// NetworkPacketTimeoutTotal is is total number of timed out packets metric
+var NetworkPacketTimeoutTotal = prometheus.NewCounterVec(prometheus.CounterOpts{
+	Name:      "packet_timeout_total",
+	Help:      "Total number of timed out packets",
 	Namespace: insolarNamespace,
 	Subsystem: "network",
 }, []string{"packetType"})

@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -60,7 +60,7 @@ func (c *JetClient) HeavySync(
 			JetID:    jetID,
 			PulseNum: pn,
 		}
-		if err := messageToHeavy(ctx, c.Bus, resetMsg); err != nil {
+		if err := messageToHeavy(ctx, c.bus, resetMsg); err != nil {
 			inslog.Error("synchronize: reset failed")
 			return err
 		}
@@ -70,14 +70,14 @@ func (c *JetClient) HeavySync(
 		JetID:    jetID,
 		PulseNum: pn,
 	}
-	if err := messageToHeavy(ctx, c.Bus, signalMsg); err != nil {
+	if err := messageToHeavy(ctx, c.bus, signalMsg); err != nil {
 		inslog.Error("synchronize: start failed")
 		return err
 	}
 	inslog.Debug("synchronize: sucessfully send start message")
 
 	replicator := storage.NewReplicaIter(
-		ctx, c.db, jetID, pn, pn+1, c.opts.SyncMessageLimit)
+		ctx, c.dbContext, jetID, pn, pn+1, c.opts.SyncMessageLimit)
 	for {
 		recs, err := replicator.NextRecords()
 		if err == storage.ErrReplicatorDone {
@@ -91,7 +91,7 @@ func (c *JetClient) HeavySync(
 			PulseNum: pn,
 			Records:  recs,
 		}
-		if err := messageToHeavy(ctx, c.Bus, msg); err != nil {
+		if err := messageToHeavy(ctx, c.bus, msg); err != nil {
 			inslog.Error("synchronize: payload failed")
 			return err
 		}
@@ -99,7 +99,7 @@ func (c *JetClient) HeavySync(
 	}
 
 	signalMsg.Finished = true
-	if err := messageToHeavy(ctx, c.Bus, signalMsg); err != nil {
+	if err := messageToHeavy(ctx, c.bus, signalMsg); err != nil {
 		inslog.Error("synchronize: finish failed")
 		return err
 	}

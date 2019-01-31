@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -42,24 +42,28 @@ type Ledger struct {
 	LocalStorage    core.LocalStorage    `inject:""`
 }
 
+// Deprecated: remove after deleting TmpLedger
 // GetPulseManager returns PulseManager.
 func (l *Ledger) GetPulseManager() core.PulseManager {
 	log.Warn("GetPulseManager is deprecated. Use component injection.")
 	return l.PulseManager
 }
 
+// Deprecated: remove after deleting TmpLedger
 // GetJetCoordinator returns JetCoordinator.
 func (l *Ledger) GetJetCoordinator() core.JetCoordinator {
 	log.Warn("GetJetCoordinator is deprecated. Use component injection.")
 	return l.JetCoordinator
 }
 
+// Deprecated: remove after deleting TmpLedger
 // GetArtifactManager returns artifact manager to work with.
 func (l *Ledger) GetArtifactManager() core.ArtifactManager {
 	log.Warn("GetArtifactManager is deprecated. Use component injection.")
 	return l.ArtifactManager
 }
 
+// Deprecated: remove after deleting TmpLedger
 // GetLocalStorage returns local storage to work with.
 func (l *Ledger) GetLocalStorage() core.LocalStorage {
 	log.Warn("GetLocalStorage is deprecated. Use component injection.")
@@ -91,19 +95,18 @@ func GetLedgerComponents(conf configuration.Ledger, certificate core.Certificate
 		panic(errors.Wrap(err, "failed to initialize DB"))
 	}
 
-	ps := storage.NewPulseStorage(db)
-
 	return []interface{}{
 		db,
-		ps,
+		storage.NewPulseStorage(),
 		storage.NewRecentStorageProvider(conf.RecentStorage.DefaultTTL),
+		artifactmanager.NewHotDataWaiterConcrete(),
 		artifactmanager.NewArtifactManger(db),
-		jetcoordinator.NewJetCoordinator(db, conf.JetCoordinator),
-		pulsemanager.NewPulseManager(db, conf),
-		artifactmanager.NewMessageHandler(db, &conf, certificate),
+		jetcoordinator.NewJetCoordinator(),
+		pulsemanager.NewPulseManager(conf),
+		artifactmanager.NewMessageHandler(&conf, certificate),
 		localstorage.NewLocalStorage(db),
 		heavyserver.NewSync(db),
-		exporter.NewExporter(db, ps, conf.Exporter),
+		exporter.NewExporter(db, conf.Exporter),
 	}
 }
 

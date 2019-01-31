@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -111,13 +111,15 @@ func initComponents(
 	genesisKeyOut string,
 
 ) (*component.Manager, error) {
+	cm := component.Manager{}
+
 	nodeNetwork, err := nodenetwork.NewNodeNetwork(cfg.Host, certManager.GetCertificate())
 	checkError(ctx, err, "failed to start NodeNetwork")
 
 	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner)
 	checkError(ctx, err, "failed to start LogicRunner")
 
-	nw, err := servicenetwork.NewServiceNetwork(cfg, platformCryptographyScheme, isGenesis)
+	nw, err := servicenetwork.NewServiceNetwork(cfg, platformCryptographyScheme, &cm, isGenesis)
 	checkError(ctx, err, "failed to start Network")
 
 	delegationTokenFactory := delegationtoken.NewDelegationTokenFactory()
@@ -157,7 +159,6 @@ func initComponents(
 	err = logicRunner.OnPulse(ctx, *pulsar.NewPulse(cfg.Pulsar.NumberDelta, 0, &entropygenerator.StandardEntropyGenerator{}))
 	checkError(ctx, err, "failed init pulse for LogicRunner")
 
-	cm := component.Manager{}
 	cm.Register(
 		platformCryptographyScheme,
 		keyStore,

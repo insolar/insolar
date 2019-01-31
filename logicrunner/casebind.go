@@ -1,19 +1,17 @@
 /*
+ *    Copyright 2019 Insolar Technologies
  *
- *  *    Copyright 2018 Insolar
- *  *
- *  *    Licensed under the Apache License, Version 2.0 (the "License");
- *  *    you may not use this file except in compliance with the License.
- *  *    You may obtain a copy of the License at
- *  *
- *  *        http://www.apache.org/licenses/LICENSE-2.0
- *  *
- *  *    Unless required by applicable law or agreed to in writing, software
- *  *    distributed under the License is distributed on an "AS IS" BASIS,
- *  *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  *    See the License for the specific language governing permissions and
- *  *    limitations under the License.
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
  *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
  */
 
 package logicrunner
@@ -192,6 +190,8 @@ func (lr *LogicRunner) Validate(ctx context.Context, ref Ref, p core.Pulse, cb C
 }
 
 func (lr *LogicRunner) HandleValidateCaseBindMessage(ctx context.Context, inmsg core.Parcel) (core.Reply, error) {
+	ctx = loggerWithTargetID(ctx, inmsg)
+	inslogger.FromContext(ctx).Debug("LogicRunner.HandleValidateCaseBindMessage starts ...")
 	msg, ok := inmsg.Message().(*message.ValidateCaseBind)
 	if !ok {
 		return nil, errors.New("Execute( ! message.ValidateCaseBindInterface )")
@@ -220,6 +220,8 @@ func (lr *LogicRunner) HandleValidateCaseBindMessage(ctx context.Context, inmsg 
 }
 
 func (lr *LogicRunner) HandleValidationResultsMessage(ctx context.Context, inmsg core.Parcel) (core.Reply, error) {
+	ctx = loggerWithTargetID(ctx, inmsg)
+	inslogger.FromContext(ctx).Debug("LogicRunner.HandleValidationResultsMessage starts ...")
 	msg, ok := inmsg.Message().(*message.ValidationResults)
 	if !ok {
 		return nil, errors.Errorf("HandleValidationResultsMessage got argument typed %t", inmsg)
@@ -233,6 +235,8 @@ func (lr *LogicRunner) HandleValidationResultsMessage(ctx context.Context, inmsg
 }
 
 func (lr *LogicRunner) HandleExecutorResultsMessage(ctx context.Context, inmsg core.Parcel) (core.Reply, error) {
+	ctx = loggerWithTargetID(ctx, inmsg)
+	inslogger.FromContext(ctx).Debug("LogicRunner.HandleExecutorResultsMessage starts ...")
 	msg, ok := inmsg.Message().(*message.ExecutorResults)
 	if !ok {
 		return nil, errors.Errorf("HandleValidationResultsMessage got argument typed %t", inmsg)

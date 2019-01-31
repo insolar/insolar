@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -22,20 +22,24 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
+	"golang.org/x/sync/errgroup"
+	"golang.org/x/sync/singleflight"
+
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/ledger/artifactmanager"
 	"github.com/insolar/insolar/ledger/heavyclient"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/index"
 	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/record"
-	"github.com/pkg/errors"
-	"golang.org/x/sync/errgroup"
-	"golang.org/x/sync/singleflight"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/pulsemanager.ActiveListSwapper -o ../../testutils -s _mock.go
@@ -45,17 +49,24 @@ type ActiveListSwapper interface {
 
 // PulseManager implements core.PulseManager.
 type PulseManager struct {
-	LR                            core.LogicRunner                   `inject:""`
-	Bus                           core.MessageBus                    `inject:""`
-	NodeNet                       core.NodeNetwork                   `inject:""`
-	JetCoordinator                core.JetCoordinator                `inject:""`
-	GIL                           core.GlobalInsolarLock             `inject:""`
-	CryptographyService           core.CryptographyService           `inject:""`
-	PlatformCryptographyScheme    core.PlatformCryptographyScheme    `inject:""`
-	RecentStorageProvider         recentstorage.Provider             `inject:""`
-	ActiveListSwapper             ActiveListSwapper                  `inject:""`
-	PulseStorage                  pulseStoragePm                     `inject:""`
-	ArtifactManagerMessageHandler core.ArtifactManagerMessageHandler `inject:""`
+	LR                         core.LogicRunner                `inject:""`
+	Bus                        core.MessageBus                 `inject:""`
+	NodeNet                    core.NodeNetwork                `inject:""`
+	JetCoordinator             core.JetCoordinator             `inject:""`
+	GIL                        core.GlobalInsolarLock          `inject:""`
+	CryptographyService        core.CryptographyService        `inject:""`
+	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
+	RecentStorageProvider      recentstorage.Provider          `inject:""`
+	ActiveListSwapper          ActiveListSwapper               `inject:""`
+	PulseStorage               pulseStoragePm                  `inject:""`
+	HotDataWaiter              artifactmanager.HotDataWaiter   `inject:""`
+	JetStorage                 storage.JetStorage              `inject:""`
+	ObjectStorage              storage.ObjectStorage           `inject:""`
+	ActiveNodesStorage         storage.ActiveNodesStorage      `inject:""`
+	PulseTracker               storage.PulseTracker            `inject:""`
+	ReplicaStorage             storage.ReplicaStorage          `inject:""`
+	DBContext                  storage.DBContext               `inject:""`
+	StorageCleaner             storage.Cleaner                 `inject:""`
 
 	// TODO: move clients pool to component - @nordicdyno - 18.Dec.2018
 	syncClientsPool *heavyclient.Pool
@@ -64,8 +75,6 @@ type PulseManager struct {
 
 	currentPulse core.Pulse
 
-	// internal stuff
-	db *storage.DB
 	// setLock locks Set method call.
 	setLock sync.RWMutex
 	// saves PM stopping mode
@@ -84,32 +93,28 @@ type jetInfo struct {
 
 // TODO: @andreyromancev. 15.01.19. Just store ledger configuration in PM. This is not required.
 type pmOptions struct {
-	enableSync       bool
-	splitThreshold   uint64
-	dropHistorySize  int
-	storeLightPulses int
+	enableSync            bool
+	splitThreshold        uint64
+	dropHistorySize       int
+	storeLightPulses      int
+	heavySyncMessageLimit int
+	lightChainLimit       int
 }
 
 // NewPulseManager creates PulseManager instance.
-func NewPulseManager(db *storage.DB, conf configuration.Ledger) *PulseManager {
+func NewPulseManager(conf configuration.Ledger) *PulseManager {
 	pmconf := conf.PulseManager
-	heavySyncPool := heavyclient.NewPool(
-		db,
-		heavyclient.Options{
-			SyncMessageLimit: pmconf.HeavySyncMessageLimit,
-			PulsesDeltaLimit: conf.LightChainLimit,
-		},
-	)
+
 	pm := &PulseManager{
-		db:           db,
 		currentPulse: *core.GenesisPulse,
 		options: pmOptions{
-			enableSync:       pmconf.HeavySyncEnabled,
-			splitThreshold:   pmconf.SplitThreshold,
-			dropHistorySize:  conf.JetSizesHistoryDepth,
-			storeLightPulses: conf.LightChainLimit,
+			enableSync:            pmconf.HeavySyncEnabled,
+			splitThreshold:        pmconf.SplitThreshold,
+			dropHistorySize:       conf.JetSizesHistoryDepth,
+			storeLightPulses:      conf.LightChainLimit,
+			heavySyncMessageLimit: pmconf.HeavySyncMessageLimit,
+			lightChainLimit:       conf.LightChainLimit,
 		},
-		syncClientsPool: heavySyncPool,
 	}
 	return pm
 }
@@ -122,6 +127,9 @@ func (m *PulseManager) processEndPulse(
 ) error {
 	var g errgroup.Group
 	logger := inslogger.FromContext(ctx)
+	ctx, span := instracer.StartSpan(ctx, "pulse.process_end")
+	defer span.End()
+
 	for _, i := range jets {
 		info := i
 		g.Go(func() error {
@@ -141,6 +149,8 @@ func (m *PulseManager) processEndPulse(
 			logger := inslogger.FromContext(ctx)
 
 			sender := func(msg message.HotData, jetID core.RecordID) {
+				ctx, span := instracer.StartSpan(ctx, "pulse.send_hot")
+				defer span.End()
 				msg.Jet = *core.NewRecordRef(core.DomainID, jetID)
 				start := time.Now()
 				genericRep, err := m.Bus.Send(ctx, &msg, nil)
@@ -160,17 +170,12 @@ func (m *PulseManager) processEndPulse(
 			}
 
 			if info.left == nil && info.right == nil {
-				m.RecentStorageProvider.GetStorage(info.id).ClearZeroTTLObjects(ctx)
-
 				// No split happened.
 				if !info.mineNext {
 					go sender(*msg, info.id)
 				}
 			} else {
 				// Split happened.
-				m.RecentStorageProvider.GetStorage(info.left.id).ClearZeroTTLObjects(ctx)
-				m.RecentStorageProvider.GetStorage(info.right.id).ClearZeroTTLObjects(ctx)
-
 				if !info.left.mineNext {
 					go sender(*msg, info.left.id)
 				}
@@ -240,9 +245,9 @@ func (m *PulseManager) createDrop(
 	err error,
 ) {
 	var prevDrop *jet.JetDrop
-	prevDrop, err = m.db.GetDrop(ctx, jetID, prevPulse)
+	prevDrop, err = m.JetStorage.GetDrop(ctx, jetID, prevPulse)
 	if err == storage.ErrNotFound {
-		prevDrop, err = m.db.GetDrop(ctx, jet.Parent(jetID), prevPulse)
+		prevDrop, err = m.JetStorage.GetDrop(ctx, jet.Parent(jetID), prevPulse)
 		if err != nil {
 			return nil, nil, nil, errors.Wrap(err, "[ createDrop ] failed to find parent")
 		}
@@ -250,11 +255,11 @@ func (m *PulseManager) createDrop(
 		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't GetDrop")
 	}
 
-	drop, messages, dropSize, err := m.db.CreateDrop(ctx, jetID, currentPulse, prevDrop.Hash)
+	drop, messages, dropSize, err := m.JetStorage.CreateDrop(ctx, jetID, currentPulse, prevDrop.Hash)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't CreateDrop")
 	}
-	err = m.db.SetDrop(ctx, jetID, drop)
+	err = m.JetStorage.SetDrop(ctx, jetID, drop)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't SetDrop")
 	}
@@ -281,7 +286,7 @@ func (m *PulseManager) createDrop(
 		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't Sign")
 	}
 
-	err = m.db.AddDropSize(ctx, dropSizeData)
+	err = m.JetStorage.AddDropSize(ctx, dropSizeData)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't AddDropSize")
 	}
@@ -316,15 +321,18 @@ func (m *PulseManager) getExecutorHotData(
 	drop *jet.JetDrop,
 	dropSerialized []byte,
 ) (*message.HotData, error) {
+	ctx, span := instracer.StartSpan(ctx, "pulse.prepare_hot_data")
+	defer span.End()
+
 	logger := inslogger.FromContext(ctx)
-	recentStorage := m.RecentStorageProvider.GetStorage(jetID)
+	recentStorage := m.RecentStorageProvider.GetStorage(ctx, jetID)
 	recentObjectsIds := recentStorage.GetObjects()
 
 	recentObjects := map[core.RecordID]*message.HotIndex{}
 	pendingRequests := map[core.RecordID]map[core.RecordID][]byte{}
 
 	for id, ttl := range recentObjectsIds {
-		lifeline, err := m.db.GetObjectIndex(ctx, jetID, &id, false)
+		lifeline, err := m.ObjectStorage.GetObjectIndex(ctx, jetID, &id, false)
 		if err != nil {
 			logger.Error(err)
 			continue
@@ -342,7 +350,7 @@ func (m *PulseManager) getExecutorHotData(
 
 	for objID, requests := range recentStorage.GetRequests() {
 		for reqID := range requests {
-			pendingRecord, err := m.db.GetRecord(ctx, jetID, &reqID)
+			pendingRecord, err := m.ObjectStorage.GetRecord(ctx, jetID, &reqID)
 			if err != nil {
 				inslogger.FromContext(ctx).Error(err)
 				continue
@@ -354,7 +362,7 @@ func (m *PulseManager) getExecutorHotData(
 		}
 	}
 
-	dropSizeHistory, err := m.db.GetDropSizeHistory(ctx, jetID)
+	dropSizeHistory, err := m.JetStorage.GetDropSizeHistory(ctx, jetID)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ processRecentObjects ] Can't GetDropSizeHistory")
 	}
@@ -374,7 +382,10 @@ func (m *PulseManager) getExecutorHotData(
 var splitCount = 5
 
 func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse core.PulseNumber) ([]jetInfo, error) {
-	tree, err := m.db.CloneJetTree(ctx, currentPulse, newPulse)
+	ctx, span := instracer.StartSpan(ctx, "jets.process")
+	defer span.End()
+
+	tree, err := m.JetStorage.CloneJetTree(ctx, currentPulse, newPulse)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to clone jet tree into a new pulse")
 	}
@@ -399,11 +410,13 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse c
 			continue
 		}
 
+		m.RecentStorageProvider.GetStorage(ctx, jetID).DecreaseTTL(ctx)
+
 		info := jetInfo{id: jetID}
 		if indexToSplit == i && splitCount > 0 {
 			splitCount--
 
-			leftJetID, rightJetID, err := m.db.SplitJetTree(
+			leftJetID, rightJetID, err := m.JetStorage.SplitJetTree(
 				ctx,
 				newPulse,
 				jetID,
@@ -411,12 +424,12 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse c
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to split jet tree")
 			}
-			err = m.db.AddJets(ctx, *leftJetID, *rightJetID)
+			err = m.JetStorage.AddJets(ctx, *leftJetID, *rightJetID)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to add jets")
 			}
 			// Set actual because we are the last executor for jet.
-			err = m.db.UpdateJetTree(ctx, newPulse, true, *leftJetID, *rightJetID)
+			err = m.JetStorage.UpdateJetTree(ctx, newPulse, true, *leftJetID, *rightJetID)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to update tree")
 			}
@@ -456,7 +469,7 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse c
 			)
 		} else {
 			// Set actual because we are the last executor for jet.
-			err = m.db.UpdateJetTree(ctx, newPulse, true, jetID)
+			err = m.JetStorage.UpdateJetTree(ctx, newPulse, true, jetID)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to update tree")
 			}
@@ -476,14 +489,14 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse c
 }
 
 func (m *PulseManager) rewriteHotData(ctx context.Context, fromJetID, toJetID core.RecordID) error {
-	recentStorage := m.RecentStorageProvider.GetStorage(fromJetID)
+	recentStorage := m.RecentStorageProvider.GetStorage(ctx, fromJetID)
 
 	for id := range recentStorage.GetObjects() {
-		idx, err := m.db.GetObjectIndex(ctx, fromJetID, &id, false)
+		idx, err := m.ObjectStorage.GetObjectIndex(ctx, fromJetID, &id, false)
 		if err != nil {
 			return errors.Wrap(err, "failed to rewrite index")
 		}
-		err = m.db.SetObjectIndex(ctx, toJetID, &id, idx)
+		err = m.ObjectStorage.SetObjectIndex(ctx, toJetID, &id, idx)
 		if err != nil {
 			return errors.Wrap(err, "failed to rewrite index")
 		}
@@ -491,11 +504,11 @@ func (m *PulseManager) rewriteHotData(ctx context.Context, fromJetID, toJetID co
 
 	for _, requests := range recentStorage.GetRequests() {
 		for fromReqID := range requests {
-			request, err := m.db.GetRecord(ctx, fromJetID, &fromReqID)
+			request, err := m.ObjectStorage.GetRecord(ctx, fromJetID, &fromReqID)
 			if err != nil {
 				return errors.Wrap(err, "failed to rewrite pending request")
 			}
-			toReqID, err := m.db.SetRecord(ctx, toJetID, fromReqID.Pulse(), request)
+			toReqID, err := m.ObjectStorage.SetRecord(ctx, toJetID, fromReqID.Pulse(), request)
 			if err == storage.ErrOverride {
 				continue
 			}
@@ -508,7 +521,8 @@ func (m *PulseManager) rewriteHotData(ctx context.Context, fromJetID, toJetID co
 		}
 	}
 
-	m.RecentStorageProvider.CloneStorage(fromJetID, toJetID)
+	inslogger.FromContext(ctx).Debugf("{LEAK} CloneStorage from - %v, to - %v", fromJetID, toJetID)
+	m.RecentStorageProvider.CloneStorage(ctx, fromJetID, toJetID)
 
 	return nil
 }
@@ -521,64 +535,18 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 		return errors.New("can't call Set method on PulseManager after stop")
 	}
 
-	logger := inslogger.FromContext(ctx)
+	ctx, span := instracer.StartSpan(
+		ctx, "pulse.process", trace.WithSampler(trace.AlwaysSample()),
+	)
+	span.AddAttributes(
+		trace.Int64Attribute("pulse.PulseNumber", int64(newPulse.PulseNumber)),
+	)
+	defer span.End()
 
-	var err error
-	m.GIL.Acquire(ctx)
-	m.PulseStorage.Lock()
-
-	// FIXME: @andreyromancev. 17.12.18. return core.Pulse here.
-	storagePulse, err := m.db.GetLatestPulse(ctx)
+	jets, oldPulse, prevPulseNumber, err := m.setUnderGilSection(ctx, newPulse, persist)
 	if err != nil {
-		m.PulseStorage.Unlock()
-		m.GIL.Release(ctx)
-		return errors.Wrap(err, "call of GetLatestPulseNumber failed")
+		return err
 	}
-	currentPulse := storagePulse.Pulse
-	prevPulseNumber := *storagePulse.Prev
-
-	logger.WithFields(map[string]interface{}{
-		"new_pulse":     newPulse.PulseNumber,
-		"current_pulse": currentPulse.PulseNumber,
-		"persist":       persist,
-	}).Debugf("received pulse")
-
-	// swap pulse
-	m.currentPulse = newPulse
-
-	// swap active nodes
-	// TODO: fix network consensus and uncomment this (after NETD18-74)
-	// m.ActiveListSwapper.MoveSyncToActive()
-	if persist {
-		if err := m.db.AddPulse(ctx, newPulse); err != nil {
-			m.GIL.Release(ctx)
-			m.PulseStorage.Unlock()
-			return errors.Wrap(err, "call of AddPulse failed")
-		}
-		err = m.db.SetActiveNodes(newPulse.PulseNumber, m.NodeNet.GetActiveNodes())
-		if err != nil {
-			m.GIL.Release(ctx)
-			m.PulseStorage.Unlock()
-			return errors.Wrap(err, "call of SetActiveNodes failed")
-		}
-	}
-
-	m.PulseStorage.Set(&newPulse)
-	m.PulseStorage.Unlock()
-
-	var jets []jetInfo
-	if persist {
-		jets, err = m.processJets(ctx, currentPulse.PulseNumber, newPulse.PulseNumber)
-		if err != nil {
-			m.GIL.Release(ctx)
-			return errors.Wrap(err, "failed to process jets")
-		}
-	}
-
-	if m.NodeNet.GetOrigin().Role() == core.StaticRoleLightMaterial {
-		m.prepareArtifactManagerMessageHandlerForNextPulse(ctx, newPulse, jets)
-	}
-	m.GIL.Release(ctx)
 
 	if !persist {
 		return nil
@@ -588,20 +556,13 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 	// execute only on material executor
 	// TODO: do as much as possible async.
 	if m.NodeNet.GetOrigin().Role() == core.StaticRoleLightMaterial {
-		err = m.processEndPulse(ctx, jets, prevPulseNumber, &currentPulse, &newPulse)
+		err = m.processEndPulse(ctx, jets, *prevPulseNumber, oldPulse, &newPulse)
 		if err != nil {
 			return err
 		}
-		if m.options.enableSync {
-			pn := currentPulse.PulseNumber
-			for _, jInfo := range jets {
-				m.syncClientsPool.AddPulsesToSyncClient(ctx, jInfo.id, true, pn)
-			}
-		}
-
 		m.postProcessJets(ctx, newPulse, jets)
-		// TODO: make it asynchronious - @aorlovsky 19.01.2019
-		m.cleanLightData(ctx, newPulse)
+		m.addSync(ctx, jets, oldPulse.PulseNumber)
+		go m.cleanLightData(ctx, newPulse)
 	}
 
 	err = m.Bus.OnPulse(ctx, newPulse)
@@ -612,32 +573,117 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 	return m.LR.OnPulse(ctx, newPulse)
 }
 
+func (m *PulseManager) setUnderGilSection(
+	ctx context.Context, newPulse core.Pulse, persist bool,
+) (
+	[]jetInfo, *core.Pulse, *core.PulseNumber, error,
+) {
+	m.GIL.Acquire(ctx)
+	ctx, span := instracer.StartSpan(ctx, "pulse.gil_locked")
+	defer span.End()
+	defer m.GIL.Release(ctx)
+
+	m.PulseStorage.Lock()
+
+	// FIXME: @andreyromancev. 17.12.18. return core.Pulse here.
+	storagePulse, err := m.PulseTracker.GetLatestPulse(ctx)
+	if err != nil {
+		m.PulseStorage.Unlock()
+		return nil, nil, nil, errors.Wrap(err, "call of GetLatestPulseNumber failed")
+	}
+
+	oldPulse := storagePulse.Pulse
+	prevPulseNumber := storagePulse.Prev
+
+	logger := inslogger.FromContext(ctx)
+	logger.WithFields(map[string]interface{}{
+		"new_pulse":     newPulse.PulseNumber,
+		"current_pulse": oldPulse.PulseNumber,
+		"persist":       persist,
+	}).Debugf("received pulse")
+
+	// swap pulse
+	m.currentPulse = newPulse
+
+	// swap active nodes
+	// TODO: fix network consensus and uncomment this (after NETD18-74)
+	// m.ActiveListSwapper.MoveSyncToActive()
+	if persist {
+		if err := m.PulseTracker.AddPulse(ctx, newPulse); err != nil {
+			m.PulseStorage.Unlock()
+			return nil, nil, nil, errors.Wrap(err, "call of AddPulse failed")
+		}
+		err = m.ActiveNodesStorage.SetActiveNodes(newPulse.PulseNumber, m.NodeNet.GetActiveNodes())
+		if err != nil {
+			m.PulseStorage.Unlock()
+			return nil, nil, nil, errors.Wrap(err, "call of SetActiveNodes failed")
+		}
+	}
+
+	m.PulseStorage.Set(&newPulse)
+	m.PulseStorage.Unlock()
+
+	var jets []jetInfo
+	if persist {
+		jets, err = m.processJets(ctx, oldPulse.PulseNumber, newPulse.PulseNumber)
+		if err != nil {
+			return nil, nil, nil, errors.Wrap(err, "failed to process jets")
+		}
+	}
+
+	if m.NodeNet.GetOrigin().Role() == core.StaticRoleLightMaterial {
+		m.prepareArtifactManagerMessageHandlerForNextPulse(ctx, newPulse, jets)
+	}
+
+	return jets, &oldPulse, prevPulseNumber, nil
+}
+
+func (m *PulseManager) addSync(ctx context.Context, jets []jetInfo, pulse core.PulseNumber) {
+	ctx, span := instracer.StartSpan(ctx, "pulse.add_sync")
+	defer span.End()
+
+	if !m.options.enableSync {
+		return
+	}
+
+	for _, jInfo := range jets {
+		m.syncClientsPool.AddPulsesToSyncClient(ctx, jInfo.id, true, pulse)
+	}
+}
+
 func (m *PulseManager) postProcessJets(ctx context.Context, newPulse core.Pulse, jets []jetInfo) {
 	logger := inslogger.FromContext(ctx)
 	logger.Debugf("[postProcessJets] post-process jets, pulse number - %v", newPulse.PulseNumber)
+
+	ctx, span := instracer.StartSpan(ctx, "jets.post_process")
+	defer span.End()
 
 	for _, jetInfo := range jets {
 		if jetInfo.left == nil && jetInfo.right == nil {
 			// No split happened.
 			if !jetInfo.mineNext {
 				logger.Debugf("[postProcessJets] clear recent storage for root jet - %v, pulse - %v", jetInfo.id, newPulse.PulseNumber)
-				m.RecentStorageProvider.GetStorage(jetInfo.id).ClearObjects(ctx)
+				m.RecentStorageProvider.RemoveStorage(ctx, jetInfo.id)
 			}
 		} else {
 			// Split happened.
+			m.RecentStorageProvider.RemoveStorage(ctx, jetInfo.id)
 			if !jetInfo.left.mineNext {
 				logger.Debugf("[postProcessJets] clear recent storage for left jet - %v, pulse - %v", jetInfo.left.id, newPulse.PulseNumber)
-				m.RecentStorageProvider.GetStorage(jetInfo.left.id).ClearObjects(ctx)
+				m.RecentStorageProvider.RemoveStorage(ctx, jetInfo.left.id)
 			}
 			if !jetInfo.right.mineNext {
 				logger.Debugf("[postProcessJets] clear recent storage for right jet - %v, pulse - %v", jetInfo.right.id, newPulse.PulseNumber)
-				m.RecentStorageProvider.GetStorage(jetInfo.right.id).ClearObjects(ctx)
+				m.RecentStorageProvider.RemoveStorage(ctx, jetInfo.right.id)
 			}
 		}
 	}
 }
 
 func (m *PulseManager) cleanLightData(ctx context.Context, newPulse core.Pulse) {
+	ctx, span := instracer.StartSpan(ctx, "pulse.clean")
+	defer span.End()
+
 	inslog := inslogger.FromContext(ctx)
 	startSync := time.Now()
 	defer func() {
@@ -649,7 +695,7 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse core.Pulse) 
 
 	pn := newPulse.PulseNumber
 	for i := 0; i <= delta; i++ {
-		prevPulse, err := m.db.GetPreviousPulse(ctx, pn)
+		prevPulse, err := m.PulseTracker.GetPreviousPulse(ctx, pn)
 		if err != nil {
 			inslogger.FromContext(ctx).Errorf("Can't get previous Nth %v pulse by pulse number: %v", i, pn)
 			return
@@ -661,17 +707,19 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse core.Pulse) 
 		}
 	}
 
-	m.db.RemoveActiveNodesUntil(pn)
+	m.ActiveNodesStorage.RemoveActiveNodesUntil(pn)
 
 	_, err, _ := m.cleanupGroup.Do("lightcleanup", func() (interface{}, error) {
+		ctx, span := instracer.StartSpan(ctx, "pulse.cleanAsync")
 		startAsync := time.Now()
 		defer func() {
 			latency := time.Since(startAsync)
 			inslog.Debugf("cleanLightData db clean phase time spend=%v", latency)
+			span.End()
 		}()
 
 		// we are remove records from 'storageRecordsUtilPN' pulse number here
-		jetSyncState, err := m.db.GetAllSyncClientJets(ctx)
+		jetSyncState, err := m.ReplicaStorage.GetAllSyncClientJets(ctx)
 		if err != nil {
 			inslogger.FromContext(ctx).Errorf("Can't get jet clients state: %v", err)
 			return nil, nil
@@ -680,7 +728,7 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse core.Pulse) 
 		for jetID := range jetSyncState {
 			inslogger.FromContext(ctx).Debugf("Start light indexes cleanup, until pulse = %v (new=%v, delta=%v), jet = %v",
 				pn, newPulse.PulseNumber, delta, jetID.DebugString())
-			rmStat, err := m.db.RemoveAllForJetUntilPulse(ctx, jetID, pn, m.RecentStorageProvider.GetStorage(jetID))
+			rmStat, err := m.StorageCleaner.RemoveAllForJetUntilPulse(ctx, jetID, pn, m.RecentStorageProvider.GetStorage(ctx, jetID))
 			if err != nil {
 				inslogger.FromContext(ctx).Errorf("Error on light indexes cleanup, until pulse = %v, jet = %v: %v", pn, jetID.DebugString(), err)
 				continue
@@ -699,7 +747,10 @@ func (m *PulseManager) prepareArtifactManagerMessageHandlerForNextPulse(ctx cont
 	logger := inslogger.FromContext(ctx)
 	logger.Debugf("[breakermiddleware] [prepareHandlerForNextPulse] close breakers my jets for the next pulse - %v", newPulse.PulseNumber)
 
-	m.ArtifactManagerMessageHandler.ResetEarlyRequestCircuitBreaker(ctx)
+	ctx, span := instracer.StartSpan(ctx, "early.close")
+	defer span.End()
+
+	m.HotDataWaiter.ThrowTimeout(ctx)
 
 	for _, jetInfo := range jets {
 
@@ -707,17 +758,17 @@ func (m *PulseManager) prepareArtifactManagerMessageHandlerForNextPulse(ctx cont
 			// No split happened.
 			if jetInfo.mineNext {
 				logger.Debugf("[breakermiddleware] [prepareHandlerForNextPulse] fetch jetInfo root %v, pulse - %v", jetInfo.id.DebugString(), newPulse.PulseNumber)
-				m.ArtifactManagerMessageHandler.CloseEarlyRequestCircuitBreakerForJet(ctx, jetInfo.id)
+				m.HotDataWaiter.Unlock(ctx, jetInfo.id)
 			}
 		} else {
 			// Split happened.
 			if jetInfo.left.mineNext {
 				logger.Debugf("[breakermiddleware] [prepareHandlerForNextPulse] fetch jetInfo left %v, pulse - %v", jetInfo.left.id.DebugString(), newPulse.PulseNumber)
-				m.ArtifactManagerMessageHandler.CloseEarlyRequestCircuitBreakerForJet(ctx, jetInfo.left.id)
+				m.HotDataWaiter.Unlock(ctx, jetInfo.left.id)
 			}
 			if jetInfo.right.mineNext {
 				logger.Debugf("[breakermiddleware] [prepareHandlerForNextPulse] fetch jetInfo right %v, pulse - %v", jetInfo.right.id.DebugString(), newPulse.PulseNumber)
-				m.ArtifactManagerMessageHandler.CloseEarlyRequestCircuitBreakerForJet(ctx, jetInfo.right.id)
+				m.HotDataWaiter.Unlock(ctx, jetInfo.right.id)
 			}
 		}
 	}
@@ -726,14 +777,25 @@ func (m *PulseManager) prepareArtifactManagerMessageHandlerForNextPulse(ctx cont
 // Start starts pulse manager, spawns replication goroutine under a hood.
 func (m *PulseManager) Start(ctx context.Context) error {
 	// FIXME: @andreyromancev. 21.12.18. Find a proper place for me. Somewhere at the genesis.
-	err := m.db.SetActiveNodes(core.FirstPulseNumber, m.NodeNet.GetActiveNodes())
+	err := m.ActiveNodesStorage.SetActiveNodes(core.FirstPulseNumber, m.NodeNet.GetActiveNodes())
 	if err != nil && err != storage.ErrOverride {
 		return err
 	}
 
 	if m.options.enableSync {
-		m.syncClientsPool.Bus = m.Bus
-		m.syncClientsPool.PulseStorage = m.PulseStorage
+		heavySyncPool := heavyclient.NewPool(
+			m.Bus,
+			m.PulseStorage,
+			m.PulseTracker,
+			m.ReplicaStorage,
+			m.DBContext,
+			heavyclient.Options{
+				SyncMessageLimit: m.options.heavySyncMessageLimit,
+				PulsesDeltaLimit: m.options.lightChainLimit,
+			},
+		)
+		m.syncClientsPool = heavySyncPool
+
 		err := m.initJetSyncState(ctx)
 		if err != nil {
 			return err
@@ -749,9 +811,9 @@ func (m *PulseManager) restoreGenesisRecentObjects(ctx context.Context) error {
 	}
 
 	jetID := *jet.NewID(0, nil)
-	recent := m.RecentStorageProvider.GetStorage(jetID)
+	recent := m.RecentStorageProvider.GetStorage(ctx, jetID)
 
-	return m.db.IterateIndexIDs(ctx, jetID, func(id core.RecordID) error {
+	return m.ObjectStorage.IterateIndexIDs(ctx, jetID, func(id core.RecordID) error {
 		if id.Pulse() == core.FirstPulseNumber {
 			recent.AddObject(ctx, id)
 		}

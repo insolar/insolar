@@ -1,117 +1,95 @@
 /*
- *    Copyright 2018 Insolar
+ * The Clear BSD License
  *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
+ * Copyright (c) 2019 Insolar Technologies
  *
- *        http://www.apache.org/licenses/LICENSE-2.0
+ * All rights reserved.
  *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
+ * Redistribution and use in source and binary forms, with or without modification, are permitted (subject to the limitations in the disclaimer below) provided that the following conditions are met:
+ *
+ *  Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+ *  Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+ *  Neither the name of Insolar Technologies nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+ *
+ * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
  */
 
 package bootstrap
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/controller/common"
 	"github.com/insolar/insolar/network/nodenetwork"
-	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/utils"
 	"github.com/pkg/errors"
 )
 
-type NetworkBootstrapper struct {
-	certificate         core.Certificate
-	sessionManager      *SessionManager
-	bootstrapper        *Bootstrapper
-	authController      *AuthorizationController
-	challengeController *ChallengeResponseController
-	nodeKeeper          network.NodeKeeper
+type NetworkBootstrapper interface {
+	Bootstrap(ctx context.Context) error
+	SetLastPulse(number core.PulseNumber)
+	GetLastPulse() core.PulseNumber
 }
 
-func (nb *NetworkBootstrapper) Bootstrap(ctx context.Context) error {
-	if len(nb.certificate.GetDiscoveryNodes()) == 0 {
+type networkBootstrapper struct {
+	Certificate         core.Certificate            `inject:""`
+	Bootstrapper        Bootstrapper                `inject:""`
+	NodeKeeper          network.NodeKeeper          `inject:""`
+	SessionManager      SessionManager              `inject:""`
+	AuthController      AuthorizationController     `inject:""`
+	ChallengeController ChallengeResponseController `inject:""`
+}
+
+func (nb *networkBootstrapper) Bootstrap(ctx context.Context) error {
+	if len(nb.Certificate.GetDiscoveryNodes()) == 0 {
 		log.Info("Zero bootstrap")
 		return nil
 	}
-	if utils.OriginIsDiscovery(nb.certificate) {
+	if utils.OriginIsDiscovery(nb.Certificate) {
 		if err := nb.bootstrapDiscovery(ctx); err != nil {
 			return errors.Wrap(err, "[ Bootstrap ] Couldn't OriginIsDiscovery")
 		}
-		nb.nodeKeeper.SetIsBootstrapped(true)
+		nb.NodeKeeper.SetIsBootstrapped(true)
 		return nil
 	}
 	return nb.bootstrapJoiner(ctx)
 }
 
-func (nb *NetworkBootstrapper) Start(cryptographyService core.CryptographyService,
-	networkCoordinator core.NetworkCoordinator, nodeKeeper network.NodeKeeper) {
-
-	nb.nodeKeeper = nodeKeeper
-	nb.bootstrapper.Start(nodeKeeper)
-	nb.authController.Start(networkCoordinator, nodeKeeper)
-	nb.challengeController.Start(cryptographyService, nodeKeeper)
-
-	// TODO: we also have to call Stop method somewhere
-	err := nb.sessionManager.Start(context.TODO())
-	if err != nil {
-		panic(fmt.Sprintf("Failed to start session manager: %s", err.Error()))
-	}
+func (nb *networkBootstrapper) SetLastPulse(number core.PulseNumber) {
+	nb.Bootstrapper.SetLastPulse(number)
 }
 
-func (nb *NetworkBootstrapper) SetLastPulse(number core.PulseNumber) {
-	nb.bootstrapper.SetLastPulse(number)
+func (nb *networkBootstrapper) GetLastPulse() core.PulseNumber {
+	return nb.Bootstrapper.GetLastPulse()
 }
 
-func (nb *NetworkBootstrapper) GetLastPulse() core.PulseNumber {
-	return nb.bootstrapper.GetLastPulse()
-}
-
-type DiscoveryNode struct {
-	Host *host.Host
-	Node core.DiscoveryNode
-}
-
-func (nb *NetworkBootstrapper) bootstrapJoiner(ctx context.Context) error {
-	discoveryNode, err := nb.bootstrapper.Bootstrap(ctx)
+func (nb *networkBootstrapper) bootstrapJoiner(ctx context.Context) error {
+	discoveryNode, err := nb.Bootstrapper.Bootstrap(ctx)
 	if err != nil {
 		return errors.Wrap(err, "Error bootstrapping to discovery node")
 	}
-	sessionID, err := nb.authController.Authorize(ctx, discoveryNode, nb.certificate)
+	sessionID, err := nb.AuthController.Authorize(ctx, discoveryNode, nb.Certificate)
 	if err != nil {
 		return errors.Wrap(err, "Error authorizing on discovery node")
 	}
 
-	data, err := nb.challengeController.Execute(ctx, discoveryNode, sessionID)
+	data, err := nb.ChallengeController.Execute(ctx, discoveryNode, sessionID)
 	if err != nil {
 		return errors.Wrap(err, "Error executing double challenge response")
 	}
-	origin := nb.nodeKeeper.GetOrigin()
+	origin := nb.NodeKeeper.GetOrigin()
 	mutableOrigin := origin.(nodenetwork.MutableNode)
 	mutableOrigin.SetShortID(data.AssignShortID)
-	return nb.authController.Register(ctx, discoveryNode, sessionID)
+	return nb.AuthController.Register(ctx, discoveryNode, sessionID)
 }
 
-func (nb *NetworkBootstrapper) bootstrapDiscovery(ctx context.Context) error {
-	return nb.bootstrapper.BootstrapDiscovery(ctx)
+func (nb *networkBootstrapper) bootstrapDiscovery(ctx context.Context) error {
+	return nb.Bootstrapper.BootstrapDiscovery(ctx)
 }
 
-func NewNetworkBootstrapper(options *common.Options, cert core.Certificate, transport network.InternalTransport) *NetworkBootstrapper {
-	nb := &NetworkBootstrapper{}
-	nb.certificate = cert
-	nb.sessionManager = NewSessionManager()
-	nb.bootstrapper = NewBootstrapper(options, cert, transport)
-	nb.authController = NewAuthorizationController(options, transport, nb.sessionManager)
-	nb.challengeController = NewChallengeResponseController(options, transport, nb.sessionManager)
-	return nb
+func NewNetworkBootstrapper() NetworkBootstrapper {
+	return &networkBootstrapper{}
 }
