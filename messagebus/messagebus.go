@@ -141,7 +141,6 @@ func (mb *MessageBus) Send(ctx context.Context, msg core.Message, ops *core.Mess
 	defer span.End()
 
 	currentPulse, err := mb.PulseStorage.Current(ctx)
-	fmt.Println("[mb.send] ", currentPulse.PulseNumber)
 	if err != nil {
 		return nil, err
 	}
@@ -263,8 +262,6 @@ func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Repl
 
 	origin := mb.NodeNetwork.GetOrigin()
 	if msg.GetSender().Equal(origin.ID()) {
-		fmt.Println("msg.GetSender()", msg.GetSender())
-		fmt.Println("origin.ID()", origin.ID())
 		ctx = hack.SetSkipValidation(ctx, true)
 	}
 	// TODO: sergey.morozov 2018-12-21 there is potential race condition because of readBarrier. We must implement correct locking.
