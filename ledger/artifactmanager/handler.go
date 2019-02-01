@@ -203,6 +203,15 @@ func (h *MessageHandler) setHandlersForLight(m *middleware) {
 			instrumentHandler("handleHotRecords"),
 			m.releaseHotDataWaiters))
 
+	h.Bus.MustRegister(
+		core.TypeGetRequest,
+		BuildMiddleware(
+			h.handleGetRequest,
+			m.checkJet,
+			instrumentHandler("handleGetRequest"),
+		),
+	)
+
 	// Validation.
 	h.Bus.MustRegister(core.TypeValidateRecord,
 		BuildMiddleware(h.handleValidateRecord,
@@ -684,7 +693,7 @@ func (h *MessageHandler) handleGetChildren(
 		}
 		counter++
 
-		rec, err := h.ObjectStorage.GetRecord(ctx, jetID, currentChild)
+		rec, err := h.ObjectStorage.GetRecord(ctx, *childJet, currentChild)
 		// We don't have this child reference. Return what was collected.
 		if err == storage.ErrNotFound {
 			return &reply.Children{Refs: refs, NextFrom: currentChild}, nil
@@ -708,6 +717,28 @@ func (h *MessageHandler) handleGetChildren(
 	}
 
 	return &reply.Children{Refs: refs, NextFrom: nil}, nil
+}
+
+func (h *MessageHandler) handleGetRequest(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
+	jetID := jetFromContext(ctx)
+	msg := parcel.Message().(*message.GetRequest)
+
+	rec, err := h.ObjectStorage.GetRecord(ctx, jetID, &msg.Request)
+	if err != nil {
+		return nil, errors.New("failed to fetch request")
+	}
+
+	req, ok := rec.(*record.RequestRecord)
+	if !ok {
+		return nil, errors.New("failed to decode request")
+	}
+
+	rep := reply.Request{
+		ID:     msg.Request,
+		Record: record.SerializeRecord(req),
+	}
+
+	return &rep, nil
 }
 
 func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Parcel) (core.Reply, error) {

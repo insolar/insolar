@@ -1214,3 +1214,38 @@ func TestMessageHandler_HandleJetDrop_SaveJet_ExistingMap(t *testing.T) {
 		require.True(t, idSet.Has(id))
 	}
 }
+
+func TestMessageHandler_HandleGetRequest(t *testing.T) {
+	t.Parallel()
+	ctx := inslogger.TestContext(t)
+	mc := minimock.NewController(t)
+	db, cleaner := storagetest.TmpDB(ctx, t)
+	defer cleaner()
+	defer mc.Finish()
+
+	jetID := *jet.NewID(0, nil)
+
+	req := record.RequestRecord{
+		Payload: []byte{1, 2, 3},
+		Object:  *genRandomID(0),
+	}
+	reqID, err := db.SetRecord(ctx, jetID, core.FirstPulseNumber, &req)
+
+	msg := message.GetRequest{
+		Request: *reqID,
+	}
+	certificate := testutils.NewCertificateMock(t)
+	certificate.GetRoleMock.Return(core.StaticRoleLightMaterial)
+
+	h := NewMessageHandler(&configuration.Ledger{}, certificate)
+	h.ObjectStorage = db
+
+	rep, err := h.handleGetRequest(contextWithJet(ctx, jetID), &message.Parcel{
+		Msg:         &msg,
+		PulseNumber: core.FirstPulseNumber + 1,
+	})
+	require.NoError(t, err)
+	reqReply, ok := rep.(*reply.Request)
+	require.True(t, ok)
+	assert.Equal(t, req, *record.DeserializeRecord(reqReply.Record).(*record.RequestRecord))
+}
