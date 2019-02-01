@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -255,6 +255,8 @@ const (
 	TypeGetJet
 	// TypeAbandonedRequestsNotification informs virtual node about unclosed requests.
 	TypeAbandonedRequestsNotification
+	// TypeGetRequest fetches request from ledger.
+	TypeGetRequest
 
 	// TypeValidationCheck checks if validation of a particular record can be performed.
 	TypeValidationCheck

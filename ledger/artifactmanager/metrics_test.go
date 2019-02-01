@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -62,6 +62,8 @@ func TestLedgerArtifactManager_Metrics(t *testing.T) {
 	am.PlatformCryptographyScheme = cs
 	am.DefaultBus = mb
 	am.PulseStorage = amPulseStorageMock
+	am.JetStorage = db
+	am.DBContext = db
 
 	tmetrics := testmetrics.Start(ctx)
 	defer tmetrics.Stop()

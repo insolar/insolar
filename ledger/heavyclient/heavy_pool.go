@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -19,28 +19,48 @@ package heavyclient
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
+	"go.opencensus.io/stats"
+	"golang.org/x/sync/singleflight"
 )
 
 // Pool manages state of heavy sync clients (one client per jet id).
 type Pool struct {
-	Bus          core.MessageBus
-	PulseStorage core.PulseStorage
-	db           *storage.DB
+	bus            core.MessageBus
+	pulseStorage   core.PulseStorage
+	pulseTracker   storage.PulseTracker
+	replicaStorage storage.ReplicaStorage
+	dbContext      storage.DBContext
 
-	ClientDefaults Options
+	clientDefaults Options
 
 	sync.Mutex
 	clients map[core.RecordID]*JetClient
+
+	cleanupGroup singleflight.Group
 }
 
 // NewPool constructor of new pool.
-func NewPool(db *storage.DB, clientDefaults Options) *Pool {
+func NewPool(
+	bus core.MessageBus,
+	pulseStorage core.PulseStorage,
+	tracker storage.PulseTracker,
+	replicaStorage storage.ReplicaStorage,
+	dbContext storage.DBContext,
+	clientDefaults Options,
+) *Pool {
 	return &Pool{
-		db:             db,
-		ClientDefaults: clientDefaults,
+		bus:            bus,
+		pulseStorage:   pulseStorage,
+		pulseTracker:   tracker,
+		replicaStorage: replicaStorage,
+		clientDefaults: clientDefaults,
+		dbContext:      dbContext,
 		clients:        map[core.RecordID]*JetClient{},
 	}
 }
@@ -74,10 +94,15 @@ func (scp *Pool) AddPulsesToSyncClient(
 	scp.Lock()
 	client, ok := scp.clients[jetID]
 	if !ok {
-		client = NewJetClient(jetID, scp.ClientDefaults)
-		client.db = scp.db
-		client.Bus = scp.Bus
-		client.PulseStorage = scp.PulseStorage
+		client = NewJetClient(
+			scp.replicaStorage,
+			scp.bus,
+			scp.pulseStorage,
+			scp.pulseTracker,
+			scp.dbContext,
+			jetID,
+			scp.clientDefaults,
+		)
 
 		scp.clients[jetID] = client
 	}
@@ -93,4 +118,59 @@ func (scp *Pool) AddPulsesToSyncClient(
 		}
 	}
 	return client
+}
+
+func (scp *Pool) AllClients(ctx context.Context) []*JetClient {
+	scp.Lock()
+	defer scp.Unlock()
+	clients := make([]*JetClient, 0, len(scp.clients))
+	for _, c := range scp.clients {
+		clients = append(clients, c)
+	}
+	return clients
+}
+
+func (scp *Pool) LightCleanup(ctx context.Context, untilPN core.PulseNumber, rsp recentstorage.Provider) error {
+	inslog := inslogger.FromContext(ctx)
+	start := time.Now()
+	defer func() {
+		latency := time.Since(start)
+		inslog.Infof("cleanLightData db clean phase time spend=%v", latency)
+		stats.Record(ctx, statCleanLatencyDB.M(latency.Nanoseconds()/1e6))
+
+	}()
+
+	_, err, _ := scp.cleanupGroup.Do("lightcleanup", func() (interface{}, error) {
+		startCleanup := time.Now()
+		defer func() {
+			latency := time.Since(startCleanup)
+			inslog.Infof("cleanLightData db clean phase job time spend=%v", latency)
+		}()
+
+		// This is how we can get all jets served by
+		// jets, err := scp.db.GetAllSyncClientJets(ctx)
+
+		allClients := scp.AllClients(ctx)
+		var wg sync.WaitGroup
+		wg.Add(len(allClients))
+		for _, c := range allClients {
+			jetID := c.jetID
+			go func() {
+				defer wg.Done()
+				inslogger.FromContext(ctx).Debugf("Start light cleanup, until pulse = %v, jet = %v",
+					untilPN, jetID.DebugString())
+				rmStat, err := scp.dbContext.RemoveAllForJetUntilPulse(ctx, jetID, untilPN, rsp.GetStorage(ctx, jetID))
+				if err != nil {
+					inslogger.FromContext(ctx).Errorf("Error on light cleanup, until pulse = %v, jet = %v: %v",
+						untilPN, jetID.DebugString(), err)
+					return
+				}
+				inslogger.FromContext(ctx).Debugf("End light cleanup, rm stat=%#v (until pulse = %v, jet = %v)",
+					rmStat, untilPN, jetID.DebugString())
+			}()
+		}
+		wg.Wait()
+		return nil, nil
+	})
+	return err
 }

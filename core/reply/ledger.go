@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -117,4 +117,15 @@ type Jet struct {
 // Type implementation of Reply interface.
 func (r *Jet) Type() core.ReplyType {
 	return TypeJet
+}
+
+// Request contains jet.
+type Request struct {
+	ID     core.RecordID
+	Record []byte
+}
+
+// Type implementation of Reply interface.
+func (r *Request) Type() core.ReplyType {
+	return TypeRequest
 }

@@ -1,3 +1,19 @@
+/*
+ *    Copyright 2019 Insolar Technologies
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
+
 package logicrunner
 
 import (
@@ -110,7 +126,6 @@ func TestPendingFinished(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
 	defer mc.Finish()
-
 
 	jc := testutils.NewJetCoordinatorMock(mc)
 	mb := testutils.NewMessageBusMock(mc)
@@ -318,6 +333,8 @@ func TestHandlePendingFinishedMessage(
 		&message.PendingFinished{Reference: objectRef},
 	)
 
+	parcel.DefaultTargetMock.Return(&core.RecordRef{})
+
 	re, err := lr.HandlePendingFinishedMessage(ctx, parcel)
 	require.NoError(t, err)
 	require.Equal(t, &reply.OK{}, re)
@@ -412,6 +429,8 @@ func TestLogicRunner_HandleStillExecutingMessage(
 		&message.StillExecuting{Reference: objectRef},
 	)
 
+	parcel.DefaultTargetMock.Return(&core.RecordRef{})
+
 	re, err := lr.HandleStillExecutingMessage(ctx, parcel)
 	require.NoError(t, err)
 	require.Equal(t, &reply.OK{}, re)
@@ -458,12 +477,156 @@ func TestLogicRunner_OnPulse_StillExecuting(t *testing.T) {
 	lr.state[objectRef] = &ObjectState{
 		ExecutionState: &ExecutionState{
 			Behaviour: &ValidationSaver{},
-			Current: &CurrentExecution{},
+			Current:   &CurrentExecution{},
 		},
 	}
 	mb.SendMock.Return(&reply.OK{}, nil)
 	err := lr.OnPulse(ctx, pulse)
 	require.NoError(t, err)
 	assert.NotNil(t, lr.state[objectRef].ExecutionState)
-	assert.Equal(t, uint64(2), mb.SendCounter)
+}
+
+func TestReleaseQueue(t *testing.T) {
+	t.Parallel()
+	type expected struct {
+		Length  int
+		HasMore bool
+	}
+	type testCase struct {
+		QueueLength int
+		Expected    expected
+	}
+	var testCases = []testCase{
+		{0, expected{0, false}},
+		{1, expected{1, false}},
+		{maxQueueLength, expected{maxQueueLength, false}},
+
+		// TODO fix expected count to maxQueueLength after start taking data from ledger
+		{maxQueueLength + 1, expected{maxQueueLength + 1, true}},
+	}
+
+	for _, tc := range testCases {
+		es := ExecutionState{Queue: make([]ExecutionQueueElement, tc.QueueLength)}
+		mq, hasMore := es.releaseQueue()
+		assert.Equal(t, tc.Expected.Length, len(mq))
+		assert.Equal(t, tc.Expected.HasMore, hasMore)
+	}
+}
+
+func TestOnPulseLedgerHasMoreRequests(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+	mc := minimock.NewController(t)
+	defer mc.Finish()
+
+	type testCase struct {
+		queue                         []ExecutionQueueElement
+		mbMock                        *testutils.MessageBusMock
+		ExpectedLedgerHasMoreRequests bool
+	}
+	testCases := []testCase{
+		{make([]ExecutionQueueElement, maxQueueLength+1), testutils.NewMessageBusMock(mc), true},
+		{make([]ExecutionQueueElement, maxQueueLength), testutils.NewMessageBusMock(mc), false},
+	}
+
+	jc := testutils.NewJetCoordinatorMock(mc)
+	jc.IsAuthorizedMock.Return(false, nil)
+	jc.MeMock.Return(core.RecordRef{})
+
+	pulse := core.Pulse{}
+
+	for _, test := range testCases {
+		queue := test.queue
+
+		// waiting for ledger implement fetch method
+		// waiting for us implement fetching
+		messagesQueue := convertQueueToMessageQueue(queue)
+		//messagesQueue := convertQueueToMessageQueue(queue[:maxQueueLength])
+
+		ref := testutils.RandomRef()
+
+		lr, _ := NewLogicRunner(&configuration.LogicRunner{})
+		lr.JetCoordinator = jc
+
+		lr.state[ref] = &ObjectState{
+			ExecutionState: &ExecutionState{
+				Behaviour: &ValidationSaver{},
+				Queue:     queue,
+			},
+		}
+
+		mb := test.mbMock
+		lr.MessageBus = mb
+
+		expectedMessage := &message.ExecutorResults{
+			RecordRef:             ref,
+			Requests:              make([]message.CaseBindRequest, 0),
+			Queue:                 messagesQueue,
+			LedgerHasMoreRequests: test.ExpectedLedgerHasMoreRequests,
+		}
+
+		// defer new SendFunc before calling OnPulse
+		mb.SendFunc = func(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) (r core.Reply, r1 error) {
+			assert.Equal(t, expectedMessage, p1)
+			return nil, nil
+		}
+
+		err := lr.OnPulse(ctx, pulse)
+		require.NoError(t, err)
+	}
+
+	// waiting for all goroutines with Send() processing
+	mc.Wait(10 * time.Second)
+	for _, test := range testCases {
+		assert.Equal(t, 1, int(test.mbMock.SendCounter))
+	}
+}
+
+func TestLogicRunner_NoExcessiveAmends(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+	am := testutils.NewArtifactManagerMock(t)
+	lr, _ := NewLogicRunner(&configuration.LogicRunner{})
+	lr.ArtifactManager = am
+	am.UpdateObjectMock.Return(nil, nil)
+
+	randRef := testutils.RandomRef()
+
+	es := &ExecutionState{ArtifactManager: am, Queue: make([]ExecutionQueueElement, 0)}
+	es.Queue = append(es.Queue, ExecutionQueueElement{})
+	es.objectbody = &ObjectBody{}
+	es.objectbody.CodeMachineType = core.MachineTypeBuiltin
+	es.Current = &CurrentExecution{}
+	es.Current.LogicContext = &core.LogicCallContext{}
+	es.Current.Request = &randRef
+	es.objectbody.CodeRef = &randRef
+
+	data := []byte(testutils.RandomString())
+	es.objectbody.Object = data
+
+	mle := testutils.NewMachineLogicExecutorMock(t)
+	lr.Executors[core.MachineTypeBuiltin] = mle
+	mle.CallMethodMock.Return(data, nil, nil)
+
+	msg := &message.CallMethod{
+		ObjectRef: randRef,
+		Method:    "some",
+	}
+
+	// In this case Update isn't send to ledger (objects data/newData are the same)
+	am.RegisterResultMock.Return(nil, nil)
+
+	_, err := lr.executeMethodCall(ctx, es, msg)
+	require.NoError(t, err)
+	require.Equal(t, uint64(0), am.UpdateObjectCounter)
+
+	// In this case Update is send to ledger (objects data/newData are different)
+	newData := make([]byte, 5, 5)
+	mle.CallMethodMock.Return(newData, nil, nil)
+
+	_, err = lr.executeMethodCall(ctx, es, msg)
+	require.NoError(t, err)
+	require.Equal(t, uint64(1), am.UpdateObjectCounter)
 }

@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ import (
 )
 
 func (m *PulseManager) initJetSyncState(ctx context.Context) error {
-	allJets, err := m.db.GetAllNonEmptySyncClientJets(ctx)
+	allJets, err := m.ReplicaStorage.GetAllNonEmptySyncClientJets(ctx)
 	if err != nil {
 		return errors.Wrap(err, "failed get heavy client jets' sync state")
 	}

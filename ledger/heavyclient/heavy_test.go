@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/dgraph-io/badger"
+	"github.com/insolar/insolar/ledger/artifactmanager"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -83,11 +84,10 @@ func sendToHeavy(t *testing.T, withretry bool) {
 
 	// Mock5: RecentStorageMock
 	recentMock := recentstorage.NewRecentStorageMock(t)
-	recentMock.ClearZeroTTLObjectsMock.Return()
 	recentMock.GetObjectsMock.Return(nil)
 	recentMock.GetRequestsMock.Return(nil)
-	recentMock.ClearObjectsMock.Return()
 	recentMock.AddObjectMock.Return()
+	recentMock.DecreaseTTLMock.Return()
 
 	// Mock6: JetCoordinatorMock
 	jcMock := testutils.NewJetCoordinatorMock(t)
@@ -172,7 +172,6 @@ func sendToHeavy(t *testing.T, withretry bool) {
 		SplitThreshold: 10 * 1000 * 1000,
 	}
 	pm := pulsemanager.NewPulseManager(
-		db,
 		configuration.Ledger{
 			PulseManager:    pmconf,
 			LightChainLimit: 10,
@@ -183,14 +182,26 @@ func sendToHeavy(t *testing.T, withretry bool) {
 	pm.Bus = busMock
 	pm.JetCoordinator = jcMock
 	pm.GIL = gilMock
-	pm.PulseStorage = storage.NewPulseStorage(db)
-	pm.ArtifactManagerMessageHandler = artifactManagerMessageHandlerMock
+	pm.JetStorage = db
+	pm.ActiveNodesStorage = db
+	pm.DBContext = db
+	pm.PulseTracker = db
+	pm.ReplicaStorage = db
+	pm.StorageCleaner = db
+	pm.ObjectStorage = db
+
+	ps := storage.NewPulseStorage()
+	ps.PulseTracker = db
+	pm.PulseStorage = ps
+
+	pm.HotDataWaiter = artifactmanager.NewHotDataWaiterConcrete()
 
 	providerMock := recentstorage.NewProviderMock(t)
-	providerMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
+	providerMock.GetStorageFunc = func(ctx context.Context, p core.RecordID) (r recentstorage.RecentStorage) {
 		return recentMock
 	}
 	providerMock.CloneStorageMock.Return()
+	providerMock.RemoveStorageMock.Return()
 	pm.RecentStorageProvider = providerMock
 
 	pm.ActiveListSwapper = alsMock

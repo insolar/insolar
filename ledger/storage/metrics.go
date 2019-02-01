@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -25,7 +25,8 @@ import (
 )
 
 var (
-	tagJet = insmetrics.MustTagKey("jet")
+	tagJet     = insmetrics.MustTagKey("jet")
+	recordType = insmetrics.MustTagKey("rectype")
 )
 
 var (
@@ -34,6 +35,9 @@ var (
 
 	statRecentStoragePendingsAdded   = stats.Int64("storage/recent/pending/added/count", "recent storage pending requests added", stats.UnitDimensionless)
 	statRecentStoragePendingsRemoved = stats.Int64("storage/recent/pending/removed/count", "recent storage pending requests removed", stats.UnitDimensionless)
+
+	statCleanScanned = stats.Int64("lightcleanup/scanned", "How many records have been scanned on LM cleanup", stats.UnitDimensionless)
+	statCleanRemoved = stats.Int64("lightcleanup/removed", "How many records have been removed on LM cleanup", stats.UnitDimensionless)
 )
 
 func init() {
@@ -66,6 +70,21 @@ func init() {
 			Measure:     statRecentStoragePendingsRemoved,
 			Aggregation: view.Sum(),
 			TagKeys:     commontags,
+		},
+
+		&view.View{
+			Name:        statCleanScanned.Name(),
+			Description: statCleanScanned.Description(),
+			Measure:     statCleanScanned,
+			Aggregation: view.Sum(),
+			TagKeys:     []tag.Key{recordType},
+		},
+		&view.View{
+			Name:        statCleanRemoved.Name(),
+			Description: statCleanRemoved.Description(),
+			Measure:     statCleanRemoved,
+			Aggregation: view.Sum(),
+			TagKeys:     []tag.Key{recordType},
 		},
 	)
 	if err != nil {
