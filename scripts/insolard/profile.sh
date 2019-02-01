@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
-prof_time=30
+#
+# Example of profiling 60 second profile on all insolard node
+# (by default profiles 30 seconds):
+#
+# ./scripts/insolard/profile.sh [60]
+
+prof_time=${1:-"30"}
 prof_files_dir=pprof
 current_dir=$( dirname $0 )
 web_profile_port=8080
@@ -14,8 +20,8 @@ killall() {
     echo DONE
 }
 
-confs=${current_dir}"/configs/generated_configs/"
-prof_ports=$( grep listenaddress ${confs}/* |  grep -o ":\d\+" | grep -o "\d\+" | tr '\n' ' ' )
+confs=${current_dir}"/configs/generated_configs"
+prof_ports=$( grep listenaddress ${confs}/insolar_*.yaml |  grep -o ":\d\+" | grep -o "\d\+" | tr '\n' ' ' )
 
 mkdir -p ${current_dir}/${prof_files_dir}
 
