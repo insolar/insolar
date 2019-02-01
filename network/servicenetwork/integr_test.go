@@ -197,6 +197,8 @@ func (s *testSuite) TestDiscoveryRestart() {
 		s.T().Skip(consensusMinMsg)
 	}
 
+	s.waitForConsensus(1)
+
 	log.Info("Discovery node stopping...")
 	err := s.fixture().bootstrapNodes[0].serviceNetwork.Stop(context.Background())
 	s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.Wipe(true)
