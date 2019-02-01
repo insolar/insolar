@@ -165,9 +165,7 @@ spec:
             - |
               # first run check
               ls -alhR /opt
-              if [ -f /opt/insolar/config/bootstrap_keys.json ]; then
-                 echo skip generate
-              else
+              if [ "$HOSTNAME" = seed-0 ]; then
                  echo generate bootstrap key
                  insolar -c gen_keys > /opt/insolar/config/bootstrap_keys.json
                  echo generate root member key
@@ -187,7 +185,13 @@ spec:
                  mkdir -p /opt/insolar/config/nodes/certs
                  mkdir -p /opt/insolar/config/data
                  insolard --config /opt/insolar/config/insolar.yaml --genesis /opt/insolar/config/genesis.yaml --keyout /opt/insolar/config/nodes/certs
+                 touch /opt/insolar/config/finished
+              else
+                 while ! (/usr/bin/test -a /opt/insolar/config/finished);do
+                  sleep 5s
+                 done
               fi
+
               echo next step
               if [ -f /opt/work/config/node-cert.json ]; then
                  echo skip work
@@ -294,7 +298,7 @@ spec:
         emptyDir: {}
       - name: node-log
         hostPath:
-          path: /Users/ilyapetrusenko/go/src/github.com/insolar/insolar/ci/local-dev/logs/
+          path: /Users/ilyapetrusenko/Documents/_work/src/github.com/insolar/insolar/ci/local-dev/logs/
           type: DirectoryOrCreate
   updateStrategy:
     type: OnDelete
