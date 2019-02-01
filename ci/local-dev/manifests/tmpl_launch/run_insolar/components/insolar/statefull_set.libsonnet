@@ -1,3 +1,5 @@
+local params = std.extVar("__ksonnet/params").components.insolar;
+
 {
 	"apiVersion": "apps/v1beta1",
 	"kind": "StatefulSet",
@@ -9,7 +11,7 @@
 	},
 	"spec": {
 		"serviceName": "bootstrap",
-		"replicas": 5,
+		"replicas": params.num_heavies + params.num_lights + params.num_virtuals,
 		"template": {
 			"metadata": {
 				"labels": {
@@ -48,8 +50,8 @@
 							},
 							{
 								"name": "seed-config",
-								"mountPath": "/opt/insolar/config/insolar.yaml",
-								"subPath": "insolar.yaml"
+								"mountPath": "/opt/insolar/config/insolar-genesis.yaml",
+								"subPath": "insolar-genesis.yaml"
 							},
 							{
 								"name": "seed-config",

@@ -1,0 +1,17 @@
+apiVersion: 0.3.0
+environments:
+  default:
+    destination:
+      namespace: default
+      server: https://localhost:6443
+    k8sVersion: v1.10.11
+    path: default
+    targets:
+    - insolar
+kind: ksonnet.io/app
+name: run_insolar
+registries:
+  incubator:
+    protocol: github
+    uri: github.com/ksonnet/parts/tree/master/incubator
+version: 0.0.1
