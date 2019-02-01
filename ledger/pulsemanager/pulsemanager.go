@@ -637,7 +637,7 @@ func (m *PulseManager) setUnderGilSection(
 	// swap active nodes
 	err = m.ActiveListSwapper.MoveSyncToActive()
 	if err != nil {
-		return errors.Wrap(err, "[ Set ] failed to move sync")
+		return nil, nil, nil, errors.Wrap(err, "failed to apply new active node list")
 	}
 	if persist {
 		if err := m.PulseTracker.AddPulse(ctx, newPulse); err != nil {
