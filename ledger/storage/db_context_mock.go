@@ -13,6 +13,7 @@ import (
 	badger "github.com/dgraph-io/badger"
 	"github.com/gojuno/minimock"
 	core "github.com/insolar/insolar/core"
+	recentstorage "github.com/insolar/insolar/ledger/recentstorage"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -50,6 +51,11 @@ type DBContextMock struct {
 	GetLocalDataCounter    uint64
 	GetLocalDataPreCounter uint64
 	GetLocalDataMock       mDBContextMockGetLocalData
+
+	RemoveAllForJetUntilPulseFunc       func(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 recentstorage.RecentStorage) (r map[string]RmStat, r1 error)
+	RemoveAllForJetUntilPulseCounter    uint64
+	RemoveAllForJetUntilPulsePreCounter uint64
+	RemoveAllForJetUntilPulseMock       mDBContextMockRemoveAllForJetUntilPulse
 
 	SetLocalDataFunc       func(p context.Context, p1 core.PulseNumber, p2 []byte, p3 []byte) (r error)
 	SetLocalDataCounter    uint64
@@ -91,6 +97,7 @@ func NewDBContextMock(t minimock.Tester) *DBContextMock {
 	m.GetBadgerDBMock = mDBContextMockGetBadgerDB{mock: m}
 	m.GetJetSizesHistoryDepthMock = mDBContextMockGetJetSizesHistoryDepth{mock: m}
 	m.GetLocalDataMock = mDBContextMockGetLocalData{mock: m}
+	m.RemoveAllForJetUntilPulseMock = mDBContextMockRemoveAllForJetUntilPulse{mock: m}
 	m.SetLocalDataMock = mDBContextMockSetLocalData{mock: m}
 	m.SetTxRetiriesMock = mDBContextMockSetTxRetiries{mock: m}
 	m.StoreKeyValuesMock = mDBContextMockStoreKeyValues{mock: m}
@@ -938,6 +945,159 @@ func (m *DBContextMock) GetLocalDataFinished() bool {
 	return true
 }
 
+type mDBContextMockRemoveAllForJetUntilPulse struct {
+	mock              *DBContextMock
+	mainExpectation   *DBContextMockRemoveAllForJetUntilPulseExpectation
+	expectationSeries []*DBContextMockRemoveAllForJetUntilPulseExpectation
+}
+
+type DBContextMockRemoveAllForJetUntilPulseExpectation struct {
+	input  *DBContextMockRemoveAllForJetUntilPulseInput
+	result *DBContextMockRemoveAllForJetUntilPulseResult
+}
+
+type DBContextMockRemoveAllForJetUntilPulseInput struct {
+	p  context.Context
+	p1 core.RecordID
+	p2 core.PulseNumber
+	p3 recentstorage.RecentStorage
+}
+
+type DBContextMockRemoveAllForJetUntilPulseResult struct {
+	r  map[string]RmStat
+	r1 error
+}
+
+//Expect specifies that invocation of DBContext.RemoveAllForJetUntilPulse is expected from 1 to Infinity times
+func (m *mDBContextMockRemoveAllForJetUntilPulse) Expect(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 recentstorage.RecentStorage) *mDBContextMockRemoveAllForJetUntilPulse {
+	m.mock.RemoveAllForJetUntilPulseFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &DBContextMockRemoveAllForJetUntilPulseExpectation{}
+	}
+	m.mainExpectation.input = &DBContextMockRemoveAllForJetUntilPulseInput{p, p1, p2, p3}
+	return m
+}
+
+//Return specifies results of invocation of DBContext.RemoveAllForJetUntilPulse
+func (m *mDBContextMockRemoveAllForJetUntilPulse) Return(r map[string]RmStat, r1 error) *DBContextMock {
+	m.mock.RemoveAllForJetUntilPulseFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &DBContextMockRemoveAllForJetUntilPulseExpectation{}
+	}
+	m.mainExpectation.result = &DBContextMockRemoveAllForJetUntilPulseResult{r, r1}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of DBContext.RemoveAllForJetUntilPulse is expected once
+func (m *mDBContextMockRemoveAllForJetUntilPulse) ExpectOnce(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 recentstorage.RecentStorage) *DBContextMockRemoveAllForJetUntilPulseExpectation {
+	m.mock.RemoveAllForJetUntilPulseFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &DBContextMockRemoveAllForJetUntilPulseExpectation{}
+	expectation.input = &DBContextMockRemoveAllForJetUntilPulseInput{p, p1, p2, p3}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *DBContextMockRemoveAllForJetUntilPulseExpectation) Return(r map[string]RmStat, r1 error) {
+	e.result = &DBContextMockRemoveAllForJetUntilPulseResult{r, r1}
+}
+
+//Set uses given function f as a mock of DBContext.RemoveAllForJetUntilPulse method
+func (m *mDBContextMockRemoveAllForJetUntilPulse) Set(f func(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 recentstorage.RecentStorage) (r map[string]RmStat, r1 error)) *DBContextMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.RemoveAllForJetUntilPulseFunc = f
+	return m.mock
+}
+
+//RemoveAllForJetUntilPulse implements github.com/insolar/insolar/ledger/storage.DBContext interface
+func (m *DBContextMock) RemoveAllForJetUntilPulse(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 recentstorage.RecentStorage) (r map[string]RmStat, r1 error) {
+	counter := atomic.AddUint64(&m.RemoveAllForJetUntilPulsePreCounter, 1)
+	defer atomic.AddUint64(&m.RemoveAllForJetUntilPulseCounter, 1)
+
+	if len(m.RemoveAllForJetUntilPulseMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.RemoveAllForJetUntilPulseMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to DBContextMock.RemoveAllForJetUntilPulse. %v %v %v %v", p, p1, p2, p3)
+			return
+		}
+
+		input := m.RemoveAllForJetUntilPulseMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, DBContextMockRemoveAllForJetUntilPulseInput{p, p1, p2, p3}, "DBContext.RemoveAllForJetUntilPulse got unexpected parameters")
+
+		result := m.RemoveAllForJetUntilPulseMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the DBContextMock.RemoveAllForJetUntilPulse")
+			return
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.RemoveAllForJetUntilPulseMock.mainExpectation != nil {
+
+		input := m.RemoveAllForJetUntilPulseMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, DBContextMockRemoveAllForJetUntilPulseInput{p, p1, p2, p3}, "DBContext.RemoveAllForJetUntilPulse got unexpected parameters")
+		}
+
+		result := m.RemoveAllForJetUntilPulseMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the DBContextMock.RemoveAllForJetUntilPulse")
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.RemoveAllForJetUntilPulseFunc == nil {
+		m.t.Fatalf("Unexpected call to DBContextMock.RemoveAllForJetUntilPulse. %v %v %v %v", p, p1, p2, p3)
+		return
+	}
+
+	return m.RemoveAllForJetUntilPulseFunc(p, p1, p2, p3)
+}
+
+//RemoveAllForJetUntilPulseMinimockCounter returns a count of DBContextMock.RemoveAllForJetUntilPulseFunc invocations
+func (m *DBContextMock) RemoveAllForJetUntilPulseMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.RemoveAllForJetUntilPulseCounter)
+}
+
+//RemoveAllForJetUntilPulseMinimockPreCounter returns the value of DBContextMock.RemoveAllForJetUntilPulse invocations
+func (m *DBContextMock) RemoveAllForJetUntilPulseMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.RemoveAllForJetUntilPulsePreCounter)
+}
+
+//RemoveAllForJetUntilPulseFinished returns true if mock invocations count is ok
+func (m *DBContextMock) RemoveAllForJetUntilPulseFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.RemoveAllForJetUntilPulseMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.RemoveAllForJetUntilPulseCounter) == uint64(len(m.RemoveAllForJetUntilPulseMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.RemoveAllForJetUntilPulseMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.RemoveAllForJetUntilPulseCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.RemoveAllForJetUntilPulseFunc != nil {
+		return atomic.LoadUint64(&m.RemoveAllForJetUntilPulseCounter) > 0
+	}
+
+	return true
+}
+
 type mDBContextMockSetLocalData struct {
 	mock              *DBContextMock
 	mainExpectation   *DBContextMockSetLocalDataExpectation
@@ -1683,6 +1843,10 @@ func (m *DBContextMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to DBContextMock.GetLocalData")
 	}
 
+	if !m.RemoveAllForJetUntilPulseFinished() {
+		m.t.Fatal("Expected call to DBContextMock.RemoveAllForJetUntilPulse")
+	}
+
 	if !m.SetLocalDataFinished() {
 		m.t.Fatal("Expected call to DBContextMock.SetLocalData")
 	}
@@ -1744,6 +1908,10 @@ func (m *DBContextMock) MinimockFinish() {
 		m.t.Fatal("Expected call to DBContextMock.GetLocalData")
 	}
 
+	if !m.RemoveAllForJetUntilPulseFinished() {
+		m.t.Fatal("Expected call to DBContextMock.RemoveAllForJetUntilPulse")
+	}
+
 	if !m.SetLocalDataFinished() {
 		m.t.Fatal("Expected call to DBContextMock.SetLocalData")
 	}
@@ -1784,6 +1952,7 @@ func (m *DBContextMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.GetBadgerDBFinished()
 		ok = ok && m.GetJetSizesHistoryDepthFinished()
 		ok = ok && m.GetLocalDataFinished()
+		ok = ok && m.RemoveAllForJetUntilPulseFinished()
 		ok = ok && m.SetLocalDataFinished()
 		ok = ok && m.SetTxRetiriesFinished()
 		ok = ok && m.StoreKeyValuesFinished()
@@ -1819,6 +1988,10 @@ func (m *DBContextMock) MinimockWait(timeout time.Duration) {
 
 			if !m.GetLocalDataFinished() {
 				m.t.Error("Expected call to DBContextMock.GetLocalData")
+			}
+
+			if !m.RemoveAllForJetUntilPulseFinished() {
+				m.t.Error("Expected call to DBContextMock.RemoveAllForJetUntilPulse")
 			}
 
 			if !m.SetLocalDataFinished() {
@@ -1874,6 +2047,10 @@ func (m *DBContextMock) AllMocksCalled() bool {
 	}
 
 	if !m.GetLocalDataFinished() {
+		return false
+	}
+
+	if !m.RemoveAllForJetUntilPulseFinished() {
 		return false
 	}
 

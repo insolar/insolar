@@ -62,6 +62,8 @@ func TestLedgerArtifactManager_Metrics(t *testing.T) {
 	am.PlatformCryptographyScheme = cs
 	am.DefaultBus = mb
 	am.PulseStorage = amPulseStorageMock
+	am.JetStorage = db
+	am.DBContext = db
 
 	tmetrics := testmetrics.Start(ctx)
 	defer tmetrics.Stop()

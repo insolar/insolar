@@ -1825,14 +1825,14 @@ func (r *One) EmptyMethod() (error) {
 		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{}),
 	}
 
+	// emulate death
+	err = rlr.sock.Close()
+	require.NoError(t, err)
+
 	client, err := gp.Downstream(ctx)
 
 	// call method without waiting of it execution
 	client.Go("RPC.CallMethod", req, res, nil)
-
-	// emulate death
-	err = rlr.sock.Close()
-	require.NoError(t, err)
 
 	// wait for gorund try to send answer back, it will see closing connection, after that it needs to die
 	// ping to goPlugin, it has to be dead

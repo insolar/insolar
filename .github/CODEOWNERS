@@ -4,8 +4,7 @@
 # KEEP THIS FILE SORTED. Order is important. Last match takes precedence.
 
 application/**                          @LinnikD
-ledger/**                               @nordicdyno
+ledger/**                               @andreyromancev
 network/**                              @dmitry-panchenko
 pulsar/**                               @egorikas
 vm/**                                   @Vany
-
