@@ -115,6 +115,9 @@ test_with_coverage:
 test_with_coverage_fast:
 	CGO_ENABLED=1 go test $(TEST_ARGS) -count 1 --coverprofile=$(COVERPROFILE) --covermode=atomic $(ALL_PACKAGES)
 
+ci_test:
+	CGO_ENABLED=1 go test -count 1 --coverprofile=$(COVERPROFILE) --covermode=atomic -v $(ALL_PACKAGES) -json > report_unit.json
+	CGO_ENABLED=1 go test $(TEST_ARGS) -tags functest -v ./functest -count=1 -json > report_func.json
 
 CONTRACTS = $(wildcard application/contract/*)
 regen-proxies: $(INSGOCC)
