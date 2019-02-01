@@ -485,3 +485,53 @@ func TestLogicRunner_OnPulse_StillExecuting(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotNil(t, lr.state[objectRef].ExecutionState)
 }
+
+func TestLogicRunner_NoExcessiveAmends(t *testing.T) {
+	t.Parallel()
+	ctx := inslogger.TestContext(t)
+	mc := minimock.NewController(t)
+	defer mc.Finish()
+
+	am := testutils.NewArtifactManagerMock(t)
+	lr, _ := NewLogicRunner(&configuration.LogicRunner{})
+	lr.ArtifactManager = am
+	am.UpdateObjectMock.Return(nil, nil)
+
+	randRef := testutils.RandomRef()
+
+	es := &ExecutionState{ArtifactManager: am, Queue: make([]ExecutionQueueElement, 0)}
+	es.Queue = append(es.Queue, ExecutionQueueElement{})
+	es.objectbody = &ObjectBody{}
+	es.objectbody.CodeMachineType = core.MachineTypeBuiltin
+	es.Current = &CurrentExecution{}
+	es.Current.LogicContext = &core.LogicCallContext{}
+	es.Current.Request = &randRef
+	es.objectbody.CodeRef = &randRef
+
+	data := []byte(testutils.RandomString())
+	es.objectbody.Object = data
+
+	mle := testutils.NewMachineLogicExecutorMock(t)
+	lr.Executors[core.MachineTypeBuiltin] = mle
+	mle.CallMethodMock.Return(data, nil, nil)
+
+	msg := &message.CallMethod{
+		ObjectRef: randRef,
+		Method:    "some",
+	}
+
+	// In this case Update isn't send to ledger (objects data/newData are the same)
+	am.RegisterResultMock.Return(nil, nil)
+
+	_, err := lr.executeMethodCall(ctx, es, msg)
+	require.NoError(t, err)
+	require.Equal(t, uint64(0), am.UpdateObjectCounter)
+
+	// In this case Update is send to ledger (objects data/newData are different)
+	newData := make([]byte, 5, 5)
+	mle.CallMethodMock.Return(newData, nil, nil)
+
+	_, err = lr.executeMethodCall(ctx, es, msg)
+	require.NoError(t, err)
+	require.Equal(t, uint64(1), am.UpdateObjectCounter)
+}
