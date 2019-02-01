@@ -124,6 +124,8 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 					return nil, errors.New("fetching children without child pointer is forbidden")
 				}
 				pulse = tm.FromChild.Pulse()
+			case *message.GetRequest:
+				pulse = tm.Request.Pulse()
 			}
 			tree, err := m.jetStorage.GetJetTree(ctx, pulse)
 			if err != nil {
