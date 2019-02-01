@@ -486,12 +486,107 @@ func TestLogicRunner_OnPulse_StillExecuting(t *testing.T) {
 	assert.NotNil(t, lr.state[objectRef].ExecutionState)
 }
 
-func TestLogicRunner_NoExcessiveAmends(t *testing.T) {
+func TestReleaseQueue(t *testing.T) {
 	t.Parallel()
+	type expected struct {
+		Length  int
+		HasMore bool
+	}
+	type testCase struct {
+		QueueLength int
+		Expected    expected
+	}
+	var testCases = []testCase{
+		{0, expected{0, false}},
+		{1, expected{1, false}},
+		{maxQueueLength, expected{maxQueueLength, false}},
+
+		// TODO fix expected count to maxQueueLength after start taking data from ledger
+		{maxQueueLength + 1, expected{maxQueueLength + 1, true}},
+	}
+
+	for _, tc := range testCases {
+		es := ExecutionState{Queue: make([]ExecutionQueueElement, tc.QueueLength)}
+		mq, hasMore := es.releaseQueue()
+		assert.Equal(t, tc.Expected.Length, len(mq))
+		assert.Equal(t, tc.Expected.HasMore, hasMore)
+	}
+}
+
+func TestOnPulseLedgerHasMoreRequests(t *testing.T) {
+	t.Parallel()
+
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
 	defer mc.Finish()
 
+	type testCase struct {
+		queue                         []ExecutionQueueElement
+		mbMock                        *testutils.MessageBusMock
+		ExpectedLedgerHasMoreRequests bool
+	}
+	testCases := []testCase{
+		{make([]ExecutionQueueElement, maxQueueLength+1), testutils.NewMessageBusMock(mc), true},
+		{make([]ExecutionQueueElement, maxQueueLength), testutils.NewMessageBusMock(mc), false},
+	}
+
+	jc := testutils.NewJetCoordinatorMock(mc)
+	jc.IsAuthorizedMock.Return(false, nil)
+	jc.MeMock.Return(core.RecordRef{})
+
+	pulse := core.Pulse{}
+
+	for _, test := range testCases {
+		queue := test.queue
+
+		// waiting for ledger implement fetch method
+		// waiting for us implement fetching
+		messagesQueue := convertQueueToMessageQueue(queue)
+		//messagesQueue := convertQueueToMessageQueue(queue[:maxQueueLength])
+
+		ref := testutils.RandomRef()
+
+		lr, _ := NewLogicRunner(&configuration.LogicRunner{})
+		lr.JetCoordinator = jc
+
+		lr.state[ref] = &ObjectState{
+			ExecutionState: &ExecutionState{
+				Behaviour: &ValidationSaver{},
+				Queue:     queue,
+			},
+		}
+
+		mb := test.mbMock
+		lr.MessageBus = mb
+
+		expectedMessage := &message.ExecutorResults{
+			RecordRef:             ref,
+			Requests:              make([]message.CaseBindRequest, 0),
+			Queue:                 messagesQueue,
+			LedgerHasMoreRequests: test.ExpectedLedgerHasMoreRequests,
+		}
+
+		// defer new SendFunc before calling OnPulse
+		mb.SendFunc = func(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) (r core.Reply, r1 error) {
+			assert.Equal(t, expectedMessage, p1)
+			return nil, nil
+		}
+
+		err := lr.OnPulse(ctx, pulse)
+		require.NoError(t, err)
+	}
+
+	// waiting for all goroutines with Send() processing
+	mc.Wait(10 * time.Second)
+	for _, test := range testCases {
+		assert.Equal(t, 1, int(test.mbMock.SendCounter))
+	}
+}
+
+func TestLogicRunner_NoExcessiveAmends(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
 	am := testutils.NewArtifactManagerMock(t)
 	lr, _ := NewLogicRunner(&configuration.LogicRunner{})
 	lr.ArtifactManager = am
