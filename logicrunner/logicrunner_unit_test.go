@@ -664,7 +664,7 @@ func TestHandleAbandonedRequestsNotificationMessage(t *testing.T) {
 
 }
 
-func TestPrepareObjectState(t *testing.T) {
+func TestPrepareObjectStateChangePendingStatus(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	lr, _ := NewLogicRunner(&configuration.LogicRunner{})
 	ref := testutils.RandomRef()
@@ -688,4 +688,34 @@ func TestPrepareObjectState(t *testing.T) {
 	err = lr.prepareObjectState(ctx, msg)
 	require.NoError(t, err)
 	assert.Equal(t, message.NotPending, lr.state[ref].ExecutionState.pending)
+}
+
+func TestPrepareObjectStateChangeLedgerHasMoreRequests(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+	lr, _ := NewLogicRunner(&configuration.LogicRunner{})
+	ref := testutils.RandomRef()
+
+	msg := &message.ExecutorResults{RecordRef: ref}
+
+	type testCase struct {
+		messageStatus             bool
+		objectStateStatus         bool
+		expectedObjectStateStatue bool
+	}
+
+	testCases := []testCase{
+		{true, true, true},
+		{true, false, true},
+		{false, true, true},
+		{false, false, false},
+	}
+
+	for _, test := range testCases {
+		msg = &message.ExecutorResults{RecordRef: ref, LedgerHasMoreRequests: test.messageStatus}
+		lr.state[ref] = &ObjectState{ExecutionState: &ExecutionState{LedgerHasMoreRequests: test.objectStateStatus}}
+		err := lr.prepareObjectState(ctx, msg)
+		require.NoError(t, err)
+		assert.Equal(t, test.expectedObjectStateStatue, lr.state[ref].ExecutionState.LedgerHasMoreRequests)
+	}
+
 }
