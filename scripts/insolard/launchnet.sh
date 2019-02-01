@@ -29,6 +29,13 @@ done
 
 DISCOVERY_NODES_KEYS_DIR=$TEST_DATA/scripts/discovery_nodes
 
+NUM_NODES=$(sed -n '/^nodes:/,$p' $GENESIS_CONFIG | grep "host:" | grep -cv "#" )
+
+for i in `seq 1 $NUM_NODES`
+do
+    NODES+=($NODES_DATA/$i)
+done
+
 kill_port()
 {
     port=$1
@@ -306,8 +313,14 @@ do
     if [[ "$i" -eq "$NUM_DISCOVERY_NODES" ]]
     then
         echo "DISCOVERY NODE $i STARTED in foreground"
-        INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $GENERATED_CONFIGS_DIR/insolar_$i.yaml --trace &> $node/output.log &
-        lastDiscoveryPID=`echo \$!`
+        if [[ "$NUM_NODES" -eq "0" ]]
+        then
+            INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $GENERATED_CONFIGS_DIR/insolar_$i.yaml --trace &> $node/output.log
+            lastDiscoveryPID=`echo \$!`
+        else
+            INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $GENERATED_CONFIGS_DIR/insolar_$i.yaml --trace &> $node/output.log &
+            lastDiscoveryPID=`echo \$!`
+        fi
         break
     fi
     INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $GENERATED_CONFIGS_DIR/insolar_$i.yaml --trace &> $node/output.log &
@@ -316,7 +329,10 @@ done
 
 printf "discovery nodes started ... \n"
 
-wait_for_complete_network_state
-scripts/insolard/start_nodes.sh
+if [[ "$NUM_NODES" -eq "0" ]]
+then
+    wait_for_complete_network_state
+    scripts/insolard/start_nodes.sh
+fi
 
 echo "FINISHING ..."
