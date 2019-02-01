@@ -198,10 +198,6 @@ func (jc *JetCoordinator) LightValidatorsForObject(
 }
 
 func (jc *JetCoordinator) Heavy(ctx context.Context, pulse core.PulseNumber) (*core.RecordRef, error) {
-	pulseData, err := jc.PulseTracker.GetPulse(ctx, pulse)
-	if err != nil {
-		return nil, errors.Wrapf(err, "[lightMaterialsForJet] failed to fetch pulse data for pulse %v", pulse)
-	}
 	candidates, err := jc.ActiveNodesStorage.GetActiveNodesByRole(pulse, core.StaticRoleHeavyMaterial)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch active heavy nodes for pulse %v", pulse)
@@ -209,9 +205,14 @@ func (jc *JetCoordinator) Heavy(ctx context.Context, pulse core.PulseNumber) (*c
 	if len(candidates) == 0 {
 		return nil, errors.New(fmt.Sprintf("no active heavy nodes for pulse %d", pulse))
 	}
+	ent, err := jc.entropy(ctx, pulse)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to fetch entropy for pulse %v", pulse)
+	}
+
 	nodes, err := getRefs(
 		jc.PlatformCryptographyScheme,
-		pulseData.Pulse.Entropy[:],
+		ent[:],
 		candidates,
 		1,
 	)
@@ -224,11 +225,6 @@ func (jc *JetCoordinator) Heavy(ctx context.Context, pulse core.PulseNumber) (*c
 func (jc *JetCoordinator) virtualsForObject(
 	ctx context.Context, objID core.RecordID, pulse core.PulseNumber, count int,
 ) ([]core.RecordRef, error) {
-	pulseData, err := jc.PulseTracker.GetPulse(ctx, pulse)
-	if err != nil {
-		curp, _ := jc.PulseStorage.Current(ctx)
-		return nil, errors.Wrapf(err, "[virtualsForObject] failed to fetch pulse data for pulse %d (current pulse is %d)", pulse, curp.PulseNumber)
-	}
 	candidates, err := jc.ActiveNodesStorage.GetActiveNodesByRole(pulse, core.StaticRoleVirtual)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch active virtual nodes for pulse %v", pulse)
@@ -237,9 +233,14 @@ func (jc *JetCoordinator) virtualsForObject(
 		return nil, errors.New(fmt.Sprintf("no active virtual nodes for pulse %d", pulse))
 	}
 
+	ent, err := jc.entropy(ctx, pulse)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to fetch entropy for pulse %v", pulse)
+	}
+
 	return getRefs(
 		jc.PlatformCryptographyScheme,
-		circleXOR(pulseData.Pulse.Entropy[:], objID.Hash()),
+		circleXOR(ent[:], objID.Hash()),
 		candidates,
 		count,
 	)
@@ -249,10 +250,7 @@ func (jc *JetCoordinator) lightMaterialsForJet(
 	ctx context.Context, jetID core.RecordID, pulse core.PulseNumber, count int,
 ) ([]core.RecordRef, error) {
 	_, prefix := jet.Jet(jetID)
-	pulseData, err := jc.PulseTracker.GetPulse(ctx, pulse)
-	if err != nil {
-		return nil, errors.Wrapf(err, "[lightMaterialsForJet] failed to fetch pulse data for pulse %v", pulse)
-	}
+
 	candidates, err := jc.ActiveNodesStorage.GetActiveNodesByRole(pulse, core.StaticRoleLightMaterial)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch active light nodes for pulse %v", pulse)
@@ -260,12 +258,36 @@ func (jc *JetCoordinator) lightMaterialsForJet(
 	if len(candidates) == 0 {
 		return nil, errors.New(fmt.Sprintf("no active light nodes for pulse %d", pulse))
 	}
+
+	ent, err := jc.entropy(ctx, pulse)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to fetch entropy for pulse %v", pulse)
+	}
+
 	return getRefs(
 		jc.PlatformCryptographyScheme,
-		circleXOR(pulseData.Pulse.Entropy[:], prefix),
+		circleXOR(ent[:], prefix),
 		candidates,
 		count,
 	)
+}
+
+func (jc *JetCoordinator) entropy(ctx context.Context, pulse core.PulseNumber) (core.Entropy, error) {
+	current, err := jc.PulseStorage.Current(ctx)
+	if err != nil {
+		return core.Entropy{}, errors.Wrap(err, "failed to get current pulse")
+	}
+
+	if current.PulseNumber == pulse {
+		return current.Entropy, nil
+	}
+
+	older, err := jc.PulseTracker.GetPulse(ctx, pulse)
+	if err != nil {
+		return core.Entropy{}, errors.Wrapf(err, "failed to fetch pulse data for pulse %v", pulse)
+	}
+
+	return older.Pulse.Entropy, nil
 }
 
 func getRefs(
