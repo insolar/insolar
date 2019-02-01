@@ -41,6 +41,8 @@ import (
 	"github.com/insolar/insolar/logicrunner/goplugin"
 )
 
+const maxQueueLength = 10
+
 type Ref = core.RecordRef
 
 // Context of one contract execution
@@ -64,9 +66,10 @@ type ExecutionState struct {
 
 	Behaviour ValidationBehaviour
 
-	Current              *CurrentExecution
-	Queue                []ExecutionQueueElement
-	QueueProcessorActive bool
+	Current               *CurrentExecution
+	Queue                 []ExecutionQueueElement
+	QueueProcessorActive  bool
+	LedgerHasMoreRequests bool
 
 	// TODO not using in validation, need separate ObjectState.ExecutionState and ObjectState.Validation from ExecutionState struct
 	pending          message.PendingState
@@ -181,11 +184,20 @@ func (es *ExecutionState) CheckPendingRequests(ctx context.Context, inMsg core.M
 }
 
 // releaseQueue must be calling only with es.Lock
-func (es *ExecutionState) releaseQueue() []ExecutionQueueElement {
+func (es *ExecutionState) releaseQueue() ([]ExecutionQueueElement, bool) {
+	ledgerHasMoreRequest := false
 	q := es.Queue
+
+	if len(q) > maxQueueLength {
+		// waiting for ledger implement fetch method
+		// waiting for us implement fetching
+		//q = q[:maxQueueLength]
+		ledgerHasMoreRequest = true
+	}
+
 	es.Queue = make([]ExecutionQueueElement, 0)
 
-	return q
+	return q, ledgerHasMoreRequest
 }
 
 // LogicRunner is a general interface of contract executor
@@ -726,6 +738,11 @@ func (lr *LogicRunner) prepareObjectState(ctx context.Context, msg *message.Exec
 		es.pending = msg.Pending
 	}
 
+	// set false to true is good, set true to false may be wrong, better make unnecessary call
+	if !es.LedgerHasMoreRequests && msg.LedgerHasMoreRequests {
+		es.LedgerHasMoreRequests = msg.LedgerHasMoreRequests
+	}
+
 	//prepare Queue
 	if msg.Queue != nil {
 		queueFromMessage := make([]ExecutionQueueElement, 0)
@@ -955,17 +972,20 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 						)
 						es.pending = message.NotPending
 						sendExecResults = true
+						es.LedgerHasMoreRequests = true
 					}
 
 					state.ExecutionState = nil
 				}
 
-				queue := es.releaseQueue()
+				queue, ledgerHasMoreRequest := es.releaseQueue()
 				if len(queue) > 0 || sendExecResults {
 					// TODO: we also should send when executed something for validation
 					// TODO: now validation is disabled
 					caseBind := es.Behaviour.(*ValidationSaver).caseBind
 					requests := caseBind.getCaseBindForMessage(ctx)
+					messagesQueue := convertQueueToMessageQueue(queue)
+
 					messages = append(
 						messages,
 						//&message.ValidateCaseBind{
@@ -974,10 +994,11 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 						//	Pulse:     pulse,
 						//},
 						&message.ExecutorResults{
-							RecordRef: ref,
-							Pending:   es.pending,
-							Requests:  requests,
-							Queue:     convertQueueToMessageQueue(queue),
+							RecordRef:             ref,
+							Pending:               es.pending,
+							Requests:              requests,
+							Queue:                 messagesQueue,
+							LedgerHasMoreRequests: es.LedgerHasMoreRequests || ledgerHasMoreRequest,
 						},
 					)
 				}
@@ -1091,6 +1112,7 @@ func (lr *LogicRunner) sendOnPulseMessage(ctx context.Context, msg core.Message,
 		inslogger.FromContext(ctx).Error(errors.Wrap(err, "error while sending validation data on pulse"))
 	}
 }
+
 func convertQueueToMessageQueue(queue []ExecutionQueueElement) []message.ExecutionQueueElement {
 	mq := make([]message.ExecutionQueueElement, 0)
 	for _, elem := range queue {
