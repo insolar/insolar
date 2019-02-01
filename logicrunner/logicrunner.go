@@ -715,25 +715,19 @@ func (lr *LogicRunner) prepareObjectState(ctx context.Context, msg *message.Exec
 
 	es.Lock()
 
-	if es.pending == message.InPending && es.Current != nil {
-		inslogger.FromContext(ctx).Debug(
-			"execution returned to node that is still executing pending",
-		)
-		es.pending = message.NotPending
-		es.PendingConfirmed = false
-	} else if es.pending == message.InPending && msg.Pending == message.NotPending {
-		inslogger.FromContext(ctx).Debug(
-			"executor we came to thinks that execution pending, but previous said to continue",
-		)
-
-		es.pending = message.NotPending
+	if es.pending == message.InPending {
 		if es.Current != nil {
-			es.objectbody = nil
-		} else {
-			inslogger.FromContext(ctx).Error(
-				"we have object in pending state, but ",
-				"with currently executing contract. shouldn't happen",
+			inslogger.FromContext(ctx).Debug(
+				"execution returned to node that is still executing pending",
 			)
+			es.pending = message.NotPending
+			es.PendingConfirmed = false
+		} else if msg.Pending == message.NotPending {
+			inslogger.FromContext(ctx).Debug(
+				"executor we came to thinks that execution pending, but previous said to continue",
+			)
+
+			es.pending = message.NotPending
 		}
 	} else if es.pending == message.PendingUnknown {
 		es.pending = msg.Pending

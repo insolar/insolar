@@ -663,3 +663,29 @@ func TestHandleAbandonedRequestsNotificationMessage(t *testing.T) {
 	assert.Equal(t, true, lr.state[*msg.DefaultTarget()].ExecutionState.LedgerHasMoreRequests)
 
 }
+
+func TestPrepareObjectState(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+	lr, _ := NewLogicRunner(&configuration.LogicRunner{})
+	ref := testutils.RandomRef()
+
+	msg := &message.ExecutorResults{RecordRef: ref}
+
+	// we are in pending and come to ourselves again
+	lr.state[ref] = &ObjectState{ExecutionState: &ExecutionState{
+		pending: message.InPending, Current: &CurrentExecution{}},
+	}
+	err := lr.prepareObjectState(ctx, msg)
+	require.NoError(t, err)
+	assert.Equal(t, message.NotPending, lr.state[ref].ExecutionState.pending)
+	assert.Equal(t, false, lr.state[ref].ExecutionState.PendingConfirmed)
+
+	// previous executor decline pending, trust him
+	msg = &message.ExecutorResults{RecordRef: ref, Pending: message.NotPending}
+	lr.state[ref] = &ObjectState{ExecutionState: &ExecutionState{
+		pending: message.InPending, Current: nil},
+	}
+	err = lr.prepareObjectState(ctx, msg)
+	require.NoError(t, err)
+	assert.Equal(t, message.NotPending, lr.state[ref].ExecutionState.pending)
+}
