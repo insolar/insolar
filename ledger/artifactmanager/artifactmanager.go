@@ -59,7 +59,7 @@ func (m *LedgerArtifactManager) State() ([]byte, error) {
 }
 
 // NewArtifactManger creates new manager instance.
-func NewArtifactManger(db *storage.DB) *LedgerArtifactManager {
+func NewArtifactManger() *LedgerArtifactManager {
 	return &LedgerArtifactManager{
 		getChildrenChunkSize: getChildrenChunkSize,
 		senders:              newLedgerArtifactSenders(),

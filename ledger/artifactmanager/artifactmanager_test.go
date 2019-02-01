@@ -472,7 +472,7 @@ func TestLedgerArtifactManager_GetObject_FollowsRedirect(t *testing.T) {
 	t.Parallel()
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
-	am := NewArtifactManger(nil)
+	am := NewArtifactManger()
 	mb := testutils.NewMessageBusMock(mc)
 
 	db, cleaner := storagetest.TmpDB(ctx, t)
@@ -659,7 +659,7 @@ func TestLedgerArtifactManager_GetChildren_FollowsRedirect(t *testing.T) {
 	t.Parallel()
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
-	am := NewArtifactManger(nil)
+	am := NewArtifactManger()
 	mb := testutils.NewMessageBusMock(mc)
 
 	db, cleaner := storagetest.TmpDB(ctx, t)
@@ -872,7 +872,7 @@ func TestLedgerArtifactManager_RegisterRequest_JetMiss(t *testing.T) {
 	defer mc.Finish()
 
 	cs := testutils.NewPlatformCryptographyScheme()
-	am := NewArtifactManger(db)
+	am := NewArtifactManger()
 	am.PlatformCryptographyScheme = cs
 	am.JetStorage = db
 	am.DBContext = db

@@ -63,7 +63,7 @@ func TestLedgerArtifactManager_PendingRequest(t *testing.T) {
 	mb := testmessagebus.NewTestMessageBus(t)
 	mb.PulseStorage = amPulseStorageMock
 
-	am := NewArtifactManger(db)
+	am := NewArtifactManger()
 	am.PulseStorage = amPulseStorageMock
 	am.PlatformCryptographyScheme = cs
 	am.DefaultBus = mb

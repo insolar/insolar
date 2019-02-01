@@ -1133,23 +1133,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 	}).Debugf("received pending requests")
 	recentStorage := h.RecentStorageProvider.GetStorage(ctx, jetID)
 	for objID, requests := range msg.PendingRequests {
-		for reqID, request := range requests {
-			newID, err := h.ObjectStorage.SetRecord(ctx, jetID, reqID.Pulse(), record.DeserializeRecord(request))
-			if err == storage.ErrOverride {
-				continue
-			}
-			if err != nil {
-				logger.Error(err)
-				continue
-			}
-			if !bytes.Equal(reqID.Bytes(), newID.Bytes()) {
-				logger.Errorf(
-					"Problems with saving the pending request, ids don't match - %v  %v",
-					reqID.Bytes(),
-					newID.Bytes(),
-				)
-				continue
-			}
+		for reqID := range requests {
 			recentStorage.AddPendingRequest(ctx, objID, reqID)
 		}
 	}

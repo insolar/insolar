@@ -969,9 +969,9 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 				TTL:   320,
 			},
 		},
-		PendingRequests: map[core.RecordID]map[core.RecordID][]byte{
+		PendingRequests: map[core.RecordID]map[core.RecordID]struct{}{
 			obj: {
-				*secondId: record.SerializeRecord(&record.CodeRecord{}),
+				*secondId: struct{}{}, /*record.SerializeRecord(&record.CodeRecord{})*/
 			},
 		},
 		Drop:               jet.JetDrop{Pulse: core.FirstPulseNumber, Hash: []byte{88}},

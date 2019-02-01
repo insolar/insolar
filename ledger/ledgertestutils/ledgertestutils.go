@@ -61,7 +61,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 	require.NoError(t, err)
 	pulseStorage.Set(&pulse.Pulse)
 
-	am := artifactmanager.NewArtifactManger(db)
+	am := artifactmanager.NewArtifactManger()
 	am.PlatformCryptographyScheme = pcs
 	am.JetStorage = db
 	am.DBContext = db
