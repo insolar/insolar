@@ -38,6 +38,7 @@ const udpMaxPacketSize = 1400
 type udpTransport struct {
 	baseTransport
 	serverConn net.PacketConn
+	address    string
 }
 
 type udpSerializer struct{}
@@ -60,10 +61,8 @@ func (b *udpSerializer) DeserializePacket(conn io.Reader) (*packet.Packet, error
 	return p, nil
 }
 
-func newUDPTransport(conn net.PacketConn, proxy relay.Proxy, publicAddress string) (*udpTransport, error) {
-	transport := &udpTransport{
-		baseTransport: newBaseTransport(proxy, publicAddress),
-		serverConn:    conn}
+func newUDPTransport(addr string, proxy relay.Proxy, publicAddress string) (*udpTransport, error) {
+	transport := &udpTransport{baseTransport: newBaseTransport(proxy, publicAddress), address: addr}
 	transport.sendFunc = transport.send
 	transport.serializer = &udpSerializer{}
 
@@ -95,9 +94,28 @@ func (t *udpTransport) send(recvAddress string, data []byte) error {
 	return errors.Wrap(err, "Failed to write data")
 }
 
+func (t *udpTransport) prepareListen() error {
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
+
+	t.disconnectStarted = make(chan bool, 1)
+	t.disconnectFinished = make(chan bool, 1)
+
+	var err error
+	t.serverConn, err = net.ListenPacket("udp", t.address)
+	return err
+}
+
 // Start starts networking.
 func (t *udpTransport) Listen(ctx context.Context, started chan struct{}) error {
-	inslogger.FromContext(ctx).Info("Start UDP transport")
+	logger := inslogger.FromContext(ctx)
+	logger.Info("[ Listen ] Start UDP transport")
+
+	if err := t.prepareListen(); err != nil {
+		logger.Infof("[ Listen ] Failed to prepare UDP transport: " + err.Error())
+		return err
+	}
+
 	started <- struct{}{}
 	for {
 		buf := make([]byte, udpMaxPacketSize)

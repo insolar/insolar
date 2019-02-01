@@ -77,7 +77,11 @@ func NewTransport(cfg configuration.Transport, proxy relay.Proxy) (Transport, er
 
 		return newTCPTransport(conn.LocalAddr().String(), proxy, publicAddress)
 	case "PURE_UDP":
-		return newUDPTransport(conn, proxy, publicAddress)
+		// TODO: not little hack: @AndreyBronin rewrite all this mess, please!
+		localAddress := conn.LocalAddr().String()
+		utils.CloseVerbose(conn)
+
+		return newUDPTransport(localAddress, proxy, publicAddress)
 	case "QUIC":
 		return newQuicTransport(conn, proxy, publicAddress)
 	default:
