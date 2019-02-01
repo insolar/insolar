@@ -1238,6 +1238,7 @@ func TestMessageHandler_HandleGetRequest(t *testing.T) {
 	certificate.GetRoleMock.Return(core.StaticRoleLightMaterial)
 
 	h := NewMessageHandler(&configuration.Ledger{}, certificate)
+	h.ObjectStorage = db
 
 	rep, err := h.handleGetRequest(contextWithJet(ctx, jetID), &message.Parcel{
 		Msg:         &msg,
