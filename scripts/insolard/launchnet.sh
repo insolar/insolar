@@ -317,8 +317,6 @@ done
 printf "discovery nodes started ... \n"
 
 wait_for_complete_network_state
-scripts/insolard/start_nodes.sh &
-
-kill -SIGCONT $lastDiscoveryPID
+scripts/insolard/start_nodes.sh
 
 echo "FINISHING ..."

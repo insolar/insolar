@@ -69,5 +69,3 @@ done
 
 sleep 10s   #time to consensus
 printf "nodes started ... \n"
-
-kill $lastNodePID
