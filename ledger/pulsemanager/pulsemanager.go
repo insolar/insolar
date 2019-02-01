@@ -743,6 +743,7 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse core.Pulse) 
 	}()
 
 	m.NodeStorage.RemoveActiveNodesUntil(pn)
+	m.JetStorage.DeleteJetTree(ctx, pn)
 
 	err := m.syncClientsPool.LightCleanup(ctx, pn, m.RecentStorageProvider)
 	if err != nil {
