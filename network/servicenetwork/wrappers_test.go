@@ -27,12 +27,17 @@ import (
 	"github.com/insolar/insolar/network/transport/host"
 )
 
+type nodeKeeperTestInterface interface {
+	// Wipe all active nodes for test purposes
+	Wipe(isDiscovery bool)
+}
+
 type nodeKeeperWrapper struct {
 	original network.NodeKeeper
 }
 
 func (n *nodeKeeperWrapper) Wipe(isDiscovery bool) {
-	n.original.Wipe(isDiscovery)
+	n.original.(nodeKeeperTestInterface).Wipe(isDiscovery)
 }
 
 func (n *nodeKeeperWrapper) AddTemporaryMapping(nodeID core.RecordRef, shortID core.ShortNodeID, address string) error {

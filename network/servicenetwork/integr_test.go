@@ -201,7 +201,7 @@ func (s *testSuite) TestDiscoveryRestart() {
 
 	log.Info("Discovery node stopping...")
 	err := s.fixture().bootstrapNodes[0].serviceNetwork.Stop(context.Background())
-	s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.Wipe(true)
+	s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.(*nodeKeeperWrapper).Wipe(true)
 	log.Info("Discovery node stopped...")
 	require.NoError(s.T(), err)
 
