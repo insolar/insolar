@@ -59,9 +59,9 @@ func TestStore_DropWaitWrites(t *testing.T) {
 			close(txstarted)
 			<-dropwaits
 			time.Sleep(waittime)
+			txFin = time.Now()
 			return nil
 		})
-		txFin = time.Now()
 		log.Debugln("end tx")
 		wg.Done()
 	}()
