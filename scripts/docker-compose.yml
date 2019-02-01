@@ -3,9 +3,9 @@ services:
   prometheus:
     image: "prom/prometheus:v2.7.0"
     volumes:
-      - ./insolard/configs/generated_configs/prometheus.yaml:/etc/prometheus/prometheus.yml:ro
+      - ${PWD}/insolard/configs/generated_configs/:/etc/prometheus:ro
     command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--config.file=/etc/prometheus/prometheus.yaml'
     ports:
       - '9090:9090'
 
