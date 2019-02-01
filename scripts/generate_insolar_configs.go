@@ -17,9 +17,12 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+	"html/template"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	pulsewatcher "github.com/insolar/insolar/cmd/pulsewatcher/config"
@@ -46,6 +49,9 @@ const (
 	dataDirectoryTemplate       = "scripts/insolard/nodes/%d/data"
 	certificatePathTemplate     = "scripts/insolard/nodes/%d/cert.json"
 	pulsewatcherFileName        = "pulsewatcher.yaml"
+
+	prometheusConfigTmpl = "scripts/prom/server.yml.tmpl"
+	prometheusFileName   = "prometheus.yaml"
 )
 
 var (
@@ -97,7 +103,34 @@ func writePulsarConfig(conf configuration.Configuration) {
 	data, err := yaml.Marshal(conf)
 	check("Can't Marshal pulsard config", err)
 	err = genesis.WriteFile(outputDir, "pulsar.yaml", string(data))
-	check("Can't WriteFile: "+gorundPortsPath, err)
+	check("Can't WriteFile: pulsar.yaml", err)
+}
+
+type promContext struct {
+	Jobs map[string][]string
+}
+
+func newPromContext() *promContext {
+	return &promContext{Jobs: map[string][]string{}}
+}
+
+func (pctx *promContext) addTarget(name string, conf configuration.Configuration) {
+	jobs := pctx.Jobs
+	addrPair := strings.SplitN(conf.Metrics.ListenAddress, ":", 2)
+	addr := "host.docker.internal:" + addrPair[1]
+	jobs[name] = append(jobs[name], addr)
+}
+
+func writePromConfig(pctx *promContext) {
+	templates, err := template.ParseFiles(prometheusConfigTmpl)
+	check("Can't parse template: "+prometheusConfigTmpl, err)
+
+	var b bytes.Buffer
+	err = templates.Execute(&b, pctx)
+	check("Can't process template: "+prometheusConfigTmpl, err)
+
+	err = genesis.WriteFile(outputDir, prometheusFileName, b.String())
+	check("Can't WriteFile: "+prometheusFileName, err)
 }
 
 func main() {
@@ -110,6 +143,8 @@ func main() {
 	insolarConfigs := make([]configuration.Configuration, 0, len(genesisConf.DiscoveryNodes))
 
 	gorundPorts := [][]string{}
+
+	pctx := newPromContext()
 
 	for index, node := range genesisConf.DiscoveryNodes {
 		nodeIndex := index + 1
@@ -138,6 +173,8 @@ func main() {
 
 		insolarConfigs = append(insolarConfigs, conf)
 
+		pctx.addTarget(node.Role, conf)
+
 		pwConfig.Nodes = append(pwConfig.Nodes, conf.APIRunner.Address)
 	}
 
@@ -157,6 +194,7 @@ func main() {
 	writeInsolarConfigs(insolarConfigs)
 	writeGorundPorts(gorundPorts)
 	writePulsarConfig(pulsarConfig)
+	writePromConfig(pctx)
 
 	pwConfig.Interval = 100 * time.Millisecond
 	pwConfig.Timeout = 1 * time.Second
