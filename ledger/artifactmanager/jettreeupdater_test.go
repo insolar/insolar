@@ -1,6 +1,7 @@
 package artifactmanager
 
 import (
+	"context"
 	"sync"
 	"testing"
 
@@ -30,6 +31,18 @@ func TestJetTreeUpdater_otherNodesForPulse(t *testing.T) {
 		JetStorage:         js,
 		JetCoordinator:     jc,
 	}
+
+	t.Run("active nodes storage returns error", func(t *testing.T) {
+		ans.GetActiveNodesByRoleMock.Expect(
+			100, core.StaticRoleLightMaterial,
+		).Return(
+			nil, errors.New("some"),
+		)
+
+		nodes, err := jtu.otherNodesForPulse(ctx, core.PulseNumber(100))
+		require.Error(t, err)
+		require.Empty(t, nodes)
+	})
 
 	meRef := testutils.RandomRef()
 	jc.MeMock.Return(meRef)
@@ -188,14 +201,14 @@ func TestJetTreeUpdater_fetchJet(t *testing.T) {
 	target := testutils.RandomID()
 
 	t.Run("wrong tree", func(t *testing.T) {
-		js.GetJetTreeMock.Expect(ctx, 100).Return(nil, errors.New("some"))
+		js.GetJetTreeMock.Return(nil, errors.New("some"))
 		jetID, err := jtu.fetchJet(ctx, target, core.PulseNumber(100))
 		require.Error(t, err)
 		require.Nil(t, jetID)
 	})
 
 	t.Run("quick reply, data is up to date", func(t *testing.T) {
-		js.GetJetTreeMock.Expect(ctx, 100).Return(
+		js.GetJetTreeMock.Return(
 			jet.NewTree(true), nil,
 		)
 		jetID, err := jtu.fetchJet(ctx, target, core.PulseNumber(100))
@@ -220,12 +233,15 @@ func TestJetTreeUpdater_fetchJet(t *testing.T) {
 			nil,
 		)
 
-		js.GetJetTreeMock.Expect(ctx, 100).Return(
+		js.GetJetTreeMock.Return(
 			jet.NewTree(false), nil,
 		)
-		js.UpdateJetTreeMock.Expect(
-			ctx, 100, true, *jet.NewID(0, nil),
-		).Return(nil)
+		js.UpdateJetTreeFunc = func(ctx context.Context, pn core.PulseNumber, actual bool, jets ...core.RecordID) (r error) {
+			require.Equal(t, core.PulseNumber(100), pn)
+			require.True(t, actual)
+			require.Equal(t, []core.RecordID{*jet.NewID(0, nil)}, jets)
+			return nil
+		}
 
 		jetID, err := jtu.fetchJet(ctx, target, core.PulseNumber(100))
 		require.NoError(t, err)

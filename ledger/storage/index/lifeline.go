@@ -32,6 +32,7 @@ type ObjectLifeline struct {
 	Parent              core.RecordRef
 	Delegates           map[core.RecordRef]core.RecordRef
 	State               record.State
+	LatestUpdate        core.PulseNumber
 }
 
 // EncodeObjectLifeline converts lifeline index into binary format.

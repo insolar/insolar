@@ -453,7 +453,7 @@
   revision = "772ced7fd4c2f6322c07537a9a93b68d74551fa6"
 
 [[projects]]
-  digest = "1:cd0a556f7c6e6946fbe39b1bbc61db209967c64cbbf0aed5e4108081cd43aea0"
+  digest = "1:2b4f8766d46d868cb490fe7b8c36c28b1e93a4afe712d25f6d4c6f9d58ca2757"
   name = "go.opencensus.io"
   packages = [
     ".",
@@ -476,8 +476,8 @@
     "zpages/internal",
   ]
   pruneopts = "UT"
-  revision = "b7bf3cdb64150a8c8c53b769fdeb2ba581bd4d4b"
-  version = "v0.18.0"
+  revision = "2b5032d79456124f42db6b7eb19ac6c155449dc2"
+  version = "v0.19.0"
 
 [[projects]]
   branch = "master"
