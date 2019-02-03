@@ -408,9 +408,6 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	node.serviceNetwork = serviceNetwork
 
 	pulseManagerMock.SetMock.Set(func(p context.Context, p1 core.Pulse, p2 bool) (r error) {
-		if serviceNetwork.NodeKeeper == nil {
-			panic("NodeKeeper == nil")
-		}
 		return serviceNetwork.NodeKeeper.MoveSyncToActive()
 	})
 }
