@@ -135,7 +135,7 @@ func TestCalculator(t *testing.T) {
 	service := cryptography.NewKeyBoundCryptographyService(key)
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
 	nk := nodekeeper.GetTestNodekeeper(service)
-	th := terminationhandler.NewTestTerminationHandler()
+	th := terminationhandler.NewTestHandler()
 
 	am := testutils.NewArtifactManagerMock(t)
 	am.StateFunc = func() (r []byte, r1 error) {

@@ -150,7 +150,7 @@ func TestCalculatorError(t *testing.T) {
 	pulseManager := testutils.NewPulseStorageMock(t)
 
 	nk := nodekeeper.GetTestNodekeeper(service)
-	th := terminationhandler.NewTestTerminationHandler()
+	th := terminationhandler.NewTestHandler()
 
 	jc := testutils.NewJetCoordinatorMock(t)
 
@@ -205,7 +205,7 @@ func TestCalculatorLedgerError(t *testing.T) {
 
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
 	nk := nodekeeper.GetTestNodekeeper(service)
-	th := terminationhandler.NewTestTerminationHandler()
+	th := terminationhandler.NewTestHandler()
 	cm.Inject(th, nk, am, calculator, service, scheme)
 
 	require.NotNil(t, calculator.ArtifactManager)
