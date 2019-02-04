@@ -24,11 +24,13 @@ import (
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/merkle"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
 )
 
 type SecondPhase interface {
@@ -48,6 +50,10 @@ type secondPhase struct {
 }
 
 func (sp *secondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*SecondPhaseState, error) {
+	ctx, span := instracer.StartSpan(ctx, "SecondPhase.Execute")
+	span.AddAttributes(trace.Int64Attribute("pulse", int64(state.PulseEntry.Pulse.PulseNumber)))
+	defer span.End()
+
 	prevCloudHash := sp.NodeKeeper.GetCloudHash()
 
 	state.ValidProofs[sp.NodeKeeper.GetOrigin()] = state.PulseProof
@@ -156,6 +162,10 @@ func (sp *secondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 }
 
 func (sp *secondPhase) Execute21(ctx context.Context, state *SecondPhaseState) (*SecondPhaseState, error) {
+	ctx, span := instracer.StartSpan(ctx, "SecondPhase.Execute21")
+	span.AddAttributes(trace.Int64Attribute("pulse", int64(state.PulseEntry.Pulse.PulseNumber)))
+	defer span.End()
+
 	additionalRequests := state.MatrixState.AdditionalRequestsPhase2
 
 	count := len(additionalRequests)
