@@ -98,3 +98,7 @@ func (p3p *Phase3Packet) GetBitset() BitSet {
 func (p3p *Phase3Packet) GetGlobuleHashSignature() GlobuleHashSignature {
 	return p3p.globuleHashSignature
 }
+
+func (p3p *Phase3Packet) GetPulseNumber() core.PulseNumber {
+	return core.PulseNumber(p3p.packetHeader.Pulse)
+}
