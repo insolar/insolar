@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/merkle"
 	"github.com/insolar/insolar/platformpolicy"
@@ -230,6 +231,7 @@ func (fp *FirstPhaseImpl) filterClaims(nodeID core.RecordRef, claims []packets.R
 		signedClaim, ok := claim.(packets.SignedClaim)
 		if ok && !nodeID.Equal(fp.NodeKeeper.GetOrigin().ID()) {
 			err := fp.checkClaimSignature(signedClaim)
+			metrics.ConsensusDeclinedClaims.WithLabelValues("declined node: " + )
 			if err != nil {
 				log.Error("[ filterClaims ] failed to check a claim sign: " + err.Error())
 				continue

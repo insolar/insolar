@@ -51,5 +51,13 @@ func GetInsolarRegistry() *prometheus.Registry {
 
 	registry.MustRegister(APIContractExecutionTime)
 
+	// consensus metrics
+	registry.MustRegister(ConsensusPacketsSent)
+	registry.MustRegister(Consensus1PhasePacketsRecv)
+	registry.MustRegister(Consensus2PhasePacketsRecv)
+	registry.MustRegister(Consensus21PhasePacketsRecv)
+	registry.MustRegister(Consensus3PhasePacketsRecv)
+	registry.MustRegister(ConsensusDeclinedClaims)
+
 	return registry
 }

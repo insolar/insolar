@@ -24,6 +24,7 @@ import (
 	consensus "github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/sequence"
 	"github.com/insolar/insolar/network/transport"
@@ -73,6 +74,7 @@ func (tc *transportConsensus) SignAndSendPacket(packet consensus.ConsensusPacket
 	}
 	ctx := context.Background()
 	p := tc.buildPacket(packet, receiverHost)
+	metrics.ConsensusPacketsSent.WithLabelValues(packet.GetType().String()).Inc()
 	return tc.transport.SendPacket(ctx, p)
 }
 

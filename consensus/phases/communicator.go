@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network"
 	"github.com/pkg/errors"
 )
@@ -111,6 +112,7 @@ func (nc *NaiveCommunicator) sendRequestToNodes(participants []core.Node, packet
 		}
 
 		go func(n core.Node, packet packets.ConsensusPacket) {
+			metrics.ConsensusPacketsSent.WithLabelValues("Send request to nodes", "to: "+n.ID().String())
 			err := nc.ConsensusNetwork.SignAndSendPacket(packet, n.ID(), nc.Cryptography)
 			if err != nil {
 				log.Errorln(err.Error())
@@ -137,6 +139,7 @@ func (nc *NaiveCommunicator) sendRequestToNodesWithOrigin(originClaim *packets.N
 
 	for ref, req := range requests {
 		go func(node core.RecordRef, consensusPacket packets.ConsensusPacket) {
+			metrics.ConsensusPacketsSent.WithLabelValues("Request with origin", "to: "+node.String())
 			err := nc.ConsensusNetwork.SignAndSendPacket(consensusPacket, node, nc.Cryptography)
 			if err != nil {
 				log.Errorln(err.Error())
@@ -250,6 +253,7 @@ func (nc *NaiveCommunicator) ExchangePhase1(
 	for {
 		select {
 		case res := <-nc.phase1result:
+			metrics.Consensus1PhasePacketsRecv.WithLabelValues("from " + res.id.String()).Inc()
 			log.Debugf("got phase1 request from %s", res.id)
 			if res.packet.GetPulseNumber() != core.PulseNumber(nc.currentPulseNumber) {
 				continue
@@ -314,6 +318,7 @@ func (nc *NaiveCommunicator) ExchangePhase2(ctx context.Context, list network.Un
 	for {
 		select {
 		case res := <-nc.phase2result:
+			metrics.Consensus2PhasePacketsRecv.WithLabelValues("from: " + res.id.String()).Inc()
 			log.Debugf("got phase2 request from %s", res.id)
 			if res.packet.GetPulseNumber() != core.PulseNumber(nc.currentPulseNumber) {
 				continue
@@ -361,6 +366,7 @@ func (nc *NaiveCommunicator) sendAdditionalRequests(origReq *packets.Phase2Packe
 		newReq := *origReq
 		newReq.AddVote(&packets.MissingNode{NodeIndex: uint16(req.RequestIndex)})
 		receiver := selectCandidate(req.Candidates)
+		metrics.ConsensusPacketsSent.WithLabelValues("Additional request", "to: "+receiver.String())
 		err := nc.ConsensusNetwork.SignAndSendPacket(&newReq, receiver, nc.Cryptography)
 		if err != nil {
 			return errors.Wrapf(err, "Failed to send additional phase 2.1 request for index %d to node %s", req.RequestIndex, receiver)
@@ -404,6 +410,7 @@ func (nc *NaiveCommunicator) ExchangePhase21(ctx context.Context, list network.U
 	for {
 		select {
 		case res := <-nc.phase2result:
+			metrics.Consensus21PhasePacketsRecv.WithLabelValues("from: " + res.id.String()).Inc()
 			if res.packet.GetPulseNumber() != core.PulseNumber(nc.currentPulseNumber) {
 				continue
 			}
@@ -467,6 +474,7 @@ func (nc *NaiveCommunicator) ExchangePhase3(ctx context.Context, participants []
 	for {
 		select {
 		case res := <-nc.phase3result:
+			metrics.Consensus3PhasePacketsRecv.WithLabelValues("from: " + res.id.String()).Inc()
 			if shouldSendResponse(&res) {
 				// send response
 				err := nc.ConsensusNetwork.SignAndSendPacket(packet, res.id, nc.Cryptography)
