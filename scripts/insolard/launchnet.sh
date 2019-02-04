@@ -320,7 +320,7 @@ do
     if [[ "$i" -eq "$NUM_DISCOVERY_NODES" ]]
     then
         echo "DISCOVERY NODE $i STARTED in foreground"
-        INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $GENERATED_CONFIGS_DIR/insolar_$i.yaml --trace &> $node/output.log
+        INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $GENERATED_CONFIGS_DIR/insolar_$i.yaml --trace &> $node/output.log &
 #        lastDiscoveryPID=`echo \$!`
         break
     fi
@@ -328,34 +328,34 @@ do
     echo "DISCOVERY NODE $i STARTED in background"
 done
 
-#sleep 40s #time to up discovery nodes
-#
-#printf "discovery nodes started ... \n"
-#printf "start nodes ... \n"
-#
-#scripts/insolard/check_status.sh
-#
-#generate_nodes_certs
-#
-#i=0
-#for node in "${NODES[@]}"
-#do
-#    i=$((i + 1))
-#    if [[ "$i" -eq "$NUM_NODES" ]]
-#    then
-#        echo "NODE $i STARTED in foreground"
-#        INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $GENERATED_CONFIGS_DIR/insolar_$((i+NUM_DISCOVERY_NODES)).yaml --trace &> $node/output.txt &
-#        lastNodePID=`echo \$!`
-#        break
-#    fi
-#    INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $GENERATED_CONFIGS_DIR/insolar_$((i+NUM_DISCOVERY_NODES)).yaml --trace &> $node/output.txt &
-#    echo "NODE $i STARTED in background"
-#done
-#
-#sleep 20s   #time to consensus
-#printf "nodes started ... \n"
-#
-#kill $lastNodePID
-#kill -CONT $lastDiscoveryPID
+sleep 40s #time to up discovery nodes
+
+printf "discovery nodes started ... \n"
+printf "start nodes ... \n"
+
+scripts/insolard/check_status.sh
+
+generate_nodes_certs
+
+i=0
+for node in "${NODES[@]}"
+do
+    i=$((i + 1))
+    if [[ "$i" -eq "$NUM_NODES" ]]
+    then
+        echo "NODE $i STARTED in foreground"
+        INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $GENERATED_CONFIGS_DIR/insolar_$((i+NUM_DISCOVERY_NODES)).yaml --trace &> $node/output.txt
+        lastNodePID=`echo \$!`
+        break
+    fi
+    INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $GENERATED_CONFIGS_DIR/insolar_$((i+NUM_DISCOVERY_NODES)).yaml --trace &> $node/output.txt &
+    echo "NODE $i STARTED in background"
+done
+
+sleep 10s   #time to consensus
+printf "nodes started ... \n"
+
+kill $lastNodePID
+kill -CONT $lastDiscoveryPID
 
 echo "FINISHING ..."
