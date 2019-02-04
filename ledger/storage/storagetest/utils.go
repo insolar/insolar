@@ -72,7 +72,6 @@ func TmpDB(ctx context.Context, t testing.TB, options ...Option) (storage.DBCont
 	require.NoError(t, err)
 
 	cm := &component.Manager{}
-	gi := storage.NewGenesisInitializer()
 
 	cm.Inject(
 		platformpolicy.NewPlatformCryptographyScheme(),
@@ -81,8 +80,12 @@ func TmpDB(ctx context.Context, t testing.TB, options ...Option) (storage.DBCont
 		storage.NewObjectStorage(),
 		storage.NewDropStorage(10),
 		storage.NewPulseTracker(),
-		gi,
 	)
+
+	if !opts.nobootstrap {
+		gi := storage.NewGenesisInitializer()
+		cm.Inject(gi)
+	}
 
 	err = cm.Init(ctx)
 	if err != nil {
@@ -93,17 +96,8 @@ func TmpDB(ctx context.Context, t testing.TB, options ...Option) (storage.DBCont
 		t.Error("ComponentManager start failed", err)
 	}
 
-	if !opts.nobootstrap {
-		err = gi.Init(ctx)
-		require.NoError(t, err)
-	}
-
 	return db, func() {
-		// cmErr := cm.Stop(ctx)
 		rmErr := os.RemoveAll(tmpdir)
-		// if cmErr != nil {
-		// 	t.Error("ComponentManager stop failed", cmErr)
-		// }
 		if rmErr != nil {
 			t.Fatal("temporary db dir cleanup failed", rmErr)
 		}

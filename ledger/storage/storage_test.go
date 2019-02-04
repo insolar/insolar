@@ -268,16 +268,44 @@ func (s *storageSuite) TestDB_IterateLocalData() {
 	}, results)
 }
 
-// TODO: @ilyamarkin 01.02.19. - test close db with mocks
-// func (s *storageSuite) TestDB_Close() {
-// 	s.cleaner()
-//
-// 	rec, err := s.objectStorage.GetRecord(s.ctx, s.jetID, &core.RecordID{})
-// 	assert.Nil(s.T(), rec)
-// 	assert.Equal(s.T(), err, storage.ErrClosed)
-//
-// 	rec = &record.RequestRecord{}
-// 	gotRef, err := s.objectStorage.SetRecord(s.ctx, s.jetID, core.GenesisPulse.PulseNumber, rec)
-// 	assert.Nil(s.T(), gotRef)
-// 	assert.Equal(s.T(), err, storage.ErrClosed)
-// }
+func TestDB_Close(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+	db, cleaner := storagetest.TmpDB(ctx, t)
+
+	jetID := testutils.RandomJet()
+
+	os := storage.NewObjectStorage()
+	ds := storage.NewDropStorage(10)
+
+	cm := &component.Manager{}
+	cm.Inject(
+		platformpolicy.NewPlatformCryptographyScheme(),
+		db,
+		os,
+		ds,
+	)
+	err := cm.Init(ctx)
+	if err != nil {
+		t.Error("ComponentManager init failed", err)
+	}
+	err = cm.Start(ctx)
+	if err != nil {
+		t.Error("ComponentManager start failed", err)
+	}
+
+	err = cm.Stop(ctx)
+	if err != nil {
+		t.Error("ComponentManager stop failed", err)
+	}
+
+	cleaner()
+
+	rec, err := os.GetRecord(ctx, jetID, &core.RecordID{})
+	assert.Nil(t, rec)
+	assert.Equal(t, err, storage.ErrClosed)
+
+	rec = &record.RequestRecord{}
+	gotRef, err := os.SetRecord(ctx, jetID, core.GenesisPulse.PulseNumber, rec)
+	assert.Nil(t, gotRef)
+	assert.Equal(t, err, storage.ErrClosed)
+}
