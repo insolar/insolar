@@ -100,6 +100,9 @@ type JetCoordinator interface {
 	LightValidatorsForJet(ctx context.Context, jetID RecordID, pulse PulseNumber) ([]RecordRef, error)
 
 	Heavy(ctx context.Context, pulse PulseNumber) (*RecordRef, error)
+
+	IsBeyondLimit(ctx context.Context, currentPN, targetPN PulseNumber) (bool, error)
+	NodeForJet(ctx context.Context, jetID RecordID, rootPN, targetPN PulseNumber) (*RecordRef, error)
 }
 
 // ArtifactManager is a high level storage interface.

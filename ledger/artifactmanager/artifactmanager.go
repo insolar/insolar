@@ -48,7 +48,6 @@ type LedgerArtifactManager struct {
 	DBContext    storage.DBContext  `inject:""`
 
 	JetCoordinator core.JetCoordinator `inject:""`
-	NodeCalculator nodeCalculator      `inject:""`
 
 	getChildrenChunkSize int
 	senders              *ledgerArtifactSenders
@@ -280,7 +279,7 @@ func (m *LedgerArtifactManager) GetPendingRequest(ctx context.Context, objectID 
 		return nil, fmt.Errorf("GetPendingRequest: unexpected reply: %#v", requestIDReply)
 	}
 
-	node, err := m.NodeCalculator.NodeForJet(ctx, objectID, currentPulse.PulseNumber, requestIDReply.ID.Pulse())
+	node, err := m.JetCoordinator.NodeForJet(ctx, objectID, currentPulse.PulseNumber, requestIDReply.ID.Pulse())
 	if err != nil {
 		return nil, err
 	}
