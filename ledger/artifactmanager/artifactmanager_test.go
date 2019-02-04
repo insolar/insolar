@@ -19,7 +19,6 @@ package artifactmanager
 import (
 	"context"
 	"math/rand"
-	"sync"
 	"testing"
 
 	"github.com/gojuno/minimock"
@@ -501,11 +500,11 @@ func (s *amSuite) TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors(
 	)
 
 	objDesc, err := am.GetObject(ctx, *objRef, nil, false)
+	rObjDesc := objDesc.(*ObjectDescriptor)
 	assert.NoError(s.T(), err)
 	expectedObjDesc := &ObjectDescriptor{
-		ctx: ctx,
-		am:  am,
-
+		ctx:          rObjDesc.ctx,
+		am:           am,
 		head:         *objRef,
 		state:        *objectAmendID,
 		prototype:    prototypeRef,
@@ -514,8 +513,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors(
 		memory:       []byte{4},
 		parent:       *parentRef,
 	}
-
-	assert.Equal(s.T(), *expectedObjDesc, *objDesc.(*ObjectDescriptor))
+	assert.Equal(t, *expectedObjDesc, *rObjDesc)
 }
 
 func (s *amSuite) TestLedgerArtifactManager_GetObject_FollowsRedirect() {

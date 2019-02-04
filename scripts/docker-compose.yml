@@ -1,25 +1,13 @@
-# docker-compose -f docker/compose.yml up grafana kibana
-# Start jaeger only after kibana has been started
-# docker-compose -f docker/compose.yml up jaeger 
-# localhost:3000 admin:pass - graphana
-# localhost:16686 - jaeger
-# localhost:5601 - kibana
- 
-version: '3'
+version: '3.7'
 services:
   prometheus:
-    image: "prom/prometheus:v2.6.0"
+    image: "prom/prometheus:v2.7.0"
     volumes:
-      - ./conf/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ${PWD}/insolard/configs/generated_configs/:/etc/prometheus:ro
     command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--config.file=/etc/prometheus/prometheus.yaml'
     ports:
       - '9090:9090'
-
-  node-exporter:
-    image: prom/node-exporter:v0.17.0
-    ports:
-      - '9100:9100'
 
   grafana:
     image: grafana/grafana:5.4.2
@@ -27,14 +15,16 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=pass
       - GF_EXPLORE_ENABLED=true
     volumes:
-      - ./conf/grafana/provisioning:/etc/grafana/provisioning
-      - ./conf/grafana/config.ini:/etc/grafana/config.ini
-      - ./conf/grafana/dashboards:/var/lib/grafana/dashboards   
+      - ./monitor/grafana/provisioning:/etc/grafana/provisioning
+      - ./monitor/grafana/config.ini:/etc/grafana/config.ini
+      - ./monitor/grafana/dashboards:/var/lib/grafana/dashboards
     depends_on:
       - prometheus
     ports:
       - "3000:3000"
 
+# elastic and kibana are optional here,
+# but they provide more powerful  search and analysis than Jaeger's UI (augments it actually).
   elasticsearch:
     image: "docker.elastic.co/elasticsearch/elasticsearch:6.5.4"
     ports:
@@ -44,6 +34,13 @@ services:
       ES_JAVA_OPTS: "-Xmx256m -Xms256m"
       discovery.type: "single-node"
       xpack.security.enabled: "false"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9200/_cat/health?h=st"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    # restart: on-failure
 
   kibana:
     image: "docker.elastic.co/kibana/kibana:6.5.4"
@@ -57,9 +54,18 @@ services:
     ports:
       - "6831:6831/udp"
       - "16686:16686"
+      - "16687:16687"
     environment:
       SPAN_STORAGE_TYPE: "elasticsearch"
       ES_SERVER_URLS: "http://elasticsearch:9200"
       ES_TAGS_AS_FIELDS: "true"
     depends_on:
       - elasticsearch
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:16687/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: on-failure
+    # restart: on-failure

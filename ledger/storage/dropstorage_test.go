@@ -117,9 +117,9 @@ func (s *dropSuite) TestStore_DropWaitWrites() {
 			close(txstarted)
 			<-dropwaits
 			time.Sleep(waittime)
+			txFin = time.Now()
 			return nil
 		})
-		txFin = time.Now()
 		log.Debugln("end tx")
 		wg.Done()
 	}()

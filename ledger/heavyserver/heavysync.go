@@ -29,6 +29,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/jet"
 )
 
 func errSyncInProgress(jetID core.RecordID, pn core.PulseNumber) *reply.HeavyError {
@@ -49,20 +50,22 @@ type syncstate struct {
 	insync    bool
 }
 
+type jetprefix [core.JetPrefixSize]byte
+
 // Sync provides methods for syncing records to heavy storage.
 type Sync struct {
 	ReplicaStorage storage.ReplicaStorage `inject:""`
 	DBContext      storage.DBContext
 
 	sync.Mutex
-	jetSyncStates map[core.RecordID]*syncstate
+	jetSyncStates map[jetprefix]*syncstate
 }
 
 // NewSync creates new Sync instance.
 func NewSync(db storage.DBContext) *Sync {
 	return &Sync{
 		DBContext:     db,
-		jetSyncStates: map[core.RecordID]*syncstate{},
+		jetSyncStates: map[jetprefix]*syncstate{},
 	}
 }
 
@@ -94,11 +97,14 @@ func (s *Sync) checkIsNextPulse(ctx context.Context, jetID core.RecordID, jetsta
 }
 
 func (s *Sync) getJetSyncState(ctx context.Context, jetID core.RecordID) *syncstate {
+	var jp jetprefix
+	_, jpBuf := jet.Jet(jetID)
+	copy(jp[:], jpBuf)
 	s.Lock()
-	jetState, ok := s.jetSyncStates[jetID]
+	jetState, ok := s.jetSyncStates[jp]
 	if !ok {
 		jetState = &syncstate{}
-		s.jetSyncStates[jetID] = jetState
+		s.jetSyncStates[jp] = jetState
 	}
 	s.Unlock()
 	return jetState

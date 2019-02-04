@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/dgraph-io/badger"
+	"github.com/insolar/insolar/ledger/artifactmanager"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
@@ -266,7 +267,7 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 	ps.PulseTracker = s.pulseTracker
 	pm.PulseStorage = ps
 
-	pm.ArtifactManagerMessageHandler = artifactManagerMessageHandlerMock
+	pm.HotDataWaiter = artifactmanager.NewHotDataWaiterConcrete()
 
 	providerMock := recentstorage.NewProviderMock(s.T())
 	providerMock.GetStorageFunc = func(ctx context.Context, p core.RecordID) (r recentstorage.RecentStorage) {

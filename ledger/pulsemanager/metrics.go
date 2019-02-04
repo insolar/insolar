@@ -14,17 +14,28 @@
  *    limitations under the License.
  */
 
-package core
+package pulsemanager
 
-import "github.com/pkg/errors"
+import (
+	"go.opencensus.io/stats"
+	"go.opencensus.io/stats/view"
+)
 
 var (
-	// ErrUnknown returned when error type cannot be defined.
-	ErrUnknown = errors.New("unknown error")
-	// ErrDeactivated returned when requested object is deactivated.
-	ErrDeactivated = errors.New("object is deactivated")
-	// ErrStateNotAvailable returned when requested object is deactivated.
-	ErrStateNotAvailable = errors.New("object state is not available")
-	// ErrHotDataTimeout returned when no hot data received for a specific jet
-	ErrHotDataTimeout = errors.New("requests were abandoned due to hot-data timeout")
+	statCleanLatencyTotal = stats.Int64("lightcleanup/latency/total", "Light storage cleanup time in milliseconds", stats.UnitMilliseconds)
 )
+
+func init() {
+	err := view.Register(
+
+		&view.View{
+			Name:        statCleanLatencyTotal.Name(),
+			Description: statCleanLatencyTotal.Description(),
+			Measure:     statCleanLatencyTotal,
+			Aggregation: view.Distribution(100, 500, 1000, 5000, 10000),
+		},
+	)
+	if err != nil {
+		panic(err)
+	}
+}

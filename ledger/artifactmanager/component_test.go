@@ -131,6 +131,7 @@ func (s *componentSuite) TestLedgerArtifactManager_PendingRequest() {
 	am.PulseStorage = amPulseStorageMock
 	am.PlatformCryptographyScheme = cs
 	am.DefaultBus = mb
+
 	provider := storage.NewRecentStorageProvider(0)
 
 	cryptoScheme := platformpolicy.NewPlatformCryptographyScheme()
@@ -150,10 +151,13 @@ func (s *componentSuite) TestLedgerArtifactManager_PendingRequest() {
 	handler.Bus = mb
 	handler.RecentStorageProvider = provider
 	handler.JetCoordinator = jcMock
+
+	handler.HotDataWaiter = NewHotDataWaiterConcrete()
+	handler.HotDataWaiter.Unlock(ctx, jetID)
+
 	err := handler.Init(s.ctx)
 	require.NoError(s.T(), err)
 	objRef := *genRandomRef(0)
-	handler.CloseEarlyRequestCircuitBreakerForJet(s.ctx, jetID)
 
 	err = s.jetStorage.UpdateJetTree(s.ctx, core.FirstPulseNumber, true, jetID)
 	require.NoError(s.T(), err)

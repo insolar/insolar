@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"sort"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/insolar/insolar/component"
@@ -40,6 +41,11 @@ const (
 	Authorized SessionState = iota + 1
 	Challenge1
 	Challenge2
+)
+
+const (
+	stateRunning = uint32(iota + 1)
+	stateIdle
 )
 
 type Session struct {
@@ -66,7 +72,7 @@ type notification struct{}
 
 type SessionManager interface {
 	component.Starter
-	// component.Stopper
+	component.Stopper
 
 	NewSession(ref core.RecordRef, cert core.AuthorizationCertificate, ttl time.Duration) SessionID
 	CheckSession(id SessionID, expected SessionState) error
@@ -80,6 +86,7 @@ type sessionManager struct {
 	sequence uint64
 	lock     sync.RWMutex
 	sessions map[SessionID]*Session
+	state    uint32
 
 	newSessionNotification  chan notification
 	stopCleanupNotification chan notification
@@ -90,25 +97,35 @@ func NewSessionManager() SessionManager {
 		sessions:                make(map[SessionID]*Session),
 		newSessionNotification:  make(chan notification),
 		stopCleanupNotification: make(chan notification),
+		state:                   stateIdle,
 	}
 }
 
 func (sm *sessionManager) Start(ctx context.Context) error {
-	inslogger.FromContext(ctx).Debug("[ sessionManager::Start ] start cleaning up sessions")
+	logger := inslogger.FromContext(ctx)
+	logger.Debug("[ sessionManager::Start ] start cleaning up sessions")
 
-	go sm.cleanupExpiredSessions()
+	if atomic.CompareAndSwapUint32(&sm.state, stateIdle, stateRunning) {
+		go sm.cleanupExpiredSessions()
+	} else {
+		logger.Warn("[ sessionManager::Start ] Called twice")
+	}
 
 	return nil
 }
 
-// TODO: fix bug. If we uncomment Stop, we get deadlock on genesis stopping
-// func (sm *sessionManager) Stop(ctx context.Context) error {
-// 	inslogger.FromContext(ctx).Debug("[ sessionManager::Stop ] stop cleaning up sessions")
-//
-// 	sm.stopCleanupNotification <- notification{}
-//
-// 	return nil
-// }
+func (sm *sessionManager) Stop(ctx context.Context) error {
+	logger := inslogger.FromContext(ctx)
+	logger.Debug("[ sessionManager::Stop ] stop cleaning up sessions")
+
+	if atomic.CompareAndSwapUint32(&sm.state, stateRunning, stateIdle) {
+		sm.stopCleanupNotification <- notification{}
+	} else {
+		logger.Warn("[ sessionManager::Stop ] Called twice")
+	}
+
+	return nil
+}
 
 func (sm *sessionManager) NewSession(ref core.RecordRef, cert core.AuthorizationCertificate, ttl time.Duration) SessionID {
 	id := utils.AtomicLoadAndIncrementUint64(&sm.sequence)
@@ -211,10 +228,14 @@ func (sm *sessionManager) cleanupExpiredSessions() {
 
 		// Session count is zero - wait for first session added.
 		if len(sessionsByExpirationTime) == 0 {
-			// Have no active sessions. Block till sessions will be added.
-			<-sm.newSessionNotification
-
-			sessionsByExpirationTime = sm.sortSessionsByExpirationTime()
+			// Have no active sessions.
+			// Block until sessions will be added or session manager begins to stop.
+			select {
+			case <-sm.newSessionNotification:
+				sessionsByExpirationTime = sm.sortSessionsByExpirationTime()
+			case <-sm.stopCleanupNotification:
+				return
+			}
 
 			// Check session instantly released concurrently
 			if len(sessionsByExpirationTime) == 0 {
