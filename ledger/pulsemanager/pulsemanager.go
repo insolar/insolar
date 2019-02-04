@@ -613,7 +613,6 @@ func (m *PulseManager) setUnderGilSection(
 	defer m.GIL.Release(ctx)
 
 	m.PulseStorage.Lock()
-
 	// FIXME: @andreyromancev. 17.12.18. return core.Pulse here.
 	storagePulse, err := m.PulseTracker.GetLatestPulse(ctx)
 	if err != nil {
