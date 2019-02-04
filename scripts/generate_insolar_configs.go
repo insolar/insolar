@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"html/template"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -225,14 +226,14 @@ func main() {
 		pulsarConfig.Pulsar.PulseDistributor.BootstrapHosts = append(pulsarConfig.Pulsar.PulseDistributor.BootstrapHosts, node.Host)
 	}
 
-	writeInsolarConfigs(outputDir, discoveryNodesConfigs)
-	writeInsolarConfigs(outputDir+"/nodes", nodesConfigs)
+	writeInsolarConfigs(filepath.Join(outputDir, "/discoverynodes"), discoveryNodesConfigs)
+	writeInsolarConfigs(filepath.Join(outputDir, "/nodes"), nodesConfigs)
 	writeGorundPorts(gorundPorts)
 	writePulsarConfig(pulsarConfig)
 	writePromConfig(pctx)
 
 	pwConfig.Interval = 100 * time.Millisecond
 	pwConfig.Timeout = 1 * time.Second
-	err = pulsewatcher.WriteConfig(outputDir+"/utils", pulsewatcherFileName, pwConfig)
+	err = pulsewatcher.WriteConfig(filepath.Join(outputDir, "/utils"), pulsewatcherFileName, pwConfig)
 	check("couldn't write pulsewatcher config file", err)
 }

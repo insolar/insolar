@@ -59,11 +59,11 @@ do
     if [[ "$i" -eq "$NUM_NODES" ]]
     then
         echo "NODE $i STARTED in foreground"
-        INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $GENERATED_CONFIGS_DIR/insolar_$((i+NUM_DISCOVERY_NODES)).yaml --trace &> $node/output.txt
+        INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $GENERATED_CONFIGS_DIR/insolar_$i.yaml --trace &> $node/output.txt
         lastNodePID=`echo \$!`
         break
     fi
-    INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $GENERATED_CONFIGS_DIR/insolar_$((i+NUM_DISCOVERY_NODES)).yaml --trace &> $node/output.txt &
+    INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $GENERATED_CONFIGS_DIR/insolar_$i.yaml --trace &> $node/output.txt &
     echo "NODE $i STARTED in background"
 done
 
