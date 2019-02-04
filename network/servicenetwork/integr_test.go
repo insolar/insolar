@@ -223,13 +223,9 @@ func setCommunicatorMock(nodes []*networkNode, opt CommunicatorTestOpt) {
 	ref := nodes[0].id
 	timedOutNodesCount := 0
 	switch opt {
-	case PartialNegative1Phase:
-		fallthrough
-	case PartialNegative2Phase:
+	case PartialNegative1Phase, PartialNegative2Phase:
 		timedOutNodesCount = int(float64(len(nodes)) * 0.6)
-	case PartialPositive1Phase:
-		fallthrough
-	case PartialPositive2Phase:
+	case PartialPositive1Phase, PartialPositive2Phase:
 		timedOutNodesCount = int(float64(len(nodes)) * 0.2)
 	}
 	// TODO: make these set operations thread-safe somehow (race detector does not like this code)
