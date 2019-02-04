@@ -1,4 +1,7 @@
-local params = std.extVar("__ksonnet/params").components.utils;
+
+local import_params = import '../params.libsonnet';
+local params = import_params.global.utils;
+
 
 {
 	"apiVersion": "apps/v1beta1",

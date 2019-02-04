@@ -1,4 +1,4 @@
-local params = std.extVar("__ksonnet/params").components;
+local params = import '../params.libsonnet';
 
 local make_min_roles() = {
   virtual:  1,
@@ -18,7 +18,7 @@ local make_min_roles() = {
 
       // generating discovery_nodes
       local discovery_nodes_tmpl() = {
-        host: params.utils.host_template,
+        host: params.global.utils.host_template,
         role: "%s",
         keys_file: "/opt/insolar/config/nodes/keys/%s-%d.json",
         cert_name: "%s-%d-cert.json"
@@ -27,16 +27,17 @@ local make_min_roles() = {
       discovery_nodes:
       [
          {
+           insolar_params :: params.components.insolar,
            host: discovery_nodes_tmpl().host % [ id ] ,
-           keys_file: discovery_nodes_tmpl().keys_file % [ params.insolar.hostname, id ],
-           cert_name: discovery_nodes_tmpl().cert_name % [  params.insolar.hostname, id ],
+           keys_file: discovery_nodes_tmpl().keys_file % [ self.insolar_params.hostname, id ],
+           cert_name: discovery_nodes_tmpl().cert_name % [ self.insolar_params.hostname, id ],
 
            role: discovery_nodes_tmpl().role %
-             if id < params.insolar.num_heavies then [ "heavy_material" ]
-             else if id < params.insolar.num_heavies + params.insolar.num_lights then [ "light_material" ]
+             if id < self.insolar_params.num_heavies then [ "heavy_material" ]
+             else if id < self.insolar_params.num_heavies + self.insolar_params.num_lights then [ "light_material" ]
              else [ "virtual" ]
          }
-         for id in std.range(0, params.utils.get_num_nodes - 1)
+         for id in std.range(0, params.global.utils.get_num_nodes - 1)
       ]
     }
 }

@@ -1,4 +1,5 @@
-local params = std.extVar("__ksonnet/params").components.insolar;
+local import_params = import '../params.libsonnet';
+local params = import_params.components.insolar;
 
 local genesis = import 'genesis.libsonnet' ;
 local statefull_set() = import 'insolard_statefull_set.libsonnet';
@@ -75,6 +76,6 @@ local configs() = {
 
 };
 
-k.core.v1.list.new([configs(), service(), perisitant_claim(), statefull_set(), pulsar().pulsar_conf(), pulsar().pulsar_statefull_set()])
+k.core.v1.list.new([configs(), service(), perisitant_claim(), statefull_set()])
 
 

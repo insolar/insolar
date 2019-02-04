@@ -8,7 +8,7 @@ environments:
     path: default
     targets:
     - insolar
-    #- pulsar
+    - pulsar
 kind: ksonnet.io/app
 name: run_insolar
 registries:
