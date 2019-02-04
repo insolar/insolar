@@ -96,20 +96,19 @@ func (m *LedgerArtifactManager) RegisterRequest(
 		return nil, err
 	}
 
-	rec := record.RequestRecord{
-		Payload: message.MustSerializeBytes(parcel),
-		Object:  *obj.Record(),
+	rec := &record.RequestRecord{
+		Parcel:      message.MustSerializeBytes(parcel),
+		MessageHash: m.PlatformCryptographyScheme.IntegrityHasher().Hash(message.MustSerializeBytes(parcel.Message())),
+		Object:      *obj.Record(),
 	}
 	recID := record.NewRecordIDFromRecord(
 		m.PlatformCryptographyScheme,
 		currentPulse.PulseNumber,
-		&record.RequestRecord{
-			Payload: message.MustSerializeBytes(parcel.Message()),
-		})
+		rec)
 	recRef := core.NewRecordRef(*parcel.DefaultTarget().Domain(), *recID)
 	id, err := m.setRecord(
 		ctx,
-		&rec,
+		rec,
 		*recRef,
 		*currentPulse,
 	)
@@ -302,17 +301,13 @@ func (m *LedgerArtifactManager) GetPendingRequest(ctx context.Context, objectID 
 
 	switch r := genericReply.(type) {
 	case *reply.Request:
-		msg, err := message.Deserialize(bytes.NewBuffer(r.Record))
-		if err != nil {
-			return nil, err
-		}
-
-		parcel, ok := msg.(core.Parcel)
+		rec := record.DeserializeRecord(r.Record)
+		castedRecord, ok := rec.(*record.RequestRecord)
 		if !ok {
-			return nil, fmt.Errorf("GetPendingRequest: unexpected message: %#v", msg)
+			return nil, fmt.Errorf("GetPendingRequest: unexpected message: %#v", r)
 		}
 
-		return parcel, nil
+		return message.DeserializeParcel(bytes.NewBuffer(castedRecord.Parcel))
 	case *reply.Error:
 		return nil, r.Error()
 	default:
