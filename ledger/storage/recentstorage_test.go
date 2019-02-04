@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -149,32 +149,6 @@ func TestRecentObjectsIndex_RemovePendingRequest(t *testing.T) {
 	}, s.GetRequests())
 }
 
-func TestRecentObjectsIndex_ClearObjects(t *testing.T) {
-	ctx := inslogger.TestContext(t)
-	jetID := testutils.RandomID()
-
-	index := NewRecentStorage(jetID, 123)
-	wg := sync.WaitGroup{}
-	wg.Add(3)
-	go func() {
-		index.AddObject(ctx, *core.NewRecordID(123, []byte{1}))
-		wg.Done()
-	}()
-	go func() {
-		index.AddObject(ctx, *core.NewRecordID(123, []byte{2}))
-		wg.Done()
-	}()
-	go func() {
-		index.AddObject(ctx, *core.NewRecordID(123, []byte{3}))
-		wg.Done()
-	}()
-	wg.Wait()
-
-	index.ClearObjects(ctx)
-
-	require.Equal(t, 0, len(index.GetObjects()))
-}
-
 func TestNewRecentStorageProvider(t *testing.T) {
 	// Act
 	provider := NewRecentStorageProvider(888)
@@ -195,7 +169,7 @@ func TestRecentStorageProvider_GetStorage(t *testing.T) {
 	for i := 0; i < 8; i++ {
 		go func() {
 			id := testutils.RandomJet()
-			storage := provider.GetStorage(id)
+			storage := provider.GetStorage(inslogger.TestContext(t), id)
 			require.NotNil(t, storage)
 			wg.Done()
 		}()

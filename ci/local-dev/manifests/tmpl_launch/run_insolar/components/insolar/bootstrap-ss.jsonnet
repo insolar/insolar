@@ -1,10 +1,12 @@
-local params = std.extVar("__ksonnet/params").components.insolar;
+local import_params = import '../params.libsonnet';
+local params = import_params.components.insolar;
 
 local genesis = import 'genesis.libsonnet' ;
-local statefull_set() = import 'statefull_set.libsonnet';
+local statefull_set() = import 'insolard_statefull_set.libsonnet';
 local genesis_insolard_conf() = import "insolard-genesis.libsonnet";
 local insolard_conf() = import "insolard.libsonnet";
 local k = import "k.libsonnet";
+local pulsar() = import 'pulsar/pulsar_common.libsonnet';
 
 local perisitant_claim() = {
   kind: "PersistentVolumeClaim",
@@ -43,7 +45,7 @@ local service() = {
         name: "prometheus"
       },
       {
-        port: 7900,
+        port: params.tcp_transport_port,
         name: "network",
         protocol: "TCP"
       },
@@ -67,20 +69,13 @@ local configs() = {
     name: "seed-config"
   },
   data:{
-            "genesis.yaml": std.manifestYamlDoc(genesis.generate_genesis( num_heavies = params.num_heavies,
-                                                      num_lights = params.num_lights,
-                                                      num_virtuals = params.num_virtuals,
-                                                      hostname = params.hostname,
-                                                      domain = params.domain
-                                                      )),
+            "genesis.yaml": std.manifestYamlDoc(genesis.generate_genesis()),
             "insolar-genesis.yaml": std.manifestYamlDoc(genesis_insolard_conf()),
             "insolar.yaml": std.manifestYamlDoc(insolard_conf()),
     }
 
 };
 
-
-
-
 k.core.v1.list.new([configs(), service(), perisitant_claim(), statefull_set()])
+
 

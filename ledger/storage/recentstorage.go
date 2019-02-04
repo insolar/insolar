@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -23,48 +23,41 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/ledger/recentstorage"
-	"github.com/insolar/insolar/ledger/storage/jet"
 	"go.opencensus.io/stats"
 )
 
 // RecentStorageProvider provides a recent storage for jet
 type RecentStorageProvider struct {
 	// TODO: @andreyromancev. 15.01.19. Use byte array for key.
-	storage    map[string]*RecentStorage
+	storage    map[core.RecordID]*RecentStorage
 	lock       sync.Mutex
 	DefaultTTL int
 }
 
 // NewRecentStorageProvider creates new provider
 func NewRecentStorageProvider(defaultTTL int) *RecentStorageProvider {
-	return &RecentStorageProvider{DefaultTTL: defaultTTL, storage: map[string]*RecentStorage{}}
+	return &RecentStorageProvider{DefaultTTL: defaultTTL, storage: map[core.RecordID]*RecentStorage{}}
 }
 
 // GetStorage returns a recent storage for jet
-func (p *RecentStorageProvider) GetStorage(jetID core.RecordID) recentstorage.RecentStorage {
+func (p *RecentStorageProvider) GetStorage(ctx context.Context, jetID core.RecordID) recentstorage.RecentStorage {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
-	_, prefix := jet.Jet(jetID)
-	k := string(prefix)
-	storage, ok := p.storage[k]
+	storage, ok := p.storage[jetID]
 	if !ok {
-		if storage, ok = p.storage[k]; !ok {
-			storage = NewRecentStorage(jetID, p.DefaultTTL)
-			p.storage[k] = storage
-		}
+		storage = NewRecentStorage(jetID, p.DefaultTTL)
+		p.storage[jetID] = storage
 	}
 	return storage
 }
 
 // CloneStorage clones a recent storage from one jet to another
-func (p *RecentStorageProvider) CloneStorage(fromJetID, toJetID core.RecordID) {
+func (p *RecentStorageProvider) CloneStorage(ctx context.Context, fromJetID, toJetID core.RecordID) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
-	_, fromPrefix := jet.Jet(fromJetID)
-	_, toPrefix := jet.Jet(toJetID)
-	fromStorage, ok := p.storage[string(fromPrefix)]
+	fromStorage, ok := p.storage[fromJetID]
 	if !ok {
 		return
 	}
@@ -77,7 +70,6 @@ func (p *RecentStorageProvider) CloneStorage(fromJetID, toJetID core.RecordID) {
 	}
 	for k, v := range fromStorage.recentObjects {
 		clone := v
-		clone.ttl--
 		toStorage.recentObjects[k] = clone
 	}
 	for objID, objRequests := range fromStorage.pendingRequests {
@@ -87,7 +79,26 @@ func (p *RecentStorageProvider) CloneStorage(fromJetID, toJetID core.RecordID) {
 		}
 		toStorage.pendingRequests[objID] = clone
 	}
-	p.storage[string(toPrefix)] = toStorage
+	p.storage[toJetID] = toStorage
+}
+
+// RemoveStorage removes storage from provider
+func (p *RecentStorageProvider) RemoveStorage(ctx context.Context, id core.RecordID) {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
+	if storage, ok := p.storage[id]; ok {
+		storage.objectLock.Lock()
+		defer storage.objectLock.Unlock()
+
+		ctx = insmetrics.InsertTag(ctx, tagJet, storage.jetID.DebugString())
+		stats.Record(ctx,
+			statRecentStorageObjectsRemoved.M(int64(len(storage.recentObjects))),
+			statRecentStoragePendingsRemoved.M(int64(len(storage.pendingRequests))),
+		)
+
+		delete(p.storage, id)
+	}
 }
 
 // RecentStorage is a base structure
@@ -124,7 +135,8 @@ func (r *RecentStorage) AddObject(ctx context.Context, id core.RecordID) {
 func (r *RecentStorage) AddObjectWithTLL(ctx context.Context, id core.RecordID, ttl int) {
 	r.objectLock.Lock()
 	defer r.objectLock.Unlock()
-	r.recentObjects[id] = recentObjectMeta{ttl: r.DefaultTTL}
+
+	r.recentObjects[id] = recentObjectMeta{ttl: ttl}
 
 	ctx = insmetrics.InsertTag(ctx, tagJet, r.jetID.DebugString())
 	stats.Record(ctx, statRecentStorageObjectsAdded.M(1))
@@ -208,7 +220,7 @@ func (r *RecentStorage) GetRequestsForObject(obj core.RecordID) []core.RecordID 
 	return results
 }
 
-// IsRecordIDCached check recordid inside caches
+// IsRecordIDCached checks recordID inside caches
 func (r *RecentStorage) IsRecordIDCached(obj core.RecordID) bool {
 	r.objectLock.Lock()
 	_, ok := r.recentObjects[obj]
@@ -224,34 +236,17 @@ func (r *RecentStorage) IsRecordIDCached(obj core.RecordID) bool {
 	return ok
 }
 
-// ClearZeroTTLObjects clears objects with zero TTL
-func (r *RecentStorage) ClearZeroTTLObjects(ctx context.Context) {
+// DecreaseTTL decreases ttl and clears objects if their ttl is zero
+func (r *RecentStorage) DecreaseTTL(ctx context.Context) {
 	r.objectLock.Lock()
 	defer r.objectLock.Unlock()
 
-	var removed int64
 	for key, value := range r.recentObjects {
+		value.ttl--
 		if value.ttl == 0 {
 			delete(r.recentObjects, key)
-			removed++
+			continue
 		}
+		r.recentObjects[key] = value
 	}
-
-	ctx = insmetrics.InsertTag(ctx, tagJet, r.jetID.DebugString())
-	stats.Record(ctx, statRecentStorageObjectsRemoved.M(removed))
-}
-
-// ClearObjects clears the whole cache
-func (r *RecentStorage) ClearObjects(ctx context.Context) {
-	r.objectLock.Lock()
-	defer r.objectLock.Unlock()
-
-	ctx = insmetrics.InsertTag(ctx, tagJet, r.jetID.DebugString())
-	stats.Record(ctx,
-		statRecentStorageObjectsRemoved.M(int64(len(r.recentObjects))),
-		statRecentStoragePendingsRemoved.M(int64(len(r.pendingRequests))),
-	)
-
-	r.recentObjects = map[core.RecordID]recentObjectMeta{}
-	r.pendingRequests = map[core.RecordID]map[core.RecordID]struct{}{}
 }

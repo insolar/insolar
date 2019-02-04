@@ -1,17 +1,18 @@
 /*
- *    Copyright 2018 Insolar
+ * The Clear BSD License
  *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
+ * Copyright (c) 2019 Insolar Technologies
  *
- *        http://www.apache.org/licenses/LICENSE-2.0
+ * All rights reserved.
  *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
+ * Redistribution and use in source and binary forms, with or without modification, are permitted (subject to the limitations in the disclaimer below) provided that the following conditions are met:
+ *
+ *  Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+ *  Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+ *  Neither the name of Insolar Technologies nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+ *
+ * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
  */
 
 package phases
@@ -37,9 +38,15 @@ func consensusReached(resultLen, participanstLen int) bool {
 	return resultLen >= minParticipants
 }
 
-// FirstPhase is a first phase.
-type FirstPhase struct {
-	NodeNetwork  core.NodeNetwork         `inject:""`
+type FirstPhase interface {
+	Execute(ctx context.Context, pulse *core.Pulse) (*FirstPhaseState, error)
+}
+
+func NewFirstPhase() FirstPhase {
+	return &firstPhase{}
+}
+
+type firstPhase struct {
 	Calculator   merkle.Calculator        `inject:""`
 	Communicator Communicator             `inject:""`
 	Cryptography core.CryptographyService `inject:""`
@@ -49,7 +56,7 @@ type FirstPhase struct {
 }
 
 // Execute do first phase
-func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPhaseState, error) {
+func (fp *firstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPhaseState, error) {
 	entry := &merkle.PulseEntry{Pulse: pulse}
 	pulseHash, pulseProof, err := fp.Calculator.GetPulseProof(entry)
 	if fp.NodeKeeper.GetState() == network.Ready {
@@ -136,7 +143,7 @@ func (fp *FirstPhase) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPha
 	}, nil
 }
 
-func (fp *FirstPhase) signPhase1Packet(packet *packets.Phase1Packet) error {
+func (fp *firstPhase) signPhase1Packet(packet *packets.Phase1Packet) error {
 	data, err := packet.RawBytes()
 	if err != nil {
 		return errors.Wrap(err, "failed to get raw bytes")
@@ -149,8 +156,8 @@ func (fp *FirstPhase) signPhase1Packet(packet *packets.Phase1Packet) error {
 	return nil
 }
 
-func (fp *FirstPhase) isSignPhase1PacketRight(packet *packets.Phase1Packet, recordRef core.RecordRef) (bool, error) {
-	key := fp.NodeNetwork.GetActiveNode(recordRef).PublicKey()
+func (fp *firstPhase) isSignPhase1PacketRight(packet *packets.Phase1Packet, recordRef core.RecordRef) (bool, error) {
+	key := fp.NodeKeeper.GetActiveNode(recordRef).PublicKey()
 	raw, err := packet.RawBytes()
 
 	if err != nil {
@@ -159,7 +166,7 @@ func (fp *FirstPhase) isSignPhase1PacketRight(packet *packets.Phase1Packet, reco
 	return fp.Cryptography.Verify(key, core.SignatureFromBytes(raw), raw), nil
 }
 
-func (fp *FirstPhase) validateProofs(
+func (fp *firstPhase) validateProofs(
 	pulseHash merkle.OriginHash,
 	proofs map[core.RecordRef]*merkle.PulseProof,
 ) (valid map[core.Node]*merkle.PulseProof, fault map[core.RecordRef]*merkle.PulseProof) {
@@ -177,7 +184,7 @@ func (fp *FirstPhase) validateProofs(
 	return validProofs, faultProofs
 }
 
-func (fp *FirstPhase) validateProof(pulseHash merkle.OriginHash, nodeID core.RecordRef, proof *merkle.PulseProof) bool {
+func (fp *firstPhase) validateProof(pulseHash merkle.OriginHash, nodeID core.RecordRef, proof *merkle.PulseProof) bool {
 	node := fp.UnsyncList.GetActiveNode(nodeID)
 	if node == nil {
 		return false
@@ -201,7 +208,7 @@ func detectSparseBitsetLength(claims map[core.RecordRef][]packets.ReferendumClai
 	return 0, errors.New("no announce claims were received")
 }
 
-func (fp *FirstPhase) getSignedClaims(claims []packets.ReferendumClaim) []packets.ReferendumClaim {
+func (fp *firstPhase) getSignedClaims(claims []packets.ReferendumClaim) []packets.ReferendumClaim {
 	result := make([]packets.ReferendumClaim, 0)
 	for _, claim := range claims {
 		joinClaim, ok := claim.(*packets.NodeJoinClaim)
@@ -221,7 +228,7 @@ func (fp *FirstPhase) getSignedClaims(claims []packets.ReferendumClaim) []packet
 	return result
 }
 
-func (fp *FirstPhase) claimSignIsOk(claim *packets.NodeJoinClaim) (bool, error) {
+func (fp *firstPhase) claimSignIsOk(claim *packets.NodeJoinClaim) (bool, error) {
 	keyProc := platformpolicy.NewKeyProcessor()
 	key, err := keyProc.ImportPublicKeyPEM(claim.NodePK[:])
 	if err != nil {

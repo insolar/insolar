@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -44,7 +44,7 @@ import (
 // TmpLedger crteates ledger on top of temporary database.
 // Returns *ledger.Ledger and cleanup function.
 // FIXME: THIS METHOD IS DEPRECATED. USE MOCKS.
-func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Components, closeJets bool) (*ledger.Ledger, func()) {
+func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Components, closeJets bool) (*ledger.Ledger, *storage.DB, func()) {
 	log.Warn("TmpLedger is deprecated. Use mocks.")
 
 	pcs := platformpolicy.NewPlatformCryptographyScheme()
@@ -54,7 +54,8 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 	ctx := inslogger.TestContext(t)
 	conf := configuration.NewLedger()
 	db, dbcancel := storagetest.TmpDB(ctx, t, storagetest.Dir(dir))
-	pulseStorage := storage.NewPulseStorage(db)
+	pulseStorage := storage.NewPulseStorage()
+	pulseStorage.PulseTracker = db
 
 	pulse, err := db.GetLatestPulse(ctx)
 	require.NoError(t, err)
@@ -62,8 +63,12 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 
 	am := artifactmanager.NewArtifactManger(db)
 	am.PlatformCryptographyScheme = pcs
+	am.JetStorage = db
+	am.DBContext = db
+	am.PulseStorage = pulseStorage
+
 	conf.PulseManager.HeavySyncEnabled = false
-	pm := pulsemanager.NewPulseManager(db, conf)
+	pm := pulsemanager.NewPulseManager(conf)
 	ls := localstorage.NewLocalStorage(db)
 	jc := testutils.NewJetCoordinatorMock(mc)
 	jc.IsAuthorizedMock.Return(true, nil)
@@ -93,7 +98,14 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 	certificate := testutils.NewCertificateMock(t)
 	certificate.GetRoleMock.Return(handlersRole)
 
-	handler := artifactmanager.NewMessageHandler(db, &conf, certificate)
+	handler := artifactmanager.NewMessageHandler(&conf, certificate)
+	handler.PulseTracker = db
+	handler.JetStorage = db
+	handler.ActiveNodesStorage = db
+	handler.DBContext = db
+	handler.PulseTracker = db
+	handler.ObjectStorage = db
+
 	handler.PlatformCryptographyScheme = pcs
 	handler.JetCoordinator = jc
 
@@ -112,7 +124,11 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 	pm.LR = c.LogicRunner
 	pm.ActiveListSwapper = alsMock
 	pm.PulseStorage = pulseStorage
-	pm.ArtifactManagerMessageHandler = handler
+
+	hdw := artifactmanager.NewHotDataWaiterConcrete()
+
+	pm.HotDataWaiter = hdw
+	handler.HotDataWaiter = hdw
 
 	recentStorageMock := recentstorage.NewRecentStorageMock(t)
 	recentStorageMock.AddPendingRequestMock.Return()
@@ -121,7 +137,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 	recentStorageMock.GetRequestsForObjectMock.Return(nil)
 
 	provideMock := recentstorage.NewProviderMock(t)
-	provideMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
+	provideMock.GetStorageFunc = func(ctx context.Context, p core.RecordID) (r recentstorage.RecentStorage) {
 		return recentStorageMock
 	}
 
@@ -133,11 +149,11 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 	}
 
 	if closeJets {
-		handler.CloseEarlyRequestCircuitBreakerForJet(ctx, *jet.NewID(0, nil))
+		pm.HotDataWaiter.Unlock(ctx, *jet.NewID(0, nil))
 	}
 
 	// Create ledger.
 	l := ledger.NewTestLedger(db, am, pm, jc, ls)
 
-	return l, dbcancel
+	return l, db, dbcancel
 }

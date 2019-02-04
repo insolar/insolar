@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -79,6 +79,8 @@ func getEmptyMessage(mt core.MessageType) (core.Message, error) {
 		return &GetJet{}, nil
 	case core.TypeAbandonedRequestsNotification:
 		return &AbandonedRequestsNotification{}, nil
+	case core.TypeGetRequest:
+		return &GetRequest{}, nil
 
 	// heavy sync
 	case core.TypeHeavyStartStop:
@@ -216,6 +218,7 @@ func init() {
 	gob.Register(&GetJet{})
 	gob.Register(&AbandonedRequestsNotification{})
 	gob.Register(&HotData{})
+	gob.Register(&GetRequest{})
 
 	// heavy
 	gob.Register(&HeavyStartStop{})

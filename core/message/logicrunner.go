@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -268,11 +268,12 @@ func (cc *CallConstructor) Type() core.MessageType {
 
 // TODO rename to executorObjectResult (results?)
 type ExecutorResults struct {
-	Caller    core.RecordRef
-	RecordRef core.RecordRef
-	Requests  []CaseBindRequest
-	Queue     []ExecutionQueueElement
-	Pending   PendingState
+	Caller                core.RecordRef
+	RecordRef             core.RecordRef
+	Requests              []CaseBindRequest
+	Queue                 []ExecutionQueueElement
+	LedgerHasMoreRequests bool
+	Pending               PendingState
 }
 
 type ExecutionQueueElement struct {

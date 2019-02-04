@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -124,7 +124,7 @@ func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *gop
 
 	nw := network.GetTestNetwork()
 	// FIXME: TmpLedger is deprecated. Use mocks instead.
-	l, cleaner := ledgertestutils.TmpLedger(
+	l, db, cleaner := ledgertestutils.TmpLedger(
 		t, "", core.StaticRoleLightMaterial,
 		core.Components{
 			LogicRunner: lr,
@@ -139,7 +139,7 @@ func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *gop
 	recentStorageMock := recentstorage.NewRecentStorageMock(t)
 	recentStorageMock.AddObjectMock.Return()
 
-	providerMock.GetStorageFunc = func(p core.RecordID) (r recentstorage.RecentStorage) {
+	providerMock.GetStorageFunc = func(ctx context.Context, p core.RecordID) (r recentstorage.RecentStorage) {
 		return recentStorageMock
 	}
 
@@ -151,7 +151,7 @@ func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *gop
 	cr, err := contractrequester.New()
 	pulseStorage := l.PulseManager.(*pulsemanager.PulseManager).PulseStorage
 
-	cm.Inject(pulseStorage, nk, providerMock, l, lr, nw, mb, cr, delegationTokenFactory, parcelFactory, mock)
+	cm.Inject(db, pulseStorage, nk, providerMock, l, lr, nw, mb, cr, delegationTokenFactory, parcelFactory, mock)
 	err = cm.Init(ctx)
 	assert.NoError(t, err)
 	err = cm.Start(ctx)
@@ -1825,14 +1825,14 @@ func (r *One) EmptyMethod() (error) {
 		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{}),
 	}
 
+	// emulate death
+	err = rlr.sock.Close()
+	require.NoError(t, err)
+
 	client, err := gp.Downstream(ctx)
 
 	// call method without waiting of it execution
 	client.Go("RPC.CallMethod", req, res, nil)
-
-	// emulate death
-	err = rlr.sock.Close()
-	require.NoError(t, err)
 
 	// wait for gorund try to send answer back, it will see closing connection, after that it needs to die
 	// ping to goPlugin, it has to be dead

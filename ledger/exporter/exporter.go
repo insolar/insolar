@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -36,14 +36,21 @@ import (
 
 // Exporter provides methods for fetching data view from storage.
 type Exporter struct {
+	JetStorage    storage.JetStorage    `inject:""`
+	ObjectStorage storage.ObjectStorage `inject:""`
+	PulseTracker  storage.PulseTracker  `inject:""`
+	PulseStorage  core.PulseStorage     `inject:""`
+
 	db  *storage.DB
-	ps  *storage.PulseStorage
 	cfg configuration.Exporter
 }
 
 // NewExporter creates new StorageExporter instance.
-func NewExporter(db *storage.DB, ps *storage.PulseStorage, cfg configuration.Exporter) *Exporter {
-	return &Exporter{db: db, ps: ps, cfg: cfg}
+func NewExporter(db *storage.DB, cfg configuration.Exporter) *Exporter {
+	return &Exporter{
+		db:  db,
+		cfg: cfg,
+	}
 }
 
 type payload map[string]interface{}
@@ -75,13 +82,13 @@ func (e *Exporter) Export(ctx context.Context, fromPulse core.PulseNumber, size 
 	inslog := inslogger.FromContext(ctx)
 	inslog.Debugf("[ API Export ] start")
 
-	jetIDs, err := e.db.GetJets(ctx)
+	jetIDs, err := e.JetStorage.GetJets(ctx)
 	if err != nil {
 		inslog.Debugf("[ API Export ] error getting jets: %s", err.Error())
 		return nil, err
 	}
 
-	currentPulse, err := e.ps.Current(ctx)
+	currentPulse, err := e.PulseStorage.Current(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get current pulse data")
 	}
@@ -89,29 +96,30 @@ func (e *Exporter) Export(ctx context.Context, fromPulse core.PulseNumber, size 
 	counter := 0
 	fromPulsePN := core.PulseNumber(math.Max(float64(fromPulse), float64(core.GenesisPulse.PulseNumber)))
 
-	if fromPulsePN >= currentPulse.PulseNumber {
-		fromPulsePN = currentPulse.PulseNumber
-	} else {
-		_, err = e.db.GetPulse(ctx, fromPulsePN)
-		if err != nil {
-			tryPulse, err := e.db.GetPulse(ctx, core.GenesisPulse.PulseNumber)
-			if err != nil {
-				return nil, errors.Wrap(err, "failed to fetch genesis pulse data")
-			}
+	if fromPulsePN > currentPulse.PulseNumber {
+		return nil, errors.Errorf("failed to fetch data: from-pulse[%v] > current-pulse[%v]",
+			fromPulsePN, currentPulse.PulseNumber)
+	}
 
-			for fromPulsePN > *tryPulse.Next {
-				tryPulse, err = e.db.GetPulse(ctx, *tryPulse.Next)
-				if err != nil {
-					return nil, errors.Wrap(err, "failed to iterate through first pulses")
-				}
-			}
-			fromPulsePN = *tryPulse.Next
+	_, err = e.PulseTracker.GetPulse(ctx, fromPulsePN)
+	if err != nil {
+		tryPulse, err := e.PulseTracker.GetPulse(ctx, core.GenesisPulse.PulseNumber)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to fetch genesis pulse data")
 		}
+
+		for fromPulsePN > *tryPulse.Next {
+			tryPulse, err = e.PulseTracker.GetPulse(ctx, *tryPulse.Next)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to iterate through first pulses")
+			}
+		}
+		fromPulsePN = *tryPulse.Next
 	}
 
 	iterPulse := &fromPulsePN
 	for iterPulse != nil && counter < size {
-		pulse, err := e.db.GetPulse(ctx, *iterPulse)
+		pulse, err := e.PulseTracker.GetPulse(ctx, *iterPulse)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to fetch pulse data")
 		}

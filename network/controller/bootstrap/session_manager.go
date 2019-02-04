@@ -1,17 +1,18 @@
 /*
- *    Copyright 2018 Insolar
+ * The Clear BSD License
  *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
+ * Copyright (c) 2019 Insolar Technologies
  *
- *        http://www.apache.org/licenses/LICENSE-2.0
+ * All rights reserved.
  *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
+ * Redistribution and use in source and binary forms, with or without modification, are permitted (subject to the limitations in the disclaimer below) provided that the following conditions are met:
+ *
+ *  Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+ *  Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+ *  Neither the name of Insolar Technologies nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+ *
+ * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
  */
 
 package bootstrap
@@ -21,8 +22,10 @@ import (
 	"fmt"
 	"sort"
 	"sync"
+	"sync/atomic"
 	"time"
 
+	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/utils"
@@ -38,6 +41,11 @@ const (
 	Authorized SessionState = iota + 1
 	Challenge1
 	Challenge2
+)
+
+const (
+	stateRunning = uint32(iota + 1)
+	stateIdle
 )
 
 type Session struct {
@@ -62,40 +70,64 @@ type sessionWithID struct {
 
 type notification struct{}
 
-type SessionManager struct {
+type SessionManager interface {
+	component.Starter
+	component.Stopper
+
+	NewSession(ref core.RecordRef, cert core.AuthorizationCertificate, ttl time.Duration) SessionID
+	CheckSession(id SessionID, expected SessionState) error
+	SetDiscoveryNonce(id SessionID, discoveryNonce Nonce) error
+	GetChallengeData(id SessionID) (core.AuthorizationCertificate, Nonce, error)
+	ChallengePassed(id SessionID) error
+	ReleaseSession(id SessionID) (*Session, error)
+}
+
+type sessionManager struct {
 	sequence uint64
 	lock     sync.RWMutex
 	sessions map[SessionID]*Session
+	state    uint32
 
 	newSessionNotification  chan notification
 	stopCleanupNotification chan notification
 }
 
-func NewSessionManager() *SessionManager {
-	return &SessionManager{
+func NewSessionManager() SessionManager {
+	return &sessionManager{
 		sessions:                make(map[SessionID]*Session),
 		newSessionNotification:  make(chan notification),
 		stopCleanupNotification: make(chan notification),
+		state:                   stateIdle,
 	}
 }
 
-func (sm *SessionManager) Start(ctx context.Context) error {
-	inslogger.FromContext(ctx).Debug("[ SessionManager::Start ] start cleaning up sessions")
+func (sm *sessionManager) Start(ctx context.Context) error {
+	logger := inslogger.FromContext(ctx)
+	logger.Debug("[ sessionManager::Start ] start cleaning up sessions")
 
-	go sm.cleanupExpiredSessions()
-
-	return nil
-}
-
-func (sm *SessionManager) Stop(ctx context.Context) error {
-	inslogger.FromContext(ctx).Debug("[ SessionManager::Stop ] stop cleaning up sessions")
-
-	sm.stopCleanupNotification <- notification{}
+	if atomic.CompareAndSwapUint32(&sm.state, stateIdle, stateRunning) {
+		go sm.cleanupExpiredSessions()
+	} else {
+		logger.Warn("[ sessionManager::Start ] Called twice")
+	}
 
 	return nil
 }
 
-func (sm *SessionManager) NewSession(ref core.RecordRef, cert core.AuthorizationCertificate, ttl time.Duration) SessionID {
+func (sm *sessionManager) Stop(ctx context.Context) error {
+	logger := inslogger.FromContext(ctx)
+	logger.Debug("[ sessionManager::Stop ] stop cleaning up sessions")
+
+	if atomic.CompareAndSwapUint32(&sm.state, stateRunning, stateIdle) {
+		sm.stopCleanupNotification <- notification{}
+	} else {
+		logger.Warn("[ sessionManager::Stop ] Called twice")
+	}
+
+	return nil
+}
+
+func (sm *sessionManager) NewSession(ref core.RecordRef, cert core.AuthorizationCertificate, ttl time.Duration) SessionID {
 	id := utils.AtomicLoadAndIncrementUint64(&sm.sequence)
 	session := &Session{
 		NodeID: ref,
@@ -115,7 +147,7 @@ func (sm *SessionManager) NewSession(ref core.RecordRef, cert core.Authorization
 	return sessionID
 }
 
-func (sm *SessionManager) CheckSession(id SessionID, expected SessionState) error {
+func (sm *sessionManager) CheckSession(id SessionID, expected SessionState) error {
 	sm.lock.RLock()
 	defer sm.lock.RUnlock()
 
@@ -123,7 +155,7 @@ func (sm *SessionManager) CheckSession(id SessionID, expected SessionState) erro
 	return err
 }
 
-func (sm *SessionManager) checkSession(id SessionID, expected SessionState) (*Session, error) {
+func (sm *sessionManager) checkSession(id SessionID, expected SessionState) (*Session, error) {
 	session := sm.sessions[id]
 	if session == nil {
 		return nil, errors.New(fmt.Sprintf("no such session ID: %d", id))
@@ -134,7 +166,7 @@ func (sm *SessionManager) checkSession(id SessionID, expected SessionState) (*Se
 	return session, nil
 }
 
-func (sm *SessionManager) SetDiscoveryNonce(id SessionID, discoveryNonce Nonce) error {
+func (sm *sessionManager) SetDiscoveryNonce(id SessionID, discoveryNonce Nonce) error {
 	sm.lock.Lock()
 	defer sm.lock.Unlock()
 
@@ -147,7 +179,7 @@ func (sm *SessionManager) SetDiscoveryNonce(id SessionID, discoveryNonce Nonce) 
 	return nil
 }
 
-func (sm *SessionManager) GetChallengeData(id SessionID) (core.AuthorizationCertificate, Nonce, error) {
+func (sm *sessionManager) GetChallengeData(id SessionID) (core.AuthorizationCertificate, Nonce, error) {
 	sm.lock.Lock()
 	defer sm.lock.Unlock()
 
@@ -158,7 +190,7 @@ func (sm *SessionManager) GetChallengeData(id SessionID) (core.AuthorizationCert
 	return session.Cert, session.DiscoveryNonce, nil
 }
 
-func (sm *SessionManager) ChallengePassed(id SessionID) error {
+func (sm *sessionManager) ChallengePassed(id SessionID) error {
 	sm.lock.Lock()
 	defer sm.lock.Unlock()
 
@@ -170,7 +202,7 @@ func (sm *SessionManager) ChallengePassed(id SessionID) error {
 	return nil
 }
 
-func (sm *SessionManager) ReleaseSession(id SessionID) (*Session, error) {
+func (sm *sessionManager) ReleaseSession(id SessionID) (*Session, error) {
 	sm.lock.Lock()
 	defer sm.lock.Unlock()
 
@@ -182,7 +214,7 @@ func (sm *SessionManager) ReleaseSession(id SessionID) (*Session, error) {
 	return session, nil
 }
 
-func (sm *SessionManager) cleanupExpiredSessions() {
+func (sm *sessionManager) cleanupExpiredSessions() {
 	var sessionsByExpirationTime []*sessionWithID
 	for {
 		sm.lock.RLock()
@@ -196,10 +228,14 @@ func (sm *SessionManager) cleanupExpiredSessions() {
 
 		// Session count is zero - wait for first session added.
 		if len(sessionsByExpirationTime) == 0 {
-			// Have no active sessions. Block till sessions will be added.
-			<-sm.newSessionNotification
-
-			sessionsByExpirationTime = sm.sortSessionsByExpirationTime()
+			// Have no active sessions.
+			// Block until sessions will be added or session manager begins to stop.
+			select {
+			case <-sm.newSessionNotification:
+				sessionsByExpirationTime = sm.sortSessionsByExpirationTime()
+			case <-sm.stopCleanupNotification:
+				return
+			}
 
 			// Check session instantly released concurrently
 			if len(sessionsByExpirationTime) == 0 {
@@ -226,7 +262,7 @@ func (sm *SessionManager) cleanupExpiredSessions() {
 	}
 }
 
-func (sm *SessionManager) sortSessionsByExpirationTime() []*sessionWithID {
+func (sm *sessionManager) sortSessionsByExpirationTime() []*sessionWithID {
 	sm.lock.RLock()
 
 	// Read active session with their ids. We have to store them as a slice to keep ordering by expiration time.
@@ -250,7 +286,7 @@ func (sm *SessionManager) sortSessionsByExpirationTime() []*sessionWithID {
 	return sessionsByExpirationTime
 }
 
-func (sm *SessionManager) expireSessions(sessionsByExpirationTime []*sessionWithID) []*sessionWithID {
+func (sm *sessionManager) expireSessions(sessionsByExpirationTime []*sessionWithID) []*sessionWithID {
 	var shift int
 
 	sm.lock.Lock()

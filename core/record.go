@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 
 	base58 "github.com/jbenet/go-base58"
@@ -205,25 +206,26 @@ func (id *RecordID) DebugString() string {
 	if pulse == PulseNumberJet {
 		depth := int(id[PulseNumberSize])
 		prefix := id[PulseNumberSize+1:]
-		prefixBits := make([]int, len(prefix)*8)
+		prefixBits := make([]int64, len(prefix)*8)
 		for i, b := range prefix {
 			for j := 0; j < 8; j++ {
-				prefixBits[i*8+j] = int(b >> uint(7-j) & 0x01)
+				prefixBits[i*8+j] = int64(b >> uint(7-j) & 0x01)
 			}
 		}
 
-		var prefixStr string
+		prefixSlice := make([]byte, 0, depth)
 		if depth == 0 {
-			prefixStr = "-"
+			prefixSlice = append(prefixSlice, '-')
 		} else {
 			if depth > len(prefixBits) {
 				return fmt.Sprintf("[JET: <wrong format> %d %b]", depth, prefix)
 			}
+
 			for i := 0; i < depth; i++ {
-				prefixStr = fmt.Sprintf("%s%d", prefixStr, prefixBits[i])
+				prefixSlice = strconv.AppendInt(prefixSlice, prefixBits[i], 10)
 			}
 		}
-		return fmt.Sprintf("[JET %d %s]", depth, prefixStr)
+		return fmt.Sprintf("[JET %d %s]", depth, prefixSlice)
 	}
 
 	return fmt.Sprintf("[%d | %s]", id.Pulse(), id.String())
