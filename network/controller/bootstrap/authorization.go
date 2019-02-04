@@ -91,6 +91,7 @@ func init() {
 // Authorize node on the discovery node (step 2 of the bootstrap process)
 func (ac *authorizationController) Authorize(ctx context.Context, discoveryNode *DiscoveryNode, cert core.AuthorizationCertificate) (SessionID, error) {
 	inslogger.FromContext(ctx).Infof("Authorizing on host: %s", discoveryNode.Host)
+	inslogger.FromContext(ctx).Infof("cert: %s", cert)
 
 	serializedCert, err := certificate.Serialize(cert)
 	if err != nil {
@@ -172,7 +173,7 @@ func (ac *authorizationController) processAuthorizeRequest(ctx context.Context, 
 	if err != nil {
 		return ac.transport.BuildResponse(ctx, request, &AuthorizationResponse{Code: OpRejected, Error: err.Error()}), nil
 	}
-	valid, err := ac.NetworkCoordinator.ValidateCert(context.Background(), cert)
+	valid, err := ac.NetworkCoordinator.ValidateCert(ctx, cert)
 	if !valid {
 		if err == nil {
 			err = errors.New("Certificate validation failed")

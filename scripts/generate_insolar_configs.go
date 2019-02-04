@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"html/template"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -91,12 +92,12 @@ func writeGorundPorts(gorundPorts [][]string) {
 	check("Can't WriteFile: "+gorundPortsPath, err)
 }
 
-func writeInsolarConfigs(insolarConfigs []configuration.Configuration) {
+func writeInsolarConfigs(output string, insolarConfigs []configuration.Configuration) {
 	for index, conf := range insolarConfigs {
 		data, err := yaml.Marshal(conf)
 		check("Can't Marshal insolard config", err)
 		fileName := fmt.Sprintf(defaultOutputConfigNameTmpl, index+1)
-		err = genesis.WriteFile(outputDir, fileName, string(data))
+		err = genesis.WriteFile(output, fileName, string(data))
 		check("Can't WriteFile: "+fileName, err)
 	}
 }
@@ -142,7 +143,7 @@ func main() {
 	check("Can't read genesis config", err)
 
 	pwConfig := pulsewatcher.Config{}
-	insolarConfigs := make([]configuration.Configuration, 0, len(genesisConf.DiscoveryNodes))
+	discoveryNodesConfigs := make([]configuration.Configuration, 0, len(genesisConf.DiscoveryNodes))
 
 	gorundPorts := [][]string{}
 
@@ -173,10 +174,12 @@ func main() {
 		conf.Ledger.Storage.DataDirectory = fmt.Sprintf(discoveryDataDirectoryTemplate, nodeIndex)
 		conf.CertificatePath = fmt.Sprintf(discoveryCertificatePathTemplate, nodeIndex)
 
-		insolarConfigs = append(insolarConfigs, conf)
+		discoveryNodesConfigs = append(discoveryNodesConfigs, conf)
 
 		pwConfig.Nodes = append(pwConfig.Nodes, conf.APIRunner.Address)
 	}
+
+	nodesConfigs := make([]configuration.Configuration, 0, len(genesisConf.DiscoveryNodes))
 
 	for index, node := range genesisConf.Nodes {
 		nodeIndex := index + 1
@@ -203,7 +206,7 @@ func main() {
 		conf.Ledger.Storage.DataDirectory = fmt.Sprintf(nodeDataDirectoryTemplate, nodeIndex)
 		conf.CertificatePath = fmt.Sprintf(nodeCertificatePathTemplate, nodeIndex)
 
-		insolarConfigs = append(insolarConfigs, conf)
+		nodesConfigs = append(nodesConfigs, conf)
 
 		pctx.addTarget(node.Role, conf)
 
@@ -223,13 +226,14 @@ func main() {
 		pulsarConfig.Pulsar.PulseDistributor.BootstrapHosts = append(pulsarConfig.Pulsar.PulseDistributor.BootstrapHosts, node.Host)
 	}
 
-	writeInsolarConfigs(insolarConfigs)
+	writeInsolarConfigs(filepath.Join(outputDir, "/discoverynodes"), discoveryNodesConfigs)
+	writeInsolarConfigs(filepath.Join(outputDir, "/nodes"), nodesConfigs)
 	writeGorundPorts(gorundPorts)
 	writePulsarConfig(pulsarConfig)
 	writePromConfig(pctx)
 
 	pwConfig.Interval = 100 * time.Millisecond
 	pwConfig.Timeout = 1 * time.Second
-	err = pulsewatcher.WriteConfig(outputDir+"/utils", pulsewatcherFileName, pwConfig)
+	err = pulsewatcher.WriteConfig(filepath.Join(outputDir, "/utils"), pulsewatcherFileName, pwConfig)
 	check("couldn't write pulsewatcher config file", err)
 }

@@ -119,9 +119,9 @@ func newCertificate(publicKey crypto.PublicKey, keyProcessor core.KeyProcessor, 
 		return nil, errors.Wrap(err, "[ newCertificate ] Incorrect fields")
 	}
 
-	cert.DiscoverySigns = make(map[*core.RecordRef][]byte)
+	cert.DiscoverySigns = make(map[core.RecordRef][]byte)
 	for _, node := range cert.BootstrapNodes {
-		cert.DiscoverySigns[node.GetNodeRef()] = node.NodeSign
+		cert.DiscoverySigns[*(node.GetNodeRef())] = node.NodeSign
 	}
 
 	return &cert, nil
