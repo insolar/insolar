@@ -29,8 +29,9 @@ import (
 )
 
 type BootstrapResult struct {
-	Host           *host.Host
-	FirstPulseTime time.Time
+	Host *host.Host
+	// FirstPulseTime    time.Time
+	ReconnectRequired bool
 }
 
 // Controller contains network logic.

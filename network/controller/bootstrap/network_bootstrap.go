@@ -52,14 +52,19 @@ func (nb *networkBootstrapper) Bootstrap(ctx context.Context) (*network.Bootstra
 		}
 		log.Info("Zero bootstrap")
 		return &network.BootstrapResult{
-			Host:           host,
-			FirstPulseTime: nb.Bootstrapper.GetFirstFakePulseTime(),
+			Host: host,
+			// FirstPulseTime: nb.Bootstrapper.GetFirstFakePulseTime(),
 		}, nil
 	}
 	var err error
 	var result *network.BootstrapResult
 	if utils.OriginIsDiscovery(nb.Certificate) {
 		result, err = nb.bootstrapDiscovery(ctx)
+		// if the network is up and complete, we return discovery nodes via consensus
+		if err == ErrReconnectRequired {
+			log.Debugf("Connecting discovery node %s as joiner", nb.NodeKeeper.GetOrigin().ID())
+			result, err = nb.bootstrapJoiner(ctx)
+		}
 	} else {
 		result, err = nb.bootstrapJoiner(ctx)
 	}

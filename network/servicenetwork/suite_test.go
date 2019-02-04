@@ -392,14 +392,6 @@ func (s *testSuite) preInitNode(node *networkNode) {
 
 	origin := nodenetwork.NewNode(node.id, node.role, pubKey, node.host, "")
 	certManager, cryptographyService := s.initCrypto(node)
-	netSwitcher := testutils.NewNetworkSwitcherMock(s.T())
-	netSwitcher.GetStateMock.Set(func() (r core.NetworkState) {
-		return core.VoidNetworkState
-	})
-
-	netSwitcher.OnPulseMock.Set(func(p context.Context, p1 core.Pulse) (r error) {
-		return nil
-	})
 
 	realKeeper := nodenetwork.NewNodeKeeper(origin)
 	terminationHandler := &terminationHandler{NodeID: origin.ID()}
@@ -412,7 +404,7 @@ func (s *testSuite) preInitNode(node *networkNode) {
 
 	node.componentManager.Register(terminationHandler, realKeeper, pulseManagerMock, pulseStorageMock, netCoordinator, amMock)
 	node.componentManager.Register(certManager, cryptographyService)
-	node.componentManager.Inject(serviceNetwork, netSwitcher)
+	node.componentManager.Inject(serviceNetwork, NewTestNetworkSwitcher())
 	node.serviceNetwork = serviceNetwork
 
 	pulseManagerMock.SetMock.Set(func(p context.Context, p1 core.Pulse, p2 bool) (r error) {

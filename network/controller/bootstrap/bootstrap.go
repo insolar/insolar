@@ -21,6 +21,7 @@ import (
 	"context"
 	"encoding/gob"
 	"fmt"
+	"math"
 	"strings"
 	"sync"
 	"time"
@@ -39,6 +40,10 @@ import (
 	"github.com/pkg/errors"
 )
 
+var (
+	ErrReconnectRequired = errors.New("Node should connect via consensus bootstrap")
+)
+
 type DiscoveryNode struct {
 	Host *host.Host
 	Node core.DiscoveryNode
@@ -51,12 +56,13 @@ type Bootstrapper interface {
 	BootstrapDiscovery(ctx context.Context) (*network.BootstrapResult, error)
 	SetLastPulse(number core.PulseNumber)
 	GetLastPulse() core.PulseNumber
-	GetFirstFakePulseTime() time.Time
+	// GetFirstFakePulseTime() time.Time
 }
 
 type bootstrapper struct {
-	Certificate core.Certificate   `inject:""`
-	NodeKeeper  network.NodeKeeper `inject:""`
+	Certificate     core.Certificate     `inject:""`
+	NodeKeeper      network.NodeKeeper   `inject:""`
+	NetworkSwitcher core.NetworkSwitcher `inject:""`
 
 	options   *common.Options
 	transport network.InternalTransport
@@ -95,10 +101,10 @@ func (bc *bootstrapper) setRequest(ref core.RecordRef, req *GenesisRequest) {
 type NodeBootstrapRequest struct{}
 
 type NodeBootstrapResponse struct {
-	Code               Code
-	RedirectHost       string
-	RejectReason       string
-	FirstPulseTimeUnix int64
+	Code         Code
+	RedirectHost string
+	RejectReason string
+	// FirstPulseTimeUnix int64
 }
 
 type GenesisRequest struct {
@@ -160,6 +166,7 @@ const (
 	Accepted = Code(iota + 1)
 	Rejected
 	Redirected
+	ReconnectRequired
 )
 
 func init() {
@@ -237,8 +244,8 @@ func (bc *bootstrapper) BootstrapDiscovery(ctx context.Context) (*network.Bootst
 			return nil, errors.Wrap(err, "[ BootstrapDiscovery ] failed to create a host")
 		}
 		return &network.BootstrapResult{
-			Host:           host,
-			FirstPulseTime: bc.firstPulseTime,
+			Host: host,
+			// FirstPulseTime: bc.firstPulseTime,
 		}, nil
 	}
 
@@ -251,6 +258,16 @@ func (bc *bootstrapper) BootstrapDiscovery(ctx context.Context) (*network.Bootst
 			// we connected to all discovery nodes
 			break
 		}
+	}
+	reconnectRequests := 0
+	for _, bootstrapResult := range bootstrapResults {
+		if bootstrapResult.ReconnectRequired {
+			reconnectRequests++
+		}
+	}
+	minRequests := int(math.Floor(0.5*float64(discoveryCount))) + 1
+	if reconnectRequests >= minRequests {
+		return nil, ErrReconnectRequired
 	}
 	activeNodes := make([]core.Node, 0)
 	activeNodesStr := make([]string, 0)
@@ -445,15 +462,25 @@ func (bc *bootstrapper) startBootstrap(ctx context.Context, address string) (*ne
 		return bootstrap(ctx, data.RedirectHost, bc.options, bc.startBootstrap)
 	}
 	return &network.BootstrapResult{
-		FirstPulseTime: time.Unix(data.FirstPulseTimeUnix, 0),
-		Host:           response.GetSenderHost(),
+		// FirstPulseTime:    time.Unix(data.FirstPulseTimeUnix, 0),
+		Host:              response.GetSenderHost(),
+		ReconnectRequired: data.Code == ReconnectRequired,
 	}, nil
 }
 
 func (bc *bootstrapper) processBootstrap(ctx context.Context, request network.Request) (network.Response, error) {
 	// TODO: redirect logic
-	return bc.transport.BuildResponse(ctx, request, &NodeBootstrapResponse{
-		Code: Accepted, FirstPulseTimeUnix: bc.firstPulseTime.Unix()}), nil
+	var code Code
+	if bc.NetworkSwitcher.GetState() == core.CompleteNetworkState {
+		code = ReconnectRequired
+	} else {
+		code = Accepted
+	}
+	return bc.transport.BuildResponse(ctx, request,
+		&NodeBootstrapResponse{
+			Code: code,
+			// FirstPulseTimeUnix: bc.firstPulseTime.Unix(),
+		}), nil
 }
 
 func (bc *bootstrapper) processGenesis(ctx context.Context, request network.Request) (network.Response, error) {
