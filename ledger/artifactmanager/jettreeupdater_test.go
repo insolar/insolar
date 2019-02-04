@@ -24,7 +24,7 @@ func TestJetTreeUpdater_otherNodesForPulse(t *testing.T) {
 	defer mc.Finish()
 
 	jc := testutils.NewJetCoordinatorMock(mc)
-	ans := storage.NewActiveNodesStorageMock(mc)
+	ans := storage.NewNodeStorageMock(mc)
 	js := storage.NewJetStorageMock(mc)
 	jtu := &jetTreeUpdater{
 		ActiveNodesStorage: ans,
@@ -117,7 +117,7 @@ func TestJetTreeUpdater_fetchActualJetFromOtherNodes(t *testing.T) {
 	defer mc.Finish()
 
 	jc := testutils.NewJetCoordinatorMock(mc)
-	ans := storage.NewActiveNodesStorageMock(mc)
+	ans := storage.NewNodeStorageMock(mc)
 	js := storage.NewJetStorageMock(mc)
 	mb := testutils.NewMessageBusMock(mc)
 	jtu := &jetTreeUpdater{
@@ -184,7 +184,7 @@ func TestJetTreeUpdater_fetchJet(t *testing.T) {
 	defer mc.Finish()
 
 	jc := testutils.NewJetCoordinatorMock(mc)
-	ans := storage.NewActiveNodesStorageMock(mc)
+	ans := storage.NewNodeStorageMock(mc)
 	js := storage.NewJetStorageMock(mc)
 	mb := testutils.NewMessageBusMock(mc)
 	jtu := &jetTreeUpdater{
@@ -236,10 +236,10 @@ func TestJetTreeUpdater_fetchJet(t *testing.T) {
 		js.GetJetTreeMock.Return(
 			jet.NewTree(false), nil,
 		)
-		js.UpdateJetTreeFunc = func (ctx context.Context, pn core.PulseNumber, actual bool, jets ...core.RecordID) (r error) {
+		js.UpdateJetTreeFunc = func(ctx context.Context, pn core.PulseNumber, actual bool, jets ...core.RecordID) (r error) {
 			require.Equal(t, core.PulseNumber(100), pn)
 			require.True(t, actual)
-			require.Equal(t, []core.RecordID{ *jet.NewID(0, nil) }, jets)
+			require.Equal(t, []core.RecordID{*jet.NewID(0, nil)}, jets)
 			return nil
 		}
 

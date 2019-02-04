@@ -38,17 +38,25 @@ type ReplicaStorage interface {
 	GetAllNonEmptySyncClientJets(ctx context.Context) (map[core.RecordID][]core.PulseNumber, error)
 }
 
+type replicaStorage struct {
+	DB DBContext `inject:""`
+}
+
+func NewReplicaStorage() ReplicaStorage {
+	return new(replicaStorage)
+}
+
 // SetHeavySyncedPulse saves last successfuly synced pulse number on heavy node.
-func (db *DB) SetHeavySyncedPulse(ctx context.Context, jetID core.RecordID, pulsenum core.PulseNumber) error {
-	return db.Update(ctx, func(tx *TransactionManager) error {
+func (rs *replicaStorage) SetHeavySyncedPulse(ctx context.Context, jetID core.RecordID, pulsenum core.PulseNumber) error {
+	return rs.DB.Update(ctx, func(tx *TransactionManager) error {
 		return tx.set(ctx, prefixkey(scopeIDSystem, jetID[:], []byte{sysLastSyncedPulseOnHeavy}), pulsenum.Bytes())
 	})
 }
 
 // GetHeavySyncedPulse returns last successfuly synced pulse number on heavy node.
-func (db *DB) GetHeavySyncedPulse(ctx context.Context, jetID core.RecordID) (pn core.PulseNumber, err error) {
+func (rs *replicaStorage) GetHeavySyncedPulse(ctx context.Context, jetID core.RecordID) (pn core.PulseNumber, err error) {
 	var buf []byte
-	buf, err = db.get(ctx, prefixkey(scopeIDSystem, jetID[:], []byte{sysLastSyncedPulseOnHeavy}))
+	buf, err = rs.DB.get(ctx, prefixkey(scopeIDSystem, jetID[:], []byte{sysLastSyncedPulseOnHeavy}))
 	if err == nil {
 		pn = core.NewPulseNumber(buf)
 	} else if err == ErrNotFound {
@@ -64,9 +72,9 @@ func sysHeavyClientStateKeyForJet(jetID []byte) []byte {
 }
 
 // GetSyncClientJetPulses returns all jet's pulses not synced to heavy.
-func (db *DB) GetSyncClientJetPulses(ctx context.Context, jetID core.RecordID) ([]core.PulseNumber, error) {
+func (rs *replicaStorage) GetSyncClientJetPulses(ctx context.Context, jetID core.RecordID) ([]core.PulseNumber, error) {
 	k := sysHeavyClientStateKeyForJet(jetID[:])
-	buf, err := db.get(ctx, k)
+	buf, err := rs.DB.get(ctx, k)
 	if err == ErrNotFound {
 		return nil, nil
 	} else if err != nil {
@@ -82,7 +90,7 @@ func decodePulsesList(r io.Reader) (pns []core.PulseNumber, err error) {
 }
 
 // SetSyncClientJetPulses saves all jet's pulses not synced to heavy.
-func (db *DB) SetSyncClientJetPulses(ctx context.Context, jetID core.RecordID, pns []core.PulseNumber) error {
+func (rs *replicaStorage) SetSyncClientJetPulses(ctx context.Context, jetID core.RecordID, pns []core.PulseNumber) error {
 	k := sysHeavyClientStateKeyForJet(jetID[:])
 	var buf bytes.Buffer
 	enc := gob.NewEncoder(&buf)
@@ -90,13 +98,13 @@ func (db *DB) SetSyncClientJetPulses(ctx context.Context, jetID core.RecordID, p
 	if err != nil {
 		return err
 	}
-	return db.set(ctx, k, buf.Bytes())
+	return rs.DB.set(ctx, k, buf.Bytes())
 }
 
 // GetAllSyncClientJets returns map of all jet's processed by node.
-func (db *DB) GetAllSyncClientJets(ctx context.Context) (map[core.RecordID][]core.PulseNumber, error) {
+func (rs *replicaStorage) GetAllSyncClientJets(ctx context.Context) (map[core.RecordID][]core.PulseNumber, error) {
 	jets := map[core.RecordID][]core.PulseNumber{}
-	err := db.db.View(func(txn *badger.Txn) error {
+	err := rs.DB.GetBadgerDB().View(func(txn *badger.Txn) error {
 		it := txn.NewIterator(badger.DefaultIteratorOptions)
 		defer it.Close()
 
@@ -129,8 +137,8 @@ func (db *DB) GetAllSyncClientJets(ctx context.Context) (map[core.RecordID][]cor
 }
 
 // GetAllNonEmptySyncClientJets returns map of all jet's if they have non empty list pulses to sync.
-func (db *DB) GetAllNonEmptySyncClientJets(ctx context.Context) (map[core.RecordID][]core.PulseNumber, error) {
-	states, err := db.GetAllSyncClientJets(ctx)
+func (rs *replicaStorage) GetAllNonEmptySyncClientJets(ctx context.Context) (map[core.RecordID][]core.PulseNumber, error) {
+	states, err := rs.GetAllSyncClientJets(ctx)
 	if err != nil {
 		return nil, err
 	}

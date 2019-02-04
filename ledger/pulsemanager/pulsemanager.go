@@ -61,8 +61,9 @@ type PulseManager struct {
 	PulseStorage               pulseStoragePm                  `inject:""`
 	HotDataWaiter              artifactmanager.HotDataWaiter   `inject:""`
 	JetStorage                 storage.JetStorage              `inject:""`
+	DropStorage                storage.DropStorage             `inject:""`
 	ObjectStorage              storage.ObjectStorage           `inject:""`
-	ActiveNodesStorage         storage.ActiveNodesStorage      `inject:""`
+	NodeStorage                storage.NodeStorage             `inject:""`
 	PulseTracker               storage.PulseTracker            `inject:""`
 	ReplicaStorage             storage.ReplicaStorage          `inject:""`
 	DBContext                  storage.DBContext               `inject:""`
@@ -274,9 +275,9 @@ func (m *PulseManager) createDrop(
 	err error,
 ) {
 	var prevDrop *jet.JetDrop
-	prevDrop, err = m.JetStorage.GetDrop(ctx, jetID, prevPulse)
+	prevDrop, err = m.DropStorage.GetDrop(ctx, jetID, prevPulse)
 	if err == storage.ErrNotFound {
-		prevDrop, err = m.JetStorage.GetDrop(ctx, jet.Parent(jetID), prevPulse)
+		prevDrop, err = m.DropStorage.GetDrop(ctx, jet.Parent(jetID), prevPulse)
 		if err != nil {
 			return nil, nil, nil, errors.Wrap(err, "[ createDrop ] failed to find parent")
 		}
@@ -284,11 +285,11 @@ func (m *PulseManager) createDrop(
 		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't GetDrop")
 	}
 
-	drop, messages, dropSize, err := m.JetStorage.CreateDrop(ctx, jetID, currentPulse, prevDrop.Hash)
+	drop, messages, dropSize, err := m.DropStorage.CreateDrop(ctx, jetID, currentPulse, prevDrop.Hash)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't CreateDrop")
 	}
-	err = m.JetStorage.SetDrop(ctx, jetID, drop)
+	err = m.DropStorage.SetDrop(ctx, jetID, drop)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't SetDrop")
 	}
@@ -315,7 +316,7 @@ func (m *PulseManager) createDrop(
 		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't Sign")
 	}
 
-	err = m.JetStorage.AddDropSize(ctx, dropSizeData)
+	err = m.DropStorage.AddDropSize(ctx, dropSizeData)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't AddDropSize")
 	}
@@ -391,7 +392,7 @@ func (m *PulseManager) getExecutorHotData(
 		}
 	}
 
-	dropSizeHistory, err := m.JetStorage.GetDropSizeHistory(ctx, jetID)
+	dropSizeHistory, err := m.DropStorage.GetDropSizeHistory(ctx, jetID)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ processRecentObjects ] Can't GetDropSizeHistory")
 	}
@@ -641,7 +642,7 @@ func (m *PulseManager) setUnderGilSection(
 			m.PulseStorage.Unlock()
 			return nil, nil, nil, errors.Wrap(err, "call of AddPulse failed")
 		}
-		err = m.ActiveNodesStorage.SetActiveNodes(newPulse.PulseNumber, m.NodeNet.GetActiveNodes())
+		err = m.NodeStorage.SetActiveNodes(newPulse.PulseNumber, m.NodeNet.GetActiveNodes())
 		if err != nil {
 			m.PulseStorage.Unlock()
 			return nil, nil, nil, errors.Wrap(err, "call of SetActiveNodes failed")
@@ -741,7 +742,7 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse core.Pulse) 
 		}
 	}()
 
-	m.ActiveNodesStorage.RemoveActiveNodesUntil(pn)
+	m.NodeStorage.RemoveActiveNodesUntil(pn)
 
 	err := m.syncClientsPool.LightCleanup(ctx, pn, m.RecentStorageProvider)
 	if err != nil {
@@ -784,7 +785,7 @@ func (m *PulseManager) prepareArtifactManagerMessageHandlerForNextPulse(ctx cont
 // Start starts pulse manager, spawns replication goroutine under a hood.
 func (m *PulseManager) Start(ctx context.Context) error {
 	// FIXME: @andreyromancev. 21.12.18. Find a proper place for me. Somewhere at the genesis.
-	err := m.ActiveNodesStorage.SetActiveNodes(core.FirstPulseNumber, m.NodeNet.GetActiveNodes())
+	err := m.NodeStorage.SetActiveNodes(core.FirstPulseNumber, m.NodeNet.GetActiveNodes())
 	if err != nil && err != storage.ErrOverride {
 		return err
 	}
@@ -795,6 +796,7 @@ func (m *PulseManager) Start(ctx context.Context) error {
 			m.PulseStorage,
 			m.PulseTracker,
 			m.ReplicaStorage,
+			m.StorageCleaner,
 			m.DBContext,
 			heavyclient.Options{
 				SyncMessageLimit: m.options.heavySyncMessageLimit,

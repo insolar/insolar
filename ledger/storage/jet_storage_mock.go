@@ -21,11 +21,6 @@ import (
 type JetStorageMock struct {
 	t minimock.Tester
 
-	AddDropSizeFunc       func(p context.Context, p1 *jet.DropSize) (r error)
-	AddDropSizeCounter    uint64
-	AddDropSizePreCounter uint64
-	AddDropSizeMock       mJetStorageMockAddDropSize
-
 	AddJetsFunc       func(p context.Context, p1 ...core.RecordID) (r error)
 	AddJetsCounter    uint64
 	AddJetsPreCounter uint64
@@ -36,21 +31,6 @@ type JetStorageMock struct {
 	CloneJetTreePreCounter uint64
 	CloneJetTreeMock       mJetStorageMockCloneJetTree
 
-	CreateDropFunc       func(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 []byte) (r *jet.JetDrop, r1 [][]byte, r2 uint64, r3 error)
-	CreateDropCounter    uint64
-	CreateDropPreCounter uint64
-	CreateDropMock       mJetStorageMockCreateDrop
-
-	GetDropFunc       func(p context.Context, p1 core.RecordID, p2 core.PulseNumber) (r *jet.JetDrop, r1 error)
-	GetDropCounter    uint64
-	GetDropPreCounter uint64
-	GetDropMock       mJetStorageMockGetDrop
-
-	GetDropSizeHistoryFunc       func(p context.Context, p1 core.RecordID) (r jet.DropSizeHistory, r1 error)
-	GetDropSizeHistoryCounter    uint64
-	GetDropSizeHistoryPreCounter uint64
-	GetDropSizeHistoryMock       mJetStorageMockGetDropSizeHistory
-
 	GetJetTreeFunc       func(p context.Context, p1 core.PulseNumber) (r *jet.Tree, r1 error)
 	GetJetTreeCounter    uint64
 	GetJetTreePreCounter uint64
@@ -60,16 +40,6 @@ type JetStorageMock struct {
 	GetJetsCounter    uint64
 	GetJetsPreCounter uint64
 	GetJetsMock       mJetStorageMockGetJets
-
-	SetDropFunc       func(p context.Context, p1 core.RecordID, p2 *jet.JetDrop) (r error)
-	SetDropCounter    uint64
-	SetDropPreCounter uint64
-	SetDropMock       mJetStorageMockSetDrop
-
-	SetDropSizeHistoryFunc       func(p context.Context, p1 core.RecordID, p2 jet.DropSizeHistory) (r error)
-	SetDropSizeHistoryCounter    uint64
-	SetDropSizeHistoryPreCounter uint64
-	SetDropSizeHistoryMock       mJetStorageMockSetDropSizeHistory
 
 	SplitJetTreeFunc       func(p context.Context, p1 core.PulseNumber, p2 core.RecordID) (r *core.RecordID, r1 *core.RecordID, r2 error)
 	SplitJetTreeCounter    uint64
@@ -90,168 +60,14 @@ func NewJetStorageMock(t minimock.Tester) *JetStorageMock {
 		controller.RegisterMocker(m)
 	}
 
-	m.AddDropSizeMock = mJetStorageMockAddDropSize{mock: m}
 	m.AddJetsMock = mJetStorageMockAddJets{mock: m}
 	m.CloneJetTreeMock = mJetStorageMockCloneJetTree{mock: m}
-	m.CreateDropMock = mJetStorageMockCreateDrop{mock: m}
-	m.GetDropMock = mJetStorageMockGetDrop{mock: m}
-	m.GetDropSizeHistoryMock = mJetStorageMockGetDropSizeHistory{mock: m}
 	m.GetJetTreeMock = mJetStorageMockGetJetTree{mock: m}
 	m.GetJetsMock = mJetStorageMockGetJets{mock: m}
-	m.SetDropMock = mJetStorageMockSetDrop{mock: m}
-	m.SetDropSizeHistoryMock = mJetStorageMockSetDropSizeHistory{mock: m}
 	m.SplitJetTreeMock = mJetStorageMockSplitJetTree{mock: m}
 	m.UpdateJetTreeMock = mJetStorageMockUpdateJetTree{mock: m}
 
 	return m
-}
-
-type mJetStorageMockAddDropSize struct {
-	mock              *JetStorageMock
-	mainExpectation   *JetStorageMockAddDropSizeExpectation
-	expectationSeries []*JetStorageMockAddDropSizeExpectation
-}
-
-type JetStorageMockAddDropSizeExpectation struct {
-	input  *JetStorageMockAddDropSizeInput
-	result *JetStorageMockAddDropSizeResult
-}
-
-type JetStorageMockAddDropSizeInput struct {
-	p  context.Context
-	p1 *jet.DropSize
-}
-
-type JetStorageMockAddDropSizeResult struct {
-	r error
-}
-
-//Expect specifies that invocation of JetStorage.AddDropSize is expected from 1 to Infinity times
-func (m *mJetStorageMockAddDropSize) Expect(p context.Context, p1 *jet.DropSize) *mJetStorageMockAddDropSize {
-	m.mock.AddDropSizeFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &JetStorageMockAddDropSizeExpectation{}
-	}
-	m.mainExpectation.input = &JetStorageMockAddDropSizeInput{p, p1}
-	return m
-}
-
-//Return specifies results of invocation of JetStorage.AddDropSize
-func (m *mJetStorageMockAddDropSize) Return(r error) *JetStorageMock {
-	m.mock.AddDropSizeFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &JetStorageMockAddDropSizeExpectation{}
-	}
-	m.mainExpectation.result = &JetStorageMockAddDropSizeResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of JetStorage.AddDropSize is expected once
-func (m *mJetStorageMockAddDropSize) ExpectOnce(p context.Context, p1 *jet.DropSize) *JetStorageMockAddDropSizeExpectation {
-	m.mock.AddDropSizeFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &JetStorageMockAddDropSizeExpectation{}
-	expectation.input = &JetStorageMockAddDropSizeInput{p, p1}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *JetStorageMockAddDropSizeExpectation) Return(r error) {
-	e.result = &JetStorageMockAddDropSizeResult{r}
-}
-
-//Set uses given function f as a mock of JetStorage.AddDropSize method
-func (m *mJetStorageMockAddDropSize) Set(f func(p context.Context, p1 *jet.DropSize) (r error)) *JetStorageMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.AddDropSizeFunc = f
-	return m.mock
-}
-
-//AddDropSize implements github.com/insolar/insolar/ledger/storage.JetStorage interface
-func (m *JetStorageMock) AddDropSize(p context.Context, p1 *jet.DropSize) (r error) {
-	counter := atomic.AddUint64(&m.AddDropSizePreCounter, 1)
-	defer atomic.AddUint64(&m.AddDropSizeCounter, 1)
-
-	if len(m.AddDropSizeMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.AddDropSizeMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to JetStorageMock.AddDropSize. %v %v", p, p1)
-			return
-		}
-
-		input := m.AddDropSizeMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, JetStorageMockAddDropSizeInput{p, p1}, "JetStorage.AddDropSize got unexpected parameters")
-
-		result := m.AddDropSizeMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the JetStorageMock.AddDropSize")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.AddDropSizeMock.mainExpectation != nil {
-
-		input := m.AddDropSizeMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, JetStorageMockAddDropSizeInput{p, p1}, "JetStorage.AddDropSize got unexpected parameters")
-		}
-
-		result := m.AddDropSizeMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the JetStorageMock.AddDropSize")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.AddDropSizeFunc == nil {
-		m.t.Fatalf("Unexpected call to JetStorageMock.AddDropSize. %v %v", p, p1)
-		return
-	}
-
-	return m.AddDropSizeFunc(p, p1)
-}
-
-//AddDropSizeMinimockCounter returns a count of JetStorageMock.AddDropSizeFunc invocations
-func (m *JetStorageMock) AddDropSizeMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.AddDropSizeCounter)
-}
-
-//AddDropSizeMinimockPreCounter returns the value of JetStorageMock.AddDropSize invocations
-func (m *JetStorageMock) AddDropSizeMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.AddDropSizePreCounter)
-}
-
-//AddDropSizeFinished returns true if mock invocations count is ok
-func (m *JetStorageMock) AddDropSizeFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.AddDropSizeMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.AddDropSizeCounter) == uint64(len(m.AddDropSizeMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.AddDropSizeMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.AddDropSizeCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.AddDropSizeFunc != nil {
-		return atomic.LoadUint64(&m.AddDropSizeCounter) > 0
-	}
-
-	return true
 }
 
 type mJetStorageMockAddJets struct {
@@ -554,468 +370,6 @@ func (m *JetStorageMock) CloneJetTreeFinished() bool {
 	return true
 }
 
-type mJetStorageMockCreateDrop struct {
-	mock              *JetStorageMock
-	mainExpectation   *JetStorageMockCreateDropExpectation
-	expectationSeries []*JetStorageMockCreateDropExpectation
-}
-
-type JetStorageMockCreateDropExpectation struct {
-	input  *JetStorageMockCreateDropInput
-	result *JetStorageMockCreateDropResult
-}
-
-type JetStorageMockCreateDropInput struct {
-	p  context.Context
-	p1 core.RecordID
-	p2 core.PulseNumber
-	p3 []byte
-}
-
-type JetStorageMockCreateDropResult struct {
-	r  *jet.JetDrop
-	r1 [][]byte
-	r2 uint64
-	r3 error
-}
-
-//Expect specifies that invocation of JetStorage.CreateDrop is expected from 1 to Infinity times
-func (m *mJetStorageMockCreateDrop) Expect(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 []byte) *mJetStorageMockCreateDrop {
-	m.mock.CreateDropFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &JetStorageMockCreateDropExpectation{}
-	}
-	m.mainExpectation.input = &JetStorageMockCreateDropInput{p, p1, p2, p3}
-	return m
-}
-
-//Return specifies results of invocation of JetStorage.CreateDrop
-func (m *mJetStorageMockCreateDrop) Return(r *jet.JetDrop, r1 [][]byte, r2 uint64, r3 error) *JetStorageMock {
-	m.mock.CreateDropFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &JetStorageMockCreateDropExpectation{}
-	}
-	m.mainExpectation.result = &JetStorageMockCreateDropResult{r, r1, r2, r3}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of JetStorage.CreateDrop is expected once
-func (m *mJetStorageMockCreateDrop) ExpectOnce(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 []byte) *JetStorageMockCreateDropExpectation {
-	m.mock.CreateDropFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &JetStorageMockCreateDropExpectation{}
-	expectation.input = &JetStorageMockCreateDropInput{p, p1, p2, p3}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *JetStorageMockCreateDropExpectation) Return(r *jet.JetDrop, r1 [][]byte, r2 uint64, r3 error) {
-	e.result = &JetStorageMockCreateDropResult{r, r1, r2, r3}
-}
-
-//Set uses given function f as a mock of JetStorage.CreateDrop method
-func (m *mJetStorageMockCreateDrop) Set(f func(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 []byte) (r *jet.JetDrop, r1 [][]byte, r2 uint64, r3 error)) *JetStorageMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.CreateDropFunc = f
-	return m.mock
-}
-
-//CreateDrop implements github.com/insolar/insolar/ledger/storage.JetStorage interface
-func (m *JetStorageMock) CreateDrop(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 []byte) (r *jet.JetDrop, r1 [][]byte, r2 uint64, r3 error) {
-	counter := atomic.AddUint64(&m.CreateDropPreCounter, 1)
-	defer atomic.AddUint64(&m.CreateDropCounter, 1)
-
-	if len(m.CreateDropMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.CreateDropMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to JetStorageMock.CreateDrop. %v %v %v %v", p, p1, p2, p3)
-			return
-		}
-
-		input := m.CreateDropMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, JetStorageMockCreateDropInput{p, p1, p2, p3}, "JetStorage.CreateDrop got unexpected parameters")
-
-		result := m.CreateDropMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the JetStorageMock.CreateDrop")
-			return
-		}
-
-		r = result.r
-		r1 = result.r1
-		r2 = result.r2
-		r3 = result.r3
-
-		return
-	}
-
-	if m.CreateDropMock.mainExpectation != nil {
-
-		input := m.CreateDropMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, JetStorageMockCreateDropInput{p, p1, p2, p3}, "JetStorage.CreateDrop got unexpected parameters")
-		}
-
-		result := m.CreateDropMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the JetStorageMock.CreateDrop")
-		}
-
-		r = result.r
-		r1 = result.r1
-		r2 = result.r2
-		r3 = result.r3
-
-		return
-	}
-
-	if m.CreateDropFunc == nil {
-		m.t.Fatalf("Unexpected call to JetStorageMock.CreateDrop. %v %v %v %v", p, p1, p2, p3)
-		return
-	}
-
-	return m.CreateDropFunc(p, p1, p2, p3)
-}
-
-//CreateDropMinimockCounter returns a count of JetStorageMock.CreateDropFunc invocations
-func (m *JetStorageMock) CreateDropMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.CreateDropCounter)
-}
-
-//CreateDropMinimockPreCounter returns the value of JetStorageMock.CreateDrop invocations
-func (m *JetStorageMock) CreateDropMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.CreateDropPreCounter)
-}
-
-//CreateDropFinished returns true if mock invocations count is ok
-func (m *JetStorageMock) CreateDropFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.CreateDropMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.CreateDropCounter) == uint64(len(m.CreateDropMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.CreateDropMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.CreateDropCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.CreateDropFunc != nil {
-		return atomic.LoadUint64(&m.CreateDropCounter) > 0
-	}
-
-	return true
-}
-
-type mJetStorageMockGetDrop struct {
-	mock              *JetStorageMock
-	mainExpectation   *JetStorageMockGetDropExpectation
-	expectationSeries []*JetStorageMockGetDropExpectation
-}
-
-type JetStorageMockGetDropExpectation struct {
-	input  *JetStorageMockGetDropInput
-	result *JetStorageMockGetDropResult
-}
-
-type JetStorageMockGetDropInput struct {
-	p  context.Context
-	p1 core.RecordID
-	p2 core.PulseNumber
-}
-
-type JetStorageMockGetDropResult struct {
-	r  *jet.JetDrop
-	r1 error
-}
-
-//Expect specifies that invocation of JetStorage.GetDrop is expected from 1 to Infinity times
-func (m *mJetStorageMockGetDrop) Expect(p context.Context, p1 core.RecordID, p2 core.PulseNumber) *mJetStorageMockGetDrop {
-	m.mock.GetDropFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &JetStorageMockGetDropExpectation{}
-	}
-	m.mainExpectation.input = &JetStorageMockGetDropInput{p, p1, p2}
-	return m
-}
-
-//Return specifies results of invocation of JetStorage.GetDrop
-func (m *mJetStorageMockGetDrop) Return(r *jet.JetDrop, r1 error) *JetStorageMock {
-	m.mock.GetDropFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &JetStorageMockGetDropExpectation{}
-	}
-	m.mainExpectation.result = &JetStorageMockGetDropResult{r, r1}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of JetStorage.GetDrop is expected once
-func (m *mJetStorageMockGetDrop) ExpectOnce(p context.Context, p1 core.RecordID, p2 core.PulseNumber) *JetStorageMockGetDropExpectation {
-	m.mock.GetDropFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &JetStorageMockGetDropExpectation{}
-	expectation.input = &JetStorageMockGetDropInput{p, p1, p2}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *JetStorageMockGetDropExpectation) Return(r *jet.JetDrop, r1 error) {
-	e.result = &JetStorageMockGetDropResult{r, r1}
-}
-
-//Set uses given function f as a mock of JetStorage.GetDrop method
-func (m *mJetStorageMockGetDrop) Set(f func(p context.Context, p1 core.RecordID, p2 core.PulseNumber) (r *jet.JetDrop, r1 error)) *JetStorageMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.GetDropFunc = f
-	return m.mock
-}
-
-//GetDrop implements github.com/insolar/insolar/ledger/storage.JetStorage interface
-func (m *JetStorageMock) GetDrop(p context.Context, p1 core.RecordID, p2 core.PulseNumber) (r *jet.JetDrop, r1 error) {
-	counter := atomic.AddUint64(&m.GetDropPreCounter, 1)
-	defer atomic.AddUint64(&m.GetDropCounter, 1)
-
-	if len(m.GetDropMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.GetDropMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to JetStorageMock.GetDrop. %v %v %v", p, p1, p2)
-			return
-		}
-
-		input := m.GetDropMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, JetStorageMockGetDropInput{p, p1, p2}, "JetStorage.GetDrop got unexpected parameters")
-
-		result := m.GetDropMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the JetStorageMock.GetDrop")
-			return
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
-	}
-
-	if m.GetDropMock.mainExpectation != nil {
-
-		input := m.GetDropMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, JetStorageMockGetDropInput{p, p1, p2}, "JetStorage.GetDrop got unexpected parameters")
-		}
-
-		result := m.GetDropMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the JetStorageMock.GetDrop")
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
-	}
-
-	if m.GetDropFunc == nil {
-		m.t.Fatalf("Unexpected call to JetStorageMock.GetDrop. %v %v %v", p, p1, p2)
-		return
-	}
-
-	return m.GetDropFunc(p, p1, p2)
-}
-
-//GetDropMinimockCounter returns a count of JetStorageMock.GetDropFunc invocations
-func (m *JetStorageMock) GetDropMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.GetDropCounter)
-}
-
-//GetDropMinimockPreCounter returns the value of JetStorageMock.GetDrop invocations
-func (m *JetStorageMock) GetDropMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.GetDropPreCounter)
-}
-
-//GetDropFinished returns true if mock invocations count is ok
-func (m *JetStorageMock) GetDropFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.GetDropMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.GetDropCounter) == uint64(len(m.GetDropMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.GetDropMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.GetDropCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.GetDropFunc != nil {
-		return atomic.LoadUint64(&m.GetDropCounter) > 0
-	}
-
-	return true
-}
-
-type mJetStorageMockGetDropSizeHistory struct {
-	mock              *JetStorageMock
-	mainExpectation   *JetStorageMockGetDropSizeHistoryExpectation
-	expectationSeries []*JetStorageMockGetDropSizeHistoryExpectation
-}
-
-type JetStorageMockGetDropSizeHistoryExpectation struct {
-	input  *JetStorageMockGetDropSizeHistoryInput
-	result *JetStorageMockGetDropSizeHistoryResult
-}
-
-type JetStorageMockGetDropSizeHistoryInput struct {
-	p  context.Context
-	p1 core.RecordID
-}
-
-type JetStorageMockGetDropSizeHistoryResult struct {
-	r  jet.DropSizeHistory
-	r1 error
-}
-
-//Expect specifies that invocation of JetStorage.GetDropSizeHistory is expected from 1 to Infinity times
-func (m *mJetStorageMockGetDropSizeHistory) Expect(p context.Context, p1 core.RecordID) *mJetStorageMockGetDropSizeHistory {
-	m.mock.GetDropSizeHistoryFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &JetStorageMockGetDropSizeHistoryExpectation{}
-	}
-	m.mainExpectation.input = &JetStorageMockGetDropSizeHistoryInput{p, p1}
-	return m
-}
-
-//Return specifies results of invocation of JetStorage.GetDropSizeHistory
-func (m *mJetStorageMockGetDropSizeHistory) Return(r jet.DropSizeHistory, r1 error) *JetStorageMock {
-	m.mock.GetDropSizeHistoryFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &JetStorageMockGetDropSizeHistoryExpectation{}
-	}
-	m.mainExpectation.result = &JetStorageMockGetDropSizeHistoryResult{r, r1}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of JetStorage.GetDropSizeHistory is expected once
-func (m *mJetStorageMockGetDropSizeHistory) ExpectOnce(p context.Context, p1 core.RecordID) *JetStorageMockGetDropSizeHistoryExpectation {
-	m.mock.GetDropSizeHistoryFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &JetStorageMockGetDropSizeHistoryExpectation{}
-	expectation.input = &JetStorageMockGetDropSizeHistoryInput{p, p1}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *JetStorageMockGetDropSizeHistoryExpectation) Return(r jet.DropSizeHistory, r1 error) {
-	e.result = &JetStorageMockGetDropSizeHistoryResult{r, r1}
-}
-
-//Set uses given function f as a mock of JetStorage.GetDropSizeHistory method
-func (m *mJetStorageMockGetDropSizeHistory) Set(f func(p context.Context, p1 core.RecordID) (r jet.DropSizeHistory, r1 error)) *JetStorageMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.GetDropSizeHistoryFunc = f
-	return m.mock
-}
-
-//GetDropSizeHistory implements github.com/insolar/insolar/ledger/storage.JetStorage interface
-func (m *JetStorageMock) GetDropSizeHistory(p context.Context, p1 core.RecordID) (r jet.DropSizeHistory, r1 error) {
-	counter := atomic.AddUint64(&m.GetDropSizeHistoryPreCounter, 1)
-	defer atomic.AddUint64(&m.GetDropSizeHistoryCounter, 1)
-
-	if len(m.GetDropSizeHistoryMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.GetDropSizeHistoryMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to JetStorageMock.GetDropSizeHistory. %v %v", p, p1)
-			return
-		}
-
-		input := m.GetDropSizeHistoryMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, JetStorageMockGetDropSizeHistoryInput{p, p1}, "JetStorage.GetDropSizeHistory got unexpected parameters")
-
-		result := m.GetDropSizeHistoryMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the JetStorageMock.GetDropSizeHistory")
-			return
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
-	}
-
-	if m.GetDropSizeHistoryMock.mainExpectation != nil {
-
-		input := m.GetDropSizeHistoryMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, JetStorageMockGetDropSizeHistoryInput{p, p1}, "JetStorage.GetDropSizeHistory got unexpected parameters")
-		}
-
-		result := m.GetDropSizeHistoryMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the JetStorageMock.GetDropSizeHistory")
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
-	}
-
-	if m.GetDropSizeHistoryFunc == nil {
-		m.t.Fatalf("Unexpected call to JetStorageMock.GetDropSizeHistory. %v %v", p, p1)
-		return
-	}
-
-	return m.GetDropSizeHistoryFunc(p, p1)
-}
-
-//GetDropSizeHistoryMinimockCounter returns a count of JetStorageMock.GetDropSizeHistoryFunc invocations
-func (m *JetStorageMock) GetDropSizeHistoryMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.GetDropSizeHistoryCounter)
-}
-
-//GetDropSizeHistoryMinimockPreCounter returns the value of JetStorageMock.GetDropSizeHistory invocations
-func (m *JetStorageMock) GetDropSizeHistoryMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.GetDropSizeHistoryPreCounter)
-}
-
-//GetDropSizeHistoryFinished returns true if mock invocations count is ok
-func (m *JetStorageMock) GetDropSizeHistoryFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.GetDropSizeHistoryMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.GetDropSizeHistoryCounter) == uint64(len(m.GetDropSizeHistoryMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.GetDropSizeHistoryMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.GetDropSizeHistoryCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.GetDropSizeHistoryFunc != nil {
-		return atomic.LoadUint64(&m.GetDropSizeHistoryCounter) > 0
-	}
-
-	return true
-}
-
 type mJetStorageMockGetJetTree struct {
 	mock              *JetStorageMock
 	mainExpectation   *JetStorageMockGetJetTreeExpectation
@@ -1312,304 +666,6 @@ func (m *JetStorageMock) GetJetsFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.GetJetsFunc != nil {
 		return atomic.LoadUint64(&m.GetJetsCounter) > 0
-	}
-
-	return true
-}
-
-type mJetStorageMockSetDrop struct {
-	mock              *JetStorageMock
-	mainExpectation   *JetStorageMockSetDropExpectation
-	expectationSeries []*JetStorageMockSetDropExpectation
-}
-
-type JetStorageMockSetDropExpectation struct {
-	input  *JetStorageMockSetDropInput
-	result *JetStorageMockSetDropResult
-}
-
-type JetStorageMockSetDropInput struct {
-	p  context.Context
-	p1 core.RecordID
-	p2 *jet.JetDrop
-}
-
-type JetStorageMockSetDropResult struct {
-	r error
-}
-
-//Expect specifies that invocation of JetStorage.SetDrop is expected from 1 to Infinity times
-func (m *mJetStorageMockSetDrop) Expect(p context.Context, p1 core.RecordID, p2 *jet.JetDrop) *mJetStorageMockSetDrop {
-	m.mock.SetDropFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &JetStorageMockSetDropExpectation{}
-	}
-	m.mainExpectation.input = &JetStorageMockSetDropInput{p, p1, p2}
-	return m
-}
-
-//Return specifies results of invocation of JetStorage.SetDrop
-func (m *mJetStorageMockSetDrop) Return(r error) *JetStorageMock {
-	m.mock.SetDropFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &JetStorageMockSetDropExpectation{}
-	}
-	m.mainExpectation.result = &JetStorageMockSetDropResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of JetStorage.SetDrop is expected once
-func (m *mJetStorageMockSetDrop) ExpectOnce(p context.Context, p1 core.RecordID, p2 *jet.JetDrop) *JetStorageMockSetDropExpectation {
-	m.mock.SetDropFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &JetStorageMockSetDropExpectation{}
-	expectation.input = &JetStorageMockSetDropInput{p, p1, p2}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *JetStorageMockSetDropExpectation) Return(r error) {
-	e.result = &JetStorageMockSetDropResult{r}
-}
-
-//Set uses given function f as a mock of JetStorage.SetDrop method
-func (m *mJetStorageMockSetDrop) Set(f func(p context.Context, p1 core.RecordID, p2 *jet.JetDrop) (r error)) *JetStorageMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.SetDropFunc = f
-	return m.mock
-}
-
-//SetDrop implements github.com/insolar/insolar/ledger/storage.JetStorage interface
-func (m *JetStorageMock) SetDrop(p context.Context, p1 core.RecordID, p2 *jet.JetDrop) (r error) {
-	counter := atomic.AddUint64(&m.SetDropPreCounter, 1)
-	defer atomic.AddUint64(&m.SetDropCounter, 1)
-
-	if len(m.SetDropMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.SetDropMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to JetStorageMock.SetDrop. %v %v %v", p, p1, p2)
-			return
-		}
-
-		input := m.SetDropMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, JetStorageMockSetDropInput{p, p1, p2}, "JetStorage.SetDrop got unexpected parameters")
-
-		result := m.SetDropMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the JetStorageMock.SetDrop")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.SetDropMock.mainExpectation != nil {
-
-		input := m.SetDropMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, JetStorageMockSetDropInput{p, p1, p2}, "JetStorage.SetDrop got unexpected parameters")
-		}
-
-		result := m.SetDropMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the JetStorageMock.SetDrop")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.SetDropFunc == nil {
-		m.t.Fatalf("Unexpected call to JetStorageMock.SetDrop. %v %v %v", p, p1, p2)
-		return
-	}
-
-	return m.SetDropFunc(p, p1, p2)
-}
-
-//SetDropMinimockCounter returns a count of JetStorageMock.SetDropFunc invocations
-func (m *JetStorageMock) SetDropMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.SetDropCounter)
-}
-
-//SetDropMinimockPreCounter returns the value of JetStorageMock.SetDrop invocations
-func (m *JetStorageMock) SetDropMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.SetDropPreCounter)
-}
-
-//SetDropFinished returns true if mock invocations count is ok
-func (m *JetStorageMock) SetDropFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.SetDropMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.SetDropCounter) == uint64(len(m.SetDropMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.SetDropMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.SetDropCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.SetDropFunc != nil {
-		return atomic.LoadUint64(&m.SetDropCounter) > 0
-	}
-
-	return true
-}
-
-type mJetStorageMockSetDropSizeHistory struct {
-	mock              *JetStorageMock
-	mainExpectation   *JetStorageMockSetDropSizeHistoryExpectation
-	expectationSeries []*JetStorageMockSetDropSizeHistoryExpectation
-}
-
-type JetStorageMockSetDropSizeHistoryExpectation struct {
-	input  *JetStorageMockSetDropSizeHistoryInput
-	result *JetStorageMockSetDropSizeHistoryResult
-}
-
-type JetStorageMockSetDropSizeHistoryInput struct {
-	p  context.Context
-	p1 core.RecordID
-	p2 jet.DropSizeHistory
-}
-
-type JetStorageMockSetDropSizeHistoryResult struct {
-	r error
-}
-
-//Expect specifies that invocation of JetStorage.SetDropSizeHistory is expected from 1 to Infinity times
-func (m *mJetStorageMockSetDropSizeHistory) Expect(p context.Context, p1 core.RecordID, p2 jet.DropSizeHistory) *mJetStorageMockSetDropSizeHistory {
-	m.mock.SetDropSizeHistoryFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &JetStorageMockSetDropSizeHistoryExpectation{}
-	}
-	m.mainExpectation.input = &JetStorageMockSetDropSizeHistoryInput{p, p1, p2}
-	return m
-}
-
-//Return specifies results of invocation of JetStorage.SetDropSizeHistory
-func (m *mJetStorageMockSetDropSizeHistory) Return(r error) *JetStorageMock {
-	m.mock.SetDropSizeHistoryFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &JetStorageMockSetDropSizeHistoryExpectation{}
-	}
-	m.mainExpectation.result = &JetStorageMockSetDropSizeHistoryResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of JetStorage.SetDropSizeHistory is expected once
-func (m *mJetStorageMockSetDropSizeHistory) ExpectOnce(p context.Context, p1 core.RecordID, p2 jet.DropSizeHistory) *JetStorageMockSetDropSizeHistoryExpectation {
-	m.mock.SetDropSizeHistoryFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &JetStorageMockSetDropSizeHistoryExpectation{}
-	expectation.input = &JetStorageMockSetDropSizeHistoryInput{p, p1, p2}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *JetStorageMockSetDropSizeHistoryExpectation) Return(r error) {
-	e.result = &JetStorageMockSetDropSizeHistoryResult{r}
-}
-
-//Set uses given function f as a mock of JetStorage.SetDropSizeHistory method
-func (m *mJetStorageMockSetDropSizeHistory) Set(f func(p context.Context, p1 core.RecordID, p2 jet.DropSizeHistory) (r error)) *JetStorageMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.SetDropSizeHistoryFunc = f
-	return m.mock
-}
-
-//SetDropSizeHistory implements github.com/insolar/insolar/ledger/storage.JetStorage interface
-func (m *JetStorageMock) SetDropSizeHistory(p context.Context, p1 core.RecordID, p2 jet.DropSizeHistory) (r error) {
-	counter := atomic.AddUint64(&m.SetDropSizeHistoryPreCounter, 1)
-	defer atomic.AddUint64(&m.SetDropSizeHistoryCounter, 1)
-
-	if len(m.SetDropSizeHistoryMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.SetDropSizeHistoryMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to JetStorageMock.SetDropSizeHistory. %v %v %v", p, p1, p2)
-			return
-		}
-
-		input := m.SetDropSizeHistoryMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, JetStorageMockSetDropSizeHistoryInput{p, p1, p2}, "JetStorage.SetDropSizeHistory got unexpected parameters")
-
-		result := m.SetDropSizeHistoryMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the JetStorageMock.SetDropSizeHistory")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.SetDropSizeHistoryMock.mainExpectation != nil {
-
-		input := m.SetDropSizeHistoryMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, JetStorageMockSetDropSizeHistoryInput{p, p1, p2}, "JetStorage.SetDropSizeHistory got unexpected parameters")
-		}
-
-		result := m.SetDropSizeHistoryMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the JetStorageMock.SetDropSizeHistory")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.SetDropSizeHistoryFunc == nil {
-		m.t.Fatalf("Unexpected call to JetStorageMock.SetDropSizeHistory. %v %v %v", p, p1, p2)
-		return
-	}
-
-	return m.SetDropSizeHistoryFunc(p, p1, p2)
-}
-
-//SetDropSizeHistoryMinimockCounter returns a count of JetStorageMock.SetDropSizeHistoryFunc invocations
-func (m *JetStorageMock) SetDropSizeHistoryMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.SetDropSizeHistoryCounter)
-}
-
-//SetDropSizeHistoryMinimockPreCounter returns the value of JetStorageMock.SetDropSizeHistory invocations
-func (m *JetStorageMock) SetDropSizeHistoryMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.SetDropSizeHistoryPreCounter)
-}
-
-//SetDropSizeHistoryFinished returns true if mock invocations count is ok
-func (m *JetStorageMock) SetDropSizeHistoryFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.SetDropSizeHistoryMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.SetDropSizeHistoryCounter) == uint64(len(m.SetDropSizeHistoryMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.SetDropSizeHistoryMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.SetDropSizeHistoryCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.SetDropSizeHistoryFunc != nil {
-		return atomic.LoadUint64(&m.SetDropSizeHistoryCounter) > 0
 	}
 
 	return true
@@ -1924,10 +980,6 @@ func (m *JetStorageMock) UpdateJetTreeFinished() bool {
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *JetStorageMock) ValidateCallCounters() {
 
-	if !m.AddDropSizeFinished() {
-		m.t.Fatal("Expected call to JetStorageMock.AddDropSize")
-	}
-
 	if !m.AddJetsFinished() {
 		m.t.Fatal("Expected call to JetStorageMock.AddJets")
 	}
@@ -1936,32 +988,12 @@ func (m *JetStorageMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to JetStorageMock.CloneJetTree")
 	}
 
-	if !m.CreateDropFinished() {
-		m.t.Fatal("Expected call to JetStorageMock.CreateDrop")
-	}
-
-	if !m.GetDropFinished() {
-		m.t.Fatal("Expected call to JetStorageMock.GetDrop")
-	}
-
-	if !m.GetDropSizeHistoryFinished() {
-		m.t.Fatal("Expected call to JetStorageMock.GetDropSizeHistory")
-	}
-
 	if !m.GetJetTreeFinished() {
 		m.t.Fatal("Expected call to JetStorageMock.GetJetTree")
 	}
 
 	if !m.GetJetsFinished() {
 		m.t.Fatal("Expected call to JetStorageMock.GetJets")
-	}
-
-	if !m.SetDropFinished() {
-		m.t.Fatal("Expected call to JetStorageMock.SetDrop")
-	}
-
-	if !m.SetDropSizeHistoryFinished() {
-		m.t.Fatal("Expected call to JetStorageMock.SetDropSizeHistory")
 	}
 
 	if !m.SplitJetTreeFinished() {
@@ -1989,10 +1021,6 @@ func (m *JetStorageMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *JetStorageMock) MinimockFinish() {
 
-	if !m.AddDropSizeFinished() {
-		m.t.Fatal("Expected call to JetStorageMock.AddDropSize")
-	}
-
 	if !m.AddJetsFinished() {
 		m.t.Fatal("Expected call to JetStorageMock.AddJets")
 	}
@@ -2001,32 +1029,12 @@ func (m *JetStorageMock) MinimockFinish() {
 		m.t.Fatal("Expected call to JetStorageMock.CloneJetTree")
 	}
 
-	if !m.CreateDropFinished() {
-		m.t.Fatal("Expected call to JetStorageMock.CreateDrop")
-	}
-
-	if !m.GetDropFinished() {
-		m.t.Fatal("Expected call to JetStorageMock.GetDrop")
-	}
-
-	if !m.GetDropSizeHistoryFinished() {
-		m.t.Fatal("Expected call to JetStorageMock.GetDropSizeHistory")
-	}
-
 	if !m.GetJetTreeFinished() {
 		m.t.Fatal("Expected call to JetStorageMock.GetJetTree")
 	}
 
 	if !m.GetJetsFinished() {
 		m.t.Fatal("Expected call to JetStorageMock.GetJets")
-	}
-
-	if !m.SetDropFinished() {
-		m.t.Fatal("Expected call to JetStorageMock.SetDrop")
-	}
-
-	if !m.SetDropSizeHistoryFinished() {
-		m.t.Fatal("Expected call to JetStorageMock.SetDropSizeHistory")
 	}
 
 	if !m.SplitJetTreeFinished() {
@@ -2051,16 +1059,10 @@ func (m *JetStorageMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
-		ok = ok && m.AddDropSizeFinished()
 		ok = ok && m.AddJetsFinished()
 		ok = ok && m.CloneJetTreeFinished()
-		ok = ok && m.CreateDropFinished()
-		ok = ok && m.GetDropFinished()
-		ok = ok && m.GetDropSizeHistoryFinished()
 		ok = ok && m.GetJetTreeFinished()
 		ok = ok && m.GetJetsFinished()
-		ok = ok && m.SetDropFinished()
-		ok = ok && m.SetDropSizeHistoryFinished()
 		ok = ok && m.SplitJetTreeFinished()
 		ok = ok && m.UpdateJetTreeFinished()
 
@@ -2071,10 +1073,6 @@ func (m *JetStorageMock) MinimockWait(timeout time.Duration) {
 		select {
 		case <-timeoutCh:
 
-			if !m.AddDropSizeFinished() {
-				m.t.Error("Expected call to JetStorageMock.AddDropSize")
-			}
-
 			if !m.AddJetsFinished() {
 				m.t.Error("Expected call to JetStorageMock.AddJets")
 			}
@@ -2083,32 +1081,12 @@ func (m *JetStorageMock) MinimockWait(timeout time.Duration) {
 				m.t.Error("Expected call to JetStorageMock.CloneJetTree")
 			}
 
-			if !m.CreateDropFinished() {
-				m.t.Error("Expected call to JetStorageMock.CreateDrop")
-			}
-
-			if !m.GetDropFinished() {
-				m.t.Error("Expected call to JetStorageMock.GetDrop")
-			}
-
-			if !m.GetDropSizeHistoryFinished() {
-				m.t.Error("Expected call to JetStorageMock.GetDropSizeHistory")
-			}
-
 			if !m.GetJetTreeFinished() {
 				m.t.Error("Expected call to JetStorageMock.GetJetTree")
 			}
 
 			if !m.GetJetsFinished() {
 				m.t.Error("Expected call to JetStorageMock.GetJets")
-			}
-
-			if !m.SetDropFinished() {
-				m.t.Error("Expected call to JetStorageMock.SetDrop")
-			}
-
-			if !m.SetDropSizeHistoryFinished() {
-				m.t.Error("Expected call to JetStorageMock.SetDropSizeHistory")
 			}
 
 			if !m.SplitJetTreeFinished() {
@@ -2131,10 +1109,6 @@ func (m *JetStorageMock) MinimockWait(timeout time.Duration) {
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *JetStorageMock) AllMocksCalled() bool {
 
-	if !m.AddDropSizeFinished() {
-		return false
-	}
-
 	if !m.AddJetsFinished() {
 		return false
 	}
@@ -2143,31 +1117,11 @@ func (m *JetStorageMock) AllMocksCalled() bool {
 		return false
 	}
 
-	if !m.CreateDropFinished() {
-		return false
-	}
-
-	if !m.GetDropFinished() {
-		return false
-	}
-
-	if !m.GetDropSizeHistoryFinished() {
-		return false
-	}
-
 	if !m.GetJetTreeFinished() {
 		return false
 	}
 
 	if !m.GetJetsFinished() {
-		return false
-	}
-
-	if !m.SetDropFinished() {
-		return false
-	}
-
-	if !m.SetDropSizeHistoryFinished() {
 		return false
 	}
 

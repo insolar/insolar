@@ -24,9 +24,7 @@ import (
 	"testing"
 
 	"github.com/dgraph-io/badger"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
+	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
@@ -34,8 +32,71 @@ import (
 	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 )
+
+type replicaIterSuite struct {
+	suite.Suite
+
+	cm      *component.Manager
+	ctx     context.Context
+	cleaner func()
+	db      storage.DBContext
+
+	objectStorage storage.ObjectStorage
+	dropStorage   storage.DropStorage
+}
+
+func NewReplicaIterSuite() *replicaIterSuite {
+	return &replicaIterSuite{
+		Suite: suite.Suite{},
+	}
+}
+
+// Init and run suite
+func TestReplicaIter(t *testing.T) {
+	suite.Run(t, NewReplicaIterSuite())
+}
+
+func (s *replicaIterSuite) BeforeTest(suiteName, testName string) {
+	s.cm = &component.Manager{}
+	s.ctx = inslogger.TestContext(s.T())
+
+	db, cleaner := storagetest.TmpDB(s.ctx, s.T())
+	s.db = db
+	s.cleaner = cleaner
+
+	s.objectStorage = storage.NewObjectStorage()
+	s.dropStorage = storage.NewDropStorage(10)
+
+	s.cm.Inject(
+		platformpolicy.NewPlatformCryptographyScheme(),
+		s.db,
+		s.objectStorage,
+		s.dropStorage,
+	)
+
+	err := s.cm.Init(s.ctx)
+	if err != nil {
+		s.T().Error("ComponentManager init failed", err)
+	}
+	err = s.cm.Start(s.ctx)
+	if err != nil {
+		s.T().Error("ComponentManager start failed", err)
+	}
+}
+
+func (s *replicaIterSuite) AfterTest(suiteName, testName string) {
+	err := s.cm.Stop(s.ctx)
+	if err != nil {
+		s.T().Error("ComponentManager stop failed", err)
+	}
+	s.cleaner()
+}
 
 func pulseDelta(n int) core.PulseNumber { return core.PulseNumber(core.FirstPulseNumber + n) }
 
@@ -55,10 +116,31 @@ func Test_StoreKeyValues(t *testing.T) {
 	func() {
 		db, cleaner := storagetest.TmpDB(ctx, t)
 		defer cleaner()
+
+		os := storage.NewObjectStorage()
+		ds := storage.NewDropStorage(10)
+
+		cm := &component.Manager{}
+		cm.Inject(
+			platformpolicy.NewPlatformCryptographyScheme(),
+			db,
+			os,
+			ds,
+		)
+		err := cm.Init(ctx)
+		if err != nil {
+			t.Error("ComponentManager init failed", err)
+		}
+		err = cm.Start(ctx)
+		if err != nil {
+			t.Error("ComponentManager start failed", err)
+		}
+		defer cm.Stop(ctx)
+
 		for n := 0; n < pulsescount; n++ {
 			lastPulse := core.PulseNumber(pulseDelta(n))
-			addRecords(ctx, t, db, jetID, lastPulse)
-			setDrop(ctx, t, db, jetID, lastPulse)
+			addRecords(ctx, t, os, jetID, lastPulse)
+			setDrop(ctx, t, ds, jetID, lastPulse)
 		}
 
 		for n := 0; n < pulsescount; n++ {
@@ -102,21 +184,16 @@ func Test_StoreKeyValues(t *testing.T) {
 	require.Equal(t, expectedidxs, gotidxs, "indexes are the same after restore")
 }
 
-func Test_ReplicaIter_FirstPulse(t *testing.T) {
-	t.Parallel()
-	ctx := inslogger.TestContext(t)
-	db, cleaner := storagetest.TmpDB(ctx, t)
-	defer cleaner()
-
+func (s *replicaIterSuite) Test_ReplicaIter_FirstPulse() {
 	// it's easy to test simple case with zero Jet
 	jetID := *jet.NewID(0, nil)
 
-	addRecords(ctx, t, db, jetID, core.FirstPulseNumber)
-	replicator := storage.NewReplicaIter(ctx, db, jetID, core.FirstPulseNumber, core.FirstPulseNumber+1, 100500)
+	addRecords(s.ctx, s.T(), s.objectStorage, jetID, core.FirstPulseNumber)
+	replicator := storage.NewReplicaIter(s.ctx, s.db, jetID, core.FirstPulseNumber, core.FirstPulseNumber+1, 100500)
 	var got []key
 	for i := 0; ; i++ {
 		if i > 50 {
-			t.Fatal("too many loops")
+			s.T().Fatal("too many loops")
 		}
 
 		recs, err := replicator.NextRecords()
@@ -133,23 +210,37 @@ func Test_ReplicaIter_FirstPulse(t *testing.T) {
 	}
 
 	got = sortkeys(got)
-	all, idxs := getallkeys(db.GetBadgerDB())
+	all, idxs := getallkeys(s.db.GetBadgerDB())
 	all = append(all, idxs...)
 	all = sortkeys(all)
 
-	// fmt.Println("All:")
-	// printkeys(all, "  ")
-	// fmt.Println("Got:")
-	// printkeys(got, "  ")
-
-	require.Equal(t, all, got, "get expected records for first pulse")
+	require.Equal(s.T(), all, got, "get expected records for first pulse")
 }
 
 func Test_ReplicaIter_Base(t *testing.T) {
-	t.Parallel()
 	ctx := inslogger.TestContext(t)
 	db, cleaner := storagetest.TmpDB(ctx, t, storagetest.DisableBootstrap())
 	defer cleaner()
+
+	os := storage.NewObjectStorage()
+	ds := storage.NewDropStorage(10)
+
+	cm := &component.Manager{}
+	cm.Inject(
+		platformpolicy.NewPlatformCryptographyScheme(),
+		db,
+		os,
+		ds,
+	)
+	err := cm.Init(ctx)
+	if err != nil {
+		t.Error("ComponentManager init failed", err)
+	}
+	err = cm.Start(ctx)
+	if err != nil {
+		t.Error("ComponentManager start failed", err)
+	}
+	defer cm.Stop(ctx)
 
 	var lastPulse core.PulseNumber
 	pulsescount := 2
@@ -167,8 +258,8 @@ func Test_ReplicaIter_Base(t *testing.T) {
 	for i := 0; i < pulsescount; i++ {
 		lastPulse = pulseDelta(i)
 
-		addRecords(ctx, t, db, jetID, lastPulse)
-		setDrop(ctx, t, db, jetID, lastPulse)
+		addRecords(ctx, t, os, jetID, lastPulse)
+		setDrop(ctx, t, ds, jetID, lastPulse)
 
 		recs, _ := getallkeys(db.GetBadgerDB())
 		recKeys := getdelta(recsBefore, recs)
@@ -230,7 +321,7 @@ func Test_ReplicaIter_Base(t *testing.T) {
 	lastPulse = lastPulse + 1
 	// addRecords here is for purpose:
 	// new records on +1 pulse should not affect iterator result on previous pulse range
-	addRecords(ctx, t, db, jetID, lastPulse)
+	addRecords(ctx, t, os, jetID, lastPulse)
 	for n := 0; n < pulsescount; n++ {
 		p := pulseDelta(n)
 
@@ -260,35 +351,35 @@ func Test_ReplicaIter_Base(t *testing.T) {
 func setDrop(
 	ctx context.Context,
 	t *testing.T,
-	db *storage.DB,
+	dropStorage storage.DropStorage,
 	jetID core.RecordID,
 	pulsenum core.PulseNumber,
 ) {
-	prevDrop, err := db.GetDrop(ctx, jetID, pulsenum-1)
+	prevDrop, err := dropStorage.GetDrop(ctx, jetID, pulsenum-1)
 	var prevhash []byte
 	if err == nil {
 		prevhash = prevDrop.Hash
 	} else if err != storage.ErrNotFound {
 		require.NoError(t, err)
 	}
-	drop, _, dropSize, err := db.CreateDrop(ctx, jetID, pulsenum, prevhash)
+	drop, _, dropSize, err := dropStorage.CreateDrop(ctx, jetID, pulsenum, prevhash)
 	if err != nil {
 		require.NoError(t, err)
 	}
 	require.NotEqual(t, 0, dropSize)
-	err = db.SetDrop(ctx, jetID, drop)
+	err = dropStorage.SetDrop(ctx, jetID, drop)
 	require.NoError(t, err)
 }
 
 func addRecords(
 	ctx context.Context,
 	t *testing.T,
-	db *storage.DB,
+	objectStorage storage.ObjectStorage,
 	jetID core.RecordID,
 	pulsenum core.PulseNumber,
 ) {
 	// set record
-	parentID, err := db.SetRecord(
+	parentID, err := objectStorage.SetRecord(
 		ctx,
 		jetID,
 		pulsenum,
@@ -301,11 +392,11 @@ func addRecords(
 	require.NoError(t, err)
 
 	// set blob
-	_, err = db.SetBlob(ctx, jetID, pulsenum, []byte("100500"))
+	_, err = objectStorage.SetBlob(ctx, jetID, pulsenum, []byte("100500"))
 	require.NoError(t, err)
 
 	// set index of record
-	err = db.SetObjectIndex(ctx, jetID, parentID, &index.ObjectLifeline{
+	err = objectStorage.SetObjectIndex(ctx, jetID, parentID, &index.ObjectLifeline{
 		LatestState: parentID,
 	})
 	require.NoError(t, err)
