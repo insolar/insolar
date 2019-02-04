@@ -298,7 +298,7 @@ spec:
         emptyDir: {}
       - name: node-log
         hostPath:
-          path: /Users/ilyapetrusenko/Documents/_work/src/github.com/insolar/insolar/ci/local-dev/logs/
+          path: /tmp/insolar_logs/
           type: DirectoryOrCreate
   updateStrategy:
     type: OnDelete
