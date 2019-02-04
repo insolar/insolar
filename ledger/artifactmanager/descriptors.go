@@ -144,9 +144,9 @@ func (d *ObjectDescriptor) Parent() *core.RecordRef {
 // 9. R (get children 6 ...) -> H
 // 10. H (children 6 ... 15 EOF) -> R
 type ChildIterator struct {
+	jetStorage   storage.JetStorage
 	ctx          context.Context
 	messageBus   core.MessageBus
-	db           *storage.DB
 	currentPulse core.Pulse
 	parent       core.RecordRef
 	chunkSize    int
@@ -161,7 +161,7 @@ type ChildIterator struct {
 func NewChildIterator(
 	ctx context.Context,
 	mb core.MessageBus,
-	db *storage.DB,
+	jetStorage storage.JetStorage,
 	parent core.RecordRef,
 	fromPulse *core.PulseNumber,
 	chunkSize int,
@@ -170,7 +170,7 @@ func NewChildIterator(
 	iter := ChildIterator{
 		ctx:          ctx,
 		messageBus:   mb,
-		db:           db,
+		jetStorage:   jetStorage,
 		parent:       parent,
 		fromPulse:    fromPulse,
 		chunkSize:    chunkSize,
@@ -222,7 +222,7 @@ func (i *ChildIterator) fetch() error {
 	}
 	genericReply, err := sendAndFollowRedirect(
 		i.ctx,
-		i.db,
+		i.jetStorage,
 		i.messageBus,
 		&message.GetChildren{
 			Parent:    i.parent,

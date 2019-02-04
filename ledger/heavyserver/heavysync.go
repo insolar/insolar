@@ -51,7 +51,7 @@ type syncstate struct {
 
 // Sync provides methods for syncing records to heavy storage.
 type Sync struct {
-	ReplicaStorage storage.ReplicaStorage
+	ReplicaStorage storage.ReplicaStorage `inject:""`
 	DBContext      storage.DBContext
 
 	sync.Mutex
@@ -59,11 +59,10 @@ type Sync struct {
 }
 
 // NewSync creates new Sync instance.
-func NewSync(db *storage.DB) *Sync {
+func NewSync(db storage.DBContext) *Sync {
 	return &Sync{
-		ReplicaStorage: db,
-		DBContext:      db,
-		jetSyncStates:  map[core.RecordID]*syncstate{},
+		DBContext:     db,
+		jetSyncStates: map[core.RecordID]*syncstate{},
 	}
 }
 

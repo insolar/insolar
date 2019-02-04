@@ -20,15 +20,81 @@ import (
 	"context"
 	"testing"
 
+	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/jet"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 )
 
-func addDropSizeToDB(ctx context.Context, t *testing.T, db *storage.DB, jetID core.RecordID, dropSize uint64) {
+type jetSuite struct {
+	suite.Suite
+
+	cm      *component.Manager
+	ctx     context.Context
+	cleaner func()
+
+	dropStorage storage.DropStorage
+
+	jetID core.RecordID
+}
+
+func NewJetSuite() *jetSuite {
+	return &jetSuite{
+		Suite: suite.Suite{},
+	}
+}
+
+// Init and run suite
+func TestJet(t *testing.T) {
+	suite.Run(t, NewJetSuite())
+}
+
+func (s *jetSuite) BeforeTest(suiteName, testName string) {
+	s.cm = &component.Manager{}
+	s.ctx = inslogger.TestContext(s.T())
+	s.jetID = core.TODOJetID
+
+	db, cleaner := TmpDB(s.ctx, s.T())
+
+	s.cleaner = cleaner
+	s.dropStorage = storage.NewDropStorage(10)
+
+	s.cm.Inject(
+		platformpolicy.NewPlatformCryptographyScheme(),
+		db,
+		s.dropStorage,
+	)
+
+	err := s.cm.Init(s.ctx)
+	if err != nil {
+		s.T().Error("ComponentManager init failed", err)
+	}
+	err = s.cm.Start(s.ctx)
+	if err != nil {
+		s.T().Error("ComponentManager start failed", err)
+	}
+}
+
+func (s *jetSuite) AfterTest(suiteName, testName string) {
+	err := s.cm.Stop(s.ctx)
+	if err != nil {
+		s.T().Error("ComponentManager stop failed", err)
+	}
+	s.cleaner()
+}
+
+func addDropSizeToDB(
+	ctx context.Context,
+	t *testing.T,
+	dropStorage storage.DropStorage,
+	jetID core.RecordID,
+	dropSize uint64,
+) {
 	dropSizeData := &jet.DropSize{
 		JetID:    jetID,
 		PulseNo:  core.FirstPulseNumber,
@@ -50,7 +116,7 @@ func addDropSizeToDB(ctx context.Context, t *testing.T, db *storage.DB, jetID co
 
 	dropSizeData.Signature = signature.Bytes()
 
-	err = db.AddDropSize(ctx, dropSizeData)
+	err = dropStorage.AddDropSize(ctx, dropSizeData)
 	require.NoError(t, err)
 }
 
@@ -64,51 +130,39 @@ func findSize(testSize uint64, dropSizes []jet.DropSize) bool {
 	return false
 }
 
-func TestAddAndGetDropSize(t *testing.T) {
-	ctx := inslogger.TestContext(t)
-	jetID := core.TODOJetID
-
-	db, cleaner := TmpDB(ctx, t)
-	defer cleaner()
-
+func (s *jetSuite) TestAddAndGetDropSize() {
 	dropSizes := []uint64{100, 200, 300, 400}
 
-	for _, s := range dropSizes {
-		addDropSizeToDB(ctx, t, db, jetID, s)
+	for _, size := range dropSizes {
+		addDropSizeToDB(s.ctx, s.T(), s.dropStorage, s.jetID, size)
 	}
 
-	dropSizeHistory, err := db.GetDropSizeHistory(ctx, jetID)
-	require.NoError(t, err)
+	dropSizeHistory, err := s.dropStorage.GetDropSizeHistory(s.ctx, s.jetID)
+	require.NoError(s.T(), err)
 
 	dropSizeArray := []jet.DropSize(dropSizeHistory)
 
-	require.Equal(t, len(dropSizes), len(dropSizeArray))
+	require.Equal(s.T(), len(dropSizes), len(dropSizeArray))
 
-	for _, s := range dropSizes {
-		require.True(t, findSize(s, dropSizeArray))
+	for _, size := range dropSizes {
+		require.True(s.T(), findSize(size, dropSizeArray))
 	}
 }
 
-func TestAddDropSizeAndIncreaseLimit(t *testing.T) {
-	ctx := inslogger.TestContext(t)
-	jetID := core.TODOJetID
-
-	db, cleaner := TmpDB(ctx, t)
-	defer cleaner()
-
-	numElements := db.GetJetSizesHistoryDepth() * 2
+func (s *jetSuite) TestAddDropSizeAndIncreaseLimit() {
+	numElements := s.dropStorage.GetJetSizesHistoryDepth() * 2
 
 	for i := 0; i <= numElements; i++ {
-		addDropSizeToDB(ctx, t, db, jetID, uint64(i))
+		addDropSizeToDB(s.ctx, s.T(), s.dropStorage, s.jetID, uint64(i))
 	}
 
-	dropSizeHistory, err := db.GetDropSizeHistory(ctx, jetID)
-	require.NoError(t, err)
+	dropSizeHistory, err := s.dropStorage.GetDropSizeHistory(s.ctx, s.jetID)
+	require.NoError(s.T(), err)
 
 	dropSizeArray := []jet.DropSize(dropSizeHistory)
-	require.Equal(t, db.GetJetSizesHistoryDepth(), len(dropSizeArray))
+	require.Equal(s.T(), s.dropStorage.GetJetSizesHistoryDepth(), len(dropSizeArray))
 
-	for i := numElements; i > (numElements - db.GetJetSizesHistoryDepth()); i-- {
-		require.True(t, findSize(uint64(i), dropSizeArray), "Couldn't find %d", i)
+	for i := numElements; i > (numElements - s.dropStorage.GetJetSizesHistoryDepth()); i-- {
+		require.True(s.T(), findSize(uint64(i), dropSizeArray), "Couldn't find %d", i)
 	}
 }

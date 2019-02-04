@@ -36,25 +36,19 @@ import (
 
 // Exporter provides methods for fetching data view from storage.
 type Exporter struct {
-	db            *storage.DB
-	jetStorage    storage.JetStorage
-	objectStorage storage.ObjectStorage
-	pulseTracker  storage.PulseTracker
-	ps            *storage.PulseStorage
-	cfg           configuration.Exporter
+	DB            storage.DBContext     `inject:""`
+	JetStorage    storage.JetStorage    `inject:""`
+	ObjectStorage storage.ObjectStorage `inject:""`
+	PulseTracker  storage.PulseTracker  `inject:""`
+	PulseStorage  core.PulseStorage     `inject:""`
+
+	cfg configuration.Exporter
 }
 
 // NewExporter creates new StorageExporter instance.
-func NewExporter(db *storage.DB, cfg configuration.Exporter) *Exporter {
-	ps := storage.NewPulseStorage()
-	ps.PulseTracker = db
+func NewExporter(cfg configuration.Exporter) *Exporter {
 	return &Exporter{
-		db:            db,
-		jetStorage:    db,
-		objectStorage: db,
-		pulseTracker:  db,
-		ps:            ps,
-		cfg:           cfg,
+		cfg: cfg,
 	}
 }
 
@@ -87,13 +81,13 @@ func (e *Exporter) Export(ctx context.Context, fromPulse core.PulseNumber, size 
 	inslog := inslogger.FromContext(ctx)
 	inslog.Debugf("[ API Export ] start")
 
-	jetIDs, err := e.jetStorage.GetJets(ctx)
+	jetIDs, err := e.JetStorage.GetJets(ctx)
 	if err != nil {
 		inslog.Debugf("[ API Export ] error getting jets: %s", err.Error())
 		return nil, err
 	}
 
-	currentPulse, err := e.ps.Current(ctx)
+	currentPulse, err := e.PulseStorage.Current(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get current pulse data")
 	}
@@ -101,29 +95,30 @@ func (e *Exporter) Export(ctx context.Context, fromPulse core.PulseNumber, size 
 	counter := 0
 	fromPulsePN := core.PulseNumber(math.Max(float64(fromPulse), float64(core.GenesisPulse.PulseNumber)))
 
-	if fromPulsePN >= currentPulse.PulseNumber {
-		fromPulsePN = currentPulse.PulseNumber
-	} else {
-		_, err = e.pulseTracker.GetPulse(ctx, fromPulsePN)
-		if err != nil {
-			tryPulse, err := e.pulseTracker.GetPulse(ctx, core.GenesisPulse.PulseNumber)
-			if err != nil {
-				return nil, errors.Wrap(err, "failed to fetch genesis pulse data")
-			}
+	if fromPulsePN > currentPulse.PulseNumber {
+		return nil, errors.Errorf("failed to fetch data: from-pulse[%v] > current-pulse[%v]",
+			fromPulsePN, currentPulse.PulseNumber)
+	}
 
-			for fromPulsePN > *tryPulse.Next {
-				tryPulse, err = e.pulseTracker.GetPulse(ctx, *tryPulse.Next)
-				if err != nil {
-					return nil, errors.Wrap(err, "failed to iterate through first pulses")
-				}
-			}
-			fromPulsePN = *tryPulse.Next
+	_, err = e.PulseTracker.GetPulse(ctx, fromPulsePN)
+	if err != nil {
+		tryPulse, err := e.PulseTracker.GetPulse(ctx, core.GenesisPulse.PulseNumber)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to fetch genesis pulse data")
 		}
+
+		for fromPulsePN > *tryPulse.Next {
+			tryPulse, err = e.PulseTracker.GetPulse(ctx, *tryPulse.Next)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to iterate through first pulses")
+			}
+		}
+		fromPulsePN = *tryPulse.Next
 	}
 
 	iterPulse := &fromPulsePN
 	for iterPulse != nil && counter < size {
-		pulse, err := e.pulseTracker.GetPulse(ctx, *iterPulse)
+		pulse, err := e.PulseTracker.GetPulse(ctx, *iterPulse)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to fetch pulse data")
 		}
@@ -160,7 +155,7 @@ func (e *Exporter) Export(ctx context.Context, fromPulse core.PulseNumber, size 
 
 func (e *Exporter) exportPulse(ctx context.Context, jetID core.RecordID, pulse *core.Pulse) (*pulseData, error) {
 	records := recordsData{}
-	err := e.db.IterateRecordsOnPulse(ctx, jetID, pulse.PulseNumber, func(id core.RecordID, rec record.Record) error {
+	err := e.DB.IterateRecordsOnPulse(ctx, jetID, pulse.PulseNumber, func(id core.RecordID, rec record.Record) error {
 		pl, err := e.getPayload(ctx, jetID, rec)
 		if err != nil {
 			return errors.Wrap(err, "exportPulse failed to getPayload")
@@ -191,7 +186,7 @@ func (e *Exporter) getPayload(ctx context.Context, jetID core.RecordID, rec reco
 		if r.GetMemory() == nil {
 			break
 		}
-		blob, err := e.db.GetBlob(ctx, jetID, r.GetMemory())
+		blob, err := e.ObjectStorage.GetBlob(ctx, jetID, r.GetMemory())
 		if err != nil {
 			return nil, errors.Wrapf(err, "getPayload failed to GetBlob (jet: %s)", jetID.DebugString())
 		}

@@ -41,7 +41,10 @@ const (
 
 // LedgerArtifactManager provides concrete API to storage for processing module.
 type LedgerArtifactManager struct {
-	db                         *storage.DB
+	DB           storage.DBContext    `inject:""`
+	GenesisState storage.GenesisState `inject:""`
+	JetStorage   storage.JetStorage   `inject:""`
+
 	DefaultBus                 core.MessageBus                 `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 	PulseStorage               core.PulseStorage               `inject:""`
@@ -65,9 +68,8 @@ func (m *LedgerArtifactManager) State() ([]byte, error) {
 }
 
 // NewArtifactManger creates new manager instance.
-func NewArtifactManger(db *storage.DB) *LedgerArtifactManager {
+func NewArtifactManger() *LedgerArtifactManager {
 	return &LedgerArtifactManager{
-		db:                   db,
 		getChildrenChunkSize: getChildrenChunkSize,
 		codeCacheLock:        &sync.Mutex{},
 		codeCache:            make(map[core.RecordRef]*cacheEntry),
@@ -78,7 +80,7 @@ func NewArtifactManger(db *storage.DB) *LedgerArtifactManager {
 //
 // Root record is the parent for all top-level records.
 func (m *LedgerArtifactManager) GenesisRef() *core.RecordRef {
-	return m.db.GenesisRef()
+	return m.GenesisState.GenesisRef()
 }
 
 // RegisterRequest sends message for request registration,
@@ -146,7 +148,7 @@ func (m *LedgerArtifactManager) GetCode(
 	ctx, span = instracer.StartSpan(ctx, "artifactmanager.GetCode sendAndFollowRedirect")
 	genericReact, err := sendAndFollowRedirect(
 		ctx,
-		m.db,
+		m.JetStorage,
 		m.bus(ctx),
 		&message.GetCode{Code: code},
 		*currentPulse,
@@ -201,7 +203,7 @@ func (m *LedgerArtifactManager) GetObject(
 		State:    state,
 		Approved: approved,
 	}
-	rep, err := sendAndFollowRedirect(ctx, m.db, m.bus(ctx), getObjectMsg, *currentPulse)
+	rep, err := sendAndFollowRedirect(ctx, m.JetStorage, m.bus(ctx), getObjectMsg, *currentPulse)
 	if err != nil {
 		return nil, err
 	}
@@ -239,7 +241,7 @@ func (m *LedgerArtifactManager) HasPendingRequests(
 
 	rep, err := sendAndRetryJet(
 		ctx,
-		m.db,
+		m.JetStorage,
 		m.bus(ctx),
 		&message.GetPendingRequests{Object: object},
 		*currentPulse,
@@ -278,7 +280,7 @@ func (m *LedgerArtifactManager) GetDelegate(
 
 	genericReact, err := sendAndFollowRedirect(
 		ctx,
-		m.db,
+		m.JetStorage,
 		m.bus(ctx),
 		&message.GetDelegate{
 			Head:   head,
@@ -315,7 +317,7 @@ func (m *LedgerArtifactManager) GetChildren(
 		return nil, err
 	}
 
-	iter, err := NewChildIterator(ctx, m.bus(ctx), m.db, parent, pulse, m.getChildrenChunkSize, *latestPulse)
+	iter, err := NewChildIterator(ctx, m.bus(ctx), m.JetStorage, parent, pulse, m.getChildrenChunkSize, *latestPulse)
 	return iter, err
 }
 
@@ -523,7 +525,7 @@ func (m *LedgerArtifactManager) RegisterValidation(
 		return err
 	}
 
-	_, err = sendAndRetryJet(ctx, m.db, m.bus(ctx), &msg, *currentPulse, jetMissRetryCount, nil)
+	_, err = sendAndRetryJet(ctx, m.JetStorage, m.bus(ctx), &msg, *currentPulse, jetMissRetryCount, nil)
 	return err
 }
 
@@ -707,7 +709,7 @@ func (m *LedgerArtifactManager) setRecord(
 
 	genericReply, err := sendAndRetryJet(
 		ctx,
-		m.db,
+		m.JetStorage,
 		m.bus(ctx),
 		&message.SetRecord{
 			Record:    record.SerializeRecord(rec),
@@ -741,7 +743,7 @@ func (m *LedgerArtifactManager) setBlob(
 	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.setBlob starts ...")
 	genericReact, err := sendAndRetryJet(
 		ctx,
-		m.db,
+		m.JetStorage,
 		m.bus(ctx),
 		&message.SetBlob{
 			Memory:    blob,
@@ -788,7 +790,7 @@ func (m *LedgerArtifactManager) sendUpdateObject(
 
 	genericRep, err := sendAndRetryJet(
 		ctx,
-		m.db,
+		m.JetStorage,
 		m.bus(ctx),
 		&message.UpdateObject{
 			Record: record.SerializeRecord(rec),
@@ -825,7 +827,7 @@ func (m *LedgerArtifactManager) registerChild(
 
 	genericReact, err := sendAndRetryJet(
 		ctx,
-		m.db,
+		m.JetStorage,
 		m.bus(ctx),
 		&message.RegisterChild{
 			Record: record.SerializeRecord(rec),
@@ -854,7 +856,7 @@ func (m *LedgerArtifactManager) bus(ctx context.Context) core.MessageBus {
 
 func sendAndFollowRedirect(
 	ctx context.Context,
-	db *storage.DB,
+	jetStorage storage.JetStorage,
 	bus core.MessageBus,
 	msg core.Message,
 	pulse core.Pulse,
@@ -868,7 +870,7 @@ func sendAndFollowRedirect(
 	}
 
 	if _, ok := rep.(*reply.JetMiss); ok {
-		rep, err = sendAndRetryJet(ctx, db, bus, msg, pulse, jetMissRetryCount, nil)
+		rep, err = sendAndRetryJet(ctx, jetStorage, bus, msg, pulse, jetMissRetryCount, nil)
 	}
 
 	if r, ok := rep.(core.RedirectReply); ok {
