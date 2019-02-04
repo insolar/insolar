@@ -20,7 +20,7 @@ INSGORUND_PORT_FILE=$BASE_DIR/$CONFIGS_DIR/insgorund_ports.txt
 insolar_log_level=Debug
 gorund_log_level=$insolar_log_level
 
-NUM_DISCOVERY_NODES=$(sed '/^nodes:/ q' $GENESIS_CONFIG | grep "host:" | grep -cv "#" )
+NUM_DISCOVERY_NODES=$(sed '/^nodes:/ q' $GENESIS_CONFIG | grep "host:" | grep -v "#" | wc -l)
 
 for i in `seq 1 $NUM_DISCOVERY_NODES`
 do
@@ -29,12 +29,15 @@ done
 
 DISCOVERY_NODES_KEYS_DIR=$TEST_DATA/scripts/discovery_nodes
 
-NUM_NODES=$(sed -n '/^nodes:/,$p' $GENESIS_CONFIG | grep "host:" | grep -cv "#" )
+NUM_NODES=$(sed -n '/^nodes:/,$p' $GENESIS_CONFIG | grep "host:" | grep -v "#" | wc -l)
 
-for i in `seq 1 $NUM_NODES`
-do
-    NODES+=($NODES_DATA/$i)
-done
+if [[ "$NUM_NODES" -ne "0" ]]
+then
+    for i in `seq 1 $NUM_NODES`
+    do
+        NODES+=($NODES_DATA/$i)
+    done
+fi
 
 kill_port()
 {
@@ -316,10 +319,8 @@ do
         if [[ "$NUM_NODES" -eq "0" ]]
         then
             INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $GENERATED_CONFIGS_DIR/insolar_$i.yaml --trace &> $node/output.log
-            lastDiscoveryPID=`echo \$!`
         else
             INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $GENERATED_CONFIGS_DIR/insolar_$i.yaml --trace &> $node/output.log &
-            lastDiscoveryPID=`echo \$!`
         fi
         break
     fi
@@ -329,7 +330,7 @@ done
 
 printf "discovery nodes started ... \n"
 
-if [[ "$NUM_NODES" -eq "0" ]]
+if [[ "$NUM_NODES" -ne "0" ]]
 then
     wait_for_complete_network_state
     scripts/insolard/start_nodes.sh

@@ -67,5 +67,4 @@ do
     echo "NODE $i STARTED in background"
 done
 
-sleep 10s   #time to consensus
 printf "nodes started ... \n"
