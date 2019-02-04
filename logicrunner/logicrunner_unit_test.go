@@ -630,3 +630,36 @@ func TestLogicRunner_NoExcessiveAmends(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, uint64(1), am.UpdateObjectCounter)
 }
+
+func TestHandleAbandonedRequestsNotificationMessage(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+	objectId := testutils.RandomID()
+	msg := &message.AbandonedRequestsNotification{Object: objectId}
+	parcel := &message.Parcel{Msg: msg}
+
+	// empty lr
+	lr, _ := NewLogicRunner(&configuration.LogicRunner{})
+
+	_, err := lr.HandleAbandonedRequestsNotificationMessage(ctx, parcel)
+	require.NoError(t, err)
+	assert.Equal(t, true, lr.state[*msg.DefaultTarget()].ExecutionState.LedgerHasMoreRequests)
+
+	// LedgerHasMoreRequests false
+	lr, _ = NewLogicRunner(&configuration.LogicRunner{})
+	lr.state[*msg.DefaultTarget()] = &ObjectState{ExecutionState: &ExecutionState{LedgerHasMoreRequests: false}}
+
+	_, err = lr.HandleAbandonedRequestsNotificationMessage(ctx, parcel)
+	require.NoError(t, err)
+	assert.Equal(t, true, lr.state[*msg.DefaultTarget()].ExecutionState.LedgerHasMoreRequests)
+
+	// LedgerHasMoreRequests already true
+	lr, _ = NewLogicRunner(&configuration.LogicRunner{})
+	lr.state[*msg.DefaultTarget()] = &ObjectState{ExecutionState: &ExecutionState{LedgerHasMoreRequests: true}}
+
+	_, err = lr.HandleAbandonedRequestsNotificationMessage(ctx, parcel)
+	require.NoError(t, err)
+	assert.Equal(t, true, lr.state[*msg.DefaultTarget()].ExecutionState.LedgerHasMoreRequests)
+
+}
