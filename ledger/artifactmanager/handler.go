@@ -57,6 +57,7 @@ type MessageHandler struct {
 	PulseTracker               storage.PulseTracker            `inject:""`
 	DBContext                  storage.DBContext               `inject:""`
 	HotDataWaiter              HotDataWaiter                   `inject:""`
+	NodeCalculator             nodeCalculator                  `inject:""`
 
 	certificate    core.Certificate
 	replayHandlers map[core.MessageType]core.MessageHandler
@@ -352,7 +353,7 @@ func (h *MessageHandler) handleGetCode(ctx context.Context, parcel core.Parcel) 
 	codeRec, err := h.getCode(ctx, msg.Code.Record())
 	if err == storage.ErrNotFound {
 		// We don't have code record. Must be on another node.
-		node, err := h.nodeForJet(ctx, jetID, parcel.Pulse(), msg.Code.Record().Pulse())
+		node, err := h.NodeCalculator.NodeForJet(ctx, jetID, parcel.Pulse(), msg.Code.Record().Pulse())
 		if err != nil {
 			return nil, err
 		}
@@ -432,7 +433,7 @@ func (h *MessageHandler) handleGetObject(
 		stateJet = &jetID
 	} else {
 		var actual bool
-		onHeavy, err := h.isBeyondLimit(ctx, parcel.Pulse(), stateID.Pulse())
+		onHeavy, err := h.NodeCalculator.IsBeyondLimit(ctx, parcel.Pulse(), stateID.Pulse())
 		if err != nil {
 			return nil, err
 		}
@@ -473,7 +474,7 @@ func (h *MessageHandler) handleGetObject(
 		}
 		// The record wasn't found on the current node. Return redirect to the node that contains it.
 		// We get Jet tree for pulse when given state was added.
-		node, err := h.nodeForJet(ctx, *stateJet, parcel.Pulse(), stateID.Pulse())
+		node, err := h.NodeCalculator.NodeForJet(ctx, *stateJet, parcel.Pulse(), stateID.Pulse())
 		if err != nil {
 			return nil, err
 		}
@@ -651,7 +652,7 @@ func (h *MessageHandler) handleGetChildren(
 		childJet = &jetID
 	} else {
 		var actual bool
-		onHeavy, err := h.isBeyondLimit(ctx, parcel.Pulse(), currentChild.Pulse())
+		onHeavy, err := h.NodeCalculator.IsBeyondLimit(ctx, parcel.Pulse(), currentChild.Pulse())
 		if err != nil {
 			return nil, err
 		}
@@ -683,7 +684,7 @@ func (h *MessageHandler) handleGetChildren(
 		if h.isHeavy {
 			return nil, fmt.Errorf("failed to fetch child for %v. jet: %v, state: %v", msg.Parent.Record(), childJet.DebugString(), currentChild.DebugString())
 		}
-		node, err := h.nodeForJet(ctx, *childJet, parcel.Pulse(), currentChild.Pulse())
+		node, err := h.NodeCalculator.NodeForJet(ctx, *childJet, parcel.Pulse(), currentChild.Pulse())
 		if err != nil {
 			return nil, err
 		}
@@ -756,10 +757,10 @@ func (h *MessageHandler) handleGetPendingRequestID(ctx context.Context, parcel c
 
 	requests := h.RecentStorageProvider.GetStorage(ctx, jetID).GetRequestsForObject(msg.ObjectID)
 	if len(requests) == 0 {
-		return nil, ErrNotFound
+		return &reply.Error{ErrType: reply.ErrNoPendingRequests}, nil
 	}
 
-	rep := reply.RequestID{
+	rep := reply.ID{
 		ID: requests[0],
 	}
 
@@ -985,7 +986,7 @@ func (h *MessageHandler) handleValidateRecord(ctx context.Context, parcel core.P
 		}
 
 		// Find node that has this state.
-		node, err := h.nodeForJet(ctx, jetID, parcel.Pulse(), msg.Object.Record().Pulse())
+		node, err := h.NodeCalculator.NodeForJet(ctx, jetID, parcel.Pulse(), msg.Object.Record().Pulse())
 		if err != nil {
 			return err
 		}
@@ -1205,35 +1206,36 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 	return &reply.OK{}, nil
 }
 
-func (h *MessageHandler) nodeForJet(
-	ctx context.Context, jetID core.RecordID, parcelPN, targetPN core.PulseNumber,
-) (*core.RecordRef, error) {
-	toHeavy, err := h.isBeyondLimit(ctx, parcelPN, targetPN)
-	if err != nil {
-		return nil, err
-	}
-
-	if toHeavy {
-		return h.JetCoordinator.Heavy(ctx, parcelPN)
-	}
-	return h.JetCoordinator.LightExecutorForJet(ctx, jetID, targetPN)
-}
-
-func (h *MessageHandler) isBeyondLimit(
-	ctx context.Context, currentPN, targetPN core.PulseNumber,
-) (bool, error) {
-	currentPulse, err := h.PulseTracker.GetPulse(ctx, currentPN)
-	if err != nil {
-		return false, errors.Wrapf(err, "failed to fetch pulse %v", currentPN)
-	}
-	targetPulse, err := h.PulseTracker.GetPulse(ctx, targetPN)
-	if err != nil {
-		return false, errors.Wrapf(err, "failed to fetch pulse %v", targetPN)
-	}
-
-	if currentPulse.SerialNumber-targetPulse.SerialNumber < h.conf.LightChainLimit {
-		return false, nil
-	}
-
-	return true, nil
-}
+//
+// func (h *MessageHandler) nodeForJet(
+// 	ctx context.Context, jetID core.RecordID, parcelPN, targetPN core.PulseNumber,
+// ) (*core.RecordRef, error) {
+// 	toHeavy, err := h.isBeyondLimit(ctx, parcelPN, targetPN)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+//
+// 	if toHeavy {
+// 		return h.JetCoordinator.Heavy(ctx, parcelPN)
+// 	}
+// 	return h.JetCoordinator.LightExecutorForJet(ctx, jetID, targetPN)
+// }
+//
+// func (h *MessageHandler) isBeyondLimit(
+// 	ctx context.Context, currentPN, targetPN core.PulseNumber,
+// ) (bool, error) {
+// 	currentPulse, err := h.PulseTracker.GetPulse(ctx, currentPN)
+// 	if err != nil {
+// 		return false, errors.Wrapf(err, "failed to fetch pulse %v", currentPN)
+// 	}
+// 	targetPulse, err := h.PulseTracker.GetPulse(ctx, targetPN)
+// 	if err != nil {
+// 		return false, errors.Wrapf(err, "failed to fetch pulse %v", targetPN)
+// 	}
+//
+// 	if currentPulse.SerialNumber-targetPulse.SerialNumber < h.conf.LightChainLimit {
+// 		return false, nil
+// 	}
+//
+// 	return true, nil
+// }

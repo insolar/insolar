@@ -99,6 +99,7 @@ func GetLedgerComponents(conf configuration.Ledger, certificate core.Certificate
 		db,
 		storage.NewPulseStorage(),
 		storage.NewRecentStorageProvider(conf.RecentStorage.DefaultTTL),
+		artifactmanager.NewNodeCalculatorConcrete(conf.LightChainLimit),
 		artifactmanager.NewHotDataWaiterConcrete(),
 		artifactmanager.NewArtifactManger(),
 		jetcoordinator.NewJetCoordinator(),

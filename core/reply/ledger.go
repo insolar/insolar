@@ -129,13 +129,3 @@ type Request struct {
 func (r *Request) Type() core.ReplyType {
 	return TypeRequest
 }
-
-// RequestID contains id of request.
-type RequestID struct {
-	ID core.RecordID
-}
-
-// Type implementation of Reply interface.
-func (r *RequestID) Type() core.ReplyType {
-	return TypeRequestID
-}

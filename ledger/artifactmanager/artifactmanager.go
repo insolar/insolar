@@ -17,6 +17,7 @@
 package artifactmanager
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 
@@ -47,6 +48,7 @@ type LedgerArtifactManager struct {
 	DBContext    storage.DBContext  `inject:""`
 
 	JetCoordinator core.JetCoordinator `inject:""`
+	NodeCalculator nodeCalculator      `inject:""`
 
 	getChildrenChunkSize int
 	senders              *ledgerArtifactSenders
@@ -241,7 +243,7 @@ func (m *LedgerArtifactManager) GetObject(
 	}
 }
 
-func (m *LedgerArtifactManager) GetPendingRequest(ctx context.Context, objectID core.RecordID) ([]byte, error) {
+func (m *LedgerArtifactManager) GetPendingRequest(ctx context.Context, objectID core.RecordID) (core.Parcel, error) {
 	var err error
 	instrumenter := instrument(ctx, "GetRegisterRequest").err(&err)
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.GetRegisterRequest")
@@ -268,9 +270,9 @@ func (m *LedgerArtifactManager) GetPendingRequest(ctx context.Context, objectID 
 		return nil, err
 	}
 
-	var requestIDReply *reply.RequestID
+	var requestIDReply *reply.ID
 	switch r := genericReply.(type) {
-	case *reply.RequestID:
+	case *reply.ID:
 		requestIDReply = r
 	case *reply.Error:
 		return nil, r.Error()
@@ -278,14 +280,13 @@ func (m *LedgerArtifactManager) GetPendingRequest(ctx context.Context, objectID 
 		return nil, fmt.Errorf("GetPendingRequest: unexpected reply: %#v", requestIDReply)
 	}
 
-	node, err := m.JetCoordinator.LightExecutorForObject(ctx, objectID, requestIDReply.ID.Pulse())
+	node, err := m.NodeCalculator.NodeForJet(ctx, objectID, currentPulse.PulseNumber, requestIDReply.ID.Pulse())
 	if err != nil {
 		return nil, err
 	}
 
 	sender = BuildSender(
 		bus.Send,
-		followRedirectSender(bus),
 		retryJetSender(currentPulse.PulseNumber, m.JetStorage),
 	)
 	genericReply, err = sender(
@@ -302,7 +303,17 @@ func (m *LedgerArtifactManager) GetPendingRequest(ctx context.Context, objectID 
 
 	switch r := genericReply.(type) {
 	case *reply.Request:
-		return r.Record, nil
+		msg, err := message.Deserialize(bytes.NewBuffer(r.Record))
+		if err != nil {
+			return nil, err
+		}
+
+		parcel, ok := msg.(core.Parcel)
+		if !ok {
+			return nil, fmt.Errorf("GetPendingRequest: unexpected message: %#v", msg)
+		}
+
+		return parcel, nil
 	case *reply.Error:
 		return nil, r.Error()
 	default:
