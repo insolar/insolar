@@ -6,10 +6,8 @@ KEYS_DIR=$NODES_DATA/keys
 NUM_NODES=$(fgrep '"host":' $GENESIS_CONFIG | grep -cv "#" )
 
 ls -alhR /opt
-if [ -f $CONFIG_DIR/bootstrap_keys.json ]
+if [ "$HOSTNAME" = seed-0 ] || (/usr/bin/test -a /opt/insolar/config/finished)
 then
-    echo skip generate
-else
     echo generate bootstrap key
     insolar -c gen_keys > $CONFIG_DIR/bootstrap_keys.json
     echo generate root member key
@@ -26,6 +24,12 @@ else
     mkdir -p $NODES_DATA/certs
     mkdir -p $CONFIG_DIR/data
     insolard --config $CONFIG_DIR/insolar-genesis.yaml --genesis $GENESIS_CONFIG --keyout $NODES_DATA/certs
+    touch /opt/insolar/config/finished
+else
+    while ! (/usr/bin/test -a /opt/insolar/config/finished)
+    do
+        sleep 5s
+    done
 fi
 
 echo next step

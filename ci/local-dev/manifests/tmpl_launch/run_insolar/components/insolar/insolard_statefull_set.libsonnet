@@ -1,4 +1,4 @@
-local params = std.extVar("__ksonnet/params").components.insolar;
+local params = std.extVar("__ksonnet/params").components.utils;
 
 {
 	"apiVersion": "apps/v1beta1",
@@ -11,7 +11,7 @@ local params = std.extVar("__ksonnet/params").components.insolar;
 	},
 	"spec": {
 		"serviceName": "bootstrap",
-		"replicas": params.num_heavies + params.num_lights + params.num_virtuals,
+		"replicas": params.get_num_nodes,
 		"template": {
 			"metadata": {
 				"labels": {
@@ -19,6 +19,9 @@ local params = std.extVar("__ksonnet/params").components.insolar;
 				}
 			},
 			"spec": {
+				"nodeSelector": {
+					"kubernetes.io/hostname": "docker-for-desktop"
+				},
 				"initContainers": [
 					{
 						"name": "init-bootstrap",
@@ -26,9 +29,9 @@ local params = std.extVar("__ksonnet/params").components.insolar;
 						"image": "base",
 						"tty": true,
 						"stdin": true,
-						"command":[
-                            "/bin/sh",  "-ec", importstr "launch.sh"
-                            ],
+						"command": [
+							"/bin/sh", "-ec", importstr "launch.sh"
+						],
 						"env": [
 							{
 								"name": "HOME",
@@ -74,18 +77,22 @@ local params = std.extVar("__ksonnet/params").components.insolar;
 						"tty": true,
 						"stdin": true,
 						"command": [
-							"insgorund",
-							"-l",
-							"127.0.0.1:18181",
-							"--rpc",
-							"127.0.0.1:18182",
-							"-d",
-							"/tmp/code"
+							"bash",
+							"-c",
+							"/go/bin/insgorund -l 127.0.0.1:18181 --rpc 127.0.0.1:18182 -d /tmp/code > /logs/$(POD_NAME).insgorund.log 2>&1"
 						],
 						"env": [
 							{
 								"name": "HOME",
 								"value": "/opt/insolar"
+							},
+							{
+								"name": "POD_NAME",
+								"valueFrom": {
+									"fieldRef": {
+										"fieldPath": "metadata.name"
+									}
+								}
 							}
 						],
 						"volumeMounts": [
@@ -96,6 +103,10 @@ local params = std.extVar("__ksonnet/params").components.insolar;
 							{
 								"name": "code",
 								"mountPath": "/tmp/code"
+							},
+							{
+								"name": "node-log",
+								"mountPath": "/logs"
 							}
 						]
 					},
@@ -107,9 +118,9 @@ local params = std.extVar("__ksonnet/params").components.insolar;
 						"tty": true,
 						"stdin": true,
 						"command": [
-							"/go/bin/insolard",
-							"--config",
-							"/opt/insolar/config/node-insolar.yaml"
+							"bash",
+							"-c",
+							"/go/bin/insolard --config /opt/insolar/config/node-insolar.yaml > /logs/$(POD_NAME).insolard.log 2>&1"
 						],
 						"env": [
 							{
@@ -158,6 +169,10 @@ local params = std.extVar("__ksonnet/params").components.insolar;
 								"name": "node-config",
 								"mountPath": "/opt/insolar/config/node-insolar.yaml",
 								"subPath": "insolar.yaml"
+							},
+							{
+								"name": "node-log",
+								"mountPath": "/logs"
 							}
 						]
 					}
@@ -188,6 +203,13 @@ local params = std.extVar("__ksonnet/params").components.insolar;
 					{
 						"name": "work",
 						"emptyDir": {}
+					},
+					{
+						"name": "node-log",
+						"hostPath": {
+							"path": "/tmp/insolar_logs/",
+							"type": "DirectoryOrCreate"
+						}
 					}
 				]
 			}
