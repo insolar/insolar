@@ -971,7 +971,7 @@ func TestMessageHandler_HandleHotRecords(t *testing.T) {
 		},
 		PendingRequests: map[core.RecordID]map[core.RecordID]struct{}{
 			obj: {
-				*secondId: struct{}{}, /*record.SerializeRecord(&record.CodeRecord{})*/
+				*secondId: struct{}{},
 			},
 		},
 		Drop:               jet.JetDrop{Pulse: core.FirstPulseNumber, Hash: []byte{88}},

@@ -71,6 +71,8 @@ const (
 	TypeJet
 	// TypeRequest contains request.
 	TypeRequest
+	// TypeRequestID contains requestID.
+	TypeRequestID
 
 	// TypeHeavyError carries heavy record sync
 	TypeHeavyError

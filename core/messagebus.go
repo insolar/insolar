@@ -257,6 +257,8 @@ const (
 	TypeAbandonedRequestsNotification
 	// TypeGetRequest fetches request from ledger.
 	TypeGetRequest
+	// TypeGetPendingRequestID fetches a pending request id from ledger
+	TypeGetPendingRequestID
 
 	// TypeValidationCheck checks if validation of a particular record can be performed.
 	TypeValidationCheck

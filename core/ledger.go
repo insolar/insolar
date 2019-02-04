@@ -132,6 +132,9 @@ type ArtifactManager interface {
 	// provide methods for fetching all related data.
 	GetObject(ctx context.Context, head RecordRef, state *RecordID, approved bool) (ObjectDescriptor, error)
 
+	// GetPendingRequest returns a pending request for object.
+	GetPendingRequest(ctx context.Context, objectID RecordID) ([]byte, error)
+
 	// HasPendingRequests returns true if object has unclosed requests.
 	HasPendingRequests(ctx context.Context, object RecordRef) (bool, error)
 

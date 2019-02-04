@@ -207,8 +207,17 @@ func (h *MessageHandler) setHandlersForLight(m *middleware) {
 		core.TypeGetRequest,
 		BuildMiddleware(
 			h.handleGetRequest,
-			m.checkJet,
 			instrumentHandler("handleGetRequest"),
+			m.checkJet,
+		),
+	)
+
+	h.Bus.MustRegister(
+		core.TypeGetPendingRequestID,
+		BuildMiddleware(
+			h.handleGetPendingRequestID,
+			instrumentHandler("handleGetPendingRequestID"),
+			m.checkJet,
 		),
 	)
 
@@ -736,6 +745,22 @@ func (h *MessageHandler) handleGetRequest(ctx context.Context, parcel core.Parce
 	rep := reply.Request{
 		ID:     msg.Request,
 		Record: record.SerializeRecord(req),
+	}
+
+	return &rep, nil
+}
+
+func (h *MessageHandler) handleGetPendingRequestID(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
+	jetID := jetFromContext(ctx)
+	msg := parcel.Message().(*message.TypeGetPendingRequestID)
+
+	requests := h.RecentStorageProvider.GetStorage(ctx, jetID).GetRequestsForObject(msg.ObjectID)
+	if len(requests) == 0 {
+		return nil, ErrNotFound
+	}
+
+	rep := reply.RequestID{
+		ID: requests[0],
 	}
 
 	return &rep, nil

@@ -96,10 +96,15 @@ func (m *LedgerArtifactManager) RegisterRequest(
 	}
 
 	rec := record.RequestRecord{
-		Payload: message.MustSerializeBytes(parcel.Message()),
+		Payload: message.MustSerializeBytes(parcel),
 		Object:  *obj.Record(),
 	}
-	recID := record.NewRecordIDFromRecord(m.PlatformCryptographyScheme, currentPulse.PulseNumber, &rec)
+	recID := record.NewRecordIDFromRecord(
+		m.PlatformCryptographyScheme,
+		currentPulse.PulseNumber,
+		&record.RequestRecord{
+			Payload: message.MustSerializeBytes(parcel.Message()),
+		})
 	recRef := core.NewRecordRef(*parcel.DefaultTarget().Domain(), *recID)
 	id, err := m.setRecord(
 		ctx,
@@ -233,6 +238,75 @@ func (m *LedgerArtifactManager) GetObject(
 		return nil, r.Error()
 	default:
 		return nil, fmt.Errorf("GetObject: unexpected reply: %#v", genericReact)
+	}
+}
+
+func (m *LedgerArtifactManager) GetPendingRequest(ctx context.Context, objectID core.RecordID) ([]byte, error) {
+	var err error
+	instrumenter := instrument(ctx, "GetRegisterRequest").err(&err)
+	ctx, span := instracer.StartSpan(ctx, "artifactmanager.GetRegisterRequest")
+	defer func() {
+		if err != nil {
+			span.AddAttributes(trace.StringAttribute("error", err.Error()))
+		}
+		span.End()
+		instrumenter.end()
+	}()
+
+	currentPulse, err := m.PulseStorage.Current(ctx)
+
+	bus := core.MessageBusFromContext(ctx, m.DefaultBus)
+	sender := BuildSender(
+		bus.Send,
+		retryJetSender(currentPulse.PulseNumber, m.JetStorage),
+	)
+
+	genericReply, err := sender(ctx, &message.TypeGetPendingRequestID{
+		ObjectID: objectID,
+	}, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var requestIDReply *reply.RequestID
+	switch r := genericReply.(type) {
+	case *reply.RequestID:
+		requestIDReply = r
+	case *reply.Error:
+		return nil, r.Error()
+	default:
+		return nil, fmt.Errorf("GetPendingRequest: unexpected reply: %#v", requestIDReply)
+	}
+
+	node, err := m.JetCoordinator.LightExecutorForObject(ctx, objectID, requestIDReply.ID.Pulse())
+	if err != nil {
+		return nil, err
+	}
+
+	sender = BuildSender(
+		bus.Send,
+		followRedirectSender(bus),
+		retryJetSender(currentPulse.PulseNumber, m.JetStorage),
+	)
+	genericReply, err = sender(
+		ctx,
+		&message.GetRequest{
+			Request: requestIDReply.ID,
+		}, &core.MessageSendOptions{
+			Receiver: node,
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	switch r := genericReply.(type) {
+	case *reply.Request:
+		return r.Record, nil
+	case *reply.Error:
+		return nil, r.Error()
+	default:
+		return nil, fmt.Errorf("GetPendingRequest: unexpected reply: %#v", requestIDReply)
 	}
 }
 
