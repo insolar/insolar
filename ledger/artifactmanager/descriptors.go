@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -18,13 +18,13 @@ package artifactmanager
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
-	"github.com/insolar/insolar/ledger/storage"
 )
 
 // CodeDescriptor represents meta info required to fetch all code data.
@@ -144,8 +144,7 @@ func (d *ObjectDescriptor) Parent() *core.RecordRef {
 // 10. H (children 6 ... 15 EOF) -> R
 type ChildIterator struct {
 	ctx          context.Context
-	messageBus   core.MessageBus
-	db           *storage.DB
+	senderChain  Sender
 	currentPulse core.Pulse
 	parent       core.RecordRef
 	chunkSize    int
@@ -159,22 +158,18 @@ type ChildIterator struct {
 // NewChildIterator creates new child iterator.
 func NewChildIterator(
 	ctx context.Context,
-	mb core.MessageBus,
-	db *storage.DB,
+	senderChain Sender,
 	parent core.RecordRef,
 	fromPulse *core.PulseNumber,
 	chunkSize int,
-	currentPulse core.Pulse,
 ) (*ChildIterator, error) {
 	iter := ChildIterator{
-		ctx:          ctx,
-		messageBus:   mb,
-		db:           db,
-		parent:       parent,
-		fromPulse:    fromPulse,
-		chunkSize:    chunkSize,
-		canFetch:     true,
-		currentPulse: currentPulse,
+		ctx:         ctx,
+		senderChain: senderChain,
+		parent:      parent,
+		fromPulse:   fromPulse,
+		chunkSize:   chunkSize,
+		canFetch:    true,
 	}
 	err := iter.fetch()
 	if err != nil {
@@ -200,7 +195,7 @@ func (i *ChildIterator) Next() (*core.RecordRef, error) {
 
 	ref := i.nextFromBuffer()
 	if ref == nil {
-		return nil, errors.New("failed to fetch record")
+		return nil, errors.New("failed to retrieve a child from buffer")
 	}
 
 	return ref, nil
@@ -217,26 +212,21 @@ func (i *ChildIterator) nextFromBuffer() *core.RecordRef {
 
 func (i *ChildIterator) fetch() error {
 	if !i.canFetch {
-		return errors.New("failed to fetch record")
+		return errors.New("failed to fetch a children chunk")
 	}
-	genericReply, err := sendAndFollowRedirect(
-		i.ctx,
-		i.messageBus,
-		i.db,
-		&message.GetChildren{
-			Parent:    i.parent,
-			FromPulse: i.fromPulse,
-			FromChild: i.fromChild,
-			Amount:    i.chunkSize,
-		},
-		i.currentPulse,
-	)
+
+	genericReply, err := i.senderChain(i.ctx, &message.GetChildren{
+		Parent:    i.parent,
+		FromPulse: i.fromPulse,
+		FromChild: i.fromChild,
+		Amount:    i.chunkSize,
+	}, nil)
 	if err != nil {
 		return err
 	}
 	rep, ok := genericReply.(*reply.Children)
 	if !ok {
-		return errors.New("failed to fetch record")
+		return fmt.Errorf("unexpected reply: %#v", genericReply)
 	}
 
 	if rep.NextFrom == nil {

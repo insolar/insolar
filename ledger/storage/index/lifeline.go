@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -32,6 +32,7 @@ type ObjectLifeline struct {
 	Parent              core.RecordRef
 	Delegates           map[core.RecordRef]core.RecordRef
 	State               record.State
+	LatestUpdate        core.PulseNumber
 }
 
 // EncodeObjectLifeline converts lifeline index into binary format.

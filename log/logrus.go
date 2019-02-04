@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -78,92 +78,128 @@ func (l logrusAdapter) WithField(key string, value interface{}) core.Logger {
 
 // Debug logs a message at level Debug on the stdout.
 func (l logrusAdapter) Debug(args ...interface{}) {
-	l.sourced().Debug(args...)
+	if l.entry.Logger.IsLevelEnabled(logrus.DebugLevel) {
+		l.sourced().Debug(args...)
+	}
 }
 
 // Debugln logs a message at level Debug on the stdout.
 func (l logrusAdapter) Debugln(args ...interface{}) {
-	l.sourced().Debugln(args...)
+	if l.entry.Logger.IsLevelEnabled(logrus.DebugLevel) {
+		l.sourced().Debugln(args...)
+	}
 }
 
 // Debugf formatted logs a message at level Debug on the stdout.
 func (l logrusAdapter) Debugf(format string, args ...interface{}) {
-	l.sourced().Debugf(format, args...)
+	if l.entry.Logger.IsLevelEnabled(logrus.DebugLevel) {
+		l.sourced().Debugf(format, args...)
+	}
 }
 
 // Info logs a message at level Info on the stdout.
 func (l logrusAdapter) Info(args ...interface{}) {
-	l.sourced().Info(args...)
+	if l.entry.Logger.IsLevelEnabled(logrus.InfoLevel) {
+		l.sourced().Info(args...)
+	}
 }
 
 // Infoln logs a message at level Info on the stdout.
 func (l logrusAdapter) Infoln(args ...interface{}) {
-	l.sourced().Infoln(args...)
+	if l.entry.Logger.IsLevelEnabled(logrus.InfoLevel) {
+		l.sourced().Infoln(args...)
+	}
 }
 
 // Infof formatted logs a message at level Info on the stdout.
 func (l logrusAdapter) Infof(format string, args ...interface{}) {
-	l.sourced().Infof(format, args...)
+	if l.entry.Logger.IsLevelEnabled(logrus.InfoLevel) {
+		l.sourced().Infof(format, args...)
+	}
 }
 
 // Warn logs a message at level Warn on the stdout.
 func (l logrusAdapter) Warn(args ...interface{}) {
-	l.sourced().Warn(args...)
+	if l.entry.Logger.IsLevelEnabled(logrus.WarnLevel) {
+		l.sourced().Warn(args...)
+	}
 }
 
 // Warnln logs a message at level Warn on the stdout.
 func (l logrusAdapter) Warnln(args ...interface{}) {
-	l.sourced().Warnln(args...)
+	if l.entry.Logger.IsLevelEnabled(logrus.WarnLevel) {
+		l.sourced().Warnln(args...)
+	}
 }
 
 // Warnf formatted logs a message at level Warn on the stdout.
 func (l logrusAdapter) Warnf(format string, args ...interface{}) {
-	l.sourced().Warnf(format, args...)
+	if l.entry.Logger.IsLevelEnabled(logrus.WarnLevel) {
+		l.sourced().Warnf(format, args...)
+	}
 }
 
 // Error logs a message at level Error on the stdout.
 func (l logrusAdapter) Error(args ...interface{}) {
-	l.sourced().Error(args...)
+	if l.entry.Logger.IsLevelEnabled(logrus.ErrorLevel) {
+		l.sourced().Error(args...)
+	}
 }
 
 // Errorln logs a message at level Error on the stdout.
 func (l logrusAdapter) Errorln(args ...interface{}) {
-	l.sourced().Errorln(args...)
+	if l.entry.Logger.IsLevelEnabled(logrus.ErrorLevel) {
+		l.sourced().Errorln(args...)
+	}
 }
 
 // Errorf formatted logs a message at level Error on the stdout.
 func (l logrusAdapter) Errorf(format string, args ...interface{}) {
-	l.sourced().Errorf(format, args...)
+	if l.entry.Logger.IsLevelEnabled(logrus.ErrorLevel) {
+		l.sourced().Errorf(format, args...)
+	}
 }
 
 // Fatal logs a message at level Fatal on the stdout.
 func (l logrusAdapter) Fatal(args ...interface{}) {
-	l.sourced().Fatal(args...)
+	if l.entry.Logger.IsLevelEnabled(logrus.FatalLevel) {
+		l.sourced().Fatal(args...)
+	}
 }
 
 // Fatalln logs a message at level Fatal on the stdout.
 func (l logrusAdapter) Fatalln(args ...interface{}) {
-	l.sourced().Fatalln(args...)
+	if l.entry.Logger.IsLevelEnabled(logrus.FatalLevel) {
+		l.sourced().Fatalln(args...)
+	}
 }
 
 // Fatalf formatted logs a message at level Fatal on the stdout.
 func (l logrusAdapter) Fatalf(format string, args ...interface{}) {
-	l.sourced().Fatalf(format, args...)
+	if l.entry.Logger.IsLevelEnabled(logrus.FatalLevel) {
+		l.sourced().Fatalf(format, args...)
+	}
 }
 
 // Panic logs a message at level Panic on the stdout.
 func (l logrusAdapter) Panic(args ...interface{}) {
-	l.sourced().Panic(args...)
+	if l.entry.Logger.IsLevelEnabled(logrus.PanicLevel) {
+		l.sourced().Panic(args...)
+	}
 }
 
 // Panicln logs a message at level Panic on the stdout.
 func (l logrusAdapter) Panicln(args ...interface{}) {
-	l.sourced().Panicln(args...)
+	if l.entry.Logger.IsLevelEnabled(logrus.PanicLevel) {
+		l.sourced().Panicln(args...)
+	}
 }
 
 // Panicf formatted logs a message at level Panic on the stdout.
 func (l logrusAdapter) Panicf(format string, args ...interface{}) {
-	l.sourced().Panicf(format, args...)
+	if l.entry.Logger.IsLevelEnabled(logrus.PanicLevel) {
+		l.sourced().Panicf(format, args...)
+	}
 }
 
 // SetLevel sets log level

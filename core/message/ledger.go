@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -470,8 +470,7 @@ func (m *GetJet) DefaultTarget() *core.RecordRef {
 type AbandonedRequestsNotification struct {
 	ledgerMessage
 
-	Object   core.RecordID
-	Requests []core.RecordID
+	Object core.RecordID
 }
 
 // Type implementation of Message interface.
@@ -492,4 +491,31 @@ func (*AbandonedRequestsNotification) DefaultRole() core.DynamicRole {
 // DefaultTarget returns of target of this event.
 func (m *AbandonedRequestsNotification) DefaultTarget() *core.RecordRef {
 	return core.NewRecordRef(core.DomainID, m.Object)
+}
+
+// GetRequest fetches request from ledger.
+type GetRequest struct {
+	ledgerMessage
+
+	Request core.RecordID
+}
+
+// Type implementation of Message interface.
+func (*GetRequest) Type() core.MessageType {
+	return core.TypeGetRequest
+}
+
+// AllowedSenderObjectAndRole implements interface method
+func (m *GetRequest) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return nil, core.DynamicRoleUndefined
+}
+
+// DefaultRole returns role for this event
+func (*GetRequest) DefaultRole() core.DynamicRole {
+	return core.DynamicRoleLightExecutor
+}
+
+// DefaultTarget returns of target of this event.
+func (m *GetRequest) DefaultTarget() *core.RecordRef {
+	return core.NewRecordRef(core.DomainID, m.Request)
 }

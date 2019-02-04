@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ package artifactmanager
 import (
 	"context"
 	"math/rand"
-	"sync"
 	"testing"
 
 	"github.com/gojuno/minimock"
@@ -75,7 +74,8 @@ func getTestData(t *testing.T) (
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
 	db, cleaner := storagetest.TmpDB(ctx, t)
-	pulseStorage := storage.NewPulseStorage(db)
+	pulseStorage := storage.NewPulseStorage()
+	pulseStorage.PulseTracker = db
 
 	pulse, err := db.GetLatestPulse(ctx)
 	require.NoError(t, err)
@@ -92,12 +92,17 @@ func getTestData(t *testing.T) (
 	certificate.GetRoleMock.Return(core.StaticRoleLightMaterial)
 
 	handler := MessageHandler{
-		db:                         db,
 		replayHandlers:             map[core.MessageType]core.MessageHandler{},
 		PlatformCryptographyScheme: scheme,
 		conf:                       &configuration.Ledger{LightChainLimit: 3},
 		certificate:                certificate,
 	}
+
+	handler.ActiveNodesStorage = db
+	handler.ObjectStorage = db
+	handler.PulseTracker = db
+	handler.DBContext = db
+	handler.JetStorage = db
 
 	recentStorageMock := recentstorage.NewRecentStorageMock(t)
 	recentStorageMock.AddPendingRequestMock.Return()
@@ -118,7 +123,8 @@ func getTestData(t *testing.T) (
 	require.NoError(t, err)
 
 	am := LedgerArtifactManager{
-		db:                         db,
+		JetStorage:                 db,
+		DBContext:                  db,
 		DefaultBus:                 mb,
 		getChildrenChunkSize:       100,
 		PlatformCryptographyScheme: scheme,
@@ -170,12 +176,13 @@ func TestLedgerArtifactManager_GetCodeWithCache(t *testing.T) {
 	}
 
 	am := LedgerArtifactManager{
-		DefaultBus:     mb,
-		db:             db,
-		codeCacheLock:  &sync.Mutex{},
-		codeCache:      make(map[core.RecordRef]*cacheEntry),
-		PulseStorage:   amPulseStorageMock,
-		JetCoordinator: jc,
+		DefaultBus:                 mb,
+		DBContext:                  db,
+		JetStorage:                 db,
+		PulseStorage:               amPulseStorageMock,
+		JetCoordinator:             jc,
+		senders:                    newLedgerArtifactSenders(),
+		PlatformCryptographyScheme: platformpolicy.NewPlatformCryptographyScheme(),
 	}
 
 	desc, err := am.GetCode(ctx, codeRef)
@@ -445,11 +452,11 @@ func TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors(t *testing.T)
 	)
 
 	objDesc, err := am.GetObject(ctx, *objRef, nil, false)
+	rObjDesc := objDesc.(*ObjectDescriptor)
 	assert.NoError(t, err)
 	expectedObjDesc := &ObjectDescriptor{
-		ctx: ctx,
-		am:  am,
-
+		ctx:          rObjDesc.ctx,
+		am:           am,
 		head:         *objRef,
 		state:        *objectAmendID,
 		prototype:    prototypeRef,
@@ -458,8 +465,7 @@ func TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors(t *testing.T)
 		memory:       []byte{4},
 		parent:       *parentRef,
 	}
-
-	assert.Equal(t, *expectedObjDesc, *objDesc.(*ObjectDescriptor))
+	assert.Equal(t, *expectedObjDesc, *rObjDesc)
 }
 
 func TestLedgerArtifactManager_GetObject_FollowsRedirect(t *testing.T) {
@@ -498,7 +504,8 @@ func TestLedgerArtifactManager_GetObject_FollowsRedirect(t *testing.T) {
 		}
 	}
 	am.DefaultBus = mb
-	am.db = db
+	am.JetStorage = db
+	am.DBContext = db
 	am.PulseStorage = makePulseStorage(db, ctx, t)
 
 	_, err := am.GetObject(ctx, *objRef, nil, false)
@@ -639,7 +646,8 @@ func TestLedgerArtifactManager_GetChildren(t *testing.T) {
 }
 
 func makePulseStorage(db *storage.DB, ctx context.Context, t *testing.T) core.PulseStorage {
-	pulseStorage := storage.NewPulseStorage(db)
+	pulseStorage := storage.NewPulseStorage()
+	pulseStorage.PulseTracker = db
 	pulse, err := db.GetLatestPulse(ctx)
 	require.NoError(t, err)
 	pulseStorage.Set(&pulse.Pulse)
@@ -657,8 +665,11 @@ func TestLedgerArtifactManager_GetChildren_FollowsRedirect(t *testing.T) {
 	db, cleaner := storagetest.TmpDB(ctx, t)
 	defer cleaner()
 
-	am.db = db
+	am.JetStorage = db
+	am.DBContext = db
 	am.PulseStorage = makePulseStorage(db, ctx, t)
+	am.DBContext = db
+	am.JetStorage = db
 
 	objRef := genRandomRef(0)
 	nodeRef := genRandomRef(0)
@@ -740,7 +751,6 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 	certificate.GetRoleMock.Return(core.StaticRoleLightMaterial)
 
 	handler := MessageHandler{
-		db:                         db,
 		replayHandlers:             map[core.MessageType]core.MessageHandler{},
 		PlatformCryptographyScheme: scheme,
 		conf:                       &configuration.Ledger{LightChainLimit: 3},
@@ -749,6 +759,11 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 
 	handler.Bus = mb
 	handler.JetCoordinator = jc
+	handler.DBContext = db
+	handler.ObjectStorage = db
+	handler.PulseTracker = db
+	handler.ActiveNodesStorage = db
+	handler.JetStorage = db
 
 	provideMock := recentstorage.NewProviderMock(t)
 	provideMock.GetStorageFunc = func(ctx context.Context, p core.RecordID) (r recentstorage.RecentStorage) {
@@ -768,7 +783,8 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 	}
 
 	am := LedgerArtifactManager{
-		db:                         db,
+		JetStorage:                 db,
+		DBContext:                  db,
 		DefaultBus:                 mb,
 		getChildrenChunkSize:       100,
 		PlatformCryptographyScheme: scheme,
@@ -858,6 +874,9 @@ func TestLedgerArtifactManager_RegisterRequest_JetMiss(t *testing.T) {
 	cs := testutils.NewPlatformCryptographyScheme()
 	am := NewArtifactManger(db)
 	am.PlatformCryptographyScheme = cs
+	am.JetStorage = db
+	am.DBContext = db
+
 	pulseStorageMock := testutils.NewPulseStorageMock(t)
 	pulseStorageMock.CurrentFunc = func(ctx context.Context) (*core.Pulse, error) {
 		return &core.Pulse{PulseNumber: core.FirstPulseNumber}, nil

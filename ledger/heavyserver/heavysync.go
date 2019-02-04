@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/jet"
 )
 
 func errSyncInProgress(jetID core.RecordID, pn core.PulseNumber) *reply.HeavyError {
@@ -49,19 +50,23 @@ type syncstate struct {
 	insync    bool
 }
 
+type jetprefix [core.JetPrefixSize]byte
+
 // Sync provides methods for syncing records to heavy storage.
 type Sync struct {
-	db *storage.DB
+	ReplicaStorage storage.ReplicaStorage
+	DBContext      storage.DBContext
 
 	sync.Mutex
-	jetSyncStates map[core.RecordID]*syncstate
+	jetSyncStates map[jetprefix]*syncstate
 }
 
 // NewSync creates new Sync instance.
 func NewSync(db *storage.DB) *Sync {
 	return &Sync{
-		db:            db,
-		jetSyncStates: map[core.RecordID]*syncstate{},
+		ReplicaStorage: db,
+		DBContext:      db,
+		jetSyncStates:  map[jetprefix]*syncstate{},
 	}
 }
 
@@ -73,7 +78,7 @@ func (s *Sync) checkIsNextPulse(ctx context.Context, jetID core.RecordID, jetsta
 
 	checkpoint = jetstate.lastok
 	if checkpoint == 0 {
-		checkpoint, err = s.db.GetHeavySyncedPulse(ctx, jetID)
+		checkpoint, err = s.ReplicaStorage.GetHeavySyncedPulse(ctx, jetID)
 		if err != nil {
 			return errors.Wrap(err, "heavyserver: GetHeavySyncedPulse failed")
 		}
@@ -93,11 +98,14 @@ func (s *Sync) checkIsNextPulse(ctx context.Context, jetID core.RecordID, jetsta
 }
 
 func (s *Sync) getJetSyncState(ctx context.Context, jetID core.RecordID) *syncstate {
+	var jp jetprefix
+	_, jpBuf := jet.Jet(jetID)
+	copy(jp[:], jpBuf)
 	s.Lock()
-	jetState, ok := s.jetSyncStates[jetID]
+	jetState, ok := s.jetSyncStates[jp]
 	if !ok {
 		jetState = &syncstate{}
-		s.jetSyncStates[jetID] = jetState
+		s.jetSyncStates[jp] = jetState
 	}
 	s.Unlock()
 	return jetState
@@ -161,7 +169,7 @@ func (s *Sync) Store(ctx context.Context, jetID core.RecordID, pn core.PulseNumb
 		jetState.Unlock()
 	}()
 	// TODO: check jet in keys?
-	err = s.db.StoreKeyValues(ctx, kvs)
+	err = s.DBContext.StoreKeyValues(ctx, kvs)
 	if err != nil {
 		return errors.Wrapf(err, "heavyserver: store failed")
 	}
@@ -202,7 +210,7 @@ func (s *Sync) Stop(ctx context.Context, jetID core.RecordID, pn core.PulseNumbe
 	}
 	jetState.syncpulse = nil
 
-	err := s.db.SetHeavySyncedPulse(ctx, jetID, pn)
+	err := s.ReplicaStorage.SetHeavySyncedPulse(ctx, jetID, pn)
 	if err != nil {
 		return err
 	}

@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -89,7 +89,7 @@ func removeJetIndexesUntil(t *testing.T, skip bool) {
 			expectedRmCount += 1
 		}
 	}
-	rmcount, err := db.RemoveJetIndexesUntil(ctx, jetID, until, nil)
+	rmStat, err := db.RemoveJetIndexesUntil(ctx, jetID, until, nil)
 	require.NoError(t, err)
 
 	var foundIDs []core.RecordID
@@ -99,7 +99,7 @@ func removeJetIndexesUntil(t *testing.T, skip bool) {
 	})
 	require.NoError(t, err)
 
-	assert.Equal(t, expectedRmCount, rmcount)
+	assert.Equal(t, int64(expectedRmCount), rmStat.Removed)
 	assert.Equalf(t, sortIDS(expectLeftIDs), sortIDS(foundIDs), "expected keys and found indexes, doesn't match, jetID=%v", jetID.DebugString())
 }
 

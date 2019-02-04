@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -59,9 +59,9 @@ func TestStore_DropWaitWrites(t *testing.T) {
 			close(txstarted)
 			<-dropwaits
 			time.Sleep(waittime)
+			txFin = time.Now()
 			return nil
 		})
-		txFin = time.Now()
 		log.Debugln("end tx")
 		wg.Done()
 	}()

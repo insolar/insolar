@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -31,7 +31,8 @@ func TestNewPulseStorage(t *testing.T) {
 
 	// Act
 	testDb := &DB{}
-	pStorage := NewPulseStorage(testDb)
+	pStorage := NewPulseStorage()
+	pStorage.PulseTracker = testDb
 
 	// Assert
 	require.NotNil(t, pStorage)
@@ -41,7 +42,8 @@ func TestLockUnlock(t *testing.T) {
 	t.Parallel()
 
 	testDb := &DB{}
-	pStorage := NewPulseStorage(testDb)
+	pStorage := NewPulseStorage()
+	pStorage.PulseTracker = testDb
 
 	// Act
 	pStorage.Lock()
@@ -55,7 +57,8 @@ func TestCurrent_OneThread(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
 	testDb := &DB{}
-	pStorage := NewPulseStorage(testDb)
+	pStorage := NewPulseStorage()
+	pStorage.PulseTracker = testDb
 	pStorage.Set(core.GenesisPulse)
 
 	// Act
@@ -75,7 +78,8 @@ func TestCurrent_ThreeThreads(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	testDb := &DB{}
 
-	pStorage := NewPulseStorage(testDb)
+	pStorage := NewPulseStorage()
+	pStorage.PulseTracker = testDb
 	pStorage.Set(&core.Pulse{PulseNumber: core.FirstPulseNumber})
 
 	var mu sync.Mutex

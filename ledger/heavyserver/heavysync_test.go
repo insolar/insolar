@@ -1,5 +1,5 @@
 /*
- *    Copyright 2018 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -17,10 +17,13 @@
 package heavyserver
 
 import (
+	"context"
 	"testing"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/require"
@@ -135,24 +138,16 @@ func TestHeavy_SyncByJet(t *testing.T) {
 	// TODO: call every case in subtest
 	jetID1 := testutils.RandomJet()
 	jetID2 := jetID1
-	// flip first bit of jetID2 for different prefix
+	// flip first bit of last byte jetID2 for different prefixes
 	lastidx := len(jetID1) - 1
 	jetID2[lastidx] ^= 0xFF
-
-	// prepare pulse helper
-	preparepulse := func(pn core.PulseNumber) {
-		pulse := core.Pulse{PulseNumber: pn}
-		// fmt.Printf("Store pulse: %v\n", pulse.PulseNumber)
-		err = db.AddPulse(ctx, pulse)
-		require.NoError(t, err)
-	}
 
 	sync := NewSync(db)
 
 	pnum = core.FirstPulseNumber + 1
 	pnumNext := pnum + 1
-	preparepulse(pnum)
-	preparepulse(pnumNext) // should set correct next for previous pulse
+	preparepulse(ctx, t, db, pnum)
+	preparepulse(ctx, t, db, pnumNext) // should set correct next for previous pulse
 
 	err = sync.Start(ctx, jetID1, core.FirstPulseNumber)
 	require.Error(t, err)
@@ -172,5 +167,45 @@ func TestHeavy_SyncByJet(t *testing.T) {
 	// stop previous
 	err = sync.Stop(ctx, jetID1, pnum)
 	err = sync.Stop(ctx, jetID2, pnum)
+	require.NoError(t, err)
+}
+
+func TestHeavy_SyncLockOnPrefix(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+	db, cleaner := storagetest.TmpDB(ctx, t)
+	defer cleaner()
+
+	var err error
+	var pnum core.PulseNumber
+
+	// different jets with same prefix
+	jetID1 := *jet.NewID(1, []byte{})
+	jetID2 := *jet.NewID(2, []byte{})
+
+	sync := NewSync(db)
+
+	pnum = core.FirstPulseNumber + 2
+	// should set correct next for previous pulse
+	preparepulse(ctx, t, db, pnum-1)
+	preparepulse(ctx, t, db, pnum)
+
+	err = sync.Start(ctx, jetID1, pnum)
+	require.NoError(t, err, "all should be ok")
+
+	err = sync.Start(ctx, jetID2, pnum)
+	require.Error(t, err, "should not start on same prefix")
+
+	// stop previous sync (only prefix matters)
+	err = sync.Stop(ctx, jetID2, pnum)
+	require.NoError(t, err)
+
+	err = sync.Start(ctx, jetID2, pnum+1)
+	require.NoError(t, err, "should start after released lock")
+}
+
+func preparepulse(ctx context.Context, t *testing.T, db *storage.DB, pn core.PulseNumber) {
+	pulse := core.Pulse{PulseNumber: pn}
+	// fmt.Printf("Store pulse: %v\n", pulse.PulseNumber)
+	err := db.AddPulse(ctx, pulse)
 	require.NoError(t, err)
 }
