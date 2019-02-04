@@ -24,12 +24,14 @@ import (
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/merkle"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
 )
 
 const BFTPercent = 2.0 / 3.0
@@ -67,6 +69,9 @@ type FirstPhaseImpl struct {
 func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPhaseState, error) {
 	entry := &merkle.PulseEntry{Pulse: pulse}
 	logger := inslogger.FromContext(ctx)
+	ctx, span := instracer.StartSpan(ctx, "FirstPhase.Execute")
+	span.AddAttributes(trace.Int64Attribute("pulse", int64(pulse.PulseNumber)))
+	defer span.End()
 
 	var unsyncList network.UnsyncList
 
