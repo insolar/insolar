@@ -237,12 +237,12 @@ func (s *amSuite) TestLedgerArtifactManager_GetCodeWithCache() {
 	}
 
 	am := LedgerArtifactManager{
-		DefaultBus:     mb,
-		DB:             s.db,
-		codeCacheLock:  &sync.Mutex{},
-		codeCache:      make(map[core.RecordRef]*cacheEntry),
-		PulseStorage:   amPulseStorageMock,
-		JetCoordinator: jc,
+		DefaultBus:                 mb,
+		DB:                         s.db,
+		PulseStorage:               amPulseStorageMock,
+		JetCoordinator:             jc,
+		PlatformCryptographyScheme: s.scheme,
+		senders:                    newLedgerArtifactSenders(),
 	}
 
 	desc, err := am.GetCode(s.ctx, codeRef)
@@ -513,7 +513,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors(
 		memory:       []byte{4},
 		parent:       *parentRef,
 	}
-	assert.Equal(t, *expectedObjDesc, *rObjDesc)
+	assert.Equal(s.T(), *expectedObjDesc, *rObjDesc)
 }
 
 func (s *amSuite) TestLedgerArtifactManager_GetObject_FollowsRedirect() {

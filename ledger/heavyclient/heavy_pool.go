@@ -35,7 +35,8 @@ type Pool struct {
 	pulseStorage   core.PulseStorage
 	pulseTracker   storage.PulseTracker
 	replicaStorage storage.ReplicaStorage
-	dbContext      storage.DBContext
+	cleaner        storage.Cleaner
+	db             storage.DBContext
 
 	clientDefaults Options
 
@@ -51,7 +52,8 @@ func NewPool(
 	pulseStorage core.PulseStorage,
 	tracker storage.PulseTracker,
 	replicaStorage storage.ReplicaStorage,
-	dbContext storage.DBContext,
+	cleaner storage.Cleaner,
+	db storage.DBContext,
 	clientDefaults Options,
 ) *Pool {
 	return &Pool{
@@ -60,7 +62,8 @@ func NewPool(
 		pulseTracker:   tracker,
 		replicaStorage: replicaStorage,
 		clientDefaults: clientDefaults,
-		dbContext:      dbContext,
+		cleaner:        cleaner,
+		db:             db,
 		clients:        map[core.RecordID]*JetClient{},
 	}
 }
@@ -99,7 +102,8 @@ func (scp *Pool) AddPulsesToSyncClient(
 			scp.bus,
 			scp.pulseStorage,
 			scp.pulseTracker,
-			scp.dbContext,
+			scp.cleaner,
+			scp.db,
 			jetID,
 			scp.clientDefaults,
 		)
@@ -159,7 +163,7 @@ func (scp *Pool) LightCleanup(ctx context.Context, untilPN core.PulseNumber, rsp
 				defer wg.Done()
 				inslogger.FromContext(ctx).Debugf("Start light cleanup, until pulse = %v, jet = %v",
 					untilPN, jetID.DebugString())
-				rmStat, err := scp.dbContext.RemoveAllForJetUntilPulse(ctx, jetID, untilPN, rsp.GetStorage(ctx, jetID))
+				rmStat, err := scp.cleaner.RemoveAllForJetUntilPulse(ctx, jetID, untilPN, rsp.GetStorage(ctx, jetID))
 				if err != nil {
 					inslogger.FromContext(ctx).Errorf("Error on light cleanup, until pulse = %v, jet = %v: %v",
 						untilPN, jetID.DebugString(), err)

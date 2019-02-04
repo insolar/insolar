@@ -25,7 +25,6 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
-	"github.com/insolar/insolar/ledger/storage"
 )
 
 // CodeDescriptor represents meta info required to fetch all code data.
@@ -144,9 +143,8 @@ func (d *ObjectDescriptor) Parent() *core.RecordRef {
 // 9. R (get children 6 ...) -> H
 // 10. H (children 6 ... 15 EOF) -> R
 type ChildIterator struct {
-	jetStorage   storage.JetStorage
 	ctx          context.Context
-	messageBus   core.MessageBus
+	senderChain  Sender
 	currentPulse core.Pulse
 	parent       core.RecordRef
 	chunkSize    int
@@ -160,22 +158,18 @@ type ChildIterator struct {
 // NewChildIterator creates new child iterator.
 func NewChildIterator(
 	ctx context.Context,
-	mb core.MessageBus,
-	jetStorage storage.JetStorage,
+	senderChain Sender,
 	parent core.RecordRef,
 	fromPulse *core.PulseNumber,
 	chunkSize int,
-	currentPulse core.Pulse,
 ) (*ChildIterator, error) {
 	iter := ChildIterator{
-		ctx:          ctx,
-		messageBus:   mb,
-		jetStorage:   jetStorage,
-		parent:       parent,
-		fromPulse:    fromPulse,
-		chunkSize:    chunkSize,
-		canFetch:     true,
-		currentPulse: currentPulse,
+		ctx:         ctx,
+		senderChain: senderChain,
+		parent:      parent,
+		fromPulse:   fromPulse,
+		chunkSize:   chunkSize,
+		canFetch:    true,
 	}
 	err := iter.fetch()
 	if err != nil {
@@ -220,18 +214,13 @@ func (i *ChildIterator) fetch() error {
 	if !i.canFetch {
 		return errors.New("failed to fetch a children chunk")
 	}
-	genericReply, err := sendAndFollowRedirect(
-		i.ctx,
-		i.jetStorage,
-		i.messageBus,
-		&message.GetChildren{
-			Parent:    i.parent,
-			FromPulse: i.fromPulse,
-			FromChild: i.fromChild,
-			Amount:    i.chunkSize,
-		},
-		i.currentPulse,
-	)
+
+	genericReply, err := i.senderChain(i.ctx, &message.GetChildren{
+		Parent:    i.parent,
+		FromPulse: i.fromPulse,
+		FromChild: i.fromChild,
+		Amount:    i.chunkSize,
+	}, nil)
 	if err != nil {
 		return err
 	}

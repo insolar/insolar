@@ -52,7 +52,7 @@ type handlerSuite struct {
 
 	scheme        core.PlatformCryptographyScheme
 	pulseTracker  storage.PulseTracker
-	nodeStorages  storage.NodeStorage
+	nodeStorage   storage.NodeStorage
 	objectStorage storage.ObjectStorage
 	jetStorage    storage.JetStorage
 	dropStorage   storage.DropStorage
@@ -78,7 +78,7 @@ func (s *handlerSuite) BeforeTest(suiteName, testName string) {
 	s.db = db
 	s.scheme = platformpolicy.NewPlatformCryptographyScheme()
 	s.jetStorage = storage.NewJetStorage()
-	s.nodeStorages = storage.NewNodeStorage()
+	s.nodeStorage = storage.NewNodeStorage()
 	s.pulseTracker = storage.NewPulseTracker()
 	s.objectStorage = storage.NewObjectStorage()
 	s.dropStorage = storage.NewDropStorage(10)
@@ -87,7 +87,7 @@ func (s *handlerSuite) BeforeTest(suiteName, testName string) {
 		s.scheme,
 		s.db,
 		s.jetStorage,
-		s.nodeStorages,
+		s.nodeStorage,
 		s.pulseTracker,
 		s.objectStorage,
 		s.dropStorage,
@@ -131,7 +131,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObject_Redirects() {
 		LightChainLimit: 2,
 	}, certificate)
 	h.JetStorage = s.jetStorage
-	h.NodeStorage = s.nodeStorages
+	h.NodeStorage = s.nodeStorage
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
@@ -285,7 +285,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetChildren_Redirects() {
 	h.DelegationTokenFactory = tf
 	h.Bus = mb
 	h.JetStorage = s.jetStorage
-	h.NodeStorage = s.nodeStorages
+	h.NodeStorage = s.nodeStorage
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
@@ -411,7 +411,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeav
 		LightChainLimit: 3,
 	}, certificate)
 	h.JetStorage = s.jetStorage
-	h.NodeStorage = s.nodeStorages
+	h.NodeStorage = s.nodeStorage
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
@@ -483,7 +483,7 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_FetchesIndexFromHea
 		LightChainLimit: 3,
 	}, certificate)
 	h.JetStorage = s.jetStorage
-	h.NodeStorage = s.nodeStorages
+	h.NodeStorage = s.nodeStorage
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
@@ -538,37 +538,33 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_FetchesIndexFromHea
 	assert.Equal(s.T(), objRep.State, *idx.LatestState)
 }
 
-func TestMessageHandler_HandleUpdateObject_UpdateIndexState(t *testing.T) {
-	t.Parallel()
+func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_UpdateIndexState() {
 	// Arrange
-	ctx := inslogger.TestContext(t)
-	mc := minimock.NewController(t)
-	db, cleaner := storagetest.TmpDB(ctx, t)
-	defer cleaner()
+	mc := minimock.NewController(s.T())
 	defer mc.Finish()
 	jetID := *jet.NewID(0, nil)
 
-	recentStorageMock := recentstorage.NewRecentStorageMock(t)
+	recentStorageMock := recentstorage.NewRecentStorageMock(s.T())
 	recentStorageMock.AddPendingRequestMock.Return()
 	recentStorageMock.AddObjectMock.Return()
 	recentStorageMock.RemovePendingRequestMock.Return()
 
-	provideMock := recentstorage.NewProviderMock(t)
+	provideMock := recentstorage.NewProviderMock(s.T())
 	provideMock.GetStorageFunc = func(ctx context.Context, p core.RecordID) (r recentstorage.RecentStorage) {
 		return recentStorageMock
 	}
 
-	certificate := testutils.NewCertificateMock(t)
+	certificate := testutils.NewCertificateMock(s.T())
 	certificate.GetRoleMock.Return(core.StaticRoleLightMaterial)
 
 	h := NewMessageHandler(&configuration.Ledger{
 		LightChainLimit: 3,
 	}, certificate)
-	h.JetStorage = db
-	h.ActiveNodesStorage = db
-	h.DBContext = db
-	h.PulseTracker = db
-	h.ObjectStorage = db
+	h.JetStorage = s.jetStorage
+	h.NodeStorage = s.nodeStorage
+	h.DBContext = s.db
+	h.PulseTracker = s.pulseTracker
+	h.ObjectStorage = s.objectStorage
 	h.RecentStorageProvider = provideMock
 
 	objIndex := index.ObjectLifeline{
@@ -579,30 +575,30 @@ func TestMessageHandler_HandleUpdateObject_UpdateIndexState(t *testing.T) {
 	amendRecord := record.ObjectAmendRecord{
 		PrevState: *objIndex.LatestState,
 	}
-	amendHash := db.PlatformCryptographyScheme.ReferenceHasher()
+	amendHash := s.db.GetPlatformCryptographyScheme().ReferenceHasher()
 	_, err := amendRecord.WriteHashData(amendHash)
-	require.NoError(t, err)
+	require.NoError(s.T(), err)
 
 	msg := message.UpdateObject{
 		Record: record.SerializeRecord(&amendRecord),
 		Object: *genRandomRef(0),
 	}
-	err = db.SetObjectIndex(ctx, jetID, msg.Object.Record(), &objIndex)
-	require.NoError(t, err)
+	err = s.objectStorage.SetObjectIndex(s.ctx, jetID, msg.Object.Record(), &objIndex)
+	require.NoError(s.T(), err)
 
 	// Act
-	rep, err := h.handleUpdateObject(contextWithJet(ctx, jetID), &message.Parcel{
+	rep, err := h.handleUpdateObject(contextWithJet(s.ctx, jetID), &message.Parcel{
 		Msg:         &msg,
 		PulseNumber: core.FirstPulseNumber,
 	})
-	require.NoError(t, err)
+	require.NoError(s.T(), err)
 	_, ok := rep.(*reply.Object)
-	require.True(t, ok)
+	require.True(s.T(), ok)
 
 	// Arrange
-	idx, err := db.GetObjectIndex(ctx, jetID, msg.Object.Record(), false)
-	require.NoError(t, err)
-	require.Equal(t, core.FirstPulseNumber, int(idx.LatestUpdate))
+	idx, err := s.objectStorage.GetObjectIndex(s.ctx, jetID, msg.Object.Record(), false)
+	require.NoError(s.T(), err)
+	require.Equal(s.T(), core.FirstPulseNumber, int(idx.LatestUpdate))
 }
 
 func (s *handlerSuite) TestMessageHandler_HandleGetObjectIndex() {
@@ -631,7 +627,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObjectIndex() {
 	h.JetCoordinator = jc
 	h.Bus = mb
 	h.JetStorage = s.jetStorage
-	h.NodeStorage = s.nodeStorages
+	h.NodeStorage = s.nodeStorage
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
@@ -687,7 +683,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHasPendingRequests() {
 	h.JetCoordinator = jc
 	h.Bus = mb
 	h.JetStorage = s.jetStorage
-	h.NodeStorage = s.nodeStorages
+	h.NodeStorage = s.nodeStorage
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
@@ -738,7 +734,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetCode_Redirects() {
 	h.DelegationTokenFactory = tf
 	h.Bus = mb
 	h.JetStorage = s.jetStorage
-	h.NodeStorage = s.nodeStorages
+	h.NodeStorage = s.nodeStorage
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
@@ -815,7 +811,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 		LightChainLimit: 2,
 	}, certificate)
 	h.JetStorage = s.jetStorage
-	h.NodeStorage = s.nodeStorages
+	h.NodeStorage = s.nodeStorage
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
@@ -872,38 +868,33 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 	assert.Equal(s.T(), childID, idx.ChildPointer)
 }
 
-func TestMessageHandler_HandleRegisterChild_IndexStateUpdated(t *testing.T) {
-	t.Parallel()
-
+func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated() {
 	// Arrange
-	ctx := inslogger.TestContext(t)
-	mc := minimock.NewController(t)
-	db, cleaner := storagetest.TmpDB(ctx, t)
-	defer cleaner()
+	mc := minimock.NewController(s.T())
 	defer mc.Finish()
 	jetID := *jet.NewID(0, nil)
 
-	recentStorageMock := recentstorage.NewRecentStorageMock(t)
+	recentStorageMock := recentstorage.NewRecentStorageMock(s.T())
 	recentStorageMock.AddPendingRequestMock.Return()
 	recentStorageMock.AddObjectMock.Return()
 	recentStorageMock.RemovePendingRequestMock.Return()
 
-	provideMock := recentstorage.NewProviderMock(t)
+	provideMock := recentstorage.NewProviderMock(s.T())
 	provideMock.GetStorageFunc = func(ctx context.Context, p core.RecordID) (r recentstorage.RecentStorage) {
 		return recentStorageMock
 	}
 
-	certificate := testutils.NewCertificateMock(t)
+	certificate := testutils.NewCertificateMock(s.T())
 	certificate.GetRoleMock.Return(core.StaticRoleLightMaterial)
 
 	h := NewMessageHandler(&configuration.Ledger{
 		LightChainLimit: 2,
 	}, certificate)
-	h.JetStorage = db
-	h.ActiveNodesStorage = db
-	h.DBContext = db
-	h.PulseTracker = db
-	h.ObjectStorage = db
+	h.JetStorage = s.jetStorage
+	h.NodeStorage = s.nodeStorage
+	h.DBContext = s.db
+	h.PulseTracker = s.pulseTracker
+	h.ObjectStorage = s.objectStorage
 	h.RecentStorageProvider = provideMock
 
 	objIndex := index.ObjectLifeline{
@@ -920,20 +911,20 @@ func TestMessageHandler_HandleRegisterChild_IndexStateUpdated(t *testing.T) {
 		Parent: *genRandomRef(0),
 	}
 
-	err := db.SetObjectIndex(ctx, jetID, msg.Parent.Record(), &objIndex)
-	require.NoError(t, err)
+	err := s.objectStorage.SetObjectIndex(s.ctx, jetID, msg.Parent.Record(), &objIndex)
+	require.NoError(s.T(), err)
 
 	// Act
-	_, err = h.handleRegisterChild(contextWithJet(ctx, jetID), &message.Parcel{
+	_, err = h.handleRegisterChild(contextWithJet(s.ctx, jetID), &message.Parcel{
 		Msg:         &msg,
 		PulseNumber: core.FirstPulseNumber + 100,
 	})
-	require.NoError(t, err)
+	require.NoError(s.T(), err)
 
 	// Assert
-	idx, err := db.GetObjectIndex(ctx, jetID, msg.Parent.Record(), false)
-	require.NoError(t, err)
-	require.Equal(t, int(idx.LatestUpdate), core.FirstPulseNumber+100)
+	idx, err := s.objectStorage.GetObjectIndex(s.ctx, jetID, msg.Parent.Record(), false)
+	require.NoError(s.T(), err)
+	require.Equal(s.T(), int(idx.LatestUpdate), core.FirstPulseNumber+100)
 }
 
 const testDropSize uint64 = 100
@@ -1036,7 +1027,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	h.RecentStorageProvider = provideMock
 	h.Bus = mb
 	h.JetStorage = s.jetStorage
-	h.NodeStorage = s.nodeStorages
+	h.NodeStorage = s.nodeStorage
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
@@ -1093,7 +1084,7 @@ func (s *handlerSuite) TestMessageHandler_HandleValidationCheck() {
 	h.JetCoordinator = jc
 	h.Bus = mb
 	h.JetStorage = s.jetStorage
-	h.NodeStorage = s.nodeStorages
+	h.NodeStorage = s.nodeStorage
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
@@ -1168,7 +1159,7 @@ func (s *handlerSuite) TestMessageHandler_HandleJetDrop_SaveJet() {
 		LightChainLimit: 3,
 	}, certificate)
 	h.JetStorage = s.jetStorage
-	h.NodeStorage = s.nodeStorages
+	h.NodeStorage = s.nodeStorage
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
@@ -1215,7 +1206,7 @@ func (s *handlerSuite) TestMessageHandler_HandleJetDrop_SaveJet_ExistingMap() {
 		LightChainLimit: 3,
 	}, certificate)
 	h.JetStorage = s.jetStorage
-	h.NodeStorage = s.nodeStorages
+	h.NodeStorage = s.nodeStorage
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
@@ -1239,12 +1230,8 @@ func (s *handlerSuite) TestMessageHandler_HandleJetDrop_SaveJet_ExistingMap() {
 	}
 }
 
-func TestMessageHandler_HandleGetRequest(t *testing.T) {
-	t.Parallel()
-	ctx := inslogger.TestContext(t)
-	mc := minimock.NewController(t)
-	db, cleaner := storagetest.TmpDB(ctx, t)
-	defer cleaner()
+func (s *handlerSuite) TestMessageHandler_HandleGetRequest() {
+	mc := minimock.NewController(s.T())
 	defer mc.Finish()
 
 	jetID := *jet.NewID(0, nil)
@@ -1253,23 +1240,23 @@ func TestMessageHandler_HandleGetRequest(t *testing.T) {
 		Payload: []byte{1, 2, 3},
 		Object:  *genRandomID(0),
 	}
-	reqID, err := db.SetRecord(ctx, jetID, core.FirstPulseNumber, &req)
+	reqID, err := s.objectStorage.SetRecord(s.ctx, jetID, core.FirstPulseNumber, &req)
 
 	msg := message.GetRequest{
 		Request: *reqID,
 	}
-	certificate := testutils.NewCertificateMock(t)
+	certificate := testutils.NewCertificateMock(s.T())
 	certificate.GetRoleMock.Return(core.StaticRoleLightMaterial)
 
 	h := NewMessageHandler(&configuration.Ledger{}, certificate)
-	h.ObjectStorage = db
+	h.ObjectStorage = s.objectStorage
 
-	rep, err := h.handleGetRequest(contextWithJet(ctx, jetID), &message.Parcel{
+	rep, err := h.handleGetRequest(contextWithJet(s.ctx, jetID), &message.Parcel{
 		Msg:         &msg,
 		PulseNumber: core.FirstPulseNumber + 1,
 	})
-	require.NoError(t, err)
+	require.NoError(s.T(), err)
 	reqReply, ok := rep.(*reply.Request)
-	require.True(t, ok)
-	assert.Equal(t, req, *record.DeserializeRecord(reqReply.Record).(*record.RequestRecord))
+	require.True(s.T(), ok)
+	assert.Equal(s.T(), req, *record.DeserializeRecord(reqReply.Record).(*record.RequestRecord))
 }

@@ -142,13 +142,8 @@ func (s *storageSuite) TestDB_SetObjectIndex_StoresCorrectDataInStorage() {
 	assert.Equal(s.T(), *storedIndex, idx)
 }
 
-func TestDB_SetObjectIndex_SaveLastUpdate(t *testing.T) {
-	t.Parallel()
-
+func (s *storageSuite) TestDB_SetObjectIndex_SaveLastUpdate() {
 	// Arrange
-	ctx := inslogger.TestContext(t)
-	db, cleaner := storagetest.TmpDB(ctx, t)
-	defer cleaner()
 	jetID := testutils.RandomJet()
 
 	idx := index.ObjectLifeline{
@@ -158,14 +153,14 @@ func TestDB_SetObjectIndex_SaveLastUpdate(t *testing.T) {
 	zeroid := core.NewRecordID(0, hexhash(""))
 
 	// Act
-	err := db.SetObjectIndex(ctx, jetID, zeroid, &idx)
-	assert.Nil(t, err)
+	err := s.objectStorage.SetObjectIndex(s.ctx, jetID, zeroid, &idx)
+	assert.Nil(s.T(), err)
 
 	// Assert
-	storedIndex, err := db.GetObjectIndex(ctx, jetID, zeroid, false)
-	assert.NoError(t, err)
-	assert.Equal(t, *storedIndex, idx)
-	assert.Equal(t, 1239, int(idx.LatestUpdate))
+	storedIndex, err := s.objectStorage.GetObjectIndex(s.ctx, jetID, zeroid, false)
+	assert.NoError(s.T(), err)
+	assert.Equal(s.T(), *storedIndex, idx)
+	assert.Equal(s.T(), 1239, int(idx.LatestUpdate))
 }
 
 func (s *storageSuite) TestDB_GetDrop_ReturnsNotFoundIfNoDrop() {

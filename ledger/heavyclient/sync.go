@@ -77,7 +77,7 @@ func (c *JetClient) HeavySync(
 	inslog.Debug("synchronize: sucessfully send start message")
 
 	replicator := storage.NewReplicaIter(
-		ctx, c.dbContext, jetID, pn, pn+1, c.opts.SyncMessageLimit)
+		ctx, c.db, jetID, pn, pn+1, c.opts.SyncMessageLimit)
 	for {
 		recs, err := replicator.NextRecords()
 		if err == storage.ErrReplicatorDone {

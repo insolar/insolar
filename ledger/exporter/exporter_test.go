@@ -27,6 +27,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
@@ -180,9 +181,9 @@ func (s *exporterSuite) TestExporter_Export() {
 		assert.Equal(s.T(), core.TypeCallConstructor.String(), request.Payload["Type"])
 	}
 
-	_, err = exporter.Export(ctx, 100000, 2)
-	require.Error(t, err, "From-pulse should be smaller (or equal) current-pulse")
+	_, err = s.exporter.Export(s.ctx, 100000, 2)
+	require.Error(s.T(), err, "From-pulse should be smaller (or equal) current-pulse")
 
-	_, err = exporter.Export(ctx, 60000, 2)
-	require.NoError(t, err, "From-pulse should be smaller (or equal) current-pulse")
+	_, err = s.exporter.Export(s.ctx, 60000, 2)
+	require.NoError(s.T(), err, "From-pulse should be smaller (or equal) current-pulse")
 }

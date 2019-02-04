@@ -49,25 +49,25 @@ type ActiveListSwapper interface {
 
 // PulseManager implements core.PulseManager.
 type PulseManager struct {
-	LR                            core.LogicRunner                   `inject:""`
-	Bus                           core.MessageBus                    `inject:""`
-	NodeNet                       core.NodeNetwork                   `inject:""`
-	JetCoordinator                core.JetCoordinator                `inject:""`
-	GIL                           core.GlobalInsolarLock             `inject:""`
-	CryptographyService           core.CryptographyService           `inject:""`
-	PlatformCryptographyScheme    core.PlatformCryptographyScheme    `inject:""`
-	RecentStorageProvider         recentstorage.Provider             `inject:""`
-	ActiveListSwapper             ActiveListSwapper                  `inject:""`
-	PulseStorage                  pulseStoragePm                     `inject:""`
-	HotDataWaiter              artifactmanager.HotDataWaiter `inject:""`
-	JetStorage                    storage.JetStorage                 `inject:""`
-	DropStorage                   storage.DropStorage                `inject:""`
-	ObjectStorage                 storage.ObjectStorage              `inject:""`
-	NodesStorage            storage.NodesStorage         `inject:""`
-	PulseTracker                  storage.PulseTracker               `inject:""`
-	ReplicaStorage                storage.ReplicaStorage             `inject:""`
-	DBContext                     storage.DBContext                  `inject:""`
-	StorageCleaner                storage.Cleaner                    `inject:""`
+	LR                         core.LogicRunner                `inject:""`
+	Bus                        core.MessageBus                 `inject:""`
+	NodeNet                    core.NodeNetwork                `inject:""`
+	JetCoordinator             core.JetCoordinator             `inject:""`
+	GIL                        core.GlobalInsolarLock          `inject:""`
+	CryptographyService        core.CryptographyService        `inject:""`
+	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
+	RecentStorageProvider      recentstorage.Provider          `inject:""`
+	ActiveListSwapper          ActiveListSwapper               `inject:""`
+	PulseStorage               pulseStoragePm                  `inject:""`
+	HotDataWaiter              artifactmanager.HotDataWaiter   `inject:""`
+	JetStorage                 storage.JetStorage              `inject:""`
+	DropStorage                storage.DropStorage             `inject:""`
+	ObjectStorage              storage.ObjectStorage           `inject:""`
+	NodeStorage                storage.NodeStorage             `inject:""`
+	PulseTracker               storage.PulseTracker            `inject:""`
+	ReplicaStorage             storage.ReplicaStorage          `inject:""`
+	DBContext                  storage.DBContext               `inject:""`
+	StorageCleaner             storage.Cleaner                 `inject:""`
 
 	// TODO: move clients pool to component - @nordicdyno - 18.Dec.2018
 	syncClientsPool *heavyclient.Pool
@@ -797,6 +797,7 @@ func (m *PulseManager) Start(ctx context.Context) error {
 			m.PulseStorage,
 			m.PulseTracker,
 			m.ReplicaStorage,
+			m.StorageCleaner,
 			m.DBContext,
 			heavyclient.Options{
 				SyncMessageLimit: m.options.heavySyncMessageLimit,

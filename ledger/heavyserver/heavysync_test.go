@@ -204,8 +204,8 @@ func (s *heavysyncSuite) TestHeavy_SyncByJet() {
 
 	pnum = core.FirstPulseNumber + 1
 	pnumNext := pnum + 1
-	preparepulse(ctx, t, db, pnum)
-	preparepulse(ctx, t, db, pnumNext) // should set correct next for previous pulse
+	preparepulse(s, pnum)
+	preparepulse(s, pnumNext) // should set correct next for previous pulse
 
 	err = sync.Start(s.ctx, jetID1, core.FirstPulseNumber)
 	require.Error(s.T(), err)
@@ -228,11 +228,7 @@ func (s *heavysyncSuite) TestHeavy_SyncByJet() {
 	require.NoError(s.T(), err)
 }
 
-func TestHeavy_SyncLockOnPrefix(t *testing.T) {
-	ctx := inslogger.TestContext(t)
-	db, cleaner := storagetest.TmpDB(ctx, t)
-	defer cleaner()
-
+func (s *heavysyncSuite) TestHeavy_SyncLockOnPrefix() {
 	var err error
 	var pnum core.PulseNumber
 
@@ -240,30 +236,30 @@ func TestHeavy_SyncLockOnPrefix(t *testing.T) {
 	jetID1 := *jet.NewID(1, []byte{})
 	jetID2 := *jet.NewID(2, []byte{})
 
-	sync := NewSync(db)
+	sync := NewSync(s.db)
+	sync.ReplicaStorage = s.replicaStorage
 
 	pnum = core.FirstPulseNumber + 2
 	// should set correct next for previous pulse
-	preparepulse(ctx, t, db, pnum-1)
-	preparepulse(ctx, t, db, pnum)
+	preparepulse(s, pnum-1)
+	preparepulse(s, pnum)
 
-	err = sync.Start(ctx, jetID1, pnum)
-	require.NoError(t, err, "all should be ok")
+	err = sync.Start(s.ctx, jetID1, pnum)
+	require.NoError(s.T(), err, "all should be ok")
 
-	err = sync.Start(ctx, jetID2, pnum)
-	require.Error(t, err, "should not start on same prefix")
+	err = sync.Start(s.ctx, jetID2, pnum)
+	require.Error(s.T(), err, "should not start on same prefix")
 
 	// stop previous sync (only prefix matters)
-	err = sync.Stop(ctx, jetID2, pnum)
-	require.NoError(t, err)
+	err = sync.Stop(s.ctx, jetID2, pnum)
+	require.NoError(s.T(), err)
 
-	err = sync.Start(ctx, jetID2, pnum+1)
-	require.NoError(t, err, "should start after released lock")
+	err = sync.Start(s.ctx, jetID2, pnum+1)
+	require.NoError(s.T(), err, "should start after released lock")
 }
 
-func preparepulse(ctx context.Context, t *testing.T, db *storage.DB, pn core.PulseNumber) {
+func preparepulse(s *heavysyncSuite, pn core.PulseNumber) {
 	pulse := core.Pulse{PulseNumber: pn}
-	// fmt.Printf("Store pulse: %v\n", pulse.PulseNumber)
-	err := db.AddPulse(ctx, pulse)
-	require.NoError(t, err)
+	err := s.pulseTracker.AddPulse(s.ctx, pulse)
+	require.NoError(s.T(), err)
 }

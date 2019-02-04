@@ -25,7 +25,6 @@ import (
 	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/pkg/errors"
@@ -79,8 +78,6 @@ type DBContext interface {
 	StoreKeyValues(ctx context.Context, kvs []core.KV) error
 
 	GetBadgerDB() *badger.DB
-
-	RemoveAllForJetUntilPulse(ctx context.Context, jetID core.RecordID, pn core.PulseNumber, recent recentstorage.RecentStorage) (map[string]RmStat, error)
 
 	Close() error
 
