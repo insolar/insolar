@@ -56,6 +56,7 @@ type ServiceNetwork struct {
 	CryptographyScheme  core.PlatformCryptographyScheme `inject:""`
 	NodeKeeper          network.NodeKeeper              `inject:""`
 	NetworkSwitcher     core.NetworkSwitcher            `inject:""`
+	TerminationHandler  core.TerminationHandler         `inject:""`
 
 	// subcomponents
 	PhaseManager phases.PhaseManager `inject:"subcomponent"`
@@ -270,7 +271,8 @@ func (n *ServiceNetwork) phaseManagerOnPulse(ctx context.Context, newPulse core.
 	logger := inslogger.FromContext(ctx)
 
 	if err := n.PhaseManager.OnPulse(ctx, &newPulse); err != nil {
-		logger.Warn("phase manager fail: " + err.Error())
+		logger.Error("Failed to pass consensus: " + err.Error())
+		n.TerminationHandler.Abort()
 	}
 }
 
