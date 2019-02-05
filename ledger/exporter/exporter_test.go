@@ -139,9 +139,13 @@ func (s *exporterSuite) TestExporter_Export() {
 		},
 		IsDelegate: true,
 	})
-	pl := message.ToBytes(&message.CallConstructor{})
+	msg := &message.CallConstructor{}
+	var parcel core.Parcel = &message.Parcel{Msg: msg}
+
+	msgHash := platformpolicy.NewPlatformCryptographyScheme().IntegrityHasher().Hash(message.ToBytes(msg))
 	requestID, err := s.objectStorage.SetRecord(s.ctx, s.jetID, core.FirstPulseNumber+10, &record.RequestRecord{
-		Payload: pl,
+		MessageHash: msgHash,
+		Parcel:      message.ParcelToBytes(parcel),
 	})
 	require.NoError(s.T(), err)
 
@@ -177,7 +181,7 @@ func (s *exporterSuite) TestExporter_Export() {
 	request, ok := records[base58.Encode(requestID[:])]
 	if assert.True(s.T(), ok, "request not found by ID") {
 		assert.Equal(s.T(), "TypeCallRequest", request.Type)
-		assert.Equal(s.T(), pl, request.Data.(*record.RequestRecord).Payload)
+		assert.Equal(s.T(), msgHash, request.Data.(*record.RequestRecord).MessageHash)
 		assert.Equal(s.T(), core.TypeCallConstructor.String(), request.Payload["Type"])
 	}
 
