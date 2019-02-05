@@ -15,6 +15,7 @@ ALL_PACKAGES = ./...
 MOCKS_PACKAGE = github.com/insolar/insolar/testutils
 TESTED_PACKAGES = $(shell go list ${ALL_PACKAGES} | grep -v "${MOCKS_PACKAGE}")
 COVERPROFILE = coverage.txt
+TEST_ARGS ?=
 
 BUILD_NUMBER := $(TRAVIS_BUILD_NUMBER)
 BUILD_DATE = $(shell date "+%Y-%m-%d")
@@ -100,20 +101,25 @@ $(CERTGEN):
 	go build -o $(CERTGEN) -ldflags "${LDFLAGS}" cmd/certgen/*.go
 
 functest:
-	CGO_ENABLED=1 go test -tags functest ./functest -count=1
+	CGO_ENABLED=1 go test $(TEST_ARGS) -tags functest ./functest -count=1
 
 test:
-	CGO_ENABLED=1 go test $(ALL_PACKAGES)
+	CGO_ENABLED=1 go test $(TEST_ARGS) $(ALL_PACKAGES)
 
 test_fast:
-	go test -count 1 -v $(ALL_PACKAGES)
+	go test $(TEST_ARGS) -count 1 -v $(ALL_PACKAGES)
 
 test_with_coverage:
-	CGO_ENABLED=1 go test --coverprofile=$(COVERPROFILE) --covermode=atomic $(TESTED_PACKAGES)
+	CGO_ENABLED=1 go test $(TEST_ARGS) --coverprofile=$(COVERPROFILE) --covermode=atomic $(TESTED_PACKAGES)
 
 test_with_coverage_fast:
-	CGO_ENABLED=1 go test -count 1 --coverprofile=$(COVERPROFILE) --covermode=atomic $(ALL_PACKAGES)
+	CGO_ENABLED=1 go test $(TEST_ARGS) -count 1 --coverprofile=$(COVERPROFILE) --covermode=atomic $(ALL_PACKAGES)
 
+ci_test_with_coverage_json:
+	CGO_ENABLED=1 go test -count 1 -parallel 4 --coverprofile=$(COVERPROFILE) --covermode=atomic -v $(ALL_PACKAGES) | tee unit.json
+
+ci_test_func_json:
+	CGO_ENABLED=1 go test $(TEST_ARGS) -tags functest -v ./functest -count=1 | tee func.json
 
 CONTRACTS = $(wildcard application/contract/*)
 regen-proxies: $(INSGOCC)

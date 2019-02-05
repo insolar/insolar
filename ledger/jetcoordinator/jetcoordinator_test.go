@@ -17,39 +17,94 @@
 package jetcoordinator
 
 import (
+	"context"
 	"testing"
 
-	"github.com/gojuno/minimock"
+	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
+	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/insolar/insolar/testutils"
+	"github.com/insolar/insolar/testutils/network"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 )
 
-func TestJetCoordinator_QueryRole(t *testing.T) {
-	ctx := inslogger.TestContext(t)
-	mc := minimock.NewController(t)
-	defer mc.Finish()
+type jetCoordinatorSuite struct {
+	suite.Suite
 
-	db, cleaner := storagetest.TmpDB(ctx, t)
+	cm      *component.Manager
+	ctx     context.Context
+	cleaner func()
 
-	defer cleaner()
-	jc := JetCoordinator{
-		JetStorage:                 db,
-		PulseTracker:               db,
-		ActiveNodesStorage:         db,
-		PlatformCryptographyScheme: testutils.NewPlatformCryptographyScheme(),
+	pulseStorage *storage.PulseStorage
+	pulseTracker storage.PulseTracker
+	jetStorage   storage.JetStorage
+	nodeStorages storage.NodeStorage
+	coordinator  *JetCoordinator
+}
+
+func NewJetCoordinatorSuite() *jetCoordinatorSuite {
+	return &jetCoordinatorSuite{
+		Suite: suite.Suite{},
 	}
-	ps := storage.NewPulseStorage()
-	ps.PulseTracker = db
-	jc.PulseStorage = ps
+}
 
-	err := db.AddPulse(ctx, core.Pulse{PulseNumber: 0, Entropy: core.Entropy{1, 2, 3}})
-	require.NoError(t, err)
+func TestCoordinator(t *testing.T) {
+	suite.Run(t, NewJetCoordinatorSuite())
+}
+
+func (s *jetCoordinatorSuite) BeforeTest(suiteName, testName string) {
+	s.cm = &component.Manager{}
+	s.ctx = inslogger.TestContext(s.T())
+
+	db, cleaner := storagetest.TmpDB(s.ctx, s.T())
+
+	s.cleaner = cleaner
+	s.pulseTracker = storage.NewPulseTracker()
+	s.pulseStorage = storage.NewPulseStorage()
+	s.jetStorage = storage.NewJetStorage()
+	s.nodeStorages = storage.NewNodeStorage()
+	s.coordinator = NewJetCoordinator(5)
+	s.coordinator.NodeNet = network.NewNodeNetworkMock(s.T())
+
+	s.cm.Inject(
+		testutils.NewPlatformCryptographyScheme(),
+		db,
+		s.pulseTracker,
+		s.pulseStorage,
+		s.jetStorage,
+		s.nodeStorages,
+		s.coordinator,
+	)
+
+	err := s.cm.Init(s.ctx)
+	if err != nil {
+		s.T().Error("ComponentManager init failed", err)
+	}
+	err = s.cm.Start(s.ctx)
+	if err != nil {
+		s.T().Error("ComponentManager start failed", err)
+	}
+}
+
+func (s *jetCoordinatorSuite) AfterTest(suiteName, testName string) {
+	err := s.cm.Stop(s.ctx)
+	if err != nil {
+		s.T().Error("ComponentManager stop failed", err)
+	}
+	s.cleaner()
+}
+
+func (s *jetCoordinatorSuite) TestJetCoordinator_QueryRole() {
+	err := s.pulseTracker.AddPulse(s.ctx, core.Pulse{PulseNumber: 0, Entropy: core.Entropy{1, 2, 3}})
+	require.NoError(s.T(), err)
 	var nodes []core.Node
 	var nodeRefs []core.RecordRef
 	for i := 0; i < 100; i++ {
@@ -57,17 +112,216 @@ func TestJetCoordinator_QueryRole(t *testing.T) {
 		nodes = append(nodes, storage.Node{FID: ref, FRole: core.StaticRoleLightMaterial})
 		nodeRefs = append(nodeRefs, ref)
 	}
-	err = db.SetActiveNodes(0, nodes)
-	require.NoError(t, err)
+	err = s.nodeStorages.SetActiveNodes(0, nodes)
+	require.NoError(s.T(), err)
 
 	objID := core.NewRecordID(0, []byte{1, 42, 123})
-	err = db.UpdateJetTree(ctx, 0, true, *jet.NewID(50, []byte{1, 42, 123}))
-	require.NoError(t, err)
+	err = s.jetStorage.UpdateJetTree(s.ctx, 0, true, *jet.NewID(50, []byte{1, 42, 123}))
+	require.NoError(s.T(), err)
 
-	selected, err := jc.QueryRole(ctx, core.DynamicRoleLightValidator, *objID, 0)
-	require.NoError(t, err)
-	assert.Equal(t, 3, len(selected))
+	selected, err := s.coordinator.QueryRole(s.ctx, core.DynamicRoleLightValidator, *objID, 0)
+	require.NoError(s.T(), err)
+	assert.Equal(s.T(), 3, len(selected))
 
 	// Indexes are hard-coded from previously calculated values.
-	assert.Equal(t, []core.RecordRef{nodeRefs[16], nodeRefs[21], nodeRefs[78]}, selected)
+	assert.Equal(s.T(), []core.RecordRef{nodeRefs[16], nodeRefs[21], nodeRefs[78]}, selected)
+}
+
+func TestNewJetCoordinator(t *testing.T) {
+	t.Parallel()
+	// Act
+	calc := NewJetCoordinator(12)
+
+	// Assert
+	require.NotNil(t, calc)
+	require.Equal(t, 12, calc.lightChainLimit)
+}
+
+func TestJetCoordinator_IsBeyondLimit_ProblemsWithTracker(t *testing.T) {
+	t.Parallel()
+	// Arrange
+	ctx := inslogger.TestContext(t)
+	pulseTrackerMock := storage.NewPulseTrackerMock(t)
+	pulseTrackerMock.GetPulseMock.Return(nil, errors.New("it's expected"))
+	calc := NewJetCoordinator(12)
+	calc.PulseTracker = pulseTrackerMock
+
+	// Act
+	res, err := calc.IsBeyondLimit(ctx, core.FirstPulseNumber, 0)
+
+	// Assert
+	require.NotNil(t, err)
+	require.Equal(t, false, res)
+}
+
+func TestJetCoordinator_IsBeyondLimit_ProblemsWithTracker_SecondCall(t *testing.T) {
+	t.Parallel()
+	// Arrange
+	ctx := inslogger.TestContext(t)
+	pulseTrackerMock := storage.NewPulseTrackerMock(t)
+	pulseTrackerMock.GetPulseFunc = func(p context.Context, p1 core.PulseNumber) (r *storage.Pulse, r1 error) {
+		if p1 == core.FirstPulseNumber {
+			return &storage.Pulse{}, nil
+		}
+
+		return nil, errors.New("it's expected")
+	}
+	calc := NewJetCoordinator(12)
+	calc.PulseTracker = pulseTrackerMock
+
+	// Act
+	res, err := calc.IsBeyondLimit(ctx, core.FirstPulseNumber, 0)
+
+	// Assert
+	require.NotNil(t, err)
+	require.Equal(t, false, res)
+}
+
+func TestJetCoordinator_IsBeyondLimit_OutsideOfLightChainLimit(t *testing.T) {
+	t.Parallel()
+	// Arrange
+	ctx := inslogger.TestContext(t)
+	pulseTrackerMock := storage.NewPulseTrackerMock(t)
+	pulseTrackerMock.GetPulseFunc = func(p context.Context, p1 core.PulseNumber) (r *storage.Pulse, r1 error) {
+		if p1 == core.FirstPulseNumber {
+			return &storage.Pulse{SerialNumber: 50}, nil
+		}
+
+		return &storage.Pulse{SerialNumber: 24}, nil
+	}
+	calc := NewJetCoordinator(25)
+	calc.PulseTracker = pulseTrackerMock
+
+	// Act
+	res, err := calc.IsBeyondLimit(ctx, core.FirstPulseNumber, 0)
+
+	// Assert
+	require.Nil(t, err)
+	require.Equal(t, true, res)
+}
+
+func TestJetCoordinator_IsBeyondLimit_InsideOfLightChainLimit(t *testing.T) {
+	t.Parallel()
+	// Arrange
+	ctx := inslogger.TestContext(t)
+	pulseTrackerMock := storage.NewPulseTrackerMock(t)
+	pulseTrackerMock.GetPulseFunc = func(p context.Context, p1 core.PulseNumber) (r *storage.Pulse, r1 error) {
+		if p1 == core.FirstPulseNumber {
+			return &storage.Pulse{SerialNumber: 50}, nil
+		}
+
+		return &storage.Pulse{SerialNumber: 34}, nil
+	}
+	calc := NewJetCoordinator(25)
+	calc.PulseTracker = pulseTrackerMock
+
+	// Act
+	res, err := calc.IsBeyondLimit(ctx, core.FirstPulseNumber, 0)
+
+	// Assert
+	require.Nil(t, err)
+	require.Equal(t, false, res)
+}
+
+func TestJetCoordinator_NodeForJet_CheckLimitFailed(t *testing.T) {
+	t.Parallel()
+	// Arrange
+	ctx := inslogger.TestContext(t)
+	pulseTrackerMock := storage.NewPulseTrackerMock(t)
+	pulseTrackerMock.GetPulseMock.Return(nil, errors.New("it's expected"))
+	calc := NewJetCoordinator(12)
+	calc.PulseTracker = pulseTrackerMock
+
+	// Act
+	res, err := calc.NodeForJet(ctx, testutils.RandomJet(), core.FirstPulseNumber, 0)
+
+	// Assert
+	require.NotNil(t, err)
+	require.Nil(t, res)
+}
+
+func TestJetCoordinator_NodeForJet_GoToHeavy(t *testing.T) {
+	t.Parallel()
+	// Arrange
+	ctx := inslogger.TestContext(t)
+	pulseTrackerMock := storage.NewPulseTrackerMock(t)
+	pulseTrackerMock.GetPulseFunc = func(p context.Context, p1 core.PulseNumber) (r *storage.Pulse, r1 error) {
+		if p1 == core.FirstPulseNumber {
+			return &storage.Pulse{SerialNumber: 50}, nil
+		}
+
+		return &storage.Pulse{SerialNumber: 24}, nil
+	}
+	expectedID := core.NewRecordRef(testutils.RandomID(), testutils.RandomID())
+	nodeMock := network.NewNodeMock(t)
+	nodeMock.IDMock.Return(*expectedID)
+	activeNodesStorageMock := storage.NewNodeStorageMock(t)
+	activeNodesStorageMock.GetActiveNodesByRoleFunc = func(p core.PulseNumber, p1 core.StaticRole) (r []core.Node, r1 error) {
+		require.Equal(t, core.FirstPulseNumber, int(p))
+		require.Equal(t, core.StaticRoleHeavyMaterial, p1)
+
+		return []core.Node{nodeMock}, nil
+	}
+
+	pulseStorageMock := testutils.NewPulseStorageMock(t)
+	pulseStorageMock.CurrentFunc = func(p context.Context) (r *core.Pulse, r1 error) {
+		generator := entropygenerator.StandardEntropyGenerator{}
+		return &core.Pulse{PulseNumber: core.FirstPulseNumber, Entropy: generator.GenerateEntropy()}, nil
+	}
+
+	calc := NewJetCoordinator(25)
+	calc.PulseTracker = pulseTrackerMock
+	calc.NodeStorage = activeNodesStorageMock
+	calc.PulseStorage = pulseStorageMock
+	calc.PlatformCryptographyScheme = platformpolicy.NewPlatformCryptographyScheme()
+
+	// Act
+	resNode, err := calc.NodeForJet(ctx, testutils.RandomJet(), core.FirstPulseNumber, 0)
+
+	// Assert
+	require.Nil(t, err)
+	require.Equal(t, expectedID, resNode)
+}
+
+func TestJetCoordinator_NodeForJet_GoToLight(t *testing.T) {
+	t.Parallel()
+	// Arrange
+	ctx := inslogger.TestContext(t)
+	pulseTrackerMock := storage.NewPulseTrackerMock(t)
+	pulseTrackerMock.GetPulseFunc = func(p context.Context, p1 core.PulseNumber) (r *storage.Pulse, r1 error) {
+		if p1 == core.FirstPulseNumber {
+			return &storage.Pulse{SerialNumber: 50}, nil
+		}
+
+		return &storage.Pulse{SerialNumber: 49}, nil
+	}
+	expectedID := core.NewRecordRef(testutils.RandomID(), testutils.RandomID())
+	nodeMock := network.NewNodeMock(t)
+	nodeMock.IDMock.Return(*expectedID)
+	activeNodesStorageMock := storage.NewNodeStorageMock(t)
+	activeNodesStorageMock.GetActiveNodesByRoleFunc = func(p core.PulseNumber, p1 core.StaticRole) (r []core.Node, r1 error) {
+		require.Equal(t, 0, int(p))
+		require.Equal(t, core.StaticRoleLightMaterial, p1)
+
+		return []core.Node{nodeMock}, nil
+	}
+
+	pulseStorageMock := testutils.NewPulseStorageMock(t)
+	pulseStorageMock.CurrentFunc = func(p context.Context) (r *core.Pulse, r1 error) {
+		generator := entropygenerator.StandardEntropyGenerator{}
+		return &core.Pulse{PulseNumber: core.FirstPulseNumber, Entropy: generator.GenerateEntropy()}, nil
+	}
+
+	calc := NewJetCoordinator(25)
+	calc.PulseTracker = pulseTrackerMock
+	calc.NodeStorage = activeNodesStorageMock
+	calc.PulseStorage = pulseStorageMock
+	calc.PlatformCryptographyScheme = platformpolicy.NewPlatformCryptographyScheme()
+
+	// Act
+	resNode, err := calc.NodeForJet(ctx, testutils.RandomJet(), core.FirstPulseNumber, 0)
+
+	// Assert
+	require.Nil(t, err)
+	require.Equal(t, expectedID, resNode)
 }

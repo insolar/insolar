@@ -22,6 +22,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/platformpolicy"
@@ -54,7 +55,7 @@ func DisableBootstrap() Option {
 // TmpDB returns BadgerDB's storage implementation and cleanup function.
 //
 // Creates BadgerDB in temporary directory and uses t for errors reporting.
-func TmpDB(ctx context.Context, t testing.TB, options ...Option) (*storage.DB, func()) {
+func TmpDB(ctx context.Context, t testing.TB, options ...Option) (storage.DBContext, func()) {
 	opts := &tmpDBOptions{}
 	for _, o := range options {
 		o(opts)
@@ -70,19 +71,33 @@ func TmpDB(ctx context.Context, t testing.TB, options ...Option) (*storage.DB, f
 	}, nil)
 	require.NoError(t, err)
 
-	db.PlatformCryptographyScheme = platformpolicy.NewPlatformCryptographyScheme()
+	cm := &component.Manager{}
+
+	cm.Inject(
+		platformpolicy.NewPlatformCryptographyScheme(),
+		db,
+		storage.NewJetStorage(),
+		storage.NewObjectStorage(),
+		storage.NewDropStorage(10),
+		storage.NewPulseTracker(),
+	)
 
 	if !opts.nobootstrap {
-		err = db.Init(ctx)
-		assert.NoError(t, err)
+		gi := storage.NewGenesisInitializer()
+		cm.Inject(gi)
+	}
+
+	err = cm.Init(ctx)
+	if err != nil {
+		t.Error("ComponentManager init failed", err)
+	}
+	err = cm.Start(ctx)
+	if err != nil {
+		t.Error("ComponentManager start failed", err)
 	}
 
 	return db, func() {
-		closeErr := db.Close()
 		rmErr := os.RemoveAll(tmpdir)
-		if closeErr != nil {
-			t.Error("temporary db close failed", closeErr)
-		}
 		if rmErr != nil {
 			t.Fatal("temporary db dir cleanup failed", rmErr)
 		}

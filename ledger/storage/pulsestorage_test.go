@@ -30,9 +30,8 @@ func TestNewPulseStorage(t *testing.T) {
 	t.Parallel()
 
 	// Act
-	testDb := &DB{}
 	pStorage := NewPulseStorage()
-	pStorage.PulseTracker = testDb
+	pStorage.PulseTracker = NewPulseTrackerMock(t)
 
 	// Assert
 	require.NotNil(t, pStorage)
@@ -41,9 +40,8 @@ func TestNewPulseStorage(t *testing.T) {
 func TestLockUnlock(t *testing.T) {
 	t.Parallel()
 
-	testDb := &DB{}
 	pStorage := NewPulseStorage()
-	pStorage.PulseTracker = testDb
+	pStorage.PulseTracker = NewPulseTrackerMock(t)
 
 	// Act
 	pStorage.Lock()
@@ -56,9 +54,8 @@ func TestCurrent_OneThread(t *testing.T) {
 	// Arrange
 	ctx := inslogger.TestContext(t)
 
-	testDb := &DB{}
 	pStorage := NewPulseStorage()
-	pStorage.PulseTracker = testDb
+	pStorage.PulseTracker = NewPulseTrackerMock(t)
 	pStorage.Set(core.GenesisPulse)
 
 	// Act
@@ -76,10 +73,9 @@ func TestCurrent_ThreeThreads(t *testing.T) {
 
 	// Arrange
 	ctx := inslogger.TestContext(t)
-	testDb := &DB{}
 
 	pStorage := NewPulseStorage()
-	pStorage.PulseTracker = testDb
+	pStorage.PulseTracker = NewPulseTrackerMock(t)
 	pStorage.Set(&core.Pulse{PulseNumber: core.FirstPulseNumber})
 
 	var mu sync.Mutex

@@ -25,11 +25,11 @@ import (
 
 // LocalStorage allows node to save local data.
 type LocalStorage struct {
-	db *storage.DB
+	db storage.DBContext
 }
 
 // NewLocalStorage create new storage instance.
-func NewLocalStorage(db *storage.DB) *LocalStorage {
+func NewLocalStorage(db storage.DBContext) *LocalStorage {
 	return &LocalStorage{db: db}
 }
 

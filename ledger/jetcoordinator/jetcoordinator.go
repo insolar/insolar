@@ -37,12 +37,14 @@ type JetCoordinator struct {
 	PulseStorage               core.PulseStorage               `inject:""`
 	JetStorage                 storage.JetStorage              `inject:""`
 	PulseTracker               storage.PulseTracker            `inject:""`
-	storage.ActiveNodesStorage `inject:""`
+	NodeStorage                storage.NodeStorage             `inject:""`
+
+	lightChainLimit int
 }
 
 // NewJetCoordinator creates new coordinator instance.
-func NewJetCoordinator() *JetCoordinator {
-	return &JetCoordinator{}
+func NewJetCoordinator(lightChainLimit int) *JetCoordinator {
+	return &JetCoordinator{lightChainLimit: lightChainLimit}
 }
 
 // Hardcoded roles count for validation and execution
@@ -198,7 +200,7 @@ func (jc *JetCoordinator) LightValidatorsForObject(
 }
 
 func (jc *JetCoordinator) Heavy(ctx context.Context, pulse core.PulseNumber) (*core.RecordRef, error) {
-	candidates, err := jc.ActiveNodesStorage.GetActiveNodesByRole(pulse, core.StaticRoleHeavyMaterial)
+	candidates, err := jc.NodeStorage.GetActiveNodesByRole(pulse, core.StaticRoleHeavyMaterial)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch active heavy nodes for pulse %v", pulse)
 	}
@@ -222,10 +224,41 @@ func (jc *JetCoordinator) Heavy(ctx context.Context, pulse core.PulseNumber) (*c
 	return &nodes[0], nil
 }
 
+// IsBeyondLimit calculates if target pulse is behind clean-up limit
+func (jc *JetCoordinator) IsBeyondLimit(ctx context.Context, currentPN, targetPN core.PulseNumber) (bool, error) {
+	currentPulse, err := jc.PulseTracker.GetPulse(ctx, currentPN)
+	if err != nil {
+		return false, errors.Wrapf(err, "failed to fetch pulse %v", currentPN)
+	}
+	targetPulse, err := jc.PulseTracker.GetPulse(ctx, targetPN)
+	if err != nil {
+		return false, errors.Wrapf(err, "failed to fetch pulse %v", targetPN)
+	}
+
+	if currentPulse.SerialNumber-targetPulse.SerialNumber < jc.lightChainLimit {
+		return false, nil
+	}
+
+	return true, nil
+}
+
+// NodeForJet calculates a node for a specific jet for a specific pulseNumber
+func (jc *JetCoordinator) NodeForJet(ctx context.Context, jetID core.RecordID, rootPN, targetPN core.PulseNumber) (*core.RecordRef, error) {
+	toHeavy, err := jc.IsBeyondLimit(ctx, rootPN, targetPN)
+	if err != nil {
+		return nil, err
+	}
+
+	if toHeavy {
+		return jc.Heavy(ctx, rootPN)
+	}
+	return jc.LightExecutorForJet(ctx, jetID, targetPN)
+}
+
 func (jc *JetCoordinator) virtualsForObject(
 	ctx context.Context, objID core.RecordID, pulse core.PulseNumber, count int,
 ) ([]core.RecordRef, error) {
-	candidates, err := jc.ActiveNodesStorage.GetActiveNodesByRole(pulse, core.StaticRoleVirtual)
+	candidates, err := jc.NodeStorage.GetActiveNodesByRole(pulse, core.StaticRoleVirtual)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch active virtual nodes for pulse %v", pulse)
 	}
@@ -251,7 +284,7 @@ func (jc *JetCoordinator) lightMaterialsForJet(
 ) ([]core.RecordRef, error) {
 	_, prefix := jet.Jet(jetID)
 
-	candidates, err := jc.ActiveNodesStorage.GetActiveNodesByRole(pulse, core.StaticRoleLightMaterial)
+	candidates, err := jc.NodeStorage.GetActiveNodesByRole(pulse, core.StaticRoleLightMaterial)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch active light nodes for pulse %v", pulse)
 	}
