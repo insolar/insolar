@@ -143,17 +143,13 @@ func TestCallMethodCanceled(t *testing.T) {
 	defer cancelFunc()
 
 	cr, err := New()
+	require.NoError(t, err)
+
 	mc := minimock.NewController(t)
 	defer mc.Finish()
 
 	mb := testutils.NewMessageBusMock(mc)
 	cr.MessageBus = mb
-
-	mb.SendFunc = func(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) (r core.Reply, r1 error) {
-		return &reply.RegisterRequest{}, nil
-	}
-
-	require.NoError(t, err)
 
 	msg := &message.BaseLogicMessage{
 		Nonce: randomUint64(),
@@ -161,6 +157,11 @@ func TestCallMethodCanceled(t *testing.T) {
 	ref := testutils.RandomRef()
 	prototypeRef := testutils.RandomRef()
 	method := testutils.RandomString()
+
+	mb.SendFunc = func(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) (r core.Reply, r1 error) {
+		return &reply.RegisterRequest{}, nil
+	}
+
 	_, err = cr.CallMethod(ctx, msg, false, &ref, method, core.Arguments{}, &prototypeRef)
 	require.Error(t, err)
 	assert.Contains(t, "canceled", err.Error())
@@ -175,11 +176,20 @@ func TestCallMethodWaitResults(t *testing.T) {
 	defer cancelFunc()
 
 	cr, err := New()
+	require.NoError(t, err)
+
 	mc := minimock.NewController(t)
 	defer mc.Finish()
 
 	mb := testutils.NewMessageBusMock(mc)
 	cr.MessageBus = mb
+
+	msg := &message.BaseLogicMessage{
+		Nonce: randomUint64(),
+	}
+	ref := testutils.RandomRef()
+	prototypeRef := testutils.RandomRef()
+	method := testutils.RandomString()
 
 	mb.SendFunc = func(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) (r core.Reply, r1 error) {
 		go func() {
@@ -195,15 +205,6 @@ func TestCallMethodWaitResults(t *testing.T) {
 		}()
 		return &reply.RegisterRequest{}, nil
 	}
-
-	require.NoError(t, err)
-
-	msg := &message.BaseLogicMessage{
-		Nonce: randomUint64(),
-	}
-	ref := testutils.RandomRef()
-	prototypeRef := testutils.RandomRef()
-	method := testutils.RandomString()
 	_, err = cr.CallMethod(ctx, msg, false, &ref, method, core.Arguments{}, &prototypeRef)
 	require.NoError(t, err)
 }

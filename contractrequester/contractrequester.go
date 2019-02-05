@@ -228,6 +228,8 @@ func (cr *ContractRequester) CallConstructor(ctx context.Context, base core.Mess
 		return &r.Request, nil
 	}
 
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(configuration.NewAPIRunner().Timeout)*time.Second)
+	defer cancel()
 	inslogger.FromContext(ctx).Debug("Waiting for constructor results req=", r.Request, " seq=", seq)
 
 	select {
