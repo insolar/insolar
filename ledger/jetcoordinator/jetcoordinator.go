@@ -225,17 +225,17 @@ func (jc *JetCoordinator) Heavy(ctx context.Context, pulse core.PulseNumber) (*c
 }
 
 // IsBeyondLimit calculates if target pulse is behind clean-up limit
-func (n *JetCoordinator) IsBeyondLimit(ctx context.Context, currentPN, targetPN core.PulseNumber) (bool, error) {
-	currentPulse, err := n.PulseTracker.GetPulse(ctx, currentPN)
+func (jc *JetCoordinator) IsBeyondLimit(ctx context.Context, currentPN, targetPN core.PulseNumber) (bool, error) {
+	currentPulse, err := jc.PulseTracker.GetPulse(ctx, currentPN)
 	if err != nil {
 		return false, errors.Wrapf(err, "failed to fetch pulse %v", currentPN)
 	}
-	targetPulse, err := n.PulseTracker.GetPulse(ctx, targetPN)
+	targetPulse, err := jc.PulseTracker.GetPulse(ctx, targetPN)
 	if err != nil {
 		return false, errors.Wrapf(err, "failed to fetch pulse %v", targetPN)
 	}
 
-	if currentPulse.SerialNumber-targetPulse.SerialNumber < n.lightChainLimit {
+	if currentPulse.SerialNumber-targetPulse.SerialNumber < jc.lightChainLimit {
 		return false, nil
 	}
 
@@ -243,16 +243,16 @@ func (n *JetCoordinator) IsBeyondLimit(ctx context.Context, currentPN, targetPN 
 }
 
 // NodeForJet calculates a node for a specific jet for a specific pulseNumber
-func (n *JetCoordinator) NodeForJet(ctx context.Context, jetID core.RecordID, rootPN, targetPN core.PulseNumber) (*core.RecordRef, error) {
-	toHeavy, err := n.IsBeyondLimit(ctx, rootPN, targetPN)
+func (jc *JetCoordinator) NodeForJet(ctx context.Context, jetID core.RecordID, rootPN, targetPN core.PulseNumber) (*core.RecordRef, error) {
+	toHeavy, err := jc.IsBeyondLimit(ctx, rootPN, targetPN)
 	if err != nil {
 		return nil, err
 	}
 
 	if toHeavy {
-		return n.Heavy(ctx, rootPN)
+		return jc.Heavy(ctx, rootPN)
 	}
-	return n.LightExecutorForJet(ctx, jetID, targetPN)
+	return jc.LightExecutorForJet(ctx, jetID, targetPN)
 }
 
 func (jc *JetCoordinator) virtualsForObject(
