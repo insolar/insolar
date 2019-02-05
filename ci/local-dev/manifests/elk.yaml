@@ -1,88 +1,86 @@
 apiVersion: v1
-kind: Service
+kind: ConfigMap
 metadata:
-  name: elasticsearch-rest
-  labels:
-    app: elasticsearch-rest
-spec:
-  type: NodePort
-  ports:
-  - port: 9200
-    nodePort: 30200
-    name: elasticsearch-rest
-  selector:
-    app: elasticsearch
+    name: elk-config
+data:
+    logstash.conf: |
+        input {
+          file {
+            path => "/logs/*.log"
+            start_position => "beginning"
+          }
+        }
+
+        output {
+          elasticsearch {
+           hosts => ["elasticsearch:9200"]
+          }
+        }
 
 ---
-
 apiVersion: v1
 kind: Service
 metadata:
-  name: elasticsearch
-  labels:
-    app: elasticsearch
+    name: elk
+    labels:
+        app: elk
 spec:
-  ports:
-  - port: 9200
-    name: elasticsearch
-    protocol: TCP
-  - port: 9300
-    name: elasticsearch-node
-    protocol: TCP
-  clusterIP: None
-  selector:
-    app: elasticsearch
+    type: NodePort
+    ports:
+        -
+            port: 5601
+            nodePort: 30601
+            name: kibana
+        -
+            port: 9200
+            nodePort: 30200
+            name: elasticsearch
+    selector:
+        app: elk
 
 ---
-
-apiVersion: v1
-kind: Service
-metadata:
-  name: kibana
-  labels:
-    app: kibana
-spec:
-  type: NodePort
-  ports:
-  - port: 5601
-    nodePort: 30601
-    name: kibana
-  selector:
-    app: kibana
-
----
-
 apiVersion: v1
 kind: Pod
 metadata:
-  name: elasticsearch
-  labels:
-    app: elasticsearch
+    name: elk
+    labels:
+        app: elk
 spec:
-  containers:
-    - name: elasticsearch
-      image: "docker.elastic.co/elasticsearch/elasticsearch:6.5.4"
-      tty: true
-      stdin: true
-      env:
-        - name: ES_JAVA_OPTS
-          value: "-Xmx256m -Xms256m"
-        - name: discovery.type
-          value: "single-node"
-        - name: xpack.security.enabled
-          value: "false"
-
----
-
-apiVersion: v1
-kind: Pod
-metadata:
-  name: kibana
-  labels:
-    app: kibana
-spec:
-  containers:
-    - name: kibana
-      image: "docker.elastic.co/kibana/kibana:6.5.4"
-      tty: true
-      stdin: true
+    hostname: elasticsearch
+    containers:
+        - name: elasticsearch
+          image: 'docker.elastic.co/elasticsearch/elasticsearch:6.5.4'
+          tty: true
+          stdin: true
+          env:
+              - name: ES_JAVA_OPTS
+                value: "-Xmx256m -Xms256m"
+              - name: discovery.type
+                value: "single-node"
+              - name: xpack.security.enabled
+                value: "false"
+        - name: kibana
+          image: 'docker.elastic.co/kibana/kibana:6.5.4'
+          tty: true
+          stdin: true
+        - name: logstash
+          image: 'docker.elastic.co/logstash/logstash:6.6.0'
+          tty: true
+          stdin: true
+          # command:
+          #   - /usr/share/logstash/bin/logstash
+          #   - '-f /etc/elk-config/logstash.conf'
+          volumeMounts:
+            - name: elk-config
+              mountPath: /usr/share/logstash/pipeline/logstash2.conf 
+              subPath: logstash.conf
+            - name: node-log
+              mountPath: /logs
+    volumes:
+      - name: node-log
+        hostPath:
+          path: /tmp/insolar_logs/
+          type: DirectoryOrCreate
+      - name: elk-config
+        configMap:
+          name: elk-config

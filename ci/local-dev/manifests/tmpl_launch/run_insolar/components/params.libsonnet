@@ -11,14 +11,9 @@
   },
   components: {
     "insolar": { 
-      nodes:[
-        { num_heavies: 1 },
-        { num_lights: 5 },
-        { num_virtuals: 4 }
-      ],
       num_heavies: 1,
-      num_lights: 5,
-      num_virtuals: 4,
+      num_lights: 2,
+      num_virtuals: 2,
       hostname: "seed",
       domain: "bootstrap",
       tcp_transport_port: 7900,
