@@ -174,7 +174,7 @@ local params = import_params.global.utils;
 								"subPath": "insolar.yaml"
 							},
 							{
-								"name": "node-log",
+								"name": params.local_log_volume_name,
 								"mountPath": "/logs"
 							}
 						]
@@ -207,13 +207,7 @@ local params = import_params.global.utils;
 						"name": "work",
 						"emptyDir": {}
 					},
-					{
-						"name": "node-log",
-						"hostPath": {
-							"path": "/tmp/insolar_logs/",
-							"type": "DirectoryOrCreate"
-						}
-					}
+					params.local_log_volume()
 				]
 			}
 		},

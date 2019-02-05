@@ -67,9 +67,6 @@ spec:
           image: 'docker.elastic.co/logstash/logstash:6.6.0'
           tty: true
           stdin: true
-          # command:
-          #   - /usr/share/logstash/bin/logstash
-          #   - '-f /etc/elk-config/logstash.conf'
           volumeMounts:
             - name: elk-config
               mountPath: /usr/share/logstash/pipeline/logstash2.conf 
