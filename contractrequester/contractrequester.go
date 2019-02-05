@@ -22,6 +22,7 @@ import (
 	"encoding/binary"
 	"sync"
 
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
@@ -145,6 +146,8 @@ func (cr *ContractRequester) CallMethod(ctx context.Context, base core.Message, 
 		return res, nil
 	}
 
+	ctx, cancel := context.WithTimeout(ctx, configuration.NewAPIRunner().Timeout)
+	defer cancel()
 	inslogger.FromContext(ctx).Debug("Waiting for Method results ref=", r.Request)
 
 	var result *reply.CallMethod
