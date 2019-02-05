@@ -752,7 +752,7 @@ func (h *MessageHandler) handleGetRequest(ctx context.Context, parcel core.Parce
 
 func (h *MessageHandler) handleGetPendingRequestID(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
 	jetID := jetFromContext(ctx)
-	msg := parcel.Message().(*message.TypeGetPendingRequestID)
+	msg := parcel.Message().(*message.GetPendingRequestID)
 
 	requests := h.RecentStorageProvider.GetStorage(ctx, jetID).GetRequestsForObject(msg.ObjectID)
 	if len(requests) == 0 {

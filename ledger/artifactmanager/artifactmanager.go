@@ -264,7 +264,7 @@ func (m *LedgerArtifactManager) GetPendingRequest(ctx context.Context, objectID 
 		retryJetSender(currentPulse.PulseNumber, m.JetStorage),
 	)
 
-	genericReply, err := sender(ctx, &message.TypeGetPendingRequestID{
+	genericReply, err := sender(ctx, &message.GetPendingRequestID{
 		ObjectID: objectID,
 	}, nil)
 	if err != nil {

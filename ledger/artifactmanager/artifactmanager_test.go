@@ -971,7 +971,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetRequest_Success() {
 	mb.SendFunc = func(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) (r core.Reply, r1 error) {
 		switch mb.SendCounter {
 		case 0:
-			casted, ok := p1.(*message.TypeGetPendingRequestID)
+			casted, ok := p1.(*message.GetPendingRequestID)
 			require.Equal(s.T(), true, ok)
 			require.Equal(s.T(), objectID, casted.ObjectID)
 			return &reply.ID{ID: requestID}, nil

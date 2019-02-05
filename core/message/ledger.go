@@ -520,29 +520,29 @@ func (m *GetRequest) DefaultTarget() *core.RecordRef {
 	return core.NewRecordRef(core.DomainID, m.Request)
 }
 
-// TypeGetPendingRequestID fetches a pending request id for an object from current LME
-type TypeGetPendingRequestID struct {
+// GetPendingRequestID fetches a pending request id for an object from current LME
+type GetPendingRequestID struct {
 	ledgerMessage
 
 	ObjectID core.RecordID
 }
 
 // Type implementation of Message interface.
-func (*TypeGetPendingRequestID) Type() core.MessageType {
+func (*GetPendingRequestID) Type() core.MessageType {
 	return core.TypeGetPendingRequestID
 }
 
 // AllowedSenderObjectAndRole implements interface method
-func (m *TypeGetPendingRequestID) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+func (m *GetPendingRequestID) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
 	return nil, core.DynamicRoleUndefined
 }
 
 // DefaultRole returns role for this event
-func (*TypeGetPendingRequestID) DefaultRole() core.DynamicRole {
+func (*GetPendingRequestID) DefaultRole() core.DynamicRole {
 	return core.DynamicRoleLightExecutor
 }
 
 // DefaultTarget returns of target of this event.
-func (m *TypeGetPendingRequestID) DefaultTarget() *core.RecordRef {
+func (m *GetPendingRequestID) DefaultTarget() *core.RecordRef {
 	return core.NewRecordRef(core.DomainID, m.ObjectID)
 }
