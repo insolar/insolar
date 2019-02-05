@@ -192,8 +192,8 @@ func (r *RecentStorage) FilterNotExistWithLock(
 	lockedFn func(filtered []core.RecordID),
 ) {
 	r.objectLock.Lock()
-	// TODO: filter candidates here
-	lockedFn(candidates)
+	markedCandidates := r.markForDelete(candidates)
+	lockedFn(markedCandidates)
 	r.objectLock.Unlock()
 }
 
@@ -260,4 +260,16 @@ func (r *RecentStorage) DecreaseTTL(ctx context.Context) {
 		}
 		r.recentObjects[key] = value
 	}
+}
+
+func (r *RecentStorage) markForDelete(candidates []core.RecordID) []core.RecordID {
+	result := make([]core.RecordID, 0, len(candidates))
+
+	for _, c := range candidates {
+		_, exists := r.recentObjects[c]
+		if !exists {
+			result = append(result, c)
+		}
+	}
+	return result
 }
