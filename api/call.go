@@ -225,11 +225,6 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 
 		}
 
-		if err != nil {
-			processError(err, "Can't makeCall", &resp, insLog)
-			return
-		}
-
 		resp.Result = result
 	}
 }
