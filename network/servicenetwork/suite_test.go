@@ -109,7 +109,7 @@ func (s *testSuite) SetupTest() {
 	for _, node := range s.fixture().bootstrapNodes {
 		pulseReceivers = append(pulseReceivers, node.host)
 	}
-	pulseReceivers = append(pulseReceivers, s.fixture().testNode.host)
+	// pulseReceivers = append(pulseReceivers, s.fixture().testNode.host)
 
 	log.Info("Start test pulsar")
 	err = s.fixture().pulsar.Start(s.fixture().ctx, pulseReceivers)

@@ -33,7 +33,7 @@ import (
 )
 
 type ThirdPhase interface {
-	Execute(ctx context.Context, state *SecondPhaseState) (*ThirdPhaseState, error)
+	Execute(ctx context.Context, pulse *core.Pulse, state *SecondPhaseState) (*ThirdPhaseState, error)
 }
 
 func NewThirdPhase() ThirdPhase {
@@ -47,14 +47,13 @@ type thirdPhase struct {
 	Calculator   merkle.Calculator        `inject:""`
 }
 
-func (tp *thirdPhase) Execute(ctx context.Context, state *SecondPhaseState) (*ThirdPhaseState, error) {
+func (tp *thirdPhase) Execute(ctx context.Context, pulse *core.Pulse, state *SecondPhaseState) (*ThirdPhaseState, error) {
 	ctx, span := instracer.StartSpan(ctx, "ThirdPhase.Execute")
 	span.AddAttributes(trace.Int64Attribute("pulse", int64(state.PulseEntry.Pulse.PulseNumber)))
 	defer span.End()
-
 	var gSign [packets.SignatureLength]byte
 	copy(gSign[:], state.GlobuleProof.Signature.Bytes()[:packets.SignatureLength])
-	packet := packets.NewPhase3Packet(gSign, state.BitSet)
+	packet := packets.NewPhase3Packet(pulse.PulseNumber, gSign, state.BitSet)
 
 	nodes := make([]core.Node, 0)
 	for _, node := range state.MatrixState.Active {

@@ -192,7 +192,7 @@ func (nc *NaiveCommunicator) generatePhase2Response(origReq, req *packets.Phase2
 			answers = append(answers, &claimAnswer)
 		}
 	}
-	response := packets.NewPhase2Packet()
+	response := packets.NewPhase2Packet(origReq.GetPulseNumber())
 	response.SetBitSet(origReq.GetBitSet())
 	ghs := origReq.GetGlobuleHashSignature()
 	err := response.SetGlobuleHashSignature(ghs[:])
@@ -257,7 +257,7 @@ func (nc *NaiveCommunicator) ExchangePhase1(
 		select {
 		case res := <-nc.phase1result:
 			log.Debugf("got phase1 request from %s", res.id)
-			if res.packet.GetPulseNumber() != core.PulseNumber(nc.currentPulseNumber) {
+			if res.packet.GetPulseNumber() != nc.getPulseNumber() {
 				continue
 			}
 
@@ -324,7 +324,7 @@ func (nc *NaiveCommunicator) ExchangePhase2(ctx context.Context, list network.Un
 		select {
 		case res := <-nc.phase2result:
 			log.Debugf("got phase2 request from %s", res.id)
-			if res.packet.GetPulseNumber() != core.PulseNumber(nc.currentPulseNumber) {
+			if res.packet.GetPulseNumber() != nc.getPulseNumber() {
 				continue
 			}
 
@@ -416,7 +416,7 @@ func (nc *NaiveCommunicator) ExchangePhase21(ctx context.Context, list network.U
 	for {
 		select {
 		case res := <-nc.phase2result:
-			if res.packet.GetPulseNumber() != core.PulseNumber(nc.currentPulseNumber) {
+			if res.packet.GetPulseNumber() != nc.getPulseNumber() {
 				continue
 			}
 

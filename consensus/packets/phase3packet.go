@@ -82,12 +82,13 @@ func (p3p *Phase3Packet) Sign(cryptographyService core.CryptographyService) erro
 	return nil
 }
 
-func NewPhase3Packet(globuleHashSignature GlobuleHashSignature, bitSet BitSet) *Phase3Packet {
+func NewPhase3Packet(number core.PulseNumber, globuleHashSignature GlobuleHashSignature, bitSet BitSet) *Phase3Packet {
 	result := &Phase3Packet{
 		globuleHashSignature: globuleHashSignature,
 		bitset:               bitSet,
 	}
 	result.packetHeader.PacketT = Phase3
+	result.packetHeader.Pulse = uint32(number)
 	return result
 }
 

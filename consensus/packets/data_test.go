@@ -163,7 +163,7 @@ func TestNodePulseProofReadWrite_BadData(t *testing.T) {
 }
 
 func TestPhase1Packet_SetPulseProof(t *testing.T) {
-	p := NewPhase1Packet()
+	p := NewPhase1Packet(core.Pulse{})
 	proofStateHash := genRandomSlice(HashLength)
 	proofSignature := genRandomSlice(SignatureLength)
 
@@ -252,7 +252,7 @@ func TestParseAndCompactPulseAndCustomFlags(t *testing.T) {
 }
 
 func makePhase1Packet() *Phase1Packet {
-	phase1Packet := NewPhase1Packet()
+	phase1Packet := NewPhase1Packet(core.Pulse{})
 	phase1Packet.packetHeader = *makeDefaultPacketHeader(Phase1)
 	phase1Packet.pulseData = makeDefaultPulseDataExt()
 	phase1Packet.proofNodePulse = NodePulseProof{NodeSignature: randomArray66(), NodeStateHash: randomArray64()}
