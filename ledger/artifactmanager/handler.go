@@ -375,6 +375,10 @@ func (h *MessageHandler) handleGetObject(
 	msg := parcel.Message().(*message.GetObject)
 	jetID := jetFromContext(ctx)
 
+	if !h.isHeavy {
+		h.RecentStorageProvider.GetStorage(ctx, jetID).AddObject(ctx, *msg.Head.Record())
+	}
+
 	// Fetch object index. If not found redirect.
 	idx, err := h.ObjectStorage.GetObjectIndex(ctx, jetID, msg.Head.Record(), false)
 	if err == storage.ErrNotFound {
@@ -397,11 +401,6 @@ func (h *MessageHandler) handleGetObject(
 		}
 	} else if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch object index %s", msg.Head.Record().String())
-	} else {
-		// Add requested object to recent.
-		if !h.isHeavy {
-			h.RecentStorageProvider.GetStorage(ctx, jetID).AddObject(ctx, *msg.Head.Record())
-		}
 	}
 
 	// Determine object state id.
@@ -553,6 +552,10 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel core.Parc
 	msg := parcel.Message().(*message.GetDelegate)
 	jetID := jetFromContext(ctx)
 
+	if !h.isHeavy {
+		h.RecentStorageProvider.GetStorage(ctx, jetID).AddObject(ctx, *msg.Head.Record())
+	}
+
 	idx, err := h.ObjectStorage.GetObjectIndex(ctx, jetID, msg.Head.Record(), false)
 	if err == storage.ErrNotFound {
 		if h.isHeavy {
@@ -569,10 +572,6 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel core.Parc
 		}
 	} else if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch object index")
-	} else {
-		if !h.isHeavy {
-			h.RecentStorageProvider.GetStorage(ctx, jetID).AddObject(ctx, *msg.Head.Record())
-		}
 	}
 
 	delegateRef, ok := idx.Delegates[msg.AsType]
@@ -596,6 +595,10 @@ func (h *MessageHandler) handleGetChildren(
 	msg := parcel.Message().(*message.GetChildren)
 	jetID := jetFromContext(ctx)
 
+	if !h.isHeavy {
+		h.RecentStorageProvider.GetStorage(ctx, jetID).AddObject(ctx, *msg.Parent.Record())
+	}
+
 	idx, err := h.ObjectStorage.GetObjectIndex(ctx, jetID, msg.Parent.Record(), false)
 	if err == storage.ErrNotFound {
 		if h.isHeavy {
@@ -615,10 +618,6 @@ func (h *MessageHandler) handleGetChildren(
 		}
 	} else if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch object index")
-	} else {
-		if !h.isHeavy {
-			h.RecentStorageProvider.GetStorage(ctx, jetID).AddObject(ctx, *msg.Parent.Record())
-		}
 	}
 
 	var (
@@ -754,6 +753,10 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 		return nil, errors.New("wrong object state record")
 	}
 
+	if !h.isHeavy {
+		h.RecentStorageProvider.GetStorage(ctx, jetID).AddObject(ctx, *msg.Object.Record())
+	}
+
 	// FIXME: temporary fix. If we calculate blob id on the client, pulse can change before message sending and this
 	//  id will not match the one calculated on the server.
 	blobID, err := h.ObjectStorage.SetBlob(ctx, jetID, parcel.Pulse(), msg.Memory)
@@ -793,10 +796,6 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 			}
 		} else if err != nil {
 			return err
-		} else {
-			if !h.isHeavy {
-				h.RecentStorageProvider.GetStorage(ctx, jetID).AddObject(ctx, *msg.Object.Record())
-			}
 		}
 
 		if err = validateState(idx.State, state.State()); err != nil {
@@ -849,6 +848,10 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel core.Pa
 		return nil, errors.New("wrong child record")
 	}
 
+	if !h.isHeavy {
+		h.RecentStorageProvider.GetStorage(ctx, jetID).AddObject(ctx, *msg.Parent.Record())
+	}
+
 	var child *core.RecordID
 	err := h.DBContext.Update(ctx, func(tx *storage.TransactionManager) error {
 		idx, err := h.ObjectStorage.GetObjectIndex(ctx, jetID, msg.Parent.Record(), false)
@@ -863,10 +866,6 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel core.Pa
 			}
 		} else if err != nil {
 			return err
-		} else {
-			if !h.isHeavy {
-				h.RecentStorageProvider.GetStorage(ctx, jetID).AddObject(ctx, *msg.Parent.Record())
-			}
 		}
 
 		// Children exist and pointer does not match (preserving chain consistency).
@@ -893,10 +892,6 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel core.Pa
 
 	if err != nil {
 		return nil, err
-	}
-
-	if !h.isHeavy {
-		h.RecentStorageProvider.GetStorage(ctx, jetID).AddObject(ctx, *msg.Parent.Record())
 	}
 
 	return &reply.ID{ID: *child}, nil
@@ -1094,7 +1089,6 @@ func (h *MessageHandler) saveIndexFromHeavy(
 		return nil, errors.Wrap(err, "failed to decode")
 	}
 
-	h.RecentStorageProvider.GetStorage(ctx, jetID).AddObject(ctx, *obj.Record())
 	err = h.ObjectStorage.SetObjectIndex(ctx, jetID, obj.Record(), idx)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to save")
