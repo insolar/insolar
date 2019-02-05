@@ -18,6 +18,7 @@ package configuration
 
 import (
 	"fmt"
+	"time"
 )
 
 // APIRunner holds configuration for api
@@ -25,7 +26,7 @@ type APIRunner struct {
 	Address string
 	Call    string
 	RPC     string
-	Timeout uint32
+	Timeout time.Duration
 }
 
 // NewAPIRunner creates new api config
@@ -34,7 +35,7 @@ func NewAPIRunner() APIRunner {
 		Address: "localhost:19101",
 		Call:    "/api/call",
 		RPC:     "/api/rpc",
-		Timeout: 15,
+		Timeout: 15 * time.Second,
 	}
 }
 
