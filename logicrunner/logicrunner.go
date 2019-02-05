@@ -273,6 +273,7 @@ func (lr *LogicRunner) RegisterHandlers() {
 	lr.MessageBus.MustRegister(core.TypeValidationResults, lr.HandleValidationResultsMessage)
 	lr.MessageBus.MustRegister(core.TypePendingFinished, lr.HandlePendingFinishedMessage)
 	lr.MessageBus.MustRegister(core.TypeStillExecuting, lr.HandleStillExecutingMessage)
+	lr.MessageBus.MustRegister(core.TypeAbandonedRequestsNotification, lr.HandleAbandonedRequestsNotificationMessage)
 }
 
 // Stop stops logic runner component and its executors
@@ -1083,6 +1084,40 @@ func (lr *LogicRunner) HandleStillExecutingMessage(
 		} else {
 			es.PendingConfirmed = true
 		}
+		es.Unlock()
+	}
+	os.Unlock()
+
+	return &reply.OK{}, nil
+}
+
+func (lr *LogicRunner) HandleAbandonedRequestsNotificationMessage(
+	ctx context.Context, parcel core.Parcel,
+) (
+	core.Reply, error,
+) {
+	ctx = loggerWithTargetID(ctx, parcel)
+	inslogger.FromContext(ctx).Debug("LogicRunner.HandleAbandonedRequestsNotificationMessage starts ...")
+
+	msg := parcel.Message().(*message.AbandonedRequestsNotification)
+	ref := msg.DefaultTarget()
+	os := lr.UpsertObjectState(*ref)
+
+	inslogger.FromContext(ctx).Debug("Got information that ", ref, " has abandoned requests")
+
+	os.Lock()
+	if os.ExecutionState == nil {
+		os.ExecutionState = &ExecutionState{
+			Queue:                 make([]ExecutionQueueElement, 0),
+			Behaviour:             &ValidationSaver{lr: lr, caseBind: NewCaseBind()},
+			pending:               message.InPending,
+			PendingConfirmed:      false,
+			LedgerHasMoreRequests: true,
+		}
+	} else {
+		es := os.ExecutionState
+		es.Lock()
+		es.LedgerHasMoreRequests = true
 		es.Unlock()
 	}
 	os.Unlock()

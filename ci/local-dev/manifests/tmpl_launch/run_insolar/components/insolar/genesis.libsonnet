@@ -7,6 +7,7 @@ local make_min_roles() = {
 };
 
 {
+    // It generates nodes in particular order: 1) heavy_material 2) light_material 3) virtual
     generate_genesis() :: {
 
       // common fields
@@ -32,10 +33,7 @@ local make_min_roles() = {
            keys_file: discovery_nodes_tmpl().keys_file % [ self.insolar_params.hostname, id ],
            cert_name: discovery_nodes_tmpl().cert_name % [ self.insolar_params.hostname, id ],
 
-           role: discovery_nodes_tmpl().role %
-             if id < self.insolar_params.num_heavies then [ "heavy_material" ]
-             else if id < self.insolar_params.num_heavies + self.insolar_params.num_lights then [ "light_material" ]
-             else [ "virtual" ]
+           role: discovery_nodes_tmpl().role % params.global.utils.id_to_node_type( id ), 
          }
          for id in std.range(0, params.global.utils.get_num_nodes - 1)
       ]
