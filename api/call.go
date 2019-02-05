@@ -219,10 +219,15 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 			}
 			resp.Result = result
 
-		case <-time.After(ar.cfg.Timeout):
+		case <-time.After(time.Duration(ar.cfg.Timeout) * time.Second):
 			resp.Error = "Messagebus timeout exceeded"
 			return
 
+		}
+
+		if err != nil {
+			processError(err, "Can't makeCall", &resp, insLog)
+			return
 		}
 
 		resp.Result = result

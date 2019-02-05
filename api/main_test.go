@@ -22,7 +22,6 @@ import (
 	"net/http"
 	"reflect"
 	"testing"
-	"time"
 
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/core"
@@ -92,7 +91,7 @@ func (suite *MainAPISuite) TestNewApiRunnerNoRequiredParams() {
 	_, err = NewRunner(&cfg)
 	suite.Contains(err.Error(), "Timeout must not be null")
 
-	cfg.Timeout = 2 * time.Second
+	cfg.Timeout = 2
 	_, err = NewRunner(&cfg)
 	suite.NoError(err)
 }
