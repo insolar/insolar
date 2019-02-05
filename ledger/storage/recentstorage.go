@@ -186,6 +186,17 @@ func (r *RecentStorage) GetObjects() map[core.RecordID]int {
 	return targetMap
 }
 
+func (r *RecentStorage) FilterNotExistWithLock(
+	ctx context.Context,
+	candidates []core.RecordID,
+	lockedFn func(filtered []core.RecordID),
+) {
+	r.objectLock.Lock()
+	// TODO: filter candidates here
+	lockedFn(candidates)
+	r.objectLock.Unlock()
+}
+
 // GetRequests returns request hot-indexes.
 func (r *RecentStorage) GetRequests() map[core.RecordID]map[core.RecordID]struct{} {
 	r.requestLock.RLock()

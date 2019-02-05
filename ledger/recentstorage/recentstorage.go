@@ -46,4 +46,6 @@ type RecentStorage interface {
 	IsRecordIDCached(obj core.RecordID) bool
 
 	DecreaseTTL(ctx context.Context)
+
+	FilterNotExistWithLock(ctx context.Context, candidates []core.RecordID, fn func(filtered []core.RecordID))
 }
