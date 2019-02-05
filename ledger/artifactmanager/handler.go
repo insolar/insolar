@@ -296,24 +296,29 @@ func (h *MessageHandler) setHandlersForHeavy(m *middleware) {
 }
 
 func (h *MessageHandler) handleSetRecord(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
+	if h.isHeavy {
+		return nil, errors.New("heavy updates are forbidden")
+	}
+
 	msg := parcel.Message().(*message.SetRecord)
 	rec := record.DeserializeRecord(msg.Record)
 	jetID := jetFromContext(ctx)
 
 	id := record.NewRecordIDFromRecord(h.PlatformCryptographyScheme, parcel.Pulse(), rec)
 
-	if !h.isHeavy {
+	switch r := rec.(type) {
+	case record.Request:
 		recentStorage := h.RecentStorageProvider.GetStorage(ctx, jetID)
-		if request, ok := rec.(record.Request); ok {
-			recentStorage.AddPendingRequest(ctx, request.GetObject(), *id)
-		}
-		if result, ok := rec.(*record.ResultRecord); ok {
-			recentStorage.RemovePendingRequest(ctx, result.Object, *result.Request.Record())
-		}
+		recentStorage.AddPendingRequest(ctx, r.GetObject(), *id)
+	case *record.ResultRecord:
+		recentStorage := h.RecentStorageProvider.GetStorage(ctx, jetID)
+		recentStorage.RemovePendingRequest(ctx, r.Object, *r.Request.Record())
 	}
 
 	id, err := h.ObjectStorage.SetRecord(ctx, jetID, parcel.Pulse(), rec)
-	if err != nil {
+	if err == storage.ErrOverride {
+		inslogger.FromContext(ctx).WithField("type", fmt.Sprintf("%T", rec)).Warnln("set record override")
+	} else if err != nil {
 		return nil, err
 	}
 
@@ -321,6 +326,10 @@ func (h *MessageHandler) handleSetRecord(ctx context.Context, parcel core.Parcel
 }
 
 func (h *MessageHandler) handleSetBlob(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
+	if h.isHeavy {
+		return nil, errors.New("heavy updates are forbidden")
+	}
+
 	msg := parcel.Message().(*message.SetBlob)
 	jetID := jetFromContext(ctx)
 	calculatedID := record.CalculateIDForBlob(h.PlatformCryptographyScheme, parcel.Pulse(), msg.Memory)
@@ -767,6 +776,10 @@ func (h *MessageHandler) handleGetPendingRequestID(ctx context.Context, parcel c
 }
 
 func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
+	if h.isHeavy {
+		return nil, errors.New("heavy updates are forbidden")
+	}
+
 	logger := inslogger.FromContext(ctx)
 
 	msg := parcel.Message().(*message.UpdateObject)
@@ -778,9 +791,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 		return nil, errors.New("wrong object state record")
 	}
 
-	if !h.isHeavy {
-		h.RecentStorageProvider.GetStorage(ctx, jetID).AddObject(ctx, *msg.Object.Record())
-	}
+	h.RecentStorageProvider.GetStorage(ctx, jetID).AddObject(ctx, *msg.Object.Record())
 
 	// FIXME: temporary fix. If we calculate blob id on the client, pulse can change before message sending and this
 	//  id will not match the one calculated on the server.
@@ -865,6 +876,10 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 }
 
 func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
+	if h.isHeavy {
+		return nil, errors.New("heavy updates are forbidden")
+	}
+
 	msg := parcel.Message().(*message.RegisterChild)
 	jetID := jetFromContext(ctx)
 	rec := record.DeserializeRecord(msg.Record)
@@ -873,9 +888,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel core.Pa
 		return nil, errors.New("wrong child record")
 	}
 
-	if !h.isHeavy {
-		h.RecentStorageProvider.GetStorage(ctx, jetID).AddObject(ctx, *msg.Parent.Record())
-	}
+	h.RecentStorageProvider.GetStorage(ctx, jetID).AddObject(ctx, *msg.Parent.Record())
 
 	var child *core.RecordID
 	err := h.DBContext.Update(ctx, func(tx *storage.TransactionManager) error {
@@ -962,6 +975,10 @@ func (h *MessageHandler) handleJetDrop(ctx context.Context, parcel core.Parcel) 
 }
 
 func (h *MessageHandler) handleValidateRecord(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
+	if h.isHeavy {
+		return nil, errors.New("heavy updates are forbidden")
+	}
+
 	msg := parcel.Message().(*message.ValidateRecord)
 	jetID := jetFromContext(ctx)
 
@@ -1122,6 +1139,10 @@ func (h *MessageHandler) saveIndexFromHeavy(
 }
 
 func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
+	if h.isHeavy {
+		return nil, errors.New("heavy updates are forbidden")
+	}
+
 	logger := inslogger.FromContext(ctx)
 	// if hack.SkipValidation(ctx) {
 	// 	fmt.Println("handleHotRecords: SkipValidation")
