@@ -31,7 +31,6 @@ import (
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/network"
 	"github.com/pkg/errors"
-	"github.com/insolar/insolar/testutils/network"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -72,7 +71,7 @@ func (s *jetCoordinatorSuite) BeforeTest(suiteName, testName string) {
 	s.pulseStorage = storage.NewPulseStorage()
 	s.jetStorage = storage.NewJetStorage()
 	s.nodeStorages = storage.NewNodeStorage()
-	s.coordinator = NewJetCoordinator()
+	s.coordinator = NewJetCoordinator(5)
 	s.coordinator.NodeNet = network.NewNodeNetworkMock(s.T())
 
 	s.cm.Inject(
@@ -256,7 +255,7 @@ func TestJetCoordinator_NodeForJet_GoToHeavy(t *testing.T) {
 	expectedID := core.NewRecordRef(testutils.RandomID(), testutils.RandomID())
 	nodeMock := network.NewNodeMock(t)
 	nodeMock.IDMock.Return(*expectedID)
-	activeNodesStorageMock := storage.NewActiveNodesStorageMock(t)
+	activeNodesStorageMock := storage.NewNodeStorageMock(t)
 	activeNodesStorageMock.GetActiveNodesByRoleFunc = func(p core.PulseNumber, p1 core.StaticRole) (r []core.Node, r1 error) {
 		require.Equal(t, core.FirstPulseNumber, int(p))
 		require.Equal(t, core.StaticRoleHeavyMaterial, p1)
@@ -272,7 +271,7 @@ func TestJetCoordinator_NodeForJet_GoToHeavy(t *testing.T) {
 
 	calc := NewJetCoordinator(25)
 	calc.PulseTracker = pulseTrackerMock
-	calc.ActiveNodesStorage = activeNodesStorageMock
+	calc.NodeStorage = activeNodesStorageMock
 	calc.PulseStorage = pulseStorageMock
 	calc.PlatformCryptographyScheme = platformpolicy.NewPlatformCryptographyScheme()
 
@@ -299,7 +298,7 @@ func TestJetCoordinator_NodeForJet_GoToLight(t *testing.T) {
 	expectedID := core.NewRecordRef(testutils.RandomID(), testutils.RandomID())
 	nodeMock := network.NewNodeMock(t)
 	nodeMock.IDMock.Return(*expectedID)
-	activeNodesStorageMock := storage.NewActiveNodesStorageMock(t)
+	activeNodesStorageMock := storage.NewNodeStorageMock(t)
 	activeNodesStorageMock.GetActiveNodesByRoleFunc = func(p core.PulseNumber, p1 core.StaticRole) (r []core.Node, r1 error) {
 		require.Equal(t, 0, int(p))
 		require.Equal(t, core.StaticRoleLightMaterial, p1)
@@ -315,7 +314,7 @@ func TestJetCoordinator_NodeForJet_GoToLight(t *testing.T) {
 
 	calc := NewJetCoordinator(25)
 	calc.PulseTracker = pulseTrackerMock
-	calc.ActiveNodesStorage = activeNodesStorageMock
+	calc.NodeStorage = activeNodesStorageMock
 	calc.PulseStorage = pulseStorageMock
 	calc.PlatformCryptographyScheme = platformpolicy.NewPlatformCryptographyScheme()
 
