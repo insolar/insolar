@@ -17,7 +17,7 @@ local service() = {
 		"ports": [
 			{
 				"port": 9090,
-				"nodePort": 30090,
+				"nodePort": params.components.prometheus.port,
 				"name": "prometheus"
 			}
 		],

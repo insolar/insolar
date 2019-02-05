@@ -29,8 +29,11 @@
           tcp_transport_port: 7900,
       },
       "elk": {
-        "kibana_port": 30601,
-        "elasticsearch_port": 30200
+        kibana_port: 30601,
+        elasticsearch_port: 30200
+      },
+      "prometheus": {
+        port: 30090
       }
   }
 }
