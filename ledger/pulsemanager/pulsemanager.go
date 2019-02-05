@@ -594,7 +594,14 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 		inslogger.FromContext(ctx).Error(errors.Wrap(err, "MessageBus OnPulse() returns error"))
 	}
 
-	return m.LR.OnPulse(ctx, newPulse)
+	if m.NodeNet.GetOrigin().Role() == core.StaticRoleVirtual {
+		err = m.LR.OnPulse(ctx, newPulse)
+	}
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (m *PulseManager) setUnderGilSection(
