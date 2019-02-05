@@ -241,6 +241,9 @@ func (m *LedgerArtifactManager) GetObject(
 	}
 }
 
+// GetPendingRequest returns an unclosed pending request
+// It takes an id from current LME
+// Then goes either to a light node or heavy node
 func (m *LedgerArtifactManager) GetPendingRequest(ctx context.Context, objectID core.RecordID) (core.Parcel, error) {
 	var err error
 	instrumenter := instrument(ctx, "GetRegisterRequest").err(&err)

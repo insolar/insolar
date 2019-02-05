@@ -945,3 +945,57 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterRequest_JetMiss() {
 		assert.True(t, actual)
 	})
 }
+
+func (s *amSuite) TestLedgerArtifactManager_GetRequest_Success() {
+	// Arrange
+	mc := minimock.NewController(s.T())
+	defer mc.Finish()
+	objectID := testutils.RandomID()
+	requestID := testutils.RandomID()
+
+	node := testutils.RandomRef()
+
+	jc := testutils.NewJetCoordinatorMock(mc)
+	jc.NodeForJetMock.Return(&node, nil)
+
+	pulseStorageMock := testutils.NewPulseStorageMock(mc)
+	pulseStorageMock.CurrentMock.Return(core.GenesisPulse, nil)
+
+	var parcel core.Parcel = &message.Parcel{PulseNumber: 123987}
+	resRecord := record.RequestRecord{
+		Parcel: message.ParcelToBytes(parcel),
+	}
+	finalResponse := &reply.Request{Record: record.SerializeRecord(&resRecord)}
+
+	mb := testutils.NewMessageBusMock(s.T())
+	mb.SendFunc = func(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) (r core.Reply, r1 error) {
+		switch mb.SendCounter {
+		case 0:
+			casted, ok := p1.(*message.TypeGetPendingRequestID)
+			require.Equal(s.T(), true, ok)
+			require.Equal(s.T(), objectID, casted.ObjectID)
+			return &reply.ID{ID: requestID}, nil
+		case 1:
+			casted, ok := p1.(*message.GetRequest)
+			require.Equal(s.T(), true, ok)
+			require.Equal(s.T(), requestID, casted.Request)
+			require.Equal(s.T(), node, *p2.Receiver)
+			return finalResponse, nil
+		default:
+			panic("test is totally broken")
+		}
+	}
+
+	am := NewArtifactManger()
+	am.JetCoordinator = jc
+	am.DefaultBus = mb
+	am.PulseStorage = pulseStorageMock
+
+	// Act
+	res, err := am.GetPendingRequest(inslogger.TestContext(s.T()), objectID)
+
+	// Assert
+	require.NoError(s.T(), err)
+	require.Equal(s.T(), parcel, res)
+
+}
