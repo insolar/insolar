@@ -49,8 +49,8 @@ type cleanerSuite struct {
 	jetID core.RecordID
 }
 
-func NewCleanerSuite() *replicaSuite {
-	return &replicaSuite{
+func NewCleanerSuite() *cleanerSuite {
+	return &cleanerSuite{
 		Suite: suite.Suite{},
 	}
 }
@@ -156,7 +156,7 @@ func removeJetIndexesUntil(s *cleanerSuite, skip bool) {
 	})
 	require.NoError(s.T(), err)
 
-	assert.Equal(s.T(), expectedRmCount, rmcount)
+	assert.Equal(s.T(), int64(expectedRmCount), rmcount.Removed)
 	assert.Equalf(s.T(), sortIDS(expectLeftIDs), sortIDS(foundIDs),
 		"expected keys and found indexes, doesn't match, jetID=%v", s.jetID.DebugString())
 }
