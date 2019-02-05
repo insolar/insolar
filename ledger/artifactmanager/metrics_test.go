@@ -27,6 +27,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -64,6 +65,7 @@ func TestLedgerArtifactManager_Metrics(t *testing.T) {
 	am.PulseStorage = amPulseStorageMock
 	am.JetStorage = db
 	am.DBContext = db
+	am.PlatformCryptographyScheme = platformpolicy.NewPlatformCryptographyScheme()
 
 	tmetrics := testmetrics.Start(ctx)
 	defer tmetrics.Stop()

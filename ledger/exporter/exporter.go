@@ -201,11 +201,13 @@ func (e *Exporter) getPayload(ctx context.Context, jetID core.RecordID, rec reco
 		if r.GetPayload() == nil {
 			break
 		}
-		msg, err := message.Deserialize(bytes.NewBuffer(r.GetPayload()))
+		parcel, err := message.DeserializeParcel(bytes.NewBuffer(r.GetPayload()))
 		if err != nil {
 			return payload{"PayloadBinary": r.GetPayload()}, nil
 		}
-		switch m := msg.(type) {
+
+		msg := parcel.Message()
+		switch m := parcel.Message().(type) {
 		case *message.CallMethod:
 			res, err := m.ToMap()
 			if err != nil {

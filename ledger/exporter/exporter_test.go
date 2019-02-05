@@ -28,6 +28,7 @@ import (
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
+	"github.com/insolar/insolar/platformpolicy"
 	base58 "github.com/jbenet/go-base58"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -77,9 +78,13 @@ func TestExporter_Export(t *testing.T) {
 		},
 		IsDelegate: true,
 	})
-	pl := message.ToBytes(&message.CallConstructor{})
+	msg := &message.CallConstructor{}
+	var parcel core.Parcel = &message.Parcel{Msg: msg}
+
+	msgHash := platformpolicy.NewPlatformCryptographyScheme().IntegrityHasher().Hash(message.ToBytes(msg))
 	requestID, err := db.SetRecord(ctx, jetID, core.FirstPulseNumber+10, &record.RequestRecord{
-		Payload: pl,
+		MessageHash: msgHash,
+		Parcel:      message.ParcelToBytes(parcel),
 	})
 	require.NoError(t, err)
 
@@ -115,7 +120,7 @@ func TestExporter_Export(t *testing.T) {
 	request, ok := records[base58.Encode(requestID[:])]
 	if assert.True(t, ok, "request not found by ID") {
 		assert.Equal(t, "TypeCallRequest", request.Type)
-		assert.Equal(t, pl, request.Data.(*record.RequestRecord).Payload)
+		assert.Equal(t, msgHash, request.Data.(*record.RequestRecord).MessageHash)
 		assert.Equal(t, core.TypeCallConstructor.String(), request.Payload["Type"])
 	}
 

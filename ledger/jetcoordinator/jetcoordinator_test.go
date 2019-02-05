@@ -250,7 +250,7 @@ func TestJetCoordinator_NodeForJet_GoToLight(t *testing.T) {
 	nodeMock.IDMock.Return(*expectedID)
 	activeNodesStorageMock := storage.NewActiveNodesStorageMock(t)
 	activeNodesStorageMock.GetActiveNodesByRoleFunc = func(p core.PulseNumber, p1 core.StaticRole) (r []core.Node, r1 error) {
-		require.Equal(t, core.FirstPulseNumber, int(p))
+		require.Equal(t, 0, int(p))
 		require.Equal(t, core.StaticRoleLightMaterial, p1)
 
 		return []core.Node{nodeMock}, nil

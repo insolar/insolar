@@ -75,6 +75,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 	jc.LightExecutorForJetMock.Return(&core.RecordRef{}, nil)
 	jc.HeavyMock.Return(&core.RecordRef{}, nil)
 	jc.MeMock.Return(core.RecordRef{})
+	jc.IsBeyondLimitMock.Return(false, err)
 
 	// Init components.
 	if c.MessageBus == nil {

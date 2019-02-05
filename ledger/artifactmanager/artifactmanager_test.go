@@ -80,10 +80,7 @@ func getTestData(t *testing.T) (
 	pulse, err := db.GetLatestPulse(ctx)
 	require.NoError(t, err)
 	pulseStorage.Set(&pulse.Pulse)
-	jc := testutils.NewJetCoordinatorMock(mc)
-	jc.LightExecutorForJetMock.Return(&core.RecordRef{}, nil)
-	jc.MeMock.Return(core.RecordRef{})
-	jc.HeavyMock.Return(&core.RecordRef{}, nil)
+
 	mb := testmessagebus.NewTestMessageBus(t)
 	mb.PulseStorage = pulseStorage
 	db.PlatformCryptographyScheme = scheme
@@ -118,7 +115,16 @@ func getTestData(t *testing.T) (
 	handler.RecentStorageProvider = provideMock
 
 	handler.Bus = mb
+
+	jc := testutils.NewJetCoordinatorMock(mc)
+	jc.LightExecutorForJetMock.Return(&core.RecordRef{}, nil)
+	jc.MeMock.Return(core.RecordRef{})
+	jc.HeavyMock.Return(&core.RecordRef{}, nil)
+	jc.NodeForJetMock.Return(&core.RecordRef{}, nil)
+	jc.IsBeyondLimitMock.Return(false, nil)
+
 	handler.JetCoordinator = jc
+
 	err = handler.Init(ctx)
 	require.NoError(t, err)
 
@@ -144,7 +150,12 @@ func TestLedgerArtifactManager_RegisterRequest(t *testing.T) {
 	assert.NoError(t, err)
 	rec, err := db.GetRecord(ctx, *jet.NewID(0, nil), id)
 	assert.NoError(t, err)
-	assert.Equal(t, message.MustSerializeBytes(parcel.Msg), rec.(*record.RequestRecord).Payload)
+
+	assert.Equal(
+		t,
+		am.PlatformCryptographyScheme.IntegrityHasher().Hash(message.MustSerializeBytes(parcel.Msg)),
+		rec.(*record.RequestRecord).MessageHash,
+	)
 }
 
 func TestLedgerArtifactManager_GetCodeWithCache(t *testing.T) {
@@ -739,7 +750,8 @@ func TestLedgerArtifactManager_RegisterValidation(t *testing.T) {
 	mb := testmessagebus.NewTestMessageBus(t)
 	mb.PulseStorage = makePulseStorage(db, ctx, t)
 	jc := testutils.NewJetCoordinatorMock(mc)
-	jc.LightExecutorForJetMock.Return(&core.RecordRef{}, nil)
+	jc.IsBeyondLimitMock.Return(false, nil)
+	jc.NodeForJetMock.Return(&core.RecordRef{}, nil)
 
 	recentStorageMock := recentstorage.NewRecentStorageMock(t)
 	recentStorageMock.AddPendingRequestMock.Return()
@@ -871,7 +883,7 @@ func TestLedgerArtifactManager_RegisterRequest_JetMiss(t *testing.T) {
 	defer cleaner()
 	defer mc.Finish()
 
-	cs := testutils.NewPlatformCryptographyScheme()
+	cs := platformpolicy.NewPlatformCryptographyScheme()
 	am := NewArtifactManger()
 	am.PlatformCryptographyScheme = cs
 	am.JetStorage = db

@@ -108,8 +108,9 @@ func TestMessageHandler_HandleGetObject_Redirects(t *testing.T) {
 			panic("unexpected call")
 		}
 
-		jc.LightExecutorForJetMock.Return(lightRef, nil)
+		jc.IsBeyondLimitMock.Return(false, nil)
 		jc.HeavyMock.Return(heavyRef, nil)
+		jc.NodeForJetMock.Return(lightRef, nil)
 
 		rep, err := h.handleGetObject(contextWithJet(ctx, jetID), &message.Parcel{
 			Msg:         &msg,
@@ -132,16 +133,8 @@ func TestMessageHandler_HandleGetObject_Redirects(t *testing.T) {
 	require.NoError(t, err)
 	t.Run("redirect to light when has index and state later than limit", func(t *testing.T) {
 		lightRef := genRandomRef(0)
-		jc.LightExecutorForJetMock.Set(nil)
-		jc.LightExecutorForJetFunc = func(c context.Context, j core.RecordID, p core.PulseNumber) (*core.RecordRef, error) {
-			switch p {
-			case core.FirstPulseNumber:
-				return lightRef, nil
-			case core.FirstPulseNumber + 1:
-				return &core.RecordRef{}, nil
-			}
-			panic("unexpected call")
-		}
+		jc.IsBeyondLimitMock.Return(false, nil)
+		jc.NodeForJetMock.Return(lightRef, nil)
 		stateID := genRandomID(core.FirstPulseNumber)
 		err = db.SetObjectIndex(ctx, jetID, msg.Head.Record(), &index.ObjectLifeline{
 			LatestState: stateID,
@@ -166,8 +159,8 @@ func TestMessageHandler_HandleGetObject_Redirects(t *testing.T) {
 	require.NoError(t, err)
 	t.Run("redirect to heavy when has index and state earlier than limit", func(t *testing.T) {
 		heavyRef := genRandomRef(0)
-		jc.LightExecutorForJetMock.Return(&core.RecordRef{}, nil)
-		jc.HeavyMock.Return(heavyRef, nil)
+		jc.IsBeyondLimitMock.Return(false, nil)
+		jc.NodeForJetMock.Return(heavyRef, nil)
 		stateID := genRandomID(core.FirstPulseNumber)
 
 		err = db.SetObjectIndex(ctx, jetID, msg.Head.Record(), &index.ObjectLifeline{
@@ -253,12 +246,10 @@ func TestMessageHandler_HandleGetChildren_Redirects(t *testing.T) {
 
 			panic("unexpected call")
 		}
-		jc.LightExecutorForJetMock.Return(&core.RecordRef{}, nil)
 		heavyRef := genRandomRef(0)
-		lightRef := genRandomRef(1)
 
 		jc.HeavyMock.Return(heavyRef, nil)
-		jc.LightExecutorForJetMock.Return(lightRef, nil)
+		jc.IsBeyondLimitMock.Return(true, nil)
 		rep, err := h.handleGetChildren(contextWithJet(ctx, jetID), &message.Parcel{
 			Msg:         &msg,
 			PulseNumber: core.FirstPulseNumber + 1,
@@ -268,7 +259,7 @@ func TestMessageHandler_HandleGetChildren_Redirects(t *testing.T) {
 		require.True(t, ok)
 		token, ok := redirect.Token.(*delegationtoken.GetChildrenRedirectToken)
 		assert.Equal(t, []byte{1, 2, 3}, token.Signature)
-		assert.Equal(t, lightRef, redirect.GetReceiver())
+		assert.Equal(t, heavyRef, redirect.GetReceiver())
 
 		idx, err := db.GetObjectIndex(ctx, jetID, msg.Parent.Record(), false)
 		require.NoError(t, err)
@@ -277,16 +268,8 @@ func TestMessageHandler_HandleGetChildren_Redirects(t *testing.T) {
 
 	t.Run("redirect to light when has index and child later than limit", func(t *testing.T) {
 		lightRef := genRandomRef(0)
-		jc.LightExecutorForJetMock.Set(nil)
-		jc.LightExecutorForJetFunc = func(c context.Context, j core.RecordID, p core.PulseNumber) (*core.RecordRef, error) {
-			switch p {
-			case core.FirstPulseNumber:
-				return lightRef, nil
-			case core.FirstPulseNumber + 1:
-				return &core.RecordRef{}, nil
-			}
-			panic("unexpected call")
-		}
+		jc.IsBeyondLimitMock.Return(false, nil)
+		jc.NodeForJetMock.Return(lightRef, nil)
 		err = db.SetObjectIndex(ctx, jetID, msg.Parent.Record(), &index.ObjectLifeline{
 			ChildPointer: genRandomID(core.FirstPulseNumber),
 		})
@@ -307,8 +290,8 @@ func TestMessageHandler_HandleGetChildren_Redirects(t *testing.T) {
 		err = db.AddPulse(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 2})
 		require.NoError(t, err)
 		heavyRef := genRandomRef(0)
-		jc.LightExecutorForJetMock.Return(&core.RecordRef{}, nil)
-		jc.HeavyMock.Return(heavyRef, nil)
+		jc.IsBeyondLimitMock.Return(false, nil)
+		jc.NodeForJetMock.Return(heavyRef, nil)
 		err = db.SetObjectIndex(ctx, jetID, msg.Parent.Record(), &index.ObjectLifeline{
 			ChildPointer: genRandomID(core.FirstPulseNumber),
 		})
@@ -717,10 +700,7 @@ func TestMessageHandler_HandleGetCode_Redirects(t *testing.T) {
 		err := db.AddPulse(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 1})
 		require.NoError(t, err)
 		lightRef := genRandomRef(0)
-		jc.LightExecutorForJetMock.Set(nil)
-		jc.LightExecutorForJetFunc = func(c context.Context, j core.RecordID, p core.PulseNumber) (*core.RecordRef, error) {
-			return lightRef, nil
-		}
+		jc.NodeForJetMock.Return(lightRef, nil)
 		rep, err := h.handleGetCode(ctx, &message.Parcel{
 			Msg:         &msg,
 			PulseNumber: core.FirstPulseNumber + 1,
@@ -737,7 +717,7 @@ func TestMessageHandler_HandleGetCode_Redirects(t *testing.T) {
 		err = db.AddPulse(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 2})
 		require.NoError(t, err)
 		heavyRef := genRandomRef(0)
-		jc.HeavyMock.Return(heavyRef, nil)
+		jc.NodeForJetMock.Return(heavyRef, nil)
 		rep, err := h.handleGetCode(contextWithJet(ctx, jetID), &message.Parcel{
 			Msg:         &msg,
 			PulseNumber: core.FirstPulseNumber + 2,
@@ -1226,8 +1206,8 @@ func TestMessageHandler_HandleGetRequest(t *testing.T) {
 	jetID := *jet.NewID(0, nil)
 
 	req := record.RequestRecord{
-		Payload: []byte{1, 2, 3},
-		Object:  *genRandomID(0),
+		MessageHash: []byte{1, 2, 3},
+		Object:      *genRandomID(0),
 	}
 	reqID, err := db.SetRecord(ctx, jetID, core.FirstPulseNumber, &req)
 
