@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller/common"
@@ -106,6 +107,8 @@ func init() {
 }
 
 func (cr *challengeResponseController) processChallenge1(ctx context.Context, request network.Request) (network.Response, error) {
+	ctx, span := instracer.StartSpan(ctx, "ChallengeResponseController.processChallenge1")
+	defer span.End()
 	data := request.GetData().(*ChallengeRequest)
 	// CheckSession is performed in SetDiscoveryNonce too, but we want to return early if the request is invalid
 	err := cr.SessionManager.CheckSession(data.SessionID, Authorized)
@@ -152,6 +155,8 @@ func (cr *challengeResponseController) buildChallenge1ErrorResponse(ctx context.
 }
 
 func (cr *challengeResponseController) processChallenge2(ctx context.Context, request network.Request) (network.Response, error) {
+	ctx, span := instracer.StartSpan(ctx, "ChallengeResponseController.processChallenge2")
+	defer span.End()
 	data := request.GetData().(*SignedChallengeRequest)
 	cert, discoveryNonce, err := cr.SessionManager.GetChallengeData(data.SessionID)
 	if err != nil {
@@ -196,6 +201,8 @@ func (cr *challengeResponseController) Start(ctx context.Context) error {
 func (cr *challengeResponseController) sendRequest1(ctx context.Context, discoveryHost *host.Host,
 	sessionID SessionID, nonce Nonce) (*SignedChallengePayload, error) {
 
+	ctx, span := instracer.StartSpan(ctx, "ChallengeResponseController.sendRequest1")
+	defer span.End()
 	request := cr.transport.NewRequestBuilder().Type(types.Challenge1).Data(&ChallengeRequest{
 		SessionID: sessionID, Nonce: nonce}).Build()
 	future, err := cr.transport.SendRequestPacket(ctx, request, discoveryHost)
@@ -216,6 +223,8 @@ func (cr *challengeResponseController) sendRequest1(ctx context.Context, discove
 func (cr *challengeResponseController) sendRequest2(ctx context.Context, discoveryHost *host.Host,
 	sessionID SessionID, signedDiscoveryNonce SignedNonce, xorNonce Nonce) (*ChallengePayload, error) {
 
+	ctx, span := instracer.StartSpan(ctx, "ChallengeResponseController.sendRequest2")
+	defer span.End()
 	request := cr.transport.NewRequestBuilder().Type(types.Challenge2).Data(&SignedChallengeRequest{
 		SessionID: sessionID, XorNonce: xorNonce, SignedDiscoveryNonce: signedDiscoveryNonce}).Build()
 	future, err := cr.transport.SendRequestPacket(ctx, request, discoveryHost)
@@ -235,6 +244,8 @@ func (cr *challengeResponseController) sendRequest2(ctx context.Context, discove
 
 // Execute double challenge response between the node and the discovery node (step 3 of the bootstrap process)
 func (cr *challengeResponseController) Execute(ctx context.Context, discoveryNode *DiscoveryNode, sessionID SessionID) (*ChallengePayload, error) {
+	ctx, span := instracer.StartSpan(ctx, "ChallengeResponseController.Execute")
+	defer span.End()
 	nonce, err := GenerateNonce()
 	if err != nil {
 		return nil, errors.Wrap(err, "error generating nonce")

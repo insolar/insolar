@@ -40,14 +40,14 @@ const (
 
 // LedgerArtifactManager provides concrete API to storage for processing module.
 type LedgerArtifactManager struct {
+	DB           storage.DBContext    `inject:""`
+	GenesisState storage.GenesisState `inject:""`
+	JetStorage   storage.JetStorage   `inject:""`
+
 	DefaultBus                 core.MessageBus                 `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
-
-	PulseStorage core.PulseStorage  `inject:""`
-	JetStorage   storage.JetStorage `inject:""`
-	DBContext    storage.DBContext  `inject:""`
-
-	JetCoordinator core.JetCoordinator `inject:""`
+	PulseStorage               core.PulseStorage               `inject:""`
+	JetCoordinator             core.JetCoordinator             `inject:""`
 
 	getChildrenChunkSize int
 	senders              *ledgerArtifactSenders
@@ -71,7 +71,7 @@ func NewArtifactManger() *LedgerArtifactManager {
 //
 // Root record is the parent for all top-level records.
 func (m *LedgerArtifactManager) GenesisRef() *core.RecordRef {
-	return m.DBContext.GenesisRef()
+	return m.GenesisState.GenesisRef()
 }
 
 // RegisterRequest sends message for request registration,

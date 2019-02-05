@@ -273,6 +273,7 @@ func (lr *LogicRunner) RegisterHandlers() {
 	lr.MessageBus.MustRegister(core.TypeValidationResults, lr.HandleValidationResultsMessage)
 	lr.MessageBus.MustRegister(core.TypePendingFinished, lr.HandlePendingFinishedMessage)
 	lr.MessageBus.MustRegister(core.TypeStillExecuting, lr.HandleStillExecutingMessage)
+	lr.MessageBus.MustRegister(core.TypeAbandonedRequestsNotification, lr.HandleAbandonedRequestsNotificationMessage)
 }
 
 // Stop stops logic runner component and its executors
@@ -714,25 +715,19 @@ func (lr *LogicRunner) prepareObjectState(ctx context.Context, msg *message.Exec
 
 	es.Lock()
 
-	if es.pending == message.InPending && es.Current != nil {
-		inslogger.FromContext(ctx).Debug(
-			"execution returned to node that is still executing pending",
-		)
-		es.pending = message.NotPending
-		es.PendingConfirmed = false
-	} else if es.pending == message.InPending && msg.Pending == message.NotPending {
-		inslogger.FromContext(ctx).Debug(
-			"executor we came to thinks that execution pending, but previous said to continue",
-		)
-
-		es.pending = message.NotPending
+	if es.pending == message.InPending {
 		if es.Current != nil {
-			es.objectbody = nil
-		} else {
-			inslogger.FromContext(ctx).Error(
-				"we have object in pending state, but ",
-				"with currently executing contract. shouldn't happen",
+			inslogger.FromContext(ctx).Debug(
+				"execution returned to node that is still executing pending",
 			)
+			es.pending = message.NotPending
+			es.PendingConfirmed = false
+		} else if msg.Pending == message.NotPending {
+			inslogger.FromContext(ctx).Debug(
+				"executor we came to thinks that execution pending, but previous said to continue",
+			)
+
+			es.pending = message.NotPending
 		}
 	} else if es.pending == message.PendingUnknown {
 		es.pending = msg.Pending
@@ -1083,6 +1078,40 @@ func (lr *LogicRunner) HandleStillExecutingMessage(
 		} else {
 			es.PendingConfirmed = true
 		}
+		es.Unlock()
+	}
+	os.Unlock()
+
+	return &reply.OK{}, nil
+}
+
+func (lr *LogicRunner) HandleAbandonedRequestsNotificationMessage(
+	ctx context.Context, parcel core.Parcel,
+) (
+	core.Reply, error,
+) {
+	ctx = loggerWithTargetID(ctx, parcel)
+	inslogger.FromContext(ctx).Debug("LogicRunner.HandleAbandonedRequestsNotificationMessage starts ...")
+
+	msg := parcel.Message().(*message.AbandonedRequestsNotification)
+	ref := msg.DefaultTarget()
+	os := lr.UpsertObjectState(*ref)
+
+	inslogger.FromContext(ctx).Debug("Got information that ", ref, " has abandoned requests")
+
+	os.Lock()
+	if os.ExecutionState == nil {
+		os.ExecutionState = &ExecutionState{
+			Queue:                 make([]ExecutionQueueElement, 0),
+			Behaviour:             &ValidationSaver{lr: lr, caseBind: NewCaseBind()},
+			pending:               message.InPending,
+			PendingConfirmed:      false,
+			LedgerHasMoreRequests: true,
+		}
+	} else {
+		es := os.ExecutionState
+		es.Lock()
+		es.LedgerHasMoreRequests = true
 		es.Unlock()
 	}
 	os.Unlock()

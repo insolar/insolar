@@ -36,19 +36,18 @@ import (
 
 // Exporter provides methods for fetching data view from storage.
 type Exporter struct {
+	DB            storage.DBContext     `inject:""`
 	JetStorage    storage.JetStorage    `inject:""`
 	ObjectStorage storage.ObjectStorage `inject:""`
 	PulseTracker  storage.PulseTracker  `inject:""`
 	PulseStorage  core.PulseStorage     `inject:""`
 
-	db  *storage.DB
 	cfg configuration.Exporter
 }
 
 // NewExporter creates new StorageExporter instance.
-func NewExporter(db *storage.DB, cfg configuration.Exporter) *Exporter {
+func NewExporter(cfg configuration.Exporter) *Exporter {
 	return &Exporter{
-		db:  db,
 		cfg: cfg,
 	}
 }
@@ -156,7 +155,7 @@ func (e *Exporter) Export(ctx context.Context, fromPulse core.PulseNumber, size 
 
 func (e *Exporter) exportPulse(ctx context.Context, jetID core.RecordID, pulse *core.Pulse) (*pulseData, error) {
 	records := recordsData{}
-	err := e.db.IterateRecordsOnPulse(ctx, jetID, pulse.PulseNumber, func(id core.RecordID, rec record.Record) error {
+	err := e.DB.IterateRecordsOnPulse(ctx, jetID, pulse.PulseNumber, func(id core.RecordID, rec record.Record) error {
 		pl, err := e.getPayload(ctx, jetID, rec)
 		if err != nil {
 			return errors.Wrap(err, "exportPulse failed to getPayload")
@@ -187,7 +186,7 @@ func (e *Exporter) getPayload(ctx context.Context, jetID core.RecordID, rec reco
 		if r.GetMemory() == nil {
 			break
 		}
-		blob, err := e.db.GetBlob(ctx, jetID, r.GetMemory())
+		blob, err := e.ObjectStorage.GetBlob(ctx, jetID, r.GetMemory())
 		if err != nil {
 			return nil, errors.Wrapf(err, "getPayload failed to GetBlob (jet: %s)", jetID.DebugString())
 		}

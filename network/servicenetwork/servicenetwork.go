@@ -27,6 +27,7 @@ import (
 	"github.com/insolar/insolar/consensus/phases"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller"
@@ -35,6 +36,7 @@ import (
 	"github.com/insolar/insolar/network/merkle"
 	"github.com/insolar/insolar/network/routing"
 	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
 )
 
 // ServiceNetwork is facade for network.
@@ -203,6 +205,11 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
 
 	ctx, logger := inslogger.WithTraceField(ctx, traceID)
 	logger.Infof("Got new pulse number: %d", pulse.PulseNumber)
+	ctx, span := instracer.StartSpan(ctx, "ServiceNetwork.Handlepulse")
+	span.AddAttributes(
+		trace.Int64Attribute("pulse.PulseNumber", int64(pulse.PulseNumber)),
+	)
+	defer span.End()
 	if n.PulseManager == nil {
 		logger.Error("PulseManager is not initialized")
 		return

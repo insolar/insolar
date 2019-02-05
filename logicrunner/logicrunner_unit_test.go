@@ -119,6 +119,33 @@ func TestOnPulse(t *testing.T) {
 	err = lr.OnPulse(ctx, pulse)
 	require.NoError(t, err)
 	require.Equal(t, message.PendingUnknown, lr.state[objectRef].ExecutionState.pending)
+
+	jc.IsAuthorizedMock.Return(true, nil)
+	lr.state[objectRef].ExecutionState.pending = message.InPending
+
+	err = lr.OnPulse(ctx, pulse)
+	require.NoError(t, err)
+	require.Equal(t, message.NotPending, lr.state[objectRef].ExecutionState.pending)
+
+	lr.state[objectRef].ExecutionState.Current = nil
+	lr.state[objectRef].ExecutionState.pending = message.InPending
+	lr.state[objectRef].ExecutionState.PendingConfirmed = false
+
+	err = lr.OnPulse(ctx, pulse)
+	require.NoError(t, err)
+	assert.Equal(t, message.NotPending, lr.state[objectRef].ExecutionState.pending)
+	assert.Nil(t, lr.state[objectRef].ExecutionState.objectbody)
+
+	jc.IsAuthorizedMock.Return(false, nil)
+	lr.state[objectRef].ExecutionState.Current = nil
+	lr.state[objectRef].ExecutionState.pending = message.InPending
+	lr.state[objectRef].ExecutionState.PendingConfirmed = false
+
+	err = lr.OnPulse(ctx, pulse)
+	require.NoError(t, err)
+
+	_, ok := lr.state[objectRef]
+	assert.Equal(t, false, ok)
 }
 
 func TestPendingFinished(t *testing.T) {
@@ -629,4 +656,93 @@ func TestLogicRunner_NoExcessiveAmends(t *testing.T) {
 	_, err = lr.executeMethodCall(ctx, es, msg)
 	require.NoError(t, err)
 	require.Equal(t, uint64(1), am.UpdateObjectCounter)
+}
+
+func TestHandleAbandonedRequestsNotificationMessage(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+	objectId := testutils.RandomID()
+	msg := &message.AbandonedRequestsNotification{Object: objectId}
+	parcel := &message.Parcel{Msg: msg}
+
+	// empty lr
+	lr, _ := NewLogicRunner(&configuration.LogicRunner{})
+
+	_, err := lr.HandleAbandonedRequestsNotificationMessage(ctx, parcel)
+	require.NoError(t, err)
+	assert.Equal(t, true, lr.state[*msg.DefaultTarget()].ExecutionState.LedgerHasMoreRequests)
+
+	// LedgerHasMoreRequests false
+	lr, _ = NewLogicRunner(&configuration.LogicRunner{})
+	lr.state[*msg.DefaultTarget()] = &ObjectState{ExecutionState: &ExecutionState{LedgerHasMoreRequests: false}}
+
+	_, err = lr.HandleAbandonedRequestsNotificationMessage(ctx, parcel)
+	require.NoError(t, err)
+	assert.Equal(t, true, lr.state[*msg.DefaultTarget()].ExecutionState.LedgerHasMoreRequests)
+
+	// LedgerHasMoreRequests already true
+	lr, _ = NewLogicRunner(&configuration.LogicRunner{})
+	lr.state[*msg.DefaultTarget()] = &ObjectState{ExecutionState: &ExecutionState{LedgerHasMoreRequests: true}}
+
+	_, err = lr.HandleAbandonedRequestsNotificationMessage(ctx, parcel)
+	require.NoError(t, err)
+	assert.Equal(t, true, lr.state[*msg.DefaultTarget()].ExecutionState.LedgerHasMoreRequests)
+
+}
+
+func TestPrepareObjectStateChangePendingStatus(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+	lr, _ := NewLogicRunner(&configuration.LogicRunner{})
+	ref := testutils.RandomRef()
+
+	msg := &message.ExecutorResults{RecordRef: ref}
+
+	// we are in pending and come to ourselves again
+	lr.state[ref] = &ObjectState{ExecutionState: &ExecutionState{
+		pending: message.InPending, Current: &CurrentExecution{}},
+	}
+	err := lr.prepareObjectState(ctx, msg)
+	require.NoError(t, err)
+	assert.Equal(t, message.NotPending, lr.state[ref].ExecutionState.pending)
+	assert.Equal(t, false, lr.state[ref].ExecutionState.PendingConfirmed)
+
+	// previous executor decline pending, trust him
+	msg = &message.ExecutorResults{RecordRef: ref, Pending: message.NotPending}
+	lr.state[ref] = &ObjectState{ExecutionState: &ExecutionState{
+		pending: message.InPending, Current: nil},
+	}
+	err = lr.prepareObjectState(ctx, msg)
+	require.NoError(t, err)
+	assert.Equal(t, message.NotPending, lr.state[ref].ExecutionState.pending)
+}
+
+func TestPrepareObjectStateChangeLedgerHasMoreRequests(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+	lr, _ := NewLogicRunner(&configuration.LogicRunner{})
+	ref := testutils.RandomRef()
+
+	msg := &message.ExecutorResults{RecordRef: ref}
+
+	type testCase struct {
+		messageStatus             bool
+		objectStateStatus         bool
+		expectedObjectStateStatue bool
+	}
+
+	testCases := []testCase{
+		{true, true, true},
+		{true, false, true},
+		{false, true, true},
+		{false, false, false},
+	}
+
+	for _, test := range testCases {
+		msg = &message.ExecutorResults{RecordRef: ref, LedgerHasMoreRequests: test.messageStatus}
+		lr.state[ref] = &ObjectState{ExecutionState: &ExecutionState{LedgerHasMoreRequests: test.objectStateStatus}}
+		err := lr.prepareObjectState(ctx, msg)
+		require.NoError(t, err)
+		assert.Equal(t, test.expectedObjectStateStatue, lr.state[ref].ExecutionState.LedgerHasMoreRequests)
+	}
+
 }

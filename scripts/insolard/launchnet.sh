@@ -17,7 +17,7 @@ GENESIS_CONFIG=$BASE_DIR/genesis.yaml
 GENERATED_CONFIGS_DIR=$BASE_DIR/$CONFIGS_DIR/generated_configs
 INSGORUND_PORT_FILE=$BASE_DIR/$CONFIGS_DIR/insgorund_ports.txt
 
-insolar_log_level=Debug
+insolar_log_level=${INSOLAR_LOG_LEVEL:-"Debug"}
 gorund_log_level=$insolar_log_level
 
 NUM_NODES=$(grep "host: " $GENESIS_CONFIG | grep -cv "#" )
