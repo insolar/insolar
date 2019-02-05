@@ -21,6 +21,7 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"sync"
+	"time"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
@@ -146,7 +147,7 @@ func (cr *ContractRequester) CallMethod(ctx context.Context, base core.Message, 
 		return res, nil
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, configuration.NewAPIRunner().Timeout)
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(configuration.NewAPIRunner().Timeout)*time.Second)
 	defer cancel()
 	inslogger.FromContext(ctx).Debug("Waiting for Method results ref=", r.Request)
 
