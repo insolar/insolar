@@ -185,7 +185,7 @@ type recentObjectMeta struct {
 
 // NewRecentIndexStorage creates new *RecentIndexStorage
 func NewRecentIndexStorage(jetID core.RecordID, defaultTTL int) *RecentIndexStorage {
-	return &RecentIndexStorage{jetID: jetID, DefaultTTL: defaultTTL}
+	return &RecentIndexStorage{jetID: jetID, DefaultTTL: defaultTTL, indexes: map[core.RecordID]recentObjectMeta{}}
 }
 
 // AddObject adds index's id to an in-memory cache and sets DefaultTTL for it
@@ -271,7 +271,7 @@ type PendingStorage struct {
 
 // NewPendingStorage creates *PendingStorage
 func NewPendingStorage(jetID core.RecordID) *PendingStorage {
-	return &PendingStorage{jetID: jetID}
+	return &PendingStorage{jetID: jetID, requests: map[core.RecordID]map[core.RecordID]struct{}{}}
 }
 
 // AddPendingRequest adds an id of pending request to memory

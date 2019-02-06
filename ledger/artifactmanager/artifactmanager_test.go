@@ -170,16 +170,17 @@ func getTestData(s *amSuite) (
 	handler.DBContext = s.db
 	handler.JetStorage = s.jetStorage
 
-	recentStorageMock := recentstorage.NewRecentStorageMock(s.T())
-	recentStorageMock.AddPendingRequestMock.Return()
-	recentStorageMock.AddObjectMock.Return()
-	recentStorageMock.RemovePendingRequestMock.Return()
-	recentStorageMock.GetRequestsMock.Return(nil)
+	indexMock := recentstorage.NewRecentIndexStorageMock(s.T())
+	pendingMock := recentstorage.NewPendingStorageMock(s.T())
+
+	indexMock.AddObjectMock.Return()
+	pendingMock.GetRequestsForObjectMock.Return(nil)
+	pendingMock.AddPendingRequestMock.Return()
+	pendingMock.RemovePendingRequestMock.Return()
 
 	provideMock := recentstorage.NewProviderMock(s.T())
-	provideMock.GetStorageFunc = func(ctx context.Context, p core.RecordID) (r recentstorage.RecentStorage) {
-		return recentStorageMock
-	}
+	provideMock.GetIndexStorageMock.Return(indexMock)
+	provideMock.GetPendingStorageMock.Return(pendingMock)
 
 	handler.RecentStorageProvider = provideMock
 
@@ -780,11 +781,17 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterValidation() {
 	jc.IsBeyondLimitMock.Return(false, nil)
 	jc.NodeForJetMock.Return(&core.RecordRef{}, nil)
 
-	recentStorageMock := recentstorage.NewRecentStorageMock(s.T())
-	recentStorageMock.AddPendingRequestMock.Return()
-	recentStorageMock.RemovePendingRequestMock.Return()
-	recentStorageMock.AddObjectMock.Return()
-	recentStorageMock.GetRequestsMock.Return(nil)
+	indexMock := recentstorage.NewRecentIndexStorageMock(s.T())
+	pendingMock := recentstorage.NewPendingStorageMock(s.T())
+
+	indexMock.AddObjectMock.Return()
+	pendingMock.GetRequestsForObjectMock.Return(nil)
+	pendingMock.AddPendingRequestMock.Return()
+	pendingMock.RemovePendingRequestMock.Return()
+
+	provideMock := recentstorage.NewProviderMock(s.T())
+	provideMock.GetIndexStorageMock.Return(indexMock)
+	provideMock.GetPendingStorageMock.Return(pendingMock)
 
 	certificate := testutils.NewCertificateMock(s.T())
 	certificate.GetRoleMock.Return(core.StaticRoleLightMaterial)
@@ -803,11 +810,6 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterValidation() {
 	handler.PulseTracker = s.pulseTracker
 	handler.NodeStorage = s.nodeStorage
 	handler.JetStorage = s.jetStorage
-
-	provideMock := recentstorage.NewProviderMock(s.T())
-	provideMock.GetStorageFunc = func(ctx context.Context, p core.RecordID) (r recentstorage.RecentStorage) {
-		return recentStorageMock
-	}
 
 	handler.RecentStorageProvider = provideMock
 
