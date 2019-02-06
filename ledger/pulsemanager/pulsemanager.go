@@ -434,8 +434,6 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse c
 			continue
 		}
 
-		m.RecentStorageProvider.GetStorage(ctx, jetID).DecreaseTTL(ctx)
-
 		info := jetInfo{id: jetID}
 		if indexToSplit == i && splitCount > 0 {
 			splitCount--
@@ -660,6 +658,8 @@ func (m *PulseManager) setUnderGilSection(
 			return nil, nil, nil, errors.Wrap(err, "failed to process jets")
 		}
 	}
+
+	m.RecentStorageProvider.DecreaseTTL(ctx)
 
 	if m.NodeNet.GetOrigin().Role() == core.StaticRoleLightMaterial {
 		m.prepareArtifactManagerMessageHandlerForNextPulse(ctx, newPulse, jets)
