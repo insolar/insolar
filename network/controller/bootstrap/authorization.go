@@ -26,16 +26,17 @@ import (
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller/common"
 	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
 )
 
 type AuthorizationController interface {
-	component.Starter
+	component.Initer
 
 	Authorize(ctx context.Context, discoveryNode *DiscoveryNode, cert core.AuthorizationCertificate) (SessionID, error)
 	Register(ctx context.Context, discoveryNode *DiscoveryNode, sessionID SessionID) error
@@ -93,6 +94,11 @@ func (ac *authorizationController) Authorize(ctx context.Context, discoveryNode 
 	inslogger.FromContext(ctx).Infof("Authorizing on host: %s", discoveryNode.Host)
 	inslogger.FromContext(ctx).Infof("cert: %s", cert)
 
+	ctx, span := instracer.StartSpan(ctx, "AuthorizationController.Authorize")
+	span.AddAttributes(
+		trace.StringAttribute("node", discoveryNode.Node.GetNodeRef().String()),
+	)
+	defer span.End()
 	serializedCert, err := certificate.Serialize(cert)
 	if err != nil {
 		return 0, errors.Wrap(err, "Error serializing certificate")
@@ -120,6 +126,11 @@ func (ac *authorizationController) Authorize(ctx context.Context, discoveryNode 
 func (ac *authorizationController) Register(ctx context.Context, discoveryNode *DiscoveryNode, sessionID SessionID) error {
 	inslogger.FromContext(ctx).Infof("Registering on host: %s", discoveryNode.Host)
 
+	ctx, span := instracer.StartSpan(ctx, "AuthorizationController.Register")
+	span.AddAttributes(
+		trace.StringAttribute("node", discoveryNode.Node.GetNodeRef().String()),
+	)
+	defer span.End()
 	originClaim, err := ac.NodeKeeper.GetOriginJoinClaim()
 	if err != nil {
 		return errors.Wrap(err, "[ Register ] failed to get origin claim")
@@ -162,7 +173,7 @@ func (ac *authorizationController) processRegisterRequest(ctx context.Context, r
 		responseAuthorize := &RegistrationResponse{Code: OpRejected, Error: err.Error()}
 		return ac.transport.BuildResponse(ctx, request, responseAuthorize), nil
 	}
-	log.Infof("Added join claim from node %s", request.GetSender())
+	inslogger.FromContext(ctx).Infof("Added join claim from node %s", request.GetSender())
 	ac.NodeKeeper.AddPendingClaim(data.JoinClaim)
 	return ac.transport.BuildResponse(ctx, request, &RegistrationResponse{Code: OpConfirmed}), nil
 }
@@ -184,7 +195,7 @@ func (ac *authorizationController) processAuthorizeRequest(ctx context.Context, 
 	return ac.transport.BuildResponse(ctx, request, &AuthorizationResponse{Code: OpConfirmed, SessionID: session}), nil
 }
 
-func (ac *authorizationController) Start(ctx context.Context) error {
+func (ac *authorizationController) Init(ctx context.Context) error {
 	ac.transport.RegisterPacketHandler(types.Register, ac.processRegisterRequest)
 	ac.transport.RegisterPacketHandler(types.Authorize, ac.processAuthorizeRequest)
 	return nil

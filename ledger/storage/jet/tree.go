@@ -72,15 +72,16 @@ func (j *jet) Update(prefix []byte, setActual bool, maxDepth, depth uint8) {
 	}
 }
 
-// ResetActual resets actual mark, which will signify uncertain state on nodes and require actualization.
-func (j *jet) ResetActual() {
+// Clone clones tree either keeping actuality state or resetting it to false
+func (j *jet) Clone(keep bool) *jet {
+	res := &jet{Actual: keep && j.Actual}
 	if j.Left != nil {
-		j.Left.ResetActual()
+		res.Left = j.Left.Clone(keep)
 	}
-	j.Actual = false
 	if j.Right != nil {
-		j.Right.ResetActual()
+		res.Right = j.Right.Clone(keep)
 	}
+	return res
 }
 
 func (j *jet) ExtractLeafIDs(ids *[]core.RecordID, path []byte, depth uint8) {
@@ -235,6 +236,11 @@ func NewTree(isActual bool) *Tree {
 	return &Tree{Head: &jet{Actual: isActual}}
 }
 
+// Clone clones the tree keeping actuality or setting everything to false
+func (t *Tree) Clone(keep bool) *Tree {
+	return &Tree{Head: t.Head.Clone(keep)}
+}
+
 // Find returns jet for provided reference. If found jet is actual, the second argument will be true.
 func (t *Tree) Find(id core.RecordID) (*core.RecordID, bool) {
 	if id.Pulse() == core.PulseNumberJet {
@@ -278,11 +284,6 @@ func (t *Tree) Split(jetID core.RecordID) (*core.RecordID, *core.RecordID, error
 	rightPrefix := ResetBits(prefix, depth)
 	setBit(rightPrefix, depth)
 	return NewID(depth+1, leftPrefix), NewID(depth+1, rightPrefix), nil
-}
-
-// ResetActual resets actual mark, which will signify uncertain state on nodes and require actualization.
-func (t *Tree) ResetActual() {
-	t.Head.ResetActual()
 }
 
 func (t *Tree) LeafIDs() []core.RecordID {

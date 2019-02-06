@@ -43,6 +43,14 @@ type PulseTracker interface {
 	AddPulse(ctx context.Context, pulse core.Pulse) error
 }
 
+type pulseTracker struct {
+	DB DBContext `inject:""`
+}
+
+func NewPulseTracker() PulseTracker {
+	return new(pulseTracker)
+}
+
 // Bytes serializes pulse.
 func (p *Pulse) Bytes() []byte {
 	var buf bytes.Buffer
@@ -78,8 +86,8 @@ func (m *TransactionManager) GetPulse(ctx context.Context, num core.PulseNumber)
 }
 
 // AddPulse saves new pulse data and updates index.
-func (db *DB) AddPulse(ctx context.Context, pulse core.Pulse) error {
-	return db.Update(ctx, func(tx *TransactionManager) error {
+func (pt *pulseTracker) AddPulse(ctx context.Context, pulse core.Pulse) error {
+	return pt.DB.Update(ctx, func(tx *TransactionManager) error {
 		var (
 			previousPulseNumber  core.PulseNumber
 			previousSerialNumber int
@@ -131,12 +139,12 @@ func (db *DB) AddPulse(ctx context.Context, pulse core.Pulse) error {
 }
 
 // GetPulse returns pulse for provided pulse number.
-func (db *DB) GetPulse(ctx context.Context, num core.PulseNumber) (*Pulse, error) {
+func (pt *pulseTracker) GetPulse(ctx context.Context, num core.PulseNumber) (*Pulse, error) {
 	var (
 		pulse *Pulse
 		err   error
 	)
-	err = db.View(ctx, func(tx *TransactionManager) error {
+	err = pt.DB.View(ctx, func(tx *TransactionManager) error {
 		pulse, err = tx.GetPulse(ctx, num)
 		return err
 	})
@@ -147,12 +155,12 @@ func (db *DB) GetPulse(ctx context.Context, num core.PulseNumber) (*Pulse, error
 }
 
 // GetPreviousPulse returns pulse for provided pulse number.
-func (db *DB) GetPreviousPulse(ctx context.Context, num core.PulseNumber) (*Pulse, error) {
+func (pt *pulseTracker) GetPreviousPulse(ctx context.Context, num core.PulseNumber) (*Pulse, error) {
 	var (
 		pulse *Pulse
 		err   error
 	)
-	err = db.View(ctx, func(tx *TransactionManager) error {
+	err = pt.DB.View(ctx, func(tx *TransactionManager) error {
 		pulse, err = tx.GetPulse(ctx, num)
 		if err != nil {
 			return err
@@ -181,12 +189,12 @@ func (m *TransactionManager) GetLatestPulse(ctx context.Context) (*Pulse, error)
 }
 
 // Deprecated: use core.PulseStorage.Current() instead (or private getLatestPulse if applicable).
-func (db *DB) GetLatestPulse(ctx context.Context) (*Pulse, error) {
-	return db.getLatestPulse(ctx)
+func (pt *pulseTracker) GetLatestPulse(ctx context.Context) (*Pulse, error) {
+	return pt.getLatestPulse(ctx)
 }
 
-func (db *DB) getLatestPulse(ctx context.Context) (*Pulse, error) {
-	tx, err := db.BeginTransaction(false)
+func (pt *pulseTracker) getLatestPulse(ctx context.Context) (*Pulse, error) {
+	tx, err := pt.DB.BeginTransaction(false)
 	if err != nil {
 		return nil, err
 	}

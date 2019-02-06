@@ -24,15 +24,17 @@ import (
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/merkle"
 	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
 )
 
 type ThirdPhase interface {
-	Execute(ctx context.Context, state *SecondPhaseState) (*ThirdPhaseState, error)
+	Execute(ctx context.Context, pulse *core.Pulse, state *SecondPhaseState) (*ThirdPhaseState, error)
 }
 
 func NewThirdPhase() ThirdPhase {
@@ -46,11 +48,14 @@ type thirdPhase struct {
 	Calculator   merkle.Calculator        `inject:""`
 }
 
-func (tp *thirdPhase) Execute(ctx context.Context, state *SecondPhaseState) (*ThirdPhaseState, error) {
+func (tp *thirdPhase) Execute(ctx context.Context, pulse *core.Pulse, state *SecondPhaseState) (*ThirdPhaseState, error) {
+	ctx, span := instracer.StartSpan(ctx, "ThirdPhase.Execute")
+	span.AddAttributes(trace.Int64Attribute("pulse", int64(state.PulseEntry.Pulse.PulseNumber)))
+	defer span.End()
 	metrics.ConsensusPhase3Exec.Inc()
 	var gSign [packets.SignatureLength]byte
 	copy(gSign[:], state.GlobuleProof.Signature.Bytes()[:packets.SignatureLength])
-	packet := packets.NewPhase3Packet(gSign, state.BitSet)
+	packet := packets.NewPhase3Packet(pulse.PulseNumber, gSign, state.BitSet)
 
 	nodes := make([]core.Node, 0)
 	for _, node := range state.MatrixState.Active {

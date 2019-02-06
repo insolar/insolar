@@ -143,7 +143,7 @@ func TestCalculatorHashes(t *testing.T) {
 
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
 	nk := nodekeeper.GetTestNodekeeper(service)
-	th := terminationhandler.NewTestTerminationHandler()
+	th := terminationhandler.NewTestHandler()
 
 	cm := component.Manager{}
 	cm.Inject(th, nk, am, calculator, service, scheme)

@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network"
@@ -31,6 +32,7 @@ import (
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
 )
 
 const BFTPercent = 2.0 / 3.0
@@ -68,6 +70,9 @@ type FirstPhaseImpl struct {
 func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPhaseState, error) {
 	entry := &merkle.PulseEntry{Pulse: pulse}
 	logger := inslogger.FromContext(ctx)
+	ctx, span := instracer.StartSpan(ctx, "FirstPhase.Execute")
+	span.AddAttributes(trace.Int64Attribute("pulse", int64(pulse.PulseNumber)))
+	defer span.End()
 
 	var unsyncList network.UnsyncList
 
@@ -82,7 +87,7 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse) (*Firs
 		return nil, errors.Wrap(err, "[ FirstPhase ] Failed to calculate pulse proof.")
 	}
 
-	packet := packets.NewPhase1Packet()
+	packet := packets.NewPhase1Packet(*pulse)
 	err = packet.SetPulseProof(pulseProof.StateHash, pulseProof.Signature.Bytes())
 	if err != nil {
 		return nil, errors.Wrap(err, "[ FirstPhase ] Failed to set pulse proof in Phase1Packet.")

@@ -45,9 +45,10 @@ func (p2p *Phase2Packet) Clone() ConsensusPacket {
 	return &clone
 }
 
-func NewPhase2Packet() *Phase2Packet {
+func NewPhase2Packet(number core.PulseNumber) *Phase2Packet {
 	result := &Phase2Packet{}
 	result.packetHeader.PacketT = Phase2
+	result.packetHeader.Pulse = uint32(number)
 	return result
 }
 

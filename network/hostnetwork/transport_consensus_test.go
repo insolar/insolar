@@ -107,7 +107,7 @@ func (t *consensusTransportSuite) sendPacket(packet consensus.ConsensusPacket) (
 }
 
 func newPhase1Packet() *consensus.Phase1Packet {
-	return consensus.NewPhase1Packet()
+	return consensus.NewPhase1Packet(core.Pulse{})
 }
 
 func newPhase2Packet() (*consensus.Phase2Packet, error) {
@@ -115,7 +115,7 @@ func newPhase2Packet() (*consensus.Phase2Packet, error) {
 	if err != nil {
 		return nil, err
 	}
-	result := consensus.NewPhase2Packet()
+	result := consensus.NewPhase2Packet(core.PulseNumber(0))
 	result.SetBitSet(bitset)
 	return result, nil
 }
@@ -126,7 +126,7 @@ func newPhase3Packet() (*consensus.Phase3Packet, error) {
 	if err != nil {
 		return nil, err
 	}
-	return consensus.NewPhase3Packet(ghs, bitset), nil
+	return consensus.NewPhase3Packet(core.PulseNumber(0), ghs, bitset), nil
 }
 
 func (t *consensusTransportSuite) TestSendPacketPhase1() {

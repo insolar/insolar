@@ -21,13 +21,16 @@ import (
 	"context"
 	"sync/atomic"
 
+	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network"
 	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
 )
 
 // Communicator interface provides methods to exchange data between nodes
@@ -47,7 +50,7 @@ type Communicator interface {
 	// ExchangePhase3 used in third consensus step to exchange data between participants
 	ExchangePhase3(ctx context.Context, participants []core.Node, packet *packets.Phase3Packet) (map[core.RecordRef]*packets.Phase3Packet, error)
 
-	Start(ctx context.Context) error
+	component.Initer
 }
 
 type phase1Result struct {
@@ -85,7 +88,7 @@ func NewNaiveCommunicator() *NaiveCommunicator {
 }
 
 // Start method implements Starter interface
-func (nc *NaiveCommunicator) Start(ctx context.Context) error {
+func (nc *NaiveCommunicator) Init(ctx context.Context) error {
 	nc.phase1result = make(chan phase1Result)
 	nc.phase2result = make(chan phase2Result)
 	nc.phase3result = make(chan phase3Result)
@@ -193,7 +196,7 @@ func (nc *NaiveCommunicator) generatePhase2Response(origReq, req *packets.Phase2
 			answers = append(answers, &claimAnswer)
 		}
 	}
-	response := packets.NewPhase2Packet()
+	response := packets.NewPhase2Packet(origReq.GetPulseNumber())
 	response.SetBitSet(origReq.GetBitSet())
 	ghs := origReq.GetGlobuleHashSignature()
 	err := response.SetGlobuleHashSignature(ghs[:])
@@ -213,6 +216,10 @@ func (nc *NaiveCommunicator) ExchangePhase1(
 	participants []core.Node,
 	packet *packets.Phase1Packet,
 ) (map[core.RecordRef]*packets.Phase1Packet, error) {
+	ctx, span := instracer.StartSpan(ctx, "Communicator.ExchangePhase1")
+	span.AddAttributes(trace.Int64Attribute("pulse", int64(packet.GetPulseNumber())))
+	defer span.End()
+
 	result := make(map[core.RecordRef]*packets.Phase1Packet, len(participants))
 
 	result[nc.ConsensusNetwork.GetNodeID()] = packet
@@ -255,7 +262,7 @@ func (nc *NaiveCommunicator) ExchangePhase1(
 		case res := <-nc.phase1result:
 			metrics.ConsensusPacketsRecv.WithLabelValues("phase 1").Inc()
 			log.Debugf("got phase1 request from %s", res.id)
-			if res.packet.GetPulseNumber() != core.PulseNumber(nc.currentPulseNumber) {
+			if res.packet.GetPulseNumber() != nc.getPulseNumber() {
 				continue
 			}
 
@@ -299,6 +306,9 @@ func (nc *NaiveCommunicator) ExchangePhase1(
 // ExchangePhase2 used in second consensus phase to exchange data between participants
 func (nc *NaiveCommunicator) ExchangePhase2(ctx context.Context, list network.UnsyncList,
 	participants []core.Node, packet *packets.Phase2Packet) (map[core.RecordRef]*packets.Phase2Packet, error) {
+	ctx, span := instracer.StartSpan(ctx, "Communicator.ExchangePhase2")
+	span.AddAttributes(trace.Int64Attribute("pulse", int64(packet.GetPulseNumber())))
+	defer span.End()
 
 	result := make(map[core.RecordRef]*packets.Phase2Packet, len(participants))
 
@@ -320,7 +330,7 @@ func (nc *NaiveCommunicator) ExchangePhase2(ctx context.Context, list network.Un
 		case res := <-nc.phase2result:
 			metrics.ConsensusPacketsRecv.WithLabelValues("phase 2").Inc()
 			log.Debugf("got phase2 request from %s", res.id)
-			if res.packet.GetPulseNumber() != core.PulseNumber(nc.currentPulseNumber) {
+			if res.packet.GetPulseNumber() != nc.getPulseNumber() {
 				continue
 			}
 
@@ -379,6 +389,9 @@ func (nc *NaiveCommunicator) sendAdditionalRequests(origReq *packets.Phase2Packe
 // ExchangePhase21 used in second consensus phase to exchange data between participants
 func (nc *NaiveCommunicator) ExchangePhase21(ctx context.Context, list network.UnsyncList, packet *packets.Phase2Packet,
 	additionalRequests []*AdditionalRequest) ([]packets.ReferendumVote, error) {
+	ctx, span := instracer.StartSpan(ctx, "Communicator.ExchangePhase21")
+	span.AddAttributes(trace.Int64Attribute("pulse", int64(packet.GetPulseNumber())))
+	defer span.End()
 
 	type none struct{}
 	incoming := make(map[core.RecordRef]none)
@@ -411,7 +424,7 @@ func (nc *NaiveCommunicator) ExchangePhase21(ctx context.Context, list network.U
 		select {
 		case res := <-nc.phase2result:
 			metrics.ConsensusPacketsRecv.WithLabelValues("phase 2").Inc()
-			if res.packet.GetPulseNumber() != core.PulseNumber(nc.currentPulseNumber) {
+			if res.packet.GetPulseNumber() != nc.getPulseNumber() {
 				continue
 			}
 
@@ -458,6 +471,9 @@ func (nc *NaiveCommunicator) ExchangePhase21(ctx context.Context, list network.U
 // ExchangePhase3 used in third consensus step to exchange data between participants
 func (nc *NaiveCommunicator) ExchangePhase3(ctx context.Context, participants []core.Node, packet *packets.Phase3Packet) (map[core.RecordRef]*packets.Phase3Packet, error) {
 	result := make(map[core.RecordRef]*packets.Phase3Packet, len(participants))
+	ctx, span := instracer.StartSpan(ctx, "Communicator.ExchangePhase3")
+	span.AddAttributes(trace.Int64Attribute("pulse", int64(packet.GetPulseNumber())))
+	defer span.End()
 
 	result[nc.ConsensusNetwork.GetNodeID()] = packet
 

@@ -21,6 +21,7 @@ import (
 	"context"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
@@ -28,6 +29,7 @@ import (
 	"github.com/insolar/insolar/consensus/phases"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller"
@@ -37,6 +39,7 @@ import (
 	"github.com/insolar/insolar/network/routing"
 	"github.com/insolar/insolar/network/utils"
 	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
 )
 
 // ServiceNetwork is facade for network.
@@ -56,6 +59,7 @@ type ServiceNetwork struct {
 	CryptographyScheme  core.PlatformCryptographyScheme `inject:""`
 	NodeKeeper          network.NodeKeeper              `inject:""`
 	NetworkSwitcher     core.NetworkSwitcher            `inject:""`
+	TerminationHandler  core.TerminationHandler         `inject:""`
 
 	// subcomponents
 	PhaseManager phases.PhaseManager `inject:"subcomponent"`
@@ -65,6 +69,8 @@ type ServiceNetwork struct {
 	isGenesis   bool
 	isDiscovery bool
 	skip        int
+
+	lock sync.Mutex
 }
 
 // NewServiceNetwork returns a new ServiceNetwork.
@@ -212,12 +218,20 @@ func (n *ServiceNetwork) Stop(ctx context.Context) error {
 }
 
 func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse core.Pulse) {
+	n.lock.Lock()
+	defer n.lock.Unlock()
+
 	if n.isGenesis {
 		return
 	}
 	traceID := "pulse_" + strconv.FormatUint(uint64(newPulse.PulseNumber), 10)
 	ctx, logger := inslogger.WithTraceField(ctx, traceID)
 	logger.Infof("Got new pulse number: %d", newPulse.PulseNumber)
+	ctx, span := instracer.StartSpan(ctx, "ServiceNetwork.Handlepulse")
+	span.AddAttributes(
+		trace.Int64Attribute("pulse.PulseNumber", int64(newPulse.PulseNumber)),
+	)
+	defer span.End()
 
 	if !n.NodeKeeper.IsBootstrapped() {
 		n.Controller.SetLastIgnoredPulse(newPulse.NextPulseNumber)
@@ -241,7 +255,7 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse core.Pulse) {
 	// }
 
 	if !isNextPulse(currentPulse, &newPulse) {
-		logger.Infof("Incorrect newPulse number. Current: %+v. New: %+v", currentPulse, newPulse)
+		logger.Infof("Incorrect pulse number. Current: %+v. New: %+v", currentPulse, newPulse)
 		return
 	}
 
@@ -270,7 +284,8 @@ func (n *ServiceNetwork) phaseManagerOnPulse(ctx context.Context, newPulse core.
 	logger := inslogger.FromContext(ctx)
 
 	if err := n.PhaseManager.OnPulse(ctx, &newPulse); err != nil {
-		logger.Warn("phase manager fail: " + err.Error())
+		logger.Error("Failed to pass consensus: " + err.Error())
+		n.TerminationHandler.Abort()
 	}
 }
 

@@ -24,17 +24,19 @@ import (
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/merkle"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
 )
 
 type SecondPhase interface {
-	Execute(ctx context.Context, state *FirstPhaseState) (*SecondPhaseState, error)
-	Execute21(ctx context.Context, state *SecondPhaseState) (*SecondPhaseState, error)
+	Execute(ctx context.Context, pulse *core.Pulse, state *FirstPhaseState) (*SecondPhaseState, error)
+	Execute21(ctx context.Context, pulse *core.Pulse, state *SecondPhaseState) (*SecondPhaseState, error)
 }
 
 func NewSecondPhase() SecondPhase {
@@ -48,7 +50,10 @@ type secondPhase struct {
 	Cryptography core.CryptographyService `inject:""`
 }
 
-func (sp *secondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*SecondPhaseState, error) {
+func (sp *secondPhase) Execute(ctx context.Context, pulse *core.Pulse, state *FirstPhaseState) (*SecondPhaseState, error) {
+	ctx, span := instracer.StartSpan(ctx, "SecondPhase.Execute")
+	span.AddAttributes(trace.Int64Attribute("pulse", int64(state.PulseEntry.Pulse.PulseNumber)))
+	defer span.End()
 	prevCloudHash := sp.NodeKeeper.GetCloudHash()
 
 	state.ValidProofs[sp.NodeKeeper.GetOrigin()] = state.PulseProof
@@ -66,7 +71,7 @@ func (sp *secondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 		return nil, errors.Wrap(err, "[ SecondPhase ] Failed to calculate globule proof")
 	}
 
-	packet := packets.NewPhase2Packet()
+	packet := packets.NewPhase2Packet(pulse.PulseNumber)
 	err = packet.SetGlobuleHashSignature(globuleProof.Signature.Bytes())
 	if err != nil {
 		return nil, errors.Wrap(err, "[ SecondPhase ] Failed to set globule proof in Phase2Packet")
@@ -98,7 +103,7 @@ func (sp *secondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 		state.UnsyncList.SetGlobuleHashSignature(ref, packet.GetGlobuleHashSignature())
 		err = stateMatrix.ApplyBitSet(ref, packet.GetBitSet())
 		if err != nil {
-			log.Warnf("[ SecondPhase ] Could not apply bitset from node %s", ref)
+			log.Warnf("[ SecondPhase ] Could not apply bitset from node %s: %s", ref, err.Error())
 			continue
 		}
 	}
@@ -156,7 +161,10 @@ func (sp *secondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 	}, nil
 }
 
-func (sp *secondPhase) Execute21(ctx context.Context, state *SecondPhaseState) (*SecondPhaseState, error) {
+func (sp *secondPhase) Execute21(ctx context.Context, pulse *core.Pulse, state *SecondPhaseState) (*SecondPhaseState, error) {
+	ctx, span := instracer.StartSpan(ctx, "SecondPhase.Execute21")
+	span.AddAttributes(trace.Int64Attribute("pulse", int64(state.PulseEntry.Pulse.PulseNumber)))
+	defer span.End()
 	metrics.ConsensusPhase21Exec.Inc()
 	additionalRequests := state.MatrixState.AdditionalRequestsPhase2
 
@@ -164,7 +172,7 @@ func (sp *secondPhase) Execute21(ctx context.Context, state *SecondPhaseState) (
 	results := make(map[uint16]*packets.MissingNodeSupplementaryVote)
 	claims := make(map[uint16]*packets.MissingNodeClaim)
 
-	packet := packets.NewPhase2Packet()
+	packet := packets.NewPhase2Packet(pulse.PulseNumber)
 	err := packet.SetGlobuleHashSignature(state.GlobuleProof.Signature.Bytes())
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Phase 2.1 ] Failed to set pulse proof in Phase2Packet.")

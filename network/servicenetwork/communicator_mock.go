@@ -82,6 +82,6 @@ func (cm *CommunicatorMock) ExchangePhase3(ctx context.Context, participants []c
 	return cm.communicator.ExchangePhase3(ctx, participants, packet)
 }
 
-func (cm *CommunicatorMock) Start(ctx context.Context) error {
-	return cm.communicator.Start(ctx)
+func (cm *CommunicatorMock) Init(ctx context.Context) error {
+	return cm.communicator.Init(ctx)
 }

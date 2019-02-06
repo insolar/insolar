@@ -7,7 +7,7 @@ import (
 
 type testTerminationHandler struct{}
 
-func NewTestTerminationHandler() core.TerminationHandler {
+func NewTestHandler() core.TerminationHandler {
 	return &testTerminationHandler{}
 }
 

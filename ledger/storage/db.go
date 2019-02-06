@@ -25,10 +25,6 @@ import (
 	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/message"
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/recentstorage"
-	"github.com/insolar/insolar/ledger/storage/index"
 	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/pkg/errors"
@@ -57,8 +53,6 @@ const (
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage.DBContext -o ./ -s _mock.go
 type DBContext interface {
 	SetTxRetiries(n int)
-	GetJetSizesHistoryDepth() int
-	GenesisRef() *core.RecordRef
 
 	BeginTransaction(update bool) (*TransactionManager, error)
 	View(ctx context.Context, fn func(*TransactionManager) error) error
@@ -67,21 +61,45 @@ type DBContext interface {
 	SetLocalData(ctx context.Context, pulse core.PulseNumber, key []byte, data []byte) error
 	GetLocalData(ctx context.Context, pulse core.PulseNumber, key []byte) ([]byte, error)
 
+	IterateLocalData(
+		ctx context.Context,
+		pulse core.PulseNumber,
+		prefix []byte,
+		handler func(k, v []byte) error,
+	) error
+
+	IterateRecordsOnPulse(
+		ctx context.Context,
+		jetID core.RecordID,
+		pulse core.PulseNumber,
+		handler func(id core.RecordID, rec record.Record) error,
+	) error
+
 	StoreKeyValues(ctx context.Context, kvs []core.KV) error
 
 	GetBadgerDB() *badger.DB
 
-	RemoveAllForJetUntilPulse(ctx context.Context, jetID core.RecordID, pn core.PulseNumber, recent recentstorage.RecentStorage) (map[string]RmStat, error)
-
 	Close() error
+
+	GetPlatformCryptographyScheme() core.PlatformCryptographyScheme
+
+	set(ctx context.Context, key, value []byte) error
+	get(ctx context.Context, key []byte) ([]byte, error)
+
+	// TODO i.markin 28.01.19: Delete after switching to conveyor architecture.
+	waitingFlight()
+
+	iterate(ctx context.Context,
+		prefix []byte,
+		handler func(k, v []byte) error,
+	) error
 }
 
 // DB represents BadgerDB storage implementation.
 type DB struct {
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 
-	db         *badger.DB
-	genesisRef *core.RecordRef
+	db *badger.DB
 
 	// dropLock protects dropWG from concurrent calls to Add and Wait
 	dropLock sync.Mutex
@@ -93,20 +111,8 @@ type DB struct {
 	// so txretiries is our knob to tune up retry logic.
 	txretiries int
 
-	jetSizesHistoryDepth int
-
 	idlocker             *IDLocker
 	jetHeavyClientLocker *IDLocker
-
-	// NodeHistory is an in-memory active node storage for each pulse. It's required to calculate node roles
-	// for past pulses to locate data.
-	// It should only contain previous N pulses. It should be stored on disk.
-	nodeHistory     map[core.PulseNumber][]Node
-	nodeHistoryLock sync.RWMutex
-
-	addJetLock       sync.RWMutex
-	addBlockSizeLock sync.RWMutex
-	jetTreeLock      sync.RWMutex
 
 	closeLock sync.RWMutex
 	isClosed  bool
@@ -115,11 +121,6 @@ type DB struct {
 // SetTxRetiries sets number of retries on conflict in Update
 func (db *DB) SetTxRetiries(n int) {
 	db.txretiries = n
-}
-
-// GetJetSizesHistoryDepth returns max amount of drop sizes
-func (db *DB) GetJetSizesHistoryDepth() int {
-	return db.jetSizesHistoryDepth
 }
 
 func setOptions(o *badger.Options) *badger.Options {
@@ -134,7 +135,7 @@ func setOptions(o *badger.Options) *badger.Options {
 
 // NewDB returns storage.DB with BadgerDB instance initialized by opts.
 // Creates database in provided dir or in current directory if dir parameter is empty.
-func NewDB(conf configuration.Ledger, opts *badger.Options) (*DB, error) {
+func NewDB(conf configuration.Ledger, opts *badger.Options) (DBContext, error) {
 	opts = setOptions(opts)
 	dir, err := filepath.Abs(conf.Storage.DataDirectory)
 	if err != nil {
@@ -152,91 +153,10 @@ func NewDB(conf configuration.Ledger, opts *badger.Options) (*DB, error) {
 	db := &DB{
 		db:                   bdb,
 		txretiries:           conf.Storage.TxRetriesOnConflict,
-		jetSizesHistoryDepth: conf.JetSizesHistoryDepth,
 		idlocker:             NewIDLocker(),
 		jetHeavyClientLocker: NewIDLocker(),
-		nodeHistory:          map[core.PulseNumber][]Node{},
 	}
 	return db, nil
-}
-
-// Init creates initial records in storage.
-func (db *DB) Init(ctx context.Context) error {
-	inslog := inslogger.FromContext(ctx)
-	inslog.Debug("start storage bootstrap")
-	jetID := *jet.NewID(0, nil)
-
-	getGenesisRef := func() (*core.RecordRef, error) {
-		buff, err := db.get(ctx, prefixkey(scopeIDSystem, []byte{sysGenesis}))
-		if err != nil {
-			return nil, err
-		}
-		var genesisRef core.RecordRef
-		copy(genesisRef[:], buff)
-		return &genesisRef, nil
-	}
-
-	createGenesisRecord := func() (*core.RecordRef, error) {
-		err := db.AddJets(ctx, jetID)
-		if err != nil {
-			return nil, err
-		}
-
-		err = db.AddPulse(
-			ctx,
-			core.Pulse{
-				PulseNumber: core.GenesisPulse.PulseNumber,
-				Entropy:     core.GenesisPulse.Entropy,
-			},
-		)
-		if err != nil {
-			return nil, err
-		}
-		// It should be 0. Becase pulse after 65537 will try to use a hash of drop between 0 - 65537
-		err = db.SetDrop(ctx, jetID, &jet.JetDrop{})
-		if err != nil {
-			return nil, err
-		}
-
-		lastPulse, err := db.GetLatestPulse(ctx)
-		if err != nil {
-			return nil, err
-		}
-		genesisID, err := db.SetRecord(ctx, jetID, lastPulse.Pulse.PulseNumber, &record.GenesisRecord{})
-		if err != nil {
-			return nil, err
-		}
-		err = db.SetObjectIndex(
-			ctx,
-			jetID,
-			genesisID,
-			&index.ObjectLifeline{LatestState: genesisID, LatestStateApproved: genesisID},
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		genesisRef := core.NewRecordRef(*genesisID, *genesisID)
-		return genesisRef, db.set(ctx, prefixkey(scopeIDSystem, []byte{sysGenesis}), genesisRef[:])
-	}
-
-	var err error
-	db.genesisRef, err = getGenesisRef()
-	if err == ErrNotFound {
-		db.genesisRef, err = createGenesisRecord()
-	}
-	if err != nil {
-		return errors.Wrap(err, "bootstrap failed")
-	}
-
-	return nil
-}
-
-// GenesisRef returns the genesis record reference.
-//
-// Genesis record is the parent for all top-level records.
-func (db *DB) GenesisRef() *core.RecordRef {
-	return db.genesisRef
 }
 
 // Close wraps BadgerDB Close method.
@@ -258,122 +178,6 @@ func (db *DB) Close() error {
 // Stop stops DB component.
 func (db *DB) Stop(ctx context.Context) error {
 	return db.Close()
-}
-
-// GetBlob returns binary value stored by record ID.
-// TODO: switch from reference to passing blob id for consistency - @nordicdyno 6.Dec.2018
-func (db *DB) GetBlob(ctx context.Context, jetID core.RecordID, id *core.RecordID) ([]byte, error) {
-	var (
-		blob []byte
-		err  error
-	)
-
-	err = db.View(ctx, func(tx *TransactionManager) error {
-		blob, err = tx.GetBlob(ctx, jetID, id)
-		return err
-	})
-	if err != nil {
-		return nil, err
-	}
-	return blob, nil
-}
-
-// SetBlob saves binary value for provided pulse.
-func (db *DB) SetBlob(ctx context.Context, jetID core.RecordID, pulseNumber core.PulseNumber, blob []byte) (*core.RecordID, error) {
-	var (
-		id  *core.RecordID
-		err error
-	)
-	err = db.Update(ctx, func(tx *TransactionManager) error {
-		id, err = tx.SetBlob(ctx, jetID, pulseNumber, blob)
-		return err
-	})
-	if err != nil {
-		return nil, err
-	}
-	return id, nil
-}
-
-// GetRecord wraps matching transaction manager method.
-func (db *DB) GetRecord(ctx context.Context, jetID core.RecordID, id *core.RecordID) (record.Record, error) {
-	var (
-		fetchedRecord record.Record
-		err           error
-	)
-
-	err = db.View(ctx, func(tx *TransactionManager) error {
-		fetchedRecord, err = tx.GetRecord(ctx, jetID, id)
-		return err
-	})
-	if err != nil {
-		return nil, err
-	}
-	return fetchedRecord, nil
-}
-
-// SetRecord wraps matching transaction manager method.
-func (db *DB) SetRecord(ctx context.Context, jetID core.RecordID, pulseNumber core.PulseNumber, rec record.Record) (*core.RecordID, error) {
-	var (
-		id  *core.RecordID
-		err error
-	)
-	err = db.Update(ctx, func(tx *TransactionManager) error {
-		id, err = tx.SetRecord(ctx, jetID, pulseNumber, rec)
-		return err
-	})
-	if err != nil {
-		return nil, err
-	}
-	return id, nil
-}
-
-// GetObjectIndex wraps matching transaction manager method.
-func (db *DB) GetObjectIndex(
-	ctx context.Context,
-	jetID core.RecordID,
-	id *core.RecordID,
-	forupdate bool,
-) (*index.ObjectLifeline, error) {
-	tx, err := db.BeginTransaction(false)
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Discard()
-
-	idx, err := tx.GetObjectIndex(ctx, jetID, id, forupdate)
-	if err != nil {
-		return nil, err
-	}
-	return idx, nil
-}
-
-// SetObjectIndex wraps matching transaction manager method.
-func (db *DB) SetObjectIndex(
-	ctx context.Context,
-	jetID core.RecordID,
-	id *core.RecordID,
-	idx *index.ObjectLifeline,
-) error {
-	return db.Update(ctx, func(tx *TransactionManager) error {
-		return tx.SetObjectIndex(ctx, jetID, id, idx)
-	})
-}
-
-// RemoveObjectIndex removes an index of an object
-func (db *DB) RemoveObjectIndex(
-	ctx context.Context,
-	jetID core.RecordID,
-	ref *core.RecordID,
-) error {
-	return db.Update(ctx, func(tx *TransactionManager) error {
-		return tx.RemoveObjectIndex(ctx, jetID, ref)
-	})
-}
-
-func (db *DB) waitinflight() {
-	db.dropLock.Lock()
-	db.dropWG.Wait()
-	db.dropLock.Unlock()
 }
 
 // BeginTransaction opens a new transaction.
@@ -451,24 +255,6 @@ func (db *DB) GetBadgerDB() *badger.DB {
 	return db.db
 }
 
-// SetMessage persists message to the database
-func (db *DB) SetMessage(ctx context.Context, jetID core.RecordID, pulseNumber core.PulseNumber, genericMessage core.Message) error {
-	_, prefix := jet.Jet(jetID)
-	messageBytes := message.ToBytes(genericMessage)
-	hw := db.PlatformCryptographyScheme.ReferenceHasher()
-	_, err := hw.Write(messageBytes)
-	if err != nil {
-		return err
-	}
-	hw.Sum(nil)
-
-	return db.set(
-		ctx,
-		prefixkey(scopeIDMessage, prefix, pulseNumber.Bytes(), hw.Sum(nil)),
-		messageBytes,
-	)
-}
-
 // SetLocalData saves provided data to storage.
 func (db *DB) SetLocalData(ctx context.Context, pulse core.PulseNumber, key []byte, data []byte) error {
 	return db.set(
@@ -520,26 +306,6 @@ func (db *DB) IterateRecordsOnPulse(
 	})
 }
 
-// IterateIndexIDs iterates over index IDs on provided Jet ID.
-func (db *DB) IterateIndexIDs(
-	ctx context.Context,
-	jetID core.RecordID,
-	handler func(id core.RecordID) error,
-) error {
-	_, jetPrefix := jet.Jet(jetID)
-	prefix := prefixkey(scopeIDLifeline, jetPrefix)
-
-	return db.iterate(ctx, prefix, func(k, v []byte) error {
-		pn := pulseNumFromKey(0, k)
-		id := core.NewRecordID(pn, k[core.PulseNumberSize:])
-		err := handler(*id)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
-}
-
 // StoreKeyValues stores provided key/value pairs.
 func (db *DB) StoreKeyValues(ctx context.Context, kvs []core.KV) error {
 	return db.Update(ctx, func(tx *TransactionManager) error {
@@ -551,6 +317,10 @@ func (db *DB) StoreKeyValues(ctx context.Context, kvs []core.KV) error {
 		}
 		return nil
 	})
+}
+
+func (db *DB) GetPlatformCryptographyScheme() core.PlatformCryptographyScheme {
+	return db.PlatformCryptographyScheme
 }
 
 // get wraps matching transaction manager method.
@@ -568,6 +338,12 @@ func (db *DB) set(ctx context.Context, key, value []byte) error {
 	return db.Update(ctx, func(tx *TransactionManager) error {
 		return tx.set(ctx, key, value)
 	})
+}
+
+func (db *DB) waitingFlight() {
+	db.dropLock.Lock()
+	db.dropWG.Wait()
+	db.dropLock.Unlock()
 }
 
 func (db *DB) iterate(
