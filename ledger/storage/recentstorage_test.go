@@ -23,6 +23,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/testutils"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -179,4 +180,27 @@ func TestRecentStorageProvider_GetStorage(t *testing.T) {
 
 	// Assert
 	require.Equal(t, 8, len(provider.storage))
+}
+
+func TestRecentStorage_markForDelete(t *testing.T) {
+	candidates := make([]core.RecordID, 0, 100)
+	expect := make([]core.RecordID, 0, 50)
+	recentStorageMap := make(map[core.RecordID]recentObjectMeta)
+
+	for i := 0; i < 100; i++ {
+		rID := testutils.RandomID()
+		candidates = append(candidates, rID)
+		if i%2 == 0 {
+			expect = append(expect, rID)
+		} else {
+			recentStorageMap[rID] = recentObjectMeta{i}
+		}
+	}
+
+	recentStorage := NewRecentStorage(testutils.RandomJet(), 888)
+	recentStorage.recentObjects = recentStorageMap
+
+	markedCandidates := recentStorage.markForDelete(candidates)
+
+	assert.Equal(t, expect, markedCandidates)
 }

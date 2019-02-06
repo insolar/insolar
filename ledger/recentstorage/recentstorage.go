@@ -58,4 +58,6 @@ type PendingStorage interface {
 	GetRequestsForObject(obj core.RecordID) []core.RecordID
 
 	RemovePendingRequest(ctx context.Context, obj, req core.RecordID)
+
+	FilterNotExistWithLock(ctx context.Context, candidates []core.RecordID, fn func(filtered []core.RecordID))
 }
