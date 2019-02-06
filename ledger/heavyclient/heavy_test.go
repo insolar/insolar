@@ -160,6 +160,7 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 	recentMock.GetRequestsMock.Return(nil)
 	recentMock.AddObjectMock.Return()
 	recentMock.DecreaseTTLMock.Return()
+	recentMock.FilterNotExistWithLockMock.Return()
 
 	// Mock6: JetCoordinatorMock
 	jcMock := testutils.NewJetCoordinatorMock(s.T())
