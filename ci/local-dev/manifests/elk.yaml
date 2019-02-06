@@ -1,67 +1,52 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: elasticsearch-rest
+  name: elk
   labels:
-    app: elasticsearch-rest
+    app: elk
 spec:
   type: NodePort
   ports:
   - port: 9200
     nodePort: 30200
-    name: elasticsearch-rest
-  selector:
-    app: elasticsearch
-
----
-
-apiVersion: v1
-kind: Service
-metadata:
-  name: elasticsearch
-  labels:
-    app: elasticsearch
-spec:
-  ports:
-  - port: 9200
     name: elasticsearch
-    protocol: TCP
-  - port: 9300
-    name: elasticsearch-node
-    protocol: TCP
-  clusterIP: None
-  selector:
-    app: elasticsearch
-
----
-
-apiVersion: v1
-kind: Service
-metadata:
-  name: kibana
-  labels:
-    app: kibana
-spec:
-  type: NodePort
-  ports:
   - port: 5601
     nodePort: 30601
     name: kibana
   selector:
-    app: kibana
+    app: elk
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: elasticsearch-local
+  labels:
+    app: elasticsearch-local
+spec:
+  ports:
+  - port: 9200
+    name: elasticsearch-local
+    protocol: TCP
+  clusterIP: None
+  selector:
+    app: elasticsearch-local
 
 ---
 
 apiVersion: v1
 kind: Pod
 metadata:
-  name: elasticsearch
+  name: elk
   labels:
-    app: elasticsearch
+    app: elk
 spec:
+  hostname: "elasticsearch"
   containers:
     - name: elasticsearch
       image: "docker.elastic.co/elasticsearch/elasticsearch:6.5.4"
+      imagePullPolicy: IfNotPresent
       tty: true
       stdin: true
       env:
@@ -71,18 +56,8 @@ spec:
           value: "single-node"
         - name: xpack.security.enabled
           value: "false"
-
----
-
-apiVersion: v1
-kind: Pod
-metadata:
-  name: kibana
-  labels:
-    app: kibana
-spec:
-  containers:
     - name: kibana
       image: "docker.elastic.co/kibana/kibana:6.5.4"
+      imagePullPolicy: IfNotPresent
       tty: true
       stdin: true
