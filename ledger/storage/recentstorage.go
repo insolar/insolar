@@ -28,7 +28,6 @@ import (
 
 // RecentStorageProvider provides a recent storage for jet
 type RecentStorageProvider struct {
-	// TODO: @andreyromancev. 15.01.19. Use byte array for key.
 	storage    map[core.RecordID]*RecentStorage
 	lock       sync.Mutex
 	DefaultTTL int

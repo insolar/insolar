@@ -18,7 +18,6 @@ package storage
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/dgraph-io/badger"
@@ -132,13 +131,13 @@ func (ds *dropStorage) CreateDrop(ctx context.Context, jetID core.RecordID, puls
 
 // SetDrop saves provided JetDrop in db.
 func (ds *dropStorage) SetDrop(ctx context.Context, jetID core.RecordID, drop *jet.JetDrop) error {
-	fmt.Printf("SetDrop for jet: %v, pulse: %v\n", jetID.DebugString(), drop.Pulse)
+	inslogger.FromContext(ctx).Debugf("SetDrop for jet: %v, pulse: %v\n", jetID.DebugString(), drop.Pulse)
 
 	_, prefix := jet.Jet(jetID)
 	k := prefixkey(scopeIDJetDrop, prefix, drop.Pulse.Bytes())
 	_, err := ds.DB.get(ctx, k)
 	if err == nil {
-		fmt.Println("override drop for pulse ", drop.Pulse)
+		inslogger.FromContext(ctx).Debugf("override drop for pulse ", drop.Pulse)
 		return ErrOverride
 	}
 
