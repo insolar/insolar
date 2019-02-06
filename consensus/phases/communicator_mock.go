@@ -46,11 +46,6 @@ type CommunicatorMock struct {
 	InitCounter    uint64
 	InitPreCounter uint64
 	InitMock       mCommunicatorMockInit
-
-	StopFunc       func(p context.Context) (r error)
-	StopCounter    uint64
-	StopPreCounter uint64
-	StopMock       mCommunicatorMockStop
 }
 
 //NewCommunicatorMock returns a mock for github.com/insolar/insolar/consensus/phases.Communicator
@@ -66,7 +61,6 @@ func NewCommunicatorMock(t minimock.Tester) *CommunicatorMock {
 	m.ExchangePhase21Mock = mCommunicatorMockExchangePhase21{mock: m}
 	m.ExchangePhase3Mock = mCommunicatorMockExchangePhase3{mock: m}
 	m.InitMock = mCommunicatorMockInit{mock: m}
-	m.StopMock = mCommunicatorMockStop{mock: m}
 
 	return m
 }
@@ -829,153 +823,6 @@ func (m *CommunicatorMock) InitFinished() bool {
 	return true
 }
 
-type mCommunicatorMockStop struct {
-	mock              *CommunicatorMock
-	mainExpectation   *CommunicatorMockStopExpectation
-	expectationSeries []*CommunicatorMockStopExpectation
-}
-
-type CommunicatorMockStopExpectation struct {
-	input  *CommunicatorMockStopInput
-	result *CommunicatorMockStopResult
-}
-
-type CommunicatorMockStopInput struct {
-	p context.Context
-}
-
-type CommunicatorMockStopResult struct {
-	r error
-}
-
-//Expect specifies that invocation of Communicator.Stop is expected from 1 to Infinity times
-func (m *mCommunicatorMockStop) Expect(p context.Context) *mCommunicatorMockStop {
-	m.mock.StopFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &CommunicatorMockStopExpectation{}
-	}
-	m.mainExpectation.input = &CommunicatorMockStopInput{p}
-	return m
-}
-
-//Return specifies results of invocation of Communicator.Stop
-func (m *mCommunicatorMockStop) Return(r error) *CommunicatorMock {
-	m.mock.StopFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &CommunicatorMockStopExpectation{}
-	}
-	m.mainExpectation.result = &CommunicatorMockStopResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of Communicator.Stop is expected once
-func (m *mCommunicatorMockStop) ExpectOnce(p context.Context) *CommunicatorMockStopExpectation {
-	m.mock.StopFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &CommunicatorMockStopExpectation{}
-	expectation.input = &CommunicatorMockStopInput{p}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *CommunicatorMockStopExpectation) Return(r error) {
-	e.result = &CommunicatorMockStopResult{r}
-}
-
-//Set uses given function f as a mock of Communicator.Stop method
-func (m *mCommunicatorMockStop) Set(f func(p context.Context) (r error)) *CommunicatorMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.StopFunc = f
-	return m.mock
-}
-
-//Stop implements github.com/insolar/insolar/consensus/phases.Communicator interface
-func (m *CommunicatorMock) Stop(p context.Context) (r error) {
-	counter := atomic.AddUint64(&m.StopPreCounter, 1)
-	defer atomic.AddUint64(&m.StopCounter, 1)
-
-	if len(m.StopMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.StopMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to CommunicatorMock.Stop. %v", p)
-			return
-		}
-
-		input := m.StopMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, CommunicatorMockStopInput{p}, "Communicator.Stop got unexpected parameters")
-
-		result := m.StopMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the CommunicatorMock.Stop")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.StopMock.mainExpectation != nil {
-
-		input := m.StopMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, CommunicatorMockStopInput{p}, "Communicator.Stop got unexpected parameters")
-		}
-
-		result := m.StopMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the CommunicatorMock.Stop")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.StopFunc == nil {
-		m.t.Fatalf("Unexpected call to CommunicatorMock.Stop. %v", p)
-		return
-	}
-
-	return m.StopFunc(p)
-}
-
-//StopMinimockCounter returns a count of CommunicatorMock.StopFunc invocations
-func (m *CommunicatorMock) StopMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.StopCounter)
-}
-
-//StopMinimockPreCounter returns the value of CommunicatorMock.Stop invocations
-func (m *CommunicatorMock) StopMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.StopPreCounter)
-}
-
-//StopFinished returns true if mock invocations count is ok
-func (m *CommunicatorMock) StopFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.StopMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.StopCounter) == uint64(len(m.StopMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.StopMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.StopCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.StopFunc != nil {
-		return atomic.LoadUint64(&m.StopCounter) > 0
-	}
-
-	return true
-}
-
 //ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *CommunicatorMock) ValidateCallCounters() {
@@ -998,10 +845,6 @@ func (m *CommunicatorMock) ValidateCallCounters() {
 
 	if !m.InitFinished() {
 		m.t.Fatal("Expected call to CommunicatorMock.Init")
-	}
-
-	if !m.StopFinished() {
-		m.t.Fatal("Expected call to CommunicatorMock.Stop")
 	}
 
 }
@@ -1041,10 +884,6 @@ func (m *CommunicatorMock) MinimockFinish() {
 		m.t.Fatal("Expected call to CommunicatorMock.Init")
 	}
 
-	if !m.StopFinished() {
-		m.t.Fatal("Expected call to CommunicatorMock.Stop")
-	}
-
 }
 
 //Wait waits for all mocked methods to be called at least once
@@ -1064,7 +903,6 @@ func (m *CommunicatorMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.ExchangePhase21Finished()
 		ok = ok && m.ExchangePhase3Finished()
 		ok = ok && m.InitFinished()
-		ok = ok && m.StopFinished()
 
 		if ok {
 			return
@@ -1091,10 +929,6 @@ func (m *CommunicatorMock) MinimockWait(timeout time.Duration) {
 
 			if !m.InitFinished() {
 				m.t.Error("Expected call to CommunicatorMock.Init")
-			}
-
-			if !m.StopFinished() {
-				m.t.Error("Expected call to CommunicatorMock.Stop")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)
@@ -1126,10 +960,6 @@ func (m *CommunicatorMock) AllMocksCalled() bool {
 	}
 
 	if !m.InitFinished() {
-		return false
-	}
-
-	if !m.StopFinished() {
 		return false
 	}
 
