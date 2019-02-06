@@ -189,7 +189,9 @@ func (m *PulseManager) processEndPulse(
 					newPulse,
 					requests,
 				)
-				logger.Error(err)
+				if err != nil {
+					logger.Error(err)
+				}
 			}()
 
 			// FIXME: @andreyromancev. 09.01.2019. Temporary disabled validation. Uncomment when jet split works properly.
