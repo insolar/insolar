@@ -20,13 +20,14 @@ import (
 	"context"
 	"runtime"
 	"testing"
+	"time"
 
-	"github.com/insolar/insolar/core/message"
-
+	"github.com/gojuno/minimock"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/testutils"
@@ -109,7 +110,8 @@ func TestContractRequester_SendRequest_RouteError(t *testing.T) {
 	cReq.PulseStorage = pm
 
 	mbm.MustRegisterMock.Return()
-	cReq.Start(ctx)
+	err = cReq.Start(ctx)
+	require.NoError(t, err)
 
 	ifResultMapEmpty := func() bool {
 		cReq.ResultMutex.Lock()
@@ -133,4 +135,76 @@ func TestContractRequester_SendRequest_RouteError(t *testing.T) {
 
 	result, err := cReq.SendRequest(ctx, &ref, "TestMethod", []interface{}{})
 	require.Nil(t, result)
+}
+
+func TestCallMethodCanceled(t *testing.T) {
+	ctx := context.Background()
+	ctx, cancelFunc := context.WithTimeout(ctx, time.Second)
+	defer cancelFunc()
+
+	cr, err := New()
+	require.NoError(t, err)
+
+	mc := minimock.NewController(t)
+	defer mc.Finish()
+
+	mb := testutils.NewMessageBusMock(mc)
+	cr.MessageBus = mb
+
+	msg := &message.BaseLogicMessage{
+		Nonce: randomUint64(),
+	}
+	ref := testutils.RandomRef()
+	prototypeRef := testutils.RandomRef()
+	method := testutils.RandomString()
+
+	mb.SendFunc = func(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) (r core.Reply, r1 error) {
+		return &reply.RegisterRequest{}, nil
+	}
+
+	_, err = cr.CallMethod(ctx, msg, false, &ref, method, core.Arguments{}, &prototypeRef)
+	require.Error(t, err)
+	assert.Contains(t, "canceled", err.Error())
+
+	_, ok := cr.ResultMap[msg.Sequence]
+	assert.Equal(t, false, ok)
+}
+
+func TestCallMethodWaitResults(t *testing.T) {
+	ctx := context.Background()
+	ctx, cancelFunc := context.WithTimeout(ctx, time.Second*10)
+	defer cancelFunc()
+
+	cr, err := New()
+	require.NoError(t, err)
+
+	mc := minimock.NewController(t)
+	defer mc.Finish()
+
+	mb := testutils.NewMessageBusMock(mc)
+	cr.MessageBus = mb
+
+	msg := &message.BaseLogicMessage{
+		Nonce: randomUint64(),
+	}
+	ref := testutils.RandomRef()
+	prototypeRef := testutils.RandomRef()
+	method := testutils.RandomString()
+
+	mb.SendFunc = func(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) (r core.Reply, r1 error) {
+		go func() {
+			r, ok := p1.(*message.CallMethod)
+			require.Equal(t, ok, true)
+
+			cr.ResultMutex.Lock()
+			defer cr.ResultMutex.Unlock()
+			resChan, ok := cr.ResultMap[r.Sequence]
+			resChan <- &message.ReturnResults{
+				Reply: &reply.CallMethod{},
+			}
+		}()
+		return &reply.RegisterRequest{}, nil
+	}
+	_, err = cr.CallMethod(ctx, msg, false, &ref, method, core.Arguments{}, &prototypeRef)
+	require.NoError(t, err)
 }

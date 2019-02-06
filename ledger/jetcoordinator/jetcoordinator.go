@@ -38,11 +38,13 @@ type JetCoordinator struct {
 	JetStorage                 storage.JetStorage              `inject:""`
 	PulseTracker               storage.PulseTracker            `inject:""`
 	NodeStorage                storage.NodeStorage             `inject:""`
+
+	lightChainLimit int
 }
 
 // NewJetCoordinator creates new coordinator instance.
-func NewJetCoordinator() *JetCoordinator {
-	return &JetCoordinator{}
+func NewJetCoordinator(lightChainLimit int) *JetCoordinator {
+	return &JetCoordinator{lightChainLimit: lightChainLimit}
 }
 
 // Hardcoded roles count for validation and execution
@@ -220,6 +222,37 @@ func (jc *JetCoordinator) Heavy(ctx context.Context, pulse core.PulseNumber) (*c
 		return nil, err
 	}
 	return &nodes[0], nil
+}
+
+// IsBeyondLimit calculates if target pulse is behind clean-up limit
+func (jc *JetCoordinator) IsBeyondLimit(ctx context.Context, currentPN, targetPN core.PulseNumber) (bool, error) {
+	currentPulse, err := jc.PulseTracker.GetPulse(ctx, currentPN)
+	if err != nil {
+		return false, errors.Wrapf(err, "failed to fetch pulse %v", currentPN)
+	}
+	targetPulse, err := jc.PulseTracker.GetPulse(ctx, targetPN)
+	if err != nil {
+		return false, errors.Wrapf(err, "failed to fetch pulse %v", targetPN)
+	}
+
+	if currentPulse.SerialNumber-targetPulse.SerialNumber < jc.lightChainLimit {
+		return false, nil
+	}
+
+	return true, nil
+}
+
+// NodeForJet calculates a node for a specific jet for a specific pulseNumber
+func (jc *JetCoordinator) NodeForJet(ctx context.Context, jetID core.RecordID, rootPN, targetPN core.PulseNumber) (*core.RecordRef, error) {
+	toHeavy, err := jc.IsBeyondLimit(ctx, rootPN, targetPN)
+	if err != nil {
+		return nil, err
+	}
+
+	if toHeavy {
+		return jc.Heavy(ctx, rootPN)
+	}
+	return jc.LightExecutorForJet(ctx, jetID, targetPN)
 }
 
 func (jc *JetCoordinator) virtualsForObject(
