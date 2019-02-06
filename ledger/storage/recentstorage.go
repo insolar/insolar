@@ -151,25 +151,6 @@ func (p *RecentStorageProvider) DecreaseIndexesTTL(ctx context.Context) map[core
 	return resMap
 }
 
-// RemoveIndexStorage removes indexes for a specific jet from provider
-// If there is a reference to RecentIndexStorage somewhere, it won't be affected
-func (p *RecentStorageProvider) RemoveIndexStorage(ctx context.Context, id core.RecordID) {
-	p.indexLock.Lock()
-	defer p.indexLock.Unlock()
-
-	if storage, ok := p.indexStorages[id]; ok {
-		storage.lock.Lock()
-		defer storage.lock.Unlock()
-
-		ctx = insmetrics.InsertTag(ctx, tagJet, storage.jetID.DebugString())
-		stats.Record(ctx,
-			statRecentStorageObjectsRemoved.M(int64(len(storage.indexes))),
-		)
-
-		delete(p.indexStorages, id)
-	}
-}
-
 // RemovePendingStorage removes pending requests for a specific jet from provider
 // If there is a reference to RecentIndexStorage somewhere, it won't be affected
 func (p *RecentStorageProvider) RemovePendingStorage(ctx context.Context, id core.RecordID) {

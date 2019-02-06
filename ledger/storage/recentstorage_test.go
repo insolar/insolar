@@ -27,18 +27,18 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestNewRecentObjectsIndex(t *testing.T) {
+func TestNewRecentIndexStorage(t *testing.T) {
 	jetID := testutils.RandomID()
-	index := NewRecentStorage(jetID, 123)
+	index := NewRecentIndexStorage(jetID, 123)
 	require.NotNil(t, index)
-	require.NotNil(t, index.recentObjects)
+	require.NotNil(t, index.indexes)
 	require.Equal(t, 123, index.DefaultTTL)
 }
 
-func TestRecentObjectsIndex_AddId(t *testing.T) {
+func TestNewRecentIndexStorage_AddId(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	jetID := testutils.RandomID()
-	s := NewRecentStorage(jetID, 123)
+	s := NewRecentIndexStorage(jetID, 123)
 
 	wg := sync.WaitGroup{}
 	wg.Add(3)
@@ -60,11 +60,11 @@ func TestRecentObjectsIndex_AddId(t *testing.T) {
 	require.Equal(t, 3, len(s.GetObjects()))
 }
 
-func TestRecentObjectsIndex_AddPendingRequest(t *testing.T) {
+func TestPendingStorage_AddPendingRequest(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	jetID := testutils.RandomID()
 
-	s := NewRecentStorage(jetID, 123)
+	s := NewPendingStorage(jetID)
 
 	obj1 := *core.NewRecordID(0, nil)
 	obj2 := *core.NewRecordID(1, nil)
@@ -102,11 +102,11 @@ func TestRecentObjectsIndex_AddPendingRequest(t *testing.T) {
 	}, s.GetRequests())
 }
 
-func TestRecentObjectsIndex_RemovePendingRequest(t *testing.T) {
+func TestPendingStorage_RemovePendingRequest(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	jetID := testutils.RandomID()
 
-	s := NewRecentStorage(jetID, 123)
+	s := NewPendingStorage(jetID)
 
 	obj := *core.NewRecordID(0, nil)
 
@@ -118,7 +118,7 @@ func TestRecentObjectsIndex_RemovePendingRequest(t *testing.T) {
 		*core.NewRecordID(123, []byte{3}),
 		*core.NewRecordID(123, []byte{4}),
 	}
-	s.pendingRequests = map[core.RecordID]map[core.RecordID]struct{}{
+	s.requests = map[core.RecordID]map[core.RecordID]struct{}{
 		obj: {
 			expectedIDs[0]: {},
 			extraIDs[0]:    {},
@@ -156,7 +156,8 @@ func TestNewRecentStorageProvider(t *testing.T) {
 
 	// Assert
 	require.Equal(t, 888, provider.DefaultTTL)
-	require.NotNil(t, provider.storage)
+	require.NotNil(t, provider.pendingStorages)
+	require.NotNil(t, provider.indexStorages)
 }
 
 func TestRecentStorageProvider_GetStorage(t *testing.T) {
@@ -170,8 +171,10 @@ func TestRecentStorageProvider_GetStorage(t *testing.T) {
 	for i := 0; i < 8; i++ {
 		go func() {
 			id := testutils.RandomJet()
-			storage := provider.GetStorage(inslogger.TestContext(t), id)
+			storage := provider.GetIndexStorage(inslogger.TestContext(t), id)
 			require.NotNil(t, storage)
+			pendingStorage := provider.GetPendingStorage(inslogger.TestContext(t), id)
+			require.NotNil(t, pendingStorage)
 			wg.Done()
 		}()
 	}
@@ -179,7 +182,8 @@ func TestRecentStorageProvider_GetStorage(t *testing.T) {
 	wg.Wait()
 
 	// Assert
-	require.Equal(t, 8, len(provider.storage))
+	require.Equal(t, 8, len(provider.indexStorages))
+	require.Equal(t, 8, len(provider.pendingStorages))
 }
 
 func TestRecentStorage_markForDelete(t *testing.T) {
@@ -197,8 +201,8 @@ func TestRecentStorage_markForDelete(t *testing.T) {
 		}
 	}
 
-	recentStorage := NewRecentStorage(testutils.RandomJet(), 888)
-	recentStorage.recentObjects = recentStorageMap
+	recentStorage := NewRecentIndexStorage(testutils.RandomJet(), 888)
+	recentStorage.indexes = recentStorageMap
 
 	markedCandidates := recentStorage.markForDelete(candidates)
 

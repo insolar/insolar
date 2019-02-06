@@ -33,7 +33,6 @@ type Provider interface {
 
 	DecreaseIndexesTTL(ctx context.Context) map[core.RecordID][]core.RecordID
 
-	RemoveIndexStorage(ctx context.Context, id core.RecordID)
 	RemovePendingStorage(ctx context.Context, id core.RecordID)
 }
 
