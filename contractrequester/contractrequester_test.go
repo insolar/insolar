@@ -22,6 +22,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/suite"
+
 	"github.com/gojuno/minimock"
 	"github.com/stretchr/testify/assert"
 
@@ -207,4 +209,71 @@ func TestCallMethodWaitResults(t *testing.T) {
 	}
 	_, err = cr.CallMethod(ctx, msg, false, &ref, method, core.Arguments{}, &prototypeRef)
 	require.NoError(t, err)
+}
+
+type callTestSuite struct {
+	suite.Suite
+
+	mc         *minimock.Controller
+	ctx        context.Context
+	cancelFunc context.CancelFunc
+	cr         *ContractRequester
+	mb         *testutils.MessageBusMock
+
+	msg          *message.BaseLogicMessage
+	ref          core.RecordRef
+	prototypeRef core.RecordRef
+	method       string
+}
+
+func (suite callTestSuite) BeforeTest(suiteName string, testName string) {
+	suite.mc = minimock.NewController(suite.T())
+
+	suite.ctx = inslogger.TestContext(suite.T())
+	suite.ctx, suite.cancelFunc = context.WithTimeout(suite.ctx, time.Second)
+
+	suite.mb = testutils.NewMessageBusMock(suite.mc)
+
+	suite.msg = &message.BaseLogicMessage{
+		Nonce: randomUint64(),
+	}
+
+	suite.cr, _ = New() // TODO why can't handle error here?
+	suite.cr.MessageBus = suite.mb
+
+	suite.ref = testutils.RandomRef()
+	suite.prototypeRef = testutils.RandomRef()
+	suite.method = testutils.RandomString()
+}
+
+func (suite *callTestSuite) AfterTest(suiteName, testName string) {
+	suite.mc.Finish()
+	suite.cancelFunc()
+}
+
+func (suite *callTestSuite) TestCallMethodWaitResults() {
+	//mb := testutils.NewMessageBusMock(suite.mc)
+	suite.mb.SendMock.Set(
+		func(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) (r core.Reply, r1 error) {
+			go func() {
+				r, ok := p1.(*message.CallMethod)
+				suite.Equal(ok, true)
+
+				suite.cr.ResultMutex.Lock()
+				defer suite.cr.ResultMutex.Unlock()
+				resChan, ok := suite.cr.ResultMap[r.Sequence]
+				resChan <- &message.ReturnResults{
+					Reply: &reply.CallMethod{},
+				}
+			}()
+			return &reply.RegisterRequest{}, nil
+		})
+
+	//suite.cr.MessageBus = mb
+	_, err := suite.cr.CallMethod(suite.ctx, suite.msg, false, &suite.ref, suite.method, core.Arguments{}, &suite.prototypeRef)
+	suite.NoError(err)
+}
+
+func TestContractRequesterCalls(t *testing.T) {
+	suite.Run(t, new(callTestSuite))
 }
