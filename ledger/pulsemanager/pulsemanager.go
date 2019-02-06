@@ -389,6 +389,7 @@ func (m *PulseManager) getExecutorHotData(
 		}
 	}
 
+	requestCount := 0
 	for objID, requests := range recentStorage.GetRequests() {
 		for reqID := range requests {
 			if _, ok := pendingRequests[objID]; !ok {
@@ -396,7 +397,14 @@ func (m *PulseManager) getExecutorHotData(
 			}
 			pendingRequests[objID][reqID] = struct{}{}
 		}
+		requestCount += len(requests)
 	}
+
+	stats.Record(
+		ctx,
+		statHotObjectsSent.M(int64(len(recentObjects))),
+		statPendingSent.M(int64(requestCount)),
+	)
 
 	dropSizeHistory, err := m.DropStorage.GetDropSizeHistory(ctx, jetID)
 	if err != nil {
