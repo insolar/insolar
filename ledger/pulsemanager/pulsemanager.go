@@ -189,7 +189,9 @@ func (m *PulseManager) processEndPulse(
 					newPulse,
 					requests,
 				)
-				logger.Error(err)
+				if err != nil {
+					logger.Error(err)
+				}
 			}()
 
 			// FIXME: @andreyromancev. 09.01.2019. Temporary disabled validation. Uncomment when jet split works properly.
@@ -594,7 +596,14 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 		inslogger.FromContext(ctx).Error(errors.Wrap(err, "MessageBus OnPulse() returns error"))
 	}
 
-	return m.LR.OnPulse(ctx, newPulse)
+	if m.NodeNet.GetOrigin().Role() == core.StaticRoleVirtual {
+		err = m.LR.OnPulse(ctx, newPulse)
+	}
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (m *PulseManager) setUnderGilSection(
