@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/sequence"
@@ -33,6 +34,7 @@ import (
 	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/insolar/insolar/network/transport/relay"
 	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
 )
 
 type hostTransport struct {
@@ -103,6 +105,13 @@ func (h *hostTransport) processMessage(msg *packet.Packet) {
 			msg.Type.String(), msg.Sender.NodeID.String())
 		return
 	}
+	ctx, span := instracer.StartSpan(ctx, "hostTransport.processMessage")
+	span.AddAttributes(
+		trace.StringAttribute("msg receiver", msg.Receiver.Address.String()),
+		trace.StringAttribute("msg trace", msg.TraceID),
+		trace.StringAttribute("msg type", msg.Type.String()),
+	)
+	defer span.End()
 	response, err := handler(ctx, (*packetWrapper)(msg))
 	if err != nil {
 		logger.Errorf("Error handling request %s from node %s: %s",

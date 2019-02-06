@@ -29,6 +29,7 @@ import (
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller/common"
@@ -38,6 +39,7 @@ import (
 	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
 )
 
 var (
@@ -181,6 +183,8 @@ func init() {
 // Bootstrap on the discovery node (step 1 of the bootstrap process)
 func (bc *bootstrapper) Bootstrap(ctx context.Context) (*network.BootstrapResult, *DiscoveryNode, error) {
 	log.Info("Bootstrapping to discovery node")
+	ctx, span := instracer.StartSpan(ctx, "Bootstrapper.Bootstrap")
+	defer span.End()
 	ch := bc.getDiscoveryNodesChannel(ctx, bc.Certificate.GetDiscoveryNodes(), 1)
 	result := bc.waitResultFromChannel(ctx, ch)
 	if result == nil {
@@ -191,7 +195,9 @@ func (bc *bootstrapper) Bootstrap(ctx context.Context) (*network.BootstrapResult
 }
 
 func (bc *bootstrapper) SetLastPulse(number core.PulseNumber) {
+	_, span := instracer.StartSpan(context.Background(), "Bootstrapper.SetLastPulse wait lastPulseLock")
 	bc.lastPulseLock.Lock()
+	span.End()
 	defer bc.lastPulseLock.Unlock()
 
 	if !bc.pulsePersisted {
@@ -202,7 +208,9 @@ func (bc *bootstrapper) SetLastPulse(number core.PulseNumber) {
 }
 
 func (bc *bootstrapper) forceSetLastPulse(number core.PulseNumber) {
+	_, span := instracer.StartSpan(context.Background(), "Bootstrapper.forceSetLastPulse wait lastPulseLock")
 	bc.lastPulseLock.Lock()
+	span.End()
 	defer bc.lastPulseLock.Unlock()
 
 	log.Infof("Network will start from pulse %d + delta", number)
@@ -210,7 +218,9 @@ func (bc *bootstrapper) forceSetLastPulse(number core.PulseNumber) {
 }
 
 func (bc *bootstrapper) GetLastPulse() core.PulseNumber {
+	_, span := instracer.StartSpan(context.Background(), "Bootstrapper.GetLastPulse wait lastPulseLock")
 	bc.lastPulseLock.RLock()
+	span.End()
 	defer bc.lastPulseLock.RUnlock()
 
 	return bc.lastPulse
@@ -231,6 +241,8 @@ func (bc *bootstrapper) checkActiveNode(node core.Node) error {
 func (bc *bootstrapper) BootstrapDiscovery(ctx context.Context) (*network.BootstrapResult, error) {
 	logger := inslogger.FromContext(ctx)
 	logger.Info("Network bootstrap between discovery nodes")
+	ctx, span := instracer.StartSpan(ctx, "Bootstrapper.BootstrapDiscovery")
+	defer span.End()
 	discoveryNodes := bc.Certificate.GetDiscoveryNodes()
 	var err error
 	discoveryNodes, err = RemoveOrigin(discoveryNodes, *bc.Certificate.GetNodeRef())
@@ -305,6 +317,8 @@ func (bc *bootstrapper) calculateLastIgnoredPulse(ctx context.Context, lastPulse
 }
 
 func (bc *bootstrapper) sendGenesisRequest(ctx context.Context, h *host.Host) (*GenesisResponse, error) {
+	ctx, span := instracer.StartSpan(ctx, "Bootstrapper.sendGenesisRequest")
+	defer span.End()
 	discovery, err := newNodeStruct(bc.NodeKeeper.GetOrigin())
 	if err != nil {
 		return nil, errors.Wrapf(err, "Failed to prepare genesis request to address %s", h)
@@ -334,6 +348,11 @@ func (bc *bootstrapper) getDiscoveryNodesChannel(ctx context.Context, discoveryN
 	for _, discoveryNode := range discoveryNodes {
 		go func(ctx context.Context, address string, ch chan<- *network.BootstrapResult) {
 			inslogger.FromContext(ctx).Infof("Starting bootstrap to address %s", address)
+			ctx, span := instracer.StartSpan(ctx, "Bootstrapper.getDiscoveryNodesChannel")
+			defer span.End()
+			span.AddAttributes(
+				trace.StringAttribute("Bootstrap node", address),
+			)
 			bootstrapResult, err := bootstrap(ctx, address, bc.options, bc.startBootstrap)
 			if err != nil {
 				inslogger.FromContext(ctx).Errorf("Error bootstrapping to address %s: %s", address, err.Error())
@@ -351,6 +370,11 @@ func (bc *bootstrapper) getGenesisRequestsChannel(ctx context.Context, discovery
 	for _, discoveryHost := range discoveryHosts {
 		go func(ctx context.Context, address *host.Host, ch chan<- *GenesisResponse) {
 			logger := inslogger.FromContext(ctx)
+			ctx, span := instracer.StartSpan(ctx, "Bootsytrapper.getGenesisRequestChannel")
+			span.AddAttributes(
+				trace.StringAttribute("genesis request to", address.String()),
+			)
+			defer span.End()
 			cachedReq := bc.getRequest(address.NodeID)
 			if cachedReq != nil {
 				logger.Infof("Got genesis info of node %s from cache", address)
@@ -441,6 +465,8 @@ func bootstrap(ctx context.Context, address string, options *common.Options, boo
 }
 
 func (bc *bootstrapper) startBootstrap(ctx context.Context, address string) (*network.BootstrapResult, error) {
+	ctx, span := instracer.StartSpan(ctx, "Bootstrapper.startBootstrap")
+	defer span.End()
 	bootstrapHost, err := bc.pinger.Ping(ctx, address, bc.options.PingTimeout)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Failed to ping address %s", address)

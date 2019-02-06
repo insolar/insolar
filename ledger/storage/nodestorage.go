@@ -18,31 +18,47 @@ package storage
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/insolar/insolar/core"
 )
 
-// ActiveNodesStorage provides info about active nodes
-//go:generate minimock -i github.com/insolar/insolar/ledger/storage.ActiveNodesStorage -o ./ -s _mock.go
-type ActiveNodesStorage interface {
+// NodeStorage provides info about active nodes
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage.NodeStorage -o ./ -s _mock.go
+type NodeStorage interface {
 	SetActiveNodes(pulse core.PulseNumber, nodes []core.Node) error
 	GetActiveNodes(pulse core.PulseNumber) ([]core.Node, error)
 	GetActiveNodesByRole(pulse core.PulseNumber, role core.StaticRole) ([]core.Node, error)
 	RemoveActiveNodesUntil(pulse core.PulseNumber)
 }
 
-// SetActiveNodes saves active nodes for pulse in memory.
-func (db *DB) SetActiveNodes(pulse core.PulseNumber, nodes []core.Node) error {
-	db.nodeHistoryLock.Lock()
-	defer db.nodeHistoryLock.Unlock()
+type nodeStorage struct {
+	DB DBContext `inject:""`
 
-	if _, ok := db.nodeHistory[pulse]; ok {
+	// NodeHistory is an in-memory active node storage for each pulse. It's required to calculate node roles
+	// for past pulses to locate data.
+	// It should only contain previous N pulses. It should be stored on disk.
+	nodeHistory     map[core.PulseNumber][]Node
+	nodeHistoryLock sync.RWMutex
+}
+
+func NewNodeStorage() NodeStorage {
+	// return new(nodeStorage)
+	return &nodeStorage{nodeHistory: map[core.PulseNumber][]Node{}}
+}
+
+// SetActiveNodes saves active nodes for pulse in memory.
+func (a *nodeStorage) SetActiveNodes(pulse core.PulseNumber, nodes []core.Node) error {
+	a.nodeHistoryLock.Lock()
+	defer a.nodeHistoryLock.Unlock()
+
+	if _, ok := a.nodeHistory[pulse]; ok {
 		return ErrOverride
 	}
 
-	db.nodeHistory[pulse] = []Node{}
+	a.nodeHistory[pulse] = []Node{}
 	for _, n := range nodes {
-		db.nodeHistory[pulse] = append(db.nodeHistory[pulse], Node{
+		a.nodeHistory[pulse] = append(a.nodeHistory[pulse], Node{
 			FID:   n.ID(),
 			FRole: n.Role(),
 		})
@@ -52,11 +68,11 @@ func (db *DB) SetActiveNodes(pulse core.PulseNumber, nodes []core.Node) error {
 }
 
 // GetActiveNodes return active nodes for specified pulse.
-func (db *DB) GetActiveNodes(pulse core.PulseNumber) ([]core.Node, error) {
-	db.nodeHistoryLock.RLock()
-	defer db.nodeHistoryLock.RUnlock()
+func (a *nodeStorage) GetActiveNodes(pulse core.PulseNumber) ([]core.Node, error) {
+	a.nodeHistoryLock.RLock()
+	defer a.nodeHistoryLock.RUnlock()
 
-	nodes, ok := db.nodeHistory[pulse]
+	nodes, ok := a.nodeHistory[pulse]
 	if !ok {
 		return nil, fmt.Errorf("GetActiveNodes: no nodes for pulse %v", pulse)
 	}
@@ -69,11 +85,11 @@ func (db *DB) GetActiveNodes(pulse core.PulseNumber) ([]core.Node, error) {
 }
 
 // GetActiveNodesByRole return active nodes for specified pulse and role.
-func (db *DB) GetActiveNodesByRole(pulse core.PulseNumber, role core.StaticRole) ([]core.Node, error) {
-	db.nodeHistoryLock.RLock()
-	defer db.nodeHistoryLock.RUnlock()
+func (a *nodeStorage) GetActiveNodesByRole(pulse core.PulseNumber, role core.StaticRole) ([]core.Node, error) {
+	a.nodeHistoryLock.RLock()
+	defer a.nodeHistoryLock.RUnlock()
 
-	nodes, ok := db.nodeHistory[pulse]
+	nodes, ok := a.nodeHistory[pulse]
 	if !ok {
 		return nil, fmt.Errorf("GetActiveNodesByRole: no nodes for pulse %v", pulse)
 	}
@@ -88,14 +104,14 @@ func (db *DB) GetActiveNodesByRole(pulse core.PulseNumber, role core.StaticRole)
 }
 
 // RemoveActiveNodesUntil removes active nodes for all nodes less than provided pulse.
-func (db *DB) RemoveActiveNodesUntil(pulse core.PulseNumber) {
-	db.nodeHistoryLock.Lock()
-	defer db.nodeHistoryLock.Unlock()
+func (a *nodeStorage) RemoveActiveNodesUntil(pulse core.PulseNumber) {
+	a.nodeHistoryLock.Lock()
+	defer a.nodeHistoryLock.Unlock()
 	fmt.Printf("cleanLightData: RemoveActiveNodesUntil: %v\n", pulse)
 
-	for pn := range db.nodeHistory {
+	for pn := range a.nodeHistory {
 		if pn < pulse {
-			delete(db.nodeHistory, pulse)
+			delete(a.nodeHistory, pulse)
 		}
 	}
 }

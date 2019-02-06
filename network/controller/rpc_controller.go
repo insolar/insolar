@@ -25,7 +25,9 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/component"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/metrics"
+	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
@@ -90,6 +92,11 @@ func (rpc *rpcController) IAmRPCController() {
 }
 
 func (rpc *rpcController) RemoteProcedureRegister(name string, method core.RemoteProcedure) {
+	_, span := instracer.StartSpan(context.Background(), "RPCController.RemoteProcedureRegister")
+	span.AddAttributes(
+		trace.StringAttribute("method", name),
+	)
+	defer span.End()
 	rpc.methodTable[name] = method
 }
 
@@ -105,13 +112,25 @@ func (rpc *rpcController) SendCascadeMessage(data core.Cascade, method string, m
 	if msg == nil {
 		return errors.New("message is nil")
 	}
-	ctx := msg.Context(context.Background())
+	ctx, span := instracer.StartSpan(context.Background(), "RPCController.SendCascadeMessage")
+	span.AddAttributes(
+		trace.StringAttribute("method", method),
+		trace.StringAttribute("msg.Type", msg.Type().String()),
+		trace.StringAttribute("msg.DefaultTarget", msg.DefaultTarget().String()),
+	)
+	defer span.End()
+	ctx = msg.Context(ctx)
 	return rpc.initCascadeSendMessage(ctx, data, false, method, [][]byte{message.ParcelToBytes(msg)})
 }
 
 func (rpc *rpcController) initCascadeSendMessage(ctx context.Context, data core.Cascade,
 	findCurrentNode bool, method string, args [][]byte) error {
 
+	_, span := instracer.StartSpan(context.Background(), "RPCController.initCascadeSendMessage")
+	span.AddAttributes(
+		trace.StringAttribute("method", method),
+	)
+	defer span.End()
 	if len(data.NodeIds) == 0 {
 		return errors.New("node IDs list should not be empty")
 	}
@@ -154,6 +173,8 @@ func (rpc *rpcController) initCascadeSendMessage(ctx context.Context, data core.
 func (rpc *rpcController) requestCascadeSendMessage(ctx context.Context, data core.Cascade, nodeID core.RecordRef,
 	method string, args [][]byte) error {
 
+	_, span := instracer.StartSpan(context.Background(), "RPCController.requestCascadeSendMessage")
+	defer span.End()
 	request := rpc.hostNetwork.NewRequestBuilder().Type(types.Cascade).Data(&RequestCascade{
 		TraceID: inslogger.TraceID(ctx),
 		RPC: RequestRPC{
