@@ -208,8 +208,17 @@ func (h *MessageHandler) setHandlersForLight(m *middleware) {
 		core.TypeGetRequest,
 		BuildMiddleware(
 			h.handleGetRequest,
-			m.checkJet,
 			instrumentHandler("handleGetRequest"),
+			m.checkJet,
+		),
+	)
+
+	h.Bus.MustRegister(
+		core.TypeGetPendingRequestID,
+		BuildMiddleware(
+			h.handleGetPendingRequestID,
+			instrumentHandler("handleGetPendingRequestID"),
+			m.checkJet,
 		),
 	)
 
@@ -344,7 +353,7 @@ func (h *MessageHandler) handleGetCode(ctx context.Context, parcel core.Parcel) 
 	codeRec, err := h.getCode(ctx, msg.Code.Record())
 	if err == storage.ErrNotFound {
 		// We don't have code record. Must be on another node.
-		node, err := h.nodeForJet(ctx, jetID, parcel.Pulse(), msg.Code.Record().Pulse())
+		node, err := h.JetCoordinator.NodeForJet(ctx, jetID, parcel.Pulse(), msg.Code.Record().Pulse())
 		if err != nil {
 			return nil, err
 		}
@@ -375,6 +384,10 @@ func (h *MessageHandler) handleGetObject(
 	msg := parcel.Message().(*message.GetObject)
 	jetID := jetFromContext(ctx)
 
+	if !h.isHeavy {
+		h.RecentStorageProvider.GetStorage(ctx, jetID).AddObject(ctx, *msg.Head.Record())
+	}
+
 	// Fetch object index. If not found redirect.
 	idx, err := h.ObjectStorage.GetObjectIndex(ctx, jetID, msg.Head.Record(), false)
 	if err == storage.ErrNotFound {
@@ -397,11 +410,6 @@ func (h *MessageHandler) handleGetObject(
 		}
 	} else if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch object index %s", msg.Head.Record().String())
-	} else {
-		// Add requested object to recent.
-		if !h.isHeavy {
-			h.RecentStorageProvider.GetStorage(ctx, jetID).AddObject(ctx, *msg.Head.Record())
-		}
 	}
 
 	// Determine object state id.
@@ -424,7 +432,7 @@ func (h *MessageHandler) handleGetObject(
 		stateJet = &jetID
 	} else {
 		var actual bool
-		onHeavy, err := h.isBeyondLimit(ctx, parcel.Pulse(), stateID.Pulse())
+		onHeavy, err := h.JetCoordinator.IsBeyondLimit(ctx, parcel.Pulse(), stateID.Pulse())
 		if err != nil {
 			return nil, err
 		}
@@ -465,7 +473,7 @@ func (h *MessageHandler) handleGetObject(
 		}
 		// The record wasn't found on the current node. Return redirect to the node that contains it.
 		// We get Jet tree for pulse when given state was added.
-		node, err := h.nodeForJet(ctx, *stateJet, parcel.Pulse(), stateID.Pulse())
+		node, err := h.JetCoordinator.NodeForJet(ctx, *stateJet, parcel.Pulse(), stateID.Pulse())
 		if err != nil {
 			return nil, err
 		}
@@ -553,6 +561,10 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel core.Parc
 	msg := parcel.Message().(*message.GetDelegate)
 	jetID := jetFromContext(ctx)
 
+	if !h.isHeavy {
+		h.RecentStorageProvider.GetStorage(ctx, jetID).AddObject(ctx, *msg.Head.Record())
+	}
+
 	idx, err := h.ObjectStorage.GetObjectIndex(ctx, jetID, msg.Head.Record(), false)
 	if err == storage.ErrNotFound {
 		if h.isHeavy {
@@ -569,10 +581,6 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel core.Parc
 		}
 	} else if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch object index")
-	} else {
-		if !h.isHeavy {
-			h.RecentStorageProvider.GetStorage(ctx, jetID).AddObject(ctx, *msg.Head.Record())
-		}
 	}
 
 	delegateRef, ok := idx.Delegates[msg.AsType]
@@ -596,6 +604,10 @@ func (h *MessageHandler) handleGetChildren(
 	msg := parcel.Message().(*message.GetChildren)
 	jetID := jetFromContext(ctx)
 
+	if !h.isHeavy {
+		h.RecentStorageProvider.GetStorage(ctx, jetID).AddObject(ctx, *msg.Parent.Record())
+	}
+
 	idx, err := h.ObjectStorage.GetObjectIndex(ctx, jetID, msg.Parent.Record(), false)
 	if err == storage.ErrNotFound {
 		if h.isHeavy {
@@ -615,10 +627,6 @@ func (h *MessageHandler) handleGetChildren(
 		}
 	} else if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch object index")
-	} else {
-		if !h.isHeavy {
-			h.RecentStorageProvider.GetStorage(ctx, jetID).AddObject(ctx, *msg.Parent.Record())
-		}
 	}
 
 	var (
@@ -643,7 +651,7 @@ func (h *MessageHandler) handleGetChildren(
 		childJet = &jetID
 	} else {
 		var actual bool
-		onHeavy, err := h.isBeyondLimit(ctx, parcel.Pulse(), currentChild.Pulse())
+		onHeavy, err := h.JetCoordinator.IsBeyondLimit(ctx, parcel.Pulse(), currentChild.Pulse())
 		if err != nil {
 			return nil, err
 		}
@@ -675,7 +683,7 @@ func (h *MessageHandler) handleGetChildren(
 		if h.isHeavy {
 			return nil, fmt.Errorf("failed to fetch child for %v. jet: %v, state: %v", msg.Parent.Record(), childJet.DebugString(), currentChild.DebugString())
 		}
-		node, err := h.nodeForJet(ctx, *childJet, parcel.Pulse(), currentChild.Pulse())
+		node, err := h.JetCoordinator.NodeForJet(ctx, *childJet, parcel.Pulse(), currentChild.Pulse())
 		if err != nil {
 			return nil, err
 		}
@@ -742,6 +750,22 @@ func (h *MessageHandler) handleGetRequest(ctx context.Context, parcel core.Parce
 	return &rep, nil
 }
 
+func (h *MessageHandler) handleGetPendingRequestID(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
+	jetID := jetFromContext(ctx)
+	msg := parcel.Message().(*message.GetPendingRequestID)
+
+	requests := h.RecentStorageProvider.GetStorage(ctx, jetID).GetRequestsForObject(msg.ObjectID)
+	if len(requests) == 0 {
+		return &reply.Error{ErrType: reply.ErrNoPendingRequests}, nil
+	}
+
+	rep := reply.ID{
+		ID: requests[0],
+	}
+
+	return &rep, nil
+}
+
 func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
 	logger := inslogger.FromContext(ctx)
 
@@ -752,6 +776,10 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 	state, ok := rec.(record.ObjectState)
 	if !ok {
 		return nil, errors.New("wrong object state record")
+	}
+
+	if !h.isHeavy {
+		h.RecentStorageProvider.GetStorage(ctx, jetID).AddObject(ctx, *msg.Object.Record())
 	}
 
 	// FIXME: temporary fix. If we calculate blob id on the client, pulse can change before message sending and this
@@ -793,10 +821,6 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 			}
 		} else if err != nil {
 			return err
-		} else {
-			if !h.isHeavy {
-				h.RecentStorageProvider.GetStorage(ctx, jetID).AddObject(ctx, *msg.Object.Record())
-			}
 		}
 
 		if err = validateState(idx.State, state.State()); err != nil {
@@ -849,6 +873,10 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel core.Pa
 		return nil, errors.New("wrong child record")
 	}
 
+	if !h.isHeavy {
+		h.RecentStorageProvider.GetStorage(ctx, jetID).AddObject(ctx, *msg.Parent.Record())
+	}
+
 	var child *core.RecordID
 	err := h.DBContext.Update(ctx, func(tx *storage.TransactionManager) error {
 		idx, err := h.ObjectStorage.GetObjectIndex(ctx, jetID, msg.Parent.Record(), false)
@@ -863,10 +891,6 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel core.Pa
 			}
 		} else if err != nil {
 			return err
-		} else {
-			if !h.isHeavy {
-				h.RecentStorageProvider.GetStorage(ctx, jetID).AddObject(ctx, *msg.Parent.Record())
-			}
 		}
 
 		// Children exist and pointer does not match (preserving chain consistency).
@@ -893,10 +917,6 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel core.Pa
 
 	if err != nil {
 		return nil, err
-	}
-
-	if !h.isHeavy {
-		h.RecentStorageProvider.GetStorage(ctx, jetID).AddObject(ctx, *msg.Parent.Record())
 	}
 
 	return &reply.ID{ID: *child}, nil
@@ -961,7 +981,7 @@ func (h *MessageHandler) handleValidateRecord(ctx context.Context, parcel core.P
 		}
 
 		// Find node that has this state.
-		node, err := h.nodeForJet(ctx, jetID, parcel.Pulse(), msg.Object.Record().Pulse())
+		node, err := h.JetCoordinator.NodeForJet(ctx, jetID, parcel.Pulse(), msg.Object.Record().Pulse())
 		if err != nil {
 			return err
 		}
@@ -1094,7 +1114,6 @@ func (h *MessageHandler) saveIndexFromHeavy(
 		return nil, errors.Wrap(err, "failed to decode")
 	}
 
-	h.RecentStorageProvider.GetStorage(ctx, jetID).AddObject(ctx, *obj.Record())
 	err = h.ObjectStorage.SetObjectIndex(ctx, jetID, obj.Record(), idx)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to save")
@@ -1134,23 +1153,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 	}).Debugf("received pending requests")
 	recentStorage := h.RecentStorageProvider.GetStorage(ctx, jetID)
 	for objID, requests := range msg.PendingRequests {
-		for reqID, request := range requests {
-			newID, err := h.ObjectStorage.SetRecord(ctx, jetID, reqID.Pulse(), record.DeserializeRecord(request))
-			if err == storage.ErrOverride {
-				continue
-			}
-			if err != nil {
-				logger.Error(err)
-				continue
-			}
-			if !bytes.Equal(reqID.Bytes(), newID.Bytes()) {
-				logger.Errorf(
-					"Problems with saving the pending request, ids don't match - %v  %v",
-					reqID.Bytes(),
-					newID.Bytes(),
-				)
-				continue
-			}
+		for reqID := range requests {
 			recentStorage.AddPendingRequest(ctx, objID, reqID)
 		}
 	}
@@ -1195,37 +1198,4 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 	}
 
 	return &reply.OK{}, nil
-}
-
-func (h *MessageHandler) nodeForJet(
-	ctx context.Context, jetID core.RecordID, parcelPN, targetPN core.PulseNumber,
-) (*core.RecordRef, error) {
-	toHeavy, err := h.isBeyondLimit(ctx, parcelPN, targetPN)
-	if err != nil {
-		return nil, err
-	}
-
-	if toHeavy {
-		return h.JetCoordinator.Heavy(ctx, parcelPN)
-	}
-	return h.JetCoordinator.LightExecutorForJet(ctx, jetID, targetPN)
-}
-
-func (h *MessageHandler) isBeyondLimit(
-	ctx context.Context, currentPN, targetPN core.PulseNumber,
-) (bool, error) {
-	currentPulse, err := h.PulseTracker.GetPulse(ctx, currentPN)
-	if err != nil {
-		return false, errors.Wrapf(err, "failed to fetch pulse %v", currentPN)
-	}
-	targetPulse, err := h.PulseTracker.GetPulse(ctx, targetPN)
-	if err != nil {
-		return false, errors.Wrapf(err, "failed to fetch pulse %v", targetPN)
-	}
-
-	if currentPulse.SerialNumber-targetPulse.SerialNumber < h.conf.LightChainLimit {
-		return false, nil
-	}
-
-	return true, nil
 }

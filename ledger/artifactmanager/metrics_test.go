@@ -29,6 +29,7 @@ import (
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -129,7 +130,7 @@ func (s *metricSuite) TestLedgerArtifactManager_Metrics() {
 
 	mb := testutils.NewMessageBusMock(mc)
 	mb.SendMock.Return(&reply.ID{}, nil)
-	cs := testutils.NewPlatformCryptographyScheme()
+	cs := platformpolicy.NewPlatformCryptographyScheme()
 	am := NewArtifactManger()
 	am.DB = s.db
 	am.PlatformCryptographyScheme = cs
