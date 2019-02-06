@@ -1,0 +1,869 @@
+package recentstorage
+
+/*
+DO NOT EDIT!
+This code was generated automatically using github.com/gojuno/minimock v1.9
+The original interface "PendingStorage" can be found in github.com/insolar/insolar/ledger/recentstorage
+*/
+import (
+	context "context"
+	"sync/atomic"
+	"time"
+
+	"github.com/gojuno/minimock"
+	core "github.com/insolar/insolar/core"
+
+	testify_assert "github.com/stretchr/testify/assert"
+)
+
+//PendingStorageMock implements github.com/insolar/insolar/ledger/recentstorage.PendingStorage
+type PendingStorageMock struct {
+	t minimock.Tester
+
+	AddPendingRequestFunc       func(p context.Context, p1 core.RecordID, p2 core.RecordID)
+	AddPendingRequestCounter    uint64
+	AddPendingRequestPreCounter uint64
+	AddPendingRequestMock       mPendingStorageMockAddPendingRequest
+
+	FilterNotExistWithLockFunc       func(p context.Context, p1 []core.RecordID, p2 func(p []core.RecordID))
+	FilterNotExistWithLockCounter    uint64
+	FilterNotExistWithLockPreCounter uint64
+	FilterNotExistWithLockMock       mPendingStorageMockFilterNotExistWithLock
+
+	GetRequestsFunc func() (r map[core.RecordID]map[core.RecordID]struct {
+	})
+	GetRequestsCounter    uint64
+	GetRequestsPreCounter uint64
+	GetRequestsMock       mPendingStorageMockGetRequests
+
+	GetRequestsForObjectFunc       func(p core.RecordID) (r []core.RecordID)
+	GetRequestsForObjectCounter    uint64
+	GetRequestsForObjectPreCounter uint64
+	GetRequestsForObjectMock       mPendingStorageMockGetRequestsForObject
+
+	RemovePendingRequestFunc       func(p context.Context, p1 core.RecordID, p2 core.RecordID)
+	RemovePendingRequestCounter    uint64
+	RemovePendingRequestPreCounter uint64
+	RemovePendingRequestMock       mPendingStorageMockRemovePendingRequest
+}
+
+//NewPendingStorageMock returns a mock for github.com/insolar/insolar/ledger/recentstorage.PendingStorage
+func NewPendingStorageMock(t minimock.Tester) *PendingStorageMock {
+	m := &PendingStorageMock{t: t}
+
+	if controller, ok := t.(minimock.MockController); ok {
+		controller.RegisterMocker(m)
+	}
+
+	m.AddPendingRequestMock = mPendingStorageMockAddPendingRequest{mock: m}
+	m.FilterNotExistWithLockMock = mPendingStorageMockFilterNotExistWithLock{mock: m}
+	m.GetRequestsMock = mPendingStorageMockGetRequests{mock: m}
+	m.GetRequestsForObjectMock = mPendingStorageMockGetRequestsForObject{mock: m}
+	m.RemovePendingRequestMock = mPendingStorageMockRemovePendingRequest{mock: m}
+
+	return m
+}
+
+type mPendingStorageMockAddPendingRequest struct {
+	mock              *PendingStorageMock
+	mainExpectation   *PendingStorageMockAddPendingRequestExpectation
+	expectationSeries []*PendingStorageMockAddPendingRequestExpectation
+}
+
+type PendingStorageMockAddPendingRequestExpectation struct {
+	input *PendingStorageMockAddPendingRequestInput
+}
+
+type PendingStorageMockAddPendingRequestInput struct {
+	p  context.Context
+	p1 core.RecordID
+	p2 core.RecordID
+}
+
+//Expect specifies that invocation of PendingStorage.AddPendingRequest is expected from 1 to Infinity times
+func (m *mPendingStorageMockAddPendingRequest) Expect(p context.Context, p1 core.RecordID, p2 core.RecordID) *mPendingStorageMockAddPendingRequest {
+	m.mock.AddPendingRequestFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &PendingStorageMockAddPendingRequestExpectation{}
+	}
+	m.mainExpectation.input = &PendingStorageMockAddPendingRequestInput{p, p1, p2}
+	return m
+}
+
+//Return specifies results of invocation of PendingStorage.AddPendingRequest
+func (m *mPendingStorageMockAddPendingRequest) Return() *PendingStorageMock {
+	m.mock.AddPendingRequestFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &PendingStorageMockAddPendingRequestExpectation{}
+	}
+
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of PendingStorage.AddPendingRequest is expected once
+func (m *mPendingStorageMockAddPendingRequest) ExpectOnce(p context.Context, p1 core.RecordID, p2 core.RecordID) *PendingStorageMockAddPendingRequestExpectation {
+	m.mock.AddPendingRequestFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &PendingStorageMockAddPendingRequestExpectation{}
+	expectation.input = &PendingStorageMockAddPendingRequestInput{p, p1, p2}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+//Set uses given function f as a mock of PendingStorage.AddPendingRequest method
+func (m *mPendingStorageMockAddPendingRequest) Set(f func(p context.Context, p1 core.RecordID, p2 core.RecordID)) *PendingStorageMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.AddPendingRequestFunc = f
+	return m.mock
+}
+
+//AddPendingRequest implements github.com/insolar/insolar/ledger/recentstorage.PendingStorage interface
+func (m *PendingStorageMock) AddPendingRequest(p context.Context, p1 core.RecordID, p2 core.RecordID) {
+	counter := atomic.AddUint64(&m.AddPendingRequestPreCounter, 1)
+	defer atomic.AddUint64(&m.AddPendingRequestCounter, 1)
+
+	if len(m.AddPendingRequestMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.AddPendingRequestMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to PendingStorageMock.AddPendingRequest. %v %v %v", p, p1, p2)
+			return
+		}
+
+		input := m.AddPendingRequestMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, PendingStorageMockAddPendingRequestInput{p, p1, p2}, "PendingStorage.AddPendingRequest got unexpected parameters")
+
+		return
+	}
+
+	if m.AddPendingRequestMock.mainExpectation != nil {
+
+		input := m.AddPendingRequestMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, PendingStorageMockAddPendingRequestInput{p, p1, p2}, "PendingStorage.AddPendingRequest got unexpected parameters")
+		}
+
+		return
+	}
+
+	if m.AddPendingRequestFunc == nil {
+		m.t.Fatalf("Unexpected call to PendingStorageMock.AddPendingRequest. %v %v %v", p, p1, p2)
+		return
+	}
+
+	m.AddPendingRequestFunc(p, p1, p2)
+}
+
+//AddPendingRequestMinimockCounter returns a count of PendingStorageMock.AddPendingRequestFunc invocations
+func (m *PendingStorageMock) AddPendingRequestMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.AddPendingRequestCounter)
+}
+
+//AddPendingRequestMinimockPreCounter returns the value of PendingStorageMock.AddPendingRequest invocations
+func (m *PendingStorageMock) AddPendingRequestMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.AddPendingRequestPreCounter)
+}
+
+//AddPendingRequestFinished returns true if mock invocations count is ok
+func (m *PendingStorageMock) AddPendingRequestFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.AddPendingRequestMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.AddPendingRequestCounter) == uint64(len(m.AddPendingRequestMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.AddPendingRequestMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.AddPendingRequestCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.AddPendingRequestFunc != nil {
+		return atomic.LoadUint64(&m.AddPendingRequestCounter) > 0
+	}
+
+	return true
+}
+
+type mPendingStorageMockFilterNotExistWithLock struct {
+	mock              *PendingStorageMock
+	mainExpectation   *PendingStorageMockFilterNotExistWithLockExpectation
+	expectationSeries []*PendingStorageMockFilterNotExistWithLockExpectation
+}
+
+type PendingStorageMockFilterNotExistWithLockExpectation struct {
+	input *PendingStorageMockFilterNotExistWithLockInput
+}
+
+type PendingStorageMockFilterNotExistWithLockInput struct {
+	p  context.Context
+	p1 []core.RecordID
+	p2 func(p []core.RecordID)
+}
+
+//Expect specifies that invocation of PendingStorage.FilterNotExistWithLock is expected from 1 to Infinity times
+func (m *mPendingStorageMockFilterNotExistWithLock) Expect(p context.Context, p1 []core.RecordID, p2 func(p []core.RecordID)) *mPendingStorageMockFilterNotExistWithLock {
+	m.mock.FilterNotExistWithLockFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &PendingStorageMockFilterNotExistWithLockExpectation{}
+	}
+	m.mainExpectation.input = &PendingStorageMockFilterNotExistWithLockInput{p, p1, p2}
+	return m
+}
+
+//Return specifies results of invocation of PendingStorage.FilterNotExistWithLock
+func (m *mPendingStorageMockFilterNotExistWithLock) Return() *PendingStorageMock {
+	m.mock.FilterNotExistWithLockFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &PendingStorageMockFilterNotExistWithLockExpectation{}
+	}
+
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of PendingStorage.FilterNotExistWithLock is expected once
+func (m *mPendingStorageMockFilterNotExistWithLock) ExpectOnce(p context.Context, p1 []core.RecordID, p2 func(p []core.RecordID)) *PendingStorageMockFilterNotExistWithLockExpectation {
+	m.mock.FilterNotExistWithLockFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &PendingStorageMockFilterNotExistWithLockExpectation{}
+	expectation.input = &PendingStorageMockFilterNotExistWithLockInput{p, p1, p2}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+//Set uses given function f as a mock of PendingStorage.FilterNotExistWithLock method
+func (m *mPendingStorageMockFilterNotExistWithLock) Set(f func(p context.Context, p1 []core.RecordID, p2 func(p []core.RecordID))) *PendingStorageMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.FilterNotExistWithLockFunc = f
+	return m.mock
+}
+
+//FilterNotExistWithLock implements github.com/insolar/insolar/ledger/recentstorage.PendingStorage interface
+func (m *PendingStorageMock) FilterNotExistWithLock(p context.Context, p1 []core.RecordID, p2 func(p []core.RecordID)) {
+	counter := atomic.AddUint64(&m.FilterNotExistWithLockPreCounter, 1)
+	defer atomic.AddUint64(&m.FilterNotExistWithLockCounter, 1)
+
+	if len(m.FilterNotExistWithLockMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.FilterNotExistWithLockMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to PendingStorageMock.FilterNotExistWithLock. %v %v %v", p, p1, p2)
+			return
+		}
+
+		input := m.FilterNotExistWithLockMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, PendingStorageMockFilterNotExistWithLockInput{p, p1, p2}, "PendingStorage.FilterNotExistWithLock got unexpected parameters")
+
+		return
+	}
+
+	if m.FilterNotExistWithLockMock.mainExpectation != nil {
+
+		input := m.FilterNotExistWithLockMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, PendingStorageMockFilterNotExistWithLockInput{p, p1, p2}, "PendingStorage.FilterNotExistWithLock got unexpected parameters")
+		}
+
+		return
+	}
+
+	if m.FilterNotExistWithLockFunc == nil {
+		m.t.Fatalf("Unexpected call to PendingStorageMock.FilterNotExistWithLock. %v %v %v", p, p1, p2)
+		return
+	}
+
+	m.FilterNotExistWithLockFunc(p, p1, p2)
+}
+
+//FilterNotExistWithLockMinimockCounter returns a count of PendingStorageMock.FilterNotExistWithLockFunc invocations
+func (m *PendingStorageMock) FilterNotExistWithLockMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.FilterNotExistWithLockCounter)
+}
+
+//FilterNotExistWithLockMinimockPreCounter returns the value of PendingStorageMock.FilterNotExistWithLock invocations
+func (m *PendingStorageMock) FilterNotExistWithLockMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.FilterNotExistWithLockPreCounter)
+}
+
+//FilterNotExistWithLockFinished returns true if mock invocations count is ok
+func (m *PendingStorageMock) FilterNotExistWithLockFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.FilterNotExistWithLockMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.FilterNotExistWithLockCounter) == uint64(len(m.FilterNotExistWithLockMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.FilterNotExistWithLockMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.FilterNotExistWithLockCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.FilterNotExistWithLockFunc != nil {
+		return atomic.LoadUint64(&m.FilterNotExistWithLockCounter) > 0
+	}
+
+	return true
+}
+
+type mPendingStorageMockGetRequests struct {
+	mock              *PendingStorageMock
+	mainExpectation   *PendingStorageMockGetRequestsExpectation
+	expectationSeries []*PendingStorageMockGetRequestsExpectation
+}
+
+type PendingStorageMockGetRequestsExpectation struct {
+	result *PendingStorageMockGetRequestsResult
+}
+
+type PendingStorageMockGetRequestsResult struct {
+	r map[core.RecordID]map[core.RecordID]struct {
+	}
+}
+
+//Expect specifies that invocation of PendingStorage.GetRequests is expected from 1 to Infinity times
+func (m *mPendingStorageMockGetRequests) Expect() *mPendingStorageMockGetRequests {
+	m.mock.GetRequestsFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &PendingStorageMockGetRequestsExpectation{}
+	}
+
+	return m
+}
+
+//Return specifies results of invocation of PendingStorage.GetRequests
+func (m *mPendingStorageMockGetRequests) Return(r map[core.RecordID]map[core.RecordID]struct {
+}) *PendingStorageMock {
+	m.mock.GetRequestsFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &PendingStorageMockGetRequestsExpectation{}
+	}
+	m.mainExpectation.result = &PendingStorageMockGetRequestsResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of PendingStorage.GetRequests is expected once
+func (m *mPendingStorageMockGetRequests) ExpectOnce() *PendingStorageMockGetRequestsExpectation {
+	m.mock.GetRequestsFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &PendingStorageMockGetRequestsExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *PendingStorageMockGetRequestsExpectation) Return(r map[core.RecordID]map[core.RecordID]struct {
+}) {
+	e.result = &PendingStorageMockGetRequestsResult{r}
+}
+
+//Set uses given function f as a mock of PendingStorage.GetRequests method
+func (m *mPendingStorageMockGetRequests) Set(f func() (r map[core.RecordID]map[core.RecordID]struct {
+})) *PendingStorageMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.GetRequestsFunc = f
+	return m.mock
+}
+
+//GetRequests implements github.com/insolar/insolar/ledger/recentstorage.PendingStorage interface
+func (m *PendingStorageMock) GetRequests() (r map[core.RecordID]map[core.RecordID]struct {
+}) {
+	counter := atomic.AddUint64(&m.GetRequestsPreCounter, 1)
+	defer atomic.AddUint64(&m.GetRequestsCounter, 1)
+
+	if len(m.GetRequestsMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.GetRequestsMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to PendingStorageMock.GetRequests.")
+			return
+		}
+
+		result := m.GetRequestsMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the PendingStorageMock.GetRequests")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetRequestsMock.mainExpectation != nil {
+
+		result := m.GetRequestsMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the PendingStorageMock.GetRequests")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetRequestsFunc == nil {
+		m.t.Fatalf("Unexpected call to PendingStorageMock.GetRequests.")
+		return
+	}
+
+	return m.GetRequestsFunc()
+}
+
+//GetRequestsMinimockCounter returns a count of PendingStorageMock.GetRequestsFunc invocations
+func (m *PendingStorageMock) GetRequestsMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.GetRequestsCounter)
+}
+
+//GetRequestsMinimockPreCounter returns the value of PendingStorageMock.GetRequests invocations
+func (m *PendingStorageMock) GetRequestsMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.GetRequestsPreCounter)
+}
+
+//GetRequestsFinished returns true if mock invocations count is ok
+func (m *PendingStorageMock) GetRequestsFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.GetRequestsMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.GetRequestsCounter) == uint64(len(m.GetRequestsMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.GetRequestsMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.GetRequestsCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.GetRequestsFunc != nil {
+		return atomic.LoadUint64(&m.GetRequestsCounter) > 0
+	}
+
+	return true
+}
+
+type mPendingStorageMockGetRequestsForObject struct {
+	mock              *PendingStorageMock
+	mainExpectation   *PendingStorageMockGetRequestsForObjectExpectation
+	expectationSeries []*PendingStorageMockGetRequestsForObjectExpectation
+}
+
+type PendingStorageMockGetRequestsForObjectExpectation struct {
+	input  *PendingStorageMockGetRequestsForObjectInput
+	result *PendingStorageMockGetRequestsForObjectResult
+}
+
+type PendingStorageMockGetRequestsForObjectInput struct {
+	p core.RecordID
+}
+
+type PendingStorageMockGetRequestsForObjectResult struct {
+	r []core.RecordID
+}
+
+//Expect specifies that invocation of PendingStorage.GetRequestsForObject is expected from 1 to Infinity times
+func (m *mPendingStorageMockGetRequestsForObject) Expect(p core.RecordID) *mPendingStorageMockGetRequestsForObject {
+	m.mock.GetRequestsForObjectFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &PendingStorageMockGetRequestsForObjectExpectation{}
+	}
+	m.mainExpectation.input = &PendingStorageMockGetRequestsForObjectInput{p}
+	return m
+}
+
+//Return specifies results of invocation of PendingStorage.GetRequestsForObject
+func (m *mPendingStorageMockGetRequestsForObject) Return(r []core.RecordID) *PendingStorageMock {
+	m.mock.GetRequestsForObjectFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &PendingStorageMockGetRequestsForObjectExpectation{}
+	}
+	m.mainExpectation.result = &PendingStorageMockGetRequestsForObjectResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of PendingStorage.GetRequestsForObject is expected once
+func (m *mPendingStorageMockGetRequestsForObject) ExpectOnce(p core.RecordID) *PendingStorageMockGetRequestsForObjectExpectation {
+	m.mock.GetRequestsForObjectFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &PendingStorageMockGetRequestsForObjectExpectation{}
+	expectation.input = &PendingStorageMockGetRequestsForObjectInput{p}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *PendingStorageMockGetRequestsForObjectExpectation) Return(r []core.RecordID) {
+	e.result = &PendingStorageMockGetRequestsForObjectResult{r}
+}
+
+//Set uses given function f as a mock of PendingStorage.GetRequestsForObject method
+func (m *mPendingStorageMockGetRequestsForObject) Set(f func(p core.RecordID) (r []core.RecordID)) *PendingStorageMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.GetRequestsForObjectFunc = f
+	return m.mock
+}
+
+//GetRequestsForObject implements github.com/insolar/insolar/ledger/recentstorage.PendingStorage interface
+func (m *PendingStorageMock) GetRequestsForObject(p core.RecordID) (r []core.RecordID) {
+	counter := atomic.AddUint64(&m.GetRequestsForObjectPreCounter, 1)
+	defer atomic.AddUint64(&m.GetRequestsForObjectCounter, 1)
+
+	if len(m.GetRequestsForObjectMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.GetRequestsForObjectMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to PendingStorageMock.GetRequestsForObject. %v", p)
+			return
+		}
+
+		input := m.GetRequestsForObjectMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, PendingStorageMockGetRequestsForObjectInput{p}, "PendingStorage.GetRequestsForObject got unexpected parameters")
+
+		result := m.GetRequestsForObjectMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the PendingStorageMock.GetRequestsForObject")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetRequestsForObjectMock.mainExpectation != nil {
+
+		input := m.GetRequestsForObjectMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, PendingStorageMockGetRequestsForObjectInput{p}, "PendingStorage.GetRequestsForObject got unexpected parameters")
+		}
+
+		result := m.GetRequestsForObjectMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the PendingStorageMock.GetRequestsForObject")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetRequestsForObjectFunc == nil {
+		m.t.Fatalf("Unexpected call to PendingStorageMock.GetRequestsForObject. %v", p)
+		return
+	}
+
+	return m.GetRequestsForObjectFunc(p)
+}
+
+//GetRequestsForObjectMinimockCounter returns a count of PendingStorageMock.GetRequestsForObjectFunc invocations
+func (m *PendingStorageMock) GetRequestsForObjectMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.GetRequestsForObjectCounter)
+}
+
+//GetRequestsForObjectMinimockPreCounter returns the value of PendingStorageMock.GetRequestsForObject invocations
+func (m *PendingStorageMock) GetRequestsForObjectMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.GetRequestsForObjectPreCounter)
+}
+
+//GetRequestsForObjectFinished returns true if mock invocations count is ok
+func (m *PendingStorageMock) GetRequestsForObjectFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.GetRequestsForObjectMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.GetRequestsForObjectCounter) == uint64(len(m.GetRequestsForObjectMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.GetRequestsForObjectMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.GetRequestsForObjectCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.GetRequestsForObjectFunc != nil {
+		return atomic.LoadUint64(&m.GetRequestsForObjectCounter) > 0
+	}
+
+	return true
+}
+
+type mPendingStorageMockRemovePendingRequest struct {
+	mock              *PendingStorageMock
+	mainExpectation   *PendingStorageMockRemovePendingRequestExpectation
+	expectationSeries []*PendingStorageMockRemovePendingRequestExpectation
+}
+
+type PendingStorageMockRemovePendingRequestExpectation struct {
+	input *PendingStorageMockRemovePendingRequestInput
+}
+
+type PendingStorageMockRemovePendingRequestInput struct {
+	p  context.Context
+	p1 core.RecordID
+	p2 core.RecordID
+}
+
+//Expect specifies that invocation of PendingStorage.RemovePendingRequest is expected from 1 to Infinity times
+func (m *mPendingStorageMockRemovePendingRequest) Expect(p context.Context, p1 core.RecordID, p2 core.RecordID) *mPendingStorageMockRemovePendingRequest {
+	m.mock.RemovePendingRequestFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &PendingStorageMockRemovePendingRequestExpectation{}
+	}
+	m.mainExpectation.input = &PendingStorageMockRemovePendingRequestInput{p, p1, p2}
+	return m
+}
+
+//Return specifies results of invocation of PendingStorage.RemovePendingRequest
+func (m *mPendingStorageMockRemovePendingRequest) Return() *PendingStorageMock {
+	m.mock.RemovePendingRequestFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &PendingStorageMockRemovePendingRequestExpectation{}
+	}
+
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of PendingStorage.RemovePendingRequest is expected once
+func (m *mPendingStorageMockRemovePendingRequest) ExpectOnce(p context.Context, p1 core.RecordID, p2 core.RecordID) *PendingStorageMockRemovePendingRequestExpectation {
+	m.mock.RemovePendingRequestFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &PendingStorageMockRemovePendingRequestExpectation{}
+	expectation.input = &PendingStorageMockRemovePendingRequestInput{p, p1, p2}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+//Set uses given function f as a mock of PendingStorage.RemovePendingRequest method
+func (m *mPendingStorageMockRemovePendingRequest) Set(f func(p context.Context, p1 core.RecordID, p2 core.RecordID)) *PendingStorageMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.RemovePendingRequestFunc = f
+	return m.mock
+}
+
+//RemovePendingRequest implements github.com/insolar/insolar/ledger/recentstorage.PendingStorage interface
+func (m *PendingStorageMock) RemovePendingRequest(p context.Context, p1 core.RecordID, p2 core.RecordID) {
+	counter := atomic.AddUint64(&m.RemovePendingRequestPreCounter, 1)
+	defer atomic.AddUint64(&m.RemovePendingRequestCounter, 1)
+
+	if len(m.RemovePendingRequestMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.RemovePendingRequestMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to PendingStorageMock.RemovePendingRequest. %v %v %v", p, p1, p2)
+			return
+		}
+
+		input := m.RemovePendingRequestMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, PendingStorageMockRemovePendingRequestInput{p, p1, p2}, "PendingStorage.RemovePendingRequest got unexpected parameters")
+
+		return
+	}
+
+	if m.RemovePendingRequestMock.mainExpectation != nil {
+
+		input := m.RemovePendingRequestMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, PendingStorageMockRemovePendingRequestInput{p, p1, p2}, "PendingStorage.RemovePendingRequest got unexpected parameters")
+		}
+
+		return
+	}
+
+	if m.RemovePendingRequestFunc == nil {
+		m.t.Fatalf("Unexpected call to PendingStorageMock.RemovePendingRequest. %v %v %v", p, p1, p2)
+		return
+	}
+
+	m.RemovePendingRequestFunc(p, p1, p2)
+}
+
+//RemovePendingRequestMinimockCounter returns a count of PendingStorageMock.RemovePendingRequestFunc invocations
+func (m *PendingStorageMock) RemovePendingRequestMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.RemovePendingRequestCounter)
+}
+
+//RemovePendingRequestMinimockPreCounter returns the value of PendingStorageMock.RemovePendingRequest invocations
+func (m *PendingStorageMock) RemovePendingRequestMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.RemovePendingRequestPreCounter)
+}
+
+//RemovePendingRequestFinished returns true if mock invocations count is ok
+func (m *PendingStorageMock) RemovePendingRequestFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.RemovePendingRequestMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.RemovePendingRequestCounter) == uint64(len(m.RemovePendingRequestMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.RemovePendingRequestMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.RemovePendingRequestCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.RemovePendingRequestFunc != nil {
+		return atomic.LoadUint64(&m.RemovePendingRequestCounter) > 0
+	}
+
+	return true
+}
+
+//ValidateCallCounters checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+func (m *PendingStorageMock) ValidateCallCounters() {
+
+	if !m.AddPendingRequestFinished() {
+		m.t.Fatal("Expected call to PendingStorageMock.AddPendingRequest")
+	}
+
+	if !m.FilterNotExistWithLockFinished() {
+		m.t.Fatal("Expected call to PendingStorageMock.FilterNotExistWithLock")
+	}
+
+	if !m.GetRequestsFinished() {
+		m.t.Fatal("Expected call to PendingStorageMock.GetRequests")
+	}
+
+	if !m.GetRequestsForObjectFinished() {
+		m.t.Fatal("Expected call to PendingStorageMock.GetRequestsForObject")
+	}
+
+	if !m.RemovePendingRequestFinished() {
+		m.t.Fatal("Expected call to PendingStorageMock.RemovePendingRequest")
+	}
+
+}
+
+//CheckMocksCalled checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+func (m *PendingStorageMock) CheckMocksCalled() {
+	m.Finish()
+}
+
+//Finish checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
+func (m *PendingStorageMock) Finish() {
+	m.MinimockFinish()
+}
+
+//MinimockFinish checks that all mocked methods of the interface have been called at least once
+func (m *PendingStorageMock) MinimockFinish() {
+
+	if !m.AddPendingRequestFinished() {
+		m.t.Fatal("Expected call to PendingStorageMock.AddPendingRequest")
+	}
+
+	if !m.FilterNotExistWithLockFinished() {
+		m.t.Fatal("Expected call to PendingStorageMock.FilterNotExistWithLock")
+	}
+
+	if !m.GetRequestsFinished() {
+		m.t.Fatal("Expected call to PendingStorageMock.GetRequests")
+	}
+
+	if !m.GetRequestsForObjectFinished() {
+		m.t.Fatal("Expected call to PendingStorageMock.GetRequestsForObject")
+	}
+
+	if !m.RemovePendingRequestFinished() {
+		m.t.Fatal("Expected call to PendingStorageMock.RemovePendingRequest")
+	}
+
+}
+
+//Wait waits for all mocked methods to be called at least once
+//Deprecated: please use MinimockWait or use Wait method of minimock.Controller
+func (m *PendingStorageMock) Wait(timeout time.Duration) {
+	m.MinimockWait(timeout)
+}
+
+//MinimockWait waits for all mocked methods to be called at least once
+//this method is called by minimock.Controller
+func (m *PendingStorageMock) MinimockWait(timeout time.Duration) {
+	timeoutCh := time.After(timeout)
+	for {
+		ok := true
+		ok = ok && m.AddPendingRequestFinished()
+		ok = ok && m.FilterNotExistWithLockFinished()
+		ok = ok && m.GetRequestsFinished()
+		ok = ok && m.GetRequestsForObjectFinished()
+		ok = ok && m.RemovePendingRequestFinished()
+
+		if ok {
+			return
+		}
+
+		select {
+		case <-timeoutCh:
+
+			if !m.AddPendingRequestFinished() {
+				m.t.Error("Expected call to PendingStorageMock.AddPendingRequest")
+			}
+
+			if !m.FilterNotExistWithLockFinished() {
+				m.t.Error("Expected call to PendingStorageMock.FilterNotExistWithLock")
+			}
+
+			if !m.GetRequestsFinished() {
+				m.t.Error("Expected call to PendingStorageMock.GetRequests")
+			}
+
+			if !m.GetRequestsForObjectFinished() {
+				m.t.Error("Expected call to PendingStorageMock.GetRequestsForObject")
+			}
+
+			if !m.RemovePendingRequestFinished() {
+				m.t.Error("Expected call to PendingStorageMock.RemovePendingRequest")
+			}
+
+			m.t.Fatalf("Some mocks were not called on time: %s", timeout)
+			return
+		default:
+			time.Sleep(time.Millisecond)
+		}
+	}
+}
+
+//AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
+//it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
+func (m *PendingStorageMock) AllMocksCalled() bool {
+
+	if !m.AddPendingRequestFinished() {
+		return false
+	}
+
+	if !m.FilterNotExistWithLockFinished() {
+		return false
+	}
+
+	if !m.GetRequestsFinished() {
+		return false
+	}
+
+	if !m.GetRequestsForObjectFinished() {
+		return false
+	}
+
+	if !m.RemovePendingRequestFinished() {
+		return false
+	}
+
+	return true
+}
