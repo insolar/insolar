@@ -21,6 +21,7 @@ import (
 	"context"
 	"sync/atomic"
 
+	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -48,7 +49,7 @@ type Communicator interface {
 	// ExchangePhase3 used in third consensus step to exchange data between participants
 	ExchangePhase3(ctx context.Context, participants []core.Node, packet *packets.Phase3Packet) (map[core.RecordRef]*packets.Phase3Packet, error)
 
-	Start(ctx context.Context) error
+	component.Initer
 }
 
 type phase1Result struct {
@@ -86,7 +87,7 @@ func NewNaiveCommunicator() *NaiveCommunicator {
 }
 
 // Start method implements Starter interface
-func (nc *NaiveCommunicator) Start(ctx context.Context) error {
+func (nc *NaiveCommunicator) Init(ctx context.Context) error {
 	nc.phase1result = make(chan phase1Result)
 	nc.phase2result = make(chan phase2Result)
 	nc.phase3result = make(chan phase3Result)

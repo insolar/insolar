@@ -35,7 +35,7 @@ import (
 )
 
 type AuthorizationController interface {
-	component.Starter
+	component.Initer
 
 	Authorize(ctx context.Context, discoveryNode *DiscoveryNode, cert core.AuthorizationCertificate) (SessionID, error)
 	Register(ctx context.Context, discoveryNode *DiscoveryNode, sessionID SessionID) error
@@ -184,7 +184,7 @@ func (ac *authorizationController) processAuthorizeRequest(ctx context.Context, 
 	return ac.transport.BuildResponse(ctx, request, &AuthorizationResponse{Code: OpConfirmed, SessionID: session}), nil
 }
 
-func (ac *authorizationController) Start(ctx context.Context) error {
+func (ac *authorizationController) Init(ctx context.Context) error {
 	ac.transport.RegisterPacketHandler(types.Register, ac.processRegisterRequest)
 	ac.transport.RegisterPacketHandler(types.Authorize, ac.processAuthorizeRequest)
 	return nil
