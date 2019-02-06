@@ -279,7 +279,17 @@ func (m *PulseManager) createDrop(
 	prevDrop, err = m.DropStorage.GetDrop(ctx, jetID, prevPulse)
 	if err == storage.ErrNotFound {
 		prevDrop, err = m.DropStorage.GetDrop(ctx, jet.Parent(jetID), prevPulse)
-		if err != nil {
+		if err == storage.ErrNotFound {
+			inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+				"pulse": prevPulse,
+				"jet":   jetID.DebugString(),
+			}).Error("failed to find drop")
+			prevDrop = &jet.JetDrop{Pulse: prevPulse}
+			err = m.DropStorage.SetDrop(ctx, jetID, prevDrop)
+			if err != nil {
+				return nil, nil, nil, errors.Wrap(err, "failed to create empty drop")
+			}
+		} else if err != nil {
 			return nil, nil, nil, errors.Wrap(err, "[ createDrop ] failed to find parent")
 		}
 	} else if err != nil {
