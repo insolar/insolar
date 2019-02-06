@@ -17,17 +17,15 @@
 package storage_test
 
 import (
-	"bytes"
 	"context"
-	"sort"
+	"fmt"
 	"testing"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/index"
-	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
@@ -44,9 +42,8 @@ type cleanerSuite struct {
 	cleaner func()
 
 	objectStorage  storage.ObjectStorage
+	dropStorage    storage.DropStorage
 	storageCleaner storage.Cleaner
-
-	jetID core.RecordID
 }
 
 func NewCleanerSuite() *cleanerSuite {
@@ -63,13 +60,12 @@ func TestCleaner(t *testing.T) {
 func (s *cleanerSuite) BeforeTest(suiteName, testName string) {
 	s.cm = &component.Manager{}
 	s.ctx = inslogger.TestContext(s.T())
-	// TODO: just use two cases: zero and non zero jetID
-	s.jetID = core.TODOJetID
 
 	db, cleaner := storagetest.TmpDB(s.ctx, s.T())
 	s.cleaner = cleaner
 
 	s.objectStorage = storage.NewObjectStorage()
+	s.dropStorage = storage.NewDropStorage(0)
 	s.storageCleaner = storage.NewCleaner()
 
 	s.cm.Inject(
@@ -77,6 +73,7 @@ func (s *cleanerSuite) BeforeTest(suiteName, testName string) {
 		db,
 		s.objectStorage,
 		s.storageCleaner,
+		s.dropStorage,
 	)
 
 	err := s.cm.Init(s.ctx)
@@ -97,73 +94,204 @@ func (s *cleanerSuite) AfterTest(suiteName, testName string) {
 	s.cleaner()
 }
 
-func (s *cleanerSuite) Test_RemoveJetIndexesUntil_Basic() {
-	removeJetIndexesUntil(s, false)
-}
+func (s *cleanerSuite) Test_RemoveRecords() {
+	t := s.T()
+	ctx := inslogger.TestContext(t)
 
-func (s *cleanerSuite) Test_RemoveJetIndexesUntil_WithSkips() {
-	removeJetIndexesUntil(s, true)
-}
+	jetID00 := testutils.JetFromString("00")
+	jetID01 := testutils.JetFromString("01")
+	jetID11 := testutils.JetFromString("11")
+	jets := []core.RecordID{jetID00, jetID01, jetID11}
 
-func removeJetIndexesUntil(s *cleanerSuite, skip bool) {
-	// if we operate on zero jetID
-	var expectLeftIDs []core.RecordID
-	err := s.objectStorage.IterateIndexIDs(s.ctx, s.jetID, func(id core.RecordID) error {
-		if id.Pulse() == core.FirstPulseNumber {
-			expectLeftIDs = append(expectLeftIDs, id)
-		}
-		return nil
-	})
-	require.NoError(s.T(), err)
+	// should remove all records in rmJetID on pulses 1, 2, but all in pulse 3 for rmJetID should left
+	// and other jets records should not be removed too
+	var checks []cleanChecker
+	until := 2
+	rmUntilPN := core.PulseNumber(core.FirstPulseNumber + until + 1)
+	rmJetID := jetID01
 
-	pulsesCount := 10
-	untilIdx := pulsesCount / 2
-	var until core.PulseNumber
+	for _, jetID := range jets {
+		for i := 1; i <= 3; i++ {
+			pn := core.PulseNumber(core.FirstPulseNumber + i)
 
-	var pulses []core.PulseNumber
-	expectedRmCount := 0
-	for i := 0; i < pulsesCount; i++ {
-		pn := core.FirstPulseNumber + core.PulseNumber(i)
-		if i == untilIdx {
-			until = pn
-			if skip {
-				// skip index saving with 'until' pulse (corner case)
-				continue
+			shouldLeft := true
+			if jetID == rmJetID {
+				shouldLeft = i > until
 			}
-		}
-		pulses = append(pulses, pn)
-		objID := testutils.RandomID()
-		copy(objID[:core.PulseNumberSize], pn.Bytes())
-		err := s.objectStorage.SetObjectIndex(s.ctx, s.jetID, &objID, &index.ObjectLifeline{
-			State:       record.StateActivation,
-			LatestState: &objID,
-		})
-		require.NoError(s.T(), err)
-		if (pn == core.FirstPulseNumber) || (i >= untilIdx) {
-			expectLeftIDs = append(expectLeftIDs, objID)
-		} else {
-			expectedRmCount += 1
+
+			blobID, err := storagetest.AddRandBlob(ctx, s.objectStorage, jetID, pn)
+			require.NoError(t, err)
+			blobCC := cleanCase{
+				rectype:    "blob",
+				id:         blobID,
+				jetID:      jetID,
+				pulseNum:   pn,
+				shouldLeft: shouldLeft,
+			}
+			checks = append(checks, blobCase{
+				cleanCase:     blobCC,
+				objectStorage: s.objectStorage,
+			})
+
+			recID, err := storagetest.AddRandRecord(ctx, s.objectStorage, jetID, pn)
+			require.NoError(t, err)
+			recCC := cleanCase{
+				rectype:    "record",
+				id:         recID,
+				jetID:      jetID,
+				pulseNum:   pn,
+				shouldLeft: shouldLeft,
+			}
+			checks = append(checks, recordCase{
+				cleanCase:     recCC,
+				objectStorage: s.objectStorage,
+			})
+
+			_, err = storagetest.AddRandDrop(ctx, s.dropStorage, jetID, pn)
+			require.NoError(t, err)
+			dropCC := cleanCase{
+				rectype:    "drop",
+				id:         recID,
+				jetID:      jetID,
+				pulseNum:   pn,
+				shouldLeft: shouldLeft,
+			}
+			checks = append(checks, dropCase{
+				cleanCase:   dropCC,
+				dropStorage: s.dropStorage,
+			})
 		}
 	}
 
-	rmcount, err := s.storageCleaner.RemoveJetIndexesUntil(s.ctx, s.jetID, until, nil)
-	require.NoError(s.T(), err)
+	s.storageCleaner.CleanJetRecordsUntilPulse(ctx, rmJetID, rmUntilPN)
 
-	var foundIDs []core.RecordID
-	err = s.objectStorage.IterateIndexIDs(s.ctx, s.jetID, func(id core.RecordID) error {
-		foundIDs = append(foundIDs, id)
-		return nil
-	})
-	require.NoError(s.T(), err)
-
-	assert.Equal(s.T(), int64(expectedRmCount), rmcount.Removed)
-	assert.Equalf(s.T(), sortIDS(expectLeftIDs), sortIDS(foundIDs),
-		"expected keys and found indexes, doesn't match, jetID=%v", s.jetID.DebugString())
+	for _, check := range checks {
+		check.Check(ctx, t)
+	}
 }
 
-func sortIDS(ids []core.RecordID) []core.RecordID {
-	sort.Slice(ids, func(i, j int) bool {
-		return bytes.Compare(ids[i][:], ids[j][:]) < 0
-	})
-	return ids
+func (s *cleanerSuite) Test_RemoveJetIndexes() {
+	t := s.T()
+	ctx := inslogger.TestContext(t)
+
+	jetID00 := testutils.JetFromString("00")
+	jetID01 := testutils.JetFromString("01")
+	jetID11 := testutils.JetFromString("11")
+	jets := []core.RecordID{jetID00, jetID01, jetID11}
+
+	// should remove records in Pulse 1, 2, but left 3
+	var checks []cleanChecker
+	until := 2
+	rmJetID := jetID01
+	var removeIndexes []core.RecordID
+
+	for _, jetID := range jets {
+		for i := 1; i <= 3; i++ {
+			pn := core.PulseNumber(core.FirstPulseNumber + i)
+			idxID, err := storagetest.AddRandIndex(ctx, s.objectStorage, jetID, pn)
+			require.NoError(t, err)
+
+			shouldLeft := true
+			if jetID == rmJetID {
+				shouldLeft = i > until
+				if !shouldLeft {
+					removeIndexes = append(removeIndexes, *idxID)
+				}
+			}
+
+			cc := cleanCase{
+				id:         idxID,
+				jetID:      jetID,
+				pulseNum:   pn,
+				shouldLeft: shouldLeft,
+			}
+			checks = append(checks, indexCase{
+				cleanCase:     cc,
+				objectStorage: s.objectStorage,
+			})
+		}
+	}
+
+	recent := recentstorage.NewRecentStorageMock(s.T())
+	recent.FilterNotExistWithLockFunc = func(ctx context.Context, candidates []core.RecordID, fn func(fordelete []core.RecordID)) {
+		fn(candidates)
+	}
+
+	s.storageCleaner.CleanJetIndexes(ctx, rmJetID, recent, removeIndexes)
+
+	for _, check := range checks {
+		check.Check(ctx, t)
+	}
+}
+
+// check helpers
+
+type cleanChecker interface {
+	Check(ctx context.Context, t *testing.T)
+	String() string
+}
+
+type cleanCase struct {
+	rectype    string
+	id         *core.RecordID
+	jetID      core.RecordID
+	pulseNum   core.PulseNumber
+	shouldLeft bool
+}
+
+func (cc cleanCase) String() string {
+	return fmt.Sprintf("%v jetID=%v, pulseNum=%v, shouldLeft=%v",
+		cc.rectype, cc.jetID.DebugString(), cc.pulseNum, cc.shouldLeft)
+}
+
+func (cc cleanCase) check(t *testing.T, err error) {
+	if cc.shouldLeft {
+		if !assert.NoError(t, err) {
+			fmt.Printf("%v => err: %T\n", cc, err)
+		}
+		return
+	}
+	if !assert.Exactly(t, err, storage.ErrNotFound) {
+		fmt.Printf("%v => err: %T\n", cc, err)
+	}
+}
+
+type indexCase struct {
+	cleanCase
+	objectStorage storage.ObjectStorage
+}
+
+func (c indexCase) Check(ctx context.Context, t *testing.T) {
+	_, err := c.objectStorage.GetObjectIndex(ctx, c.jetID, c.id, false)
+	c.check(t, err)
+}
+
+type blobCase struct {
+	cleanCase
+	objectStorage storage.ObjectStorage
+}
+
+func (c blobCase) Check(ctx context.Context, t *testing.T) {
+	_, err := c.objectStorage.GetBlob(ctx, c.jetID, c.id)
+	c.check(t, err)
+}
+
+type recordCase struct {
+	cleanCase
+	objectStorage storage.ObjectStorage
+}
+
+func (c recordCase) Check(ctx context.Context, t *testing.T) {
+	_, err := c.objectStorage.GetRecord(ctx, c.jetID, c.id)
+	c.check(t, err)
+}
+
+type dropCase struct {
+	cleanCase
+	dropStorage storage.DropStorage
+}
+
+func (c dropCase) Check(ctx context.Context, t *testing.T) {
+	_, err := c.dropStorage.GetDrop(ctx, c.jetID, c.pulseNum)
+	c.check(t, err)
 }
