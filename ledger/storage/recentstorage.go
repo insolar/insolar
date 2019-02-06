@@ -21,6 +21,7 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"go.opencensus.io/stats"
@@ -138,15 +139,17 @@ func (p *RecentStorageProvider) DecreaseIndexesTTL(ctx context.Context) map[core
 				resMapLock.Unlock()
 			}
 
-			if len(s.indexes) == 0 {
-				delete(p.indexStorages, jetID)
-			}
-
 			wg.Done()
 		}(jetID, storage)
 	}
 
 	wg.Wait()
+
+	for jetID, storage := range p.indexStorages {
+		if len(storage.indexes) == 0 {
+			delete(p.indexStorages, jetID)
+		}
+	}
 
 	return resMap
 }
@@ -197,6 +200,11 @@ func (r *RecentIndexStorage) AddObject(ctx context.Context, id core.RecordID) {
 func (r *RecentIndexStorage) AddObjectWithTLL(ctx context.Context, id core.RecordID, ttl int) {
 	r.lock.Lock()
 	defer r.lock.Unlock()
+
+	if ttl < 0 {
+		inslogger.FromContext(ctx).Error("about zero ttl happened")
+		panic("about zero ttl happened")
+	}
 
 	r.indexes[id] = recentObjectMeta{ttl: ttl}
 
@@ -252,7 +260,7 @@ func (r *RecentIndexStorage) DecreaseIndexTTL(ctx context.Context) []core.Record
 	var clearedObjects []core.RecordID
 	for key, value := range r.indexes {
 		value.ttl--
-		if value.ttl == 0 {
+		if value.ttl <= 0 {
 			clearedObjects = append(clearedObjects, key)
 			delete(r.indexes, key)
 			continue

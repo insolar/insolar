@@ -208,3 +208,48 @@ func TestRecentStorage_markForDelete(t *testing.T) {
 
 	assert.Equal(t, expect, markedCandidates)
 }
+
+func TestRecentStorageProvider_DecreaseIndexesTTL(t *testing.T) {
+	// Arrange
+	ctx := inslogger.TestContext(t)
+
+	firstJet := testutils.RandomJet()
+	secondJet := testutils.RandomJet()
+
+	provider := NewRecentStorageProvider(8)
+	provider.GetIndexStorage(ctx, firstJet).AddObject(ctx, testutils.RandomID())
+	provider.GetIndexStorage(ctx, firstJet).AddObject(ctx, testutils.RandomID())
+
+	removedFirst := testutils.RandomID()
+	removedSecond := testutils.RandomID()
+	provider.GetIndexStorage(ctx, secondJet).AddObjectWithTLL(ctx, removedFirst, 1)
+	provider.GetIndexStorage(ctx, secondJet).AddObjectWithTLL(ctx, removedSecond, 1)
+
+	// Act
+	result := provider.DecreaseIndexesTTL(ctx)
+
+	// Assert
+	provider.indexLock.Lock()
+	defer provider.indexLock.Unlock()
+	assert.NotNil(t, result)
+	assert.Equal(t, 1, len(provider.indexStorages))
+	assert.Equal(t, 1, len(result))
+	assert.Equal(t, 2, len(result[secondJet]))
+	assert.Equal(t, removedFirst, result[secondJet][0])
+	assert.Equal(t, removedSecond, result[secondJet][1])
+	for _, index := range provider.indexStorages[firstJet].indexes {
+		assert.Equal(t, 7, index.ttl)
+	}
+}
+
+func TestRecentStorageProvider_DecreaseIndexesTTL_WorksOnEmptyStorage(t *testing.T) {
+	// Arrange
+	ctx := inslogger.TestContext(t)
+	provider := NewRecentStorageProvider(8)
+
+	// Act
+	result := provider.DecreaseIndexesTTL(ctx)
+
+	// Assert
+	assert.Equal(t, map[core.RecordID][]core.RecordID{}, result)
+}
