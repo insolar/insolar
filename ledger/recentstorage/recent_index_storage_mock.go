@@ -35,6 +35,11 @@ type RecentIndexStorageMock struct {
 	DecreaseIndexTTLPreCounter uint64
 	DecreaseIndexTTLMock       mRecentIndexStorageMockDecreaseIndexTTL
 
+	FilterNotExistWithLockFunc       func(p context.Context, p1 []core.RecordID, p2 func(p []core.RecordID))
+	FilterNotExistWithLockCounter    uint64
+	FilterNotExistWithLockPreCounter uint64
+	FilterNotExistWithLockMock       mRecentIndexStorageMockFilterNotExistWithLock
+
 	GetObjectsFunc       func() (r map[core.RecordID]int)
 	GetObjectsCounter    uint64
 	GetObjectsPreCounter uint64
@@ -52,6 +57,7 @@ func NewRecentIndexStorageMock(t minimock.Tester) *RecentIndexStorageMock {
 	m.AddObjectMock = mRecentIndexStorageMockAddObject{mock: m}
 	m.AddObjectWithTLLMock = mRecentIndexStorageMockAddObjectWithTLL{mock: m}
 	m.DecreaseIndexTTLMock = mRecentIndexStorageMockDecreaseIndexTTL{mock: m}
+	m.FilterNotExistWithLockMock = mRecentIndexStorageMockFilterNotExistWithLock{mock: m}
 	m.GetObjectsMock = mRecentIndexStorageMockGetObjects{mock: m}
 
 	return m
@@ -453,6 +459,131 @@ func (m *RecentIndexStorageMock) DecreaseIndexTTLFinished() bool {
 	return true
 }
 
+type mRecentIndexStorageMockFilterNotExistWithLock struct {
+	mock              *RecentIndexStorageMock
+	mainExpectation   *RecentIndexStorageMockFilterNotExistWithLockExpectation
+	expectationSeries []*RecentIndexStorageMockFilterNotExistWithLockExpectation
+}
+
+type RecentIndexStorageMockFilterNotExistWithLockExpectation struct {
+	input *RecentIndexStorageMockFilterNotExistWithLockInput
+}
+
+type RecentIndexStorageMockFilterNotExistWithLockInput struct {
+	p  context.Context
+	p1 []core.RecordID
+	p2 func(p []core.RecordID)
+}
+
+//Expect specifies that invocation of RecentIndexStorage.FilterNotExistWithLock is expected from 1 to Infinity times
+func (m *mRecentIndexStorageMockFilterNotExistWithLock) Expect(p context.Context, p1 []core.RecordID, p2 func(p []core.RecordID)) *mRecentIndexStorageMockFilterNotExistWithLock {
+	m.mock.FilterNotExistWithLockFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &RecentIndexStorageMockFilterNotExistWithLockExpectation{}
+	}
+	m.mainExpectation.input = &RecentIndexStorageMockFilterNotExistWithLockInput{p, p1, p2}
+	return m
+}
+
+//Return specifies results of invocation of RecentIndexStorage.FilterNotExistWithLock
+func (m *mRecentIndexStorageMockFilterNotExistWithLock) Return() *RecentIndexStorageMock {
+	m.mock.FilterNotExistWithLockFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &RecentIndexStorageMockFilterNotExistWithLockExpectation{}
+	}
+
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of RecentIndexStorage.FilterNotExistWithLock is expected once
+func (m *mRecentIndexStorageMockFilterNotExistWithLock) ExpectOnce(p context.Context, p1 []core.RecordID, p2 func(p []core.RecordID)) *RecentIndexStorageMockFilterNotExistWithLockExpectation {
+	m.mock.FilterNotExistWithLockFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &RecentIndexStorageMockFilterNotExistWithLockExpectation{}
+	expectation.input = &RecentIndexStorageMockFilterNotExistWithLockInput{p, p1, p2}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+//Set uses given function f as a mock of RecentIndexStorage.FilterNotExistWithLock method
+func (m *mRecentIndexStorageMockFilterNotExistWithLock) Set(f func(p context.Context, p1 []core.RecordID, p2 func(p []core.RecordID))) *RecentIndexStorageMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.FilterNotExistWithLockFunc = f
+	return m.mock
+}
+
+//FilterNotExistWithLock implements github.com/insolar/insolar/ledger/recentstorage.RecentIndexStorage interface
+func (m *RecentIndexStorageMock) FilterNotExistWithLock(p context.Context, p1 []core.RecordID, p2 func(p []core.RecordID)) {
+	counter := atomic.AddUint64(&m.FilterNotExistWithLockPreCounter, 1)
+	defer atomic.AddUint64(&m.FilterNotExistWithLockCounter, 1)
+
+	if len(m.FilterNotExistWithLockMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.FilterNotExistWithLockMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to RecentIndexStorageMock.FilterNotExistWithLock. %v %v %v", p, p1, p2)
+			return
+		}
+
+		input := m.FilterNotExistWithLockMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, RecentIndexStorageMockFilterNotExistWithLockInput{p, p1, p2}, "RecentIndexStorage.FilterNotExistWithLock got unexpected parameters")
+
+		return
+	}
+
+	if m.FilterNotExistWithLockMock.mainExpectation != nil {
+
+		input := m.FilterNotExistWithLockMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, RecentIndexStorageMockFilterNotExistWithLockInput{p, p1, p2}, "RecentIndexStorage.FilterNotExistWithLock got unexpected parameters")
+		}
+
+		return
+	}
+
+	if m.FilterNotExistWithLockFunc == nil {
+		m.t.Fatalf("Unexpected call to RecentIndexStorageMock.FilterNotExistWithLock. %v %v %v", p, p1, p2)
+		return
+	}
+
+	m.FilterNotExistWithLockFunc(p, p1, p2)
+}
+
+//FilterNotExistWithLockMinimockCounter returns a count of RecentIndexStorageMock.FilterNotExistWithLockFunc invocations
+func (m *RecentIndexStorageMock) FilterNotExistWithLockMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.FilterNotExistWithLockCounter)
+}
+
+//FilterNotExistWithLockMinimockPreCounter returns the value of RecentIndexStorageMock.FilterNotExistWithLock invocations
+func (m *RecentIndexStorageMock) FilterNotExistWithLockMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.FilterNotExistWithLockPreCounter)
+}
+
+//FilterNotExistWithLockFinished returns true if mock invocations count is ok
+func (m *RecentIndexStorageMock) FilterNotExistWithLockFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.FilterNotExistWithLockMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.FilterNotExistWithLockCounter) == uint64(len(m.FilterNotExistWithLockMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.FilterNotExistWithLockMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.FilterNotExistWithLockCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.FilterNotExistWithLockFunc != nil {
+		return atomic.LoadUint64(&m.FilterNotExistWithLockCounter) > 0
+	}
+
+	return true
+}
+
 type mRecentIndexStorageMockGetObjects struct {
 	mock              *RecentIndexStorageMock
 	mainExpectation   *RecentIndexStorageMockGetObjectsExpectation
@@ -603,6 +734,10 @@ func (m *RecentIndexStorageMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to RecentIndexStorageMock.DecreaseIndexTTL")
 	}
 
+	if !m.FilterNotExistWithLockFinished() {
+		m.t.Fatal("Expected call to RecentIndexStorageMock.FilterNotExistWithLock")
+	}
+
 	if !m.GetObjectsFinished() {
 		m.t.Fatal("Expected call to RecentIndexStorageMock.GetObjects")
 	}
@@ -636,6 +771,10 @@ func (m *RecentIndexStorageMock) MinimockFinish() {
 		m.t.Fatal("Expected call to RecentIndexStorageMock.DecreaseIndexTTL")
 	}
 
+	if !m.FilterNotExistWithLockFinished() {
+		m.t.Fatal("Expected call to RecentIndexStorageMock.FilterNotExistWithLock")
+	}
+
 	if !m.GetObjectsFinished() {
 		m.t.Fatal("Expected call to RecentIndexStorageMock.GetObjects")
 	}
@@ -657,6 +796,7 @@ func (m *RecentIndexStorageMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.AddObjectFinished()
 		ok = ok && m.AddObjectWithTLLFinished()
 		ok = ok && m.DecreaseIndexTTLFinished()
+		ok = ok && m.FilterNotExistWithLockFinished()
 		ok = ok && m.GetObjectsFinished()
 
 		if ok {
@@ -676,6 +816,10 @@ func (m *RecentIndexStorageMock) MinimockWait(timeout time.Duration) {
 
 			if !m.DecreaseIndexTTLFinished() {
 				m.t.Error("Expected call to RecentIndexStorageMock.DecreaseIndexTTL")
+			}
+
+			if !m.FilterNotExistWithLockFinished() {
+				m.t.Error("Expected call to RecentIndexStorageMock.FilterNotExistWithLock")
 			}
 
 			if !m.GetObjectsFinished() {
@@ -703,6 +847,10 @@ func (m *RecentIndexStorageMock) AllMocksCalled() bool {
 	}
 
 	if !m.DecreaseIndexTTLFinished() {
+		return false
+	}
+
+	if !m.FilterNotExistWithLockFinished() {
 		return false
 	}
 

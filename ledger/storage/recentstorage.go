@@ -236,15 +236,30 @@ func (r *RecentIndexStorage) GetObjects() map[core.RecordID]int {
 	return targetMap
 }
 
-func (r *RecentStorage) FilterNotExistWithLock(
+// FilterNotExistWithLock filters candidates from params
+// found indexes, which aren't removed from cache
+// and the passes it to lockedFn
+func (r *RecentIndexStorage) FilterNotExistWithLock(
 	ctx context.Context,
 	candidates []core.RecordID,
 	lockedFn func(filtered []core.RecordID),
 ) {
-	r.objectLock.Lock()
+	r.lock.Lock()
 	markedCandidates := r.markForDelete(candidates)
 	lockedFn(markedCandidates)
-	r.objectLock.Unlock()
+	r.lock.Unlock()
+}
+
+func (r *RecentIndexStorage) markForDelete(candidates []core.RecordID) []core.RecordID {
+	result := make([]core.RecordID, 0, len(candidates))
+
+	for _, c := range candidates {
+		_, exists := r.indexes[c]
+		if !exists {
+			result = append(result, c)
+		}
+	}
+	return result
 }
 
 // DecreaseIndexTTL decreases ttls and remove indexes with 0 ttl
@@ -342,16 +357,4 @@ func (r *PendingStorage) RemovePendingRequest(ctx context.Context, obj, req core
 
 	ctx = insmetrics.InsertTag(ctx, tagJet, r.jetID.DebugString())
 	stats.Record(ctx, statRecentStoragePendingsRemoved.M(1))
-}
-
-func (r *RecentStorage) markForDelete(candidates []core.RecordID) []core.RecordID {
-	result := make([]core.RecordID, 0, len(candidates))
-
-	for _, c := range candidates {
-		_, exists := r.recentObjects[c]
-		if !exists {
-			result = append(result, c)
-		}
-	}
-	return result
 }

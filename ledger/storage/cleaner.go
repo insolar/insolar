@@ -41,7 +41,7 @@ type Cleaner interface {
 	CleanJetIndexes(
 		ctx context.Context,
 		jetID core.RecordID,
-		recent recentstorage.RecentStorage,
+		recent recentstorage.RecentIndexStorage,
 		candidates []core.RecordID,
 	) (RmStat, error)
 }
@@ -168,7 +168,7 @@ func (c *cleaner) removeJetRecordsUntil(
 func (c *cleaner) CleanJetIndexes(
 	ctx context.Context,
 	jetID core.RecordID,
-	recent recentstorage.RecentStorage,
+	recent recentstorage.RecentIndexStorage,
 	candidates []core.RecordID,
 ) (RmStat, error) {
 	var stat RmStat

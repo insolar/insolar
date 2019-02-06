@@ -48,6 +48,8 @@ type RecentIndexStorage interface {
 	GetObjects() map[core.RecordID]int
 
 	DecreaseIndexTTL(ctx context.Context) []core.RecordID
+
+	FilterNotExistWithLock(ctx context.Context, candidates []core.RecordID, fn func(filtered []core.RecordID))
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/recentstorage.PendingStorage -o ./ -s _mock.go
@@ -58,6 +60,4 @@ type PendingStorage interface {
 	GetRequestsForObject(obj core.RecordID) []core.RecordID
 
 	RemovePendingRequest(ctx context.Context, obj, req core.RecordID)
-
-	FilterNotExistWithLock(ctx context.Context, candidates []core.RecordID, fn func(filtered []core.RecordID))
 }

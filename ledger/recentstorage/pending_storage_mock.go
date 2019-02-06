@@ -25,11 +25,6 @@ type PendingStorageMock struct {
 	AddPendingRequestPreCounter uint64
 	AddPendingRequestMock       mPendingStorageMockAddPendingRequest
 
-	FilterNotExistWithLockFunc       func(p context.Context, p1 []core.RecordID, p2 func(p []core.RecordID))
-	FilterNotExistWithLockCounter    uint64
-	FilterNotExistWithLockPreCounter uint64
-	FilterNotExistWithLockMock       mPendingStorageMockFilterNotExistWithLock
-
 	GetRequestsFunc func() (r map[core.RecordID]map[core.RecordID]struct {
 	})
 	GetRequestsCounter    uint64
@@ -56,7 +51,6 @@ func NewPendingStorageMock(t minimock.Tester) *PendingStorageMock {
 	}
 
 	m.AddPendingRequestMock = mPendingStorageMockAddPendingRequest{mock: m}
-	m.FilterNotExistWithLockMock = mPendingStorageMockFilterNotExistWithLock{mock: m}
 	m.GetRequestsMock = mPendingStorageMockGetRequests{mock: m}
 	m.GetRequestsForObjectMock = mPendingStorageMockGetRequestsForObject{mock: m}
 	m.RemovePendingRequestMock = mPendingStorageMockRemovePendingRequest{mock: m}
@@ -184,131 +178,6 @@ func (m *PendingStorageMock) AddPendingRequestFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.AddPendingRequestFunc != nil {
 		return atomic.LoadUint64(&m.AddPendingRequestCounter) > 0
-	}
-
-	return true
-}
-
-type mPendingStorageMockFilterNotExistWithLock struct {
-	mock              *PendingStorageMock
-	mainExpectation   *PendingStorageMockFilterNotExistWithLockExpectation
-	expectationSeries []*PendingStorageMockFilterNotExistWithLockExpectation
-}
-
-type PendingStorageMockFilterNotExistWithLockExpectation struct {
-	input *PendingStorageMockFilterNotExistWithLockInput
-}
-
-type PendingStorageMockFilterNotExistWithLockInput struct {
-	p  context.Context
-	p1 []core.RecordID
-	p2 func(p []core.RecordID)
-}
-
-//Expect specifies that invocation of PendingStorage.FilterNotExistWithLock is expected from 1 to Infinity times
-func (m *mPendingStorageMockFilterNotExistWithLock) Expect(p context.Context, p1 []core.RecordID, p2 func(p []core.RecordID)) *mPendingStorageMockFilterNotExistWithLock {
-	m.mock.FilterNotExistWithLockFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &PendingStorageMockFilterNotExistWithLockExpectation{}
-	}
-	m.mainExpectation.input = &PendingStorageMockFilterNotExistWithLockInput{p, p1, p2}
-	return m
-}
-
-//Return specifies results of invocation of PendingStorage.FilterNotExistWithLock
-func (m *mPendingStorageMockFilterNotExistWithLock) Return() *PendingStorageMock {
-	m.mock.FilterNotExistWithLockFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &PendingStorageMockFilterNotExistWithLockExpectation{}
-	}
-
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of PendingStorage.FilterNotExistWithLock is expected once
-func (m *mPendingStorageMockFilterNotExistWithLock) ExpectOnce(p context.Context, p1 []core.RecordID, p2 func(p []core.RecordID)) *PendingStorageMockFilterNotExistWithLockExpectation {
-	m.mock.FilterNotExistWithLockFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &PendingStorageMockFilterNotExistWithLockExpectation{}
-	expectation.input = &PendingStorageMockFilterNotExistWithLockInput{p, p1, p2}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-//Set uses given function f as a mock of PendingStorage.FilterNotExistWithLock method
-func (m *mPendingStorageMockFilterNotExistWithLock) Set(f func(p context.Context, p1 []core.RecordID, p2 func(p []core.RecordID))) *PendingStorageMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.FilterNotExistWithLockFunc = f
-	return m.mock
-}
-
-//FilterNotExistWithLock implements github.com/insolar/insolar/ledger/recentstorage.PendingStorage interface
-func (m *PendingStorageMock) FilterNotExistWithLock(p context.Context, p1 []core.RecordID, p2 func(p []core.RecordID)) {
-	counter := atomic.AddUint64(&m.FilterNotExistWithLockPreCounter, 1)
-	defer atomic.AddUint64(&m.FilterNotExistWithLockCounter, 1)
-
-	if len(m.FilterNotExistWithLockMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.FilterNotExistWithLockMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to PendingStorageMock.FilterNotExistWithLock. %v %v %v", p, p1, p2)
-			return
-		}
-
-		input := m.FilterNotExistWithLockMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, PendingStorageMockFilterNotExistWithLockInput{p, p1, p2}, "PendingStorage.FilterNotExistWithLock got unexpected parameters")
-
-		return
-	}
-
-	if m.FilterNotExistWithLockMock.mainExpectation != nil {
-
-		input := m.FilterNotExistWithLockMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, PendingStorageMockFilterNotExistWithLockInput{p, p1, p2}, "PendingStorage.FilterNotExistWithLock got unexpected parameters")
-		}
-
-		return
-	}
-
-	if m.FilterNotExistWithLockFunc == nil {
-		m.t.Fatalf("Unexpected call to PendingStorageMock.FilterNotExistWithLock. %v %v %v", p, p1, p2)
-		return
-	}
-
-	m.FilterNotExistWithLockFunc(p, p1, p2)
-}
-
-//FilterNotExistWithLockMinimockCounter returns a count of PendingStorageMock.FilterNotExistWithLockFunc invocations
-func (m *PendingStorageMock) FilterNotExistWithLockMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.FilterNotExistWithLockCounter)
-}
-
-//FilterNotExistWithLockMinimockPreCounter returns the value of PendingStorageMock.FilterNotExistWithLock invocations
-func (m *PendingStorageMock) FilterNotExistWithLockMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.FilterNotExistWithLockPreCounter)
-}
-
-//FilterNotExistWithLockFinished returns true if mock invocations count is ok
-func (m *PendingStorageMock) FilterNotExistWithLockFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.FilterNotExistWithLockMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.FilterNotExistWithLockCounter) == uint64(len(m.FilterNotExistWithLockMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.FilterNotExistWithLockMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.FilterNotExistWithLockCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.FilterNotExistWithLockFunc != nil {
-		return atomic.LoadUint64(&m.FilterNotExistWithLockCounter) > 0
 	}
 
 	return true
@@ -733,10 +602,6 @@ func (m *PendingStorageMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to PendingStorageMock.AddPendingRequest")
 	}
 
-	if !m.FilterNotExistWithLockFinished() {
-		m.t.Fatal("Expected call to PendingStorageMock.FilterNotExistWithLock")
-	}
-
 	if !m.GetRequestsFinished() {
 		m.t.Fatal("Expected call to PendingStorageMock.GetRequests")
 	}
@@ -770,10 +635,6 @@ func (m *PendingStorageMock) MinimockFinish() {
 		m.t.Fatal("Expected call to PendingStorageMock.AddPendingRequest")
 	}
 
-	if !m.FilterNotExistWithLockFinished() {
-		m.t.Fatal("Expected call to PendingStorageMock.FilterNotExistWithLock")
-	}
-
 	if !m.GetRequestsFinished() {
 		m.t.Fatal("Expected call to PendingStorageMock.GetRequests")
 	}
@@ -801,7 +662,6 @@ func (m *PendingStorageMock) MinimockWait(timeout time.Duration) {
 	for {
 		ok := true
 		ok = ok && m.AddPendingRequestFinished()
-		ok = ok && m.FilterNotExistWithLockFinished()
 		ok = ok && m.GetRequestsFinished()
 		ok = ok && m.GetRequestsForObjectFinished()
 		ok = ok && m.RemovePendingRequestFinished()
@@ -815,10 +675,6 @@ func (m *PendingStorageMock) MinimockWait(timeout time.Duration) {
 
 			if !m.AddPendingRequestFinished() {
 				m.t.Error("Expected call to PendingStorageMock.AddPendingRequest")
-			}
-
-			if !m.FilterNotExistWithLockFinished() {
-				m.t.Error("Expected call to PendingStorageMock.FilterNotExistWithLock")
 			}
 
 			if !m.GetRequestsFinished() {
@@ -846,10 +702,6 @@ func (m *PendingStorageMock) MinimockWait(timeout time.Duration) {
 func (m *PendingStorageMock) AllMocksCalled() bool {
 
 	if !m.AddPendingRequestFinished() {
-		return false
-	}
-
-	if !m.FilterNotExistWithLockFinished() {
 		return false
 	}
 
