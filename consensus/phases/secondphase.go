@@ -102,7 +102,7 @@ func (sp *secondPhase) Execute(ctx context.Context, pulse *core.Pulse, state *Fi
 		state.UnsyncList.SetGlobuleHashSignature(ref, packet.GetGlobuleHashSignature())
 		err = stateMatrix.ApplyBitSet(ref, packet.GetBitSet())
 		if err != nil {
-			log.Warnf("[ SecondPhase ] Could not apply bitset from node %s", ref)
+			log.Warnf("[ SecondPhase ] Could not apply bitset from node %s: %s", ref, err.Error())
 			continue
 		}
 	}

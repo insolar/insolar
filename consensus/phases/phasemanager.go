@@ -51,7 +51,7 @@ func NewPhaseManager() PhaseManager {
 func (pm *Phases) OnPulse(ctx context.Context, pulse *core.Pulse) error {
 	var err error
 
-	inslogger.FromContext(ctx).Infof("Staring consensus process for pulse %d", pulse.PulseNumber)
+	inslogger.FromContext(ctx).Infof("Starting consensus process for pulse %d", pulse.PulseNumber)
 
 	pulseDuration, err := getPulseDuration(pulse)
 	if err != nil {
