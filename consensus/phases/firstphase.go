@@ -231,8 +231,8 @@ func (fp *FirstPhaseImpl) filterClaims(nodeID core.RecordRef, claims []packets.R
 		signedClaim, ok := claim.(packets.SignedClaim)
 		if ok && !nodeID.Equal(fp.NodeKeeper.GetOrigin().ID()) {
 			err := fp.checkClaimSignature(signedClaim)
-			metrics.ConsensusDeclinedClaims.WithLabelValues("declined node: " + )
 			if err != nil {
+				metrics.ConsensusDeclinedClaims.Inc()
 				log.Error("[ filterClaims ] failed to check a claim sign: " + err.Error())
 				continue
 			}

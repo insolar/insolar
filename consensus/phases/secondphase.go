@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/merkle"
 	"github.com/insolar/insolar/network/nodenetwork"
@@ -156,6 +157,7 @@ func (sp *secondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 }
 
 func (sp *secondPhase) Execute21(ctx context.Context, state *SecondPhaseState) (*SecondPhaseState, error) {
+	metrics.ConsensusPhase21Exec.Inc()
 	additionalRequests := state.MatrixState.AdditionalRequestsPhase2
 
 	count := len(additionalRequests)

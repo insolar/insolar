@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/merkle"
 	"github.com/pkg/errors"
@@ -46,6 +47,7 @@ type thirdPhase struct {
 }
 
 func (tp *thirdPhase) Execute(ctx context.Context, state *SecondPhaseState) (*ThirdPhaseState, error) {
+	metrics.ConsensusPhase3Exec.Inc()
 	var gSign [packets.SignatureLength]byte
 	copy(gSign[:], state.GlobuleProof.Signature.Bytes()[:packets.SignatureLength])
 	packet := packets.NewPhase3Packet(gSign, state.BitSet)

@@ -253,7 +253,7 @@ func (nc *NaiveCommunicator) ExchangePhase1(
 	for {
 		select {
 		case res := <-nc.phase1result:
-			metrics.Consensus1PhasePacketsRecv.WithLabelValues("from " + res.id.String()).Inc()
+			metrics.ConsensusPacketsRecv.WithLabelValues("phase 1").Inc()
 			log.Debugf("got phase1 request from %s", res.id)
 			if res.packet.GetPulseNumber() != core.PulseNumber(nc.currentPulseNumber) {
 				continue
@@ -318,7 +318,7 @@ func (nc *NaiveCommunicator) ExchangePhase2(ctx context.Context, list network.Un
 	for {
 		select {
 		case res := <-nc.phase2result:
-			metrics.Consensus2PhasePacketsRecv.WithLabelValues("from: " + res.id.String()).Inc()
+			metrics.ConsensusPacketsRecv.WithLabelValues("phase 2").Inc()
 			log.Debugf("got phase2 request from %s", res.id)
 			if res.packet.GetPulseNumber() != core.PulseNumber(nc.currentPulseNumber) {
 				continue
@@ -410,7 +410,7 @@ func (nc *NaiveCommunicator) ExchangePhase21(ctx context.Context, list network.U
 	for {
 		select {
 		case res := <-nc.phase2result:
-			metrics.Consensus21PhasePacketsRecv.WithLabelValues("from: " + res.id.String()).Inc()
+			metrics.ConsensusPacketsRecv.WithLabelValues("phase 2").Inc()
 			if res.packet.GetPulseNumber() != core.PulseNumber(nc.currentPulseNumber) {
 				continue
 			}
@@ -474,7 +474,7 @@ func (nc *NaiveCommunicator) ExchangePhase3(ctx context.Context, participants []
 	for {
 		select {
 		case res := <-nc.phase3result:
-			metrics.Consensus3PhasePacketsRecv.WithLabelValues("from: " + res.id.String()).Inc()
+			metrics.ConsensusPacketsRecv.WithLabelValues("phase 3").Inc()
 			if shouldSendResponse(&res) {
 				// send response
 				err := nc.ConsensusNetwork.SignAndSendPacket(packet, res.id, nc.Cryptography)

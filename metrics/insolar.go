@@ -40,6 +40,8 @@ func GetInsolarRegistry() *prometheus.Registry {
 	registry.MustRegister(NetworkPacketReceivedTotal)
 	registry.MustRegister(NetworkParcelReceivedTotal)
 	registry.MustRegister(NetworkComplete)
+	registry.MustRegister(NetworkSentSize)
+	registry.MustRegister(NetworkRecvSize)
 
 	registry.MustRegister(ParcelsSentTotal)
 	registry.MustRegister(ParcelsTime)
@@ -53,11 +55,14 @@ func GetInsolarRegistry() *prometheus.Registry {
 
 	// consensus metrics
 	registry.MustRegister(ConsensusPacketsSent)
-	registry.MustRegister(Consensus1PhasePacketsRecv)
-	registry.MustRegister(Consensus2PhasePacketsRecv)
-	registry.MustRegister(Consensus21PhasePacketsRecv)
-	registry.MustRegister(Consensus3PhasePacketsRecv)
+	registry.MustRegister(ConsensusPacketsRecv)
 	registry.MustRegister(ConsensusDeclinedClaims)
+	registry.MustRegister(ConsensusSentSize)
+	registry.MustRegister(ConsensusRecvSize)
+	registry.MustRegister(ConsensusFailedCheckProof)
+	registry.MustRegister(ConsensusPhase2TimedOuts)
+	registry.MustRegister(ConsensusPhase3Exec)
+	registry.MustRegister(ConsensusPhase21Exec)
 
 	return registry
 }

@@ -52,6 +52,22 @@ var NetworkPacketReceivedTotal = prometheus.NewCounterVec(prometheus.CounterOpts
 	Subsystem: "network",
 }, []string{"packetType"})
 
+// NetworkSentSize is total sent bytes
+var NetworkSentSize = prometheus.NewGauge(prometheus.GaugeOpts{
+	Name:      "bytes",
+	Help:      "Sent by transport",
+	Namespace: insolarNamespace,
+	Subsystem: "network",
+})
+
+// NetworkRecvSize is total received bytes
+var NetworkRecvSize = prometheus.NewGauge(prometheus.GaugeOpts{
+	Name:      "bytes",
+	Help:      "Recieved by transport",
+	Namespace: insolarNamespace,
+	Subsystem: "network",
+})
+
 // NetworkPacketTimeoutTotal is is total number of timed out packets metric
 var NetworkPacketTimeoutTotal = prometheus.NewCounterVec(prometheus.CounterOpts{
 	Name:      "packet_timeout_total",

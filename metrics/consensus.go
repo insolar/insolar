@@ -18,50 +18,74 @@ package metrics
 
 import "github.com/prometheus/client_golang/prometheus"
 
-// ConsensusPacketsSent is current network transport futures count metric
-var ConsensusPacketsSent = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-	Name:      "packets sent",
+// ConsensusPacketsSent is current consunsus packets sent count metric
+var ConsensusPacketsSent = prometheus.NewCounterVec(prometheus.CounterOpts{
+	Name:      "count",
 	Help:      "Current consensus transport packets sent",
 	Namespace: insolarNamespace,
 	Subsystem: "consensus",
-}, []string{"packetType"})
+}, []string{"phase #"})
 
-// Consensus1PhasePacketsRecv is current network transport futures count metric
-var Consensus1PhasePacketsRecv = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-	Name:      "1 phase packets recv",
+// ConsensusPacketsRecv is current consensus packets received count metric
+var ConsensusPacketsRecv = prometheus.NewCounterVec(prometheus.CounterOpts{
+	Name:      "count",
 	Help:      "Current consensus transport packets recv",
 	Namespace: insolarNamespace,
 	Subsystem: "consensus",
-}, []string{"packetType"})
+}, []string{"phase #"})
 
-// Consensus2PhasePacketsRecv is current network transport futures count metric
-var Consensus2PhasePacketsRecv = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-	Name:      "2 phase packets recv",
-	Help:      "Current consensus transport packets recv",
+// ConsensusDeclinedClaims is current consensus declined claims count metric
+var ConsensusDeclinedClaims = prometheus.NewCounter(prometheus.CounterOpts{
+	Name:      "count",
+	Help:      "Consensus claims declined",
 	Namespace: insolarNamespace,
 	Subsystem: "consensus",
-}, []string{"packetType"})
+})
 
-// Consensus21PhasePacketsRecv is current network transport futures count metric
-var Consensus21PhasePacketsRecv = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-	Name:      "21 phase packets recv",
-	Help:      "Current consensus transport packets recv",
+// ConsensusSentSize is current consensus recv packets size count metric
+var ConsensusSentSize = prometheus.NewCounter(prometheus.CounterOpts{
+	Name:      "bytes",
+	Help:      "Consensus received packets size",
 	Namespace: insolarNamespace,
 	Subsystem: "consensus",
-}, []string{"packetType"})
+})
 
-// Consensus3PhasePacketsRecv is current network transport futures count metric
-var Consensus3PhasePacketsRecv = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-	Name:      "3 phase packets recv",
-	Help:      "Current consensus transport packets recv",
+// ConsensusRecvSize is current consensus recv packets size count metric
+var ConsensusRecvSize = prometheus.NewCounter(prometheus.CounterOpts{
+	Name:      "bytes",
+	Help:      "Consensus received packets size",
 	Namespace: insolarNamespace,
 	Subsystem: "consensus",
-}, []string{"packetType"})
+})
 
-// ConsensusDeclinedClaims is current network transport futures count metric
-var ConsensusDeclinedClaims = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-	Name:      "declined claims",
-	Help:      "Claim signature check failed",
+// ConsensusFailedCheckProof is current consensus recv packets size count metric
+var ConsensusFailedCheckProof = prometheus.NewCounter(prometheus.CounterOpts{
+	Name:      "count",
+	Help:      "Consensus validate proof fails",
 	Namespace: insolarNamespace,
 	Subsystem: "consensus",
-}, []string{"packetType"})
+})
+
+// ConsensusPhase2TimedOuts is a current consensus phase 2 timed out nodes count metric
+var ConsensusPhase2TimedOuts = prometheus.NewCounter(prometheus.CounterOpts{
+	Name:      "count",
+	Help:      "Timed out nodes on phase 2",
+	Namespace: insolarNamespace,
+	Subsystem: "consensus",
+})
+
+// ConsensusPhase3Exec is current consensus phase 3 execution count metric
+var ConsensusPhase3Exec = prometheus.NewCounter(prometheus.CounterOpts{
+	Name:      "count",
+	Help:      "Phase 3 execution counter",
+	Namespace: insolarNamespace,
+	Subsystem: "consensus",
+})
+
+// ConsensusPhase21Exec is current consensus phase 21 execution count metric
+var ConsensusPhase21Exec = prometheus.NewCounter(prometheus.CounterOpts{
+	Name:      "count",
+	Help:      "Phase 21 execution counter",
+	Namespace: insolarNamespace,
+	Subsystem: "consensus",
+})
