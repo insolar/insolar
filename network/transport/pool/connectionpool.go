@@ -23,9 +23,11 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/utils"
 	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
 )
 
 type lockableConnection struct {
@@ -122,7 +124,12 @@ func (cp *connectionPool) getOrCreateConnection(ctx context.Context, address net
 
 	logger.Debugf("[ getOrCreateConnection ] Failed to retrieve connection to %s, creating it", address)
 
+	ctx, span := instracer.StartSpan(ctx, "connectionPool.getOrCreateConnection")
+	span.AddAttributes(
+		trace.StringAttribute("create connect to", address.String()),
+	)
 	conn, err := cp.connectionFactory.CreateConnection(ctx, address)
+	defer span.End()
 	if err != nil {
 		return nil, errors.Wrap(err, "[ send ] Failed to create TCP connection")
 	}

@@ -21,13 +21,16 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"sync"
+	"time"
 
+	"github.com/pkg/errors"
+
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/pkg/errors"
 )
 
 // ContractRequester helps to call contracts
@@ -145,6 +148,8 @@ func (cr *ContractRequester) CallMethod(ctx context.Context, base core.Message, 
 		return res, nil
 	}
 
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(configuration.NewAPIRunner().Timeout)*time.Second)
+	defer cancel()
 	inslogger.FromContext(ctx).Debug("Waiting for Method results ref=", r.Request)
 
 	var result *reply.CallMethod
@@ -223,6 +228,8 @@ func (cr *ContractRequester) CallConstructor(ctx context.Context, base core.Mess
 		return &r.Request, nil
 	}
 
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(configuration.NewAPIRunner().Timeout)*time.Second)
+	defer cancel()
 	inslogger.FromContext(ctx).Debug("Waiting for constructor results req=", r.Request, " seq=", seq)
 
 	select {

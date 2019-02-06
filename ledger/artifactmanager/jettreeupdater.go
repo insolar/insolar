@@ -16,7 +16,7 @@ import (
 )
 
 type jetTreeUpdater struct {
-	ActiveNodesStorage storage.ActiveNodesStorage
+	ActiveNodesStorage storage.NodeStorage
 	JetStorage         storage.JetStorage
 	MessageBus         core.MessageBus
 	JetCoordinator     core.JetCoordinator
@@ -29,7 +29,7 @@ type jetTreeUpdater struct {
 }
 
 func newJetTreeUpdater(
-	ans storage.ActiveNodesStorage,
+	ans storage.NodeStorage,
 	js storage.JetStorage, mb core.MessageBus, jc core.JetCoordinator,
 ) *jetTreeUpdater {
 	return &jetTreeUpdater{

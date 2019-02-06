@@ -107,6 +107,9 @@ type JetCoordinator interface {
 	LightValidatorsForJet(ctx context.Context, jetID RecordID, pulse PulseNumber) ([]RecordRef, error)
 
 	Heavy(ctx context.Context, pulse PulseNumber) (*RecordRef, error)
+
+	IsBeyondLimit(ctx context.Context, currentPN, targetPN PulseNumber) (bool, error)
+	NodeForJet(ctx context.Context, jetID RecordID, rootPN, targetPN PulseNumber) (*RecordRef, error)
 }
 
 // ArtifactManager is a high level storage interface.
@@ -138,6 +141,9 @@ type ArtifactManager interface {
 	// If provided state is nil, the latest state will be returned (with deactivation check). Returned descriptor will
 	// provide methods for fetching all related data.
 	GetObject(ctx context.Context, head RecordRef, state *RecordID, approved bool) (ObjectDescriptor, error)
+
+	// GetPendingRequest returns a pending request for object.
+	GetPendingRequest(ctx context.Context, objectID RecordID) (Parcel, error)
 
 	// HasPendingRequests returns true if object has unclosed requests.
 	HasPendingRequests(ctx context.Context, object RecordRef) (bool, error)
