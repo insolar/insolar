@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/merkle"
 	"github.com/pkg/errors"
@@ -50,6 +51,8 @@ func NewPhaseManager() PhaseManager {
 func (pm *Phases) OnPulse(ctx context.Context, pulse *core.Pulse) error {
 	var err error
 
+	inslogger.FromContext(ctx).Infof("Staring consensus process for pulse %d", pulse.PulseNumber)
+
 	pulseDuration, err := getPulseDuration(pulse)
 	if err != nil {
 		return errors.Wrap(err, "[ OnPulse ] Failed to get pulse duration")
@@ -69,7 +72,7 @@ func (pm *Phases) OnPulse(ctx context.Context, pulse *core.Pulse) error {
 	tctx, cancel = contextTimeout(ctx, *pulseDuration, 0.2)
 	defer cancel()
 
-	secondPhaseState, err := pm.SecondPhase.Execute(tctx, firstPhaseState)
+	secondPhaseState, err := pm.SecondPhase.Execute(tctx, pulse, firstPhaseState)
 	if err != nil {
 		return errors.Wrap(err, "Network consensus: error executing phase 2.0")
 	}
@@ -77,7 +80,7 @@ func (pm *Phases) OnPulse(ctx context.Context, pulse *core.Pulse) error {
 	tctx, cancel = contextTimeout(ctx, *pulseDuration, 0.2)
 	defer cancel()
 
-	secondPhaseState, err = pm.SecondPhase.Execute21(tctx, secondPhaseState)
+	secondPhaseState, err = pm.SecondPhase.Execute21(tctx, pulse, secondPhaseState)
 	if err != nil {
 		return errors.Wrap(err, "Network consensus: error executing phase 2.1")
 	}
@@ -85,7 +88,7 @@ func (pm *Phases) OnPulse(ctx context.Context, pulse *core.Pulse) error {
 	tctx, cancel = contextTimeout(ctx, *pulseDuration, 0.2)
 	defer cancel()
 
-	thirdPhaseState, err := pm.ThirdPhase.Execute(tctx, secondPhaseState)
+	thirdPhaseState, err := pm.ThirdPhase.Execute(tctx, pulse, secondPhaseState)
 	if err != nil {
 		return errors.Wrap(err, "Network consensus: error executing phase 3")
 	}

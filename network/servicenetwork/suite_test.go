@@ -24,6 +24,7 @@ import (
 	"math/rand"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/insolar/insolar/certificate"
@@ -109,7 +110,6 @@ func (s *testSuite) SetupTest() {
 	for _, node := range s.fixture().bootstrapNodes {
 		pulseReceivers = append(pulseReceivers, node.host)
 	}
-	pulseReceivers = append(pulseReceivers, s.fixture().testNode.host)
 
 	log.Info("Start test pulsar")
 	err = s.fixture().pulsar.Start(s.fixture().ctx, pulseReceivers)
@@ -354,6 +354,31 @@ func (t *terminationHandler) Abort() {
 	log.Errorf("Abort node: %s", t.NodeID)
 }
 
+type pulseManagerMock struct {
+	pulse core.Pulse
+	lock  sync.Mutex
+
+	keeper network.NodeKeeper
+}
+
+func newPulseManagerMock(keeper network.NodeKeeper) *pulseManagerMock {
+	return &pulseManagerMock{pulse: *core.GenesisPulse, keeper: keeper}
+}
+
+func (p *pulseManagerMock) Current(ctx context.Context) (*core.Pulse, error) {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	return &p.pulse, nil
+}
+
+func (p *pulseManagerMock) Set(ctx context.Context, pulse core.Pulse, persist bool) error {
+	p.lock.Lock()
+	p.pulse = pulse
+	p.lock.Unlock()
+
+	return p.keeper.MoveSyncToActive()
+}
+
 // preInitNode inits previously created node with mocks and external dependencies
 func (s *testSuite) preInitNode(node *networkNode) {
 	cfg := configuration.NewConfiguration()
@@ -365,14 +390,6 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	node.componentManager.Register(platformpolicy.NewPlatformCryptographyScheme())
 	serviceNetwork, err := NewServiceNetwork(cfg, node.componentManager, false)
 	s.NoError(err)
-
-	pulseStorageMock := testutils.NewPulseStorageMock(s.T())
-	pulseStorageMock.CurrentMock.Set(func(p context.Context) (r *core.Pulse, r1 error) {
-		return &core.Pulse{PulseNumber: 0}, nil
-
-	})
-
-	pulseManagerMock := testutils.NewPulseManagerMock(s.T())
 
 	netCoordinator := testutils.NewNetworkCoordinatorMock(s.T())
 	netCoordinator.ValidateCertMock.Set(func(p context.Context, p1 core.AuthorizationCertificate) (bool, error) {
@@ -402,12 +419,8 @@ func (s *testSuite) preInitNode(node *networkNode) {
 		realKeeper.AddActiveNodes([]core.Node{origin})
 	}
 
-	node.componentManager.Register(terminationHandler, realKeeper, pulseManagerMock, pulseStorageMock, netCoordinator, amMock)
+	node.componentManager.Register(terminationHandler, realKeeper, newPulseManagerMock(realKeeper), netCoordinator, amMock)
 	node.componentManager.Register(certManager, cryptographyService)
 	node.componentManager.Inject(serviceNetwork, NewTestNetworkSwitcher())
 	node.serviceNetwork = serviceNetwork
-
-	pulseManagerMock.SetMock.Set(func(p context.Context, p1 core.Pulse, p2 bool) (r error) {
-		return serviceNetwork.NodeKeeper.MoveSyncToActive()
-	})
 }

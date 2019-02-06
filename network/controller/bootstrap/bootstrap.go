@@ -50,7 +50,7 @@ type DiscoveryNode struct {
 }
 
 type Bootstrapper interface {
-	component.Starter
+	component.Initer
 
 	Bootstrap(ctx context.Context) (*network.BootstrapResult, *DiscoveryNode, error)
 	BootstrapDiscovery(ctx context.Context) (*network.BootstrapResult, error)
@@ -496,7 +496,7 @@ func (bc *bootstrapper) processGenesis(ctx context.Context, request network.Requ
 	}), nil
 }
 
-func (bc *bootstrapper) Start(ctx context.Context) error {
+func (bc *bootstrapper) Init(ctx context.Context) error {
 	bc.firstPulseTime = time.Now()
 	bc.transport.RegisterPacketHandler(types.Bootstrap, bc.processBootstrap)
 	bc.transport.RegisterPacketHandler(types.Genesis, bc.processGenesis)

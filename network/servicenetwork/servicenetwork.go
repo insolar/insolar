@@ -21,6 +21,7 @@ import (
 	"context"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
@@ -66,6 +67,8 @@ type ServiceNetwork struct {
 	isGenesis   bool
 	isDiscovery bool
 	skip        int
+
+	lock sync.Mutex
 }
 
 // NewServiceNetwork returns a new ServiceNetwork.
@@ -213,6 +216,9 @@ func (n *ServiceNetwork) Stop(ctx context.Context) error {
 }
 
 func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse core.Pulse) {
+	n.lock.Lock()
+	defer n.lock.Unlock()
+
 	if n.isGenesis {
 		return
 	}
@@ -242,7 +248,7 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse core.Pulse) {
 	// }
 
 	if !isNextPulse(currentPulse, &newPulse) {
-		logger.Infof("Incorrect newPulse number. Current: %+v. New: %+v", currentPulse, newPulse)
+		logger.Infof("Incorrect pulse number. Current: %+v. New: %+v", currentPulse, newPulse)
 		return
 	}
 

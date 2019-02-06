@@ -86,7 +86,7 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse) (*Firs
 		return nil, errors.Wrap(err, "[ FirstPhase ] Failed to calculate pulse proof.")
 	}
 
-	packet := packets.NewPhase1Packet()
+	packet := packets.NewPhase1Packet(*pulse)
 	err = packet.SetPulseProof(pulseProof.StateHash, pulseProof.Signature.Bytes())
 	if err != nil {
 		return nil, errors.Wrap(err, "[ FirstPhase ] Failed to set pulse proof in Phase1Packet.")

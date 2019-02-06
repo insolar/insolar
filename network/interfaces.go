@@ -36,7 +36,7 @@ type BootstrapResult struct {
 
 // Controller contains network logic.
 type Controller interface {
-	component.Starter
+	component.Initer
 	// SendParcel send message to nodeID.
 	SendMessage(nodeID core.RecordRef, name string, msg core.Parcel) ([]byte, error)
 	// RemoteProcedureRegister register remote procedure that will be executed when message is received.

@@ -34,8 +34,8 @@ import (
 )
 
 type SecondPhase interface {
-	Execute(ctx context.Context, state *FirstPhaseState) (*SecondPhaseState, error)
-	Execute21(ctx context.Context, state *SecondPhaseState) (*SecondPhaseState, error)
+	Execute(ctx context.Context, pulse *core.Pulse, state *FirstPhaseState) (*SecondPhaseState, error)
+	Execute21(ctx context.Context, pulse *core.Pulse, state *SecondPhaseState) (*SecondPhaseState, error)
 }
 
 func NewSecondPhase() SecondPhase {
@@ -49,11 +49,10 @@ type secondPhase struct {
 	Cryptography core.CryptographyService `inject:""`
 }
 
-func (sp *secondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*SecondPhaseState, error) {
+func (sp *secondPhase) Execute(ctx context.Context, pulse *core.Pulse, state *FirstPhaseState) (*SecondPhaseState, error) {
 	ctx, span := instracer.StartSpan(ctx, "SecondPhase.Execute")
 	span.AddAttributes(trace.Int64Attribute("pulse", int64(state.PulseEntry.Pulse.PulseNumber)))
 	defer span.End()
-
 	prevCloudHash := sp.NodeKeeper.GetCloudHash()
 
 	state.ValidProofs[sp.NodeKeeper.GetOrigin()] = state.PulseProof
@@ -71,7 +70,7 @@ func (sp *secondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 		return nil, errors.Wrap(err, "[ SecondPhase ] Failed to calculate globule proof")
 	}
 
-	packet := packets.NewPhase2Packet()
+	packet := packets.NewPhase2Packet(pulse.PulseNumber)
 	err = packet.SetGlobuleHashSignature(globuleProof.Signature.Bytes())
 	if err != nil {
 		return nil, errors.Wrap(err, "[ SecondPhase ] Failed to set globule proof in Phase2Packet")
@@ -161,18 +160,17 @@ func (sp *secondPhase) Execute(ctx context.Context, state *FirstPhaseState) (*Se
 	}, nil
 }
 
-func (sp *secondPhase) Execute21(ctx context.Context, state *SecondPhaseState) (*SecondPhaseState, error) {
+func (sp *secondPhase) Execute21(ctx context.Context, pulse *core.Pulse, state *SecondPhaseState) (*SecondPhaseState, error) {
 	ctx, span := instracer.StartSpan(ctx, "SecondPhase.Execute21")
 	span.AddAttributes(trace.Int64Attribute("pulse", int64(state.PulseEntry.Pulse.PulseNumber)))
 	defer span.End()
-
 	additionalRequests := state.MatrixState.AdditionalRequestsPhase2
 
 	count := len(additionalRequests)
 	results := make(map[uint16]*packets.MissingNodeSupplementaryVote)
 	claims := make(map[uint16]*packets.MissingNodeClaim)
 
-	packet := packets.NewPhase2Packet()
+	packet := packets.NewPhase2Packet(pulse.PulseNumber)
 	err := packet.SetGlobuleHashSignature(state.GlobuleProof.Signature.Bytes())
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Phase 2.1 ] Failed to set pulse proof in Phase2Packet.")

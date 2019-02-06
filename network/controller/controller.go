@@ -66,7 +66,7 @@ func (c *Controller) Bootstrap(ctx context.Context) (*network.BootstrapResult, e
 }
 
 // Inject inject components.
-func (c *Controller) Start(ctx context.Context) error {
+func (c *Controller) Init(ctx context.Context) error {
 	c.network.RegisterRequestHandler(types.Ping, func(ctx context.Context, request network.Request) (network.Response, error) {
 		return c.network.BuildResponse(ctx, request, nil), nil
 	})
