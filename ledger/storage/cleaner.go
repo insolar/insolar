@@ -32,32 +32,36 @@ import (
 // Cleaner cleans lights after sync to heavy
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage.Cleaner -o ./ -s _mock.go
 type Cleaner interface {
-	RemoveAllForJetUntilPulse(
+	CleanJetRecordsUntilPulse(
 		ctx context.Context,
 		jetID core.RecordID,
 		pn core.PulseNumber,
-		recent recentstorage.RecentStorage,
 	) (map[string]RmStat, error)
 
-	RemoveJetIndexesUntil(ctx context.Context, jetID core.RecordID, pn core.PulseNumber, recent recentstorage.RecentStorage) (RmStat, error)
-	RemoveJetBlobsUntil(ctx context.Context, jetID core.RecordID, pn core.PulseNumber) (RmStat, error)
-	RemoveJetRecordsUntil(ctx context.Context, jetID core.RecordID, pn core.PulseNumber) (RmStat, error)
-	RemoveJetDropsUntil(ctx context.Context, jetID core.RecordID, pn core.PulseNumber) (RmStat, error)
+	CleanJetIndexes(
+		ctx context.Context,
+		jetID core.RecordID,
+		recent recentstorage.RecentStorage,
+		candidates []core.RecordID,
+	) (RmStat, error)
 }
 
 type cleaner struct {
 	DB DBContext `inject:""`
 }
 
+// NewCleaner is a constructor for Cleaner.
 func NewCleaner() Cleaner {
 	return new(cleaner)
 }
 
 var rmScanFromPulse = core.PulseNumber(core.FirstPulseNumber + 1).Bytes()
 
+// RmStat holds removal statistics
 type RmStat struct {
 	Scanned int64
 	Removed int64
+	Errors  int64
 }
 
 func recordCleanupMetrics(ctx context.Context, stat map[string]RmStat) {
@@ -70,60 +74,59 @@ func recordCleanupMetrics(ctx context.Context, stat map[string]RmStat) {
 	}
 }
 
-// RemoveAllForJetUntilPulse removes all syncing on heavy records until pulse number for provided jetID
-// returns removal stat and cummulative error
-func (c *cleaner) RemoveAllForJetUntilPulse(
+// CleanJetRecordsUntilPulse removes all records synced on heavy, except indexes until pn pulse number for jetID.
+//
+// Returns removal statistics and cummulative error of sub cleanup methods.
+func (c *cleaner) CleanJetRecordsUntilPulse(
 	ctx context.Context,
 	jetID core.RecordID,
 	pn core.PulseNumber,
-	recent recentstorage.RecentStorage,
 ) (map[string]RmStat, error) {
 	allstat := map[string]RmStat{}
 	var result error
 
 	var err error
 	var stat RmStat
-	if stat, err = c.RemoveJetIndexesUntil(ctx, jetID, pn, recent); err != nil {
-		result = multierror.Append(result, errors.Wrap(err, "RemoveJetIndexesUntil"))
-	}
-	allstat["indexes"] = stat
 	if stat, err = c.RemoveJetBlobsUntil(ctx, jetID, pn); err != nil {
 		result = multierror.Append(result, errors.Wrap(err, "RemoveJetBlobsUntil"))
+		stat.Errors = stat.Scanned
+		stat.Removed = 0
 	}
 	allstat["blobs"] = stat
+
 	if stat, err = c.RemoveJetRecordsUntil(ctx, jetID, pn); err != nil {
 		result = multierror.Append(result, errors.Wrap(err, "RemoveJetRecordsUntil"))
+		stat.Errors = stat.Scanned
+		stat.Removed = 0
 	}
 	allstat["records"] = stat
+
 	if stat, err = c.RemoveJetDropsUntil(ctx, jetID, pn); err != nil {
 		result = multierror.Append(result, errors.Wrap(err, "RemoveJetDropsUntil"))
+		stat.Errors = stat.Scanned
+		stat.Removed = 0
 	}
 	allstat["drops"] = stat
+
 	recordCleanupMetrics(ctx, allstat)
 
 	return allstat, result
 }
 
-// RemoveJetIndexesUntil removes for provided JetID all lifelines older than provided pulse number.
-// Indexes caches by recent storage, we should avoid them deletion.
-func (c *cleaner) RemoveJetIndexesUntil(ctx context.Context, jetID core.RecordID, pn core.PulseNumber, recent recentstorage.RecentStorage) (RmStat, error) {
-	return c.removeJetRecordsUntil(ctx, scopeIDLifeline, jetID, pn, recent)
-}
-
 // RemoveJetBlobsUntil removes for provided JetID all blobs older than provided pulse number.
 func (c *cleaner) RemoveJetBlobsUntil(ctx context.Context, jetID core.RecordID, pn core.PulseNumber) (RmStat, error) {
-	return c.removeJetRecordsUntil(ctx, scopeIDBlob, jetID, pn, nil)
+	return c.removeJetRecordsUntil(ctx, scopeIDBlob, jetID, pn)
 }
 
 // RemoveJetRecordsUntil removes for provided JetID all records older than provided pulse number.
 // In recods pending requests live, so we need recent storage here
 func (c *cleaner) RemoveJetRecordsUntil(ctx context.Context, jetID core.RecordID, pn core.PulseNumber) (RmStat, error) {
-	return c.removeJetRecordsUntil(ctx, scopeIDRecord, jetID, pn, nil)
+	return c.removeJetRecordsUntil(ctx, scopeIDRecord, jetID, pn)
 }
 
 // RemoveJetDropsUntil removes for provided JetID all jet drops older than provided pulse number.
 func (c *cleaner) RemoveJetDropsUntil(ctx context.Context, jetID core.RecordID, pn core.PulseNumber) (RmStat, error) {
-	return c.removeJetRecordsUntil(ctx, scopeIDJetDrop, jetID, pn, nil)
+	return c.removeJetRecordsUntil(ctx, scopeIDJetDrop, jetID, pn)
 }
 
 func (c *cleaner) removeJetRecordsUntil(
@@ -131,7 +134,6 @@ func (c *cleaner) removeJetRecordsUntil(
 	namespace byte,
 	jetID core.RecordID,
 	pn core.PulseNumber,
-	recent recentstorage.RecentStorage,
 ) (RmStat, error) {
 	var stat RmStat
 	_, prefix := jet.Jet(jetID)
@@ -139,7 +141,6 @@ func (c *cleaner) removeJetRecordsUntil(
 	startprefix := prefixkey(namespace, prefix, rmScanFromPulse)
 
 	return stat, c.DB.GetBadgerDB().Update(func(txn *badger.Txn) error {
-		var id core.RecordID
 		opts := badger.DefaultIteratorOptions
 		opts.PrefetchSize = 0
 		it := txn.NewIterator(opts)
@@ -151,13 +152,6 @@ func (c *cleaner) removeJetRecordsUntil(
 			}
 			stat.Scanned++
 
-			if recent != nil {
-				copy(id[:], key[len(jetprefix):])
-				if recent.IsRecordIDCached(id) {
-					continue
-				}
-			}
-
 			if err := txn.Delete(key); err != nil {
 				return err
 			}
@@ -165,4 +159,41 @@ func (c *cleaner) removeJetRecordsUntil(
 		}
 		return nil
 	})
+}
+
+// CleanJetIndexes removes indexes from candidates list,
+// call recent storage is list still valid.
+//
+// It locks recent jet store while works.
+func (c *cleaner) CleanJetIndexes(
+	ctx context.Context,
+	jetID core.RecordID,
+	recent recentstorage.RecentStorage,
+	candidates []core.RecordID,
+) (RmStat, error) {
+	var stat RmStat
+	_, prefix := jet.Jet(jetID)
+
+	recent.FilterNotExistWithLock(ctx, candidates, func(fordelete []core.RecordID) {
+		for _, recID := range fordelete {
+			stat.Scanned++
+			key := prefixkey(scopeIDLifeline, prefix, recID[:])
+			err := c.DB.GetBadgerDB().Update(func(txn *badger.Txn) error {
+				return txn.Delete(key)
+			})
+			if err != nil {
+				stat.Errors++
+			} else {
+				stat.Removed++
+			}
+		}
+	})
+
+	mctx := insmetrics.InsertTag(ctx, recordType, "indexes")
+	stats.Record(mctx,
+		statCleanScanned.M(stat.Scanned),
+		statCleanRemoved.M(stat.Removed),
+		statCleanFailed.M(stat.Errors),
+	)
+	return stat, nil
 }
