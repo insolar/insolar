@@ -1,7 +1,9 @@
 local k = import "k.libsonnet";
-local import_params = import '../params.libsonnet';
-local elk_params = import_params.components.elk;
-local utils = import_params.global.utils;
+
+local base_params = import '../params.libsonnet';
+local params = std.mergePatch( base_params.components, std.extVar("__ksonnet/params").components );
+local utils = params.utils;
+local elk_params = params.elk;
 
 local config_map() = {
 	"apiVersion": "v1",

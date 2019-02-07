@@ -1,7 +1,9 @@
 local k = import "k.libsonnet";
 
-local params = import '../params.libsonnet';
-local insolar_params = params.components.insolar;
+local base_params = import '../params.libsonnet';
+local params = std.mergePatch( base_params.components, std.extVar("__ksonnet/params").components );
+
+local insolar_params = params.insolar;
 
 local service() = {
 	"apiVersion": "v1",
@@ -17,7 +19,7 @@ local service() = {
 		"ports": [
 			{
 				"port": 9090,
-				"nodePort": params.components.prometheus.port,
+				"nodePort": params.prometheus.port,
 				"name": "prometheus"
 			}
 		],
@@ -69,8 +71,8 @@ local pod() = {
 
 local get_typed_nodes( node_type ) = {
 	tmp:: [  
-			if params.global.utils.id_to_node_type( id ) == node_type then params.global.utils.host_template % [ id ]
-			for id in std.range(0, params.global.utils.get_num_nodes - 1)
+			if params.utils.id_to_node_type( id ) == node_type then params.utils.host_template % [ id ]
+			for id in std.range(0, params.utils.get_num_nodes - 1)
 		 ],
 
     result : std.prune( self.tmp )
