@@ -70,6 +70,8 @@ type ExecutionState struct {
 	Queue                 []ExecutionQueueElement
 	QueueProcessorActive  bool
 	LedgerHasMoreRequests bool
+	LedgerQueueElement    *ExecutionQueueElement
+	getLedgerPendingMutex sync.Mutex
 
 	// TODO not using in validation, need separate ObjectState.ExecutionState and ObjectState.Validation from ExecutionState struct
 	pending          message.PendingState
@@ -93,10 +95,11 @@ type ExecutionQueueResult struct {
 }
 
 type ExecutionQueueElement struct {
-	ctx     context.Context
-	parcel  core.Parcel
-	request *Ref
-	pulse   core.PulseNumber
+	ctx        context.Context
+	parcel     core.Parcel
+	request    *Ref
+	pulse      core.PulseNumber
+	fromLedger bool
 }
 
 type Error struct {
@@ -189,9 +192,7 @@ func (es *ExecutionState) releaseQueue() ([]ExecutionQueueElement, bool) {
 	q := es.Queue
 
 	if len(q) > maxQueueLength {
-		// waiting for ledger implement fetch method
-		// waiting for us implement fetching
-		//q = q[:maxQueueLength]
+		q = q[:maxQueueLength]
 		ledgerHasMoreRequest = true
 	}
 
@@ -535,8 +536,15 @@ func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionS
 			es.Unlock()
 			return
 		}
-		qe, q := q[0], q[1:]
-		es.Queue = q
+
+		var qe ExecutionQueueElement
+		if es.LedgerQueueElement != nil {
+			qe = *es.LedgerQueueElement
+			es.LedgerQueueElement = nil
+		} else {
+			qe, q = q[0], q[1:]
+			es.Queue = q
+		}
 
 		sender := qe.parcel.GetSender()
 		current := CurrentExecution{
@@ -569,6 +577,10 @@ func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionS
 		es.Behaviour.(*ValidationSaver).NewRequest(qe.parcel, *qe.request, recordingBus)
 
 		res.reply, res.err = lr.executeOrValidate(current.Context, es, qe.parcel)
+
+		if qe.fromLedger {
+			go lr.getLedgerPendingRequest(ctx, es, *qe.parcel.DefaultTarget().Record())
+		}
 
 		inslogger.FromContext(qe.ctx).Debug("Registering result within execution behaviour")
 		err := es.Behaviour.Result(res.reply, res.err)
@@ -683,6 +695,67 @@ func (lr *LogicRunner) executeOrValidate(
 	}()
 
 	return re, err
+}
+
+// never call this under es.Lock(), this leads to deadlock
+func (lr *LogicRunner) getLedgerPendingRequest(ctx context.Context, es *ExecutionState, id core.RecordID) {
+	// todo span on whole function?
+	if es.LedgerQueueElement != nil || !es.LedgerHasMoreRequests {
+		return
+	}
+
+	es.getLedgerPendingMutex.Lock()
+	defer es.getLedgerPendingMutex.Unlock()
+
+	if es.LedgerQueueElement != nil || !es.LedgerHasMoreRequests {
+		return
+	}
+
+	ledgerHasMore := true
+
+	// todo span on AM call?
+	parcel, err := lr.ArtifactManager.GetPendingRequest(ctx, id)
+	if err != nil {
+		if err != core.ErrNoPendingRequest {
+			// todo log?
+			return
+		}
+
+		ledgerHasMore = false
+	}
+	es.Lock()
+	defer es.Unlock()
+
+	if !ledgerHasMore {
+		es.LedgerHasMoreRequests = ledgerHasMore
+		return
+	}
+
+	pulse := lr.pulse(ctx).PulseNumber
+	authorized, err := lr.JetCoordinator.IsAuthorized(
+		ctx, core.DynamicRoleVirtualExecutor, id, pulse, lr.JetCoordinator.Me(),
+	)
+	if err != nil {
+		// todo log?
+		return
+	}
+
+	if !authorized {
+		// todo log?
+		return
+	}
+
+	request := parcel.Message().(message.IBaseLogicMessage).GetReference()
+	request.SetRecord(id)
+
+	es.LedgerHasMoreRequests = ledgerHasMore
+	es.LedgerQueueElement = &ExecutionQueueElement{
+		ctx:        ctx,
+		parcel:     parcel,
+		request:    &request,
+		pulse:      pulse,
+		fromLedger: true,
+	}
 }
 
 // ObjectBody is an inner representation of object and all it accessory

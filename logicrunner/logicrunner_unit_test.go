@@ -526,9 +526,7 @@ func TestReleaseQueue(t *testing.T) {
 		{0, expected{0, false}},
 		{1, expected{1, false}},
 		{maxQueueLength, expected{maxQueueLength, false}},
-
-		// TODO fix expected count to maxQueueLength after start taking data from ledger
-		{maxQueueLength + 1, expected{maxQueueLength + 1, true}},
+		{maxQueueLength + 1, expected{maxQueueLength, true}},
 	}
 
 	for _, tc := range testCases {
@@ -565,10 +563,7 @@ func TestOnPulseLedgerHasMoreRequests(t *testing.T) {
 	for _, test := range testCases {
 		queue := test.queue
 
-		// waiting for ledger implement fetch method
-		// waiting for us implement fetching
-		messagesQueue := convertQueueToMessageQueue(queue)
-		//messagesQueue := convertQueueToMessageQueue(queue[:maxQueueLength])
+		messagesQueue := convertQueueToMessageQueue(queue[:maxQueueLength])
 
 		ref := testutils.RandomRef()
 
@@ -744,4 +739,67 @@ func TestPrepareObjectStateChangeLedgerHasMoreRequests(t *testing.T) {
 		assert.Equal(t, test.expectedObjectStateStatue, lr.state[ref].ExecutionState.LedgerHasMoreRequests)
 	}
 
+}
+
+func TestGetLedgerPendingRequest(t *testing.T) {
+	mc := minimock.NewController(t)
+	defer mc.Finish()
+
+	ctx := inslogger.TestContext(t)
+	lr, _ := NewLogicRunner(&configuration.LogicRunner{})
+	//ref := testutils.RandomRef()
+	id := testutils.RandomID()
+
+	const currentPulseNumber = core.PulseNumber(3)
+	const oldRequestPulseNumber = core.PulseNumber(1)
+
+	// no need to change
+	es := &ExecutionState{LedgerQueueElement: &ExecutionQueueElement{pulse: currentPulseNumber}}
+	lr.getLedgerPendingRequest(ctx, es, id)
+	assert.Equal(t, es.LedgerQueueElement.pulse, currentPulseNumber)
+
+	// no need to change
+	es = &ExecutionState{LedgerHasMoreRequests: false}
+	lr.getLedgerPendingRequest(ctx, es, id)
+	assert.Nil(t, es.LedgerQueueElement)
+
+	// there is no more requests
+	es = &ExecutionState{LedgerHasMoreRequests: true}
+	am := testutils.NewArtifactManagerMock(t)
+	am.GetPendingRequestMock.Return(nil, core.ErrNoPendingRequest)
+	lr.ArtifactManager = am
+	lr.getLedgerPendingRequest(ctx, es, id)
+	assert.Equal(t, false, es.LedgerHasMoreRequests)
+
+	// there is requests
+	es = &ExecutionState{LedgerHasMoreRequests: true}
+	parcel := &message.Parcel{
+		PulseNumber: oldRequestPulseNumber,
+		Msg:         &message.CallMethod{},
+	}
+	am.GetPendingRequestMock.Return(parcel, nil)
+	lr.ArtifactManager = am
+
+	// preset some data, that doesn't need before
+	ps := testutils.NewPulseStorageMock(mc)
+	ps.CurrentMock.Return(&core.Pulse{PulseNumber: currentPulseNumber}, nil)
+	lr.PulseStorage = ps
+
+	// we doesn't authorized (pulse change in time we process function)
+	jc := testutils.NewJetCoordinatorMock(mc)
+	jc.IsAuthorizedMock.Return(false, nil)
+	jc.MeMock.Return(core.RecordRef{})
+	lr.JetCoordinator = jc
+	lr.getLedgerPendingRequest(ctx, es, id)
+	assert.Nil(t, es.LedgerQueueElement)
+
+	// happy path
+	jc = testutils.NewJetCoordinatorMock(mc)
+	jc.IsAuthorizedMock.Return(true, nil)
+	jc.MeMock.Return(core.RecordRef{})
+	lr.JetCoordinator = jc
+	lr.getLedgerPendingRequest(ctx, es, id)
+	assert.Equal(t, true, es.LedgerHasMoreRequests)
+	assert.Equal(t, parcel, es.LedgerQueueElement.parcel)
+	assert.Equal(t, currentPulseNumber, es.LedgerQueueElement.pulse)
 }
