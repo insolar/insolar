@@ -220,7 +220,8 @@ type LogicRunner struct {
 	state      map[Ref]*ObjectState // if object exists, we are validating or executing it right now
 	stateMutex sync.RWMutex
 
-	sock net.Listener
+	sock               net.Listener
+	SynchronousOnPulse bool // used only for testing
 }
 
 // NewLogicRunner is constructor for LogicRunner
@@ -1038,8 +1039,18 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 
 	lr.stateMutex.Unlock()
 
+	// During testing we can't use asynchronous code. Sending messages
+	// through mocked MessageBus will trigger corresponding handlers instantly.
+	// In the same time OnPulse will return. The test will check and/or change
+	// the state of LogicRunner which meanwhile will execute message handlers. Thus
+	// a race condition will occur. To prevent this scenario during testing we use
+	// a synchronous code here.
 	if len(messages) > 0 {
-		go lr.sendOnPulseMessagesAsync(ctx, messages)
+		if lr.SynchronousOnPulse {
+			lr.sendOnPulseMessagesSync(ctx, messages)
+		} else {
+			go lr.sendOnPulseMessagesAsync(ctx, messages)
+		}
 	}
 
 	return nil
@@ -1132,6 +1143,18 @@ func (lr *LogicRunner) sendOnPulseMessagesAsync(ctx context.Context, messages []
 
 	sendWg.Wait()
 	spanMessages.End()
+}
+
+// used only during testing, don't use any spans or metrics here
+func (lr *LogicRunner) sendOnPulseMessagesSync(ctx context.Context, messages []core.Message) {
+	var sendWg sync.WaitGroup
+	sendWg.Add(len(messages))
+
+	for _, msg := range messages {
+		lr.sendOnPulseMessage(ctx, msg, &sendWg)
+	}
+
+	sendWg.Wait()
 }
 
 func (lr *LogicRunner) sendOnPulseMessage(ctx context.Context, msg core.Message, sendWg *sync.WaitGroup) {
