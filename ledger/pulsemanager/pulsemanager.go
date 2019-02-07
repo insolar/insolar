@@ -557,7 +557,7 @@ func (m *PulseManager) rewriteHotData(ctx context.Context, fromJetID, toJetID co
 		}
 	}
 
-	inslogger.FromContext(ctx).Debugf("{LEAK} CloneStorage from - %v, to - %v", fromJetID, toJetID)
+	inslogger.FromContext(ctx).Debugf("CloneStorage from - %v, to - %v", fromJetID, toJetID)
 	m.RecentStorageProvider.CloneIndexStorage(ctx, fromJetID, toJetID)
 	m.RecentStorageProvider.ClonePendingStorage(ctx, fromJetID, toJetID)
 
