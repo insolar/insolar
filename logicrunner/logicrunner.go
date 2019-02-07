@@ -530,6 +530,7 @@ func (lr *LogicRunner) StartQueueProcessorIfNeeded(
 	inslogger.FromContext(ctx).Debug("Starting a new queue processor")
 	es.QueueProcessorActive = true
 	go lr.ProcessExecutionQueue(ctx, es)
+	go lr.getLedgerPendingRequest(ctx, es, *msg.DefaultTarget().Record())
 
 	return nil
 }
@@ -537,7 +538,7 @@ func (lr *LogicRunner) StartQueueProcessorIfNeeded(
 func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionState) {
 	for {
 		es.Lock()
-		if es.haveSomeToProcess() {
+		if !es.haveSomeToProcess() {
 			inslogger.FromContext(ctx).Debug("Quiting queue processing, empty")
 			es.QueueProcessorActive = false
 			es.Current = nil
@@ -550,10 +551,13 @@ func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionS
 			qe = *es.LedgerQueueElement
 			es.LedgerQueueElement = nil
 		} else {
-			qe, q := es.Queue[0], es.Queue[1:]
-			es.Queue = q
-			if es.LedgerHasMoreRequests {
-				go lr.getLedgerPendingRequest(ctx, es, *qe.parcel.DefaultTarget().Record())
+			if len(es.Queue) > 0 {
+				qe, es.Queue = es.Queue[0], es.Queue[1:]
+			} else {
+				// queue empty, LedgerQueueElement empty, but still have LedgerPendingRequest
+				// and have a goroutine that trying to get request from ledger
+				es.Unlock()
+				continue
 			}
 		}
 
@@ -1096,6 +1100,7 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 					)
 					es.pending = message.NotPending
 					es.objectbody = nil
+					es.LedgerHasMoreRequests = true
 					go func() {
 						err := lr.StartQueueProcessorIfNeeded(ctx, es, nil)
 						if err != nil {
