@@ -1,6 +1,9 @@
 
-local import_params = import '../params.libsonnet';
-local params = import_params.global.utils;
+local base_params = import '../params.libsonnet';
+local params = std.mergePatch( base_params.components, std.extVar("__ksonnet/params").components );
+
+local utils = params.utils;
+local image_params = params.insolar.image;
 
 
 {
@@ -14,7 +17,7 @@ local params = import_params.global.utils;
 	},
 	"spec": {
 		"serviceName": "bootstrap",
-		"replicas": params.get_num_nodes,
+		"replicas": utils.get_num_nodes,
 		"template": {
 			"metadata": {
 				"labels": {
@@ -28,8 +31,8 @@ local params = import_params.global.utils;
 				"initContainers": [
 					{
 						"name": "init-bootstrap",
-						"imagePullPolicy": "Never",
-						"image": "base",
+						"imagePullPolicy": image_params.image_pull_policy,
+						"image": image_params.image + ":" + image_params.tag,
 						"tty": true,
 						"stdin": true,
 						"command": [
@@ -174,7 +177,7 @@ local params = import_params.global.utils;
 								"subPath": "insolar.yaml"
 							},
 							{
-								"name": params.local_log_volume_name,
+								"name": utils.local_log_volume_name,
 								"mountPath": "/logs"
 							}
 						]
@@ -207,7 +210,7 @@ local params = import_params.global.utils;
 						"name": "work",
 						"emptyDir": {}
 					},
-					params.local_log_volume()
+					utils.local_log_volume()
 				]
 			}
 		},
