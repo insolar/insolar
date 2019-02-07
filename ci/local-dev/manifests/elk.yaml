@@ -50,7 +50,6 @@ spec:
   - port: 9200
     name: elasticsearch-local
     protocol: TCP
-  clusterIP: None
   selector:
     app: elasticsearch
 ---
