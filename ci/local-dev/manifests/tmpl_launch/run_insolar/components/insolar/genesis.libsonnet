@@ -31,7 +31,7 @@ local make_min_roles() = {
       discovery_nodes:
       [
          {
-           host: discovery_nodes_tmpl().host % [ id ] ,
+           host: discovery_nodes_tmpl().host % [ id, insolar_params.tcp_transport_port ] ,
            keys_file: discovery_nodes_tmpl().keys_file % [ insolar_params.hostname, id ],
            cert_name: discovery_nodes_tmpl().cert_name % [ insolar_params.hostname, id ],
 

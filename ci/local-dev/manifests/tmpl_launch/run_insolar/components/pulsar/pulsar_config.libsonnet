@@ -1,6 +1,7 @@
 local base_params = import '../params.libsonnet';
 local params = std.mergePatch( base_params.components, std.extVar("__ksonnet/params").components );
 
+local insolar_params = params.insolar;
 local utils = params.utils;
 
 {
@@ -26,7 +27,7 @@ local utils = params.utils;
 		},
 		"pulsedistributor": {
 			"bootstraphosts": [
-				utils.host_template % id for id in std.range(0, utils.get_num_nodes - 1)
+				utils.host_template % [ id , insolar_params.tcp_transport_port] for id in std.range(0, utils.get_num_nodes - 1)
 			]
 		}
 	},

@@ -9,6 +9,7 @@
           hostname: "seed",
           domain: "bootstrap",
           tcp_transport_port: 7900,
+          metrics_port: 8080,
           image: {
               image: "base",
               tag: "latest",
@@ -25,7 +26,7 @@
       "utils":{
         insolar_conf : $.components.insolar,
         get_num_nodes : self.insolar_conf.num_heavies + self.insolar_conf.num_lights + self.insolar_conf.num_virtuals,
-        host_template : self.insolar_conf.hostname + "-%d." + self.insolar_conf.domain + ":" + self.insolar_conf.tcp_transport_port,
+        host_template : self.insolar_conf.hostname + "-%d." + self.insolar_conf.domain + ":%d",
         id_to_node_type( id ) :  if id < self.insolar_conf.num_heavies then "heavy_material" 
                                  else if id < self.insolar_conf.num_heavies + self.insolar_conf.num_lights then "light_material"
                                  else "virtual",

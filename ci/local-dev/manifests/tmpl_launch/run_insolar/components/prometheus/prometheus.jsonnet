@@ -71,7 +71,7 @@ local pod() = {
 
 local get_typed_nodes( node_type ) = {
 	tmp:: [  
-			if params.utils.id_to_node_type( id ) == node_type then params.utils.host_template % [ id ]
+			if params.utils.id_to_node_type( id ) == node_type then params.utils.host_template % [ id, insolar_params.metrics_port ]
 			for id in std.range(0, params.utils.get_num_nodes - 1)
 		 ],
 
