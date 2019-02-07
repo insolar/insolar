@@ -45,11 +45,6 @@ type ProviderMock struct {
 	GetPendingStoragePreCounter uint64
 	GetPendingStorageMock       mProviderMockGetPendingStorage
 
-	RemoveIndexStorageFunc       func(p context.Context, p1 core.RecordID)
-	RemoveIndexStorageCounter    uint64
-	RemoveIndexStoragePreCounter uint64
-	RemoveIndexStorageMock       mProviderMockRemoveIndexStorage
-
 	RemovePendingStorageFunc       func(p context.Context, p1 core.RecordID)
 	RemovePendingStorageCounter    uint64
 	RemovePendingStoragePreCounter uint64
@@ -69,7 +64,6 @@ func NewProviderMock(t minimock.Tester) *ProviderMock {
 	m.DecreaseIndexesTTLMock = mProviderMockDecreaseIndexesTTL{mock: m}
 	m.GetIndexStorageMock = mProviderMockGetIndexStorage{mock: m}
 	m.GetPendingStorageMock = mProviderMockGetPendingStorage{mock: m}
-	m.RemoveIndexStorageMock = mProviderMockRemoveIndexStorage{mock: m}
 	m.RemovePendingStorageMock = mProviderMockRemovePendingStorage{mock: m}
 
 	return m
@@ -768,130 +762,6 @@ func (m *ProviderMock) GetPendingStorageFinished() bool {
 	return true
 }
 
-type mProviderMockRemoveIndexStorage struct {
-	mock              *ProviderMock
-	mainExpectation   *ProviderMockRemoveIndexStorageExpectation
-	expectationSeries []*ProviderMockRemoveIndexStorageExpectation
-}
-
-type ProviderMockRemoveIndexStorageExpectation struct {
-	input *ProviderMockRemoveIndexStorageInput
-}
-
-type ProviderMockRemoveIndexStorageInput struct {
-	p  context.Context
-	p1 core.RecordID
-}
-
-//Expect specifies that invocation of Provider.RemoveIndexStorage is expected from 1 to Infinity times
-func (m *mProviderMockRemoveIndexStorage) Expect(p context.Context, p1 core.RecordID) *mProviderMockRemoveIndexStorage {
-	m.mock.RemoveIndexStorageFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &ProviderMockRemoveIndexStorageExpectation{}
-	}
-	m.mainExpectation.input = &ProviderMockRemoveIndexStorageInput{p, p1}
-	return m
-}
-
-//Return specifies results of invocation of Provider.RemoveIndexStorage
-func (m *mProviderMockRemoveIndexStorage) Return() *ProviderMock {
-	m.mock.RemoveIndexStorageFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &ProviderMockRemoveIndexStorageExpectation{}
-	}
-
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of Provider.RemoveIndexStorage is expected once
-func (m *mProviderMockRemoveIndexStorage) ExpectOnce(p context.Context, p1 core.RecordID) *ProviderMockRemoveIndexStorageExpectation {
-	m.mock.RemoveIndexStorageFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &ProviderMockRemoveIndexStorageExpectation{}
-	expectation.input = &ProviderMockRemoveIndexStorageInput{p, p1}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-//Set uses given function f as a mock of Provider.RemoveIndexStorage method
-func (m *mProviderMockRemoveIndexStorage) Set(f func(p context.Context, p1 core.RecordID)) *ProviderMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.RemoveIndexStorageFunc = f
-	return m.mock
-}
-
-//RemoveIndexStorage implements github.com/insolar/insolar/ledger/recentstorage.Provider interface
-func (m *ProviderMock) RemoveIndexStorage(p context.Context, p1 core.RecordID) {
-	counter := atomic.AddUint64(&m.RemoveIndexStoragePreCounter, 1)
-	defer atomic.AddUint64(&m.RemoveIndexStorageCounter, 1)
-
-	if len(m.RemoveIndexStorageMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.RemoveIndexStorageMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to ProviderMock.RemoveIndexStorage. %v %v", p, p1)
-			return
-		}
-
-		input := m.RemoveIndexStorageMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, ProviderMockRemoveIndexStorageInput{p, p1}, "Provider.RemoveIndexStorage got unexpected parameters")
-
-		return
-	}
-
-	if m.RemoveIndexStorageMock.mainExpectation != nil {
-
-		input := m.RemoveIndexStorageMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, ProviderMockRemoveIndexStorageInput{p, p1}, "Provider.RemoveIndexStorage got unexpected parameters")
-		}
-
-		return
-	}
-
-	if m.RemoveIndexStorageFunc == nil {
-		m.t.Fatalf("Unexpected call to ProviderMock.RemoveIndexStorage. %v %v", p, p1)
-		return
-	}
-
-	m.RemoveIndexStorageFunc(p, p1)
-}
-
-//RemoveIndexStorageMinimockCounter returns a count of ProviderMock.RemoveIndexStorageFunc invocations
-func (m *ProviderMock) RemoveIndexStorageMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.RemoveIndexStorageCounter)
-}
-
-//RemoveIndexStorageMinimockPreCounter returns the value of ProviderMock.RemoveIndexStorage invocations
-func (m *ProviderMock) RemoveIndexStorageMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.RemoveIndexStoragePreCounter)
-}
-
-//RemoveIndexStorageFinished returns true if mock invocations count is ok
-func (m *ProviderMock) RemoveIndexStorageFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.RemoveIndexStorageMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.RemoveIndexStorageCounter) == uint64(len(m.RemoveIndexStorageMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.RemoveIndexStorageMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.RemoveIndexStorageCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.RemoveIndexStorageFunc != nil {
-		return atomic.LoadUint64(&m.RemoveIndexStorageCounter) > 0
-	}
-
-	return true
-}
-
 type mProviderMockRemovePendingStorage struct {
 	mock              *ProviderMock
 	mainExpectation   *ProviderMockRemovePendingStorageExpectation
@@ -1040,10 +910,6 @@ func (m *ProviderMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to ProviderMock.GetPendingStorage")
 	}
 
-	if !m.RemoveIndexStorageFinished() {
-		m.t.Fatal("Expected call to ProviderMock.RemoveIndexStorage")
-	}
-
 	if !m.RemovePendingStorageFinished() {
 		m.t.Fatal("Expected call to ProviderMock.RemovePendingStorage")
 	}
@@ -1085,10 +951,6 @@ func (m *ProviderMock) MinimockFinish() {
 		m.t.Fatal("Expected call to ProviderMock.GetPendingStorage")
 	}
 
-	if !m.RemoveIndexStorageFinished() {
-		m.t.Fatal("Expected call to ProviderMock.RemoveIndexStorage")
-	}
-
 	if !m.RemovePendingStorageFinished() {
 		m.t.Fatal("Expected call to ProviderMock.RemovePendingStorage")
 	}
@@ -1112,7 +974,6 @@ func (m *ProviderMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.DecreaseIndexesTTLFinished()
 		ok = ok && m.GetIndexStorageFinished()
 		ok = ok && m.GetPendingStorageFinished()
-		ok = ok && m.RemoveIndexStorageFinished()
 		ok = ok && m.RemovePendingStorageFinished()
 
 		if ok {
@@ -1140,10 +1001,6 @@ func (m *ProviderMock) MinimockWait(timeout time.Duration) {
 
 			if !m.GetPendingStorageFinished() {
 				m.t.Error("Expected call to ProviderMock.GetPendingStorage")
-			}
-
-			if !m.RemoveIndexStorageFinished() {
-				m.t.Error("Expected call to ProviderMock.RemoveIndexStorage")
 			}
 
 			if !m.RemovePendingStorageFinished() {
@@ -1179,10 +1036,6 @@ func (m *ProviderMock) AllMocksCalled() bool {
 	}
 
 	if !m.GetPendingStorageFinished() {
-		return false
-	}
-
-	if !m.RemoveIndexStorageFinished() {
 		return false
 	}
 
