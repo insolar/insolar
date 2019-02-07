@@ -126,7 +126,7 @@ local image_params = params.insolar.image;
 						"command": [
 							"bash",
 							"-c",
-							"/go/bin/insolard --config /opt/insolar/config/node-insolar.yaml > /logs/$(POD_NAME).insolard.log 2>&1"
+							"/go/bin/insolard --config /opt/insolar/config/node-insolar.yaml --trace > /logs/$(POD_NAME).insolard.log 2>&1"
 						],
 						"env": [
 							{
