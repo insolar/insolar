@@ -1,4 +1,4 @@
-// +build network
+// +build networktest
 
 /*
  * The Clear BSD License

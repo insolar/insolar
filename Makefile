@@ -106,6 +106,9 @@ functest:
 test:
 	CGO_ENABLED=1 go test $(TEST_ARGS) $(ALL_PACKAGES)
 
+integrtest:
+    CGO_ENABLED=1 go test $(TEST_ARGS) -tags networktest ./network/servicenetwork -count=1
+
 test_fast:
 	go test $(TEST_ARGS) -count 1 -v $(ALL_PACKAGES)
 
