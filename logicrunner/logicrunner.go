@@ -201,6 +201,10 @@ func (es *ExecutionState) releaseQueue() ([]ExecutionQueueElement, bool) {
 	return q, ledgerHasMoreRequest
 }
 
+func (es *ExecutionState) haveSomeToProcess() bool {
+	return len(es.Queue) > 0 || es.LedgerHasMoreRequests || es.LedgerQueueElement != nil
+}
+
 // LogicRunner is a general interface of contract executor
 type LogicRunner struct {
 	// FIXME: Ledger component is deprecated. Inject required sub-components.
@@ -497,7 +501,7 @@ func (lr *LogicRunner) StartQueueProcessorIfNeeded(
 	es.Lock()
 	defer es.Unlock()
 
-	if len(es.Queue) == 0 {
+	if es.haveSomeToProcess() {
 		inslogger.FromContext(ctx).Debug("queue is empty. processor is not needed")
 		return nil
 	}
@@ -509,10 +513,14 @@ func (lr *LogicRunner) StartQueueProcessorIfNeeded(
 
 	if es.pending == message.PendingUnknown {
 		pending, err := es.CheckPendingRequests(ctx, msg)
+
 		if err != nil {
 			return errors.Wrap(err, "couldn't check for pending requests")
 		}
 		es.pending = pending
+		if es.pending == message.InPending {
+			es.LedgerHasMoreRequests = true
+		}
 	}
 	if es.pending == message.InPending {
 		inslogger.FromContext(ctx).Debug("object in pending. not starting queue processor")
@@ -522,14 +530,14 @@ func (lr *LogicRunner) StartQueueProcessorIfNeeded(
 	inslogger.FromContext(ctx).Debug("Starting a new queue processor")
 	es.QueueProcessorActive = true
 	go lr.ProcessExecutionQueue(ctx, es)
+
 	return nil
 }
 
 func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionState) {
 	for {
 		es.Lock()
-		q := es.Queue
-		if len(q) == 0 {
+		if es.haveSomeToProcess() {
 			inslogger.FromContext(ctx).Debug("Quiting queue processing, empty")
 			es.QueueProcessorActive = false
 			es.Current = nil
@@ -542,8 +550,11 @@ func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionS
 			qe = *es.LedgerQueueElement
 			es.LedgerQueueElement = nil
 		} else {
-			qe, q = q[0], q[1:]
+			qe, q := es.Queue[0], es.Queue[1:]
 			es.Queue = q
+			if es.LedgerHasMoreRequests {
+				go lr.getLedgerPendingRequest(ctx, es, *qe.parcel.DefaultTarget().Record())
+			}
 		}
 
 		sender := qe.parcel.GetSender()
