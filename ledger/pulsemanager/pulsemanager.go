@@ -39,7 +39,6 @@ import (
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/index"
 	"github.com/insolar/insolar/ledger/storage/jet"
-	"github.com/insolar/insolar/ledger/storage/record"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/pulsemanager.ActiveListSwapper -o ../../testutils -s _mock.go
@@ -190,7 +189,9 @@ func (m *PulseManager) processEndPulse(
 					newPulse,
 					requests,
 				)
-				logger.Error(err)
+				if err != nil {
+					logger.Error(err)
+				}
 			}()
 
 			// FIXME: @andreyromancev. 09.01.2019. Temporary disabled validation. Uncomment when jet split works properly.
@@ -278,7 +279,17 @@ func (m *PulseManager) createDrop(
 	prevDrop, err = m.DropStorage.GetDrop(ctx, jetID, prevPulse)
 	if err == storage.ErrNotFound {
 		prevDrop, err = m.DropStorage.GetDrop(ctx, jet.Parent(jetID), prevPulse)
-		if err != nil {
+		if err == storage.ErrNotFound {
+			inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+				"pulse": prevPulse,
+				"jet":   jetID.DebugString(),
+			}).Error("failed to find drop")
+			prevDrop = &jet.JetDrop{Pulse: prevPulse}
+			err = m.DropStorage.SetDrop(ctx, jetID, prevDrop)
+			if err != nil {
+				return nil, nil, nil, errors.Wrap(err, "failed to create empty drop")
+			}
+		} else if err != nil {
 			return nil, nil, nil, errors.Wrap(err, "[ createDrop ] failed to find parent")
 		}
 	} else if err != nil {
@@ -359,7 +370,7 @@ func (m *PulseManager) getExecutorHotData(
 	recentObjectsIds := recentStorage.GetObjects()
 
 	recentObjects := map[core.RecordID]*message.HotIndex{}
-	pendingRequests := map[core.RecordID]map[core.RecordID][]byte{}
+	pendingRequests := map[core.RecordID]map[core.RecordID]struct{}{}
 
 	for id, ttl := range recentObjectsIds {
 		lifeline, err := m.ObjectStorage.GetObjectIndex(ctx, jetID, &id, false)
@@ -380,15 +391,10 @@ func (m *PulseManager) getExecutorHotData(
 
 	for objID, requests := range recentStorage.GetRequests() {
 		for reqID := range requests {
-			pendingRecord, err := m.ObjectStorage.GetRecord(ctx, jetID, &reqID)
-			if err != nil {
-				inslogger.FromContext(ctx).Error(err)
-				continue
-			}
 			if _, ok := pendingRequests[objID]; !ok {
-				pendingRequests[objID] = map[core.RecordID][]byte{}
+				pendingRequests[objID] = map[core.RecordID]struct{}{}
 			}
-			pendingRequests[objID][reqID] = record.SerializeRecord(pendingRecord)
+			pendingRequests[objID][reqID] = struct{}{}
 		}
 	}
 
@@ -600,7 +606,14 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 		inslogger.FromContext(ctx).Error(errors.Wrap(err, "MessageBus OnPulse() returns error"))
 	}
 
-	return m.LR.OnPulse(ctx, newPulse)
+	if m.NodeNet.GetOrigin().Role() == core.StaticRoleVirtual {
+		err = m.LR.OnPulse(ctx, newPulse)
+	}
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (m *PulseManager) setUnderGilSection(
@@ -743,6 +756,7 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse core.Pulse) 
 	}()
 
 	m.NodeStorage.RemoveActiveNodesUntil(pn)
+	m.JetStorage.DeleteJetTree(ctx, pn)
 
 	err := m.syncClientsPool.LightCleanup(ctx, pn, m.RecentStorageProvider)
 	if err != nil {

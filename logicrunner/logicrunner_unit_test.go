@@ -120,7 +120,6 @@ func TestOnPulse(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, message.PendingUnknown, lr.state[objectRef].ExecutionState.pending)
 
-	jc.IsAuthorizedMock.Return(true, nil)
 	lr.state[objectRef].ExecutionState.pending = message.InPending
 
 	err = lr.OnPulse(ctx, pulse)

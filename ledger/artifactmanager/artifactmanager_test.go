@@ -150,10 +150,7 @@ func getTestData(s *amSuite) (
 	pulse, err := s.pulseTracker.GetLatestPulse(s.ctx)
 	require.NoError(s.T(), err)
 	pulseStorage.Set(&pulse.Pulse)
-	jc := testutils.NewJetCoordinatorMock(mc)
-	jc.LightExecutorForJetMock.Return(&core.RecordRef{}, nil)
-	jc.MeMock.Return(core.RecordRef{})
-	jc.HeavyMock.Return(&core.RecordRef{}, nil)
+
 	mb := testmessagebus.NewTestMessageBus(s.T())
 	mb.PulseStorage = pulseStorage
 
@@ -187,7 +184,16 @@ func getTestData(s *amSuite) (
 	handler.RecentStorageProvider = provideMock
 
 	handler.Bus = mb
+
+	jc := testutils.NewJetCoordinatorMock(mc)
+	jc.LightExecutorForJetMock.Return(&core.RecordRef{}, nil)
+	jc.MeMock.Return(core.RecordRef{})
+	jc.HeavyMock.Return(&core.RecordRef{}, nil)
+	jc.NodeForJetMock.Return(&core.RecordRef{}, nil)
+	jc.IsBeyondLimitMock.Return(false, nil)
+
 	handler.JetCoordinator = jc
+
 	err = handler.Init(s.ctx)
 	require.NoError(s.T(), err)
 
@@ -211,7 +217,12 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterRequest() {
 	assert.NoError(s.T(), err)
 	rec, err := os.GetRecord(ctx, *jet.NewID(0, nil), id)
 	assert.NoError(s.T(), err)
-	assert.Equal(s.T(), message.MustSerializeBytes(parcel.Msg), rec.(*record.RequestRecord).Payload)
+
+	assert.Equal(
+		s.T(),
+		am.PlatformCryptographyScheme.IntegrityHasher().Hash(message.MustSerializeBytes(parcel.Msg)),
+		rec.(*record.RequestRecord).MessageHash,
+	)
 }
 
 func (s *amSuite) TestLedgerArtifactManager_GetCodeWithCache() {
@@ -766,7 +777,8 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterValidation() {
 	mb := testmessagebus.NewTestMessageBus(s.T())
 	mb.PulseStorage = makePulseStorage(s)
 	jc := testutils.NewJetCoordinatorMock(mc)
-	jc.LightExecutorForJetMock.Return(&core.RecordRef{}, nil)
+	jc.IsBeyondLimitMock.Return(false, nil)
+	jc.NodeForJetMock.Return(&core.RecordRef{}, nil)
 
 	recentStorageMock := recentstorage.NewRecentStorageMock(s.T())
 	recentStorageMock.AddPendingRequestMock.Return()
@@ -892,7 +904,7 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterRequest_JetMiss() {
 	mc := minimock.NewController(s.T())
 	defer mc.Finish()
 
-	cs := testutils.NewPlatformCryptographyScheme()
+	cs := platformpolicy.NewPlatformCryptographyScheme()
 	am := NewArtifactManger()
 	am.PlatformCryptographyScheme = cs
 	pulseStorageMock := testutils.NewPulseStorageMock(s.T())
@@ -932,4 +944,58 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterRequest_JetMiss() {
 		assert.Equal(t, *jet.NewID(4, []byte{0xD0}), *jetID)
 		assert.True(t, actual)
 	})
+}
+
+func (s *amSuite) TestLedgerArtifactManager_GetRequest_Success() {
+	// Arrange
+	mc := minimock.NewController(s.T())
+	defer mc.Finish()
+	objectID := testutils.RandomID()
+	requestID := testutils.RandomID()
+
+	node := testutils.RandomRef()
+
+	jc := testutils.NewJetCoordinatorMock(mc)
+	jc.NodeForJetMock.Return(&node, nil)
+
+	pulseStorageMock := testutils.NewPulseStorageMock(mc)
+	pulseStorageMock.CurrentMock.Return(core.GenesisPulse, nil)
+
+	var parcel core.Parcel = &message.Parcel{PulseNumber: 123987}
+	resRecord := record.RequestRecord{
+		Parcel: message.ParcelToBytes(parcel),
+	}
+	finalResponse := &reply.Request{Record: record.SerializeRecord(&resRecord)}
+
+	mb := testutils.NewMessageBusMock(s.T())
+	mb.SendFunc = func(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) (r core.Reply, r1 error) {
+		switch mb.SendCounter {
+		case 0:
+			casted, ok := p1.(*message.GetPendingRequestID)
+			require.Equal(s.T(), true, ok)
+			require.Equal(s.T(), objectID, casted.ObjectID)
+			return &reply.ID{ID: requestID}, nil
+		case 1:
+			casted, ok := p1.(*message.GetRequest)
+			require.Equal(s.T(), true, ok)
+			require.Equal(s.T(), requestID, casted.Request)
+			require.Equal(s.T(), node, *p2.Receiver)
+			return finalResponse, nil
+		default:
+			panic("test is totally broken")
+		}
+	}
+
+	am := NewArtifactManger()
+	am.JetCoordinator = jc
+	am.DefaultBus = mb
+	am.PulseStorage = pulseStorageMock
+
+	// Act
+	res, err := am.GetPendingRequest(inslogger.TestContext(s.T()), objectID)
+
+	// Assert
+	require.NoError(s.T(), err)
+	require.Equal(s.T(), parcel, res)
+
 }

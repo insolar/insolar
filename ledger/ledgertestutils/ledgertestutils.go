@@ -68,7 +68,6 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 	cl := storage.NewCleaner()
 
 	am := artifactmanager.NewArtifactManger()
-
 	am.PlatformCryptographyScheme = pcs
 
 	conf.PulseManager.HeavySyncEnabled = false
@@ -79,6 +78,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 	jc.LightExecutorForJetMock.Return(&core.RecordRef{}, nil)
 	jc.HeavyMock.Return(&core.RecordRef{}, nil)
 	jc.MeMock.Return(core.RecordRef{})
+	jc.IsBeyondLimitMock.Return(false, nil)
 
 	// Init components.
 	if c.MessageBus == nil {

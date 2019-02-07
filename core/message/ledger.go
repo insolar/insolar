@@ -380,7 +380,7 @@ type HotData struct {
 	DropJet            core.RecordID // If will be different in case of split.
 	Drop               jet.JetDrop
 	RecentObjects      map[core.RecordID]*HotIndex
-	PendingRequests    map[core.RecordID]map[core.RecordID][]byte
+	PendingRequests    map[core.RecordID]map[core.RecordID]struct{}
 	PulseNumber        core.PulseNumber
 	JetDropSizeHistory jet.DropSizeHistory
 }
@@ -518,4 +518,31 @@ func (*GetRequest) DefaultRole() core.DynamicRole {
 // DefaultTarget returns of target of this event.
 func (m *GetRequest) DefaultTarget() *core.RecordRef {
 	return core.NewRecordRef(core.DomainID, m.Request)
+}
+
+// GetPendingRequestID fetches a pending request id for an object from current LME
+type GetPendingRequestID struct {
+	ledgerMessage
+
+	ObjectID core.RecordID
+}
+
+// Type implementation of Message interface.
+func (*GetPendingRequestID) Type() core.MessageType {
+	return core.TypeGetPendingRequestID
+}
+
+// AllowedSenderObjectAndRole implements interface method
+func (m *GetPendingRequestID) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return nil, core.DynamicRoleUndefined
+}
+
+// DefaultRole returns role for this event
+func (*GetPendingRequestID) DefaultRole() core.DynamicRole {
+	return core.DynamicRoleLightExecutor
+}
+
+// DefaultTarget returns of target of this event.
+func (m *GetPendingRequestID) DefaultTarget() *core.RecordRef {
+	return core.NewRecordRef(core.DomainID, m.ObjectID)
 }
