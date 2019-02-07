@@ -20,23 +20,23 @@ import "github.com/prometheus/client_golang/prometheus"
 
 // ConsensusPacketsSent is current consunsus packets sent count metric
 var ConsensusPacketsSent = prometheus.NewCounterVec(prometheus.CounterOpts{
-	Name:      "count",
+	Name:      "sent_count",
 	Help:      "Current consensus transport packets sent",
 	Namespace: insolarNamespace,
 	Subsystem: "consensus",
-}, []string{"phase #"})
+}, []string{"phase"})
 
 // ConsensusPacketsRecv is current consensus packets received count metric
 var ConsensusPacketsRecv = prometheus.NewCounterVec(prometheus.CounterOpts{
-	Name:      "count",
+	Name:      "recv_count",
 	Help:      "Current consensus transport packets recv",
 	Namespace: insolarNamespace,
 	Subsystem: "consensus",
-}, []string{"phase #"})
+}, []string{"phase"})
 
 // ConsensusDeclinedClaims is current consensus declined claims count metric
 var ConsensusDeclinedClaims = prometheus.NewCounter(prometheus.CounterOpts{
-	Name:      "count",
+	Name:      "declined_claims_count",
 	Help:      "Consensus claims declined",
 	Namespace: insolarNamespace,
 	Subsystem: "consensus",
@@ -44,7 +44,7 @@ var ConsensusDeclinedClaims = prometheus.NewCounter(prometheus.CounterOpts{
 
 // ConsensusSentSize is current consensus recv packets size count metric
 var ConsensusSentSize = prometheus.NewCounter(prometheus.CounterOpts{
-	Name:      "bytes",
+	Name:      "sent_bytes",
 	Help:      "Consensus received packets size",
 	Namespace: insolarNamespace,
 	Subsystem: "consensus",
@@ -52,7 +52,7 @@ var ConsensusSentSize = prometheus.NewCounter(prometheus.CounterOpts{
 
 // ConsensusRecvSize is current consensus recv packets size count metric
 var ConsensusRecvSize = prometheus.NewCounter(prometheus.CounterOpts{
-	Name:      "bytes",
+	Name:      "received_bytes",
 	Help:      "Consensus received packets size",
 	Namespace: insolarNamespace,
 	Subsystem: "consensus",
@@ -60,7 +60,7 @@ var ConsensusRecvSize = prometheus.NewCounter(prometheus.CounterOpts{
 
 // ConsensusFailedCheckProof is current consensus recv packets size count metric
 var ConsensusFailedCheckProof = prometheus.NewCounter(prometheus.CounterOpts{
-	Name:      "count",
+	Name:      "failed_proof_count",
 	Help:      "Consensus validate proof fails",
 	Namespace: insolarNamespace,
 	Subsystem: "consensus",
@@ -68,7 +68,7 @@ var ConsensusFailedCheckProof = prometheus.NewCounter(prometheus.CounterOpts{
 
 // ConsensusPhase2TimedOuts is a current consensus phase 2 timed out nodes count metric
 var ConsensusPhase2TimedOuts = prometheus.NewCounter(prometheus.CounterOpts{
-	Name:      "count",
+	Name:      "phase2_exec_count",
 	Help:      "Timed out nodes on phase 2",
 	Namespace: insolarNamespace,
 	Subsystem: "consensus",
@@ -76,7 +76,7 @@ var ConsensusPhase2TimedOuts = prometheus.NewCounter(prometheus.CounterOpts{
 
 // ConsensusPhase3Exec is current consensus phase 3 execution count metric
 var ConsensusPhase3Exec = prometheus.NewCounter(prometheus.CounterOpts{
-	Name:      "count",
+	Name:      "phase3_exec_count",
 	Help:      "Phase 3 execution counter",
 	Namespace: insolarNamespace,
 	Subsystem: "consensus",
@@ -84,7 +84,7 @@ var ConsensusPhase3Exec = prometheus.NewCounter(prometheus.CounterOpts{
 
 // ConsensusPhase21Exec is current consensus phase 21 execution count metric
 var ConsensusPhase21Exec = prometheus.NewCounter(prometheus.CounterOpts{
-	Name:      "count",
+	Name:      "phase21_exec_count",
 	Help:      "Phase 21 execution counter",
 	Namespace: insolarNamespace,
 	Subsystem: "consensus",
@@ -92,7 +92,7 @@ var ConsensusPhase21Exec = prometheus.NewCounter(prometheus.CounterOpts{
 
 // ConsensusActiveNodes is current consensus phase 21 execution count metric
 var ConsensusActiveNodes = prometheus.NewGauge(prometheus.GaugeOpts{
-	Name:      "count",
+	Name:      "active_nodes_count",
 	Help:      "Active nodes count after consensus",
 	Namespace: insolarNamespace,
 	Subsystem: "consensus",
