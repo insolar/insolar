@@ -57,6 +57,7 @@ spec:
   containers:
     - name: prometheus
       image: "prom/prometheus:v2.6.0"
+      imagePullPolicy: IfNotPresent
       tty: true
       stdin: true
       command:

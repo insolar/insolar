@@ -135,6 +135,12 @@ data:
       certificatepath: "/opt/insolar/config/node-cert.json"
       metrics:
         listenaddress: 0.0.0.0:8080
+      tracer:
+        jaeger:
+          collectorendpoint: ""
+          agentendpoint: jaeger:6831
+          probabilityrate: 1
+        samplingrules: {}
 
 ---
 apiVersion: apps/v1beta1
@@ -254,7 +260,7 @@ spec:
           command:
           - bash
           - -c
-          - "/go/bin/insolard --config /opt/insolar/config/node-insolar.yaml > /logs/$(POD_NAME).insolard.log 2>&1"
+          - "/go/bin/insolard --config /opt/insolar/config/node-insolar.yaml --trace > /logs/$(POD_NAME).insolard.log 2>&1"
           env:
             - name: HOME
               value: /opt/insolar

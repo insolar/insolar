@@ -40,6 +40,21 @@ spec:
 
 ---
 apiVersion: v1
+kind: Service
+metadata:
+  name: elasticsearch-local
+  labels:
+    app: elasticsearch-local
+spec:
+  ports:
+  - port: 9200
+    name: elasticsearch-local
+    protocol: TCP
+  clusterIP: None
+  selector:
+    app: elasticsearch
+---
+apiVersion: v1
 kind: Pod
 metadata:
     name: elk
@@ -69,7 +84,7 @@ spec:
           stdin: true
           volumeMounts:
             - name: elk-config
-              mountPath: /usr/share/logstash/pipeline/logstash2.conf 
+              mountPath: /usr/share/logstash/pipeline/logstash2.conf
               subPath: logstash.conf
             - name: node-log
               mountPath: /logs
