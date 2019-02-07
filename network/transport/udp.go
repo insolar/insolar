@@ -27,6 +27,7 @@ import (
 	consensus "github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/transport/packet"
 	"github.com/insolar/insolar/network/transport/relay"
 	"github.com/insolar/insolar/network/utils"
@@ -90,7 +91,8 @@ func (t *udpTransport) send(recvAddress string, data []byte) error {
 	defer utils.CloseVerbose(udpConn)
 
 	log.Debug("udpTransport.send: len = ", len(data))
-	_, err = udpConn.Write(data)
+	n, err := udpConn.Write(data)
+	metrics.ConsensusSentSize.Add(float64(n))
 	return errors.Wrap(err, "Failed to write data")
 }
 
@@ -124,6 +126,7 @@ func (t *udpTransport) Listen(ctx context.Context, started chan struct{}) error 
 			<-t.disconnectFinished
 			return err
 		}
+		metrics.ConsensusRecvSize.Add(float64(n))
 
 		go t.handleAcceptedConnection(buf[:n], addr)
 	}

@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/merkle"
 	"github.com/insolar/insolar/network/nodenetwork"
@@ -86,6 +87,7 @@ func (sp *secondPhase) Execute(ctx context.Context, pulse *core.Pulse, state *Fi
 		return nil, errors.Wrap(err, "[ SecondPhase ] Failed to exchange packets on phase 2")
 	}
 	inslogger.FromContext(ctx).Infof("[ SecondPhase ] received responses: %d/%d", len(packets), len(activeNodes))
+	metrics.ConsensusPacketsRecv.WithLabelValues("phase 2").Add(float64(len(packets)))
 
 	origin := sp.NodeKeeper.GetOrigin().ID()
 	stateMatrix := NewStateMatrix(state.UnsyncList)
@@ -164,6 +166,7 @@ func (sp *secondPhase) Execute21(ctx context.Context, pulse *core.Pulse, state *
 	ctx, span := instracer.StartSpan(ctx, "SecondPhase.Execute21")
 	span.AddAttributes(trace.Int64Attribute("pulse", int64(state.PulseEntry.Pulse.PulseNumber)))
 	defer span.End()
+	metrics.ConsensusPhase21Exec.Inc()
 	additionalRequests := state.MatrixState.AdditionalRequestsPhase2
 
 	count := len(additionalRequests)
@@ -195,6 +198,7 @@ func (sp *secondPhase) Execute21(ctx context.Context, pulse *core.Pulse, state *
 		}
 	}
 
+	metrics.ConsensusPacketsRecv.WithLabelValues("phase 21").Add(float64(len(results)))
 	if len(results) != count {
 		return nil, errors.New(fmt.Sprintf("[ Phase 2.1 ] Failed to receive enough MissingNodeSupplementaryVote responses,"+
 			" received: %d/%d", len(results), count))

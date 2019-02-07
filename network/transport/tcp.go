@@ -22,12 +22,14 @@ import (
 	"io"
 	"net"
 
+	"github.com/insolar/insolar/metrics"
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/transport/pool"
 	"github.com/insolar/insolar/network/transport/relay"
 	"github.com/insolar/insolar/network/utils"
-	"github.com/pkg/errors"
 )
 
 type tcpTransport struct {
@@ -66,7 +68,7 @@ func (t *tcpTransport) send(address string, data []byte) error {
 
 	logger.Debug("[ send ] len = ", len(data))
 
-	_, err = conn.Write(data)
+	n, err := conn.Write(data)
 
 	if err != nil {
 		// All this to check is error EPIPE
@@ -79,12 +81,16 @@ func (t *tcpTransport) send(address string, data []byte) error {
 		if err != nil {
 			return errors.Wrap(err, "[ send ] Failed to get connection")
 		}
-		_, err = conn.Write(data)
+		n, err = conn.Write(data)
 		// 		}
 		// 	}
 		// }
 	}
 
+	if err == nil {
+		metrics.NetworkSentSize.Add(float64(n))
+		return nil
+	}
 	return errors.Wrap(err, "[ send ] Failed to write data")
 }
 
