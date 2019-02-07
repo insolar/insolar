@@ -87,6 +87,7 @@ func (sp *secondPhase) Execute(ctx context.Context, pulse *core.Pulse, state *Fi
 		return nil, errors.Wrap(err, "[ SecondPhase ] Failed to exchange packets on phase 2")
 	}
 	inslogger.FromContext(ctx).Infof("[ SecondPhase ] received responses: %d/%d", len(packets), len(activeNodes))
+	metrics.ConsensusPacketsRecv.WithLabelValues("phase 2").Add(float64(len(packets)))
 
 	origin := sp.NodeKeeper.GetOrigin().ID()
 	stateMatrix := NewStateMatrix(state.UnsyncList)
@@ -187,6 +188,7 @@ func (sp *secondPhase) Execute21(ctx context.Context, pulse *core.Pulse, state *
 	if len(additionalRequests) == 0 {
 		return state, nil
 	}
+	metrics.ConsensusPacketsRecv.WithLabelValues("phase 21").Add(float64(len(voteAnswers)))
 
 	for _, vote := range voteAnswers {
 		switch v := vote.(type) {

@@ -53,7 +53,7 @@ var NetworkPacketReceivedTotal = prometheus.NewCounterVec(prometheus.CounterOpts
 }, []string{"packetType"})
 
 // NetworkSentSize is total sent bytes
-var NetworkSentSize = prometheus.NewGauge(prometheus.GaugeOpts{
+var NetworkSentSize = prometheus.NewCounter(prometheus.CounterOpts{
 	Name:      "bytes",
 	Help:      "Sent by transport",
 	Namespace: insolarNamespace,
@@ -61,7 +61,7 @@ var NetworkSentSize = prometheus.NewGauge(prometheus.GaugeOpts{
 })
 
 // NetworkRecvSize is total received bytes
-var NetworkRecvSize = prometheus.NewGauge(prometheus.GaugeOpts{
+var NetworkRecvSize = prometheus.NewCounter(prometheus.CounterOpts{
 	Name:      "bytes",
 	Help:      "Recieved by transport",
 	Namespace: insolarNamespace,

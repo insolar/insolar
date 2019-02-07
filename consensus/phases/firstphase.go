@@ -131,6 +131,7 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse) (*Firs
 	} else {
 		logger.Infof("[ FirstPhase ] received packets: %d/%d", len(resultPackets), len(activeNodes))
 	}
+	metrics.ConsensusPacketsRecv.WithLabelValues("phase 1").Add(float64(len(resultPackets)))
 
 	proofSet := make(map[core.RecordRef]*merkle.PulseProof)
 	rawProofs := make(map[core.RecordRef]*packets.NodePulseProof)
