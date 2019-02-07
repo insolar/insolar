@@ -38,6 +38,7 @@ var (
 
 	statCleanScanned = stats.Int64("lightcleanup/scanned", "How many records have been scanned on LM cleanup", stats.UnitDimensionless)
 	statCleanRemoved = stats.Int64("lightcleanup/removed", "How many records have been removed on LM cleanup", stats.UnitDimensionless)
+	statCleanFailed  = stats.Int64("lightcleanup/rmfailed", "How many records have not been removed because of error", stats.UnitDimensionless)
 )
 
 func init() {
@@ -83,6 +84,13 @@ func init() {
 			Name:        statCleanRemoved.Name(),
 			Description: statCleanRemoved.Description(),
 			Measure:     statCleanRemoved,
+			Aggregation: view.Sum(),
+			TagKeys:     []tag.Key{recordType},
+		},
+		&view.View{
+			Name:        statCleanFailed.Name(),
+			Description: statCleanFailed.Description(),
+			Measure:     statCleanFailed,
 			Aggregation: view.Sum(),
 			TagKeys:     []tag.Key{recordType},
 		},

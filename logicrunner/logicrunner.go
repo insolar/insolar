@@ -901,7 +901,7 @@ func (lr *LogicRunner) executeConstructorCall(
 		return nil, es.WrapError(err, "no executer registered")
 	}
 
-	newData, err := executor.CallConstructor(ctx, current.LogicContext, *codeDesc.Ref(), m.Name, m.Arguments)
+	newData, err := executor.CallConstructor(ctx, current.LogicContext, *codeDesc.Ref(), m.Method, m.Arguments)
 	if err != nil {
 		return nil, es.WrapError(err, "executer error")
 	}

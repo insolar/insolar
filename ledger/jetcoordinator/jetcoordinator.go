@@ -127,6 +127,7 @@ func (jc *JetCoordinator) QueryRole(
 	panic("unexpected role")
 }
 
+// VirtualExecutorForObject returns list of VEs for a provided pulse and objID
 func (jc *JetCoordinator) VirtualExecutorForObject(
 	ctx context.Context, objID core.RecordID, pulse core.PulseNumber,
 ) (*core.RecordRef, error) {
@@ -137,6 +138,7 @@ func (jc *JetCoordinator) VirtualExecutorForObject(
 	return &nodes[0], nil
 }
 
+// VirtualValidatorsForObject returns list of VVs for a provided pulse and objID
 func (jc *JetCoordinator) VirtualValidatorsForObject(
 	ctx context.Context, objID core.RecordID, pulse core.PulseNumber,
 ) ([]core.RecordRef, error) {
@@ -149,6 +151,7 @@ func (jc *JetCoordinator) VirtualValidatorsForObject(
 	return nodes[VirtualExecutorCount:], nil
 }
 
+// LightExecutorForJet returns list of LEs for a provided pulse and jetID
 func (jc *JetCoordinator) LightExecutorForJet(
 	ctx context.Context, jetID core.RecordID, pulse core.PulseNumber,
 ) (*core.RecordRef, error) {
@@ -165,6 +168,7 @@ func (jc *JetCoordinator) LightExecutorForJet(
 	return &nodes[0], nil
 }
 
+// LightValidatorsForJet returns list of LVs for a provided pulse and jetID
 func (jc *JetCoordinator) LightValidatorsForJet(
 	ctx context.Context, jetID core.RecordID, pulse core.PulseNumber,
 ) ([]core.RecordRef, error) {
@@ -177,6 +181,7 @@ func (jc *JetCoordinator) LightValidatorsForJet(
 	return nodes[MaterialExecutorCount:], nil
 }
 
+// LightExecutorForObject returns list of LEs for a provided pulse and objID
 func (jc *JetCoordinator) LightExecutorForObject(
 	ctx context.Context, objID core.RecordID, pulse core.PulseNumber,
 ) (*core.RecordRef, error) {
@@ -188,6 +193,7 @@ func (jc *JetCoordinator) LightExecutorForObject(
 	return jc.LightExecutorForJet(ctx, *jetID, pulse)
 }
 
+// LightValidatorsForObject returns list of LVs for a provided pulse and objID
 func (jc *JetCoordinator) LightValidatorsForObject(
 	ctx context.Context, objID core.RecordID, pulse core.PulseNumber,
 ) ([]core.RecordRef, error) {
@@ -199,6 +205,7 @@ func (jc *JetCoordinator) LightValidatorsForObject(
 	return jc.LightValidatorsForJet(ctx, *jetID, pulse)
 }
 
+// Heavy returns *core.RecorRef to a heavy of specific pulse
 func (jc *JetCoordinator) Heavy(ctx context.Context, pulse core.PulseNumber) (*core.RecordRef, error) {
 	candidates, err := jc.NodeStorage.GetActiveNodesByRole(pulse, core.StaticRoleHeavyMaterial)
 	if err != nil {

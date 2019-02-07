@@ -38,6 +38,7 @@ type Pulse struct {
 type PulseTracker interface {
 	GetPulse(ctx context.Context, num core.PulseNumber) (*Pulse, error)
 	GetPreviousPulse(ctx context.Context, num core.PulseNumber) (*Pulse, error)
+	GetNthPrevPulse(ctx context.Context, n uint, from core.PulseNumber) (*Pulse, error)
 	GetLatestPulse(ctx context.Context) (*Pulse, error)
 
 	AddPulse(ctx context.Context, pulse core.Pulse) error
@@ -171,6 +172,34 @@ func (pt *pulseTracker) GetPreviousPulse(ctx context.Context, num core.PulseNumb
 		}
 		pulse, err = tx.GetPulse(ctx, *pulse.Prev)
 		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return pulse, nil
+}
+
+// GetNthPrevPulse returns Nth previous pulse from some pulse number
+func (pt *pulseTracker) GetNthPrevPulse(ctx context.Context, n uint, num core.PulseNumber) (*Pulse, error) {
+	pulse, err := pt.GetPulse(ctx, num)
+	if err != nil {
+		return nil, err
+	}
+
+	err = pt.DB.View(ctx, func(tx *TransactionManager) error {
+		for n > 0 {
+			if pulse.Prev == nil {
+				pulse = nil
+				return ErrNotFound
+			}
+			pulse, err = tx.GetPulse(ctx, *pulse.Prev)
+			if err != nil {
+				return err
+			}
+			n--
+		}
+		return nil
 	})
 	if err != nil {
 		return nil, err

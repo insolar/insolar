@@ -116,10 +116,13 @@ func (s *heavySuite) TestLedgerArtifactManager_handleHeavy() {
 	})
 	heavysync.StopMock.Return(nil)
 
-	recentStorageMock := recentstorage.NewRecentStorageMock(s.T())
-	recentStorageMock.AddPendingRequestMock.Return()
-	recentStorageMock.AddObjectMock.Return()
-	recentStorageMock.RemovePendingRequestMock.Return()
+	recentIndexMock := recentstorage.NewRecentIndexStorageMock(s.T())
+	recentIndexMock.AddObjectMock.Return()
+	pendingMock := recentstorage.NewPendingStorageMock(s.T())
+	pendingMock.RemovePendingRequestMock.Return()
+	provideMock := recentstorage.NewProviderMock(s.T())
+	provideMock.GetIndexStorageMock.Return(recentIndexMock)
+	provideMock.GetPendingStorageMock.Return(pendingMock)
 
 	certificate := testutils.NewCertificateMock(s.T())
 	certificate.GetRoleMock.Return(core.StaticRoleHeavyMaterial)
@@ -131,12 +134,6 @@ func (s *heavySuite) TestLedgerArtifactManager_handleHeavy() {
 	mh.DBContext = s.db
 	mh.PulseTracker = s.pulseTracker
 	mh.ObjectStorage = s.objectStorage
-
-	provideMock := recentstorage.NewProviderMock(s.T())
-	provideMock.GetStorageFunc = func(ctx context.Context, p core.RecordID) (r recentstorage.RecentStorage) {
-		return recentStorageMock
-	}
-
 	mh.RecentStorageProvider = provideMock
 
 	mh.HeavySync = heavysync
