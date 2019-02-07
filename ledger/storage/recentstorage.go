@@ -161,8 +161,6 @@ func (p *RecentStorageProvider) RemovePendingStorage(ctx context.Context, id cor
 	defer p.pendingLock.Unlock()
 
 	if storage, ok := p.pendingStorages[id]; ok {
-		storage.lock.Lock()
-		defer storage.lock.Unlock()
 
 		ctx = insmetrics.InsertTag(ctx, tagJet, storage.jetID.DebugString())
 		stats.Record(ctx,
