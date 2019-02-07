@@ -501,7 +501,7 @@ func (lr *LogicRunner) StartQueueProcessorIfNeeded(
 	es.Lock()
 	defer es.Unlock()
 
-	if es.haveSomeToProcess() {
+	if !es.haveSomeToProcess() {
 		inslogger.FromContext(ctx).Debug("queue is empty. processor is not needed")
 		return nil
 	}
