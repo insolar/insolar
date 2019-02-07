@@ -46,7 +46,7 @@ type jetStorage struct {
 	trees     map[core.PulseNumber]*jet.Tree
 	treesLock sync.RWMutex
 
-	addJetLock  sync.RWMutex
+	addJetLock sync.RWMutex
 }
 
 func NewJetStorage() JetStorage {
@@ -54,6 +54,7 @@ func NewJetStorage() JetStorage {
 		trees: map[core.PulseNumber]*jet.Tree{},
 	}
 }
+
 // GetJetTree fetches tree for specified pulse.
 func (js *jetStorage) GetJetTree(ctx context.Context, pulse core.PulseNumber) (*jet.Tree, error) {
 	js.treesLock.RLock()
