@@ -22,30 +22,41 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
-// Provider provides a recent storage for jet
+// Provider provides different types of storages for a specific jet
 //go:generate minimock -i github.com/insolar/insolar/ledger/recentstorage.Provider -o ./ -s _mock.go
 type Provider interface {
-	GetStorage(ctx context.Context, jetID core.RecordID) RecentStorage
-	CloneStorage(ctx context.Context, fromJetID, toJetID core.RecordID)
-	RemoveStorage(ctx context.Context, id core.RecordID)
+	GetIndexStorage(ctx context.Context, jetID core.RecordID) RecentIndexStorage
+	GetPendingStorage(ctx context.Context, jetID core.RecordID) PendingStorage
+
+	CloneIndexStorage(ctx context.Context, fromJetID, toJetID core.RecordID)
+	ClonePendingStorage(ctx context.Context, fromJetID, toJetID core.RecordID)
+
+	DecreaseIndexesTTL(ctx context.Context) map[core.RecordID][]core.RecordID
+
+	RemovePendingStorage(ctx context.Context, id core.RecordID)
 }
 
-// RecentStorage is a base interface for the storage of recent objects and indexes
-//go:generate minimock -i github.com/insolar/insolar/ledger/recentstorage.RecentStorage -o ./ -s _mock.go
-type RecentStorage interface {
+// RecentIndexStorage is a struct which contains `recent indexes` for a specific jet
+// `recent index` is a index which was called between TTL-border
+// If index is put to a recent storage, it'll be there for TTL-pulses at least
+//go:generate minimock -i github.com/insolar/insolar/ledger/recentstorage.RecentIndexStorage -o ./ -s _mock.go
+type RecentIndexStorage interface {
 	AddObject(ctx context.Context, id core.RecordID)
 	AddObjectWithTLL(ctx context.Context, id core.RecordID, ttl int)
 
-	AddPendingRequest(ctx context.Context, obj, req core.RecordID)
-	RemovePendingRequest(ctx context.Context, obj, req core.RecordID)
-
 	GetObjects() map[core.RecordID]int
+
+	DecreaseIndexTTL(ctx context.Context) []core.RecordID
+
+	FilterNotExistWithLock(ctx context.Context, candidates []core.RecordID, fn func(filtered []core.RecordID))
+}
+
+//go:generate minimock -i github.com/insolar/insolar/ledger/recentstorage.PendingStorage -o ./ -s _mock.go
+type PendingStorage interface {
+	AddPendingRequest(ctx context.Context, obj, req core.RecordID)
+
 	GetRequests() map[core.RecordID]map[core.RecordID]struct{}
 	GetRequestsForObject(obj core.RecordID) []core.RecordID
 
-	IsRecordIDCached(obj core.RecordID) bool
-
-	DecreaseTTL(ctx context.Context)
-
-	FilterNotExistWithLock(ctx context.Context, candidates []core.RecordID, fn func(filtered []core.RecordID))
+	RemovePendingRequest(ctx context.Context, obj, req core.RecordID)
 }

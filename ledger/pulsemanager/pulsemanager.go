@@ -182,7 +182,7 @@ func (m *PulseManager) processEndPulse(
 				}
 			}
 
-			requests := m.RecentStorageProvider.GetStorage(ctx, info.id).GetRequests()
+			requests := m.RecentStorageProvider.GetPendingStorage(ctx, info.id).GetRequests()
 			go func() {
 				err := m.sendAbandonedRequests(
 					ctx,
@@ -366,8 +366,9 @@ func (m *PulseManager) getExecutorHotData(
 	defer span.End()
 
 	logger := inslogger.FromContext(ctx)
-	recentStorage := m.RecentStorageProvider.GetStorage(ctx, jetID)
-	recentObjectsIds := recentStorage.GetObjects()
+	indexStorage := m.RecentStorageProvider.GetIndexStorage(ctx, jetID)
+	pendingStorage := m.RecentStorageProvider.GetPendingStorage(ctx, jetID)
+	recentObjectsIds := indexStorage.GetObjects()
 
 	recentObjects := map[core.RecordID]*message.HotIndex{}
 	pendingRequests := map[core.RecordID]map[core.RecordID]struct{}{}
@@ -389,7 +390,7 @@ func (m *PulseManager) getExecutorHotData(
 		}
 	}
 
-	for objID, requests := range recentStorage.GetRequests() {
+	for objID, requests := range pendingStorage.GetRequests() {
 		for reqID := range requests {
 			if _, ok := pendingRequests[objID]; !ok {
 				pendingRequests[objID] = map[core.RecordID]struct{}{}
@@ -445,8 +446,6 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse c
 		if !imExecutor {
 			continue
 		}
-
-		m.RecentStorageProvider.GetStorage(ctx, jetID).DecreaseTTL(ctx)
 
 		info := jetInfo{id: jetID}
 		if indexToSplit == i && splitCount > 0 {
@@ -525,9 +524,10 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse c
 }
 
 func (m *PulseManager) rewriteHotData(ctx context.Context, fromJetID, toJetID core.RecordID) error {
-	recentStorage := m.RecentStorageProvider.GetStorage(ctx, fromJetID)
+	indexStorage := m.RecentStorageProvider.GetIndexStorage(ctx, fromJetID)
+	pendingStorage := m.RecentStorageProvider.GetPendingStorage(ctx, fromJetID)
 
-	for id := range recentStorage.GetObjects() {
+	for id := range indexStorage.GetObjects() {
 		idx, err := m.ObjectStorage.GetObjectIndex(ctx, fromJetID, &id, false)
 		if err != nil {
 			return errors.Wrap(err, "failed to rewrite index")
@@ -538,7 +538,7 @@ func (m *PulseManager) rewriteHotData(ctx context.Context, fromJetID, toJetID co
 		}
 	}
 
-	for _, requests := range recentStorage.GetRequests() {
+	for _, requests := range pendingStorage.GetRequests() {
 		for fromReqID := range requests {
 			request, err := m.ObjectStorage.GetRecord(ctx, fromJetID, &fromReqID)
 			if err != nil {
@@ -557,8 +557,9 @@ func (m *PulseManager) rewriteHotData(ctx context.Context, fromJetID, toJetID co
 		}
 	}
 
-	inslogger.FromContext(ctx).Debugf("{LEAK} CloneStorage from - %v, to - %v", fromJetID, toJetID)
-	m.RecentStorageProvider.CloneStorage(ctx, fromJetID, toJetID)
+	inslogger.FromContext(ctx).Debugf("CloneStorage from - %v, to - %v", fromJetID, toJetID)
+	m.RecentStorageProvider.CloneIndexStorage(ctx, fromJetID, toJetID)
+	m.RecentStorageProvider.ClonePendingStorage(ctx, fromJetID, toJetID)
 
 	return nil
 }
@@ -673,6 +674,8 @@ func (m *PulseManager) setUnderGilSection(
 		}
 	}
 
+	m.RecentStorageProvider.DecreaseIndexesTTL(ctx)
+
 	if m.NodeNet.GetOrigin().Role() == core.StaticRoleLightMaterial {
 		m.prepareArtifactManagerMessageHandlerForNextPulse(ctx, newPulse, jets)
 	}
@@ -705,18 +708,18 @@ func (m *PulseManager) postProcessJets(ctx context.Context, newPulse core.Pulse,
 			// No split happened.
 			if !jetInfo.mineNext {
 				logger.Debugf("[postProcessJets] clear recent storage for root jet - %v, pulse - %v", jetInfo.id, newPulse.PulseNumber)
-				m.RecentStorageProvider.RemoveStorage(ctx, jetInfo.id)
+				m.RecentStorageProvider.RemovePendingStorage(ctx, jetInfo.id)
 			}
 		} else {
 			// Split happened.
-			m.RecentStorageProvider.RemoveStorage(ctx, jetInfo.id)
+			m.RecentStorageProvider.RemovePendingStorage(ctx, jetInfo.id)
 			if !jetInfo.left.mineNext {
 				logger.Debugf("[postProcessJets] clear recent storage for left jet - %v, pulse - %v", jetInfo.left.id, newPulse.PulseNumber)
-				m.RecentStorageProvider.RemoveStorage(ctx, jetInfo.left.id)
+				m.RecentStorageProvider.RemovePendingStorage(ctx, jetInfo.left.id)
 			}
 			if !jetInfo.right.mineNext {
 				logger.Debugf("[postProcessJets] clear recent storage for right jet - %v, pulse - %v", jetInfo.right.id, newPulse.PulseNumber)
-				m.RecentStorageProvider.RemoveStorage(ctx, jetInfo.right.id)
+				m.RecentStorageProvider.RemovePendingStorage(ctx, jetInfo.right.id)
 			}
 		}
 	}
@@ -834,7 +837,7 @@ func (m *PulseManager) restoreGenesisRecentObjects(ctx context.Context) error {
 	}
 
 	jetID := *jet.NewID(0, nil)
-	recent := m.RecentStorageProvider.GetStorage(ctx, jetID)
+	recent := m.RecentStorageProvider.GetIndexStorage(ctx, jetID)
 
 	return m.ObjectStorage.IterateIndexIDs(ctx, jetID, func(id core.RecordID) error {
 		if id.Pulse() == core.FirstPulseNumber {

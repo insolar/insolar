@@ -154,13 +154,15 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 		return nil
 	}
 
-	// Mock5: RecentStorageMock
-	recentMock := recentstorage.NewRecentStorageMock(s.T())
+	// Mock5: RecentIndexStorageMock and PendingStorageMock
+	recentMock := recentstorage.NewRecentIndexStorageMock(s.T())
 	recentMock.GetObjectsMock.Return(nil)
-	recentMock.GetRequestsMock.Return(nil)
 	recentMock.AddObjectMock.Return()
-	recentMock.DecreaseTTLMock.Return()
+	recentMock.DecreaseIndexTTLMock.Return([]core.RecordID{})
 	recentMock.FilterNotExistWithLockMock.Return()
+
+	pendingStorageMock := recentstorage.NewPendingStorageMock(s.T())
+	pendingStorageMock.GetRequestsMock.Return(map[core.RecordID]map[core.RecordID]struct{}{})
 
 	// Mock6: JetCoordinatorMock
 	jcMock := testutils.NewJetCoordinatorMock(s.T())
@@ -271,11 +273,12 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 	pm.HotDataWaiter = artifactmanager.NewHotDataWaiterConcrete()
 
 	providerMock := recentstorage.NewProviderMock(s.T())
-	providerMock.GetStorageFunc = func(ctx context.Context, p core.RecordID) (r recentstorage.RecentStorage) {
-		return recentMock
-	}
-	providerMock.CloneStorageMock.Return()
-	providerMock.RemoveStorageMock.Return()
+	providerMock.GetIndexStorageMock.Return(recentMock)
+	providerMock.GetPendingStorageMock.Return(pendingStorageMock)
+	providerMock.CloneIndexStorageMock.Return()
+	providerMock.ClonePendingStorageMock.Return()
+	providerMock.RemovePendingStorageMock.Return()
+	providerMock.DecreaseIndexesTTLMock.Return(map[core.RecordID][]core.RecordID{})
 	pm.RecentStorageProvider = providerMock
 
 	pm.ActiveListSwapper = alsMock

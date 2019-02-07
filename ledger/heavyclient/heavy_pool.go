@@ -191,7 +191,7 @@ func (scp *Pool) LightCleanup(ctx context.Context, untilPN core.PulseNumber, rsp
 					inslogger.FromContext(ctx).Debugf("Start light cleanup, pulse < %v, jet = %v",
 						untilPN, jetID.DebugString())
 
-					jetRecentStore := rsp.GetStorage(ctx, jetID)
+					jetRecentStore := rsp.GetIndexStorage(ctx, jetID)
 
 					idxsRmStat, err := scp.cleaner.CleanJetIndexes(ctx, jetID, jetRecentStore, candidates)
 					if err != nil {

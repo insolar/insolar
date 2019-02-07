@@ -212,7 +212,7 @@ func (s *cleanerSuite) Test_RemoveJetIndexes() {
 		}
 	}
 
-	recent := recentstorage.NewRecentStorageMock(s.T())
+	recent := recentstorage.NewRecentIndexStorageMock(s.T())
 	recent.FilterNotExistWithLockFunc = func(ctx context.Context, candidates []core.RecordID, fn func(fordelete []core.RecordID)) {
 		fn(candidates)
 	}
