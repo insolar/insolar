@@ -843,7 +843,9 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 		}
 
 		id, err := tx.SetRecord(ctx, jetID, parcel.Pulse(), rec)
-		if err != nil {
+		if err == storage.ErrOverride {
+			inslogger.FromContext(ctx).WithField("type", fmt.Sprintf("%T", rec)).Warnln("set record override")
+		} else if err != nil {
 			return err
 		}
 		idx.LatestState = id
@@ -912,7 +914,9 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel core.Pa
 		}
 
 		child, err = tx.SetRecord(ctx, jetID, parcel.Pulse(), childRec)
-		if err != nil {
+		if err == storage.ErrOverride {
+			inslogger.FromContext(ctx).WithField("type", fmt.Sprintf("%T", rec)).Warnln("set record override")
+		} else if err != nil {
 			return err
 		}
 		idx.ChildPointer = child
