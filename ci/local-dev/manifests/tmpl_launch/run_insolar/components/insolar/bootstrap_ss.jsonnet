@@ -66,7 +66,7 @@ local configs() = {
   apiVersion: "v1",
   kind: "ConfigMap",
   metadata: {
-    name: "seed-config"
+    name: "node-config"
   },
   data:{
             "genesis.yaml": std.manifestYamlDoc(genesis.generate_genesis()),

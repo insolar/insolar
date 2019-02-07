@@ -58,12 +58,12 @@ local image_params = params.insolar.image;
 								"mountPath": "/tmp/code"
 							},
 							{
-								"name": "seed-config",
+								"name": "node-config",
 								"mountPath": "/opt/insolar/config/insolar-genesis.yaml",
 								"subPath": "insolar-genesis.yaml"
 							},
 							{
-								"name": "seed-config",
+								"name": "node-config",
 								"mountPath": "/opt/insolar/config/genesis.yaml",
 								"subPath": "genesis.yaml"
 							},
@@ -193,12 +193,6 @@ local image_params = params.insolar.image;
 					{
 						"name": "code",
 						"emptyDir": {}
-					},
-					{
-						"name": "seed-config",
-						"configMap": {
-							"name": "seed-config"
-						}
 					},
 					{
 						"name": "node-config",
