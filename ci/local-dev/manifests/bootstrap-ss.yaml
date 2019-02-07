@@ -138,7 +138,7 @@ data:
       tracer:
         jaeger:
           collectorendpoint: ""
-          agentendpoint: jaeger:6831
+          agentendpoint: jaeger-agent:6831
           probabilityrate: 1
         samplingrules: {}
 

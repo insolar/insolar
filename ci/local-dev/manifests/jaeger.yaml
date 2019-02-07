@@ -18,27 +18,14 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: jaeger-udp
+  name: jaeger-agent
   labels:
-    app: jaeger-udp
+    app: jaeger-agent
 spec:
   ports:
   - port: 6831
     protocol: UDP
-    name: jaeger-6831
-  - port: 6832
-    protocol: UDP
-    name: jaeger-6832
-  - port: 5775
-    protocol: UDP
-    name: jaeger-5775
-  - port: 5778
-    protocol: TCP
-    name: jaeger-5778
-  - port: 16686
-    protocol: TCP
-    name: jaeger-16686
-  clusterIP: None
+    name: agent-compact
   selector:
     app: jaeger
 

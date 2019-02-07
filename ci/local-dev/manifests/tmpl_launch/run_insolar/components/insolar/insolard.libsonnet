@@ -45,6 +45,14 @@ local params = std.mergePatch( base_params.components.insolar, std.extVar("__kso
     "certificatepath": "/opt/insolar/config/node-cert.json",
     "metrics": {
         "listenaddress": "0.0.0.0:" + params.metrics_port
+    },
+    "tracer": {
+       	"jaeger": {
+            "collectorendpoint": "",
+            "agentendpoint": "jaeger-agent:6831",
+            "probabilityrate": 1,
+            "samplingrules": {}
+        }
     }
 }
 
