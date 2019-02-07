@@ -19,6 +19,7 @@ package phases
 
 import (
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/merkle"
 )
@@ -37,6 +38,7 @@ func validateProofs(
 		if valid {
 			validProofs[unsyncList.GetActiveNode(nodeID)] = proof
 		} else {
+			metrics.ConsensusFailedCheckProof.Inc()
 			faultProofs[nodeID] = proof
 		}
 	}

@@ -23,6 +23,7 @@ import (
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/metrics"
 	"github.com/pkg/errors"
 )
 
@@ -116,6 +117,7 @@ func (sm *StateMatrix) CalculatePhase2(origin core.RecordRef) (*Phase2MatrixStat
 		}
 		if timedOuts > 0 {
 			result.NeedPhase21 = true
+			metrics.ConsensusPhase2TimedOuts.Add(float64(timedOuts))
 		}
 		if currentNeedsPhase21 {
 			err := sm.appendAdditionalRequest(result, j)

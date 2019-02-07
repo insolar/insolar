@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/merkle"
 	"github.com/pkg/errors"
@@ -51,6 +52,7 @@ func (tp *thirdPhase) Execute(ctx context.Context, pulse *core.Pulse, state *Sec
 	ctx, span := instracer.StartSpan(ctx, "ThirdPhase.Execute")
 	span.AddAttributes(trace.Int64Attribute("pulse", int64(state.PulseEntry.Pulse.PulseNumber)))
 	defer span.End()
+	metrics.ConsensusPhase3Exec.Inc()
 	var gSign [packets.SignatureLength]byte
 	copy(gSign[:], state.GlobuleProof.Signature.Bytes()[:packets.SignatureLength])
 	packet := packets.NewPhase3Packet(pulse.PulseNumber, gSign, state.BitSet)
@@ -64,6 +66,7 @@ func (tp *thirdPhase) Execute(ctx context.Context, pulse *core.Pulse, state *Sec
 		return nil, errors.Wrap(err, "[ Phase 3 ] Failed exchange packets on phase 3")
 	}
 	inslogger.FromContext(ctx).Infof("[ Phase 3 ] received responses: %d/%d", len(responses), len(nodes))
+	metrics.ConsensusPacketsRecv.WithLabelValues("phase 3").Add(float64(len(responses)))
 
 	for ref, packet := range responses {
 		err = nil
