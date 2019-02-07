@@ -155,7 +155,7 @@ local image_params = params.insolar.image;
 							},
 							{
 								"name": "INSOLAR_APIRUNNER_ADDRESS",
-								"value": "$(POD_IP):19191"
+								"value": "$(POD_IP):" + params.insolar.api_port
 							}
 						],
 						"volumeMounts": [

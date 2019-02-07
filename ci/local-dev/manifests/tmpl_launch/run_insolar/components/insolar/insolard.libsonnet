@@ -1,5 +1,6 @@
 local base_params = import '../params.libsonnet';
-local params = std.mergePatch( base_params.components.insolar, std.extVar("__ksonnet/params").components.insolar );
+local params = std.mergePatch( base_params.components, std.extVar("__ksonnet/params").components );
+local insolar_params = params.insolar;
 
 {
     "versionmanager": {
@@ -8,7 +9,7 @@ local params = std.mergePatch( base_params.components.insolar, std.extVar("__kso
     "host": {
         "transport": {
             "protocol": "TCP",
-            "address": "0.0.0.0:" + params.tcp_transport_port,
+            "address": "0.0.0.0:" + insolar_params.tcp_transport_port,
             "behindnat": false
         },
         "bootstraphosts": [],
@@ -34,7 +35,7 @@ local params = std.mergePatch( base_params.components.insolar, std.extVar("__kso
         }
     },
     "apirunner": {
-        "address": "127.0.0.1:19191"
+        "address": "127.0.0.1:" + insolar_params.api_port,
     },
     "pulsar": {
         "type": "tcp",
@@ -44,12 +45,12 @@ local params = std.mergePatch( base_params.components.insolar, std.extVar("__kso
     "keyspath": "/opt/insolar/config/node-keys.json",
     "certificatepath": "/opt/insolar/config/node-cert.json",
     "metrics": {
-        "listenaddress": "0.0.0.0:" + params.metrics_port
+        "listenaddress": "0.0.0.0:" + insolar_params.metrics_port,
     },
     "tracer": {
        	"jaeger": {
             "collectorendpoint": "",
-            "agentendpoint": "jaeger-agent:6831",
+            "agentendpoint": "jaeger-agent:" + params.jaeger.jaeger_agent.port,
             "probabilityrate": 1,
             "samplingrules": {}
         }

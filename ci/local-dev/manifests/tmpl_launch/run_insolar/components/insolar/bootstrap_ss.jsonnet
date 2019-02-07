@@ -50,7 +50,7 @@ local service() = {
         protocol: "TCP"
       },
       {
-        port: 19191,
+        port: params.api_port,
         name: "api",
         protocol: "TCP"
       }

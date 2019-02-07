@@ -2,6 +2,12 @@
   global: {
   },
   components: {
+      "jaeger":{
+          port: 30686,
+          jaeger_agent: {
+              port: 6831
+          }
+      },
       "insolar": { 
           num_heavies: 1,
           num_lights: 2,
@@ -10,6 +16,7 @@
           domain: "bootstrap",
           tcp_transport_port: 7900,
           metrics_port: 8080,
+          api_port: 19191,
           image: {
               image: "base",
               tag: "latest",
@@ -21,7 +28,7 @@
         elasticsearch_port: 30200
       },
       "prometheus": {
-        port: 30090
+          port: 30090
       },
       "utils":{
         insolar_conf : $.components.insolar,
