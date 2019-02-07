@@ -68,7 +68,7 @@ stop_listening()
     ports="$ports $transport_ports"
 
     echo "Stop listening..."
-    
+
     for port in $ports
     do
         echo "port: $port"
@@ -174,12 +174,13 @@ usage()
     echo -e "\t-n - don't run insgorund"
     echo -e "\t-g - preventively generate initial ledger"
     echo -e "\t-l - clear all and exit"
+    echo -e "\t-C - generate configs only"
 }
 
 process_input_params()
 {
     OPTIND=1
-    while getopts "h?ngl" opt; do
+    while getopts "h?nglC" opt; do
         case "$opt" in
         h|\?)
             usage
@@ -195,6 +196,9 @@ process_input_params()
             prepare
             exit 0
             ;;
+        C)
+            generate_insolard_configs
+            exit $?
         esac
     done
 }
@@ -267,11 +271,11 @@ genesis()
     fi
 }
 
-trap 'stop_listening true' INT TERM EXIT
-
 run_insgorund=true
 check_working_dir
 process_input_params $@
+
+trap 'stop_listening true' INT TERM EXIT
 
 printf "start pulsar ... \n"
 $PULSARD -c $GENERATED_CONFIGS_DIR/pulsar.yaml --trace &> $NODES_DATA/pulsar_output.log &

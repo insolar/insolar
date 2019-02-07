@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/jet"
 	"go.opencensus.io/stats"
 	"golang.org/x/sync/singleflight"
 )
@@ -124,6 +125,7 @@ func (scp *Pool) AddPulsesToSyncClient(
 	return client
 }
 
+// AllClients returns slice with all clients in Pool.
 func (scp *Pool) AllClients(ctx context.Context) []*JetClient {
 	scp.Lock()
 	defer scp.Unlock()
@@ -134,47 +136,92 @@ func (scp *Pool) AllClients(ctx context.Context) []*JetClient {
 	return clients
 }
 
-func (scp *Pool) LightCleanup(ctx context.Context, untilPN core.PulseNumber, rsp recentstorage.Provider) error {
+// LightCleanup starts async cleanup on all heavy synchronization clients (per jet cleanup).
+//
+// Waits until all cleanup will done and mesaures time.
+//
+// Under hood it uses singleflight on Jet prefix to avoid clashing on the same key space.
+func (scp *Pool) LightCleanup(
+	ctx context.Context,
+	untilPN core.PulseNumber,
+	rsp recentstorage.Provider,
+	jetIndexesRemoved map[core.RecordID][]core.RecordID,
+) error {
 	inslog := inslogger.FromContext(ctx)
 	start := time.Now()
 	defer func() {
 		latency := time.Since(start)
 		inslog.Infof("cleanLightData db clean phase time spend=%v", latency)
 		stats.Record(ctx, statCleanLatencyDB.M(latency.Nanoseconds()/1e6))
-
 	}()
 
-	_, err, _ := scp.cleanupGroup.Do("lightcleanup", func() (interface{}, error) {
+	func() {
 		startCleanup := time.Now()
 		defer func() {
 			latency := time.Since(startCleanup)
 			inslog.Infof("cleanLightData db clean phase job time spend=%v", latency)
 		}()
 
-		// This is how we can get all jets served by
+		// This is how we can get all jets served on light during it storage lifetime.
 		// jets, err := scp.db.GetAllSyncClientJets(ctx)
 
 		allClients := scp.AllClients(ctx)
 		var wg sync.WaitGroup
 		wg.Add(len(allClients))
+
+		cleanupConcurrency := 8
+		sem := make(chan struct{}, cleanupConcurrency)
+
+		jetPrefixSeen := map[string]struct{}{}
+
 		for _, c := range allClients {
 			jetID := c.jetID
+			_, jetPrefix := jet.Jet(jetID)
+			prefixKey := string(jetPrefix)
+
+			_, skipRecordsCleanup := jetPrefixSeen[prefixKey]
+			jetPrefixSeen[prefixKey] = struct{}{}
+
+			// TODO: fill candidates here
+			candidates := jetIndexesRemoved[jetID]
+
+			sem <- struct{}{}
 			go func() {
-				defer wg.Done()
-				inslogger.FromContext(ctx).Debugf("Start light cleanup, until pulse = %v, jet = %v",
-					untilPN, jetID.DebugString())
-				rmStat, err := scp.cleaner.RemoveAllForJetUntilPulse(ctx, jetID, untilPN, rsp.GetStorage(ctx, jetID))
-				if err != nil {
-					inslogger.FromContext(ctx).Errorf("Error on light cleanup, until pulse = %v, jet = %v: %v",
-						untilPN, jetID.DebugString(), err)
-					return
-				}
-				inslogger.FromContext(ctx).Debugf("End light cleanup, rm stat=%#v (until pulse = %v, jet = %v)",
-					rmStat, untilPN, jetID.DebugString())
+				defer func() {
+					wg.Done()
+					<-sem
+				}()
+				scp.cleanupGroup.Do(string(jetPrefix), func() (interface{}, error) {
+
+					inslogger.FromContext(ctx).Debugf("Start light cleanup, pulse < %v, jet = %v",
+						untilPN, jetID.DebugString())
+
+					jetRecentStore := rsp.GetIndexStorage(ctx, jetID)
+
+					idxsRmStat, err := scp.cleaner.CleanJetIndexes(ctx, jetID, jetRecentStore, candidates)
+					if err != nil {
+						inslogger.FromContext(ctx).Errorf("Error on indexes cleanup (pulse < %v, jet = %v): %v",
+							untilPN, jetID.DebugString(), err)
+					}
+					inslogger.FromContext(ctx).Infof(
+						"Indexes light cleanup stat=%#v (pulse < %v, jet = %v)", idxsRmStat, untilPN, jetID.DebugString())
+					if skipRecordsCleanup {
+						return nil, nil
+					}
+
+					recsRmStat, err := scp.cleaner.CleanJetRecordsUntilPulse(ctx, jetID, untilPN)
+					if err != nil {
+						inslogger.FromContext(ctx).Errorf("Error on light cleanup (pulse < %v, jet = %v): %v",
+							untilPN, jetID.DebugString(), err)
+						return nil, err
+					}
+					inslogger.FromContext(ctx).Infof(
+						"Records light cleanup, records stat=%#v (pulse < %v, jet = %v)", recsRmStat, untilPN, jetID.DebugString())
+					return nil, nil
+				})
 			}()
 		}
 		wg.Wait()
-		return nil, nil
-	})
-	return err
+	}()
+	return nil
 }
