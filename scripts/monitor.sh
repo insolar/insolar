@@ -15,9 +15,12 @@
 # ./scripts/monitor.sh restart jaeger
 
 set -e
-cd scripts/
 
 if [ $# -lt 1 ]; then
+    echo "pregen configs (required for prometheus config generation)"
+    ./scripts/insolard/launchnet.sh -C
+    cd scripts/
+
     docker-compose down
     docker-compose up -d
     docker-compose ps
@@ -38,4 +41,5 @@ if [ $# -lt 1 ]; then
     exit
 fi
 
+cd scripts/
 docker-compose $@

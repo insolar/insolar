@@ -24,7 +24,7 @@ import (
 	"github.com/gojuno/minimock"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
@@ -34,65 +34,95 @@ import (
 	"github.com/insolar/insolar/testutils"
 )
 
-func TestOnPulse(t *testing.T) {
-	t.Parallel()
-	ctx := inslogger.TestContext(t)
-	mc := minimock.NewController(t)
-	defer mc.Finish()
+type LogicRunnerTestSuite struct {
+	suite.Suite
 
-	mb := testutils.NewMessageBusMock(t)
-	mb.SendMock.Return(&reply.ID{}, nil)
-	jc := testutils.NewJetCoordinatorMock(mc)
+	mc  *minimock.Controller
+	ctx context.Context
+	am  *testutils.ArtifactManagerMock
+	mb  *testutils.MessageBusMock
+	jc  *testutils.JetCoordinatorMock
+	lr  *LogicRunner
+	es  ExecutionState
+	ps  *testutils.PulseStorageMock
+	mle *testutils.MachineLogicExecutorMock
+}
 
-	lr, _ := NewLogicRunner(&configuration.LogicRunner{})
-	lr.MessageBus = mb
-	lr.JetCoordinator = jc
+func (suite *LogicRunnerTestSuite) BeforeTest(suiteName, testName string) {
+	// testing context
+	suite.ctx = inslogger.TestContext(suite.T())
 
-	jc.IsAuthorizedMock.Return(false, nil)
-	jc.MeMock.Return(core.RecordRef{})
+	// initialize minimock and mocks
+	suite.mc = minimock.NewController(suite.T())
+	suite.am = testutils.NewArtifactManagerMock(suite.mc)
+	suite.mb = testutils.NewMessageBusMock(suite.mc)
+	suite.jc = testutils.NewJetCoordinatorMock(suite.mc)
+	suite.ps = testutils.NewPulseStorageMock(suite.mc)
+
+	suite.SetupLogicRunner()
+}
+
+func (suite *LogicRunnerTestSuite) SetupLogicRunner() {
+	suite.lr, _ = NewLogicRunner(&configuration.LogicRunner{})
+	suite.lr.ArtifactManager = suite.am
+	suite.lr.MessageBus = suite.mb
+	suite.lr.JetCoordinator = suite.jc
+	suite.lr.PulseStorage = suite.ps
+}
+
+func (suite *LogicRunnerTestSuite) AfterTest(suiteName, testName string) {
+	suite.mc.Wait(60 * time.Second)
+	suite.mc.Finish()
+}
+
+func (suite *LogicRunnerTestSuite) TestOnPulse() {
+	suite.mb.SendMock.Return(&reply.ID{}, nil)
+
+	suite.jc.IsAuthorizedMock.Return(false, nil)
+	suite.jc.MeMock.Return(core.RecordRef{})
 
 	// test empty lr
 	pulse := core.Pulse{}
 
-	err := lr.OnPulse(ctx, pulse)
-	require.NoError(t, err)
+	err := suite.lr.OnPulse(suite.ctx, pulse)
+	suite.Require().NoError(err)
 
 	objectRef := testutils.RandomRef()
 
 	// test empty ExecutionState
-	lr.state[objectRef] = &ObjectState{ExecutionState: &ExecutionState{Behaviour: &ValidationSaver{}}}
-	err = lr.OnPulse(ctx, pulse)
-	require.NoError(t, err)
-	assert.Nil(t, lr.state[objectRef])
+	suite.lr.state[objectRef] = &ObjectState{ExecutionState: &ExecutionState{Behaviour: &ValidationSaver{}}}
+	err = suite.lr.OnPulse(suite.ctx, pulse)
+	suite.Require().NoError(err)
+	suite.Nil(suite.lr.state[objectRef])
 
 	// test empty ExecutionState but not empty validation/consensus
-	lr.state[objectRef] = &ObjectState{
+	suite.lr.state[objectRef] = &ObjectState{
 		ExecutionState: &ExecutionState{
 			Behaviour: &ValidationSaver{},
 		},
 		Validation: &ExecutionState{},
 		Consensus:  &Consensus{},
 	}
-	err = lr.OnPulse(ctx, pulse)
-	require.NoError(t, err)
-	require.NotNil(t, lr.state[objectRef])
-	assert.Nil(t, lr.state[objectRef].ExecutionState)
+	err = suite.lr.OnPulse(suite.ctx, pulse)
+	suite.Require().NoError(err)
+	suite.Require().NotNil(suite.lr.state[objectRef])
+	suite.Nil(suite.lr.state[objectRef].ExecutionState)
 
 	// test empty es with query in current
-	lr.state[objectRef] = &ObjectState{
+	suite.lr.state[objectRef] = &ObjectState{
 		ExecutionState: &ExecutionState{
 			Behaviour: &ValidationSaver{},
 			Current:   &CurrentExecution{},
 		},
 	}
-	err = lr.OnPulse(ctx, pulse)
-	require.NoError(t, err)
-	assert.Equal(t, message.InPending, lr.state[objectRef].ExecutionState.pending)
+	err = suite.lr.OnPulse(suite.ctx, pulse)
+	suite.Require().NoError(err)
+	suite.Equal(message.InPending, suite.lr.state[objectRef].ExecutionState.pending)
 	qe := ExecutionQueueElement{}
 
 	queue := append(make([]ExecutionQueueElement, 0), qe)
 
-	lr.state[objectRef] = &ObjectState{
+	suite.lr.state[objectRef] = &ObjectState{
 		ExecutionState: &ExecutionState{
 			Behaviour: &ValidationSaver{},
 			Current:   &CurrentExecution{},
@@ -100,15 +130,15 @@ func TestOnPulse(t *testing.T) {
 		},
 	}
 
-	err = lr.OnPulse(ctx, pulse)
-	require.NoError(t, err)
-	require.Equal(t, message.InPending, lr.state[objectRef].ExecutionState.pending)
+	err = suite.lr.OnPulse(suite.ctx, pulse)
+	suite.Require().NoError(err)
+	suite.Equal(message.InPending, suite.lr.state[objectRef].ExecutionState.pending)
 
 	// Executor in new pulse is same node
-	jc.IsAuthorizedMock.Return(true, nil)
-	lr.state[objectRef].ExecutionState.pending = message.PendingUnknown
+	suite.jc.IsAuthorizedMock.Return(true, nil)
+	suite.lr.state[objectRef].ExecutionState.pending = message.PendingUnknown
 
-	lr.state[objectRef] = &ObjectState{
+	suite.lr.state[objectRef] = &ObjectState{
 		ExecutionState: &ExecutionState{
 			Behaviour: &ValidationSaver{},
 			Current:   &CurrentExecution{},
@@ -116,60 +146,50 @@ func TestOnPulse(t *testing.T) {
 		},
 	}
 
-	err = lr.OnPulse(ctx, pulse)
-	require.NoError(t, err)
-	require.Equal(t, message.PendingUnknown, lr.state[objectRef].ExecutionState.pending)
+	err = suite.lr.OnPulse(suite.ctx, pulse)
+	suite.Require().NoError(err)
+	suite.Require().Equal(message.PendingUnknown, suite.lr.state[objectRef].ExecutionState.pending)
 
-	lr.state[objectRef].ExecutionState.pending = message.InPending
+	suite.lr.state[objectRef].ExecutionState.pending = message.InPending
 
-	err = lr.OnPulse(ctx, pulse)
-	require.NoError(t, err)
-	require.Equal(t, message.NotPending, lr.state[objectRef].ExecutionState.pending)
+	err = suite.lr.OnPulse(suite.ctx, pulse)
+	suite.Require().NoError(err)
+	suite.Require().Equal(message.NotPending, suite.lr.state[objectRef].ExecutionState.pending)
 
-	lr.state[objectRef].ExecutionState.Current = nil
-	lr.state[objectRef].ExecutionState.pending = message.InPending
-	lr.state[objectRef].ExecutionState.PendingConfirmed = false
+	suite.jc.IsAuthorizedMock.Return(true, nil)
+	suite.lr.state[objectRef].ExecutionState.pending = message.InPending
 
-	err = lr.OnPulse(ctx, pulse)
-	require.NoError(t, err)
-	assert.Equal(t, message.NotPending, lr.state[objectRef].ExecutionState.pending)
-	assert.Nil(t, lr.state[objectRef].ExecutionState.objectbody)
+	err = suite.lr.OnPulse(suite.ctx, pulse)
+	suite.Require().NoError(err)
+	suite.Require().Equal(message.NotPending, suite.lr.state[objectRef].ExecutionState.pending)
 
-	jc.IsAuthorizedMock.Return(false, nil)
-	lr.state[objectRef].ExecutionState.Current = nil
-	lr.state[objectRef].ExecutionState.pending = message.InPending
-	lr.state[objectRef].ExecutionState.PendingConfirmed = false
+	suite.lr.state[objectRef].ExecutionState.Current = nil
+	suite.lr.state[objectRef].ExecutionState.pending = message.InPending
+	suite.lr.state[objectRef].ExecutionState.PendingConfirmed = false
 
-	err = lr.OnPulse(ctx, pulse)
-	require.NoError(t, err)
+	err = suite.lr.OnPulse(suite.ctx, pulse)
+	suite.Require().NoError(err)
+	suite.Equal(message.NotPending, suite.lr.state[objectRef].ExecutionState.pending)
 
-	_, ok := lr.state[objectRef]
-	assert.Equal(t, false, ok)
+	suite.jc.IsAuthorizedMock.Return(false, nil)
+	suite.lr.state[objectRef].ExecutionState.Current = nil
+	suite.lr.state[objectRef].ExecutionState.pending = message.InPending
+	suite.lr.state[objectRef].ExecutionState.PendingConfirmed = false
+
+	err = suite.lr.OnPulse(suite.ctx, pulse)
+	suite.Require().NoError(err)
+
+	_, ok := suite.lr.state[objectRef]
+	suite.Equal(false, ok)
 }
 
-func TestPendingFinished(t *testing.T) {
-	t.Parallel()
-	ctx := inslogger.TestContext(t)
-	mc := minimock.NewController(t)
-	defer mc.Finish()
-
-	jc := testutils.NewJetCoordinatorMock(mc)
-	mb := testutils.NewMessageBusMock(mc)
-	ps := testutils.NewPulseStorageMock(mc)
-
-	lr, _ := NewLogicRunner(&configuration.LogicRunner{})
-
-	lr.JetCoordinator = jc
-	lr.MessageBus = mb
-	lr.PulseStorage = ps
-
+func (suite *LogicRunnerTestSuite) TestPendingFinished() {
 	pulse := core.Pulse{}
 	objectRef := testutils.RandomRef()
 	meRef := testutils.RandomRef()
 
-	jc.MeMock.Return(meRef)
-
-	ps.CurrentMock.Return(&pulse, nil)
+	suite.jc.MeMock.Return(meRef)
+	suite.ps.CurrentMock.Return(&pulse, nil)
 
 	es := &ExecutionState{
 		Behaviour: &ValidationSaver{},
@@ -179,115 +199,88 @@ func TestPendingFinished(t *testing.T) {
 
 	// make sure that if there is no pending finishPendingIfNeeded returns false,
 	// doesn't send PendingFinished message and doesn't change ExecutionState.pending
-	lr.finishPendingIfNeeded(ctx, es, objectRef)
-	require.Zero(t, mb.SendCounter)
-	require.Equal(t, message.NotPending, es.pending)
+	suite.lr.finishPendingIfNeeded(suite.ctx, es, objectRef)
+	suite.Require().Zero(suite.mb.SendCounter)
+	suite.Require().Equal(message.NotPending, es.pending)
 
 	es.pending = message.InPending
 	es.objectbody = &ObjectBody{}
-	mb.SendMock.ExpectOnce(ctx, &message.PendingFinished{Reference: objectRef}, nil).Return(&reply.ID{}, nil)
-	jc.IsAuthorizedMock.Return(false, nil)
-	lr.finishPendingIfNeeded(ctx, es, objectRef)
-	require.Equal(t, message.NotPending, es.pending)
-	require.Nil(t, es.objectbody)
+	suite.mb.SendMock.ExpectOnce(suite.ctx, &message.PendingFinished{Reference: objectRef}, nil).Return(&reply.ID{}, nil)
+	suite.jc.IsAuthorizedMock.Return(false, nil)
+	suite.lr.finishPendingIfNeeded(suite.ctx, es, objectRef)
+	suite.Require().Equal(message.NotPending, es.pending)
+	suite.Require().Nil(es.objectbody)
 
-	mc.Wait(time.Second) // message bus' send is called in a goroutine
+	suite.mc.Wait(time.Second) // message bus' send is called in a goroutine
 
 	es.pending = message.InPending
 	es.objectbody = &ObjectBody{}
-	jc.IsAuthorizedMock.Return(true, nil)
-	lr.finishPendingIfNeeded(ctx, es, objectRef)
-	require.Equal(t, message.NotPending, es.pending)
-	require.NotNil(t, es.objectbody)
+	suite.jc.IsAuthorizedMock.Return(true, nil)
+	suite.lr.finishPendingIfNeeded(suite.ctx, es, objectRef)
+	suite.Require().Equal(message.NotPending, es.pending)
+	suite.Require().NotNil(es.objectbody)
 }
 
-func TestStartQueueProcessorIfNeeded_DontStartQueueProcessorWhenPending(
-	t *testing.T,
-) {
-	t.Parallel()
-	ctx := inslogger.TestContext(t)
-	mc := minimock.NewController(t)
-	defer mc.Finish()
-
-	am := testutils.NewArtifactManagerMock(t)
-	lr, _ := NewLogicRunner(&configuration.LogicRunner{})
-	lr.ArtifactManager = am
-
+func (suite *LogicRunnerTestSuite) TestStartQueueProcessorIfNeeded_DontStartQueueProcessorWhenPending() {
 	objectRef := testutils.RandomRef()
 
-	am.HasPendingRequestsMock.Return(true, nil)
-	es := &ExecutionState{ArtifactManager: am, Queue: make([]ExecutionQueueElement, 0)}
+	suite.am.HasPendingRequestsMock.Return(true, nil)
+	es := &ExecutionState{ArtifactManager: suite.am, Queue: make([]ExecutionQueueElement, 0)}
 	es.Queue = append(es.Queue, ExecutionQueueElement{})
-	err := lr.StartQueueProcessorIfNeeded(
-		ctx,
+	err := suite.lr.StartQueueProcessorIfNeeded(
+		suite.ctx,
 		es,
 		&message.CallMethod{
 			ObjectRef: objectRef,
 			Method:    "some",
 		},
 	)
-	require.NoError(t, err)
-	require.Equal(t, message.InPending, es.pending)
+	suite.Require().NoError(err)
+	suite.Require().Equal(message.InPending, es.pending)
 }
 
-func TestCheckPendingRequests(
-	t *testing.T,
-) {
-	t.Parallel()
-	ctx := inslogger.TestContext(t)
-	mc := minimock.NewController(t)
-	defer mc.Finish()
-
+func (suite *LogicRunnerTestSuite) TestCheckPendingRequests() {
 	objectRef := testutils.RandomRef()
 
-	am := testutils.NewArtifactManagerMock(t)
-
-	es := &ExecutionState{ArtifactManager: am}
+	es := &ExecutionState{ArtifactManager: suite.am}
 	pending, err := es.CheckPendingRequests(
-		ctx, &message.CallConstructor{},
+		suite.ctx, &message.CallConstructor{},
 	)
-	require.NoError(t, err)
-	require.Equal(t, message.NotPending, pending)
+	suite.Require().NoError(err)
+	suite.Require().Equal(message.NotPending, pending)
 
-	am.HasPendingRequestsMock.Return(false, nil)
-	es = &ExecutionState{ArtifactManager: am}
+	suite.am.HasPendingRequestsMock.Return(false, nil)
+	es = &ExecutionState{ArtifactManager: suite.am}
 	pending, err = es.CheckPendingRequests(
-		ctx, &message.CallMethod{
+		suite.ctx, &message.CallMethod{
 			ObjectRef: objectRef,
 		},
 	)
-	require.NoError(t, err)
-	require.Equal(t, message.NotPending, pending)
+	suite.Require().NoError(err)
+	suite.Require().Equal(message.NotPending, pending)
 
-	am.HasPendingRequestsMock.Return(true, nil)
-	es = &ExecutionState{ArtifactManager: am}
+	suite.am.HasPendingRequestsMock.Return(true, nil)
+	es = &ExecutionState{ArtifactManager: suite.am}
 	pending, err = es.CheckPendingRequests(
-		ctx, &message.CallMethod{
+		suite.ctx, &message.CallMethod{
 			ObjectRef: objectRef,
 		},
 	)
-	require.NoError(t, err)
-	require.Equal(t, message.InPending, pending)
+	suite.Require().NoError(err)
+	suite.Require().Equal(message.InPending, pending)
 
-	am.HasPendingRequestsMock.Return(false, errors.New("some"))
-	es = &ExecutionState{ArtifactManager: am}
+	suite.am.HasPendingRequestsMock.Return(false, errors.New("some"))
+	es = &ExecutionState{ArtifactManager: suite.am}
 	pending, err = es.CheckPendingRequests(
-		ctx, &message.CallMethod{
+		suite.ctx, &message.CallMethod{
 			ObjectRef: objectRef,
 		},
 	)
-	require.Error(t, err)
-	require.Equal(t, message.NotPending, pending)
+	suite.Require().Error(err)
+	suite.Require().Equal(message.NotPending, pending)
 }
 
-func TestPrepareState(t *testing.T) {
-	t.Parallel()
-	ctx := inslogger.TestContext(t)
-	mc := minimock.NewController(t)
-	defer mc.Finish()
-
-	lr, _ := NewLogicRunner(&configuration.LogicRunner{})
-
+func (suite *LogicRunnerTestSuite) TestPrepareState() {
 	object := testutils.RandomRef()
 	msg := &message.ExecutorResults{
 		Caller:    testutils.RandomRef(),
@@ -298,113 +291,92 @@ func TestPrepareState(t *testing.T) {
 	// it's a first call, it's also initialize lr.state[object].ExecutionState
 	// also check for empty Queue
 	msg.Pending = message.NotPending
-	_ = lr.prepareObjectState(ctx, msg)
-	require.Equal(t, message.NotPending, lr.state[object].ExecutionState.pending)
-	require.Equal(t, 0, len(lr.state[object].ExecutionState.Queue))
+	_ = suite.lr.prepareObjectState(suite.ctx, msg)
+	suite.Require().Equal(message.NotPending, suite.lr.state[object].ExecutionState.pending)
+	suite.Require().Equal(0, len(suite.lr.state[object].ExecutionState.Queue))
 
 	// pending without queue
-	lr.state[object].ExecutionState.pending = message.PendingUnknown
+	suite.lr.state[object].ExecutionState.pending = message.PendingUnknown
 	msg.Pending = message.InPending
-	_ = lr.prepareObjectState(ctx, msg)
-	require.Equal(t, message.InPending, lr.state[object].ExecutionState.pending)
+	_ = suite.lr.prepareObjectState(suite.ctx, msg)
+	suite.Require().Equal(message.InPending, suite.lr.state[object].ExecutionState.pending)
 
 	// do not change pending status if it isn't unknown
-	lr.state[object].ExecutionState.pending = message.NotPending
+	suite.lr.state[object].ExecutionState.pending = message.NotPending
 	msg.Pending = message.InPending
-	_ = lr.prepareObjectState(ctx, msg)
-	require.Equal(t, message.NotPending, lr.state[object].ExecutionState.pending)
+	_ = suite.lr.prepareObjectState(suite.ctx, msg)
+	suite.Require().Equal(message.NotPending, suite.lr.state[object].ExecutionState.pending)
 
 	// do not change pending status if it isn't unknown
-	lr.state[object].ExecutionState.pending = message.InPending
+	suite.lr.state[object].ExecutionState.pending = message.InPending
 	msg.Pending = message.InPending
-	_ = lr.prepareObjectState(ctx, msg)
-	require.Equal(t, message.InPending, lr.state[object].ExecutionState.pending)
+	_ = suite.lr.prepareObjectState(suite.ctx, msg)
+	suite.Require().Equal(message.InPending, suite.lr.state[object].ExecutionState.pending)
 
-	parcel := testutils.NewParcelMock(t)
+	parcel := testutils.NewParcelMock(suite.mc)
 	parcel.ContextMock.Expect(context.Background()).Return(context.Background())
 	// brand new queue from message
 	msg.Queue = []message.ExecutionQueueElement{
 		message.ExecutionQueueElement{Parcel: parcel},
 	}
-	_ = lr.prepareObjectState(ctx, msg)
-	require.Equal(t, 1, len(lr.state[object].ExecutionState.Queue))
+	_ = suite.lr.prepareObjectState(suite.ctx, msg)
+	suite.Require().Equal(1, len(suite.lr.state[object].ExecutionState.Queue))
 
 	testMsg := message.CallMethod{ReturnMode: message.ReturnNoWait}
-	parcel = testutils.NewParcelMock(t)
+	parcel = testutils.NewParcelMock(suite.mc)
 	parcel.ContextMock.Expect(context.Background()).Return(context.Background())
 	parcel.MessageMock.Return(&testMsg) // mock message that returns NoWait
 
 	queueElementRequest := testutils.RandomRef()
 	msg.Queue = []message.ExecutionQueueElement{message.ExecutionQueueElement{Request: &queueElementRequest, Parcel: parcel}}
-	_ = lr.prepareObjectState(ctx, msg)
-	require.Equal(t, 2, len(lr.state[object].ExecutionState.Queue))
-	require.Equal(t, &queueElementRequest, lr.state[object].ExecutionState.Queue[0].request)
-	require.Equal(t, &testMsg, lr.state[object].ExecutionState.Queue[0].parcel.Message())
-
+	_ = suite.lr.prepareObjectState(suite.ctx, msg)
+	suite.Require().Equal(2, len(suite.lr.state[object].ExecutionState.Queue))
+	suite.Require().Equal(&queueElementRequest, suite.lr.state[object].ExecutionState.Queue[0].request)
+	suite.Require().Equal(&testMsg, suite.lr.state[object].ExecutionState.Queue[0].parcel.Message())
 }
 
-func TestHandlePendingFinishedMessage(
-	t *testing.T,
-) {
-	t.Parallel()
-	ctx := inslogger.TestContext(t)
-	mc := minimock.NewController(t)
-	defer mc.Finish()
-
+func (suite *LogicRunnerTestSuite) TestHandlePendingFinishedMessage() {
 	objectRef := testutils.RandomRef()
 
-	lr, _ := NewLogicRunner(&configuration.LogicRunner{})
-
-	parcel := testutils.NewParcelMock(t).MessageMock.Return(
+	parcel := testutils.NewParcelMock(suite.mc).MessageMock.Return(
 		&message.PendingFinished{Reference: objectRef},
 	)
 
 	parcel.DefaultTargetMock.Return(&core.RecordRef{})
 
-	re, err := lr.HandlePendingFinishedMessage(ctx, parcel)
-	require.NoError(t, err)
-	require.Equal(t, &reply.OK{}, re)
+	re, err := suite.lr.HandlePendingFinishedMessage(suite.ctx, parcel)
+	suite.Require().NoError(err)
+	suite.Require().Equal(&reply.OK{}, re)
 
-	st := lr.MustObjectState(objectRef)
+	st := suite.lr.MustObjectState(objectRef)
 
 	es := st.ExecutionState
-	require.NotNil(t, es)
-	require.Equal(t, message.NotPending, es.pending)
+	suite.Require().NotNil(es)
+	suite.Require().Equal(message.NotPending, es.pending)
 
 	es.Current = &CurrentExecution{}
-	re, err = lr.HandlePendingFinishedMessage(ctx, parcel)
-	require.Error(t, err)
+	re, err = suite.lr.HandlePendingFinishedMessage(suite.ctx, parcel)
+	suite.Require().Error(err)
 
 	es.Current = nil
 
-	re, err = lr.HandlePendingFinishedMessage(ctx, parcel)
-	require.NoError(t, err)
-	require.Equal(t, &reply.OK{}, re)
-
+	re, err = suite.lr.HandlePendingFinishedMessage(suite.ctx, parcel)
+	suite.Require().NoError(err)
+	suite.Require().Equal(&reply.OK{}, re)
 }
 
-func TestLogicRunner_CheckExecutionLoop(
-	t *testing.T,
-) {
-	t.Parallel()
-	ctx := inslogger.TestContext(t)
-
-	mc := minimock.NewController(t)
-	defer mc.Finish()
-
-	lr, _ := NewLogicRunner(&configuration.LogicRunner{})
-
+func (suite *LogicRunnerTestSuite) TestCheckExecutionLoop() {
 	es := &ExecutionState{
 		Current: nil,
 	}
 
-	loop := lr.CheckExecutionLoop(ctx, es, nil)
-	require.False(t, loop)
+	loop := suite.lr.CheckExecutionLoop(suite.ctx, es, nil)
+	suite.Require().False(loop)
 
-	ctxA, _ := inslogger.WithTraceField(ctx, "a")
-	ctxB, _ := inslogger.WithTraceField(ctx, "b")
+	ctxA, _ := inslogger.WithTraceField(suite.ctx, "a")
+	ctxB, _ := inslogger.WithTraceField(suite.ctx, "b")
 
-	parcel := testutils.NewParcelMock(t).MessageMock.Return(
+	parcel := testutils.NewParcelMock(suite.mc).MessageMock.Return(
 		&message.CallMethod{ReturnMode: message.ReturnResult},
 	)
 	es.Current = &CurrentExecution{
@@ -412,104 +384,81 @@ func TestLogicRunner_CheckExecutionLoop(
 		Context:    ctxA,
 	}
 
-	loop = lr.CheckExecutionLoop(ctxA, es, parcel)
-	require.True(t, loop)
+	loop = suite.lr.CheckExecutionLoop(ctxA, es, parcel)
+	suite.Require().True(loop)
 
-	loop = lr.CheckExecutionLoop(ctxB, es, parcel)
-	require.False(t, loop)
+	loop = suite.lr.CheckExecutionLoop(ctxB, es, parcel)
+	suite.Require().False(loop)
 
-	parcel = testutils.NewParcelMock(t).MessageMock.Return(
+	parcel = testutils.NewParcelMock(suite.mc).MessageMock.Return(
 		&message.CallMethod{ReturnMode: message.ReturnNoWait},
 	)
 	es.Current = &CurrentExecution{
 		ReturnMode: message.ReturnResult,
 		Context:    ctxA,
 	}
-	loop = lr.CheckExecutionLoop(ctxA, es, parcel)
-	require.False(t, loop)
+	loop = suite.lr.CheckExecutionLoop(ctxA, es, parcel)
+	suite.Require().False(loop)
 
-	parcel = testutils.NewParcelMock(t).MessageMock.Return(
-		&message.CallMethod{ReturnMode: message.ReturnResult},
-	)
+	parcel = testutils.NewParcelMock(suite.mc)
 	es.Current = &CurrentExecution{
 		ReturnMode: message.ReturnNoWait,
 		Context:    ctxA,
 	}
-	loop = lr.CheckExecutionLoop(ctxA, es, parcel)
-	require.False(t, loop)
+	loop = suite.lr.CheckExecutionLoop(ctxA, es, parcel)
+	suite.Require().False(loop)
 }
 
-func TestLogicRunner_HandleStillExecutingMessage(
-	t *testing.T,
-) {
-	t.Parallel()
-	ctx := inslogger.TestContext(t)
-	mc := minimock.NewController(t)
-	defer mc.Finish()
-
+func (suite *LogicRunnerTestSuite) TestHandleStillExecutingMessage() {
 	objectRef := testutils.RandomRef()
 
-	lr, _ := NewLogicRunner(&configuration.LogicRunner{})
-
-	parcel := testutils.NewParcelMock(t).MessageMock.Return(
+	parcel := testutils.NewParcelMock(suite.mc).MessageMock.Return(
 		&message.StillExecuting{Reference: objectRef},
 	)
 
 	parcel.DefaultTargetMock.Return(&core.RecordRef{})
 
-	re, err := lr.HandleStillExecutingMessage(ctx, parcel)
-	require.NoError(t, err)
-	require.Equal(t, &reply.OK{}, re)
+	re, err := suite.lr.HandleStillExecutingMessage(suite.ctx, parcel)
+	suite.Require().NoError(err)
+	suite.Require().Equal(&reply.OK{}, re)
 
-	st := lr.MustObjectState(objectRef)
-	require.NotNil(t, st.ExecutionState)
-	require.Equal(t, message.InPending, st.ExecutionState.pending)
-	require.Equal(t, true, st.ExecutionState.PendingConfirmed)
+	st := suite.lr.MustObjectState(objectRef)
+	suite.Require().NotNil(st.ExecutionState)
+	suite.Require().Equal(message.InPending, st.ExecutionState.pending)
+	suite.Require().Equal(true, st.ExecutionState.PendingConfirmed)
 
 	st.ExecutionState.pending = message.NotPending
 	st.ExecutionState.PendingConfirmed = false
 
-	re, err = lr.HandleStillExecutingMessage(ctx, parcel)
-	require.NoError(t, err)
-	require.Equal(t, &reply.OK{}, re)
+	re, err = suite.lr.HandleStillExecutingMessage(suite.ctx, parcel)
+	suite.Require().NoError(err)
+	suite.Require().Equal(&reply.OK{}, re)
 
-	st = lr.MustObjectState(objectRef)
-	require.NotNil(t, st.ExecutionState)
-	require.Equal(t, message.NotPending, st.ExecutionState.pending)
-	require.Equal(t, false, st.ExecutionState.PendingConfirmed)
+	st = suite.lr.MustObjectState(objectRef)
+	suite.Require().NotNil(st.ExecutionState)
+	suite.Require().Equal(message.NotPending, st.ExecutionState.pending)
+	suite.Require().Equal(false, st.ExecutionState.PendingConfirmed)
 }
 
-func TestLogicRunner_OnPulse_StillExecuting(t *testing.T) {
-	t.Parallel()
-	ctx := inslogger.TestContext(t)
-	mc := minimock.NewController(t)
-	defer mc.Finish()
-
-	mb := testutils.NewMessageBusMock(t)
-	jc := testutils.NewJetCoordinatorMock(mc)
-
-	lr, _ := NewLogicRunner(&configuration.LogicRunner{})
-	lr.MessageBus = mb
-	lr.JetCoordinator = jc
-
-	jc.IsAuthorizedMock.Return(false, nil)
-	jc.MeMock.Return(core.RecordRef{})
+func (suite *LogicRunnerTestSuite) Test_OnPulse_StillExecuting() {
+	suite.jc.IsAuthorizedMock.Return(false, nil)
+	suite.jc.MeMock.Return(core.RecordRef{})
 
 	// test empty lr
 	pulse := core.Pulse{}
 
 	objectRef := testutils.RandomRef()
 
-	lr.state[objectRef] = &ObjectState{
+	suite.lr.state[objectRef] = &ObjectState{
 		ExecutionState: &ExecutionState{
 			Behaviour: &ValidationSaver{},
 			Current:   &CurrentExecution{},
 		},
 	}
-	mb.SendMock.Return(&reply.OK{}, nil)
-	err := lr.OnPulse(ctx, pulse)
-	require.NoError(t, err)
-	assert.NotNil(t, lr.state[objectRef].ExecutionState)
+	suite.mb.SendMock.Return(&reply.OK{}, nil)
+	err := suite.lr.OnPulse(suite.ctx, pulse)
+	suite.Require().NoError(err)
+	suite.NotNil(suite.lr.state[objectRef].ExecutionState)
 }
 
 func TestReleaseQueue(t *testing.T) {
@@ -539,30 +488,24 @@ func TestReleaseQueue(t *testing.T) {
 	}
 }
 
-func TestOnPulseLedgerHasMoreRequests(t *testing.T) {
-	t.Parallel()
-
-	ctx := inslogger.TestContext(t)
-	mc := minimock.NewController(t)
-	defer mc.Finish()
-
+func (suite *LogicRunnerTestSuite) TestOnPulseLedgerHasMoreRequests() {
 	type testCase struct {
 		queue                         []ExecutionQueueElement
 		mbMock                        *testutils.MessageBusMock
 		ExpectedLedgerHasMoreRequests bool
 	}
 	testCases := []testCase{
-		{make([]ExecutionQueueElement, maxQueueLength+1), testutils.NewMessageBusMock(mc), true},
-		{make([]ExecutionQueueElement, maxQueueLength), testutils.NewMessageBusMock(mc), false},
+		{make([]ExecutionQueueElement, maxQueueLength+1), testutils.NewMessageBusMock(suite.mc), true},
+		{make([]ExecutionQueueElement, maxQueueLength), testutils.NewMessageBusMock(suite.mc), false},
 	}
 
-	jc := testutils.NewJetCoordinatorMock(mc)
-	jc.IsAuthorizedMock.Return(false, nil)
-	jc.MeMock.Return(core.RecordRef{})
+	suite.jc.IsAuthorizedMock.Return(false, nil)
+	suite.jc.MeMock.Return(core.RecordRef{})
 
 	pulse := core.Pulse{}
 
 	for _, test := range testCases {
+		suite.SetupLogicRunner()
 		queue := test.queue
 
 		// waiting for ledger implement fetch method
@@ -572,10 +515,9 @@ func TestOnPulseLedgerHasMoreRequests(t *testing.T) {
 
 		ref := testutils.RandomRef()
 
-		lr, _ := NewLogicRunner(&configuration.LogicRunner{})
-		lr.JetCoordinator = jc
+		suite.lr.JetCoordinator = suite.jc
 
-		lr.state[ref] = &ObjectState{
+		suite.lr.state[ref] = &ObjectState{
 			ExecutionState: &ExecutionState{
 				Behaviour: &ValidationSaver{},
 				Queue:     queue,
@@ -583,7 +525,7 @@ func TestOnPulseLedgerHasMoreRequests(t *testing.T) {
 		}
 
 		mb := test.mbMock
-		lr.MessageBus = mb
+		suite.lr.MessageBus = mb
 
 		expectedMessage := &message.ExecutorResults{
 			RecordRef:             ref,
@@ -594,33 +536,27 @@ func TestOnPulseLedgerHasMoreRequests(t *testing.T) {
 
 		// defer new SendFunc before calling OnPulse
 		mb.SendFunc = func(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) (r core.Reply, r1 error) {
-			assert.Equal(t, expectedMessage, p1)
+			suite.Equal(expectedMessage, p1)
 			return nil, nil
 		}
 
-		err := lr.OnPulse(ctx, pulse)
-		require.NoError(t, err)
+		err := suite.lr.OnPulse(suite.ctx, pulse)
+		suite.NoError(err)
 	}
 
 	// waiting for all goroutines with Send() processing
-	mc.Wait(10 * time.Second)
+	suite.mc.Wait(10 * time.Second)
 	for _, test := range testCases {
-		assert.Equal(t, 1, int(test.mbMock.SendCounter))
+		suite.Equal(1, int(test.mbMock.SendCounter))
 	}
 }
 
-func TestLogicRunner_NoExcessiveAmends(t *testing.T) {
-	t.Parallel()
-
-	ctx := inslogger.TestContext(t)
-	am := testutils.NewArtifactManagerMock(t)
-	lr, _ := NewLogicRunner(&configuration.LogicRunner{})
-	lr.ArtifactManager = am
-	am.UpdateObjectMock.Return(nil, nil)
+func (suite *LogicRunnerTestSuite) TestNoExcessiveAmends() {
+	suite.am.UpdateObjectMock.Return(nil, nil)
 
 	randRef := testutils.RandomRef()
 
-	es := &ExecutionState{ArtifactManager: am, Queue: make([]ExecutionQueueElement, 0)}
+	es := &ExecutionState{ArtifactManager: suite.am, Queue: make([]ExecutionQueueElement, 0)}
 	es.Queue = append(es.Queue, ExecutionQueueElement{})
 	es.objectbody = &ObjectBody{}
 	es.objectbody.CodeMachineType = core.MachineTypeBuiltin
@@ -632,8 +568,8 @@ func TestLogicRunner_NoExcessiveAmends(t *testing.T) {
 	data := []byte(testutils.RandomString())
 	es.objectbody.Object = data
 
-	mle := testutils.NewMachineLogicExecutorMock(t)
-	lr.Executors[core.MachineTypeBuiltin] = mle
+	mle := testutils.NewMachineLogicExecutorMock(suite.mc)
+	suite.lr.Executors[core.MachineTypeBuiltin] = mle
 	mle.CallMethodMock.Return(data, nil, nil)
 
 	msg := &message.CallMethod{
@@ -642,83 +578,72 @@ func TestLogicRunner_NoExcessiveAmends(t *testing.T) {
 	}
 
 	// In this case Update isn't send to ledger (objects data/newData are the same)
-	am.RegisterResultMock.Return(nil, nil)
+	suite.am.RegisterResultMock.Return(nil, nil)
 
-	_, err := lr.executeMethodCall(ctx, es, msg)
-	require.NoError(t, err)
-	require.Equal(t, uint64(0), am.UpdateObjectCounter)
+	_, err := suite.lr.executeMethodCall(suite.ctx, es, msg)
+	suite.Require().NoError(err)
+	suite.Require().Equal(uint64(0), suite.am.UpdateObjectCounter)
 
 	// In this case Update is send to ledger (objects data/newData are different)
 	newData := make([]byte, 5, 5)
 	mle.CallMethodMock.Return(newData, nil, nil)
 
-	_, err = lr.executeMethodCall(ctx, es, msg)
-	require.NoError(t, err)
-	require.Equal(t, uint64(1), am.UpdateObjectCounter)
+	_, err = suite.lr.executeMethodCall(suite.ctx, es, msg)
+	suite.Require().NoError(err)
+	suite.Require().Equal(uint64(1), suite.am.UpdateObjectCounter)
 }
 
-func TestHandleAbandonedRequestsNotificationMessage(t *testing.T) {
-	t.Parallel()
-
-	ctx := inslogger.TestContext(t)
+func (suite *LogicRunnerTestSuite) TestHandleAbandonedRequestsNotificationMessage() {
 	objectId := testutils.RandomID()
 	msg := &message.AbandonedRequestsNotification{Object: objectId}
 	parcel := &message.Parcel{Msg: msg}
 
-	// empty lr
-	lr, _ := NewLogicRunner(&configuration.LogicRunner{})
-
-	_, err := lr.HandleAbandonedRequestsNotificationMessage(ctx, parcel)
-	require.NoError(t, err)
-	assert.Equal(t, true, lr.state[*msg.DefaultTarget()].ExecutionState.LedgerHasMoreRequests)
+	_, err := suite.lr.HandleAbandonedRequestsNotificationMessage(suite.ctx, parcel)
+	suite.Require().NoError(err)
+	suite.Equal(true, suite.lr.state[*msg.DefaultTarget()].ExecutionState.LedgerHasMoreRequests)
 
 	// LedgerHasMoreRequests false
-	lr, _ = NewLogicRunner(&configuration.LogicRunner{})
-	lr.state[*msg.DefaultTarget()] = &ObjectState{ExecutionState: &ExecutionState{LedgerHasMoreRequests: false}}
+	suite.lr, _ = NewLogicRunner(&configuration.LogicRunner{})
+	suite.lr.state[*msg.DefaultTarget()] = &ObjectState{ExecutionState: &ExecutionState{LedgerHasMoreRequests: false}}
 
-	_, err = lr.HandleAbandonedRequestsNotificationMessage(ctx, parcel)
-	require.NoError(t, err)
-	assert.Equal(t, true, lr.state[*msg.DefaultTarget()].ExecutionState.LedgerHasMoreRequests)
+	_, err = suite.lr.HandleAbandonedRequestsNotificationMessage(suite.ctx, parcel)
+	suite.Require().NoError(err)
+	suite.Equal(true, suite.lr.state[*msg.DefaultTarget()].ExecutionState.LedgerHasMoreRequests)
 
 	// LedgerHasMoreRequests already true
-	lr, _ = NewLogicRunner(&configuration.LogicRunner{})
-	lr.state[*msg.DefaultTarget()] = &ObjectState{ExecutionState: &ExecutionState{LedgerHasMoreRequests: true}}
+	suite.lr, _ = NewLogicRunner(&configuration.LogicRunner{})
+	suite.lr.state[*msg.DefaultTarget()] = &ObjectState{ExecutionState: &ExecutionState{LedgerHasMoreRequests: true}}
 
-	_, err = lr.HandleAbandonedRequestsNotificationMessage(ctx, parcel)
-	require.NoError(t, err)
-	assert.Equal(t, true, lr.state[*msg.DefaultTarget()].ExecutionState.LedgerHasMoreRequests)
-
+	_, err = suite.lr.HandleAbandonedRequestsNotificationMessage(suite.ctx, parcel)
+	suite.Require().NoError(err)
+	suite.Equal(true, suite.lr.state[*msg.DefaultTarget()].ExecutionState.LedgerHasMoreRequests)
 }
 
-func TestPrepareObjectStateChangePendingStatus(t *testing.T) {
-	ctx := inslogger.TestContext(t)
-	lr, _ := NewLogicRunner(&configuration.LogicRunner{})
+func (suite *LogicRunnerTestSuite) TestPrepareObjectStateChangePendingStatus() {
 	ref := testutils.RandomRef()
 
 	msg := &message.ExecutorResults{RecordRef: ref}
 
 	// we are in pending and come to ourselves again
-	lr.state[ref] = &ObjectState{ExecutionState: &ExecutionState{
+	suite.lr.state[ref] = &ObjectState{ExecutionState: &ExecutionState{
 		pending: message.InPending, Current: &CurrentExecution{}},
 	}
-	err := lr.prepareObjectState(ctx, msg)
-	require.NoError(t, err)
-	assert.Equal(t, message.NotPending, lr.state[ref].ExecutionState.pending)
-	assert.Equal(t, false, lr.state[ref].ExecutionState.PendingConfirmed)
+	err := suite.lr.prepareObjectState(suite.ctx, msg)
+	suite.Require().NoError(err)
+	suite.Equal(message.NotPending, suite.lr.state[ref].ExecutionState.pending)
+	suite.Equal(false, suite.lr.state[ref].ExecutionState.PendingConfirmed)
 
 	// previous executor decline pending, trust him
 	msg = &message.ExecutorResults{RecordRef: ref, Pending: message.NotPending}
-	lr.state[ref] = &ObjectState{ExecutionState: &ExecutionState{
+	suite.lr.state[ref] = &ObjectState{ExecutionState: &ExecutionState{
 		pending: message.InPending, Current: nil},
 	}
-	err = lr.prepareObjectState(ctx, msg)
-	require.NoError(t, err)
-	assert.Equal(t, message.NotPending, lr.state[ref].ExecutionState.pending)
+	err = suite.lr.prepareObjectState(suite.ctx, msg)
+	suite.Require().NoError(err)
+	suite.Equal(message.NotPending, suite.lr.state[ref].ExecutionState.pending)
 }
 
-func TestPrepareObjectStateChangeLedgerHasMoreRequests(t *testing.T) {
-	ctx := inslogger.TestContext(t)
-	lr, _ := NewLogicRunner(&configuration.LogicRunner{})
+func (suite *LogicRunnerTestSuite) TestPrepareObjectStateChangeLedgerHasMoreRequests() {
 	ref := testutils.RandomRef()
 
 	msg := &message.ExecutorResults{RecordRef: ref}
@@ -738,10 +663,13 @@ func TestPrepareObjectStateChangeLedgerHasMoreRequests(t *testing.T) {
 
 	for _, test := range testCases {
 		msg = &message.ExecutorResults{RecordRef: ref, LedgerHasMoreRequests: test.messageStatus}
-		lr.state[ref] = &ObjectState{ExecutionState: &ExecutionState{LedgerHasMoreRequests: test.objectStateStatus}}
-		err := lr.prepareObjectState(ctx, msg)
-		require.NoError(t, err)
-		assert.Equal(t, test.expectedObjectStateStatue, lr.state[ref].ExecutionState.LedgerHasMoreRequests)
+		suite.lr.state[ref] = &ObjectState{ExecutionState: &ExecutionState{LedgerHasMoreRequests: test.objectStateStatus}}
+		err := suite.lr.prepareObjectState(suite.ctx, msg)
+		suite.Require().NoError(err)
+		suite.Equal(test.expectedObjectStateStatue, suite.lr.state[ref].ExecutionState.LedgerHasMoreRequests)
 	}
+}
 
+func TestLogicRunner(t *testing.T) {
+	suite.Run(t, new(LogicRunnerTestSuite))
 }

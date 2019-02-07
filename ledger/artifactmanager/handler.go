@@ -308,10 +308,10 @@ func (h *MessageHandler) handleSetRecord(ctx context.Context, parcel core.Parcel
 
 	switch r := rec.(type) {
 	case record.Request:
-		recentStorage := h.RecentStorageProvider.GetStorage(ctx, jetID)
+		recentStorage := h.RecentStorageProvider.GetPendingStorage(ctx, jetID)
 		recentStorage.AddPendingRequest(ctx, r.GetObject(), *id)
 	case *record.ResultRecord:
-		recentStorage := h.RecentStorageProvider.GetStorage(ctx, jetID)
+		recentStorage := h.RecentStorageProvider.GetPendingStorage(ctx, jetID)
 		recentStorage.RemovePendingRequest(ctx, r.Object, *r.Request.Record())
 	}
 
@@ -394,7 +394,7 @@ func (h *MessageHandler) handleGetObject(
 	jetID := jetFromContext(ctx)
 
 	if !h.isHeavy {
-		h.RecentStorageProvider.GetStorage(ctx, jetID).AddObject(ctx, *msg.Head.Record())
+		h.RecentStorageProvider.GetIndexStorage(ctx, jetID).AddObject(ctx, *msg.Head.Record())
 	}
 
 	// Fetch object index. If not found redirect.
@@ -540,7 +540,7 @@ func (h *MessageHandler) handleHasPendingRequests(ctx context.Context, parcel co
 	msg := parcel.Message().(*message.GetPendingRequests)
 	jetID := jetFromContext(ctx)
 
-	for _, reqID := range h.RecentStorageProvider.GetStorage(ctx, jetID).GetRequestsForObject(*msg.Object.Record()) {
+	for _, reqID := range h.RecentStorageProvider.GetPendingStorage(ctx, jetID).GetRequestsForObject(*msg.Object.Record()) {
 		if reqID.Pulse() < parcel.Pulse() {
 			return &reply.HasPendingRequests{Has: true}, nil
 		}
@@ -571,7 +571,7 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel core.Parc
 	jetID := jetFromContext(ctx)
 
 	if !h.isHeavy {
-		h.RecentStorageProvider.GetStorage(ctx, jetID).AddObject(ctx, *msg.Head.Record())
+		h.RecentStorageProvider.GetIndexStorage(ctx, jetID).AddObject(ctx, *msg.Head.Record())
 	}
 
 	idx, err := h.ObjectStorage.GetObjectIndex(ctx, jetID, msg.Head.Record(), false)
@@ -614,7 +614,7 @@ func (h *MessageHandler) handleGetChildren(
 	jetID := jetFromContext(ctx)
 
 	if !h.isHeavy {
-		h.RecentStorageProvider.GetStorage(ctx, jetID).AddObject(ctx, *msg.Parent.Record())
+		h.RecentStorageProvider.GetIndexStorage(ctx, jetID).AddObject(ctx, *msg.Parent.Record())
 	}
 
 	idx, err := h.ObjectStorage.GetObjectIndex(ctx, jetID, msg.Parent.Record(), false)
@@ -763,7 +763,7 @@ func (h *MessageHandler) handleGetPendingRequestID(ctx context.Context, parcel c
 	jetID := jetFromContext(ctx)
 	msg := parcel.Message().(*message.GetPendingRequestID)
 
-	requests := h.RecentStorageProvider.GetStorage(ctx, jetID).GetRequestsForObject(msg.ObjectID)
+	requests := h.RecentStorageProvider.GetPendingStorage(ctx, jetID).GetRequestsForObject(msg.ObjectID)
 	if len(requests) == 0 {
 		return &reply.Error{ErrType: reply.ErrNoPendingRequests}, nil
 	}
@@ -791,7 +791,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 		return nil, errors.New("wrong object state record")
 	}
 
-	h.RecentStorageProvider.GetStorage(ctx, jetID).AddObject(ctx, *msg.Object.Record())
+	h.RecentStorageProvider.GetIndexStorage(ctx, jetID).AddObject(ctx, *msg.Object.Record())
 
 	// FIXME: temporary fix. If we calculate blob id on the client, pulse can change before message sending and this
 	//  id will not match the one calculated on the server.
@@ -890,7 +890,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel core.Pa
 		return nil, errors.New("wrong child record")
 	}
 
-	h.RecentStorageProvider.GetStorage(ctx, jetID).AddObject(ctx, *msg.Parent.Record())
+	h.RecentStorageProvider.GetIndexStorage(ctx, jetID).AddObject(ctx, *msg.Parent.Record())
 
 	var child *core.RecordID
 	err := h.DBContext.Update(ctx, func(tx *storage.TransactionManager) error {
@@ -1176,10 +1176,11 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 		"len": len(msg.RecentObjects),
 		"jet": jetID.DebugString(),
 	}).Debugf("received pending requests")
-	recentStorage := h.RecentStorageProvider.GetStorage(ctx, jetID)
+	pendingStorage := h.RecentStorageProvider.GetPendingStorage(ctx, jetID)
+	indexStorage := h.RecentStorageProvider.GetIndexStorage(ctx, jetID)
 	for objID, requests := range msg.PendingRequests {
 		for reqID := range requests {
-			recentStorage.AddPendingRequest(ctx, objID, reqID)
+			pendingStorage.AddPendingRequest(ctx, objID, reqID)
 		}
 	}
 
@@ -1204,7 +1205,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 		}
 
 		fmt.Println("[saved id] ", id.String())
-		recentStorage.AddObjectWithTLL(ctx, id, meta.TTL)
+		indexStorage.AddObjectWithTLL(ctx, id, meta.TTL)
 	}
 
 	err = h.JetStorage.UpdateJetTree(
