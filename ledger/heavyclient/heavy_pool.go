@@ -167,7 +167,6 @@ func (scp *Pool) LightCleanup(
 
 		allClients := scp.AllClients(ctx)
 		var wg sync.WaitGroup
-		wg.Add(len(allClients))
 
 		cleanupConcurrency := 8
 		sem := make(chan struct{}, cleanupConcurrency)
@@ -185,6 +184,11 @@ func (scp *Pool) LightCleanup(
 			// TODO: fill candidates here
 			candidates := jetIndexesRemoved[jetID]
 
+			if (len(candidates) == 0) && skipRecordsCleanup {
+				continue
+			}
+
+			wg.Add(1)
 			sem <- struct{}{}
 			go func() {
 				defer func() {
@@ -196,15 +200,17 @@ func (scp *Pool) LightCleanup(
 					inslogger.FromContext(ctx).Debugf("Start light cleanup, pulse < %v, jet = %v",
 						untilPN, jetID.DebugString())
 
-					jetRecentStore := rsp.GetIndexStorage(ctx, jetID)
-
-					idxsRmStat, err := scp.cleaner.CleanJetIndexes(ctx, jetID, jetRecentStore, candidates)
-					if err != nil {
-						inslogger.FromContext(ctx).Errorf("Error on indexes cleanup (pulse < %v, jet = %v): %v",
-							untilPN, jetID.DebugString(), err)
+					if len(candidates) > 0 {
+						jetRecentStore := rsp.GetIndexStorage(ctx, jetID)
+						idxsRmStat, err := scp.cleaner.CleanJetIndexes(ctx, jetID, jetRecentStore, candidates)
+						if err != nil {
+							inslogger.FromContext(ctx).Errorf("Error on indexes cleanup (pulse < %v, jet = %v): %v",
+								untilPN, jetID.DebugString(), err)
+						}
+						inslogger.FromContext(ctx).Infof(
+							"Indexes light cleanup stat=%#v (pulse < %v, jet = %v)", idxsRmStat, untilPN, jetID.DebugString())
 					}
-					inslogger.FromContext(ctx).Infof(
-						"Indexes light cleanup stat=%#v (pulse < %v, jet = %v)", idxsRmStat, untilPN, jetID.DebugString())
+
 					if skipRecordsCleanup {
 						return nil, nil
 					}
