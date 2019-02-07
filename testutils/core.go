@@ -18,6 +18,7 @@ package testutils
 
 import (
 	"crypto"
+	"fmt"
 	"hash"
 	"math/rand"
 
@@ -56,16 +57,44 @@ func RandomID() core.RecordID {
 	return id
 }
 
-// RandomJet generates random jet with random depth (uint8) and
+// RandomJet generates random jet with random depth.
 func RandomJet() core.RecordID {
+	// don't be too huge (i.e. 255)
+	depth := uint8(rand.Intn(128))
+	return RandomJetWithDepth(depth)
+}
+
+// RandomJetWithDepth generates random jet with provided depth.
+func RandomJetWithDepth(depth uint8) core.RecordID {
 	jetbuf := make([]byte, core.RecordHashSize)
 	_, err := rand.Read(jetbuf)
 	if err != nil {
 		panic(err)
 	}
-	// don't be too huge (i.e. 255)
-	depth := uint8(rand.Intn(128))
 	return *jet.NewID(depth, jet.ResetBits(jetbuf[1:], depth))
+}
+
+// JetFromString converts string representation of Jet to core.RecordID.
+//
+// Examples: "010" converts to Jet with depth 3 and prefix "01".
+func JetFromString(s string) core.RecordID {
+	jetPrefix := make([]byte, core.JetPrefixSize)
+	depth := uint8(len(s))
+	for i, char := range s {
+		byteOffset := int(i / 8)
+		bitsOffset := 7 - uint(i%8)
+		switch char {
+		case '0':
+		case '1':
+			add := uint8(1 << bitsOffset)
+			jetPrefix[byteOffset] = byte(uint8(jetPrefix[byteOffset] + add))
+		default:
+			panic(fmt.Errorf(
+				"%v character is non 0 or 1, but %v (input string='%v')", i, char, s))
+		}
+	}
+	return *jet.NewID(depth, jetPrefix)
+
 }
 
 type cryptographySchemeMock struct{}
