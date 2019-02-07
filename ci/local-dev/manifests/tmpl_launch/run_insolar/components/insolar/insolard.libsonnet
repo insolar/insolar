@@ -48,6 +48,14 @@
     "certificatepath": "/opt/insolar/config/node-cert.json",
     "metrics": {
         "listenaddress": "0.0.0.0:8080"
+    },
+    "tracer": {
+       	"jaeger": {
+            "collectorendpoint": "",
+            "agentendpoint": "jaeger-agent:6831",
+            "probabilityrate": 1,
+            "samplingrules": {}
+        }
     }
 }
 
