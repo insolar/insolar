@@ -1,3 +1,5 @@
+// +build network
+
 /*
  * The Clear BSD License
  *
