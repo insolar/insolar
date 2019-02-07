@@ -89,3 +89,11 @@ var ConsensusPhase21Exec = prometheus.NewCounter(prometheus.CounterOpts{
 	Namespace: insolarNamespace,
 	Subsystem: "consensus",
 })
+
+// ConsensusActiveNodes is current consensus phase 21 execution count metric
+var ConsensusActiveNodes = prometheus.NewGauge(prometheus.GaugeOpts{
+	Name:      "count",
+	Help:      "Active nodes count after consensus",
+	Namespace: insolarNamespace,
+	Subsystem: "consensus",
+})

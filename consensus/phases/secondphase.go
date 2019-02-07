@@ -188,7 +188,6 @@ func (sp *secondPhase) Execute21(ctx context.Context, pulse *core.Pulse, state *
 	if len(additionalRequests) == 0 {
 		return state, nil
 	}
-	metrics.ConsensusPacketsRecv.WithLabelValues("phase 21").Add(float64(len(voteAnswers)))
 
 	for _, vote := range voteAnswers {
 		switch v := vote.(type) {
@@ -199,6 +198,7 @@ func (sp *secondPhase) Execute21(ctx context.Context, pulse *core.Pulse, state *
 		}
 	}
 
+	metrics.ConsensusPacketsRecv.WithLabelValues("phase 21").Add(float64(len(results)))
 	if len(results) != count {
 		return nil, errors.New(fmt.Sprintf("[ Phase 2.1 ] Failed to receive enough MissingNodeSupplementaryVote responses,"+
 			" received: %d/%d", len(results), count))

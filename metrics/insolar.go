@@ -63,6 +63,7 @@ func GetInsolarRegistry() *prometheus.Registry {
 	registry.MustRegister(ConsensusPhase2TimedOuts)
 	registry.MustRegister(ConsensusPhase3Exec)
 	registry.MustRegister(ConsensusPhase21Exec)
+	registry.MustRegister(ConsensusActiveNodes)
 
 	return registry
 }

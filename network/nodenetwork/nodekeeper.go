@@ -28,6 +28,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/network/transport/host"
@@ -427,6 +428,7 @@ func (nk *nodekeeper) MoveSyncToActive() error {
 	log.Infof("[ MoveSyncToActive ] New active list confirmed. Active list size: %d -> %d",
 		len(nk.active), len(mergeResult.ActiveList))
 	nk.active = mergeResult.ActiveList
+	metrics.ConsensusActiveNodes.Set(float64(len(nk.active)))
 	nk.reindex()
 	nk.nodesJoinedDuringPrevPulse = mergeResult.Flags.NodesJoinedDuringPrevPulse
 	return nil
