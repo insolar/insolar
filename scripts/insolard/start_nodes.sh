@@ -40,7 +40,7 @@ generate_nodes_certs()
     for node in "${NODES[@]}"
     do
         i=$((i + 1))
-        $CERT_GENERATOR --root-conf $ROOT_MEMBER_KEYS_FILE -c $NODES_DATA/certs/node_cert_$i.json -k $node/keys.json
+        $CERT_GENERATOR --root-conf $ROOT_MEMBER_KEYS_FILE -h "http://127.0.0.1:19101/api" -c $NODES_DATA/certs/node_cert_$i.json -k $node/keys.json
         cp -v $NODES_DATA/certs/node_cert_$i.json $node/cert.json
     done
     echo "generate_nodes_certs() end."
