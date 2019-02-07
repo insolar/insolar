@@ -709,34 +709,28 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse core.Pulse, 
 
 	delta := m.options.storeLightPulses
 
-	pn := newPulse.PulseNumber
-	func() {
-		startLookup := time.Now()
-		defer func() {
-			inslog.Infof("cleanLightData pulse lookup time spend=%v", time.Since(startLookup))
-		}()
-		for i := 0; i <= delta; i++ {
-			prevPulse, err := m.PulseTracker.GetPreviousPulse(ctx, pn)
-			if err != nil {
-				inslogger.FromContext(ctx).Errorf("Can't get previous Nth %v pulse by pulse number: %v", i, pn)
-				return
-			}
+	p, err := m.PulseTracker.GetNthPrevPulse(ctx, uint(delta), newPulse.PulseNumber)
+	if err != nil {
+		inslogger.FromContext(ctx).Errorf("Can't get %dth previous pulse: %s", delta, err)
+		return
+	}
 
-			pn = prevPulse.Pulse.PulseNumber
-			if pn <= core.FirstPulseNumber {
-				return
-			}
-		}
-	}()
+	pn := p.Pulse.PulseNumber
 
 	m.NodeStorage.RemoveActiveNodesUntil(pn)
-	m.JetStorage.DeleteJetTree(ctx, pn)
 
-	err := m.syncClientsPool.LightCleanup(ctx, pn, m.RecentStorageProvider, jetIndexesRemoved)
+	err = m.syncClientsPool.LightCleanup(ctx, pn, m.RecentStorageProvider, jetIndexesRemoved)
 	if err != nil {
 		inslogger.FromContext(ctx).Errorf(
 			"Error on light cleanup, until pulse = %v, singlefligt err = %v", pn, err)
 	}
+
+	p, err = m.PulseTracker.GetPreviousPulse(ctx, pn)
+	if err != nil {
+		inslogger.FromContext(ctx).Errorf("Can't get previous pulse: %s", err)
+		return
+	}
+	m.JetStorage.DeleteJetTree(ctx, p.Pulse.PulseNumber)
 }
 
 func (m *PulseManager) prepareArtifactManagerMessageHandlerForNextPulse(ctx context.Context, newPulse core.Pulse, jets []jetInfo) {

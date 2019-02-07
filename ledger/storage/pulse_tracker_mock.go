@@ -30,6 +30,11 @@ type PulseTrackerMock struct {
 	GetLatestPulsePreCounter uint64
 	GetLatestPulseMock       mPulseTrackerMockGetLatestPulse
 
+	GetNthPrevPulseFunc       func(p context.Context, p1 uint, p2 core.PulseNumber) (r *Pulse, r1 error)
+	GetNthPrevPulseCounter    uint64
+	GetNthPrevPulsePreCounter uint64
+	GetNthPrevPulseMock       mPulseTrackerMockGetNthPrevPulse
+
 	GetPreviousPulseFunc       func(p context.Context, p1 core.PulseNumber) (r *Pulse, r1 error)
 	GetPreviousPulseCounter    uint64
 	GetPreviousPulsePreCounter uint64
@@ -51,6 +56,7 @@ func NewPulseTrackerMock(t minimock.Tester) *PulseTrackerMock {
 
 	m.AddPulseMock = mPulseTrackerMockAddPulse{mock: m}
 	m.GetLatestPulseMock = mPulseTrackerMockGetLatestPulse{mock: m}
+	m.GetNthPrevPulseMock = mPulseTrackerMockGetNthPrevPulse{mock: m}
 	m.GetPreviousPulseMock = mPulseTrackerMockGetPreviousPulse{mock: m}
 	m.GetPulseMock = mPulseTrackerMockGetPulse{mock: m}
 
@@ -350,6 +356,158 @@ func (m *PulseTrackerMock) GetLatestPulseFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.GetLatestPulseFunc != nil {
 		return atomic.LoadUint64(&m.GetLatestPulseCounter) > 0
+	}
+
+	return true
+}
+
+type mPulseTrackerMockGetNthPrevPulse struct {
+	mock              *PulseTrackerMock
+	mainExpectation   *PulseTrackerMockGetNthPrevPulseExpectation
+	expectationSeries []*PulseTrackerMockGetNthPrevPulseExpectation
+}
+
+type PulseTrackerMockGetNthPrevPulseExpectation struct {
+	input  *PulseTrackerMockGetNthPrevPulseInput
+	result *PulseTrackerMockGetNthPrevPulseResult
+}
+
+type PulseTrackerMockGetNthPrevPulseInput struct {
+	p  context.Context
+	p1 uint
+	p2 core.PulseNumber
+}
+
+type PulseTrackerMockGetNthPrevPulseResult struct {
+	r  *Pulse
+	r1 error
+}
+
+//Expect specifies that invocation of PulseTracker.GetNthPrevPulse is expected from 1 to Infinity times
+func (m *mPulseTrackerMockGetNthPrevPulse) Expect(p context.Context, p1 uint, p2 core.PulseNumber) *mPulseTrackerMockGetNthPrevPulse {
+	m.mock.GetNthPrevPulseFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &PulseTrackerMockGetNthPrevPulseExpectation{}
+	}
+	m.mainExpectation.input = &PulseTrackerMockGetNthPrevPulseInput{p, p1, p2}
+	return m
+}
+
+//Return specifies results of invocation of PulseTracker.GetNthPrevPulse
+func (m *mPulseTrackerMockGetNthPrevPulse) Return(r *Pulse, r1 error) *PulseTrackerMock {
+	m.mock.GetNthPrevPulseFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &PulseTrackerMockGetNthPrevPulseExpectation{}
+	}
+	m.mainExpectation.result = &PulseTrackerMockGetNthPrevPulseResult{r, r1}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of PulseTracker.GetNthPrevPulse is expected once
+func (m *mPulseTrackerMockGetNthPrevPulse) ExpectOnce(p context.Context, p1 uint, p2 core.PulseNumber) *PulseTrackerMockGetNthPrevPulseExpectation {
+	m.mock.GetNthPrevPulseFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &PulseTrackerMockGetNthPrevPulseExpectation{}
+	expectation.input = &PulseTrackerMockGetNthPrevPulseInput{p, p1, p2}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *PulseTrackerMockGetNthPrevPulseExpectation) Return(r *Pulse, r1 error) {
+	e.result = &PulseTrackerMockGetNthPrevPulseResult{r, r1}
+}
+
+//Set uses given function f as a mock of PulseTracker.GetNthPrevPulse method
+func (m *mPulseTrackerMockGetNthPrevPulse) Set(f func(p context.Context, p1 uint, p2 core.PulseNumber) (r *Pulse, r1 error)) *PulseTrackerMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.GetNthPrevPulseFunc = f
+	return m.mock
+}
+
+//GetNthPrevPulse implements github.com/insolar/insolar/ledger/storage.PulseTracker interface
+func (m *PulseTrackerMock) GetNthPrevPulse(p context.Context, p1 uint, p2 core.PulseNumber) (r *Pulse, r1 error) {
+	counter := atomic.AddUint64(&m.GetNthPrevPulsePreCounter, 1)
+	defer atomic.AddUint64(&m.GetNthPrevPulseCounter, 1)
+
+	if len(m.GetNthPrevPulseMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.GetNthPrevPulseMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to PulseTrackerMock.GetNthPrevPulse. %v %v %v", p, p1, p2)
+			return
+		}
+
+		input := m.GetNthPrevPulseMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, PulseTrackerMockGetNthPrevPulseInput{p, p1, p2}, "PulseTracker.GetNthPrevPulse got unexpected parameters")
+
+		result := m.GetNthPrevPulseMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the PulseTrackerMock.GetNthPrevPulse")
+			return
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.GetNthPrevPulseMock.mainExpectation != nil {
+
+		input := m.GetNthPrevPulseMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, PulseTrackerMockGetNthPrevPulseInput{p, p1, p2}, "PulseTracker.GetNthPrevPulse got unexpected parameters")
+		}
+
+		result := m.GetNthPrevPulseMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the PulseTrackerMock.GetNthPrevPulse")
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.GetNthPrevPulseFunc == nil {
+		m.t.Fatalf("Unexpected call to PulseTrackerMock.GetNthPrevPulse. %v %v %v", p, p1, p2)
+		return
+	}
+
+	return m.GetNthPrevPulseFunc(p, p1, p2)
+}
+
+//GetNthPrevPulseMinimockCounter returns a count of PulseTrackerMock.GetNthPrevPulseFunc invocations
+func (m *PulseTrackerMock) GetNthPrevPulseMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.GetNthPrevPulseCounter)
+}
+
+//GetNthPrevPulseMinimockPreCounter returns the value of PulseTrackerMock.GetNthPrevPulse invocations
+func (m *PulseTrackerMock) GetNthPrevPulseMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.GetNthPrevPulsePreCounter)
+}
+
+//GetNthPrevPulseFinished returns true if mock invocations count is ok
+func (m *PulseTrackerMock) GetNthPrevPulseFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.GetNthPrevPulseMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.GetNthPrevPulseCounter) == uint64(len(m.GetNthPrevPulseMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.GetNthPrevPulseMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.GetNthPrevPulseCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.GetNthPrevPulseFunc != nil {
+		return atomic.LoadUint64(&m.GetNthPrevPulseCounter) > 0
 	}
 
 	return true
@@ -669,6 +827,10 @@ func (m *PulseTrackerMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to PulseTrackerMock.GetLatestPulse")
 	}
 
+	if !m.GetNthPrevPulseFinished() {
+		m.t.Fatal("Expected call to PulseTrackerMock.GetNthPrevPulse")
+	}
+
 	if !m.GetPreviousPulseFinished() {
 		m.t.Fatal("Expected call to PulseTrackerMock.GetPreviousPulse")
 	}
@@ -702,6 +864,10 @@ func (m *PulseTrackerMock) MinimockFinish() {
 		m.t.Fatal("Expected call to PulseTrackerMock.GetLatestPulse")
 	}
 
+	if !m.GetNthPrevPulseFinished() {
+		m.t.Fatal("Expected call to PulseTrackerMock.GetNthPrevPulse")
+	}
+
 	if !m.GetPreviousPulseFinished() {
 		m.t.Fatal("Expected call to PulseTrackerMock.GetPreviousPulse")
 	}
@@ -726,6 +892,7 @@ func (m *PulseTrackerMock) MinimockWait(timeout time.Duration) {
 		ok := true
 		ok = ok && m.AddPulseFinished()
 		ok = ok && m.GetLatestPulseFinished()
+		ok = ok && m.GetNthPrevPulseFinished()
 		ok = ok && m.GetPreviousPulseFinished()
 		ok = ok && m.GetPulseFinished()
 
@@ -742,6 +909,10 @@ func (m *PulseTrackerMock) MinimockWait(timeout time.Duration) {
 
 			if !m.GetLatestPulseFinished() {
 				m.t.Error("Expected call to PulseTrackerMock.GetLatestPulse")
+			}
+
+			if !m.GetNthPrevPulseFinished() {
+				m.t.Error("Expected call to PulseTrackerMock.GetNthPrevPulse")
 			}
 
 			if !m.GetPreviousPulseFinished() {
@@ -769,6 +940,10 @@ func (m *PulseTrackerMock) AllMocksCalled() bool {
 	}
 
 	if !m.GetLatestPulseFinished() {
+		return false
+	}
+
+	if !m.GetNthPrevPulseFinished() {
 		return false
 	}
 
