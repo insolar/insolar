@@ -331,7 +331,7 @@ func (r *PendingStorage) GetRequestsForObject(obj core.RecordID) []core.RecordID
 	return results
 }
 
-// RemovePendingRequest removes an id from cache
+// RemovePendingRequest removes a request on object from cache
 func (r *PendingStorage) RemovePendingRequest(ctx context.Context, obj, req core.RecordID) {
 	r.lock.Lock()
 	defer r.lock.Unlock()
