@@ -176,6 +176,8 @@ func main() {
 
 		discoveryNodesConfigs = append(discoveryNodesConfigs, conf)
 
+		pctx.addTarget(node.Role, conf)
+
 		pwConfig.Nodes = append(pwConfig.Nodes, conf.APIRunner.Address)
 	}
 
