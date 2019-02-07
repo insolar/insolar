@@ -141,7 +141,12 @@ func (scp *Pool) AllClients(ctx context.Context) []*JetClient {
 // Waits until all cleanup will done and mesaures time.
 //
 // Under hood it uses singleflight on Jet prefix to avoid clashing on the same key space.
-func (scp *Pool) LightCleanup(ctx context.Context, untilPN core.PulseNumber, rsp recentstorage.Provider) error {
+func (scp *Pool) LightCleanup(
+	ctx context.Context,
+	untilPN core.PulseNumber,
+	rsp recentstorage.Provider,
+	jetIndexesRemoved map[core.RecordID][]core.RecordID,
+) error {
 	inslog := inslogger.FromContext(ctx)
 	start := time.Now()
 	defer func() {
@@ -178,7 +183,7 @@ func (scp *Pool) LightCleanup(ctx context.Context, untilPN core.PulseNumber, rsp
 			jetPrefixSeen[prefixKey] = struct{}{}
 
 			// TODO: fill candidates here
-			candidates := []core.RecordID{}
+			candidates := jetIndexesRemoved[jetID]
 
 			sem <- struct{}{}
 			go func() {

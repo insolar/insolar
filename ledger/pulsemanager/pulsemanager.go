@@ -580,7 +580,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 	)
 	defer span.End()
 
-	jets, oldPulse, prevPulseNumber, err := m.setUnderGilSection(ctx, newPulse, persist)
+	jets, jetIndexesRemoved, oldPulse, prevPulseNumber, err := m.setUnderGilSection(ctx, newPulse, persist)
 	if err != nil {
 		return err
 	}
@@ -599,7 +599,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 		}
 		m.postProcessJets(ctx, newPulse, jets)
 		m.addSync(ctx, jets, oldPulse.PulseNumber)
-		go m.cleanLightData(ctx, newPulse)
+		go m.cleanLightData(ctx, newPulse, jetIndexesRemoved)
 	}
 
 	err = m.Bus.OnPulse(ctx, newPulse)
@@ -620,7 +620,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 func (m *PulseManager) setUnderGilSection(
 	ctx context.Context, newPulse core.Pulse, persist bool,
 ) (
-	[]jetInfo, *core.Pulse, *core.PulseNumber, error,
+	[]jetInfo, map[core.RecordID][]core.RecordID, *core.Pulse, *core.PulseNumber, error,
 ) {
 	m.GIL.Acquire(ctx)
 	ctx, span := instracer.StartSpan(ctx, "pulse.gil_locked")
@@ -632,7 +632,7 @@ func (m *PulseManager) setUnderGilSection(
 	storagePulse, err := m.PulseTracker.GetLatestPulse(ctx)
 	if err != nil {
 		m.PulseStorage.Unlock()
-		return nil, nil, nil, errors.Wrap(err, "call of GetLatestPulseNumber failed")
+		return nil, nil, nil, nil, errors.Wrap(err, "call of GetLatestPulseNumber failed")
 	}
 
 	oldPulse := storagePulse.Pulse
@@ -654,12 +654,12 @@ func (m *PulseManager) setUnderGilSection(
 	if persist {
 		if err := m.PulseTracker.AddPulse(ctx, newPulse); err != nil {
 			m.PulseStorage.Unlock()
-			return nil, nil, nil, errors.Wrap(err, "call of AddPulse failed")
+			return nil, nil, nil, nil, errors.Wrap(err, "call of AddPulse failed")
 		}
 		err = m.NodeStorage.SetActiveNodes(newPulse.PulseNumber, m.NodeNet.GetActiveNodes())
 		if err != nil {
 			m.PulseStorage.Unlock()
-			return nil, nil, nil, errors.Wrap(err, "call of SetActiveNodes failed")
+			return nil, nil, nil, nil, errors.Wrap(err, "call of SetActiveNodes failed")
 		}
 	}
 
@@ -670,17 +670,17 @@ func (m *PulseManager) setUnderGilSection(
 	if persist {
 		jets, err = m.processJets(ctx, oldPulse.PulseNumber, newPulse.PulseNumber)
 		if err != nil {
-			return nil, nil, nil, errors.Wrap(err, "failed to process jets")
+			return nil, nil, nil, nil, errors.Wrap(err, "failed to process jets")
 		}
 	}
 
-	m.RecentStorageProvider.DecreaseIndexesTTL(ctx)
+	removed := m.RecentStorageProvider.DecreaseIndexesTTL(ctx)
 
 	if m.NodeNet.GetOrigin().Role() == core.StaticRoleLightMaterial {
 		m.prepareArtifactManagerMessageHandlerForNextPulse(ctx, newPulse, jets)
 	}
 
-	return jets, &oldPulse, prevPulseNumber, nil
+	return jets, removed, &oldPulse, prevPulseNumber, nil
 }
 
 func (m *PulseManager) addSync(ctx context.Context, jets []jetInfo, pulse core.PulseNumber) {
@@ -725,7 +725,7 @@ func (m *PulseManager) postProcessJets(ctx context.Context, newPulse core.Pulse,
 	}
 }
 
-func (m *PulseManager) cleanLightData(ctx context.Context, newPulse core.Pulse) {
+func (m *PulseManager) cleanLightData(ctx context.Context, newPulse core.Pulse, jetIndexesRemoved map[core.RecordID][]core.RecordID) {
 	startSync := time.Now()
 	inslog := inslogger.FromContext(ctx)
 	ctx, span := instracer.StartSpan(ctx, "pulse.clean")
@@ -761,7 +761,7 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse core.Pulse) 
 	m.NodeStorage.RemoveActiveNodesUntil(pn)
 	m.JetStorage.DeleteJetTree(ctx, pn)
 
-	err := m.syncClientsPool.LightCleanup(ctx, pn, m.RecentStorageProvider)
+	err := m.syncClientsPool.LightCleanup(ctx, pn, m.RecentStorageProvider, jetIndexesRemoved)
 	if err != nil {
 		inslogger.FromContext(ctx).Errorf(
 			"Error on light cleanup, until pulse = %v, singlefligt err = %v", pn, err)
