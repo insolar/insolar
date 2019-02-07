@@ -244,8 +244,7 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse core.Pulse) {
 
 	currentPulse, err := n.PulseStorage.Current(ctx)
 	if err != nil {
-		logger.Error(errors.Wrap(err, "Could not get current pulse"))
-		return
+		panic(errors.Wrap(err, "Could not get current pulse"))
 	}
 
 	// Working on early network state, ready for fake pulses
@@ -267,13 +266,11 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse core.Pulse) {
 	err = n.NetworkSwitcher.OnPulse(ctx, newPulse)
 	if err != nil {
 		logger.Error(errors.Wrap(err, "Failed to call OnPulse on NetworkSwitcher"))
-		return
 	}
 
 	err = n.PulseManager.Set(ctx, newPulse, n.NetworkSwitcher.GetState() == core.CompleteNetworkState)
 	if err != nil {
-		logger.Error(errors.Wrap(err, "Failed to set newPulse"))
-		return
+		panic(errors.Wrap(err, "Failed to set newPulse"))
 	}
 
 	logger.Infof("Set new current pulse number: %d", newPulse.PulseNumber)
