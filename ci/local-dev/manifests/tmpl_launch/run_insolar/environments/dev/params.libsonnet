@@ -2,11 +2,20 @@ local params = std.extVar("__ksonnet/params");
 local globals = import "globals.libsonnet";
 local envParams = params + {
   components +: {
-    // Insert component parameter overrides here. Ex:
-    // guestbook +: {
-    //   name: "guestbook-dev",
-    //   replicas: params.global.replicas,
-    // },
+    "insolar.insolar"+:{
+    image+: {
+              image: "registry.insolar.io/insolard",
+              tag: "v0.7.6",
+              image_pull_policy: "IfNotPresent"
+          }
+        },
+    "pulsar.insolar"+:{
+    image+: {
+              image: "registry.insolar.io/insolard",
+              tag: "v0.7.6",
+              image_pull_policy: "IfNotPresent"
+          }
+        }
   },
 };
 

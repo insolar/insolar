@@ -9,9 +9,15 @@ environments:
     targets:
     - insolar
     - pulsar
-    - prometheus
-    - elk
-    - jaeger
+  dev:
+    destination:
+      namespace: dev
+      server: https://kube.insolar.io:6443
+    k8sVersion: v1.13.1
+    path: dev
+    targets:
+    - insolar
+    - pulsar
 kind: ksonnet.io/app
 name: run_insolar
 registries:

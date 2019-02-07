@@ -1,3 +1,8 @@
+local base_params = import '../params.libsonnet';
+local params = std.mergePatch( base_params.components, std.extVar("__ksonnet/params").components );
+
+local image_params = params.insolar.image;
+
 {
 	"apiVersion": "apps/v1beta1",
 	"kind": "StatefulSet",
@@ -20,8 +25,8 @@
 				"initContainers": [
 					{
 						"name": "init-register",
-						"imagePullPolicy": "Never",
-						"image": "base",
+						"imagePullPolicy": image_params.image_pull_policy,
+						"image": image_params.image + ":" + image_params.tag,
 						"tty": true,
 						"stdin": true,
 						"command": [
@@ -46,8 +51,8 @@
 				"containers": [
 					{
 						"name": "pulsar",
-						"imagePullPolicy": "Never",
-						"image": "base",
+						"imagePullPolicy": image_params.image_pull_policy,
+						"image": image_params.image + ":" + image_params.tag,
 						"workingDir": "/opt/insolar",
 						"tty": true,
 						"stdin": true,

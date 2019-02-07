@@ -25,9 +25,6 @@ local image_params = params.insolar.image;
 				}
 			},
 			"spec": {
-				"nodeSelector": {
-					"kubernetes.io/hostname": "docker-for-desktop"
-				},
 				"initContainers": [
 					{
 						"name": "init-bootstrap",
@@ -77,8 +74,8 @@ local image_params = params.insolar.image;
 				"containers": [
 					{
 						"name": "insgorund",
-						"imagePullPolicy": "Never",
-						"image": "base",
+						"imagePullPolicy": image_params.image_pull_policy,
+						"image": image_params.image + ":" + image_params.tag,
 						"workingDir": "/opt/insolar",
 						"tty": true,
 						"stdin": true,
@@ -118,8 +115,8 @@ local image_params = params.insolar.image;
 					},
 					{
 						"name": "insolard",
-						"imagePullPolicy": "Never",
-						"image": "base",
+						"imagePullPolicy": image_params.image_pull_policy,
+						"image": image_params.image + ":" + image_params.tag,
 						"workingDir": "/opt/insolar",
 						"tty": true,
 						"stdin": true,
