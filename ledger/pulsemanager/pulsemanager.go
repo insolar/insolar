@@ -138,13 +138,6 @@ func (m *PulseManager) processEndPulse(
 				return errors.Wrapf(err, "create drop on pulse %v failed", currentPulse.PulseNumber)
 			}
 
-			msg, err := m.getExecutorHotData(
-				ctx, info.id, newPulse.PulseNumber, drop, dropSerialized,
-			)
-			if err != nil {
-				return errors.Wrapf(err, "getExecutorData failed for jet id %v", info.id)
-			}
-
 			logger := inslogger.FromContext(ctx)
 			sender := func(msg message.HotData, jetID core.RecordID) {
 				ctx, span := instracer.StartSpan(ctx, "pulse.send_hot")
@@ -168,11 +161,23 @@ func (m *PulseManager) processEndPulse(
 			}
 
 			if info.left == nil && info.right == nil {
+				msg, err := m.getExecutorHotData(
+					ctx, info.id, newPulse.PulseNumber, drop, dropSerialized,
+				)
+				if err != nil {
+					return errors.Wrapf(err, "getExecutorData failed for jet id %v", info.id)
+				}
 				// No split happened.
 				if !info.mineNext {
 					go sender(*msg, info.id)
 				}
 			} else {
+				msg, err := m.getExecutorHotData(
+					ctx, info.id, newPulse.PulseNumber, drop, dropSerialized,
+				)
+				if err != nil {
+					return errors.Wrapf(err, "getExecutorData failed for jet id %v", info.id)
+				}
 				// Split happened.
 				if !info.left.mineNext {
 					go sender(*msg, info.left.id)
@@ -525,7 +530,6 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse c
 
 func (m *PulseManager) rewriteHotData(ctx context.Context, fromJetID, toJetID core.RecordID) error {
 	indexStorage := m.RecentStorageProvider.GetIndexStorage(ctx, fromJetID)
-	pendingStorage := m.RecentStorageProvider.GetPendingStorage(ctx, fromJetID)
 
 	for id := range indexStorage.GetObjects() {
 		idx, err := m.ObjectStorage.GetObjectIndex(ctx, fromJetID, &id, false)
@@ -535,25 +539,6 @@ func (m *PulseManager) rewriteHotData(ctx context.Context, fromJetID, toJetID co
 		err = m.ObjectStorage.SetObjectIndex(ctx, toJetID, &id, idx)
 		if err != nil {
 			return errors.Wrap(err, "failed to rewrite index")
-		}
-	}
-
-	for _, requests := range pendingStorage.GetRequests() {
-		for fromReqID := range requests {
-			request, err := m.ObjectStorage.GetRecord(ctx, fromJetID, &fromReqID)
-			if err != nil {
-				return errors.Wrap(err, "failed to rewrite pending request")
-			}
-			toReqID, err := m.ObjectStorage.SetRecord(ctx, toJetID, fromReqID.Pulse(), request)
-			if err == storage.ErrOverride {
-				continue
-			}
-			if err != nil {
-				return errors.Wrap(err, "failed to rewrite pending request")
-			}
-			if !fromReqID.Equal(toReqID) {
-				return errors.New("failed to rewrite pending request (wrong ID generated)")
-			}
 		}
 	}
 
@@ -704,23 +689,9 @@ func (m *PulseManager) postProcessJets(ctx context.Context, newPulse core.Pulse,
 	defer span.End()
 
 	for _, jetInfo := range jets {
-		if jetInfo.left == nil && jetInfo.right == nil {
-			// No split happened.
-			if !jetInfo.mineNext {
-				logger.Debugf("[postProcessJets] clear recent storage for root jet - %v, pulse - %v", jetInfo.id, newPulse.PulseNumber)
-				m.RecentStorageProvider.RemovePendingStorage(ctx, jetInfo.id)
-			}
-		} else {
-			// Split happened.
+		if !jetInfo.mineNext {
+			logger.Debugf("[postProcessJets] clear pending storage for jet - %v, pulse - %v", jetInfo.id, newPulse.PulseNumber)
 			m.RecentStorageProvider.RemovePendingStorage(ctx, jetInfo.id)
-			if !jetInfo.left.mineNext {
-				logger.Debugf("[postProcessJets] clear recent storage for left jet - %v, pulse - %v", jetInfo.left.id, newPulse.PulseNumber)
-				m.RecentStorageProvider.RemovePendingStorage(ctx, jetInfo.left.id)
-			}
-			if !jetInfo.right.mineNext {
-				logger.Debugf("[postProcessJets] clear recent storage for right jet - %v, pulse - %v", jetInfo.right.id, newPulse.PulseNumber)
-				m.RecentStorageProvider.RemovePendingStorage(ctx, jetInfo.right.id)
-			}
 		}
 	}
 }
