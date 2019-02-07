@@ -47,6 +47,7 @@ func TestOnPulse(t *testing.T) {
 	lr, _ := NewLogicRunner(&configuration.LogicRunner{})
 	lr.MessageBus = mb
 	lr.JetCoordinator = jc
+	lr.SynchronousOnPulse = true
 
 	jc.IsAuthorizedMock.Return(false, nil)
 	jc.MeMock.Return(core.RecordRef{})
@@ -491,6 +492,7 @@ func TestLogicRunner_OnPulse_StillExecuting(t *testing.T) {
 	lr, _ := NewLogicRunner(&configuration.LogicRunner{})
 	lr.MessageBus = mb
 	lr.JetCoordinator = jc
+	lr.SynchronousOnPulse = true
 
 	jc.IsAuthorizedMock.Return(false, nil)
 	jc.MeMock.Return(core.RecordRef{})
@@ -574,6 +576,7 @@ func TestOnPulseLedgerHasMoreRequests(t *testing.T) {
 
 		lr, _ := NewLogicRunner(&configuration.LogicRunner{})
 		lr.JetCoordinator = jc
+		lr.SynchronousOnPulse = true
 
 		lr.state[ref] = &ObjectState{
 			ExecutionState: &ExecutionState{
