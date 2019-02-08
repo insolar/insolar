@@ -503,7 +503,7 @@ func (g *Genesis) createKeys(ctx context.Context, path string, amount int) error
 			return errors.Wrap(err, "[ createKeys ] couldn't marshal keys")
 		}
 
-		name := "node_" + strconv.Itoa(i) + ".json"
+		name := fmt.Sprintf(g.config.KeysNameFormat, i)
 		err = WriteFile(path, name, string(result))
 		if err != nil {
 			return errors.Wrap(err, "[ createKeys ] couldn't write keys to file")

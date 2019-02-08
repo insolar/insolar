@@ -1,5 +1,5 @@
 /*
- *    Copyright 2019 Insolar Technologies
+ *    Copyright 2019 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -34,6 +34,7 @@ type Config struct {
 	RootKeysFile     string `mapstructure:"root_keys_file"`
 	NodeKeysDir      string `mapstructure:"node_keys_dir"`
 	DiscoveryKeysDir string `mapstructure:"discovery_keys_dir"`
+	KeysNameFormat   string `mapstructure:"keys_name_format"`
 	ReuseKeys        bool   `mapstructure:"reuse_keys"`
 	RootBalance      uint   `mapstructure:"root_balance"`
 	MajorityRule     int    `mapstructure:"majority_rule"`
