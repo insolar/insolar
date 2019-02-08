@@ -51,3 +51,4 @@ data_pulsar
 /scripts/insolard/benchmark
 
 /ci/local-dev/logs
+/ci/local-dev/manifests/ks/lib
