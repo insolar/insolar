@@ -114,7 +114,7 @@ generate_insolard_configs()
 prepare()
 {
     echo "prepare() starts ..."
-#    stop_listening $run_insgorund
+    stop_listening $run_insgorund
     clear_dirs
     create_required_dirs
     echo "prepare() end."
