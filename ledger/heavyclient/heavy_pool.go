@@ -195,7 +195,7 @@ func (scp *Pool) LightCleanup(
 					wg.Done()
 					<-sem
 				}()
-				scp.cleanupGroup.Do(string(jetPrefix), func() (interface{}, error) {
+				_, _, _ = scp.cleanupGroup.Do(string(jetPrefix), func() (interface{}, error) {
 
 					inslogger.FromContext(ctx).Debugf("Start light cleanup, pulse < %v, jet = %v",
 						untilPN, jetID.DebugString())
@@ -219,7 +219,7 @@ func (scp *Pool) LightCleanup(
 					if err != nil {
 						inslogger.FromContext(ctx).Errorf("Error on light cleanup (pulse < %v, jet = %v): %v",
 							untilPN, jetID.DebugString(), err)
-						return nil, err
+						return nil, nil
 					}
 					inslogger.FromContext(ctx).Infof(
 						"Records light cleanup, records stat=%#v (pulse < %v, jet = %v)", recsRmStat, untilPN, jetID.DebugString())
