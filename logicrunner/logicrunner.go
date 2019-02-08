@@ -535,6 +535,32 @@ func (lr *LogicRunner) StartQueueProcessorIfNeeded(
 	return nil
 }
 
+func (lr *LogicRunner) StartQueueProcessorIfNeededOnPulse(
+	ctx context.Context, es *ExecutionState, ref *core.RecordRef,
+) error {
+	es.Lock()
+	defer es.Unlock()
+
+	if !es.haveSomeToProcess() {
+		inslogger.FromContext(ctx).Debug("queue is empty. processor is not needed")
+		return nil
+	}
+
+	if es.QueueProcessorActive {
+		inslogger.FromContext(ctx).Debug("queue processor is already active. processor is not needed")
+		return nil
+	}
+
+	es.pending = message.NotPending
+
+	inslogger.FromContext(ctx).Debug("Starting a new queue processor")
+	es.QueueProcessorActive = true
+	go lr.ProcessExecutionQueue(ctx, es)
+	go lr.getLedgerPendingRequest(ctx, es, *ref.Record())
+
+	return nil
+}
+
 func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionState) {
 	for {
 		es.Lock()
@@ -1102,7 +1128,7 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 					es.objectbody = nil
 					es.LedgerHasMoreRequests = true
 					go func() {
-						err := lr.StartQueueProcessorIfNeeded(ctx, es, nil)
+						err := lr.StartQueueProcessorIfNeededOnPulse(ctx, es, &ref)
 						if err != nil {
 							inslogger.FromContext(ctx).Error(
 								errors.Wrap(err, "couldn't start queue processor"),
