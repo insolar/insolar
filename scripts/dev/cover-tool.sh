@@ -10,6 +10,8 @@
 #
 # ./scripts/dev/cover-tool.sh instrumentation -v
 #
+# COVERPROFILE=./coverage.txt ./scripts/dev/cover-tool.sh -v
+#
 # depends on gocov:
 #
 #   go get github.com/axw/gocov/gocov
@@ -51,19 +53,18 @@ fi
 TESTED_PACKAGES=./$COVER_TARGET/...
 if [[ -z "$COVER_TARGET" ]]; then
     TESTED_PACKAGES=./...
-    COVER_TARGET="all"
 fi
 
 COVERPROFILE=${COVERPROFILE:-""}
 if [[ -z $"COVERPROFILE" ]]; then
     # collect coverage
-    export COVERPROFILE=$OUTPUT_DIR/$COVER_TARGET.out
+    export COVERPROFILE=$OUTPUT_DIR/coverage.out
     export TESTED_PACKAGES
     make test_with_coverage
 fi
 
 # produce report
-GOCOV_FILE=$OUTPUT_DIR/$COVER_TARGET.gocov
+GOCOV_FILE=$OUTPUT_DIR/coverage.gocov
 gocov convert $COVERPROFILE > $GOCOV_FILE
 if [[ -z "$VERBOSE" ]]; then
     gocov report $GOCOV_FILE | grep -E -v '\S+.go\s+' | grep '.' | awk '/^(.*)([[:space:]]+-+[[:space:]]+)(.*)$/{print $1 "\t" $3}'
