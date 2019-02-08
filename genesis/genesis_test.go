@@ -30,6 +30,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const testDataPath = "gentestdata"
+
 func mockArtifactManager(t *testing.T) *testutils.ArtifactManagerMock {
 	amMock := testutils.NewArtifactManagerMock(t)
 	amMock.RegisterRequestFunc = func(p context.Context, p1 core.RecordRef, p2 core.Parcel) (r *core.RecordID, r1 error) {
@@ -54,17 +56,52 @@ func mockArtifactManagerWithRegisterRequestError(t *testing.T) *testutils.Artifa
 	return amMock
 }
 
+func mockGenesis(t *testing.T, am *testutils.ArtifactManagerMock) *Genesis {
+	ref := testutils.RandomRef()
+	var discoveryNodes []Node
+	discoveryNodes = append(discoveryNodes,
+		Node{
+			Role: "virtual",
+		},
+	)
+	g := &Genesis{
+		config: &Config{
+			ReuseKeys:        true,
+			DiscoveryNodes:   discoveryNodes,
+			DiscoveryKeysDir: testDataPath,
+			NodeKeysDir:      testDataPath,
+		},
+		ArtifactManager: am,
+		rootDomainRef:   &ref,
+		nodeDomainRef:   &ref,
+	}
+	return g
+}
+
+func mockContractBuilder(t *testing.T, g *Genesis) *ContractsBuilder {
+	ref := testutils.RandomRef()
+	cb := NewContractBuilder(g.ArtifactManager)
+	cb.Prototypes[nodeRecord] = &ref
+	return cb
+}
+
+func clearTestDir(t *testing.T) {
+	err := os.RemoveAll(testDataPath)
+	if err != nil {
+		t.Error("can't remove testing data after test done")
+	}
+}
+
 func TestCreateKeys(t *testing.T) {
 	g := Genesis{}
 	ctx := inslogger.TestContext(t)
-	path := "gentestdata"
 	amount := 5
-	defer os.RemoveAll(path)
+	defer clearTestDir(t)
 
-	err := g.createKeys(ctx, path, amount)
+	err := g.createKeys(ctx, testDataPath, amount)
 	require.Nil(t, err)
 
-	files, _ := ioutil.ReadDir(path)
+	files, _ := ioutil.ReadDir(testDataPath)
 	require.Equal(t, amount, len(files))
 }
 
@@ -75,11 +112,10 @@ func TestUploadKeys_DontReuse(t *testing.T) {
 		},
 	}
 	ctx := inslogger.TestContext(t)
-	path := "gentestdata"
 	amount := 5
-	defer os.RemoveAll(path)
+	defer clearTestDir(t)
 
-	info, err := g.uploadKeys(ctx, path, amount)
+	info, err := g.uploadKeys(ctx, testDataPath, amount)
 	require.Nil(t, err)
 
 	require.Equal(t, amount, len(info))
@@ -92,12 +128,12 @@ func TestUploadKeys_Reuse(t *testing.T) {
 		},
 	}
 	ctx := inslogger.TestContext(t)
-	path := "gentestdata"
 	amount := 5
-	err := g.createKeys(ctx, path, amount)
+	err := g.createKeys(ctx, testDataPath, amount)
+	defer clearTestDir(t)
 	require.Nil(t, err)
 
-	info, err := g.uploadKeys(ctx, path, amount)
+	info, err := g.uploadKeys(ctx, testDataPath, amount)
 	require.Nil(t, err)
 
 	require.Equal(t, amount, len(info))
@@ -110,13 +146,12 @@ func TestUploadKeys_Reuse_WrongAmount(t *testing.T) {
 		},
 	}
 	ctx := inslogger.TestContext(t)
-	path := "gentestdata"
 	amount := 5
-	err := g.createKeys(ctx, path, amount+5)
-	defer os.RemoveAll(path)
+	err := g.createKeys(ctx, testDataPath, amount+5)
+	defer os.RemoveAll(testDataPath)
 	require.Nil(t, err)
 
-	_, err = g.uploadKeys(ctx, path, amount)
+	_, err = g.uploadKeys(ctx, testDataPath, amount)
 	require.NotNil(t, err)
 	require.Contains(t, err.Error(), "[ uploadKeys ] amount of nodes != amount of files in directory")
 }
@@ -128,25 +163,17 @@ func TestUploadKeys_Reuse_DirNotExist(t *testing.T) {
 		},
 	}
 	ctx := inslogger.TestContext(t)
-	path := "gentestdata"
 	amount := 5
 
-	_, err := g.uploadKeys(ctx, path, amount)
+	_, err := g.uploadKeys(ctx, testDataPath, amount)
 	require.NotNil(t, err)
 	require.Contains(t, err.Error(), "[ uploadKeys ] dir is not exist")
 }
 
 func TestActivateNodeRecord_RegisterRequest_Err(t *testing.T) {
 	am := mockArtifactManagerWithRegisterRequestError(t)
-	ref := testutils.RandomRef()
-	g := Genesis{
-		config: &Config{
-			ReuseKeys: true,
-		},
-		ArtifactManager: am,
-		rootDomainRef:   &ref,
-	}
-	cb := NewContractBuilder(g.ArtifactManager)
+	g := mockGenesis(t, am)
+	cb := mockContractBuilder(t, g)
 	ctx := inslogger.TestContext(t)
 	publicKey := "fancy_public_key"
 	name := "fancy_name"
@@ -172,17 +199,8 @@ func TestActivateNodeRecord_Activate_Err(t *testing.T) {
 		return nil, errors.New("test reasons")
 	}
 
-	ref := testutils.RandomRef()
-	g := Genesis{
-		config: &Config{
-			ReuseKeys: true,
-		},
-		ArtifactManager: am,
-		rootDomainRef:   &ref,
-		nodeDomainRef:   &ref,
-	}
-	cb := NewContractBuilder(g.ArtifactManager)
-	cb.Prototypes[nodeRecord] = &ref
+	g := mockGenesis(t, am)
+	cb := mockContractBuilder(t, g)
 	ctx := inslogger.TestContext(t)
 	publicKey := "fancy_public_key"
 	name := "fancy_name"
@@ -211,17 +229,8 @@ func TestActivateNodeRecord_RegisterResult_Err(t *testing.T) {
 		return nil, errors.New("test reasons")
 	}
 
-	ref := testutils.RandomRef()
-	g := Genesis{
-		config: &Config{
-			ReuseKeys: true,
-		},
-		ArtifactManager: am,
-		rootDomainRef:   &ref,
-		nodeDomainRef:   &ref,
-	}
-	cb := NewContractBuilder(g.ArtifactManager)
-	cb.Prototypes[nodeRecord] = &ref
+	g := mockGenesis(t, am)
+	cb := mockContractBuilder(t, g)
 	ctx := inslogger.TestContext(t)
 	publicKey := "fancy_public_key"
 	name := "fancy_name"
@@ -239,17 +248,8 @@ func TestActivateNodeRecord_RegisterResult_Err(t *testing.T) {
 
 func TestActivateNodeRecord(t *testing.T) {
 	am := mockArtifactManager(t)
-	ref := testutils.RandomRef()
-	g := Genesis{
-		config: &Config{
-			ReuseKeys: true,
-		},
-		ArtifactManager: am,
-		rootDomainRef:   &ref,
-		nodeDomainRef:   &ref,
-	}
-	cb := NewContractBuilder(g.ArtifactManager)
-	cb.Prototypes[nodeRecord] = &ref
+	g := mockGenesis(t, am)
+	cb := mockContractBuilder(t, g)
 	ctx := inslogger.TestContext(t)
 	publicKey := "fancy_public_key"
 	name := "fancy_name"
@@ -267,17 +267,8 @@ func TestActivateNodeRecord(t *testing.T) {
 
 func TestActivateNodes_Err(t *testing.T) {
 	am := mockArtifactManagerWithRegisterRequestError(t)
-	ref := testutils.RandomRef()
-	g := Genesis{
-		config: &Config{
-			ReuseKeys: true,
-		},
-		ArtifactManager: am,
-		rootDomainRef:   &ref,
-		nodeDomainRef:   &ref,
-	}
-	cb := NewContractBuilder(g.ArtifactManager)
-	cb.Prototypes[nodeRecord] = &ref
+	g := mockGenesis(t, am)
+	cb := mockContractBuilder(t, g)
 	ctx := inslogger.TestContext(t)
 
 	var nodes []nodeInfo
@@ -297,17 +288,8 @@ func TestActivateNodes_Err(t *testing.T) {
 
 func TestActivateNodes(t *testing.T) {
 	am := mockArtifactManager(t)
-	ref := testutils.RandomRef()
-	g := Genesis{
-		config: &Config{
-			ReuseKeys: true,
-		},
-		ArtifactManager: am,
-		rootDomainRef:   &ref,
-		nodeDomainRef:   &ref,
-	}
-	cb := NewContractBuilder(g.ArtifactManager)
-	cb.Prototypes[nodeRecord] = &ref
+	g := mockGenesis(t, am)
+	cb := mockContractBuilder(t, g)
 	ctx := inslogger.TestContext(t)
 
 	var nodes []nodeInfo
@@ -331,24 +313,8 @@ func TestActivateNodes(t *testing.T) {
 
 func TestActivateDiscoveryNodes_DiffLen(t *testing.T) {
 	am := mockArtifactManager(t)
-	ref := testutils.RandomRef()
-	var discoveryNodes []Node
-	discoveryNodes = append(discoveryNodes,
-		Node{
-			Role: "virtual",
-		},
-	)
-	g := Genesis{
-		config: &Config{
-			ReuseKeys:      true,
-			DiscoveryNodes: discoveryNodes,
-		},
-		ArtifactManager: am,
-		rootDomainRef:   &ref,
-		nodeDomainRef:   &ref,
-	}
-	cb := NewContractBuilder(g.ArtifactManager)
-	cb.Prototypes[nodeRecord] = &ref
+	g := mockGenesis(t, am)
+	cb := mockContractBuilder(t, g)
 	ctx := inslogger.TestContext(t)
 
 	var nodes []nodeInfo
@@ -367,27 +333,8 @@ func TestActivateDiscoveryNodes_DiffLen(t *testing.T) {
 
 func TestActivateDiscoveryNodes_Err(t *testing.T) {
 	am := mockArtifactManagerWithRegisterRequestError(t)
-	ref := testutils.RandomRef()
-	var discoveryNodes []Node
-	discoveryNodes = append(discoveryNodes,
-		Node{
-			Role: "virtual",
-		},
-		Node{
-			Role: "light_material",
-		},
-	)
-	g := Genesis{
-		config: &Config{
-			ReuseKeys:      true,
-			DiscoveryNodes: discoveryNodes,
-		},
-		ArtifactManager: am,
-		rootDomainRef:   &ref,
-		nodeDomainRef:   &ref,
-	}
-	cb := NewContractBuilder(g.ArtifactManager)
-	cb.Prototypes[nodeRecord] = &ref
+	g := mockGenesis(t, am)
+	cb := mockContractBuilder(t, g)
 	ctx := inslogger.TestContext(t)
 
 	var nodes []nodeInfo
@@ -399,7 +346,7 @@ func TestActivateDiscoveryNodes_Err(t *testing.T) {
 			publicKey: "test_pk_2",
 		},
 	)
-	require.Len(t, nodes, len(discoveryNodes))
+	require.Len(t, nodes, len(g.config.DiscoveryNodes))
 
 	_, err := g.activateDiscoveryNodes(ctx, cb, nodes)
 	require.NotNil(t, err)
@@ -408,27 +355,8 @@ func TestActivateDiscoveryNodes_Err(t *testing.T) {
 
 func TestActivateDiscoveryNodes(t *testing.T) {
 	am := mockArtifactManager(t)
-	ref := testutils.RandomRef()
-	var discoveryNodes []Node
-	discoveryNodes = append(discoveryNodes,
-		Node{
-			Role: "virtual",
-		},
-		Node{
-			Role: "light_material",
-		},
-	)
-	g := Genesis{
-		config: &Config{
-			ReuseKeys:      true,
-			DiscoveryNodes: discoveryNodes,
-		},
-		ArtifactManager: am,
-		rootDomainRef:   &ref,
-		nodeDomainRef:   &ref,
-	}
-	cb := NewContractBuilder(g.ArtifactManager)
-	cb.Prototypes[nodeRecord] = &ref
+	g := mockGenesis(t, am)
+	cb := mockContractBuilder(t, g)
 	ctx := inslogger.TestContext(t)
 
 	var nodes []nodeInfo
@@ -440,13 +368,13 @@ func TestActivateDiscoveryNodes(t *testing.T) {
 			publicKey: "test_pk_2",
 		},
 	)
-	require.Len(t, nodes, len(discoveryNodes))
+	require.Len(t, nodes, len(g.config.DiscoveryNodes))
 
 	genesisNodes, err := g.activateDiscoveryNodes(ctx, cb, nodes)
 	require.Nil(t, err)
-	require.Len(t, genesisNodes, len(discoveryNodes))
-	for i := 0; i < len(discoveryNodes); i++ {
-		require.Equal(t, discoveryNodes[i].Role, genesisNodes[i].role)
+	require.Len(t, genesisNodes, len(g.config.DiscoveryNodes))
+	for i := 0; i < len(g.config.DiscoveryNodes); i++ {
+		require.Equal(t, g.config.DiscoveryNodes[i].Role, genesisNodes[i].role)
 		require.Equal(t, nodes[i].publicKey, genesisNodes[i].node.PublicKey)
 		require.NotNil(t, genesisNodes[i].ref)
 	}
@@ -454,34 +382,12 @@ func TestActivateDiscoveryNodes(t *testing.T) {
 
 func TestAddDiscoveryIndex_ActivateErr(t *testing.T) {
 	am := mockArtifactManagerWithRegisterRequestError(t)
-	ref := testutils.RandomRef()
-	var discoveryNodes []Node
-	discoveryNodes = append(discoveryNodes,
-		Node{
-			Role: "virtual",
-		},
-		Node{
-			Role: "light_material",
-		},
-	)
-	path := "gentestdata"
-	amount := 2
-	g := Genesis{
-		config: &Config{
-			ReuseKeys:        true,
-			DiscoveryNodes:   discoveryNodes,
-			DiscoveryKeysDir: path,
-		},
-		ArtifactManager: am,
-		rootDomainRef:   &ref,
-		nodeDomainRef:   &ref,
-	}
+	g := mockGenesis(t, am)
+	cb := mockContractBuilder(t, g)
 	ctx := inslogger.TestContext(t)
-	err := g.createKeys(ctx, path, amount)
+	err := g.createKeys(ctx, testDataPath, len(g.config.DiscoveryNodes))
 	require.Nil(t, err)
-	defer os.RemoveAll(path)
-	cb := NewContractBuilder(g.ArtifactManager)
-	cb.Prototypes[nodeRecord] = &ref
+	defer os.RemoveAll(testDataPath)
 
 	indexMap := make(map[string]string)
 
@@ -494,29 +400,10 @@ func TestAddDiscoveryIndex_ActivateErr(t *testing.T) {
 
 func TestAddDiscoveryIndex_UploadErr(t *testing.T) {
 	am := mockArtifactManagerWithRegisterRequestError(t)
-	ref := testutils.RandomRef()
-	var discoveryNodes []Node
-	discoveryNodes = append(discoveryNodes,
-		Node{
-			Role: "virtual",
-		},
-		Node{
-			Role: "light_material",
-		},
-	)
-	g := Genesis{
-		config: &Config{
-			ReuseKeys:        true,
-			DiscoveryNodes:   discoveryNodes,
-			DiscoveryKeysDir: "not_existed_path",
-		},
-		ArtifactManager: am,
-		rootDomainRef:   &ref,
-		nodeDomainRef:   &ref,
-	}
+	g := mockGenesis(t, am)
+	g.config.DiscoveryKeysDir = "not_existed_testDataPath"
+	cb := mockContractBuilder(t, g)
 	ctx := inslogger.TestContext(t)
-	cb := NewContractBuilder(g.ArtifactManager)
-	cb.Prototypes[nodeRecord] = &ref
 
 	indexMap := make(map[string]string)
 
@@ -529,62 +416,29 @@ func TestAddDiscoveryIndex_UploadErr(t *testing.T) {
 
 func TestAddDiscoveryIndex(t *testing.T) {
 	am := mockArtifactManager(t)
-	ref := testutils.RandomRef()
-	var discoveryNodes []Node
-	discoveryNodes = append(discoveryNodes,
-		Node{
-			Role: "virtual",
-		},
-		Node{
-			Role: "light_material",
-		},
-	)
-	path := "gentestdata"
-	amount := 2
-	g := Genesis{
-		config: &Config{
-			ReuseKeys:        true,
-			DiscoveryNodes:   discoveryNodes,
-			DiscoveryKeysDir: path,
-		},
-		ArtifactManager: am,
-		rootDomainRef:   &ref,
-		nodeDomainRef:   &ref,
-	}
+	g := mockGenesis(t, am)
+	cb := mockContractBuilder(t, g)
 	ctx := inslogger.TestContext(t)
-	err := g.createKeys(ctx, path, amount)
+	err := g.createKeys(ctx, testDataPath, len(g.config.DiscoveryNodes))
 	require.Nil(t, err)
-	defer os.RemoveAll(path)
-	cb := NewContractBuilder(g.ArtifactManager)
-	cb.Prototypes[nodeRecord] = &ref
+	defer os.RemoveAll(testDataPath)
 
 	indexMap := make(map[string]string)
 
 	genesisNodes, resIndexMap, err := g.addDiscoveryIndex(ctx, cb, indexMap)
 	require.Nil(t, err)
-	require.Len(t, genesisNodes, len(discoveryNodes))
-	require.Len(t, resIndexMap, len(discoveryNodes))
+	require.Len(t, genesisNodes, len(g.config.DiscoveryNodes))
+	require.Len(t, resIndexMap, len(g.config.DiscoveryNodes))
 }
 
 func TestAddIndex_ActivateErr(t *testing.T) {
 	am := mockArtifactManagerWithRegisterRequestError(t)
-	ref := testutils.RandomRef()
-	path := "gentestdata"
-	g := Genesis{
-		config: &Config{
-			ReuseKeys:   true,
-			NodeKeysDir: path,
-		},
-		ArtifactManager: am,
-		rootDomainRef:   &ref,
-		nodeDomainRef:   &ref,
-	}
+	g := mockGenesis(t, am)
+	cb := mockContractBuilder(t, g)
 	ctx := inslogger.TestContext(t)
-	err := g.createKeys(ctx, path, nodeAmount)
+	err := g.createKeys(ctx, testDataPath, nodeAmount)
 	require.Nil(t, err)
-	defer os.RemoveAll(path)
-	cb := NewContractBuilder(g.ArtifactManager)
-	cb.Prototypes[nodeRecord] = &ref
+	defer os.RemoveAll(testDataPath)
 
 	indexMap := make(map[string]string)
 
@@ -596,19 +450,10 @@ func TestAddIndex_ActivateErr(t *testing.T) {
 
 func TestAddIndex_UploadErr(t *testing.T) {
 	am := mockArtifactManagerWithRegisterRequestError(t)
-	ref := testutils.RandomRef()
-	g := Genesis{
-		config: &Config{
-			ReuseKeys:   true,
-			NodeKeysDir: "not_existed_path",
-		},
-		ArtifactManager: am,
-		rootDomainRef:   &ref,
-		nodeDomainRef:   &ref,
-	}
+	g := mockGenesis(t, am)
+	g.config.NodeKeysDir = "not_existed_testDataPath"
+	cb := mockContractBuilder(t, g)
 	ctx := inslogger.TestContext(t)
-	cb := NewContractBuilder(g.ArtifactManager)
-	cb.Prototypes[nodeRecord] = &ref
 
 	indexMap := make(map[string]string)
 
@@ -620,23 +465,12 @@ func TestAddIndex_UploadErr(t *testing.T) {
 
 func TestAddIndex(t *testing.T) {
 	am := mockArtifactManager(t)
-	ref := testutils.RandomRef()
-	path := "gentestdata"
-	g := Genesis{
-		config: &Config{
-			ReuseKeys:   true,
-			NodeKeysDir: path,
-		},
-		ArtifactManager: am,
-		rootDomainRef:   &ref,
-		nodeDomainRef:   &ref,
-	}
+	g := mockGenesis(t, am)
+	cb := mockContractBuilder(t, g)
 	ctx := inslogger.TestContext(t)
-	err := g.createKeys(ctx, path, nodeAmount)
+	err := g.createKeys(ctx, testDataPath, nodeAmount)
 	require.Nil(t, err)
-	defer os.RemoveAll(path)
-	cb := NewContractBuilder(g.ArtifactManager)
-	cb.Prototypes[nodeRecord] = &ref
+	defer os.RemoveAll(testDataPath)
 
 	indexMap := make(map[string]string)
 
