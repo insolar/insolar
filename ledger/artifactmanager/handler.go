@@ -303,7 +303,7 @@ func (h *MessageHandler) handleSetRecord(ctx context.Context, parcel core.Parcel
 	id := record.NewRecordIDFromRecord(h.PlatformCryptographyScheme, parcel.Pulse(), rec)
 
 	if !h.isHeavy {
-		recentStorage := h.RecentStorageProvider.GetStorage(ctx, jetID)
+		recentStorage := h.RecentStorageProvider.GetPendingStorage(ctx, jetID)
 		if request, ok := rec.(record.Request); ok {
 			recentStorage.AddPendingRequest(ctx, request.GetObject(), *id)
 		}
@@ -385,7 +385,7 @@ func (h *MessageHandler) handleGetObject(
 	jetID := jetFromContext(ctx)
 
 	if !h.isHeavy {
-		h.RecentStorageProvider.GetStorage(ctx, jetID).AddObject(ctx, *msg.Head.Record())
+		h.RecentStorageProvider.GetIndexStorage(ctx, jetID).AddObject(ctx, *msg.Head.Record())
 	}
 
 	// Fetch object index. If not found redirect.
@@ -531,7 +531,7 @@ func (h *MessageHandler) handleHasPendingRequests(ctx context.Context, parcel co
 	msg := parcel.Message().(*message.GetPendingRequests)
 	jetID := jetFromContext(ctx)
 
-	for _, reqID := range h.RecentStorageProvider.GetStorage(ctx, jetID).GetRequestsForObject(*msg.Object.Record()) {
+	for _, reqID := range h.RecentStorageProvider.GetPendingStorage(ctx, jetID).GetRequestsForObject(*msg.Object.Record()) {
 		if reqID.Pulse() < parcel.Pulse() {
 			return &reply.HasPendingRequests{Has: true}, nil
 		}
@@ -562,7 +562,7 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel core.Parc
 	jetID := jetFromContext(ctx)
 
 	if !h.isHeavy {
-		h.RecentStorageProvider.GetStorage(ctx, jetID).AddObject(ctx, *msg.Head.Record())
+		h.RecentStorageProvider.GetIndexStorage(ctx, jetID).AddObject(ctx, *msg.Head.Record())
 	}
 
 	idx, err := h.ObjectStorage.GetObjectIndex(ctx, jetID, msg.Head.Record(), false)
@@ -605,7 +605,7 @@ func (h *MessageHandler) handleGetChildren(
 	jetID := jetFromContext(ctx)
 
 	if !h.isHeavy {
-		h.RecentStorageProvider.GetStorage(ctx, jetID).AddObject(ctx, *msg.Parent.Record())
+		h.RecentStorageProvider.GetIndexStorage(ctx, jetID).AddObject(ctx, *msg.Parent.Record())
 	}
 
 	idx, err := h.ObjectStorage.GetObjectIndex(ctx, jetID, msg.Parent.Record(), false)
@@ -754,7 +754,7 @@ func (h *MessageHandler) handleGetPendingRequestID(ctx context.Context, parcel c
 	jetID := jetFromContext(ctx)
 	msg := parcel.Message().(*message.GetPendingRequestID)
 
-	requests := h.RecentStorageProvider.GetStorage(ctx, jetID).GetRequestsForObject(msg.ObjectID)
+	requests := h.RecentStorageProvider.GetPendingStorage(ctx, jetID).GetRequestsForObject(msg.ObjectID)
 	if len(requests) == 0 {
 		return &reply.Error{ErrType: reply.ErrNoPendingRequests}, nil
 	}
@@ -779,7 +779,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 	}
 
 	if !h.isHeavy {
-		h.RecentStorageProvider.GetStorage(ctx, jetID).AddObject(ctx, *msg.Object.Record())
+		h.RecentStorageProvider.GetIndexStorage(ctx, jetID).AddObject(ctx, *msg.Object.Record())
 	}
 
 	// FIXME: temporary fix. If we calculate blob id on the client, pulse can change before message sending and this
@@ -874,7 +874,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel core.Pa
 	}
 
 	if !h.isHeavy {
-		h.RecentStorageProvider.GetStorage(ctx, jetID).AddObject(ctx, *msg.Parent.Record())
+		h.RecentStorageProvider.GetIndexStorage(ctx, jetID).AddObject(ctx, *msg.Parent.Record())
 	}
 
 	var child *core.RecordID
@@ -1123,16 +1123,17 @@ func (h *MessageHandler) saveIndexFromHeavy(
 
 func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
 	logger := inslogger.FromContext(ctx)
-	// if hack.SkipValidation(ctx) {
-	// 	fmt.Println("handleHotRecords: SkipValidation")
-	// 	return &reply.OK{}, nil
-	// }
 
 	msg := parcel.Message().(*message.HotData)
 	// FIXME: check split signatures.
 	jetID := *msg.Jet.Record()
 
-	logger.Debugf("[jet]: %v got hot. Pulse: %v, DropPulse: %v, DropJet: %v\n", jetID.DebugString(), parcel.Pulse(), msg.Drop.Pulse, msg.DropJet.DebugString())
+	logger = logger.WithField("jet", jetID.DebugString())
+
+	logger.Debugf(
+		"got hot. Pulse: %v, DropPulse: %v, DropJet: %v\n",
+		parcel.Pulse(), msg.Drop.Pulse, msg.DropJet.DebugString(),
+	)
 
 	err := h.DropStorage.SetDrop(ctx, msg.DropJet, &msg.Drop)
 	if err == storage.ErrOverride {
@@ -1142,58 +1143,50 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 	if err != nil {
 		return nil, errors.Wrapf(err, "[jet]: drop error (pulse: %v)", msg.Drop.Pulse)
 	}
+
 	err = h.DropStorage.SetDropSizeHistory(ctx, msg.DropJet, msg.JetDropSizeHistory)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ handleHotRecords ] Can't SetDropSizeHistory")
 	}
 
-	logger.WithFields(map[string]interface{}{
-		"len": len(msg.RecentObjects),
-		"jet": jetID.DebugString(),
-	}).Debugf("received pending requests")
-	recentStorage := h.RecentStorageProvider.GetStorage(ctx, jetID)
+	pendingStorage := h.RecentStorageProvider.GetPendingStorage(ctx, jetID)
+	logger.Debugf("received %d pending requests", len(msg.PendingRequests))
 	for objID, requests := range msg.PendingRequests {
 		for reqID := range requests {
-			recentStorage.AddPendingRequest(ctx, objID, reqID)
+			pendingStorage.AddPendingRequest(ctx, objID, reqID)
 		}
 	}
 
-	logger.WithFields(map[string]interface{}{
-		"len": len(msg.RecentObjects),
-		"jet": jetID.DebugString(),
-	}).Debugf("received recent objects")
+	indexStorage := h.RecentStorageProvider.GetIndexStorage(ctx, jetID)
+	logger.Debugf("received %d recent objects", len(msg.RecentObjects))
 	for id, meta := range msg.RecentObjects {
 		logger.Debugf("[got id] jet: %v, id: %v", jetID.DebugString(), id.DebugString())
 		decodedIndex, err := index.DecodeObjectLifeline(meta.Index)
 		if err != nil {
-			fmt.Print("hot index write error")
 			logger.Error(err)
 			continue
 		}
 
 		err = h.ObjectStorage.SetObjectIndex(ctx, jetID, &id, decodedIndex)
 		if err != nil {
-			fmt.Print("hot index write error")
 			logger.Error(err)
 			continue
 		}
 
-		fmt.Println("[saved id] ", id.String())
-		recentStorage.AddObjectWithTLL(ctx, id, meta.TTL)
+		indexStorage.AddObjectWithTLL(ctx, id, meta.TTL)
 	}
 
 	err = h.JetStorage.UpdateJetTree(
-		ctx,
-		msg.PulseNumber,
-		true,
-		jetID,
+		ctx, msg.PulseNumber, true, jetID,
 	)
 	if err != nil {
-		fmt.Println("handleHotRecords: UpdateJetTree with err, ", err)
+		logger.Error(errors.Wrap(err, "couldn't actualize jet tree"))
 		return nil, err
 	}
+
 	err = h.JetStorage.AddJets(ctx, jetID)
 	if err != nil {
+		logger.Error(errors.Wrap(err, "couldn't add jet"))
 		return nil, err
 	}
 

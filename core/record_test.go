@@ -80,8 +80,22 @@ func TestRecordID_DebugString_Jet(t *testing.T) {
 }
 
 
-func BenchmarkRecordID_DebugString(b *testing.B) {
-	jet := testutils.RandomJet()
+func BenchmarkRecordID_DebugString_ZeroDepth(b *testing.B) {
+	jet := jet.NewID(0, []byte{})
+	for n := 0; n < b.N; n++ {
+		jet.DebugString()
+	}
+}
+
+func BenchmarkRecordID_DebugString_Depth1(b *testing.B) {
+	jet := jet.NewID(1, []byte{128})
+	for n := 0; n < b.N; n++ {
+		jet.DebugString()
+	}
+}
+
+func BenchmarkRecordID_DebugString_Depth5(b *testing.B) {
+	jet := jet.NewID(5, []byte{128})
 	for n := 0; n < b.N; n++ {
 		jet.DebugString()
 	}
