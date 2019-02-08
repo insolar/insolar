@@ -143,6 +143,7 @@ func (c *cleaner) removeJetRecordsUntil(
 	return stat, c.DB.GetBadgerDB().Update(func(txn *badger.Txn) error {
 		opts := badger.DefaultIteratorOptions
 		opts.PrefetchSize = 0
+		opts.PrefetchValues = false
 		it := txn.NewIterator(opts)
 		defer it.Close()
 		for it.Seek(startprefix); it.ValidForPrefix(jetprefix); it.Next() {
