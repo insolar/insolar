@@ -1,5 +1,5 @@
 /*
- *    Copyright 2019 Insolar Technologies
+ *    Copyright 2019 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -469,7 +469,7 @@ func (g *Genesis) uploadKeys(ctx context.Context, path string, amount int) ([]no
 
 	files, _ := ioutil.ReadDir(path)
 	if len(files) != amount {
-		return nil, errors.New("[ uploadKeys ] amount of nodes != amount of files in directory")
+		return nil, errors.New("[ uploadKeys ] amount of nodes != amount of files in directory: " + strconv.Itoa(len(files)) + "!=" + strconv.Itoa(amount))
 	}
 
 	var keys []nodeInfo
