@@ -81,29 +81,29 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse) (*Firs
 		unsyncList = fp.NodeKeeper.GetUnsyncList()
 	}
 
-	logger.Infof("[ FirstPhase ] Calculated pulse proof: %s", base58.Encode(pulseHash))
+	logger.Infof("[ NET Consensus %d phase-1 ] Calculated pulse proof: %s", pulse.PulseNumber, base58.Encode(pulseHash))
 
 	if err != nil {
-		return nil, errors.Wrap(err, "[ FirstPhase ] Failed to calculate pulse proof.")
+		return nil, errors.Wrapf(err, "[ NET Consensus %d phase-1 ] Failed to calculate pulse proof", pulse.PulseNumber)
 	}
 
 	packet := packets.NewPhase1Packet(*pulse)
 	err = packet.SetPulseProof(pulseProof.StateHash, pulseProof.Signature.Bytes())
 	if err != nil {
-		return nil, errors.Wrap(err, "[ FirstPhase ] Failed to set pulse proof in Phase1Packet.")
+		return nil, errors.Wrapf(err, "[ NET Consensus %d phase-1 ] Failed to set pulse proof in Phase1Packet", pulse.PulseNumber)
 	}
 
 	var success bool
 	var originClaim *packets.NodeAnnounceClaim
 	if fp.NodeKeeper.NodesJoinedDuringPreviousPulse() {
-		log.Debug("Add origin announce claim to consensus phase1 packet")
+		log.Debugf("[ NET Consensus %d phase-1 ] Add origin announce claim to consensus phase1 packet", pulse.PulseNumber)
 		originClaim, err = fp.NodeKeeper.GetOriginAnnounceClaim(unsyncList)
 		if err != nil {
-			return nil, errors.Wrap(err, "[ FirstPhase ] Failed to get origin claim")
+			return nil, errors.Wrapf(err, "[ NET Consensus %d phase-1 ] Failed to get origin claim", pulse.PulseNumber)
 		}
 		success = packet.AddClaim(originClaim)
 		if !success {
-			return nil, errors.Wrap(err, "[ FirstPhase ] Failed to add origin claim in Phase1Packet.")
+			return nil, errors.Wrapf(err, "[ NET Consensus %d phase-1 ] Failed to add origin claim in Phase1Packet", pulse.PulseNumber)
 		}
 	}
 	for {
@@ -121,15 +121,15 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse) (*Firs
 	activeNodes := fp.NodeKeeper.GetActiveNodes()
 	resultPackets, err := fp.Communicator.ExchangePhase1(ctx, originClaim, activeNodes, packet)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ FirstPhase ] Failed to exchange results")
+		return nil, errors.Wrapf(err, "[ NET Consensus %d phase-1 ] Failed to exchange results", pulse.PulseNumber)
 	}
 	if len(resultPackets) < 2 && fp.NodeKeeper.GetState() == network.Waiting {
-		return nil, errors.New("[ FirstPhase ] Failed to receive packets from other nodes")
+		return nil, errors.Errorf("[ NET Consensus %d phase-1 ] Failed to receive packets from other nodes", pulse.PulseNumber)
 	}
 	if fp.NodeKeeper.GetState() == network.Waiting {
-		logger.Infof("[ FirstPhase ] received packets: %d", len(resultPackets))
+		logger.Infof("[ NET Consensus %d phase-1 ] received packets: %d", pulse.PulseNumber, len(resultPackets))
 	} else {
-		logger.Infof("[ FirstPhase ] received packets: %d/%d", len(resultPackets), len(activeNodes))
+		logger.Infof("[ NET Consensus %d phase-1 ] received packets: %d/%d", pulse.PulseNumber, len(resultPackets), len(activeNodes))
 	}
 	metrics.ConsensusPacketsRecv.WithLabelValues("phase 1").Add(float64(len(resultPackets)))
 
@@ -142,7 +142,7 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse) (*Firs
 			err = fp.checkPacketSignature(packet, ref)
 		}
 		if err != nil {
-			logger.Warnf("Failed to check phase1 packet signature from %s: %s", ref, err.Error())
+			logger.Warnf("[ NET Consensus %d phase-1 ] Failed to check phase1 packet signature from %s: %s", pulse.PulseNumber, ref, err.Error())
 			continue
 		}
 		rawProof := packet.GetPulseProof()
@@ -159,24 +159,24 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse) (*Firs
 	if fp.NodeKeeper.GetState() == network.Waiting {
 		length, err := detectSparseBitsetLength(claimMap, fp.NodeKeeper)
 		if err != nil {
-			return nil, errors.Wrapf(err, "[ FirstPhase ] Failed to detect bitset length")
+			return nil, errors.Wrapf(err, "[ NET Consensus %d phase-1 ] Failed to detect bitset length", pulse.PulseNumber)
 		}
 		unsyncList = fp.NodeKeeper.GetSparseUnsyncList(length)
 	}
 
 	err = unsyncList.AddClaims(claimMap)
 	if err != nil {
-		return nil, errors.Wrapf(err, "[ FirstPhase ] Failed to add claims")
+		return nil, errors.Wrapf(err, "[ NET Consensus %d phase-1 ] Failed to add claims", pulse.PulseNumber)
 	}
 	valid, fault := validateProofs(fp.Calculator, unsyncList, pulseHash, proofSet)
 	for node := range valid {
 		unsyncList.AddProof(node.ID(), rawProofs[node.ID()])
 	}
 	for nodeID := range fault {
-		logger.Warnf("[ FirstPhase ] Failed to validate proof from %s", nodeID)
+		logger.Warnf("[ NET Consensus %d phase-1 ] Failed to validate proof from %s", pulse.PulseNumber, nodeID)
 		unsyncList.RemoveNode(nodeID)
 	}
-	logger.Infof("[ FirstPhase ] Valid proofs after phase: %d/%d", len(valid), len(resultPackets))
+	logger.Infof("[ NET Consensus %d phase-1 ] Valid proofs after phase: %d/%d", pulse.PulseNumber, len(valid), len(activeNodes))
 
 	return &FirstPhaseState{
 		PulseEntry:  entry,
@@ -239,7 +239,7 @@ func (fp *FirstPhaseImpl) filterClaims(nodeID core.RecordRef, claims []packets.R
 			err := fp.checkClaimSignature(signedClaim)
 			if err != nil {
 				metrics.ConsensusDeclinedClaims.Inc()
-				log.Error("[ filterClaims ] failed to check a claim sign: " + err.Error())
+				log.Error("failed to check claim signature: " + err.Error())
 				continue
 			}
 		}
@@ -255,15 +255,15 @@ func (fp *FirstPhaseImpl) filterClaims(nodeID core.RecordRef, claims []packets.R
 func (fp *FirstPhaseImpl) checkClaimSignature(claim packets.SignedClaim) error {
 	key, err := claim.GetPublicKey()
 	if err != nil {
-		return errors.Wrap(err, "[ checkClaimSignature ] Failed to import a key")
+		return errors.Wrap(err, "failed to import a key")
 	}
 	rawClaim, err := claim.SerializeRaw()
 	if err != nil {
-		return errors.Wrap(err, "[ checkClaimSignature ] Failed to serialize a claim")
+		return errors.Wrap(err, "failed to serialize a claim")
 	}
 	success := fp.Cryptography.Verify(key, core.SignatureFromBytes(claim.GetSignature()), rawClaim)
 	if !success {
-		return errors.New("[ checkClaimSignature ] Signature verification failed")
+		return errors.New("signature verification failed")
 	}
 	return nil
 }
