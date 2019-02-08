@@ -1,5 +1,5 @@
 /*
- *    Copyright 2019 Insolar Technologies
+ *    Copyright 2019 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -84,7 +84,7 @@ func getKeysFromFile(ctx context.Context, file string) (crypto.PrivateKey, strin
 	}
 	data, err := ioutil.ReadFile(absPath)
 	if err != nil {
-		return nil, "", errors.Wrap(err, "[ getKeyFromFile ] couldn't read keys file "+absPath+"   "+file)
+		return nil, "", errors.Wrap(err, "[ getKeyFromFile ] couldn't read keys file "+absPath)
 	}
 	var keys map[string]string
 	err = json.Unmarshal(data, &keys)
@@ -108,7 +108,7 @@ func getKeysFromFile(ctx context.Context, file string) (crypto.PrivateKey, strin
 func abs(path string) (string, error) {
 	absPath, err := filepath.Abs(path)
 	if err != nil {
-		return "", errors.Wrap(err, "[ uploadKeys ] couldn't get abs path")
+		return "", errors.Wrap(err, "[ abs ] couldn't get abs path")
 	}
 	return absPath, nil
 }

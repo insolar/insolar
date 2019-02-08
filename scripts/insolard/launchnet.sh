@@ -30,7 +30,7 @@ done
 
 DISCOVERY_NODES_KEYS_DIR=$TEST_DATA/scripts/discovery_nodes
 
-NUM_NODES="0"
+NUM_NODES=$(sed -n '/^nodes:/,$p' $GENESIS_CONFIG | grep "host:" | grep -v "#" | wc -l)
 
 if [[ "$NUM_NODES" -ne "0" ]]
 then
@@ -155,8 +155,6 @@ generate_root_member_keys()
 	bin/insolar -c gen_keys > $ROOT_MEMBER_KEYS_FILE
 	echo "generate_root_member_keys() end."
 }
-
-
 
 check_working_dir()
 {

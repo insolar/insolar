@@ -171,7 +171,6 @@ func main() {
 		conf.Log.Level = debugLevel
 		conf.Log.Adapter = "logrus"
 		conf.KeysPath = genesisConf.DiscoveryKeysDir + "/node_" + strconv.Itoa(index) + ".json"
-		// conf.KeysPath = node.KeysFile
 		conf.Ledger.Storage.DataDirectory = fmt.Sprintf(discoveryDataDirectoryTemplate, nodeIndex)
 		conf.CertificatePath = fmt.Sprintf(discoveryCertificatePathTemplate, nodeIndex)
 

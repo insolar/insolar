@@ -1,5 +1,5 @@
 /*
- *    Copyright 2019 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -65,14 +65,13 @@ type nodeInfo struct {
 
 // Genesis is a component for precreation core contracts types and RootDomain instance
 type Genesis struct {
-	rootDomainRef *core.RecordRef
-	nodeDomainRef *core.RecordRef
-	rootMemberRef *core.RecordRef
-	prototypeRefs map[string]*core.RecordRef
-	isGenesis     bool
-	config        *Config
-	keyOut        string
-	// discoveryKeys   []nodeInfo
+	rootDomainRef   *core.RecordRef
+	nodeDomainRef   *core.RecordRef
+	rootMemberRef   *core.RecordRef
+	prototypeRefs   map[string]*core.RecordRef
+	isGenesis       bool
+	config          *Config
+	keyOut          string
 	ArtifactManager core.ArtifactManager `inject:""`
 	MBLock          messageBusLocker     `inject:""`
 }
@@ -325,37 +324,6 @@ func (g *Genesis) activateSmartContracts(
 		return nil, errors.Wrap(err, errMsg)
 
 	}
-	// discoveryKeysPath, err := abs(g.config.DiscoveryKeysDir)
-	// if err != nil {
-	// 	return nil, errors.Wrap(err, errMsg)
-	// }
-	// _, err = g.uploadKeys(ctx, discoveryKeysPath, len(g.config.DiscoveryNodes), true)
-	// if err != nil {
-	// 	return nil, errors.Wrap(err, errMsg)
-	// }
-	// discoveryNodes, err := g.activateDiscoveryNodes(ctx, cb)
-	// if err != nil {
-	// 	return nil, errors.Wrap(err, errMsg)
-	// }
-	// for _, node := range discoveryNodes {
-	// 	indexMap[node.node.PublicKey] = node.ref.String()
-	// }
-
-	// nodeKeysPath, err := abs(g.config.NodeKeysDir)
-	// if err != nil {
-	// 	return nil, errors.Wrap(err, errMsg)
-	// }
-	// userKeys, err := g.uploadKeys(ctx, nodeKeysPath, nodeAmount, false)
-	// if err != nil {
-	// 	return nil, errors.Wrap(err, errMsg)
-	// }
-	// nodes, err := g.activateNodes(ctx, cb, userKeys)
-	// if err != nil {
-	// 	return nil, errors.Wrap(err, errMsg)
-	// }
-	// for _, node := range nodes {
-	// 	indexMap[node.publicKey] = node.ref.String()
-	// }
 
 	err = g.updateNodeDomainIndex(ctx, nodeDomainDesc, indexMap)
 	if err != nil {
