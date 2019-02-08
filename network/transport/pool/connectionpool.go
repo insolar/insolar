@@ -96,7 +96,7 @@ func (cp *connectionPool) CloseConnection(ctx context.Context, address net.Addr)
 	if ok {
 		utils.CloseVerbose(conn)
 
-		logger.Debugf("[ CloseConnection ] Delete connection to %s from pool: %s", address)
+		logger.Debugf("[ CloseConnection ] Delete connection to %s from pool", address)
 		cp.unsafeConnectionsHolder.Delete(address)
 		metrics.NetworkConnections.Set(float64(cp.unsafeConnectionsHolder.Size()))
 	}
