@@ -23,7 +23,6 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -262,10 +261,10 @@ func TestRecentStorageProvider_DecreaseIndexesTTL(t *testing.T) {
 	require.Equal(t, 1, len(provider.indexStorages))
 	require.Equal(t, 1, len(result))
 	require.Equal(t, 2, len(result[secondJet]))
-	if !assert.Equal(t, removedFirst, result[secondJet][0]) && !assert.Equal(t, removedFirst, result[secondJet][1]) {
+	if removedFirst != result[secondJet][0] && removedFirst != result[secondJet][1] {
 		require.Fail(t, "return result is broken")
 	}
-	if !assert.Equal(t, removedSecond, result[secondJet][1]) && !assert.Equal(t, removedSecond, result[secondJet][0]) {
+	if removedSecond != result[secondJet][1] && removedSecond != result[secondJet][0] {
 		require.Fail(t, "return result is broken")
 	}
 	for _, index := range provider.indexStorages[firstJet].indexes {
