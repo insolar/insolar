@@ -1,4 +1,5 @@
 BIN_DIR ?= bin
+ARTIFACTS_DIR ?= .artifacts
 INSOLAR = insolar
 INSOLARD = insolard
 INSGOCC = $(BIN_DIR)/insgocc
@@ -13,8 +14,8 @@ CERTGEN = $(BIN_DIR)/certgen
 
 ALL_PACKAGES = ./...
 MOCKS_PACKAGE = github.com/insolar/insolar/testutils
-TESTED_PACKAGES = $(shell go list ${ALL_PACKAGES} | grep -v "${MOCKS_PACKAGE}")
-COVERPROFILE = coverage.txt
+TESTED_PACKAGES ?= $(shell go list ${ALL_PACKAGES} | grep -v "${MOCKS_PACKAGE}")
+COVERPROFILE ?= coverage.txt
 TEST_ARGS ?=
 
 BUILD_NUMBER := $(TRAVIS_BUILD_NUMBER)
@@ -134,9 +135,13 @@ test:
 test_fast:
 	go test $(TEST_ARGS) -count 1 -v $(ALL_PACKAGES)
 
+$(ARTIFACTS_DIR):
+	mkdir -p $(ARTIFACTS_DIR)
+
 .PHONY: test_with_coverage
-test_with_coverage:
-	CGO_ENABLED=1 go test $(TEST_ARGS) --coverprofile=$(COVERPROFILE) --covermode=atomic $(TESTED_PACKAGES)
+test_with_coverage: $(ARTIFACTS_DIR)
+	CGO_ENABLED=1 go test $(TEST_ARGS) --coverprofile=$(ARTIFACTS_DIR)/cover.all --covermode=atomic $(TESTED_PACKAGES)
+	@cat $(ARTIFACTS_DIR)/cover.all | ./scripts/dev/cover-filter.sh > $(COVERPROFILE)
 
 .PHONY: test_with_coverage_fast
 test_with_coverage_fast:
