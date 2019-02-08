@@ -67,7 +67,7 @@ func (ul *unsyncList) ApproveSync(sync []core.RecordRef) {
 	for nodeID := range ul.activeNodes {
 		prevActive = append(prevActive, nodeID)
 	}
-	diff := diffList(prevActive, sync)
+	diff := removeFromList(prevActive, sync)
 	for _, node := range diff {
 		ul.removeNode(node)
 	}

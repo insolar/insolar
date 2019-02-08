@@ -23,21 +23,21 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
-func diffList(old, new []core.RecordRef) []core.RecordRef {
-	sort.Slice(old, func(i, j int) bool {
-		return old[i].Compare(old[j]) < 0
+func removeFromList(nodeList, nodesToRemove []core.RecordRef) []core.RecordRef {
+	sort.Slice(nodeList, func(i, j int) bool {
+		return nodeList[i].Compare(nodeList[j]) < 0
 	})
-	sort.Slice(new, func(i, j int) bool {
-		return new[i].Compare(new[j]) < 0
+	sort.Slice(nodesToRemove, func(i, j int) bool {
+		return nodesToRemove[i].Compare(nodesToRemove[j]) < 0
 	})
 
 	diff := make([]core.RecordRef, 0)
 
 	i := 0
-	for j := 0; i < len(old) && j < len(new); {
-		comparison := old[i].Compare(new[j])
+	for j := 0; i < len(nodeList) && j < len(nodesToRemove); {
+		comparison := nodeList[i].Compare(nodesToRemove[j])
 		if comparison < 0 {
-			diff = append(diff, old[i])
+			diff = append(diff, nodeList[i])
 			i++
 		} else if comparison > 0 {
 			j++
@@ -46,8 +46,8 @@ func diffList(old, new []core.RecordRef) []core.RecordRef {
 			j++
 		}
 	}
-	for i < len(old) {
-		diff = append(diff, old[i])
+	for i < len(nodeList) {
+		diff = append(diff, nodeList[i])
 		i++
 	}
 	return diff
