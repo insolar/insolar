@@ -23,8 +23,8 @@ import (
 
 var (
 	statCleanLatencyTotal = stats.Int64("lightcleanup/latency/total", "Light storage cleanup time in milliseconds", stats.UnitMilliseconds)
-	statHotObjectsSent    = stats.Int64("hotdata/objects/total", "..", stats.UnitDimensionless)
-	statPendingSent       = stats.Int64("hotdata/pending/total", "..", stats.UnitDimensionless)
+	statHotObjectsSent    = stats.Int64("hotdata/objects/total", "Amount of hot objects sent to the next executor", stats.UnitDimensionless)
+	statPendingSent       = stats.Int64("hotdata/pending/total", "Amount of pending requests sent to the next executor", stats.UnitDimensionless)
 )
 
 func init() {
