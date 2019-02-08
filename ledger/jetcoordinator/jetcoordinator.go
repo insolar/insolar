@@ -262,7 +262,7 @@ func (jc *JetCoordinator) NodeForJet(ctx context.Context, jetID core.RecordID, r
 	return jc.LightExecutorForJet(ctx, jetID, targetPN)
 }
 
-// NodeForJet calculates a node for a specific jet for a specific pulseNumber
+// NodeForObject calculates a node for a specific jet for a specific pulseNumber
 func (jc *JetCoordinator) NodeForObject(ctx context.Context, objectId core.RecordID, rootPN, targetPN core.PulseNumber) (*core.RecordRef, error) {
 	toHeavy, err := jc.IsBeyondLimit(ctx, rootPN, targetPN)
 	if err != nil {
