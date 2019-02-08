@@ -53,6 +53,9 @@ func (tp *thirdPhase) Execute(ctx context.Context, pulse *core.Pulse, state *Sec
 	span.AddAttributes(trace.Int64Attribute("pulse", int64(state.PulseEntry.Pulse.PulseNumber)))
 	defer span.End()
 	metrics.ConsensusPhase3Exec.Inc()
+
+	logger := inslogger.FromContext(ctx)
+
 	var gSign [packets.SignatureLength]byte
 	copy(gSign[:], state.GlobuleProof.Signature.Bytes()[:packets.SignatureLength])
 	packet := packets.NewPhase3Packet(pulse.PulseNumber, gSign, state.BitSet)
@@ -63,9 +66,9 @@ func (tp *thirdPhase) Execute(ctx context.Context, pulse *core.Pulse, state *Sec
 	}
 	responses, err := tp.Communicator.ExchangePhase3(ctx, nodes, packet)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ Phase 3 ] Failed exchange packets on phase 3")
+		return nil, errors.Wrapf(err, "[ NET Consensus %d phase-3 ] Failed to exchange packets", pulse.PulseNumber)
 	}
-	inslogger.FromContext(ctx).Infof("[ Phase 3 ] received responses: %d/%d", len(responses), len(nodes))
+	logger.Infof("[ NET Consensus %d phase-3 ] received responses: %d/%d", pulse.PulseNumber, len(responses), len(nodes))
 	metrics.ConsensusPacketsRecv.WithLabelValues("phase 3").Add(float64(len(responses)))
 
 	for ref, packet := range responses {
@@ -74,7 +77,7 @@ func (tp *thirdPhase) Execute(ctx context.Context, pulse *core.Pulse, state *Sec
 			err = tp.checkPacketSignature(packet, ref, state.UnsyncList)
 		}
 		if err != nil {
-			inslogger.FromContext(ctx).Warnf("Failed to check phase3 packet signature from %s: %s", ref, err.Error())
+			logger.Warnf("[ NET Consensus %d phase-3 ] Failed to check phase3 packet signature from %s: %s", pulse.PulseNumber, ref, err.Error())
 			continue
 		}
 		// not needed until we implement fraud detection
@@ -89,7 +92,7 @@ func (tp *thirdPhase) Execute(ctx context.Context, pulse *core.Pulse, state *Sec
 	for _, node := range nodes {
 		ghs, ok := state.UnsyncList.GetGlobuleHashSignature(node.ID())
 		if !ok {
-			log.Warnf("[ Phase 3 ] No globule hash signature for node %s", node.ID())
+			log.Warnf("[ NET Consensus %d phase-3 ] No globule hash signature for node %s", pulse.PulseNumber, node.ID())
 			continue
 		}
 		proof := &merkle.GlobuleProof{
@@ -110,10 +113,10 @@ func (tp *thirdPhase) Execute(ctx context.Context, pulse *core.Pulse, state *Sec
 	}
 
 	if !consensusReachedBFT(len(validNodes), totalCount) {
-		return nil, errors.New(fmt.Sprintf("[ Phase 3 ] Failed to pass BFT consensus: %d/%d", len(validNodes), totalCount))
+		return nil, errors.New(fmt.Sprintf("[ NET Consensus %d phase-3 ] Failed to pass BFT consensus: %d/%d", pulse.PulseNumber, len(validNodes), totalCount))
 	}
 
-	inslogger.FromContext(ctx).Infof("Network phase 3 BFT consensus passed: %d/%d", len(validNodes), totalCount)
+	logger.Infof("[ NET Consensus %d phase-3 ] BFT consensus passed: %d/%d", pulse.PulseNumber, len(validNodes), totalCount)
 
 	return &ThirdPhaseState{
 		ActiveNodes:  validNodes,
