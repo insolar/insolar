@@ -281,7 +281,8 @@ func (m *LedgerArtifactManager) GetPendingRequest(ctx context.Context, objectID 
 		return nil, fmt.Errorf("GetPendingRequest: unexpected reply: %#v", requestIDReply)
 	}
 
-	node, err := m.JetCoordinator.NodeForJet(ctx, objectID, currentPulse.PulseNumber, requestIDReply.ID.Pulse())
+	node, err := m.JetCoordinator.NodeForObject(ctx, objectID, currentPulse.PulseNumber, requestIDReply.ID.Pulse())
+
 	if err != nil {
 		return nil, err
 	}
