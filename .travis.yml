@@ -22,10 +22,12 @@ install:
   - make pre-build
 script:
 # check if git repo unchanged in CI before build stage (try to catch forgotten generated files)
-  - make test_git_no_changes
-  - make build
+  # - make test_git_no_changes
+  # - make build
   - make test_with_coverage
-  - make functest
+  # - make functest
 
 after_success:
-  - "bash <(curl -s https://codecov.io/bash)"
+  - go get github.com/axw/gocov/gocov
+  - COVERPROFILE="./coverage.txt" ./scripts/dev/cover-tool.sh
+  - "bash <(curl -s https://codecov.io/bash) -f coverage.txt -X fix"
