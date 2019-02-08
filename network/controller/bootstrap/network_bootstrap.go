@@ -21,6 +21,7 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/nodenetwork"
@@ -44,6 +45,8 @@ type networkBootstrapper struct {
 }
 
 func (nb *networkBootstrapper) Bootstrap(ctx context.Context) error {
+	ctx, span := instracer.StartSpan(ctx, "NetworkBoostrapper.Bootstrap")
+	defer span.End()
 	if len(nb.Certificate.GetDiscoveryNodes()) == 0 {
 		log.Info("Zero bootstrap")
 		return nil
@@ -67,6 +70,8 @@ func (nb *networkBootstrapper) GetLastPulse() core.PulseNumber {
 }
 
 func (nb *networkBootstrapper) bootstrapJoiner(ctx context.Context) error {
+	ctx, span := instracer.StartSpan(ctx, "NetworkBoostrapper.bootstrapJoiner")
+	defer span.End()
 	discoveryNode, err := nb.Bootstrapper.Bootstrap(ctx)
 	if err != nil {
 		return errors.Wrap(err, "Error bootstrapping to discovery node")

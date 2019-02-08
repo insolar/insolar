@@ -56,7 +56,7 @@ func TestHandlerRouter_Build(t *testing.T) {
 		return nil, errors.New("Not implemented")
 	}
 
-	Build(handler,
+	BuildMiddleware(handler,
 		firstWrap,
 		secondWrap,
 		thirdWrap)

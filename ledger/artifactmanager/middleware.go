@@ -57,6 +57,14 @@ func newMiddleware(
 	}
 }
 
+func (m *middleware) addFieldsToLogger(handler core.MessageHandler) core.MessageHandler {
+	return func(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
+		context, _ := inslogger.WithField(ctx, "targetid", parcel.DefaultTarget().String())
+
+		return handler(context, parcel)
+	}
+}
+
 type jetKey struct{}
 
 func contextWithJet(ctx context.Context, jetID core.RecordID) context.Context {
@@ -77,6 +85,12 @@ func (m *middleware) zeroJetForHeavy(handler core.MessageHandler) core.MessageHa
 	return func(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
 		return handler(contextWithJet(ctx, *jet.NewID(0, nil)), parcel)
 	}
+}
+
+func addJetIDToLogger(ctx context.Context, jetID core.RecordID) context.Context {
+	ctx, _ = inslogger.WithField(ctx, "jetid", jetID.DebugString())
+
+	return ctx
 }
 
 func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
@@ -110,6 +124,8 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 					return nil, errors.New("fetching children without child pointer is forbidden")
 				}
 				pulse = tm.FromChild.Pulse()
+			case *message.GetRequest:
+				pulse = tm.Request.Pulse()
 			}
 			tree, err := m.jetStorage.GetJetTree(ctx, pulse)
 			if err != nil {
@@ -147,9 +163,12 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to calculate executor for jet")
 		}
+
 		if *node != m.jetCoordinator.Me() {
 			return &reply.JetMiss{JetID: jetID}, nil
 		}
+
+		ctx = addJetIDToLogger(ctx, jetID)
 
 		return handler(contextWithJet(ctx, jetID), parcel)
 	}

@@ -1,6 +1,23 @@
+/*
+ *    Copyright 2019 Insolar Technologies
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
+
 package artifactmanager
 
 import (
+	"context"
 	"sync"
 	"testing"
 
@@ -23,13 +40,25 @@ func TestJetTreeUpdater_otherNodesForPulse(t *testing.T) {
 	defer mc.Finish()
 
 	jc := testutils.NewJetCoordinatorMock(mc)
-	ans := storage.NewActiveNodesStorageMock(mc)
+	ans := storage.NewNodeStorageMock(mc)
 	js := storage.NewJetStorageMock(mc)
 	jtu := &jetTreeUpdater{
 		ActiveNodesStorage: ans,
 		JetStorage:         js,
 		JetCoordinator:     jc,
 	}
+
+	t.Run("active nodes storage returns error", func(t *testing.T) {
+		ans.GetActiveNodesByRoleMock.Expect(
+			100, core.StaticRoleLightMaterial,
+		).Return(
+			nil, errors.New("some"),
+		)
+
+		nodes, err := jtu.otherNodesForPulse(ctx, core.PulseNumber(100))
+		require.Error(t, err)
+		require.Empty(t, nodes)
+	})
 
 	meRef := testutils.RandomRef()
 	jc.MeMock.Return(meRef)
@@ -104,7 +133,7 @@ func TestJetTreeUpdater_fetchActualJetFromOtherNodes(t *testing.T) {
 	defer mc.Finish()
 
 	jc := testutils.NewJetCoordinatorMock(mc)
-	ans := storage.NewActiveNodesStorageMock(mc)
+	ans := storage.NewNodeStorageMock(mc)
 	js := storage.NewJetStorageMock(mc)
 	mb := testutils.NewMessageBusMock(mc)
 	jtu := &jetTreeUpdater{
@@ -171,7 +200,7 @@ func TestJetTreeUpdater_fetchJet(t *testing.T) {
 	defer mc.Finish()
 
 	jc := testutils.NewJetCoordinatorMock(mc)
-	ans := storage.NewActiveNodesStorageMock(mc)
+	ans := storage.NewNodeStorageMock(mc)
 	js := storage.NewJetStorageMock(mc)
 	mb := testutils.NewMessageBusMock(mc)
 	jtu := &jetTreeUpdater{
@@ -188,14 +217,14 @@ func TestJetTreeUpdater_fetchJet(t *testing.T) {
 	target := testutils.RandomID()
 
 	t.Run("wrong tree", func(t *testing.T) {
-		js.GetJetTreeMock.Expect(ctx, 100).Return(nil, errors.New("some"))
+		js.GetJetTreeMock.Return(nil, errors.New("some"))
 		jetID, err := jtu.fetchJet(ctx, target, core.PulseNumber(100))
 		require.Error(t, err)
 		require.Nil(t, jetID)
 	})
 
 	t.Run("quick reply, data is up to date", func(t *testing.T) {
-		js.GetJetTreeMock.Expect(ctx, 100).Return(
+		js.GetJetTreeMock.Return(
 			jet.NewTree(true), nil,
 		)
 		jetID, err := jtu.fetchJet(ctx, target, core.PulseNumber(100))
@@ -220,12 +249,15 @@ func TestJetTreeUpdater_fetchJet(t *testing.T) {
 			nil,
 		)
 
-		js.GetJetTreeMock.Expect(ctx, 100).Return(
+		js.GetJetTreeMock.Return(
 			jet.NewTree(false), nil,
 		)
-		js.UpdateJetTreeMock.Expect(
-			ctx, 100, true, *jet.NewID(0, nil),
-		).Return(nil)
+		js.UpdateJetTreeFunc = func(ctx context.Context, pn core.PulseNumber, actual bool, jets ...core.RecordID) (r error) {
+			require.Equal(t, core.PulseNumber(100), pn)
+			require.True(t, actual)
+			require.Equal(t, []core.RecordID{*jet.NewID(0, nil)}, jets)
+			return nil
+		}
 
 		jetID, err := jtu.fetchJet(ctx, target, core.PulseNumber(100))
 		require.NoError(t, err)

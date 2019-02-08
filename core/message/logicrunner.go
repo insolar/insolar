@@ -202,7 +202,7 @@ type CallConstructor struct {
 	ParentRef    core.RecordRef
 	SaveAs       SaveAs
 	PrototypeRef core.RecordRef
-	Name         string
+	Method       string
 	Arguments    core.Arguments
 	PulseNum     core.PulseNumber
 }
@@ -223,7 +223,7 @@ func (cc *CallConstructor) ToMap() (map[string]interface{}, error) {
 	msg["ParentRef"] = cc.ParentRef.String()
 	msg["SaveAs"] = cc.SaveAs
 	msg["PrototypeRef"] = cc.PrototypeRef.String()
-	msg["Name"] = cc.Name
+	msg["Method"] = cc.Method
 	msg["PulseNum"] = cc.PulseNum
 	args, err := cc.Arguments.MarshalJSON()
 	if err != nil {
@@ -268,11 +268,12 @@ func (cc *CallConstructor) Type() core.MessageType {
 
 // TODO rename to executorObjectResult (results?)
 type ExecutorResults struct {
-	Caller    core.RecordRef
-	RecordRef core.RecordRef
-	Requests  []CaseBindRequest
-	Queue     []ExecutionQueueElement
-	Pending   PendingState
+	Caller                core.RecordRef
+	RecordRef             core.RecordRef
+	Requests              []CaseBindRequest
+	Queue                 []ExecutionQueueElement
+	LedgerHasMoreRequests bool
+	Pending               PendingState
 }
 
 type ExecutionQueueElement struct {

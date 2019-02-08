@@ -34,6 +34,7 @@ const (
 )
 
 // MachineLogicExecutor is an interface for implementers of one particular machine type
+//go:generate minimock -i github.com/insolar/insolar/core.MachineLogicExecutor -o ../testutils -s _mock.go
 type MachineLogicExecutor interface {
 	CallMethod(
 		ctx context.Context, callContext *LogicCallContext,

@@ -17,12 +17,16 @@
 package storage_test
 
 import (
+	"context"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/component"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -30,6 +34,62 @@ import (
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/log"
 )
+
+type dropSuite struct {
+	suite.Suite
+
+	cm      *component.Manager
+	ctx     context.Context
+	cleaner func()
+	db      storage.DBContext
+
+	dropStorage storage.DropStorage
+}
+
+func NewDropSuite() *dropSuite {
+	return &dropSuite{
+		Suite: suite.Suite{},
+	}
+}
+
+// Init and run suite
+func TestDrop(t *testing.T) {
+	suite.Run(t, NewDropSuite())
+}
+
+func (s *dropSuite) BeforeTest(suiteName, testName string) {
+	s.cm = &component.Manager{}
+	s.ctx = inslogger.TestContext(s.T())
+
+	db, cleaner := storagetest.TmpDB(s.ctx, s.T())
+
+	s.db = db
+	s.cleaner = cleaner
+	s.dropStorage = storage.NewDropStorage(10)
+
+	s.cm.Inject(
+		platformpolicy.NewPlatformCryptographyScheme(),
+		s.db,
+		s.dropStorage,
+	)
+
+	err := s.cm.Init(s.ctx)
+	if err != nil {
+		s.T().Error("ComponentManager init failed", err)
+	}
+	err = s.cm.Start(s.ctx)
+	if err != nil {
+		s.T().Error("ComponentManager start failed", err)
+	}
+}
+
+func (s *dropSuite) AfterTest(suiteName, testName string) {
+	err := s.cm.Stop(s.ctx)
+	if err != nil {
+		s.T().Error("ComponentManager stop failed", err)
+	}
+	s.cleaner()
+}
 
 // testing storage CreateDrop lock logic
 //
@@ -39,11 +99,8 @@ import (
 // 3) wait CreateDrop and transaction finished
 // 4) compare finish time of CreateDrop and transaction
 // CreateDrop should happen after transaction (after 'waittime' timeout happens)
-func TestStore_DropWaitWrites(t *testing.T) {
-	t.Parallel()
-	ctx := inslogger.TestContext(t)
-	db, cleaner := storagetest.TmpDB(ctx, t)
-	defer cleaner()
+func (s *dropSuite) TestStore_DropWaitWrites() {
+	// s.T().Parallel()
 
 	var txFin time.Time
 	var dropFin time.Time
@@ -53,15 +110,16 @@ func TestStore_DropWaitWrites(t *testing.T) {
 	wg.Add(2)
 	txstarted := make(chan bool)
 	dropwaits := make(chan bool)
+	var err error
 	go func() {
-		db.Update(ctx, func(tx *storage.TransactionManager) error {
+		err = s.db.Update(s.ctx, func(tx *storage.TransactionManager) error {
 			log.Debugln("start tx")
 			close(txstarted)
 			<-dropwaits
 			time.Sleep(waittime)
+			txFin = time.Now()
 			return nil
 		})
-		txFin = time.Now()
 		log.Debugln("end tx")
 		wg.Done()
 	}()
@@ -70,11 +128,11 @@ func TestStore_DropWaitWrites(t *testing.T) {
 		<-txstarted
 		log.Debugln("start CreateDrop")
 		close(dropwaits)
-		_, _, dropSize, droperr := db.CreateDrop(ctx, core.TODOJetID, 0, []byte{})
+		_, _, dropSize, droperr := s.dropStorage.CreateDrop(s.ctx, core.TODOJetID, 0, []byte{})
 		if droperr != nil {
 			panic(droperr)
 		}
-		require.NotEqual(t, 0, dropSize)
+		require.NotEqual(s.T(), 0, dropSize)
 		dropFin = time.Now()
 		log.Debugln("end CreateDrop")
 		wg.Done()
@@ -84,7 +142,8 @@ func TestStore_DropWaitWrites(t *testing.T) {
 	log.Debugln("R: tx end t:", txFin)
 	log.Debugln("R: drop   t:", dropFin)
 
-	assert.Conditionf(t, func() bool {
+	require.NoError(s.T(), err)
+	assert.Conditionf(s.T(), func() bool {
 		return dropFin.After(txFin)
 	}, "drop should happens after transaction ending")
 }

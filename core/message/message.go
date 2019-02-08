@@ -79,6 +79,10 @@ func getEmptyMessage(mt core.MessageType) (core.Message, error) {
 		return &GetJet{}, nil
 	case core.TypeAbandonedRequestsNotification:
 		return &AbandonedRequestsNotification{}, nil
+	case core.TypeGetPendingRequestID:
+		return &GetPendingRequestID{}, nil
+	case core.TypeGetRequest:
+		return &GetRequest{}, nil
 
 	// heavy sync
 	case core.TypeHeavyStartStop:
@@ -216,6 +220,8 @@ func init() {
 	gob.Register(&GetJet{})
 	gob.Register(&AbandonedRequestsNotification{})
 	gob.Register(&HotData{})
+	gob.Register(&GetPendingRequestID{})
+	gob.Register(&GetRequest{})
 
 	// heavy
 	gob.Register(&HeavyStartStop{})

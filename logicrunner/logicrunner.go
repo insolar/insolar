@@ -41,6 +41,8 @@ import (
 	"github.com/insolar/insolar/logicrunner/goplugin"
 )
 
+const maxQueueLength = 10
+
 type Ref = core.RecordRef
 
 // Context of one contract execution
@@ -64,9 +66,10 @@ type ExecutionState struct {
 
 	Behaviour ValidationBehaviour
 
-	Current              *CurrentExecution
-	Queue                []ExecutionQueueElement
-	QueueProcessorActive bool
+	Current               *CurrentExecution
+	Queue                 []ExecutionQueueElement
+	QueueProcessorActive  bool
+	LedgerHasMoreRequests bool
 
 	// TODO not using in validation, need separate ObjectState.ExecutionState and ObjectState.Validation from ExecutionState struct
 	pending          message.PendingState
@@ -181,11 +184,20 @@ func (es *ExecutionState) CheckPendingRequests(ctx context.Context, inMsg core.M
 }
 
 // releaseQueue must be calling only with es.Lock
-func (es *ExecutionState) releaseQueue() []ExecutionQueueElement {
+func (es *ExecutionState) releaseQueue() ([]ExecutionQueueElement, bool) {
+	ledgerHasMoreRequest := false
 	q := es.Queue
+
+	if len(q) > maxQueueLength {
+		// waiting for ledger implement fetch method
+		// waiting for us implement fetching
+		//q = q[:maxQueueLength]
+		ledgerHasMoreRequest = true
+	}
+
 	es.Queue = make([]ExecutionQueueElement, 0)
 
-	return q
+	return q, ledgerHasMoreRequest
 }
 
 // LogicRunner is a general interface of contract executor
@@ -261,6 +273,7 @@ func (lr *LogicRunner) RegisterHandlers() {
 	lr.MessageBus.MustRegister(core.TypeValidationResults, lr.HandleValidationResultsMessage)
 	lr.MessageBus.MustRegister(core.TypePendingFinished, lr.HandlePendingFinishedMessage)
 	lr.MessageBus.MustRegister(core.TypeStillExecuting, lr.HandleStillExecutingMessage)
+	lr.MessageBus.MustRegister(core.TypeAbandonedRequestsNotification, lr.HandleAbandonedRequestsNotificationMessage)
 }
 
 // Stop stops logic runner component and its executors
@@ -315,8 +328,16 @@ func (lr *LogicRunner) RegisterRequest(ctx context.Context, parcel core.Parcel) 
 	return &res, nil
 }
 
+func loggerWithTargetID(ctx context.Context, msg core.Parcel) context.Context {
+	context, _ := inslogger.WithField(ctx, "targetid", msg.DefaultTarget().String())
+	return context
+}
+
 // Execute runs a method on an object, ATM just thin proxy to `GoPlugin.Exec`
 func (lr *LogicRunner) Execute(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
+	ctx = loggerWithTargetID(ctx, parcel)
+	inslogger.FromContext(ctx).Debug("LogicRunner.Execute starts ...")
+
 	msg, ok := parcel.Message().(message.IBaseLogicMessage)
 	if !ok {
 		return nil, errors.New("Execute( ! message.IBaseLogicMessage )")
@@ -432,6 +453,9 @@ func (lr *LogicRunner) HandlePendingFinishedMessage(
 ) (
 	core.Reply, error,
 ) {
+	ctx = loggerWithTargetID(ctx, parcel)
+	inslogger.FromContext(ctx).Debug("LogicRunner.HandlePendingFinishedMessage starts ...")
+
 	msg := parcel.Message().(*message.PendingFinished)
 	ref := msg.DefaultTarget()
 	os := lr.UpsertObjectState(*ref)
@@ -691,28 +715,27 @@ func (lr *LogicRunner) prepareObjectState(ctx context.Context, msg *message.Exec
 
 	es.Lock()
 
-	if es.pending == message.InPending && es.Current != nil {
-		inslogger.FromContext(ctx).Debug(
-			"execution returned to node that is still executing pending",
-		)
-		es.pending = message.NotPending
-		es.PendingConfirmed = false
-	} else if es.pending == message.InPending && msg.Pending == message.NotPending {
-		inslogger.FromContext(ctx).Debug(
-			"executor we came to thinks that execution pending, but previous said to continue",
-		)
-
-		es.pending = message.NotPending
+	if es.pending == message.InPending {
 		if es.Current != nil {
-			es.objectbody = nil
-		} else {
-			inslogger.FromContext(ctx).Error(
-				"we have object in pending state, but ",
-				"with currently executing contract. shouldn't happen",
+			inslogger.FromContext(ctx).Debug(
+				"execution returned to node that is still executing pending",
 			)
+			es.pending = message.NotPending
+			es.PendingConfirmed = false
+		} else if msg.Pending == message.NotPending {
+			inslogger.FromContext(ctx).Debug(
+				"executor we came to thinks that execution pending, but previous said to continue",
+			)
+
+			es.pending = message.NotPending
 		}
 	} else if es.pending == message.PendingUnknown {
 		es.pending = msg.Pending
+	}
+
+	// set false to true is good, set true to false may be wrong, better make unnecessary call
+	if !es.LedgerHasMoreRequests && msg.LedgerHasMoreRequests {
+		es.LedgerHasMoreRequests = msg.LedgerHasMoreRequests
 	}
 
 	//prepare Queue
@@ -787,7 +810,7 @@ func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState
 		if err != nil {
 			return nil, es.WrapError(err, "couldn't deactivate object")
 		}
-	} else {
+	} else if !bytes.Equal(es.objectbody.Object, newData) {
 		od, err := am.UpdateObject(ctx, Ref{}, *current.Request, es.objectbody.objDescriptor, newData)
 		if err != nil {
 			if strings.Contains(err.Error(), "invalid state record") {
@@ -878,7 +901,7 @@ func (lr *LogicRunner) executeConstructorCall(
 		return nil, es.WrapError(err, "no executer registered")
 	}
 
-	newData, err := executor.CallConstructor(ctx, current.LogicContext, *codeDesc.Ref(), m.Name, m.Arguments)
+	newData, err := executor.CallConstructor(ctx, current.LogicContext, *codeDesc.Ref(), m.Method, m.Arguments)
 	if err != nil {
 		return nil, es.WrapError(err, "executer error")
 	}
@@ -944,17 +967,20 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 						)
 						es.pending = message.NotPending
 						sendExecResults = true
+						es.LedgerHasMoreRequests = true
 					}
 
 					state.ExecutionState = nil
 				}
 
-				queue := es.releaseQueue()
+				queue, ledgerHasMoreRequest := es.releaseQueue()
 				if len(queue) > 0 || sendExecResults {
 					// TODO: we also should send when executed something for validation
 					// TODO: now validation is disabled
 					caseBind := es.Behaviour.(*ValidationSaver).caseBind
 					requests := caseBind.getCaseBindForMessage(ctx)
+					messagesQueue := convertQueueToMessageQueue(queue)
+
 					messages = append(
 						messages,
 						//&message.ValidateCaseBind{
@@ -963,10 +989,11 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 						//	Pulse:     pulse,
 						//},
 						&message.ExecutorResults{
-							RecordRef: ref,
-							Pending:   es.pending,
-							Requests:  requests,
-							Queue:     convertQueueToMessageQueue(queue),
+							RecordRef:             ref,
+							Pending:               es.pending,
+							Requests:              requests,
+							Queue:                 messagesQueue,
+							LedgerHasMoreRequests: es.LedgerHasMoreRequests || ledgerHasMoreRequest,
 						},
 					)
 				}
@@ -1011,22 +1038,9 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 
 	lr.stateMutex.Unlock()
 
-	var sendWg sync.WaitGroup
-	ctx, spanMessages := instracer.StartSpan(ctx, "pulse.logicrunner sending messages")
-	spanMessages.AddAttributes(trace.StringAttribute("numMessages", strconv.Itoa(len(messages))))
-
 	if len(messages) > 0 {
-		sendWg.Add(len(messages))
-
-		for _, msg := range messages {
-			go lr.sendOnPulseMessagesAsync(ctx, msg, &sendWg)
-		}
+		go lr.sendOnPulseMessagesAsync(ctx, messages)
 	}
-
-	go func() {
-		sendWg.Wait()
-		spanMessages.End()
-	}()
 
 	return nil
 }
@@ -1036,6 +1050,9 @@ func (lr *LogicRunner) HandleStillExecutingMessage(
 ) (
 	core.Reply, error,
 ) {
+	ctx = loggerWithTargetID(ctx, parcel)
+	inslogger.FromContext(ctx).Debug("LogicRunner.HandleStillExecutingMessage starts ...")
+
 	msg := parcel.Message().(*message.StillExecuting)
 	ref := msg.DefaultTarget()
 	os := lr.UpsertObjectState(*ref)
@@ -1068,13 +1085,63 @@ func (lr *LogicRunner) HandleStillExecutingMessage(
 	return &reply.OK{}, nil
 }
 
-func (lr *LogicRunner) sendOnPulseMessagesAsync(ctx context.Context, msg core.Message, sendWg *sync.WaitGroup) {
+func (lr *LogicRunner) HandleAbandonedRequestsNotificationMessage(
+	ctx context.Context, parcel core.Parcel,
+) (
+	core.Reply, error,
+) {
+	ctx = loggerWithTargetID(ctx, parcel)
+	inslogger.FromContext(ctx).Debug("LogicRunner.HandleAbandonedRequestsNotificationMessage starts ...")
+
+	msg := parcel.Message().(*message.AbandonedRequestsNotification)
+	ref := msg.DefaultTarget()
+	os := lr.UpsertObjectState(*ref)
+
+	inslogger.FromContext(ctx).Debug("Got information that ", ref, " has abandoned requests")
+
+	os.Lock()
+	if os.ExecutionState == nil {
+		os.ExecutionState = &ExecutionState{
+			Queue:                 make([]ExecutionQueueElement, 0),
+			Behaviour:             &ValidationSaver{lr: lr, caseBind: NewCaseBind()},
+			pending:               message.InPending,
+			PendingConfirmed:      false,
+			LedgerHasMoreRequests: true,
+		}
+	} else {
+		es := os.ExecutionState
+		es.Lock()
+		es.LedgerHasMoreRequests = true
+		es.Unlock()
+	}
+	os.Unlock()
+
+	return &reply.OK{}, nil
+}
+
+func (lr *LogicRunner) sendOnPulseMessagesAsync(ctx context.Context, messages []core.Message) {
+	ctx, spanMessages := instracer.StartSpan(ctx, "pulse.logicrunner sending messages")
+	spanMessages.AddAttributes(trace.StringAttribute("numMessages", strconv.Itoa(len(messages))))
+
+	var sendWg sync.WaitGroup
+	sendWg.Add(len(messages))
+
+	for _, msg := range messages {
+		go lr.sendOnPulseMessage(ctx, msg, &sendWg)
+	}
+
+	sendWg.Wait()
+	spanMessages.End()
+}
+
+func (lr *LogicRunner) sendOnPulseMessage(ctx context.Context, msg core.Message, sendWg *sync.WaitGroup) {
 	defer sendWg.Done()
 	_, err := lr.MessageBus.Send(ctx, msg, nil)
 	if err != nil {
 		inslogger.FromContext(ctx).Error(errors.Wrap(err, "error while sending validation data on pulse"))
 	}
 }
+
 func convertQueueToMessageQueue(queue []ExecutionQueueElement) []message.ExecutionQueueElement {
 	mq := make([]message.ExecutionQueueElement, 0)
 	for _, elem := range queue {

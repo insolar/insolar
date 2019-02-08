@@ -135,13 +135,12 @@ func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *gop
 		false,
 	)
 
-	providerMock := recentstorage.NewProviderMock(t)
-	recentStorageMock := recentstorage.NewRecentStorageMock(t)
-	recentStorageMock.AddObjectMock.Return()
+	indexMock := recentstorage.NewRecentIndexStorageMock(t)
+	indexMock.AddObjectMock.Return()
 
-	providerMock.GetStorageFunc = func(ctx context.Context, p core.RecordID) (r recentstorage.RecentStorage) {
-		return recentStorageMock
-	}
+	providerMock := recentstorage.NewProviderMock(t)
+	providerMock.GetIndexStorageMock.Return(indexMock)
+	providerMock.DecreaseIndexesTTLMock.Return(nil)
 
 	parcelFactory := messagebus.NewParcelFactory()
 	cm := &component.Manager{}
@@ -1825,14 +1824,14 @@ func (r *One) EmptyMethod() (error) {
 		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{}),
 	}
 
+	// emulate death
+	err = rlr.sock.Close()
+	require.NoError(t, err)
+
 	client, err := gp.Downstream(ctx)
 
 	// call method without waiting of it execution
 	client.Go("RPC.CallMethod", req, res, nil)
-
-	// emulate death
-	err = rlr.sock.Close()
-	require.NoError(t, err)
 
 	// wait for gorund try to send answer back, it will see closing connection, after that it needs to die
 	// ping to goPlugin, it has to be dead

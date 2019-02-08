@@ -18,9 +18,12 @@ package storage_test
 
 import (
 	"bytes"
+	"context"
 	"testing"
 
+	"github.com/insolar/insolar/component"
 	base58 "github.com/jbenet/go-base58"
+	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
@@ -36,91 +39,144 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestDB_GetRecordNotFound(t *testing.T) {
-	t.Parallel()
-	ctx := inslogger.TestContext(t)
-	db, cleaner := storagetest.TmpDB(ctx, t)
-	defer cleaner()
-	jet := testutils.RandomJet()
+type storageSuite struct {
+	suite.Suite
 
-	rec, err := db.GetRecord(ctx, jet, &core.RecordID{})
-	assert.Equal(t, err, storage.ErrNotFound)
-	assert.Nil(t, rec)
+	cm      *component.Manager
+	ctx     context.Context
+	cleaner func()
+	db      storage.DBContext
+
+	objectStorage storage.ObjectStorage
+	dropStorage   storage.DropStorage
+	pulseTracker  storage.PulseTracker
+
+	jetID core.RecordID
 }
 
-func TestDB_SetRecord(t *testing.T) {
-	t.Parallel()
-	ctx := inslogger.TestContext(t)
-	db, cleaner := storagetest.TmpDB(ctx, t)
-	defer cleaner()
-	jet := testutils.RandomJet()
+func NewStorageSuite() *storageSuite {
+	return &storageSuite{
+		Suite: suite.Suite{},
+	}
+}
 
+// Init and run suite
+func TestStorage(t *testing.T) {
+	suite.Run(t, NewStorageSuite())
+}
+
+func (s *storageSuite) BeforeTest(suiteName, testName string) {
+	s.cm = &component.Manager{}
+	s.ctx = inslogger.TestContext(s.T())
+
+	db, cleaner := storagetest.TmpDB(s.ctx, s.T())
+	s.db = db
+	s.cleaner = cleaner
+
+	s.objectStorage = storage.NewObjectStorage()
+	s.dropStorage = storage.NewDropStorage(10)
+	s.pulseTracker = storage.NewPulseTracker()
+	s.jetID = testutils.RandomJet()
+
+	s.cm.Inject(
+		platformpolicy.NewPlatformCryptographyScheme(),
+		s.db,
+		s.objectStorage,
+		s.dropStorage,
+		s.pulseTracker,
+	)
+
+	err := s.cm.Init(s.ctx)
+	if err != nil {
+		s.T().Error("ComponentManager init failed", err)
+	}
+	err = s.cm.Start(s.ctx)
+	if err != nil {
+		s.T().Error("ComponentManager start failed", err)
+	}
+}
+
+func (s *storageSuite) AfterTest(suiteName, testName string) {
+	err := s.cm.Stop(s.ctx)
+	if err != nil {
+		s.T().Error("ComponentManager stop failed", err)
+	}
+	s.cleaner()
+}
+
+func (s *storageSuite) TestDB_GetRecordNotFound() {
+	rec, err := s.objectStorage.GetRecord(s.ctx, s.jetID, &core.RecordID{})
+	assert.Equal(s.T(), err, storage.ErrNotFound)
+	assert.Nil(s.T(), rec)
+}
+
+func (s *storageSuite) TestDB_SetRecord() {
 	rec := &record.RequestRecord{}
-	gotRef, err := db.SetRecord(ctx, jet, core.GenesisPulse.PulseNumber, rec)
-	assert.Nil(t, err)
+	gotRef, err := s.objectStorage.SetRecord(s.ctx, s.jetID, core.GenesisPulse.PulseNumber, rec)
+	assert.Nil(s.T(), err)
 
-	gotRec, err := db.GetRecord(ctx, jet, gotRef)
-	assert.Nil(t, err)
-	assert.Equal(t, rec, gotRec)
+	gotRec, err := s.objectStorage.GetRecord(s.ctx, s.jetID, gotRef)
+	assert.Nil(s.T(), err)
+	assert.Equal(s.T(), rec, gotRec)
 
-	_, err = db.SetRecord(ctx, jet, core.GenesisPulse.PulseNumber, rec)
-	assert.Equalf(t, err, storage.ErrOverride, "records override should be forbidden")
+	_, err = s.objectStorage.SetRecord(s.ctx, s.jetID, core.GenesisPulse.PulseNumber, rec)
+	assert.Equalf(s.T(), err, storage.ErrOverride, "records override should be forbidden")
 }
 
-func TestDB_SetObjectIndex_ReturnsNotFoundIfNoIndex(t *testing.T) {
-	t.Parallel()
-	ctx := inslogger.TestContext(t)
-	db, cleaner := storagetest.TmpDB(ctx, t)
-	defer cleaner()
-	jetID := testutils.RandomJet()
-
-	idx, err := db.GetObjectIndex(ctx, jetID, core.NewRecordID(0, hexhash("5000")), false)
-	assert.Equal(t, storage.ErrNotFound, err)
-	assert.Nil(t, idx)
+func (s *storageSuite) TestDB_SetObjectIndex_ReturnsNotFoundIfNoIndex() {
+	idx, err := s.objectStorage.GetObjectIndex(s.ctx, s.jetID, core.NewRecordID(0, hexhash("5000")), false)
+	assert.Equal(s.T(), storage.ErrNotFound, err)
+	assert.Nil(s.T(), idx)
 }
 
-func TestDB_SetObjectIndex_StoresCorrectDataInStorage(t *testing.T) {
-	t.Parallel()
-	ctx := inslogger.TestContext(t)
-	db, cleaner := storagetest.TmpDB(ctx, t)
-	defer cleaner()
-	jetID := testutils.RandomJet()
-
+func (s *storageSuite) TestDB_SetObjectIndex_StoresCorrectDataInStorage() {
 	idx := index.ObjectLifeline{
 		LatestState: core.NewRecordID(0, hexhash("20")),
 	}
 	zeroid := core.NewRecordID(0, hexhash(""))
-	err := db.SetObjectIndex(ctx, jetID, zeroid, &idx)
-	assert.Nil(t, err)
+	err := s.objectStorage.SetObjectIndex(s.ctx, s.jetID, zeroid, &idx)
+	assert.Nil(s.T(), err)
 
-	storedIndex, err := db.GetObjectIndex(ctx, jetID, zeroid, false)
-	assert.NoError(t, err)
-	assert.Equal(t, *storedIndex, idx)
+	storedIndex, err := s.objectStorage.GetObjectIndex(s.ctx, s.jetID, zeroid, false)
+	assert.NoError(s.T(), err)
+	assert.Equal(s.T(), *storedIndex, idx)
 }
 
-func TestDB_GetDrop_ReturnsNotFoundIfNoDrop(t *testing.T) {
-	t.Parallel()
-	ctx := inslogger.TestContext(t)
-	db, cleaner := storagetest.TmpDB(ctx, t)
-	defer cleaner()
+func (s *storageSuite) TestDB_SetObjectIndex_SaveLastUpdate() {
+	// Arrange
+	jetID := testutils.RandomJet()
 
-	drop, err := db.GetDrop(ctx, testutils.RandomJet(), 1)
-	assert.Equal(t, err, storage.ErrNotFound)
-	assert.Nil(t, drop)
+	idx := index.ObjectLifeline{
+		LatestState:  core.NewRecordID(0, hexhash("20")),
+		LatestUpdate: 1239,
+	}
+	zeroid := core.NewRecordID(0, hexhash(""))
+
+	// Act
+	err := s.objectStorage.SetObjectIndex(s.ctx, jetID, zeroid, &idx)
+	assert.Nil(s.T(), err)
+
+	// Assert
+	storedIndex, err := s.objectStorage.GetObjectIndex(s.ctx, jetID, zeroid, false)
+	assert.NoError(s.T(), err)
+	assert.Equal(s.T(), *storedIndex, idx)
+	assert.Equal(s.T(), 1239, int(idx.LatestUpdate))
 }
 
-func TestDB_CreateDrop(t *testing.T) {
-	t.Parallel()
-	ctx := inslogger.TestContext(t)
-	db, cleaner := storagetest.TmpDB(ctx, t)
-	defer cleaner()
+func (s *storageSuite) TestDB_GetDrop_ReturnsNotFoundIfNoDrop() {
+	drop, err := s.dropStorage.GetDrop(s.ctx, testutils.RandomJet(), 1)
+	assert.Equal(s.T(), err, storage.ErrNotFound)
+	assert.Nil(s.T(), drop)
+}
+
+func (s *storageSuite) TestDB_CreateDrop() {
 	// FIXME: should work with random jet
 	// jetID := testutils.RandomJet()
 	jetID := *jet.NewID(0, nil)
 
 	pulse := core.PulseNumber(core.FirstPulseNumber + 10)
-	err := db.AddPulse(
-		ctx,
+	err := s.pulseTracker.AddPulse(
+		s.ctx,
 		core.Pulse{
 			PulseNumber: pulse,
 			Entropy:     core.Entropy{1, 2, 3},
@@ -135,31 +191,28 @@ func TestDB_CreateDrop(t *testing.T) {
 				Code: record.CalculateIDForBlob(cs, pulse, []byte{byte(i)}),
 			}),
 		}
-		db.SetMessage(ctx, jetID, pulse, &setRecordMessage)
-		db.SetBlob(ctx, jetID, pulse, []byte{byte(i)})
+		err = s.objectStorage.SetMessage(s.ctx, jetID, pulse, &setRecordMessage)
+		require.NoError(s.T(), err)
+		_, err = s.objectStorage.SetBlob(s.ctx, jetID, pulse, []byte{byte(i)})
+		require.NoError(s.T(), err)
 	}
 
-	drop, messages, dropSize, err := db.CreateDrop(ctx, jetID, pulse, []byte{4, 5, 6})
-	require.NoError(t, err)
-	require.NotEqual(t, 0, dropSize)
+	drop, messages, dropSize, err := s.dropStorage.CreateDrop(s.ctx, jetID, pulse, []byte{4, 5, 6})
+	require.NoError(s.T(), err)
+	require.NotEqual(s.T(), 0, dropSize)
 	// TODO: messages collection was disabled in ab46d01, validation is not active ATM
-	require.Equal(t, 0, len(messages))
-	require.Equal(t, pulse, drop.Pulse)
-	require.Equal(t, "2aCdao6DhZSWQNTrtrxJW7QQZRb6UJ1ssRi9cg", base58.Encode(drop.Hash))
+	require.Equal(s.T(), 0, len(messages))
+	require.Equal(s.T(), pulse, drop.Pulse)
+	require.Equal(s.T(), "2aCdao6DhZSWQNTrtrxJW7QQZRb6UJ1ssRi9cg", base58.Encode(drop.Hash))
 
 	for _, rawMessage := range messages {
 		formatedMessage, err := message.Deserialize(bytes.NewBuffer(rawMessage))
-		assert.NoError(t, err)
-		assert.Equal(t, core.TypeSetRecord, formatedMessage.Type())
+		assert.NoError(s.T(), err)
+		assert.Equal(s.T(), core.TypeSetRecord, formatedMessage.Type())
 	}
 }
 
-func TestDB_SetDrop(t *testing.T) {
-	t.Parallel()
-	ctx := inslogger.TestContext(t)
-	db, cleaner := storagetest.TmpDB(ctx, t)
-	defer cleaner()
-
+func (s *storageSuite) TestDB_SetDrop() {
 	drop42 := jet.JetDrop{
 		Pulse: 42,
 		Hash:  []byte{0xFF},
@@ -167,32 +220,27 @@ func TestDB_SetDrop(t *testing.T) {
 	// FIXME: should work with random jet
 	// jetID := testutils.RandomJet()
 	jetID := *jet.NewID(0, nil)
-	err := db.SetDrop(ctx, jetID, &drop42)
-	assert.NoError(t, err)
+	err := s.dropStorage.SetDrop(s.ctx, jetID, &drop42)
+	assert.NoError(s.T(), err)
 
-	got, err := db.GetDrop(ctx, jetID, 42)
-	assert.NoError(t, err)
-	assert.Equal(t, *got, drop42)
+	got, err := s.dropStorage.GetDrop(s.ctx, jetID, 42)
+	assert.NoError(s.T(), err)
+	assert.Equal(s.T(), *got, drop42)
 }
 
-func TestDB_AddPulse(t *testing.T) {
-	t.Parallel()
-	ctx := inslogger.TestContext(t)
-	db, cleaner := storagetest.TmpDB(ctx, t)
-	defer cleaner()
-
+func (s *storageSuite) TestDB_AddPulse() {
 	pulse42 := core.Pulse{PulseNumber: 42, Entropy: core.Entropy{1, 2, 3}}
-	err := db.AddPulse(ctx, pulse42)
-	require.NoError(t, err)
+	err := s.pulseTracker.AddPulse(s.ctx, pulse42)
+	require.NoError(s.T(), err)
 
-	latestPulse, err := db.GetLatestPulse(ctx)
-	assert.Equal(t, core.PulseNumber(42), latestPulse.Pulse.PulseNumber)
+	latestPulse, err := s.pulseTracker.GetLatestPulse(s.ctx)
+	assert.Equal(s.T(), core.PulseNumber(42), latestPulse.Pulse.PulseNumber)
 
-	pulse, err := db.GetPulse(ctx, latestPulse.Pulse.PulseNumber)
-	require.NoError(t, err)
+	pulse, err := s.pulseTracker.GetPulse(s.ctx, latestPulse.Pulse.PulseNumber)
+	require.NoError(s.T(), err)
 
-	prevPulse, err := db.GetPulse(ctx, *latestPulse.Prev)
-	require.NoError(t, err)
+	prevPulse, err := s.pulseTracker.GetPulse(s.ctx, *latestPulse.Prev)
+	require.NoError(s.T(), err)
 
 	prevPN := core.PulseNumber(core.FirstPulseNumber)
 	expectPulse := storage.Pulse{
@@ -200,73 +248,85 @@ func TestDB_AddPulse(t *testing.T) {
 		Pulse:        pulse42,
 		SerialNumber: prevPulse.SerialNumber + 1,
 	}
-	assert.Equal(t, expectPulse, *pulse)
+	assert.Equal(s.T(), expectPulse, *pulse)
 }
 
-func TestDB_SetLocalData(t *testing.T) {
-	t.Parallel()
-	ctx := inslogger.TestContext(t)
-	db, cleaner := storagetest.TmpDB(ctx, t)
-	defer cleaner()
+func (s *storageSuite) TestDB_SetLocalData() {
+	err := s.db.SetLocalData(s.ctx, 0, []byte{1}, []byte{2})
+	require.NoError(s.T(), err)
 
-	err := db.SetLocalData(ctx, 0, []byte{1}, []byte{2})
-	require.NoError(t, err)
+	data, err := s.db.GetLocalData(s.ctx, 0, []byte{1})
+	require.NoError(s.T(), err)
+	assert.Equal(s.T(), []byte{2}, data)
 
-	data, err := db.GetLocalData(ctx, 0, []byte{1})
-	require.NoError(t, err)
-	assert.Equal(t, []byte{2}, data)
-
-	_, err = db.GetLocalData(ctx, 1, []byte{1})
-	assert.Equal(t, storage.ErrNotFound, err)
+	_, err = s.db.GetLocalData(s.ctx, 1, []byte{1})
+	assert.Equal(s.T(), storage.ErrNotFound, err)
 }
 
-func TestDB_IterateLocalData(t *testing.T) {
-	t.Parallel()
-	ctx := inslogger.TestContext(t)
-	db, cleaner := storagetest.TmpDB(ctx, t)
-	defer cleaner()
-
-	err := db.SetLocalData(ctx, 1, []byte{1, 1}, []byte{1})
-	require.NoError(t, err)
-	err = db.SetLocalData(ctx, 1, []byte{1, 2}, []byte{2})
-	require.NoError(t, err)
-	err = db.SetLocalData(ctx, 1, []byte{2, 1}, []byte{3})
-	require.NoError(t, err)
-	err = db.SetLocalData(ctx, 2, []byte{1, 1}, []byte{4})
-	require.NoError(t, err)
+func (s *storageSuite) TestDB_IterateLocalData() {
+	err := s.db.SetLocalData(s.ctx, 1, []byte{1, 1}, []byte{1})
+	require.NoError(s.T(), err)
+	err = s.db.SetLocalData(s.ctx, 1, []byte{1, 2}, []byte{2})
+	require.NoError(s.T(), err)
+	err = s.db.SetLocalData(s.ctx, 1, []byte{2, 1}, []byte{3})
+	require.NoError(s.T(), err)
+	err = s.db.SetLocalData(s.ctx, 2, []byte{1, 1}, []byte{4})
+	require.NoError(s.T(), err)
 
 	type tuple struct {
 		k []byte
 		v []byte
 	}
 	var results []tuple
-	err = db.IterateLocalData(ctx, 1, []byte{1}, func(k, v []byte) error {
+	err = s.db.IterateLocalData(s.ctx, 1, []byte{1}, func(k, v []byte) error {
 		results = append(results, tuple{k: k, v: v})
 		return nil
 	})
-	require.NoError(t, err)
-	assert.Equal(t, []tuple{
+	require.NoError(s.T(), err)
+	assert.Equal(s.T(), []tuple{
 		{k: []byte{1}, v: []byte{1}},
 		{k: []byte{2}, v: []byte{2}},
 	}, results)
 }
 
 func TestDB_Close(t *testing.T) {
-	t.Parallel()
-
 	ctx := inslogger.TestContext(t)
 	db, cleaner := storagetest.TmpDB(ctx, t)
 
 	jetID := testutils.RandomJet()
 
+	os := storage.NewObjectStorage()
+	ds := storage.NewDropStorage(10)
+
+	cm := &component.Manager{}
+	cm.Inject(
+		platformpolicy.NewPlatformCryptographyScheme(),
+		db,
+		os,
+		ds,
+	)
+	err := cm.Init(ctx)
+	if err != nil {
+		t.Error("ComponentManager init failed", err)
+	}
+	err = cm.Start(ctx)
+	if err != nil {
+		t.Error("ComponentManager start failed", err)
+	}
+
+	err = cm.Stop(ctx)
+	if err != nil {
+		t.Error("ComponentManager stop failed", err)
+	}
+
 	cleaner()
 
-	rec, err := db.GetRecord(ctx, jetID, &core.RecordID{})
+	rec, err := os.GetRecord(ctx, jetID, &core.RecordID{})
 	assert.Nil(t, rec)
 	assert.Equal(t, err, storage.ErrClosed)
 
 	rec = &record.RequestRecord{}
-	gotRef, err := db.SetRecord(ctx, jetID, core.GenesisPulse.PulseNumber, rec)
+	gotRef, err := os.SetRecord(ctx, jetID, core.GenesisPulse.PulseNumber, rec)
 	assert.Nil(t, gotRef)
 	assert.Equal(t, err, storage.ErrClosed)
 }

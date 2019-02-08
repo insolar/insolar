@@ -35,7 +35,7 @@ import (
 
 // Ledger is the global ledger handler. Other system parts communicate with ledger through it.
 type Ledger struct {
-	db              *storage.DB
+	db              storage.DBContext
 	ArtifactManager core.ArtifactManager `inject:""`
 	PulseManager    core.PulseManager    `inject:""`
 	JetCoordinator  core.JetCoordinator  `inject:""`
@@ -73,7 +73,7 @@ func (l *Ledger) GetLocalStorage() core.LocalStorage {
 // NewTestLedger is the util function for creation of Ledger with provided
 // private members (suitable for tests).
 func NewTestLedger(
-	db *storage.DB,
+	db storage.DBContext,
 	am *artifactmanager.LedgerArtifactManager,
 	pm *pulsemanager.PulseManager,
 	jc core.JetCoordinator,
@@ -97,16 +97,24 @@ func GetLedgerComponents(conf configuration.Ledger, certificate core.Certificate
 
 	return []interface{}{
 		db,
+		storage.NewCleaner(),
+		storage.NewPulseTracker(),
 		storage.NewPulseStorage(),
+		storage.NewJetStorage(),
+		storage.NewDropStorage(conf.JetSizesHistoryDepth),
+		storage.NewNodeStorage(),
+		storage.NewObjectStorage(),
+		storage.NewReplicaStorage(),
+		storage.NewGenesisInitializer(),
 		storage.NewRecentStorageProvider(conf.RecentStorage.DefaultTTL),
 		artifactmanager.NewHotDataWaiterConcrete(),
-		artifactmanager.NewArtifactManger(db),
-		jetcoordinator.NewJetCoordinator(),
+		artifactmanager.NewArtifactManger(),
+		jetcoordinator.NewJetCoordinator(conf.LightChainLimit),
 		pulsemanager.NewPulseManager(conf),
 		artifactmanager.NewMessageHandler(&conf, certificate),
 		localstorage.NewLocalStorage(db),
 		heavyserver.NewSync(db),
-		exporter.NewExporter(db, conf.Exporter),
+		exporter.NewExporter(conf.Exporter),
 	}
 }
 

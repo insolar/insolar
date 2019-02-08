@@ -30,6 +30,11 @@ type JetCoordinatorMock struct {
 	IsAuthorizedPreCounter uint64
 	IsAuthorizedMock       mJetCoordinatorMockIsAuthorized
 
+	IsBeyondLimitFunc       func(p context.Context, p1 core.PulseNumber, p2 core.PulseNumber) (r bool, r1 error)
+	IsBeyondLimitCounter    uint64
+	IsBeyondLimitPreCounter uint64
+	IsBeyondLimitMock       mJetCoordinatorMockIsBeyondLimit
+
 	LightExecutorForJetFunc       func(p context.Context, p1 core.RecordID, p2 core.PulseNumber) (r *core.RecordRef, r1 error)
 	LightExecutorForJetCounter    uint64
 	LightExecutorForJetPreCounter uint64
@@ -54,6 +59,11 @@ type JetCoordinatorMock struct {
 	MeCounter    uint64
 	MePreCounter uint64
 	MeMock       mJetCoordinatorMockMe
+
+	NodeForJetFunc       func(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 core.PulseNumber) (r *core.RecordRef, r1 error)
+	NodeForJetCounter    uint64
+	NodeForJetPreCounter uint64
+	NodeForJetMock       mJetCoordinatorMockNodeForJet
 
 	QueryRoleFunc       func(p context.Context, p1 core.DynamicRole, p2 core.RecordID, p3 core.PulseNumber) (r []core.RecordRef, r1 error)
 	QueryRoleCounter    uint64
@@ -81,11 +91,13 @@ func NewJetCoordinatorMock(t minimock.Tester) *JetCoordinatorMock {
 
 	m.HeavyMock = mJetCoordinatorMockHeavy{mock: m}
 	m.IsAuthorizedMock = mJetCoordinatorMockIsAuthorized{mock: m}
+	m.IsBeyondLimitMock = mJetCoordinatorMockIsBeyondLimit{mock: m}
 	m.LightExecutorForJetMock = mJetCoordinatorMockLightExecutorForJet{mock: m}
 	m.LightExecutorForObjectMock = mJetCoordinatorMockLightExecutorForObject{mock: m}
 	m.LightValidatorsForJetMock = mJetCoordinatorMockLightValidatorsForJet{mock: m}
 	m.LightValidatorsForObjectMock = mJetCoordinatorMockLightValidatorsForObject{mock: m}
 	m.MeMock = mJetCoordinatorMockMe{mock: m}
+	m.NodeForJetMock = mJetCoordinatorMockNodeForJet{mock: m}
 	m.QueryRoleMock = mJetCoordinatorMockQueryRole{mock: m}
 	m.VirtualExecutorForObjectMock = mJetCoordinatorMockVirtualExecutorForObject{mock: m}
 	m.VirtualValidatorsForObjectMock = mJetCoordinatorMockVirtualValidatorsForObject{mock: m}
@@ -393,6 +405,158 @@ func (m *JetCoordinatorMock) IsAuthorizedFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.IsAuthorizedFunc != nil {
 		return atomic.LoadUint64(&m.IsAuthorizedCounter) > 0
+	}
+
+	return true
+}
+
+type mJetCoordinatorMockIsBeyondLimit struct {
+	mock              *JetCoordinatorMock
+	mainExpectation   *JetCoordinatorMockIsBeyondLimitExpectation
+	expectationSeries []*JetCoordinatorMockIsBeyondLimitExpectation
+}
+
+type JetCoordinatorMockIsBeyondLimitExpectation struct {
+	input  *JetCoordinatorMockIsBeyondLimitInput
+	result *JetCoordinatorMockIsBeyondLimitResult
+}
+
+type JetCoordinatorMockIsBeyondLimitInput struct {
+	p  context.Context
+	p1 core.PulseNumber
+	p2 core.PulseNumber
+}
+
+type JetCoordinatorMockIsBeyondLimitResult struct {
+	r  bool
+	r1 error
+}
+
+//Expect specifies that invocation of JetCoordinator.IsBeyondLimit is expected from 1 to Infinity times
+func (m *mJetCoordinatorMockIsBeyondLimit) Expect(p context.Context, p1 core.PulseNumber, p2 core.PulseNumber) *mJetCoordinatorMockIsBeyondLimit {
+	m.mock.IsBeyondLimitFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &JetCoordinatorMockIsBeyondLimitExpectation{}
+	}
+	m.mainExpectation.input = &JetCoordinatorMockIsBeyondLimitInput{p, p1, p2}
+	return m
+}
+
+//Return specifies results of invocation of JetCoordinator.IsBeyondLimit
+func (m *mJetCoordinatorMockIsBeyondLimit) Return(r bool, r1 error) *JetCoordinatorMock {
+	m.mock.IsBeyondLimitFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &JetCoordinatorMockIsBeyondLimitExpectation{}
+	}
+	m.mainExpectation.result = &JetCoordinatorMockIsBeyondLimitResult{r, r1}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of JetCoordinator.IsBeyondLimit is expected once
+func (m *mJetCoordinatorMockIsBeyondLimit) ExpectOnce(p context.Context, p1 core.PulseNumber, p2 core.PulseNumber) *JetCoordinatorMockIsBeyondLimitExpectation {
+	m.mock.IsBeyondLimitFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &JetCoordinatorMockIsBeyondLimitExpectation{}
+	expectation.input = &JetCoordinatorMockIsBeyondLimitInput{p, p1, p2}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *JetCoordinatorMockIsBeyondLimitExpectation) Return(r bool, r1 error) {
+	e.result = &JetCoordinatorMockIsBeyondLimitResult{r, r1}
+}
+
+//Set uses given function f as a mock of JetCoordinator.IsBeyondLimit method
+func (m *mJetCoordinatorMockIsBeyondLimit) Set(f func(p context.Context, p1 core.PulseNumber, p2 core.PulseNumber) (r bool, r1 error)) *JetCoordinatorMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.IsBeyondLimitFunc = f
+	return m.mock
+}
+
+//IsBeyondLimit implements github.com/insolar/insolar/core.JetCoordinator interface
+func (m *JetCoordinatorMock) IsBeyondLimit(p context.Context, p1 core.PulseNumber, p2 core.PulseNumber) (r bool, r1 error) {
+	counter := atomic.AddUint64(&m.IsBeyondLimitPreCounter, 1)
+	defer atomic.AddUint64(&m.IsBeyondLimitCounter, 1)
+
+	if len(m.IsBeyondLimitMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.IsBeyondLimitMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to JetCoordinatorMock.IsBeyondLimit. %v %v %v", p, p1, p2)
+			return
+		}
+
+		input := m.IsBeyondLimitMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, JetCoordinatorMockIsBeyondLimitInput{p, p1, p2}, "JetCoordinator.IsBeyondLimit got unexpected parameters")
+
+		result := m.IsBeyondLimitMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the JetCoordinatorMock.IsBeyondLimit")
+			return
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.IsBeyondLimitMock.mainExpectation != nil {
+
+		input := m.IsBeyondLimitMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, JetCoordinatorMockIsBeyondLimitInput{p, p1, p2}, "JetCoordinator.IsBeyondLimit got unexpected parameters")
+		}
+
+		result := m.IsBeyondLimitMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the JetCoordinatorMock.IsBeyondLimit")
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.IsBeyondLimitFunc == nil {
+		m.t.Fatalf("Unexpected call to JetCoordinatorMock.IsBeyondLimit. %v %v %v", p, p1, p2)
+		return
+	}
+
+	return m.IsBeyondLimitFunc(p, p1, p2)
+}
+
+//IsBeyondLimitMinimockCounter returns a count of JetCoordinatorMock.IsBeyondLimitFunc invocations
+func (m *JetCoordinatorMock) IsBeyondLimitMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.IsBeyondLimitCounter)
+}
+
+//IsBeyondLimitMinimockPreCounter returns the value of JetCoordinatorMock.IsBeyondLimit invocations
+func (m *JetCoordinatorMock) IsBeyondLimitMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.IsBeyondLimitPreCounter)
+}
+
+//IsBeyondLimitFinished returns true if mock invocations count is ok
+func (m *JetCoordinatorMock) IsBeyondLimitFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.IsBeyondLimitMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.IsBeyondLimitCounter) == uint64(len(m.IsBeyondLimitMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.IsBeyondLimitMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.IsBeyondLimitCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.IsBeyondLimitFunc != nil {
+		return atomic.LoadUint64(&m.IsBeyondLimitCounter) > 0
 	}
 
 	return true
@@ -1140,6 +1304,159 @@ func (m *JetCoordinatorMock) MeFinished() bool {
 	return true
 }
 
+type mJetCoordinatorMockNodeForJet struct {
+	mock              *JetCoordinatorMock
+	mainExpectation   *JetCoordinatorMockNodeForJetExpectation
+	expectationSeries []*JetCoordinatorMockNodeForJetExpectation
+}
+
+type JetCoordinatorMockNodeForJetExpectation struct {
+	input  *JetCoordinatorMockNodeForJetInput
+	result *JetCoordinatorMockNodeForJetResult
+}
+
+type JetCoordinatorMockNodeForJetInput struct {
+	p  context.Context
+	p1 core.RecordID
+	p2 core.PulseNumber
+	p3 core.PulseNumber
+}
+
+type JetCoordinatorMockNodeForJetResult struct {
+	r  *core.RecordRef
+	r1 error
+}
+
+//Expect specifies that invocation of JetCoordinator.NodeForJet is expected from 1 to Infinity times
+func (m *mJetCoordinatorMockNodeForJet) Expect(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 core.PulseNumber) *mJetCoordinatorMockNodeForJet {
+	m.mock.NodeForJetFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &JetCoordinatorMockNodeForJetExpectation{}
+	}
+	m.mainExpectation.input = &JetCoordinatorMockNodeForJetInput{p, p1, p2, p3}
+	return m
+}
+
+//Return specifies results of invocation of JetCoordinator.NodeForJet
+func (m *mJetCoordinatorMockNodeForJet) Return(r *core.RecordRef, r1 error) *JetCoordinatorMock {
+	m.mock.NodeForJetFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &JetCoordinatorMockNodeForJetExpectation{}
+	}
+	m.mainExpectation.result = &JetCoordinatorMockNodeForJetResult{r, r1}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of JetCoordinator.NodeForJet is expected once
+func (m *mJetCoordinatorMockNodeForJet) ExpectOnce(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 core.PulseNumber) *JetCoordinatorMockNodeForJetExpectation {
+	m.mock.NodeForJetFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &JetCoordinatorMockNodeForJetExpectation{}
+	expectation.input = &JetCoordinatorMockNodeForJetInput{p, p1, p2, p3}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *JetCoordinatorMockNodeForJetExpectation) Return(r *core.RecordRef, r1 error) {
+	e.result = &JetCoordinatorMockNodeForJetResult{r, r1}
+}
+
+//Set uses given function f as a mock of JetCoordinator.NodeForJet method
+func (m *mJetCoordinatorMockNodeForJet) Set(f func(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 core.PulseNumber) (r *core.RecordRef, r1 error)) *JetCoordinatorMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.NodeForJetFunc = f
+	return m.mock
+}
+
+//NodeForJet implements github.com/insolar/insolar/core.JetCoordinator interface
+func (m *JetCoordinatorMock) NodeForJet(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 core.PulseNumber) (r *core.RecordRef, r1 error) {
+	counter := atomic.AddUint64(&m.NodeForJetPreCounter, 1)
+	defer atomic.AddUint64(&m.NodeForJetCounter, 1)
+
+	if len(m.NodeForJetMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.NodeForJetMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to JetCoordinatorMock.NodeForJet. %v %v %v %v", p, p1, p2, p3)
+			return
+		}
+
+		input := m.NodeForJetMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, JetCoordinatorMockNodeForJetInput{p, p1, p2, p3}, "JetCoordinator.NodeForJet got unexpected parameters")
+
+		result := m.NodeForJetMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the JetCoordinatorMock.NodeForJet")
+			return
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.NodeForJetMock.mainExpectation != nil {
+
+		input := m.NodeForJetMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, JetCoordinatorMockNodeForJetInput{p, p1, p2, p3}, "JetCoordinator.NodeForJet got unexpected parameters")
+		}
+
+		result := m.NodeForJetMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the JetCoordinatorMock.NodeForJet")
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.NodeForJetFunc == nil {
+		m.t.Fatalf("Unexpected call to JetCoordinatorMock.NodeForJet. %v %v %v %v", p, p1, p2, p3)
+		return
+	}
+
+	return m.NodeForJetFunc(p, p1, p2, p3)
+}
+
+//NodeForJetMinimockCounter returns a count of JetCoordinatorMock.NodeForJetFunc invocations
+func (m *JetCoordinatorMock) NodeForJetMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.NodeForJetCounter)
+}
+
+//NodeForJetMinimockPreCounter returns the value of JetCoordinatorMock.NodeForJet invocations
+func (m *JetCoordinatorMock) NodeForJetMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.NodeForJetPreCounter)
+}
+
+//NodeForJetFinished returns true if mock invocations count is ok
+func (m *JetCoordinatorMock) NodeForJetFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.NodeForJetMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.NodeForJetCounter) == uint64(len(m.NodeForJetMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.NodeForJetMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.NodeForJetCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.NodeForJetFunc != nil {
+		return atomic.LoadUint64(&m.NodeForJetCounter) > 0
+	}
+
+	return true
+}
+
 type mJetCoordinatorMockQueryRole struct {
 	mock              *JetCoordinatorMock
 	mainExpectation   *JetCoordinatorMockQueryRoleExpectation
@@ -1609,6 +1926,10 @@ func (m *JetCoordinatorMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to JetCoordinatorMock.IsAuthorized")
 	}
 
+	if !m.IsBeyondLimitFinished() {
+		m.t.Fatal("Expected call to JetCoordinatorMock.IsBeyondLimit")
+	}
+
 	if !m.LightExecutorForJetFinished() {
 		m.t.Fatal("Expected call to JetCoordinatorMock.LightExecutorForJet")
 	}
@@ -1627,6 +1948,10 @@ func (m *JetCoordinatorMock) ValidateCallCounters() {
 
 	if !m.MeFinished() {
 		m.t.Fatal("Expected call to JetCoordinatorMock.Me")
+	}
+
+	if !m.NodeForJetFinished() {
+		m.t.Fatal("Expected call to JetCoordinatorMock.NodeForJet")
 	}
 
 	if !m.QueryRoleFinished() {
@@ -1666,6 +1991,10 @@ func (m *JetCoordinatorMock) MinimockFinish() {
 		m.t.Fatal("Expected call to JetCoordinatorMock.IsAuthorized")
 	}
 
+	if !m.IsBeyondLimitFinished() {
+		m.t.Fatal("Expected call to JetCoordinatorMock.IsBeyondLimit")
+	}
+
 	if !m.LightExecutorForJetFinished() {
 		m.t.Fatal("Expected call to JetCoordinatorMock.LightExecutorForJet")
 	}
@@ -1684,6 +2013,10 @@ func (m *JetCoordinatorMock) MinimockFinish() {
 
 	if !m.MeFinished() {
 		m.t.Fatal("Expected call to JetCoordinatorMock.Me")
+	}
+
+	if !m.NodeForJetFinished() {
+		m.t.Fatal("Expected call to JetCoordinatorMock.NodeForJet")
 	}
 
 	if !m.QueryRoleFinished() {
@@ -1714,11 +2047,13 @@ func (m *JetCoordinatorMock) MinimockWait(timeout time.Duration) {
 		ok := true
 		ok = ok && m.HeavyFinished()
 		ok = ok && m.IsAuthorizedFinished()
+		ok = ok && m.IsBeyondLimitFinished()
 		ok = ok && m.LightExecutorForJetFinished()
 		ok = ok && m.LightExecutorForObjectFinished()
 		ok = ok && m.LightValidatorsForJetFinished()
 		ok = ok && m.LightValidatorsForObjectFinished()
 		ok = ok && m.MeFinished()
+		ok = ok && m.NodeForJetFinished()
 		ok = ok && m.QueryRoleFinished()
 		ok = ok && m.VirtualExecutorForObjectFinished()
 		ok = ok && m.VirtualValidatorsForObjectFinished()
@@ -1736,6 +2071,10 @@ func (m *JetCoordinatorMock) MinimockWait(timeout time.Duration) {
 
 			if !m.IsAuthorizedFinished() {
 				m.t.Error("Expected call to JetCoordinatorMock.IsAuthorized")
+			}
+
+			if !m.IsBeyondLimitFinished() {
+				m.t.Error("Expected call to JetCoordinatorMock.IsBeyondLimit")
 			}
 
 			if !m.LightExecutorForJetFinished() {
@@ -1756,6 +2095,10 @@ func (m *JetCoordinatorMock) MinimockWait(timeout time.Duration) {
 
 			if !m.MeFinished() {
 				m.t.Error("Expected call to JetCoordinatorMock.Me")
+			}
+
+			if !m.NodeForJetFinished() {
+				m.t.Error("Expected call to JetCoordinatorMock.NodeForJet")
 			}
 
 			if !m.QueryRoleFinished() {
@@ -1790,6 +2133,10 @@ func (m *JetCoordinatorMock) AllMocksCalled() bool {
 		return false
 	}
 
+	if !m.IsBeyondLimitFinished() {
+		return false
+	}
+
 	if !m.LightExecutorForJetFinished() {
 		return false
 	}
@@ -1807,6 +2154,10 @@ func (m *JetCoordinatorMock) AllMocksCalled() bool {
 	}
 
 	if !m.MeFinished() {
+		return false
+	}
+
+	if !m.NodeForJetFinished() {
 		return false
 	}
 
