@@ -40,7 +40,7 @@
      ```
      ci/local-dev/manifests/ks/components/
      ```
-     For example, config of **insolard**
+     For example, config of **insolard** and ***pulsar***
      ```
      ci/local-dev/manifests/ks/components/insolar/insolard_config.libsonnet # insolard config
      ci/local-dev/manifests/ks/components/pulsar/pulsar_config.libsonnet    # pulsar config
