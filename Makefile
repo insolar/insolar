@@ -29,110 +29,143 @@ LDFLAGS += -X github.com/insolar/insolar/version.BuildDate=${BUILD_DATE}
 LDFLAGS += -X github.com/insolar/insolar/version.BuildTime=${BUILD_TIME}
 LDFLAGS += -X github.com/insolar/insolar/version.GitHash=${BUILD_HASH}
 
-.PHONY: all lint ci-lint metalint clean install-deps pre-build build functest test test_with_coverage regen-proxies generate ensure test_git_no_changes
 
+.PHONY: all
 all: clean install-deps pre-build build test
 
+.PHONY: lint
 lint: ci-lint
 
+.PHONY: ci-lint
 ci-lint:
 	golangci-lint run $(ALL_PACKAGES)
 
+.PHONY: metalint
 metalint:
 	gometalinter --vendor $(ALL_PACKAGES)
 
+.PHONY: clean
 clean:
 	go clean $(ALL_PACKAGES)
 	rm -f $(COVERPROFILE)
 	rm -rf $(BIN_DIR)
 	./scripts/insolard/launchnet.sh -l
 
+.PHONY: install-deps
 install-deps:
 	./scripts/build/fetchdeps github.com/golang/dep/cmd/dep 22125cfaa6ddc71e145b1535d4b7ee9744fefff2
 	go get -u golang.org/x/tools/cmd/stringer
 	./scripts/build/fetchdeps github.com/gojuno/minimock/cmd/minimock 890c67cef23dd06d694294d4f7b1026ed7bac8e6
 
+.PHONY: pre-build
 pre-build: ensure generate
 
+.PHONY: generate
 generate:
 	GOPATH=`go env GOPATH` go generate -x $(ALL_PACKAGES)
 
+.PHONY: test_git_no_changes
 test_git_no_changes:
 	git diff --exit-code
 
+.PHONY: ensure
 ensure:
 	dep ensure
 
-build:
-	mkdir -p $(BIN_DIR)
-	make $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(INSGORUND) $(HEALTHCHECK) $(BENCHMARK) $(PULSEWATCHER)
+.PHONY: build
+build: $(BIN_DIR) $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(INSGORUND) $(HEALTHCHECK) $(BENCHMARK) $(PULSEWATCHER)
 
+$(BIN_DIR):
+	mkdir -p $(BIN_DIR)
+
+.PHONY: $(INSOLARD)
 $(INSOLARD):
 	go build -o $(BIN_DIR)/$(INSOLARD) -ldflags "${LDFLAGS}" cmd/insolard/*.go
 
+.PHONY: $(INSOLAR)
 $(INSOLAR):
 	go build -o $(BIN_DIR)/$(INSOLAR) -ldflags "${LDFLAGS}" cmd/insolar/*.go
 
+.PHONY: $(INSGOCC)
 $(INSGOCC): cmd/insgocc/insgocc.go logicrunner/goplugin/preprocessor
 	go build -o $(INSGOCC) -ldflags "${LDFLAGS}" cmd/insgocc/*.go
 
+.PHONY: $(PULSARD)
 $(PULSARD):
 	go build -o $(BIN_DIR)/$(PULSARD) -ldflags "${LDFLAGS}" cmd/pulsard/*.go
 
+.PHONY: $(INSGORUND)
 $(INSGORUND):
 	CGO_ENABLED=1 go build -o $(BIN_DIR)/$(INSGORUND) -ldflags "${LDFLAGS}" cmd/insgorund/*.go
 
+.PHONY: $(BENCHMARK)
 $(BENCHMARK):
 	go build -o $(BIN_DIR)/$(BENCHMARK) -ldflags "${LDFLAGS}" cmd/benchmark/*.go
 
+.PHONY: $(PULSEWATCHER)
 $(PULSEWATCHER):
 	go build -o $(BIN_DIR)/$(PULSEWATCHER) -ldflags "${LDFLAGS}" cmd/pulsewatcher/*.go
 
+.PHONY: $(APIREQUESTER)
 $(APIREQUESTER):
 	go build -o $(BIN_DIR)/$(APIREQUESTER) -ldflags "${LDFLAGS}" cmd/apirequester/*.go
 
+.PHONY: $(EXPORTER)
 $(EXPORTER):
 	go build -o $(BIN_DIR)/$(EXPORTER) -ldflags "${LDFLAGS}" cmd/exporter/*.go
 
+.PHONY: $(HEALTHCHECK)
 $(HEALTHCHECK):
 	go build -o $(BIN_DIR)/$(HEALTHCHECK) -ldflags "${LDFLAGS}" cmd/healthcheck/*.go
 
+.PHONY: $(CERTGEN)
 $(CERTGEN):
 	go build -o $(CERTGEN) -ldflags "${LDFLAGS}" cmd/certgen/*.go
 
+.PHONY: functest
 functest:
 	CGO_ENABLED=1 go test $(TEST_ARGS) -tags functest ./functest -count=1
 
+.PHONY: test
 test:
 	CGO_ENABLED=1 go test $(TEST_ARGS) $(ALL_PACKAGES)
 
+.PHONY: test_fast
 test_fast:
 	go test $(TEST_ARGS) -count 1 -v $(ALL_PACKAGES)
 
+.PHONY: test_with_coverage
 test_with_coverage:
 	CGO_ENABLED=1 go test $(TEST_ARGS) --coverprofile=$(COVERPROFILE) --covermode=atomic $(TESTED_PACKAGES)
 
+.PHONY: test_with_coverage_fast
 test_with_coverage_fast:
 	CGO_ENABLED=1 go test $(TEST_ARGS) -count 1 --coverprofile=$(COVERPROFILE) --covermode=atomic $(ALL_PACKAGES)
 
+.PHONY: ci_test_with_coverage_json
 ci_test_with_coverage_json:
 	CGO_ENABLED=1 go test -count 1 -parallel 4 --coverprofile=$(COVERPROFILE) --covermode=atomic -v $(ALL_PACKAGES) | tee unit.json
 
+.PHONY: ci_test_func_json
 ci_test_func_json:
 	CGO_ENABLED=1 go test $(TEST_ARGS) -tags functest -v ./functest -count=1 | tee func.json
 
+.PHONY: regen-proxies
 CONTRACTS = $(wildcard application/contract/*)
 regen-proxies: $(INSGOCC)
 	$(foreach c,$(CONTRACTS), $(INSGOCC) proxy application/contract/$(notdir $(c))/$(notdir $(c)).go; )
 
+.PHONY: docker-insolard
 docker-insolard:
 	docker build --tag insolar/insolard -f ./docker/Dockerfile.insolard .
 
+.PHONY: docker-pulsar
 docker-pulsar:
 	docker build --tag insolar/pulsar -f ./docker/Dockerfile.pulsar .
 
+.PHONY: docker-insgorund
 docker-insgorund:
 	docker build --tag insolar/insgorund -f ./docker/Dockerfile.insgorund .
 
-
+.PHONY: docker
 docker: docker-insolard docker-pulsar docker-insgorund
