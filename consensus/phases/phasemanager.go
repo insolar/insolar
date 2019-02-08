@@ -19,6 +19,7 @@ package phases
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/insolar/insolar/core"
@@ -40,6 +41,8 @@ type Phases struct {
 	PulseManager core.PulseManager  `inject:""`
 	NodeKeeper   network.NodeKeeper `inject:""`
 	Calculator   merkle.Calculator  `inject:""`
+
+	lock sync.Mutex
 }
 
 // NewPhaseManager creates and returns a new phase manager.
@@ -49,9 +52,12 @@ func NewPhaseManager() PhaseManager {
 
 // OnPulse starts calculate args on phases.
 func (pm *Phases) OnPulse(ctx context.Context, pulse *core.Pulse) error {
+	pm.lock.Lock()
+	defer pm.lock.Unlock()
+
 	var err error
 
-	inslogger.FromContext(ctx).Infof("[ NET Consensus %d ] Starting consensus process", pulse.PulseNumber, pulse.PulseNumber)
+	inslogger.FromContext(ctx).Infof("[ NET Consensus %d ] Starting consensus process", pulse.PulseNumber)
 
 	pulseDuration, err := getPulseDuration(pulse)
 	if err != nil {
