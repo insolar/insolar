@@ -1,4 +1,7 @@
 root_keys_file: "scripts/insolard/configs/root_member_keys.json"
+node_keys_dir: "scripts/insolard/reusekeys/node"
+discovery_keys_dir: "scripts/insolard/reusekeys/discovery"
+reuse_keys: false
 root_balance: 1000000000
 majority_rule: 0
 min_roles:
@@ -11,43 +14,36 @@ discovery_nodes:
   -
     host: "127.0.0.1:13831"
     role: "heavy_material"
-    keys_file: "scripts/insolard/discoverynodes/1/keys.json"
     cert_name: "discovery_cert_1.json"
   -
     host: "127.0.0.1:23832"
     role: "virtual"
-    keys_file: "scripts/insolard/discoverynodes/2/keys.json"
     cert_name: "discovery_cert_2.json"
   -
     host: "127.0.0.1:33833"
     role: "light_material"
-    keys_file: "scripts/insolard/discoverynodes/3/keys.json"
     cert_name: "discovery_cert_3.json"
   -
     host: "127.0.0.1:43834"
     role: "virtual"
-    keys_file: "scripts/insolard/discoverynodes/4/keys.json"
     cert_name: "discovery_cert_4.json"
   -
     host: "127.0.0.1:53835"
     role: "light_material"
-    keys_file: "scripts/insolard/discoverynodes/5/keys.json"
     cert_name: "discovery_cert_5.json"
-#  -
-#    host: "127.0.0.1:53866"
-#    role: "virtual"
-#    keys_file: "scripts/insolard/discoverynodes/6/keys.json"
-#    cert_name: "discovery_cert_6.json"
-#  -
-#    host: "127.0.0.1:53877"
-#    role: "light_material"
-#    keys_file: "scripts/insolard/discoverynodes/7/keys.json"
-#    cert_name: "discovery_cert_7.json"
-#  -
-#    host: "127.0.0.1:53888"
-#    role: "virtual"
-#    keys_file: "scripts/insolard/discoverynodes/8/keys.json"
-#    cert_name: "discovery_cert_8.json"
+  -
+    host: "127.0.0.1:53866"
+    role: "virtual"
+    cert_name: "discovery_cert_6.json"
+  -
+    host: "127.0.0.1:53877"
+    role: "light_material"
+    cert_name: "discovery_cert_7.json"
+  -
+    host: "127.0.0.1:53888"
+    role: "virtual"
+    keys_file: "scripts/insolard/discoverynodes/8/keys.json"
+    cert_name: "discovery_cert_8.json"
 #  -
 #    host: "127.0.0.1:53899"
 #    role: "light_material"
