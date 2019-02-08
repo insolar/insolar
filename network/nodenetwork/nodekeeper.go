@@ -94,7 +94,7 @@ func NewNodeKeeper(origin core.Node) network.NodeKeeper {
 		indexShortID: make(map[core.ShortNodeID]core.Node),
 		tempMapR:     make(map[core.RecordRef]*host.Host),
 		tempMapS:     make(map[core.ShortNodeID]*host.Host),
-		sync:         newUnsyncList(origin, []core.Node{}),
+		sync:         newUnsyncList(origin, []core.Node{}, 0),
 	}
 	result.SetState(network.Ready)
 	return result
@@ -157,7 +157,7 @@ func (nk *nodekeeper) Wipe(isDiscovery bool) {
 		nk.state = network.Ready
 	}
 	nk.syncLock.Lock()
-	nk.sync = newUnsyncList(nk.origin, []core.Node{})
+	nk.sync = newUnsyncList(nk.origin, []core.Node{}, 0)
 	nk.syncLock.Unlock()
 }
 
@@ -344,7 +344,8 @@ func (nk *nodekeeper) NodesJoinedDuringPreviousPulse() bool {
 }
 
 func (nk *nodekeeper) GetUnsyncList() network.UnsyncList {
-	return newUnsyncList(nk.origin, nk.GetActiveNodes())
+	activeNodes := nk.GetActiveNodes()
+	return newUnsyncList(nk.origin, activeNodes, len(activeNodes))
 }
 
 func (nk *nodekeeper) GetSparseUnsyncList(length int) network.UnsyncList {

@@ -253,12 +253,13 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse core.Pulse) {
 		logger.Error(errors.Wrap(err, "Failed to call OnPulse on NetworkSwitcher"))
 	}
 
+	logger.Debugf("Before set new current pulse number: %d", newPulse.PulseNumber)
 	err = n.PulseManager.Set(ctx, newPulse, n.NetworkSwitcher.GetState() == core.CompleteNetworkState)
 	if err != nil {
-		panic(errors.Wrap(err, "Failed to set newPulse"))
+		panic(errors.Wrap(err, "Failed to set new pulse"))
 	}
-
 	logger.Infof("Set new current pulse number: %d", newPulse.PulseNumber)
+
 	go n.phaseManagerOnPulse(ctx, newPulse)
 }
 

@@ -19,6 +19,7 @@ package phases
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/insolar/insolar/core"
@@ -40,6 +41,8 @@ type Phases struct {
 	PulseManager core.PulseManager  `inject:""`
 	NodeKeeper   network.NodeKeeper `inject:""`
 	Calculator   merkle.Calculator  `inject:""`
+
+	lock sync.Mutex
 }
 
 // NewPhaseManager creates and returns a new phase manager.
@@ -49,24 +52,27 @@ func NewPhaseManager() PhaseManager {
 
 // OnPulse starts calculate args on phases.
 func (pm *Phases) OnPulse(ctx context.Context, pulse *core.Pulse) error {
+	pm.lock.Lock()
+	defer pm.lock.Unlock()
+
 	var err error
 
-	inslogger.FromContext(ctx).Infof("Starting consensus process for pulse %d", pulse.PulseNumber)
+	inslogger.FromContext(ctx).Info("[ NET Consensus ] Starting consensus process")
 
 	pulseDuration, err := getPulseDuration(pulse)
 	if err != nil {
-		return errors.Wrap(err, "[ OnPulse ] Failed to get pulse duration")
+		return errors.Wrap(err, "[ NET Consensus ] Failed to get pulse duration")
 	}
 
 	var tctx context.Context
 	var cancel context.CancelFunc
 
-	tctx, cancel = contextTimeout(ctx, *pulseDuration, 0.2)
+	tctx, cancel = contextTimeout(ctx, *pulseDuration, 0.3)
 	defer cancel()
 
 	firstPhaseState, err := pm.FirstPhase.Execute(tctx, pulse)
 	if err != nil {
-		return errors.Wrap(err, "Network consensus: error executing phase 1")
+		return errors.Wrap(err, "[ NET Consensus ] Error executing phase 1")
 	}
 
 	tctx, cancel = contextTimeout(ctx, *pulseDuration, 0.2)
@@ -74,7 +80,7 @@ func (pm *Phases) OnPulse(ctx context.Context, pulse *core.Pulse) error {
 
 	secondPhaseState, err := pm.SecondPhase.Execute(tctx, pulse, firstPhaseState)
 	if err != nil {
-		return errors.Wrap(err, "Network consensus: error executing phase 2.0")
+		return errors.Wrap(err, "[ NET Consensus ] Error executing phase 2.0")
 	}
 
 	tctx, cancel = contextTimeout(ctx, *pulseDuration, 0.2)
@@ -82,7 +88,7 @@ func (pm *Phases) OnPulse(ctx context.Context, pulse *core.Pulse) error {
 
 	secondPhaseState, err = pm.SecondPhase.Execute21(tctx, pulse, secondPhaseState)
 	if err != nil {
-		return errors.Wrap(err, "Network consensus: error executing phase 2.1")
+		return errors.Wrap(err, "[ NET Consensus ] Error executing phase 2.1")
 	}
 
 	tctx, cancel = contextTimeout(ctx, *pulseDuration, 0.2)
@@ -90,7 +96,7 @@ func (pm *Phases) OnPulse(ctx context.Context, pulse *core.Pulse) error {
 
 	thirdPhaseState, err := pm.ThirdPhase.Execute(tctx, pulse, secondPhaseState)
 	if err != nil {
-		return errors.Wrap(err, "Network consensus: error executing phase 3")
+		return errors.Wrap(err, "[ NET Consensus ] Error executing phase 3")
 	}
 
 	state := thirdPhaseState
@@ -100,10 +106,9 @@ func (pm *Phases) OnPulse(ctx context.Context, pulse *core.Pulse) error {
 	}
 	hash, _, err := pm.Calculator.GetCloudProof(cloud)
 	if err != nil {
-		return errors.Wrap(err, "Network consensus: error calculating cloud hash")
+		return errors.Wrap(err, "[ NET Consensus ] Error calculating cloud hash")
 	}
 	pm.NodeKeeper.SetCloudHash(hash)
-
 	state.UnsyncList.ApproveSync(state.ActiveNodes)
 	pm.NodeKeeper.Sync(state.UnsyncList)
 	return nil
