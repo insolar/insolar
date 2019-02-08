@@ -61,7 +61,7 @@ func (pm *Phases) OnPulse(ctx context.Context, pulse *core.Pulse) error {
 	var tctx context.Context
 	var cancel context.CancelFunc
 
-	tctx, cancel = contextTimeout(ctx, *pulseDuration, 0.2)
+	tctx, cancel = contextTimeout(ctx, *pulseDuration, 0.3)
 	defer cancel()
 
 	firstPhaseState, err := pm.FirstPhase.Execute(tctx, pulse)
