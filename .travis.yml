@@ -30,4 +30,4 @@ script:
 after_success:
   - go get github.com/axw/gocov/gocov
   - COVERPROFILE="./coverage.txt" ./scripts/dev/cover-tool.sh
-  - "bash <(curl -s https://codecov.io/bash) -f coverage.txt -X fix"
+  - "bash <(curl -s https://codecov.io/bash) -f coverage.txt"
