@@ -85,7 +85,7 @@ func (sp *secondPhase) Execute(ctx context.Context, pulse *core.Pulse, state *Fi
 	if err != nil {
 		return nil, errors.Wrapf(err, "[ NET Consensus %d phase-2.0 ] Failed to exchange packets", pulse.PulseNumber)
 	}
-	logger.Infof("[ NET Consensus %d phase-2.0 ] Received responses: %d/%d", len(packets), len(activeNodes))
+	logger.Infof("[ NET Consensus %d phase-2.0 ] Received responses: %d/%d", pulse.PulseNumber, len(packets), len(activeNodes))
 	metrics.ConsensusPacketsRecv.WithLabelValues("phase 2").Add(float64(len(packets)))
 
 	origin := sp.NodeKeeper.GetOrigin().ID()
