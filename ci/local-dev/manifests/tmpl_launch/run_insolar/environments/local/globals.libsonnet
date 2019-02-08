@@ -1,3 +1,0 @@
-{
-	local_launch: true
-}

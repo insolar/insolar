@@ -11,7 +11,7 @@ check () {
 
 DOCKER=./ci/local-dev/docker/
 K8S=./ci/local-dev/manifests/
-KS=./ci/local-dev/manifests/tmpl_launch/run_insolar/
+KS=./ci/local-dev/manifests/ks/
 
 prepare () {
   echo installing ksonnet
