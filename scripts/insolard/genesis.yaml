@@ -33,56 +33,56 @@ discovery_nodes:
     role: "light_material"
     keys_file: "scripts/insolard/discoverynodes/5/keys.json"
     cert_name: "discovery_cert_5.json"
-  -
-    host: "127.0.0.1:53866"
-    role: "virtual"
-    keys_file: "scripts/insolard/discoverynodes/6/keys.json"
-    cert_name: "discovery_cert_6.json"
-  -
-    host: "127.0.0.1:53877"
-    role: "light_material"
-    keys_file: "scripts/insolard/discoverynodes/7/keys.json"
-    cert_name: "discovery_cert_7.json"
-  -
-    host: "127.0.0.1:53888"
-    role: "virtual"
-    keys_file: "scripts/insolard/discoverynodes/8/keys.json"
-    cert_name: "discovery_cert_8.json"
-  -
-    host: "127.0.0.1:53899"
-    role: "light_material"
-    keys_file: "scripts/insolard/discoverynodes/9/keys.json"
-    cert_name: "discovery_cert_9.json"
-  -
-    host: "127.0.0.1:53100"
-    role: "virtual"
-    keys_file: "scripts/insolard/discoverynodes/10/keys.json"
-    cert_name: "discovery_cert_10.json"
-  -
-    host: "127.0.0.1:51101"
-    role: "light_material"
-    keys_file: "scripts/insolard/discoverynodes/11/keys.json"
-    cert_name: "discovery_cert_11.json"
-  -
-    host: "127.0.0.1:53202"
-    role: "virtual"
-    keys_file: "scripts/insolard/discoverynodes/12/keys.json"
-    cert_name: "discovery_cert_12.json"
-  -
-    host: "127.0.0.1:53404"
-    role: "virtual"
-    keys_file: "scripts/insolard/discoverynodes/13/keys.json"
-    cert_name: "discovery_cert_13.json"
-  -
-    host: "127.0.0.1:53606"
-    role: "virtual"
-    keys_file: "scripts/insolard/discoverynodes/14/keys.json"
-    cert_name: "discovery_cert_14.json"
-  -
-    host: "127.0.0.1:53707"
-    role: "light_material"
-    keys_file: "scripts/insolard/discoverynodes/15/keys.json"
-    cert_name: "discovery_cert_15.json"
+#  -
+#    host: "127.0.0.1:53866"
+#    role: "virtual"
+#    keys_file: "scripts/insolard/discoverynodes/6/keys.json"
+#    cert_name: "discovery_cert_6.json"
+#  -
+#    host: "127.0.0.1:53877"
+#    role: "light_material"
+#    keys_file: "scripts/insolard/discoverynodes/7/keys.json"
+#    cert_name: "discovery_cert_7.json"
+#  -
+#    host: "127.0.0.1:53888"
+#    role: "virtual"
+#    keys_file: "scripts/insolard/discoverynodes/8/keys.json"
+#    cert_name: "discovery_cert_8.json"
+#  -
+#    host: "127.0.0.1:53899"
+#    role: "light_material"
+#    keys_file: "scripts/insolard/discoverynodes/9/keys.json"
+#    cert_name: "discovery_cert_9.json"
+#  -
+#    host: "127.0.0.1:53100"
+#    role: "virtual"
+#    keys_file: "scripts/insolard/discoverynodes/10/keys.json"
+#    cert_name: "discovery_cert_10.json"
+#  -
+#    host: "127.0.0.1:51101"
+#    role: "light_material"
+#    keys_file: "scripts/insolard/discoverynodes/11/keys.json"
+#    cert_name: "discovery_cert_11.json"
+#  -
+#    host: "127.0.0.1:53202"
+#    role: "virtual"
+#    keys_file: "scripts/insolard/discoverynodes/12/keys.json"
+#    cert_name: "discovery_cert_12.json"
+#  -
+#    host: "127.0.0.1:53404"
+#    role: "virtual"
+#    keys_file: "scripts/insolard/discoverynodes/13/keys.json"
+#    cert_name: "discovery_cert_13.json"
+#  -
+#    host: "127.0.0.1:53606"
+#    role: "virtual"
+#    keys_file: "scripts/insolard/discoverynodes/14/keys.json"
+#    cert_name: "discovery_cert_14.json"
+#  -
+#    host: "127.0.0.1:53707"
+#    role: "light_material"
+#    keys_file: "scripts/insolard/discoverynodes/15/keys.json"
+#    cert_name: "discovery_cert_15.json"
 #  -
 #    host: "127.0.0.1:53808"
 #    role: "virtual"
