@@ -55,6 +55,7 @@ func (tp *thirdPhase) Execute(ctx context.Context, pulse *core.Pulse, state *Sec
 	metrics.ConsensusPhase3Exec.Inc()
 
 	logger := inslogger.FromContext(ctx)
+	totalCount := state.UnsyncList.Length()
 
 	var gSign [packets.SignatureLength]byte
 	copy(gSign[:], state.GlobuleProof.Signature.Bytes()[:packets.SignatureLength])
@@ -68,7 +69,7 @@ func (tp *thirdPhase) Execute(ctx context.Context, pulse *core.Pulse, state *Sec
 	if err != nil {
 		return nil, errors.Wrapf(err, "[ NET Consensus %d phase-3 ] Failed to exchange packets", pulse.PulseNumber)
 	}
-	logger.Infof("[ NET Consensus %d phase-3 ] received responses: %d/%d", pulse.PulseNumber, len(responses), len(nodes))
+	logger.Infof("[ NET Consensus %d phase-3 ] received responses: %d/%d", pulse.PulseNumber, len(responses), totalCount)
 	metrics.ConsensusPacketsRecv.WithLabelValues("phase 3").Add(float64(len(responses)))
 
 	for ref, packet := range responses {
@@ -86,7 +87,6 @@ func (tp *thirdPhase) Execute(ctx context.Context, pulse *core.Pulse, state *Sec
 		state.UnsyncList.SetGlobuleHashSignature(ref, packet.GetGlobuleHashSignature())
 	}
 
-	totalCount := state.UnsyncList.Length()
 	prevCloudHash := tp.NodeKeeper.GetCloudHash()
 	validNodes := make([]core.RecordRef, 0)
 	for _, node := range nodes {
