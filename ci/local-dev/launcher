@@ -86,7 +86,7 @@ case $ARG in
     echo "rebuild - rebuild source code only"
     echo "full-rebuild - prepare dependencies and rebuild source code"
     echo "start-nodes - deploy and start discovery nodes and pulsar"
-    echo "start-all - also start elk, jaeger, prometheus and grafana"
+    echo "start-all - like 'start-nodes' + start elk, jaeger, prometheus ( and grafana - not completely implemented )"
     echo "stop - stop all containers"
     echo
     echo "builded images"
