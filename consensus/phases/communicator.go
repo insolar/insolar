@@ -22,14 +22,15 @@ import (
 	"sync/atomic"
 
 	"github.com/insolar/insolar/component"
+	"github.com/insolar/insolar/consensus"
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network"
 	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
 	"go.opencensus.io/trace"
 )
 
@@ -115,7 +116,7 @@ func (nc *NaiveCommunicator) sendRequestToNodes(participants []core.Node, packet
 		}
 
 		go func(n core.Node, packet packets.ConsensusPacket) {
-			metrics.ConsensusPacketsSent.WithLabelValues("Send request to nodes").Inc()
+			stats.Record(context.Background(), consensus.ConsensusPacketsSent.M(1))
 			err := nc.ConsensusNetwork.SignAndSendPacket(packet, n.ID(), nc.Cryptography)
 			if err != nil {
 				log.Errorln(err.Error())
@@ -142,7 +143,8 @@ func (nc *NaiveCommunicator) sendRequestToNodesWithOrigin(originClaim *packets.N
 
 	for ref, req := range requests {
 		go func(node core.RecordRef, consensusPacket packets.ConsensusPacket) {
-			metrics.ConsensusPacketsSent.WithLabelValues("Request with origin").Inc()
+			stats.Record(context.Background(), consensus.ConsensusPacketsSent.M(1))
+			stats.Record(context.Background())
 			err := nc.ConsensusNetwork.SignAndSendPacket(consensusPacket, node, nc.Cryptography)
 			if err != nil {
 				log.Errorln(err.Error())
@@ -374,7 +376,7 @@ func (nc *NaiveCommunicator) sendAdditionalRequests(origReq *packets.Phase2Packe
 		newReq := *origReq
 		newReq.AddVote(&packets.MissingNode{NodeIndex: uint16(req.RequestIndex)})
 		receiver := selectCandidate(req.Candidates)
-		metrics.ConsensusPacketsSent.WithLabelValues("Additional request").Inc()
+		stats.Record(context.Background(), consensus.ConsensusPacketsSent.M(1))
 		err := nc.ConsensusNetwork.SignAndSendPacket(&newReq, receiver, nc.Cryptography)
 		if err != nil {
 			return errors.Wrapf(err, "Failed to send additional phase 2.1 request for index %d to node %s", req.RequestIndex, receiver)

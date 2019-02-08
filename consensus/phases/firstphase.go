@@ -21,6 +21,7 @@ import (
 	"context"
 	"math"
 
+	"github.com/insolar/insolar/consensus"
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -32,6 +33,7 @@ import (
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
 	"go.opencensus.io/trace"
 )
 
@@ -132,6 +134,7 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse) (*Firs
 		logger.Infof("[ FirstPhase ] received packets: %d/%d", len(resultPackets), len(activeNodes))
 	}
 	metrics.ConsensusPacketsRecv.WithLabelValues("phase 1").Add(float64(len(resultPackets)))
+	stats.Record(ctx, consensus.ConsensusPacketsRecv.M(1))
 
 	proofSet := make(map[core.RecordRef]*merkle.PulseProof)
 	rawProofs := make(map[core.RecordRef]*packets.NodePulseProof)

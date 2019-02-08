@@ -18,21 +18,23 @@
 package nodenetwork
 
 import (
+	"context"
 	"sort"
 	"strings"
 	"sync"
 
 	"github.com/insolar/insolar/configuration"
-	consensus "github.com/insolar/insolar/consensus/packets"
+	"github.com/insolar/insolar/consensus"
+	consensusPackets "github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/utils"
 	"github.com/insolar/insolar/version"
 	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
 )
 
 // NewNodeNetwork create active node component
@@ -316,21 +318,21 @@ func (nk *nodekeeper) GetState() network.NodeKeeperState {
 	return nk.state
 }
 
-func (nk *nodekeeper) GetOriginJoinClaim() (*consensus.NodeJoinClaim, error) {
+func (nk *nodekeeper) GetOriginJoinClaim() (*consensusPackets.NodeJoinClaim, error) {
 	nk.activeLock.RLock()
 	defer nk.activeLock.RUnlock()
 
 	return nk.nodeToSignedClaim()
 }
 
-func (nk *nodekeeper) GetOriginAnnounceClaim(mapper consensus.BitSetMapper) (*consensus.NodeAnnounceClaim, error) {
+func (nk *nodekeeper) GetOriginAnnounceClaim(mapper consensusPackets.BitSetMapper) (*consensusPackets.NodeAnnounceClaim, error) {
 	nk.activeLock.RLock()
 	defer nk.activeLock.RUnlock()
 
 	return nk.nodeToAnnounceClaim(mapper)
 }
 
-func (nk *nodekeeper) AddPendingClaim(claim consensus.ReferendumClaim) bool {
+func (nk *nodekeeper) AddPendingClaim(claim consensusPackets.ReferendumClaim) bool {
 	nk.claimQueue.Push(claim)
 	return true
 }
@@ -396,7 +398,7 @@ func (nk *nodekeeper) MoveSyncToActive() error {
 	log.Infof("[ MoveSyncToActive ] New active list confirmed. Active list size: %d -> %d",
 		len(nk.active), len(mergeResult.ActiveList))
 	nk.active = mergeResult.ActiveList
-	metrics.ConsensusActiveNodes.Set(float64(len(nk.active)))
+	stats.Record(context.Background(), consensus.ConsensusActiveNodes.M(int64(len(nk.active))))
 	nk.reindex()
 	nk.nodesJoinedDuringPrevPulse = mergeResult.Flags.NodesJoinedDuringPrevPulse
 	return nil
@@ -424,8 +426,8 @@ func (nk *nodekeeper) shouldExit(foundOrigin bool) bool {
 	return !foundOrigin && nk.state == network.Ready && len(nk.active) != 0
 }
 
-func (nk *nodekeeper) nodeToSignedClaim() (*consensus.NodeJoinClaim, error) {
-	claim, err := consensus.NodeToClaim(nk.origin)
+func (nk *nodekeeper) nodeToSignedClaim() (*consensusPackets.NodeJoinClaim, error) {
+	claim, err := consensusPackets.NodeToClaim(nk.origin)
 	if err != nil {
 		return nil, err
 	}
@@ -439,13 +441,13 @@ func (nk *nodekeeper) nodeToSignedClaim() (*consensus.NodeJoinClaim, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "[ nodeToSignedClaim ] failed to sign a claim")
 	}
-	copy(claim.Signature[:], sign[:consensus.SignatureLength])
+	copy(claim.Signature[:], sign[:consensusPackets.SignatureLength])
 	return claim, nil
 }
 
-func (nk *nodekeeper) nodeToAnnounceClaim(mapper consensus.BitSetMapper) (*consensus.NodeAnnounceClaim, error) {
-	claim := consensus.NodeAnnounceClaim{}
-	joinClaim, err := consensus.NodeToClaim(nk.origin)
+func (nk *nodekeeper) nodeToAnnounceClaim(mapper consensusPackets.BitSetMapper) (*consensusPackets.NodeAnnounceClaim, error) {
+	claim := consensusPackets.NodeAnnounceClaim{}
+	joinClaim, err := consensusPackets.NodeToClaim(nk.origin)
 	if err != nil {
 		return nil, err
 	}
