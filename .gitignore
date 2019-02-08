@@ -50,3 +50,4 @@ data_pulsar
 /scripts/insolard/discoverynodes
 /scripts/insolard/loglinks
 /scripts/insolard/benchmark
+/scripts/insolard/reusekeys
