@@ -83,7 +83,7 @@ func (sp *secondPhase) Execute(ctx context.Context, pulse *core.Pulse, state *Fi
 	activeNodes := state.UnsyncList.GetActiveNodes()
 	packets, err := sp.Communicator.ExchangePhase2(ctx, state.UnsyncList, activeNodes, packet)
 	if err != nil {
-		return nil, errors.Wrapf(err, "[ NET Consensus %d phase-2.0 ] Failed to exchange packets on phase 2", pulse.PulseNumber)
+		return nil, errors.Wrapf(err, "[ NET Consensus %d phase-2.0 ] Failed to exchange packets", pulse.PulseNumber)
 	}
 	logger.Infof("[ NET Consensus %d phase-2.0 ] Received responses: %d/%d", len(packets), len(activeNodes))
 	metrics.ConsensusPacketsRecv.WithLabelValues("phase 2").Add(float64(len(packets)))
@@ -183,7 +183,7 @@ func (sp *secondPhase) Execute21(ctx context.Context, pulse *core.Pulse, state *
 
 	voteAnswers, err := sp.Communicator.ExchangePhase21(ctx, state.UnsyncList, packet, additionalRequests)
 	if err != nil {
-		return nil, errors.Wrapf(err, "[ NET Consensus %d phase-2.1 ] Failed to send additional requests on phase 2.1", pulse.PulseNumber)
+		return nil, errors.Wrapf(err, "[ NET Consensus %d phase-2.1 ] Failed to send additional requests", pulse.PulseNumber)
 	}
 
 	if len(additionalRequests) == 0 {

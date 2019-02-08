@@ -124,7 +124,7 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse) (*Firs
 		return nil, errors.Wrapf(err, "[ NET Consensus %d phase-1 ] Failed to exchange results", pulse.PulseNumber)
 	}
 	if len(resultPackets) < 2 && fp.NodeKeeper.GetState() == network.Waiting {
-		return nil, errors.Errorf("[ NET Consensus %d phase-1 ] Failed to receive packets from other nodes", pulse.PulseNumber)
+		return nil, errors.Errorf("[ NET Consensus %d phase-1 ] Failed to receive enough packets from other nodes", pulse.PulseNumber)
 	}
 	if fp.NodeKeeper.GetState() == network.Waiting {
 		logger.Infof("[ NET Consensus %d phase-1 ] received packets: %d", pulse.PulseNumber, len(resultPackets))
