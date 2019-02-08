@@ -57,11 +57,11 @@ func (pm *Phases) OnPulse(ctx context.Context, pulse *core.Pulse) error {
 
 	var err error
 
-	inslogger.FromContext(ctx).Infof("[ NET Consensus %d ] Starting consensus process", pulse.PulseNumber)
+	inslogger.FromContext(ctx).Info("[ NET Consensus ] Starting consensus process")
 
 	pulseDuration, err := getPulseDuration(pulse)
 	if err != nil {
-		return errors.Wrap(err, "[ NET Consensus %d ] Failed to get pulse duration")
+		return errors.Wrap(err, "[ NET Consensus ] Failed to get pulse duration")
 	}
 
 	var tctx context.Context
@@ -72,7 +72,7 @@ func (pm *Phases) OnPulse(ctx context.Context, pulse *core.Pulse) error {
 
 	firstPhaseState, err := pm.FirstPhase.Execute(tctx, pulse)
 	if err != nil {
-		return errors.Wrapf(err, "[ NET Consensus %d ] Error executing phase 1", pulse.PulseNumber)
+		return errors.Wrap(err, "[ NET Consensus ] Error executing phase 1")
 	}
 
 	tctx, cancel = contextTimeout(ctx, *pulseDuration, 0.2)
@@ -80,7 +80,7 @@ func (pm *Phases) OnPulse(ctx context.Context, pulse *core.Pulse) error {
 
 	secondPhaseState, err := pm.SecondPhase.Execute(tctx, pulse, firstPhaseState)
 	if err != nil {
-		return errors.Wrapf(err, "[ NET Consensus %d ] Error executing phase 2.0", pulse.PulseNumber)
+		return errors.Wrap(err, "[ NET Consensus ] Error executing phase 2.0")
 	}
 
 	tctx, cancel = contextTimeout(ctx, *pulseDuration, 0.2)
@@ -88,7 +88,7 @@ func (pm *Phases) OnPulse(ctx context.Context, pulse *core.Pulse) error {
 
 	secondPhaseState, err = pm.SecondPhase.Execute21(tctx, pulse, secondPhaseState)
 	if err != nil {
-		return errors.Wrapf(err, "[ NET Consensus %d ] Error executing phase 2.1", pulse.PulseNumber)
+		return errors.Wrap(err, "[ NET Consensus ] Error executing phase 2.1")
 	}
 
 	tctx, cancel = contextTimeout(ctx, *pulseDuration, 0.2)
@@ -96,7 +96,7 @@ func (pm *Phases) OnPulse(ctx context.Context, pulse *core.Pulse) error {
 
 	thirdPhaseState, err := pm.ThirdPhase.Execute(tctx, pulse, secondPhaseState)
 	if err != nil {
-		return errors.Wrapf(err, "[ NET Consensus %d ] Error executing phase 3", pulse.PulseNumber)
+		return errors.Wrap(err, "[ NET Consensus ] Error executing phase 3")
 	}
 
 	state := thirdPhaseState
@@ -106,7 +106,7 @@ func (pm *Phases) OnPulse(ctx context.Context, pulse *core.Pulse) error {
 	}
 	hash, _, err := pm.Calculator.GetCloudProof(cloud)
 	if err != nil {
-		return errors.Wrapf(err, "[ NET Consensus %d ] Error calculating cloud hash", pulse.PulseNumber)
+		return errors.Wrap(err, "[ NET Consensus ] Error calculating cloud hash")
 	}
 	pm.NodeKeeper.SetCloudHash(hash)
 	state.UnsyncList.ApproveSync(state.ActiveNodes)
