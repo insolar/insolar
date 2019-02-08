@@ -84,7 +84,7 @@ func getKeysFromFile(ctx context.Context, file string) (crypto.PrivateKey, strin
 	}
 	data, err := ioutil.ReadFile(absPath)
 	if err != nil {
-		return nil, "", errors.Wrap(err, "[ getKeyFromFile ] couldn't read keys file "+absPath)
+		return nil, "", errors.Wrap(err, "[ getKeyFromFile ] couldn't read keys file "+absPath+"   "+file)
 	}
 	var keys map[string]string
 	err = json.Unmarshal(data, &keys)
@@ -103,4 +103,12 @@ func getKeysFromFile(ctx context.Context, file string) (crypto.PrivateKey, strin
 		return nil, "", errors.Wrapf(err, "[ getKeyFromFile ] couldn't import private key")
 	}
 	return key, keys["public_key"], nil
+}
+
+func abs(path string) (string, error) {
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return "", errors.Wrap(err, "[ uploadKeys ] couldn't get abs path")
+	}
+	return absPath, nil
 }
