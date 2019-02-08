@@ -28,6 +28,7 @@ import (
 	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 )
 
 const testDataPath = "gentestdata"
@@ -63,6 +64,9 @@ func mockGenesis(t *testing.T, am *testutils.ArtifactManagerMock) *Genesis {
 		Node{
 			Role: "virtual",
 		},
+		Node{
+			Role: "virtual",
+		},
 	)
 	g := &Genesis{
 		config: &Config{
@@ -85,75 +89,86 @@ func mockContractBuilder(t *testing.T, g *Genesis) *ContractsBuilder {
 	return cb
 }
 
-func clearTestDir(t *testing.T) {
-	err := os.RemoveAll(testDataPath)
-	if err != nil {
-		t.Error("can't remove testing data after test done")
+type genesisWithDataSuite struct {
+	suite.Suite
+}
+
+func NewGenesisWithDataSuite() *genesisWithDataSuite {
+	return &genesisWithDataSuite{
+		Suite: suite.Suite{},
 	}
 }
 
-func TestCreateKeys(t *testing.T) {
-	g := Genesis{}
-	ctx := inslogger.TestContext(t)
-	amount := 5
-	defer clearTestDir(t)
-
-	err := g.createKeys(ctx, testDataPath, amount)
-	require.Nil(t, err)
-
-	files, _ := ioutil.ReadDir(testDataPath)
-	require.Equal(t, amount, len(files))
+// Init and run suite
+func TestGenesisWithData(t *testing.T) {
+	suite.Run(t, NewGenesisWithDataSuite())
 }
 
-func TestUploadKeys_DontReuse(t *testing.T) {
+func (s *genesisWithDataSuite) AfterTest(suiteName, testName string) {
+	err := os.RemoveAll(testDataPath)
+	if err != nil {
+		s.T().Error("Can't remove testing data after test done", err)
+	}
+}
+
+func (s *genesisWithDataSuite) TestCreateKeys() {
+	g := Genesis{}
+	ctx := inslogger.TestContext(s.T())
+	amount := 5
+
+	err := g.createKeys(ctx, testDataPath, amount)
+	require.Nil(s.T(), err)
+
+	files, _ := ioutil.ReadDir(testDataPath)
+	require.Equal(s.T(), amount, len(files))
+}
+
+func (s *genesisWithDataSuite) TestUploadKeys_DontReuse() {
 	g := Genesis{
 		config: &Config{
 			ReuseKeys: false,
 		},
 	}
-	ctx := inslogger.TestContext(t)
+	ctx := inslogger.TestContext(s.T())
 	amount := 5
-	defer clearTestDir(t)
 
 	info, err := g.uploadKeys(ctx, testDataPath, amount)
-	require.Nil(t, err)
+	require.Nil(s.T(), err)
 
-	require.Equal(t, amount, len(info))
+	require.Equal(s.T(), amount, len(info))
 }
 
-func TestUploadKeys_Reuse(t *testing.T) {
+func (s *genesisWithDataSuite) TestUploadKeys_Reuse() {
 	g := Genesis{
 		config: &Config{
 			ReuseKeys: true,
 		},
 	}
-	ctx := inslogger.TestContext(t)
+	ctx := inslogger.TestContext(s.T())
 	amount := 5
 	err := g.createKeys(ctx, testDataPath, amount)
-	defer clearTestDir(t)
-	require.Nil(t, err)
+	require.Nil(s.T(), err)
 
 	info, err := g.uploadKeys(ctx, testDataPath, amount)
-	require.Nil(t, err)
+	require.Nil(s.T(), err)
 
-	require.Equal(t, amount, len(info))
+	require.Equal(s.T(), amount, len(info))
 }
 
-func TestUploadKeys_Reuse_WrongAmount(t *testing.T) {
+func (s *genesisWithDataSuite) TestUploadKeys_Reuse_WrongAmount() {
 	g := Genesis{
 		config: &Config{
 			ReuseKeys: true,
 		},
 	}
-	ctx := inslogger.TestContext(t)
+	ctx := inslogger.TestContext(s.T())
 	amount := 5
 	err := g.createKeys(ctx, testDataPath, amount+5)
-	defer os.RemoveAll(testDataPath)
-	require.Nil(t, err)
+	require.Nil(s.T(), err)
 
 	_, err = g.uploadKeys(ctx, testDataPath, amount)
-	require.NotNil(t, err)
-	require.Contains(t, err.Error(), "[ uploadKeys ] amount of nodes != amount of files in directory")
+	require.NotNil(s.T(), err)
+	require.Contains(s.T(), err.Error(), "[ uploadKeys ] amount of nodes != amount of files in directory")
 }
 
 func TestUploadKeys_Reuse_DirNotExist(t *testing.T) {
@@ -322,9 +337,6 @@ func TestActivateDiscoveryNodes_DiffLen(t *testing.T) {
 		nodeInfo{
 			publicKey: "test_pk_1",
 		},
-		nodeInfo{
-			publicKey: "test_pk_2",
-		},
 	)
 
 	_, err := g.activateDiscoveryNodes(ctx, cb, nodes)
@@ -380,22 +392,21 @@ func TestActivateDiscoveryNodes(t *testing.T) {
 	}
 }
 
-func TestAddDiscoveryIndex_ActivateErr(t *testing.T) {
-	am := mockArtifactManagerWithRegisterRequestError(t)
-	g := mockGenesis(t, am)
-	cb := mockContractBuilder(t, g)
-	ctx := inslogger.TestContext(t)
+func (s *genesisWithDataSuite) TestAddDiscoveryIndex_ActivateErr() {
+	am := mockArtifactManagerWithRegisterRequestError(s.T())
+	g := mockGenesis(s.T(), am)
+	cb := mockContractBuilder(s.T(), g)
+	ctx := inslogger.TestContext(s.T())
 	err := g.createKeys(ctx, testDataPath, len(g.config.DiscoveryNodes))
-	require.Nil(t, err)
-	defer os.RemoveAll(testDataPath)
+	require.Nil(s.T(), err)
 
 	indexMap := make(map[string]string)
 
 	genesisNodes, resIndexMap, err := g.addDiscoveryIndex(ctx, cb, indexMap)
-	require.NotNil(t, err)
-	require.Contains(t, err.Error(), "[ addDiscoveryIndex ]: [ activateDiscoveryNodes ] Couldn't activateNodeRecord node instance")
-	require.Empty(t, genesisNodes)
-	require.Empty(t, resIndexMap)
+	require.NotNil(s.T(), err)
+	require.Contains(s.T(), err.Error(), "[ addDiscoveryIndex ]: [ activateDiscoveryNodes ] Couldn't activateNodeRecord node instance")
+	require.Empty(s.T(), genesisNodes)
+	require.Empty(s.T(), resIndexMap)
 }
 
 func TestAddDiscoveryIndex_UploadErr(t *testing.T) {
@@ -414,38 +425,36 @@ func TestAddDiscoveryIndex_UploadErr(t *testing.T) {
 	require.Empty(t, resIndexMap)
 }
 
-func TestAddDiscoveryIndex(t *testing.T) {
-	am := mockArtifactManager(t)
-	g := mockGenesis(t, am)
-	cb := mockContractBuilder(t, g)
-	ctx := inslogger.TestContext(t)
+func (s *genesisWithDataSuite) TestAddDiscoveryIndex() {
+	am := mockArtifactManager(s.T())
+	g := mockGenesis(s.T(), am)
+	cb := mockContractBuilder(s.T(), g)
+	ctx := inslogger.TestContext(s.T())
 	err := g.createKeys(ctx, testDataPath, len(g.config.DiscoveryNodes))
-	require.Nil(t, err)
-	defer os.RemoveAll(testDataPath)
+	require.Nil(s.T(), err)
 
 	indexMap := make(map[string]string)
 
 	genesisNodes, resIndexMap, err := g.addDiscoveryIndex(ctx, cb, indexMap)
-	require.Nil(t, err)
-	require.Len(t, genesisNodes, len(g.config.DiscoveryNodes))
-	require.Len(t, resIndexMap, len(g.config.DiscoveryNodes))
+	require.Nil(s.T(), err)
+	require.Len(s.T(), genesisNodes, len(g.config.DiscoveryNodes))
+	require.Len(s.T(), resIndexMap, len(g.config.DiscoveryNodes))
 }
 
-func TestAddIndex_ActivateErr(t *testing.T) {
-	am := mockArtifactManagerWithRegisterRequestError(t)
-	g := mockGenesis(t, am)
-	cb := mockContractBuilder(t, g)
-	ctx := inslogger.TestContext(t)
+func (s *genesisWithDataSuite) TestAddIndex_ActivateErr() {
+	am := mockArtifactManagerWithRegisterRequestError(s.T())
+	g := mockGenesis(s.T(), am)
+	cb := mockContractBuilder(s.T(), g)
+	ctx := inslogger.TestContext(s.T())
 	err := g.createKeys(ctx, testDataPath, nodeAmount)
-	require.Nil(t, err)
-	defer os.RemoveAll(testDataPath)
+	require.Nil(s.T(), err)
 
 	indexMap := make(map[string]string)
 
 	resIndexMap, err := g.addIndex(ctx, cb, indexMap)
-	require.NotNil(t, err)
-	require.Contains(t, err.Error(), "[ addIndex ]: [ activateNodes ] Couldn't activateNodeRecord node instance")
-	require.Empty(t, resIndexMap)
+	require.NotNil(s.T(), err)
+	require.Contains(s.T(), err.Error(), "[ addIndex ]: [ activateNodes ] Couldn't activateNodeRecord node instance")
+	require.Empty(s.T(), resIndexMap)
 }
 
 func TestAddIndex_UploadErr(t *testing.T) {
@@ -463,18 +472,17 @@ func TestAddIndex_UploadErr(t *testing.T) {
 	require.Empty(t, resIndexMap)
 }
 
-func TestAddIndex(t *testing.T) {
-	am := mockArtifactManager(t)
-	g := mockGenesis(t, am)
-	cb := mockContractBuilder(t, g)
-	ctx := inslogger.TestContext(t)
+func (s *genesisWithDataSuite) TestAddIndex() {
+	am := mockArtifactManager(s.T())
+	g := mockGenesis(s.T(), am)
+	cb := mockContractBuilder(s.T(), g)
+	ctx := inslogger.TestContext(s.T())
 	err := g.createKeys(ctx, testDataPath, nodeAmount)
-	require.Nil(t, err)
-	defer os.RemoveAll(testDataPath)
+	require.Nil(s.T(), err)
 
 	indexMap := make(map[string]string)
 
 	resIndexMap, err := g.addIndex(ctx, cb, indexMap)
-	require.Nil(t, err)
-	require.Len(t, resIndexMap, nodeAmount)
+	require.Nil(s.T(), err)
+	require.Len(s.T(), resIndexMap, nodeAmount)
 }
