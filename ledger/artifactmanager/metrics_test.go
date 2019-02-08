@@ -26,7 +26,6 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
@@ -115,11 +114,6 @@ func (s *metricSuite) TestLedgerArtifactManager_Metrics() {
 	// BEWARE: this test should not be run in parallel!
 	mc := minimock.NewController(s.T())
 	defer mc.Finish()
-
-	recentStorageMock := recentstorage.NewRecentStorageMock(s.T())
-	recentStorageMock.AddPendingRequestMock.Return()
-	recentStorageMock.AddObjectMock.Return()
-	recentStorageMock.RemovePendingRequestMock.Return()
 
 	amPulseStorageMock := testutils.NewPulseStorageMock(s.T())
 	amPulseStorageMock.CurrentFunc = func(p context.Context) (r *core.Pulse, r1 error) {
