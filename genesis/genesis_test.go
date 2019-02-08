@@ -112,7 +112,11 @@ func (s *genesisWithDataSuite) AfterTest(suiteName, testName string) {
 }
 
 func (s *genesisWithDataSuite) TestCreateKeys() {
-	g := Genesis{}
+	g := &Genesis{
+		config: &Config{
+			KeysNameFormat: "/node_%d.json",
+		},
+	}
 	ctx := inslogger.TestContext(s.T())
 	amount := 5
 
