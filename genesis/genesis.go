@@ -340,6 +340,96 @@ type genesisNode struct {
 	role    string
 }
 
+func (g *Genesis) activateDiscoveryNodes(ctx context.Context, cb *ContractsBuilder, nodesInfo []nodeInfo) ([]genesisNode, error) {
+	if len(nodesInfo) != len(g.config.DiscoveryNodes) {
+		return nil, errors.New("[ activateDiscoveryNodes ] len of nodesInfo param must be equal to len of DiscoveryNodes in genesis config")
+	}
+
+	nodes := make([]genesisNode, len(g.config.DiscoveryNodes))
+
+	for i, discoverNode := range g.config.DiscoveryNodes {
+		privKey := nodesInfo[i].privateKey
+		nodePubKey := nodesInfo[i].publicKey
+
+		nodeState := &noderecord.NodeRecord{
+			Record: noderecord.RecordInfo{
+				PublicKey: nodePubKey,
+				Role:      core.GetStaticRoleFromString(discoverNode.Role),
+			},
+		}
+		contract, err := g.activateNodeRecord(ctx, cb, nodeState, "discoverynoderecord_"+strconv.Itoa(i))
+		if err != nil {
+			return nil, errors.Wrap(err, "[ activateDiscoveryNodes ] Couldn't activateNodeRecord node instance")
+		}
+
+		nodes[i] = genesisNode{
+			node: certificate.BootstrapNode{
+				PublicKey: nodePubKey,
+				Host:      discoverNode.Host,
+				NodeRef:   contract.String(),
+			},
+			privKey: privKey,
+			ref:     contract,
+			role:    discoverNode.Role,
+		}
+	}
+	return nodes, nil
+}
+
+func (g *Genesis) activateNodes(ctx context.Context, cb *ContractsBuilder, nodes []nodeInfo) ([]nodeInfo, error) {
+	var updatedNodes []nodeInfo
+
+	for i, node := range nodes {
+		nodeState := &noderecord.NodeRecord{
+			Record: noderecord.RecordInfo{
+				PublicKey: node.publicKey,
+				Role:      core.StaticRoleVirtual,
+			},
+		}
+		contract, err := g.activateNodeRecord(ctx, cb, nodeState, "noderecord_"+strconv.Itoa(i))
+		if err != nil {
+			return nil, errors.Wrap(err, "[ activateNodes ] Couldn't activateNodeRecord node instance")
+		}
+		updatedNode := nodeInfo{
+			ref:       contract,
+			publicKey: node.publicKey,
+		}
+		updatedNodes = append(updatedNodes, updatedNode)
+	}
+
+	return updatedNodes, nil
+}
+
+func (g *Genesis) activateNodeRecord(ctx context.Context, cb *ContractsBuilder, record *noderecord.NodeRecord, name string) (*core.RecordRef, error) {
+	nodeData, err := serializeInstance(record)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ activateNodes ] Couldn't serialize node instance")
+	}
+
+	nodeID, err := g.ArtifactManager.RegisterRequest(ctx, *g.rootDomainRef, &message.Parcel{Msg: &message.GenesisRequest{Name: name}})
+	if err != nil {
+		return nil, errors.Wrap(err, "[ activateNodes ] Couldn't register request to artifact manager")
+	}
+	contract := core.NewRecordRef(*g.rootDomainRef.Record(), *nodeID)
+	_, err = g.ArtifactManager.ActivateObject(
+		ctx,
+		core.RecordRef{},
+		*contract,
+		*g.nodeDomainRef,
+		*cb.Prototypes[nodeRecord],
+		false,
+		nodeData,
+	)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ activateNodes ] Could'n activateNodeRecord node object")
+	}
+	_, err = g.ArtifactManager.RegisterResult(ctx, *g.rootDomainRef, *contract, nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ activateNodes ] Couldn't register result to artifact manager")
+	}
+	return contract, nil
+}
+
 func (g *Genesis) addDiscoveryIndex(ctx context.Context, cb *ContractsBuilder, indexMap map[string]string) ([]genesisNode, map[string]string, error) {
 	errMsg := "[ addDiscoveryIndex ]"
 	discoveryKeysPath, err := abs(g.config.DiscoveryKeysDir)
@@ -455,96 +545,6 @@ func (g *Genesis) uploadKeys(ctx context.Context, path string, amount int) ([]no
 	}
 
 	return keys, nil
-}
-
-func (g *Genesis) activateDiscoveryNodes(ctx context.Context, cb *ContractsBuilder, nodesInfo []nodeInfo) ([]genesisNode, error) {
-	if len(nodesInfo) != len(g.config.DiscoveryNodes) {
-		return nil, errors.New("[ activateDiscoveryNodes ] len of nodesInfo param must be equal to len of DiscoveryNodes in genesis config")
-	}
-
-	nodes := make([]genesisNode, len(g.config.DiscoveryNodes))
-
-	for i, discoverNode := range g.config.DiscoveryNodes {
-		privKey := nodesInfo[i].privateKey
-		nodePubKey := nodesInfo[i].publicKey
-
-		nodeState := &noderecord.NodeRecord{
-			Record: noderecord.RecordInfo{
-				PublicKey: nodePubKey,
-				Role:      core.GetStaticRoleFromString(discoverNode.Role),
-			},
-		}
-		contract, err := g.activateNodeRecord(ctx, cb, nodeState, "discoverynoderecord_"+strconv.Itoa(i))
-		if err != nil {
-			return nil, errors.Wrap(err, "[ activateDiscoveryNodes ] Couldn't activateNodeRecord node instance")
-		}
-
-		nodes[i] = genesisNode{
-			node: certificate.BootstrapNode{
-				PublicKey: nodePubKey,
-				Host:      discoverNode.Host,
-				NodeRef:   contract.String(),
-			},
-			privKey: privKey,
-			ref:     contract,
-			role:    discoverNode.Role,
-		}
-	}
-	return nodes, nil
-}
-
-func (g *Genesis) activateNodes(ctx context.Context, cb *ContractsBuilder, nodes []nodeInfo) ([]nodeInfo, error) {
-	var updatedNodes []nodeInfo
-
-	for i, node := range nodes {
-		nodeState := &noderecord.NodeRecord{
-			Record: noderecord.RecordInfo{
-				PublicKey: node.publicKey,
-				Role:      core.StaticRoleVirtual,
-			},
-		}
-		contract, err := g.activateNodeRecord(ctx, cb, nodeState, "noderecord_"+strconv.Itoa(i))
-		if err != nil {
-			return nil, errors.Wrap(err, "[ activateNodes ] Couldn't activateNodeRecord node instance")
-		}
-		updatedNode := nodeInfo{
-			ref:       contract,
-			publicKey: node.publicKey,
-		}
-		updatedNodes = append(updatedNodes, updatedNode)
-	}
-
-	return updatedNodes, nil
-}
-
-func (g *Genesis) activateNodeRecord(ctx context.Context, cb *ContractsBuilder, record *noderecord.NodeRecord, name string) (*core.RecordRef, error) {
-	nodeData, err := serializeInstance(record)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ activateNodes ] Couldn't serialize node instance")
-	}
-
-	nodeID, err := g.ArtifactManager.RegisterRequest(ctx, *g.rootDomainRef, &message.Parcel{Msg: &message.GenesisRequest{Name: name}})
-	if err != nil {
-		return nil, errors.Wrap(err, "[ activateNodes ] Couldn't register request to artifact manager")
-	}
-	contract := core.NewRecordRef(*g.rootDomainRef.Record(), *nodeID)
-	_, err = g.ArtifactManager.ActivateObject(
-		ctx,
-		core.RecordRef{},
-		*contract,
-		*g.nodeDomainRef,
-		*cb.Prototypes[nodeRecord],
-		false,
-		nodeData,
-	)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ activateNodes ] Could'n activateNodeRecord node object")
-	}
-	_, err = g.ArtifactManager.RegisterResult(ctx, *g.rootDomainRef, *contract, nil)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ activateNodes ] Couldn't register result to artifact manager")
-	}
-	return contract, nil
 }
 
 func (g *Genesis) registerGenesisRequest(ctx context.Context, name string) (*core.RecordID, error) {
