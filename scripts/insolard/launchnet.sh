@@ -253,22 +253,22 @@ genesis()
     $INSOLARD --config $BASE_DIR/insolar.yaml --genesis $GENESIS_CONFIG --keyout $NODES_DATA/certs
     printf "genesis is done\n"
 
-#    copy_data
-#    copy_certs
+    copy_data
+    copy_certs
 
 
-#    if which jq ; then
-#        NL=$BASE_DIR/loglinks
-#        mkdir  $NL || \
-#        rm -f $NL/*.log
-#        for node in "${NODES[@]}" ; do
-#            ref=`jq -r '.reference' $node/cert.json`
-#            [[ $ref =~ .+\. ]]
-#            ln -s `pwd`/$node/output.log $NL/${BASH_REMATCH[0]}log
-#        done
-#    else
-#        echo "no jq =("
-#    fi
+    if which jq ; then
+        NL=$BASE_DIR/loglinks
+        mkdir  $NL || \
+        rm -f $NL/*.log
+        for node in "${NODES[@]}" ; do
+            ref=`jq -r '.reference' $node/cert.json`
+            [[ $ref =~ .+\. ]]
+            ln -s `pwd`/$node/output.log $NL/${BASH_REMATCH[0]}log
+        done
+    else
+        echo "no jq =("
+    fi
 }
 
 run_insgorund=true
