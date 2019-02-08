@@ -12,6 +12,7 @@ environments:
     - jaeger
     - prometheus
     - elk
+    - grafana
   dev:
     destination:
       namespace: dev

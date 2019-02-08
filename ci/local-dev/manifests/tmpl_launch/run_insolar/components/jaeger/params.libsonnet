@@ -4,5 +4,8 @@
     // replicas: 4,
   },
   components+: {
+  	"jaeger"+:{
+  		
+  	}
   },
 }
