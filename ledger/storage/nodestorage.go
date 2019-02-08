@@ -42,6 +42,7 @@ type nodeStorage struct {
 	nodeHistoryLock sync.RWMutex
 }
 
+// NewNodeStorage create new instance of NodeStorage
 func NewNodeStorage() NodeStorage {
 	// return new(nodeStorage)
 	return &nodeStorage{nodeHistory: map[core.PulseNumber][]Node{}}
@@ -111,7 +112,7 @@ func (a *nodeStorage) RemoveActiveNodesUntil(pulse core.PulseNumber) {
 
 	for pn := range a.nodeHistory {
 		if pn < pulse {
-			delete(a.nodeHistory, pulse)
+			delete(a.nodeHistory, pn)
 		}
 	}
 }
