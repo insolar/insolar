@@ -136,18 +136,20 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObject_Redirects() {
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
 
-	recentStorageMock := recentstorage.NewRecentStorageMock(s.T())
-	recentStorageMock.AddPendingRequestMock.Return()
-	recentStorageMock.AddObjectMock.Return()
-	recentStorageMock.RemovePendingRequestMock.Return()
+	indexMock := recentstorage.NewRecentIndexStorageMock(s.T())
+	pendingMock := recentstorage.NewPendingStorageMock(s.T())
+
+	indexMock.AddObjectMock.Return()
+	pendingMock.GetRequestsForObjectMock.Return(nil)
+	pendingMock.AddPendingRequestMock.Return()
+	pendingMock.RemovePendingRequestMock.Return()
+
+	provideMock := recentstorage.NewProviderMock(s.T())
+	provideMock.GetIndexStorageMock.Return(indexMock)
+	provideMock.GetPendingStorageMock.Return(pendingMock)
 
 	mb := testutils.NewMessageBusMock(mc)
 	mb.MustRegisterMock.Return()
-
-	provideMock := recentstorage.NewProviderMock(s.T())
-	provideMock.GetStorageFunc = func(ctx context.Context, p core.RecordID) (r recentstorage.RecentStorage) {
-		return recentStorageMock
-	}
 
 	h.RecentStorageProvider = provideMock
 	h.JetCoordinator = jc
@@ -260,10 +262,17 @@ func (s *handlerSuite) TestMessageHandler_HandleGetChildren_Redirects() {
 	mb.MustRegisterMock.Return()
 	jc := testutils.NewJetCoordinatorMock(mc)
 
-	recentStorageMock := recentstorage.NewRecentStorageMock(s.T())
-	recentStorageMock.AddPendingRequestMock.Return()
-	recentStorageMock.AddObjectMock.Return()
-	recentStorageMock.RemovePendingRequestMock.Return()
+	indexMock := recentstorage.NewRecentIndexStorageMock(s.T())
+	pendingMock := recentstorage.NewPendingStorageMock(s.T())
+
+	indexMock.AddObjectMock.Return()
+	pendingMock.GetRequestsForObjectMock.Return(nil)
+	pendingMock.AddPendingRequestMock.Return()
+	pendingMock.RemovePendingRequestMock.Return()
+
+	provideMock := recentstorage.NewProviderMock(s.T())
+	provideMock.GetIndexStorageMock.Return(indexMock)
+	provideMock.GetPendingStorageMock.Return(pendingMock)
 
 	certificate := testutils.NewCertificateMock(s.T())
 	certificate.GetRoleMock.Return(core.StaticRoleLightMaterial)
@@ -285,10 +294,6 @@ func (s *handlerSuite) TestMessageHandler_HandleGetChildren_Redirects() {
 
 	err := h.Init(s.ctx)
 	require.NoError(s.T(), err)
-	provideMock := recentstorage.NewProviderMock(s.T())
-	provideMock.GetStorageFunc = func(ctx context.Context, p core.RecordID) (r recentstorage.RecentStorage) {
-		return recentStorageMock
-	}
 
 	h.RecentStorageProvider = provideMock
 
@@ -378,10 +383,17 @@ func (s *handlerSuite) TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeav
 	defer mc.Finish()
 	jetID := *jet.NewID(0, nil)
 
-	recentStorageMock := recentstorage.NewRecentStorageMock(s.T())
-	recentStorageMock.AddPendingRequestMock.Return()
-	recentStorageMock.AddObjectMock.Return()
-	recentStorageMock.RemovePendingRequestMock.Return()
+	indexMock := recentstorage.NewRecentIndexStorageMock(s.T())
+	pendingMock := recentstorage.NewPendingStorageMock(s.T())
+
+	indexMock.AddObjectMock.Return()
+	pendingMock.GetRequestsForObjectMock.Return(nil)
+	pendingMock.AddPendingRequestMock.Return()
+	pendingMock.RemovePendingRequestMock.Return()
+
+	provideMock := recentstorage.NewProviderMock(s.T())
+	provideMock.GetIndexStorageMock.Return(indexMock)
+	provideMock.GetPendingStorageMock.Return(pendingMock)
 
 	certificate := testutils.NewCertificateMock(s.T())
 	certificate.GetRoleMock.Return(core.StaticRoleLightMaterial)
@@ -398,11 +410,6 @@ func (s *handlerSuite) TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeav
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
-
-	provideMock := recentstorage.NewProviderMock(s.T())
-	provideMock.GetStorageFunc = func(ctx context.Context, p core.RecordID) (r recentstorage.RecentStorage) {
-		return recentStorageMock
-	}
 
 	h.RecentStorageProvider = provideMock
 
@@ -450,10 +457,17 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_FetchesIndexFromHea
 	defer mc.Finish()
 	jetID := *jet.NewID(0, nil)
 
-	recentStorageMock := recentstorage.NewRecentStorageMock(s.T())
-	recentStorageMock.AddPendingRequestMock.Return()
-	recentStorageMock.AddObjectMock.Return()
-	recentStorageMock.RemovePendingRequestMock.Return()
+	indexMock := recentstorage.NewRecentIndexStorageMock(s.T())
+	pendingMock := recentstorage.NewPendingStorageMock(s.T())
+
+	indexMock.AddObjectMock.Return()
+	pendingMock.GetRequestsForObjectMock.Return(nil)
+	pendingMock.AddPendingRequestMock.Return()
+	pendingMock.RemovePendingRequestMock.Return()
+
+	provideMock := recentstorage.NewProviderMock(s.T())
+	provideMock.GetIndexStorageMock.Return(indexMock)
+	provideMock.GetPendingStorageMock.Return(pendingMock)
 
 	certificate := testutils.NewCertificateMock(s.T())
 	certificate.GetRoleMock.Return(core.StaticRoleLightMaterial)
@@ -470,11 +484,6 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_FetchesIndexFromHea
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
-
-	provideMock := recentstorage.NewProviderMock(s.T())
-	provideMock.GetStorageFunc = func(ctx context.Context, p core.RecordID) (r recentstorage.RecentStorage) {
-		return recentStorageMock
-	}
 
 	h.RecentStorageProvider = provideMock
 
@@ -527,15 +536,17 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_UpdateIndexState() 
 	defer mc.Finish()
 	jetID := *jet.NewID(0, nil)
 
-	recentStorageMock := recentstorage.NewRecentStorageMock(s.T())
-	recentStorageMock.AddPendingRequestMock.Return()
-	recentStorageMock.AddObjectMock.Return()
-	recentStorageMock.RemovePendingRequestMock.Return()
+	indexMock := recentstorage.NewRecentIndexStorageMock(s.T())
+	pendingMock := recentstorage.NewPendingStorageMock(s.T())
+
+	indexMock.AddObjectMock.Return()
+	pendingMock.GetRequestsForObjectMock.Return(nil)
+	pendingMock.AddPendingRequestMock.Return()
+	pendingMock.RemovePendingRequestMock.Return()
 
 	provideMock := recentstorage.NewProviderMock(s.T())
-	provideMock.GetStorageFunc = func(ctx context.Context, p core.RecordID) (r recentstorage.RecentStorage) {
-		return recentStorageMock
-	}
+	provideMock.GetIndexStorageMock.Return(indexMock)
+	provideMock.GetPendingStorageMock.Return(pendingMock)
 
 	certificate := testutils.NewCertificateMock(s.T())
 	certificate.GetRoleMock.Return(core.StaticRoleLightMaterial)
@@ -591,10 +602,17 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObjectIndex() {
 	msg := message.GetObjectIndex{
 		Object: *genRandomRef(0),
 	}
-	recentStorageMock := recentstorage.NewRecentStorageMock(s.T())
-	recentStorageMock.AddPendingRequestMock.Return()
-	recentStorageMock.AddObjectMock.Return()
-	recentStorageMock.RemovePendingRequestMock.Return()
+	indexMock := recentstorage.NewRecentIndexStorageMock(s.T())
+	pendingMock := recentstorage.NewPendingStorageMock(s.T())
+
+	indexMock.AddObjectMock.Return()
+	pendingMock.GetRequestsForObjectMock.Return(nil)
+	pendingMock.AddPendingRequestMock.Return()
+	pendingMock.RemovePendingRequestMock.Return()
+
+	provideMock := recentstorage.NewProviderMock(s.T())
+	provideMock.GetIndexStorageMock.Return(indexMock)
+	provideMock.GetPendingStorageMock.Return(pendingMock)
 
 	certificate := testutils.NewCertificateMock(s.T())
 	certificate.GetRoleMock.Return(core.StaticRoleLightMaterial)
@@ -617,11 +635,6 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObjectIndex() {
 
 	err := h.Init(s.ctx)
 	require.NoError(s.T(), err)
-
-	provideMock := recentstorage.NewProviderMock(s.T())
-	provideMock.GetStorageFunc = func(ctx context.Context, p core.RecordID) (r recentstorage.RecentStorage) {
-		return recentStorageMock
-	}
 
 	h.RecentStorageProvider = provideMock
 
@@ -651,7 +664,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHasPendingRequests() {
 		*genRandomID(core.FirstPulseNumber),
 	}
 
-	recentStorageMock := recentstorage.NewRecentStorageMock(s.T())
+	recentStorageMock := recentstorage.NewPendingStorageMock(s.T())
 	recentStorageMock.GetRequestsForObjectMock.Return(pendingRequests)
 
 	certificate := testutils.NewCertificateMock(s.T())
@@ -675,9 +688,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHasPendingRequests() {
 	require.NoError(s.T(), err)
 
 	provideMock := recentstorage.NewProviderMock(s.T())
-	provideMock.GetStorageFunc = func(ctx context.Context, p core.RecordID) (r recentstorage.RecentStorage) {
-		return recentStorageMock
-	}
+	provideMock.GetPendingStorageMock.Return(recentStorageMock)
 
 	h.RecentStorageProvider = provideMock
 
@@ -700,10 +711,17 @@ func (s *handlerSuite) TestMessageHandler_HandleGetCode_Redirects() {
 	mb := testutils.NewMessageBusMock(mc)
 	mb.MustRegisterMock.Return()
 
-	recentStorageMock := recentstorage.NewRecentStorageMock(s.T())
-	recentStorageMock.AddPendingRequestMock.Return()
-	recentStorageMock.AddObjectMock.Return()
-	recentStorageMock.RemovePendingRequestMock.Return()
+	indexMock := recentstorage.NewRecentIndexStorageMock(s.T())
+	pendingMock := recentstorage.NewPendingStorageMock(s.T())
+
+	indexMock.AddObjectMock.Return()
+	pendingMock.GetRequestsForObjectMock.Return(nil)
+	pendingMock.AddPendingRequestMock.Return()
+	pendingMock.RemovePendingRequestMock.Return()
+
+	provideMock := recentstorage.NewProviderMock(s.T())
+	provideMock.GetIndexStorageMock.Return(indexMock)
+	provideMock.GetPendingStorageMock.Return(pendingMock)
 
 	certificate := testutils.NewCertificateMock(s.T())
 	certificate.GetRoleMock.Return(core.StaticRoleLightMaterial)
@@ -723,11 +741,6 @@ func (s *handlerSuite) TestMessageHandler_HandleGetCode_Redirects() {
 	h.ObjectStorage = s.objectStorage
 	err := h.Init(s.ctx)
 	require.NoError(s.T(), err)
-
-	provideMock := recentstorage.NewProviderMock(s.T())
-	provideMock.GetStorageFunc = func(ctx context.Context, p core.RecordID) (r recentstorage.RecentStorage) {
-		return recentStorageMock
-	}
 
 	h.RecentStorageProvider = provideMock
 
@@ -776,10 +789,17 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 	defer mc.Finish()
 	jetID := *jet.NewID(0, nil)
 
-	recentStorageMock := recentstorage.NewRecentStorageMock(s.T())
-	recentStorageMock.AddPendingRequestMock.Return()
-	recentStorageMock.AddObjectMock.Return()
-	recentStorageMock.RemovePendingRequestMock.Return()
+	indexMock := recentstorage.NewRecentIndexStorageMock(s.T())
+	pendingMock := recentstorage.NewPendingStorageMock(s.T())
+
+	indexMock.AddObjectMock.Return()
+	pendingMock.GetRequestsForObjectMock.Return(nil)
+	pendingMock.AddPendingRequestMock.Return()
+	pendingMock.RemovePendingRequestMock.Return()
+
+	provideMock := recentstorage.NewProviderMock(s.T())
+	provideMock.GetIndexStorageMock.Return(indexMock)
+	provideMock.GetPendingStorageMock.Return(pendingMock)
 
 	certificate := testutils.NewCertificateMock(s.T())
 	certificate.GetRoleMock.Return(core.StaticRoleLightMaterial)
@@ -795,12 +815,6 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
-
-	provideMock := recentstorage.NewProviderMock(s.T())
-	provideMock.GetStorageFunc = func(ctx context.Context, p core.RecordID) (r recentstorage.RecentStorage) {
-		return recentStorageMock
-	}
-
 	h.RecentStorageProvider = provideMock
 
 	objIndex := index.ObjectLifeline{LatestState: genRandomID(0), State: record.StateActivation}
@@ -854,15 +868,17 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 	defer mc.Finish()
 	jetID := *jet.NewID(0, nil)
 
-	recentStorageMock := recentstorage.NewRecentStorageMock(s.T())
-	recentStorageMock.AddPendingRequestMock.Return()
-	recentStorageMock.AddObjectMock.Return()
-	recentStorageMock.RemovePendingRequestMock.Return()
+	indexMock := recentstorage.NewRecentIndexStorageMock(s.T())
+	pendingMock := recentstorage.NewPendingStorageMock(s.T())
+
+	indexMock.AddObjectMock.Return()
+	pendingMock.GetRequestsForObjectMock.Return(nil)
+	pendingMock.AddPendingRequestMock.Return()
+	pendingMock.RemovePendingRequestMock.Return()
 
 	provideMock := recentstorage.NewProviderMock(s.T())
-	provideMock.GetStorageFunc = func(ctx context.Context, p core.RecordID) (r recentstorage.RecentStorage) {
-		return recentStorageMock
-	}
+	provideMock.GetIndexStorageMock.Return(indexMock)
+	provideMock.GetPendingStorageMock.Return(pendingMock)
 
 	certificate := testutils.NewCertificateMock(s.T())
 	certificate.GetRoleMock.Return(core.StaticRoleLightMaterial)
@@ -985,19 +1001,20 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 		JetDropSizeHistory: dropSizeHistory,
 	}
 
-	recentStorageMock := recentstorage.NewRecentStorageMock(s.T())
-	recentStorageMock.AddPendingRequestFunc = func(ctx context.Context, o, p core.RecordID) {
+	indexMock := recentstorage.NewRecentIndexStorageMock(s.T())
+	pendingMock := recentstorage.NewPendingStorageMock(s.T())
+
+	pendingMock.AddPendingRequestFunc = func(ctx context.Context, o, p core.RecordID) {
 		require.Equal(s.T(), o, obj)
 		require.Equal(s.T(), p, *secondId)
 	}
-	recentStorageMock.AddObjectWithTLLFunc = func(ctx context.Context, p core.RecordID, ttl int) {
+	indexMock.AddObjectWithTLLFunc = func(ctx context.Context, p core.RecordID, ttl int) {
 		require.Equal(s.T(), p, *firstID)
 		require.Equal(s.T(), 320, ttl)
 	}
 	provideMock := recentstorage.NewProviderMock(s.T())
-	provideMock.GetStorageFunc = func(ctx context.Context, p core.RecordID) (r recentstorage.RecentStorage) {
-		return recentStorageMock
-	}
+	provideMock.GetPendingStorageMock.Return(pendingMock)
+	provideMock.GetIndexStorageMock.Return(indexMock)
 
 	certificate := testutils.NewCertificateMock(s.T())
 	certificate.GetRoleMock.Return(core.StaticRoleLightMaterial)
@@ -1032,8 +1049,8 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	require.Equal(s.T(), jetID, dropSizeHistory[0].JetID)
 	require.Equal(s.T(), core.FirstPulseNumber, int(dropSizeHistory[0].PulseNo))
 
-	recentStorageMock.MinimockFinish()
-
+	indexMock.MinimockFinish()
+	pendingMock.MinimockFinish()
 }
 
 func (s *handlerSuite) TestMessageHandler_HandleValidationCheck() {
@@ -1041,10 +1058,16 @@ func (s *handlerSuite) TestMessageHandler_HandleValidationCheck() {
 	defer mc.Finish()
 	jetID := *jet.NewID(0, nil)
 
-	recentStorageMock := recentstorage.NewRecentStorageMock(s.T())
-	recentStorageMock.AddPendingRequestMock.Return()
-	recentStorageMock.AddObjectMock.Return()
-	recentStorageMock.RemovePendingRequestMock.Return()
+	indexMock := recentstorage.NewRecentIndexStorageMock(s.T())
+	pendingMock := recentstorage.NewPendingStorageMock(s.T())
+
+	indexMock.AddObjectMock.Return()
+	pendingMock.AddPendingRequestMock.Return()
+	pendingMock.RemovePendingRequestMock.Return()
+
+	provideMock := recentstorage.NewProviderMock(s.T())
+	provideMock.GetIndexStorageMock.Return(indexMock)
+	provideMock.GetPendingStorageMock.Return(pendingMock)
 
 	nodeMock := network.NewNodeMock(s.T())
 	nodeMock.RoleMock.Return(core.StaticRoleLightMaterial)
@@ -1068,16 +1091,10 @@ func (s *handlerSuite) TestMessageHandler_HandleValidationCheck() {
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
+	h.RecentStorageProvider = provideMock
 
 	err := h.Init(s.ctx)
 	require.NoError(s.T(), err)
-
-	provideMock := recentstorage.NewProviderMock(s.T())
-	provideMock.GetStorageFunc = func(ctx context.Context, p core.RecordID) (r recentstorage.RecentStorage) {
-		return recentStorageMock
-	}
-
-	h.RecentStorageProvider = provideMock
 
 	s.T().Run("returns not ok when not valid", func(t *testing.T) {
 		validatedStateID, err := s.objectStorage.SetRecord(s.ctx, jetID, 0, &record.ObjectAmendRecord{})
