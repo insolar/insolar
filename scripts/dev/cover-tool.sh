@@ -54,10 +54,13 @@ if [[ -z "$COVER_TARGET" ]]; then
     COVER_TARGET="all"
 fi
 
-# collect coverage
-export COVERPROFILE=$OUTPUT_DIR/$COVER_TARGET.out
-export TESTED_PACKAGES
-make test_with_coverage
+COVERPROFILE=${COVERPROFILE:-""}
+if [[ -z $"COVERPROFILE" ]]; then
+    # collect coverage
+    export COVERPROFILE=$OUTPUT_DIR/$COVER_TARGET.out
+    export TESTED_PACKAGES
+    make test_with_coverage
+fi
 
 # produce report
 GOCOV_FILE=$OUTPUT_DIR/$COVER_TARGET.gocov
