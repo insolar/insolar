@@ -105,7 +105,7 @@ func getKeysFromFile(ctx context.Context, file string) (crypto.PrivateKey, strin
 	return key, keys["public_key"], nil
 }
 
-func abs(path string) (string, error) {
+func absPath(path string) (string, error) {
 	absPath, err := filepath.Abs(path)
 	if err != nil {
 		return "", errors.Wrap(err, "[ abs ] couldn't get abs path")

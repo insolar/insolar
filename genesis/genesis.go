@@ -20,6 +20,7 @@ import (
 	"context"
 	"crypto"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
@@ -432,7 +433,7 @@ func (g *Genesis) activateNodeRecord(ctx context.Context, cb *ContractsBuilder, 
 
 func (g *Genesis) addDiscoveryIndex(ctx context.Context, cb *ContractsBuilder, indexMap map[string]string) ([]genesisNode, map[string]string, error) {
 	errMsg := "[ addDiscoveryIndex ]"
-	discoveryKeysPath, err := abs(g.config.DiscoveryKeysDir)
+	discoveryKeysPath, err := absPath(g.config.DiscoveryKeysDir)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, errMsg)
 	}
@@ -452,7 +453,7 @@ func (g *Genesis) addDiscoveryIndex(ctx context.Context, cb *ContractsBuilder, i
 
 func (g *Genesis) addIndex(ctx context.Context, cb *ContractsBuilder, indexMap map[string]string) (map[string]string, error) {
 	errMsg := "[ addIndex ]"
-	nodeKeysPath, err := abs(g.config.NodeKeysDir)
+	nodeKeysPath, err := absPath(g.config.NodeKeysDir)
 	if err != nil {
 		return nil, errors.Wrap(err, errMsg)
 	}
@@ -527,7 +528,7 @@ func (g *Genesis) uploadKeys(ctx context.Context, path string, amount int) ([]no
 
 	files, _ := ioutil.ReadDir(path)
 	if len(files) != amount {
-		return nil, errors.New("[ uploadKeys ] amount of nodes != amount of files in directory: " + strconv.Itoa(len(files)) + "!=" + strconv.Itoa(amount))
+		return nil, errors.New(fmt.Sprintf("[ uploadKeys ] amount of nodes != amount of files in directory: %d != %d", len(files), amount))
 	}
 
 	var keys []nodeInfo
