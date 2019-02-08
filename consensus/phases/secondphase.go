@@ -25,7 +25,6 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/merkle"
@@ -51,6 +50,7 @@ type secondPhase struct {
 }
 
 func (sp *secondPhase) Execute(ctx context.Context, pulse *core.Pulse, state *FirstPhaseState) (*SecondPhaseState, error) {
+	logger := inslogger.FromContext(ctx)
 	ctx, span := instracer.StartSpan(ctx, "SecondPhase.Execute")
 	span.AddAttributes(trace.Int64Attribute("pulse", int64(state.PulseEntry.Pulse.PulseNumber)))
 	defer span.End()
@@ -68,25 +68,25 @@ func (sp *secondPhase) Execute(ctx context.Context, pulse *core.Pulse, state *Fi
 	globuleHash, globuleProof, err := sp.Calculator.GetGlobuleProof(entry)
 
 	if err != nil {
-		return nil, errors.Wrap(err, "[ SecondPhase ] Failed to calculate globule proof")
+		return nil, errors.Wrapf(err, "[ NET Consensus %d phase-2.0 ] Failed to calculate globule proof", pulse.PulseNumber)
 	}
 
 	packet := packets.NewPhase2Packet(pulse.PulseNumber)
 	err = packet.SetGlobuleHashSignature(globuleProof.Signature.Bytes())
 	if err != nil {
-		return nil, errors.Wrap(err, "[ SecondPhase ] Failed to set globule proof in Phase2Packet")
+		return nil, errors.Wrapf(err, "[ NET Consensus %d phase-2.0 ] Failed to set globule proof in Phase2Packet", pulse.PulseNumber)
 	}
 	bitset, err := sp.generatePhase2Bitset(state.UnsyncList, state.ValidProofs)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ SecondPhase ] Failed to generate bitset for Phase2Packet")
+		return nil, errors.Wrapf(err, "[ NET Consensus %d phase-2.0 ] Failed to generate bitset for Phase2Packet", pulse.PulseNumber)
 	}
 	packet.SetBitSet(bitset)
 	activeNodes := state.UnsyncList.GetActiveNodes()
 	packets, err := sp.Communicator.ExchangePhase2(ctx, state.UnsyncList, activeNodes, packet)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ SecondPhase ] Failed to exchange packets on phase 2")
+		return nil, errors.Wrapf(err, "[ NET Consensus %d phase-2.0 ] Failed to exchange packets on phase 2", pulse.PulseNumber)
 	}
-	inslogger.FromContext(ctx).Infof("[ SecondPhase ] received responses: %d/%d", len(packets), len(activeNodes))
+	logger.Infof("[ NET Consensus %d phase-2.0 ] Received responses: %d/%d", len(packets), len(activeNodes))
 	metrics.ConsensusPacketsRecv.WithLabelValues("phase 2").Add(float64(len(packets)))
 
 	origin := sp.NodeKeeper.GetOrigin().ID()
@@ -98,20 +98,20 @@ func (sp *secondPhase) Execute(ctx context.Context, pulse *core.Pulse, state *Fi
 			err = sp.checkPacketSignature(packet, ref, state.UnsyncList)
 		}
 		if err != nil {
-			inslogger.FromContext(ctx).Warnf("Failed to check phase2 packet signature from %s: %s", ref, err.Error())
+			logger.Warnf("[ NET Consensus %d phase-2.0 ] Failed to check phase2 packet signature from %s: %s", pulse.PulseNumber, ref, err.Error())
 			continue
 		}
 		state.UnsyncList.SetGlobuleHashSignature(ref, packet.GetGlobuleHashSignature())
 		err = stateMatrix.ApplyBitSet(ref, packet.GetBitSet())
 		if err != nil {
-			log.Warnf("[ SecondPhase ] Could not apply bitset from node %s: %s", ref, err.Error())
+			logger.Warnf("[ NET Consensus %d phase-2.0 ] Could not apply bitset from node %s: %s", pulse.PulseNumber, ref, err.Error())
 			continue
 		}
 	}
 
 	matrixCalculation, err := stateMatrix.CalculatePhase2(origin)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ SecondPhase ] Failed to calculate bitset matrix consensus result")
+		return nil, errors.Wrapf(err, "[ NET Consensus %d phase-2.0 ] Failed to calculate bitset matrix consensus result", pulse.PulseNumber)
 	}
 
 	if len(matrixCalculation.TimedOut) > 0 {
@@ -147,7 +147,7 @@ func (sp *secondPhase) Execute(ctx context.Context, pulse *core.Pulse, state *Fi
 		globuleHash, globuleProof, err = sp.Calculator.GetGlobuleProof(entry)
 
 		if err != nil {
-			return nil, errors.Wrap(err, "[ SecondPhase ] Failed to calculate globule proof")
+			return nil, errors.Wrapf(err, "[ NET Consensus %d phase-2.0 ] Failed to calculate globule proof", pulse.PulseNumber)
 		}
 	}
 
