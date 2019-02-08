@@ -39,6 +39,24 @@ func TestNodeStorage_SetActiveNodes(t *testing.T) {
 	require.Equal(t, secondNode, nodeStorage.nodeHistory[1][1])
 }
 
+func TestNodeStorage_SetActiveNodes_OverrideError(t *testing.T) {
+	t.Parallel()
+	firstNode := Node{FID: testutils.RandomRef()}
+	secondNode := Node{FID: testutils.RandomRef()}
+	nodeStorage := nodeStorage{
+		nodeHistory: map[core.PulseNumber][]Node{},
+	}
+
+	err := nodeStorage.SetActiveNodes(1, []core.Node{firstNode, secondNode})
+	require.NoError(t, err)
+	err = nodeStorage.SetActiveNodes(1, []core.Node{firstNode, secondNode})
+	require.Error(t, err)
+
+	require.Equal(t, 1, len(nodeStorage.nodeHistory))
+	require.Equal(t, firstNode, nodeStorage.nodeHistory[1][0])
+	require.Equal(t, secondNode, nodeStorage.nodeHistory[1][1])
+}
+
 func TestNodeStorage_GetActiveNodes(t *testing.T) {
 	t.Parallel()
 	firstNode := Node{FID: testutils.RandomRef()}
