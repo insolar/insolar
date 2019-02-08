@@ -206,7 +206,7 @@ func TestRecentStorage_markForDelete(t *testing.T) {
 
 	markedCandidates := recentStorage.markForDelete(candidates)
 
-	assert.Equal(t, expect, markedCandidates)
+	require.Equal(t, expect, markedCandidates)
 }
 
 func TestRecentStorageProvider_DecreaseIndexesTTL(t *testing.T) {
@@ -231,14 +231,18 @@ func TestRecentStorageProvider_DecreaseIndexesTTL(t *testing.T) {
 	// Assert
 	provider.indexLock.Lock()
 	defer provider.indexLock.Unlock()
-	assert.NotNil(t, result)
-	assert.Equal(t, 1, len(provider.indexStorages))
-	assert.Equal(t, 1, len(result))
-	assert.Equal(t, 2, len(result[secondJet]))
-	assert.Equal(t, removedFirst, result[secondJet][0])
-	assert.Equal(t, removedSecond, result[secondJet][1])
+	require.NotNil(t, result)
+	require.Equal(t, 1, len(provider.indexStorages))
+	require.Equal(t, 1, len(result))
+	require.Equal(t, 2, len(result[secondJet]))
+	if !assert.Equal(t, removedFirst, result[secondJet][0]) && !assert.Equal(t, removedFirst, result[secondJet][1]) {
+		require.Fail(t, "return result is broken")
+	}
+	if !assert.Equal(t, removedSecond, result[secondJet][1]) && !assert.Equal(t, removedSecond, result[secondJet][0]) {
+		require.Fail(t, "return result is broken")
+	}
 	for _, index := range provider.indexStorages[firstJet].indexes {
-		assert.Equal(t, 7, index.ttl)
+		require.Equal(t, 7, index.ttl)
 	}
 }
 
@@ -251,5 +255,5 @@ func TestRecentStorageProvider_DecreaseIndexesTTL_WorksOnEmptyStorage(t *testing
 	result := provider.DecreaseIndexesTTL(ctx)
 
 	// Assert
-	assert.Equal(t, map[core.RecordID][]core.RecordID{}, result)
+	require.Equal(t, map[core.RecordID][]core.RecordID{}, result)
 }
