@@ -958,7 +958,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetRequest_Success() {
 	node := testutils.RandomRef()
 
 	jc := testutils.NewJetCoordinatorMock(mc)
-	jc.NodeForJetMock.Return(&node, nil)
+	jc.NodeForObjectMock.Return(&node, nil)
 
 	pulseStorageMock := testutils.NewPulseStorageMock(mc)
 	pulseStorageMock.CurrentMock.Return(core.GenesisPulse, nil)

@@ -65,6 +65,11 @@ type JetCoordinatorMock struct {
 	NodeForJetPreCounter uint64
 	NodeForJetMock       mJetCoordinatorMockNodeForJet
 
+	NodeForObjectFunc       func(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 core.PulseNumber) (r *core.RecordRef, r1 error)
+	NodeForObjectCounter    uint64
+	NodeForObjectPreCounter uint64
+	NodeForObjectMock       mJetCoordinatorMockNodeForObject
+
 	QueryRoleFunc       func(p context.Context, p1 core.DynamicRole, p2 core.RecordID, p3 core.PulseNumber) (r []core.RecordRef, r1 error)
 	QueryRoleCounter    uint64
 	QueryRolePreCounter uint64
@@ -98,6 +103,7 @@ func NewJetCoordinatorMock(t minimock.Tester) *JetCoordinatorMock {
 	m.LightValidatorsForObjectMock = mJetCoordinatorMockLightValidatorsForObject{mock: m}
 	m.MeMock = mJetCoordinatorMockMe{mock: m}
 	m.NodeForJetMock = mJetCoordinatorMockNodeForJet{mock: m}
+	m.NodeForObjectMock = mJetCoordinatorMockNodeForObject{mock: m}
 	m.QueryRoleMock = mJetCoordinatorMockQueryRole{mock: m}
 	m.VirtualExecutorForObjectMock = mJetCoordinatorMockVirtualExecutorForObject{mock: m}
 	m.VirtualValidatorsForObjectMock = mJetCoordinatorMockVirtualValidatorsForObject{mock: m}
@@ -106,120 +112,56 @@ func NewJetCoordinatorMock(t minimock.Tester) *JetCoordinatorMock {
 }
 
 type mJetCoordinatorMockHeavy struct {
-	mock              *JetCoordinatorMock
-	mainExpectation   *JetCoordinatorMockHeavyExpectation
-	expectationSeries []*JetCoordinatorMockHeavyExpectation
+	mock             *JetCoordinatorMock
+	mockExpectations *JetCoordinatorMockHeavyParams
 }
 
-type JetCoordinatorMockHeavyExpectation struct {
-	input  *JetCoordinatorMockHeavyInput
-	result *JetCoordinatorMockHeavyResult
-}
-
-type JetCoordinatorMockHeavyInput struct {
+//JetCoordinatorMockHeavyParams represents input parameters of the JetCoordinator.Heavy
+type JetCoordinatorMockHeavyParams struct {
 	p  context.Context
 	p1 core.PulseNumber
 }
 
-type JetCoordinatorMockHeavyResult struct {
-	r  *core.RecordRef
-	r1 error
-}
-
-//Expect specifies that invocation of JetCoordinator.Heavy is expected from 1 to Infinity times
+//Expect sets up expected params for the JetCoordinator.Heavy
 func (m *mJetCoordinatorMockHeavy) Expect(p context.Context, p1 core.PulseNumber) *mJetCoordinatorMockHeavy {
-	m.mock.HeavyFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &JetCoordinatorMockHeavyExpectation{}
-	}
-	m.mainExpectation.input = &JetCoordinatorMockHeavyInput{p, p1}
+	m.mockExpectations = &JetCoordinatorMockHeavyParams{p, p1}
 	return m
 }
 
-//Return specifies results of invocation of JetCoordinator.Heavy
+//Return sets up a mock for JetCoordinator.Heavy to return Return's arguments
 func (m *mJetCoordinatorMockHeavy) Return(r *core.RecordRef, r1 error) *JetCoordinatorMock {
-	m.mock.HeavyFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &JetCoordinatorMockHeavyExpectation{}
+	m.mock.HeavyFunc = func(p context.Context, p1 core.PulseNumber) (*core.RecordRef, error) {
+		return r, r1
 	}
-	m.mainExpectation.result = &JetCoordinatorMockHeavyResult{r, r1}
 	return m.mock
-}
-
-//ExpectOnce specifies that invocation of JetCoordinator.Heavy is expected once
-func (m *mJetCoordinatorMockHeavy) ExpectOnce(p context.Context, p1 core.PulseNumber) *JetCoordinatorMockHeavyExpectation {
-	m.mock.HeavyFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &JetCoordinatorMockHeavyExpectation{}
-	expectation.input = &JetCoordinatorMockHeavyInput{p, p1}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *JetCoordinatorMockHeavyExpectation) Return(r *core.RecordRef, r1 error) {
-	e.result = &JetCoordinatorMockHeavyResult{r, r1}
 }
 
 //Set uses given function f as a mock of JetCoordinator.Heavy method
 func (m *mJetCoordinatorMockHeavy) Set(f func(p context.Context, p1 core.PulseNumber) (r *core.RecordRef, r1 error)) *JetCoordinatorMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
 	m.mock.HeavyFunc = f
+	m.mockExpectations = nil
 	return m.mock
 }
 
 //Heavy implements github.com/insolar/insolar/core.JetCoordinator interface
 func (m *JetCoordinatorMock) Heavy(p context.Context, p1 core.PulseNumber) (r *core.RecordRef, r1 error) {
-	counter := atomic.AddUint64(&m.HeavyPreCounter, 1)
+	atomic.AddUint64(&m.HeavyPreCounter, 1)
 	defer atomic.AddUint64(&m.HeavyCounter, 1)
 
-	if len(m.HeavyMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.HeavyMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to JetCoordinatorMock.Heavy. %v %v", p, p1)
+	if m.HeavyMock.mockExpectations != nil {
+		testify_assert.Equal(m.t, *m.HeavyMock.mockExpectations, JetCoordinatorMockHeavyParams{p, p1},
+			"JetCoordinator.Heavy got unexpected parameters")
+
+		if m.HeavyFunc == nil {
+
+			m.t.Fatal("No results are set for the JetCoordinatorMock.Heavy")
+
 			return
 		}
-
-		input := m.HeavyMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, JetCoordinatorMockHeavyInput{p, p1}, "JetCoordinator.Heavy got unexpected parameters")
-
-		result := m.HeavyMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the JetCoordinatorMock.Heavy")
-			return
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
-	}
-
-	if m.HeavyMock.mainExpectation != nil {
-
-		input := m.HeavyMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, JetCoordinatorMockHeavyInput{p, p1}, "JetCoordinator.Heavy got unexpected parameters")
-		}
-
-		result := m.HeavyMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the JetCoordinatorMock.Heavy")
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
 	}
 
 	if m.HeavyFunc == nil {
-		m.t.Fatalf("Unexpected call to JetCoordinatorMock.Heavy. %v %v", p, p1)
+		m.t.Fatal("Unexpected call to JetCoordinatorMock.Heavy")
 		return
 	}
 
@@ -236,38 +178,13 @@ func (m *JetCoordinatorMock) HeavyMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.HeavyPreCounter)
 }
 
-//HeavyFinished returns true if mock invocations count is ok
-func (m *JetCoordinatorMock) HeavyFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.HeavyMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.HeavyCounter) == uint64(len(m.HeavyMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.HeavyMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.HeavyCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.HeavyFunc != nil {
-		return atomic.LoadUint64(&m.HeavyCounter) > 0
-	}
-
-	return true
-}
-
 type mJetCoordinatorMockIsAuthorized struct {
-	mock              *JetCoordinatorMock
-	mainExpectation   *JetCoordinatorMockIsAuthorizedExpectation
-	expectationSeries []*JetCoordinatorMockIsAuthorizedExpectation
+	mock             *JetCoordinatorMock
+	mockExpectations *JetCoordinatorMockIsAuthorizedParams
 }
 
-type JetCoordinatorMockIsAuthorizedExpectation struct {
-	input  *JetCoordinatorMockIsAuthorizedInput
-	result *JetCoordinatorMockIsAuthorizedResult
-}
-
-type JetCoordinatorMockIsAuthorizedInput struct {
+//JetCoordinatorMockIsAuthorizedParams represents input parameters of the JetCoordinator.IsAuthorized
+type JetCoordinatorMockIsAuthorizedParams struct {
 	p  context.Context
 	p1 core.DynamicRole
 	p2 core.RecordID
@@ -275,105 +192,46 @@ type JetCoordinatorMockIsAuthorizedInput struct {
 	p4 core.RecordRef
 }
 
-type JetCoordinatorMockIsAuthorizedResult struct {
-	r  bool
-	r1 error
-}
-
-//Expect specifies that invocation of JetCoordinator.IsAuthorized is expected from 1 to Infinity times
+//Expect sets up expected params for the JetCoordinator.IsAuthorized
 func (m *mJetCoordinatorMockIsAuthorized) Expect(p context.Context, p1 core.DynamicRole, p2 core.RecordID, p3 core.PulseNumber, p4 core.RecordRef) *mJetCoordinatorMockIsAuthorized {
-	m.mock.IsAuthorizedFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &JetCoordinatorMockIsAuthorizedExpectation{}
-	}
-	m.mainExpectation.input = &JetCoordinatorMockIsAuthorizedInput{p, p1, p2, p3, p4}
+	m.mockExpectations = &JetCoordinatorMockIsAuthorizedParams{p, p1, p2, p3, p4}
 	return m
 }
 
-//Return specifies results of invocation of JetCoordinator.IsAuthorized
+//Return sets up a mock for JetCoordinator.IsAuthorized to return Return's arguments
 func (m *mJetCoordinatorMockIsAuthorized) Return(r bool, r1 error) *JetCoordinatorMock {
-	m.mock.IsAuthorizedFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &JetCoordinatorMockIsAuthorizedExpectation{}
+	m.mock.IsAuthorizedFunc = func(p context.Context, p1 core.DynamicRole, p2 core.RecordID, p3 core.PulseNumber, p4 core.RecordRef) (bool, error) {
+		return r, r1
 	}
-	m.mainExpectation.result = &JetCoordinatorMockIsAuthorizedResult{r, r1}
 	return m.mock
-}
-
-//ExpectOnce specifies that invocation of JetCoordinator.IsAuthorized is expected once
-func (m *mJetCoordinatorMockIsAuthorized) ExpectOnce(p context.Context, p1 core.DynamicRole, p2 core.RecordID, p3 core.PulseNumber, p4 core.RecordRef) *JetCoordinatorMockIsAuthorizedExpectation {
-	m.mock.IsAuthorizedFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &JetCoordinatorMockIsAuthorizedExpectation{}
-	expectation.input = &JetCoordinatorMockIsAuthorizedInput{p, p1, p2, p3, p4}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *JetCoordinatorMockIsAuthorizedExpectation) Return(r bool, r1 error) {
-	e.result = &JetCoordinatorMockIsAuthorizedResult{r, r1}
 }
 
 //Set uses given function f as a mock of JetCoordinator.IsAuthorized method
 func (m *mJetCoordinatorMockIsAuthorized) Set(f func(p context.Context, p1 core.DynamicRole, p2 core.RecordID, p3 core.PulseNumber, p4 core.RecordRef) (r bool, r1 error)) *JetCoordinatorMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
 	m.mock.IsAuthorizedFunc = f
+	m.mockExpectations = nil
 	return m.mock
 }
 
 //IsAuthorized implements github.com/insolar/insolar/core.JetCoordinator interface
 func (m *JetCoordinatorMock) IsAuthorized(p context.Context, p1 core.DynamicRole, p2 core.RecordID, p3 core.PulseNumber, p4 core.RecordRef) (r bool, r1 error) {
-	counter := atomic.AddUint64(&m.IsAuthorizedPreCounter, 1)
+	atomic.AddUint64(&m.IsAuthorizedPreCounter, 1)
 	defer atomic.AddUint64(&m.IsAuthorizedCounter, 1)
 
-	if len(m.IsAuthorizedMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.IsAuthorizedMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to JetCoordinatorMock.IsAuthorized. %v %v %v %v %v", p, p1, p2, p3, p4)
+	if m.IsAuthorizedMock.mockExpectations != nil {
+		testify_assert.Equal(m.t, *m.IsAuthorizedMock.mockExpectations, JetCoordinatorMockIsAuthorizedParams{p, p1, p2, p3, p4},
+			"JetCoordinator.IsAuthorized got unexpected parameters")
+
+		if m.IsAuthorizedFunc == nil {
+
+			m.t.Fatal("No results are set for the JetCoordinatorMock.IsAuthorized")
+
 			return
 		}
-
-		input := m.IsAuthorizedMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, JetCoordinatorMockIsAuthorizedInput{p, p1, p2, p3, p4}, "JetCoordinator.IsAuthorized got unexpected parameters")
-
-		result := m.IsAuthorizedMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the JetCoordinatorMock.IsAuthorized")
-			return
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
-	}
-
-	if m.IsAuthorizedMock.mainExpectation != nil {
-
-		input := m.IsAuthorizedMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, JetCoordinatorMockIsAuthorizedInput{p, p1, p2, p3, p4}, "JetCoordinator.IsAuthorized got unexpected parameters")
-		}
-
-		result := m.IsAuthorizedMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the JetCoordinatorMock.IsAuthorized")
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
 	}
 
 	if m.IsAuthorizedFunc == nil {
-		m.t.Fatalf("Unexpected call to JetCoordinatorMock.IsAuthorized. %v %v %v %v %v", p, p1, p2, p3, p4)
+		m.t.Fatal("Unexpected call to JetCoordinatorMock.IsAuthorized")
 		return
 	}
 
@@ -390,142 +248,58 @@ func (m *JetCoordinatorMock) IsAuthorizedMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.IsAuthorizedPreCounter)
 }
 
-//IsAuthorizedFinished returns true if mock invocations count is ok
-func (m *JetCoordinatorMock) IsAuthorizedFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.IsAuthorizedMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.IsAuthorizedCounter) == uint64(len(m.IsAuthorizedMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.IsAuthorizedMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.IsAuthorizedCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.IsAuthorizedFunc != nil {
-		return atomic.LoadUint64(&m.IsAuthorizedCounter) > 0
-	}
-
-	return true
-}
-
 type mJetCoordinatorMockIsBeyondLimit struct {
-	mock              *JetCoordinatorMock
-	mainExpectation   *JetCoordinatorMockIsBeyondLimitExpectation
-	expectationSeries []*JetCoordinatorMockIsBeyondLimitExpectation
+	mock             *JetCoordinatorMock
+	mockExpectations *JetCoordinatorMockIsBeyondLimitParams
 }
 
-type JetCoordinatorMockIsBeyondLimitExpectation struct {
-	input  *JetCoordinatorMockIsBeyondLimitInput
-	result *JetCoordinatorMockIsBeyondLimitResult
-}
-
-type JetCoordinatorMockIsBeyondLimitInput struct {
+//JetCoordinatorMockIsBeyondLimitParams represents input parameters of the JetCoordinator.IsBeyondLimit
+type JetCoordinatorMockIsBeyondLimitParams struct {
 	p  context.Context
 	p1 core.PulseNumber
 	p2 core.PulseNumber
 }
 
-type JetCoordinatorMockIsBeyondLimitResult struct {
-	r  bool
-	r1 error
-}
-
-//Expect specifies that invocation of JetCoordinator.IsBeyondLimit is expected from 1 to Infinity times
+//Expect sets up expected params for the JetCoordinator.IsBeyondLimit
 func (m *mJetCoordinatorMockIsBeyondLimit) Expect(p context.Context, p1 core.PulseNumber, p2 core.PulseNumber) *mJetCoordinatorMockIsBeyondLimit {
-	m.mock.IsBeyondLimitFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &JetCoordinatorMockIsBeyondLimitExpectation{}
-	}
-	m.mainExpectation.input = &JetCoordinatorMockIsBeyondLimitInput{p, p1, p2}
+	m.mockExpectations = &JetCoordinatorMockIsBeyondLimitParams{p, p1, p2}
 	return m
 }
 
-//Return specifies results of invocation of JetCoordinator.IsBeyondLimit
+//Return sets up a mock for JetCoordinator.IsBeyondLimit to return Return's arguments
 func (m *mJetCoordinatorMockIsBeyondLimit) Return(r bool, r1 error) *JetCoordinatorMock {
-	m.mock.IsBeyondLimitFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &JetCoordinatorMockIsBeyondLimitExpectation{}
+	m.mock.IsBeyondLimitFunc = func(p context.Context, p1 core.PulseNumber, p2 core.PulseNumber) (bool, error) {
+		return r, r1
 	}
-	m.mainExpectation.result = &JetCoordinatorMockIsBeyondLimitResult{r, r1}
 	return m.mock
-}
-
-//ExpectOnce specifies that invocation of JetCoordinator.IsBeyondLimit is expected once
-func (m *mJetCoordinatorMockIsBeyondLimit) ExpectOnce(p context.Context, p1 core.PulseNumber, p2 core.PulseNumber) *JetCoordinatorMockIsBeyondLimitExpectation {
-	m.mock.IsBeyondLimitFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &JetCoordinatorMockIsBeyondLimitExpectation{}
-	expectation.input = &JetCoordinatorMockIsBeyondLimitInput{p, p1, p2}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *JetCoordinatorMockIsBeyondLimitExpectation) Return(r bool, r1 error) {
-	e.result = &JetCoordinatorMockIsBeyondLimitResult{r, r1}
 }
 
 //Set uses given function f as a mock of JetCoordinator.IsBeyondLimit method
 func (m *mJetCoordinatorMockIsBeyondLimit) Set(f func(p context.Context, p1 core.PulseNumber, p2 core.PulseNumber) (r bool, r1 error)) *JetCoordinatorMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
 	m.mock.IsBeyondLimitFunc = f
+	m.mockExpectations = nil
 	return m.mock
 }
 
 //IsBeyondLimit implements github.com/insolar/insolar/core.JetCoordinator interface
 func (m *JetCoordinatorMock) IsBeyondLimit(p context.Context, p1 core.PulseNumber, p2 core.PulseNumber) (r bool, r1 error) {
-	counter := atomic.AddUint64(&m.IsBeyondLimitPreCounter, 1)
+	atomic.AddUint64(&m.IsBeyondLimitPreCounter, 1)
 	defer atomic.AddUint64(&m.IsBeyondLimitCounter, 1)
 
-	if len(m.IsBeyondLimitMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.IsBeyondLimitMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to JetCoordinatorMock.IsBeyondLimit. %v %v %v", p, p1, p2)
+	if m.IsBeyondLimitMock.mockExpectations != nil {
+		testify_assert.Equal(m.t, *m.IsBeyondLimitMock.mockExpectations, JetCoordinatorMockIsBeyondLimitParams{p, p1, p2},
+			"JetCoordinator.IsBeyondLimit got unexpected parameters")
+
+		if m.IsBeyondLimitFunc == nil {
+
+			m.t.Fatal("No results are set for the JetCoordinatorMock.IsBeyondLimit")
+
 			return
 		}
-
-		input := m.IsBeyondLimitMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, JetCoordinatorMockIsBeyondLimitInput{p, p1, p2}, "JetCoordinator.IsBeyondLimit got unexpected parameters")
-
-		result := m.IsBeyondLimitMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the JetCoordinatorMock.IsBeyondLimit")
-			return
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
-	}
-
-	if m.IsBeyondLimitMock.mainExpectation != nil {
-
-		input := m.IsBeyondLimitMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, JetCoordinatorMockIsBeyondLimitInput{p, p1, p2}, "JetCoordinator.IsBeyondLimit got unexpected parameters")
-		}
-
-		result := m.IsBeyondLimitMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the JetCoordinatorMock.IsBeyondLimit")
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
 	}
 
 	if m.IsBeyondLimitFunc == nil {
-		m.t.Fatalf("Unexpected call to JetCoordinatorMock.IsBeyondLimit. %v %v %v", p, p1, p2)
+		m.t.Fatal("Unexpected call to JetCoordinatorMock.IsBeyondLimit")
 		return
 	}
 
@@ -542,142 +316,58 @@ func (m *JetCoordinatorMock) IsBeyondLimitMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.IsBeyondLimitPreCounter)
 }
 
-//IsBeyondLimitFinished returns true if mock invocations count is ok
-func (m *JetCoordinatorMock) IsBeyondLimitFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.IsBeyondLimitMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.IsBeyondLimitCounter) == uint64(len(m.IsBeyondLimitMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.IsBeyondLimitMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.IsBeyondLimitCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.IsBeyondLimitFunc != nil {
-		return atomic.LoadUint64(&m.IsBeyondLimitCounter) > 0
-	}
-
-	return true
-}
-
 type mJetCoordinatorMockLightExecutorForJet struct {
-	mock              *JetCoordinatorMock
-	mainExpectation   *JetCoordinatorMockLightExecutorForJetExpectation
-	expectationSeries []*JetCoordinatorMockLightExecutorForJetExpectation
+	mock             *JetCoordinatorMock
+	mockExpectations *JetCoordinatorMockLightExecutorForJetParams
 }
 
-type JetCoordinatorMockLightExecutorForJetExpectation struct {
-	input  *JetCoordinatorMockLightExecutorForJetInput
-	result *JetCoordinatorMockLightExecutorForJetResult
-}
-
-type JetCoordinatorMockLightExecutorForJetInput struct {
+//JetCoordinatorMockLightExecutorForJetParams represents input parameters of the JetCoordinator.LightExecutorForJet
+type JetCoordinatorMockLightExecutorForJetParams struct {
 	p  context.Context
 	p1 core.RecordID
 	p2 core.PulseNumber
 }
 
-type JetCoordinatorMockLightExecutorForJetResult struct {
-	r  *core.RecordRef
-	r1 error
-}
-
-//Expect specifies that invocation of JetCoordinator.LightExecutorForJet is expected from 1 to Infinity times
+//Expect sets up expected params for the JetCoordinator.LightExecutorForJet
 func (m *mJetCoordinatorMockLightExecutorForJet) Expect(p context.Context, p1 core.RecordID, p2 core.PulseNumber) *mJetCoordinatorMockLightExecutorForJet {
-	m.mock.LightExecutorForJetFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &JetCoordinatorMockLightExecutorForJetExpectation{}
-	}
-	m.mainExpectation.input = &JetCoordinatorMockLightExecutorForJetInput{p, p1, p2}
+	m.mockExpectations = &JetCoordinatorMockLightExecutorForJetParams{p, p1, p2}
 	return m
 }
 
-//Return specifies results of invocation of JetCoordinator.LightExecutorForJet
+//Return sets up a mock for JetCoordinator.LightExecutorForJet to return Return's arguments
 func (m *mJetCoordinatorMockLightExecutorForJet) Return(r *core.RecordRef, r1 error) *JetCoordinatorMock {
-	m.mock.LightExecutorForJetFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &JetCoordinatorMockLightExecutorForJetExpectation{}
+	m.mock.LightExecutorForJetFunc = func(p context.Context, p1 core.RecordID, p2 core.PulseNumber) (*core.RecordRef, error) {
+		return r, r1
 	}
-	m.mainExpectation.result = &JetCoordinatorMockLightExecutorForJetResult{r, r1}
 	return m.mock
-}
-
-//ExpectOnce specifies that invocation of JetCoordinator.LightExecutorForJet is expected once
-func (m *mJetCoordinatorMockLightExecutorForJet) ExpectOnce(p context.Context, p1 core.RecordID, p2 core.PulseNumber) *JetCoordinatorMockLightExecutorForJetExpectation {
-	m.mock.LightExecutorForJetFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &JetCoordinatorMockLightExecutorForJetExpectation{}
-	expectation.input = &JetCoordinatorMockLightExecutorForJetInput{p, p1, p2}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *JetCoordinatorMockLightExecutorForJetExpectation) Return(r *core.RecordRef, r1 error) {
-	e.result = &JetCoordinatorMockLightExecutorForJetResult{r, r1}
 }
 
 //Set uses given function f as a mock of JetCoordinator.LightExecutorForJet method
 func (m *mJetCoordinatorMockLightExecutorForJet) Set(f func(p context.Context, p1 core.RecordID, p2 core.PulseNumber) (r *core.RecordRef, r1 error)) *JetCoordinatorMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
 	m.mock.LightExecutorForJetFunc = f
+	m.mockExpectations = nil
 	return m.mock
 }
 
 //LightExecutorForJet implements github.com/insolar/insolar/core.JetCoordinator interface
 func (m *JetCoordinatorMock) LightExecutorForJet(p context.Context, p1 core.RecordID, p2 core.PulseNumber) (r *core.RecordRef, r1 error) {
-	counter := atomic.AddUint64(&m.LightExecutorForJetPreCounter, 1)
+	atomic.AddUint64(&m.LightExecutorForJetPreCounter, 1)
 	defer atomic.AddUint64(&m.LightExecutorForJetCounter, 1)
 
-	if len(m.LightExecutorForJetMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.LightExecutorForJetMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to JetCoordinatorMock.LightExecutorForJet. %v %v %v", p, p1, p2)
+	if m.LightExecutorForJetMock.mockExpectations != nil {
+		testify_assert.Equal(m.t, *m.LightExecutorForJetMock.mockExpectations, JetCoordinatorMockLightExecutorForJetParams{p, p1, p2},
+			"JetCoordinator.LightExecutorForJet got unexpected parameters")
+
+		if m.LightExecutorForJetFunc == nil {
+
+			m.t.Fatal("No results are set for the JetCoordinatorMock.LightExecutorForJet")
+
 			return
 		}
-
-		input := m.LightExecutorForJetMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, JetCoordinatorMockLightExecutorForJetInput{p, p1, p2}, "JetCoordinator.LightExecutorForJet got unexpected parameters")
-
-		result := m.LightExecutorForJetMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the JetCoordinatorMock.LightExecutorForJet")
-			return
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
-	}
-
-	if m.LightExecutorForJetMock.mainExpectation != nil {
-
-		input := m.LightExecutorForJetMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, JetCoordinatorMockLightExecutorForJetInput{p, p1, p2}, "JetCoordinator.LightExecutorForJet got unexpected parameters")
-		}
-
-		result := m.LightExecutorForJetMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the JetCoordinatorMock.LightExecutorForJet")
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
 	}
 
 	if m.LightExecutorForJetFunc == nil {
-		m.t.Fatalf("Unexpected call to JetCoordinatorMock.LightExecutorForJet. %v %v %v", p, p1, p2)
+		m.t.Fatal("Unexpected call to JetCoordinatorMock.LightExecutorForJet")
 		return
 	}
 
@@ -694,142 +384,58 @@ func (m *JetCoordinatorMock) LightExecutorForJetMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.LightExecutorForJetPreCounter)
 }
 
-//LightExecutorForJetFinished returns true if mock invocations count is ok
-func (m *JetCoordinatorMock) LightExecutorForJetFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.LightExecutorForJetMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.LightExecutorForJetCounter) == uint64(len(m.LightExecutorForJetMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.LightExecutorForJetMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.LightExecutorForJetCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.LightExecutorForJetFunc != nil {
-		return atomic.LoadUint64(&m.LightExecutorForJetCounter) > 0
-	}
-
-	return true
-}
-
 type mJetCoordinatorMockLightExecutorForObject struct {
-	mock              *JetCoordinatorMock
-	mainExpectation   *JetCoordinatorMockLightExecutorForObjectExpectation
-	expectationSeries []*JetCoordinatorMockLightExecutorForObjectExpectation
+	mock             *JetCoordinatorMock
+	mockExpectations *JetCoordinatorMockLightExecutorForObjectParams
 }
 
-type JetCoordinatorMockLightExecutorForObjectExpectation struct {
-	input  *JetCoordinatorMockLightExecutorForObjectInput
-	result *JetCoordinatorMockLightExecutorForObjectResult
-}
-
-type JetCoordinatorMockLightExecutorForObjectInput struct {
+//JetCoordinatorMockLightExecutorForObjectParams represents input parameters of the JetCoordinator.LightExecutorForObject
+type JetCoordinatorMockLightExecutorForObjectParams struct {
 	p  context.Context
 	p1 core.RecordID
 	p2 core.PulseNumber
 }
 
-type JetCoordinatorMockLightExecutorForObjectResult struct {
-	r  *core.RecordRef
-	r1 error
-}
-
-//Expect specifies that invocation of JetCoordinator.LightExecutorForObject is expected from 1 to Infinity times
+//Expect sets up expected params for the JetCoordinator.LightExecutorForObject
 func (m *mJetCoordinatorMockLightExecutorForObject) Expect(p context.Context, p1 core.RecordID, p2 core.PulseNumber) *mJetCoordinatorMockLightExecutorForObject {
-	m.mock.LightExecutorForObjectFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &JetCoordinatorMockLightExecutorForObjectExpectation{}
-	}
-	m.mainExpectation.input = &JetCoordinatorMockLightExecutorForObjectInput{p, p1, p2}
+	m.mockExpectations = &JetCoordinatorMockLightExecutorForObjectParams{p, p1, p2}
 	return m
 }
 
-//Return specifies results of invocation of JetCoordinator.LightExecutorForObject
+//Return sets up a mock for JetCoordinator.LightExecutorForObject to return Return's arguments
 func (m *mJetCoordinatorMockLightExecutorForObject) Return(r *core.RecordRef, r1 error) *JetCoordinatorMock {
-	m.mock.LightExecutorForObjectFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &JetCoordinatorMockLightExecutorForObjectExpectation{}
+	m.mock.LightExecutorForObjectFunc = func(p context.Context, p1 core.RecordID, p2 core.PulseNumber) (*core.RecordRef, error) {
+		return r, r1
 	}
-	m.mainExpectation.result = &JetCoordinatorMockLightExecutorForObjectResult{r, r1}
 	return m.mock
-}
-
-//ExpectOnce specifies that invocation of JetCoordinator.LightExecutorForObject is expected once
-func (m *mJetCoordinatorMockLightExecutorForObject) ExpectOnce(p context.Context, p1 core.RecordID, p2 core.PulseNumber) *JetCoordinatorMockLightExecutorForObjectExpectation {
-	m.mock.LightExecutorForObjectFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &JetCoordinatorMockLightExecutorForObjectExpectation{}
-	expectation.input = &JetCoordinatorMockLightExecutorForObjectInput{p, p1, p2}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *JetCoordinatorMockLightExecutorForObjectExpectation) Return(r *core.RecordRef, r1 error) {
-	e.result = &JetCoordinatorMockLightExecutorForObjectResult{r, r1}
 }
 
 //Set uses given function f as a mock of JetCoordinator.LightExecutorForObject method
 func (m *mJetCoordinatorMockLightExecutorForObject) Set(f func(p context.Context, p1 core.RecordID, p2 core.PulseNumber) (r *core.RecordRef, r1 error)) *JetCoordinatorMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
 	m.mock.LightExecutorForObjectFunc = f
+	m.mockExpectations = nil
 	return m.mock
 }
 
 //LightExecutorForObject implements github.com/insolar/insolar/core.JetCoordinator interface
 func (m *JetCoordinatorMock) LightExecutorForObject(p context.Context, p1 core.RecordID, p2 core.PulseNumber) (r *core.RecordRef, r1 error) {
-	counter := atomic.AddUint64(&m.LightExecutorForObjectPreCounter, 1)
+	atomic.AddUint64(&m.LightExecutorForObjectPreCounter, 1)
 	defer atomic.AddUint64(&m.LightExecutorForObjectCounter, 1)
 
-	if len(m.LightExecutorForObjectMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.LightExecutorForObjectMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to JetCoordinatorMock.LightExecutorForObject. %v %v %v", p, p1, p2)
+	if m.LightExecutorForObjectMock.mockExpectations != nil {
+		testify_assert.Equal(m.t, *m.LightExecutorForObjectMock.mockExpectations, JetCoordinatorMockLightExecutorForObjectParams{p, p1, p2},
+			"JetCoordinator.LightExecutorForObject got unexpected parameters")
+
+		if m.LightExecutorForObjectFunc == nil {
+
+			m.t.Fatal("No results are set for the JetCoordinatorMock.LightExecutorForObject")
+
 			return
 		}
-
-		input := m.LightExecutorForObjectMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, JetCoordinatorMockLightExecutorForObjectInput{p, p1, p2}, "JetCoordinator.LightExecutorForObject got unexpected parameters")
-
-		result := m.LightExecutorForObjectMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the JetCoordinatorMock.LightExecutorForObject")
-			return
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
-	}
-
-	if m.LightExecutorForObjectMock.mainExpectation != nil {
-
-		input := m.LightExecutorForObjectMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, JetCoordinatorMockLightExecutorForObjectInput{p, p1, p2}, "JetCoordinator.LightExecutorForObject got unexpected parameters")
-		}
-
-		result := m.LightExecutorForObjectMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the JetCoordinatorMock.LightExecutorForObject")
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
 	}
 
 	if m.LightExecutorForObjectFunc == nil {
-		m.t.Fatalf("Unexpected call to JetCoordinatorMock.LightExecutorForObject. %v %v %v", p, p1, p2)
+		m.t.Fatal("Unexpected call to JetCoordinatorMock.LightExecutorForObject")
 		return
 	}
 
@@ -846,142 +452,58 @@ func (m *JetCoordinatorMock) LightExecutorForObjectMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.LightExecutorForObjectPreCounter)
 }
 
-//LightExecutorForObjectFinished returns true if mock invocations count is ok
-func (m *JetCoordinatorMock) LightExecutorForObjectFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.LightExecutorForObjectMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.LightExecutorForObjectCounter) == uint64(len(m.LightExecutorForObjectMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.LightExecutorForObjectMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.LightExecutorForObjectCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.LightExecutorForObjectFunc != nil {
-		return atomic.LoadUint64(&m.LightExecutorForObjectCounter) > 0
-	}
-
-	return true
-}
-
 type mJetCoordinatorMockLightValidatorsForJet struct {
-	mock              *JetCoordinatorMock
-	mainExpectation   *JetCoordinatorMockLightValidatorsForJetExpectation
-	expectationSeries []*JetCoordinatorMockLightValidatorsForJetExpectation
+	mock             *JetCoordinatorMock
+	mockExpectations *JetCoordinatorMockLightValidatorsForJetParams
 }
 
-type JetCoordinatorMockLightValidatorsForJetExpectation struct {
-	input  *JetCoordinatorMockLightValidatorsForJetInput
-	result *JetCoordinatorMockLightValidatorsForJetResult
-}
-
-type JetCoordinatorMockLightValidatorsForJetInput struct {
+//JetCoordinatorMockLightValidatorsForJetParams represents input parameters of the JetCoordinator.LightValidatorsForJet
+type JetCoordinatorMockLightValidatorsForJetParams struct {
 	p  context.Context
 	p1 core.RecordID
 	p2 core.PulseNumber
 }
 
-type JetCoordinatorMockLightValidatorsForJetResult struct {
-	r  []core.RecordRef
-	r1 error
-}
-
-//Expect specifies that invocation of JetCoordinator.LightValidatorsForJet is expected from 1 to Infinity times
+//Expect sets up expected params for the JetCoordinator.LightValidatorsForJet
 func (m *mJetCoordinatorMockLightValidatorsForJet) Expect(p context.Context, p1 core.RecordID, p2 core.PulseNumber) *mJetCoordinatorMockLightValidatorsForJet {
-	m.mock.LightValidatorsForJetFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &JetCoordinatorMockLightValidatorsForJetExpectation{}
-	}
-	m.mainExpectation.input = &JetCoordinatorMockLightValidatorsForJetInput{p, p1, p2}
+	m.mockExpectations = &JetCoordinatorMockLightValidatorsForJetParams{p, p1, p2}
 	return m
 }
 
-//Return specifies results of invocation of JetCoordinator.LightValidatorsForJet
+//Return sets up a mock for JetCoordinator.LightValidatorsForJet to return Return's arguments
 func (m *mJetCoordinatorMockLightValidatorsForJet) Return(r []core.RecordRef, r1 error) *JetCoordinatorMock {
-	m.mock.LightValidatorsForJetFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &JetCoordinatorMockLightValidatorsForJetExpectation{}
+	m.mock.LightValidatorsForJetFunc = func(p context.Context, p1 core.RecordID, p2 core.PulseNumber) ([]core.RecordRef, error) {
+		return r, r1
 	}
-	m.mainExpectation.result = &JetCoordinatorMockLightValidatorsForJetResult{r, r1}
 	return m.mock
-}
-
-//ExpectOnce specifies that invocation of JetCoordinator.LightValidatorsForJet is expected once
-func (m *mJetCoordinatorMockLightValidatorsForJet) ExpectOnce(p context.Context, p1 core.RecordID, p2 core.PulseNumber) *JetCoordinatorMockLightValidatorsForJetExpectation {
-	m.mock.LightValidatorsForJetFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &JetCoordinatorMockLightValidatorsForJetExpectation{}
-	expectation.input = &JetCoordinatorMockLightValidatorsForJetInput{p, p1, p2}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *JetCoordinatorMockLightValidatorsForJetExpectation) Return(r []core.RecordRef, r1 error) {
-	e.result = &JetCoordinatorMockLightValidatorsForJetResult{r, r1}
 }
 
 //Set uses given function f as a mock of JetCoordinator.LightValidatorsForJet method
 func (m *mJetCoordinatorMockLightValidatorsForJet) Set(f func(p context.Context, p1 core.RecordID, p2 core.PulseNumber) (r []core.RecordRef, r1 error)) *JetCoordinatorMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
 	m.mock.LightValidatorsForJetFunc = f
+	m.mockExpectations = nil
 	return m.mock
 }
 
 //LightValidatorsForJet implements github.com/insolar/insolar/core.JetCoordinator interface
 func (m *JetCoordinatorMock) LightValidatorsForJet(p context.Context, p1 core.RecordID, p2 core.PulseNumber) (r []core.RecordRef, r1 error) {
-	counter := atomic.AddUint64(&m.LightValidatorsForJetPreCounter, 1)
+	atomic.AddUint64(&m.LightValidatorsForJetPreCounter, 1)
 	defer atomic.AddUint64(&m.LightValidatorsForJetCounter, 1)
 
-	if len(m.LightValidatorsForJetMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.LightValidatorsForJetMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to JetCoordinatorMock.LightValidatorsForJet. %v %v %v", p, p1, p2)
+	if m.LightValidatorsForJetMock.mockExpectations != nil {
+		testify_assert.Equal(m.t, *m.LightValidatorsForJetMock.mockExpectations, JetCoordinatorMockLightValidatorsForJetParams{p, p1, p2},
+			"JetCoordinator.LightValidatorsForJet got unexpected parameters")
+
+		if m.LightValidatorsForJetFunc == nil {
+
+			m.t.Fatal("No results are set for the JetCoordinatorMock.LightValidatorsForJet")
+
 			return
 		}
-
-		input := m.LightValidatorsForJetMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, JetCoordinatorMockLightValidatorsForJetInput{p, p1, p2}, "JetCoordinator.LightValidatorsForJet got unexpected parameters")
-
-		result := m.LightValidatorsForJetMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the JetCoordinatorMock.LightValidatorsForJet")
-			return
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
-	}
-
-	if m.LightValidatorsForJetMock.mainExpectation != nil {
-
-		input := m.LightValidatorsForJetMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, JetCoordinatorMockLightValidatorsForJetInput{p, p1, p2}, "JetCoordinator.LightValidatorsForJet got unexpected parameters")
-		}
-
-		result := m.LightValidatorsForJetMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the JetCoordinatorMock.LightValidatorsForJet")
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
 	}
 
 	if m.LightValidatorsForJetFunc == nil {
-		m.t.Fatalf("Unexpected call to JetCoordinatorMock.LightValidatorsForJet. %v %v %v", p, p1, p2)
+		m.t.Fatal("Unexpected call to JetCoordinatorMock.LightValidatorsForJet")
 		return
 	}
 
@@ -998,142 +520,58 @@ func (m *JetCoordinatorMock) LightValidatorsForJetMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.LightValidatorsForJetPreCounter)
 }
 
-//LightValidatorsForJetFinished returns true if mock invocations count is ok
-func (m *JetCoordinatorMock) LightValidatorsForJetFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.LightValidatorsForJetMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.LightValidatorsForJetCounter) == uint64(len(m.LightValidatorsForJetMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.LightValidatorsForJetMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.LightValidatorsForJetCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.LightValidatorsForJetFunc != nil {
-		return atomic.LoadUint64(&m.LightValidatorsForJetCounter) > 0
-	}
-
-	return true
-}
-
 type mJetCoordinatorMockLightValidatorsForObject struct {
-	mock              *JetCoordinatorMock
-	mainExpectation   *JetCoordinatorMockLightValidatorsForObjectExpectation
-	expectationSeries []*JetCoordinatorMockLightValidatorsForObjectExpectation
+	mock             *JetCoordinatorMock
+	mockExpectations *JetCoordinatorMockLightValidatorsForObjectParams
 }
 
-type JetCoordinatorMockLightValidatorsForObjectExpectation struct {
-	input  *JetCoordinatorMockLightValidatorsForObjectInput
-	result *JetCoordinatorMockLightValidatorsForObjectResult
-}
-
-type JetCoordinatorMockLightValidatorsForObjectInput struct {
+//JetCoordinatorMockLightValidatorsForObjectParams represents input parameters of the JetCoordinator.LightValidatorsForObject
+type JetCoordinatorMockLightValidatorsForObjectParams struct {
 	p  context.Context
 	p1 core.RecordID
 	p2 core.PulseNumber
 }
 
-type JetCoordinatorMockLightValidatorsForObjectResult struct {
-	r  []core.RecordRef
-	r1 error
-}
-
-//Expect specifies that invocation of JetCoordinator.LightValidatorsForObject is expected from 1 to Infinity times
+//Expect sets up expected params for the JetCoordinator.LightValidatorsForObject
 func (m *mJetCoordinatorMockLightValidatorsForObject) Expect(p context.Context, p1 core.RecordID, p2 core.PulseNumber) *mJetCoordinatorMockLightValidatorsForObject {
-	m.mock.LightValidatorsForObjectFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &JetCoordinatorMockLightValidatorsForObjectExpectation{}
-	}
-	m.mainExpectation.input = &JetCoordinatorMockLightValidatorsForObjectInput{p, p1, p2}
+	m.mockExpectations = &JetCoordinatorMockLightValidatorsForObjectParams{p, p1, p2}
 	return m
 }
 
-//Return specifies results of invocation of JetCoordinator.LightValidatorsForObject
+//Return sets up a mock for JetCoordinator.LightValidatorsForObject to return Return's arguments
 func (m *mJetCoordinatorMockLightValidatorsForObject) Return(r []core.RecordRef, r1 error) *JetCoordinatorMock {
-	m.mock.LightValidatorsForObjectFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &JetCoordinatorMockLightValidatorsForObjectExpectation{}
+	m.mock.LightValidatorsForObjectFunc = func(p context.Context, p1 core.RecordID, p2 core.PulseNumber) ([]core.RecordRef, error) {
+		return r, r1
 	}
-	m.mainExpectation.result = &JetCoordinatorMockLightValidatorsForObjectResult{r, r1}
 	return m.mock
-}
-
-//ExpectOnce specifies that invocation of JetCoordinator.LightValidatorsForObject is expected once
-func (m *mJetCoordinatorMockLightValidatorsForObject) ExpectOnce(p context.Context, p1 core.RecordID, p2 core.PulseNumber) *JetCoordinatorMockLightValidatorsForObjectExpectation {
-	m.mock.LightValidatorsForObjectFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &JetCoordinatorMockLightValidatorsForObjectExpectation{}
-	expectation.input = &JetCoordinatorMockLightValidatorsForObjectInput{p, p1, p2}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *JetCoordinatorMockLightValidatorsForObjectExpectation) Return(r []core.RecordRef, r1 error) {
-	e.result = &JetCoordinatorMockLightValidatorsForObjectResult{r, r1}
 }
 
 //Set uses given function f as a mock of JetCoordinator.LightValidatorsForObject method
 func (m *mJetCoordinatorMockLightValidatorsForObject) Set(f func(p context.Context, p1 core.RecordID, p2 core.PulseNumber) (r []core.RecordRef, r1 error)) *JetCoordinatorMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
 	m.mock.LightValidatorsForObjectFunc = f
+	m.mockExpectations = nil
 	return m.mock
 }
 
 //LightValidatorsForObject implements github.com/insolar/insolar/core.JetCoordinator interface
 func (m *JetCoordinatorMock) LightValidatorsForObject(p context.Context, p1 core.RecordID, p2 core.PulseNumber) (r []core.RecordRef, r1 error) {
-	counter := atomic.AddUint64(&m.LightValidatorsForObjectPreCounter, 1)
+	atomic.AddUint64(&m.LightValidatorsForObjectPreCounter, 1)
 	defer atomic.AddUint64(&m.LightValidatorsForObjectCounter, 1)
 
-	if len(m.LightValidatorsForObjectMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.LightValidatorsForObjectMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to JetCoordinatorMock.LightValidatorsForObject. %v %v %v", p, p1, p2)
+	if m.LightValidatorsForObjectMock.mockExpectations != nil {
+		testify_assert.Equal(m.t, *m.LightValidatorsForObjectMock.mockExpectations, JetCoordinatorMockLightValidatorsForObjectParams{p, p1, p2},
+			"JetCoordinator.LightValidatorsForObject got unexpected parameters")
+
+		if m.LightValidatorsForObjectFunc == nil {
+
+			m.t.Fatal("No results are set for the JetCoordinatorMock.LightValidatorsForObject")
+
 			return
 		}
-
-		input := m.LightValidatorsForObjectMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, JetCoordinatorMockLightValidatorsForObjectInput{p, p1, p2}, "JetCoordinator.LightValidatorsForObject got unexpected parameters")
-
-		result := m.LightValidatorsForObjectMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the JetCoordinatorMock.LightValidatorsForObject")
-			return
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
-	}
-
-	if m.LightValidatorsForObjectMock.mainExpectation != nil {
-
-		input := m.LightValidatorsForObjectMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, JetCoordinatorMockLightValidatorsForObjectInput{p, p1, p2}, "JetCoordinator.LightValidatorsForObject got unexpected parameters")
-		}
-
-		result := m.LightValidatorsForObjectMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the JetCoordinatorMock.LightValidatorsForObject")
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
 	}
 
 	if m.LightValidatorsForObjectFunc == nil {
-		m.t.Fatalf("Unexpected call to JetCoordinatorMock.LightValidatorsForObject. %v %v %v", p, p1, p2)
+		m.t.Fatal("Unexpected call to JetCoordinatorMock.LightValidatorsForObject")
 		return
 	}
 
@@ -1150,124 +588,32 @@ func (m *JetCoordinatorMock) LightValidatorsForObjectMinimockPreCounter() uint64
 	return atomic.LoadUint64(&m.LightValidatorsForObjectPreCounter)
 }
 
-//LightValidatorsForObjectFinished returns true if mock invocations count is ok
-func (m *JetCoordinatorMock) LightValidatorsForObjectFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.LightValidatorsForObjectMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.LightValidatorsForObjectCounter) == uint64(len(m.LightValidatorsForObjectMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.LightValidatorsForObjectMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.LightValidatorsForObjectCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.LightValidatorsForObjectFunc != nil {
-		return atomic.LoadUint64(&m.LightValidatorsForObjectCounter) > 0
-	}
-
-	return true
-}
-
 type mJetCoordinatorMockMe struct {
-	mock              *JetCoordinatorMock
-	mainExpectation   *JetCoordinatorMockMeExpectation
-	expectationSeries []*JetCoordinatorMockMeExpectation
+	mock *JetCoordinatorMock
 }
 
-type JetCoordinatorMockMeExpectation struct {
-	result *JetCoordinatorMockMeResult
-}
-
-type JetCoordinatorMockMeResult struct {
-	r core.RecordRef
-}
-
-//Expect specifies that invocation of JetCoordinator.Me is expected from 1 to Infinity times
-func (m *mJetCoordinatorMockMe) Expect() *mJetCoordinatorMockMe {
-	m.mock.MeFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &JetCoordinatorMockMeExpectation{}
-	}
-
-	return m
-}
-
-//Return specifies results of invocation of JetCoordinator.Me
+//Return sets up a mock for JetCoordinator.Me to return Return's arguments
 func (m *mJetCoordinatorMockMe) Return(r core.RecordRef) *JetCoordinatorMock {
-	m.mock.MeFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &JetCoordinatorMockMeExpectation{}
+	m.mock.MeFunc = func() core.RecordRef {
+		return r
 	}
-	m.mainExpectation.result = &JetCoordinatorMockMeResult{r}
 	return m.mock
-}
-
-//ExpectOnce specifies that invocation of JetCoordinator.Me is expected once
-func (m *mJetCoordinatorMockMe) ExpectOnce() *JetCoordinatorMockMeExpectation {
-	m.mock.MeFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &JetCoordinatorMockMeExpectation{}
-
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *JetCoordinatorMockMeExpectation) Return(r core.RecordRef) {
-	e.result = &JetCoordinatorMockMeResult{r}
 }
 
 //Set uses given function f as a mock of JetCoordinator.Me method
 func (m *mJetCoordinatorMockMe) Set(f func() (r core.RecordRef)) *JetCoordinatorMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
 	m.mock.MeFunc = f
+
 	return m.mock
 }
 
 //Me implements github.com/insolar/insolar/core.JetCoordinator interface
 func (m *JetCoordinatorMock) Me() (r core.RecordRef) {
-	counter := atomic.AddUint64(&m.MePreCounter, 1)
+	atomic.AddUint64(&m.MePreCounter, 1)
 	defer atomic.AddUint64(&m.MeCounter, 1)
 
-	if len(m.MeMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.MeMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to JetCoordinatorMock.Me.")
-			return
-		}
-
-		result := m.MeMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the JetCoordinatorMock.Me")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.MeMock.mainExpectation != nil {
-
-		result := m.MeMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the JetCoordinatorMock.Me")
-		}
-
-		r = result.r
-
-		return
-	}
-
 	if m.MeFunc == nil {
-		m.t.Fatalf("Unexpected call to JetCoordinatorMock.Me.")
+		m.t.Fatal("Unexpected call to JetCoordinatorMock.Me")
 		return
 	}
 
@@ -1284,143 +630,59 @@ func (m *JetCoordinatorMock) MeMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.MePreCounter)
 }
 
-//MeFinished returns true if mock invocations count is ok
-func (m *JetCoordinatorMock) MeFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.MeMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.MeCounter) == uint64(len(m.MeMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.MeMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.MeCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.MeFunc != nil {
-		return atomic.LoadUint64(&m.MeCounter) > 0
-	}
-
-	return true
-}
-
 type mJetCoordinatorMockNodeForJet struct {
-	mock              *JetCoordinatorMock
-	mainExpectation   *JetCoordinatorMockNodeForJetExpectation
-	expectationSeries []*JetCoordinatorMockNodeForJetExpectation
+	mock             *JetCoordinatorMock
+	mockExpectations *JetCoordinatorMockNodeForJetParams
 }
 
-type JetCoordinatorMockNodeForJetExpectation struct {
-	input  *JetCoordinatorMockNodeForJetInput
-	result *JetCoordinatorMockNodeForJetResult
-}
-
-type JetCoordinatorMockNodeForJetInput struct {
+//JetCoordinatorMockNodeForJetParams represents input parameters of the JetCoordinator.NodeForJet
+type JetCoordinatorMockNodeForJetParams struct {
 	p  context.Context
 	p1 core.RecordID
 	p2 core.PulseNumber
 	p3 core.PulseNumber
 }
 
-type JetCoordinatorMockNodeForJetResult struct {
-	r  *core.RecordRef
-	r1 error
-}
-
-//Expect specifies that invocation of JetCoordinator.NodeForJet is expected from 1 to Infinity times
+//Expect sets up expected params for the JetCoordinator.NodeForJet
 func (m *mJetCoordinatorMockNodeForJet) Expect(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 core.PulseNumber) *mJetCoordinatorMockNodeForJet {
-	m.mock.NodeForJetFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &JetCoordinatorMockNodeForJetExpectation{}
-	}
-	m.mainExpectation.input = &JetCoordinatorMockNodeForJetInput{p, p1, p2, p3}
+	m.mockExpectations = &JetCoordinatorMockNodeForJetParams{p, p1, p2, p3}
 	return m
 }
 
-//Return specifies results of invocation of JetCoordinator.NodeForJet
+//Return sets up a mock for JetCoordinator.NodeForJet to return Return's arguments
 func (m *mJetCoordinatorMockNodeForJet) Return(r *core.RecordRef, r1 error) *JetCoordinatorMock {
-	m.mock.NodeForJetFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &JetCoordinatorMockNodeForJetExpectation{}
+	m.mock.NodeForJetFunc = func(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 core.PulseNumber) (*core.RecordRef, error) {
+		return r, r1
 	}
-	m.mainExpectation.result = &JetCoordinatorMockNodeForJetResult{r, r1}
 	return m.mock
-}
-
-//ExpectOnce specifies that invocation of JetCoordinator.NodeForJet is expected once
-func (m *mJetCoordinatorMockNodeForJet) ExpectOnce(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 core.PulseNumber) *JetCoordinatorMockNodeForJetExpectation {
-	m.mock.NodeForJetFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &JetCoordinatorMockNodeForJetExpectation{}
-	expectation.input = &JetCoordinatorMockNodeForJetInput{p, p1, p2, p3}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *JetCoordinatorMockNodeForJetExpectation) Return(r *core.RecordRef, r1 error) {
-	e.result = &JetCoordinatorMockNodeForJetResult{r, r1}
 }
 
 //Set uses given function f as a mock of JetCoordinator.NodeForJet method
 func (m *mJetCoordinatorMockNodeForJet) Set(f func(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 core.PulseNumber) (r *core.RecordRef, r1 error)) *JetCoordinatorMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
 	m.mock.NodeForJetFunc = f
+	m.mockExpectations = nil
 	return m.mock
 }
 
 //NodeForJet implements github.com/insolar/insolar/core.JetCoordinator interface
 func (m *JetCoordinatorMock) NodeForJet(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 core.PulseNumber) (r *core.RecordRef, r1 error) {
-	counter := atomic.AddUint64(&m.NodeForJetPreCounter, 1)
+	atomic.AddUint64(&m.NodeForJetPreCounter, 1)
 	defer atomic.AddUint64(&m.NodeForJetCounter, 1)
 
-	if len(m.NodeForJetMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.NodeForJetMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to JetCoordinatorMock.NodeForJet. %v %v %v %v", p, p1, p2, p3)
+	if m.NodeForJetMock.mockExpectations != nil {
+		testify_assert.Equal(m.t, *m.NodeForJetMock.mockExpectations, JetCoordinatorMockNodeForJetParams{p, p1, p2, p3},
+			"JetCoordinator.NodeForJet got unexpected parameters")
+
+		if m.NodeForJetFunc == nil {
+
+			m.t.Fatal("No results are set for the JetCoordinatorMock.NodeForJet")
+
 			return
 		}
-
-		input := m.NodeForJetMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, JetCoordinatorMockNodeForJetInput{p, p1, p2, p3}, "JetCoordinator.NodeForJet got unexpected parameters")
-
-		result := m.NodeForJetMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the JetCoordinatorMock.NodeForJet")
-			return
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
-	}
-
-	if m.NodeForJetMock.mainExpectation != nil {
-
-		input := m.NodeForJetMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, JetCoordinatorMockNodeForJetInput{p, p1, p2, p3}, "JetCoordinator.NodeForJet got unexpected parameters")
-		}
-
-		result := m.NodeForJetMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the JetCoordinatorMock.NodeForJet")
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
 	}
 
 	if m.NodeForJetFunc == nil {
-		m.t.Fatalf("Unexpected call to JetCoordinatorMock.NodeForJet. %v %v %v %v", p, p1, p2, p3)
+		m.t.Fatal("Unexpected call to JetCoordinatorMock.NodeForJet")
 		return
 	}
 
@@ -1437,143 +699,128 @@ func (m *JetCoordinatorMock) NodeForJetMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.NodeForJetPreCounter)
 }
 
-//NodeForJetFinished returns true if mock invocations count is ok
-func (m *JetCoordinatorMock) NodeForJetFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.NodeForJetMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.NodeForJetCounter) == uint64(len(m.NodeForJetMock.expectationSeries))
+type mJetCoordinatorMockNodeForObject struct {
+	mock             *JetCoordinatorMock
+	mockExpectations *JetCoordinatorMockNodeForObjectParams
+}
+
+//JetCoordinatorMockNodeForObjectParams represents input parameters of the JetCoordinator.NodeForObject
+type JetCoordinatorMockNodeForObjectParams struct {
+	p  context.Context
+	p1 core.RecordID
+	p2 core.PulseNumber
+	p3 core.PulseNumber
+}
+
+//Expect sets up expected params for the JetCoordinator.NodeForObject
+func (m *mJetCoordinatorMockNodeForObject) Expect(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 core.PulseNumber) *mJetCoordinatorMockNodeForObject {
+	m.mockExpectations = &JetCoordinatorMockNodeForObjectParams{p, p1, p2, p3}
+	return m
+}
+
+//Return sets up a mock for JetCoordinator.NodeForObject to return Return's arguments
+func (m *mJetCoordinatorMockNodeForObject) Return(r *core.RecordRef, r1 error) *JetCoordinatorMock {
+	m.mock.NodeForObjectFunc = func(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 core.PulseNumber) (*core.RecordRef, error) {
+		return r, r1
+	}
+	return m.mock
+}
+
+//Set uses given function f as a mock of JetCoordinator.NodeForObject method
+func (m *mJetCoordinatorMockNodeForObject) Set(f func(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 core.PulseNumber) (r *core.RecordRef, r1 error)) *JetCoordinatorMock {
+	m.mock.NodeForObjectFunc = f
+	m.mockExpectations = nil
+	return m.mock
+}
+
+//NodeForObject implements github.com/insolar/insolar/core.JetCoordinator interface
+func (m *JetCoordinatorMock) NodeForObject(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 core.PulseNumber) (r *core.RecordRef, r1 error) {
+	atomic.AddUint64(&m.NodeForObjectPreCounter, 1)
+	defer atomic.AddUint64(&m.NodeForObjectCounter, 1)
+
+	if m.NodeForObjectMock.mockExpectations != nil {
+		testify_assert.Equal(m.t, *m.NodeForObjectMock.mockExpectations, JetCoordinatorMockNodeForObjectParams{p, p1, p2, p3},
+			"JetCoordinator.NodeForObject got unexpected parameters")
+
+		if m.NodeForObjectFunc == nil {
+
+			m.t.Fatal("No results are set for the JetCoordinatorMock.NodeForObject")
+
+			return
+		}
 	}
 
-	// if main expectation was set then invocations count should be greater than zero
-	if m.NodeForJetMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.NodeForJetCounter) > 0
+	if m.NodeForObjectFunc == nil {
+		m.t.Fatal("Unexpected call to JetCoordinatorMock.NodeForObject")
+		return
 	}
 
-	// if func was set then invocations count should be greater than zero
-	if m.NodeForJetFunc != nil {
-		return atomic.LoadUint64(&m.NodeForJetCounter) > 0
-	}
+	return m.NodeForObjectFunc(p, p1, p2, p3)
+}
 
-	return true
+//NodeForObjectMinimockCounter returns a count of JetCoordinatorMock.NodeForObjectFunc invocations
+func (m *JetCoordinatorMock) NodeForObjectMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.NodeForObjectCounter)
+}
+
+//NodeForObjectMinimockPreCounter returns the value of JetCoordinatorMock.NodeForObject invocations
+func (m *JetCoordinatorMock) NodeForObjectMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.NodeForObjectPreCounter)
 }
 
 type mJetCoordinatorMockQueryRole struct {
-	mock              *JetCoordinatorMock
-	mainExpectation   *JetCoordinatorMockQueryRoleExpectation
-	expectationSeries []*JetCoordinatorMockQueryRoleExpectation
+	mock             *JetCoordinatorMock
+	mockExpectations *JetCoordinatorMockQueryRoleParams
 }
 
-type JetCoordinatorMockQueryRoleExpectation struct {
-	input  *JetCoordinatorMockQueryRoleInput
-	result *JetCoordinatorMockQueryRoleResult
-}
-
-type JetCoordinatorMockQueryRoleInput struct {
+//JetCoordinatorMockQueryRoleParams represents input parameters of the JetCoordinator.QueryRole
+type JetCoordinatorMockQueryRoleParams struct {
 	p  context.Context
 	p1 core.DynamicRole
 	p2 core.RecordID
 	p3 core.PulseNumber
 }
 
-type JetCoordinatorMockQueryRoleResult struct {
-	r  []core.RecordRef
-	r1 error
-}
-
-//Expect specifies that invocation of JetCoordinator.QueryRole is expected from 1 to Infinity times
+//Expect sets up expected params for the JetCoordinator.QueryRole
 func (m *mJetCoordinatorMockQueryRole) Expect(p context.Context, p1 core.DynamicRole, p2 core.RecordID, p3 core.PulseNumber) *mJetCoordinatorMockQueryRole {
-	m.mock.QueryRoleFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &JetCoordinatorMockQueryRoleExpectation{}
-	}
-	m.mainExpectation.input = &JetCoordinatorMockQueryRoleInput{p, p1, p2, p3}
+	m.mockExpectations = &JetCoordinatorMockQueryRoleParams{p, p1, p2, p3}
 	return m
 }
 
-//Return specifies results of invocation of JetCoordinator.QueryRole
+//Return sets up a mock for JetCoordinator.QueryRole to return Return's arguments
 func (m *mJetCoordinatorMockQueryRole) Return(r []core.RecordRef, r1 error) *JetCoordinatorMock {
-	m.mock.QueryRoleFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &JetCoordinatorMockQueryRoleExpectation{}
+	m.mock.QueryRoleFunc = func(p context.Context, p1 core.DynamicRole, p2 core.RecordID, p3 core.PulseNumber) ([]core.RecordRef, error) {
+		return r, r1
 	}
-	m.mainExpectation.result = &JetCoordinatorMockQueryRoleResult{r, r1}
 	return m.mock
-}
-
-//ExpectOnce specifies that invocation of JetCoordinator.QueryRole is expected once
-func (m *mJetCoordinatorMockQueryRole) ExpectOnce(p context.Context, p1 core.DynamicRole, p2 core.RecordID, p3 core.PulseNumber) *JetCoordinatorMockQueryRoleExpectation {
-	m.mock.QueryRoleFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &JetCoordinatorMockQueryRoleExpectation{}
-	expectation.input = &JetCoordinatorMockQueryRoleInput{p, p1, p2, p3}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *JetCoordinatorMockQueryRoleExpectation) Return(r []core.RecordRef, r1 error) {
-	e.result = &JetCoordinatorMockQueryRoleResult{r, r1}
 }
 
 //Set uses given function f as a mock of JetCoordinator.QueryRole method
 func (m *mJetCoordinatorMockQueryRole) Set(f func(p context.Context, p1 core.DynamicRole, p2 core.RecordID, p3 core.PulseNumber) (r []core.RecordRef, r1 error)) *JetCoordinatorMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
 	m.mock.QueryRoleFunc = f
+	m.mockExpectations = nil
 	return m.mock
 }
 
 //QueryRole implements github.com/insolar/insolar/core.JetCoordinator interface
 func (m *JetCoordinatorMock) QueryRole(p context.Context, p1 core.DynamicRole, p2 core.RecordID, p3 core.PulseNumber) (r []core.RecordRef, r1 error) {
-	counter := atomic.AddUint64(&m.QueryRolePreCounter, 1)
+	atomic.AddUint64(&m.QueryRolePreCounter, 1)
 	defer atomic.AddUint64(&m.QueryRoleCounter, 1)
 
-	if len(m.QueryRoleMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.QueryRoleMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to JetCoordinatorMock.QueryRole. %v %v %v %v", p, p1, p2, p3)
+	if m.QueryRoleMock.mockExpectations != nil {
+		testify_assert.Equal(m.t, *m.QueryRoleMock.mockExpectations, JetCoordinatorMockQueryRoleParams{p, p1, p2, p3},
+			"JetCoordinator.QueryRole got unexpected parameters")
+
+		if m.QueryRoleFunc == nil {
+
+			m.t.Fatal("No results are set for the JetCoordinatorMock.QueryRole")
+
 			return
 		}
-
-		input := m.QueryRoleMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, JetCoordinatorMockQueryRoleInput{p, p1, p2, p3}, "JetCoordinator.QueryRole got unexpected parameters")
-
-		result := m.QueryRoleMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the JetCoordinatorMock.QueryRole")
-			return
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
-	}
-
-	if m.QueryRoleMock.mainExpectation != nil {
-
-		input := m.QueryRoleMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, JetCoordinatorMockQueryRoleInput{p, p1, p2, p3}, "JetCoordinator.QueryRole got unexpected parameters")
-		}
-
-		result := m.QueryRoleMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the JetCoordinatorMock.QueryRole")
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
 	}
 
 	if m.QueryRoleFunc == nil {
-		m.t.Fatalf("Unexpected call to JetCoordinatorMock.QueryRole. %v %v %v %v", p, p1, p2, p3)
+		m.t.Fatal("Unexpected call to JetCoordinatorMock.QueryRole")
 		return
 	}
 
@@ -1590,142 +837,58 @@ func (m *JetCoordinatorMock) QueryRoleMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.QueryRolePreCounter)
 }
 
-//QueryRoleFinished returns true if mock invocations count is ok
-func (m *JetCoordinatorMock) QueryRoleFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.QueryRoleMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.QueryRoleCounter) == uint64(len(m.QueryRoleMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.QueryRoleMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.QueryRoleCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.QueryRoleFunc != nil {
-		return atomic.LoadUint64(&m.QueryRoleCounter) > 0
-	}
-
-	return true
-}
-
 type mJetCoordinatorMockVirtualExecutorForObject struct {
-	mock              *JetCoordinatorMock
-	mainExpectation   *JetCoordinatorMockVirtualExecutorForObjectExpectation
-	expectationSeries []*JetCoordinatorMockVirtualExecutorForObjectExpectation
+	mock             *JetCoordinatorMock
+	mockExpectations *JetCoordinatorMockVirtualExecutorForObjectParams
 }
 
-type JetCoordinatorMockVirtualExecutorForObjectExpectation struct {
-	input  *JetCoordinatorMockVirtualExecutorForObjectInput
-	result *JetCoordinatorMockVirtualExecutorForObjectResult
-}
-
-type JetCoordinatorMockVirtualExecutorForObjectInput struct {
+//JetCoordinatorMockVirtualExecutorForObjectParams represents input parameters of the JetCoordinator.VirtualExecutorForObject
+type JetCoordinatorMockVirtualExecutorForObjectParams struct {
 	p  context.Context
 	p1 core.RecordID
 	p2 core.PulseNumber
 }
 
-type JetCoordinatorMockVirtualExecutorForObjectResult struct {
-	r  *core.RecordRef
-	r1 error
-}
-
-//Expect specifies that invocation of JetCoordinator.VirtualExecutorForObject is expected from 1 to Infinity times
+//Expect sets up expected params for the JetCoordinator.VirtualExecutorForObject
 func (m *mJetCoordinatorMockVirtualExecutorForObject) Expect(p context.Context, p1 core.RecordID, p2 core.PulseNumber) *mJetCoordinatorMockVirtualExecutorForObject {
-	m.mock.VirtualExecutorForObjectFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &JetCoordinatorMockVirtualExecutorForObjectExpectation{}
-	}
-	m.mainExpectation.input = &JetCoordinatorMockVirtualExecutorForObjectInput{p, p1, p2}
+	m.mockExpectations = &JetCoordinatorMockVirtualExecutorForObjectParams{p, p1, p2}
 	return m
 }
 
-//Return specifies results of invocation of JetCoordinator.VirtualExecutorForObject
+//Return sets up a mock for JetCoordinator.VirtualExecutorForObject to return Return's arguments
 func (m *mJetCoordinatorMockVirtualExecutorForObject) Return(r *core.RecordRef, r1 error) *JetCoordinatorMock {
-	m.mock.VirtualExecutorForObjectFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &JetCoordinatorMockVirtualExecutorForObjectExpectation{}
+	m.mock.VirtualExecutorForObjectFunc = func(p context.Context, p1 core.RecordID, p2 core.PulseNumber) (*core.RecordRef, error) {
+		return r, r1
 	}
-	m.mainExpectation.result = &JetCoordinatorMockVirtualExecutorForObjectResult{r, r1}
 	return m.mock
-}
-
-//ExpectOnce specifies that invocation of JetCoordinator.VirtualExecutorForObject is expected once
-func (m *mJetCoordinatorMockVirtualExecutorForObject) ExpectOnce(p context.Context, p1 core.RecordID, p2 core.PulseNumber) *JetCoordinatorMockVirtualExecutorForObjectExpectation {
-	m.mock.VirtualExecutorForObjectFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &JetCoordinatorMockVirtualExecutorForObjectExpectation{}
-	expectation.input = &JetCoordinatorMockVirtualExecutorForObjectInput{p, p1, p2}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *JetCoordinatorMockVirtualExecutorForObjectExpectation) Return(r *core.RecordRef, r1 error) {
-	e.result = &JetCoordinatorMockVirtualExecutorForObjectResult{r, r1}
 }
 
 //Set uses given function f as a mock of JetCoordinator.VirtualExecutorForObject method
 func (m *mJetCoordinatorMockVirtualExecutorForObject) Set(f func(p context.Context, p1 core.RecordID, p2 core.PulseNumber) (r *core.RecordRef, r1 error)) *JetCoordinatorMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
 	m.mock.VirtualExecutorForObjectFunc = f
+	m.mockExpectations = nil
 	return m.mock
 }
 
 //VirtualExecutorForObject implements github.com/insolar/insolar/core.JetCoordinator interface
 func (m *JetCoordinatorMock) VirtualExecutorForObject(p context.Context, p1 core.RecordID, p2 core.PulseNumber) (r *core.RecordRef, r1 error) {
-	counter := atomic.AddUint64(&m.VirtualExecutorForObjectPreCounter, 1)
+	atomic.AddUint64(&m.VirtualExecutorForObjectPreCounter, 1)
 	defer atomic.AddUint64(&m.VirtualExecutorForObjectCounter, 1)
 
-	if len(m.VirtualExecutorForObjectMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.VirtualExecutorForObjectMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to JetCoordinatorMock.VirtualExecutorForObject. %v %v %v", p, p1, p2)
+	if m.VirtualExecutorForObjectMock.mockExpectations != nil {
+		testify_assert.Equal(m.t, *m.VirtualExecutorForObjectMock.mockExpectations, JetCoordinatorMockVirtualExecutorForObjectParams{p, p1, p2},
+			"JetCoordinator.VirtualExecutorForObject got unexpected parameters")
+
+		if m.VirtualExecutorForObjectFunc == nil {
+
+			m.t.Fatal("No results are set for the JetCoordinatorMock.VirtualExecutorForObject")
+
 			return
 		}
-
-		input := m.VirtualExecutorForObjectMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, JetCoordinatorMockVirtualExecutorForObjectInput{p, p1, p2}, "JetCoordinator.VirtualExecutorForObject got unexpected parameters")
-
-		result := m.VirtualExecutorForObjectMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the JetCoordinatorMock.VirtualExecutorForObject")
-			return
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
-	}
-
-	if m.VirtualExecutorForObjectMock.mainExpectation != nil {
-
-		input := m.VirtualExecutorForObjectMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, JetCoordinatorMockVirtualExecutorForObjectInput{p, p1, p2}, "JetCoordinator.VirtualExecutorForObject got unexpected parameters")
-		}
-
-		result := m.VirtualExecutorForObjectMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the JetCoordinatorMock.VirtualExecutorForObject")
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
 	}
 
 	if m.VirtualExecutorForObjectFunc == nil {
-		m.t.Fatalf("Unexpected call to JetCoordinatorMock.VirtualExecutorForObject. %v %v %v", p, p1, p2)
+		m.t.Fatal("Unexpected call to JetCoordinatorMock.VirtualExecutorForObject")
 		return
 	}
 
@@ -1742,142 +905,58 @@ func (m *JetCoordinatorMock) VirtualExecutorForObjectMinimockPreCounter() uint64
 	return atomic.LoadUint64(&m.VirtualExecutorForObjectPreCounter)
 }
 
-//VirtualExecutorForObjectFinished returns true if mock invocations count is ok
-func (m *JetCoordinatorMock) VirtualExecutorForObjectFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.VirtualExecutorForObjectMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.VirtualExecutorForObjectCounter) == uint64(len(m.VirtualExecutorForObjectMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.VirtualExecutorForObjectMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.VirtualExecutorForObjectCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.VirtualExecutorForObjectFunc != nil {
-		return atomic.LoadUint64(&m.VirtualExecutorForObjectCounter) > 0
-	}
-
-	return true
-}
-
 type mJetCoordinatorMockVirtualValidatorsForObject struct {
-	mock              *JetCoordinatorMock
-	mainExpectation   *JetCoordinatorMockVirtualValidatorsForObjectExpectation
-	expectationSeries []*JetCoordinatorMockVirtualValidatorsForObjectExpectation
+	mock             *JetCoordinatorMock
+	mockExpectations *JetCoordinatorMockVirtualValidatorsForObjectParams
 }
 
-type JetCoordinatorMockVirtualValidatorsForObjectExpectation struct {
-	input  *JetCoordinatorMockVirtualValidatorsForObjectInput
-	result *JetCoordinatorMockVirtualValidatorsForObjectResult
-}
-
-type JetCoordinatorMockVirtualValidatorsForObjectInput struct {
+//JetCoordinatorMockVirtualValidatorsForObjectParams represents input parameters of the JetCoordinator.VirtualValidatorsForObject
+type JetCoordinatorMockVirtualValidatorsForObjectParams struct {
 	p  context.Context
 	p1 core.RecordID
 	p2 core.PulseNumber
 }
 
-type JetCoordinatorMockVirtualValidatorsForObjectResult struct {
-	r  []core.RecordRef
-	r1 error
-}
-
-//Expect specifies that invocation of JetCoordinator.VirtualValidatorsForObject is expected from 1 to Infinity times
+//Expect sets up expected params for the JetCoordinator.VirtualValidatorsForObject
 func (m *mJetCoordinatorMockVirtualValidatorsForObject) Expect(p context.Context, p1 core.RecordID, p2 core.PulseNumber) *mJetCoordinatorMockVirtualValidatorsForObject {
-	m.mock.VirtualValidatorsForObjectFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &JetCoordinatorMockVirtualValidatorsForObjectExpectation{}
-	}
-	m.mainExpectation.input = &JetCoordinatorMockVirtualValidatorsForObjectInput{p, p1, p2}
+	m.mockExpectations = &JetCoordinatorMockVirtualValidatorsForObjectParams{p, p1, p2}
 	return m
 }
 
-//Return specifies results of invocation of JetCoordinator.VirtualValidatorsForObject
+//Return sets up a mock for JetCoordinator.VirtualValidatorsForObject to return Return's arguments
 func (m *mJetCoordinatorMockVirtualValidatorsForObject) Return(r []core.RecordRef, r1 error) *JetCoordinatorMock {
-	m.mock.VirtualValidatorsForObjectFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &JetCoordinatorMockVirtualValidatorsForObjectExpectation{}
+	m.mock.VirtualValidatorsForObjectFunc = func(p context.Context, p1 core.RecordID, p2 core.PulseNumber) ([]core.RecordRef, error) {
+		return r, r1
 	}
-	m.mainExpectation.result = &JetCoordinatorMockVirtualValidatorsForObjectResult{r, r1}
 	return m.mock
-}
-
-//ExpectOnce specifies that invocation of JetCoordinator.VirtualValidatorsForObject is expected once
-func (m *mJetCoordinatorMockVirtualValidatorsForObject) ExpectOnce(p context.Context, p1 core.RecordID, p2 core.PulseNumber) *JetCoordinatorMockVirtualValidatorsForObjectExpectation {
-	m.mock.VirtualValidatorsForObjectFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &JetCoordinatorMockVirtualValidatorsForObjectExpectation{}
-	expectation.input = &JetCoordinatorMockVirtualValidatorsForObjectInput{p, p1, p2}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *JetCoordinatorMockVirtualValidatorsForObjectExpectation) Return(r []core.RecordRef, r1 error) {
-	e.result = &JetCoordinatorMockVirtualValidatorsForObjectResult{r, r1}
 }
 
 //Set uses given function f as a mock of JetCoordinator.VirtualValidatorsForObject method
 func (m *mJetCoordinatorMockVirtualValidatorsForObject) Set(f func(p context.Context, p1 core.RecordID, p2 core.PulseNumber) (r []core.RecordRef, r1 error)) *JetCoordinatorMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
 	m.mock.VirtualValidatorsForObjectFunc = f
+	m.mockExpectations = nil
 	return m.mock
 }
 
 //VirtualValidatorsForObject implements github.com/insolar/insolar/core.JetCoordinator interface
 func (m *JetCoordinatorMock) VirtualValidatorsForObject(p context.Context, p1 core.RecordID, p2 core.PulseNumber) (r []core.RecordRef, r1 error) {
-	counter := atomic.AddUint64(&m.VirtualValidatorsForObjectPreCounter, 1)
+	atomic.AddUint64(&m.VirtualValidatorsForObjectPreCounter, 1)
 	defer atomic.AddUint64(&m.VirtualValidatorsForObjectCounter, 1)
 
-	if len(m.VirtualValidatorsForObjectMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.VirtualValidatorsForObjectMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to JetCoordinatorMock.VirtualValidatorsForObject. %v %v %v", p, p1, p2)
+	if m.VirtualValidatorsForObjectMock.mockExpectations != nil {
+		testify_assert.Equal(m.t, *m.VirtualValidatorsForObjectMock.mockExpectations, JetCoordinatorMockVirtualValidatorsForObjectParams{p, p1, p2},
+			"JetCoordinator.VirtualValidatorsForObject got unexpected parameters")
+
+		if m.VirtualValidatorsForObjectFunc == nil {
+
+			m.t.Fatal("No results are set for the JetCoordinatorMock.VirtualValidatorsForObject")
+
 			return
 		}
-
-		input := m.VirtualValidatorsForObjectMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, JetCoordinatorMockVirtualValidatorsForObjectInput{p, p1, p2}, "JetCoordinator.VirtualValidatorsForObject got unexpected parameters")
-
-		result := m.VirtualValidatorsForObjectMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the JetCoordinatorMock.VirtualValidatorsForObject")
-			return
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
-	}
-
-	if m.VirtualValidatorsForObjectMock.mainExpectation != nil {
-
-		input := m.VirtualValidatorsForObjectMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, JetCoordinatorMockVirtualValidatorsForObjectInput{p, p1, p2}, "JetCoordinator.VirtualValidatorsForObject got unexpected parameters")
-		}
-
-		result := m.VirtualValidatorsForObjectMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the JetCoordinatorMock.VirtualValidatorsForObject")
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
 	}
 
 	if m.VirtualValidatorsForObjectFunc == nil {
-		m.t.Fatalf("Unexpected call to JetCoordinatorMock.VirtualValidatorsForObject. %v %v %v", p, p1, p2)
+		m.t.Fatal("Unexpected call to JetCoordinatorMock.VirtualValidatorsForObject")
 		return
 	}
 
@@ -1894,75 +973,59 @@ func (m *JetCoordinatorMock) VirtualValidatorsForObjectMinimockPreCounter() uint
 	return atomic.LoadUint64(&m.VirtualValidatorsForObjectPreCounter)
 }
 
-//VirtualValidatorsForObjectFinished returns true if mock invocations count is ok
-func (m *JetCoordinatorMock) VirtualValidatorsForObjectFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.VirtualValidatorsForObjectMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.VirtualValidatorsForObjectCounter) == uint64(len(m.VirtualValidatorsForObjectMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.VirtualValidatorsForObjectMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.VirtualValidatorsForObjectCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.VirtualValidatorsForObjectFunc != nil {
-		return atomic.LoadUint64(&m.VirtualValidatorsForObjectCounter) > 0
-	}
-
-	return true
-}
-
 //ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *JetCoordinatorMock) ValidateCallCounters() {
 
-	if !m.HeavyFinished() {
+	if m.HeavyFunc != nil && atomic.LoadUint64(&m.HeavyCounter) == 0 {
 		m.t.Fatal("Expected call to JetCoordinatorMock.Heavy")
 	}
 
-	if !m.IsAuthorizedFinished() {
+	if m.IsAuthorizedFunc != nil && atomic.LoadUint64(&m.IsAuthorizedCounter) == 0 {
 		m.t.Fatal("Expected call to JetCoordinatorMock.IsAuthorized")
 	}
 
-	if !m.IsBeyondLimitFinished() {
+	if m.IsBeyondLimitFunc != nil && atomic.LoadUint64(&m.IsBeyondLimitCounter) == 0 {
 		m.t.Fatal("Expected call to JetCoordinatorMock.IsBeyondLimit")
 	}
 
-	if !m.LightExecutorForJetFinished() {
+	if m.LightExecutorForJetFunc != nil && atomic.LoadUint64(&m.LightExecutorForJetCounter) == 0 {
 		m.t.Fatal("Expected call to JetCoordinatorMock.LightExecutorForJet")
 	}
 
-	if !m.LightExecutorForObjectFinished() {
+	if m.LightExecutorForObjectFunc != nil && atomic.LoadUint64(&m.LightExecutorForObjectCounter) == 0 {
 		m.t.Fatal("Expected call to JetCoordinatorMock.LightExecutorForObject")
 	}
 
-	if !m.LightValidatorsForJetFinished() {
+	if m.LightValidatorsForJetFunc != nil && atomic.LoadUint64(&m.LightValidatorsForJetCounter) == 0 {
 		m.t.Fatal("Expected call to JetCoordinatorMock.LightValidatorsForJet")
 	}
 
-	if !m.LightValidatorsForObjectFinished() {
+	if m.LightValidatorsForObjectFunc != nil && atomic.LoadUint64(&m.LightValidatorsForObjectCounter) == 0 {
 		m.t.Fatal("Expected call to JetCoordinatorMock.LightValidatorsForObject")
 	}
 
-	if !m.MeFinished() {
+	if m.MeFunc != nil && atomic.LoadUint64(&m.MeCounter) == 0 {
 		m.t.Fatal("Expected call to JetCoordinatorMock.Me")
 	}
 
-	if !m.NodeForJetFinished() {
+	if m.NodeForJetFunc != nil && atomic.LoadUint64(&m.NodeForJetCounter) == 0 {
 		m.t.Fatal("Expected call to JetCoordinatorMock.NodeForJet")
 	}
 
-	if !m.QueryRoleFinished() {
+	if m.NodeForObjectFunc != nil && atomic.LoadUint64(&m.NodeForObjectCounter) == 0 {
+		m.t.Fatal("Expected call to JetCoordinatorMock.NodeForObject")
+	}
+
+	if m.QueryRoleFunc != nil && atomic.LoadUint64(&m.QueryRoleCounter) == 0 {
 		m.t.Fatal("Expected call to JetCoordinatorMock.QueryRole")
 	}
 
-	if !m.VirtualExecutorForObjectFinished() {
+	if m.VirtualExecutorForObjectFunc != nil && atomic.LoadUint64(&m.VirtualExecutorForObjectCounter) == 0 {
 		m.t.Fatal("Expected call to JetCoordinatorMock.VirtualExecutorForObject")
 	}
 
-	if !m.VirtualValidatorsForObjectFinished() {
+	if m.VirtualValidatorsForObjectFunc != nil && atomic.LoadUint64(&m.VirtualValidatorsForObjectCounter) == 0 {
 		m.t.Fatal("Expected call to JetCoordinatorMock.VirtualValidatorsForObject")
 	}
 
@@ -1983,51 +1046,55 @@ func (m *JetCoordinatorMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *JetCoordinatorMock) MinimockFinish() {
 
-	if !m.HeavyFinished() {
+	if m.HeavyFunc != nil && atomic.LoadUint64(&m.HeavyCounter) == 0 {
 		m.t.Fatal("Expected call to JetCoordinatorMock.Heavy")
 	}
 
-	if !m.IsAuthorizedFinished() {
+	if m.IsAuthorizedFunc != nil && atomic.LoadUint64(&m.IsAuthorizedCounter) == 0 {
 		m.t.Fatal("Expected call to JetCoordinatorMock.IsAuthorized")
 	}
 
-	if !m.IsBeyondLimitFinished() {
+	if m.IsBeyondLimitFunc != nil && atomic.LoadUint64(&m.IsBeyondLimitCounter) == 0 {
 		m.t.Fatal("Expected call to JetCoordinatorMock.IsBeyondLimit")
 	}
 
-	if !m.LightExecutorForJetFinished() {
+	if m.LightExecutorForJetFunc != nil && atomic.LoadUint64(&m.LightExecutorForJetCounter) == 0 {
 		m.t.Fatal("Expected call to JetCoordinatorMock.LightExecutorForJet")
 	}
 
-	if !m.LightExecutorForObjectFinished() {
+	if m.LightExecutorForObjectFunc != nil && atomic.LoadUint64(&m.LightExecutorForObjectCounter) == 0 {
 		m.t.Fatal("Expected call to JetCoordinatorMock.LightExecutorForObject")
 	}
 
-	if !m.LightValidatorsForJetFinished() {
+	if m.LightValidatorsForJetFunc != nil && atomic.LoadUint64(&m.LightValidatorsForJetCounter) == 0 {
 		m.t.Fatal("Expected call to JetCoordinatorMock.LightValidatorsForJet")
 	}
 
-	if !m.LightValidatorsForObjectFinished() {
+	if m.LightValidatorsForObjectFunc != nil && atomic.LoadUint64(&m.LightValidatorsForObjectCounter) == 0 {
 		m.t.Fatal("Expected call to JetCoordinatorMock.LightValidatorsForObject")
 	}
 
-	if !m.MeFinished() {
+	if m.MeFunc != nil && atomic.LoadUint64(&m.MeCounter) == 0 {
 		m.t.Fatal("Expected call to JetCoordinatorMock.Me")
 	}
 
-	if !m.NodeForJetFinished() {
+	if m.NodeForJetFunc != nil && atomic.LoadUint64(&m.NodeForJetCounter) == 0 {
 		m.t.Fatal("Expected call to JetCoordinatorMock.NodeForJet")
 	}
 
-	if !m.QueryRoleFinished() {
+	if m.NodeForObjectFunc != nil && atomic.LoadUint64(&m.NodeForObjectCounter) == 0 {
+		m.t.Fatal("Expected call to JetCoordinatorMock.NodeForObject")
+	}
+
+	if m.QueryRoleFunc != nil && atomic.LoadUint64(&m.QueryRoleCounter) == 0 {
 		m.t.Fatal("Expected call to JetCoordinatorMock.QueryRole")
 	}
 
-	if !m.VirtualExecutorForObjectFinished() {
+	if m.VirtualExecutorForObjectFunc != nil && atomic.LoadUint64(&m.VirtualExecutorForObjectCounter) == 0 {
 		m.t.Fatal("Expected call to JetCoordinatorMock.VirtualExecutorForObject")
 	}
 
-	if !m.VirtualValidatorsForObjectFinished() {
+	if m.VirtualValidatorsForObjectFunc != nil && atomic.LoadUint64(&m.VirtualValidatorsForObjectCounter) == 0 {
 		m.t.Fatal("Expected call to JetCoordinatorMock.VirtualValidatorsForObject")
 	}
 
@@ -2045,18 +1112,19 @@ func (m *JetCoordinatorMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
-		ok = ok && m.HeavyFinished()
-		ok = ok && m.IsAuthorizedFinished()
-		ok = ok && m.IsBeyondLimitFinished()
-		ok = ok && m.LightExecutorForJetFinished()
-		ok = ok && m.LightExecutorForObjectFinished()
-		ok = ok && m.LightValidatorsForJetFinished()
-		ok = ok && m.LightValidatorsForObjectFinished()
-		ok = ok && m.MeFinished()
-		ok = ok && m.NodeForJetFinished()
-		ok = ok && m.QueryRoleFinished()
-		ok = ok && m.VirtualExecutorForObjectFinished()
-		ok = ok && m.VirtualValidatorsForObjectFinished()
+		ok = ok && (m.HeavyFunc == nil || atomic.LoadUint64(&m.HeavyCounter) > 0)
+		ok = ok && (m.IsAuthorizedFunc == nil || atomic.LoadUint64(&m.IsAuthorizedCounter) > 0)
+		ok = ok && (m.IsBeyondLimitFunc == nil || atomic.LoadUint64(&m.IsBeyondLimitCounter) > 0)
+		ok = ok && (m.LightExecutorForJetFunc == nil || atomic.LoadUint64(&m.LightExecutorForJetCounter) > 0)
+		ok = ok && (m.LightExecutorForObjectFunc == nil || atomic.LoadUint64(&m.LightExecutorForObjectCounter) > 0)
+		ok = ok && (m.LightValidatorsForJetFunc == nil || atomic.LoadUint64(&m.LightValidatorsForJetCounter) > 0)
+		ok = ok && (m.LightValidatorsForObjectFunc == nil || atomic.LoadUint64(&m.LightValidatorsForObjectCounter) > 0)
+		ok = ok && (m.MeFunc == nil || atomic.LoadUint64(&m.MeCounter) > 0)
+		ok = ok && (m.NodeForJetFunc == nil || atomic.LoadUint64(&m.NodeForJetCounter) > 0)
+		ok = ok && (m.NodeForObjectFunc == nil || atomic.LoadUint64(&m.NodeForObjectCounter) > 0)
+		ok = ok && (m.QueryRoleFunc == nil || atomic.LoadUint64(&m.QueryRoleCounter) > 0)
+		ok = ok && (m.VirtualExecutorForObjectFunc == nil || atomic.LoadUint64(&m.VirtualExecutorForObjectCounter) > 0)
+		ok = ok && (m.VirtualValidatorsForObjectFunc == nil || atomic.LoadUint64(&m.VirtualValidatorsForObjectCounter) > 0)
 
 		if ok {
 			return
@@ -2065,51 +1133,55 @@ func (m *JetCoordinatorMock) MinimockWait(timeout time.Duration) {
 		select {
 		case <-timeoutCh:
 
-			if !m.HeavyFinished() {
+			if m.HeavyFunc != nil && atomic.LoadUint64(&m.HeavyCounter) == 0 {
 				m.t.Error("Expected call to JetCoordinatorMock.Heavy")
 			}
 
-			if !m.IsAuthorizedFinished() {
+			if m.IsAuthorizedFunc != nil && atomic.LoadUint64(&m.IsAuthorizedCounter) == 0 {
 				m.t.Error("Expected call to JetCoordinatorMock.IsAuthorized")
 			}
 
-			if !m.IsBeyondLimitFinished() {
+			if m.IsBeyondLimitFunc != nil && atomic.LoadUint64(&m.IsBeyondLimitCounter) == 0 {
 				m.t.Error("Expected call to JetCoordinatorMock.IsBeyondLimit")
 			}
 
-			if !m.LightExecutorForJetFinished() {
+			if m.LightExecutorForJetFunc != nil && atomic.LoadUint64(&m.LightExecutorForJetCounter) == 0 {
 				m.t.Error("Expected call to JetCoordinatorMock.LightExecutorForJet")
 			}
 
-			if !m.LightExecutorForObjectFinished() {
+			if m.LightExecutorForObjectFunc != nil && atomic.LoadUint64(&m.LightExecutorForObjectCounter) == 0 {
 				m.t.Error("Expected call to JetCoordinatorMock.LightExecutorForObject")
 			}
 
-			if !m.LightValidatorsForJetFinished() {
+			if m.LightValidatorsForJetFunc != nil && atomic.LoadUint64(&m.LightValidatorsForJetCounter) == 0 {
 				m.t.Error("Expected call to JetCoordinatorMock.LightValidatorsForJet")
 			}
 
-			if !m.LightValidatorsForObjectFinished() {
+			if m.LightValidatorsForObjectFunc != nil && atomic.LoadUint64(&m.LightValidatorsForObjectCounter) == 0 {
 				m.t.Error("Expected call to JetCoordinatorMock.LightValidatorsForObject")
 			}
 
-			if !m.MeFinished() {
+			if m.MeFunc != nil && atomic.LoadUint64(&m.MeCounter) == 0 {
 				m.t.Error("Expected call to JetCoordinatorMock.Me")
 			}
 
-			if !m.NodeForJetFinished() {
+			if m.NodeForJetFunc != nil && atomic.LoadUint64(&m.NodeForJetCounter) == 0 {
 				m.t.Error("Expected call to JetCoordinatorMock.NodeForJet")
 			}
 
-			if !m.QueryRoleFinished() {
+			if m.NodeForObjectFunc != nil && atomic.LoadUint64(&m.NodeForObjectCounter) == 0 {
+				m.t.Error("Expected call to JetCoordinatorMock.NodeForObject")
+			}
+
+			if m.QueryRoleFunc != nil && atomic.LoadUint64(&m.QueryRoleCounter) == 0 {
 				m.t.Error("Expected call to JetCoordinatorMock.QueryRole")
 			}
 
-			if !m.VirtualExecutorForObjectFinished() {
+			if m.VirtualExecutorForObjectFunc != nil && atomic.LoadUint64(&m.VirtualExecutorForObjectCounter) == 0 {
 				m.t.Error("Expected call to JetCoordinatorMock.VirtualExecutorForObject")
 			}
 
-			if !m.VirtualValidatorsForObjectFinished() {
+			if m.VirtualValidatorsForObjectFunc != nil && atomic.LoadUint64(&m.VirtualValidatorsForObjectCounter) == 0 {
 				m.t.Error("Expected call to JetCoordinatorMock.VirtualValidatorsForObject")
 			}
 
@@ -2125,51 +1197,55 @@ func (m *JetCoordinatorMock) MinimockWait(timeout time.Duration) {
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *JetCoordinatorMock) AllMocksCalled() bool {
 
-	if !m.HeavyFinished() {
+	if m.HeavyFunc != nil && atomic.LoadUint64(&m.HeavyCounter) == 0 {
 		return false
 	}
 
-	if !m.IsAuthorizedFinished() {
+	if m.IsAuthorizedFunc != nil && atomic.LoadUint64(&m.IsAuthorizedCounter) == 0 {
 		return false
 	}
 
-	if !m.IsBeyondLimitFinished() {
+	if m.IsBeyondLimitFunc != nil && atomic.LoadUint64(&m.IsBeyondLimitCounter) == 0 {
 		return false
 	}
 
-	if !m.LightExecutorForJetFinished() {
+	if m.LightExecutorForJetFunc != nil && atomic.LoadUint64(&m.LightExecutorForJetCounter) == 0 {
 		return false
 	}
 
-	if !m.LightExecutorForObjectFinished() {
+	if m.LightExecutorForObjectFunc != nil && atomic.LoadUint64(&m.LightExecutorForObjectCounter) == 0 {
 		return false
 	}
 
-	if !m.LightValidatorsForJetFinished() {
+	if m.LightValidatorsForJetFunc != nil && atomic.LoadUint64(&m.LightValidatorsForJetCounter) == 0 {
 		return false
 	}
 
-	if !m.LightValidatorsForObjectFinished() {
+	if m.LightValidatorsForObjectFunc != nil && atomic.LoadUint64(&m.LightValidatorsForObjectCounter) == 0 {
 		return false
 	}
 
-	if !m.MeFinished() {
+	if m.MeFunc != nil && atomic.LoadUint64(&m.MeCounter) == 0 {
 		return false
 	}
 
-	if !m.NodeForJetFinished() {
+	if m.NodeForJetFunc != nil && atomic.LoadUint64(&m.NodeForJetCounter) == 0 {
 		return false
 	}
 
-	if !m.QueryRoleFinished() {
+	if m.NodeForObjectFunc != nil && atomic.LoadUint64(&m.NodeForObjectCounter) == 0 {
 		return false
 	}
 
-	if !m.VirtualExecutorForObjectFinished() {
+	if m.QueryRoleFunc != nil && atomic.LoadUint64(&m.QueryRoleCounter) == 0 {
 		return false
 	}
 
-	if !m.VirtualValidatorsForObjectFinished() {
+	if m.VirtualExecutorForObjectFunc != nil && atomic.LoadUint64(&m.VirtualExecutorForObjectCounter) == 0 {
+		return false
+	}
+
+	if m.VirtualValidatorsForObjectFunc != nil && atomic.LoadUint64(&m.VirtualValidatorsForObjectCounter) == 0 {
 		return false
 	}
 
