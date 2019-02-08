@@ -137,13 +137,12 @@ func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *gop
 		false,
 	)
 
-	providerMock := recentstorage.NewProviderMock(t)
-	recentStorageMock := recentstorage.NewRecentStorageMock(t)
-	recentStorageMock.AddObjectMock.Return()
+	indexMock := recentstorage.NewRecentIndexStorageMock(t)
+	indexMock.AddObjectMock.Return()
 
-	providerMock.GetStorageFunc = func(ctx context.Context, p core.RecordID) (r recentstorage.RecentStorage) {
-		return recentStorageMock
-	}
+	providerMock := recentstorage.NewProviderMock(t)
+	providerMock.GetIndexStorageMock.Return(indexMock)
+	providerMock.DecreaseIndexesTTLMock.Return(nil)
 
 	parcelFactory := messagebus.NewParcelFactory()
 	cm := &component.Manager{}

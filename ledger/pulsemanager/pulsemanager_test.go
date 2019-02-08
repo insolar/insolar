@@ -124,18 +124,21 @@ func (s *pulseManagerSuite) TestPulseManager_Set_CheckHotIndexesSending() {
 		codeRecord,
 	)
 
-	recentMock := recentstorage.NewRecentStorageMock(s.T())
+	indexMock := recentstorage.NewRecentIndexStorageMock(s.T())
+	pendingMock := recentstorage.NewPendingStorageMock(s.T())
 	// TODO: @andreyromancev. 12.01.19. Uncomment to check if this doesn't delete indexes it should not.
 	// recentMock.ClearZeroTTLObjectsMock.Return()
 	// recentMock.ClearObjectsMock.Return()
-	recentMock.GetObjectsMock.Return(map[core.RecordID]int{
+	indexMock.GetObjectsMock.Return(map[core.RecordID]int{
 		*firstID: 1,
 	})
-	recentMock.GetRequestsMock.Return(map[core.RecordID]map[core.RecordID]struct{}{objID: {*secondID: struct{}{}}})
+	pendingMock.GetRequestsMock.Return(map[core.RecordID]map[core.RecordID]struct{}{objID: {*secondID: struct{}{}}})
 
 	providerMock := recentstorage.NewProviderMock(s.T())
-	providerMock.GetStorageMock.Return(recentMock)
-	providerMock.CloneStorageMock.Return()
+	providerMock.GetPendingStorageMock.Return(pendingMock)
+	providerMock.GetIndexStorageMock.Return(indexMock)
+	providerMock.ClonePendingStorageMock.Return()
+	providerMock.CloneIndexStorageMock.Return()
 
 	mbMock := testutils.NewMessageBusMock(s.T())
 	mbMock.OnPulseFunc = func(context.Context, core.Pulse) error {
@@ -221,7 +224,8 @@ func (s *pulseManagerSuite) TestPulseManager_Set_CheckHotIndexesSending() {
 	// Assert
 	require.NotNil(s.T(), savedIndex)
 	require.NotNil(s.T(), firstIndex, savedIndex)
-	recentMock.MinimockFinish()
+	indexMock.MinimockFinish()
+	pendingMock.MinimockFinish()
 }
 
 func TestPulseManager_Set_SendAbandonedRequests(t *testing.T) {

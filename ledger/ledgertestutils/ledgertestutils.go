@@ -172,16 +172,17 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 	pm.HotDataWaiter = hdw
 	handler.HotDataWaiter = hdw
 
-	recentStorageMock := recentstorage.NewRecentStorageMock(t)
-	recentStorageMock.AddPendingRequestMock.Return()
-	recentStorageMock.AddObjectMock.Return()
-	recentStorageMock.RemovePendingRequestMock.Return()
-	recentStorageMock.GetRequestsForObjectMock.Return(nil)
+	indexMock := recentstorage.NewRecentIndexStorageMock(t)
+	pendingMock := recentstorage.NewPendingStorageMock(t)
+
+	indexMock.AddObjectMock.Return()
+	pendingMock.GetRequestsForObjectMock.Return(nil)
+	pendingMock.AddPendingRequestMock.Return()
+	pendingMock.RemovePendingRequestMock.Return()
 
 	provideMock := recentstorage.NewProviderMock(t)
-	provideMock.GetStorageFunc = func(ctx context.Context, p core.RecordID) (r recentstorage.RecentStorage) {
-		return recentStorageMock
-	}
+	provideMock.GetIndexStorageMock.Return(indexMock)
+	provideMock.GetPendingStorageMock.Return(pendingMock)
 
 	handler.RecentStorageProvider = provideMock
 

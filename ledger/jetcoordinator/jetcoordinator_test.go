@@ -127,6 +127,24 @@ func (s *jetCoordinatorSuite) TestJetCoordinator_QueryRole() {
 	assert.Equal(s.T(), []core.RecordRef{nodeRefs[16], nodeRefs[21], nodeRefs[78]}, selected)
 }
 
+func TestJetCoordinator_Me(t *testing.T) {
+	t.Parallel()
+	// Arrange
+	expectedID := testutils.RandomRef()
+	nodeNet := network.NewNodeNetworkMock(t)
+	node := network.NewNodeMock(t)
+	nodeNet.GetOriginMock.Return(node)
+	node.IDMock.Return(expectedID)
+	jc := NewJetCoordinator(1)
+	jc.NodeNet = nodeNet
+
+	// Act
+	resultID := jc.Me()
+
+	// Assert
+	require.Equal(t, expectedID, resultID)
+}
+
 func TestNewJetCoordinator(t *testing.T) {
 	t.Parallel()
 	// Act

@@ -195,7 +195,7 @@ func (cr *ContractRequester) CallConstructor(ctx context.Context, base core.Mess
 		BaseLogicMessage: *baseMessage,
 		PrototypeRef:     *prototype,
 		ParentRef:        *to,
-		Name:             method,
+		Method:           method,
 		Arguments:        argsIn,
 		SaveAs:           message.SaveAs(saveAs),
 	}
