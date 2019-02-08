@@ -2,9 +2,9 @@ local base_params = import '../params.libsonnet';
 local params = std.mergePatch( base_params.components.insolar, std.extVar("__ksonnet/params").components.insolar );
 
 local genesis = import 'genesis.libsonnet' ;
-local statefull_set() = import 'insolard_statefull_set.libsonnet';
-local genesis_insolard_conf() = import "insolard-genesis.libsonnet";
-local insolard_conf() = import "insolard.libsonnet";
+local statefull_set() = import 'statefull_set.libsonnet';
+local genesis_insolard_conf() = import "insolard_genesis_config.libsonnet";
+local insolard_conf() = import "insolard_config.libsonnet";
 local k = import "k.libsonnet";
 local pulsar() = import 'pulsar/pulsar_common.libsonnet';
 

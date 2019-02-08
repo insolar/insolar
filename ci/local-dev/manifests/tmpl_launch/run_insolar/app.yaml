@@ -1,14 +1,17 @@
 apiVersion: 0.3.0
 environments:
-  default:
+  local:
     destination:
       namespace: default
       server: https://localhost:6443
     k8sVersion: v1.10.11
-    path: default
+    path: local
     targets:
     - insolar
     - pulsar
+    - jaeger
+    - prometheus
+    - elk
   dev:
     destination:
       namespace: dev

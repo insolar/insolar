@@ -1,2 +1,3 @@
 {
+	local_launch: false
 }

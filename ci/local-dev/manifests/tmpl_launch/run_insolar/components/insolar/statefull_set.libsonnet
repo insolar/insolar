@@ -5,7 +5,6 @@ local params = std.mergePatch( base_params.components, std.extVar("__ksonnet/par
 local utils = params.utils;
 local image_params = params.insolar.image;
 
-
 {
 	"apiVersion": "apps/v1beta1",
 	"kind": "StatefulSet",
@@ -120,10 +119,16 @@ local image_params = params.insolar.image;
 						"workingDir": "/opt/insolar",
 						"tty": true,
 						"stdin": true,
+						launch_insolar_cmd :: "/go/bin/insolard --config /opt/insolar/config/node-insolar.yaml --trace 2>&1",
 						"command": [
 							"bash",
 							"-c",
-							"/go/bin/insolard --config /opt/insolar/config/node-insolar.yaml --trace > /logs/$(POD_NAME).insolard.log 2>&1"
+							if params.insolar.local_launch == true
+							then
+								self.launch_insolar_cmd + " | tee /logs/$(POD_NAME).insolard.log 2>&1"
+							else
+								self.launch_insolar_cmd
+
 						],
 						"env": [
 							{

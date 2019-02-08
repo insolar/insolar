@@ -9,9 +9,9 @@ local service() = {
 	"apiVersion": "v1",
 	"kind": "Service",
 	"metadata": {
-		"name": "prometheus",
+		"name": "prometheus-k8s",
 		"labels": {
-			"app": "prometheus"
+			"app": "prometheus-k8s"
 		}
 	},
 	"spec": {
@@ -20,11 +20,11 @@ local service() = {
 			{
 				"port": 9090,
 				"nodePort": params.prometheus.port,
-				"name": "prometheus"
+				"name": "prometheus-k8s"
 			}
 		],
 		"selector": {
-			"app": "prometheus"
+			"app": "prometheus-k8s"
 		}
 	}
 };
@@ -33,15 +33,15 @@ local pod() = {
 	"apiVersion": "v1",
 	"kind": "Pod",
 	"metadata": {
-		"name": "prometheus",
+		"name": "prometheus-k8s",
 		"labels": {
-			"app": "prometheus"
+			"app": "prometheus-k8s"
 		}
 	},
 	"spec": {
 		"containers": [
 			{
-				"name": "prometheus",
+				"name": "prometheus-k8s",
 				"image": "prom/prometheus:v2.6.0",
 				"tty": true,
 				"stdin": true,

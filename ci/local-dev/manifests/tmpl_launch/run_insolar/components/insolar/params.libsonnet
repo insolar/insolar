@@ -4,7 +4,5 @@
     // replicas: 4,
   },
   components+: {
-    "insolar": { },
-    "utils"+: { } ,
   },
 }

@@ -32,17 +32,17 @@ rebuild () {
 
 start-nodes () {
   echo start only nodes and pulsar
-  cd $KS; ks apply default -c insolar.bootstrap_ss; ks apply default -c pulsar.pulsar_common
+  cd $KS && ks apply local -c insolar.bootstrap_ss && ks apply local -c pulsar.pulsar_common
 }
 
 start-all () {
   echo start all nodes and services
-  cd $KS; ks apply default
+  cd $KS && ks apply local
 }
 
 stop () {
 	echo stop all
-	cd $KS; ks delete default
+	cd $KS && ks delete local
 }
 
 #restart-dev () {

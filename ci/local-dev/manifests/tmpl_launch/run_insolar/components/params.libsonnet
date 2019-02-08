@@ -1,7 +1,7 @@
 {
   global: {
   },
-  components: {
+  components: { 
       "jaeger":{
           port: 30686,
           jaeger_agent: {
@@ -34,12 +34,12 @@
         insolar_conf : $.components.insolar,
         get_num_nodes : self.insolar_conf.num_heavies + self.insolar_conf.num_lights + self.insolar_conf.num_virtuals,
         host_template : self.insolar_conf.hostname + "-%d." + self.insolar_conf.domain + ":%d",
-        id_to_node_type( id ) :  if id < self.insolar_conf.num_heavies then "heavy_material" 
+        id_to_node_type( id ) ::  if id < self.insolar_conf.num_heavies then "heavy_material" 
                                  else if id < self.insolar_conf.num_heavies + self.insolar_conf.num_lights then "light_material"
                                  else "virtual",
 
         local_log_volume_name: "node-log",
-        local_log_volume() : {
+        local_log_volume() :: {
             "name": $.components.utils.local_log_volume_name,
             "hostPath": {
                 "path": "/tmp/insolar_logs/",
