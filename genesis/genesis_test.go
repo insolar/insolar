@@ -452,8 +452,48 @@ func TestActivateDiscoveryNodes(t *testing.T) {
 	}
 }
 
-func TestAddDiscoveryIndex(t *testing.T) {
-	am := mockArtifactManager(t)
+func TestAddDiscoveryIndex_ActivateErr(t *testing.T) {
+	am := mockArtifactManagerWithRegisterRequestError(t)
+	ref := testutils.RandomRef()
+	var discoveryNodes []Node
+	discoveryNodes = append(discoveryNodes,
+		Node{
+			Role: "virtual",
+		},
+		Node{
+			Role: "light_material",
+		},
+	)
+	path := "gentestdata"
+	amount := 2
+	g := Genesis{
+		config: &Config{
+			ReuseKeys:        true,
+			DiscoveryNodes:   discoveryNodes,
+			DiscoveryKeysDir: path,
+		},
+		ArtifactManager: am,
+		rootDomainRef:   &ref,
+		nodeDomainRef:   &ref,
+	}
+	ctx := inslogger.TestContext(t)
+	err := g.createKeys(ctx, path, amount)
+	require.Nil(t, err)
+	defer os.RemoveAll(path)
+	cb := NewContractBuilder(g.ArtifactManager)
+	cb.Prototypes[nodeRecord] = &ref
+
+	indexMap := make(map[string]string)
+
+	genesisNodes, resIndexMap, err := g.addDiscoveryIndex(ctx, cb, indexMap)
+	require.NotNil(t, err)
+	require.Contains(t, err.Error(), "[ addDiscoveryIndex ]: [ activateDiscoveryNodes ] Couldn't activateNodeRecord node instance")
+	require.Empty(t, genesisNodes)
+	require.Empty(t, resIndexMap)
+}
+
+func TestAddDiscoveryIndex_UploadErr(t *testing.T) {
+	am := mockArtifactManagerWithRegisterRequestError(t)
 	ref := testutils.RandomRef()
 	var discoveryNodes []Node
 	discoveryNodes = append(discoveryNodes,
@@ -466,16 +506,57 @@ func TestAddDiscoveryIndex(t *testing.T) {
 	)
 	g := Genesis{
 		config: &Config{
-			ReuseKeys:      false,
-			DiscoveryNodes: discoveryNodes,
+			ReuseKeys:        true,
+			DiscoveryNodes:   discoveryNodes,
+			DiscoveryKeysDir: "not_existed_path",
 		},
 		ArtifactManager: am,
 		rootDomainRef:   &ref,
 		nodeDomainRef:   &ref,
 	}
+	ctx := inslogger.TestContext(t)
 	cb := NewContractBuilder(g.ArtifactManager)
 	cb.Prototypes[nodeRecord] = &ref
+
+	indexMap := make(map[string]string)
+
+	genesisNodes, resIndexMap, err := g.addDiscoveryIndex(ctx, cb, indexMap)
+	require.NotNil(t, err)
+	require.Contains(t, err.Error(), "[ addDiscoveryIndex ]: [ uploadKeys ] dir is not exist")
+	require.Empty(t, genesisNodes)
+	require.Empty(t, resIndexMap)
+}
+
+func TestAddDiscoveryIndex(t *testing.T) {
+	am := mockArtifactManager(t)
+	ref := testutils.RandomRef()
+	var discoveryNodes []Node
+	discoveryNodes = append(discoveryNodes,
+		Node{
+			Role: "virtual",
+		},
+		Node{
+			Role: "light_material",
+		},
+	)
+	path := "gentestdata"
+	amount := 2
+	g := Genesis{
+		config: &Config{
+			ReuseKeys:        true,
+			DiscoveryNodes:   discoveryNodes,
+			DiscoveryKeysDir: path,
+		},
+		ArtifactManager: am,
+		rootDomainRef:   &ref,
+		nodeDomainRef:   &ref,
+	}
 	ctx := inslogger.TestContext(t)
+	err := g.createKeys(ctx, path, amount)
+	require.Nil(t, err)
+	defer os.RemoveAll(path)
+	cb := NewContractBuilder(g.ArtifactManager)
+	cb.Prototypes[nodeRecord] = &ref
 
 	indexMap := make(map[string]string)
 
@@ -483,4 +564,83 @@ func TestAddDiscoveryIndex(t *testing.T) {
 	require.Nil(t, err)
 	require.Len(t, genesisNodes, len(discoveryNodes))
 	require.Len(t, resIndexMap, len(discoveryNodes))
+}
+
+func TestAddIndex_ActivateErr(t *testing.T) {
+	am := mockArtifactManagerWithRegisterRequestError(t)
+	ref := testutils.RandomRef()
+	path := "gentestdata"
+	g := Genesis{
+		config: &Config{
+			ReuseKeys:   true,
+			NodeKeysDir: path,
+		},
+		ArtifactManager: am,
+		rootDomainRef:   &ref,
+		nodeDomainRef:   &ref,
+	}
+	ctx := inslogger.TestContext(t)
+	err := g.createKeys(ctx, path, nodeAmount)
+	require.Nil(t, err)
+	defer os.RemoveAll(path)
+	cb := NewContractBuilder(g.ArtifactManager)
+	cb.Prototypes[nodeRecord] = &ref
+
+	indexMap := make(map[string]string)
+
+	resIndexMap, err := g.addIndex(ctx, cb, indexMap)
+	require.NotNil(t, err)
+	require.Contains(t, err.Error(), "[ addIndex ]: [ activateNodes ] Couldn't activateNodeRecord node instance")
+	require.Empty(t, resIndexMap)
+}
+
+func TestAddIndex_UploadErr(t *testing.T) {
+	am := mockArtifactManagerWithRegisterRequestError(t)
+	ref := testutils.RandomRef()
+	g := Genesis{
+		config: &Config{
+			ReuseKeys:   true,
+			NodeKeysDir: "not_existed_path",
+		},
+		ArtifactManager: am,
+		rootDomainRef:   &ref,
+		nodeDomainRef:   &ref,
+	}
+	ctx := inslogger.TestContext(t)
+	cb := NewContractBuilder(g.ArtifactManager)
+	cb.Prototypes[nodeRecord] = &ref
+
+	indexMap := make(map[string]string)
+
+	resIndexMap, err := g.addIndex(ctx, cb, indexMap)
+	require.NotNil(t, err)
+	require.Contains(t, err.Error(), "[ addIndex ]: [ uploadKeys ] dir is not exist")
+	require.Empty(t, resIndexMap)
+}
+
+func TestAddIndex(t *testing.T) {
+	am := mockArtifactManager(t)
+	ref := testutils.RandomRef()
+	path := "gentestdata"
+	g := Genesis{
+		config: &Config{
+			ReuseKeys:   true,
+			NodeKeysDir: path,
+		},
+		ArtifactManager: am,
+		rootDomainRef:   &ref,
+		nodeDomainRef:   &ref,
+	}
+	ctx := inslogger.TestContext(t)
+	err := g.createKeys(ctx, path, nodeAmount)
+	require.Nil(t, err)
+	defer os.RemoveAll(path)
+	cb := NewContractBuilder(g.ArtifactManager)
+	cb.Prototypes[nodeRecord] = &ref
+
+	indexMap := make(map[string]string)
+
+	resIndexMap, err := g.addIndex(ctx, cb, indexMap)
+	require.Nil(t, err)
+	require.Len(t, resIndexMap, nodeAmount)
 }
