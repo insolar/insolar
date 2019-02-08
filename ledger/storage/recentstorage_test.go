@@ -150,6 +150,33 @@ func TestPendingStorage_RemovePendingRequest(t *testing.T) {
 	}, s.GetRequests())
 }
 
+func TestPendingStorage_RemovePendingRequest_RemoveNothingIfThereIsNothing(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+	jetID := testutils.RandomID()
+
+	s := NewPendingStorage(jetID)
+
+	obj := *core.NewRecordID(0, nil)
+	anotherObj := *core.NewRecordID(123, nil)
+
+	expectedIDs := []core.RecordID{
+		*core.NewRecordID(123, []byte{1}),
+	}
+	s.requests = map[core.RecordID]map[core.RecordID]struct{}{
+		obj: {
+			expectedIDs[0]: {},
+		},
+	}
+
+	s.RemovePendingRequest(ctx, anotherObj, testutils.RandomID())
+
+	require.Equal(t, map[core.RecordID]map[core.RecordID]struct{}{
+		obj: {
+			expectedIDs[0]: struct{}{},
+		},
+	}, s.GetRequests())
+}
+
 func TestNewRecentStorageProvider(t *testing.T) {
 	// Act
 	provider := NewRecentStorageProvider(888)
