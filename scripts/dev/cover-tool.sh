@@ -56,7 +56,7 @@ if [[ -z "$COVER_TARGET" ]]; then
 fi
 
 COVERPROFILE=${COVERPROFILE:-""}
-if [[ -z $"COVERPROFILE" ]]; then
+if [[ -z "$COVERPROFILE" ]]; then
     # collect coverage
     export COVERPROFILE=$OUTPUT_DIR/coverage.out
     export TESTED_PACKAGES
