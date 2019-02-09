@@ -18,7 +18,7 @@ package metrics
 
 import "github.com/prometheus/client_golang/prometheus"
 
-// ConsensusPacketsSent is current consunsus packets sent count metric
+// ConsensusPacketsSent is current consensus packets sent count metric
 var ConsensusPacketsSent = prometheus.NewCounterVec(prometheus.CounterOpts{
 	Name:      "sent_count",
 	Help:      "Current consensus transport packets sent",
@@ -90,7 +90,7 @@ var ConsensusPhase21Exec = prometheus.NewCounter(prometheus.CounterOpts{
 	Subsystem: "consensus",
 })
 
-// ConsensusActiveNodes is current consensus phase 21 execution count metric
+// ConsensusActiveNodes is active nodes count after consensus
 var ConsensusActiveNodes = prometheus.NewGauge(prometheus.GaugeOpts{
 	Name:      "active_nodes_count",
 	Help:      "Active nodes count after consensus",
