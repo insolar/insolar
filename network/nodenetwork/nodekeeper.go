@@ -18,9 +18,12 @@
 package nodenetwork
 
 import (
+	"context"
 	"sort"
 	"strings"
 	"sync"
+
+	"github.com/insolar/insolar/instrumentation/inslogger"
 
 	"github.com/insolar/insolar/configuration"
 	consensus "github.com/insolar/insolar/consensus/packets"
@@ -372,7 +375,7 @@ func (nk *nodekeeper) Sync(list network.UnsyncList) {
 	nk.sync = list
 }
 
-func (nk *nodekeeper) MoveSyncToActive() error {
+func (nk *nodekeeper) MoveSyncToActive(ctx context.Context) error {
 	nk.activeLock.Lock()
 	nk.syncLock.Lock()
 	defer func() {
@@ -394,7 +397,7 @@ func (nk *nodekeeper) MoveSyncToActive() error {
 		nk.gracefullyStop()
 	}
 
-	log.Infof("[ MoveSyncToActive ] New active list confirmed. Active list size: %d -> %d",
+	inslogger.FromContext(ctx).Infof("[ MoveSyncToActive ] New active list confirmed. Active list size: %d -> %d",
 		len(nk.active), len(mergeResult.ActiveList))
 	nk.active = mergeResult.ActiveList
 	metrics.ConsensusActiveNodes.Set(float64(len(nk.active)))
