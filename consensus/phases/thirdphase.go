@@ -87,7 +87,7 @@ func (tp *ThirdPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse, state 
 	}
 
 	prevCloudHash := tp.NodeKeeper.GetCloudHash()
-	validNodes := make([]core.RecordRef, 0)
+	validNodes := 0
 	for _, node := range nodes {
 		ghs, ok := state.UnsyncList.GetGlobuleHashSignature(node.ID())
 		if !ok {
@@ -105,20 +105,18 @@ func (tp *ThirdPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse, state 
 		}
 		valid := tp.Calculator.IsValid(proof, state.GlobuleHash, node.PublicKey())
 		if valid {
-			validNodes = append(validNodes, node.ID())
-		} else {
-			state.UnsyncList.RemoveNode(node.ID())
+			validNodes++
 		}
 	}
 
-	if !consensusReachedBFT(len(validNodes), totalCount) {
-		return nil, errors.Errorf("[ NET Consensus phase-3 ] Failed to pass BFT consensus: %d/%d", len(validNodes), totalCount)
+	if !consensusReachedBFT(validNodes, totalCount) {
+		return nil, errors.Errorf("[ NET Consensus phase-3 ] Failed to pass BFT consensus: %d/%d", validNodes, totalCount)
 	}
 
-	logger.Infof("[ NET Consensus phase-3 ] BFT consensus passed: %d/%d", len(validNodes), totalCount)
+	logger.Infof("[ NET Consensus phase-3 ] BFT consensus passed: %d/%d", validNodes, totalCount)
 
 	return &ThirdPhaseState{
-		ActiveNodes:  validNodes,
+		ActiveNodes:  state.MatrixState.Active,
 		UnsyncList:   state.UnsyncList,
 		GlobuleProof: state.GlobuleProof,
 	}, nil
