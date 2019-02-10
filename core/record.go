@@ -24,7 +24,7 @@ import (
 	"strconv"
 	"strings"
 
-	base58 "github.com/jbenet/go-base58"
+	"github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 )
 
@@ -205,27 +205,33 @@ func (id *RecordID) DebugString() string {
 	pulse := NewPulseNumber(id[:PulseNumberSize])
 	if pulse == PulseNumberJet {
 		depth := int(id[PulseNumberSize])
-		prefix := id[PulseNumberSize+1:]
-		prefixBits := make([]int64, len(prefix)*8)
-		for i, b := range prefix {
-			for j := 0; j < 8; j++ {
-				prefixBits[i*8+j] = int64(b >> uint(7-j) & 0x01)
-			}
-		}
-
-		prefixSlice := make([]byte, 0, depth)
 		if depth == 0 {
-			prefixSlice = append(prefixSlice, '-')
-		} else {
-			if depth > len(prefixBits) {
-				return fmt.Sprintf("[JET: <wrong format> %d %b]", depth, prefix)
-			}
+			return "[JET 0 -]"
+		}
 
-			for i := 0; i < depth; i++ {
-				prefixSlice = strconv.AppendInt(prefixSlice, prefixBits[i], 10)
+		prefix := id[PulseNumberSize+1:]
+		var res strings.Builder
+		res.WriteString("[JET ")
+		res.WriteString(strconv.Itoa(depth))
+		res.WriteString(" ")
+
+		for _, b := range prefix {
+			for j := 7; j >= 0; j-- {
+				if 0 == (b >> uint(j) & 0x01) {
+					res.WriteString("0")
+				} else {
+					res.WriteString("1")
+				}
+
+				depth--
+				if depth == 0 {
+					res.WriteString("]")
+					return res.String()
+				}
 			}
 		}
-		return fmt.Sprintf("[JET %d %s]", depth, prefixSlice)
+
+		return fmt.Sprintf("[JET: <wrong format> %d %b]", depth, prefix)
 	}
 
 	return fmt.Sprintf("[%d | %s]", id.Pulse(), id.String())

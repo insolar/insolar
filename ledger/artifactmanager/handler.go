@@ -1123,16 +1123,17 @@ func (h *MessageHandler) saveIndexFromHeavy(
 
 func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
 	logger := inslogger.FromContext(ctx)
-	// if hack.SkipValidation(ctx) {
-	// 	fmt.Println("handleHotRecords: SkipValidation")
-	// 	return &reply.OK{}, nil
-	// }
 
 	msg := parcel.Message().(*message.HotData)
 	// FIXME: check split signatures.
 	jetID := *msg.Jet.Record()
 
-	logger.Debugf("[jet]: %v got hot. Pulse: %v, DropPulse: %v, DropJet: %v\n", jetID.DebugString(), parcel.Pulse(), msg.Drop.Pulse, msg.DropJet.DebugString())
+	logger = logger.WithField("jet", jetID.DebugString())
+
+	logger.Debugf(
+		"got hot. Pulse: %v, DropPulse: %v, DropJet: %v\n",
+		parcel.Pulse(), msg.Drop.Pulse, msg.DropJet.DebugString(),
+	)
 
 	err := h.DropStorage.SetDrop(ctx, msg.DropJet, &msg.Drop)
 	if err == storage.ErrOverride {
@@ -1142,59 +1143,50 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 	if err != nil {
 		return nil, errors.Wrapf(err, "[jet]: drop error (pulse: %v)", msg.Drop.Pulse)
 	}
+
 	err = h.DropStorage.SetDropSizeHistory(ctx, msg.DropJet, msg.JetDropSizeHistory)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ handleHotRecords ] Can't SetDropSizeHistory")
 	}
 
-	logger.WithFields(map[string]interface{}{
-		"len": len(msg.RecentObjects),
-		"jet": jetID.DebugString(),
-	}).Debugf("received pending requests")
 	pendingStorage := h.RecentStorageProvider.GetPendingStorage(ctx, jetID)
-	indexStorage := h.RecentStorageProvider.GetIndexStorage(ctx, jetID)
+	logger.Debugf("received %d pending requests", len(msg.PendingRequests))
 	for objID, requests := range msg.PendingRequests {
 		for reqID := range requests {
 			pendingStorage.AddPendingRequest(ctx, objID, reqID)
 		}
 	}
 
-	logger.WithFields(map[string]interface{}{
-		"len": len(msg.RecentObjects),
-		"jet": jetID.DebugString(),
-	}).Debugf("received recent objects")
+	indexStorage := h.RecentStorageProvider.GetIndexStorage(ctx, jetID)
+	logger.Debugf("received %d recent objects", len(msg.RecentObjects))
 	for id, meta := range msg.RecentObjects {
 		logger.Debugf("[got id] jet: %v, id: %v", jetID.DebugString(), id.DebugString())
 		decodedIndex, err := index.DecodeObjectLifeline(meta.Index)
 		if err != nil {
-			fmt.Print("hot index write error")
 			logger.Error(err)
 			continue
 		}
 
 		err = h.ObjectStorage.SetObjectIndex(ctx, jetID, &id, decodedIndex)
 		if err != nil {
-			fmt.Print("hot index write error")
 			logger.Error(err)
 			continue
 		}
 
-		fmt.Println("[saved id] ", id.String())
 		indexStorage.AddObjectWithTLL(ctx, id, meta.TTL)
 	}
 
 	err = h.JetStorage.UpdateJetTree(
-		ctx,
-		msg.PulseNumber,
-		true,
-		jetID,
+		ctx, msg.PulseNumber, true, jetID,
 	)
 	if err != nil {
-		fmt.Println("handleHotRecords: UpdateJetTree with err, ", err)
+		logger.Error(errors.Wrap(err, "couldn't actualize jet tree"))
 		return nil, err
 	}
+
 	err = h.JetStorage.AddJets(ctx, jetID)
 	if err != nil {
+		logger.Error(errors.Wrap(err, "couldn't add jet"))
 		return nil, err
 	}
 
