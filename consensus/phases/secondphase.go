@@ -38,17 +38,17 @@ type SecondPhase interface {
 }
 
 func NewSecondPhase() SecondPhase {
-	return &secondPhase{}
+	return &SecondPhaseImpl{}
 }
 
-type secondPhase struct {
+type SecondPhaseImpl struct {
 	NodeKeeper   network.NodeKeeper       `inject:""`
 	Calculator   merkle.Calculator        `inject:""`
 	Communicator Communicator             `inject:""`
 	Cryptography core.CryptographyService `inject:""`
 }
 
-func (sp *secondPhase) Execute(ctx context.Context, pulse *core.Pulse, state *FirstPhaseState) (*SecondPhaseState, error) {
+func (sp *SecondPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse, state *FirstPhaseState) (*SecondPhaseState, error) {
 	logger := inslogger.FromContext(ctx)
 	ctx, span := instracer.StartSpan(ctx, "SecondPhase.Execute")
 	span.AddAttributes(trace.Int64Attribute("pulse", int64(state.PulseEntry.Pulse.PulseNumber)))
@@ -161,7 +161,7 @@ func (sp *secondPhase) Execute(ctx context.Context, pulse *core.Pulse, state *Fi
 	}, nil
 }
 
-func (sp *secondPhase) Execute21(ctx context.Context, pulse *core.Pulse, state *SecondPhaseState) (*SecondPhaseState, error) {
+func (sp *SecondPhaseImpl) Execute21(ctx context.Context, pulse *core.Pulse, state *SecondPhaseState) (*SecondPhaseState, error) {
 	ctx, span := instracer.StartSpan(ctx, "SecondPhase.Execute21")
 	span.AddAttributes(trace.Int64Attribute("pulse", int64(state.PulseEntry.Pulse.PulseNumber)))
 	defer span.End()
@@ -287,7 +287,7 @@ func (sp *secondPhase) Execute21(ctx context.Context, pulse *core.Pulse, state *
 	return state, nil
 }
 
-func (sp *secondPhase) generatePhase2Bitset(list network.UnsyncList, proofs map[core.Node]*merkle.PulseProof) (packets.BitSet, error) {
+func (sp *SecondPhaseImpl) generatePhase2Bitset(list network.UnsyncList, proofs map[core.Node]*merkle.PulseProof) (packets.BitSet, error) {
 	bitset, err := packets.NewBitSet(list.Length())
 	if err != nil {
 		return nil, err
@@ -304,7 +304,7 @@ func (sp *secondPhase) generatePhase2Bitset(list network.UnsyncList, proofs map[
 	return bitset, nil
 }
 
-func (sp *secondPhase) checkPacketSignature(packet *packets.Phase2Packet, recordRef core.RecordRef, unsyncList network.UnsyncList) error {
+func (sp *SecondPhaseImpl) checkPacketSignature(packet *packets.Phase2Packet, recordRef core.RecordRef, unsyncList network.UnsyncList) error {
 	activeNode := unsyncList.GetActiveNode(recordRef)
 	if activeNode == nil {
 		return errors.New("failed to get active node")

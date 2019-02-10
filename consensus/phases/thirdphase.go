@@ -37,17 +37,17 @@ type ThirdPhase interface {
 }
 
 func NewThirdPhase() ThirdPhase {
-	return &thirdPhase{}
+	return &ThirdPhaseImpl{}
 }
 
-type thirdPhase struct {
+type ThirdPhaseImpl struct {
 	Cryptography core.CryptographyService `inject:""`
 	Communicator Communicator             `inject:""`
 	NodeKeeper   network.NodeKeeper       `inject:""`
 	Calculator   merkle.Calculator        `inject:""`
 }
 
-func (tp *thirdPhase) Execute(ctx context.Context, pulse *core.Pulse, state *SecondPhaseState) (*ThirdPhaseState, error) {
+func (tp *ThirdPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse, state *SecondPhaseState) (*ThirdPhaseState, error) {
 	ctx, span := instracer.StartSpan(ctx, "ThirdPhase.Execute")
 	span.AddAttributes(trace.Int64Attribute("pulse", int64(state.PulseEntry.Pulse.PulseNumber)))
 	defer span.End()
@@ -124,7 +124,7 @@ func (tp *thirdPhase) Execute(ctx context.Context, pulse *core.Pulse, state *Sec
 	}, nil
 }
 
-func (tp *thirdPhase) checkPacketSignature(packet *packets.Phase3Packet, recordRef core.RecordRef, unsyncList network.UnsyncList) error {
+func (tp *ThirdPhaseImpl) checkPacketSignature(packet *packets.Phase3Packet, recordRef core.RecordRef, unsyncList network.UnsyncList) error {
 	activeNode := unsyncList.GetActiveNode(recordRef)
 	if activeNode == nil {
 		return errors.New("failed to get active node")
