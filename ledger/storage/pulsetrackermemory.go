@@ -15,3 +15,48 @@
  */
 
 package storage
+
+import (
+	"context"
+	"sync"
+
+	"github.com/insolar/insolar/core"
+)
+
+type pulseTrackerMemory struct {
+	memory map[core.PulseNumber]*Pulse
+	mutex  sync.RWMutex
+}
+
+func NewPulseTrackerMemory() PulseTracker {
+	return &pulseTrackerMemory{memory: make(map[core.PulseNumber]*Pulse)}
+}
+
+func (p *pulseTrackerMemory) GetPulse(ctx context.Context, num core.PulseNumber) (*Pulse, error) {
+	p.mutex.RLock()
+	defer p.mutex.RUnlock()
+
+	pulse, ok := p.memory[num]
+
+	if !ok {
+		return nil, ErrNotFound
+	}
+
+	return pulse, nil
+}
+
+func (p *pulseTrackerMemory) GetPreviousPulse(ctx context.Context, num core.PulseNumber) (*Pulse, error) {
+	panic("implement me")
+}
+
+func (p *pulseTrackerMemory) GetNthPrevPulse(ctx context.Context, n uint, from core.PulseNumber) (*Pulse, error) {
+	panic("implement me")
+}
+
+func (p *pulseTrackerMemory) GetLatestPulse(ctx context.Context) (*Pulse, error) {
+	panic("implement me")
+}
+
+func (p *pulseTrackerMemory) AddPulse(ctx context.Context, pulse core.Pulse) error {
+	panic("implement me")
+}

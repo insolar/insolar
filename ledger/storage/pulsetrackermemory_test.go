@@ -15,3 +15,48 @@
  */
 
 package storage
+
+import (
+	"testing"
+
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+func TestPulseTrackerMemory_GetPulse(t *testing.T) {
+	// Arrange
+	ctx := inslogger.TestContext(t)
+	pulseTracker := &pulseTrackerMemory{
+		memory: map[core.PulseNumber]*Pulse{},
+	}
+	existingPulse := &Pulse{Pulse: core.Pulse{PulseNumber: core.FirstPulseNumber}}
+	pulseTracker.memory[core.FirstPulseNumber] = existingPulse
+
+	// Act
+	pulse, err := pulseTracker.GetPulse(ctx, core.FirstPulseNumber)
+	_, notFoundErr := pulseTracker.GetPulse(ctx, core.FirstPulseNumber+1)
+
+	// Assert
+	require.NoError(t, err)
+	require.Equal(t, existingPulse, pulse)
+
+	assert.Equal(t, notFoundErr, ErrNotFound)
+}
+
+func TestPulseTrackerMemory_GetPreviousPulse(t *testing.T) {
+	assert.True(t, false)
+}
+
+func TestPulseTrackerMemory_GetNthPrevPulse(t *testing.T) {
+	assert.True(t, false)
+}
+
+func TestPulseTrackerMemory_GetLatestPulse(t *testing.T) {
+	assert.True(t, false)
+}
+
+func TestPulseTrackerMemory_AddPulse(t *testing.T) {
+	assert.True(t, false)
+}
