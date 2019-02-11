@@ -34,13 +34,13 @@ func (h *MessageHandler) handleHeavyPayload(ctx context.Context, genericMsg core
 
 	inslog := inslogger.FromContext(ctx).WithField("pulseNum", msg.PulseNum)
 	inslog = inslog.WithField("jetID", msg.JetID)
-	inslog.Debugf("Heavy sync: get payload message with %v records", len(msg.Records))
+	inslog.Debugf("Heavy sync: got payload message with %v records", len(msg.Records))
 
 	if err := h.HeavySync.Store(ctx, msg.JetID, msg.PulseNum, msg.Records); err != nil {
-		inslog.Error("Heavy store failed ", err)
+		inslog.Error("Heavy sync: failed ", err)
 		return heavyerrreply(err)
 	}
-	inslog.Debugf("Heavy sync: stores %v records", len(msg.Records))
+	inslog.Debugf("Heavy sync: done!")
 	return &reply.OK{}, nil
 }
 

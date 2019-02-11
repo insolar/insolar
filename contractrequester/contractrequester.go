@@ -156,7 +156,7 @@ func (cr *ContractRequester) CallMethod(ctx context.Context, base core.Message, 
 
 	select {
 	case ret := <-ch:
-		inslogger.FromContext(ctx).Debug("GOT Method results")
+		inslogger.FromContext(ctx).Debug("Got Method results")
 		if ret.Error != "" {
 			return nil, errors.New(ret.Error)
 		}
@@ -234,7 +234,7 @@ func (cr *ContractRequester) CallConstructor(ctx context.Context, base core.Mess
 
 	select {
 	case ret := <-ch:
-		inslogger.FromContext(ctx).Debug("GOT Constructor results")
+		inslogger.FromContext(ctx).Debug("Got Constructor results")
 		if ret.Error != "" {
 			return nil, errors.New(ret.Error)
 		}
@@ -267,7 +267,7 @@ func (cr *ContractRequester) ReceiveResult(ctx context.Context, parcel core.Parc
 		log.Info("oops unwaited results seq=", msg.Sequence)
 		return &reply.OK{}, nil
 	}
-	inslogger.FromContext(ctx).Debug("Got wanted results seq=", msg.Sequence)
+	log.Debug("Got wanted results seq=", msg.Sequence)
 
 	c <- msg
 	delete(cr.ResultMap, msg.Sequence)
