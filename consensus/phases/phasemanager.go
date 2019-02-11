@@ -57,7 +57,7 @@ func (pm *Phases) OnPulse(ctx context.Context, pulse *core.Pulse, pulseStartTime
 
 	var err error
 
-	consensusDelay := time.Now().Sub(pulseStartTime)
+	consensusDelay := time.Since(pulseStartTime)
 	inslogger.FromContext(ctx).Infof("[ NET Consensus ] Starting consensus process, delay: %v", consensusDelay)
 
 	pulseDuration, err := getPulseDuration(pulse)
