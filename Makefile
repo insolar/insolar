@@ -67,7 +67,7 @@ generate:
 
 .PHONY: test_git_no_changes
 test_git_no_changes:
-	git diff --exit-code
+	git diff -w -G'(^[^\*# /])|(^#\w)|(^\s+[^\*#/])' --exit-code
 
 .PHONY: ensure
 ensure:
