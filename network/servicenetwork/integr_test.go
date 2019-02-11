@@ -23,6 +23,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/insolar/insolar/consensus/phases"
 	"github.com/insolar/insolar/core"
@@ -113,7 +114,7 @@ func TestServiceNetworkManyNodes(t *testing.T) {
 type FullTimeoutPhaseManager struct {
 }
 
-func (ftpm *FullTimeoutPhaseManager) OnPulse(ctx context.Context, pulse *core.Pulse) error {
+func (ftpm *FullTimeoutPhaseManager) OnPulse(ctx context.Context, pulse *core.Pulse, pulseStartTime time.Time) error {
 	return nil
 }
 
