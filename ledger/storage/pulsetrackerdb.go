@@ -25,25 +25,6 @@ import (
 	"github.com/ugorji/go/codec"
 )
 
-// Pulse is a record containing pulse info.
-type Pulse struct {
-	Prev         *core.PulseNumber
-	Next         *core.PulseNumber
-	SerialNumber int
-	Pulse        core.Pulse
-}
-
-// PulseTracker allows to modify state of the pulse inside db
-//go:generate minimock -i github.com/insolar/insolar/ledger/storage.PulseTracker -o ./ -s _mock.go
-type PulseTracker interface {
-	GetPulse(ctx context.Context, num core.PulseNumber) (*Pulse, error)
-	GetPreviousPulse(ctx context.Context, num core.PulseNumber) (*Pulse, error)
-	GetNthPrevPulse(ctx context.Context, n uint, from core.PulseNumber) (*Pulse, error)
-	GetLatestPulse(ctx context.Context) (*Pulse, error)
-
-	AddPulse(ctx context.Context, pulse core.Pulse) error
-}
-
 type pulseTracker struct {
 	DB DBContext `inject:""`
 }
