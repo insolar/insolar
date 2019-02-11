@@ -72,7 +72,7 @@ func (cp *connectionPool) CloseConnection(ctx context.Context, address net.Addr)
 
 		logger.Debugf("[ CloseConnection ] Delete entry for connection to %s from pool", address)
 		cp.entryHolder.Delete(address)
-		metrics.NetworkConnections.Set(float64(cp.entryHolder.Size()))
+		metrics.NetworkConnections.Dec()
 	}
 }
 
@@ -107,7 +107,7 @@ func (cp *connectionPool) getOrCreateEntry(ctx context.Context, address net.Addr
 		address.String(),
 		size,
 	)
-	metrics.NetworkConnections.Set(float64(size))
+	metrics.NetworkConnections.Inc()
 
 	return entry
 }
