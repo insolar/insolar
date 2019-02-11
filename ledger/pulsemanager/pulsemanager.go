@@ -187,17 +187,18 @@ func (m *PulseManager) processEndPulse(
 				}
 			}
 
-			requests := m.RecentStorageProvider.GetPendingStorage(ctx, info.id).GetRequests()
-			go func() {
-				err := m.sendAbandonedRequests(
-					ctx,
-					newPulse,
-					requests,
-				)
-				if err != nil {
-					logger.Error(err)
-				}
-			}()
+			// TODO: uncomment this when the issue of message storm of abandoned requests is fixed
+			// requests := m.RecentStorageProvider.GetPendingStorage(ctx, info.id).GetRequests()
+			// go func() {
+			// 	err := m.sendAbandonedRequests(
+			// 		ctx,
+			// 		newPulse,
+			// 		requests,
+			// 	)
+			// 	if err != nil {
+			// 		logger.Error(err)
+			// 	}
+			// }()
 
 			// FIXME: @andreyromancev. 09.01.2019. Temporary disabled validation. Uncomment when jet split works properly.
 			// dropErr := m.processDrop(ctx, jetID, currentPulse, dropSerialized, messages)
