@@ -2,7 +2,7 @@ BIN_DIR ?= bin
 ARTIFACTS_DIR ?= .artefacts
 INSOLAR = insolar
 INSOLARD = insolard
-INSGOCC = $(BIN_DIR)/insgocc
+INSGOCC = insgocc
 PULSARD = pulsard
 INSGORUND = insgorund
 BENCHMARK = benchmark
@@ -29,6 +29,8 @@ LDFLAGS += -X github.com/insolar/insolar/version.BuildNumber=${BUILD_NUMBER}
 LDFLAGS += -X github.com/insolar/insolar/version.BuildDate=${BUILD_DATE}
 LDFLAGS += -X github.com/insolar/insolar/version.BuildTime=${BUILD_TIME}
 LDFLAGS += -X github.com/insolar/insolar/version.GitHash=${BUILD_HASH}
+
+BININSGOCC=$(BIN_DIR)/$(INSGOCC)
 
 
 .PHONY: all
@@ -88,7 +90,9 @@ $(INSOLAR):
 	go build -o $(BIN_DIR)/$(INSOLAR) -ldflags "${LDFLAGS}" cmd/insolar/*.go
 
 $(INSGOCC): cmd/insgocc/insgocc.go logicrunner/goplugin/preprocessor
-	go build -o $(INSGOCC) -ldflags "${LDFLAGS}" cmd/insgocc/*.go
+	go build -o $(BININSGOCC) -ldflags "${LDFLAGS}" cmd/insgocc/*.go
+
+$(BININSGOCC): $(INSGOCC)
 
 .PHONY: $(PULSARD)
 $(PULSARD):
@@ -154,10 +158,11 @@ ci_test_with_coverage_json:
 ci_test_func_json:
 	CGO_ENABLED=1 go test $(TEST_ARGS) -tags functest -v ./functest -count=1 | tee func.json
 
+
 .PHONY: regen-proxies
 CONTRACTS = $(wildcard application/contract/*)
-regen-proxies: $(INSGOCC)
-	$(foreach c,$(CONTRACTS), $(INSGOCC) proxy application/contract/$(notdir $(c))/$(notdir $(c)).go; )
+regen-proxies: $(BININSGOCC)
+	$(foreach c, $(CONTRACTS), $(BININSGOCC) proxy application/contract/$(notdir $(c))/$(notdir $(c)).go; )
 
 .PHONY: docker-insolard
 docker-insolard:
