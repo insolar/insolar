@@ -41,7 +41,7 @@ func validateProofs(
 		if valid {
 			validProofs[unsyncList.GetActiveNode(nodeID)] = proof
 		} else {
-			stats.Record(context.Background(), consensus.ConsensusFailedCheckProof.M(1))
+			stats.Record(context.Background(), consensus.FailedCheckProof.M(1))
 			faultProofs[nodeID] = proof
 		}
 	}

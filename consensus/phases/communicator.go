@@ -31,6 +31,7 @@ import (
 	"github.com/insolar/insolar/network"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
+	"go.opencensus.io/tag"
 	"go.opencensus.io/trace"
 )
 
@@ -116,8 +117,11 @@ func (nc *NaiveCommunicator) sendRequestToNodes(participants []core.Node, packet
 		}
 
 		go func(n core.Node, packet packets.ConsensusPacket) {
-			stats.Record(context.Background(), consensus.ConsensusPacketsSent.M(1))
-			err := nc.ConsensusNetwork.SignAndSendPacket(packet, n.ID(), nc.Cryptography)
+			err := stats.RecordWithTags(context.Background(), []tag.Mutator{tag.Upsert(consensus.TagPhase, packet.GetType().String())}, consensus.PacketsSent.M(1))
+			if err != nil {
+				core.Logger.Warn(" [ NativeCommunicator: sendRequestToNodes ] failed to record a metric")
+			}
+			err = nc.ConsensusNetwork.SignAndSendPacket(packet, n.ID(), nc.Cryptography)
 			if err != nil {
 				log.Errorln(err.Error())
 			}
@@ -143,9 +147,11 @@ func (nc *NaiveCommunicator) sendRequestToNodesWithOrigin(originClaim *packets.N
 
 	for ref, req := range requests {
 		go func(node core.RecordRef, consensusPacket packets.ConsensusPacket) {
-			stats.Record(context.Background(), consensus.ConsensusPacketsSent.M(1))
-			stats.Record(context.Background())
-			err := nc.ConsensusNetwork.SignAndSendPacket(consensusPacket, node, nc.Cryptography)
+			err := stats.RecordWithTags(context.Background(), []tag.Mutator{tag.Upsert(consensus.TagPhase, consensusPacket.GetType().String())}, consensus.PacketsSent.M(1))
+			if err != nil {
+				core.Logger.Warn(" [ NativeCommunicator: sendRequestToNodesWithOrigin ] failed to record a metric")
+			}
+			err = nc.ConsensusNetwork.SignAndSendPacket(consensusPacket, node, nc.Cryptography)
 			if err != nil {
 				log.Errorln(err.Error())
 			}
@@ -376,8 +382,12 @@ func (nc *NaiveCommunicator) sendAdditionalRequests(origReq *packets.Phase2Packe
 		newReq := *origReq
 		newReq.AddVote(&packets.MissingNode{NodeIndex: uint16(req.RequestIndex)})
 		receiver := selectCandidate(req.Candidates)
-		stats.Record(context.Background(), consensus.ConsensusPacketsSent.M(1))
-		err := nc.ConsensusNetwork.SignAndSendPacket(&newReq, receiver, nc.Cryptography)
+		stats.Record(context.Background(), consensus.PacketsSent.M(1))
+		err := stats.RecordWithTags(context.Background(), []tag.Mutator{tag.Upsert(consensus.TagPhase, origReq.GetType().String())}, consensus.PacketsSent.M(1))
+		if err != nil {
+			core.Logger.Warn(" [ NativeCommunicator: sendAdditionalRequests ] failed to record a metric")
+		}
+		err = nc.ConsensusNetwork.SignAndSendPacket(&newReq, receiver, nc.Cryptography)
 		if err != nil {
 			return errors.Wrapf(err, "Failed to send additional phase 2.1 request for index %d to node %s", req.RequestIndex, receiver)
 		}

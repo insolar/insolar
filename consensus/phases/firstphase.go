@@ -133,9 +133,9 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse) (*Firs
 	} else {
 		logger.Infof("[ NET Consensus phase-1 ] received packets: %d/%d", len(resultPackets), len(activeNodes))
 	}
-	err = stats.RecordWithTags(ctx, []tag.Mutator{tag.Upsert(consensus.TagPhase, "phase 1")}, consensus.ConsensusPacketsRecv.M(int64(len(resultPackets))))
+	err = stats.RecordWithTags(ctx, []tag.Mutator{tag.Upsert(consensus.TagPhase, "phase 1")}, consensus.PacketsRecv.M(int64(len(resultPackets))))
 	if err != nil {
-		log.Warn("[ NET Consensus phase-1 ] failed to record a metric")
+		core.Logger.Warn("[ NET Consensus phase-1 ] failed to record a metric")
 	}
 
 	proofSet := make(map[core.RecordRef]*merkle.PulseProof)
@@ -243,7 +243,7 @@ func (fp *FirstPhaseImpl) filterClaims(nodeID core.RecordRef, claims []packets.R
 		if ok && !nodeID.Equal(fp.NodeKeeper.GetOrigin().ID()) {
 			err := fp.checkClaimSignature(signedClaim)
 			if err != nil {
-				stats.Record(context.Background(), consensus.ConsensusDeclinedClaims.M(1))
+				stats.Record(context.Background(), consensus.DeclinedClaims.M(1))
 				log.Error("failed to check claim signature: " + err.Error())
 				continue
 			}

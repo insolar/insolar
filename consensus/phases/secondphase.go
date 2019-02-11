@@ -25,7 +25,6 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/merkle"
 	"github.com/insolar/insolar/network/nodenetwork"
@@ -89,9 +88,9 @@ func (sp *SecondPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse, state
 		return nil, errors.Wrap(err, "[ NET Consensus phase-2.0 ] Failed to exchange packets")
 	}
 	logger.Infof("[ NET Consensus phase-2.0 ] Received responses: %d/%d", len(packets), len(activeNodes))
-	err = stats.RecordWithTags(ctx, []tag.Mutator{tag.Upsert(consensus.TagPhase, "phase 2")}, consensus.ConsensusPacketsRecv.M(int64(len(packets))))
+	err = stats.RecordWithTags(ctx, []tag.Mutator{tag.Upsert(consensus.TagPhase, "phase 2")}, consensus.PacketsRecv.M(int64(len(packets))))
 	if err != nil {
-		log.Warn("[ NET Consensus phase-2.0 ] failed to record a metric")
+		core.Logger.Warn("[ NET Consensus phase-2.0 ] failed to record a metric")
 	}
 
 	origin := sp.NodeKeeper.GetOrigin().ID()
@@ -171,7 +170,7 @@ func (sp *SecondPhaseImpl) Execute21(ctx context.Context, pulse *core.Pulse, sta
 	ctx, span := instracer.StartSpan(ctx, "SecondPhase.Execute21")
 	span.AddAttributes(trace.Int64Attribute("pulse", int64(state.PulseEntry.Pulse.PulseNumber)))
 	defer span.End()
-	stats.Record(ctx, consensus.ConsensusPhase21Exec.M(1))
+	stats.Record(ctx, consensus.Phase21Exec.M(1))
 	additionalRequests := state.MatrixState.AdditionalRequestsPhase2
 
 	logger := inslogger.FromContext(ctx)
@@ -205,9 +204,9 @@ func (sp *SecondPhaseImpl) Execute21(ctx context.Context, pulse *core.Pulse, sta
 		}
 	}
 
-	err = stats.RecordWithTags(ctx, []tag.Mutator{tag.Upsert(consensus.TagPhase, "phase 21")}, consensus.ConsensusPacketsRecv.M(int64(len(results))))
+	err = stats.RecordWithTags(ctx, []tag.Mutator{tag.Upsert(consensus.TagPhase, "phase 21")}, consensus.PacketsRecv.M(int64(len(results))))
 	if err != nil {
-		log.Warn("[ NET Consensus phase-2.1 ] failed to record a metric")
+		core.Logger.Warn("[ NET Consensus phase-2.1 ] failed to record a metric")
 	}
 	if len(results) != len(additionalRequests) {
 		return nil, errors.Errorf("[ NET Consensus phase-2.1 ] Failed to receive enough MissingNodeSupplementaryVote responses,"+

@@ -119,7 +119,7 @@ func (sm *StateMatrix) CalculatePhase2(origin core.RecordRef) (*Phase2MatrixStat
 		}
 		if timedOuts > 0 {
 			result.NeedPhase21 = true
-			stats.Record(context.Background(), consensus.ConsensusPhase2TimedOuts.M(int64(timedOuts)))
+			stats.Record(context.Background(), consensus.Phase2TimedOuts.M(int64(timedOuts)))
 		}
 		if currentNeedsPhase21 {
 			err := sm.appendAdditionalRequest(result, j)

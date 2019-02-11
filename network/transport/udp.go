@@ -93,7 +93,7 @@ func (t *udpTransport) send(recvAddress string, data []byte) error {
 
 	log.Debug("udpTransport.send: len = ", len(data))
 	n, err := udpConn.Write(data)
-	stats.Record(context.Background(), consensus.ConsensusSentSize.M(int64(n)))
+	stats.Record(context.Background(), consensus.SentSize.M(int64(n)))
 	return errors.Wrap(err, "Failed to write data")
 }
 
@@ -127,7 +127,7 @@ func (t *udpTransport) Listen(ctx context.Context, started chan struct{}) error 
 			<-t.disconnectFinished
 			return err
 		}
-		stats.Record(ctx, consensus.ConsensusRecvSize.M(int64(n)))
+		stats.Record(ctx, consensus.RecvSize.M(int64(n)))
 
 		go t.handleAcceptedConnection(buf[:n], addr)
 	}
