@@ -124,9 +124,9 @@ discovery_nodes:
 #    keys_file: "scripts/insolard/discoverynodes/23/keys.json"
 #    cert_name: "discovery_cert_23.json"
 
-nodes:
-  -
-    host: "127.0.0.1:63836"
-    role: "virtual"
-    keys_file: "scripts/insolard/nodes/1/keys.json"
-    cert_name: "node_cert_1.json"
+#nodes:
+#  -
+#    host: "127.0.0.1:63836"
+#    role: "virtual"
+#    keys_file: "scripts/insolard/nodes/1/keys.json"
+#    cert_name: "node_cert_1.json"

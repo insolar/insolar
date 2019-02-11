@@ -106,6 +106,8 @@ func (tp *ThirdPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse, state 
 		valid := tp.Calculator.IsValid(proof, state.GlobuleHash, node.PublicKey())
 		if valid {
 			validNodes++
+		} else {
+			logger.Warnf("[ NET Consensus phase-3 ] Failed to validate globule hash from node %s", node.ID())
 		}
 	}
 
