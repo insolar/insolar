@@ -24,14 +24,15 @@ import (
 	"io"
 	"net"
 
-	consensus "github.com/insolar/insolar/consensus/packets"
+	"github.com/insolar/insolar/consensus"
+	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/transport/packet"
 	"github.com/insolar/insolar/network/transport/relay"
 	"github.com/insolar/insolar/network/utils"
 	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
 )
 
 const udpMaxPacketSize = 1400
@@ -45,7 +46,7 @@ type udpTransport struct {
 type udpSerializer struct{}
 
 func (b *udpSerializer) SerializePacket(q *packet.Packet) ([]byte, error) {
-	data, ok := q.Data.(consensus.ConsensusPacket)
+	data, ok := q.Data.(packets.ConsensusPacket)
 	if !ok {
 		return nil, errors.New("could not convert packet to ConsensusPacket type")
 	}
@@ -53,7 +54,7 @@ func (b *udpSerializer) SerializePacket(q *packet.Packet) ([]byte, error) {
 }
 
 func (b *udpSerializer) DeserializePacket(conn io.Reader) (*packet.Packet, error) {
-	data, err := consensus.ExtractPacket(conn)
+	data, err := packets.ExtractPacket(conn)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not convert network datagram to ConsensusPacket")
 	}
@@ -92,7 +93,7 @@ func (t *udpTransport) send(recvAddress string, data []byte) error {
 
 	log.Debug("udpTransport.send: len = ", len(data))
 	n, err := udpConn.Write(data)
-	metrics.ConsensusSentSize.Add(float64(n))
+	stats.Record(context.Background(), consensus.SentSize.M(int64(n)))
 	return errors.Wrap(err, "Failed to write data")
 }
 
@@ -126,7 +127,7 @@ func (t *udpTransport) Listen(ctx context.Context, started chan struct{}) error 
 			<-t.disconnectFinished
 			return err
 		}
-		metrics.ConsensusRecvSize.Add(float64(n))
+		stats.Record(ctx, consensus.RecvSize.M(int64(n)))
 
 		go t.handleAcceptedConnection(buf[:n], addr)
 	}

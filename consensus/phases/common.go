@@ -18,10 +18,13 @@
 package phases
 
 import (
+	"context"
+
+	"github.com/insolar/insolar/consensus"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/merkle"
+	"go.opencensus.io/stats"
 )
 
 func validateProofs(
@@ -38,7 +41,7 @@ func validateProofs(
 		if valid {
 			validProofs[unsyncList.GetActiveNode(nodeID)] = proof
 		} else {
-			metrics.ConsensusFailedCheckProof.Inc()
+			stats.Record(context.Background(), consensus.FailedCheckProof.M(1))
 			faultProofs[nodeID] = proof
 		}
 	}

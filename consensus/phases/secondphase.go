@@ -20,15 +20,17 @@ package phases
 import (
 	"context"
 
+	"github.com/insolar/insolar/consensus"
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/merkle"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
+	"go.opencensus.io/tag"
 	"go.opencensus.io/trace"
 )
 
@@ -86,7 +88,10 @@ func (sp *SecondPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse, state
 		return nil, errors.Wrap(err, "[ NET Consensus phase-2.0 ] Failed to exchange packets")
 	}
 	logger.Infof("[ NET Consensus phase-2.0 ] Received responses: %d/%d", len(packets), len(activeNodes))
-	metrics.ConsensusPacketsRecv.WithLabelValues("phase 2").Add(float64(len(packets)))
+	err = stats.RecordWithTags(ctx, []tag.Mutator{tag.Upsert(consensus.TagPhase, "phase 2")}, consensus.PacketsRecv.M(int64(len(packets))))
+	if err != nil {
+		logger.Warn("[ NET Consensus phase-2.0 ] failed to record a metric")
+	}
 
 	origin := sp.NodeKeeper.GetOrigin().ID()
 	stateMatrix := NewStateMatrix(state.UnsyncList)
@@ -165,7 +170,7 @@ func (sp *SecondPhaseImpl) Execute21(ctx context.Context, pulse *core.Pulse, sta
 	ctx, span := instracer.StartSpan(ctx, "SecondPhase.Execute21")
 	span.AddAttributes(trace.Int64Attribute("pulse", int64(state.PulseEntry.Pulse.PulseNumber)))
 	defer span.End()
-	metrics.ConsensusPhase21Exec.Inc()
+	stats.Record(ctx, consensus.Phase21Exec.M(1))
 	additionalRequests := state.MatrixState.AdditionalRequestsPhase2
 
 	logger := inslogger.FromContext(ctx)
@@ -199,7 +204,10 @@ func (sp *SecondPhaseImpl) Execute21(ctx context.Context, pulse *core.Pulse, sta
 		}
 	}
 
-	metrics.ConsensusPacketsRecv.WithLabelValues("phase 21").Add(float64(len(results)))
+	err = stats.RecordWithTags(ctx, []tag.Mutator{tag.Upsert(consensus.TagPhase, "phase 21")}, consensus.PacketsRecv.M(int64(len(results))))
+	if err != nil {
+		logger.Warn("[ NET Consensus phase-2.1 ] failed to record a metric")
+	}
 	if len(results) != len(additionalRequests) {
 		return nil, errors.Errorf("[ NET Consensus phase-2.1 ] Failed to receive enough MissingNodeSupplementaryVote responses,"+
 			" received: %d/%d", len(results), len(additionalRequests))
