@@ -2,7 +2,7 @@ BIN_DIR ?= bin
 ARTIFACTS_DIR ?= .artefacts
 INSOLAR = insolar
 INSOLARD = insolard
-INSGOCC = insgocc
+INSGOCC = $(BIN_DIR)/insgocc
 PULSARD = pulsard
 INSGORUND = insgorund
 BENCHMARK = benchmark
@@ -87,9 +87,8 @@ $(INSOLARD):
 $(INSOLAR):
 	go build -o $(BIN_DIR)/$(INSOLAR) -ldflags "${LDFLAGS}" cmd/insolar/*.go
 
-.PHONY: $(INSGOCC)
 $(INSGOCC): cmd/insgocc/insgocc.go logicrunner/goplugin/preprocessor
-	go build -o $(BIN_DIR)/$(INSGOCC) -ldflags "${LDFLAGS}" cmd/insgocc/*.go
+	go build -o $(INSGOCC) -ldflags "${LDFLAGS}" cmd/insgocc/*.go
 
 .PHONY: $(PULSARD)
 $(PULSARD):
