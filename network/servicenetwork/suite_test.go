@@ -376,7 +376,7 @@ func (p *pulseManagerMock) Set(ctx context.Context, pulse core.Pulse, persist bo
 	p.pulse = pulse
 	p.lock.Unlock()
 
-	return p.keeper.MoveSyncToActive()
+	return p.keeper.MoveSyncToActive(ctx)
 }
 
 // preInitNode inits previously created node with mocks and external dependencies

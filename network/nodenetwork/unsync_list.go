@@ -36,6 +36,7 @@ func copyMap(m map[core.RecordRef]core.Node) map[core.RecordRef]core.Node {
 }
 
 type unsyncList struct {
+	length      int
 	origin      core.Node
 	activeNodes map[core.RecordRef]core.Node
 	claims      map[core.RecordRef][]consensus.ReferendumClaim
@@ -67,7 +68,7 @@ func (ul *unsyncList) ApproveSync(sync []core.RecordRef) {
 	for nodeID := range ul.activeNodes {
 		prevActive = append(prevActive, nodeID)
 	}
-	diff := diffList(prevActive, sync)
+	diff := removeFromList(prevActive, sync)
 	for _, node := range diff {
 		ul.removeNode(node)
 	}
@@ -89,8 +90,9 @@ func (ul *unsyncList) GetProof(nodeID core.RecordRef) *consensus.NodePulseProof 
 	return ul.proofs[nodeID]
 }
 
-func newUnsyncList(origin core.Node, activeNodesSorted []core.Node) *unsyncList {
+func newUnsyncList(origin core.Node, activeNodesSorted []core.Node, length int) *unsyncList {
 	result := &unsyncList{
+		length:      length,
 		origin:      origin,
 		indexToRef:  make(map[int]core.RecordRef, len(activeNodesSorted)),
 		refToIndex:  make(map[core.RecordRef]int, len(activeNodesSorted)),
@@ -242,20 +244,15 @@ func (ul *unsyncList) RefToIndex(nodeID core.RecordRef) (int, error) {
 }
 
 func (ul *unsyncList) Length() int {
-	return len(ul.activeNodes)
+	return ul.length
 }
 
 type sparseUnsyncList struct {
 	unsyncList
-	capacity int
 }
 
 func newSparseUnsyncList(origin core.Node, capacity int) *sparseUnsyncList {
-	return &sparseUnsyncList{unsyncList: *newUnsyncList(origin, nil), capacity: capacity}
-}
-
-func (ul *sparseUnsyncList) Length() int {
-	return ul.capacity
+	return &sparseUnsyncList{unsyncList: *newUnsyncList(origin, nil, capacity)}
 }
 
 func (ul *sparseUnsyncList) AddClaims(claims map[core.RecordRef][]consensus.ReferendumClaim) error {

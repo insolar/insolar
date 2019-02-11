@@ -22,6 +22,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
@@ -65,7 +66,6 @@ type ServiceNetwork struct {
 	PhaseManager phases.PhaseManager `inject:"subcomponent"`
 	Controller   network.Controller  `inject:"subcomponent"`
 
-	// fakePulsar *fakepulsar.FakePulsar
 	isGenesis   bool
 	isDiscovery bool
 	skip        int
@@ -167,7 +167,6 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		return errors.Wrap(err, "Failed to init internal components")
 	}
 
-	// n.fakePulsar = fakepulsar.NewFakePulsar(n, time.Duration(n.cfg.Pulsar.PulseTime)*time.Millisecond)
 	return nil
 }
 
@@ -190,9 +189,7 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "Failed to bootstrap network")
 	}
-	// if !n.isGenesis {
-	// 	n.fakePulsar.Start(ctx, result.FirstPulseTime)
-	// }
+
 	logger.Info("Service network started")
 	return nil
 }
@@ -218,6 +215,8 @@ func (n *ServiceNetwork) Stop(ctx context.Context) error {
 }
 
 func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse core.Pulse) {
+	currentTime := time.Now()
+
 	n.lock.Lock()
 	defer n.lock.Unlock()
 
@@ -244,64 +243,38 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse core.Pulse) {
 
 	currentPulse, err := n.PulseStorage.Current(ctx)
 	if err != nil {
-		panic(errors.Wrap(err, "Could not get current pulse"))
+		logger.Fatalf("Could not get current pulse: %s", err.Error())
 	}
-
-	// Working on early network state, ready for fake pulses
-	// if isFakePulse(&newPulse) && !fakePulseAllowed(n.NetworkSwitcher.GetState()) {
-	// 	logger.Infof("Got fake pulse on invalid network state. Current: %+v. New: %+v", currentPulse, newPulse)
-	// 	return
-	// }
 
 	if !isNextPulse(currentPulse, &newPulse) {
 		logger.Infof("Incorrect pulse number. Current: %+v. New: %+v", currentPulse, newPulse)
 		return
 	}
 
-	// Got real pulse
-	// if isFakePulse(currentPulse) && !isFakePulse(&newPulse) {
-	// 	n.fakePulsar.Stop(ctx)
-	// }
-
 	err = n.NetworkSwitcher.OnPulse(ctx, newPulse)
 	if err != nil {
 		logger.Error(errors.Wrap(err, "Failed to call OnPulse on NetworkSwitcher"))
 	}
 
+	logger.Debugf("Before set new current pulse number: %d", newPulse.PulseNumber)
 	err = n.PulseManager.Set(ctx, newPulse, n.NetworkSwitcher.GetState() == core.CompleteNetworkState)
 	if err != nil {
-		panic(errors.Wrap(err, "Failed to set newPulse"))
+		logger.Fatalf("Failed to set new pulse: %s", err.Error())
 	}
-
 	logger.Infof("Set new current pulse number: %d", newPulse.PulseNumber)
-	go n.phaseManagerOnPulse(ctx, newPulse)
+
+	go n.phaseManagerOnPulse(ctx, newPulse, currentTime)
 }
 
-func (n *ServiceNetwork) phaseManagerOnPulse(ctx context.Context, newPulse core.Pulse) {
+func (n *ServiceNetwork) phaseManagerOnPulse(ctx context.Context, newPulse core.Pulse, pulseStartTime time.Time) {
 	logger := inslogger.FromContext(ctx)
 
-	if err := n.PhaseManager.OnPulse(ctx, &newPulse); err != nil {
+	if err := n.PhaseManager.OnPulse(ctx, &newPulse, pulseStartTime); err != nil {
 		logger.Error("Failed to pass consensus: " + err.Error())
 		n.TerminationHandler.Abort()
 	}
 }
 
-// func isFakePulse(newPulse *core.Pulse) bool {
-// 	return newPulse.EpochPulseNumber == -1
-// }
-//
-// func isNewEpoch(currentPulse, newPulse *core.Pulse) bool {
-// 	return newPulse.EpochPulseNumber > currentPulse.EpochPulseNumber
-// }
-
 func isNextPulse(currentPulse, newPulse *core.Pulse) bool {
 	return newPulse.PulseNumber > currentPulse.PulseNumber && newPulse.PulseNumber >= currentPulse.NextPulseNumber
 }
-
-// func fakePulseStarted(currentPulse, newPulse *core.Pulse) bool {
-// 	return isFakePulse(newPulse) && currentPulse.EpochPulseNumber > -1
-// }
-//
-// func fakePulseAllowed(state core.NetworkState) bool {
-// 	return state == core.VoidNetworkState || state == core.NoNetworkState
-// }

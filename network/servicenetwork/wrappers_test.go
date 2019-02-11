@@ -19,6 +19,7 @@ package servicenetwork
 
 import (
 	"context"
+	"time"
 
 	consensus "github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/consensus/phases"
@@ -57,8 +58,8 @@ type phaseManagerWrapper struct {
 	result   chan error
 }
 
-func (p *phaseManagerWrapper) OnPulse(ctx context.Context, pulse *core.Pulse) error {
-	res := p.original.OnPulse(ctx, pulse)
+func (p *phaseManagerWrapper) OnPulse(ctx context.Context, pulse *core.Pulse, pulseStartTime time.Time) error {
+	res := p.original.OnPulse(ctx, pulse, pulseStartTime)
 	p.result <- res
 	return res
 }
@@ -145,6 +146,6 @@ func (n *nodeKeeperWrapper) Sync(list network.UnsyncList) {
 	n.original.Sync(list)
 }
 
-func (n *nodeKeeperWrapper) MoveSyncToActive() error {
-	return n.original.MoveSyncToActive()
+func (n *nodeKeeperWrapper) MoveSyncToActive(ctx context.Context) error {
+	return n.original.MoveSyncToActive(ctx)
 }

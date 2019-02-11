@@ -19,13 +19,11 @@ package phases
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/merkle"
@@ -40,17 +38,18 @@ type SecondPhase interface {
 }
 
 func NewSecondPhase() SecondPhase {
-	return &secondPhase{}
+	return &SecondPhaseImpl{}
 }
 
-type secondPhase struct {
+type SecondPhaseImpl struct {
 	NodeKeeper   network.NodeKeeper       `inject:""`
 	Calculator   merkle.Calculator        `inject:""`
 	Communicator Communicator             `inject:""`
 	Cryptography core.CryptographyService `inject:""`
 }
 
-func (sp *secondPhase) Execute(ctx context.Context, pulse *core.Pulse, state *FirstPhaseState) (*SecondPhaseState, error) {
+func (sp *SecondPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse, state *FirstPhaseState) (*SecondPhaseState, error) {
+	logger := inslogger.FromContext(ctx)
 	ctx, span := instracer.StartSpan(ctx, "SecondPhase.Execute")
 	span.AddAttributes(trace.Int64Attribute("pulse", int64(state.PulseEntry.Pulse.PulseNumber)))
 	defer span.End()
@@ -68,25 +67,25 @@ func (sp *secondPhase) Execute(ctx context.Context, pulse *core.Pulse, state *Fi
 	globuleHash, globuleProof, err := sp.Calculator.GetGlobuleProof(entry)
 
 	if err != nil {
-		return nil, errors.Wrap(err, "[ SecondPhase ] Failed to calculate globule proof")
+		return nil, errors.Wrap(err, "[ NET Consensus phase-2.0 ] Failed to calculate globule proof")
 	}
 
 	packet := packets.NewPhase2Packet(pulse.PulseNumber)
 	err = packet.SetGlobuleHashSignature(globuleProof.Signature.Bytes())
 	if err != nil {
-		return nil, errors.Wrap(err, "[ SecondPhase ] Failed to set globule proof in Phase2Packet")
+		return nil, errors.Wrap(err, "[ NET Consensus phase-2.0 ] Failed to set globule proof in Phase2Packet")
 	}
 	bitset, err := sp.generatePhase2Bitset(state.UnsyncList, state.ValidProofs)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ SecondPhase ] Failed to generate bitset for Phase2Packet")
+		return nil, errors.Wrap(err, "[ NET Consensus phase-2.0 ] Failed to generate bitset for Phase2Packet")
 	}
 	packet.SetBitSet(bitset)
 	activeNodes := state.UnsyncList.GetActiveNodes()
 	packets, err := sp.Communicator.ExchangePhase2(ctx, state.UnsyncList, activeNodes, packet)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ SecondPhase ] Failed to exchange packets on phase 2")
+		return nil, errors.Wrap(err, "[ NET Consensus phase-2.0 ] Failed to exchange packets")
 	}
-	inslogger.FromContext(ctx).Infof("[ SecondPhase ] received responses: %d/%d", len(packets), len(activeNodes))
+	logger.Infof("[ NET Consensus phase-2.0 ] Received responses: %d/%d", len(packets), len(activeNodes))
 	metrics.ConsensusPacketsRecv.WithLabelValues("phase 2").Add(float64(len(packets)))
 
 	origin := sp.NodeKeeper.GetOrigin().ID()
@@ -98,20 +97,20 @@ func (sp *secondPhase) Execute(ctx context.Context, pulse *core.Pulse, state *Fi
 			err = sp.checkPacketSignature(packet, ref, state.UnsyncList)
 		}
 		if err != nil {
-			inslogger.FromContext(ctx).Warnf("Failed to check phase2 packet signature from %s: %s", ref, err.Error())
+			logger.Warnf("[ NET Consensus phase-2.0 ] Failed to check phase2 packet signature from %s: %s", ref, err.Error())
 			continue
 		}
 		state.UnsyncList.SetGlobuleHashSignature(ref, packet.GetGlobuleHashSignature())
 		err = stateMatrix.ApplyBitSet(ref, packet.GetBitSet())
 		if err != nil {
-			log.Warnf("[ SecondPhase ] Could not apply bitset from node %s: %s", ref, err.Error())
+			logger.Warnf("[ NET Consensus phase-2.0 ] Could not apply bitset from node %s: %s", ref, err.Error())
 			continue
 		}
 	}
 
 	matrixCalculation, err := stateMatrix.CalculatePhase2(origin)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ SecondPhase ] Failed to calculate bitset matrix consensus result")
+		return nil, errors.Wrap(err, "[ NET Consensus phase-2.0 ] Failed to calculate bitset matrix consensus result")
 	}
 
 	if len(matrixCalculation.TimedOut) > 0 {
@@ -147,7 +146,7 @@ func (sp *secondPhase) Execute(ctx context.Context, pulse *core.Pulse, state *Fi
 		globuleHash, globuleProof, err = sp.Calculator.GetGlobuleProof(entry)
 
 		if err != nil {
-			return nil, errors.Wrap(err, "[ SecondPhase ] Failed to calculate globule proof")
+			return nil, errors.Wrap(err, "[ NET Consensus phase-2.0 ] Failed to calculate globule proof")
 		}
 	}
 
@@ -162,27 +161,29 @@ func (sp *secondPhase) Execute(ctx context.Context, pulse *core.Pulse, state *Fi
 	}, nil
 }
 
-func (sp *secondPhase) Execute21(ctx context.Context, pulse *core.Pulse, state *SecondPhaseState) (*SecondPhaseState, error) {
+func (sp *SecondPhaseImpl) Execute21(ctx context.Context, pulse *core.Pulse, state *SecondPhaseState) (*SecondPhaseState, error) {
 	ctx, span := instracer.StartSpan(ctx, "SecondPhase.Execute21")
 	span.AddAttributes(trace.Int64Attribute("pulse", int64(state.PulseEntry.Pulse.PulseNumber)))
 	defer span.End()
 	metrics.ConsensusPhase21Exec.Inc()
 	additionalRequests := state.MatrixState.AdditionalRequestsPhase2
 
-	count := len(additionalRequests)
+	logger := inslogger.FromContext(ctx)
+	logger.Infof("[ NET Consensus phase-2.1 ] Additional requests needed: %d", len(additionalRequests))
+
 	results := make(map[uint16]*packets.MissingNodeSupplementaryVote)
 	claims := make(map[uint16]*packets.MissingNodeClaim)
 
 	packet := packets.NewPhase2Packet(pulse.PulseNumber)
 	err := packet.SetGlobuleHashSignature(state.GlobuleProof.Signature.Bytes())
 	if err != nil {
-		return nil, errors.Wrap(err, "[ Phase 2.1 ] Failed to set pulse proof in Phase2Packet.")
+		return nil, errors.Wrap(err, "[ NET Consensus phase-2.1 ] Failed to set pulse proof in Phase2Packet")
 	}
 	packet.SetBitSet(state.BitSet)
 
 	voteAnswers, err := sp.Communicator.ExchangePhase21(ctx, state.UnsyncList, packet, additionalRequests)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ Phase 2.1 ] Failed to send additional requests on phase 2.1")
+		return nil, errors.Wrap(err, "[ NET Consensus phase-2.1 ] Failed to send additional requests")
 	}
 
 	if len(additionalRequests) == 0 {
@@ -199,9 +200,9 @@ func (sp *secondPhase) Execute21(ctx context.Context, pulse *core.Pulse, state *
 	}
 
 	metrics.ConsensusPacketsRecv.WithLabelValues("phase 21").Add(float64(len(results)))
-	if len(results) != count {
-		return nil, errors.New(fmt.Sprintf("[ Phase 2.1 ] Failed to receive enough MissingNodeSupplementaryVote responses,"+
-			" received: %d/%d", len(results), count))
+	if len(results) != len(additionalRequests) {
+		return nil, errors.Errorf("[ NET Consensus phase-2.1 ] Failed to receive enough MissingNodeSupplementaryVote responses,"+
+			" received: %d/%d", len(results), len(additionalRequests))
 	}
 
 	origin := sp.NodeKeeper.GetOrigin().ID()
@@ -209,7 +210,7 @@ func (sp *secondPhase) Execute21(ctx context.Context, pulse *core.Pulse, state *
 	for index, result := range results {
 		node, err := nodenetwork.ClaimToNode("", &result.NodeClaimUnsigned)
 		if err != nil {
-			return nil, errors.Wrapf(err, "[ Phase 2.1 ] Failed to convert claim to node, ref: %s",
+			return nil, errors.Wrapf(err, "[ NET Consensus phase-2.1 ] Failed to convert claim to node, ref: %s",
 				result.NodeClaimUnsigned.NodeRef)
 		}
 
@@ -222,13 +223,13 @@ func (sp *secondPhase) Execute21(ctx context.Context, pulse *core.Pulse, state *
 
 		valid := validateProof(sp.Calculator, state.UnsyncList, state.PulseHash, node.ID(), merkleProof)
 		if !valid {
-			inslogger.FromContext(ctx).Warnf("Failed to validate proof from %s", node.ID())
+			logger.Warnf("[ NET Consensus phase-2.1 ] Failed to validate proof from %s", node.ID())
 			continue
 		}
 
 		err = state.Matrix.ReceivedProofFromNode(origin, node.ID())
 		if err != nil {
-			return nil, errors.Wrapf(err, "[ Phase 2.1 ] Failed to assign proof from node %s to state matrix",
+			return nil, errors.Wrapf(err, "[ NET Consensus phase-2.1 ] Failed to assign proof from node %s to state matrix",
 				result.NodeClaimUnsigned.NodeRef)
 		}
 		state.UnsyncList.AddNode(node, index)
@@ -239,13 +240,13 @@ func (sp *secondPhase) Execute21(ctx context.Context, pulse *core.Pulse, state *
 
 	err = state.BitSet.ApplyChanges(bitsetChanges, state.UnsyncList)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ Phase 2.1 ] Failed to apply changes to current bitset")
+		return nil, errors.Wrap(err, "[ NET Consensus phase-2.1 ] Failed to apply changes to current bitset")
 	}
 	claimMap := make(map[core.RecordRef][]packets.ReferendumClaim)
 	for index, claim := range claims {
 		ref, err := state.UnsyncList.IndexToRef(int(index))
 		if err != nil {
-			return nil, errors.Wrapf(err, "[ Phase 2.1 ] Failed to map index %d to ref", index)
+			return nil, errors.Wrapf(err, "[ NET Consensus phase-2.1 ] Failed to map index %d to ref", index)
 		}
 		list := claimMap[ref]
 		if list == nil {
@@ -255,16 +256,16 @@ func (sp *secondPhase) Execute21(ctx context.Context, pulse *core.Pulse, state *
 		claimMap[ref] = list
 	}
 	if err = state.UnsyncList.AddClaims(claimMap); err != nil {
-		return nil, errors.Wrapf(err, "[ Phase 2.1 ] Failed to add claims")
+		return nil, errors.Wrap(err, "[ NET Consensus phase-2.1 ] Failed to add claims")
 	}
 	state.MatrixState, err = state.Matrix.CalculatePhase2(origin)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ Phase 2.1 ] Failed to calculate matrix state")
+		return nil, errors.Wrap(err, "[ NET Consensus phase-2.1 ] Failed to calculate matrix state")
 	}
 	addReqCount := len(state.MatrixState.AdditionalRequestsPhase2)
 	if addReqCount != 0 {
-		return nil, errors.New(fmt.Sprintf("[ Phase 2.1 ] Failed to get enough data during phase 2.1 "+
-			"(still need additional %d requests)", addReqCount))
+		return nil, errors.Errorf("[ NET Consensus phase-2.1 ] Failed to get enough data during phase 2.1 "+
+			"(still need additional %d requests)", addReqCount)
 	}
 
 	prevCloudHash := sp.NodeKeeper.GetCloudHash()
@@ -277,7 +278,7 @@ func (sp *secondPhase) Execute21(ctx context.Context, pulse *core.Pulse, state *
 	}
 	state.GlobuleHash, state.GlobuleProof, err = sp.Calculator.GetGlobuleProof(entry)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ Phase 2.1 ] Failed to calculate globule proof")
+		return nil, errors.Wrap(err, "[ NET Consensus phase-2.1 ] Failed to calculate globule proof")
 	}
 	var ghs packets.GlobuleHashSignature
 	copy(ghs[:], state.GlobuleProof.Signature.Bytes()[:packets.SignatureLength])
@@ -286,7 +287,7 @@ func (sp *secondPhase) Execute21(ctx context.Context, pulse *core.Pulse, state *
 	return state, nil
 }
 
-func (sp *secondPhase) generatePhase2Bitset(list network.UnsyncList, proofs map[core.Node]*merkle.PulseProof) (packets.BitSet, error) {
+func (sp *SecondPhaseImpl) generatePhase2Bitset(list network.UnsyncList, proofs map[core.Node]*merkle.PulseProof) (packets.BitSet, error) {
 	bitset, err := packets.NewBitSet(list.Length())
 	if err != nil {
 		return nil, err
@@ -303,7 +304,7 @@ func (sp *secondPhase) generatePhase2Bitset(list network.UnsyncList, proofs map[
 	return bitset, nil
 }
 
-func (sp *secondPhase) checkPacketSignature(packet *packets.Phase2Packet, recordRef core.RecordRef, unsyncList network.UnsyncList) error {
+func (sp *SecondPhaseImpl) checkPacketSignature(packet *packets.Phase2Packet, recordRef core.RecordRef, unsyncList network.UnsyncList) error {
 	activeNode := unsyncList.GetActiveNode(recordRef)
 	if activeNode == nil {
 		return errors.New("failed to get active node")

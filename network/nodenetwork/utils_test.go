@@ -24,27 +24,43 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_diffList(t *testing.T) {
-	old := []core.RecordRef{{0}, {1}, {2}, {3}, {4}}
-	new := []core.RecordRef{{0}, {2}}
-	expected := []core.RecordRef{{1}, {3}, {4}}
+func Test_removeFromList(t *testing.T) {
+	// table driven tests
+	tests := map[string]struct {
+		list          []core.RecordRef
+		nodesToRemove []core.RecordRef
+		expected      []core.RecordRef
+	}{
+		"simpleDiff": {
+			list:          []core.RecordRef{{0}, {1}, {2}, {3}, {4}},
+			nodesToRemove: []core.RecordRef{{0}, {2}},
+			expected:      []core.RecordRef{{1}, {3}, {4}},
+		},
+		"equals": {
+			list:          []core.RecordRef{{1}, {2}, {3}},
+			nodesToRemove: []core.RecordRef{{1}, {2}, {3}},
+			expected:      []core.RecordRef{},
+		},
+		"emptyRemoveList": {
+			list:          []core.RecordRef{{1}, {2}, {3}},
+			nodesToRemove: []core.RecordRef{},
+			expected:      []core.RecordRef{{1}, {2}, {3}},
+		},
+		"emptyList": {
+			list:          []core.RecordRef{},
+			nodesToRemove: []core.RecordRef{{1}, {2}, {3}},
+			expected:      []core.RecordRef{},
+		},
+		"allEmpty": {
+			list:          []core.RecordRef{},
+			nodesToRemove: []core.RecordRef{},
+			expected:      []core.RecordRef{},
+		},
+	}
 
-	assert.Equal(t, expected, diffList(old, new))
-
-	old = []core.RecordRef{{4}, {0}, {2}, {3}, {1}}
-	new = []core.RecordRef{{2}, {0}}
-	expected = []core.RecordRef{{1}, {3}, {4}}
-
-	assert.Equal(t, expected, diffList(old, new))
-
-	old = []core.RecordRef{{1}, {2}, {3}, {4}}
-	new = []core.RecordRef{{0}, {2}, {3}}
-	expected = []core.RecordRef{{1}, {4}}
-
-	assert.Equal(t, expected, diffList(old, new))
-
-	old = []core.RecordRef{{1}, {2}, {3}}
-	new = []core.RecordRef{{1}, {2}, {3}}
-
-	assert.Empty(t, diffList(old, new))
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, test.expected, removeFromList(test.list, test.nodesToRemove))
+		})
+	}
 }

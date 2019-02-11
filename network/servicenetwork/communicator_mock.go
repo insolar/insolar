@@ -33,6 +33,10 @@ const (
 	PartialNegative1Phase
 	PartialPositive2Phase
 	PartialNegative2Phase
+	PartialPositive3Phase
+	PartialNegative3Phase
+	PartialPositive23Phase
+	PartialNegative23Phase
 )
 
 type CommunicatorMock struct {
@@ -52,9 +56,7 @@ func (cm *CommunicatorMock) ExchangePhase1(
 		return nil, err
 	}
 	switch cm.testOpt {
-	case PartialNegative1Phase:
-		fallthrough
-	case PartialPositive1Phase:
+	case PartialNegative1Phase, PartialPositive1Phase:
 		delete(pckts, cm.ignoreFrom)
 	}
 	return pckts, nil
@@ -66,9 +68,7 @@ func (cm *CommunicatorMock) ExchangePhase2(ctx context.Context, list network.Uns
 		return nil, err
 	}
 	switch cm.testOpt {
-	case PartialPositive2Phase:
-		fallthrough
-	case PartialNegative2Phase:
+	case PartialPositive2Phase, PartialNegative2Phase, PartialPositive23Phase, PartialNegative23Phase:
 		delete(pckts, cm.ignoreFrom)
 	}
 	return pckts, nil
@@ -79,7 +79,15 @@ func (cm *CommunicatorMock) ExchangePhase21(ctx context.Context, list network.Un
 }
 
 func (cm *CommunicatorMock) ExchangePhase3(ctx context.Context, participants []core.Node, packet *packets.Phase3Packet) (map[core.RecordRef]*packets.Phase3Packet, error) {
-	return cm.communicator.ExchangePhase3(ctx, participants, packet)
+	pckts, err := cm.communicator.ExchangePhase3(ctx, participants, packet)
+	if err != nil {
+		return nil, err
+	}
+	switch cm.testOpt {
+	case PartialPositive3Phase, PartialNegative3Phase, PartialPositive23Phase, PartialNegative23Phase:
+		delete(pckts, cm.ignoreFrom)
+	}
+	return pckts, nil
 }
 
 func (cm *CommunicatorMock) Init(ctx context.Context) error {

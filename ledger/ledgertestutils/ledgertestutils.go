@@ -149,7 +149,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 	gilMock.ReleaseFunc = func(context.Context) {}
 
 	alsMock := testutils.NewActiveListSwapperMock(t)
-	alsMock.MoveSyncToActiveFunc = func() error { return nil }
+	alsMock.MoveSyncToActiveFunc = func(context.Context) error { return nil }
 
 	handler.Bus = c.MessageBus
 

@@ -23,6 +23,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/insolar/insolar/instrumentation/inslogger"
+
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/consensus"
 	consensusPackets "github.com/insolar/insolar/consensus/packets"
@@ -96,7 +98,7 @@ func NewNodeKeeper(origin core.Node) network.NodeKeeper {
 		indexShortID: make(map[core.ShortNodeID]core.Node),
 		tempMapR:     make(map[core.RecordRef]*host.Host),
 		tempMapS:     make(map[core.ShortNodeID]*host.Host),
-		sync:         newUnsyncList(origin, []core.Node{}),
+		sync:         newUnsyncList(origin, []core.Node{}, 0),
 	}
 	result.SetState(network.Ready)
 	return result
@@ -159,7 +161,7 @@ func (nk *nodekeeper) Wipe(isDiscovery bool) {
 		nk.state = network.Ready
 	}
 	nk.syncLock.Lock()
-	nk.sync = newUnsyncList(nk.origin, []core.Node{})
+	nk.sync = newUnsyncList(nk.origin, []core.Node{}, 0)
 	nk.syncLock.Unlock()
 }
 
@@ -346,7 +348,8 @@ func (nk *nodekeeper) NodesJoinedDuringPreviousPulse() bool {
 }
 
 func (nk *nodekeeper) GetUnsyncList() network.UnsyncList {
-	return newUnsyncList(nk.origin, nk.GetActiveNodes())
+	activeNodes := nk.GetActiveNodes()
+	return newUnsyncList(nk.origin, activeNodes, len(activeNodes))
 }
 
 func (nk *nodekeeper) GetSparseUnsyncList(length int) network.UnsyncList {
@@ -373,7 +376,7 @@ func (nk *nodekeeper) Sync(list network.UnsyncList) {
 	nk.sync = list
 }
 
-func (nk *nodekeeper) MoveSyncToActive() error {
+func (nk *nodekeeper) MoveSyncToActive(ctx context.Context) error {
 	nk.activeLock.Lock()
 	nk.syncLock.Lock()
 	defer func() {
@@ -395,7 +398,7 @@ func (nk *nodekeeper) MoveSyncToActive() error {
 		nk.gracefullyStop()
 	}
 
-	log.Infof("[ MoveSyncToActive ] New active list confirmed. Active list size: %d -> %d",
+	inslogger.FromContext(ctx).Infof("[ MoveSyncToActive ] New active list confirmed. Active list size: %d -> %d",
 		len(nk.active), len(mergeResult.ActiveList))
 	nk.active = mergeResult.ActiveList
 	stats.Record(context.Background(), consensus.ConsensusActiveNodes.M(int64(len(nk.active))))

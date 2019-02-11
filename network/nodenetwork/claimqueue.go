@@ -18,11 +18,9 @@
 package nodenetwork
 
 import (
-	"context"
 	"sync"
 
 	"github.com/insolar/insolar/consensus/packets"
-	"github.com/insolar/insolar/instrumentation/instracer"
 )
 
 type claimQueue struct {
@@ -35,11 +33,7 @@ func newClaimQueue() *claimQueue {
 }
 
 func (cq *claimQueue) Pop() packets.ReferendumClaim {
-	ctx, span := instracer.StartSpan(context.Background(), "claimQueue.Pop wait lock")
 	cq.lock.Lock()
-	span.End()
-	_, span = instracer.StartSpan(ctx, "claimQueue.Pop lock")
-	defer span.End()
 	defer cq.lock.Unlock()
 
 	if len(cq.data) == 0 {
@@ -51,11 +45,7 @@ func (cq *claimQueue) Pop() packets.ReferendumClaim {
 }
 
 func (cq *claimQueue) Front() packets.ReferendumClaim {
-	ctx, span := instracer.StartSpan(context.Background(), "claimQueue.Front wait lock")
 	cq.lock.RLock()
-	span.End()
-	_, span = instracer.StartSpan(ctx, "claimQueue.Front lock")
-	defer span.End()
 	defer cq.lock.RUnlock()
 
 	if len(cq.data) == 0 {
@@ -65,22 +55,14 @@ func (cq *claimQueue) Front() packets.ReferendumClaim {
 }
 
 func (cq *claimQueue) Length() int {
-	ctx, span := instracer.StartSpan(context.Background(), "claimQueue.Length wait lock")
 	cq.lock.RLock()
-	span.End()
-	_, span = instracer.StartSpan(ctx, "claimQueue.Length lock")
-	defer span.End()
 	defer cq.lock.RUnlock()
 
 	return len(cq.data)
 }
 
 func (cq *claimQueue) Push(claim packets.ReferendumClaim) {
-	ctx, span := instracer.StartSpan(context.Background(), "claimQueue.Push wait lock")
 	cq.lock.Lock()
-	span.End()
-	_, span = instracer.StartSpan(ctx, "claimQueue.Push lock")
-	defer span.End()
 	defer cq.lock.Unlock()
 
 	cq.data = append(cq.data, claim)

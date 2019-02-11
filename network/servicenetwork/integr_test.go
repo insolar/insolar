@@ -23,6 +23,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/insolar/insolar/consensus/phases"
 	"github.com/insolar/insolar/core"
@@ -113,7 +114,7 @@ func TestServiceNetworkManyNodes(t *testing.T) {
 type FullTimeoutPhaseManager struct {
 }
 
-func (ftpm *FullTimeoutPhaseManager) OnPulse(ctx context.Context, pulse *core.Pulse) error {
+func (ftpm *FullTimeoutPhaseManager) OnPulse(ctx context.Context, pulse *core.Pulse, pulseStartTime time.Time) error {
 	return nil
 }
 
@@ -183,6 +184,54 @@ func (s *testSuite) TestPartialNegative2PhaseTimeOut() {
 	s.Equal(s.getNodesCount(), len(activeNodes))
 }
 
+func (s *testSuite) TestPartialNegative3PhaseTimeOut() {
+	if len(s.fixture().bootstrapNodes) < consensusMin {
+		s.T().Skip(consensusMinMsg)
+	}
+
+	setCommunicatorMock(s.fixture().bootstrapNodes, PartialNegative3Phase)
+
+	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
+	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount(), len(activeNodes))
+}
+
+func (s *testSuite) TestPartialPositive3PhaseTimeOut() {
+	if len(s.fixture().bootstrapNodes) < consensusMin {
+		s.T().Skip(consensusMinMsg)
+	}
+
+	setCommunicatorMock(s.fixture().bootstrapNodes, PartialPositive3Phase)
+
+	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
+	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount(), len(activeNodes))
+}
+
+func (s *testSuite) TestPartialNegative23PhaseTimeOut() {
+	if len(s.fixture().bootstrapNodes) < consensusMin {
+		s.T().Skip(consensusMinMsg)
+	}
+
+	setCommunicatorMock(s.fixture().bootstrapNodes, PartialNegative23Phase)
+
+	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
+	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount(), len(activeNodes))
+}
+
+func (s *testSuite) TestPartialPositive23PhaseTimeOut() {
+	if len(s.fixture().bootstrapNodes) < consensusMin {
+		s.T().Skip(consensusMinMsg)
+	}
+
+	setCommunicatorMock(s.fixture().bootstrapNodes, PartialPositive23Phase)
+
+	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
+	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount(), len(activeNodes))
+}
+
 func (s *testSuite) TestDiscoveryDown() {
 	if len(s.fixture().bootstrapNodes) < consensusMin {
 		s.T().Skip(consensusMinMsg)
@@ -225,15 +274,18 @@ func setCommunicatorMock(nodes []*networkNode, opt CommunicatorTestOpt) {
 	ref := nodes[0].id
 	timedOutNodesCount := 0
 	switch opt {
-	case PartialNegative1Phase, PartialNegative2Phase:
+	case PartialNegative1Phase, PartialNegative2Phase, PartialNegative3Phase, PartialNegative23Phase:
 		timedOutNodesCount = int(float64(len(nodes)) * 0.6)
-	case PartialPositive1Phase, PartialPositive2Phase:
+	case PartialPositive1Phase, PartialPositive2Phase, PartialPositive3Phase, PartialPositive23Phase:
 		timedOutNodesCount = int(float64(len(nodes)) * 0.2)
 	}
 	// TODO: make these set operations thread-safe somehow (race detector does not like this code)
 	for i := 1; i <= timedOutNodesCount; i++ {
 		comm := nodes[i].serviceNetwork.PhaseManager.(*phaseManagerWrapper).original.(*phases.Phases).FirstPhase.(*phases.FirstPhaseImpl).Communicator
 		wrapper := &CommunicatorMock{communicator: comm, ignoreFrom: ref, testOpt: opt}
-		nodes[i].serviceNetwork.PhaseManager.(*phaseManagerWrapper).original.(*phases.Phases).FirstPhase.(*phases.FirstPhaseImpl).Communicator = wrapper
+		phasemanager := nodes[i].serviceNetwork.PhaseManager.(*phaseManagerWrapper).original.(*phases.Phases)
+		phasemanager.FirstPhase.(*phases.FirstPhaseImpl).Communicator = wrapper
+		phasemanager.SecondPhase.(*phases.SecondPhaseImpl).Communicator = wrapper
+		phasemanager.ThirdPhase.(*phases.ThirdPhaseImpl).Communicator = wrapper
 	}
 }
