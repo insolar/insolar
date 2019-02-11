@@ -735,16 +735,15 @@ func (lr *LogicRunner) getLedgerPendingRequest(ctx context.Context, es *Executio
 	ctx, span := instracer.StartSpan(ctx, "LogicRunner.getLedgerPendingRequest")
 	defer span.End()
 
-	if es.LedgerQueueElement != nil || !es.LedgerHasMoreRequests {
-		return
-	}
-
 	es.getLedgerPendingMutex.Lock()
 	defer es.getLedgerPendingMutex.Unlock()
 
+	es.Lock()
 	if es.LedgerQueueElement != nil || !es.LedgerHasMoreRequests {
+		es.Unlock()
 		return
 	}
+	es.Unlock()
 
 	ledgerHasMore := true
 
