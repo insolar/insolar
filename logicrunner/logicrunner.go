@@ -530,6 +530,7 @@ func (lr *LogicRunner) StartQueueProcessorIfNeeded(
 	inslogger.FromContext(ctx).Debug("Starting a new queue processor")
 	es.QueueProcessorActive = true
 	go lr.ProcessExecutionQueue(ctx, es)
+	go lr.getLedgerPendingRequest(ctx, es, *msg.DefaultTarget().Record())
 
 	return nil
 }
@@ -555,6 +556,7 @@ func (lr *LogicRunner) StartQueueProcessorIfNeededOnPulse(
 	inslogger.FromContext(ctx).Debug("Starting a new queue processor")
 	es.QueueProcessorActive = true
 	go lr.ProcessExecutionQueue(ctx, es)
+	go lr.getLedgerPendingRequest(ctx, es, *ref.Record())
 
 	return nil
 }
