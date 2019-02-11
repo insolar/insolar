@@ -26,7 +26,7 @@ func main() {
 	fatal(err)
 	defer f.Close()
 
-	reg := record.Registry()
+	reg := record.Registered()
 	records := make([]typedRecord, 0, len(reg))
 	for id, rec := range reg {
 		records = append(records, typedRecord{

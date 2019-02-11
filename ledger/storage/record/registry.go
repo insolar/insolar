@@ -11,8 +11,8 @@ func register(id TypeID, r Record) {
 	registry[id] = r
 }
 
-// Registry returns records by type.
-func Registry() map[TypeID]Record {
+// Registered returns records by type.
+func Registered() map[TypeID]Record {
 	res := map[TypeID]Record{}
 	for id, rec := range registry {
 		res[id] = rec
