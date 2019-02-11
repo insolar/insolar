@@ -35,16 +35,16 @@ type Record interface {
 
 func init() {
 	// Never change id constants.
-	register(10, &GenesisRecord{})
-	register(11, &ChildRecord{})
-	register(12, &JetRecord{})
+	register(10, new(GenesisRecord))
+	register(11, new(ChildRecord))
+	register(12, new(JetRecord))
 
-	register(20, &RequestRecord{})
+	register(20, new(RequestRecord))
 
-	register(30, &ResultRecord{})
-	register(31, &TypeRecord{})
-	register(32, &CodeRecord{})
-	register(33, &ObjectActivateRecord{})
-	register(34, &ObjectAmendRecord{})
-	register(35, &DeactivationRecord{})
+	register(30, new(ResultRecord))
+	register(31, new(TypeRecord))
+	register(32, new(CodeRecord))
+	register(33, new(ObjectActivateRecord))
+	register(34, new(ObjectAmendRecord))
+	register(35, new(DeactivationRecord))
 }
