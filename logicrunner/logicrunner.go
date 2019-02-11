@@ -733,7 +733,9 @@ func (lr *LogicRunner) executeOrValidate(
 
 // never call this under es.Lock(), this leads to deadlock
 func (lr *LogicRunner) getLedgerPendingRequest(ctx context.Context, es *ExecutionState, id core.RecordID) {
-	// todo span on whole function?
+	ctx, span := instracer.StartSpan(ctx, "LogicRunner.getLedgerPendingRequest")
+	defer span.End()
+
 	if es.LedgerQueueElement != nil || !es.LedgerHasMoreRequests {
 		return
 	}
@@ -751,7 +753,7 @@ func (lr *LogicRunner) getLedgerPendingRequest(ctx context.Context, es *Executio
 	parcel, err := lr.ArtifactManager.GetPendingRequest(ctx, id)
 	if err != nil {
 		if err != core.ErrNoPendingRequest {
-			// todo log?
+			inslogger.FromContext(ctx).Debug("GetPendingRequest failed with error")
 			return
 		}
 
@@ -765,21 +767,23 @@ func (lr *LogicRunner) getLedgerPendingRequest(ctx context.Context, es *Executio
 		return
 	}
 
+	msg := parcel.Message().(message.IBaseLogicMessage)
+
 	pulse := lr.pulse(ctx).PulseNumber
 	authorized, err := lr.JetCoordinator.IsAuthorized(
 		ctx, core.DynamicRoleVirtualExecutor, id, pulse, lr.JetCoordinator.Me(),
 	)
 	if err != nil {
-		// todo log?
+		inslogger.FromContext(ctx).Debug("Authorization failed with error in getLedgerPendingRequest")
 		return
 	}
 
 	if !authorized {
-		// todo log?
+		inslogger.FromContext(ctx).Debug("pulse changed, can't process abandoned messages for this object")
+		go lr.StartQueueProcessorIfNeededOnPulse(ctx, es, msg.DefaultTarget())
 		return
 	}
 
-	msg := parcel.Message().(message.IBaseLogicMessage)
 	request := msg.GetReference()
 	request.SetRecord(id)
 
@@ -792,7 +796,7 @@ func (lr *LogicRunner) getLedgerPendingRequest(ctx context.Context, es *Executio
 		fromLedger: true,
 	}
 
-	_ = lr.StartQueueProcessorIfNeededOnPulse(ctx, es, msg.DefaultTarget())
+	go lr.StartQueueProcessorIfNeededOnPulse(ctx, es, msg.DefaultTarget())
 }
 
 // ObjectBody is an inner representation of object and all it accessory
