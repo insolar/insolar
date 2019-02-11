@@ -67,7 +67,7 @@ generate:
 
 .PHONY: test_git_no_changes
 test_git_no_changes:
-	ci/scripts/diff.sh
+	ci/scripts/git_diff_without_comments.sh
 
 .PHONY: ensure
 ensure:
