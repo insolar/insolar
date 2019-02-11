@@ -76,7 +76,7 @@ func (pm *Phases) OnPulse(ctx context.Context, pulse *core.Pulse, pulseStartTime
 		return errors.Wrap(err, "[ NET Consensus ] Error executing phase 1")
 	}
 
-	tctx, cancel = contextTimeout(ctx, *pulseDuration, 0.2)
+	tctx, cancel = contextTimeout(ctx, *pulseDuration, 0.05)
 	defer cancel()
 
 	secondPhaseState, err := pm.SecondPhase.Execute(tctx, pulse, firstPhaseState)
@@ -84,7 +84,7 @@ func (pm *Phases) OnPulse(ctx context.Context, pulse *core.Pulse, pulseStartTime
 		return errors.Wrap(err, "[ NET Consensus ] Error executing phase 2.0")
 	}
 
-	tctx, cancel = contextTimeout(ctx, *pulseDuration, 0.2)
+	tctx, cancel = contextTimeout(ctx, *pulseDuration, 0.05)
 	defer cancel()
 
 	secondPhaseState, err = pm.SecondPhase.Execute21(tctx, pulse, secondPhaseState)
@@ -92,7 +92,7 @@ func (pm *Phases) OnPulse(ctx context.Context, pulse *core.Pulse, pulseStartTime
 		return errors.Wrap(err, "[ NET Consensus ] Error executing phase 2.1")
 	}
 
-	tctx, cancel = contextTimeout(ctx, *pulseDuration, 0.2)
+	tctx, cancel = contextTimeout(ctx, *pulseDuration, 0.05)
 	defer cancel()
 
 	thirdPhaseState, err := pm.ThirdPhase.Execute(tctx, pulse, secondPhaseState)
