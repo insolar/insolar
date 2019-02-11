@@ -18,6 +18,16 @@ import (
 type NodeMock struct {
 	t minimock.Tester
 
+	AddressFunc       func() (r string)
+	AddressCounter    uint64
+	AddressPreCounter uint64
+	AddressMock       mNodeMockAddress
+
+	ConsensusAddressFunc       func() (r string)
+	ConsensusAddressCounter    uint64
+	ConsensusAddressPreCounter uint64
+	ConsensusAddressMock       mNodeMockConsensusAddress
+
 	GetGlobuleIDFunc       func() (r core.GlobuleID)
 	GetGlobuleIDCounter    uint64
 	GetGlobuleIDPreCounter uint64
@@ -27,11 +37,6 @@ type NodeMock struct {
 	IDCounter    uint64
 	IDPreCounter uint64
 	IDMock       mNodeMockID
-
-	PhysicalAddressFunc       func() (r string)
-	PhysicalAddressCounter    uint64
-	PhysicalAddressPreCounter uint64
-	PhysicalAddressMock       mNodeMockPhysicalAddress
 
 	PublicKeyFunc       func() (r crypto.PublicKey)
 	PublicKeyCounter    uint64
@@ -62,15 +67,284 @@ func NewNodeMock(t minimock.Tester) *NodeMock {
 		controller.RegisterMocker(m)
 	}
 
+	m.AddressMock = mNodeMockAddress{mock: m}
+	m.ConsensusAddressMock = mNodeMockConsensusAddress{mock: m}
 	m.GetGlobuleIDMock = mNodeMockGetGlobuleID{mock: m}
 	m.IDMock = mNodeMockID{mock: m}
-	m.PhysicalAddressMock = mNodeMockPhysicalAddress{mock: m}
 	m.PublicKeyMock = mNodeMockPublicKey{mock: m}
 	m.RoleMock = mNodeMockRole{mock: m}
 	m.ShortIDMock = mNodeMockShortID{mock: m}
 	m.VersionMock = mNodeMockVersion{mock: m}
 
 	return m
+}
+
+type mNodeMockAddress struct {
+	mock              *NodeMock
+	mainExpectation   *NodeMockAddressExpectation
+	expectationSeries []*NodeMockAddressExpectation
+}
+
+type NodeMockAddressExpectation struct {
+	result *NodeMockAddressResult
+}
+
+type NodeMockAddressResult struct {
+	r string
+}
+
+//Expect specifies that invocation of Node.Address is expected from 1 to Infinity times
+func (m *mNodeMockAddress) Expect() *mNodeMockAddress {
+	m.mock.AddressFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &NodeMockAddressExpectation{}
+	}
+
+	return m
+}
+
+//Return specifies results of invocation of Node.Address
+func (m *mNodeMockAddress) Return(r string) *NodeMock {
+	m.mock.AddressFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &NodeMockAddressExpectation{}
+	}
+	m.mainExpectation.result = &NodeMockAddressResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of Node.Address is expected once
+func (m *mNodeMockAddress) ExpectOnce() *NodeMockAddressExpectation {
+	m.mock.AddressFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &NodeMockAddressExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *NodeMockAddressExpectation) Return(r string) {
+	e.result = &NodeMockAddressResult{r}
+}
+
+//Set uses given function f as a mock of Node.Address method
+func (m *mNodeMockAddress) Set(f func() (r string)) *NodeMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.AddressFunc = f
+	return m.mock
+}
+
+//Address implements github.com/insolar/insolar/core.Node interface
+func (m *NodeMock) Address() (r string) {
+	counter := atomic.AddUint64(&m.AddressPreCounter, 1)
+	defer atomic.AddUint64(&m.AddressCounter, 1)
+
+	if len(m.AddressMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.AddressMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to NodeMock.Address.")
+			return
+		}
+
+		result := m.AddressMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the NodeMock.Address")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.AddressMock.mainExpectation != nil {
+
+		result := m.AddressMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the NodeMock.Address")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.AddressFunc == nil {
+		m.t.Fatalf("Unexpected call to NodeMock.Address.")
+		return
+	}
+
+	return m.AddressFunc()
+}
+
+//AddressMinimockCounter returns a count of NodeMock.AddressFunc invocations
+func (m *NodeMock) AddressMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.AddressCounter)
+}
+
+//AddressMinimockPreCounter returns the value of NodeMock.Address invocations
+func (m *NodeMock) AddressMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.AddressPreCounter)
+}
+
+//AddressFinished returns true if mock invocations count is ok
+func (m *NodeMock) AddressFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.AddressMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.AddressCounter) == uint64(len(m.AddressMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.AddressMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.AddressCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.AddressFunc != nil {
+		return atomic.LoadUint64(&m.AddressCounter) > 0
+	}
+
+	return true
+}
+
+type mNodeMockConsensusAddress struct {
+	mock              *NodeMock
+	mainExpectation   *NodeMockConsensusAddressExpectation
+	expectationSeries []*NodeMockConsensusAddressExpectation
+}
+
+type NodeMockConsensusAddressExpectation struct {
+	result *NodeMockConsensusAddressResult
+}
+
+type NodeMockConsensusAddressResult struct {
+	r string
+}
+
+//Expect specifies that invocation of Node.ConsensusAddress is expected from 1 to Infinity times
+func (m *mNodeMockConsensusAddress) Expect() *mNodeMockConsensusAddress {
+	m.mock.ConsensusAddressFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &NodeMockConsensusAddressExpectation{}
+	}
+
+	return m
+}
+
+//Return specifies results of invocation of Node.ConsensusAddress
+func (m *mNodeMockConsensusAddress) Return(r string) *NodeMock {
+	m.mock.ConsensusAddressFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &NodeMockConsensusAddressExpectation{}
+	}
+	m.mainExpectation.result = &NodeMockConsensusAddressResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of Node.ConsensusAddress is expected once
+func (m *mNodeMockConsensusAddress) ExpectOnce() *NodeMockConsensusAddressExpectation {
+	m.mock.ConsensusAddressFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &NodeMockConsensusAddressExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *NodeMockConsensusAddressExpectation) Return(r string) {
+	e.result = &NodeMockConsensusAddressResult{r}
+}
+
+//Set uses given function f as a mock of Node.ConsensusAddress method
+func (m *mNodeMockConsensusAddress) Set(f func() (r string)) *NodeMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.ConsensusAddressFunc = f
+	return m.mock
+}
+
+//ConsensusAddress implements github.com/insolar/insolar/core.Node interface
+func (m *NodeMock) ConsensusAddress() (r string) {
+	counter := atomic.AddUint64(&m.ConsensusAddressPreCounter, 1)
+	defer atomic.AddUint64(&m.ConsensusAddressCounter, 1)
+
+	if len(m.ConsensusAddressMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.ConsensusAddressMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to NodeMock.ConsensusAddress.")
+			return
+		}
+
+		result := m.ConsensusAddressMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the NodeMock.ConsensusAddress")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.ConsensusAddressMock.mainExpectation != nil {
+
+		result := m.ConsensusAddressMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the NodeMock.ConsensusAddress")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.ConsensusAddressFunc == nil {
+		m.t.Fatalf("Unexpected call to NodeMock.ConsensusAddress.")
+		return
+	}
+
+	return m.ConsensusAddressFunc()
+}
+
+//ConsensusAddressMinimockCounter returns a count of NodeMock.ConsensusAddressFunc invocations
+func (m *NodeMock) ConsensusAddressMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.ConsensusAddressCounter)
+}
+
+//ConsensusAddressMinimockPreCounter returns the value of NodeMock.ConsensusAddress invocations
+func (m *NodeMock) ConsensusAddressMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.ConsensusAddressPreCounter)
+}
+
+//ConsensusAddressFinished returns true if mock invocations count is ok
+func (m *NodeMock) ConsensusAddressFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.ConsensusAddressMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.ConsensusAddressCounter) == uint64(len(m.ConsensusAddressMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.ConsensusAddressMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.ConsensusAddressCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.ConsensusAddressFunc != nil {
+		return atomic.LoadUint64(&m.ConsensusAddressCounter) > 0
+	}
+
+	return true
 }
 
 type mNodeMockGetGlobuleID struct {
@@ -336,140 +610,6 @@ func (m *NodeMock) IDFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.IDFunc != nil {
 		return atomic.LoadUint64(&m.IDCounter) > 0
-	}
-
-	return true
-}
-
-type mNodeMockPhysicalAddress struct {
-	mock              *NodeMock
-	mainExpectation   *NodeMockPhysicalAddressExpectation
-	expectationSeries []*NodeMockPhysicalAddressExpectation
-}
-
-type NodeMockPhysicalAddressExpectation struct {
-	result *NodeMockPhysicalAddressResult
-}
-
-type NodeMockPhysicalAddressResult struct {
-	r string
-}
-
-//Expect specifies that invocation of Node.PhysicalAddress is expected from 1 to Infinity times
-func (m *mNodeMockPhysicalAddress) Expect() *mNodeMockPhysicalAddress {
-	m.mock.PhysicalAddressFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &NodeMockPhysicalAddressExpectation{}
-	}
-
-	return m
-}
-
-//Return specifies results of invocation of Node.PhysicalAddress
-func (m *mNodeMockPhysicalAddress) Return(r string) *NodeMock {
-	m.mock.PhysicalAddressFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &NodeMockPhysicalAddressExpectation{}
-	}
-	m.mainExpectation.result = &NodeMockPhysicalAddressResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of Node.PhysicalAddress is expected once
-func (m *mNodeMockPhysicalAddress) ExpectOnce() *NodeMockPhysicalAddressExpectation {
-	m.mock.PhysicalAddressFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &NodeMockPhysicalAddressExpectation{}
-
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *NodeMockPhysicalAddressExpectation) Return(r string) {
-	e.result = &NodeMockPhysicalAddressResult{r}
-}
-
-//Set uses given function f as a mock of Node.PhysicalAddress method
-func (m *mNodeMockPhysicalAddress) Set(f func() (r string)) *NodeMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.PhysicalAddressFunc = f
-	return m.mock
-}
-
-//PhysicalAddress implements github.com/insolar/insolar/core.Node interface
-func (m *NodeMock) PhysicalAddress() (r string) {
-	counter := atomic.AddUint64(&m.PhysicalAddressPreCounter, 1)
-	defer atomic.AddUint64(&m.PhysicalAddressCounter, 1)
-
-	if len(m.PhysicalAddressMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.PhysicalAddressMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to NodeMock.PhysicalAddress.")
-			return
-		}
-
-		result := m.PhysicalAddressMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the NodeMock.PhysicalAddress")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.PhysicalAddressMock.mainExpectation != nil {
-
-		result := m.PhysicalAddressMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the NodeMock.PhysicalAddress")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.PhysicalAddressFunc == nil {
-		m.t.Fatalf("Unexpected call to NodeMock.PhysicalAddress.")
-		return
-	}
-
-	return m.PhysicalAddressFunc()
-}
-
-//PhysicalAddressMinimockCounter returns a count of NodeMock.PhysicalAddressFunc invocations
-func (m *NodeMock) PhysicalAddressMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.PhysicalAddressCounter)
-}
-
-//PhysicalAddressMinimockPreCounter returns the value of NodeMock.PhysicalAddress invocations
-func (m *NodeMock) PhysicalAddressMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.PhysicalAddressPreCounter)
-}
-
-//PhysicalAddressFinished returns true if mock invocations count is ok
-func (m *NodeMock) PhysicalAddressFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.PhysicalAddressMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.PhysicalAddressCounter) == uint64(len(m.PhysicalAddressMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.PhysicalAddressMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.PhysicalAddressCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.PhysicalAddressFunc != nil {
-		return atomic.LoadUint64(&m.PhysicalAddressCounter) > 0
 	}
 
 	return true
@@ -1015,16 +1155,20 @@ func (m *NodeMock) VersionFinished() bool {
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *NodeMock) ValidateCallCounters() {
 
+	if !m.AddressFinished() {
+		m.t.Fatal("Expected call to NodeMock.Address")
+	}
+
+	if !m.ConsensusAddressFinished() {
+		m.t.Fatal("Expected call to NodeMock.ConsensusAddress")
+	}
+
 	if !m.GetGlobuleIDFinished() {
 		m.t.Fatal("Expected call to NodeMock.GetGlobuleID")
 	}
 
 	if !m.IDFinished() {
 		m.t.Fatal("Expected call to NodeMock.ID")
-	}
-
-	if !m.PhysicalAddressFinished() {
-		m.t.Fatal("Expected call to NodeMock.PhysicalAddress")
 	}
 
 	if !m.PublicKeyFinished() {
@@ -1060,16 +1204,20 @@ func (m *NodeMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *NodeMock) MinimockFinish() {
 
+	if !m.AddressFinished() {
+		m.t.Fatal("Expected call to NodeMock.Address")
+	}
+
+	if !m.ConsensusAddressFinished() {
+		m.t.Fatal("Expected call to NodeMock.ConsensusAddress")
+	}
+
 	if !m.GetGlobuleIDFinished() {
 		m.t.Fatal("Expected call to NodeMock.GetGlobuleID")
 	}
 
 	if !m.IDFinished() {
 		m.t.Fatal("Expected call to NodeMock.ID")
-	}
-
-	if !m.PhysicalAddressFinished() {
-		m.t.Fatal("Expected call to NodeMock.PhysicalAddress")
 	}
 
 	if !m.PublicKeyFinished() {
@@ -1102,9 +1250,10 @@ func (m *NodeMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
+		ok = ok && m.AddressFinished()
+		ok = ok && m.ConsensusAddressFinished()
 		ok = ok && m.GetGlobuleIDFinished()
 		ok = ok && m.IDFinished()
-		ok = ok && m.PhysicalAddressFinished()
 		ok = ok && m.PublicKeyFinished()
 		ok = ok && m.RoleFinished()
 		ok = ok && m.ShortIDFinished()
@@ -1117,16 +1266,20 @@ func (m *NodeMock) MinimockWait(timeout time.Duration) {
 		select {
 		case <-timeoutCh:
 
+			if !m.AddressFinished() {
+				m.t.Error("Expected call to NodeMock.Address")
+			}
+
+			if !m.ConsensusAddressFinished() {
+				m.t.Error("Expected call to NodeMock.ConsensusAddress")
+			}
+
 			if !m.GetGlobuleIDFinished() {
 				m.t.Error("Expected call to NodeMock.GetGlobuleID")
 			}
 
 			if !m.IDFinished() {
 				m.t.Error("Expected call to NodeMock.ID")
-			}
-
-			if !m.PhysicalAddressFinished() {
-				m.t.Error("Expected call to NodeMock.PhysicalAddress")
 			}
 
 			if !m.PublicKeyFinished() {
@@ -1157,15 +1310,19 @@ func (m *NodeMock) MinimockWait(timeout time.Duration) {
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *NodeMock) AllMocksCalled() bool {
 
+	if !m.AddressFinished() {
+		return false
+	}
+
+	if !m.ConsensusAddressFinished() {
+		return false
+	}
+
 	if !m.GetGlobuleIDFinished() {
 		return false
 	}
 
 	if !m.IDFinished() {
-		return false
-	}
-
-	if !m.PhysicalAddressFinished() {
 		return false
 	}
 

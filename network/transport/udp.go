@@ -27,7 +27,7 @@ import (
 	consensus "github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/network/transport/host"
+	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/transport/packet"
 	"github.com/insolar/insolar/network/transport/relay"
 	"github.com/insolar/insolar/network/utils"
@@ -39,6 +39,7 @@ const udpMaxPacketSize = 1400
 type udpTransport struct {
 	baseTransport
 	serverConn net.PacketConn
+	address    string
 }
 
 type udpSerializer struct{}
@@ -48,15 +49,6 @@ func (b *udpSerializer) SerializePacket(q *packet.Packet) ([]byte, error) {
 	if !ok {
 		return nil, errors.New("could not convert packet to ConsensusPacket type")
 	}
-	header := &consensus.RoutingHeader{
-		OriginID:   q.Sender.ShortID,
-		TargetID:   q.Receiver.ShortID,
-		PacketType: q.Type,
-	}
-	err := data.SetPacketHeader(header)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not set routing information for ConsensusPacket")
-	}
 	return data.Serialize()
 }
 
@@ -65,21 +57,13 @@ func (b *udpSerializer) DeserializePacket(conn io.Reader) (*packet.Packet, error
 	if err != nil {
 		return nil, errors.Wrap(err, "could not convert network datagram to ConsensusPacket")
 	}
-	header, err := data.GetPacketHeader()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get routing information from ConsensusPacket")
-	}
 	p := &packet.Packet{}
-	p.Sender = &host.Host{ShortID: header.OriginID}
-	p.Receiver = &host.Host{ShortID: header.TargetID}
-	p.Type = header.PacketType
+	p.Data = data
 	return p, nil
 }
 
-func newUDPTransport(conn net.PacketConn, proxy relay.Proxy, publicAddress string) (*udpTransport, error) {
-	transport := &udpTransport{
-		baseTransport: newBaseTransport(proxy, publicAddress),
-		serverConn:    conn}
+func newUDPTransport(addr string, proxy relay.Proxy, publicAddress string) (*udpTransport, error) {
+	transport := &udpTransport{baseTransport: newBaseTransport(proxy, publicAddress), address: addr}
 	transport.sendFunc = transport.send
 	transport.serializer = &udpSerializer{}
 
@@ -107,13 +91,33 @@ func (t *udpTransport) send(recvAddress string, data []byte) error {
 	defer utils.CloseVerbose(udpConn)
 
 	log.Debug("udpTransport.send: len = ", len(data))
-	_, err = udpConn.Write(data)
+	n, err := udpConn.Write(data)
+	metrics.ConsensusSentSize.Add(float64(n))
 	return errors.Wrap(err, "Failed to write data")
+}
+
+func (t *udpTransport) prepareListen() error {
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
+
+	t.disconnectStarted = make(chan bool, 1)
+	t.disconnectFinished = make(chan bool, 1)
+
+	var err error
+	t.serverConn, err = net.ListenPacket("udp", t.address)
+	return err
 }
 
 // Start starts networking.
 func (t *udpTransport) Listen(ctx context.Context, started chan struct{}) error {
-	inslogger.FromContext(ctx).Info("Start UDP transport")
+	logger := inslogger.FromContext(ctx)
+	logger.Info("[ Listen ] Start UDP transport")
+
+	if err := t.prepareListen(); err != nil {
+		logger.Infof("[ Listen ] Failed to prepare UDP transport: " + err.Error())
+		return err
+	}
+
 	started <- struct{}{}
 	for {
 		buf := make([]byte, udpMaxPacketSize)
@@ -122,6 +126,7 @@ func (t *udpTransport) Listen(ctx context.Context, started chan struct{}) error 
 			<-t.disconnectFinished
 			return err
 		}
+		metrics.ConsensusRecvSize.Add(float64(n))
 
 		go t.handleAcceptedConnection(buf[:n], addr)
 	}

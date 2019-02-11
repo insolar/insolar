@@ -74,7 +74,7 @@ func (j *jet) Update(prefix []byte, setActual bool, maxDepth, depth uint8) {
 
 // Clone clones tree either keeping actuality state or resetting it to false
 func (j *jet) Clone(keep bool) *jet {
-	res := &jet{Actual: keep && j.Actual }
+	res := &jet{Actual: keep && j.Actual}
 	if j.Left != nil {
 		res.Left = j.Left.Clone(keep)
 	}
@@ -103,8 +103,6 @@ func (j *jet) ExtractLeafIDs(ids *[]core.RecordID, path []byte, depth uint8) {
 		j.Right.ExtractLeafIDs(ids, rightPath, depth+1)
 	}
 }
-
-
 
 // Tree stores jet in a binary tree.
 type Tree struct {

@@ -96,7 +96,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 		}
 	}
 	if c.NodeNetwork == nil {
-		c.NodeNetwork = nodenetwork.NewNodeKeeper(nodenetwork.NewNode(core.RecordRef{}, core.StaticRoleLightMaterial, nil, "", ""))
+		c.NodeNetwork = nodenetwork.NewNodeKeeper(nodenetwork.NewNode(core.RecordRef{}, core.StaticRoleLightMaterial, nil, "127.0.0.1:5432", ""))
 	}
 
 	certificate := testutils.NewCertificateMock(t)
@@ -149,7 +149,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 	gilMock.ReleaseFunc = func(context.Context) {}
 
 	alsMock := testutils.NewActiveListSwapperMock(t)
-	alsMock.MoveSyncToActiveFunc = func() {}
+	alsMock.MoveSyncToActiveFunc = func(context.Context) error { return nil }
 
 	handler.Bus = c.MessageBus
 

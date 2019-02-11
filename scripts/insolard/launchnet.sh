@@ -12,22 +12,33 @@ CONFIGS_DIR=configs
 BASE_DIR=scripts/insolard
 KEYS_FILE=$BASE_DIR/$CONFIGS_DIR/bootstrap_keys.json
 ROOT_MEMBER_KEYS_FILE=$BASE_DIR/$CONFIGS_DIR/root_member_keys.json
-NODES_DATA=$BASE_DIR/nodes/
+DISCOVERY_NODES_DATA=$BASE_DIR/discoverynodes/
 GENESIS_CONFIG=$BASE_DIR/genesis.yaml
 GENERATED_CONFIGS_DIR=$BASE_DIR/$CONFIGS_DIR/generated_configs
+GENERATED_DISCOVERY_CONFIGS_DIR=$GENERATED_CONFIGS_DIR/discoverynodes
 INSGORUND_PORT_FILE=$BASE_DIR/$CONFIGS_DIR/insgorund_ports.txt
 
 insolar_log_level=${INSOLAR_LOG_LEVEL:-"Debug"}
 gorund_log_level=$insolar_log_level
 
-NUM_NODES=$(grep "host: " $GENESIS_CONFIG | grep -cv "#" )
+NUM_DISCOVERY_NODES=$(sed '/^nodes:/ q' $GENESIS_CONFIG | grep "host:" | grep -v "#" | wc -l)
 
-for i in `seq 1 $NUM_NODES`
+for i in `seq 1 $NUM_DISCOVERY_NODES`
 do
-    NODES+=($NODES_DATA/$i)
+    DISCOVERY_NODES+=($DISCOVERY_NODES_DATA/$i)
 done
 
 DISCOVERY_NODES_KEYS_DIR=$TEST_DATA/scripts/discovery_nodes
+
+NUM_NODES=$(sed -n '/^nodes:/,$p' $GENESIS_CONFIG | grep "host:" | grep -v "#" | wc -l)
+
+if [[ "$NUM_NODES" -ne "0" ]]
+then
+    for i in `seq 1 $NUM_NODES`
+    do
+        NODES+=($NODES_DATA/$i)
+    done
+fi
 
 kill_port()
 {
@@ -46,7 +57,7 @@ stop_listening()
     stop_insgorund=$1
     ports="$ports 58090" # Pulsar
     ports="$ports 53837" # Genesis
-    if [ "$stop_insgorund" == "true" ]
+    if [[ "$stop_insgorund" == "true" ]]
     then
         gorund_ports=
         while read -r line; do
@@ -82,7 +93,7 @@ clear_dirs()
     echo "clear_dirs() starts ..."
     rm -rfv $CONTRACT_STORAGE/*
     rm -rfv $LEDGER_DIR/*
-    rm -rfv $NODES_DATA/*
+    rm -rfv $DISCOVERY_NODES_DATA/*
     rm -rfv $GENERATED_CONFIGS_DIR/*
     echo "clear_dirs() end."
 }
@@ -92,11 +103,11 @@ create_required_dirs()
     echo "create_required_dirs() starts ..."
     mkdir -vp $CONTRACT_STORAGE
     mkdir -vp $LEDGER_DIR
-    mkdir -vp $NODES_DATA/certs
+    mkdir -vp $DISCOVERY_NODES_DATA/certs
     mkdir -vp $GENERATED_CONFIGS_DIR
     touch $INSGORUND_PORT_FILE
 
-    for node in "${NODES[@]}"
+    for node in "${DISCOVERY_NODES[@]}"
     do
         mkdir -vp $node/data
     done
@@ -148,7 +159,7 @@ generate_root_member_keys()
 generate_discovery_nodes_keys()
 {
     echo "generate_discovery_nodes_keys() starts ..."
-    for node in "${NODES[@]}"
+    for node in "${DISCOVERY_NODES[@]}"
     do
         bin/insolar -c gen_keys > $node/keys.json
     done
@@ -221,23 +232,37 @@ launch_insgorund()
 copy_data()
 {
     echo "copy_data() starts ..."
-    for node in "${NODES[@]}"
+    for node in "${DISCOVERY_NODES[@]}"
     do
         cp -v $LEDGER_DIR/* $node/data
     done
     echo "copy_data() end."
 }
 
-copy_certs()
+copy_discovery_certs()
 {
     echo "copy_certs() starts ..."
     i=0
-    for node in "${NODES[@]}"
+    for node in "${DISCOVERY_NODES[@]}"
     do
         i=$((i + 1))
-        cp -v $NODES_DATA/certs/discovery_cert_$i.json $node/cert.json
+        cp -v $DISCOVERY_NODES_DATA/certs/discovery_cert_$i.json $node/cert.json
     done
     echo "copy_certs() end."
+}
+
+wait_for_complete_network_state()
+{
+    while true
+    do
+        num=`scripts/insolard/check_status.sh 2>/dev/null | grep "CompleteNetworkState" | wc -l`
+        echo "$num/$NUM_DISCOVERY_NODES discovery nodes ready"
+        if [[ "$num" -eq "$NUM_DISCOVERY_NODES" ]]
+        then
+            break
+        fi
+        sleep 5s
+    done
 }
 
 genesis()
@@ -250,18 +275,17 @@ genesis()
     generate_insolard_configs
 
     printf "start genesis ... \n"
-    $INSOLARD --config $BASE_DIR/insolar.yaml --genesis $GENESIS_CONFIG --keyout $NODES_DATA/certs
+    $INSOLARD --config $BASE_DIR/insolar.yaml --genesis $GENESIS_CONFIG --keyout $DISCOVERY_NODES_DATA/certs
     printf "genesis is done\n"
 
     copy_data
-    copy_certs
-
+    copy_discovery_certs
 
     if which jq ; then
         NL=$BASE_DIR/loglinks
         mkdir  $NL || \
         rm -f $NL/*.log
-        for node in "${NODES[@]}" ; do
+        for node in "${DISCOVERY_NODES[@]}" ; do
             ref=`jq -r '.reference' $node/cert.json`
             [[ $ref =~ .+\. ]]
             ln -s `pwd`/$node/output.log $NL/${BASH_REMATCH[0]}log
@@ -278,9 +302,9 @@ process_input_params $@
 trap 'stop_listening true' INT TERM EXIT
 
 printf "start pulsar ... \n"
-$PULSARD -c $GENERATED_CONFIGS_DIR/pulsar.yaml --trace &> $NODES_DATA/pulsar_output.log &
+$PULSARD -c $GENERATED_CONFIGS_DIR/pulsar.yaml --trace &> $DISCOVERY_NODES_DATA/pulsar_output.log &
 
-if [ "$run_insgorund" == "true" ]
+if [[ "$run_insgorund" == "true" ]]
 then
     printf "start insgorund ... \n"
     launch_insgorund
@@ -288,20 +312,33 @@ else
     echo "INSGORUND IS NOT LAUNCHED"
 fi
 
-printf "start nodes ... \n"
+printf "start discovery nodes ... \n"
 
 i=0
-for node in "${NODES[@]}"
+for node in "${DISCOVERY_NODES[@]}"
 do
     i=$((i + 1))
-    if [ "$i" -eq "$NUM_NODES" ]
+    if [[ "$i" -eq "$NUM_DISCOVERY_NODES" ]]
     then
-        echo "NODE $i STARTED in foreground"
-        INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $GENERATED_CONFIGS_DIR/insolar_$i.yaml --trace &> $node/output.log
+        echo "DISCOVERY NODE $i STARTED in foreground"
+        if [[ "$NUM_NODES" -eq "0" ]]
+        then
+            INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $GENERATED_DISCOVERY_CONFIGS_DIR/insolar_$i.yaml --trace &> $node/output.log
+        else
+            INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $GENERATED_DISCOVERY_CONFIGS_DIR/insolar_$i.yaml --trace &> $node/output.log &
+        fi
         break
     fi
-    INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $GENERATED_CONFIGS_DIR/insolar_$i.yaml --trace &> $node/output.log &
-    echo "NODE $i STARTED in background"
+    INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $GENERATED_DISCOVERY_CONFIGS_DIR/insolar_$i.yaml --trace &> $node/output.log &
+    echo "DISCOVERY NODE $i STARTED in background"
 done
+
+printf "discovery nodes started ... \n"
+
+if [[ "$NUM_NODES" -ne "0" ]]
+then
+    wait_for_complete_network_state
+    scripts/insolard/start_nodes.sh
+fi
 
 echo "FINISHING ..."

@@ -23,7 +23,7 @@ type CertificateMock struct {
 	GetDiscoveryNodesPreCounter uint64
 	GetDiscoveryNodesMock       mCertificateMockGetDiscoveryNodes
 
-	GetDiscoverySignsFunc       func() (r map[*core.RecordRef][]byte)
+	GetDiscoverySignsFunc       func() (r map[core.RecordRef][]byte)
 	GetDiscoverySignsCounter    uint64
 	GetDiscoverySignsPreCounter uint64
 	GetDiscoverySignsMock       mCertificateMockGetDiscoverySigns
@@ -218,7 +218,7 @@ type CertificateMockGetDiscoverySignsExpectation struct {
 }
 
 type CertificateMockGetDiscoverySignsResult struct {
-	r map[*core.RecordRef][]byte
+	r map[core.RecordRef][]byte
 }
 
 //Expect specifies that invocation of Certificate.GetDiscoverySigns is expected from 1 to Infinity times
@@ -234,7 +234,7 @@ func (m *mCertificateMockGetDiscoverySigns) Expect() *mCertificateMockGetDiscove
 }
 
 //Return specifies results of invocation of Certificate.GetDiscoverySigns
-func (m *mCertificateMockGetDiscoverySigns) Return(r map[*core.RecordRef][]byte) *CertificateMock {
+func (m *mCertificateMockGetDiscoverySigns) Return(r map[core.RecordRef][]byte) *CertificateMock {
 	m.mock.GetDiscoverySignsFunc = nil
 	m.expectationSeries = nil
 
@@ -256,12 +256,12 @@ func (m *mCertificateMockGetDiscoverySigns) ExpectOnce() *CertificateMockGetDisc
 	return expectation
 }
 
-func (e *CertificateMockGetDiscoverySignsExpectation) Return(r map[*core.RecordRef][]byte) {
+func (e *CertificateMockGetDiscoverySignsExpectation) Return(r map[core.RecordRef][]byte) {
 	e.result = &CertificateMockGetDiscoverySignsResult{r}
 }
 
 //Set uses given function f as a mock of Certificate.GetDiscoverySigns method
-func (m *mCertificateMockGetDiscoverySigns) Set(f func() (r map[*core.RecordRef][]byte)) *CertificateMock {
+func (m *mCertificateMockGetDiscoverySigns) Set(f func() (r map[core.RecordRef][]byte)) *CertificateMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -270,7 +270,7 @@ func (m *mCertificateMockGetDiscoverySigns) Set(f func() (r map[*core.RecordRef]
 }
 
 //GetDiscoverySigns implements github.com/insolar/insolar/core.Certificate interface
-func (m *CertificateMock) GetDiscoverySigns() (r map[*core.RecordRef][]byte) {
+func (m *CertificateMock) GetDiscoverySigns() (r map[core.RecordRef][]byte) {
 	counter := atomic.AddUint64(&m.GetDiscoverySignsPreCounter, 1)
 	defer atomic.AddUint64(&m.GetDiscoverySignsCounter, 1)
 

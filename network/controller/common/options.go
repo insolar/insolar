@@ -48,4 +48,7 @@ type Options struct {
 
 	// HandshakeSession TTL
 	HandshakeSessionTTL time.Duration
+
+	// FakePulseDuration is a timeout to new pulse in ms
+	FakePulseDuration time.Duration
 }
