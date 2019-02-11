@@ -522,11 +522,10 @@ func (g *Genesis) uploadKeys(ctx context.Context, path string, amount int) ([]no
 		}
 	}
 
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return nil, errors.Wrap(err, "[ uploadKeys ] dir is not exist")
+	files, err := ioutil.ReadDir(path)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ uploadKeys ] can't read dir")
 	}
-
-	files, _ := ioutil.ReadDir(path)
 	if len(files) != amount {
 		return nil, errors.New(fmt.Sprintf("[ uploadKeys ] amount of nodes != amount of files in directory: %d != %d", len(files), amount))
 	}

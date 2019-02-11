@@ -186,7 +186,7 @@ func TestUploadKeys_Reuse_DirNotExist(t *testing.T) {
 
 	_, err := g.uploadKeys(ctx, testDataPath, amount)
 	require.NotNil(t, err)
-	require.Contains(t, err.Error(), "[ uploadKeys ] dir is not exist")
+	require.Contains(t, err.Error(), "[ uploadKeys ] can't read dir")
 }
 
 func TestActivateNodeRecord_RegisterRequest_Err(t *testing.T) {
@@ -205,7 +205,7 @@ func TestActivateNodeRecord_RegisterRequest_Err(t *testing.T) {
 
 	_, err := g.activateNodeRecord(ctx, cb, record, name)
 	require.NotNil(t, err)
-	require.Contains(t, err.Error(), "[ activateNodes ] Couldn't register request to artifact manager: test reasons")
+	require.Contains(t, err.Error(), "[ activateNodeRecord ] Couldn't register request to artifact manager: test reasons")
 }
 
 func TestActivateNodeRecord_Activate_Err(t *testing.T) {
@@ -232,7 +232,7 @@ func TestActivateNodeRecord_Activate_Err(t *testing.T) {
 
 	_, err := g.activateNodeRecord(ctx, cb, record, name)
 	require.NotNil(t, err)
-	require.Contains(t, err.Error(), "[ activateNodes ] Could'n activateNodeRecord node object: test reasons")
+	require.Contains(t, err.Error(), "[ activateNodeRecord ] Could'n activateNodeRecord node object: test reasons")
 }
 
 func TestActivateNodeRecord_RegisterResult_Err(t *testing.T) {
@@ -262,7 +262,7 @@ func TestActivateNodeRecord_RegisterResult_Err(t *testing.T) {
 
 	_, err := g.activateNodeRecord(ctx, cb, record, name)
 	require.NotNil(t, err)
-	require.Contains(t, err.Error(), "[ activateNodes ] Couldn't register result to artifact manager: test reasons")
+	require.Contains(t, err.Error(), "[ activateNodeRecord ] Couldn't register result to artifact manager: test reasons")
 }
 
 func TestActivateNodeRecord(t *testing.T) {
@@ -424,7 +424,7 @@ func TestAddDiscoveryIndex_UploadErr(t *testing.T) {
 
 	genesisNodes, resIndexMap, err := g.addDiscoveryIndex(ctx, cb, indexMap)
 	require.NotNil(t, err)
-	require.Contains(t, err.Error(), "[ addDiscoveryIndex ]: [ uploadKeys ] dir is not exist")
+	require.Contains(t, err.Error(), "[ addDiscoveryIndex ]: [ uploadKeys ] can't read dir")
 	require.Empty(t, genesisNodes)
 	require.Empty(t, resIndexMap)
 }
@@ -472,7 +472,7 @@ func TestAddIndex_UploadErr(t *testing.T) {
 
 	resIndexMap, err := g.addIndex(ctx, cb, indexMap)
 	require.NotNil(t, err)
-	require.Contains(t, err.Error(), "[ addIndex ]: [ uploadKeys ] dir is not exist")
+	require.Contains(t, err.Error(), "[ addIndex ]: [ uploadKeys ] can't read dir")
 	require.Empty(t, resIndexMap)
 }
 
