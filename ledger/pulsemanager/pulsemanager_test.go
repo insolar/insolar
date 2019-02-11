@@ -132,7 +132,10 @@ func (s *pulseManagerSuite) TestPulseManager_Set_CheckHotIndexesSending() {
 	indexMock.GetObjectsMock.Return(map[core.RecordID]int{
 		*firstID: 1,
 	})
-	pendingMock.GetRequestsMock.Return(map[core.RecordID]map[core.RecordID]struct{}{objID: {*secondID: struct{}{}}})
+	pendingMock.GetRequestsMock.Return(
+		map[core.RecordID]recentstorage.PendingObjectContext{
+			objID: {Requests: []core.RecordID{*secondID}},
+		})
 
 	providerMock := recentstorage.NewProviderMock(s.T())
 	providerMock.GetPendingStorageMock.Return(pendingMock)
@@ -152,9 +155,9 @@ func (s *pulseManagerSuite) TestPulseManager_Set_CheckHotIndexesSending() {
 
 		// Assert
 		require.Equal(s.T(), 1, len(val.PendingRequests))
-		requests, ok := val.PendingRequests[objID]
+		objContext, ok := val.PendingRequests[objID]
 		require.True(s.T(), ok)
-		require.Equal(s.T(), 1, len(requests))
+		require.Equal(s.T(), 1, len(objContext.Requests))
 
 		require.Equal(s.T(), 1, len(val.RecentObjects))
 		decodedIndex, err := index.DecodeObjectLifeline(val.RecentObjects[*firstID].Index)

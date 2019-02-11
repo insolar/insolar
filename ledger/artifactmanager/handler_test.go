@@ -994,10 +994,8 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 				TTL:   320,
 			},
 		},
-		PendingRequests: map[core.RecordID]map[core.RecordID]struct{}{
-			obj: {
-				*secondId: struct{}{},
-			},
+		PendingRequests: map[core.RecordID]*recentstorage.PendingObjectContext{
+			*secondId: {},
 		},
 		Drop:               jet.JetDrop{Pulse: core.FirstPulseNumber, Hash: []byte{88}},
 		DropJet:            jetID,

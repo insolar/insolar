@@ -19,6 +19,7 @@ package ledger
 import (
 	"context"
 
+	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/configuration"
@@ -106,7 +107,7 @@ func GetLedgerComponents(conf configuration.Ledger, certificate core.Certificate
 		storage.NewObjectStorage(),
 		storage.NewReplicaStorage(),
 		storage.NewGenesisInitializer(),
-		storage.NewRecentStorageProvider(conf.RecentStorage.DefaultTTL),
+		recentstorage.NewRecentStorageProvider(conf.RecentStorage.DefaultTTL),
 		artifactmanager.NewHotDataWaiterConcrete(),
 		artifactmanager.NewArtifactManger(),
 		jetcoordinator.NewJetCoordinator(conf.LightChainLimit),

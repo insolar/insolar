@@ -162,7 +162,7 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 	recentMock.FilterNotExistWithLockMock.Return()
 
 	pendingStorageMock := recentstorage.NewPendingStorageMock(s.T())
-	pendingStorageMock.GetRequestsMock.Return(map[core.RecordID]map[core.RecordID]struct{}{})
+	pendingStorageMock.GetRequestsMock.Return(map[core.RecordID]recentstorage.PendingObjectContext{})
 
 	// Mock6: JetCoordinatorMock
 	jcMock := testutils.NewJetCoordinatorMock(s.T())
