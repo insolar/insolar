@@ -23,65 +23,39 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/metrics"
-	"github.com/insolar/insolar/network/utils"
-	"github.com/pkg/errors"
-	"go.opencensus.io/trace"
 )
-
-type lockableConnection struct {
-	net.Conn
-	sync.Locker
-}
-
-func (lc *lockableConnection) Write(data []byte) (int, error) {
-	lc.Lock()
-	defer lc.Unlock()
-
-	// TODO: sergey.morozov 16.01.19: possible malformed packet fix; uncomment this when you meet errors ;)
-	// var written int
-	// for written < len(data) {
-	// 	n, err := lc.Conn.Write(data[written:])
-	// 	written += n
-	// 	if err != nil {
-	// 		return written, err
-	// 	}
-	// }
-	// return written, nil
-
-	return lc.Conn.Write(data)
-}
 
 type connectionPool struct {
 	connectionFactory connectionFactory
 
-	unsafeConnectionsHolder unsafeConnectionHolder
-	mutex                   sync.RWMutex
+	entryHolder entryHolder
+	mutex       sync.RWMutex
 }
 
 func newConnectionPool(connectionFactory connectionFactory) *connectionPool {
 	return &connectionPool{
 		connectionFactory: connectionFactory,
 
-		unsafeConnectionsHolder: newUnsafeConnectionHolder(),
+		entryHolder: newEntryHolder(),
 	}
 }
 
 func (cp *connectionPool) GetConnection(ctx context.Context, address net.Addr) (net.Conn, error) {
 	logger := inslogger.FromContext(ctx)
 
-	conn, ok := cp.getConnection(address)
+	entry, ok := cp.getEntry(address)
 
-	logger.Debugf("[ GetConnection ] Finding connection to %s in pool: %t", address, ok)
+	logger.Debugf("[ GetConnection ] Finding entry for connection to %s in pool: %t", address, ok)
 
 	if ok {
-		return conn, nil
+		return entry.Open(ctx)
 	}
 
-	logger.Debugf("[ GetConnection ] Missing open connection to %s in pool ", address)
+	logger.Debugf("[ GetConnection ] Missing entry for connection to %s in pool ", address)
+	entry = cp.getOrCreateEntry(ctx, address)
 
-	return cp.getOrCreateConnection(ctx, address)
+	return entry.Open(ctx)
 }
 
 func (cp *connectionPool) CloseConnection(ctx context.Context, address net.Addr) {
@@ -90,86 +64,61 @@ func (cp *connectionPool) CloseConnection(ctx context.Context, address net.Addr)
 
 	logger := inslogger.FromContext(ctx)
 
-	conn, ok := cp.unsafeConnectionsHolder.Get(address)
-	logger.Debugf("[ CloseConnection ] Finding connection to %s in pool: %s", address, ok)
+	entry, ok := cp.entryHolder.Get(address)
+	logger.Debugf("[ CloseConnection ] Finding entry for connection to %s in pool: %s", address, ok)
 
 	if ok {
-		utils.CloseVerbose(conn)
+		entry.Close()
 
-		logger.Debugf("[ CloseConnection ] Delete connection to %s from pool", address)
-		cp.unsafeConnectionsHolder.Delete(address)
-		metrics.NetworkConnections.Set(float64(cp.unsafeConnectionsHolder.Size()))
+		logger.Debugf("[ CloseConnection ] Delete entry for connection to %s from pool", address)
+		cp.entryHolder.Delete(address)
+		metrics.NetworkConnections.Dec()
 	}
 }
 
-func (cp *connectionPool) getConnection(address net.Addr) (net.Conn, bool) {
+func (cp *connectionPool) getEntry(address net.Addr) (entry, bool) {
 	cp.mutex.RLock()
 	defer cp.mutex.RUnlock()
 
-	return cp.unsafeConnectionsHolder.Get(address)
+	return cp.entryHolder.Get(address)
 }
 
-func (cp *connectionPool) getOrCreateConnection(ctx context.Context, address net.Addr) (net.Conn, error) {
+func (cp *connectionPool) getOrCreateEntry(ctx context.Context, address net.Addr) entry {
 	logger := inslogger.FromContext(ctx)
 
 	cp.mutex.Lock()
 	defer cp.mutex.Unlock()
 
-	conn, ok := cp.unsafeConnectionsHolder.Get(address)
-	logger.Debugf("[ getOrCreateConnection ] Finding connection to %s in pool: %s", address, ok)
+	entry, ok := cp.entryHolder.Get(address)
+	logger.Debugf("[ getOrCreateEntry ] Finding entry for connection to %s in pool: %s", address, ok)
 
 	if ok {
-		return conn, nil
+		return entry
 	}
 
-	logger.Debugf("[ getOrCreateConnection ] Failed to retrieve connection to %s, creating it", address)
+	logger.Debugf("[ getOrCreateEntry ] Failed to retrieve entry for connection to %s, creating it", address)
 
-	ctx, span := instracer.StartSpan(ctx, "connectionPool.getOrCreateConnection")
-	span.AddAttributes(
-		trace.StringAttribute("create connect to", address.String()),
-	)
-	conn, err := cp.connectionFactory.CreateConnection(ctx, address)
-	defer span.End()
-	if err != nil {
-		return nil, errors.Wrap(err, "[ send ] Failed to create TCP connection")
-	}
+	entry = newEntry(cp.connectionFactory, address, cp.CloseConnection)
 
-	go func() {
-		b := make([]byte, 1)
-		_, err := conn.Read(b)
-		if err != nil {
-			logger.Infof("remote host 'closed' connection to %s: %s", address, err)
-			cp.CloseConnection(ctx, address)
-			return
-		}
-
-		logger.Errorf("unexpected data on connection to %s", address)
-	}()
-
-	lc := &lockableConnection{
-		Conn:   conn,
-		Locker: &sync.Mutex{},
-	}
-
-	cp.unsafeConnectionsHolder.Add(address, lc)
-	size := cp.unsafeConnectionsHolder.Size()
+	cp.entryHolder.Add(address, entry)
+	size := cp.entryHolder.Size()
 	logger.Debugf(
-		"[ getOrCreateConnection ] Added connection to %s. Current pool size: %d",
-		conn.RemoteAddr(),
+		"[ getOrCreateEntry ] Added entry for connection to %s. Current pool size: %d",
+		address.String(),
 		size,
 	)
-	metrics.NetworkConnections.Set(float64(size))
+	metrics.NetworkConnections.Inc()
 
-	return conn, nil
+	return entry
 }
 
 func (cp *connectionPool) Reset() {
 	cp.mutex.Lock()
 	defer cp.mutex.Unlock()
 
-	cp.unsafeConnectionsHolder.Iterate(func(conn net.Conn) {
-		utils.CloseVerbose(conn)
+	cp.entryHolder.Iterate(func(entry entry) {
+		entry.Close()
 	})
-	cp.unsafeConnectionsHolder.Clear()
-	metrics.NetworkConnections.Set(float64(cp.unsafeConnectionsHolder.Size()))
+	cp.entryHolder.Clear()
+	metrics.NetworkConnections.Set(float64(cp.entryHolder.Size()))
 }
