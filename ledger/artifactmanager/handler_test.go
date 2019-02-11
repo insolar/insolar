@@ -484,7 +484,7 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_FetchesIndexFromHea
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
-
+	h.PlatformCryptographyScheme = s.scheme
 	h.RecentStorageProvider = provideMock
 
 	objIndex := index.ObjectLifeline{LatestState: genRandomID(0), State: record.StateActivation}
@@ -560,6 +560,7 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_UpdateIndexState() 
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
 	h.RecentStorageProvider = provideMock
+	h.PlatformCryptographyScheme = s.scheme
 
 	objIndex := index.ObjectLifeline{
 		LatestState:  genRandomID(0),
@@ -816,6 +817,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
 	h.RecentStorageProvider = provideMock
+	h.PlatformCryptographyScheme = s.scheme
 
 	objIndex := index.ObjectLifeline{LatestState: genRandomID(0), State: record.StateActivation}
 	childRecord := record.ChildRecord{
@@ -892,6 +894,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
 	h.RecentStorageProvider = provideMock
+	h.PlatformCryptographyScheme = s.scheme
 
 	objIndex := index.ObjectLifeline{
 		LatestState:  genRandomID(0),
