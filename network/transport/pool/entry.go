@@ -96,5 +96,7 @@ func (e *entryImpl) Close() {
 	e.mutex.Lock()
 	defer e.mutex.Unlock()
 
-	utils.CloseVerbose(e.conn)
+	if e.conn != nil {
+		utils.CloseVerbose(e.conn)
+	}
 }
