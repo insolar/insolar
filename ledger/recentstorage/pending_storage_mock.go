@@ -6,12 +6,12 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "PendingStorage" can be found in github.com/insolar/insolar/ledger/recentstorage
 */
 import (
-	context "context"
+	"context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	core "github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -250,8 +250,7 @@ func (m *mPendingStorageMockGetRequests) Set(f func() (r map[core.RecordID]map[c
 }
 
 //GetRequests implements github.com/insolar/insolar/ledger/recentstorage.PendingStorage interface
-func (m *PendingStorageMock) GetRequests() (r map[core.RecordID]map[core.RecordID]struct {
-}) {
+func (m *PendingStorageMock) GetRequests() map[core.RecordID]PendingObjectContext {
 	counter := atomic.AddUint64(&m.GetRequestsPreCounter, 1)
 	defer atomic.AddUint64(&m.GetRequestsCounter, 1)
 

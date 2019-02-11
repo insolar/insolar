@@ -187,17 +187,7 @@ func (m *PulseManager) processEndPulse(
 				}
 			}
 
-			requests := m.RecentStorageProvider.GetPendingStorage(ctx, info.id).GetRequests()
-			go func() {
-				err := m.sendAbandonedRequests(
-					ctx,
-					newPulse,
-					requests,
-				)
-				if err != nil {
-					logger.Error(err)
-				}
-			}()
+			m.RecentStorageProvider.RemovePendingStorage(ctx, info.id)
 
 			// FIXME: @andreyromancev. 09.01.2019. Temporary disabled validation. Uncomment when jet split works properly.
 			// dropErr := m.processDrop(ctx, jetID, currentPulse, dropSerialized, messages)
@@ -376,7 +366,7 @@ func (m *PulseManager) getExecutorHotData(
 	recentObjectsIds := indexStorage.GetObjects()
 
 	recentObjects := map[core.RecordID]*message.HotIndex{}
-	pendingRequests := map[core.RecordID]map[core.RecordID]struct{}{}
+	pendingRequests := map[core.RecordID]*recentstorage.PendingObjectContext{}
 
 	for id, ttl := range recentObjectsIds {
 		lifeline, err := m.ObjectStorage.GetObjectIndex(ctx, jetID, &id, false)
@@ -396,14 +386,9 @@ func (m *PulseManager) getExecutorHotData(
 	}
 
 	requestCount := 0
-	for objID, requests := range pendingStorage.GetRequests() {
-		for reqID := range requests {
-			if _, ok := pendingRequests[objID]; !ok {
-				pendingRequests[objID] = map[core.RecordID]struct{}{}
-			}
-			pendingRequests[objID][reqID] = struct{}{}
-		}
-		requestCount += len(requests)
+	for objID, objContext := range pendingStorage.GetRequests() {
+		pendingRequests[objID] = &objContext
+		requestCount += len(objContext.Requests)
 	}
 
 	stats.Record(

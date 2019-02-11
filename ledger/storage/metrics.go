@@ -25,54 +25,17 @@ import (
 )
 
 var (
-	tagJet     = insmetrics.MustTagKey("jet")
 	recordType = insmetrics.MustTagKey("rectype")
 )
 
 var (
-	statRecentStorageObjectsAdded   = stats.Int64("storage/recent/objects/added/count", "recent storage objects added", stats.UnitDimensionless)
-	statRecentStorageObjectsRemoved = stats.Int64("storage/recent/objects/removed/count", "recent storage objects removed", stats.UnitDimensionless)
-
-	statRecentStoragePendingsAdded   = stats.Int64("storage/recent/pending/added/count", "recent storage pending requests added", stats.UnitDimensionless)
-	statRecentStoragePendingsRemoved = stats.Int64("storage/recent/pending/removed/count", "recent storage pending requests removed", stats.UnitDimensionless)
-
 	statCleanScanned = stats.Int64("lightcleanup/scanned", "How many records have been scanned on LM cleanup", stats.UnitDimensionless)
 	statCleanRemoved = stats.Int64("lightcleanup/removed", "How many records have been removed on LM cleanup", stats.UnitDimensionless)
 	statCleanFailed  = stats.Int64("lightcleanup/rmfailed", "How many records have not been removed because of error", stats.UnitDimensionless)
 )
 
 func init() {
-	commontags := []tag.Key{tagJet}
 	err := view.Register(
-		&view.View{
-			Name:        statRecentStorageObjectsAdded.Name(),
-			Description: statRecentStorageObjectsAdded.Description(),
-			Measure:     statRecentStorageObjectsAdded,
-			Aggregation: view.Sum(),
-			TagKeys:     commontags,
-		},
-		&view.View{
-			Name:        statRecentStorageObjectsRemoved.Name(),
-			Description: statRecentStorageObjectsRemoved.Description(),
-			Measure:     statRecentStorageObjectsRemoved,
-			Aggregation: view.Sum(),
-			TagKeys:     commontags,
-		},
-		&view.View{
-			Name:        statRecentStoragePendingsAdded.Name(),
-			Description: statRecentStoragePendingsAdded.Description(),
-			Measure:     statRecentStoragePendingsAdded,
-			Aggregation: view.Sum(),
-			TagKeys:     commontags,
-		},
-		&view.View{
-			Name:        statRecentStoragePendingsRemoved.Name(),
-			Description: statRecentStoragePendingsRemoved.Description(),
-			Measure:     statRecentStoragePendingsRemoved,
-			Aggregation: view.Sum(),
-			TagKeys:     commontags,
-		},
-
 		&view.View{
 			Name:        statCleanScanned.Name(),
 			Description: statCleanScanned.Description(),

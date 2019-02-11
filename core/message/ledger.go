@@ -18,6 +18,7 @@ package message
 
 import (
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage/jet"
 )
 
@@ -380,7 +381,7 @@ type HotData struct {
 	DropJet            core.RecordID // If will be different in case of split.
 	Drop               jet.JetDrop
 	RecentObjects      map[core.RecordID]*HotIndex
-	PendingRequests    map[core.RecordID]map[core.RecordID]struct{}
+	PendingRequests    map[core.RecordID]*recentstorage.PendingObjectContext
 	PulseNumber        core.PulseNumber
 	JetDropSizeHistory jet.DropSizeHistory
 }
