@@ -18,7 +18,6 @@ package storage
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/dgraph-io/badger"
@@ -138,7 +137,7 @@ func (ds *dropStorage) SetDrop(ctx context.Context, jetID core.RecordID, drop *j
 	k := prefixkey(scopeIDJetDrop, prefix, drop.Pulse.Bytes())
 	_, err := ds.DB.get(ctx, k)
 	if err == nil {
-		fmt.Println("override drop for pulse ", drop.Pulse)
+		inslogger.FromContext(ctx).Debugf("override drop for pulse %v", drop.Pulse)
 		return ErrOverride
 	}
 
