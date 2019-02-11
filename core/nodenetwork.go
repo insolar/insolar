@@ -36,8 +36,10 @@ type Node interface {
 	Role() StaticRole
 	// PublicKey is the public key of the node
 	PublicKey() crypto.PublicKey
-	// PhysicalAddress is the network address of the node
-	PhysicalAddress() string
+	// Address is the network address of the node
+	Address() string
+	// ConsensusAddress is the network address of the node for consensus packets exchange
+	ConsensusAddress() string
 	// GetGlobuleID returns node current globule id
 	GetGlobuleID() GlobuleID
 	// Version of node software
@@ -54,8 +56,6 @@ type NodeNetwork interface {
 	GetActiveNodes() []Node
 	// GetActiveNodesByRole get active nodes by role
 	GetActiveNodesByRole(role DynamicRole) []RecordRef
-	// GetCloudHash returns current cloud hash
-	GetCloudHash() []byte
 }
 
 // TODO: remove this interface when bootstrap mechanism completed

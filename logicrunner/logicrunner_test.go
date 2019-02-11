@@ -27,6 +27,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/testutils/terminationhandler"
+
 	"github.com/insolar/insolar/ledger/storage/jet"
 
 	"github.com/insolar/insolar/contractrequester"
@@ -149,8 +151,9 @@ func PrepareLrAmCbPm(t *testing.T) (core.LogicRunner, core.ArtifactManager, *gop
 	cm.Register(am, l.GetPulseManager(), l.GetJetCoordinator())
 	cr, err := contractrequester.New()
 	pulseStorage := l.PulseManager.(*pulsemanager.PulseManager).PulseStorage
+	nth := terminationhandler.NewTestHandler()
 
-	cm.Inject(db, pulseStorage, nk, providerMock, l, lr, nw, mb, cr, delegationTokenFactory, parcelFactory, mock)
+	cm.Inject(db, pulseStorage, nk, providerMock, l, lr, nw, mb, cr, delegationTokenFactory, parcelFactory, nth, mock)
 	err = cm.Init(ctx)
 	assert.NoError(t, err)
 	err = cm.Start(ctx)

@@ -48,7 +48,7 @@ func (m *CertificateManager) VerifyAuthorizationCertificate(authCert core.Author
 	}
 	data := authCert.SerializeNodePart()
 	for _, node := range discoveryNodes {
-		sign := authCert.GetDiscoverySigns()[node.GetNodeRef()]
+		sign := authCert.GetDiscoverySigns()[*node.GetNodeRef()]
 		ok := m.CS.Verify(node.GetPublicKey(), core.SignatureFromBytes(sign), data)
 		if !ok {
 			return false, nil
@@ -102,7 +102,7 @@ func NewManagerReadCertificateFromReader(publicKey crypto.PublicKey, keyProcesso
 }
 
 // NewManagerCertificateWithKeys generate manager with certificate from given keys
-// DEPRECATED, this method generates invalid certificate
+// DEPRECATED, this method generates invalid certificate, remove it after pulsar tests refactor
 func NewManagerCertificateWithKeys(publicKey crypto.PublicKey, keyProcessor core.KeyProcessor) (*CertificateManager, error) {
 	cert, err := NewCertificatesWithKeys(publicKey, keyProcessor)
 	if err != nil {

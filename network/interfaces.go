@@ -28,9 +28,15 @@ import (
 	"github.com/insolar/insolar/network/transport/packet/types"
 )
 
+type BootstrapResult struct {
+	Host *host.Host
+	// FirstPulseTime    time.Time
+	ReconnectRequired bool
+}
+
 // Controller contains network logic.
 type Controller interface {
-	component.Starter
+	component.Initer
 	// SendParcel send message to nodeID.
 	SendMessage(nodeID core.RecordRef, name string, msg core.Parcel) ([]byte, error)
 	// RemoteProcedureRegister register remote procedure that will be executed when message is received.
@@ -38,7 +44,7 @@ type Controller interface {
 	// SendCascadeMessage sends a message from MessageBus to a cascade of nodes.
 	SendCascadeMessage(data core.Cascade, method string, msg core.Parcel) error
 	// Bootstrap init complex bootstrap process. Blocks until bootstrap is complete.
-	Bootstrap(ctx context.Context) error
+	Bootstrap(ctx context.Context) (*BootstrapResult, error)
 
 	// TODO: workaround methods, should be deleted once network consensus is alive
 
@@ -73,25 +79,21 @@ type HostNetwork interface {
 	BuildResponse(ctx context.Context, request Request, responseData interface{}) Response
 }
 
-type ConsensusRequestHandler func(Request)
+type ConsensusPacketHandler func(incomingPacket consensus.ConsensusPacket, sender core.RecordRef)
 
 //go:generate minimock -i github.com/insolar/insolar/network.ConsensusNetwork -o ../testutils/network -s _mock.go
 type ConsensusNetwork interface {
-	// Start listening to network requests.
-	Start(ctx context.Context)
-	// Stop listening to network requests.
-	Stop()
+	component.Starter
+	component.Stopper
 	// PublicAddress returns public address that can be published for all nodes.
 	PublicAddress() string
 	// GetNodeID get current node ID.
 	GetNodeID() core.RecordRef
 
-	// SendRequest send request to a remote node.
-	SendRequest(request Request, receiver core.RecordRef) error
-	// RegisterRequestHandler register a handler function to process incoming requests of a specific type.
-	RegisterRequestHandler(t types.PacketType, handler ConsensusRequestHandler)
-	// NewRequestBuilder create packet builder for an outgoing request with sender set to current node.
-	NewRequestBuilder() RequestBuilder
+	// SignAndSendPacket send request to a remote node.
+	SignAndSendPacket(packet consensus.ConsensusPacket, receiver core.RecordRef, service core.CryptographyService) error
+	// RegisterPacketHandler register a handler function to process incoming requests of a specific type.
+	RegisterPacketHandler(t consensus.PacketType, handler ConsensusPacketHandler)
 }
 
 // RequestID is 64 bit unsigned int request id.
@@ -151,6 +153,8 @@ type NodeKeeper interface {
 	// TODO: remove this interface when bootstrap mechanism completed
 	core.SwitcherWorkAround
 
+	// GetCloudHash returns current cloud hash
+	GetCloudHash() []byte
 	// SetCloudHash set new cloud hash
 	SetCloudHash([]byte)
 	// AddActiveNodes add active nodes.
@@ -161,8 +165,10 @@ type NodeKeeper interface {
 	SetState(NodeKeeperState)
 	// GetState get state of the NodeKeeper
 	GetState() NodeKeeperState
-	// GetOriginClaim get origin NodeJoinClaim
-	GetOriginClaim() (*consensus.NodeJoinClaim, error)
+	// GetOriginJoinClaim get origin NodeJoinClaim
+	GetOriginJoinClaim() (*consensus.NodeJoinClaim, error)
+	// GetOriginAnnounceClaim get origin NodeAnnounceClaim
+	GetOriginAnnounceClaim(mapper consensus.BitSetMapper) (*consensus.NodeAnnounceClaim, error)
 	// NodesJoinedDuringPreviousPulse returns true if the last Sync call contained approved Join claims
 	NodesJoinedDuringPreviousPulse() bool
 	// AddPendingClaim add pending claim to the internal queue of claims
@@ -179,23 +185,55 @@ type NodeKeeper interface {
 	// Sync move unsync -> sync
 	Sync(list UnsyncList)
 	// MoveSyncToActive merge sync list with active nodes
-	MoveSyncToActive()
+	MoveSyncToActive(ctx context.Context) error
+	// AddTemporaryMapping add temporary mapping till the next pulse for consensus
+	AddTemporaryMapping(nodeID core.RecordRef, shortID core.ShortNodeID, address string) error
+	// ResolveConsensus get temporary mapping by short ID
+	ResolveConsensus(shortID core.ShortNodeID) *host.Host
+	// ResolveConsensusRef get temporary mapping by node ID
+	ResolveConsensusRef(nodeID core.RecordRef) *host.Host
 }
 
 // UnsyncList is interface to manage unsync list
 //go:generate minimock -i github.com/insolar/insolar/network.UnsyncList -o ../testutils/network -s _mock.go
 type UnsyncList interface {
 	consensus.BitSetMapper
-	// RemoveClaims
-	RemoveClaims(core.RecordRef)
+	// ApproveSync
+	ApproveSync([]core.RecordRef)
 	// AddClaims
-	AddClaims(map[core.RecordRef][]consensus.ReferendumClaim, map[core.RecordRef]string)
+	AddClaims(map[core.RecordRef][]consensus.ReferendumClaim) error
+	// AddNode
+	AddNode(node core.Node, bitsetIndex uint16)
+	// GetClaims
+	GetClaims(nodeID core.RecordRef) []consensus.ReferendumClaim
+	// AddProof
+	AddProof(nodeID core.RecordRef, proof *consensus.NodePulseProof)
+	// GetProof
+	GetProof(nodeID core.RecordRef) *consensus.NodePulseProof
+	// GetGlobuleHashSignature
+	GetGlobuleHashSignature(ref core.RecordRef) (consensus.GlobuleHashSignature, bool)
+	// SetGlobuleHashSignature
+	SetGlobuleHashSignature(core.RecordRef, consensus.GlobuleHashSignature)
 	// CalculateHash calculate node list hash based on active node list and claims
-	CalculateHash() ([]byte, error)
+	CalculateHash(core.PlatformCryptographyScheme) ([]byte, error)
 	// GetActiveNode get active node by reference ID for current consensus
 	GetActiveNode(ref core.RecordRef) core.Node
 	// GetActiveNodes get active nodes for current consensus
 	GetActiveNodes() []core.Node
+	// TODO:
+	GetMergedCopy() (*MergedListCopy, error)
+	//
+	RemoveNode(nodeID core.RecordRef)
+}
+
+type MergedListCopy struct {
+	ActiveList map[core.RecordRef]core.Node
+	Flags      MergedListFlags
+}
+
+type MergedListFlags struct {
+	NodesJoinedDuringPrevPulse bool
+	ShouldExit                 bool
 }
 
 // PartitionPolicy contains all rules how to initiate globule resharding.
@@ -209,8 +247,10 @@ type RoutingTable interface {
 	Inject(nodeKeeper NodeKeeper)
 	// Resolve NodeID -> ShortID, Address. Can initiate network requests.
 	Resolve(core.RecordRef) (*host.Host, error)
-	// ResolveS ShortID -> NodeID, Address for node inside current globe.
-	ResolveS(core.ShortNodeID) (*host.Host, error)
+	// ResolveConsensus ShortID -> NodeID, Address for node inside current globe for current consensus.
+	ResolveConsensus(core.ShortNodeID) (*host.Host, error)
+	// ResolveConsensusRef NodeID -> ShortID, Address for node inside current globe for current consensus.
+	ResolveConsensusRef(core.RecordRef) (*host.Host, error)
 	// AddToKnownHosts add host to routing table.
 	AddToKnownHosts(*host.Host)
 	// Rebalance recreate shards of routing table with known hosts according to new partition policy.

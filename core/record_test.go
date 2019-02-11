@@ -79,7 +79,6 @@ func TestRecordID_DebugString_Jet(t *testing.T) {
 	assert.Equal(t, "[JET 2 11]", j.DebugString())
 }
 
-
 func BenchmarkRecordID_DebugString_ZeroDepth(b *testing.B) {
 	jet := jet.NewID(0, []byte{})
 	for n := 0; n < b.N; n++ {

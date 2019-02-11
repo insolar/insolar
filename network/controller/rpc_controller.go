@@ -40,7 +40,7 @@ import (
 )
 
 type RPCController interface {
-	component.Starter
+	component.Initer
 
 	// hack for DI, else we receive ServiceNetwork injection in RPCController instead of rpcController that leads to stack overflow
 	IAmRPCController()
@@ -271,7 +271,7 @@ func (rpc *rpcController) processCascade(ctx context.Context, request network.Re
 	return rpc.hostNetwork.BuildResponse(ctx, request, &ResponseCascade{Success: true}), nil
 }
 
-func (rpc *rpcController) Start(ctx context.Context) error {
+func (rpc *rpcController) Init(ctx context.Context) error {
 	rpc.hostNetwork.RegisterRequestHandler(types.RPC, rpc.processMessage)
 	rpc.hostNetwork.RegisterRequestHandler(types.Cascade, rpc.processCascade)
 	return nil
