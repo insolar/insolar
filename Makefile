@@ -151,13 +151,17 @@ test_with_coverage: $(ARTIFACTS_DIR)
 test_with_coverage_fast:
 	CGO_ENABLED=1 go test $(TEST_ARGS) -count 1 --coverprofile=$(COVERPROFILE) --covermode=atomic $(ALL_PACKAGES)
 
-.PHONY: ci_test_with_coverage_json
-ci_test_with_coverage_json:
-	CGO_ENABLED=1 go test -count 1 -parallel 4 --coverprofile=$(COVERPROFILE) --covermode=atomic -v $(ALL_PACKAGES) | tee unit.json
+.PHONY: ci_test_with_coverage
+ci_test_with_coverage:
+	CGO_ENABLED=1 go test -count 1 -parallel 4 --coverprofile=$(COVERPROFILE) --covermode=atomic -v $(ALL_PACKAGES) | tee unit.file
 
-.PHONY: ci_test_func_json
-ci_test_func_json:
-	CGO_ENABLED=1 go test $(TEST_ARGS) -tags functest -v ./functest -count=1 | tee func.json
+.PHONY: ci_test_func
+ci_test_func:
+	CGO_ENABLED=1 go test $(TEST_ARGS) -tags functest -v ./functest -count=1 | tee func.file
+
+.PHONY: ci_test_integrtest
+ci_test_integrtest:
+	CGO_ENABLED=1 go test $(TEST_ARGS) -tags networktest -v ./network/servicenetwork -count=1 | tee integr.file
 
 
 .PHONY: regen-proxies
