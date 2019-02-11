@@ -21,7 +21,7 @@
 .idea
 *.iml
 out
-gen
+.gen
 
 ### VSCode configuration
 .vscode
