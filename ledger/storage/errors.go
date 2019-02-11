@@ -37,4 +37,10 @@ var (
 
 	// ErrClosed is returned when attempt to read or write to closed db.
 	ErrClosed = errors.New("db is closed")
+
+	// ErrPulseNotFound is returned if pulse not found in storage
+	ErrPulseNotFound = errors.New("pulse not found")
+
+	// ErrPrevPulseNotFound is returned if previous pulse not found in storage
+	ErrPrevPulseNotFound = errors.New("previous pulse not found")
 )

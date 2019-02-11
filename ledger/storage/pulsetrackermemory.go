@@ -39,14 +39,33 @@ func (p *pulseTrackerMemory) GetPulse(ctx context.Context, num core.PulseNumber)
 	pulse, ok := p.memory[num]
 
 	if !ok {
-		return nil, ErrNotFound
+		return nil, ErrPulseNotFound
 	}
 
 	return pulse, nil
 }
 
 func (p *pulseTrackerMemory) GetPreviousPulse(ctx context.Context, num core.PulseNumber) (*Pulse, error) {
-	panic("implement me")
+	p.mutex.RLock()
+	defer p.mutex.RUnlock()
+
+	pulse, exists := p.memory[num]
+
+	if !exists {
+		return nil, ErrPulseNotFound
+	}
+
+	if pulse.Prev == nil {
+		return nil, ErrPrevPulseNotFound
+	}
+
+	resultPulse, exists := p.memory[*pulse.Prev]
+
+	if !exists {
+		return nil, ErrPulseNotFound
+	}
+
+	return resultPulse, nil
 }
 
 func (p *pulseTrackerMemory) GetNthPrevPulse(ctx context.Context, n uint, from core.PulseNumber) (*Pulse, error) {
