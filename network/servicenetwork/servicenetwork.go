@@ -22,6 +22,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
@@ -214,6 +215,8 @@ func (n *ServiceNetwork) Stop(ctx context.Context) error {
 }
 
 func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse core.Pulse) {
+	currentTime := time.Now()
+
 	n.lock.Lock()
 	defer n.lock.Unlock()
 
@@ -240,7 +243,7 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse core.Pulse) {
 
 	currentPulse, err := n.PulseStorage.Current(ctx)
 	if err != nil {
-		panic(errors.Wrap(err, "Could not get current pulse"))
+		logger.Fatalf("Could not get current pulse: %s", err.Error())
 	}
 
 	if !isNextPulse(currentPulse, &newPulse) {
@@ -256,17 +259,17 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse core.Pulse) {
 	logger.Debugf("Before set new current pulse number: %d", newPulse.PulseNumber)
 	err = n.PulseManager.Set(ctx, newPulse, n.NetworkSwitcher.GetState() == core.CompleteNetworkState)
 	if err != nil {
-		panic(errors.Wrap(err, "Failed to set new pulse"))
+		logger.Fatalf("Failed to set new pulse: %s", err.Error())
 	}
 	logger.Infof("Set new current pulse number: %d", newPulse.PulseNumber)
 
-	go n.phaseManagerOnPulse(ctx, newPulse)
+	go n.phaseManagerOnPulse(ctx, newPulse, currentTime)
 }
 
-func (n *ServiceNetwork) phaseManagerOnPulse(ctx context.Context, newPulse core.Pulse) {
+func (n *ServiceNetwork) phaseManagerOnPulse(ctx context.Context, newPulse core.Pulse, pulseStartTime time.Time) {
 	logger := inslogger.FromContext(ctx)
 
-	if err := n.PhaseManager.OnPulse(ctx, &newPulse); err != nil {
+	if err := n.PhaseManager.OnPulse(ctx, &newPulse, pulseStartTime); err != nil {
 		logger.Error("Failed to pass consensus: " + err.Error())
 		n.TerminationHandler.Abort()
 	}

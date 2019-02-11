@@ -30,7 +30,7 @@ import (
 )
 
 type PhaseManager interface {
-	OnPulse(ctx context.Context, pulse *core.Pulse) error
+	OnPulse(ctx context.Context, pulse *core.Pulse, pulseStartTime time.Time) error
 }
 
 type Phases struct {
@@ -51,13 +51,14 @@ func NewPhaseManager() PhaseManager {
 }
 
 // OnPulse starts calculate args on phases.
-func (pm *Phases) OnPulse(ctx context.Context, pulse *core.Pulse) error {
+func (pm *Phases) OnPulse(ctx context.Context, pulse *core.Pulse, pulseStartTime time.Time) error {
 	pm.lock.Lock()
 	defer pm.lock.Unlock()
 
 	var err error
 
-	inslogger.FromContext(ctx).Info("[ NET Consensus ] Starting consensus process")
+	consensusDelay := time.Now().Sub(pulseStartTime)
+	inslogger.FromContext(ctx).Infof("[ NET Consensus ] Starting consensus process, delay: %v", consensusDelay)
 
 	pulseDuration, err := getPulseDuration(pulse)
 	if err != nil {
@@ -67,7 +68,7 @@ func (pm *Phases) OnPulse(ctx context.Context, pulse *core.Pulse) error {
 	var tctx context.Context
 	var cancel context.CancelFunc
 
-	tctx, cancel = contextTimeout(ctx, *pulseDuration, 0.3)
+	tctx, cancel = contextTimeoutWithDelay(ctx, *pulseDuration, consensusDelay, 0.3)
 	defer cancel()
 
 	firstPhaseState, err := pm.FirstPhase.Execute(tctx, pulse)
@@ -121,6 +122,15 @@ func getPulseDuration(pulse *core.Pulse) (*time.Duration, error) {
 
 func contextTimeout(ctx context.Context, duration time.Duration, k float64) (context.Context, context.CancelFunc) {
 	timeout := time.Duration(k * float64(duration))
+	timedCtx, cancelFund := context.WithTimeout(ctx, timeout)
+	return timedCtx, cancelFund
+}
+
+func contextTimeoutWithDelay(ctx context.Context, duration, delay time.Duration, k float64) (context.Context, context.CancelFunc) {
+	timeout := time.Duration(k*float64(duration)) - delay
+	if timeout < 0 {
+		inslogger.FromContext(ctx).Fatalf("[ NET Consensus ] Not enough time for consensus process")
+	}
 	timedCtx, cancelFund := context.WithTimeout(ctx, timeout)
 	return timedCtx, cancelFund
 }
