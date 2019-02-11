@@ -404,12 +404,12 @@ func (g *Genesis) activateNodes(ctx context.Context, cb *ContractsBuilder, nodes
 func (g *Genesis) activateNodeRecord(ctx context.Context, cb *ContractsBuilder, record *noderecord.NodeRecord, name string) (*core.RecordRef, error) {
 	nodeData, err := serializeInstance(record)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ activateNodes ] Couldn't serialize node instance")
+		return nil, errors.Wrap(err, "[ activateNodeRecord ] Couldn't serialize node instance")
 	}
 
 	nodeID, err := g.ArtifactManager.RegisterRequest(ctx, *g.rootDomainRef, &message.Parcel{Msg: &message.GenesisRequest{Name: name}})
 	if err != nil {
-		return nil, errors.Wrap(err, "[ activateNodes ] Couldn't register request to artifact manager")
+		return nil, errors.Wrap(err, "[ activateNodeRecord ] Couldn't register request to artifact manager")
 	}
 	contract := core.NewRecordRef(*g.rootDomainRef.Record(), *nodeID)
 	_, err = g.ArtifactManager.ActivateObject(
@@ -422,11 +422,11 @@ func (g *Genesis) activateNodeRecord(ctx context.Context, cb *ContractsBuilder, 
 		nodeData,
 	)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ activateNodes ] Could'n activateNodeRecord node object")
+		return nil, errors.Wrap(err, "[ activateNodeRecord ] Could'n activateNodeRecord node object")
 	}
 	_, err = g.ArtifactManager.RegisterResult(ctx, *g.rootDomainRef, *contract, nil)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ activateNodes ] Couldn't register result to artifact manager")
+		return nil, errors.Wrap(err, "[ activateNodeRecord ] Couldn't register result to artifact manager")
 	}
 	return contract, nil
 }
