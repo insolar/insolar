@@ -34,18 +34,18 @@ type Record interface {
 }
 
 func init() {
-	// ID can be any unique TypeID value.
+	// ID can be any unique int value.
 	// Never change id constants. They are used for serialization.
-	register(10, new(GenesisRecord))
-	register(11, new(ChildRecord))
-	register(12, new(JetRecord))
+	register(100, new(GenesisRecord))
+	register(101, new(ChildRecord))
+	register(102, new(JetRecord))
 
-	register(20, new(RequestRecord))
+	register(200, new(RequestRecord))
 
-	register(30, new(ResultRecord))
-	register(31, new(TypeRecord))
-	register(32, new(CodeRecord))
-	register(33, new(ObjectActivateRecord))
-	register(34, new(ObjectAmendRecord))
-	register(35, new(DeactivationRecord))
+	register(300, new(ResultRecord))
+	register(301, new(TypeRecord))
+	register(302, new(CodeRecord))
+	register(303, new(ObjectActivateRecord))
+	register(304, new(ObjectAmendRecord))
+	register(305, new(DeactivationRecord))
 }
