@@ -31,10 +31,14 @@ type Node struct {
 
 // Config contains all genesis config
 type Config struct {
-	RootKeysFile string `mapstructure:"root_keys_file"`
-	RootBalance  uint   `mapstructure:"root_balance"`
-	MajorityRule int    `mapstructure:"majority_rule"`
-	MinRoles     struct {
+	RootKeysFile     string `mapstructure:"root_keys_file"`
+	NodeKeysDir      string `mapstructure:"node_keys_dir"`
+	DiscoveryKeysDir string `mapstructure:"discovery_keys_dir"`
+	KeysNameFormat   string `mapstructure:"keys_name_format"`
+	ReuseKeys        bool   `mapstructure:"reuse_keys"`
+	RootBalance      uint   `mapstructure:"root_balance"`
+	MajorityRule     int    `mapstructure:"majority_rule"`
+	MinRoles         struct {
 		Virtual       uint `mapstructure:"virtual"`
 		HeavyMaterial uint `mapstructure:"heavy_material"`
 		LightMaterial uint `mapstructure:"light_material"`

@@ -156,16 +156,6 @@ generate_root_member_keys()
 	echo "generate_root_member_keys() end."
 }
 
-generate_discovery_nodes_keys()
-{
-    echo "generate_discovery_nodes_keys() starts ..."
-    for node in "${DISCOVERY_NODES[@]}"
-    do
-        bin/insolar -c gen_keys > $node/keys.json
-    done
-    echo "generate_discovery_nodes_keys() end."
-}
-
 check_working_dir()
 {
     echo "check_working_dir() starts ..."
@@ -271,7 +261,6 @@ genesis()
     build_binaries
     generate_bootstrap_keys
     generate_root_member_keys
-    generate_discovery_nodes_keys
     generate_insolard_configs
 
     printf "start genesis ... \n"
