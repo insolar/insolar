@@ -34,7 +34,8 @@ type Record interface {
 }
 
 func init() {
-	// Never change id constants.
+	// ID can be any unique TypeID value.
+	// Never change id constants. They are used for serialization.
 	register(10, new(GenesisRecord))
 	register(11, new(ChildRecord))
 	register(12, new(JetRecord))
