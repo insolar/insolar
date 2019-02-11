@@ -27,13 +27,13 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/merkle"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
+	"go.opencensus.io/tag"
 	"go.opencensus.io/trace"
 )
 
@@ -133,8 +133,10 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse) (*Firs
 	} else {
 		logger.Infof("[ NET Consensus phase-1 ] received packets: %d/%d", len(resultPackets), len(activeNodes))
 	}
-	metrics.ConsensusPacketsRecv.WithLabelValues("phase 1").Add(float64(len(resultPackets)))
-	stats.Record(ctx, consensus.ConsensusPacketsRecv.M(1))
+	err = stats.RecordWithTags(ctx, []tag.Mutator{tag.Upsert(consensus.TagPhase, "phase 1")}, consensus.ConsensusPacketsRecv.M(int64(len(resultPackets))))
+	if err != nil {
+		log.Warn("[ NET Consensus phase-1 ] failed to record a metric")
+	}
 
 	proofSet := make(map[core.RecordRef]*merkle.PulseProof)
 	rawProofs := make(map[core.RecordRef]*packets.NodePulseProof)
@@ -241,7 +243,7 @@ func (fp *FirstPhaseImpl) filterClaims(nodeID core.RecordRef, claims []packets.R
 		if ok && !nodeID.Equal(fp.NodeKeeper.GetOrigin().ID()) {
 			err := fp.checkClaimSignature(signedClaim)
 			if err != nil {
-				metrics.ConsensusDeclinedClaims.Inc()
+				stats.Record(context.Background(), consensus.ConsensusDeclinedClaims.M(1))
 				log.Error("failed to check claim signature: " + err.Error())
 				continue
 			}

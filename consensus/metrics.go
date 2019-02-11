@@ -24,7 +24,7 @@ import (
 )
 
 var (
-	tagPhase = insmetrics.MustTagKey("phase")
+	TagPhase = insmetrics.MustTagKey("phase")
 )
 
 var (
@@ -41,7 +41,7 @@ var (
 )
 
 func init() {
-	commontags := []tag.Key{tagPhase}
+	commontags := []tag.Key{TagPhase}
 	err := view.Register(
 		&view.View{
 			Name:        ConsensusPacketsSent.Name(),
@@ -103,7 +103,7 @@ func init() {
 			Name:        ConsensusActiveNodes.Name(),
 			Description: ConsensusActiveNodes.Description(),
 			Measure:     ConsensusActiveNodes,
-			Aggregation: view.Count(),
+			Aggregation: view.LastValue(),
 		},
 	)
 	if err != nil {

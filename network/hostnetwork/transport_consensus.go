@@ -21,10 +21,10 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/configuration"
+	consensus2 "github.com/insolar/insolar/consensus"
 	consensus "github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/sequence"
 	"github.com/insolar/insolar/network/transport"
@@ -32,6 +32,8 @@ import (
 	"github.com/insolar/insolar/network/transport/packet"
 	"github.com/insolar/insolar/network/transport/relay"
 	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
+	"go.opencensus.io/tag"
 )
 
 type transportConsensus struct {
@@ -74,7 +76,11 @@ func (tc *transportConsensus) SignAndSendPacket(packet consensus.ConsensusPacket
 	}
 	ctx := context.Background()
 	p := tc.buildPacket(packet, receiverHost)
-	metrics.ConsensusPacketsSent.WithLabelValues(packet.GetType().String()).Inc()
+	err = stats.RecordWithTags(ctx, []tag.Mutator{tag.Upsert(consensus2.TagPhase, packet.GetType().String())}, consensus2.ConsensusPacketsSent.M(1))
+	if err != nil {
+		log.Warn(" [ transportConsensus ] failed to record a metric")
+	}
+
 	return tc.transport.SendPacket(ctx, p)
 }
 

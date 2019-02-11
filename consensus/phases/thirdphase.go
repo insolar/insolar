@@ -20,15 +20,17 @@ package phases
 import (
 	"context"
 
+	"github.com/insolar/insolar/consensus"
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/merkle"
 	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
+	"go.opencensus.io/tag"
 	"go.opencensus.io/trace"
 )
 
@@ -51,7 +53,7 @@ func (tp *ThirdPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse, state 
 	ctx, span := instracer.StartSpan(ctx, "ThirdPhase.Execute")
 	span.AddAttributes(trace.Int64Attribute("pulse", int64(state.PulseEntry.Pulse.PulseNumber)))
 	defer span.End()
-	metrics.ConsensusPhase3Exec.Inc()
+	stats.Record(ctx, consensus.ConsensusPhase3Exec.M(1))
 
 	logger := inslogger.FromContext(ctx)
 	totalCount := state.UnsyncList.Length()
@@ -69,7 +71,10 @@ func (tp *ThirdPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse, state 
 		return nil, errors.Wrap(err, "[ NET Consensus phase-3 ] Failed to exchange packets")
 	}
 	logger.Infof("[ NET Consensus phase-3 ] received responses: %d/%d", len(responses), totalCount)
-	metrics.ConsensusPacketsRecv.WithLabelValues("phase 3").Add(float64(len(responses)))
+	err = stats.RecordWithTags(ctx, []tag.Mutator{tag.Upsert(consensus.TagPhase, "phase 3")}, consensus.ConsensusPacketsRecv.M(int64(len(responses))))
+	if err != nil {
+		log.Warn("[ NET Consensus phase-3 ] failed to record a metric")
+	}
 
 	for ref, packet := range responses {
 		err = nil
