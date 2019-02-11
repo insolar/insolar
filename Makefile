@@ -67,7 +67,7 @@ generate:
 
 .PHONY: test_git_no_changes
 test_git_no_changes:
-	git diff -w -G'(^[^\*# /])|(^#\w)|(^\s+[^\*#/])' --exit-code
+	ci/scripts/diff.sh
 
 .PHONY: ensure
 ensure:
