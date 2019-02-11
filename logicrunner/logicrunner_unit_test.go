@@ -904,10 +904,7 @@ func (s *LogicRunnerOnPulseTestSuite) TestLedgerHasMoreRequests() {
 		s.T().Run(name, func(t *testing.T) {
 			assert := assert.New(t)
 
-			// waiting for ledger implement fetch method
-			// waiting for us implement fetching
-			messagesQueue := convertQueueToMessageQueue(test.queue)
-			//messagesQueue := convertQueueToMessageQueue(queue[:maxQueueLength])
+			messagesQueue := convertQueueToMessageQueue(test.queue[:maxQueueLength])
 
 			expectedMessage := &message.ExecutorResults{
 				RecordRef:             s.objectRef,
