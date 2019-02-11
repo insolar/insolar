@@ -773,7 +773,6 @@ func (lr *LogicRunner) getLedgerPendingRequest(ctx context.Context, es *Executio
 
 	if !authorized {
 		inslogger.FromContext(ctx).Debug("pulse changed, can't process abandoned messages for this object")
-		go lr.StartQueueProcessorIfNeededOnPulse(ctx, es, msg.DefaultTarget())
 		return
 	}
 
