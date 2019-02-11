@@ -90,7 +90,7 @@ func (sp *SecondPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse, state
 	logger.Infof("[ NET Consensus phase-2.0 ] Received responses: %d/%d", len(packets), len(activeNodes))
 	err = stats.RecordWithTags(ctx, []tag.Mutator{tag.Upsert(consensus.TagPhase, "phase 2")}, consensus.PacketsRecv.M(int64(len(packets))))
 	if err != nil {
-		core.Logger.Warn("[ NET Consensus phase-2.0 ] failed to record a metric")
+		logger.Warn("[ NET Consensus phase-2.0 ] failed to record a metric")
 	}
 
 	origin := sp.NodeKeeper.GetOrigin().ID()
@@ -206,7 +206,7 @@ func (sp *SecondPhaseImpl) Execute21(ctx context.Context, pulse *core.Pulse, sta
 
 	err = stats.RecordWithTags(ctx, []tag.Mutator{tag.Upsert(consensus.TagPhase, "phase 21")}, consensus.PacketsRecv.M(int64(len(results))))
 	if err != nil {
-		core.Logger.Warn("[ NET Consensus phase-2.1 ] failed to record a metric")
+		logger.Warn("[ NET Consensus phase-2.1 ] failed to record a metric")
 	}
 	if len(results) != len(additionalRequests) {
 		return nil, errors.Errorf("[ NET Consensus phase-2.1 ] Failed to receive enough MissingNodeSupplementaryVote responses,"+

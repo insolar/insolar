@@ -135,7 +135,7 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse) (*Firs
 	}
 	err = stats.RecordWithTags(ctx, []tag.Mutator{tag.Upsert(consensus.TagPhase, "phase 1")}, consensus.PacketsRecv.M(int64(len(resultPackets))))
 	if err != nil {
-		core.Logger.Warn("[ NET Consensus phase-1 ] failed to record a metric")
+		logger.Warn("[ NET Consensus phase-1 ] failed to record a metric")
 	}
 
 	proofSet := make(map[core.RecordRef]*merkle.PulseProof)

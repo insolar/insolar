@@ -119,7 +119,7 @@ func (nc *NaiveCommunicator) sendRequestToNodes(participants []core.Node, packet
 		go func(n core.Node, packet packets.ConsensusPacket) {
 			err := stats.RecordWithTags(context.Background(), []tag.Mutator{tag.Upsert(consensus.TagPhase, packet.GetType().String())}, consensus.PacketsSent.M(1))
 			if err != nil {
-				core.Logger.Warn(" [ NativeCommunicator: sendRequestToNodes ] failed to record a metric")
+				log.Warn(" [ NativeCommunicator: sendRequestToNodes ] failed to record a metric")
 			}
 			err = nc.ConsensusNetwork.SignAndSendPacket(packet, n.ID(), nc.Cryptography)
 			if err != nil {
@@ -149,7 +149,7 @@ func (nc *NaiveCommunicator) sendRequestToNodesWithOrigin(originClaim *packets.N
 		go func(node core.RecordRef, consensusPacket packets.ConsensusPacket) {
 			err := stats.RecordWithTags(context.Background(), []tag.Mutator{tag.Upsert(consensus.TagPhase, consensusPacket.GetType().String())}, consensus.PacketsSent.M(1))
 			if err != nil {
-				core.Logger.Warn(" [ NativeCommunicator: sendRequestToNodesWithOrigin ] failed to record a metric")
+				log.Warn(" [ NativeCommunicator: sendRequestToNodesWithOrigin ] failed to record a metric")
 			}
 			err = nc.ConsensusNetwork.SignAndSendPacket(consensusPacket, node, nc.Cryptography)
 			if err != nil {
@@ -385,7 +385,7 @@ func (nc *NaiveCommunicator) sendAdditionalRequests(origReq *packets.Phase2Packe
 		stats.Record(context.Background(), consensus.PacketsSent.M(1))
 		err := stats.RecordWithTags(context.Background(), []tag.Mutator{tag.Upsert(consensus.TagPhase, origReq.GetType().String())}, consensus.PacketsSent.M(1))
 		if err != nil {
-			core.Logger.Warn(" [ NativeCommunicator: sendAdditionalRequests ] failed to record a metric")
+			log.Warn(" [ NativeCommunicator: sendAdditionalRequests ] failed to record a metric")
 		}
 		err = nc.ConsensusNetwork.SignAndSendPacket(&newReq, receiver, nc.Cryptography)
 		if err != nil {

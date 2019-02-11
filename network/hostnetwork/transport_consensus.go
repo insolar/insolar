@@ -21,7 +21,7 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/configuration"
-	consensus "github.com/insolar/insolar/consensus"
+	"github.com/insolar/insolar/consensus"
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
@@ -78,7 +78,7 @@ func (tc *transportConsensus) SignAndSendPacket(packet packets.ConsensusPacket,
 	p := tc.buildPacket(packet, receiverHost)
 	err = stats.RecordWithTags(ctx, []tag.Mutator{tag.Upsert(consensus.TagPhase, packet.GetType().String())}, consensus.PacketsSent.M(1))
 	if err != nil {
-		core.Logger.Warn(" [ transportConsensus ] failed to record a metric")
+		log.Warn(" [ transportConsensus ] failed to record a metric")
 	}
 
 	return tc.transport.SendPacket(ctx, p)
