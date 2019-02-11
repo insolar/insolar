@@ -2,7 +2,7 @@ BIN_DIR ?= bin
 ARTIFACTS_DIR ?= .artefacts
 INSOLAR = insolar
 INSOLARD = insolard
-INSGOCC = $(BIN_DIR)/insgocc
+INSGOCC = insgocc
 PULSARD = pulsard
 INSGORUND = insgorund
 BENCHMARK = benchmark
@@ -10,7 +10,7 @@ PULSEWATCHER = pulsewatcher
 EXPORTER = exporter
 APIREQUESTER = apirequester
 HEALTHCHECK = healthcheck
-CERTGEN = $(BIN_DIR)/certgen
+CERTGEN = certgen
 
 ALL_PACKAGES = ./...
 MOCKS_PACKAGE = github.com/insolar/insolar/testutils
@@ -89,7 +89,7 @@ $(INSOLAR):
 
 .PHONY: $(INSGOCC)
 $(INSGOCC): cmd/insgocc/insgocc.go logicrunner/goplugin/preprocessor
-	go build -o $(INSGOCC) -ldflags "${LDFLAGS}" cmd/insgocc/*.go
+	go build -o $(BIN_DIR)/$(INSGOCC) -ldflags "${LDFLAGS}" cmd/insgocc/*.go
 
 .PHONY: $(PULSARD)
 $(PULSARD):
@@ -121,7 +121,7 @@ $(HEALTHCHECK):
 
 .PHONY: $(CERTGEN)
 $(CERTGEN):
-	go build -o $(CERTGEN) -ldflags "${LDFLAGS}" cmd/certgen/*.go
+	go build -o $(BIN_DIR)/$(CERTGEN) -ldflags "${LDFLAGS}" cmd/certgen/*.go
 
 .PHONY: functest
 functest:
