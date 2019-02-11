@@ -535,20 +535,16 @@ func (lr *LogicRunner) StartQueueProcessorIfNeeded(
 	return nil
 }
 
-func (lr *LogicRunner) StartQueueProcessorIfNeededOnPulse(
-	ctx context.Context, es *ExecutionState, ref *core.RecordRef,
-) error {
+func (lr *LogicRunner) StartQueueProcessorIfNeededOnPulse(ctx context.Context, es *ExecutionState, ref *core.RecordRef) {
 	es.Lock()
 	defer es.Unlock()
 
 	if !es.haveSomeToProcess() {
 		inslogger.FromContext(ctx).Debug("queue is empty. processor is not needed")
-		return nil
 	}
 
 	if es.QueueProcessorActive {
 		inslogger.FromContext(ctx).Debug("queue processor is already active. processor is not needed")
-		return nil
 	}
 
 	es.pending = message.NotPending
@@ -557,8 +553,6 @@ func (lr *LogicRunner) StartQueueProcessorIfNeededOnPulse(
 	es.QueueProcessorActive = true
 	go lr.ProcessExecutionQueue(ctx, es)
 	go lr.getLedgerPendingRequest(ctx, es, *ref.Record())
-
-	return nil
 }
 
 func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionState) {
@@ -749,7 +743,6 @@ func (lr *LogicRunner) getLedgerPendingRequest(ctx context.Context, es *Executio
 
 	ledgerHasMore := true
 
-	// todo span on AM call?
 	parcel, err := lr.ArtifactManager.GetPendingRequest(ctx, id)
 	if err != nil {
 		if err != core.ErrNoPendingRequest {
@@ -1129,13 +1122,8 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 					es.LedgerHasMoreRequests = true
 					go func() {
 						go lr.getLedgerPendingRequest(ctx, es, *ref.Record())
-						err := lr.StartQueueProcessorIfNeededOnPulse(ctx, es, &ref)
-						if err != nil {
-							inslogger.FromContext(ctx).Error(
-								errors.Wrap(err, "couldn't start queue processor"),
-							)
+						lr.StartQueueProcessorIfNeededOnPulse(ctx, es, &ref)
 
-						}
 					}()
 				}
 				es.PendingConfirmed = false
