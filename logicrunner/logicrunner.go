@@ -738,10 +738,18 @@ func (lr *LogicRunner) getLedgerPendingRequest(ctx context.Context, es *Executio
 	es.getLedgerPendingMutex.Lock()
 	defer es.getLedgerPendingMutex.Unlock()
 
+	ref := lr.unsafeGetLedgerPendingRequest(ctx, es, id)
+
+	if ref != nil {
+		go lr.StartQueueProcessorIfNeededOnPulse(ctx, es, ref)
+	}
+}
+
+func (lr *LogicRunner) unsafeGetLedgerPendingRequest(ctx context.Context, es *ExecutionState, id core.RecordID) *core.RecordRef {
 	es.Lock()
 	if es.LedgerQueueElement != nil || !es.LedgerHasMoreRequests {
 		es.Unlock()
-		return
+		return nil
 	}
 	es.Unlock()
 
@@ -751,7 +759,7 @@ func (lr *LogicRunner) getLedgerPendingRequest(ctx context.Context, es *Executio
 	if err != nil {
 		if err != core.ErrNoPendingRequest {
 			inslogger.FromContext(ctx).Debug("GetPendingRequest failed with error")
-			return
+			return nil
 		}
 
 		ledgerHasMore = false
@@ -761,7 +769,7 @@ func (lr *LogicRunner) getLedgerPendingRequest(ctx context.Context, es *Executio
 
 	if !ledgerHasMore {
 		es.LedgerHasMoreRequests = ledgerHasMore
-		return
+		return nil
 	}
 
 	msg := parcel.Message().(message.IBaseLogicMessage)
@@ -772,12 +780,12 @@ func (lr *LogicRunner) getLedgerPendingRequest(ctx context.Context, es *Executio
 	)
 	if err != nil {
 		inslogger.FromContext(ctx).Debug("Authorization failed with error in getLedgerPendingRequest")
-		return
+		return nil
 	}
 
 	if !authorized {
 		inslogger.FromContext(ctx).Debug("pulse changed, can't process abandoned messages for this object")
-		return
+		return nil
 	}
 
 	request := msg.GetReference()
@@ -792,7 +800,7 @@ func (lr *LogicRunner) getLedgerPendingRequest(ctx context.Context, es *Executio
 		fromLedger: true,
 	}
 
-	go lr.StartQueueProcessorIfNeededOnPulse(ctx, es, msg.DefaultTarget())
+	return msg.DefaultTarget()
 }
 
 // ObjectBody is an inner representation of object and all it accessory
