@@ -14,7 +14,6 @@
  *    limitations under the License.
  */
 
-
 package controller
 
 import (
@@ -27,6 +26,7 @@ import (
 
 var (
 	tagMessageType = insmetrics.MustTagKey("messageType")
+	tagPacketType  = insmetrics.MustTagKey("packetType")
 )
 
 var (
@@ -40,18 +40,32 @@ var (
 		"size of replies to parcels",
 		stats.UnitBytes,
 	)
+	statPacketsReceived = stats.Int64(
+		"network/packets/received",
+		"number of received packets",
+		stats.UnitDimensionless,
+	)
 )
 
 func init() {
 	err := view.Register(
 		&view.View{
 			Measure:     statParcelsSentSizeBytes,
-			Aggregation: view.Distribution(16, 32, 64, 128, 256, 512, 1024, 16*1<<10, 512*1<<10, 1<<20 ),
+			Aggregation: view.Distribution(16, 32, 64, 128, 256, 512, 1024, 16*1<<10, 512*1<<10, 1<<20),
 			TagKeys:     []tag.Key{tagMessageType},
+		},
+		&view.View{
+			Measure:     statParcelsReplySizeBytes,
+			Aggregation: view.Distribution(16, 32, 64, 128, 256, 512, 1024, 16*1<<10, 512*1<<10, 1<<20),
+			TagKeys:     []tag.Key{tagMessageType},
+		},
+		&view.View{
+			Measure:     statPacketsReceived,
+			Aggregation: view.Count(),
+			TagKeys:     []tag.Key{tagPacketType},
 		},
 	)
 	if err != nil {
 		panic(err)
 	}
 }
-
