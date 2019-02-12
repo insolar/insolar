@@ -96,12 +96,14 @@ func (p *RecentStorageProvider) CloneIndexStorage(ctx context.Context, fromJetID
 // ClonePendingStorage clones pending requests from one jet to another one
 func (p *RecentStorageProvider) ClonePendingStorage(ctx context.Context, fromJetID, toJetID core.RecordID) {
 	p.pendingLock.Lock()
-	defer p.pendingLock.Unlock()
-
 	fromStorage, ok := p.pendingStorages[fromJetID]
+	p.pendingLock.Unlock()
+
 	if !ok {
 		return
 	}
+
+	fromStorage.lock.RLock()
 	toStorage := &PendingStorageConcrete{
 		jetID:    toJetID,
 		requests: map[core.RecordID]*lockedPendingObjectContext{},
@@ -119,7 +121,11 @@ func (p *RecentStorageProvider) ClonePendingStorage(ctx context.Context, fromJet
 
 		pendingContext.lock.Unlock()
 	}
+	fromStorage.lock.RUnlock()
+
+	p.pendingLock.Lock()
 	p.pendingStorages[toJetID] = toStorage
+	p.pendingLock.Unlock()
 }
 
 // DecreaseIndexesTTL decrease ttl of all indexes in all storages
