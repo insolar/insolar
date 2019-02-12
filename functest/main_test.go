@@ -290,7 +290,7 @@ func waitForLaunch() error {
 		for scanner.Scan() {
 			line := scanner.Text()
 			fmt.Println(line)
-			if strings.Contains(line, "start nodes ...") {
+			if strings.Contains(line, "start discovery nodes ...") {
 				done <- true
 			}
 		}
@@ -378,7 +378,10 @@ func teardown() {
 		fmt.Println("[ teardown ] insolard was successfully stoped")
 	}
 
-	stopAllInsgorunds()
+	err = stopAllInsgorunds()
+	if err != nil {
+		fmt.Println("[ teardown ]  failed to stop all insgrounds: ", err)
+	}
 	fmt.Println("[ teardown ] insgorund was successfully stoped")
 
 	err = deleteDirForContracts()

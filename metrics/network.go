@@ -20,22 +20,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-// NetworkParcelSentTotal is total number of sent messages metric
-var NetworkParcelSentTotal = prometheus.NewCounterVec(prometheus.CounterOpts{
-	Name:      "parcel_sent_total",
-	Help:      "Total number of sent parcels",
-	Namespace: insolarNamespace,
-	Subsystem: "network",
-}, []string{"messageType"})
-
-// NetworkParcelReceivedTotal is total number of received messages metric
-var NetworkParcelReceivedTotal = prometheus.NewCounterVec(prometheus.CounterOpts{
-	Name:      "parcel_received_total",
-	Help:      "Total number of received parcels",
-	Namespace: insolarNamespace,
-	Subsystem: "network",
-}, []string{"messageType"})
-
 // NetworkPacketSentTotal is total number of sent packets metric
 var NetworkPacketSentTotal = prometheus.NewCounterVec(prometheus.CounterOpts{
 	Name:      "packet_sent_total",
@@ -51,6 +35,22 @@ var NetworkPacketReceivedTotal = prometheus.NewCounterVec(prometheus.CounterOpts
 	Namespace: insolarNamespace,
 	Subsystem: "network",
 }, []string{"packetType"})
+
+// NetworkSentSize is total sent bytes
+var NetworkSentSize = prometheus.NewCounter(prometheus.CounterOpts{
+	Name:      "sent_bytes",
+	Help:      "Sent by transport",
+	Namespace: insolarNamespace,
+	Subsystem: "network",
+})
+
+// NetworkRecvSize is total received bytes
+var NetworkRecvSize = prometheus.NewCounter(prometheus.CounterOpts{
+	Name:      "recv_bytes",
+	Help:      "Recieved by transport",
+	Namespace: insolarNamespace,
+	Subsystem: "network",
+})
 
 // NetworkPacketTimeoutTotal is is total number of timed out packets metric
 var NetworkPacketTimeoutTotal = prometheus.NewCounterVec(prometheus.CounterOpts{

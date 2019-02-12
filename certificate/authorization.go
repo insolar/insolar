@@ -26,10 +26,10 @@ import (
 
 // AuthorizationCertificate holds info about node from it certificate
 type AuthorizationCertificate struct {
-	PublicKey      string                     `json:"public_key"`
-	Reference      string                     `json:"reference"`
-	Role           string                     `json:"role"`
-	DiscoverySigns map[*core.RecordRef][]byte `json:"-"`
+	PublicKey      string                    `json:"public_key"`
+	Reference      string                    `json:"reference"`
+	Role           string                    `json:"role"`
+	DiscoverySigns map[core.RecordRef][]byte `json:"-" codec:"discoverysigns"`
 
 	nodePublicKey crypto.PublicKey
 }
@@ -55,7 +55,7 @@ func (authCert *AuthorizationCertificate) GetRole() core.StaticRole {
 }
 
 // GetDiscoverySigns return map of discovery nodes signs
-func (authCert *AuthorizationCertificate) GetDiscoverySigns() map[*core.RecordRef][]byte {
+func (authCert *AuthorizationCertificate) GetDiscoverySigns() map[core.RecordRef][]byte {
 	return authCert.DiscoverySigns
 }
 

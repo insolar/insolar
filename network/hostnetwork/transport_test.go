@@ -50,16 +50,20 @@ type MockResolver struct {
 	smapping map[core.ShortNodeID]*host.Host
 }
 
-func (m *MockResolver) Resolve(nodeID core.RecordRef) (*host.Host, error) {
-	result, exist := m.mapping[nodeID]
+func (m *MockResolver) ResolveConsensus(id core.ShortNodeID) (*host.Host, error) {
+	result, exist := m.smapping[id]
 	if !exist {
 		return nil, errors.New("failed to resolve")
 	}
 	return result, nil
 }
 
-func (m *MockResolver) ResolveS(id core.ShortNodeID) (*host.Host, error) {
-	result, exist := m.smapping[id]
+func (m *MockResolver) ResolveConsensusRef(nodeID core.RecordRef) (*host.Host, error) {
+	return m.Resolve(nodeID)
+}
+
+func (m *MockResolver) Resolve(nodeID core.RecordRef) (*host.Host, error) {
+	result, exist := m.mapping[nodeID]
 	if !exist {
 		return nil, errors.New("failed to resolve")
 	}
@@ -122,6 +126,7 @@ func TestNewInternalTransport2(t *testing.T) {
 	tp, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID1+DOMAIN)
 	require.NoError(t, err)
 	go tp.Start(ctx)
+	time.Sleep(time.Millisecond)
 	// no assertion, check that Stop does not block
 	defer func(t *testing.T) {
 		tp.Stop()
@@ -406,20 +411,4 @@ func TestDoubleStart(t *testing.T) {
 	wg.Wait()
 
 	tp.Stop()
-}
-
-func TestHostTransport_RegisterPacketHandler(t *testing.T) {
-	m := newMockResolver()
-
-	i1, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID1+DOMAIN)
-	require.NoError(t, err)
-	tr1 := NewHostTransport(i1, m)
-	handler := func(ctx context.Context, request network.Request) (network.Response, error) {
-		return tr1.BuildResponse(ctx, request, nil), nil
-	}
-	f := func() {
-		tr1.RegisterRequestHandler(types.Ping, handler)
-	}
-	require.NotPanics(t, f, "first request handler register should not panic")
-	require.Panics(t, f, "second request handler register should panic because it is already registered")
 }

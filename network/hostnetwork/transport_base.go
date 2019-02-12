@@ -46,9 +46,9 @@ func (h *transportBase) Start(ctx context.Context) {
 		inslogger.FromContext(ctx).Warn("double listen initiated")
 		return
 	}
-	go h.listen(ctx)
-
 	transport.ListenAndWaitUntilReady(ctx, h.transport)
+
+	go h.listen(ctx)
 }
 
 func (h *transportBase) listen(ctx context.Context) {
@@ -64,9 +64,6 @@ func (h *transportBase) listen(ctx context.Context) {
 			}
 			go h.messageProcessor(msg)
 		case <-h.transport.Stopped():
-			if atomic.CompareAndSwapUint32(&h.started, 1, 0) {
-				h.transport.Close()
-			}
 			return
 		}
 	}

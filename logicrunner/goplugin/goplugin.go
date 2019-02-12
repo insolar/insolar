@@ -24,13 +24,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/insolar/insolar/metrics"
+	"go.opencensus.io/stats"
+
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
-	"github.com/pkg/errors"
 )
 
 // Options of the GoPlugin
@@ -155,6 +156,11 @@ func (gp *GoPlugin) CallMethod(
 ) {
 	inslogger.FromContext(ctx).Debug("GoPlugin.CallMethod starts")
 	start := time.Now()
+	defer func() {
+		stats.Record(ctx, statGopluginContractMethodTime.M(
+			float64(time.Since(start).Nanoseconds())/1e6,
+		))
+	}()
 
 	res := rpctypes.DownCallMethodResp{}
 	req := rpctypes.DownCallMethodReq{
@@ -170,9 +176,6 @@ func (gp *GoPlugin) CallMethod(
 
 	select {
 	case callResult := <-resultChan:
-		callTime := time.Since(start)
-		metrics.GopluginContractExecutionTime.WithLabelValues(method).Observe(callTime.Seconds())
-		inslogger.FromContext(ctx).Debugf("CallMethod done work, time spend in here - %s", callTime)
 		if callResult.Error != nil {
 			return nil, nil, errors.Wrap(callResult.Error, "problem with API call")
 		}

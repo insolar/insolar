@@ -20,103 +20,120 @@ package phases
 import (
 	"context"
 
+	"github.com/insolar/insolar/consensus"
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/merkle"
 	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
+	"go.opencensus.io/tag"
+	"go.opencensus.io/trace"
 )
 
 type ThirdPhase interface {
-	Execute(ctx context.Context, state *SecondPhaseState) error
+	Execute(ctx context.Context, pulse *core.Pulse, state *SecondPhaseState) (*ThirdPhaseState, error)
 }
 
 func NewThirdPhase() ThirdPhase {
-	return &thirdPhase{}
+	return &ThirdPhaseImpl{}
 }
 
-type thirdPhase struct {
+type ThirdPhaseImpl struct {
 	Cryptography core.CryptographyService `inject:""`
 	Communicator Communicator             `inject:""`
 	NodeKeeper   network.NodeKeeper       `inject:""`
-
-	newActiveNodeList []core.Node
-	// TODO: insert it from somewhere
-	mapper packets.BitSetMapper
+	Calculator   merkle.Calculator        `inject:""`
 }
 
-func (tp *thirdPhase) Execute(ctx context.Context, state *SecondPhaseState) error {
+func (tp *ThirdPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse, state *SecondPhaseState) (*ThirdPhaseState, error) {
+	ctx, span := instracer.StartSpan(ctx, "ThirdPhase.Execute")
+	span.AddAttributes(trace.Int64Attribute("pulse", int64(state.PulseEntry.Pulse.PulseNumber)))
+	defer span.End()
+	stats.Record(ctx, consensus.Phase3Exec.M(1))
+
+	logger := inslogger.FromContext(ctx)
+	totalCount := state.UnsyncList.Length()
+
 	var gSign [packets.SignatureLength]byte
 	copy(gSign[:], state.GlobuleProof.Signature.Bytes()[:packets.SignatureLength])
-	packet := packets.NewPhase3Packet(gSign, state.DBitSet)
+	packet := packets.NewPhase3Packet(pulse.PulseNumber, gSign, state.BitSet)
 
-	err := tp.signPhase3Packet(&packet)
-
+	nodes := make([]core.Node, 0)
+	for _, node := range state.MatrixState.Active {
+		nodes = append(nodes, state.UnsyncList.GetActiveNode(node))
+	}
+	responses, err := tp.Communicator.ExchangePhase3(ctx, nodes, packet)
 	if err != nil {
-		return errors.Wrap(err, "[ Execute ] failed to sign a phase 3 packet")
+		return nil, errors.Wrap(err, "[ NET Consensus phase-3 ] Failed to exchange packets")
 	}
-
-	nodes := tp.NodeKeeper.GetActiveNodes()
-	answers, err := tp.Communicator.ExchangePhase3(ctx, nodes, &packet)
+	logger.Infof("[ NET Consensus phase-3 ] received responses: %d/%d", len(responses), totalCount)
+	err = stats.RecordWithTags(ctx, []tag.Mutator{tag.Upsert(consensus.TagPhase, "phase 3")}, consensus.PacketsRecv.M(int64(len(responses))))
 	if err != nil {
-		return errors.Wrap(err, "[ Execute ] failed to get answers on phase 3")
+		logger.Warn("[ NET Consensus phase-3 ] failed to record a metric")
 	}
 
-	for ref, packet := range answers {
-		signed, err := tp.isSignPhase3PacketRight(packet, ref)
+	for ref, packet := range responses {
+		err = nil
+		if !ref.Equal(tp.NodeKeeper.GetOrigin().ID()) {
+			err = tp.checkPacketSignature(packet, ref, state.UnsyncList)
+		}
 		if err != nil {
-			return errors.Wrap(err, "[ Execute ] failed to check a packet sign")
-		} else if !signed {
-			return errors.New("recv not signed packet")
+			logger.Warnf("[ NET Consensus phase-3 ] Failed to check phase3 packet signature from %s: %s", ref, err.Error())
+			continue
 		}
-		cells, err := packet.GetBitset().GetCells(tp.mapper)
-		if err != nil {
-			return errors.Wrap(err, "[ Execute ] failed to get a cells")
-		}
-		for _, cell := range cells {
-			if cell.State == packets.Legit {
-				node, err := getNode(cell.NodeID, nodes)
-				if err != nil {
-					return errors.Wrap(err, "[ Execute ] failed to find a node on phase 3")
-				}
-				tp.newActiveNodeList = append(tp.newActiveNodeList, node)
-			}
-		}
+		// not needed until we implement fraud detection
+		// cells, err := packet.GetBitset().GetCells(state.UnsyncList)
+
+		state.UnsyncList.SetGlobuleHashSignature(ref, packet.GetGlobuleHashSignature())
 	}
 
-	return nil
-}
-
-func getNode(ref core.RecordRef, nodes []core.Node) (core.Node, error) {
+	prevCloudHash := tp.NodeKeeper.GetCloudHash()
+	validNodes := 0
 	for _, node := range nodes {
-		if ref == node.ID() {
-			return node, nil
+		ghs, ok := state.UnsyncList.GetGlobuleHashSignature(node.ID())
+		if !ok {
+			log.Warnf("[ NET Consensus phase-3 ] No globule hash signature for node %s", node.ID())
+			continue
+		}
+		proof := &merkle.GlobuleProof{
+			BaseProof: merkle.BaseProof{
+				Signature: core.SignatureFromBytes(ghs[:]),
+			},
+			PrevCloudHash: prevCloudHash,
+			GlobuleID:     state.GlobuleProof.GlobuleID,
+			NodeCount:     state.GlobuleProof.NodeCount,
+			NodeRoot:      state.GlobuleProof.NodeRoot,
+		}
+		valid := tp.Calculator.IsValid(proof, state.GlobuleHash, node.PublicKey())
+		if valid {
+			validNodes++
+		} else {
+			logger.Warnf("[ NET Consensus phase-3 ] Failed to validate globule hash from node %s", node.ID())
 		}
 	}
-	return nil, errors.New("[ getNode] failed to find a node on phase 3")
+
+	if !consensusReachedBFT(validNodes, totalCount) {
+		return nil, errors.Errorf("[ NET Consensus phase-3 ] Failed to pass BFT consensus: %d/%d", validNodes, totalCount)
+	}
+
+	logger.Infof("[ NET Consensus phase-3 ] BFT consensus passed: %d/%d", validNodes, totalCount)
+
+	return &ThirdPhaseState{
+		ActiveNodes:  state.MatrixState.Active,
+		UnsyncList:   state.UnsyncList,
+		GlobuleProof: state.GlobuleProof,
+	}, nil
 }
 
-func (tp *thirdPhase) signPhase3Packet(p *packets.Phase3Packet) error {
-	data, err := p.RawBytes()
-	if err != nil {
-		return errors.Wrap(err, "failed to get raw bytes")
+func (tp *ThirdPhaseImpl) checkPacketSignature(packet *packets.Phase3Packet, recordRef core.RecordRef, unsyncList network.UnsyncList) error {
+	activeNode := unsyncList.GetActiveNode(recordRef)
+	if activeNode == nil {
+		return errors.New("failed to get active node")
 	}
-	sign, err := tp.Cryptography.Sign(data)
-	if err != nil {
-		return errors.Wrap(err, "failed to sign a phase 2 packet")
-	}
-
-	copy(p.SignatureHeaderSection1[:], sign.Bytes())
-	// TODO: sign a second part after claim addition
-	return nil
-}
-
-func (tp *thirdPhase) isSignPhase3PacketRight(packet *packets.Phase3Packet, recordRef core.RecordRef) (bool, error) {
-	key := tp.NodeKeeper.GetActiveNode(recordRef).PublicKey()
-
-	raw, err := packet.RawBytes()
-	if err != nil {
-		return false, errors.Wrap(err, "failed to serialize")
-	}
-
-	return tp.Cryptography.Verify(key, core.SignatureFromBytes(raw), raw), nil
+	key := activeNode.PublicKey()
+	return packet.Verify(tp.Cryptography, key)
 }

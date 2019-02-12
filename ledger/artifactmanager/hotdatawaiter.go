@@ -104,7 +104,7 @@ func (hdw *HotDataWaiterConcrete) Unlock(ctx context.Context, jetID core.RecordI
 // ThrowTimeout raises all timeoutChannel
 func (hdw *HotDataWaiterConcrete) ThrowTimeout(ctx context.Context) {
 	logger := inslogger.FromContext(ctx)
-	logger.Debugf("[ThrowTimeout] start method. waiters will be notified about timeout")
+	logger.Debugf("[ThrowTimeout] start method")
 
 	hdw.waitersMapLock.Lock()
 	defer hdw.waitersMapLock.Unlock()

@@ -20,9 +20,11 @@ import (
 	"context"
 	"crypto"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
-	"log"
+	"os"
 	"path"
+	"path/filepath"
 	"strconv"
 
 	"github.com/insolar/insolar/application/contract/member"
@@ -35,6 +37,7 @@ import (
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 )
 
@@ -45,6 +48,7 @@ const (
 	walletContract    = "wallet"
 	memberContract    = "member"
 	allowanceContract = "allowance"
+	nodeAmount        = 32
 )
 
 var contractNames = []string{walletContract, memberContract, allowanceContract, rootDomain, nodeDomain, nodeRecord}
@@ -52,6 +56,12 @@ var contractNames = []string{walletContract, memberContract, allowanceContract, 
 type messageBusLocker interface {
 	Lock(ctx context.Context)
 	Unlock(ctx context.Context)
+}
+
+type nodeInfo struct {
+	privateKey crypto.PrivateKey
+	publicKey  string
+	ref        *core.RecordRef
 }
 
 // Genesis is a component for precreation core contracts types and RootDomain instance
@@ -303,16 +313,25 @@ func (g *Genesis) activateSmartContracts(
 	if err != nil {
 		return nil, errors.Wrap(err, errMsg)
 	}
-	nodes, err := g.activateDiscoveryNodes(ctx, cb)
+	indexMap := make(map[string]string)
+
+	discoveryNodes, indexMap, err := g.addDiscoveryIndex(ctx, cb, indexMap)
 	if err != nil {
 		return nil, errors.Wrap(err, errMsg)
+
 	}
-	err = g.updateNodeDomainIndex(ctx, nodeDomainDesc, nodes)
+	indexMap, err = g.addIndex(ctx, cb, indexMap)
+	if err != nil {
+		return nil, errors.Wrap(err, errMsg)
+
+	}
+
+	err = g.updateNodeDomainIndex(ctx, nodeDomainDesc, indexMap)
 	if err != nil {
 		return nil, errors.Wrap(err, errMsg)
 	}
 
-	return nodes, nil
+	return discoveryNodes, nil
 }
 
 type genesisNode struct {
@@ -322,15 +341,16 @@ type genesisNode struct {
 	role    string
 }
 
-func (g *Genesis) activateDiscoveryNodes(ctx context.Context, cb *ContractsBuilder) ([]genesisNode, error) {
+func (g *Genesis) activateDiscoveryNodes(ctx context.Context, cb *ContractsBuilder, nodesInfo []nodeInfo) ([]genesisNode, error) {
+	if len(nodesInfo) != len(g.config.DiscoveryNodes) {
+		return nil, errors.New("[ activateDiscoveryNodes ] len of nodesInfo param must be equal to len of DiscoveryNodes in genesis config")
+	}
 
 	nodes := make([]genesisNode, len(g.config.DiscoveryNodes))
 
 	for i, discoverNode := range g.config.DiscoveryNodes {
-		privKey, nodePubKey, err := getKeysFromFile(ctx, discoverNode.KeysFile)
-		if err != nil {
-			log.Fatal(err)
-		}
+		privKey := nodesInfo[i].privateKey
+		nodePubKey := nodesInfo[i].publicKey
 
 		nodeState := &noderecord.NodeRecord{
 			Record: noderecord.RecordInfo{
@@ -338,31 +358,9 @@ func (g *Genesis) activateDiscoveryNodes(ctx context.Context, cb *ContractsBuild
 				Role:      core.GetStaticRoleFromString(discoverNode.Role),
 			},
 		}
-		nodeData, err := serializeInstance(nodeState)
+		contract, err := g.activateNodeRecord(ctx, cb, nodeState, "discoverynoderecord_"+strconv.Itoa(i))
 		if err != nil {
-			return nil, errors.Wrap(err, "[ activateDiscoveryNodes ] Couldn't serialize discovery node instance")
-		}
-
-		nodeID, err := g.ArtifactManager.RegisterRequest(ctx, *g.rootDomainRef, &message.Parcel{Msg: &message.GenesisRequest{Name: "noderecord_" + strconv.Itoa(i)}})
-		if err != nil {
-			return nil, errors.Wrap(err, "[ activateDiscoveryNodes ] Couldn't register request to artifact manager")
-		}
-		contract := core.NewRecordRef(*g.rootDomainRef.Record(), *nodeID)
-		_, err = g.ArtifactManager.ActivateObject(
-			ctx,
-			core.RecordRef{},
-			*contract,
-			*g.nodeDomainRef,
-			*cb.Prototypes[nodeRecord],
-			false,
-			nodeData,
-		)
-		if err != nil {
-			return nil, errors.Wrap(err, "[ activateDiscoveryNodes ] Could'n activate discovery node object")
-		}
-		_, err = g.ArtifactManager.RegisterResult(ctx, *g.rootDomainRef, *contract, nil)
-		if err != nil {
-			return nil, errors.Wrap(err, "[ registerDiscoveryNodes ] Could'n activate discovery node object")
+			return nil, errors.Wrap(err, "[ activateDiscoveryNodes ] Couldn't activateNodeRecord node instance")
 		}
 
 		nodes[i] = genesisNode{
@@ -377,6 +375,176 @@ func (g *Genesis) activateDiscoveryNodes(ctx context.Context, cb *ContractsBuild
 		}
 	}
 	return nodes, nil
+}
+
+func (g *Genesis) activateNodes(ctx context.Context, cb *ContractsBuilder, nodes []nodeInfo) ([]nodeInfo, error) {
+	var updatedNodes []nodeInfo
+
+	for i, node := range nodes {
+		nodeState := &noderecord.NodeRecord{
+			Record: noderecord.RecordInfo{
+				PublicKey: node.publicKey,
+				Role:      core.StaticRoleVirtual,
+			},
+		}
+		contract, err := g.activateNodeRecord(ctx, cb, nodeState, "noderecord_"+strconv.Itoa(i))
+		if err != nil {
+			return nil, errors.Wrap(err, "[ activateNodes ] Couldn't activateNodeRecord node instance")
+		}
+		updatedNode := nodeInfo{
+			ref:       contract,
+			publicKey: node.publicKey,
+		}
+		updatedNodes = append(updatedNodes, updatedNode)
+	}
+
+	return updatedNodes, nil
+}
+
+func (g *Genesis) activateNodeRecord(ctx context.Context, cb *ContractsBuilder, record *noderecord.NodeRecord, name string) (*core.RecordRef, error) {
+	nodeData, err := serializeInstance(record)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ activateNodeRecord ] Couldn't serialize node instance")
+	}
+
+	nodeID, err := g.ArtifactManager.RegisterRequest(ctx, *g.rootDomainRef, &message.Parcel{Msg: &message.GenesisRequest{Name: name}})
+	if err != nil {
+		return nil, errors.Wrap(err, "[ activateNodeRecord ] Couldn't register request to artifact manager")
+	}
+	contract := core.NewRecordRef(*g.rootDomainRef.Record(), *nodeID)
+	_, err = g.ArtifactManager.ActivateObject(
+		ctx,
+		core.RecordRef{},
+		*contract,
+		*g.nodeDomainRef,
+		*cb.Prototypes[nodeRecord],
+		false,
+		nodeData,
+	)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ activateNodeRecord ] Could'n activateNodeRecord node object")
+	}
+	_, err = g.ArtifactManager.RegisterResult(ctx, *g.rootDomainRef, *contract, nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ activateNodeRecord ] Couldn't register result to artifact manager")
+	}
+	return contract, nil
+}
+
+func (g *Genesis) addDiscoveryIndex(ctx context.Context, cb *ContractsBuilder, indexMap map[string]string) ([]genesisNode, map[string]string, error) {
+	errMsg := "[ addDiscoveryIndex ]"
+	discoveryKeysPath, err := absPath(g.config.DiscoveryKeysDir)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, errMsg)
+	}
+	discoveryKeys, err := g.uploadKeys(ctx, discoveryKeysPath, len(g.config.DiscoveryNodes))
+	if err != nil {
+		return nil, nil, errors.Wrap(err, errMsg)
+	}
+	discoveryNodes, err := g.activateDiscoveryNodes(ctx, cb, discoveryKeys)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, errMsg)
+	}
+	for _, node := range discoveryNodes {
+		indexMap[node.node.PublicKey] = node.ref.String()
+	}
+	return discoveryNodes, indexMap, nil
+}
+
+func (g *Genesis) addIndex(ctx context.Context, cb *ContractsBuilder, indexMap map[string]string) (map[string]string, error) {
+	errMsg := "[ addIndex ]"
+	nodeKeysPath, err := absPath(g.config.NodeKeysDir)
+	if err != nil {
+		return nil, errors.Wrap(err, errMsg)
+	}
+	userKeys, err := g.uploadKeys(ctx, nodeKeysPath, nodeAmount)
+	if err != nil {
+		return nil, errors.Wrap(err, errMsg)
+	}
+	nodes, err := g.activateNodes(ctx, cb, userKeys)
+	if err != nil {
+		return nil, errors.Wrap(err, errMsg)
+	}
+	for _, node := range nodes {
+		indexMap[node.publicKey] = node.ref.String()
+	}
+	return indexMap, nil
+}
+
+func (g *Genesis) createKeys(ctx context.Context, path string, amount int) error {
+	err := os.RemoveAll(path)
+	if err != nil {
+		return errors.Wrap(err, "[ createKeys ] couldn't remove old dir")
+	}
+
+	for i := 1; i <= amount; i++ {
+		ks := platformpolicy.NewKeyProcessor()
+
+		privKey, err := ks.GeneratePrivateKey()
+		if err != nil {
+			return errors.Wrap(err, "[ createKeys ] couldn't generate private key")
+		}
+
+		privKeyStr, err := ks.ExportPrivateKeyPEM(privKey)
+		if err != nil {
+			return errors.Wrap(err, "[ createKeys ] couldn't export private key")
+		}
+
+		pubKeyStr, err := ks.ExportPublicKeyPEM(ks.ExtractPublicKey(privKey))
+		if err != nil {
+			return errors.Wrap(err, "[ createKeys ] couldn't export public key")
+		}
+
+		result, err := json.MarshalIndent(map[string]interface{}{
+			"private_key": string(privKeyStr),
+			"public_key":  string(pubKeyStr),
+		}, "", "    ")
+		if err != nil {
+			return errors.Wrap(err, "[ createKeys ] couldn't marshal keys")
+		}
+
+		name := fmt.Sprintf(g.config.KeysNameFormat, i)
+		err = WriteFile(path, name, string(result))
+		if err != nil {
+			return errors.Wrap(err, "[ createKeys ] couldn't write keys to file")
+		}
+	}
+
+	return nil
+}
+
+func (g *Genesis) uploadKeys(ctx context.Context, path string, amount int) ([]nodeInfo, error) {
+	var err error
+	if !g.config.ReuseKeys {
+		err = g.createKeys(ctx, path, amount)
+		if err != nil {
+			return nil, errors.Wrap(err, "[ uploadKeys ]")
+		}
+	}
+
+	files, err := ioutil.ReadDir(path)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ uploadKeys ] can't read dir")
+	}
+	if len(files) != amount {
+		return nil, errors.New(fmt.Sprintf("[ uploadKeys ] amount of nodes != amount of files in directory: %d != %d", len(files), amount))
+	}
+
+	var keys []nodeInfo
+	for _, f := range files {
+		privKey, nodePubKey, err := getKeysFromFile(ctx, filepath.Join(path, f.Name()))
+		if err != nil {
+			return nil, errors.Wrap(err, "[ uploadKeys ] can't get keys from file")
+		}
+
+		key := nodeInfo{
+			publicKey:  nodePubKey,
+			privateKey: privKey,
+		}
+		keys = append(keys, key)
+	}
+
+	return keys, nil
 }
 
 func (g *Genesis) registerGenesisRequest(ctx context.Context, name string) (*core.RecordID, error) {
@@ -476,12 +644,7 @@ func (g *Genesis) makeCertificates(nodes []genesisNode) error {
 	return nil
 }
 
-func (g *Genesis) updateNodeDomainIndex(ctx context.Context, nodeDomainDesc core.ObjectDescriptor, nodes []genesisNode) error {
-
-	indexMap := make(map[string]string)
-	for _, node := range nodes {
-		indexMap[node.node.PublicKey] = node.ref.String()
-	}
+func (g *Genesis) updateNodeDomainIndex(ctx context.Context, nodeDomainDesc core.ObjectDescriptor, indexMap map[string]string) error {
 	updateData, err := serializeInstance(&nodedomain.NodeDomain{NodeIndexPK: indexMap})
 	if err != nil {
 		return errors.Wrap(err, "[ updateNodeDomainIndex ]  Couldn't serialize NodeDomain")

@@ -161,7 +161,7 @@ func (e *Exporter) exportPulse(ctx context.Context, jetID core.RecordID, pulse *
 			return errors.Wrap(err, "exportPulse failed to getPayload")
 		}
 		records[string(base58.Encode(id[:]))] = recordData{
-			Type:    strings.Title(rec.Type().String()),
+			Type:    strings.Title(record.TypeFromRecord(rec).String()),
 			Data:    rec,
 			Payload: pl,
 		}

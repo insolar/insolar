@@ -41,9 +41,6 @@ func (r *RequestRecord) WriteHashData(w io.Writer) (int, error) {
 	return w.Write(r.MessageHash)
 }
 
-// Type implementation of Record interface.
-func (r *RequestRecord) Type() TypeID { return typeCallRequest }
-
 // GetPayload returns payload. Required for Record interface implementation.
 func (r *RequestRecord) GetPayload() []byte {
 	return r.Parcel

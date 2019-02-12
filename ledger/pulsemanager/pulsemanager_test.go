@@ -190,7 +190,7 @@ func (s *pulseManagerSuite) TestPulseManager_Set_CheckHotIndexesSending() {
 	gil.ReleaseMock.Return()
 
 	alsMock := testutils.NewActiveListSwapperMock(s.T())
-	alsMock.MoveSyncToActiveFunc = func() {}
+	alsMock.MoveSyncToActiveFunc = func(context.Context) error { return nil }
 
 	cryptoServiceMock := testutils.NewCryptographyServiceMock(s.T())
 	cryptoServiceMock.SignFunc = func(p []byte) (r *core.Signature, r1 error) {

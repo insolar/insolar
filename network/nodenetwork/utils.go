@@ -15,30 +15,40 @@
  *
  */
 
-package fakepulsar
+package nodenetwork
 
 import (
-	"context"
-	"testing"
-	"time"
+	"sort"
 
 	"github.com/insolar/insolar/core"
-	"github.com/stretchr/testify/assert"
 )
 
-func onPulse(ctx context.Context, pulse core.Pulse) {
-}
+func removeFromList(nodeList, nodesToRemove []core.RecordRef) []core.RecordRef {
+	sort.Slice(nodeList, func(i, j int) bool {
+		return nodeList[i].Compare(nodeList[j]) < 0
+	})
+	sort.Slice(nodesToRemove, func(i, j int) bool {
+		return nodesToRemove[i].Compare(nodesToRemove[j]) < 0
+	})
 
-func TestGetFakePulse(t *testing.T) {
-	pulsar := NewFakePulsar(onPulse, 1000)
-	pulse := pulsar.GetFakePulse()
-	assert.NotNil(t, pulse)
-}
+	diff := make([]core.RecordRef, 0)
 
-func TestFakePulsar_Start(t *testing.T) {
-	pulsar := NewFakePulsar(onPulse, 1000)
-	ctx := context.TODO()
-	pulsar.Start(ctx)
-	time.Sleep(time.Millisecond * 1100)
-	pulsar.Stop(ctx)
+	i := 0
+	for j := 0; i < len(nodeList) && j < len(nodesToRemove); {
+		comparison := nodeList[i].Compare(nodesToRemove[j])
+		if comparison < 0 {
+			diff = append(diff, nodeList[i])
+			i++
+		} else if comparison > 0 {
+			j++
+		} else {
+			i++
+			j++
+		}
+	}
+	for i < len(nodeList) {
+		diff = append(diff, nodeList[i])
+		i++
+	}
+	return diff
 }

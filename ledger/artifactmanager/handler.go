@@ -849,7 +849,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 
 		id, err := tx.SetRecord(ctx, jetID, parcel.Pulse(), rec)
 		if err == storage.ErrOverride {
-			inslogger.FromContext(ctx).WithField("type", fmt.Sprintf("%T", rec)).Warnln("set record override")
+			inslogger.FromContext(ctx).WithField("type", fmt.Sprintf("%T", rec)).Warnln("set record override (#1)")
 		} else if err != nil {
 			return err
 		}
@@ -923,7 +923,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel core.Pa
 
 		child, err = tx.SetRecord(ctx, jetID, parcel.Pulse(), childRec)
 		if err == storage.ErrOverride {
-			inslogger.FromContext(ctx).WithField("type", fmt.Sprintf("%T", rec)).Warnln("set record override")
+			inslogger.FromContext(ctx).WithField("type", fmt.Sprintf("%T", rec)).Warnln("set record override (#2)")
 		} else if err != nil {
 			return err
 		}
@@ -1164,7 +1164,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 	logger = logger.WithField("jet", jetID.DebugString())
 
 	logger.Debugf(
-		"got hot. Pulse: %v, DropPulse: %v, DropJet: %v\n",
+		"handleHotRecords called. Pulse: %v, DropPulse: %v, DropJet: %v\n",
 		parcel.Pulse(), msg.Drop.Pulse, msg.DropJet.DebugString(),
 	)
 
