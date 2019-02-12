@@ -108,7 +108,6 @@ func (a *nodeStorage) GetActiveNodesByRole(pulse core.PulseNumber, role core.Sta
 func (a *nodeStorage) RemoveActiveNodesUntil(pulse core.PulseNumber) {
 	a.nodeHistoryLock.Lock()
 	defer a.nodeHistoryLock.Unlock()
-	fmt.Printf("cleanLightData: RemoveActiveNodesUntil: %v\n", pulse)
 
 	for pn := range a.nodeHistory {
 		if pn < pulse {
