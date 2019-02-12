@@ -17,6 +17,7 @@
 package recentstorage
 
 import (
+	"bytes"
 	"sync"
 	"testing"
 
@@ -93,14 +94,26 @@ func TestPendingStorage_AddPendingRequest(t *testing.T) {
 	}()
 	wg.Wait()
 
-	require.Equal(
-		t,
-		map[core.RecordID]PendingObjectContext{
-			obj1: {Active: true, Requests: []core.RecordID{expectedIDs[0], expectedIDs[1]}},
-			obj2: {Active: true, Requests: []core.RecordID{expectedIDs[2]}},
-		},
-		s.GetRequests(),
-	)
+	contains := func(slice []core.RecordID, x core.RecordID) bool {
+		for _, n := range slice {
+			if x == n {
+				return true
+			}
+		}
+		return false
+	}
+	requests := s.GetRequests()
+	require.Equal(t, 2, len(requests))
+	for key, objContext := range requests {
+		if bytes.Equal(key.Bytes(), obj1.Bytes()) {
+			require.Equal(t, 2, len(objContext.Requests))
+			require.Equal(t, true, contains(objContext.Requests, expectedIDs[0]))
+			require.Equal(t, true, contains(objContext.Requests, expectedIDs[1]))
+		} else {
+			require.Equal(t, 1, len(objContext.Requests))
+			require.Equal(t, expectedIDs[2], objContext.Requests[0])
+		}
+	}
 }
 
 func TestPendingStorage_RemovePendingRequest(t *testing.T) {
