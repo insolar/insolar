@@ -1191,7 +1191,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 		}
 
 		objContext.Active = false
-		pendingStorage.SetContextToObject(ctx, objID, *objContext)
+		pendingStorage.SetContextToObject(ctx, objID, objContext)
 	}
 
 	go func() {

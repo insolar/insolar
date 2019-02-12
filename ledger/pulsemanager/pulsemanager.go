@@ -311,8 +311,8 @@ func (m *PulseManager) getExecutorHotData(
 	pendingStorage := m.RecentStorageProvider.GetPendingStorage(ctx, jetID)
 	recentObjectsIds := indexStorage.GetObjects()
 
-	recentObjects := map[core.RecordID]*message.HotIndex{}
-	pendingRequests := map[core.RecordID]*recentstorage.PendingObjectContext{}
+	recentObjects := map[core.RecordID]message.HotIndex{}
+	pendingRequests := map[core.RecordID]recentstorage.PendingObjectContext{}
 
 	for id, ttl := range recentObjectsIds {
 		lifeline, err := m.ObjectStorage.GetObjectIndex(ctx, jetID, &id, false)
@@ -325,7 +325,7 @@ func (m *PulseManager) getExecutorHotData(
 			logger.Error(err)
 			continue
 		}
-		recentObjects[id] = &message.HotIndex{
+		recentObjects[id] = message.HotIndex{
 			TTL:   ttl,
 			Index: encoded,
 		}
@@ -333,7 +333,7 @@ func (m *PulseManager) getExecutorHotData(
 
 	requestCount := 0
 	for objID, objContext := range pendingStorage.GetRequests() {
-		pendingRequests[objID] = &objContext
+		pendingRequests[objID] = objContext
 		requestCount += len(objContext.Requests)
 	}
 

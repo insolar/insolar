@@ -380,8 +380,8 @@ type HotData struct {
 	Jet                core.RecordRef
 	DropJet            core.RecordID // If will be different in case of split.
 	Drop               jet.JetDrop
-	RecentObjects      map[core.RecordID]*HotIndex
-	PendingRequests    map[core.RecordID]*recentstorage.PendingObjectContext
+	RecentObjects      map[core.RecordID]HotIndex
+	PendingRequests    map[core.RecordID]recentstorage.PendingObjectContext
 	PulseNumber        core.PulseNumber
 	JetDropSizeHistory jet.DropSizeHistory
 }
