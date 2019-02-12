@@ -43,7 +43,7 @@ func TestPulseTrackerMemory_GetPulse(t *testing.T) {
 	// Assert
 	require.NoError(t, err)
 	require.Equal(t, existingPulse, pulse)
-	require.Equal(t, notFoundErr, ErrPulseNotFound)
+	require.Equal(t, ErrPulseNotFound, notFoundErr)
 }
 
 func TestPulseTrackerMemory_GetPreviousPulse(t *testing.T) {
@@ -79,13 +79,58 @@ func TestPulseTrackerMemory_GetPreviousPulse(t *testing.T) {
 	// Assert
 	require.NoError(t, err)
 	require.Equal(t, firstPulse, pulse)
-	require.Equal(t, prevPulseErr, ErrPrevPulseNotFound)
-	require.Equal(t, badPrevErr, ErrPulseNotFound)
-	require.Equal(t, notFoundErr, ErrPulseNotFound)
+	require.Equal(t, ErrPrevPulseNotFound, prevPulseErr)
+	require.Equal(t, ErrPulseNotFound, badPrevErr)
+	require.Equal(t, ErrPulseNotFound, notFoundErr)
 }
 
 func TestPulseTrackerMemory_GetNthPrevPulse(t *testing.T) {
-	assert.True(t, false)
+	t.Parallel()
+
+	// Arrange
+	ctx := inslogger.TestContext(t)
+	pulseTracker := &pulseTrackerMemory{
+		memory: map[core.PulseNumber]*Pulse{},
+	}
+	firstPulse := &Pulse{
+		Pulse: core.Pulse{PulseNumber: core.FirstPulseNumber},
+	}
+	secondPulse := &Pulse{
+		Pulse: core.Pulse{PulseNumber: core.FirstPulseNumber + 1},
+		Prev:  &firstPulse.Pulse.PulseNumber,
+	}
+	thirdPulse := &Pulse{
+		Pulse: core.Pulse{PulseNumber: core.FirstPulseNumber + 2},
+		Prev:  &secondPulse.Pulse.PulseNumber,
+	}
+	forth := &Pulse{
+		Pulse: core.Pulse{PulseNumber: core.FirstPulseNumber + 3},
+		Prev:  &thirdPulse.Pulse.PulseNumber,
+	}
+	pulseTracker.memory[core.FirstPulseNumber] = firstPulse
+	pulseTracker.memory[core.FirstPulseNumber+1] = secondPulse
+	pulseTracker.memory[core.FirstPulseNumber+2] = thirdPulse
+	pulseTracker.memory[core.FirstPulseNumber+3] = forth
+
+	// Act and Assert
+	targetPulse, err := pulseTracker.GetNthPrevPulse(ctx, 0, core.FirstPulseNumber+3)
+	require.NoError(t, err)
+	require.Equal(t, forth, targetPulse)
+
+	prev1pulse, err := pulseTracker.GetNthPrevPulse(ctx, 1, core.FirstPulseNumber+3)
+	require.NoError(t, err)
+	require.Equal(t, thirdPulse, prev1pulse)
+
+	prev2pulse, err := pulseTracker.GetNthPrevPulse(ctx, 2, core.FirstPulseNumber+3)
+	require.NoError(t, err)
+	require.Equal(t, secondPulse, prev2pulse)
+
+	prev3pulse, err := pulseTracker.GetNthPrevPulse(ctx, 3, core.FirstPulseNumber+3)
+	require.NoError(t, err)
+	require.Equal(t, firstPulse, prev3pulse)
+
+	_, err = pulseTracker.GetNthPrevPulse(ctx, 4, core.FirstPulseNumber+3)
+	require.Equal(t, ErrPrevPulseNotFound, err)
 }
 
 func TestPulseTrackerMemory_GetLatestPulse(t *testing.T) {

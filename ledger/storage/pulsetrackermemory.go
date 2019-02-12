@@ -47,7 +47,10 @@ func (p *pulseTrackerMemory) GetPreviousPulse(ctx context.Context, num core.Puls
 }
 
 func (p *pulseTrackerMemory) GetNthPrevPulse(ctx context.Context, n uint, from core.PulseNumber) (*Pulse, error) {
-	panic("implement me")
+	p.mutex.RLock()
+	defer p.mutex.RUnlock()
+
+	return p.getNthPrevPulse(ctx, n, from)
 }
 
 func (p *pulseTrackerMemory) GetLatestPulse(ctx context.Context) (*Pulse, error) {
