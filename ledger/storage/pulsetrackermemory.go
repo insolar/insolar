@@ -58,15 +58,39 @@ func (p *pulseTrackerMemory) GetLatestPulse(ctx context.Context) (*Pulse, error)
 	p.mutex.RLock()
 	defer p.mutex.RUnlock()
 
-	if p.latestPulse == 0 {
-		return nil, ErrEmptyLatestPulse
-	}
-
-	return p.getPulse(ctx, p.latestPulse)
+	return p.getLatestPulse(ctx)
 }
 
 func (p *pulseTrackerMemory) AddPulse(ctx context.Context, pulse core.Pulse) error {
-	panic("implement me")
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+
+	pn := pulse.PulseNumber
+
+	if pn < p.latestPulse {
+		return ErrLesserPulse
+	}
+
+	if pn == p.latestPulse {
+		return ErrOverride
+	}
+
+	var (
+		previousPulseNumber  core.PulseNumber
+		previousSerialNumber int
+	)
+
+	// Save new pulse.
+	newPulse := Pulse{
+		Prev:         &previousPulseNumber,
+		SerialNumber: previousSerialNumber + 1,
+		Pulse:        pulse,
+	}
+
+	p.memory[pn] = &newPulse
+	p.latestPulse = pn
+
+	return nil
 }
 
 func (p *pulseTrackerMemory) getPulse(ctx context.Context, num core.PulseNumber) (*Pulse, error) {
@@ -98,4 +122,12 @@ func (p *pulseTrackerMemory) getNthPrevPulse(ctx context.Context, n uint, num co
 		n--
 	}
 	return pulse, nil
+}
+
+func (p *pulseTrackerMemory) getLatestPulse(ctx context.Context) (*Pulse, error) {
+	if p.latestPulse == 0 {
+		return nil, ErrEmptyLatestPulse
+	}
+
+	return p.getPulse(ctx, p.latestPulse)
 }

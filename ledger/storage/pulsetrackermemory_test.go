@@ -196,6 +196,54 @@ func TestPulseTrackerMemory_GetLatestPulse(t *testing.T) {
 	assert.Equal(t, fourthPulse, pulse)
 }
 
+func TestPulseTrackerMemory_AddPulse_FailFirstCheck(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+	pulseTracker := &pulseTrackerMemory{
+		memory: map[core.PulseNumber]*Pulse{},
+	}
+
+	// Check pulse smaller than current
+	firstPulse := &Pulse{
+		Pulse: core.Pulse{PulseNumber: core.FirstPulseNumber},
+	}
+	pulseTracker.latestPulse = core.FirstPulseNumber + 1
+	err := pulseTracker.AddPulse(ctx, firstPulse.Pulse)
+
+	assert.Equal(t, ErrLesserPulse, err)
+
+	// Check pulse equal with current
+	pulseTracker.latestPulse = core.FirstPulseNumber
+	err = pulseTracker.AddPulse(ctx, firstPulse.Pulse)
+
+	assert.Equal(t, ErrOverride, err)
+}
+
 func TestPulseTrackerMemory_AddPulse(t *testing.T) {
+	t.Parallel()
+
+	// Arrange
+	ctx := inslogger.TestContext(t)
+
+	// Check new pulse adding
+	pulseTracker := &pulseTrackerMemory{
+		memory: map[core.PulseNumber]*Pulse{},
+	}
+	firstPulse := &Pulse{
+		Pulse: core.Pulse{PulseNumber: core.FirstPulseNumber},
+	}
+	err := pulseTracker.AddPulse(ctx, firstPulse.Pulse)
+	assert.NoError(t, err)
+	assert.Equal(t, firstPulse.Pulse, pulseTracker.memory[core.FirstPulseNumber].Pulse)
+	assert.Equal(t, firstPulse.Pulse.PulseNumber, pulseTracker.latestPulse)
+
+	prevPulse := core.PulseNumber(0)
+	firstPulse.Prev = &prevPulse
+	firstPulse.SerialNumber = 1
+	assert.Equal(t, firstPulse, pulseTracker.memory[core.FirstPulseNumber])
+
+	// Check pulse adding to non-empty storage
+	// TODO tomorrow
 	assert.True(t, false)
 }
