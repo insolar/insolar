@@ -261,13 +261,13 @@ func (cr *ContractRequester) ReceiveResult(ctx context.Context, parcel core.Parc
 	cr.ResultMutex.Lock()
 	defer cr.ResultMutex.Unlock()
 
-	log := inslogger.FromContext(ctx)
+	logger := inslogger.FromContext(ctx)
 	c, ok := cr.ResultMap[msg.Sequence]
 	if !ok {
-		log.Info("oops unwaited results seq=", msg.Sequence)
+		logger.Info("oops unwaited results seq=", msg.Sequence)
 		return &reply.OK{}, nil
 	}
-	log.Debug("Got wanted results seq=", msg.Sequence)
+	logger.Debug("Got wanted results seq=", msg.Sequence)
 
 	c <- msg
 	delete(cr.ResultMap, msg.Sequence)
