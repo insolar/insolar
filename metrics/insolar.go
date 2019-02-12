@@ -32,7 +32,6 @@ func GetInsolarRegistry() *prometheus.Registry {
 	registry.MustRegister(prometheus.NewProcessCollector(os.Getpid(), insolarNamespace))
 	registry.MustRegister(prometheus.NewGoCollector())
 	// insolar collectors
-	registry.MustRegister(NetworkParcelSentTotal)
 	registry.MustRegister(NetworkFutures)
 	registry.MustRegister(NetworkConnections)
 	registry.MustRegister(NetworkPacketSentTotal)
@@ -42,12 +41,6 @@ func GetInsolarRegistry() *prometheus.Registry {
 	registry.MustRegister(NetworkComplete)
 	registry.MustRegister(NetworkSentSize)
 	registry.MustRegister(NetworkRecvSize)
-
-	registry.MustRegister(ParcelsSentTotal)
-	registry.MustRegister(ParcelsTime)
-	registry.MustRegister(ParcelsSentSizeBytes)
-	registry.MustRegister(ParcelsReplySizeBytes)
-	registry.MustRegister(LocallyDeliveredParcelsTotal)
 
 	registry.MustRegister(GopluginContractExecutionTime)
 
