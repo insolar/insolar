@@ -17,6 +17,7 @@
 package artifactmanager
 
 import (
+	"bytes"
 	"context"
 	"testing"
 
@@ -964,14 +965,15 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	jc := testutils.NewJetCoordinatorMock(mc)
 
 	firstID := core.NewRecordID(core.FirstPulseNumber, []byte{1, 2, 3})
-	secondId := record.NewRecordIDFromRecord(s.scheme, core.FirstPulseNumber, &record.CodeRecord{})
+	secondID := record.NewRecordIDFromRecord(s.scheme, core.FirstPulseNumber, &record.CodeRecord{})
+	thirdID := record.NewRecordIDFromRecord(s.scheme, core.FirstPulseNumber-1, &record.CodeRecord{})
 
 	mb := testutils.NewMessageBusMock(mc)
 	mb.MustRegisterMock.Return()
 	mb.SendFunc = func(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) (r core.Reply, r1 error) {
 		parsedMsg, ok := p1.(*message.AbandonedRequestsNotification)
 		require.Equal(s.T(), true, ok)
-		require.Equal(s.T(), *secondId, parsedMsg.Object)
+		require.Equal(s.T(), *secondID, parsedMsg.Object)
 		return &reply.OK{}, nil
 	}
 
@@ -1000,7 +1002,8 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 			},
 		},
 		PendingRequests: map[core.RecordID]*recentstorage.PendingObjectContext{
-			*secondId: {},
+			*secondID: {},
+			*thirdID:  {Active: true},
 		},
 		Drop:               jet.JetDrop{Pulse: core.FirstPulseNumber, Hash: []byte{88}},
 		DropJet:            jetID,
@@ -1011,7 +1014,16 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	pendingMock := recentstorage.NewPendingStorageMock(s.T())
 
 	pendingMock.SetContextToObjectFunc = func(p context.Context, p1 core.RecordID, p2 recentstorage.PendingObjectContext) {
-		require.Equal(s.T(), *secondId, p1)
+
+		if bytes.Equal(p1.Bytes(), secondID.Bytes()) {
+			require.Equal(s.T(), false, p2.Active)
+			return
+		}
+		if bytes.Equal(p1.Bytes(), thirdID.Bytes()) {
+			require.Equal(s.T(), false, p2.Active)
+			return
+		}
+		s.T().Fail()
 	}
 	indexMock.AddObjectWithTLLFunc = func(ctx context.Context, p core.RecordID, ttl int) {
 		require.Equal(s.T(), p, *firstID)
@@ -1053,6 +1065,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	require.Equal(s.T(), testDropSize, dropSizeHistory[0].DropSize)
 	require.Equal(s.T(), jetID, dropSizeHistory[0].JetID)
 	require.Equal(s.T(), core.FirstPulseNumber, int(dropSizeHistory[0].PulseNo))
+	require.Equal(s.T(), 1, int(mb.SendCounter))
 
 	indexMock.MinimockFinish()
 	pendingMock.MinimockFinish()
