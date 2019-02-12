@@ -963,11 +963,17 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 
 	jc := testutils.NewJetCoordinatorMock(mc)
 
-	mb := testutils.NewMessageBusMock(mc)
-	mb.MustRegisterMock.Return()
-
 	firstID := core.NewRecordID(core.FirstPulseNumber, []byte{1, 2, 3})
 	secondId := record.NewRecordIDFromRecord(s.scheme, core.FirstPulseNumber, &record.CodeRecord{})
+
+	mb := testutils.NewMessageBusMock(mc)
+	mb.MustRegisterMock.Return()
+	mb.SendFunc = func(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) (r core.Reply, r1 error) {
+		parsedMsg, ok := p1.(*message.AbandonedRequestsNotification)
+		require.Equal(s.T(), true, ok)
+		require.Equal(s.T(), *secondId, parsedMsg.Object)
+		return &reply.OK{}, nil
+	}
 
 	firstIndex, _ := index.EncodeObjectLifeline(&index.ObjectLifeline{
 		LatestState: firstID,
@@ -984,7 +990,6 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	dropSizeHistory, err = s.dropStorage.GetDropSizeHistory(s.ctx, jetID)
 	require.NoError(s.T(), err)
 
-	obj := core.RecordID{}
 	hotIndexes := &message.HotData{
 		Jet:         *core.NewRecordRef(core.DomainID, jetID),
 		PulseNumber: core.FirstPulseNumber,
@@ -1005,9 +1010,8 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	indexMock := recentstorage.NewRecentIndexStorageMock(s.T())
 	pendingMock := recentstorage.NewPendingStorageMock(s.T())
 
-	pendingMock.AddPendingRequestFunc = func(ctx context.Context, o, p core.RecordID) {
-		require.Equal(s.T(), o, obj)
-		require.Equal(s.T(), p, *secondId)
+	pendingMock.SetContextToObjectFunc = func(p context.Context, p1 core.RecordID, p2 recentstorage.PendingObjectContext) {
+		require.Equal(s.T(), *secondId, p1)
 	}
 	indexMock.AddObjectWithTLLFunc = func(ctx context.Context, p core.RecordID, ttl int) {
 		require.Equal(s.T(), p, *firstID)
