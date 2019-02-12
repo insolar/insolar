@@ -1129,11 +1129,7 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 					es.pending = message.NotPending
 					es.objectbody = nil
 					es.LedgerHasMoreRequests = true
-					go func() {
-						go lr.getLedgerPendingRequest(ctx, es, *ref.Record())
-						lr.StartQueueProcessorIfNeededOnPulse(ctx, es, &ref)
-
-					}()
+					go lr.getLedgerPendingRequest(ctx, es, *ref.Record())
 				}
 				es.PendingConfirmed = false
 			}

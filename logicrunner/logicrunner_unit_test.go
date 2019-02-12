@@ -821,9 +821,10 @@ func (s *LogicRunnerOnPulseTestSuite) TestStateTransfer1() {
 // We're the next executor and this task wasn't currently executing
 // move task from InPending -> NotPending
 func (s *LogicRunnerOnPulseTestSuite) TestStateTransfer2() {
-	s.T().Skip()
 	s.jc.MeMock.Return(core.RecordRef{})
 	s.jc.IsAuthorizedMock.Return(true, nil)
+
+	s.am.GetPendingRequestMock.Return(nil, core.ErrNoPendingRequest)
 
 	s.lr.state[s.objectRef] = &ObjectState{
 		ExecutionState: &ExecutionState{
@@ -940,7 +941,6 @@ func (s *LogicRunnerOnPulseTestSuite) TestLedgerHasMoreRequests() {
 }
 
 func TestLogicRunnerOnPulse(t *testing.T) {
-	t.Parallel()
 	suite.Run(t, new(LogicRunnerOnPulseTestSuite))
 }
 
