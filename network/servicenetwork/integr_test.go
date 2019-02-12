@@ -1,3 +1,5 @@
+// +build networktest
+
 /*
  * The Clear BSD License
  *
@@ -18,177 +20,272 @@
 package servicenetwork
 
 import (
-	"bytes"
 	"context"
-	"crypto"
-	"encoding/json"
-	"strconv"
+	"fmt"
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/certificate"
-	"github.com/insolar/insolar/component"
-	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/consensus/phases"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/network/nodenetwork"
-	"github.com/insolar/insolar/platformpolicy"
-	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
-type testSuite struct {
-	suite.Suite
-	ctx            context.Context
-	bootstrapNodes []networkNode
-	networkNodes   []networkNode
-	testNode       networkNode
-	networkPort    int
+var (
+	consensusMin    = 5 // minimum count of participants that can survive when one node leaves
+	consensusMinMsg = fmt.Sprintf("skip test for bootstrap nodes < %d", consensusMin)
+)
+
+func (s *testSuite) TestNetworkConsensus3Times() {
+	s.waitForConsensus(3)
 }
 
-func NewTestSuite() *testSuite {
-	return &testSuite{
-		Suite:        suite.Suite{},
-		ctx:          context.Background(),
-		networkNodes: make([]networkNode, 0),
-		networkPort:  10001,
-	}
-}
-func (s *testSuite) InitNodes() {
-	for _, n := range s.bootstrapNodes {
-		err := n.componentManager.Init(s.ctx)
-		s.NoError(err)
-	}
-	log.Info("========== Bootstrap nodes inited")
-	<-time.After(time.Second * 1)
+func (s *testSuite) TestNodeConnect() {
+	s.preInitNode(s.fixture().testNode)
 
-	if s.testNode.componentManager != nil {
-		err := s.testNode.componentManager.Init(s.ctx)
-		s.NoError(err)
-	}
-}
+	s.InitTestNode()
+	s.StartTestNode()
+	defer func() {
+		s.StopTestNode()
+	}()
 
-func (s *testSuite) StartNodes() {
-	for _, n := range s.bootstrapNodes {
-		err := n.componentManager.Start(s.ctx)
-		s.NoError(err)
-	}
-	log.Info("========== Bootstrap nodes started")
-	<-time.After(time.Second * 1)
+	s.waitForConsensus(1)
 
-	if s.testNode.componentManager != nil {
-		err := s.testNode.componentManager.Init(s.ctx)
-		s.NoError(err)
-		err = s.testNode.componentManager.Start(s.ctx)
-		s.NoError(err)
-	}
+	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount(), len(activeNodes))
 
+	s.waitForConsensus(1)
+
+	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount()+1, len(activeNodes))
+
+	s.waitForConsensus(2)
+
+	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount()+1, len(activeNodes))
 }
 
-func (s *testSuite) StopNodes() {
-	for _, n := range s.networkNodes {
-		err := n.componentManager.Stop(s.ctx)
-		s.NoError(err)
+func (s *testSuite) TestNodeLeave() {
+	s.preInitNode(s.fixture().testNode)
+
+	s.InitTestNode()
+	s.StartTestNode()
+	defer func() {
+		s.StopTestNode()
+	}()
+
+	s.waitForConsensus(1)
+
+	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount(), len(activeNodes))
+
+	s.waitForConsensus(1)
+
+	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount()+1, len(activeNodes))
+
+	s.fixture().testNode.serviceNetwork.GracefulStop(context.Background())
+
+	s.waitForConsensus(2)
+
+	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount(), len(activeNodes))
+}
+
+func TestServiceNetworkOneBootstrap(t *testing.T) {
+	s := NewTestSuite(1, 0)
+	suite.Run(t, s)
+}
+
+func TestServiceNetworkManyBootstraps(t *testing.T) {
+	s := NewTestSuite(15, 0)
+	suite.Run(t, s)
+}
+
+func TestServiceNetworkManyNodes(t *testing.T) {
+	t.Skip("tmp 123")
+
+	s := NewTestSuite(5, 10)
+	suite.Run(t, s)
+}
+
+// Full timeout test
+type FullTimeoutPhaseManager struct {
+}
+
+func (ftpm *FullTimeoutPhaseManager) OnPulse(ctx context.Context, pulse *core.Pulse, pulseStartTime time.Time) error {
+	return nil
+}
+
+func (s *testSuite) TestFullTimeOut() {
+	if len(s.fixture().bootstrapNodes) < consensusMin {
+		s.T().Skip(consensusMinMsg)
 	}
 
-	if s.testNode.componentManager != nil {
-		err := s.testNode.componentManager.Stop(s.ctx)
-		s.NoError(err)
-	}
+	// TODO: make this set operation thread-safe somehow (race detector does not like this code)
+	wrapper := s.fixture().bootstrapNodes[1].serviceNetwork.PhaseManager.(*phaseManagerWrapper)
+	wrapper.original = &FullTimeoutPhaseManager{}
+	s.fixture().bootstrapNodes[1].serviceNetwork.PhaseManager = wrapper
+
+	s.waitForConsensus(2)
+
+	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount()-1, len(activeNodes))
 }
 
-type networkNode struct {
-	componentManager *component.Manager
-	serviceNetwork   *ServiceNetwork
-}
+// Partial timeout
 
-func initCertificate(t *testing.T, nodes []certificate.BootstrapNode, key crypto.PublicKey, ref core.RecordRef) *certificate.CertificateManager {
-	proc := platformpolicy.NewKeyProcessor()
-	publicKey, err := proc.ExportPublicKeyPEM(key)
-	assert.NoError(t, err)
-	bytes.NewReader(publicKey)
-
-	type сertInfo map[string]interface{}
-	j := сertInfo{
-		"public_key": string(publicKey[:]),
+func (s *testSuite) TestPartialPositive1PhaseTimeOut() {
+	if len(s.fixture().bootstrapNodes) < consensusMin {
+		s.T().Skip(consensusMinMsg)
 	}
 
-	data, err := json.Marshal(j)
+	setCommunicatorMock(s.fixture().bootstrapNodes, PartialPositive1Phase)
 
-	cert, err := certificate.ReadCertificateFromReader(key, proc, bytes.NewReader(data))
-	cert.Reference = ref.String()
-	assert.NoError(t, err)
-	cert.BootstrapNodes = nodes
-	mngr := certificate.NewCertificateManager(cert)
-	return mngr
+	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
+	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount(), len(activeNodes))
 }
 
-func initCrypto(t *testing.T, nodes []certificate.BootstrapNode, ref core.RecordRef) (*certificate.CertificateManager, core.CryptographyService) {
-	key, err := platformpolicy.NewKeyProcessor().GeneratePrivateKey()
-	assert.NoError(t, err)
-	require.NotNil(t, key)
-	cs := cryptography.NewKeyBoundCryptographyService(key)
-	pubKey, err := cs.GetPublicKey()
-	assert.NoError(t, err)
-	mngr := initCertificate(t, nodes, pubKey, ref)
-
-	return mngr, cs
-}
-
-func (s *testSuite) getBootstrapNodes(t *testing.T) []certificate.BootstrapNode {
-	result := make([]certificate.BootstrapNode, 0)
-	for _, b := range s.bootstrapNodes {
-		node := certificate.NewBootstrapNode(
-			b.serviceNetwork.CertificateManager.GetCertificate().GetPublicKey(),
-			b.serviceNetwork.CertificateManager.GetCertificate().(*certificate.Certificate).PublicKey,
-			b.serviceNetwork.cfg.Host.Transport.Address,
-			b.serviceNetwork.NodeKeeper.GetOrigin().ID().String())
-		result = append(result, *node)
+func (s *testSuite) TestPartialPositive2PhaseTimeOut() {
+	if len(s.fixture().bootstrapNodes) < consensusMin {
+		s.T().Skip(consensusMinMsg)
 	}
-	return result
+
+	setCommunicatorMock(s.fixture().bootstrapNodes, PartialPositive2Phase)
+
+	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
+	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount(), len(activeNodes))
 }
 
-func (s *testSuite) createNetworkNode(t *testing.T) networkNode {
-	address := "127.0.0.1:" + strconv.Itoa(s.networkPort)
-	s.networkPort += 2 // coz consensus transport port+=1
+func (s *testSuite) TestPartialNegative1PhaseTimeOut() {
+	if len(s.fixture().bootstrapNodes) < consensusMin {
+		s.T().Skip(consensusMinMsg)
+	}
 
-	origin := nodenetwork.NewNode(testutils.RandomRef(),
-		core.StaticRoleVirtual,
-		nil,
-		address,
-		"",
-	)
+	setCommunicatorMock(s.fixture().bootstrapNodes, PartialNegative1Phase)
 
-	cfg := configuration.NewConfiguration()
-	cfg.Host.Transport.Address = address
+	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
+	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount()-1, len(activeNodes))
+}
 
-	pulseManagerMock := testutils.NewPulseManagerMock(t)
-	netCoordinator := testutils.NewNetworkCoordinatorMock(t)
-	netCoordinator.ValidateCertMock.Set(func(p context.Context, p1 core.AuthorizationCertificate) (bool, error) {
-		return true, nil
-	})
+func (s *testSuite) TestPartialNegative2PhaseTimeOut() {
+	if len(s.fixture().bootstrapNodes) < consensusMin {
+		s.T().Skip(consensusMinMsg)
+	}
 
-	amMock := testutils.NewArtifactManagerMock(t)
+	setCommunicatorMock(s.fixture().bootstrapNodes, PartialNegative2Phase)
 
-	certManager, cryptographyService := initCrypto(t, s.getBootstrapNodes(t), origin.ID())
-	netSwitcher := testutils.NewNetworkSwitcherMock(t)
+	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
+	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount(), len(activeNodes))
+}
 
-	realKeeper := nodenetwork.NewNodeKeeper(origin)
-	keeper := &nodeKeeperWrapper{realKeeper}
+func (s *testSuite) TestPartialNegative3PhaseTimeOut() {
+	if len(s.fixture().bootstrapNodes) < consensusMin {
+		s.T().Skip(consensusMinMsg)
+	}
 
-	cm := &component.Manager{}
-	cm.Register(keeper, pulseManagerMock, netCoordinator, amMock, realKeeper)
-	cm.Register(certManager, cryptographyService)
-	cm.Inject(netSwitcher)
+	setCommunicatorMock(s.fixture().bootstrapNodes, PartialNegative3Phase)
 
-	scheme := platformpolicy.NewPlatformCryptographyScheme()
-	serviceNetwork, err := NewServiceNetwork(cfg, scheme, cm, false)
-	assert.NoError(t, err)
+	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
+	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount(), len(activeNodes))
+}
 
-	serviceNetwork.NodeKeeper = keeper
+func (s *testSuite) TestPartialPositive3PhaseTimeOut() {
+	if len(s.fixture().bootstrapNodes) < consensusMin {
+		s.T().Skip(consensusMinMsg)
+	}
 
-	return networkNode{cm, serviceNetwork}
+	setCommunicatorMock(s.fixture().bootstrapNodes, PartialPositive3Phase)
+
+	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
+	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount(), len(activeNodes))
+}
+
+func (s *testSuite) TestPartialNegative23PhaseTimeOut() {
+	if len(s.fixture().bootstrapNodes) < consensusMin {
+		s.T().Skip(consensusMinMsg)
+	}
+
+	setCommunicatorMock(s.fixture().bootstrapNodes, PartialNegative23Phase)
+
+	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
+	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount(), len(activeNodes))
+}
+
+func (s *testSuite) TestPartialPositive23PhaseTimeOut() {
+	if len(s.fixture().bootstrapNodes) < consensusMin {
+		s.T().Skip(consensusMinMsg)
+	}
+
+	setCommunicatorMock(s.fixture().bootstrapNodes, PartialPositive23Phase)
+
+	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
+	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount(), len(activeNodes))
+}
+
+func (s *testSuite) TestDiscoveryDown() {
+	if len(s.fixture().bootstrapNodes) < consensusMin {
+		s.T().Skip(consensusMinMsg)
+	}
+
+	s.fixture().bootstrapNodes[0].serviceNetwork.Stop(context.Background())
+	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
+	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount()-1, len(activeNodes))
+}
+
+func (s *testSuite) TestDiscoveryRestart() {
+	if len(s.fixture().bootstrapNodes) < consensusMin {
+		s.T().Skip(consensusMinMsg)
+	}
+
+	s.waitForConsensus(1)
+
+	log.Info("Discovery node stopping...")
+	err := s.fixture().bootstrapNodes[0].serviceNetwork.Stop(context.Background())
+	s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.(*nodeKeeperWrapper).Wipe(true)
+	log.Info("Discovery node stopped...")
+	require.NoError(s.T(), err)
+
+	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
+	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount()-1, len(activeNodes))
+
+	log.Info("Discovery node starting...")
+	err = s.fixture().bootstrapNodes[0].serviceNetwork.Start(context.Background())
+	log.Info("Discovery node started")
+	require.NoError(s.T(), err)
+
+	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
+	activeNodes = s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount(), len(activeNodes))
+}
+
+func setCommunicatorMock(nodes []*networkNode, opt CommunicatorTestOpt) {
+	ref := nodes[0].id
+	timedOutNodesCount := 0
+	switch opt {
+	case PartialNegative1Phase, PartialNegative2Phase, PartialNegative3Phase, PartialNegative23Phase:
+		timedOutNodesCount = int(float64(len(nodes)) * 0.6)
+	case PartialPositive1Phase, PartialPositive2Phase, PartialPositive3Phase, PartialPositive23Phase:
+		timedOutNodesCount = int(float64(len(nodes)) * 0.2)
+	}
+	// TODO: make these set operations thread-safe somehow (race detector does not like this code)
+	for i := 1; i <= timedOutNodesCount; i++ {
+		comm := nodes[i].serviceNetwork.PhaseManager.(*phaseManagerWrapper).original.(*phases.Phases).FirstPhase.(*phases.FirstPhaseImpl).Communicator
+		wrapper := &CommunicatorMock{communicator: comm, ignoreFrom: ref, testOpt: opt}
+		phasemanager := nodes[i].serviceNetwork.PhaseManager.(*phaseManagerWrapper).original.(*phases.Phases)
+		phasemanager.FirstPhase.(*phases.FirstPhaseImpl).Communicator = wrapper
+		phasemanager.SecondPhase.(*phases.SecondPhaseImpl).Communicator = wrapper
+		phasemanager.ThirdPhase.(*phases.ThirdPhaseImpl).Communicator = wrapper
+	}
 }

@@ -22,7 +22,7 @@ import (
 )
 
 // Discovery contains info about discovery nodes
-type Discovery struct {
+type Node struct {
 	Host     string `mapstructure:"host"`
 	Role     string `mapstructure:"role"`
 	KeysFile string `mapstructure:"keys_file"`
@@ -31,16 +31,21 @@ type Discovery struct {
 
 // Config contains all genesis config
 type Config struct {
-	RootKeysFile string `mapstructure:"root_keys_file"`
-	RootBalance  uint   `mapstructure:"root_balance"`
-	MajorityRule int    `mapstructure:"majority_rule"`
-	MinRoles     struct {
+	RootKeysFile     string `mapstructure:"root_keys_file"`
+	NodeKeysDir      string `mapstructure:"node_keys_dir"`
+	DiscoveryKeysDir string `mapstructure:"discovery_keys_dir"`
+	KeysNameFormat   string `mapstructure:"keys_name_format"`
+	ReuseKeys        bool   `mapstructure:"reuse_keys"`
+	RootBalance      uint   `mapstructure:"root_balance"`
+	MajorityRule     int    `mapstructure:"majority_rule"`
+	MinRoles         struct {
 		Virtual       uint `mapstructure:"virtual"`
 		HeavyMaterial uint `mapstructure:"heavy_material"`
 		LightMaterial uint `mapstructure:"light_material"`
 	} `mapstructure:"min_roles"`
-	PulsarPublicKeys []string    `mapstructure:"pulsar_public_keys"`
-	DiscoveryNodes   []Discovery `mapstructure:"discovery_nodes"`
+	PulsarPublicKeys []string `mapstructure:"pulsar_public_keys"`
+	DiscoveryNodes   []Node   `mapstructure:"discovery_nodes"`
+	Nodes            []Node   `mapstructure:"nodes"`
 }
 
 // It's very light check. It's not about majority rule

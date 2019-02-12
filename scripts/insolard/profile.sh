@@ -20,8 +20,8 @@ killall() {
     echo DONE
 }
 
-confs=${current_dir}"/configs/generated_configs"
-prof_ports=$( grep listenaddress ${confs}/insolar_*.yaml |  grep -o ":\d\+" | grep -o "\d\+" | tr '\n' ' ' )
+confs=${current_dir}"/configs/generated_configs/*nodes/insolar_*.yaml"
+prof_ports=$( grep listenaddress ${confs} |  grep -o ":\d\+" | grep -o "\d\+" | tr '\n' ' ' )
 
 mkdir -p ${current_dir}/${prof_files_dir}
 

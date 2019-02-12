@@ -15,52 +15,52 @@
  *
  */
 
-package packets
+package nodenetwork
 
 import (
 	"testing"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/network/transport/packet/types"
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/assert"
 )
 
-func checkGetAndSetPacketHeader(t *testing.T, packet PacketRoutable, header *RoutingHeader) {
-	err := packet.SetPacketHeader(header)
-	require.NoError(t, err)
+func Test_removeFromList(t *testing.T) {
+	// table driven tests
+	tests := map[string]struct {
+		list          []core.RecordRef
+		nodesToRemove []core.RecordRef
+		expected      []core.RecordRef
+	}{
+		"simpleDiff": {
+			list:          []core.RecordRef{{0}, {1}, {2}, {3}, {4}},
+			nodesToRemove: []core.RecordRef{{0}, {2}},
+			expected:      []core.RecordRef{{1}, {3}, {4}},
+		},
+		"equals": {
+			list:          []core.RecordRef{{1}, {2}, {3}},
+			nodesToRemove: []core.RecordRef{{1}, {2}, {3}},
+			expected:      []core.RecordRef{},
+		},
+		"emptyRemoveList": {
+			list:          []core.RecordRef{{1}, {2}, {3}},
+			nodesToRemove: []core.RecordRef{},
+			expected:      []core.RecordRef{{1}, {2}, {3}},
+		},
+		"emptyList": {
+			list:          []core.RecordRef{},
+			nodesToRemove: []core.RecordRef{{1}, {2}, {3}},
+			expected:      []core.RecordRef{},
+		},
+		"allEmpty": {
+			list:          []core.RecordRef{},
+			nodesToRemove: []core.RecordRef{},
+			expected:      []core.RecordRef{},
+		},
+	}
 
-	newHeader, err := packet.GetPacketHeader()
-	require.NoError(t, err)
-
-	require.Equal(t, header, newHeader)
-}
-
-func checkSetPacketHeader_BadType(t *testing.T, packet PacketRoutable, header *RoutingHeader) {
-	err := packet.SetPacketHeader(header)
-	require.Contains(t, err.Error(), "wrong packet type")
-}
-
-func makeHeader(packetType types.PacketType) *RoutingHeader {
-	header := &RoutingHeader{}
-	header.PacketType = packetType
-	header.OriginID = core.ShortNodeID(23)
-	header.TargetID = core.ShortNodeID(33)
-
-	return header
-}
-
-func TestPhase1Packet_GetAndSetPacketHeader(t *testing.T) {
-	checkGetAndSetPacketHeader(t, &Phase1Packet{}, makeHeader(types.Phase1))
-}
-
-func TestPhase2Packet_SetAndGetPacketHeader(t *testing.T) {
-	checkGetAndSetPacketHeader(t, &Phase2Packet{}, makeHeader(types.Phase2))
-}
-
-func TestPhase1Packet_SetPacketHeader_BadType(t *testing.T) {
-	checkSetPacketHeader_BadType(t, &Phase1Packet{}, makeHeader(types.Phase2))
-}
-
-func TestPhase2Packet_SetPacketHeader_BadType(t *testing.T) {
-	checkSetPacketHeader_BadType(t, &Phase2Packet{}, makeHeader(types.Phase1))
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, test.expected, removeFromList(test.list, test.nodesToRemove))
+		})
+	}
 }

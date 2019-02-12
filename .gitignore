@@ -21,7 +21,7 @@
 .idea
 *.iml
 out
-gen
+.gen
 
 ### VSCode configuration
 .vscode
@@ -40,15 +40,20 @@ vm/wasm/test/data/*.wat
 data
 data_pulsar
 
+# generated/compiled files
 /bin
+/.artefacts
+coverage.txt
 
 # GoReleaser dist dir
 /dist
 
 /scripts/insolard/configs
 /scripts/insolard/nodes
+/scripts/insolard/discoverynodes
 /scripts/insolard/loglinks
 /scripts/insolard/benchmark
 
 /ci/local-dev/logs
 /ci/local-dev/manifests/ks/lib
+/scripts/insolard/reusekeys

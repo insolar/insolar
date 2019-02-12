@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -o pipefail
 
-confs=$( dirname $0 )"/configs/generated_configs/"
+confs=$( dirname $0 )"/configs/generated_configs/discoverynodes"
 api_ports=$( grep -A 1 "apirunner" $confs/insolar_*.yaml  | grep address  |  grep -o ":\d\+" | grep -o "\d\+" | tr '\n' ' ' )
 grep_exit=$?
 if [[ $grep_exit -ne 0 ]]; then

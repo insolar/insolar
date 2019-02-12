@@ -127,7 +127,7 @@ func genRandomSlice(n int) []byte {
 	return buf[:]
 }
 
-func randomArray71() [SignatureLength]byte {
+func randomArray66() [SignatureLength]byte {
 	var buf [SignatureLength]byte
 	copy(buf[:], genRandomSlice(SignatureLength))
 	return buf
@@ -148,7 +148,7 @@ func randomArray32() [32]byte {
 
 func makeNodePulseProof() *NodePulseProof {
 	nodePulseProof := &NodePulseProof{}
-	nodePulseProof.NodeSignature = randomArray71()
+	nodePulseProof.NodeSignature = randomArray66()
 	nodePulseProof.NodeStateHash = randomArray64()
 
 	return nodePulseProof
@@ -163,7 +163,7 @@ func TestNodePulseProofReadWrite_BadData(t *testing.T) {
 }
 
 func TestPhase1Packet_SetPulseProof(t *testing.T) {
-	p := NewPhase1Packet()
+	p := NewPhase1Packet(core.Pulse{})
 	proofStateHash := genRandomSlice(HashLength)
 	proofSignature := genRandomSlice(SignatureLength)
 
@@ -252,16 +252,16 @@ func TestParseAndCompactPulseAndCustomFlags(t *testing.T) {
 }
 
 func makePhase1Packet() *Phase1Packet {
-	phase1Packet := NewPhase1Packet()
+	phase1Packet := NewPhase1Packet(core.Pulse{})
 	phase1Packet.packetHeader = *makeDefaultPacketHeader(Phase1)
 	phase1Packet.pulseData = makeDefaultPulseDataExt()
-	phase1Packet.proofNodePulse = NodePulseProof{NodeSignature: randomArray71(), NodeStateHash: randomArray64()}
+	phase1Packet.proofNodePulse = NodePulseProof{NodeSignature: randomArray66(), NodeStateHash: randomArray64()}
 
-	phase1Packet.AddClaim(makeNodeJoinClaim())
+	phase1Packet.AddClaim(makeNodeJoinClaim(true))
 	phase1Packet.AddClaim(makeNodeViolationBlame())
 	phase1Packet.AddClaim(&NodeLeaveClaim{})
 
-	phase1Packet.Signature = randomArray71()
+	phase1Packet.Signature = randomArray66()
 
 	return phase1Packet
 }
@@ -273,9 +273,9 @@ func TestPhase1Packet_Deserialize(t *testing.T) {
 func makePhase2Packet() *Phase2Packet {
 	phase2Packet := &Phase2Packet{}
 	phase2Packet.packetHeader = *makeDefaultPacketHeader(Phase2)
-	phase2Packet.globuleHashSignature = randomArray64()
-	phase2Packet.SignatureHeaderSection1 = randomArray71()
-	phase2Packet.SignatureHeaderSection2 = randomArray71()
+	phase2Packet.globuleHashSignature = randomArray66()
+	phase2Packet.SignatureHeaderSection1 = randomArray66()
+	phase2Packet.SignatureHeaderSection2 = randomArray66()
 	phase2Packet.bitSet, _ = NewTriStateBitSet(134)
 
 	vote := &MissingNode{NodeIndex: 25}
@@ -346,7 +346,7 @@ func TestExtractPacket_Phase1_BadExtract(t *testing.T) {
 func TestPhase1Packet_AddClaim(t *testing.T) {
 	packet := makePhase1Packet()
 
-	success := packet.AddClaim(makeNodeJoinClaim())
+	success := packet.AddClaim(makeNodeJoinClaim(true))
 	assert.True(t, success)
 
 	for success {
@@ -362,10 +362,10 @@ func TestPhase3Packet_Serialize(t *testing.T) {
 func getPhase3Packet(t *testing.T) *Phase3Packet {
 	packet := &Phase3Packet{}
 	packet.packetHeader = *makeDefaultPacketHeader(Phase3)
-	packet.globuleHashSignature = randomArray71()
-	packet.SignatureHeaderSection1 = randomArray71()
+	packet.globuleHashSignature = randomArray66()
+	packet.SignatureHeaderSection1 = randomArray66()
 	var err error
-	packet.deviantBitSet, err = NewBitSet(100)
+	packet.bitset, err = NewBitSet(100)
 	assert.NoError(t, err)
 
 	count := 70
@@ -374,7 +374,7 @@ func getPhase3Packet(t *testing.T) *Phase3Packet {
 	bitset, err := NewBitSet(len(cells))
 	assert.NoError(t, err)
 
-	packet.deviantBitSet = bitset
+	packet.bitset = bitset
 
 	return packet
 }

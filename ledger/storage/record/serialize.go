@@ -19,64 +19,10 @@ package record
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
 
 	"github.com/insolar/insolar/core"
 	"github.com/ugorji/go/codec"
 )
-
-// record type ids for record types
-// in use mostly for hashing and deserialization
-// (we don't use iota for clarity and predictable ids,
-// not depended on definition order)
-//go:generate stringer -type=TypeID
-const (
-	// meta
-	typeGenesis TypeID = 10
-	typeChild   TypeID = 11
-	typeJet     TypeID = 12
-
-	// request
-	typeCallRequest TypeID = 20
-
-	// result
-	typeResult     TypeID = 30
-	typeType       TypeID = 31
-	typeCode       TypeID = 32
-	typeActivate   TypeID = 33
-	typeAmend      TypeID = 34
-	typeDeactivate TypeID = 35
-)
-
-// getRecordByTypeID returns Record interface with concrete record type under the hood.
-// This is useful with deserialization cases.
-func getRecordByTypeID(id TypeID) Record { // nolint: gocyclo
-	switch id {
-	// request records
-	case typeCallRequest:
-		return &RequestRecord{}
-	case typeActivate:
-		return &ObjectActivateRecord{}
-	case typeCode:
-		return &CodeRecord{}
-	case typeDeactivate:
-		return &DeactivationRecord{}
-	case typeAmend:
-		return &ObjectAmendRecord{}
-	case typeType:
-		return &TypeRecord{}
-	case typeChild:
-		return &ChildRecord{}
-	case typeGenesis:
-		return &GenesisRecord{}
-	case typeResult:
-		return &ResultRecord{}
-	case typeJet:
-		return &JetRecord{}
-	default:
-		panic(fmt.Errorf("unknown record type id %v", id))
-	}
-}
 
 // SerializeType returns binary representation of provided type.
 func SerializeType(id TypeID) []byte {
@@ -92,7 +38,7 @@ func DeserializeType(buf []byte) TypeID {
 
 // SerializeRecord returns binary representation of provided record.
 func SerializeRecord(rec Record) []byte {
-	typeBytes := SerializeType(rec.Type())
+	typeBytes := SerializeType(TypeFromRecord(rec))
 	buff := bytes.NewBuffer(typeBytes)
 	enc := codec.NewEncoder(buff, &codec.CborHandle{})
 	enc.MustEncode(rec)
@@ -103,7 +49,7 @@ func SerializeRecord(rec Record) []byte {
 func DeserializeRecord(buf []byte) Record {
 	t := DeserializeType(buf[:TypeIDSize])
 	dec := codec.NewDecoderBytes(buf[TypeIDSize:], &codec.CborHandle{})
-	rec := getRecordByTypeID(t)
+	rec := RecordFromType(t)
 	dec.MustDecode(&rec)
 	return rec
 }

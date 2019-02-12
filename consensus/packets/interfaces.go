@@ -18,26 +18,19 @@
 package packets
 
 import (
+	"crypto"
 	"io"
 	"strconv"
 
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/network/transport/packet/types"
 )
 
-type RoutingHeader struct {
-	OriginID   core.ShortNodeID
-	TargetID   core.ShortNodeID
-	PacketType types.PacketType
-}
-
 type PacketRoutable interface {
-	// SetPacketHeader set routing information for transport level.
-	SetPacketHeader(header *RoutingHeader) error
-	// GetPacketHeader get routing information from transport level.
-	GetPacketHeader() (*RoutingHeader, error)
+	GetOrigin() core.ShortNodeID
+	GetTarget() core.ShortNodeID
+	SetRouting(origin, target core.ShortNodeID)
 }
 
 type Serializer interface {
@@ -49,7 +42,16 @@ type HeaderSkipDeserializer interface {
 	DeserializeWithoutHeader(data io.Reader, header *PacketHeader) error
 }
 
+type SignedPacket interface {
+	Verify(cryptographyService core.CryptographyService, key crypto.PublicKey) error
+	Sign(core.CryptographyService) error
+}
+
 type ConsensusPacket interface {
+	GetType() PacketType
+	Clone() ConsensusPacket
+
+	SignedPacket
 	HeaderSkipDeserializer
 	Serializer
 	PacketRoutable
@@ -57,6 +59,7 @@ type ConsensusPacket interface {
 
 func ExtractPacket(reader io.Reader) (ConsensusPacket, error) {
 	header := PacketHeader{}
+	// TODO: serialize/deserialize consensus packets without header and move header serialization/deserialization to transport layer
 	err := header.Deserialize(reader)
 	if err != nil {
 		return nil, errors.New("[ ExtractPacket ] Can't read packet header")

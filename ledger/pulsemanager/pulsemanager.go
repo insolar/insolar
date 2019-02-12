@@ -43,7 +43,7 @@ import (
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/pulsemanager.ActiveListSwapper -o ../../testutils -s _mock.go
 type ActiveListSwapper interface {
-	MoveSyncToActive()
+	MoveSyncToActive(ctx context.Context) error
 }
 
 // PulseManager implements core.PulseManager.
@@ -187,17 +187,18 @@ func (m *PulseManager) processEndPulse(
 				}
 			}
 
-			requests := m.RecentStorageProvider.GetPendingStorage(ctx, info.id).GetRequests()
-			go func() {
-				err := m.sendAbandonedRequests(
-					ctx,
-					newPulse,
-					requests,
-				)
-				if err != nil {
-					logger.Error(err)
-				}
-			}()
+			// TODO: uncomment this when the issue of message storm of abandoned requests is fixed
+			// requests := m.RecentStorageProvider.GetPendingStorage(ctx, info.id).GetRequests()
+			// go func() {
+			// 	err := m.sendAbandonedRequests(
+			// 		ctx,
+			// 		newPulse,
+			// 		requests,
+			// 	)
+			// 	if err != nil {
+			// 		logger.Error(err)
+			// 	}
+			// }()
 
 			// FIXME: @andreyromancev. 09.01.2019. Temporary disabled validation. Uncomment when jet split works properly.
 			// dropErr := m.processDrop(ctx, jetID, currentPulse, dropSerialized, messages)
@@ -395,6 +396,7 @@ func (m *PulseManager) getExecutorHotData(
 		}
 	}
 
+	requestCount := 0
 	for objID, requests := range pendingStorage.GetRequests() {
 		for reqID := range requests {
 			if _, ok := pendingRequests[objID]; !ok {
@@ -402,7 +404,14 @@ func (m *PulseManager) getExecutorHotData(
 			}
 			pendingRequests[objID][reqID] = struct{}{}
 		}
+		requestCount += len(requests)
 	}
+
+	stats.Record(
+		ctx,
+		statHotObjectsSent.M(int64(len(recentObjects))),
+		statPendingSent.M(int64(requestCount)),
+	)
 
 	dropSizeHistory, err := m.DropStorage.GetDropSizeHistory(ctx, jetID)
 	if err != nil {
@@ -634,8 +643,10 @@ func (m *PulseManager) setUnderGilSection(
 	m.currentPulse = newPulse
 
 	// swap active nodes
-	// TODO: fix network consensus and uncomment this (after NETD18-74)
-	// m.ActiveListSwapper.MoveSyncToActive()
+	err = m.ActiveListSwapper.MoveSyncToActive(ctx)
+	if err != nil {
+		return nil, nil, nil, nil, errors.Wrap(err, "failed to apply new active node list")
+	}
 	if persist {
 		if err := m.PulseTracker.AddPulse(ctx, newPulse); err != nil {
 			m.PulseStorage.Unlock()

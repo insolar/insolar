@@ -47,7 +47,7 @@ type AuthorizationCertificate interface {
 
 	GetRole() StaticRole
 	SerializeNodePart() []byte
-	GetDiscoverySigns() map[*RecordRef][]byte
+	GetDiscoverySigns() map[RecordRef][]byte
 }
 
 // CertificateManager interface provides methods to manage nodes certificate

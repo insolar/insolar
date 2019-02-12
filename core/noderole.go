@@ -17,7 +17,7 @@
 package core
 
 // StaticRole holds role of node.
-type StaticRole int
+type StaticRole uint32
 
 const (
 	StaticRoleUnknown = StaticRole(iota)
