@@ -113,9 +113,7 @@ func (p *RecentStorageProvider) ClonePendingStorage(ctx context.Context, fromJet
 			Requests: []core.RecordID{},
 		}
 
-		for _, reqID := range pendingContext.Requests {
-			clone.Requests = append(clone.Requests, reqID)
-		}
+		clone.Requests = append(clone.Requests, pendingContext.Requests...)
 		toStorage.requests[objID] = &clone
 		pendingContext.lock.RUnlock()
 	}
@@ -341,9 +339,7 @@ func (r *PendingStorageConcrete) GetRequests() map[core.RecordID]PendingObjectCo
 			Active:   objContext.Active,
 			Requests: []core.RecordID{},
 		}
-		for _, request := range objContext.Requests {
-			objectClone.Requests = append(objectClone.Requests, request)
-		}
+		objectClone.Requests = append(objectClone.Requests, objContext.Requests...)
 		requestsClone[objID] = objectClone
 		objContext.lock.RUnlock()
 	}
@@ -365,9 +361,7 @@ func (r *PendingStorageConcrete) GetRequestsForObject(obj core.RecordID) []core.
 	defer forObject.lock.RUnlock()
 
 	results := make([]core.RecordID, 0, len(forObject.Requests))
-	for _, reqID := range forObject.Requests {
-		results = append(results, reqID)
-	}
+	results = append(results, forObject.Requests...)
 
 	return results
 }
