@@ -777,8 +777,17 @@ func (m *PulseManager) prepareArtifactManagerMessageHandlerForNextPulse(ctx cont
 
 // Start starts pulse manager, spawns replication goroutine under a hood.
 func (m *PulseManager) Start(ctx context.Context) error {
-	// FIXME: @andreyromancev. 21.12.18. Find a proper place for me. Somewhere at the genesis.
-	err := m.NodeStorage.SetActiveNodes(core.FirstPulseNumber, m.NodeNet.GetActiveNodes())
+	err := m.restoreLatestPulse(ctx)
+	if err != nil {
+		return err
+	}
+
+	latestPulse, err := m.PulseStorage.Current(ctx)
+	if err != nil {
+		return err
+	}
+
+	err = m.NodeStorage.SetActiveNodes(latestPulse.PulseNumber, m.NodeNet.GetActiveNodes())
 	if err != nil && err != storage.ErrOverride {
 		return err
 	}
@@ -805,6 +814,21 @@ func (m *PulseManager) Start(ctx context.Context) error {
 	}
 
 	return m.restoreGenesisRecentObjects(ctx)
+}
+
+func (m *PulseManager) restoreLatestPulse(ctx context.Context) error {
+	if m.NodeNet.GetOrigin().Role() != core.StaticRoleHeavyMaterial {
+		return nil
+	}
+	pulse, err := m.PulseTracker.GetLatestPulse(ctx)
+	if err != nil {
+		return err
+	}
+	m.PulseStorage.Lock()
+	m.PulseStorage.Set(&pulse.Pulse)
+	m.PulseStorage.Unlock()
+
+	return nil
 }
 
 func (m *PulseManager) restoreGenesisRecentObjects(ctx context.Context) error {
