@@ -995,13 +995,13 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	hotIndexes := &message.HotData{
 		Jet:         *core.NewRecordRef(core.DomainID, jetID),
 		PulseNumber: core.FirstPulseNumber,
-		RecentObjects: map[core.RecordID]*message.HotIndex{
+		RecentObjects: map[core.RecordID]message.HotIndex{
 			*firstID: {
 				Index: firstIndex,
 				TTL:   320,
 			},
 		},
-		PendingRequests: map[core.RecordID]*recentstorage.PendingObjectContext{
+		PendingRequests: map[core.RecordID]recentstorage.PendingObjectContext{
 			*secondID: {},
 			*thirdID:  {Active: true},
 		},
