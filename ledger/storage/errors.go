@@ -43,4 +43,7 @@ var (
 
 	// ErrPrevPulseNotFound is returned if previous pulse not found in storage
 	ErrPrevPulseNotFound = errors.New("previous pulse not found")
+
+	// ErrEmptyLatestPulse is returned if latest pulse is empty
+	ErrEmptyLatestPulse = errors.New("latest pulse is empty")
 )

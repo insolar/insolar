@@ -24,8 +24,9 @@ import (
 )
 
 type pulseTrackerMemory struct {
-	memory map[core.PulseNumber]*Pulse
-	mutex  sync.RWMutex
+	memory      map[core.PulseNumber]*Pulse
+	latestPulse core.PulseNumber
+	mutex       sync.RWMutex
 }
 
 func NewPulseTrackerMemory() PulseTracker {
@@ -54,7 +55,14 @@ func (p *pulseTrackerMemory) GetNthPrevPulse(ctx context.Context, n uint, from c
 }
 
 func (p *pulseTrackerMemory) GetLatestPulse(ctx context.Context) (*Pulse, error) {
-	panic("implement me")
+	p.mutex.RLock()
+	defer p.mutex.RUnlock()
+
+	if p.latestPulse == 0 {
+		return nil, ErrEmptyLatestPulse
+	}
+
+	return p.getPulse(ctx, p.latestPulse)
 }
 
 func (p *pulseTrackerMemory) AddPulse(ctx context.Context, pulse core.Pulse) error {
