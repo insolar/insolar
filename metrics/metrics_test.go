@@ -67,8 +67,6 @@ func TestMetrics_NewMetrics(t *testing.T) {
 	require.NoError(t, err)
 	// fmt.Println("/metrics => ", content)
 
-	assert.Contains(t, content, `insolar_network_parcel_sent_total{messageType="ping"} 1`)
-	assert.Contains(t, content, `insolar_network_packet_sent_total{packetType="ping"} 55`)
 	assert.Contains(t, content, `insolar_video_size_count{osx="11.12.13"} 1`)
 	assert.Contains(t, content, `insolar_example_com_measures_video_count{osx="11.12.13"} 1`)
 
