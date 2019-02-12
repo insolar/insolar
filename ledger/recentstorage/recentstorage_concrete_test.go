@@ -90,15 +90,14 @@ func TestPendingStorage_AddPendingRequest(t *testing.T) {
 	}()
 	wg.Wait()
 
-	require.Equal(t, map[core.RecordID]map[core.RecordID]struct{}{
-		obj1: {
-			expectedIDs[0]: struct{}{},
-			expectedIDs[1]: struct{}{},
+	require.Equal(
+		t,
+		map[core.RecordID]PendingObjectContext{
+			obj1: {Active: true, Requests: []core.RecordID{expectedIDs[0], expectedIDs[1]}},
+			obj2: {Active: true, Requests: []core.RecordID{expectedIDs[2]}},
 		},
-		obj2: {
-			expectedIDs[2]: struct{}{},
-		},
-	}, s.GetRequests())
+		s.GetRequests(),
+	)
 }
 
 func TestPendingStorage_RemovePendingRequest(t *testing.T) {
@@ -117,12 +116,9 @@ func TestPendingStorage_RemovePendingRequest(t *testing.T) {
 		*core.NewRecordID(123, []byte{3}),
 		*core.NewRecordID(123, []byte{4}),
 	}
-	s.requests = map[core.RecordID]map[core.RecordID]struct{}{
+	s.requests = map[core.RecordID]*PendingObjectContext{
 		obj: {
-			expectedIDs[0]: {},
-			extraIDs[0]:    {},
-			extraIDs[1]:    {},
-			extraIDs[2]:    {},
+			Requests: []core.RecordID{expectedIDs[0], extraIDs[0], extraIDs[1], extraIDs[2]},
 		},
 	}
 
@@ -142,38 +138,42 @@ func TestPendingStorage_RemovePendingRequest(t *testing.T) {
 	}()
 	wg.Wait()
 
-	require.Equal(t, map[core.RecordID]map[core.RecordID]struct{}{
-		obj: {
-			expectedIDs[0]: struct{}{},
+	require.Equal(
+		t,
+		map[core.RecordID]PendingObjectContext{
+			obj: {
+				Active:   true,
+				Requests: []core.RecordID{expectedIDs[0]},
+			},
 		},
-	}, s.GetRequests())
+		s.GetRequests(),
+	)
 }
 
 func TestPendingStorage_RemovePendingRequest_RemoveNothingIfThereIsNothing(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	jetID := testutils.RandomID()
-
+	objID := testutils.RandomID()
+	anotherObj := *core.NewRecordID(123, nil)
 	s := NewPendingStorage(jetID)
 
-	obj := *core.NewRecordID(0, nil)
-	anotherObj := *core.NewRecordID(123, nil)
-
-	expectedIDs := []core.RecordID{
-		*core.NewRecordID(123, []byte{1}),
-	}
-	s.requests = map[core.RecordID]map[core.RecordID]struct{}{
-		obj: {
-			expectedIDs[0]: {},
+	s.requests = map[core.RecordID]*PendingObjectContext{
+		objID: {
+			Requests: []core.RecordID{},
 		},
 	}
 
 	s.RemovePendingRequest(ctx, anotherObj, testutils.RandomID())
 
-	require.Equal(t, map[core.RecordID]map[core.RecordID]struct{}{
-		obj: {
-			expectedIDs[0]: struct{}{},
+	require.Equal(
+		t,
+		map[core.RecordID]PendingObjectContext{
+			objID: {
+				Requests: []core.RecordID{},
+			},
 		},
-	}, s.GetRequests())
+		s.GetRequests(),
+	)
 }
 
 func TestNewRecentStorageProvider(t *testing.T) {

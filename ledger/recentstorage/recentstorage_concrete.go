@@ -303,21 +303,14 @@ func NewPendingStorage(jetID core.RecordID) *PendingStorageConcrete {
 // The id stores in a collection ids of a specific object
 func (r *PendingStorageConcrete) AddPendingRequest(ctx context.Context, obj, req core.RecordID) {
 	r.lock.Lock()
+	defer r.lock.Unlock()
 
-	var objContext *PendingObjectContext
-	var ok bool
-	if objContext, ok = r.requests[obj]; !ok {
+	if _, ok := r.requests[obj]; !ok {
 		r.requests[obj] = &PendingObjectContext{
 			Active:   true,
 			Requests: []core.RecordID{},
 		}
-		objContext = r.requests[obj]
 	}
-
-	r.lock.Unlock()
-
-	objContext.lock.Lock()
-	defer objContext.lock.Unlock()
 
 	r.requests[obj].Requests = append(r.requests[obj].Requests, req)
 
