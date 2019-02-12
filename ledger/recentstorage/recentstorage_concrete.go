@@ -104,18 +104,20 @@ func (p *RecentStorageProvider) ClonePendingStorage(ctx context.Context, fromJet
 	}
 	toStorage := &PendingStorageConcrete{
 		jetID:    toJetID,
-		requests: map[core.RecordID]*PendingObjectContext{},
+		requests: map[core.RecordID]*lockedPendingObjectContext{},
 	}
 	for objID, pendingContext := range fromStorage.requests {
-		pendingContext.lock.RLock()
+		pendingContext.lock.Lock()
+
 		clone := PendingObjectContext{
-			Active:   pendingContext.Active,
+			Active:   pendingContext.Context.Active,
 			Requests: []core.RecordID{},
 		}
 
-		clone.Requests = append(clone.Requests, pendingContext.Requests...)
-		toStorage.requests[objID] = &clone
-		pendingContext.lock.RUnlock()
+		clone.Requests = append(clone.Requests, pendingContext.Context.Requests...)
+		toStorage.requests[objID] = &lockedPendingObjectContext{Context: &clone}
+
+		pendingContext.lock.Unlock()
 	}
 	p.pendingStorages[toJetID] = toStorage
 }
@@ -273,9 +275,11 @@ func (r *RecentIndexStorageConcrete) DecreaseIndexTTL(ctx context.Context) []cor
 
 // PendingStorageConcrete contains indexes of unclosed requests (pendings) for a specific object id
 type PendingStorageConcrete struct {
-	jetID    core.RecordID
-	requests map[core.RecordID]*PendingObjectContext
-	lock     sync.RWMutex
+	lock sync.RWMutex
+
+	jetID core.RecordID
+
+	requests map[core.RecordID]*lockedPendingObjectContext
 }
 
 // PendingObjectContext contains a list of requests for an object
@@ -285,15 +289,18 @@ type PendingStorageConcrete struct {
 type PendingObjectContext struct {
 	Active   bool
 	Requests []core.RecordID
+}
 
-	lock sync.RWMutex
+type lockedPendingObjectContext struct {
+	Context *PendingObjectContext
+	lock    sync.RWMutex
 }
 
 // NewPendingStorage creates *PendingStorage
 func NewPendingStorage(jetID core.RecordID) *PendingStorageConcrete {
 	return &PendingStorageConcrete{
 		jetID:    jetID,
-		requests: map[core.RecordID]*PendingObjectContext{},
+		requests: map[core.RecordID]*lockedPendingObjectContext{},
 	}
 }
 
@@ -303,14 +310,23 @@ func (r *PendingStorageConcrete) AddPendingRequest(ctx context.Context, obj, req
 	r.lock.Lock()
 	defer r.lock.Unlock()
 
-	if _, ok := r.requests[obj]; !ok {
-		r.requests[obj] = &PendingObjectContext{
-			Active:   true,
-			Requests: []core.RecordID{},
+	var objectContext *lockedPendingObjectContext
+	var ok bool
+	if objectContext, ok = r.requests[obj]; !ok {
+		objectContext = &lockedPendingObjectContext{
+			lock: sync.RWMutex{},
+			Context: &PendingObjectContext{
+				Active:   true,
+				Requests: []core.RecordID{},
+			},
 		}
+		r.requests[obj] = objectContext
 	}
 
-	r.requests[obj].Requests = append(r.requests[obj].Requests, req)
+	objectContext.lock.Lock()
+	defer objectContext.lock.Unlock()
+
+	objectContext.Context.Requests = append(objectContext.Context.Requests, req)
 
 	ctx = insmetrics.InsertTag(ctx, tagJet, r.jetID.DebugString())
 	stats.Record(ctx, statRecentStoragePendingsAdded.M(1))
@@ -321,7 +337,9 @@ func (r *PendingStorageConcrete) SetContextToObject(ctx context.Context, obj cor
 	r.lock.Lock()
 	defer r.lock.Unlock()
 
-	r.requests[obj] = &objContext
+	r.requests[obj] = &lockedPendingObjectContext{
+		Context: &objContext,
+	}
 	ctx = insmetrics.InsertTag(ctx, tagJet, r.jetID.DebugString())
 	stats.Record(ctx, statRecentStoragePendingsAdded.M(int64(len(objContext.Requests))))
 }
@@ -336,11 +354,12 @@ func (r *PendingStorageConcrete) GetRequests() map[core.RecordID]PendingObjectCo
 		objContext.lock.RLock()
 
 		objectClone := PendingObjectContext{
-			Active:   objContext.Active,
+			Active:   objContext.Context.Active,
 			Requests: []core.RecordID{},
 		}
-		objectClone.Requests = append(objectClone.Requests, objContext.Requests...)
+		objectClone.Requests = append(objectClone.Requests, objContext.Context.Requests...)
 		requestsClone[objID] = objectClone
+
 		objContext.lock.RUnlock()
 	}
 
@@ -360,8 +379,8 @@ func (r *PendingStorageConcrete) GetRequestsForObject(obj core.RecordID) []core.
 	forObject.lock.RLock()
 	defer forObject.lock.RUnlock()
 
-	results := make([]core.RecordID, 0, len(forObject.Requests))
-	results = append(results, forObject.Requests...)
+	results := make([]core.RecordID, 0, len(forObject.Context.Requests))
+	results = append(results, forObject.Context.Requests...)
 
 	return results
 }
@@ -369,45 +388,39 @@ func (r *PendingStorageConcrete) GetRequestsForObject(obj core.RecordID) []core.
 // RemovePendingRequest removes a request on object from cache
 func (r *PendingStorageConcrete) RemovePendingRequest(ctx context.Context, obj, req core.RecordID) {
 	r.lock.RLock()
-	defer r.lock.RUnlock()
-
 	objContext, ok := r.requests[obj]
 	if !ok {
+		r.lock.RUnlock()
 		return
 	}
 
 	objContext.lock.Lock()
 	defer objContext.lock.Unlock()
 
-	firstRequest := objContext.Requests[0]
+	r.lock.RUnlock()
+
+	firstRequest := objContext.Context.Requests[0]
 	if firstRequest.Pulse() == req.Pulse() {
-		objContext.Active = true
+		objContext.Context.Active = true
 	}
 
 	index := -1
 	var objReq core.RecordID
-	for index, objReq = range objContext.Requests {
+	for index, objReq = range objContext.Context.Requests {
 		if objReq == req {
 			break
 		}
 	}
 
-	if index == -1 {
+	if index == -1 || len(objContext.Context.Requests) == 1 {
+		r.lock.Lock()
+		delete(r.requests, obj)
+		r.lock.Unlock()
+
 		return
 	}
 
-	// edge-cases and a common path
-	// index == 0 - start of slice
-	// index == len - 1 - end of slice
-	// default - somewhere in slice
-	switch index {
-	case 0:
-		objContext.Requests = objContext.Requests[1:]
-	case len(objContext.Requests) - 1:
-		objContext.Requests = objContext.Requests[:index]
-	default:
-		objContext.Requests = append(objContext.Requests[:index], objContext.Requests[index+1:]...)
-	}
+	objContext.Context.Requests = append(objContext.Context.Requests[:index], objContext.Context.Requests[index+1:]...)
 
 	ctx = insmetrics.InsertTag(ctx, tagJet, r.jetID.DebugString())
 	stats.Record(ctx, statRecentStoragePendingsRemoved.M(1))

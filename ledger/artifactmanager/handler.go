@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/pkg/errors"
@@ -1185,31 +1184,31 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 	pendingStorage := h.RecentStorageProvider.GetPendingStorage(ctx, jetID)
 	logger.Debugf("received %d pending requests", len(msg.PendingRequests))
 
-	wg := sync.WaitGroup{}
-	wg.Add(len(msg.PendingRequests))
+	var notificationList []core.RecordID
 	for objID, objContext := range msg.PendingRequests {
-		go func(storage recentstorage.PendingStorage, objID core.RecordID, objContext recentstorage.PendingObjectContext) {
-			if !objContext.Active {
-				rep, err := h.Bus.Send(ctx, &message.AbandonedRequestsNotification{
-					Object: objID,
-				}, nil)
+		if !objContext.Active {
+			notificationList = append(notificationList, objID)
+		}
 
-				if err != nil {
-					logger.Error("failed to notify about pending requests")
-					return
-				}
-				if _, ok := rep.(*reply.OK); !ok {
-					logger.Error("received unexpected reply on pending notification")
-				}
-			}
-
-			objContext.Active = false
-			storage.SetContextToObject(ctx, objID, objContext)
-
-			wg.Done()
-		}(pendingStorage, objID, *objContext)
+		objContext.Active = false
+		pendingStorage.SetContextToObject(ctx, objID, *objContext)
 	}
-	wg.Wait()
+
+	go func() {
+		for _, objID := range notificationList {
+			rep, err := h.Bus.Send(ctx, &message.AbandonedRequestsNotification{
+				Object: objID,
+			}, nil)
+
+			if err != nil {
+				logger.Error("failed to notify about pending requests")
+				return
+			}
+			if _, ok := rep.(*reply.OK); !ok {
+				logger.Error("received unexpected reply on pending notification")
+			}
+		}
+	}()
 
 	indexStorage := h.RecentStorageProvider.GetIndexStorage(ctx, jetID)
 	logger.Debugf("received %d recent objects", len(msg.RecentObjects))

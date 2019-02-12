@@ -120,9 +120,11 @@ func TestPendingStorage_RemovePendingRequest(t *testing.T) {
 		*core.NewRecordID(123, []byte{3}),
 		*core.NewRecordID(123, []byte{4}),
 	}
-	s.requests = map[core.RecordID]*PendingObjectContext{
+	s.requests = map[core.RecordID]*lockedPendingObjectContext{
 		obj: {
-			Requests: []core.RecordID{expectedIDs[0], extraIDs[0], extraIDs[1], extraIDs[2]},
+			Context: &PendingObjectContext{
+				Requests: []core.RecordID{expectedIDs[0], extraIDs[0], extraIDs[1], extraIDs[2]},
+			},
 		},
 	}
 
@@ -162,9 +164,11 @@ func TestPendingStorage_RemovePendingRequest_RemoveNothingIfThereIsNothing(t *te
 	anotherObj := *core.NewRecordID(123, nil)
 	s := NewPendingStorage(jetID)
 
-	s.requests = map[core.RecordID]*PendingObjectContext{
+	s.requests = map[core.RecordID]*lockedPendingObjectContext{
 		objID: {
-			Requests: []core.RecordID{},
+			Context: &PendingObjectContext{
+				Requests: []core.RecordID{},
+			},
 		},
 	}
 
@@ -304,12 +308,16 @@ func TestPendingStorageConcrete_GetRequestsForObject(t *testing.T) {
 	unexpectedReqID := testutils.RandomID()
 
 	pendingStorage := &PendingStorageConcrete{
-		requests: map[core.RecordID]*PendingObjectContext{
+		requests: map[core.RecordID]*lockedPendingObjectContext{
 			objID: {
-				Requests: []core.RecordID{requestID},
+				Context: &PendingObjectContext{
+					Requests: []core.RecordID{requestID},
+				},
 			},
 			unexpectedID: {
-				Requests: []core.RecordID{unexpectedReqID},
+				Context: &PendingObjectContext{
+					Requests: []core.RecordID{unexpectedReqID},
+				},
 			},
 		},
 	}
@@ -326,7 +334,7 @@ func TestPendingStorageConcrete_GetRequestsForObject_NoObject(t *testing.T) {
 	unexpectedReqID := testutils.RandomID()
 
 	pendingStorage := &PendingStorageConcrete{
-		requests: map[core.RecordID]*PendingObjectContext{},
+		requests: map[core.RecordID]*lockedPendingObjectContext{},
 	}
 
 	requests := pendingStorage.GetRequestsForObject(unexpectedReqID)
@@ -337,7 +345,7 @@ func TestPendingStorageConcrete_GetRequestsForObject_NoObject(t *testing.T) {
 func TestPendingStorageConcrete_SetContextToObject(t *testing.T) {
 	t.Parallel()
 	pendingStorage := &PendingStorageConcrete{
-		requests: map[core.RecordID]*PendingObjectContext{},
+		requests: map[core.RecordID]*lockedPendingObjectContext{},
 	}
 	expectedObj := testutils.RandomID()
 	expectedContext := PendingObjectContext{
@@ -348,5 +356,5 @@ func TestPendingStorageConcrete_SetContextToObject(t *testing.T) {
 	pendingStorage.SetContextToObject(inslogger.TestContext(t), expectedObj, expectedContext)
 
 	require.Equal(t, 1, len(pendingStorage.requests))
-	require.Equal(t, expectedContext, *pendingStorage.requests[expectedObj])
+	require.Equal(t, expectedContext, *pendingStorage.requests[expectedObj].Context)
 }

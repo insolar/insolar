@@ -1065,7 +1065,6 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	require.Equal(s.T(), testDropSize, dropSizeHistory[0].DropSize)
 	require.Equal(s.T(), jetID, dropSizeHistory[0].JetID)
 	require.Equal(s.T(), core.FirstPulseNumber, int(dropSizeHistory[0].PulseNo))
-	require.Equal(s.T(), 1, int(mb.SendCounter))
 
 	indexMock.MinimockFinish()
 	pendingMock.MinimockFinish()
