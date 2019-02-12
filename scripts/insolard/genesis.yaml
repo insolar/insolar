@@ -1,7 +1,7 @@
 root_keys_file: "scripts/insolard/configs/root_member_keys.json"
 node_keys_dir: "scripts/insolard/reusekeys/node"
 discovery_keys_dir: "scripts/insolard/reusekeys/discovery"
-keys_name_format: "/node_%d.json"
+keys_name_format: "/node_%02d.json"
 reuse_keys: false
 root_balance: 1000000000
 majority_rule: 0
