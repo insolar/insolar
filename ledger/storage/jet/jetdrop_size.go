@@ -23,7 +23,6 @@ import (
 	"io"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
 )
@@ -69,7 +68,6 @@ type DropSizeHistory []DropSize
 
 // DeserializeJetDropSizeHistory deserializes DropSizeHistory
 func DeserializeJetDropSizeHistory(ctx context.Context, buff []byte) (DropSizeHistory, error) {
-	inslogger.FromContext(ctx).Debugf("DeserializeJetDropSizeHistory starts ... ( buff len: %d)", len(buff))
 	dec := codec.NewDecoder(bytes.NewReader(buff), &codec.CborHandle{})
 	var dropSizes = DropSizeHistory{}
 

@@ -353,9 +353,6 @@ func (h *MessageHandler) handleSetBlob(ctx context.Context, parcel core.Parcel) 
 }
 
 func (h *MessageHandler) handleGetCode(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
-	logger := inslogger.FromContext(ctx)
-	logger.Debug("CALL handleGetCode")
-
 	msg := parcel.Message().(*message.GetCode)
 	jetID := *jet.NewID(0, nil)
 
@@ -387,11 +384,12 @@ func (h *MessageHandler) handleGetCode(ctx context.Context, parcel core.Parcel) 
 func (h *MessageHandler) handleGetObject(
 	ctx context.Context, parcel core.Parcel,
 ) (core.Reply, error) {
-	logger := inslogger.FromContext(ctx)
-	logger.Debug("CALL handleGetObject")
-
 	msg := parcel.Message().(*message.GetObject)
 	jetID := jetFromContext(ctx)
+	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+		"object": msg.Head.Record().DebugString(),
+		"pulse":  parcel.Pulse(),
+	})
 
 	if !h.isHeavy {
 		h.RecentStorageProvider.GetIndexStorage(ctx, jetID).AddObject(ctx, *msg.Head.Record())
@@ -404,11 +402,7 @@ func (h *MessageHandler) handleGetObject(
 			return nil, fmt.Errorf("failed to fetch index for %s", msg.Head.Record().String())
 		}
 
-		logger.Errorf(
-			"failed to fetch index (going to heavy). jet: %v, obj: %v",
-			jetID.DebugString(),
-			msg.Head.Record().DebugString(),
-		)
+		logger.Debug("failed to fetch index (fetching from heavy)")
 		node, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
 		if err != nil {
 			return nil, err
@@ -450,13 +444,10 @@ func (h *MessageHandler) handleGetObject(
 			if err != nil {
 				return nil, err
 			}
-			logger.Debugf(
-				"redirect (on heavy). pulse: %v, id: %v, state: %v, to: %v",
-				parcel.Pulse(),
-				msg.Head.Record().DebugString(),
-				stateID.DebugString(),
-				node.String(),
-			)
+			logger.WithFields(map[string]interface{}{
+				"state":       stateID.DebugString(),
+				"redirect_to": node.String(),
+			}).Debug("redirect (on heavy)")
 			return reply.NewGetObjectRedirectReply(h.DelegationTokenFactory, parcel, node, stateID)
 		}
 
@@ -486,14 +477,10 @@ func (h *MessageHandler) handleGetObject(
 		if err != nil {
 			return nil, err
 		}
-
-		logger.Debugf(
-			"redirect (record not found). jet: %v, id: %v, state: %v, to: %v",
-			stateJet.DebugString(),
-			msg.Head.Record().DebugString(),
-			stateID.DebugString(),
-			node.String(),
-		)
+		logger.WithFields(map[string]interface{}{
+			"state":       stateID.DebugString(),
+			"redirect_to": node.String(),
+		}).Debug("redirect (record not found)")
 		return reply.NewGetObjectRedirectReply(h.DelegationTokenFactory, parcel, node, stateID)
 	}
 	if err != nil {
@@ -523,12 +510,6 @@ func (h *MessageHandler) handleGetObject(
 	if state.GetMemory() != nil {
 		rep.Memory, err = h.ObjectStorage.GetBlob(ctx, *stateJet, state.GetMemory())
 		if err != nil {
-			logger.Errorf(
-				"failed to fetch blob. pulse: %v, jet: %v, id: %v",
-				parcel.Pulse(),
-				stateJet.DebugString(),
-				state.GetMemory().DebugString(),
-			)
 			return nil, errors.Wrap(err, "failed to fetch blob")
 		}
 	}
@@ -564,9 +545,6 @@ func (h *MessageHandler) handleGetJet(ctx context.Context, parcel core.Parcel) (
 }
 
 func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
-	logger := inslogger.FromContext(ctx)
-	logger.Debug("CALL handleGetDelegate")
-
 	msg := parcel.Message().(*message.GetDelegate)
 	jetID := jetFromContext(ctx)
 
@@ -607,9 +585,6 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel core.Parc
 func (h *MessageHandler) handleGetChildren(
 	ctx context.Context, parcel core.Parcel,
 ) (core.Reply, error) {
-	logger := inslogger.FromContext(ctx)
-	logger.Debug("CALL handleGetChildren")
-
 	msg := parcel.Message().(*message.GetChildren)
 	jetID := jetFromContext(ctx)
 
@@ -780,10 +755,12 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 		return nil, errors.New("heavy updates are forbidden")
 	}
 
-	logger := inslogger.FromContext(ctx)
-
 	msg := parcel.Message().(*message.UpdateObject)
 	jetID := jetFromContext(ctx)
+	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+		"object": msg.Object.Record().DebugString(),
+		"pulse":  parcel.Pulse(),
+	})
 
 	rec := record.DeserializeRecord(msg.Record)
 	state, ok := rec.(record.ObjectState)
@@ -799,7 +776,6 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to set blob")
 	}
-	logger.Debugf("save blob. pulse: %v, jet: %v, id: %v", parcel.Pulse(), jetID.DebugString(), blobID.DebugString())
 
 	switch s := state.(type) {
 	case *record.ObjectActivateRecord:
@@ -811,7 +787,6 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 	var idx *index.ObjectLifeline
 	err = h.DBContext.Update(ctx, func(tx *storage.TransactionManager) error {
 		var err error
-		logger.Debugf("Get index for: %v, jet: %v", msg.Object.Record(), jetID.DebugString())
 		idx, err = tx.GetObjectIndex(ctx, jetID, msg.Object.Record(), true)
 		// No index on our node.
 		if err == storage.ErrNotFound {
@@ -819,7 +794,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 				// We are activating the object. There is no index for it anywhere.
 				idx = &index.ObjectLifeline{State: record.StateUndefined}
 			} else {
-				logger.Debugf("Not found index for: %v, jet: %v", msg.Object.Record(), jetID.DebugString())
+				logger.Debug("failed to fetch index (fetching from heavy)")
 				// We are updating object. Index should be on the heavy executor.
 				heavy, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
 				if err != nil {
@@ -857,8 +832,6 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 		if state.State() == record.StateActivation {
 			idx.Parent = state.(*record.ObjectActivateRecord).Parent
 		}
-
-		logger.WithFields(map[string]interface{}{"jet": jetID.DebugString()}).Debugf("saved object. jet: %v, id: %v, state: %v", jetID.DebugString(), msg.Object.Record().DebugString(), id.DebugString())
 
 		idx.LatestUpdate = parcel.Pulse()
 		return tx.SetObjectIndex(ctx, jetID, msg.Object.Record(), idx)
@@ -1053,15 +1026,11 @@ func (h *MessageHandler) handleValidateRecord(ctx context.Context, parcel core.P
 }
 
 func (h *MessageHandler) handleGetObjectIndex(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
-	inslog := inslogger.FromContext(ctx)
 	msg := parcel.Message().(*message.GetObjectIndex)
 	jetID := jetFromContext(ctx)
 
-	inslog.Debugf("handleGetObjectIndex: jetID: %v", jetID)
-	inslog.Debug("handleGetObjectIndex: msg.Object.Record() ", msg.Object.Record())
 	idx, err := h.ObjectStorage.GetObjectIndex(ctx, jetID, msg.Object.Record(), true)
 	if err != nil {
-		inslog.Debug("handleGetObjectIndex: failed to fetch object index, error - ", err)
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
 
@@ -1160,16 +1129,12 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 	// FIXME: check split signatures.
 	jetID := *msg.Jet.Record()
 
-	logger = logger.WithField("jet", jetID.DebugString())
-
-	logger.Debugf(
-		"handleHotRecords called. Pulse: %v, DropPulse: %v, DropJet: %v\n",
-		parcel.Pulse(), msg.Drop.Pulse, msg.DropJet.DebugString(),
-	)
+	logger.WithFields(map[string]interface{}{
+		"jet": jetID.DebugString(),
+	}).Info("received hot data")
 
 	err := h.DropStorage.SetDrop(ctx, msg.DropJet, &msg.Drop)
 	if err == storage.ErrOverride {
-		logger.Debugf("received drop duplicate for. jet: %v, pulse: %v", msg.DropJet.DebugString(), msg.Drop.Pulse)
 		err = nil
 	}
 	if err != nil {
@@ -1182,7 +1147,6 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 	}
 
 	pendingStorage := h.RecentStorageProvider.GetPendingStorage(ctx, jetID)
-	logger.Debugf("received %d pending requests", len(msg.PendingRequests))
 	for objID, requests := range msg.PendingRequests {
 		for reqID := range requests {
 			pendingStorage.AddPendingRequest(ctx, objID, reqID)
@@ -1190,9 +1154,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 	}
 
 	indexStorage := h.RecentStorageProvider.GetIndexStorage(ctx, jetID)
-	logger.Debugf("received %d recent objects", len(msg.RecentObjects))
 	for id, meta := range msg.RecentObjects {
-		logger.Debugf("[got id] jet: %v, id: %v", jetID.DebugString(), id.DebugString())
 		decodedIndex, err := index.DecodeObjectLifeline(meta.Index)
 		if err != nil {
 			logger.Error(err)

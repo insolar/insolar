@@ -124,7 +124,6 @@ func (m *PulseManager) processEndPulse(
 	currentPulse, newPulse core.Pulse,
 ) error {
 	var g errgroup.Group
-	logger := inslogger.FromContext(ctx)
 	ctx, span := instracer.StartSpan(ctx, "pulse.process_end")
 	defer span.End()
 
@@ -133,31 +132,21 @@ func (m *PulseManager) processEndPulse(
 
 		g.Go(func() error {
 			drop, dropSerialized, _, err := m.createDrop(ctx, info.id, prevPulseNumber, currentPulse.PulseNumber)
-			logger.Debugf("[jet]: %v create drop. Pulse: %v, Error: %s", info.id.DebugString(), currentPulse.PulseNumber, err)
 			if err != nil {
 				return errors.Wrapf(err, "create drop on pulse %v failed", currentPulse.PulseNumber)
 			}
 
-			logger := inslogger.FromContext(ctx)
 			sender := func(msg message.HotData, jetID core.RecordID) {
 				ctx, span := instracer.StartSpan(ctx, "pulse.send_hot")
 				defer span.End()
 				msg.Jet = *core.NewRecordRef(core.DomainID, jetID)
-				start := time.Now()
 				genericRep, err := m.Bus.Send(ctx, &msg, nil)
-				sendTime := time.Since(start)
-				if sendTime > time.Second {
-					logger.Debugf("[send] jet: %v, long send: %s. Success: %v", jetID.DebugString(), sendTime, err == nil)
-				}
 				if err != nil {
-					logger.Debugf("[jet]: %v send hot. Pulse: %v, DropJet: %v, Error: %s", jetID.DebugString(), currentPulse.PulseNumber, msg.DropJet.DebugString(), err)
 					return
 				}
 				if _, ok := genericRep.(*reply.OK); !ok {
-					logger.Debugf("[jet]: %v send hot. Pulse: %v, DropJet: %v, Unexpected reply: %#v", jetID.DebugString(), currentPulse.PulseNumber, msg.DropJet.DebugString(), genericRep)
 					return
 				}
-				logger.Debugf("[jet]: %v send hot. Pulse: %v, DropJet: %v, Success", jetID.DebugString(), currentPulse.PulseNumber, msg.DropJet.DebugString())
 			}
 
 			if info.left == nil && info.right == nil {
@@ -448,7 +437,10 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse c
 	var results []jetInfo
 	jetIDs := tree.LeafIDs()
 	me := m.JetCoordinator.Me()
-	logger := inslogger.FromContext(ctx)
+	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+		"current_pulse": currentPulse,
+		"new_pulse":     newPulse,
+	})
 	indexToSplit := rand.Intn(len(jetIDs))
 	for i, jetID := range jetIDs {
 		executor, err := m.JetCoordinator.LightExecutorForJet(ctx, jetID, currentPulse)
@@ -456,7 +448,10 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse c
 			return nil, err
 		}
 		imExecutor := *executor == me
-		logger.Debugf("[jet]: %v process. Pulse: %v, Executor: %v", jetID.DebugString(), currentPulse, imExecutor)
+
+		jetLogger := logger.WithField("jetid", jetID.DebugString())
+		inslogger.SetLogger(ctx, jetLogger)
+		logger.WithField("im_executor", imExecutor).Debug("process jet")
 		if !imExecutor {
 			continue
 		}
@@ -492,7 +487,6 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse c
 			if *nextLeftExecutor == me {
 				info.left.mineNext = true
 				err := m.rewriteHotData(ctx, jetID, *leftJetID)
-				logger.Debugf("[jet]: %v rewrite hot left. Pulse: %v, Error: %s", info.left.id.DebugString(), currentPulse, err)
 				if err != nil {
 					return nil, err
 				}
@@ -504,18 +498,15 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse c
 			if *nextRightExecutor == me {
 				info.right.mineNext = true
 				err := m.rewriteHotData(ctx, jetID, *rightJetID)
-				logger.Debugf("[jet]: %v rewrite hot right. Pulse: %v, Error: %s", info.right.id.DebugString(), currentPulse, err)
 				if err != nil {
 					return nil, err
 				}
 			}
 
-			logger.Debugf(
-				"SPLIT HAPPENED parent: %v, left: %v, right: %v",
-				jetID.DebugString(),
-				leftJetID.DebugString(),
-				rightJetID.DebugString(),
-			)
+			logger.WithFields(map[string]interface{}{
+				"left_child":  leftJetID.DebugString(),
+				"right_child": rightJetID.DebugString(),
+			}).Info("jet split performed")
 		} else {
 			// Set actual because we are the last executor for jet.
 			err = m.JetStorage.UpdateJetTree(ctx, newPulse, true, jetID)
@@ -528,7 +519,6 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse c
 			}
 			if *nextExecutor == me {
 				info.mineNext = true
-				logger.Debugf("[jet]: %v preserve hot. Pulse: %v", info.id.DebugString(), currentPulse)
 			}
 		}
 		results = append(results, info)
@@ -551,7 +541,6 @@ func (m *PulseManager) rewriteHotData(ctx context.Context, fromJetID, toJetID co
 		}
 	}
 
-	inslogger.FromContext(ctx).Debugf("CloneStorage from - %v, to - %v", fromJetID, toJetID)
 	m.RecentStorageProvider.CloneIndexStorage(ctx, fromJetID, toJetID)
 	m.RecentStorageProvider.ClonePendingStorage(ctx, fromJetID, toJetID)
 
@@ -693,15 +682,11 @@ func (m *PulseManager) addSync(ctx context.Context, jets []jetInfo, pulse core.P
 }
 
 func (m *PulseManager) postProcessJets(ctx context.Context, newPulse core.Pulse, jets []jetInfo) {
-	logger := inslogger.FromContext(ctx)
-	logger.Debugf("[postProcessJets] post-process jets, pulse number - %v", newPulse.PulseNumber)
-
 	ctx, span := instracer.StartSpan(ctx, "jets.post_process")
 	defer span.End()
 
 	for _, jetInfo := range jets {
 		if !jetInfo.mineNext {
-			logger.Debugf("[postProcessJets] clear pending storage for jet - %v, pulse - %v", jetInfo.id, newPulse.PulseNumber)
 			m.RecentStorageProvider.RemovePendingStorage(ctx, jetInfo.id)
 		}
 	}
@@ -745,30 +730,23 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse core.Pulse, 
 }
 
 func (m *PulseManager) prepareArtifactManagerMessageHandlerForNextPulse(ctx context.Context, newPulse core.Pulse, jets []jetInfo) {
-	logger := inslogger.FromContext(ctx)
-	logger.Debugf("[breakermiddleware] [prepareHandlerForNextPulse] close breakers my jets for the next pulse - %v", newPulse.PulseNumber)
-
 	ctx, span := instracer.StartSpan(ctx, "early.close")
 	defer span.End()
 
 	m.HotDataWaiter.ThrowTimeout(ctx)
 
 	for _, jetInfo := range jets {
-
 		if jetInfo.left == nil && jetInfo.right == nil {
 			// No split happened.
 			if jetInfo.mineNext {
-				logger.Debugf("[breakermiddleware] [prepareHandlerForNextPulse] fetch jetInfo root %v, pulse - %v", jetInfo.id.DebugString(), newPulse.PulseNumber)
 				m.HotDataWaiter.Unlock(ctx, jetInfo.id)
 			}
 		} else {
 			// Split happened.
 			if jetInfo.left.mineNext {
-				logger.Debugf("[breakermiddleware] [prepareHandlerForNextPulse] fetch jetInfo left %v, pulse - %v", jetInfo.left.id.DebugString(), newPulse.PulseNumber)
 				m.HotDataWaiter.Unlock(ctx, jetInfo.left.id)
 			}
 			if jetInfo.right.mineNext {
-				logger.Debugf("[breakermiddleware] [prepareHandlerForNextPulse] fetch jetInfo right %v, pulse - %v", jetInfo.right.id.DebugString(), newPulse.PulseNumber)
 				m.HotDataWaiter.Unlock(ctx, jetInfo.right.id)
 			}
 		}

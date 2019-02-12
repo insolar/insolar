@@ -23,7 +23,6 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
@@ -84,9 +83,6 @@ func (m *ledgerArtifactSenders) cachedSender(scheme core.PlatformCryptographySch
 func followRedirectSender(bus core.MessageBus) PreSender {
 	return func(sender Sender) Sender {
 		return func(ctx context.Context, msg core.Message, options *core.MessageSendOptions) (core.Reply, error) {
-			inslog := inslogger.FromContext(ctx)
-			inslog.Debug("LedgerArtifactManager.SendAndFollowRedirectSender starts ...")
-
 			rep, err := sender(ctx, msg, options)
 			if err != nil {
 				return nil, err
@@ -120,11 +116,7 @@ func followRedirectSender(bus core.MessageBus) PreSender {
 func retryJetSender(pulseNumber core.PulseNumber, jetStorage storage.JetStorage) PreSender {
 	return func(sender Sender) Sender {
 		return func(ctx context.Context, msg core.Message, options *core.MessageSendOptions) (core.Reply, error) {
-			inslog := inslogger.FromContext(ctx)
-			inslog.Debug("LedgerArtifactManager.RetryJetSender starts ...")
-
 			retries := jetMissRetryCount
-
 			for retries > 0 {
 				rep, err := sender(ctx, msg, options)
 				if err != nil {

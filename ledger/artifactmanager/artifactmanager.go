@@ -27,7 +27,6 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/record"
@@ -79,7 +78,6 @@ func (m *LedgerArtifactManager) GenesisRef() *core.RecordRef {
 func (m *LedgerArtifactManager) RegisterRequest(
 	ctx context.Context, obj core.RecordRef, parcel core.Parcel,
 ) (*core.RecordID, error) {
-	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.RegisterRequest starts ...")
 	var err error
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.RegisterRequest")
 	instrumenter := instrument(ctx, "RegisterRequest").err(&err)
@@ -121,8 +119,6 @@ func (m *LedgerArtifactManager) RegisterRequest(
 func (m *LedgerArtifactManager) GetCode(
 	ctx context.Context, code core.RecordRef,
 ) (core.CodeDescriptor, error) {
-	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.GetCode starts ...")
-
 	var err error
 	instrumenter := instrument(ctx, "GetCode").err(&err)
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.GetCode")
@@ -179,7 +175,6 @@ func (m *LedgerArtifactManager) GetObject(
 	state *core.RecordID,
 	approved bool,
 ) (core.ObjectDescriptor, error) {
-	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.GetObject starts ...")
 	var (
 		desc *ObjectDescriptor
 		err  error
@@ -358,7 +353,6 @@ func (m *LedgerArtifactManager) HasPendingRequests(
 func (m *LedgerArtifactManager) GetDelegate(
 	ctx context.Context, head, asType core.RecordRef,
 ) (*core.RecordRef, error) {
-	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.GetDelegate starts ...")
 	var err error
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.GetDelegate")
 	instrumenter := instrument(ctx, "GetDelegate").err(&err)
@@ -670,7 +664,6 @@ func (m *LedgerArtifactManager) RegisterValidation(
 	isValid bool,
 	validationMessages []core.Message,
 ) error {
-	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.RegisterValidation starts ...")
 	var err error
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.RegisterValidation")
 	instrumenter := instrument(ctx, "RegisterValidation").err(&err)
@@ -820,7 +813,6 @@ func (m *LedgerArtifactManager) updateObject(
 	code *core.RecordRef,
 	memory []byte,
 ) (core.ObjectDescriptor, error) {
-	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.updateObject starts ...")
 	var (
 		image *core.RecordRef
 		err   error
@@ -885,8 +877,6 @@ func (m *LedgerArtifactManager) setRecord(
 	target core.RecordRef,
 	currentPulse core.Pulse,
 ) (*core.RecordID, error) {
-	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.setRecord starts ...")
-
 	bus := core.MessageBusFromContext(ctx, m.DefaultBus)
 
 	sender := BuildSender(bus.Send, retryJetSender(currentPulse.PulseNumber, m.JetStorage))
@@ -915,7 +905,6 @@ func (m *LedgerArtifactManager) setBlob(
 	target core.RecordRef,
 	currentPulse core.Pulse,
 ) (*core.RecordID, error) {
-	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.setBlob starts ...")
 
 	bus := core.MessageBusFromContext(ctx, m.DefaultBus)
 	sender := BuildSender(bus.Send, retryJetSender(currentPulse.PulseNumber, m.JetStorage))
@@ -945,7 +934,6 @@ func (m *LedgerArtifactManager) sendUpdateObject(
 	memory []byte,
 	currentPulse core.Pulse,
 ) (*reply.Object, error) {
-	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.sendUpdateObject starts ...")
 	// TODO: @andreyromancev. 14.01.19. Uncomment when message streaming or validation is ready.
 	// genericRep, err := sendAndRetryJet(ctx, m.bus(ctx), m.db, &message.SetBlob{
 	// 	TargetRef: object,
@@ -990,8 +978,6 @@ func (m *LedgerArtifactManager) registerChild(
 	asType *core.RecordRef,
 	currentPulse core.Pulse,
 ) (*core.RecordID, error) {
-	inslogger.FromContext(ctx).Debug("LedgerArtifactManager.registerChild starts ...")
-
 	bus := core.MessageBusFromContext(ctx, m.DefaultBus)
 	sender := BuildSender(bus.Send, retryJetSender(currentPulse.PulseNumber, m.JetStorage))
 	genericReact, err := sender(ctx, &message.RegisterChild{
