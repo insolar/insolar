@@ -818,34 +818,13 @@ func (s *LogicRunnerOnPulseTestSuite) TestStateTransfer1() {
 	s.Require().Equal(message.NotPending, s.lr.state[s.objectRef].ExecutionState.pending)
 }
 
-// We're the next executor and this task wasn't currently executing
+// We're the next executor and no one confirmed that this task is executing
 // move task from InPending -> NotPending
 func (s *LogicRunnerOnPulseTestSuite) TestStateTransfer2() {
 	s.jc.MeMock.Return(core.RecordRef{})
 	s.jc.IsAuthorizedMock.Return(true, nil)
 
 	s.am.GetPendingRequestMock.Return(nil, core.ErrNoPendingRequest)
-
-	s.lr.state[s.objectRef] = &ObjectState{
-		ExecutionState: &ExecutionState{
-			Behaviour: &ValidationSaver{},
-			Current:   nil,
-			Queue:     make([]ExecutionQueueElement, 0),
-			pending:   message.InPending,
-		},
-	}
-
-	// need to refactor code and do something with go routine that needs a ES, but we kill it after test
-	err := s.lr.OnPulse(s.ctx, s.pulse)
-	s.Require().NoError(err)
-	s.Require().Equal(message.NotPending, s.lr.state[s.objectRef].ExecutionState.pending)
-}
-
-// We're the next executor and no one confirmed that this task is executing
-// move task from InPending -> NotPending
-func (s *LogicRunnerOnPulseTestSuite) TestStateTransfer3() {
-	s.jc.MeMock.Return(core.RecordRef{})
-	s.jc.IsAuthorizedMock.Return(true, nil)
 
 	s.lr.state[s.objectRef] = &ObjectState{
 		ExecutionState: &ExecutionState{
@@ -859,7 +838,33 @@ func (s *LogicRunnerOnPulseTestSuite) TestStateTransfer3() {
 
 	err := s.lr.OnPulse(s.ctx, s.pulse)
 	s.Require().NoError(err)
-	s.Equal(message.NotPending, s.lr.state[s.objectRef].ExecutionState.pending)
+	s.Require().Equal(message.NotPending, s.lr.state[s.objectRef].ExecutionState.pending)
+}
+
+// We're the next executor and previous confirmed that this task is executing
+// still in pending
+// but we expect that previous executor come to us for token
+func (s *LogicRunnerOnPulseTestSuite) TestStateTransfer3() {
+	s.jc.MeMock.Return(core.RecordRef{})
+	s.jc.IsAuthorizedMock.Return(true, nil)
+
+	s.lr.state[s.objectRef] = &ObjectState{
+		ExecutionState: &ExecutionState{
+			Behaviour:        &ValidationSaver{},
+			Current:          nil,
+			Queue:            make([]ExecutionQueueElement, 0),
+			pending:          message.InPending,
+			PendingConfirmed: true,
+		},
+	}
+
+	err := s.lr.OnPulse(s.ctx, s.pulse)
+	s.Require().NoError(err)
+
+	// we still in pending
+	s.Equal(message.InPending, s.lr.state[s.objectRef].ExecutionState.pending)
+	// but we expect that previous executor come to us for token
+	s.Equal(false, s.lr.state[s.objectRef].ExecutionState.PendingConfirmed)
 }
 
 // We're not the next executor, so we must send this task to the next executor
