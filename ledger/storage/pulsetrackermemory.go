@@ -36,36 +36,14 @@ func (p *pulseTrackerMemory) GetPulse(ctx context.Context, num core.PulseNumber)
 	p.mutex.RLock()
 	defer p.mutex.RUnlock()
 
-	pulse, ok := p.memory[num]
-
-	if !ok {
-		return nil, ErrPulseNotFound
-	}
-
-	return pulse, nil
+	return p.getPulse(ctx, num)
 }
 
 func (p *pulseTrackerMemory) GetPreviousPulse(ctx context.Context, num core.PulseNumber) (*Pulse, error) {
 	p.mutex.RLock()
 	defer p.mutex.RUnlock()
 
-	pulse, exists := p.memory[num]
-
-	if !exists {
-		return nil, ErrPulseNotFound
-	}
-
-	if pulse.Prev == nil {
-		return nil, ErrPrevPulseNotFound
-	}
-
-	resultPulse, exists := p.memory[*pulse.Prev]
-
-	if !exists {
-		return nil, ErrPulseNotFound
-	}
-
-	return resultPulse, nil
+	return p.getNthPrevPulse(ctx, 1, num)
 }
 
 func (p *pulseTrackerMemory) GetNthPrevPulse(ctx context.Context, n uint, from core.PulseNumber) (*Pulse, error) {
@@ -78,4 +56,35 @@ func (p *pulseTrackerMemory) GetLatestPulse(ctx context.Context) (*Pulse, error)
 
 func (p *pulseTrackerMemory) AddPulse(ctx context.Context, pulse core.Pulse) error {
 	panic("implement me")
+}
+
+func (p *pulseTrackerMemory) getPulse(ctx context.Context, num core.PulseNumber) (*Pulse, error) {
+	pulse, ok := p.memory[num]
+
+	if !ok {
+		return nil, ErrPulseNotFound
+	}
+
+	return pulse, nil
+}
+
+func (p *pulseTrackerMemory) getNthPrevPulse(ctx context.Context, n uint, num core.PulseNumber) (*Pulse, error) {
+	pulse, err := p.getPulse(ctx, num)
+	if err != nil {
+		return nil, err
+	}
+
+	for n > 0 {
+		if pulse.Prev == nil {
+			return nil, ErrPrevPulseNotFound
+		}
+
+		pulse, err = p.getPulse(ctx, *pulse.Prev)
+
+		if err != nil {
+			return nil, ErrPulseNotFound
+		}
+		n--
+	}
+	return pulse, nil
 }
