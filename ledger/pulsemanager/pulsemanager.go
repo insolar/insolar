@@ -540,9 +540,17 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse c
 func (m *PulseManager) rewriteHotData(ctx context.Context, fromJetID, toJetID core.RecordID) error {
 	indexStorage := m.RecentStorageProvider.GetIndexStorage(ctx, fromJetID)
 
+	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+		"from_jet": fromJetID.DebugString(),
+		"to_jet":   toJetID.DebugString(),
+	})
 	for id := range indexStorage.GetObjects() {
 		idx, err := m.ObjectStorage.GetObjectIndex(ctx, fromJetID, &id, false)
 		if err != nil {
+			if err == storage.ErrNotFound {
+				logger.WithField("id", id.DebugString()).Error("rewrite index not found")
+				continue
+			}
 			return errors.Wrap(err, "failed to rewrite index")
 		}
 		err = m.ObjectStorage.SetObjectIndex(ctx, toJetID, &id, idx)
