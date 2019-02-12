@@ -318,6 +318,7 @@ func (r *PendingStorageConcrete) AddPendingRequest(ctx context.Context, obj, req
 	stats.Record(ctx, statRecentStoragePendingsAdded.M(1))
 }
 
+// SetContextToObject add a context to a provided object
 func (r *PendingStorageConcrete) SetContextToObject(ctx context.Context, obj core.RecordID, objContext PendingObjectContext) {
 	r.lock.Lock()
 	defer r.lock.Unlock()

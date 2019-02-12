@@ -206,60 +206,6 @@ func (m *PulseManager) processEndPulse(
 	return nil
 }
 
-func (m *PulseManager) sendAbandonedRequests(
-	ctx context.Context,
-	pulse core.Pulse,
-	pendingRequests map[core.RecordID]map[core.RecordID]struct{},
-) error {
-	ctx, span := instracer.StartSpan(ctx, "pulse.sendAbandonedRequests")
-	defer span.End()
-
-	logger := inslogger.FromContext(ctx)
-	currentDBPulse, err := m.PulseTracker.GetPulse(ctx, pulse.PulseNumber)
-	if err != nil {
-		return err
-	}
-
-	wg := sync.WaitGroup{}
-	wg.Add(len(pendingRequests))
-	for objID, requests := range pendingRequests {
-		go func(object core.RecordID, requests map[core.RecordID]struct{}) {
-			defer wg.Done()
-			for request := range requests {
-				pulse, err := m.PulseTracker.GetPulse(ctx, request.Pulse())
-				if err != nil {
-					logger.Error("failed to notify about pending requests. failed to calculate pulse")
-					return
-				}
-
-				if currentDBPulse.SerialNumber-pulse.SerialNumber < 2 {
-					continue
-				}
-
-				rep, err := m.Bus.Send(
-					ctx,
-					&message.AbandonedRequestsNotification{
-						Object: object,
-					},
-					nil,
-				)
-				if err != nil {
-					logger.Error("failed to notify about pending requests")
-					return
-				}
-				if _, ok := rep.(*reply.OK); !ok {
-					logger.Error("received unexpected reply on pending notification")
-				}
-
-				return
-			}
-		}(objID, requests)
-	}
-
-	wg.Wait()
-	return nil
-}
-
 func (m *PulseManager) createDrop(
 	ctx context.Context,
 	jetID core.RecordID,

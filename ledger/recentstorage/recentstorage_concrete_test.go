@@ -27,6 +27,7 @@ import (
 )
 
 func TestNewRecentIndexStorage(t *testing.T) {
+	t.Parallel()
 	jetID := testutils.RandomID()
 	index := NewRecentIndexStorage(jetID, 123)
 	require.NotNil(t, index)
@@ -35,6 +36,7 @@ func TestNewRecentIndexStorage(t *testing.T) {
 }
 
 func TestNewRecentIndexStorage_AddId(t *testing.T) {
+	t.Parallel()
 	ctx := inslogger.TestContext(t)
 	jetID := testutils.RandomID()
 	s := NewRecentIndexStorage(jetID, 123)
@@ -60,6 +62,7 @@ func TestNewRecentIndexStorage_AddId(t *testing.T) {
 }
 
 func TestPendingStorage_AddPendingRequest(t *testing.T) {
+	t.Parallel()
 	ctx := inslogger.TestContext(t)
 	jetID := testutils.RandomID()
 
@@ -101,6 +104,7 @@ func TestPendingStorage_AddPendingRequest(t *testing.T) {
 }
 
 func TestPendingStorage_RemovePendingRequest(t *testing.T) {
+	t.Parallel()
 	ctx := inslogger.TestContext(t)
 	jetID := testutils.RandomID()
 
@@ -151,6 +155,7 @@ func TestPendingStorage_RemovePendingRequest(t *testing.T) {
 }
 
 func TestPendingStorage_RemovePendingRequest_RemoveNothingIfThereIsNothing(t *testing.T) {
+	t.Parallel()
 	ctx := inslogger.TestContext(t)
 	jetID := testutils.RandomID()
 	objID := testutils.RandomID()
@@ -177,6 +182,7 @@ func TestPendingStorage_RemovePendingRequest_RemoveNothingIfThereIsNothing(t *te
 }
 
 func TestNewRecentStorageProvider(t *testing.T) {
+	t.Parallel()
 	// Act
 	provider := NewRecentStorageProvider(888)
 
@@ -187,6 +193,7 @@ func TestNewRecentStorageProvider(t *testing.T) {
 }
 
 func TestRecentStorageProvider_GetStorage(t *testing.T) {
+	t.Parallel()
 	// Arrange
 	provider := NewRecentStorageProvider(8)
 
@@ -213,6 +220,7 @@ func TestRecentStorageProvider_GetStorage(t *testing.T) {
 }
 
 func TestRecentStorage_markForDelete(t *testing.T) {
+	t.Parallel()
 	candidates := make([]core.RecordID, 0, 100)
 	expect := make([]core.RecordID, 0, 50)
 	recentStorageMap := make(map[core.RecordID]recentObjectMeta)
@@ -236,6 +244,7 @@ func TestRecentStorage_markForDelete(t *testing.T) {
 }
 
 func TestRecentStorageProvider_DecreaseIndexesTTL(t *testing.T) {
+	t.Parallel()
 	// Arrange
 	ctx := inslogger.TestContext(t)
 
@@ -273,6 +282,7 @@ func TestRecentStorageProvider_DecreaseIndexesTTL(t *testing.T) {
 }
 
 func TestRecentStorageProvider_DecreaseIndexesTTL_WorksOnEmptyStorage(t *testing.T) {
+	t.Parallel()
 	// Arrange
 	ctx := inslogger.TestContext(t)
 	provider := NewRecentStorageProvider(8)
@@ -282,4 +292,61 @@ func TestRecentStorageProvider_DecreaseIndexesTTL_WorksOnEmptyStorage(t *testing
 
 	// Assert
 	require.Equal(t, map[core.RecordID][]core.RecordID{}, result)
+}
+
+func TestPendingStorageConcrete_GetRequestsForObject(t *testing.T) {
+	t.Parallel()
+
+	objID := testutils.RandomID()
+	requestID := testutils.RandomID()
+
+	unexpectedID := testutils.RandomID()
+	unexpectedReqID := testutils.RandomID()
+
+	pendingStorage := &PendingStorageConcrete{
+		requests: map[core.RecordID]*PendingObjectContext{
+			objID: {
+				Requests: []core.RecordID{requestID},
+			},
+			unexpectedID: {
+				Requests: []core.RecordID{unexpectedReqID},
+			},
+		},
+	}
+
+	requests := pendingStorage.GetRequestsForObject(objID)
+
+	require.Equal(t, 1, len(requests))
+	require.Equal(t, requestID, requests[0])
+}
+
+func TestPendingStorageConcrete_GetRequestsForObject_NoObject(t *testing.T) {
+	t.Parallel()
+
+	unexpectedReqID := testutils.RandomID()
+
+	pendingStorage := &PendingStorageConcrete{
+		requests: map[core.RecordID]*PendingObjectContext{},
+	}
+
+	requests := pendingStorage.GetRequestsForObject(unexpectedReqID)
+
+	require.Nil(t, requests)
+}
+
+func TestPendingStorageConcrete_SetContextToObject(t *testing.T) {
+	t.Parallel()
+	pendingStorage := &PendingStorageConcrete{
+		requests: map[core.RecordID]*PendingObjectContext{},
+	}
+	expectedObj := testutils.RandomID()
+	expectedContext := PendingObjectContext{
+		Active:   true,
+		Requests: []core.RecordID{testutils.RandomID(), testutils.RandomID()},
+	}
+
+	pendingStorage.SetContextToObject(inslogger.TestContext(t), expectedObj, expectedContext)
+
+	require.Equal(t, 1, len(pendingStorage.requests))
+	require.Equal(t, expectedContext, *pendingStorage.requests[expectedObj])
 }
