@@ -518,10 +518,8 @@ func (lr *LogicRunner) StartQueueProcessorIfNeeded(
 			return errors.Wrap(err, "couldn't check for pending requests")
 		}
 		es.pending = pending
-		if es.pending == message.InPending {
-			es.LedgerHasMoreRequests = true
-		}
 	}
+
 	if es.pending == message.InPending {
 		inslogger.FromContext(ctx).Debug("object in pending. not starting queue processor")
 		return nil
