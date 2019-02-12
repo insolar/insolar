@@ -76,17 +76,14 @@ func (suite *LogicRunnerCommonTestSuite) AfterTest(suiteName, testName string) {
 }
 
 func (suite *LogicRunnerTestSuite) TestOnPulse() {
-	suite.T().Skip()
 	// TODO in test case where we are executor again need check for queue start, or make it active before test
 	suite.mb.SendMock.Return(&reply.ID{}, nil)
-	suite.am.GetPendingRequestMock.Return(nil, nil)
 
 	suite.jc.IsAuthorizedMock.Return(false, nil)
 	suite.jc.MeMock.Return(core.RecordRef{})
 
 	// test empty lr
 	pulse := core.Pulse{}
-	suite.ps.CurrentMock.Return(&pulse, nil)
 
 	err := suite.lr.OnPulse(suite.ctx, pulse)
 	suite.Require().NoError(err)
@@ -138,7 +135,9 @@ func (suite *LogicRunnerTestSuite) TestOnPulse() {
 	suite.Require().NoError(err)
 	suite.Equal(message.InPending, suite.lr.state[objectRef].ExecutionState.pending)
 
-	// Executor in new pulse is same node
+	suite.am.GetPendingRequestMock.Return(nil, core.ErrNoPendingRequest)
+
+	//Executor in new pulse is same node
 	suite.jc.IsAuthorizedMock.Return(true, nil)
 	suite.lr.state[objectRef].ExecutionState.pending = message.PendingUnknown
 
