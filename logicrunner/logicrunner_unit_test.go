@@ -75,106 +75,6 @@ func (suite *LogicRunnerCommonTestSuite) AfterTest(suiteName, testName string) {
 	suite.mc.Finish()
 }
 
-func (suite *LogicRunnerTestSuite) TestOnPulse() {
-	// TODO in test case where we are executor again need check for queue start, or make it active before test
-	suite.mb.SendMock.Return(&reply.ID{}, nil)
-
-	suite.jc.IsAuthorizedMock.Return(false, nil)
-	suite.jc.MeMock.Return(core.RecordRef{})
-
-	// test empty lr
-	pulse := core.Pulse{}
-
-	err := suite.lr.OnPulse(suite.ctx, pulse)
-	suite.Require().NoError(err)
-
-	objectRef := testutils.RandomRef()
-
-	// test empty ExecutionState
-	suite.lr.state[objectRef] = &ObjectState{ExecutionState: &ExecutionState{Behaviour: &ValidationSaver{}}}
-	err = suite.lr.OnPulse(suite.ctx, pulse)
-	suite.Require().NoError(err)
-	suite.Nil(suite.lr.state[objectRef])
-
-	// test empty ExecutionState but not empty validation/consensus
-	suite.lr.state[objectRef] = &ObjectState{
-		ExecutionState: &ExecutionState{
-			Behaviour: &ValidationSaver{},
-		},
-		Validation: &ExecutionState{},
-		Consensus:  &Consensus{},
-	}
-	err = suite.lr.OnPulse(suite.ctx, pulse)
-	suite.Require().NoError(err)
-	suite.Require().NotNil(suite.lr.state[objectRef])
-	suite.Nil(suite.lr.state[objectRef].ExecutionState)
-
-	// test empty es with query in current
-	suite.lr.state[objectRef] = &ObjectState{
-		ExecutionState: &ExecutionState{
-			Behaviour: &ValidationSaver{},
-			Current:   &CurrentExecution{},
-		},
-	}
-	err = suite.lr.OnPulse(suite.ctx, pulse)
-	suite.Require().NoError(err)
-	suite.Equal(message.InPending, suite.lr.state[objectRef].ExecutionState.pending)
-	qe := ExecutionQueueElement{}
-
-	queue := append(make([]ExecutionQueueElement, 0), qe)
-
-	suite.lr.state[objectRef] = &ObjectState{
-		ExecutionState: &ExecutionState{
-			Behaviour: &ValidationSaver{},
-			Current:   &CurrentExecution{},
-			Queue:     queue,
-		},
-	}
-
-	err = suite.lr.OnPulse(suite.ctx, pulse)
-	suite.Require().NoError(err)
-	suite.Equal(message.InPending, suite.lr.state[objectRef].ExecutionState.pending)
-
-	suite.am.GetPendingRequestMock.Return(nil, core.ErrNoPendingRequest)
-
-	//Executor in new pulse is same node
-	suite.jc.IsAuthorizedMock.Return(true, nil)
-	suite.lr.state[objectRef].ExecutionState.pending = message.PendingUnknown
-
-	suite.lr.state[objectRef] = &ObjectState{
-		ExecutionState: &ExecutionState{
-			Behaviour: &ValidationSaver{},
-			Current:   &CurrentExecution{},
-			Queue:     queue,
-		},
-	}
-
-	err = suite.lr.OnPulse(suite.ctx, pulse)
-	suite.Require().NoError(err)
-	suite.Require().Equal(message.PendingUnknown, suite.lr.state[objectRef].ExecutionState.pending)
-
-	suite.lr.state[objectRef].ExecutionState.pending = message.InPending
-
-	err = suite.lr.OnPulse(suite.ctx, pulse)
-	suite.Require().NoError(err)
-	suite.Require().Equal(message.NotPending, suite.lr.state[objectRef].ExecutionState.pending)
-
-	suite.jc.IsAuthorizedMock.Return(true, nil)
-	suite.lr.state[objectRef].ExecutionState.pending = message.InPending
-
-	err = suite.lr.OnPulse(suite.ctx, pulse)
-	suite.Require().NoError(err)
-	suite.Require().Equal(message.NotPending, suite.lr.state[objectRef].ExecutionState.pending)
-
-	suite.lr.state[objectRef].ExecutionState.Current = nil
-	suite.lr.state[objectRef].ExecutionState.pending = message.InPending
-	suite.lr.state[objectRef].ExecutionState.PendingConfirmed = false
-
-	err = suite.lr.OnPulse(suite.ctx, pulse)
-	suite.Require().NoError(err)
-	suite.Equal(message.NotPending, suite.lr.state[objectRef].ExecutionState.pending)
-}
-
 type LogicRunnerTestSuite struct {
 	LogicRunnerCommonTestSuite
 }
@@ -472,86 +372,26 @@ func (suite *LogicRunnerTestSuite) TestHandleStillExecutingMessage() {
 
 func TestReleaseQueue(t *testing.T) {
 	t.Parallel()
-	type expected struct {
-		Length  int
-		HasMore bool
+
+	tests := map[string]struct {
+		QueueLength     int
+		ExpectedLength  int
+		ExpectedHasMore bool
+	}{
+		"zero":  {0, 0, false},
+		"one":   {1, 1, false},
+		"max":   {maxQueueLength, maxQueueLength, false},
+		"max+1": {maxQueueLength + 1, maxQueueLength, true},
 	}
-	type testCase struct {
-		QueueLength int
-		Expected    expected
-	}
-	var testCases = []testCase{
-		{0, expected{0, false}},
-		{1, expected{1, false}},
-		{maxQueueLength, expected{maxQueueLength, false}},
-		{maxQueueLength + 1, expected{maxQueueLength, true}},
-	}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			a := assert.New(t)
 
-	for _, tc := range testCases {
-		es := ExecutionState{Queue: make([]ExecutionQueueElement, tc.QueueLength)}
-		mq, hasMore := es.releaseQueue()
-		assert.Equal(t, tc.Expected.Length, len(mq))
-		assert.Equal(t, tc.Expected.HasMore, hasMore)
-	}
-}
-
-func (suite *LogicRunnerTestSuite) TestOnPulseLedgerHasMoreRequests() {
-	type testCase struct {
-		queue                         []ExecutionQueueElement
-		mbMock                        *testutils.MessageBusMock
-		ExpectedLedgerHasMoreRequests bool
-	}
-	testCases := []testCase{
-		{make([]ExecutionQueueElement, maxQueueLength+1), testutils.NewMessageBusMock(suite.mc), true},
-		{make([]ExecutionQueueElement, maxQueueLength), testutils.NewMessageBusMock(suite.mc), false},
-	}
-
-	suite.jc.IsAuthorizedMock.Return(false, nil)
-	suite.jc.MeMock.Return(core.RecordRef{})
-
-	pulse := core.Pulse{}
-
-	for _, test := range testCases {
-		suite.SetupLogicRunner()
-		queue := test.queue
-
-		messagesQueue := convertQueueToMessageQueue(queue[:maxQueueLength])
-
-		ref := testutils.RandomRef()
-
-		suite.lr.JetCoordinator = suite.jc
-
-		suite.lr.state[ref] = &ObjectState{
-			ExecutionState: &ExecutionState{
-				Behaviour: &ValidationSaver{},
-				Queue:     queue,
-			},
-		}
-
-		mb := test.mbMock
-		suite.lr.MessageBus = mb
-
-		expectedMessage := &message.ExecutorResults{
-			RecordRef:             ref,
-			Requests:              make([]message.CaseBindRequest, 0),
-			Queue:                 messagesQueue,
-			LedgerHasMoreRequests: test.ExpectedLedgerHasMoreRequests,
-		}
-
-		// defer new SendFunc before calling OnPulse
-		mb.SendFunc = func(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) (r core.Reply, r1 error) {
-			suite.Equal(expectedMessage, p1)
-			return nil, nil
-		}
-
-		err := suite.lr.OnPulse(suite.ctx, pulse)
-		suite.NoError(err)
-	}
-
-	// waiting for all goroutines with Send() processing
-	suite.mc.Wait(10 * time.Second)
-	for _, test := range testCases {
-		suite.Equal(1, int(test.mbMock.SendCounter))
+			es := ExecutionState{Queue: make([]ExecutionQueueElement, tc.QueueLength)}
+			mq, hasMore := es.releaseQueue()
+			a.Equal(tc.ExpectedLength, len(mq))
+			a.Equal(tc.ExpectedHasMore, hasMore)
+		})
 	}
 }
 
