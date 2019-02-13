@@ -80,6 +80,25 @@ func (p *pulseTrackerMemory) AddPulse(ctx context.Context, pulse core.Pulse) err
 		previousSerialNumber int
 	)
 
+	previousPulse, err := p.getLatestPulse(ctx)
+	if err != nil && err != ErrEmptyLatestPulse {
+		return err
+	}
+
+	if err == nil {
+		if previousPulse != nil {
+			previousPulseNumber = previousPulse.Pulse.PulseNumber
+			previousSerialNumber = previousPulse.SerialNumber
+		}
+
+		prevPulse, err := p.getPulse(ctx, previousPulseNumber)
+		if err != nil {
+			return err
+		}
+		prevPulse.Next = &pulse.PulseNumber
+		p.memory[prevPulse.Pulse.PulseNumber] = prevPulse
+	}
+
 	// Save new pulse.
 	newPulse := Pulse{
 		Prev:         &previousPulseNumber,

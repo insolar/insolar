@@ -22,6 +22,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestPulseTrackerMemory_GetPulse(t *testing.T) {
@@ -40,7 +41,7 @@ func TestPulseTrackerMemory_GetPulse(t *testing.T) {
 	_, notFoundErr := pulseTracker.GetPulse(ctx, core.FirstPulseNumber+1)
 
 	// Assert
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, existingPulse, pulse)
 	assert.Equal(t, ErrPulseNotFound, notFoundErr)
 }
@@ -76,7 +77,7 @@ func TestPulseTrackerMemory_GetPreviousPulse(t *testing.T) {
 	_, notFoundErr := pulseTracker.GetPreviousPulse(ctx, 42)
 
 	// Assert
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, firstPulse, pulse)
 	assert.Equal(t, ErrPrevPulseNotFound, prevPulseErr)
 	assert.Equal(t, ErrPulseNotFound, badPrevErr)
@@ -113,19 +114,19 @@ func TestPulseTrackerMemory_GetNthPrevPulse(t *testing.T) {
 
 	// Act and Assert
 	targetPulse, err := pulseTracker.GetNthPrevPulse(ctx, 0, core.FirstPulseNumber+3)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, fourth, targetPulse)
 
 	prev1pulse, err := pulseTracker.GetNthPrevPulse(ctx, 1, core.FirstPulseNumber+3)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, thirdPulse, prev1pulse)
 
 	prev2pulse, err := pulseTracker.GetNthPrevPulse(ctx, 2, core.FirstPulseNumber+3)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, secondPulse, prev2pulse)
 
 	prev3pulse, err := pulseTracker.GetNthPrevPulse(ctx, 3, core.FirstPulseNumber+3)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, firstPulse, prev3pulse)
 
 	_, err = pulseTracker.GetNthPrevPulse(ctx, 4, core.FirstPulseNumber+3)
@@ -157,7 +158,7 @@ func TestPulseTrackerMemory_GetLatestPulse(t *testing.T) {
 	pulseTracker.memory[core.FirstPulseNumber] = firstPulse
 	pulseTracker.latestPulse = core.FirstPulseNumber
 	pulse, err := pulseTracker.GetLatestPulse(ctx)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, firstPulse, pulse)
 
 	// Add and check second pulse
@@ -169,7 +170,7 @@ func TestPulseTrackerMemory_GetLatestPulse(t *testing.T) {
 	pulseTracker.memory[core.FirstPulseNumber+1] = secondPulse
 	pulseTracker.latestPulse = core.FirstPulseNumber + 1
 	pulse, err = pulseTracker.GetLatestPulse(ctx)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, secondPulse, pulse)
 
 	// Add and check third pulse
@@ -180,7 +181,7 @@ func TestPulseTrackerMemory_GetLatestPulse(t *testing.T) {
 	}
 	pulseTracker.memory[42] = thirdPulse
 	pulse, err = pulseTracker.GetLatestPulse(ctx)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, secondPulse, pulse)
 
 	// Add and check fourth pulse
@@ -192,7 +193,7 @@ func TestPulseTrackerMemory_GetLatestPulse(t *testing.T) {
 	pulseTracker.memory[core.FirstPulseNumber+3] = fourthPulse
 	pulseTracker.latestPulse = core.FirstPulseNumber + 3
 	pulse, err = pulseTracker.GetLatestPulse(ctx)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, fourthPulse, pulse)
 }
 
@@ -223,9 +224,9 @@ func TestPulseTrackerMemory_AddPulse_FailFirstCheck(t *testing.T) {
 func TestPulseTrackerMemory_AddPulse(t *testing.T) {
 	t.Parallel()
 
-	// Arrange
 	ctx := inslogger.TestContext(t)
 
+	// Arrange
 	// Check new pulse adding
 	pulseTracker := &pulseTrackerMemory{
 		memory: map[core.PulseNumber]*Pulse{},
@@ -233,17 +234,36 @@ func TestPulseTrackerMemory_AddPulse(t *testing.T) {
 	firstPulse := &Pulse{
 		Pulse: core.Pulse{PulseNumber: core.FirstPulseNumber},
 	}
+	prevPN := core.PulseNumber(0)
+	firstPulse.Prev = &prevPN
+	firstPulse.SerialNumber = 1
+
+	// Act
 	err := pulseTracker.AddPulse(ctx, firstPulse.Pulse)
-	assert.NoError(t, err)
+
+	// Assert
+	require.NoError(t, err)
 	assert.Equal(t, firstPulse.Pulse, pulseTracker.memory[core.FirstPulseNumber].Pulse)
 	assert.Equal(t, firstPulse.Pulse.PulseNumber, pulseTracker.latestPulse)
-
-	prevPulse := core.PulseNumber(0)
-	firstPulse.Prev = &prevPulse
-	firstPulse.SerialNumber = 1
 	assert.Equal(t, firstPulse, pulseTracker.memory[core.FirstPulseNumber])
 
+	// Arrange
 	// Check pulse adding to non-empty storage
-	// TODO tomorrow
-	assert.True(t, false)
+	secondPulse := &Pulse{
+		Pulse: core.Pulse{PulseNumber: core.FirstPulseNumber + 1},
+	}
+	secondPulse.Prev = &firstPulse.Pulse.PulseNumber
+	secondPulse.SerialNumber = firstPulse.SerialNumber + 1
+	firstPulse.Next = &secondPulse.Pulse.PulseNumber
+
+	// Act
+	err = pulseTracker.AddPulse(ctx, secondPulse.Pulse)
+
+	// Assert
+	require.NoError(t, err)
+	assert.Equal(t, secondPulse.Pulse, pulseTracker.memory[core.FirstPulseNumber+1].Pulse)
+	assert.Equal(t, secondPulse.Pulse.PulseNumber, pulseTracker.latestPulse)
+	assert.Equal(t, *secondPulse.Prev, pulseTracker.memory[core.FirstPulseNumber].Pulse.PulseNumber)
+	assert.Equal(t, secondPulse.SerialNumber, pulseTracker.memory[core.FirstPulseNumber+1].SerialNumber)
+	assert.Equal(t, *firstPulse.Next, pulseTracker.memory[core.FirstPulseNumber+1].Pulse.PulseNumber)
 }
