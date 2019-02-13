@@ -410,19 +410,3 @@ func TestDoubleStart(t *testing.T) {
 	wg.Wait()
 	tp.Stop()
 }
-
-func TestHostTransport_RegisterPacketHandler(t *testing.T) {
-	m := newMockResolver()
-
-	i1, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID1+DOMAIN)
-	require.NoError(t, err)
-	tr1 := NewHostTransport(i1, m)
-	handler := func(ctx context.Context, request network.Request) (network.Response, error) {
-		return tr1.BuildResponse(ctx, request, nil), nil
-	}
-	f := func() {
-		tr1.RegisterRequestHandler(types.Ping, handler)
-	}
-	require.NotPanics(t, f, "first request handler register should not panic")
-	require.Panics(t, f, "second request handler register should panic because it is already registered")
-}

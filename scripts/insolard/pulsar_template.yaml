@@ -16,10 +16,6 @@ pulsar:
     protocol: TCP
     address: 127.0.0.1:58091
     behindnat: false
-  pulsedistributor:
-    bootstraphosts:
-#    if you want start system with real pulsar, change this to host of one of discovery nodes (for example, localhost:13831)
-    - 127.0.0.1:13831
 keyspath: "scripts/insolard/configs/bootstrap_keys.json"
 log:
   level: Debug

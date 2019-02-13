@@ -68,17 +68,17 @@ func (cp *connectionPool) RegisterConnection(ctx context.Context, address net.Ad
 
 	_, ok := cp.entryHolder.Get(address)
 
-	logger.Debugf("[ RegisterConnection ] Finding connection to %s in pool: %s", address, ok)
+	logger.Debugf("[ RegisterConnection ] Finding entry for connection to %s in pool: %s", address, ok)
 
 	if ok {
 		return false
 	}
 
-	logger.Debugf("[ RegisterConnection ] Missing open connection to %s in pool ", address)
+	logger.Debugf("[ RegisterConnection ] Missing entry for connection to %s in pool ", address)
 
 	cp.entryHolder.Add(address, newReadyEntry(conn))
 	logger.Debugf(
-		"[ RegisterConnection ] Added connection to %s. Current pool size: %d",
+		"[ RegisterConnection ] Added entry for connection to %s. Current pool size: %d",
 		conn.RemoteAddr(),
 		cp.entryHolder.Size(),
 	)
