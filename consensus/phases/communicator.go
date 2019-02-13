@@ -110,26 +110,28 @@ func (nc *ConsensusCommunicator) setPulseNumber(new core.PulseNumber) bool {
 	return old < new && atomic.CompareAndSwapUint32(&nc.currentPulseNumber, uint32(old), uint32(new))
 }
 
-func (nc *ConsensusCommunicator) sendRequestToNodes(participants []core.Node, packet packets.ConsensusPacket) {
+func (nc *ConsensusCommunicator) sendRequestToNodes(ctx context.Context, participants []core.Node, packet packets.ConsensusPacket) {
 	for _, node := range participants {
 		if node.ID().Equal(nc.NodeKeeper.GetOrigin().ID()) {
 			continue
 		}
 
-		go func(n core.Node, packet packets.ConsensusPacket) {
-			err := stats.RecordWithTags(context.Background(), []tag.Mutator{tag.Upsert(consensus.TagPhase, packet.GetType().String())}, consensus.PacketsSent.M(1))
+		go func(ctx context.Context, n core.Node, packet packets.ConsensusPacket) {
+			logger := inslogger.FromContext(ctx)
+			err := nc.ConsensusNetwork.SignAndSendPacket(packet, n.ID(), nc.Cryptography)
 			if err != nil {
-				log.Warn(" [ NativeCommunicator: sendRequestToNodes ] failed to record a metric")
+				logger.Error("Failed to send phase1 request: " + err.Error())
+				return
 			}
-			err = nc.ConsensusNetwork.SignAndSendPacket(packet, n.ID(), nc.Cryptography)
+			err = stats.RecordWithTags(context.Background(), []tag.Mutator{tag.Upsert(consensus.TagPhase, packet.GetType().String())}, consensus.PacketsSent.M(1))
 			if err != nil {
-				log.Errorln(err.Error())
+				logger.Warn("Failed to record metric of sent phase1 requests")
 			}
-		}(node, packet.Clone())
+		}(ctx, node, packet.Clone())
 	}
 }
 
-func (nc *ConsensusCommunicator) sendRequestToNodesWithOrigin(originClaim *packets.NodeAnnounceClaim,
+func (nc *ConsensusCommunicator) sendRequestToNodesWithOrigin(ctx context.Context, originClaim *packets.NodeAnnounceClaim,
 	participants []core.Node, packet *packets.Phase1Packet) error {
 
 	requests := make(map[core.RecordRef]packets.ConsensusPacket)
@@ -146,16 +148,18 @@ func (nc *ConsensusCommunicator) sendRequestToNodesWithOrigin(originClaim *packe
 	}
 
 	for ref, req := range requests {
-		go func(node core.RecordRef, consensusPacket packets.ConsensusPacket) {
-			err := stats.RecordWithTags(context.Background(), []tag.Mutator{tag.Upsert(consensus.TagPhase, consensusPacket.GetType().String())}, consensus.PacketsSent.M(1))
+		go func(ctx context.Context, node core.RecordRef, consensusPacket packets.ConsensusPacket) {
+			logger := inslogger.FromContext(ctx)
+			err := nc.ConsensusNetwork.SignAndSendPacket(consensusPacket, node, nc.Cryptography)
 			if err != nil {
-				log.Warn(" [ NativeCommunicator: sendRequestToNodesWithOrigin ] failed to record a metric")
+				logger.Error("Failed to send phase1 request with origin: " + err.Error())
+				return
 			}
-			err = nc.ConsensusNetwork.SignAndSendPacket(consensusPacket, node, nc.Cryptography)
+			err = stats.RecordWithTags(context.Background(), []tag.Mutator{tag.Upsert(consensus.TagPhase, consensusPacket.GetType().String())}, consensus.PacketsSent.M(1))
 			if err != nil {
-				log.Errorln(err.Error())
+				logger.Warn("Failed to record metric of sent phase1 requests")
 			}
-		}(ref, req)
+		}(ctx, ref, req)
 	}
 	return nil
 }
@@ -224,9 +228,10 @@ func (nc *ConsensusCommunicator) ExchangePhase1(
 	participants []core.Node,
 	packet *packets.Phase1Packet,
 ) (map[core.RecordRef]*packets.Phase1Packet, error) {
-	ctx, span := instracer.StartSpan(ctx, "Communicator.ExchangePhase1")
+	_, span := instracer.StartSpan(ctx, "Communicator.ExchangePhase1")
 	span.AddAttributes(trace.Int64Attribute("pulse", int64(packet.GetPulseNumber())))
 	defer span.End()
+	logger := inslogger.FromContext(ctx)
 
 	result := make(map[core.RecordRef]*packets.Phase1Packet, len(participants))
 
@@ -248,11 +253,11 @@ func (nc *ConsensusCommunicator) ExchangePhase1(
 	}
 
 	if originClaim == nil {
-		nc.sendRequestToNodes(participants, request)
+		nc.sendRequestToNodes(ctx, participants, request)
 	} else {
-		err := nc.sendRequestToNodesWithOrigin(originClaim, participants, packet)
+		err := nc.sendRequestToNodesWithOrigin(ctx, originClaim, participants, packet)
 		if err != nil {
-			return nil, errors.Wrap(err, "[ExchangePhase1] Failed to send requests")
+			return nil, errors.Wrap(err, "Failed to send requests")
 		}
 	}
 	for _, p := range participants {
@@ -268,13 +273,13 @@ func (nc *ConsensusCommunicator) ExchangePhase1(
 	for {
 		select {
 		case res := <-nc.phase1result:
-			log.Debugf("got phase1 request from %s", res.id)
+			logger.Debugf("Got phase1 request from %s", res.id)
 			if res.packet.GetPulseNumber() != nc.getPulseNumber() {
 				continue
 			}
 
 			if res.id.IsEmpty() {
-				log.Debug("got unknown phase1 request, try to get routing info from announce claim")
+				logger.Debug("Got unknown phase1 request, try to get routing info from announce claim")
 				claim := res.packet.GetAnnounceClaim()
 				if claim == nil {
 					continue
@@ -282,17 +287,17 @@ func (nc *ConsensusCommunicator) ExchangePhase1(
 				res.id = claim.NodeRef
 				err := nc.NodeKeeper.AddTemporaryMapping(claim.NodeRef, claim.ShortNodeID, claim.NodeAddress.Get())
 				if err != nil {
-					inslogger.FromContext(ctx).Warn("Error adding temporary mapping: " + err.Error())
+					logger.Warn("Error adding temporary mapping: " + err.Error())
 					continue
 				}
 			}
 
 			if shouldSendResponse(res.id) {
 				// send response
-				log.Debugf("send phase1 response to %s", res.id)
+				logger.Debugf("Send phase1 response to %s", res.id)
 				err := nc.ConsensusNetwork.SignAndSendPacket(response, res.id, nc.Cryptography)
 				if err != nil {
-					log.Errorln(err.Error())
+					logger.Error("Error sending phase1 response: " + err.Error())
 				}
 			}
 			if !res.id.IsEmpty() {
@@ -313,7 +318,7 @@ func (nc *ConsensusCommunicator) ExchangePhase1(
 // ExchangePhase2 used in second consensus phase to exchange data between participants
 func (nc *ConsensusCommunicator) ExchangePhase2(ctx context.Context, list network.UnsyncList,
 	participants []core.Node, packet *packets.Phase2Packet) (map[core.RecordRef]*packets.Phase2Packet, error) {
-	ctx, span := instracer.StartSpan(ctx, "Communicator.ExchangePhase2")
+	_, span := instracer.StartSpan(ctx, "Communicator.ExchangePhase2")
 	span.AddAttributes(trace.Int64Attribute("pulse", int64(packet.GetPulseNumber())))
 	defer span.End()
 
@@ -321,7 +326,7 @@ func (nc *ConsensusCommunicator) ExchangePhase2(ctx context.Context, list networ
 
 	result[nc.ConsensusNetwork.GetNodeID()] = packet
 
-	nc.sendRequestToNodes(participants, packet)
+	nc.sendRequestToNodes(ctx, participants, packet)
 
 	type none struct{}
 	sentRequests := make(map[core.RecordRef]none)
@@ -399,7 +404,7 @@ func (nc *ConsensusCommunicator) sendAdditionalRequests(origReq *packets.Phase2P
 // ExchangePhase21 used in second consensus phase to exchange data between participants
 func (nc *ConsensusCommunicator) ExchangePhase21(ctx context.Context, list network.UnsyncList, packet *packets.Phase2Packet,
 	additionalRequests []*AdditionalRequest) ([]packets.ReferendumVote, error) {
-	ctx, span := instracer.StartSpan(ctx, "Communicator.ExchangePhase21")
+	_, span := instracer.StartSpan(ctx, "Communicator.ExchangePhase21")
 	span.AddAttributes(trace.Int64Attribute("pulse", int64(packet.GetPulseNumber())))
 	defer span.End()
 
@@ -480,13 +485,13 @@ func (nc *ConsensusCommunicator) ExchangePhase21(ctx context.Context, list netwo
 // ExchangePhase3 used in third consensus step to exchange data between participants
 func (nc *ConsensusCommunicator) ExchangePhase3(ctx context.Context, participants []core.Node, packet *packets.Phase3Packet) (map[core.RecordRef]*packets.Phase3Packet, error) {
 	result := make(map[core.RecordRef]*packets.Phase3Packet, len(participants))
-	ctx, span := instracer.StartSpan(ctx, "Communicator.ExchangePhase3")
+	_, span := instracer.StartSpan(ctx, "Communicator.ExchangePhase3")
 	span.AddAttributes(trace.Int64Attribute("pulse", int64(packet.GetPulseNumber())))
 	defer span.End()
 
 	result[nc.ConsensusNetwork.GetNodeID()] = packet
 
-	nc.sendRequestToNodes(participants, packet)
+	nc.sendRequestToNodes(ctx, participants, packet)
 
 	type none struct{}
 	sentRequests := make(map[core.RecordRef]none)
