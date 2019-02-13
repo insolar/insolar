@@ -265,8 +265,10 @@ func (s *testSuite) TestDiscoveryRestart() {
 	log.Info("Discovery node started")
 	require.NoError(s.T(), err)
 
-	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
+	s.waitForConsensusExcept(3, s.fixture().bootstrapNodes[0].id)
 	activeNodes = s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount(), len(activeNodes))
+	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
 	s.Equal(s.getNodesCount(), len(activeNodes))
 }
 
