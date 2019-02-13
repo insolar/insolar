@@ -164,7 +164,10 @@ func (nc *ConsensusCommunicator) sendRequestToNodesWithOrigin(ctx context.Contex
 	return nil
 }
 
-func (nc *ConsensusCommunicator) generatePhase2Response(origReq, req *packets.Phase2Packet, list network.UnsyncList) (*packets.Phase2Packet, error) {
+func (nc *ConsensusCommunicator) generatePhase2Response(ctx context.Context, origReq, req *packets.Phase2Packet,
+	list network.UnsyncList) (*packets.Phase2Packet, error) {
+
+	logger := inslogger.FromContext(ctx)
 	answers := make([]packets.ReferendumVote, 0)
 	for _, vote := range req.GetVotes() {
 		if vote.Type() != packets.TypeMissingNode {
@@ -172,28 +175,28 @@ func (nc *ConsensusCommunicator) generatePhase2Response(origReq, req *packets.Ph
 		}
 		v, ok := vote.(*packets.MissingNode)
 		if !ok {
-			log.Warnf("Phase 2 MissingNode request type mismatch")
+			logger.Warnf("Phase 2 MissingNode request type mismatch")
 			continue
 		}
 		ref, err := list.IndexToRef(int(v.NodeIndex))
 		if err != nil {
-			log.Warnf("Phase 2 MissingNode requested index: %d, error: %s", v.NodeIndex, err.Error())
+			logger.Warnf("Phase 2 MissingNode requested index: %d, error: %s", v.NodeIndex, err.Error())
 			continue
 		}
 		node := list.GetActiveNode(ref)
 		if node == nil {
-			log.Warnf("Phase 2 MissingNode requested index: %d; mapped ref %s not found", v.NodeIndex, ref)
+			logger.Warnf("Phase 2 MissingNode requested index: %d; mapped ref %s not found", v.NodeIndex, ref)
 			continue
 		}
 		claim, err := packets.NodeToClaim(node)
 		if err != nil {
-			log.Warnf("Phase 2 MissingNode requested index: %d, mapped ref: %s, convertation node -> claim error: %s",
+			logger.Warnf("Phase 2 MissingNode requested index: %d, mapped ref: %s, convertation node -> claim error: %s",
 				v.NodeIndex, ref, err.Error())
 			continue
 		}
 		proof := list.GetProof(ref)
 		if proof == nil {
-			log.Warnf("Phase 2 MissingNode requested index: %d, mapped ref: %s, proof not found", v.NodeIndex, ref)
+			logger.Warnf("Phase 2 MissingNode requested index: %d, mapped ref: %s, proof not found", v.NodeIndex, ref)
 			continue
 		}
 		answer := packets.MissingNodeSupplementaryVote{
@@ -213,7 +216,7 @@ func (nc *ConsensusCommunicator) generatePhase2Response(origReq, req *packets.Ph
 	ghs := origReq.GetGlobuleHashSignature()
 	err := response.SetGlobuleHashSignature(ghs[:])
 	if err != nil {
-		return nil, errors.Wrap(err, "[ generatePhase2Response ] failed to set globule hash")
+		return nil, errors.Wrap(err, "Failed to set globule hash in phase2 response")
 	}
 	for _, answer := range answers {
 		response.AddVote(answer)
@@ -274,7 +277,10 @@ func (nc *ConsensusCommunicator) ExchangePhase1(
 		select {
 		case res := <-nc.phase1result:
 			logger.Debugf("Got phase1 request from %s", res.id)
-			if res.packet.GetPulseNumber() != nc.getPulseNumber() {
+			currentPulse := nc.getPulseNumber()
+			if res.packet.GetPulseNumber() != currentPulse {
+				logger.Debugf("Filtered phase1 packet, packet pulse %d != %d (current pulse)",
+					res.packet.GetPulseNumber(), currentPulse)
 				continue
 			}
 
@@ -321,6 +327,7 @@ func (nc *ConsensusCommunicator) ExchangePhase2(ctx context.Context, list networ
 	_, span := instracer.StartSpan(ctx, "Communicator.ExchangePhase2")
 	span.AddAttributes(trace.Int64Attribute("pulse", int64(packet.GetPulseNumber())))
 	defer span.End()
+	logger := inslogger.FromContext(ctx)
 
 	result := make(map[core.RecordRef]*packets.Phase2Packet, len(participants))
 
@@ -340,25 +347,28 @@ func (nc *ConsensusCommunicator) ExchangePhase2(ctx context.Context, list networ
 	for {
 		select {
 		case res := <-nc.phase2result:
-			log.Debugf("got phase2 request from %s", res.id)
-			if res.packet.GetPulseNumber() != nc.getPulseNumber() {
+			logger.Debugf("Got phase2 request from %s", res.id)
+			currentPulse := nc.getPulseNumber()
+			if res.packet.GetPulseNumber() != currentPulse {
+				logger.Debugf("Filtered phase2 packet, packet pulse %d != %d (current pulse)",
+					res.packet.GetPulseNumber(), currentPulse)
 				continue
 			}
 
 			if shouldSendResponse(&res) {
-				log.Debugf("send phase2 response to %s", res.id)
+				logger.Debugf("Send phase2 response to %s", res.id)
 				// send response
 				response := packet
 				if res.packet.ContainsRequests() {
-					response, err = nc.generatePhase2Response(packet, res.packet, list)
+					response, err = nc.generatePhase2Response(ctx, packet, res.packet, list)
 					if err != nil {
-						log.Warnf("Failed to generate phase 2 response packet: %s", err.Error())
+						logger.Warnf("Failed to generate phase 2 response packet: %s", err.Error())
 						continue
 					}
 				}
 				err := nc.ConsensusNetwork.SignAndSendPacket(response, res.id, nc.Cryptography)
 				if err != nil {
-					log.Errorln(err.Error())
+					logger.Error("Error sending phase2 response: " + err.Error())
 				}
 			}
 			result[res.id] = res.packet
@@ -382,19 +392,21 @@ func selectCandidate(candidates []core.RecordRef) core.RecordRef {
 	return candidates[0]
 }
 
-func (nc *ConsensusCommunicator) sendAdditionalRequests(origReq *packets.Phase2Packet, additionalRequests []*AdditionalRequest) error {
+func (nc *ConsensusCommunicator) sendAdditionalRequests(ctx context.Context, origReq *packets.Phase2Packet,
+	additionalRequests []*AdditionalRequest) error {
+
+	logger := inslogger.FromContext(ctx)
 	for _, req := range additionalRequests {
 		newReq := *origReq
 		newReq.AddVote(&packets.MissingNode{NodeIndex: uint16(req.RequestIndex)})
 		receiver := selectCandidate(req.Candidates)
-		stats.Record(context.Background(), consensus.PacketsSent.M(1))
-		err := stats.RecordWithTags(context.Background(), []tag.Mutator{tag.Upsert(consensus.TagPhase, origReq.GetType().String())}, consensus.PacketsSent.M(1))
-		if err != nil {
-			log.Warn(" [ NativeCommunicator: sendAdditionalRequests ] failed to record a metric")
-		}
-		err = nc.ConsensusNetwork.SignAndSendPacket(&newReq, receiver, nc.Cryptography)
+		err := nc.ConsensusNetwork.SignAndSendPacket(&newReq, receiver, nc.Cryptography)
 		if err != nil {
 			return errors.Wrapf(err, "Failed to send additional phase 2.1 request for index %d to node %s", req.RequestIndex, receiver)
+		}
+		err = stats.RecordWithTags(context.Background(), []tag.Mutator{tag.Upsert(consensus.TagPhase, origReq.GetType().String())}, consensus.PacketsSent.M(1))
+		if err != nil {
+			logger.Warn("Failed to record metric of sent phase2.1 additional requests")
 		}
 	}
 
@@ -407,6 +419,7 @@ func (nc *ConsensusCommunicator) ExchangePhase21(ctx context.Context, list netwo
 	_, span := instracer.StartSpan(ctx, "Communicator.ExchangePhase21")
 	span.AddAttributes(trace.Int64Attribute("pulse", int64(packet.GetPulseNumber())))
 	defer span.End()
+	logger := inslogger.FromContext(ctx)
 
 	type none struct{}
 	incoming := make(map[core.RecordRef]none)
@@ -430,7 +443,7 @@ func (nc *ConsensusCommunicator) ExchangePhase21(ctx context.Context, list netwo
 		result = append(result, vote)
 	}
 
-	err := nc.sendAdditionalRequests(packet, additionalRequests)
+	err := nc.sendAdditionalRequests(ctx, packet, additionalRequests)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ExchangePhase2.1 ] Failed to send additional phase 2.1 requests")
 	}
@@ -438,7 +451,11 @@ func (nc *ConsensusCommunicator) ExchangePhase21(ctx context.Context, list netwo
 	for {
 		select {
 		case res := <-nc.phase2result:
-			if res.packet.GetPulseNumber() != nc.getPulseNumber() {
+			logger.Debugf("Got phase2 request from %s", res.id)
+			currentPulse := nc.getPulseNumber()
+			if res.packet.GetPulseNumber() != currentPulse {
+				logger.Debugf("Filtered phase2 packet, packet pulse %d != %d (current pulse)",
+					res.packet.GetPulseNumber(), currentPulse)
 				continue
 			}
 
@@ -446,15 +463,15 @@ func (nc *ConsensusCommunicator) ExchangePhase21(ctx context.Context, list netwo
 				// send response
 				response := packet
 				if res.packet.ContainsRequests() {
-					response, err = nc.generatePhase2Response(packet, res.packet, list)
+					response, err = nc.generatePhase2Response(ctx, packet, res.packet, list)
 					if err != nil {
-						log.Warnf("Failed to generate phase 2 response packet: %s", err.Error())
+						logger.Warnf("Failed to generate phase 2 response packet: %s", err.Error())
 						continue
 					}
 				}
 				err := nc.ConsensusNetwork.SignAndSendPacket(response, res.id, nc.Cryptography)
 				if err != nil {
-					log.Errorln(err.Error())
+					logger.Error("Error sending phase2 response: " + err.Error())
 				}
 			}
 
@@ -488,6 +505,7 @@ func (nc *ConsensusCommunicator) ExchangePhase3(ctx context.Context, participant
 	_, span := instracer.StartSpan(ctx, "Communicator.ExchangePhase3")
 	span.AddAttributes(trace.Int64Attribute("pulse", int64(packet.GetPulseNumber())))
 	defer span.End()
+	logger := inslogger.FromContext(ctx)
 
 	result[nc.ConsensusNetwork.GetNodeID()] = packet
 
@@ -504,11 +522,19 @@ func (nc *ConsensusCommunicator) ExchangePhase3(ctx context.Context, participant
 	for {
 		select {
 		case res := <-nc.phase3result:
+			logger.Debugf("Got phase3 request from %s", res.id)
+			currentPulse := nc.getPulseNumber()
+			if res.packet.GetPulseNumber() != currentPulse {
+				logger.Debugf("Filtered phase3 packet, packet pulse %d != %d (current pulse)",
+					res.packet.GetPulseNumber(), currentPulse)
+				continue
+			}
+
 			if shouldSendResponse(&res) {
 				// send response
 				err := nc.ConsensusNetwork.SignAndSendPacket(packet, res.id, nc.Cryptography)
 				if err != nil {
-					log.Errorln(err.Error())
+					logger.Error("Error sending phase3 response: " + err.Error())
 				}
 			}
 			result[res.id] = res.packet
