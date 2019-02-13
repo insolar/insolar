@@ -1183,11 +1183,34 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 
 	pendingStorage := h.RecentStorageProvider.GetPendingStorage(ctx, jetID)
 	logger.Debugf("received %d pending requests", len(msg.PendingRequests))
-	for objID, requests := range msg.PendingRequests {
-		for reqID := range requests {
-			pendingStorage.AddPendingRequest(ctx, objID, reqID)
+
+	var notificationList []core.RecordID
+	for objID, objContext := range msg.PendingRequests {
+		if !objContext.Active {
+			notificationList = append(notificationList, objID)
 		}
+
+		objContext.Active = false
+		pendingStorage.SetContextToObject(ctx, objID, objContext)
 	}
+
+	go func() {
+		for _, objID := range notificationList {
+			go func(objID core.RecordID) {
+				rep, err := h.Bus.Send(ctx, &message.AbandonedRequestsNotification{
+					Object: objID,
+				}, nil)
+
+				if err != nil {
+					logger.Error("failed to notify about pending requests")
+					return
+				}
+				if _, ok := rep.(*reply.OK); !ok {
+					logger.Error("received unexpected reply on pending notification")
+				}
+			}(objID)
+		}
+	}()
 
 	indexStorage := h.RecentStorageProvider.GetIndexStorage(ctx, jetID)
 	logger.Debugf("received %d recent objects", len(msg.RecentObjects))

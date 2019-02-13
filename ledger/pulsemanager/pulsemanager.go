@@ -187,18 +187,7 @@ func (m *PulseManager) processEndPulse(
 				}
 			}
 
-			// TODO: uncomment this when the issue of message storm of abandoned requests is fixed
-			// requests := m.RecentStorageProvider.GetPendingStorage(ctx, info.id).GetRequests()
-			// go func() {
-			// 	err := m.sendAbandonedRequests(
-			// 		ctx,
-			// 		newPulse,
-			// 		requests,
-			// 	)
-			// 	if err != nil {
-			// 		logger.Error(err)
-			// 	}
-			// }()
+			m.RecentStorageProvider.RemovePendingStorage(ctx, info.id)
 
 			// FIXME: @andreyromancev. 09.01.2019. Temporary disabled validation. Uncomment when jet split works properly.
 			// dropErr := m.processDrop(ctx, jetID, currentPulse, dropSerialized, messages)
@@ -214,60 +203,6 @@ func (m *PulseManager) processEndPulse(
 		return errors.Wrap(err, "got error on jets sync")
 	}
 
-	return nil
-}
-
-func (m *PulseManager) sendAbandonedRequests(
-	ctx context.Context,
-	pulse core.Pulse,
-	pendingRequests map[core.RecordID]map[core.RecordID]struct{},
-) error {
-	ctx, span := instracer.StartSpan(ctx, "pulse.sendAbandonedRequests")
-	defer span.End()
-
-	logger := inslogger.FromContext(ctx)
-	currentDBPulse, err := m.PulseTracker.GetPulse(ctx, pulse.PulseNumber)
-	if err != nil {
-		return err
-	}
-
-	wg := sync.WaitGroup{}
-	wg.Add(len(pendingRequests))
-	for objID, requests := range pendingRequests {
-		go func(object core.RecordID, requests map[core.RecordID]struct{}) {
-			defer wg.Done()
-			for request := range requests {
-				pulse, err := m.PulseTracker.GetPulse(ctx, request.Pulse())
-				if err != nil {
-					logger.Error("failed to notify about pending requests. failed to calculate pulse")
-					return
-				}
-
-				if currentDBPulse.SerialNumber-pulse.SerialNumber < 2 {
-					continue
-				}
-
-				rep, err := m.Bus.Send(
-					ctx,
-					&message.AbandonedRequestsNotification{
-						Object: object,
-					},
-					nil,
-				)
-				if err != nil {
-					logger.Error("failed to notify about pending requests")
-					return
-				}
-				if _, ok := rep.(*reply.OK); !ok {
-					logger.Error("received unexpected reply on pending notification")
-				}
-
-				return
-			}
-		}(objID, requests)
-	}
-
-	wg.Wait()
 	return nil
 }
 
@@ -376,8 +311,8 @@ func (m *PulseManager) getExecutorHotData(
 	pendingStorage := m.RecentStorageProvider.GetPendingStorage(ctx, jetID)
 	recentObjectsIds := indexStorage.GetObjects()
 
-	recentObjects := map[core.RecordID]*message.HotIndex{}
-	pendingRequests := map[core.RecordID]map[core.RecordID]struct{}{}
+	recentObjects := map[core.RecordID]message.HotIndex{}
+	pendingRequests := map[core.RecordID]recentstorage.PendingObjectContext{}
 
 	for id, ttl := range recentObjectsIds {
 		lifeline, err := m.ObjectStorage.GetObjectIndex(ctx, jetID, &id, false)
@@ -390,21 +325,16 @@ func (m *PulseManager) getExecutorHotData(
 			logger.Error(err)
 			continue
 		}
-		recentObjects[id] = &message.HotIndex{
+		recentObjects[id] = message.HotIndex{
 			TTL:   ttl,
 			Index: encoded,
 		}
 	}
 
 	requestCount := 0
-	for objID, requests := range pendingStorage.GetRequests() {
-		for reqID := range requests {
-			if _, ok := pendingRequests[objID]; !ok {
-				pendingRequests[objID] = map[core.RecordID]struct{}{}
-			}
-			pendingRequests[objID][reqID] = struct{}{}
-		}
-		requestCount += len(requests)
+	for objID, objContext := range pendingStorage.GetRequests() {
+		pendingRequests[objID] = objContext
+		requestCount += len(objContext.Requests)
 	}
 
 	stats.Record(
