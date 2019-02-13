@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
+	"errors"
 
 	"github.com/insolar/insolar/core"
 	"github.com/ugorji/go/codec"
@@ -201,6 +202,10 @@ func (m *TransactionManager) GetLatestPulse(ctx context.Context) (*Pulse, error)
 // Deprecated: use core.PulseStorage.Current() instead (or private getLatestPulse if applicable).
 func (pt *pulseTracker) GetLatestPulse(ctx context.Context) (*Pulse, error) {
 	return pt.getLatestPulse(ctx)
+}
+
+func (pt *pulseTracker) DeletePulse(ctx context.Context, num core.PulseNumber) error {
+	return errors.New("DB pulse removal is forbidden")
 }
 
 func (pt *pulseTracker) getLatestPulse(ctx context.Context) (*Pulse, error) {

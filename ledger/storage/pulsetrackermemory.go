@@ -21,6 +21,7 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 type pulseTrackerMemory struct {
@@ -108,6 +109,26 @@ func (p *pulseTrackerMemory) AddPulse(ctx context.Context, pulse core.Pulse) err
 
 	p.memory[pn] = &newPulse
 	p.latestPulse = pn
+
+	return nil
+}
+
+func (p *pulseTrackerMemory) DeletePulse(ctx context.Context, num core.PulseNumber) error {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+
+	_, err := p.getPulse(ctx, num)
+
+	if err == ErrPulseNotFound {
+		inslogger.FromContext(ctx).Error("can't delete non-existing pulse")
+		return nil
+	}
+
+	if err != nil {
+		return err
+	}
+
+	delete(p.memory, num)
 
 	return nil
 }

@@ -274,3 +274,32 @@ func TestPulseTrackerMemory_AddPulse(t *testing.T) {
 	err = pulseTracker.AddPulse(ctx, pastPulse.Pulse)
 	require.Equal(t, ErrLesserPulse, err)
 }
+
+func TestPulseTrackerMemory_DeletePulse(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+
+	pulseTracker := &pulseTrackerMemory{
+		memory: map[core.PulseNumber]*Pulse{},
+	}
+	firstPulse := &Pulse{
+		Pulse: core.Pulse{PulseNumber: core.FirstPulseNumber},
+	}
+	assert.Equal(t, 0, len(pulseTracker.memory))
+
+	// Check deleting from empty storage
+	err := pulseTracker.DeletePulse(ctx, core.FirstPulseNumber)
+	require.NoError(t, err)
+	assert.Equal(t, 0, len(pulseTracker.memory))
+
+	// Add pulse to storage
+	pulseTracker.memory[core.FirstPulseNumber] = firstPulse
+	assert.Equal(t, 1, len(pulseTracker.memory))
+	assert.Equal(t, firstPulse.Pulse, pulseTracker.memory[core.FirstPulseNumber].Pulse)
+
+	// Check deleting from non-empty storage
+	err = pulseTracker.DeletePulse(ctx, core.FirstPulseNumber)
+	require.NoError(t, err)
+	assert.Equal(t, 0, len(pulseTracker.memory))
+}

@@ -39,4 +39,6 @@ type PulseTracker interface {
 	GetLatestPulse(ctx context.Context) (*Pulse, error)
 
 	AddPulse(ctx context.Context, pulse core.Pulse) error
+
+	DeletePulse(ctx context.Context, num core.PulseNumber) error
 }
