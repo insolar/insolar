@@ -357,6 +357,7 @@ func TestPendingStorageConcrete_GetRequestsForObject_NoObject(t *testing.T) {
 
 func TestPendingStorageConcrete_SetContextToObject(t *testing.T) {
 	t.Parallel()
+
 	pendingStorage := &PendingStorageConcrete{
 		requests: map[core.RecordID]*lockedPendingObjectContext{},
 	}
@@ -370,4 +371,141 @@ func TestPendingStorageConcrete_SetContextToObject(t *testing.T) {
 
 	require.Equal(t, 1, len(pendingStorage.requests))
 	require.Equal(t, expectedContext, *pendingStorage.requests[expectedObj].Context)
+}
+
+func TestPendingStorageConcrete_RemovePendingRequest_RemoveFromStart(t *testing.T) {
+	t.Parallel()
+
+	objID := testutils.RandomID()
+	first := testutils.RandomID()
+	second := testutils.RandomID()
+	pendingStorage := &PendingStorageConcrete{
+		requests: map[core.RecordID]*lockedPendingObjectContext{
+
+			objID: {
+				Context: &PendingObjectContext{
+					Requests: []core.RecordID{first, second},
+				},
+			},
+		},
+	}
+
+	pendingStorage.RemovePendingRequest(inslogger.TestContext(t), objID, first)
+
+	require.Equal(t, 1, len(pendingStorage.requests[objID].Context.Requests))
+	require.Equal(t, second, pendingStorage.requests[objID].Context.Requests[0])
+}
+
+func TestPendingStorageConcrete_RemovePendingRequest_RemoveFromEnd(t *testing.T) {
+	t.Parallel()
+
+	objID := testutils.RandomID()
+	first := testutils.RandomID()
+	second := testutils.RandomID()
+	pendingStorage := &PendingStorageConcrete{
+		requests: map[core.RecordID]*lockedPendingObjectContext{
+
+			objID: {
+				Context: &PendingObjectContext{
+					Requests: []core.RecordID{first, second},
+				},
+			},
+		},
+	}
+
+	pendingStorage.RemovePendingRequest(inslogger.TestContext(t), objID, second)
+
+	require.Equal(t, 1, len(pendingStorage.requests[objID].Context.Requests))
+	require.Equal(t, first, pendingStorage.requests[objID].Context.Requests[0])
+}
+
+func TestPendingStorageConcrete_RemovePendingRequest_RemoveFromMiddle(t *testing.T) {
+	t.Parallel()
+
+	objID := testutils.RandomID()
+	first := testutils.RandomID()
+	second := testutils.RandomID()
+	third := testutils.RandomID()
+	pendingStorage := &PendingStorageConcrete{
+		requests: map[core.RecordID]*lockedPendingObjectContext{
+
+			objID: {
+				Context: &PendingObjectContext{
+					Requests: []core.RecordID{first, second, third},
+				},
+			},
+		},
+	}
+
+	pendingStorage.RemovePendingRequest(inslogger.TestContext(t), objID, second)
+
+	require.Equal(t, 2, len(pendingStorage.requests[objID].Context.Requests))
+	require.Equal(t, first, pendingStorage.requests[objID].Context.Requests[0])
+	require.Equal(t, third, pendingStorage.requests[objID].Context.Requests[1])
+}
+
+func TestPendingStorageConcrete_RemovePendingRequest_NothingHappensIfNoRequests(t *testing.T) {
+	t.Parallel()
+
+	objID := testutils.RandomID()
+	pendingStorage := &PendingStorageConcrete{
+		requests: map[core.RecordID]*lockedPendingObjectContext{
+
+			objID: {
+				Context: &PendingObjectContext{},
+			},
+		},
+	}
+
+	pendingStorage.RemovePendingRequest(inslogger.TestContext(t), objID, testutils.RandomID())
+
+	require.Equal(t, 1, len(pendingStorage.requests))
+	_, ok := pendingStorage.requests[objID]
+	require.Equal(t, true, ok)
+}
+
+func TestPendingStorageConcrete_RemovePendingRequest_RemoveOnlyOne(t *testing.T) {
+	t.Parallel()
+
+	first := testutils.RandomID()
+	objID := testutils.RandomID()
+
+	pendingStorage := &PendingStorageConcrete{
+		requests: map[core.RecordID]*lockedPendingObjectContext{
+			objID: {
+				Context: &PendingObjectContext{
+					Requests: []core.RecordID{first},
+				},
+			},
+		},
+	}
+
+	pendingStorage.RemovePendingRequest(inslogger.TestContext(t), objID, first)
+
+	require.Equal(t, 0, len(pendingStorage.requests[objID].Context.Requests))
+}
+
+func TestPendingStorageConcrete_RemovePendingRequest_RemoveNotExisting(t *testing.T) {
+	t.Parallel()
+
+	objID := testutils.RandomID()
+	first := testutils.RandomID()
+	second := testutils.RandomID()
+	third := testutils.RandomID()
+	pendingStorage := &PendingStorageConcrete{
+		requests: map[core.RecordID]*lockedPendingObjectContext{
+
+			objID: {
+				Context: &PendingObjectContext{
+					Requests: []core.RecordID{first, second},
+				},
+			},
+		},
+	}
+
+	pendingStorage.RemovePendingRequest(inslogger.TestContext(t), objID, third)
+
+	require.Equal(t, 2, len(pendingStorage.requests[objID].Context.Requests))
+	require.Equal(t, first, pendingStorage.requests[objID].Context.Requests[0])
+	require.Equal(t, second, pendingStorage.requests[objID].Context.Requests[1])
 }
