@@ -70,8 +70,8 @@ type phase3Result struct {
 	packet *packets.Phase3Packet
 }
 
-// NaiveCommunicator is simple Communicator implementation which communicates with each participants
-type NaiveCommunicator struct {
+// ConsensusCommunicator is simple Communicator implementation which communicates with each participants
+type ConsensusCommunicator struct {
 	ConsensusNetwork network.ConsensusNetwork `inject:""`
 	PulseHandler     network.PulseHandler     `inject:""`
 	Cryptography     core.CryptographyService `inject:""`
@@ -84,13 +84,13 @@ type NaiveCommunicator struct {
 	currentPulseNumber uint32
 }
 
-// NewNaiveCommunicator constructor creates new NaiveCommunicator
-func NewNaiveCommunicator() *NaiveCommunicator {
-	return &NaiveCommunicator{}
+// NewCommunicator constructor creates new ConsensusCommunicator
+func NewCommunicator() *ConsensusCommunicator {
+	return &ConsensusCommunicator{}
 }
 
 // Start method implements Starter interface
-func (nc *NaiveCommunicator) Init(ctx context.Context) error {
+func (nc *ConsensusCommunicator) Init(ctx context.Context) error {
 	nc.phase1result = make(chan phase1Result)
 	nc.phase2result = make(chan phase2Result)
 	nc.phase3result = make(chan phase3Result)
@@ -100,17 +100,17 @@ func (nc *NaiveCommunicator) Init(ctx context.Context) error {
 	return nil
 }
 
-func (nc *NaiveCommunicator) getPulseNumber() core.PulseNumber {
+func (nc *ConsensusCommunicator) getPulseNumber() core.PulseNumber {
 	pulseNumber := atomic.LoadUint32(&nc.currentPulseNumber)
 	return core.PulseNumber(pulseNumber)
 }
 
-func (nc *NaiveCommunicator) setPulseNumber(new core.PulseNumber) bool {
+func (nc *ConsensusCommunicator) setPulseNumber(new core.PulseNumber) bool {
 	old := nc.getPulseNumber()
 	return old < new && atomic.CompareAndSwapUint32(&nc.currentPulseNumber, uint32(old), uint32(new))
 }
 
-func (nc *NaiveCommunicator) sendRequestToNodes(participants []core.Node, packet packets.ConsensusPacket) {
+func (nc *ConsensusCommunicator) sendRequestToNodes(participants []core.Node, packet packets.ConsensusPacket) {
 	for _, node := range participants {
 		if node.ID().Equal(nc.NodeKeeper.GetOrigin().ID()) {
 			continue
@@ -129,7 +129,7 @@ func (nc *NaiveCommunicator) sendRequestToNodes(participants []core.Node, packet
 	}
 }
 
-func (nc *NaiveCommunicator) sendRequestToNodesWithOrigin(originClaim *packets.NodeAnnounceClaim,
+func (nc *ConsensusCommunicator) sendRequestToNodesWithOrigin(originClaim *packets.NodeAnnounceClaim,
 	participants []core.Node, packet *packets.Phase1Packet) error {
 
 	requests := make(map[core.RecordRef]packets.ConsensusPacket)
@@ -160,7 +160,7 @@ func (nc *NaiveCommunicator) sendRequestToNodesWithOrigin(originClaim *packets.N
 	return nil
 }
 
-func (nc *NaiveCommunicator) generatePhase2Response(origReq, req *packets.Phase2Packet, list network.UnsyncList) (*packets.Phase2Packet, error) {
+func (nc *ConsensusCommunicator) generatePhase2Response(origReq, req *packets.Phase2Packet, list network.UnsyncList) (*packets.Phase2Packet, error) {
 	answers := make([]packets.ReferendumVote, 0)
 	for _, vote := range req.GetVotes() {
 		if vote.Type() != packets.TypeMissingNode {
@@ -218,7 +218,7 @@ func (nc *NaiveCommunicator) generatePhase2Response(origReq, req *packets.Phase2
 }
 
 // ExchangePhase1 used in first consensus phase to exchange data between participants
-func (nc *NaiveCommunicator) ExchangePhase1(
+func (nc *ConsensusCommunicator) ExchangePhase1(
 	ctx context.Context,
 	originClaim *packets.NodeAnnounceClaim,
 	participants []core.Node,
@@ -311,7 +311,7 @@ func (nc *NaiveCommunicator) ExchangePhase1(
 }
 
 // ExchangePhase2 used in second consensus phase to exchange data between participants
-func (nc *NaiveCommunicator) ExchangePhase2(ctx context.Context, list network.UnsyncList,
+func (nc *ConsensusCommunicator) ExchangePhase2(ctx context.Context, list network.UnsyncList,
 	participants []core.Node, packet *packets.Phase2Packet) (map[core.RecordRef]*packets.Phase2Packet, error) {
 	ctx, span := instracer.StartSpan(ctx, "Communicator.ExchangePhase2")
 	span.AddAttributes(trace.Int64Attribute("pulse", int64(packet.GetPulseNumber())))
@@ -377,7 +377,7 @@ func selectCandidate(candidates []core.RecordRef) core.RecordRef {
 	return candidates[0]
 }
 
-func (nc *NaiveCommunicator) sendAdditionalRequests(origReq *packets.Phase2Packet, additionalRequests []*AdditionalRequest) error {
+func (nc *ConsensusCommunicator) sendAdditionalRequests(origReq *packets.Phase2Packet, additionalRequests []*AdditionalRequest) error {
 	for _, req := range additionalRequests {
 		newReq := *origReq
 		newReq.AddVote(&packets.MissingNode{NodeIndex: uint16(req.RequestIndex)})
@@ -397,7 +397,7 @@ func (nc *NaiveCommunicator) sendAdditionalRequests(origReq *packets.Phase2Packe
 }
 
 // ExchangePhase21 used in second consensus phase to exchange data between participants
-func (nc *NaiveCommunicator) ExchangePhase21(ctx context.Context, list network.UnsyncList, packet *packets.Phase2Packet,
+func (nc *ConsensusCommunicator) ExchangePhase21(ctx context.Context, list network.UnsyncList, packet *packets.Phase2Packet,
 	additionalRequests []*AdditionalRequest) ([]packets.ReferendumVote, error) {
 	ctx, span := instracer.StartSpan(ctx, "Communicator.ExchangePhase21")
 	span.AddAttributes(trace.Int64Attribute("pulse", int64(packet.GetPulseNumber())))
@@ -478,7 +478,7 @@ func (nc *NaiveCommunicator) ExchangePhase21(ctx context.Context, list network.U
 }
 
 // ExchangePhase3 used in third consensus step to exchange data between participants
-func (nc *NaiveCommunicator) ExchangePhase3(ctx context.Context, participants []core.Node, packet *packets.Phase3Packet) (map[core.RecordRef]*packets.Phase3Packet, error) {
+func (nc *ConsensusCommunicator) ExchangePhase3(ctx context.Context, participants []core.Node, packet *packets.Phase3Packet) (map[core.RecordRef]*packets.Phase3Packet, error) {
 	result := make(map[core.RecordRef]*packets.Phase3Packet, len(participants))
 	ctx, span := instracer.StartSpan(ctx, "Communicator.ExchangePhase3")
 	span.AddAttributes(trace.Int64Attribute("pulse", int64(packet.GetPulseNumber())))
@@ -519,7 +519,7 @@ func (nc *NaiveCommunicator) ExchangePhase3(ctx context.Context, participants []
 	}
 }
 
-func (nc *NaiveCommunicator) phase1DataHandler(packet packets.ConsensusPacket, sender core.RecordRef) {
+func (nc *ConsensusCommunicator) phase1DataHandler(packet packets.ConsensusPacket, sender core.RecordRef) {
 	p, ok := packet.(*packets.Phase1Packet)
 	if !ok {
 		log.Errorln("invalid Phase1Packet")
@@ -540,7 +540,7 @@ func (nc *NaiveCommunicator) phase1DataHandler(packet packets.ConsensusPacket, s
 	nc.phase1result <- phase1Result{id: sender, packet: p}
 }
 
-func (nc *NaiveCommunicator) phase2DataHandler(packet packets.ConsensusPacket, sender core.RecordRef) {
+func (nc *ConsensusCommunicator) phase2DataHandler(packet packets.ConsensusPacket, sender core.RecordRef) {
 	p, ok := packet.(*packets.Phase2Packet)
 	if !ok {
 		log.Errorln("invalid Phase2Packet")
@@ -557,7 +557,7 @@ func (nc *NaiveCommunicator) phase2DataHandler(packet packets.ConsensusPacket, s
 	nc.phase2result <- phase2Result{id: sender, packet: p}
 }
 
-func (nc *NaiveCommunicator) phase3DataHandler(packet packets.ConsensusPacket, sender core.RecordRef) {
+func (nc *ConsensusCommunicator) phase3DataHandler(packet packets.ConsensusPacket, sender core.RecordRef) {
 	p, ok := packet.(*packets.Phase3Packet)
 	if !ok {
 		log.Warn("failed to cast a type 3 packet to phase3packet")

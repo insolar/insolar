@@ -148,7 +148,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		n.NodeKeeper,
 		merkle.NewCalculator(),
 		consensusNetwork,
-		phases.NewNaiveCommunicator(),
+		phases.NewCommunicator(),
 		phases.NewFirstPhase(),
 		phases.NewSecondPhase(),
 		phases.NewThirdPhase(),
