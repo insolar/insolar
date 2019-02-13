@@ -25,6 +25,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+//go:generate stringer -type=ClaimType
 type ClaimType uint8
 
 const (

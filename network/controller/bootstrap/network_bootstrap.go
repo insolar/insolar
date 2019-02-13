@@ -46,14 +46,14 @@ type networkBootstrapper struct {
 }
 
 func (nb *networkBootstrapper) Bootstrap(ctx context.Context) (*network.BootstrapResult, error) {
-	ctx, span := instracer.StartSpan(ctx, "NetworkBoostrapper.Bootstrap")
+	ctx, span := instracer.StartSpan(ctx, "NetworkBootstrapper.Bootstrap")
 	defer span.End()
 	if len(nb.Certificate.GetDiscoveryNodes()) == 0 {
 		host, err := host.NewHostN(nb.NodeKeeper.GetOrigin().Address(), nb.NodeKeeper.GetOrigin().ID())
 		if err != nil {
-			return nil, errors.Wrap(err, "[ Bootstrap ] failed to create a host")
+			return nil, errors.Wrap(err, "failed to create a host")
 		}
-		log.Info("Zero bootstrap")
+		log.Info("[ Bootstrap ] Zero bootstrap")
 		return &network.BootstrapResult{
 			Host: host,
 			// FirstPulseTime: nb.Bootstrapper.GetFirstFakePulseTime(),
@@ -65,14 +65,15 @@ func (nb *networkBootstrapper) Bootstrap(ctx context.Context) (*network.Bootstra
 		result, err = nb.bootstrapDiscovery(ctx)
 		// if the network is up and complete, we return discovery nodes via consensus
 		if err == ErrReconnectRequired {
-			log.Debugf("Connecting discovery node %s as joiner", nb.NodeKeeper.GetOrigin().ID())
+			log.Debugf("[ Bootstrap ] Connecting discovery node %s as joiner", nb.NodeKeeper.GetOrigin().ID())
+			nb.NodeKeeper.SetState(network.Waiting)
 			result, err = nb.bootstrapJoiner(ctx)
 		}
 	} else {
 		result, err = nb.bootstrapJoiner(ctx)
 	}
 	if err != nil {
-		return nil, errors.Wrap(err, "[ Bootstrap ] failed to bootstrap")
+		return nil, errors.Wrap(err, "failed to bootstrap")
 	}
 	nb.NodeKeeper.SetIsBootstrapped(true)
 	return result, nil
@@ -87,7 +88,7 @@ func (nb *networkBootstrapper) GetLastPulse() core.PulseNumber {
 }
 
 func (nb *networkBootstrapper) bootstrapJoiner(ctx context.Context) (*network.BootstrapResult, error) {
-	ctx, span := instracer.StartSpan(ctx, "NetworkBoostrapper.bootstrapJoiner")
+	ctx, span := instracer.StartSpan(ctx, "NetworkBootstrapper.bootstrapJoiner")
 	defer span.End()
 	result, discoveryNode, err := nb.Bootstrapper.Bootstrap(ctx)
 	if err != nil {

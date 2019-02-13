@@ -107,6 +107,7 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse) (*Firs
 		if !success {
 			return nil, errors.Wrap(err, "[ NET Consensus phase-1 ] Failed to add origin claim in Phase1Packet")
 		}
+		log.Debug("[ NET Consensus phase-1 ] Added origin claim in Phase1Packet")
 	}
 	for {
 		claim := fp.NodeKeeper.GetClaimQueue().Front()
@@ -118,7 +119,9 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse) (*Firs
 			break
 		}
 		_ = fp.NodeKeeper.GetClaimQueue().Pop()
+		log.Debugf("[ NET Consensus phase-1 ] Added claim %s to Phase1Packet", claim.Type())
 	}
+	log.Infof("[ NET Consensus phase-1 ] Phase1Packet claims count: %d", len(packet.GetClaims()))
 
 	activeNodes := fp.NodeKeeper.GetActiveNodes()
 	resultPackets, err := fp.Communicator.ExchangePhase1(ctx, originClaim, activeNodes, packet)

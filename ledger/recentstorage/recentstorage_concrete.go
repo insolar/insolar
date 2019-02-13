@@ -109,6 +109,10 @@ func (p *RecentStorageProvider) ClonePendingStorage(ctx context.Context, fromJet
 		requests: map[core.RecordID]*lockedPendingObjectContext{},
 	}
 	for objID, pendingContext := range fromStorage.requests {
+		if len(pendingContext.Context.Requests) == 0 {
+			continue
+		}
+
 		pendingContext.lock.Lock()
 
 		clone := PendingObjectContext{
@@ -211,8 +215,8 @@ func (r *RecentIndexStorageConcrete) AddObjectWithTLL(ctx context.Context, id co
 	defer r.lock.Unlock()
 
 	if ttl < 0 {
-		inslogger.FromContext(ctx).Error("about zero ttl happened")
-		panic("about zero ttl happened")
+		inslogger.FromContext(ctx).Error("below zero ttl happened")
+		panic("below zero ttl happened")
 	}
 
 	r.indexes[id] = recentObjectMeta{ttl: ttl}
@@ -394,16 +398,19 @@ func (r *PendingStorageConcrete) GetRequestsForObject(obj core.RecordID) []core.
 // RemovePendingRequest removes a request on object from cache
 func (r *PendingStorageConcrete) RemovePendingRequest(ctx context.Context, obj, req core.RecordID) {
 	r.lock.RLock()
+	defer r.lock.RUnlock()
+
 	objContext, ok := r.requests[obj]
 	if !ok {
-		r.lock.RUnlock()
 		return
 	}
 
 	objContext.lock.Lock()
 	defer objContext.lock.Unlock()
 
-	r.lock.RUnlock()
+	if len(objContext.Context.Requests) == 0 {
+		return
+	}
 
 	firstRequest := objContext.Context.Requests[0]
 	if firstRequest.Pulse() == req.Pulse() {
@@ -423,10 +430,7 @@ func (r *PendingStorageConcrete) RemovePendingRequest(ctx context.Context, obj, 
 	}
 
 	if len(objContext.Context.Requests) == 1 {
-		r.lock.Lock()
-		delete(r.requests, obj)
-		r.lock.Unlock()
-
+		objContext.Context.Requests = []core.RecordID{}
 		return
 	}
 

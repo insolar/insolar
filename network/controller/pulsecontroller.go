@@ -32,6 +32,7 @@ type PulseController interface {
 
 type pulseController struct {
 	PulseHandler network.PulseHandler `inject:""`
+	NodeKeeper   network.NodeKeeper   `inject:""`
 
 	hostNetwork  network.HostNetwork
 	routingTable network.RoutingTable
@@ -45,7 +46,11 @@ func (pc *pulseController) Init(ctx context.Context) error {
 
 func (pc *pulseController) processPulse(ctx context.Context, request network.Request) (network.Response, error) {
 	data := request.GetData().(*packet.RequestPulse)
-	go pc.PulseHandler.HandlePulse(context.Background(), data.Pulse)
+	// we should not process pulses in Waiting state because network can be unready to join current node,
+	// so we should wait for pulse from consensus phase1 packet
+	if pc.NodeKeeper.GetState() != network.Waiting {
+		go pc.PulseHandler.HandlePulse(context.Background(), data.Pulse)
+	}
 	return pc.hostNetwork.BuildResponse(ctx, request, &packet.ResponsePulse{Success: true, Error: ""}), nil
 }
 

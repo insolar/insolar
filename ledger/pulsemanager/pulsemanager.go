@@ -322,8 +322,10 @@ func (m *PulseManager) getExecutorHotData(
 
 	requestCount := 0
 	for objID, objContext := range pendingStorage.GetRequests() {
-		pendingRequests[objID] = objContext
-		requestCount += len(objContext.Requests)
+		if len(objContext.Requests) > 0 {
+			pendingRequests[objID] = objContext
+			requestCount += len(objContext.Requests)
+		}
 	}
 
 	stats.Record(
