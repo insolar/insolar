@@ -25,6 +25,11 @@ type PulseTrackerMock struct {
 	AddPulsePreCounter uint64
 	AddPulseMock       mPulseTrackerMockAddPulse
 
+	DeletePulseFunc       func(p context.Context, p1 core.PulseNumber) (r error)
+	DeletePulseCounter    uint64
+	DeletePulsePreCounter uint64
+	DeletePulseMock       mPulseTrackerMockDeletePulse
+
 	GetLatestPulseFunc       func(p context.Context) (r *Pulse, r1 error)
 	GetLatestPulseCounter    uint64
 	GetLatestPulsePreCounter uint64
@@ -55,6 +60,7 @@ func NewPulseTrackerMock(t minimock.Tester) *PulseTrackerMock {
 	}
 
 	m.AddPulseMock = mPulseTrackerMockAddPulse{mock: m}
+	m.DeletePulseMock = mPulseTrackerMockDeletePulse{mock: m}
 	m.GetLatestPulseMock = mPulseTrackerMockGetLatestPulse{mock: m}
 	m.GetNthPrevPulseMock = mPulseTrackerMockGetNthPrevPulse{mock: m}
 	m.GetPreviousPulseMock = mPulseTrackerMockGetPreviousPulse{mock: m}
@@ -206,6 +212,154 @@ func (m *PulseTrackerMock) AddPulseFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.AddPulseFunc != nil {
 		return atomic.LoadUint64(&m.AddPulseCounter) > 0
+	}
+
+	return true
+}
+
+type mPulseTrackerMockDeletePulse struct {
+	mock              *PulseTrackerMock
+	mainExpectation   *PulseTrackerMockDeletePulseExpectation
+	expectationSeries []*PulseTrackerMockDeletePulseExpectation
+}
+
+type PulseTrackerMockDeletePulseExpectation struct {
+	input  *PulseTrackerMockDeletePulseInput
+	result *PulseTrackerMockDeletePulseResult
+}
+
+type PulseTrackerMockDeletePulseInput struct {
+	p  context.Context
+	p1 core.PulseNumber
+}
+
+type PulseTrackerMockDeletePulseResult struct {
+	r error
+}
+
+//Expect specifies that invocation of PulseTracker.DeletePulse is expected from 1 to Infinity times
+func (m *mPulseTrackerMockDeletePulse) Expect(p context.Context, p1 core.PulseNumber) *mPulseTrackerMockDeletePulse {
+	m.mock.DeletePulseFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &PulseTrackerMockDeletePulseExpectation{}
+	}
+	m.mainExpectation.input = &PulseTrackerMockDeletePulseInput{p, p1}
+	return m
+}
+
+//Return specifies results of invocation of PulseTracker.DeletePulse
+func (m *mPulseTrackerMockDeletePulse) Return(r error) *PulseTrackerMock {
+	m.mock.DeletePulseFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &PulseTrackerMockDeletePulseExpectation{}
+	}
+	m.mainExpectation.result = &PulseTrackerMockDeletePulseResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of PulseTracker.DeletePulse is expected once
+func (m *mPulseTrackerMockDeletePulse) ExpectOnce(p context.Context, p1 core.PulseNumber) *PulseTrackerMockDeletePulseExpectation {
+	m.mock.DeletePulseFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &PulseTrackerMockDeletePulseExpectation{}
+	expectation.input = &PulseTrackerMockDeletePulseInput{p, p1}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *PulseTrackerMockDeletePulseExpectation) Return(r error) {
+	e.result = &PulseTrackerMockDeletePulseResult{r}
+}
+
+//Set uses given function f as a mock of PulseTracker.DeletePulse method
+func (m *mPulseTrackerMockDeletePulse) Set(f func(p context.Context, p1 core.PulseNumber) (r error)) *PulseTrackerMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.DeletePulseFunc = f
+	return m.mock
+}
+
+//DeletePulse implements github.com/insolar/insolar/ledger/storage.PulseTracker interface
+func (m *PulseTrackerMock) DeletePulse(p context.Context, p1 core.PulseNumber) (r error) {
+	counter := atomic.AddUint64(&m.DeletePulsePreCounter, 1)
+	defer atomic.AddUint64(&m.DeletePulseCounter, 1)
+
+	if len(m.DeletePulseMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.DeletePulseMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to PulseTrackerMock.DeletePulse. %v %v", p, p1)
+			return
+		}
+
+		input := m.DeletePulseMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, PulseTrackerMockDeletePulseInput{p, p1}, "PulseTracker.DeletePulse got unexpected parameters")
+
+		result := m.DeletePulseMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the PulseTrackerMock.DeletePulse")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.DeletePulseMock.mainExpectation != nil {
+
+		input := m.DeletePulseMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, PulseTrackerMockDeletePulseInput{p, p1}, "PulseTracker.DeletePulse got unexpected parameters")
+		}
+
+		result := m.DeletePulseMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the PulseTrackerMock.DeletePulse")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.DeletePulseFunc == nil {
+		m.t.Fatalf("Unexpected call to PulseTrackerMock.DeletePulse. %v %v", p, p1)
+		return
+	}
+
+	return m.DeletePulseFunc(p, p1)
+}
+
+//DeletePulseMinimockCounter returns a count of PulseTrackerMock.DeletePulseFunc invocations
+func (m *PulseTrackerMock) DeletePulseMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.DeletePulseCounter)
+}
+
+//DeletePulseMinimockPreCounter returns the value of PulseTrackerMock.DeletePulse invocations
+func (m *PulseTrackerMock) DeletePulseMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.DeletePulsePreCounter)
+}
+
+//DeletePulseFinished returns true if mock invocations count is ok
+func (m *PulseTrackerMock) DeletePulseFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.DeletePulseMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.DeletePulseCounter) == uint64(len(m.DeletePulseMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.DeletePulseMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.DeletePulseCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.DeletePulseFunc != nil {
+		return atomic.LoadUint64(&m.DeletePulseCounter) > 0
 	}
 
 	return true
@@ -823,6 +977,10 @@ func (m *PulseTrackerMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to PulseTrackerMock.AddPulse")
 	}
 
+	if !m.DeletePulseFinished() {
+		m.t.Fatal("Expected call to PulseTrackerMock.DeletePulse")
+	}
+
 	if !m.GetLatestPulseFinished() {
 		m.t.Fatal("Expected call to PulseTrackerMock.GetLatestPulse")
 	}
@@ -860,6 +1018,10 @@ func (m *PulseTrackerMock) MinimockFinish() {
 		m.t.Fatal("Expected call to PulseTrackerMock.AddPulse")
 	}
 
+	if !m.DeletePulseFinished() {
+		m.t.Fatal("Expected call to PulseTrackerMock.DeletePulse")
+	}
+
 	if !m.GetLatestPulseFinished() {
 		m.t.Fatal("Expected call to PulseTrackerMock.GetLatestPulse")
 	}
@@ -891,6 +1053,7 @@ func (m *PulseTrackerMock) MinimockWait(timeout time.Duration) {
 	for {
 		ok := true
 		ok = ok && m.AddPulseFinished()
+		ok = ok && m.DeletePulseFinished()
 		ok = ok && m.GetLatestPulseFinished()
 		ok = ok && m.GetNthPrevPulseFinished()
 		ok = ok && m.GetPreviousPulseFinished()
@@ -905,6 +1068,10 @@ func (m *PulseTrackerMock) MinimockWait(timeout time.Duration) {
 
 			if !m.AddPulseFinished() {
 				m.t.Error("Expected call to PulseTrackerMock.AddPulse")
+			}
+
+			if !m.DeletePulseFinished() {
+				m.t.Error("Expected call to PulseTrackerMock.DeletePulse")
 			}
 
 			if !m.GetLatestPulseFinished() {
@@ -936,6 +1103,10 @@ func (m *PulseTrackerMock) MinimockWait(timeout time.Duration) {
 func (m *PulseTrackerMock) AllMocksCalled() bool {
 
 	if !m.AddPulseFinished() {
+		return false
+	}
+
+	if !m.DeletePulseFinished() {
 		return false
 	}
 
