@@ -106,7 +106,6 @@ func NewNodeKeeper(origin core.Node) network.NodeKeeper {
 
 type nodekeeper struct {
 	origin     core.Node
-	state      network.NodeKeeperState
 	claimQueue *claimQueue
 
 	nodesJoinedDuringPrevPulse bool
@@ -123,8 +122,9 @@ type nodekeeper struct {
 	tempMapR map[core.RecordRef]*host.Host
 	tempMapS map[core.ShortNodeID]*host.Host
 
-	sync     network.UnsyncList
 	syncLock sync.Mutex
+	sync     network.UnsyncList
+	state    network.NodeKeeperState
 
 	isBootstrap     bool
 	isBootstrapLock sync.RWMutex
@@ -156,12 +156,12 @@ func (nk *nodekeeper) Wipe(isDiscovery bool) {
 	nk.nodesJoinedDuringPrevPulse = false
 	nk.active = make(map[core.RecordRef]core.Node)
 	nk.reindex()
+	nk.syncLock.Lock()
+	nk.sync = newUnsyncList(nk.origin, []core.Node{}, 0)
 	if isDiscovery {
 		nk.addActiveNode(nk.origin)
 		nk.state = network.Ready
 	}
-	nk.syncLock.Lock()
-	nk.sync = newUnsyncList(nk.origin, []core.Node{}, 0)
 	nk.syncLock.Unlock()
 }
 
@@ -313,10 +313,16 @@ func (nk *nodekeeper) addToIndex(node core.Node) {
 }
 
 func (nk *nodekeeper) SetState(state network.NodeKeeperState) {
+	nk.syncLock.Lock()
+	defer nk.syncLock.Unlock()
+
 	nk.state = state
 }
 
 func (nk *nodekeeper) GetState() network.NodeKeeperState {
+	nk.syncLock.Lock()
+	defer nk.syncLock.Unlock()
+
 	return nk.state
 }
 
@@ -344,6 +350,9 @@ func (nk *nodekeeper) GetClaimQueue() network.ClaimQueue {
 }
 
 func (nk *nodekeeper) NodesJoinedDuringPreviousPulse() bool {
+	nk.activeLock.RLock()
+	defer nk.activeLock.RUnlock()
+
 	return nk.nodesJoinedDuringPrevPulse
 }
 
@@ -366,6 +375,7 @@ func (nk *nodekeeper) Sync(list network.UnsyncList) {
 	for _, node := range nodes {
 		if node.ID().Equal(nk.origin.ID()) {
 			foundOrigin = true
+			nk.state = network.Ready
 		}
 	}
 
@@ -419,9 +429,6 @@ func (nk *nodekeeper) reindex() {
 
 	for _, node := range nk.active {
 		nk.addToIndex(node)
-		if node.ID().Equal(nk.origin.ID()) {
-			nk.state = network.Ready
-		}
 	}
 }
 
