@@ -18,7 +18,7 @@ GENERATED_CONFIGS_DIR=$BASE_DIR/$CONFIGS_DIR/generated_configs
 GENERATED_DISCOVERY_CONFIGS_DIR=$GENERATED_CONFIGS_DIR/discoverynodes
 INSGORUND_PORT_FILE=$BASE_DIR/$CONFIGS_DIR/insgorund_ports.txt
 
-insolar_log_level=${INSOLAR_LOG_LEVEL:-"Info"}
+insolar_log_level=${INSOLAR_LOG_LEVEL:-"Debug"}
 gorund_log_level=$insolar_log_level
 
 NUM_DISCOVERY_NODES=$(sed '/^nodes:/ q' $GENESIS_CONFIG | grep "host:" | grep -v "#" | wc -l)
