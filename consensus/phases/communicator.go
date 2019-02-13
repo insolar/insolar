@@ -118,6 +118,7 @@ func (nc *ConsensusCommunicator) sendRequestToNodes(ctx context.Context, partici
 
 		go func(ctx context.Context, n core.Node, packet packets.ConsensusPacket) {
 			logger := inslogger.FromContext(ctx)
+			logger.Debugf("Send %s request to %s", packet.GetType(), n.ID())
 			err := nc.ConsensusNetwork.SignAndSendPacket(packet, n.ID(), nc.Cryptography)
 			if err != nil {
 				logger.Error("Failed to send phase1 request: " + err.Error())
@@ -150,6 +151,7 @@ func (nc *ConsensusCommunicator) sendRequestToNodesWithOrigin(ctx context.Contex
 	for ref, req := range requests {
 		go func(ctx context.Context, node core.RecordRef, consensusPacket packets.ConsensusPacket) {
 			logger := inslogger.FromContext(ctx)
+			logger.Debug("Send phase1 request with origin to %s", node)
 			err := nc.ConsensusNetwork.SignAndSendPacket(consensusPacket, node, nc.Cryptography)
 			if err != nil {
 				logger.Error("Failed to send phase1 request with origin: " + err.Error())
@@ -461,6 +463,7 @@ func (nc *ConsensusCommunicator) ExchangePhase21(ctx context.Context, list netwo
 			}
 
 			if shouldSendResponse(&res) {
+				logger.Debugf("Send phase2 response to %s", res.id)
 				// send response
 				response := packet
 				if res.packet.ContainsRequests() {
@@ -532,6 +535,7 @@ func (nc *ConsensusCommunicator) ExchangePhase3(ctx context.Context, participant
 			}
 
 			if shouldSendResponse(&res) {
+				logger.Debugf("Send phase3 response to %s", res.id)
 				// send response
 				err := nc.ConsensusNetwork.SignAndSendPacket(packet, res.id, nc.Cryptography)
 				if err != nil {
