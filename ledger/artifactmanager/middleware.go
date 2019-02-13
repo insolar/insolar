@@ -225,10 +225,15 @@ func (m *middleware) waitForHotData(handler core.MessageHandler) core.MessageHan
 
 func (m *middleware) releaseHotDataWaiters(handler core.MessageHandler) core.MessageHandler {
 	return func(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
+		rep, err := handler(ctx, parcel)
+
 		hotDataMessage := parcel.Message().(*message.HotData)
 		jetID := hotDataMessage.Jet.Record()
+		unlockErr := m.hotDataWaiter.Unlock(ctx, *jetID)
+		if unlockErr != nil {
+			inslogger.FromContext(ctx).Error(err)
+		}
 
-		defer m.hotDataWaiter.Unlock(ctx, *jetID)
-		return handler(ctx, parcel)
+		return rep, err
 	}
 }

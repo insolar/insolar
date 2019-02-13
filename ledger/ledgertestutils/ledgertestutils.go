@@ -192,7 +192,8 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 	}
 
 	if closeJets {
-		pm.HotDataWaiter.Unlock(ctx, *jet.NewID(0, nil))
+		err := pm.HotDataWaiter.Unlock(ctx, *jet.NewID(0, nil))
+		require.NoError(t, err)
 	}
 
 	// Create ledger.

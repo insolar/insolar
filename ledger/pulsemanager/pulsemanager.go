@@ -673,19 +673,29 @@ func (m *PulseManager) prepareArtifactManagerMessageHandlerForNextPulse(ctx cont
 
 	m.HotDataWaiter.ThrowTimeout(ctx)
 
+	logger := inslogger.FromContext(ctx)
 	for _, jetInfo := range jets {
 		if jetInfo.left == nil && jetInfo.right == nil {
 			// No split happened.
 			if jetInfo.mineNext {
-				m.HotDataWaiter.Unlock(ctx, jetInfo.id)
+				err := m.HotDataWaiter.Unlock(ctx, jetInfo.id)
+				if err != nil {
+					logger.Error(err)
+				}
 			}
 		} else {
 			// Split happened.
 			if jetInfo.left.mineNext {
-				m.HotDataWaiter.Unlock(ctx, jetInfo.left.id)
+				err := m.HotDataWaiter.Unlock(ctx, jetInfo.left.id)
+				if err != nil {
+					logger.Error(err)
+				}
 			}
 			if jetInfo.right.mineNext {
-				m.HotDataWaiter.Unlock(ctx, jetInfo.right.id)
+				err := m.HotDataWaiter.Unlock(ctx, jetInfo.right.id)
+				if err != nil {
+					logger.Error(err)
+				}
 			}
 		}
 	}
