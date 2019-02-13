@@ -20,34 +20,17 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
+	"errors"
 
 	"github.com/insolar/insolar/core"
 	"github.com/ugorji/go/codec"
 )
 
-// Pulse is a record containing pulse info.
-type Pulse struct {
-	Prev         *core.PulseNumber
-	Next         *core.PulseNumber
-	SerialNumber int
-	Pulse        core.Pulse
-}
-
-// PulseTracker allows to modify state of the pulse inside db
-//go:generate minimock -i github.com/insolar/insolar/ledger/storage.PulseTracker -o ./ -s _mock.go
-type PulseTracker interface {
-	GetPulse(ctx context.Context, num core.PulseNumber) (*Pulse, error)
-	GetPreviousPulse(ctx context.Context, num core.PulseNumber) (*Pulse, error)
-	GetNthPrevPulse(ctx context.Context, n uint, from core.PulseNumber) (*Pulse, error)
-	GetLatestPulse(ctx context.Context) (*Pulse, error)
-
-	AddPulse(ctx context.Context, pulse core.Pulse) error
-}
-
 type pulseTracker struct {
 	DB DBContext `inject:""`
 }
 
+// NewPulseTracker returns new instance PulseTracker with DB-storage realization
 func NewPulseTracker() PulseTracker {
 	return new(pulseTracker)
 }
@@ -220,6 +203,11 @@ func (m *TransactionManager) GetLatestPulse(ctx context.Context) (*Pulse, error)
 // Deprecated: use core.PulseStorage.Current() instead (or private getLatestPulse if applicable).
 func (pt *pulseTracker) GetLatestPulse(ctx context.Context) (*Pulse, error) {
 	return pt.getLatestPulse(ctx)
+}
+
+// DeletePulse delete pulse data.
+func (pt *pulseTracker) DeletePulse(ctx context.Context, num core.PulseNumber) error {
+	return errors.New("DB pulse removal is forbidden")
 }
 
 func (pt *pulseTracker) getLatestPulse(ctx context.Context) (*Pulse, error) {

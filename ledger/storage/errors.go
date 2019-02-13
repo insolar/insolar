@@ -32,9 +32,15 @@ var (
 	// ErrConflict is the alias for badger.ErrConflict.
 	ErrConflict = badger.ErrConflict
 
-	// ErrOverride is returned if SetRecord tries to update existing record.
+	// ErrOverride is returned if something tries to update existing record.
 	ErrOverride = errors.New("records override is forbidden")
 
 	// ErrClosed is returned when attempt to read or write to closed db.
 	ErrClosed = errors.New("db is closed")
+
+	// ErrPrevPulse is returned if previous pulse not found in storage
+	ErrPrevPulse = errors.New("previous pulse not found")
+
+	// ErrBadPulse is returned when pulse less than latest
+	ErrBadPulse = errors.New("pulse should be bigger than latest")
 )
