@@ -21,12 +21,16 @@ import (
 	"context"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/consensus/phases"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller"
@@ -34,7 +38,9 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/merkle"
 	"github.com/insolar/insolar/network/routing"
+	"github.com/insolar/insolar/network/utils"
 	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
 )
 
 // ServiceNetwork is facade for network.
@@ -54,19 +60,22 @@ type ServiceNetwork struct {
 	CryptographyScheme  core.PlatformCryptographyScheme `inject:""`
 	NodeKeeper          network.NodeKeeper              `inject:""`
 	NetworkSwitcher     core.NetworkSwitcher            `inject:""`
+	TerminationHandler  core.TerminationHandler         `inject:""`
 
 	// subcomponents
 	PhaseManager phases.PhaseManager `inject:"subcomponent"`
 	Controller   network.Controller  `inject:"subcomponent"`
 
-	// fakePulsar *fakepulsar.FakePulsar
-	isGenesis bool
-	skip      int
+	isGenesis   bool
+	isDiscovery bool
+	skip        int
+
+	lock sync.Mutex
 }
 
 // NewServiceNetwork returns a new ServiceNetwork.
-func NewServiceNetwork(conf configuration.Configuration, scheme core.PlatformCryptographyScheme, rootCm *component.Manager, isGenesis bool) (*ServiceNetwork, error) {
-	serviceNetwork := &ServiceNetwork{cm: component.NewManager(rootCm), cfg: conf, CryptographyScheme: scheme, isGenesis: isGenesis, skip: conf.Service.Skip}
+func NewServiceNetwork(conf configuration.Configuration, rootCm *component.Manager, isGenesis bool) (*ServiceNetwork, error) {
+	serviceNetwork := &ServiceNetwork{cm: component.NewManager(rootCm), cfg: conf, isGenesis: isGenesis, skip: conf.Service.Skip}
 	return serviceNetwork, nil
 }
 
@@ -119,7 +128,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	}
 
 	consensusNetwork, err := hostnetwork.NewConsensusNetwork(
-		n.cfg.Host.Transport.Address,
+		n.NodeKeeper.GetOrigin().ConsensusAddress(),
 		n.CertificateManager.GetCertificate().GetNodeRef().String(),
 		n.NodeKeeper.GetOrigin().ShortID(),
 		n.routingTable,
@@ -129,10 +138,13 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	}
 
 	n.hostNetwork = hostnetwork.NewHostTransport(internalTransport, n.routingTable)
-	options := controller.ConfigureOptions(n.cfg.Host)
+	options := controller.ConfigureOptions(n.cfg)
+
+	cert := n.CertificateManager.GetCertificate()
+	n.isDiscovery = utils.OriginIsDiscovery(cert)
 
 	n.cm.Inject(n,
-		n.CertificateManager.GetCertificate(),
+		cert,
 		n.NodeKeeper,
 		merkle.NewCalculator(),
 		consensusNetwork,
@@ -150,16 +162,21 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		bootstrap.NewChallengeResponseController(options, internalTransport),
 		bootstrap.NewNetworkBootstrapper(),
 	)
+	err = n.cm.Init(ctx)
+	if err != nil {
+		return errors.Wrap(err, "Failed to init internal components")
+	}
 
-	// n.fakePulsar = fakepulsar.NewFakePulsar(n.HandlePulse, n.cfg.Pulsar.PulseTime)
 	return nil
 }
 
 // Start implements component.Starter
 func (n *ServiceNetwork) Start(ctx context.Context) error {
-	log.Infoln("Network starts listening...")
-	n.hostNetwork.Start(ctx)
+	logger := inslogger.FromContext(ctx)
+
+	logger.Infoln("Network starts listening...")
 	n.routingTable.Inject(n.NodeKeeper)
+	n.hostNetwork.Start(ctx)
 
 	log.Info("Starting network component manager...")
 	err := n.cm.Start(ctx)
@@ -168,14 +185,20 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 	}
 
 	log.Infoln("Bootstrapping network...")
-	err = n.Controller.Bootstrap(ctx)
+	_, err = n.Controller.Bootstrap(ctx)
 	if err != nil {
 		return errors.Wrap(err, "Failed to bootstrap network")
 	}
 
-	// n.fakePulsar.Start(ctx)
-
+	logger.Info("Service network started")
 	return nil
+}
+
+func (n *ServiceNetwork) GracefulStop(ctx context.Context) {
+	logger := inslogger.FromContext(ctx)
+	logger.Info("Gracefully stopping service network")
+
+	n.NodeKeeper.AddPendingClaim(&packets.NodeLeaveClaim{})
 }
 
 // Stop implements core.Component
@@ -191,63 +214,67 @@ func (n *ServiceNetwork) Stop(ctx context.Context) error {
 	return nil
 }
 
-func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse core.Pulse) {
-	// if !n.isFakePulse(&pulse) {
-	// 	n.fakePulsar.Stop(ctx)
-	// }
+func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse core.Pulse) {
+	currentTime := time.Now()
+
+	n.lock.Lock()
+	defer n.lock.Unlock()
+
 	if n.isGenesis {
 		return
 	}
-
-	traceID := "pulse_" + strconv.FormatUint(uint64(pulse.PulseNumber), 10)
-
+	traceID := "pulse_" + strconv.FormatUint(uint64(newPulse.PulseNumber), 10)
 	ctx, logger := inslogger.WithTraceField(ctx, traceID)
-	logger.Infof("Got new pulse number: %d", pulse.PulseNumber)
-	if n.PulseManager == nil {
-		logger.Error("PulseManager is not initialized")
-		return
-	}
+	logger.Infof("Got new pulse number: %d", newPulse.PulseNumber)
+	ctx, span := instracer.StartSpan(ctx, "ServiceNetwork.Handlepulse")
+	span.AddAttributes(
+		trace.Int64Attribute("pulse.PulseNumber", int64(newPulse.PulseNumber)),
+	)
+	defer span.End()
+
 	if !n.NodeKeeper.IsBootstrapped() {
-		n.Controller.SetLastIgnoredPulse(pulse.NextPulseNumber)
+		n.Controller.SetLastIgnoredPulse(newPulse.NextPulseNumber)
 		return
 	}
-	if pulse.PulseNumber <= n.Controller.GetLastIgnoredPulse()+core.PulseNumber(n.skip) {
-		log.Infof("Ignore pulse %d: network is not yet initialized", pulse.PulseNumber)
+	if n.isDiscovery && newPulse.PulseNumber <= n.Controller.GetLastIgnoredPulse()+core.PulseNumber(n.skip) {
+		log.Infof("Ignore pulse %d: network is not yet initialized", newPulse.PulseNumber)
 		return
 	}
+
 	currentPulse, err := n.PulseStorage.Current(ctx)
 	if err != nil {
-		logger.Error(errors.Wrap(err, "Could not get current pulse"))
+		logger.Fatalf("Could not get current pulse: %s", err.Error())
+	}
+
+	if !isNextPulse(currentPulse, &newPulse) {
+		logger.Infof("Incorrect pulse number. Current: %+v. New: %+v", currentPulse, newPulse)
 		return
 	}
-	if (pulse.PulseNumber > currentPulse.PulseNumber) &&
-		(pulse.PulseNumber >= currentPulse.NextPulseNumber) {
 
-		err = n.NetworkSwitcher.OnPulse(ctx, pulse)
-		if err != nil {
-			logger.Error(errors.Wrap(err, "Failed to call OnPulse on NetworkSwitcher"))
-			return
-		}
+	err = n.NetworkSwitcher.OnPulse(ctx, newPulse)
+	if err != nil {
+		logger.Error(errors.Wrap(err, "Failed to call OnPulse on NetworkSwitcher"))
+	}
 
-		err = n.PulseManager.Set(ctx, pulse, n.NetworkSwitcher.GetState() == core.CompleteNetworkState)
-		if err != nil {
-			logger.Error(errors.Wrap(err, "Failed to set pulse"))
-			return
-		}
+	logger.Debugf("Before set new current pulse number: %d", newPulse.PulseNumber)
+	err = n.PulseManager.Set(ctx, newPulse, n.NetworkSwitcher.GetState() == core.CompleteNetworkState)
+	if err != nil {
+		logger.Fatalf("Failed to set new pulse: %s", err.Error())
+	}
+	logger.Infof("Set new current pulse number: %d", newPulse.PulseNumber)
 
-		logger.Infof("Set new current pulse number: %d", pulse.PulseNumber)
-		// go func(logger core.Logger, network *ServiceNetwork) {
-		// 	TODO: make PhaseManager works and uncomment this (after NETD18-75)
-		// 	err = n.PhaseManager.OnPulse(ctx, &pulse)
-		// 	if err != nil {
-		// 		logger.Warn("phase manager fail: " + err.Error())
-		// 	}
-		// }(logger, n)
-	} else {
-		logger.Infof("Incorrect pulse number. Current: %d. New: %d", currentPulse.PulseNumber, pulse.PulseNumber)
+	go n.phaseManagerOnPulse(ctx, newPulse, currentTime)
+}
+
+func (n *ServiceNetwork) phaseManagerOnPulse(ctx context.Context, newPulse core.Pulse, pulseStartTime time.Time) {
+	logger := inslogger.FromContext(ctx)
+
+	if err := n.PhaseManager.OnPulse(ctx, &newPulse, pulseStartTime); err != nil {
+		logger.Error("Failed to pass consensus: " + err.Error())
+		n.TerminationHandler.Abort()
 	}
 }
 
-// func (n *ServiceNetwork) isFakePulse(pulse *core.Pulse) bool {
-// 	return (pulse.NextPulseNumber == 0) && (pulse.PulseNumber == 0)
-// }
+func isNextPulse(currentPulse, newPulse *core.Pulse) bool {
+	return newPulse.PulseNumber > currentPulse.PulseNumber && newPulse.PulseNumber >= currentPulse.NextPulseNumber
+}

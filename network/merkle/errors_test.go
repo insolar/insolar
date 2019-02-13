@@ -30,6 +30,7 @@ import (
 	"github.com/insolar/insolar/pulsar/pulsartestutils"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/nodekeeper"
+	"github.com/insolar/insolar/testutils/terminationhandler"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -149,10 +150,11 @@ func TestCalculatorError(t *testing.T) {
 	pulseManager := testutils.NewPulseStorageMock(t)
 
 	nk := nodekeeper.GetTestNodekeeper(service)
+	th := terminationhandler.NewTestHandler()
 
 	jc := testutils.NewJetCoordinatorMock(t)
 
-	cm.Inject(nk, jc, l.ArtifactManager, calculator, service, scheme, pulseManager)
+	cm.Inject(th, nk, jc, l.ArtifactManager, calculator, service, scheme, pulseManager)
 
 	require.NotNil(t, calculator.ArtifactManager)
 	require.NotNil(t, calculator.NodeNetwork)
@@ -203,7 +205,8 @@ func TestCalculatorLedgerError(t *testing.T) {
 
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
 	nk := nodekeeper.GetTestNodekeeper(service)
-	cm.Inject(nk, am, calculator, service, scheme)
+	th := terminationhandler.NewTestHandler()
+	cm.Inject(th, nk, am, calculator, service, scheme)
 
 	require.NotNil(t, calculator.ArtifactManager)
 	require.NotNil(t, calculator.NodeNetwork)

@@ -18,6 +18,7 @@ package message
 
 import (
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage/jet"
 )
 
@@ -379,8 +380,8 @@ type HotData struct {
 	Jet                core.RecordRef
 	DropJet            core.RecordID // If will be different in case of split.
 	Drop               jet.JetDrop
-	RecentObjects      map[core.RecordID]*HotIndex
-	PendingRequests    map[core.RecordID]map[core.RecordID][]byte
+	RecentObjects      map[core.RecordID]HotIndex
+	PendingRequests    map[core.RecordID]recentstorage.PendingObjectContext
 	PulseNumber        core.PulseNumber
 	JetDropSizeHistory jet.DropSizeHistory
 }
@@ -470,8 +471,7 @@ func (m *GetJet) DefaultTarget() *core.RecordRef {
 type AbandonedRequestsNotification struct {
 	ledgerMessage
 
-	Object   core.RecordID
-	Requests []core.RecordID
+	Object core.RecordID
 }
 
 // Type implementation of Message interface.
@@ -492,4 +492,58 @@ func (*AbandonedRequestsNotification) DefaultRole() core.DynamicRole {
 // DefaultTarget returns of target of this event.
 func (m *AbandonedRequestsNotification) DefaultTarget() *core.RecordRef {
 	return core.NewRecordRef(core.DomainID, m.Object)
+}
+
+// GetRequest fetches request from ledger.
+type GetRequest struct {
+	ledgerMessage
+
+	Request core.RecordID
+}
+
+// Type implementation of Message interface.
+func (*GetRequest) Type() core.MessageType {
+	return core.TypeGetRequest
+}
+
+// AllowedSenderObjectAndRole implements interface method
+func (m *GetRequest) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return nil, core.DynamicRoleUndefined
+}
+
+// DefaultRole returns role for this event
+func (*GetRequest) DefaultRole() core.DynamicRole {
+	return core.DynamicRoleLightExecutor
+}
+
+// DefaultTarget returns of target of this event.
+func (m *GetRequest) DefaultTarget() *core.RecordRef {
+	return core.NewRecordRef(core.DomainID, m.Request)
+}
+
+// GetPendingRequestID fetches a pending request id for an object from current LME
+type GetPendingRequestID struct {
+	ledgerMessage
+
+	ObjectID core.RecordID
+}
+
+// Type implementation of Message interface.
+func (*GetPendingRequestID) Type() core.MessageType {
+	return core.TypeGetPendingRequestID
+}
+
+// AllowedSenderObjectAndRole implements interface method
+func (m *GetPendingRequestID) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
+	return nil, core.DynamicRoleUndefined
+}
+
+// DefaultRole returns role for this event
+func (*GetPendingRequestID) DefaultRole() core.DynamicRole {
+	return core.DynamicRoleLightExecutor
+}
+
+// DefaultTarget returns of target of this event.
+func (m *GetPendingRequestID) DefaultTarget() *core.RecordRef {
+	return core.NewRecordRef(core.DomainID, m.ObjectID)
 }

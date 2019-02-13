@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/gojuno/minimock"
+	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -44,7 +45,7 @@ import (
 // TmpLedger crteates ledger on top of temporary database.
 // Returns *ledger.Ledger and cleanup function.
 // FIXME: THIS METHOD IS DEPRECATED. USE MOCKS.
-func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Components, closeJets bool) (*ledger.Ledger, *storage.DB, func()) {
+func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Components, closeJets bool) (*ledger.Ledger, storage.DBContext, func()) {
 	log.Warn("TmpLedger is deprecated. Use mocks.")
 
 	pcs := platformpolicy.NewPlatformCryptographyScheme()
@@ -54,15 +55,21 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 	ctx := inslogger.TestContext(t)
 	conf := configuration.NewLedger()
 	db, dbcancel := storagetest.TmpDB(ctx, t, storagetest.Dir(dir))
-	pulseStorage := storage.NewPulseStorage()
-	pulseStorage.PulseTracker = db
 
-	pulse, err := db.GetLatestPulse(ctx)
-	require.NoError(t, err)
-	pulseStorage.Set(&pulse.Pulse)
+	cm := &component.Manager{}
+	gi := storage.NewGenesisInitializer()
+	pt := storage.NewPulseTracker()
+	ps := storage.NewPulseStorage()
+	js := storage.NewJetStorage()
+	os := storage.NewObjectStorage()
+	ns := storage.NewNodeStorage()
+	ds := storage.NewDropStorage(10)
+	rs := storage.NewReplicaStorage()
+	cl := storage.NewCleaner()
 
-	am := artifactmanager.NewArtifactManger(db)
+	am := artifactmanager.NewArtifactManger()
 	am.PlatformCryptographyScheme = pcs
+
 	conf.PulseManager.HeavySyncEnabled = false
 	pm := pulsemanager.NewPulseManager(conf)
 	ls := localstorage.NewLocalStorage(db)
@@ -71,71 +78,111 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 	jc.LightExecutorForJetMock.Return(&core.RecordRef{}, nil)
 	jc.HeavyMock.Return(&core.RecordRef{}, nil)
 	jc.MeMock.Return(core.RecordRef{})
+	jc.IsBeyondLimitMock.Return(false, nil)
 
 	// Init components.
 	if c.MessageBus == nil {
 		mb := testmessagebus.NewTestMessageBus(t)
-		mb.PulseStorage = pulseStorage
+		mb.PulseStorage = ps
 		c.MessageBus = mb
 	} else {
 		switch mb := c.MessageBus.(type) {
 		case *messagebus.MessageBus:
-			mb.PulseStorage = pulseStorage
+			mb.PulseStorage = ps
 		case *testmessagebus.TestMessageBus:
-			mb.PulseStorage = pulseStorage
+			mb.PulseStorage = ps
 		default:
 			panic("unknown message bus")
 		}
 	}
 	if c.NodeNetwork == nil {
-		c.NodeNetwork = nodenetwork.NewNodeKeeper(nodenetwork.NewNode(core.RecordRef{}, core.StaticRoleLightMaterial, nil, "", ""))
+		c.NodeNetwork = nodenetwork.NewNodeKeeper(nodenetwork.NewNode(core.RecordRef{}, core.StaticRoleLightMaterial, nil, "127.0.0.1:5432", ""))
 	}
 
 	certificate := testutils.NewCertificateMock(t)
 	certificate.GetRoleMock.Return(handlersRole)
 
 	handler := artifactmanager.NewMessageHandler(&conf, certificate)
-	handler.PulseTracker = db
-	handler.JetStorage = db
-	handler.ActiveNodesStorage = db
+	handler.PulseTracker = pt
+	handler.JetStorage = js
+	handler.NodeStorage = ns
 	handler.DBContext = db
-	handler.PulseTracker = db
-	handler.ObjectStorage = db
+	handler.ObjectStorage = os
+	handler.DropStorage = ds
 
 	handler.PlatformCryptographyScheme = pcs
 	handler.JetCoordinator = jc
+
+	am.DefaultBus = c.MessageBus
+	am.JetCoordinator = jc
+
+	cm.Inject(
+		platformpolicy.NewPlatformCryptographyScheme(),
+		db,
+		js,
+		os,
+		ns,
+		pt,
+		ps,
+		ds,
+		gi,
+		am,
+		rs,
+		cl,
+	)
+
+	err := cm.Init(ctx)
+	if err != nil {
+		t.Error("ComponentManager init failed", err)
+	}
+	err = cm.Start(ctx)
+	if err != nil {
+		t.Error("ComponentManager start failed", err)
+	}
+
+	pulse, err := pt.GetLatestPulse(ctx)
+	require.NoError(t, err)
+	ps.Set(&pulse.Pulse)
 
 	gilMock := testutils.NewGlobalInsolarLockMock(t)
 	gilMock.AcquireFunc = func(context.Context) {}
 	gilMock.ReleaseFunc = func(context.Context) {}
 
 	alsMock := testutils.NewActiveListSwapperMock(t)
-	alsMock.MoveSyncToActiveFunc = func() {}
+	alsMock.MoveSyncToActiveFunc = func(context.Context) error { return nil }
 
 	handler.Bus = c.MessageBus
-	am.DefaultBus = c.MessageBus
+
 	pm.NodeNet = c.NodeNetwork
 	pm.GIL = gilMock
 	pm.Bus = c.MessageBus
 	pm.LR = c.LogicRunner
 	pm.ActiveListSwapper = alsMock
-	pm.PulseStorage = pulseStorage
+	pm.PulseStorage = ps
+	pm.JetStorage = js
+	pm.DropStorage = ds
+	pm.ObjectStorage = os
+	pm.NodeStorage = ns
+	pm.PulseTracker = pt
+	pm.ReplicaStorage = rs
+	pm.StorageCleaner = cl
 
 	hdw := artifactmanager.NewHotDataWaiterConcrete()
 
 	pm.HotDataWaiter = hdw
 	handler.HotDataWaiter = hdw
 
-	recentStorageMock := recentstorage.NewRecentStorageMock(t)
-	recentStorageMock.AddPendingRequestMock.Return()
-	recentStorageMock.AddObjectMock.Return()
-	recentStorageMock.RemovePendingRequestMock.Return()
-	recentStorageMock.GetRequestsForObjectMock.Return(nil)
+	indexMock := recentstorage.NewRecentIndexStorageMock(t)
+	pendingMock := recentstorage.NewPendingStorageMock(t)
+
+	indexMock.AddObjectMock.Return()
+	pendingMock.GetRequestsForObjectMock.Return(nil)
+	pendingMock.AddPendingRequestMock.Return()
+	pendingMock.RemovePendingRequestMock.Return()
 
 	provideMock := recentstorage.NewProviderMock(t)
-	provideMock.GetStorageFunc = func(ctx context.Context, p core.RecordID) (r recentstorage.RecentStorage) {
-		return recentStorageMock
-	}
+	provideMock.GetIndexStorageMock.Return(indexMock)
+	provideMock.GetPendingStorageMock.Return(pendingMock)
 
 	handler.RecentStorageProvider = provideMock
 

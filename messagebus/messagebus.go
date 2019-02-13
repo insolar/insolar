@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
@@ -33,8 +34,8 @@ import (
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/hack"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/insolar/metrics"
 )
 
 const deliverRPCMethodName = "MessageBus.Deliver"
@@ -141,7 +142,6 @@ func (mb *MessageBus) Send(ctx context.Context, msg core.Message, ops *core.Mess
 	defer span.End()
 
 	currentPulse, err := mb.PulseStorage.Current(ctx)
-	fmt.Println("[mb.send] ", currentPulse.PulseNumber)
 	if err != nil {
 		return nil, err
 	}
@@ -169,6 +169,7 @@ func (mb *MessageBus) SendParcel(
 ) (core.Reply, error) {
 	parcelType := parcel.Type().String()
 	ctx, span := instracer.StartSpan(ctx, "MessageBus.SendParcel "+parcelType)
+	ctx = insmetrics.InsertTag(ctx, tagMessageType, parcelType)
 	defer span.End()
 
 	readBarrier(ctx, &mb.globalLock)
@@ -194,10 +195,10 @@ func (mb *MessageBus) SendParcel(
 
 	start := time.Now()
 	defer func() {
-		metrics.ParcelsTime.WithLabelValues(parcelType).Observe(time.Since(start).Seconds())
-	}()
+		stats.Record(ctx, statParcelsTime.M(float64(time.Since(start).Nanoseconds())/1e6))
+		}()
 
-	metrics.ParcelsSentTotal.WithLabelValues(parcelType).Inc()
+	stats.Record(ctx, statParcelsSentTotal.M(1))
 
 	if len(nodes) > 1 {
 		cascade := core.Cascade{
@@ -212,7 +213,7 @@ func (mb *MessageBus) SendParcel(
 	// Short path when sending to self node. Skip serialization
 	origin := mb.NodeNetwork.GetOrigin()
 	if nodes[0].Equal(origin.ID()) {
-		metrics.LocallyDeliveredParcelsTotal.WithLabelValues(parcelType).Inc()
+		stats.Record(ctx, statLocallyDeliveredParcelsTotal.M(1))
 		return mb.doDeliver(parcel.Context(context.Background()), parcel)
 	}
 
@@ -263,8 +264,6 @@ func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Repl
 
 	origin := mb.NodeNetwork.GetOrigin()
 	if msg.GetSender().Equal(origin.ID()) {
-		fmt.Println("msg.GetSender()", msg.GetSender())
-		fmt.Println("origin.ID()", origin.ID())
 		ctx = hack.SetSkipValidation(ctx, true)
 	}
 	// TODO: sergey.morozov 2018-12-21 there is potential race condition because of readBarrier. We must implement correct locking.
@@ -313,6 +312,7 @@ func (mb *MessageBus) checkPulse(ctx context.Context, parcel core.Parcel, locked
 			*message.GetPendingRequests,
 			*message.ValidateRecord,
 			*message.CallConstructor,
+			*message.HotData,
 			*message.CallMethod:
 			inslogger.FromContext(ctx).Errorf("[ checkPulse ] Incorrect message pulse (parcel: %d, current: %d)", ppn, pulse.PulseNumber)
 			return fmt.Errorf("[ checkPulse ] Incorrect message pulse (parcel: %d, current: %d)", ppn, pulse.PulseNumber)

@@ -24,21 +24,24 @@ import (
 	"strings"
 	"time"
 
-	"github.com/insolar/insolar/component"
-	"github.com/insolar/insolar/metrics"
+	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
+	"go.opencensus.io/trace"
 
+	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/insmetrics"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/cascade"
 	"github.com/insolar/insolar/network/controller/common"
 	"github.com/insolar/insolar/network/transport/packet/types"
-	"github.com/pkg/errors"
 )
 
 type RPCController interface {
-	component.Starter
+	component.Initer
 
 	// hack for DI, else we receive ServiceNetwork injection in RPCController instead of rpcController that leads to stack overflow
 	IAmRPCController()
@@ -90,6 +93,11 @@ func (rpc *rpcController) IAmRPCController() {
 }
 
 func (rpc *rpcController) RemoteProcedureRegister(name string, method core.RemoteProcedure) {
+	_, span := instracer.StartSpan(context.Background(), "RPCController.RemoteProcedureRegister")
+	span.AddAttributes(
+		trace.StringAttribute("method", name),
+	)
+	defer span.End()
 	rpc.methodTable[name] = method
 }
 
@@ -105,13 +113,25 @@ func (rpc *rpcController) SendCascadeMessage(data core.Cascade, method string, m
 	if msg == nil {
 		return errors.New("message is nil")
 	}
-	ctx := msg.Context(context.Background())
+	ctx, span := instracer.StartSpan(context.Background(), "RPCController.SendCascadeMessage")
+	span.AddAttributes(
+		trace.StringAttribute("method", method),
+		trace.StringAttribute("msg.Type", msg.Type().String()),
+		trace.StringAttribute("msg.DefaultTarget", msg.DefaultTarget().String()),
+	)
+	defer span.End()
+	ctx = msg.Context(ctx)
 	return rpc.initCascadeSendMessage(ctx, data, false, method, [][]byte{message.ParcelToBytes(msg)})
 }
 
 func (rpc *rpcController) initCascadeSendMessage(ctx context.Context, data core.Cascade,
 	findCurrentNode bool, method string, args [][]byte) error {
 
+	_, span := instracer.StartSpan(context.Background(), "RPCController.initCascadeSendMessage")
+	span.AddAttributes(
+		trace.StringAttribute("method", method),
+	)
+	defer span.End()
 	if len(data.NodeIds) == 0 {
 		return errors.New("node IDs list should not be empty")
 	}
@@ -154,6 +174,8 @@ func (rpc *rpcController) initCascadeSendMessage(ctx context.Context, data core.
 func (rpc *rpcController) requestCascadeSendMessage(ctx context.Context, data core.Cascade, nodeID core.RecordRef,
 	method string, args [][]byte) error {
 
+	_, span := instracer.StartSpan(context.Background(), "RPCController.requestCascadeSendMessage")
+	defer span.End()
 	request := rpc.hostNetwork.NewRequestBuilder().Type(types.Cascade).Data(&RequestCascade{
 		TraceID: inslogger.TraceID(ctx),
 		RPC: RequestRPC{
@@ -188,14 +210,16 @@ func (rpc *rpcController) requestCascadeSendMessage(ctx context.Context, data co
 
 func (rpc *rpcController) SendMessage(nodeID core.RecordRef, name string, msg core.Parcel) ([]byte, error) {
 	msgBytes := message.ParcelToBytes(msg)
-	metrics.ParcelsSentSizeBytes.WithLabelValues(msg.Type().String()).Observe(float64(len(msgBytes)))
+	ctx := context.Background() // TODO: ctx as argument
+	ctx = insmetrics.InsertTag(ctx, tagMessageType, msg.Type().String())
+	stats.Record(ctx, statParcelsSentSizeBytes.M(int64(len(msgBytes))))
 	request := rpc.hostNetwork.NewRequestBuilder().Type(types.RPC).Data(&RequestRPC{
 		Method: name,
 		Data:   [][]byte{msgBytes},
 	}).Build()
 
 	start := time.Now()
-	ctx := msg.Context(context.Background())
+	ctx = msg.Context(ctx)
 	logger := inslogger.FromContext(ctx)
 	logger.Debugf("SendParcel with nodeID = %s method = %s, message reference = %s, RequestID = %d", nodeID.String(),
 		name, msg.DefaultTarget().String(), request.GetRequestID())
@@ -213,15 +237,16 @@ func (rpc *rpcController) SendMessage(nodeID core.RecordRef, name string, msg co
 	if !data.Success {
 		return nil, errors.New("RPC call returned error: " + data.Error)
 	}
-	metrics.ParcelsReplySizeBytes.WithLabelValues(msg.Type().String()).Observe(float64(len(data.Result)))
-	metrics.NetworkParcelSentTotal.WithLabelValues(msg.Type().String()).Inc()
+	stats.Record(ctx, statParcelsReplySizeBytes.M(int64(len(data.Result))))
 	return data.Result, nil
 }
 
 func (rpc *rpcController) processMessage(ctx context.Context, request network.Request) (network.Response, error) {
+	ctx = insmetrics.InsertTag(ctx, tagPacketType, request.GetType().String())
+	stats.Record(ctx, statPacketsReceived.M(1))
+
 	payload := request.GetData().(*RequestRPC)
 	result, err := rpc.invoke(ctx, payload.Method, payload.Data)
-	metrics.NetworkParcelReceivedTotal.WithLabelValues(request.GetType().String()).Inc()
 	if err != nil {
 		return rpc.hostNetwork.BuildResponse(ctx, request, &ResponseRPC{Success: false, Error: err.Error()}), nil
 	}
@@ -250,7 +275,7 @@ func (rpc *rpcController) processCascade(ctx context.Context, request network.Re
 	return rpc.hostNetwork.BuildResponse(ctx, request, &ResponseCascade{Success: true}), nil
 }
 
-func (rpc *rpcController) Start(ctx context.Context) error {
+func (rpc *rpcController) Init(ctx context.Context) error {
 	rpc.hostNetwork.RegisterRequestHandler(types.RPC, rpc.processMessage)
 	rpc.hostNetwork.RegisterRequestHandler(types.Cascade, rpc.processCascade)
 	return nil

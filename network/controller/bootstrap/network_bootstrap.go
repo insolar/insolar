@@ -21,15 +21,17 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/nodenetwork"
+	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/utils"
 	"github.com/pkg/errors"
 )
 
 type NetworkBootstrapper interface {
-	Bootstrap(ctx context.Context) error
+	Bootstrap(ctx context.Context) (*network.BootstrapResult, error)
 	SetLastPulse(number core.PulseNumber)
 	GetLastPulse() core.PulseNumber
 }
@@ -43,19 +45,37 @@ type networkBootstrapper struct {
 	ChallengeController ChallengeResponseController `inject:""`
 }
 
-func (nb *networkBootstrapper) Bootstrap(ctx context.Context) error {
+func (nb *networkBootstrapper) Bootstrap(ctx context.Context) (*network.BootstrapResult, error) {
+	ctx, span := instracer.StartSpan(ctx, "NetworkBoostrapper.Bootstrap")
+	defer span.End()
 	if len(nb.Certificate.GetDiscoveryNodes()) == 0 {
-		log.Info("Zero bootstrap")
-		return nil
-	}
-	if utils.OriginIsDiscovery(nb.Certificate) {
-		if err := nb.bootstrapDiscovery(ctx); err != nil {
-			return errors.Wrap(err, "[ Bootstrap ] Couldn't OriginIsDiscovery")
+		host, err := host.NewHostN(nb.NodeKeeper.GetOrigin().Address(), nb.NodeKeeper.GetOrigin().ID())
+		if err != nil {
+			return nil, errors.Wrap(err, "[ Bootstrap ] failed to create a host")
 		}
-		nb.NodeKeeper.SetIsBootstrapped(true)
-		return nil
+		log.Info("Zero bootstrap")
+		return &network.BootstrapResult{
+			Host: host,
+			// FirstPulseTime: nb.Bootstrapper.GetFirstFakePulseTime(),
+		}, nil
 	}
-	return nb.bootstrapJoiner(ctx)
+	var err error
+	var result *network.BootstrapResult
+	if utils.OriginIsDiscovery(nb.Certificate) {
+		result, err = nb.bootstrapDiscovery(ctx)
+		// if the network is up and complete, we return discovery nodes via consensus
+		if err == ErrReconnectRequired {
+			log.Debugf("Connecting discovery node %s as joiner", nb.NodeKeeper.GetOrigin().ID())
+			result, err = nb.bootstrapJoiner(ctx)
+		}
+	} else {
+		result, err = nb.bootstrapJoiner(ctx)
+	}
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Bootstrap ] failed to bootstrap")
+	}
+	nb.NodeKeeper.SetIsBootstrapped(true)
+	return result, nil
 }
 
 func (nb *networkBootstrapper) SetLastPulse(number core.PulseNumber) {
@@ -66,27 +86,29 @@ func (nb *networkBootstrapper) GetLastPulse() core.PulseNumber {
 	return nb.Bootstrapper.GetLastPulse()
 }
 
-func (nb *networkBootstrapper) bootstrapJoiner(ctx context.Context) error {
-	discoveryNode, err := nb.Bootstrapper.Bootstrap(ctx)
+func (nb *networkBootstrapper) bootstrapJoiner(ctx context.Context) (*network.BootstrapResult, error) {
+	ctx, span := instracer.StartSpan(ctx, "NetworkBoostrapper.bootstrapJoiner")
+	defer span.End()
+	result, discoveryNode, err := nb.Bootstrapper.Bootstrap(ctx)
 	if err != nil {
-		return errors.Wrap(err, "Error bootstrapping to discovery node")
+		return nil, errors.Wrap(err, "Error bootstrapping to discovery node")
 	}
 	sessionID, err := nb.AuthController.Authorize(ctx, discoveryNode, nb.Certificate)
 	if err != nil {
-		return errors.Wrap(err, "Error authorizing on discovery node")
+		return nil, errors.Wrap(err, "Error authorizing on discovery node")
 	}
 
 	data, err := nb.ChallengeController.Execute(ctx, discoveryNode, sessionID)
 	if err != nil {
-		return errors.Wrap(err, "Error executing double challenge response")
+		return nil, errors.Wrap(err, "Error executing double challenge response")
 	}
 	origin := nb.NodeKeeper.GetOrigin()
 	mutableOrigin := origin.(nodenetwork.MutableNode)
 	mutableOrigin.SetShortID(data.AssignShortID)
-	return nb.AuthController.Register(ctx, discoveryNode, sessionID)
+	return result, nb.AuthController.Register(ctx, discoveryNode, sessionID)
 }
 
-func (nb *networkBootstrapper) bootstrapDiscovery(ctx context.Context) error {
+func (nb *networkBootstrapper) bootstrapDiscovery(ctx context.Context) (*network.BootstrapResult, error) {
 	return nb.Bootstrapper.BootstrapDiscovery(ctx)
 }
 

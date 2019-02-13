@@ -18,7 +18,6 @@ package artifactmanager
 
 import (
 	"context"
-	"time"
 
 	"github.com/pkg/errors"
 
@@ -100,19 +99,14 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 			return nil, errors.New("unexpected message")
 		}
 
-		logger := inslogger.FromContext(ctx)
-		logger.Debugf("checking jet for %v", parcel.Type().String())
-
 		// FIXME: @andreyromancev. 17.01.19. Temporary allow any genesis request. Remove it.
 		if parcel.Pulse() == core.FirstPulseNumber {
-			logger.Debugf("genesis pulse shortcut")
 			return handler(contextWithJet(ctx, *jet.NewID(0, nil)), parcel)
 		}
 
 		// Check token jet.
 		token := parcel.DelegationToken()
 		if token != nil {
-			logger.Debugf("received token. returning any jet")
 			// Calculate jet for target pulse.
 			target := *msg.DefaultTarget().Record()
 			pulse := target.Pulse()
@@ -124,6 +118,8 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 					return nil, errors.New("fetching children without child pointer is forbidden")
 				}
 				pulse = tm.FromChild.Pulse()
+			case *message.GetRequest:
+				pulse = tm.Request.Pulse()
 			}
 			tree, err := m.jetStorage.GetJetTree(ctx, pulse)
 			if err != nil {
@@ -132,11 +128,11 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 
 			jetID, actual := tree.Find(target)
 			if !actual {
-				inslogger.FromContext(ctx).Errorf(
-					"got message of type %s with redirect token,"+
-						" but jet %s for pulse %d is not actual",
-					msg.Type(), jetID.DebugString(), pulse,
-				)
+				inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+					"msg":   msg.Type().String(),
+					"jet":   jetID.DebugString(),
+					"pulse": pulse,
+				}).Error("jet is not actual")
 			}
 
 			return handler(contextWithJet(ctx, *jetID), parcel)
@@ -145,7 +141,6 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 		// Calculate jet for current pulse.
 		var jetID core.RecordID
 		if msg.DefaultTarget().Record().Pulse() == core.PulseNumberJet {
-			logger.Debugf("special pulse number (jet). returning jet from message")
 			jetID = *msg.DefaultTarget().Record()
 		} else {
 			j, err := m.handler.jetTreeUpdater.fetchJet(ctx, *msg.DefaultTarget().Record(), parcel.Pulse())
@@ -174,13 +169,11 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 
 func (m *middleware) saveParcel(handler core.MessageHandler) core.MessageHandler {
 	return func(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
-		logger := inslogger.FromContext(ctx)
 		jetID := jetFromContext(ctx)
 		pulse, err := m.pulseStorage.Current(ctx)
 		if err != nil {
 			return nil, err
 		}
-		logger.Debugf("saveParcel, pulse - %v", pulse.PulseNumber)
 		err = m.objectStorage.SetMessage(ctx, jetID, pulse.PulseNumber, parcel)
 		if err != nil {
 			return nil, err
@@ -209,9 +202,6 @@ func (m *middleware) checkHeavySync(handler core.MessageHandler) core.MessageHan
 
 func (m *middleware) waitForHotData(handler core.MessageHandler) core.MessageHandler {
 	return func(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
-		logger := inslogger.FromContext(ctx)
-		logger.Debugf("[waitForHotData] for parcel with pulse %v", parcel.Pulse())
-
 		// TODO: 15.01.2019 @egorikas
 		// Hack is needed for genesis
 		if parcel.Pulse() == core.FirstPulseNumber {
@@ -221,7 +211,6 @@ func (m *middleware) waitForHotData(handler core.MessageHandler) core.MessageHan
 		// If the call is a call in redirect-chain
 		// skip waiting for the hot records
 		if parcel.DelegationToken() != nil {
-			logger.Debugf("[waitForHotData] parcel.DelegationToken() != nil")
 			return handler(ctx, parcel)
 		}
 
@@ -236,16 +225,10 @@ func (m *middleware) waitForHotData(handler core.MessageHandler) core.MessageHan
 
 func (m *middleware) releaseHotDataWaiters(handler core.MessageHandler) core.MessageHandler {
 	return func(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
-		logger := inslogger.FromContext(ctx)
-		logger.Debugf("[releaseHotDataWaiters] pulse %v starts %v", parcel.Pulse(), time.Now())
-
 		hotDataMessage := parcel.Message().(*message.HotData)
 		jetID := hotDataMessage.Jet.Record()
 
-		logger.Debugf("[releaseHotDataWaiters] hot data for jet happens - %v, pulse - %v", jetID.DebugString(), parcel.Pulse())
 		defer m.hotDataWaiter.Unlock(ctx, *jetID)
-
-		logger.Debugf("[releaseHotDataWaiters] before handler for jet - %v, pulse - %v", jetID.DebugString(), parcel.Pulse())
 		return handler(ctx, parcel)
 	}
 }

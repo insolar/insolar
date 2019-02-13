@@ -36,9 +36,6 @@ func (r *GenesisRecord) State() State {
 	return StateActivation
 }
 
-// Type implementation of Record interface.
-func (r *GenesisRecord) Type() TypeID { return typeGenesis }
-
 // WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
 func (r *GenesisRecord) WriteHashData(w io.Writer) (int, error) {
 	return w.Write(SerializeRecord(r))
@@ -66,9 +63,6 @@ type ChildRecord struct {
 	Ref core.RecordRef // Reference to the child's head.
 }
 
-// Type implementation of Record interface.
-func (r *ChildRecord) Type() TypeID { return typeChild }
-
 // WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
 func (r *ChildRecord) WriteHashData(w io.Writer) (int, error) {
 	return w.Write(SerializeRecord(r))
@@ -78,9 +72,6 @@ func (r *ChildRecord) WriteHashData(w io.Writer) (int, error) {
 type JetRecord struct {
 	// TODO: should contain prefix.
 }
-
-// Type implementation of Record interface.
-func (r *JetRecord) Type() TypeID { return typeJet }
 
 // WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
 func (r *JetRecord) WriteHashData(w io.Writer) (int, error) {

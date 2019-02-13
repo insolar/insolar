@@ -23,7 +23,6 @@ import (
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/consensus/phases"
 	"github.com/insolar/insolar/contractrequester"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/delegationtoken"
@@ -112,6 +111,7 @@ func initComponents(
 
 ) (*component.Manager, error) {
 	cm := component.Manager{}
+	terminationHandler := core.NewTerminationHandler()
 
 	nodeNetwork, err := nodenetwork.NewNodeNetwork(cfg.Host, certManager.GetCertificate())
 	checkError(ctx, err, "failed to start NodeNetwork")
@@ -119,7 +119,7 @@ func initComponents(
 	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner)
 	checkError(ctx, err, "failed to start LogicRunner")
 
-	nw, err := servicenetwork.NewServiceNetwork(cfg, platformCryptographyScheme, &cm, isGenesis)
+	nw, err := servicenetwork.NewServiceNetwork(cfg, &cm, isGenesis)
 	checkError(ctx, err, "failed to start Network")
 
 	delegationTokenFactory := delegationtoken.NewDelegationTokenFactory()
@@ -160,6 +160,7 @@ func initComponents(
 	checkError(ctx, err, "failed init pulse for LogicRunner")
 
 	cm.Register(
+		terminationHandler,
 		platformCryptographyScheme,
 		keyStore,
 		cryptographyService,
@@ -189,7 +190,6 @@ func initComponents(
 		metricsHandler,
 		networkSwitcher,
 		networkCoordinator,
-		phases.NewPhaseManager(),
 		cryptographyService,
 	}...)
 

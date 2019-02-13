@@ -50,16 +50,20 @@ type MockResolver struct {
 	smapping map[core.ShortNodeID]*host.Host
 }
 
-func (m *MockResolver) Resolve(nodeID core.RecordRef) (*host.Host, error) {
-	result, exist := m.mapping[nodeID]
+func (m *MockResolver) ResolveConsensus(id core.ShortNodeID) (*host.Host, error) {
+	result, exist := m.smapping[id]
 	if !exist {
 		return nil, errors.New("failed to resolve")
 	}
 	return result, nil
 }
 
-func (m *MockResolver) ResolveS(id core.ShortNodeID) (*host.Host, error) {
-	result, exist := m.smapping[id]
+func (m *MockResolver) ResolveConsensusRef(nodeID core.RecordRef) (*host.Host, error) {
+	return m.Resolve(nodeID)
+}
+
+func (m *MockResolver) Resolve(nodeID core.RecordRef) (*host.Host, error) {
+	result, exist := m.mapping[nodeID]
 	if !exist {
 		return nil, errors.New("failed to resolve")
 	}
@@ -413,7 +417,6 @@ func TestHostTransport_RegisterPacketHandler(t *testing.T) {
 	i1, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID1+DOMAIN)
 	require.NoError(t, err)
 	tr1 := NewHostTransport(i1, m)
-
 	handler := func(ctx context.Context, request network.Request) (network.Response, error) {
 		return tr1.BuildResponse(ctx, request, nil), nil
 	}

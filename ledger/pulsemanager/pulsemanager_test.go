@@ -14,75 +14,134 @@
  *    limitations under the License.
  */
 
-package pulsemanager_test
+package pulsemanager
 
 import (
 	"context"
 	"testing"
 
+	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/insolar/insolar/ledger/recentstorage"
+	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/index"
 	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/network"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 )
 
-func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
+type pulseManagerSuite struct {
+	suite.Suite
+
+	cm      *component.Manager
+	ctx     context.Context
+	cleaner func()
+
+	objectStorage storage.ObjectStorage
+}
+
+func NewPulseManagerSuite() *pulseManagerSuite {
+	return &pulseManagerSuite{
+		Suite: suite.Suite{},
+	}
+}
+
+// Init and run suite
+func TestPulseManager(t *testing.T) {
+	suite.Run(t, NewPulseManagerSuite())
+}
+
+func (s *pulseManagerSuite) BeforeTest(suiteName, testName string) {
+	s.cm = &component.Manager{}
+	s.ctx = inslogger.TestContext(s.T())
+
+	db, cleaner := storagetest.TmpDB(s.ctx, s.T())
+	s.cleaner = cleaner
+	s.objectStorage = storage.NewObjectStorage()
+
+	s.cm.Inject(
+		platformpolicy.NewPlatformCryptographyScheme(),
+		db,
+		s.objectStorage,
+	)
+
+	err := s.cm.Init(s.ctx)
+	if err != nil {
+		s.T().Error("ComponentManager init failed", err)
+	}
+	err = s.cm.Start(s.ctx)
+	if err != nil {
+		s.T().Error("ComponentManager start failed", err)
+	}
+}
+
+func (s *pulseManagerSuite) AfterTest(suiteName, testName string) {
+	err := s.cm.Stop(s.ctx)
+	if err != nil {
+		s.T().Error("ComponentManager stop failed", err)
+	}
+	s.cleaner()
+}
+
+func (s *pulseManagerSuite) TestPulseManager_Set_CheckHotIndexesSending() {
 	// Error:      	Not equal:
 	// expected: 0x2
 	// actual  : 0x0
-	t.Skip()
+	s.T().Skip()
 
 	// Arrange
-	ctx := inslogger.TestContext(t)
 	jetID := jet.ZeroJetID
 	objID := core.RecordID{}
 
-	lr := testutils.NewLogicRunnerMock(t)
+	lr := testutils.NewLogicRunnerMock(s.T())
 	lr.OnPulseMock.Return(nil)
 
-	db, dbcancel := storagetest.TmpDB(ctx, t)
-	defer dbcancel()
-	firstID, _ := db.SetRecord(
-		ctx,
+	firstID, _ := s.objectStorage.SetRecord(
+		s.ctx,
 		jetID,
 		core.GenesisPulse.PulseNumber,
 		&record.ObjectActivateRecord{})
 	firstIndex := index.ObjectLifeline{
 		LatestState: firstID,
 	}
-	_ = db.SetObjectIndex(ctx, jetID, firstID, &firstIndex)
+	_ = s.objectStorage.SetObjectIndex(s.ctx, jetID, firstID, &firstIndex)
 	codeRecord := &record.CodeRecord{}
-	secondID, _ := db.SetRecord(
-		ctx,
+	secondID, _ := s.objectStorage.SetRecord(
+		s.ctx,
 		jetID,
 		core.GenesisPulse.PulseNumber,
 		codeRecord,
 	)
 
-	recentMock := recentstorage.NewRecentStorageMock(t)
+	indexMock := recentstorage.NewRecentIndexStorageMock(s.T())
+	pendingMock := recentstorage.NewPendingStorageMock(s.T())
 	// TODO: @andreyromancev. 12.01.19. Uncomment to check if this doesn't delete indexes it should not.
 	// recentMock.ClearZeroTTLObjectsMock.Return()
 	// recentMock.ClearObjectsMock.Return()
-	recentMock.GetObjectsMock.Return(map[core.RecordID]int{
+	indexMock.GetObjectsMock.Return(map[core.RecordID]int{
 		*firstID: 1,
 	})
-	recentMock.GetRequestsMock.Return(map[core.RecordID]map[core.RecordID]struct{}{objID: {*secondID: struct{}{}}})
+	pendingMock.GetRequestsMock.Return(
+		map[core.RecordID]recentstorage.PendingObjectContext{
+			objID: {Requests: []core.RecordID{*secondID}},
+		})
 
-	providerMock := recentstorage.NewProviderMock(t)
-	providerMock.GetStorageMock.Return(recentMock)
-	providerMock.CloneStorageMock.Return()
+	providerMock := recentstorage.NewProviderMock(s.T())
+	providerMock.GetPendingStorageMock.Return(pendingMock)
+	providerMock.GetIndexStorageMock.Return(indexMock)
+	providerMock.ClonePendingStorageMock.Return()
+	providerMock.CloneIndexStorageMock.Return()
 
-	mbMock := testutils.NewMessageBusMock(t)
+	mbMock := testutils.NewMessageBusMock(s.T())
 	mbMock.OnPulseFunc = func(context.Context, core.Pulse) error {
 		return nil
 	}
@@ -93,52 +152,51 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 		}
 
 		// Assert
-		require.Equal(t, 1, len(val.PendingRequests))
-		requests, ok := val.PendingRequests[objID]
-		require.True(t, ok)
-		require.Equal(t, 1, len(requests))
-		require.Equal(t, codeRecord, record.DeserializeRecord(requests[*secondID]))
+		require.Equal(s.T(), 1, len(val.PendingRequests))
+		objContext, ok := val.PendingRequests[objID]
+		require.True(s.T(), ok)
+		require.Equal(s.T(), 1, len(objContext.Requests))
 
-		require.Equal(t, 1, len(val.RecentObjects))
+		require.Equal(s.T(), 1, len(val.RecentObjects))
 		decodedIndex, err := index.DecodeObjectLifeline(val.RecentObjects[*firstID].Index)
-		require.NoError(t, err)
-		require.Equal(t, firstIndex, *decodedIndex)
-		require.Equal(t, 1, val.RecentObjects[*firstID].TTL)
+		require.NoError(s.T(), err)
+		require.Equal(s.T(), firstIndex, *decodedIndex)
+		require.Equal(s.T(), 1, val.RecentObjects[*firstID].TTL)
 
 		return nil, nil
 	}
 
-	nodeMock := network.NewNodeMock(t)
+	nodeMock := network.NewNodeMock(s.T())
 	nodeMock.RoleMock.Return(core.StaticRoleLightMaterial)
 	nodeMock.IDMock.Return(core.RecordRef{})
 
-	nodeNetworkMock := network.NewNodeNetworkMock(t)
+	nodeNetworkMock := network.NewNodeNetworkMock(s.T())
 	nodeNetworkMock.GetActiveNodesMock.Return([]core.Node{nodeMock})
 	nodeNetworkMock.GetOriginMock.Return(nodeMock)
 
-	jetCoordinatorMock := testutils.NewJetCoordinatorMock(t)
+	jetCoordinatorMock := testutils.NewJetCoordinatorMock(s.T())
 	executor := core.NewRecordRef(core.RecordID{}, *core.NewRecordID(123, []byte{3, 2, 1}))
 	jetCoordinatorMock.LightExecutorForJetMock.Return(executor, nil)
 	jetCoordinatorMock.MeMock.Return(*executor)
 
-	pm := pulsemanager.NewPulseManager(configuration.Ledger{
+	pm := NewPulseManager(configuration.Ledger{
 		JetSizesHistoryDepth: 5,
 	})
 
-	gil := testutils.NewGlobalInsolarLockMock(t)
+	gil := testutils.NewGlobalInsolarLockMock(s.T())
 	gil.AcquireMock.Return()
 	gil.ReleaseMock.Return()
 
-	alsMock := testutils.NewActiveListSwapperMock(t)
-	alsMock.MoveSyncToActiveFunc = func() {}
+	alsMock := testutils.NewActiveListSwapperMock(s.T())
+	alsMock.MoveSyncToActiveFunc = func(context.Context) error { return nil }
 
-	cryptoServiceMock := testutils.NewCryptographyServiceMock(t)
+	cryptoServiceMock := testutils.NewCryptographyServiceMock(s.T())
 	cryptoServiceMock.SignFunc = func(p []byte) (r *core.Signature, r1 error) {
 		signature := core.SignatureFromBytes(nil)
 		return &signature, nil
 	}
 
-	pulseStorageMock := pulsemanager.NewpulseStoragePmMock(t)
+	pulseStorageMock := NewpulseStoragePmMock(s.T())
 	pulseStorageMock.CurrentMock.Return(core.GenesisPulse, nil)
 	pulseStorageMock.LockMock.Return()
 	pulseStorageMock.UnlockMock.Return()
@@ -157,15 +215,16 @@ func TestPulseManager_Set_CheckHotIndexesSending(t *testing.T) {
 	pm.JetCoordinator = jetCoordinatorMock
 
 	// Act
-	err := pm.Set(ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 1}, true)
-	require.NoError(t, err)
+	err := pm.Set(s.ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 1}, true)
+	require.NoError(s.T(), err)
 	// // TODO: @andreyromancev. 12.01.19. put 1, when dynamic split is working.
-	assert.Equal(t, uint64(2), mbMock.SendMinimockCounter()) // 1 validator drop (no split)
-	savedIndex, err := db.GetObjectIndex(ctx, jetID, firstID, false)
-	require.NoError(t, err)
+	assert.Equal(s.T(), uint64(2), mbMock.SendMinimockCounter()) // 1 validator drop (no split)
+	savedIndex, err := s.objectStorage.GetObjectIndex(s.ctx, jetID, firstID, false)
+	require.NoError(s.T(), err)
 
 	// Assert
-	require.NotNil(t, savedIndex)
-	require.NotNil(t, firstIndex, savedIndex)
-	recentMock.MinimockFinish()
+	require.NotNil(s.T(), savedIndex)
+	require.NotNil(s.T(), firstIndex, savedIndex)
+	indexMock.MinimockFinish()
+	pendingMock.MinimockFinish()
 }

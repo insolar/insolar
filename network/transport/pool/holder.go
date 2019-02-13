@@ -21,46 +21,46 @@ import (
 	"net"
 )
 
-type unsafeConnectionsHolderImpl struct {
-	connections map[string]net.Conn
+type entryHolderImpl struct {
+	entries map[string]entry
 }
 
-func newUnsafeConnectionHolderImpl() unsafeConnectionHolder {
-	return &unsafeConnectionsHolderImpl{
-		connections: make(map[string]net.Conn),
+func newEntryHolderImpl() entryHolder {
+	return &entryHolderImpl{
+		entries: make(map[string]entry),
 	}
 }
 
-func (uch *unsafeConnectionsHolderImpl) key(address net.Addr) string {
+func (eh *entryHolderImpl) key(address net.Addr) string {
 	return address.String()
 }
 
-func (uch *unsafeConnectionsHolderImpl) Get(address net.Addr) (net.Conn, bool) {
-	conn, ok := uch.connections[uch.key(address)]
+func (eh *entryHolderImpl) Get(address net.Addr) (entry, bool) {
+	entry, ok := eh.entries[eh.key(address)]
 
-	return conn, ok
+	return entry, ok
 }
 
-func (uch *unsafeConnectionsHolderImpl) Delete(address net.Addr) {
-	delete(uch.connections, uch.key(address))
+func (eh *entryHolderImpl) Delete(address net.Addr) {
+	delete(eh.entries, eh.key(address))
 }
 
-func (uch *unsafeConnectionsHolderImpl) Add(address net.Addr, conn net.Conn) {
-	uch.connections[uch.key(address)] = conn
+func (eh *entryHolderImpl) Add(address net.Addr, entry entry) {
+	eh.entries[eh.key(address)] = entry
 }
 
-func (uch *unsafeConnectionsHolderImpl) Clear() {
-	for key := range uch.connections {
-		delete(uch.connections, key)
+func (eh *entryHolderImpl) Clear() {
+	for key := range eh.entries {
+		delete(eh.entries, key)
 	}
 }
 
-func (uch *unsafeConnectionsHolderImpl) Iterate(iterateFunc iterateFunc) {
-	for _, conn := range uch.connections {
-		iterateFunc(conn)
+func (eh *entryHolderImpl) Iterate(iterateFunc iterateFunc) {
+	for _, entry := range eh.entries {
+		iterateFunc(entry)
 	}
 }
 
-func (uch *unsafeConnectionsHolderImpl) Size() int {
-	return len(uch.connections)
+func (eh *entryHolderImpl) Size() int {
+	return len(eh.entries)
 }

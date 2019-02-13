@@ -20,6 +20,13 @@ import (
 	"context"
 )
 
+const (
+	// JetSize is a Jet's size (depth+prefix).
+	JetSize = RecordIDSize - PulseNumberSize
+	// JetPrefixSize is a Jet's prefix size.
+	JetPrefixSize = JetSize - 1
+)
+
 // DynamicRole is number representing a node role.
 type DynamicRole int
 
@@ -100,6 +107,12 @@ type JetCoordinator interface {
 	LightValidatorsForJet(ctx context.Context, jetID RecordID, pulse PulseNumber) ([]RecordRef, error)
 
 	Heavy(ctx context.Context, pulse PulseNumber) (*RecordRef, error)
+
+	IsBeyondLimit(ctx context.Context, currentPN, targetPN PulseNumber) (bool, error)
+	NodeForJet(ctx context.Context, jetID RecordID, rootPN, targetPN PulseNumber) (*RecordRef, error)
+
+	// NodeForObject calculates a node (LME or heavy) for a specific jet for a specific pulseNumber
+	NodeForObject(ctx context.Context, objectID RecordID, rootPN, targetPN PulseNumber) (*RecordRef, error)
 }
 
 // ArtifactManager is a high level storage interface.
@@ -131,6 +144,9 @@ type ArtifactManager interface {
 	// If provided state is nil, the latest state will be returned (with deactivation check). Returned descriptor will
 	// provide methods for fetching all related data.
 	GetObject(ctx context.Context, head RecordRef, state *RecordID, approved bool) (ObjectDescriptor, error)
+
+	// GetPendingRequest returns a pending request for object.
+	GetPendingRequest(ctx context.Context, objectID RecordID) (Parcel, error)
 
 	// HasPendingRequests returns true if object has unclosed requests.
 	HasPendingRequests(ctx context.Context, object RecordRef) (bool, error)

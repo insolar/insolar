@@ -33,19 +33,32 @@ type connectionFactory interface {
 	CreateConnection(ctx context.Context, address net.Addr) (net.Conn, error)
 }
 
-type iterateFunc func(conn net.Conn)
+type entry interface {
+	Open(ctx context.Context) (net.Conn, error)
+	Close()
+}
 
-type unsafeConnectionHolder interface {
-	Get(address net.Addr) (net.Conn, bool)
+func newManagerEntry(connectionFactory connectionFactory, address net.Addr) entry {
+	return newManagedEntryImpl(connectionFactory, address)
+}
+
+func newReadyEntry(conn net.Conn) entry {
+	return newReadyEntryImpl(conn)
+}
+
+type iterateFunc func(entry entry)
+
+type entryHolder interface {
+	Get(address net.Addr) (entry, bool)
 	Delete(address net.Addr)
-	Add(address net.Addr, conn net.Conn)
+	Add(address net.Addr, entry entry)
 	Size() int
 	Clear()
 	Iterate(iterateFunc iterateFunc)
 }
 
-func newUnsafeConnectionHolder() unsafeConnectionHolder {
-	return newUnsafeConnectionHolderImpl()
+func newEntryHolder() entryHolder {
+	return newEntryHolderImpl()
 }
 
 func NewConnectionPool(connectionFactory connectionFactory) ConnectionPool {

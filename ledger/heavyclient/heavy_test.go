@@ -27,15 +27,13 @@ import (
 	"time"
 
 	"github.com/dgraph-io/badger"
-	"github.com/insolar/insolar/ledger/artifactmanager"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
+	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/artifactmanager"
 	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
@@ -43,68 +41,145 @@ import (
 	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/network"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 )
 
-func TestPulseManager_SendToHeavyHappyPath(t *testing.T) {
-	sendToHeavy(t, false)
+type heavySuite struct {
+	suite.Suite
+
+	cm      *component.Manager
+	ctx     context.Context
+	cleaner func()
+	db      storage.DBContext
+
+	jetStorage     storage.JetStorage
+	nodeStorage    storage.NodeStorage
+	pulseTracker   storage.PulseTracker
+	replicaStorage storage.ReplicaStorage
+	objectStorage  storage.ObjectStorage
+	dropStorage    storage.DropStorage
+	storageCleaner storage.Cleaner
 }
 
-func TestPulseManager_SendToHeavyWithRetry(t *testing.T) {
-	sendToHeavy(t, true)
+func NewHeavySuite() *heavySuite {
+	return &heavySuite{
+		Suite: suite.Suite{},
+	}
 }
 
-func sendToHeavy(t *testing.T, withretry bool) {
-	ctx := inslogger.TestContext(t)
-	db, cleaner := storagetest.TmpDB(ctx, t)
-	defer cleaner()
+// Init and run suite
+func TestHeavySuite(t *testing.T) {
+	suite.Run(t, NewHeavySuite())
+}
+
+func (s *heavySuite) BeforeTest(suiteName, testName string) {
+	s.cm = &component.Manager{}
+	s.ctx = inslogger.TestContext(s.T())
+
+	db, cleaner := storagetest.TmpDB(s.ctx, s.T())
+	s.cleaner = cleaner
+	s.db = db
+	s.jetStorage = storage.NewJetStorage()
+	s.nodeStorage = storage.NewNodeStorage()
+	s.pulseTracker = storage.NewPulseTracker()
+	s.replicaStorage = storage.NewReplicaStorage()
+	s.objectStorage = storage.NewObjectStorage()
+	s.dropStorage = storage.NewDropStorage(10)
+	s.storageCleaner = storage.NewCleaner()
+
+	s.cm.Inject(
+		platformpolicy.NewPlatformCryptographyScheme(),
+		s.db,
+		s.jetStorage,
+		s.nodeStorage,
+		s.pulseTracker,
+		s.replicaStorage,
+		s.objectStorage,
+		s.dropStorage,
+		s.storageCleaner,
+	)
+
+	err := s.cm.Init(s.ctx)
+	if err != nil {
+		s.T().Error("ComponentManager init failed", err)
+	}
+	err = s.cm.Start(s.ctx)
+	if err != nil {
+		s.T().Error("ComponentManager start failed", err)
+	}
+}
+
+func (s *heavySuite) AfterTest(suiteName, testName string) {
+	err := s.cm.Stop(s.ctx)
+	if err != nil {
+		s.T().Error("ComponentManager stop failed", err)
+	}
+	s.cleaner()
+}
+
+func (s *heavySuite) TestPulseManager_SendToHeavyHappyPath() {
+	sendToHeavy(s, false)
+}
+
+func (s *heavySuite) TestPulseManager_SendToHeavyWithRetry() {
+	sendToHeavy(s, true)
+}
+
+func sendToHeavy(s *heavySuite, withretry bool) {
 	// TODO: test should work with any JetID (add new test?) - 14.Dec.2018 @nordicdyno
 	jetID := jet.ZeroJetID
 	// Mock N1: LR mock do nothing
-	lrMock := testutils.NewLogicRunnerMock(t)
+	lrMock := testutils.NewLogicRunnerMock(s.T())
 	lrMock.OnPulseMock.Return(nil)
 
 	// Mock N2: we are light material
-	nodeMock := network.NewNodeMock(t)
+	nodeMock := network.NewNodeMock(s.T())
 	nodeMock.RoleMock.Return(core.StaticRoleLightMaterial)
 	nodeMock.IDMock.Return(core.RecordRef{})
 
 	// Mock N3: nodenet returns mocked node (above)
 	// and add stub for GetActiveNodes
-	nodenetMock := network.NewNodeNetworkMock(t)
+	nodenetMock := network.NewNodeNetworkMock(s.T())
 	nodenetMock.GetActiveNodesMock.Return(nil)
 	nodenetMock.GetOriginMock.Return(nodeMock)
 
 	// Mock N4: message bus for Send method
-	busMock := testutils.NewMessageBusMock(t)
+	busMock := testutils.NewMessageBusMock(s.T())
 	busMock.OnPulseFunc = func(context.Context, core.Pulse) error {
 		return nil
 	}
 
-	// Mock5: RecentStorageMock
-	recentMock := recentstorage.NewRecentStorageMock(t)
+	// Mock5: RecentIndexStorageMock and PendingStorageMock
+	recentMock := recentstorage.NewRecentIndexStorageMock(s.T())
 	recentMock.GetObjectsMock.Return(nil)
-	recentMock.GetRequestsMock.Return(nil)
 	recentMock.AddObjectMock.Return()
-	recentMock.DecreaseTTLMock.Return()
+	recentMock.DecreaseIndexTTLMock.Return([]core.RecordID{})
+	recentMock.FilterNotExistWithLockMock.Return()
+
+	pendingStorageMock := recentstorage.NewPendingStorageMock(s.T())
+	pendingStorageMock.GetRequestsMock.Return(map[core.RecordID]recentstorage.PendingObjectContext{})
 
 	// Mock6: JetCoordinatorMock
-	jcMock := testutils.NewJetCoordinatorMock(t)
+	jcMock := testutils.NewJetCoordinatorMock(s.T())
 	jcMock.LightExecutorForJetMock.Return(&core.RecordRef{}, nil)
 	jcMock.MeMock.Return(core.RecordRef{})
 
 	// Mock N7: GIL mock
-	gilMock := testutils.NewGlobalInsolarLockMock(t)
+	gilMock := testutils.NewGlobalInsolarLockMock(s.T())
 	gilMock.AcquireFunc = func(context.Context) {}
 	gilMock.ReleaseFunc = func(context.Context) {}
 
 	// Mock N8: Active List Swapper mock
-	alsMock := testutils.NewActiveListSwapperMock(t)
-	alsMock.MoveSyncToActiveFunc = func() {}
+	alsMock := testutils.NewActiveListSwapperMock(s.T())
+	alsMock.MoveSyncToActiveFunc = func(context.Context) error { return nil }
 
 	// Mock N9: Crypto things mock
-	cryptoServiceMock := testutils.NewCryptographyServiceMock(t)
+	cryptoServiceMock := testutils.NewCryptographyServiceMock(s.T())
 	cryptoServiceMock.SignFunc = func(p []byte) (r *core.Signature, r1 error) {
 		signature := core.SignatureFromBytes(nil)
 		return &signature, nil
@@ -112,7 +187,7 @@ func sendToHeavy(t *testing.T, withretry bool) {
 	cryptoScheme := testutils.NewPlatformCryptographyScheme()
 
 	// Mock N10: ArtifactManagerMessageHandler
-	artifactManagerMessageHandlerMock := testutils.NewArtifactManagerMessageHandlerMock(t)
+	artifactManagerMessageHandlerMock := testutils.NewArtifactManagerMessageHandlerMock(s.T())
 	artifactManagerMessageHandlerMock.ResetEarlyRequestCircuitBreakerMock.Return()
 	artifactManagerMessageHandlerMock.CloseEarlyRequestCircuitBreakerForJetMock.Return()
 
@@ -182,26 +257,28 @@ func sendToHeavy(t *testing.T, withretry bool) {
 	pm.Bus = busMock
 	pm.JetCoordinator = jcMock
 	pm.GIL = gilMock
-	pm.JetStorage = db
-	pm.ActiveNodesStorage = db
-	pm.DBContext = db
-	pm.PulseTracker = db
-	pm.ReplicaStorage = db
-	pm.StorageCleaner = db
-	pm.ObjectStorage = db
+	pm.JetStorage = s.jetStorage
+	pm.NodeStorage = s.nodeStorage
+	pm.DBContext = s.db
+	pm.PulseTracker = s.pulseTracker
+	pm.ReplicaStorage = s.replicaStorage
+	pm.StorageCleaner = s.storageCleaner
+	pm.ObjectStorage = s.objectStorage
+	pm.DropStorage = s.dropStorage
 
 	ps := storage.NewPulseStorage()
-	ps.PulseTracker = db
+	ps.PulseTracker = s.pulseTracker
 	pm.PulseStorage = ps
 
 	pm.HotDataWaiter = artifactmanager.NewHotDataWaiterConcrete()
 
-	providerMock := recentstorage.NewProviderMock(t)
-	providerMock.GetStorageFunc = func(ctx context.Context, p core.RecordID) (r recentstorage.RecentStorage) {
-		return recentMock
-	}
-	providerMock.CloneStorageMock.Return()
-	providerMock.RemoveStorageMock.Return()
+	providerMock := recentstorage.NewProviderMock(s.T())
+	providerMock.GetIndexStorageMock.Return(recentMock)
+	providerMock.GetPendingStorageMock.Return(pendingStorageMock)
+	providerMock.CloneIndexStorageMock.Return()
+	providerMock.ClonePendingStorageMock.Return()
+	providerMock.RemovePendingStorageMock.Return()
+	providerMock.DecreaseIndexesTTLMock.Return(map[core.RecordID][]core.RecordID{})
 	pm.RecentStorageProvider = providerMock
 
 	pm.ActiveListSwapper = alsMock
@@ -210,76 +287,70 @@ func sendToHeavy(t *testing.T, withretry bool) {
 
 	// Actial test logic
 	// start PulseManager
-	err := pm.Start(ctx)
-	assert.NoError(t, err)
+	err := pm.Start(s.ctx)
+	assert.NoError(s.T(), err)
 
 	// store last pulse as light material and set next one
 	lastpulse := core.FirstPulseNumber + 1
-	err = setpulse(ctx, pm, lastpulse)
-	require.NoError(t, err)
+	err = setpulse(s.ctx, pm, lastpulse)
+	require.NoError(s.T(), err)
 
 	for i := 0; i < 2; i++ {
 		// fmt.Printf("%v: call addRecords for pulse %v\n", t.Name(), lastpulse)
-		addRecords(ctx, t, db, jetID, core.PulseNumber(lastpulse+i))
+		addRecords(s.ctx, s.T(), s.objectStorage, jetID, core.PulseNumber(lastpulse+i))
 	}
 
 	fmt.Println("Case1: sync after db fill and with new received pulses")
 	for i := 0; i < 2; i++ {
 		lastpulse++
-		err = setpulse(ctx, pm, lastpulse)
-		require.NoError(t, err)
+		err = setpulse(s.ctx, pm, lastpulse)
+		require.NoError(s.T(), err)
 	}
 
 	fmt.Println("Case2: sync during db fill")
 	for i := 0; i < 2; i++ {
 		// fill DB with records, indexes (TODO: add blobs)
-		addRecords(ctx, t, db, jetID, core.PulseNumber(lastpulse))
+		addRecords(s.ctx, s.T(), s.objectStorage, jetID, core.PulseNumber(lastpulse))
 
 		lastpulse++
-		err = setpulse(ctx, pm, lastpulse)
-		require.NoError(t, err)
+		err = setpulse(s.ctx, pm, lastpulse)
+		require.NoError(s.T(), err)
 	}
 	// set last pulse
 	lastpulse++
-	err = setpulse(ctx, pm, lastpulse)
-	require.NoError(t, err)
+	err = setpulse(s.ctx, pm, lastpulse)
+	require.NoError(s.T(), err)
 
 	// give sync chance to complete and start sync loop again
 	time.Sleep(2 * minretry)
 
-	err = pm.Stop(ctx)
-	assert.NoError(t, err)
+	err = pm.Stop(s.ctx)
+	assert.NoError(s.T(), err)
 
 	synckeys = uniqkeys(sortkeys(synckeys))
 
-	recs := getallkeys(db.GetBadgerDB())
+	recs := getallkeys(s.db.GetBadgerDB())
 	recs = filterkeys(recs, func(k key) bool {
 		return storage.Key(k).PulseNumber() != 0
 	})
 
-	// fmt.Println("getallkeys: ", len(recs))
-	// printkeys(recs, "  ")
-	// fmt.Println("synckeys:", len(synckeys))
-	// printkeys(synckeys, "  ")
-	require.Equal(t, len(recs), len(synckeys), "synced keys count are the same as records count in storage")
-	assert.Equal(t, recs, synckeys, "synced keys are the same as records in storage")
+	require.Equal(s.T(), len(recs), len(synckeys), "synced keys count are the same as records count in storage")
+	assert.Equal(s.T(), recs, synckeys, "synced keys are the same as records in storage")
 }
 
 func setpulse(ctx context.Context, pm core.PulseManager, pulsenum int) error {
-	// fmt.Printf("CALL setpulse %v\n", pulsenum)
 	return pm.Set(ctx, core.Pulse{PulseNumber: core.PulseNumber(pulsenum)}, true)
 }
 
 func addRecords(
 	ctx context.Context,
 	t *testing.T,
-	db *storage.DB,
+	objectStorage storage.ObjectStorage,
 	jetID core.RecordID,
 	pn core.PulseNumber,
 ) {
-	// fmt.Printf("CALL addRecords for pulse %v\n", pn)
 	// set record
-	parentID, err := db.SetRecord(
+	parentID, err := objectStorage.SetRecord(
 		ctx,
 		jetID,
 		pn,
@@ -291,11 +362,11 @@ func addRecords(
 	)
 	require.NoError(t, err)
 
-	_, err = db.SetBlob(ctx, jetID, pn, []byte("100500"))
+	_, err = objectStorage.SetBlob(ctx, jetID, pn, []byte("100500"))
 	require.NoError(t, err)
 
 	// set index of record
-	err = db.SetObjectIndex(ctx, jetID, parentID, &index.ObjectLifeline{
+	err = objectStorage.SetObjectIndex(ctx, jetID, parentID, &index.ObjectLifeline{
 		LatestState: parentID,
 	})
 	require.NoError(t, err)

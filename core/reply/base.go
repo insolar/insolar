@@ -36,8 +36,11 @@ const (
 	// TypeNotOK is a generic reply for signaling a negative result.
 	TypeNotOK
 
+	// TypeGetCodeRedirect is a redirect reply for code-call
 	TypeGetCodeRedirect
+	// TypeGetObjectRedirect is a redirect reply for object-call
 	TypeGetObjectRedirect
+	// TypeGetChildrenRedirect is a redirect reply for children-call
 	TypeGetChildrenRedirect
 
 	// Logicrunner
@@ -69,7 +72,8 @@ const (
 	TypePendingRequests
 	// TypeJet contains jet.
 	TypeJet
-
+	// TypeRequest contains request.
+	TypeRequest
 	// TypeHeavyError carries heavy record sync
 	TypeHeavyError
 
@@ -82,8 +86,12 @@ type ErrType int
 const (
 	// ErrDeactivated returned when requested object is deactivated.
 	ErrDeactivated = iota + 1
+	// ErrStateNotAvailable is returned when requested object is deactivated.
 	ErrStateNotAvailable
+	// ErrHotDataTimeout is returned when no hot data received for a specific jet
 	ErrHotDataTimeout
+	// ErrNoPendingRequests is returned when there are no pending requests on current LME
+	ErrNoPendingRequests
 )
 
 func getEmptyReply(t core.ReplyType) (core.Reply, error) {
@@ -124,6 +132,8 @@ func getEmptyReply(t core.ReplyType) (core.Reply, error) {
 		return &HasPendingRequests{}, nil
 	case TypeJet:
 		return &Jet{}, nil
+	case TypeRequest:
+		return &Request{}, nil
 
 	case TypeNodeSign:
 		return &NodeSign{}, nil
@@ -191,4 +201,5 @@ func init() {
 	gob.Register(&JetMiss{})
 	gob.Register(&NodeSign{})
 	gob.Register(&HasPendingRequests{})
+	gob.Register(&Request{})
 }

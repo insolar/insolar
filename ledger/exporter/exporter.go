@@ -26,29 +26,27 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/record"
-	base58 "github.com/jbenet/go-base58"
+	"github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
 )
 
 // Exporter provides methods for fetching data view from storage.
 type Exporter struct {
+	DB            storage.DBContext     `inject:""`
 	JetStorage    storage.JetStorage    `inject:""`
 	ObjectStorage storage.ObjectStorage `inject:""`
 	PulseTracker  storage.PulseTracker  `inject:""`
 	PulseStorage  core.PulseStorage     `inject:""`
 
-	db  *storage.DB
 	cfg configuration.Exporter
 }
 
 // NewExporter creates new StorageExporter instance.
-func NewExporter(db *storage.DB, cfg configuration.Exporter) *Exporter {
+func NewExporter(cfg configuration.Exporter) *Exporter {
 	return &Exporter{
-		db:  db,
 		cfg: cfg,
 	}
 }
@@ -79,13 +77,10 @@ type pulseData struct {
 // Export returns data view from storage.
 func (e *Exporter) Export(ctx context.Context, fromPulse core.PulseNumber, size int) (*core.StorageExportResult, error) {
 	result := core.StorageExportResult{Data: map[string]interface{}{}}
-	inslog := inslogger.FromContext(ctx)
-	inslog.Debugf("[ API Export ] start")
 
 	jetIDs, err := e.JetStorage.GetJets(ctx)
 	if err != nil {
-		inslog.Debugf("[ API Export ] error getting jets: %s", err.Error())
-		return nil, err
+		return nil, errors.Wrap(err, "failed to fetch jets")
 	}
 
 	currentPulse, err := e.PulseStorage.Current(ctx)
@@ -156,13 +151,13 @@ func (e *Exporter) Export(ctx context.Context, fromPulse core.PulseNumber, size 
 
 func (e *Exporter) exportPulse(ctx context.Context, jetID core.RecordID, pulse *core.Pulse) (*pulseData, error) {
 	records := recordsData{}
-	err := e.db.IterateRecordsOnPulse(ctx, jetID, pulse.PulseNumber, func(id core.RecordID, rec record.Record) error {
+	err := e.DB.IterateRecordsOnPulse(ctx, jetID, pulse.PulseNumber, func(id core.RecordID, rec record.Record) error {
 		pl, err := e.getPayload(ctx, jetID, rec)
 		if err != nil {
 			return errors.Wrap(err, "exportPulse failed to getPayload")
 		}
 		records[string(base58.Encode(id[:]))] = recordData{
-			Type:    strings.Title(rec.Type().String()),
+			Type:    strings.Title(record.TypeFromRecord(rec).String()),
 			Data:    rec,
 			Payload: pl,
 		}
@@ -187,7 +182,7 @@ func (e *Exporter) getPayload(ctx context.Context, jetID core.RecordID, rec reco
 		if r.GetMemory() == nil {
 			break
 		}
-		blob, err := e.db.GetBlob(ctx, jetID, r.GetMemory())
+		blob, err := e.ObjectStorage.GetBlob(ctx, jetID, r.GetMemory())
 		if err != nil {
 			return nil, errors.Wrapf(err, "getPayload failed to GetBlob (jet: %s)", jetID.DebugString())
 		}
@@ -201,11 +196,13 @@ func (e *Exporter) getPayload(ctx context.Context, jetID core.RecordID, rec reco
 		if r.GetPayload() == nil {
 			break
 		}
-		msg, err := message.Deserialize(bytes.NewBuffer(r.GetPayload()))
+		parcel, err := message.DeserializeParcel(bytes.NewBuffer(r.GetPayload()))
 		if err != nil {
 			return payload{"PayloadBinary": r.GetPayload()}, nil
 		}
-		switch m := msg.(type) {
+
+		msg := parcel.Message()
+		switch m := parcel.Message().(type) {
 		case *message.CallMethod:
 			res, err := m.ToMap()
 			if err != nil {
