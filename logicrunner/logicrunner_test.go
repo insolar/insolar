@@ -24,6 +24,7 @@ import (
 	"io/ioutil"
 	"net/rpc"
 	"os"
+	"path"
 	"testing"
 	"time"
 
@@ -1090,20 +1091,34 @@ func TestRootDomainContract(t *testing.T) {
 	if parallel {
 		t.Parallel()
 	}
-	rootDomainCode, err := ioutil.ReadFile("../application/contract/rootdomain/rootdomain.go" +
-		"")
+	rootDomainPath    := "application/contract/rootdomain/rootdomain.go"
+	memberCodePath    := "application/contract/member/member.go"
+	allowanceCodePath := "application/contract/allowance/allowance.go"
+	walletCodePath    := "application/contract/wallet/wallet.go"
+	if _, err := os.Stat(rootDomainPath); os.IsNotExist(err) {
+		rootDomainPath = path.Join("..", rootDomainPath)
+		memberCodePath = path.Join("..", memberCodePath)
+		allowanceCodePath = path.Join("..", allowanceCodePath)
+		walletCodePath = path.Join("..", walletCodePath)
+
+		if _, err := os.Stat(rootDomainPath); os.IsNotExist(err) {
+			t.Fatal("Failed to find rootDomain file in ", rootDomainPath)
+		}
+	}
+
+	rootDomainCode, err := ioutil.ReadFile(rootDomainPath)
 	if err != nil {
 		fmt.Print(err)
 	}
-	memberCode, err := ioutil.ReadFile("../application/contract/member/member.go")
+	memberCode, err := ioutil.ReadFile(memberCodePath)
 	if err != nil {
 		fmt.Print(err)
 	}
-	allowanceCode, err := ioutil.ReadFile("../application/contract/allowance/allowance.go")
+	allowanceCode, err := ioutil.ReadFile(allowanceCodePath)
 	if err != nil {
 		fmt.Print(err)
 	}
-	walletCode, err := ioutil.ReadFile("../application/contract/wallet/wallet.go")
+	walletCode, err := ioutil.ReadFile(walletCodePath)
 	if err != nil {
 		fmt.Print(err)
 	}
@@ -1487,24 +1502,37 @@ func (r *One) CreateAllowance(member string) (error) {
 	return nil
 }
 `
-	rootDomainCode, err := ioutil.ReadFile("../application/contract/rootdomain/rootdomain.go" +
-		"")
-	if err != nil {
-		fmt.Print(err)
-	}
-	memberCode, err := ioutil.ReadFile("../application/contract/member/member.go")
-	if err != nil {
-		fmt.Print(err)
-	}
-	allowanceCode, err := ioutil.ReadFile("../application/contract/allowance/allowance.go")
-	if err != nil {
-		fmt.Print(err)
-	}
-	walletCode, err := ioutil.ReadFile("../application/contract/wallet/wallet.go")
-	if err != nil {
-		fmt.Print(err)
+	rootDomainPath    := "application/contract/rootdomain/rootdomain.go"
+	memberCodePath    := "application/contract/member/member.go"
+	allowanceCodePath := "application/contract/allowance/allowance.go"
+	walletCodePath    := "application/contract/wallet/wallet.go"
+	if _, err := os.Stat(rootDomainPath); os.IsNotExist(err) {
+		rootDomainPath = path.Join("..", rootDomainPath)
+		memberCodePath = path.Join("..", memberCodePath)
+		allowanceCodePath = path.Join("..", allowanceCodePath)
+		walletCodePath = path.Join("..", walletCodePath)
+
+		if _, err := os.Stat(rootDomainPath); os.IsNotExist(err) {
+			t.Fatal("Failed to find rootDomain file in ", rootDomainPath)
+		}
 	}
 
+	rootDomainCode, err := ioutil.ReadFile(rootDomainPath)
+	if err != nil {
+		fmt.Print(err)
+	}
+	memberCode, err := ioutil.ReadFile(memberCodePath)
+	if err != nil {
+		fmt.Print(err)
+	}
+	allowanceCode, err := ioutil.ReadFile(allowanceCodePath)
+	if err != nil {
+		fmt.Print(err)
+	}
+	walletCode, err := ioutil.ReadFile(walletCodePath)
+	if err != nil {
+		fmt.Print(err)
+	}
 	ctx := context.TODO()
 	lr, am, cb, pm, cleaner := PrepareLrAmCbPm(t)
 	defer cleaner()
