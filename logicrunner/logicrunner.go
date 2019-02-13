@@ -70,6 +70,8 @@ type ExecutionState struct {
 	Queue                 []ExecutionQueueElement
 	QueueProcessorActive  bool
 	LedgerHasMoreRequests bool
+	LedgerQueueElement    *ExecutionQueueElement
+	getLedgerPendingMutex sync.Mutex
 
 	// TODO not using in validation, need separate ObjectState.ExecutionState and ObjectState.Validation from ExecutionState struct
 	pending          message.PendingState
@@ -93,10 +95,11 @@ type ExecutionQueueResult struct {
 }
 
 type ExecutionQueueElement struct {
-	ctx     context.Context
-	parcel  core.Parcel
-	request *Ref
-	pulse   core.PulseNumber
+	ctx        context.Context
+	parcel     core.Parcel
+	request    *Ref
+	pulse      core.PulseNumber
+	fromLedger bool
 }
 
 type Error struct {
@@ -189,15 +192,17 @@ func (es *ExecutionState) releaseQueue() ([]ExecutionQueueElement, bool) {
 	q := es.Queue
 
 	if len(q) > maxQueueLength {
-		// waiting for ledger implement fetch method
-		// waiting for us implement fetching
-		//q = q[:maxQueueLength]
+		q = q[:maxQueueLength]
 		ledgerHasMoreRequest = true
 	}
 
 	es.Queue = make([]ExecutionQueueElement, 0)
 
 	return q, ledgerHasMoreRequest
+}
+
+func (es *ExecutionState) haveSomeToProcess() bool {
+	return len(es.Queue) > 0 || es.LedgerHasMoreRequests || es.LedgerQueueElement != nil
 }
 
 // LogicRunner is a general interface of contract executor
@@ -496,7 +501,7 @@ func (lr *LogicRunner) StartQueueProcessorIfNeeded(
 	es.Lock()
 	defer es.Unlock()
 
-	if len(es.Queue) == 0 {
+	if !es.haveSomeToProcess() {
 		inslogger.FromContext(ctx).Debug("queue is empty. processor is not needed")
 		return nil
 	}
@@ -508,11 +513,13 @@ func (lr *LogicRunner) StartQueueProcessorIfNeeded(
 
 	if es.pending == message.PendingUnknown {
 		pending, err := es.CheckPendingRequests(ctx, msg)
+
 		if err != nil {
 			return errors.Wrap(err, "couldn't check for pending requests")
 		}
 		es.pending = pending
 	}
+
 	if es.pending == message.InPending {
 		inslogger.FromContext(ctx).Debug("object in pending. not starting queue processor")
 		return nil
@@ -521,22 +528,49 @@ func (lr *LogicRunner) StartQueueProcessorIfNeeded(
 	inslogger.FromContext(ctx).Debug("Starting a new queue processor")
 	es.QueueProcessorActive = true
 	go lr.ProcessExecutionQueue(ctx, es)
+	go lr.getLedgerPendingRequest(ctx, es, *msg.DefaultTarget().Record())
+
 	return nil
+}
+
+func (lr *LogicRunner) StartQueueProcessorIfNeededOnPulse(ctx context.Context, es *ExecutionState, ref *core.RecordRef) {
+	es.Lock()
+	defer es.Unlock()
+
+	if !es.haveSomeToProcess() {
+		inslogger.FromContext(ctx).Debug("queue is empty. processor is not needed")
+	}
+
+	if es.QueueProcessorActive {
+		inslogger.FromContext(ctx).Debug("queue processor is already active. processor is not needed")
+	}
+
+	es.pending = message.NotPending
+
+	inslogger.FromContext(ctx).Debug("Starting a new queue processor")
+	es.QueueProcessorActive = true
+	go lr.ProcessExecutionQueue(ctx, es)
+	go lr.getLedgerPendingRequest(ctx, es, *ref.Record())
 }
 
 func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionState) {
 	for {
 		es.Lock()
-		q := es.Queue
-		if len(q) == 0 {
+		if len(es.Queue) == 0 && es.LedgerQueueElement == nil {
 			inslogger.FromContext(ctx).Debug("Quiting queue processing, empty")
 			es.QueueProcessorActive = false
 			es.Current = nil
 			es.Unlock()
 			return
 		}
-		qe, q := q[0], q[1:]
-		es.Queue = q
+
+		var qe ExecutionQueueElement
+		if es.LedgerQueueElement != nil {
+			qe = *es.LedgerQueueElement
+			es.LedgerQueueElement = nil
+		} else {
+			qe, es.Queue = es.Queue[0], es.Queue[1:]
+		}
 
 		sender := qe.parcel.GetSender()
 		current := CurrentExecution{
@@ -566,9 +600,18 @@ func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionS
 		current.Context = core.ContextWithMessageBus(qe.ctx, recordingBus)
 
 		inslogger.FromContext(qe.ctx).Debug("Registering request within execution behaviour")
+
+		ok := es.Behaviour.(*ValidationSaver)
+		if ok == nil {
+			panic("not ValidationSaver behaviour in ProcessExecutionQueue()")
+		}
 		es.Behaviour.(*ValidationSaver).NewRequest(qe.parcel, *qe.request, recordingBus)
 
 		res.reply, res.err = lr.executeOrValidate(current.Context, es, qe.parcel)
+
+		if qe.fromLedger {
+			go lr.getLedgerPendingRequest(ctx, es, *qe.parcel.DefaultTarget().Record())
+		}
 
 		inslogger.FromContext(qe.ctx).Debug("Registering result within execution behaviour")
 		err := es.Behaviour.Result(res.reply, res.err)
@@ -683,6 +726,79 @@ func (lr *LogicRunner) executeOrValidate(
 	}()
 
 	return re, err
+}
+
+// never call this under es.Lock(), this leads to deadlock
+func (lr *LogicRunner) getLedgerPendingRequest(ctx context.Context, es *ExecutionState, id core.RecordID) {
+	ctx, span := instracer.StartSpan(ctx, "LogicRunner.getLedgerPendingRequest")
+	defer span.End()
+
+	es.getLedgerPendingMutex.Lock()
+	defer es.getLedgerPendingMutex.Unlock()
+
+	ref := lr.unsafeGetLedgerPendingRequest(ctx, es, id)
+
+	if ref != nil {
+		go lr.StartQueueProcessorIfNeededOnPulse(ctx, es, ref)
+	}
+}
+
+func (lr *LogicRunner) unsafeGetLedgerPendingRequest(ctx context.Context, es *ExecutionState, id core.RecordID) *core.RecordRef {
+	es.Lock()
+	if es.LedgerQueueElement != nil || !es.LedgerHasMoreRequests {
+		es.Unlock()
+		return nil
+	}
+	es.Unlock()
+
+	ledgerHasMore := true
+
+	parcel, err := lr.ArtifactManager.GetPendingRequest(ctx, id)
+	if err != nil {
+		if err != core.ErrNoPendingRequest {
+			inslogger.FromContext(ctx).Debug("GetPendingRequest failed with error")
+			return nil
+		}
+
+		ledgerHasMore = false
+	}
+	es.Lock()
+	defer es.Unlock()
+
+	if !ledgerHasMore {
+		es.LedgerHasMoreRequests = ledgerHasMore
+		return nil
+	}
+
+	msg := parcel.Message().(message.IBaseLogicMessage)
+
+	pulse := lr.pulse(ctx).PulseNumber
+	authorized, err := lr.JetCoordinator.IsAuthorized(
+		ctx, core.DynamicRoleVirtualExecutor, id, pulse, lr.JetCoordinator.Me(),
+	)
+	if err != nil {
+		inslogger.FromContext(ctx).Debug("Authorization failed with error in getLedgerPendingRequest")
+		return nil
+	}
+
+	if !authorized {
+		inslogger.FromContext(ctx).Debug("pulse changed, can't process abandoned messages for this object")
+		return nil
+	}
+
+	request := msg.GetReference()
+	request.SetRecord(id)
+
+	es.LedgerHasMoreRequests = ledgerHasMore
+	es.LedgerQueueElement = &ExecutionQueueElement{
+		ctx:        ctx,
+		parcel:     parcel,
+		request:    &request,
+		pulse:      pulse,
+		fromLedger: true,
+	}
+
+	return msg.DefaultTarget()
 }
 
 // ObjectBody is an inner representation of object and all it accessory
@@ -1012,15 +1128,8 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 					)
 					es.pending = message.NotPending
 					es.objectbody = nil
-					go func() {
-						err := lr.StartQueueProcessorIfNeeded(ctx, es, nil)
-						if err != nil {
-							inslogger.FromContext(ctx).Error(
-								errors.Wrap(err, "couldn't start queue processor"),
-							)
-
-						}
-					}()
+					es.LedgerHasMoreRequests = true
+					go lr.getLedgerPendingRequest(ctx, es, *ref.Record())
 				}
 				es.PendingConfirmed = false
 			}

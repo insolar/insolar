@@ -110,6 +110,9 @@ type JetCoordinator interface {
 
 	IsBeyondLimit(ctx context.Context, currentPN, targetPN PulseNumber) (bool, error)
 	NodeForJet(ctx context.Context, jetID RecordID, rootPN, targetPN PulseNumber) (*RecordRef, error)
+
+	// NodeForJet calculates a node (LME or heavy) for a specific jet for a specific pulseNumber
+	NodeForObject(ctx context.Context, objectID RecordID, rootPN, targetPN PulseNumber) (*RecordRef, error)
 }
 
 // ArtifactManager is a high level storage interface.
