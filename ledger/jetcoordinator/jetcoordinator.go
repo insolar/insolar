@@ -249,7 +249,7 @@ func (jc *JetCoordinator) IsBeyondLimit(ctx context.Context, currentPN, targetPN
 	return true, nil
 }
 
-// NodeForJet calculates a node for a specific jet for a specific pulseNumber
+// NodeForJet calculates a node (LME or heavy) for a specific jet for a specific pulseNumber
 func (jc *JetCoordinator) NodeForJet(ctx context.Context, jetID core.RecordID, rootPN, targetPN core.PulseNumber) (*core.RecordRef, error) {
 	toHeavy, err := jc.IsBeyondLimit(ctx, rootPN, targetPN)
 	if err != nil {
