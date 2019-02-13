@@ -25,14 +25,14 @@ import (
 )
 
 type pulseTrackerMemory struct {
-	memory      map[core.PulseNumber]*Pulse
-	latestPulse core.PulseNumber
 	mutex       sync.RWMutex
+	memory      map[core.PulseNumber]Pulse
+	latestPulse core.PulseNumber
 }
 
 // NewPulseTracker returns new instance PulseTracker with in-memory realization
 func NewPulseTrackerMemory() PulseTracker {
-	return &pulseTrackerMemory{memory: make(map[core.PulseNumber]*Pulse)}
+	return &pulseTrackerMemory{memory: make(map[core.PulseNumber]Pulse)}
 }
 
 // GetPulse returns pulse for provided pulse number.
@@ -74,12 +74,8 @@ func (p *pulseTrackerMemory) AddPulse(ctx context.Context, pulse core.Pulse) err
 
 	pn := pulse.PulseNumber
 
-	if pn < p.latestPulse {
+	if pn <= p.latestPulse {
 		return ErrBadPulse
-	}
-
-	if pn == p.latestPulse {
-		return ErrOverride
 	}
 
 	var (
@@ -104,7 +100,7 @@ func (p *pulseTrackerMemory) AddPulse(ctx context.Context, pulse core.Pulse) err
 			return err
 		}
 		prevPulse.Next = &pulse.PulseNumber
-		p.memory[prevPulse.Pulse.PulseNumber] = prevPulse
+		p.memory[prevPulse.Pulse.PulseNumber] = *prevPulse
 	}
 
 	// Save new pulse.
@@ -114,7 +110,7 @@ func (p *pulseTrackerMemory) AddPulse(ctx context.Context, pulse core.Pulse) err
 		Pulse:        pulse,
 	}
 
-	p.memory[pn] = &newPulse
+	p.memory[pn] = newPulse
 	p.latestPulse = pn
 
 	return nil
@@ -148,7 +144,7 @@ func (p *pulseTrackerMemory) getPulse(ctx context.Context, num core.PulseNumber)
 		return nil, ErrNotFound
 	}
 
-	return pulse, nil
+	return &pulse, nil
 }
 
 func (p *pulseTrackerMemory) getNthPrevPulse(ctx context.Context, n uint, num core.PulseNumber) (*Pulse, error) {
