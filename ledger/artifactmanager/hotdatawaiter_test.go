@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/testutils"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -46,12 +47,10 @@ func TestHotDataWaiterConcrete_Get_CreateIfNil(t *testing.T) {
 	jetID := testutils.RandomID()
 
 	// Act
-	waiter := hdw.getWaiter(inslogger.TestContext(t), jetID)
+	waiter := hdw.instance(jetID)
 
 	// Assert
 	require.NotNil(t, waiter)
-	require.NotNil(t, waiter.hotDataChannel)
-	require.NotNil(t, waiter.timeoutChannel)
 	require.Equal(t, waiter, hdw.waiters[jetID])
 	require.Equal(t, 1, len(hdw.waiters))
 }
@@ -70,7 +69,7 @@ func TestHotDataWaiterConcrete_Wait_UnlockHotData(t *testing.T) {
 		return hdw
 	}
 	jetID := testutils.RandomID()
-	_ = hdw.getWaiter(inslogger.TestContext(t), jetID)
+	_ = hdw.instance(jetID)
 
 	// Act
 	go func() {
@@ -81,9 +80,15 @@ func TestHotDataWaiterConcrete_Wait_UnlockHotData(t *testing.T) {
 
 	time.Sleep(10 * time.Millisecond)
 
-	hdwGetter().Unlock(inslogger.TestContext(t), jetID)
+	// Closing waiter the first time, no error.
+	err := hdwGetter().Unlock(inslogger.TestContext(t), jetID)
+	require.NoError(t, err)
 
 	<-syncChannel
+
+	// Closing waiter the second time, error.
+	err = hdwGetter().Unlock(inslogger.TestContext(t), jetID)
+	assert.Error(t, err)
 }
 
 func TestHotDataWaiterConcrete_Wait_ThrowTimeout(t *testing.T) {
@@ -106,7 +111,7 @@ func TestHotDataWaiterConcrete_Wait_ThrowTimeout(t *testing.T) {
 		return len(hdw.waiters)
 	}
 	jetID := testutils.RandomID()
-	_ = hdw.getWaiter(inslogger.TestContext(t), jetID)
+	_ = hdw.instance(jetID)
 
 	// Act
 	go func() {
@@ -145,7 +150,7 @@ func TestHotDataWaiterConcrete_Wait_ThrowTimeout_MultipleMembers(t *testing.T) {
 	}
 	jetID := testutils.RandomID()
 	secondJetID := testutils.RandomID()
-	_ = hdw.getWaiter(inslogger.TestContext(t), jetID)
+	_ = hdw.instance(jetID)
 
 	// Act
 	go func() {

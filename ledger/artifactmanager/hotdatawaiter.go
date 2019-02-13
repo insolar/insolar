@@ -33,75 +33,80 @@ import (
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage.HotDataWaiter -o ./ -s _mock.go
 type HotDataWaiter interface {
 	Wait(ctx context.Context, jetID core.RecordID) error
-	Unlock(ctx context.Context, jetID core.RecordID)
+	Unlock(ctx context.Context, jetID core.RecordID) error
 	ThrowTimeout(ctx context.Context)
 }
 
 // HotDataWaiterConcrete is an implementation of HotDataWaiter
 type HotDataWaiterConcrete struct {
-	waitersMapLock sync.Mutex
-	waiters        map[core.RecordID]*waiter
+	lock    sync.Mutex
+	waiters map[core.RecordID]waiter
+	timeout chan struct{}
+}
+
+type waiter chan struct{}
+
+func (w waiter) isClosed() bool {
+	select {
+	case <-w:
+		return true
+	default:
+	}
+	return false
 }
 
 // NewHotDataWaiterConcrete is a constructor
 func NewHotDataWaiterConcrete() *HotDataWaiterConcrete {
-	return &HotDataWaiterConcrete{waiters: map[core.RecordID]*waiter{}}
-}
-
-type waiter struct {
-	hotDataChannel chan struct{}
-	timeoutChannel chan struct{}
-}
-
-func (hdw *HotDataWaiterConcrete) getWaiter(ctx context.Context, jetID core.RecordID) *waiter {
-	hdw.waitersMapLock.Lock()
-	defer hdw.waitersMapLock.Unlock()
-
-	if _, ok := hdw.waiters[jetID]; !ok {
-		hdw.waiters[jetID] = &waiter{
-			hotDataChannel: make(chan struct{}),
-			timeoutChannel: make(chan struct{}),
-		}
+	return &HotDataWaiterConcrete{
+		waiters: map[core.RecordID]waiter{},
+		timeout: make(chan struct{}),
 	}
+}
 
-	return hdw.waiters[jetID]
+func (w *HotDataWaiterConcrete) instance(jetID core.RecordID) waiter {
+	if _, ok := w.waiters[jetID]; !ok {
+		w.waiters[jetID] = make(waiter)
+	}
+	return w.waiters[jetID]
 }
 
 // Wait waits for the raising one of two channels.
 // If hotDataChannel or timeoutChannel was raised, the method returns error
 // Either nil or ErrHotDataTimeout
-func (hdw *HotDataWaiterConcrete) Wait(ctx context.Context, jetID core.RecordID) error {
-	waiter := hdw.getWaiter(ctx, jetID)
+func (w *HotDataWaiterConcrete) Wait(ctx context.Context, jetID core.RecordID) error {
+	w.lock.Lock()
+	waiter := w.instance(jetID)
+	timeout := w.timeout
+	w.lock.Unlock()
 
 	select {
-	case <-waiter.hotDataChannel:
+	case <-waiter:
 		return nil
-	case <-waiter.timeoutChannel:
+	case <-timeout:
 		return core.ErrHotDataTimeout
 	}
 }
 
 // Unlock raises hotDataChannel
-func (hdw *HotDataWaiterConcrete) Unlock(ctx context.Context, jetID core.RecordID) {
-	waiter := hdw.getWaiter(ctx, jetID)
+func (w *HotDataWaiterConcrete) Unlock(ctx context.Context, jetID core.RecordID) error {
+	w.lock.Lock()
+	defer w.lock.Unlock()
 
-	hdw.waitersMapLock.Lock()
-	defer hdw.waitersMapLock.Unlock()
-
-	close(waiter.hotDataChannel)
+	waiter := w.instance(jetID)
+	if waiter.isClosed() {
+		return ErrWaiterNotLocked
+	}
+	close(waiter)
+	return nil
 }
 
 // ThrowTimeout raises all timeoutChannel
-func (hdw *HotDataWaiterConcrete) ThrowTimeout(ctx context.Context) {
-	logger := inslogger.FromContext(ctx)
+func (w *HotDataWaiterConcrete) ThrowTimeout(ctx context.Context) {
+	w.lock.Lock()
+	defer w.lock.Unlock()
 
-	hdw.waitersMapLock.Lock()
-	defer hdw.waitersMapLock.Unlock()
-
-	for jetID, waiter := range hdw.waiters {
-		logger.WithField("jetid", jetID.DebugString()).Debug("raising timeout for requests")
-		close(waiter.timeoutChannel)
-	}
-
-	hdw.waiters = map[core.RecordID]*waiter{}
+	inslogger.FromContext(ctx).Debug("raising timeout for requests")
+	close(w.timeout)
+	w.timeout = make(chan struct{})
+	w.waiters = map[core.RecordID]waiter{}
 }
