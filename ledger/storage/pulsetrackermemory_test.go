@@ -266,4 +266,11 @@ func TestPulseTrackerMemory_AddPulse(t *testing.T) {
 	assert.Equal(t, *secondPulse.Prev, pulseTracker.memory[core.FirstPulseNumber].Pulse.PulseNumber)
 	assert.Equal(t, secondPulse.SerialNumber, pulseTracker.memory[core.FirstPulseNumber+1].SerialNumber)
 	assert.Equal(t, *firstPulse.Next, pulseTracker.memory[core.FirstPulseNumber+1].Pulse.PulseNumber)
+
+	// Check pulse from the past for non-empty storage
+	pastPulse := &Pulse{
+		Pulse: core.Pulse{PulseNumber: core.FirstPulseNumber - 1},
+	}
+	err = pulseTracker.AddPulse(ctx, pastPulse.Pulse)
+	require.Equal(t, ErrLesserPulse, err)
 }
