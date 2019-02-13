@@ -25,8 +25,7 @@ type PendingStorageMock struct {
 	AddPendingRequestPreCounter uint64
 	AddPendingRequestMock       mPendingStorageMockAddPendingRequest
 
-	GetRequestsFunc func() (r map[core.RecordID]map[core.RecordID]struct {
-	})
+	GetRequestsFunc       func() (r map[core.RecordID]PendingObjectContext)
 	GetRequestsCounter    uint64
 	GetRequestsPreCounter uint64
 	GetRequestsMock       mPendingStorageMockGetRequests
@@ -40,6 +39,11 @@ type PendingStorageMock struct {
 	RemovePendingRequestCounter    uint64
 	RemovePendingRequestPreCounter uint64
 	RemovePendingRequestMock       mPendingStorageMockRemovePendingRequest
+
+	SetContextToObjectFunc       func(p context.Context, p1 core.RecordID, p2 PendingObjectContext)
+	SetContextToObjectCounter    uint64
+	SetContextToObjectPreCounter uint64
+	SetContextToObjectMock       mPendingStorageMockSetContextToObject
 }
 
 //NewPendingStorageMock returns a mock for github.com/insolar/insolar/ledger/recentstorage.PendingStorage
@@ -54,6 +58,7 @@ func NewPendingStorageMock(t minimock.Tester) *PendingStorageMock {
 	m.GetRequestsMock = mPendingStorageMockGetRequests{mock: m}
 	m.GetRequestsForObjectMock = mPendingStorageMockGetRequestsForObject{mock: m}
 	m.RemovePendingRequestMock = mPendingStorageMockRemovePendingRequest{mock: m}
+	m.SetContextToObjectMock = mPendingStorageMockSetContextToObject{mock: m}
 
 	return m
 }
@@ -194,8 +199,7 @@ type PendingStorageMockGetRequestsExpectation struct {
 }
 
 type PendingStorageMockGetRequestsResult struct {
-	r map[core.RecordID]map[core.RecordID]struct {
-	}
+	r map[core.RecordID]PendingObjectContext
 }
 
 //Expect specifies that invocation of PendingStorage.GetRequests is expected from 1 to Infinity times
@@ -211,8 +215,7 @@ func (m *mPendingStorageMockGetRequests) Expect() *mPendingStorageMockGetRequest
 }
 
 //Return specifies results of invocation of PendingStorage.GetRequests
-func (m *mPendingStorageMockGetRequests) Return(r map[core.RecordID]map[core.RecordID]struct {
-}) *PendingStorageMock {
+func (m *mPendingStorageMockGetRequests) Return(r map[core.RecordID]PendingObjectContext) *PendingStorageMock {
 	m.mock.GetRequestsFunc = nil
 	m.expectationSeries = nil
 
@@ -234,14 +237,12 @@ func (m *mPendingStorageMockGetRequests) ExpectOnce() *PendingStorageMockGetRequ
 	return expectation
 }
 
-func (e *PendingStorageMockGetRequestsExpectation) Return(r map[core.RecordID]map[core.RecordID]struct {
-}) {
+func (e *PendingStorageMockGetRequestsExpectation) Return(r map[core.RecordID]PendingObjectContext) {
 	e.result = &PendingStorageMockGetRequestsResult{r}
 }
 
 //Set uses given function f as a mock of PendingStorage.GetRequests method
-func (m *mPendingStorageMockGetRequests) Set(f func() (r map[core.RecordID]map[core.RecordID]struct {
-})) *PendingStorageMock {
+func (m *mPendingStorageMockGetRequests) Set(f func() (r map[core.RecordID]PendingObjectContext)) *PendingStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -250,8 +251,7 @@ func (m *mPendingStorageMockGetRequests) Set(f func() (r map[core.RecordID]map[c
 }
 
 //GetRequests implements github.com/insolar/insolar/ledger/recentstorage.PendingStorage interface
-func (m *PendingStorageMock) GetRequests() (r map[core.RecordID]map[core.RecordID]struct {
-}) {
+func (m *PendingStorageMock) GetRequests() (r map[core.RecordID]PendingObjectContext) {
 	counter := atomic.AddUint64(&m.GetRequestsPreCounter, 1)
 	defer atomic.AddUint64(&m.GetRequestsCounter, 1)
 
@@ -594,6 +594,131 @@ func (m *PendingStorageMock) RemovePendingRequestFinished() bool {
 	return true
 }
 
+type mPendingStorageMockSetContextToObject struct {
+	mock              *PendingStorageMock
+	mainExpectation   *PendingStorageMockSetContextToObjectExpectation
+	expectationSeries []*PendingStorageMockSetContextToObjectExpectation
+}
+
+type PendingStorageMockSetContextToObjectExpectation struct {
+	input *PendingStorageMockSetContextToObjectInput
+}
+
+type PendingStorageMockSetContextToObjectInput struct {
+	p  context.Context
+	p1 core.RecordID
+	p2 PendingObjectContext
+}
+
+//Expect specifies that invocation of PendingStorage.SetContextToObject is expected from 1 to Infinity times
+func (m *mPendingStorageMockSetContextToObject) Expect(p context.Context, p1 core.RecordID, p2 PendingObjectContext) *mPendingStorageMockSetContextToObject {
+	m.mock.SetContextToObjectFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &PendingStorageMockSetContextToObjectExpectation{}
+	}
+	m.mainExpectation.input = &PendingStorageMockSetContextToObjectInput{p, p1, p2}
+	return m
+}
+
+//Return specifies results of invocation of PendingStorage.SetContextToObject
+func (m *mPendingStorageMockSetContextToObject) Return() *PendingStorageMock {
+	m.mock.SetContextToObjectFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &PendingStorageMockSetContextToObjectExpectation{}
+	}
+
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of PendingStorage.SetContextToObject is expected once
+func (m *mPendingStorageMockSetContextToObject) ExpectOnce(p context.Context, p1 core.RecordID, p2 PendingObjectContext) *PendingStorageMockSetContextToObjectExpectation {
+	m.mock.SetContextToObjectFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &PendingStorageMockSetContextToObjectExpectation{}
+	expectation.input = &PendingStorageMockSetContextToObjectInput{p, p1, p2}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+//Set uses given function f as a mock of PendingStorage.SetContextToObject method
+func (m *mPendingStorageMockSetContextToObject) Set(f func(p context.Context, p1 core.RecordID, p2 PendingObjectContext)) *PendingStorageMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.SetContextToObjectFunc = f
+	return m.mock
+}
+
+//SetContextToObject implements github.com/insolar/insolar/ledger/recentstorage.PendingStorage interface
+func (m *PendingStorageMock) SetContextToObject(p context.Context, p1 core.RecordID, p2 PendingObjectContext) {
+	counter := atomic.AddUint64(&m.SetContextToObjectPreCounter, 1)
+	defer atomic.AddUint64(&m.SetContextToObjectCounter, 1)
+
+	if len(m.SetContextToObjectMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.SetContextToObjectMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to PendingStorageMock.SetContextToObject. %v %v %v", p, p1, p2)
+			return
+		}
+
+		input := m.SetContextToObjectMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, PendingStorageMockSetContextToObjectInput{p, p1, p2}, "PendingStorage.SetContextToObject got unexpected parameters")
+
+		return
+	}
+
+	if m.SetContextToObjectMock.mainExpectation != nil {
+
+		input := m.SetContextToObjectMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, PendingStorageMockSetContextToObjectInput{p, p1, p2}, "PendingStorage.SetContextToObject got unexpected parameters")
+		}
+
+		return
+	}
+
+	if m.SetContextToObjectFunc == nil {
+		m.t.Fatalf("Unexpected call to PendingStorageMock.SetContextToObject. %v %v %v", p, p1, p2)
+		return
+	}
+
+	m.SetContextToObjectFunc(p, p1, p2)
+}
+
+//SetContextToObjectMinimockCounter returns a count of PendingStorageMock.SetContextToObjectFunc invocations
+func (m *PendingStorageMock) SetContextToObjectMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.SetContextToObjectCounter)
+}
+
+//SetContextToObjectMinimockPreCounter returns the value of PendingStorageMock.SetContextToObject invocations
+func (m *PendingStorageMock) SetContextToObjectMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.SetContextToObjectPreCounter)
+}
+
+//SetContextToObjectFinished returns true if mock invocations count is ok
+func (m *PendingStorageMock) SetContextToObjectFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.SetContextToObjectMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.SetContextToObjectCounter) == uint64(len(m.SetContextToObjectMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.SetContextToObjectMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.SetContextToObjectCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.SetContextToObjectFunc != nil {
+		return atomic.LoadUint64(&m.SetContextToObjectCounter) > 0
+	}
+
+	return true
+}
+
 //ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *PendingStorageMock) ValidateCallCounters() {
@@ -612,6 +737,10 @@ func (m *PendingStorageMock) ValidateCallCounters() {
 
 	if !m.RemovePendingRequestFinished() {
 		m.t.Fatal("Expected call to PendingStorageMock.RemovePendingRequest")
+	}
+
+	if !m.SetContextToObjectFinished() {
+		m.t.Fatal("Expected call to PendingStorageMock.SetContextToObject")
 	}
 
 }
@@ -647,6 +776,10 @@ func (m *PendingStorageMock) MinimockFinish() {
 		m.t.Fatal("Expected call to PendingStorageMock.RemovePendingRequest")
 	}
 
+	if !m.SetContextToObjectFinished() {
+		m.t.Fatal("Expected call to PendingStorageMock.SetContextToObject")
+	}
+
 }
 
 //Wait waits for all mocked methods to be called at least once
@@ -665,6 +798,7 @@ func (m *PendingStorageMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.GetRequestsFinished()
 		ok = ok && m.GetRequestsForObjectFinished()
 		ok = ok && m.RemovePendingRequestFinished()
+		ok = ok && m.SetContextToObjectFinished()
 
 		if ok {
 			return
@@ -687,6 +821,10 @@ func (m *PendingStorageMock) MinimockWait(timeout time.Duration) {
 
 			if !m.RemovePendingRequestFinished() {
 				m.t.Error("Expected call to PendingStorageMock.RemovePendingRequest")
+			}
+
+			if !m.SetContextToObjectFinished() {
+				m.t.Error("Expected call to PendingStorageMock.SetContextToObject")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)
@@ -714,6 +852,10 @@ func (m *PendingStorageMock) AllMocksCalled() bool {
 	}
 
 	if !m.RemovePendingRequestFinished() {
+		return false
+	}
+
+	if !m.SetContextToObjectFinished() {
 		return false
 	}
 

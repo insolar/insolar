@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
@@ -133,7 +134,7 @@ func (s *componentSuite) TestLedgerArtifactManager_PendingRequest() {
 	am.DefaultBus = mb
 	am.PlatformCryptographyScheme = platformpolicy.NewPlatformCryptographyScheme()
 
-	provider := storage.NewRecentStorageProvider(0)
+	provider := recentstorage.NewRecentStorageProvider(0)
 
 	cryptoScheme := platformpolicy.NewPlatformCryptographyScheme()
 
