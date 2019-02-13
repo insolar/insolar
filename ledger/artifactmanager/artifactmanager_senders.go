@@ -23,6 +23,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
@@ -92,7 +93,7 @@ func followRedirectSender(bus core.MessageBus) PreSender {
 				stats.Record(ctx, statRedirects.M(1))
 
 				redirected := r.Redirected(msg)
-				inslog.Debugf("redirect reciever=%v", r.GetReceiver())
+				inslogger.FromContext(ctx).Debugf("redirect reciever=%v", r.GetReceiver())
 
 				rep, err = bus.Send(ctx, redirected, &core.MessageSendOptions{
 					Token:    r.GetToken(),
