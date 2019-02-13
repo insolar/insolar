@@ -48,7 +48,7 @@ type communicatorSuite struct {
 func NewSuite() *communicatorSuite {
 	return &communicatorSuite{
 		Suite:        suite.Suite{},
-		communicator: NewNaiveCommunicator(),
+		communicator: NewCommunicator(),
 		participants: nil,
 	}
 }
