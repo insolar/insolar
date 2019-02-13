@@ -212,7 +212,7 @@ func (c *JetClient) syncloop(ctx context.Context) {
 			inslog.Debug("synchronization waiting signal what new pulse happens")
 			_, ok := <-c.signal
 			if !ok {
-				inslog.Debug("stop is called, so we are should just stop syncronization loop")
+				inslog.Info("stop is called, so we are should just stop syncronization loop")
 				return
 			}
 		}

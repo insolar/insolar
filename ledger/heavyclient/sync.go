@@ -53,7 +53,6 @@ func (c *JetClient) HeavySync(
 	inslog = inslog.WithField("jetID", jetID.DebugString())
 	inslog = inslog.WithField("pulseNum", pn)
 
-	inslog.Debug("JetClient.HeavySync")
 	if retry {
 		inslog.Info("synchronize: send reset message (retry sync)")
 		resetMsg := &message.HeavyReset{
@@ -74,7 +73,6 @@ func (c *JetClient) HeavySync(
 		inslog.Error("synchronize: start failed")
 		return err
 	}
-	inslog.Debug("synchronize: sucessfully send start message")
 
 	replicator := storage.NewReplicaIter(
 		ctx, c.db, jetID, pn, pn+1, c.opts.SyncMessageLimit)
@@ -95,7 +93,6 @@ func (c *JetClient) HeavySync(
 			inslog.Error("synchronize: payload failed")
 			return err
 		}
-		inslog.Debug("synchronize: sucessfully send save message")
 	}
 
 	signalMsg.Finished = true
@@ -103,9 +100,6 @@ func (c *JetClient) HeavySync(
 		inslog.Error("synchronize: finish failed")
 		return err
 	}
-	inslog.Debug("synchronize: sucessfully send finish message")
 
-	lastMeetPulse := replicator.LastSeenPulse()
-	inslog.Debugf("synchronize: finished (maximum pulse of saved messages is %v)", lastMeetPulse)
 	return nil
 }
