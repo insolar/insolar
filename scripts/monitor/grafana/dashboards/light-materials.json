@@ -18,6 +18,202 @@
   "links": [],
   "panels": [
     {
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 18,
+      "title": "Memory objects",
+      "type": "row"
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "fill": 1,
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 1
+      },
+      "id": 14,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "rate(insolard_hotdata_pending_total[1m])",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Pending requests",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "fill": 1,
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 1
+      },
+      "id": 20,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "rate(insolard_hotdata_objects_total[1m])",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "refId": "A"
+        },
+        {
+          "expr": "",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "refId": "B"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Hot objects",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 10
+      },
+      "id": 16,
+      "panels": [],
+      "title": "Cleanup",
+      "type": "row"
+    },
+    {
       "aliasColors": {},
       "bars": true,
       "dashLength": 10,
@@ -27,7 +223,7 @@
         "h": 5,
         "w": 8,
         "x": 0,
-        "y": 0
+        "y": 11
       },
       "id": 6,
       "legend": {
@@ -118,7 +314,7 @@
         "h": 5,
         "w": 8,
         "x": 8,
-        "y": 0
+        "y": 11
       },
       "id": 4,
       "legend": {
@@ -197,21 +393,21 @@
       "bars": true,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "Prometheus",
-      "fill": 10,
+      "fill": 1,
       "gridPos": {
         "h": 5,
         "w": 8,
         "x": 16,
-        "y": 0
+        "y": 11
       },
-      "id": 2,
+      "id": 12,
       "legend": {
+        "alignAsTable": false,
         "avg": false,
         "current": false,
         "max": false,
         "min": false,
-        "show": true,
+        "show": false,
         "total": false,
         "values": false
       },
@@ -225,42 +421,25 @@
       "renderer": "flot",
       "seriesOverrides": [],
       "spaceLength": 10,
-      "stack": true,
+      "stack": false,
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(increase(insolard_storage_recent_objects_added_count[1m]))",
+          "expr": "count(count by (jet) (insolard_heavyserver_synced_bytes))",
           "format": "time_series",
-          "hide": false,
           "intervalFactor": 1,
-          "legendFormat": "added",
+          "legendFormat": "",
           "refId": "A"
-        },
-        {
-          "expr": "sum(increase(insolard_storage_recent_objects_removed_count[1m]))",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "removed",
-          "refId": "B"
-        },
-        {
-          "expr": "sum(increase(insolard_storage_recent_objects_added_count[1m])) - sum(increase(insolard_storage_recent_objects_removed_count[1m]))",
-          "format": "time_series",
-          "hide": true,
-          "instant": false,
-          "intervalFactor": 1,
-          "legendFormat": "delta",
-          "refId": "C"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "recent storage: objects",
+      "title": "Unique Jets in heavy metrics",
       "tooltip": {
         "shared": true,
-        "sort": 1,
+        "sort": 0,
         "value_type": "individual"
       },
       "type": "graph",
@@ -311,7 +490,7 @@
         "h": 5,
         "w": 8,
         "x": 0,
-        "y": 5
+        "y": 16
       },
       "heatmap": {},
       "highlightCards": true,
@@ -364,7 +543,7 @@
         "h": 5,
         "w": 8,
         "x": 8,
-        "y": 5
+        "y": 16
       },
       "id": 10,
       "legend": {
@@ -457,21 +636,21 @@
       "bars": true,
       "dashLength": 10,
       "dashes": false,
-      "fill": 1,
+      "datasource": "Prometheus",
+      "fill": 10,
       "gridPos": {
         "h": 5,
         "w": 8,
         "x": 16,
-        "y": 5
+        "y": 16
       },
-      "id": 12,
+      "id": 2,
       "legend": {
-        "alignAsTable": false,
         "avg": false,
         "current": false,
         "max": false,
         "min": false,
-        "show": false,
+        "show": true,
         "total": false,
         "values": false
       },
@@ -485,25 +664,42 @@
       "renderer": "flot",
       "seriesOverrides": [],
       "spaceLength": 10,
-      "stack": false,
+      "stack": true,
       "steppedLine": false,
       "targets": [
         {
-          "expr": "count(count by (jet) (insolard_heavyserver_synced_bytes))",
+          "expr": "sum(increase(insolard_storage_recent_objects_added_count[1m]))",
+          "format": "time_series",
+          "hide": false,
+          "intervalFactor": 1,
+          "legendFormat": "added",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(increase(insolard_storage_recent_objects_removed_count[1m]))",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "",
-          "refId": "A"
+          "legendFormat": "removed",
+          "refId": "B"
+        },
+        {
+          "expr": "sum(increase(insolard_storage_recent_objects_added_count[1m])) - sum(increase(insolard_storage_recent_objects_removed_count[1m]))",
+          "format": "time_series",
+          "hide": true,
+          "instant": false,
+          "intervalFactor": 1,
+          "legendFormat": "delta",
+          "refId": "C"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Unique Jets in heavy metrics",
+      "title": "recent storage: objects",
       "tooltip": {
         "shared": true,
-        "sort": 0,
+        "sort": 1,
         "value_type": "individual"
       },
       "type": "graph",
@@ -576,5 +772,5 @@
   "timezone": "",
   "title": "LM storage",
   "uid": "XGisdx_ik",
-  "version": 1
+  "version": 2
 }
