@@ -672,7 +672,7 @@ func (m *PulseManager) addSync(ctx context.Context, jets []jetInfo, pulse core.P
 	ctx, span := instracer.StartSpan(ctx, "pulse.add_sync")
 	defer span.End()
 
-	if !m.options.enableSync {
+	if !m.options.enableSync || m.NodeNet.GetOrigin().Role() != core.StaticRoleLightMaterial {
 		return
 	}
 
@@ -772,7 +772,7 @@ func (m *PulseManager) Start(ctx context.Context) error {
 		return err
 	}
 
-	if m.options.enableSync {
+	if m.options.enableSync && m.NodeNet.GetOrigin().Role() == core.StaticRoleLightMaterial {
 		heavySyncPool := heavyclient.NewPool(
 			m.Bus,
 			m.PulseStorage,
@@ -819,7 +819,7 @@ func (m *PulseManager) Stop(ctx context.Context) error {
 	m.stopped = true
 	m.setLock.Unlock()
 
-	if m.options.enableSync {
+	if m.options.enableSync && m.NodeNet.GetOrigin().Role() == core.StaticRoleLightMaterial {
 		inslogger.FromContext(ctx).Info("waiting finish of heavy replication client...")
 		m.syncClientsPool.Stop(ctx)
 	}
