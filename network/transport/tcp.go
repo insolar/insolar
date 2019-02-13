@@ -105,7 +105,10 @@ func (t *tcpTransport) prepareListen() error {
 	defer t.mutex.Unlock()
 
 	t.openConnections = &sync.WaitGroup{}
+
+	t.stoppedMutex.Lock()
 	t.disconnectStarted = make(chan bool, 1)
+	t.stoppedMutex.Unlock()
 
 	listener, err := net.ListenTCP("tcp", t.listenAddr)
 	if err != nil {
@@ -131,7 +134,7 @@ func (t *tcpTransport) Listen(ctx context.Context, started chan struct{}) error 
 		conn, err := t.listener.AcceptTCP()
 		if err != nil {
 			logger.Debugf("[ Listen ] Failed to accept connection: %s", err.Error())
-			return errors.Wrap(err, "[ Listen ] Failed to accept connection")
+			return nil
 		}
 
 		go func(conn *net.TCPConn) {

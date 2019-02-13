@@ -53,7 +53,9 @@ type baseTransport struct {
 	proxy         relay.Proxy
 	packetHandler packetHandler
 
-	disconnectStarted  chan bool
+	stoppedMutex      *sync.RWMutex
+	disconnectStarted chan bool
+
 	disconnectFinished chan bool
 
 	mutex *sync.RWMutex
@@ -70,7 +72,8 @@ func newBaseTransport(proxy relay.Proxy, publicAddress string) baseTransport {
 		proxy:         proxy,
 		serializer:    &baseSerializer{},
 
-		mutex: &sync.RWMutex{},
+		stoppedMutex: &sync.RWMutex{},
+		mutex:        &sync.RWMutex{},
 
 		disconnectStarted:  make(chan bool, 1),
 		disconnectFinished: make(chan bool, 1),
@@ -110,14 +113,13 @@ func (t *baseTransport) Packets() <-chan *packet.Packet {
 
 // Stopped checks if networking is stopped already.
 func (t *baseTransport) Stopped() <-chan bool {
-	t.mutex.RLock()
-	defer t.mutex.RUnlock()
+	t.stoppedMutex.RLock()
+	defer t.stoppedMutex.RUnlock()
 
 	return t.disconnectStarted
 }
 
 func (t *baseTransport) prepareDisconnect() {
-	t.disconnectStarted <- true
 	close(t.disconnectStarted)
 }
 

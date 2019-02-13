@@ -28,6 +28,7 @@ import (
 	"github.com/insolar/insolar/network/transport/packet"
 	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/insolar/insolar/network/transport/relay"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -73,21 +74,29 @@ func (t *transportSuite) BeforeTest(suiteName, testName string) {
 	started1 := make(chan struct{}, 1)
 	started2 := make(chan struct{}, 1)
 
-	go t.node1.transport.Listen(ctx, started1)
-	go t.node2.transport.Listen(ctx, started2)
+	test := t.T()
+
+	start := func(tr Transport, c chan struct{}) {
+		err := tr.Listen(ctx, c)
+		require.NoError(test, err)
+	}
+
+	go start(t.node1.transport, started1)
+	go start(t.node2.transport, started2)
 
 	<-started1
 	<-started2
 }
 
 func (t *transportSuite) AfterTest(suiteName, testName string) {
-	go t.node1.transport.Stop()
-	<-t.node1.transport.Stopped()
-	t.node1.transport.Close()
+	stop := func(tr Transport) {
+		go tr.Stop()
+		<-tr.Stopped()
+		tr.Close()
+	}
 
-	go t.node2.transport.Stop()
-	<-t.node2.transport.Stopped()
-	t.node2.transport.Close()
+	stop(t.node1.transport)
+	stop(t.node2.transport)
 }
 
 func generateRandomBytes(n int) ([]byte, error) {

@@ -101,7 +101,10 @@ func (t *udpTransport) prepareListen() error {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 
+	t.stoppedMutex.Lock()
 	t.disconnectStarted = make(chan bool, 1)
+	t.stoppedMutex.Unlock()
+
 	t.disconnectFinished = make(chan bool, 1)
 
 	var err error
