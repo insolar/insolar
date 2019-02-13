@@ -43,7 +43,7 @@ func TestPulseTrackerMemory_GetPulse(t *testing.T) {
 	// Assert
 	require.NoError(t, err)
 	assert.Equal(t, existingPulse, pulse)
-	assert.Equal(t, ErrPulseNotFound, notFoundErr)
+	assert.Equal(t, ErrNotFound, notFoundErr)
 }
 
 func TestPulseTrackerMemory_GetPreviousPulse(t *testing.T) {
@@ -79,9 +79,9 @@ func TestPulseTrackerMemory_GetPreviousPulse(t *testing.T) {
 	// Assert
 	require.NoError(t, err)
 	assert.Equal(t, firstPulse, pulse)
-	assert.Equal(t, ErrPrevPulseNotFound, prevPulseErr)
-	assert.Equal(t, ErrPulseNotFound, badPrevErr)
-	assert.Equal(t, ErrPulseNotFound, notFoundErr)
+	assert.Equal(t, ErrPrevPulse, prevPulseErr)
+	assert.Equal(t, ErrNotFound, badPrevErr)
+	assert.Equal(t, ErrNotFound, notFoundErr)
 }
 
 func TestPulseTrackerMemory_GetNthPrevPulse(t *testing.T) {
@@ -130,7 +130,7 @@ func TestPulseTrackerMemory_GetNthPrevPulse(t *testing.T) {
 	assert.Equal(t, firstPulse, prev3pulse)
 
 	_, err = pulseTracker.GetNthPrevPulse(ctx, 4, core.FirstPulseNumber+3)
-	assert.Equal(t, ErrPrevPulseNotFound, err)
+	assert.Equal(t, ErrPrevPulse, err)
 }
 
 func TestPulseTrackerMemory_GetLatestPulse(t *testing.T) {
@@ -143,12 +143,12 @@ func TestPulseTrackerMemory_GetLatestPulse(t *testing.T) {
 
 	// Check empty storage
 	_, err := pulseTracker.GetLatestPulse(ctx)
-	assert.Equal(t, ErrEmptyLatestPulse, err)
+	assert.Equal(t, ErrNotFound, err)
 
 	// Check correct pulseNumber, but empty storage
 	pulseTracker.latestPulse = 1
 	_, err = pulseTracker.GetLatestPulse(ctx)
-	assert.Equal(t, ErrPulseNotFound, err)
+	assert.Equal(t, ErrNotFound, err)
 
 	// Add and check first pulse
 	// latest = first
@@ -212,7 +212,7 @@ func TestPulseTrackerMemory_AddPulse_FailFirstCheck(t *testing.T) {
 	pulseTracker.latestPulse = core.FirstPulseNumber + 1
 	err := pulseTracker.AddPulse(ctx, firstPulse.Pulse)
 
-	assert.Equal(t, ErrLesserPulse, err)
+	assert.Equal(t, ErrBadPulse, err)
 
 	// Check pulse equal with current
 	pulseTracker.latestPulse = core.FirstPulseNumber
@@ -272,7 +272,7 @@ func TestPulseTrackerMemory_AddPulse(t *testing.T) {
 		Pulse: core.Pulse{PulseNumber: core.FirstPulseNumber - 1},
 	}
 	err = pulseTracker.AddPulse(ctx, pastPulse.Pulse)
-	require.Equal(t, ErrLesserPulse, err)
+	require.Equal(t, ErrBadPulse, err)
 }
 
 func TestPulseTrackerMemory_DeletePulse(t *testing.T) {

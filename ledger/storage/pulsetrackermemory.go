@@ -75,7 +75,7 @@ func (p *pulseTrackerMemory) AddPulse(ctx context.Context, pulse core.Pulse) err
 	pn := pulse.PulseNumber
 
 	if pn < p.latestPulse {
-		return ErrLesserPulse
+		return ErrBadPulse
 	}
 
 	if pn == p.latestPulse {
@@ -88,7 +88,7 @@ func (p *pulseTrackerMemory) AddPulse(ctx context.Context, pulse core.Pulse) err
 	)
 
 	previousPulse, err := p.getLatestPulse(ctx)
-	if err != nil && err != ErrEmptyLatestPulse {
+	if err != nil && err != ErrNotFound {
 		return err
 	}
 
@@ -127,7 +127,7 @@ func (p *pulseTrackerMemory) DeletePulse(ctx context.Context, num core.PulseNumb
 
 	_, err := p.getPulse(ctx, num)
 
-	if err == ErrPulseNotFound {
+	if err == ErrNotFound {
 		inslogger.FromContext(ctx).Error("can't delete non-existing pulse")
 		return nil
 	}
@@ -145,7 +145,7 @@ func (p *pulseTrackerMemory) getPulse(ctx context.Context, num core.PulseNumber)
 	pulse, ok := p.memory[num]
 
 	if !ok {
-		return nil, ErrPulseNotFound
+		return nil, ErrNotFound
 	}
 
 	return pulse, nil
@@ -159,13 +159,13 @@ func (p *pulseTrackerMemory) getNthPrevPulse(ctx context.Context, n uint, num co
 
 	for n > 0 {
 		if pulse.Prev == nil {
-			return nil, ErrPrevPulseNotFound
+			return nil, ErrPrevPulse
 		}
 
 		pulse, err = p.getPulse(ctx, *pulse.Prev)
 
 		if err != nil {
-			return nil, ErrPulseNotFound
+			return nil, ErrNotFound
 		}
 		n--
 	}
@@ -174,7 +174,7 @@ func (p *pulseTrackerMemory) getNthPrevPulse(ctx context.Context, n uint, num co
 
 func (p *pulseTrackerMemory) getLatestPulse(ctx context.Context) (*Pulse, error) {
 	if p.latestPulse == 0 {
-		return nil, ErrEmptyLatestPulse
+		return nil, ErrNotFound
 	}
 
 	return p.getPulse(ctx, p.latestPulse)
