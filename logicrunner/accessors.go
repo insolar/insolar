@@ -60,7 +60,7 @@ func (lr *LogicRunner) UpsertObjectState(ref Ref) *ObjectState {
 	lr.stateMutex.Lock()
 	defer lr.stateMutex.Unlock()
 	if _, ok := lr.state[ref]; !ok {
-		lr.state[ref] = &ObjectState{Ref: &ref}
+		lr.state[ref] = &ObjectState{}
 	}
 	return lr.state[ref]
 }
@@ -112,13 +112,13 @@ func (st *ObjectState) RefreshConsensus() {
 	st.Consensus = nil
 }
 
-func (st *ObjectState) StartValidation() *ExecutionState {
+func (st *ObjectState) StartValidation(ref Ref) *ExecutionState {
 	st.Lock()
 	defer st.Unlock()
 
 	if st.Validation != nil {
 		panic("Unexpected. Validation already in progress")
 	}
-	st.Validation = &ExecutionState{}
+	st.Validation = &ExecutionState{Ref: ref}
 	return st.Validation
 }
