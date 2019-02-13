@@ -38,9 +38,9 @@ var (
 	// ErrClosed is returned when attempt to read or write to closed db.
 	ErrClosed = errors.New("db is closed")
 
-	// ErrPrevPulseNotFound is returned if previous pulse not found in storage
+	// ErrPrevPulse is returned if previous pulse not found in storage
 	ErrPrevPulse = errors.New("previous pulse not found")
 
-	// ErrLesserPulse is returned if pulse less than current
-	ErrBadPulse = errors.New("pulse-number less than current")
+	// ErrBadPulse is returned when pulse less than latest
+	ErrBadPulse = errors.New("pulse should be bigger than latest")
 )
