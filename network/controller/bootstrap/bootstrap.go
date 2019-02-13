@@ -240,7 +240,7 @@ func (bc *bootstrapper) checkActiveNode(node core.Node) error {
 
 func (bc *bootstrapper) BootstrapDiscovery(ctx context.Context) (*network.BootstrapResult, error) {
 	logger := inslogger.FromContext(ctx)
-	logger.Info("Network bootstrap between discovery nodes")
+	logger.Info("[ BootstrapDiscovery ] Network bootstrap between discovery nodes")
 	ctx, span := instracer.StartSpan(ctx, "Bootstrapper.BootstrapDiscovery")
 	defer span.End()
 	discoveryNodes := bc.Certificate.GetDiscoveryNodes()
@@ -253,7 +253,7 @@ func (bc *bootstrapper) BootstrapDiscovery(ctx context.Context) (*network.Bootst
 	if discoveryCount == 0 {
 		host, err := host.NewHostN(bc.NodeKeeper.GetOrigin().Address(), bc.NodeKeeper.GetOrigin().ID())
 		if err != nil {
-			return nil, errors.Wrap(err, "[ BootstrapDiscovery ] failed to create a host")
+			return nil, errors.Wrap(err, "failed to create a host")
 		}
 		return &network.BootstrapResult{
 			Host: host,
@@ -269,6 +269,8 @@ func (bc *bootstrapper) BootstrapDiscovery(ctx context.Context) (*network.Bootst
 		if len(hosts) == discoveryCount {
 			// we connected to all discovery nodes
 			break
+		} else {
+			logger.Infof("[ BootstrapDiscovery ] Connected to %d/%d discovery nodes", len(hosts), discoveryCount)
 		}
 	}
 	reconnectRequests := 0
@@ -279,13 +281,15 @@ func (bc *bootstrapper) BootstrapDiscovery(ctx context.Context) (*network.Bootst
 	}
 	minRequests := int(math.Floor(0.5*float64(discoveryCount))) + 1
 	if reconnectRequests >= minRequests {
+		logger.Infof("[ BootstrapDiscovery ] Need to reconnect as joiner (requested by %d/%d discovery nodes)",
+			reconnectRequests, discoveryCount)
 		return nil, ErrReconnectRequired
 	}
 	activeNodes := make([]core.Node, 0)
 	activeNodesStr := make([]string, 0)
 
 	<-bc.bootstrapLock
-	logger.Debugf("After bootstrap lock")
+	logger.Debugf("[ BootstrapDiscovery ] After bootstrap lock")
 
 	ch := bc.getGenesisRequestsChannel(ctx, hosts)
 	activeNodes, lastPulses, err := bc.waitGenesisResults(ctx, ch, len(hosts))
@@ -301,7 +305,7 @@ func (bc *bootstrapper) BootstrapDiscovery(ctx context.Context) (*network.Bootst
 		activeNodesStr = append(activeNodesStr, activeNode.ID().String())
 	}
 	bc.NodeKeeper.AddActiveNodes(activeNodes)
-	logger.Infof("Added active nodes: %s", strings.Join(activeNodesStr, ", "))
+	logger.Infof("[ BootstrapDiscovery ] Added active nodes: %s", strings.Join(activeNodesStr, ", "))
 	return parseBotstrapResults(bootstrapResults), nil
 }
 
