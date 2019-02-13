@@ -176,10 +176,13 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 
 	logger.Infoln("Network starts listening...")
 	n.routingTable.Inject(n.NodeKeeper)
-	n.hostNetwork.Start(ctx)
+	err := n.hostNetwork.Start(ctx)
+	if err != nil {
+		return errors.Wrap(err, "Failed to start host network")
+	}
 
 	log.Info("Starting network component manager...")
-	err := n.cm.Start(ctx)
+	err = n.cm.Start(ctx)
 	if err != nil {
 		return errors.Wrap(err, "Failed to bootstrap network")
 	}
@@ -210,7 +213,10 @@ func (n *ServiceNetwork) Stop(ctx context.Context) error {
 		log.Errorf("Error while stopping network components: %s", err.Error())
 	}
 	logger.Info("Stopping host network")
-	n.hostNetwork.Stop()
+	if err := n.hostNetwork.Stop(ctx); err != nil {
+		return errors.Wrap(err, "Failed to stop host network")
+	}
+
 	return nil
 }
 

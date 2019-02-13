@@ -92,11 +92,18 @@ func (t *consensusTransportSuite) sendPacket(packet consensus.ConsensusPacket) (
 	}
 	cn2.RegisterPacketHandler(packet.GetType(), handler)
 
-	cn2.Start(ctx2)
-	cn1.Start(ctx)
+	err2 := cn2.Start(ctx)
+	err1 := cn1.Start(ctx2)
+
+	require.NoError(t.T(), err2)
+	require.NoError(t.T(), err1)
+
 	defer func() {
-		cn1.Stop(ctx)
-		cn2.Stop(ctx2)
+		err1 := cn1.Stop(ctx)
+		err2 := cn2.Stop(ctx2)
+
+		require.NoError(t.T(), err1)
+		require.NoError(t.T(), err2)
 	}()
 
 	err = cn1.SignAndSendPacket(packet, cn2.GetNodeID(), t.crypto)
@@ -180,11 +187,18 @@ func (t *consensusTransportSuite) sendPacketAndVerify(packet consensus.Consensus
 	}
 	cn2.RegisterPacketHandler(packet.GetType(), handler)
 
-	cn2.Start(ctx2)
-	cn1.Start(ctx)
+	err2 := cn2.Start(ctx)
+	err1 := cn1.Start(ctx2)
+
+	require.NoError(t.T(), err2)
+	require.NoError(t.T(), err1)
+
 	defer func() {
-		cn1.Stop(ctx)
-		cn2.Stop(ctx2)
+		err1 := cn1.Stop(ctx)
+		err2 := cn2.Stop(ctx2)
+
+		require.NoError(t.T(), err1)
+		require.NoError(t.T(), err2)
 	}()
 
 	err = cn1.SignAndSendPacket(packet, cn2.GetNodeID(), t.crypto)

@@ -42,16 +42,6 @@ type transportConsensus struct {
 	handlers map[packets.PacketType]network.ConsensusPacketHandler
 }
 
-func (tc *transportConsensus) Start(ctx context.Context) error {
-	tc.transportBase.Start(ctx)
-	return nil
-}
-
-func (tc *transportConsensus) Stop(ctx context.Context) error {
-	tc.transportBase.Stop()
-	return nil
-}
-
 // RegisterPacketHandler register a handler function to process incoming requests of a specific type.
 func (tc *transportConsensus) RegisterPacketHandler(t packets.PacketType, handler network.ConsensusPacketHandler) {
 	_, exists := tc.handlers[t]

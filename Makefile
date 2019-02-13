@@ -131,6 +131,11 @@ $(CERTGEN):
 functest:
 	CGO_ENABLED=1 go test $(TEST_ARGS) -tags functest ./functest -count=1
 
+
+.PHONY: integrtest
+integrtest:
+	CGO_ENABLED=1 go test $(TEST_ARGS) -tags networktest -v ./network/servicenetwork -count=1
+
 .PHONY: test
 test:
 	CGO_ENABLED=1 go test $(TEST_ARGS) $(ALL_PACKAGES)

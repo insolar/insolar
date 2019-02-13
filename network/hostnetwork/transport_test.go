@@ -113,7 +113,6 @@ func TestNewInternalTransport(t *testing.T) {
 	address := "127.0.0.1:0"
 	tp, err := NewInternalTransport(mockConfiguration(address), ID1+DOMAIN)
 	require.NoError(t, err)
-	defer tp.Stop()
 	// require that new address with correct port has been assigned
 	require.NotEqual(t, address, tp.PublicAddress())
 	ref, err := core.NewRefFromBase58(ID1 + DOMAIN)
@@ -125,11 +124,14 @@ func TestNewInternalTransport2(t *testing.T) {
 	ctx := context.Background()
 	tp, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID1+DOMAIN)
 	require.NoError(t, err)
-	go tp.Start(ctx)
+	go func() {
+		err := tp.Start(ctx)
+		require.NoError(t, err)
+	}()
 	// no assertion, check that Stop does not block
 	defer func(t *testing.T) {
-		tp.Stop()
-		require.True(t, true)
+		err := tp.Stop(ctx)
+		require.NoError(t, err)
 	}(t)
 }
 
@@ -186,12 +188,18 @@ func TestNewHostTransport(t *testing.T) {
 	}
 	t2.RegisterRequestHandler(types.Ping, handler)
 
-	t2.Start(ctx)
-	t1.Start(ctx2)
+	err2 := t2.Start(ctx)
+	err1 := t1.Start(ctx2)
+
+	require.NoError(t, err2)
+	require.NoError(t, err1)
 
 	defer func() {
-		t1.Stop()
-		t2.Stop()
+		err1 := t1.Stop(ctx)
+		err2 := t2.Stop(ctx2)
+
+		require.NoError(t, err1)
+		require.NoError(t, err2)
 	}()
 
 	for i := 0; i < count; i++ {
@@ -212,8 +220,14 @@ func TestHostTransport_SendRequestPacket(t *testing.T) {
 	i1, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID1+DOMAIN)
 	require.NoError(t, err)
 	t1 := NewHostTransport(i1, m)
-	t1.Start(ctx)
-	defer t1.Stop()
+
+	err = t1.Start(ctx)
+	require.NoError(t, err)
+
+	defer func() {
+		err := t1.Stop(ctx)
+		require.NoError(t, err)
+	}()
 
 	unknownID, err := core.NewRefFromBase58(IDUNKNOWN + DOMAIN)
 	require.NoError(t, err)
@@ -256,11 +270,18 @@ func TestHostTransport_SendRequestPacket2(t *testing.T) {
 
 	t2.RegisterRequestHandler(types.Ping, handler)
 
-	t2.Start(ctx)
-	t1.Start(ctx2)
+	err2 := t2.Start(ctx)
+	err1 := t1.Start(ctx2)
+
+	require.NoError(t, err2)
+	require.NoError(t, err1)
+
 	defer func() {
-		t1.Stop()
-		t2.Stop()
+		err1 := t1.Stop(ctx)
+		err2 := t2.Stop(ctx2)
+
+		require.NoError(t, err1)
+		require.NoError(t, err2)
 	}()
 
 	request := t1.NewRequestBuilder().Type(types.Ping).Data(nil).Build()
@@ -295,11 +316,18 @@ func TestHostTransport_SendRequestPacket3(t *testing.T) {
 	}
 	t2.RegisterRequestHandler(types.Ping, handler)
 
-	t2.Start(ctx)
-	t1.Start(ctx2)
+	err2 := t2.Start(ctx)
+	err1 := t1.Start(ctx2)
+
+	require.NoError(t, err2)
+	require.NoError(t, err1)
+
 	defer func() {
-		t1.Stop()
-		t2.Stop()
+		err1 := t1.Stop(ctx)
+		err2 := t2.Stop(ctx2)
+
+		require.NoError(t, err1)
+		require.NoError(t, err2)
 	}()
 
 	magicNumber := 42
@@ -339,9 +367,16 @@ func TestHostTransport_SendRequestPacket_errors(t *testing.T) {
 	}
 	t2.RegisterRequestHandler(types.Ping, handler)
 
-	t2.Start(ctx)
-	defer t2.Stop()
-	t1.Start(ctx2)
+	err = t2.Start(ctx)
+	require.NoError(t, err)
+
+	defer func() {
+		err := t2.Stop(ctx2)
+		require.NoError(t, err)
+	}()
+
+	err = t1.Start(ctx2)
+	require.NoError(t, err)
 
 	request := t1.NewRequestBuilder().Type(types.Ping).Data(nil).Build()
 	ref, err := core.NewRefFromBase58(ID2 + DOMAIN)
@@ -354,7 +389,8 @@ func TestHostTransport_SendRequestPacket_errors(t *testing.T) {
 
 	f, err = t1.SendRequest(ctx, request, *ref)
 	require.NoError(t, err)
-	t1.Stop()
+	err = t1.Stop(ctx)
+	require.NoError(t, err)
 
 	_, err = f.GetResponse(time.Second)
 	require.Error(t, err)
@@ -376,11 +412,18 @@ func TestHostTransport_WrongHandler(t *testing.T) {
 	}
 	t2.RegisterRequestHandler(InvalidPacket, handler)
 
-	t2.Start(ctx)
-	t1.Start(ctx2)
+	err2 := t2.Start(ctx)
+	err1 := t1.Start(ctx2)
+
+	require.NoError(t, err2)
+	require.NoError(t, err1)
+
 	defer func() {
-		t1.Stop()
-		t2.Stop()
+		err1 := t1.Stop(ctx)
+		err2 := t2.Stop(ctx2)
+
+		require.NoError(t, err1)
+		require.NoError(t, err2)
 	}()
 
 	request := t1.NewRequestBuilder().Type(types.Ping).Build()
@@ -401,12 +444,16 @@ func TestDoubleStart(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(2)
 
-	f := func(group *sync.WaitGroup, t network.InternalTransport) {
-		t.Start(ctx)
+	f := func(group *sync.WaitGroup, tr network.InternalTransport) {
+		err := tr.Start(ctx)
 		wg.Done()
+		require.NoError(t, err)
 	}
+
 	go f(&wg, tp)
 	go f(&wg, tp)
 	wg.Wait()
-	tp.Stop()
+
+	err = tp.Stop(ctx)
+	require.NoError(t, err)
 }
