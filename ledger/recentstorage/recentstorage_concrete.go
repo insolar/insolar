@@ -109,6 +109,10 @@ func (p *RecentStorageProvider) ClonePendingStorage(ctx context.Context, fromJet
 		requests: map[core.RecordID]*lockedPendingObjectContext{},
 	}
 	for objID, pendingContext := range fromStorage.requests {
+		if len(pendingContext.Context.Requests) == 0 {
+			continue
+		}
+
 		pendingContext.lock.Lock()
 
 		clone := PendingObjectContext{
