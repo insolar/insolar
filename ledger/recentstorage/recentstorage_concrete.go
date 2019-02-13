@@ -411,14 +411,18 @@ func (r *PendingStorageConcrete) RemovePendingRequest(ctx context.Context, obj, 
 	}
 
 	index := -1
-	var objReq core.RecordID
-	for index, objReq = range objContext.Context.Requests {
+	for internalIndex, objReq := range objContext.Context.Requests {
 		if objReq == req {
+			index = internalIndex
 			break
 		}
 	}
 
-	if index == -1 || len(objContext.Context.Requests) == 1 {
+	if index == -1 {
+		return
+	}
+
+	if len(objContext.Context.Requests) == 1 {
 		r.lock.Lock()
 		delete(r.requests, obj)
 		r.lock.Unlock()
