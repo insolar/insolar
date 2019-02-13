@@ -288,6 +288,7 @@ func (nc *ConsensusCommunicator) ExchangePhase1(
 				logger.Debug("Got unknown phase1 request, try to get routing info from announce claim")
 				claim := res.packet.GetAnnounceClaim()
 				if claim == nil {
+					logger.Warn("Could not get announce claim from phase1 packet")
 					continue
 				}
 				res.id = claim.NodeRef
