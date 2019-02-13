@@ -1,5 +1,5 @@
 /*
- *    Copyright 2019 Insolar Technologies
+ *    Copyright 2019 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -54,8 +54,9 @@ type RecentIndexStorage interface {
 //go:generate minimock -i github.com/insolar/insolar/ledger/recentstorage.PendingStorage -o ./ -s _mock.go
 type PendingStorage interface {
 	AddPendingRequest(ctx context.Context, obj, req core.RecordID)
+	SetContextToObject(ctx context.Context, obj core.RecordID, objContext PendingObjectContext)
 
-	GetRequests() map[core.RecordID]map[core.RecordID]struct{}
+	GetRequests() map[core.RecordID]PendingObjectContext
 	GetRequestsForObject(obj core.RecordID) []core.RecordID
 
 	RemovePendingRequest(ctx context.Context, obj, req core.RecordID)

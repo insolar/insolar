@@ -24,19 +24,20 @@ import (
 	"strings"
 	"time"
 
-	"github.com/insolar/insolar/component"
-	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/insolar/metrics"
+	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
 	"go.opencensus.io/trace"
 
+	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/insmetrics"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/cascade"
 	"github.com/insolar/insolar/network/controller/common"
 	"github.com/insolar/insolar/network/transport/packet/types"
-	"github.com/pkg/errors"
 )
 
 type RPCController interface {
@@ -209,14 +210,16 @@ func (rpc *rpcController) requestCascadeSendMessage(ctx context.Context, data co
 
 func (rpc *rpcController) SendMessage(nodeID core.RecordRef, name string, msg core.Parcel) ([]byte, error) {
 	msgBytes := message.ParcelToBytes(msg)
-	metrics.ParcelsSentSizeBytes.WithLabelValues(msg.Type().String()).Observe(float64(len(msgBytes)))
+	ctx := context.Background() // TODO: ctx as argument
+	ctx = insmetrics.InsertTag(ctx, tagMessageType, msg.Type().String())
+	stats.Record(ctx, statParcelsSentSizeBytes.M(int64(len(msgBytes))))
 	request := rpc.hostNetwork.NewRequestBuilder().Type(types.RPC).Data(&RequestRPC{
 		Method: name,
 		Data:   [][]byte{msgBytes},
 	}).Build()
 
 	start := time.Now()
-	ctx := msg.Context(context.Background())
+	ctx = msg.Context(ctx)
 	logger := inslogger.FromContext(ctx)
 	logger.Debugf("SendParcel with nodeID = %s method = %s, message reference = %s, RequestID = %d", nodeID.String(),
 		name, msg.DefaultTarget().String(), request.GetRequestID())
@@ -234,15 +237,16 @@ func (rpc *rpcController) SendMessage(nodeID core.RecordRef, name string, msg co
 	if !data.Success {
 		return nil, errors.New("RPC call returned error: " + data.Error)
 	}
-	metrics.ParcelsReplySizeBytes.WithLabelValues(msg.Type().String()).Observe(float64(len(data.Result)))
-	metrics.NetworkParcelSentTotal.WithLabelValues(msg.Type().String()).Inc()
+	stats.Record(ctx, statParcelsReplySizeBytes.M(int64(len(data.Result))))
 	return data.Result, nil
 }
 
 func (rpc *rpcController) processMessage(ctx context.Context, request network.Request) (network.Response, error) {
+	ctx = insmetrics.InsertTag(ctx, tagPacketType, request.GetType().String())
+	stats.Record(ctx, statPacketsReceived.M(1))
+
 	payload := request.GetData().(*RequestRPC)
 	result, err := rpc.invoke(ctx, payload.Method, payload.Data)
-	metrics.NetworkParcelReceivedTotal.WithLabelValues(request.GetType().String()).Inc()
 	if err != nil {
 		return rpc.hostNetwork.BuildResponse(ctx, request, &ResponseRPC{Success: false, Error: err.Error()}), nil
 	}

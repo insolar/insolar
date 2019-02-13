@@ -1,5 +1,5 @@
 /*
- *    Copyright 2019 Insolar Technologies
+ *    Copyright 2019 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -14,9 +14,10 @@
  *    limitations under the License.
  */
 
-package storage
+package recentstorage
 
 import (
+	"bytes"
 	"sync"
 	"testing"
 
@@ -27,6 +28,7 @@ import (
 )
 
 func TestNewRecentIndexStorage(t *testing.T) {
+	t.Parallel()
 	jetID := testutils.RandomID()
 	index := NewRecentIndexStorage(jetID, 123)
 	require.NotNil(t, index)
@@ -35,6 +37,7 @@ func TestNewRecentIndexStorage(t *testing.T) {
 }
 
 func TestNewRecentIndexStorage_AddId(t *testing.T) {
+	t.Parallel()
 	ctx := inslogger.TestContext(t)
 	jetID := testutils.RandomID()
 	s := NewRecentIndexStorage(jetID, 123)
@@ -60,6 +63,7 @@ func TestNewRecentIndexStorage_AddId(t *testing.T) {
 }
 
 func TestPendingStorage_AddPendingRequest(t *testing.T) {
+	t.Parallel()
 	ctx := inslogger.TestContext(t)
 	jetID := testutils.RandomID()
 
@@ -90,18 +94,30 @@ func TestPendingStorage_AddPendingRequest(t *testing.T) {
 	}()
 	wg.Wait()
 
-	require.Equal(t, map[core.RecordID]map[core.RecordID]struct{}{
-		obj1: {
-			expectedIDs[0]: struct{}{},
-			expectedIDs[1]: struct{}{},
-		},
-		obj2: {
-			expectedIDs[2]: struct{}{},
-		},
-	}, s.GetRequests())
+	contains := func(slice []core.RecordID, x core.RecordID) bool {
+		for _, n := range slice {
+			if x == n {
+				return true
+			}
+		}
+		return false
+	}
+	requests := s.GetRequests()
+	require.Equal(t, 2, len(requests))
+	for key, objContext := range requests {
+		if bytes.Equal(key.Bytes(), obj1.Bytes()) {
+			require.Equal(t, 2, len(objContext.Requests))
+			require.Equal(t, true, contains(objContext.Requests, expectedIDs[0]))
+			require.Equal(t, true, contains(objContext.Requests, expectedIDs[1]))
+		} else {
+			require.Equal(t, 1, len(objContext.Requests))
+			require.Equal(t, expectedIDs[2], objContext.Requests[0])
+		}
+	}
 }
 
 func TestPendingStorage_RemovePendingRequest(t *testing.T) {
+	t.Parallel()
 	ctx := inslogger.TestContext(t)
 	jetID := testutils.RandomID()
 
@@ -117,12 +133,11 @@ func TestPendingStorage_RemovePendingRequest(t *testing.T) {
 		*core.NewRecordID(123, []byte{3}),
 		*core.NewRecordID(123, []byte{4}),
 	}
-	s.requests = map[core.RecordID]map[core.RecordID]struct{}{
+	s.requests = map[core.RecordID]*lockedPendingObjectContext{
 		obj: {
-			expectedIDs[0]: {},
-			extraIDs[0]:    {},
-			extraIDs[1]:    {},
-			extraIDs[2]:    {},
+			Context: &PendingObjectContext{
+				Requests: []core.RecordID{expectedIDs[0], extraIDs[0], extraIDs[1], extraIDs[2]},
+			},
 		},
 	}
 
@@ -142,41 +157,49 @@ func TestPendingStorage_RemovePendingRequest(t *testing.T) {
 	}()
 	wg.Wait()
 
-	require.Equal(t, map[core.RecordID]map[core.RecordID]struct{}{
-		obj: {
-			expectedIDs[0]: struct{}{},
+	require.Equal(
+		t,
+		map[core.RecordID]PendingObjectContext{
+			obj: {
+				Active:   true,
+				Requests: []core.RecordID{expectedIDs[0]},
+			},
 		},
-	}, s.GetRequests())
+		s.GetRequests(),
+	)
 }
 
 func TestPendingStorage_RemovePendingRequest_RemoveNothingIfThereIsNothing(t *testing.T) {
+	t.Parallel()
 	ctx := inslogger.TestContext(t)
 	jetID := testutils.RandomID()
-
+	objID := testutils.RandomID()
+	anotherObj := *core.NewRecordID(123, nil)
 	s := NewPendingStorage(jetID)
 
-	obj := *core.NewRecordID(0, nil)
-	anotherObj := *core.NewRecordID(123, nil)
-
-	expectedIDs := []core.RecordID{
-		*core.NewRecordID(123, []byte{1}),
-	}
-	s.requests = map[core.RecordID]map[core.RecordID]struct{}{
-		obj: {
-			expectedIDs[0]: {},
+	s.requests = map[core.RecordID]*lockedPendingObjectContext{
+		objID: {
+			Context: &PendingObjectContext{
+				Requests: []core.RecordID{},
+			},
 		},
 	}
 
 	s.RemovePendingRequest(ctx, anotherObj, testutils.RandomID())
 
-	require.Equal(t, map[core.RecordID]map[core.RecordID]struct{}{
-		obj: {
-			expectedIDs[0]: struct{}{},
+	require.Equal(
+		t,
+		map[core.RecordID]PendingObjectContext{
+			objID: {
+				Requests: []core.RecordID{},
+			},
 		},
-	}, s.GetRequests())
+		s.GetRequests(),
+	)
 }
 
 func TestNewRecentStorageProvider(t *testing.T) {
+	t.Parallel()
 	// Act
 	provider := NewRecentStorageProvider(888)
 
@@ -187,6 +210,7 @@ func TestNewRecentStorageProvider(t *testing.T) {
 }
 
 func TestRecentStorageProvider_GetStorage(t *testing.T) {
+	t.Parallel()
 	// Arrange
 	provider := NewRecentStorageProvider(8)
 
@@ -213,6 +237,7 @@ func TestRecentStorageProvider_GetStorage(t *testing.T) {
 }
 
 func TestRecentStorage_markForDelete(t *testing.T) {
+	t.Parallel()
 	candidates := make([]core.RecordID, 0, 100)
 	expect := make([]core.RecordID, 0, 50)
 	recentStorageMap := make(map[core.RecordID]recentObjectMeta)
@@ -236,6 +261,7 @@ func TestRecentStorage_markForDelete(t *testing.T) {
 }
 
 func TestRecentStorageProvider_DecreaseIndexesTTL(t *testing.T) {
+	t.Parallel()
 	// Arrange
 	ctx := inslogger.TestContext(t)
 
@@ -273,6 +299,7 @@ func TestRecentStorageProvider_DecreaseIndexesTTL(t *testing.T) {
 }
 
 func TestRecentStorageProvider_DecreaseIndexesTTL_WorksOnEmptyStorage(t *testing.T) {
+	t.Parallel()
 	// Arrange
 	ctx := inslogger.TestContext(t)
 	provider := NewRecentStorageProvider(8)
@@ -282,4 +309,65 @@ func TestRecentStorageProvider_DecreaseIndexesTTL_WorksOnEmptyStorage(t *testing
 
 	// Assert
 	require.Equal(t, map[core.RecordID][]core.RecordID{}, result)
+}
+
+func TestPendingStorageConcrete_GetRequestsForObject(t *testing.T) {
+	t.Parallel()
+
+	objID := testutils.RandomID()
+	requestID := testutils.RandomID()
+
+	unexpectedID := testutils.RandomID()
+	unexpectedReqID := testutils.RandomID()
+
+	pendingStorage := &PendingStorageConcrete{
+		requests: map[core.RecordID]*lockedPendingObjectContext{
+			objID: {
+				Context: &PendingObjectContext{
+					Requests: []core.RecordID{requestID},
+				},
+			},
+			unexpectedID: {
+				Context: &PendingObjectContext{
+					Requests: []core.RecordID{unexpectedReqID},
+				},
+			},
+		},
+	}
+
+	requests := pendingStorage.GetRequestsForObject(objID)
+
+	require.Equal(t, 1, len(requests))
+	require.Equal(t, requestID, requests[0])
+}
+
+func TestPendingStorageConcrete_GetRequestsForObject_NoObject(t *testing.T) {
+	t.Parallel()
+
+	unexpectedReqID := testutils.RandomID()
+
+	pendingStorage := &PendingStorageConcrete{
+		requests: map[core.RecordID]*lockedPendingObjectContext{},
+	}
+
+	requests := pendingStorage.GetRequestsForObject(unexpectedReqID)
+
+	require.Nil(t, requests)
+}
+
+func TestPendingStorageConcrete_SetContextToObject(t *testing.T) {
+	t.Parallel()
+	pendingStorage := &PendingStorageConcrete{
+		requests: map[core.RecordID]*lockedPendingObjectContext{},
+	}
+	expectedObj := testutils.RandomID()
+	expectedContext := PendingObjectContext{
+		Active:   true,
+		Requests: []core.RecordID{testutils.RandomID(), testutils.RandomID()},
+	}
+
+	pendingStorage.SetContextToObject(inslogger.TestContext(t), expectedObj, expectedContext)
+
+	require.Equal(t, 1, len(pendingStorage.requests))
+	require.Equal(t, expectedContext, *pendingStorage.requests[expectedObj].Context)
 }
