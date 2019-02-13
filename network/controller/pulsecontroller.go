@@ -27,7 +27,7 @@ import (
 )
 
 type PulseController interface {
-	component.Starter
+	component.Initer
 }
 
 type pulseController struct {
@@ -37,7 +37,7 @@ type pulseController struct {
 	routingTable network.RoutingTable
 }
 
-func (pc *pulseController) Start(ctx context.Context) error {
+func (pc *pulseController) Init(ctx context.Context) error {
 	pc.hostNetwork.RegisterRequestHandler(types.Pulse, pc.processPulse)
 	pc.hostNetwork.RegisterRequestHandler(types.GetRandomHosts, pc.processGetRandomHosts)
 	return nil

@@ -83,6 +83,7 @@ func main() {
 						Origin       struct {
 							Role string
 						}
+						ActiveListSize int
 					}
 				}
 				err = json.Unmarshal(data, &out)
@@ -91,7 +92,7 @@ func main() {
 					log.Fatal(err)
 				}
 				lock.Lock()
-				results[i] = url + " : " + out.Result.NetworkState + " : " + strconv.Itoa(int(out.Result.PulseNumber)) + " : " + out.Result.Origin.Role
+				results[i] = url + " : " + out.Result.NetworkState + " : " + strconv.Itoa(int(out.Result.PulseNumber)) + " : " + strconv.Itoa(out.Result.ActiveListSize) + " : " + out.Result.Origin.Role
 				lock.Unlock()
 				wg.Done()
 			}(url, i)

@@ -74,18 +74,11 @@ func (jtu *jetTreeUpdater) fetchJet(
 
 	jetID, actual := tree.Find(target)
 	if actual {
-		inslogger.FromContext(ctx).Debugf(
-			"we believe object %s is in JET %s", target.String(), jetID.DebugString(),
-		)
 		return jetID, nil
 	}
 
+	// Not actual in our tree, asking neighbors for jet.
 	span.Annotate(nil, "tree in DB is not actual")
-	inslogger.FromContext(ctx).Debugf(
-		"jet %s is not actual in our tree, asking neighbors for jet of object %s",
-		jetID.DebugString(), target.String(),
-	)
-
 	key := fmt.Sprintf("%d:%s", pulse, jetID.String())
 
 	jtu.seqMutex.Lock()
@@ -103,21 +96,15 @@ func (jtu *jetTreeUpdater) fetchJet(
 	mu.Lock()
 	if mu.done {
 		mu.Unlock()
+		// Tree was updated in another thread, rechecking.
 		span.Annotate(nil, "somebody else updated actuality")
-		inslogger.FromContext(ctx).Debugf(
-			"somebody else updated actuality of jet %s, rechecking our DB",
-			jetID.DebugString(),
-		)
 		return jtu.fetchJet(ctx, target, pulse)
 	}
 	defer func() {
-		inslogger.FromContext(ctx).Debugf("done fetching jet, cleaning")
-
 		mu.done = true
 		mu.Unlock()
 
 		jtu.seqMutex.Lock()
-		inslogger.FromContext(ctx).Debugf("deleting sequencer for jet %s", jetID.DebugString())
 		delete(jtu.sequencer, key)
 		jtu.seqMutex.Unlock()
 	}()
@@ -130,7 +117,7 @@ func (jtu *jetTreeUpdater) fetchJet(
 	err = jtu.JetStorage.UpdateJetTree(ctx, pulse, true, *resJet)
 	if err != nil {
 		inslogger.FromContext(ctx).Error(
-			errors.Wrapf(err, "couldn't actualize jet %s", resJet.DebugString()),
+			errors.Wrapf(err, "failed actualize jet %s", resJet.DebugString()),
 		)
 	}
 
@@ -179,11 +166,6 @@ func (jtu *jetTreeUpdater) fetchActualJetFromOtherNodes(
 				inslogger.FromContext(ctx).Errorf("middleware.fetchActualJetFromOtherNodes: unexpected reply: %#v\n", rep)
 				return
 			}
-
-			inslogger.FromContext(ctx).Debugf(
-				"Got jet %s from %s node, actual is %s",
-				r.ID.DebugString(), node.ID().String(), r.Actual,
-			)
 			replies[i] = r
 		}(i, node)
 	}
@@ -207,22 +189,18 @@ func (jtu *jetTreeUpdater) fetchActualJetFromOtherNodes(
 	}
 
 	if len(res) == 1 {
-		inslogger.FromContext(ctx).Debugf(
-			"got jet %s as actual for object %s on pulse %d",
-			res[0].DebugString(), target.String(), pulse,
-		)
 		return res[0], nil
 	} else if len(res) == 0 {
-		inslogger.FromContext(ctx).Errorf(
-			"all lights for pulse %d have no actual jet for object %s",
-			pulse, target.String(),
-		)
+		inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+			"pulse":  pulse,
+			"object": target.DebugString(),
+		}).Error("all lights for pulse have no actual jet for object")
 		return nil, errors.New("impossible situation")
 	} else {
-		inslogger.FromContext(ctx).Errorf(
-			"lights said different actual jet for object %s",
-			target.String(),
-		)
+		inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+			"pulse":  pulse,
+			"object": target.DebugString(),
+		}).Error("lights said different actual jet for object")
 		return nil, errors.New("nodes returned more than one unique jet")
 	}
 }

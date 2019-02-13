@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"html/template"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -40,15 +41,17 @@ func check(msg string, err error) {
 }
 
 const (
-	defaultOutputConfigNameTmpl = "insolar_%d.yaml"
-	defaultHost                 = "127.0.0.1"
-	defaultJaegerEndPoint       = defaultHost + ":6831"
-	defaultLogLevel             = "Debug"
-	defaultGenesisFile          = "genesis.yaml"
-	defaultPulsarTemplate       = "scripts/insolard/pulsar_template.yaml"
-	dataDirectoryTemplate       = "scripts/insolard/nodes/%d/data"
-	certificatePathTemplate     = "scripts/insolard/nodes/%d/cert.json"
-	pulsewatcherFileName        = "pulsewatcher.yaml"
+	defaultOutputConfigNameTmpl      = "insolar_%d.yaml"
+	defaultHost                      = "127.0.0.1"
+	defaultJaegerEndPoint            = defaultHost + ":6831"
+	defaultLogLevel                  = "Debug"
+	defaultGenesisFile               = "genesis.yaml"
+	defaultPulsarTemplate            = "scripts/insolard/pulsar_template.yaml"
+	discoveryDataDirectoryTemplate   = "scripts/insolard/discoverynodes/%d/data"
+	discoveryCertificatePathTemplate = "scripts/insolard/discoverynodes/%d/cert.json"
+	nodeDataDirectoryTemplate        = "scripts/insolard/nodes/%d/data"
+	nodeCertificatePathTemplate      = "scripts/insolard/nodes/%d/cert.json"
+	pulsewatcherFileName             = "pulsewatcher.yaml"
 
 	prometheusConfigTmpl = "scripts/prom/server.yml.tmpl"
 	prometheusFileName   = "prometheus.yaml"
@@ -89,12 +92,12 @@ func writeGorundPorts(gorundPorts [][]string) {
 	check("Can't WriteFile: "+gorundPortsPath, err)
 }
 
-func writeInsolarConfigs(insolarConfigs []configuration.Configuration) {
+func writeInsolarConfigs(output string, insolarConfigs []configuration.Configuration) {
 	for index, conf := range insolarConfigs {
 		data, err := yaml.Marshal(conf)
 		check("Can't Marshal insolard config", err)
 		fileName := fmt.Sprintf(defaultOutputConfigNameTmpl, index+1)
-		err = genesis.WriteFile(outputDir, fileName, string(data))
+		err = genesis.WriteFile(output, fileName, string(data))
 		check("Can't WriteFile: "+fileName, err)
 	}
 }
@@ -140,7 +143,7 @@ func main() {
 	check("Can't read genesis config", err)
 
 	pwConfig := pulsewatcher.Config{}
-	insolarConfigs := make([]configuration.Configuration, 0, len(genesisConf.DiscoveryNodes))
+	discoveryNodesConfigs := make([]configuration.Configuration, 0, len(genesisConf.DiscoveryNodes))
 
 	gorundPorts := [][]string{}
 
@@ -167,11 +170,45 @@ func main() {
 		conf.Tracer.Jaeger.AgentEndpoint = defaultJaegerEndPoint
 		conf.Log.Level = debugLevel
 		conf.Log.Adapter = "logrus"
-		conf.KeysPath = node.KeysFile
-		conf.Ledger.Storage.DataDirectory = fmt.Sprintf(dataDirectoryTemplate, nodeIndex)
-		conf.CertificatePath = fmt.Sprintf(certificatePathTemplate, nodeIndex)
+		conf.KeysPath = genesisConf.DiscoveryKeysDir + fmt.Sprintf(genesisConf.KeysNameFormat, nodeIndex)
+		conf.Ledger.Storage.DataDirectory = fmt.Sprintf(discoveryDataDirectoryTemplate, nodeIndex)
+		conf.CertificatePath = fmt.Sprintf(discoveryCertificatePathTemplate, nodeIndex)
 
-		insolarConfigs = append(insolarConfigs, conf)
+		discoveryNodesConfigs = append(discoveryNodesConfigs, conf)
+
+		pctx.addTarget(node.Role, conf)
+
+		pwConfig.Nodes = append(pwConfig.Nodes, conf.APIRunner.Address)
+	}
+
+	nodesConfigs := make([]configuration.Configuration, 0, len(genesisConf.DiscoveryNodes))
+
+	for index, node := range genesisConf.Nodes {
+		nodeIndex := index + 1
+
+		conf := configuration.NewConfiguration()
+		conf.Host.Transport.Address = node.Host
+		conf.Host.Transport.Protocol = "TCP"
+
+		rpcListenPort := 34300 + (index+nodeIndex+len(genesisConf.DiscoveryNodes)+1)*nodeIndex
+		conf.LogicRunner = configuration.NewLogicRunner()
+		conf.LogicRunner.GoPlugin.RunnerListen = fmt.Sprintf(defaultHost+":%d", rpcListenPort-1)
+		conf.LogicRunner.RPCListen = fmt.Sprintf(defaultHost+":%d", rpcListenPort)
+		if node.Role == "virtual" {
+			gorundPorts = append(gorundPorts, []string{strconv.Itoa(rpcListenPort - 1), strconv.Itoa(rpcListenPort)})
+		}
+
+		conf.APIRunner.Address = fmt.Sprintf(defaultHost+":191%02d", nodeIndex+len(genesisConf.DiscoveryNodes))
+		conf.Metrics.ListenAddress = fmt.Sprintf(defaultHost+":80%02d", nodeIndex+len(genesisConf.DiscoveryNodes))
+
+		conf.Tracer.Jaeger.AgentEndpoint = defaultJaegerEndPoint
+		conf.Log.Level = debugLevel
+		conf.Log.Adapter = "logrus"
+		conf.KeysPath = node.KeysFile
+		conf.Ledger.Storage.DataDirectory = fmt.Sprintf(nodeDataDirectoryTemplate, nodeIndex)
+		conf.CertificatePath = fmt.Sprintf(nodeCertificatePathTemplate, nodeIndex)
+
+		nodesConfigs = append(nodesConfigs, conf)
 
 		pctx.addTarget(node.Role, conf)
 
@@ -191,13 +228,14 @@ func main() {
 		pulsarConfig.Pulsar.PulseDistributor.BootstrapHosts = append(pulsarConfig.Pulsar.PulseDistributor.BootstrapHosts, node.Host)
 	}
 
-	writeInsolarConfigs(insolarConfigs)
+	writeInsolarConfigs(filepath.Join(outputDir, "/discoverynodes"), discoveryNodesConfigs)
+	writeInsolarConfigs(filepath.Join(outputDir, "/nodes"), nodesConfigs)
 	writeGorundPorts(gorundPorts)
 	writePulsarConfig(pulsarConfig)
 	writePromConfig(pctx)
 
 	pwConfig.Interval = 100 * time.Millisecond
 	pwConfig.Timeout = 1 * time.Second
-	err = pulsewatcher.WriteConfig(outputDir+"/utils", pulsewatcherFileName, pwConfig)
+	err = pulsewatcher.WriteConfig(filepath.Join(outputDir, "/utils"), pulsewatcherFileName, pwConfig)
 	check("couldn't write pulsewatcher config file", err)
 }

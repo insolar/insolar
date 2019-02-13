@@ -17,7 +17,6 @@
 package record
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/insolar/insolar/core"
@@ -26,36 +25,7 @@ import (
 )
 
 func Test_RecordByTypeIDPanic(t *testing.T) {
-	assert.Panics(t, func() { getRecordByTypeID(0) })
-}
-
-var type2idTests = []struct {
-	typ string
-	rec Record
-	id  TypeID
-}{
-	// request records
-	{"RequestRecord", &RequestRecord{}, typeCallRequest},
-
-	// result records
-	{"ObjectActivateRecord", &ObjectActivateRecord{}, typeActivate},
-	{"CodeRecord", &CodeRecord{}, typeCode},
-	{"DeactivationRecord", &DeactivationRecord{}, typeDeactivate},
-	{"ObjectAmendRecord", &ObjectAmendRecord{}, typeAmend},
-	{"TypeRecord", &TypeRecord{}, typeType},
-	{"ChildRecord", &ChildRecord{}, typeChild},
-	{"GenesisRecord", &GenesisRecord{}, typeGenesis},
-}
-
-func Test_TypeIDConversion(t *testing.T) {
-	for _, tt := range type2idTests {
-		t.Run(tt.typ, func(t *testing.T) {
-			gotRecTypeID := tt.rec.Type()
-			gotRecord := getRecordByTypeID(tt.id)
-			assert.Equal(t, "*record."+tt.typ, fmt.Sprintf("%T", gotRecord))
-			assert.Equal(t, tt.id, gotRecTypeID)
-		})
-	}
+	assert.Panics(t, func() { RecordFromType(0) })
 }
 
 func TestSerializeDeserializeRecord(t *testing.T) {

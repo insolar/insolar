@@ -162,7 +162,7 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 	recentMock.FilterNotExistWithLockMock.Return()
 
 	pendingStorageMock := recentstorage.NewPendingStorageMock(s.T())
-	pendingStorageMock.GetRequestsMock.Return(map[core.RecordID]map[core.RecordID]struct{}{})
+	pendingStorageMock.GetRequestsMock.Return(map[core.RecordID]recentstorage.PendingObjectContext{})
 
 	// Mock6: JetCoordinatorMock
 	jcMock := testutils.NewJetCoordinatorMock(s.T())
@@ -176,7 +176,7 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 
 	// Mock N8: Active List Swapper mock
 	alsMock := testutils.NewActiveListSwapperMock(s.T())
-	alsMock.MoveSyncToActiveFunc = func() {}
+	alsMock.MoveSyncToActiveFunc = func(context.Context) error { return nil }
 
 	// Mock N9: Crypto things mock
 	cryptoServiceMock := testutils.NewCryptographyServiceMock(s.T())

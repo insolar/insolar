@@ -57,11 +57,6 @@ type ResultRecord struct {
 	Payload []byte
 }
 
-// Type implementation of Record interface.
-func (ResultRecord) Type() TypeID {
-	return typeResult
-}
-
 // WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
 func (r *ResultRecord) WriteHashData(w io.Writer) (int, error) {
 	return w.Write(SerializeRecord(r))
@@ -80,9 +75,6 @@ type TypeRecord struct {
 	TypeDeclaration []byte
 }
 
-// Type implementation of Record interface.
-func (r *TypeRecord) Type() TypeID { return typeType }
-
 // WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
 func (r *TypeRecord) WriteHashData(w io.Writer) (int, error) {
 	return w.Write(SerializeRecord(r))
@@ -95,9 +87,6 @@ type CodeRecord struct {
 	Code        *core.RecordID
 	MachineType core.MachineType
 }
-
-// Type implementation of Record interface.
-func (r *CodeRecord) Type() TypeID { return typeCode }
 
 // WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
 func (r *CodeRecord) WriteHashData(w io.Writer) (int, error) {
@@ -145,9 +134,6 @@ func (r *ObjectActivateRecord) State() State {
 	return StateActivation
 }
 
-// Type implementation of Record interface.
-func (r *ObjectActivateRecord) Type() TypeID { return typeActivate }
-
 // WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
 func (r *ObjectActivateRecord) WriteHashData(w io.Writer) (int, error) {
 	return w.Write(SerializeRecord(r))
@@ -171,9 +157,6 @@ func (r *ObjectAmendRecord) State() State {
 	return StateAmend
 }
 
-// Type implementation of Record interface.
-func (r *ObjectAmendRecord) Type() TypeID { return typeAmend }
-
 // WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
 func (r *ObjectAmendRecord) WriteHashData(w io.Writer) (int, error) {
 	return w.Write(SerializeRecord(r))
@@ -194,9 +177,6 @@ func (r *DeactivationRecord) PrevStateID() *core.RecordID {
 func (r *DeactivationRecord) State() State {
 	return StateDeactivation
 }
-
-// Type implementation of Record interface.
-func (r *DeactivationRecord) Type() TypeID { return typeDeactivate }
 
 // WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
 func (r *DeactivationRecord) WriteHashData(w io.Writer) (int, error) {

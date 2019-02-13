@@ -35,7 +35,7 @@ import (
 )
 
 type ChallengeResponseController interface {
-	component.Starter
+	component.Initer
 
 	Execute(ctx context.Context, discoveryNode *DiscoveryNode, sessionID SessionID) (*ChallengePayload, error)
 }
@@ -192,7 +192,7 @@ func (cr *challengeResponseController) buildChallenge2ErrorResponse(ctx context.
 	})
 }
 
-func (cr *challengeResponseController) Start(ctx context.Context) error {
+func (cr *challengeResponseController) Init(ctx context.Context) error {
 	cr.transport.RegisterPacketHandler(types.Challenge1, cr.processChallenge1)
 	cr.transport.RegisterPacketHandler(types.Challenge2, cr.processChallenge2)
 	return nil

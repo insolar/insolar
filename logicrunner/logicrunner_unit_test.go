@@ -730,7 +730,7 @@ func (s *LogicRunnerOnPulseTestSuite) TestLedgerHasMoreRequests() {
 	var testCases = map[string]struct {
 		queue           []ExecutionQueueElement
 		hasMoreRequests bool
-	} {
+	}{
 		"Has": {
 			make([]ExecutionQueueElement, maxQueueLength+1),
 			true,
