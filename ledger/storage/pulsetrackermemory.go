@@ -30,10 +30,12 @@ type pulseTrackerMemory struct {
 	mutex       sync.RWMutex
 }
 
+// NewPulseTracker returns new instance PulseTracker with in-memory realization
 func NewPulseTrackerMemory() PulseTracker {
 	return &pulseTrackerMemory{memory: make(map[core.PulseNumber]*Pulse)}
 }
 
+// GetPulse returns pulse for provided pulse number.
 func (p *pulseTrackerMemory) GetPulse(ctx context.Context, num core.PulseNumber) (*Pulse, error) {
 	p.mutex.RLock()
 	defer p.mutex.RUnlock()
@@ -41,6 +43,7 @@ func (p *pulseTrackerMemory) GetPulse(ctx context.Context, num core.PulseNumber)
 	return p.getPulse(ctx, num)
 }
 
+// GetPreviousPulse returns pulse for provided pulse number.
 func (p *pulseTrackerMemory) GetPreviousPulse(ctx context.Context, num core.PulseNumber) (*Pulse, error) {
 	p.mutex.RLock()
 	defer p.mutex.RUnlock()
@@ -48,6 +51,7 @@ func (p *pulseTrackerMemory) GetPreviousPulse(ctx context.Context, num core.Puls
 	return p.getNthPrevPulse(ctx, 1, num)
 }
 
+// GetNthPrevPulse returns Nth previous pulse from some pulse number
 func (p *pulseTrackerMemory) GetNthPrevPulse(ctx context.Context, n uint, from core.PulseNumber) (*Pulse, error) {
 	p.mutex.RLock()
 	defer p.mutex.RUnlock()
@@ -55,6 +59,7 @@ func (p *pulseTrackerMemory) GetNthPrevPulse(ctx context.Context, n uint, from c
 	return p.getNthPrevPulse(ctx, n, from)
 }
 
+// Deprecated: use core.PulseStorage.Current() instead (or private getLatestPulse if applicable).
 func (p *pulseTrackerMemory) GetLatestPulse(ctx context.Context) (*Pulse, error) {
 	p.mutex.RLock()
 	defer p.mutex.RUnlock()
@@ -62,6 +67,7 @@ func (p *pulseTrackerMemory) GetLatestPulse(ctx context.Context) (*Pulse, error)
 	return p.getLatestPulse(ctx)
 }
 
+// AddPulse saves new pulse data and latestPulse index.
 func (p *pulseTrackerMemory) AddPulse(ctx context.Context, pulse core.Pulse) error {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
@@ -86,6 +92,7 @@ func (p *pulseTrackerMemory) AddPulse(ctx context.Context, pulse core.Pulse) err
 		return err
 	}
 
+	// Set next on previousPulseNumber pulse if it exists.
 	if err == nil {
 		if previousPulse != nil {
 			previousPulseNumber = previousPulse.Pulse.PulseNumber
@@ -113,6 +120,7 @@ func (p *pulseTrackerMemory) AddPulse(ctx context.Context, pulse core.Pulse) err
 	return nil
 }
 
+// DeletePulse delete pulse data.
 func (p *pulseTrackerMemory) DeletePulse(ctx context.Context, num core.PulseNumber) error {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()

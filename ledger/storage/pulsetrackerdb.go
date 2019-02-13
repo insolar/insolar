@@ -30,6 +30,7 @@ type pulseTracker struct {
 	DB DBContext `inject:""`
 }
 
+// NewPulseTracker returns new instance PulseTracker with DB-storage realization
 func NewPulseTracker() PulseTracker {
 	return new(pulseTracker)
 }
@@ -204,6 +205,7 @@ func (pt *pulseTracker) GetLatestPulse(ctx context.Context) (*Pulse, error) {
 	return pt.getLatestPulse(ctx)
 }
 
+// DeletePulse delete pulse data.
 func (pt *pulseTracker) DeletePulse(ctx context.Context, num core.PulseNumber) error {
 	return errors.New("DB pulse removal is forbidden")
 }
