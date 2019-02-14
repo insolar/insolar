@@ -67,6 +67,48 @@ func (s *testSuite) TestNodeConnect() {
 	s.Equal(s.getNodesCount()+1, len(activeNodes))
 }
 
+func (s *testSuite) TestTwoNodesConnect() {
+	if len(s.fixture().bootstrapNodes) < consensusMin {
+		s.T().Skip(consensusMinMsg)
+	}
+
+	testNode := newNetworkNode()
+	testNode2 := newNetworkNode()
+
+	s.preInitNode(testNode)
+	s.preInitNode(testNode2)
+
+	s.InitNode(testNode)
+	s.InitNode(testNode2)
+
+	s.StartNode(testNode)
+	s.StartNode(testNode2)
+
+	defer func(s *testSuite) {
+		s.StopNode(testNode)
+		s.StartNode(testNode2)
+	}(s)
+
+	s.waitForConsensus(1)
+
+	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount(), len(activeNodes))
+
+	s.waitForConsensus(1)
+
+	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount()+2, len(activeNodes))
+
+	s.waitForConsensus(2)
+
+	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount()+2, len(activeNodes))
+	activeNodes = testNode.serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount()+2, len(activeNodes))
+	activeNodes = testNode2.serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount()+2, len(activeNodes))
+}
+
 func (s *testSuite) TestNodeLeave() {
 	testNode := newNetworkNode()
 	s.preInitNode(testNode)
