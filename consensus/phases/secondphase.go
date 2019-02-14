@@ -216,10 +216,11 @@ func (sp *SecondPhaseImpl) Execute21(ctx context.Context, pulse *core.Pulse, sta
 	origin := sp.NodeKeeper.GetOrigin().ID()
 	bitsetChanges := make([]packets.BitSetCell, 0)
 	for index, result := range results {
-		node, err := nodenetwork.ClaimToNode("", &result.NodeClaimUnsigned)
+		claim := result.NodeClaimUnsigned
+		node, err := nodenetwork.ClaimToNode("", &claim)
 		if err != nil {
-			return nil, errors.Wrapf(err, "[ NET Consensus phase-2.1 ] Failed to convert claim to node, ref: %s",
-				result.NodeClaimUnsigned.NodeRef)
+			return nil, errors.Wrapf(err, "[ NET Consensus phase-2.1 ] Failed to convert claim to node, "+
+				"ref: %s", claim.NodeRef)
 		}
 
 		merkleProof := &merkle.PulseProof{
@@ -230,6 +231,10 @@ func (sp *SecondPhaseImpl) Execute21(ctx context.Context, pulse *core.Pulse, sta
 		}
 
 		state.UnsyncList.AddNode(node, index)
+		err = sp.NodeKeeper.AddTemporaryMapping(claim.NodeRef, claim.ShortNodeID, claim.NodeAddress.Get())
+		if err != nil {
+			logger.Warn("Error adding temporary mapping: " + err.Error())
+		}
 		valid := validateProof(sp.Calculator, state.UnsyncList, state.PulseHash, node.ID(), merkleProof)
 		if !valid {
 			logger.Warnf("[ NET Consensus phase-2.1 ] Failed to validate proof from %s", node.ID())
@@ -239,8 +244,8 @@ func (sp *SecondPhaseImpl) Execute21(ctx context.Context, pulse *core.Pulse, sta
 
 		err = state.Matrix.ReceivedProofFromNode(origin, node.ID())
 		if err != nil {
-			return nil, errors.Wrapf(err, "[ NET Consensus phase-2.1 ] Failed to assign proof from node %s to state matrix",
-				result.NodeClaimUnsigned.NodeRef)
+			return nil, errors.Wrapf(err, "[ NET Consensus phase-2.1 ] Failed to assign proof from node %s "+
+				"to state matrix", claim.NodeRef)
 		}
 		state.UnsyncList.AddProof(node.ID(), &result.NodePulseProof)
 		state.ValidProofs[node] = merkleProof
