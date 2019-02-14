@@ -138,7 +138,7 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse) (*Firs
 	}
 	err = stats.RecordWithTags(ctx, []tag.Mutator{tag.Upsert(consensus.TagPhase, "phase 1")}, consensus.PacketsRecv.M(int64(len(resultPackets))))
 	if err != nil {
-		logger.Warn("[ NET Consensus phase-1 ] failed to record a metric")
+		logger.Warn("[ NET Consensus phase-1 ] Failed to record received packets metric: " + err.Error())
 	}
 
 	proofSet := make(map[core.RecordRef]*merkle.PulseProof)
@@ -169,6 +169,7 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse) (*Firs
 		if err != nil {
 			return nil, errors.Wrap(err, "[ NET Consensus phase-1 ] Failed to detect bitset length")
 		}
+		logger.Debugf("[ NET Consensus phase-1 ] Bitset length: %d", length)
 		unsyncList = fp.NodeKeeper.GetSparseUnsyncList(length)
 	}
 
@@ -184,7 +185,7 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse) (*Firs
 		logger.Warnf("[ NET Consensus phase-1 ] Failed to validate proof from %s", nodeID)
 		unsyncList.RemoveNode(nodeID)
 	}
-	logger.Infof("[ NET Consensus phase-1 ] Valid proofs after phase: %d/%d", len(valid), len(activeNodes))
+	logger.Infof("[ NET Consensus phase-1 ] Valid proofs after phase: %d/%d", len(valid), unsyncList.Length())
 
 	return &FirstPhaseState{
 		PulseEntry:  entry,

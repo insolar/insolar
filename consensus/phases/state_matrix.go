@@ -18,15 +18,12 @@
 package phases
 
 import (
-	"context"
 	"fmt"
 
-	"github.com/insolar/insolar/consensus"
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
-	"go.opencensus.io/stats"
 )
 
 type StateMatrix struct {
@@ -46,21 +43,18 @@ func NewStateMatrix(mapper packets.BitSetMapper) *StateMatrix {
 }
 
 func (sm *StateMatrix) ApplyBitSet(sender core.RecordRef, set packets.BitSet) error {
-	cells, err := set.GetCells(sm.mapper)
+	array, err := set.GetTristateArray()
 	if err != nil {
-		return errors.Wrap(err, "Can't get cells from bitset")
+		return errors.Wrap(err, "Can't get tristate array from bitset")
+	}
+	if len(array) != sm.mapper.Length() {
+		return errors.Wrapf(err, "Incorrect bitset length: %d != %d", len(array), sm.mapper.Length())
 	}
 	i, err := sm.mapper.RefToIndex(sender)
 	if err != nil {
 		return errors.Wrap(err, "Can't map sender reference to matrix index")
 	}
-	for _, cell := range cells {
-		j, err := sm.mapper.RefToIndex(cell.NodeID)
-		if err != nil {
-			return errors.Wrap(err, "Can't map cell reference to matrix index")
-		}
-		sm.data[i][j] = cell.State
-	}
+	sm.data[i] = array
 	return nil
 }
 
@@ -119,7 +113,6 @@ func (sm *StateMatrix) CalculatePhase2(origin core.RecordRef) (*Phase2MatrixStat
 		}
 		if timedOuts > 0 {
 			result.NeedPhase21 = true
-			stats.Record(context.Background(), consensus.Phase2TimedOuts.M(int64(timedOuts)))
 		}
 		if currentNeedsPhase21 {
 			err := sm.appendAdditionalRequest(result, j)
@@ -176,7 +169,7 @@ func (sm *StateMatrix) fillState2Result(result *Phase2MatrixState, index int) er
 		return errors.Wrapf(err, "Error mapping matrix index %d to node reference ID", index)
 	}
 	if err == packets.ErrBitSetNodeIsMissing {
-		return sm.appendAdditionalRequest(result, index)
+		return nil
 	}
 	if err != nil {
 		return errors.Wrap(err, "fillState2Result unknown error")
