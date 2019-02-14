@@ -104,7 +104,7 @@ func main() {
 		go func(wg *sync.WaitGroup, q *Queue) {
 			fmt.Println("START")
 			for i := 0; i < numIterations; i++ {
-				q.sinkPush(i)
+				q.SinkPush(i)
 			}
 			wg.Done()
 		}(&wg, queue)
