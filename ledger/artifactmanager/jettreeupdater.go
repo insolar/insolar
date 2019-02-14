@@ -93,13 +93,13 @@ func (jtu *jetTreeUpdater) fetchJet(
 		jtu.sequencer[key] = &seqEntry{ch: make(chan struct{}) }
 		executing = true
 	}
-	mu := jtu.sequencer[key]
+	entry := jtu.sequencer[key]
 	jtu.seqMutex.Unlock()
 
 	span.Annotate(nil, "got sequencer entry")
 
 	if !executing {
-		<-mu.ch
+		<-entry.ch
 
 		// Tree was updated in another thread, rechecking.
 		span.Annotate(nil, "somebody else updated actuality")
@@ -107,8 +107,8 @@ func (jtu *jetTreeUpdater) fetchJet(
 	}
 
 	defer func() {
-		mu.once.Do(func(){
-			close(mu.ch)
+		entry.once.Do(func(){
+			close(entry.ch)
 		})
 
 		jtu.seqMutex.Lock()
