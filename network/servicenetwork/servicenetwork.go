@@ -241,17 +241,18 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse core.Pulse) {
 		return
 	}
 
-	currentPulse, err := n.PulseStorage.Current(ctx)
-	if err != nil {
-		logger.Fatalf("Could not get current pulse: %s", err.Error())
+	if currentPulse, err := n.PulseStorage.Current(ctx); err != nil {
+		if err != core.ErrNotFound {
+			logger.Fatalf("Could not get current pulse: %s", err.Error())
+		}
+	} else {
+		if !isNextPulse(currentPulse, &newPulse) {
+			logger.Infof("Incorrect pulse number. Current: %+v. New: %+v", currentPulse, newPulse)
+			return
+		}
 	}
 
-	if !isNextPulse(currentPulse, &newPulse) {
-		logger.Infof("Incorrect pulse number. Current: %+v. New: %+v", currentPulse, newPulse)
-		return
-	}
-
-	err = n.NetworkSwitcher.OnPulse(ctx, newPulse)
+	err := n.NetworkSwitcher.OnPulse(ctx, newPulse)
 	if err != nil {
 		logger.Error(errors.Wrap(err, "Failed to call OnPulse on NetworkSwitcher"))
 	}

@@ -554,12 +554,12 @@ func (m *PulseManager) setUnderGilSection(
 	m.PulseStorage.Lock()
 	// FIXME: @andreyromancev. 17.12.18. return core.Pulse here.
 	storagePulse, err := m.PulseTracker.GetLatestPulse(ctx)
-	if err != nil && err != storage.ErrNotFound {
+	if err != nil && err != core.ErrNotFound {
 		m.PulseStorage.Unlock()
 		return nil, nil, nil, errors.Wrap(err, "call of GetLatestPulseNumber failed")
 	}
 
-	if err != storage.ErrNotFound {
+	if err != core.ErrNotFound {
 		oldPulse = &storagePulse.Pulse
 	}
 
@@ -711,12 +711,7 @@ func (m *PulseManager) Start(ctx context.Context) error {
 		return err
 	}
 
-	latestPulse, err := m.PulseStorage.Current(ctx)
-	if err != nil {
-		return err
-	}
-
-	err = m.NodeStorage.SetActiveNodes(latestPulse.PulseNumber, m.NodeNet.GetActiveNodes())
+	err = m.NodeStorage.SetActiveNodes(core.FirstPulseNumber, []core.Node{m.NodeNet.GetOrigin()})
 	if err != nil && err != storage.ErrOverride {
 		return err
 	}
