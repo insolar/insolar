@@ -1202,6 +1202,8 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 		return nil, err
 	}
 
+	h.jetTreeUpdater.releaseJet(ctx, jetID, msg.PulseNumber)
+
 	err = h.JetStorage.AddJets(ctx, jetID)
 	if err != nil {
 		logger.Error(errors.Wrap(err, "couldn't add jet"))
