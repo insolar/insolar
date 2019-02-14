@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/cmd/pulsewatcher/config"
+	"github.com/insolar/insolar/core"
 	"github.com/olekukonko/tablewriter"
 	"github.com/pkg/errors"
 	"github.com/spf13/pflag"
@@ -42,6 +43,11 @@ const (
 	esc       = "\x1b%s"
 	moveUp    = "[%dA"
 	clearDown = "[0J"
+)
+
+const (
+	insolarReady    = "Ready"
+	insolarNotReady = "Not Ready"
 )
 
 func escape(format string, args ...interface{}) string {
@@ -140,7 +146,7 @@ func main() {
 					out.Result.Origin.Role,
 					"",
 				}
-				state = state && out.Result.NetworkState == "CompleteNetworkState" && out.Result.NodeState == "Ready"
+				state = state && out.Result.NetworkState == core.CompleteNetworkState.String() && out.Result.NodeState == core.ReadyNodeNetworkState.String()
 				lock.Unlock()
 				wg.Done()
 			}(url, i)
@@ -165,9 +171,9 @@ func main() {
 		moveBack(buffer)
 		buffer.Reset()
 
-		stateString := "Ready"
+		stateString := insolarReady
 		if !state || errored == len(conf.Nodes) {
-			stateString = "Not Ready"
+			stateString = insolarNotReady
 		}
 
 		table.SetFooter([]string{

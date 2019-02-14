@@ -413,9 +413,9 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	realKeeper := nodenetwork.NewNodeKeeper(origin)
 	terminationHandler := &terminationHandler{NodeID: origin.ID()}
 
-	realKeeper.SetState(network.Waiting)
+	realKeeper.SetState(core.WaitingNodeNetworkState)
 	if len(certManager.GetCertificate().GetDiscoveryNodes()) == 0 || utils.OriginIsDiscovery(certManager.GetCertificate()) {
-		realKeeper.SetState(network.Ready)
+		realKeeper.SetState(core.ReadyNodeNetworkState)
 		realKeeper.AddActiveNodes([]core.Node{origin})
 	}
 

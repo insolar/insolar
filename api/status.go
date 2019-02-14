@@ -22,7 +22,6 @@ import (
 
 	"github.com/insolar/insolar/core/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/network"
 )
 
 type Node struct {
@@ -59,7 +58,7 @@ func (s *StatusService) Get(r *http.Request, args *interface{}, reply *StatusRep
 	inslog.Infof("[ StatusService.Get ] Incoming request: %s", r.RequestURI)
 
 	reply.NetworkState = s.runner.NetworkSwitcher.GetState().String()
-	reply.NodeState = s.runner.NodeNetwork.(network.NodeKeeper).GetState().String()
+	reply.NodeState = s.runner.NodeNetwork.GetState().String()
 	activeNodes := s.runner.NodeNetwork.GetActiveNodes()
 
 	reply.ActiveListSize = len(activeNodes)
