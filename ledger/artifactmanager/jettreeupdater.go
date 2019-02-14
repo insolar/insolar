@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"sync"
-	"sync/atomic"
 
 	"github.com/pkg/errors"
 
@@ -34,8 +33,8 @@ import (
 )
 
 type seqEntry struct {
-	ch chan struct{}
-	closed *uint32
+	ch   chan struct{}
+	once sync.Once
 }
 
 type fetchResult struct {
@@ -91,8 +90,7 @@ func (jtu *jetTreeUpdater) fetchJet(
 
 	jtu.seqMutex.Lock()
 	if _, ok := jtu.sequencer[key]; !ok {
-		closed := uint32(0)
-		jtu.sequencer[key] = &seqEntry{make(chan struct{}), &closed }
+		jtu.sequencer[key] = &seqEntry{ch: make(chan struct{}) }
 		executing = true
 	}
 	mu := jtu.sequencer[key]
@@ -109,9 +107,9 @@ func (jtu *jetTreeUpdater) fetchJet(
 	}
 
 	defer func() {
-		if atomic.CompareAndSwapUint32(mu.closed, 0, 1) {
+		mu.once.Do(func(){
 			close(mu.ch)
-		}
+		})
 
 		jtu.seqMutex.Lock()
 		delete(jtu.sequencer, key)
@@ -141,9 +139,10 @@ func (jtu *jetTreeUpdater) releaseJet(ctx context.Context, jetID core.RecordID, 
 	for {
 		key := fmt.Sprintf("%d:%s", pulse, jetID.String())
 		if v, ok := jtu.sequencer[key]; ok {
-			if atomic.CompareAndSwapUint32(v.closed, 0, 1) {
+			v.once.Do(func(){
 				close(v.ch)
-			}
+			})
+
 			delete(jtu.sequencer, key)
 		}
 
@@ -175,7 +174,7 @@ func (jtu *jetTreeUpdater) fetchActualJetFromOtherNodes(
 		wg := sync.WaitGroup{}
 		wg.Add(num)
 
-		found := uint32(0)
+		once := sync.Once{}
 
 		replies := make([]*reply.Jet, num)
 		for i, node := range nodes {
@@ -208,11 +207,11 @@ func (jtu *jetTreeUpdater) fetchActualJetFromOtherNodes(
 					return
 				}
 
-				if atomic.CompareAndSwapUint32(&found, 0, 1) {
+				once.Do(func() {
 					jetID := r.ID
 					ch <- fetchResult{&jetID, nil }
 					close(ch)
-				}
+				})
 
 				replies[i] = r
 			}(i, node)
