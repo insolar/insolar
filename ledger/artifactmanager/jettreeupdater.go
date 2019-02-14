@@ -18,7 +18,6 @@ package artifactmanager
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/pkg/errors"
@@ -37,6 +36,11 @@ type seqEntry struct {
 	once sync.Once
 }
 
+type seqKey struct {
+	pulse core.PulseNumber
+	jet core.RecordID
+}
+
 type fetchResult struct {
 	jet *core.RecordID
 	err error
@@ -49,7 +53,7 @@ type jetTreeUpdater struct {
 	JetCoordinator     core.JetCoordinator
 
 	seqMutex  sync.Mutex
-	sequencer map[string]*seqEntry
+	sequencer map[seqKey]*seqEntry
 }
 
 func newJetTreeUpdater(
@@ -61,7 +65,7 @@ func newJetTreeUpdater(
 		JetStorage:         js,
 		MessageBus:         mb,
 		JetCoordinator:     jc,
-		sequencer: map[string]*seqEntry{},
+		sequencer: map[seqKey]*seqEntry{},
 	}
 }
 
@@ -84,7 +88,7 @@ func (jtu *jetTreeUpdater) fetchJet(
 
 	// Not actual in our tree, asking neighbors for jet.
 	span.Annotate(nil, "tree in DB is not actual")
-	key := fmt.Sprintf("%d:%s", pulse, jetID.String())
+	key := seqKey{pulse, *jetID}
 
 	executing := false
 
@@ -137,7 +141,7 @@ func (jtu *jetTreeUpdater) releaseJet(ctx context.Context, jetID core.RecordID, 
 
 	depth, _ := jet.Jet(jetID)
 	for {
-		key := fmt.Sprintf("%d:%s", pulse, jetID.String())
+		key := seqKey{pulse, jetID}
 		if v, ok := jtu.sequencer[key]; ok {
 			v.once.Do(func(){
 				close(v.ch)

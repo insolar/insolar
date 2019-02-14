@@ -207,7 +207,7 @@ func TestJetTreeUpdater_fetchJet(t *testing.T) {
 		JetStorage:         js,
 		JetCoordinator:     jc,
 		MessageBus:         mb,
-		sequencer: map[string]*seqEntry{},
+		sequencer: map[seqKey]*seqEntry{},
 	}
 
 	target := testutils.RandomID()
