@@ -38,6 +38,11 @@ type NodeMock struct {
 	IDPreCounter uint64
 	IDMock       mNodeMockID
 
+	IsActiveFunc       func() (r bool)
+	IsActiveCounter    uint64
+	IsActivePreCounter uint64
+	IsActiveMock       mNodeMockIsActive
+
 	PublicKeyFunc       func() (r crypto.PublicKey)
 	PublicKeyCounter    uint64
 	PublicKeyPreCounter uint64
@@ -71,6 +76,7 @@ func NewNodeMock(t minimock.Tester) *NodeMock {
 	m.ConsensusAddressMock = mNodeMockConsensusAddress{mock: m}
 	m.GetGlobuleIDMock = mNodeMockGetGlobuleID{mock: m}
 	m.IDMock = mNodeMockID{mock: m}
+	m.IsActiveMock = mNodeMockIsActive{mock: m}
 	m.PublicKeyMock = mNodeMockPublicKey{mock: m}
 	m.RoleMock = mNodeMockRole{mock: m}
 	m.ShortIDMock = mNodeMockShortID{mock: m}
@@ -610,6 +616,140 @@ func (m *NodeMock) IDFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.IDFunc != nil {
 		return atomic.LoadUint64(&m.IDCounter) > 0
+	}
+
+	return true
+}
+
+type mNodeMockIsActive struct {
+	mock              *NodeMock
+	mainExpectation   *NodeMockIsActiveExpectation
+	expectationSeries []*NodeMockIsActiveExpectation
+}
+
+type NodeMockIsActiveExpectation struct {
+	result *NodeMockIsActiveResult
+}
+
+type NodeMockIsActiveResult struct {
+	r bool
+}
+
+//Expect specifies that invocation of Node.IsActive is expected from 1 to Infinity times
+func (m *mNodeMockIsActive) Expect() *mNodeMockIsActive {
+	m.mock.IsActiveFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &NodeMockIsActiveExpectation{}
+	}
+
+	return m
+}
+
+//Return specifies results of invocation of Node.IsActive
+func (m *mNodeMockIsActive) Return(r bool) *NodeMock {
+	m.mock.IsActiveFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &NodeMockIsActiveExpectation{}
+	}
+	m.mainExpectation.result = &NodeMockIsActiveResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of Node.IsActive is expected once
+func (m *mNodeMockIsActive) ExpectOnce() *NodeMockIsActiveExpectation {
+	m.mock.IsActiveFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &NodeMockIsActiveExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *NodeMockIsActiveExpectation) Return(r bool) {
+	e.result = &NodeMockIsActiveResult{r}
+}
+
+//Set uses given function f as a mock of Node.IsActive method
+func (m *mNodeMockIsActive) Set(f func() (r bool)) *NodeMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.IsActiveFunc = f
+	return m.mock
+}
+
+//IsActive implements github.com/insolar/insolar/core.Node interface
+func (m *NodeMock) IsActive() (r bool) {
+	counter := atomic.AddUint64(&m.IsActivePreCounter, 1)
+	defer atomic.AddUint64(&m.IsActiveCounter, 1)
+
+	if len(m.IsActiveMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.IsActiveMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to NodeMock.IsActive.")
+			return
+		}
+
+		result := m.IsActiveMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the NodeMock.IsActive")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.IsActiveMock.mainExpectation != nil {
+
+		result := m.IsActiveMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the NodeMock.IsActive")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.IsActiveFunc == nil {
+		m.t.Fatalf("Unexpected call to NodeMock.IsActive.")
+		return
+	}
+
+	return m.IsActiveFunc()
+}
+
+//IsActiveMinimockCounter returns a count of NodeMock.IsActiveFunc invocations
+func (m *NodeMock) IsActiveMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.IsActiveCounter)
+}
+
+//IsActiveMinimockPreCounter returns the value of NodeMock.IsActive invocations
+func (m *NodeMock) IsActiveMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.IsActivePreCounter)
+}
+
+//IsActiveFinished returns true if mock invocations count is ok
+func (m *NodeMock) IsActiveFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.IsActiveMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.IsActiveCounter) == uint64(len(m.IsActiveMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.IsActiveMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.IsActiveCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.IsActiveFunc != nil {
+		return atomic.LoadUint64(&m.IsActiveCounter) > 0
 	}
 
 	return true
@@ -1171,6 +1311,10 @@ func (m *NodeMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to NodeMock.ID")
 	}
 
+	if !m.IsActiveFinished() {
+		m.t.Fatal("Expected call to NodeMock.IsActive")
+	}
+
 	if !m.PublicKeyFinished() {
 		m.t.Fatal("Expected call to NodeMock.PublicKey")
 	}
@@ -1220,6 +1364,10 @@ func (m *NodeMock) MinimockFinish() {
 		m.t.Fatal("Expected call to NodeMock.ID")
 	}
 
+	if !m.IsActiveFinished() {
+		m.t.Fatal("Expected call to NodeMock.IsActive")
+	}
+
 	if !m.PublicKeyFinished() {
 		m.t.Fatal("Expected call to NodeMock.PublicKey")
 	}
@@ -1254,6 +1402,7 @@ func (m *NodeMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.ConsensusAddressFinished()
 		ok = ok && m.GetGlobuleIDFinished()
 		ok = ok && m.IDFinished()
+		ok = ok && m.IsActiveFinished()
 		ok = ok && m.PublicKeyFinished()
 		ok = ok && m.RoleFinished()
 		ok = ok && m.ShortIDFinished()
@@ -1280,6 +1429,10 @@ func (m *NodeMock) MinimockWait(timeout time.Duration) {
 
 			if !m.IDFinished() {
 				m.t.Error("Expected call to NodeMock.ID")
+			}
+
+			if !m.IsActiveFinished() {
+				m.t.Error("Expected call to NodeMock.IsActive")
 			}
 
 			if !m.PublicKeyFinished() {
@@ -1323,6 +1476,10 @@ func (m *NodeMock) AllMocksCalled() bool {
 	}
 
 	if !m.IDFinished() {
+		return false
+	}
+
+	if !m.IsActiveFinished() {
 		return false
 	}
 

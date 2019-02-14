@@ -60,11 +60,13 @@ func (s *testSuite) TestNodeConnect() {
 	s.waitForConsensus(1)
 
 	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
-	s.Equal(s.getNodesCount()+1, len(activeNodes))
+	s.Equal(s.getNodesCount(), len(activeNodes))
 
 	s.waitForConsensus(2)
 
 	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount()+1, len(activeNodes))
+	activeNodes = testNode.serviceNetwork.NodeKeeper.GetActiveNodes()
 	s.Equal(s.getNodesCount()+1, len(activeNodes))
 }
 
@@ -110,7 +112,7 @@ func (s *testSuite) TestTwoNodesConnect() {
 	s.waitForConsensus(1)
 
 	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
-	s.Equal(s.getNodesCount()+2, len(activeNodes))
+	s.Equal(s.getNodesCount(), len(activeNodes))
 
 	s.waitForConsensus(2)
 

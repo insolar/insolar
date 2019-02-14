@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"sync/atomic"
 
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
@@ -35,11 +36,12 @@ type MutableNode interface {
 	core.Node
 
 	SetShortID(shortID core.ShortNodeID)
+	SetIsActive(isActive bool)
 }
 
 type node struct {
 	NodeID        core.RecordRef
-	NodeShortID   core.ShortNodeID
+	NodeShortID   uint32
 	NodeRole      core.StaticRole
 	NodePublicKey crypto.PublicKey
 
@@ -48,6 +50,8 @@ type node struct {
 	NodeAddress string
 	CAddress    string
 	NodeVersion string
+
+	active uint32
 }
 
 func newMutableNode(
@@ -62,12 +66,13 @@ func newMutableNode(
 	}
 	return &node{
 		NodeID:        id,
-		NodeShortID:   utils.GenerateShortID(id),
+		NodeShortID:   utils.GenerateUintShortID(id),
 		NodeRole:      role,
 		NodePublicKey: publicKey,
 		NodeAddress:   address,
 		CAddress:      consensusAddress,
 		NodeVersion:   version,
+		active:        1,
 	}
 }
 
@@ -84,7 +89,7 @@ func (n *node) ID() core.RecordRef {
 }
 
 func (n *node) ShortID() core.ShortNodeID {
-	return n.NodeShortID
+	return core.ShortNodeID(atomic.LoadUint32(&n.NodeShortID))
 }
 
 func (n *node) Role() core.StaticRole {
@@ -111,8 +116,20 @@ func (n *node) Version() string {
 	return n.NodeVersion
 }
 
+func (n *node) IsActive() bool {
+	return atomic.LoadUint32(&n.active) == 1
+}
+
 func (n *node) SetShortID(id core.ShortNodeID) {
-	n.NodeShortID = id
+	atomic.StoreUint32(&n.NodeShortID, uint32(id))
+}
+
+func (n *node) SetIsActive(isActive bool) {
+	var value uint32
+	if isActive {
+		value = 1
+	}
+	atomic.StoreUint32(&n.active, value)
 }
 
 func init() {

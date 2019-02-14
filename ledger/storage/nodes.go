@@ -58,3 +58,7 @@ func (Node) ShortID() core.ShortNodeID {
 func (Node) Version() string {
 	panic("implement me")
 }
+
+func (Node) IsActive() bool {
+	panic("implement me")
+}

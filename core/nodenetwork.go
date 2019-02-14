@@ -44,6 +44,8 @@ type Node interface {
 	GetGlobuleID() GlobuleID
 	// Version of node software
 	Version() string
+	// IsActive true if node is in active node list, else it is in sync list
+	IsActive() bool
 }
 
 //go:generate minimock -i github.com/insolar/insolar/core.NodeNetwork -o ../testutils/network -s _mock.go
