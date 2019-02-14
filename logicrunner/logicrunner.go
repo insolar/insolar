@@ -1192,16 +1192,28 @@ func (lr *LogicRunner) ClarifyPendingState(
 	}
 	es.Unlock()
 
+	es.HasPendingCheckMutex.Lock()
+	defer es.HasPendingCheckMutex.Unlock()
+
+	es.Lock()
+	if es.pending != message.PendingUnknown {
+		es.Unlock()
+		return nil
+	}
+	es.Unlock()
+
 	has, err := lr.ArtifactManager.HasPendingRequests(ctx, es.Ref)
 	if err != nil {
 		return err
 	}
 
 	es.Lock()
-	if has {
-		es.pending = message.InPending
-	} else {
-		es.pending = message.NotPending
+	if es.pending == message.PendingUnknown {
+		if has {
+			es.pending = message.InPending
+		} else {
+			es.pending = message.NotPending
+		}
 	}
 	es.Unlock()
 

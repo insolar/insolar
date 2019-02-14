@@ -27,8 +27,9 @@ type ExecutionState struct {
 	getLedgerPendingMutex sync.Mutex
 
 	// TODO not using in validation, need separate ObjectState.ExecutionState and ObjectState.Validation from ExecutionState struct
-	pending          message.PendingState
-	PendingConfirmed bool
+	pending              message.PendingState
+	PendingConfirmed     bool
+	HasPendingCheckMutex sync.Mutex
 }
 
 func (es *ExecutionState) WrapError(err error, message string) error {
@@ -65,5 +66,3 @@ func (es *ExecutionState) releaseQueue() ([]ExecutionQueueElement, bool) {
 func (es *ExecutionState) haveSomeToProcess() bool {
 	return len(es.Queue) > 0 || es.LedgerHasMoreRequests || es.LedgerQueueElement != nil
 }
-
-
