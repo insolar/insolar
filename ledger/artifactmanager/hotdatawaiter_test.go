@@ -47,7 +47,7 @@ func TestHotDataWaiterConcrete_Get_CreateIfNil(t *testing.T) {
 	jetID := testutils.RandomID()
 
 	// Act
-	waiter := hdw.instance(jetID)
+	waiter := hdw.waiterForJet(jetID)
 
 	// Assert
 	require.NotNil(t, waiter)
@@ -69,7 +69,7 @@ func TestHotDataWaiterConcrete_Wait_UnlockHotData(t *testing.T) {
 		return hdw
 	}
 	jetID := testutils.RandomID()
-	_ = hdw.instance(jetID)
+	_ = hdw.waiterForJet(jetID)
 
 	// Act
 	go func() {
@@ -111,7 +111,7 @@ func TestHotDataWaiterConcrete_Wait_ThrowTimeout(t *testing.T) {
 		return len(hdw.waiters)
 	}
 	jetID := testutils.RandomID()
-	_ = hdw.instance(jetID)
+	_ = hdw.waiterForJet(jetID)
 
 	// Act
 	go func() {
@@ -150,7 +150,7 @@ func TestHotDataWaiterConcrete_Wait_ThrowTimeout_MultipleMembers(t *testing.T) {
 	}
 	jetID := testutils.RandomID()
 	secondJetID := testutils.RandomID()
-	_ = hdw.instance(jetID)
+	_ = hdw.waiterForJet(jetID)
 
 	// Act
 	go func() {

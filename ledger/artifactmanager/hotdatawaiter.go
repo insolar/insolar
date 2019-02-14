@@ -63,7 +63,7 @@ func NewHotDataWaiterConcrete() *HotDataWaiterConcrete {
 	}
 }
 
-func (w *HotDataWaiterConcrete) instance(jetID core.RecordID) waiter {
+func (w *HotDataWaiterConcrete) waiterForJet(jetID core.RecordID) waiter {
 	if _, ok := w.waiters[jetID]; !ok {
 		w.waiters[jetID] = make(waiter)
 	}
@@ -75,7 +75,7 @@ func (w *HotDataWaiterConcrete) instance(jetID core.RecordID) waiter {
 // Either nil or ErrHotDataTimeout
 func (w *HotDataWaiterConcrete) Wait(ctx context.Context, jetID core.RecordID) error {
 	w.lock.Lock()
-	waiter := w.instance(jetID)
+	waiter := w.waiterForJet(jetID)
 	timeout := w.timeout
 	w.lock.Unlock()
 
@@ -92,7 +92,7 @@ func (w *HotDataWaiterConcrete) Unlock(ctx context.Context, jetID core.RecordID)
 	w.lock.Lock()
 	defer w.lock.Unlock()
 
-	waiter := w.instance(jetID)
+	waiter := w.waiterForJet(jetID)
 	if waiter.isClosed() {
 		return ErrWaiterNotLocked
 	}
