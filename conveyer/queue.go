@@ -5,6 +5,10 @@ import (
 	"sync"
 )
 
+type SyncDone interface {
+	done()
+}
+
 type QueueItem struct {
 	itemType uint
 	signal   uint
@@ -37,7 +41,7 @@ func NewQueue() *Queue {
 	return queue
 }
 
-func (q *Queue) sinkPush(data interface{}) bool {
+func (q *Queue) SinkPush(data interface{}) bool {
 	fmt.Println("Pushing: ", data)
 	newNode := &QueueItem{
 		payload: data,
@@ -49,6 +53,30 @@ func (q *Queue) sinkPush(data interface{}) bool {
 	return true
 }
 
+func (q *Queue) SinkPushAll(data []interface{}) bool {
+	for el := range data {
+		res := q.SinkPush(el)
+		if !res {
+			fmt.Println("[ SinkPushAll ] Couldn't sinkPush of", el)
+		}
+
+	}
+
+	return true
+}
+
+func (q *Queue) RemoveAll() [](interface{}) {
+	return []interface{}{}
+}
+
+func (q *Queue) Unblock() bool {
+	return true
+}
+
+func (q *Queue) PushSignal(signalType uint, callback SyncDone) bool {
+	return q.SinkPush(signalType)
+}
+
 func (q *Queue) Next() (*QueueItem, error) {
 	if *q.head == emptyQueueItem {
 		return nil, fmt.Errorf("Empty queue")
@@ -57,6 +85,10 @@ func (q *Queue) Next() (*QueueItem, error) {
 	q.head = q.head.next
 
 	return retElement, nil
+}
+
+func (q *Queue) HasSignal() bool {
+	return false
 }
 
 func main() {
