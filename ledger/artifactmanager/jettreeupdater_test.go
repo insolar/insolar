@@ -159,10 +159,9 @@ func TestJetTreeUpdater_fetchActualJetFromOtherNodes(t *testing.T) {
 
 		mb.SendMock.Return(nil, errors.New("some"))
 
-		ch := jtu.fetchActualJetFromOtherNodes(ctx, target, core.PulseNumber(100))
-		res := <-ch
-		require.Error(t, res.err)
-		require.Nil(t, res.jet)
+		jetID, err := jtu.fetchActualJetFromOtherNodes(ctx, target, core.PulseNumber(100))
+		require.Error(t, err)
+		require.Nil(t, jetID)
 	})
 
 	t.Run("MB got one not actual jet", func(t *testing.T) {
@@ -173,10 +172,9 @@ func TestJetTreeUpdater_fetchActualJetFromOtherNodes(t *testing.T) {
 			nil,
 		)
 
-		ch := jtu.fetchActualJetFromOtherNodes(ctx, target, core.PulseNumber(100))
-		res := <-ch
-		require.Error(t, res.err)
-		require.Nil(t, res.jet)
+		jetID, err := jtu.fetchActualJetFromOtherNodes(ctx, target, core.PulseNumber(100))
+		require.Error(t, err)
+		require.Nil(t, jetID)
 	})
 	t.Run("MB got one actual jet", func(t *testing.T) {
 		target := testutils.RandomID()
@@ -186,10 +184,9 @@ func TestJetTreeUpdater_fetchActualJetFromOtherNodes(t *testing.T) {
 			nil,
 		)
 
-		ch := jtu.fetchActualJetFromOtherNodes(ctx, target, core.PulseNumber(100))
-		res := <-ch
-		require.NoError(t, res.err)
-		require.Equal(t, jet.NewID(0, nil), res.jet)
+		jetID, err := jtu.fetchActualJetFromOtherNodes(ctx, target, core.PulseNumber(100))
+		require.NoError(t, err)
+		require.Equal(t, jet.NewID(0, nil), jetID)
 	})
 
 	// TODO: multiple nodes returned different results

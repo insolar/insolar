@@ -118,10 +118,7 @@ func (jtu *jetTreeUpdater) fetchJet(
 		jtu.seqMutex.Unlock()
 	}()
 
-	ch := jtu.fetchActualJetFromOtherNodes(ctx, target, pulse)
-	res := <-ch
-
-	resJet, err := res.jet, res.err
+	resJet, err := jtu.fetchActualJetFromOtherNodes(ctx, target, pulse)
 	if err != nil {
 		return nil, err
 	}
@@ -160,7 +157,7 @@ func (jtu *jetTreeUpdater) releaseJet(ctx context.Context, jetID core.RecordID, 
 
 func (jtu *jetTreeUpdater) fetchActualJetFromOtherNodes(
 	ctx context.Context, target core.RecordID, pulse core.PulseNumber,
-) chan fetchResult {
+) (*core.RecordID, error) {
 	ctx, span := instracer.StartSpan(ctx, "jet_tree_updater.fetch_jet_from_other_nodes")
 	defer span.End()
 
@@ -251,7 +248,8 @@ func (jtu *jetTreeUpdater) fetchActualJetFromOtherNodes(
 		}
 	}()
 
-	return ch
+	res := <-ch
+	return res.jet, res.err
 }
 
 func (jtu *jetTreeUpdater) otherNodesForPulse(
