@@ -51,6 +51,7 @@ coverage.txt
 /scripts/insolard/configs
 /scripts/insolard/nodes
 /scripts/insolard/discoverynodes
+/scripts/insolard/insgorund
 /scripts/insolard/loglinks
 /scripts/insolard/benchmark
 /scripts/insolard/reusekeys

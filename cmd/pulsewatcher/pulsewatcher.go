@@ -17,8 +17,11 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -27,12 +30,28 @@ import (
 	"sync"
 	"time"
 
-	pulsewatcher "github.com/insolar/insolar/cmd/pulsewatcher/config"
+	"github.com/insolar/insolar/cmd/pulsewatcher/config"
+	"github.com/olekukonko/tablewriter"
 	"github.com/pkg/errors"
 	"github.com/spf13/pflag"
 )
 
 var client http.Client
+
+func escape(format string, args ...interface{}) string {
+	return fmt.Sprintf("\x1b%s", fmt.Sprintf(format, args...))
+}
+
+func moveBack(reader io.Reader) {
+	fileScanner := bufio.NewScanner(reader)
+	lineCount := 0
+	for fileScanner.Scan() {
+		lineCount++
+	}
+
+	fmt.Print(escape("[%dA", lineCount))
+	fmt.Print(escape("[0J"))
+}
 
 func main() {
 	var configFile string
@@ -55,9 +74,21 @@ func main() {
 		Timeout:   conf.Timeout,
 	}
 
+	buffer := &bytes.Buffer{}
+
+	var (
+		state   bool
+		errored int
+	)
+
+	fmt.Print("\n\n")
+
 	for {
-		results := make([]string, len(conf.Nodes))
+		state = true
+		errored = 0
+		results := make([][]string, len(conf.Nodes))
 		lock := &sync.Mutex{}
+
 		wg := &sync.WaitGroup{}
 		wg.Add(len(conf.Nodes))
 		for i, url := range conf.Nodes {
@@ -66,7 +97,8 @@ func main() {
 					strings.NewReader(`{"jsonrpc": "2.0", "method": "status.Get", "id": 0}`))
 				if err != nil {
 					lock.Lock()
-					results[i] = url + " : " + err.Error()
+					results[i] = []string{url, "", "", "", "", "", err.Error()}
+					errored++
 					lock.Unlock()
 					wg.Done()
 					return
@@ -80,6 +112,7 @@ func main() {
 					Result struct {
 						PulseNumber  uint32
 						NetworkState string
+						NodeState    string
 						Origin       struct {
 							Role string
 						}
@@ -92,19 +125,59 @@ func main() {
 					log.Fatal(err)
 				}
 				lock.Lock()
-				results[i] = url + " : " + out.Result.NetworkState + " : " + strconv.Itoa(int(out.Result.PulseNumber)) + " : " + strconv.Itoa(out.Result.ActiveListSize) + " : " + out.Result.Origin.Role
+				results[i] = []string{
+					url,
+					out.Result.NetworkState,
+					out.Result.NodeState,
+					strconv.Itoa(int(out.Result.PulseNumber)),
+					strconv.Itoa(out.Result.ActiveListSize),
+					out.Result.Origin.Role,
+					"",
+				}
+				state = state && out.Result.NetworkState == "CompleteNetworkState" && out.Result.NodeState == "Ready"
 				lock.Unlock()
 				wg.Done()
 			}(url, i)
 		}
 		wg.Wait()
-		fmt.Println("\033[2J")
-		fmt.Printf("%v\n\n", time.Now())
-		lock.Lock()
-		for _, result := range results {
-			fmt.Println(result)
+
+		table := tablewriter.NewWriter(buffer)
+		table.SetHeader([]string{
+			"URL",
+			"Network State",
+			"Node State",
+			"Pulse Number",
+			"Active List Size",
+			"Role",
+			"Error",
+		})
+		table.SetBorder(false)
+
+		table.ClearRows()
+		table.ClearFooter()
+
+		moveBack(buffer)
+		buffer.Reset()
+
+		stateString := "Ready"
+		if !state || errored == len(conf.Nodes) {
+			stateString = "Not Ready"
 		}
+
+		table.SetFooter([]string{
+			"", "", "",
+			"Insolar State", stateString,
+			"Time", time.Now().Format(time.RFC3339),
+		})
+
+		lock.Lock()
+		table.AppendBulk(results)
 		lock.Unlock()
+
+		table.Render()
+
+		fmt.Print(buffer)
+
 		time.Sleep(conf.Interval)
 	}
 }

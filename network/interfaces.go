@@ -136,6 +136,7 @@ type PulseHandler interface {
 
 type NodeKeeperState uint8
 
+//go:generate stringer -type=NodeKeeperState
 const (
 	// Undefined is state of NodeKeeper while it is not valid
 	Undefined NodeKeeperState = iota + 1

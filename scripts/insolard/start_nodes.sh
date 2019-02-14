@@ -56,13 +56,6 @@ i=0
 for node in "${NODES[@]}"
 do
     i=$((i + 1))
-    if [[ "$i" -eq "$NUM_NODES" ]]
-    then
-        echo "NODE $i STARTED in foreground"
-        INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $GENERATED_CONFIGS_DIR/insolar_$i.yaml --trace &> $node/output.log
-        lastNodePID=`echo \$!`
-        break
-    fi
     INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $GENERATED_CONFIGS_DIR/insolar_$i.yaml --trace &> $node/output.log &
     echo "NODE $i STARTED in background"
 done
