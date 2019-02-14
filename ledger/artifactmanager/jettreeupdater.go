@@ -30,7 +30,18 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/jet"
 )
+
+type seqEntry struct {
+	ch chan struct{}
+	closed *uint32
+}
+
+type fetchResult struct {
+	jet *core.RecordID
+	err error
+}
 
 type jetTreeUpdater struct {
 	ActiveNodesStorage storage.NodeStorage
@@ -39,10 +50,7 @@ type jetTreeUpdater struct {
 	JetCoordinator     core.JetCoordinator
 
 	seqMutex  sync.Mutex
-	sequencer map[string]*struct {
-		sync.Mutex
-		done bool
-	}
+	sequencer map[string]*seqEntry
 }
 
 func newJetTreeUpdater(
@@ -54,10 +62,7 @@ func newJetTreeUpdater(
 		JetStorage:         js,
 		MessageBus:         mb,
 		JetCoordinator:     jc,
-		sequencer: map[string]*struct {
-			sync.Mutex
-			done bool
-		}{},
+		sequencer: map[string]*seqEntry{},
 	}
 }
 
@@ -82,28 +87,31 @@ func (jtu *jetTreeUpdater) fetchJet(
 	span.Annotate(nil, "tree in DB is not actual")
 	key := fmt.Sprintf("%d:%s", pulse, jetID.String())
 
+	executing := false
+
 	jtu.seqMutex.Lock()
 	if _, ok := jtu.sequencer[key]; !ok {
-		jtu.sequencer[key] = &struct {
-			sync.Mutex
-			done bool
-		}{}
+		closed := uint32(0)
+		jtu.sequencer[key] = &seqEntry{make(chan struct{}), &closed }
+		executing = true
 	}
 	mu := jtu.sequencer[key]
 	jtu.seqMutex.Unlock()
 
 	span.Annotate(nil, "got sequencer entry")
 
-	mu.Lock()
-	if mu.done {
-		mu.Unlock()
+	if !executing {
+		<-mu.ch
+
 		// Tree was updated in another thread, rechecking.
 		span.Annotate(nil, "somebody else updated actuality")
 		return jtu.fetchJet(ctx, target, pulse)
 	}
+
 	defer func() {
-		mu.done = true
-		mu.Unlock()
+		if atomic.CompareAndSwapUint32(mu.closed, 0, 1) {
+			close(mu.ch)
+		}
 
 		jtu.seqMutex.Lock()
 		delete(jtu.sequencer, key)
@@ -128,23 +136,40 @@ func (jtu *jetTreeUpdater) fetchJet(
 	return resJet, nil
 }
 
-type result struct {
-	jet *core.RecordID
-	err error
+func (jtu *jetTreeUpdater) releaseJet(ctx context.Context, jetID core.RecordID, pulse core.PulseNumber) {
+	jtu.seqMutex.Lock()
+	defer jtu.seqMutex.Unlock()
+
+	depth, _ := jet.Jet(jetID)
+	for {
+		key := fmt.Sprintf("%d:%s", pulse, jetID.String())
+		if v, ok := jtu.sequencer[key]; ok {
+			if atomic.CompareAndSwapUint32(v.closed, 0, 1) {
+				close(v.ch)
+			}
+			delete(jtu.sequencer, key)
+		}
+
+		if depth == 0 {
+			break
+		}
+		jetID = jet.Parent(jetID)
+		depth--
+	}
 }
 
 func (jtu *jetTreeUpdater) fetchActualJetFromOtherNodes(
 	ctx context.Context, target core.RecordID, pulse core.PulseNumber,
-) chan result {
+) chan fetchResult {
 	ctx, span := instracer.StartSpan(ctx, "jet_tree_updater.fetch_jet_from_other_nodes")
 	defer span.End()
 
-	ch := make(chan result, 1)
+	ch := make(chan fetchResult, 1)
 
 	go func() {
 		nodes, err := jtu.otherNodesForPulse(ctx, pulse)
 		if err != nil {
-			ch <- result{nil, err}
+			ch <- fetchResult{nil, err}
 			return
 		}
 
@@ -187,8 +212,8 @@ func (jtu *jetTreeUpdater) fetchActualJetFromOtherNodes(
 				}
 
 				if atomic.CompareAndSwapUint32(&found, 0, 1) {
-					jet := r.ID
-					ch <- result{&jet, nil }
+					jetID := r.ID
+					ch <- fetchResult{&jetID, nil }
 					close(ch)
 				}
 
@@ -216,7 +241,7 @@ func (jtu *jetTreeUpdater) fetchActualJetFromOtherNodes(
 				"pulse":  pulse,
 				"object": target.DebugString(),
 			}).Error("all lights for pulse have no actual jet for object")
-			ch <- result{nil, errors.New("impossible situation") }
+			ch <- fetchResult{nil, errors.New("impossible situation") }
 			close(ch)
 		} else if len(res) > 1 {
 			inslogger.FromContext(ctx).WithFields(map[string]interface{}{
