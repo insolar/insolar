@@ -42,13 +42,14 @@ func (s *testSuite) TestNetworkConsensus3Times() {
 }
 
 func (s *testSuite) TestNodeConnect() {
-	s.preInitNode(s.fixture().testNode)
+	testNode := newNetworkNode()
+	s.preInitNode(testNode)
 
-	s.InitTestNode()
-	s.StartTestNode()
-	defer func() {
-		s.StopTestNode()
-	}()
+	s.InitNode(testNode)
+	s.StartNode(testNode)
+	defer func(s *testSuite) {
+		s.StopNode(testNode)
+	}(s)
 
 	s.waitForConsensus(1)
 
@@ -67,13 +68,14 @@ func (s *testSuite) TestNodeConnect() {
 }
 
 func (s *testSuite) TestNodeLeave() {
-	s.preInitNode(s.fixture().testNode)
+	testNode := newNetworkNode()
+	s.preInitNode(testNode)
 
-	s.InitTestNode()
-	s.StartTestNode()
-	defer func() {
-		s.StopTestNode()
-	}()
+	s.InitNode(testNode)
+	s.StartNode(testNode)
+	defer func(s *testSuite) {
+		s.StopNode(testNode)
+	}(s)
 
 	s.waitForConsensus(1)
 
@@ -85,7 +87,7 @@ func (s *testSuite) TestNodeLeave() {
 	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
 	s.Equal(s.getNodesCount()+1, len(activeNodes))
 
-	s.fixture().testNode.serviceNetwork.GracefulStop(context.Background())
+	testNode.serviceNetwork.GracefulStop(context.Background())
 
 	s.waitForConsensus(2)
 
