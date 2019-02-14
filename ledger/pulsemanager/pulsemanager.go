@@ -126,19 +126,11 @@ func (m *PulseManager) processEndPulse(
 	ctx, span := instracer.StartSpan(ctx, "pulse.process_end")
 	defer span.End()
 
-	prevPulse, err := m.PulseTracker.GetPreviousPulse(ctx, currentPulse.PulseNumber)
-	if err == storage.ErrNotFound {
-		inslogger.FromContext(ctx).Warn("skipping end pulse (no prev pulse)")
-		return nil
-	}
-	if err != nil {
-		return errors.Wrap(err, "failed to fetch previous pulse")
-	}
 	for _, i := range jets {
 		info := i
 
 		g.Go(func() error {
-			drop, dropSerialized, _, err := m.createDrop(ctx, info.id, prevPulse.Pulse.PulseNumber, currentPulse.PulseNumber)
+			drop, dropSerialized, _, err := m.createDrop(ctx, info.id, currentPulse.PrevPulseNumber, currentPulse.PulseNumber)
 			if err != nil {
 				return errors.Wrapf(err, "create drop on pulse %v failed", currentPulse.PulseNumber)
 			}
@@ -194,7 +186,7 @@ func (m *PulseManager) processEndPulse(
 			return nil
 		})
 	}
-	err = g.Wait()
+	err := g.Wait()
 	if err != nil {
 		return errors.Wrap(err, "got error on jets sync")
 	}
