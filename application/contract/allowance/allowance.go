@@ -44,7 +44,9 @@ func (a *Allowance) TakeAmount() (uint, error) {
 	if a.isExpired() {
 		return 0, fmt.Errorf("[ TakeAmount ] Allowance expiried")
 	}
-	a.SelfDestruct()
+	if err := a.SelfDestruct(); err != nil {
+		return 0, err
+	}
 	return a.Amount, nil
 }
 
@@ -59,7 +61,9 @@ func (a *Allowance) GetExpiredBalance() (uint, error) {
 		return 0, fmt.Errorf("[ DeleteExpiredAllowance ] Only owner can delete expiried Allowance")
 	}
 	if a.isExpired() {
-		a.SelfDestruct()
+		if err := a.SelfDestruct(); err != nil {
+			return 0, err
+		}
 		return a.Amount, nil
 	}
 	return 0, nil
