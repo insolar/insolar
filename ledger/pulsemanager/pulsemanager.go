@@ -120,6 +120,7 @@ func NewPulseManager(conf configuration.Ledger) *PulseManager {
 func (m *PulseManager) processEndPulse(
 	ctx context.Context,
 	jets []jetInfo,
+	prevPulseNumber core.PulseNumber,
 	currentPulse, newPulse core.Pulse,
 ) error {
 	var g errgroup.Group
@@ -130,7 +131,7 @@ func (m *PulseManager) processEndPulse(
 		info := i
 
 		g.Go(func() error {
-			drop, dropSerialized, _, err := m.createDrop(ctx, info.id, currentPulse.PrevPulseNumber, currentPulse.PulseNumber)
+			drop, dropSerialized, _, err := m.createDrop(ctx, info.id, prevPulseNumber, currentPulse.PulseNumber)
 			if err != nil {
 				return errors.Wrapf(err, "create drop on pulse %v failed", currentPulse.PulseNumber)
 			}
@@ -502,7 +503,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 	)
 	defer span.End()
 
-	jets, jetIndexesRemoved, oldPulse, err := m.setUnderGilSection(ctx, newPulse, persist)
+	jets, jetIndexesRemoved, oldPulse, prevPN, err := m.setUnderGilSection(ctx, newPulse, persist)
 	if err != nil {
 		return err
 	}
@@ -514,8 +515,8 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 	// Run only on material executor.
 	// execute only on material executor
 	// TODO: do as much as possible async.
-	if m.NodeNet.GetOrigin().Role() == core.StaticRoleLightMaterial && oldPulse != nil {
-		err = m.processEndPulse(ctx, jets, *oldPulse, newPulse)
+	if m.NodeNet.GetOrigin().Role() == core.StaticRoleLightMaterial && oldPulse != nil && prevPN != nil {
+		err = m.processEndPulse(ctx, jets, *prevPN, *oldPulse, newPulse)
 		if err != nil {
 			return err
 		}
@@ -542,9 +543,12 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 func (m *PulseManager) setUnderGilSection(
 	ctx context.Context, newPulse core.Pulse, persist bool,
 ) (
-	[]jetInfo, map[core.RecordID][]core.RecordID, *core.Pulse, error,
+	[]jetInfo, map[core.RecordID][]core.RecordID, *core.Pulse, *core.PulseNumber, error,
 ) {
-	var oldPulse *core.Pulse
+	var (
+		oldPulse *core.Pulse
+		prevPN   *core.PulseNumber
+	)
 
 	m.GIL.Acquire(ctx)
 	ctx, span := instracer.StartSpan(ctx, "pulse.gil_locked")
@@ -556,11 +560,12 @@ func (m *PulseManager) setUnderGilSection(
 	storagePulse, err := m.PulseTracker.GetLatestPulse(ctx)
 	if err != nil && err != core.ErrNotFound {
 		m.PulseStorage.Unlock()
-		return nil, nil, nil, errors.Wrap(err, "call of GetLatestPulseNumber failed")
+		return nil, nil, nil, nil, errors.Wrap(err, "call of GetLatestPulseNumber failed")
 	}
 
 	if err != core.ErrNotFound {
 		oldPulse = &storagePulse.Pulse
+		prevPN = storagePulse.Prev
 	}
 
 	logger := inslogger.FromContext(ctx)
@@ -575,17 +580,17 @@ func (m *PulseManager) setUnderGilSection(
 	// swap active nodes
 	err = m.ActiveListSwapper.MoveSyncToActive(ctx)
 	if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "failed to apply new active node list")
+		return nil, nil, nil, nil, errors.Wrap(err, "failed to apply new active node list")
 	}
 	if persist {
 		if err := m.PulseTracker.AddPulse(ctx, newPulse); err != nil {
 			m.PulseStorage.Unlock()
-			return nil, nil, nil, errors.Wrap(err, "call of AddPulse failed")
+			return nil, nil, nil, nil, errors.Wrap(err, "call of AddPulse failed")
 		}
 		err = m.NodeStorage.SetActiveNodes(newPulse.PulseNumber, m.NodeNet.GetActiveNodes())
 		if err != nil {
 			m.PulseStorage.Unlock()
-			return nil, nil, nil, errors.Wrap(err, "call of SetActiveNodes failed")
+			return nil, nil, nil, nil, errors.Wrap(err, "call of SetActiveNodes failed")
 		}
 	}
 
@@ -593,10 +598,10 @@ func (m *PulseManager) setUnderGilSection(
 	m.PulseStorage.Unlock()
 
 	var jets []jetInfo
-	if persist && oldPulse != nil {
+	if persist && oldPulse != nil && prevPN != nil {
 		jets, err = m.processJets(ctx, oldPulse.PulseNumber, newPulse.PulseNumber)
 		if err != nil {
-			return nil, nil, nil, errors.Wrap(err, "failed to process jets")
+			return nil, nil, nil, nil, errors.Wrap(err, "failed to process jets")
 		}
 	}
 
@@ -606,7 +611,7 @@ func (m *PulseManager) setUnderGilSection(
 		m.prepareArtifactManagerMessageHandlerForNextPulse(ctx, newPulse, jets)
 	}
 
-	return jets, removed, oldPulse, nil
+	return jets, removed, oldPulse, prevPN, nil
 }
 
 func (m *PulseManager) addSync(ctx context.Context, jets []jetInfo, pulse core.PulseNumber) {

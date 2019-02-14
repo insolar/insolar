@@ -1,0 +1,31 @@
+apiVersion: 0.3.0
+environments:
+  local:
+    destination:
+      namespace: default
+      server: https://localhost:6443
+    k8sVersion: v1.10.11
+    path: local
+    targets:
+    - insolar
+    - pulsar
+    - jaeger
+    - prometheus
+    - elk
+    # - grafana
+  dev:
+    destination:
+      namespace: dev
+      server: https://kube.insolar.io:6443
+    k8sVersion: v1.13.1
+    path: dev
+    targets:
+    - insolar
+    - pulsar
+kind: ksonnet.io/app
+name: run_insolar
+registries:
+  incubator:
+    protocol: github
+    uri: github.com/ksonnet/parts/tree/master/incubator
+version: 0.0.1
