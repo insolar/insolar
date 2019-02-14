@@ -225,7 +225,7 @@ func sortedNodeList(nodes map[core.RecordRef]core.Node) []core.Node {
 }
 
 func (ul *unsyncList) IndexToRef(index int) (core.RecordRef, error) {
-	if index < 0 || index >= len(ul.indexToRef) {
+	if index < 0 || index >= ul.length {
 		return core.RecordRef{}, consensus.ErrBitSetOutOfRange
 	}
 	result, ok := ul.indexToRef[index]

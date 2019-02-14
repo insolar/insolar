@@ -55,7 +55,6 @@ type fixture struct {
 	ctx            context.Context
 	bootstrapNodes []*networkNode
 	networkNodes   []*networkNode
-	testNode       *networkNode
 	pulsar         TestPulsar
 }
 
@@ -103,8 +102,6 @@ func (s *testSuite) SetupTest() {
 	for i := 0; i < s.nodesCount; i++ {
 		s.fixture().networkNodes = append(s.fixture().networkNodes, newNetworkNode())
 	}
-
-	s.fixture().testNode = newNetworkNode()
 
 	pulseReceivers := make([]string, 0)
 	for _, node := range s.fixture().bootstrapNodes {
@@ -241,23 +238,23 @@ func (s *testSuite) getNodesCount() int {
 	return len(s.fixture().bootstrapNodes) + len(s.fixture().networkNodes)
 }
 
-func (s *testSuite) InitTestNode() {
-	if s.fixture().testNode.componentManager != nil {
-		err := s.fixture().testNode.init(s.fixture().ctx)
+func (s *testSuite) InitNode(node *networkNode) {
+	if node.componentManager != nil {
+		err := node.init(s.fixture().ctx)
 		s.NoError(err)
 	}
 }
 
-func (s *testSuite) StartTestNode() {
-	if s.fixture().testNode.componentManager != nil {
-		err := s.fixture().testNode.componentManager.Start(s.fixture().ctx)
+func (s *testSuite) StartNode(node *networkNode) {
+	if node.componentManager != nil {
+		err := node.componentManager.Start(s.fixture().ctx)
 		s.NoError(err)
 	}
 }
 
-func (s *testSuite) StopTestNode() {
-	if s.fixture().testNode.componentManager != nil {
-		err := s.fixture().testNode.componentManager.Stop(s.fixture().ctx)
+func (s *testSuite) StopNode(node *networkNode) {
+	if node.componentManager != nil {
+		err := node.componentManager.Stop(s.fixture().ctx)
 		s.NoError(err)
 	}
 }

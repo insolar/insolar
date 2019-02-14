@@ -54,4 +54,7 @@ coverage.txt
 /scripts/insolard/insgorund
 /scripts/insolard/loglinks
 /scripts/insolard/benchmark
+
+/ci/local-dev/logs
+/ci/local-dev/manifests/ks/lib
 /scripts/insolard/reusekeys
