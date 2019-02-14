@@ -234,7 +234,7 @@ func main() {
 	writePulsarConfig(pulsarConfig)
 	writePromConfig(pctx)
 
-	pwConfig.Interval = 100 * time.Millisecond
+	pwConfig.Interval = 500 * time.Millisecond
 	pwConfig.Timeout = 1 * time.Second
 	err = pulsewatcher.WriteConfig(filepath.Join(outputDir, "/utils"), pulsewatcherFileName, pwConfig)
 	check("couldn't write pulsewatcher config file", err)
