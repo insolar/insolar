@@ -38,8 +38,14 @@ import (
 
 var client http.Client
 
+const (
+	esc       = "\x1b%s"
+	moveUp    = "[%dA"
+	clearDown = "[0J"
+)
+
 func escape(format string, args ...interface{}) string {
-	return fmt.Sprintf("\x1b%s", fmt.Sprintf(format, args...))
+	return fmt.Sprintf(esc, fmt.Sprintf(format, args...))
 }
 
 func moveBack(reader io.Reader) {
@@ -49,8 +55,8 @@ func moveBack(reader io.Reader) {
 		lineCount++
 	}
 
-	fmt.Print(escape("[%dA", lineCount)) // Move up lineCount lines
-	fmt.Print(escape("[0J"))             // Clear screen down
+	fmt.Print(escape(moveUp, lineCount))
+	fmt.Print(escape(clearDown))
 }
 
 func main() {
