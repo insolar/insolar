@@ -144,51 +144,78 @@ func (suite *LogicRunnerTestSuite) TestStartQueueProcessorIfNeeded_DontStartQueu
 func (suite *LogicRunnerTestSuite) TestCheckPendingRequests() {
 	objectRef := testutils.RandomRef()
 
-	suite.T().Run("already in pending", func(t *testing.T) {
-		parcel:= testutils.NewParcelMock(t)
-		es := &ExecutionState{Ref: objectRef, pending: message.InPending}
-		err := suite.lr.ClarifyPendingState(suite.ctx, es, parcel)
-		require.NoError(t, err)
-		require.Equal(t, message.InPending, es.pending)
-	})
+	table := []struct {
+		name string
+		inState message.PendingState
+		outState message.PendingState
+		message bool
+		messageType core.MessageType
+		amReply *struct {has bool; err error}
+		isError bool
+	}{
+		{
+			name: "already in pending",
+			inState: message.InPending,
+			outState: message.InPending,
+		},
+		{
+			name: "already not in pending",
+			inState: message.NotPending,
+			outState: message.NotPending,
+		},
+		{
+			name: "constructor call",
+			inState: message.PendingUnknown,
+			message: true,
+			messageType: core.TypeCallConstructor,
+			outState: message.NotPending,
+		},
+		{
+			name: "method call, not pending",
+			inState: message.PendingUnknown,
+			message: true,
+			messageType: core.TypeCallMethod,
+			amReply: &struct {has bool; err error}{false, nil},
+			outState: message.NotPending,
+		},
+		{
+			name: "method call, in pending",
+			inState: message.PendingUnknown,
+			message: true,
+			messageType: core.TypeCallMethod,
+			amReply: &struct {has bool; err error}{true, nil},
+			outState: message.InPending,
+		},
+		{
+			name: "method call, in pending",
+			inState: message.PendingUnknown,
+			message: true,
+			messageType: core.TypeCallMethod,
+			amReply: &struct {has bool; err error}{true, errors.New("some")},
+			outState: message.PendingUnknown,
+			isError: true,
+		},
+	}
 
-	suite.T().Run("already not in pending", func(t *testing.T) {
-		parcel:= testutils.NewParcelMock(t)
-		es := &ExecutionState{Ref: objectRef, pending: message.NotPending}
-		err := suite.lr.ClarifyPendingState(suite.ctx, es, parcel)
-		require.NoError(t, err)
-		require.Equal(t, message.NotPending, es.pending)
-	})
-
-	suite.T().Run("constructor call", func(t *testing.T) {
-		parcel:= testutils.NewParcelMock(t)
-		parcel.TypeMock.Expect().Return(core.TypeCallConstructor)
-		es := &ExecutionState{Ref: objectRef, pending: message.PendingUnknown}
-
-		err := suite.lr.ClarifyPendingState(suite.ctx, es, parcel)
-		require.NoError(t, err)
-		require.Equal(t, message.NotPending, es.pending)
-	})
-
-	suite.T().Run("method call, not pending", func(t *testing.T) {
-		parcel:= testutils.NewParcelMock(t)
-		parcel.TypeMock.Expect().Return(core.TypeCallMethod)
-		es := &ExecutionState{Ref: objectRef, pending: message.PendingUnknown}
-		suite.am.HasPendingRequestsMock.Return(false, nil)
-		err := suite.lr.ClarifyPendingState(suite.ctx, es, parcel)
-		require.NoError(t, err)
-		require.Equal(t, message.NotPending, es.pending)
-	})
-
-	suite.T().Run("method call, in pending", func(t *testing.T) {
-		parcel:= testutils.NewParcelMock(t)
-		parcel.TypeMock.Expect().Return(core.TypeCallMethod)
-		es := &ExecutionState{Ref: objectRef, pending: message.PendingUnknown}
-		suite.am.HasPendingRequestsMock.Return(true, nil)
-		err := suite.lr.ClarifyPendingState(suite.ctx, es, parcel)
-		require.NoError(t, err)
-		require.Equal(t, message.InPending, es.pending)
-	})
+	for _, test := range table {
+		suite.T().Run(test.name, func(t *testing.T) {
+			parcel:= testutils.NewParcelMock(t)
+			if test.message {
+				parcel.TypeMock.ExpectOnce().Return(test.messageType)
+			}
+			es := &ExecutionState{Ref: objectRef, pending: test.inState}
+			if test.amReply != nil {
+				suite.am.HasPendingRequestsMock.Return(test.amReply.has, test.amReply.err)
+			}
+			err := suite.lr.ClarifyPendingState(suite.ctx, es, parcel)
+			if test.isError {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+			require.Equal(t, test.outState, es.pending)
+		})
+	}
 
 	suite.T().Run("method call, AM error", func(t *testing.T) {
 		parcel:= testutils.NewParcelMock(t)
