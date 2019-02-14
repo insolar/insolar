@@ -170,7 +170,7 @@ func main() {
 		conf.Tracer.Jaeger.AgentEndpoint = defaultJaegerEndPoint
 		conf.Log.Level = debugLevel
 		conf.Log.Adapter = "logrus"
-		conf.KeysPath = genesisConf.DiscoveryKeysDir + fmt.Sprintf(genesisConf.KeysNameFormat, nodeIndex)
+		conf.KeysPath = genesisConf.DiscoveryKeysDir + fmt.Sprintf(genesisConf.KeysNameFormat, index)
 		conf.Ledger.Storage.DataDirectory = fmt.Sprintf(discoveryDataDirectoryTemplate, nodeIndex)
 		conf.CertificatePath = fmt.Sprintf(discoveryCertificatePathTemplate, nodeIndex)
 
