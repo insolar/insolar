@@ -186,7 +186,7 @@ usage()
 process_input_params()
 {
     OPTIND=1
-    while getopts "h?nglC" opt; do
+    while getopts "h?nglwC" opt; do
         case "$opt" in
         h|\?)
             usage
@@ -201,6 +201,9 @@ process_input_params()
         l)
             prepare
             exit 0
+            ;;
+        w)
+            watch_pulse=false
             ;;
         C)
             generate_insolard_configs
@@ -290,6 +293,7 @@ genesis()
 }
 
 run_insgorund=true
+watch_pulse=true
 check_working_dir
 process_input_params $@
 
@@ -324,8 +328,13 @@ then
     scripts/insolard/start_nodes.sh
 fi
 
-echo "Starting pulse watcher..."
-
-$PULSEWATCHER -c $PULSEWATCHER_CONFIG
+if [[ "$watch_pulse" == "true" ]]
+then
+    echo "Starting pulse watcher..."
+    $PULSEWATCHER -c $PULSEWATCHER_CONFIG
+else
+    echo "Waiting..."
+    wait
+fi
 
 echo "FINISHING ..."
