@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"sync/atomic"
 
 	"github.com/pkg/errors"
 
@@ -109,7 +110,10 @@ func (jtu *jetTreeUpdater) fetchJet(
 		jtu.seqMutex.Unlock()
 	}()
 
-	resJet, err := jtu.fetchActualJetFromOtherNodes(ctx, target, pulse)
+	ch := jtu.fetchActualJetFromOtherNodes(ctx, target, pulse)
+	res := <-ch
+
+	resJet, err := res.jet, res.err
 	if err != nil {
 		return nil, err
 	}
@@ -124,85 +128,105 @@ func (jtu *jetTreeUpdater) fetchJet(
 	return resJet, nil
 }
 
+type result struct {
+	jet *core.RecordID
+	err error
+}
+
 func (jtu *jetTreeUpdater) fetchActualJetFromOtherNodes(
 	ctx context.Context, target core.RecordID, pulse core.PulseNumber,
-) (*core.RecordID, error) {
+) chan result {
 	ctx, span := instracer.StartSpan(ctx, "jet_tree_updater.fetch_jet_from_other_nodes")
 	defer span.End()
 
-	nodes, err := jtu.otherNodesForPulse(ctx, pulse)
-	if err != nil {
-		return nil, err
-	}
+	ch := make(chan result, 1)
 
-	num := len(nodes)
+	go func() {
+		nodes, err := jtu.otherNodesForPulse(ctx, pulse)
+		if err != nil {
+			ch <- result{nil, err}
+			return
+		}
 
-	wg := sync.WaitGroup{}
-	wg.Add(num)
+		num := len(nodes)
 
-	replies := make([]*reply.Jet, num)
-	for i, node := range nodes {
-		go func(i int, node core.Node) {
-			ctx, span := instracer.StartSpan(ctx, "jet_tree_updater.one_node_get_jet")
-			defer span.End()
+		wg := sync.WaitGroup{}
+		wg.Add(num)
 
-			defer wg.Done()
+		found := uint32(0)
 
-			nodeID := node.ID()
-			rep, err := jtu.MessageBus.Send(
-				ctx,
-				&message.GetJet{Object: target, Pulse: pulse},
-				&core.MessageSendOptions{Receiver: &nodeID},
-			)
-			if err != nil {
-				inslogger.FromContext(ctx).Error(
-					errors.Wrap(err, "couldn't get jet"),
+		replies := make([]*reply.Jet, num)
+		for i, node := range nodes {
+			go func(i int, node core.Node) {
+				ctx, span := instracer.StartSpan(ctx, "jet_tree_updater.one_node_get_jet")
+				defer span.End()
+
+				defer wg.Done()
+
+				nodeID := node.ID()
+				rep, err := jtu.MessageBus.Send(
+					ctx,
+					&message.GetJet{Object: target, Pulse: pulse},
+					&core.MessageSendOptions{Receiver: &nodeID},
 				)
-				return
+				if err != nil {
+					inslogger.FromContext(ctx).Error(
+						errors.Wrap(err, "couldn't get jet"),
+					)
+					return
+				}
+
+				r, ok := rep.(*reply.Jet)
+				if !ok {
+					inslogger.FromContext(ctx).Errorf("middleware.fetchActualJetFromOtherNodes: unexpected reply: %#v\n", rep)
+					return
+				}
+
+				if !r.Actual {
+					return
+				}
+
+				if atomic.CompareAndSwapUint32(&found, 0, 1) {
+					jet := r.ID
+					ch <- result{&jet, nil }
+					close(ch)
+				}
+
+				replies[i] = r
+			}(i, node)
+		}
+		wg.Wait()
+
+		seen := make(map[core.RecordID]struct{})
+		res := make([]*core.RecordID, 0)
+		for _, r := range replies {
+			if r == nil {
+				continue
+			}
+			if _, ok := seen[r.ID]; ok {
+				continue
 			}
 
-			r, ok := rep.(*reply.Jet)
-			if !ok {
-				inslogger.FromContext(ctx).Errorf("middleware.fetchActualJetFromOtherNodes: unexpected reply: %#v\n", rep)
-				return
-			}
-			replies[i] = r
-		}(i, node)
-	}
-	wg.Wait()
-
-	seen := make(map[core.RecordID]struct{})
-	res := make([]*core.RecordID, 0)
-	for _, r := range replies {
-		if r == nil {
-			continue
-		}
-		if !r.Actual {
-			continue
-		}
-		if _, ok := seen[r.ID]; ok {
-			continue
+			seen[r.ID] = struct{}{}
+			res = append(res, &r.ID)
 		}
 
-		seen[r.ID] = struct{}{}
-		res = append(res, &r.ID)
-	}
+		if len(res) == 0 {
+			inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+				"pulse":  pulse,
+				"object": target.DebugString(),
+			}).Error("all lights for pulse have no actual jet for object")
+			ch <- result{nil, errors.New("impossible situation") }
+			close(ch)
+		} else if len(res) > 1 {
+			inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+				"pulse":  pulse,
+				"object": target.DebugString(),
+			}).Error("lights said different actual jet for object")
+		}
+	}()
 
-	if len(res) == 1 {
-		return res[0], nil
-	} else if len(res) == 0 {
-		inslogger.FromContext(ctx).WithFields(map[string]interface{}{
-			"pulse":  pulse,
-			"object": target.DebugString(),
-		}).Error("all lights for pulse have no actual jet for object")
-		return nil, errors.New("impossible situation")
-	} else {
-		inslogger.FromContext(ctx).WithFields(map[string]interface{}{
-			"pulse":  pulse,
-			"object": target.DebugString(),
-		}).Error("lights said different actual jet for object")
-		return nil, errors.New("nodes returned more than one unique jet")
-	}
+	return ch
 }
 
 func (jtu *jetTreeUpdater) otherNodesForPulse(
