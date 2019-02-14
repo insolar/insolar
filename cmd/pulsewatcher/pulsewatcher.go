@@ -49,8 +49,8 @@ func moveBack(reader io.Reader) {
 		lineCount++
 	}
 
-	fmt.Print(escape("[%dA", lineCount))
-	fmt.Print(escape("[0J"))
+	fmt.Print(escape("[%dA", lineCount)) // Move up lineCount lines
+	fmt.Print(escape("[0J"))             // Clear screen down
 }
 
 func main() {
