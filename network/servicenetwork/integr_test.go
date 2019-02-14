@@ -22,6 +22,7 @@ package servicenetwork
 import (
 	"context"
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -81,8 +82,20 @@ func (s *testSuite) TestTwoNodesConnect() {
 	s.InitNode(testNode)
 	s.InitNode(testNode2)
 
-	s.StartNode(testNode)
-	s.StartNode(testNode2)
+	wg := sync.WaitGroup{}
+	wg.Add(2)
+
+	go func(wg *sync.WaitGroup) {
+		s.StartNode(testNode)
+		wg.Done()
+	}(&wg)
+
+	go func(wg *sync.WaitGroup) {
+		s.StartNode(testNode2)
+		wg.Done()
+	}(&wg)
+
+	wg.Wait()
 
 	defer func(s *testSuite) {
 		s.StopNode(testNode)

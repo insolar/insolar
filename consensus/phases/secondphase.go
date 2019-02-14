@@ -229,9 +229,11 @@ func (sp *SecondPhaseImpl) Execute21(ctx context.Context, pulse *core.Pulse, sta
 			StateHash: result.NodePulseProof.StateHash(),
 		}
 
+		state.UnsyncList.AddNode(node, index)
 		valid := validateProof(sp.Calculator, state.UnsyncList, state.PulseHash, node.ID(), merkleProof)
 		if !valid {
 			logger.Warnf("[ NET Consensus phase-2.1 ] Failed to validate proof from %s", node.ID())
+			state.UnsyncList.RemoveNode(node.ID())
 			continue
 		}
 
@@ -240,7 +242,6 @@ func (sp *SecondPhaseImpl) Execute21(ctx context.Context, pulse *core.Pulse, sta
 			return nil, errors.Wrapf(err, "[ NET Consensus phase-2.1 ] Failed to assign proof from node %s to state matrix",
 				result.NodeClaimUnsigned.NodeRef)
 		}
-		state.UnsyncList.AddNode(node, index)
 		state.UnsyncList.AddProof(node.ID(), &result.NodePulseProof)
 		state.ValidProofs[node] = merkleProof
 		bitsetChanges = append(bitsetChanges, packets.BitSetCell{NodeID: node.ID(), State: packets.Legit})
