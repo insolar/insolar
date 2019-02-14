@@ -565,7 +565,9 @@ func (m *PulseManager) setUnderGilSection(
 	if err != nil && err != storage.ErrNotFound {
 		m.PulseStorage.Unlock()
 		return nil, nil, nil, errors.Wrap(err, "call of GetLatestPulseNumber failed")
-	} else {
+	}
+
+	if err != storage.ErrNotFound {
 		oldPulse = &storagePulse.Pulse
 	}
 
