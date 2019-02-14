@@ -155,9 +155,10 @@ func (s *componentSuite) TestLedgerArtifactManager_PendingRequest() {
 	handler.JetCoordinator = jcMock
 
 	handler.HotDataWaiter = NewHotDataWaiterConcrete()
-	handler.HotDataWaiter.Unlock(s.ctx, jetID)
+	err := handler.HotDataWaiter.Unlock(s.ctx, jetID)
+	require.NoError(s.T(), err)
 
-	err := handler.Init(s.ctx)
+	err = handler.Init(s.ctx)
 	require.NoError(s.T(), err)
 	objRef := *genRandomRef(0)
 
