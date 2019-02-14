@@ -477,7 +477,7 @@ func (g *Genesis) createKeys(ctx context.Context, path string, amount int) error
 		return errors.Wrap(err, "[ createKeys ] couldn't remove old dir")
 	}
 
-	for i := 1; i <= amount; i++ {
+	for i := 0; i < amount; i++ {
 		ks := platformpolicy.NewKeyProcessor()
 
 		privKey, err := ks.GeneratePrivateKey()
