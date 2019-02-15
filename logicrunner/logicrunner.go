@@ -75,7 +75,6 @@ type ExecutionQueueElement struct {
 	ctx        context.Context
 	parcel     core.Parcel
 	request    *Ref
-	pulse      core.PulseNumber
 	fromLedger bool
 }
 
@@ -332,7 +331,6 @@ func (lr *LogicRunner) executeActual(ctx context.Context, parcel core.Parcel, ms
 		ctx:     ctx,
 		parcel:  parcel,
 		request: request,
-		pulse:   lr.pulse(ctx).PulseNumber,
 	}
 
 	es.Queue = append(es.Queue, qElement)
@@ -703,7 +701,6 @@ func (lr *LogicRunner) unsafeGetLedgerPendingRequest(ctx context.Context, es *Ex
 		ctx:        ctx,
 		parcel:     parcel,
 		request:    &request,
-		pulse:      pulse,
 		fromLedger: true,
 	}
 
@@ -774,7 +771,6 @@ func (lr *LogicRunner) prepareObjectState(ctx context.Context, msg *message.Exec
 					ctx:     qe.Parcel.Context(context.Background()),
 					parcel:  qe.Parcel,
 					request: qe.Request,
-					pulse:   qe.Pulse,
 				})
 		}
 		es.Queue = append(queueFromMessage, es.Queue...)
@@ -1169,7 +1165,6 @@ func convertQueueToMessageQueue(queue []ExecutionQueueElement) []message.Executi
 		mq = append(mq, message.ExecutionQueueElement{
 			Parcel:  elem.parcel,
 			Request: elem.request,
-			Pulse:   elem.pulse,
 		})
 	}
 
