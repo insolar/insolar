@@ -241,6 +241,9 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse core.Pulse) {
 		return
 	}
 
+	// Ignore core.ErrNotFound because
+	// sometimes we can't fetch current pulse in new nodes
+	// (for fresh bootstrapped light-material with in-memory pulse-tracker)
 	if currentPulse, err := n.PulseStorage.Current(ctx); err != nil {
 		if err != core.ErrNotFound {
 			logger.Fatalf("Could not get current pulse: %s", err.Error())
