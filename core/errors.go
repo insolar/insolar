@@ -29,4 +29,6 @@ var (
 	ErrHotDataTimeout = errors.New("requests were abandoned due to hot-data timeout")
 	// ErrNoPendingRequest is returned when there are no pending requests on current LME
 	ErrNoPendingRequest = errors.New("no pending requests are available")
+	// ErrNotFound is returned when something not found
+	ErrNotFound = errors.New("Not found")
 )
