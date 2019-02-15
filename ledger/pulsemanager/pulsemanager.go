@@ -357,10 +357,7 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse c
 	ctx, span := instracer.StartSpan(ctx, "jets.process")
 	defer span.End()
 
-	tree, err := m.JetStorage.CloneJetTree(ctx, currentPulse, newPulse)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to clone jet tree into a new pulse")
-	}
+	tree := m.JetStorage.CloneJetTree(ctx, currentPulse, newPulse)
 
 	if m.NodeNet.GetOrigin().Role() != core.StaticRoleLightMaterial {
 		return nil, nil
@@ -405,10 +402,7 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse c
 				return nil, errors.Wrap(err, "failed to add jets")
 			}
 			// Set actual because we are the last executor for jet.
-			err = m.JetStorage.UpdateJetTree(ctx, newPulse, true, *leftJetID, *rightJetID)
-			if err != nil {
-				return nil, errors.Wrap(err, "failed to update tree")
-			}
+			m.JetStorage.UpdateJetTree(ctx, newPulse, true, *leftJetID, *rightJetID)
 
 			info.left = &jetInfo{id: *leftJetID}
 			info.right = &jetInfo{id: *rightJetID}
@@ -441,10 +435,7 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse c
 			}).Info("jet split performed")
 		} else {
 			// Set actual because we are the last executor for jet.
-			err = m.JetStorage.UpdateJetTree(ctx, newPulse, true, jetID)
-			if err != nil {
-				return nil, errors.Wrap(err, "failed to update tree")
-			}
+			m.JetStorage.UpdateJetTree(ctx, newPulse, true, jetID)
 			nextExecutor, err := m.JetCoordinator.LightExecutorForJet(ctx, jetID, newPulse)
 			if err != nil {
 				return nil, err
@@ -587,7 +578,7 @@ func (m *PulseManager) setUnderGilSection(
 			m.PulseStorage.Unlock()
 			return nil, nil, nil, nil, errors.Wrap(err, "call of AddPulse failed")
 		}
-		err = m.NodeStorage.SetActiveNodes(newPulse.PulseNumber, m.NodeNet.GetActiveNodes())
+		err = m.NodeStorage.SetActiveNodes(newPulse.PulseNumber, m.NodeNet.GetWorkingNodes())
 		if err != nil {
 			m.PulseStorage.Unlock()
 			return nil, nil, nil, nil, errors.Wrap(err, "call of SetActiveNodes failed")

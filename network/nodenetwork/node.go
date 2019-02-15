@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 
 	"github.com/insolar/insolar/consensus/packets"
@@ -37,6 +38,7 @@ type MutableNode interface {
 
 	SetShortID(shortID core.ShortNodeID)
 	SetIsActive(isActive bool)
+	SetLeavingETA(number core.PulseNumber)
 }
 
 type node struct {
@@ -50,6 +52,10 @@ type node struct {
 	NodeAddress string
 	CAddress    string
 	NodeVersion string
+
+	leavingMutex   sync.RWMutex
+	NodeLeaving    bool
+	NodeLeavingETA core.PulseNumber
 
 	active uint32
 }
@@ -130,6 +136,25 @@ func (n *node) SetIsActive(isActive bool) {
 		value = 1
 	}
 	atomic.StoreUint32(&n.active, value)
+}
+
+func (n *node) Leaving() bool {
+	n.leavingMutex.RLock()
+	defer n.leavingMutex.RUnlock()
+	return n.NodeLeaving
+}
+func (n *node) LeavingETA() core.PulseNumber {
+	n.leavingMutex.RLock()
+	defer n.leavingMutex.RUnlock()
+	return n.NodeLeavingETA
+}
+
+func (n *node) SetLeavingETA(number core.PulseNumber) {
+	n.leavingMutex.Lock()
+	defer n.leavingMutex.Unlock()
+
+	n.NodeLeaving = true
+	n.NodeLeavingETA = number
 }
 
 func init() {

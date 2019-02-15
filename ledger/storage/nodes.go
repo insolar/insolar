@@ -59,6 +59,14 @@ func (Node) Version() string {
 	panic("implement me")
 }
 
+func (Node) Leaving() bool {
+	panic("implement me")
+}
+
+func (Node) LeavingETA() core.PulseNumber {
+	panic("implement me")
+}
+
 func (Node) IsActive() bool {
 	panic("implement me")
 }
