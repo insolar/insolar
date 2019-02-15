@@ -66,7 +66,7 @@ func (nb *networkBootstrapper) Bootstrap(ctx context.Context) (*network.Bootstra
 		// if the network is up and complete, we return discovery nodes via consensus
 		if err == ErrReconnectRequired {
 			log.Debugf("[ Bootstrap ] Connecting discovery node %s as joiner", nb.NodeKeeper.GetOrigin().ID())
-			nb.NodeKeeper.SetState(network.Waiting)
+			nb.NodeKeeper.SetState(core.WaitingNodeNetworkState)
 			result, err = nb.bootstrapJoiner(ctx)
 		}
 	} else {

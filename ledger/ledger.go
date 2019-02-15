@@ -96,10 +96,17 @@ func GetLedgerComponents(conf configuration.Ledger, certificate core.Certificate
 		panic(errors.Wrap(err, "failed to initialize DB"))
 	}
 
+	var pulseTracker storage.PulseTracker
+	if certificate.GetRole() == core.StaticRoleLightMaterial {
+		pulseTracker = storage.NewPulseTrackerMemory()
+	} else {
+		pulseTracker = storage.NewPulseTracker()
+	}
+
 	return []interface{}{
 		db,
 		storage.NewCleaner(),
-		storage.NewPulseTracker(),
+		pulseTracker,
 		storage.NewPulseStorage(),
 		storage.NewJetStorage(),
 		storage.NewDropStorage(conf.JetSizesHistoryDepth),
