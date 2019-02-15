@@ -38,7 +38,7 @@ type seqEntry struct {
 
 type seqKey struct {
 	pulse core.PulseNumber
-	jet core.RecordID
+	jet   core.RecordID
 }
 
 type fetchResult struct {
@@ -65,7 +65,7 @@ func newJetTreeUpdater(
 		JetStorage:         js,
 		MessageBus:         mb,
 		JetCoordinator:     jc,
-		sequencer: map[seqKey]*seqEntry{},
+		sequencer:          map[seqKey]*seqEntry{},
 	}
 }
 
@@ -89,7 +89,7 @@ func (jtu *jetTreeUpdater) fetchJet(
 
 	jtu.seqMutex.Lock()
 	if _, ok := jtu.sequencer[key]; !ok {
-		jtu.sequencer[key] = &seqEntry{ch: make(chan struct{}) }
+		jtu.sequencer[key] = &seqEntry{ch: make(chan struct{})}
 		executing = true
 	}
 	entry := jtu.sequencer[key]
@@ -106,7 +106,7 @@ func (jtu *jetTreeUpdater) fetchJet(
 	}
 
 	defer func() {
-		entry.once.Do(func(){
+		entry.once.Do(func() {
 			close(entry.ch)
 		})
 
@@ -133,7 +133,7 @@ func (jtu *jetTreeUpdater) releaseJet(ctx context.Context, jetID core.RecordID, 
 	for {
 		key := seqKey{pulse, jetID}
 		if v, ok := jtu.sequencer[key]; ok {
-			v.once.Do(func(){
+			v.once.Do(func() {
 				close(v.ch)
 			})
 
@@ -203,7 +203,7 @@ func (jtu *jetTreeUpdater) fetchActualJetFromOtherNodes(
 
 				once.Do(func() {
 					jetID := r.ID
-					ch <- fetchResult{&jetID, nil }
+					ch <- fetchResult{&jetID, nil}
 					close(ch)
 				})
 
@@ -231,7 +231,7 @@ func (jtu *jetTreeUpdater) fetchActualJetFromOtherNodes(
 				"pulse":  pulse,
 				"object": target.DebugString(),
 			}).Error("all lights for pulse have no actual jet for object")
-			ch <- fetchResult{nil, errors.New("impossible situation") }
+			ch <- fetchResult{jet.NewID(0, nil), nil}
 			close(ch)
 		} else if len(res) > 1 {
 			inslogger.FromContext(ctx).WithFields(map[string]interface{}{
