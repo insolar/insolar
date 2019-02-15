@@ -17,19 +17,19 @@
 package claimhandler
 
 import (
-	"math/rand"
-
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
 )
 
 type joinClaimHandler struct {
 	next        ClaimHandler
+	queue       Queue
+	ref         core.RecordRef
 	activeCount int
 }
 
-func NewJoinClaimHandler(activeNodesCount int, next ClaimHandler) ClaimHandler {
-	return &joinClaimHandler{activeCount: activeNodesCount, next: next}
+func NewJoinClaimHandler(activeNodesCount int, ref core.RecordRef, next ClaimHandler) ClaimHandler {
+	return &joinClaimHandler{activeCount: activeNodesCount, next: next, ref: ref}
 }
 
 func (jch *joinClaimHandler) HandleClaim(claim packets.ReferendumClaim, pulse *core.Pulse) packets.ReferendumClaim {
@@ -44,9 +44,14 @@ func (jch *joinClaimHandler) HandleClaim(claim packets.ReferendumClaim, pulse *c
 }
 
 func (jch *joinClaimHandler) handle(claim packets.ReferendumClaim, pulse *core.Pulse) packets.ReferendumClaim {
-	return claim
+	jch.queue.PushClaim(claim, getPriority(jch.ref, pulse.Entropy))
+	return jch.queue.PopClaim()
 }
 
-func getIndex(id core.RecordRef, pulse *core.Pulse) int {
-	return rand.Int()
+func getPriority(ref core.RecordRef, entropy core.Entropy) []byte {
+	res := make([]byte, len(ref))
+	for i := 0; i < len(ref); i++ {
+		res[i] = ref[i] ^ entropy[i]
+	}
+	return res
 }
