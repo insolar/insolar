@@ -55,10 +55,6 @@ type Control interface {
 type Conveyer interface {
 	EventSink
 	Control
-	readLock()
-	readUnlock()
-	writeLock()
-	writeUnlock()
 }
 
 type PulseConveyer struct {
@@ -66,7 +62,6 @@ type PulseConveyer struct {
 	slotMap      map[core.PulseNumber]Slot
 	lock         sync.RWMutex
 	state        State
-	stateLock    sync.RWMutex
 }
 
 func NewPulseConveyer() *PulseConveyer {
