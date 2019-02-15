@@ -18,9 +18,8 @@ package claimhandler
 
 import (
 	"github.com/insolar/insolar/consensus/packets"
-	"github.com/insolar/insolar/core"
 )
 
 type ClaimHandler interface {
-	HandleClaim(packets.ReferendumClaim, *core.Pulse) packets.ReferendumClaim
+	HandleClaim(packets.ReferendumClaim) packets.ReferendumClaim
 }

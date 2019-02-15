@@ -28,23 +28,26 @@ type joinClaimHandler struct {
 	activeCount int
 }
 
-func NewJoinClaimHandler(activeNodesCount int, ref core.RecordRef, next ClaimHandler) ClaimHandler {
-	return &joinClaimHandler{activeCount: activeNodesCount, next: next, ref: ref}
+func NewJoinClaimHandler(activeNodesCount int, claims []*packets.NodeJoinClaim, pulse *core.Pulse, next ClaimHandler) ClaimHandler {
+	handler := &joinClaimHandler{activeCount: activeNodesCount, next: next}
+	for _, claim := range claims {
+		handler.queue.PushClaim(claim, getPriority(claim.NodeRef, pulse.Entropy))
+	}
+	return handler
 }
 
-func (jch *joinClaimHandler) HandleClaim(claim packets.ReferendumClaim, pulse *core.Pulse) packets.ReferendumClaim {
-	c, ok := claim.(*packets.NodeJoinClaim)
+func (jch *joinClaimHandler) HandleClaim(claim packets.ReferendumClaim) packets.ReferendumClaim {
+	_, ok := claim.(*packets.NodeJoinClaim)
 	if !ok {
 		if jch.next == nil {
 			return claim
 		}
-		jch.next.HandleClaim(claim, pulse)
+		jch.next.HandleClaim(claim)
 	}
-	return jch.handle(claim, pulse)
+	return jch.handle(claim)
 }
 
-func (jch *joinClaimHandler) handle(claim packets.ReferendumClaim, pulse *core.Pulse) packets.ReferendumClaim {
-	jch.queue.PushClaim(claim, getPriority(jch.ref, pulse.Entropy))
+func (jch *joinClaimHandler) handle(claim packets.ReferendumClaim) packets.ReferendumClaim {
 	return jch.queue.PopClaim()
 }
 

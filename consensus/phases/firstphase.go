@@ -110,14 +110,14 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse) (*Firs
 		}
 		log.Debug("[ NET Consensus phase-1 ] Added origin claim in Phase1Packet")
 	}
-	claimHandler := claimhandler.NewJoinClaimHandler(len(fp.NodeKeeper.GetActiveNodes()), nil)
+	claimHandler := claimhandler.NewJoinClaimHandler(len(fp.NodeKeeper.GetActiveNodes()), nil, pulse, nil)
 	for {
 		claim := fp.NodeKeeper.GetClaimQueue().Front()
 		if claim == nil {
 			break
 		}
 
-		claim = claimHandler.HandleClaim(claim, pulse)
+		claim = claimHandler.HandleClaim(claim)
 		if claim == nil {
 			continue
 		}
