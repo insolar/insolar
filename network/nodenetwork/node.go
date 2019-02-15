@@ -33,11 +33,20 @@ import (
 	"github.com/pkg/errors"
 )
 
+type NodeState uint8
+
+const (
+	NodeDiscovery NodeState = iota
+	NodeJoining
+	NodeReady
+)
+
 type MutableNode interface {
 	core.Node
 
 	SetShortID(shortID core.ShortNodeID)
-	SetIsWorking(isActive bool)
+	SetState(state NodeState)
+	ChangeState()
 	SetLeavingETA(number core.PulseNumber)
 }
 
@@ -57,7 +66,21 @@ type node struct {
 	NodeLeaving    bool
 	NodeLeavingETA core.PulseNumber
 
-	working uint32
+	state uint32
+}
+
+func (n *node) SetState(state NodeState) {
+	atomic.StoreUint32(&n.state, uint32(state))
+}
+
+func (n *node) ChangeState() {
+	// we don't expect concurrent changes, so do not CAS
+
+	currentState := atomic.LoadUint32(&n.state)
+	if currentState == uint32(NodeReady) {
+		return
+	}
+	atomic.StoreUint32(&n.state, currentState+1)
 }
 
 func newMutableNode(
@@ -78,7 +101,7 @@ func newMutableNode(
 		NodeAddress:   address,
 		CAddress:      consensusAddress,
 		NodeVersion:   version,
-		working:       1,
+		state:         uint32(NodeReady),
 	}
 }
 
@@ -123,19 +146,11 @@ func (n *node) Version() string {
 }
 
 func (n *node) IsWorking() bool {
-	return atomic.LoadUint32(&n.working) == 1
+	return atomic.LoadUint32(&n.state) == uint32(NodeReady)
 }
 
 func (n *node) SetShortID(id core.ShortNodeID) {
 	atomic.StoreUint32(&n.NodeShortID, uint32(id))
-}
-
-func (n *node) SetIsWorking(isWorking bool) {
-	var value uint32
-	if isWorking {
-		value = 1
-	}
-	atomic.StoreUint32(&n.working, value)
 }
 
 func (n *node) Leaving() bool {

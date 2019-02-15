@@ -30,7 +30,7 @@ import (
 func copyActiveNodes(m map[core.RecordRef]core.Node) map[core.RecordRef]core.Node {
 	result := make(map[core.RecordRef]core.Node, len(m))
 	for k, v := range m {
-		v.(MutableNode).SetIsWorking(true)
+		v.(MutableNode).ChangeState()
 		result[k] = v
 	}
 	return result
@@ -200,7 +200,7 @@ func (ul *unsyncList) mergeClaim(origin core.Node, nodes map[core.RecordRef]core
 		if err != nil {
 			return nil, errors.Wrap(err, "[ mergeClaim ] failed to convert Claim -> Node")
 		}
-		node.(MutableNode).SetIsWorking(false)
+		node.(MutableNode).SetState(NodeJoining)
 		nodes[node.ID()] = node
 		isJoinClaim = true
 	case *consensus.NodeLeaveClaim:
