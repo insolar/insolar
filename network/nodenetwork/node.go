@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
@@ -35,6 +36,7 @@ type MutableNode interface {
 	core.Node
 
 	SetShortID(shortID core.ShortNodeID)
+	SetLeavingETA(number core.PulseNumber)
 }
 
 type node struct {
@@ -48,6 +50,10 @@ type node struct {
 	NodeAddress string
 	CAddress    string
 	NodeVersion string
+
+	leavingMutex   sync.RWMutex
+	NodeLeaving    bool
+	NodeLeavingETA core.PulseNumber
 }
 
 func newMutableNode(
@@ -113,6 +119,25 @@ func (n *node) Version() string {
 
 func (n *node) SetShortID(id core.ShortNodeID) {
 	n.NodeShortID = id
+}
+
+func (n *node) Leaving() bool {
+	n.leavingMutex.RLock()
+	defer n.leavingMutex.RUnlock()
+	return n.NodeLeaving
+}
+func (n *node) LeavingETA() core.PulseNumber {
+	n.leavingMutex.RLock()
+	defer n.leavingMutex.RUnlock()
+	return n.NodeLeavingETA
+}
+
+func (n *node) SetLeavingETA(number core.PulseNumber) {
+	n.leavingMutex.Lock()
+	defer n.leavingMutex.Unlock()
+
+	n.NodeLeaving = true
+	n.NodeLeavingETA = number
 }
 
 func init() {

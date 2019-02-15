@@ -171,7 +171,7 @@ func (s *pulseManagerSuite) TestPulseManager_Set_CheckHotIndexesSending() {
 	nodeMock.IDMock.Return(core.RecordRef{})
 
 	nodeNetworkMock := network.NewNodeNetworkMock(s.T())
-	nodeNetworkMock.GetActiveNodesMock.Return([]core.Node{nodeMock})
+	nodeNetworkMock.GetWorkingNodesMock.Return([]core.Node{nodeMock})
 	nodeNetworkMock.GetOriginMock.Return(nodeMock)
 
 	jetCoordinatorMock := testutils.NewJetCoordinatorMock(s.T())

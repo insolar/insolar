@@ -44,6 +44,10 @@ type Node interface {
 	GetGlobuleID() GlobuleID
 	// Version of node software
 	Version() string
+	// Leaving indicates, that node preparing for graceful shutdown
+	Leaving() bool
+	// LeavingETA is pulse number, after which node leave
+	LeavingETA() PulseNumber
 }
 
 type NodeNetworkState uint8
@@ -62,14 +66,14 @@ const (
 type NodeNetwork interface {
 	// GetState get state of the NodeKeeper
 	GetState() NodeNetworkState
-	// GetOrigin get active node for the current insolard. Returns nil if the current insolard is not an active node.
+	// GetOrigin get origin node for the current insolard. Returns nil if the current insolard is not a working node.
 	GetOrigin() Node
-	// GetActiveNode get active node by its reference. Returns nil if node is not found.
-	GetActiveNode(ref RecordRef) Node
-	// GetActiveNodes get active nodes.
-	GetActiveNodes() []Node
-	// GetActiveNodesByRole get active nodes by role
-	GetActiveNodesByRole(role DynamicRole) []RecordRef
+	// GetWorkingNode get working node by its reference. Returns nil if node is not found.
+	GetWorkingNode(ref RecordRef) Node
+	// GetWorkingNodes get working nodes.
+	GetWorkingNodes() []Node
+	// GetWorkingNodesByRole get working nodes by role
+	GetWorkingNodesByRole(role DynamicRole) []RecordRef
 }
 
 // TODO: remove this interface when bootstrap mechanism completed

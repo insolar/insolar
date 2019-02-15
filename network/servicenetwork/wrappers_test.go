@@ -37,6 +37,18 @@ type nodeKeeperWrapper struct {
 	original network.NodeKeeper
 }
 
+func (n *nodeKeeperWrapper) GetWorkingNode(ref core.RecordRef) core.Node {
+	return n.original.GetWorkingNode(ref)
+}
+
+func (n *nodeKeeperWrapper) GetWorkingNodes() []core.Node {
+	return n.original.GetWorkingNodes()
+}
+
+func (n *nodeKeeperWrapper) GetWorkingNodesByRole(role core.DynamicRole) []core.RecordRef {
+	return n.original.GetWorkingNodesByRole(role)
+}
+
 func (n *nodeKeeperWrapper) Wipe(isDiscovery bool) {
 	n.original.(nodeKeeperTestInterface).Wipe(isDiscovery)
 }
@@ -76,10 +88,6 @@ func (n *nodeKeeperWrapper) GetActiveNodes() []core.Node {
 	tmp := n.original.GetActiveNodes()
 	//tmp = tmp[:len(tmp)-2]
 	return tmp
-}
-
-func (n *nodeKeeperWrapper) GetActiveNodesByRole(role core.DynamicRole) []core.RecordRef {
-	return n.original.GetActiveNodesByRole(role)
 }
 
 func (n *nodeKeeperWrapper) GetCloudHash() []byte {
