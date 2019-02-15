@@ -312,6 +312,18 @@ func (nk *nodekeeper) addToIndex(node core.Node) {
 	nk.indexShortID[node.ShortID()] = node
 }
 
+func (nk *nodekeeper) GetWorkingNodes() []core.Node {
+	var workingNodes []core.Node
+	activeNodes := nk.GetActiveNodes()
+	for _, node := range activeNodes {
+		if !node.Living() {
+			workingNodes = append(workingNodes, node)
+		}
+	}
+
+	return workingNodes
+}
+
 func (nk *nodekeeper) SetState(state network.NodeKeeperState) {
 	nk.syncLock.Lock()
 	defer nk.syncLock.Unlock()

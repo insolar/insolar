@@ -343,14 +343,23 @@ func (nac *NodeAnnounceClaim) Update(nodeJoinerID core.RecordRef, crypto core.Cr
 	return nil
 }
 
-// Deserialize implements interface method
-func (nlc *NodeLeaveClaim) Deserialize(data io.Reader) error {
-	return nil
-}
-
 // Serialize implements interface method
 func (nlc *NodeLeaveClaim) Serialize() ([]byte, error) {
-	return nil, nil
+	var result bytes.Buffer
+	err := binary.Write(&result, defaultByteOrder, nlc.ETA)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ MissingNode.Serialize ] failed to write ti a buffer")
+	}
+	return result.Bytes(), nil
+}
+
+// Deserialize implements interface method
+func (nlc *NodeLeaveClaim) Deserialize(data io.Reader) error {
+	err := binary.Read(data, defaultByteOrder, &nlc.ETA)
+	if err != nil {
+		return errors.Wrap(err, "[ MissingNode.Deserialize ] failed to read a node index")
+	}
+	return nil
 }
 
 func serializeClaims(claims []ReferendumClaim) ([]byte, error) {

@@ -44,6 +44,10 @@ type Node interface {
 	GetGlobuleID() GlobuleID
 	// Version of node software
 	Version() string
+	// Living indicates, that node preparing for graceful shutdown
+	Living() bool
+	// LivingETA is pulse number, after which node leave
+	LivingETA() PulseNumber
 }
 
 //go:generate minimock -i github.com/insolar/insolar/core.NodeNetwork -o ../testutils/network -s _mock.go
@@ -54,6 +58,8 @@ type NodeNetwork interface {
 	GetActiveNode(ref RecordRef) Node
 	// GetActiveNodes get active nodes.
 	GetActiveNodes() []Node
+	// GetWorkingNodes get active nodes without leaving nodes
+	GetWorkingNodes() []Node
 	// GetActiveNodesByRole get active nodes by role
 	GetActiveNodesByRole(role DynamicRole) []RecordRef
 }
