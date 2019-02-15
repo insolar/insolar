@@ -121,12 +121,7 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 			case *message.GetRequest:
 				pulse = tm.Request.Pulse()
 			}
-			tree, err := m.jetStorage.GetJetTree(ctx, pulse)
-			if err != nil {
-				return nil, err
-			}
-
-			jetID, actual := tree.Find(target)
+			jetID, actual := m.jetStorage.FindJet(ctx, pulse, target)
 			if !actual {
 				inslogger.FromContext(ctx).WithFields(map[string]interface{}{
 					"msg":   msg.Type().String(),

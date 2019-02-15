@@ -178,11 +178,7 @@ func (jc *JetCoordinator) LightValidatorsForJet(
 func (jc *JetCoordinator) LightExecutorForObject(
 	ctx context.Context, objID core.RecordID, pulse core.PulseNumber,
 ) (*core.RecordRef, error) {
-	tree, err := jc.JetStorage.GetJetTree(ctx, pulse)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to fetch jet tree")
-	}
-	jetID, _ := tree.Find(objID)
+	jetID, _ := jc.JetStorage.FindJet(ctx, pulse, objID)
 	return jc.LightExecutorForJet(ctx, *jetID, pulse)
 }
 
@@ -190,11 +186,7 @@ func (jc *JetCoordinator) LightExecutorForObject(
 func (jc *JetCoordinator) LightValidatorsForObject(
 	ctx context.Context, objID core.RecordID, pulse core.PulseNumber,
 ) ([]core.RecordRef, error) {
-	tree, err := jc.JetStorage.GetJetTree(ctx, pulse)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to fetch jet tree for pulse %v", pulse)
-	}
-	jetID, _ := tree.Find(objID)
+	jetID, _ := jc.JetStorage.FindJet(ctx, pulse, objID)
 	return jc.LightValidatorsForJet(ctx, *jetID, pulse)
 }
 
