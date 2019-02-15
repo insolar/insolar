@@ -106,11 +106,11 @@ func (n *nodeKeeperWrapper) GetActiveNodeByShortID(shortID core.ShortNodeID) cor
 	return n.original.GetActiveNodeByShortID(shortID)
 }
 
-func (n *nodeKeeperWrapper) SetState(state network.NodeKeeperState) {
+func (n *nodeKeeperWrapper) SetState(state core.NodeNetworkState) {
 	n.original.SetState(state)
 }
 
-func (n *nodeKeeperWrapper) GetState() network.NodeKeeperState {
+func (n *nodeKeeperWrapper) GetState() core.NodeNetworkState {
 	return n.original.GetState()
 }
 

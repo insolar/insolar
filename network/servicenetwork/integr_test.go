@@ -101,7 +101,7 @@ func (s *testSuite) TestTwoNodesConnect() {
 
 	defer func(s *testSuite) {
 		s.StopNode(testNode)
-		s.StartNode(testNode2)
+		s.StopNode(testNode2)
 	}(s)
 
 	s.waitForConsensus(1)

@@ -1,7 +1,8 @@
 CONFIG_DIR=/opt/insolar/config
 GENESIS_CONFIG=$CONFIG_DIR/genesis.yaml
 NODES_DATA=$CONFIG_DIR/nodes
-KEYS_DIR=$NODES_DATA/keys
+DISCOVERY_KEYS=$CONFIG_DIR/discovery
+CERTS_KEYS=$CONFIG_DIR/certs
 
 NUM_NODES=$(fgrep '"host":' $GENESIS_CONFIG | grep -cv "#" )
 
@@ -14,17 +15,12 @@ then
     echo "generate root member key"
     insolar -c gen_keys > $CONFIG_DIR/root_member_keys.json
 
-    echo "generate discovery node keys"
-    mkdir -vp $KEYS_DIR
-    for i in `seq 0 $((NUM_NODES-1))`
-    do
-        insolar -c gen_keys > $KEYS_DIR/seed-$i.json
-    done
-
     echo "generate genesis"
-    mkdir -vp $NODES_DATA/certs
+    mkdir -vp $NODES_DATA
+    mkdir -vp $CERTS_KEYS
     mkdir -vp $CONFIG_DIR/data
-    insolard --config $CONFIG_DIR/insolar-genesis.yaml --genesis $GENESIS_CONFIG --keyout $NODES_DATA/certs
+    mkdir -vp $DISCOVERY_KEYS
+    insolard --config $CONFIG_DIR/insolar-genesis.yaml --genesis $GENESIS_CONFIG --keyout $CERTS_KEYS
     touch /opt/insolar/config/finished
 else
     while ! (/usr/bin/test -e /opt/insolar/config/finished)
@@ -42,6 +38,6 @@ else
     echo "copy genesis"
     cp -vR $CONFIG_DIR/data /opt/work/
     mkdir -vp /opt/work/config
-    cp -v $NODES_DATA/certs/$(ls $NODES_DATA/certs/ | grep $(hostname | sed 's/[^0-9]*//g')) /opt/work/config/node-cert.json
-    cp -v $KEYS_DIR/$(hostname).json /opt/work/config/node-keys.json
+    cp -v $CERTS_KEYS/$(hostname | awk -F'-' '{ printf "seed-%d-cert.json", $2 }')  /opt/work/config/node-cert.json
+    cp -v $DISCOVERY_KEYS/$(hostname | awk -F'-' '{ printf "key-%02d.json", $2 }')  /opt/work/config/node-keys.json
 fi

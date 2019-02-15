@@ -48,8 +48,22 @@ type Node interface {
 	IsActive() bool
 }
 
+type NodeNetworkState uint8
+
+//go:generate stringer -type=NodeNetworkState
+const (
+	// UndefinedNodeNetworkState is state of NodeKeeper while it is not valid
+	UndefinedNodeNetworkState NodeNetworkState = iota + 1
+	// WaitingNodeNetworkState is state of NodeKeeper while it is not part of consensus yet (waits for its join claim to pass)
+	WaitingNodeNetworkState
+	// ReadyNodeNetworkState is state of NodeKeeper when it is ready for consensus
+	ReadyNodeNetworkState
+)
+
 //go:generate minimock -i github.com/insolar/insolar/core.NodeNetwork -o ../testutils/network -s _mock.go
 type NodeNetwork interface {
+	// GetState get state of the NodeKeeper
+	GetState() NodeNetworkState
 	// GetOrigin get active node for the current insolard. Returns nil if the current insolard is not an active node.
 	GetOrigin() Node
 	// GetActiveNode get active node by its reference. Returns nil if node is not found.

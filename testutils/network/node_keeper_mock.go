@@ -88,7 +88,7 @@ type NodeKeeperMock struct {
 	GetSparseUnsyncListPreCounter uint64
 	GetSparseUnsyncListMock       mNodeKeeperMockGetSparseUnsyncList
 
-	GetStateFunc       func() (r network.NodeKeeperState)
+	GetStateFunc       func() (r core.NodeNetworkState)
 	GetStateCounter    uint64
 	GetStatePreCounter uint64
 	GetStateMock       mNodeKeeperMockGetState
@@ -133,7 +133,7 @@ type NodeKeeperMock struct {
 	SetIsBootstrappedPreCounter uint64
 	SetIsBootstrappedMock       mNodeKeeperMockSetIsBootstrapped
 
-	SetStateFunc       func(p network.NodeKeeperState)
+	SetStateFunc       func(p core.NodeNetworkState)
 	SetStateCounter    uint64
 	SetStatePreCounter uint64
 	SetStateMock       mNodeKeeperMockSetState
@@ -2021,7 +2021,7 @@ type NodeKeeperMockGetStateExpectation struct {
 }
 
 type NodeKeeperMockGetStateResult struct {
-	r network.NodeKeeperState
+	r core.NodeNetworkState
 }
 
 //Expect specifies that invocation of NodeKeeper.GetState is expected from 1 to Infinity times
@@ -2037,7 +2037,7 @@ func (m *mNodeKeeperMockGetState) Expect() *mNodeKeeperMockGetState {
 }
 
 //Return specifies results of invocation of NodeKeeper.GetState
-func (m *mNodeKeeperMockGetState) Return(r network.NodeKeeperState) *NodeKeeperMock {
+func (m *mNodeKeeperMockGetState) Return(r core.NodeNetworkState) *NodeKeeperMock {
 	m.mock.GetStateFunc = nil
 	m.expectationSeries = nil
 
@@ -2059,12 +2059,12 @@ func (m *mNodeKeeperMockGetState) ExpectOnce() *NodeKeeperMockGetStateExpectatio
 	return expectation
 }
 
-func (e *NodeKeeperMockGetStateExpectation) Return(r network.NodeKeeperState) {
+func (e *NodeKeeperMockGetStateExpectation) Return(r core.NodeNetworkState) {
 	e.result = &NodeKeeperMockGetStateResult{r}
 }
 
 //Set uses given function f as a mock of NodeKeeper.GetState method
-func (m *mNodeKeeperMockGetState) Set(f func() (r network.NodeKeeperState)) *NodeKeeperMock {
+func (m *mNodeKeeperMockGetState) Set(f func() (r core.NodeNetworkState)) *NodeKeeperMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -2073,7 +2073,7 @@ func (m *mNodeKeeperMockGetState) Set(f func() (r network.NodeKeeperState)) *Nod
 }
 
 //GetState implements github.com/insolar/insolar/network.NodeKeeper interface
-func (m *NodeKeeperMock) GetState() (r network.NodeKeeperState) {
+func (m *NodeKeeperMock) GetState() (r core.NodeNetworkState) {
 	counter := atomic.AddUint64(&m.GetStatePreCounter, 1)
 	defer atomic.AddUint64(&m.GetStateCounter, 1)
 
@@ -3244,11 +3244,11 @@ type NodeKeeperMockSetStateExpectation struct {
 }
 
 type NodeKeeperMockSetStateInput struct {
-	p network.NodeKeeperState
+	p core.NodeNetworkState
 }
 
 //Expect specifies that invocation of NodeKeeper.SetState is expected from 1 to Infinity times
-func (m *mNodeKeeperMockSetState) Expect(p network.NodeKeeperState) *mNodeKeeperMockSetState {
+func (m *mNodeKeeperMockSetState) Expect(p core.NodeNetworkState) *mNodeKeeperMockSetState {
 	m.mock.SetStateFunc = nil
 	m.expectationSeries = nil
 
@@ -3272,7 +3272,7 @@ func (m *mNodeKeeperMockSetState) Return() *NodeKeeperMock {
 }
 
 //ExpectOnce specifies that invocation of NodeKeeper.SetState is expected once
-func (m *mNodeKeeperMockSetState) ExpectOnce(p network.NodeKeeperState) *NodeKeeperMockSetStateExpectation {
+func (m *mNodeKeeperMockSetState) ExpectOnce(p core.NodeNetworkState) *NodeKeeperMockSetStateExpectation {
 	m.mock.SetStateFunc = nil
 	m.mainExpectation = nil
 
@@ -3283,7 +3283,7 @@ func (m *mNodeKeeperMockSetState) ExpectOnce(p network.NodeKeeperState) *NodeKee
 }
 
 //Set uses given function f as a mock of NodeKeeper.SetState method
-func (m *mNodeKeeperMockSetState) Set(f func(p network.NodeKeeperState)) *NodeKeeperMock {
+func (m *mNodeKeeperMockSetState) Set(f func(p core.NodeNetworkState)) *NodeKeeperMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -3292,7 +3292,7 @@ func (m *mNodeKeeperMockSetState) Set(f func(p network.NodeKeeperState)) *NodeKe
 }
 
 //SetState implements github.com/insolar/insolar/network.NodeKeeper interface
-func (m *NodeKeeperMock) SetState(p network.NodeKeeperState) {
+func (m *NodeKeeperMock) SetState(p core.NodeNetworkState) {
 	counter := atomic.AddUint64(&m.SetStatePreCounter, 1)
 	defer atomic.AddUint64(&m.SetStateCounter, 1)
 

@@ -134,17 +134,6 @@ type PulseHandler interface {
 	HandlePulse(ctx context.Context, pulse core.Pulse)
 }
 
-type NodeKeeperState uint8
-
-const (
-	// Undefined is state of NodeKeeper while it is not valid
-	Undefined NodeKeeperState = iota + 1
-	// Waiting is state of NodeKeeper while it is not part of consensus yet (waits for its join claim to pass)
-	Waiting
-	// Ready is state of NodeKeeper when it is ready for consensus
-	Ready
-)
-
 // NodeKeeper manages unsync, sync and active lists.
 //go:generate minimock -i github.com/insolar/insolar/network.NodeKeeper -o ../testutils/network -s _mock.go
 type NodeKeeper interface {
@@ -162,9 +151,7 @@ type NodeKeeper interface {
 	// GetActiveNodeByShortID get active node by short ID. Returns nil if node is not found.
 	GetActiveNodeByShortID(shortID core.ShortNodeID) core.Node
 	// SetState set state of the NodeKeeper
-	SetState(NodeKeeperState)
-	// GetState get state of the NodeKeeper
-	GetState() NodeKeeperState
+	SetState(core.NodeNetworkState)
 	// GetOriginJoinClaim get origin NodeJoinClaim
 	GetOriginJoinClaim() (*consensus.NodeJoinClaim, error)
 	// GetOriginAnnounceClaim get origin NodeAnnounceClaim
@@ -176,11 +163,11 @@ type NodeKeeper interface {
 	// GetClaimQueue get the internal queue of claims
 	GetClaimQueue() ClaimQueue
 	// GetUnsyncList get unsync list for current pulse. Has copy of active node list from nodekeeper as internal state.
-	// Should be called when nodekeeper state is Ready.
+	// Should be called when nodekeeper state is ReadyNodeNetworkState.
 	GetUnsyncList() UnsyncList
 	// GetSparseUnsyncList get sparse unsync list for current pulse with predefined length of active node list.
 	// Does not contain active list, should collect active list during its lifetime via AddClaims.
-	// Should be called when nodekeeper state is Waiting.
+	// Should be called when nodekeeper state is WaitingNodeNetworkState.
 	GetSparseUnsyncList(length int) UnsyncList
 	// Sync move unsync -> sync
 	Sync(list UnsyncList)
