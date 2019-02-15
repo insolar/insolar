@@ -33,14 +33,23 @@ type Claim struct {
 	index    int
 }
 
-func (q *Queue) Push(x interface{}) {
-	item := Claim{
-		value: x.(packets.ReferendumClaim),
-		index: q.Len(),
+func (q *Queue) PushClaim(claim packets.ReferendumClaim, ref core.RecordRef, entropy core.Entropy) {
+	item := &Claim{
+		value:    claim,
+		index:    q.Len(),
+		priority: getPriority(ref, entropy),
 	}
-	item.index = q.Len()
+	q.Push(item)
+}
+
+func (q *Queue) Push(x interface{}) {
+	item := x.(*Claim)
 	*q = append(*q, item)
 	heap.Fix(q, item.index)
+}
+
+func (q *Queue) PopClaim() packets.ReferendumClaim {
+	return q.PopClaim().(packets.ReferendumClaim)
 }
 
 func (q *Queue) Pop() interface{} {
@@ -68,7 +77,7 @@ func (q Queue) Less(i, j int) bool {
 	return false
 }
 
-func (q *Queue) getPriority(ref core.RecordRef, entropy core.Entropy) []byte {
+func getPriority(ref core.RecordRef, entropy core.Entropy) []byte {
 	res := make([]byte, len(ref))
 	for i := 0; i < len(ref); i++ {
 		res[i] = ref[i] ^ entropy[i]
