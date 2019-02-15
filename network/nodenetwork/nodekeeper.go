@@ -316,7 +316,7 @@ func (nk *nodekeeper) GetWorkingNodes() []core.Node {
 	var workingNodes []core.Node
 	activeNodes := nk.GetActiveNodes()
 	for _, node := range activeNodes {
-		if !node.Living() {
+		if !node.Leaving() {
 			workingNodes = append(workingNodes, node)
 		}
 	}

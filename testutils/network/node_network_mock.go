@@ -43,6 +43,11 @@ type NodeNetworkMock struct {
 	GetStateCounter    uint64
 	GetStatePreCounter uint64
 	GetStateMock       mNodeNetworkMockGetState
+
+	GetWorkingNodesFunc       func() (r []core.Node)
+	GetWorkingNodesCounter    uint64
+	GetWorkingNodesPreCounter uint64
+	GetWorkingNodesMock       mNodeNetworkMockGetWorkingNodes
 }
 
 //NewNodeNetworkMock returns a mock for github.com/insolar/insolar/core.NodeNetwork
@@ -58,6 +63,7 @@ func NewNodeNetworkMock(t minimock.Tester) *NodeNetworkMock {
 	m.GetActiveNodesByRoleMock = mNodeNetworkMockGetActiveNodesByRole{mock: m}
 	m.GetOriginMock = mNodeNetworkMockGetOrigin{mock: m}
 	m.GetStateMock = mNodeNetworkMockGetState{mock: m}
+	m.GetWorkingNodesMock = mNodeNetworkMockGetWorkingNodes{mock: m}
 
 	return m
 }
@@ -758,6 +764,140 @@ func (m *NodeNetworkMock) GetStateFinished() bool {
 	return true
 }
 
+type mNodeNetworkMockGetWorkingNodes struct {
+	mock              *NodeNetworkMock
+	mainExpectation   *NodeNetworkMockGetWorkingNodesExpectation
+	expectationSeries []*NodeNetworkMockGetWorkingNodesExpectation
+}
+
+type NodeNetworkMockGetWorkingNodesExpectation struct {
+	result *NodeNetworkMockGetWorkingNodesResult
+}
+
+type NodeNetworkMockGetWorkingNodesResult struct {
+	r []core.Node
+}
+
+//Expect specifies that invocation of NodeNetwork.GetWorkingNodes is expected from 1 to Infinity times
+func (m *mNodeNetworkMockGetWorkingNodes) Expect() *mNodeNetworkMockGetWorkingNodes {
+	m.mock.GetWorkingNodesFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &NodeNetworkMockGetWorkingNodesExpectation{}
+	}
+
+	return m
+}
+
+//Return specifies results of invocation of NodeNetwork.GetWorkingNodes
+func (m *mNodeNetworkMockGetWorkingNodes) Return(r []core.Node) *NodeNetworkMock {
+	m.mock.GetWorkingNodesFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &NodeNetworkMockGetWorkingNodesExpectation{}
+	}
+	m.mainExpectation.result = &NodeNetworkMockGetWorkingNodesResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of NodeNetwork.GetWorkingNodes is expected once
+func (m *mNodeNetworkMockGetWorkingNodes) ExpectOnce() *NodeNetworkMockGetWorkingNodesExpectation {
+	m.mock.GetWorkingNodesFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &NodeNetworkMockGetWorkingNodesExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *NodeNetworkMockGetWorkingNodesExpectation) Return(r []core.Node) {
+	e.result = &NodeNetworkMockGetWorkingNodesResult{r}
+}
+
+//Set uses given function f as a mock of NodeNetwork.GetWorkingNodes method
+func (m *mNodeNetworkMockGetWorkingNodes) Set(f func() (r []core.Node)) *NodeNetworkMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.GetWorkingNodesFunc = f
+	return m.mock
+}
+
+//GetWorkingNodes implements github.com/insolar/insolar/core.NodeNetwork interface
+func (m *NodeNetworkMock) GetWorkingNodes() (r []core.Node) {
+	counter := atomic.AddUint64(&m.GetWorkingNodesPreCounter, 1)
+	defer atomic.AddUint64(&m.GetWorkingNodesCounter, 1)
+
+	if len(m.GetWorkingNodesMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.GetWorkingNodesMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to NodeNetworkMock.GetWorkingNodes.")
+			return
+		}
+
+		result := m.GetWorkingNodesMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the NodeNetworkMock.GetWorkingNodes")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetWorkingNodesMock.mainExpectation != nil {
+
+		result := m.GetWorkingNodesMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the NodeNetworkMock.GetWorkingNodes")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetWorkingNodesFunc == nil {
+		m.t.Fatalf("Unexpected call to NodeNetworkMock.GetWorkingNodes.")
+		return
+	}
+
+	return m.GetWorkingNodesFunc()
+}
+
+//GetWorkingNodesMinimockCounter returns a count of NodeNetworkMock.GetWorkingNodesFunc invocations
+func (m *NodeNetworkMock) GetWorkingNodesMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.GetWorkingNodesCounter)
+}
+
+//GetWorkingNodesMinimockPreCounter returns the value of NodeNetworkMock.GetWorkingNodes invocations
+func (m *NodeNetworkMock) GetWorkingNodesMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.GetWorkingNodesPreCounter)
+}
+
+//GetWorkingNodesFinished returns true if mock invocations count is ok
+func (m *NodeNetworkMock) GetWorkingNodesFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.GetWorkingNodesMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.GetWorkingNodesCounter) == uint64(len(m.GetWorkingNodesMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.GetWorkingNodesMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.GetWorkingNodesCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.GetWorkingNodesFunc != nil {
+		return atomic.LoadUint64(&m.GetWorkingNodesCounter) > 0
+	}
+
+	return true
+}
+
 //ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *NodeNetworkMock) ValidateCallCounters() {
@@ -780,6 +920,10 @@ func (m *NodeNetworkMock) ValidateCallCounters() {
 
 	if !m.GetStateFinished() {
 		m.t.Fatal("Expected call to NodeNetworkMock.GetState")
+	}
+
+	if !m.GetWorkingNodesFinished() {
+		m.t.Fatal("Expected call to NodeNetworkMock.GetWorkingNodes")
 	}
 
 }
@@ -819,6 +963,10 @@ func (m *NodeNetworkMock) MinimockFinish() {
 		m.t.Fatal("Expected call to NodeNetworkMock.GetState")
 	}
 
+	if !m.GetWorkingNodesFinished() {
+		m.t.Fatal("Expected call to NodeNetworkMock.GetWorkingNodes")
+	}
+
 }
 
 //Wait waits for all mocked methods to be called at least once
@@ -838,6 +986,7 @@ func (m *NodeNetworkMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.GetActiveNodesByRoleFinished()
 		ok = ok && m.GetOriginFinished()
 		ok = ok && m.GetStateFinished()
+		ok = ok && m.GetWorkingNodesFinished()
 
 		if ok {
 			return
@@ -864,6 +1013,10 @@ func (m *NodeNetworkMock) MinimockWait(timeout time.Duration) {
 
 			if !m.GetStateFinished() {
 				m.t.Error("Expected call to NodeNetworkMock.GetState")
+			}
+
+			if !m.GetWorkingNodesFinished() {
+				m.t.Error("Expected call to NodeNetworkMock.GetWorkingNodes")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)
@@ -895,6 +1048,10 @@ func (m *NodeNetworkMock) AllMocksCalled() bool {
 	}
 
 	if !m.GetStateFinished() {
+		return false
+	}
+
+	if !m.GetWorkingNodesFinished() {
 		return false
 	}
 

@@ -38,6 +38,16 @@ type NodeMock struct {
 	IDPreCounter uint64
 	IDMock       mNodeMockID
 
+	LeavingFunc       func() (r bool)
+	LeavingCounter    uint64
+	LeavingPreCounter uint64
+	LeavingMock       mNodeMockLeaving
+
+	LeavingETAFunc       func() (r core.PulseNumber)
+	LeavingETACounter    uint64
+	LeavingETAPreCounter uint64
+	LeavingETAMock       mNodeMockLeavingETA
+
 	PublicKeyFunc       func() (r crypto.PublicKey)
 	PublicKeyCounter    uint64
 	PublicKeyPreCounter uint64
@@ -71,6 +81,8 @@ func NewNodeMock(t minimock.Tester) *NodeMock {
 	m.ConsensusAddressMock = mNodeMockConsensusAddress{mock: m}
 	m.GetGlobuleIDMock = mNodeMockGetGlobuleID{mock: m}
 	m.IDMock = mNodeMockID{mock: m}
+	m.LeavingMock = mNodeMockLeaving{mock: m}
+	m.LeavingETAMock = mNodeMockLeavingETA{mock: m}
 	m.PublicKeyMock = mNodeMockPublicKey{mock: m}
 	m.RoleMock = mNodeMockRole{mock: m}
 	m.ShortIDMock = mNodeMockShortID{mock: m}
@@ -610,6 +622,274 @@ func (m *NodeMock) IDFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.IDFunc != nil {
 		return atomic.LoadUint64(&m.IDCounter) > 0
+	}
+
+	return true
+}
+
+type mNodeMockLeaving struct {
+	mock              *NodeMock
+	mainExpectation   *NodeMockLeavingExpectation
+	expectationSeries []*NodeMockLeavingExpectation
+}
+
+type NodeMockLeavingExpectation struct {
+	result *NodeMockLeavingResult
+}
+
+type NodeMockLeavingResult struct {
+	r bool
+}
+
+//Expect specifies that invocation of Node.Leaving is expected from 1 to Infinity times
+func (m *mNodeMockLeaving) Expect() *mNodeMockLeaving {
+	m.mock.LeavingFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &NodeMockLeavingExpectation{}
+	}
+
+	return m
+}
+
+//Return specifies results of invocation of Node.Leaving
+func (m *mNodeMockLeaving) Return(r bool) *NodeMock {
+	m.mock.LeavingFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &NodeMockLeavingExpectation{}
+	}
+	m.mainExpectation.result = &NodeMockLeavingResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of Node.Leaving is expected once
+func (m *mNodeMockLeaving) ExpectOnce() *NodeMockLeavingExpectation {
+	m.mock.LeavingFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &NodeMockLeavingExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *NodeMockLeavingExpectation) Return(r bool) {
+	e.result = &NodeMockLeavingResult{r}
+}
+
+//Set uses given function f as a mock of Node.Leaving method
+func (m *mNodeMockLeaving) Set(f func() (r bool)) *NodeMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.LeavingFunc = f
+	return m.mock
+}
+
+//Leaving implements github.com/insolar/insolar/core.Node interface
+func (m *NodeMock) Leaving() (r bool) {
+	counter := atomic.AddUint64(&m.LeavingPreCounter, 1)
+	defer atomic.AddUint64(&m.LeavingCounter, 1)
+
+	if len(m.LeavingMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.LeavingMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to NodeMock.Leaving.")
+			return
+		}
+
+		result := m.LeavingMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the NodeMock.Leaving")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.LeavingMock.mainExpectation != nil {
+
+		result := m.LeavingMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the NodeMock.Leaving")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.LeavingFunc == nil {
+		m.t.Fatalf("Unexpected call to NodeMock.Leaving.")
+		return
+	}
+
+	return m.LeavingFunc()
+}
+
+//LeavingMinimockCounter returns a count of NodeMock.LeavingFunc invocations
+func (m *NodeMock) LeavingMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.LeavingCounter)
+}
+
+//LeavingMinimockPreCounter returns the value of NodeMock.Leaving invocations
+func (m *NodeMock) LeavingMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.LeavingPreCounter)
+}
+
+//LeavingFinished returns true if mock invocations count is ok
+func (m *NodeMock) LeavingFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.LeavingMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.LeavingCounter) == uint64(len(m.LeavingMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.LeavingMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.LeavingCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.LeavingFunc != nil {
+		return atomic.LoadUint64(&m.LeavingCounter) > 0
+	}
+
+	return true
+}
+
+type mNodeMockLeavingETA struct {
+	mock              *NodeMock
+	mainExpectation   *NodeMockLeavingETAExpectation
+	expectationSeries []*NodeMockLeavingETAExpectation
+}
+
+type NodeMockLeavingETAExpectation struct {
+	result *NodeMockLeavingETAResult
+}
+
+type NodeMockLeavingETAResult struct {
+	r core.PulseNumber
+}
+
+//Expect specifies that invocation of Node.LeavingETA is expected from 1 to Infinity times
+func (m *mNodeMockLeavingETA) Expect() *mNodeMockLeavingETA {
+	m.mock.LeavingETAFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &NodeMockLeavingETAExpectation{}
+	}
+
+	return m
+}
+
+//Return specifies results of invocation of Node.LeavingETA
+func (m *mNodeMockLeavingETA) Return(r core.PulseNumber) *NodeMock {
+	m.mock.LeavingETAFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &NodeMockLeavingETAExpectation{}
+	}
+	m.mainExpectation.result = &NodeMockLeavingETAResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of Node.LeavingETA is expected once
+func (m *mNodeMockLeavingETA) ExpectOnce() *NodeMockLeavingETAExpectation {
+	m.mock.LeavingETAFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &NodeMockLeavingETAExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *NodeMockLeavingETAExpectation) Return(r core.PulseNumber) {
+	e.result = &NodeMockLeavingETAResult{r}
+}
+
+//Set uses given function f as a mock of Node.LeavingETA method
+func (m *mNodeMockLeavingETA) Set(f func() (r core.PulseNumber)) *NodeMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.LeavingETAFunc = f
+	return m.mock
+}
+
+//LeavingETA implements github.com/insolar/insolar/core.Node interface
+func (m *NodeMock) LeavingETA() (r core.PulseNumber) {
+	counter := atomic.AddUint64(&m.LeavingETAPreCounter, 1)
+	defer atomic.AddUint64(&m.LeavingETACounter, 1)
+
+	if len(m.LeavingETAMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.LeavingETAMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to NodeMock.LeavingETA.")
+			return
+		}
+
+		result := m.LeavingETAMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the NodeMock.LeavingETA")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.LeavingETAMock.mainExpectation != nil {
+
+		result := m.LeavingETAMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the NodeMock.LeavingETA")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.LeavingETAFunc == nil {
+		m.t.Fatalf("Unexpected call to NodeMock.LeavingETA.")
+		return
+	}
+
+	return m.LeavingETAFunc()
+}
+
+//LeavingETAMinimockCounter returns a count of NodeMock.LeavingETAFunc invocations
+func (m *NodeMock) LeavingETAMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.LeavingETACounter)
+}
+
+//LeavingETAMinimockPreCounter returns the value of NodeMock.LeavingETA invocations
+func (m *NodeMock) LeavingETAMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.LeavingETAPreCounter)
+}
+
+//LeavingETAFinished returns true if mock invocations count is ok
+func (m *NodeMock) LeavingETAFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.LeavingETAMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.LeavingETACounter) == uint64(len(m.LeavingETAMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.LeavingETAMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.LeavingETACounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.LeavingETAFunc != nil {
+		return atomic.LoadUint64(&m.LeavingETACounter) > 0
 	}
 
 	return true
@@ -1171,6 +1451,14 @@ func (m *NodeMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to NodeMock.ID")
 	}
 
+	if !m.LeavingFinished() {
+		m.t.Fatal("Expected call to NodeMock.Leaving")
+	}
+
+	if !m.LeavingETAFinished() {
+		m.t.Fatal("Expected call to NodeMock.LeavingETA")
+	}
+
 	if !m.PublicKeyFinished() {
 		m.t.Fatal("Expected call to NodeMock.PublicKey")
 	}
@@ -1220,6 +1508,14 @@ func (m *NodeMock) MinimockFinish() {
 		m.t.Fatal("Expected call to NodeMock.ID")
 	}
 
+	if !m.LeavingFinished() {
+		m.t.Fatal("Expected call to NodeMock.Leaving")
+	}
+
+	if !m.LeavingETAFinished() {
+		m.t.Fatal("Expected call to NodeMock.LeavingETA")
+	}
+
 	if !m.PublicKeyFinished() {
 		m.t.Fatal("Expected call to NodeMock.PublicKey")
 	}
@@ -1254,6 +1550,8 @@ func (m *NodeMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.ConsensusAddressFinished()
 		ok = ok && m.GetGlobuleIDFinished()
 		ok = ok && m.IDFinished()
+		ok = ok && m.LeavingFinished()
+		ok = ok && m.LeavingETAFinished()
 		ok = ok && m.PublicKeyFinished()
 		ok = ok && m.RoleFinished()
 		ok = ok && m.ShortIDFinished()
@@ -1280,6 +1578,14 @@ func (m *NodeMock) MinimockWait(timeout time.Duration) {
 
 			if !m.IDFinished() {
 				m.t.Error("Expected call to NodeMock.ID")
+			}
+
+			if !m.LeavingFinished() {
+				m.t.Error("Expected call to NodeMock.Leaving")
+			}
+
+			if !m.LeavingETAFinished() {
+				m.t.Error("Expected call to NodeMock.LeavingETA")
 			}
 
 			if !m.PublicKeyFinished() {
@@ -1323,6 +1629,14 @@ func (m *NodeMock) AllMocksCalled() bool {
 	}
 
 	if !m.IDFinished() {
+		return false
+	}
+
+	if !m.LeavingFinished() {
+		return false
+	}
+
+	if !m.LeavingETAFinished() {
 		return false
 	}
 

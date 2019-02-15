@@ -51,7 +51,7 @@ type node struct {
 	CAddress    string
 	NodeVersion string
 
-	leavingMutex   sync.Mutex
+	leavingMutex   sync.RWMutex
 	NodeLeaving    bool
 	NodeLeavingETA core.PulseNumber
 }
@@ -121,10 +121,14 @@ func (n *node) SetShortID(id core.ShortNodeID) {
 	n.NodeShortID = id
 }
 
-func (n *node) Living() bool {
+func (n *node) Leaving() bool {
+	n.leavingMutex.RLock()
+	defer n.leavingMutex.RUnlock()
 	return n.NodeLeaving
 }
-func (n *node) LivingETA() core.PulseNumber {
+func (n *node) LeavingETA() core.PulseNumber {
+	n.leavingMutex.RLock()
+	defer n.leavingMutex.RUnlock()
 	return n.NodeLeavingETA
 }
 

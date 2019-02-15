@@ -44,10 +44,10 @@ type Node interface {
 	GetGlobuleID() GlobuleID
 	// Version of node software
 	Version() string
-	// Living indicates, that node preparing for graceful shutdown
-	Living() bool
-	// LivingETA is pulse number, after which node leave
-	LivingETA() PulseNumber
+	// Leaving indicates, that node preparing for graceful shutdown
+	Leaving() bool
+	// LeavingETA is pulse number, after which node leave
+	LeavingETA() PulseNumber
 }
 
 type NodeNetworkState uint8

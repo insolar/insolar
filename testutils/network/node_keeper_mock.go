@@ -98,6 +98,11 @@ type NodeKeeperMock struct {
 	GetUnsyncListPreCounter uint64
 	GetUnsyncListMock       mNodeKeeperMockGetUnsyncList
 
+	GetWorkingNodesFunc       func() (r []core.Node)
+	GetWorkingNodesCounter    uint64
+	GetWorkingNodesPreCounter uint64
+	GetWorkingNodesMock       mNodeKeeperMockGetWorkingNodes
+
 	IsBootstrappedFunc       func() (r bool)
 	IsBootstrappedCounter    uint64
 	IsBootstrappedPreCounter uint64
@@ -167,6 +172,7 @@ func NewNodeKeeperMock(t minimock.Tester) *NodeKeeperMock {
 	m.GetSparseUnsyncListMock = mNodeKeeperMockGetSparseUnsyncList{mock: m}
 	m.GetStateMock = mNodeKeeperMockGetState{mock: m}
 	m.GetUnsyncListMock = mNodeKeeperMockGetUnsyncList{mock: m}
+	m.GetWorkingNodesMock = mNodeKeeperMockGetWorkingNodes{mock: m}
 	m.IsBootstrappedMock = mNodeKeeperMockIsBootstrapped{mock: m}
 	m.MoveSyncToActiveMock = mNodeKeeperMockMoveSyncToActive{mock: m}
 	m.NodesJoinedDuringPreviousPulseMock = mNodeKeeperMockNodesJoinedDuringPreviousPulse{mock: m}
@@ -2278,6 +2284,140 @@ func (m *NodeKeeperMock) GetUnsyncListFinished() bool {
 	return true
 }
 
+type mNodeKeeperMockGetWorkingNodes struct {
+	mock              *NodeKeeperMock
+	mainExpectation   *NodeKeeperMockGetWorkingNodesExpectation
+	expectationSeries []*NodeKeeperMockGetWorkingNodesExpectation
+}
+
+type NodeKeeperMockGetWorkingNodesExpectation struct {
+	result *NodeKeeperMockGetWorkingNodesResult
+}
+
+type NodeKeeperMockGetWorkingNodesResult struct {
+	r []core.Node
+}
+
+//Expect specifies that invocation of NodeKeeper.GetWorkingNodes is expected from 1 to Infinity times
+func (m *mNodeKeeperMockGetWorkingNodes) Expect() *mNodeKeeperMockGetWorkingNodes {
+	m.mock.GetWorkingNodesFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &NodeKeeperMockGetWorkingNodesExpectation{}
+	}
+
+	return m
+}
+
+//Return specifies results of invocation of NodeKeeper.GetWorkingNodes
+func (m *mNodeKeeperMockGetWorkingNodes) Return(r []core.Node) *NodeKeeperMock {
+	m.mock.GetWorkingNodesFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &NodeKeeperMockGetWorkingNodesExpectation{}
+	}
+	m.mainExpectation.result = &NodeKeeperMockGetWorkingNodesResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of NodeKeeper.GetWorkingNodes is expected once
+func (m *mNodeKeeperMockGetWorkingNodes) ExpectOnce() *NodeKeeperMockGetWorkingNodesExpectation {
+	m.mock.GetWorkingNodesFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &NodeKeeperMockGetWorkingNodesExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *NodeKeeperMockGetWorkingNodesExpectation) Return(r []core.Node) {
+	e.result = &NodeKeeperMockGetWorkingNodesResult{r}
+}
+
+//Set uses given function f as a mock of NodeKeeper.GetWorkingNodes method
+func (m *mNodeKeeperMockGetWorkingNodes) Set(f func() (r []core.Node)) *NodeKeeperMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.GetWorkingNodesFunc = f
+	return m.mock
+}
+
+//GetWorkingNodes implements github.com/insolar/insolar/network.NodeKeeper interface
+func (m *NodeKeeperMock) GetWorkingNodes() (r []core.Node) {
+	counter := atomic.AddUint64(&m.GetWorkingNodesPreCounter, 1)
+	defer atomic.AddUint64(&m.GetWorkingNodesCounter, 1)
+
+	if len(m.GetWorkingNodesMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.GetWorkingNodesMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to NodeKeeperMock.GetWorkingNodes.")
+			return
+		}
+
+		result := m.GetWorkingNodesMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the NodeKeeperMock.GetWorkingNodes")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetWorkingNodesMock.mainExpectation != nil {
+
+		result := m.GetWorkingNodesMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the NodeKeeperMock.GetWorkingNodes")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetWorkingNodesFunc == nil {
+		m.t.Fatalf("Unexpected call to NodeKeeperMock.GetWorkingNodes.")
+		return
+	}
+
+	return m.GetWorkingNodesFunc()
+}
+
+//GetWorkingNodesMinimockCounter returns a count of NodeKeeperMock.GetWorkingNodesFunc invocations
+func (m *NodeKeeperMock) GetWorkingNodesMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.GetWorkingNodesCounter)
+}
+
+//GetWorkingNodesMinimockPreCounter returns the value of NodeKeeperMock.GetWorkingNodes invocations
+func (m *NodeKeeperMock) GetWorkingNodesMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.GetWorkingNodesPreCounter)
+}
+
+//GetWorkingNodesFinished returns true if mock invocations count is ok
+func (m *NodeKeeperMock) GetWorkingNodesFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.GetWorkingNodesMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.GetWorkingNodesCounter) == uint64(len(m.GetWorkingNodesMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.GetWorkingNodesMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.GetWorkingNodesCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.GetWorkingNodesFunc != nil {
+		return atomic.LoadUint64(&m.GetWorkingNodesCounter) > 0
+	}
+
+	return true
+}
+
 type mNodeKeeperMockIsBootstrapped struct {
 	mock              *NodeKeeperMock
 	mainExpectation   *NodeKeeperMockIsBootstrappedExpectation
@@ -3543,6 +3683,10 @@ func (m *NodeKeeperMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to NodeKeeperMock.GetUnsyncList")
 	}
 
+	if !m.GetWorkingNodesFinished() {
+		m.t.Fatal("Expected call to NodeKeeperMock.GetWorkingNodes")
+	}
+
 	if !m.IsBootstrappedFinished() {
 		m.t.Fatal("Expected call to NodeKeeperMock.IsBootstrapped")
 	}
@@ -3656,6 +3800,10 @@ func (m *NodeKeeperMock) MinimockFinish() {
 		m.t.Fatal("Expected call to NodeKeeperMock.GetUnsyncList")
 	}
 
+	if !m.GetWorkingNodesFinished() {
+		m.t.Fatal("Expected call to NodeKeeperMock.GetWorkingNodes")
+	}
+
 	if !m.IsBootstrappedFinished() {
 		m.t.Fatal("Expected call to NodeKeeperMock.IsBootstrapped")
 	}
@@ -3721,6 +3869,7 @@ func (m *NodeKeeperMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.GetSparseUnsyncListFinished()
 		ok = ok && m.GetStateFinished()
 		ok = ok && m.GetUnsyncListFinished()
+		ok = ok && m.GetWorkingNodesFinished()
 		ok = ok && m.IsBootstrappedFinished()
 		ok = ok && m.MoveSyncToActiveFinished()
 		ok = ok && m.NodesJoinedDuringPreviousPulseFinished()
@@ -3796,6 +3945,10 @@ func (m *NodeKeeperMock) MinimockWait(timeout time.Duration) {
 
 			if !m.GetUnsyncListFinished() {
 				m.t.Error("Expected call to NodeKeeperMock.GetUnsyncList")
+			}
+
+			if !m.GetWorkingNodesFinished() {
+				m.t.Error("Expected call to NodeKeeperMock.GetWorkingNodes")
 			}
 
 			if !m.IsBootstrappedFinished() {
@@ -3903,6 +4056,10 @@ func (m *NodeKeeperMock) AllMocksCalled() bool {
 	}
 
 	if !m.GetUnsyncListFinished() {
+		return false
+	}
+
+	if !m.GetWorkingNodesFinished() {
 		return false
 	}
 

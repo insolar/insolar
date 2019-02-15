@@ -348,7 +348,7 @@ func (nlc *NodeLeaveClaim) Serialize() ([]byte, error) {
 	var result bytes.Buffer
 	err := binary.Write(&result, defaultByteOrder, nlc.ETA)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ MissingNode.Serialize ] failed to write ti a buffer")
+		return nil, errors.Wrap(err, "[ NodeLeaveClaim.Serialize ] failed to write ETA to buffer")
 	}
 	return result.Bytes(), nil
 }
@@ -357,7 +357,7 @@ func (nlc *NodeLeaveClaim) Serialize() ([]byte, error) {
 func (nlc *NodeLeaveClaim) Deserialize(data io.Reader) error {
 	err := binary.Read(data, defaultByteOrder, &nlc.ETA)
 	if err != nil {
-		return errors.Wrap(err, "[ MissingNode.Deserialize ] failed to read a node index")
+		return errors.Wrap(err, "[ NodeLeaveClaim.Deserialize ] failed to read a ETA")
 	}
 	return nil
 }
