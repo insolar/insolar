@@ -21,6 +21,8 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/utils"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 )
 
@@ -130,7 +132,8 @@ func (c *PulseConveyer) IsOperational() bool {
 func (c *PulseConveyer) getSlot(addr core.PulseNumber) (*Slot, error) {
 	slot, ok := c.slotMap[addr]
 	if !ok {
-		ctx := context.Background()
+		traceID := "conveyer_" + utils.RandTraceID()
+		ctx, _ := inslogger.WithTraceField(context.Background(), traceID)
 		currentPulse, err := c.PulseStorage.Current(ctx)
 		if err != nil {
 			return nil, err
