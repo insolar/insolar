@@ -21,6 +21,7 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/core"
+	"github.com/pkg/errors"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/conveyer.NonBlockingQueue -o ./ -s _mock.go
@@ -32,12 +33,28 @@ type NonBlockingQueue interface {
 }
 
 type EventSink interface {
-	sinkPush(addr core.PulseNumber, data interface{}) bool
-	sinkPushAll(addr core.PulseNumber, data []interface{}) bool
+	SinkPush(addr core.PulseNumber, data interface{}) bool
+	SinkPushAll(addr core.PulseNumber, data []interface{}) bool
+}
+
+type State int
+
+//go:generate stringer -type=State
+const (
+	Active = State(iota)
+	PreparingPulse
+	ShuttingDown
+	Inactive
+)
+
+type Control interface {
+	GetState() State
+	IsOperational() bool
 }
 
 type Conveyer interface {
 	EventSink
+	Control
 	readLock()
 	readUnlock()
 	writeLock()
@@ -48,21 +65,28 @@ type PulseConveyer struct {
 	PulseStorage core.PulseStorage `inject:""`
 	slotMap      map[core.PulseNumber]Slot
 	lock         sync.RWMutex
+	state        State
+	stateLock    sync.RWMutex
 }
 
 func NewPulseConveyer() *PulseConveyer {
 	return &PulseConveyer{
 		slotMap: make(map[core.PulseNumber]Slot),
+		state:   Inactive,
 	}
 }
 
 type PulseState int
 
+const AntiqueSlotPulse = core.PulseNumber(0)
+
+//go:generate stringer -type=PulseState
 const (
-	Unassigned = PulseState(iota)
+	Unallocated = PulseState(iota)
 	Future
 	Present
 	Past
+	Antique
 )
 
 type Slot struct {
@@ -93,36 +117,56 @@ func (c *PulseConveyer) writeUnlock() {
 	c.lock.Unlock()
 }
 
-func (c *PulseConveyer) sinkPush(addr core.PulseNumber, data interface{}) bool {
+func (c *PulseConveyer) GetState() State {
 	c.readLock()
 	defer c.readUnlock()
-	slot, ok := c.slotMap[addr]
-	if !ok {
-		// TODO: create if some cases new slot?
-		return false
-	}
-	ok = slot.inputQueue.SinkPush(data)
-	if !ok {
-		return false
-	}
-	return true
+	return c.state
 }
 
-func (c *PulseConveyer) sinkPushAll(addr core.PulseNumber, data []interface{}) bool {
-	c.readLock()
-	defer c.readUnlock()
+func (c *PulseConveyer) IsOperational() bool {
+	currentState := c.GetState()
+	if currentState == Active || currentState == PreparingPulse {
+		return true
+	}
+	return false
+}
+
+func (c *PulseConveyer) getSlot(addr core.PulseNumber) (Slot, error) {
 	slot, ok := c.slotMap[addr]
 	if !ok {
-		// TODO: create if some cases new slot?
+		ctx := context.Background()
+		currentPulse, err := c.PulseStorage.Current(ctx)
+		if err != nil {
+			return Slot{}, err
+		}
+		if addr >= currentPulse.PulseNumber {
+			return Slot{}, errors.New("unknown pulse")
+		}
+		slot = c.slotMap[AntiqueSlotPulse]
+	}
+	return slot, nil
+}
+
+func (c *PulseConveyer) SinkPush(addr core.PulseNumber, data interface{}) bool {
+	c.readLock()
+	defer c.readUnlock()
+	slot, err := c.getSlot(addr)
+	if err != nil {
 		return false
 	}
-	for _, d := range data {
-		ok = slot.inputQueue.SinkPush(d)
-		if !ok {
-			return false
-		}
+	ok := slot.inputQueue.SinkPush(data)
+	return ok
+}
+
+func (c *PulseConveyer) SinkPushAll(addr core.PulseNumber, data []interface{}) bool {
+	c.readLock()
+	defer c.readUnlock()
+	slot, err := c.getSlot(addr)
+	if err != nil {
+		return false
 	}
-	return true
+	ok := slot.inputQueue.SinkPushAll(data)
+	return ok
 }
 
 // Start creates Present and Future Slots.
@@ -131,15 +175,19 @@ func (c *PulseConveyer) Start(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+
+	c.writeLock()
+	defer c.writeUnlock()
+
 	presentSlot := NewSlot(Present)
 	c.slotMap[pulse.PulseNumber] = presentSlot
+
 	futureSlot := NewSlot(Future)
 	c.slotMap[pulse.NextPulseNumber] = futureSlot
-	return nil
-}
 
-// Stop stops PulseConveyer.
-func (c *PulseConveyer) Stop(ctx context.Context) error {
-	// TODO: process every slot? just get out and delete all?
+	antiqueSlot := NewSlot(Antique)
+	c.slotMap[AntiqueSlotPulse] = antiqueSlot
+
+	c.state = Active
 	return nil
 }
