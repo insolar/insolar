@@ -213,15 +213,18 @@ func TestParallelAccess(t *testing.T) {
 
 	wg.Wait()
 
-	rawResult := queue.RemoveAll()
+	restResult := queue.RemoveAll()
 
 	fmt.Println("Got:                 ", len(gotElements))
 	fmt.Println("Added:               ", len(addedElements))
-	fmt.Println("Rest:                ", len(rawResult))
+	fmt.Println("Rest:                ", len(restResult))
 	fmt.Println("Num blocked requests:", len(blockedRequests))
 
-	leftResults := make([]int, 0, len(rawResult))
-	for _, el := range rawResult {
+	require.NotEqual(t, 0, len(gotElements))
+	require.NotEqual(t, 0, len(addedElements))
+
+	leftResults := make([]int, 0, len(restResult))
+	for _, el := range restResult {
 		leftResults = append(leftResults, el.(int))
 	}
 

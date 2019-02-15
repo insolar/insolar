@@ -16,21 +16,18 @@
 
 package queue
 
+// SyncDone is callback for signal
 type SyncDone interface {
 	done()
 }
 
+// QueueItem is one item if the queue
 type QueueItem struct {
-	itemType uint
-	signal   uint
+	itemType uint32
+	signal   uint32
 	index    uint
 	payload  interface{}
 	next     *QueueItem
-}
-
-// Why do we need both this and isSignal functions?
-func (qi *QueueItem) hasSignal() bool {
-	return qi.signal != 0
 }
 
 func (qi *QueueItem) isSignal() bool {
@@ -49,12 +46,20 @@ func init() {
 	}
 }
 
+// IQueue is interface for queue
 type IQueue interface {
+	// SinkPush adds one item to queue
 	SinkPush(data interface{}) bool
+	// SinkPushAll adds list of items to queue
 	SinkPushAll(data []interface{}) bool
+	// RemoveAll removes all elements from queue and return them
 	RemoveAll() []interface{}
+	// BlockAndRemoveAll like RemoveAll + lock queue after that
 	BlockAndRemoveAll() []interface{}
+	// Unblock unlock queue after BlockAndRemoveAll. If not locked it returns false
 	Unblock() bool
-	PushSignal(signalType uint, callback SyncDone) bool
+	// PushSignal adds signal to queue
+	PushSignal(signalType uint32, callback SyncDone) bool
+	// HasSignal is true if queue has at least ont signal. Must be atomic. Without mutex
 	HasSignal() bool
 }

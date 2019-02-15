@@ -18,13 +18,16 @@ package queue
 
 import (
 	"sync"
+	"sync/atomic"
 )
 
+// MutexQueue is mutex-based realization of IQueue
 type MutexQueue struct {
 	locker sync.Mutex
 	head   *QueueItem
 }
 
+// NewMutexQueue creates new instance of MutexQueue
 func NewMutexQueue() IQueue {
 	queue := &MutexQueue{
 		head: &emptyQueueItem,
@@ -32,12 +35,7 @@ func NewMutexQueue() IQueue {
 	return queue
 }
 
-func (q *MutexQueue) SinkPush(data interface{}) bool {
-
-	newNode := &QueueItem{
-		payload: data,
-	}
-
+func (q *MutexQueue) sinkPush(newNode *QueueItem) bool {
 	q.locker.Lock()
 	defer q.locker.Unlock()
 
@@ -45,17 +43,36 @@ func (q *MutexQueue) SinkPush(data interface{}) bool {
 		return false
 	}
 
-	if q.head.hasSignal() {
+	if q.HasSignal() {
 		// do smth interesting
 	}
 
 	newNode.next = q.head
 	newNode.index = q.head.index + 1
+
+	// just max =(
+	if q.head.signal > newNode.itemType {
+		newNode.signal = q.head.signal
+	} else {
+		newNode.signal = newNode.itemType
+	}
+
 	q.head = newNode
 
 	return true
 }
 
+// SinkPush is implementation for IQueue
+func (q *MutexQueue) SinkPush(data interface{}) bool {
+
+	newNode := &QueueItem{
+		payload: data,
+	}
+
+	return q.sinkPush(newNode)
+}
+
+// SinkPushAll is implementation for IQueue
 func (q *MutexQueue) SinkPushAll(data []interface{}) bool {
 	inputSize := len(data)
 	lastElement := &QueueItem{}
@@ -75,7 +92,7 @@ func (q *MutexQueue) SinkPushAll(data []interface{}) bool {
 		return false
 	}
 
-	if q.head.hasSignal() {
+	if q.HasSignal() {
 		// do smth interesting
 	}
 
@@ -94,16 +111,16 @@ func (q *MutexQueue) SinkPushAll(data []interface{}) bool {
 	return true
 }
 
-func (q *MutexQueue) extractAllUnsafe() *QueueItem {
+func (q *MutexQueue) checkAndGetHead() *QueueItem {
 	if q.head == nil || q.head == &emptyQueueItem {
 		return nil
 	}
 
-	localHead := q.head
-
-	return localHead
+	return q.head
 }
 
+// get pointer to head and unfold linked list to slice:
+//  all signals will be at the begging of the slice
 func convertSublistToArray(localHead *QueueItem) []interface{} {
 	result := make([]interface{}, localHead.index)
 
@@ -116,11 +133,12 @@ func convertSublistToArray(localHead *QueueItem) []interface{} {
 	return result
 }
 
+// SinkPushAll is implementation for IQueue
 func (q *MutexQueue) RemoveAll() []interface{} {
 
 	var localHead *QueueItem
 	q.locker.Lock()
-	localHead = q.extractAllUnsafe()
+	localHead = q.checkAndGetHead()
 	if localHead == nil {
 		q.locker.Unlock()
 		return []interface{}{}
@@ -134,7 +152,7 @@ func (q *MutexQueue) RemoveAll() []interface{} {
 func (q *MutexQueue) BlockAndRemoveAll() []interface{} {
 	var localHead *QueueItem
 	q.locker.Lock()
-	localHead = q.extractAllUnsafe()
+	localHead = q.checkAndGetHead()
 	if localHead == nil {
 		q.locker.Unlock()
 		return []interface{}{}
@@ -145,6 +163,7 @@ func (q *MutexQueue) BlockAndRemoveAll() []interface{} {
 	return convertSublistToArray(localHead)
 }
 
+// SinkPushAll is implementation for IQueue
 func (q *MutexQueue) Unblock() bool {
 	q.locker.Lock()
 	defer q.locker.Unlock()
@@ -157,10 +176,17 @@ func (q *MutexQueue) Unblock() bool {
 	return true
 }
 
-func (q *MutexQueue) PushSignal(signalType uint, callback SyncDone) bool {
-	return true
+// SinkPushAll is implementation for IQueue
+func (q *MutexQueue) PushSignal(signalType uint32, callback SyncDone) bool {
+	newNode := &QueueItem{
+		payload: callback,
+		signal:  signalType,
+	}
+
+	return q.sinkPush(newNode)
 }
 
+// SinkPushAll is implementation for IQueue
 func (q *MutexQueue) HasSignal() bool {
-	return false
+	return atomic.LoadUint32(&q.head.signal) != 0
 }

@@ -48,7 +48,7 @@ func (q *LockFreeQueue) SinkPush(data interface{}) bool {
 			return false
 		}
 
-		if head.hasSignal() {
+		if q.HasSignal() {
 			// do smth interesting
 		}
 
@@ -83,7 +83,7 @@ func (q *LockFreeQueue) SinkPushAll(data []interface{}) bool {
 			return false
 		}
 
-		if head.hasSignal() {
+		if q.HasSignal() {
 			// do smth interesting
 		}
 
@@ -138,10 +138,10 @@ func (q *LockFreeQueue) Unblock() bool {
 	return true
 }
 
-func (q *LockFreeQueue) PushSignal(signalType uint, callback SyncDone) bool {
+func (q *LockFreeQueue) PushSignal(signalType uint32, callback SyncDone) bool {
 	return q.SinkPush(signalType)
 }
 
 func (q *LockFreeQueue) HasSignal() bool {
-	return false
+	return atomic.LoadUint32(&q.head.signal) != 0
 }
