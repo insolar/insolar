@@ -451,8 +451,7 @@ func (h *MessageHandler) handleGetObject(
 			return reply.NewGetObjectRedirectReply(h.DelegationTokenFactory, parcel, node, stateID)
 		}
 
-		stateTree := h.JetStorage.GetJetTree(ctx, stateID.Pulse())
-		stateJet, actual = stateTree.Find(*msg.Head.Record())
+		stateJet, actual = h.JetStorage.FindJet(ctx, stateID.Pulse(), *msg.Head.Record())
 		if !actual {
 			actualJet, err := h.jetTreeUpdater.fetchJet(ctx, *msg.Head.Record(), stateID.Pulse())
 			if err != nil {
@@ -530,8 +529,7 @@ func (h *MessageHandler) handleHasPendingRequests(ctx context.Context, parcel co
 func (h *MessageHandler) handleGetJet(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
 	msg := parcel.Message().(*message.GetJet)
 
-	tree := h.JetStorage.GetJetTree(ctx, msg.Pulse)
-	jetID, actual := tree.Find(msg.Object)
+	jetID, actual := h.JetStorage.FindJet(ctx, msg.Pulse, msg.Object)
 
 	return &reply.Jet{ID: *jetID, Actual: actual}, nil
 }
@@ -639,8 +637,7 @@ func (h *MessageHandler) handleGetChildren(
 			return reply.NewGetChildrenRedirect(h.DelegationTokenFactory, parcel, node, *currentChild)
 		}
 
-		childTree := h.JetStorage.GetJetTree(ctx, currentChild.Pulse())
-		childJet, actual = childTree.Find(*msg.Parent.Record())
+		childJet, actual = h.JetStorage.FindJet(ctx, currentChild.Pulse(), *msg.Parent.Record())
 		if !actual {
 			actualJet, err := h.jetTreeUpdater.fetchJet(ctx, *msg.Parent.Record(), currentChild.Pulse())
 			if err != nil {

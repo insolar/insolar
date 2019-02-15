@@ -29,7 +29,7 @@ func TestJetStorage_GetJetTree(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	js := NewJetStorage()
 
-	tree := js.GetJetTree(ctx, 100)
+	tree := js.(*jetStorage).getJetTree(ctx, 100)
 	require.Equal(t, "root (level=0 actual=false)\n", tree.String())
 }
 
@@ -39,7 +39,7 @@ func TestJetStorage_UpdateJetTree(t *testing.T) {
 
 	js.UpdateJetTree(ctx, 100, true, *jet.NewID(0, nil))
 
-	tree := js.GetJetTree(ctx, 100)
+	tree := js.(*jetStorage).getJetTree(ctx, 100)
 	require.Equal(t, "root (level=0 actual=true)\n", tree.String())
 }
 
@@ -52,7 +52,7 @@ func TestJetStorage_SplitJetTree(t *testing.T) {
 	require.Equal(t, "[JET 1 0]", l.DebugString())
 	require.Equal(t, "[JET 1 1]", r.DebugString())
 
-	tree := js.GetJetTree(ctx, 100)
+	tree := js.(*jetStorage).getJetTree(ctx, 100)
 	require.Equal(t, "root (level=0 actual=false)\n 0 (level=1 actual=false)\n 1 (level=1 actual=false)\n", tree.String())
 }
 
@@ -62,16 +62,16 @@ func TestJetStorage_CloneJetTree(t *testing.T) {
 
 	js.UpdateJetTree(ctx, 100, true, *jet.NewID(0, nil))
 
-	tree := js.GetJetTree(ctx, 100)
+	tree := js.(*jetStorage).getJetTree(ctx, 100)
 	require.Equal(t, "root (level=0 actual=true)\n", tree.String())
 
 	tree = js.CloneJetTree(ctx, 100, 101)
 	require.Equal(t, "root (level=0 actual=false)\n", tree.String())
 
-	tree = js.GetJetTree(ctx, 101)
+	tree = js.(*jetStorage).getJetTree(ctx, 101)
 	require.Equal(t, "root (level=0 actual=false)\n", tree.String())
 
-	tree = js.GetJetTree(ctx, 100)
+	tree = js.(*jetStorage).getJetTree(ctx, 100)
 	require.Equal(t, "root (level=0 actual=true)\n", tree.String())
 }
 
@@ -84,7 +84,7 @@ func TestJetStorage_DeleteJetTree(t *testing.T) {
 
 	js.DeleteJetTree(ctx, 100)
 
-	tree := js.GetJetTree(ctx, 100)
+	tree := js.(*jetStorage).getJetTree(ctx, 100)
 	require.NoError(t, err)
 	require.Equal(t, "root (level=0 actual=false)\n", tree.String())
 }

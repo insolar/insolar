@@ -31,7 +31,7 @@ import (
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage.JetStorage -o ./ -s _mock.go
 type JetStorage interface {
 	UpdateJetTree(ctx context.Context, pulse core.PulseNumber, setActual bool, ids ...core.RecordID)
-	GetJetTree(ctx context.Context, pulse core.PulseNumber) *jet.Tree
+	FindJet(ctx context.Context, pulse core.PulseNumber, id core.RecordID) (*core.RecordID, bool)
 	SplitJetTree(ctx context.Context, pulse core.PulseNumber, jetID core.RecordID) (*core.RecordID, *core.RecordID, error)
 	CloneJetTree(ctx context.Context, from, to core.PulseNumber) *jet.Tree
 	DeleteJetTree(ctx context.Context, pulse core.PulseNumber)
@@ -55,19 +55,19 @@ func NewJetStorage() JetStorage {
 	}
 }
 
-// GetJetTree fetches tree for specified pulse.
-func (js *jetStorage) GetJetTree(ctx context.Context, pulse core.PulseNumber) *jet.Tree {
+// FindJet finds jet for specified pulse and object.
+func (js *jetStorage) FindJet(ctx context.Context, pulse core.PulseNumber, id core.RecordID) (*core.RecordID, bool) {
 	js.treesLock.RLock()
 
 	if t, ok := js.trees[pulse]; ok {
-		js.treesLock.RUnlock()
-		return t
+		defer js.treesLock.RUnlock()
+		return t.Find(id)
 	}
 	js.treesLock.RUnlock()
 
 	js.treesLock.Lock()
 	defer js.treesLock.Unlock()
-	return js.getJetTree(ctx, pulse)
+	return js.getJetTree(ctx, pulse).Find(id)
 }
 
 // UpdateJetTree updates jet tree for specified pulse.

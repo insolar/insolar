@@ -36,10 +36,10 @@ type JetStorageMock struct {
 	DeleteJetTreePreCounter uint64
 	DeleteJetTreeMock       mJetStorageMockDeleteJetTree
 
-	GetJetTreeFunc       func(p context.Context, p1 core.PulseNumber) (r *jet.Tree)
-	GetJetTreeCounter    uint64
-	GetJetTreePreCounter uint64
-	GetJetTreeMock       mJetStorageMockGetJetTree
+	FindJetFunc       func(p context.Context, p1 core.PulseNumber, p2 core.RecordID) (r *core.RecordID, r1 bool)
+	FindJetCounter    uint64
+	FindJetPreCounter uint64
+	FindJetMock       mJetStorageMockFindJet
 
 	GetJetsFunc       func(p context.Context) (r jet.IDSet, r1 error)
 	GetJetsCounter    uint64
@@ -68,7 +68,7 @@ func NewJetStorageMock(t minimock.Tester) *JetStorageMock {
 	m.AddJetsMock = mJetStorageMockAddJets{mock: m}
 	m.CloneJetTreeMock = mJetStorageMockCloneJetTree{mock: m}
 	m.DeleteJetTreeMock = mJetStorageMockDeleteJetTree{mock: m}
-	m.GetJetTreeMock = mJetStorageMockGetJetTree{mock: m}
+	m.FindJetMock = mJetStorageMockFindJet{mock: m}
 	m.GetJetsMock = mJetStorageMockGetJets{mock: m}
 	m.SplitJetTreeMock = mJetStorageMockSplitJetTree{mock: m}
 	m.UpdateJetTreeMock = mJetStorageMockUpdateJetTree{mock: m}
@@ -497,149 +497,153 @@ func (m *JetStorageMock) DeleteJetTreeFinished() bool {
 	return true
 }
 
-type mJetStorageMockGetJetTree struct {
+type mJetStorageMockFindJet struct {
 	mock              *JetStorageMock
-	mainExpectation   *JetStorageMockGetJetTreeExpectation
-	expectationSeries []*JetStorageMockGetJetTreeExpectation
+	mainExpectation   *JetStorageMockFindJetExpectation
+	expectationSeries []*JetStorageMockFindJetExpectation
 }
 
-type JetStorageMockGetJetTreeExpectation struct {
-	input  *JetStorageMockGetJetTreeInput
-	result *JetStorageMockGetJetTreeResult
+type JetStorageMockFindJetExpectation struct {
+	input  *JetStorageMockFindJetInput
+	result *JetStorageMockFindJetResult
 }
 
-type JetStorageMockGetJetTreeInput struct {
+type JetStorageMockFindJetInput struct {
 	p  context.Context
 	p1 core.PulseNumber
+	p2 core.RecordID
 }
 
-type JetStorageMockGetJetTreeResult struct {
-	r *jet.Tree
+type JetStorageMockFindJetResult struct {
+	r  *core.RecordID
+	r1 bool
 }
 
-//Expect specifies that invocation of JetStorage.GetJetTree is expected from 1 to Infinity times
-func (m *mJetStorageMockGetJetTree) Expect(p context.Context, p1 core.PulseNumber) *mJetStorageMockGetJetTree {
-	m.mock.GetJetTreeFunc = nil
+//Expect specifies that invocation of JetStorage.FindJet is expected from 1 to Infinity times
+func (m *mJetStorageMockFindJet) Expect(p context.Context, p1 core.PulseNumber, p2 core.RecordID) *mJetStorageMockFindJet {
+	m.mock.FindJetFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &JetStorageMockGetJetTreeExpectation{}
+		m.mainExpectation = &JetStorageMockFindJetExpectation{}
 	}
-	m.mainExpectation.input = &JetStorageMockGetJetTreeInput{p, p1}
+	m.mainExpectation.input = &JetStorageMockFindJetInput{p, p1, p2}
 	return m
 }
 
-//Return specifies results of invocation of JetStorage.GetJetTree
-func (m *mJetStorageMockGetJetTree) Return(r *jet.Tree) *JetStorageMock {
-	m.mock.GetJetTreeFunc = nil
+//Return specifies results of invocation of JetStorage.FindJet
+func (m *mJetStorageMockFindJet) Return(r *core.RecordID, r1 bool) *JetStorageMock {
+	m.mock.FindJetFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &JetStorageMockGetJetTreeExpectation{}
+		m.mainExpectation = &JetStorageMockFindJetExpectation{}
 	}
-	m.mainExpectation.result = &JetStorageMockGetJetTreeResult{r}
+	m.mainExpectation.result = &JetStorageMockFindJetResult{r, r1}
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of JetStorage.GetJetTree is expected once
-func (m *mJetStorageMockGetJetTree) ExpectOnce(p context.Context, p1 core.PulseNumber) *JetStorageMockGetJetTreeExpectation {
-	m.mock.GetJetTreeFunc = nil
+//ExpectOnce specifies that invocation of JetStorage.FindJet is expected once
+func (m *mJetStorageMockFindJet) ExpectOnce(p context.Context, p1 core.PulseNumber, p2 core.RecordID) *JetStorageMockFindJetExpectation {
+	m.mock.FindJetFunc = nil
 	m.mainExpectation = nil
 
-	expectation := &JetStorageMockGetJetTreeExpectation{}
-	expectation.input = &JetStorageMockGetJetTreeInput{p, p1}
+	expectation := &JetStorageMockFindJetExpectation{}
+	expectation.input = &JetStorageMockFindJetInput{p, p1, p2}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
-func (e *JetStorageMockGetJetTreeExpectation) Return(r *jet.Tree) {
-	e.result = &JetStorageMockGetJetTreeResult{r}
+func (e *JetStorageMockFindJetExpectation) Return(r *core.RecordID, r1 bool) {
+	e.result = &JetStorageMockFindJetResult{r, r1}
 }
 
-//Set uses given function f as a mock of JetStorage.GetJetTree method
-func (m *mJetStorageMockGetJetTree) Set(f func(p context.Context, p1 core.PulseNumber) (r *jet.Tree)) *JetStorageMock {
+//Set uses given function f as a mock of JetStorage.FindJet method
+func (m *mJetStorageMockFindJet) Set(f func(p context.Context, p1 core.PulseNumber, p2 core.RecordID) (r *core.RecordID, r1 bool)) *JetStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
-	m.mock.GetJetTreeFunc = f
+	m.mock.FindJetFunc = f
 	return m.mock
 }
 
-//GetJetTree implements github.com/insolar/insolar/ledger/storage.JetStorage interface
-func (m *JetStorageMock) GetJetTree(p context.Context, p1 core.PulseNumber) (r *jet.Tree) {
-	counter := atomic.AddUint64(&m.GetJetTreePreCounter, 1)
-	defer atomic.AddUint64(&m.GetJetTreeCounter, 1)
+//FindJet implements github.com/insolar/insolar/ledger/storage.JetStorage interface
+func (m *JetStorageMock) FindJet(p context.Context, p1 core.PulseNumber, p2 core.RecordID) (r *core.RecordID, r1 bool) {
+	counter := atomic.AddUint64(&m.FindJetPreCounter, 1)
+	defer atomic.AddUint64(&m.FindJetCounter, 1)
 
-	if len(m.GetJetTreeMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.GetJetTreeMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to JetStorageMock.GetJetTree. %v %v", p, p1)
+	if len(m.FindJetMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.FindJetMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to JetStorageMock.FindJet. %v %v %v", p, p1, p2)
 			return
 		}
 
-		input := m.GetJetTreeMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, JetStorageMockGetJetTreeInput{p, p1}, "JetStorage.GetJetTree got unexpected parameters")
+		input := m.FindJetMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, JetStorageMockFindJetInput{p, p1, p2}, "JetStorage.FindJet got unexpected parameters")
 
-		result := m.GetJetTreeMock.expectationSeries[counter-1].result
+		result := m.FindJetMock.expectationSeries[counter-1].result
 		if result == nil {
-			m.t.Fatal("No results are set for the JetStorageMock.GetJetTree")
+			m.t.Fatal("No results are set for the JetStorageMock.FindJet")
 			return
 		}
 
 		r = result.r
+		r1 = result.r1
 
 		return
 	}
 
-	if m.GetJetTreeMock.mainExpectation != nil {
+	if m.FindJetMock.mainExpectation != nil {
 
-		input := m.GetJetTreeMock.mainExpectation.input
+		input := m.FindJetMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, JetStorageMockGetJetTreeInput{p, p1}, "JetStorage.GetJetTree got unexpected parameters")
+			testify_assert.Equal(m.t, *input, JetStorageMockFindJetInput{p, p1, p2}, "JetStorage.FindJet got unexpected parameters")
 		}
 
-		result := m.GetJetTreeMock.mainExpectation.result
+		result := m.FindJetMock.mainExpectation.result
 		if result == nil {
-			m.t.Fatal("No results are set for the JetStorageMock.GetJetTree")
+			m.t.Fatal("No results are set for the JetStorageMock.FindJet")
 		}
 
 		r = result.r
+		r1 = result.r1
 
 		return
 	}
 
-	if m.GetJetTreeFunc == nil {
-		m.t.Fatalf("Unexpected call to JetStorageMock.GetJetTree. %v %v", p, p1)
+	if m.FindJetFunc == nil {
+		m.t.Fatalf("Unexpected call to JetStorageMock.FindJet. %v %v %v", p, p1, p2)
 		return
 	}
 
-	return m.GetJetTreeFunc(p, p1)
+	return m.FindJetFunc(p, p1, p2)
 }
 
-//GetJetTreeMinimockCounter returns a count of JetStorageMock.GetJetTreeFunc invocations
-func (m *JetStorageMock) GetJetTreeMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.GetJetTreeCounter)
+//FindJetMinimockCounter returns a count of JetStorageMock.FindJetFunc invocations
+func (m *JetStorageMock) FindJetMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.FindJetCounter)
 }
 
-//GetJetTreeMinimockPreCounter returns the value of JetStorageMock.GetJetTree invocations
-func (m *JetStorageMock) GetJetTreeMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.GetJetTreePreCounter)
+//FindJetMinimockPreCounter returns the value of JetStorageMock.FindJet invocations
+func (m *JetStorageMock) FindJetMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.FindJetPreCounter)
 }
 
-//GetJetTreeFinished returns true if mock invocations count is ok
-func (m *JetStorageMock) GetJetTreeFinished() bool {
+//FindJetFinished returns true if mock invocations count is ok
+func (m *JetStorageMock) FindJetFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.GetJetTreeMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.GetJetTreeCounter) == uint64(len(m.GetJetTreeMock.expectationSeries))
+	if len(m.FindJetMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.FindJetCounter) == uint64(len(m.FindJetMock.expectationSeries))
 	}
 
 	// if main expectation was set then invocations count should be greater than zero
-	if m.GetJetTreeMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.GetJetTreeCounter) > 0
+	if m.FindJetMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.FindJetCounter) > 0
 	}
 
 	// if func was set then invocations count should be greater than zero
-	if m.GetJetTreeFunc != nil {
-		return atomic.LoadUint64(&m.GetJetTreeCounter) > 0
+	if m.FindJetFunc != nil {
+		return atomic.LoadUint64(&m.FindJetCounter) > 0
 	}
 
 	return true
@@ -1092,8 +1096,8 @@ func (m *JetStorageMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to JetStorageMock.DeleteJetTree")
 	}
 
-	if !m.GetJetTreeFinished() {
-		m.t.Fatal("Expected call to JetStorageMock.GetJetTree")
+	if !m.FindJetFinished() {
+		m.t.Fatal("Expected call to JetStorageMock.FindJet")
 	}
 
 	if !m.GetJetsFinished() {
@@ -1137,8 +1141,8 @@ func (m *JetStorageMock) MinimockFinish() {
 		m.t.Fatal("Expected call to JetStorageMock.DeleteJetTree")
 	}
 
-	if !m.GetJetTreeFinished() {
-		m.t.Fatal("Expected call to JetStorageMock.GetJetTree")
+	if !m.FindJetFinished() {
+		m.t.Fatal("Expected call to JetStorageMock.FindJet")
 	}
 
 	if !m.GetJetsFinished() {
@@ -1170,7 +1174,7 @@ func (m *JetStorageMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.AddJetsFinished()
 		ok = ok && m.CloneJetTreeFinished()
 		ok = ok && m.DeleteJetTreeFinished()
-		ok = ok && m.GetJetTreeFinished()
+		ok = ok && m.FindJetFinished()
 		ok = ok && m.GetJetsFinished()
 		ok = ok && m.SplitJetTreeFinished()
 		ok = ok && m.UpdateJetTreeFinished()
@@ -1194,8 +1198,8 @@ func (m *JetStorageMock) MinimockWait(timeout time.Duration) {
 				m.t.Error("Expected call to JetStorageMock.DeleteJetTree")
 			}
 
-			if !m.GetJetTreeFinished() {
-				m.t.Error("Expected call to JetStorageMock.GetJetTree")
+			if !m.FindJetFinished() {
+				m.t.Error("Expected call to JetStorageMock.FindJet")
 			}
 
 			if !m.GetJetsFinished() {
@@ -1234,7 +1238,7 @@ func (m *JetStorageMock) AllMocksCalled() bool {
 		return false
 	}
 
-	if !m.GetJetTreeFinished() {
+	if !m.FindJetFinished() {
 		return false
 	}
 

@@ -76,8 +76,7 @@ func (jtu *jetTreeUpdater) fetchJet(
 	defer span.End()
 
 	// Look in the local tree. Return if the actual jet found.
-	tree := jtu.JetStorage.GetJetTree(ctx, pulse)
-	jetID, actual := tree.Find(target)
+	jetID, actual := jtu.JetStorage.FindJet(ctx, pulse, target)
 	if actual {
 		return jetID, nil
 	}
