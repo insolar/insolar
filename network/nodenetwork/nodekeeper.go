@@ -434,16 +434,13 @@ func (nk *nodekeeper) MoveSyncToActive(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "[ MoveSyncToActive ] Failed to calculate new active list")
 	}
-	if mergeResult.Flags.ShouldExit {
-		nk.gracefullyStop()
-	}
 
 	inslogger.FromContext(ctx).Infof("[ MoveSyncToActive ] New active list confirmed. Active list size: %d -> %d",
 		len(nk.active), len(mergeResult.ActiveList))
 	nk.active = mergeResult.ActiveList
 	stats.Record(ctx, consensus.ActiveNodes.M(int64(len(nk.active))))
 	nk.reindex()
-	nk.nodesJoinedDuringPrevPulse = mergeResult.Flags.NodesJoinedDuringPrevPulse
+	nk.nodesJoinedDuringPrevPulse = mergeResult.NodesJoinedDuringPrevPulse
 	return nil
 }
 

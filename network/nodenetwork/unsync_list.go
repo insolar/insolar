@@ -167,48 +167,47 @@ func (ul *unsyncList) GetActiveNodes() []core.Node {
 func (ul *unsyncList) GetMergedCopy() (*network.MergedListCopy, error) {
 	nodes := copyMap(ul.activeNodes)
 
-	resultFlags := network.MergedListFlags{}
+	var nodesJoinedDuringPrevPulse bool
 	for _, claimList := range ul.claims {
 		for _, claim := range claimList {
-			flags, err := ul.mergeClaim(ul.origin, nodes, claim)
+			isJoin, err := mergeClaim(nodes, claim)
 			if err != nil {
 				return nil, errors.Wrap(err, "[ GetMergedCopy ] failed to merge a claim")
 			}
-			if flags.ShouldExit {
-				resultFlags.ShouldExit = true
-			}
-			if flags.NodesJoinedDuringPrevPulse {
-				resultFlags.NodesJoinedDuringPrevPulse = true
-			}
+
+			nodesJoinedDuringPrevPulse = nodesJoinedDuringPrevPulse || isJoin
 		}
 	}
 
 	return &network.MergedListCopy{
-		ActiveList: nodes,
-		Flags:      resultFlags,
+		ActiveList:                 nodes,
+		NodesJoinedDuringPrevPulse: nodesJoinedDuringPrevPulse,
 	}, nil
 }
 
-func (ul *unsyncList) mergeClaim(origin core.Node, nodes map[core.RecordRef]core.Node, claim consensus.ReferendumClaim) (*network.MergedListFlags, error) {
+func mergeClaim(nodes map[core.RecordRef]core.Node, claim consensus.ReferendumClaim) (bool, error) {
 	isJoinClaim := false
-	shouldExit := false
 	switch t := claim.(type) {
 	case *consensus.NodeJoinClaim:
+		isJoinClaim = true
 		// TODO: fix version
 		node, err := ClaimToNode("", t)
 		if err != nil {
-			return nil, errors.Wrap(err, "[ mergeClaim ] failed to convert Claim -> Node")
+			return isJoinClaim, errors.Wrap(err, "[ mergeClaim ] failed to convert Claim -> Node")
 		}
 		nodes[node.ID()] = node
-		isJoinClaim = true
 	case *consensus.NodeLeaveClaim:
-		if origin.ID().Equal(t.NodeID) {
-			shouldExit = true
+		if nodes[t.NodeID] == nil {
+			break
 		}
-		delete(nodes, t.NodeID)
-		break
+
+		node := nodes[t.NodeID].(MutableNode)
+		if t.ETA == 0 || !node.Leaving() {
+			node.SetLeavingETA(t.ETA)
+		}
 	}
-	return &network.MergedListFlags{NodesJoinedDuringPrevPulse: isJoinClaim, ShouldExit: shouldExit}, nil
+
+	return isJoinClaim, nil
 }
 
 func sortedNodeList(nodes map[core.RecordRef]core.Node) []core.Node {

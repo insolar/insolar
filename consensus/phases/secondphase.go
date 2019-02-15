@@ -77,7 +77,7 @@ func (sp *SecondPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse, state
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NET Consensus phase-2.0 ] Failed to set globule proof in Phase2Packet")
 	}
-	bitset, err := sp.generatePhase2Bitset(state.UnsyncList, state.ValidProofs)
+	bitset, err := sp.generatePhase2Bitset(state.UnsyncList, state.ValidProofs, pulse.PulseNumber)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NET Consensus phase-2.0 ] Failed to generate bitset for Phase2Packet")
 	}
@@ -301,21 +301,36 @@ func (sp *SecondPhaseImpl) Execute21(ctx context.Context, pulse *core.Pulse, sta
 	return state, nil
 }
 
-func (sp *SecondPhaseImpl) generatePhase2Bitset(list network.UnsyncList, proofs map[core.Node]*merkle.PulseProof) (packets.BitSet, error) {
+func (sp *SecondPhaseImpl) generatePhase2Bitset(list network.UnsyncList, proofs map[core.Node]*merkle.PulseProof, pulseNumber core.PulseNumber) (packets.BitSet, error) {
 	bitset, err := packets.NewBitSet(list.Length())
 	if err != nil {
 		return nil, err
 	}
 	cells := make([]packets.BitSetCell, 0)
 	for node := range proofs {
-		cells = append(cells, packets.BitSetCell{NodeID: node.ID(), State: packets.Legit})
+		cells = append(cells, packets.BitSetCell{
+			NodeID: node.ID(),
+			State:  livingNodeState(list.GetActiveNode(node.ID()), pulseNumber),
+		})
 	}
-	cells = append(cells, packets.BitSetCell{NodeID: sp.NodeKeeper.GetOrigin().ID(), State: packets.Legit})
+	cells = append(cells, packets.BitSetCell{
+		NodeID: sp.NodeKeeper.GetOrigin().ID(),
+		State:  livingNodeState(sp.NodeKeeper.GetOrigin(), pulseNumber),
+	})
 	err = bitset.ApplyChanges(cells, list)
 	if err != nil {
 		return nil, err
 	}
 	return bitset, nil
+}
+
+func livingNodeState(node core.Node, pulseNumber core.PulseNumber) packets.TriState {
+	state := packets.Legit
+	if node.Leaving() && node.LeavingETA() < pulseNumber {
+		state = packets.TimedOut
+	}
+
+	return state
 }
 
 func (sp *SecondPhaseImpl) checkPacketSignature(packet *packets.Phase2Packet, recordRef core.RecordRef, unsyncList network.UnsyncList) error {
