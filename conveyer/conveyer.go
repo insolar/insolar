@@ -112,6 +112,7 @@ func (c *PulseConveyer) writeUnlock() {
 	c.lock.Unlock()
 }
 
+// GetState returns current state of Conveyer
 func (c *PulseConveyer) GetState() State {
 	c.readLock()
 	defer c.readUnlock()
@@ -126,20 +127,20 @@ func (c *PulseConveyer) IsOperational() bool {
 	return false
 }
 
-func (c *PulseConveyer) getSlot(addr core.PulseNumber) (Slot, error) {
+func (c *PulseConveyer) getSlot(addr core.PulseNumber) (*Slot, error) {
 	slot, ok := c.slotMap[addr]
 	if !ok {
 		ctx := context.Background()
 		currentPulse, err := c.PulseStorage.Current(ctx)
 		if err != nil {
-			return Slot{}, err
+			return nil, err
 		}
 		if addr >= currentPulse.PulseNumber {
-			return Slot{}, errors.New("unknown pulse")
+			return nil, errors.New("unknown pulse")
 		}
 		slot = c.slotMap[AntiqueSlotPulse]
 	}
-	return slot, nil
+	return &slot, nil
 }
 
 func (c *PulseConveyer) SinkPush(addr core.PulseNumber, data interface{}) bool {
@@ -165,6 +166,7 @@ func (c *PulseConveyer) SinkPushAll(addr core.PulseNumber, data []interface{}) b
 }
 
 // Start creates Present and Future Slots.
+// This logic probably must be done after we get first pulse (after OnPulse call). It wiil be consider later
 func (c *PulseConveyer) Start(ctx context.Context) error {
 	pulse, err := c.PulseStorage.Current(ctx)
 	if err != nil {
