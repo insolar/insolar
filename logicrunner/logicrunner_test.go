@@ -20,11 +20,14 @@ import (
 	"context"
 	"crypto"
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"net/rpc"
 	"os"
+	"path"
+	"runtime"
 	"testing"
 	"time"
 
@@ -64,7 +67,6 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
-	"github.com/insolar/insolar/logicrunner/goplugin/preprocessor"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/testmessagebus"
 )
@@ -79,6 +81,18 @@ type LogicRunnerFuncSuite struct {
 	contractsDir string
 }
 
+func FindContractsDir() (string, error) {
+	_, file, _, ok := runtime.Caller(0)
+	if !ok {
+		return "", errors.New("failed to find folder")
+	}
+
+	// we're located in /logicrunner/logicrunner_test.go file, so we must take two basenames
+	projectRoot := path.Dir(path.Dir(file))
+	contractsDir := path.Join(projectRoot, "application", "contract")
+	return contractsDir, nil
+}
+
 func (s *LogicRunnerFuncSuite) SetupSuite() {
 	if err := log.SetLevel("debug"); err != nil {
 		log.Errorln("Failed to set logLevel to debug: ", err.Error())
@@ -89,7 +103,7 @@ func (s *LogicRunnerFuncSuite) SetupSuite() {
 		s.Fail("Logic runner build failed, skip tests: ", err.Error())
 	}
 
-	if s.contractsDir, err = preprocessor.GetRealApplicationDir("contract"); err != nil {
+	if s.contractsDir, err = FindContractsDir(); err != nil {
 		s.contractsDir = ""
 		log.Errorln("Failed to find contracts dir: ", err.Error())
 	}
@@ -1098,38 +1112,30 @@ func (s *Caller) SignedCall(ctx context.Context, pm core.PulseManager, rootDomai
 	return result
 }
 
+func (s *LogicRunnerFuncSuite) LoadBasicContracts(contracts []string) map[string]string {
+	contractCode := make(map[string]string)
+	for _, contract := range contracts {
+		code, err := ioutil.ReadFile(path.Join(s.contractsDir, contract, contract+".go"))
+		if err != nil {
+			s.Failf("Failed to load contract %s: %s", contract, err.Error())
+		}
+		contractCode[contract] = string(code)
+	}
+	return contractCode
+}
+
 func (s *LogicRunnerFuncSuite) TestRootDomainContractError() {
 	if parallel {
 		s.T().Parallel()
 	}
-	rootDomainCode, err := ioutil.ReadFile("../application/contract/rootdomain/rootdomain.go" +
-		"")
-	if err != nil {
-		fmt.Print(err)
-	}
-	memberCode, err := ioutil.ReadFile("../application/contract/member/member.go")
-	if err != nil {
-		fmt.Print(err)
-	}
-	allowanceCode, err := ioutil.ReadFile("../application/contract/allowance/allowance.go")
-	if err != nil {
-		fmt.Print(err)
-	}
-	walletCode, err := ioutil.ReadFile("../application/contract/wallet/wallet.go")
-	if err != nil {
-		fmt.Print(err)
-	}
 
+	contracts := []string{"member", "allowance", "wallet", "rootdomain"}
+	contractCode := s.LoadBasicContracts(contracts)
 	ctx := context.TODO()
 	// TODO need use pulseManager to sync all refs
 	lr, am, cb, pm, cleaner := s.PrepareLrAmCbPm()
 	defer cleaner()
-	err = cb.Build(map[string]string{
-		"member":     string(memberCode),
-		"allowance":  string(allowanceCode),
-		"wallet":     string(walletCode),
-		"rootdomain": string(rootDomainCode),
-	})
+	err := cb.Build(contractCode)
 	s.NoError(err)
 
 	// Initializing Root Domain
@@ -1499,34 +1505,14 @@ func (r *One) CreateAllowance(member string) (error) {
 	return nil
 }
 `
-	rootDomainCode, err := ioutil.ReadFile("../application/contract/rootdomain/rootdomain.go" +
-		"")
-	if err != nil {
-		fmt.Print(err)
-	}
-	memberCode, err := ioutil.ReadFile("../application/contract/member/member.go")
-	if err != nil {
-		fmt.Print(err)
-	}
-	allowanceCode, err := ioutil.ReadFile("../application/contract/allowance/allowance.go")
-	if err != nil {
-		fmt.Print(err)
-	}
-	walletCode, err := ioutil.ReadFile("../application/contract/wallet/wallet.go")
-	if err != nil {
-		fmt.Print(err)
-	}
+	contracts := []string{"member", "allowance", "wallet", "rootdomain"}
+	contractCode := s.LoadBasicContracts(contracts)
+	contractCode["one"] = contractOneCode
 
 	ctx := context.TODO()
 	lr, am, cb, pm, cleaner := s.PrepareLrAmCbPm()
 	defer cleaner()
-	err = cb.Build(map[string]string{
-		"one":        contractOneCode,
-		"member":     string(memberCode),
-		"allowance":  string(allowanceCode),
-		"wallet":     string(walletCode),
-		"rootdomain": string(rootDomainCode),
-	})
+	err := cb.Build(contractCode)
 	s.NoError(err)
 
 	kp := platformpolicy.NewKeyProcessor()
@@ -2091,8 +2077,6 @@ func (s *LogicRunnerFuncSuite) getObjectInstance(ctx context.Context, am core.Ar
 }
 
 func TestLogicRunnerFunc(t *testing.T) {
-	// if parallel {
 	t.Parallel()
-	// }
 	suite.Run(t, new(LogicRunnerFuncSuite))
 }
