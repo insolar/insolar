@@ -79,7 +79,7 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse) (*Firs
 	var unsyncList network.UnsyncList
 
 	pulseHash, pulseProof, err := fp.Calculator.GetPulseProof(entry)
-	if fp.NodeKeeper.GetState() == network.Ready {
+	if fp.NodeKeeper.GetState() == core.ReadyNodeNetworkState {
 		unsyncList = fp.NodeKeeper.GetUnsyncList()
 	}
 
@@ -128,10 +128,10 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse) (*Firs
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NET Consensus phase-1 ] Failed to exchange results")
 	}
-	if len(resultPackets) < 2 && fp.NodeKeeper.GetState() == network.Waiting {
+	if len(resultPackets) < 2 && fp.NodeKeeper.GetState() == core.WaitingNodeNetworkState {
 		return nil, errors.New("[ NET Consensus phase-1 ] Failed to receive enough packets from other nodes")
 	}
-	if fp.NodeKeeper.GetState() == network.Waiting {
+	if fp.NodeKeeper.GetState() == core.WaitingNodeNetworkState {
 		logger.Infof("[ NET Consensus phase-1 ] received packets: %d", len(resultPackets))
 	} else {
 		logger.Infof("[ NET Consensus phase-1 ] received packets: %d/%d", len(resultPackets), len(activeNodes))
@@ -164,7 +164,7 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse) (*Firs
 		claimMap[ref] = fp.filterClaims(ref, packet.GetClaims())
 	}
 
-	if fp.NodeKeeper.GetState() == network.Waiting {
+	if fp.NodeKeeper.GetState() == core.WaitingNodeNetworkState {
 		length, err := detectSparseBitsetLength(claimMap, fp.NodeKeeper)
 		if err != nil {
 			return nil, errors.Wrap(err, "[ NET Consensus phase-1 ] Failed to detect bitset length")
@@ -198,7 +198,7 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse) (*Firs
 }
 
 func (fp *FirstPhaseImpl) checkPacketSignature(packet *packets.Phase1Packet, recordRef core.RecordRef) error {
-	if fp.NodeKeeper.GetState() == network.Waiting {
+	if fp.NodeKeeper.GetState() == core.WaitingNodeNetworkState {
 		return fp.checkPacketSignatureFromClaim(packet, recordRef)
 	}
 
