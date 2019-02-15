@@ -256,6 +256,7 @@ func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Repl
 	// We must check barrier just before exiting function
 	// to deliver reply right after pulse switches if it is switching right now.
 	defer readBarrier(ctx, &mb.globalLock)
+	ctx, _ = inslogger.WithField(ctx, "msg_type", msg.Type().String())
 	inslogger.FromContext(ctx).Debug("MessageBus.doDeliver starts ...")
 	handler, ok := mb.handlers[msg.Type()]
 	if !ok {
