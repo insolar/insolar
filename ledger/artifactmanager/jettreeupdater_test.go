@@ -212,17 +212,8 @@ func TestJetTreeUpdater_fetchJet(t *testing.T) {
 
 	target := testutils.RandomID()
 
-	t.Run("wrong tree", func(t *testing.T) {
-		js.GetJetTreeMock.Return(nil, errors.New("some"))
-		jetID, err := jtu.fetchJet(ctx, target, core.PulseNumber(100))
-		require.Error(t, err)
-		require.Nil(t, jetID)
-	})
-
 	t.Run("quick reply, data is up to date", func(t *testing.T) {
-		js.GetJetTreeMock.Return(
-			jet.NewTree(true), nil,
-		)
+		js.GetJetTreeMock.Return(jet.NewTree(true))
 		jetID, err := jtu.fetchJet(ctx, target, core.PulseNumber(100))
 		require.NoError(t, err)
 		require.Equal(t, jet.NewID(0, nil), jetID)
@@ -245,14 +236,11 @@ func TestJetTreeUpdater_fetchJet(t *testing.T) {
 			nil,
 		)
 
-		js.GetJetTreeMock.Return(
-			jet.NewTree(false), nil,
-		)
-		js.UpdateJetTreeFunc = func(ctx context.Context, pn core.PulseNumber, actual bool, jets ...core.RecordID) (r error) {
+		js.GetJetTreeMock.Return(jet.NewTree(false))
+		js.UpdateJetTreeFunc = func(ctx context.Context, pn core.PulseNumber, actual bool, jets ...core.RecordID) {
 			require.Equal(t, core.PulseNumber(100), pn)
 			require.True(t, actual)
 			require.Equal(t, []core.RecordID{*jet.NewID(0, nil)}, jets)
-			return nil
 		}
 
 		jetID, err := jtu.fetchJet(ctx, target, core.PulseNumber(100))

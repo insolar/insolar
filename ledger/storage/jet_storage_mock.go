@@ -26,7 +26,7 @@ type JetStorageMock struct {
 	AddJetsPreCounter uint64
 	AddJetsMock       mJetStorageMockAddJets
 
-	CloneJetTreeFunc       func(p context.Context, p1 core.PulseNumber, p2 core.PulseNumber) (r *jet.Tree, r1 error)
+	CloneJetTreeFunc       func(p context.Context, p1 core.PulseNumber, p2 core.PulseNumber) (r *jet.Tree)
 	CloneJetTreeCounter    uint64
 	CloneJetTreePreCounter uint64
 	CloneJetTreeMock       mJetStorageMockCloneJetTree
@@ -36,7 +36,7 @@ type JetStorageMock struct {
 	DeleteJetTreePreCounter uint64
 	DeleteJetTreeMock       mJetStorageMockDeleteJetTree
 
-	GetJetTreeFunc       func(p context.Context, p1 core.PulseNumber) (r *jet.Tree, r1 error)
+	GetJetTreeFunc       func(p context.Context, p1 core.PulseNumber) (r *jet.Tree)
 	GetJetTreeCounter    uint64
 	GetJetTreePreCounter uint64
 	GetJetTreeMock       mJetStorageMockGetJetTree
@@ -51,7 +51,7 @@ type JetStorageMock struct {
 	SplitJetTreePreCounter uint64
 	SplitJetTreeMock       mJetStorageMockSplitJetTree
 
-	UpdateJetTreeFunc       func(p context.Context, p1 core.PulseNumber, p2 bool, p3 ...core.RecordID) (r error)
+	UpdateJetTreeFunc       func(p context.Context, p1 core.PulseNumber, p2 bool, p3 ...core.RecordID)
 	UpdateJetTreeCounter    uint64
 	UpdateJetTreePreCounter uint64
 	UpdateJetTreeMock       mJetStorageMockUpdateJetTree
@@ -242,8 +242,7 @@ type JetStorageMockCloneJetTreeInput struct {
 }
 
 type JetStorageMockCloneJetTreeResult struct {
-	r  *jet.Tree
-	r1 error
+	r *jet.Tree
 }
 
 //Expect specifies that invocation of JetStorage.CloneJetTree is expected from 1 to Infinity times
@@ -259,14 +258,14 @@ func (m *mJetStorageMockCloneJetTree) Expect(p context.Context, p1 core.PulseNum
 }
 
 //Return specifies results of invocation of JetStorage.CloneJetTree
-func (m *mJetStorageMockCloneJetTree) Return(r *jet.Tree, r1 error) *JetStorageMock {
+func (m *mJetStorageMockCloneJetTree) Return(r *jet.Tree) *JetStorageMock {
 	m.mock.CloneJetTreeFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &JetStorageMockCloneJetTreeExpectation{}
 	}
-	m.mainExpectation.result = &JetStorageMockCloneJetTreeResult{r, r1}
+	m.mainExpectation.result = &JetStorageMockCloneJetTreeResult{r}
 	return m.mock
 }
 
@@ -281,12 +280,12 @@ func (m *mJetStorageMockCloneJetTree) ExpectOnce(p context.Context, p1 core.Puls
 	return expectation
 }
 
-func (e *JetStorageMockCloneJetTreeExpectation) Return(r *jet.Tree, r1 error) {
-	e.result = &JetStorageMockCloneJetTreeResult{r, r1}
+func (e *JetStorageMockCloneJetTreeExpectation) Return(r *jet.Tree) {
+	e.result = &JetStorageMockCloneJetTreeResult{r}
 }
 
 //Set uses given function f as a mock of JetStorage.CloneJetTree method
-func (m *mJetStorageMockCloneJetTree) Set(f func(p context.Context, p1 core.PulseNumber, p2 core.PulseNumber) (r *jet.Tree, r1 error)) *JetStorageMock {
+func (m *mJetStorageMockCloneJetTree) Set(f func(p context.Context, p1 core.PulseNumber, p2 core.PulseNumber) (r *jet.Tree)) *JetStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -295,7 +294,7 @@ func (m *mJetStorageMockCloneJetTree) Set(f func(p context.Context, p1 core.Puls
 }
 
 //CloneJetTree implements github.com/insolar/insolar/ledger/storage.JetStorage interface
-func (m *JetStorageMock) CloneJetTree(p context.Context, p1 core.PulseNumber, p2 core.PulseNumber) (r *jet.Tree, r1 error) {
+func (m *JetStorageMock) CloneJetTree(p context.Context, p1 core.PulseNumber, p2 core.PulseNumber) (r *jet.Tree) {
 	counter := atomic.AddUint64(&m.CloneJetTreePreCounter, 1)
 	defer atomic.AddUint64(&m.CloneJetTreeCounter, 1)
 
@@ -315,7 +314,6 @@ func (m *JetStorageMock) CloneJetTree(p context.Context, p1 core.PulseNumber, p2
 		}
 
 		r = result.r
-		r1 = result.r1
 
 		return
 	}
@@ -333,7 +331,6 @@ func (m *JetStorageMock) CloneJetTree(p context.Context, p1 core.PulseNumber, p2
 		}
 
 		r = result.r
-		r1 = result.r1
 
 		return
 	}
@@ -517,8 +514,7 @@ type JetStorageMockGetJetTreeInput struct {
 }
 
 type JetStorageMockGetJetTreeResult struct {
-	r  *jet.Tree
-	r1 error
+	r *jet.Tree
 }
 
 //Expect specifies that invocation of JetStorage.GetJetTree is expected from 1 to Infinity times
@@ -534,14 +530,14 @@ func (m *mJetStorageMockGetJetTree) Expect(p context.Context, p1 core.PulseNumbe
 }
 
 //Return specifies results of invocation of JetStorage.GetJetTree
-func (m *mJetStorageMockGetJetTree) Return(r *jet.Tree, r1 error) *JetStorageMock {
+func (m *mJetStorageMockGetJetTree) Return(r *jet.Tree) *JetStorageMock {
 	m.mock.GetJetTreeFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &JetStorageMockGetJetTreeExpectation{}
 	}
-	m.mainExpectation.result = &JetStorageMockGetJetTreeResult{r, r1}
+	m.mainExpectation.result = &JetStorageMockGetJetTreeResult{r}
 	return m.mock
 }
 
@@ -556,12 +552,12 @@ func (m *mJetStorageMockGetJetTree) ExpectOnce(p context.Context, p1 core.PulseN
 	return expectation
 }
 
-func (e *JetStorageMockGetJetTreeExpectation) Return(r *jet.Tree, r1 error) {
-	e.result = &JetStorageMockGetJetTreeResult{r, r1}
+func (e *JetStorageMockGetJetTreeExpectation) Return(r *jet.Tree) {
+	e.result = &JetStorageMockGetJetTreeResult{r}
 }
 
 //Set uses given function f as a mock of JetStorage.GetJetTree method
-func (m *mJetStorageMockGetJetTree) Set(f func(p context.Context, p1 core.PulseNumber) (r *jet.Tree, r1 error)) *JetStorageMock {
+func (m *mJetStorageMockGetJetTree) Set(f func(p context.Context, p1 core.PulseNumber) (r *jet.Tree)) *JetStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -570,7 +566,7 @@ func (m *mJetStorageMockGetJetTree) Set(f func(p context.Context, p1 core.PulseN
 }
 
 //GetJetTree implements github.com/insolar/insolar/ledger/storage.JetStorage interface
-func (m *JetStorageMock) GetJetTree(p context.Context, p1 core.PulseNumber) (r *jet.Tree, r1 error) {
+func (m *JetStorageMock) GetJetTree(p context.Context, p1 core.PulseNumber) (r *jet.Tree) {
 	counter := atomic.AddUint64(&m.GetJetTreePreCounter, 1)
 	defer atomic.AddUint64(&m.GetJetTreeCounter, 1)
 
@@ -590,7 +586,6 @@ func (m *JetStorageMock) GetJetTree(p context.Context, p1 core.PulseNumber) (r *
 		}
 
 		r = result.r
-		r1 = result.r1
 
 		return
 	}
@@ -608,7 +603,6 @@ func (m *JetStorageMock) GetJetTree(p context.Context, p1 core.PulseNumber) (r *
 		}
 
 		r = result.r
-		r1 = result.r1
 
 		return
 	}
@@ -963,8 +957,7 @@ type mJetStorageMockUpdateJetTree struct {
 }
 
 type JetStorageMockUpdateJetTreeExpectation struct {
-	input  *JetStorageMockUpdateJetTreeInput
-	result *JetStorageMockUpdateJetTreeResult
+	input *JetStorageMockUpdateJetTreeInput
 }
 
 type JetStorageMockUpdateJetTreeInput struct {
@@ -972,10 +965,6 @@ type JetStorageMockUpdateJetTreeInput struct {
 	p1 core.PulseNumber
 	p2 bool
 	p3 []core.RecordID
-}
-
-type JetStorageMockUpdateJetTreeResult struct {
-	r error
 }
 
 //Expect specifies that invocation of JetStorage.UpdateJetTree is expected from 1 to Infinity times
@@ -991,14 +980,14 @@ func (m *mJetStorageMockUpdateJetTree) Expect(p context.Context, p1 core.PulseNu
 }
 
 //Return specifies results of invocation of JetStorage.UpdateJetTree
-func (m *mJetStorageMockUpdateJetTree) Return(r error) *JetStorageMock {
+func (m *mJetStorageMockUpdateJetTree) Return() *JetStorageMock {
 	m.mock.UpdateJetTreeFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &JetStorageMockUpdateJetTreeExpectation{}
 	}
-	m.mainExpectation.result = &JetStorageMockUpdateJetTreeResult{r}
+
 	return m.mock
 }
 
@@ -1013,12 +1002,8 @@ func (m *mJetStorageMockUpdateJetTree) ExpectOnce(p context.Context, p1 core.Pul
 	return expectation
 }
 
-func (e *JetStorageMockUpdateJetTreeExpectation) Return(r error) {
-	e.result = &JetStorageMockUpdateJetTreeResult{r}
-}
-
 //Set uses given function f as a mock of JetStorage.UpdateJetTree method
-func (m *mJetStorageMockUpdateJetTree) Set(f func(p context.Context, p1 core.PulseNumber, p2 bool, p3 ...core.RecordID) (r error)) *JetStorageMock {
+func (m *mJetStorageMockUpdateJetTree) Set(f func(p context.Context, p1 core.PulseNumber, p2 bool, p3 ...core.RecordID)) *JetStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1027,7 +1012,7 @@ func (m *mJetStorageMockUpdateJetTree) Set(f func(p context.Context, p1 core.Pul
 }
 
 //UpdateJetTree implements github.com/insolar/insolar/ledger/storage.JetStorage interface
-func (m *JetStorageMock) UpdateJetTree(p context.Context, p1 core.PulseNumber, p2 bool, p3 ...core.RecordID) (r error) {
+func (m *JetStorageMock) UpdateJetTree(p context.Context, p1 core.PulseNumber, p2 bool, p3 ...core.RecordID) {
 	counter := atomic.AddUint64(&m.UpdateJetTreePreCounter, 1)
 	defer atomic.AddUint64(&m.UpdateJetTreeCounter, 1)
 
@@ -1040,14 +1025,6 @@ func (m *JetStorageMock) UpdateJetTree(p context.Context, p1 core.PulseNumber, p
 		input := m.UpdateJetTreeMock.expectationSeries[counter-1].input
 		testify_assert.Equal(m.t, *input, JetStorageMockUpdateJetTreeInput{p, p1, p2, p3}, "JetStorage.UpdateJetTree got unexpected parameters")
 
-		result := m.UpdateJetTreeMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the JetStorageMock.UpdateJetTree")
-			return
-		}
-
-		r = result.r
-
 		return
 	}
 
@@ -1058,13 +1035,6 @@ func (m *JetStorageMock) UpdateJetTree(p context.Context, p1 core.PulseNumber, p
 			testify_assert.Equal(m.t, *input, JetStorageMockUpdateJetTreeInput{p, p1, p2, p3}, "JetStorage.UpdateJetTree got unexpected parameters")
 		}
 
-		result := m.UpdateJetTreeMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the JetStorageMock.UpdateJetTree")
-		}
-
-		r = result.r
-
 		return
 	}
 
@@ -1073,7 +1043,7 @@ func (m *JetStorageMock) UpdateJetTree(p context.Context, p1 core.PulseNumber, p
 		return
 	}
 
-	return m.UpdateJetTreeFunc(p, p1, p2, p3...)
+	m.UpdateJetTreeFunc(p, p1, p2, p3...)
 }
 
 //UpdateJetTreeMinimockCounter returns a count of JetStorageMock.UpdateJetTreeFunc invocations

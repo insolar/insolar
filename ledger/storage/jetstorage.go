@@ -30,10 +30,10 @@ import (
 // JetStorage provides methods for working with jets
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage.JetStorage -o ./ -s _mock.go
 type JetStorage interface {
-	UpdateJetTree(ctx context.Context, pulse core.PulseNumber, setActual bool, ids ...core.RecordID) error
-	GetJetTree(ctx context.Context, pulse core.PulseNumber) (*jet.Tree, error)
+	UpdateJetTree(ctx context.Context, pulse core.PulseNumber, setActual bool, ids ...core.RecordID)
+	GetJetTree(ctx context.Context, pulse core.PulseNumber) *jet.Tree
 	SplitJetTree(ctx context.Context, pulse core.PulseNumber, jetID core.RecordID) (*core.RecordID, *core.RecordID, error)
-	CloneJetTree(ctx context.Context, from, to core.PulseNumber) (*jet.Tree, error)
+	CloneJetTree(ctx context.Context, from, to core.PulseNumber) *jet.Tree
 	DeleteJetTree(ctx context.Context, pulse core.PulseNumber)
 
 	AddJets(ctx context.Context, jetIDs ...core.RecordID) error
@@ -56,12 +56,12 @@ func NewJetStorage() JetStorage {
 }
 
 // GetJetTree fetches tree for specified pulse.
-func (js *jetStorage) GetJetTree(ctx context.Context, pulse core.PulseNumber) (*jet.Tree, error) {
+func (js *jetStorage) GetJetTree(ctx context.Context, pulse core.PulseNumber) *jet.Tree {
 	js.treesLock.RLock()
 
 	if t, ok := js.trees[pulse]; ok {
 		js.treesLock.RUnlock()
-		return t, nil
+		return t
 	}
 	js.treesLock.RUnlock()
 
@@ -71,19 +71,14 @@ func (js *jetStorage) GetJetTree(ctx context.Context, pulse core.PulseNumber) (*
 }
 
 // UpdateJetTree updates jet tree for specified pulse.
-func (js *jetStorage) UpdateJetTree(ctx context.Context, pulse core.PulseNumber, setActual bool, ids ...core.RecordID) error {
+func (js *jetStorage) UpdateJetTree(ctx context.Context, pulse core.PulseNumber, setActual bool, ids ...core.RecordID) {
 	js.treesLock.Lock()
 	defer js.treesLock.Unlock()
 
-	tree, err := js.getJetTree(ctx, pulse)
-	if err != nil {
-		return err
-	}
+	tree := js.getJetTree(ctx, pulse)
 	for _, id := range ids {
 		tree.Update(id, setActual)
 	}
-
-	return nil
 }
 
 // SplitJetTree performs jet split and returns resulting jet ids.
@@ -93,10 +88,7 @@ func (js *jetStorage) SplitJetTree(
 	js.treesLock.Lock()
 	defer js.treesLock.Unlock()
 
-	tree, err := js.getJetTree(ctx, pulse)
-	if err != nil {
-		return nil, nil, err
-	}
+	tree := js.getJetTree(ctx, pulse)
 
 	left, right, err := tree.Split(jetID)
 	if err != nil {
@@ -109,18 +101,15 @@ func (js *jetStorage) SplitJetTree(
 // CloneJetTree copies tree from one pulse to another. Use it to copy past tree into new pulse.
 func (js *jetStorage) CloneJetTree(
 	ctx context.Context, from, to core.PulseNumber,
-) (*jet.Tree, error) {
+) *jet.Tree {
 	js.treesLock.Lock()
 	defer js.treesLock.Unlock()
 
-	tree, err := js.getJetTree(ctx, from)
-	if err != nil {
-		return nil, err
-	}
+	tree := js.getJetTree(ctx, from)
 
 	res := tree.Clone(false)
 	js.trees[to] = res
-	return res, nil
+	return res
 }
 
 func (js *jetStorage) DeleteJetTree(
@@ -132,14 +121,14 @@ func (js *jetStorage) DeleteJetTree(
 	delete(js.trees, pulse)
 }
 
-func (js *jetStorage) getJetTree(ctx context.Context, pulse core.PulseNumber) (*jet.Tree, error) {
+func (js *jetStorage) getJetTree(ctx context.Context, pulse core.PulseNumber) *jet.Tree {
 	if t, ok := js.trees[pulse]; ok {
-		return t, nil
+		return t
 	}
 
 	tree := jet.NewTree(pulse == core.GenesisPulse.PulseNumber)
 	js.trees[pulse] = tree
-	return tree, nil
+	return tree
 }
 
 // AddJets stores a list of jets of the current node.

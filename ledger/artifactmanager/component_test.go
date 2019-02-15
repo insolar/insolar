@@ -162,10 +162,8 @@ func (s *componentSuite) TestLedgerArtifactManager_PendingRequest() {
 	require.NoError(s.T(), err)
 	objRef := *genRandomRef(0)
 
-	err = s.jetStorage.UpdateJetTree(s.ctx, core.FirstPulseNumber, true, jetID)
-	require.NoError(s.T(), err)
-	err = s.jetStorage.UpdateJetTree(s.ctx, core.FirstPulseNumber+1, true, jetID)
-	require.NoError(s.T(), err)
+	s.jetStorage.UpdateJetTree(s.ctx, core.FirstPulseNumber, true, jetID)
+	s.jetStorage.UpdateJetTree(s.ctx, core.FirstPulseNumber+1, true, jetID)
 
 	// Register request
 	reqID, err := am.RegisterRequest(s.ctx, objRef, &message.Parcel{Msg: &message.CallMethod{}, PulseNumber: core.FirstPulseNumber})
