@@ -146,8 +146,12 @@ type NodeKeeper interface {
 	GetCloudHash() []byte
 	// SetCloudHash set new cloud hash
 	SetCloudHash([]byte)
+	// GetActiveNode returns active node.
+	GetActiveNode(ref core.RecordRef) core.Node
 	// AddActiveNodes add active nodes.
 	AddActiveNodes([]core.Node)
+	// GetActiveNodes returns active nodes.
+	GetActiveNodes() []core.Node
 	// GetActiveNodeByShortID get active node by short ID. Returns nil if node is not found.
 	GetActiveNodeByShortID(shortID core.ShortNodeID) core.Node
 	// SetState set state of the NodeKeeper

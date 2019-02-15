@@ -196,7 +196,7 @@ func (mb *MessageBus) SendParcel(
 	start := time.Now()
 	defer func() {
 		stats.Record(ctx, statParcelsTime.M(float64(time.Since(start).Nanoseconds())/1e6))
-		}()
+	}()
 
 	stats.Record(ctx, statParcelsSentTotal.M(1))
 
@@ -417,7 +417,7 @@ func (mb *MessageBus) checkParcel(ctx context.Context, parcel core.Parcel) error
 	sender := parcel.GetSender()
 
 	if mb.signmessages {
-		senderKey := mb.NodeNetwork.GetActiveNode(sender).PublicKey()
+		senderKey := mb.NodeNetwork.GetWorkingNode(sender).PublicKey()
 		if err := mb.ParcelFactory.Validate(senderKey, parcel); err != nil {
 			return errors.Wrap(err, "failed to check a message sign")
 		}

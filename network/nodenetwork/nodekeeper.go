@@ -133,6 +133,27 @@ type nodekeeper struct {
 	Handler      core.TerminationHandler  `inject:""`
 }
 
+func (nk *nodekeeper) GetWorkingNode(ref core.RecordRef) core.Node {
+	node := nk.GetActiveNode(ref)
+
+	if node == nil || node.Leaving() {
+		return nil
+	}
+
+	return node
+}
+
+func (nk *nodekeeper) GetWorkingNodesByRole(role core.DynamicRole) []core.RecordRef {
+	nk.activeLock.RLock()
+	defer nk.activeLock.RUnlock()
+
+	list, exists := nk.indexNode[jetRoleToNodeRole(role)]
+	if !exists {
+		return nil
+	}
+	return list.Collect()
+}
+
 func (nk *nodekeeper) Wipe(isDiscovery bool) {
 	log.Warn("don't use it in production")
 
@@ -252,17 +273,6 @@ func (nk *nodekeeper) GetActiveNodes() []core.Node {
 	return result
 }
 
-func (nk *nodekeeper) GetActiveNodesByRole(role core.DynamicRole) []core.RecordRef {
-	nk.activeLock.RLock()
-	defer nk.activeLock.RUnlock()
-
-	list, exists := nk.indexNode[jetRoleToNodeRole(role)]
-	if !exists {
-		return nil
-	}
-	return list.Collect()
-}
-
 func (nk *nodekeeper) AddActiveNodes(nodes []core.Node) {
 	nk.activeLock.Lock()
 	defer nk.activeLock.Unlock()
@@ -302,14 +312,22 @@ func (nk *nodekeeper) addActiveNode(node core.Node) {
 }
 
 func (nk *nodekeeper) addToIndex(node core.Node) {
+	nk.indexShortID[node.ShortID()] = node
+	nk.addToRoleIndex(node)
+}
+
+func (nk *nodekeeper) addToRoleIndex(node core.Node) {
+	if node.Leaving() {
+		return
+	}
+
 	list, ok := nk.indexNode[node.Role()]
 	if !ok {
 		list = newRecordRefSet()
 	}
+
 	list.Add(node.ID())
 	nk.indexNode[node.Role()] = list
-
-	nk.indexShortID[node.ShortID()] = node
 }
 
 func (nk *nodekeeper) GetWorkingNodes() []core.Node {
