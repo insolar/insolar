@@ -137,19 +137,25 @@ func (p *pulseTrackerMemory) DeletePulse(ctx context.Context, num core.PulseNumb
 	return nil
 }
 
-func (p *pulseTrackerMemory) getPulse(ctx context.Context, num core.PulseNumber) (*Pulse, error) {
-	// TODO: @imarkin 14.02.18 - it's a hack for fill genesis pulse in memory realization
-	if num == core.FirstPulseNumber {
-		pulse := &Pulse{
-			Pulse: core.Pulse{
-				PulseNumber: core.FirstPulseNumber,
-				Entropy:     core.GenesisPulse.Entropy,
-			},
-			SerialNumber: 1,
-		}
-		return pulse, nil
-	}
+// TODO: @imarkin 14.02.18 - it's a hack for fill genesis pulse in memory realization
+func (p *pulseTrackerMemory) Init(ctx context.Context) error {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
 
+	pulse := &Pulse{
+		Pulse: core.Pulse{
+			PulseNumber: core.FirstPulseNumber,
+			Entropy:     core.GenesisPulse.Entropy,
+		},
+		SerialNumber: 1,
+	}
+	p.memory[core.FirstPulseNumber] = *pulse
+	p.latestPulse = core.FirstPulseNumber
+
+	return nil
+}
+
+func (p *pulseTrackerMemory) getPulse(ctx context.Context, num core.PulseNumber) (*Pulse, error) {
 	pulse, ok := p.memory[num]
 
 	if !ok {
