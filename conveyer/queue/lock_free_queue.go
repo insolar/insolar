@@ -22,6 +22,7 @@ import (
 	"unsafe"
 )
 
+// TODO: not completely implemented
 type LockFreeQueue struct {
 	head *QueueItem
 }

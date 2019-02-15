@@ -48,8 +48,6 @@ func TestSequentialAccess(t *testing.T) {
 	}
 	queue.SinkPushAll(buf)
 
-	fmt.Println("SECOND PART: ", buf)
-
 	total := queue.RemoveAll()
 	require.Equal(t, numElements*2, len(total))
 
@@ -126,56 +124,110 @@ func TestRemoveAllAfterBlock(t *testing.T) {
 	require.Empty(t, queue.RemoveAll())
 }
 
+func chanToSortedArray(in chan int, additional []int) []int {
+	result := make([]int, 0, len(in)+len(additional))
+	for len(in) != 0 {
+		result = append(result, <-in)
+	}
+
+	result = append(result, additional...)
+
+	sort.Slice(result, func(i, j int) bool {
+		return result[i] > result[j]
+	})
+
+	return result
+}
+
 func TestParallelAccess(t *testing.T) {
 	queue := NewMutexQueue()
 
-	parallelGet := 30
-
-	parallelPut := 30
+	parallelGet := 23
+	parallelPut := 33
 	wg := sync.WaitGroup{}
-	wg.Add(parallelPut*2 + parallelGet)
+	wg.Add(parallelPut*2 + parallelGet*2)
 
 	numIterations := 100
 
+	totalNumOperations := (parallelGet + parallelPut) * numIterations * 2
+	addedElements := make(chan int, totalNumOperations)
+	gotElements := make(chan int, totalNumOperations)
+	blockedRequests := make(chan int, totalNumOperations)
+
 	for i := 0; i < parallelPut; i++ {
-		go func(wg *sync.WaitGroup, q IQueue) {
+		go func(wg *sync.WaitGroup, q IQueue, added chan int, blocked chan int) {
 			for i := 0; i < numIterations; i++ {
-				q.SinkPush(i)
+				if q.SinkPush(i) {
+					added <- i
+				} else {
+					blockedRequests <- i
+				}
 			}
 			wg.Done()
-		}(&wg, queue)
+		}(&wg, queue, addedElements, blockedRequests)
 	}
 
 	for i := 0; i < parallelGet; i++ {
-		go func(wg *sync.WaitGroup, q IQueue) {
+		go func(wg *sync.WaitGroup, q IQueue, got chan int) {
 			for i := 0; i < numIterations; i++ {
-				q.RemoveAll()
+				results := q.RemoveAll()
+				for _, el := range results {
+					got <- el.(int)
+				}
 			}
 			wg.Done()
-		}(&wg, queue)
+		}(&wg, queue, gotElements)
 	}
 
 	for i := 0; i < parallelPut; i++ {
-		go func(wg *sync.WaitGroup, q IQueue) {
+		go func(wg *sync.WaitGroup, q IQueue, added chan int, blocked chan int) {
 			input := []interface{}{}
 			for i := 0; i < numIterations; i++ {
 				input = append(input, i)
 			}
-			queue.SinkPushAll(input)
+			if queue.SinkPushAll(input) {
+				for _, el := range input {
+					added <- el.(int)
+				}
+			} else {
+				for _, el := range input {
+					blocked <- el.(int)
+				}
+			}
 			wg.Done()
-		}(&wg, queue)
+		}(&wg, queue, addedElements, blockedRequests)
+	}
+
+	for i := 0; i < parallelGet; i++ {
+		go func(wg *sync.WaitGroup, q IQueue, got chan int) {
+			for i := 0; i < numIterations; i++ {
+				results := q.BlockAndRemoveAll()
+				q.Unblock()
+				for _, el := range results {
+					got <- el.(int)
+				}
+			}
+			wg.Done()
+		}(&wg, queue, gotElements)
 	}
 
 	wg.Wait()
 
-	result := queue.RemoveAll()
+	rawResult := queue.RemoveAll()
 
-	sort.Slice(result, func(i, j int) bool {
-		return result[i].(int) > result[j].(int)
-	})
+	fmt.Println("Got:                 ", len(gotElements))
+	fmt.Println("Added:               ", len(addedElements))
+	fmt.Println("Rest:                ", len(rawResult))
+	fmt.Println("Num blocked requests:", len(blockedRequests))
 
-	fmt.Println(result)
+	leftResults := make([]int, 0, len(rawResult))
+	for _, el := range rawResult {
+		leftResults = append(leftResults, el.(int))
+	}
 
-	fmt.Printf("Num Elements: %d . Must be: %d\n", len(result), parallelPut*numIterations)
+	allAddedElements := chanToSortedArray(addedElements, []int{})
+	allGotElements := chanToSortedArray(gotElements, leftResults)
+
+	require.EqualValues(t, allAddedElements, allGotElements)
 
 }

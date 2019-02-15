@@ -53,8 +53,6 @@ func (q *MutexQueue) SinkPush(data interface{}) bool {
 	newNode.index = q.head.index + 1
 	q.head = newNode
 
-	//fmt.Println("Pushing: ", data)
-
 	return true
 }
 
@@ -93,8 +91,6 @@ func (q *MutexQueue) SinkPushAll(data []interface{}) bool {
 
 	q.head = newHead
 
-	//fmt.Println(" ALL Pushing: ", data)
-
 	return true
 }
 
@@ -130,10 +126,7 @@ func (q *MutexQueue) RemoveAll() []interface{} {
 		return []interface{}{}
 	}
 	q.head = &emptyQueueItem
-
 	q.locker.Unlock()
-
-	//fmt.Println(" REMOVING ALL: ", result)
 
 	return convertSublistToArray(localHead)
 }
@@ -147,10 +140,7 @@ func (q *MutexQueue) BlockAndRemoveAll() []interface{} {
 		return []interface{}{}
 	}
 	q.head = nil
-
 	q.locker.Unlock()
-
-	//fmt.Println(" REMOVING ALL AND BLOCK: ", result)
 
 	return convertSublistToArray(localHead)
 }
