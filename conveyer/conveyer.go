@@ -61,14 +61,14 @@ type Conveyer interface {
 
 type PulseConveyer struct {
 	PulseStorage core.PulseStorage `inject:""`
-	slotMap      map[core.PulseNumber]Slot
+	slotMap      map[core.PulseNumber]*Slot
 	lock         sync.RWMutex
 	state        State
 }
 
 func NewPulseConveyer() *PulseConveyer {
 	return &PulseConveyer{
-		slotMap: make(map[core.PulseNumber]Slot),
+		slotMap: make(map[core.PulseNumber]*Slot),
 		state:   Inactive,
 	}
 }
@@ -91,8 +91,8 @@ type Slot struct {
 	pulseState PulseState
 }
 
-func NewSlot(pulseState PulseState) Slot {
-	return Slot{
+func NewSlot(pulseState PulseState) *Slot {
+	return &Slot{
 		pulseState: pulseState,
 		inputQueue: &Queue{},
 	}
@@ -143,7 +143,7 @@ func (c *PulseConveyer) getSlot(addr core.PulseNumber) (*Slot, error) {
 		}
 		slot = c.slotMap[AntiqueSlotPulse]
 	}
-	return &slot, nil
+	return slot, nil
 }
 
 func (c *PulseConveyer) SinkPush(addr core.PulseNumber, data interface{}) bool {

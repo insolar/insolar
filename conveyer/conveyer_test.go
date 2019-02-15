@@ -53,8 +53,8 @@ func mockQueueReturnFalse(t *testing.T) *NonBlockingQueueMock {
 	return qMock
 }
 
-func mockSlot(t *testing.T, q *NonBlockingQueueMock) Slot {
-	slot := Slot{
+func mockSlot(t *testing.T, q *NonBlockingQueueMock) *Slot {
+	slot := &Slot{
 		inputQueue: q,
 		pulseState: Present,
 	}
@@ -69,7 +69,7 @@ func testPulseConveyer(t *testing.T, isQueueOk bool) *PulseConveyer {
 		q = mockQueueReturnFalse(t)
 	}
 	slot := mockSlot(t, q)
-	slotMap := make(map[core.PulseNumber]Slot)
+	slotMap := make(map[core.PulseNumber]*Slot)
 	slotMap[testRealPulse] = slot
 	slotMap[AntiqueSlotPulse] = slot
 
