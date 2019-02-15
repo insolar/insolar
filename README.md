@@ -75,9 +75,10 @@ Run launcher:
 
     scripts/insolard/launchnet.sh -g
 
-It will generate genesis data and launch a number of nodes. Default number is 5, you can uncomment more nodes in `scripts/insolard/genesis.yaml`. One node will be launched in foreground, others in background.
+It will generate genesis data and launch a number of nodes. Default number is 5, you can uncomment more nodes in `scripts/insolard/genesis.yaml`.
 
-After network has started (you will see messages like “NODE 3 STARTED in background” in log) you can run test scripts and benchmarks:
+After node processes are started you will see messages like “NODE 3 STARTED in background” in log and PulseWatcher will be started.
+When you see `Ready` in Insolar State you can run test scripts and benchmarks:
 
     bin/apirequester -k=scripts/insolard/configs/root_member_keys.json -u=http://127.0.0.1:19101/api
 
