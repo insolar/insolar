@@ -22,6 +22,7 @@ import (
 	"math"
 
 	"github.com/insolar/insolar/consensus"
+	"github.com/insolar/insolar/consensus/claimhandler"
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -109,11 +110,18 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse) (*Firs
 		}
 		log.Debug("[ NET Consensus phase-1 ] Added origin claim in Phase1Packet")
 	}
+	claimHandler := claimhandler.NewJoinClaimHandler(len(fp.NodeKeeper.GetActiveNodes()), nil)
 	for {
 		claim := fp.NodeKeeper.GetClaimQueue().Front()
 		if claim == nil {
 			break
 		}
+
+		claim = claimHandler.HandleClaim(claim, pulse)
+		if claim == nil {
+			continue
+		}
+
 		success = packet.AddClaim(claim)
 		if !success {
 			break
