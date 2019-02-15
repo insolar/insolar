@@ -314,18 +314,25 @@ func (lr *LogicRunner) executeActual(ctx context.Context, parcel core.Parcel, ms
 		es.Unlock()
 		return nil, os.WrapError(nil, "loop detected")
 	}
+	es.Unlock()
 
 	request, err := lr.RegisterRequest(ctx, parcel)
 	if err != nil {
-		es.Unlock()
 		return nil, os.WrapError(err, "[ Execute ] can't create request")
 	}
 
-	_, span := instracer.StartSpan(ctx, "LogicRunner.QueueCall")
-
-	// Attention! Do not refactor this line if no sure. Here is no bug. Many specialists spend lots of time
-	// to write it as it is.
-	span.End()
+	es.Lock()
+	pulse := lr.pulse(ctx)
+	if pulse.PulseNumber != parcel.Pulse() {
+		meCurrent, _ := lr.JetCoordinator.IsAuthorized(
+			ctx, core.DynamicRoleVirtualExecutor, *ref.Record(), pulse.PulseNumber, lr.JetCoordinator.Me(),
+		)
+		if !meCurrent {
+			return &reply.RegisterRequest{
+				Request: *request,
+			}, nil
+		}
+	}
 
 	qElement := ExecutionQueueElement{
 		ctx:     ctx,
