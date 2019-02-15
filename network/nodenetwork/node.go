@@ -37,7 +37,7 @@ type MutableNode interface {
 	core.Node
 
 	SetShortID(shortID core.ShortNodeID)
-	SetIsActive(isActive bool)
+	SetIsWorking(isActive bool)
 	SetLeavingETA(number core.PulseNumber)
 }
 
@@ -57,7 +57,7 @@ type node struct {
 	NodeLeaving    bool
 	NodeLeavingETA core.PulseNumber
 
-	active uint32
+	working uint32
 }
 
 func newMutableNode(
@@ -78,7 +78,7 @@ func newMutableNode(
 		NodeAddress:   address,
 		CAddress:      consensusAddress,
 		NodeVersion:   version,
-		active:        1,
+		working:       1,
 	}
 }
 
@@ -122,20 +122,20 @@ func (n *node) Version() string {
 	return n.NodeVersion
 }
 
-func (n *node) IsActive() bool {
-	return atomic.LoadUint32(&n.active) == 1
+func (n *node) IsWorking() bool {
+	return atomic.LoadUint32(&n.working) == 1
 }
 
 func (n *node) SetShortID(id core.ShortNodeID) {
 	atomic.StoreUint32(&n.NodeShortID, uint32(id))
 }
 
-func (n *node) SetIsActive(isActive bool) {
+func (n *node) SetIsWorking(isWorking bool) {
 	var value uint32
-	if isActive {
+	if isWorking {
 		value = 1
 	}
-	atomic.StoreUint32(&n.active, value)
+	atomic.StoreUint32(&n.working, value)
 }
 
 func (n *node) Leaving() bool {

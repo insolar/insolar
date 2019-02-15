@@ -48,8 +48,8 @@ type Node interface {
 	Leaving() bool
 	// LeavingETA is pulse number, after which node leave
 	LeavingETA() PulseNumber
-	// IsActive true if node is in active node list, else it is in sync list
-	IsActive() bool
+	// IsWorking true if node is in working node list
+	IsWorking() bool
 }
 
 type NodeNetworkState uint8

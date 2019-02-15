@@ -136,7 +136,7 @@ type nodekeeper struct {
 func (nk *nodekeeper) GetWorkingNode(ref core.RecordRef) core.Node {
 	node := nk.GetActiveNode(ref)
 
-	if node == nil || node.Leaving() {
+	if node == nil || node.Leaving() || !node.IsWorking() {
 		return nil
 	}
 
@@ -317,7 +317,7 @@ func (nk *nodekeeper) addToIndex(node core.Node) {
 }
 
 func (nk *nodekeeper) addToRoleIndex(node core.Node) {
-	if node.Leaving() {
+	if node.Leaving() || !node.IsWorking() {
 		return
 	}
 
@@ -334,7 +334,7 @@ func (nk *nodekeeper) GetWorkingNodes() []core.Node {
 	var workingNodes []core.Node
 	activeNodes := nk.GetActiveNodes()
 	for _, node := range activeNodes {
-		if !node.Leaving() {
+		if !node.Leaving() && node.IsWorking() {
 			workingNodes = append(workingNodes, node)
 		}
 	}

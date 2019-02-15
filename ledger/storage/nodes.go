@@ -67,6 +67,6 @@ func (Node) LeavingETA() core.PulseNumber {
 	panic("implement me")
 }
 
-func (Node) IsActive() bool {
+func (Node) IsWorking() bool {
 	panic("implement me")
 }
