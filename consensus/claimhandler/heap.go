@@ -67,3 +67,11 @@ func (q Queue) Less(i, j int) bool {
 	}
 	return false
 }
+
+func (q *Queue) getPriority(ref core.RecordRef, entropy core.Entropy) []byte {
+	res := make([]byte, len(ref))
+	for i := 0; i < len(ref); i++ {
+		res[i] = ref[i] ^ entropy[i]
+	}
+	return res
+}
