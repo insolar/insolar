@@ -294,7 +294,7 @@ func TestJetTreeUpdater_Concurrency(t *testing.T) {
 	}
 
 
-	i := 1
+	i := 100
 	for i > 0 {
 		i--
 
