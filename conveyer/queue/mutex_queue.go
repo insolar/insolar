@@ -74,9 +74,9 @@ func (q *MutexQueue) SinkPush(data interface{}) error {
 func (q *MutexQueue) SinkPushAll(data []interface{}) error {
 	inputSize := len(data)
 	lastElement := &queueItem{}
-	newHead := lastElement
 
 	lastElement.payload = data[inputSize-1]
+	newHead := lastElement
 	for i := inputSize - 2; i >= 0; i-- {
 		lastElement.next = &queueItem{}
 		lastElement = lastElement.next
