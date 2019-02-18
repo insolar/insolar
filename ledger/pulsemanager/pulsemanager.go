@@ -664,6 +664,10 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse core.Pulse, 
 		return
 	}
 	m.JetStorage.DeleteJetTree(ctx, p.Pulse.PulseNumber)
+	err = m.PulseTracker.DeletePulse(ctx, p.Pulse.PulseNumber)
+	if err != nil {
+		inslogger.FromContext(ctx).Errorf("Can't clean pulse-tracker from pulse: %s", err)
+	}
 }
 
 func (m *PulseManager) prepareArtifactManagerMessageHandlerForNextPulse(ctx context.Context, newPulse core.Pulse, jets []jetInfo) {

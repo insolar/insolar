@@ -279,7 +279,6 @@ type ExecutorResults struct {
 type ExecutionQueueElement struct {
 	Parcel  core.Parcel
 	Request *core.RecordRef
-	Pulse   core.PulseNumber
 }
 
 // AllowedSenderObjectAndRole implements interface method

@@ -32,6 +32,9 @@ var (
 	statCleanScanned = stats.Int64("lightcleanup/scanned", "How many records have been scanned on LM cleanup", stats.UnitDimensionless)
 	statCleanRemoved = stats.Int64("lightcleanup/removed", "How many records have been removed on LM cleanup", stats.UnitDimensionless)
 	statCleanFailed  = stats.Int64("lightcleanup/rmfailed", "How many records have not been removed because of error", stats.UnitDimensionless)
+
+	statPulseDeleted = stats.Int64("lightcleanup/pulses/removed/total", "How many pulses deleted from pulseTracker on LM cleanup", stats.UnitDimensionless)
+	statPulseAdded   = stats.Int64("lightcleanup/pulses/added/total", "How many pulses added to pulseTracker", stats.UnitDimensionless)
 )
 
 func init() {
@@ -56,6 +59,18 @@ func init() {
 			Measure:     statCleanFailed,
 			Aggregation: view.Sum(),
 			TagKeys:     []tag.Key{recordType},
+		},
+		&view.View{
+			Name:        statPulseDeleted.Name(),
+			Description: statPulseDeleted.Description(),
+			Measure:     statPulseDeleted,
+			Aggregation: view.Count(),
+		},
+		&view.View{
+			Name:        statPulseAdded.Name(),
+			Description: statPulseAdded.Description(),
+			Measure:     statPulseAdded,
+			Aggregation: view.Count(),
 		},
 	)
 	if err != nil {
