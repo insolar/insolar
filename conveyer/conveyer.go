@@ -17,7 +17,6 @@
 package conveyer
 
 import (
-	"fmt"
 	"sync"
 
 	"github.com/insolar/insolar/core"
@@ -165,15 +164,11 @@ func (c *PulseConveyer) PreparePulse(pulse core.Pulse) error {
 		return errors.New("[ PreparePulse ] preparation was already done")
 	}
 	if c.futurePulseNumber == nil {
-		fmt.Println("lol")
 		futureSlot := NewSlot(Future, pulse.PulseNumber)
 		c.slotMap[pulse.PulseNumber] = futureSlot
 		c.futurePulseNumber = &pulse.PulseNumber
 	}
 	if *c.futurePulseNumber != pulse.PulseNumber {
-		fmt.Println("lol2")
-		fmt.Println(*c.futurePulseNumber)
-		fmt.Println(pulse.PulseNumber)
 		return errors.New("[ PreparePulse ] received future pulse is different from expected")
 	}
 	// TODO: add sending signal to slots queues
