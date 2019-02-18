@@ -201,6 +201,11 @@ func (cert *Certificate) GetDiscoveryNodes() []core.DiscoveryNode {
 	return result
 }
 
+// GetMajorityRule returns majority rule number
+func (cert *Certificate) GetMajorityRule() int {
+	return cert.MajorityRule
+}
+
 // Dump returns all info about certificate in json format
 func (cert *Certificate) Dump() (string, error) {
 	result, err := json.MarshalIndent(cert, "", "    ")

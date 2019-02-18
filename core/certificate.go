@@ -32,6 +32,7 @@ type Certificate interface {
 
 	GetRootDomainReference() *RecordRef
 	GetDiscoveryNodes() []DiscoveryNode
+	GetMajorityRule() int
 }
 
 //go:generate minimock -i github.com/insolar/insolar/core.DiscoveryNode -o ../testutils -s _mock.go
