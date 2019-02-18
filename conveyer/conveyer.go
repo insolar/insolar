@@ -59,13 +59,13 @@ type Conveyer interface {
 }
 
 type PulseConveyer struct {
-	slotMap         map[core.PulseNumber]*Slot
-	futurePulseData *core.Pulse
-	newFutureSlot   *Slot
-	futureSlot      *Slot
-	presentSlot     *Slot
-	lock            sync.RWMutex
-	state           State
+	slotMap              map[core.PulseNumber]*Slot
+	futurePulseData      *core.Pulse
+	newFuturePulseNumber *core.PulseNumber
+	futurePulseNumber    *core.PulseNumber
+	presentPulseNumber   *core.PulseNumber
+	lock                 sync.RWMutex
+	state                State
 }
 
 func NewPulseConveyer() *PulseConveyer {
@@ -123,7 +123,7 @@ func (c *PulseConveyer) IsOperational() bool {
 func (c *PulseConveyer) unsafeGetSlot(pulseNumber core.PulseNumber) *Slot {
 	slot, ok := c.slotMap[pulseNumber]
 	if !ok {
-		if pulseNumber > c.futureSlot.pulseNumber {
+		if c.futurePulseNumber == nil || pulseNumber > *c.futurePulseNumber {
 			return nil
 		}
 		slot = c.slotMap[AntiqueSlotPulse]
@@ -162,16 +162,20 @@ func (c *PulseConveyer) PreparePulse(pulse core.Pulse) error {
 	if c.futurePulseData != nil {
 		return errors.New("[ PreparePulse ] preparation was already done")
 	}
-	if c.futureSlot == nil {
-		c.futureSlot = NewSlot(Future, pulse.PulseNumber)
+	if c.futurePulseNumber == nil {
+		futureSlot := NewSlot(Future, pulse.PulseNumber)
+		c.slotMap[pulse.PulseNumber] = futureSlot
+		c.futurePulseNumber = &pulse.PulseNumber
 	}
-	if c.futureSlot.pulseNumber != pulse.PulseNumber {
+	if *c.futurePulseNumber != pulse.PulseNumber {
 		return errors.New("[ PreparePulse ] received future pulse is different from expected")
 	}
 	// TODO: add sending signal to slots queues
 
 	c.futurePulseData = &pulse
-	c.newFutureSlot = NewSlot(Unallocated, pulse.NextPulseNumber)
+	newFutureSlot := NewSlot(Unallocated, pulse.NextPulseNumber)
+	c.slotMap[pulse.NextPulseNumber] = newFutureSlot
+	c.newFuturePulseNumber = &pulse.NextPulseNumber
 	return nil
 }
 
@@ -188,8 +192,8 @@ func (c *PulseConveyer) ActivatePulse() error {
 
 	c.futurePulseData = nil
 
-	c.presentSlot = c.futureSlot
-	c.futureSlot = c.newFutureSlot
+	c.presentPulseNumber = c.futurePulseNumber
+	c.futurePulseNumber = c.newFuturePulseNumber
 	// TODO: add sending signal to slots queues
 
 	return nil
