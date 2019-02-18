@@ -17,8 +17,11 @@
 package conveyer
 
 import (
+	"errors"
+	"fmt"
 	"testing"
 
+	"github.com/insolar/insolar/conveyer/queue"
 	"github.com/insolar/insolar/core"
 	"github.com/stretchr/testify/require"
 )
@@ -28,29 +31,29 @@ const testPulseDelta = 10
 const testUnknownPastPulse = core.PulseNumber(500)
 const testUnknownFuturePulse = core.PulseNumber(2000)
 
-func mockQueue(t *testing.T) *NonBlockingQueueMock {
-	qMock := NewNonBlockingQueueMock(t)
-	qMock.SinkPushFunc = func(p interface{}) (r bool) {
-		return true
+func mockQueue(t *testing.T) *queue.IQueueMock {
+	qMock := queue.NewIQueueMock(t)
+	qMock.SinkPushFunc = func(p interface{}) (r error) {
+		return nil
 	}
-	qMock.SinkPushAllFunc = func(p []interface{}) (r bool) {
-		return true
-	}
-	return qMock
-}
-
-func mockQueueReturnFalse(t *testing.T) *NonBlockingQueueMock {
-	qMock := NewNonBlockingQueueMock(t)
-	qMock.SinkPushFunc = func(p interface{}) (r bool) {
-		return false
-	}
-	qMock.SinkPushAllFunc = func(p []interface{}) (r bool) {
-		return false
+	qMock.SinkPushAllFunc = func(p []interface{}) (r error) {
+		return nil
 	}
 	return qMock
 }
 
-func mockSlot(t *testing.T, q *NonBlockingQueueMock, pulseNumber core.PulseNumber) *Slot {
+func mockQueueReturnFalse(t *testing.T) *queue.IQueueMock {
+	qMock := queue.NewIQueueMock(t)
+	qMock.SinkPushFunc = func(p interface{}) (r error) {
+		return errors.New("test error")
+	}
+	qMock.SinkPushAllFunc = func(p []interface{}) (r error) {
+		return errors.New("test error")
+	}
+	return qMock
+}
+
+func mockSlot(t *testing.T, q *queue.IQueueMock, pulseNumber core.PulseNumber) *Slot {
 	slot := &Slot{
 		inputQueue:  q,
 		pulseNumber: pulseNumber,
@@ -59,7 +62,7 @@ func mockSlot(t *testing.T, q *NonBlockingQueueMock, pulseNumber core.PulseNumbe
 }
 
 func testPulseConveyer(t *testing.T, isQueueOk bool) *PulseConveyer {
-	var q *NonBlockingQueueMock
+	var q *queue.IQueueMock
 	if isQueueOk {
 		q = mockQueue(t)
 	} else {
@@ -125,35 +128,35 @@ func TestConveyer_SinkPush(t *testing.T) {
 	c := testPulseConveyer(t, true)
 	data := "fancy_data"
 
-	ok := c.SinkPush(testRealPulse, data)
-	require.True(t, ok)
-	c.slotMap[testRealPulse].inputQueue.(*NonBlockingQueueMock).SinkPushMock.Expect(data)
+	err := c.SinkPush(testRealPulse, data)
+	require.NoError(t, err)
+	c.slotMap[testRealPulse].inputQueue.(*queue.IQueueMock).SinkPushMock.Expect(data)
 }
 
 func TestConveyer_SinkPush_QueueErr(t *testing.T) {
 	c := testPulseConveyer(t, false)
 	data := "fancy_data"
 
-	ok := c.SinkPush(testRealPulse, data)
-	require.False(t, ok)
-	c.slotMap[testRealPulse].inputQueue.(*NonBlockingQueueMock).SinkPushMock.Expect(data)
+	err := c.SinkPush(testRealPulse, data)
+	require.EqualError(t, err, "[ SinkPush ] can't push to queue: test error")
+	c.slotMap[testRealPulse].inputQueue.(*queue.IQueueMock).SinkPushMock.Expect(data)
 }
 
 func TestConveyer_SinkPush_AntiqueSlot(t *testing.T) {
 	c := testPulseConveyer(t, true)
 	data := "fancy_data"
 
-	ok := c.SinkPush(testUnknownPastPulse, data)
-	require.True(t, ok)
-	c.slotMap[AntiqueSlotPulse].inputQueue.(*NonBlockingQueueMock).SinkPushMock.Expect(data)
+	err := c.SinkPush(testUnknownPastPulse, data)
+	require.NoError(t, err)
+	c.slotMap[AntiqueSlotPulse].inputQueue.(*queue.IQueueMock).SinkPushMock.Expect(data)
 }
 
 func TestConveyer_SinkPush_UnknownSlot(t *testing.T) {
 	c := testPulseConveyer(t, true)
 	data := "fancy_data"
 
-	ok := c.SinkPush(testUnknownFuturePulse, data)
-	require.False(t, ok)
+	err := c.SinkPush(testUnknownFuturePulse, data)
+	require.EqualError(t, err, fmt.Sprintf("[ SinkPush ] can't get slot by pulse number %d", testUnknownFuturePulse))
 }
 
 func TestConveyer_SinkPush_NotOperational(t *testing.T) {
@@ -161,8 +164,9 @@ func TestConveyer_SinkPush_NotOperational(t *testing.T) {
 	c.state = Inactive
 	data := "fancy_data"
 
-	ok := c.SinkPush(testUnknownFuturePulse, data)
-	require.False(t, ok)
+	err := c.SinkPush(testUnknownFuturePulse, data)
+	fmt.Println(err.Error())
+	require.EqualError(t, err, "[ SinkPush ] conveyer is not operational now")
 }
 
 func TestConveyer_SinkPushAll(t *testing.T) {
@@ -171,9 +175,9 @@ func TestConveyer_SinkPushAll(t *testing.T) {
 	data2 := "fancy_data_2"
 	data := []interface{}{data1, data2}
 
-	ok := c.SinkPushAll(testRealPulse, data)
-	require.True(t, ok)
-	c.slotMap[testRealPulse].inputQueue.(*NonBlockingQueueMock).SinkPushMock.Expect(data)
+	err := c.SinkPushAll(testRealPulse, data)
+	require.NoError(t, err)
+	c.slotMap[testRealPulse].inputQueue.(*queue.IQueueMock).SinkPushMock.Expect(data)
 }
 
 func TestConveyer_SinkPushAll_QueueErr(t *testing.T) {
@@ -182,9 +186,9 @@ func TestConveyer_SinkPushAll_QueueErr(t *testing.T) {
 	data2 := "fancy_data_2"
 	data := []interface{}{data1, data2}
 
-	ok := c.SinkPushAll(testRealPulse, data)
-	require.False(t, ok)
-	c.slotMap[testRealPulse].inputQueue.(*NonBlockingQueueMock).SinkPushMock.Expect(data)
+	err := c.SinkPushAll(testRealPulse, data)
+	require.EqualError(t, err, "[ SinkPushAll ] can't push to queue: test error")
+	c.slotMap[testRealPulse].inputQueue.(*queue.IQueueMock).SinkPushMock.Expect(data)
 }
 
 func TestConveyer_SinkPushAll_AntiqueSlot(t *testing.T) {
@@ -193,9 +197,9 @@ func TestConveyer_SinkPushAll_AntiqueSlot(t *testing.T) {
 	data2 := "fancy_data_2"
 	data := []interface{}{data1, data2}
 
-	ok := c.SinkPushAll(testUnknownPastPulse, data)
-	require.True(t, ok)
-	c.slotMap[AntiqueSlotPulse].inputQueue.(*NonBlockingQueueMock).SinkPushMock.Expect(data)
+	err := c.SinkPushAll(testUnknownPastPulse, data)
+	require.NoError(t, err)
+	c.slotMap[AntiqueSlotPulse].inputQueue.(*queue.IQueueMock).SinkPushMock.Expect(data)
 }
 
 func TestConveyer_SinkPushAll_UnknownSlot(t *testing.T) {
@@ -204,8 +208,8 @@ func TestConveyer_SinkPushAll_UnknownSlot(t *testing.T) {
 	data2 := "fancy_data_2"
 	data := []interface{}{data1, data2}
 
-	ok := c.SinkPushAll(testUnknownFuturePulse, data)
-	require.False(t, ok)
+	err := c.SinkPushAll(testUnknownFuturePulse, data)
+	require.EqualError(t, err, fmt.Sprintf("[ SinkPushAll ] can't get slot by pulse number %d", testUnknownFuturePulse))
 }
 
 func TestConveyer_SinkPushAll_NotOperational(t *testing.T) {
@@ -215,8 +219,8 @@ func TestConveyer_SinkPushAll_NotOperational(t *testing.T) {
 	data2 := "fancy_data_2"
 	data := []interface{}{data1, data2}
 
-	ok := c.SinkPushAll(testUnknownFuturePulse, data)
-	require.False(t, ok)
+	err := c.SinkPushAll(testUnknownFuturePulse, data)
+	require.EqualError(t, err, "[ SinkPushAll ] conveyer is not operational now")
 }
 
 func TestConveyer_PreparePulse(t *testing.T) {
@@ -237,7 +241,7 @@ func TestConveyer_PreparePulse_NotOperational(t *testing.T) {
 
 	err := c.PreparePulse(pulse)
 
-	require.Errorf(t, err, "[ PreparePulse ] conveyer is not operational now")
+	require.EqualError(t, err, "[ PreparePulse ] conveyer is not operational now")
 	require.Nil(t, c.futurePulseData)
 	require.Equal(t, Inactive, c.state)
 }
@@ -250,7 +254,7 @@ func TestConveyer_PreparePulse_AlreadyDone(t *testing.T) {
 
 	err := c.PreparePulse(pulse)
 
-	require.Errorf(t, err, "[ PreparePulse ] preparation was already done")
+	require.EqualError(t, err, "[ PreparePulse ] preparation was already done")
 	require.Equal(t, PreparingPulse, c.state)
 }
 
@@ -259,7 +263,7 @@ func TestConveyer_PreparePulse_NotFuture(t *testing.T) {
 	pulse := core.Pulse{PulseNumber: testRealPulse + testPulseDelta + 10}
 
 	err := c.PreparePulse(pulse)
-	require.Errorf(t, err, "[ PreparePulse ] received future pulse is different from expected")
+	require.EqualError(t, err, "[ PreparePulse ] received future pulse is different from expected")
 	require.Nil(t, c.futurePulseData)
 	require.Equal(t, Active, c.state)
 }
@@ -285,7 +289,7 @@ func TestConveyer_ActivatePulse_NotOperational(t *testing.T) {
 
 	err := c.ActivatePulse()
 
-	require.Errorf(t, err, "[ ActivatePulse ] conveyer is not operational now")
+	require.EqualError(t, err, "[ ActivatePulse ] conveyer is not operational now")
 	require.Equal(t, &pulse, c.futurePulseData)
 	require.Equal(t, Inactive, c.state)
 }
@@ -296,6 +300,6 @@ func TestConveyer_ActivatePulse_NoPrepare(t *testing.T) {
 
 	err := c.ActivatePulse()
 
-	require.Errorf(t, err, "[ ActivatePulse ] preparation missing")
+	require.EqualError(t, err, "[ ActivatePulse ] preparation missing")
 	require.Equal(t, Active, c.state)
 }

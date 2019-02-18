@@ -19,23 +19,20 @@ package conveyer
 import (
 	"sync"
 
+	"github.com/insolar/insolar/conveyer/queue"
 	"github.com/insolar/insolar/core"
 	"github.com/pkg/errors"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/conveyer.NonBlockingQueue -o ./ -s _mock.go
-// will be change to Ivan realization
-type NonBlockingQueue interface {
-	SinkPush(data interface{}) bool
-	SinkPushAll(data []interface{}) bool
-	RemoveAll() [](interface{})
-}
-
+// EventSink allows to push events to conveyer
 type EventSink interface {
-	SinkPush(pulseNumber core.PulseNumber, data interface{}) bool
-	SinkPushAll(pulseNumber core.PulseNumber, data []interface{}) bool
+	// SinkPush adds event to conveyer
+	SinkPush(pulseNumber core.PulseNumber, data interface{}) error
+	// SinkPushAll adds several events to conveyer
+	SinkPushAll(pulseNumber core.PulseNumber, data []interface{}) error
 }
 
+// State is the states of conveyer
 type State int
 
 //go:generate stringer -type=State
@@ -46,18 +43,25 @@ const (
 	Inactive
 )
 
+// Control allows to control conveyer and pulse
 type Control interface {
+	// PreparePulse is preparing conveyer for working with provided pulse
 	PreparePulse(pulse core.Pulse) error
+	// ActivatePulse is activate conveyer with prepared pulse
 	ActivatePulse() error
+	// GetState returns current state of conveyer
 	GetState() State
+	// IsOperational shows if conveyer is ready for work
 	IsOperational() bool
 }
 
+// Conveyer is responsible for all pulse-dependent processing logic
 type Conveyer interface {
 	EventSink
 	Control
 }
 
+// PulseConveyer is realization of Conveyer
 type PulseConveyer struct {
 	slotMap              map[core.PulseNumber]*Slot
 	futurePulseData      *core.Pulse
@@ -68,7 +72,8 @@ type PulseConveyer struct {
 	state                State
 }
 
-func NewPulseConveyer() *PulseConveyer {
+// NewPulseConveyer creates new instance of PulseConveyer
+func NewPulseConveyer() Conveyer {
 	c := &PulseConveyer{
 		slotMap: make(map[core.PulseNumber]*Slot),
 		state:   Inactive,
@@ -78,6 +83,7 @@ func NewPulseConveyer() *PulseConveyer {
 	return c
 }
 
+// PulseState is the states of pulse inside slot
 type PulseState int
 
 const AntiqueSlotPulse = core.PulseNumber(0)
@@ -91,27 +97,30 @@ const (
 	Antique
 )
 
+// Slot holds info about specific pulse and events for it
 type Slot struct {
-	inputQueue  NonBlockingQueue
+	inputQueue  queue.IQueue
 	pulseState  PulseState
 	pulseNumber core.PulseNumber
 }
 
+// NewSlot creates new instance of Slot
 func NewSlot(pulseState PulseState, pulseNumber core.PulseNumber) *Slot {
 	return &Slot{
 		pulseState:  pulseState,
-		inputQueue:  &Queue{},
+		inputQueue:  queue.NewMutexQueue(),
 		pulseNumber: pulseNumber,
 	}
 }
 
-// GetState returns current state of Conveyer
+// GetState returns current state of conveyer
 func (c *PulseConveyer) GetState() State {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 	return c.state
 }
 
+// IsOperational shows if conveyer is ready for work
 func (c *PulseConveyer) IsOperational() bool {
 	currentState := c.GetState()
 	if currentState == Active || currentState == PreparingPulse {
@@ -131,32 +140,35 @@ func (c *PulseConveyer) unsafeGetSlot(pulseNumber core.PulseNumber) *Slot {
 	return slot
 }
 
-func (c *PulseConveyer) SinkPush(pulseNumber core.PulseNumber, data interface{}) bool {
+// SinkPush adds event to conveyer
+func (c *PulseConveyer) SinkPush(pulseNumber core.PulseNumber, data interface{}) error {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 	if !c.IsOperational() {
-		return false
+		return errors.New("[ SinkPush ] conveyer is not operational now")
 	}
 	slot := c.unsafeGetSlot(pulseNumber)
 	if slot == nil {
-		return false
+		return errors.Errorf("[ SinkPush ] can't get slot by pulse number %d", pulseNumber)
 	}
-	return slot.inputQueue.SinkPush(data)
+	return errors.Wrap(slot.inputQueue.SinkPush(data), "[ SinkPush ] can't push to queue")
 }
 
-func (c *PulseConveyer) SinkPushAll(pulseNumber core.PulseNumber, data []interface{}) bool {
+// SinkPushAll adds several events to conveyer
+func (c *PulseConveyer) SinkPushAll(pulseNumber core.PulseNumber, data []interface{}) error {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 	if !c.IsOperational() {
-		return false
+		return errors.New("[ SinkPushAll ] conveyer is not operational now")
 	}
 	slot := c.unsafeGetSlot(pulseNumber)
 	if slot == nil {
-		return false
+		return errors.Errorf("[ SinkPushAll ] can't get slot by pulse number %d", pulseNumber)
 	}
-	return slot.inputQueue.SinkPushAll(data)
+	return errors.Wrap(slot.inputQueue.SinkPushAll(data), "[ SinkPushAll ] can't push to queue")
 }
 
+// PreparePulse is preparing conveyer for working with provided pulse
 // TODO: add callback param
 func (c *PulseConveyer) PreparePulse(pulse core.Pulse) error {
 	if !c.IsOperational() {
@@ -187,6 +199,7 @@ func (c *PulseConveyer) PreparePulse(pulse core.Pulse) error {
 	return nil
 }
 
+// ActivatePulse is activate conveyer with prepared pulse
 func (c *PulseConveyer) ActivatePulse() error {
 	if !c.IsOperational() {
 		return errors.New("[ ActivatePulse ] conveyer is not operational now")
