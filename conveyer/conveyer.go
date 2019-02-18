@@ -32,8 +32,8 @@ type NonBlockingQueue interface {
 }
 
 type EventSink interface {
-	SinkPush(addr core.PulseNumber, data interface{}) bool
-	SinkPushAll(addr core.PulseNumber, data []interface{}) bool
+	SinkPush(pulseNumber core.PulseNumber, data interface{}) bool
+	SinkPushAll(pulseNumber core.PulseNumber, data []interface{}) bool
 }
 
 type State int
@@ -131,20 +131,20 @@ func (c *PulseConveyer) unsafeGetSlot(pulseNumber core.PulseNumber) *Slot {
 	return slot
 }
 
-func (c *PulseConveyer) SinkPush(addr core.PulseNumber, data interface{}) bool {
+func (c *PulseConveyer) SinkPush(pulseNumber core.PulseNumber, data interface{}) bool {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
-	slot := c.unsafeGetSlot(addr)
+	slot := c.unsafeGetSlot(pulseNumber)
 	if slot == nil {
 		return false
 	}
 	return slot.inputQueue.SinkPush(data)
 }
 
-func (c *PulseConveyer) SinkPushAll(addr core.PulseNumber, data []interface{}) bool {
+func (c *PulseConveyer) SinkPushAll(pulseNumber core.PulseNumber, data []interface{}) bool {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
-	slot := c.unsafeGetSlot(addr)
+	slot := c.unsafeGetSlot(pulseNumber)
 	if slot == nil {
 		return false
 	}
