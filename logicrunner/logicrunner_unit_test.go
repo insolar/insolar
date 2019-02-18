@@ -145,61 +145,73 @@ func (suite *LogicRunnerTestSuite) TestCheckPendingRequests() {
 	objectRef := testutils.RandomRef()
 
 	table := []struct {
-		name string
-		inState message.PendingState
-		outState message.PendingState
-		message bool
+		name        string
+		inState     message.PendingState
+		outState    message.PendingState
+		message     bool
 		messageType core.MessageType
-		amReply *struct {has bool; err error}
+		amReply     *struct {
+			has bool;
+			err error
+		}
 		isError bool
 	}{
 		{
-			name: "already in pending",
-			inState: message.InPending,
+			name:     "already in pending",
+			inState:  message.InPending,
 			outState: message.InPending,
 		},
 		{
-			name: "already not in pending",
-			inState: message.NotPending,
+			name:     "already not in pending",
+			inState:  message.NotPending,
 			outState: message.NotPending,
 		},
 		{
-			name: "constructor call",
-			inState: message.PendingUnknown,
-			message: true,
+			name:        "constructor call",
+			inState:     message.PendingUnknown,
+			message:     true,
 			messageType: core.TypeCallConstructor,
+			outState:    message.NotPending,
+		},
+		{
+			name:        "method call, not pending",
+			inState:     message.PendingUnknown,
+			message:     true,
+			messageType: core.TypeCallMethod,
+			amReply: &struct {
+				has bool;
+				err error
+			}{false, nil},
 			outState: message.NotPending,
 		},
 		{
-			name: "method call, not pending",
-			inState: message.PendingUnknown,
-			message: true,
+			name:        "method call, in pending",
+			inState:     message.PendingUnknown,
+			message:     true,
 			messageType: core.TypeCallMethod,
-			amReply: &struct {has bool; err error}{false, nil},
-			outState: message.NotPending,
-		},
-		{
-			name: "method call, in pending",
-			inState: message.PendingUnknown,
-			message: true,
-			messageType: core.TypeCallMethod,
-			amReply: &struct {has bool; err error}{true, nil},
+			amReply: &struct {
+				has bool;
+				err error
+			}{true, nil},
 			outState: message.InPending,
 		},
 		{
-			name: "method call, in pending",
-			inState: message.PendingUnknown,
-			message: true,
+			name:        "method call, in pending",
+			inState:     message.PendingUnknown,
+			message:     true,
 			messageType: core.TypeCallMethod,
-			amReply: &struct {has bool; err error}{true, errors.New("some")},
+			amReply: &struct {
+				has bool;
+				err error
+			}{true, errors.New("some")},
 			outState: message.PendingUnknown,
-			isError: true,
+			isError:  true,
 		},
 	}
 
 	for _, test := range table {
 		suite.T().Run(test.name, func(t *testing.T) {
-			parcel:= testutils.NewParcelMock(t)
+			parcel := testutils.NewParcelMock(t)
 			if test.message {
 				parcel.TypeMock.ExpectOnce().Return(test.messageType)
 			}
@@ -218,7 +230,7 @@ func (suite *LogicRunnerTestSuite) TestCheckPendingRequests() {
 	}
 
 	suite.T().Run("method call, AM error", func(t *testing.T) {
-		parcel:= testutils.NewParcelMock(t)
+		parcel := testutils.NewParcelMock(t)
 		parcel.TypeMock.Expect().Return(core.TypeCallMethod)
 		es := &ExecutionState{Ref: objectRef, pending: message.PendingUnknown}
 		suite.am.HasPendingRequestsMock.Return(false, errors.New("some"))
@@ -906,6 +918,20 @@ func (s *LRUnsafeGetLedgerPendingRequestTestSuite) BeforeTest(suiteName, testNam
 
 func (s *LRUnsafeGetLedgerPendingRequestTestSuite) AfterTest(suiteName, testName string) {
 	s.LogicRunnerCommonTestSuite.AfterTest(suiteName, testName)
+}
+
+func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestAlreadyHaveLedgerQueueElement() {
+	es := &ExecutionState{
+		Ref:                s.ref,
+		Behaviour:          &ValidationSaver{},
+		LedgerQueueElement: &ExecutionQueueElement{},
+	}
+
+	s.lr.unsafeGetLedgerPendingRequest(s.ctx, es)
+
+	// we check that there is no unexpected calls to A.M., as we already have element
+	// from ledger another call to the ledger will return the same request, so we make
+	// sure it doesn't happen
 }
 
 func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestNoMoreRequestsInExecutionState() {
