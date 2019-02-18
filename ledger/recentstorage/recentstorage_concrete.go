@@ -72,6 +72,19 @@ func (p *RecentStorageProvider) GetPendingStorage(ctx context.Context, jetID cor
 	return storage
 }
 
+// Count returns count of pendings in all storages
+func (p *RecentStorageProvider) Count() int {
+	p.indexLock.Lock()
+	defer p.indexLock.Unlock()
+
+	count := 0
+	for _, storage := range p.pendingStorages {
+		count += len(storage.requests)
+	}
+
+	return count
+}
+
 // CloneIndexStorage clones indexes from one jet to another one
 func (p *RecentStorageProvider) CloneIndexStorage(ctx context.Context, fromJetID, toJetID core.RecordID) {
 	p.indexLock.Lock()
@@ -393,14 +406,6 @@ func (r *PendingStorageConcrete) GetRequestsForObject(obj core.RecordID) []core.
 	results = append(results, forObject.Context.Requests...)
 
 	return results
-}
-
-// Count returns a number of pending requests, which are registered in the system
-func (r *PendingStorageConcrete) Count() int {
-	r.lock.RLock()
-	defer r.lock.RUnlock()
-
-	return len(r.requests)
 }
 
 // RemovePendingRequest removes a request on object from cache

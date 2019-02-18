@@ -28,6 +28,8 @@ type Provider interface {
 	GetIndexStorage(ctx context.Context, jetID core.RecordID) RecentIndexStorage
 	GetPendingStorage(ctx context.Context, jetID core.RecordID) PendingStorage
 
+	Count() int
+
 	CloneIndexStorage(ctx context.Context, fromJetID, toJetID core.RecordID)
 	ClonePendingStorage(ctx context.Context, fromJetID, toJetID core.RecordID)
 
@@ -58,8 +60,6 @@ type PendingStorage interface {
 
 	GetRequests() map[core.RecordID]PendingObjectContext
 	GetRequestsForObject(obj core.RecordID) []core.RecordID
-
-	Count() int
 
 	RemovePendingRequest(ctx context.Context, obj, req core.RecordID)
 }

@@ -122,6 +122,6 @@ func NewLedger() Ledger {
 			ExportLag: 40, // 40 seconds
 		},
 
-		PendingRequestsLimit: 500,
+		PendingRequestsLimit: 1000,
 	}
 }

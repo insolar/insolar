@@ -308,10 +308,11 @@ func (h *MessageHandler) handleSetRecord(ctx context.Context, parcel core.Parcel
 
 	switch r := rec.(type) {
 	case record.Request:
-		recentStorage := h.RecentStorageProvider.GetPendingStorage(ctx, jetID)
-		if recentStorage.Count() > h.conf.PendingRequestsLimit {
+		if h.RecentStorageProvider.Count() > h.conf.PendingRequestsLimit {
+			inslogger.FromContext(ctx).Errorf("Rate limiter works. Too many pendings")
 			return &reply.Error{ErrType: reply.ErrToManyPendingRequests}, nil
 		}
+		recentStorage := h.RecentStorageProvider.GetPendingStorage(ctx, jetID)
 		recentStorage.AddPendingRequest(ctx, r.GetObject(), *id)
 	case *record.ResultRecord:
 		recentStorage := h.RecentStorageProvider.GetPendingStorage(ctx, jetID)
