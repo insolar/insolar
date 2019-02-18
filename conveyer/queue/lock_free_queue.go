@@ -55,12 +55,14 @@ func (q *LockFreeQueue) SinkPush(data interface{}) error {
 
 		newNode.next = head
 		newNode.index = head.index + 1
-		// lastNew.biggestQueueSignal = max(head.biggestQueueSignal, lastNew.type) // TODO:
+		if q.head.biggestQueueSignal > newNode.itemType {
+			newNode.biggestQueueSignal = q.head.biggestQueueSignal
+		} else {
+			newNode.biggestQueueSignal = newNode.itemType
+		}
 
 		newNodeAdded = atomic.CompareAndSwapPointer((*unsafe.Pointer)(unsafe.Pointer(&q.head)), unsafe.Pointer(head), unsafe.Pointer(newNode))
 	}
-
-	//fmt.Println("Pushing: ", data)
 
 	return nil
 }
@@ -96,7 +98,6 @@ func (q *LockFreeQueue) SinkPushAll(data []interface{}) error {
 		}
 
 		lastElement.next = head
-		// lastNew.biggestQueueSignal = max(head.biggestQueueSignal, lastNew.type) // TODO:
 
 		newNodeAdded = atomic.CompareAndSwapPointer((*unsafe.Pointer)(unsafe.Pointer(&q.head)), unsafe.Pointer(head), unsafe.Pointer(newHead))
 	}
@@ -127,8 +128,6 @@ func (q *LockFreeQueue) RemoveAll() []OutputElement {
 		result = append(result, element)
 		current = current.next
 	}
-
-	//fmt.Println(" REMOVING ALL Pushing: ", result)
 
 	return result
 }
