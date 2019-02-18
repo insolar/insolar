@@ -22,6 +22,7 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"go.opencensus.io/stats"
 )
 
 type pulseTrackerMemory struct {
@@ -113,6 +114,10 @@ func (p *pulseTrackerMemory) AddPulse(ctx context.Context, pulse core.Pulse) err
 	p.memory[pn] = newPulse
 	p.latestPulse = pn
 
+	stats.Record(ctx,
+		statPulseAdded.M(1),
+	)
+
 	return nil
 }
 
@@ -133,6 +138,10 @@ func (p *pulseTrackerMemory) DeletePulse(ctx context.Context, num core.PulseNumb
 	}
 
 	delete(p.memory, num)
+
+	stats.Record(ctx,
+		statPulseDeleted.M(1),
+	)
 
 	return nil
 }
