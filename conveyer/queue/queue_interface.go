@@ -56,6 +56,14 @@ func init() {
 	}
 }
 
+func maxSignal(signal1 uint32, signal2 uint32) uint32 {
+	if signal1 > signal2 {
+		return signal1
+	} else {
+		return signal2
+	}
+}
+
 // IQueue is interface for queue
 type IQueue interface {
 	// SinkPush adds one item to queue

@@ -118,7 +118,7 @@ func TestMultipleBlockUnblock(t *testing.T) {
 }
 
 func TestRemoveAllAfterBlock(t *testing.T) {
-	numElements := 300
+	numElements := 200
 	expectedResult := make([]OutputElement, 0, numElements*2)
 	queue := getFilledQueue(t, numElements, &expectedResult)
 	require.EqualValues(t, expectedResult, queue.BlockAndRemoveAll())
@@ -169,6 +169,18 @@ func TestPushSignalsAndMessages(t *testing.T) {
 	require.NotEmpty(t, expectedSignals)
 	require.NotEmpty(t, expectedMessages)
 	require.EqualValues(t, append(expectedSignals, expectedMessages...), queue.RemoveAll())
+}
+
+func TestHasSignalAfterPushAll(t *testing.T) {
+	queue := makeTestQueue()
+
+	callback := mockSyncDone{}
+
+	require.False(t, queue.HasSignal())
+	queue.PushSignal(11, callback)
+	queue.SinkPushAll([]interface{}{77, 88, 99})
+
+	require.True(t, queue.HasSignal())
 }
 
 func TestPushInvalidSignal(t *testing.T) {

@@ -55,11 +55,7 @@ func (q *LockFreeQueue) SinkPush(data interface{}) error {
 
 		newNode.next = head
 		newNode.index = head.index + 1
-		if q.head.biggestQueueSignal > newNode.itemType {
-			newNode.biggestQueueSignal = q.head.biggestQueueSignal
-		} else {
-			newNode.biggestQueueSignal = newNode.itemType
-		}
+		newNode.biggestQueueSignal = maxSignal(q.head.biggestQueueSignal, newNode.itemType)
 
 		newNodeAdded = atomic.CompareAndSwapPointer((*unsafe.Pointer)(unsafe.Pointer(&q.head)), unsafe.Pointer(head), unsafe.Pointer(newNode))
 	}

@@ -54,12 +54,7 @@ func (q *MutexQueue) sinkPush(newNode *QueueItem) error {
 	newNode.next = q.head
 	newNode.index = q.head.index + 1
 
-	// just max =(
-	if q.head.biggestQueueSignal > newNode.itemType {
-		newNode.biggestQueueSignal = q.head.biggestQueueSignal
-	} else {
-		newNode.biggestQueueSignal = newNode.itemType
-	}
+	newNode.biggestQueueSignal = maxSignal(q.head.biggestQueueSignal, newNode.itemType)
 
 	q.head = newNode
 
@@ -102,13 +97,15 @@ func (q *MutexQueue) SinkPushAll(data []interface{}) error {
 
 	nextIndex := q.head.index + 1
 	tmpHead := newHead
+	currentMaxSignal := maxSignal(q.head.biggestQueueSignal, tmpHead.itemType)
 	for i := inputSize - 1; i >= 0; i-- {
 		tmpHead.index = nextIndex + uint(i)
+		currentMaxSignal = maxSignal(currentMaxSignal, tmpHead.biggestQueueSignal)
+		tmpHead.biggestQueueSignal = currentMaxSignal
 		tmpHead = tmpHead.next
 	}
 
 	lastElement.next = q.head
-	// lastNew.biggestQueueSignal = max(head.biggestQueueSignal, lastNew.type) // TODO: ? What is that ?
 
 	q.head = newHead
 
