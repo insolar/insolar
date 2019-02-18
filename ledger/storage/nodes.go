@@ -70,3 +70,7 @@ func (Node) LeavingETA() core.PulseNumber {
 func (Node) IsWorking() bool {
 	panic("implement me")
 }
+
+func (Node) GetState() core.NodeState {
+	panic("implement me")
+}

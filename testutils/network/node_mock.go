@@ -33,6 +33,11 @@ type NodeMock struct {
 	GetGlobuleIDPreCounter uint64
 	GetGlobuleIDMock       mNodeMockGetGlobuleID
 
+	GetStateFunc       func() (r core.NodeState)
+	GetStateCounter    uint64
+	GetStatePreCounter uint64
+	GetStateMock       mNodeMockGetState
+
 	IDFunc       func() (r core.RecordRef)
 	IDCounter    uint64
 	IDPreCounter uint64
@@ -85,6 +90,7 @@ func NewNodeMock(t minimock.Tester) *NodeMock {
 	m.AddressMock = mNodeMockAddress{mock: m}
 	m.ConsensusAddressMock = mNodeMockConsensusAddress{mock: m}
 	m.GetGlobuleIDMock = mNodeMockGetGlobuleID{mock: m}
+	m.GetStateMock = mNodeMockGetState{mock: m}
 	m.IDMock = mNodeMockID{mock: m}
 	m.IsWorkingMock = mNodeMockIsWorking{mock: m}
 	m.LeavingMock = mNodeMockLeaving{mock: m}
@@ -494,6 +500,140 @@ func (m *NodeMock) GetGlobuleIDFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.GetGlobuleIDFunc != nil {
 		return atomic.LoadUint64(&m.GetGlobuleIDCounter) > 0
+	}
+
+	return true
+}
+
+type mNodeMockGetState struct {
+	mock              *NodeMock
+	mainExpectation   *NodeMockGetStateExpectation
+	expectationSeries []*NodeMockGetStateExpectation
+}
+
+type NodeMockGetStateExpectation struct {
+	result *NodeMockGetStateResult
+}
+
+type NodeMockGetStateResult struct {
+	r core.NodeState
+}
+
+//Expect specifies that invocation of Node.GetState is expected from 1 to Infinity times
+func (m *mNodeMockGetState) Expect() *mNodeMockGetState {
+	m.mock.GetStateFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &NodeMockGetStateExpectation{}
+	}
+
+	return m
+}
+
+//Return specifies results of invocation of Node.GetState
+func (m *mNodeMockGetState) Return(r core.NodeState) *NodeMock {
+	m.mock.GetStateFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &NodeMockGetStateExpectation{}
+	}
+	m.mainExpectation.result = &NodeMockGetStateResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of Node.GetState is expected once
+func (m *mNodeMockGetState) ExpectOnce() *NodeMockGetStateExpectation {
+	m.mock.GetStateFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &NodeMockGetStateExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *NodeMockGetStateExpectation) Return(r core.NodeState) {
+	e.result = &NodeMockGetStateResult{r}
+}
+
+//Set uses given function f as a mock of Node.GetState method
+func (m *mNodeMockGetState) Set(f func() (r core.NodeState)) *NodeMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.GetStateFunc = f
+	return m.mock
+}
+
+//GetState implements github.com/insolar/insolar/core.Node interface
+func (m *NodeMock) GetState() (r core.NodeState) {
+	counter := atomic.AddUint64(&m.GetStatePreCounter, 1)
+	defer atomic.AddUint64(&m.GetStateCounter, 1)
+
+	if len(m.GetStateMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.GetStateMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to NodeMock.GetState.")
+			return
+		}
+
+		result := m.GetStateMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the NodeMock.GetState")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetStateMock.mainExpectation != nil {
+
+		result := m.GetStateMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the NodeMock.GetState")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetStateFunc == nil {
+		m.t.Fatalf("Unexpected call to NodeMock.GetState.")
+		return
+	}
+
+	return m.GetStateFunc()
+}
+
+//GetStateMinimockCounter returns a count of NodeMock.GetStateFunc invocations
+func (m *NodeMock) GetStateMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.GetStateCounter)
+}
+
+//GetStateMinimockPreCounter returns the value of NodeMock.GetState invocations
+func (m *NodeMock) GetStateMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.GetStatePreCounter)
+}
+
+//GetStateFinished returns true if mock invocations count is ok
+func (m *NodeMock) GetStateFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.GetStateMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.GetStateCounter) == uint64(len(m.GetStateMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.GetStateMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.GetStateCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.GetStateFunc != nil {
+		return atomic.LoadUint64(&m.GetStateCounter) > 0
 	}
 
 	return true
@@ -1587,6 +1727,10 @@ func (m *NodeMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to NodeMock.GetGlobuleID")
 	}
 
+	if !m.GetStateFinished() {
+		m.t.Fatal("Expected call to NodeMock.GetState")
+	}
+
 	if !m.IDFinished() {
 		m.t.Fatal("Expected call to NodeMock.ID")
 	}
@@ -1648,6 +1792,10 @@ func (m *NodeMock) MinimockFinish() {
 		m.t.Fatal("Expected call to NodeMock.GetGlobuleID")
 	}
 
+	if !m.GetStateFinished() {
+		m.t.Fatal("Expected call to NodeMock.GetState")
+	}
+
 	if !m.IDFinished() {
 		m.t.Fatal("Expected call to NodeMock.ID")
 	}
@@ -1697,6 +1845,7 @@ func (m *NodeMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.AddressFinished()
 		ok = ok && m.ConsensusAddressFinished()
 		ok = ok && m.GetGlobuleIDFinished()
+		ok = ok && m.GetStateFinished()
 		ok = ok && m.IDFinished()
 		ok = ok && m.IsWorkingFinished()
 		ok = ok && m.LeavingFinished()
@@ -1723,6 +1872,10 @@ func (m *NodeMock) MinimockWait(timeout time.Duration) {
 
 			if !m.GetGlobuleIDFinished() {
 				m.t.Error("Expected call to NodeMock.GetGlobuleID")
+			}
+
+			if !m.GetStateFinished() {
+				m.t.Error("Expected call to NodeMock.GetState")
 			}
 
 			if !m.IDFinished() {
@@ -1778,6 +1931,10 @@ func (m *NodeMock) AllMocksCalled() bool {
 	}
 
 	if !m.GetGlobuleIDFinished() {
+		return false
+	}
+
+	if !m.GetStateFinished() {
 		return false
 	}
 

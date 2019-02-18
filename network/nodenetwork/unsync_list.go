@@ -200,7 +200,7 @@ func (ul *unsyncList) mergeClaim(origin core.Node, nodes map[core.RecordRef]core
 		if err != nil {
 			return nil, errors.Wrap(err, "[ mergeClaim ] failed to convert Claim -> Node")
 		}
-		node.(MutableNode).SetState(NodeJoining)
+		node.(MutableNode).SetState(core.NodeJoining)
 		nodes[node.ID()] = node
 		isJoinClaim = true
 	case *consensus.NodeLeaveClaim:
