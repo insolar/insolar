@@ -908,6 +908,20 @@ func (s *LRUnsafeGetLedgerPendingRequestTestSuite) AfterTest(suiteName, testName
 	s.LogicRunnerCommonTestSuite.AfterTest(suiteName, testName)
 }
 
+func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestAlreadyHaveLedgerQueueElement() {
+	es := &ExecutionState{
+		Ref:                s.ref,
+		Behaviour:          &ValidationSaver{},
+		LedgerQueueElement: &ExecutionQueueElement{},
+	}
+
+	s.lr.unsafeGetLedgerPendingRequest(s.ctx, es)
+
+	// we check that there is no unexpected calls to A.M., as we already have element
+	// from ledger another call to the ledger will return the same request, so we make
+	// sure it doesn't happen
+}
+
 func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestNoMoreRequestsInExecutionState() {
 	es := &ExecutionState{
 		Ref:                   s.ref,
