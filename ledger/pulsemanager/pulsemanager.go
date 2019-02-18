@@ -372,11 +372,14 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse c
 	})
 	indexToSplit := rand.Intn(len(jetIDs))
 	for i, jetID := range jetIDs {
+		imExecutor := false
 		executor, err := m.JetCoordinator.LightExecutorForJet(ctx, jetID, currentPulse)
-		if err != nil {
+		if err != nil && err != core.ErrNoNodes {
 			return nil, err
 		}
-		imExecutor := *executor == me
+		if err == nil {
+			imExecutor = *executor == me
+		}
 
 		jetLogger := logger.WithField("jetid", jetID.DebugString())
 		inslogger.SetLogger(ctx, jetLogger)
@@ -554,12 +557,13 @@ func (m *PulseManager) setUnderGilSection(
 		return nil, nil, nil, nil, errors.Wrap(err, "call of GetLatestPulseNumber failed")
 	}
 
+	logger := inslogger.FromContext(ctx)
 	if err != core.ErrNotFound {
 		oldPulse = &storagePulse.Pulse
 		prevPN = storagePulse.Prev
+		logger.WithField("current_pulse", oldPulse.PulseNumber)
 	}
 
-	logger := inslogger.FromContext(ctx)
 	logger.WithFields(map[string]interface{}{
 		"new_pulse": newPulse.PulseNumber,
 		"persist":   persist,

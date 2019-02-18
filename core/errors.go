@@ -31,4 +31,6 @@ var (
 	ErrNoPendingRequest = errors.New("no pending requests are available")
 	// ErrNotFound is returned when something not found
 	ErrNotFound = errors.New("Not found")
+	// ErrNoNodes is returned if no matching nodes found
+	ErrNoNodes = errors.New("no matching nodes")
 )
