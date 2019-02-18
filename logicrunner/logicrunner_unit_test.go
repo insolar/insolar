@@ -908,16 +908,6 @@ func (s *LRUnsafeGetLedgerPendingRequestTestSuite) AfterTest(suiteName, testName
 	s.LogicRunnerCommonTestSuite.AfterTest(suiteName, testName)
 }
 
-func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestAlreadyHaveLedgerQueueElement() {
-	es := &ExecutionState{
-		Ref:                s.ref,
-		Behaviour:          &ValidationSaver{},
-		LedgerQueueElement: &ExecutionQueueElement{pulse: s.currentPulseNumber},
-	}
-	s.lr.unsafeGetLedgerPendingRequest(s.ctx, es)
-	s.Require().Equal(es.LedgerQueueElement.pulse, s.currentPulseNumber)
-}
-
 func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestNoMoreRequestsInExecutionState() {
 	es := &ExecutionState{
 		Ref:                   s.ref,
@@ -972,5 +962,4 @@ func (s LRUnsafeGetLedgerPendingRequestTestSuite) TestUnsafeGetLedgerPendingRequ
 
 	s.Require().Equal(true, es.LedgerHasMoreRequests)
 	s.Require().Equal(parcel, es.LedgerQueueElement.parcel)
-	s.Require().Equal(s.currentPulseNumber, es.LedgerQueueElement.pulse)
 }
