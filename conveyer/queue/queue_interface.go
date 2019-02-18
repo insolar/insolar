@@ -1,5 +1,5 @@
 /*
- *    Copyright 2019 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -58,9 +58,9 @@ func init() {
 func maxSignal(signal1 uint32, signal2 uint32) uint32 {
 	if signal1 > signal2 {
 		return signal1
-	} else {
-		return signal2
 	}
+
+	return signal2
 }
 
 // IQueue is interface for queue
@@ -77,6 +77,6 @@ type IQueue interface {
 	Unblock() bool
 	// PushSignal adds biggestQueueSignal to queue
 	PushSignal(signalType uint32, callback SyncDone) error
-	// HasSignal is true if queue has at least ont biggestQueueSignal. Must be atomic. Without mutex
+	// HasSignal is true if queue has at least one biggestQueueSignal. Must be atomic. Without mutex
 	HasSignal() bool
 }

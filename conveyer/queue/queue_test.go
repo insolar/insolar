@@ -1,5 +1,5 @@
 /*
- *    Copyright 2019 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -53,6 +53,17 @@ func TestSequentialAccess(t *testing.T) {
 	require.Equal(t, numElements*2, len(total))
 
 	require.EqualValues(t, expectedResult, total)
+}
+
+func TestSinkPushAllToEmptyQueue(t *testing.T) {
+	queue := makeTestQueue()
+	expected := []interface{}{3, 5, 55}
+	queue.SinkPushAll(expected)
+	require.EqualValues(t, []OutputElement{
+		OutputElement{data: expected[0]},
+		OutputElement{data: expected[1]},
+		OutputElement{data: expected[2]},
+	}, queue.RemoveAll())
 }
 
 func TestGetFromEmptyQueue(t *testing.T) {

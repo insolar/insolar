@@ -1,5 +1,5 @@
 /*
- *    Copyright 2019 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@
 package queue
 
 import (
-	"fmt"
 	"sync"
 	"sync/atomic"
 	"unsafe"
@@ -154,7 +153,7 @@ func convertSublistToArray(localHead *queueItem) []OutputElement {
 	return result
 }
 
-// SinkPushAll is implementation for IQueue
+// RemoveAll is implementation for IQueue
 func (q *MutexQueue) RemoveAll() []OutputElement {
 
 	var localHead *queueItem
@@ -170,6 +169,7 @@ func (q *MutexQueue) RemoveAll() []OutputElement {
 	return convertSublistToArray(localHead)
 }
 
+// BlockAndRemoveAll is implementation for IQueue
 func (q *MutexQueue) BlockAndRemoveAll() []OutputElement {
 	var localHead *queueItem
 	q.locker.Lock()
@@ -185,7 +185,7 @@ func (q *MutexQueue) BlockAndRemoveAll() []OutputElement {
 	return convertSublistToArray(localHead)
 }
 
-// SinkPushAll is implementation for IQueue
+// Unblock is implementation for IQueue
 func (q *MutexQueue) Unblock() bool {
 	q.locker.Lock()
 	defer q.locker.Unlock()
@@ -198,10 +198,10 @@ func (q *MutexQueue) Unblock() bool {
 	return true
 }
 
-// SinkPushAll is implementation for IQueue
+// PushSignal is implementation for IQueue
 func (q *MutexQueue) PushSignal(signalType uint32, callback SyncDone) error {
 	if signalType == 0 {
-		return errors.New(fmt.Sprintf("[ PushSignal ] Unsupported signalType: %d", signalType))
+		return errors.Errorf("[ PushSignal ] Unsupported signalType: %d", signalType)
 	}
 
 	newNode := &queueItem{
@@ -213,7 +213,7 @@ func (q *MutexQueue) PushSignal(signalType uint32, callback SyncDone) error {
 	return q.sinkPush(newNode)
 }
 
-// SinkPushAll is implementation for IQueue
+// HasSignal is implementation for IQueue
 // If queue is locked then it returns false
 // Now it uses unsafe pointer. This function will be called very frequently, that is why we use atomic here
 // But to be sure, this should be benchmarked in comparison with simple lock

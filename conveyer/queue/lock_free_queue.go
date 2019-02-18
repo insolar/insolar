@@ -1,5 +1,5 @@
 /*
- *    Copyright 2019 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@ type LockFreeQueue struct {
 	head *queueItem
 }
 
+// NewLockFreeQueue creates lf-queue
 func NewLockFreeQueue() IQueue {
 	queue := &LockFreeQueue{
 		head: &emptyQueueItem,
@@ -35,6 +36,7 @@ func NewLockFreeQueue() IQueue {
 	return queue
 }
 
+// SinkPush is mutex-based realization of IQueue
 func (q *LockFreeQueue) SinkPush(data interface{}) error {
 
 	newNode := &queueItem{
@@ -63,6 +65,7 @@ func (q *LockFreeQueue) SinkPush(data interface{}) error {
 	return nil
 }
 
+// SinkPushAll is mutex-based realization of IQueue
 func (q *LockFreeQueue) SinkPushAll(data []interface{}) error {
 	inputSize := len(data)
 	lastElement := &queueItem{}
@@ -101,6 +104,7 @@ func (q *LockFreeQueue) SinkPushAll(data []interface{}) error {
 	return nil
 }
 
+// // RemoveAll is mutex-based realization of IQueue
 func (q *LockFreeQueue) RemoveAll() []OutputElement {
 	removed := false
 	var head *queueItem
@@ -128,18 +132,22 @@ func (q *LockFreeQueue) RemoveAll() []OutputElement {
 	return result
 }
 
+// BlockAndRemoveAll is mutex-based realization of IQueue
 func (q *LockFreeQueue) BlockAndRemoveAll() []OutputElement {
 	return nil
 }
 
+// Unblock is mutex-based realization of IQueue
 func (q *LockFreeQueue) Unblock() bool {
 	return true
 }
 
+// PushSignal is mutex-based realization of IQueue
 func (q *LockFreeQueue) PushSignal(signalType uint32, callback SyncDone) error {
 	return q.SinkPush(signalType)
 }
 
+// HasSignal is mutex-based realization of IQueue
 func (q *LockFreeQueue) HasSignal() bool {
 	return atomic.LoadUint32(&q.head.biggestQueueSignal) != 0
 }
