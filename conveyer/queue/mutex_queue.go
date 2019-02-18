@@ -174,13 +174,11 @@ func (q *MutexQueue) BlockAndRemoveAll() []OutputElement {
 	var localHead *queueItem
 	q.locker.Lock()
 	localHead = q.checkAndGetHeadUnsafe()
-	if localHead == nil {
-		q.head = nil
-		q.locker.Unlock()
-		return []OutputElement{}
-	}
 	q.head = nil
 	q.locker.Unlock()
+	if localHead == nil {
+		return []OutputElement{}
+	}
 
 	return convertSublistToArray(localHead)
 }

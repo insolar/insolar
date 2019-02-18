@@ -274,7 +274,7 @@ func TestParallelAccess(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(parallelPut*2 + parallelGet*2 + parallelHasSignal + parallelPushSignal)
 
-	numIterations := 2
+	numIterations := 100
 
 	totalNumOperations := (parallelGet+parallelPut)*numIterations*2 + parallelPushSignal
 	addedElements := make(chan OutputElement, totalNumOperations)
