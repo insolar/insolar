@@ -109,7 +109,7 @@ func main() {
 					strings.NewReader(`{"jsonrpc": "2.0", "method": "status.Get", "id": 0}`))
 				if err != nil {
 					lock.Lock()
-					results[i] = []string{url, "", "", "", "", "", err.Error()}
+					results[i] = []string{url, "", "", "", "", "", "", err.Error()}
 					errored++
 					lock.Unlock()
 					wg.Done()
@@ -122,10 +122,11 @@ func main() {
 				}
 				var out struct {
 					Result struct {
-						PulseNumber  uint32
-						NetworkState string
-						NodeState    string
-						Origin       struct {
+						PulseNumber         uint32
+						NetworkState        string
+						NodeState           string
+						AdditionalNodeState string
+						Origin              struct {
 							Role string
 						}
 						ActiveListSize int
@@ -141,6 +142,7 @@ func main() {
 					url,
 					out.Result.NetworkState,
 					out.Result.NodeState,
+					out.Result.AdditionalNodeState,
 					strconv.Itoa(int(out.Result.PulseNumber)),
 					strconv.Itoa(out.Result.ActiveListSize),
 					out.Result.Origin.Role,
@@ -158,6 +160,7 @@ func main() {
 			"URL",
 			"Network State",
 			"Node State",
+			"Additional Node State",
 			"Pulse Number",
 			"Active List Size",
 			"Role",
@@ -177,7 +180,7 @@ func main() {
 		}
 
 		table.SetFooter([]string{
-			"", "", "",
+			"", "", "", "",
 			"Insolar State", stateString,
 			"Time", time.Now().Format(time.RFC3339),
 		})

@@ -29,6 +29,7 @@ type GlobuleID uint32
 // NodeState is the state of the node
 type NodeState uint8
 
+//go:generate stringer -type=NodeState
 const (
 	NodeDiscovery NodeState = iota
 	NodeJoining
