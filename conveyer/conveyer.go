@@ -17,12 +17,9 @@
 package conveyer
 
 import (
-	"context"
 	"sync"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/utils"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 )
 
@@ -50,6 +47,8 @@ const (
 )
 
 type Control interface {
+	PreparePulse(pulse core.Pulse) error
+	ActivatePulse() error
 	GetState() State
 	IsOperational() bool
 }
@@ -60,17 +59,23 @@ type Conveyer interface {
 }
 
 type PulseConveyer struct {
-	PulseStorage core.PulseStorage `inject:""`
-	slotMap      map[core.PulseNumber]*Slot
-	lock         sync.RWMutex
-	state        State
+	slotMap         map[core.PulseNumber]*Slot
+	futurePulseData *core.Pulse
+	newFutureSlot   *Slot
+	futureSlot      *Slot
+	presentSlot     *Slot
+	lock            sync.RWMutex
+	state           State
 }
 
 func NewPulseConveyer() *PulseConveyer {
-	return &PulseConveyer{
+	c := &PulseConveyer{
 		slotMap: make(map[core.PulseNumber]*Slot),
 		state:   Inactive,
 	}
+	antiqueSlot := NewSlot(Antique, AntiqueSlotPulse)
+	c.slotMap[AntiqueSlotPulse] = antiqueSlot
+	return c
 }
 
 type PulseState int
@@ -87,37 +92,23 @@ const (
 )
 
 type Slot struct {
-	inputQueue NonBlockingQueue
-	pulseState PulseState
+	inputQueue  NonBlockingQueue
+	pulseState  PulseState
+	pulseNumber core.PulseNumber
 }
 
-func NewSlot(pulseState PulseState) *Slot {
+func NewSlot(pulseState PulseState, pulseNumber core.PulseNumber) *Slot {
 	return &Slot{
-		pulseState: pulseState,
-		inputQueue: &Queue{},
+		pulseState:  pulseState,
+		inputQueue:  &Queue{},
+		pulseNumber: pulseNumber,
 	}
-}
-
-func (c *PulseConveyer) readLock() {
-	c.lock.RLock()
-}
-
-func (c *PulseConveyer) readUnlock() {
-	c.lock.RUnlock()
-}
-
-func (c *PulseConveyer) writeLock() {
-	c.lock.Lock()
-}
-
-func (c *PulseConveyer) writeUnlock() {
-	c.lock.Unlock()
 }
 
 // GetState returns current state of Conveyer
 func (c *PulseConveyer) GetState() State {
-	c.readLock()
-	defer c.readUnlock()
+	c.lock.RLock()
+	defer c.lock.RUnlock()
 	return c.state
 }
 
@@ -129,65 +120,77 @@ func (c *PulseConveyer) IsOperational() bool {
 	return false
 }
 
-func (c *PulseConveyer) getSlot(addr core.PulseNumber) (*Slot, error) {
-	slot, ok := c.slotMap[addr]
+func (c *PulseConveyer) unsafeGetSlot(pulseNumber core.PulseNumber) *Slot {
+	slot, ok := c.slotMap[pulseNumber]
 	if !ok {
-		traceID := "conveyer_" + utils.RandTraceID()
-		ctx, _ := inslogger.WithTraceField(context.Background(), traceID)
-		currentPulse, err := c.PulseStorage.Current(ctx)
-		if err != nil {
-			return nil, err
-		}
-		if addr >= currentPulse.PulseNumber {
-			return nil, errors.New("unknown pulse")
+		if pulseNumber > c.futureSlot.pulseNumber {
+			return nil
 		}
 		slot = c.slotMap[AntiqueSlotPulse]
 	}
-	return slot, nil
+	return slot
 }
 
 func (c *PulseConveyer) SinkPush(addr core.PulseNumber, data interface{}) bool {
-	c.readLock()
-	defer c.readUnlock()
-	slot, err := c.getSlot(addr)
-	if err != nil {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+	slot := c.unsafeGetSlot(addr)
+	if slot == nil {
 		return false
 	}
-	ok := slot.inputQueue.SinkPush(data)
-	return ok
+	return slot.inputQueue.SinkPush(data)
 }
 
 func (c *PulseConveyer) SinkPushAll(addr core.PulseNumber, data []interface{}) bool {
-	c.readLock()
-	defer c.readUnlock()
-	slot, err := c.getSlot(addr)
-	if err != nil {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+	slot := c.unsafeGetSlot(addr)
+	if slot == nil {
 		return false
 	}
-	ok := slot.inputQueue.SinkPushAll(data)
-	return ok
+	return slot.inputQueue.SinkPushAll(data)
 }
 
-// Start creates Present and Future Slots.
-// This logic probably must be done after we get first pulse (after OnPulse call). It wiil be consider later
-func (c *PulseConveyer) Start(ctx context.Context) error {
-	pulse, err := c.PulseStorage.Current(ctx)
-	if err != nil {
-		return err
+// TODO: add callback param
+func (c *PulseConveyer) PreparePulse(pulse core.Pulse) error {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	if !c.IsOperational() {
+		return errors.New("[ PreparePulse ] conveyer is not operational now")
+	}
+	if c.futurePulseData != nil {
+		return errors.New("[ PreparePulse ] preparation was already done")
+	}
+	if c.futureSlot == nil {
+		c.futureSlot = NewSlot(Future, pulse.PulseNumber)
+	}
+	if c.futureSlot.pulseNumber != pulse.PulseNumber {
+		return errors.New("[ PreparePulse ] received future pulse is different from expected")
+	}
+	// TODO: add sending signal to slots queues
+
+	c.futurePulseData = &pulse
+	c.newFutureSlot = NewSlot(Unallocated, pulse.NextPulseNumber)
+	return nil
+}
+
+func (c *PulseConveyer) ActivatePulse() error {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	if !c.IsOperational() {
+		return errors.New("[ ActivatePulse ] conveyer is not operational now")
+	}
+	if c.futurePulseData == nil {
+		return errors.New("[ ActivatePulse ] preparation missing")
 	}
 
-	c.writeLock()
-	defer c.writeUnlock()
+	c.futurePulseData = nil
 
-	presentSlot := NewSlot(Present)
-	c.slotMap[pulse.PulseNumber] = presentSlot
+	c.presentSlot = c.futureSlot
+	c.futureSlot = c.newFutureSlot
+	// TODO: add sending signal to slots queues
 
-	futureSlot := NewSlot(Future)
-	c.slotMap[pulse.NextPulseNumber] = futureSlot
-
-	antiqueSlot := NewSlot(Antique)
-	c.slotMap[AntiqueSlotPulse] = antiqueSlot
-
-	c.state = Active
 	return nil
 }

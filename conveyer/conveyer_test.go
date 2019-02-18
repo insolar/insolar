@@ -17,12 +17,9 @@
 package conveyer
 
 import (
-	"context"
-	"fmt"
 	"testing"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/require"
 )
 
@@ -53,10 +50,10 @@ func mockQueueReturnFalse(t *testing.T) *NonBlockingQueueMock {
 	return qMock
 }
 
-func mockSlot(t *testing.T, q *NonBlockingQueueMock) *Slot {
+func mockSlot(t *testing.T, q *NonBlockingQueueMock, pulseNumber core.PulseNumber) *Slot {
 	slot := &Slot{
-		inputQueue: q,
-		pulseState: Present,
+		inputQueue:  q,
+		pulseNumber: pulseNumber,
 	}
 	return slot
 }
@@ -68,23 +65,18 @@ func testPulseConveyer(t *testing.T, isQueueOk bool) *PulseConveyer {
 	} else {
 		q = mockQueueReturnFalse(t)
 	}
-	slot := mockSlot(t, q)
+	presentSlot := mockSlot(t, q, testRealPulse)
+	futureSlot := mockSlot(t, q, testRealPulse+testPulseDelta)
 	slotMap := make(map[core.PulseNumber]*Slot)
-	slotMap[testRealPulse] = slot
-	slotMap[AntiqueSlotPulse] = slot
+	slotMap[testRealPulse] = presentSlot
+	slotMap[testRealPulse+testPulseDelta] = futureSlot
+	slotMap[AntiqueSlotPulse] = mockSlot(t, q, AntiqueSlotPulse)
 
-	c := &PulseConveyer{
-		slotMap: slotMap,
+	return &PulseConveyer{
+		slotMap:     slotMap,
+		futureSlot:  futureSlot,
+		presentSlot: presentSlot,
 	}
-	ps := testutils.NewPulseStorageMock(t)
-	ps.CurrentFunc = func(p context.Context) (r *core.Pulse, r1 error) {
-		return &core.Pulse{
-			PulseNumber:     testRealPulse,
-			NextPulseNumber: testRealPulse + testPulseDelta,
-		}, nil
-	}
-	c.PulseStorage = ps
-	return c
 }
 
 func TestNewPulseConveyer(t *testing.T) {
@@ -93,7 +85,7 @@ func TestNewPulseConveyer(t *testing.T) {
 }
 
 func TestNewSlot(t *testing.T) {
-	s := NewSlot(Future)
+	s := NewSlot(Future, testRealPulse)
 	require.NotNil(t, s)
 	require.Equal(t, Future, s.pulseState)
 	require.Empty(t, s.inputQueue.RemoveAll())
@@ -204,29 +196,4 @@ func TestConveyer_SinkPushAll_UnknownSlot(t *testing.T) {
 
 	ok := c.SinkPushAll(testUnknownFuturePulse, data)
 	require.False(t, ok)
-}
-
-func TestConveyer_Start(t *testing.T) {
-	ctx := context.Background()
-	c := testPulseConveyer(t, false)
-
-	err := c.Start(ctx)
-	require.NoError(t, err)
-	require.Len(t, c.slotMap, 3)
-}
-
-func TestConveyer_Start_Err(t *testing.T) {
-	ctx := context.Background()
-	c := NewPulseConveyer()
-	ps := testutils.NewPulseStorageMock(t)
-	errMessage := "some fancy error"
-	ps.CurrentFunc = func(p context.Context) (r *core.Pulse, r1 error) {
-		return nil, fmt.Errorf(errMessage)
-	}
-	c.PulseStorage = ps
-
-	err := c.Start(ctx)
-	require.Error(t, err)
-	require.EqualError(t, err, errMessage)
-	require.Empty(t, c.slotMap)
 }
