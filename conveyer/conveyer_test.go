@@ -156,6 +156,15 @@ func TestConveyer_SinkPush_UnknownSlot(t *testing.T) {
 	require.False(t, ok)
 }
 
+func TestConveyer_SinkPush_NotOperational(t *testing.T) {
+	c := testPulseConveyer(t, true)
+	c.state = Inactive
+	data := "fancy_data"
+
+	ok := c.SinkPush(testUnknownFuturePulse, data)
+	require.False(t, ok)
+}
+
 func TestConveyer_SinkPushAll(t *testing.T) {
 	c := testPulseConveyer(t, true)
 	data1 := "fancy_data_1"
@@ -191,6 +200,17 @@ func TestConveyer_SinkPushAll_AntiqueSlot(t *testing.T) {
 
 func TestConveyer_SinkPushAll_UnknownSlot(t *testing.T) {
 	c := testPulseConveyer(t, true)
+	data1 := "fancy_data_1"
+	data2 := "fancy_data_2"
+	data := []interface{}{data1, data2}
+
+	ok := c.SinkPushAll(testUnknownFuturePulse, data)
+	require.False(t, ok)
+}
+
+func TestConveyer_SinkPushAll_NotOperational(t *testing.T) {
+	c := testPulseConveyer(t, true)
+	c.state = Inactive
 	data1 := "fancy_data_1"
 	data2 := "fancy_data_2"
 	data := []interface{}{data1, data2}
