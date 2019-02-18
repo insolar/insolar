@@ -25,7 +25,7 @@ import (
 
 // TODO: not completely implemented
 type LockFreeQueue struct {
-	head *QueueItem
+	head *queueItem
 }
 
 func NewLockFreeQueue() IQueue {
@@ -37,20 +37,20 @@ func NewLockFreeQueue() IQueue {
 
 func (q *LockFreeQueue) SinkPush(data interface{}) error {
 
-	newNode := &QueueItem{
+	newNode := &queueItem{
 		payload: data,
 	}
 
 	newNodeAdded := false
 
 	for !newNodeAdded {
-		head := (*QueueItem)(atomic.LoadPointer((*unsafe.Pointer)(unsafe.Pointer(&q.head))))
+		head := (*queueItem)(atomic.LoadPointer((*unsafe.Pointer)(unsafe.Pointer(&q.head))))
 		if head == nil {
 			return errors.New("[ SinkPush ] Queue is blocked")
 		}
 
 		if q.HasSignal() {
-			// do smth interesting
+			// TODO: no specific logic yet. Will be added later
 		}
 
 		newNode.next = head
@@ -65,11 +65,11 @@ func (q *LockFreeQueue) SinkPush(data interface{}) error {
 
 func (q *LockFreeQueue) SinkPushAll(data []interface{}) error {
 	inputSize := len(data)
-	lastElement := &QueueItem{}
+	lastElement := &queueItem{}
 	newHead := lastElement
 	for i := 0; i < inputSize-1; i++ {
 		lastElement.payload = data[i]
-		lastElement.next = &QueueItem{}
+		lastElement.next = &queueItem{}
 		lastElement = lastElement.next
 	}
 	lastElement.payload = data[inputSize-1]
@@ -77,7 +77,7 @@ func (q *LockFreeQueue) SinkPushAll(data []interface{}) error {
 	newNodeAdded := false
 
 	for !newNodeAdded {
-		head := (*QueueItem)(atomic.LoadPointer((*unsafe.Pointer)(unsafe.Pointer(&q.head))))
+		head := (*queueItem)(atomic.LoadPointer((*unsafe.Pointer)(unsafe.Pointer(&q.head))))
 		if head == nil {
 			return errors.New("[ SinkPush ] Queue is blocked")
 		}
@@ -103,9 +103,9 @@ func (q *LockFreeQueue) SinkPushAll(data []interface{}) error {
 
 func (q *LockFreeQueue) RemoveAll() []OutputElement {
 	removed := false
-	var head *QueueItem
+	var head *queueItem
 	for !removed {
-		head = (*QueueItem)(atomic.LoadPointer((*unsafe.Pointer)(unsafe.Pointer(&q.head))))
+		head = (*queueItem)(atomic.LoadPointer((*unsafe.Pointer)(unsafe.Pointer(&q.head))))
 		if head == nil || head == &emptyQueueItem {
 			return nil
 		}

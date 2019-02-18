@@ -27,27 +27,26 @@ type OutputElement struct {
 	itemType uint32
 }
 
-// QueueItem is one item if the queue
-type QueueItem struct {
+type queueItem struct {
 	itemType           uint32
 	biggestQueueSignal uint32
 	index              uint
 	payload            interface{}
-	next               *QueueItem
+	next               *queueItem
 }
 
-func (qi *QueueItem) isSignal() bool {
+func (qi *queueItem) isSignal() bool {
 	return qi.itemType != 0
 }
 
-func (qi *QueueItem) hasSignal() bool {
+func (qi *queueItem) hasSignal() bool {
 	return qi.biggestQueueSignal != 0
 }
 
-var emptyQueueItem QueueItem
+var emptyQueueItem queueItem
 
 func init() {
-	emptyQueueItem = QueueItem{
+	emptyQueueItem = queueItem{
 		itemType:           0,
 		biggestQueueSignal: 0,
 		index:              0,
