@@ -134,6 +134,9 @@ func (c *PulseConveyer) unsafeGetSlot(pulseNumber core.PulseNumber) *Slot {
 func (c *PulseConveyer) SinkPush(pulseNumber core.PulseNumber, data interface{}) bool {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
+	if !c.IsOperational() {
+		return false
+	}
 	slot := c.unsafeGetSlot(pulseNumber)
 	if slot == nil {
 		return false
@@ -144,6 +147,9 @@ func (c *PulseConveyer) SinkPush(pulseNumber core.PulseNumber, data interface{})
 func (c *PulseConveyer) SinkPushAll(pulseNumber core.PulseNumber, data []interface{}) bool {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
+	if !c.IsOperational() {
+		return false
+	}
 	slot := c.unsafeGetSlot(pulseNumber)
 	if slot == nil {
 		return false
@@ -177,6 +183,7 @@ func (c *PulseConveyer) PreparePulse(pulse core.Pulse) error {
 	newFutureSlot := NewSlot(Unallocated, pulse.NextPulseNumber)
 	c.slotMap[pulse.NextPulseNumber] = newFutureSlot
 	c.newFuturePulseNumber = &pulse.NextPulseNumber
+	c.state = PreparingPulse
 	return nil
 }
 
@@ -197,6 +204,7 @@ func (c *PulseConveyer) ActivatePulse() error {
 	c.presentPulseNumber = c.futurePulseNumber
 	c.futurePulseNumber = c.newFuturePulseNumber
 	// TODO: add sending signal to slots queues
+	c.state = Active
 
 	return nil
 }

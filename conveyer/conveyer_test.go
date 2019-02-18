@@ -73,6 +73,7 @@ func testPulseConveyer(t *testing.T, isQueueOk bool) *PulseConveyer {
 	slotMap[AntiqueSlotPulse] = mockSlot(t, q, AntiqueSlotPulse)
 
 	return &PulseConveyer{
+		state:              Active,
 		slotMap:            slotMap,
 		futurePulseNumber:  &futureSlot.pulseNumber,
 		presentPulseNumber: &presentSlot.pulseNumber,
@@ -206,6 +207,7 @@ func TestConveyer_PreparePulse(t *testing.T) {
 	err := c.PreparePulse(pulse)
 	require.NoError(t, err)
 	require.NotNil(t, c.futurePulseData)
+	require.Equal(t, PreparingPulse, c.state)
 }
 
 func TestConveyer_PreparePulse_NotOperational(t *testing.T) {
@@ -217,16 +219,19 @@ func TestConveyer_PreparePulse_NotOperational(t *testing.T) {
 
 	require.Errorf(t, err, "[ PreparePulse ] conveyer is not operational now")
 	require.Nil(t, c.futurePulseData)
+	require.Equal(t, Inactive, c.state)
 }
 
 func TestConveyer_PreparePulse_AlreadyDone(t *testing.T) {
 	c := testPulseConveyer(t, true)
 	pulse := core.Pulse{PulseNumber: testRealPulse + testPulseDelta}
 	c.futurePulseData = &pulse
+	c.state = PreparingPulse
 
 	err := c.PreparePulse(pulse)
 
 	require.Errorf(t, err, "[ PreparePulse ] preparation was already done")
+	require.Equal(t, PreparingPulse, c.state)
 }
 
 func TestConveyer_PreparePulse_NotFuture(t *testing.T) {
@@ -236,17 +241,20 @@ func TestConveyer_PreparePulse_NotFuture(t *testing.T) {
 	err := c.PreparePulse(pulse)
 	require.Errorf(t, err, "[ PreparePulse ] received future pulse is different from expected")
 	require.Nil(t, c.futurePulseData)
+	require.Equal(t, Active, c.state)
 }
 
 func TestConveyer_ActivatePulse(t *testing.T) {
 	c := testPulseConveyer(t, true)
 	pulse := core.Pulse{PulseNumber: testRealPulse + testPulseDelta}
 	c.futurePulseData = &pulse
+	c.state = PreparingPulse
 
 	err := c.ActivatePulse()
 
 	require.NoError(t, err)
 	require.Nil(t, c.futurePulseData)
+	require.Equal(t, Active, c.state)
 }
 
 func TestConveyer_ActivatePulse_NotOperational(t *testing.T) {
@@ -259,6 +267,7 @@ func TestConveyer_ActivatePulse_NotOperational(t *testing.T) {
 
 	require.Errorf(t, err, "[ ActivatePulse ] conveyer is not operational now")
 	require.Equal(t, &pulse, c.futurePulseData)
+	require.Equal(t, Inactive, c.state)
 }
 
 func TestConveyer_ActivatePulse_NoPrepare(t *testing.T) {
@@ -268,4 +277,5 @@ func TestConveyer_ActivatePulse_NoPrepare(t *testing.T) {
 	err := c.ActivatePulse()
 
 	require.Errorf(t, err, "[ ActivatePulse ] preparation missing")
+	require.Equal(t, Active, c.state)
 }
