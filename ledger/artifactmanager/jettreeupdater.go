@@ -76,12 +76,7 @@ func (jtu *jetTreeUpdater) fetchJet(
 	defer span.End()
 
 	// Look in the local tree. Return if the actual jet found.
-	tree, err := jtu.JetStorage.GetJetTree(ctx, pulse)
-	if err != nil {
-		return nil, err
-	}
-
-	jetID, actual := tree.Find(target)
+	jetID, actual := jtu.JetStorage.FindJet(ctx, pulse, target)
 	if actual {
 		return jetID, nil
 	}
@@ -125,12 +120,7 @@ func (jtu *jetTreeUpdater) fetchJet(
 		return nil, err
 	}
 
-	err = jtu.JetStorage.UpdateJetTree(ctx, pulse, true, *resJet)
-	if err != nil {
-		inslogger.FromContext(ctx).Error(
-			errors.Wrapf(err, "failed actualize jet %s", resJet.DebugString()),
-		)
-	}
+	jtu.JetStorage.UpdateJetTree(ctx, pulse, true, *resJet)
 
 	return resJet, nil
 }

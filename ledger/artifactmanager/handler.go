@@ -451,11 +451,7 @@ func (h *MessageHandler) handleGetObject(
 			return reply.NewGetObjectRedirectReply(h.DelegationTokenFactory, parcel, node, stateID)
 		}
 
-		stateTree, err := h.JetStorage.GetJetTree(ctx, stateID.Pulse())
-		if err != nil {
-			return nil, err
-		}
-		stateJet, actual = stateTree.Find(*msg.Head.Record())
+		stateJet, actual = h.JetStorage.FindJet(ctx, stateID.Pulse(), *msg.Head.Record())
 		if !actual {
 			actualJet, err := h.jetTreeUpdater.fetchJet(ctx, *msg.Head.Record(), stateID.Pulse())
 			if err != nil {
@@ -532,14 +528,8 @@ func (h *MessageHandler) handleHasPendingRequests(ctx context.Context, parcel co
 
 func (h *MessageHandler) handleGetJet(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
 	msg := parcel.Message().(*message.GetJet)
-	tree, err := h.JetStorage.GetJetTree(ctx, msg.Pulse)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to fetch jet tree")
-	}
-	jetID, actual := tree.Find(msg.Object)
-	if err != nil {
-		return nil, err
-	}
+
+	jetID, actual := h.JetStorage.FindJet(ctx, msg.Pulse, msg.Object)
 
 	return &reply.Jet{ID: *jetID, Actual: actual}, nil
 }
@@ -647,11 +637,7 @@ func (h *MessageHandler) handleGetChildren(
 			return reply.NewGetChildrenRedirect(h.DelegationTokenFactory, parcel, node, *currentChild)
 		}
 
-		childTree, err := h.JetStorage.GetJetTree(ctx, currentChild.Pulse())
-		if err != nil {
-			return nil, err
-		}
-		childJet, actual = childTree.Find(*msg.Parent.Record())
+		childJet, actual = h.JetStorage.FindJet(ctx, currentChild.Pulse(), *msg.Parent.Record())
 		if !actual {
 			actualJet, err := h.jetTreeUpdater.fetchJet(ctx, *msg.Parent.Record(), currentChild.Pulse())
 			if err != nil {
@@ -945,15 +931,9 @@ func (h *MessageHandler) handleJetDrop(ctx context.Context, parcel core.Parcel) 
 		return nil, err
 	}
 
-	err = h.JetStorage.UpdateJetTree(
-		ctx,
-		parcel.Pulse(),
-		true,
-		msg.JetID,
+	h.JetStorage.UpdateJetTree(
+		ctx, parcel.Pulse(), true, msg.JetID,
 	)
-	if err != nil {
-		return nil, err
-	}
 
 	return &reply.OK{}, nil
 }
@@ -1194,13 +1174,9 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 		indexStorage.AddObjectWithTLL(ctx, id, meta.TTL)
 	}
 
-	err = h.JetStorage.UpdateJetTree(
+	h.JetStorage.UpdateJetTree(
 		ctx, msg.PulseNumber, true, jetID,
 	)
-	if err != nil {
-		logger.Error(errors.Wrap(err, "couldn't actualize jet tree"))
-		return nil, err
-	}
 
 	h.jetTreeUpdater.releaseJet(ctx, jetID, msg.PulseNumber)
 

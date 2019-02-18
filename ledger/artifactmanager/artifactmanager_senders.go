@@ -125,10 +125,7 @@ func retryJetSender(pulseNumber core.PulseNumber, jetStorage storage.JetStorage)
 				}
 
 				if r, ok := rep.(*reply.JetMiss); ok {
-					err := jetStorage.UpdateJetTree(ctx, pulseNumber, true, r.JetID)
-					if err != nil {
-						return nil, err
-					}
+					jetStorage.UpdateJetTree(ctx, pulseNumber, true, r.JetID)
 				} else {
 					return rep, err
 				}
