@@ -17,9 +17,10 @@
 package queue
 
 import (
-	"fmt"
 	"sync/atomic"
 	"unsafe"
+
+	"github.com/pkg/errors"
 )
 
 // TODO: not completely implemented
@@ -34,7 +35,7 @@ func NewLockFreeQueue() IQueue {
 	return queue
 }
 
-func (q *LockFreeQueue) SinkPush(data interface{}) bool {
+func (q *LockFreeQueue) SinkPush(data interface{}) error {
 
 	newNode := &QueueItem{
 		payload: data,
@@ -45,7 +46,7 @@ func (q *LockFreeQueue) SinkPush(data interface{}) bool {
 	for !newNodeAdded {
 		head := (*QueueItem)(atomic.LoadPointer((*unsafe.Pointer)(unsafe.Pointer(&q.head))))
 		if head == nil {
-			return false
+			return errors.New("[ SinkPush ] Queue is blocked")
 		}
 
 		if q.HasSignal() {
@@ -54,17 +55,17 @@ func (q *LockFreeQueue) SinkPush(data interface{}) bool {
 
 		newNode.next = head
 		newNode.index = head.index + 1
-		// lastNew.signal = max(head.signal, lastNew.type) // TODO:
+		// lastNew.biggestQueueSignal = max(head.biggestQueueSignal, lastNew.type) // TODO:
 
 		newNodeAdded = atomic.CompareAndSwapPointer((*unsafe.Pointer)(unsafe.Pointer(&q.head)), unsafe.Pointer(head), unsafe.Pointer(newNode))
 	}
 
 	//fmt.Println("Pushing: ", data)
 
-	return true
+	return nil
 }
 
-func (q *LockFreeQueue) SinkPushAll(data []interface{}) bool {
+func (q *LockFreeQueue) SinkPushAll(data []interface{}) error {
 	inputSize := len(data)
 	lastElement := &QueueItem{}
 	newHead := lastElement
@@ -80,7 +81,7 @@ func (q *LockFreeQueue) SinkPushAll(data []interface{}) bool {
 	for !newNodeAdded {
 		head := (*QueueItem)(atomic.LoadPointer((*unsafe.Pointer)(unsafe.Pointer(&q.head))))
 		if head == nil {
-			return false
+			return errors.New("[ SinkPush ] Queue is blocked")
 		}
 
 		if q.HasSignal() {
@@ -95,17 +96,15 @@ func (q *LockFreeQueue) SinkPushAll(data []interface{}) bool {
 		}
 
 		lastElement.next = head
-		// lastNew.signal = max(head.signal, lastNew.type) // TODO:
+		// lastNew.biggestQueueSignal = max(head.biggestQueueSignal, lastNew.type) // TODO:
 
 		newNodeAdded = atomic.CompareAndSwapPointer((*unsafe.Pointer)(unsafe.Pointer(&q.head)), unsafe.Pointer(head), unsafe.Pointer(newHead))
 	}
 
-	fmt.Println(" ALL Pushing: ", data)
-
-	return true
+	return nil
 }
 
-func (q *LockFreeQueue) RemoveAll() []interface{} {
+func (q *LockFreeQueue) RemoveAll() []OutputElement {
 	removed := false
 	var head *QueueItem
 	for !removed {
@@ -117,11 +116,15 @@ func (q *LockFreeQueue) RemoveAll() []interface{} {
 		removed = atomic.CompareAndSwapPointer((*unsafe.Pointer)(unsafe.Pointer(&q.head)), unsafe.Pointer(head), unsafe.Pointer(&emptyQueueItem))
 	}
 
-	result := make([]interface{}, 0, head.index)
+	result := make([]OutputElement, 0, head.index)
 
 	current := head
 	for i := uint(0); i < head.index; i++ {
-		result = append(result, current.payload)
+		element := OutputElement{
+			data:     current.payload,
+			itemType: current.itemType,
+		}
+		result = append(result, element)
 		current = current.next
 	}
 
@@ -130,7 +133,7 @@ func (q *LockFreeQueue) RemoveAll() []interface{} {
 	return result
 }
 
-func (q *LockFreeQueue) BlockAndRemoveAll() []interface{} {
+func (q *LockFreeQueue) BlockAndRemoveAll() []OutputElement {
 	return nil
 }
 
@@ -138,10 +141,10 @@ func (q *LockFreeQueue) Unblock() bool {
 	return true
 }
 
-func (q *LockFreeQueue) PushSignal(signalType uint32, callback SyncDone) bool {
+func (q *LockFreeQueue) PushSignal(signalType uint32, callback SyncDone) error {
 	return q.SinkPush(signalType)
 }
 
 func (q *LockFreeQueue) HasSignal() bool {
-	return atomic.LoadUint32(&q.head.signal) != 0
+	return atomic.LoadUint32(&q.head.biggestQueueSignal) != 0
 }

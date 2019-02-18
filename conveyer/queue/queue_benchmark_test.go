@@ -71,8 +71,7 @@ func benchParallel(i int, b *testing.B) {
 	wg.Wait()
 }
 
-func BenchmarkParallel1(b *testing.B) { benchParallel(1, b) }
-
+func BenchmarkParallel1(b *testing.B)  { benchParallel(1, b) }
 func BenchmarkParallel2(b *testing.B)  { benchParallel(2, b) }
 func BenchmarkParallel3(b *testing.B)  { benchParallel(3, b) }
 func BenchmarkParallel10(b *testing.B) { benchParallel(10, b) }

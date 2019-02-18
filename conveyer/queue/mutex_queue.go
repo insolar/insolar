@@ -17,8 +17,12 @@
 package queue
 
 import (
+	"fmt"
 	"sync"
 	"sync/atomic"
+	"unsafe"
+
+	"github.com/pkg/errors"
 )
 
 // MutexQueue is mutex-based realization of IQueue
@@ -35,12 +39,12 @@ func NewMutexQueue() IQueue {
 	return queue
 }
 
-func (q *MutexQueue) sinkPush(newNode *QueueItem) bool {
+func (q *MutexQueue) sinkPush(newNode *QueueItem) error {
 	q.locker.Lock()
 	defer q.locker.Unlock()
 
-	if q.head == nil {
-		return false
+	if q.isQueueBlockedUnsafe() {
+		return errors.New("[ sinkPush ] Queue is blocked")
 	}
 
 	if q.HasSignal() {
@@ -51,19 +55,19 @@ func (q *MutexQueue) sinkPush(newNode *QueueItem) bool {
 	newNode.index = q.head.index + 1
 
 	// just max =(
-	if q.head.signal > newNode.itemType {
-		newNode.signal = q.head.signal
+	if q.head.biggestQueueSignal > newNode.itemType {
+		newNode.biggestQueueSignal = q.head.biggestQueueSignal
 	} else {
-		newNode.signal = newNode.itemType
+		newNode.biggestQueueSignal = newNode.itemType
 	}
 
 	q.head = newNode
 
-	return true
+	return nil
 }
 
 // SinkPush is implementation for IQueue
-func (q *MutexQueue) SinkPush(data interface{}) bool {
+func (q *MutexQueue) SinkPush(data interface{}) error {
 
 	newNode := &QueueItem{
 		payload: data,
@@ -73,7 +77,7 @@ func (q *MutexQueue) SinkPush(data interface{}) bool {
 }
 
 // SinkPushAll is implementation for IQueue
-func (q *MutexQueue) SinkPushAll(data []interface{}) bool {
+func (q *MutexQueue) SinkPushAll(data []interface{}) error {
 	inputSize := len(data)
 	lastElement := &QueueItem{}
 	newHead := lastElement
@@ -88,8 +92,8 @@ func (q *MutexQueue) SinkPushAll(data []interface{}) bool {
 	q.locker.Lock()
 	defer q.locker.Unlock()
 
-	if q.head == nil {
-		return false
+	if q.isQueueBlockedUnsafe() {
+		return errors.New("[ SinkPushAll ] Queue is blocked")
 	}
 
 	if q.HasSignal() {
@@ -104,29 +108,49 @@ func (q *MutexQueue) SinkPushAll(data []interface{}) bool {
 	}
 
 	lastElement.next = q.head
-	// lastNew.signal = max(head.signal, lastNew.type) // TODO: ? What is that ?
+	// lastNew.biggestQueueSignal = max(head.biggestQueueSignal, lastNew.type) // TODO: ? What is that ?
 
 	q.head = newHead
 
-	return true
+	return nil
 }
 
-func (q *MutexQueue) checkAndGetHead() *QueueItem {
-	if q.head == nil || q.head == &emptyQueueItem {
+func (q *MutexQueue) checkAndGetHeadUnsafe() *QueueItem {
+	if q.isQueueBlockedUnsafe() || q.isQueueEmptyUnsafe() {
 		return nil
 	}
 
 	return q.head
 }
 
+func (q *MutexQueue) isQueueBlockedUnsafe() bool {
+	return q.head == nil
+}
+
+func (q *MutexQueue) isQueueEmptyUnsafe() bool {
+	return q.head == &emptyQueueItem
+}
+
 // get pointer to head and unfold linked list to slice:
 //  all signals will be at the begging of the slice
-func convertSublistToArray(localHead *QueueItem) []interface{} {
-	result := make([]interface{}, localHead.index)
+func convertSublistToArray(localHead *QueueItem) []OutputElement {
+	result := make([]OutputElement, localHead.index)
 
 	current := localHead
+	signalCurrentIndex := 0
+	messageCurrentIndex := localHead.index - 1
 	for i := uint(0); i < localHead.index; i++ {
-		result[localHead.index-i-1] = current.payload
+		element := OutputElement{
+			data:     current.payload,
+			itemType: current.itemType,
+		}
+		if current.isSignal() {
+			result[signalCurrentIndex] = element
+			signalCurrentIndex++
+		} else {
+			result[messageCurrentIndex] = element
+			messageCurrentIndex--
+		}
 		current = current.next
 	}
 
@@ -134,14 +158,14 @@ func convertSublistToArray(localHead *QueueItem) []interface{} {
 }
 
 // SinkPushAll is implementation for IQueue
-func (q *MutexQueue) RemoveAll() []interface{} {
+func (q *MutexQueue) RemoveAll() []OutputElement {
 
 	var localHead *QueueItem
 	q.locker.Lock()
-	localHead = q.checkAndGetHead()
+	localHead = q.checkAndGetHeadUnsafe()
 	if localHead == nil {
 		q.locker.Unlock()
-		return []interface{}{}
+		return []OutputElement{}
 	}
 	q.head = &emptyQueueItem
 	q.locker.Unlock()
@@ -149,13 +173,14 @@ func (q *MutexQueue) RemoveAll() []interface{} {
 	return convertSublistToArray(localHead)
 }
 
-func (q *MutexQueue) BlockAndRemoveAll() []interface{} {
+func (q *MutexQueue) BlockAndRemoveAll() []OutputElement {
 	var localHead *QueueItem
 	q.locker.Lock()
-	localHead = q.checkAndGetHead()
+	localHead = q.checkAndGetHeadUnsafe()
 	if localHead == nil {
+		q.head = nil
 		q.locker.Unlock()
-		return []interface{}{}
+		return []OutputElement{}
 	}
 	q.head = nil
 	q.locker.Unlock()
@@ -177,16 +202,26 @@ func (q *MutexQueue) Unblock() bool {
 }
 
 // SinkPushAll is implementation for IQueue
-func (q *MutexQueue) PushSignal(signalType uint32, callback SyncDone) bool {
+func (q *MutexQueue) PushSignal(signalType uint32, callback SyncDone) error {
+	if signalType == 0 {
+		return errors.New(fmt.Sprintf("[ PushSignal ] Unsupported signalType: %d", signalType))
+	}
+
 	newNode := &QueueItem{
-		payload: callback,
-		signal:  signalType,
+		payload:            callback,
+		biggestQueueSignal: signalType,
+		itemType:           signalType,
 	}
 
 	return q.sinkPush(newNode)
 }
 
 // SinkPushAll is implementation for IQueue
+// If queue is locked then it returns false
+// Now it uses unsafe pointer. This function will be called very frequently, that is why we use atomic here
+// But to be sure, this should be benchmarked in comparison with simple lock
 func (q *MutexQueue) HasSignal() bool {
-	return atomic.LoadUint32(&q.head.signal) != 0
+	head := (*QueueItem)(atomic.LoadPointer((*unsafe.Pointer)(unsafe.Pointer(&q.head))))
+	return !q.isQueueBlockedUnsafe() && !q.isQueueEmptyUnsafe() && head.hasSignal()
+
 }
