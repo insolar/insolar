@@ -309,6 +309,9 @@ func (h *MessageHandler) handleSetRecord(ctx context.Context, parcel core.Parcel
 	switch r := rec.(type) {
 	case record.Request:
 		recentStorage := h.RecentStorageProvider.GetPendingStorage(ctx, jetID)
+		if recentStorage.Count() > h.conf.PendingRequestsLimit {
+			return &reply.Error{ErrType: reply.ErrToManyPendingRequests}, nil
+		}
 		recentStorage.AddPendingRequest(ctx, r.GetObject(), *id)
 	case *record.ResultRecord:
 		recentStorage := h.RecentStorageProvider.GetPendingStorage(ctx, jetID)

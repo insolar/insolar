@@ -92,6 +92,8 @@ const (
 	ErrHotDataTimeout
 	// ErrNoPendingRequests is returned when there are no pending requests on current LME
 	ErrNoPendingRequests
+	// ErrToManyPendingRequests is returned when a limit of pending requests has been reached
+	ErrToManyPendingRequests
 )
 
 func getEmptyReply(t core.ReplyType) (core.Reply, error) {

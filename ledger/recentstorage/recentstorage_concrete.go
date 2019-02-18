@@ -395,6 +395,14 @@ func (r *PendingStorageConcrete) GetRequestsForObject(obj core.RecordID) []core.
 	return results
 }
 
+// Count returns a number of pending requests, which are registered in the system
+func (r *PendingStorageConcrete) Count() int {
+	r.lock.RLock()
+	defer r.lock.RUnlock()
+
+	return len(r.requests)
+}
+
 // RemovePendingRequest removes a request on object from cache
 func (r *PendingStorageConcrete) RemovePendingRequest(ctx context.Context, obj, req core.RecordID) {
 	r.lock.RLock()

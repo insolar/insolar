@@ -57,6 +57,8 @@ func (e *Error) Error() error {
 		return core.ErrHotDataTimeout
 	case ErrNoPendingRequests:
 		return core.ErrNoPendingRequest
+	case ErrToManyPendingRequests:
+		return core.ErrToManyPendingRequests
 	}
 
 	return core.ErrUnknown

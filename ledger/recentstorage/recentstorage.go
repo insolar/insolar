@@ -59,5 +59,7 @@ type PendingStorage interface {
 	GetRequests() map[core.RecordID]PendingObjectContext
 	GetRequestsForObject(obj core.RecordID) []core.RecordID
 
+	Count() int
+
 	RemovePendingRequest(ctx context.Context, obj, req core.RecordID)
 }
