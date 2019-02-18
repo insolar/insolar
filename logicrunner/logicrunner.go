@@ -328,6 +328,7 @@ func (lr *LogicRunner) executeActual(ctx context.Context, parcel core.Parcel, ms
 			ctx, core.DynamicRoleVirtualExecutor, *ref.Record(), pulse.PulseNumber, lr.JetCoordinator.Me(),
 		)
 		if !meCurrent {
+			es.Unlock()
 			return &reply.RegisterRequest{
 				Request: *request,
 			}, nil
