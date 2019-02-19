@@ -171,7 +171,7 @@ func getTotalBalance(insSDK *sdk.SDK, members []*sdk.Member) uint64 {
 			bof := backoff.Backoff{Min: 1 * time.Second, Max: 10 * time.Second}
 
 			res := Result{num: num}
-			for attempt := 0; attempt < 10; attempt++ {
+			for attempt := 0; attempt < 3; attempt++ {
 				res.balance, res.err = insSDK.GetBalance(m)
 				if res.err == nil {
 					break

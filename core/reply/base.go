@@ -93,7 +93,7 @@ const (
 	// ErrNoPendingRequests is returned when there are no pending requests on current LME
 	ErrNoPendingRequests
 	// ErrTooManyPendingRequests is returned when a limit of pending requests has been reached
-	ErrToManyPendingRequests
+	ErrTooManyPendingRequests
 )
 
 func getEmptyReply(t core.ReplyType) (core.Reply, error) {
