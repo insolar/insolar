@@ -86,7 +86,6 @@ func (n *nodeKeeperWrapper) GetActiveNode(ref core.RecordRef) core.Node {
 
 func (n *nodeKeeperWrapper) GetActiveNodes() []core.Node {
 	tmp := n.original.GetActiveNodes()
-	//tmp = tmp[:len(tmp)-2]
 	return tmp
 }
 
