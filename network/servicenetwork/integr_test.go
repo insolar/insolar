@@ -239,31 +239,35 @@ func (s *testSuite) TestNodeComeAfterAnotherNodeSendLeaveETA() {
 
 	// wait for newNode will be added at active list, its a last pulse for leavingNode
 	s.waitForConsensus(2)
-	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
 
 	// newNode doesn't have workingNodes
+	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
 	workingNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	newNodeWorkingNodes := newNode.serviceNetwork.NodeKeeper.GetWorkingNodes()
-	s.Equal(s.getNodesCount()+1, len(workingNodes))
+
 	s.Equal(s.getNodesCount()+2, len(activeNodes))
+	s.Equal(s.getNodesCount()+1, len(workingNodes))
 	s.Equal(0, len(newNodeWorkingNodes))
 
 	// newNode have to have same working node list as other nodes, but it doesn't because it miss leaving claim
 	s.waitForConsensus(1)
+	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
 	workingNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	newNodeWorkingNodes = newNode.serviceNetwork.NodeKeeper.GetWorkingNodes()
-	s.Equal(s.getNodesCount()+1, len(workingNodes))
+
 	s.Equal(s.getNodesCount()+2, len(activeNodes))
-	// TODO it's wrong!!!
+	s.Equal(s.getNodesCount()+1, len(workingNodes))
+	// TODO it's wrong!!! have to be same as len(workingNodes)
 	s.Equal(s.getNodesCount()+2, len(newNodeWorkingNodes))
 
 	// leaveNode leaving, newNode still ok
 	s.waitForConsensus(1)
-	workingNodes = newNode.serviceNetwork.NodeKeeper.GetWorkingNodes()
 	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	workingNodes = newNode.serviceNetwork.NodeKeeper.GetWorkingNodes()
 	newNodeWorkingNodes = newNode.serviceNetwork.NodeKeeper.GetWorkingNodes()
-	s.Equal(s.getNodesCount()+1, len(workingNodes))
+
 	s.Equal(s.getNodesCount()+1, len(activeNodes))
+	s.Equal(s.getNodesCount()+1, len(workingNodes))
 	s.Equal(s.getNodesCount()+1, len(newNodeWorkingNodes))
 }
 
