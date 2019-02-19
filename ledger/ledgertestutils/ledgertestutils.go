@@ -183,6 +183,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 	provideMock := recentstorage.NewProviderMock(t)
 	provideMock.GetIndexStorageMock.Return(indexMock)
 	provideMock.GetPendingStorageMock.Return(pendingMock)
+	provideMock.CountMock.Return(0)
 
 	handler.RecentStorageProvider = provideMock
 

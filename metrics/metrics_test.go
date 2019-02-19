@@ -107,3 +107,15 @@ func TestMetrics_Badger(t *testing.T) {
 
 	assert.NoError(t, testm.Stop())
 }
+
+func TestMetrics_Status(t *testing.T) {
+	t.Parallel()
+	ctx := inslogger.TestContext(t)
+	testm := testmetrics.Start(ctx)
+
+	code, _, err := testm.FetchURL("/_status")
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, code)
+
+	assert.NoError(t, testm.Stop())
+}

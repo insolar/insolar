@@ -18,6 +18,9 @@ package logicrunner
 
 import (
 	"context"
+	"fmt"
+	"strconv"
+	"sync"
 	"testing"
 	"time"
 
@@ -33,6 +36,7 @@ import (
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/testutils"
+	"github.com/insolar/insolar/testutils/network"
 )
 
 type LogicRunnerCommonTestSuite struct {
@@ -47,6 +51,7 @@ type LogicRunnerCommonTestSuite struct {
 	es  ExecutionState
 	ps  *testutils.PulseStorageMock
 	mle *testutils.MachineLogicExecutorMock
+	nn  *network.NodeNetworkMock
 }
 
 func (suite *LogicRunnerCommonTestSuite) BeforeTest(suiteName, testName string) {
@@ -59,6 +64,7 @@ func (suite *LogicRunnerCommonTestSuite) BeforeTest(suiteName, testName string) 
 	suite.mb = testutils.NewMessageBusMock(suite.mc)
 	suite.jc = testutils.NewJetCoordinatorMock(suite.mc)
 	suite.ps = testutils.NewPulseStorageMock(suite.mc)
+	suite.nn = network.NewNodeNetworkMock(suite.mc)
 
 	suite.SetupLogicRunner()
 }
@@ -69,6 +75,7 @@ func (suite *LogicRunnerCommonTestSuite) SetupLogicRunner() {
 	suite.lr.MessageBus = suite.mb
 	suite.lr.JetCoordinator = suite.jc
 	suite.lr.PulseStorage = suite.ps
+	suite.lr.NodeNetwork = suite.nn
 }
 
 func (suite *LogicRunnerCommonTestSuite) AfterTest(suiteName, testName string) {
@@ -595,6 +602,114 @@ func (suite *LogicRunnerTestSuite) TestStartStop() {
 
 	err = lr.Stop(suite.ctx)
 	suite.Require().NoError(err)
+}
+
+func (suite *LogicRunnerTestSuite) TestConcurrency() {
+	objectRef := testutils.RandomRef()
+	parentRef := testutils.RandomRef()
+	protoRef := testutils.RandomRef()
+	codeRef := testutils.RandomRef()
+
+	meRef := testutils.RandomRef()
+	notMeRef := testutils.RandomRef()
+	suite.jc.MeMock.Return(meRef)
+
+	pulse := core.Pulse{PulseNumber: 100}
+	suite.ps.CurrentMock.Return(&pulse, nil)
+
+	suite.jc.IsAuthorizedFunc = func(
+		ctx context.Context, role core.DynamicRole, id core.RecordID, pn core.PulseNumber, obj core.RecordRef,
+	) (bool, error) {
+		return true, nil
+	}
+
+	mle := testutils.NewMachineLogicExecutorMock(suite.mc)
+	err := suite.lr.RegisterExecutor(core.MachineTypeBuiltin, mle)
+	suite.Require().NoError(err)
+
+	mle.CallMethodMock.Return([]byte{1, 2, 3}, []byte{}, nil)
+
+	nodeMock := network.NewNodeMock(suite.T())
+	nodeMock.IDMock.Return(meRef)
+	suite.nn.GetOriginMock.Return(nodeMock)
+
+	od := testutils.NewObjectDescriptorMock(suite.T())
+	od.PrototypeMock.Return(&protoRef, nil)
+	od.MemoryMock.Return([]byte{1, 2, 3})
+	od.ParentMock.Return(&parentRef)
+	od.HeadRefMock.Return(&objectRef)
+
+	pd := testutils.NewObjectDescriptorMock(suite.T())
+	pd.CodeMock.Return(&codeRef, nil)
+	pd.HeadRefMock.Return(&protoRef)
+
+	cd := testutils.NewCodeDescriptorMock(suite.T())
+	cd.MachineTypeMock.Return(core.MachineTypeBuiltin)
+	cd.RefMock.Return(&codeRef)
+	suite.am.GetCodeMock.Return(cd, nil)
+
+	suite.am.GetObjectFunc = func(
+		ctx context.Context, obj core.RecordRef, st *core.RecordID, approved bool,
+	) (core.ObjectDescriptor, error) {
+		switch obj {
+		case objectRef:
+			return od, nil
+		case protoRef:
+			return pd, nil
+		}
+		return nil, errors.New("unexpected call")
+	}
+
+	suite.am.GetCodeMock.Return(cd, nil)
+
+	suite.am.HasPendingRequestsMock.Return(false, nil)
+
+	reqId := testutils.RandomID()
+	suite.am.RegisterRequestMock.Return(&reqId, nil)
+	resId := testutils.RandomID()
+	suite.am.RegisterResultMock.Return(&resId, nil)
+
+	num := 100
+	wg := sync.WaitGroup{}
+	wg.Add(num*2)
+
+	suite.mb.SendFunc = func(
+		ctx context.Context, msg core.Message, opts *core.MessageSendOptions,
+	) (core.Reply, error) {
+		switch msg.Type() {
+		case core.TypeReturnResults:
+			wg.Done()
+			return &reply.OK{}, nil
+		}
+		suite.Require().Fail(fmt.Sprintf("unexpected message send: %#v", msg))
+		return nil, errors.New("unexpected message")
+	}
+
+	for i := 0; i < num; i++ {
+		go func(i int) {
+			msg := &message.CallMethod{
+				ObjectRef:      objectRef,
+				Method:         "some",
+				ProxyPrototype: protoRef,
+			}
+
+			parcel := testutils.NewParcelMock(suite.T())
+			parcel.DefaultTargetMock.Return(&objectRef)
+			parcel.MessageMock.Return(msg)
+			parcel.TypeMock.Return(msg.Type())
+			parcel.PulseMock.Return(pulse.PulseNumber)
+			parcel.GetSenderMock.Return(notMeRef)
+
+			ctx := inslogger.ContextWithTrace(suite.ctx, "req-"+strconv.Itoa(i))
+
+			_, err := suite.lr.Execute(ctx, parcel)
+			suite.Require().NoError(err)
+
+			wg.Done()
+		}(i)
+	}
+
+	wg.Wait()
 }
 
 func TestLogicRunner(t *testing.T) {

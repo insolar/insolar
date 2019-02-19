@@ -161,7 +161,7 @@ func getTestData(s *amSuite) (
 	handler := MessageHandler{
 		replayHandlers:             map[core.MessageType]core.MessageHandler{},
 		PlatformCryptographyScheme: s.scheme,
-		conf:                       &configuration.Ledger{LightChainLimit: 3},
+		conf:                       &configuration.Ledger{LightChainLimit: 3, PendingRequestsLimit: 10},
 		certificate:                certificate,
 	}
 
@@ -182,6 +182,7 @@ func getTestData(s *amSuite) (
 	provideMock := recentstorage.NewProviderMock(s.T())
 	provideMock.GetIndexStorageMock.Return(indexMock)
 	provideMock.GetPendingStorageMock.Return(pendingMock)
+	provideMock.CountMock.Return(1)
 
 	handler.RecentStorageProvider = provideMock
 
@@ -793,6 +794,7 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterValidation() {
 	provideMock := recentstorage.NewProviderMock(s.T())
 	provideMock.GetIndexStorageMock.Return(indexMock)
 	provideMock.GetPendingStorageMock.Return(pendingMock)
+	provideMock.CountMock.Return(0)
 
 	certificate := testutils.NewCertificateMock(s.T())
 	certificate.GetRoleMock.Return(core.StaticRoleLightMaterial)
@@ -800,7 +802,7 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterValidation() {
 	handler := MessageHandler{
 		replayHandlers:             map[core.MessageType]core.MessageHandler{},
 		PlatformCryptographyScheme: s.scheme,
-		conf:                       &configuration.Ledger{LightChainLimit: 3},
+		conf:                       &configuration.Ledger{LightChainLimit: 3, PendingRequestsLimit: 10},
 		certificate:                certificate,
 	}
 

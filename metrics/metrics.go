@@ -51,6 +51,7 @@ func NewMetrics(ctx context.Context, cfg configuration.Metrics, registry *promet
 
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", promhandler)
+	mux.Handle("/_status", newProcStatus())
 	pprof.Handle(mux)
 	if cfg.ZpagesEnabled {
 		// https://opencensus.io/zpages/

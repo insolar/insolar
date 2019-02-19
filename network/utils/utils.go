@@ -54,8 +54,12 @@ func AtomicLoadAndIncrementUint64(addr *uint64) uint64 {
 
 // GenerateShortID generate short ID for node without checking collisions
 func GenerateShortID(ref core.RecordRef) core.ShortNodeID {
-	result := crc32.ChecksumIEEE(ref[:])
-	return core.ShortNodeID(result)
+	return core.ShortNodeID(GenerateUintShortID(ref))
+}
+
+// GenerateShortID generate short ID for node without checking collisions
+func GenerateUintShortID(ref core.RecordRef) uint32 {
+	return crc32.ChecksumIEEE(ref[:])
 }
 
 func OriginIsDiscovery(cert core.Certificate) bool {
