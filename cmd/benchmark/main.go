@@ -31,6 +31,7 @@ import (
 
 	"github.com/insolar/insolar/api/sdk"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/utils/backoff"
 	"github.com/pkg/errors"
 	"github.com/spf13/pflag"
 )
@@ -167,6 +168,8 @@ func getTotalBalance(insSDK *sdk.SDK, members []*sdk.Member) uint64 {
 	// execute all queries in parallel
 	for i := 0; i < nmembers; i++ {
 		go func(m *sdk.Member, num int) {
+			bof := backoff.Backoff{Min: 1 * time.Second, Max: 10 * time.Second}
+
 			res := Result{num: num}
 			for attempt := 0; attempt < 3; attempt++ {
 				res.balance, res.err = insSDK.GetBalance(m)
@@ -174,7 +177,7 @@ func getTotalBalance(insSDK *sdk.SDK, members []*sdk.Member) uint64 {
 					break
 				}
 				// retry
-				time.Sleep(1 * time.Second)
+				time.Sleep(bof.Duration())
 			}
 			results <- res
 			wg.Done()
