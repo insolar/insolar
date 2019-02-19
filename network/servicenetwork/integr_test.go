@@ -150,7 +150,7 @@ func (s *testSuite) TestNodeLeave() {
 
 	s.waitForConsensus(2)
 
-	// one active nodes become "not working"
+	// one active node becomes "not working"
 	workingNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount(), len(workingNodes))
 

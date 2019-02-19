@@ -194,6 +194,7 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 	return nil
 }
 
+// TODO add ETA as param
 func (n *ServiceNetwork) Leave(ctx context.Context) {
 	logger := inslogger.FromContext(ctx)
 	logger.Info("Gracefully stopping service network")

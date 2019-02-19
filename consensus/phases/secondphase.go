@@ -310,12 +310,12 @@ func (sp *SecondPhaseImpl) generatePhase2Bitset(list network.UnsyncList, proofs 
 	for node := range proofs {
 		cells = append(cells, packets.BitSetCell{
 			NodeID: node.ID(),
-			State:  livingNodeState(list.GetActiveNode(node.ID()), pulseNumber),
+			State:  getNodeState(node, pulseNumber),
 		})
 	}
 	cells = append(cells, packets.BitSetCell{
 		NodeID: sp.NodeKeeper.GetOrigin().ID(),
-		State:  livingNodeState(sp.NodeKeeper.GetOrigin(), pulseNumber),
+		State:  getNodeState(sp.NodeKeeper.GetOrigin(), pulseNumber),
 	})
 	err = bitset.ApplyChanges(cells, list)
 	if err != nil {
@@ -324,7 +324,7 @@ func (sp *SecondPhaseImpl) generatePhase2Bitset(list network.UnsyncList, proofs 
 	return bitset, nil
 }
 
-func livingNodeState(node core.Node, pulseNumber core.PulseNumber) packets.TriState {
+func getNodeState(node core.Node, pulseNumber core.PulseNumber) packets.TriState {
 	state := packets.Legit
 	if node.Leaving() && node.LeavingETA() < pulseNumber {
 		state = packets.TimedOut
