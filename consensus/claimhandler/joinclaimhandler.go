@@ -17,8 +17,11 @@
 package claimhandler
 
 import (
+	"context"
+
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 type joinClaimHandler struct {
@@ -52,6 +55,11 @@ func (jch *joinClaimHandler) handle(claim packets.ReferendumClaim) packets.Refer
 }
 
 func getPriority(ref core.RecordRef, entropy core.Entropy) []byte {
+	// TODO: try to delete this if block, but be careful
+	if len(ref) != len(entropy) {
+		logger := inslogger.FromContext(context.Background())
+		logger.Errorf("[ joinClaimHandler ] getPriority: length not match! reference: %d, entropy: %d", len(ref), len(entropy))
+	}
 	res := make([]byte, len(ref))
 	for i := 0; i < len(ref); i++ {
 		res[i] = ref[i] ^ entropy[i]

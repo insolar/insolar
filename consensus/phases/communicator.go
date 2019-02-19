@@ -89,7 +89,7 @@ func NewCommunicator() *ConsensusCommunicator {
 	return &ConsensusCommunicator{}
 }
 
-// Start method implements Starter interface
+// Init method implements Starter interface
 func (nc *ConsensusCommunicator) Init(ctx context.Context) error {
 	nc.phase1result = make(chan phase1Result)
 	nc.phase2result = make(chan phase2Result)

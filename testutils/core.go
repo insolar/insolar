@@ -24,7 +24,7 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/storage/jet"
-	uuid "github.com/satori/go.uuid"
+	"github.com/satori/go.uuid"
 	"golang.org/x/crypto/sha3"
 )
 

@@ -38,17 +38,16 @@ func (q *Queue) PushClaim(claim packets.ReferendumClaim, priority []byte) {
 		index:    q.Len(),
 		priority: priority,
 	}
-	q.Push(item)
+	heap.Push(q, item)
 }
 
 func (q *Queue) Push(x interface{}) {
 	item := x.(*Claim)
 	*q = append(*q, item)
-	heap.Fix(q, item.index)
 }
 
 func (q *Queue) PopClaim() packets.ReferendumClaim {
-	return q.PopClaim().(packets.ReferendumClaim)
+	return heap.Pop(q).(packets.ReferendumClaim)
 }
 
 func (q *Queue) Pop() interface{} {
