@@ -26,6 +26,16 @@ type ShortNodeID uint32
 // GlobuleID is the ID of the globe
 type GlobuleID uint32
 
+// NodeState is the state of the node
+type NodeState uint8
+
+//go:generate stringer -type=NodeState
+const (
+	NodeDiscovery NodeState = iota
+	NodeJoining
+	NodeReady
+)
+
 //go:generate minimock -i github.com/insolar/insolar/core.Node -o ../testutils/network -s _mock.go
 type Node interface {
 	// ID is the unique identifier of the node
@@ -50,6 +60,8 @@ type Node interface {
 	LeavingETA() PulseNumber
 	// IsWorking true if node is in working node list
 	IsWorking() bool
+	// GetState get state of the node
+	GetState() NodeState
 }
 
 type NodeNetworkState uint8

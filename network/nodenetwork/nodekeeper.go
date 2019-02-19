@@ -89,9 +89,9 @@ func resolveAddress(configuration configuration.HostNetwork) (string, error) {
 
 // NewNodeKeeper create new NodeKeeper
 func NewNodeKeeper(origin core.Node) network.NodeKeeper {
-	result := &nodekeeper{
+	return &nodekeeper{
 		origin:       origin,
-		state:        core.UndefinedNodeNetworkState,
+		state:        core.ReadyNodeNetworkState,
 		claimQueue:   newClaimQueue(),
 		active:       make(map[core.RecordRef]core.Node),
 		indexNode:    make(map[core.StaticRole]*recordRefSet),
@@ -100,8 +100,6 @@ func NewNodeKeeper(origin core.Node) network.NodeKeeper {
 		tempMapS:     make(map[core.ShortNodeID]*host.Host),
 		sync:         newUnsyncList(origin, []core.Node{}, 0),
 	}
-	result.SetState(core.ReadyNodeNetworkState)
-	return result
 }
 
 type nodekeeper struct {
