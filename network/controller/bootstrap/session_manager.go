@@ -28,7 +28,6 @@ import (
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/network/utils"
 	"github.com/pkg/errors"
 )
@@ -139,9 +138,7 @@ func (sm *sessionManager) NewSession(ref core.RecordRef, cert core.Authorization
 	}
 	sessionID := SessionID(id)
 
-	_, span := instracer.StartSpan(context.Background(), "SessionManager.NewSession wait lock")
 	sm.lock.Lock()
-	span.End()
 	sm.sessions[sessionID] = session
 	sm.lock.Unlock()
 
@@ -151,9 +148,7 @@ func (sm *sessionManager) NewSession(ref core.RecordRef, cert core.Authorization
 }
 
 func (sm *sessionManager) CheckSession(id SessionID, expected SessionState) error {
-	_, span := instracer.StartSpan(context.Background(), "SessionManager.CheckSession wait lock")
 	sm.lock.RLock()
-	span.End()
 	defer sm.lock.RUnlock()
 
 	_, err := sm.checkSession(id, expected)
@@ -172,9 +167,7 @@ func (sm *sessionManager) checkSession(id SessionID, expected SessionState) (*Se
 }
 
 func (sm *sessionManager) SetDiscoveryNonce(id SessionID, discoveryNonce Nonce) error {
-	_, span := instracer.StartSpan(context.Background(), "SessionManager.SetDiscoveryNonce wait lock")
 	sm.lock.Lock()
-	span.End()
 	defer sm.lock.Unlock()
 
 	session, err := sm.checkSession(id, Authorized)
@@ -187,9 +180,7 @@ func (sm *sessionManager) SetDiscoveryNonce(id SessionID, discoveryNonce Nonce) 
 }
 
 func (sm *sessionManager) GetChallengeData(id SessionID) (core.AuthorizationCertificate, Nonce, error) {
-	_, span := instracer.StartSpan(context.Background(), "SessionManager.GetChallengeData wait lock")
 	sm.lock.Lock()
-	span.End()
 	defer sm.lock.Unlock()
 
 	session, err := sm.checkSession(id, Challenge1)
@@ -200,9 +191,7 @@ func (sm *sessionManager) GetChallengeData(id SessionID) (core.AuthorizationCert
 }
 
 func (sm *sessionManager) ChallengePassed(id SessionID) error {
-	_, span := instracer.StartSpan(context.Background(), "SessionManager.ChallengePassed wait lock")
 	sm.lock.Lock()
-	span.End()
 	defer sm.lock.Unlock()
 
 	session, err := sm.checkSession(id, Challenge1)
@@ -214,9 +203,7 @@ func (sm *sessionManager) ChallengePassed(id SessionID) error {
 }
 
 func (sm *sessionManager) ReleaseSession(id SessionID) (*Session, error) {
-	_, span := instracer.StartSpan(context.Background(), "SessionManager.ReleaseSession wait lock")
 	sm.lock.Lock()
-	span.End()
 	defer sm.lock.Unlock()
 
 	session, err := sm.checkSession(id, Challenge2)
@@ -230,9 +217,7 @@ func (sm *sessionManager) ReleaseSession(id SessionID) (*Session, error) {
 func (sm *sessionManager) cleanupExpiredSessions() {
 	var sessionsByExpirationTime []*sessionWithID
 	for {
-		_, span := instracer.StartSpan(context.Background(), "SessionManager.cleanupExpiredSessions wait lock")
 		sm.lock.RLock()
-		span.End()
 		sessionsCount := len(sm.sessions)
 		sm.lock.RUnlock()
 
@@ -278,9 +263,7 @@ func (sm *sessionManager) cleanupExpiredSessions() {
 }
 
 func (sm *sessionManager) sortSessionsByExpirationTime() []*sessionWithID {
-	_, span := instracer.StartSpan(context.Background(), "SessionManager.sortSessionByExpirationTime wait lock")
 	sm.lock.RLock()
-	span.End()
 
 	// Read active session with their ids. We have to store them as a slice to keep ordering by expiration time.
 	sessionsByExpirationTime := make([]*sessionWithID, 0, len(sm.sessions))
@@ -306,9 +289,7 @@ func (sm *sessionManager) sortSessionsByExpirationTime() []*sessionWithID {
 func (sm *sessionManager) expireSessions(sessionsByExpirationTime []*sessionWithID) []*sessionWithID {
 	var shift int
 
-	_, span := instracer.StartSpan(context.Background(), "SessionManager.expireSessions wait lock")
 	sm.lock.Lock()
-	span.End()
 
 	for i, session := range sessionsByExpirationTime {
 		// Check when we have to stop expire
