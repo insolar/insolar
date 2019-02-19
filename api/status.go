@@ -22,11 +22,13 @@ import (
 
 	"github.com/insolar/insolar/core/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/network"
 )
 
 type Node struct {
 	Reference string
 	Role      string
+	IsWorking bool
 }
 
 // StatusReply is reply for Status service requests.
@@ -34,7 +36,8 @@ type StatusReply struct {
 	NetworkState        string
 	Origin              Node
 	ActiveListSize      int
-	ActiveList          []Node
+	WorkingListSize     int
+	Nodes               []Node
 	PulseNumber         uint32
 	Entropy             []byte
 	NodeState           string
@@ -61,19 +64,23 @@ func (s *StatusService) Get(r *http.Request, args *interface{}, reply *StatusRep
 	reply.NetworkState = s.runner.NetworkSwitcher.GetState().String()
 	reply.NodeState = s.runner.NodeNetwork.GetState().String()
 	reply.AdditionalNodeState = s.runner.NodeNetwork.GetOrigin().GetState().String()
-	activeNodes := s.runner.NodeNetwork.GetWorkingNodes()
+
+	activeNodes := s.runner.NodeNetwork.(network.NodeKeeper).GetActiveNodes()
+	workingNodes := s.runner.NodeNetwork.GetWorkingNodes()
 
 	reply.ActiveListSize = len(activeNodes)
+	reply.WorkingListSize = len(workingNodes)
 
 	nodes := make([]Node, reply.ActiveListSize)
 	for i, node := range activeNodes {
 		nodes[i] = Node{
 			Reference: node.ID().String(),
 			Role:      node.Role().String(),
+			IsWorking: node.IsWorking(),
 		}
 	}
 
-	reply.ActiveList = nodes
+	reply.Nodes = nodes
 	origin := s.runner.NodeNetwork.GetOrigin()
 	reply.Origin = Node{
 		Reference: origin.ID().String(),

@@ -32,5 +32,5 @@ func TestGetStatus(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, "CompleteNetworkState", status.NetworkState)
-	require.Equal(t, numNodes, status.ActiveListSize)
+	require.Equal(t, numNodes, status.WorkingListSize)
 }
