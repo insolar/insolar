@@ -58,17 +58,6 @@ func (m *LedgerArtifactManager) State() ([]byte, error) {
 	return m.PlatformCryptographyScheme.IntegrityHasher().Hash([]byte{1, 2, 3}), nil
 }
 
-// Pulse returns current PulseNumber for artifact manager
-func (m *LedgerArtifactManager) Pulse(ctx context.Context) (pn core.PulseNumber, err error) {
-	pulse, err := m.PulseStorage.Current(ctx)
-	if err != nil {
-		return
-	}
-
-	pn = pulse.PulseNumber
-	return
-}
-
 // NewArtifactManger creates new manager instance.
 func NewArtifactManger() *LedgerArtifactManager {
 	return &LedgerArtifactManager{
@@ -100,7 +89,7 @@ func (m *LedgerArtifactManager) RegisterRequest(
 		instrumenter.end()
 	}()
 
-	currentPN, err := m.Pulse(ctx)
+	currentPN, err := m.pulse(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -141,7 +130,7 @@ func (m *LedgerArtifactManager) GetCode(
 		instrumenter.end()
 	}()
 
-	currentPN, err := m.Pulse(ctx)
+	currentPN, err := m.pulse(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -209,7 +198,7 @@ func (m *LedgerArtifactManager) GetObject(
 		Approved: approved,
 	}
 
-	currentPN, err := m.Pulse(ctx)
+	currentPN, err := m.pulse(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -262,7 +251,7 @@ func (m *LedgerArtifactManager) GetPendingRequest(ctx context.Context, objectID 
 		instrumenter.end()
 	}()
 
-	currentPN, err := m.Pulse(ctx)
+	currentPN, err := m.pulse(ctx)
 
 	bus := core.MessageBusFromContext(ctx, m.DefaultBus)
 	sender := BuildSender(
@@ -331,7 +320,7 @@ func (m *LedgerArtifactManager) HasPendingRequests(
 	object core.RecordRef,
 ) (bool, error) {
 
-	currentPN, err := m.Pulse(ctx)
+	currentPN, err := m.pulse(ctx)
 	if err != nil {
 		return false, err
 	}
@@ -376,7 +365,7 @@ func (m *LedgerArtifactManager) GetDelegate(
 		instrumenter.end()
 	}()
 
-	currentPN, err := m.Pulse(ctx)
+	currentPN, err := m.pulse(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -419,7 +408,7 @@ func (m *LedgerArtifactManager) GetChildren(
 		instrumenter.end()
 	}()
 
-	currentPN, err := m.Pulse(ctx)
+	currentPN, err := m.pulse(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -447,7 +436,7 @@ func (m *LedgerArtifactManager) DeclareType(
 		instrumenter.end()
 	}()
 
-	currentPN, err := m.Pulse(ctx)
+	currentPN, err := m.pulse(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -488,7 +477,7 @@ func (m *LedgerArtifactManager) DeployCode(
 		instrumenter.end()
 	}()
 
-	currentPN, err := m.Pulse(ctx)
+	currentPN, err := m.pulse(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -586,7 +575,7 @@ func (m *LedgerArtifactManager) DeactivateObject(
 		instrumenter.end()
 	}()
 
-	currentPN, err := m.Pulse(ctx)
+	currentPN, err := m.pulse(ctx)
 
 	desc, err := m.sendUpdateObject(
 		ctx,
@@ -694,7 +683,7 @@ func (m *LedgerArtifactManager) RegisterValidation(
 		ValidationMessages: validationMessages,
 	}
 
-	currentPN, err := m.Pulse(ctx)
+	currentPN, err := m.pulse(ctx)
 	if err != nil {
 		return err
 	}
@@ -721,7 +710,7 @@ func (m *LedgerArtifactManager) RegisterResult(
 		instrumenter.end()
 	}()
 
-	currentPN, err := m.Pulse(ctx)
+	currentPN, err := m.pulse(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -739,6 +728,17 @@ func (m *LedgerArtifactManager) RegisterResult(
 	return recid, err
 }
 
+// pulse returns current PulseNumber for artifact manager
+func (m *LedgerArtifactManager) pulse(ctx context.Context) (pn core.PulseNumber, err error) {
+	pulse, err := m.PulseStorage.Current(ctx)
+	if err != nil {
+		return
+	}
+
+	pn = pulse.PulseNumber
+	return
+}
+
 func (m *LedgerArtifactManager) activateObject(
 	ctx context.Context,
 	domain core.RecordRef,
@@ -753,7 +753,7 @@ func (m *LedgerArtifactManager) activateObject(
 	if err != nil {
 		return nil, err
 	}
-	currentPN, err := m.Pulse(ctx)
+	currentPN, err := m.pulse(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -842,7 +842,7 @@ func (m *LedgerArtifactManager) updateObject(
 		return nil, errors.Wrap(err, "failed to update object")
 	}
 
-	currentPN, err := m.Pulse(ctx)
+	currentPN, err := m.pulse(ctx)
 	if err != nil {
 		return nil, err
 	}
