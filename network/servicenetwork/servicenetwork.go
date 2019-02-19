@@ -194,11 +194,11 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 	return nil
 }
 
-func (n *ServiceNetwork) GracefulStop(ctx context.Context) {
+func (n *ServiceNetwork) Leave(ctx context.Context) {
 	logger := inslogger.FromContext(ctx)
 	logger.Info("Gracefully stopping service network")
 
-	n.NodeKeeper.AddPendingClaim(&packets.NodeLeaveClaim{})
+	n.NodeKeeper.AddPendingClaim(&packets.NodeLeaveClaim{ETA: 0})
 }
 
 // Stop implements core.Component

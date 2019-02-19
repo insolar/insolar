@@ -123,6 +123,10 @@ func (s *testSuite) TestTwoNodesConnect() {
 }
 
 func (s *testSuite) TestNodeLeave() {
+	if len(s.fixture().bootstrapNodes) < consensusMin {
+		s.T().Skip(consensusMinMsg)
+	}
+
 	testNode := newNetworkNode()
 	s.preInitNode(testNode)
 
@@ -142,12 +146,17 @@ func (s *testSuite) TestNodeLeave() {
 	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
 	s.Equal(s.getNodesCount()+1, len(activeNodes))
 
-	testNode.serviceNetwork.GracefulStop(context.Background())
+	testNode.serviceNetwork.Leave(context.Background())
 
 	s.waitForConsensus(2)
 
+	// one active nodes become "not working"
+	workingNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
+	s.Equal(s.getNodesCount(), len(workingNodes))
+
+	// but all nodes are active
 	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
-	s.Equal(s.getNodesCount(), len(activeNodes))
+	s.Equal(s.getNodesCount()+1, len(activeNodes))
 }
 
 func TestServiceNetworkOneBootstrap(t *testing.T) {
