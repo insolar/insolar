@@ -209,7 +209,7 @@ func (bc *bootstrapper) Bootstrap(ctx context.Context) (*network.BootstrapResult
 		}
 	}
 
-	return nil, nil, errors.New("majority failed")
+	return nil, nil, errors.New("majority rule failed")
 }
 
 func (bc *bootstrapper) SetLastPulse(number core.PulseNumber) {
@@ -324,10 +324,9 @@ func (bc *bootstrapper) BootstrapDiscovery(ctx context.Context) (*network.Bootst
 		activeNode.(nodenetwork.MutableNode).SetState(core.NodeDiscovery)
 		activeNodesStr = append(activeNodesStr, activeNode.ID().String())
 	}
-	// TODO: bronin check majority and roles ??
+
 	if len(activeNodes) < bc.Certificate.GetMajorityRule() {
-		panic("majority rule TODO:")
-		return nil, errors.New("majority rule TODO:")
+		return nil, errors.New("majority rule failed")
 	}
 
 	bc.NodeKeeper.AddActiveNodes(activeNodes)
