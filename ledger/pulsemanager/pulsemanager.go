@@ -373,19 +373,19 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse c
 	})
 	indexToSplit := rand.Intn(len(jetIDs))
 	for i, jetID := range jetIDs {
-		imExecutor := false
+		wasExecutor := false
 		executor, err := m.JetCoordinator.LightExecutorForJet(ctx, jetID, currentPulse)
 		if err != nil && err != core.ErrNoNodes {
 			return nil, err
 		}
 		if err == nil {
-			imExecutor = *executor == me
+			wasExecutor = *executor == me
 		}
 
 		jetLogger := logger.WithField("jetid", jetID.DebugString())
 		inslogger.SetLogger(ctx, jetLogger)
-		logger.WithField("i_was_executor", imExecutor).Debug("process jet")
-		if !imExecutor {
+		logger.WithField("i_was_executor", wasExecutor).Debug("process jet")
+		if !wasExecutor {
 			continue
 		}
 
