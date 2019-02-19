@@ -210,9 +210,9 @@ func (s *testSuite) TestNodeComeAfterAnotherNodeSendLeaveETA() {
 
 	s.InitNode(leavingNode)
 	s.StartNode(leavingNode)
-	//defer func(s *testSuite) {
-	//	s.StopNode(leavingNode)
-	//}(s)
+	defer func(s *testSuite) {
+		s.StopNode(leavingNode)
+	}(s)
 
 	// wait for node will be added at active list
 	s.waitForConsensus(2)
