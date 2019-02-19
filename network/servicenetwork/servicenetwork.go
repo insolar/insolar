@@ -195,11 +195,11 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 }
 
 // TODO add ETA as param
-func (n *ServiceNetwork) Leave(ctx context.Context) {
+func (n *ServiceNetwork) Leave(ctx context.Context, ETA core.PulseNumber) {
 	logger := inslogger.FromContext(ctx)
 	logger.Info("Gracefully stopping service network")
 
-	n.NodeKeeper.AddPendingClaim(&packets.NodeLeaveClaim{ETA: 0})
+	n.NodeKeeper.AddPendingClaim(&packets.NodeLeaveClaim{ETA: ETA})
 }
 
 // Stop implements core.Component

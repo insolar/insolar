@@ -146,7 +146,7 @@ func (s *testSuite) TestNodeLeave() {
 	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
 	s.Equal(s.getNodesCount()+1, len(activeNodes))
 
-	testNode.serviceNetwork.Leave(context.Background())
+	testNode.serviceNetwork.Leave(context.Background(), 0)
 
 	s.waitForConsensus(2)
 
@@ -156,6 +156,47 @@ func (s *testSuite) TestNodeLeave() {
 
 	// but all nodes are active
 	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount()+1, len(activeNodes))
+}
+
+func (s *testSuite) TestNodeLeaveAtETA() {
+	if len(s.fixture().bootstrapNodes) < consensusMin {
+		s.T().Skip(consensusMinMsg)
+	}
+
+	testNode := newNetworkNode()
+	s.preInitNode(testNode)
+
+	s.InitNode(testNode)
+	s.StartNode(testNode)
+	defer func(s *testSuite) {
+		s.StopNode(testNode)
+	}(s)
+
+	// wait for node will be added at active list
+	s.waitForConsensus(2)
+	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount()+1, len(activeNodes))
+
+	pulse, err := s.fixture().bootstrapNodes[0].serviceNetwork.PulseStorage.Current(s.fixture().ctx)
+	s.NoError(err)
+
+	// next pulse will be last for this node
+	testNode.serviceNetwork.Leave(s.fixture().ctx, pulse.NextPulseNumber)
+
+	// node still active and working
+	s.waitForConsensus(1)
+	workingNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
+	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount()+1, len(activeNodes))
+	s.Equal(s.getNodesCount()+1, len(workingNodes))
+
+	// now node leaves, but it's still in active list
+	s.waitForConsensus(1)
+	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	workingNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
+	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount(), len(workingNodes))
 	s.Equal(s.getNodesCount()+1, len(activeNodes))
 }
 
