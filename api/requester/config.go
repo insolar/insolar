@@ -20,6 +20,7 @@ import (
 	"crypto"
 	"encoding/json"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 
 	"github.com/insolar/insolar/platformpolicy"
@@ -41,7 +42,13 @@ type RequestConfigJSON struct {
 }
 
 func readFile(path string, configType interface{}) error {
-	rawConf, err := ioutil.ReadFile(filepath.Clean(path))
+	var rawConf []byte
+	var err error
+	if path == "-" {
+		rawConf, err = ioutil.ReadAll(os.Stdin)
+	} else {
+		rawConf, err = ioutil.ReadFile(filepath.Clean(path))
+	}
 	if err != nil {
 		return errors.Wrap(err, "[ readFile ] Problem with reading config")
 	}
@@ -54,7 +61,7 @@ func readFile(path string, configType interface{}) error {
 	return nil
 }
 
-// ReadUserConfigFromFile read user confgi from file
+// ReadUserConfigFromFile read user config from file
 func ReadUserConfigFromFile(path string) (*UserConfigJSON, error) {
 	cfgJSON := &UserConfigJSON{}
 	err := readFile(path, cfgJSON)
@@ -63,6 +70,19 @@ func ReadUserConfigFromFile(path string) (*UserConfigJSON, error) {
 	}
 
 	ks := platformpolicy.NewKeyProcessor()
+
+	if cfgJSON.PrivateKey == "" {
+		privKey, err := ks.GeneratePrivateKey()
+		if err != nil {
+			return nil, errors.Wrap(err, "[ readUserConfigFromFile ] ")
+		}
+		privKeyStr, err := ks.ExportPrivateKeyPEM(privKey)
+		if err != nil {
+			return nil, errors.Wrap(err, "[ readUserConfigFromFile ] ")
+		}
+		cfgJSON.PrivateKey = string(privKeyStr)
+	}
+
 	cfgJSON.privateKeyObject, err = ks.ImportPrivateKeyPEM([]byte(cfgJSON.PrivateKey))
 	if err != nil {
 		return nil, errors.Wrap(err, "[ readUserConfigFromFile ] Problem with reading private key")

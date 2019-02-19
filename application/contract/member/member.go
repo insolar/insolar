@@ -77,13 +77,16 @@ var INSATTR_Call_API = true
 // Call method for authorized calls
 func (m *Member) Call(rootDomain core.RecordRef, method string, params []byte, seed []byte, sign []byte) (interface{}, error) {
 
+	switch method {
+	case "CreateMember":
+		return m.createMemberCall(rootDomain, params)
+	}
+
 	if err := m.verifySig(method, params, seed, sign); err != nil {
 		return nil, fmt.Errorf("[ Call ]: %s", err.Error())
 	}
 
 	switch method {
-	case "CreateMember":
-		return m.createMemberCall(rootDomain, params)
 	case "GetMyBalance":
 		return m.getMyBalanceCall()
 	case "GetBalance":
