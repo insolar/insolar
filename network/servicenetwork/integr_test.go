@@ -222,9 +222,9 @@ func (s *testSuite) TestNodeComeAfterAnotherNodeSendLeaveETA() {
 	pulse, err := s.fixture().bootstrapNodes[0].serviceNetwork.PulseStorage.Current(s.fixture().ctx)
 	s.NoError(err)
 
-	// living in 3 pulses
+	// leaving in 3 pulses
 	pulseDelta := pulse.NextPulseNumber - pulse.PulseNumber
-	leavingNode.serviceNetwork.Leave(s.fixture().ctx, pulse.PulseNumber+2*pulseDelta)
+	leavingNode.serviceNetwork.Leave(s.fixture().ctx, pulse.PulseNumber+3*pulseDelta)
 
 	// wait for leavingNode will be marked as leaving
 	s.waitForConsensus(1)
@@ -241,16 +241,31 @@ func (s *testSuite) TestNodeComeAfterAnotherNodeSendLeaveETA() {
 	// wait for newNode will be added at active list, its a last pulse for leavingNode
 	s.waitForConsensus(2)
 	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+
+	// newNode doesn't have workingNodes
 	workingNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
+	newNodeWorkingNodes := newNode.serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount()+1, len(workingNodes))
 	s.Equal(s.getNodesCount()+2, len(activeNodes))
+	s.Equal(0, len(newNodeWorkingNodes))
+
+	// newNode have to have same working node list as other nodes, but it doesn't because it miss leaving claim
+	s.waitForConsensus(1)
+	workingNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
+	newNodeWorkingNodes = newNode.serviceNetwork.NodeKeeper.GetWorkingNodes()
+	s.Equal(s.getNodesCount()+1, len(workingNodes))
+	s.Equal(s.getNodesCount()+2, len(activeNodes))
+	// TODO it's wrong!!!
+	s.Equal(s.getNodesCount()+2, len(newNodeWorkingNodes))
 
 	// leaveNode leaving, newNode still ok
 	s.waitForConsensus(1)
-	workingNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
+	workingNodes = newNode.serviceNetwork.NodeKeeper.GetWorkingNodes()
 	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	newNodeWorkingNodes = newNode.serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount()+1, len(workingNodes))
 	s.Equal(s.getNodesCount()+1, len(activeNodes))
+	s.Equal(s.getNodesCount()+1, len(newNodeWorkingNodes))
 }
 
 func TestServiceNetworkOneBootstrap(t *testing.T) {
