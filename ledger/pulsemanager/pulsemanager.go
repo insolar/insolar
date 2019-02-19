@@ -617,7 +617,6 @@ func (m *PulseManager) setUnderGilSection(
 		// No active nodes for pulse. It means there was no processing (network start).
 		if len(nodes) == 0 {
 			// Activate zero jet for jet tree and unlock jet waiter.
-			inslogger.FromContext(ctx).Error("I AM CALLED ")
 			zeroJet := *jet.NewID(0, nil)
 			m.JetStorage.UpdateJetTree(ctx, newPulse.PulseNumber, true, zeroJet)
 			err := m.HotDataWaiter.Unlock(ctx, zeroJet)
