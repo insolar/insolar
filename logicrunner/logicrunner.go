@@ -510,10 +510,6 @@ func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionS
 
 		inslogger.FromContext(qe.ctx).Debug("Registering request within execution behaviour")
 
-		ok := es.Behaviour.(*ValidationSaver)
-		if ok == nil {
-			panic("not ValidationSaver behaviour in ProcessExecutionQueue()")
-		}
 		es.Behaviour.(*ValidationSaver).NewRequest(qe.parcel, *qe.request, recordingBus)
 
 		res.reply, res.err = lr.executeOrValidate(current.Context, es, qe.parcel)
