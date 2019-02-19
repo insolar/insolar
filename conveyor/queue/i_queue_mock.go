@@ -3,7 +3,7 @@ package queue
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "IQueue" can be found in github.com/insolar/insolar/conveyer/queue
+The original interface "IQueue" can be found in github.com/insolar/insolar/conveyor/queue
 */
 import (
 	"sync/atomic"
@@ -13,7 +13,7 @@ import (
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//IQueueMock implements github.com/insolar/insolar/conveyer/queue.IQueue
+//IQueueMock implements github.com/insolar/insolar/conveyor/queue.IQueue
 type IQueueMock struct {
 	t minimock.Tester
 
@@ -53,7 +53,7 @@ type IQueueMock struct {
 	UnblockMock       mIQueueMockUnblock
 }
 
-//NewIQueueMock returns a mock for github.com/insolar/insolar/conveyer/queue.IQueue
+//NewIQueueMock returns a mock for github.com/insolar/insolar/conveyor/queue.IQueue
 func NewIQueueMock(t minimock.Tester) *IQueueMock {
 	m := &IQueueMock{t: t}
 
@@ -134,7 +134,7 @@ func (m *mIQueueMockBlockAndRemoveAll) Set(f func() (r []OutputElement)) *IQueue
 	return m.mock
 }
 
-//BlockAndRemoveAll implements github.com/insolar/insolar/conveyer/queue.IQueue interface
+//BlockAndRemoveAll implements github.com/insolar/insolar/conveyor/queue.IQueue interface
 func (m *IQueueMock) BlockAndRemoveAll() (r []OutputElement) {
 	counter := atomic.AddUint64(&m.BlockAndRemoveAllPreCounter, 1)
 	defer atomic.AddUint64(&m.BlockAndRemoveAllCounter, 1)
@@ -268,7 +268,7 @@ func (m *mIQueueMockHasSignal) Set(f func() (r bool)) *IQueueMock {
 	return m.mock
 }
 
-//HasSignal implements github.com/insolar/insolar/conveyer/queue.IQueue interface
+//HasSignal implements github.com/insolar/insolar/conveyor/queue.IQueue interface
 func (m *IQueueMock) HasSignal() (r bool) {
 	counter := atomic.AddUint64(&m.HasSignalPreCounter, 1)
 	defer atomic.AddUint64(&m.HasSignalCounter, 1)
@@ -408,7 +408,7 @@ func (m *mIQueueMockPushSignal) Set(f func(p uint32, p1 SyncDone) (r error)) *IQ
 	return m.mock
 }
 
-//PushSignal implements github.com/insolar/insolar/conveyer/queue.IQueue interface
+//PushSignal implements github.com/insolar/insolar/conveyor/queue.IQueue interface
 func (m *IQueueMock) PushSignal(p uint32, p1 SyncDone) (r error) {
 	counter := atomic.AddUint64(&m.PushSignalPreCounter, 1)
 	defer atomic.AddUint64(&m.PushSignalCounter, 1)
@@ -550,7 +550,7 @@ func (m *mIQueueMockRemoveAll) Set(f func() (r []OutputElement)) *IQueueMock {
 	return m.mock
 }
 
-//RemoveAll implements github.com/insolar/insolar/conveyer/queue.IQueue interface
+//RemoveAll implements github.com/insolar/insolar/conveyor/queue.IQueue interface
 func (m *IQueueMock) RemoveAll() (r []OutputElement) {
 	counter := atomic.AddUint64(&m.RemoveAllPreCounter, 1)
 	defer atomic.AddUint64(&m.RemoveAllCounter, 1)
@@ -689,7 +689,7 @@ func (m *mIQueueMockSinkPush) Set(f func(p interface{}) (r error)) *IQueueMock {
 	return m.mock
 }
 
-//SinkPush implements github.com/insolar/insolar/conveyer/queue.IQueue interface
+//SinkPush implements github.com/insolar/insolar/conveyor/queue.IQueue interface
 func (m *IQueueMock) SinkPush(p interface{}) (r error) {
 	counter := atomic.AddUint64(&m.SinkPushPreCounter, 1)
 	defer atomic.AddUint64(&m.SinkPushCounter, 1)
@@ -836,7 +836,7 @@ func (m *mIQueueMockSinkPushAll) Set(f func(p []interface{}) (r error)) *IQueueM
 	return m.mock
 }
 
-//SinkPushAll implements github.com/insolar/insolar/conveyer/queue.IQueue interface
+//SinkPushAll implements github.com/insolar/insolar/conveyor/queue.IQueue interface
 func (m *IQueueMock) SinkPushAll(p []interface{}) (r error) {
 	counter := atomic.AddUint64(&m.SinkPushAllPreCounter, 1)
 	defer atomic.AddUint64(&m.SinkPushAllCounter, 1)
@@ -978,7 +978,7 @@ func (m *mIQueueMockUnblock) Set(f func() (r bool)) *IQueueMock {
 	return m.mock
 }
 
-//Unblock implements github.com/insolar/insolar/conveyer/queue.IQueue interface
+//Unblock implements github.com/insolar/insolar/conveyor/queue.IQueue interface
 func (m *IQueueMock) Unblock() (r bool) {
 	counter := atomic.AddUint64(&m.UnblockPreCounter, 1)
 	defer atomic.AddUint64(&m.UnblockCounter, 1)
