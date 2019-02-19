@@ -46,9 +46,9 @@ func NewNodeNetwork(configuration configuration.HostNetwork, certificate core.Ce
 		return nil, errors.Wrap(err, "Failed to create origin node")
 	}
 	nodeKeeper := NewNodeKeeper(origin)
-	nodeKeeper.SetState(network.Waiting)
+	nodeKeeper.SetState(core.WaitingNodeNetworkState)
 	if len(certificate.GetDiscoveryNodes()) == 0 || utils.OriginIsDiscovery(certificate) {
-		nodeKeeper.SetState(network.Ready)
+		nodeKeeper.SetState(core.ReadyNodeNetworkState)
 		nodeKeeper.AddActiveNodes([]core.Node{origin})
 	}
 	return nodeKeeper, nil
@@ -91,7 +91,7 @@ func resolveAddress(configuration configuration.HostNetwork) (string, error) {
 func NewNodeKeeper(origin core.Node) network.NodeKeeper {
 	result := &nodekeeper{
 		origin:       origin,
-		state:        network.Undefined,
+		state:        core.UndefinedNodeNetworkState,
 		claimQueue:   newClaimQueue(),
 		active:       make(map[core.RecordRef]core.Node),
 		indexNode:    make(map[core.StaticRole]*recordRefSet),
@@ -100,7 +100,7 @@ func NewNodeKeeper(origin core.Node) network.NodeKeeper {
 		tempMapS:     make(map[core.ShortNodeID]*host.Host),
 		sync:         newUnsyncList(origin, []core.Node{}, 0),
 	}
-	result.SetState(network.Ready)
+	result.SetState(core.ReadyNodeNetworkState)
 	return result
 }
 
@@ -124,13 +124,34 @@ type nodekeeper struct {
 
 	syncLock sync.Mutex
 	sync     network.UnsyncList
-	state    network.NodeKeeperState
+	state    core.NodeNetworkState
 
 	isBootstrap     bool
 	isBootstrapLock sync.RWMutex
 
 	Cryptography core.CryptographyService `inject:""`
 	Handler      core.TerminationHandler  `inject:""`
+}
+
+func (nk *nodekeeper) GetWorkingNode(ref core.RecordRef) core.Node {
+	node := nk.GetActiveNode(ref)
+
+	if node == nil || node.Leaving() {
+		return nil
+	}
+
+	return node
+}
+
+func (nk *nodekeeper) GetWorkingNodesByRole(role core.DynamicRole) []core.RecordRef {
+	nk.activeLock.RLock()
+	defer nk.activeLock.RUnlock()
+
+	list, exists := nk.indexNode[jetRoleToNodeRole(role)]
+	if !exists {
+		return nil
+	}
+	return list.Collect()
 }
 
 func (nk *nodekeeper) Wipe(isDiscovery bool) {
@@ -160,7 +181,7 @@ func (nk *nodekeeper) Wipe(isDiscovery bool) {
 	nk.sync = newUnsyncList(nk.origin, []core.Node{}, 0)
 	if isDiscovery {
 		nk.addActiveNode(nk.origin)
-		nk.state = network.Ready
+		nk.state = core.ReadyNodeNetworkState
 	}
 	nk.syncLock.Unlock()
 }
@@ -252,17 +273,6 @@ func (nk *nodekeeper) GetActiveNodes() []core.Node {
 	return result
 }
 
-func (nk *nodekeeper) GetActiveNodesByRole(role core.DynamicRole) []core.RecordRef {
-	nk.activeLock.RLock()
-	defer nk.activeLock.RUnlock()
-
-	list, exists := nk.indexNode[jetRoleToNodeRole(role)]
-	if !exists {
-		return nil
-	}
-	return list.Collect()
-}
-
 func (nk *nodekeeper) AddActiveNodes(nodes []core.Node) {
 	nk.activeLock.Lock()
 	defer nk.activeLock.Unlock()
@@ -302,24 +312,44 @@ func (nk *nodekeeper) addActiveNode(node core.Node) {
 }
 
 func (nk *nodekeeper) addToIndex(node core.Node) {
+	nk.indexShortID[node.ShortID()] = node
+	nk.addToRoleIndex(node)
+}
+
+func (nk *nodekeeper) addToRoleIndex(node core.Node) {
+	if node.Leaving() {
+		return
+	}
+
 	list, ok := nk.indexNode[node.Role()]
 	if !ok {
 		list = newRecordRefSet()
 	}
+
 	list.Add(node.ID())
 	nk.indexNode[node.Role()] = list
-
-	nk.indexShortID[node.ShortID()] = node
 }
 
-func (nk *nodekeeper) SetState(state network.NodeKeeperState) {
+func (nk *nodekeeper) GetWorkingNodes() []core.Node {
+	var workingNodes []core.Node
+	activeNodes := nk.GetActiveNodes()
+	for _, node := range activeNodes {
+		if !node.Leaving() {
+			workingNodes = append(workingNodes, node)
+		}
+	}
+
+	return workingNodes
+}
+
+func (nk *nodekeeper) SetState(state core.NodeNetworkState) {
 	nk.syncLock.Lock()
 	defer nk.syncLock.Unlock()
 
 	nk.state = state
 }
 
-func (nk *nodekeeper) GetState() network.NodeKeeperState {
+func (nk *nodekeeper) GetState() core.NodeNetworkState {
 	nk.syncLock.Lock()
 	defer nk.syncLock.Unlock()
 
@@ -375,7 +405,7 @@ func (nk *nodekeeper) Sync(list network.UnsyncList) {
 	for _, node := range nodes {
 		if node.ID().Equal(nk.origin.ID()) {
 			foundOrigin = true
-			nk.state = network.Ready
+			nk.state = core.ReadyNodeNetworkState
 		}
 	}
 
@@ -433,7 +463,7 @@ func (nk *nodekeeper) reindex() {
 }
 
 func (nk *nodekeeper) shouldExit(foundOrigin bool) bool {
-	return !foundOrigin && nk.state == network.Ready && len(nk.active) != 0
+	return !foundOrigin && nk.state == core.ReadyNodeNetworkState && len(nk.active) != 0
 }
 
 func (nk *nodekeeper) nodeToSignedClaim() (*consensusPackets.NodeJoinClaim, error) {

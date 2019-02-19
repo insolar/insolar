@@ -34,6 +34,7 @@ func TestPulseTrackerMemory_GetPulse(t *testing.T) {
 		memory: map[core.PulseNumber]Pulse{},
 	}
 	existingPulse := Pulse{Pulse: core.Pulse{PulseNumber: core.FirstPulseNumber}}
+	existingPulse.SerialNumber = 1
 	pulseTracker.memory[core.FirstPulseNumber] = existingPulse
 
 	// Act
@@ -43,7 +44,7 @@ func TestPulseTrackerMemory_GetPulse(t *testing.T) {
 	// Assert
 	require.NoError(t, err)
 	assert.Equal(t, existingPulse, *pulse)
-	assert.Equal(t, ErrNotFound, notFoundErr)
+	assert.Equal(t, core.ErrNotFound, notFoundErr)
 }
 
 func TestPulseTrackerMemory_GetPreviousPulse(t *testing.T) {
@@ -55,7 +56,8 @@ func TestPulseTrackerMemory_GetPreviousPulse(t *testing.T) {
 		memory: map[core.PulseNumber]Pulse{},
 	}
 	firstPulse := Pulse{
-		Pulse: core.Pulse{PulseNumber: core.FirstPulseNumber},
+		Pulse:        core.Pulse{PulseNumber: core.FirstPulseNumber},
+		SerialNumber: 1,
 	}
 	secondPulse := Pulse{
 		Pulse: core.Pulse{PulseNumber: core.FirstPulseNumber + 1},
@@ -80,8 +82,8 @@ func TestPulseTrackerMemory_GetPreviousPulse(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, firstPulse, *pulse)
 	assert.Equal(t, ErrPrevPulse, prevPulseErr)
-	assert.Equal(t, ErrNotFound, badPrevErr)
-	assert.Equal(t, ErrNotFound, notFoundErr)
+	assert.Equal(t, core.ErrNotFound, badPrevErr)
+	assert.Equal(t, core.ErrNotFound, notFoundErr)
 }
 
 func TestPulseTrackerMemory_GetNthPrevPulse(t *testing.T) {
@@ -93,7 +95,8 @@ func TestPulseTrackerMemory_GetNthPrevPulse(t *testing.T) {
 		memory: map[core.PulseNumber]Pulse{},
 	}
 	firstPulse := Pulse{
-		Pulse: core.Pulse{PulseNumber: core.FirstPulseNumber},
+		Pulse:        core.Pulse{PulseNumber: core.FirstPulseNumber},
+		SerialNumber: 1,
 	}
 	secondPulse := Pulse{
 		Pulse: core.Pulse{PulseNumber: core.FirstPulseNumber + 1},
@@ -143,17 +146,18 @@ func TestPulseTrackerMemory_GetLatestPulse(t *testing.T) {
 
 	// Check empty storage
 	_, err := pulseTracker.GetLatestPulse(ctx)
-	assert.Equal(t, ErrNotFound, err)
+	assert.Equal(t, core.ErrNotFound, err)
 
 	// Check correct pulseNumber, but empty storage
 	pulseTracker.latestPulse = 1
 	_, err = pulseTracker.GetLatestPulse(ctx)
-	assert.Equal(t, ErrNotFound, err)
+	assert.Equal(t, core.ErrNotFound, err)
 
 	// Add and check first pulse
 	// latest = first
 	firstPulse := Pulse{
-		Pulse: core.Pulse{PulseNumber: core.FirstPulseNumber},
+		Pulse:        core.Pulse{PulseNumber: core.FirstPulseNumber},
+		SerialNumber: 1,
 	}
 	pulseTracker.memory[core.FirstPulseNumber] = firstPulse
 	pulseTracker.latestPulse = core.FirstPulseNumber

@@ -121,12 +121,7 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 			case *message.GetRequest:
 				pulse = tm.Request.Pulse()
 			}
-			tree, err := m.jetStorage.GetJetTree(ctx, pulse)
-			if err != nil {
-				return nil, err
-			}
-
-			jetID, actual := tree.Find(target)
+			jetID, actual := m.jetStorage.FindJet(ctx, pulse, target)
 			if !actual {
 				inslogger.FromContext(ctx).WithFields(map[string]interface{}{
 					"msg":   msg.Type().String(),
@@ -225,10 +220,15 @@ func (m *middleware) waitForHotData(handler core.MessageHandler) core.MessageHan
 
 func (m *middleware) releaseHotDataWaiters(handler core.MessageHandler) core.MessageHandler {
 	return func(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
+		rep, err := handler(ctx, parcel)
+
 		hotDataMessage := parcel.Message().(*message.HotData)
 		jetID := hotDataMessage.Jet.Record()
+		unlockErr := m.hotDataWaiter.Unlock(ctx, *jetID)
+		if unlockErr != nil {
+			inslogger.FromContext(ctx).Error(err)
+		}
 
-		defer m.hotDataWaiter.Unlock(ctx, *jetID)
-		return handler(ctx, parcel)
+		return rep, err
 	}
 }

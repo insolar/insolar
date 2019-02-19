@@ -22,6 +22,10 @@ import (
 	"testing"
 
 	"github.com/gojuno/minimock"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
+
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
@@ -38,9 +42,6 @@ import (
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/testmessagebus"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"github.com/stretchr/testify/suite"
 )
 
 type amSuite struct {
@@ -940,9 +941,9 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterRequest_JetMiss() {
 		_, err := am.RegisterRequest(s.ctx, *am.GenesisRef(), &message.Parcel{Msg: &message.CallMethod{}})
 		require.NoError(t, err)
 
-		tree, err := s.jetStorage.GetJetTree(s.ctx, core.FirstPulseNumber)
-		require.NoError(t, err)
-		jetID, actual := tree.Find(*core.NewRecordID(0, []byte{0xD5}))
+		jetID, actual := s.jetStorage.FindJet(
+			s.ctx, core.FirstPulseNumber, *core.NewRecordID(0, []byte{0xD5}),
+		)
 		assert.Equal(t, *jet.NewID(4, []byte{0xD0}), *jetID)
 		assert.True(t, actual)
 	})

@@ -121,7 +121,7 @@ func (nc *ConsensusCommunicator) sendRequestToNodes(ctx context.Context, partici
 			logger.Debugf("Send %s request to %s", packet.GetType(), n.ID())
 			err := nc.ConsensusNetwork.SignAndSendPacket(packet, n.ID(), nc.Cryptography)
 			if err != nil {
-				logger.Error("Failed to send phase1 request: " + err.Error())
+				logger.Errorf("Failed to send %s request: %s", packet.GetType(), err.Error())
 				return
 			}
 			err = stats.RecordWithTags(context.Background(), []tag.Mutator{tag.Upsert(consensus.TagPhase, packet.GetType().String())}, consensus.PacketsSent.M(1))
@@ -239,9 +239,7 @@ func (nc *ConsensusCommunicator) ExchangePhase1(
 	logger := inslogger.FromContext(ctx)
 
 	result := make(map[core.RecordRef]*packets.Phase1Packet, len(participants))
-
 	result[nc.ConsensusNetwork.GetNodeID()] = packet
-
 	nc.setPulseNumber(packet.GetPulse().PulseNumber)
 
 	var request *packets.Phase1Packet

@@ -22,6 +22,7 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"go.opencensus.io/stats"
 )
 
 type pulseTrackerMemory struct {
@@ -84,7 +85,7 @@ func (p *pulseTrackerMemory) AddPulse(ctx context.Context, pulse core.Pulse) err
 	)
 
 	previousPulse, err := p.getLatestPulse(ctx)
-	if err != nil && err != ErrNotFound {
+	if err != nil && err != core.ErrNotFound {
 		return err
 	}
 
@@ -113,6 +114,10 @@ func (p *pulseTrackerMemory) AddPulse(ctx context.Context, pulse core.Pulse) err
 	p.memory[pn] = newPulse
 	p.latestPulse = pn
 
+	stats.Record(ctx,
+		statPulseAdded.M(1),
+	)
+
 	return nil
 }
 
@@ -123,7 +128,7 @@ func (p *pulseTrackerMemory) DeletePulse(ctx context.Context, num core.PulseNumb
 
 	_, err := p.getPulse(ctx, num)
 
-	if err == ErrNotFound {
+	if err == core.ErrNotFound {
 		inslogger.FromContext(ctx).Error("can't delete non-existing pulse")
 		return nil
 	}
@@ -134,14 +139,30 @@ func (p *pulseTrackerMemory) DeletePulse(ctx context.Context, num core.PulseNumb
 
 	delete(p.memory, num)
 
+	stats.Record(ctx,
+		statPulseDeleted.M(1),
+	)
+
 	return nil
 }
 
 func (p *pulseTrackerMemory) getPulse(ctx context.Context, num core.PulseNumber) (*Pulse, error) {
+	// TODO: @imarkin 14.02.18 - it's a hack for fill genesis pulse in memory realization
+	if num == core.FirstPulseNumber {
+		pulse := &Pulse{
+			Pulse: core.Pulse{
+				PulseNumber: core.FirstPulseNumber,
+				Entropy:     core.GenesisPulse.Entropy,
+			},
+			SerialNumber: 1,
+		}
+		return pulse, nil
+	}
+
 	pulse, ok := p.memory[num]
 
 	if !ok {
-		return nil, ErrNotFound
+		return nil, core.ErrNotFound
 	}
 
 	return &pulse, nil
@@ -161,7 +182,7 @@ func (p *pulseTrackerMemory) getNthPrevPulse(ctx context.Context, n uint, num co
 		pulse, err = p.getPulse(ctx, *pulse.Prev)
 
 		if err != nil {
-			return nil, ErrNotFound
+			return nil, core.ErrNotFound
 		}
 		n--
 	}
@@ -170,7 +191,7 @@ func (p *pulseTrackerMemory) getNthPrevPulse(ctx context.Context, n uint, num co
 
 func (p *pulseTrackerMemory) getLatestPulse(ctx context.Context) (*Pulse, error) {
 	if p.latestPulse == 0 {
-		return nil, ErrNotFound
+		return nil, core.ErrNotFound
 	}
 
 	return p.getPulse(ctx, p.latestPulse)

@@ -65,6 +65,8 @@ type BitSet interface {
 	Serialize() ([]byte, error)
 	// GetCells get buckets of bitset
 	GetCells(mapper BitSetMapper) ([]BitSetCell, error)
+	// GetTristateArray get underlying tristate
+	GetTristateArray() ([]TriState, error)
 	// ApplyChanges returns copy of the current bitset with changes applied
 	ApplyChanges(changes []BitSetCell, mapper BitSetMapper) error
 }

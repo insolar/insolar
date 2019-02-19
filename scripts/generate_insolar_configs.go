@@ -170,7 +170,7 @@ func main() {
 		conf.Tracer.Jaeger.AgentEndpoint = defaultJaegerEndPoint
 		conf.Log.Level = debugLevel
 		conf.Log.Adapter = "logrus"
-		conf.KeysPath = genesisConf.DiscoveryKeysDir + fmt.Sprintf(genesisConf.KeysNameFormat, nodeIndex)
+		conf.KeysPath = genesisConf.DiscoveryKeysDir + fmt.Sprintf(genesisConf.KeysNameFormat, index)
 		conf.Ledger.Storage.DataDirectory = fmt.Sprintf(discoveryDataDirectoryTemplate, nodeIndex)
 		conf.CertificatePath = fmt.Sprintf(discoveryCertificatePathTemplate, nodeIndex)
 
@@ -234,7 +234,7 @@ func main() {
 	writePulsarConfig(pulsarConfig)
 	writePromConfig(pctx)
 
-	pwConfig.Interval = 100 * time.Millisecond
+	pwConfig.Interval = 500 * time.Millisecond
 	pwConfig.Timeout = 1 * time.Second
 	err = pulsewatcher.WriteConfig(filepath.Join(outputDir, "/utils"), pulsewatcherFileName, pwConfig)
 	check("couldn't write pulsewatcher config file", err)
