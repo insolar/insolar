@@ -66,3 +66,11 @@ func (Node) Leaving() bool {
 func (Node) LeavingETA() core.PulseNumber {
 	panic("implement me")
 }
+
+func (Node) IsWorking() bool {
+	panic("implement me")
+}
+
+func (Node) GetState() core.NodeState {
+	panic("implement me")
+}

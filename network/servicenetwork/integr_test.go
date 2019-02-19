@@ -59,12 +59,14 @@ func (s *testSuite) TestNodeConnect() {
 
 	s.waitForConsensus(1)
 
-	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
-	s.Equal(s.getNodesCount()+1, len(activeNodes))
+	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
+	s.Equal(s.getNodesCount(), len(activeNodes))
 
 	s.waitForConsensus(2)
 
-	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
+	s.Equal(s.getNodesCount()+1, len(activeNodes))
+	activeNodes = testNode.serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount()+1, len(activeNodes))
 }
 
@@ -109,16 +111,16 @@ func (s *testSuite) TestTwoNodesConnect() {
 
 	s.waitForConsensus(1)
 
-	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
-	s.Equal(s.getNodesCount()+2, len(activeNodes))
+	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
+	s.Equal(s.getNodesCount(), len(activeNodes))
 
 	s.waitForConsensus(2)
 
-	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount()+2, len(activeNodes))
-	activeNodes = testNode.serviceNetwork.NodeKeeper.GetActiveNodes()
+	activeNodes = testNode.serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount()+2, len(activeNodes))
-	activeNodes = testNode2.serviceNetwork.NodeKeeper.GetActiveNodes()
+	activeNodes = testNode2.serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount()+2, len(activeNodes))
 }
 
@@ -132,21 +134,21 @@ func (s *testSuite) TestNodeLeave() {
 		s.StopNode(testNode)
 	}(s)
 
-	s.waitForConsensus(1)
+	s.waitForConsensus(2)
 
-	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount(), len(activeNodes))
 
 	s.waitForConsensus(1)
 
-	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount()+1, len(activeNodes))
 
 	testNode.serviceNetwork.GracefulStop(context.Background())
 
 	s.waitForConsensus(2)
 
-	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount(), len(activeNodes))
 }
 
@@ -187,7 +189,7 @@ func (s *testSuite) TestFullTimeOut() {
 
 	s.waitForConsensus(2)
 
-	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount()-1, len(activeNodes))
 }
 
@@ -201,7 +203,7 @@ func (s *testSuite) TestPartialPositive1PhaseTimeOut() {
 	setCommunicatorMock(s.fixture().bootstrapNodes, PartialPositive1Phase)
 
 	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
-	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetActiveNodes()
+	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount(), len(activeNodes))
 }
 
@@ -213,7 +215,7 @@ func (s *testSuite) TestPartialPositive2PhaseTimeOut() {
 	setCommunicatorMock(s.fixture().bootstrapNodes, PartialPositive2Phase)
 
 	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
-	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetActiveNodes()
+	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount(), len(activeNodes))
 }
 
@@ -225,7 +227,7 @@ func (s *testSuite) TestPartialNegative1PhaseTimeOut() {
 	setCommunicatorMock(s.fixture().bootstrapNodes, PartialNegative1Phase)
 
 	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
-	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetActiveNodes()
+	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount()-1, len(activeNodes))
 }
 
@@ -237,7 +239,7 @@ func (s *testSuite) TestPartialNegative2PhaseTimeOut() {
 	setCommunicatorMock(s.fixture().bootstrapNodes, PartialNegative2Phase)
 
 	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
-	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetActiveNodes()
+	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount(), len(activeNodes))
 }
 
@@ -249,7 +251,7 @@ func (s *testSuite) TestPartialNegative3PhaseTimeOut() {
 	setCommunicatorMock(s.fixture().bootstrapNodes, PartialNegative3Phase)
 
 	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
-	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetActiveNodes()
+	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount(), len(activeNodes))
 }
 
@@ -261,7 +263,7 @@ func (s *testSuite) TestPartialPositive3PhaseTimeOut() {
 	setCommunicatorMock(s.fixture().bootstrapNodes, PartialPositive3Phase)
 
 	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
-	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetActiveNodes()
+	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount(), len(activeNodes))
 }
 
@@ -273,7 +275,7 @@ func (s *testSuite) TestPartialNegative23PhaseTimeOut() {
 	setCommunicatorMock(s.fixture().bootstrapNodes, PartialNegative23Phase)
 
 	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
-	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetActiveNodes()
+	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount(), len(activeNodes))
 }
 
@@ -285,7 +287,7 @@ func (s *testSuite) TestPartialPositive23PhaseTimeOut() {
 	setCommunicatorMock(s.fixture().bootstrapNodes, PartialPositive23Phase)
 
 	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
-	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetActiveNodes()
+	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount(), len(activeNodes))
 }
 
@@ -296,7 +298,7 @@ func (s *testSuite) TestDiscoveryDown() {
 
 	s.fixture().bootstrapNodes[0].serviceNetwork.Stop(context.Background())
 	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
-	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetActiveNodes()
+	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount()-1, len(activeNodes))
 }
 
@@ -314,7 +316,7 @@ func (s *testSuite) TestDiscoveryRestart() {
 	require.NoError(s.T(), err)
 
 	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
-	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetActiveNodes()
+	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount()-1, len(activeNodes))
 
 	log.Info("Discovery node starting...")
@@ -323,9 +325,9 @@ func (s *testSuite) TestDiscoveryRestart() {
 	require.NoError(s.T(), err)
 
 	s.waitForConsensusExcept(3, s.fixture().bootstrapNodes[0].id)
-	activeNodes = s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetActiveNodes()
+	activeNodes = s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount(), len(activeNodes))
-	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount(), len(activeNodes))
 }
 

@@ -89,9 +89,9 @@ func resolveAddress(configuration configuration.HostNetwork) (string, error) {
 
 // NewNodeKeeper create new NodeKeeper
 func NewNodeKeeper(origin core.Node) network.NodeKeeper {
-	result := &nodekeeper{
+	return &nodekeeper{
 		origin:       origin,
-		state:        core.UndefinedNodeNetworkState,
+		state:        core.ReadyNodeNetworkState,
 		claimQueue:   newClaimQueue(),
 		active:       make(map[core.RecordRef]core.Node),
 		indexNode:    make(map[core.StaticRole]*recordRefSet),
@@ -100,8 +100,6 @@ func NewNodeKeeper(origin core.Node) network.NodeKeeper {
 		tempMapS:     make(map[core.ShortNodeID]*host.Host),
 		sync:         newUnsyncList(origin, []core.Node{}, 0),
 	}
-	result.SetState(core.ReadyNodeNetworkState)
-	return result
 }
 
 type nodekeeper struct {
@@ -136,7 +134,7 @@ type nodekeeper struct {
 func (nk *nodekeeper) GetWorkingNode(ref core.RecordRef) core.Node {
 	node := nk.GetActiveNode(ref)
 
-	if node == nil || node.Leaving() {
+	if node == nil || node.Leaving() || !node.IsWorking() {
 		return nil
 	}
 
@@ -317,7 +315,7 @@ func (nk *nodekeeper) addToIndex(node core.Node) {
 }
 
 func (nk *nodekeeper) addToRoleIndex(node core.Node) {
-	if node.Leaving() {
+	if node.Leaving() || !node.IsWorking() {
 		return
 	}
 
@@ -334,7 +332,7 @@ func (nk *nodekeeper) GetWorkingNodes() []core.Node {
 	var workingNodes []core.Node
 	activeNodes := nk.GetActiveNodes()
 	for _, node := range activeNodes {
-		if !node.Leaving() {
+		if !node.Leaving() && node.IsWorking() {
 			workingNodes = append(workingNodes, node)
 		}
 	}
