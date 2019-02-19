@@ -224,6 +224,9 @@ type ArtifactManager interface {
 
 	// State returns hash state for artifact manager.
 	State() ([]byte, error)
+
+	// Pulse returns current PulseNumber for artifact manager
+	Pulse(ctx context.Context) (PulseNumber, error)
 }
 
 // CodeDescriptor represents meta info required to fetch all code data.

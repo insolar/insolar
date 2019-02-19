@@ -58,9 +58,9 @@ func newMiddleware(
 
 func (m *middleware) addFieldsToLogger(handler core.MessageHandler) core.MessageHandler {
 	return func(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
-		context, _ := inslogger.WithField(ctx, "targetid", parcel.DefaultTarget().String())
+		cntext, _ := inslogger.WithField(ctx, "targetid", parcel.DefaultTarget().String())
 
-		return handler(context, parcel)
+		return handler(cntext, parcel)
 	}
 }
 
@@ -159,22 +159,6 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 		ctx = addJetIDToLogger(ctx, jetID)
 
 		return handler(contextWithJet(ctx, jetID), parcel)
-	}
-}
-
-func (m *middleware) saveParcel(handler core.MessageHandler) core.MessageHandler {
-	return func(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
-		jetID := jetFromContext(ctx)
-		pulse, err := m.pulseStorage.Current(ctx)
-		if err != nil {
-			return nil, err
-		}
-		err = m.objectStorage.SetMessage(ctx, jetID, pulse.PulseNumber, parcel)
-		if err != nil {
-			return nil, err
-		}
-
-		return handler(ctx, parcel)
 	}
 }
 
