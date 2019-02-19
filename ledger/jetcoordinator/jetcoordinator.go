@@ -219,10 +219,17 @@ func (jc *JetCoordinator) Heavy(ctx context.Context, pulse core.PulseNumber) (*c
 // IsBeyondLimit calculates if target pulse is behind clean-up limit
 func (jc *JetCoordinator) IsBeyondLimit(ctx context.Context, currentPN, targetPN core.PulseNumber) (bool, error) {
 	currentPulse, err := jc.PulseTracker.GetPulse(ctx, currentPN)
+	if err == core.ErrNotFound {
+		return true, nil
+	}
 	if err != nil {
 		return false, errors.Wrapf(err, "failed to fetch pulse %v", currentPN)
 	}
+
 	targetPulse, err := jc.PulseTracker.GetPulse(ctx, targetPN)
+	if err == core.ErrNotFound {
+		return true, nil
+	}
 	if err != nil {
 		return false, errors.Wrapf(err, "failed to fetch pulse %v", targetPN)
 	}
