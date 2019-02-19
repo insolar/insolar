@@ -74,8 +74,8 @@ func (p *RecentStorageProvider) GetPendingStorage(ctx context.Context, jetID cor
 
 // Count returns count of pendings in all storages
 func (p *RecentStorageProvider) Count() int {
-	p.indexLock.Lock()
-	defer p.indexLock.Unlock()
+	p.pendingLock.Lock()
+	defer p.pendingLock.Unlock()
 
 	count := 0
 	for _, storage := range p.pendingStorages {
