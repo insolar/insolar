@@ -28,6 +28,7 @@ import (
 
 	"github.com/insolar/insolar/api/sdk"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/utils/backoff"
 	"github.com/pkg/errors"
 )
 
@@ -122,7 +123,7 @@ func (s *transferDifferentMembersScenario) startMember(ctx context.Context, inde
 		var traceID string
 		var err error
 
-		bof := backoff{Min: 1 * time.Millisecond, Max: 1 * time.Second}
+		bof := backoff.Backoff{Min: 1 * time.Millisecond, Max: 1 * time.Second}
 
 		retry := true
 		for retry {
