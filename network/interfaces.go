@@ -28,10 +28,12 @@ import (
 	"github.com/insolar/insolar/network/transport/packet/types"
 )
 
+// BootstrapResult represents result of bootstrap to one discovery node
 type BootstrapResult struct {
 	Host *host.Host
 	// FirstPulseTime    time.Time
 	ReconnectRequired bool
+	DiscoveryCount    int
 }
 
 // Controller contains network logic.
