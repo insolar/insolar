@@ -98,9 +98,10 @@ func GetLedgerComponents(conf configuration.Ledger, certificate core.Certificate
 
 	var pulseTracker storage.PulseTracker
 	// TODO: @imarkin 18.02.18 - Comparision with core.StaticRoleUnknown is a hack for genesis pulse (INS-1537)
-	if certificate.GetRole() == core.StaticRoleHeavyMaterial || certificate.GetRole() == core.StaticRoleUnknown {
+	switch certificate.GetRole() {
+	case core.StaticRoleUnknown, core.StaticRoleHeavyMaterial:
 		pulseTracker = storage.NewPulseTracker()
-	} else {
+	default:
 		pulseTracker = storage.NewPulseTrackerMemory()
 	}
 
