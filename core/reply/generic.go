@@ -58,7 +58,7 @@ func (e *Error) Error() error {
 	case ErrNoPendingRequests:
 		return core.ErrNoPendingRequest
 	case ErrToManyPendingRequests:
-		return core.ErrToManyPendingRequests
+		return core.ErrTooManyPendingRequests
 	}
 
 	return core.ErrUnknown

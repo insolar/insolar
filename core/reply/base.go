@@ -92,7 +92,7 @@ const (
 	ErrHotDataTimeout
 	// ErrNoPendingRequests is returned when there are no pending requests on current LME
 	ErrNoPendingRequests
-	// ErrToManyPendingRequests is returned when a limit of pending requests has been reached
+	// ErrTooManyPendingRequests is returned when a limit of pending requests has been reached
 	ErrToManyPendingRequests
 )
 

@@ -133,7 +133,7 @@ func (s *transferDifferentMembersScenario) startMember(ctx context.Context, inde
 
 			if err == nil {
 				retry = false
-			} else if strings.Contains(err.Error(), core.ErrToManyPendingRequests.Error()) {
+			} else if strings.Contains(err.Error(), core.ErrTooManyPendingRequests.Error()) {
 				time.Sleep(bof.Duration())
 			} else {
 				retry = false
