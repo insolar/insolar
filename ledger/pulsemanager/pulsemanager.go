@@ -18,6 +18,7 @@ package pulsemanager
 
 import (
 	"context"
+	"fmt"
 	"math/rand"
 	"sync"
 	"time"
@@ -383,7 +384,7 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse c
 
 		jetLogger := logger.WithField("jetid", jetID.DebugString())
 		inslogger.SetLogger(ctx, jetLogger)
-		logger.WithField("im_executor", imExecutor).Debug("process jet")
+		logger.WithField("i_was_executor", imExecutor).Debug("process jet")
 		if !imExecutor {
 			continue
 		}
@@ -557,13 +558,13 @@ func (m *PulseManager) setUnderGilSection(
 		return nil, nil, nil, nil, errors.Wrap(err, "call of GetLatestPulseNumber failed")
 	}
 
-	logger := inslogger.FromContext(ctx)
 	if err != core.ErrNotFound {
 		oldPulse = &storagePulse.Pulse
 		prevPN = storagePulse.Prev
-		logger.WithField("current_pulse", oldPulse.PulseNumber)
+		ctx, _ = inslogger.WithField(ctx, "current_pulse", fmt.Sprintf("%d", oldPulse.PulseNumber))
 	}
 
+	logger := inslogger.FromContext(ctx)
 	logger.WithFields(map[string]interface{}{
 		"new_pulse": newPulse.PulseNumber,
 		"persist":   persist,
@@ -593,17 +594,41 @@ func (m *PulseManager) setUnderGilSection(
 	m.PulseStorage.Unlock()
 
 	var jets []jetInfo
-	if persist && oldPulse != nil && prevPN != nil {
+	if persist && oldPulse != nil {
 		jets, err = m.processJets(ctx, oldPulse.PulseNumber, newPulse.PulseNumber)
 		if err != nil {
 			return nil, nil, nil, nil, errors.Wrap(err, "failed to process jets")
 		}
 	}
 
-	removed := m.RecentStorageProvider.DecreaseIndexesTTL(ctx)
+	removed := map[core.RecordID][]core.RecordID{}
+	if oldPulse != nil && prevPN != nil {
+		removed = m.RecentStorageProvider.DecreaseIndexesTTL(ctx)
+		if m.NodeNet.GetOrigin().Role() == core.StaticRoleLightMaterial {
+			m.prepareArtifactManagerMessageHandlerForNextPulse(ctx, newPulse, jets)
+		}
+	}
 
-	if m.NodeNet.GetOrigin().Role() == core.StaticRoleLightMaterial {
-		m.prepareArtifactManagerMessageHandlerForNextPulse(ctx, newPulse, jets)
+	if persist && oldPulse != nil {
+		nodes, err := m.NodeStorage.GetActiveNodes(oldPulse.PulseNumber)
+		if err != nil {
+			return nil, nil, nil, nil, err
+		}
+		// No active nodes for pulse. It means there was no processing (network start).
+		if len(nodes) == 0 {
+			// Activate zero jet for jet tree and unlock jet waiter.
+			inslogger.FromContext(ctx).Error("I AM CALLED ")
+			zeroJet := *jet.NewID(0, nil)
+			m.JetStorage.UpdateJetTree(ctx, newPulse.PulseNumber, true, zeroJet)
+			err := m.HotDataWaiter.Unlock(ctx, zeroJet)
+			if err != nil {
+				if err == artifactmanager.ErrWaiterNotLocked {
+					inslogger.FromContext(ctx).Error(err)
+				} else {
+					return nil, nil, nil, nil, errors.Wrap(err, "failed to unlock zero jet")
+				}
+			}
+		}
 	}
 
 	return jets, removed, oldPulse, prevPN, nil
