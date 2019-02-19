@@ -124,3 +124,20 @@ func GenerateNonce() (Nonce, error) {
 	}
 	return buffer[:], nil
 }
+
+// FindDiscoveryInActiveNodeList returns only discovery nodes from active node list
+func FindDiscoveryInActiveNodeList(activeNodes []core.Node, cert core.Certificate) []core.Node {
+	discovery := cert.GetDiscoveryNodes()
+	result := make([]core.Node, 0)
+
+	for _, d := range discovery {
+		for _, n := range activeNodes {
+			if d.GetNodeRef().Equal(n.ID()) {
+				result = append(result, n)
+				break
+			}
+		}
+	}
+
+	return result
+}
