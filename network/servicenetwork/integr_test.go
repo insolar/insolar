@@ -195,7 +195,6 @@ func (s *testSuite) TestNodeLeaveAtETA() {
 	s.waitForConsensus(1)
 	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
 	workingNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
-	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
 	s.Equal(s.getNodesCount(), len(workingNodes))
 	s.Equal(s.getNodesCount()+1, len(activeNodes))
 }
