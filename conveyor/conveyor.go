@@ -151,7 +151,8 @@ func (c *PulseConveyor) SinkPush(pulseNumber core.PulseNumber, data interface{})
 	if slot == nil {
 		return errors.Errorf("[ SinkPush ] can't get slot by pulse number %d", pulseNumber)
 	}
-	return errors.Wrap(slot.inputQueue.SinkPush(data), "[ SinkPush ] can't push to queue")
+	err := slot.inputQueue.SinkPush(data)
+	return errors.Wrap(err, "[ SinkPush ] can't push to queue")
 }
 
 // SinkPushAll adds several events to conveyor
@@ -165,7 +166,8 @@ func (c *PulseConveyor) SinkPushAll(pulseNumber core.PulseNumber, data []interfa
 	if slot == nil {
 		return errors.Errorf("[ SinkPushAll ] can't get slot by pulse number %d", pulseNumber)
 	}
-	return errors.Wrap(slot.inputQueue.SinkPushAll(data), "[ SinkPushAll ] can't push to queue")
+	err := slot.inputQueue.SinkPushAll(data)
+	return errors.Wrap(err, "[ SinkPushAll ] can't push to queue")
 }
 
 // PreparePulse is preparing conveyor for working with provided pulse
@@ -199,7 +201,7 @@ func (c *PulseConveyor) PreparePulse(pulse core.Pulse) error {
 	return nil
 }
 
-// ActivatePulse is activate conveyor with prepared pulse
+// ActivatePulse activates conveyor with prepared pulse
 func (c *PulseConveyor) ActivatePulse() error {
 	if !c.IsOperational() {
 		return errors.New("[ ActivatePulse ] conveyor is not operational now")
