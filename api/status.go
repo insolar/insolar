@@ -85,6 +85,7 @@ func (s *StatusService) Get(r *http.Request, args *interface{}, reply *StatusRep
 	reply.Origin = Node{
 		Reference: origin.ID().String(),
 		Role:      origin.Role().String(),
+		IsWorking: origin.IsWorking(),
 	}
 
 	pulse, err := s.runner.PulseStorage.Current(ctx)
