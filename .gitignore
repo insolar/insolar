@@ -54,3 +54,5 @@ coverage.txt
 /scripts/insolard/loglinks
 /scripts/insolard/benchmark
 /scripts/insolard/reusekeys
+
+/conveyor/generator/sample/sample_state_machine_generated.go
