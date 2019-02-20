@@ -15,7 +15,7 @@
  *
  */
 
-package network
+package rules
 
 import (
 	"github.com/insolar/insolar/core"
