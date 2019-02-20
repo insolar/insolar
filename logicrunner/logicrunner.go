@@ -927,9 +927,9 @@ func (lr *LogicRunner) executeConstructorCall(
 			ctx,
 			Ref{}, *current.Request, m.ParentRef, m.PrototypeRef, m.SaveAs == message.Delegate, newData,
 		)
-		if err != nil {
-			return nil, es.WrapError(err, "couldn't activate object")
-		}
+		// if err != nil {
+		// 	return nil, es.WrapError(err, "couldn't activate object")
+		// }
 		_, err = lr.ArtifactManager.RegisterResult(ctx, *current.Request, *current.Request, nil)
 		if err != nil {
 			return nil, es.WrapError(err, "couldn't save results")
