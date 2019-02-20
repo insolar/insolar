@@ -912,11 +912,6 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel core.Pa
 		// Children exist and pointer does not match (preserving chain consistency).
 		// For the case when vm can't save or send result to another vm and it tries to update the same record again
 		if idx.ChildPointer != nil && !childRec.PrevChild.Equal(idx.ChildPointer) && idx.ChildPointer != recID {
-			logger.WithFields(map[string]interface{}{
-				"from_vm":    childRec.PrevChild.DebugString(),
-				"from_idx":   idx.ChildPointer.DebugString(),
-				"calculated": recID.DebugString(),
-			}).Error("failed to register child")
 			return errors.New("invalid child record")
 		}
 
@@ -937,9 +932,6 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel core.Pa
 			return err
 		}
 
-		logger.WithFields(map[string]interface{}{
-			"id": child.DebugString(),
-		}).Info("saved child")
 		return nil
 	})
 
