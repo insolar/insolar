@@ -91,10 +91,10 @@ func (m *Metrics) Start(ctx context.Context) error {
 		return errors.Wrap(err, "Failed to listen at address")
 	}
 	m.listener = listener
-	inslog.Infoln("Started metrics server", m.AddrString())
+	inslog.Info("Started metrics server", m.AddrString())
 
 	go func() {
-		inslog.Debugln("metrics server starting on", m.server.Addr)
+		inslog.Debug("metrics server starting on", m.server.Addr)
 		err := m.server.Serve(listener)
 		if err == nil {
 			return
@@ -102,7 +102,7 @@ func (m *Metrics) Start(ctx context.Context) error {
 		if IsServerClosed(err) {
 			return
 		}
-		inslog.Errorln("falied to start metrics server", err)
+		inslog.Error("falied to start metrics server", err)
 	}()
 
 	return nil

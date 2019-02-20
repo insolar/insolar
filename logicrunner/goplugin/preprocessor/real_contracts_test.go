@@ -49,7 +49,7 @@ type RealContractsSuite struct {
 
 func (s *RealContractsSuite) SetupSuite() {
 	if err := log.SetLevel("debug"); err != nil {
-		log.Errorln("Failed to set logLevel to debug: ", err.Error())
+		log.Error("Failed to set logLevel to debug: ", err.Error())
 	}
 
 	var err error
