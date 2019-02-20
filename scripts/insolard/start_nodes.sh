@@ -13,6 +13,7 @@ CERT_GENERATOR=$BIN_DIR/certgen
 insolar_log_level=Debug
 
 NUM_NODES=$(sed -n '/^nodes:/,$p' $GENESIS_CONFIG | grep "host:" | grep -cv "#" )
+read -ra ROLES <<< $(sed -n '/^nodes:/,$p' ./scripts/insolard/genesis.yaml | grep "role" | cut -d: -f2)
 
 for i in `seq 1 $NUM_NODES`
 do
@@ -39,8 +40,9 @@ generate_nodes_certs()
     i=0
     for node in "${NODES[@]}"
     do
+        role="${ROLES[$i]//\"}"
         i=$((i + 1))
-        $CERT_GENERATOR --root-conf $ROOT_MEMBER_KEYS_FILE -h "http://127.0.0.1:19101/api" -c $NODES_DATA/certs/node_cert_$i.json -k $node/keys.json
+        $CERT_GENERATOR --root-conf $ROOT_MEMBER_KEYS_FILE -h "http://127.0.0.1:19101/api" -c $NODES_DATA/certs/node_cert_$i.json -k $node/keys.json -r $role
         cp -v $NODES_DATA/certs/node_cert_$i.json $node/cert.json
     done
     echo "generate_nodes_certs() end."

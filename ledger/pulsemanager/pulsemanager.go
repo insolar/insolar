@@ -596,6 +596,10 @@ func (m *PulseManager) setUnderGilSection(
 	var jets []jetInfo
 	if persist && oldPulse != nil {
 		jets, err = m.processJets(ctx, oldPulse.PulseNumber, newPulse.PulseNumber)
+		// We just joined to network
+		if err == core.ErrNoNodes {
+			return jets, map[core.RecordID][]core.RecordID{}, oldPulse, prevPN, nil
+		}
 		if err != nil {
 			return nil, nil, nil, nil, errors.Wrap(err, "failed to process jets")
 		}
