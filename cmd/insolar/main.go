@@ -24,8 +24,6 @@ import (
 	"os"
 	"reflect"
 
-	"github.com/davecgh/go-spew/spew"
-
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
@@ -252,28 +250,5 @@ func main() {
 		genSendConfigs(out)
 	case "get_info":
 		getInfo(out)
-	case "create_member":
-		createMember(out)
 	}
-}
-
-func createMember(out io.Writer) {
-	info, err := requester.Info(sendUrls)
-	check("Problems with requesting network info", err)
-	ks := platformpolicy.NewKeyProcessor()
-	privKey, err := ks.GeneratePrivateKey()
-	check("Problems with generating of private key:", err)
-	privKeyStr, err := ks.ExportPrivateKeyPEM(privKey)
-	check("Problems with serialization of private key:", err)
-
-	rootCfg, err := requester.CreateUserConfig(info.RootMember, string(privKeyStr))
-	check("Problems with internal config logic:", err)
-
-	ctx := context.TODO()
-	res, err := requester.SendWithSeed(ctx, sendUrls, rootCfg, &requester.RequestConfigJSON{
-		Method: "CreateMember",
-		Params: nil,
-	}, []byte("111"))
-	check("Problems with communication:", err)
-	spew.Fdump(out, res)
 }
