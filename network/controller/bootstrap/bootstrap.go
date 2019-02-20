@@ -205,7 +205,7 @@ func (bc *bootstrapper) Bootstrap(ctx context.Context) (*network.BootstrapResult
 	majorityRule := bc.Certificate.GetMajorityRule()
 	for _, b := range bootstrapResults {
 		if b.DiscoveryCount >= majorityRule {
-			return b, &DiscoveryNode{b.Host, FindDiscovery(bc.Certificate, b.Host.NodeID)}, nil
+			return b, &DiscoveryNode{b.Host, findDiscovery(bc.Certificate, b.Host.NodeID)}, nil
 		}
 	}
 
@@ -264,7 +264,7 @@ func (bc *bootstrapper) BootstrapDiscovery(ctx context.Context) (*network.Bootst
 
 	discoveryNodes := bc.Certificate.GetDiscoveryNodes()
 	var err error
-	discoveryNodes, err = RemoveOrigin(discoveryNodes, *bc.Certificate.GetNodeRef())
+	discoveryNodes, err = removeOrigin(discoveryNodes, *bc.Certificate.GetNodeRef())
 	if err != nil {
 		return nil, errors.Wrapf(err, "Discovery bootstrap failed")
 	}
@@ -524,8 +524,8 @@ func (bc *bootstrapper) processBootstrap(ctx context.Context, request network.Re
 		code = Accepted
 	}
 
-	activeDiscoveryNodes := FindDiscoveryInActiveNodeList(bc.NodeKeeper.GetActiveNodes(), bc.Certificate)
-	log.Warnf("FindDiscoveryInActiveNodeList: %d  TODO: remove this log", len(activeDiscoveryNodes))
+	activeDiscoveryNodes := findDiscoveriesInActiveNodeList(bc.NodeKeeper.GetActiveNodes(), bc.Certificate)
+	log.Warnf("findDiscoveriesInActiveNodeList: %d  TODO: remove this log", len(activeDiscoveryNodes))
 
 	return bc.transport.BuildResponse(ctx, request,
 		&NodeBootstrapResponse{
