@@ -88,7 +88,7 @@ func (tm TestMetrics) FetchURL(relurl string) (int, string, error) {
 	time.Sleep(time.Millisecond * 5)
 
 	fetchurl := "http://" + tm.Metrics.AddrString() + relurl
-	response, err := http.Get(fetchurl)
+	response, err := http.Get(fetchurl) //nolint: gosec
 	if err != nil {
 		return 0, "", err
 	}
