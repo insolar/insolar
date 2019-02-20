@@ -80,6 +80,7 @@ type SessionManager interface {
 	GetChallengeData(id SessionID) (core.AuthorizationCertificate, Nonce, error)
 	ChallengePassed(id SessionID) error
 	ReleaseSession(id SessionID) (*Session, error)
+	ProlongateSession(id SessionID, session *Session)
 }
 
 type sessionManager struct {
@@ -137,14 +138,16 @@ func (sm *sessionManager) NewSession(ref core.RecordRef, cert core.Authorization
 		TTL:    ttl,
 	}
 	sessionID := SessionID(id)
+	sm.addSession(sessionID, session)
+	return sessionID
+}
 
+func (sm *sessionManager) addSession(id SessionID, session *Session) {
 	sm.lock.Lock()
-	sm.sessions[sessionID] = session
+	sm.sessions[id] = session
 	sm.lock.Unlock()
 
 	sm.newSessionNotification <- notification{}
-
-	return sessionID
 }
 
 func (sm *sessionManager) CheckSession(id SessionID, expected SessionState) error {
@@ -212,6 +215,11 @@ func (sm *sessionManager) ReleaseSession(id SessionID) (*Session, error) {
 	}
 	delete(sm.sessions, id)
 	return session, nil
+}
+
+func (sm *sessionManager) ProlongateSession(id SessionID, session *Session) {
+	session.Time = time.Now()
+	sm.addSession(id, session)
 }
 
 func (sm *sessionManager) cleanupExpiredSessions() {

@@ -20,6 +20,7 @@ package bootstrap
 import (
 	"context"
 	"encoding/gob"
+	"time"
 
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
@@ -33,6 +34,10 @@ import (
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
+)
+
+const (
+	registrationRetries = 10
 )
 
 type AuthorizationController interface {
@@ -56,6 +61,7 @@ type OperationCode uint8
 const (
 	OpConfirmed OperationCode = iota + 1
 	OpRejected
+	OpRetry
 )
 
 // AuthorizationRequest
@@ -78,8 +84,9 @@ type RegistrationRequest struct {
 
 // RegistrationResponse
 type RegistrationResponse struct {
-	Code  OperationCode
-	Error string
+	Code    OperationCode
+	RetryIn time.Duration
+	Error   string
 }
 
 func init() {
@@ -124,7 +131,17 @@ func (ac *authorizationController) Authorize(ctx context.Context, discoveryNode 
 
 // Register node on the discovery node (step 4 of the bootstrap process)
 func (ac *authorizationController) Register(ctx context.Context, discoveryNode *DiscoveryNode, sessionID SessionID) error {
-	inslogger.FromContext(ctx).Infof("Registering on host: %s", discoveryNode.Host)
+	return ac.register(ctx, discoveryNode, sessionID, 0)
+}
+
+func (ac *authorizationController) register(ctx context.Context, discoveryNode *DiscoveryNode,
+	sessionID SessionID, attempt int) error {
+
+	if attempt == 0 {
+		inslogger.FromContext(ctx).Infof("Registering on host: %s", discoveryNode.Host)
+	} else {
+		inslogger.FromContext(ctx).Infof("Registering on host: %s; attempt: %d", discoveryNode.Host, attempt+1)
+	}
 
 	ctx, span := instracer.StartSpan(ctx, "AuthorizationController.Register")
 	span.AddAttributes(
@@ -133,7 +150,7 @@ func (ac *authorizationController) Register(ctx context.Context, discoveryNode *
 	defer span.End()
 	originClaim, err := ac.NodeKeeper.GetOriginJoinClaim()
 	if err != nil {
-		return errors.Wrap(err, "[ Register ] failed to get origin claim")
+		return errors.Wrap(err, "Failed to get origin claim")
 	}
 	request := ac.transport.NewRequestBuilder().Type(types.Register).Data(&RegistrationRequest{
 		SessionID: sessionID,
@@ -151,31 +168,57 @@ func (ac *authorizationController) Register(ctx context.Context, discoveryNode *
 	if data.Code == OpRejected {
 		return errors.New("Register rejected: " + data.Error)
 	}
+	if data.Code == OpRetry {
+		if attempt >= registrationRetries {
+			return errors.Errorf("Exceeded maximum number of registration retries (%d)", registrationRetries)
+		}
+		time.Sleep(data.RetryIn)
+		return ac.register(ctx, discoveryNode, sessionID, attempt+1)
+	}
 	return nil
 }
 
-func (ac *authorizationController) checkClaim(sessionID SessionID, claim *packets.NodeJoinClaim) error {
+func (ac *authorizationController) buildRegistrationResponse(sessionID SessionID, claim *packets.NodeJoinClaim) *RegistrationResponse {
+	session, err := ac.getSession(sessionID, claim)
+	if err != nil {
+		return &RegistrationResponse{Code: OpRejected, Error: err.Error()}
+	}
+	if node := ac.NodeKeeper.GetActiveNode(claim.NodeRef); node != nil {
+		ac.SessionManager.ProlongateSession(sessionID, session)
+		return &RegistrationResponse{Code: OpRetry, RetryIn: session.TTL / 2}
+	}
+	return &RegistrationResponse{Code: OpConfirmed}
+}
+
+func (ac *authorizationController) getSession(sessionID SessionID, claim *packets.NodeJoinClaim) (*Session, error) {
 	session, err := ac.SessionManager.ReleaseSession(sessionID)
 	if err != nil {
-		return errors.Wrapf(err, "Error getting session %d for authorization", sessionID)
+		return nil, errors.Wrapf(err, "Error getting session %d for authorization", sessionID)
 	}
 	if !claim.NodeRef.Equal(session.NodeID) {
-		return errors.New("Claim node ID is not equal to session node ID")
+		return nil, errors.New("Claim node ID is not equal to session node ID")
 	}
 	// TODO: check claim signature
-	return nil
+	return session, nil
 }
 
 func (ac *authorizationController) processRegisterRequest(ctx context.Context, request network.Request) (network.Response, error) {
 	data := request.GetData().(*RegistrationRequest)
-	err := ac.checkClaim(data.SessionID, data.JoinClaim)
-	if err != nil {
-		responseAuthorize := &RegistrationResponse{Code: OpRejected, Error: err.Error()}
-		return ac.transport.BuildResponse(ctx, request, responseAuthorize), nil
+	response := ac.buildRegistrationResponse(data.SessionID, data.JoinClaim)
+	if response.Code != OpConfirmed {
+		return ac.transport.BuildResponse(ctx, request, response), nil
 	}
+
+	// TODO: fix Short ID assignment logic
+	if CheckShortIDCollision(ac.NodeKeeper, data.JoinClaim.ShortNodeID) {
+		response = &RegistrationResponse{Code: OpRejected,
+			Error: "Short ID of the joiner node conflicts with active node short ID"}
+		return ac.transport.BuildResponse(ctx, request, response), nil
+	}
+
 	inslogger.FromContext(ctx).Infof("Added join claim from node %s", request.GetSender())
 	ac.NodeKeeper.AddPendingClaim(data.JoinClaim)
-	return ac.transport.BuildResponse(ctx, request, &RegistrationResponse{Code: OpConfirmed}), nil
+	return ac.transport.BuildResponse(ctx, request, response), nil
 }
 
 func (ac *authorizationController) processAuthorizeRequest(ctx context.Context, request network.Request) (network.Response, error) {
