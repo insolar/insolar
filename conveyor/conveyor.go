@@ -19,7 +19,6 @@ package conveyor
 import (
 	"sync"
 
-	"github.com/insolar/insolar/conveyor/queue"
 	"github.com/insolar/insolar/core"
 	"github.com/pkg/errors"
 )
@@ -83,35 +82,7 @@ func NewPulseConveyor() Conveyor {
 	return c
 }
 
-// PulseState is the states of pulse inside slot
-type PulseState int
-
 const AntiqueSlotPulse = core.PulseNumber(0)
-
-//go:generate stringer -type=PulseState
-const (
-	Unallocated = PulseState(iota)
-	Future
-	Present
-	Past
-	Antique
-)
-
-// Slot holds info about specific pulse and events for it
-type Slot struct {
-	inputQueue  queue.IQueue
-	pulseState  PulseState
-	pulseNumber core.PulseNumber
-}
-
-// NewSlot creates new instance of Slot
-func NewSlot(pulseState PulseState, pulseNumber core.PulseNumber) *Slot {
-	return &Slot{
-		pulseState:  pulseState,
-		inputQueue:  queue.NewMutexQueue(),
-		pulseNumber: pulseNumber,
-	}
-}
 
 // GetState returns current state of conveyor
 func (c *PulseConveyor) GetState() State {
@@ -222,4 +193,8 @@ func (c *PulseConveyor) ActivatePulse() error {
 	c.state = Active
 
 	return nil
+}
+
+func (c *PulseConveyor) getSlotConfiguration(state SlotState) HandlersConfiguration {
+	return HandlersConfiguration{state: state}
 }
