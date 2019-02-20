@@ -57,9 +57,6 @@ func (p *player) Send(ctx context.Context, msg core.Message, ops *core.MessageSe
 
 	item, err := p.tape.Get(ctx, id)
 	if err != nil {
-		if err == core.ErrNotFound {
-			return nil, ErrNoReply
-		}
 		return nil, err
 	}
 
