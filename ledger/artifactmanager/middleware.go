@@ -58,9 +58,9 @@ func newMiddleware(
 
 func (m *middleware) addFieldsToLogger(handler core.MessageHandler) core.MessageHandler {
 	return func(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
-		context, _ := inslogger.WithField(ctx, "targetid", parcel.DefaultTarget().String())
+		ctx, _ = inslogger.WithField(ctx, "targetid", parcel.DefaultTarget().String())
 
-		return handler(context, parcel)
+		return handler(ctx, parcel)
 	}
 }
 
@@ -159,39 +159,6 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 		ctx = addJetIDToLogger(ctx, jetID)
 
 		return handler(contextWithJet(ctx, jetID), parcel)
-	}
-}
-
-func (m *middleware) saveParcel(handler core.MessageHandler) core.MessageHandler {
-	return func(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
-		jetID := jetFromContext(ctx)
-		pulse, err := m.pulseStorage.Current(ctx)
-		if err != nil {
-			return nil, err
-		}
-		err = m.objectStorage.SetMessage(ctx, jetID, pulse.PulseNumber, parcel)
-		if err != nil {
-			return nil, err
-		}
-
-		return handler(ctx, parcel)
-	}
-}
-
-func (m *middleware) checkHeavySync(handler core.MessageHandler) core.MessageHandler {
-	return func(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
-		// TODO: @andreyromancev. 10.01.2019. Uncomment to enable backpressure for writing requests.
-		// Currently disabled due to big initial difference in pulse numbers, which prevents requests from being accepted.
-		// jetID := jetFromContext(ctx)
-		// replicated, err := m.db.GetReplicatedPulse(ctx, jetID)
-		// if err != nil {
-		// 	return nil, err
-		// }
-		// if parcel.Pulse()-replicated >= m.conf.LightChainLimit {
-		// 	return nil, errors.New("failed to write data (waiting for heavy replication)")
-		// }
-
-		return handler(ctx, parcel)
 	}
 }
 

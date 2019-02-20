@@ -193,6 +193,9 @@ func (jc *JetCoordinator) LightValidatorsForObject(
 // Heavy returns *core.RecorRef to a heavy of specific pulse
 func (jc *JetCoordinator) Heavy(ctx context.Context, pulse core.PulseNumber) (*core.RecordRef, error) {
 	candidates, err := jc.NodeStorage.GetActiveNodesByRole(pulse, core.StaticRoleHeavyMaterial)
+	if err == core.ErrNoNodes {
+		return nil, err
+	}
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch active heavy nodes for pulse %v", pulse)
 	}
@@ -217,12 +220,20 @@ func (jc *JetCoordinator) Heavy(ctx context.Context, pulse core.PulseNumber) (*c
 }
 
 // IsBeyondLimit calculates if target pulse is behind clean-up limit
+// or if currentPN|targetPN didn't found in in-memory pulse-storage.
 func (jc *JetCoordinator) IsBeyondLimit(ctx context.Context, currentPN, targetPN core.PulseNumber) (bool, error) {
 	currentPulse, err := jc.PulseTracker.GetPulse(ctx, currentPN)
+	if err == core.ErrNotFound {
+		return true, nil
+	}
 	if err != nil {
 		return false, errors.Wrapf(err, "failed to fetch pulse %v", currentPN)
 	}
+
 	targetPulse, err := jc.PulseTracker.GetPulse(ctx, targetPN)
+	if err == core.ErrNotFound {
+		return true, nil
+	}
 	if err != nil {
 		return false, errors.Wrapf(err, "failed to fetch pulse %v", targetPN)
 	}
@@ -264,6 +275,9 @@ func (jc *JetCoordinator) virtualsForObject(
 	ctx context.Context, objID core.RecordID, pulse core.PulseNumber, count int,
 ) ([]core.RecordRef, error) {
 	candidates, err := jc.NodeStorage.GetActiveNodesByRole(pulse, core.StaticRoleVirtual)
+	if err == core.ErrNoNodes {
+		return nil, err
+	}
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch active virtual nodes for pulse %v", pulse)
 	}
@@ -290,11 +304,14 @@ func (jc *JetCoordinator) lightMaterialsForJet(
 	_, prefix := jet.Jet(jetID)
 
 	candidates, err := jc.NodeStorage.GetActiveNodesByRole(pulse, core.StaticRoleLightMaterial)
+	if err == core.ErrNoNodes {
+		return nil, err
+	}
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch active light nodes for pulse %v", pulse)
 	}
 	if len(candidates) == 0 {
-		return nil, errors.New(fmt.Sprintf("no active light nodes for pulse %d", pulse))
+		return nil, core.ErrNoNodes
 	}
 
 	ent, err := jc.entropy(ctx, pulse)

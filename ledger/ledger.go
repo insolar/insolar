@@ -28,7 +28,6 @@ import (
 	"github.com/insolar/insolar/ledger/exporter"
 	"github.com/insolar/insolar/ledger/heavyserver"
 	"github.com/insolar/insolar/ledger/jetcoordinator"
-	"github.com/insolar/insolar/ledger/localstorage"
 	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/log"
@@ -40,7 +39,6 @@ type Ledger struct {
 	ArtifactManager core.ArtifactManager `inject:""`
 	PulseManager    core.PulseManager    `inject:""`
 	JetCoordinator  core.JetCoordinator  `inject:""`
-	LocalStorage    core.LocalStorage    `inject:""`
 }
 
 // Deprecated: remove after deleting TmpLedger
@@ -64,13 +62,6 @@ func (l *Ledger) GetArtifactManager() core.ArtifactManager {
 	return l.ArtifactManager
 }
 
-// Deprecated: remove after deleting TmpLedger
-// GetLocalStorage returns local storage to work with.
-func (l *Ledger) GetLocalStorage() core.LocalStorage {
-	log.Warn("GetLocalStorage is deprecated. Use component injection.")
-	return l.LocalStorage
-}
-
 // NewTestLedger is the util function for creation of Ledger with provided
 // private members (suitable for tests).
 func NewTestLedger(
@@ -78,14 +69,12 @@ func NewTestLedger(
 	am *artifactmanager.LedgerArtifactManager,
 	pm *pulsemanager.PulseManager,
 	jc core.JetCoordinator,
-	ls *localstorage.LocalStorage,
 ) *Ledger {
 	return &Ledger{
 		db:              db,
 		ArtifactManager: am,
 		PulseManager:    pm,
 		JetCoordinator:  jc,
-		LocalStorage:    ls,
 	}
 }
 
@@ -97,10 +86,12 @@ func GetLedgerComponents(conf configuration.Ledger, certificate core.Certificate
 	}
 
 	var pulseTracker storage.PulseTracker
-	if certificate.GetRole() == core.StaticRoleLightMaterial {
-		pulseTracker = storage.NewPulseTrackerMemory()
-	} else {
+	// TODO: @imarkin 18.02.18 - Comparision with core.StaticRoleUnknown is a hack for genesis pulse (INS-1537)
+	switch certificate.GetRole() {
+	case core.StaticRoleUnknown, core.StaticRoleHeavyMaterial:
 		pulseTracker = storage.NewPulseTracker()
+	default:
+		pulseTracker = storage.NewPulseTrackerMemory()
 	}
 
 	return []interface{}{
@@ -120,7 +111,6 @@ func GetLedgerComponents(conf configuration.Ledger, certificate core.Certificate
 		jetcoordinator.NewJetCoordinator(conf.LightChainLimit),
 		pulsemanager.NewPulseManager(conf),
 		artifactmanager.NewMessageHandler(&conf, certificate),
-		localstorage.NewLocalStorage(db),
 		heavyserver.NewSync(db),
 		exporter.NewExporter(conf.Exporter),
 	}
