@@ -20,7 +20,6 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/localstorage"
 )
 
 // Player is a MessageBus wrapper that replays replies from provided tape. The tape can be created and by Recorder
@@ -58,9 +57,6 @@ func (p *player) Send(ctx context.Context, msg core.Message, ops *core.MessageSe
 
 	item, err := p.tape.Get(ctx, id)
 	if err != nil {
-		if err == localstorage.ErrNotFound {
-			return nil, ErrNoReply
-		}
 		return nil, err
 	}
 
