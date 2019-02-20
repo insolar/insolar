@@ -307,7 +307,7 @@ func (s *testSuite) TestDiscoveryRestart() {
 		s.T().Skip(consensusMinMsg)
 	}
 
-	s.waitForConsensus(1)
+	s.waitForConsensus(2)
 
 	log.Info("Discovery node stopping...")
 	err := s.fixture().bootstrapNodes[0].serviceNetwork.Stop(context.Background())
@@ -326,6 +326,33 @@ func (s *testSuite) TestDiscoveryRestart() {
 
 	s.waitForConsensusExcept(3, s.fixture().bootstrapNodes[0].id)
 	activeNodes = s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
+	s.Equal(s.getNodesCount(), len(activeNodes))
+	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
+	s.Equal(s.getNodesCount(), len(activeNodes))
+}
+
+func (s *testSuite) TestDiscoveryRestartNoWait() {
+	if len(s.fixture().bootstrapNodes) < consensusMin {
+		s.T().Skip(consensusMinMsg)
+	}
+
+	s.waitForConsensus(2)
+
+	log.Info("Discovery node stopping...")
+	err := s.fixture().bootstrapNodes[0].serviceNetwork.Stop(context.Background())
+	s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.(*nodeKeeperWrapper).Wipe(true)
+	log.Info("Discovery node stopped...")
+	require.NoError(s.T(), err)
+
+	go func(s *testSuite) {
+		log.Info("Discovery node starting...")
+		err = s.fixture().bootstrapNodes[0].serviceNetwork.Start(context.Background())
+		log.Info("Discovery node started")
+		require.NoError(s.T(), err)
+	}(s)
+
+	s.waitForConsensusExcept(4, s.fixture().bootstrapNodes[0].id)
+	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount(), len(activeNodes))
 	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount(), len(activeNodes))
