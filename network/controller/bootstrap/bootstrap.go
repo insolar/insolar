@@ -187,20 +187,12 @@ func (bc *bootstrapper) Bootstrap(ctx context.Context) (*network.BootstrapResult
 	logger.Info("Bootstrapping to discovery node")
 	ctx, span := instracer.StartSpan(ctx, "Bootstrapper.Bootstrap")
 	defer span.End()
-	ch := bc.getDiscoveryNodesChannel(ctx, bc.Certificate.GetDiscoveryNodes(), 1)
-	discoveryCount := len(bc.Certificate.GetDiscoveryNodes())
 
-	var bootstrapResults []*network.BootstrapResult
-	var hosts []*host.Host
-	for {
-		bootstrapResults, hosts = bc.waitResultsFromChannel(ctx, ch, discoveryCount)
-		if len(bootstrapResults) == discoveryCount {
-			// we connected to all discovery nodes
-			break
-		} else {
-			logger.Infof("[ Bootstrap ] Connected to %d/%d discovery nodes", len(hosts), discoveryCount)
-		}
-	}
+	discoveryCount := len(bc.Certificate.GetDiscoveryNodes())
+	ch := bc.getDiscoveryNodesChannel(ctx, bc.Certificate.GetDiscoveryNodes(), discoveryCount)
+
+	bootstrapResults, hosts := bc.waitResultsFromChannel(ctx, ch, discoveryCount)
+	logger.Infof("[ Bootstrap ] Connected to %d/%d discovery nodes", len(hosts), discoveryCount)
 
 	majorityRule := bc.Certificate.GetMajorityRule()
 	for _, b := range bootstrapResults {
