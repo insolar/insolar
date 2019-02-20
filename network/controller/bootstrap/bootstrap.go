@@ -65,6 +65,7 @@ type bootstrapper struct {
 	Certificate     core.Certificate     `inject:""`
 	NodeKeeper      network.NodeKeeper   `inject:""`
 	NetworkSwitcher core.NetworkSwitcher `inject:""`
+	Rules           network.Rules        `inject:""`
 
 	options   *common.Options
 	transport network.InternalTransport
@@ -516,13 +517,12 @@ func (bc *bootstrapper) processBootstrap(ctx context.Context, request network.Re
 		code = Accepted
 	}
 
-	activeDiscoveryNodes := findDiscoveriesInActiveNodeList(bc.NodeKeeper.GetActiveNodes(), bc.Certificate)
-	log.Warnf("findDiscoveriesInActiveNodeList: %d  TODO: remove this log", len(activeDiscoveryNodes))
+	_, activeDiscoveryNodesLen := bc.Rules.CheckMajorityRule()
 
 	return bc.transport.BuildResponse(ctx, request,
 		&NodeBootstrapResponse{
 			Code:           code,
-			DiscoveryCount: len(activeDiscoveryNodes),
+			DiscoveryCount: activeDiscoveryNodesLen,
 			// FirstPulseTimeUnix: bc.firstPulseTime.Unix(),
 		}), nil
 }
