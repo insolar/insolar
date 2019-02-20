@@ -22,17 +22,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/component"
-	"github.com/insolar/insolar/platformpolicy"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
+	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/platformpolicy"
 )
 
 type dropSuite struct {
@@ -113,20 +113,20 @@ func (s *dropSuite) TestStore_DropWaitWrites() {
 	var err error
 	go func() {
 		err = s.db.Update(s.ctx, func(tx *storage.TransactionManager) error {
-			log.Debugln("start tx")
+			log.Debug("start tx")
 			close(txstarted)
 			<-dropwaits
 			time.Sleep(waittime)
 			txFin = time.Now()
 			return nil
 		})
-		log.Debugln("end tx")
+		log.Debug("end tx")
 		wg.Done()
 	}()
 
 	go func() {
 		<-txstarted
-		log.Debugln("start CreateDrop")
+		log.Debug("start CreateDrop")
 		close(dropwaits)
 		_, _, dropSize, droperr := s.dropStorage.CreateDrop(s.ctx, core.TODOJetID, 0, []byte{})
 		if droperr != nil {
@@ -134,13 +134,13 @@ func (s *dropSuite) TestStore_DropWaitWrites() {
 		}
 		require.NotEqual(s.T(), 0, dropSize)
 		dropFin = time.Now()
-		log.Debugln("end CreateDrop")
+		log.Debug("end CreateDrop")
 		wg.Done()
 	}()
 	wg.Wait()
 
-	log.Debugln("R: tx end t:", txFin)
-	log.Debugln("R: drop   t:", dropFin)
+	log.Debug("R: tx end t:", txFin)
+	log.Debug("R: drop   t:", dropFin)
 
 	require.NoError(s.T(), err)
 	assert.Conditionf(s.T(), func() bool {

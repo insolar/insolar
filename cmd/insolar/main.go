@@ -118,7 +118,7 @@ func parseInputParams() {
 
 func verboseInfo(msg string) {
 	if verbose {
-		log.Infoln(msg)
+		log.Info(msg)
 	}
 }
 

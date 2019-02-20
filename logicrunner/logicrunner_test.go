@@ -96,7 +96,7 @@ func FindContractsDir() (string, error) {
 
 func (s *LogicRunnerFuncSuite) SetupSuite() {
 	if err := log.SetLevel("debug"); err != nil {
-		log.Errorln("Failed to set logLevel to debug: ", err.Error())
+		log.Error("Failed to set logLevel to debug: ", err.Error())
 	}
 
 	var err error
@@ -106,7 +106,7 @@ func (s *LogicRunnerFuncSuite) SetupSuite() {
 
 	if s.contractsDir, err = FindContractsDir(); err != nil {
 		s.contractsDir = ""
-		log.Errorln("Failed to find contracts dir: ", err.Error())
+		log.Error("Failed to find contracts dir: ", err.Error())
 	}
 }
 

@@ -174,7 +174,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 func (n *ServiceNetwork) Start(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
 
-	logger.Infoln("Network starts listening...")
+	logger.Info("Network starts listening...")
 	n.routingTable.Inject(n.NodeKeeper)
 	n.hostNetwork.Start(ctx)
 
@@ -184,7 +184,7 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 		return errors.Wrap(err, "Failed to bootstrap network")
 	}
 
-	log.Infoln("Bootstrapping network...")
+	log.Info("Bootstrapping network...")
 	_, err = n.Controller.Bootstrap(ctx)
 	if err != nil {
 		return errors.Wrap(err, "Failed to bootstrap network")
