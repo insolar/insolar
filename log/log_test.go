@@ -94,12 +94,8 @@ func TestLog_NewLog_Config(t *testing.T) {
 }
 
 func TestLog_GlobalLogger_Level(t *testing.T) {
-	got := GetLevel()
 	assert.NoError(t, SetLevel("error"))
 	assert.Error(t, SetLevel("errorrr"))
-	assert.Equal(t, "error", GetLevel())
-	assert.NoError(t, SetLevel(got))
-	assert.Equal(t, got, GetLevel())
 }
 
 func TestLog_AddFields(t *testing.T) {

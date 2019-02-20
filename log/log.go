@@ -81,11 +81,6 @@ func SetLevel(level string) error {
 	return GlobalLogger.SetLevel(level)
 }
 
-// GetLevel lets log level for global logger
-func GetLevel() string {
-	return GlobalLogger.GetLevel()
-}
-
 // Debug logs a message at level Debug to the global logger.
 func Debug(args ...interface{}) {
 	GlobalLogger.Debug(args...)

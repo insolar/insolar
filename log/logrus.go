@@ -192,11 +192,6 @@ func (l logrusAdapter) SetLevel(level string) error {
 	return nil
 }
 
-// GetLevel returns log level
-func (l logrusAdapter) GetLevel() string {
-	return l.entry.Logger.Level.String()
-}
-
 // SetOutput sets the output destination for the logger.
 func (l logrusAdapter) SetOutput(w io.Writer) {
 	l.entry.Logger.SetOutput(w)

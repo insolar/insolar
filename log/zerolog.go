@@ -31,7 +31,6 @@ import (
 
 type zerologAdapter struct {
 	logger   zerolog.Logger
-	logLevel string
 }
 
 func newZerologAdapter(cfg configuration.Log) (*zerologAdapter, error) {
@@ -130,14 +129,8 @@ func (z *zerologAdapter) SetLevel(level string) error {
 		return errors.Wrap(err, "Failed to parse log level")
 	}
 
-	z.logLevel = level
 	z.logger = z.logger.Level(l)
 	return nil
-}
-
-// GetLevel returns log level
-func (z zerologAdapter) GetLevel() string {
-	return z.logLevel
 }
 
 // SetOutput sets the output destination for the logger.
