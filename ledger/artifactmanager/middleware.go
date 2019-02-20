@@ -58,9 +58,9 @@ func newMiddleware(
 
 func (m *middleware) addFieldsToLogger(handler core.MessageHandler) core.MessageHandler {
 	return func(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
-		cntext, _ := inslogger.WithField(ctx, "targetid", parcel.DefaultTarget().String())
+		ctx, _ = inslogger.WithField(ctx, "targetid", parcel.DefaultTarget().String())
 
-		return handler(cntext, parcel)
+		return handler(ctx, parcel)
 	}
 }
 
