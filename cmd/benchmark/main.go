@@ -151,9 +151,10 @@ func createMembers(insSDK *sdk.SDK, count int) ([]*sdk.Member, int32) {
 				break
 			}
 
-			fmt.Printf("Retry to create member. TraceID: %s Error is: %s\n", traceID, err.Error())
 			if strings.Contains(err.Error(), core.ErrTooManyPendingRequests.Error()) {
 				retriesCount++
+			} else {
+				fmt.Printf("Retry to create member. TraceID: %s Error is: %s\n", traceID, err.Error())
 			}
 			time.Sleep(bof.Duration())
 		}
@@ -186,9 +187,12 @@ func getTotalBalance(insSDK *sdk.SDK, members []*sdk.Member) (totalBalance uint6
 				if res.err == nil {
 					break
 				}
-				// retry
-				fmt.Printf("Retry to fetch balance for %v-th member: %v\n", res.num, res.err)
-				atomic.AddInt32(&penRetires, 1)
+				if strings.Contains(res.err.Error(), core.ErrTooManyPendingRequests.Error()) {
+					atomic.AddInt32(&penRetires, 1)
+				} else {
+					// retry
+					fmt.Printf("Retry to fetch balance for %v-th member: %v\n", res.num, res.err)
+				}
 				time.Sleep(bof.Duration())
 			}
 			results <- res

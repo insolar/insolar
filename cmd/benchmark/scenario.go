@@ -124,7 +124,7 @@ func (s *transferDifferentMembersScenario) startMember(ctx context.Context, inde
 		var traceID string
 		var err error
 
-		bof := backoff.Backoff{Min: 1 * time.Millisecond, Max: 1 * time.Second}
+		bof := backoff.Backoff{Min: 500 * time.Millisecond, Max: 20 * time.Second}
 
 		retry := true
 		for retry && bof.Attempt() < backoffAttemptsCount {
