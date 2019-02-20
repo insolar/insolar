@@ -266,26 +266,6 @@ func (m *PulseManager) createDrop(
 	return
 }
 
-func (m *PulseManager) processDrop(
-	ctx context.Context,
-	jetID core.RecordID,
-	pulse *core.Pulse,
-	dropSerialized []byte,
-	messages [][]byte,
-) error {
-	msg := &message.JetDrop{
-		JetID:       jetID,
-		Drop:        dropSerialized,
-		Messages:    messages,
-		PulseNumber: pulse.PulseNumber,
-	}
-	_, err := m.Bus.Send(ctx, msg, nil)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func (m *PulseManager) getExecutorHotData(
 	ctx context.Context,
 	jetID core.RecordID,

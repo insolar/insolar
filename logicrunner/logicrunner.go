@@ -66,9 +66,8 @@ type CurrentExecution struct {
 }
 
 type ExecutionQueueResult struct {
-	reply        core.Reply
-	err          error
-	somebodyElse bool
+	reply core.Reply
+	err   error
 }
 
 type ExecutionQueueElement struct {
@@ -130,10 +129,8 @@ func (st *ObjectState) WrapError(err error, message string) error {
 
 // LogicRunner is a general interface of contract executor
 type LogicRunner struct {
-	// FIXME: Ledger component is deprecated. Inject required sub-components.
 	MessageBus                 core.MessageBus                 `inject:""`
 	ContractRequester          core.ContractRequester          `inject:""`
-	Ledger                     core.Ledger                     `inject:""`
 	NodeNetwork                core.NodeNetwork                `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 	ParcelFactory              message.ParcelFactory           `inject:""`
@@ -930,6 +927,9 @@ func (lr *LogicRunner) executeConstructorCall(
 			ctx,
 			Ref{}, *current.Request, m.ParentRef, m.PrototypeRef, m.SaveAs == message.Delegate, newData,
 		)
+		if err != nil {
+			return nil, es.WrapError(err, "couldn't activate object")
+		}
 		_, err = lr.ArtifactManager.RegisterResult(ctx, *current.Request, *current.Request, nil)
 		if err != nil {
 			return nil, es.WrapError(err, "couldn't save results")
