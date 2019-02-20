@@ -21,16 +21,16 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/instrumentation/insmetrics"
-	"github.com/insolar/insolar/ledger/storage/storagetest"
-	"github.com/insolar/insolar/metrics"
-	"github.com/insolar/insolar/testutils/testmetrics"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
+
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/insmetrics"
+	"github.com/insolar/insolar/ledger/storage/storagetest"
+	"github.com/insolar/insolar/testutils/testmetrics"
 )
 
 func TestMetrics_NewMetrics(t *testing.T) {
@@ -62,15 +62,11 @@ func TestMetrics_NewMetrics(t *testing.T) {
 
 	newctx := insmetrics.ChangeTags(ctx, tag.Insert(osxtag, "11.12.13"))
 	stats.Record(newctx, videoCount.M(1), videoSize.M(rand.Int63()))
-	metrics.NetworkParcelSentTotal.WithLabelValues("ping").Inc()
-	metrics.NetworkPacketSentTotal.WithLabelValues("ping").Add(55)
 
 	content, err := testm.FetchContent()
 	require.NoError(t, err)
 	// fmt.Println("/metrics => ", content)
 
-	assert.Contains(t, content, `insolar_network_parcel_sent_total{messageType="ping"} 1`)
-	assert.Contains(t, content, `insolar_network_packet_sent_total{packetType="ping"} 55`)
 	assert.Contains(t, content, `insolar_video_size_count{osx="11.12.13"} 1`)
 	assert.Contains(t, content, `insolar_example_com_measures_video_count{osx="11.12.13"} 1`)
 
@@ -108,6 +104,18 @@ func TestMetrics_Badger(t *testing.T) {
 	require.Equal(t, http.StatusOK, code)
 	// fmt.Println("/metrics => ", content)
 	assert.Contains(t, content, "insolar_badger_blocked_puts_total")
+
+	assert.NoError(t, testm.Stop())
+}
+
+func TestMetrics_Status(t *testing.T) {
+	t.Parallel()
+	ctx := inslogger.TestContext(t)
+	testm := testmetrics.Start(ctx)
+
+	code, _, err := testm.FetchURL("/_status")
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, code)
 
 	assert.NoError(t, testm.Stop())
 }

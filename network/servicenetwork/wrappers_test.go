@@ -19,17 +19,50 @@ package servicenetwork
 
 import (
 	"context"
+	"time"
 
 	consensus "github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/consensus/phases"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/transport/host"
 )
+
+type nodeKeeperTestInterface interface {
+	// Wipe all active nodes for test purposes
+	Wipe(isDiscovery bool)
+}
 
 type nodeKeeperWrapper struct {
 	original network.NodeKeeper
+}
 
-	// network.NodeKeeperMock
+func (n *nodeKeeperWrapper) GetWorkingNode(ref core.RecordRef) core.Node {
+	return n.original.GetWorkingNode(ref)
+}
+
+func (n *nodeKeeperWrapper) GetWorkingNodes() []core.Node {
+	return n.original.GetWorkingNodes()
+}
+
+func (n *nodeKeeperWrapper) GetWorkingNodesByRole(role core.DynamicRole) []core.RecordRef {
+	return n.original.GetWorkingNodesByRole(role)
+}
+
+func (n *nodeKeeperWrapper) Wipe(isDiscovery bool) {
+	n.original.(nodeKeeperTestInterface).Wipe(isDiscovery)
+}
+
+func (n *nodeKeeperWrapper) AddTemporaryMapping(nodeID core.RecordRef, shortID core.ShortNodeID, address string) error {
+	return n.original.AddTemporaryMapping(nodeID, shortID, address)
+}
+
+func (n *nodeKeeperWrapper) ResolveConsensus(shortID core.ShortNodeID) *host.Host {
+	return n.original.ResolveConsensus(shortID)
+}
+
+func (n *nodeKeeperWrapper) ResolveConsensusRef(nodeID core.RecordRef) *host.Host {
+	return n.original.ResolveConsensusRef(nodeID)
 }
 
 type phaseManagerWrapper struct {
@@ -37,9 +70,8 @@ type phaseManagerWrapper struct {
 	result   chan error
 }
 
-func (p *phaseManagerWrapper) OnPulse(ctx context.Context, pulse *core.Pulse) error {
-
-	res := p.original.OnPulse(ctx, pulse)
+func (p *phaseManagerWrapper) OnPulse(ctx context.Context, pulse *core.Pulse, pulseStartTime time.Time) error {
+	res := p.original.OnPulse(ctx, pulse, pulseStartTime)
 	p.result <- res
 	return res
 }
@@ -53,11 +85,8 @@ func (n *nodeKeeperWrapper) GetActiveNode(ref core.RecordRef) core.Node {
 }
 
 func (n *nodeKeeperWrapper) GetActiveNodes() []core.Node {
-	return n.original.GetActiveNodes()
-}
-
-func (n *nodeKeeperWrapper) GetActiveNodesByRole(role core.DynamicRole) []core.RecordRef {
-	return n.original.GetActiveNodesByRole(role)
+	tmp := n.original.GetActiveNodes()
+	return tmp
 }
 
 func (n *nodeKeeperWrapper) GetCloudHash() []byte {
@@ -84,16 +113,20 @@ func (n *nodeKeeperWrapper) GetActiveNodeByShortID(shortID core.ShortNodeID) cor
 	return n.original.GetActiveNodeByShortID(shortID)
 }
 
-func (n *nodeKeeperWrapper) SetState(state network.NodeKeeperState) {
+func (n *nodeKeeperWrapper) SetState(state core.NodeNetworkState) {
 	n.original.SetState(state)
 }
 
-func (n *nodeKeeperWrapper) GetState() network.NodeKeeperState {
+func (n *nodeKeeperWrapper) GetState() core.NodeNetworkState {
 	return n.original.GetState()
 }
 
-func (n *nodeKeeperWrapper) GetOriginClaim() (*consensus.NodeJoinClaim, error) {
-	return n.original.GetOriginClaim()
+func (n *nodeKeeperWrapper) GetOriginJoinClaim() (*consensus.NodeJoinClaim, error) {
+	return n.original.GetOriginJoinClaim()
+}
+
+func (n *nodeKeeperWrapper) GetOriginAnnounceClaim(mapper consensus.BitSetMapper) (*consensus.NodeAnnounceClaim, error) {
+	return n.original.GetOriginAnnounceClaim(mapper)
 }
 
 func (n *nodeKeeperWrapper) NodesJoinedDuringPreviousPulse() bool {
@@ -101,8 +134,6 @@ func (n *nodeKeeperWrapper) NodesJoinedDuringPreviousPulse() bool {
 }
 
 func (n *nodeKeeperWrapper) AddPendingClaim(claim consensus.ReferendumClaim) bool {
-	// TODO: why panic?
-	// panic("nodeKeeperWrapper.AddPendingClaim")
 	return n.original.AddPendingClaim(claim)
 }
 
@@ -122,6 +153,6 @@ func (n *nodeKeeperWrapper) Sync(list network.UnsyncList) {
 	n.original.Sync(list)
 }
 
-func (n *nodeKeeperWrapper) MoveSyncToActive() {
-	n.original.MoveSyncToActive()
+func (n *nodeKeeperWrapper) MoveSyncToActive(ctx context.Context) error {
+	return n.original.MoveSyncToActive(ctx)
 }

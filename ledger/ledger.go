@@ -19,6 +19,7 @@ package ledger
 import (
 	"context"
 
+	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/configuration"
@@ -95,10 +96,19 @@ func GetLedgerComponents(conf configuration.Ledger, certificate core.Certificate
 		panic(errors.Wrap(err, "failed to initialize DB"))
 	}
 
+	var pulseTracker storage.PulseTracker
+	// TODO: @imarkin 18.02.18 - Comparision with core.StaticRoleUnknown is a hack for genesis pulse (INS-1537)
+	switch certificate.GetRole() {
+	case core.StaticRoleUnknown, core.StaticRoleHeavyMaterial:
+		pulseTracker = storage.NewPulseTracker()
+	default:
+		pulseTracker = storage.NewPulseTrackerMemory()
+	}
+
 	return []interface{}{
 		db,
 		storage.NewCleaner(),
-		storage.NewPulseTracker(),
+		pulseTracker,
 		storage.NewPulseStorage(),
 		storage.NewJetStorage(),
 		storage.NewDropStorage(conf.JetSizesHistoryDepth),
@@ -106,7 +116,7 @@ func GetLedgerComponents(conf configuration.Ledger, certificate core.Certificate
 		storage.NewObjectStorage(),
 		storage.NewReplicaStorage(),
 		storage.NewGenesisInitializer(),
-		storage.NewRecentStorageProvider(conf.RecentStorage.DefaultTTL),
+		recentstorage.NewRecentStorageProvider(conf.RecentStorage.DefaultTTL),
 		artifactmanager.NewHotDataWaiterConcrete(),
 		artifactmanager.NewArtifactManger(),
 		jetcoordinator.NewJetCoordinator(conf.LightChainLimit),

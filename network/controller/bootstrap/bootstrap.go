@@ -21,6 +21,7 @@ import (
 	"context"
 	"encoding/gob"
 	"fmt"
+	"math"
 	"strings"
 	"sync"
 	"time"
@@ -41,23 +42,29 @@ import (
 	"go.opencensus.io/trace"
 )
 
+var (
+	ErrReconnectRequired = errors.New("Node should connect via consensus bootstrap")
+)
+
 type DiscoveryNode struct {
 	Host *host.Host
 	Node core.DiscoveryNode
 }
 
 type Bootstrapper interface {
-	component.Starter
+	component.Initer
 
-	Bootstrap(ctx context.Context) (*DiscoveryNode, error)
-	BootstrapDiscovery(ctx context.Context) error
+	Bootstrap(ctx context.Context) (*network.BootstrapResult, *DiscoveryNode, error)
+	BootstrapDiscovery(ctx context.Context) (*network.BootstrapResult, error)
 	SetLastPulse(number core.PulseNumber)
 	GetLastPulse() core.PulseNumber
+	// GetFirstFakePulseTime() time.Time
 }
 
 type bootstrapper struct {
-	Certificate core.Certificate   `inject:""`
-	NodeKeeper  network.NodeKeeper `inject:""`
+	Certificate     core.Certificate     `inject:""`
+	NodeKeeper      network.NodeKeeper   `inject:""`
+	NetworkSwitcher core.NetworkSwitcher `inject:""`
 
 	options   *common.Options
 	transport network.InternalTransport
@@ -71,6 +78,12 @@ type bootstrapper struct {
 
 	genesisRequestsReceived map[core.RecordRef]*GenesisRequest
 	genesisLock             sync.Mutex
+
+	firstPulseTime time.Time
+}
+
+func (bc *bootstrapper) GetFirstFakePulseTime() time.Time {
+	return bc.firstPulseTime
 }
 
 func (bc *bootstrapper) getRequest(ref core.RecordRef) *GenesisRequest {
@@ -93,6 +106,7 @@ type NodeBootstrapResponse struct {
 	Code         Code
 	RedirectHost string
 	RejectReason string
+	// FirstPulseTimeUnix int64
 }
 
 type GenesisRequest struct {
@@ -121,7 +135,7 @@ type NodeStruct struct {
 }
 
 func newNode(n *NodeStruct) (core.Node, error) {
-	pk, err := platformpolicy.NewKeyProcessor().ImportPublicKeyPEM(n.PK)
+	pk, err := platformpolicy.NewKeyProcessor().ImportPublicKeyBinary(n.PK)
 	if err != nil {
 		return nil, errors.Wrap(err, "error deserializing node public key")
 	}
@@ -133,7 +147,7 @@ func newNode(n *NodeStruct) (core.Node, error) {
 }
 
 func newNodeStruct(node core.Node) (*NodeStruct, error) {
-	pk, err := platformpolicy.NewKeyProcessor().ExportPublicKeyPEM(node.PublicKey())
+	pk, err := platformpolicy.NewKeyProcessor().ExportPublicKeyBinary(node.PublicKey())
 	if err != nil {
 		return nil, errors.Wrap(err, "error serializing node public key")
 	}
@@ -143,7 +157,7 @@ func newNodeStruct(node core.Node) (*NodeStruct, error) {
 		SID:     node.ShortID(),
 		Role:    node.Role(),
 		PK:      pk,
-		Address: node.PhysicalAddress(),
+		Address: node.Address(),
 		Version: node.Version(),
 	}, nil
 }
@@ -154,6 +168,7 @@ const (
 	Accepted = Code(iota + 1)
 	Rejected
 	Redirected
+	ReconnectRequired
 )
 
 func init() {
@@ -166,17 +181,17 @@ func init() {
 }
 
 // Bootstrap on the discovery node (step 1 of the bootstrap process)
-func (bc *bootstrapper) Bootstrap(ctx context.Context) (*DiscoveryNode, error) {
+func (bc *bootstrapper) Bootstrap(ctx context.Context) (*network.BootstrapResult, *DiscoveryNode, error) {
 	log.Info("Bootstrapping to discovery node")
 	ctx, span := instracer.StartSpan(ctx, "Bootstrapper.Bootstrap")
 	defer span.End()
 	ch := bc.getDiscoveryNodesChannel(ctx, bc.Certificate.GetDiscoveryNodes(), 1)
-	host := bc.waitResultFromChannel(ctx, ch)
-	if host == nil {
-		return nil, errors.New("Failed to bootstrap to any of discovery nodes")
+	result := bc.waitResultFromChannel(ctx, ch)
+	if result == nil {
+		return nil, nil, errors.New("Failed to bootstrap to any of discovery nodes")
 	}
-	discovery := FindDiscovery(bc.Certificate, host.NodeID)
-	return &DiscoveryNode{Host: host, Node: discovery}, nil
+	discovery := FindDiscovery(bc.Certificate, result.Host.NodeID)
+	return result, &DiscoveryNode{result.Host, discovery}, nil
 }
 
 func (bc *bootstrapper) SetLastPulse(number core.PulseNumber) {
@@ -198,7 +213,7 @@ func (bc *bootstrapper) forceSetLastPulse(number core.PulseNumber) {
 	span.End()
 	defer bc.lastPulseLock.Unlock()
 
-	log.Debugf("Network will start from pulse %d", number)
+	log.Infof("Network will start from pulse %d + delta", number)
 	bc.lastPulse = number
 }
 
@@ -223,53 +238,77 @@ func (bc *bootstrapper) checkActiveNode(node core.Node) error {
 	return nil
 }
 
-func (bc *bootstrapper) BootstrapDiscovery(ctx context.Context) error {
+func (bc *bootstrapper) BootstrapDiscovery(ctx context.Context) (*network.BootstrapResult, error) {
 	logger := inslogger.FromContext(ctx)
-	logger.Info("Network bootstrap between discovery nodes")
+	logger.Info("[ BootstrapDiscovery ] Network bootstrap between discovery nodes")
 	ctx, span := instracer.StartSpan(ctx, "Bootstrapper.BootstrapDiscovery")
 	defer span.End()
 	discoveryNodes := bc.Certificate.GetDiscoveryNodes()
 	var err error
 	discoveryNodes, err = RemoveOrigin(discoveryNodes, *bc.Certificate.GetNodeRef())
 	if err != nil {
-		return errors.Wrapf(err, "Discovery bootstrap failed")
+		return nil, errors.Wrapf(err, "Discovery bootstrap failed")
 	}
 	discoveryCount := len(discoveryNodes)
 	if discoveryCount == 0 {
-		return nil
+		host, err := host.NewHostN(bc.NodeKeeper.GetOrigin().Address(), bc.NodeKeeper.GetOrigin().ID())
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to create a host")
+		}
+		return &network.BootstrapResult{
+			Host: host,
+			// FirstPulseTime: bc.firstPulseTime,
+		}, nil
 	}
 
+	var bootstrapResults []*network.BootstrapResult
 	var hosts []*host.Host
 	for {
 		ch := bc.getDiscoveryNodesChannel(ctx, discoveryNodes, discoveryCount)
-		hosts = bc.waitResultsFromChannel(ctx, ch, discoveryCount)
+		bootstrapResults, hosts = bc.waitResultsFromChannel(ctx, ch, discoveryCount)
 		if len(hosts) == discoveryCount {
 			// we connected to all discovery nodes
 			break
+		} else {
+			logger.Infof("[ BootstrapDiscovery ] Connected to %d/%d discovery nodes", len(hosts), discoveryCount)
 		}
+	}
+	reconnectRequests := 0
+	for _, bootstrapResult := range bootstrapResults {
+		if bootstrapResult.ReconnectRequired {
+			reconnectRequests++
+		}
+	}
+	minRequests := int(math.Floor(0.5*float64(discoveryCount))) + 1
+	if reconnectRequests >= minRequests {
+		logger.Infof("[ BootstrapDiscovery ] Need to reconnect as joiner (requested by %d/%d discovery nodes)",
+			reconnectRequests, discoveryCount)
+		return nil, ErrReconnectRequired
 	}
 	activeNodes := make([]core.Node, 0)
 	activeNodesStr := make([]string, 0)
 
 	<-bc.bootstrapLock
-	logger.Debugf("After bootstrap lock")
+	logger.Debugf("[ BootstrapDiscovery ] After bootstrap lock")
 
 	ch := bc.getGenesisRequestsChannel(ctx, hosts)
 	activeNodes, lastPulses, err := bc.waitGenesisResults(ctx, ch, len(hosts))
 	if err != nil {
-		return err
+		return nil, err
 	}
 	bc.forceSetLastPulse(bc.calculateLastIgnoredPulse(ctx, lastPulses))
 	for _, activeNode := range activeNodes {
 		err = bc.checkActiveNode(activeNode)
 		if err != nil {
-			return errors.Wrapf(err, "Discovery check of node %s failed", activeNode.ID())
+			return nil, errors.Wrapf(err, "Discovery check of node %s failed", activeNode.ID())
 		}
+		activeNode.(nodenetwork.MutableNode).SetState(core.NodeDiscovery)
 		activeNodesStr = append(activeNodesStr, activeNode.ID().String())
 	}
 	bc.NodeKeeper.AddActiveNodes(activeNodes)
-	logger.Infof("Added active nodes: %s", strings.Join(activeNodesStr, ", "))
-	return nil
+	bc.NodeKeeper.GetOrigin().(nodenetwork.MutableNode).SetState(core.NodeDiscovery)
+	logger.Infof("[ BootstrapDiscovery ] Added active nodes: %s", strings.Join(activeNodesStr, ", "))
+	return parseBotstrapResults(bootstrapResults), nil
 }
 
 func (bc *bootstrapper) calculateLastIgnoredPulse(ctx context.Context, lastPulses []core.PulseNumber) core.PulseNumber {
@@ -309,26 +348,27 @@ func (bc *bootstrapper) sendGenesisRequest(ctx context.Context, h *host.Host) (*
 	return data, nil
 }
 
-func (bc *bootstrapper) getDiscoveryNodesChannel(ctx context.Context, discoveryNodes []core.DiscoveryNode, needResponses int) <-chan *host.Host {
+func (bc *bootstrapper) getDiscoveryNodesChannel(ctx context.Context, discoveryNodes []core.DiscoveryNode, needResponses int) <-chan *network.BootstrapResult {
 	// we need only one host to bootstrap
-	bootstrapHosts := make(chan *host.Host, needResponses)
+	bootstrapResults := make(chan *network.BootstrapResult, needResponses)
 	for _, discoveryNode := range discoveryNodes {
-		go func(ctx context.Context, address string, ch chan<- *host.Host) {
+		go func(ctx context.Context, address string, ch chan<- *network.BootstrapResult) {
 			inslogger.FromContext(ctx).Infof("Starting bootstrap to address %s", address)
 			ctx, span := instracer.StartSpan(ctx, "Bootstrapper.getDiscoveryNodesChannel")
 			defer span.End()
 			span.AddAttributes(
 				trace.StringAttribute("Bootstrap node", address),
 			)
-			bootstrapHost, err := bootstrap(ctx, address, bc.options, bc.startBootstrap)
+			bootstrapResult, err := bootstrap(ctx, address, bc.options, bc.startBootstrap)
 			if err != nil {
 				inslogger.FromContext(ctx).Errorf("Error bootstrapping to address %s: %s", address, err.Error())
 				return
 			}
-			bootstrapHosts <- bootstrapHost
-		}(ctx, discoveryNode.GetHost(), bootstrapHosts)
+			bootstrapResults <- bootstrapResult
+		}(ctx, discoveryNode.GetHost(), bootstrapResults)
 	}
-	return bootstrapHosts
+
+	return bootstrapResults
 }
 
 func (bc *bootstrapper) getGenesisRequestsChannel(ctx context.Context, discoveryHosts []*host.Host) chan *GenesisResponse {
@@ -360,7 +400,7 @@ func (bc *bootstrapper) getGenesisRequestsChannel(ctx context.Context, discovery
 	return result
 }
 
-func (bc *bootstrapper) waitResultFromChannel(ctx context.Context, ch <-chan *host.Host) *host.Host {
+func (bc *bootstrapper) waitResultFromChannel(ctx context.Context, ch <-chan *network.BootstrapResult) *network.BootstrapResult {
 	for {
 		select {
 		case bootstrapHost := <-ch:
@@ -372,18 +412,20 @@ func (bc *bootstrapper) waitResultFromChannel(ctx context.Context, ch <-chan *ho
 	}
 }
 
-func (bc *bootstrapper) waitResultsFromChannel(ctx context.Context, ch <-chan *host.Host, count int) []*host.Host {
-	result := make([]*host.Host, 0)
+func (bc *bootstrapper) waitResultsFromChannel(ctx context.Context, ch <-chan *network.BootstrapResult, count int) ([]*network.BootstrapResult, []*host.Host) {
+	result := make([]*network.BootstrapResult, 0)
+	hosts := make([]*host.Host, 0)
 	for {
 		select {
-		case bootstrapHost := <-ch:
-			result = append(result, bootstrapHost)
+		case bootstrapResult := <-ch:
+			result = append(result, bootstrapResult)
+			hosts = append(hosts, bootstrapResult.Host)
 			if len(result) == count {
-				return result
+				return result, hosts
 			}
 		case <-time.After(bc.options.BootstrapTimeout):
 			inslogger.FromContext(ctx).Warnf("Bootstrap timeout, successful bootstraps: %d/%d", len(result), count)
-			return result
+			return result, hosts
 		}
 	}
 }
@@ -410,7 +452,7 @@ func (bc *bootstrapper) waitGenesisResults(ctx context.Context, ch <-chan *Genes
 	}
 }
 
-func bootstrap(ctx context.Context, address string, options *common.Options, bootstrapF func(context.Context, string) (*host.Host, error)) (*host.Host, error) {
+func bootstrap(ctx context.Context, address string, options *common.Options, bootstrapF func(context.Context, string) (*network.BootstrapResult, error)) (*network.BootstrapResult, error) {
 	minTO := options.MinTimeout
 	if !options.InfinityBootstrap {
 		return bootstrapF(ctx, address)
@@ -428,7 +470,7 @@ func bootstrap(ctx context.Context, address string, options *common.Options, boo
 	}
 }
 
-func (bc *bootstrapper) startBootstrap(ctx context.Context, address string) (*host.Host, error) {
+func (bc *bootstrapper) startBootstrap(ctx context.Context, address string) (*network.BootstrapResult, error) {
 	ctx, span := instracer.StartSpan(ctx, "Bootstrapper.startBootstrap")
 	defer span.End()
 	bootstrapHost, err := bc.pinger.Ping(ctx, address, bc.options.PingTimeout)
@@ -445,18 +487,32 @@ func (bc *bootstrapper) startBootstrap(ctx context.Context, address string) (*ho
 		return nil, errors.Wrapf(err, "Failed to get response to bootstrap request from address %s", address)
 	}
 	data := response.GetData().(*NodeBootstrapResponse)
-	if data.Code == Rejected {
+	switch data.Code {
+	case Rejected:
 		return nil, errors.New("Rejected: " + data.RejectReason)
-	}
-	if data.Code == Redirected {
+	case Redirected:
 		return bootstrap(ctx, data.RedirectHost, bc.options, bc.startBootstrap)
 	}
-	return response.GetSenderHost(), nil
+	return &network.BootstrapResult{
+		// FirstPulseTime:    time.Unix(data.FirstPulseTimeUnix, 0),
+		Host:              response.GetSenderHost(),
+		ReconnectRequired: data.Code == ReconnectRequired,
+	}, nil
 }
 
 func (bc *bootstrapper) processBootstrap(ctx context.Context, request network.Request) (network.Response, error) {
 	// TODO: redirect logic
-	return bc.transport.BuildResponse(ctx, request, &NodeBootstrapResponse{Code: Accepted}), nil
+	var code Code
+	if bc.NetworkSwitcher.GetState() == core.CompleteNetworkState {
+		code = ReconnectRequired
+	} else {
+		code = Accepted
+	}
+	return bc.transport.BuildResponse(ctx, request,
+		&NodeBootstrapResponse{
+			Code: code,
+			// FirstPulseTimeUnix: bc.firstPulseTime.Unix(),
+		}), nil
 }
 
 func (bc *bootstrapper) processGenesis(ctx context.Context, request network.Request) (network.Response, error) {
@@ -472,13 +528,28 @@ func (bc *bootstrapper) processGenesis(ctx context.Context, request network.Requ
 	}), nil
 }
 
-func (bc *bootstrapper) Start(ctx context.Context) error {
+func (bc *bootstrapper) Init(ctx context.Context) error {
+	bc.firstPulseTime = time.Now()
 	bc.transport.RegisterPacketHandler(types.Bootstrap, bc.processBootstrap)
 	bc.transport.RegisterPacketHandler(types.Genesis, bc.processGenesis)
 	return nil
 }
 
-func NewBootstrapper(options *common.Options, transport network.InternalTransport) Bootstrapper {
+func parseBotstrapResults(results []*network.BootstrapResult) *network.BootstrapResult {
+	minIDIndex := 0
+	minID := results[0].Host.NodeID
+	for i, result := range results {
+		if minID.Compare(result.Host.NodeID) > 0 {
+			minIDIndex = i
+		}
+	}
+	return results[minIDIndex]
+}
+
+func NewBootstrapper(
+	options *common.Options,
+
+	transport network.InternalTransport) Bootstrapper {
 	return &bootstrapper{
 		options:       options,
 		transport:     transport,

@@ -145,7 +145,7 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 	// Mock N3: nodenet returns mocked node (above)
 	// and add stub for GetActiveNodes
 	nodenetMock := network.NewNodeNetworkMock(s.T())
-	nodenetMock.GetActiveNodesMock.Return(nil)
+	nodenetMock.GetWorkingNodesMock.Return(nil)
 	nodenetMock.GetOriginMock.Return(nodeMock)
 
 	// Mock N4: message bus for Send method
@@ -162,7 +162,7 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 	recentMock.FilterNotExistWithLockMock.Return()
 
 	pendingStorageMock := recentstorage.NewPendingStorageMock(s.T())
-	pendingStorageMock.GetRequestsMock.Return(map[core.RecordID]map[core.RecordID]struct{}{})
+	pendingStorageMock.GetRequestsMock.Return(map[core.RecordID]recentstorage.PendingObjectContext{})
 
 	// Mock6: JetCoordinatorMock
 	jcMock := testutils.NewJetCoordinatorMock(s.T())
@@ -176,7 +176,7 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 
 	// Mock N8: Active List Swapper mock
 	alsMock := testutils.NewActiveListSwapperMock(s.T())
-	alsMock.MoveSyncToActiveFunc = func() {}
+	alsMock.MoveSyncToActiveFunc = func(context.Context) error { return nil }
 
 	// Mock N9: Crypto things mock
 	cryptoServiceMock := testutils.NewCryptographyServiceMock(s.T())

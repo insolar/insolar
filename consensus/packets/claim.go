@@ -18,9 +18,14 @@
 package packets
 
 import (
+	"crypto"
+
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/platformpolicy"
+	"github.com/pkg/errors"
 )
 
+//go:generate stringer -type=ClaimType
 type ClaimType uint8
 
 const (
@@ -33,6 +38,8 @@ const (
 	TypeChangeNetworkClaim
 )
 
+const claimHeaderSize = 2
+
 // ChangeNetworkClaim uses to change network state.
 type ChangeNetworkClaim struct {
 }
@@ -44,12 +51,29 @@ func (cnc *ChangeNetworkClaim) Type() ClaimType {
 type ReferendumClaim interface {
 	Serializer
 	Type() ClaimType
+	Clone() ReferendumClaim
+}
+
+type ClaimSupplementary interface {
+	AddSupplementaryInfo(nodeID core.RecordRef)
+}
+
+type SignedClaim interface {
+	GetNodeID() core.RecordRef
+	GetPublicKey() (crypto.PublicKey, error)
+	SerializeRaw() ([]byte, error)
+	GetSignature() []byte
 }
 
 // NodeBroadcast is a broadcast of info. Must be brief and only one entry per node.
 // Type 4.
 type NodeBroadcast struct {
 	EmergencyLevel uint8
+}
+
+func (nb *NodeBroadcast) Clone() ReferendumClaim {
+	result := *nb
+	return &result
 }
 
 func (nb *NodeBroadcast) Type() ClaimType {
@@ -63,6 +87,11 @@ type CapabilityPoolingAndActivation struct {
 	CapabilityRef  [ReferenceLength]byte
 }
 
+func (cpa *CapabilityPoolingAndActivation) Clone() ReferendumClaim {
+	result := *cpa
+	return &result
+}
+
 func (cpa *CapabilityPoolingAndActivation) Type() ClaimType {
 	return TypeCapabilityPollingAndActivation
 }
@@ -73,8 +102,38 @@ type NodeViolationBlame struct {
 	TypeViolation uint8
 }
 
+func (nvb *NodeViolationBlame) Clone() ReferendumClaim {
+	result := *nvb
+	return &result
+}
+
 func (nvb *NodeViolationBlame) Type() ClaimType {
 	return TypeNodeViolationBlame
+}
+
+const NodeAddressSize = 20
+
+// TODO: create heterogeneous structure for variuos types of adresses (IPv4, IPv6, etc.)
+type NodeAddress [NodeAddressSize]byte
+
+func NewNodeAddress(address string) NodeAddress {
+	var result NodeAddress
+	result.Set(address)
+	return result
+}
+
+func (address *NodeAddress) Set(s string) {
+	copy(address[:], []byte(s)[:NodeAddressSize])
+}
+
+func (address NodeAddress) Get() string {
+	var i int
+	for i = 1; i < len(address); i++ {
+		if address[i] == 0 {
+			break
+		}
+	}
+	return string(address[:i])
 }
 
 // NodeJoinClaim is a type 1, len == 272.
@@ -83,10 +142,29 @@ type NodeJoinClaim struct {
 	RelayNodeID             core.ShortNodeID
 	ProtocolVersionAndFlags uint32
 	JoinsAfter              uint32
-	NodeRoleRecID           uint32
+	NodeRoleRecID           core.StaticRole
 	NodeRef                 core.RecordRef
+	NodeAddress             NodeAddress
 	NodePK                  [PublicKeyLength]byte
 	Signature               [SignatureLength]byte
+}
+
+func (njc *NodeJoinClaim) Clone() ReferendumClaim {
+	result := *njc
+	return &result
+}
+
+func (njc *NodeJoinClaim) GetNodeID() core.RecordRef {
+	return njc.NodeRef
+}
+
+func (njc *NodeJoinClaim) GetPublicKey() (crypto.PublicKey, error) {
+	keyProc := platformpolicy.NewKeyProcessor()
+	return keyProc.ImportPublicKeyBinary(njc.NodePK[:])
+}
+
+func (njc *NodeJoinClaim) GetSignature() []byte {
+	return njc.Signature[:]
 }
 
 func (njc *NodeJoinClaim) Type() ClaimType {
@@ -97,19 +175,76 @@ func (njc *NodeJoinClaim) Type() ClaimType {
 type NodeAnnounceClaim struct {
 	NodeJoinClaim
 
-	NodeIndex uint16
-	NodeCount uint16
+	NodeAnnouncerIndex uint16
+	NodeJoinerIndex    uint16
+	NodeCount          uint16
+	CloudHash          [HashLength]byte
+
+	// mapper is used to fill three fields above, is not serialized
+	BitSetMapper BitSetMapper
+}
+
+func (nac *NodeAnnounceClaim) Clone() ReferendumClaim {
+	result := *nac
+	return &result
 }
 
 func (nac *NodeAnnounceClaim) Type() ClaimType {
 	return TypeNodeAnnounceClaim
 }
 
+func (nac *NodeAnnounceClaim) SetCloudHash(cloudHash []byte) {
+	copy(nac.CloudHash[:], cloudHash[:HashLength])
+}
+
 // NodeLeaveClaim can be the only be issued by the node itself and must be the only claim record.
 // Should be executed with the next pulse. Type 1, len == 0.
 type NodeLeaveClaim struct {
+	// additional field that is not serialized and is set from transport layer on packet receive
+	NodeID core.RecordRef
+	ETA    core.PulseNumber
+}
+
+func (nlc *NodeLeaveClaim) Clone() ReferendumClaim {
+	result := *nlc
+	return &result
+}
+
+func (nlc *NodeLeaveClaim) AddSupplementaryInfo(nodeID core.RecordRef) {
+	nlc.NodeID = nodeID
 }
 
 func (nlc *NodeLeaveClaim) Type() ClaimType {
 	return TypeNodeLeaveClaim
+}
+
+func getClaimSize(claim ReferendumClaim) uint16 {
+	return claimSizeMap[claim.Type()]
+}
+
+func getClaimWithHeaderSize(claim ReferendumClaim) uint16 {
+	return getClaimSize(claim) + claimHeaderSize
+}
+
+func NodeToClaim(node core.Node) (*NodeJoinClaim, error) {
+	keyProc := platformpolicy.NewKeyProcessor()
+	exportedKey, err := keyProc.ExportPublicKeyBinary(node.PublicKey())
+	if err != nil {
+		return nil, errors.Wrap(err, "[ NodeToClaim ] failed to export a public key")
+	}
+	var keyData [PublicKeyLength]byte
+	copy(keyData[:], exportedKey[:PublicKeyLength])
+
+	var s [SignatureLength]byte
+	return &NodeJoinClaim{
+		ShortNodeID:             node.ShortID(),
+		RelayNodeID:             node.ShortID(),
+		ProtocolVersionAndFlags: 0,
+		JoinsAfter:              0,
+		NodeRoleRecID:           node.Role(),
+		NodeRef:                 node.ID(),
+		NodePK:                  keyData,
+		NodeAddress:             NewNodeAddress(node.Address()),
+		Signature:               s,
+	}, nil
 }

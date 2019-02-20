@@ -1,0 +1,97 @@
+#!/bin/bash
+
+set -e
+
+ARG=$1
+
+check () {
+  # run only in local k8s
+  kubectl config current-context | grep -q 'docker-for-desktop' || (echo "bad context, it can run only on local k8s: kubectl config use-context docker-for-desktop" && exit 1)
+}
+
+DOCKER=./ci/local-dev/docker/
+K8S=./ci/local-dev/manifests/
+KS=./ci/local-dev/manifests/ks/
+
+prepare () {
+  echo installing ksonnet
+  brew update && brew tap ksonnet/tap && brew install ksonnet/tap/ks
+}
+
+full-rebuild () {
+  echo start full rebuild
+  docker build --rm --tag pre -f $DOCKER/Dockerfile.pre .
+  docker build --rm --tag base -f $DOCKER/Dockerfile.base .
+}
+
+rebuild () {
+  echo start rebuild
+  DEP=$(docker images -q pre)
+  [ -z "$DEP" ] && full-rebuild || docker build --rm --tag base -f $DOCKER/Dockerfile.base .
+}
+
+start-nodes () {
+  echo start only nodes and pulsar
+  cd $KS && ks apply local -c insolar.bootstrap_ss && ks apply local -c pulsar.pulsar_common
+}
+
+start-all () {
+  echo start all nodes and services
+  cd $KS && ks apply local
+}
+
+stop () {
+	echo stop all
+	cd $KS && ks delete local
+}
+
+#restart-dev () {
+#  stop-dev
+#  start-dev
+#}
+#
+#rebuild-and-restart () {
+#  rebuild
+#  restart-dev
+#}
+
+case $ARG in
+  prepare)
+    check
+    prepare
+    ;;
+  rebuild)
+    check
+    rebuild
+    ;;
+  full-rebuild)
+    check
+    full-rebuild
+    ;;
+  start-nodes)
+    check
+    start-nodes
+    ;;
+  start-all)
+    check
+    start-all
+    ;;
+  stop)
+    check
+    stop
+    ;;
+  *)
+    echo "Use cases:"
+    echo "prepare - install ksonnet"
+    echo "rebuild - rebuild source code only"
+    echo "full-rebuild - prepare dependencies and rebuild source code"
+    echo "start-nodes - deploy and start discovery nodes and pulsar"
+    echo "start-all - like 'start-nodes' + start elk, jaeger, prometheus ( and grafana - not completely implemented )"
+    echo "stop - stop all containers"
+    echo
+    echo "builded images"
+    echo "pre - image with dependencies"
+    echo "base - image with binaries"
+esac
+
+

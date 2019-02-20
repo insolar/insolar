@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
@@ -33,8 +34,8 @@ import (
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/hack"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/insolar/metrics"
 )
 
 const deliverRPCMethodName = "MessageBus.Deliver"
@@ -168,6 +169,7 @@ func (mb *MessageBus) SendParcel(
 ) (core.Reply, error) {
 	parcelType := parcel.Type().String()
 	ctx, span := instracer.StartSpan(ctx, "MessageBus.SendParcel "+parcelType)
+	ctx = insmetrics.InsertTag(ctx, tagMessageType, parcelType)
 	defer span.End()
 
 	readBarrier(ctx, &mb.globalLock)
@@ -193,10 +195,10 @@ func (mb *MessageBus) SendParcel(
 
 	start := time.Now()
 	defer func() {
-		metrics.ParcelsTime.WithLabelValues(parcelType).Observe(time.Since(start).Seconds())
+		stats.Record(ctx, statParcelsTime.M(float64(time.Since(start).Nanoseconds())/1e6))
 	}()
 
-	metrics.ParcelsSentTotal.WithLabelValues(parcelType).Inc()
+	stats.Record(ctx, statParcelsSentTotal.M(1))
 
 	if len(nodes) > 1 {
 		cascade := core.Cascade{
@@ -211,7 +213,7 @@ func (mb *MessageBus) SendParcel(
 	// Short path when sending to self node. Skip serialization
 	origin := mb.NodeNetwork.GetOrigin()
 	if nodes[0].Equal(origin.ID()) {
-		metrics.LocallyDeliveredParcelsTotal.WithLabelValues(parcelType).Inc()
+		stats.Record(ctx, statLocallyDeliveredParcelsTotal.M(1))
 		return mb.doDeliver(parcel.Context(context.Background()), parcel)
 	}
 
@@ -254,6 +256,7 @@ func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Repl
 	// We must check barrier just before exiting function
 	// to deliver reply right after pulse switches if it is switching right now.
 	defer readBarrier(ctx, &mb.globalLock)
+	ctx, _ = inslogger.WithField(ctx, "msg_type", msg.Type().String())
 	inslogger.FromContext(ctx).Debug("MessageBus.doDeliver starts ...")
 	handler, ok := mb.handlers[msg.Type()]
 	if !ok {
@@ -415,7 +418,7 @@ func (mb *MessageBus) checkParcel(ctx context.Context, parcel core.Parcel) error
 	sender := parcel.GetSender()
 
 	if mb.signmessages {
-		senderKey := mb.NodeNetwork.GetActiveNode(sender).PublicKey()
+		senderKey := mb.NodeNetwork.GetWorkingNode(sender).PublicKey()
 		if err := mb.ParcelFactory.Validate(senderKey, parcel); err != nil {
 			return errors.Wrap(err, "failed to check a message sign")
 		}

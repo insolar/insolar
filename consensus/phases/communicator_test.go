@@ -27,9 +27,7 @@ import (
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/nodenetwork"
-	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/insolar/insolar/testutils"
 	networkUtils "github.com/insolar/insolar/testutils/network"
 	"github.com/stretchr/testify/suite"
@@ -50,7 +48,7 @@ type communicatorSuite struct {
 func NewSuite() *communicatorSuite {
 	return &communicatorSuite{
 		Suite:        suite.Suite{},
-		communicator: NewNaiveCommunicator(),
+		communicator: NewCommunicator(),
 		participants: nil,
 	}
 }
@@ -59,7 +57,7 @@ func (s *communicatorSuite) SetupTest() {
 	s.consensusNetworkMock = networkUtils.NewConsensusNetworkMock(s.T())
 	s.pulseHandlerMock = networkUtils.NewPulseHandlerMock(s.T())
 	s.originNode = makeRandomNode()
-	nodeN := networkUtils.NewNodeNetworkMock(s.T())
+	nodeN := networkUtils.NewNodeKeeperMock(s.T())
 
 	cryptoServ := testutils.NewCryptographyServiceMock(s.T())
 	cryptoServ.SignFunc = func(p []byte) (r *core.Signature, r1 error) {
@@ -70,12 +68,11 @@ func (s *communicatorSuite) SetupTest() {
 		return true
 	}
 
-	s.consensusNetworkMock.RegisterRequestHandlerMock.Set(func(p types.PacketType, p1 network.ConsensusRequestHandler) {
+	s.consensusNetworkMock.RegisterPacketHandlerMock.Set(func(p packets.PacketType, p1 network.ConsensusPacketHandler) {
+
 	})
 
-	s.consensusNetworkMock.NewRequestBuilderMock.Set(func() (r network.RequestBuilder) {
-		return &hostnetwork.Builder{}
-	})
+	s.consensusNetworkMock.StartMock.Set(func(context.Context) error { return nil })
 
 	s.consensusNetworkMock.GetNodeIDMock.Set(func() (r core.RecordRef) {
 		return s.originNode.ID()
@@ -91,7 +88,7 @@ func (s *communicatorSuite) SetupTest() {
 }
 
 func makeRandomNode() core.Node {
-	return nodenetwork.NewNode(testutils.RandomRef(), core.StaticRoleUnknown, nil, "127.0.0.1", "")
+	return nodenetwork.NewNode(testutils.RandomRef(), core.StaticRoleUnknown, nil, "127.0.0.1:5432", "")
 }
 
 func (s *communicatorSuite) TestExchangeData() {
@@ -99,7 +96,7 @@ func (s *communicatorSuite) TestExchangeData() {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 	defer cancel()
 
-	result, _, err := s.communicator.ExchangePhase1(ctx, s.participants, &packets.Phase1Packet{})
+	result, err := s.communicator.ExchangePhase1(ctx, nil, s.participants, &packets.Phase1Packet{})
 	s.Assert().NoError(err)
 	s.NotEqual(0, len(result))
 }

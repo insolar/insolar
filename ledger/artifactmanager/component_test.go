@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
@@ -133,7 +134,7 @@ func (s *componentSuite) TestLedgerArtifactManager_PendingRequest() {
 	am.DefaultBus = mb
 	am.PlatformCryptographyScheme = platformpolicy.NewPlatformCryptographyScheme()
 
-	provider := storage.NewRecentStorageProvider(0)
+	provider := recentstorage.NewRecentStorageProvider(0)
 
 	cryptoScheme := platformpolicy.NewPlatformCryptographyScheme()
 
@@ -154,16 +155,15 @@ func (s *componentSuite) TestLedgerArtifactManager_PendingRequest() {
 	handler.JetCoordinator = jcMock
 
 	handler.HotDataWaiter = NewHotDataWaiterConcrete()
-	handler.HotDataWaiter.Unlock(s.ctx, jetID)
+	err := handler.HotDataWaiter.Unlock(s.ctx, jetID)
+	require.NoError(s.T(), err)
 
-	err := handler.Init(s.ctx)
+	err = handler.Init(s.ctx)
 	require.NoError(s.T(), err)
 	objRef := *genRandomRef(0)
 
-	err = s.jetStorage.UpdateJetTree(s.ctx, core.FirstPulseNumber, true, jetID)
-	require.NoError(s.T(), err)
-	err = s.jetStorage.UpdateJetTree(s.ctx, core.FirstPulseNumber+1, true, jetID)
-	require.NoError(s.T(), err)
+	s.jetStorage.UpdateJetTree(s.ctx, core.FirstPulseNumber, true, jetID)
+	s.jetStorage.UpdateJetTree(s.ctx, core.FirstPulseNumber+1, true, jetID)
 
 	// Register request
 	reqID, err := am.RegisterRequest(s.ctx, objRef, &message.Parcel{Msg: &message.CallMethod{}, PulseNumber: core.FirstPulseNumber})

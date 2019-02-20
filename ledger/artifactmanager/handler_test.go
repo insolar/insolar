@@ -17,6 +17,7 @@
 package artifactmanager
 
 import (
+	"bytes"
 	"context"
 	"testing"
 
@@ -484,7 +485,7 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_FetchesIndexFromHea
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
-
+	h.PlatformCryptographyScheme = s.scheme
 	h.RecentStorageProvider = provideMock
 
 	objIndex := index.ObjectLifeline{LatestState: genRandomID(0), State: record.StateActivation}
@@ -560,6 +561,7 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_UpdateIndexState() 
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
 	h.RecentStorageProvider = provideMock
+	h.PlatformCryptographyScheme = s.scheme
 
 	objIndex := index.ObjectLifeline{
 		LatestState:  genRandomID(0),
@@ -816,6 +818,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
 	h.RecentStorageProvider = provideMock
+	h.PlatformCryptographyScheme = s.scheme
 
 	objIndex := index.ObjectLifeline{LatestState: genRandomID(0), State: record.StateActivation}
 	childRecord := record.ChildRecord{
@@ -892,6 +895,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
 	h.RecentStorageProvider = provideMock
+	h.PlatformCryptographyScheme = s.scheme
 
 	objIndex := index.ObjectLifeline{
 		LatestState:  genRandomID(0),
@@ -960,11 +964,18 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 
 	jc := testutils.NewJetCoordinatorMock(mc)
 
+	firstID := core.NewRecordID(core.FirstPulseNumber, []byte{1, 2, 3})
+	secondID := record.NewRecordIDFromRecord(s.scheme, core.FirstPulseNumber, &record.CodeRecord{})
+	thirdID := record.NewRecordIDFromRecord(s.scheme, core.FirstPulseNumber-1, &record.CodeRecord{})
+
 	mb := testutils.NewMessageBusMock(mc)
 	mb.MustRegisterMock.Return()
-
-	firstID := core.NewRecordID(core.FirstPulseNumber, []byte{1, 2, 3})
-	secondId := record.NewRecordIDFromRecord(s.scheme, core.FirstPulseNumber, &record.CodeRecord{})
+	mb.SendFunc = func(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) (r core.Reply, r1 error) {
+		parsedMsg, ok := p1.(*message.AbandonedRequestsNotification)
+		require.Equal(s.T(), true, ok)
+		require.Equal(s.T(), *secondID, parsedMsg.Object)
+		return &reply.OK{}, nil
+	}
 
 	firstIndex, _ := index.EncodeObjectLifeline(&index.ObjectLifeline{
 		LatestState: firstID,
@@ -981,20 +992,18 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	dropSizeHistory, err = s.dropStorage.GetDropSizeHistory(s.ctx, jetID)
 	require.NoError(s.T(), err)
 
-	obj := core.RecordID{}
 	hotIndexes := &message.HotData{
 		Jet:         *core.NewRecordRef(core.DomainID, jetID),
 		PulseNumber: core.FirstPulseNumber,
-		RecentObjects: map[core.RecordID]*message.HotIndex{
+		RecentObjects: map[core.RecordID]message.HotIndex{
 			*firstID: {
 				Index: firstIndex,
 				TTL:   320,
 			},
 		},
-		PendingRequests: map[core.RecordID]map[core.RecordID]struct{}{
-			obj: {
-				*secondId: struct{}{},
-			},
+		PendingRequests: map[core.RecordID]recentstorage.PendingObjectContext{
+			*secondID: {},
+			*thirdID:  {Active: true},
 		},
 		Drop:               jet.JetDrop{Pulse: core.FirstPulseNumber, Hash: []byte{88}},
 		DropJet:            jetID,
@@ -1004,9 +1013,17 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	indexMock := recentstorage.NewRecentIndexStorageMock(s.T())
 	pendingMock := recentstorage.NewPendingStorageMock(s.T())
 
-	pendingMock.AddPendingRequestFunc = func(ctx context.Context, o, p core.RecordID) {
-		require.Equal(s.T(), o, obj)
-		require.Equal(s.T(), p, *secondId)
+	pendingMock.SetContextToObjectFunc = func(p context.Context, p1 core.RecordID, p2 recentstorage.PendingObjectContext) {
+
+		if bytes.Equal(p1.Bytes(), secondID.Bytes()) {
+			require.Equal(s.T(), false, p2.Active)
+			return
+		}
+		if bytes.Equal(p1.Bytes(), thirdID.Bytes()) {
+			require.Equal(s.T(), false, p2.Active)
+			return
+		}
+		s.T().Fail()
 	}
 	indexMock.AddObjectWithTLLFunc = func(ctx context.Context, p core.RecordID, ttl int) {
 		require.Equal(s.T(), p, *firstID)

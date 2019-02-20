@@ -26,10 +26,9 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/record"
-	base58 "github.com/jbenet/go-base58"
+	"github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
 )
@@ -78,13 +77,10 @@ type pulseData struct {
 // Export returns data view from storage.
 func (e *Exporter) Export(ctx context.Context, fromPulse core.PulseNumber, size int) (*core.StorageExportResult, error) {
 	result := core.StorageExportResult{Data: map[string]interface{}{}}
-	inslog := inslogger.FromContext(ctx)
-	inslog.Debugf("[ API Export ] start")
 
 	jetIDs, err := e.JetStorage.GetJets(ctx)
 	if err != nil {
-		inslog.Debugf("[ API Export ] error getting jets: %s", err.Error())
-		return nil, err
+		return nil, errors.Wrap(err, "failed to fetch jets")
 	}
 
 	currentPulse, err := e.PulseStorage.Current(ctx)
@@ -161,7 +157,7 @@ func (e *Exporter) exportPulse(ctx context.Context, jetID core.RecordID, pulse *
 			return errors.Wrap(err, "exportPulse failed to getPayload")
 		}
 		records[string(base58.Encode(id[:]))] = recordData{
-			Type:    strings.Title(rec.Type().String()),
+			Type:    strings.Title(record.TypeFromRecord(rec).String()),
 			Data:    rec,
 			Payload: pl,
 		}

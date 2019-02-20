@@ -18,12 +18,10 @@ package storage
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/pkg/errors"
 )
@@ -132,13 +130,10 @@ func (ds *dropStorage) CreateDrop(ctx context.Context, jetID core.RecordID, puls
 
 // SetDrop saves provided JetDrop in db.
 func (ds *dropStorage) SetDrop(ctx context.Context, jetID core.RecordID, drop *jet.JetDrop) error {
-	inslogger.FromContext(ctx).Debugf("SetDrop for jet: %v, pulse: %v", jetID.DebugString(), drop.Pulse)
-
 	_, prefix := jet.Jet(jetID)
 	k := prefixkey(scopeIDJetDrop, prefix, drop.Pulse.Bytes())
 	_, err := ds.DB.get(ctx, k)
 	if err == nil {
-		fmt.Println("override drop for pulse ", drop.Pulse)
 		return ErrOverride
 	}
 
@@ -168,7 +163,6 @@ func (ds *dropStorage) GetDrop(ctx context.Context, jetID core.RecordID, pulse c
 
 // AddDropSize adds Jet drop size stats (required for split decision).
 func (ds *dropStorage) AddDropSize(ctx context.Context, dropSize *jet.DropSize) error {
-	inslogger.FromContext(ctx).Debug("DB.AddDropSize starts ...")
 	ds.addBlockSizeLock.Lock()
 	defer ds.addBlockSizeLock.Unlock()
 
@@ -197,7 +191,6 @@ func (ds *dropStorage) AddDropSize(ctx context.Context, dropSize *jet.DropSize) 
 
 // SetDropSizeHistory saves drop sizes history.
 func (ds *dropStorage) SetDropSizeHistory(ctx context.Context, jetID core.RecordID, dropSizeHistory jet.DropSizeHistory) error {
-	inslogger.FromContext(ctx).Debug("DB.ResetDropSizeHistory starts ...")
 	ds.addBlockSizeLock.Lock()
 	defer ds.addBlockSizeLock.Unlock()
 
@@ -208,7 +201,6 @@ func (ds *dropStorage) SetDropSizeHistory(ctx context.Context, jetID core.Record
 
 // GetDropSizeHistory returns last drops sizes.
 func (ds *dropStorage) GetDropSizeHistory(ctx context.Context, jetID core.RecordID) (jet.DropSizeHistory, error) {
-	inslogger.FromContext(ctx).Debug("DB.GetDropSizeHistory starts ...")
 	ds.addBlockSizeLock.RLock()
 	defer ds.addBlockSizeLock.RUnlock()
 

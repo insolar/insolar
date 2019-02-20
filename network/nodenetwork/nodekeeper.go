@@ -23,19 +23,20 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/insolar/insolar/instrumentation/inslogger"
+
 	"github.com/insolar/insolar/configuration"
-	consensus "github.com/insolar/insolar/consensus/packets"
+	"github.com/insolar/insolar/consensus"
+	consensusPackets "github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
-	coreutils "github.com/insolar/insolar/core/utils"
-	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/transport"
+	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/utils"
-	"github.com/insolar/insolar/platformpolicy"
-
 	"github.com/insolar/insolar/version"
 	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
 )
 
 // NewNodeNetwork create active node component
@@ -45,7 +46,9 @@ func NewNodeNetwork(configuration configuration.HostNetwork, certificate core.Ce
 		return nil, errors.Wrap(err, "Failed to create origin node")
 	}
 	nodeKeeper := NewNodeKeeper(origin)
+	nodeKeeper.SetState(core.WaitingNodeNetworkState)
 	if len(certificate.GetDiscoveryNodes()) == 0 || utils.OriginIsDiscovery(certificate) {
+		nodeKeeper.SetState(core.ReadyNodeNetworkState)
 		nodeKeeper.AddActiveNodes([]core.Node{origin})
 	}
 	return nodeKeeper, nil
@@ -63,7 +66,6 @@ func createOrigin(configuration configuration.HostNetwork, certificate core.Cert
 		role = core.StaticRoleLightMaterial
 	}
 
-	// TODO: get roles from certificate
 	return newMutableNode(
 		*certificate.GetNodeRef(),
 		role,
@@ -89,18 +91,19 @@ func resolveAddress(configuration configuration.HostNetwork) (string, error) {
 func NewNodeKeeper(origin core.Node) network.NodeKeeper {
 	return &nodekeeper{
 		origin:       origin,
-		state:        network.Undefined,
+		state:        core.ReadyNodeNetworkState,
 		claimQueue:   newClaimQueue(),
 		active:       make(map[core.RecordRef]core.Node),
 		indexNode:    make(map[core.StaticRole]*recordRefSet),
 		indexShortID: make(map[core.ShortNodeID]core.Node),
+		tempMapR:     make(map[core.RecordRef]*host.Host),
+		tempMapS:     make(map[core.ShortNodeID]*host.Host),
+		sync:         newUnsyncList(origin, []core.Node{}, 0),
 	}
 }
 
 type nodekeeper struct {
 	origin     core.Node
-	originLock sync.RWMutex
-	state      network.NodeKeeperState
 	claimQueue *claimQueue
 
 	nodesJoinedDuringPrevPulse bool
@@ -113,68 +116,146 @@ type nodekeeper struct {
 	indexNode    map[core.StaticRole]*recordRefSet
 	indexShortID map[core.ShortNodeID]core.Node
 
-	sync     network.UnsyncList
+	tempLock sync.RWMutex
+	tempMapR map[core.RecordRef]*host.Host
+	tempMapS map[core.ShortNodeID]*host.Host
+
 	syncLock sync.Mutex
+	sync     network.UnsyncList
+	state    core.NodeNetworkState
 
 	isBootstrap     bool
 	isBootstrapLock sync.RWMutex
 
 	Cryptography core.CryptographyService `inject:""`
+	Handler      core.TerminationHandler  `inject:""`
 }
 
-// IsBootstrapped method returns true when bootstrapNodes are connected to each other
+func (nk *nodekeeper) GetWorkingNode(ref core.RecordRef) core.Node {
+	node := nk.GetActiveNode(ref)
+
+	if node == nil || node.Leaving() || !node.IsWorking() {
+		return nil
+	}
+
+	return node
+}
+
+func (nk *nodekeeper) GetWorkingNodesByRole(role core.DynamicRole) []core.RecordRef {
+	nk.activeLock.RLock()
+	defer nk.activeLock.RUnlock()
+
+	list, exists := nk.indexNode[jetRoleToNodeRole(role)]
+	if !exists {
+		return nil
+	}
+	return list.Collect()
+}
+
+func (nk *nodekeeper) Wipe(isDiscovery bool) {
+	log.Warn("don't use it in production")
+
+	nk.isBootstrapLock.Lock()
+	nk.isBootstrap = false
+	nk.isBootstrapLock.Unlock()
+
+	nk.tempLock.Lock()
+	nk.tempMapR = make(map[core.RecordRef]*host.Host)
+	nk.tempMapS = make(map[core.ShortNodeID]*host.Host)
+	nk.tempLock.Unlock()
+
+	nk.cloudHashLock.Lock()
+	nk.cloudHash = nil
+	nk.cloudHashLock.Unlock()
+
+	nk.activeLock.Lock()
+	defer nk.activeLock.Unlock()
+
+	nk.claimQueue = newClaimQueue()
+	nk.nodesJoinedDuringPrevPulse = false
+	nk.active = make(map[core.RecordRef]core.Node)
+	nk.reindex()
+	nk.syncLock.Lock()
+	nk.sync = newUnsyncList(nk.origin, []core.Node{}, 0)
+	if isDiscovery {
+		nk.addActiveNode(nk.origin)
+		nk.state = core.ReadyNodeNetworkState
+	}
+	nk.syncLock.Unlock()
+}
+
+func (nk *nodekeeper) AddTemporaryMapping(nodeID core.RecordRef, shortID core.ShortNodeID, address string) error {
+	consensusAddress, err := incrementPort(address)
+	if err != nil {
+		return errors.Wrapf(err, "Failed to increment port for address %s", address)
+	}
+	h, err := host.NewHostNS(consensusAddress, nodeID, shortID)
+	if err != nil {
+		return errors.Wrapf(err, "Failed to generate address (%s, %s, %d)", consensusAddress, nodeID, shortID)
+	}
+	nk.tempLock.Lock()
+	nk.tempMapR[nodeID] = h
+	nk.tempMapS[shortID] = h
+	nk.tempLock.Unlock()
+	log.Infof("Added temporary mapping: %s -> (%s, %d)", consensusAddress, nodeID, shortID)
+	return nil
+}
+
+func (nk *nodekeeper) ResolveConsensus(shortID core.ShortNodeID) *host.Host {
+	nk.tempLock.RLock()
+	defer nk.tempLock.RUnlock()
+
+	return nk.tempMapS[shortID]
+}
+
+func (nk *nodekeeper) ResolveConsensusRef(nodeID core.RecordRef) *host.Host {
+	nk.tempLock.RLock()
+	defer nk.tempLock.RUnlock()
+
+	return nk.tempMapR[nodeID]
+}
+
 // TODO: remove this method when bootstrap mechanism completed
+// IsBootstrapped method returns true when bootstrapNodes are connected to each other
 func (nk *nodekeeper) IsBootstrapped() bool {
-	_, span := instracer.StartSpan(context.Background(), "nodekeeper.IsBootstrapped wait lock")
 	nk.isBootstrapLock.RLock()
-	span.End()
 	defer nk.isBootstrapLock.RUnlock()
 
 	return nk.isBootstrap
 }
 
-// SetIsBootstrapped method set is bootstrap completed
 // TODO: remove this method when bootstrap mechanism completed
+// SetIsBootstrapped method set is bootstrap completed
 func (nk *nodekeeper) SetIsBootstrapped(isBootstrap bool) {
-	_, span := instracer.StartSpan(context.Background(), "nodekeeper.SetIsBootstrapped wait lock")
 	nk.isBootstrapLock.Lock()
-	span.End()
 	defer nk.isBootstrapLock.Unlock()
 
 	nk.isBootstrap = isBootstrap
 }
 
 func (nk *nodekeeper) GetOrigin() core.Node {
-	_, span := instracer.StartSpan(context.Background(), "nodekeeper.GetOrigin wait lock")
 	nk.activeLock.RLock()
-	span.End()
 	defer nk.activeLock.RUnlock()
 
 	return nk.origin
 }
 
 func (nk *nodekeeper) GetCloudHash() []byte {
-	_, span := instracer.StartSpan(context.Background(), "nodekeeper.GetCloudHash wait lock")
 	nk.cloudHashLock.RLock()
-	span.End()
 	defer nk.cloudHashLock.RUnlock()
 
 	return nk.cloudHash
 }
 
 func (nk *nodekeeper) SetCloudHash(cloudHash []byte) {
-	_, span := instracer.StartSpan(context.Background(), "nodekeeper.SetCloudHash wait lock")
 	nk.cloudHashLock.Lock()
-	span.End()
 	defer nk.cloudHashLock.Unlock()
 
 	nk.cloudHash = cloudHash
 }
 
 func (nk *nodekeeper) GetActiveNodes() []core.Node {
-	_, span := instracer.StartSpan(context.Background(), "nodekeeper.GetActiveNodes wait lock")
 	nk.activeLock.RLock()
-	span.End()
 	result := make([]core.Node, len(nk.active))
 	index := 0
 	for _, node := range nk.active {
@@ -190,23 +271,8 @@ func (nk *nodekeeper) GetActiveNodes() []core.Node {
 	return result
 }
 
-func (nk *nodekeeper) GetActiveNodesByRole(role core.DynamicRole) []core.RecordRef {
-	_, span := instracer.StartSpan(context.Background(), "nodekeeper.GetActiveNodesByRole wait lock")
-	nk.activeLock.RLock()
-	span.End()
-	defer nk.activeLock.RUnlock()
-
-	list, exists := nk.indexNode[jetRoleToNodeRole(role)]
-	if !exists {
-		return nil
-	}
-	return list.Collect()
-}
-
 func (nk *nodekeeper) AddActiveNodes(nodes []core.Node) {
-	_, span := instracer.StartSpan(context.Background(), "nodekeeper.AddActiveNodes wait lock")
 	nk.activeLock.Lock()
-	span.End()
 	defer nk.activeLock.Unlock()
 
 	activeNodes := make([]string, len(nodes))
@@ -214,22 +280,20 @@ func (nk *nodekeeper) AddActiveNodes(nodes []core.Node) {
 		nk.addActiveNode(node)
 		activeNodes[i] = node.ID().String()
 	}
+	syncList := nk.sync.(*unsyncList)
+	syncList.addNodes(nodes)
 	log.Debugf("Added active nodes: %s", strings.Join(activeNodes, ", "))
 }
 
 func (nk *nodekeeper) GetActiveNode(ref core.RecordRef) core.Node {
-	_, span := instracer.StartSpan(context.Background(), "nodekeeper.GetActiveNode wait lock")
 	nk.activeLock.RLock()
-	span.End()
 	defer nk.activeLock.RUnlock()
 
 	return nk.active[ref]
 }
 
 func (nk *nodekeeper) GetActiveNodeByShortID(shortID core.ShortNodeID) core.Node {
-	_, span := instracer.StartSpan(context.Background(), "nodekeeper.GetActiveNodeByShortID wait lock")
 	nk.activeLock.RLock()
-	span.End()
 	defer nk.activeLock.RUnlock()
 
 	return nk.indexShortID[shortID]
@@ -242,54 +306,69 @@ func (nk *nodekeeper) addActiveNode(node core.Node) {
 	}
 	nk.active[node.ID()] = node
 
+	nk.addToIndex(node)
+}
+
+func (nk *nodekeeper) addToIndex(node core.Node) {
+	nk.indexShortID[node.ShortID()] = node
+	nk.addToRoleIndex(node)
+}
+
+func (nk *nodekeeper) addToRoleIndex(node core.Node) {
+	if node.Leaving() || !node.IsWorking() {
+		return
+	}
+
 	list, ok := nk.indexNode[node.Role()]
 	if !ok {
 		list = newRecordRefSet()
 	}
+
 	list.Add(node.ID())
 	nk.indexNode[node.Role()] = list
-
-	nk.indexShortID[node.ShortID()] = node
 }
 
-func (nk *nodekeeper) delActiveNode(ref core.RecordRef) {
-	if ref.Equal(nk.origin.ID()) {
-		// we received acknowledge to leave, can gracefully stop
-
-		// graceful stop instead of panic
-		err := coreutils.SendGracefulStopSignal()
-		if err != nil {
-			// we tried :(
-			panic("Node leave acknowledged by network. Goodbye!")
+func (nk *nodekeeper) GetWorkingNodes() []core.Node {
+	var workingNodes []core.Node
+	activeNodes := nk.GetActiveNodes()
+	for _, node := range activeNodes {
+		if !node.Leaving() && node.IsWorking() {
+			workingNodes = append(workingNodes, node)
 		}
 	}
-	active, ok := nk.active[ref]
-	if !ok {
-		return
-	}
-	delete(nk.active, ref)
-	delete(nk.indexShortID, active.ShortID())
-	nk.indexNode[active.Role()].Remove(ref)
+
+	return workingNodes
 }
 
-func (nk *nodekeeper) SetState(state network.NodeKeeperState) {
+func (nk *nodekeeper) SetState(state core.NodeNetworkState) {
+	nk.syncLock.Lock()
+	defer nk.syncLock.Unlock()
+
 	nk.state = state
 }
 
-func (nk *nodekeeper) GetState() network.NodeKeeperState {
+func (nk *nodekeeper) GetState() core.NodeNetworkState {
+	nk.syncLock.Lock()
+	defer nk.syncLock.Unlock()
+
 	return nk.state
 }
 
-func (nk *nodekeeper) GetOriginClaim() (*consensus.NodeJoinClaim, error) {
-	_, span := instracer.StartSpan(context.Background(), "nodekeeper.GetOriginClaim wait lock")
-	nk.originLock.RLock()
-	span.End()
-	defer nk.originLock.RUnlock()
+func (nk *nodekeeper) GetOriginJoinClaim() (*consensusPackets.NodeJoinClaim, error) {
+	nk.activeLock.RLock()
+	defer nk.activeLock.RUnlock()
 
-	return nk.nodeToClaim()
+	return nk.nodeToSignedClaim()
 }
 
-func (nk *nodekeeper) AddPendingClaim(claim consensus.ReferendumClaim) bool {
+func (nk *nodekeeper) GetOriginAnnounceClaim(mapper consensusPackets.BitSetMapper) (*consensusPackets.NodeAnnounceClaim, error) {
+	nk.activeLock.RLock()
+	defer nk.activeLock.RUnlock()
+
+	return nk.nodeToAnnounceClaim(mapper)
+}
+
+func (nk *nodekeeper) AddPendingClaim(claim consensusPackets.ReferendumClaim) bool {
 	nk.claimQueue.Push(claim)
 	return true
 }
@@ -299,79 +378,123 @@ func (nk *nodekeeper) GetClaimQueue() network.ClaimQueue {
 }
 
 func (nk *nodekeeper) NodesJoinedDuringPreviousPulse() bool {
+	nk.activeLock.RLock()
+	defer nk.activeLock.RUnlock()
+
 	return nk.nodesJoinedDuringPrevPulse
 }
 
 func (nk *nodekeeper) GetUnsyncList() network.UnsyncList {
-	return newUnsyncList(nk.GetActiveNodes())
+	activeNodes := nk.GetActiveNodes()
+	return newUnsyncList(nk.origin, activeNodes, len(activeNodes))
 }
 
 func (nk *nodekeeper) GetSparseUnsyncList(length int) network.UnsyncList {
-	return newSparseUnsyncList(length)
+	return newSparseUnsyncList(nk.origin, length)
 }
 
 func (nk *nodekeeper) Sync(list network.UnsyncList) {
-	_, span := instracer.StartSpan(context.Background(), "nodekeeper.Sync wait lock")
 	nk.syncLock.Lock()
-	span.End()
 	defer nk.syncLock.Unlock()
+
+	nodes := list.GetActiveNodes()
+
+	foundOrigin := false
+	for _, node := range nodes {
+		if node.ID().Equal(nk.origin.ID()) {
+			foundOrigin = true
+			nk.state = core.ReadyNodeNetworkState
+		}
+	}
+
+	if nk.shouldExit(foundOrigin) {
+		nk.gracefullyStop()
+	}
 
 	nk.sync = list
 }
 
-func (nk *nodekeeper) MoveSyncToActive() {
-	ctx, span := instracer.StartSpan(context.Background(), "nodekeeper.MoveSyncToActive wait active lock")
+func (nk *nodekeeper) MoveSyncToActive(ctx context.Context) error {
 	nk.activeLock.Lock()
-	span.End()
-	ctx, span = instracer.StartSpan(ctx, "nodekeeper.MoveSyncToActive wait sync lock")
 	nk.syncLock.Lock()
-	span.End()
-	_, span = instracer.StartSpan(ctx, "nodekeeper.MoveSyncToActive lock")
 	defer func() {
 		nk.syncLock.Unlock()
 		nk.activeLock.Unlock()
-		span.End()
 	}()
 
-	sync := nk.sync.(*unsyncList)
-	sync.mergeWith(sync.claims, nk.addActiveNode, nk.delActiveNode)
+	nk.tempLock.Lock()
+	// clear temporary mappings
+	nk.tempMapR = make(map[core.RecordRef]*host.Host)
+	nk.tempMapS = make(map[core.ShortNodeID]*host.Host)
+	nk.tempLock.Unlock()
+
+	mergeResult, err := nk.sync.GetMergedCopy()
+	if err != nil {
+		return errors.Wrap(err, "[ MoveSyncToActive ] Failed to calculate new active list")
+	}
+
+	inslogger.FromContext(ctx).Infof("[ MoveSyncToActive ] New active list confirmed. Active list size: %d -> %d",
+		len(nk.active), len(mergeResult.ActiveList))
+	nk.active = mergeResult.ActiveList
+	stats.Record(ctx, consensus.ActiveNodes.M(int64(len(nk.active))))
+	nk.reindex()
+	nk.nodesJoinedDuringPrevPulse = mergeResult.NodesJoinedDuringPrevPulse
+	return nil
 }
 
-func (nk *nodekeeper) nodeToClaim() (*consensus.NodeJoinClaim, error) {
-	key, err := nk.Cryptography.GetPublicKey()
-	if err != nil {
-		return nil, errors.Wrap(err, "[ nodeToClaim ] failed to get a public key")
-	}
-	keyProc := platformpolicy.NewKeyProcessor()
-	exportedKey, err := keyProc.ExportPublicKeyPEM(key)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ nodeToClaim ] failed to export a public key")
-	}
-	var keyData [consensus.PublicKeyLength]byte
-	copy(keyData[:], exportedKey[:consensus.PublicKeyLength])
+func (nk *nodekeeper) gracefullyStop() {
+	// TODO: graceful stop
+	nk.Handler.Abort()
+}
 
-	var s [consensus.SignatureLength]byte
-	claim := consensus.NodeJoinClaim{
-		ShortNodeID:             nk.origin.ShortID(),
-		RelayNodeID:             nk.origin.ShortID(),
-		ProtocolVersionAndFlags: 0,
-		JoinsAfter:              0,
-		NodeRoleRecID:           0, // TODO: how to get a role as int?
-		NodeRef:                 nk.origin.ID(),
-		NodePK:                  keyData,
-		Signature:               s,
-	}
+func (nk *nodekeeper) reindex() {
+	// drop all indexes
+	nk.indexNode = make(map[core.StaticRole]*recordRefSet)
+	nk.indexShortID = make(map[core.ShortNodeID]core.Node)
 
-	dataToSign, err := claim.SerializeWithoutSign()
+	for _, node := range nk.active {
+		nk.addToIndex(node)
+	}
+}
+
+func (nk *nodekeeper) shouldExit(foundOrigin bool) bool {
+	return !foundOrigin && nk.state == core.ReadyNodeNetworkState && len(nk.active) != 0
+}
+
+func (nk *nodekeeper) nodeToSignedClaim() (*consensusPackets.NodeJoinClaim, error) {
+	claim, err := consensusPackets.NodeToClaim(nk.origin)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ nodeToClaim ] failed to serialize a claim")
+		return nil, err
+	}
+	dataToSign, err := claim.SerializeRaw()
+	log.Debugf("dataToSign len: %d", len(dataToSign))
+	if err != nil {
+		return nil, errors.Wrap(err, "[ nodeToSignedClaim ] failed to serialize a claim")
 	}
 	sign, err := nk.sign(dataToSign)
+	log.Debugf("sign len: %d", len(sign))
 	if err != nil {
-		return nil, errors.Wrap(err, "[ nodeToClaim ] failed to sign a claim")
+		return nil, errors.Wrap(err, "[ nodeToSignedClaim ] failed to sign a claim")
 	}
+	copy(claim.Signature[:], sign[:consensusPackets.SignatureLength])
+	return claim, nil
+}
 
-	copy(claim.Signature[:], sign[:consensus.SignatureLength])
+func (nk *nodekeeper) nodeToAnnounceClaim(mapper consensusPackets.BitSetMapper) (*consensusPackets.NodeAnnounceClaim, error) {
+	claim := consensusPackets.NodeAnnounceClaim{}
+	joinClaim, err := consensusPackets.NodeToClaim(nk.origin)
+	if err != nil {
+		return nil, err
+	}
+	claim.NodeJoinClaim = *joinClaim
+	claim.NodeCount = uint16(mapper.Length())
+	announcerIndex, err := mapper.RefToIndex(nk.origin.ID())
+	if err != nil {
+		return nil, errors.Wrap(err, "[ nodeToAnnounceClaim ] failed to map origin node ID to bitset index")
+	}
+	claim.NodeAnnouncerIndex = uint16(announcerIndex)
+	claim.BitSetMapper = mapper
+	claim.SetCloudHash(nk.GetCloudHash())
 	return &claim, nil
 }
 

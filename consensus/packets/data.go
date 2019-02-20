@@ -21,6 +21,7 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
+//go:generate stringer -type=PacketType
 type PacketType uint8
 
 const (
@@ -31,8 +32,8 @@ const (
 
 const HashLength = 64
 const SignatureLength = 66
+const PublicKeyLength = 66
 const ReferenceLength = 64
-const PublicKeyLength = 64
 
 // ------------------------------PACKET HEADER------------------------------
 

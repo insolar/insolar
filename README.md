@@ -57,32 +57,47 @@ Using Prometheus monitoring system and time series database for collecting and s
 
 ## Installation
 
+Download Insolar package
+
     go get github.com/insolar/insolar
 
-### Generate default configuration file
+Go to package directory
 
-    go run cmd/insolar/* --cmd=default_config
+    cd $GOPATH/src/github.com/insolar/insolar
+
+Install dependencies and build binaries
+
+    make install-deps pre-build build
 
 ### Example
 
-    # Start net of nodes
-    ./scripts/insolard/launchnet.sh -g
+Run launcher:
+
+    scripts/insolard/launchnet.sh -g
+
+It will generate genesis data and launch a number of nodes. Default number is 5, you can uncomment more nodes in `scripts/insolard/genesis.yaml`.
+
+After node processes are started you will see messages like “NODE 3 STARTED in background” in log and PulseWatcher will be started.
+When you see `Ready` in Insolar State you can run test scripts and benchmarks:
+
+    bin/apirequester -k=scripts/insolard/configs/root_member_keys.json -u=http://127.0.0.1:19101/api
+
+This tool runs such scenario: it creates a number of users with wallets, then transfers some money between these users. First time script does it sequentially, second time — concurrently.
+Options:
+* `-k`: Path to root user keypair. All requests to create new user must be signed by root user.
+* `-u`: Node API URL. By default first node listens on 127.0.0.1:19101. It can be changed in config.
 
 
-    # In other terminal:
+    bin/benchmark -c 2 -r 4 -k=scripts/insolard/configs/root_member_keys.json
 
-    # Build insolar
-    make insolar
-  
-    # Send request example
-    ./bin/insolar -c=send_request --config=./scripts/insolard/configs/root_member_keys.json --root_as_caller --params=params.json
+Options:
+* `-k`: Same as above, path to root user keypair.
+* `-c`: Number of concurrent threads in which requests will be sent.
+* `-r`: Number of transfer requests that will be sent in each thread.
 
-#### See [insolar readme](cmd/insolar) for more details
+After testing you can stop all nodes by pressing Ctrl+C.
 
-## Docker container
-
-    docker pull insolar/insolar
-    docker run -ti insolar/insolar
+#### See [apirequester](cmd/apirequester) and [benchmark](cmd/benchmark) readme for more details
 
 ## Contributing
 

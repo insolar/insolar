@@ -61,7 +61,7 @@ func (tr *TransportResolvable) SendRequest(ctx context.Context, request network.
 	return tr.internalTransport.SendRequestPacket(ctx, request, h)
 }
 
-// RegisterRequestHandler register a handler function to process incoming requests of a specific type.
+// RegisterPacketHandler register a handler function to process incoming requests of a specific type.
 func (tr *TransportResolvable) RegisterRequestHandler(t types.PacketType, handler network.RequestHandler) {
 	f := func(ctx context.Context, request network.Request) (network.Response, error) {
 		tr.resolver.AddToKnownHosts(request.GetSenderHost())

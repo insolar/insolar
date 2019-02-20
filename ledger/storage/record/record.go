@@ -21,6 +21,7 @@ import (
 )
 
 // TypeID encodes a record object type.
+//go:generate go run gen/type.go
 type TypeID uint32
 
 // TypeIDSize is a size of TypeID type.
@@ -28,8 +29,23 @@ const TypeIDSize = 4
 
 // Record is base interface for all records.
 type Record interface {
-	// Type returns record type.
-	Type() TypeID
 	// WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
 	WriteHashData(w io.Writer) (int, error)
+}
+
+func init() {
+	// ID can be any unique int value.
+	// Never change id constants. They are used for serialization.
+	register(100, new(GenesisRecord))
+	register(101, new(ChildRecord))
+	register(102, new(JetRecord))
+
+	register(200, new(RequestRecord))
+
+	register(300, new(ResultRecord))
+	register(301, new(TypeRecord))
+	register(302, new(CodeRecord))
+	register(303, new(ObjectActivateRecord))
+	register(304, new(ObjectAmendRecord))
+	register(305, new(DeactivationRecord))
 }

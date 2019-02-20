@@ -145,8 +145,7 @@ func (r *CaseBindReplay) NextRequest() *CaseRequest {
 
 func (lr *LogicRunner) Validate(ctx context.Context, ref Ref, p core.Pulse, cb CaseBind) (int, error) {
 	os := lr.UpsertObjectState(ref)
-	vs := os.StartValidation()
-	vs.ArtifactManager = lr.ArtifactManager
+	vs := os.StartValidation(ref)
 
 	vs.Lock()
 	defer vs.Unlock()

@@ -25,4 +25,9 @@ SEARCH_PATTERN=$1
 shift
 
 set -x
-grep $@ "$SEARCH_PATTERN" ./scripts/insolard/nodes/*/output.log
+
+if which ag ; then
+    ag $@ "$SEARCH_PATTERN" ./scripts/insolard/discoverynodes/*/output.log
+else
+    grep $@ "$SEARCH_PATTERN" ./scripts/insolard/discoverynodes/*/output.log
+fi

@@ -296,24 +296,32 @@ func (h *MessageHandler) setHandlersForHeavy(m *middleware) {
 }
 
 func (h *MessageHandler) handleSetRecord(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
+	if h.isHeavy {
+		return nil, errors.New("heavy updates are forbidden")
+	}
+
 	msg := parcel.Message().(*message.SetRecord)
 	rec := record.DeserializeRecord(msg.Record)
 	jetID := jetFromContext(ctx)
 
 	id := record.NewRecordIDFromRecord(h.PlatformCryptographyScheme, parcel.Pulse(), rec)
 
-	if !h.isHeavy {
+	switch r := rec.(type) {
+	case record.Request:
+		if h.RecentStorageProvider.Count() > h.conf.PendingRequestsLimit {
+			return &reply.Error{ErrType: reply.ErrTooManyPendingRequests}, nil
+		}
 		recentStorage := h.RecentStorageProvider.GetPendingStorage(ctx, jetID)
-		if request, ok := rec.(record.Request); ok {
-			recentStorage.AddPendingRequest(ctx, request.GetObject(), *id)
-		}
-		if result, ok := rec.(*record.ResultRecord); ok {
-			recentStorage.RemovePendingRequest(ctx, result.Object, *result.Request.Record())
-		}
+		recentStorage.AddPendingRequest(ctx, r.GetObject(), *id)
+	case *record.ResultRecord:
+		recentStorage := h.RecentStorageProvider.GetPendingStorage(ctx, jetID)
+		recentStorage.RemovePendingRequest(ctx, r.Object, *r.Request.Record())
 	}
 
 	id, err := h.ObjectStorage.SetRecord(ctx, jetID, parcel.Pulse(), rec)
-	if err != nil {
+	if err == storage.ErrOverride {
+		inslogger.FromContext(ctx).WithField("type", fmt.Sprintf("%T", rec)).Warnln("set record override")
+	} else if err != nil {
 		return nil, err
 	}
 
@@ -321,6 +329,10 @@ func (h *MessageHandler) handleSetRecord(ctx context.Context, parcel core.Parcel
 }
 
 func (h *MessageHandler) handleSetBlob(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
+	if h.isHeavy {
+		return nil, errors.New("heavy updates are forbidden")
+	}
+
 	msg := parcel.Message().(*message.SetBlob)
 	jetID := jetFromContext(ctx)
 	calculatedID := record.CalculateIDForBlob(h.PlatformCryptographyScheme, parcel.Pulse(), msg.Memory)
@@ -344,9 +356,6 @@ func (h *MessageHandler) handleSetBlob(ctx context.Context, parcel core.Parcel) 
 }
 
 func (h *MessageHandler) handleGetCode(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
-	logger := inslogger.FromContext(ctx)
-	logger.Debug("CALL handleGetCode")
-
 	msg := parcel.Message().(*message.GetCode)
 	jetID := *jet.NewID(0, nil)
 
@@ -378,11 +387,12 @@ func (h *MessageHandler) handleGetCode(ctx context.Context, parcel core.Parcel) 
 func (h *MessageHandler) handleGetObject(
 	ctx context.Context, parcel core.Parcel,
 ) (core.Reply, error) {
-	logger := inslogger.FromContext(ctx)
-	logger.Debug("CALL handleGetObject")
-
 	msg := parcel.Message().(*message.GetObject)
 	jetID := jetFromContext(ctx)
+	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+		"object": msg.Head.Record().DebugString(),
+		"pulse":  parcel.Pulse(),
+	})
 
 	if !h.isHeavy {
 		h.RecentStorageProvider.GetIndexStorage(ctx, jetID).AddObject(ctx, *msg.Head.Record())
@@ -395,11 +405,7 @@ func (h *MessageHandler) handleGetObject(
 			return nil, fmt.Errorf("failed to fetch index for %s", msg.Head.Record().String())
 		}
 
-		logger.Errorf(
-			"failed to fetch index (going to heavy). jet: %v, obj: %v",
-			jetID.DebugString(),
-			msg.Head.Record().DebugString(),
-		)
+		logger.Debug("failed to fetch index (fetching from heavy)")
 		node, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
 		if err != nil {
 			return nil, err
@@ -441,21 +447,14 @@ func (h *MessageHandler) handleGetObject(
 			if err != nil {
 				return nil, err
 			}
-			logger.Debugf(
-				"redirect (on heavy). pulse: %v, id: %v, state: %v, to: %v",
-				parcel.Pulse(),
-				msg.Head.Record().DebugString(),
-				stateID.DebugString(),
-				node.String(),
-			)
+			logger.WithFields(map[string]interface{}{
+				"state":       stateID.DebugString(),
+				"redirect_to": node.String(),
+			}).Debug("redirect (on heavy)")
 			return reply.NewGetObjectRedirectReply(h.DelegationTokenFactory, parcel, node, stateID)
 		}
 
-		stateTree, err := h.JetStorage.GetJetTree(ctx, stateID.Pulse())
-		if err != nil {
-			return nil, err
-		}
-		stateJet, actual = stateTree.Find(*msg.Head.Record())
+		stateJet, actual = h.JetStorage.FindJet(ctx, stateID.Pulse(), *msg.Head.Record())
 		if !actual {
 			actualJet, err := h.jetTreeUpdater.fetchJet(ctx, *msg.Head.Record(), stateID.Pulse())
 			if err != nil {
@@ -477,14 +476,10 @@ func (h *MessageHandler) handleGetObject(
 		if err != nil {
 			return nil, err
 		}
-
-		logger.Debugf(
-			"redirect (record not found). jet: %v, id: %v, state: %v, to: %v",
-			stateJet.DebugString(),
-			msg.Head.Record().DebugString(),
-			stateID.DebugString(),
-			node.String(),
-		)
+		logger.WithFields(map[string]interface{}{
+			"state":       stateID.DebugString(),
+			"redirect_to": node.String(),
+		}).Debug("redirect (record not found)")
 		return reply.NewGetObjectRedirectReply(h.DelegationTokenFactory, parcel, node, stateID)
 	}
 	if err != nil {
@@ -514,12 +509,6 @@ func (h *MessageHandler) handleGetObject(
 	if state.GetMemory() != nil {
 		rep.Memory, err = h.ObjectStorage.GetBlob(ctx, *stateJet, state.GetMemory())
 		if err != nil {
-			logger.Errorf(
-				"failed to fetch blob. pulse: %v, jet: %v, id: %v",
-				parcel.Pulse(),
-				stateJet.DebugString(),
-				state.GetMemory().DebugString(),
-			)
 			return nil, errors.Wrap(err, "failed to fetch blob")
 		}
 	}
@@ -542,22 +531,13 @@ func (h *MessageHandler) handleHasPendingRequests(ctx context.Context, parcel co
 
 func (h *MessageHandler) handleGetJet(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
 	msg := parcel.Message().(*message.GetJet)
-	tree, err := h.JetStorage.GetJetTree(ctx, msg.Pulse)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to fetch jet tree")
-	}
-	jetID, actual := tree.Find(msg.Object)
-	if err != nil {
-		return nil, err
-	}
+
+	jetID, actual := h.JetStorage.FindJet(ctx, msg.Pulse, msg.Object)
 
 	return &reply.Jet{ID: *jetID, Actual: actual}, nil
 }
 
 func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
-	logger := inslogger.FromContext(ctx)
-	logger.Debug("CALL handleGetDelegate")
-
 	msg := parcel.Message().(*message.GetDelegate)
 	jetID := jetFromContext(ctx)
 
@@ -598,9 +578,6 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel core.Parc
 func (h *MessageHandler) handleGetChildren(
 	ctx context.Context, parcel core.Parcel,
 ) (core.Reply, error) {
-	logger := inslogger.FromContext(ctx)
-	logger.Debug("CALL handleGetChildren")
-
 	msg := parcel.Message().(*message.GetChildren)
 	jetID := jetFromContext(ctx)
 
@@ -663,11 +640,7 @@ func (h *MessageHandler) handleGetChildren(
 			return reply.NewGetChildrenRedirect(h.DelegationTokenFactory, parcel, node, *currentChild)
 		}
 
-		childTree, err := h.JetStorage.GetJetTree(ctx, currentChild.Pulse())
-		if err != nil {
-			return nil, err
-		}
-		childJet, actual = childTree.Find(*msg.Parent.Record())
+		childJet, actual = h.JetStorage.FindJet(ctx, currentChild.Pulse(), *msg.Parent.Record())
 		if !actual {
 			actualJet, err := h.jetTreeUpdater.fetchJet(ctx, *msg.Parent.Record(), currentChild.Pulse())
 			if err != nil {
@@ -767,10 +740,16 @@ func (h *MessageHandler) handleGetPendingRequestID(ctx context.Context, parcel c
 }
 
 func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
-	logger := inslogger.FromContext(ctx)
+	if h.isHeavy {
+		return nil, errors.New("heavy updates are forbidden")
+	}
 
 	msg := parcel.Message().(*message.UpdateObject)
 	jetID := jetFromContext(ctx)
+	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+		"object": msg.Object.Record().DebugString(),
+		"pulse":  parcel.Pulse(),
+	})
 
 	rec := record.DeserializeRecord(msg.Record)
 	state, ok := rec.(record.ObjectState)
@@ -778,9 +757,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 		return nil, errors.New("wrong object state record")
 	}
 
-	if !h.isHeavy {
-		h.RecentStorageProvider.GetIndexStorage(ctx, jetID).AddObject(ctx, *msg.Object.Record())
-	}
+	h.RecentStorageProvider.GetIndexStorage(ctx, jetID).AddObject(ctx, *msg.Object.Record())
 
 	// FIXME: temporary fix. If we calculate blob id on the client, pulse can change before message sending and this
 	//  id will not match the one calculated on the server.
@@ -788,7 +765,6 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to set blob")
 	}
-	logger.Debugf("save blob. pulse: %v, jet: %v, id: %v", parcel.Pulse(), jetID.DebugString(), blobID.DebugString())
 
 	switch s := state.(type) {
 	case *record.ObjectActivateRecord:
@@ -800,7 +776,6 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 	var idx *index.ObjectLifeline
 	err = h.DBContext.Update(ctx, func(tx *storage.TransactionManager) error {
 		var err error
-		logger.Debugf("Get index for: %v, jet: %v", msg.Object.Record(), jetID.DebugString())
 		idx, err = tx.GetObjectIndex(ctx, jetID, msg.Object.Record(), true)
 		// No index on our node.
 		if err == storage.ErrNotFound {
@@ -808,7 +783,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 				// We are activating the object. There is no index for it anywhere.
 				idx = &index.ObjectLifeline{State: record.StateUndefined}
 			} else {
-				logger.Debugf("Not found index for: %v, jet: %v", msg.Object.Record(), jetID.DebugString())
+				logger.Debug("failed to fetch index (fetching from heavy)")
 				// We are updating object. Index should be on the heavy executor.
 				heavy, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
 				if err != nil {
@@ -826,13 +801,19 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 		if err = validateState(idx.State, state.State()); err != nil {
 			return err
 		}
+
+		recID := record.NewRecordIDFromRecord(h.PlatformCryptographyScheme, parcel.Pulse(), rec)
+
 		// Index exists and latest record id does not match (preserving chain consistency).
-		if idx.LatestState != nil && !state.PrevStateID().Equal(idx.LatestState) {
+		// For the case when vm can't save or send result to another vm and it tries to update the same record again
+		if idx.LatestState != nil && !state.PrevStateID().Equal(idx.LatestState) && idx.LatestState != recID {
 			return errors.New("invalid state record")
 		}
 
 		id, err := tx.SetRecord(ctx, jetID, parcel.Pulse(), rec)
-		if err != nil {
+		if err == storage.ErrOverride {
+			inslogger.FromContext(ctx).WithField("type", fmt.Sprintf("%T", rec)).Warnln("set record override (#1)")
+		} else if err != nil {
 			return err
 		}
 		idx.LatestState = id
@@ -840,8 +821,6 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 		if state.State() == record.StateActivation {
 			idx.Parent = state.(*record.ObjectActivateRecord).Parent
 		}
-
-		logger.WithFields(map[string]interface{}{"jet": jetID.DebugString()}).Debugf("saved object. jet: %v, id: %v, state: %v", jetID.DebugString(), msg.Object.Record().DebugString(), id.DebugString())
 
 		idx.LatestUpdate = parcel.Pulse()
 		return tx.SetObjectIndex(ctx, jetID, msg.Object.Record(), idx)
@@ -865,6 +844,10 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 }
 
 func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
+	if h.isHeavy {
+		return nil, errors.New("heavy updates are forbidden")
+	}
+
 	msg := parcel.Message().(*message.RegisterChild)
 	jetID := jetFromContext(ctx)
 	rec := record.DeserializeRecord(msg.Record)
@@ -873,9 +856,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel core.Pa
 		return nil, errors.New("wrong child record")
 	}
 
-	if !h.isHeavy {
-		h.RecentStorageProvider.GetIndexStorage(ctx, jetID).AddObject(ctx, *msg.Parent.Record())
-	}
+	h.RecentStorageProvider.GetIndexStorage(ctx, jetID).AddObject(ctx, *msg.Parent.Record())
 
 	var child *core.RecordID
 	err := h.DBContext.Update(ctx, func(tx *storage.TransactionManager) error {
@@ -893,13 +874,18 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel core.Pa
 			return err
 		}
 
+		recID := record.NewRecordIDFromRecord(h.PlatformCryptographyScheme, parcel.Pulse(), childRec)
+
 		// Children exist and pointer does not match (preserving chain consistency).
-		if idx.ChildPointer != nil && !childRec.PrevChild.Equal(idx.ChildPointer) {
+		// For the case when vm can't save or send result to another vm and it tries to update the same record again
+		if idx.ChildPointer != nil && !childRec.PrevChild.Equal(idx.ChildPointer) && idx.ChildPointer != recID {
 			return errors.New("invalid child record")
 		}
 
 		child, err = tx.SetRecord(ctx, jetID, parcel.Pulse(), childRec)
-		if err != nil {
+		if err == storage.ErrOverride {
+			inslogger.FromContext(ctx).WithField("type", fmt.Sprintf("%T", rec)).Warnln("set record override (#2)")
+		} else if err != nil {
 			return err
 		}
 		idx.ChildPointer = child
@@ -948,20 +934,18 @@ func (h *MessageHandler) handleJetDrop(ctx context.Context, parcel core.Parcel) 
 		return nil, err
 	}
 
-	err = h.JetStorage.UpdateJetTree(
-		ctx,
-		parcel.Pulse(),
-		true,
-		msg.JetID,
+	h.JetStorage.UpdateJetTree(
+		ctx, parcel.Pulse(), true, msg.JetID,
 	)
-	if err != nil {
-		return nil, err
-	}
 
 	return &reply.OK{}, nil
 }
 
 func (h *MessageHandler) handleValidateRecord(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
+	if h.isHeavy {
+		return nil, errors.New("heavy updates are forbidden")
+	}
+
 	msg := parcel.Message().(*message.ValidateRecord)
 	jetID := jetFromContext(ctx)
 
@@ -1025,15 +1009,11 @@ func (h *MessageHandler) handleValidateRecord(ctx context.Context, parcel core.P
 }
 
 func (h *MessageHandler) handleGetObjectIndex(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
-	inslog := inslogger.FromContext(ctx)
 	msg := parcel.Message().(*message.GetObjectIndex)
 	jetID := jetFromContext(ctx)
 
-	inslog.Debugf("handleGetObjectIndex: jetID: %v", jetID)
-	inslog.Debug("handleGetObjectIndex: msg.Object.Record() ", msg.Object.Record())
 	idx, err := h.ObjectStorage.GetObjectIndex(ctx, jetID, msg.Object.Record(), true)
 	if err != nil {
-		inslog.Debug("handleGetObjectIndex: failed to fetch object index, error - ", err)
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
 
@@ -1122,22 +1102,22 @@ func (h *MessageHandler) saveIndexFromHeavy(
 }
 
 func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
+	if h.isHeavy {
+		return nil, errors.New("heavy updates are forbidden")
+	}
+
 	logger := inslogger.FromContext(ctx)
 
 	msg := parcel.Message().(*message.HotData)
 	// FIXME: check split signatures.
 	jetID := *msg.Jet.Record()
 
-	logger = logger.WithField("jet", jetID.DebugString())
-
-	logger.Debugf(
-		"got hot. Pulse: %v, DropPulse: %v, DropJet: %v\n",
-		parcel.Pulse(), msg.Drop.Pulse, msg.DropJet.DebugString(),
-	)
+	logger.WithFields(map[string]interface{}{
+		"jet": jetID.DebugString(),
+	}).Info("received hot data")
 
 	err := h.DropStorage.SetDrop(ctx, msg.DropJet, &msg.Drop)
 	if err == storage.ErrOverride {
-		logger.Debugf("received drop duplicate for. jet: %v, pulse: %v", msg.DropJet.DebugString(), msg.Drop.Pulse)
 		err = nil
 	}
 	if err != nil {
@@ -1151,16 +1131,37 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 
 	pendingStorage := h.RecentStorageProvider.GetPendingStorage(ctx, jetID)
 	logger.Debugf("received %d pending requests", len(msg.PendingRequests))
-	for objID, requests := range msg.PendingRequests {
-		for reqID := range requests {
-			pendingStorage.AddPendingRequest(ctx, objID, reqID)
+
+	var notificationList []core.RecordID
+	for objID, objContext := range msg.PendingRequests {
+		if !objContext.Active {
+			notificationList = append(notificationList, objID)
 		}
+
+		objContext.Active = false
+		pendingStorage.SetContextToObject(ctx, objID, objContext)
 	}
 
+	go func() {
+		for _, objID := range notificationList {
+			go func(objID core.RecordID) {
+				rep, err := h.Bus.Send(ctx, &message.AbandonedRequestsNotification{
+					Object: objID,
+				}, nil)
+
+				if err != nil {
+					logger.Error("failed to notify about pending requests")
+					return
+				}
+				if _, ok := rep.(*reply.OK); !ok {
+					logger.Error("received unexpected reply on pending notification")
+				}
+			}(objID)
+		}
+	}()
+
 	indexStorage := h.RecentStorageProvider.GetIndexStorage(ctx, jetID)
-	logger.Debugf("received %d recent objects", len(msg.RecentObjects))
 	for id, meta := range msg.RecentObjects {
-		logger.Debugf("[got id] jet: %v, id: %v", jetID.DebugString(), id.DebugString())
 		decodedIndex, err := index.DecodeObjectLifeline(meta.Index)
 		if err != nil {
 			logger.Error(err)
@@ -1176,13 +1177,11 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 		indexStorage.AddObjectWithTLL(ctx, id, meta.TTL)
 	}
 
-	err = h.JetStorage.UpdateJetTree(
+	h.JetStorage.UpdateJetTree(
 		ctx, msg.PulseNumber, true, jetID,
 	)
-	if err != nil {
-		logger.Error(errors.Wrap(err, "couldn't actualize jet tree"))
-		return nil, err
-	}
+
+	h.jetTreeUpdater.releaseJet(ctx, jetID, msg.PulseNumber)
 
 	err = h.JetStorage.AddJets(ctx, jetID)
 	if err != nil {

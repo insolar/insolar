@@ -28,50 +28,53 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/stretchr/testify/suite"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/testutils"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 var binaryPath string
 
-func TestHealthCheck(t *testing.T) {
+type HealthCheckSuite struct {
+	suite.Suite
+}
+
+func (s *HealthCheckSuite) TestHealthCheck() {
 	protocol := "unix"
 	socket := os.TempDir() + "/" + testutils.RandomString() + ".sock"
 
 	tmpDir, err := ioutil.TempDir("", "contractcache-")
-	require.NoError(t, err, "failed to build tmp dir")
+	s.Require().NoError(err, "failed to build tmp dir")
 	defer os.RemoveAll(tmpDir)
 
 	currentPath, err := os.Getwd()
-	require.NoError(t, err)
+	s.Require().NoError(err)
 
 	insgoccPath := binaryPath + "/insgocc"
 	healthcheckPath := binaryPath + "/healthcheck"
 	contractPath := currentPath + "/healthcheck/healthcheck.go"
 	if _, err = os.Stat(healthcheckPath); err != nil {
-		t.Fatalf("Binary file %s is not found, please run make build", healthcheckPath)
+		s.Failf("Binary file %s is not found, please run make build", healthcheckPath)
 	}
 
 	pathToTmp, err := filepath.Rel(currentPath, tmpDir)
 
 	execResult, err := exec.Command(insgoccPath, "compile", "-o", pathToTmp, contractPath).CombinedOutput()
 	log.Warnf("%s", execResult)
-	require.NoError(t, err, "failed to compile contract")
+	s.Require().NoError(err, "failed to compile contract")
 
 	// start GoInsider
 	gi := NewGoInsider(tmpDir, protocol, socket)
 
 	refString := "4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa"
 	ref, err := core.NewRefFromBase58(refString)
-	require.NoError(t, err)
+	s.Require().NoError(err)
 	err = gi.AddPlugin(*ref, tmpDir+"/main.so")
-	require.NoError(t, err, "failed to add plugin")
+	s.Require().NoError(err, "failed to add plugin")
 
-	startGoInsider(t, gi, protocol, socket)
+	s.prepareGoInsider(gi, protocol, socket)
 
 	cmd := exec.Command(healthcheckPath,
 		"-a", socket,
@@ -82,15 +85,19 @@ func TestHealthCheck(t *testing.T) {
 
 	log.Warnf("%+v", output)
 
-	assert.NoError(t, err)
+	s.NoError(err)
 }
 
-func startGoInsider(t *testing.T, gi *GoInsider, protocol string, socket string) {
+func (s *HealthCheckSuite) prepareGoInsider(gi *GoInsider, protocol, socket string) {
 	err := rpc.Register(&RPC{GI: gi})
-	require.NoError(t, err, "can't register gi as rpc")
+	s.Require().NoError(err, "can't register gi as rpc")
 	listener, err := net.Listen(protocol, socket)
-	require.NoError(t, err, "can't start listener")
+	s.Require().NoError(err, "can't start listener")
 	go rpc.Accept(listener)
+}
+
+func TestHealthCheck(t *testing.T) {
+	suite.Run(t, new(HealthCheckSuite))
 }
 
 func init() {

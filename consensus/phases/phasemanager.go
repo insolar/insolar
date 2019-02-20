@@ -19,26 +19,30 @@ package phases
 
 import (
 	"context"
-	"fmt"
+	"sync"
 	"time"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/merkle"
 	"github.com/pkg/errors"
 )
 
 type PhaseManager interface {
-	OnPulse(ctx context.Context, pulse *core.Pulse) error
+	OnPulse(ctx context.Context, pulse *core.Pulse, pulseStartTime time.Time) error
 }
 
 type Phases struct {
-	FirstPhase  FirstPhase  `inject:"subcomponent"`
-	SecondPhase SecondPhase `inject:"subcomponent"`
-	ThirdPhase  ThirdPhase  `inject:"subcomponent"`
+	FirstPhase  FirstPhase  `inject:""`
+	SecondPhase SecondPhase `inject:""`
+	ThirdPhase  ThirdPhase  `inject:""`
 
 	PulseManager core.PulseManager  `inject:""`
 	NodeKeeper   network.NodeKeeper `inject:""`
+	Calculator   merkle.Calculator  `inject:""`
+
+	lock sync.Mutex
 }
 
 // NewPhaseManager creates and returns a new phase manager.
@@ -46,39 +50,73 @@ func NewPhaseManager() PhaseManager {
 	return &Phases{}
 }
 
-// Start starts calculate args on phases.
-func (pm *Phases) OnPulse(ctx context.Context, pulse *core.Pulse) error {
+// OnPulse starts calculate args on phases.
+func (pm *Phases) OnPulse(ctx context.Context, pulse *core.Pulse, pulseStartTime time.Time) error {
+	pm.lock.Lock()
+	defer pm.lock.Unlock()
+
 	var err error
+
+	consensusDelay := time.Since(pulseStartTime)
+	inslogger.FromContext(ctx).Infof("[ NET Consensus ] Starting consensus process, delay: %v", consensusDelay)
 
 	pulseDuration, err := getPulseDuration(pulse)
 	if err != nil {
-		return errors.Wrap(err, "[ OnPulse ] Failed to get pulse duration")
+		return errors.Wrap(err, "[ NET Consensus ] Failed to get pulse duration")
 	}
 
 	var tctx context.Context
 	var cancel context.CancelFunc
 
-	tctx, cancel = contextTimeout(ctx, *pulseDuration, 0.2)
+	tctx, cancel = contextTimeoutWithDelay(ctx, *pulseDuration, consensusDelay, 0.3)
 	defer cancel()
 
 	firstPhaseState, err := pm.FirstPhase.Execute(tctx, pulse)
-	checkError(err)
+	if err != nil {
+		return errors.Wrap(err, "[ NET Consensus ] Error executing phase 1")
+	}
 
-	tctx, cancel = contextTimeout(ctx, *pulseDuration, 0.2)
+	tctx, cancel = contextTimeout(ctx, *pulseDuration, 0.05)
 	defer cancel()
 
-	secondPhaseState, err := pm.SecondPhase.Execute(tctx, firstPhaseState)
-	checkError(err)
+	secondPhaseState, err := pm.SecondPhase.Execute(tctx, pulse, firstPhaseState)
+	if err != nil {
+		return errors.Wrap(err, "[ NET Consensus ] Error executing phase 2.0")
+	}
 
-	fmt.Println(secondPhaseState) // TODO: remove after use
+	tctx, cancel = contextTimeout(ctx, *pulseDuration, 0.05)
+	defer cancel()
 
-	checkError(pm.ThirdPhase.Execute(ctx, secondPhaseState))
+	secondPhaseState, err = pm.SecondPhase.Execute21(tctx, pulse, secondPhaseState)
+	if err != nil {
+		return errors.Wrap(err, "[ NET Consensus ] Error executing phase 2.1")
+	}
 
+	tctx, cancel = contextTimeout(ctx, *pulseDuration, 0.05)
+	defer cancel()
+
+	thirdPhaseState, err := pm.ThirdPhase.Execute(tctx, pulse, secondPhaseState)
+	if err != nil {
+		return errors.Wrap(err, "[ NET Consensus ] Error executing phase 3")
+	}
+
+	state := thirdPhaseState
+	cloud := &merkle.CloudEntry{
+		ProofSet:      []*merkle.GlobuleProof{state.GlobuleProof},
+		PrevCloudHash: pm.NodeKeeper.GetCloudHash(),
+	}
+	hash, _, err := pm.Calculator.GetCloudProof(cloud)
+	if err != nil {
+		return errors.Wrap(err, "[ NET Consensus ] Error calculating cloud hash")
+	}
+	pm.NodeKeeper.SetCloudHash(hash)
+	state.UnsyncList.ApproveSync(state.ActiveNodes)
+	pm.NodeKeeper.Sync(state.UnsyncList)
 	return nil
 }
 
 func getPulseDuration(pulse *core.Pulse) (*time.Duration, error) {
-	duration := time.Duration(pulse.PulseNumber-pulse.PrevPulseNumber) * time.Second
+	duration := time.Duration(pulse.NextPulseNumber-pulse.PulseNumber) * time.Second
 	return &duration, nil
 }
 
@@ -88,8 +126,11 @@ func contextTimeout(ctx context.Context, duration time.Duration, k float64) (con
 	return timedCtx, cancelFund
 }
 
-func checkError(err error) {
-	if err != nil {
-		log.Error(err)
+func contextTimeoutWithDelay(ctx context.Context, duration, delay time.Duration, k float64) (context.Context, context.CancelFunc) {
+	timeout := time.Duration(k*float64(duration)) - delay
+	if timeout < 0 {
+		inslogger.FromContext(ctx).Fatalf("[ NET Consensus ] Not enough time for consensus process")
 	}
+	timedCtx, cancelFund := context.WithTimeout(ctx, timeout)
+	return timedCtx, cancelFund
 }

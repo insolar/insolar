@@ -2,7 +2,7 @@ BIN_DIR ?= bin
 ARTIFACTS_DIR ?= .artefacts
 INSOLAR = insolar
 INSOLARD = insolard
-INSGOCC = $(BIN_DIR)/insgocc
+INSGOCC = insgocc
 PULSARD = pulsard
 INSGORUND = insgorund
 BENCHMARK = benchmark
@@ -10,7 +10,7 @@ PULSEWATCHER = pulsewatcher
 EXPORTER = exporter
 APIREQUESTER = apirequester
 HEALTHCHECK = healthcheck
-CERTGEN = $(BIN_DIR)/certgen
+CERTGEN = certgen
 
 ALL_PACKAGES = ./...
 MOCKS_PACKAGE = github.com/insolar/insolar/testutils
@@ -29,6 +29,8 @@ LDFLAGS += -X github.com/insolar/insolar/version.BuildNumber=${BUILD_NUMBER}
 LDFLAGS += -X github.com/insolar/insolar/version.BuildDate=${BUILD_DATE}
 LDFLAGS += -X github.com/insolar/insolar/version.BuildTime=${BUILD_TIME}
 LDFLAGS += -X github.com/insolar/insolar/version.GitHash=${BUILD_HASH}
+
+BININSGOCC=$(BIN_DIR)/$(INSGOCC)
 
 
 .PHONY: all
@@ -67,14 +69,14 @@ generate:
 
 .PHONY: test_git_no_changes
 test_git_no_changes:
-	git diff --exit-code
+	ci/scripts/git_diff_without_comments.sh
 
 .PHONY: ensure
 ensure:
 	dep ensure
 
 .PHONY: build
-build: $(BIN_DIR) $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(INSGORUND) $(HEALTHCHECK) $(BENCHMARK) $(PULSEWATCHER)
+build: $(BIN_DIR) $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(INSGORUND) $(HEALTHCHECK) $(BENCHMARK) $(APIREQUESTER) $(PULSEWATCHER) $(CERTGEN)
 
 $(BIN_DIR):
 	mkdir -p $(BIN_DIR)
@@ -89,7 +91,9 @@ $(INSOLAR):
 
 .PHONY: $(INSGOCC)
 $(INSGOCC): cmd/insgocc/insgocc.go logicrunner/goplugin/preprocessor
-	go build -o $(INSGOCC) -ldflags "${LDFLAGS}" cmd/insgocc/*.go
+	go build -o $(BININSGOCC) -ldflags "${LDFLAGS}" cmd/insgocc/*.go
+
+$(BININSGOCC): $(INSGOCC)
 
 .PHONY: $(PULSARD)
 $(PULSARD):
@@ -121,7 +125,7 @@ $(HEALTHCHECK):
 
 .PHONY: $(CERTGEN)
 $(CERTGEN):
-	go build -o $(CERTGEN) -ldflags "${LDFLAGS}" cmd/certgen/*.go
+	go build -o $(BIN_DIR)/$(CERTGEN) -ldflags "${LDFLAGS}" cmd/certgen/*.go
 
 .PHONY: functest
 functest:
@@ -147,18 +151,23 @@ test_with_coverage: $(ARTIFACTS_DIR)
 test_with_coverage_fast:
 	CGO_ENABLED=1 go test $(TEST_ARGS) -count 1 --coverprofile=$(COVERPROFILE) --covermode=atomic $(ALL_PACKAGES)
 
-.PHONY: ci_test_with_coverage_json
-ci_test_with_coverage_json:
-	CGO_ENABLED=1 go test -count 1 -parallel 4 --coverprofile=$(COVERPROFILE) --covermode=atomic -v $(ALL_PACKAGES) | tee unit.json
+.PHONY: ci_test_with_coverage
+ci_test_with_coverage:
+	CGO_ENABLED=1 go test -count 1 -parallel 4 --coverprofile=$(COVERPROFILE) --covermode=atomic -v $(ALL_PACKAGES) | tee unit.file
 
-.PHONY: ci_test_func_json
-ci_test_func_json:
-	CGO_ENABLED=1 go test $(TEST_ARGS) -tags functest -v ./functest -count=1 | tee func.json
+.PHONY: ci_test_func
+ci_test_func:
+	CGO_ENABLED=1 go test $(TEST_ARGS) -tags functest -v ./functest -count=1 | tee func.file
+
+.PHONY: ci_test_integrtest
+ci_test_integrtest:
+	CGO_ENABLED=1 go test $(TEST_ARGS) -tags networktest -v ./network/servicenetwork -count=1 | tee integr.file
+
 
 .PHONY: regen-proxies
 CONTRACTS = $(wildcard application/contract/*)
-regen-proxies: $(INSGOCC)
-	$(foreach c,$(CONTRACTS), $(INSGOCC) proxy application/contract/$(notdir $(c))/$(notdir $(c)).go; )
+regen-proxies: $(BININSGOCC)
+	$(foreach c, $(CONTRACTS), $(BININSGOCC) proxy application/contract/$(notdir $(c))/$(notdir $(c)).go; )
 
 .PHONY: docker-insolard
 docker-insolard:

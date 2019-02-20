@@ -27,16 +27,20 @@ type Node struct {
 	FRole core.StaticRole
 }
 
+func (n Node) Address() string {
+	panic("implement me")
+}
+
+func (n Node) ConsensusAddress() string {
+	panic("implement me")
+}
+
 func (Node) GetGlobuleID() core.GlobuleID {
 	panic("implement me")
 }
 
 func (n Node) ID() core.RecordRef {
 	return n.FID
-}
-
-func (Node) PhysicalAddress() string {
-	panic("implement me")
 }
 
 func (Node) PublicKey() crypto.PublicKey {
@@ -52,5 +56,21 @@ func (Node) ShortID() core.ShortNodeID {
 }
 
 func (Node) Version() string {
+	panic("implement me")
+}
+
+func (Node) Leaving() bool {
+	panic("implement me")
+}
+
+func (Node) LeavingETA() core.PulseNumber {
+	panic("implement me")
+}
+
+func (Node) IsWorking() bool {
+	panic("implement me")
+}
+
+func (Node) GetState() core.NodeState {
 	panic("implement me")
 }

@@ -17,7 +17,6 @@
 package storage
 
 import (
-	"fmt"
 	"sync"
 
 	"github.com/insolar/insolar/core"
@@ -42,6 +41,7 @@ type nodeStorage struct {
 	nodeHistoryLock sync.RWMutex
 }
 
+// NewNodeStorage create new instance of NodeStorage
 func NewNodeStorage() NodeStorage {
 	// return new(nodeStorage)
 	return &nodeStorage{nodeHistory: map[core.PulseNumber][]Node{}}
@@ -74,7 +74,7 @@ func (a *nodeStorage) GetActiveNodes(pulse core.PulseNumber) ([]core.Node, error
 
 	nodes, ok := a.nodeHistory[pulse]
 	if !ok {
-		return nil, fmt.Errorf("GetActiveNodes: no nodes for pulse %v", pulse)
+		return nil, core.ErrNoNodes
 	}
 	res := make([]core.Node, len(nodes))
 	for i, n := range nodes {
@@ -91,7 +91,7 @@ func (a *nodeStorage) GetActiveNodesByRole(pulse core.PulseNumber, role core.Sta
 
 	nodes, ok := a.nodeHistory[pulse]
 	if !ok {
-		return nil, fmt.Errorf("GetActiveNodesByRole: no nodes for pulse %v", pulse)
+		return nil, core.ErrNoNodes
 	}
 	var inRole []core.Node
 	for _, n := range nodes {
@@ -107,11 +107,10 @@ func (a *nodeStorage) GetActiveNodesByRole(pulse core.PulseNumber, role core.Sta
 func (a *nodeStorage) RemoveActiveNodesUntil(pulse core.PulseNumber) {
 	a.nodeHistoryLock.Lock()
 	defer a.nodeHistoryLock.Unlock()
-	fmt.Printf("cleanLightData: RemoveActiveNodesUntil: %v\n", pulse)
 
 	for pn := range a.nodeHistory {
 		if pn < pulse {
-			delete(a.nodeHistory, pulse)
+			delete(a.nodeHistory, pn)
 		}
 	}
 }

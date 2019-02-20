@@ -36,7 +36,7 @@ import (
 )
 
 type AuthorizationController interface {
-	component.Starter
+	component.Initer
 
 	Authorize(ctx context.Context, discoveryNode *DiscoveryNode, cert core.AuthorizationCertificate) (SessionID, error)
 	Register(ctx context.Context, discoveryNode *DiscoveryNode, sessionID SessionID) error
@@ -91,7 +91,8 @@ func init() {
 
 // Authorize node on the discovery node (step 2 of the bootstrap process)
 func (ac *authorizationController) Authorize(ctx context.Context, discoveryNode *DiscoveryNode, cert core.AuthorizationCertificate) (SessionID, error) {
-	inslogger.FromContext(ctx).Infof("Authorizing on host: %s", discoveryNode)
+	inslogger.FromContext(ctx).Infof("Authorizing on host: %s", discoveryNode.Host)
+	inslogger.FromContext(ctx).Infof("cert: %s", cert)
 
 	ctx, span := instracer.StartSpan(ctx, "AuthorizationController.Authorize")
 	span.AddAttributes(
@@ -123,14 +124,14 @@ func (ac *authorizationController) Authorize(ctx context.Context, discoveryNode 
 
 // Register node on the discovery node (step 4 of the bootstrap process)
 func (ac *authorizationController) Register(ctx context.Context, discoveryNode *DiscoveryNode, sessionID SessionID) error {
-	inslogger.FromContext(ctx).Infof("Registering on host: %s", discoveryNode)
+	inslogger.FromContext(ctx).Infof("Registering on host: %s", discoveryNode.Host)
 
 	ctx, span := instracer.StartSpan(ctx, "AuthorizationController.Register")
 	span.AddAttributes(
 		trace.StringAttribute("node", discoveryNode.Node.GetNodeRef().String()),
 	)
 	defer span.End()
-	originClaim, err := ac.NodeKeeper.GetOriginClaim()
+	originClaim, err := ac.NodeKeeper.GetOriginJoinClaim()
 	if err != nil {
 		return errors.Wrap(err, "[ Register ] failed to get origin claim")
 	}
@@ -172,6 +173,7 @@ func (ac *authorizationController) processRegisterRequest(ctx context.Context, r
 		responseAuthorize := &RegistrationResponse{Code: OpRejected, Error: err.Error()}
 		return ac.transport.BuildResponse(ctx, request, responseAuthorize), nil
 	}
+	inslogger.FromContext(ctx).Infof("Added join claim from node %s", request.GetSender())
 	ac.NodeKeeper.AddPendingClaim(data.JoinClaim)
 	return ac.transport.BuildResponse(ctx, request, &RegistrationResponse{Code: OpConfirmed}), nil
 }
@@ -182,7 +184,7 @@ func (ac *authorizationController) processAuthorizeRequest(ctx context.Context, 
 	if err != nil {
 		return ac.transport.BuildResponse(ctx, request, &AuthorizationResponse{Code: OpRejected, Error: err.Error()}), nil
 	}
-	valid, err := ac.NetworkCoordinator.ValidateCert(context.Background(), cert)
+	valid, err := ac.NetworkCoordinator.ValidateCert(ctx, cert)
 	if !valid {
 		if err == nil {
 			err = errors.New("Certificate validation failed")
@@ -193,7 +195,7 @@ func (ac *authorizationController) processAuthorizeRequest(ctx context.Context, 
 	return ac.transport.BuildResponse(ctx, request, &AuthorizationResponse{Code: OpConfirmed, SessionID: session}), nil
 }
 
-func (ac *authorizationController) Start(ctx context.Context) error {
+func (ac *authorizationController) Init(ctx context.Context) error {
 	ac.transport.RegisterPacketHandler(types.Register, ac.processRegisterRequest)
 	ac.transport.RegisterPacketHandler(types.Authorize, ac.processAuthorizeRequest)
 	return nil

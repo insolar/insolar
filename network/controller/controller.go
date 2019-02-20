@@ -61,12 +61,12 @@ func (c *Controller) SendCascadeMessage(data core.Cascade, method string, msg co
 }
 
 // Bootstrap init bootstrap process: 1. Connect to discovery node; 2. Reconnect to new discovery node if redirected.
-func (c *Controller) Bootstrap(ctx context.Context) error {
+func (c *Controller) Bootstrap(ctx context.Context) (*network.BootstrapResult, error) {
 	return c.Bootstrapper.Bootstrap(ctx)
 }
 
 // Inject inject components.
-func (c *Controller) Start(ctx context.Context) error {
+func (c *Controller) Init(ctx context.Context) error {
 	c.network.RegisterRequestHandler(types.Ping, func(ctx context.Context, request network.Request) (network.Response, error) {
 		return c.network.BuildResponse(ctx, request, nil), nil
 	})
@@ -74,7 +74,8 @@ func (c *Controller) Start(ctx context.Context) error {
 }
 
 // ConfigureOptions convert daemon configuration to controller options
-func ConfigureOptions(config configuration.HostNetwork) *common.Options {
+func ConfigureOptions(conf configuration.Configuration) *common.Options {
+	config := conf.Host
 	return &common.Options{
 		InfinityBootstrap:   config.InfinityBootstrap,
 		TimeoutMult:         time.Duration(config.TimeoutMult) * time.Second,
@@ -84,6 +85,7 @@ func ConfigureOptions(config configuration.HostNetwork) *common.Options {
 		PacketTimeout:       10 * time.Second,
 		BootstrapTimeout:    10 * time.Second,
 		HandshakeSessionTTL: time.Duration(config.HandshakeSessionTTL) * time.Millisecond,
+		FakePulseDuration:   time.Duration(conf.Pulsar.PulseTime) * time.Millisecond,
 	}
 }
 
