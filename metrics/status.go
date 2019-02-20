@@ -129,5 +129,12 @@ func (ps *procStatus) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "text/html")
-	io.Copy(w, &b)
+	mustCopy(w, &b)
+}
+
+func mustCopy(dst io.Writer, src io.Reader) {
+	_, err := io.Copy(dst, src)
+	if err != nil {
+		panic(err)
+	}
 }
