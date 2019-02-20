@@ -259,7 +259,7 @@ func main() {
 
 func createMember(out io.Writer) {
 	info, err := requester.Info(sendUrls)
-
+	check("Problems with requesting network info", err)
 	ks := platformpolicy.NewKeyProcessor()
 	privKey, err := ks.GeneratePrivateKey()
 	check("Problems with generating of private key:", err)
@@ -267,11 +267,13 @@ func createMember(out io.Writer) {
 	check("Problems with serialization of private key:", err)
 
 	rootCfg, err := requester.CreateUserConfig(info.RootMember, string(privKeyStr))
+	check("Problems with internal config logic:", err)
 
 	ctx := context.TODO()
 	res, err := requester.SendWithSeed(ctx, sendUrls, rootCfg, &requester.RequestConfigJSON{
 		Method: "CreateMember",
 		Params: nil,
 	}, []byte("111"))
+	check("Problems with communication:", err)
 	spew.Fdump(out, res)
 }

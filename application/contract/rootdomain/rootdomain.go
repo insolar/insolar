@@ -33,6 +33,8 @@ type RootDomain struct {
 	NodeDomainRef core.RecordRef
 }
 
+var INSATTR_CreateMember_API = true
+
 // CreateMember processes create member request
 func (rd *RootDomain) CreateMember(name string, key string) (string, error) {
 	memberHolder := member.New(name, key)
