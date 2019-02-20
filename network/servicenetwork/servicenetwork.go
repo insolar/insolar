@@ -38,6 +38,7 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/merkle"
 	"github.com/insolar/insolar/network/routing"
+	"github.com/insolar/insolar/network/rules"
 	"github.com/insolar/insolar/network/utils"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
@@ -160,6 +161,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		bootstrap.NewBootstrapper(options, internalTransport),
 		bootstrap.NewAuthorizationController(options, internalTransport),
 		bootstrap.NewChallengeResponseController(options, internalTransport),
+		rules.NewRules(),
 		bootstrap.NewNetworkBootstrapper(),
 	)
 	err = n.cm.Init(ctx)
