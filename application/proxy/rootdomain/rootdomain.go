@@ -24,7 +24,7 @@ import (
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = core.NewRefFromBase58("1111C3jrgHyV9RYvRQjnZDcZb58a5ymPrgKt6o7N89.11111111111111111111111111111111")
+var PrototypeReference, _ = core.NewRefFromBase58("11112VuVJtjTz4etAEQPmaGoDD3hRj5BBEMxqu9j8Bh.11111111111111111111111111111111")
 
 // RootDomain holds proxy type
 type RootDomain struct {
