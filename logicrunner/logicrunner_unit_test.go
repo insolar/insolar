@@ -429,9 +429,7 @@ func (suite *LogicRunnerTestSuite) TestHandleStillExecutingMessage() {
 	suite.Equal(true, suite.lr.state[objectRef].ExecutionState.PendingConfirmed)
 }
 
-func TestReleaseQueue(t *testing.T) {
-	t.Parallel()
-
+func (suite *LogicRunnerTestSuite) TestReleaseQueue() {
 	tests := map[string]struct {
 		QueueLength     int
 		ExpectedLength  int
@@ -443,7 +441,7 @@ func TestReleaseQueue(t *testing.T) {
 		"max+1": {maxQueueLength + 1, maxQueueLength, true},
 	}
 	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+		suite.T().Run(name, func(t *testing.T) {
 			a := assert.New(t)
 
 			es := ExecutionState{Queue: make([]ExecutionQueueElement, tc.QueueLength)}
