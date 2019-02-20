@@ -241,6 +241,13 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse core.Pulse) {
 		return
 	}
 
+	if n.NodeKeeper.GetState() == core.WaitingNodeNetworkState {
+		// do not set pulse because otherwise we will set invalid active list
+		// pass consensus, prepare valid active list and set it on next pulse
+		go n.phaseManagerOnPulse(ctx, newPulse, currentTime)
+		return
+	}
+
 	// Ignore core.ErrNotFound because
 	// sometimes we can't fetch current pulse in new nodes
 	// (for fresh bootstrapped light-material with in-memory pulse-tracker)
