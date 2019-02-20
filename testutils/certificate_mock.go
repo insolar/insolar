@@ -28,6 +28,11 @@ type CertificateMock struct {
 	GetDiscoverySignsPreCounter uint64
 	GetDiscoverySignsMock       mCertificateMockGetDiscoverySigns
 
+	GetMajorityRuleFunc       func() (r int)
+	GetMajorityRuleCounter    uint64
+	GetMajorityRulePreCounter uint64
+	GetMajorityRuleMock       mCertificateMockGetMajorityRule
+
 	GetNodeRefFunc       func() (r *core.RecordRef)
 	GetNodeRefCounter    uint64
 	GetNodeRefPreCounter uint64
@@ -64,6 +69,7 @@ func NewCertificateMock(t minimock.Tester) *CertificateMock {
 
 	m.GetDiscoveryNodesMock = mCertificateMockGetDiscoveryNodes{mock: m}
 	m.GetDiscoverySignsMock = mCertificateMockGetDiscoverySigns{mock: m}
+	m.GetMajorityRuleMock = mCertificateMockGetMajorityRule{mock: m}
 	m.GetNodeRefMock = mCertificateMockGetNodeRef{mock: m}
 	m.GetPublicKeyMock = mCertificateMockGetPublicKey{mock: m}
 	m.GetRoleMock = mCertificateMockGetRole{mock: m}
@@ -336,6 +342,140 @@ func (m *CertificateMock) GetDiscoverySignsFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.GetDiscoverySignsFunc != nil {
 		return atomic.LoadUint64(&m.GetDiscoverySignsCounter) > 0
+	}
+
+	return true
+}
+
+type mCertificateMockGetMajorityRule struct {
+	mock              *CertificateMock
+	mainExpectation   *CertificateMockGetMajorityRuleExpectation
+	expectationSeries []*CertificateMockGetMajorityRuleExpectation
+}
+
+type CertificateMockGetMajorityRuleExpectation struct {
+	result *CertificateMockGetMajorityRuleResult
+}
+
+type CertificateMockGetMajorityRuleResult struct {
+	r int
+}
+
+//Expect specifies that invocation of Certificate.GetMajorityRule is expected from 1 to Infinity times
+func (m *mCertificateMockGetMajorityRule) Expect() *mCertificateMockGetMajorityRule {
+	m.mock.GetMajorityRuleFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &CertificateMockGetMajorityRuleExpectation{}
+	}
+
+	return m
+}
+
+//Return specifies results of invocation of Certificate.GetMajorityRule
+func (m *mCertificateMockGetMajorityRule) Return(r int) *CertificateMock {
+	m.mock.GetMajorityRuleFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &CertificateMockGetMajorityRuleExpectation{}
+	}
+	m.mainExpectation.result = &CertificateMockGetMajorityRuleResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of Certificate.GetMajorityRule is expected once
+func (m *mCertificateMockGetMajorityRule) ExpectOnce() *CertificateMockGetMajorityRuleExpectation {
+	m.mock.GetMajorityRuleFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &CertificateMockGetMajorityRuleExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *CertificateMockGetMajorityRuleExpectation) Return(r int) {
+	e.result = &CertificateMockGetMajorityRuleResult{r}
+}
+
+//Set uses given function f as a mock of Certificate.GetMajorityRule method
+func (m *mCertificateMockGetMajorityRule) Set(f func() (r int)) *CertificateMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.GetMajorityRuleFunc = f
+	return m.mock
+}
+
+//GetMajorityRule implements github.com/insolar/insolar/core.Certificate interface
+func (m *CertificateMock) GetMajorityRule() (r int) {
+	counter := atomic.AddUint64(&m.GetMajorityRulePreCounter, 1)
+	defer atomic.AddUint64(&m.GetMajorityRuleCounter, 1)
+
+	if len(m.GetMajorityRuleMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.GetMajorityRuleMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to CertificateMock.GetMajorityRule.")
+			return
+		}
+
+		result := m.GetMajorityRuleMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the CertificateMock.GetMajorityRule")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetMajorityRuleMock.mainExpectation != nil {
+
+		result := m.GetMajorityRuleMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the CertificateMock.GetMajorityRule")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetMajorityRuleFunc == nil {
+		m.t.Fatalf("Unexpected call to CertificateMock.GetMajorityRule.")
+		return
+	}
+
+	return m.GetMajorityRuleFunc()
+}
+
+//GetMajorityRuleMinimockCounter returns a count of CertificateMock.GetMajorityRuleFunc invocations
+func (m *CertificateMock) GetMajorityRuleMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.GetMajorityRuleCounter)
+}
+
+//GetMajorityRuleMinimockPreCounter returns the value of CertificateMock.GetMajorityRule invocations
+func (m *CertificateMock) GetMajorityRuleMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.GetMajorityRulePreCounter)
+}
+
+//GetMajorityRuleFinished returns true if mock invocations count is ok
+func (m *CertificateMock) GetMajorityRuleFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.GetMajorityRuleMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.GetMajorityRuleCounter) == uint64(len(m.GetMajorityRuleMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.GetMajorityRuleMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.GetMajorityRuleCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.GetMajorityRuleFunc != nil {
+		return atomic.LoadUint64(&m.GetMajorityRuleCounter) > 0
 	}
 
 	return true
@@ -1023,6 +1163,10 @@ func (m *CertificateMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to CertificateMock.GetDiscoverySigns")
 	}
 
+	if !m.GetMajorityRuleFinished() {
+		m.t.Fatal("Expected call to CertificateMock.GetMajorityRule")
+	}
+
 	if !m.GetNodeRefFinished() {
 		m.t.Fatal("Expected call to CertificateMock.GetNodeRef")
 	}
@@ -1068,6 +1212,10 @@ func (m *CertificateMock) MinimockFinish() {
 		m.t.Fatal("Expected call to CertificateMock.GetDiscoverySigns")
 	}
 
+	if !m.GetMajorityRuleFinished() {
+		m.t.Fatal("Expected call to CertificateMock.GetMajorityRule")
+	}
+
 	if !m.GetNodeRefFinished() {
 		m.t.Fatal("Expected call to CertificateMock.GetNodeRef")
 	}
@@ -1104,6 +1252,7 @@ func (m *CertificateMock) MinimockWait(timeout time.Duration) {
 		ok := true
 		ok = ok && m.GetDiscoveryNodesFinished()
 		ok = ok && m.GetDiscoverySignsFinished()
+		ok = ok && m.GetMajorityRuleFinished()
 		ok = ok && m.GetNodeRefFinished()
 		ok = ok && m.GetPublicKeyFinished()
 		ok = ok && m.GetRoleFinished()
@@ -1123,6 +1272,10 @@ func (m *CertificateMock) MinimockWait(timeout time.Duration) {
 
 			if !m.GetDiscoverySignsFinished() {
 				m.t.Error("Expected call to CertificateMock.GetDiscoverySigns")
+			}
+
+			if !m.GetMajorityRuleFinished() {
+				m.t.Error("Expected call to CertificateMock.GetMajorityRule")
 			}
 
 			if !m.GetNodeRefFinished() {
@@ -1162,6 +1315,10 @@ func (m *CertificateMock) AllMocksCalled() bool {
 	}
 
 	if !m.GetDiscoverySignsFinished() {
+		return false
+	}
+
+	if !m.GetMajorityRuleFinished() {
 		return false
 	}
 
