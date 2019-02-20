@@ -24,34 +24,36 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
-type joinClaimHandler struct {
-	next        ClaimHandler
+type JoinHandler struct {
 	queue       Queue
 	ref         core.RecordRef
 	activeCount int
 }
 
-func NewJoinClaimHandler(activeNodesCount int, claims []*packets.NodeJoinClaim, pulse *core.Pulse, next ClaimHandler) ClaimHandler {
-	handler := &joinClaimHandler{activeCount: activeNodesCount, next: next}
-	for _, claim := range claims {
-		handler.queue.PushClaim(claim, getPriority(claim.NodeRef, pulse.Entropy))
+func NewJoinHandler(activeNodesCount int) *JoinHandler {
+	handler := &JoinHandler{
+		queue:       Queue{},
+		activeCount: activeNodesCount,
 	}
 	return handler
 }
 
-func (jch *joinClaimHandler) HandleClaim(claim packets.ReferendumClaim) packets.ReferendumClaim {
-	_, ok := claim.(*packets.NodeJoinClaim)
-	if !ok {
-		if jch.next == nil {
-			return claim
-		}
-		jch.next.HandleClaim(claim)
+func (jch *JoinHandler) HandleClaims(claims []*packets.NodeJoinClaim, entropy core.Entropy) []*packets.NodeJoinClaim {
+	for _, claim := range claims {
+		priority := getPriority(claim.NodeRef, entropy)
+		jch.queue.PushClaim(claim, priority)
 	}
-	return jch.handle(claim)
+	return jch.getClaimsByPriority()
 }
 
-func (jch *joinClaimHandler) handle(claim packets.ReferendumClaim) packets.ReferendumClaim {
-	return jch.queue.PopClaim()
+func (jch *JoinHandler) getClaimsByPriority() []*packets.NodeJoinClaim {
+	res := make([]*packets.NodeJoinClaim, 0)
+
+	for i := 0; i < jch.activeCount; i++ {
+		res = append(res, jch.queue.PopClaim().(*packets.NodeJoinClaim))
+	}
+
+	return res
 }
 
 func getPriority(ref core.RecordRef, entropy core.Entropy) []byte {
