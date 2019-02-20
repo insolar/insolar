@@ -848,6 +848,8 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel core.Pa
 		return nil, errors.New("heavy updates are forbidden")
 	}
 
+	logger := inslogger.FromContext(ctx)
+
 	msg := parcel.Message().(*message.RegisterChild)
 	jetID := jetFromContext(ctx)
 	rec := record.DeserializeRecord(msg.Record)
@@ -879,15 +881,21 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel core.Pa
 		// Children exist and pointer does not match (preserving chain consistency).
 		// For the case when vm can't save or send result to another vm and it tries to update the same record again
 		if idx.ChildPointer != nil && !childRec.PrevChild.Equal(idx.ChildPointer) && idx.ChildPointer != recID {
+			logger.WithFields(map[string]interface{}{
+				"from_vm":    childRec.PrevChild.DebugString(),
+				"from_idx":   idx.ChildPointer.DebugString(),
+				"calculated": recID.DebugString(),
+			}).Error("failed to register child")
 			return errors.New("invalid child record")
 		}
 
 		child, err = tx.SetRecord(ctx, jetID, parcel.Pulse(), childRec)
 		if err == storage.ErrOverride {
-			inslogger.FromContext(ctx).WithField("type", fmt.Sprintf("%T", rec)).Warn("set record override (#2)")
+			logger.WithField("type", fmt.Sprintf("%T", rec)).Warn("set record override (#2)")
 		} else if err != nil {
 			return err
 		}
+
 		idx.ChildPointer = child
 		if msg.AsType != nil {
 			idx.Delegates[*msg.AsType] = msg.Child
@@ -898,6 +906,9 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel core.Pa
 			return err
 		}
 
+		logger.WithFields(map[string]interface{}{
+			"id": child.DebugString(),
+		}).Info("saved child")
 		return nil
 	})
 
