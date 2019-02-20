@@ -55,6 +55,7 @@ type transferDifferentMembersScenario struct {
 	timeouts       uint32
 	members        []*sdk.Member
 	insSDK         *sdk.SDK
+	penRetries     int32
 }
 
 func (s *transferDifferentMembersScenario) getOperationsNumber() int {
@@ -123,10 +124,10 @@ func (s *transferDifferentMembersScenario) startMember(ctx context.Context, inde
 		var traceID string
 		var err error
 
-		bof := backoff.Backoff{Min: 1 * time.Millisecond, Max: 1 * time.Second}
+		bof := backoff.Backoff{Min: 500 * time.Millisecond, Max: 20 * time.Second}
 
 		retry := true
-		for retry {
+		for retry && bof.Attempt() < backoffAttemptsCount {
 			start = time.Now()
 			traceID, err = s.insSDK.Transfer(1, from, to)
 			stop = time.Since(start)
@@ -135,6 +136,7 @@ func (s *transferDifferentMembersScenario) startMember(ctx context.Context, inde
 				retry = false
 			} else if strings.Contains(err.Error(), core.ErrTooManyPendingRequests.Error()) {
 				time.Sleep(bof.Duration())
+				atomic.AddInt32(&s.penRetries, 1)
 			} else {
 				retry = false
 			}
@@ -164,5 +166,5 @@ func (s *transferDifferentMembersScenario) startMember(ctx context.Context, inde
 }
 
 func (s *transferDifferentMembersScenario) printResult() {
-	writeToOutput(s.out, fmt.Sprintf("Scenario result:\n\tSuccesses: %d\n\tErrors: %d\n\tTimeouts: %d\n", s.successes, s.errors, s.timeouts))
+	writeToOutput(s.out, fmt.Sprintf("Scenario result:\n\tSuccesses: %d\n\tErrors: %d\n\tTimeouts: %d\n\tPending retries: %d\n", s.successes, s.errors, s.timeouts, s.penRetries))
 }

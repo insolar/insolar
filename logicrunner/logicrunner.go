@@ -485,6 +485,7 @@ func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionS
 		current := CurrentExecution{
 			Request:       qe.request,
 			RequesterNode: &sender,
+			Context:       qe.ctx,
 		}
 		es.Current = &current
 
@@ -499,22 +500,9 @@ func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionS
 
 		res := ExecutionQueueResult{}
 
-		recordingBus := lr.MessageBus
-		//recordingBus, err := lr.MessageBus.NewRecorder(qe.ctx, *lr.pulse(qe.ctx))
-		//if err != nil {
-		//	res.err = err
-		//	continue
-		//}
-
-		current.Context = core.ContextWithMessageBus(qe.ctx, recordingBus)
-
 		inslogger.FromContext(qe.ctx).Debug("Registering request within execution behaviour")
 
-		ok := es.Behaviour.(*ValidationSaver)
-		if ok == nil {
-			panic("not ValidationSaver behaviour in ProcessExecutionQueue()")
-		}
-		es.Behaviour.(*ValidationSaver).NewRequest(qe.parcel, *qe.request, recordingBus)
+		es.Behaviour.(*ValidationSaver).NewRequest(qe.parcel, *qe.request, lr.MessageBus)
 
 		res.reply, res.err = lr.executeOrValidate(current.Context, es, qe.parcel)
 
@@ -616,7 +604,7 @@ func (lr *LogicRunner) executeOrValidate(
 	go func() {
 		inslogger.FromContext(ctx).Debugf("Sending Method Results for ", request)
 
-		_, err := core.MessageBusFromContext(ctx, nil).Send(
+		_, err := core.MessageBusFromContext(ctx, lr.MessageBus).Send(
 			ctx,
 			&message.ReturnResults{
 				Caller:   lr.NodeNetwork.GetOrigin().ID(),

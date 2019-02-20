@@ -227,6 +227,7 @@ type ArtifactManager interface {
 }
 
 // CodeDescriptor represents meta info required to fetch all code data.
+//go:generate minimock -i github.com/insolar/insolar/core.CodeDescriptor -o ../testutils -s _mock.go
 type CodeDescriptor interface {
 	// Ref returns reference to represented code record.
 	Ref() *RecordRef
