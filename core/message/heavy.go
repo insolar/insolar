@@ -49,7 +49,7 @@ func (HeavyPayload) GetCaller() *core.RecordRef {
 }
 
 // Type implementation of Message interface.
-func (e *HeavyPayload) Type() core.MessageType {
+func (hp *HeavyPayload) Type() core.MessageType {
 	return core.TypeHeavyPayload
 }
 

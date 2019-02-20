@@ -45,22 +45,18 @@ func TestLog_GlobalLogger(t *testing.T) {
 	assert.NoError(t, SetLevel("debug"))
 
 	assertHelloWorld(t, capture(func() { Debug("HelloWorld") }))
-	assertHelloWorld(t, capture(func() { Debugln("HelloWorld") }))
 	assertHelloWorld(t, capture(func() { Debugf("%s", "HelloWorld") }))
+
 	assertHelloWorld(t, capture(func() { Info("HelloWorld") }))
-	assertHelloWorld(t, capture(func() { Infoln("HelloWorld") }))
 	assertHelloWorld(t, capture(func() { Infof("%s", "HelloWorld") }))
 
 	assertHelloWorld(t, capture(func() { Warn("HelloWorld") }))
-	assertHelloWorld(t, capture(func() { Warnln("HelloWorld") }))
 	assertHelloWorld(t, capture(func() { Warnf("%s", "HelloWorld") }))
 
 	assertHelloWorld(t, capture(func() { Error("HelloWorld") }))
-	assertHelloWorld(t, capture(func() { Errorln("HelloWorld") }))
 	assertHelloWorld(t, capture(func() { Errorf("%s", "HelloWorld") }))
 
 	assert.Panics(t, func() { Panic("HelloWorld") })
-	assert.Panics(t, func() { Panicln("HelloWorld") })
 	assert.Panics(t, func() { Panicf("%s", "HelloWorld") })
 
 	// can't catch os.exit() to test Fatal

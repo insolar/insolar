@@ -24,12 +24,12 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/insolar/insolar/core/utils"
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
@@ -83,12 +83,12 @@ func main() {
 		err = cfgHolder.Load()
 	}
 	if err != nil {
-		log.Warnln("failed to load configuration from file: ", err.Error())
+		log.Warn("failed to load configuration from file: ", err.Error())
 	}
 
 	err = cfgHolder.LoadEnv()
 	if err != nil {
-		log.Warnln("failed to load configuration from env:", err.Error())
+		log.Warn("failed to load configuration from env:", err.Error())
 	}
 
 	cfg := &cfgHolder.Configuration
@@ -159,7 +159,7 @@ func main() {
 
 	go func() {
 		sig := <-gracefulStop
-		inslog.Debugln("caught sig: ", sig)
+		inslog.Debug("caught sig: ", sig)
 
 		inslog.Warn("GRACEFULL STOP APP")
 		err = cm.Stop(ctx)
@@ -181,7 +181,7 @@ func initLogger(ctx context.Context, cfg configuration.Log, traceid string) (con
 	}
 	err = inslog.SetLevel(cfg.Level)
 	if err != nil {
-		inslog.Errorln(err.Error())
+		inslog.Error(err.Error())
 	}
 	return inslogger.WithTraceField(inslogger.SetLogger(ctx, inslog), traceid)
 }
