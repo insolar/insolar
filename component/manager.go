@@ -21,8 +21,9 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
+
+	"github.com/insolar/insolar/log"
 )
 
 // Manager provide methods to manage components lifecycle
@@ -124,7 +125,7 @@ func (m *Manager) Start(ctx context.Context) error {
 		}
 		name := reflect.TypeOf(c).Elem().String()
 		if s, ok := c.(Starter); ok {
-			log.Debugln("ComponentManager: Start component: ", name)
+			log.Debug("ComponentManager: Start component: ", name)
 			err := s.Start(ctx)
 			if err != nil {
 				return errors.Wrap(err, "Failed to start components.")
@@ -149,7 +150,7 @@ func (m *Manager) Init(ctx context.Context) error {
 			log.Debugf("ComponentManager: Component %s has no Init method", name)
 			continue
 		}
-		log.Debugln("ComponentManager: Init component: ", name)
+		log.Debug("ComponentManager: Init component: ", name)
 		err := s.Init(ctx)
 		if err != nil {
 			return errors.Wrap(err, "Failed to init components.")
@@ -167,7 +168,7 @@ func (m *Manager) Stop(ctx context.Context) error {
 		}
 		name := reflect.TypeOf(m.components[i]).Elem().String()
 		if s, ok := m.components[i].(Stopper); ok {
-			log.Debugln("ComponentManager: Stop component: ", name)
+			log.Debug("ComponentManager: Stop component: ", name)
 
 			err := s.Stop(ctx)
 			if err != nil {

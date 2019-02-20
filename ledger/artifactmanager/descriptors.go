@@ -34,7 +34,6 @@ type CodeDescriptor struct {
 	ref         core.RecordRef
 
 	ctx context.Context
-	am  core.ArtifactManager
 }
 
 // Ref returns reference to represented code record.
@@ -143,16 +142,15 @@ func (d *ObjectDescriptor) Parent() *core.RecordRef {
 // 9. R (get children 6 ...) -> H
 // 10. H (children 6 ... 15 EOF) -> R
 type ChildIterator struct {
-	ctx          context.Context
-	senderChain  Sender
-	currentPulse core.Pulse
-	parent       core.RecordRef
-	chunkSize    int
-	fromPulse    *core.PulseNumber
-	fromChild    *core.RecordID
-	buff         []core.RecordRef
-	buffIndex    int
-	canFetch     bool
+	ctx         context.Context
+	senderChain Sender
+	parent      core.RecordRef
+	chunkSize   int
+	fromPulse   *core.PulseNumber
+	fromChild   *core.RecordID
+	buff        []core.RecordRef
+	buffIndex   int
+	canFetch    bool
 }
 
 // NewChildIterator creates new child iterator.
