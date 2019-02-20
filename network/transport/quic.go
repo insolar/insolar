@@ -142,7 +142,7 @@ func (t *quicTransport) handleAcceptedConnection(session quic.Session) {
 
 func createConnection(addr string) (quic.Session, quic.Stream, error) {
 	// TODO: NETD18-78
-	session, err := quic.DialAddr(addr, &tls.Config{InsecureSkipVerify: true}, nil)
+	session, err := quic.DialAddr(addr, &tls.Config{InsecureSkipVerify: true}, nil) //nolint: gosec
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "[ createConnection ] failed to create a session")
 	}
