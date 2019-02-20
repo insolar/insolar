@@ -17,9 +17,42 @@
 package claimhandler
 
 import (
+	"bytes"
+	"crypto/rand"
+	"testing"
+
 	"github.com/insolar/insolar/consensus/packets"
+	"github.com/insolar/insolar/core"
+	"github.com/stretchr/testify/assert"
 )
 
-type ClaimHandler interface {
-	HandleClaim(packets.ReferendumClaim) packets.ReferendumClaim
+func TestJoinClaimHandler_HandleClaim(t *testing.T) {
+	activeNodesCount := 5
+	claimsCount := 10
+	entropy := core.Entropy{}
+	_, err := rand.Read(entropy[:])
+	assert.NoError(t, err)
+
+	claims := make([]*packets.NodeJoinClaim, claimsCount)
+	priorityMap := make(map[core.RecordRef][]byte, claimsCount)
+	for i := 0; i < claimsCount; i++ {
+		claim := getJoinClaim(t)
+		claims[i] = claim
+		priorityMap[claim.NodeRef] = getPriority(claim.NodeRef, entropy)
+	}
+
+	handler := NewJoinHandler(activeNodesCount)
+	res := handler.HandleClaims(claims, entropy)
+	assert.Len(t, res, activeNodesCount)
+
+	for _, claim := range res {
+		delete(priorityMap, claim.NodeRef)
+	}
+
+	for i := len(res) - 1; i >= 0; i-- {
+		highPriority := getPriority(res[i].NodeRef, entropy)
+		for _, claim := range priorityMap {
+			assert.True(t, bytes.Compare(highPriority, claim) >= 0)
+		}
+	}
 }
