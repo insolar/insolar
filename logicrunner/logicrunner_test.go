@@ -22,7 +22,6 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"net/rpc"
 	"os"
@@ -30,6 +29,8 @@ import (
 	"runtime"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/stretchr/testify/suite"
 	"github.com/ugorji/go/codec"
@@ -204,7 +205,7 @@ func (s *LogicRunnerFuncSuite) incrementPulseHelper(ctx context.Context, lr core
 	currentPulse, _ := pulseStorage.Current(ctx)
 
 	newPulseNumber := currentPulse.PulseNumber + 1
-	err := lr.(*LogicRunner).Ledger.GetPulseManager().Set(
+	err := pm.Set(
 		ctx,
 		core.Pulse{PulseNumber: newPulseNumber, Entropy: core.Entropy{}},
 		true,
@@ -1342,7 +1343,7 @@ func New(n int) (*Child, error) {
 	})
 
 	newPulse := core.Pulse{PulseNumber: 1231234, Entropy: core.Entropy{}}
-	err = lr.(*LogicRunner).Ledger.GetPulseManager().Set(
+	err = lr.(*LogicRunner).PulseStorage.(core.PulseManager).Set(
 		ctx, newPulse, true,
 	)
 	s.NoError(err)

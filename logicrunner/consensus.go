@@ -64,11 +64,11 @@ func (c *Consensus) AddValidated(ctx context.Context, sm core.Parcel, msg *messa
 	defer c.Unlock()
 	if _, ok := c.Results[source]; !ok {
 		return errors.Errorf("Validation packet from non validation node for %#v", sm)
-	} else {
-		c.Results[source] = ConsensusRecord{
-			Steps: msg.PassedStepsCount,
-			Error: msg.Error,
-		}
+	}
+
+	c.Results[source] = ConsensusRecord{
+		Steps: msg.PassedStepsCount,
+		Error: msg.Error,
 	}
 	c.Have++
 	c.CheckReady(ctx)

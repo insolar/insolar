@@ -25,7 +25,7 @@ import (
 )
 
 // CertificateManager is a component for working with current node certificate
-type CertificateManager struct {
+type CertificateManager struct { //nolint: golint
 	CS          core.CryptographyService `inject:""`
 	certificate core.Certificate
 }
