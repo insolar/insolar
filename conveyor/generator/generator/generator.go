@@ -25,16 +25,17 @@ import (
 	"log"
 )
 
-type method struct {
+type handler struct {
 	name string
 	params []string
 	results []string
 }
+
 type state struct {
 	name string
-	transit *method
-	error *method
-	migrate *method
+	transit *handler
+	error *handler
+	migrate *handler
 }
 
 type initHandler struct {
@@ -129,84 +130,84 @@ func (g *Generator) parseStateMachineInterface(machine *stateMachine, source *as
 		}
 		methodType := methodItem.Type.(*ast.FuncType)
 
-		currentMethod := &method{
+		currentHandler := &handler{
 			name: methodItem.Names[0].Name,
 			params: remap(g.sourceCode, methodType.Params),
 			results: remap(g.sourceCode, methodType.Results),
 		}
 		switch {
-		case currentMethod.name == "Init":
-			g.parseInit(machine, currentMethod)
-		case strings.HasPrefix(currentMethod.name, "State"):
-			g.parseState(machine, currentMethod)
-		case strings.HasPrefix(currentMethod.name, "Transit"):
-			g.parseTransit(machine, currentMethod)
-		case strings.HasPrefix(currentMethod.name, "Migrate"):
-			g.parseMigrate(machine, currentMethod)
-		case strings.HasPrefix(currentMethod.name, "Error"):
-			g.parseError(machine, currentMethod)
+		case currentHandler.name == "Init":
+			g.parseInit(machine, currentHandler)
+		case strings.HasPrefix(currentHandler.name, "State"):
+			g.parseState(machine, currentHandler)
+		case strings.HasPrefix(currentHandler.name, "Transit"):
+			g.parseTransit(machine, currentHandler)
+		case strings.HasPrefix(currentHandler.name, "Migrate"):
+			g.parseMigrate(machine, currentHandler)
+		case strings.HasPrefix(currentHandler.name, "Error"):
+			g.parseError(machine, currentHandler)
 		default:
-			log.Fatal("Unknokn handler:", currentMethod.name)
+			log.Fatal("Unknokn handler:", currentHandler.name)
 		}
 	}
 	g.stateMachines = append(g.stateMachines, machine)
 }
 
-func (g *Generator) parseInit(machine *stateMachine, m *method) {
-	if len(m.params) != 1 {
+func (g *Generator) parseInit(machine *stateMachine, h *handler) {
+	if len(h.params) != 1 {
 		log.Fatal("Init must have only one parameter")
 	}
-	if len(m.results) != 3 {
+	if len(h.results) != 3 {
 		log.Fatal("Init should return three values")
 	}
-	if !strings.HasPrefix(m.results[0], "*") {
+	if !strings.HasPrefix(h.results[0], "*") {
 		log.Fatal("Returned payload should be a pointer")
 	}
-	if m.results[1] != "common.ElState" {
+	if h.results[1] != "common.ElState" {
 		log.Fatal("Returned state should be common.ElState")
 	}
-	if m.results[2] != "error" {
+	if h.results[2] != "error" {
 		log.Fatal("Returned error must be of type error")
 	}
 	if machine.Init != nil {
 		log.Fatal("Only one init handler for state machine")
 	}
 	machine.Init = &initHandler{
-		eventType: m.params[0],
-		payloadType: m.results[0],
+		eventType: h.params[0],
+		payloadType: h.results[0],
 	}
 }
 
-func (g *Generator) parseState(machine *stateMachine, m *method) {
-	if len(m.params) != 0 {
+func (g *Generator) parseState(machine *stateMachine, h *handler) {
+	if len(h.params) != 0 {
 		log.Fatal("State must not have any parameters")
 	}
-	if len(m.results) != 1 || m.results[0] != "common.ElState" {
+	if len(h.results) != 1 || h.results[0] != "common.ElState" {
 		log.Fatal("State should returns only common.ElState")
 	}
-	machine.States = append(machine.States, state{name: m.name})
+	machine.States = append(machine.States, state{name: h.name})
 }
 
-func (g *Generator) parseTransit(machine *stateMachine, m *method) {
-	if len(m.params) != 2 {
+func (g *Generator) parseTransit(machine *stateMachine, h *handler) {
+	if len(h.params) != 2 {
 		log.Fatal("Transit must have two parameters")
 	}
-	if m.params[0] != machine.Init.eventType {
+	if h.params[0] != machine.Init.eventType {
 		log.Fatal("Event should be of the same type with the event in the init")
 	}
-	if !strings.HasPrefix(m.params[1], "*") {
+	if !strings.HasPrefix(h.params[1], "*") {
 		log.Fatal("Payload must be a pointer")
 	}
-	if len(m.results) != 3 {
+	if len(h.results) != 3 {
 		log.Fatal("Transit should return three values")
 	}
-	if !strings.HasPrefix(m.results[0], "*") {
+	if !strings.HasPrefix(h.results[0], "*") {
 		log.Fatal("Returned payload should be a pointer")
 	}
-	if m.results[1] != "common.ElState" {
+	if h.results[1] != "common.ElState" {
 		log.Fatal("Returned state should be common.ElState")
 	}
-	if m.results[2] != "error" {
+	if h.results[2] != "error" {
 		log.Fatal("Returned error must be of type error")
 	}
 	if len(machine.States) < 1 {
@@ -215,29 +216,29 @@ func (g *Generator) parseTransit(machine *stateMachine, m *method) {
 	if machine.States[len(machine.States)-1].transit != nil {
 		log.Fatal("Only one transit handler for state")
 	}
-	machine.States[len(machine.States)-1].transit = m
+	machine.States[len(machine.States)-1].transit = h
 }
 
-func (g *Generator) parseMigrate(machine *stateMachine, m *method) {
-	if len(m.params) != 2 {
+func (g *Generator) parseMigrate(machine *stateMachine, h *handler) {
+	if len(h.params) != 2 {
 		log.Fatal("Migrate must have two parameters")
 	}
-	if m.params[0] != machine.Init.eventType {
+	if h.params[0] != machine.Init.eventType {
 		log.Fatal("Event should be of the same type with the event in the init")
 	}
-	if !strings.HasPrefix(m.params[1], "*") {
+	if !strings.HasPrefix(h.params[1], "*") {
 		log.Fatal("Payload must be a pointer")
 	}
-	if len(m.results) != 3 {
+	if len(h.results) != 3 {
 		log.Fatal("Migrate should return three values")
 	}
-	if !strings.HasPrefix(m.results[0], "*") {
+	if !strings.HasPrefix(h.results[0], "*") {
 		log.Fatal("Returned payload should be a pointer")
 	}
-	if m.results[1] != "common.ElState" {
+	if h.results[1] != "common.ElState" {
 		log.Fatal("Returned state should be common.ElState")
 	}
-	if m.results[2] != "error" {
+	if h.results[2] != "error" {
 		log.Fatal("Returned error must be of type error")
 	}
 	if len(machine.States) < 1 {
@@ -246,29 +247,29 @@ func (g *Generator) parseMigrate(machine *stateMachine, m *method) {
 	if machine.States[len(machine.States)-1].migrate != nil {
 		log.Fatal("Only one migrate handler for state")
 	}
-	machine.States[len(machine.States)-1].migrate = m
+	machine.States[len(machine.States)-1].migrate = h
 }
 
-func (g *Generator) parseError(machine *stateMachine, m *method) {
-	if len(m.params) != 3 {
+func (g *Generator) parseError(machine *stateMachine, h *handler) {
+	if len(h.params) != 3 {
 		log.Fatal("Error handler must have three parameters")
 	}
-	if m.params[0] != machine.Init.eventType {
+	if h.params[0] != machine.Init.eventType {
 		log.Fatal("Event should be of the same type with the event in the init")
 	}
-	if !strings.HasPrefix(m.params[1], "*") {
+	if !strings.HasPrefix(h.params[1], "*") {
 		log.Fatal("Payload must be a pointer")
 	}
-	if m.params[2] != "error" {
+	if h.params[2] != "error" {
 		log.Fatal("Third parameter must be of type error")
 	}
-	if len(m.results) != 2 {
+	if len(h.results) != 2 {
 		log.Fatal("Error should return two values")
 	}
-	if !strings.HasPrefix(m.results[0], "*") {
+	if !strings.HasPrefix(h.results[0], "*") {
 		log.Fatal("Returned payload should be a pointer")
 	}
-	if m.results[1] != "common.ElState" {
+	if h.results[1] != "common.ElState" {
 		log.Fatal("Returned state should be common.ElState")
 	}
 	if len(machine.States) < 1 {
@@ -277,5 +278,5 @@ func (g *Generator) parseError(machine *stateMachine, m *method) {
 	if machine.States[len(machine.States)-1].error != nil {
 		log.Fatal("Only one error handler for state")
 	}
-	machine.States[len(machine.States)-1].error = m
+	machine.States[len(machine.States)-1].error = h
 }
