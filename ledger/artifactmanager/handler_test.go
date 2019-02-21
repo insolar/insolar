@@ -77,7 +77,7 @@ func (s *handlerSuite) BeforeTest(suiteName, testName string) {
 	db, cleaner := storagetest.TmpDB(s.ctx, s.T())
 	s.cleaner = cleaner
 	s.db = db
-	s.scheme = platformpolicy.NewPlatformCryptographyScheme()
+	s.scheme = testutils.NewPlatformCryptographyScheme()
 	s.jetStorage = storage.NewJetStorage()
 	s.nodeStorage = storage.NewNodeStorage()
 	s.pulseTracker = storage.NewPulseTracker()
@@ -582,7 +582,7 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_UpdateIndexState() 
 	amendRecord := record.ObjectAmendRecord{
 		PrevState: *objIndex.LatestState,
 	}
-	amendHash := s.db.GetPlatformCryptographyScheme().ReferenceHasher()
+	amendHash := testutils.NewPlatformCryptographyScheme().ReferenceHasher()
 	_, err := amendRecord.WriteHashData(amendHash)
 	require.NoError(s.T(), err)
 
