@@ -115,7 +115,7 @@ func (gi *genesisInitializer) Init(ctx context.Context) error {
 
 	var err error
 	gi.genesisRef, err = getGenesisRef()
-	if err == ErrNotFound {
+	if err == core.ErrNotFound {
 		gi.genesisRef, err = createGenesisRecord()
 	}
 	if err != nil {

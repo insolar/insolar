@@ -28,6 +28,7 @@ import (
 )
 
 const defaultSkipCallNumber = 3
+const timestampFormat = "2006-01-02 15:04:05.000000"
 
 // NewLog creates logger instance with particular configuration
 func NewLog(cfg configuration.Log) (core.Logger, error) {
@@ -37,6 +38,8 @@ func NewLog(cfg configuration.Log) (core.Logger, error) {
 	switch strings.ToLower(cfg.Adapter) {
 	case "logrus":
 		logger, err = newLogrusAdapter(cfg)
+	case "zerolog":
+		logger, err = newZerologAdapter(cfg)
 	default:
 		err = errors.New("unknown adapter")
 	}
@@ -57,12 +60,12 @@ func NewLog(cfg configuration.Log) (core.Logger, error) {
 // TODO: make it private again
 var GlobalLogger = func() core.Logger {
 	holder := configuration.NewHolder().MustInit(false)
-	logger, err := newLogrusAdapter(holder.Configuration.Log)
+	logger, err := NewLog(holder.Configuration.Log)
 	if err != nil {
 		stdlog.Println("warning:", err.Error())
 	}
 
-	logger.skipCallNumber = defaultSkipCallNumber + 1
+	//logger.skipCallNumber = defaultSkipCallNumber + 1
 	if err := logger.SetLevel(holder.Configuration.Log.Level); err != nil {
 		stdlog.Println("warning:", err.Error())
 	}
@@ -76,11 +79,6 @@ func SetGlobalLogger(logger core.Logger) {
 // SetLevel lets log level for global logger
 func SetLevel(level string) error {
 	return GlobalLogger.SetLevel(level)
-}
-
-// GetLevel lets log level for global logger
-func GetLevel() string {
-	return GlobalLogger.GetLevel()
 }
 
 // Debug logs a message at level Debug to the global logger.

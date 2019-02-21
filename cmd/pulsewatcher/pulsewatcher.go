@@ -178,8 +178,10 @@ func main() {
 		buffer.Reset()
 
 		stateString := insolarReady
+		color := tablewriter.FgHiGreenColor
 		if !state || errored == len(conf.Nodes) {
 			stateString = insolarNotReady
+			color = tablewriter.FgHiRedColor
 		}
 
 		table.SetFooter([]string{
@@ -187,6 +189,19 @@ func main() {
 			"Insolar State", stateString,
 			"Time", time.Now().Format(time.RFC3339),
 		})
+		table.SetFooterColor(
+			tablewriter.Colors{},
+			tablewriter.Colors{},
+			tablewriter.Colors{},
+			tablewriter.Colors{},
+			tablewriter.Colors{},
+
+			tablewriter.Colors{},
+			tablewriter.Colors{color},
+
+			tablewriter.Colors{},
+			tablewriter.Colors{},
+		)
 
 		lock.Lock()
 		table.AppendBulk(results)

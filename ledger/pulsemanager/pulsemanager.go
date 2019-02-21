@@ -128,6 +128,7 @@ func (m *PulseManager) processEndPulse(
 	ctx, span := instracer.StartSpan(ctx, "pulse.process_end")
 	defer span.End()
 
+	logger := inslogger.FromContext(ctx)
 	for _, i := range jets {
 		info := i
 
@@ -143,9 +144,14 @@ func (m *PulseManager) processEndPulse(
 				msg.Jet = *core.NewRecordRef(core.DomainID, jetID)
 				genericRep, err := m.Bus.Send(ctx, &msg, nil)
 				if err != nil {
+					logger.WithField("err", err).Error("failed to send hot data")
 					return
 				}
 				if _, ok := genericRep.(*reply.OK); !ok {
+					logger.WithField(
+						"err",
+						fmt.Sprintf("unexpected reply: %T", genericRep),
+					).Error("failed to send hot data")
 					return
 				}
 			}
@@ -208,9 +214,9 @@ func (m *PulseManager) createDrop(
 ) {
 	var prevDrop *jet.JetDrop
 	prevDrop, err = m.DropStorage.GetDrop(ctx, jetID, prevPulse)
-	if err == storage.ErrNotFound {
+	if err == core.ErrNotFound {
 		prevDrop, err = m.DropStorage.GetDrop(ctx, jet.Parent(jetID), prevPulse)
-		if err == storage.ErrNotFound {
+		if err == core.ErrNotFound {
 			inslogger.FromContext(ctx).WithFields(map[string]interface{}{
 				"pulse": prevPulse,
 				"jet":   jetID.DebugString(),
@@ -362,8 +368,8 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse c
 			wasExecutor = *executor == me
 		}
 
-		jetLogger := logger.WithField("jetid", jetID.DebugString())
-		inslogger.SetLogger(ctx, jetLogger)
+		logger = logger.WithField("jetid", jetID.DebugString())
+		inslogger.SetLogger(ctx, logger)
 		logger.WithField("i_was_executor", wasExecutor).Debug("process jet")
 		if !wasExecutor {
 			continue
@@ -444,7 +450,7 @@ func (m *PulseManager) rewriteHotData(ctx context.Context, fromJetID, toJetID co
 	for id := range indexStorage.GetObjects() {
 		idx, err := m.ObjectStorage.GetObjectIndex(ctx, fromJetID, &id, false)
 		if err != nil {
-			if err == storage.ErrNotFound {
+			if err == core.ErrNotFound {
 				logger.WithField("id", id.DebugString()).Error("rewrite index not found")
 				continue
 			}
@@ -572,6 +578,10 @@ func (m *PulseManager) setUnderGilSection(
 
 	m.PulseStorage.Set(&newPulse)
 	m.PulseStorage.Unlock()
+
+	if m.NodeNet.GetOrigin().Role() == core.StaticRoleHeavyMaterial {
+		return nil, nil, nil, nil, nil
+	}
 
 	var jets []jetInfo
 	if persist && oldPulse != nil {

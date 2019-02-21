@@ -80,12 +80,12 @@ func (pt *pulseTracker) AddPulse(ctx context.Context, pulse core.Pulse) error {
 		_, err := tx.get(ctx, prefixkey(scopeIDPulse, pulse.PulseNumber.Bytes()))
 		if err == nil {
 			return ErrOverride
-		} else if err != ErrNotFound {
+		} else if err != core.ErrNotFound {
 			return err
 		}
 
 		previousPulse, err := tx.GetLatestPulse(ctx)
-		if err != nil && err != ErrNotFound {
+		if err != nil && err != core.ErrNotFound {
 			return err
 		}
 
@@ -174,7 +174,7 @@ func (pt *pulseTracker) GetNthPrevPulse(ctx context.Context, n uint, num core.Pu
 		for n > 0 {
 			if pulse.Prev == nil {
 				pulse = nil
-				return ErrNotFound
+				return core.ErrNotFound
 			}
 			pulse, err = tx.GetPulse(ctx, *pulse.Prev)
 			if err != nil {

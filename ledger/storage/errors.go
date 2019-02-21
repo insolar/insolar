@@ -23,9 +23,6 @@ import (
 )
 
 var (
-	// ErrNotFound returns if record/index not found in storage.
-	ErrNotFound = errors.New("storage object not found")
-
 	// ErrConflictRetriesOver is returned if Update transaction fails on all retry attempts.
 	ErrConflictRetriesOver = errors.New("transaction conflict retries limit exceeded")
 

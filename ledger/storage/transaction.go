@@ -230,7 +230,7 @@ func (m *TransactionManager) get(ctx context.Context, key []byte) ([]byte, error
 	item, err := txn.Get(key)
 	if err != nil {
 		if err == badger.ErrKeyNotFound {
-			return nil, ErrNotFound
+			return nil, core.ErrNotFound
 		}
 		return nil, err
 	}
