@@ -43,7 +43,7 @@ func TestJoinClaimHandler_HandleClaim(t *testing.T) {
 
 	handler := NewJoinHandler(activeNodesCount)
 	res := handler.HandleClaims(claims, entropy)
-	assert.Len(t, res, activeNodesCount)
+	assert.Len(t, res, int(float64(activeNodesCount)*NodesToJoinPercent))
 
 	for _, claim := range res {
 		delete(priorityMap, claim.NodeRef)

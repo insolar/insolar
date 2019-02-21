@@ -58,7 +58,7 @@ func (jch *JoinHandler) getClaimsByPriority() []*packets.NodeJoinClaim {
 		nodesToJoin++
 	}
 	logger := inslogger.FromContext(context.Background())
-	for i := 0.0; i < math.Min(nodesToJoin, float64(jch.queue.Len())); i++ {
+	for i := 0; i < int(math.Min(nodesToJoin, float64(jch.queue.Len()))); i++ {
 		res = append(res, jch.queue.PopClaim().(*packets.NodeJoinClaim))
 	}
 	logger.Debugf("[ getClaimsByPriority ] handle join claims. max nodes to join: %d, join nodes count: %d", nodesToJoin, len(res))
