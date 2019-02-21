@@ -52,8 +52,8 @@ func (jch *JoinHandler) getClaimsByPriority() []*packets.NodeJoinClaim {
 	res := make([]*packets.NodeJoinClaim, 0)
 	nodesToJoin := int(float64(jch.activeCount) * NodesToJoinPercent)
 
-	if jch.activeCount == 0 {
-		nodesToJoin = jch.queue.Len()
+	if nodesToJoin == 0 {
+		nodesToJoin++
 	}
 	logger := inslogger.FromContext(context.Background())
 	for i := 0; i < nodesToJoin; i++ {
