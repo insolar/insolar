@@ -843,7 +843,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 
 		id, err := tx.SetRecord(ctx, jetID, parcel.Pulse(), rec)
 		if err == storage.ErrOverride {
-			inslogger.FromContext(ctx).WithField("type", fmt.Sprintf("%T", rec)).Warn("set record override (#1)")
+			logger.WithField("type", fmt.Sprintf("%T", rec)).Warn("set record override (#1)")
 		} else if err != nil {
 			return err
 		}
@@ -862,6 +862,8 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 		}
 		return nil, err
 	}
+
+	logger.WithField("state", idx.LatestState.DebugString()).Debug("saved object")
 
 	rep := reply.Object{
 		Head:         msg.Object,

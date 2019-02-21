@@ -128,6 +128,7 @@ func (m *PulseManager) processEndPulse(
 	ctx, span := instracer.StartSpan(ctx, "pulse.process_end")
 	defer span.End()
 
+	logger := inslogger.FromContext(ctx)
 	for _, i := range jets {
 		info := i
 
@@ -143,9 +144,14 @@ func (m *PulseManager) processEndPulse(
 				msg.Jet = *core.NewRecordRef(core.DomainID, jetID)
 				genericRep, err := m.Bus.Send(ctx, &msg, nil)
 				if err != nil {
+					logger.WithField("err", err).Error("failed to send hot data")
 					return
 				}
 				if _, ok := genericRep.(*reply.OK); !ok {
+					logger.WithField(
+						"err",
+						fmt.Sprintf("unexpected reply: %T", genericRep),
+					).Error("failed to send hot data")
 					return
 				}
 			}
@@ -362,8 +368,8 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse c
 			wasExecutor = *executor == me
 		}
 
-		jetLogger := logger.WithField("jetid", jetID.DebugString())
-		inslogger.SetLogger(ctx, jetLogger)
+		logger = logger.WithField("jetid", jetID.DebugString())
+		inslogger.SetLogger(ctx, logger)
 		logger.WithField("i_was_executor", wasExecutor).Debug("process jet")
 		if !wasExecutor {
 			continue
