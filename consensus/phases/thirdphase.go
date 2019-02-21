@@ -74,7 +74,7 @@ func (tp *ThirdPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse, state 
 	logger.Infof("[ NET Consensus phase-3 ] received responses: %d/%d", len(responses), totalCount)
 	err = stats.RecordWithTags(ctx, []tag.Mutator{tag.Upsert(consensus.TagPhase, "phase 3")}, consensus.PacketsRecv.M(int64(len(responses))))
 	if err != nil {
-		logger.Warn("[ NET Consensus phase-3 ] failed to record a metric")
+		logger.Warn("[ NET Consensus phase-3 ] Failed to record received responses metric: " + err.Error())
 	}
 
 	for ref, packet := range responses {

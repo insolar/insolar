@@ -55,7 +55,6 @@ type fixture struct {
 	ctx            context.Context
 	bootstrapNodes []*networkNode
 	networkNodes   []*networkNode
-	testNode       *networkNode
 	pulsar         TestPulsar
 }
 
@@ -94,7 +93,7 @@ func (s *testSuite) SetupTest() {
 	s.fixture().pulsar, err = NewTestPulsar(pulseTimeMs, reqTimeoutMs, pulseDelta)
 	require.NoError(s.T(), err)
 
-	log.Infoln("SetupTest")
+	log.Info("SetupTest")
 
 	for i := 0; i < s.bootstrapCount; i++ {
 		s.fixture().bootstrapNodes = append(s.fixture().bootstrapNodes, newNetworkNode())
@@ -103,8 +102,6 @@ func (s *testSuite) SetupTest() {
 	for i := 0; i < s.nodesCount; i++ {
 		s.fixture().networkNodes = append(s.fixture().networkNodes, newNetworkNode())
 	}
-
-	s.fixture().testNode = newNetworkNode()
 
 	pulseReceivers := make([]string, 0)
 	for _, node := range s.fixture().bootstrapNodes {
@@ -115,7 +112,7 @@ func (s *testSuite) SetupTest() {
 	err = s.fixture().pulsar.Start(s.fixture().ctx, pulseReceivers)
 	require.NoError(s.T(), err)
 
-	log.Infoln("Setup bootstrap nodes")
+	log.Info("Setup bootstrap nodes")
 	s.SetupNodesNetwork(s.fixture().bootstrapNodes)
 
 	<-time.After(time.Second * 2)
@@ -123,7 +120,7 @@ func (s *testSuite) SetupTest() {
 	require.Equal(s.T(), len(s.fixture().bootstrapNodes), len(activeNodes))
 
 	if len(s.fixture().networkNodes) > 0 {
-		log.Infoln("Setup network nodes")
+		log.Info("Setup network nodes")
 		s.SetupNodesNetwork(s.fixture().networkNodes)
 		s.waitForConsensus(2)
 
@@ -168,7 +165,7 @@ func (s *testSuite) SetupNodesNetwork(nodes []*networkNode) {
 		}
 	}
 
-	log.Infoln("Init nodes")
+	log.Info("Init nodes")
 	for _, node := range nodes {
 		go initNode(node)
 	}
@@ -176,7 +173,7 @@ func (s *testSuite) SetupNodesNetwork(nodes []*networkNode) {
 	err := waitResults(results, len(nodes))
 	s.NoError(err)
 
-	log.Infoln("Start nodes")
+	log.Info("Start nodes")
 	for _, node := range nodes {
 		go startNode(node)
 	}
@@ -188,12 +185,12 @@ func (s *testSuite) SetupNodesNetwork(nodes []*networkNode) {
 // TearDownSuite shutdowns all nodes in network, calls once after all tests in suite finished
 func (s *testSuite) TearDownTest() {
 	log.Info("=================== TearDownTest()")
-	log.Infoln("Stop network nodes")
+	log.Info("Stop network nodes")
 	for _, n := range s.fixture().networkNodes {
 		err := n.componentManager.Stop(s.fixture().ctx)
 		s.NoError(err)
 	}
-	log.Infoln("Stop bootstrap nodes")
+	log.Info("Stop bootstrap nodes")
 	for _, n := range s.fixture().bootstrapNodes {
 		err := n.componentManager.Stop(s.fixture().ctx)
 		s.NoError(err)
@@ -241,23 +238,23 @@ func (s *testSuite) getNodesCount() int {
 	return len(s.fixture().bootstrapNodes) + len(s.fixture().networkNodes)
 }
 
-func (s *testSuite) InitTestNode() {
-	if s.fixture().testNode.componentManager != nil {
-		err := s.fixture().testNode.init(s.fixture().ctx)
+func (s *testSuite) InitNode(node *networkNode) {
+	if node.componentManager != nil {
+		err := node.init(s.fixture().ctx)
 		s.NoError(err)
 	}
 }
 
-func (s *testSuite) StartTestNode() {
-	if s.fixture().testNode.componentManager != nil {
-		err := s.fixture().testNode.componentManager.Start(s.fixture().ctx)
+func (s *testSuite) StartNode(node *networkNode) {
+	if node.componentManager != nil {
+		err := node.componentManager.Start(s.fixture().ctx)
 		s.NoError(err)
 	}
 }
 
-func (s *testSuite) StopTestNode() {
-	if s.fixture().testNode.componentManager != nil {
-		err := s.fixture().testNode.componentManager.Stop(s.fixture().ctx)
+func (s *testSuite) StopNode(node *networkNode) {
+	if node.componentManager != nil {
+		err := node.componentManager.Stop(s.fixture().ctx)
 		s.NoError(err)
 	}
 }
@@ -413,9 +410,9 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	realKeeper := nodenetwork.NewNodeKeeper(origin)
 	terminationHandler := &terminationHandler{NodeID: origin.ID()}
 
-	realKeeper.SetState(network.Waiting)
+	realKeeper.SetState(core.WaitingNodeNetworkState)
 	if len(certManager.GetCertificate().GetDiscoveryNodes()) == 0 || utils.OriginIsDiscovery(certManager.GetCertificate()) {
-		realKeeper.SetState(network.Ready)
+		realKeeper.SetState(core.ReadyNodeNetworkState)
 		realKeeper.AddActiveNodes([]core.Node{origin})
 	}
 

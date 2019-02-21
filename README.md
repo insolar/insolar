@@ -5,6 +5,7 @@ Enterprise-ready blockchain platform
 [![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/2150/badge)](https://bestpractices.coreinfrastructure.org/projects/2150)
 
 [![Build Status](https://travis-ci.org/insolar/insolar.svg?branch=master)](https://travis-ci.org/insolar/insolar)
+[![GolangCI](https://golangci.com/badges/github.com/insolar/insolar.svg)](https://golangci.com/r/github.com/insolar/insolar/)
 [![Go Report Card](https://goreportcard.com/badge/github.com/insolar/insolar)](https://goreportcard.com/report/github.com/insolar/insolar)
 [![GoDoc](https://godoc.org/github.com/insolar/insolar?status.svg)](https://godoc.org/github.com/insolar/insolar)
 [![codecov](https://codecov.io/gh/insolar/insolar/branch/master/graph/badge.svg)](https://codecov.io/gh/insolar/insolar)
@@ -75,9 +76,10 @@ Run launcher:
 
     scripts/insolard/launchnet.sh -g
 
-It will generate genesis data and launch a number of nodes. Default number is 5, you can uncomment more nodes in `scripts/insolard/genesis.yaml`. One node will be launched in foreground, others in background.
+It will generate genesis data and launch a number of nodes. Default number is 5, you can uncomment more nodes in `scripts/insolard/genesis.yaml`.
 
-After network has started (you will see messages like “NODE 3 STARTED in background” in log) you can run test scripts and benchmarks:
+After node processes are started you will see messages like “NODE 3 STARTED in background” in log and PulseWatcher will be started.
+When you see `Ready` in Insolar State you can run test scripts and benchmarks:
 
     bin/apirequester -k=scripts/insolard/configs/root_member_keys.json -u=http://127.0.0.1:19101/api
 

@@ -17,7 +17,6 @@
 package storage
 
 import (
-	"fmt"
 	"sync"
 
 	"github.com/insolar/insolar/core"
@@ -75,7 +74,7 @@ func (a *nodeStorage) GetActiveNodes(pulse core.PulseNumber) ([]core.Node, error
 
 	nodes, ok := a.nodeHistory[pulse]
 	if !ok {
-		return nil, fmt.Errorf("GetActiveNodes: no nodes for pulse %v", pulse)
+		return nil, core.ErrNoNodes
 	}
 	res := make([]core.Node, len(nodes))
 	for i, n := range nodes {
@@ -92,7 +91,7 @@ func (a *nodeStorage) GetActiveNodesByRole(pulse core.PulseNumber, role core.Sta
 
 	nodes, ok := a.nodeHistory[pulse]
 	if !ok {
-		return nil, fmt.Errorf("GetActiveNodesByRole: no nodes for pulse %v", pulse)
+		return nil, core.ErrNoNodes
 	}
 	var inRole []core.Node
 	for _, n := range nodes {

@@ -31,15 +31,15 @@ import (
 
 const nonceSize int = 128
 
-// checkShortIDCollision returns true if NodeKeeper already contains node with such ShortID
-func checkShortIDCollision(keeper network.NodeKeeper, id core.ShortNodeID) bool {
+// CheckShortIDCollision returns true if NodeKeeper already contains node with such ShortID
+func CheckShortIDCollision(keeper network.NodeKeeper, id core.ShortNodeID) bool {
 	return keeper.GetActiveNodeByShortID(id) != nil
 }
 
 // GenerateShortID correct ShortID of the node so it does not conflict with existing active node list
 func GenerateShortID(keeper network.NodeKeeper, nodeID core.RecordRef) core.ShortNodeID {
 	shortID := utils.GenerateShortID(nodeID)
-	if !checkShortIDCollision(keeper, shortID) {
+	if !CheckShortIDCollision(keeper, shortID) {
 		return shortID
 	}
 	return regenerateShortID(keeper, shortID)

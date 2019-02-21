@@ -76,12 +76,16 @@ func (tc *transportConsensus) SignAndSendPacket(packet packets.ConsensusPacket,
 	}
 	ctx := context.Background()
 	p := tc.buildPacket(packet, receiverHost)
-	err = stats.RecordWithTags(ctx, []tag.Mutator{tag.Upsert(consensus.TagPhase, packet.GetType().String())}, consensus.PacketsSent.M(1))
-	if err != nil {
-		log.Warn(" [ transportConsensus ] failed to record a metric")
+	err = tc.transport.SendPacket(ctx, p)
+	if err == nil {
+		statsErr := stats.RecordWithTags(ctx, []tag.Mutator{
+			tag.Upsert(consensus.TagPhase, packet.GetType().String()),
+		}, consensus.PacketsSent.M(1))
+		if statsErr != nil {
+			log.Warn(" [ transportConsensus ] Failed to record sent packets metric: " + statsErr.Error())
+		}
 	}
-
-	return tc.transport.SendPacket(ctx, p)
+	return err
 }
 
 func (tc *transportConsensus) buildPacket(p packets.ConsensusPacket, receiver *host.Host) *packet.Packet {

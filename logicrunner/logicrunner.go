@@ -66,16 +66,14 @@ type CurrentExecution struct {
 }
 
 type ExecutionQueueResult struct {
-	reply        core.Reply
-	err          error
-	somebodyElse bool
+	reply core.Reply
+	err   error
 }
 
 type ExecutionQueueElement struct {
 	ctx        context.Context
 	parcel     core.Parcel
 	request    *Ref
-	pulse      core.PulseNumber
 	fromLedger bool
 }
 
@@ -131,10 +129,8 @@ func (st *ObjectState) WrapError(err error, message string) error {
 
 // LogicRunner is a general interface of contract executor
 type LogicRunner struct {
-	// FIXME: Ledger component is deprecated. Inject required sub-components.
 	MessageBus                 core.MessageBus                 `inject:""`
 	ContractRequester          core.ContractRequester          `inject:""`
-	Ledger                     core.Ledger                     `inject:""`
 	NodeNetwork                core.NodeNetwork                `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 	ParcelFactory              message.ParcelFactory           `inject:""`
@@ -315,24 +311,31 @@ func (lr *LogicRunner) executeActual(ctx context.Context, parcel core.Parcel, ms
 		es.Unlock()
 		return nil, os.WrapError(nil, "loop detected")
 	}
+	es.Unlock()
 
 	request, err := lr.RegisterRequest(ctx, parcel)
 	if err != nil {
-		es.Unlock()
 		return nil, os.WrapError(err, "[ Execute ] can't create request")
 	}
 
-	_, span := instracer.StartSpan(ctx, "LogicRunner.QueueCall")
-
-	// Attention! Do not refactor this line if no sure. Here is no bug. Many specialists spend lots of time
-	// to write it as it is.
-	span.End()
+	es.Lock()
+	pulse := lr.pulse(ctx)
+	if pulse.PulseNumber != parcel.Pulse() {
+		meCurrent, _ := lr.JetCoordinator.IsAuthorized(
+			ctx, core.DynamicRoleVirtualExecutor, *ref.Record(), pulse.PulseNumber, lr.JetCoordinator.Me(),
+		)
+		if !meCurrent {
+			es.Unlock()
+			return &reply.RegisterRequest{
+				Request: *request,
+			}, nil
+		}
+	}
 
 	qElement := ExecutionQueueElement{
 		ctx:     ctx,
 		parcel:  parcel,
 		request: request,
-		pulse:   lr.pulse(ctx).PulseNumber,
 	}
 
 	es.Queue = append(es.Queue, qElement)
@@ -479,6 +482,7 @@ func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionS
 		current := CurrentExecution{
 			Request:       qe.request,
 			RequesterNode: &sender,
+			Context:       qe.ctx,
 		}
 		es.Current = &current
 
@@ -493,22 +497,9 @@ func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionS
 
 		res := ExecutionQueueResult{}
 
-		recordingBus := lr.MessageBus
-		//recordingBus, err := lr.MessageBus.NewRecorder(qe.ctx, *lr.pulse(qe.ctx))
-		//if err != nil {
-		//	res.err = err
-		//	continue
-		//}
-
-		current.Context = core.ContextWithMessageBus(qe.ctx, recordingBus)
-
 		inslogger.FromContext(qe.ctx).Debug("Registering request within execution behaviour")
 
-		ok := es.Behaviour.(*ValidationSaver)
-		if ok == nil {
-			panic("not ValidationSaver behaviour in ProcessExecutionQueue()")
-		}
-		es.Behaviour.(*ValidationSaver).NewRequest(qe.parcel, *qe.request, recordingBus)
+		es.Behaviour.(*ValidationSaver).NewRequest(qe.parcel, *qe.request, lr.MessageBus)
 
 		res.reply, res.err = lr.executeOrValidate(current.Context, es, qe.parcel)
 
@@ -610,7 +601,7 @@ func (lr *LogicRunner) executeOrValidate(
 	go func() {
 		inslogger.FromContext(ctx).Debugf("Sending Method Results for ", request)
 
-		_, err := core.MessageBusFromContext(ctx, nil).Send(
+		_, err := core.MessageBusFromContext(ctx, lr.MessageBus).Send(
 			ctx,
 			&message.ReturnResults{
 				Caller:   lr.NodeNetwork.GetOrigin().ID(),
@@ -703,7 +694,6 @@ func (lr *LogicRunner) unsafeGetLedgerPendingRequest(ctx context.Context, es *Ex
 		ctx:        ctx,
 		parcel:     parcel,
 		request:    &request,
-		pulse:      pulse,
 		fromLedger: true,
 	}
 
@@ -774,7 +764,6 @@ func (lr *LogicRunner) prepareObjectState(ctx context.Context, msg *message.Exec
 					ctx:     qe.Parcel.Context(context.Background()),
 					parcel:  qe.Parcel,
 					request: qe.Request,
-					pulse:   qe.Pulse,
 				})
 		}
 		es.Queue = append(queueFromMessage, es.Queue...)
@@ -938,6 +927,9 @@ func (lr *LogicRunner) executeConstructorCall(
 			ctx,
 			Ref{}, *current.Request, m.ParentRef, m.PrototypeRef, m.SaveAs == message.Delegate, newData,
 		)
+		if err != nil {
+			return nil, es.WrapError(err, "couldn't activate object")
+		}
 		_, err = lr.ArtifactManager.RegisterResult(ctx, *current.Request, *current.Request, nil)
 		if err != nil {
 			return nil, es.WrapError(err, "couldn't save results")
@@ -1169,7 +1161,6 @@ func convertQueueToMessageQueue(queue []ExecutionQueueElement) []message.Executi
 		mq = append(mq, message.ExecutionQueueElement{
 			Parcel:  elem.parcel,
 			Request: elem.request,
-			Pulse:   elem.pulse,
 		})
 	}
 

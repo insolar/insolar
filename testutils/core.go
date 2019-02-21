@@ -18,9 +18,10 @@ package testutils
 
 import (
 	"crypto"
+	"crypto/rand"
 	"fmt"
 	"hash"
-	"math/rand"
+	"math/big"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/storage/jet"
@@ -60,7 +61,12 @@ func RandomID() core.RecordID {
 // RandomJet generates random jet with random depth.
 func RandomJet() core.RecordID {
 	// don't be too huge (i.e. 255)
-	depth := uint8(rand.Intn(128))
+	n, err := rand.Int(rand.Reader, big.NewInt(128))
+	if err != nil {
+		panic(err)
+	}
+
+	depth := uint8(n.Int64())
 	return RandomJetWithDepth(depth)
 }
 

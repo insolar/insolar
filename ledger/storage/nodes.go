@@ -58,3 +58,19 @@ func (Node) ShortID() core.ShortNodeID {
 func (Node) Version() string {
 	panic("implement me")
 }
+
+func (Node) Leaving() bool {
+	panic("implement me")
+}
+
+func (Node) LeavingETA() core.PulseNumber {
+	panic("implement me")
+}
+
+func (Node) IsWorking() bool {
+	panic("implement me")
+}
+
+func (Node) GetState() core.NodeState {
+	panic("implement me")
+}

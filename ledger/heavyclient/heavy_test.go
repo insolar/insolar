@@ -145,7 +145,7 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 	// Mock N3: nodenet returns mocked node (above)
 	// and add stub for GetActiveNodes
 	nodenetMock := network.NewNodeNetworkMock(s.T())
-	nodenetMock.GetActiveNodesMock.Return(nil)
+	nodenetMock.GetWorkingNodesMock.Return(nil)
 	nodenetMock.GetOriginMock.Return(nodeMock)
 
 	// Mock N4: message bus for Send method

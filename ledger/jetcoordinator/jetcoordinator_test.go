@@ -116,8 +116,7 @@ func (s *jetCoordinatorSuite) TestJetCoordinator_QueryRole() {
 	require.NoError(s.T(), err)
 
 	objID := core.NewRecordID(0, []byte{1, 42, 123})
-	err = s.jetStorage.UpdateJetTree(s.ctx, 0, true, *jet.NewID(50, []byte{1, 42, 123}))
-	require.NoError(s.T(), err)
+	s.jetStorage.UpdateJetTree(s.ctx, 0, true, *jet.NewID(50, []byte{1, 42, 123}))
 
 	selected, err := s.coordinator.QueryRole(s.ctx, core.DynamicRoleLightValidator, *objID, 0)
 	require.NoError(s.T(), err)

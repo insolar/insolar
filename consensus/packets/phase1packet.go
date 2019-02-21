@@ -118,7 +118,7 @@ func dataToPulse(number core.PulseNumber, data PulseDataExt) core.Pulse {
 	result.Entropy = data.Entropy
 	result.EpochPulseNumber = int(data.EpochPulseNo)
 	result.NextPulseNumber = number + core.PulseNumber(data.NextPulseDelta)
-	result.PrevPulseNumber = number + core.PulseNumber(data.PrevPulseDelta)
+	result.PrevPulseNumber = number - core.PulseNumber(data.PrevPulseDelta)
 	result.OriginID = data.OriginID
 	result.PulseTimestamp = int64(data.PulseTimestamp)
 	return result

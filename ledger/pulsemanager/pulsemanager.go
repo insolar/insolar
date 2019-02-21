@@ -18,6 +18,7 @@ package pulsemanager
 
 import (
 	"context"
+	"fmt"
 	"math/rand"
 	"sync"
 	"time"
@@ -265,26 +266,6 @@ func (m *PulseManager) createDrop(
 	return
 }
 
-func (m *PulseManager) processDrop(
-	ctx context.Context,
-	jetID core.RecordID,
-	pulse *core.Pulse,
-	dropSerialized []byte,
-	messages [][]byte,
-) error {
-	msg := &message.JetDrop{
-		JetID:       jetID,
-		Drop:        dropSerialized,
-		Messages:    messages,
-		PulseNumber: pulse.PulseNumber,
-	}
-	_, err := m.Bus.Send(ctx, msg, nil)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func (m *PulseManager) getExecutorHotData(
 	ctx context.Context,
 	jetID core.RecordID,
@@ -357,10 +338,7 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse c
 	ctx, span := instracer.StartSpan(ctx, "jets.process")
 	defer span.End()
 
-	tree, err := m.JetStorage.CloneJetTree(ctx, currentPulse, newPulse)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to clone jet tree into a new pulse")
-	}
+	tree := m.JetStorage.CloneJetTree(ctx, currentPulse, newPulse)
 
 	if m.NodeNet.GetOrigin().Role() != core.StaticRoleLightMaterial {
 		return nil, nil
@@ -375,16 +353,19 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse c
 	})
 	indexToSplit := rand.Intn(len(jetIDs))
 	for i, jetID := range jetIDs {
+		wasExecutor := false
 		executor, err := m.JetCoordinator.LightExecutorForJet(ctx, jetID, currentPulse)
-		if err != nil {
+		if err != nil && err != core.ErrNoNodes {
 			return nil, err
 		}
-		imExecutor := *executor == me
+		if err == nil {
+			wasExecutor = *executor == me
+		}
 
 		jetLogger := logger.WithField("jetid", jetID.DebugString())
 		inslogger.SetLogger(ctx, jetLogger)
-		logger.WithField("im_executor", imExecutor).Debug("process jet")
-		if !imExecutor {
+		logger.WithField("i_was_executor", wasExecutor).Debug("process jet")
+		if !wasExecutor {
 			continue
 		}
 
@@ -405,10 +386,7 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse c
 				return nil, errors.Wrap(err, "failed to add jets")
 			}
 			// Set actual because we are the last executor for jet.
-			err = m.JetStorage.UpdateJetTree(ctx, newPulse, true, *leftJetID, *rightJetID)
-			if err != nil {
-				return nil, errors.Wrap(err, "failed to update tree")
-			}
+			m.JetStorage.UpdateJetTree(ctx, newPulse, true, *leftJetID, *rightJetID)
 
 			info.left = &jetInfo{id: *leftJetID}
 			info.right = &jetInfo{id: *rightJetID}
@@ -441,10 +419,7 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse c
 			}).Info("jet split performed")
 		} else {
 			// Set actual because we are the last executor for jet.
-			err = m.JetStorage.UpdateJetTree(ctx, newPulse, true, jetID)
-			if err != nil {
-				return nil, errors.Wrap(err, "failed to update tree")
-			}
+			m.JetStorage.UpdateJetTree(ctx, newPulse, true, jetID)
 			nextExecutor, err := m.JetCoordinator.LightExecutorForJet(ctx, jetID, newPulse)
 			if err != nil {
 				return nil, err
@@ -503,7 +478,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 	)
 	defer span.End()
 
-	jets, jetIndexesRemoved, oldPulse, prevPulseNumber, err := m.setUnderGilSection(ctx, newPulse, persist)
+	jets, jetIndexesRemoved, oldPulse, prevPN, err := m.setUnderGilSection(ctx, newPulse, persist)
 	if err != nil {
 		return err
 	}
@@ -515,8 +490,8 @@ func (m *PulseManager) Set(ctx context.Context, newPulse core.Pulse, persist boo
 	// Run only on material executor.
 	// execute only on material executor
 	// TODO: do as much as possible async.
-	if m.NodeNet.GetOrigin().Role() == core.StaticRoleLightMaterial {
-		err = m.processEndPulse(ctx, jets, *prevPulseNumber, *oldPulse, newPulse)
+	if m.NodeNet.GetOrigin().Role() == core.StaticRoleLightMaterial && oldPulse != nil && prevPN != nil {
+		err = m.processEndPulse(ctx, jets, *prevPN, *oldPulse, newPulse)
 		if err != nil {
 			return err
 		}
@@ -545,6 +520,11 @@ func (m *PulseManager) setUnderGilSection(
 ) (
 	[]jetInfo, map[core.RecordID][]core.RecordID, *core.Pulse, *core.PulseNumber, error,
 ) {
+	var (
+		oldPulse *core.Pulse
+		prevPN   *core.PulseNumber
+	)
+
 	m.GIL.Acquire(ctx)
 	ctx, span := instracer.StartSpan(ctx, "pulse.gil_locked")
 	defer span.End()
@@ -553,19 +533,21 @@ func (m *PulseManager) setUnderGilSection(
 	m.PulseStorage.Lock()
 	// FIXME: @andreyromancev. 17.12.18. return core.Pulse here.
 	storagePulse, err := m.PulseTracker.GetLatestPulse(ctx)
-	if err != nil {
+	if err != nil && err != core.ErrNotFound {
 		m.PulseStorage.Unlock()
 		return nil, nil, nil, nil, errors.Wrap(err, "call of GetLatestPulseNumber failed")
 	}
 
-	oldPulse := storagePulse.Pulse
-	prevPulseNumber := storagePulse.Prev
+	if err != core.ErrNotFound {
+		oldPulse = &storagePulse.Pulse
+		prevPN = storagePulse.Prev
+		ctx, _ = inslogger.WithField(ctx, "current_pulse", fmt.Sprintf("%d", oldPulse.PulseNumber))
+	}
 
 	logger := inslogger.FromContext(ctx)
 	logger.WithFields(map[string]interface{}{
-		"new_pulse":     newPulse.PulseNumber,
-		"current_pulse": oldPulse.PulseNumber,
-		"persist":       persist,
+		"new_pulse": newPulse.PulseNumber,
+		"persist":   persist,
 	}).Debugf("received pulse")
 
 	// swap pulse
@@ -581,7 +563,7 @@ func (m *PulseManager) setUnderGilSection(
 			m.PulseStorage.Unlock()
 			return nil, nil, nil, nil, errors.Wrap(err, "call of AddPulse failed")
 		}
-		err = m.NodeStorage.SetActiveNodes(newPulse.PulseNumber, m.NodeNet.GetActiveNodes())
+		err = m.NodeStorage.SetActiveNodes(newPulse.PulseNumber, m.NodeNet.GetWorkingNodes())
 		if err != nil {
 			m.PulseStorage.Unlock()
 			return nil, nil, nil, nil, errors.Wrap(err, "call of SetActiveNodes failed")
@@ -591,21 +573,52 @@ func (m *PulseManager) setUnderGilSection(
 	m.PulseStorage.Set(&newPulse)
 	m.PulseStorage.Unlock()
 
+	if m.NodeNet.GetOrigin().Role() == core.StaticRoleHeavyMaterial {
+		return nil, nil, nil, nil, nil
+	}
+
 	var jets []jetInfo
-	if persist {
+	if persist && oldPulse != nil {
 		jets, err = m.processJets(ctx, oldPulse.PulseNumber, newPulse.PulseNumber)
+		// We just joined to network
+		if err == core.ErrNoNodes {
+			return jets, map[core.RecordID][]core.RecordID{}, oldPulse, prevPN, nil
+		}
 		if err != nil {
 			return nil, nil, nil, nil, errors.Wrap(err, "failed to process jets")
 		}
 	}
 
-	removed := m.RecentStorageProvider.DecreaseIndexesTTL(ctx)
-
-	if m.NodeNet.GetOrigin().Role() == core.StaticRoleLightMaterial {
-		m.prepareArtifactManagerMessageHandlerForNextPulse(ctx, newPulse, jets)
+	removed := map[core.RecordID][]core.RecordID{}
+	if oldPulse != nil && prevPN != nil {
+		removed = m.RecentStorageProvider.DecreaseIndexesTTL(ctx)
+		if m.NodeNet.GetOrigin().Role() == core.StaticRoleLightMaterial {
+			m.prepareArtifactManagerMessageHandlerForNextPulse(ctx, newPulse, jets)
+		}
 	}
 
-	return jets, removed, &oldPulse, prevPulseNumber, nil
+	if persist && oldPulse != nil {
+		nodes, err := m.NodeStorage.GetActiveNodes(oldPulse.PulseNumber)
+		if err != nil {
+			return nil, nil, nil, nil, err
+		}
+		// No active nodes for pulse. It means there was no processing (network start).
+		if len(nodes) == 0 {
+			// Activate zero jet for jet tree and unlock jet waiter.
+			zeroJet := *jet.NewID(0, nil)
+			m.JetStorage.UpdateJetTree(ctx, newPulse.PulseNumber, true, zeroJet)
+			err := m.HotDataWaiter.Unlock(ctx, zeroJet)
+			if err != nil {
+				if err == artifactmanager.ErrWaiterNotLocked {
+					inslogger.FromContext(ctx).Error(err)
+				} else {
+					return nil, nil, nil, nil, errors.Wrap(err, "failed to unlock zero jet")
+				}
+			}
+		}
+	}
+
+	return jets, removed, oldPulse, prevPN, nil
 }
 
 func (m *PulseManager) addSync(ctx context.Context, jets []jetInfo, pulse core.PulseNumber) {
@@ -667,6 +680,10 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse core.Pulse, 
 		return
 	}
 	m.JetStorage.DeleteJetTree(ctx, p.Pulse.PulseNumber)
+	err = m.PulseTracker.DeletePulse(ctx, p.Pulse.PulseNumber)
+	if err != nil {
+		inslogger.FromContext(ctx).Errorf("Can't clean pulse-tracker from pulse: %s", err)
+	}
 }
 
 func (m *PulseManager) prepareArtifactManagerMessageHandlerForNextPulse(ctx context.Context, newPulse core.Pulse, jets []jetInfo) {
@@ -710,12 +727,7 @@ func (m *PulseManager) Start(ctx context.Context) error {
 		return err
 	}
 
-	latestPulse, err := m.PulseStorage.Current(ctx)
-	if err != nil {
-		return err
-	}
-
-	err = m.NodeStorage.SetActiveNodes(latestPulse.PulseNumber, m.NodeNet.GetActiveNodes())
+	err = m.NodeStorage.SetActiveNodes(core.FirstPulseNumber, []core.Node{m.NodeNet.GetOrigin()})
 	if err != nil && err != storage.ErrOverride {
 		return err
 	}

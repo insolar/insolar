@@ -26,6 +26,16 @@ type ShortNodeID uint32
 // GlobuleID is the ID of the globe
 type GlobuleID uint32
 
+// NodeState is the state of the node
+type NodeState uint8
+
+//go:generate stringer -type=NodeState
+const (
+	NodeDiscovery NodeState = iota
+	NodeJoining
+	NodeReady
+)
+
 //go:generate minimock -i github.com/insolar/insolar/core.Node -o ../testutils/network -s _mock.go
 type Node interface {
 	// ID is the unique identifier of the node
@@ -44,18 +54,40 @@ type Node interface {
 	GetGlobuleID() GlobuleID
 	// Version of node software
 	Version() string
+	// Leaving indicates, that node preparing for graceful shutdown
+	Leaving() bool
+	// LeavingETA is pulse number, after which node leave
+	LeavingETA() PulseNumber
+	// IsWorking true if node is in working node list
+	IsWorking() bool
+	// GetState get state of the node
+	GetState() NodeState
 }
+
+type NodeNetworkState uint8
+
+//go:generate stringer -type=NodeNetworkState
+const (
+	// UndefinedNodeNetworkState is state of NodeKeeper while it is not valid
+	UndefinedNodeNetworkState NodeNetworkState = iota + 1
+	// WaitingNodeNetworkState is state of NodeKeeper while it is not part of consensus yet (waits for its join claim to pass)
+	WaitingNodeNetworkState
+	// ReadyNodeNetworkState is state of NodeKeeper when it is ready for consensus
+	ReadyNodeNetworkState
+)
 
 //go:generate minimock -i github.com/insolar/insolar/core.NodeNetwork -o ../testutils/network -s _mock.go
 type NodeNetwork interface {
-	// GetOrigin get active node for the current insolard. Returns nil if the current insolard is not an active node.
+	// GetState get state of the NodeKeeper
+	GetState() NodeNetworkState
+	// GetOrigin get origin node for the current insolard. Returns nil if the current insolard is not a working node.
 	GetOrigin() Node
-	// GetActiveNode get active node by its reference. Returns nil if node is not found.
-	GetActiveNode(ref RecordRef) Node
-	// GetActiveNodes get active nodes.
-	GetActiveNodes() []Node
-	// GetActiveNodesByRole get active nodes by role
-	GetActiveNodesByRole(role DynamicRole) []RecordRef
+	// GetWorkingNode get working node by its reference. Returns nil if node is not found.
+	GetWorkingNode(ref RecordRef) Node
+	// GetWorkingNodes get working nodes.
+	GetWorkingNodes() []Node
+	// GetWorkingNodesByRole get working nodes by role
+	GetWorkingNodesByRole(role DynamicRole) []RecordRef
 }
 
 // TODO: remove this interface when bootstrap mechanism completed

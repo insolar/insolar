@@ -18,7 +18,6 @@ package artifactmanager
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/pkg/errors"
@@ -29,7 +28,23 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/jet"
 )
+
+type seqEntry struct {
+	ch   chan struct{}
+	once sync.Once
+}
+
+type seqKey struct {
+	pulse core.PulseNumber
+	jet core.RecordID
+}
+
+type fetchResult struct {
+	jet *core.RecordID
+	err error
+}
 
 type jetTreeUpdater struct {
 	ActiveNodesStorage storage.NodeStorage
@@ -38,10 +53,7 @@ type jetTreeUpdater struct {
 	JetCoordinator     core.JetCoordinator
 
 	seqMutex  sync.Mutex
-	sequencer map[string]*struct {
-		sync.Mutex
-		done bool
-	}
+	sequencer map[seqKey]*seqEntry
 }
 
 func newJetTreeUpdater(
@@ -53,10 +65,7 @@ func newJetTreeUpdater(
 		JetStorage:         js,
 		MessageBus:         mb,
 		JetCoordinator:     jc,
-		sequencer: map[string]*struct {
-			sync.Mutex
-			done bool
-		}{},
+		sequencer: map[seqKey]*seqEntry{},
 	}
 }
 
@@ -67,42 +76,39 @@ func (jtu *jetTreeUpdater) fetchJet(
 	defer span.End()
 
 	// Look in the local tree. Return if the actual jet found.
-	tree, err := jtu.JetStorage.GetJetTree(ctx, pulse)
-	if err != nil {
-		return nil, err
-	}
-
-	jetID, actual := tree.Find(target)
+	jetID, actual := jtu.JetStorage.FindJet(ctx, pulse, target)
 	if actual {
 		return jetID, nil
 	}
 
 	// Not actual in our tree, asking neighbors for jet.
 	span.Annotate(nil, "tree in DB is not actual")
-	key := fmt.Sprintf("%d:%s", pulse, jetID.String())
+	key := seqKey{pulse, *jetID}
+
+	executing := false
 
 	jtu.seqMutex.Lock()
 	if _, ok := jtu.sequencer[key]; !ok {
-		jtu.sequencer[key] = &struct {
-			sync.Mutex
-			done bool
-		}{}
+		jtu.sequencer[key] = &seqEntry{ch: make(chan struct{}) }
+		executing = true
 	}
-	mu := jtu.sequencer[key]
+	entry := jtu.sequencer[key]
 	jtu.seqMutex.Unlock()
 
 	span.Annotate(nil, "got sequencer entry")
 
-	mu.Lock()
-	if mu.done {
-		mu.Unlock()
+	if !executing {
+		<-entry.ch
+
 		// Tree was updated in another thread, rechecking.
 		span.Annotate(nil, "somebody else updated actuality")
 		return jtu.fetchJet(ctx, target, pulse)
 	}
+
 	defer func() {
-		mu.done = true
-		mu.Unlock()
+		entry.once.Do(func(){
+			close(entry.ch)
+		})
 
 		jtu.seqMutex.Lock()
 		delete(jtu.sequencer, key)
@@ -114,14 +120,32 @@ func (jtu *jetTreeUpdater) fetchJet(
 		return nil, err
 	}
 
-	err = jtu.JetStorage.UpdateJetTree(ctx, pulse, true, *resJet)
-	if err != nil {
-		inslogger.FromContext(ctx).Error(
-			errors.Wrapf(err, "failed actualize jet %s", resJet.DebugString()),
-		)
-	}
+	jtu.JetStorage.UpdateJetTree(ctx, pulse, true, *resJet)
 
 	return resJet, nil
+}
+
+func (jtu *jetTreeUpdater) releaseJet(ctx context.Context, jetID core.RecordID, pulse core.PulseNumber) {
+	jtu.seqMutex.Lock()
+	defer jtu.seqMutex.Unlock()
+
+	depth, _ := jet.Jet(jetID)
+	for {
+		key := seqKey{pulse, jetID}
+		if v, ok := jtu.sequencer[key]; ok {
+			v.once.Do(func(){
+				close(v.ch)
+			})
+
+			delete(jtu.sequencer, key)
+		}
+
+		if depth == 0 {
+			break
+		}
+		jetID = jet.Parent(jetID)
+		depth--
+	}
 }
 
 func (jtu *jetTreeUpdater) fetchActualJetFromOtherNodes(
@@ -130,79 +154,95 @@ func (jtu *jetTreeUpdater) fetchActualJetFromOtherNodes(
 	ctx, span := instracer.StartSpan(ctx, "jet_tree_updater.fetch_jet_from_other_nodes")
 	defer span.End()
 
-	nodes, err := jtu.otherNodesForPulse(ctx, pulse)
-	if err != nil {
-		return nil, err
-	}
+	ch := make(chan fetchResult, 1)
 
-	num := len(nodes)
+	go func() {
+		nodes, err := jtu.otherNodesForPulse(ctx, pulse)
+		if err != nil {
+			ch <- fetchResult{nil, err}
+			return
+		}
 
-	wg := sync.WaitGroup{}
-	wg.Add(num)
+		num := len(nodes)
 
-	replies := make([]*reply.Jet, num)
-	for i, node := range nodes {
-		go func(i int, node core.Node) {
-			ctx, span := instracer.StartSpan(ctx, "jet_tree_updater.one_node_get_jet")
-			defer span.End()
+		wg := sync.WaitGroup{}
+		wg.Add(num)
 
-			defer wg.Done()
+		once := sync.Once{}
 
-			nodeID := node.ID()
-			rep, err := jtu.MessageBus.Send(
-				ctx,
-				&message.GetJet{Object: target, Pulse: pulse},
-				&core.MessageSendOptions{Receiver: &nodeID},
-			)
-			if err != nil {
-				inslogger.FromContext(ctx).Error(
-					errors.Wrap(err, "couldn't get jet"),
+		replies := make([]*reply.Jet, num)
+		for i, node := range nodes {
+			go func(i int, node core.Node) {
+				ctx, span := instracer.StartSpan(ctx, "jet_tree_updater.one_node_get_jet")
+				defer span.End()
+
+				defer wg.Done()
+
+				nodeID := node.ID()
+				rep, err := jtu.MessageBus.Send(
+					ctx,
+					&message.GetJet{Object: target, Pulse: pulse},
+					&core.MessageSendOptions{Receiver: &nodeID},
 				)
-				return
+				if err != nil {
+					inslogger.FromContext(ctx).Error(
+						errors.Wrap(err, "couldn't get jet"),
+					)
+					return
+				}
+
+				r, ok := rep.(*reply.Jet)
+				if !ok {
+					inslogger.FromContext(ctx).Errorf("middleware.fetchActualJetFromOtherNodes: unexpected reply: %#v\n", rep)
+					return
+				}
+
+				if !r.Actual {
+					return
+				}
+
+				once.Do(func() {
+					jetID := r.ID
+					ch <- fetchResult{&jetID, nil }
+					close(ch)
+				})
+
+				replies[i] = r
+			}(i, node)
+		}
+		wg.Wait()
+
+		seen := make(map[core.RecordID]struct{})
+		res := make([]*core.RecordID, 0)
+		for _, r := range replies {
+			if r == nil {
+				continue
+			}
+			if _, ok := seen[r.ID]; ok {
+				continue
 			}
 
-			r, ok := rep.(*reply.Jet)
-			if !ok {
-				inslogger.FromContext(ctx).Errorf("middleware.fetchActualJetFromOtherNodes: unexpected reply: %#v\n", rep)
-				return
-			}
-			replies[i] = r
-		}(i, node)
-	}
-	wg.Wait()
-
-	seen := make(map[core.RecordID]struct{})
-	res := make([]*core.RecordID, 0)
-	for _, r := range replies {
-		if r == nil {
-			continue
-		}
-		if !r.Actual {
-			continue
-		}
-		if _, ok := seen[r.ID]; ok {
-			continue
+			seen[r.ID] = struct{}{}
+			res = append(res, &r.ID)
 		}
 
-		seen[r.ID] = struct{}{}
-		res = append(res, &r.ID)
-	}
+		if len(res) == 0 {
+			inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+				"pulse":  pulse,
+				"object": target.DebugString(),
+			}).Error("all lights for pulse have no actual jet for object")
+			ch <- fetchResult{nil, errors.New("impossible situation") }
+			close(ch)
+		} else if len(res) > 1 {
+			inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+				"pulse":  pulse,
+				"object": target.DebugString(),
+			}).Error("lights said different actual jet for object")
+		}
+	}()
 
-	if len(res) == 1 {
-		return res[0], nil
-	} else if len(res) == 0 {
-		inslogger.FromContext(ctx).WithFields(map[string]interface{}{
-			"pulse":  pulse,
-			"object": target.DebugString(),
-		}).Error("all lights for pulse have no actual jet for object")
-		return nil, errors.New("impossible situation")
-	} else {
-		inslogger.FromContext(ctx).WithFields(map[string]interface{}{
-			"pulse":  pulse,
-			"object": target.DebugString(),
-		}).Error("lights said different actual jet for object")
-		return nil, errors.New("nodes returned more than one unique jet")
-	}
+	res := <-ch
+	return res.jet, res.err
 }
 
 func (jtu *jetTreeUpdater) otherNodesForPulse(
