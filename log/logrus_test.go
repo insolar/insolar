@@ -14,16 +14,26 @@
  *    limitations under the License.
  */
 
-package configuration
+package log
 
-// Log holds configuration for logging
-type Log struct {
-	Level     string
-	Adapter   string
-	Formatter string
-}
+import (
+	"bytes"
+	"testing"
 
-// NewLog creates new default configuration for logging
-func NewLog() Log {
-	return Log{Level: "Info", Adapter: "zerolog", Formatter: "json"}
+	"github.com/stretchr/testify/require"
+
+	"github.com/insolar/insolar/configuration"
+)
+
+func TestLogrusAdapter_CallerInfo(t *testing.T) {
+	log, err := NewLog(configuration.Log{Level: "info", Adapter: "logrus", Formatter: "json"})
+	require.NoError(t, err)
+	require.NotNil(t, log)
+
+	var buf bytes.Buffer
+	log.SetOutput(&buf)
+
+	log.Error("test")
+
+	require.Contains(t, buf.String(), "logrus_test.go:36")
 }

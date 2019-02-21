@@ -37,7 +37,6 @@ func newLogrusAdapter(cfg configuration.Log) (*logrusAdapter, error) {
 	log := logrus.New()
 
 	var formatter logrus.Formatter
-	timestampFormat := "2006-01-02 15:04:05.000000"
 
 	switch strings.ToLower(cfg.Formatter) {
 	case "text":
@@ -191,11 +190,6 @@ func (l logrusAdapter) SetLevel(level string) error {
 
 	l.entry.Logger.Level = lvl
 	return nil
-}
-
-// GetLevel returns log level
-func (l logrusAdapter) GetLevel() string {
-	return l.entry.Logger.Level.String()
 }
 
 // SetOutput sets the output destination for the logger.

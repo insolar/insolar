@@ -22,8 +22,6 @@ import "io"
 type Logger interface {
 	// SetLevel sets log level.
 	SetLevel(string) error
-	// GetLevel gets log level.
-	GetLevel() string
 
 	// Debug logs a message at level Debug.
 	Debug(...interface{})

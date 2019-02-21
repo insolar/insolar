@@ -25,25 +25,28 @@ import (
 	"os"
 	"testing"
 
+	"github.com/pkg/errors"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
+
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/insolar/insolar/pulsar/pulsartestutils"
 	"github.com/insolar/insolar/testutils"
-	"github.com/pkg/errors"
-	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
 )
 
-func capture(f func()) string {
+func capture(
+	ctx context.Context, f func(ctx context.Context),
+) string {
+	logger := inslogger.FromContext(ctx)
 	var buf bytes.Buffer
-	log.SetOutput(&buf)
-	f()
-	log.SetOutput(os.Stderr)
+	logger.SetOutput(&buf)
+	f(ctx)
+	logger.SetOutput(os.Stderr)
 	return buf.String()
 }
 
@@ -359,7 +362,7 @@ func TestPulsar_CheckConnectionsToPulsars_NilClient_FirstConnectionFailed(t *tes
 		OutgoingClient: clientMock,
 	}
 
-	resultLog := capture(func() {
+	resultLog := capture(ctx, func(ctx context.Context) {
 		pulsar.CheckConnectionsToPulsars(ctx)
 	})
 
@@ -398,7 +401,7 @@ func TestPulsar_CheckConnectionsToPulsars_NilClient_SecondConnectionFailed(t *te
 		ConnectionAddress: "TestConnectionAddress",
 	}
 
-	resultLog := capture(func() {
+	resultLog := capture(ctx, func(ctx context.Context) {
 		pulsar.CheckConnectionsToPulsars(ctx)
 	})
 
@@ -502,7 +505,7 @@ func TestPulsar_broadcastSignatureOfEntropy_SendToNeighbours(t *testing.T) {
 
 	mockClientWrapper.On("Go", ReceiveSignatureForEntropy.String(), mock.Anything, nil, (chan *rpc.Call)(nil)).Return(replyChan)
 
-	resultLog := capture(func() {
+	resultLog := capture(ctx, func(ctx context.Context) {
 		pulsar.broadcastSignatureOfEntropy(ctx)
 	})
 
@@ -563,7 +566,7 @@ func TestPulsar_broadcastVector_SendToNeighbours(t *testing.T) {
 	}
 	mockClientWrapper.On("Go", ReceiveVector.String(), mock.Anything, nil, (chan *rpc.Call)(nil)).Return(replyChan)
 
-	resultLog := capture(func() {
+	resultLog := capture(ctx, func(ctx context.Context) {
 		pulsar.broadcastVector(ctx)
 	})
 
@@ -623,7 +626,7 @@ func TestPulsar_broadcastEntropy_SendToNeighbours(t *testing.T) {
 
 	mockClientWrapper.On("Go", ReceiveEntropy.String(), mock.Anything, nil, (chan *rpc.Call)(nil)).Return(replyChan)
 
-	resultLog := capture(func() {
+	resultLog := capture(ctx, func(ctx context.Context) {
 		pulsar.broadcastEntropy(ctx)
 	})
 

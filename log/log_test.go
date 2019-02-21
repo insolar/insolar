@@ -20,12 +20,14 @@ import (
 	"bytes"
 	"io"
 	"os"
+	"regexp"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func capture(f func()) string {
@@ -37,7 +39,7 @@ func capture(f func()) string {
 }
 
 func assertHelloWorld(t *testing.T, out string) {
-	assert.Contains(t, out, " msg=HelloWorld")
+	assert.Contains(t, out, "HelloWorld")
 }
 
 func TestLog_GlobalLogger(t *testing.T) {
@@ -93,12 +95,8 @@ func TestLog_NewLog_Config(t *testing.T) {
 }
 
 func TestLog_GlobalLogger_Level(t *testing.T) {
-	got := GetLevel()
 	assert.NoError(t, SetLevel("error"))
 	assert.Error(t, SetLevel("errorrr"))
-	assert.Equal(t, "error", GetLevel())
-	assert.NoError(t, SetLevel(got))
-	assert.Equal(t, got, GetLevel())
 }
 
 func TestLog_AddFields(t *testing.T) {
@@ -156,6 +154,24 @@ func TestLog_AddFields(t *testing.T) {
 			assert.Contains(t, recitems[1], errtxt2)
 			assert.Contains(t, recitems[0], fieldvalue)
 			assert.NotContains(t, recitems[1], fieldvalue)
+		})
+	}
+}
+
+func TestLog_Timestamp (t *testing.T) {
+	for _, adapter := range []string{"logrus", "zerolog"} {
+		adapter := adapter
+		t.Run(adapter, func(t *testing.T) {
+			log, err := NewLog(configuration.Log{Level: "info", Adapter: "logrus", Formatter: "json"})
+			require.NoError(t, err)
+			require.NotNil(t, log)
+
+			var buf bytes.Buffer
+			log.SetOutput(&buf)
+
+			log.Error("test")
+
+			require.Regexp(t, regexp.MustCompile("[0-9][0-9]:[0-9][0-9]:[0-9][0-9]\\.[0-9]+"), buf.String())
 		})
 	}
 }
