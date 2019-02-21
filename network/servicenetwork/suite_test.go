@@ -36,6 +36,7 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/nodenetwork"
+	"github.com/insolar/insolar/network/rules"
 	"github.com/insolar/insolar/network/utils"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
@@ -417,7 +418,7 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	}
 
 	node.componentManager.Register(terminationHandler, realKeeper, newPulseManagerMock(realKeeper), netCoordinator, amMock)
-	node.componentManager.Register(certManager, cryptographyService)
+	node.componentManager.Register(certManager, cryptographyService, rules.NewRules())
 	node.componentManager.Inject(serviceNetwork, NewTestNetworkSwitcher())
 	node.serviceNetwork = serviceNetwork
 }

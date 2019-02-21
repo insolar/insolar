@@ -28,15 +28,16 @@ func NewRules() *rules {
 }
 
 type rules struct {
-	Certificate core.Certificate   `inject:""`
-	NodeKeeper  network.NodeKeeper `inject:""`
+	CertificateManager core.CertificateManager `inject:""`
+	NodeKeeper         network.NodeKeeper      `inject:""`
 }
 
 // CheckMajorityRule returns true id MajorityRule check passed, also returns active discovery nodes count
 func (r *rules) CheckMajorityRule() (bool, int) {
 	// activeNodes []core.Node
-	majorityRule := r.Certificate.GetMajorityRule()
-	activeDiscoveryNodesLen := len(findDiscoveriesInActiveNodeList(r.NodeKeeper.GetActiveNodes(), r.Certificate))
+	cert := r.CertificateManager.GetCertificate()
+	majorityRule := cert.GetMajorityRule()
+	activeDiscoveryNodesLen := len(findDiscoveriesInActiveNodeList(r.NodeKeeper.GetActiveNodes(), cert))
 	return activeDiscoveryNodesLen >= majorityRule, activeDiscoveryNodesLen
 }
 
