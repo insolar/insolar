@@ -124,10 +124,15 @@ func remap(code []byte, m *ast.FieldList) []string {
 }
 
 func (g *Generator) parseStateMachineInterface(machine *stateMachine, source *ast.InterfaceType) {
+	var curPos token.Pos = 0
 	for _, methodItem := range source.Methods.List {
 		if len(methodItem.Names) == 0 {
 			continue
 		}
+		if methodItem.Pos() <= curPos {
+			log.Fatal("Incorrect order of methods")
+		}
+		curPos = methodItem.Pos()
 		methodType := methodItem.Type.(*ast.FuncType)
 
 		currentHandler := &handler{
