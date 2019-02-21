@@ -44,8 +44,8 @@ const (
 )
 
 const (
-	PendingPulse  = 1
-	ActivatePulse = 2
+	PendingPulseSignal  = 1
+	ActivatePulseSignal = 2
 )
 
 // Control allows to control conveyor and pulse
@@ -168,14 +168,14 @@ func (c *PulseConveyor) PreparePulse(pulse core.Pulse, callback queue.SyncDone) 
 	}
 
 	futureSlot := c.slotMap[*c.futurePulseNumber]
-	err := futureSlot.inputQueue.PushSignal(PendingPulse, callback)
+	err := futureSlot.inputQueue.PushSignal(PendingPulseSignal, callback)
 	if err != nil {
 		return errors.Wrapf(err, "[ PreparePulse ] can't send signal to future slot (for pulse %d)", c.futurePulseNumber)
 	}
 
 	if c.presentPulseNumber != nil {
 		presentSlot := c.slotMap[*c.presentPulseNumber]
-		err := presentSlot.inputQueue.PushSignal(PendingPulse, callback)
+		err := presentSlot.inputQueue.PushSignal(PendingPulseSignal, callback)
 		if err != nil {
 			return errors.Wrapf(err, "[ PreparePulse ] can't send signal to present slot (for pulse %d)", c.presentPulseNumber)
 		}
@@ -244,13 +244,13 @@ func (c *PulseConveyor) ActivatePulse() error {
 
 	futureSlot := c.slotMap[*c.futurePulseNumber]
 	callback := NewPulseWithCallback(&wg, *c.futurePulseData)
-	err := futureSlot.inputQueue.PushSignal(ActivatePulse, callback)
+	err := futureSlot.inputQueue.PushSignal(ActivatePulseSignal, callback)
 	if err != nil {
 		return errors.Wrapf(err, "[ ActivatePulse ] can't send signal to future slot (for pulse %d)", c.futurePulseNumber)
 	}
 
 	presentSlot := c.slotMap[*c.presentPulseNumber]
-	err = presentSlot.inputQueue.PushSignal(ActivatePulse, &wg)
+	err = presentSlot.inputQueue.PushSignal(ActivatePulseSignal, &wg)
 	if err != nil {
 		return errors.Wrapf(err, "[ ActivatePulse ] can't send signal to present slot (for pulse %d)", c.presentPulseNumber)
 	}
