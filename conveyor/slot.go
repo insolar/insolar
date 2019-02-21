@@ -193,7 +193,6 @@ func (s *Slot) getNodeData() interface{} {
 // createElement creates new active element from empty element
 func (s *Slot) createElement(stateMachineType StateMachineType, state uint16, event queue.OutputElement) *slotElement {
 	element := s.popElement(EmptyElement)
-	element.id = element.id + slotElementDelta
 	element.stateMachineType = stateMachineType
 	element.state = state
 	element.activationStatus = ActiveElement
@@ -214,6 +213,9 @@ func (s *Slot) popElement(status ActivationStatus) *slotElement {
 // pushElement adds element of provided status to correspondent linked list
 func (s *Slot) pushElement(status ActivationStatus, element *slotElement) {
 	element.activationStatus = status
+	if status == EmptyElement {
+		element.id = element.id + slotElementDelta
+	}
 	list := s.elementListMap[status]
 	list.pushElement(element)
 }

@@ -184,7 +184,7 @@ func TestSlot_createElement(t *testing.T) {
 	require.NotNil(t, element)
 	require.Equal(t, "testStateMachineType", element.stateMachineType)
 	require.Equal(t, uint16(1), element.state)
-	require.Equal(t, uint32(1+slotElementDelta), element.id)
+	require.Equal(t, uint32(1), element.id)
 	require.Equal(t, ActiveElement, element.activationStatus)
 	require.Equal(t, 1, s.elementListMap[ActiveElement].len())
 }
@@ -215,13 +215,37 @@ func TestSlot_pushElement(t *testing.T) {
 	}
 	prevHead := s.elementListMap[ActiveElement].head
 	prevTail := s.elementListMap[ActiveElement].tail
-	element := &slotElement{}
+	element := &slotElement{id: 777}
+	prevID := element.id
 
 	s.pushElement(ActiveElement, element)
 	require.Equal(t, prevHead, s.elementListMap[ActiveElement].head)
 	require.Equal(t, element, prevTail.listNext)
 	require.Equal(t, element, s.elementListMap[ActiveElement].tail)
 	require.Equal(t, 4, s.elementListMap[ActiveElement].len())
+
+	require.Equal(t, prevID, element.id)
+}
+
+func TestSlot_pushElement_Empty(t *testing.T) {
+	l := len3List()
+	s := Slot{
+		elementListMap: map[ActivationStatus]*ElementList{
+			EmptyElement: &l,
+		},
+	}
+	prevHead := s.elementListMap[EmptyElement].head
+	prevTail := s.elementListMap[EmptyElement].tail
+	element := &slotElement{id: 777}
+	prevID := element.id
+
+	s.pushElement(EmptyElement, element)
+	require.Equal(t, prevHead, s.elementListMap[EmptyElement].head)
+	require.Equal(t, element, prevTail.listNext)
+	require.Equal(t, element, s.elementListMap[EmptyElement].tail)
+	require.Equal(t, 4, s.elementListMap[EmptyElement].len())
+
+	require.Equal(t, prevID+slotElementDelta, element.id)
 }
 
 func TestNewSlotElement(t *testing.T) {
