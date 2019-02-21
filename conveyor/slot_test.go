@@ -225,7 +225,7 @@ func TestSlot_pushElement(t *testing.T) {
 }
 
 func TestNewSlotElement(t *testing.T) {
-	s := NewSlotElement(ActiveElement)
+	s := newSlotElement(ActiveElement)
 	require.NotNil(t, s)
 	require.Equal(t, ActiveElement, s.activationStatus)
 }

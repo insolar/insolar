@@ -46,6 +46,7 @@ const (
 const slotSize = 10000
 const slotElementDelta = 1000000
 
+// SlotDetails provides information about slot
 type SlotDetails interface {
 	getPulseNumber() core.PulseNumber
 	getNodeId() uint32
@@ -135,7 +136,7 @@ func initElementsBuf() []slotElement {
 	elements[0] = SlotStateMachine
 	var nextElement *slotElement
 	for i := slotSize - 1; i > 0; i-- {
-		elements[i] = *NewSlotElement(EmptyElement)
+		elements[i] = *newSlotElement(EmptyElement)
 		elements[i].id = uint32(i)
 		elements[i].listNext = nextElement
 		nextElement = &elements[i]
@@ -229,6 +230,7 @@ type slotElement struct {
 	activationStatus ActivationStatus
 }
 
-func NewSlotElement(activationStatus ActivationStatus) *slotElement {
+// newSlotElement creates new slot element with provided activation status
+func newSlotElement(activationStatus ActivationStatus) *slotElement {
 	return &slotElement{activationStatus: activationStatus}
 }
