@@ -28,7 +28,6 @@ const NodesToJoinPercent = 0.3
 
 type JoinHandler struct {
 	queue       Queue
-	ref         core.RecordRef
 	activeCount int
 }
 

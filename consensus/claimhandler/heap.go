@@ -69,8 +69,5 @@ func (q Queue) Len() int {
 
 // Less returns true if i > j cuz we need a greater to pop. Otherwise returns false.
 func (q Queue) Less(i, j int) bool {
-	if bytes.Compare(q[i].priority, q[j].priority) > 0 {
-		return true
-	}
-	return false
+	return bytes.Compare(q[i].priority, q[j].priority) > 0
 }
