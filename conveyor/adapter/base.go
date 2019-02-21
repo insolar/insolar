@@ -24,19 +24,19 @@ type idType = uint32
 
 // PulseConveyorAdapterTaskSink is iface which helps to slot to push task to adapter
 type PulseConveyorAdapterTaskSink interface {
-	PushTask(respSink PulseConveyorSlotResponseSink, elementId idType, handlerId idType, taskPayload interface{}) error
-	CancelElementTasks(pulseNumber idType, elementId idType)
+	PushTask(respSink PulseConveyorSlotResponseSink, elementID idType, handlerID idType, taskPayload interface{}) error
+	CancelElementTasks(pulseNumber idType, elementID idType)
 	CancelPulseTasks(pulseNumber idType)
 	FlushPulseTasks(pulseNumber uint32)
-	FlushNodeTasks(nodeId idType)
+	FlushNodeTasks(nodeID idType)
 }
 
 // PulseConveyorSlotResponseSink is iface which helps to adapter to access to slot
 type PulseConveyorSlotResponseSink interface {
-	PushResponse(adapterId idType, elementId idType, handlerId idType, respPayload interface{})
-	PushNestedEvent(adapterId idType, parentElementId idType, handlerId idType, eventPayload interface{})
+	PushResponse(adapterID idType, elementID idType, handlerID idType, respPayload interface{})
+	PushNestedEvent(adapterID idType, parentElementID idType, handlerID idType, eventPayload interface{})
 	GetPulseNumber() uint32
-	GetNodeId() uint32
+	GetNodeID() uint32
 	GetSlotDetails() SlotDetails
 }
 
@@ -49,8 +49,8 @@ func (sd *SlotDetails) GetPulseNumber() uint32 {
 	return 0
 }
 
-// GetNodeId returns consensus's node id
-func (sd *SlotDetails) GetNodeId() uint32 {
+// GetNodeID returns consensus's node id
+func (sd *SlotDetails) GetNodeID() uint32 {
 	return 32
 }
 

@@ -28,8 +28,8 @@ import (
 )
 
 type processElement struct {
-	elementId   idType
-	handlerId   idType
+	elementID   idType
+	handlerID   idType
 	taskPayload interface{}
 	respSink    PulseConveyorSlotResponseSink
 	cancelInfo  *cancelInfoT
@@ -131,10 +131,6 @@ type simpleWaitAdapterInputData struct {
 	waitPeriodMilliseconds int
 }
 
-type simpleWaitAdapterOutputData struct {
-	info string
-}
-
 // NewSimpleWaitAdapter creates new instance of SimpleWaitAdapter
 func NewSimpleWaitAdapter() PulseConveyorAdapterTaskSink {
 	adapter := &SimpleWaitAdapter{
@@ -232,14 +228,14 @@ func (swa *SimpleWaitAdapter) doWork(task processElement, cancelInfo *cancelInfo
 	log.Info("[ SimpleWaitAdapter.doWork ] ", msg)
 
 	task.respSink.PushResponse(swa.adapterID,
-		task.elementId,
-		task.handlerId,
+		task.elementID,
+		task.handlerID,
 		fmt.Sprintf(msg))
 
 	// TODO: remove cancelInfo from swa.taskHolder
 }
 
-var reqId uint64 = 0
+var reqID uint64 = 0
 
 func atomicLoadAndIncrementUint64(addr *uint64) uint64 {
 	for {
@@ -252,8 +248,8 @@ func atomicLoadAndIncrementUint64(addr *uint64) uint64 {
 
 // PushTask implements PulseConveyorAdapterTaskSink
 func (swa *SimpleWaitAdapter) PushTask(respSink PulseConveyorSlotResponseSink,
-	elementId idType,
-	handlerId idType,
+	elementID idType,
+	handlerID idType,
 	taskPayload interface{}) error {
 
 	payload, ok := taskPayload.(simpleWaitAdapterInputData)
@@ -261,20 +257,20 @@ func (swa *SimpleWaitAdapter) PushTask(respSink PulseConveyorSlotResponseSink,
 		return errors.Errorf("[ PushTask ] Incorrect payload type: %T", taskPayload)
 	}
 
-	cancelInfo := newCancelInfo(atomicLoadAndIncrementUint64(&reqId))
+	cancelInfo := newCancelInfo(atomicLoadAndIncrementUint64(&reqID))
 	swa.taskHolder.add(cancelInfo, respSink.GetPulseNumber())
 
 	return swa.queue.SinkPush(processElement{
 		respSink:    respSink,
-		elementId:   elementId,
-		handlerId:   handlerId,
+		elementID:   elementID,
+		handlerID:   handlerID,
 		taskPayload: payload,
 		cancelInfo:  cancelInfo,
 	})
 }
 
 // CancelElementTasks: now cancels all pulseNumber's tasks
-func (swa *SimpleWaitAdapter) CancelElementTasks(pulseNumber idType, elementId idType) {
+func (swa *SimpleWaitAdapter) CancelElementTasks(pulseNumber idType, elementID idType) {
 	swa.taskHolder.stop(pulseNumber, false)
 }
 
@@ -289,6 +285,6 @@ func (swa *SimpleWaitAdapter) FlushPulseTasks(pulseNumber uint32) {
 }
 
 // FlushNodeTasks: now flush all tasks
-func (swa *SimpleWaitAdapter) FlushNodeTasks(nodeId idType) {
+func (swa *SimpleWaitAdapter) FlushNodeTasks(nodeID idType) {
 	swa.taskHolder.stopAll(true)
 }

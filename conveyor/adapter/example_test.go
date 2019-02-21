@@ -30,7 +30,7 @@ type mockResponseSink struct {
 	lock     sync.Mutex
 }
 
-func (m *mockResponseSink) PushResponse(adapterId idType, elementId idType, handlerId idType, respPayload interface{}) {
+func (m *mockResponseSink) PushResponse(adapterID idType, elementID idType, handlerID idType, respPayload interface{}) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	log.Infof("[ mockResponseSink.PushResponse] PushResponse: %+v", respPayload)
@@ -44,7 +44,7 @@ func (m *mockResponseSink) GetResponse() string {
 	return m.response
 }
 
-func (m *mockResponseSink) PushNestedEvent(adapterId idType, parentElementId idType, handlerId idType, eventPayload interface{}) {
+func (m *mockResponseSink) PushNestedEvent(adapterID idType, parentElementID idType, handlerID idType, eventPayload interface{}) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	log.Infof("[ mockResponseSink.PushNestedEvent] PushNestedEvent: %+v", eventPayload)
@@ -55,7 +55,7 @@ func (m *mockResponseSink) GetPulseNumber() uint32 {
 	return 142
 }
 
-func (m *mockResponseSink) GetNodeId() uint32 {
+func (m *mockResponseSink) GetNodeID() uint32 {
 	return 42
 }
 
