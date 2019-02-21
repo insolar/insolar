@@ -40,17 +40,21 @@ type PulseConveyorSlotResponseSink interface {
 	GetSlotDetails() SlotDetails
 }
 
+// SlotDetails holds info about slot
 type SlotDetails struct {
 }
 
+// GetPulseNumber returns pulse number
 func (sd *SlotDetails) GetPulseNumber() uint32 {
 	return 0
 }
 
+// GetNodeId returns consensus's node id
 func (sd *SlotDetails) GetNodeId() uint32 {
 	return 32
 }
 
+// GetPulseData returns pulse data
 func (sd *SlotDetails) GetPulseData() *core.Pulse {
 	return core.GenesisPulse
 }
@@ -75,6 +79,6 @@ type AdapterResponse struct {
 type AdapterNestedEvent struct {
 	adapterID       idType
 	parentElementID idType
-	handlerID       uint32
+	handlerID       idType
 	eventPayload    interface{}
 }

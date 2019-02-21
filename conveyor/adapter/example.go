@@ -27,7 +27,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-type ProcessElement struct {
+type processElement struct {
 	elementId   idType
 	handlerId   idType
 	taskPayload interface{}
@@ -115,6 +115,7 @@ func (th *taskHolderT) stopAll(flush bool) {
 
 }
 
+// SimpleWaitAdapter holds all adapter logic
 type SimpleWaitAdapter struct {
 	queue             queue.IQueue
 	processingStarted uint32
@@ -126,14 +127,15 @@ type SimpleWaitAdapter struct {
 	taskHolder taskHolderT
 }
 
-type SimpleWaitAdapterInputData struct {
+type simpleWaitAdapterInputData struct {
 	waitPeriodMilliseconds int
 }
 
-type SimpleWaitAdapterOutputData struct {
+type simpleWaitAdapterOutputData struct {
 	info string
 }
 
+// NewSimpleWaitAdapter creates new instance of SimpleWaitAdapter
 func NewSimpleWaitAdapter() PulseConveyorAdapterTaskSink {
 	adapter := &SimpleWaitAdapter{
 		queue:             queue.NewMutexQueue(),
@@ -159,6 +161,7 @@ func (swa *SimpleWaitAdapter) StopProcessing() {
 	<-swa.processingStopped
 }
 
+// StartProcessing start processing of input queue
 func (swa *SimpleWaitAdapter) StartProcessing(started chan bool) {
 	if atomic.LoadUint32(&swa.processingStarted) != 0 {
 		log.Infof("[ StartProcessing ] processing already started. Nothing done")
@@ -196,7 +199,7 @@ func (swa *SimpleWaitAdapter) StartProcessing(started chan bool) {
 		}
 
 		for _, itask := range itasks {
-			task, ok := itask.GetData().(ProcessElement)
+			task, ok := itask.GetData().(processElement)
 			if !ok {
 				panic(fmt.Sprintf("[ StartProcessing ] How does it happen? Wrong Type: %T", itask.GetData()))
 			}
@@ -208,11 +211,12 @@ func (swa *SimpleWaitAdapter) StartProcessing(started chan bool) {
 	swa.processingStopped <- true
 }
 
-func (swa *SimpleWaitAdapter) doWork(task ProcessElement, cancelInfo *cancelInfoT) {
+// it's function which make useful adapter's work
+func (swa *SimpleWaitAdapter) doWork(task processElement, cancelInfo *cancelInfoT) {
 
 	log.Info("[ doWork ] Start. cancelInfo.id: ", cancelInfo.id)
 
-	payload := task.taskPayload.(SimpleWaitAdapterInputData)
+	payload := task.taskPayload.(simpleWaitAdapterInputData)
 
 	var msg string
 	select {
@@ -237,7 +241,7 @@ func (swa *SimpleWaitAdapter) doWork(task ProcessElement, cancelInfo *cancelInfo
 
 var reqId uint64 = 0
 
-func AtomicLoadAndIncrementUint64(addr *uint64) uint64 {
+func atomicLoadAndIncrementUint64(addr *uint64) uint64 {
 	for {
 		val := atomic.LoadUint64(addr)
 		if atomic.CompareAndSwapUint64(addr, val, val+1) {
@@ -246,20 +250,21 @@ func AtomicLoadAndIncrementUint64(addr *uint64) uint64 {
 	}
 }
 
+// PushTask implements PulseConveyorAdapterTaskSink
 func (swa *SimpleWaitAdapter) PushTask(respSink PulseConveyorSlotResponseSink,
 	elementId idType,
 	handlerId idType,
 	taskPayload interface{}) error {
 
-	payload, ok := taskPayload.(SimpleWaitAdapterInputData)
+	payload, ok := taskPayload.(simpleWaitAdapterInputData)
 	if !ok {
 		return errors.Errorf("[ PushTask ] Incorrect payload type: %T", taskPayload)
 	}
 
-	cancelInfo := newCancelInfo(AtomicLoadAndIncrementUint64(&reqId))
+	cancelInfo := newCancelInfo(atomicLoadAndIncrementUint64(&reqId))
 	swa.taskHolder.add(cancelInfo, respSink.GetPulseNumber())
 
-	return swa.queue.SinkPush(ProcessElement{
+	return swa.queue.SinkPush(processElement{
 		respSink:    respSink,
 		elementId:   elementId,
 		handlerId:   handlerId,
