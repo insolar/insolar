@@ -109,7 +109,7 @@ func initComponents(
 	genesisConfigPath string,
 	genesisKeyOut string,
 
-) (*component.Manager, error) {
+) (*component.Manager, core.TerminationHandler, error) {
 	cm := component.Manager{}
 	terminationHandler := core.NewTerminationHandler()
 
@@ -195,5 +195,5 @@ func initComponents(
 
 	cm.Inject(components...)
 
-	return &cm, nil
+	return &cm, terminationHandler, nil
 }

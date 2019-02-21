@@ -127,8 +127,8 @@ type nodekeeper struct {
 	isBootstrap     bool
 	isBootstrapLock sync.RWMutex
 
-	Cryptography core.CryptographyService `inject:""`
-	Handler      core.TerminationHandler  `inject:""`
+	Cryptography       core.CryptographyService `inject:""`
+	TerminationHandler core.TerminationHandler  `inject:""`
 }
 
 func (nk *nodekeeper) GetWorkingNode(ref core.RecordRef) core.Node {
@@ -408,7 +408,7 @@ func (nk *nodekeeper) Sync(list network.UnsyncList) {
 	}
 
 	if nk.shouldExit(foundOrigin) {
-		nk.gracefullyStop()
+		nk.Abort()
 	}
 
 	nk.sync = list
@@ -439,12 +439,21 @@ func (nk *nodekeeper) MoveSyncToActive(ctx context.Context) error {
 	stats.Record(ctx, consensus.ActiveNodes.M(int64(len(nk.active))))
 	nk.reindex()
 	nk.nodesJoinedDuringPrevPulse = mergeResult.NodesJoinedDuringPrevPulse
+
+	nk.gracefulStopIfNeeded()
+
 	return nil
 }
 
-func (nk *nodekeeper) gracefullyStop() {
-	// TODO: graceful stop
-	nk.Handler.Abort()
+func (nk *nodekeeper) gracefulStopIfNeeded() {
+	origin, ok := nk.active[nk.GetOrigin().ID()]
+	if ok && origin.Leaving() {
+		nk.TerminationHandler.OnLeaveApproved()
+	}
+}
+
+func (nk *nodekeeper) Abort() {
+	nk.TerminationHandler.Abort()
 }
 
 func (nk *nodekeeper) reindex() {

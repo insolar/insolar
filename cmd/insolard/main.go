@@ -129,7 +129,7 @@ func main() {
 	}
 	defer jaegerflush()
 
-	cm, err := initComponents(
+	cm, th, err := initComponents(
 		ctx,
 		*cfg,
 		bootstrapComponents.CryptographyService,
@@ -162,7 +162,8 @@ func main() {
 		inslog.Debug("caught sig: ", sig)
 
 		inslog.Warn("GRACEFULL STOP APP")
-		err = cm.Stop(ctx)
+		<-th.Leave(ctx, 0) // TODO add normal relative number
+		err = cm.Stop(ctx) // TODO add leave logic for VE
 		checkError(ctx, err, "failed to graceful stop components")
 		close(waitChannel)
 	}()
