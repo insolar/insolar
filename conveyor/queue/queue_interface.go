@@ -27,6 +27,14 @@ type OutputElement struct {
 	itemType uint32
 }
 
+func (oe *OutputElement) GetData() interface{} {
+	return oe.data
+}
+
+func (oe *OutputElement) GetItemType() uint32 {
+	return oe.itemType
+}
+
 type queueItem struct {
 	itemType           uint32
 	biggestQueueSignal uint32
