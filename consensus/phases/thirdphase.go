@@ -89,8 +89,15 @@ func (tp *ThirdPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse, state 
 		}
 		// not needed until we implement fraud detection
 		// cells, err := packet.GetBitset().GetCells(state.UnsyncList)
+
 		handler.AddClaims(state.UnsyncList.GetClaims(ref), pulse.Entropy)
 		state.UnsyncList.SetGlobuleHashSignature(ref, packet.GetGlobuleHashSignature())
+	}
+
+	handledJoinClaims := handler.HandleAndReturnClaims()
+
+	for ref := range responses {
+		tp.handleJoinClaims(handledJoinClaims, ref, state)
 	}
 
 	prevCloudHash := tp.NodeKeeper.GetCloudHash()
@@ -131,10 +138,10 @@ func (tp *ThirdPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse, state 
 	}, nil
 }
 
-func (tp *ThirdPhaseImpl) handleJoinClaims(handler *claimhandler.JoinClaimHandler, ref core.RecordRef, state *ThirdPhaseState) {
+func (tp *ThirdPhaseImpl) handleJoinClaims(joinClaims []*packets.NodeJoinClaim, ref core.RecordRef, state *SecondPhaseState) {
 	resultClaims := make([]packets.ReferendumClaim, 0)
 	claims := state.UnsyncList.GetClaims(ref)
-	if len(claims) == 0 {
+	if len(claims) == 0 || len(joinClaims) == 0 {
 		return
 	}
 	for _, claim := range claims {
@@ -143,13 +150,10 @@ func (tp *ThirdPhaseImpl) handleJoinClaims(handler *claimhandler.JoinClaimHandle
 			resultClaims = append(resultClaims, claim)
 		}
 	}
-	updatedJoinClaims := handler.HandleAndReturnClaims()
-	if len(updatedJoinClaims) > 0 {
-		for _, claim := range updatedJoinClaims {
-			resultClaims = append(resultClaims, claim)
-		}
-		state.UnsyncList.InsertClaims(ref, resultClaims)
+	for _, claim := range joinClaims {
+		resultClaims = append(resultClaims, claim)
 	}
+	state.UnsyncList.InsertClaims(ref, resultClaims)
 }
 
 func (tp *ThirdPhaseImpl) checkPacketSignature(packet *packets.Phase3Packet, recordRef core.RecordRef, unsyncList network.UnsyncList) error {
