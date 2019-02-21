@@ -305,7 +305,7 @@ func (h *MessageHandler) handleSetRecord(ctx context.Context, parcel core.Parcel
 	rec := record.DeserializeRecord(msg.Record)
 	jetID := jetFromContext(ctx)
 
-	id := record.NewRecordIDFromRecord(h.PlatformCryptographyScheme, parcel.Pulse(), rec)
+	calculatedID := record.NewRecordIDFromRecord(h.PlatformCryptographyScheme, parcel.Pulse(), rec)
 
 	switch r := rec.(type) {
 	case record.Request:
@@ -313,7 +313,7 @@ func (h *MessageHandler) handleSetRecord(ctx context.Context, parcel core.Parcel
 			return &reply.Error{ErrType: reply.ErrTooManyPendingRequests}, nil
 		}
 		recentStorage := h.RecentStorageProvider.GetPendingStorage(ctx, jetID)
-		recentStorage.AddPendingRequest(ctx, r.GetObject(), *id)
+		recentStorage.AddPendingRequest(ctx, r.GetObject(), *calculatedID)
 	case *record.ResultRecord:
 		recentStorage := h.RecentStorageProvider.GetPendingStorage(ctx, jetID)
 		recentStorage.RemovePendingRequest(ctx, r.Object, *r.Request.Record())
@@ -322,6 +322,7 @@ func (h *MessageHandler) handleSetRecord(ctx context.Context, parcel core.Parcel
 	id, err := h.ObjectStorage.SetRecord(ctx, jetID, parcel.Pulse(), rec)
 	if err == storage.ErrOverride {
 		inslogger.FromContext(ctx).WithField("type", fmt.Sprintf("%T", rec)).Warn("set record override")
+		id = calculatedID
 	} else if err != nil {
 		return nil, err
 	}
@@ -844,6 +845,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 		id, err := tx.SetRecord(ctx, jetID, parcel.Pulse(), rec)
 		if err == storage.ErrOverride {
 			logger.WithField("type", fmt.Sprintf("%T", rec)).Warn("set record override (#1)")
+			id = recID
 		} else if err != nil {
 			return err
 		}
@@ -920,6 +922,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel core.Pa
 		child, err = tx.SetRecord(ctx, jetID, parcel.Pulse(), childRec)
 		if err == storage.ErrOverride {
 			logger.WithField("type", fmt.Sprintf("%T", rec)).Warn("set record override (#2)")
+			child = recID
 		} else if err != nil {
 			return err
 		}
