@@ -281,3 +281,7 @@ func (ul *sparseUnsyncList) AddClaims(claims map[core.RecordRef][]consensus.Refe
 	}
 	return nil
 }
+
+func (ul *sparseUnsyncList) UpdateClaims(ref core.RecordRef, claims []consensus.ReferendumClaim) {
+	ul.unsyncList.claims[ref] = claims
+}
