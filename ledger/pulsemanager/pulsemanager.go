@@ -573,6 +573,10 @@ func (m *PulseManager) setUnderGilSection(
 	m.PulseStorage.Set(&newPulse)
 	m.PulseStorage.Unlock()
 
+	if m.NodeNet.GetOrigin().Role() == core.StaticRoleHeavyMaterial {
+		return nil, nil, nil, nil, nil
+	}
+
 	var jets []jetInfo
 	if persist && oldPulse != nil {
 		jets, err = m.processJets(ctx, oldPulse.PulseNumber, newPulse.PulseNumber)
