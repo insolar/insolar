@@ -28,12 +28,12 @@ import (
 const defaultURL = "http://localhost:19101/api"
 
 var (
-	rootMemberKeys string
-	apiURL         string
+	memberKeys string
+	apiURL     string
 )
 
 func parseInputParams() {
-	pflag.StringVarP(&rootMemberKeys, "rootmemberkeys", "k", "", "path to file with RootMember keys")
+	pflag.StringVarP(&memberKeys, "memberkeys", "k", "", "path to file with Member keys")
 	pflag.StringVarP(&apiURL, "url", "u", defaultURL, "api url")
 	pflag.Parse()
 }
@@ -51,7 +51,7 @@ func main() {
 	err := log.SetLevel("error")
 	check("can't set 'error' level on logger: ", err)
 
-	insSDK, err := sdk.NewSDK([]string{apiURL}, rootMemberKeys)
+	insSDK, err := sdk.NewSDK([]string{apiURL}, memberKeys)
 	check("can't create SDK: ", err)
 
 	// you can modify this manual tests by commenting any of this functions or/and add some new functions if necessary

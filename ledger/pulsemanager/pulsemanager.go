@@ -18,6 +18,7 @@ package pulsemanager
 
 import (
 	"context"
+	"fmt"
 	"math/rand"
 	"sync"
 	"time"
@@ -127,6 +128,7 @@ func (m *PulseManager) processEndPulse(
 	ctx, span := instracer.StartSpan(ctx, "pulse.process_end")
 	defer span.End()
 
+	logger := inslogger.FromContext(ctx)
 	for _, i := range jets {
 		info := i
 
@@ -142,9 +144,14 @@ func (m *PulseManager) processEndPulse(
 				msg.Jet = *core.NewRecordRef(core.DomainID, jetID)
 				genericRep, err := m.Bus.Send(ctx, &msg, nil)
 				if err != nil {
+					logger.WithField("err", err).Error("failed to send hot data")
 					return
 				}
 				if _, ok := genericRep.(*reply.OK); !ok {
+					logger.WithField(
+						"err",
+						fmt.Sprintf("unexpected reply: %T", genericRep),
+					).Error("failed to send hot data")
 					return
 				}
 			}
@@ -207,9 +214,9 @@ func (m *PulseManager) createDrop(
 ) {
 	var prevDrop *jet.JetDrop
 	prevDrop, err = m.DropStorage.GetDrop(ctx, jetID, prevPulse)
-	if err == storage.ErrNotFound {
+	if err == core.ErrNotFound {
 		prevDrop, err = m.DropStorage.GetDrop(ctx, jet.Parent(jetID), prevPulse)
-		if err == storage.ErrNotFound {
+		if err == core.ErrNotFound {
 			inslogger.FromContext(ctx).WithFields(map[string]interface{}{
 				"pulse": prevPulse,
 				"jet":   jetID.DebugString(),
@@ -263,26 +270,6 @@ func (m *PulseManager) createDrop(
 	}
 
 	return
-}
-
-func (m *PulseManager) processDrop(
-	ctx context.Context,
-	jetID core.RecordID,
-	pulse *core.Pulse,
-	dropSerialized []byte,
-	messages [][]byte,
-) error {
-	msg := &message.JetDrop{
-		JetID:       jetID,
-		Drop:        dropSerialized,
-		Messages:    messages,
-		PulseNumber: pulse.PulseNumber,
-	}
-	_, err := m.Bus.Send(ctx, msg, nil)
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 func (m *PulseManager) getExecutorHotData(
@@ -372,16 +359,19 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse c
 	})
 	indexToSplit := rand.Intn(len(jetIDs))
 	for i, jetID := range jetIDs {
+		wasExecutor := false
 		executor, err := m.JetCoordinator.LightExecutorForJet(ctx, jetID, currentPulse)
-		if err != nil {
+		if err != nil && err != core.ErrNoNodes {
 			return nil, err
 		}
-		imExecutor := *executor == me
+		if err == nil {
+			wasExecutor = *executor == me
+		}
 
-		jetLogger := logger.WithField("jetid", jetID.DebugString())
-		inslogger.SetLogger(ctx, jetLogger)
-		logger.WithField("im_executor", imExecutor).Debug("process jet")
-		if !imExecutor {
+		logger = logger.WithField("jetid", jetID.DebugString())
+		inslogger.SetLogger(ctx, logger)
+		logger.WithField("i_was_executor", wasExecutor).Debug("process jet")
+		if !wasExecutor {
 			continue
 		}
 
@@ -460,7 +450,7 @@ func (m *PulseManager) rewriteHotData(ctx context.Context, fromJetID, toJetID co
 	for id := range indexStorage.GetObjects() {
 		idx, err := m.ObjectStorage.GetObjectIndex(ctx, fromJetID, &id, false)
 		if err != nil {
-			if err == storage.ErrNotFound {
+			if err == core.ErrNotFound {
 				logger.WithField("id", id.DebugString()).Error("rewrite index not found")
 				continue
 			}
@@ -557,6 +547,7 @@ func (m *PulseManager) setUnderGilSection(
 	if err != core.ErrNotFound {
 		oldPulse = &storagePulse.Pulse
 		prevPN = storagePulse.Prev
+		ctx, _ = inslogger.WithField(ctx, "current_pulse", fmt.Sprintf("%d", oldPulse.PulseNumber))
 	}
 
 	logger := inslogger.FromContext(ctx)
@@ -588,18 +579,49 @@ func (m *PulseManager) setUnderGilSection(
 	m.PulseStorage.Set(&newPulse)
 	m.PulseStorage.Unlock()
 
+	if m.NodeNet.GetOrigin().Role() == core.StaticRoleHeavyMaterial {
+		return nil, nil, nil, nil, nil
+	}
+
 	var jets []jetInfo
-	if persist && oldPulse != nil && prevPN != nil {
+	if persist && oldPulse != nil {
 		jets, err = m.processJets(ctx, oldPulse.PulseNumber, newPulse.PulseNumber)
+		// We just joined to network
+		if err == core.ErrNoNodes {
+			return jets, map[core.RecordID][]core.RecordID{}, oldPulse, prevPN, nil
+		}
 		if err != nil {
 			return nil, nil, nil, nil, errors.Wrap(err, "failed to process jets")
 		}
 	}
 
-	removed := m.RecentStorageProvider.DecreaseIndexesTTL(ctx)
+	removed := map[core.RecordID][]core.RecordID{}
+	if oldPulse != nil && prevPN != nil {
+		removed = m.RecentStorageProvider.DecreaseIndexesTTL(ctx)
+		if m.NodeNet.GetOrigin().Role() == core.StaticRoleLightMaterial {
+			m.prepareArtifactManagerMessageHandlerForNextPulse(ctx, newPulse, jets)
+		}
+	}
 
-	if m.NodeNet.GetOrigin().Role() == core.StaticRoleLightMaterial {
-		m.prepareArtifactManagerMessageHandlerForNextPulse(ctx, newPulse, jets)
+	if persist && oldPulse != nil {
+		nodes, err := m.NodeStorage.GetActiveNodes(oldPulse.PulseNumber)
+		if err != nil {
+			return nil, nil, nil, nil, err
+		}
+		// No active nodes for pulse. It means there was no processing (network start).
+		if len(nodes) == 0 {
+			// Activate zero jet for jet tree and unlock jet waiter.
+			zeroJet := *jet.NewID(0, nil)
+			m.JetStorage.UpdateJetTree(ctx, newPulse.PulseNumber, true, zeroJet)
+			err := m.HotDataWaiter.Unlock(ctx, zeroJet)
+			if err != nil {
+				if err == artifactmanager.ErrWaiterNotLocked {
+					inslogger.FromContext(ctx).Error(err)
+				} else {
+					return nil, nil, nil, nil, errors.Wrap(err, "failed to unlock zero jet")
+				}
+			}
+		}
 	}
 
 	return jets, removed, oldPulse, prevPN, nil

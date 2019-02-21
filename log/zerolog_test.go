@@ -14,5 +14,26 @@
  *    limitations under the License.
  */
 
-// Package localstorage provides methods for saving data on current machine.
-package localstorage
+package log
+
+import (
+	"bytes"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+
+	"github.com/insolar/insolar/configuration"
+)
+
+func TestZeroLogAdapter_CallerInfo(t *testing.T) {
+	log, err := NewLog(configuration.Log{Level: "info", Adapter: "zerolog", Formatter: "json"})
+	require.NoError(t, err)
+	require.NotNil(t, log)
+
+	var buf bytes.Buffer
+	log.SetOutput(&buf)
+
+	log.Error("test")
+
+	require.Contains(t, buf.String(), "zerolog_test.go:36")
+}

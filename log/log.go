@@ -21,12 +21,14 @@ import (
 	stdlog "log"
 	"strings"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/pkg/errors"
 )
 
 const defaultSkipCallNumber = 3
+const timestampFormat = "2006-01-02 15:04:05.000000"
 
 // NewLog creates logger instance with particular configuration
 func NewLog(cfg configuration.Log) (core.Logger, error) {
@@ -36,6 +38,8 @@ func NewLog(cfg configuration.Log) (core.Logger, error) {
 	switch strings.ToLower(cfg.Adapter) {
 	case "logrus":
 		logger, err = newLogrusAdapter(cfg)
+	case "zerolog":
+		logger, err = newZerologAdapter(cfg)
 	default:
 		err = errors.New("unknown adapter")
 	}
@@ -56,12 +60,12 @@ func NewLog(cfg configuration.Log) (core.Logger, error) {
 // TODO: make it private again
 var GlobalLogger = func() core.Logger {
 	holder := configuration.NewHolder().MustInit(false)
-	logger, err := newLogrusAdapter(holder.Configuration.Log)
+	logger, err := NewLog(holder.Configuration.Log)
 	if err != nil {
 		stdlog.Println("warning:", err.Error())
 	}
 
-	logger.skipCallNumber = defaultSkipCallNumber + 1
+	//logger.skipCallNumber = defaultSkipCallNumber + 1
 	if err := logger.SetLevel(holder.Configuration.Log.Level); err != nil {
 		stdlog.Println("warning:", err.Error())
 	}
@@ -77,19 +81,9 @@ func SetLevel(level string) error {
 	return GlobalLogger.SetLevel(level)
 }
 
-// GetLevel lets log level for global logger
-func GetLevel() string {
-	return GlobalLogger.GetLevel()
-}
-
 // Debug logs a message at level Debug to the global logger.
 func Debug(args ...interface{}) {
 	GlobalLogger.Debug(args...)
-}
-
-// Debugln logs a message at level Debug to the global logger.
-func Debugln(args ...interface{}) {
-	GlobalLogger.Debugln(args...)
 }
 
 // Debugf logs a message at level Debug to the global logger.
@@ -102,11 +96,6 @@ func Info(args ...interface{}) {
 	GlobalLogger.Info(args...)
 }
 
-// Infoln logs a message at level Info to the global logger.
-func Infoln(args ...interface{}) {
-	GlobalLogger.Infoln(args...)
-}
-
 // Infof logs a message at level Info to the global logger.
 func Infof(format string, args ...interface{}) {
 	GlobalLogger.Infof(format, args...)
@@ -115,11 +104,6 @@ func Infof(format string, args ...interface{}) {
 // Warn logs a message at level Warn to the global logger.
 func Warn(args ...interface{}) {
 	GlobalLogger.Warn(args...)
-}
-
-// Warnln logs a message at level Warn to the global logger.
-func Warnln(args ...interface{}) {
-	GlobalLogger.Warnln(args...)
 }
 
 // Warnf logs a message at level Warn to the global logger.
@@ -132,11 +116,6 @@ func Error(args ...interface{}) {
 	GlobalLogger.Error(args...)
 }
 
-// Errorln logs a message at level Error to the global logger.
-func Errorln(args ...interface{}) {
-	GlobalLogger.Errorln(args...)
-}
-
 // Errorf logs a message at level Error to the global logger.
 func Errorf(format string, args ...interface{}) {
 	GlobalLogger.Errorf(format, args...)
@@ -147,11 +126,6 @@ func Fatal(args ...interface{}) {
 	GlobalLogger.Fatal(args...)
 }
 
-// Fatalln logs a message at level Fatal to the global logger.
-func Fatalln(args ...interface{}) {
-	GlobalLogger.Fatalln(args...)
-}
-
 // Fatalf logs a message at level Fatal to the global logger.
 func Fatalf(format string, args ...interface{}) {
 	GlobalLogger.Fatalf(format, args...)
@@ -160,11 +134,6 @@ func Fatalf(format string, args ...interface{}) {
 // Panic logs a message at level Panic to the global logger.
 func Panic(args ...interface{}) {
 	GlobalLogger.Panic(args...)
-}
-
-// Panicln logs a message at level Panic to the global logger.
-func Panicln(args ...interface{}) {
-	GlobalLogger.Panicln(args...)
 }
 
 // Panicf logs a message at level Panic to the global logger.

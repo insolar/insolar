@@ -146,7 +146,7 @@ func (js *jetStorage) AddJets(ctx context.Context, jetIDs ...core.RecordID) erro
 		if err != nil {
 			return err
 		}
-	} else if err == ErrNotFound {
+	} else if err == core.ErrNotFound {
 		jets = jet.IDSet{}
 	} else {
 		return err

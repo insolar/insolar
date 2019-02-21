@@ -59,7 +59,7 @@ func (rs *replicaStorage) GetHeavySyncedPulse(ctx context.Context, jetID core.Re
 	buf, err = rs.DB.get(ctx, prefixkey(scopeIDSystem, jetID[:], []byte{sysLastSyncedPulseOnHeavy}))
 	if err == nil {
 		pn = core.NewPulseNumber(buf)
-	} else if err == ErrNotFound {
+	} else if err == core.ErrNotFound {
 		err = nil
 	}
 	return
@@ -75,7 +75,7 @@ func sysHeavyClientStateKeyForJet(jetID []byte) []byte {
 func (rs *replicaStorage) GetSyncClientJetPulses(ctx context.Context, jetID core.RecordID) ([]core.PulseNumber, error) {
 	k := sysHeavyClientStateKeyForJet(jetID[:])
 	buf, err := rs.DB.get(ctx, k)
-	if err == ErrNotFound {
+	if err == core.ErrNotFound {
 		return nil, nil
 	} else if err != nil {
 		return nil, errors.Wrap(err, "GetSyncClientJetPulses failed")

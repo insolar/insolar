@@ -20,7 +20,6 @@ package goplugin
 import (
 	"context"
 	"net/rpc"
-	"os/exec"
 	"sync"
 	"time"
 
@@ -53,7 +52,6 @@ type GoPlugin struct {
 	Cfg             *configuration.LogicRunner
 	MessageBus      core.MessageBus
 	ArtifactManager core.ArtifactManager
-	runner          *exec.Cmd
 
 	clientMutex sync.Mutex
 	client      *rpc.Client

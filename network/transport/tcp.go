@@ -22,11 +22,11 @@ import (
 	"io"
 	"net"
 
-	"github.com/insolar/insolar/metrics"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/transport/pool"
 	"github.com/insolar/insolar/network/transport/relay"
 	"github.com/insolar/insolar/network/utils"
@@ -191,7 +191,7 @@ func (*tcpConnectionFactory) CreateConnection(ctx context.Context, address net.A
 
 	err = conn.SetNoDelay(true)
 	if err != nil {
-		logger.Errorln("[ createConnection ] Failed to set connection no delay: ", err.Error())
+		logger.Error("[ createConnection ] Failed to set connection no delay: ", err.Error())
 	}
 
 	return conn, nil

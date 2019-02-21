@@ -66,9 +66,8 @@ type CurrentExecution struct {
 }
 
 type ExecutionQueueResult struct {
-	reply        core.Reply
-	err          error
-	somebodyElse bool
+	reply core.Reply
+	err   error
 }
 
 type ExecutionQueueElement struct {
@@ -130,10 +129,8 @@ func (st *ObjectState) WrapError(err error, message string) error {
 
 // LogicRunner is a general interface of contract executor
 type LogicRunner struct {
-	// FIXME: Ledger component is deprecated. Inject required sub-components.
 	MessageBus                 core.MessageBus                 `inject:""`
 	ContractRequester          core.ContractRequester          `inject:""`
-	Ledger                     core.Ledger                     `inject:""`
 	NodeNetwork                core.NodeNetwork                `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 	ParcelFactory              message.ParcelFactory           `inject:""`
@@ -485,6 +482,7 @@ func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionS
 		current := CurrentExecution{
 			Request:       qe.request,
 			RequesterNode: &sender,
+			Context:       qe.ctx,
 		}
 		es.Current = &current
 
@@ -499,22 +497,9 @@ func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionS
 
 		res := ExecutionQueueResult{}
 
-		recordingBus := lr.MessageBus
-		//recordingBus, err := lr.MessageBus.NewRecorder(qe.ctx, *lr.pulse(qe.ctx))
-		//if err != nil {
-		//	res.err = err
-		//	continue
-		//}
-
-		current.Context = core.ContextWithMessageBus(qe.ctx, recordingBus)
-
 		inslogger.FromContext(qe.ctx).Debug("Registering request within execution behaviour")
 
-		ok := es.Behaviour.(*ValidationSaver)
-		if ok == nil {
-			panic("not ValidationSaver behaviour in ProcessExecutionQueue()")
-		}
-		es.Behaviour.(*ValidationSaver).NewRequest(qe.parcel, *qe.request, recordingBus)
+		es.Behaviour.(*ValidationSaver).NewRequest(qe.parcel, *qe.request, lr.MessageBus)
 
 		res.reply, res.err = lr.executeOrValidate(current.Context, es, qe.parcel)
 
@@ -616,7 +601,7 @@ func (lr *LogicRunner) executeOrValidate(
 	go func() {
 		inslogger.FromContext(ctx).Debugf("Sending Method Results for ", request)
 
-		_, err := core.MessageBusFromContext(ctx, nil).Send(
+		_, err := core.MessageBusFromContext(ctx, lr.MessageBus).Send(
 			ctx,
 			&message.ReturnResults{
 				Caller:   lr.NodeNetwork.GetOrigin().ID(),
@@ -942,6 +927,9 @@ func (lr *LogicRunner) executeConstructorCall(
 			ctx,
 			Ref{}, *current.Request, m.ParentRef, m.PrototypeRef, m.SaveAs == message.Delegate, newData,
 		)
+		if err != nil {
+			return nil, es.WrapError(err, "couldn't activate object")
+		}
 		_, err = lr.ArtifactManager.RegisterResult(ctx, *current.Request, *current.Request, nil)
 		if err != nil {
 			return nil, es.WrapError(err, "couldn't save results")
