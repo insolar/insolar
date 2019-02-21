@@ -1,9 +1,0 @@
-FROM insolar/insolard as builder
-
-FROM alpine:latest
-RUN mkdir -p /go/bin
-COPY --from=builder /go/bin/insgorund /go/bin/insgorund
-EXPOSE 7777
-EXPOSE 7778
-ENTRYPOINT ["/go/bin/insgorund"]
-CMD ["--rpc=0.0.0.0:7778"]
