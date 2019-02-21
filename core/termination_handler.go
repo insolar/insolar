@@ -20,15 +20,14 @@ import (
 	"context"
 	"sync"
 
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/servicenetwork"
 )
 
-type leaveAproved struct{}
+type leaveApproved struct{}
 
 // TerminationHandler handles such node events as graceful stop, abort, etc.
 type TerminationHandler interface {
-	Leave(context.Context, PulseNumber) chan leaveAproved
+	Leave(context.Context, PulseNumber) chan leaveApproved
 	OnLeaveApproved()
 	// Abort forces to stop all node components
 	Abort()
@@ -37,7 +36,7 @@ type TerminationHandler interface {
 type terminationHandler struct {
 	sync.Mutex
 	Network     servicenetwork.ServiceNetwork `inject:""`
-	done        chan leaveAproved
+	done        chan leaveApproved
 	terminating bool
 }
 
@@ -45,12 +44,12 @@ func NewTerminationHandler() TerminationHandler {
 	return &terminationHandler{}
 }
 
-func (t terminationHandler) Leave(ctx context.Context, pulseDelta PulseNumber) chan leaveAproved {
+func (t terminationHandler) Leave(ctx context.Context, pulseDelta PulseNumber) chan leaveApproved {
 	t.Lock()
 	defer t.Unlock()
 
 	if !t.terminating {
-		t.done = make(chan leaveAproved, 1)
+		t.done = make(chan leaveApproved, 1)
 	}
 
 	if pulseDelta == 0 || !t.terminating {
@@ -68,6 +67,7 @@ func (t terminationHandler) OnLeaveApproved() {
 	close(t.done)
 }
 
+// ci said that log.Fatal causes import cycle
 func (t terminationHandler) Abort() {
-	log.Fatal("Node leave acknowledged by network. Goodbye!")
+	panic("Node leave acknowledged by network. Goodbye!")
 }
