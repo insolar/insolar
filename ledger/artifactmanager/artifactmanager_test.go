@@ -55,7 +55,7 @@ type amSuite struct {
 
 	scheme        core.PlatformCryptographyScheme
 	pulseTracker  storage.PulseTracker
-	nodeStorage   nodes.Storage
+	nodeStorage   nodes.Accessor
 	objectStorage storage.ObjectStorage
 	jetStorage    storage.JetStorage
 	dropStorage   storage.DropStorage
@@ -162,11 +162,11 @@ func getTestData(s *amSuite) (
 	handler := MessageHandler{
 		replayHandlers:             map[core.MessageType]core.MessageHandler{},
 		PlatformCryptographyScheme: s.scheme,
-		conf:                       &configuration.Ledger{LightChainLimit: 3, PendingRequestsLimit: 10},
-		certificate:                certificate,
+		conf:        &configuration.Ledger{LightChainLimit: 3, PendingRequestsLimit: 10},
+		certificate: certificate,
 	}
 
-	handler.NodeStorage = s.nodeStorage
+	handler.Nodes = s.nodeStorage
 	handler.ObjectStorage = s.objectStorage
 	handler.PulseTracker = s.pulseTracker
 	handler.DBContext = s.db
@@ -803,8 +803,8 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterValidation() {
 	handler := MessageHandler{
 		replayHandlers:             map[core.MessageType]core.MessageHandler{},
 		PlatformCryptographyScheme: s.scheme,
-		conf:                       &configuration.Ledger{LightChainLimit: 3, PendingRequestsLimit: 10},
-		certificate:                certificate,
+		conf:        &configuration.Ledger{LightChainLimit: 3, PendingRequestsLimit: 10},
+		certificate: certificate,
 	}
 
 	handler.Bus = mb
@@ -812,7 +812,7 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterValidation() {
 	handler.DBContext = s.db
 	handler.ObjectStorage = s.objectStorage
 	handler.PulseTracker = s.pulseTracker
-	handler.NodeStorage = s.nodeStorage
+	handler.Nodes = s.nodeStorage
 	handler.JetStorage = s.jetStorage
 
 	handler.RecentStorageProvider = provideMock

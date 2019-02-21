@@ -54,7 +54,7 @@ type handlerSuite struct {
 
 	scheme        core.PlatformCryptographyScheme
 	pulseTracker  storage.PulseTracker
-	nodeStorage   nodes.Storage
+	nodeStorage   nodes.Accessor
 	objectStorage storage.ObjectStorage
 	jetStorage    storage.JetStorage
 	dropStorage   storage.DropStorage
@@ -131,7 +131,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObject_FetchesObject() {
 		LightChainLimit: 2,
 	}, certificate)
 	h.JetStorage = s.jetStorage
-	h.NodeStorage = s.nodeStorage
+	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
@@ -300,7 +300,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetChildren_Redirects() {
 	h.DelegationTokenFactory = tf
 	h.Bus = mb
 	h.JetStorage = s.jetStorage
-	h.NodeStorage = s.nodeStorage
+	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
@@ -419,7 +419,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeav
 		LightChainLimit: 3,
 	}, certificate)
 	h.JetStorage = s.jetStorage
-	h.NodeStorage = s.nodeStorage
+	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
@@ -493,7 +493,7 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_FetchesIndexFromHea
 		LightChainLimit: 3,
 	}, certificate)
 	h.JetStorage = s.jetStorage
-	h.NodeStorage = s.nodeStorage
+	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
@@ -568,7 +568,7 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_UpdateIndexState() 
 		LightChainLimit: 3,
 	}, certificate)
 	h.JetStorage = s.jetStorage
-	h.NodeStorage = s.nodeStorage
+	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
@@ -642,7 +642,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObjectIndex() {
 	h.JetCoordinator = jc
 	h.Bus = mb
 	h.JetStorage = s.jetStorage
-	h.NodeStorage = s.nodeStorage
+	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
@@ -693,7 +693,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHasPendingRequests() {
 	h.JetCoordinator = jc
 	h.Bus = mb
 	h.JetStorage = s.jetStorage
-	h.NodeStorage = s.nodeStorage
+	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
@@ -749,7 +749,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetCode_Redirects() {
 	h.DelegationTokenFactory = tf
 	h.Bus = mb
 	h.JetStorage = s.jetStorage
-	h.NodeStorage = s.nodeStorage
+	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
@@ -825,7 +825,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 		LightChainLimit: 2,
 	}, certificate)
 	h.JetStorage = s.jetStorage
-	h.NodeStorage = s.nodeStorage
+	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
@@ -902,7 +902,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 		LightChainLimit: 2,
 	}, certificate)
 	h.JetStorage = s.jetStorage
-	h.NodeStorage = s.nodeStorage
+	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
@@ -1053,7 +1053,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	h.RecentStorageProvider = provideMock
 	h.Bus = mb
 	h.JetStorage = s.jetStorage
-	h.NodeStorage = s.nodeStorage
+	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
@@ -1116,7 +1116,7 @@ func (s *handlerSuite) TestMessageHandler_HandleValidationCheck() {
 	h.JetCoordinator = jc
 	h.Bus = mb
 	h.JetStorage = s.jetStorage
-	h.NodeStorage = s.nodeStorage
+	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
@@ -1185,7 +1185,7 @@ func (s *handlerSuite) TestMessageHandler_HandleJetDrop_SaveJet() {
 		LightChainLimit: 3,
 	}, certificate)
 	h.JetStorage = s.jetStorage
-	h.NodeStorage = s.nodeStorage
+	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
@@ -1232,7 +1232,7 @@ func (s *handlerSuite) TestMessageHandler_HandleJetDrop_SaveJet_ExistingMap() {
 		LightChainLimit: 3,
 	}, certificate)
 	h.JetStorage = s.jetStorage
-	h.NodeStorage = s.nodeStorage
+	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage

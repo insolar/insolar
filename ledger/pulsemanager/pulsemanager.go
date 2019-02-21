@@ -64,7 +64,8 @@ type PulseManager struct {
 	JetStorage                 storage.JetStorage              `inject:""`
 	DropStorage                storage.DropStorage             `inject:""`
 	ObjectStorage              storage.ObjectStorage           `inject:""`
-	NodeStorage                nodes.Storage                   `inject:""`
+	NodeSetter                 nodes.Setter                    `inject:""`
+	Nodes                      nodes.Accessor                  `inject:""`
 	PulseTracker               storage.PulseTracker            `inject:""`
 	ReplicaStorage             storage.ReplicaStorage          `inject:""`
 	DBContext                  storage.DBContext               `inject:""`
@@ -570,7 +571,7 @@ func (m *PulseManager) setUnderGilSection(
 			m.PulseStorage.Unlock()
 			return nil, nil, nil, nil, errors.Wrap(err, "call of AddPulse failed")
 		}
-		err = m.NodeStorage.Set(newPulse.PulseNumber, m.NodeNet.GetWorkingNodes())
+		err = m.NodeSetter.Set(newPulse.PulseNumber, m.NodeNet.GetWorkingNodes())
 		if err != nil {
 			m.PulseStorage.Unlock()
 			return nil, nil, nil, nil, errors.Wrap(err, "call of SetActiveNodes failed")
@@ -605,7 +606,7 @@ func (m *PulseManager) setUnderGilSection(
 	}
 
 	if persist && oldPulse != nil {
-		nodes, err := m.NodeStorage.All(oldPulse.PulseNumber)
+		nodes, err := m.Nodes.All(oldPulse.PulseNumber)
 		if err != nil {
 			return nil, nil, nil, nil, err
 		}
@@ -673,7 +674,7 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse core.Pulse, 
 
 	pn := p.Pulse.PulseNumber
 
-	m.NodeStorage.RemoveActiveNodesUntil(pn)
+	m.NodeSetter.RemoveActiveNodesUntil(pn)
 
 	err = m.syncClientsPool.LightCleanup(ctx, pn, m.RecentStorageProvider, jetIndexesRemoved)
 	if err != nil {
@@ -734,7 +735,7 @@ func (m *PulseManager) Start(ctx context.Context) error {
 		return err
 	}
 
-	err = m.NodeStorage.Set(core.FirstPulseNumber, []core.Node{m.NodeNet.GetOrigin()})
+	err = m.NodeSetter.Set(core.FirstPulseNumber, []core.Node{m.NodeNet.GetOrigin()})
 	if err != nil && err != storage.ErrOverride {
 		return err
 	}

@@ -23,12 +23,17 @@ import (
 	"github.com/insolar/insolar/ledger/storage"
 )
 
-// Storage provides info about active nodes
-//go:generate minimock -i github.com/insolar/insolar/ledger/storage/nodes.Storage -o ./ -s _mock.go
-type Storage interface {
-	Set(pulse core.PulseNumber, nodes []core.Node) error
+// Accessor provides info about active nodes.
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage/nodes.Accessor -o ./ -s _mock.go
+type Accessor interface {
 	All(pulse core.PulseNumber) ([]core.Node, error)
 	InRole(pulse core.PulseNumber, role core.StaticRole) ([]core.Node, error)
+}
+
+// Setter provides methods for setting active nodes.
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage/nodes.Setter -o ./ -s _mock.go
+type Setter interface {
+	Set(pulse core.PulseNumber, nodes []core.Node) error
 
 	// RemoveActiveNodesUntil
 	// DEPRECATED
@@ -38,19 +43,19 @@ type Storage interface {
 // NodeHistory is an in-memory active node storage for each pulse. It's required to calculate node roles
 // for past pulses to locate data.
 // It should only contain previous N pulses. It should be stored on disk.
-type nodeStorage struct {
+type nodes struct {
 	lock  sync.RWMutex
 	nodes map[core.PulseNumber][]Node
 }
 
 // NewStorage create new instance of Storage
-func NewStorage() Storage {
+func NewStorage() *nodes {
 	// return new(nodeStorage)
-	return &nodeStorage{nodes: map[core.PulseNumber][]Node{}}
+	return &nodes{nodes: map[core.PulseNumber][]Node{}}
 }
 
 // Set saves active nodes for pulse in memory.
-func (a *nodeStorage) Set(pulse core.PulseNumber, nodes []core.Node) error {
+func (a *nodes) Set(pulse core.PulseNumber, nodes []core.Node) error {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 
@@ -70,7 +75,7 @@ func (a *nodeStorage) Set(pulse core.PulseNumber, nodes []core.Node) error {
 }
 
 // All return active nodes for specified pulse.
-func (a *nodeStorage) All(pulse core.PulseNumber) ([]core.Node, error) {
+func (a *nodes) All(pulse core.PulseNumber) ([]core.Node, error) {
 	a.lock.RLock()
 	defer a.lock.RUnlock()
 
@@ -87,7 +92,7 @@ func (a *nodeStorage) All(pulse core.PulseNumber) ([]core.Node, error) {
 }
 
 // InRole return active nodes for specified pulse and role.
-func (a *nodeStorage) InRole(pulse core.PulseNumber, role core.StaticRole) ([]core.Node, error) {
+func (a *nodes) InRole(pulse core.PulseNumber, role core.StaticRole) ([]core.Node, error) {
 	a.lock.RLock()
 	defer a.lock.RUnlock()
 
@@ -106,7 +111,7 @@ func (a *nodeStorage) InRole(pulse core.PulseNumber, role core.StaticRole) ([]co
 }
 
 // RemoveActiveNodesUntil removes active nodes for all nodes less than provided pulse.
-func (a *nodeStorage) RemoveActiveNodesUntil(pulse core.PulseNumber) {
+func (a *nodes) RemoveActiveNodesUntil(pulse core.PulseNumber) {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 

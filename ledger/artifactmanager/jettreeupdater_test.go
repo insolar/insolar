@@ -42,12 +42,12 @@ func TestJetTreeUpdater_otherNodesForPulse(t *testing.T) {
 	defer mc.Finish()
 
 	jc := testutils.NewJetCoordinatorMock(mc)
-	ans := nodes.NewStorageMock(mc)
+	ans := nodes.NewAccessorMock(mc)
 	js := storage.NewJetStorageMock(mc)
 	jtu := &jetTreeUpdater{
-		ActiveNodesStorage: ans,
-		JetStorage:         js,
-		JetCoordinator:     jc,
+		Nodes:          ans,
+		JetStorage:     js,
+		JetCoordinator: jc,
 	}
 
 	t.Run("active nodes storage returns error", func(t *testing.T) {
@@ -135,14 +135,14 @@ func TestJetTreeUpdater_fetchActualJetFromOtherNodes(t *testing.T) {
 	defer mc.Finish()
 
 	jc := testutils.NewJetCoordinatorMock(mc)
-	ans := nodes.NewStorageMock(mc)
+	ans := nodes.NewAccessorMock(mc)
 	js := storage.NewJetStorageMock(mc)
 	mb := testutils.NewMessageBusMock(mc)
 	jtu := &jetTreeUpdater{
-		ActiveNodesStorage: ans,
-		JetStorage:         js,
-		JetCoordinator:     jc,
-		MessageBus:         mb,
+		Nodes:          ans,
+		JetStorage:     js,
+		JetCoordinator: jc,
+		MessageBus:     mb,
 	}
 
 	meRef := testutils.RandomRef()
@@ -202,15 +202,15 @@ func TestJetTreeUpdater_fetchJet(t *testing.T) {
 	defer mc.Finish()
 
 	jc := testutils.NewJetCoordinatorMock(mc)
-	ans := nodes.NewStorageMock(mc)
+	ans := nodes.NewAccessorMock(mc)
 	js := storage.NewJetStorageMock(mc)
 	mb := testutils.NewMessageBusMock(mc)
 	jtu := &jetTreeUpdater{
-		ActiveNodesStorage: ans,
-		JetStorage:         js,
-		JetCoordinator:     jc,
-		MessageBus:         mb,
-		sequencer:          map[seqKey]*seqEntry{},
+		Nodes:          ans,
+		JetStorage:     js,
+		JetCoordinator: jc,
+		MessageBus:     mb,
+		sequencer:      map[seqKey]*seqEntry{},
 	}
 
 	target := testutils.RandomID()
@@ -258,15 +258,15 @@ func TestJetTreeUpdater_Concurrency(t *testing.T) {
 	defer mc.Finish()
 
 	jc := testutils.NewJetCoordinatorMock(mc)
-	ans := nodes.NewStorageMock(mc)
+	ans := nodes.NewAccessorMock(mc)
 	js := storage.NewJetStorageMock(mc)
 	mb := testutils.NewMessageBusMock(mc)
 	jtu := &jetTreeUpdater{
-		ActiveNodesStorage: ans,
-		JetStorage:         js,
-		JetCoordinator:     jc,
-		MessageBus:         mb,
-		sequencer:          map[seqKey]*seqEntry{},
+		Nodes:          ans,
+		JetStorage:     js,
+		JetCoordinator: jc,
+		MessageBus:     mb,
+		sequencer:      map[seqKey]*seqEntry{},
 	}
 
 	meRef := testutils.RandomRef()

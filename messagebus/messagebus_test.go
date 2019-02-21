@@ -28,7 +28,6 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
-	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/network"
 )
@@ -55,7 +54,9 @@ func prepare(t *testing.T, ctx context.Context, currentPulse int, msgPulse int) 
 	jc := testutils.NewJetCoordinatorMock(t)
 	nn := network.NewNodeNetworkMock(t)
 	nn.GetOriginFunc = func() (r core.Node) {
-		return storage.Node{}
+		n := network.NewNodeMock(t)
+		n.IDMock.Return(core.RecordRef{})
+		return n
 	}
 
 	pcs := testutils.NewPlatformCryptographyScheme()

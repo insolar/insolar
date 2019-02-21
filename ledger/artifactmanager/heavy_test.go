@@ -47,7 +47,7 @@ type heavySuite struct {
 
 	scheme        core.PlatformCryptographyScheme
 	pulseTracker  storage.PulseTracker
-	nodeStorage   nodes.Storage
+	nodeStorage   nodes.Accessor
 	objectStorage storage.ObjectStorage
 	jetStorage    storage.JetStorage
 	dropStorage   storage.DropStorage
@@ -131,7 +131,7 @@ func (s *heavySuite) TestLedgerArtifactManager_handleHeavy() {
 	// message hanler with mok
 	mh := NewMessageHandler(nil, certificate)
 	mh.JetStorage = s.jetStorage
-	mh.NodeStorage = s.nodeStorage
+	mh.Nodes = s.nodeStorage
 	mh.DBContext = s.db
 	mh.PulseTracker = s.pulseTracker
 	mh.ObjectStorage = s.objectStorage

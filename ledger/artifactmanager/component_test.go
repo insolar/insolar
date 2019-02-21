@@ -49,7 +49,7 @@ type componentSuite struct {
 
 	scheme        core.PlatformCryptographyScheme
 	pulseTracker  storage.PulseTracker
-	nodeStorage   nodes.Storage
+	nodeStorage   nodes.Accessor
 	objectStorage storage.ObjectStorage
 	jetStorage    storage.JetStorage
 }
@@ -145,7 +145,7 @@ func (s *componentSuite) TestLedgerArtifactManager_PendingRequest() {
 		certificate)
 
 	handler.JetStorage = s.jetStorage
-	handler.NodeStorage = s.nodeStorage
+	handler.Nodes = s.nodeStorage
 	handler.DBContext = s.db
 	handler.PulseTracker = s.pulseTracker
 	handler.ObjectStorage = s.objectStorage

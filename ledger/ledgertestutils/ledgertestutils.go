@@ -104,7 +104,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 	handler := artifactmanager.NewMessageHandler(&conf, certificate)
 	handler.PulseTracker = pt
 	handler.JetStorage = js
-	handler.NodeStorage = ns
+	handler.Nodes = ns
 	handler.DBContext = db
 	handler.ObjectStorage = os
 	handler.DropStorage = ds
@@ -161,7 +161,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 	pm.JetStorage = js
 	pm.DropStorage = ds
 	pm.ObjectStorage = os
-	pm.NodeStorage = ns
+	pm.Nodes = ns
 	pm.PulseTracker = pt
 	pm.ReplicaStorage = rs
 	pm.StorageCleaner = cl

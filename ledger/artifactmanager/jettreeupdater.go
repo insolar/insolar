@@ -48,25 +48,25 @@ type fetchResult struct {
 }
 
 type jetTreeUpdater struct {
-	ActiveNodesStorage nodes.Storage
-	JetStorage         storage.JetStorage
-	MessageBus         core.MessageBus
-	JetCoordinator     core.JetCoordinator
+	Nodes          nodes.Accessor
+	JetStorage     storage.JetStorage
+	MessageBus     core.MessageBus
+	JetCoordinator core.JetCoordinator
 
 	seqMutex  sync.Mutex
 	sequencer map[seqKey]*seqEntry
 }
 
 func newJetTreeUpdater(
-	ans nodes.Storage,
+	ans nodes.Accessor,
 	js storage.JetStorage, mb core.MessageBus, jc core.JetCoordinator,
 ) *jetTreeUpdater {
 	return &jetTreeUpdater{
-		ActiveNodesStorage: ans,
-		JetStorage:         js,
-		MessageBus:         mb,
-		JetCoordinator:     jc,
-		sequencer:          map[seqKey]*seqEntry{},
+		Nodes:          ans,
+		JetStorage:     js,
+		MessageBus:     mb,
+		JetCoordinator: jc,
+		sequencer:      map[seqKey]*seqEntry{},
 	}
 }
 
@@ -252,20 +252,20 @@ func (jtu *jetTreeUpdater) otherNodesForPulse(
 	ctx, span := instracer.StartSpan(ctx, "jet_tree_updater.other_nodes_for_pulse")
 	defer span.End()
 
-	nodes, err := jtu.ActiveNodesStorage.InRole(pulse, core.StaticRoleLightMaterial)
+	res, err := jtu.Nodes.InRole(pulse, core.StaticRoleLightMaterial)
 	if err != nil {
 		return nil, err
 	}
 
 	me := jtu.JetCoordinator.Me()
-	for i := range nodes {
-		if nodes[i].ID() == me {
-			nodes = append(nodes[:i], nodes[i+1:]...)
+	for i := range res {
+		if res[i].ID() == me {
+			res = append(res[:i], res[i+1:]...)
 			break
 		}
 	}
 
-	num := len(nodes)
+	num := len(res)
 	if num == 0 {
 		inslogger.FromContext(ctx).Error(
 			"This shouldn't happen. We're solo active light material",
@@ -274,5 +274,5 @@ func (jtu *jetTreeUpdater) otherNodesForPulse(
 		return nil, errors.New("impossible situation")
 	}
 
-	return nodes, nil
+	return res, nil
 }
