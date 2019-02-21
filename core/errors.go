@@ -31,6 +31,8 @@ var (
 	ErrNoPendingRequest = errors.New("no pending requests are available")
 	// ErrNotFound is returned when something not found
 	ErrNotFound = errors.New("Not found")
+	// ErrTooManyPendingRequests is returned when a limit of pending requests has been reached on a current LME
+	ErrTooManyPendingRequests = errors.New("the limit of pending requests count has been reached")
 	// ErrNoNodes is returned if no matching nodes found
 	ErrNoNodes = errors.New("no matching nodes")
 )

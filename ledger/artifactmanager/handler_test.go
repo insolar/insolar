@@ -112,7 +112,7 @@ func (s *handlerSuite) AfterTest(suiteName, testName string) {
 	s.cleaner()
 }
 
-func (s *handlerSuite) TestMessageHandler_HandleGetObject_Redirects() {
+func (s *handlerSuite) TestMessageHandler_HandleGetObject_FetchesObject() {
 	mc := minimock.NewController(s.T())
 	defer mc.Finish()
 	jetID := *jet.NewID(0, nil)
@@ -125,8 +125,6 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObject_Redirects() {
 
 	certificate := testutils.NewCertificateMock(s.T())
 	certificate.GetRoleMock.Return(core.StaticRoleLightMaterial)
-
-	tf.IssueGetObjectRedirectMock.Return(&delegationtoken.GetObjectRedirectToken{Signature: []byte{1, 2, 3}}, nil)
 
 	h := NewMessageHandler(&configuration.Ledger{
 		LightChainLimit: 2,
@@ -160,7 +158,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObject_Redirects() {
 	err := h.Init(s.ctx)
 	require.NoError(s.T(), err)
 
-	s.T().Run("fetches_index_from_heavy_when_no_index", func(t *testing.T) {
+	s.T().Run("fetches state from heavy when no index", func(t *testing.T) {
 		idxState := genRandomID(core.FirstPulseNumber)
 		objIndex := index.ObjectLifeline{
 			LatestState: idxState,
@@ -176,6 +174,10 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObject_Redirects() {
 				return &reply.ObjectIndex{Index: buf}, nil
 			}
 
+			if _, ok := gm.(*message.GetObject); ok {
+				return &reply.Object{Memory: []byte{42, 16, 2}}, nil
+			}
+
 			panic("unexpected call")
 		}
 
@@ -188,12 +190,9 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObject_Redirects() {
 			PulseNumber: core.FirstPulseNumber,
 		})
 		require.NoError(t, err)
-		redirect, ok := rep.(*reply.GetObjectRedirectReply)
+		obj, ok := rep.(*reply.Object)
 		require.True(t, ok)
-		token, ok := redirect.Token.(*delegationtoken.GetObjectRedirectToken)
-		assert.Equal(t, []byte{1, 2, 3}, token.Signature)
-		assert.Equal(t, lightRef, redirect.GetReceiver())
-		assert.Equal(t, idxState, redirect.StateID)
+		assert.Equal(t, []byte{42, 16, 2}, obj.Memory)
 
 		idx, err := s.objectStorage.GetObjectIndex(s.ctx, jetID, msg.Head.Record(), false)
 		require.NoError(t, err)
@@ -202,7 +201,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObject_Redirects() {
 
 	err = s.pulseTracker.AddPulse(s.ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 1})
 	require.NoError(s.T(), err)
-	s.T().Run("redirect to light when has index and state later than limit", func(t *testing.T) {
+	s.T().Run("fetches state from light when has index and state later than limit", func(t *testing.T) {
 		lightRef := genRandomRef(0)
 		jc.IsBeyondLimitMock.Return(false, nil)
 		jc.NodeForJetMock.Return(lightRef, nil)
@@ -211,24 +210,30 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObject_Redirects() {
 			LatestState: stateID,
 		})
 		require.NoError(t, err)
+
+		mb.SendFunc = func(c context.Context, gm core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
+			if _, ok := gm.(*message.GetObject); ok {
+				return &reply.Object{Memory: []byte{42, 16, 2}}, nil
+			}
+
+			panic("unexpected call")
+		}
+
 		rep, err := h.handleGetObject(contextWithJet(s.ctx, jetID), &message.Parcel{
 			Msg:         &msg,
 			PulseNumber: core.FirstPulseNumber + 1,
 		})
 		require.NoError(t, err)
-		redirect, ok := rep.(*reply.GetObjectRedirectReply)
+		obj, ok := rep.(*reply.Object)
 		require.True(t, ok)
-		token, ok := redirect.Token.(*delegationtoken.GetObjectRedirectToken)
-		assert.Equal(t, []byte{1, 2, 3}, token.Signature)
-		assert.Equal(t, lightRef, redirect.GetReceiver())
-		assert.Equal(t, stateID, redirect.StateID)
+		assert.Equal(t, []byte{42, 16, 2}, obj.Memory)
 	})
 
 	err = s.pulseTracker.AddPulse(s.ctx, core.Pulse{
 		PulseNumber: core.FirstPulseNumber + 2,
 	})
 	require.NoError(s.T(), err)
-	s.T().Run("redirect to heavy when has index and state earlier than limit", func(t *testing.T) {
+	s.T().Run("fetches state from heavy when has index and state earlier than limit", func(t *testing.T) {
 		heavyRef := genRandomRef(0)
 		jc.IsBeyondLimitMock.Return(false, nil)
 		jc.NodeForJetMock.Return(heavyRef, nil)
@@ -238,17 +243,23 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObject_Redirects() {
 			LatestState: stateID,
 		})
 		require.NoError(t, err)
+
+		mb.SendFunc = func(c context.Context, gm core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
+			if _, ok := gm.(*message.GetObject); ok {
+				return &reply.Object{Memory: []byte{42, 16, 2}}, nil
+			}
+
+			panic("unexpected call")
+		}
+
 		rep, err := h.handleGetObject(contextWithJet(s.ctx, jetID), &message.Parcel{
 			Msg:         &msg,
 			PulseNumber: core.FirstPulseNumber + 2,
 		})
 		require.NoError(t, err)
-		redirect, ok := rep.(*reply.GetObjectRedirectReply)
+		obj, ok := rep.(*reply.Object)
 		require.True(t, ok)
-		token, ok := redirect.Token.(*delegationtoken.GetObjectRedirectToken)
-		assert.Equal(t, []byte{1, 2, 3}, token.Signature)
-		assert.Equal(t, heavyRef, redirect.GetReceiver())
-		assert.Equal(t, stateID, redirect.StateID)
+		assert.Equal(t, []byte{42, 16, 2}, obj.Memory)
 	})
 }
 

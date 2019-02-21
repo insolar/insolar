@@ -24,7 +24,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/utils"
 	"github.com/pkg/errors"
@@ -101,13 +100,14 @@ func (nb *networkBootstrapper) bootstrapJoiner(ctx context.Context) (*network.Bo
 		return nil, errors.Wrap(err, "Error authorizing on discovery node")
 	}
 
-	data, err := nb.ChallengeController.Execute(ctx, discoveryNode, sessionID)
+	_, err = nb.ChallengeController.Execute(ctx, discoveryNode, sessionID)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error executing double challenge response")
 	}
-	origin := nb.NodeKeeper.GetOrigin()
-	mutableOrigin := origin.(nodenetwork.MutableNode)
-	mutableOrigin.SetShortID(data.AssignShortID)
+	// TODO: fix Short ID assignment logic
+	// origin := nb.NodeKeeper.GetOrigin()
+	// mutableOrigin := origin.(nodenetwork.MutableNode)
+	// mutableOrigin.SetShortID(data.AssignShortID)
 	return result, nb.AuthController.Register(ctx, discoveryNode, sessionID)
 }
 

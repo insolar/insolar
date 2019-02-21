@@ -213,20 +213,15 @@ type UnsyncList interface {
 	GetActiveNode(ref core.RecordRef) core.Node
 	// GetActiveNodes get active nodes for current consensus
 	GetActiveNodes() []core.Node
-	// TODO:
+	// GetMergedCopy returns copy of unsyncList with claims applied
 	GetMergedCopy() (*MergedListCopy, error)
 	//
 	RemoveNode(nodeID core.RecordRef)
 }
 
 type MergedListCopy struct {
-	ActiveList map[core.RecordRef]core.Node
-	Flags      MergedListFlags
-}
-
-type MergedListFlags struct {
+	ActiveList                 map[core.RecordRef]core.Node
 	NodesJoinedDuringPrevPulse bool
-	ShouldExit                 bool
 }
 
 // PartitionPolicy contains all rules how to initiate globule resharding.

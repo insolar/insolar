@@ -266,26 +266,6 @@ func (m *PulseManager) createDrop(
 	return
 }
 
-func (m *PulseManager) processDrop(
-	ctx context.Context,
-	jetID core.RecordID,
-	pulse *core.Pulse,
-	dropSerialized []byte,
-	messages [][]byte,
-) error {
-	msg := &message.JetDrop{
-		JetID:       jetID,
-		Drop:        dropSerialized,
-		Messages:    messages,
-		PulseNumber: pulse.PulseNumber,
-	}
-	_, err := m.Bus.Send(ctx, msg, nil)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func (m *PulseManager) getExecutorHotData(
 	ctx context.Context,
 	jetID core.RecordID,
@@ -593,9 +573,17 @@ func (m *PulseManager) setUnderGilSection(
 	m.PulseStorage.Set(&newPulse)
 	m.PulseStorage.Unlock()
 
+	if m.NodeNet.GetOrigin().Role() == core.StaticRoleHeavyMaterial {
+		return nil, nil, nil, nil, nil
+	}
+
 	var jets []jetInfo
 	if persist && oldPulse != nil {
 		jets, err = m.processJets(ctx, oldPulse.PulseNumber, newPulse.PulseNumber)
+		// We just joined to network
+		if err == core.ErrNoNodes {
+			return jets, map[core.RecordID][]core.RecordID{}, oldPulse, prevPN, nil
+		}
 		if err != nil {
 			return nil, nil, nil, nil, errors.Wrap(err, "failed to process jets")
 		}

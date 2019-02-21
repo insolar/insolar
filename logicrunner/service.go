@@ -22,7 +22,6 @@ import (
 	"net"
 	"net/rpc"
 	"sync"
-	"sync/atomic"
 
 	"github.com/insolar/insolar/instrumentation/instracer"
 
@@ -284,14 +283,4 @@ func (gpr *RPC) DeactivateObject(req rpctypes.UpDeactivateObjectReq, rep *rpctyp
 	es := os.MustModeState(req.Mode)
 	es.deactivate = true
 	return nil
-}
-
-// atomicLoadAndIncrementUint64 performs CAS loop, increments counter and returns old value.
-func atomicLoadAndIncrementUint64(addr *uint64) uint64 {
-	for {
-		val := atomic.LoadUint64(addr)
-		if atomic.CompareAndSwapUint64(addr, val, val+1) {
-			return val
-		}
-	}
 }

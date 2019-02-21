@@ -220,6 +220,7 @@ func (jc *JetCoordinator) Heavy(ctx context.Context, pulse core.PulseNumber) (*c
 }
 
 // IsBeyondLimit calculates if target pulse is behind clean-up limit
+// or if currentPN|targetPN didn't found in in-memory pulse-storage.
 func (jc *JetCoordinator) IsBeyondLimit(ctx context.Context, currentPN, targetPN core.PulseNumber) (bool, error) {
 	currentPulse, err := jc.PulseTracker.GetPulse(ctx, currentPN)
 	if err == core.ErrNotFound {

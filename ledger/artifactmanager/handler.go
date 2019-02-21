@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/insolar/insolar/core/delegationtoken"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/tag"
@@ -308,6 +309,9 @@ func (h *MessageHandler) handleSetRecord(ctx context.Context, parcel core.Parcel
 
 	switch r := rec.(type) {
 	case record.Request:
+		if h.RecentStorageProvider.Count() > h.conf.PendingRequestsLimit {
+			return &reply.Error{ErrType: reply.ErrTooManyPendingRequests}, nil
+		}
 		recentStorage := h.RecentStorageProvider.GetPendingStorage(ctx, jetID)
 		recentStorage.AddPendingRequest(ctx, r.GetObject(), *id)
 	case *record.ResultRecord:
@@ -317,7 +321,7 @@ func (h *MessageHandler) handleSetRecord(ctx context.Context, parcel core.Parcel
 
 	id, err := h.ObjectStorage.SetRecord(ctx, jetID, parcel.Pulse(), rec)
 	if err == storage.ErrOverride {
-		inslogger.FromContext(ctx).WithField("type", fmt.Sprintf("%T", rec)).Warnln("set record override")
+		inslogger.FromContext(ctx).WithField("type", fmt.Sprintf("%T", rec)).Warn("set record override")
 	} else if err != nil {
 		return nil, err
 	}
@@ -430,7 +434,9 @@ func (h *MessageHandler) handleGetObject(
 		return &reply.Error{ErrType: reply.ErrStateNotAvailable}, nil
 	}
 
-	var stateJet *core.RecordID
+	var (
+		stateJet *core.RecordID
+	)
 	if h.isHeavy {
 		stateJet = &jetID
 	} else {
@@ -445,10 +451,24 @@ func (h *MessageHandler) handleGetObject(
 				return nil, err
 			}
 			logger.WithFields(map[string]interface{}{
-				"state":       stateID.DebugString(),
-				"redirect_to": node.String(),
-			}).Debug("redirect (on heavy)")
-			return reply.NewGetObjectRedirectReply(h.DelegationTokenFactory, parcel, node, stateID)
+				"state":    stateID.DebugString(),
+				"going_to": node.String(),
+			}).Debug("fetching object (on heavy)")
+
+			obj, err := h.fetchObject(ctx, msg.Head, *node, stateID, parcel.Pulse())
+			if err != nil {
+				return nil, err
+			}
+
+			return &reply.Object{
+				Head:         msg.Head,
+				State:        *stateID,
+				Prototype:    obj.Prototype,
+				IsPrototype:  obj.IsPrototype,
+				ChildPointer: idx.ChildPointer,
+				Parent:       idx.Parent,
+				Memory:       obj.Memory,
+			}, nil
 		}
 
 		stateJet, actual = h.JetStorage.FindJet(ctx, stateID.Pulse(), *msg.Head.Record())
@@ -474,10 +494,24 @@ func (h *MessageHandler) handleGetObject(
 			return nil, err
 		}
 		logger.WithFields(map[string]interface{}{
-			"state":       stateID.DebugString(),
-			"redirect_to": node.String(),
-		}).Debug("redirect (record not found)")
-		return reply.NewGetObjectRedirectReply(h.DelegationTokenFactory, parcel, node, stateID)
+			"state":    stateID.DebugString(),
+			"going_to": node.String(),
+		}).Debug("fetching object (record not found)")
+
+		obj, err := h.fetchObject(ctx, msg.Head, *node, stateID, parcel.Pulse())
+		if err != nil {
+			return nil, err
+		}
+
+		return &reply.Object{
+			Head:         msg.Head,
+			State:        *stateID,
+			Prototype:    obj.Prototype,
+			IsPrototype:  obj.IsPrototype,
+			ChildPointer: idx.ChildPointer,
+			Parent:       idx.Parent,
+			Memory:       obj.Memory,
+		}, nil
 	}
 	if err != nil {
 		return nil, err
@@ -809,7 +843,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 
 		id, err := tx.SetRecord(ctx, jetID, parcel.Pulse(), rec)
 		if err == storage.ErrOverride {
-			inslogger.FromContext(ctx).WithField("type", fmt.Sprintf("%T", rec)).Warnln("set record override (#1)")
+			inslogger.FromContext(ctx).WithField("type", fmt.Sprintf("%T", rec)).Warn("set record override (#1)")
 		} else if err != nil {
 			return err
 		}
@@ -844,6 +878,8 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel core.Pa
 	if h.isHeavy {
 		return nil, errors.New("heavy updates are forbidden")
 	}
+
+	logger := inslogger.FromContext(ctx)
 
 	msg := parcel.Message().(*message.RegisterChild)
 	jetID := jetFromContext(ctx)
@@ -881,10 +917,11 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel core.Pa
 
 		child, err = tx.SetRecord(ctx, jetID, parcel.Pulse(), childRec)
 		if err == storage.ErrOverride {
-			inslogger.FromContext(ctx).WithField("type", fmt.Sprintf("%T", rec)).Warnln("set record override (#2)")
+			logger.WithField("type", fmt.Sprintf("%T", rec)).Warn("set record override (#2)")
 		} else if err != nil {
 			return err
 		}
+
 		idx.ChildPointer = child
 		if msg.AsType != nil {
 			idx.Delegates[*msg.AsType] = msg.Child
@@ -1096,6 +1133,36 @@ func (h *MessageHandler) saveIndexFromHeavy(
 		return nil, errors.Wrap(err, "failed to save")
 	}
 	return idx, nil
+}
+
+func (h *MessageHandler) fetchObject(
+	ctx context.Context, obj core.RecordRef, node core.RecordRef, stateID *core.RecordID, pulse core.PulseNumber,
+) (*reply.Object, error) {
+	sender := BuildSender(
+		h.Bus.Send,
+		followRedirectSender(h.Bus),
+		retryJetSender(pulse, h.JetStorage),
+	)
+	genericReply, err := sender(
+		ctx,
+		&message.GetObject{
+			Head:     obj,
+			Approved: false,
+			State:    stateID,
+		},
+		&core.MessageSendOptions{
+			Receiver: &node,
+			Token:    &delegationtoken.GetObjectRedirectToken{},
+		},
+	)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to fetch object state")
+	}
+	rep, ok := genericReply.(*reply.Object)
+	if !ok {
+		return nil, fmt.Errorf("failed to fetch object state: unexpected reply type %T (reply=%+v)", genericReply, genericReply)
+	}
+	return rep, nil
 }
 
 func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parcel) (core.Reply, error) {

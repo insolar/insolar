@@ -27,7 +27,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger"
 	"github.com/insolar/insolar/ledger/artifactmanager"
-	"github.com/insolar/insolar/ledger/localstorage"
 	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
@@ -72,7 +71,6 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 
 	conf.PulseManager.HeavySyncEnabled = false
 	pm := pulsemanager.NewPulseManager(conf)
-	ls := localstorage.NewLocalStorage(db)
 	jc := testutils.NewJetCoordinatorMock(mc)
 	jc.IsAuthorizedMock.Return(true, nil)
 	jc.LightExecutorForJetMock.Return(&core.RecordRef{}, nil)
@@ -183,6 +181,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 	provideMock := recentstorage.NewProviderMock(t)
 	provideMock.GetIndexStorageMock.Return(indexMock)
 	provideMock.GetPendingStorageMock.Return(pendingMock)
+	provideMock.CountMock.Return(0)
 
 	handler.RecentStorageProvider = provideMock
 
@@ -197,7 +196,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 	}
 
 	// Create ledger.
-	l := ledger.NewTestLedger(db, am, pm, jc, ls)
+	l := ledger.NewTestLedger(db, am, pm, jc)
 
 	return l, db, dbcancel
 }

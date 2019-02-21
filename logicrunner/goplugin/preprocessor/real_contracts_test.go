@@ -20,32 +20,16 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 	"testing"
 
-	"github.com/insolar/insolar/testutils"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
-	"github.com/stretchr/testify/assert"
+	"github.com/insolar/insolar/testutils"
 )
-
-var icc = ""
-var runnerbin = ""
-
-func TestMain(m *testing.M) {
-	var err error
-	err = log.SetLevel("Debug")
-	if err != nil {
-		log.Errorln(err.Error())
-	}
-	if runnerbin, icc, err = goplugintestutils.Build(); err != nil {
-		fmt.Println("Logic runner build failed, skip tests:", err.Error())
-		os.Exit(1)
-	}
-	os.Exit(m.Run())
-}
 
 func contractPath(name string, contractsDir string) string {
 	return filepath.Join(contractsDir, name, name+".go")
@@ -55,70 +39,97 @@ func MakeTestName(file string, contractType string) string {
 	return fmt.Sprintf("Generate contract %s from '%s'", contractType, file)
 }
 
-func TestGenerateProxiesForRealSmartContracts(t *testing.T) {
-	t.Parallel()
-	contractNames, err := GetRealContractsNames()
-	assert.NoError(t, err)
-	contractsDir, err := GetRealApplicationDir("contract")
-	assert.NoError(t, err)
-	for _, name := range contractNames {
-		file := contractPath(name, contractsDir)
-		t.Run(MakeTestName(file, "proxy"), func(t *testing.T) {
+type RealContractsSuite struct {
+	suite.Suite
+
+	icc           string
+	contractNames []string
+	contractsDir  string
+}
+
+func (s *RealContractsSuite) SetupSuite() {
+	if err := log.SetLevel("debug"); err != nil {
+		log.Error("Failed to set logLevel to debug: ", err.Error())
+	}
+
+	var err error
+	if _, s.icc, err = goplugintestutils.Build(); err != nil {
+		s.Fail("Logic runner build failed, skip tests: ", err.Error())
+	}
+
+	if s.contractNames, err = GetRealContractsNames(); err != nil {
+		s.Fail("Failed to load contracts names: ", err.Error())
+	}
+
+	if s.contractsDir, err = GetRealApplicationDir("contract"); err != nil {
+		s.Fail("Failed to find contracts dir: ", err.Error())
+	}
+}
+
+func (s *RealContractsSuite) TestGenerateProxies() {
+	for _, name := range s.contractNames {
+		file := contractPath(name, s.contractsDir)
+		testName := MakeTestName(file, "proxy")
+
+		s.T().Run(testName, func(t *testing.T) {
 			t.Parallel()
+			a := assert.New(t)
+
 			parsed, err := ParseFile(file)
-			assert.NoError(t, err)
+			a.NoError(err)
 
 			var buf bytes.Buffer
 			err = parsed.WriteProxy(testutils.RandomRef().String(), &buf)
-			assert.NoError(t, err)
+			a.NoError(err)
 
 			code, err := ioutil.ReadAll(&buf)
-			assert.NoError(t, err)
-			assert.NotEqual(t, len(code), 0)
+			a.NoError(err)
+			a.NotEqual(0, len(code))
 		})
 	}
 }
 
-func TestGenerateWrappersForRealSmartContracts(t *testing.T) {
-	t.Parallel()
-	contractNames, err := GetRealContractsNames()
-	assert.NoError(t, err)
-	contractsDir, err := GetRealApplicationDir("contract")
-	assert.NoError(t, err)
-	for _, name := range contractNames {
-		file := contractPath(name, contractsDir)
-		t.Run(MakeTestName(file, "wrapper"), func(t *testing.T) {
+func (s *RealContractsSuite) TestGenerateWrappers() {
+	for _, name := range s.contractNames {
+		file := contractPath(name, s.contractsDir)
+		testName := MakeTestName(file, "wrapper")
+
+		s.T().Run(testName, func(t *testing.T) {
 			t.Parallel()
+			a := assert.New(t)
+
 			parsed, err := ParseFile(file)
-			assert.NoError(t, err)
+			a.NoError(err)
 
 			var buf bytes.Buffer
 			err = parsed.WriteWrapper(&buf)
-			assert.NoError(t, err)
+			a.NoError(err)
 
 			code, err := ioutil.ReadAll(&buf)
-			assert.NoError(t, err)
-			assert.NotEqual(t, len(code), 0)
+			a.NoError(err)
+			a.NotEqual(0, len(code))
 		})
 	}
 }
 
-func TestCompilingRealSmartContracts(t *testing.T) {
-	t.Parallel()
+
+func (s *RealContractsSuite) TestCompiling() {
 	contracts := make(map[string]string)
-	contractNames, err := GetRealContractsNames()
-	assert.NoError(t, err)
-	contractsDir, err := GetRealApplicationDir("contract")
-	assert.NoError(t, err)
-	for _, name := range contractNames {
-		code, err := ioutil.ReadFile(contractPath(name, contractsDir))
-		assert.NoError(t, err)
+	for _, name := range s.contractNames {
+		code, err := ioutil.ReadFile(contractPath(name, s.contractsDir))
+		s.NoError(err)
 		contracts[name] = string(code)
 	}
 
 	am := goplugintestutils.NewTestArtifactManager()
-	cb := goplugintestutils.NewContractBuilder(am, icc)
-	defer cb.Clean()
-	err = cb.Build(contracts)
-	assert.NoError(t, err)
+	cb := goplugintestutils.NewContractBuilder(am, s.icc)
+
+	err := cb.Build(contracts)
+	s.NoError(err)
+	cb.Clean()
+}
+
+func TestRealSmartContract(t *testing.T) {
+	t.Parallel()
+	suite.Run(t, new(RealContractsSuite))
 }

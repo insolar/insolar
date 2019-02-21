@@ -31,11 +31,11 @@ import (
 // be used concurrently.
 type Backoff struct {
 	attempt int
-	//Factor is the multiplying factor for each increment step
+	// Factor is the multiplying factor for each increment step
 	Factor float64
-	//Jitter eases contention by randomizing backoff steps
+	// Jitter eases contention by randomizing backoff steps
 	Jitter bool
-	//Min and Max are the minimum and maximum values of the counter
+	// Min and Max are the minimum and maximum values of the counter
 	Min, Max time.Duration
 }
 
@@ -74,18 +74,18 @@ func (b *Backoff) ForAttempt(attempt int) time.Duration {
 	if factor <= 0 {
 		factor = 2
 	}
-	//calculate this duration
+	// calculate this duration
 	minf := float64(min)
 	durf := minf * math.Pow(factor, float64(attempt))
 	if b.Jitter {
 		durf = rand.Float64()*(durf-minf) + minf
 	}
-	//ensure float64 wont overflow int64
+	// ensure float64 wont overflow int64
 	if durf > maxInt64 {
 		return max
 	}
 	dur := time.Duration(durf)
-	//keep within bounds
+	// keep within bounds
 	if dur < min {
 		return min
 	}
