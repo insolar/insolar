@@ -97,6 +97,12 @@ func TestFunctionality(t *testing.T) {
 	require.NoError(t, err)
 	adapter.FlushPulseTasks(resp.GetPulseNumber())
 
+	// FlushPulseTasks
+	resp = &mockResponseSink{}
+	err = adapter.PushTask(resp, 34, 22, SimpleWaitAdapterInputData{waitPeriodMilliseconds: 200000000})
+	require.NoError(t, err)
+	adapter.FlushNodeTasks(resp.GetPulseNumber())
+
 	adapter.StopProcessing()
 	adapter.StopProcessing()
 
