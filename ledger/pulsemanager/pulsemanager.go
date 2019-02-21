@@ -214,9 +214,9 @@ func (m *PulseManager) createDrop(
 ) {
 	var prevDrop *jet.JetDrop
 	prevDrop, err = m.DropStorage.GetDrop(ctx, jetID, prevPulse)
-	if err == storage.ErrNotFound {
+	if err == core.ErrNotFound {
 		prevDrop, err = m.DropStorage.GetDrop(ctx, jet.Parent(jetID), prevPulse)
-		if err == storage.ErrNotFound {
+		if err == core.ErrNotFound {
 			inslogger.FromContext(ctx).WithFields(map[string]interface{}{
 				"pulse": prevPulse,
 				"jet":   jetID.DebugString(),
@@ -450,7 +450,7 @@ func (m *PulseManager) rewriteHotData(ctx context.Context, fromJetID, toJetID co
 	for id := range indexStorage.GetObjects() {
 		idx, err := m.ObjectStorage.GetObjectIndex(ctx, fromJetID, &id, false)
 		if err != nil {
-			if err == storage.ErrNotFound {
+			if err == core.ErrNotFound {
 				logger.WithField("id", id.DebugString()).Error("rewrite index not found")
 				continue
 			}
