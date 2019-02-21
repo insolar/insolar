@@ -74,10 +74,39 @@ const (
 	NotActiveElement
 )
 
-// ActivationStatusList is a list of slotElements by ActivationStatus with pointers to head and tail
-type ActivationStatusList struct {
+// ElementList is a list of slotElements with pointers to head and tail
+type ElementList struct {
 	head *slotElement
 	tail *slotElement
+}
+
+// popElement gets element from linked list (and remove it from list)
+func (l *ElementList) popElement() *slotElement {
+	result := l.head
+	if result == nil {
+		return nil
+	}
+	l.head = l.head.listNext
+	return result
+}
+
+// pushElement adds element to linked list
+func (l *ElementList) pushElement(element *slotElement) {
+	if l.head == nil {
+		l.head = element
+		l.tail = element
+	} else {
+		l.tail.listNext = element
+		l.tail = element
+	}
+}
+
+func (l *ElementList) len() int {
+	i := 0
+	for element := l.head; element != nil; element = element.listNext {
+		i++
+	}
+	return i
 }
 
 // Slot holds info about specific pulse and events for it
@@ -86,12 +115,12 @@ type Slot struct {
 	inputQueue            queue.IQueue
 	pulseState            PulseState
 	slotState             SlotState
-	pulse                 *core.Pulse
+	pulse                 core.Pulse
 	pulseNumber           core.PulseNumber
-	nodeId                uint32
+	nodeID                uint32
 	nodeData              interface{}
 	elements              []slotElement
-	elementListMap        map[ActivationStatus]ActivationStatusList
+	elementListMap        map[ActivationStatus]*ElementList
 }
 
 // SlotStateMachine represents state machine of slot itself
@@ -123,16 +152,16 @@ func NewSlot(pulseState PulseState, pulseNumber core.PulseNumber) *Slot {
 
 	elements := initElementsBuf()
 
-	empty := ActivationStatusList{
+	empty := &ElementList{
 		// elements[0] contains SlotStateMachine, so first empty element is elements[1]
 		head: &elements[1],
 		tail: &elements[slotSize-1],
 	}
 
-	elementListMap := map[ActivationStatus]ActivationStatusList{
+	elementListMap := map[ActivationStatus]*ElementList{
 		EmptyElement:     empty,
-		ActiveElement:    ActivationStatusList{},
-		NotActiveElement: ActivationStatusList{},
+		ActiveElement:    &ElementList{},
+		NotActiveElement: &ElementList{},
 	}
 	return &Slot{
 		pulseState:     pulseState,
@@ -148,12 +177,12 @@ func (s *Slot) getPulseNumber() core.PulseNumber {
 	return s.pulseNumber
 }
 
-func (s *Slot) getPulseData() *core.Pulse {
+func (s *Slot) getPulseData() core.Pulse {
 	return s.pulse
 }
 
-func (s *Slot) getNodeId() uint32 {
-	return s.nodeId
+func (s *Slot) getNodeID() uint32 {
+	return s.nodeID
 }
 
 func (s *Slot) getNodeData() interface{} {
@@ -162,39 +191,30 @@ func (s *Slot) getNodeData() interface{} {
 
 // createElement creates new active element from empty element
 func (s *Slot) createElement(stateMachineType StateMachineType, state uint16, event queue.OutputElement) *slotElement {
-	element := s.getElement(EmptyElement)
+	element := s.popElement(EmptyElement)
 	element.id = element.id + slotElementDelta
 	element.stateMachineType = stateMachineType
 	element.state = state
 	element.activationStatus = ActiveElement
+	element.listNext = nil
 	// Set other fields to element, like:
 	// element.payload = event.GetPayload()
 
-	s.addElement(ActiveElement, element)
+	s.pushElement(ActiveElement, element)
 	return element
 }
 
-// getElement gets element of provided status from correspondent linked list (and remove it from that list)
-func (s *Slot) getElement(status ActivationStatus) *slotElement {
+// popElement gets element of provided status from correspondent linked list (and remove it from that list)
+func (s *Slot) popElement(status ActivationStatus) *slotElement {
 	list := s.elementListMap[status]
-	result := list.head
-	if result == nil {
-		return nil
-	}
-	list.head = list.head.listNext
-	return result
+	return list.popElement()
 }
 
-// addElement adds element of provided status to correspondent linked list
-func (s *Slot) addElement(status ActivationStatus, element *slotElement) {
+// pushElement adds element of provided status to correspondent linked list
+func (s *Slot) pushElement(status ActivationStatus, element *slotElement) {
+	element.activationStatus = status
 	list := s.elementListMap[status]
-	if list.head == nil {
-		list.head = element
-		list.tail = element
-	} else {
-		list.tail.listNext = element
-		list.tail = element
-	}
+	list.pushElement(element)
 }
 
 type StateMachineType interface{}

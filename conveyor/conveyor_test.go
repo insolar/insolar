@@ -88,13 +88,6 @@ func TestNewPulseConveyor(t *testing.T) {
 	require.NotNil(t, c)
 }
 
-func TestNewSlot(t *testing.T) {
-	s := NewSlot(Future, testRealPulse)
-	require.NotNil(t, s)
-	require.Equal(t, Future, s.pulseState)
-	require.Empty(t, s.inputQueue.RemoveAll())
-}
-
 func TestConveyor_GetState(t *testing.T) {
 	c := testPulseConveyor(t, true)
 	c.state = PreparingPulse
