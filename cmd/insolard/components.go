@@ -113,7 +113,6 @@ func initComponents(
 
 ) (*component.Manager, core.TerminationHandler, error) {
 	cm := component.Manager{}
-	terminationHandler := termination.NewHandler()
 
 	nodeNetwork, err := nodenetwork.NewNodeNetwork(cfg.Host, certManager.GetCertificate())
 	checkError(ctx, err, "failed to start NodeNetwork")
@@ -123,6 +122,8 @@ func initComponents(
 
 	nw, err := servicenetwork.NewServiceNetwork(cfg, &cm, isGenesis)
 	checkError(ctx, err, "failed to start Network")
+
+	terminationHandler := termination.NewHandler(nw)
 
 	delegationTokenFactory := delegationtoken.NewDelegationTokenFactory()
 	parcelFactory := messagebus.NewParcelFactory()

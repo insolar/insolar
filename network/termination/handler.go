@@ -13,11 +13,11 @@ type terminationHandler struct {
 	done        chan core.LeaveApproved
 	terminating bool
 
-	Network servicenetwork.ServiceNetwork `inject:""`
+	Network *servicenetwork.ServiceNetwork `inject:""`
 }
 
-func NewHandler() core.TerminationHandler {
-	return &terminationHandler{}
+func NewHandler(nw *servicenetwork.ServiceNetwork) core.TerminationHandler {
+	return &terminationHandler{Network: nw}
 }
 
 func (t *terminationHandler) Leave(ctx context.Context, pulseDelta core.PulseNumber) chan core.LeaveApproved {
