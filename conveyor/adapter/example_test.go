@@ -112,4 +112,78 @@ func TestFunctionality(t *testing.T) {
 
 func TestParallel(t *testing.T) {
 
+	adapter := NewSimpleWaitAdapter().(*SimpleWaitAdapter)
+	started := make(chan bool, 1)
+	adapter.StartProcessing(started)
+	<-started
+
+	res := mockResponseSink{}
+
+	pulseNumber := res.GetPulseNumber()
+
+	numIterations := 200
+	parallelPushTasks := 27
+	parallelCancelElement := 19
+	parallelCancelPulse := 13
+	parallelFlushPulse := 9
+	parallelFlushNode := 5
+
+	wg := sync.WaitGroup{}
+	wg.Add(parallelPushTasks + parallelCancelElement + parallelCancelPulse + parallelFlushPulse + parallelFlushNode)
+
+	// PushTask
+	for i := 0; i < parallelPushTasks; i++ {
+		go func(wg *sync.WaitGroup, adapter PulseConveyorAdapterTaskSink) {
+			for i := 0; i < numIterations; i++ {
+				resp := &mockResponseSink{}
+				adapter.PushTask(resp, 34, 22, SimpleWaitAdapterInputData{waitPeriodMilliseconds: 20})
+			}
+			wg.Done()
+		}(&wg, adapter)
+	}
+
+	// CancelElementTasks
+	for i := 0; i < parallelCancelElement; i++ {
+		go func(wg *sync.WaitGroup, adapter PulseConveyorAdapterTaskSink) {
+			for i := 0; i < numIterations; i++ {
+				adapter.CancelElementTasks(pulseNumber, 22)
+			}
+			wg.Done()
+		}(&wg, adapter)
+	}
+
+	// CancelPulseTasks
+	for i := 0; i < parallelCancelPulse; i++ {
+		go func(wg *sync.WaitGroup, adapter PulseConveyorAdapterTaskSink) {
+			for i := 0; i < numIterations; i++ {
+				adapter.CancelPulseTasks(pulseNumber)
+			}
+			wg.Done()
+		}(&wg, adapter)
+	}
+
+	// FlushPulseTasks
+	for i := 0; i < parallelFlushPulse; i++ {
+		go func(wg *sync.WaitGroup, adapter PulseConveyorAdapterTaskSink) {
+			for i := 0; i < numIterations; i++ {
+				adapter.FlushPulseTasks(pulseNumber)
+			}
+			wg.Done()
+		}(&wg, adapter)
+	}
+
+	// FlushNodeTasks
+	for i := 0; i < parallelFlushNode; i++ {
+		go func(wg *sync.WaitGroup, adapter PulseConveyorAdapterTaskSink) {
+			for i := 0; i < numIterations; i++ {
+				adapter.FlushNodeTasks(pulseNumber)
+			}
+			wg.Done()
+		}(&wg, adapter)
+	}
+
+	wg.Wait()
+
+	adapter.StopProcessing()
+
 }

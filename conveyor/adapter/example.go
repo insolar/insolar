@@ -54,6 +54,12 @@ type taskHolderT struct {
 	tasks          map[uint32][]*cancelInfoT
 }
 
+func newTaskHolder() taskHolderT {
+	return taskHolderT{
+		tasks: make(map[uint32][]*cancelInfoT),
+	}
+}
+
 func (th *taskHolderT) add(info *cancelInfoT, pulseNumber uint32) {
 	log.Infof("[ taskHolderT.add ] Adding pulseNumber: %d. Id: %d", pulseNumber, info.id)
 	th.taskHolderLock.Lock()
@@ -96,9 +102,10 @@ func (th *taskHolderT) stop(pulseNumber uint32, flush bool) {
 }
 
 func (th *taskHolderT) stopAll(flush bool) {
-	log.Infof("[ taskHolderT.stopAll ] flush: ", flush)
 	th.taskHolderLock.Lock()
 	defer th.taskHolderLock.Unlock()
+
+	log.Infof("[ taskHolderT.stopAll ] flush: ", flush)
 
 	for _, cancelList := range th.tasks {
 		processStop(cancelList, flush)
@@ -133,6 +140,7 @@ func NewSimpleWaitAdapter() PulseConveyorAdapterTaskSink {
 		processingStarted: 0,
 		stopProcessing:    0,
 		processingStopped: make(chan bool, 1),
+		taskHolder:        newTaskHolder(),
 	}
 	started := make(chan bool, 1)
 	go adapter.StartProcessing(started)
