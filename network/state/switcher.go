@@ -91,6 +91,7 @@ func (ns *NetworkSwitcher) OnPulse(ctx context.Context, pulse core.Pulse) error 
 
 		if !checkRulesOk && ns.state != core.NoNetworkState {
 			ns.state = core.NoNetworkState
+			ns.Acquire(ctx)
 			inslogger.FromContext(ctx).Infof("Current NetworkSwitcher state switched to: %s", ns.state.String())
 		}
 	}
