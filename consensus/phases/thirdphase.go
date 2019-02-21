@@ -97,7 +97,7 @@ func (tp *ThirdPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse, state 
 	handledJoinClaims := handler.HandleAndReturnClaims()
 
 	for ref := range responses {
-		tp.handleJoinClaims(handledJoinClaims, ref, state)
+		tp.removeExcessJoinClaims(handledJoinClaims, ref, state)
 	}
 
 	prevCloudHash := tp.NodeKeeper.GetCloudHash()
@@ -138,22 +138,23 @@ func (tp *ThirdPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse, state 
 	}, nil
 }
 
-func (tp *ThirdPhaseImpl) handleJoinClaims(joinClaims []*packets.NodeJoinClaim, ref core.RecordRef, state *SecondPhaseState) {
-	resultClaims := make([]packets.ReferendumClaim, 0)
+func (tp *ThirdPhaseImpl) removeExcessJoinClaims(joinClaims []*packets.NodeJoinClaim, ref core.RecordRef, state *SecondPhaseState) {
 	claims := state.UnsyncList.GetClaims(ref)
-	if len(claims) == 0 || len(joinClaims) == 0 {
+	originLen := len(claims)
+	if originLen == 0 || len(joinClaims) == 0 {
 		return
 	}
-	for _, claim := range claims {
-		_, ok := claim.(*packets.NodeJoinClaim)
-		if !ok {
-			resultClaims = append(resultClaims, claim)
+	for _, join := range joinClaims {
+		for i := 0; i < len(claims); i++ {
+			claim, ok := claims[i].(*packets.NodeJoinClaim)
+			if ok && claim.NodeRef.Equal(join.NodeRef) {
+				claims = append(claims[:i], claims[i+1:]...)
+			}
 		}
 	}
-	for _, claim := range joinClaims {
-		resultClaims = append(resultClaims, claim)
-	}
-	state.UnsyncList.InsertClaims(ref, resultClaims)
+	logger := inslogger.FromContext(context.Background())
+	logger.Debugf("[ removeExcessJoinClaims ] removed claims: %d", originLen-len(claims))
+	state.UnsyncList.InsertClaims(ref, claims)
 }
 
 func (tp *ThirdPhaseImpl) checkPacketSignature(packet *packets.Phase3Packet, recordRef core.RecordRef, unsyncList network.UnsyncList) error {

@@ -31,6 +31,7 @@ const NodesToJoinPercent = 1.0 / 3.0
 
 type JoinClaimHandler struct {
 	queue       Queue
+	knownClaims map[core.RecordRef]bool
 	activeCount int
 }
 
@@ -39,15 +40,17 @@ func NewJoinHandler(activeNodesCount int) *JoinClaimHandler {
 		queue:       Queue{},
 		activeCount: activeNodesCount,
 	}
+	handler.knownClaims = make(map[core.RecordRef]bool)
 	return handler
 }
 
 func (jch *JoinClaimHandler) AddClaims(claims []packets.ReferendumClaim, entropy core.Entropy) {
 	for _, claim := range claims {
 		join, ok := claim.(*packets.NodeJoinClaim)
-		if !ok {
+		if !ok || jch.isKnownClaim(join) {
 			continue
 		}
+		jch.knownClaims[join.NodeRef] = true
 		priority := getPriority(join.NodeRef, entropy)
 		jch.queue.PushClaim(claim, priority)
 	}
@@ -68,11 +71,16 @@ func (jch *JoinClaimHandler) getClaimsByPriority() []*packets.NodeJoinClaim {
 	for i := 0; i < int(math.Min(nodesToJoin, float64(jch.queue.Len()))); i++ {
 		res = append(res, jch.queue.PopClaim().(*packets.NodeJoinClaim))
 	}
-	logger.Debugf("[ getClaimsByPriority ] handle join claims. max nodes to join: %d, join nodes count: %d", nodesToJoin, len(res))
+	logger.Debugf("[ getClaimsByPriority ] handle join claims. max nodes to join: %d, join nodes count: %d", int(nodesToJoin), len(res))
 
 	return res
 }
 
 func getPriority(ref core.RecordRef, entropy core.Entropy) []byte {
 	return utils.CircleXOR(ref[:], entropy[:])
+}
+
+func (jch *JoinClaimHandler) isKnownClaim(claim *packets.NodeJoinClaim) bool {
+	_, ok := jch.knownClaims[claim.NodeRef]
+	return ok
 }
