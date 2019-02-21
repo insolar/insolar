@@ -100,6 +100,11 @@ type UnsyncListMock struct {
 	SetGlobuleHashSignatureCounter    uint64
 	SetGlobuleHashSignaturePreCounter uint64
 	SetGlobuleHashSignatureMock       mUnsyncListMockSetGlobuleHashSignature
+
+	UpdateClaimsFunc       func(p core.RecordRef, p1 []packets.ReferendumClaim)
+	UpdateClaimsCounter    uint64
+	UpdateClaimsPreCounter uint64
+	UpdateClaimsMock       mUnsyncListMockUpdateClaims
 }
 
 //NewUnsyncListMock returns a mock for github.com/insolar/insolar/network.UnsyncList
@@ -126,6 +131,7 @@ func NewUnsyncListMock(t minimock.Tester) *UnsyncListMock {
 	m.RefToIndexMock = mUnsyncListMockRefToIndex{mock: m}
 	m.RemoveNodeMock = mUnsyncListMockRemoveNode{mock: m}
 	m.SetGlobuleHashSignatureMock = mUnsyncListMockSetGlobuleHashSignature{mock: m}
+	m.UpdateClaimsMock = mUnsyncListMockUpdateClaims{mock: m}
 
 	return m
 }
@@ -2341,6 +2347,130 @@ func (m *UnsyncListMock) SetGlobuleHashSignatureFinished() bool {
 	return true
 }
 
+type mUnsyncListMockUpdateClaims struct {
+	mock              *UnsyncListMock
+	mainExpectation   *UnsyncListMockUpdateClaimsExpectation
+	expectationSeries []*UnsyncListMockUpdateClaimsExpectation
+}
+
+type UnsyncListMockUpdateClaimsExpectation struct {
+	input *UnsyncListMockUpdateClaimsInput
+}
+
+type UnsyncListMockUpdateClaimsInput struct {
+	p  core.RecordRef
+	p1 []packets.ReferendumClaim
+}
+
+//Expect specifies that invocation of UnsyncList.UpdateClaims is expected from 1 to Infinity times
+func (m *mUnsyncListMockUpdateClaims) Expect(p core.RecordRef, p1 []packets.ReferendumClaim) *mUnsyncListMockUpdateClaims {
+	m.mock.UpdateClaimsFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &UnsyncListMockUpdateClaimsExpectation{}
+	}
+	m.mainExpectation.input = &UnsyncListMockUpdateClaimsInput{p, p1}
+	return m
+}
+
+//Return specifies results of invocation of UnsyncList.UpdateClaims
+func (m *mUnsyncListMockUpdateClaims) Return() *UnsyncListMock {
+	m.mock.UpdateClaimsFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &UnsyncListMockUpdateClaimsExpectation{}
+	}
+
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of UnsyncList.UpdateClaims is expected once
+func (m *mUnsyncListMockUpdateClaims) ExpectOnce(p core.RecordRef, p1 []packets.ReferendumClaim) *UnsyncListMockUpdateClaimsExpectation {
+	m.mock.UpdateClaimsFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &UnsyncListMockUpdateClaimsExpectation{}
+	expectation.input = &UnsyncListMockUpdateClaimsInput{p, p1}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+//Set uses given function f as a mock of UnsyncList.UpdateClaims method
+func (m *mUnsyncListMockUpdateClaims) Set(f func(p core.RecordRef, p1 []packets.ReferendumClaim)) *UnsyncListMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.UpdateClaimsFunc = f
+	return m.mock
+}
+
+//UpdateClaims implements github.com/insolar/insolar/network.UnsyncList interface
+func (m *UnsyncListMock) UpdateClaims(p core.RecordRef, p1 []packets.ReferendumClaim) {
+	counter := atomic.AddUint64(&m.UpdateClaimsPreCounter, 1)
+	defer atomic.AddUint64(&m.UpdateClaimsCounter, 1)
+
+	if len(m.UpdateClaimsMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.UpdateClaimsMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to UnsyncListMock.UpdateClaims. %v %v", p, p1)
+			return
+		}
+
+		input := m.UpdateClaimsMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, UnsyncListMockUpdateClaimsInput{p, p1}, "UnsyncList.UpdateClaims got unexpected parameters")
+
+		return
+	}
+
+	if m.UpdateClaimsMock.mainExpectation != nil {
+
+		input := m.UpdateClaimsMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, UnsyncListMockUpdateClaimsInput{p, p1}, "UnsyncList.UpdateClaims got unexpected parameters")
+		}
+
+		return
+	}
+
+	if m.UpdateClaimsFunc == nil {
+		m.t.Fatalf("Unexpected call to UnsyncListMock.UpdateClaims. %v %v", p, p1)
+		return
+	}
+
+	m.UpdateClaimsFunc(p, p1)
+}
+
+//UpdateClaimsMinimockCounter returns a count of UnsyncListMock.UpdateClaimsFunc invocations
+func (m *UnsyncListMock) UpdateClaimsMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.UpdateClaimsCounter)
+}
+
+//UpdateClaimsMinimockPreCounter returns the value of UnsyncListMock.UpdateClaims invocations
+func (m *UnsyncListMock) UpdateClaimsMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.UpdateClaimsPreCounter)
+}
+
+//UpdateClaimsFinished returns true if mock invocations count is ok
+func (m *UnsyncListMock) UpdateClaimsFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.UpdateClaimsMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.UpdateClaimsCounter) == uint64(len(m.UpdateClaimsMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.UpdateClaimsMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.UpdateClaimsCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.UpdateClaimsFunc != nil {
+		return atomic.LoadUint64(&m.UpdateClaimsCounter) > 0
+	}
+
+	return true
+}
+
 //ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *UnsyncListMock) ValidateCallCounters() {
@@ -2407,6 +2537,10 @@ func (m *UnsyncListMock) ValidateCallCounters() {
 
 	if !m.SetGlobuleHashSignatureFinished() {
 		m.t.Fatal("Expected call to UnsyncListMock.SetGlobuleHashSignature")
+	}
+
+	if !m.UpdateClaimsFinished() {
+		m.t.Fatal("Expected call to UnsyncListMock.UpdateClaims")
 	}
 
 }
@@ -2490,6 +2624,10 @@ func (m *UnsyncListMock) MinimockFinish() {
 		m.t.Fatal("Expected call to UnsyncListMock.SetGlobuleHashSignature")
 	}
 
+	if !m.UpdateClaimsFinished() {
+		m.t.Fatal("Expected call to UnsyncListMock.UpdateClaims")
+	}
+
 }
 
 //Wait waits for all mocked methods to be called at least once
@@ -2520,6 +2658,7 @@ func (m *UnsyncListMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.RefToIndexFinished()
 		ok = ok && m.RemoveNodeFinished()
 		ok = ok && m.SetGlobuleHashSignatureFinished()
+		ok = ok && m.UpdateClaimsFinished()
 
 		if ok {
 			return
@@ -2590,6 +2729,10 @@ func (m *UnsyncListMock) MinimockWait(timeout time.Duration) {
 
 			if !m.SetGlobuleHashSignatureFinished() {
 				m.t.Error("Expected call to UnsyncListMock.SetGlobuleHashSignature")
+			}
+
+			if !m.UpdateClaimsFinished() {
+				m.t.Error("Expected call to UnsyncListMock.UpdateClaims")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)
@@ -2665,6 +2808,10 @@ func (m *UnsyncListMock) AllMocksCalled() bool {
 	}
 
 	if !m.SetGlobuleHashSignatureFinished() {
+		return false
+	}
+
+	if !m.UpdateClaimsFinished() {
 		return false
 	}
 
