@@ -74,10 +74,5 @@ func (jch *JoinClaimHandler) getClaimsByPriority() []*packets.NodeJoinClaim {
 }
 
 func getPriority(ref core.RecordRef, entropy core.Entropy) []byte {
-	// TODO: try to delete this if block, but be careful
-	if len(ref) != len(entropy) {
-		logger := inslogger.FromContext(context.Background())
-		logger.Errorf("[ joinClaimHandler ] getPriority: length not match! reference: %d, entropy: %d", len(ref), len(entropy))
-	}
 	return utils.CircleXOR(ref[:], entropy[:])
 }
