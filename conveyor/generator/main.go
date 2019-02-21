@@ -17,10 +17,10 @@
 package main
 
 import (
-	"os"
 	"github.com/insolar/insolar/conveyor/generator/generator"
-	"github.com/insolar/insolar/log"
+	"os"
 	"bufio"
+	"github.com/insolar/insolar/log"
 )
 
 func main() {
@@ -35,4 +35,5 @@ func main() {
 	g.GenerateStateMachine(w, 0)
 	g.GenerateRawHandlers(w, 0)
 	w.Flush()
+	g.GenMatrix()
 }
