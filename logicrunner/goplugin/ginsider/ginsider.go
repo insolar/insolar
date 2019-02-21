@@ -29,19 +29,17 @@ import (
 	"sync"
 	"time"
 
-	"github.com/insolar/insolar/metrics"
-
-	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
-
 	"github.com/pkg/errors"
+	"github.com/tylerb/gls"
 	"github.com/ugorji/go/codec"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
-	"github.com/tylerb/gls"
+	"github.com/insolar/insolar/metrics"
 )
 
 type pluginRec struct {
@@ -85,7 +83,7 @@ func recoverRPC(ctx context.Context, err *error) {
 				*err = errors.New(fmt.Sprint(*err, r))
 			}
 		}
-		inslogger.FromContext(ctx).Errorln("panic: ", r, string(debug.Stack()))
+		inslogger.FromContext(ctx).Error("panic: ", r, string(debug.Stack()))
 	}
 }
 

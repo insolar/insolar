@@ -25,13 +25,17 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/require"
-
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
+	"github.com/insolar/insolar/testutils"
 )
+
+type PreprocessorSuite struct {
+	suite.Suite
+}
 
 var randomTestCode = `
 package main
@@ -104,48 +108,48 @@ func (hw HelloWorlder) ConstEcho(s string) (string, error) {
 func JustExportedStaticFunction(int, int) error { return nil }
 `
 
-func TestBasicGeneration(t *testing.T) {
-	t.Parallel()
+func (s *PreprocessorSuite) TestBasicGeneration() {
 	tmpDir, err := ioutil.TempDir("", "test_")
-	assert.NoError(t, err)
+	s.NoError(err)
 	defer os.RemoveAll(tmpDir) // nolint: errcheck
 
 	err = goplugintestutils.WriteFile(tmpDir, "main.go", randomTestCode)
-	assert.NoError(t, err)
+	s.NoError(err)
 
 	parsed, err := ParseFile(filepath.Join(tmpDir, "main.go"))
-	assert.NoError(t, err)
-	assert.NotNil(t, parsed)
+	s.NoError(err)
+	s.NotNil(parsed)
 
-	t.Run("wrapper", func(t *testing.T) {
+	s.T().Run("wrapper", func(t *testing.T) {
 		t.Parallel()
+		a := assert.New(t)
 
 		buf := bytes.Buffer{}
 		err := parsed.WriteWrapper(&buf)
-		assert.NoError(t, err)
+		a.NoError(err)
 
 		code, err := ioutil.ReadAll(&buf)
-		assert.NoError(t, err)
-		assert.NotEmpty(t, code)
+		a.NoError(err)
+		a.NotEmpty(code)
 	})
 
-	t.Run("proxy", func(t *testing.T) {
+	s.T().Run("proxy", func(t *testing.T) {
 		t.Parallel()
+		a := assert.New(t)
 
 		buf := bytes.Buffer{}
 		err := parsed.WriteProxy(testutils.RandomRef().String(), &buf)
-		assert.NoError(t, err)
+		a.NoError(err)
 
 		code, err := ioutil.ReadAll(&buf)
-		assert.NoError(t, err)
-		assert.NotEmpty(t, code)
+		a.NoError(err)
+		a.NotEmpty(code)
 	})
 }
 
-func TestConstructorsParsing(t *testing.T) {
-	t.Parallel()
+func (s *PreprocessorSuite) TestConstructorsParsing() {
 	tmpDir, err := ioutil.TempDir("", "test-")
-	assert.NoError(t, err)
+	s.NoError(err)
 	defer os.RemoveAll(tmpDir) // nolint: errcheck
 
 	code := `
@@ -165,15 +169,15 @@ func NewFromString(s string) (*One, error) {
 `
 
 	err = goplugintestutils.WriteFile(tmpDir, "code1", code)
-	assert.NoError(t, err)
+	s.NoError(err)
 
 	info, err := ParseFile(filepath.Join(tmpDir, "code1"))
-	assert.NoError(t, err)
+	s.NoError(err)
 
-	assert.Equal(t, 1, len(info.constructors))
-	assert.Equal(t, 2, len(info.constructors["One"]))
-	assert.Equal(t, "New", info.constructors["One"][0].Name.Name)
-	assert.Equal(t, "NewFromString", info.constructors["One"][1].Name.Name)
+	s.Equal(1, len(info.constructors))
+	s.Equal(2, len(info.constructors["One"]))
+	s.Equal("New", info.constructors["One"][0].Name.Name)
+	s.Equal("NewFromString", info.constructors["One"][1].Name.Name)
 
 	code = `
 package main
@@ -188,10 +192,10 @@ func New() {
 `
 
 	err = goplugintestutils.WriteFile(tmpDir, "code1", code)
-	assert.NoError(t, err)
+	s.NoError(err)
 
 	_, err = ParseFile(filepath.Join(tmpDir, "code1"))
-	assert.Error(t, err)
+	s.Error(err)
 
 	code = `
 package main
@@ -206,43 +210,42 @@ func New() *One {
 `
 
 	err = goplugintestutils.WriteFile(tmpDir, "code1", code)
-	assert.NoError(t, err)
+	s.NoError(err)
 
 	_, err = ParseFile(filepath.Join(tmpDir, "code1"))
-	assert.Error(t, err)
+	s.Error(err)
 }
 
-func TestCompileContractProxy(t *testing.T) {
-	t.Parallel()
+func (s *PreprocessorSuite) TestCompileContractProxy() {
 
 	tmpDir, err := ioutil.TempDir("", "test-")
-	assert.NoError(t, err)
+	s.NoError(err)
 	defer os.RemoveAll(tmpDir) // nolint: errcheck
 
 	err = os.MkdirAll(filepath.Join(tmpDir, "src/secondary"), 0777)
-	assert.NoError(t, err)
+	s.NoError(err)
 
 	cwd, err := os.Getwd()
-	assert.NoError(t, err)
+	s.NoError(err)
 
 	// XXX: dirty hack to make `dep` installed packages available in generated code
 	err = os.Symlink(filepath.Join(cwd, "../../../vendor"), filepath.Join(tmpDir, "src/secondary/vendor"))
-	assert.NoError(t, err)
+	s.NoError(err)
 
 	proxyFh, err := os.OpenFile(filepath.Join(tmpDir, "/src/secondary/main.go"), os.O_WRONLY|os.O_CREATE, 0644)
-	assert.NoError(t, err)
+	s.NoError(err)
 
 	err = goplugintestutils.WriteFile(filepath.Join(tmpDir, "/contracts/secondary/"), "main.go", randomTestCode)
-	assert.NoError(t, err)
+	s.NoError(err)
 
 	parsed, err := ParseFile(filepath.Join(tmpDir, "/contracts/secondary/main.go"))
-	assert.NoError(t, err)
+	s.NoError(err)
 
 	err = parsed.WriteProxy(testutils.RandomRef().String(), proxyFh)
-	assert.NoError(t, err)
+	s.NoError(err)
 
 	err = proxyFh.Close()
-	assert.NoError(t, err)
+	s.NoError(err)
 
 	err = goplugintestutils.WriteFile(tmpDir, "/test.go", `
 package test
@@ -257,18 +260,17 @@ func main() {
 	_ = secondary.GetObject(*ref)
 }
 	`)
-	assert.NoError(t, err)
+	s.NoError(err)
 
 	cmd := exec.Command("go", "build", filepath.Join(tmpDir, "test.go"))
 	cmd.Env = append(os.Environ(), "GOPATH="+goplugintestutils.PrependGoPath(tmpDir))
 	out, err := cmd.CombinedOutput()
-	assert.NoError(t, err, string(out))
+	s.NoError(err, string(out))
 }
 
-func TestFailIfThereAreNoContract(t *testing.T) {
-	t.Parallel()
+func (s *PreprocessorSuite) TestFailIfThereAreNoContract() {
 	tmpDir, err := ioutil.TempDir("", "test-")
-	assert.NoError(t, err)
+	s.NoError(err)
 	defer os.RemoveAll(tmpDir) //nolint: errcheck
 
 	testContract := "/test.go"
@@ -278,16 +280,15 @@ type A struct{
 	ttt ppp.TTT
 }
 `)
-	assert.NoError(t, err)
+	s.NoError(err)
 
 	_, err = ParseFile(tmpDir + testContract)
-	assert.EqualError(t, err, "Only one smart contract must exist")
+	s.EqualError(err, "Only one smart contract must exist")
 }
 
-func TestInitializationFunctionParamsProxy(t *testing.T) {
-	t.Parallel()
-	tmpDir, err := ioutil.TempDir("", "test-")
-	assert.NoError(t, err)
+func (s *PreprocessorSuite) TestInitializationFunctionParamsProxy() {
+tmpDir, err := ioutil.TempDir("", "test-")
+	s.NoError(err)
 	defer os.RemoveAll(tmpDir) // nolint: errcheck
 
 	testContract := "/test.go"
@@ -308,31 +309,30 @@ func ( a *A ) Get(
 }
 `)
 
-	assert.NoError(t, err)
+	s.NoError(err)
 
 	parsed, err := ParseFile(tmpDir + testContract)
-	assert.NoError(t, err)
+	s.NoError(err)
 
 	var bufProxy bytes.Buffer
 	err = parsed.WriteProxy(testutils.RandomRef().String(), &bufProxy)
-	assert.NoError(t, err)
-	assert.Contains(t, bufProxy.String(), "var ret0 int")
-	assert.Contains(t, bufProxy.String(), "ret[0] = &ret0")
+	s.NoError(err)
+	s.Contains(bufProxy.String(), "var ret0 int")
+	s.Contains(bufProxy.String(), "ret[0] = &ret0")
 
-	assert.Contains(t, bufProxy.String(), "var ret1 bool")
-	assert.Contains(t, bufProxy.String(), "ret[1] = &ret1")
+	s.Contains(bufProxy.String(), "var ret1 bool")
+	s.Contains(bufProxy.String(), "ret[1] = &ret1")
 
-	assert.Contains(t, bufProxy.String(), "var ret2 string")
-	assert.Contains(t, bufProxy.String(), "ret[2] = &ret2")
+	s.Contains(bufProxy.String(), "var ret2 string")
+	s.Contains(bufProxy.String(), "ret[2] = &ret2")
 
-	assert.Contains(t, bufProxy.String(), "var ret3 foundation.Reference")
-	assert.Contains(t, bufProxy.String(), "ret[3] = &ret3")
+	s.Contains(bufProxy.String(), "var ret3 foundation.Reference")
+	s.Contains(bufProxy.String(), "ret[3] = &ret3")
 }
 
-func TestInitializationFunctionParamsWrapper(t *testing.T) {
-	t.Parallel()
-	tmpDir, err := ioutil.TempDir("", "test-")
-	assert.NoError(t, err)
+func (s *PreprocessorSuite) TestInitializationFunctionParamsWrapper() {
+tmpDir, err := ioutil.TempDir("", "test-")
+	s.NoError(err)
 	defer os.RemoveAll(tmpDir) //nolint: errcheck
 
 	testContract := "/test.go"
@@ -352,31 +352,30 @@ func (a *A) Get(
 	return
 }
 `)
-	assert.NoError(t, err)
+	s.NoError(err)
 
 	parsed, err := ParseFile(tmpDir + testContract)
-	assert.NoError(t, err)
+	s.NoError(err)
 
 	var bufWrapper bytes.Buffer
 	err = parsed.WriteWrapper(&bufWrapper)
-	assert.NoError(t, err)
-	assert.Contains(t, bufWrapper.String(), "var args0 int")
-	assert.Contains(t, bufWrapper.String(), "args[0] = &args0")
+	s.NoError(err)
+	s.Contains(bufWrapper.String(), "var args0 int")
+	s.Contains(bufWrapper.String(), "args[0] = &args0")
 
-	assert.Contains(t, bufWrapper.String(), "var args1 bool")
-	assert.Contains(t, bufWrapper.String(), "args[1] = &args1")
+	s.Contains(bufWrapper.String(), "var args1 bool")
+	s.Contains(bufWrapper.String(), "args[1] = &args1")
 
-	assert.Contains(t, bufWrapper.String(), "var args2 string")
-	assert.Contains(t, bufWrapper.String(), "args[2] = &args2")
+	s.Contains(bufWrapper.String(), "var args2 string")
+	s.Contains(bufWrapper.String(), "args[2] = &args2")
 
-	assert.Contains(t, bufWrapper.String(), "var args3 foundation.Reference")
-	assert.Contains(t, bufWrapper.String(), "args[3] = &args3")
+	s.Contains(bufWrapper.String(), "var args3 foundation.Reference")
+	s.Contains(bufWrapper.String(), "args[3] = &args3")
 }
 
-func TestContractOnlyIfEmbedBaseContract(t *testing.T) {
-	t.Parallel()
-	tmpDir, err := ioutil.TempDir("", "test-")
-	assert.NoError(t, err)
+func (s *PreprocessorSuite) TestContractOnlyIfEmbedBaseContract() {
+tmpDir, err := ioutil.TempDir("", "test-")
+	s.NoError(err)
 	defer os.RemoveAll(tmpDir) //nolint: errcheck
 
 	testContract := "/test.go"
@@ -388,16 +387,15 @@ type A struct{
 	tt foundation.BaseContract
 }
 `)
-	assert.NoError(t, err)
+	s.NoError(err)
 
 	_, err = ParseFile(tmpDir + testContract)
-	assert.EqualError(t, err, "Only one smart contract must exist")
+	s.EqualError(err, "Only one smart contract must exist")
 }
 
-func TestOnlyOneSmartContractMustExist(t *testing.T) {
-	t.Parallel()
-	tmpDir, err := ioutil.TempDir("", "test-")
-	assert.NoError(t, err)
+func (s *PreprocessorSuite) TestOnlyOneSmartContractMustExist() {
+tmpDir, err := ioutil.TempDir("", "test-")
+	s.NoError(err)
 	defer os.RemoveAll(tmpDir) //nolint: errcheck
 
 	testContract := "/test.go"
@@ -413,16 +411,15 @@ type B struct{
 	foundation.BaseContract
 }
 `)
-	assert.NoError(t, err)
+	s.NoError(err)
 
 	_, err = ParseFile(tmpDir + testContract)
-	assert.EqualError(t, err, ": more than one contract in a file")
+	s.EqualError(err, ": more than one contract in a file")
 }
 
-func TestImportsFromContract(t *testing.T) {
-	t.Parallel()
-	tmpDir, err := ioutil.TempDir("", "test-")
-	assert.NoError(t, err)
+func (s *PreprocessorSuite) TestImportsFromContract() {
+tmpDir, err := ioutil.TempDir("", "test-")
+	s.NoError(err)
 	defer os.RemoveAll(tmpDir)
 
 	testContract := "/test.go"
@@ -446,32 +443,31 @@ func ( A ) GetPointer(i *pointerPath.SomeType) error {
 	return nil
 }
 `)
-	assert.NoError(t, err)
+	s.NoError(err)
 
 	parsed, err := ParseFile(tmpDir + testContract)
-	assert.NoError(t, err)
+	s.NoError(err)
 
 	var bufProxy bytes.Buffer
 	err = parsed.WriteProxy(testutils.RandomRef().String(), &bufProxy)
-	assert.NoError(t, err)
-	assert.Contains(t, bufProxy.String(), `"some/test/import/path"`)
-	assert.Contains(t, bufProxy.String(), `"some/test/import/pointerPath"`)
-	assert.Contains(t, bufProxy.String(), `"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"`)
+	s.NoError(err)
+	s.Contains(bufProxy.String(), `"some/test/import/path"`)
+	s.Contains(bufProxy.String(), `"some/test/import/pointerPath"`)
+	s.Contains(bufProxy.String(), `"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"`)
 	code, err := ioutil.ReadAll(&bufProxy)
-	assert.NoError(t, err)
-	assert.NotEqual(t, len(code), 0)
+	s.NoError(err)
+	s.NotEqual(len(code), 0)
 
 	var bufWrapper bytes.Buffer
 	err = parsed.WriteWrapper(&bufWrapper)
-	assert.NoError(t, err)
-	assert.Contains(t, bufWrapper.String(), `"some/test/import/path"`)
-	assert.Contains(t, bufWrapper.String(), `"some/test/import/pointerPath"`)
+	s.NoError(err)
+	s.Contains(bufWrapper.String(), `"some/test/import/path"`)
+	s.Contains(bufWrapper.String(), `"some/test/import/pointerPath"`)
 }
 
-func TestAliasImportsFromContract(t *testing.T) {
-	t.Parallel()
+func (s *PreprocessorSuite) TestAliasImportsFromContract() {
 	tmpDir, err := ioutil.TempDir("", "test-")
-	assert.NoError(t, err)
+	s.NoError(err)
 	defer os.RemoveAll(tmpDir)
 
 	testContract := "/test.go"
@@ -490,31 +486,30 @@ func ( A ) Get(i someAlias.SomeType) error {
 	return nil
 }
 `)
-	assert.NoError(t, err)
+	s.NoError(err)
 
 	parsed, err := ParseFile(tmpDir + testContract)
-	assert.NoError(t, err)
+	s.NoError(err)
 
 	var bufProxy bytes.Buffer
 	err = parsed.WriteProxy(testutils.RandomRef().String(), &bufProxy)
-	assert.NoError(t, err)
-	assert.Contains(t, bufProxy.String(), `someAlias "some/test/import/path"`)
-	assert.Contains(t, bufProxy.String(), `"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"`)
+	s.NoError(err)
+	s.Contains(bufProxy.String(), `someAlias "some/test/import/path"`)
+	s.Contains(bufProxy.String(), `"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"`)
 	code, err := ioutil.ReadAll(&bufProxy)
-	assert.NoError(t, err)
-	assert.NotEqual(t, len(code), 0)
+	s.NoError(err)
+	s.NotEqual(len(code), 0)
 
 	var bufWrapper bytes.Buffer
 	err = parsed.WriteWrapper(&bufWrapper)
-	assert.NoError(t, err)
-	assert.Contains(t, bufWrapper.String(), `someAlias "some/test/import/path"`)
-	assert.NotContains(t, bufProxy.String(), `"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"`)
+	s.NoError(err)
+	s.Contains(bufWrapper.String(), `someAlias "some/test/import/path"`)
+	s.NotContains(bufProxy.String(), `"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"`)
 }
 
-func TestImportsFromContractUseInsideFunc(t *testing.T) {
-	t.Parallel()
+func (s *PreprocessorSuite) TestImportsFromContractUseInsideFunc() {
 	tmpDir, err := ioutil.TempDir("", "test-")
-	assert.NoError(t, err)
+	s.NoError(err)
 	defer os.RemoveAll(tmpDir)
 
 	testContract := "/test.go"
@@ -534,29 +529,28 @@ func ( A ) Get() error {
 	return nil
 }
 `)
-	assert.NoError(t, err)
+	s.NoError(err)
 
 	parsed, err := ParseFile(tmpDir + testContract)
-	assert.NoError(t, err)
+	s.NoError(err)
 
 	var bufProxy bytes.Buffer
 	err = parsed.WriteProxy(testutils.RandomRef().String(), &bufProxy)
-	assert.NoError(t, err)
-	assert.NotContains(t, bufProxy.String(), `"some/test/import/path"`)
+	s.NoError(err)
+	s.NotContains(bufProxy.String(), `"some/test/import/path"`)
 	code, err := ioutil.ReadAll(&bufProxy)
-	assert.NoError(t, err)
-	assert.NotEqual(t, len(code), 0)
+	s.NoError(err)
+	s.NotEqual(len(code), 0)
 
 	var bufWrapper bytes.Buffer
 	err = parsed.WriteWrapper(&bufWrapper)
-	assert.NoError(t, err)
-	assert.NotContains(t, bufWrapper.String(), `"some/test/import/path"`)
+	s.NoError(err)
+	s.NotContains(bufWrapper.String(), `"some/test/import/path"`)
 }
 
-func TestImportsFromContractUseForReturnValue(t *testing.T) {
-	t.Parallel()
+func (s *PreprocessorSuite) TestImportsFromContractUseForReturnValue() {
 	tmpDir, err := ioutil.TempDir("", "test-")
-	assert.NoError(t, err)
+	s.NoError(err)
 	defer os.RemoveAll(tmpDir)
 
 	testContract := "/test.go"
@@ -576,29 +570,28 @@ func ( A ) Get() (path.SomeValue, error) {
 	return f, nil
 }
 `)
-	assert.NoError(t, err)
+	s.NoError(err)
 
 	parsed, err := ParseFile(tmpDir + testContract)
-	assert.NoError(t, err)
+	s.NoError(err)
 
 	var bufProxy bytes.Buffer
 	err = parsed.WriteProxy(testutils.RandomRef().String(), &bufProxy)
-	assert.NoError(t, err)
-	assert.Contains(t, bufProxy.String(), `"some/test/import/path"`)
+	s.NoError(err)
+	s.Contains(bufProxy.String(), `"some/test/import/path"`)
 	code, err := ioutil.ReadAll(&bufProxy)
-	assert.NoError(t, err)
-	assert.NotEqual(t, len(code), 0)
+	s.NoError(err)
+	s.NotEqual(len(code), 0)
 
 	var bufWrapper bytes.Buffer
 	err = parsed.WriteWrapper(&bufWrapper)
-	assert.NoError(t, err)
-	assert.NotContains(t, bufWrapper.String(), `"some/test/import/path"`)
+	s.NoError(err)
+	s.NotContains(bufWrapper.String(), `"some/test/import/path"`)
 }
 
-func TestNotMatchFileNameForProxy(t *testing.T) {
-	t.Parallel()
+func (s *PreprocessorSuite) TestNotMatchFileNameForProxy() {
 	tmpDir, err := ioutil.TempDir("", "test-")
-	assert.NoError(t, err)
+	s.NoError(err)
 	defer os.RemoveAll(tmpDir)
 
 	testContract := "/test_not_go_file.test"
@@ -609,48 +602,59 @@ type A struct{
 	foundation.BaseContract
 }
 `)
-	assert.NoError(t, err)
+	s.NoError(err)
 
 	parsed, err := ParseFile(tmpDir + testContract)
-	assert.NoError(t, err)
+	s.NoError(err)
 
 	var bufProxy bytes.Buffer
 	err = parsed.WriteProxy(testutils.RandomRef().String(), &bufProxy)
-	assert.EqualError(t, err, "couldn't match filename without extension and path")
+	s.EqualError(err, "couldn't match filename without extension and path")
 }
 
-func TestProxyGeneration(t *testing.T) {
+func (s *PreprocessorSuite) TestProxyGeneration() {
 	contracts, err := GetRealContractsNames()
-	assert.NoError(t, err)
+	s.Require().NoError(err)
+
+	contractDir, err := GetRealApplicationDir("contract")
+	s.Require().NoError(err)
 
 	for _, contract := range contracts {
 		// Make a copy for proper work of closure inside gorutine
 		contract := contract
 
-		t.Run(contract, func(t *testing.T) {
+		s.T().Run(contract, func(t *testing.T) {
 			t.Parallel()
-			parsed, err := ParseFile("../../../application/contract/" + contract + "/" + contract + ".go")
-			assert.NotNil(t, parsed, "have parsed object")
-			assert.NoError(t, err)
+			a, r := assert.New(t), require.New(t)
+
+			parsed, err := ParseFile(path.Join(contractDir, contract, contract + ".go"))
+			a.NotNil(parsed, "have parsed object")
+			a.NoError(err)
 
 			proxyPath, err := GetRealApplicationDir("proxy")
-			assert.NoError(t, err)
+			a.NoError(err)
 
 			name, err := parsed.ProxyPackageName()
-			assert.NoError(t, err)
+			a.NoError(err)
 
 			proxy := path.Join(proxyPath, name, name+".go")
 			_, err = os.Stat(proxy)
-			assert.NoError(t, err)
+			a.NoError(err)
 
 			buff := bytes.NewBufferString("")
 			err = parsed.WriteProxy("", buff)
-			require.NoError(t, err)
+			r.NoError(err)
 
 			cmd := exec.Command("diff", "-u", proxy, "-")
 			cmd.Stdin = buff
 			out, err := cmd.CombinedOutput()
-			assert.NoError(t, err, string(out))
+			a.NoError(err, string(out))
 		})
 	}
 }
+
+func TestPreprocessor(t *testing.T) {
+	t.Parallel()
+	suite.Run(t, new(PreprocessorSuite))
+}
+

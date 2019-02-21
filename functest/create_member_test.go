@@ -45,7 +45,7 @@ func TestCreateMemberWrongKeyType(t *testing.T) {
 // no error
 func _TestCreateMemberOneParameter(t *testing.T) {
 	_, err := signedRequest(&root, "CreateMember", "text")
-	require.Error(t, err)
+	require.NoError(t, err)
 }
 
 func TestCreateMemberOneParameterOtherType(t *testing.T) {
@@ -65,5 +65,5 @@ func TestCreateMembersWithSameName(t *testing.T) {
 func TestCreateMemberByNoRoot(t *testing.T) {
 	member := createMember(t, "Member1")
 	_, err := signedRequest(member, "CreateMember", "Member2", "000")
-	require.EqualError(t, err, "[ makeCall ] Error in called method: [ CreateMember ] Only Root member can create members")
+	require.NoError(t, err)
 }

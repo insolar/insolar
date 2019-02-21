@@ -58,44 +58,44 @@ func (p *Parcel) DefaultTarget() *core.RecordRef {
 }
 
 // Pulse returns pulse, when parcel was sent
-func (sm *Parcel) Pulse() core.PulseNumber {
-	return sm.PulseNumber
+func (p *Parcel) Pulse() core.PulseNumber {
+	return p.PulseNumber
 }
 
 // Message returns current instance's message
-func (sm *Parcel) Message() core.Message {
-	return sm.Msg
+func (p *Parcel) Message() core.Message {
+	return p.Msg
 }
 
 // Context returns initialized context with propagated data with ctx as parent.
-func (sm *Parcel) Context(ctx context.Context) context.Context {
-	ctx = inslogger.ContextWithTrace(ctx, sm.LogTraceID)
-	parentspan := instracer.MustDeserialize(sm.TraceSpanData)
+func (p *Parcel) Context(ctx context.Context) context.Context {
+	ctx = inslogger.ContextWithTrace(ctx, p.LogTraceID)
+	parentspan := instracer.MustDeserialize(p.TraceSpanData)
 	return instracer.WithParentSpan(ctx, parentspan)
 }
 
-func (sm *Parcel) DelegationToken() core.DelegationToken {
-	return sm.Token
+func (p *Parcel) DelegationToken() core.DelegationToken {
+	return p.Token
 }
 
 // Type returns message type.
-func (sm *Parcel) Type() core.MessageType {
-	return sm.Msg.Type()
+func (p *Parcel) Type() core.MessageType {
+	return p.Msg.Type()
 }
 
 // GetCaller returns initiator of this event.
-func (sm *Parcel) GetCaller() *core.RecordRef {
-	return sm.Msg.GetCaller()
+func (p *Parcel) GetCaller() *core.RecordRef {
+	return p.Msg.GetCaller()
 }
 
-func (sm *Parcel) GetSign() []byte {
-	return sm.Signature
+func (p *Parcel) GetSign() []byte {
+	return p.Signature
 }
 
-func (sm *Parcel) GetSender() core.RecordRef {
-	return sm.Sender
+func (p *Parcel) GetSender() core.RecordRef {
+	return p.Sender
 }
 
-func (sm *Parcel) AddDelegationToken(token core.DelegationToken) {
-	sm.Token = token
+func (p *Parcel) AddDelegationToken(token core.DelegationToken) {
+	p.Token = token
 }

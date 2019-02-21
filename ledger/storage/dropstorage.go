@@ -168,12 +168,12 @@ func (ds *dropStorage) AddDropSize(ctx context.Context, dropSize *jet.DropSize) 
 
 	k := dropSizesPrefixKey(dropSize.JetID)
 	buff, err := ds.DB.get(ctx, k)
-	if err != nil && err != ErrNotFound {
+	if err != nil && err != core.ErrNotFound {
 		return errors.Wrapf(err, "[ AddDropSize ] Can't get object: %s", string(k))
 	}
 
 	var dropSizes = jet.DropSizeHistory{}
-	if err != ErrNotFound {
+	if err != core.ErrNotFound {
 		dropSizes, err = jet.DeserializeJetDropSizeHistory(ctx, buff)
 		if err != nil {
 			return errors.Wrapf(err, "[ AddDropSize ] Can't decode dropSizes")
@@ -206,11 +206,11 @@ func (ds *dropStorage) GetDropSizeHistory(ctx context.Context, jetID core.Record
 
 	k := dropSizesPrefixKey(jetID)
 	buff, err := ds.DB.get(ctx, k)
-	if err != nil && err != ErrNotFound {
+	if err != nil && err != core.ErrNotFound {
 		return nil, errors.Wrap(err, "[ GetDropSizeHistory ] Can't db.set")
 	}
 
-	if err == ErrNotFound {
+	if err == core.ErrNotFound {
 		return jet.DropSizeHistory{}, nil
 	}
 
