@@ -23,7 +23,7 @@ import (
 )
 
 // NewRules creates network Rules component
-func NewRules() *rules {
+func NewRules() network.Rules {
 	return &rules{}
 }
 
