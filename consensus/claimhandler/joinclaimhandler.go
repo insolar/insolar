@@ -24,7 +24,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
-const NodesToJoinCount = 3
+const NodesToJoinPercent = 0.3
 
 type JoinHandler struct {
 	queue       Queue
@@ -50,16 +50,19 @@ func (jch *JoinHandler) HandleClaims(claims []*packets.NodeJoinClaim, entropy co
 
 func (jch *JoinHandler) getClaimsByPriority() []*packets.NodeJoinClaim {
 	res := make([]*packets.NodeJoinClaim, 0)
-	nodesToJoin := jch.activeCount / NodesToJoinCount
+	nodesToJoin := int(float64(jch.activeCount) * NodesToJoinPercent)
 
 	if jch.activeCount == 0 {
 		nodesToJoin = jch.queue.Len()
 	}
 	logger := inslogger.FromContext(context.Background())
-	for i := 0; (i < nodesToJoin) || (i < jch.queue.Len()); i++ {
+	for i := 0; i < nodesToJoin; i++ {
+		if i >= jch.queue.Len() {
+			break
+		}
 		res = append(res, jch.queue.PopClaim().(*packets.NodeJoinClaim))
 	}
-	logger.Debugf("[ getClaimsByPriority ] handle join claims. active node count: %d, join nodes count: %d", jch.activeCount, len(res))
+	logger.Debugf("[ getClaimsByPriority ] handle join claims. max nodes to join: %d, join nodes count: %d", nodesToJoin, len(res))
 
 	return res
 }
