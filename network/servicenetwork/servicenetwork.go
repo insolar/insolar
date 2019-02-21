@@ -174,7 +174,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 func (n *ServiceNetwork) Start(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
 
-	logger.Infoln("Network starts listening...")
+	logger.Info("Network starts listening...")
 	n.routingTable.Inject(n.NodeKeeper)
 	n.hostNetwork.Start(ctx)
 
@@ -184,7 +184,7 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 		return errors.Wrap(err, "Failed to bootstrap network")
 	}
 
-	log.Infoln("Bootstrapping network...")
+	log.Info("Bootstrapping network...")
 	_, err = n.Controller.Bootstrap(ctx)
 	if err != nil {
 		return errors.Wrap(err, "Failed to bootstrap network")
@@ -238,6 +238,13 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse core.Pulse) {
 	}
 	if n.isDiscovery && newPulse.PulseNumber <= n.Controller.GetLastIgnoredPulse()+core.PulseNumber(n.skip) {
 		log.Infof("Ignore pulse %d: network is not yet initialized", newPulse.PulseNumber)
+		return
+	}
+
+	if n.NodeKeeper.GetState() == core.WaitingNodeNetworkState {
+		// do not set pulse because otherwise we will set invalid active list
+		// pass consensus, prepare valid active list and set it on next pulse
+		go n.phaseManagerOnPulse(ctx, newPulse, currentTime)
 		return
 	}
 

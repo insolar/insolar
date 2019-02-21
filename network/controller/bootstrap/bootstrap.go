@@ -285,7 +285,6 @@ func (bc *bootstrapper) BootstrapDiscovery(ctx context.Context) (*network.Bootst
 			reconnectRequests, discoveryCount)
 		return nil, ErrReconnectRequired
 	}
-	activeNodes := make([]core.Node, 0)
 	activeNodesStr := make([]string, 0)
 
 	<-bc.bootstrapLock

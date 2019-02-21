@@ -50,10 +50,10 @@ func (NodeSignPayload) GetCaller() *core.RecordRef {
 }
 
 // Type implementation of Message interface.
-func (e *NodeSignPayload) Type() core.MessageType {
+func (nsp *NodeSignPayload) Type() core.MessageType {
 	return core.TypeNodeSignRequest
 }
 
-func (e *NodeSignPayload) GetNodeRef() *core.RecordRef {
-	return e.NodeRef
+func (nsp *NodeSignPayload) GetNodeRef() *core.RecordRef {
+	return nsp.NodeRef
 }

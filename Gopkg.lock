@@ -367,6 +367,18 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:33c4725d2c51f4b8e38e3e91fc423f686893a6d17c173d9acc1ec3096bddde3b"
+  name = "github.com/rs/zerolog"
+  packages = [
+    ".",
+    "internal/cbor",
+    "internal/json",
+  ]
+  pruneopts = "UT"
+  revision = "aa55558e4cb2e8f05cd079342d430f77e946d00a"
+
+[[projects]]
+  branch = "master"
   digest = "1:a3b8912deeef29007fab9a13a9f21b9e9b59c621a2ed61e2fe7b37320a71fbd5"
   name = "github.com/satori/go.uuid"
   packages = ["."]
@@ -615,6 +627,7 @@
     "github.com/pkg/errors",
     "github.com/prometheus/client_golang/prometheus",
     "github.com/prometheus/client_golang/prometheus/promhttp",
+    "github.com/rs/zerolog",
     "github.com/satori/go.uuid",
     "github.com/sirupsen/logrus",
     "github.com/spf13/cobra",

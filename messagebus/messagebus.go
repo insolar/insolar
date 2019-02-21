@@ -45,7 +45,6 @@ const deliverRPCMethodName = "MessageBus.Deliver"
 type MessageBus struct {
 	Network                    core.Network                    `inject:""`
 	JetCoordinator             core.JetCoordinator             `inject:""`
-	LocalStorage               core.LocalStorage               `inject:""`
 	NodeNetwork                core.NodeNetwork                `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 	CryptographyService        core.CryptographyService        `inject:""`

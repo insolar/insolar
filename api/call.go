@@ -198,12 +198,6 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 			return
 		}
 
-		err = ar.verifySignature(ctx, params)
-		if err != nil {
-			processError(err, "Can't verify signature", &resp, insLog)
-			return
-		}
-
 		var result interface{}
 		ch := make(chan interface{}, 1)
 		go func() {

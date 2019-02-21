@@ -66,7 +66,7 @@ var scheme = platformpolicy.NewPlatformCryptographyScheme()
 
 func verboseInfo(ctx context.Context, msg string) {
 	if verbose {
-		inslogger.FromContext(ctx).Infoln(msg)
+		inslogger.FromContext(ctx).Info(msg)
 	}
 }
 

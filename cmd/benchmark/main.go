@@ -49,7 +49,7 @@ var (
 	output             string
 	concurrent         int
 	repetitions        int
-	rootMemberKeys     string
+	memberKeys         string
 	apiURLs            []string
 	logLevel           string
 	saveMembersToFile  bool
@@ -61,7 +61,7 @@ func parseInputParams() {
 	pflag.StringVarP(&output, "output", "o", defaultStdoutPath, "output file (use - for STDOUT)")
 	pflag.IntVarP(&concurrent, "concurrent", "c", 1, "concurrent users")
 	pflag.IntVarP(&repetitions, "repetitions", "r", 1, "repetitions for one user")
-	pflag.StringVarP(&rootMemberKeys, "rootmemberkeys", "k", "", "path to file with RootMember keys")
+	pflag.StringVarP(&memberKeys, "memberkeys", "k", "", "path to file with member keys")
 	pflag.StringArrayVarP(&apiURLs, "apiurl", "u", []string{"http://localhost:19101/api"}, "url to api")
 	pflag.StringVarP(&logLevel, "loglevel", "l", "info", "log level for benchmark")
 	pflag.BoolVarP(&saveMembersToFile, "savemembers", "s", false, "save members to file")
@@ -293,7 +293,7 @@ func main() {
 	out, err := chooseOutput(output)
 	check("Problems with output file:", err)
 
-	insSDK, err := sdk.NewSDK(apiURLs, rootMemberKeys)
+	insSDK, err := sdk.NewSDK(apiURLs, memberKeys)
 	check("SDK is not initialized: ", err)
 
 	members, crMemPenBefore, err := getMembers(insSDK)

@@ -359,7 +359,7 @@ func setDrop(
 	var prevhash []byte
 	if err == nil {
 		prevhash = prevDrop.Hash
-	} else if err != storage.ErrNotFound {
+	} else if err != core.ErrNotFound {
 		require.NoError(t, err)
 	}
 	drop, _, dropSize, err := dropStorage.CreateDrop(ctx, jetID, pulsenum, prevhash)

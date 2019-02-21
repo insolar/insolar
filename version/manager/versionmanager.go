@@ -129,9 +129,7 @@ func (vm *VersionManager) Get(key string) *Feature {
 
 func (vm *VersionManager) Remove(key string) {
 	key = strings.ToLower(key)
-	if _, ok := vm.VersionTable[key]; ok {
-		delete(vm.VersionTable, key)
-	}
+	delete(vm.VersionTable, key)
 }
 
 func (vm *VersionManager) Start(ctx context.Context) error {

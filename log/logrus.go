@@ -22,9 +22,10 @@ import (
 	"io"
 	"strings"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/sirupsen/logrus"
 )
 
 type logrusAdapter struct {
@@ -36,7 +37,6 @@ func newLogrusAdapter(cfg configuration.Log) (*logrusAdapter, error) {
 	log := logrus.New()
 
 	var formatter logrus.Formatter
-	timestampFormat := "2006-01-02 15:04:05.000000"
 
 	switch strings.ToLower(cfg.Formatter) {
 	case "text":
@@ -83,13 +83,6 @@ func (l logrusAdapter) Debug(args ...interface{}) {
 	}
 }
 
-// Debugln logs a message at level Debug on the stdout.
-func (l logrusAdapter) Debugln(args ...interface{}) {
-	if l.entry.Logger.IsLevelEnabled(logrus.DebugLevel) {
-		l.sourced().Debugln(args...)
-	}
-}
-
 // Debugf formatted logs a message at level Debug on the stdout.
 func (l logrusAdapter) Debugf(format string, args ...interface{}) {
 	if l.entry.Logger.IsLevelEnabled(logrus.DebugLevel) {
@@ -104,13 +97,6 @@ func (l logrusAdapter) Info(args ...interface{}) {
 	}
 }
 
-// Infoln logs a message at level Info on the stdout.
-func (l logrusAdapter) Infoln(args ...interface{}) {
-	if l.entry.Logger.IsLevelEnabled(logrus.InfoLevel) {
-		l.sourced().Infoln(args...)
-	}
-}
-
 // Infof formatted logs a message at level Info on the stdout.
 func (l logrusAdapter) Infof(format string, args ...interface{}) {
 	if l.entry.Logger.IsLevelEnabled(logrus.InfoLevel) {
@@ -122,13 +108,6 @@ func (l logrusAdapter) Infof(format string, args ...interface{}) {
 func (l logrusAdapter) Warn(args ...interface{}) {
 	if l.entry.Logger.IsLevelEnabled(logrus.WarnLevel) {
 		l.sourced().Warn(args...)
-	}
-}
-
-// Warnln logs a message at level Warn on the stdout.
-func (l logrusAdapter) Warnln(args ...interface{}) {
-	if l.entry.Logger.IsLevelEnabled(logrus.WarnLevel) {
-		l.sourced().Warnln(args...)
 	}
 }
 
@@ -211,11 +190,6 @@ func (l logrusAdapter) SetLevel(level string) error {
 
 	l.entry.Logger.Level = lvl
 	return nil
-}
-
-// GetLevel returns log level
-func (l logrusAdapter) GetLevel() string {
-	return l.entry.Logger.Level.String()
 }
 
 // SetOutput sets the output destination for the logger.

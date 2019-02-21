@@ -129,5 +129,10 @@ func (ps *procStatus) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "text/html")
-	io.Copy(w, &b)
+	_, err = io.Copy(w, &b)
+	if err != nil {
+		http.Error(w, fmt.Sprintln("Copy error:", err),
+			http.StatusInternalServerError)
+		return
+	}
 }
