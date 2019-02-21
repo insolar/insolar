@@ -95,7 +95,7 @@ func (m *LedgerArtifactManager) RegisterRequest(
 	}
 
 	rec := &record.RequestRecord{
-		Parcel:      message.MustSerializeBytes(parcel),
+		Parcel:      message.ParcelToBytes(parcel),
 		MessageHash: m.PlatformCryptographyScheme.IntegrityHasher().Hash(message.MustSerializeBytes(parcel.Message())),
 		Object:      *obj.Record(),
 	}
