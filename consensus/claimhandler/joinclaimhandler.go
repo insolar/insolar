@@ -29,28 +29,35 @@ import (
 // NodesToJoinPercent how many nodes from active list can connect to the network.
 const NodesToJoinPercent = 1.0 / 3.0
 
-type JoinHandler struct {
+type JoinClaimHandler struct {
 	queue       Queue
 	activeCount int
 }
 
-func NewJoinHandler(activeNodesCount int) *JoinHandler {
-	handler := &JoinHandler{
+func NewJoinHandler(activeNodesCount int) *JoinClaimHandler {
+	handler := &JoinClaimHandler{
 		queue:       Queue{},
 		activeCount: activeNodesCount,
 	}
 	return handler
 }
 
-func (jch *JoinHandler) HandleClaims(claims []*packets.NodeJoinClaim, entropy core.Entropy) []*packets.NodeJoinClaim {
+func (jch *JoinClaimHandler) AddClaims(claims []packets.ReferendumClaim, entropy core.Entropy) {
 	for _, claim := range claims {
-		priority := getPriority(claim.NodeRef, entropy)
+		join, ok := claim.(*packets.NodeJoinClaim)
+		if !ok {
+			continue
+		}
+		priority := getPriority(join.NodeRef, entropy)
 		jch.queue.PushClaim(claim, priority)
 	}
+}
+
+func (jch *JoinClaimHandler) HandleAndReturnClaims() []*packets.NodeJoinClaim {
 	return jch.getClaimsByPriority()
 }
 
-func (jch *JoinHandler) getClaimsByPriority() []*packets.NodeJoinClaim {
+func (jch *JoinClaimHandler) getClaimsByPriority() []*packets.NodeJoinClaim {
 	res := make([]*packets.NodeJoinClaim, 0)
 	nodesToJoin := float64(jch.activeCount) * NodesToJoinPercent
 

@@ -91,7 +91,7 @@ func (ul *unsyncList) GetProof(nodeID core.RecordRef) *consensus.NodePulseProof 
 	return ul.proofs[nodeID]
 }
 
-func (ul *unsyncList) UpdateClaims(ref core.RecordRef, claims []consensus.ReferendumClaim) {
+func (ul *unsyncList) InsertClaims(ref core.RecordRef, claims []consensus.ReferendumClaim) {
 	ul.claims[ref] = claims
 }
 

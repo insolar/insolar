@@ -33,7 +33,7 @@ func TestJoinClaimHandler_HandleClaim(t *testing.T) {
 	_, err := rand.Read(entropy[:])
 	assert.NoError(t, err)
 
-	claims := make([]*packets.NodeJoinClaim, claimsCount)
+	claims := make([]packets.ReferendumClaim, claimsCount)
 	priorityMap := make(map[core.RecordRef][]byte, claimsCount)
 	for i := 0; i < claimsCount; i++ {
 		claim := getJoinClaim(t)
@@ -42,7 +42,8 @@ func TestJoinClaimHandler_HandleClaim(t *testing.T) {
 	}
 
 	handler := NewJoinHandler(activeNodesCount)
-	res := handler.HandleClaims(claims, entropy)
+	handler.AddClaims(claims, entropy)
+	res := handler.HandleAndReturnClaims()
 	assert.Len(t, res, int(float64(activeNodesCount)*NodesToJoinPercent))
 
 	for _, claim := range res {

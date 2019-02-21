@@ -77,6 +77,7 @@ func (tp *ThirdPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse, state 
 		logger.Warn("[ NET Consensus phase-3 ] Failed to record received responses metric: " + err.Error())
 	}
 
+	handler := claimhandler.NewJoinHandler(len(tp.NodeKeeper.GetActiveNodes()))
 	for ref, packet := range responses {
 		err = nil
 		if !ref.Equal(tp.NodeKeeper.GetOrigin().ID()) {
@@ -88,8 +89,7 @@ func (tp *ThirdPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse, state 
 		}
 		// not needed until we implement fraud detection
 		// cells, err := packet.GetBitset().GetCells(state.UnsyncList)
-
-		tp.handleJoinClaims(ref, state, pulse.Entropy)
+		handler.AddClaims(state.UnsyncList.GetClaims(ref), pulse.Entropy)
 		state.UnsyncList.SetGlobuleHashSignature(ref, packet.GetGlobuleHashSignature())
 	}
 
@@ -131,31 +131,23 @@ func (tp *ThirdPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse, state 
 	}, nil
 }
 
-func (tp *ThirdPhaseImpl) handleJoinClaims(ref core.RecordRef, state *SecondPhaseState, entropy core.Entropy) {
-	handler := claimhandler.NewJoinHandler(len(tp.NodeKeeper.GetActiveNodes()))
+func (tp *ThirdPhaseImpl) handleJoinClaims(handler *claimhandler.JoinClaimHandler, ref core.RecordRef, state *ThirdPhaseState) {
+	resultClaims := make([]packets.ReferendumClaim, 0)
 	claims := state.UnsyncList.GetClaims(ref)
-
 	if len(claims) == 0 {
 		return
 	}
-
-	joinClaims := make([]*packets.NodeJoinClaim, 0)
-	resultClaims := make([]packets.ReferendumClaim, 0)
-	logger := inslogger.FromContext(context.Background())
 	for _, claim := range claims {
-		c, ok := claim.(*packets.NodeJoinClaim)
+		_, ok := claim.(*packets.NodeJoinClaim)
 		if !ok {
-			resultClaims = append(resultClaims, c)
-			continue
+			resultClaims = append(resultClaims, claim)
 		}
-		joinClaims = append(joinClaims, c)
 	}
-	updatedJoinClaims := handler.HandleClaims(joinClaims, entropy)
+	updatedJoinClaims := handler.HandleAndReturnClaims()
 	if len(updatedJoinClaims) > 0 {
 		for _, claim := range updatedJoinClaims {
 			resultClaims = append(resultClaims, claim)
 		}
-		logger.Debugf("[ handleJoinClaims ] old claims count: %d; new claims count: %d", len(claims), len(resultClaims))
 		state.UnsyncList.InsertClaims(ref, resultClaims)
 	}
 }
