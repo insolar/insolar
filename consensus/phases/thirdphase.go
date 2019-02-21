@@ -21,6 +21,7 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/consensus"
+	"github.com/insolar/insolar/consensus/claimhandler"
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -87,7 +88,7 @@ func (tp *ThirdPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse, state 
 		}
 		// not needed until we implement fraud detection
 		// cells, err := packet.GetBitset().GetCells(state.UnsyncList)
-
+		tp.handleJoinClaims(ref, state, pulse.Entropy)
 		state.UnsyncList.SetGlobuleHashSignature(ref, packet.GetGlobuleHashSignature())
 	}
 
@@ -127,6 +128,26 @@ func (tp *ThirdPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse, state 
 		UnsyncList:   state.UnsyncList,
 		GlobuleProof: state.GlobuleProof,
 	}, nil
+}
+
+func (tp *ThirdPhaseImpl) handleJoinClaims(ref core.RecordRef, state *SecondPhaseState, entropy core.Entropy) {
+	handler := claimhandler.NewJoinHandler(len(tp.NodeKeeper.GetActiveNodes()))
+	claims := state.UnsyncList.GetClaims(ref)
+	joinClaims := make([]*packets.NodeJoinClaim, 0)
+	resClaims := make([]packets.ReferendumClaim, 0)
+	for _, claim := range claims {
+		c, ok := claim.(*packets.NodeJoinClaim)
+		if !ok {
+			resClaims = append(resClaims, c)
+			continue
+		}
+		joinClaims = append(joinClaims, c)
+	}
+	updatedJoinClaims := handler.HandleClaims(joinClaims, entropy)
+	for _, claim := range updatedJoinClaims {
+		resClaims = append(resClaims, claim)
+	}
+	state.UnsyncList.UpdateClaims(ref, resClaims)
 }
 
 func (tp *ThirdPhaseImpl) checkPacketSignature(packet *packets.Phase3Packet, recordRef core.RecordRef, unsyncList network.UnsyncList) error {
