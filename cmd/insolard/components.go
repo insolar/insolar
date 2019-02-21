@@ -19,6 +19,8 @@ package main
 import (
 	"context"
 
+	"github.com/insolar/insolar/network/termination"
+
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
@@ -111,7 +113,7 @@ func initComponents(
 
 ) (*component.Manager, core.TerminationHandler, error) {
 	cm := component.Manager{}
-	terminationHandler := core.NewTerminationHandler()
+	terminationHandler := termination.NewHandler()
 
 	nodeNetwork, err := nodenetwork.NewNodeNetwork(cfg.Host, certManager.GetCertificate())
 	checkError(ctx, err, "failed to start NodeNetwork")
