@@ -33,6 +33,7 @@ import (
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/index"
 	"github.com/insolar/insolar/ledger/storage/jet"
+	"github.com/insolar/insolar/ledger/storage/nodes"
 	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
@@ -53,7 +54,7 @@ type handlerSuite struct {
 
 	scheme        core.PlatformCryptographyScheme
 	pulseTracker  storage.PulseTracker
-	nodeStorage   storage.NodeStorage
+	nodeStorage   nodes.Storage
 	objectStorage storage.ObjectStorage
 	jetStorage    storage.JetStorage
 	dropStorage   storage.DropStorage
@@ -79,7 +80,7 @@ func (s *handlerSuite) BeforeTest(suiteName, testName string) {
 	s.db = db
 	s.scheme = testutils.NewPlatformCryptographyScheme()
 	s.jetStorage = storage.NewJetStorage()
-	s.nodeStorage = storage.NewNodeStorage()
+	s.nodeStorage = nodes.NewStorage()
 	s.pulseTracker = storage.NewPulseTracker()
 	s.objectStorage = storage.NewObjectStorage()
 	s.dropStorage = storage.NewDropStorage(10)
@@ -582,7 +583,7 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_UpdateIndexState() 
 	amendRecord := record.ObjectAmendRecord{
 		PrevState: *objIndex.LatestState,
 	}
-	amendHash := testutils.NewPlatformCryptographyScheme().ReferenceHasher()
+	amendHash := s.scheme.ReferenceHasher()
 	_, err := amendRecord.WriteHashData(amendHash)
 	require.NoError(s.T(), err)
 

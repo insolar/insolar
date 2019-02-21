@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/jet"
+	"github.com/insolar/insolar/ledger/storage/nodes"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
@@ -46,7 +47,7 @@ type jetCoordinatorSuite struct {
 	pulseStorage *storage.PulseStorage
 	pulseTracker storage.PulseTracker
 	jetStorage   storage.JetStorage
-	nodeStorages storage.NodeStorage
+	nodeStorages nodes.Storage
 	coordinator  *JetCoordinator
 }
 
@@ -70,7 +71,7 @@ func (s *jetCoordinatorSuite) BeforeTest(suiteName, testName string) {
 	s.pulseTracker = storage.NewPulseTracker()
 	s.pulseStorage = storage.NewPulseStorage()
 	s.jetStorage = storage.NewJetStorage()
-	s.nodeStorages = storage.NewNodeStorage()
+	s.nodeStorages = nodes.NewStorage()
 	s.coordinator = NewJetCoordinator(5)
 	s.coordinator.NodeNet = network.NewNodeNetworkMock(s.T())
 
@@ -105,14 +106,14 @@ func (s *jetCoordinatorSuite) AfterTest(suiteName, testName string) {
 func (s *jetCoordinatorSuite) TestJetCoordinator_QueryRole() {
 	err := s.pulseTracker.AddPulse(s.ctx, core.Pulse{PulseNumber: 0, Entropy: core.Entropy{1, 2, 3}})
 	require.NoError(s.T(), err)
-	var nodes []core.Node
+	var nds []core.Node
 	var nodeRefs []core.RecordRef
 	for i := 0; i < 100; i++ {
 		ref := *core.NewRecordRef(core.DomainID, *core.NewRecordID(0, []byte{byte(i)}))
-		nodes = append(nodes, storage.Node{FID: ref, FRole: core.StaticRoleLightMaterial})
+		nds = append(nds, nodes.Node{FID: ref, FRole: core.StaticRoleLightMaterial})
 		nodeRefs = append(nodeRefs, ref)
 	}
-	err = s.nodeStorages.SetActiveNodes(0, nodes)
+	err = s.nodeStorages.Set(0, nds)
 	require.NoError(s.T(), err)
 
 	objID := core.NewRecordID(0, []byte{1, 42, 123})
@@ -272,8 +273,8 @@ func TestJetCoordinator_NodeForJet_GoToHeavy(t *testing.T) {
 	expectedID := core.NewRecordRef(testutils.RandomID(), testutils.RandomID())
 	nodeMock := network.NewNodeMock(t)
 	nodeMock.IDMock.Return(*expectedID)
-	activeNodesStorageMock := storage.NewNodeStorageMock(t)
-	activeNodesStorageMock.GetActiveNodesByRoleFunc = func(p core.PulseNumber, p1 core.StaticRole) (r []core.Node, r1 error) {
+	activeNodesStorageMock := nodes.NewStorageMock(t)
+	activeNodesStorageMock.InRoleFunc = func(p core.PulseNumber, p1 core.StaticRole) (r []core.Node, r1 error) {
 		require.Equal(t, core.FirstPulseNumber, int(p))
 		require.Equal(t, core.StaticRoleHeavyMaterial, p1)
 
@@ -315,8 +316,8 @@ func TestJetCoordinator_NodeForJet_GoToLight(t *testing.T) {
 	expectedID := core.NewRecordRef(testutils.RandomID(), testutils.RandomID())
 	nodeMock := network.NewNodeMock(t)
 	nodeMock.IDMock.Return(*expectedID)
-	activeNodesStorageMock := storage.NewNodeStorageMock(t)
-	activeNodesStorageMock.GetActiveNodesByRoleFunc = func(p core.PulseNumber, p1 core.StaticRole) (r []core.Node, r1 error) {
+	activeNodesStorageMock := nodes.NewStorageMock(t)
+	activeNodesStorageMock.InRoleFunc = func(p core.PulseNumber, p1 core.StaticRole) (r []core.Node, r1 error) {
 		require.Equal(t, 0, int(p))
 		require.Equal(t, core.StaticRoleLightMaterial, p1)
 

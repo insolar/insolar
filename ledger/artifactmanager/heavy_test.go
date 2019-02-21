@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/nodes"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
@@ -46,7 +47,7 @@ type heavySuite struct {
 
 	scheme        core.PlatformCryptographyScheme
 	pulseTracker  storage.PulseTracker
-	nodeStorage   storage.NodeStorage
+	nodeStorage   nodes.Storage
 	objectStorage storage.ObjectStorage
 	jetStorage    storage.JetStorage
 	dropStorage   storage.DropStorage
@@ -72,7 +73,7 @@ func (s *heavySuite) BeforeTest(suiteName, testName string) {
 	s.db = db
 	s.scheme = platformpolicy.NewPlatformCryptographyScheme()
 	s.jetStorage = storage.NewJetStorage()
-	s.nodeStorage = storage.NewNodeStorage()
+	s.nodeStorage = nodes.NewStorage()
 	s.pulseTracker = storage.NewPulseTracker()
 	s.objectStorage = storage.NewObjectStorage()
 	s.dropStorage = storage.NewDropStorage(10)

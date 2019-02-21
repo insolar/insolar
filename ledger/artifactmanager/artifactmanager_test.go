@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/gojuno/minimock"
+	"github.com/insolar/insolar/ledger/storage/nodes"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -54,7 +55,7 @@ type amSuite struct {
 
 	scheme        core.PlatformCryptographyScheme
 	pulseTracker  storage.PulseTracker
-	nodeStorage   storage.NodeStorage
+	nodeStorage   nodes.Storage
 	objectStorage storage.ObjectStorage
 	jetStorage    storage.JetStorage
 	dropStorage   storage.DropStorage
@@ -81,7 +82,7 @@ func (s *amSuite) BeforeTest(suiteName, testName string) {
 	s.db = db
 	s.scheme = platformpolicy.NewPlatformCryptographyScheme()
 	s.jetStorage = storage.NewJetStorage()
-	s.nodeStorage = storage.NewNodeStorage()
+	s.nodeStorage = nodes.NewStorage()
 	s.pulseTracker = storage.NewPulseTracker()
 	s.objectStorage = storage.NewObjectStorage()
 	s.dropStorage = storage.NewDropStorage(10)

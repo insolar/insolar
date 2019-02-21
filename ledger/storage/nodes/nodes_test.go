@@ -1,5 +1,5 @@
 /*
- *    Copyright 2019 Insolar Technologies
+ *    Copyright 2019 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package storage
+package nodes
 
 import (
 	"testing"
@@ -24,37 +24,37 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestNodeStorage_SetActiveNodes(t *testing.T) {
+func TestNodeStorage_Set(t *testing.T) {
 	t.Parallel()
 	firstNode := Node{FID: testutils.RandomRef()}
 	secondNode := Node{FID: testutils.RandomRef()}
 	nodeStorage := nodeStorage{
-		nodeHistory: map[core.PulseNumber][]Node{},
+		nodes: map[core.PulseNumber][]Node{},
 	}
-	err := nodeStorage.SetActiveNodes(1, []core.Node{firstNode, secondNode})
+	err := nodeStorage.Set(1, []core.Node{firstNode, secondNode})
 
 	require.NoError(t, err)
-	require.Equal(t, 1, len(nodeStorage.nodeHistory))
-	require.Equal(t, firstNode, nodeStorage.nodeHistory[1][0])
-	require.Equal(t, secondNode, nodeStorage.nodeHistory[1][1])
+	require.Equal(t, 1, len(nodeStorage.nodes))
+	require.Equal(t, firstNode, nodeStorage.nodes[1][0])
+	require.Equal(t, secondNode, nodeStorage.nodes[1][1])
 }
 
-func TestNodeStorage_SetActiveNodes_OverrideError(t *testing.T) {
+func TestNodeStorage_Set_OverrideError(t *testing.T) {
 	t.Parallel()
 	firstNode := Node{FID: testutils.RandomRef()}
 	secondNode := Node{FID: testutils.RandomRef()}
 	nodeStorage := nodeStorage{
-		nodeHistory: map[core.PulseNumber][]Node{},
+		nodes: map[core.PulseNumber][]Node{},
 	}
 
-	err := nodeStorage.SetActiveNodes(1, []core.Node{firstNode, secondNode})
+	err := nodeStorage.Set(1, []core.Node{firstNode, secondNode})
 	require.NoError(t, err)
-	err = nodeStorage.SetActiveNodes(1, []core.Node{firstNode, secondNode})
+	err = nodeStorage.Set(1, []core.Node{firstNode, secondNode})
 	require.Error(t, err)
 
-	require.Equal(t, 1, len(nodeStorage.nodeHistory))
-	require.Equal(t, firstNode, nodeStorage.nodeHistory[1][0])
-	require.Equal(t, secondNode, nodeStorage.nodeHistory[1][1])
+	require.Equal(t, 1, len(nodeStorage.nodes))
+	require.Equal(t, firstNode, nodeStorage.nodes[1][0])
+	require.Equal(t, secondNode, nodeStorage.nodes[1][1])
 }
 
 func TestNodeStorage_GetActiveNodes(t *testing.T) {
@@ -62,12 +62,12 @@ func TestNodeStorage_GetActiveNodes(t *testing.T) {
 	firstNode := Node{FID: testutils.RandomRef()}
 	secondNode := Node{FID: testutils.RandomRef()}
 	nodeStorage := nodeStorage{
-		nodeHistory: map[core.PulseNumber][]Node{
+		nodes: map[core.PulseNumber][]Node{
 			1: {firstNode, secondNode},
 		},
 	}
 
-	result, err := nodeStorage.GetActiveNodes(1)
+	result, err := nodeStorage.All(1)
 
 	require.NoError(t, err)
 	require.Equal(t, 2, len(result))
@@ -79,10 +79,10 @@ func TestNodeStorage_GetActiveNodes_FailsWhenNoNodes(t *testing.T) {
 	t.Parallel()
 
 	nodeStorage := nodeStorage{
-		nodeHistory: map[core.PulseNumber][]Node{},
+		nodes: map[core.PulseNumber][]Node{},
 	}
 
-	result, err := nodeStorage.GetActiveNodes(1)
+	result, err := nodeStorage.All(1)
 
 	require.Error(t, err)
 	require.Nil(t, result)
@@ -94,14 +94,14 @@ func TestNodeStorage_GetActiveNodesByRole(t *testing.T) {
 	light := Node{FID: testutils.RandomRef(), FRole: core.StaticRoleLightMaterial}
 	heavy := Node{FID: testutils.RandomRef(), FRole: core.StaticRoleHeavyMaterial}
 	nodeStorage := nodeStorage{
-		nodeHistory: map[core.PulseNumber][]Node{
+		nodes: map[core.PulseNumber][]Node{
 			1: {nodeWithouRole, light, heavy},
 		},
 	}
 
-	lightResult, err := nodeStorage.GetActiveNodesByRole(1, core.StaticRoleLightMaterial)
+	lightResult, err := nodeStorage.InRole(1, core.StaticRoleLightMaterial)
 	require.NoError(t, err)
-	heavyResult, err := nodeStorage.GetActiveNodesByRole(1, core.StaticRoleHeavyMaterial)
+	heavyResult, err := nodeStorage.InRole(1, core.StaticRoleHeavyMaterial)
 	require.NoError(t, err)
 
 	require.Equal(t, 1, len(lightResult))
@@ -113,10 +113,10 @@ func TestNodeStorage_GetActiveNodesByRole(t *testing.T) {
 func TestNodeStorage_GetActiveNodesByRole_FailsWhenNoNode(t *testing.T) {
 	t.Parallel()
 	nodeStorage := nodeStorage{
-		nodeHistory: map[core.PulseNumber][]Node{},
+		nodes: map[core.PulseNumber][]Node{},
 	}
 
-	result, err := nodeStorage.GetActiveNodesByRole(1, core.StaticRoleLightMaterial)
+	result, err := nodeStorage.InRole(1, core.StaticRoleLightMaterial)
 
 	require.Error(t, err)
 	require.Nil(t, result)
@@ -125,7 +125,7 @@ func TestNodeStorage_GetActiveNodesByRole_FailsWhenNoNode(t *testing.T) {
 func TestNodeStorage_RemoveActiveNodesUntil(t *testing.T) {
 	t.Parallel()
 	nodeStorage := nodeStorage{
-		nodeHistory: map[core.PulseNumber][]Node{
+		nodes: map[core.PulseNumber][]Node{
 			1:   {},
 			2:   {},
 			222: {},
@@ -136,9 +136,9 @@ func TestNodeStorage_RemoveActiveNodesUntil(t *testing.T) {
 
 	nodeStorage.RemoveActiveNodesUntil(222)
 
-	require.Equal(t, 2, len(nodeStorage.nodeHistory))
-	_, ok := nodeStorage.nodeHistory[222]
+	require.Equal(t, 2, len(nodeStorage.nodes))
+	_, ok := nodeStorage.nodes[222]
 	require.Equal(t, true, ok)
-	_, ok = nodeStorage.nodeHistory[555]
+	_, ok = nodeStorage.nodes[555]
 	require.Equal(t, true, ok)
 }
