@@ -230,7 +230,7 @@ func (swa *SimpleWaitAdapter) doWork(task processElement, cancelInfo *cancelInfo
 	task.respSink.PushResponse(swa.adapterID,
 		task.elementID,
 		task.handlerID,
-		fmt.Sprintf(msg))
+		msg)
 
 	// TODO: remove cancelInfo from swa.taskHolder
 }
