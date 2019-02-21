@@ -20,6 +20,11 @@ type RulesMock struct {
 	CheckMajorityRuleCounter    uint64
 	CheckMajorityRulePreCounter uint64
 	CheckMajorityRuleMock       mRulesMockCheckMajorityRule
+
+	CheckMinRoleRuleFunc       func() (r bool)
+	CheckMinRoleRuleCounter    uint64
+	CheckMinRoleRulePreCounter uint64
+	CheckMinRoleRuleMock       mRulesMockCheckMinRoleRule
 }
 
 //NewRulesMock returns a mock for github.com/insolar/insolar/network.Rules
@@ -31,6 +36,7 @@ func NewRulesMock(t minimock.Tester) *RulesMock {
 	}
 
 	m.CheckMajorityRuleMock = mRulesMockCheckMajorityRule{mock: m}
+	m.CheckMinRoleRuleMock = mRulesMockCheckMinRoleRule{mock: m}
 
 	return m
 }
@@ -172,12 +178,150 @@ func (m *RulesMock) CheckMajorityRuleFinished() bool {
 	return true
 }
 
+type mRulesMockCheckMinRoleRule struct {
+	mock              *RulesMock
+	mainExpectation   *RulesMockCheckMinRoleRuleExpectation
+	expectationSeries []*RulesMockCheckMinRoleRuleExpectation
+}
+
+type RulesMockCheckMinRoleRuleExpectation struct {
+	result *RulesMockCheckMinRoleRuleResult
+}
+
+type RulesMockCheckMinRoleRuleResult struct {
+	r bool
+}
+
+//Expect specifies that invocation of Rules.CheckMinRoleRule is expected from 1 to Infinity times
+func (m *mRulesMockCheckMinRoleRule) Expect() *mRulesMockCheckMinRoleRule {
+	m.mock.CheckMinRoleRuleFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &RulesMockCheckMinRoleRuleExpectation{}
+	}
+
+	return m
+}
+
+//Return specifies results of invocation of Rules.CheckMinRoleRule
+func (m *mRulesMockCheckMinRoleRule) Return(r bool) *RulesMock {
+	m.mock.CheckMinRoleRuleFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &RulesMockCheckMinRoleRuleExpectation{}
+	}
+	m.mainExpectation.result = &RulesMockCheckMinRoleRuleResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of Rules.CheckMinRoleRule is expected once
+func (m *mRulesMockCheckMinRoleRule) ExpectOnce() *RulesMockCheckMinRoleRuleExpectation {
+	m.mock.CheckMinRoleRuleFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &RulesMockCheckMinRoleRuleExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *RulesMockCheckMinRoleRuleExpectation) Return(r bool) {
+	e.result = &RulesMockCheckMinRoleRuleResult{r}
+}
+
+//Set uses given function f as a mock of Rules.CheckMinRoleRule method
+func (m *mRulesMockCheckMinRoleRule) Set(f func() (r bool)) *RulesMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.CheckMinRoleRuleFunc = f
+	return m.mock
+}
+
+//CheckMinRoleRule implements github.com/insolar/insolar/network.Rules interface
+func (m *RulesMock) CheckMinRoleRule() (r bool) {
+	counter := atomic.AddUint64(&m.CheckMinRoleRulePreCounter, 1)
+	defer atomic.AddUint64(&m.CheckMinRoleRuleCounter, 1)
+
+	if len(m.CheckMinRoleRuleMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.CheckMinRoleRuleMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to RulesMock.CheckMinRoleRule.")
+			return
+		}
+
+		result := m.CheckMinRoleRuleMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the RulesMock.CheckMinRoleRule")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.CheckMinRoleRuleMock.mainExpectation != nil {
+
+		result := m.CheckMinRoleRuleMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the RulesMock.CheckMinRoleRule")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.CheckMinRoleRuleFunc == nil {
+		m.t.Fatalf("Unexpected call to RulesMock.CheckMinRoleRule.")
+		return
+	}
+
+	return m.CheckMinRoleRuleFunc()
+}
+
+//CheckMinRoleRuleMinimockCounter returns a count of RulesMock.CheckMinRoleRuleFunc invocations
+func (m *RulesMock) CheckMinRoleRuleMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.CheckMinRoleRuleCounter)
+}
+
+//CheckMinRoleRuleMinimockPreCounter returns the value of RulesMock.CheckMinRoleRule invocations
+func (m *RulesMock) CheckMinRoleRuleMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.CheckMinRoleRulePreCounter)
+}
+
+//CheckMinRoleRuleFinished returns true if mock invocations count is ok
+func (m *RulesMock) CheckMinRoleRuleFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.CheckMinRoleRuleMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.CheckMinRoleRuleCounter) == uint64(len(m.CheckMinRoleRuleMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.CheckMinRoleRuleMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.CheckMinRoleRuleCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.CheckMinRoleRuleFunc != nil {
+		return atomic.LoadUint64(&m.CheckMinRoleRuleCounter) > 0
+	}
+
+	return true
+}
+
 //ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *RulesMock) ValidateCallCounters() {
 
 	if !m.CheckMajorityRuleFinished() {
 		m.t.Fatal("Expected call to RulesMock.CheckMajorityRule")
+	}
+
+	if !m.CheckMinRoleRuleFinished() {
+		m.t.Fatal("Expected call to RulesMock.CheckMinRoleRule")
 	}
 
 }
@@ -201,6 +345,10 @@ func (m *RulesMock) MinimockFinish() {
 		m.t.Fatal("Expected call to RulesMock.CheckMajorityRule")
 	}
 
+	if !m.CheckMinRoleRuleFinished() {
+		m.t.Fatal("Expected call to RulesMock.CheckMinRoleRule")
+	}
+
 }
 
 //Wait waits for all mocked methods to be called at least once
@@ -216,6 +364,7 @@ func (m *RulesMock) MinimockWait(timeout time.Duration) {
 	for {
 		ok := true
 		ok = ok && m.CheckMajorityRuleFinished()
+		ok = ok && m.CheckMinRoleRuleFinished()
 
 		if ok {
 			return
@@ -226,6 +375,10 @@ func (m *RulesMock) MinimockWait(timeout time.Duration) {
 
 			if !m.CheckMajorityRuleFinished() {
 				m.t.Error("Expected call to RulesMock.CheckMajorityRule")
+			}
+
+			if !m.CheckMinRoleRuleFinished() {
+				m.t.Error("Expected call to RulesMock.CheckMinRoleRule")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)
@@ -241,6 +394,10 @@ func (m *RulesMock) MinimockWait(timeout time.Duration) {
 func (m *RulesMock) AllMocksCalled() bool {
 
 	if !m.CheckMajorityRuleFinished() {
+		return false
+	}
+
+	if !m.CheckMinRoleRuleFinished() {
 		return false
 	}
 

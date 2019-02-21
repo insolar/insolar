@@ -41,6 +41,12 @@ func (r *rules) CheckMajorityRule() (bool, int) {
 	return activeDiscoveryNodesLen >= majorityRule, activeDiscoveryNodesLen
 }
 
+// CheckMinRoleRule TODO
+func (r *rules) CheckMinRoleRule() bool {
+	// TODO: implementation
+	return true
+}
+
 // findDiscoveriesInActiveNodeList returns only discovery nodes from active node list
 func findDiscoveriesInActiveNodeList(activeNodes []core.Node, cert core.Certificate) []core.Node {
 	discovery := cert.GetDiscoveryNodes()

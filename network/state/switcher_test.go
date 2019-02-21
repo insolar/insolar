@@ -80,6 +80,9 @@ func TestOnPulseNoChange(t *testing.T) {
 	rules.CheckMajorityRuleMock.Set(func() (r bool, r1 int) {
 		return true, 0
 	})
+	rules.CheckMinRoleRuleMock.Set(func() (r bool) {
+		return true
+	})
 
 	cm := &component.Manager{}
 	cm.Inject(switcherWorkAround, switcher, nodeNet, messageBusLocker, rules)
@@ -101,6 +104,9 @@ func TestOnPulseStateChanged(t *testing.T) {
 	rules.CheckMajorityRuleMock.Set(func() (r bool, r1 int) {
 		return true, 0
 	})
+	rules.CheckMinRoleRuleMock.Set(func() (r bool) {
+		return true
+	})
 
 	cm := &component.Manager{}
 	cm.Inject(switcherWorkAround, switcher, nodeNet, messageBusLocker, rules)
@@ -121,6 +127,9 @@ func TestGetStateAfterStateChanged(t *testing.T) {
 
 	rules.CheckMajorityRuleMock.Set(func() (r bool, r1 int) {
 		return true, 0
+	})
+	rules.CheckMinRoleRuleMock.Set(func() (r bool) {
+		return true
 	})
 
 	cm := &component.Manager{}

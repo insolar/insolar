@@ -284,4 +284,6 @@ type ClaimQueue interface {
 type Rules interface {
 	// CheckMajorityRule returns true id MajorityRule check passed, also returns active discovery nodes count
 	CheckMajorityRule() (bool, int)
+	// CheckMinRoleRule TODO
+	CheckMinRoleRule() bool
 }
