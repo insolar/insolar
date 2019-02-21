@@ -18,13 +18,16 @@ package claimhandler
 
 import (
 	"context"
+	"math"
 
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
-const NodesToJoinPercent = 0.3
+// NodesToJoinPercent how many nodes from active list can connect to the network.
+const NodesToJoinPercent = 1.0 / 3.0
 
 type JoinHandler struct {
 	queue       Queue
@@ -49,16 +52,13 @@ func (jch *JoinHandler) HandleClaims(claims []*packets.NodeJoinClaim, entropy co
 
 func (jch *JoinHandler) getClaimsByPriority() []*packets.NodeJoinClaim {
 	res := make([]*packets.NodeJoinClaim, 0)
-	nodesToJoin := int(float64(jch.activeCount) * NodesToJoinPercent)
+	nodesToJoin := float64(jch.activeCount) * NodesToJoinPercent
 
 	if nodesToJoin == 0 {
 		nodesToJoin++
 	}
 	logger := inslogger.FromContext(context.Background())
-	for i := 0; i < nodesToJoin; i++ {
-		if i >= jch.queue.Len() {
-			break
-		}
+	for i := 0.0; i < math.Min(nodesToJoin, float64(jch.queue.Len())); i++ {
 		res = append(res, jch.queue.PopClaim().(*packets.NodeJoinClaim))
 	}
 	logger.Debugf("[ getClaimsByPriority ] handle join claims. max nodes to join: %d, join nodes count: %d", nodesToJoin, len(res))
@@ -72,9 +72,5 @@ func getPriority(ref core.RecordRef, entropy core.Entropy) []byte {
 		logger := inslogger.FromContext(context.Background())
 		logger.Errorf("[ joinClaimHandler ] getPriority: length not match! reference: %d, entropy: %d", len(ref), len(entropy))
 	}
-	res := make([]byte, len(ref))
-	for i := 0; i < len(ref); i++ {
-		res[i] = ref[i] ^ entropy[i]
-	}
-	return res
+	return utils.CircleXOR(ref[:], entropy[:])
 }

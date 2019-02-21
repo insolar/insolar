@@ -140,13 +140,12 @@ func (tp *ThirdPhaseImpl) handleJoinClaims(ref core.RecordRef, state *SecondPhas
 	}
 
 	joinClaims := make([]*packets.NodeJoinClaim, 0)
-	resClaims := make([]packets.ReferendumClaim, 0)
+	resultClaims := make([]packets.ReferendumClaim, 0)
 	logger := inslogger.FromContext(context.Background())
-	logger.Debugf("[ handleJoinClaims ] old claims count: %d", len(claims))
 	for _, claim := range claims {
 		c, ok := claim.(*packets.NodeJoinClaim)
 		if !ok {
-			resClaims = append(resClaims, c)
+			resultClaims = append(resultClaims, c)
 			continue
 		}
 		joinClaims = append(joinClaims, c)
@@ -154,10 +153,10 @@ func (tp *ThirdPhaseImpl) handleJoinClaims(ref core.RecordRef, state *SecondPhas
 	updatedJoinClaims := handler.HandleClaims(joinClaims, entropy)
 	if len(updatedJoinClaims) > 0 {
 		for _, claim := range updatedJoinClaims {
-			resClaims = append(resClaims, claim)
+			resultClaims = append(resultClaims, claim)
 		}
-		logger.Debugf("[ handleJoinClaims ] new claims count: %d", len(resClaims))
-		state.UnsyncList.UpdateClaims(ref, resClaims)
+		logger.Debugf("[ handleJoinClaims ] old claims count: %d; new claims count: %d", len(claims), len(resultClaims))
+		state.UnsyncList.InsertClaims(ref, resultClaims)
 	}
 }
 
