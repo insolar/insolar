@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/metrics"
+	"github.com/insolar/insolar/network"
 	"go.opencensus.io/trace"
 )
 
@@ -38,6 +39,7 @@ type messageBusLocker interface {
 // NetworkSwitcher is a network FSM using for bootstrapping
 type NetworkSwitcher struct {
 	NodeNetwork        core.NodeNetwork        `inject:""`
+	Rules              network.Rules           `inject:""`
 	SwitcherWorkAround core.SwitcherWorkAround `inject:""`
 	MBLocker           messageBusLocker        `inject:""`
 
@@ -75,13 +77,22 @@ func (ns *NetworkSwitcher) OnPulse(ctx context.Context, pulse core.Pulse) error 
 		trace.StringAttribute("NetworkSwitcher state: ", ns.state.String()),
 	)
 	defer span.End()
-	inslogger.FromContext(ctx).Infof("Current NetworkSwitcher state is: %s", ns.state)
+	inslogger.FromContext(ctx).Infof("Current NetworkSwitcher state is: %s", ns.state.String())
 
-	if ns.SwitcherWorkAround.IsBootstrapped() && ns.state != core.CompleteNetworkState {
-		ns.state = core.CompleteNetworkState
-		ns.Release(ctx)
-		metrics.NetworkComplete.Set(float64(time.Now().Unix()))
-		inslogger.FromContext(ctx).Infof("Current NetworkSwitcher state switched to: %s", ns.state)
+	checkRulesOk, _ := ns.Rules.CheckMajorityRule()
+
+	if ns.SwitcherWorkAround.IsBootstrapped() {
+		if checkRulesOk && ns.state != core.CompleteNetworkState {
+			ns.state = core.CompleteNetworkState
+			ns.Release(ctx)
+			metrics.NetworkComplete.Set(float64(time.Now().Unix()))
+			inslogger.FromContext(ctx).Infof("Current NetworkSwitcher state switched to: %s", ns.state.String())
+		}
+
+		if !checkRulesOk && ns.state != core.NoNetworkState {
+			ns.state = core.NoNetworkState
+			inslogger.FromContext(ctx).Infof("Current NetworkSwitcher state switched to: %s", ns.state.String())
+		}
 	}
 
 	return nil
