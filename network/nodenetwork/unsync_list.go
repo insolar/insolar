@@ -90,6 +90,10 @@ func (ul *unsyncList) GetProof(nodeID core.RecordRef) *consensus.NodePulseProof 
 	return ul.proofs[nodeID]
 }
 
+func (ul *unsyncList) UpdateClaims(ref core.RecordRef, claims []consensus.ReferendumClaim) {
+	ul.claims[ref] = claims
+}
+
 func newUnsyncList(origin core.Node, activeNodesSorted []core.Node, length int) *unsyncList {
 	result := &unsyncList{
 		length:      length,
