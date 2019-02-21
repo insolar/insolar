@@ -4,9 +4,9 @@ package conveyor
 
 import "strconv"
 
-const _ActivationStatus_name = "EmptyElementActiveElementDeactiveElement"
+const _ActivationStatus_name = "EmptyElementActiveElementNotActiveElement"
 
-var _ActivationStatus_index = [...]uint8{0, 12, 25, 40}
+var _ActivationStatus_index = [...]uint8{0, 12, 25, 41}
 
 func (i ActivationStatus) String() string {
 	if i < 0 || i >= ActivationStatus(len(_ActivationStatus_index)-1) {
