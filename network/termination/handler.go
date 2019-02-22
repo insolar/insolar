@@ -20,17 +20,15 @@ func NewHandler(nw *servicenetwork.ServiceNetwork) core.TerminationHandler {
 	return &terminationHandler{Network: nw}
 }
 
-func (t *terminationHandler) Leave(ctx context.Context, pulseDelta core.PulseNumber) chan core.LeaveApproved {
+// TODO take ETA by role of node
+func (t *terminationHandler) Leave(ctx context.Context) chan core.LeaveApproved {
 	t.Lock()
 	defer t.Unlock()
 
 	if !t.terminating {
-		t.done = make(chan core.LeaveApproved, 1)
-	}
-
-	if pulseDelta == 0 || !t.terminating {
 		t.terminating = true
-		t.Network.Leave(ctx, pulseDelta)
+		t.done = make(chan core.LeaveApproved, 1)
+		t.Network.Leave(ctx, 0)
 	}
 
 	return t.done
@@ -40,7 +38,9 @@ func (t *terminationHandler) Leave(ctx context.Context, pulseDelta core.PulseNum
 func (t *terminationHandler) OnLeaveApproved() {
 	t.Lock()
 	defer t.Unlock()
-	close(t.done)
+	if t.terminating {
+		close(t.done)
+	}
 }
 
 // ci said that log.Fatal causes import cycle

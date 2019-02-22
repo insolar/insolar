@@ -24,7 +24,7 @@ type LeaveApproved struct{}
 
 // TerminationHandler handles such node events as graceful stop, abort, etc.
 type TerminationHandler interface {
-	Leave(context.Context, PulseNumber) chan LeaveApproved
+	Leave(context.Context) chan LeaveApproved
 	OnLeaveApproved()
 	// Abort forces to stop all node components
 	Abort()

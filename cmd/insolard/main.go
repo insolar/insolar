@@ -162,7 +162,11 @@ func main() {
 		inslog.Debug("caught sig: ", sig)
 
 		inslog.Warn("GRACEFULL STOP APP")
-		<-th.Leave(ctx, 0) // TODO add normal relative number
+
+		if !params.isGenesis {
+			<-th.Leave(ctx) // TODO add normal relative number
+		}
+
 		err = cm.Stop(ctx) // TODO add leave logic for VE
 		checkError(ctx, err, "failed to graceful stop components")
 		close(waitChannel)

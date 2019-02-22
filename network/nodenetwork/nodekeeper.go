@@ -446,8 +446,7 @@ func (nk *nodekeeper) MoveSyncToActive(ctx context.Context) error {
 }
 
 func (nk *nodekeeper) gracefulStopIfNeeded() {
-	origin, ok := nk.active[nk.GetOrigin().ID()]
-	if ok && origin.Leaving() {
+	if nk.origin.Leaving() {
 		nk.TerminationHandler.OnLeaveApproved()
 	}
 }
