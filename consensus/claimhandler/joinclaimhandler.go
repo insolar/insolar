@@ -17,13 +17,11 @@
 package claimhandler
 
 import (
-	"context"
 	"math"
 
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/utils"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 // NodesToJoinPercent how many nodes from active list can connect to the network.
@@ -50,9 +48,9 @@ func (jch *JoinClaimHandler) AddClaims(claims []packets.ReferendumClaim, entropy
 		if !ok || jch.isKnownClaim(join) {
 			continue
 		}
-		jch.knownClaims[join.NodeRef] = true
 		priority := getPriority(join.NodeRef, entropy)
 		jch.queue.PushClaim(claim, priority)
+		jch.knownClaims[join.NodeRef] = true
 	}
 }
 
@@ -67,11 +65,10 @@ func (jch *JoinClaimHandler) getClaimsByPriority() []*packets.NodeJoinClaim {
 	if nodesToJoin == 0 {
 		nodesToJoin++
 	}
-	logger := inslogger.FromContext(context.Background())
-	for i := 0; i < int(math.Min(nodesToJoin, float64(jch.queue.Len()))); i++ {
+	queueLen := float64(jch.queue.Len())
+	for i := 0; i < int(math.Min(nodesToJoin, queueLen)); i++ {
 		res = append(res, jch.queue.PopClaim().(*packets.NodeJoinClaim))
 	}
-	logger.Debugf("[ getClaimsByPriority ] handle join claims. max nodes to join: %d, join nodes count: %d", int(nodesToJoin), len(res))
 
 	return res
 }

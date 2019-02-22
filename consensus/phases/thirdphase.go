@@ -77,7 +77,7 @@ func (tp *ThirdPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse, state 
 		logger.Warn("[ NET Consensus phase-3 ] Failed to record received responses metric: " + err.Error())
 	}
 
-	handler := claimhandler.NewJoinHandler(len(tp.NodeKeeper.GetActiveNodes()))
+	handler := claimhandler.NewJoinHandler(totalCount)
 	for ref, packet := range responses {
 		err = nil
 		if !ref.Equal(tp.NodeKeeper.GetOrigin().ID()) {
@@ -90,8 +90,11 @@ func (tp *ThirdPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse, state 
 		// not needed until we implement fraud detection
 		// cells, err := packet.GetBitset().GetCells(state.UnsyncList)
 
-		handler.AddClaims(state.UnsyncList.GetClaims(ref), pulse.Entropy)
 		state.UnsyncList.SetGlobuleHashSignature(ref, packet.GetGlobuleHashSignature())
+	}
+
+	for _, node := range nodes {
+		handler.AddClaims(state.UnsyncList.GetClaims(node.ID()), pulse.Entropy)
 	}
 
 	handledJoinClaims := handler.HandleAndReturnClaims()
@@ -157,9 +160,6 @@ func (tp *ThirdPhaseImpl) removeExcessJoinClaims(joinClaims []*packets.NodeJoinC
 		}
 	}
 
-	logger := inslogger.FromContext(context.Background())
-	logger.Debugf("[ removeExcessJoinClaims ] needed len: %d; origin len: %d; new len: %d", len(joinClaims), len(claims), len(updatedClaims))
-	claims = updatedClaims
 	state.UnsyncList.InsertClaims(ref, updatedClaims)
 }
 

@@ -124,6 +124,49 @@ func (s *testSuite) TestTwoNodesConnect() {
 	s.Equal(s.getNodesCount()+2, len(activeNodes))
 }
 
+func (s *testSuite) TestManyNodesConnect() {
+	if len(s.fixture().bootstrapNodes) < consensusMin {
+		s.T().Skip(consensusMinMsg)
+	}
+
+	nodesCount := 10
+	nodes := make([]*networkNode, 0)
+	for i := 0; i < nodesCount; i++ {
+		nodes = append(nodes, newNetworkNode())
+	}
+
+	for _, node := range nodes {
+		s.preInitNode(node)
+	}
+	for _, node := range nodes {
+		s.InitNode(node)
+	}
+
+	wg := sync.WaitGroup{}
+	wg.Add(nodesCount)
+
+	for _, node := range nodes {
+		go func(wg *sync.WaitGroup) {
+			s.StartNode(node)
+			wg.Done()
+		}(&wg)
+	}
+
+	wg.Wait()
+
+	defer func(s *testSuite) {
+		for _, node := range nodes {
+			s.StopNode(node)
+		}
+	}(s)
+
+	s.waitForConsensus(5)
+
+	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount(), len(activeNodes))
+	log.Infof("active: %d, nodesCount: %d", len(activeNodes), s.getNodesCount())
+}
+
 func (s *testSuite) TestNodeLeave() {
 	if len(s.fixture().bootstrapNodes) < consensusMin {
 		s.T().Skip(consensusMinMsg)
@@ -285,7 +328,7 @@ func TestServiceNetworkManyBootstraps(t *testing.T) {
 }
 
 func TestServiceNetworkManyNodes(t *testing.T) {
-	t.Skip("tmp 123")
+	t.Skip(consensusMinMsg)
 
 	s := NewTestSuite(5, 10)
 	suite.Run(t, s)
