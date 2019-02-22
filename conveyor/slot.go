@@ -51,20 +51,20 @@ const slotElementDelta = 1000000 // nolint: unused
 
 // SlotDetails provides information about slot
 type SlotDetails interface {
-	getPulseNumber() core.PulseNumber
-	getNodeID() uint32
-	getPulseData() core.Pulse
-	getNodeData() interface{}
+	getPulseNumber() core.PulseNumber // nolint: unused
+	getNodeID() uint32                // nolint: unused
+	getPulseData() core.Pulse         // nolint: unused
+	getNodeData() interface{}         // nolint: unused
 }
 
 // HandlersConfiguration contains configuration of handlers for specific pulse state
 // TODO: logic will be provided after pulse change mechanism
 type HandlersConfiguration struct {
-	state SlotState
+	state SlotState // nolint: unused
 }
 
 // TODO: logic will be provided after pulse change mechanism
-func (s *HandlersConfiguration) getMachineConfiguration(smType int) StateMachineType {
+func (s *HandlersConfiguration) getMachineConfiguration(smType int) StateMachineType { // nolint: unused
 	return nil
 }
 
@@ -106,7 +106,7 @@ func (l *ElementList) pushElement(element *slotElement) { // nolint: unused
 
 // Slot holds info about specific pulse and events for it
 type Slot struct {
-	handlersConfiguration HandlersConfiguration
+	handlersConfiguration HandlersConfiguration // nolint: structcheck
 	inputQueue            queue.IQueue
 	pulseState            PulseState
 	slotState             SlotState
@@ -227,7 +227,7 @@ type StateMachineType interface{}
 
 type slotElement struct {
 	id               uint32
-	payload          interface{}
+	payload          interface{} // nolint: structcheck
 	state            uint16
 	stateMachineType StateMachineType
 
