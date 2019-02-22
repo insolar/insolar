@@ -31,6 +31,11 @@ type Starter interface {
 	Start(ctx context.Context) error
 }
 
+// GracefulStopper interface provides method to end work with other components.
+type GracefulStopper interface {
+	GracefulStop(ctx context.Context) error
+}
+
 // Stopper interface provides method to stop a component.
 type Stopper interface {
 	Stop(ctx context.Context) error

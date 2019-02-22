@@ -414,7 +414,7 @@ func (nk *nodekeeper) Sync(list network.UnsyncList) {
 	nk.sync = list
 }
 
-func (nk *nodekeeper) MoveSyncToActive(ctx context.Context) error {
+func (nk *nodekeeper) MoveSyncToActive(ctx context.Context, pulse core.PulseNumber) error {
 	nk.activeLock.Lock()
 	nk.syncLock.Lock()
 	defer func() {
@@ -440,12 +440,12 @@ func (nk *nodekeeper) MoveSyncToActive(ctx context.Context) error {
 	nk.reindex()
 	nk.nodesJoinedDuringPrevPulse = mergeResult.NodesJoinedDuringPrevPulse
 
-	nk.gracefulStopIfNeeded()
+	nk.gracefulStopIfNeeded(pulse)
 
 	return nil
 }
 
-func (nk *nodekeeper) gracefulStopIfNeeded() {
+func (nk *nodekeeper) gracefulStopIfNeeded(pulse core.PulseNumber) {
 	if nk.origin.Leaving() {
 		nk.TerminationHandler.OnLeaveApproved()
 	}

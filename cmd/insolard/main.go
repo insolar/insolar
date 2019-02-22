@@ -164,11 +164,13 @@ func main() {
 		inslog.Warn("GRACEFULL STOP APP")
 
 		if !params.isGenesis {
-			<-th.Leave(ctx) // TODO add normal relative number
+			<-th.Leave(ctx)
+			err = cm.GracefulStop(ctx)
+			checkError(ctx, err, "failed to graceful stop components")
 		}
 
-		err = cm.Stop(ctx) // TODO add leave logic for VE
-		checkError(ctx, err, "failed to graceful stop components")
+		err = cm.Stop(ctx)
+		checkError(ctx, err, "failed to stop components")
 		close(waitChannel)
 	}()
 

@@ -146,6 +146,9 @@ type LogicRunner struct {
 	stateMutex sync.RWMutex
 
 	sock net.Listener
+
+	isStopping bool
+	stopChan   chan struct{}
 }
 
 // NewLogicRunner is constructor for LogicRunner
@@ -221,6 +224,15 @@ func (lr *LogicRunner) Stop(ctx context.Context) error {
 	}
 
 	return reterr
+}
+
+func (lr *LogicRunner) GracefulStop(ctx context.Context) error {
+	lr.isStopping = true
+	<-lr.stopChan
+
+	// TODO send claim
+
+	return nil
 }
 
 func (lr *LogicRunner) CheckOurRole(ctx context.Context, msg core.Message, role core.DynamicRole) error {
@@ -1051,6 +1063,10 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 
 	if len(messages) > 0 {
 		go lr.sendOnPulseMessagesAsync(ctx, messages)
+	}
+
+	if lr.isStopping && lr.state == nil {
+		lr.stopChan <- struct{}{}
 	}
 
 	return nil

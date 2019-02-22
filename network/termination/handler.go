@@ -28,7 +28,10 @@ func (t *terminationHandler) Leave(ctx context.Context) chan core.LeaveApproved 
 	if !t.terminating {
 		t.terminating = true
 		t.done = make(chan core.LeaveApproved, 1)
-		t.Network.Leave(ctx, 0)
+
+		pulse, _ := t.Network.PulseStorage.Current(ctx)
+		pulseDelta := pulse.NextPulseNumber - pulse.PulseNumber
+		t.Network.Leave(ctx, pulse.PulseNumber+10*pulseDelta)
 	}
 
 	return t.done

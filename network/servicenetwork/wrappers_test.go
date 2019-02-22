@@ -153,6 +153,6 @@ func (n *nodeKeeperWrapper) Sync(list network.UnsyncList) {
 	n.original.Sync(list)
 }
 
-func (n *nodeKeeperWrapper) MoveSyncToActive(ctx context.Context) error {
-	return n.original.MoveSyncToActive(ctx)
+func (n *nodeKeeperWrapper) MoveSyncToActive(ctx context.Context, pulse core.PulseNumber) error {
+	return n.original.MoveSyncToActive(ctx, pulse)
 }
