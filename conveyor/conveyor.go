@@ -43,10 +43,15 @@ const (
 	Inactive
 )
 
+const (
+	PendingPulseSignal  = 1
+	ActivatePulseSignal = 2
+)
+
 // Control allows to control conveyor and pulse
 type Control interface {
 	// PreparePulse is preparing conveyor for working with provided pulse
-	PreparePulse(pulse core.Pulse) error
+	PreparePulse(pulse core.Pulse, callback queue.SyncDone) error
 	// ActivatePulse is activate conveyor with prepared pulse
 	ActivatePulse() error
 	// GetState returns current state of conveyor
@@ -83,35 +88,7 @@ func NewPulseConveyor() Conveyor {
 	return c
 }
 
-// PulseState is the states of pulse inside slot
-type PulseState int
-
 const AntiqueSlotPulse = core.PulseNumber(0)
-
-//go:generate stringer -type=PulseState
-const (
-	Unallocated = PulseState(iota)
-	Future
-	Present
-	Past
-	Antique
-)
-
-// Slot holds info about specific pulse and events for it
-type Slot struct {
-	inputQueue  queue.IQueue
-	pulseState  PulseState
-	pulseNumber core.PulseNumber
-}
-
-// NewSlot creates new instance of Slot
-func NewSlot(pulseState PulseState, pulseNumber core.PulseNumber) *Slot {
-	return &Slot{
-		pulseState:  pulseState,
-		inputQueue:  queue.NewMutexQueue(),
-		pulseNumber: pulseNumber,
-	}
-}
 
 // GetState returns current state of conveyor
 func (c *PulseConveyor) GetState() State {
@@ -171,8 +148,7 @@ func (c *PulseConveyor) SinkPushAll(pulseNumber core.PulseNumber, data []interfa
 }
 
 // PreparePulse is preparing conveyor for working with provided pulse
-// TODO: add callback param
-func (c *PulseConveyor) PreparePulse(pulse core.Pulse) error {
+func (c *PulseConveyor) PreparePulse(pulse core.Pulse, callback queue.SyncDone) error {
 	if !c.IsOperational() {
 		return errors.New("[ PreparePulse ] conveyor is not operational now")
 	}
@@ -184,14 +160,26 @@ func (c *PulseConveyor) PreparePulse(pulse core.Pulse) error {
 		return errors.New("[ PreparePulse ] preparation was already done")
 	}
 	if c.futurePulseNumber == nil {
-		futureSlot := NewSlot(Future, pulse.PulseNumber)
-		c.slotMap[pulse.PulseNumber] = futureSlot
+		c.slotMap[pulse.PulseNumber] = NewSlot(Future, pulse.PulseNumber)
 		c.futurePulseNumber = &pulse.PulseNumber
 	}
 	if *c.futurePulseNumber != pulse.PulseNumber {
 		return errors.New("[ PreparePulse ] received future pulse is different from expected")
 	}
-	// TODO: add sending signal to slots queues
+
+	futureSlot := c.slotMap[*c.futurePulseNumber]
+	err := futureSlot.inputQueue.PushSignal(PendingPulseSignal, callback)
+	if err != nil {
+		return errors.Wrapf(err, "[ PreparePulse ] can't send signal to future slot (for pulse %d)", c.futurePulseNumber)
+	}
+
+	if c.presentPulseNumber != nil {
+		presentSlot := c.slotMap[*c.presentPulseNumber]
+		err := presentSlot.inputQueue.PushSignal(PendingPulseSignal, callback)
+		if err != nil {
+			return errors.Wrapf(err, "[ PreparePulse ] can't send signal to present slot (for pulse %d)", c.presentPulseNumber)
+		}
+	}
 
 	c.futurePulseData = &pulse
 	newFutureSlot := NewSlot(Unallocated, pulse.NextPulseNumber)
@@ -201,6 +189,41 @@ func (c *PulseConveyor) PreparePulse(pulse core.Pulse) error {
 	return nil
 }
 
+// PulseWithCallback contains info about new pulse and callback func
+type PulseWithCallback interface {
+	GetCallback() queue.SyncDone
+	GetPulse() core.Pulse
+	Done()
+}
+
+type pulseWithCallback struct {
+	callback queue.SyncDone
+	pulse    core.Pulse
+}
+
+// PulseWithCallback creates new instance of pulseWithCallback
+func NewPulseWithCallback(callback queue.SyncDone, pulse core.Pulse) PulseWithCallback {
+	return &pulseWithCallback{
+		callback: callback,
+		pulse:    pulse,
+	}
+}
+
+// GetCallback returns callback
+func (p *pulseWithCallback) GetCallback() queue.SyncDone {
+	return p.callback
+}
+
+// GetCallback returns callback
+func (p *pulseWithCallback) GetPulse() core.Pulse {
+	return p.pulse
+}
+
+// Done calls .Done() on func in callback param
+func (p *pulseWithCallback) Done() {
+	p.callback.Done()
+}
+
 // ActivatePulse activates conveyor with prepared pulse
 func (c *PulseConveyor) ActivatePulse() error {
 	if !c.IsOperational() {
@@ -208,18 +231,42 @@ func (c *PulseConveyor) ActivatePulse() error {
 	}
 
 	c.lock.Lock()
-	defer c.lock.Unlock()
 
 	if c.futurePulseData == nil {
+		c.lock.Unlock()
 		return errors.New("[ ActivatePulse ] preparation missing")
 	}
 
-	c.futurePulseData = nil
-
 	c.presentPulseNumber = c.futurePulseNumber
 	c.futurePulseNumber = c.newFuturePulseNumber
-	// TODO: add sending signal to slots queues
+
+	wg := sync.WaitGroup{}
+
+	futureSlot := c.slotMap[*c.futurePulseNumber]
+	callback := NewPulseWithCallback(&wg, *c.futurePulseData)
+	wg.Add(1)
+	err := futureSlot.inputQueue.PushSignal(ActivatePulseSignal, callback)
+	if err != nil {
+		c.lock.Unlock()
+		return errors.Wrapf(err, "[ ActivatePulse ] can't send signal to future slot (for pulse %d)", c.futurePulseNumber)
+	}
+
+	presentSlot := c.slotMap[*c.presentPulseNumber]
+	wg.Add(1)
+	err = presentSlot.inputQueue.PushSignal(ActivatePulseSignal, &wg)
+	if err != nil {
+		c.lock.Unlock()
+		return errors.Wrapf(err, "[ ActivatePulse ] can't send signal to present slot (for pulse %d)", c.presentPulseNumber)
+	}
+
+	c.futurePulseData = nil
 	c.state = Active
+	c.lock.Unlock()
+	wg.Wait()
 
 	return nil
+}
+
+func (c *PulseConveyor) getSlotConfiguration(state SlotState) HandlersConfiguration { // nolint: unused
+	return HandlersConfiguration{state: state}
 }
