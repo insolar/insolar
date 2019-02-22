@@ -80,7 +80,7 @@ func TestOnPulseNoChange(t *testing.T) {
 	rules.CheckMajorityRuleMock.Set(func() (r bool, r1 int) {
 		return true, 0
 	})
-	rules.CheckMinRoleRuleMock.Set(func() (r bool) {
+	rules.CheckMinRoleMock.Set(func() (r bool) {
 		return true
 	})
 
@@ -104,7 +104,7 @@ func TestOnPulseStateChanged(t *testing.T) {
 	rules.CheckMajorityRuleMock.Set(func() (r bool, r1 int) {
 		return true, 0
 	})
-	rules.CheckMinRoleRuleMock.Set(func() (r bool) {
+	rules.CheckMinRoleMock.Set(func() (r bool) {
 		return true
 	})
 
@@ -128,7 +128,7 @@ func TestGetStateAfterStateChanged(t *testing.T) {
 	rules.CheckMajorityRuleMock.Set(func() (r bool, r1 int) {
 		return true, 0
 	})
-	rules.CheckMinRoleRuleMock.Set(func() (r bool) {
+	rules.CheckMinRoleMock.Set(func() (r bool) {
 		return true
 	})
 
