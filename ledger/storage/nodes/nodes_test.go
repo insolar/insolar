@@ -28,7 +28,7 @@ func TestNodeStorage_Set(t *testing.T) {
 	t.Parallel()
 	firstNode := Node{FID: testutils.RandomRef()}
 	secondNode := Node{FID: testutils.RandomRef()}
-	nodeStorage := nodes{
+	nodeStorage := Storage{
 		nodes: map[core.PulseNumber][]Node{},
 	}
 	err := nodeStorage.Set(1, []core.Node{firstNode, secondNode})
@@ -43,7 +43,7 @@ func TestNodeStorage_Set_OverrideError(t *testing.T) {
 	t.Parallel()
 	firstNode := Node{FID: testutils.RandomRef()}
 	secondNode := Node{FID: testutils.RandomRef()}
-	nodeStorage := nodes{
+	nodeStorage := Storage{
 		nodes: map[core.PulseNumber][]Node{},
 	}
 
@@ -61,7 +61,7 @@ func TestNodeStorage_GetActiveNodes(t *testing.T) {
 	t.Parallel()
 	firstNode := Node{FID: testutils.RandomRef()}
 	secondNode := Node{FID: testutils.RandomRef()}
-	nodeStorage := nodes{
+	nodeStorage := Storage{
 		nodes: map[core.PulseNumber][]Node{
 			1: {firstNode, secondNode},
 		},
@@ -78,7 +78,7 @@ func TestNodeStorage_GetActiveNodes(t *testing.T) {
 func TestNodeStorage_GetActiveNodes_FailsWhenNoNodes(t *testing.T) {
 	t.Parallel()
 
-	nodeStorage := nodes{
+	nodeStorage := Storage{
 		nodes: map[core.PulseNumber][]Node{},
 	}
 
@@ -93,7 +93,7 @@ func TestNodeStorage_GetActiveNodesByRole(t *testing.T) {
 	nodeWithouRole := Node{}
 	light := Node{FID: testutils.RandomRef(), FRole: core.StaticRoleLightMaterial}
 	heavy := Node{FID: testutils.RandomRef(), FRole: core.StaticRoleHeavyMaterial}
-	nodeStorage := nodes{
+	nodeStorage := Storage{
 		nodes: map[core.PulseNumber][]Node{
 			1: {nodeWithouRole, light, heavy},
 		},
@@ -112,7 +112,7 @@ func TestNodeStorage_GetActiveNodesByRole(t *testing.T) {
 
 func TestNodeStorage_GetActiveNodesByRole_FailsWhenNoNode(t *testing.T) {
 	t.Parallel()
-	nodeStorage := nodes{
+	nodeStorage := Storage{
 		nodes: map[core.PulseNumber][]Node{},
 	}
 
@@ -124,7 +124,7 @@ func TestNodeStorage_GetActiveNodesByRole_FailsWhenNoNode(t *testing.T) {
 
 func TestNodeStorage_RemoveActiveNodesUntil(t *testing.T) {
 	t.Parallel()
-	nodeStorage := nodes{
+	nodeStorage := Storage{
 		nodes: map[core.PulseNumber][]Node{
 			1:   {},
 			2:   {},

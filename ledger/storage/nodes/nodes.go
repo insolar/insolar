@@ -37,22 +37,22 @@ type Setter interface {
 	Delete(pulse core.PulseNumber)
 }
 
-// NodeHistory is an in-memory active node storage for each pulse. It's required to calculate node roles
+// Storage is an in-memory active node storage for each pulse. It's required to calculate node roles
 // for past pulses to locate data.
 // It should only contain previous N pulses. It should be stored on disk.
-type nodes struct {
+type Storage struct {
 	lock  sync.RWMutex
 	nodes map[core.PulseNumber][]Node
 }
 
 // NewStorage create new instance of Storage
-func NewStorage() *nodes { // nolint
+func NewStorage() *Storage {
 	// return new(nodeStorage)
-	return &nodes{nodes: map[core.PulseNumber][]Node{}}
+	return &Storage{nodes: map[core.PulseNumber][]Node{}}
 }
 
 // Set saves active nodes for pulse in memory.
-func (a *nodes) Set(pulse core.PulseNumber, nodes []core.Node) error {
+func (a *Storage) Set(pulse core.PulseNumber, nodes []core.Node) error {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 
@@ -72,7 +72,7 @@ func (a *nodes) Set(pulse core.PulseNumber, nodes []core.Node) error {
 }
 
 // All return active nodes for specified pulse.
-func (a *nodes) All(pulse core.PulseNumber) ([]core.Node, error) {
+func (a *Storage) All(pulse core.PulseNumber) ([]core.Node, error) {
 	a.lock.RLock()
 	defer a.lock.RUnlock()
 
@@ -89,7 +89,7 @@ func (a *nodes) All(pulse core.PulseNumber) ([]core.Node, error) {
 }
 
 // InRole return active nodes for specified pulse and role.
-func (a *nodes) InRole(pulse core.PulseNumber, role core.StaticRole) ([]core.Node, error) {
+func (a *Storage) InRole(pulse core.PulseNumber, role core.StaticRole) ([]core.Node, error) {
 	a.lock.RLock()
 	defer a.lock.RUnlock()
 
@@ -108,7 +108,7 @@ func (a *nodes) InRole(pulse core.PulseNumber, role core.StaticRole) ([]core.Nod
 }
 
 // Delete erases nodes for specified pulse.
-func (a *nodes) Delete(pulse core.PulseNumber) {
+func (a *Storage) Delete(pulse core.PulseNumber) {
 	a.lock.Lock()
 	delete(a.nodes, pulse)
 	a.lock.Unlock()
