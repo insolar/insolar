@@ -162,6 +162,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 	pm.DropStorage = ds
 	pm.ObjectStorage = os
 	pm.Nodes = ns
+	pm.NodeSetter = ns
 	pm.PulseTracker = pt
 	pm.ReplicaStorage = rs
 	pm.StorageCleaner = cl
