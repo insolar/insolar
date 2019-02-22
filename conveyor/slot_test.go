@@ -173,14 +173,14 @@ func TestNewSlot(t *testing.T) {
 func TestSlot_getPulseNumber(t *testing.T) {
 	s := testSlot(t, true, testRealPulse)
 
-	pn := s.getPulseNumber()
+	pn := s.GetPulseNumber()
 	require.Equal(t, testRealPulse, pn)
 }
 
 func TestSlot_getPulseData(t *testing.T) {
 	s := testSlot(t, true, testRealPulse)
 
-	pulse := s.getPulseData()
+	pulse := s.GetPulseData()
 	require.Equal(t, core.Pulse{PulseNumber: testRealPulse}, pulse)
 }
 
@@ -189,7 +189,7 @@ func TestSlot_getNodeId(t *testing.T) {
 	expectedNodeID := uint32(112233)
 	s.nodeID = expectedNodeID
 
-	nodeID := s.getNodeID()
+	nodeID := s.GetNodeID()
 	require.Equal(t, expectedNodeID, nodeID)
 }
 
@@ -198,7 +198,7 @@ func TestSlot_getNodeData(t *testing.T) {
 	expectedNodeData := "some_test_node_data"
 	s.nodeData = expectedNodeData
 
-	nodeData := s.getNodeData()
+	nodeData := s.GetNodeData()
 	require.Equal(t, expectedNodeData, nodeData)
 }
 
