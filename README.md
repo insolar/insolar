@@ -109,5 +109,4 @@ See [Contributing Guidelines](.github/CONTRIBUTING.md).
 This project is licensed under the terms of the [Apache license 2.0](LICENSE), except for the [Network](network), [NetworkCoordinator](networkcoordinator) and [Consensus](consensus)  subdirectories, which are licensed under the terms of the [BSD 3-Clause Clear License](network/LICENSE.md).
 
 
-2
-3
+4
