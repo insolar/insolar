@@ -280,7 +280,7 @@ func (bc *bootstrapper) BootstrapDiscovery(ctx context.Context) (*network.Bootst
 		ch := bc.getDiscoveryNodesChannel(ctx, discoveryNodes, discoveryCount)
 		bootstrapResults, hosts = bc.waitResultsFromChannel(ctx, ch, discoveryCount)
 		if len(hosts) == discoveryCount {
-			// we connected to discovery nodes
+			// we connected to all discovery nodes
 			break
 		} else {
 			logger.WithFields(map[string]interface{}{
