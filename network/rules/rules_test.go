@@ -13,7 +13,6 @@ import (
 )
 
 func TestRules_CheckMajorityRule(t *testing.T) {
-	t.Skip("tmp")
 	cm := component.Manager{}
 	r := NewRules()
 	certManager := testutils.NewCertificateManagerMock(t)
@@ -35,6 +34,7 @@ func TestRules_CheckMajorityRule(t *testing.T) {
 	nodeKeeper := network.NewNodeKeeperMock(t)
 	nodeKeeper.GetActiveNodesMock.Set(func() (r []core.Node) {
 		nodes, _ := getDiscoveryNodes(5)
+		nodes = append(nodes, newNode(250))
 		return nodes
 	})
 
@@ -42,18 +42,25 @@ func TestRules_CheckMajorityRule(t *testing.T) {
 
 	result, count := r.CheckMajorityRule()
 	assert.True(t, result)
-	assert.Equal(t, 0, count)
+	assert.Equal(t, 5, count)
 }
 
 func getDiscoveryNodes(count int) ([]core.Node, []core.DiscoveryNode) {
 	result1 := make([]core.Node, count)
 	result2 := make([]core.DiscoveryNode, count)
 
-	for i := 1; i <= count; i++ {
-		recordRef := core.RecordRef{byte(i)}
-		result1 = append(result1, nodenetwork.NewNode(recordRef, core.StaticRoleVirtual, nil, "127.0.0.1:3000", ""))
-		result2 = append(result2, certificate.NewBootstrapNode(nil, "", "127.0.0.1:3000", recordRef.String()))
+	for i := 0; i < count; i++ {
+		n := newNode(i)
+		d := certificate.NewBootstrapNode(nil, "", "127.0.0.1:3000", n.ID().String())
+		result1[i] = n
+		result2[i] = d
 	}
 
 	return result1, result2
+}
+
+func newNode(id int) core.Node {
+	recordRef := core.RecordRef{byte(id)}
+	node := nodenetwork.NewNode(recordRef, core.StaticRoleVirtual, nil, "127.0.0.1:3000", "")
+	return node
 }
