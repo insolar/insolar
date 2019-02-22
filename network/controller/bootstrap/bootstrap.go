@@ -19,9 +19,12 @@ package bootstrap
 
 import (
 	"context"
+	"crypto/rand"
 	"encoding/gob"
 	"fmt"
 	"math"
+	"math/big"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -37,6 +40,7 @@ import (
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet/types"
+	"github.com/insolar/insolar/network/utils"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
@@ -195,15 +199,40 @@ func (bc *bootstrapper) Bootstrap(ctx context.Context) (*network.BootstrapResult
 	bootstrapResults, hosts := bc.waitResultsFromChannel(ctx, ch, discoveryCount)
 	logger.Infof("[ Bootstrap ] Connected to %d/%d discovery nodes", len(hosts), discoveryCount)
 
-	majorityRule := bc.Certificate.GetMajorityRule()
+	if len(bootstrapResults) == 0 {
+		return nil, nil, errors.New("[ Bootstrap ] Failed to get bootstrap results")
+	}
 
-	for _, b := range bootstrapResults {
-		if b.DiscoveryCount >= majorityRule {
-			return b, &DiscoveryNode{b.Host, findDiscovery(bc.Certificate, b.Host.NodeID)}, nil
-		}
+	majorityRule := bc.Certificate.GetMajorityRule()
+	b, isMajority := getDiscoveryFromBootstrapResults(bootstrapResults, majorityRule)
+	if utils.OriginIsDiscovery(bc.Certificate) || isMajority {
+		return b, &DiscoveryNode{b.Host, findDiscovery(bc.Certificate, b.Host.NodeID)}, nil
 	}
 
 	return nil, nil, errors.New("majority rule failed")
+}
+
+func getDiscoveryFromBootstrapResults(bootstrapResults []*network.BootstrapResult, majorityRule int) (*network.BootstrapResult, bool) {
+	sort.Slice(bootstrapResults, func(i, j int) bool {
+		return bootstrapResults[i].DiscoveryCount > bootstrapResults[j].DiscoveryCount
+	})
+
+	maxBootstrapResults := make([]*network.BootstrapResult, 0, len(bootstrapResults))
+	for i, result := range bootstrapResults {
+		if i == 0 || maxBootstrapResults[0].DiscoveryCount == result.DiscoveryCount {
+			maxBootstrapResults = append(maxBootstrapResults, result)
+		} else {
+			break
+		}
+	}
+
+	i, err := rand.Int(rand.Reader, big.NewInt(int64(len(maxBootstrapResults))))
+	if err != nil {
+		panic(err)
+	}
+
+	randomMaxResult := bootstrapResults[int(i.Int64())]
+	return randomMaxResult, randomMaxResult.DiscoveryCount >= majorityRule
 }
 
 func (bc *bootstrapper) SetLastPulse(number core.PulseNumber) {
