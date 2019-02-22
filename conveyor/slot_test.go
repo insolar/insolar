@@ -43,8 +43,8 @@ func len3List() ElementList {
 	el1 := &slotElement{id: 1}
 	el2 := &slotElement{id: 2}
 	el3 := &slotElement{id: 3}
-	el1.listNext = el2
-	el2.listNext = el3
+	el1.nextElement = el2
+	el2.nextElement = el3
 
 	l := ElementList{
 		head: el1,
@@ -53,82 +53,107 @@ func len3List() ElementList {
 	return l
 }
 
-func TestElementList_len_Empty(t *testing.T) {
-	l := ElementList{}
-	listLen := l.len()
-	require.Equal(t, 0, listLen)
+func elementListLength(l *ElementList) int {
+	i := 0
+	for element := l.head; element != nil; element = element.nextElement {
+		i++
+	}
+	return i
 }
 
-func TestElementList_len(t *testing.T) {
-	l := len3List()
-	listLen := l.len()
-	require.Equal(t, 3, listLen)
-}
-
-func TestElementList_popElement_Empty(t *testing.T) {
+func TestElementList_popElement_FromEmptyList(t *testing.T) {
 	l := ElementList{}
 	el := l.popElement()
 	require.Nil(t, el)
 }
 
-func TestElementList_popElement_OnlyOne(t *testing.T) {
+func TestElementList_popElement_FromLenOneList(t *testing.T) {
 	expectedElement := &slotElement{id: 1}
 	l := ElementList{head: expectedElement, tail: expectedElement}
 
 	el := l.popElement()
 	require.Equal(t, expectedElement, el)
-	require.Equal(t, 0, l.len())
+	require.Equal(t, 0, elementListLength(&l))
 }
 
-func TestElementList_popElement(t *testing.T) {
-	l := len3List()
-	prevHead := l.head
-	prevTail := l.tail
+func TestElementList_popElement_Multiple(t *testing.T) {
+	l := ElementList{}
+	numElements := 333
+	prevElement := &slotElement{id: uint32(numElements)}
+	l.tail = prevElement
+	var el *slotElement
+	for i := numElements - 1; i > 0; i-- {
+		el = &slotElement{id: uint32(i)}
+		el.nextElement = prevElement
+		prevElement = el
+	}
+	l.head = el
 
-	el := l.popElement()
-	require.Equal(t, prevHead, el)
-	require.Equal(t, prevHead.listNext, l.head)
-	require.Equal(t, prevTail, l.tail)
-	require.Equal(t, 2, l.len())
+	for i := 1; i <= numElements; i++ {
+		prevHead := l.head
+		prevTail := l.tail
+
+		el := l.popElement()
+
+		require.Equal(t, prevHead, el)
+		require.Equal(t, prevHead.nextElement, l.head)
+		require.Equal(t, prevTail, l.tail)
+		require.Equal(t, numElements-i, elementListLength(&l))
+	}
 }
 
-func TestElementList_pushElement_Empty(t *testing.T) {
+func TestElementList_pushElement_ToEmptyList(t *testing.T) {
 	l := ElementList{}
 	el := &slotElement{}
 
 	l.pushElement(el)
-	require.Equal(t, 1, l.len())
+	require.Equal(t, 1, elementListLength(&l))
 }
 
-func TestElementList_pushElement_OnlyOne(t *testing.T) {
+func TestElementList_pushElement_ToLenOneList(t *testing.T) {
 	expectedElement := &slotElement{id: 1}
 	l := ElementList{head: expectedElement, tail: expectedElement}
 	el := &slotElement{}
 
 	l.pushElement(el)
-	require.Equal(t, el, expectedElement.listNext)
+	require.Equal(t, el, expectedElement.nextElement)
 	require.Equal(t, el, l.tail)
-	require.Equal(t, 2, l.len())
+	require.Equal(t, 2, elementListLength(&l))
 }
 
-func TestElementList_pushElement(t *testing.T) {
-	l := len3List()
-	prevHead := l.head
-	prevTail := l.tail
-	el := &slotElement{}
+func TestElementList_pushElement_Multiple(t *testing.T) {
+	firstElement := &slotElement{id: 1}
+	l := ElementList{head: firstElement, tail: firstElement}
+	numElements := 333
+
+	for i := 2; i < numElements; i++ {
+		prevHead := l.head
+		prevTail := l.tail
+		el := &slotElement{id: uint32(i)}
+
+		l.pushElement(el)
+
+		require.Equal(t, prevHead, l.head)
+		require.Equal(t, el, prevTail.nextElement)
+		require.Equal(t, el, l.tail)
+		require.Equal(t, i, elementListLength(&l))
+	}
+}
+
+func TestElementList_pushElement_popElement(t *testing.T) {
+	l := ElementList{}
+	el := &slotElement{id: 1}
 
 	l.pushElement(el)
-	require.Equal(t, prevHead, l.head)
-	require.Equal(t, el, prevTail.listNext)
-	require.Equal(t, el, l.tail)
-	require.Equal(t, 4, l.len())
+	res := l.popElement()
+	require.Equal(t, el, res)
+	require.Equal(t, 0, elementListLength(&l))
 }
 
 func TestInitElementsBuf(t *testing.T) {
 	elements := initElementsBuf()
 	require.Len(t, elements, slotSize)
-	require.Equal(t, SlotStateMachine, elements[0])
-	for i := 1; i < slotSize; i++ {
+	for i := 0; i < slotSize; i++ {
 		require.Equal(t, EmptyElement, elements[i].activationStatus)
 	}
 }
@@ -142,6 +167,7 @@ func TestNewSlot(t *testing.T) {
 	require.Empty(t, s.inputQueue.RemoveAll())
 	require.Len(t, s.elements, slotSize)
 	require.Len(t, s.elementListMap, 3)
+	require.Equal(t, SlotStateMachine, s.elements[0])
 }
 
 func TestSlot_getPulseNumber(t *testing.T) {
@@ -180,13 +206,24 @@ func TestSlot_createElement(t *testing.T) {
 	s := NewSlot(Future, testRealPulse)
 	event := queue.OutputElement{}
 
-	element := s.createElement("testStateMachineType", 1, event)
+	element, err := s.createElement("testStateMachineType", 1, event)
 	require.NotNil(t, element)
+	require.NoError(t, err)
 	require.Equal(t, "testStateMachineType", element.stateMachineType)
 	require.Equal(t, uint16(1), element.state)
 	require.Equal(t, uint32(1), element.id)
 	require.Equal(t, ActiveElement, element.activationStatus)
-	require.Equal(t, 1, s.elementListMap[ActiveElement].len())
+	require.Equal(t, 1, elementListLength(s.elementListMap[ActiveElement]))
+}
+
+func TestSlot_createElement_Err(t *testing.T) {
+	s := NewSlot(Future, testRealPulse)
+	delete(s.elementListMap, ActiveElement)
+	event := queue.OutputElement{}
+
+	element, err := s.createElement("testStateMachineType", 1, event)
+	require.Nil(t, element)
+	require.EqualError(t, err, "[ createElement ]: [ pushElement ] can't push element: list for status ActiveElement doesn't exist")
 }
 
 func TestSlot_popElement(t *testing.T) {
@@ -201,9 +238,17 @@ func TestSlot_popElement(t *testing.T) {
 
 	element := s.popElement(ActiveElement)
 	require.Equal(t, prevHead, element)
-	require.Equal(t, prevHead.listNext, s.elementListMap[ActiveElement].head)
+	require.Equal(t, prevHead.nextElement, s.elementListMap[ActiveElement].head)
 	require.Equal(t, prevTail, s.elementListMap[ActiveElement].tail)
-	require.Equal(t, 2, s.elementListMap[ActiveElement].len())
+	require.Equal(t, 2, elementListLength(s.elementListMap[ActiveElement]))
+}
+
+func TestSlot_popElement_UnknownStatus(t *testing.T) {
+	s := Slot{}
+	unknownStatus := ActivationStatus(6767)
+
+	element := s.popElement(unknownStatus)
+	require.Nil(t, element)
 }
 
 func TestSlot_pushElement(t *testing.T) {
@@ -218,13 +263,23 @@ func TestSlot_pushElement(t *testing.T) {
 	element := &slotElement{id: 777}
 	prevID := element.id
 
-	s.pushElement(ActiveElement, element)
+	err := s.pushElement(ActiveElement, element)
+	require.NoError(t, err)
 	require.Equal(t, prevHead, s.elementListMap[ActiveElement].head)
-	require.Equal(t, element, prevTail.listNext)
+	require.Equal(t, element, prevTail.nextElement)
 	require.Equal(t, element, s.elementListMap[ActiveElement].tail)
-	require.Equal(t, 4, s.elementListMap[ActiveElement].len())
+	require.Equal(t, 4, elementListLength(s.elementListMap[ActiveElement]))
 
 	require.Equal(t, prevID, element.id)
+}
+
+func TestSlot_pushElement_UnknownStatus(t *testing.T) {
+	s := Slot{}
+	unknownStatus := ActivationStatus(6767)
+	element := &slotElement{id: 777}
+
+	err := s.pushElement(unknownStatus, element)
+	require.EqualError(t, err, "[ pushElement ] can't push element: list for status ActivationStatus(6767) doesn't exist")
 }
 
 func TestSlot_pushElement_Empty(t *testing.T) {
@@ -239,11 +294,12 @@ func TestSlot_pushElement_Empty(t *testing.T) {
 	element := &slotElement{id: 777}
 	prevID := element.id
 
-	s.pushElement(EmptyElement, element)
+	err := s.pushElement(EmptyElement, element)
+	require.NoError(t, err)
 	require.Equal(t, prevHead, s.elementListMap[EmptyElement].head)
-	require.Equal(t, element, prevTail.listNext)
+	require.Equal(t, element, prevTail.nextElement)
 	require.Equal(t, element, s.elementListMap[EmptyElement].tail)
-	require.Equal(t, 4, s.elementListMap[EmptyElement].len())
+	require.Equal(t, 4, elementListLength(s.elementListMap[EmptyElement]))
 
 	require.Equal(t, prevID+slotElementDelta, element.id)
 }

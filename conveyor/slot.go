@@ -17,8 +17,11 @@
 package conveyor
 
 import (
+	"fmt"
+
 	"github.com/insolar/insolar/conveyor/queue"
 	"github.com/insolar/insolar/core"
+	"github.com/pkg/errors"
 )
 
 // PulseState is the states of pulse inside slot
@@ -87,7 +90,7 @@ func (l *ElementList) popElement() *slotElement {
 	if result == nil {
 		return nil
 	}
-	l.head = l.head.listNext
+	l.head = l.head.nextElement
 	return result
 }
 
@@ -95,19 +98,10 @@ func (l *ElementList) popElement() *slotElement {
 func (l *ElementList) pushElement(element *slotElement) {
 	if l.head == nil {
 		l.head = element
-		l.tail = element
 	} else {
-		l.tail.listNext = element
-		l.tail = element
+		l.tail.nextElement = element
 	}
-}
-
-func (l *ElementList) len() int {
-	i := 0
-	for element := l.head; element != nil; element = element.listNext {
-		i++
-	}
-	return i
+	l.tail = element
 }
 
 // Slot holds info about specific pulse and events for it
@@ -121,7 +115,8 @@ type Slot struct {
 	nodeID                uint32
 	nodeData              interface{}
 	elements              []slotElement
-	elementListMap        map[ActivationStatus]*ElementList
+	// we can use slice or just several fields of ElementList, it will be faster but not pretty
+	elementListMap map[ActivationStatus]*ElementList
 }
 
 // SlotStateMachine represents state machine of slot itself
@@ -133,12 +128,11 @@ var SlotStateMachine = slotElement{
 
 func initElementsBuf() []slotElement {
 	elements := make([]slotElement, slotSize)
-	elements[0] = SlotStateMachine
 	var nextElement *slotElement
-	for i := slotSize - 1; i > 0; i-- {
+	for i := slotSize - 1; i >= 0; i-- {
 		elements[i] = *newSlotElement(EmptyElement)
 		elements[i].id = uint32(i)
-		elements[i].listNext = nextElement
+		elements[i].nextElement = nextElement
 		nextElement = &elements[i]
 	}
 	return elements
@@ -153,17 +147,16 @@ func NewSlot(pulseState PulseState, pulseNumber core.PulseNumber) *Slot {
 
 	elements := initElementsBuf()
 
-	empty := &ElementList{
-		// elements[0] contains SlotStateMachine, so first empty element is elements[1]
-		head: &elements[1],
-		tail: &elements[slotSize-1],
-	}
-
 	elementListMap := map[ActivationStatus]*ElementList{
-		EmptyElement:     empty,
-		ActiveElement:    &ElementList{},
-		NotActiveElement: &ElementList{},
+		EmptyElement: {
+			head: &elements[0],
+			tail: &elements[slotSize-1],
+		},
+		ActiveElement:    {},
+		NotActiveElement: {},
 	}
+	firstElement := elementListMap[EmptyElement].popElement()
+	*firstElement = SlotStateMachine
 	return &Slot{
 		pulseState:     pulseState,
 		inputQueue:     queue.NewMutexQueue(),
@@ -191,33 +184,43 @@ func (s *Slot) getNodeData() interface{} {
 }
 
 // createElement creates new active element from empty element
-func (s *Slot) createElement(stateMachineType StateMachineType, state uint16, event queue.OutputElement) *slotElement {
+func (s *Slot) createElement(stateMachineType StateMachineType, state uint16, event queue.OutputElement) (*slotElement, error) {
 	element := s.popElement(EmptyElement)
 	element.stateMachineType = stateMachineType
 	element.state = state
 	element.activationStatus = ActiveElement
-	element.listNext = nil
+	element.nextElement = nil
 	// Set other fields to element, like:
 	// element.payload = event.GetPayload()
 
-	s.pushElement(ActiveElement, element)
-	return element
+	err := s.pushElement(ActiveElement, element)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ createElement ]")
+	}
+	return element, nil
 }
 
 // popElement gets element of provided status from correspondent linked list (and remove it from that list)
 func (s *Slot) popElement(status ActivationStatus) *slotElement {
-	list := s.elementListMap[status]
+	list, ok := s.elementListMap[status]
+	if !ok {
+		return nil
+	}
 	return list.popElement()
 }
 
 // pushElement adds element of provided status to correspondent linked list
-func (s *Slot) pushElement(status ActivationStatus, element *slotElement) {
+func (s *Slot) pushElement(status ActivationStatus, element *slotElement) error {
 	element.activationStatus = status
+	list, ok := s.elementListMap[status]
+	if !ok {
+		return fmt.Errorf("[ pushElement ] can't push element: list for status %s doesn't exist", status)
+	}
 	if status == EmptyElement {
 		element.id = element.id + slotElementDelta
 	}
-	list := s.elementListMap[status]
 	list.pushElement(element)
+	return nil
 }
 
 type StateMachineType interface{}
@@ -228,7 +231,7 @@ type slotElement struct {
 	state            uint16
 	stateMachineType StateMachineType
 
-	listNext         *slotElement
+	nextElement      *slotElement
 	activationStatus ActivationStatus
 }
 

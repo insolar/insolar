@@ -233,6 +233,7 @@ func (c *PulseConveyor) ActivatePulse() error {
 	c.lock.Lock()
 
 	if c.futurePulseData == nil {
+		c.lock.Unlock()
 		return errors.New("[ ActivatePulse ] preparation missing")
 	}
 
@@ -240,18 +241,21 @@ func (c *PulseConveyor) ActivatePulse() error {
 	c.futurePulseNumber = c.newFuturePulseNumber
 
 	wg := sync.WaitGroup{}
-	wg.Add(2)
 
 	futureSlot := c.slotMap[*c.futurePulseNumber]
 	callback := NewPulseWithCallback(&wg, *c.futurePulseData)
+	wg.Add(1)
 	err := futureSlot.inputQueue.PushSignal(ActivatePulseSignal, callback)
 	if err != nil {
+		c.lock.Unlock()
 		return errors.Wrapf(err, "[ ActivatePulse ] can't send signal to future slot (for pulse %d)", c.futurePulseNumber)
 	}
 
 	presentSlot := c.slotMap[*c.presentPulseNumber]
+	wg.Add(1)
 	err = presentSlot.inputQueue.PushSignal(ActivatePulseSignal, &wg)
 	if err != nil {
+		c.lock.Unlock()
 		return errors.Wrapf(err, "[ ActivatePulse ] can't send signal to present slot (for pulse %d)", c.presentPulseNumber)
 	}
 
