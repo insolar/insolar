@@ -144,17 +144,23 @@ func (tp *ThirdPhaseImpl) removeExcessJoinClaims(joinClaims []*packets.NodeJoinC
 	if originLen == 0 || len(joinClaims) == 0 {
 		return
 	}
+	updatedClaims := make([]packets.ReferendumClaim, 0)
 	for _, join := range joinClaims {
 		for i := 0; i < len(claims); i++ {
 			claim, ok := claims[i].(*packets.NodeJoinClaim)
 			if ok && claim.NodeRef.Equal(join.NodeRef) {
-				claims = append(claims[:i], claims[i+1:]...)
+				updatedClaims = append(updatedClaims, join)
+				continue
+			} else if !ok {
+				updatedClaims = append(updatedClaims, claim)
 			}
 		}
 	}
+
 	logger := inslogger.FromContext(context.Background())
-	logger.Debugf("[ removeExcessJoinClaims ] removed claims: %d", originLen-len(claims))
-	state.UnsyncList.InsertClaims(ref, claims)
+	logger.Debugf("[ removeExcessJoinClaims ] needed len: %d; origin len: %d; new len: %d", len(joinClaims), len(claims), len(updatedClaims))
+	claims = updatedClaims
+	state.UnsyncList.InsertClaims(ref, updatedClaims)
 }
 
 func (tp *ThirdPhaseImpl) checkPacketSignature(packet *packets.Phase3Packet, recordRef core.RecordRef, unsyncList network.UnsyncList) error {
