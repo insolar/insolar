@@ -267,6 +267,6 @@ func (c *PulseConveyor) ActivatePulse() error {
 	return nil
 }
 
-func (c *PulseConveyor) getSlotConfiguration(state SlotState) HandlersConfiguration {
+func (c *PulseConveyor) getSlotConfiguration(state SlotState) HandlersConfiguration { // nolint: unused
 	return HandlersConfiguration{state: state}
 }

@@ -47,13 +47,13 @@ const (
 )
 
 const slotSize = 10000
-const slotElementDelta = 1000000
+const slotElementDelta = 1000000 // nolint: unused
 
 // SlotDetails provides information about slot
 type SlotDetails interface {
 	getPulseNumber() core.PulseNumber
-	getNodeId() uint32
-	getPulseData() *core.Pulse
+	getNodeID() uint32
+	getPulseData() core.Pulse
 	getNodeData() interface{}
 }
 
@@ -95,7 +95,7 @@ func (l *ElementList) popElement() *slotElement {
 }
 
 // pushElement adds element to linked list
-func (l *ElementList) pushElement(element *slotElement) {
+func (l *ElementList) pushElement(element *slotElement) { // nolint: unused
 	if l.head == nil {
 		l.head = element
 	} else {
@@ -167,19 +167,19 @@ func NewSlot(pulseState PulseState, pulseNumber core.PulseNumber) *Slot {
 	}
 }
 
-func (s *Slot) getPulseNumber() core.PulseNumber {
+func (s *Slot) getPulseNumber() core.PulseNumber { // nolint: unused
 	return s.pulseNumber
 }
 
-func (s *Slot) getPulseData() core.Pulse {
+func (s *Slot) getPulseData() core.Pulse { // nolint: unused
 	return s.pulse
 }
 
-func (s *Slot) getNodeID() uint32 {
+func (s *Slot) getNodeID() uint32 { // nolint: unused
 	return s.nodeID
 }
 
-func (s *Slot) getNodeData() interface{} {
+func (s *Slot) getNodeData() interface{} { // nolint: unused
 	return s.nodeData
 }
 
@@ -201,7 +201,7 @@ func (s *Slot) createElement(stateMachineType StateMachineType, state uint16, ev
 }
 
 // popElement gets element of provided status from correspondent linked list (and remove it from that list)
-func (s *Slot) popElement(status ActivationStatus) *slotElement {
+func (s *Slot) popElement(status ActivationStatus) *slotElement { // nolint: unused
 	list, ok := s.elementListMap[status]
 	if !ok {
 		return nil
@@ -210,7 +210,7 @@ func (s *Slot) popElement(status ActivationStatus) *slotElement {
 }
 
 // pushElement adds element of provided status to correspondent linked list
-func (s *Slot) pushElement(status ActivationStatus, element *slotElement) error {
+func (s *Slot) pushElement(status ActivationStatus, element *slotElement) error { // nolint: unused
 	element.activationStatus = status
 	list, ok := s.elementListMap[status]
 	if !ok {
