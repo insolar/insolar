@@ -19,6 +19,7 @@ package rules
 
 import (
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 )
 
@@ -43,8 +44,26 @@ func (r *rules) CheckMajorityRule() (bool, int) {
 
 // CheckMinRoleRule TODO
 func (r *rules) CheckMinRoleRule() bool {
-	// TODO: implementation
-	return true
+	cert := r.CertificateManager.GetCertificate()
+
+
+	nodes := r.NodeKeeper.GetActiveNodes()
+
+	var virtualCount, heavyCount, lightCount uint
+	for _, n := range nodes {
+		switch n.Role() {
+		case core.StaticRoleVirtual: virtualCount++
+		case core.StaticRoleHeavyMaterial: heavyCount++
+		case core.StaticRoleLightMaterial: lightCount++
+		default:
+			log.Warn("unknown node role")
+		}
+	}
+
+	v, h, l := cert.GetMinRoles()
+	return virtualCount >= v &&
+		heavyCount >= h &&
+		lightCount >= l
 }
 
 // findDiscoveriesInActiveNodeList returns only discovery nodes from active node list
