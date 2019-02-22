@@ -51,10 +51,10 @@ const slotElementDelta = 1000000 // nolint: unused
 
 // SlotDetails provides information about slot
 type SlotDetails interface {
-	getPulseNumber() core.PulseNumber // nolint: unused
-	getNodeID() uint32                // nolint: unused
-	getPulseData() core.Pulse         // nolint: unused
-	getNodeData() interface{}         // nolint: unused
+	GetPulseNumber() core.PulseNumber // nolint: unused
+	GetNodeID() uint32                // nolint: unused
+	GetPulseData() core.Pulse         // nolint: unused
+	GetNodeData() interface{}         // nolint: unused
 }
 
 // HandlersConfiguration contains configuration of handlers for specific pulse state
@@ -167,19 +167,19 @@ func NewSlot(pulseState PulseState, pulseNumber core.PulseNumber) *Slot {
 	}
 }
 
-func (s *Slot) getPulseNumber() core.PulseNumber { // nolint: unused
+func (s *Slot) GetPulseNumber() core.PulseNumber { // nolint: unused
 	return s.pulseNumber
 }
 
-func (s *Slot) getPulseData() core.Pulse { // nolint: unused
+func (s *Slot) GetPulseData() core.Pulse { // nolint: unused
 	return s.pulse
 }
 
-func (s *Slot) getNodeID() uint32 { // nolint: unused
+func (s *Slot) GetNodeID() uint32 { // nolint: unused
 	return s.nodeID
 }
 
-func (s *Slot) getNodeData() interface{} { // nolint: unused
+func (s *Slot) GetNodeData() interface{} { // nolint: unused
 	return s.nodeData
 }
 
