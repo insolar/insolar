@@ -16,16 +16,20 @@
 
 package core
 
+import (
+	"fmt"
+)
+
 // TerminationHandler handles such node events as graceful stop, abort, etc.
 type TerminationHandler interface {
 	// Abort forces to stop all node components
-	Abort()
+	Abort(reason string)
 }
 
 type terminationHandler struct{}
 
-func (terminationHandler) Abort() {
-	panic("Node leave acknowledged by network. Goodbye!")
+func (terminationHandler) Abort(reason string) {
+	panic(fmt.Sprintf("Node leave acknowledged by network. Goodbye! Reason: %s", reason))
 }
 
 func NewTerminationHandler() TerminationHandler {

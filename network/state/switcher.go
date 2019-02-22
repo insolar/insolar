@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/utils"
 	"go.opencensus.io/trace"
 )
 
@@ -47,13 +48,16 @@ type NetworkSwitcher struct {
 	NodeNetwork        core.NodeNetwork        `inject:""`
 	Rules              network.Rules           `inject:""`
 	SwitcherWorkAround core.SwitcherWorkAround `inject:""`
+	CertificateManager core.CertificateManager `inject:""`
+	TerminationHandler core.TerminationHandler `inject:""`
 	MBLocker           messageBusLocker        `inject:""`
 
 	counter uint64
 
-	state     core.NetworkState
-	stateMap  map[core.NetworkState]stateHandler
-	stateLock sync.RWMutex
+	state              core.NetworkState
+	stateMap           map[core.NetworkState]stateHandler
+	wasInCompleteState bool
+	stateLock          sync.RWMutex
 
 	span *trace.Span
 }
@@ -92,27 +96,43 @@ func (ns *NetworkSwitcher) handleNoNetworkState(ctx context.Context, transitionD
 func (ns *NetworkSwitcher) handleVoidNetworkState(ctx context.Context, transitionData *transitionData) {
 	if !transitionData.majorityRule {
 		ns.state = core.NoNetworkState
+		ns.onNoNetworkStateIn(ctx)
 	}
 
 	if transitionData.minRoleRule {
-		defer ns.Release(ctx)
-
 		ns.state = core.CompleteNetworkState
+		ns.onCompleteNetworkStateIn(ctx)
 	}
 }
 
 func (ns *NetworkSwitcher) handleCompleteNetworkState(ctx context.Context, transitionData *transitionData) {
 	if !transitionData.majorityRule || !transitionData.minRoleRule {
-		defer ns.Acquire(ctx)
+		ns.onCompleteNetworkStateOut(ctx)
 
 		if !transitionData.majorityRule {
 			ns.state = core.NoNetworkState
+			ns.onNoNetworkStateIn(ctx)
 		}
 
 		if !transitionData.minRoleRule {
 			ns.state = core.VoidNetworkState
 		}
 	}
+}
+
+func (ns *NetworkSwitcher) onNoNetworkStateIn(ctx context.Context) {
+	if !utils.OriginIsDiscovery(ns.CertificateManager.GetCertificate()) {
+		ns.TerminationHandler.Abort("We are not discovery and majority rule faded")
+	}
+}
+
+func (ns *NetworkSwitcher) onCompleteNetworkStateIn(ctx context.Context) {
+	ns.Release(ctx)
+	ns.wasInCompleteState = true
+}
+
+func (ns *NetworkSwitcher) onCompleteNetworkStateOut(ctx context.Context) {
+	ns.Acquire(ctx)
 }
 
 func (ns *NetworkSwitcher) changeState(ctx context.Context, pulse core.Pulse) core.NetworkState {
@@ -138,6 +158,13 @@ func (ns *NetworkSwitcher) changeState(ctx context.Context, pulse core.Pulse) co
 	}
 
 	return ns.state
+}
+
+func (ns *NetworkSwitcher) WasInCompleteState() bool {
+	ns.stateLock.RLock()
+	defer ns.stateLock.RUnlock()
+
+	return ns.wasInCompleteState
 }
 
 // OnPulse method checks current state and finds out reasons to update this state

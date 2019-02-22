@@ -444,7 +444,7 @@ func (nk *nodekeeper) MoveSyncToActive(ctx context.Context) error {
 
 func (nk *nodekeeper) gracefullyStop() {
 	// TODO: graceful stop
-	nk.Handler.Abort()
+	nk.Handler.Abort("Gracefully stop")
 }
 
 func (nk *nodekeeper) reindex() {
