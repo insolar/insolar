@@ -33,6 +33,11 @@ type CertificateMock struct {
 	GetMajorityRulePreCounter uint64
 	GetMajorityRuleMock       mCertificateMockGetMajorityRule
 
+	GetMinRolesFunc       func() (r uint, r1 uint, r2 uint)
+	GetMinRolesCounter    uint64
+	GetMinRolesPreCounter uint64
+	GetMinRolesMock       mCertificateMockGetMinRoles
+
 	GetNodeRefFunc       func() (r *core.RecordRef)
 	GetNodeRefCounter    uint64
 	GetNodeRefPreCounter uint64
@@ -70,6 +75,7 @@ func NewCertificateMock(t minimock.Tester) *CertificateMock {
 	m.GetDiscoveryNodesMock = mCertificateMockGetDiscoveryNodes{mock: m}
 	m.GetDiscoverySignsMock = mCertificateMockGetDiscoverySigns{mock: m}
 	m.GetMajorityRuleMock = mCertificateMockGetMajorityRule{mock: m}
+	m.GetMinRolesMock = mCertificateMockGetMinRoles{mock: m}
 	m.GetNodeRefMock = mCertificateMockGetNodeRef{mock: m}
 	m.GetPublicKeyMock = mCertificateMockGetPublicKey{mock: m}
 	m.GetRoleMock = mCertificateMockGetRole{mock: m}
@@ -476,6 +482,146 @@ func (m *CertificateMock) GetMajorityRuleFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.GetMajorityRuleFunc != nil {
 		return atomic.LoadUint64(&m.GetMajorityRuleCounter) > 0
+	}
+
+	return true
+}
+
+type mCertificateMockGetMinRoles struct {
+	mock              *CertificateMock
+	mainExpectation   *CertificateMockGetMinRolesExpectation
+	expectationSeries []*CertificateMockGetMinRolesExpectation
+}
+
+type CertificateMockGetMinRolesExpectation struct {
+	result *CertificateMockGetMinRolesResult
+}
+
+type CertificateMockGetMinRolesResult struct {
+	r  uint
+	r1 uint
+	r2 uint
+}
+
+//Expect specifies that invocation of Certificate.GetMinRoles is expected from 1 to Infinity times
+func (m *mCertificateMockGetMinRoles) Expect() *mCertificateMockGetMinRoles {
+	m.mock.GetMinRolesFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &CertificateMockGetMinRolesExpectation{}
+	}
+
+	return m
+}
+
+//Return specifies results of invocation of Certificate.GetMinRoles
+func (m *mCertificateMockGetMinRoles) Return(r uint, r1 uint, r2 uint) *CertificateMock {
+	m.mock.GetMinRolesFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &CertificateMockGetMinRolesExpectation{}
+	}
+	m.mainExpectation.result = &CertificateMockGetMinRolesResult{r, r1, r2}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of Certificate.GetMinRoles is expected once
+func (m *mCertificateMockGetMinRoles) ExpectOnce() *CertificateMockGetMinRolesExpectation {
+	m.mock.GetMinRolesFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &CertificateMockGetMinRolesExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *CertificateMockGetMinRolesExpectation) Return(r uint, r1 uint, r2 uint) {
+	e.result = &CertificateMockGetMinRolesResult{r, r1, r2}
+}
+
+//Set uses given function f as a mock of Certificate.GetMinRoles method
+func (m *mCertificateMockGetMinRoles) Set(f func() (r uint, r1 uint, r2 uint)) *CertificateMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.GetMinRolesFunc = f
+	return m.mock
+}
+
+//GetMinRoles implements github.com/insolar/insolar/core.Certificate interface
+func (m *CertificateMock) GetMinRoles() (r uint, r1 uint, r2 uint) {
+	counter := atomic.AddUint64(&m.GetMinRolesPreCounter, 1)
+	defer atomic.AddUint64(&m.GetMinRolesCounter, 1)
+
+	if len(m.GetMinRolesMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.GetMinRolesMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to CertificateMock.GetMinRoles.")
+			return
+		}
+
+		result := m.GetMinRolesMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the CertificateMock.GetMinRoles")
+			return
+		}
+
+		r = result.r
+		r1 = result.r1
+		r2 = result.r2
+
+		return
+	}
+
+	if m.GetMinRolesMock.mainExpectation != nil {
+
+		result := m.GetMinRolesMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the CertificateMock.GetMinRoles")
+		}
+
+		r = result.r
+		r1 = result.r1
+		r2 = result.r2
+
+		return
+	}
+
+	if m.GetMinRolesFunc == nil {
+		m.t.Fatalf("Unexpected call to CertificateMock.GetMinRoles.")
+		return
+	}
+
+	return m.GetMinRolesFunc()
+}
+
+//GetMinRolesMinimockCounter returns a count of CertificateMock.GetMinRolesFunc invocations
+func (m *CertificateMock) GetMinRolesMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.GetMinRolesCounter)
+}
+
+//GetMinRolesMinimockPreCounter returns the value of CertificateMock.GetMinRoles invocations
+func (m *CertificateMock) GetMinRolesMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.GetMinRolesPreCounter)
+}
+
+//GetMinRolesFinished returns true if mock invocations count is ok
+func (m *CertificateMock) GetMinRolesFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.GetMinRolesMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.GetMinRolesCounter) == uint64(len(m.GetMinRolesMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.GetMinRolesMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.GetMinRolesCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.GetMinRolesFunc != nil {
+		return atomic.LoadUint64(&m.GetMinRolesCounter) > 0
 	}
 
 	return true
@@ -1167,6 +1313,10 @@ func (m *CertificateMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to CertificateMock.GetMajorityRule")
 	}
 
+	if !m.GetMinRolesFinished() {
+		m.t.Fatal("Expected call to CertificateMock.GetMinRoles")
+	}
+
 	if !m.GetNodeRefFinished() {
 		m.t.Fatal("Expected call to CertificateMock.GetNodeRef")
 	}
@@ -1216,6 +1366,10 @@ func (m *CertificateMock) MinimockFinish() {
 		m.t.Fatal("Expected call to CertificateMock.GetMajorityRule")
 	}
 
+	if !m.GetMinRolesFinished() {
+		m.t.Fatal("Expected call to CertificateMock.GetMinRoles")
+	}
+
 	if !m.GetNodeRefFinished() {
 		m.t.Fatal("Expected call to CertificateMock.GetNodeRef")
 	}
@@ -1253,6 +1407,7 @@ func (m *CertificateMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.GetDiscoveryNodesFinished()
 		ok = ok && m.GetDiscoverySignsFinished()
 		ok = ok && m.GetMajorityRuleFinished()
+		ok = ok && m.GetMinRolesFinished()
 		ok = ok && m.GetNodeRefFinished()
 		ok = ok && m.GetPublicKeyFinished()
 		ok = ok && m.GetRoleFinished()
@@ -1276,6 +1431,10 @@ func (m *CertificateMock) MinimockWait(timeout time.Duration) {
 
 			if !m.GetMajorityRuleFinished() {
 				m.t.Error("Expected call to CertificateMock.GetMajorityRule")
+			}
+
+			if !m.GetMinRolesFinished() {
+				m.t.Error("Expected call to CertificateMock.GetMinRoles")
 			}
 
 			if !m.GetNodeRefFinished() {
@@ -1319,6 +1478,10 @@ func (m *CertificateMock) AllMocksCalled() bool {
 	}
 
 	if !m.GetMajorityRuleFinished() {
+		return false
+	}
+
+	if !m.GetMinRolesFinished() {
 		return false
 	}
 
