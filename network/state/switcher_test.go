@@ -51,7 +51,8 @@ func TestNewNetworkSwitcher(t *testing.T) {
 	require.NoError(t, err)
 
 	cm := &component.Manager{}
-	cm.Inject(nodeNet, switcherWorkAround, messageBusLocker, switcher)
+	rules := network.NewRulesMock(t)
+	cm.Inject(nodeNet, switcherWorkAround, messageBusLocker, switcher, rules)
 
 	require.Equal(t, nodeNet, switcher.NodeNetwork)
 	require.Equal(t, switcherWorkAround, switcher.SwitcherWorkAround)
@@ -74,9 +75,17 @@ func TestOnPulseNoChange(t *testing.T) {
 	switcherWorkAround := mockSwitcherWorkAround(t, false)
 	nodeNet := network.NewNodeNetworkMock(t)
 	messageBusLocker := mockMessageBusLocker(t)
+	rules := network.NewRulesMock(t)
+
+	rules.CheckMajorityRuleMock.Set(func() (r bool, r1 int) {
+		return true, 0
+	})
+	rules.CheckMinRoleMock.Set(func() (r bool) {
+		return true
+	})
 
 	cm := &component.Manager{}
-	cm.Inject(switcherWorkAround, switcher, nodeNet, messageBusLocker)
+	cm.Inject(switcherWorkAround, switcher, nodeNet, messageBusLocker, rules)
 
 	err = switcher.OnPulse(context.Background(), core.Pulse{})
 	require.NoError(t, err)
@@ -90,9 +99,17 @@ func TestOnPulseStateChanged(t *testing.T) {
 	switcherWorkAround := mockSwitcherWorkAround(t, true)
 	nodeNet := network.NewNodeNetworkMock(t)
 	messageBusLocker := mockMessageBusLocker(t)
+	rules := network.NewRulesMock(t)
+
+	rules.CheckMajorityRuleMock.Set(func() (r bool, r1 int) {
+		return true, 0
+	})
+	rules.CheckMinRoleMock.Set(func() (r bool) {
+		return true
+	})
 
 	cm := &component.Manager{}
-	cm.Inject(switcherWorkAround, switcher, nodeNet, messageBusLocker)
+	cm.Inject(switcherWorkAround, switcher, nodeNet, messageBusLocker, rules)
 
 	err = switcher.OnPulse(context.Background(), core.Pulse{})
 	require.NoError(t, err)
@@ -106,9 +123,17 @@ func TestGetStateAfterStateChanged(t *testing.T) {
 	switcherWorkAround := mockSwitcherWorkAround(t, true)
 	nodeNet := network.NewNodeNetworkMock(t)
 	messageBusLocker := mockMessageBusLocker(t)
+	rules := network.NewRulesMock(t)
+
+	rules.CheckMajorityRuleMock.Set(func() (r bool, r1 int) {
+		return true, 0
+	})
+	rules.CheckMinRoleMock.Set(func() (r bool) {
+		return true
+	})
 
 	cm := &component.Manager{}
-	cm.Inject(switcherWorkAround, switcher, nodeNet, messageBusLocker)
+	cm.Inject(switcherWorkAround, switcher, nodeNet, messageBusLocker, rules)
 
 	err = switcher.OnPulse(context.Background(), core.Pulse{})
 	require.NoError(t, err)

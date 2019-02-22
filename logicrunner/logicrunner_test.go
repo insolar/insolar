@@ -22,7 +22,6 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"net/rpc"
 	"os"
@@ -30,6 +29,8 @@ import (
 	"runtime"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/stretchr/testify/suite"
 	"github.com/ugorji/go/codec"
@@ -95,7 +96,7 @@ func FindContractsDir() (string, error) {
 
 func (s *LogicRunnerFuncSuite) SetupSuite() {
 	if err := log.SetLevel("debug"); err != nil {
-		log.Errorln("Failed to set logLevel to debug: ", err.Error())
+		log.Error("Failed to set logLevel to debug: ", err.Error())
 	}
 
 	var err error
@@ -105,7 +106,7 @@ func (s *LogicRunnerFuncSuite) SetupSuite() {
 
 	if s.contractsDir, err = FindContractsDir(); err != nil {
 		s.contractsDir = ""
-		log.Errorln("Failed to find contracts dir: ", err.Error())
+		log.Error("Failed to find contracts dir: ", err.Error())
 	}
 }
 
@@ -204,7 +205,7 @@ func (s *LogicRunnerFuncSuite) incrementPulseHelper(ctx context.Context, lr core
 	currentPulse, _ := pulseStorage.Current(ctx)
 
 	newPulseNumber := currentPulse.PulseNumber + 1
-	err := lr.(*LogicRunner).Ledger.GetPulseManager().Set(
+	err := pm.Set(
 		ctx,
 		core.Pulse{PulseNumber: newPulseNumber, Entropy: core.Entropy{}},
 		true,
@@ -1342,7 +1343,7 @@ func New(n int) (*Child, error) {
 	})
 
 	newPulse := core.Pulse{PulseNumber: 1231234, Entropy: core.Entropy{}}
-	err = lr.(*LogicRunner).Ledger.GetPulseManager().Set(
+	err = lr.(*LogicRunner).PulseStorage.(core.PulseManager).Set(
 		ctx, newPulse, true,
 	)
 	s.NoError(err)

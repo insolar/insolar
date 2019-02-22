@@ -14,12 +14,26 @@
  *    limitations under the License.
  */
 
-package localstorage
+package log
 
 import (
-	"github.com/pkg/errors"
+	"bytes"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+
+	"github.com/insolar/insolar/configuration"
 )
 
-var (
-	ErrNotFound = errors.New("record not found")
-)
+func TestLogrusAdapter_CallerInfo(t *testing.T) {
+	log, err := NewLog(configuration.Log{Level: "info", Adapter: "logrus", Formatter: "json"})
+	require.NoError(t, err)
+	require.NotNil(t, log)
+
+	var buf bytes.Buffer
+	log.SetOutput(&buf)
+
+	log.Error("test")
+
+	require.Contains(t, buf.String(), "logrus_test.go:36")
+}

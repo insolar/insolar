@@ -27,7 +27,7 @@ import (
 )
 
 // RecentStorageProvider provides a recent storage for jet
-type RecentStorageProvider struct {
+type RecentStorageProvider struct { //nolint: golint
 	indexStorages   map[core.RecordID]*RecentIndexStorageConcrete
 	pendingStorages map[core.RecordID]*PendingStorageConcrete
 

@@ -52,21 +52,21 @@ func TestCorrectShortIDCollision(t *testing.T) {
 		newTestNodeWithShortID(1<<32 - 1),
 	})
 
-	require.False(t, checkShortIDCollision(keeper, core.ShortNodeID(2)))
-	require.False(t, checkShortIDCollision(keeper, core.ShortNodeID(31)))
-	require.False(t, checkShortIDCollision(keeper, core.ShortNodeID(35)))
-	require.False(t, checkShortIDCollision(keeper, core.ShortNodeID(65)))
+	require.False(t, CheckShortIDCollision(keeper, core.ShortNodeID(2)))
+	require.False(t, CheckShortIDCollision(keeper, core.ShortNodeID(31)))
+	require.False(t, CheckShortIDCollision(keeper, core.ShortNodeID(35)))
+	require.False(t, CheckShortIDCollision(keeper, core.ShortNodeID(65)))
 
-	require.True(t, checkShortIDCollision(keeper, core.ShortNodeID(30)))
+	require.True(t, CheckShortIDCollision(keeper, core.ShortNodeID(30)))
 	require.Equal(t, core.ShortNodeID(31), regenerateShortID(keeper, core.ShortNodeID(30)))
 
-	require.True(t, checkShortIDCollision(keeper, core.ShortNodeID(32)))
+	require.True(t, CheckShortIDCollision(keeper, core.ShortNodeID(32)))
 	require.Equal(t, core.ShortNodeID(35), regenerateShortID(keeper, core.ShortNodeID(32)))
 
-	require.True(t, checkShortIDCollision(keeper, core.ShortNodeID(64)))
+	require.True(t, CheckShortIDCollision(keeper, core.ShortNodeID(64)))
 	require.Equal(t, core.ShortNodeID(65), regenerateShortID(keeper, core.ShortNodeID(64)))
 
-	require.True(t, checkShortIDCollision(keeper, core.ShortNodeID(1<<32-2)))
+	require.True(t, CheckShortIDCollision(keeper, core.ShortNodeID(1<<32-2)))
 	require.Equal(t, core.ShortNodeID(2), regenerateShortID(keeper, core.ShortNodeID(1<<32-2)))
 }
 
@@ -93,26 +93,26 @@ func TestRemoveOrigin(t *testing.T) {
 	second := &testNode{testutils.RandomRef()}
 
 	discoveryNodes := []core.DiscoveryNode{first, originNode, second}
-	result, err := RemoveOrigin(discoveryNodes, origin)
+	result, err := removeOrigin(discoveryNodes, origin)
 	require.NoError(t, err)
 	assert.Equal(t, []core.DiscoveryNode{first, second}, result)
 
 	discoveryNodes = []core.DiscoveryNode{first, second}
-	_, err = RemoveOrigin(discoveryNodes, origin)
+	_, err = removeOrigin(discoveryNodes, origin)
 	assert.Error(t, err)
 
 	discoveryNodes = []core.DiscoveryNode{first, originNode}
-	result, err = RemoveOrigin(discoveryNodes, origin)
+	result, err = removeOrigin(discoveryNodes, origin)
 	require.NoError(t, err)
 	assert.Equal(t, []core.DiscoveryNode{first}, result)
 
 	discoveryNodes = []core.DiscoveryNode{originNode, first}
-	result, err = RemoveOrigin(discoveryNodes, origin)
+	result, err = removeOrigin(discoveryNodes, origin)
 	require.NoError(t, err)
 	assert.Equal(t, []core.DiscoveryNode{first}, result)
 
 	discoveryNodes = []core.DiscoveryNode{originNode}
-	result, err = RemoveOrigin(discoveryNodes, origin)
+	result, err = removeOrigin(discoveryNodes, origin)
 	require.NoError(t, err)
 	assert.Empty(t, result)
 }

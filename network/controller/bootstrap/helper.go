@@ -31,15 +31,15 @@ import (
 
 const nonceSize int = 128
 
-// checkShortIDCollision returns true if NodeKeeper already contains node with such ShortID
-func checkShortIDCollision(keeper network.NodeKeeper, id core.ShortNodeID) bool {
+// CheckShortIDCollision returns true if NodeKeeper already contains node with such ShortID
+func CheckShortIDCollision(keeper network.NodeKeeper, id core.ShortNodeID) bool {
 	return keeper.GetActiveNodeByShortID(id) != nil
 }
 
 // GenerateShortID correct ShortID of the node so it does not conflict with existing active node list
 func GenerateShortID(keeper network.NodeKeeper, nodeID core.RecordRef) core.ShortNodeID {
 	shortID := utils.GenerateShortID(nodeID)
-	if !checkShortIDCollision(keeper, shortID) {
+	if !CheckShortIDCollision(keeper, shortID) {
 		return shortID
 	}
 	return regenerateShortID(keeper, shortID)
@@ -81,7 +81,7 @@ func generateNonConflictingID(sortedSlice []core.ShortNodeID, conflictingID core
 	}
 }
 
-func RemoveOrigin(discoveryNodes []core.DiscoveryNode, origin core.RecordRef) ([]core.DiscoveryNode, error) {
+func removeOrigin(discoveryNodes []core.DiscoveryNode, origin core.RecordRef) ([]core.DiscoveryNode, error) {
 	for i, discoveryNode := range discoveryNodes {
 		if origin.Equal(*discoveryNode.GetNodeRef()) {
 			return append(discoveryNodes[:i], discoveryNodes[i+1:]...), nil
@@ -90,7 +90,7 @@ func RemoveOrigin(discoveryNodes []core.DiscoveryNode, origin core.RecordRef) ([
 	return nil, errors.New("Origin not found in discovery nodes list")
 }
 
-func FindDiscovery(cert core.Certificate, ref core.RecordRef) core.DiscoveryNode {
+func findDiscovery(cert core.Certificate, ref core.RecordRef) core.DiscoveryNode {
 	bNodes := cert.GetDiscoveryNodes()
 	for _, discoveryNode := range bNodes {
 		if ref.Equal(*discoveryNode.GetNodeRef()) {

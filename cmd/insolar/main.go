@@ -97,7 +97,7 @@ var (
 func parseInputParams() {
 	var rootCmd = &cobra.Command{}
 	rootCmd.Flags().StringVarP(&cmd, "cmd", "c", "",
-		"available commands: default_config | random_ref | version | gen_keys | gen_certificate | send_request | gen_send_configs")
+		"available commands: default_config | random_ref | version | gen_keys | gen_certificate | send_request | gen_send_configs | get_info | create_member")
 	rootCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "be verbose (default false)")
 	rootCmd.Flags().StringVarP(&output, "output", "o", defaultStdoutPath, "output file (use - for STDOUT)")
 	rootCmd.Flags().StringVarP(&sendUrls, "url", "u", defaultURL, "api url")
@@ -118,7 +118,7 @@ func parseInputParams() {
 
 func verboseInfo(msg string) {
 	if verbose {
-		log.Infoln(msg)
+		log.Info(msg)
 	}
 }
 
@@ -180,7 +180,8 @@ func sendRequest(out io.Writer) {
 	requester.SetVerbose(verbose)
 	userCfg, err := requester.ReadUserConfigFromFile(configPath)
 	check("[ sendRequest ]", err)
-	if rootAsCaller {
+
+	if rootAsCaller || userCfg.Caller == "" {
 		info, err := requester.Info(sendUrls)
 		check("[ sendRequest ]", err)
 		userCfg.Caller = info.RootMember
@@ -218,6 +219,15 @@ func genSendConfigs(out io.Writer) {
 	writeToOutput(out, string(userConf)+"\n")
 }
 
+func getInfo(out io.Writer) {
+	info, err := requester.Info(sendUrls)
+	check("[ sendRequest ]", err)
+	fmt.Fprintf(out, "TraceID    : %s\n", info.TraceID)
+	fmt.Fprintf(out, "RootMember : %s\n", info.RootMember)
+	fmt.Fprintf(out, "NodeDomain : %s\n", info.NodeDomain)
+	fmt.Fprintf(out, "RootDomain : %s\n", info.RootDomain)
+}
+
 func main() {
 	parseInputParams()
 	out, err := chooseOutput(output)
@@ -238,5 +248,7 @@ func main() {
 		sendRequest(out)
 	case "gen_send_configs":
 		genSendConfigs(out)
+	case "get_info":
+		getInfo(out)
 	}
 }
