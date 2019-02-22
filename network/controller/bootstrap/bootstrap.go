@@ -19,11 +19,9 @@ package bootstrap
 
 import (
 	"context"
-	"crypto/rand"
 	"encoding/gob"
 	"fmt"
 	"math"
-	"math/big"
 	"sort"
 	"strings"
 	"sync"
@@ -31,6 +29,7 @@ import (
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/core"
+	coreutils "github.com/insolar/insolar/core/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
@@ -226,12 +225,8 @@ func getDiscoveryFromBootstrapResults(bootstrapResults []*network.BootstrapResul
 		}
 	}
 
-	i, err := rand.Int(rand.Reader, big.NewInt(int64(len(maxBootstrapResults))))
-	if err != nil {
-		panic(err)
-	}
-
-	randomMaxResult := bootstrapResults[int(i.Int64())]
+	i := coreutils.RandomInt(len(maxBootstrapResults))
+	randomMaxResult := bootstrapResults[i]
 	return randomMaxResult, randomMaxResult.DiscoveryCount >= majorityRule
 }
 

@@ -18,7 +18,9 @@ package utils
 
 import (
 	"context"
+	"crypto/rand"
 	"encoding/binary"
+	"math/big"
 	"os"
 
 	"github.com/pkg/errors"
@@ -65,4 +67,12 @@ func SendGracefulStopSignal() error {
 		return err
 	}
 	return p.Signal(os.Interrupt)
+}
+
+func RandomInt(max int) int {
+	i, err := rand.Int(rand.Reader, big.NewInt(int64(max)))
+	if err != nil {
+		panic(err)
+	}
+	return int(i.Int64())
 }
