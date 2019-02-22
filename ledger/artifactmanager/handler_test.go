@@ -33,6 +33,7 @@ import (
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/index"
 	"github.com/insolar/insolar/ledger/storage/jet"
+	"github.com/insolar/insolar/ledger/storage/nodes"
 	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
@@ -53,7 +54,7 @@ type handlerSuite struct {
 
 	scheme        core.PlatformCryptographyScheme
 	pulseTracker  storage.PulseTracker
-	nodeStorage   storage.NodeStorage
+	nodeStorage   nodes.Accessor
 	objectStorage storage.ObjectStorage
 	jetStorage    storage.JetStorage
 	dropStorage   storage.DropStorage
@@ -77,9 +78,9 @@ func (s *handlerSuite) BeforeTest(suiteName, testName string) {
 	db, cleaner := storagetest.TmpDB(s.ctx, s.T())
 	s.cleaner = cleaner
 	s.db = db
-	s.scheme = platformpolicy.NewPlatformCryptographyScheme()
+	s.scheme = testutils.NewPlatformCryptographyScheme()
 	s.jetStorage = storage.NewJetStorage()
-	s.nodeStorage = storage.NewNodeStorage()
+	s.nodeStorage = nodes.NewStorage()
 	s.pulseTracker = storage.NewPulseTracker()
 	s.objectStorage = storage.NewObjectStorage()
 	s.dropStorage = storage.NewDropStorage(10)
@@ -130,7 +131,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObject_FetchesObject() {
 		LightChainLimit: 2,
 	}, certificate)
 	h.JetStorage = s.jetStorage
-	h.NodeStorage = s.nodeStorage
+	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
@@ -299,7 +300,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetChildren_Redirects() {
 	h.DelegationTokenFactory = tf
 	h.Bus = mb
 	h.JetStorage = s.jetStorage
-	h.NodeStorage = s.nodeStorage
+	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
@@ -418,7 +419,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeav
 		LightChainLimit: 3,
 	}, certificate)
 	h.JetStorage = s.jetStorage
-	h.NodeStorage = s.nodeStorage
+	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
@@ -492,7 +493,7 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_FetchesIndexFromHea
 		LightChainLimit: 3,
 	}, certificate)
 	h.JetStorage = s.jetStorage
-	h.NodeStorage = s.nodeStorage
+	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
@@ -567,7 +568,7 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_UpdateIndexState() 
 		LightChainLimit: 3,
 	}, certificate)
 	h.JetStorage = s.jetStorage
-	h.NodeStorage = s.nodeStorage
+	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
@@ -582,7 +583,7 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_UpdateIndexState() 
 	amendRecord := record.ObjectAmendRecord{
 		PrevState: *objIndex.LatestState,
 	}
-	amendHash := s.db.GetPlatformCryptographyScheme().ReferenceHasher()
+	amendHash := s.scheme.ReferenceHasher()
 	_, err := amendRecord.WriteHashData(amendHash)
 	require.NoError(s.T(), err)
 
@@ -641,7 +642,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObjectIndex() {
 	h.JetCoordinator = jc
 	h.Bus = mb
 	h.JetStorage = s.jetStorage
-	h.NodeStorage = s.nodeStorage
+	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
@@ -692,7 +693,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHasPendingRequests() {
 	h.JetCoordinator = jc
 	h.Bus = mb
 	h.JetStorage = s.jetStorage
-	h.NodeStorage = s.nodeStorage
+	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
@@ -748,7 +749,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetCode_Redirects() {
 	h.DelegationTokenFactory = tf
 	h.Bus = mb
 	h.JetStorage = s.jetStorage
-	h.NodeStorage = s.nodeStorage
+	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
@@ -824,7 +825,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 		LightChainLimit: 2,
 	}, certificate)
 	h.JetStorage = s.jetStorage
-	h.NodeStorage = s.nodeStorage
+	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
@@ -901,7 +902,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 		LightChainLimit: 2,
 	}, certificate)
 	h.JetStorage = s.jetStorage
-	h.NodeStorage = s.nodeStorage
+	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
@@ -1052,7 +1053,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	h.RecentStorageProvider = provideMock
 	h.Bus = mb
 	h.JetStorage = s.jetStorage
-	h.NodeStorage = s.nodeStorage
+	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
@@ -1115,7 +1116,7 @@ func (s *handlerSuite) TestMessageHandler_HandleValidationCheck() {
 	h.JetCoordinator = jc
 	h.Bus = mb
 	h.JetStorage = s.jetStorage
-	h.NodeStorage = s.nodeStorage
+	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
@@ -1184,7 +1185,7 @@ func (s *handlerSuite) TestMessageHandler_HandleJetDrop_SaveJet() {
 		LightChainLimit: 3,
 	}, certificate)
 	h.JetStorage = s.jetStorage
-	h.NodeStorage = s.nodeStorage
+	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
@@ -1231,7 +1232,7 @@ func (s *handlerSuite) TestMessageHandler_HandleJetDrop_SaveJet_ExistingMap() {
 		LightChainLimit: 3,
 	}, certificate)
 	h.JetStorage = s.jetStorage
-	h.NodeStorage = s.nodeStorage
+	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage

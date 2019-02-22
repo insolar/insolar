@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/gojuno/minimock"
+	"github.com/insolar/insolar/ledger/storage/nodes"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 
@@ -41,16 +42,16 @@ func TestJetTreeUpdater_otherNodesForPulse(t *testing.T) {
 	defer mc.Finish()
 
 	jc := testutils.NewJetCoordinatorMock(mc)
-	ans := storage.NewNodeStorageMock(mc)
+	ans := nodes.NewAccessorMock(mc)
 	js := storage.NewJetStorageMock(mc)
 	jtu := &jetTreeUpdater{
-		ActiveNodesStorage: ans,
-		JetStorage:         js,
-		JetCoordinator:     jc,
+		Nodes:          ans,
+		JetStorage:     js,
+		JetCoordinator: jc,
 	}
 
 	t.Run("active nodes storage returns error", func(t *testing.T) {
-		ans.GetActiveNodesByRoleMock.Expect(
+		ans.InRoleMock.Expect(
 			100, core.StaticRoleLightMaterial,
 		).Return(
 			nil, errors.New("some"),
@@ -66,7 +67,7 @@ func TestJetTreeUpdater_otherNodesForPulse(t *testing.T) {
 
 	t.Run("no active nodes at all", func(t *testing.T) {
 
-		ans.GetActiveNodesByRoleMock.Expect(
+		ans.InRoleMock.Expect(
 			100, core.StaticRoleLightMaterial,
 		).Return(
 			[]core.Node{}, nil,
@@ -82,7 +83,7 @@ func TestJetTreeUpdater_otherNodesForPulse(t *testing.T) {
 		someNode := network.NewNodeMock(mc)
 		someNode.IDMock.Return(meRef)
 
-		ans.GetActiveNodesByRoleMock.Expect(
+		ans.InRoleMock.Expect(
 			100, core.StaticRoleLightMaterial,
 		).Return(
 			[]core.Node{someNode}, nil,
@@ -97,7 +98,7 @@ func TestJetTreeUpdater_otherNodesForPulse(t *testing.T) {
 		someNode := network.NewNodeMock(mc)
 		someNode.IDMock.Return(testutils.RandomRef())
 
-		ans.GetActiveNodesByRoleMock.Expect(
+		ans.InRoleMock.Expect(
 			100, core.StaticRoleLightMaterial,
 		).Return(
 			[]core.Node{someNode}, nil,
@@ -115,7 +116,7 @@ func TestJetTreeUpdater_otherNodesForPulse(t *testing.T) {
 		someNode := network.NewNodeMock(mc)
 		someNode.IDMock.Return(testutils.RandomRef())
 
-		ans.GetActiveNodesByRoleMock.Expect(
+		ans.InRoleMock.Expect(
 			100, core.StaticRoleLightMaterial,
 		).Return(
 			[]core.Node{someNode, meNode}, nil,
@@ -134,14 +135,14 @@ func TestJetTreeUpdater_fetchActualJetFromOtherNodes(t *testing.T) {
 	defer mc.Finish()
 
 	jc := testutils.NewJetCoordinatorMock(mc)
-	ans := storage.NewNodeStorageMock(mc)
+	ans := nodes.NewAccessorMock(mc)
 	js := storage.NewJetStorageMock(mc)
 	mb := testutils.NewMessageBusMock(mc)
 	jtu := &jetTreeUpdater{
-		ActiveNodesStorage: ans,
-		JetStorage:         js,
-		JetCoordinator:     jc,
-		MessageBus:         mb,
+		Nodes:          ans,
+		JetStorage:     js,
+		JetCoordinator: jc,
+		MessageBus:     mb,
 	}
 
 	meRef := testutils.RandomRef()
@@ -150,7 +151,7 @@ func TestJetTreeUpdater_fetchActualJetFromOtherNodes(t *testing.T) {
 	otherNode := network.NewNodeMock(mc)
 	otherNode.IDMock.Return(testutils.RandomRef())
 
-	ans.GetActiveNodesByRoleMock.Expect(
+	ans.InRoleMock.Expect(
 		100, core.StaticRoleLightMaterial,
 	).Return(
 		[]core.Node{otherNode}, nil,
@@ -201,15 +202,15 @@ func TestJetTreeUpdater_fetchJet(t *testing.T) {
 	defer mc.Finish()
 
 	jc := testutils.NewJetCoordinatorMock(mc)
-	ans := storage.NewNodeStorageMock(mc)
+	ans := nodes.NewAccessorMock(mc)
 	js := storage.NewJetStorageMock(mc)
 	mb := testutils.NewMessageBusMock(mc)
 	jtu := &jetTreeUpdater{
-		ActiveNodesStorage: ans,
-		JetStorage:         js,
-		JetCoordinator:     jc,
-		MessageBus:         mb,
-		sequencer: map[seqKey]*seqEntry{},
+		Nodes:          ans,
+		JetStorage:     js,
+		JetCoordinator: jc,
+		MessageBus:     mb,
+		sequencer:      map[seqKey]*seqEntry{},
 	}
 
 	target := testutils.RandomID()
@@ -228,7 +229,7 @@ func TestJetTreeUpdater_fetchJet(t *testing.T) {
 		otherNode := network.NewNodeMock(mc)
 		otherNode.IDMock.Return(testutils.RandomRef())
 
-		ans.GetActiveNodesByRoleMock.Expect(
+		ans.InRoleMock.Expect(
 			100, core.StaticRoleLightMaterial,
 		).Return(
 			[]core.Node{otherNode}, nil,
@@ -257,15 +258,15 @@ func TestJetTreeUpdater_Concurrency(t *testing.T) {
 	defer mc.Finish()
 
 	jc := testutils.NewJetCoordinatorMock(mc)
-	ans := storage.NewNodeStorageMock(mc)
+	ans := nodes.NewAccessorMock(mc)
 	js := storage.NewJetStorageMock(mc)
 	mb := testutils.NewMessageBusMock(mc)
 	jtu := &jetTreeUpdater{
-		ActiveNodesStorage: ans,
-		JetStorage:         js,
-		JetCoordinator:     jc,
-		MessageBus:         mb,
-		sequencer: map[seqKey]*seqEntry{},
+		Nodes:          ans,
+		JetStorage:     js,
+		JetCoordinator: jc,
+		MessageBus:     mb,
+		sequencer:      map[seqKey]*seqEntry{},
 	}
 
 	meRef := testutils.RandomRef()
@@ -275,13 +276,13 @@ func TestJetTreeUpdater_Concurrency(t *testing.T) {
 	node.IDMock.Return(testutils.RandomRef())
 	nodes := []core.Node{node, node, node}
 
-	ans.GetActiveNodesByRoleMock.Return(nodes, nil )
+	ans.InRoleMock.Return(nodes, nil)
 
 	dataMu := sync.Mutex{}
 	data := map[byte]*core.RecordID{
-		0: jet.NewID(2, []byte{0}), // 00
+		0:   jet.NewID(2, []byte{0}), // 00
 		128: jet.NewID(2, []byte{0}), // 10
-		64: jet.NewID(2, []byte{0}), // 01
+		64:  jet.NewID(2, []byte{0}), // 01
 		192: jet.NewID(2, []byte{0}), // 11
 	}
 
@@ -292,7 +293,6 @@ func TestJetTreeUpdater_Concurrency(t *testing.T) {
 		b := msg.(*message.GetJet).Object.Bytes()[0]
 		return &reply.Jet{ID: *data[b], Actual: true}, nil
 	}
-
 
 	i := 100
 	for i > 0 {

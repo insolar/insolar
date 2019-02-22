@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/core/delegationtoken"
+	"github.com/insolar/insolar/ledger/storage/nodes"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/tag"
@@ -55,7 +56,7 @@ type MessageHandler struct {
 	JetStorage                 storage.JetStorage              `inject:""`
 	DropStorage                storage.DropStorage             `inject:""`
 	ObjectStorage              storage.ObjectStorage           `inject:""`
-	NodeStorage                storage.NodeStorage             `inject:""`
+	Nodes                      nodes.Accessor                  `inject:""`
 	PulseTracker               storage.PulseTracker            `inject:""`
 	DBContext                  storage.DBContext               `inject:""`
 	HotDataWaiter              HotDataWaiter                   `inject:""`
@@ -112,7 +113,7 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 	m := newMiddleware(h)
 	h.middleware = m
 
-	h.jetTreeUpdater = newJetTreeUpdater(h.NodeStorage, h.JetStorage, h.Bus, h.JetCoordinator)
+	h.jetTreeUpdater = newJetTreeUpdater(h.Nodes, h.JetStorage, h.Bus, h.JetCoordinator)
 
 	h.isHeavy = h.certificate.GetRole() == core.StaticRoleHeavyMaterial
 
