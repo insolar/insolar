@@ -46,7 +46,7 @@ type nodes struct {
 }
 
 // NewStorage create new instance of Storage
-func NewStorage() *nodes {
+func NewStorage() *nodes { // nolint
 	// return new(nodeStorage)
 	return &nodes{nodes: map[core.PulseNumber][]Node{}}
 }
