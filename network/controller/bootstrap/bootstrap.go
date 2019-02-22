@@ -21,6 +21,7 @@ import (
 	"context"
 	"encoding/gob"
 	"fmt"
+	"math"
 	"strings"
 	"sync"
 	"time"
@@ -36,7 +37,6 @@ import (
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet/types"
-	"github.com/insolar/insolar/network/utils"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
@@ -197,14 +197,10 @@ func (bc *bootstrapper) Bootstrap(ctx context.Context) (*network.BootstrapResult
 
 	majorityRule := bc.Certificate.GetMajorityRule()
 
-	if !utils.OriginIsDiscovery(bc.Certificate) {
-		for _, b := range bootstrapResults {
-			if b.DiscoveryCount >= majorityRule {
-				return b, &DiscoveryNode{b.Host, findDiscovery(bc.Certificate, b.Host.NodeID)}, nil
-			}
+	for _, b := range bootstrapResults {
+		if b.DiscoveryCount >= majorityRule {
+			return b, &DiscoveryNode{b.Host, findDiscovery(bc.Certificate, b.Host.NodeID)}, nil
 		}
-	} else {
-
 	}
 
 	return nil, nil, errors.New("majority rule failed")
@@ -283,24 +279,38 @@ func (bc *bootstrapper) BootstrapDiscovery(ctx context.Context) (*network.Bootst
 	for {
 		ch := bc.getDiscoveryNodesChannel(ctx, discoveryNodes, discoveryCount)
 		bootstrapResults, hosts = bc.waitResultsFromChannel(ctx, ch, discoveryCount)
-		if len(hosts) > 0 {
+		if len(hosts) == discoveryCount {
 			// we connected to discovery nodes
 			break
 		} else {
-			logger.Infof("[ BootstrapDiscovery ] Connected to %d/%d discovery nodes", len(hosts), discoveryCount)
-		}
-	}
-	reconnectRequests := 0
-	for _, bootstrapResult := range bootstrapResults {
-		if bootstrapResult.ReconnectRequired {
-			reconnectRequests++
+			logger.WithFields(map[string]interface{}{
+				"connected":      len(hosts),
+				"discoveryCount": discoveryCount,
+			}).Info("[ BootstrapDiscovery ] Connected to discovery nodes")
+
+			reconnectRequests := getReconnectCount(bootstrapResults)
+			// Few discovery nodes are down and network was in complete state
+			if reconnectRequests == len(hosts) {
+				logger.WithFields(map[string]interface{}{
+					"connected":         len(hosts),
+					"reconnectRequests": reconnectRequests,
+				}).Info("[ BootstrapDiscovery ] Need to reconnect as joiner (all connected discoveries require reconnect)")
+				return nil, ErrReconnectRequired
+			}
 		}
 	}
 
-	if reconnectRequests == len(hosts) {
-		logger.WithField("reconnectRequests", reconnectRequests).Info("[ BootstrapDiscovery ] Need to reconnect as joiner (request)")
+	reconnectRequests := getReconnectCount(bootstrapResults)
+	minRequests := int(math.Floor(0.5*float64(discoveryCount))) + 1
+
+	if reconnectRequests >= minRequests {
+		logger.WithFields(map[string]interface{}{
+			"reconnectRequests": reconnectRequests,
+			"discoveryCount":    discoveryCount,
+		}).Info("[ BootstrapDiscovery ] Need to reconnect as joiner (requested by discovery nodes)")
 		return nil, ErrReconnectRequired
 	}
+
 	activeNodesStr := make([]string, 0)
 
 	<-bc.bootstrapLock
@@ -319,14 +329,6 @@ func (bc *bootstrapper) BootstrapDiscovery(ctx context.Context) (*network.Bootst
 		}
 		activeNode.(nodenetwork.MutableNode).SetState(core.NodeDiscovery)
 		activeNodesStr = append(activeNodesStr, activeNode.ID().String())
-	}
-
-	if len(activeNodes) < bc.Certificate.GetMajorityRule() {
-		logger.WithFields(map[string]interface{}{
-			"activeNodes":  len(activeNodes),
-			"majorityRule": bc.Certificate.GetMajorityRule(),
-		}).Info("[ BootstrapDiscovery ] Need to reconnect as joiner (majority rule)")
-		return nil, ErrReconnectRequired
 	}
 
 	bc.NodeKeeper.AddActiveNodes(activeNodes)
@@ -563,6 +565,17 @@ func parseBotstrapResults(results []*network.BootstrapResult) *network.Bootstrap
 		}
 	}
 	return results[minIDIndex]
+}
+
+func getReconnectCount(results []*network.BootstrapResult) int {
+	reconnectRequests := 0
+	for _, bootstrapResult := range results {
+		if bootstrapResult.ReconnectRequired {
+			reconnectRequests++
+		}
+	}
+
+	return reconnectRequests
 }
 
 func NewBootstrapper(options *common.Options, transport network.InternalTransport) Bootstrapper {
