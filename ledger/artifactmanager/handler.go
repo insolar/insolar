@@ -459,6 +459,9 @@ func (h *MessageHandler) handleGetObject(
 
 			obj, err := h.fetchObject(ctx, msg.Head, *node, stateID, parcel.Pulse())
 			if err != nil {
+				if err == core.ErrDeactivated {
+					return &reply.Error{ErrType: reply.ErrDeactivated}, nil
+				}
 				return nil, err
 			}
 
@@ -502,6 +505,9 @@ func (h *MessageHandler) handleGetObject(
 
 		obj, err := h.fetchObject(ctx, msg.Head, *node, stateID, parcel.Pulse())
 		if err != nil {
+			if err == core.ErrDeactivated {
+				return &reply.Error{ErrType: reply.ErrDeactivated}, nil
+			}
 			return nil, err
 		}
 
@@ -1164,6 +1170,10 @@ func (h *MessageHandler) fetchObject(
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch object state")
 	}
+	if rep, ok := genericReply.(*reply.Error); ok {
+		return nil, rep.Error()
+	}
+
 	rep, ok := genericReply.(*reply.Object)
 	if !ok {
 		return nil, fmt.Errorf("failed to fetch object state: unexpected reply type %T (reply=%+v)", genericReply, genericReply)
