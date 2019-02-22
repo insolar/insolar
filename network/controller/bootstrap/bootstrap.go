@@ -296,11 +296,9 @@ func (bc *bootstrapper) BootstrapDiscovery(ctx context.Context) (*network.Bootst
 			reconnectRequests++
 		}
 	}
-	logger.WithField("reconnectRequests", reconnectRequests).Info("[ BootstrapDiscovery ] Reconnect requests")
 
 	if reconnectRequests == len(hosts) {
-		logger.Infof("[ BootstrapDiscovery ] Need to reconnect as joiner (requested by %d/%d discovery nodes)",
-			reconnectRequests, discoveryCount)
+		logger.WithField("reconnectRequests", reconnectRequests).Info("[ BootstrapDiscovery ] Need to reconnect as joiner (request)")
 		return nil, ErrReconnectRequired
 	}
 	activeNodesStr := make([]string, 0)
@@ -324,8 +322,10 @@ func (bc *bootstrapper) BootstrapDiscovery(ctx context.Context) (*network.Bootst
 	}
 
 	if len(activeNodes) < bc.Certificate.GetMajorityRule() {
-		logger.Infof("[ BootstrapDiscovery ] Need to reconnect as joiner (requested by %d/%d discovery nodes)",
-			reconnectRequests, discoveryCount)
+		logger.WithFields(map[string]interface{}{
+			"activeNodes":  len(activeNodes),
+			"majorityRule": bc.Certificate.GetMajorityRule(),
+		}).Info("[ BootstrapDiscovery ] Need to reconnect as joiner (majority rule)")
 		return nil, ErrReconnectRequired
 	}
 
