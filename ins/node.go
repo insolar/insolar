@@ -1,4 +1,4 @@
-package insolar
+package ins
 
 import (
 	"github.com/insolar/insolar/core"

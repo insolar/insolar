@@ -21,7 +21,7 @@ import (
 
 	"github.com/google/gofuzz"
 	"github.com/insolar/insolar/core/gen"
-	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/ins"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -30,11 +30,11 @@ import (
 func TestStorage_Set(t *testing.T) {
 	t.Parallel()
 
-	var nodes []insolar.Node
-	f := fuzz.New().Funcs(func(e *insolar.Node, c fuzz.Continue) {
+	var nodes []ins.Node
+	f := fuzz.New().Funcs(func(e *ins.Node, c fuzz.Continue) {
 		e.ID = gen.Reference()
 	})
-	f.NumElements(0, 10).Fuzz(&nodes)
+	f.NumElements(5, 10).NilChance(0).Fuzz(&nodes)
 	pulse := gen.PulseNumber()
 	nodeStorage := NewStorage()
 

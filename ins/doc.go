@@ -15,4 +15,4 @@
  */
 
 // Package insolar contains insolar business entities.
-package insolar
+package ins
