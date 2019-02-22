@@ -184,7 +184,7 @@ func (s *Slot) getNodeData() interface{} {
 }
 
 // createElement creates new active element from empty element
-func (s *Slot) createElement(stateMachineType StateMachineType, state uint16, event queue.OutputElement) (*slotElement, error) {
+func (s *Slot) createElement(stateMachineType StateMachineType, state uint16, event queue.OutputElement) (*slotElement, error) { // nolint: unused
 	element := s.popElement(EmptyElement)
 	element.stateMachineType = stateMachineType
 	element.state = state
