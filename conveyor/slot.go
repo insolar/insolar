@@ -106,7 +106,7 @@ func (l *ElementList) pushElement(element *slotElement) { // nolint: unused
 
 // Slot holds info about specific pulse and events for it
 type Slot struct {
-	handlersConfiguration HandlersConfiguration // nolint: structcheck
+	handlersConfiguration HandlersConfiguration // nolint
 	inputQueue            queue.IQueue
 	pulseState            PulseState
 	slotState             SlotState
@@ -227,7 +227,7 @@ type StateMachineType interface{}
 
 type slotElement struct {
 	id               uint32
-	payload          interface{} // nolint: structcheck
+	payload          interface{} // nolint
 	state            uint16
 	stateMachineType StateMachineType
 
