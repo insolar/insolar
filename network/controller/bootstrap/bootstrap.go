@@ -21,7 +21,6 @@ import (
 	"context"
 	"encoding/gob"
 	"fmt"
-	"math"
 	"strings"
 	"sync"
 	"time"
@@ -37,6 +36,7 @@ import (
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet/types"
+	"github.com/insolar/insolar/network/utils"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
@@ -196,10 +196,15 @@ func (bc *bootstrapper) Bootstrap(ctx context.Context) (*network.BootstrapResult
 	logger.Infof("[ Bootstrap ] Connected to %d/%d discovery nodes", len(hosts), discoveryCount)
 
 	majorityRule := bc.Certificate.GetMajorityRule()
-	for _, b := range bootstrapResults {
-		if b.DiscoveryCount >= majorityRule {
-			return b, &DiscoveryNode{b.Host, findDiscovery(bc.Certificate, b.Host.NodeID)}, nil
+
+	if !utils.OriginIsDiscovery(bc.Certificate) {
+		for _, b := range bootstrapResults {
+			if b.DiscoveryCount >= majorityRule {
+				return b, &DiscoveryNode{b.Host, findDiscovery(bc.Certificate, b.Host.NodeID)}, nil
+			}
 		}
+	} else {
+
 	}
 
 	return nil, nil, errors.New("majority rule failed")
@@ -278,8 +283,8 @@ func (bc *bootstrapper) BootstrapDiscovery(ctx context.Context) (*network.Bootst
 	for {
 		ch := bc.getDiscoveryNodesChannel(ctx, discoveryNodes, discoveryCount)
 		bootstrapResults, hosts = bc.waitResultsFromChannel(ctx, ch, discoveryCount)
-		if len(hosts) == discoveryCount {
-			// we connected to all discovery nodes
+		if len(hosts) > 0 {
+			// we connected to discovery nodes
 			break
 		} else {
 			logger.Infof("[ BootstrapDiscovery ] Connected to %d/%d discovery nodes", len(hosts), discoveryCount)
@@ -291,8 +296,9 @@ func (bc *bootstrapper) BootstrapDiscovery(ctx context.Context) (*network.Bootst
 			reconnectRequests++
 		}
 	}
-	minRequests := int(math.Floor(0.5*float64(discoveryCount))) + 1
-	if reconnectRequests >= minRequests {
+	logger.WithField("reconnectRequests", reconnectRequests).Info("[ BootstrapDiscovery ] Reconnect requests")
+
+	if reconnectRequests == len(hosts) {
 		logger.Infof("[ BootstrapDiscovery ] Need to reconnect as joiner (requested by %d/%d discovery nodes)",
 			reconnectRequests, discoveryCount)
 		return nil, ErrReconnectRequired
@@ -318,7 +324,9 @@ func (bc *bootstrapper) BootstrapDiscovery(ctx context.Context) (*network.Bootst
 	}
 
 	if len(activeNodes) < bc.Certificate.GetMajorityRule() {
-		return nil, errors.New("majority rule failed")
+		logger.Infof("[ BootstrapDiscovery ] Need to reconnect as joiner (requested by %d/%d discovery nodes)",
+			reconnectRequests, discoveryCount)
+		return nil, ErrReconnectRequired
 	}
 
 	bc.NodeKeeper.AddActiveNodes(activeNodes)
@@ -510,7 +518,7 @@ func (bc *bootstrapper) startBootstrap(ctx context.Context, address string) (*ne
 func (bc *bootstrapper) processBootstrap(ctx context.Context, request network.Request) (network.Response, error) {
 	// TODO: redirect logic
 	var code Code
-	if bc.NetworkSwitcher.GetState() == core.CompleteNetworkState {
+	if bc.NetworkSwitcher.WasInCompleteState() {
 		code = ReconnectRequired
 	} else {
 		code = Accepted

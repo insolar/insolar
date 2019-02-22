@@ -38,6 +38,10 @@ func (t *testNetworkSwitcher) GetState() core.NetworkState {
 	return core.NetworkState(s)
 }
 
+func (t *testNetworkSwitcher) WasInCompleteState() bool {
+	panic("implement me")
+}
+
 func (t *testNetworkSwitcher) OnPulse(context.Context, core.Pulse) error {
 	newState := int32(core.CompleteNetworkState)
 	atomic.StoreInt32(&t.state, newState)
