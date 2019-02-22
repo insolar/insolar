@@ -12,6 +12,32 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestRules_CheckMinRoleRule(t *testing.T) {
+	cm := component.Manager{}
+	r := NewRules()
+	certManager := testutils.NewCertificateManagerMock(t)
+	cert := testutils.NewCertificateMock(t)
+	nodeKeeper := network.NewNodeKeeperMock(t)
+	cm.Inject(r, certManager, nodeKeeper)
+
+	certManager.GetCertificateMock.Set(func() (r core.Certificate) {
+		return cert
+	})
+
+	cert.GetMinRolesMock.Set(func() (r uint, r1 uint, r2 uint) {
+		return 1,0,0
+	})
+
+	nodeKeeper.GetActiveNodesMock.Set(func() (r []core.Node) {
+		nodes, _ := getDiscoveryNodes(5)
+		nodes = append(nodes, newNode(250))
+		return nodes
+	})
+
+	result := r.CheckMinRoleRule()
+	assert.True(t, result)
+}
+
 func TestRules_CheckMajorityRule(t *testing.T) {
 	cm := component.Manager{}
 	r := NewRules()
