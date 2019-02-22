@@ -282,8 +282,8 @@ type ClaimQueue interface {
 // Rules are responsible for a majority and minimum roles checking
 //go:generate minimock -i github.com/insolar/insolar/network.Rules -o ../testutils/network -s _mock.go
 type Rules interface {
-	// CheckMajorityRule returns true id MajorityRule check passed, also returns active discovery nodes count
+	// CheckMajorityRule returns true if MajorityRule check passed, also returns active discovery nodes count
 	CheckMajorityRule() (bool, int)
-	// CheckMinRoleRule TODO
-	CheckMinRoleRule() bool
+	// CheckMinRole returns true if MinRole check passed
+	CheckMinRole() bool
 }

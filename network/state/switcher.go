@@ -117,7 +117,7 @@ func (ns *NetworkSwitcher) handleCompleteNetworkState(ctx context.Context, trans
 
 func (ns *NetworkSwitcher) changeState(ctx context.Context, pulse core.Pulse) core.NetworkState {
 	majorityOk, _ := ns.Rules.CheckMajorityRule()
-	minRoleOk := ns.Rules.CheckMinRoleRule()
+	minRoleOk := ns.Rules.CheckMinRole()
 
 	transitionData := &transitionData{
 		pulse:        pulse,

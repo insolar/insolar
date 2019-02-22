@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestRules_CheckMinRoleRule(t *testing.T) {
+func TestRules_CheckMinRole(t *testing.T) {
 	cm := component.Manager{}
 	r := NewRules()
 	certManager := testutils.NewCertificateManagerMock(t)
@@ -34,7 +34,7 @@ func TestRules_CheckMinRoleRule(t *testing.T) {
 		return nodes
 	})
 
-	result := r.CheckMinRoleRule()
+	result := r.CheckMinRole()
 	assert.True(t, result)
 }
 

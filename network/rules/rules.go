@@ -42,10 +42,9 @@ func (r *rules) CheckMajorityRule() (bool, int) {
 	return activeDiscoveryNodesLen >= majorityRule, activeDiscoveryNodesLen
 }
 
-// CheckMinRoleRule TODO
-func (r *rules) CheckMinRoleRule() bool {
+// CheckMinRole returns true if MinRole check passed
+func (r *rules) CheckMinRole() bool {
 	cert := r.CertificateManager.GetCertificate()
-
 
 	nodes := r.NodeKeeper.GetActiveNodes()
 
