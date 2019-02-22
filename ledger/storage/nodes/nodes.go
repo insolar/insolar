@@ -34,10 +34,7 @@ type Accessor interface {
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage/nodes.Setter -o ./ -s _mock.go
 type Setter interface {
 	Set(pulse core.PulseNumber, nodes []core.Node) error
-
-	// RemoveActiveNodesUntil
-	// DEPRECATED
-	RemoveActiveNodesUntil(pulse core.PulseNumber)
+	Delete(pulse core.PulseNumber)
 }
 
 // NodeHistory is an in-memory active node storage for each pulse. It's required to calculate node roles
@@ -110,14 +107,9 @@ func (a *nodes) InRole(pulse core.PulseNumber, role core.StaticRole) ([]core.Nod
 	return inRole, nil
 }
 
-// RemoveActiveNodesUntil removes active nodes for all nodes less than provided pulse.
-func (a *nodes) RemoveActiveNodesUntil(pulse core.PulseNumber) {
+// Delete erases nodes for specified pulse.
+func (a *nodes) Delete(pulse core.PulseNumber) {
 	a.lock.Lock()
-	defer a.lock.Unlock()
-
-	for pn := range a.nodes {
-		if pn < pulse {
-			delete(a.nodes, pn)
-		}
-	}
+	delete(a.nodes, pulse)
+	a.lock.Unlock()
 }

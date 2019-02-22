@@ -134,7 +134,9 @@ func TestNodeStorage_RemoveActiveNodesUntil(t *testing.T) {
 		},
 	}
 
-	nodeStorage.RemoveActiveNodesUntil(222)
+	nodeStorage.Delete(1)
+	nodeStorage.Delete(2)
+	nodeStorage.Delete(5)
 
 	require.Equal(t, 2, len(nodeStorage.nodes))
 	_, ok := nodeStorage.nodes[222]

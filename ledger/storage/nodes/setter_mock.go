@@ -19,10 +19,10 @@ import (
 type SetterMock struct {
 	t minimock.Tester
 
-	RemoveActiveNodesUntilFunc       func(p core.PulseNumber)
-	RemoveActiveNodesUntilCounter    uint64
-	RemoveActiveNodesUntilPreCounter uint64
-	RemoveActiveNodesUntilMock       mSetterMockRemoveActiveNodesUntil
+	DeleteFunc       func(p core.PulseNumber)
+	DeleteCounter    uint64
+	DeletePreCounter uint64
+	DeleteMock       mSetterMockDelete
 
 	SetFunc       func(p core.PulseNumber, p1 []core.Node) (r error)
 	SetCounter    uint64
@@ -38,130 +38,130 @@ func NewSetterMock(t minimock.Tester) *SetterMock {
 		controller.RegisterMocker(m)
 	}
 
-	m.RemoveActiveNodesUntilMock = mSetterMockRemoveActiveNodesUntil{mock: m}
+	m.DeleteMock = mSetterMockDelete{mock: m}
 	m.SetMock = mSetterMockSet{mock: m}
 
 	return m
 }
 
-type mSetterMockRemoveActiveNodesUntil struct {
+type mSetterMockDelete struct {
 	mock              *SetterMock
-	mainExpectation   *SetterMockRemoveActiveNodesUntilExpectation
-	expectationSeries []*SetterMockRemoveActiveNodesUntilExpectation
+	mainExpectation   *SetterMockDeleteExpectation
+	expectationSeries []*SetterMockDeleteExpectation
 }
 
-type SetterMockRemoveActiveNodesUntilExpectation struct {
-	input *SetterMockRemoveActiveNodesUntilInput
+type SetterMockDeleteExpectation struct {
+	input *SetterMockDeleteInput
 }
 
-type SetterMockRemoveActiveNodesUntilInput struct {
+type SetterMockDeleteInput struct {
 	p core.PulseNumber
 }
 
-//Expect specifies that invocation of Setter.RemoveActiveNodesUntil is expected from 1 to Infinity times
-func (m *mSetterMockRemoveActiveNodesUntil) Expect(p core.PulseNumber) *mSetterMockRemoveActiveNodesUntil {
-	m.mock.RemoveActiveNodesUntilFunc = nil
+//Expect specifies that invocation of Setter.Delete is expected from 1 to Infinity times
+func (m *mSetterMockDelete) Expect(p core.PulseNumber) *mSetterMockDelete {
+	m.mock.DeleteFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &SetterMockRemoveActiveNodesUntilExpectation{}
+		m.mainExpectation = &SetterMockDeleteExpectation{}
 	}
-	m.mainExpectation.input = &SetterMockRemoveActiveNodesUntilInput{p}
+	m.mainExpectation.input = &SetterMockDeleteInput{p}
 	return m
 }
 
-//Return specifies results of invocation of Setter.RemoveActiveNodesUntil
-func (m *mSetterMockRemoveActiveNodesUntil) Return() *SetterMock {
-	m.mock.RemoveActiveNodesUntilFunc = nil
+//Return specifies results of invocation of Setter.Delete
+func (m *mSetterMockDelete) Return() *SetterMock {
+	m.mock.DeleteFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &SetterMockRemoveActiveNodesUntilExpectation{}
+		m.mainExpectation = &SetterMockDeleteExpectation{}
 	}
 
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of Setter.RemoveActiveNodesUntil is expected once
-func (m *mSetterMockRemoveActiveNodesUntil) ExpectOnce(p core.PulseNumber) *SetterMockRemoveActiveNodesUntilExpectation {
-	m.mock.RemoveActiveNodesUntilFunc = nil
+//ExpectOnce specifies that invocation of Setter.Delete is expected once
+func (m *mSetterMockDelete) ExpectOnce(p core.PulseNumber) *SetterMockDeleteExpectation {
+	m.mock.DeleteFunc = nil
 	m.mainExpectation = nil
 
-	expectation := &SetterMockRemoveActiveNodesUntilExpectation{}
-	expectation.input = &SetterMockRemoveActiveNodesUntilInput{p}
+	expectation := &SetterMockDeleteExpectation{}
+	expectation.input = &SetterMockDeleteInput{p}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
-//Set uses given function f as a mock of Setter.RemoveActiveNodesUntil method
-func (m *mSetterMockRemoveActiveNodesUntil) Set(f func(p core.PulseNumber)) *SetterMock {
+//Set uses given function f as a mock of Setter.Delete method
+func (m *mSetterMockDelete) Set(f func(p core.PulseNumber)) *SetterMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
-	m.mock.RemoveActiveNodesUntilFunc = f
+	m.mock.DeleteFunc = f
 	return m.mock
 }
 
-//RemoveActiveNodesUntil implements github.com/insolar/insolar/ledger/storage/nodes.Setter interface
-func (m *SetterMock) RemoveActiveNodesUntil(p core.PulseNumber) {
-	counter := atomic.AddUint64(&m.RemoveActiveNodesUntilPreCounter, 1)
-	defer atomic.AddUint64(&m.RemoveActiveNodesUntilCounter, 1)
+//Delete implements github.com/insolar/insolar/ledger/storage/nodes.Setter interface
+func (m *SetterMock) Delete(p core.PulseNumber) {
+	counter := atomic.AddUint64(&m.DeletePreCounter, 1)
+	defer atomic.AddUint64(&m.DeleteCounter, 1)
 
-	if len(m.RemoveActiveNodesUntilMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.RemoveActiveNodesUntilMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to SetterMock.RemoveActiveNodesUntil. %v", p)
+	if len(m.DeleteMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.DeleteMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to SetterMock.Delete. %v", p)
 			return
 		}
 
-		input := m.RemoveActiveNodesUntilMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, SetterMockRemoveActiveNodesUntilInput{p}, "Setter.RemoveActiveNodesUntil got unexpected parameters")
+		input := m.DeleteMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, SetterMockDeleteInput{p}, "Setter.Delete got unexpected parameters")
 
 		return
 	}
 
-	if m.RemoveActiveNodesUntilMock.mainExpectation != nil {
+	if m.DeleteMock.mainExpectation != nil {
 
-		input := m.RemoveActiveNodesUntilMock.mainExpectation.input
+		input := m.DeleteMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, SetterMockRemoveActiveNodesUntilInput{p}, "Setter.RemoveActiveNodesUntil got unexpected parameters")
+			testify_assert.Equal(m.t, *input, SetterMockDeleteInput{p}, "Setter.Delete got unexpected parameters")
 		}
 
 		return
 	}
 
-	if m.RemoveActiveNodesUntilFunc == nil {
-		m.t.Fatalf("Unexpected call to SetterMock.RemoveActiveNodesUntil. %v", p)
+	if m.DeleteFunc == nil {
+		m.t.Fatalf("Unexpected call to SetterMock.Delete. %v", p)
 		return
 	}
 
-	m.RemoveActiveNodesUntilFunc(p)
+	m.DeleteFunc(p)
 }
 
-//RemoveActiveNodesUntilMinimockCounter returns a count of SetterMock.RemoveActiveNodesUntilFunc invocations
-func (m *SetterMock) RemoveActiveNodesUntilMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.RemoveActiveNodesUntilCounter)
+//DeleteMinimockCounter returns a count of SetterMock.DeleteFunc invocations
+func (m *SetterMock) DeleteMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.DeleteCounter)
 }
 
-//RemoveActiveNodesUntilMinimockPreCounter returns the value of SetterMock.RemoveActiveNodesUntil invocations
-func (m *SetterMock) RemoveActiveNodesUntilMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.RemoveActiveNodesUntilPreCounter)
+//DeleteMinimockPreCounter returns the value of SetterMock.Delete invocations
+func (m *SetterMock) DeleteMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.DeletePreCounter)
 }
 
-//RemoveActiveNodesUntilFinished returns true if mock invocations count is ok
-func (m *SetterMock) RemoveActiveNodesUntilFinished() bool {
+//DeleteFinished returns true if mock invocations count is ok
+func (m *SetterMock) DeleteFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.RemoveActiveNodesUntilMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.RemoveActiveNodesUntilCounter) == uint64(len(m.RemoveActiveNodesUntilMock.expectationSeries))
+	if len(m.DeleteMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.DeleteCounter) == uint64(len(m.DeleteMock.expectationSeries))
 	}
 
 	// if main expectation was set then invocations count should be greater than zero
-	if m.RemoveActiveNodesUntilMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.RemoveActiveNodesUntilCounter) > 0
+	if m.DeleteMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.DeleteCounter) > 0
 	}
 
 	// if func was set then invocations count should be greater than zero
-	if m.RemoveActiveNodesUntilFunc != nil {
-		return atomic.LoadUint64(&m.RemoveActiveNodesUntilCounter) > 0
+	if m.DeleteFunc != nil {
+		return atomic.LoadUint64(&m.DeleteCounter) > 0
 	}
 
 	return true
@@ -319,8 +319,8 @@ func (m *SetterMock) SetFinished() bool {
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *SetterMock) ValidateCallCounters() {
 
-	if !m.RemoveActiveNodesUntilFinished() {
-		m.t.Fatal("Expected call to SetterMock.RemoveActiveNodesUntil")
+	if !m.DeleteFinished() {
+		m.t.Fatal("Expected call to SetterMock.Delete")
 	}
 
 	if !m.SetFinished() {
@@ -344,8 +344,8 @@ func (m *SetterMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *SetterMock) MinimockFinish() {
 
-	if !m.RemoveActiveNodesUntilFinished() {
-		m.t.Fatal("Expected call to SetterMock.RemoveActiveNodesUntil")
+	if !m.DeleteFinished() {
+		m.t.Fatal("Expected call to SetterMock.Delete")
 	}
 
 	if !m.SetFinished() {
@@ -366,7 +366,7 @@ func (m *SetterMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
-		ok = ok && m.RemoveActiveNodesUntilFinished()
+		ok = ok && m.DeleteFinished()
 		ok = ok && m.SetFinished()
 
 		if ok {
@@ -376,8 +376,8 @@ func (m *SetterMock) MinimockWait(timeout time.Duration) {
 		select {
 		case <-timeoutCh:
 
-			if !m.RemoveActiveNodesUntilFinished() {
-				m.t.Error("Expected call to SetterMock.RemoveActiveNodesUntil")
+			if !m.DeleteFinished() {
+				m.t.Error("Expected call to SetterMock.Delete")
 			}
 
 			if !m.SetFinished() {
@@ -396,7 +396,7 @@ func (m *SetterMock) MinimockWait(timeout time.Duration) {
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *SetterMock) AllMocksCalled() bool {
 
-	if !m.RemoveActiveNodesUntilFinished() {
+	if !m.DeleteFinished() {
 		return false
 	}
 

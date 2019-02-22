@@ -673,9 +673,6 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse core.Pulse, 
 	}
 
 	pn := p.Pulse.PulseNumber
-
-	m.NodeSetter.RemoveActiveNodesUntil(pn)
-
 	err = m.syncClientsPool.LightCleanup(ctx, pn, m.RecentStorageProvider, jetIndexesRemoved)
 	if err != nil {
 		inslogger.FromContext(ctx).Errorf(
@@ -688,6 +685,7 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse core.Pulse, 
 		return
 	}
 	m.JetStorage.DeleteJetTree(ctx, p.Pulse.PulseNumber)
+	m.NodeSetter.Delete(p.Pulse.PulseNumber)
 	err = m.PulseTracker.DeletePulse(ctx, p.Pulse.PulseNumber)
 	if err != nil {
 		inslogger.FromContext(ctx).Errorf("Can't clean pulse-tracker from pulse: %s", err)
