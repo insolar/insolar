@@ -18,6 +18,9 @@ package member
 
 import (
 	"fmt"
+	"math"
+
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/application/contract/member/signer"
 	"github.com/insolar/insolar/application/proxy/nodedomain"
@@ -144,8 +147,18 @@ func (m *Member) getBalanceCall(params []byte) (interface{}, error) {
 func (m *Member) transferCall(params []byte) (interface{}, error) {
 	var amount uint
 	var toStr string
-	if err := signer.UnmarshalParams(params, &amount, &toStr); err != nil {
+	var inAmount interface{}
+	if err := signer.UnmarshalParams(params, &inAmount, &toStr); err != nil {
 		return nil, fmt.Errorf("[ transferCall ] Can't unmarshal params: %s", err.Error())
+	}
+	switch a := inAmount.(type) {
+	case uint:
+		amount = a
+	case float64:
+		if a > math.MaxUint32 {
+			return nil, errors.New("Transfer ammount bigger than integer")
+		}
+		amount = uint(a)
 	}
 	to, err := core.NewRefFromBase58(toStr)
 	if err != nil {
