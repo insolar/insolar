@@ -61,10 +61,7 @@ func (a *Storage) Set(pulse core.PulseNumber, nodes []ins.Node) error {
 		return storage.ErrOverride
 	}
 
-	a.nodes[pulse] = []ins.Node{}
-	for _, node := range nodes {
-		a.nodes[pulse] = append(a.nodes[pulse], node)
-	}
+	a.nodes[pulse] = append([]ins.Node{}, nodes...)
 
 	return nil
 }
