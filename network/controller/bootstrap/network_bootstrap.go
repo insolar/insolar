@@ -47,6 +47,7 @@ type networkBootstrapper struct {
 func (nb *networkBootstrapper) Bootstrap(ctx context.Context) (*network.BootstrapResult, error) {
 	ctx, span := instracer.StartSpan(ctx, "NetworkBootstrapper.Bootstrap")
 	defer span.End()
+
 	if len(nb.Certificate.GetDiscoveryNodes()) == 0 {
 		host, err := host.NewHostN(nb.NodeKeeper.GetOrigin().Address(), nb.NodeKeeper.GetOrigin().ID())
 		if err != nil {
@@ -58,6 +59,7 @@ func (nb *networkBootstrapper) Bootstrap(ctx context.Context) (*network.Bootstra
 			// FirstPulseTime: nb.Bootstrapper.GetFirstFakePulseTime(),
 		}, nil
 	}
+
 	var err error
 	var result *network.BootstrapResult
 	if utils.OriginIsDiscovery(nb.Certificate) {

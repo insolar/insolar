@@ -29,6 +29,7 @@ import (
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/jet"
+	"github.com/insolar/insolar/ledger/storage/nodes"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
@@ -48,7 +49,7 @@ type componentSuite struct {
 
 	scheme        core.PlatformCryptographyScheme
 	pulseTracker  storage.PulseTracker
-	nodeStorage   storage.NodeStorage
+	nodeStorage   nodes.Accessor
 	objectStorage storage.ObjectStorage
 	jetStorage    storage.JetStorage
 }
@@ -71,9 +72,9 @@ func (s *componentSuite) BeforeTest(suiteName, testName string) {
 	db, cleaner := storagetest.TmpDB(s.ctx, s.T())
 	s.cleaner = cleaner
 	s.db = db
-	s.scheme = platformpolicy.NewPlatformCryptographyScheme()
+	s.scheme = testutils.NewPlatformCryptographyScheme()
 	s.jetStorage = storage.NewJetStorage()
-	s.nodeStorage = storage.NewNodeStorage()
+	s.nodeStorage = nodes.NewStorage()
 	s.pulseTracker = storage.NewPulseTracker()
 	s.objectStorage = storage.NewObjectStorage()
 
@@ -136,7 +137,7 @@ func (s *componentSuite) TestLedgerArtifactManager_PendingRequest() {
 
 	provider := recentstorage.NewRecentStorageProvider(0)
 
-	cryptoScheme := platformpolicy.NewPlatformCryptographyScheme()
+	cryptoScheme := testutils.NewPlatformCryptographyScheme()
 
 	handler := NewMessageHandler(&configuration.Ledger{
 		LightChainLimit: 10,
@@ -144,7 +145,7 @@ func (s *componentSuite) TestLedgerArtifactManager_PendingRequest() {
 		certificate)
 
 	handler.JetStorage = s.jetStorage
-	handler.NodeStorage = s.nodeStorage
+	handler.Nodes = s.nodeStorage
 	handler.DBContext = s.db
 	handler.PulseTracker = s.pulseTracker
 	handler.ObjectStorage = s.objectStorage

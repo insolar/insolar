@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/testutils/network"
 	"github.com/stretchr/testify/require"
+	"github.com/insolar/insolar/testutils"
 )
 
 func mockSwitcherWorkAround(t *testing.T, isBootstrapped bool) *network.SwitcherWorkAroundMock {
@@ -39,6 +40,7 @@ func mockSwitcherWorkAround(t *testing.T, isBootstrapped bool) *network.Switcher
 func mockMessageBusLocker(t *testing.T) *messageBusLockerMock {
 	mblMock := NewmessageBusLockerMock(t)
 	mblMock.UnlockFunc = func(p context.Context) {}
+	mblMock.LockFunc = func(p context.Context) {}
 	return mblMock
 }
 
@@ -51,7 +53,10 @@ func TestNewNetworkSwitcher(t *testing.T) {
 	require.NoError(t, err)
 
 	cm := &component.Manager{}
-	cm.Inject(nodeNet, switcherWorkAround, messageBusLocker, switcher)
+	rules := network.NewRulesMock(t)
+	certManager := testutils.NewCertificateManagerMock(t)
+	terminationHandler := testutils.NewTerminationHandlerMock(t)
+	cm.Inject(nodeNet, switcherWorkAround, messageBusLocker, switcher, rules, certManager, terminationHandler)
 
 	require.Equal(t, nodeNet, switcher.NodeNetwork)
 	require.Equal(t, switcherWorkAround, switcher.SwitcherWorkAround)
@@ -74,9 +79,19 @@ func TestOnPulseNoChange(t *testing.T) {
 	switcherWorkAround := mockSwitcherWorkAround(t, false)
 	nodeNet := network.NewNodeNetworkMock(t)
 	messageBusLocker := mockMessageBusLocker(t)
+	rules := network.NewRulesMock(t)
+	certManager := testutils.NewCertificateManagerMock(t)
+	terminationHandler := testutils.NewTerminationHandlerMock(t)
+
+	rules.CheckMajorityRuleMock.Set(func() (r bool, r1 int) {
+		return true, 0
+	})
+	rules.CheckMinRoleMock.Set(func() (r bool) {
+		return true
+	})
 
 	cm := &component.Manager{}
-	cm.Inject(switcherWorkAround, switcher, nodeNet, messageBusLocker)
+	cm.Inject(switcherWorkAround, switcher, nodeNet, messageBusLocker, rules, certManager, terminationHandler)
 
 	err = switcher.OnPulse(context.Background(), core.Pulse{})
 	require.NoError(t, err)
@@ -90,9 +105,19 @@ func TestOnPulseStateChanged(t *testing.T) {
 	switcherWorkAround := mockSwitcherWorkAround(t, true)
 	nodeNet := network.NewNodeNetworkMock(t)
 	messageBusLocker := mockMessageBusLocker(t)
+	rules := network.NewRulesMock(t)
+	certManager := testutils.NewCertificateManagerMock(t)
+	terminationHandler := testutils.NewTerminationHandlerMock(t)
+
+	rules.CheckMajorityRuleMock.Set(func() (r bool, r1 int) {
+		return true, 0
+	})
+	rules.CheckMinRoleMock.Set(func() (r bool) {
+		return true
+	})
 
 	cm := &component.Manager{}
-	cm.Inject(switcherWorkAround, switcher, nodeNet, messageBusLocker)
+	cm.Inject(switcherWorkAround, switcher, nodeNet, messageBusLocker, rules, certManager, terminationHandler)
 
 	err = switcher.OnPulse(context.Background(), core.Pulse{})
 	require.NoError(t, err)
@@ -106,9 +131,19 @@ func TestGetStateAfterStateChanged(t *testing.T) {
 	switcherWorkAround := mockSwitcherWorkAround(t, true)
 	nodeNet := network.NewNodeNetworkMock(t)
 	messageBusLocker := mockMessageBusLocker(t)
+	rules := network.NewRulesMock(t)
+	certManager := testutils.NewCertificateManagerMock(t)
+	terminationHandler := testutils.NewTerminationHandlerMock(t)
+
+	rules.CheckMajorityRuleMock.Set(func() (r bool, r1 int) {
+		return true, 0
+	})
+	rules.CheckMinRoleMock.Set(func() (r bool) {
+		return true
+	})
 
 	cm := &component.Manager{}
-	cm.Inject(switcherWorkAround, switcher, nodeNet, messageBusLocker)
+	cm.Inject(switcherWorkAround, switcher, nodeNet, messageBusLocker, rules, certManager, terminationHandler)
 
 	err = switcher.OnPulse(context.Background(), core.Pulse{})
 	require.NoError(t, err)
@@ -116,4 +151,52 @@ func TestGetStateAfterStateChanged(t *testing.T) {
 
 	state := switcher.GetState()
 	require.Equal(t, core.CompleteNetworkState, state)
+}
+
+func TestNetworkSwitcher_WasInCompleteState(t *testing.T) {
+	switcher, err := NewNetworkSwitcher()
+	require.NoError(t, err)
+	switcherWorkAround := mockSwitcherWorkAround(t, true)
+	nodeNet := network.NewNodeNetworkMock(t)
+	messageBusLocker := mockMessageBusLocker(t)
+	rules := network.NewRulesMock(t)
+	certManager := testutils.NewCertificateManagerMock(t)
+	terminationHandler := testutils.NewTerminationHandlerMock(t)
+
+	rules.CheckMajorityRuleMock.Set(func() (r bool, r1 int) {
+		return true, 0
+	})
+	rules.CheckMinRoleMock.Set(func() (r bool) {
+		return true
+	})
+	certManager.GetCertificateFunc = func() (r core.Certificate) {
+		cert := testutils.NewCertificateMock(t)
+		cert.GetDiscoveryNodesFunc = func() (r []core.DiscoveryNode) {
+			return []core.DiscoveryNode{}
+		}
+		return cert
+	}
+	terminationHandler.AbortFunc = func(p string) {}
+
+	cm := &component.Manager{}
+	cm.Inject(switcherWorkAround, switcher, nodeNet, messageBusLocker, rules, certManager, terminationHandler)
+
+	require.False(t, switcher.WasInCompleteState())
+
+	err = switcher.OnPulse(context.Background(), core.Pulse{})
+	require.NoError(t, err)
+	require.Equal(t, core.CompleteNetworkState, switcher.state)
+
+	state := switcher.GetState()
+	require.Equal(t, core.CompleteNetworkState, state)
+	require.True(t, switcher.WasInCompleteState())
+
+	rules.CheckMajorityRuleMock.Set(func() (r bool, r1 int) {
+		return false, 0
+	})
+
+	err = switcher.OnPulse(context.Background(), core.Pulse{})
+	require.NoError(t, err)
+	require.Equal(t, core.NoNetworkState, switcher.state)
+	require.True(t, switcher.WasInCompleteState())
 }

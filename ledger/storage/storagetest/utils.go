@@ -25,7 +25,7 @@ import (
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -74,7 +74,7 @@ func TmpDB(ctx context.Context, t testing.TB, options ...Option) (storage.DBCont
 	cm := &component.Manager{}
 
 	cm.Inject(
-		platformpolicy.NewPlatformCryptographyScheme(),
+		testutils.NewPlatformCryptographyScheme(),
 		db,
 		storage.NewJetStorage(),
 		storage.NewObjectStorage(),

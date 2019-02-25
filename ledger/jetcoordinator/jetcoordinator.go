@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/core/utils"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/jet"
+	"github.com/insolar/insolar/ledger/storage/nodes"
 	"github.com/insolar/insolar/utils/entropy"
 	"github.com/pkg/errors"
 )
@@ -37,7 +38,7 @@ type JetCoordinator struct {
 	PulseStorage               core.PulseStorage               `inject:""`
 	JetStorage                 storage.JetStorage              `inject:""`
 	PulseTracker               storage.PulseTracker            `inject:""`
-	NodeStorage                storage.NodeStorage             `inject:""`
+	Nodes                      nodes.Accessor                  `inject:""`
 
 	lightChainLimit int
 }
@@ -193,7 +194,7 @@ func (jc *JetCoordinator) LightValidatorsForObject(
 
 // Heavy returns *core.RecorRef to a heavy of specific pulse
 func (jc *JetCoordinator) Heavy(ctx context.Context, pulse core.PulseNumber) (*core.RecordRef, error) {
-	candidates, err := jc.NodeStorage.GetActiveNodesByRole(pulse, core.StaticRoleHeavyMaterial)
+	candidates, err := jc.Nodes.InRole(pulse, core.StaticRoleHeavyMaterial)
 	if err == core.ErrNoNodes {
 		return nil, err
 	}
@@ -275,7 +276,7 @@ func (jc *JetCoordinator) NodeForObject(ctx context.Context, objectID core.Recor
 func (jc *JetCoordinator) virtualsForObject(
 	ctx context.Context, objID core.RecordID, pulse core.PulseNumber, count int,
 ) ([]core.RecordRef, error) {
-	candidates, err := jc.NodeStorage.GetActiveNodesByRole(pulse, core.StaticRoleVirtual)
+	candidates, err := jc.Nodes.InRole(pulse, core.StaticRoleVirtual)
 	if err == core.ErrNoNodes {
 		return nil, err
 	}
@@ -304,7 +305,7 @@ func (jc *JetCoordinator) lightMaterialsForJet(
 ) ([]core.RecordRef, error) {
 	_, prefix := jet.Jet(jetID)
 
-	candidates, err := jc.NodeStorage.GetActiveNodesByRole(pulse, core.StaticRoleLightMaterial)
+	candidates, err := jc.Nodes.InRole(pulse, core.StaticRoleLightMaterial)
 	if err == core.ErrNoNodes {
 		return nil, err
 	}

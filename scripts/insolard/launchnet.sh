@@ -14,6 +14,7 @@ BASE_DIR=scripts/insolard
 KEYS_FILE=$BASE_DIR/$CONFIGS_DIR/bootstrap_keys.json
 ROOT_MEMBER_KEYS_FILE=$BASE_DIR/$CONFIGS_DIR/root_member_keys.json
 DISCOVERY_NODES_DATA=$BASE_DIR/discoverynodes/
+NODES_DATA=$BASE_DIR/nodes/
 INSGORUND_DATA=$BASE_DIR/insgorund/
 GENESIS_CONFIG=$BASE_DIR/genesis.yaml
 GENERATED_CONFIGS_DIR=$BASE_DIR/$CONFIGS_DIR/generated_configs
@@ -99,6 +100,7 @@ clear_dirs()
     rm -rfv $DISCOVERY_NODES_DATA/*
     rm -rfv $GENERATED_CONFIGS_DIR/*
     rm -rfv $INSGORUND_DATA/*
+    rm -rfv $NODES_DATA/*
     echo "clear_dirs() end."
 }
 

@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/jet"
+	"github.com/insolar/insolar/ledger/storage/nodes"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
@@ -46,7 +47,7 @@ type jetCoordinatorSuite struct {
 	pulseStorage *storage.PulseStorage
 	pulseTracker storage.PulseTracker
 	jetStorage   storage.JetStorage
-	nodeStorages storage.NodeStorage
+	nodeStorage  *nodes.AccessorMock
 	coordinator  *JetCoordinator
 }
 
@@ -70,7 +71,7 @@ func (s *jetCoordinatorSuite) BeforeTest(suiteName, testName string) {
 	s.pulseTracker = storage.NewPulseTracker()
 	s.pulseStorage = storage.NewPulseStorage()
 	s.jetStorage = storage.NewJetStorage()
-	s.nodeStorages = storage.NewNodeStorage()
+	s.nodeStorage = nodes.NewAccessorMock(s.T())
 	s.coordinator = NewJetCoordinator(5)
 	s.coordinator.NodeNet = network.NewNodeNetworkMock(s.T())
 
@@ -80,7 +81,7 @@ func (s *jetCoordinatorSuite) BeforeTest(suiteName, testName string) {
 		s.pulseTracker,
 		s.pulseStorage,
 		s.jetStorage,
-		s.nodeStorages,
+		s.nodeStorage,
 		s.coordinator,
 	)
 
@@ -105,15 +106,16 @@ func (s *jetCoordinatorSuite) AfterTest(suiteName, testName string) {
 func (s *jetCoordinatorSuite) TestJetCoordinator_QueryRole() {
 	err := s.pulseTracker.AddPulse(s.ctx, core.Pulse{PulseNumber: 0, Entropy: core.Entropy{1, 2, 3}})
 	require.NoError(s.T(), err)
-	var nodes []core.Node
+	var nds []core.Node
 	var nodeRefs []core.RecordRef
 	for i := 0; i < 100; i++ {
 		ref := *core.NewRecordRef(core.DomainID, *core.NewRecordID(0, []byte{byte(i)}))
-		nodes = append(nodes, storage.Node{FID: ref, FRole: core.StaticRoleLightMaterial})
+		nds = append(nds, nodes.Node{FID: ref, FRole: core.StaticRoleLightMaterial})
 		nodeRefs = append(nodeRefs, ref)
 	}
-	err = s.nodeStorages.SetActiveNodes(0, nodes)
 	require.NoError(s.T(), err)
+
+	s.nodeStorage.InRoleMock.Return(nds, nil)
 
 	objID := core.NewRecordID(0, []byte{1, 42, 123})
 	s.jetStorage.UpdateJetTree(s.ctx, 0, true, *jet.NewID(50, []byte{1, 42, 123}))
@@ -272,8 +274,8 @@ func TestJetCoordinator_NodeForJet_GoToHeavy(t *testing.T) {
 	expectedID := core.NewRecordRef(testutils.RandomID(), testutils.RandomID())
 	nodeMock := network.NewNodeMock(t)
 	nodeMock.IDMock.Return(*expectedID)
-	activeNodesStorageMock := storage.NewNodeStorageMock(t)
-	activeNodesStorageMock.GetActiveNodesByRoleFunc = func(p core.PulseNumber, p1 core.StaticRole) (r []core.Node, r1 error) {
+	activeNodesStorageMock := nodes.NewAccessorMock(t)
+	activeNodesStorageMock.InRoleFunc = func(p core.PulseNumber, p1 core.StaticRole) (r []core.Node, r1 error) {
 		require.Equal(t, core.FirstPulseNumber, int(p))
 		require.Equal(t, core.StaticRoleHeavyMaterial, p1)
 
@@ -288,7 +290,7 @@ func TestJetCoordinator_NodeForJet_GoToHeavy(t *testing.T) {
 
 	calc := NewJetCoordinator(25)
 	calc.PulseTracker = pulseTrackerMock
-	calc.NodeStorage = activeNodesStorageMock
+	calc.Nodes = activeNodesStorageMock
 	calc.PulseStorage = pulseStorageMock
 	calc.PlatformCryptographyScheme = platformpolicy.NewPlatformCryptographyScheme()
 
@@ -315,8 +317,8 @@ func TestJetCoordinator_NodeForJet_GoToLight(t *testing.T) {
 	expectedID := core.NewRecordRef(testutils.RandomID(), testutils.RandomID())
 	nodeMock := network.NewNodeMock(t)
 	nodeMock.IDMock.Return(*expectedID)
-	activeNodesStorageMock := storage.NewNodeStorageMock(t)
-	activeNodesStorageMock.GetActiveNodesByRoleFunc = func(p core.PulseNumber, p1 core.StaticRole) (r []core.Node, r1 error) {
+	activeNodesStorageMock := nodes.NewAccessorMock(t)
+	activeNodesStorageMock.InRoleFunc = func(p core.PulseNumber, p1 core.StaticRole) (r []core.Node, r1 error) {
 		require.Equal(t, 0, int(p))
 		require.Equal(t, core.StaticRoleLightMaterial, p1)
 
@@ -331,7 +333,7 @@ func TestJetCoordinator_NodeForJet_GoToLight(t *testing.T) {
 
 	calc := NewJetCoordinator(25)
 	calc.PulseTracker = pulseTrackerMock
-	calc.NodeStorage = activeNodesStorageMock
+	calc.Nodes = activeNodesStorageMock
 	calc.PulseStorage = pulseStorageMock
 	calc.PlatformCryptographyScheme = platformpolicy.NewPlatformCryptographyScheme()
 

@@ -251,7 +251,7 @@ func (cc cleanCase) check(t *testing.T, err error) {
 		}
 		return
 	}
-	if !assert.Exactly(t, err, storage.ErrNotFound) {
+	if !assert.Exactly(t, err, core.ErrNotFound) {
 		fmt.Printf("%v => err: %T\n", cc, err)
 	}
 }
