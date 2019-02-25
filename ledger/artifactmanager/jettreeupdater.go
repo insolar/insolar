@@ -20,6 +20,7 @@ import (
 	"context"
 	"sync"
 
+	"github.com/insolar/insolar"
 	"github.com/insolar/insolar/ledger/storage/nodes"
 	"github.com/pkg/errors"
 
@@ -173,13 +174,13 @@ func (jtu *jetTreeUpdater) fetchActualJetFromOtherNodes(
 
 		replies := make([]*reply.Jet, num)
 		for i, node := range nodes {
-			go func(i int, node core.Node) {
+			go func(i int, node insolar.Node) {
 				ctx, span := instracer.StartSpan(ctx, "jet_tree_updater.one_node_get_jet")
 				defer span.End()
 
 				defer wg.Done()
 
-				nodeID := node.ID()
+				nodeID := node.ID
 				rep, err := jtu.MessageBus.Send(
 					ctx,
 					&message.GetJet{Object: target, Pulse: pulse},
@@ -248,7 +249,7 @@ func (jtu *jetTreeUpdater) fetchActualJetFromOtherNodes(
 
 func (jtu *jetTreeUpdater) otherNodesForPulse(
 	ctx context.Context, pulse core.PulseNumber,
-) ([]core.Node, error) {
+) ([]insolar.Node, error) {
 	ctx, span := instracer.StartSpan(ctx, "jet_tree_updater.other_nodes_for_pulse")
 	defer span.End()
 
@@ -259,7 +260,7 @@ func (jtu *jetTreeUpdater) otherNodesForPulse(
 
 	me := jtu.JetCoordinator.Me()
 	for i := range res {
-		if res[i].ID() == me {
+		if res[i].ID == me {
 			res = append(res[:i], res[i+1:]...)
 			break
 		}
