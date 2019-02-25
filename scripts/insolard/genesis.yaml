@@ -6,9 +6,9 @@ reuse_keys: false
 root_balance: 1000000000
 majority_rule: 4
 min_roles:
-  virtual:  1
+  virtual:  2
   heavy_material: 1
-  light_material: 1
+  light_material: 2
 pulsar_public_keys:
   - "pulsar_public_key"
 discovery_nodes:
@@ -106,11 +106,11 @@ discovery_nodes:
 #    cert_name: "discovery_cert_23.json"
 
 nodes:
-  -
-    host: "127.0.0.1:63836"
-    role: "virtual"
-    keys_file: "scripts/insolard/nodes/1/keys.json"
-    cert_name: "node_cert_1.json"
+#  -
+#    host: "127.0.0.1:63836"
+#    role: "virtual"
+#    keys_file: "scripts/insolard/nodes/1/keys.json"
+#    cert_name: "node_cert_1.json"
 #  - # Attention! You must wait `lightChainLimit` pulses after LM joined to run benchmark w/o errors.
 #    host: "127.0.0.1:63936"
 #    role: "light_material"

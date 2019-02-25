@@ -255,7 +255,7 @@ wait_for_complete_network_state()
 {
     while true
     do
-        num=`scripts/insolard/check_status.sh 2>/dev/null | grep "NodeReady" | wc -l`
+        num=`scripts/insolard/check_status.sh 2>/dev/null | grep "CompleteNetworkState" | wc -l`
         echo "$num/$NUM_DISCOVERY_NODES discovery nodes ready"
         if [[ "$num" -eq "$NUM_DISCOVERY_NODES" ]]
         then
