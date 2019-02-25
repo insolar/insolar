@@ -45,7 +45,6 @@ type unsyncList struct {
 	proofs      map[core.RecordRef]*consensus.NodePulseProof
 	ghs         map[core.RecordRef]consensus.GlobuleHashSignature
 	indexToRef  map[int]core.RecordRef
-	cache       []byte
 }
 
 func (ul *unsyncList) GetGlobuleHashSignature(ref core.RecordRef) (consensus.GlobuleHashSignature, bool) {
@@ -139,26 +138,11 @@ func (ul *unsyncList) removeNode(nodeID core.RecordRef) {
 		delete(ul.indexToRef, i)
 	}
 	delete(ul.refToIndex, nodeID)
-	ul.cache = nil
 }
 
 func (ul *unsyncList) AddClaims(claims map[core.RecordRef][]consensus.ReferendumClaim) error {
 	ul.claims = claims
-	ul.cache = nil
 	return nil
-}
-
-func (ul *unsyncList) CalculateHash(scheme core.PlatformCryptographyScheme) ([]byte, error) {
-	if ul.cache != nil {
-		return ul.cache, nil
-	}
-	m, err := ul.GetMergedCopy()
-	if err != nil {
-		return nil, errors.Wrap(err, "[ CalculateHash ] failed to merge a node map")
-	}
-	sorted := sortedNodeList(m.ActiveList)
-	ul.cache, err = CalculateHash(scheme, sorted)
-	return ul.cache, err
 }
 
 func (ul *unsyncList) GetActiveNode(ref core.RecordRef) core.Node {
