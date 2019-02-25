@@ -138,7 +138,7 @@ func TestRemoveAllAfterBlock(t *testing.T) {
 
 type mockSyncDone struct{}
 
-func (m mockSyncDone) done() {}
+func (m mockSyncDone) Done() {}
 
 // with signals
 func TestSimplePushSignals(t *testing.T) {
