@@ -61,7 +61,11 @@ func (a *Storage) Set(pulse core.PulseNumber, nodes []insolar.Node) error {
 		return storage.ErrOverride
 	}
 
-	a.nodes[pulse] = append([]insolar.Node{}, nodes...)
+	if len(nodes) != 0 {
+		a.nodes[pulse] = append([]insolar.Node{}, nodes...)
+	} else {
+		a.nodes[pulse] = nil
+	}
 
 	return nil
 }
@@ -75,8 +79,7 @@ func (a *Storage) All(pulse core.PulseNumber) ([]insolar.Node, error) {
 	if !ok {
 		return nil, core.ErrNoNodes
 	}
-	res := make([]insolar.Node, len(nodes))
-	copy(res, nodes)
+	res := append(nodes[:0:0], nodes...)
 
 	return res, nil
 }
