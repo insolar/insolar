@@ -147,6 +147,7 @@ func (tp *ThirdPhaseImpl) removeExcessJoinClaims(joinClaims []*packets.NodeJoinC
 	if originLen == 0 || len(joinClaims) == 0 {
 		return
 	}
+
 	updatedClaims := make([]packets.ReferendumClaim, 0)
 	for _, join := range joinClaims {
 		for i := 0; i < len(claims); i++ {
