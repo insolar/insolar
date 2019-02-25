@@ -73,7 +73,7 @@ func NewPulsar() Pulsar {
 		ReceivingVectorTimeout: 1000,
 
 		Neighbours: []PulsarNodeAddress{},
-		Storage:    Storage{DataDirectory: "./data/pulsar"},
+		Storage:    Storage{DataDirectory: "./.artifacts/pulsar"},
 
 		NumberDelta: 10,
 		DistributionTransport: Transport{
