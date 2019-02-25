@@ -38,7 +38,8 @@ import (
 )
 
 const defaultStdoutPath = "-"
-const defaultURL = "http://localhost:19101/api"
+
+var defaultURL = "http://localhost:19101/api"
 
 func genDefaultConfig(r interface{}) ([]byte, error) {
 	t := reflect.TypeOf(r)
@@ -117,7 +118,11 @@ func parseInputParams() {
 }
 
 func main() {
+	if u := os.Getenv("INSOLAR_API_URL"); u != "" {
+		defaultURL = u
+	}
 	parseInputParams()
+
 	out, err := chooseOutput(output)
 	check("Problems with parsing input:", err)
 
