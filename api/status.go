@@ -23,6 +23,7 @@ import (
 	"github.com/insolar/insolar/core/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
+	netutils "github.com/insolar/insolar/network/utils"
 )
 
 type Node struct {
@@ -35,6 +36,7 @@ type Node struct {
 type StatusReply struct {
 	NetworkState        string
 	Origin              Node
+	IsDiscovery         bool
 	ActiveListSize      int
 	WorkingListSize     int
 	Nodes               []Node
@@ -70,6 +72,8 @@ func (s *StatusService) Get(r *http.Request, args *interface{}, reply *StatusRep
 
 	reply.ActiveListSize = len(activeNodes)
 	reply.WorkingListSize = len(workingNodes)
+
+	reply.IsDiscovery = netutils.OriginIsDiscovery(s.runner.CertificateManager.GetCertificate())
 
 	nodes := make([]Node, reply.ActiveListSize)
 	for i, node := range activeNodes {

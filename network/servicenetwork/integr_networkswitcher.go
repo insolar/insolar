@@ -19,27 +19,42 @@ package servicenetwork
 
 import (
 	"context"
-	"sync/atomic"
+	"sync"
 
 	"github.com/insolar/insolar/core"
 )
 
 type testNetworkSwitcher struct {
-	state int32
+	state              core.NetworkState
+	wasInCompleteState bool
+
+	lock sync.RWMutex
 }
 
 func NewTestNetworkSwitcher() core.NetworkSwitcher {
-	state := int32(core.VoidNetworkState)
+	state := core.VoidNetworkState
 	return &testNetworkSwitcher{state: state}
 }
 
 func (t *testNetworkSwitcher) GetState() core.NetworkState {
-	s := atomic.LoadInt32(&t.state)
-	return core.NetworkState(s)
+	t.lock.RLock()
+	defer t.lock.RUnlock()
+
+	return t.state
+}
+
+func (t *testNetworkSwitcher) WasInCompleteState() bool {
+	t.lock.RLock()
+	defer t.lock.RUnlock()
+
+	return t.wasInCompleteState
 }
 
 func (t *testNetworkSwitcher) OnPulse(context.Context, core.Pulse) error {
-	newState := int32(core.CompleteNetworkState)
-	atomic.StoreInt32(&t.state, newState)
+	t.lock.Lock()
+	defer t.lock.Unlock()
+
+	t.state = core.CompleteNetworkState
+	t.wasInCompleteState = true
 	return nil
 }

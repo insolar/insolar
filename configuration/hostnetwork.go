@@ -51,6 +51,6 @@ func NewHostNetwork() HostNetwork {
 		TimeoutMult:         2,
 		InfinityBootstrap:   false,
 		SignMessages:        false,
-		HandshakeSessionTTL: 5000,
+		HandshakeSessionTTL: 10000,
 	}
 }
