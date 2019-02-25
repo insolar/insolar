@@ -30,19 +30,27 @@ import (
 func TestNodeStorage_All(t *testing.T) {
 	t.Parallel()
 
-	var nodes []insolar.Node
+	var all []insolar.Node
 	f := fuzz.New().Funcs(func(e *insolar.Node, c fuzz.Continue) {
 		e.ID = gen.Reference()
 	})
-	f.NumElements(5, 10).NilChance(0).Fuzz(&nodes)
+	f.NumElements(5, 10).NilChance(0).Fuzz(&all)
 	pulse := gen.PulseNumber()
 
 	t.Run("returns correct nodes", func(t *testing.T) {
 		nodeStorage := NewStorage()
-		nodeStorage.nodes[pulse] = nodes
+		nodeStorage.nodes[pulse] = all
 		result, err := nodeStorage.All(pulse)
 		assert.NoError(t, err)
-		assert.Equal(t, nodes, result)
+		assert.Equal(t, all, result)
+	})
+
+	t.Run("returns nil when empty nodes", func(t *testing.T) {
+		nodeStorage := NewStorage()
+		nodeStorage.nodes[pulse] = nil
+		result, err := nodeStorage.All(pulse)
+		assert.NoError(t, err)
+		assert.Nil(t, result)
 	})
 
 	t.Run("returns error when no nodes", func(t *testing.T) {
@@ -93,9 +101,17 @@ func TestNodeStorage_InRole(t *testing.T) {
 		}
 	})
 
+	t.Run("returns nil when empty nodes", func(t *testing.T) {
+		nodeStorage := NewStorage()
+		nodeStorage.nodes[pulse] = nil
+		result, err := nodeStorage.InRole(pulse, core.StaticRoleVirtual)
+		assert.NoError(t, err)
+		assert.Nil(t, result)
+	})
+
 	t.Run("returns error when no nodes", func(t *testing.T) {
 		nodeStorage := NewStorage()
-		result, err := nodeStorage.All(pulse)
+		result, err := nodeStorage.InRole(pulse, core.StaticRoleVirtual)
 		assert.Equal(t, core.ErrNoNodes, err)
 		assert.Nil(t, result)
 	})
@@ -110,15 +126,24 @@ func TestStorage_Set(t *testing.T) {
 	})
 	f.NumElements(5, 10).NilChance(0).Fuzz(&nodes)
 	pulse := gen.PulseNumber()
-	nodeStorage := NewStorage()
 
 	t.Run("saves correct nodes", func(t *testing.T) {
+		nodeStorage := NewStorage()
 		err := nodeStorage.Set(pulse, nodes)
 		assert.NoError(t, err)
 		assert.Equal(t, nodes, nodeStorage.nodes[pulse])
 	})
 
+	t.Run("saves nil if empty nodes", func(t *testing.T) {
+		nodeStorage := NewStorage()
+		err := nodeStorage.Set(pulse, []insolar.Node{})
+		assert.NoError(t, err)
+		assert.Nil(t, nodeStorage.nodes[pulse])
+	})
+
 	t.Run("returns error when saving with the same pulse", func(t *testing.T) {
+		nodeStorage := NewStorage()
+		_ = nodeStorage.Set(pulse, nodes)
 		err := nodeStorage.Set(pulse, nodes)
 		assert.Equal(t, storage.ErrOverride, err)
 		assert.Equal(t, nodes, nodeStorage.nodes[pulse])
@@ -149,6 +174,5 @@ func TestNewStorage_Delete(t *testing.T) {
 			assert.Equal(t, core.ErrNoNodes, err)
 			assert.Nil(t, result)
 		}
-
 	})
 }
