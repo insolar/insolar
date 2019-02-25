@@ -21,6 +21,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/utils"
 )
 
 // NewRules creates network Rules component
@@ -38,7 +39,7 @@ func (r *rules) CheckMajorityRule() (bool, int) {
 	// activeNodes []core.Node
 	cert := r.CertificateManager.GetCertificate()
 	majorityRule := cert.GetMajorityRule()
-	activeDiscoveryNodesLen := len(findDiscoveriesInActiveNodeList(r.NodeKeeper.GetActiveNodes(), cert))
+	activeDiscoveryNodesLen := len(utils.FindDiscoveriesInNodeList(r.NodeKeeper.GetActiveNodes(), cert))
 	return activeDiscoveryNodesLen >= majorityRule, activeDiscoveryNodesLen
 }
 
@@ -51,9 +52,12 @@ func (r *rules) CheckMinRole() bool {
 	var virtualCount, heavyCount, lightCount uint
 	for _, n := range nodes {
 		switch n.Role() {
-		case core.StaticRoleVirtual: virtualCount++
-		case core.StaticRoleHeavyMaterial: heavyCount++
-		case core.StaticRoleLightMaterial: lightCount++
+		case core.StaticRoleVirtual:
+			virtualCount++
+		case core.StaticRoleHeavyMaterial:
+			heavyCount++
+		case core.StaticRoleLightMaterial:
+			lightCount++
 		default:
 			log.Warn("unknown node role")
 		}
@@ -63,21 +67,4 @@ func (r *rules) CheckMinRole() bool {
 	return virtualCount >= v &&
 		heavyCount >= h &&
 		lightCount >= l
-}
-
-// findDiscoveriesInActiveNodeList returns only discovery nodes from active node list
-func findDiscoveriesInActiveNodeList(activeNodes []core.Node, cert core.Certificate) []core.Node {
-	discovery := cert.GetDiscoveryNodes()
-	result := make([]core.Node, 0)
-
-	for _, d := range discovery {
-		for _, n := range activeNodes {
-			if d.GetNodeRef().Equal(n.ID()) {
-				result = append(result, n)
-				break
-			}
-		}
-	}
-
-	return result
 }
