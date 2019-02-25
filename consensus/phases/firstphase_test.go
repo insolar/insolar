@@ -52,8 +52,20 @@ func TestFirstPhase_HandlePulse(t *testing.T) {
 
 	})
 
+	networkSwitcherMock := testutils.NewNetworkSwitcherMock(t)
+	certificateManagerMock := testutils.NewCertificateManagerMock(t)
+
 	cm := component.Manager{}
-	cm.Inject(cryptoServ, nodeKeeperMock, firstPhase, pulseCalculatorMock, communicatorMock, consensusNetworkMock)
+	cm.Inject(
+		cryptoServ,
+		nodeKeeperMock,
+		firstPhase,
+		pulseCalculatorMock,
+		communicatorMock,
+		consensusNetworkMock,
+		networkSwitcherMock,
+		certificateManagerMock,
+	)
 
 	require.NotNil(t, firstPhase.Calculator)
 	require.NotNil(t, firstPhase.NodeKeeper)

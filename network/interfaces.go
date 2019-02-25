@@ -171,6 +171,8 @@ type NodeKeeper interface {
 	// GetUnsyncList get unsync list for current pulse. Has copy of active node list from nodekeeper as internal state.
 	// Should be called when nodekeeper state is ReadyNodeNetworkState.
 	GetUnsyncList() UnsyncList
+	// GetUnsyncListFromNodes returns unsync list for nodes. Does copy of nodes.
+	GetUnsyncListFromNodes([]core.Node) UnsyncList
 	// GetSparseUnsyncList get sparse unsync list for current pulse with predefined length of active node list.
 	// Does not contain active list, should collect active list during its lifetime via AddClaims.
 	// Should be called when nodekeeper state is WaitingNodeNetworkState.
