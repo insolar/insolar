@@ -192,8 +192,23 @@ func (bc *bootstrapper) Bootstrap(ctx context.Context) (*network.BootstrapResult
 	ctx, span := instracer.StartSpan(ctx, "Bootstrapper.Bootstrap")
 	defer span.End()
 
-	discoveryCount := len(bc.Certificate.GetDiscoveryNodes())
-	ch := bc.getDiscoveryNodesChannel(ctx, bc.Certificate.GetDiscoveryNodes(), discoveryCount)
+	discoveryNodes := bc.Certificate.GetDiscoveryNodes()
+	isDiscovery := utils.OriginIsDiscovery(bc.Certificate)
+
+	if isDiscovery {
+		var err error
+		discoveryNodes, err = removeOrigin(discoveryNodes, *bc.Certificate.GetNodeRef())
+		if err != nil {
+			return nil, nil, errors.Wrapf(err, "Bootstrap failed (no available discovery nodes)")
+		}
+	}
+	discoveryCount := len(discoveryNodes)
+
+	if discoveryCount == 0 {
+		return nil, nil, errors.New("Invalid discovery list")
+	}
+
+	ch := bc.getDiscoveryNodesChannel(ctx, discoveryNodes, discoveryCount)
 
 	bootstrapResults, hosts := bc.waitResultsFromChannel(ctx, ch, discoveryCount)
 	logger.Infof("[ Bootstrap ] Connected to %d/%d discovery nodes", len(hosts), discoveryCount)
@@ -204,7 +219,7 @@ func (bc *bootstrapper) Bootstrap(ctx context.Context) (*network.BootstrapResult
 
 	majorityRule := bc.Certificate.GetMajorityRule()
 	b, isMajority := getDiscoveryFromBootstrapResults(bootstrapResults, majorityRule)
-	if utils.OriginIsDiscovery(bc.Certificate) || isMajority {
+	if isDiscovery || isMajority {
 		return b, &DiscoveryNode{b.Host, findDiscovery(bc.Certificate, b.Host.NodeID)}, nil
 	}
 
