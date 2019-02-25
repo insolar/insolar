@@ -169,7 +169,7 @@ func (swa *SimpleWaitAdapter) StartProcessing(started chan bool) {
 	started <- true
 
 	lastLoop := false
-	for true {
+	for {
 
 		var itasks []queue.OutputElement
 
