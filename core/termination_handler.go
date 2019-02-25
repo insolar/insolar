@@ -21,6 +21,7 @@ import (
 )
 
 // TerminationHandler handles such node events as graceful stop, abort, etc.
+//go:generate minimock -i github.com/insolar/insolar/core.TerminationHandler -o ../testutils -s _mock.go
 type TerminationHandler interface {
 	// Abort forces to stop all node components
 	Abort(reason string)

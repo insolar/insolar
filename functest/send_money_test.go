@@ -68,7 +68,7 @@ func TestTransferMoneyFromNotExist(t *testing.T) {
 	amount := 111
 
 	_, err := signedRequest(firstMember, "Transfer", amount, secondMember.ref)
-	require.Contains(t, err.Error(), "Not found")
+	require.Contains(t, err.Error(), "not found")
 
 	newSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)
 	require.Equal(t, oldSecondBalance, newSecondBalance)

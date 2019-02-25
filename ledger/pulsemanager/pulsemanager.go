@@ -23,6 +23,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/ledger/storage/nodes"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/trace"
@@ -63,7 +64,8 @@ type PulseManager struct {
 	JetStorage                 storage.JetStorage              `inject:""`
 	DropStorage                storage.DropStorage             `inject:""`
 	ObjectStorage              storage.ObjectStorage           `inject:""`
-	NodeStorage                storage.NodeStorage             `inject:""`
+	NodeSetter                 nodes.Setter                    `inject:""`
+	Nodes                      nodes.Accessor                  `inject:""`
 	PulseTracker               storage.PulseTracker            `inject:""`
 	ReplicaStorage             storage.ReplicaStorage          `inject:""`
 	DBContext                  storage.DBContext               `inject:""`
@@ -569,7 +571,7 @@ func (m *PulseManager) setUnderGilSection(
 			m.PulseStorage.Unlock()
 			return nil, nil, nil, nil, errors.Wrap(err, "call of AddPulse failed")
 		}
-		err = m.NodeStorage.SetActiveNodes(newPulse.PulseNumber, m.NodeNet.GetWorkingNodes())
+		err = m.NodeSetter.Set(newPulse.PulseNumber, m.NodeNet.GetWorkingNodes())
 		if err != nil {
 			m.PulseStorage.Unlock()
 			return nil, nil, nil, nil, errors.Wrap(err, "call of SetActiveNodes failed")
@@ -604,7 +606,7 @@ func (m *PulseManager) setUnderGilSection(
 	}
 
 	if persist && oldPulse != nil {
-		nodes, err := m.NodeStorage.GetActiveNodes(oldPulse.PulseNumber)
+		nodes, err := m.Nodes.All(oldPulse.PulseNumber)
 		if err != nil {
 			return nil, nil, nil, nil, err
 		}
@@ -671,9 +673,6 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse core.Pulse, 
 	}
 
 	pn := p.Pulse.PulseNumber
-
-	m.NodeStorage.RemoveActiveNodesUntil(pn)
-
 	err = m.syncClientsPool.LightCleanup(ctx, pn, m.RecentStorageProvider, jetIndexesRemoved)
 	if err != nil {
 		inslogger.FromContext(ctx).Errorf(
@@ -686,6 +685,7 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse core.Pulse, 
 		return
 	}
 	m.JetStorage.DeleteJetTree(ctx, p.Pulse.PulseNumber)
+	m.NodeSetter.Delete(p.Pulse.PulseNumber)
 	err = m.PulseTracker.DeletePulse(ctx, p.Pulse.PulseNumber)
 	if err != nil {
 		inslogger.FromContext(ctx).Errorf("Can't clean pulse-tracker from pulse: %s", err)
@@ -733,7 +733,7 @@ func (m *PulseManager) Start(ctx context.Context) error {
 		return err
 	}
 
-	err = m.NodeStorage.SetActiveNodes(core.FirstPulseNumber, []core.Node{m.NodeNet.GetOrigin()})
+	err = m.NodeSetter.Set(core.FirstPulseNumber, []core.Node{m.NodeNet.GetOrigin()})
 	if err != nil && err != storage.ErrOverride {
 		return err
 	}
