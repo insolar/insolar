@@ -31,7 +31,7 @@ type processElement struct {
 	elementID   idType
 	handlerID   idType
 	taskPayload interface{}
-	respSink    PulseConveyorSlotResponseSink
+	respSink    AdaptorToSlotResponseSink
 	cancelInfo  *cancelInfoT
 }
 
@@ -235,7 +235,7 @@ func (swa *SimpleWaitAdapter) doWork(task processElement, cancelInfo *cancelInfo
 	// TODO: remove cancelInfo from swa.taskHolder
 }
 
-var reqID uint64 = 0
+var reqID uint64
 
 func atomicLoadAndIncrementUint64(addr *uint64) uint64 {
 	for {
@@ -247,7 +247,7 @@ func atomicLoadAndIncrementUint64(addr *uint64) uint64 {
 }
 
 // PushTask implements PulseConveyorAdapterTaskSink
-func (swa *SimpleWaitAdapter) PushTask(respSink PulseConveyorSlotResponseSink,
+func (swa *SimpleWaitAdapter) PushTask(respSink AdaptorToSlotResponseSink,
 	elementID idType,
 	handlerID idType,
 	taskPayload interface{}) error {

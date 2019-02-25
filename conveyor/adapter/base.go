@@ -17,51 +17,32 @@
 package adapter
 
 import (
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/conveyor"
 )
 
 type idType = uint32
 
 // PulseConveyorAdapterTaskSink is iface which helps to slot to push task to adapter
 type PulseConveyorAdapterTaskSink interface {
-	PushTask(respSink PulseConveyorSlotResponseSink, elementID idType, handlerID idType, taskPayload interface{}) error
+	PushTask(respSink AdaptorToSlotResponseSink, elementID idType, handlerID idType, taskPayload interface{}) error
 	CancelElementTasks(pulseNumber idType, elementID idType)
 	CancelPulseTasks(pulseNumber idType)
 	FlushPulseTasks(pulseNumber uint32)
 	FlushNodeTasks(nodeID idType)
 }
 
-// PulseConveyorSlotResponseSink is iface which helps to adapter to access to slot
-type PulseConveyorSlotResponseSink interface {
+// AdaptorToSlotResponseSink is iface which helps to adapter to access to slot
+type AdaptorToSlotResponseSink interface {
 	PushResponse(adapterID idType, elementID idType, handlerID idType, respPayload interface{})
 	PushNestedEvent(adapterID idType, parentElementID idType, handlerID idType, eventPayload interface{})
 	GetPulseNumber() uint32
 	GetNodeID() uint32
-	GetSlotDetails() SlotDetails
-}
-
-// SlotDetails holds info about slot
-type SlotDetails struct {
-}
-
-// GetPulseNumber returns pulse number
-func (sd *SlotDetails) GetPulseNumber() uint32 {
-	return 0
-}
-
-// GetNodeID returns consensus's node id
-func (sd *SlotDetails) GetNodeID() uint32 {
-	return 32
-}
-
-// GetPulseData returns pulse data
-func (sd *SlotDetails) GetPulseData() *core.Pulse {
-	return core.GenesisPulse
+	GetSlotDetails() conveyor.SlotDetails
 }
 
 // AdapterTask contains info for launch adapter task
 type AdapterTask struct {
-	respSink    PulseConveyorSlotResponseSink
+	respSink    AdaptorToSlotResponseSink
 	elementID   idType
 	handlerID   idType
 	taskPayload interface{}
