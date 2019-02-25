@@ -78,3 +78,20 @@ func CloseVerbose(closer io.Closer) {
 		log.Errorf("[ CloseVerbose ] Failed to close: %s", err.Error())
 	}
 }
+
+// FindDiscoveriesInNodeList returns only discovery nodes from active node list
+func FindDiscoveriesInNodeList(nodes []core.Node, cert core.Certificate) []core.Node {
+	discovery := cert.GetDiscoveryNodes()
+	result := make([]core.Node, 0)
+
+	for _, d := range discovery {
+		for _, n := range nodes {
+			if d.GetNodeRef().Equal(n.ID()) {
+				result = append(result, n)
+				break
+			}
+		}
+	}
+
+	return result
+}
