@@ -41,11 +41,6 @@ type UnsyncListMock struct {
 	ApproveSyncPreCounter uint64
 	ApproveSyncMock       mUnsyncListMockApproveSync
 
-	CalculateHashFunc       func(p core.PlatformCryptographyScheme) (r []byte, r1 error)
-	CalculateHashCounter    uint64
-	CalculateHashPreCounter uint64
-	CalculateHashMock       mUnsyncListMockCalculateHash
-
 	GetActiveNodeFunc       func(p core.RecordRef) (r core.Node)
 	GetActiveNodeCounter    uint64
 	GetActiveNodePreCounter uint64
@@ -119,7 +114,6 @@ func NewUnsyncListMock(t minimock.Tester) *UnsyncListMock {
 	m.AddNodeMock = mUnsyncListMockAddNode{mock: m}
 	m.AddProofMock = mUnsyncListMockAddProof{mock: m}
 	m.ApproveSyncMock = mUnsyncListMockApproveSync{mock: m}
-	m.CalculateHashMock = mUnsyncListMockCalculateHash{mock: m}
 	m.GetActiveNodeMock = mUnsyncListMockGetActiveNode{mock: m}
 	m.GetActiveNodesMock = mUnsyncListMockGetActiveNodes{mock: m}
 	m.GetClaimsMock = mUnsyncListMockGetClaims{mock: m}
@@ -649,156 +643,6 @@ func (m *UnsyncListMock) ApproveSyncFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.ApproveSyncFunc != nil {
 		return atomic.LoadUint64(&m.ApproveSyncCounter) > 0
-	}
-
-	return true
-}
-
-type mUnsyncListMockCalculateHash struct {
-	mock              *UnsyncListMock
-	mainExpectation   *UnsyncListMockCalculateHashExpectation
-	expectationSeries []*UnsyncListMockCalculateHashExpectation
-}
-
-type UnsyncListMockCalculateHashExpectation struct {
-	input  *UnsyncListMockCalculateHashInput
-	result *UnsyncListMockCalculateHashResult
-}
-
-type UnsyncListMockCalculateHashInput struct {
-	p core.PlatformCryptographyScheme
-}
-
-type UnsyncListMockCalculateHashResult struct {
-	r  []byte
-	r1 error
-}
-
-//Expect specifies that invocation of UnsyncList.CalculateHash is expected from 1 to Infinity times
-func (m *mUnsyncListMockCalculateHash) Expect(p core.PlatformCryptographyScheme) *mUnsyncListMockCalculateHash {
-	m.mock.CalculateHashFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &UnsyncListMockCalculateHashExpectation{}
-	}
-	m.mainExpectation.input = &UnsyncListMockCalculateHashInput{p}
-	return m
-}
-
-//Return specifies results of invocation of UnsyncList.CalculateHash
-func (m *mUnsyncListMockCalculateHash) Return(r []byte, r1 error) *UnsyncListMock {
-	m.mock.CalculateHashFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &UnsyncListMockCalculateHashExpectation{}
-	}
-	m.mainExpectation.result = &UnsyncListMockCalculateHashResult{r, r1}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of UnsyncList.CalculateHash is expected once
-func (m *mUnsyncListMockCalculateHash) ExpectOnce(p core.PlatformCryptographyScheme) *UnsyncListMockCalculateHashExpectation {
-	m.mock.CalculateHashFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &UnsyncListMockCalculateHashExpectation{}
-	expectation.input = &UnsyncListMockCalculateHashInput{p}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *UnsyncListMockCalculateHashExpectation) Return(r []byte, r1 error) {
-	e.result = &UnsyncListMockCalculateHashResult{r, r1}
-}
-
-//Set uses given function f as a mock of UnsyncList.CalculateHash method
-func (m *mUnsyncListMockCalculateHash) Set(f func(p core.PlatformCryptographyScheme) (r []byte, r1 error)) *UnsyncListMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.CalculateHashFunc = f
-	return m.mock
-}
-
-//CalculateHash implements github.com/insolar/insolar/network.UnsyncList interface
-func (m *UnsyncListMock) CalculateHash(p core.PlatformCryptographyScheme) (r []byte, r1 error) {
-	counter := atomic.AddUint64(&m.CalculateHashPreCounter, 1)
-	defer atomic.AddUint64(&m.CalculateHashCounter, 1)
-
-	if len(m.CalculateHashMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.CalculateHashMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to UnsyncListMock.CalculateHash. %v", p)
-			return
-		}
-
-		input := m.CalculateHashMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, UnsyncListMockCalculateHashInput{p}, "UnsyncList.CalculateHash got unexpected parameters")
-
-		result := m.CalculateHashMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the UnsyncListMock.CalculateHash")
-			return
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
-	}
-
-	if m.CalculateHashMock.mainExpectation != nil {
-
-		input := m.CalculateHashMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, UnsyncListMockCalculateHashInput{p}, "UnsyncList.CalculateHash got unexpected parameters")
-		}
-
-		result := m.CalculateHashMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the UnsyncListMock.CalculateHash")
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
-	}
-
-	if m.CalculateHashFunc == nil {
-		m.t.Fatalf("Unexpected call to UnsyncListMock.CalculateHash. %v", p)
-		return
-	}
-
-	return m.CalculateHashFunc(p)
-}
-
-//CalculateHashMinimockCounter returns a count of UnsyncListMock.CalculateHashFunc invocations
-func (m *UnsyncListMock) CalculateHashMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.CalculateHashCounter)
-}
-
-//CalculateHashMinimockPreCounter returns the value of UnsyncListMock.CalculateHash invocations
-func (m *UnsyncListMock) CalculateHashMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.CalculateHashPreCounter)
-}
-
-//CalculateHashFinished returns true if mock invocations count is ok
-func (m *UnsyncListMock) CalculateHashFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.CalculateHashMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.CalculateHashCounter) == uint64(len(m.CalculateHashMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.CalculateHashMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.CalculateHashCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.CalculateHashFunc != nil {
-		return atomic.LoadUint64(&m.CalculateHashCounter) > 0
 	}
 
 	return true
@@ -2491,10 +2335,6 @@ func (m *UnsyncListMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to UnsyncListMock.ApproveSync")
 	}
 
-	if !m.CalculateHashFinished() {
-		m.t.Fatal("Expected call to UnsyncListMock.CalculateHash")
-	}
-
 	if !m.GetActiveNodeFinished() {
 		m.t.Fatal("Expected call to UnsyncListMock.GetActiveNode")
 	}
@@ -2576,10 +2416,6 @@ func (m *UnsyncListMock) MinimockFinish() {
 		m.t.Fatal("Expected call to UnsyncListMock.ApproveSync")
 	}
 
-	if !m.CalculateHashFinished() {
-		m.t.Fatal("Expected call to UnsyncListMock.CalculateHash")
-	}
-
 	if !m.GetActiveNodeFinished() {
 		m.t.Fatal("Expected call to UnsyncListMock.GetActiveNode")
 	}
@@ -2646,7 +2482,6 @@ func (m *UnsyncListMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.AddNodeFinished()
 		ok = ok && m.AddProofFinished()
 		ok = ok && m.ApproveSyncFinished()
-		ok = ok && m.CalculateHashFinished()
 		ok = ok && m.GetActiveNodeFinished()
 		ok = ok && m.GetActiveNodesFinished()
 		ok = ok && m.GetClaimsFinished()
@@ -2681,10 +2516,6 @@ func (m *UnsyncListMock) MinimockWait(timeout time.Duration) {
 
 			if !m.ApproveSyncFinished() {
 				m.t.Error("Expected call to UnsyncListMock.ApproveSync")
-			}
-
-			if !m.CalculateHashFinished() {
-				m.t.Error("Expected call to UnsyncListMock.CalculateHash")
 			}
 
 			if !m.GetActiveNodeFinished() {
@@ -2760,10 +2591,6 @@ func (m *UnsyncListMock) AllMocksCalled() bool {
 	}
 
 	if !m.ApproveSyncFinished() {
-		return false
-	}
-
-	if !m.CalculateHashFinished() {
 		return false
 	}
 
