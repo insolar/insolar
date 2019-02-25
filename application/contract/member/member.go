@@ -17,10 +17,9 @@
 package member
 
 import (
+	"errors"
 	"fmt"
 	"math"
-
-	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/application/contract/member/signer"
 	"github.com/insolar/insolar/application/proxy/nodedomain"
