@@ -26,7 +26,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/consensus/claimhandler"
 	"github.com/insolar/insolar/consensus/phases"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
@@ -71,62 +70,6 @@ func (s *testSuite) TestNodeConnect() {
 	s.Equal(s.getNodesCount()+1, len(activeNodes))
 }
 
-func (s *testSuite) TestTwoNodesConnect() {
-	if len(s.fixture().bootstrapNodes) < consensusMin {
-		s.T().Skip(consensusMinMsg)
-	}
-
-	testNode := newNetworkNode()
-	testNode2 := newNetworkNode()
-
-	s.preInitNode(testNode)
-	s.preInitNode(testNode2)
-
-	s.InitNode(testNode)
-	s.InitNode(testNode2)
-
-	wg := sync.WaitGroup{}
-	wg.Add(2)
-
-	go func(wg *sync.WaitGroup) {
-		s.StartNode(testNode)
-		wg.Done()
-	}(&wg)
-
-	go func(wg *sync.WaitGroup) {
-		s.StartNode(testNode2)
-		wg.Done()
-	}(&wg)
-
-	wg.Wait()
-
-	defer func(s *testSuite) {
-		s.StopNode(testNode)
-		s.StopNode(testNode2)
-	}(s)
-
-	s.waitForConsensus(1)
-
-	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
-	s.Equal(s.getNodesCount(), len(activeNodes))
-
-	s.waitForConsensus(1)
-
-	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
-	s.Equal(s.getNodesCount(), len(activeNodes))
-
-	s.waitForConsensus(2)
-
-	maxNodesToAdd := int(float64(s.getNodesCount()) * claimhandler.NodesToJoinPercent)
-	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
-	s.True((s.getNodesCount() + maxNodesToAdd) >= len(activeNodes))
-	activeNodes1 := testNode.serviceNetwork.NodeKeeper.GetWorkingNodes()
-	activeNodes2 := testNode2.serviceNetwork.NodeKeeper.GetWorkingNodes()
-	testNodeConnected := (s.getNodesCount() + maxNodesToAdd) >= len(activeNodes1)
-	testNode2Connected := (s.getNodesCount() + maxNodesToAdd) >= len(activeNodes2)
-	s.True(testNodeConnected || testNode2Connected)
-}
-
 func (s *testSuite) TestManyNodesConnect() {
 	if len(s.fixture().bootstrapNodes) < consensusMin {
 		s.T().Skip(consensusMinMsg)
@@ -160,9 +103,12 @@ func (s *testSuite) TestManyNodesConnect() {
 
 	s.waitForConsensus(5)
 
-	maxNodesToAdd := int(float64(s.getNodesCount()) * claimhandler.NodesToJoinPercent)
+	joined := nodesCount
+	if s.getMaxJoinCount() < nodesCount {
+		joined = s.getMaxJoinCount()
+	}
 	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
-	s.True((s.getNodesCount() + maxNodesToAdd) >= len(activeNodes))
+	s.Equal(s.getNodesCount()+joined, len(activeNodes))
 }
 
 func (s *testSuite) TestNodeLeave() {
