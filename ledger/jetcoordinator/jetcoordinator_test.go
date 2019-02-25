@@ -20,9 +20,9 @@ import (
 	"context"
 	"testing"
 
+	"github.com/insolar/insolar"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ins"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/jet"
@@ -107,11 +107,11 @@ func (s *jetCoordinatorSuite) AfterTest(suiteName, testName string) {
 func (s *jetCoordinatorSuite) TestJetCoordinator_QueryRole() {
 	err := s.pulseTracker.AddPulse(s.ctx, core.Pulse{PulseNumber: 0, Entropy: core.Entropy{1, 2, 3}})
 	require.NoError(s.T(), err)
-	var nds []ins.Node
+	var nds []insolar.Node
 	var nodeRefs []core.RecordRef
 	for i := 0; i < 100; i++ {
 		ref := *core.NewRecordRef(core.DomainID, *core.NewRecordID(0, []byte{byte(i)}))
-		nds = append(nds, ins.Node{ID: ref, Role: core.StaticRoleLightMaterial})
+		nds = append(nds, insolar.Node{ID: ref, Role: core.StaticRoleLightMaterial})
 		nodeRefs = append(nodeRefs, ref)
 	}
 	require.NoError(s.T(), err)
@@ -274,11 +274,11 @@ func TestJetCoordinator_NodeForJet_GoToHeavy(t *testing.T) {
 	}
 	expectedID := core.NewRecordRef(testutils.RandomID(), testutils.RandomID())
 	activeNodesStorageMock := nodes.NewAccessorMock(t)
-	activeNodesStorageMock.InRoleFunc = func(p core.PulseNumber, p1 core.StaticRole) (r []ins.Node, r1 error) {
+	activeNodesStorageMock.InRoleFunc = func(p core.PulseNumber, p1 core.StaticRole) (r []insolar.Node, r1 error) {
 		require.Equal(t, core.FirstPulseNumber, int(p))
 		require.Equal(t, core.StaticRoleHeavyMaterial, p1)
 
-		return []ins.Node{{ID: *expectedID}}, nil
+		return []insolar.Node{{ID: *expectedID}}, nil
 	}
 
 	pulseStorageMock := testutils.NewPulseStorageMock(t)
@@ -315,11 +315,11 @@ func TestJetCoordinator_NodeForJet_GoToLight(t *testing.T) {
 	}
 	expectedID := core.NewRecordRef(testutils.RandomID(), testutils.RandomID())
 	activeNodesStorageMock := nodes.NewAccessorMock(t)
-	activeNodesStorageMock.InRoleFunc = func(p core.PulseNumber, p1 core.StaticRole) (r []ins.Node, r1 error) {
+	activeNodesStorageMock.InRoleFunc = func(p core.PulseNumber, p1 core.StaticRole) (r []insolar.Node, r1 error) {
 		require.Equal(t, 0, int(p))
 		require.Equal(t, core.StaticRoleLightMaterial, p1)
 
-		return []ins.Node{{ID: *expectedID}}, nil
+		return []insolar.Node{{ID: *expectedID}}, nil
 	}
 
 	pulseStorageMock := testutils.NewPulseStorageMock(t)

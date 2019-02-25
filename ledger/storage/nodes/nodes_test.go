@@ -20,9 +20,9 @@ import (
 	"testing"
 
 	"github.com/google/gofuzz"
+	"github.com/insolar/insolar"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/gen"
-	"github.com/insolar/insolar/ins"
+	"github.com/insolar/insolar/gen"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/stretchr/testify/assert"
 )
@@ -30,8 +30,8 @@ import (
 func TestNodeStorage_All(t *testing.T) {
 	t.Parallel()
 
-	var nodes []ins.Node
-	f := fuzz.New().Funcs(func(e *ins.Node, c fuzz.Continue) {
+	var nodes []insolar.Node
+	f := fuzz.New().Funcs(func(e *insolar.Node, c fuzz.Continue) {
 		e.ID = gen.Reference()
 	})
 	f.NumElements(5, 10).NilChance(0).Fuzz(&nodes)
@@ -57,19 +57,19 @@ func TestNodeStorage_InRole(t *testing.T) {
 	t.Parallel()
 
 	var (
-		virtuals  []ins.Node
-		materials []ins.Node
-		all       []ins.Node
+		virtuals  []insolar.Node
+		materials []insolar.Node
+		all       []insolar.Node
 	)
 	{
-		f := fuzz.New().Funcs(func(e *ins.Node, c fuzz.Continue) {
+		f := fuzz.New().Funcs(func(e *insolar.Node, c fuzz.Continue) {
 			e.ID = gen.Reference()
 			e.Role = core.StaticRoleVirtual
 		})
 		f.NumElements(5, 10).NilChance(0).Fuzz(&virtuals)
 	}
 	{
-		f := fuzz.New().Funcs(func(e *ins.Node, c fuzz.Continue) {
+		f := fuzz.New().Funcs(func(e *insolar.Node, c fuzz.Continue) {
 			e.ID = gen.Reference()
 			e.Role = core.StaticRoleLightMaterial
 		})
@@ -104,8 +104,8 @@ func TestNodeStorage_InRole(t *testing.T) {
 func TestStorage_Set(t *testing.T) {
 	t.Parallel()
 
-	var nodes []ins.Node
-	f := fuzz.New().Funcs(func(e *ins.Node, c fuzz.Continue) {
+	var nodes []insolar.Node
+	f := fuzz.New().Funcs(func(e *insolar.Node, c fuzz.Continue) {
 		e.ID = gen.Reference()
 	})
 	f.NumElements(5, 10).NilChance(0).Fuzz(&nodes)
@@ -128,8 +128,8 @@ func TestStorage_Set(t *testing.T) {
 func TestNewStorage_Delete(t *testing.T) {
 	t.Parallel()
 
-	var nodes []ins.Node
-	f := fuzz.New().Funcs(func(e *ins.Node, c fuzz.Continue) {
+	var nodes []insolar.Node
+	f := fuzz.New().Funcs(func(e *insolar.Node, c fuzz.Continue) {
 		e.ID = gen.Reference()
 	})
 	f.NumElements(5, 10).NilChance(0).Fuzz(&nodes)

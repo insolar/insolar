@@ -22,8 +22,8 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/insolar/insolar"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ins"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/nodes"
@@ -350,7 +350,7 @@ func (jc *JetCoordinator) entropy(ctx context.Context, pulse core.PulseNumber) (
 func getRefs(
 	scheme core.PlatformCryptographyScheme,
 	e []byte,
-	values []ins.Node,
+	values []insolar.Node,
 	count int,
 ) ([]core.RecordRef, error) {
 	// TODO: remove sort when network provides sorted result from GetActiveNodesByRole (INS-890) - @nordicdyno 5.Dec.2018

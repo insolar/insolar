@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package ins
+package insolar
 
 import (
 	"github.com/insolar/insolar/core"

@@ -20,9 +20,9 @@ import (
 	"testing"
 
 	"github.com/google/gofuzz"
+	"github.com/insolar/insolar"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/gen"
-	"github.com/insolar/insolar/ins"
+	"github.com/insolar/insolar/gen"
 	"github.com/insolar/insolar/ledger/storage/nodes"
 	"github.com/stretchr/testify/assert"
 )
@@ -31,19 +31,19 @@ func TestNodes(t *testing.T) {
 	storage := nodes.NewStorage()
 
 	var (
-		virtuals  []ins.Node
-		materials []ins.Node
-		all       []ins.Node
+		virtuals  []insolar.Node
+		materials []insolar.Node
+		all       []insolar.Node
 	)
 	{
-		f := fuzz.New().Funcs(func(e *ins.Node, c fuzz.Continue) {
+		f := fuzz.New().Funcs(func(e *insolar.Node, c fuzz.Continue) {
 			e.ID = gen.Reference()
 			e.Role = core.StaticRoleVirtual
 		})
 		f.NumElements(5, 10).NilChance(0).Fuzz(&virtuals)
 	}
 	{
-		f := fuzz.New().Funcs(func(e *ins.Node, c fuzz.Continue) {
+		f := fuzz.New().Funcs(func(e *insolar.Node, c fuzz.Continue) {
 			e.ID = gen.Reference()
 			e.Role = core.StaticRoleLightMaterial
 		})
