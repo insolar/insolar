@@ -321,7 +321,7 @@ func (bc *bootstrapper) BootstrapDiscovery(ctx context.Context) (*network.Bootst
 		if len(hosts) == discoveryCount {
 			// we connected to all discovery nodes
 			break
-		} else {
+		} else if len(hosts) > 0 {
 			logger.WithFields(map[string]interface{}{
 				"connected":      len(hosts),
 				"discoveryCount": discoveryCount,
