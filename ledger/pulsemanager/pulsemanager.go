@@ -566,16 +566,14 @@ func (m *PulseManager) setUnderGilSection(
 	if err != nil {
 		return nil, nil, nil, nil, errors.Wrap(err, "failed to apply new active node list")
 	}
-	if persist {
-		if err := m.PulseTracker.AddPulse(ctx, newPulse); err != nil {
-			m.PulseStorage.Unlock()
-			return nil, nil, nil, nil, errors.Wrap(err, "call of AddPulse failed")
-		}
-		err = m.NodeSetter.Set(newPulse.PulseNumber, m.NodeNet.GetWorkingNodes())
-		if err != nil {
-			m.PulseStorage.Unlock()
-			return nil, nil, nil, nil, errors.Wrap(err, "call of SetActiveNodes failed")
-		}
+	if err := m.PulseTracker.AddPulse(ctx, newPulse); err != nil {
+		m.PulseStorage.Unlock()
+		return nil, nil, nil, nil, errors.Wrap(err, "call of AddPulse failed")
+	}
+	err = m.NodeSetter.Set(newPulse.PulseNumber, m.NodeNet.GetWorkingNodes())
+	if err != nil {
+		m.PulseStorage.Unlock()
+		return nil, nil, nil, nil, errors.Wrap(err, "call of SetActiveNodes failed")
 	}
 
 	m.PulseStorage.Set(&newPulse)
