@@ -244,10 +244,6 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse core.Pulse) {
 	if n.NodeKeeper.GetState() == core.WaitingNodeNetworkState {
 		// do not set pulse because otherwise we will set invalid active list
 		// pass consensus, prepare valid active list and set it on next pulse
-		err := n.NetworkSwitcher.OnPulse(ctx, newPulse)
-		if err != nil {
-			logger.Error(errors.Wrap(err, "Failed to call OnPulse on NetworkSwitcher"))
-		}
 		go n.phaseManagerOnPulse(ctx, newPulse, currentTime)
 		return
 	}
