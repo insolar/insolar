@@ -40,6 +40,7 @@ type MutableNode interface {
 	SetState(state core.NodeState)
 	ChangeState()
 	SetLeavingETA(number core.PulseNumber)
+	SetVersion(version string)
 }
 
 type node struct {
@@ -52,13 +53,22 @@ type node struct {
 
 	NodeAddress string
 	CAddress    string
-	NodeVersion string
+
+	versionMutex sync.RWMutex
+	NodeVersion  string
 
 	leavingMutex   sync.RWMutex
 	NodeLeaving    bool
 	NodeLeavingETA core.PulseNumber
 
 	state uint32
+}
+
+func (n *node) SetVersion(version string) {
+	n.versionMutex.Lock()
+	defer n.versionMutex.Unlock()
+
+	n.NodeVersion = version
 }
 
 func (n *node) SetState(state core.NodeState) {
@@ -138,6 +148,9 @@ func (n *node) GetGlobuleID() core.GlobuleID {
 }
 
 func (n *node) Version() string {
+	n.versionMutex.RLock()
+	defer n.versionMutex.RUnlock()
+
 	return n.NodeVersion
 }
 
