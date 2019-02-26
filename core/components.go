@@ -33,7 +33,6 @@ type Component interface {
 type Components struct {
 	NodeNetwork NodeNetwork
 	LogicRunner LogicRunner
-	Ledger      Ledger
 	Network     Network
 	MessageBus  MessageBus
 }
