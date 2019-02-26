@@ -31,12 +31,8 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/metrics"
-	"github.com/insolar/insolar/platformpolicy"
-
 	"github.com/pkg/errors"
 )
-
-var scheme = platformpolicy.NewPlatformCryptographyScheme()
 
 // Request is a representation of request struct to api
 type Request struct {
@@ -68,35 +64,6 @@ func UnmarshalRequest(req *http.Request, params interface{}) ([]byte, error) {
 		return body, errors.Wrap(err, "[ UnmarshalRequest ] Can't unmarshal input params")
 	}
 	return body, nil
-}
-
-func (ar *Runner) verifySignature(ctx context.Context, params Request) error {
-	key, err := ar.getMemberPubKey(ctx, params.Reference)
-	if err != nil {
-		return errors.Wrap(err, "[ VerifySignature ] Can't getMemberPubKey")
-	}
-	if key == "" {
-		return errors.New("[ VerifySignature ] Not found public key for this member")
-	}
-	ref, err := core.NewRefFromBase58(params.Reference)
-	if err != nil {
-		return errors.Wrap(err, "[ VerifySignature ] failed to parse params.Reference")
-	}
-
-	args, err := core.MarshalArgs(
-		*ref,
-		params.Method,
-		params.Params,
-		params.Seed)
-	if err != nil {
-		return errors.Wrap(err, "[ VerifySignature ] Can't marshal arguments for verify signature")
-	}
-	verifier := scheme.Verifier(key)
-	verified := verifier.Verify(core.SignatureFromBytes(params.Signature), args)
-	if !verified {
-		return errors.New("[ VerifySignature ] Incorrect signature")
-	}
-	return nil
 }
 
 func (ar *Runner) checkSeed(paramsSeed []byte) error {

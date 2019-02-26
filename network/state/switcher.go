@@ -20,11 +20,12 @@ package state
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/metrics"
 	"go.opencensus.io/trace"
 )
 
@@ -34,45 +35,26 @@ type messageBusLocker interface {
 	Unlock(ctx context.Context)
 }
 
-type transitionData struct {
-	pulse        core.Pulse
-	majorityRule bool
-	minRoleRule  bool
-}
-
-type stateHandler func(context.Context, *transitionData)
-
 // NetworkSwitcher is a network FSM using for bootstrapping
 type NetworkSwitcher struct {
 	NodeNetwork        core.NodeNetwork        `inject:""`
-	Rules              network.Rules           `inject:""`
 	SwitcherWorkAround core.SwitcherWorkAround `inject:""`
 	MBLocker           messageBusLocker        `inject:""`
 
 	counter uint64
 
 	state     core.NetworkState
-	stateMap  map[core.NetworkState]stateHandler
 	stateLock sync.RWMutex
-
-	span *trace.Span
+	span      *trace.Span
 }
 
 // NewNetworkSwitcher creates new NetworkSwitcher
 func NewNetworkSwitcher() (*NetworkSwitcher, error) {
-	ns := &NetworkSwitcher{
+	return &NetworkSwitcher{
 		state:     core.NoNetworkState,
 		stateLock: sync.RWMutex{},
 		counter:   1,
-	}
-
-	ns.stateMap = map[core.NetworkState]stateHandler{
-		core.NoNetworkState:       ns.handleNoNetworkState,
-		core.VoidNetworkState:     ns.handleVoidNetworkState,
-		core.CompleteNetworkState: ns.handleCompleteNetworkState,
-	}
-
-	return ns, nil
+	}, nil
 }
 
 // GetState method returns current network state
@@ -83,83 +65,23 @@ func (ns *NetworkSwitcher) GetState() core.NetworkState {
 	return ns.state
 }
 
-func (ns *NetworkSwitcher) handleNoNetworkState(ctx context.Context, transitionData *transitionData) {
-	if ns.SwitcherWorkAround.IsBootstrapped() && transitionData.majorityRule {
-		ns.state = core.VoidNetworkState
-	}
-}
-
-func (ns *NetworkSwitcher) handleVoidNetworkState(ctx context.Context, transitionData *transitionData) {
-	if !transitionData.majorityRule {
-		ns.state = core.NoNetworkState
-	}
-
-	if transitionData.minRoleRule {
-		defer ns.Release(ctx)
-
-		ns.state = core.CompleteNetworkState
-	}
-}
-
-func (ns *NetworkSwitcher) handleCompleteNetworkState(ctx context.Context, transitionData *transitionData) {
-	if !transitionData.majorityRule || !transitionData.minRoleRule {
-		defer ns.Acquire(ctx)
-
-		if !transitionData.majorityRule {
-			ns.state = core.NoNetworkState
-		}
-
-		if !transitionData.minRoleRule {
-			ns.state = core.VoidNetworkState
-		}
-	}
-}
-
-func (ns *NetworkSwitcher) changeState(ctx context.Context, pulse core.Pulse) core.NetworkState {
-	majorityOk, _ := ns.Rules.CheckMajorityRule()
-	minRoleOk := ns.Rules.CheckMinRole()
-
-	transitionData := &transitionData{
-		pulse:        pulse,
-		majorityRule: majorityOk,
-		minRoleRule:  minRoleOk,
-	}
-
-	for {
-		state := ns.state
-		handler := ns.stateMap[state]
-
-		handler(ctx, transitionData)
-
-		stateChanged := state != ns.state
-		if !stateChanged {
-			break
-		}
-	}
-
-	return ns.state
-}
-
 // OnPulse method checks current state and finds out reasons to update this state
 func (ns *NetworkSwitcher) OnPulse(ctx context.Context, pulse core.Pulse) error {
 	ns.stateLock.Lock()
 	defer ns.stateLock.Unlock()
 
-	oldState := ns.state
-
-	ctx, span := instracer.StartSpan(ctx, "NetworkSwitcher.changeState")
+	ctx, span := instracer.StartSpan(ctx, "NetworkSwitcher.OnPulse")
 	span.AddAttributes(
-		trace.StringAttribute("NetworkSwitcher state: ", oldState.String()),
+		trace.StringAttribute("NetworkSwitcher state: ", ns.state.String()),
 	)
 	defer span.End()
+	inslogger.FromContext(ctx).Infof("Current NetworkSwitcher state is: %s", ns.state)
 
-	newState := ns.changeState(ctx, pulse)
-
-	if oldState != newState {
-		inslogger.FromContext(ctx).WithFields(map[string]interface{}{
-			"oldState": oldState.String(),
-			"newState": newState.String(),
-		}).Infof("Current NetworkSwitcher state switched")
+	if ns.SwitcherWorkAround.IsBootstrapped() && ns.state != core.CompleteNetworkState {
+		ns.state = core.CompleteNetworkState
+		ns.Release(ctx)
+		metrics.NetworkComplete.Set(float64(time.Now().Unix()))
+		inslogger.FromContext(ctx).Infof("Current NetworkSwitcher state switched to: %s", ns.state)
 	}
 
 	return nil

@@ -1,5 +1,5 @@
 BIN_DIR ?= bin
-ARTIFACTS_DIR ?= .artefacts
+ARTIFACTS_DIR ?= .artifacts
 INSOLAR = insolar
 INSOLARD = insolard
 INSGOCC = insgocc

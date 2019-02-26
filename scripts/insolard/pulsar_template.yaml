@@ -2,7 +2,7 @@ pulsar:
   connectiontype: tcp
   mainlisteneraddress: 127.0.0.1:58090
   storage:
-    datadirectory: ./data_pulsar
+    datadirectory: ./.artifacts/pulsar_data
     txretriesonconflict: 0
   pulsetime: 10000
   receivingsigntimeout: 1000

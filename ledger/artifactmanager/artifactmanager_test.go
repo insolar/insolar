@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/gojuno/minimock"
+	"github.com/insolar/insolar/ledger/storage/nodes"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -54,7 +55,7 @@ type amSuite struct {
 
 	scheme        core.PlatformCryptographyScheme
 	pulseTracker  storage.PulseTracker
-	nodeStorage   storage.NodeStorage
+	nodeStorage   nodes.Accessor
 	objectStorage storage.ObjectStorage
 	jetStorage    storage.JetStorage
 	dropStorage   storage.DropStorage
@@ -81,7 +82,7 @@ func (s *amSuite) BeforeTest(suiteName, testName string) {
 	s.db = db
 	s.scheme = platformpolicy.NewPlatformCryptographyScheme()
 	s.jetStorage = storage.NewJetStorage()
-	s.nodeStorage = storage.NewNodeStorage()
+	s.nodeStorage = nodes.NewStorage()
 	s.pulseTracker = storage.NewPulseTracker()
 	s.objectStorage = storage.NewObjectStorage()
 	s.dropStorage = storage.NewDropStorage(10)
@@ -161,11 +162,11 @@ func getTestData(s *amSuite) (
 	handler := MessageHandler{
 		replayHandlers:             map[core.MessageType]core.MessageHandler{},
 		PlatformCryptographyScheme: s.scheme,
-		conf:                       &configuration.Ledger{LightChainLimit: 3, PendingRequestsLimit: 10},
-		certificate:                certificate,
+		conf:        &configuration.Ledger{LightChainLimit: 3, PendingRequestsLimit: 10},
+		certificate: certificate,
 	}
 
-	handler.NodeStorage = s.nodeStorage
+	handler.Nodes = s.nodeStorage
 	handler.ObjectStorage = s.objectStorage
 	handler.PulseTracker = s.pulseTracker
 	handler.DBContext = s.db
@@ -802,8 +803,8 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterValidation() {
 	handler := MessageHandler{
 		replayHandlers:             map[core.MessageType]core.MessageHandler{},
 		PlatformCryptographyScheme: s.scheme,
-		conf:                       &configuration.Ledger{LightChainLimit: 3, PendingRequestsLimit: 10},
-		certificate:                certificate,
+		conf:        &configuration.Ledger{LightChainLimit: 3, PendingRequestsLimit: 10},
+		certificate: certificate,
 	}
 
 	handler.Bus = mb
@@ -811,7 +812,7 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterValidation() {
 	handler.DBContext = s.db
 	handler.ObjectStorage = s.objectStorage
 	handler.PulseTracker = s.pulseTracker
-	handler.NodeStorage = s.nodeStorage
+	handler.Nodes = s.nodeStorage
 	handler.JetStorage = s.jetStorage
 
 	handler.RecentStorageProvider = provideMock
