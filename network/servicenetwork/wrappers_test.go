@@ -149,10 +149,6 @@ func (n *nodeKeeperWrapper) GetSparseUnsyncList(length int) network.UnsyncList {
 	return n.original.GetSparseUnsyncList(length)
 }
 
-func (n *nodeKeeperWrapper) GetUnsyncListFromNodes(nodes []core.Node) network.UnsyncList {
-	return n.original.GetUnsyncListFromNodes(nodes)
-}
-
 func (n *nodeKeeperWrapper) Sync(list network.UnsyncList) {
 	n.original.Sync(list)
 }
