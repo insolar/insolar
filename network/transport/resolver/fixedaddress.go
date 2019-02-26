@@ -15,66 +15,43 @@
  *
  */
 
-package utils
+package resolver
 
 import (
-	"hash/crc32"
-	"io"
-	"sync"
-	"sync/atomic"
-	"time"
+	"fmt"
+	"net"
+	"net/url"
 
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/log"
+	"github.com/pkg/errors"
 )
 
-func WaitTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
-	c := make(chan struct{})
-	go func() {
-		defer close(c)
-		wg.Wait()
-	}()
-	select {
-	case <-c:
-		return true // completed normally
-	case <-time.After(timeout):
-		return false // timed out
+type fixedAddressResolver struct {
+	publicAddress string
+}
+
+func NewFixedAddressResolver(publicAddress string) PublicAddressResolver {
+	return newFixedAddressResolver(publicAddress)
+}
+
+func newFixedAddressResolver(publicAddress string) *fixedAddressResolver {
+	return &fixedAddressResolver{
+		publicAddress: publicAddress,
 	}
 }
 
-// AtomicLoadAndIncrementUint64 performs CAS loop, increments counter and returns old value.
-func AtomicLoadAndIncrementUint64(addr *uint64) uint64 {
-	for {
-		val := atomic.LoadUint64(addr)
-		if atomic.CompareAndSwapUint64(addr, val, val+1) {
-			return val
-		}
-	}
-}
+func (r *fixedAddressResolver) Resolve(conn net.PacketConn) (string, error) {
+	urlString := conn.LocalAddr().String()
+	url, err := url.Parse(urlString)
 
-// GenerateShortID generate short ID for node without checking collisions
-func GenerateShortID(ref core.RecordRef) core.ShortNodeID {
-	return core.ShortNodeID(GenerateUintShortID(ref))
-}
-
-// GenerateShortID generate short ID for node without checking collisions
-func GenerateUintShortID(ref core.RecordRef) uint32 {
-	return crc32.ChecksumIEEE(ref[:])
-}
-
-func OriginIsDiscovery(cert core.Certificate) bool {
-	bNodes := cert.GetDiscoveryNodes()
-	for _, discoveryNode := range bNodes {
-		if cert.GetNodeRef().Equal(*discoveryNode.GetNodeRef()) {
-			return true
-		}
-	}
-	return false
-}
-
-func CloseVerbose(closer io.Closer) {
-	err := closer.Close()
+	var port string
 	if err != nil {
-		log.Errorf("[ CloseVerbose ] Failed to close: %s", err.Error())
+		_, port, _ = net.SplitHostPort(urlString)
+	} else {
+		port = url.Port()
 	}
+
+	if port == "" {
+		return "", errors.New("Failed to extract port from uri: " + urlString)
+	}
+	return fmt.Sprintf("%s:%s", r.publicAddress, port), nil
 }

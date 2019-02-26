@@ -42,8 +42,6 @@ const (
 type NetworkSwitcher interface {
 	// GetState method returns current network state
 	GetState() NetworkState
-	// WasInCompleteState returns true when network was in complete network state at least once during working time
-	WasInCompleteState() bool
 	// OnPulse method checks current state and finds out reasons to update this state
 	OnPulse(context.Context, Pulse) error
 }

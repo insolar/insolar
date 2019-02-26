@@ -430,8 +430,7 @@ func (s *testSuite) TestDiscoveryDown() {
 		s.T().Skip(consensusMinMsg)
 	}
 
-	s.StopNode(s.fixture().bootstrapNodes[0])
-
+	s.fixture().bootstrapNodes[0].serviceNetwork.Stop(context.Background())
 	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
 	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount()-1, len(activeNodes))

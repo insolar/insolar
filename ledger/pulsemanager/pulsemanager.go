@@ -23,6 +23,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar"
 	"github.com/insolar/insolar/ledger/storage/nodes"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
@@ -571,7 +572,12 @@ func (m *PulseManager) setUnderGilSection(
 			m.PulseStorage.Unlock()
 			return nil, nil, nil, nil, errors.Wrap(err, "call of AddPulse failed")
 		}
-		err = m.NodeSetter.Set(newPulse.PulseNumber, m.NodeNet.GetWorkingNodes())
+		fromNetwork := m.NodeNet.GetWorkingNodes()
+		toSet := make([]insolar.Node, 0, len(fromNetwork))
+		for _, node := range fromNetwork {
+			toSet = append(toSet, insolar.Node{ID: node.ID(), Role: node.Role()})
+		}
+		err = m.NodeSetter.Set(newPulse.PulseNumber, toSet)
 		if err != nil {
 			m.PulseStorage.Unlock()
 			return nil, nil, nil, nil, errors.Wrap(err, "call of SetActiveNodes failed")
@@ -733,7 +739,8 @@ func (m *PulseManager) Start(ctx context.Context) error {
 		return err
 	}
 
-	err = m.NodeSetter.Set(core.FirstPulseNumber, []core.Node{m.NodeNet.GetOrigin()})
+	origin := m.NodeNet.GetOrigin()
+	err = m.NodeSetter.Set(core.FirstPulseNumber, []insolar.Node{{ID: origin.ID(), Role: origin.Role()}})
 	if err != nil && err != storage.ErrOverride {
 		return err
 	}

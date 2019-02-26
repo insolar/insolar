@@ -15,56 +15,46 @@
  *
  */
 
-package rules
+package resolver
 
 import (
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/utils"
+	"net"
+	"testing"
+
+	"github.com/stretchr/testify/suite"
 )
 
-// NewRules creates network Rules component
-func NewRules() network.Rules {
-	return &rules{}
+type FixedAddressResolverSuite struct {
+	suite.Suite
 }
 
-type rules struct {
-	CertificateManager core.CertificateManager `inject:""`
-	NodeKeeper         network.NodeKeeper      `inject:""`
+func (s *FixedAddressResolverSuite) TestSuccess() {
+	localAddress := "127.0.0.1:12345"
+	externalAddress := "192.168.0.1"
+
+	conn := &MocktConn{}
+	conn.On("LocalAddr").Return(net.ResolveTCPAddr("tcp", localAddress))
+
+	r := NewFixedAddressResolver(externalAddress)
+	s.Require().IsType(&fixedAddressResolver{}, r)
+	realAddress, err := r.Resolve(conn)
+	s.NoError(err)
+	s.Equal("192.168.0.1:12345", realAddress)
 }
 
-// CheckMajorityRule returns true id MajorityRule check passed, also returns active discovery nodes count
-func (r *rules) CheckMajorityRule() (bool, int) {
-	// activeNodes []core.Node
-	cert := r.CertificateManager.GetCertificate()
-	majorityRule := cert.GetMajorityRule()
-	activeDiscoveryNodesLen := len(utils.FindDiscoveriesInNodeList(r.NodeKeeper.GetActiveNodes(), cert))
-	return activeDiscoveryNodesLen >= majorityRule, activeDiscoveryNodesLen
+func (s *FixedAddressResolverSuite) TestFailure_EmptyPort() {
+	localAddress := "empty_port"
+	externalAddress := "192.168.0.1"
+
+	conn := &MocktConn{}
+	conn.On("LocalAddr").Return(net.ResolveTCPAddr("tcp", localAddress))
+
+	r := NewFixedAddressResolver(externalAddress)
+	s.Require().IsType(&fixedAddressResolver{}, r)
+	_, err := r.Resolve(conn)
+	s.Error(err)
 }
 
-// CheckMinRole returns true if MinRole check passed
-func (r *rules) CheckMinRole() bool {
-	cert := r.CertificateManager.GetCertificate()
-
-	nodes := r.NodeKeeper.GetActiveNodes()
-
-	var virtualCount, heavyCount, lightCount uint
-	for _, n := range nodes {
-		switch n.Role() {
-		case core.StaticRoleVirtual:
-			virtualCount++
-		case core.StaticRoleHeavyMaterial:
-			heavyCount++
-		case core.StaticRoleLightMaterial:
-			lightCount++
-		default:
-			log.Warn("unknown node role")
-		}
-	}
-
-	v, h, l := cert.GetMinRoles()
-	return virtualCount >= v &&
-		heavyCount >= h &&
-		lightCount >= l
+func TestFixedAddressResolver(t *testing.T) {
+	suite.Run(t, new(FixedAddressResolverSuite))
 }

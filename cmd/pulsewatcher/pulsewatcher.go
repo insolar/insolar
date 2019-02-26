@@ -109,7 +109,7 @@ func main() {
 					strings.NewReader(`{"jsonrpc": "2.0", "method": "status.Get", "id": 0}`))
 				if err != nil {
 					lock.Lock()
-					results[i] = []string{url, "", "", "", "", "", "", "", "", err.Error()}
+					results[i] = []string{url, "", "", "", "", "", "", "", err.Error()}
 					errored++
 					lock.Unlock()
 					wg.Done()
@@ -131,7 +131,6 @@ func main() {
 						}
 						ActiveListSize  int
 						WorkingListSize int
-						IsDiscovery     bool
 					}
 				}
 				err = json.Unmarshal(data, &out)
@@ -142,7 +141,6 @@ func main() {
 				lock.Lock()
 				results[i] = []string{
 					url,
-					fmt.Sprintf("%v", out.Result.IsDiscovery),
 					out.Result.NetworkState,
 					out.Result.NodeState,
 					out.Result.AdditionalNodeState,
@@ -152,11 +150,7 @@ func main() {
 					out.Result.Origin.Role,
 					"",
 				}
-
-				if out.Result.IsDiscovery {
-					state = state && out.Result.NetworkState == core.CompleteNetworkState.String() && out.Result.NodeState == core.ReadyNodeNetworkState.String()
-				}
-
+				state = state && out.Result.NetworkState == core.CompleteNetworkState.String() && out.Result.NodeState == core.ReadyNodeNetworkState.String()
 				lock.Unlock()
 				wg.Done()
 			}(url, i)
@@ -166,7 +160,6 @@ func main() {
 		table := tablewriter.NewWriter(buffer)
 		table.SetHeader([]string{
 			"URL",
-			"Discovery",
 			"Network State",
 			"Node State",
 			"Additional Node State",
@@ -192,12 +185,11 @@ func main() {
 		}
 
 		table.SetFooter([]string{
-			"", "", "", "", "", "",
+			"", "", "", "", "",
 			"Insolar State", stateString,
 			"Time", time.Now().Format(time.RFC3339),
 		})
 		table.SetFooterColor(
-			tablewriter.Colors{},
 			tablewriter.Colors{},
 			tablewriter.Colors{},
 			tablewriter.Colors{},

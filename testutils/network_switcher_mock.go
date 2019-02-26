@@ -29,11 +29,6 @@ type NetworkSwitcherMock struct {
 	OnPulseCounter    uint64
 	OnPulsePreCounter uint64
 	OnPulseMock       mNetworkSwitcherMockOnPulse
-
-	WasInCompleteStateFunc       func() (r bool)
-	WasInCompleteStateCounter    uint64
-	WasInCompleteStatePreCounter uint64
-	WasInCompleteStateMock       mNetworkSwitcherMockWasInCompleteState
 }
 
 //NewNetworkSwitcherMock returns a mock for github.com/insolar/insolar/core.NetworkSwitcher
@@ -46,7 +41,6 @@ func NewNetworkSwitcherMock(t minimock.Tester) *NetworkSwitcherMock {
 
 	m.GetStateMock = mNetworkSwitcherMockGetState{mock: m}
 	m.OnPulseMock = mNetworkSwitcherMockOnPulse{mock: m}
-	m.WasInCompleteStateMock = mNetworkSwitcherMockWasInCompleteState{mock: m}
 
 	return m
 }
@@ -333,140 +327,6 @@ func (m *NetworkSwitcherMock) OnPulseFinished() bool {
 	return true
 }
 
-type mNetworkSwitcherMockWasInCompleteState struct {
-	mock              *NetworkSwitcherMock
-	mainExpectation   *NetworkSwitcherMockWasInCompleteStateExpectation
-	expectationSeries []*NetworkSwitcherMockWasInCompleteStateExpectation
-}
-
-type NetworkSwitcherMockWasInCompleteStateExpectation struct {
-	result *NetworkSwitcherMockWasInCompleteStateResult
-}
-
-type NetworkSwitcherMockWasInCompleteStateResult struct {
-	r bool
-}
-
-//Expect specifies that invocation of NetworkSwitcher.WasInCompleteState is expected from 1 to Infinity times
-func (m *mNetworkSwitcherMockWasInCompleteState) Expect() *mNetworkSwitcherMockWasInCompleteState {
-	m.mock.WasInCompleteStateFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &NetworkSwitcherMockWasInCompleteStateExpectation{}
-	}
-
-	return m
-}
-
-//Return specifies results of invocation of NetworkSwitcher.WasInCompleteState
-func (m *mNetworkSwitcherMockWasInCompleteState) Return(r bool) *NetworkSwitcherMock {
-	m.mock.WasInCompleteStateFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &NetworkSwitcherMockWasInCompleteStateExpectation{}
-	}
-	m.mainExpectation.result = &NetworkSwitcherMockWasInCompleteStateResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of NetworkSwitcher.WasInCompleteState is expected once
-func (m *mNetworkSwitcherMockWasInCompleteState) ExpectOnce() *NetworkSwitcherMockWasInCompleteStateExpectation {
-	m.mock.WasInCompleteStateFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &NetworkSwitcherMockWasInCompleteStateExpectation{}
-
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *NetworkSwitcherMockWasInCompleteStateExpectation) Return(r bool) {
-	e.result = &NetworkSwitcherMockWasInCompleteStateResult{r}
-}
-
-//Set uses given function f as a mock of NetworkSwitcher.WasInCompleteState method
-func (m *mNetworkSwitcherMockWasInCompleteState) Set(f func() (r bool)) *NetworkSwitcherMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.WasInCompleteStateFunc = f
-	return m.mock
-}
-
-//WasInCompleteState implements github.com/insolar/insolar/core.NetworkSwitcher interface
-func (m *NetworkSwitcherMock) WasInCompleteState() (r bool) {
-	counter := atomic.AddUint64(&m.WasInCompleteStatePreCounter, 1)
-	defer atomic.AddUint64(&m.WasInCompleteStateCounter, 1)
-
-	if len(m.WasInCompleteStateMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.WasInCompleteStateMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to NetworkSwitcherMock.WasInCompleteState.")
-			return
-		}
-
-		result := m.WasInCompleteStateMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the NetworkSwitcherMock.WasInCompleteState")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.WasInCompleteStateMock.mainExpectation != nil {
-
-		result := m.WasInCompleteStateMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the NetworkSwitcherMock.WasInCompleteState")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.WasInCompleteStateFunc == nil {
-		m.t.Fatalf("Unexpected call to NetworkSwitcherMock.WasInCompleteState.")
-		return
-	}
-
-	return m.WasInCompleteStateFunc()
-}
-
-//WasInCompleteStateMinimockCounter returns a count of NetworkSwitcherMock.WasInCompleteStateFunc invocations
-func (m *NetworkSwitcherMock) WasInCompleteStateMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.WasInCompleteStateCounter)
-}
-
-//WasInCompleteStateMinimockPreCounter returns the value of NetworkSwitcherMock.WasInCompleteState invocations
-func (m *NetworkSwitcherMock) WasInCompleteStateMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.WasInCompleteStatePreCounter)
-}
-
-//WasInCompleteStateFinished returns true if mock invocations count is ok
-func (m *NetworkSwitcherMock) WasInCompleteStateFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.WasInCompleteStateMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.WasInCompleteStateCounter) == uint64(len(m.WasInCompleteStateMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.WasInCompleteStateMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.WasInCompleteStateCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.WasInCompleteStateFunc != nil {
-		return atomic.LoadUint64(&m.WasInCompleteStateCounter) > 0
-	}
-
-	return true
-}
-
 //ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *NetworkSwitcherMock) ValidateCallCounters() {
@@ -477,10 +337,6 @@ func (m *NetworkSwitcherMock) ValidateCallCounters() {
 
 	if !m.OnPulseFinished() {
 		m.t.Fatal("Expected call to NetworkSwitcherMock.OnPulse")
-	}
-
-	if !m.WasInCompleteStateFinished() {
-		m.t.Fatal("Expected call to NetworkSwitcherMock.WasInCompleteState")
 	}
 
 }
@@ -508,10 +364,6 @@ func (m *NetworkSwitcherMock) MinimockFinish() {
 		m.t.Fatal("Expected call to NetworkSwitcherMock.OnPulse")
 	}
 
-	if !m.WasInCompleteStateFinished() {
-		m.t.Fatal("Expected call to NetworkSwitcherMock.WasInCompleteState")
-	}
-
 }
 
 //Wait waits for all mocked methods to be called at least once
@@ -528,7 +380,6 @@ func (m *NetworkSwitcherMock) MinimockWait(timeout time.Duration) {
 		ok := true
 		ok = ok && m.GetStateFinished()
 		ok = ok && m.OnPulseFinished()
-		ok = ok && m.WasInCompleteStateFinished()
 
 		if ok {
 			return
@@ -543,10 +394,6 @@ func (m *NetworkSwitcherMock) MinimockWait(timeout time.Duration) {
 
 			if !m.OnPulseFinished() {
 				m.t.Error("Expected call to NetworkSwitcherMock.OnPulse")
-			}
-
-			if !m.WasInCompleteStateFinished() {
-				m.t.Error("Expected call to NetworkSwitcherMock.WasInCompleteState")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)
@@ -566,10 +413,6 @@ func (m *NetworkSwitcherMock) AllMocksCalled() bool {
 	}
 
 	if !m.OnPulseFinished() {
-		return false
-	}
-
-	if !m.WasInCompleteStateFinished() {
 		return false
 	}
 
