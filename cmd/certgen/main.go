@@ -39,7 +39,7 @@ var ks = platformpolicy.NewKeyProcessor()
 var (
 	role        string
 	api         string
-	keysFileOut string
+	keysFile    string
 	certFileOut string
 	rootConfig  string
 	verbose     bool
@@ -51,7 +51,7 @@ func parseInputParams() {
 	pflag.StringVarP(&api, "url", "h", defaultURL, "Insolar API URL")
 	pflag.BoolVarP(&verbose, "verbose", "v", false, "Be verbose (default false)")
 	pflag.BoolVarP(&reuseKeys, "reuse-keys", "u", false, "Read keys from file instead og generating of new ones")
-	pflag.StringVarP(&keysFileOut, "keys-file", "k", "keys.json", "The OUT/IN ( depends on 'reuse-keys' ) file for public/private keys of the node")
+	pflag.StringVarP(&keysFile, "keys-file", "k", "keys.json", "The OUT/IN ( depends on 'reuse-keys' ) file for public/private keys of the node")
 	pflag.StringVarP(&certFileOut, "cert-file", "c", "cert.json", "The OUT file the node certificate")
 	pflag.StringVarP(&rootConfig, "root-conf", "t", "", "Config that contains public/private keys of root member")
 	pflag.Parse()
@@ -66,7 +66,7 @@ func generateKeys() (crypto.PublicKey, crypto.PrivateKey) {
 }
 
 func loadKeys() (crypto.PublicKey, crypto.PrivateKey) {
-	keyStore, err := keystore.NewKeyStore(keysFileOut)
+	keyStore, err := keystore.NewKeyStore(keysFile)
 	checkError("Failed to laod keys", err)
 
 	privKey, err := keyStore.GetPrivateKey("")
@@ -162,7 +162,7 @@ func writeKeys(pubKey crypto.PublicKey, privKey crypto.PrivateKey) {
 		"public_key":  string(pubKeyStr),
 	}, "", "    ")
 	checkError("Failed to serialize file with private/public keys:", err)
-	f, err := openFile(keysFileOut)
+	f, err := openFile(keysFile)
 	checkError("Failed to open file with private/public keys:", err)
 	_, err = f.Write([]byte(result))
 	checkError("Failed to write file with private/public keys:", err)
