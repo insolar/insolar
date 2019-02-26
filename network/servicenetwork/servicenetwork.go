@@ -121,14 +121,19 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		return errors.Wrap(err, "Failed to create internal transport")
 	}
 
-	// workaround for Consensus transport, port+=1 of default transport
-	n.cfg.Host.Transport.Address, err = incrementPort(n.cfg.Host.Transport.Address)
-	if err != nil {
-		return errors.Wrap(err, "failed to increment port.")
+	var consensusAddress string
+	if n.cfg.Host.Transport.FixedPublicAddress != "" {
+		// workaround for Consensus transport, port+=1 of default transport
+		consensusAddress, err = incrementPort(n.cfg.Host.Transport.Address)
+		if err != nil {
+			return errors.Wrap(err, "failed to increment port.")
+		}
+	} else {
+		consensusAddress = n.NodeKeeper.GetOrigin().ConsensusAddress()
 	}
 
 	consensusNetwork, err := hostnetwork.NewConsensusNetwork(
-		n.NodeKeeper.GetOrigin().ConsensusAddress(),
+		consensusAddress,
 		n.CertificateManager.GetCertificate().GetNodeRef().String(),
 		n.NodeKeeper.GetOrigin().ShortID(),
 		n.routingTable,
