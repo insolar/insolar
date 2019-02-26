@@ -21,9 +21,9 @@ import (
 	"crypto/rand"
 	"fmt"
 	"hash"
+	"math/big"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/utils"
 	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/satori/go.uuid"
 	"golang.org/x/crypto/sha3"
@@ -60,8 +60,13 @@ func RandomID() core.RecordID {
 
 // RandomJet generates random jet with random depth.
 func RandomJet() core.RecordID {
-	n := utils.RandomInt(128)
-	depth := uint8(n)
+	// don't be too huge (i.e. 255)
+	n, err := rand.Int(rand.Reader, big.NewInt(128))
+	if err != nil {
+		panic(err)
+	}
+
+	depth := uint8(n.Int64())
 	return RandomJetWithDepth(depth)
 }
 

@@ -16,21 +16,16 @@
 
 package core
 
-import (
-	"fmt"
-)
-
 // TerminationHandler handles such node events as graceful stop, abort, etc.
-//go:generate minimock -i github.com/insolar/insolar/core.TerminationHandler -o ../testutils -s _mock.go
 type TerminationHandler interface {
 	// Abort forces to stop all node components
-	Abort(reason string)
+	Abort()
 }
 
 type terminationHandler struct{}
 
-func (terminationHandler) Abort(reason string) {
-	panic(fmt.Sprintf("Node leave acknowledged by network. Goodbye! Reason: %s", reason))
+func (terminationHandler) Abort() {
+	panic("Node leave acknowledged by network. Goodbye!")
 }
 
 func NewTerminationHandler() TerminationHandler {
