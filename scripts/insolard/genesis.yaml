@@ -105,7 +105,7 @@ discovery_nodes:
 #    role: "light_material"
 #    cert_name: "discovery_cert_23.json"
 
-nodes:
+#nodes:
 #  -
 #    host: "127.0.0.1:63836"
 #    role: "virtual"

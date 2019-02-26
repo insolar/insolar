@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
+	insolar "github.com/insolar/insolar"
 	core "github.com/insolar/insolar/core"
 
 	testify_assert "github.com/stretchr/testify/assert"
@@ -24,7 +25,7 @@ type SetterMock struct {
 	DeletePreCounter uint64
 	DeleteMock       mSetterMockDelete
 
-	SetFunc       func(p core.PulseNumber, p1 []core.Node) (r error)
+	SetFunc       func(p core.PulseNumber, p1 []insolar.Node) (r error)
 	SetCounter    uint64
 	SetPreCounter uint64
 	SetMock       mSetterMockSet
@@ -180,7 +181,7 @@ type SetterMockSetExpectation struct {
 
 type SetterMockSetInput struct {
 	p  core.PulseNumber
-	p1 []core.Node
+	p1 []insolar.Node
 }
 
 type SetterMockSetResult struct {
@@ -188,7 +189,7 @@ type SetterMockSetResult struct {
 }
 
 //Expect specifies that invocation of Setter.Set is expected from 1 to Infinity times
-func (m *mSetterMockSet) Expect(p core.PulseNumber, p1 []core.Node) *mSetterMockSet {
+func (m *mSetterMockSet) Expect(p core.PulseNumber, p1 []insolar.Node) *mSetterMockSet {
 	m.mock.SetFunc = nil
 	m.expectationSeries = nil
 
@@ -212,7 +213,7 @@ func (m *mSetterMockSet) Return(r error) *SetterMock {
 }
 
 //ExpectOnce specifies that invocation of Setter.Set is expected once
-func (m *mSetterMockSet) ExpectOnce(p core.PulseNumber, p1 []core.Node) *SetterMockSetExpectation {
+func (m *mSetterMockSet) ExpectOnce(p core.PulseNumber, p1 []insolar.Node) *SetterMockSetExpectation {
 	m.mock.SetFunc = nil
 	m.mainExpectation = nil
 
@@ -227,7 +228,7 @@ func (e *SetterMockSetExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of Setter.Set method
-func (m *mSetterMockSet) Set(f func(p core.PulseNumber, p1 []core.Node) (r error)) *SetterMock {
+func (m *mSetterMockSet) Set(f func(p core.PulseNumber, p1 []insolar.Node) (r error)) *SetterMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -236,7 +237,7 @@ func (m *mSetterMockSet) Set(f func(p core.PulseNumber, p1 []core.Node) (r error
 }
 
 //Set implements github.com/insolar/insolar/ledger/storage/nodes.Setter interface
-func (m *SetterMock) Set(p core.PulseNumber, p1 []core.Node) (r error) {
+func (m *SetterMock) Set(p core.PulseNumber, p1 []insolar.Node) (r error) {
 	counter := atomic.AddUint64(&m.SetPreCounter, 1)
 	defer atomic.AddUint64(&m.SetCounter, 1)
 

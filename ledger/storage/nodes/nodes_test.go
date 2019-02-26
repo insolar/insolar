@@ -19,128 +19,160 @@ package nodes
 import (
 	"testing"
 
+	"github.com/google/gofuzz"
+	"github.com/insolar/insolar"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/require"
+	"github.com/insolar/insolar/gen"
+	"github.com/insolar/insolar/ledger/storage"
+	"github.com/stretchr/testify/assert"
 )
 
-func TestNodeStorage_Set(t *testing.T) {
+func TestNodeStorage_All(t *testing.T) {
 	t.Parallel()
-	firstNode := Node{FID: testutils.RandomRef()}
-	secondNode := Node{FID: testutils.RandomRef()}
-	nodeStorage := Storage{
-		nodes: map[core.PulseNumber][]Node{},
-	}
-	err := nodeStorage.Set(1, []core.Node{firstNode, secondNode})
 
-	require.NoError(t, err)
-	require.Equal(t, 1, len(nodeStorage.nodes))
-	require.Equal(t, firstNode, nodeStorage.nodes[1][0])
-	require.Equal(t, secondNode, nodeStorage.nodes[1][1])
+	var all []insolar.Node
+	f := fuzz.New().Funcs(func(e *insolar.Node, c fuzz.Continue) {
+		e.ID = gen.Reference()
+	})
+	f.NumElements(5, 10).NilChance(0).Fuzz(&all)
+	pulse := gen.PulseNumber()
+
+	t.Run("returns correct nodes", func(t *testing.T) {
+		nodeStorage := NewStorage()
+		nodeStorage.nodes[pulse] = all
+		result, err := nodeStorage.All(pulse)
+		assert.NoError(t, err)
+		assert.Equal(t, all, result)
+	})
+
+	t.Run("returns nil when empty nodes", func(t *testing.T) {
+		nodeStorage := NewStorage()
+		nodeStorage.nodes[pulse] = nil
+		result, err := nodeStorage.All(pulse)
+		assert.NoError(t, err)
+		assert.Nil(t, result)
+	})
+
+	t.Run("returns error when no nodes", func(t *testing.T) {
+		nodeStorage := NewStorage()
+		result, err := nodeStorage.All(pulse)
+		assert.Equal(t, core.ErrNoNodes, err)
+		assert.Nil(t, result)
+	})
 }
 
-func TestNodeStorage_Set_OverrideError(t *testing.T) {
+func TestNodeStorage_InRole(t *testing.T) {
 	t.Parallel()
-	firstNode := Node{FID: testutils.RandomRef()}
-	secondNode := Node{FID: testutils.RandomRef()}
-	nodeStorage := Storage{
-		nodes: map[core.PulseNumber][]Node{},
+
+	var (
+		virtuals  []insolar.Node
+		materials []insolar.Node
+		all       []insolar.Node
+	)
+	{
+		f := fuzz.New().Funcs(func(e *insolar.Node, c fuzz.Continue) {
+			e.ID = gen.Reference()
+			e.Role = core.StaticRoleVirtual
+		})
+		f.NumElements(5, 10).NilChance(0).Fuzz(&virtuals)
 	}
+	{
+		f := fuzz.New().Funcs(func(e *insolar.Node, c fuzz.Continue) {
+			e.ID = gen.Reference()
+			e.Role = core.StaticRoleLightMaterial
+		})
+		f.NumElements(5, 10).NilChance(0).Fuzz(&materials)
+	}
+	all = append(virtuals, materials...)
+	pulse := gen.PulseNumber()
 
-	err := nodeStorage.Set(1, []core.Node{firstNode, secondNode})
-	require.NoError(t, err)
-	err = nodeStorage.Set(1, []core.Node{firstNode, secondNode})
-	require.Error(t, err)
+	t.Run("returns correct nodes", func(t *testing.T) {
+		nodeStorage := NewStorage()
+		nodeStorage.nodes[pulse] = all
+		{
+			result, err := nodeStorage.InRole(pulse, core.StaticRoleVirtual)
+			assert.NoError(t, err)
+			assert.Equal(t, virtuals, result)
+		}
+		{
+			result, err := nodeStorage.InRole(pulse, core.StaticRoleLightMaterial)
+			assert.NoError(t, err)
+			assert.Equal(t, materials, result)
+		}
+	})
 
-	require.Equal(t, 1, len(nodeStorage.nodes))
-	require.Equal(t, firstNode, nodeStorage.nodes[1][0])
-	require.Equal(t, secondNode, nodeStorage.nodes[1][1])
+	t.Run("returns nil when empty nodes", func(t *testing.T) {
+		nodeStorage := NewStorage()
+		nodeStorage.nodes[pulse] = nil
+		result, err := nodeStorage.InRole(pulse, core.StaticRoleVirtual)
+		assert.NoError(t, err)
+		assert.Nil(t, result)
+	})
+
+	t.Run("returns error when no nodes", func(t *testing.T) {
+		nodeStorage := NewStorage()
+		result, err := nodeStorage.InRole(pulse, core.StaticRoleVirtual)
+		assert.Equal(t, core.ErrNoNodes, err)
+		assert.Nil(t, result)
+	})
 }
 
-func TestNodeStorage_GetActiveNodes(t *testing.T) {
+func TestStorage_Set(t *testing.T) {
 	t.Parallel()
-	firstNode := Node{FID: testutils.RandomRef()}
-	secondNode := Node{FID: testutils.RandomRef()}
-	nodeStorage := Storage{
-		nodes: map[core.PulseNumber][]Node{
-			1: {firstNode, secondNode},
-		},
-	}
 
-	result, err := nodeStorage.All(1)
+	var nodes []insolar.Node
+	f := fuzz.New().Funcs(func(e *insolar.Node, c fuzz.Continue) {
+		e.ID = gen.Reference()
+	})
+	f.NumElements(5, 10).NilChance(0).Fuzz(&nodes)
+	pulse := gen.PulseNumber()
 
-	require.NoError(t, err)
-	require.Equal(t, 2, len(result))
-	require.Equal(t, firstNode, result[0])
-	require.Equal(t, secondNode, result[1])
+	t.Run("saves correct nodes", func(t *testing.T) {
+		nodeStorage := NewStorage()
+		err := nodeStorage.Set(pulse, nodes)
+		assert.NoError(t, err)
+		assert.Equal(t, nodes, nodeStorage.nodes[pulse])
+	})
+
+	t.Run("saves nil if empty nodes", func(t *testing.T) {
+		nodeStorage := NewStorage()
+		err := nodeStorage.Set(pulse, []insolar.Node{})
+		assert.NoError(t, err)
+		assert.Nil(t, nodeStorage.nodes[pulse])
+	})
+
+	t.Run("returns error when saving with the same pulse", func(t *testing.T) {
+		nodeStorage := NewStorage()
+		_ = nodeStorage.Set(pulse, nodes)
+		err := nodeStorage.Set(pulse, nodes)
+		assert.Equal(t, storage.ErrOverride, err)
+		assert.Equal(t, nodes, nodeStorage.nodes[pulse])
+	})
 }
 
-func TestNodeStorage_GetActiveNodes_FailsWhenNoNodes(t *testing.T) {
+func TestNewStorage_Delete(t *testing.T) {
 	t.Parallel()
 
-	nodeStorage := Storage{
-		nodes: map[core.PulseNumber][]Node{},
-	}
+	var nodes []insolar.Node
+	f := fuzz.New().Funcs(func(e *insolar.Node, c fuzz.Continue) {
+		e.ID = gen.Reference()
+	})
+	f.NumElements(5, 10).NilChance(0).Fuzz(&nodes)
+	pulse := gen.PulseNumber()
+	nodeStorage := NewStorage()
+	nodeStorage.nodes[pulse] = nodes
 
-	result, err := nodeStorage.All(1)
-
-	require.Error(t, err)
-	require.Nil(t, result)
-}
-
-func TestNodeStorage_GetActiveNodesByRole(t *testing.T) {
-	t.Parallel()
-	nodeWithouRole := Node{}
-	light := Node{FID: testutils.RandomRef(), FRole: core.StaticRoleLightMaterial}
-	heavy := Node{FID: testutils.RandomRef(), FRole: core.StaticRoleHeavyMaterial}
-	nodeStorage := Storage{
-		nodes: map[core.PulseNumber][]Node{
-			1: {nodeWithouRole, light, heavy},
-		},
-	}
-
-	lightResult, err := nodeStorage.InRole(1, core.StaticRoleLightMaterial)
-	require.NoError(t, err)
-	heavyResult, err := nodeStorage.InRole(1, core.StaticRoleHeavyMaterial)
-	require.NoError(t, err)
-
-	require.Equal(t, 1, len(lightResult))
-	require.Equal(t, light, lightResult[0])
-	require.Equal(t, 1, len(heavyResult))
-	require.Equal(t, heavy, heavyResult[0])
-}
-
-func TestNodeStorage_GetActiveNodesByRole_FailsWhenNoNode(t *testing.T) {
-	t.Parallel()
-	nodeStorage := Storage{
-		nodes: map[core.PulseNumber][]Node{},
-	}
-
-	result, err := nodeStorage.InRole(1, core.StaticRoleLightMaterial)
-
-	require.Error(t, err)
-	require.Nil(t, result)
-}
-
-func TestNodeStorage_RemoveActiveNodesUntil(t *testing.T) {
-	t.Parallel()
-	nodeStorage := Storage{
-		nodes: map[core.PulseNumber][]Node{
-			1:   {},
-			2:   {},
-			222: {},
-			555: {},
-			5:   {},
-		},
-	}
-
-	nodeStorage.Delete(1)
-	nodeStorage.Delete(2)
-	nodeStorage.Delete(5)
-
-	require.Equal(t, 2, len(nodeStorage.nodes))
-	_, ok := nodeStorage.nodes[222]
-	require.Equal(t, true, ok)
-	_, ok = nodeStorage.nodes[555]
-	require.Equal(t, true, ok)
+	t.Run("removes nodes for pulse", func(t *testing.T) {
+		{
+			result, err := nodeStorage.All(pulse)
+			assert.NoError(t, err)
+			assert.Equal(t, nodes, result)
+		}
+		{
+			nodeStorage.Delete(pulse)
+			result, err := nodeStorage.All(pulse)
+			assert.Equal(t, core.ErrNoNodes, err)
+			assert.Nil(t, result)
+		}
+	})
 }

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
+	insolar "github.com/insolar/insolar"
 	core "github.com/insolar/insolar/core"
 
 	testify_assert "github.com/stretchr/testify/assert"
@@ -19,12 +20,12 @@ import (
 type AccessorMock struct {
 	t minimock.Tester
 
-	AllFunc       func(p core.PulseNumber) (r []core.Node, r1 error)
+	AllFunc       func(p core.PulseNumber) (r []insolar.Node, r1 error)
 	AllCounter    uint64
 	AllPreCounter uint64
 	AllMock       mAccessorMockAll
 
-	InRoleFunc       func(p core.PulseNumber, p1 core.StaticRole) (r []core.Node, r1 error)
+	InRoleFunc       func(p core.PulseNumber, p1 core.StaticRole) (r []insolar.Node, r1 error)
 	InRoleCounter    uint64
 	InRolePreCounter uint64
 	InRoleMock       mAccessorMockInRole
@@ -60,7 +61,7 @@ type AccessorMockAllInput struct {
 }
 
 type AccessorMockAllResult struct {
-	r  []core.Node
+	r  []insolar.Node
 	r1 error
 }
 
@@ -77,7 +78,7 @@ func (m *mAccessorMockAll) Expect(p core.PulseNumber) *mAccessorMockAll {
 }
 
 //Return specifies results of invocation of Accessor.All
-func (m *mAccessorMockAll) Return(r []core.Node, r1 error) *AccessorMock {
+func (m *mAccessorMockAll) Return(r []insolar.Node, r1 error) *AccessorMock {
 	m.mock.AllFunc = nil
 	m.expectationSeries = nil
 
@@ -99,12 +100,12 @@ func (m *mAccessorMockAll) ExpectOnce(p core.PulseNumber) *AccessorMockAllExpect
 	return expectation
 }
 
-func (e *AccessorMockAllExpectation) Return(r []core.Node, r1 error) {
+func (e *AccessorMockAllExpectation) Return(r []insolar.Node, r1 error) {
 	e.result = &AccessorMockAllResult{r, r1}
 }
 
 //Set uses given function f as a mock of Accessor.All method
-func (m *mAccessorMockAll) Set(f func(p core.PulseNumber) (r []core.Node, r1 error)) *AccessorMock {
+func (m *mAccessorMockAll) Set(f func(p core.PulseNumber) (r []insolar.Node, r1 error)) *AccessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -113,7 +114,7 @@ func (m *mAccessorMockAll) Set(f func(p core.PulseNumber) (r []core.Node, r1 err
 }
 
 //All implements github.com/insolar/insolar/ledger/storage/nodes.Accessor interface
-func (m *AccessorMock) All(p core.PulseNumber) (r []core.Node, r1 error) {
+func (m *AccessorMock) All(p core.PulseNumber) (r []insolar.Node, r1 error) {
 	counter := atomic.AddUint64(&m.AllPreCounter, 1)
 	defer atomic.AddUint64(&m.AllCounter, 1)
 
@@ -211,7 +212,7 @@ type AccessorMockInRoleInput struct {
 }
 
 type AccessorMockInRoleResult struct {
-	r  []core.Node
+	r  []insolar.Node
 	r1 error
 }
 
@@ -228,7 +229,7 @@ func (m *mAccessorMockInRole) Expect(p core.PulseNumber, p1 core.StaticRole) *mA
 }
 
 //Return specifies results of invocation of Accessor.InRole
-func (m *mAccessorMockInRole) Return(r []core.Node, r1 error) *AccessorMock {
+func (m *mAccessorMockInRole) Return(r []insolar.Node, r1 error) *AccessorMock {
 	m.mock.InRoleFunc = nil
 	m.expectationSeries = nil
 
@@ -250,12 +251,12 @@ func (m *mAccessorMockInRole) ExpectOnce(p core.PulseNumber, p1 core.StaticRole)
 	return expectation
 }
 
-func (e *AccessorMockInRoleExpectation) Return(r []core.Node, r1 error) {
+func (e *AccessorMockInRoleExpectation) Return(r []insolar.Node, r1 error) {
 	e.result = &AccessorMockInRoleResult{r, r1}
 }
 
 //Set uses given function f as a mock of Accessor.InRole method
-func (m *mAccessorMockInRole) Set(f func(p core.PulseNumber, p1 core.StaticRole) (r []core.Node, r1 error)) *AccessorMock {
+func (m *mAccessorMockInRole) Set(f func(p core.PulseNumber, p1 core.StaticRole) (r []insolar.Node, r1 error)) *AccessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -264,7 +265,7 @@ func (m *mAccessorMockInRole) Set(f func(p core.PulseNumber, p1 core.StaticRole)
 }
 
 //InRole implements github.com/insolar/insolar/ledger/storage/nodes.Accessor interface
-func (m *AccessorMock) InRole(p core.PulseNumber, p1 core.StaticRole) (r []core.Node, r1 error) {
+func (m *AccessorMock) InRole(p core.PulseNumber, p1 core.StaticRole) (r []insolar.Node, r1 error) {
 	counter := atomic.AddUint64(&m.InRolePreCounter, 1)
 	defer atomic.AddUint64(&m.InRoleCounter, 1)
 

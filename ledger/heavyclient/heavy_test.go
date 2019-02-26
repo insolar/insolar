@@ -193,11 +193,6 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 	}
 	cryptoScheme := testutils.NewPlatformCryptographyScheme()
 
-	// Mock N10: ArtifactManagerMessageHandler
-	artifactManagerMessageHandlerMock := testutils.NewArtifactManagerMessageHandlerMock(s.T())
-	artifactManagerMessageHandlerMock.ResetEarlyRequestCircuitBreakerMock.Return()
-	artifactManagerMessageHandlerMock.CloseEarlyRequestCircuitBreakerForJetMock.Return()
-
 	// mock bus.Mock method, store synced records, and calls count with HeavyRecord
 	var statMutex sync.Mutex
 	var synckeys []key
