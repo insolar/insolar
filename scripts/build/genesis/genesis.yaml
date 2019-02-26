@@ -1,0 +1,118 @@
+root_keys_file: "keys/root_member.key.json"
+node_keys_dir: "keys"
+discovery_keys_dir: "keys"
+keys_name_format: "/node_%02d.json"
+reuse_keys: false
+root_balance: 1000000000
+majority_rule: 0
+min_roles:
+  virtual:  1
+  heavy_material: 1
+  light_material: 1
+pulsar_public_keys:
+  - "pulsar_public_key"
+discovery_nodes:
+  -
+    host: "127.0.0.1:13831"
+    role: "heavy_material"
+    cert_name: "discovery_cert_1.json"
+  -
+    host: "127.0.0.1:23832"
+    role: "virtual"
+    cert_name: "discovery_cert_2.json"
+  -
+    host: "127.0.0.1:33833"
+    role: "light_material"
+    cert_name: "discovery_cert_3.json"
+  -
+    host: "127.0.0.1:43834"
+    role: "virtual"
+    cert_name: "discovery_cert_4.json"
+  -
+    host: "127.0.0.1:53835"
+    role: "light_material"
+    cert_name: "discovery_cert_5.json"
+#  -
+#    host: "127.0.0.1:53866"
+#    role: "virtual"
+#    cert_name: "discovery_cert_6.json"
+#  -
+#    host: "127.0.0.1:53877"
+#    role: "light_material"
+#    cert_name: "discovery_cert_7.json"
+#  -
+#    host: "127.0.0.1:53888"
+#    role: "virtual"
+#    cert_name: "discovery_cert_8.json"
+#  -
+#    host: "127.0.0.1:53899"
+#    role: "light_material"
+#    cert_name: "discovery_cert_9.json"
+#  -
+#    host: "127.0.0.1:53100"
+#    role: "virtual"
+#    cert_name: "discovery_cert_10.json"
+#  -
+#    host: "127.0.0.1:51101"
+#    role: "light_material"
+#    cert_name: "discovery_cert_11.json"
+#  -
+#    host: "127.0.0.1:53202"
+#    role: "virtual"
+#    cert_name: "discovery_cert_12.json"
+#  -
+#    host: "127.0.0.1:53404"
+#    role: "virtual"
+#    cert_name: "discovery_cert_13.json"
+#  -
+#    host: "127.0.0.1:53606"
+#    role: "virtual"
+#    cert_name: "discovery_cert_14.json"
+#  -
+#    host: "127.0.0.1:53707"
+#    role: "light_material"
+#    cert_name: "discovery_cert_15.json"
+#  -
+#    host: "127.0.0.1:53808"
+#    role: "virtual"
+#    cert_name: "discovery_cert_16.json"
+#  -
+#    host: "127.0.0.1:53909"
+#    role: "light_material"
+#    cert_name: "discovery_cert_17.json"
+#  -
+#    host: "127.0.0.1:51110"
+#    role: "virtual"
+#    cert_name: "discovery_cert_18.json"
+#  -
+#    host: "127.0.0.1:53111"
+#    role: "light_material"
+#    cert_name: "discovery_cert_19.json"
+#  -
+#    host: "127.0.0.1:51112"
+#    role: "virtual"
+#    cert_name: "discovery_cert_20.json"
+#  -
+#    host: "127.0.0.1:53113"
+#    role: "light_material"
+#    cert_name: "discovery_cert_21.json"
+#  -
+#    host: "127.0.0.1:54114"
+#    role: "light_material"
+#    cert_name: "discovery_cert_22.json"
+#  -
+#    host: "127.0.0.1:51115"
+#    role: "light_material"
+#    cert_name: "discovery_cert_23.json"
+
+nodes:
+  -
+    host: "127.0.0.1:63836"
+    role: "virtual"
+    keys_file: "scripts/insolard/nodes/1/keys.json"
+    cert_name: "node_cert_1.json"
+#  - # Attention! You must wait `lightChainLimit` pulses after LM joined to run benchmark w/o errors.
+#    host: "127.0.0.1:63936"
+#    role: "light_material"
+#    keys_file: "scripts/insolard/nodes/2/keys.json"
+#    cert_name: "node_cert_2.json"
