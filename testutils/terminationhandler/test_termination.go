@@ -1,8 +1,9 @@
 package terminationhandler
 
 import (
+	"fmt"
+
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/log"
 )
 
 type testTerminationHandler struct{}
@@ -11,6 +12,6 @@ func NewTestHandler() core.TerminationHandler {
 	return &testTerminationHandler{}
 }
 
-func (t *testTerminationHandler) Abort() {
-	log.Error("Node leave acknowledged by network. Goodbye!")
+func (t *testTerminationHandler) Abort(reason string) {
+	panic(fmt.Sprintf("Node leave acknowledged by network. Goodbye! Reason: %s", reason))
 }
