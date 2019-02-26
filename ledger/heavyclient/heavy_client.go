@@ -226,9 +226,7 @@ func (c *JetClient) syncloop(ctx context.Context) {
 		inslog.Infof("start synchronization to heavy for pulse %v", syncPN)
 
 		shouldretry := false
-		isretry := c.syncbackoff.Attempt() > 0
-
-		syncerr := c.HeavySync(ctx, syncPN, isretry)
+		syncerr := c.HeavySync(ctx, syncPN)
 		if syncerr != nil {
 			if heavyerr, ok := syncerr.(*reply.HeavyError); ok {
 				shouldretry = heavyerr.IsRetryable()
