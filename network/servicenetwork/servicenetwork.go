@@ -32,6 +32,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller"
 	"github.com/insolar/insolar/network/controller/bootstrap"
@@ -39,6 +40,7 @@ import (
 	"github.com/insolar/insolar/network/merkle"
 	"github.com/insolar/insolar/network/routing"
 	"github.com/insolar/insolar/network/utils"
+	"github.com/insolar/insolar/pulsar"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 )
@@ -220,6 +222,15 @@ func (n *ServiceNetwork) Stop(ctx context.Context) error {
 }
 
 func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse core.Pulse) {
+	verified, err := n.verifyPulseSign(newPulse)
+	if err != nil {
+		log.Error("[ ServiceNetwork ] HandlePulse: ", err.Error())
+		return
+	}
+	if !verified {
+		log.Error("[ ServiceNetwork ] HandlePulse: failed to verify a pulse sign")
+		return
+	}
 	currentTime := time.Now()
 
 	n.lock.Lock()
@@ -267,7 +278,7 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse core.Pulse) {
 		}
 	}
 
-	err := n.NetworkSwitcher.OnPulse(ctx, newPulse)
+	err = n.NetworkSwitcher.OnPulse(ctx, newPulse)
 	if err != nil {
 		logger.Error(errors.Wrap(err, "Failed to call OnPulse on NetworkSwitcher"))
 	}
@@ -293,4 +304,26 @@ func (n *ServiceNetwork) phaseManagerOnPulse(ctx context.Context, newPulse core.
 
 func isNextPulse(currentPulse, newPulse *core.Pulse) bool {
 	return newPulse.PulseNumber > currentPulse.PulseNumber && newPulse.PulseNumber >= currentPulse.NextPulseNumber
+}
+
+func (n *ServiceNetwork) verifyPulseSign(pulse core.Pulse) (bool, error) {
+	hashProvider := n.CryptographyScheme.IntegrityHasher()
+	for _, psc := range pulse.Signs {
+		payload := pulsar.PulseSenderConfirmationPayload{PulseSenderConfirmation: psc}
+		hash, err := payload.Hash(hashProvider)
+		if err != nil {
+			return false, errors.Wrap(err, "[ ServiceNetwork] verifyPulseSign: error to get a hash from pulse payload")
+		}
+		key, err := foundation.ImportPublicKey(psc.ChosenPublicKey)
+		if err != nil {
+			return false, errors.Wrap(err, "[ ServiceNetwork] verifyPulseSign: error to import a public key")
+		}
+
+		verified := n.CryptographyService.Verify(key, core.SignatureFromBytes(psc.Signature), hash)
+
+		if !verified {
+			return false, errors.New("[ ServiceNetwork ] verifyPulseSign: error to verify a pulse")
+		}
+	}
+	return true, nil
 }
