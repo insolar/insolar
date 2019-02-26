@@ -29,12 +29,16 @@ func (h bytes2hex) String() string {
 	return hex.EncodeToString(h)
 }
 
-func Prefixkey(prefix byte, parts ...[]byte) []byte {
+func prefixkey(prefix byte, parts ...[]byte) []byte {
 	tail := bytes.Join(parts, nil)
 	k := make([]byte, len(tail)+1)
 	k[0] = prefix
 	_ = copy(k[1:], tail)
 	return k
+}
+
+func JetDropPrefixKey(jp []byte, pn core.PulseNumber) []byte {
+	return prefixkey(scopeIDJetDrop, jp, pn.Bytes())
 }
 
 func pulseFromKey(key []byte) core.PulseNumber {

@@ -95,7 +95,7 @@ func (m *TransactionManager) GetRequest(ctx context.Context, jetID core.RecordID
 // GetBlob returns binary value stored by record ID.
 func (m *TransactionManager) GetBlob(ctx context.Context, jetID core.RecordID, id *core.RecordID) ([]byte, error) {
 	_, jetPrefix := jet.Jet(jetID)
-	k := Prefixkey(scopeIDBlob, jetPrefix, id[:])
+	k := prefixkey(scopeIDBlob, jetPrefix, id[:])
 	return m.get(ctx, k)
 }
 
@@ -103,7 +103,7 @@ func (m *TransactionManager) GetBlob(ctx context.Context, jetID core.RecordID, i
 func (m *TransactionManager) SetBlob(ctx context.Context, jetID core.RecordID, pulseNumber core.PulseNumber, blob []byte) (*core.RecordID, error) {
 	id := record.CalculateIDForBlob(m.db.PlatformCryptographyScheme, pulseNumber, blob)
 	_, jetPrefix := jet.Jet(jetID)
-	k := Prefixkey(scopeIDBlob, jetPrefix, id[:])
+	k := prefixkey(scopeIDBlob, jetPrefix, id[:])
 
 	// TODO: @andreyromancev. 16.01.19. Blob override is ok.
 	// geterr := m.db.db.View(func(tx *badger.Txn) error {
@@ -129,7 +129,7 @@ func (m *TransactionManager) SetBlob(ctx context.Context, jetID core.RecordID, p
 // It returns ErrNotFound if the DB does not contain the key.
 func (m *TransactionManager) GetRecord(ctx context.Context, jetID core.RecordID, id *core.RecordID) (record.Record, error) {
 	_, jetPrefix := jet.Jet(jetID)
-	k := Prefixkey(scopeIDRecord, jetPrefix, id[:])
+	k := prefixkey(scopeIDRecord, jetPrefix, id[:])
 	buf, err := m.get(ctx, k)
 	if err != nil {
 		return nil, err
@@ -144,7 +144,7 @@ func (m *TransactionManager) GetRecord(ctx context.Context, jetID core.RecordID,
 func (m *TransactionManager) SetRecord(ctx context.Context, jetID core.RecordID, pulseNumber core.PulseNumber, rec record.Record) (*core.RecordID, error) {
 	id := record.NewRecordIDFromRecord(m.db.PlatformCryptographyScheme, pulseNumber, rec)
 	_, prefix := jet.Jet(jetID)
-	k := Prefixkey(scopeIDRecord, prefix, id[:])
+	k := prefixkey(scopeIDRecord, prefix, id[:])
 	geterr := m.db.db.View(func(tx *badger.Txn) error {
 		_, err := tx.Get(k)
 		return err
@@ -174,7 +174,7 @@ func (m *TransactionManager) GetObjectIndex(
 		m.lockOnID(id)
 	}
 	_, prefix := jet.Jet(jetID)
-	k := Prefixkey(scopeIDLifeline, prefix, id[:])
+	k := prefixkey(scopeIDLifeline, prefix, id[:])
 	buf, err := m.get(ctx, k)
 	if err != nil {
 		return nil, err
@@ -190,7 +190,7 @@ func (m *TransactionManager) SetObjectIndex(
 	idx *index.ObjectLifeline,
 ) error {
 	_, prefix := jet.Jet(jetID)
-	k := Prefixkey(scopeIDLifeline, prefix, id[:])
+	k := prefixkey(scopeIDLifeline, prefix, id[:])
 	if idx.Delegates == nil {
 		idx.Delegates = map[core.RecordRef]core.RecordRef{}
 	}
@@ -209,7 +209,7 @@ func (m *TransactionManager) RemoveObjectIndex(
 ) error {
 	m.lockOnID(ref)
 	_, prefix := jet.Jet(jetID)
-	k := Prefixkey(scopeIDLifeline, prefix, ref[:])
+	k := prefixkey(scopeIDLifeline, prefix, ref[:])
 	return m.remove(ctx, k)
 }
 

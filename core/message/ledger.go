@@ -377,13 +377,13 @@ func (*ValidationCheck) Type() core.MessageType {
 // HotData contains hot-data
 type HotData struct {
 	ledgerMessage
-	Jet                core.RecordRef
-	DropJet            core.RecordID // If will be different in case of split.
-	Drop               jet.JetDrop
-	RecentObjects      map[core.RecordID]HotIndex
-	PendingRequests    map[core.RecordID]recentstorage.PendingObjectContext
-	PulseNumber        core.PulseNumber
-	JetDropSizeHistory jet.DropSizeHistory
+	Jet             core.RecordRef
+	DropJet         core.RecordID // If will be different in case of split.
+	Drop            jet.JetDrop
+	RecentObjects   map[core.RecordID]HotIndex
+	PendingRequests map[core.RecordID]recentstorage.PendingObjectContext
+	PulseNumber     core.PulseNumber
+	//JetDropSizeHistory jet.DropSizeHistory
 }
 
 // AllowedSenderObjectAndRole implements interface method

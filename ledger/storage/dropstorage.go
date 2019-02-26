@@ -23,7 +23,6 @@ import (
 	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/storage/jet"
-	"github.com/pkg/errors"
 )
 
 // DropStorage jet-drops
@@ -35,14 +34,12 @@ type DropStorage interface {
 		uint64,
 		error,
 	)
-	SetDrop(ctx context.Context, jetID core.RecordID, drop *jet.JetDrop) error
-	GetDrop(ctx context.Context, jetID core.RecordID, pulse core.PulseNumber) (*jet.JetDrop, error)
+	//SetDrop(ctx context.Context, jetID core.RecordID, drop *jet.JetDrop) error
+	//GetDrop(ctx context.Context, jetID core.RecordID, pulse core.PulseNumber) (*jet.JetDrop, error)
 
-	AddDropSize(ctx context.Context, dropSize *jet.DropSize) error
-	SetDropSizeHistory(ctx context.Context, jetID core.RecordID, dropSizeHistory jet.DropSizeHistory) error
-	GetDropSizeHistory(ctx context.Context, jetID core.RecordID) (jet.DropSizeHistory, error)
-
-	GetJetSizesHistoryDepth() int
+	//AddDropSize(ctx context.Context, dropSize *jet.DropSize) error
+	//SetDropSizeHistory(ctx context.Context, jetID core.RecordID, dropSizeHistory jet.DropSizeHistory) error
+	//GetDropSizeHistory(ctx context.Context, jetID core.RecordID) (jet.DropSizeHistory, error)
 }
 
 type dropStorage struct {
@@ -76,8 +73,8 @@ func (ds *dropStorage) CreateDrop(ctx context.Context, jetID core.RecordID, puls
 	}
 
 	var messages [][]byte
-	_, jetPrefix := jet.Jet(jetID)
-	// messagesPrefix := Prefixkey(scopeIDMessage, jetPrefix, pulse.Bytes())
+	_, jetPrefix := jet.Jet(core.JetID(jetID))
+	// messagesPrefix := prefixkey(scopeIDMessage, jetPrefix, pulse.Bytes())
 
 	// err = db.db.View(func(txn *badger.Txn) error {
 	// 	it := txn.NewIterator(badger.DefaultIteratorOptions)
@@ -97,7 +94,7 @@ func (ds *dropStorage) CreateDrop(ctx context.Context, jetID core.RecordID, puls
 	// }
 
 	var dropSize uint64
-	recordPrefix := Prefixkey(scopeIDRecord, jetPrefix, pulse.Bytes())
+	recordPrefix := prefixkey(scopeIDRecord, jetPrefix, pulse.Bytes())
 
 	err = ds.DB.GetBadgerDB().View(func(txn *badger.Txn) error {
 		it := txn.NewIterator(badger.DefaultIteratorOptions)
@@ -129,104 +126,95 @@ func (ds *dropStorage) CreateDrop(ctx context.Context, jetID core.RecordID, puls
 }
 
 // SetDrop saves provided JetDrop in db.
-func (ds *dropStorage) SetDrop(ctx context.Context, jetID core.RecordID, drop *jet.JetDrop) error {
-	_, prefix := jet.Jet(jetID)
-	k := Prefixkey(scopeIDJetDrop, prefix, drop.Pulse.Bytes())
-	_, err := ds.DB.Get(ctx, k)
-	if err == nil {
-		return ErrOverride
-	}
-
-	encoded, err := jet.Encode(drop)
-	if err != nil {
-		return err
-	}
-	return ds.DB.Set(ctx, k, encoded)
-}
-
-// GetDrop returns jet drop for a given pulse number and jet id.
-func (ds *dropStorage) GetDrop(ctx context.Context, jetID core.RecordID, pulse core.PulseNumber) (*jet.JetDrop, error) {
-	_, prefix := jet.Jet(jetID)
-	k := Prefixkey(scopeIDJetDrop, prefix, pulse.Bytes())
-
-	// buf, err := db.get(ctx, k)
-	buf, err := ds.DB.Get(ctx, k)
-	if err != nil {
-		return nil, err
-	}
-	drop, err := jet.Decode(buf)
-	if err != nil {
-		return nil, err
-	}
-	return drop, nil
-}
+// func (ds *dropStorage) SetDrop(ctx context.Context, jetID core.RecordID, drop *jet.JetDrop) error {
+// 	_, prefix := jet.Jet(jetID)
+// 	k := prefixkey(scopeIDJetDrop, prefix, drop.Pulse.Bytes())
+// 	_, err := ds.DB.Get(ctx, k)
+// 	if err == nil {
+// 		return ErrOverride
+// 	}
+//
+// 	encoded, err := jet.Encode(drop)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	return ds.DB.Set(ctx, k, encoded)
+// }
+//
+// // GetDrop returns jet drop for a given pulse number and jet id.
+// func (ds *dropStorage) GetDrop(ctx context.Context, jetID core.RecordID, pulse core.PulseNumber) (*jet.JetDrop, error) {
+// 	_, prefix := jet.Jet(jetID)
+// 	k := prefixkey(scopeIDJetDrop, prefix, pulse.Bytes())
+//
+// 	// buf, err := db.get(ctx, k)
+// 	buf, err := ds.DB.Get(ctx, k)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	drop, err := jet.Decode(buf)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	return drop, nil
+// }
 
 // AddDropSize adds Jet drop size stats (required for split decision).
-func (ds *dropStorage) AddDropSize(ctx context.Context, dropSize *jet.DropSize) error {
-	ds.addBlockSizeLock.Lock()
-	defer ds.addBlockSizeLock.Unlock()
-
-	k := dropSizesPrefixKey(dropSize.JetID)
-	buff, err := ds.DB.Get(ctx, k)
-	if err != nil && err != core.ErrNotFound {
-		return errors.Wrapf(err, "[ AddDropSize ] Can't get object: %s", string(k))
-	}
-
-	var dropSizes = jet.DropSizeHistory{}
-	if err != core.ErrNotFound {
-		dropSizes, err = jet.DeserializeJetDropSizeHistory(ctx, buff)
-		if err != nil {
-			return errors.Wrapf(err, "[ AddDropSize ] Can't decode dropSizes")
-		}
-
-		if len([]jet.DropSize(dropSizes)) >= ds.jetSizesHistoryDepth {
-			dropSizes = dropSizes[1:]
-		}
-	}
-
-	dropSizes = append(dropSizes, *dropSize)
-
-	return ds.DB.Set(ctx, k, dropSizes.Bytes())
-}
+// func (ds *dropStorage) AddDropSize(ctx context.Context, dropSize *jet.DropSize) error {
+// 	ds.addBlockSizeLock.Lock()
+// 	defer ds.addBlockSizeLock.Unlock()
+//
+// 	k := dropSizesPrefixKey(dropSize.JetID)
+// 	buff, err := ds.DB.Get(ctx, k)
+// 	if err != nil && err != core.ErrNotFound {
+// 		return errors.Wrapf(err, "[ AddDropSize ] Can't get object: %s", string(k))
+// 	}
+//
+// 	var dropSizes = jet.DropSizeHistory{}
+// 	if err != core.ErrNotFound {
+// 		dropSizes, err = jet.DeserializeJetDropSizeHistory(ctx, buff)
+// 		if err != nil {
+// 			return errors.Wrapf(err, "[ AddDropSize ] Can't decode dropSizes")
+// 		}
+//
+// 		if len([]jet.DropSize(dropSizes)) >= ds.jetSizesHistoryDepth {
+// 			dropSizes = dropSizes[1:]
+// 		}
+// 	}
+//
+// 	dropSizes = append(dropSizes, *dropSize)
+//
+// 	return ds.DB.Set(ctx, k, dropSizes.Bytes())
+// }
 
 // SetDropSizeHistory saves drop sizes history.
-func (ds *dropStorage) SetDropSizeHistory(ctx context.Context, jetID core.RecordID, dropSizeHistory jet.DropSizeHistory) error {
-	ds.addBlockSizeLock.Lock()
-	defer ds.addBlockSizeLock.Unlock()
-
-	k := dropSizesPrefixKey(jetID)
-	err := ds.DB.Set(ctx, k, dropSizeHistory.Bytes())
-	return errors.Wrap(err, "[ ResetDropSizeHistory ] Can't db.set")
-}
+// func (ds *dropStorage) SetDropSizeHistory(ctx context.Context, jetID core.RecordID, dropSizeHistory jet.DropSizeHistory) error {
+// 	ds.addBlockSizeLock.Lock()
+// 	defer ds.addBlockSizeLock.Unlock()
+//
+// 	k := dropSizesPrefixKey(jetID)
+// 	err := ds.DB.Set(ctx, k, dropSizeHistory.Bytes())
+// 	return errors.Wrap(err, "[ ResetDropSizeHistory ] Can't db.set")
+// }
 
 // GetDropSizeHistory returns last drops sizes.
-func (ds *dropStorage) GetDropSizeHistory(ctx context.Context, jetID core.RecordID) (jet.DropSizeHistory, error) {
-	ds.addBlockSizeLock.RLock()
-	defer ds.addBlockSizeLock.RUnlock()
-
-	k := dropSizesPrefixKey(jetID)
-	buff, err := ds.DB.Get(ctx, k)
-	if err != nil && err != core.ErrNotFound {
-		return nil, errors.Wrap(err, "[ GetDropSizeHistory ] Can't db.set")
-	}
-
-	if err == core.ErrNotFound {
-		return jet.DropSizeHistory{}, nil
-	}
-
-	dropSizes, err := jet.DeserializeJetDropSizeHistory(ctx, buff)
-	if err != nil {
-		return nil, errors.Wrapf(err, "[ GetDropSizeHistory ] Can't decode dropSizes")
-	}
-
-	return dropSizes, nil
-}
-
-// GetJetSizesHistoryDepth returns max amount of drop sizes
-func (ds *dropStorage) GetJetSizesHistoryDepth() int {
-	return ds.jetSizesHistoryDepth
-}
-
-func dropSizesPrefixKey(jetID core.RecordID) []byte {
-	return Prefixkey(scopeIDSystem, []byte{sysDropSizeHistory}, jetID.Bytes())
-}
+// func (ds *dropStorage) GetDropSizeHistory(ctx context.Context, jetID core.RecordID) (jet.DropSizeHistory, error) {
+// 	ds.addBlockSizeLock.RLock()
+// 	defer ds.addBlockSizeLock.RUnlock()
+//
+// 	k := dropSizesPrefixKey(jetID)
+// 	buff, err := ds.DB.Get(ctx, k)
+// 	if err != nil && err != core.ErrNotFound {
+// 		return nil, errors.Wrap(err, "[ GetDropSizeHistory ] Can't db.set")
+// 	}
+//
+// 	if err == core.ErrNotFound {
+// 		return jet.DropSizeHistory{}, nil
+// 	}
+//
+// 	dropSizes, err := jet.DeserializeJetDropSizeHistory(ctx, buff)
+// 	if err != nil {
+// 		return nil, errors.Wrapf(err, "[ GetDropSizeHistory ] Can't decode dropSizes")
+// 	}
+//
+// 	return dropSizes, nil
+// }

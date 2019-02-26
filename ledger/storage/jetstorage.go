@@ -136,7 +136,7 @@ func (js *jetStorage) AddJets(ctx context.Context, jetIDs ...core.RecordID) erro
 	js.addJetLock.Lock()
 	defer js.addJetLock.Unlock()
 
-	k := Prefixkey(scopeIDSystem, []byte{sysJetList})
+	k := prefixkey(scopeIDSystem, []byte{sysJetList})
 
 	var jets jet.IDSet
 	buff, err := js.DB.Get(ctx, k)
@@ -163,7 +163,7 @@ func (js *jetStorage) GetJets(ctx context.Context) (jet.IDSet, error) {
 	js.addJetLock.RLock()
 	defer js.addJetLock.RUnlock()
 
-	k := Prefixkey(scopeIDSystem, []byte{sysJetList})
+	k := prefixkey(scopeIDSystem, []byte{sysJetList})
 	buff, err := js.DB.Get(ctx, k)
 	if err != nil {
 		return nil, err

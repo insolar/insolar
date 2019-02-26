@@ -49,14 +49,14 @@ func NewReplicaStorage() ReplicaStorage {
 // SetHeavySyncedPulse saves last successfuly synced pulse number on heavy node.
 func (rs *replicaStorage) SetHeavySyncedPulse(ctx context.Context, jetID core.RecordID, pulsenum core.PulseNumber) error {
 	return rs.DB.Update(ctx, func(tx *TransactionManager) error {
-		return tx.set(ctx, Prefixkey(scopeIDSystem, jetID[:], []byte{sysLastSyncedPulseOnHeavy}), pulsenum.Bytes())
+		return tx.set(ctx, prefixkey(scopeIDSystem, jetID[:], []byte{sysLastSyncedPulseOnHeavy}), pulsenum.Bytes())
 	})
 }
 
 // GetHeavySyncedPulse returns last successfuly synced pulse number on heavy node.
 func (rs *replicaStorage) GetHeavySyncedPulse(ctx context.Context, jetID core.RecordID) (pn core.PulseNumber, err error) {
 	var buf []byte
-	buf, err = rs.DB.Get(ctx, Prefixkey(scopeIDSystem, jetID[:], []byte{sysLastSyncedPulseOnHeavy}))
+	buf, err = rs.DB.Get(ctx, prefixkey(scopeIDSystem, jetID[:], []byte{sysLastSyncedPulseOnHeavy}))
 	if err == nil {
 		pn = core.NewPulseNumber(buf)
 	} else if err == core.ErrNotFound {
@@ -65,7 +65,7 @@ func (rs *replicaStorage) GetHeavySyncedPulse(ctx context.Context, jetID core.Re
 	return
 }
 
-var sysHeavyClientStatePrefix = Prefixkey(scopeIDSystem, []byte{sysHeavyClientState})
+var sysHeavyClientStatePrefix = prefixkey(scopeIDSystem, []byte{sysHeavyClientState})
 
 func sysHeavyClientStateKeyForJet(jetID []byte) []byte {
 	return bytes.Join([][]byte{sysHeavyClientStatePrefix, jetID[:]}, nil)

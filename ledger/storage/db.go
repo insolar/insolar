@@ -241,7 +241,7 @@ func (db *DB) IterateRecordsOnPulse(
 	handler func(id core.RecordID, rec record.Record) error,
 ) error {
 	_, jetPrefix := jet.Jet(jetID)
-	prefix := Prefixkey(scopeIDRecord, jetPrefix, pulse.Bytes())
+	prefix := prefixkey(scopeIDRecord, jetPrefix, pulse.Bytes())
 
 	return db.iterate(ctx, prefix, func(k, v []byte) error {
 		id := core.NewRecordID(pulse, k)

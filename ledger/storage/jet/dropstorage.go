@@ -22,13 +22,14 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/jet"
 )
 
+//go:generate minimock -i github.com/insolar/insolar/ledger/jet.DropSaver -o ./ -s _mock.go
 type DropSaver interface {
-	Set(ctx context.Context, jetID core.JetID, drop JetDrop, pulse core.PulseNumber) error
+	Set(ctx context.Context, jetID core.JetID, drop JetDrop) error
 }
 
+//go:generate minimock -i github.com/insolar/insolar/ledger/jet.DropFetcher -o ./ -s _mock.go
 type DropFetcher interface {
 	ForPulse(ctx context.Context, jetID core.JetID, pulse core.PulseNumber) (JetDrop, error)
 }
@@ -85,30 +86,42 @@ func (m *dropStorageMemory) ForPulse(ctx context.Context, jetID core.JetID, puls
 	return ds.forPulse(jetID, pulse)
 }
 
-func (m *dropStorageMemory) Set(ctx context.Context, jetID core.JetID, drop JetDrop, pulse core.PulseNumber) error {
+func (m *dropStorageMemory) Set(ctx context.Context, jetID core.JetID, drop JetDrop) error {
 	ds := m.fetchStorage(jetID)
-	return ds.set(drop, pulse)
+	return ds.set(drop, drop.Pulse)
 }
 
 type dropStorageDB struct {
 	DB storage.DBContext
 }
 
-func (*dropStorageDB) ForPulse(ctx context.Context, jetID core.JetID, pulse core.PulseNumber) (JetDrop, error) {
-	panic("implement me")
+func (ds *dropStorageDB) ForPulse(ctx context.Context, jetID core.JetID, pulse core.PulseNumber) (JetDrop, error) {
+	_, prefix := Jet(jetID)
+	k := storage.JetDropPrefixKey(prefix, pulse)
+
+	// buf, err := db.get(ctx, k)
+	buf, err := ds.DB.Get(ctx, k)
+	if err != nil {
+		return JetDrop{}, err
+	}
+	drop, err := Decode(buf)
+	if err != nil {
+		return JetDrop{}, err
+	}
+	return *drop, nil
 }
 
 func (ds *dropStorageDB) Set(ctx context.Context, jetID core.JetID, drop JetDrop, pulse core.PulseNumber) error {
 	_, prefix := Jet(jetID)
-	k := storage.Prefixkey(scopeIDJetDrop, prefix, drop.Pulse.Bytes())
-	_, err := ds.DB.get(ctx, k)
+	k := storage.JetDropPrefixKey(prefix, drop.Pulse)
+	_, err := ds.DB.Get(ctx, k)
 	if err == nil {
-		return ErrOverride
+		return storage.ErrOverride
 	}
 
-	encoded, err := jet.Encode(drop)
+	encoded, err := Encode(&drop)
 	if err != nil {
 		return err
 	}
-	return ds.DB.set(ctx, k, encoded)
+	return ds.DB.Set(ctx, k, encoded)
 }

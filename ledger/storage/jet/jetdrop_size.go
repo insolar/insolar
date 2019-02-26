@@ -18,12 +18,10 @@ package jet
 
 import (
 	"bytes"
-	"context"
 	"encoding/binary"
 	"io"
 
 	"github.com/insolar/insolar/core"
-	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
 )
 
@@ -64,22 +62,4 @@ func (ds *DropSize) WriteHashData(w io.Writer) (int, error) {
 }
 
 // DropSizeHistory is chain of drop sizes
-type DropSizeHistory []DropSize
-
-// DeserializeJetDropSizeHistory deserializes DropSizeHistory
-func DeserializeJetDropSizeHistory(ctx context.Context, buff []byte) (DropSizeHistory, error) {
-	dec := codec.NewDecoder(bytes.NewReader(buff), &codec.CborHandle{})
-	var dropSizes = DropSizeHistory{}
-
-	err := dec.Decode(&dropSizes)
-	if err != nil {
-		return nil, errors.Wrapf(err, "[ DeserializeJetDropSizeHistory ] Can't decode DropSizeHistory")
-	}
-
-	return dropSizes, nil
-}
-
-// Bytes serializes DropSizeHistory
-func (dropSizeHistory DropSizeHistory) Bytes() []byte {
-	return encode(dropSizeHistory)
-}
+//type DropSizeHistory []DropSize

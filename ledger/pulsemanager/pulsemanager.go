@@ -63,14 +63,17 @@ type PulseManager struct {
 	PulseStorage               pulseStoragePm                  `inject:""`
 	HotDataWaiter              artifactmanager.HotDataWaiter   `inject:""`
 	JetStorage                 storage.JetStorage              `inject:""`
-	DropStorage                storage.DropStorage             `inject:""`
-	ObjectStorage              storage.ObjectStorage           `inject:""`
-	NodeSetter                 nodes.Setter                    `inject:""`
-	Nodes                      nodes.Accessor                  `inject:""`
-	PulseTracker               storage.PulseTracker            `inject:""`
-	ReplicaStorage             storage.ReplicaStorage          `inject:""`
-	DBContext                  storage.DBContext               `inject:""`
-	StorageCleaner             storage.Cleaner                 `inject:""`
+
+	ObjectStorage  storage.ObjectStorage  `inject:""`
+	NodeSetter     nodes.Setter           `inject:""`
+	Nodes          nodes.Accessor         `inject:""`
+	PulseTracker   storage.PulseTracker   `inject:""`
+	ReplicaStorage storage.ReplicaStorage `inject:""`
+	DBContext      storage.DBContext      `inject:""`
+	StorageCleaner storage.Cleaner        `inject:""`
+
+	DropSaver   jet.DropSaver   `inject:""`
+	DropFetcher jet.DropFetcher `inject:""`
 
 	// TODO: move clients pool to component - @nordicdyno - 18.Dec.2018
 	syncClientsPool *heavyclient.Pool
@@ -215,17 +218,17 @@ func (m *PulseManager) createDrop(
 	messages [][]byte,
 	err error,
 ) {
-	var prevDrop *jet.JetDrop
-	prevDrop, err = m.DropStorage.GetDrop(ctx, jetID, prevPulse)
+	//var prevDrop *jet.JetDrop
+	prevDrop, err := m.DropFetcher.ForPulse(ctx, core.JetID(jetID), prevPulse)
 	if err == core.ErrNotFound {
-		prevDrop, err = m.DropStorage.GetDrop(ctx, jet.Parent(jetID), prevPulse)
+		prevDrop, err = m.DropFetcher.ForPulse(ctx, jet.Parent(core.JetID(jetID)), prevPulse)
 		if err == core.ErrNotFound {
 			inslogger.FromContext(ctx).WithFields(map[string]interface{}{
 				"pulse": prevPulse,
 				"jet":   jetID.DebugString(),
 			}).Error("failed to find drop")
-			prevDrop = &jet.JetDrop{Pulse: prevPulse}
-			err = m.DropStorage.SetDrop(ctx, jetID, prevDrop)
+			prevDrop = jet.JetDrop{Pulse: prevPulse}
+			err = m.DropSaver.Set(ctx, core.JetID(jetID), prevDrop)
 			if err != nil {
 				return nil, nil, nil, errors.Wrap(err, "failed to create empty drop")
 			}
@@ -240,7 +243,7 @@ func (m *PulseManager) createDrop(
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't CreateDrop")
 	}
-	err = m.DropStorage.SetDrop(ctx, jetID, drop)
+	err = m.DropSaver.Set(ctx, core.JetID(jetID), *drop)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't SetDrop")
 	}
@@ -620,8 +623,8 @@ func (m *PulseManager) setUnderGilSection(
 		if len(nodes) == 0 {
 			// Activate zero jet for jet tree and unlock jet waiter.
 			zeroJet := *jet.NewID(0, nil)
-			m.JetStorage.UpdateJetTree(ctx, newPulse.PulseNumber, true, zeroJet)
-			err := m.HotDataWaiter.Unlock(ctx, zeroJet)
+			m.JetStorage.UpdateJetTree(ctx, newPulse.PulseNumber, true, core.RecordID(zeroJet))
+			err := m.HotDataWaiter.Unlock(ctx, core.RecordID(zeroJet))
 			if err != nil {
 				if err == artifactmanager.ErrWaiterNotLocked {
 					inslogger.FromContext(ctx).Error(err)
@@ -790,9 +793,9 @@ func (m *PulseManager) restoreGenesisRecentObjects(ctx context.Context) error {
 	}
 
 	jetID := *jet.NewID(0, nil)
-	recent := m.RecentStorageProvider.GetIndexStorage(ctx, jetID)
+	recent := m.RecentStorageProvider.GetIndexStorage(ctx, core.RecordID(jetID))
 
-	return m.ObjectStorage.IterateIndexIDs(ctx, jetID, func(id core.RecordID) error {
+	return m.ObjectStorage.IterateIndexIDs(ctx, core.RecordID(jetID), func(id core.RecordID) error {
 		if id.Pulse() == core.FirstPulseNumber {
 			recent.AddObject(ctx, id)
 		}
