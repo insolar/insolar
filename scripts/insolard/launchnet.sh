@@ -302,6 +302,9 @@ process_input_params $@
 trap 'stop_listening true' INT TERM EXIT
 
 printf "start pulsar ... \n"
+ARTIFACTS_DIR=${ARTIFACTS_DIR:-".artifacts"}
+PULSAR_DATA_DIR=$ARTIFACTS_DIR/pulsar_data
+mkdir -p $PULSAR_DATA_DIR
 $PULSARD -c $GENERATED_CONFIGS_DIR/pulsar.yaml --trace &> $DISCOVERY_NODES_DATA/pulsar_output.log &
 
 if [[ "$run_insgorund" == "true" ]]
