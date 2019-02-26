@@ -35,7 +35,6 @@ import (
 	"github.com/insolar/insolar/messagebus"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/nodenetwork"
-	"github.com/insolar/insolar/network/rules"
 	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/insolar/insolar/network/state"
 	"github.com/insolar/insolar/networkcoordinator"
@@ -167,7 +166,6 @@ func initComponents(
 		cryptographyService,
 		keyProcessor,
 		certManager,
-		rules.NewRules(),
 		nodeNetwork,
 		nw,
 	)

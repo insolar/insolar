@@ -28,12 +28,10 @@ import (
 	"github.com/insolar/insolar/network/transport/packet/types"
 )
 
-// BootstrapResult represents result of bootstrap to one discovery node
 type BootstrapResult struct {
 	Host *host.Host
 	// FirstPulseTime    time.Time
 	ReconnectRequired bool
-	DiscoveryCount    int
 }
 
 // Controller contains network logic.
@@ -277,13 +275,4 @@ type ClaimQueue interface {
 	Front() consensus.ReferendumClaim
 	// Length returns the length of the queue
 	Length() int
-}
-
-// Rules are responsible for a majority and minimum roles checking
-//go:generate minimock -i github.com/insolar/insolar/network.Rules -o ../testutils/network -s _mock.go
-type Rules interface {
-	// CheckMajorityRule returns true if MajorityRule check passed, also returns active discovery nodes count
-	CheckMajorityRule() (bool, int)
-	// CheckMinRole returns true if MinRole check passed
-	CheckMinRole() bool
 }
