@@ -13,7 +13,7 @@ type terminationHandler struct {
 	done        chan core.LeaveApproved
 	terminating bool
 
-	Network *servicenetwork.ServiceNetwork `inject:""`
+	Network *servicenetwork.ServiceNetwork
 }
 
 func NewHandler(nw *servicenetwork.ServiceNetwork) core.TerminationHandler {
