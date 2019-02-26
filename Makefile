@@ -171,7 +171,7 @@ regen-proxies: $(BININSGOCC)
 
 .PHONY: docker-insolard
 docker-insolard:
-	docker build --tag insolar/insolard -f ./docker/Dockerfile.insolard .
+	docker build --tag insolar/insolard -f ./docker/Dockerfile .
 
 .PHONY: docker-pulsar
 docker-pulsar:

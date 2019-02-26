@@ -26,20 +26,23 @@ func getURI(port uint) string {
 }
 
 const (
-	defaultTranportListenPort  = 13831
-	defaultLogLevel            = "info"
-	defaultMetricsListenPort   = 8001
-	defaultRPCListenPort       = 33001
-	defaultInsgorundListenPort = 33002
-	defaultApiListenPort       = 19101
-	defaultJaegerEndpointPort  = 6831
-	defaultKeysPath            = "/opt/config/keys.json"
-	defaultCertPath            = "/opt/config/cert.json"
+	defaultConfigPath            = "/etc/insolar/insolard.yaml"
+	defaultTranportListenPort    = 13831
+	defaultLogLevel              = "info"
+	defaultMetricsListenPort     = 8001
+	defaultRPCListenPort         = 33001
+	defaultInsgorundListenPort   = 33002
+	defaultApiListenPort         = 19101
+	defaultJaegerEndpointPort    = 6831
+	defaultKeysPath              = "/etc/insolar/keys.json"
+	defaultCertPath              = "/etc/insolar/cert.json"
+	defaultDataDir               = "/var/lib/insolar/"
+	defaultTransportFixedAddress = ""
 )
 
 func main() {
 	hld := configuration.NewHolder()
-	err := hld.LoadFromFile("/opt/config/insolard.yaml")
+	err := hld.LoadFromFile(defaultConfigPath)
 	if err != nil {
 		fmt.Println("Failed to open configuration:")
 		fmt.Println(err.Error())
@@ -56,6 +59,7 @@ func main() {
 	insgorundListen := GetEnvDefault("INSGORUND_LISTEN", defaultInsgorundListen)
 	insolardAPIListen := GetEnvDefault("INSOLARD_API_LISTEN", getURI(defaultApiListenPort))
 	insolardTracerEndpoint := GetEnvDefault("INSOLARD_JAEGER_ENDPOINT", getURI(defaultJaegerEndpointPort))
+	insolardTransportFixedAddress := GetEnvDefault("INSOLARD_TRANSPORT_FIXED_ADDRESS", defaultTransportFixedAddress)
 
 	fmt.Println("[debug] cfg->host->transport->address ==", insolardTransportListen)
 	fmt.Println("[debug] cfg->log->level ==", insolardLogLevel)
@@ -68,6 +72,7 @@ func main() {
 
 	// transport related
 	cfg.Host.Transport.Address = insolardTransportListen
+	cfg.Host.Transport.FixedPublicAddress = insolardTransportFixedAddress
 	// logger related
 	cfg.Log.Level = insolardLogLevel
 	// metrics related
@@ -83,6 +88,7 @@ func main() {
 	// unstructured
 	cfg.KeysPath = defaultKeysPath
 	cfg.CertificatePath = defaultCertPath
+	cfg.Ledger.Storage.DataDirectory = defaultDataDir
 
 	data, err := yaml.Marshal(cfg)
 	if err != nil {
@@ -90,7 +96,7 @@ func main() {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
-	err = ioutil.WriteFile("/opt/config/insolard.yaml", data, 0666)
+	err = ioutil.WriteFile(defaultConfigPath, data, 0666)
 	if err != nil {
 		fmt.Println("Failed to save configuration:")
 		fmt.Println(err.Error())
