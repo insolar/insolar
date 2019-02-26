@@ -230,8 +230,6 @@ func (lr *LogicRunner) GracefulStop(ctx context.Context) error {
 	lr.isStopping = true
 	<-lr.stopChan
 
-	// TODO send claim
-
 	return nil
 }
 

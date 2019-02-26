@@ -205,6 +205,9 @@ func (n *ServiceNetwork) Leave(ctx context.Context, ETA core.PulseNumber) {
 func (n *ServiceNetwork) Stop(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
 
+	// node leaving from network
+	// all components need to do what they want over net in gracefulStop
+	n.Leave(ctx, 0)
 	logger.Info("Stopping network components")
 	if err := n.cm.Stop(ctx); err != nil {
 		log.Errorf("Error while stopping network components: %s", err.Error())
