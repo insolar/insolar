@@ -70,6 +70,7 @@ func loadKeys() (crypto.PublicKey, crypto.PrivateKey) {
 	checkError("Failed to laod keys", err)
 
 	privKey, err := keyStore.GetPrivateKey("")
+	checkError("Failed to GetPrivateKey", err)
 
 	fmt.Println("Load keys")
 	return ks.ExtractPublicKey(privKey), privKey
