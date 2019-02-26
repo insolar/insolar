@@ -37,6 +37,7 @@ import (
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/rules"
+	"github.com/insolar/insolar/network/state"
 	"github.com/insolar/insolar/network/utils"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
@@ -417,8 +418,15 @@ func (s *testSuite) preInitNode(node *networkNode) {
 		realKeeper.AddActiveNodes([]core.Node{origin})
 	}
 
+	networkSwitcher, err := state.NewNetworkSwitcher()
+	s.NoError(err)
+
+	messageBusLocker := state.NewmessageBusLockerMock(s.T())
+	messageBusLocker.LockFunc = func(context.Context) {}
+	messageBusLocker.UnlockFunc = func(context.Context) {}
+
 	node.componentManager.Register(terminationHandler, realKeeper, newPulseManagerMock(realKeeper), netCoordinator, amMock)
 	node.componentManager.Register(certManager, cryptographyService, rules.NewRules())
-	node.componentManager.Inject(serviceNetwork, NewTestNetworkSwitcher())
+	node.componentManager.Inject(serviceNetwork, networkSwitcher, messageBusLocker)
 	node.serviceNetwork = serviceNetwork
 }
