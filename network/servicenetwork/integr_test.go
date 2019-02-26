@@ -45,6 +45,7 @@ func (s *testSuite) TestNetworkConsensus3Times() {
 func (s *testSuite) TestNodeConnect() {
 	testNode := newNetworkNode()
 	s.preInitNode(testNode)
+	setMajority(testNode, len(s.fixture().bootstrapNodes))
 
 	s.InitNode(testNode)
 	s.StartNode(testNode)
