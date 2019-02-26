@@ -21,10 +21,12 @@ import (
 	"context"
 	"crypto"
 	"fmt"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"math/rand"
 	"strconv"
 	"strings"
 	"sync"
+	"testing"
 	"time"
 
 	"github.com/insolar/insolar/certificate"
@@ -59,9 +61,9 @@ type fixture struct {
 	pulsar         TestPulsar
 }
 
-func newFixture() *fixture {
+func newFixture(t *testing.T) *fixture {
 	return &fixture{
-		ctx:            context.Background(),
+		ctx:            inslogger.TestContext(t),
 		bootstrapNodes: make([]*networkNode, 0),
 		networkNodes:   make([]*networkNode, 0),
 	}
@@ -89,7 +91,7 @@ func (s *testSuite) fixture() *fixture {
 
 // SetupSuite creates and run network with bootstrap and common nodes once before run all tests in the suite
 func (s *testSuite) SetupTest() {
-	s.fixtureMap[s.T().Name()] = newFixture()
+	s.fixtureMap[s.T().Name()] = newFixture(s.T())
 	var err error
 	s.fixture().pulsar, err = NewTestPulsar(pulseTimeMs, reqTimeoutMs, pulseDelta)
 	require.NoError(s.T(), err)
@@ -97,11 +99,11 @@ func (s *testSuite) SetupTest() {
 	log.Info("SetupTest")
 
 	for i := 0; i < s.bootstrapCount; i++ {
-		s.fixture().bootstrapNodes = append(s.fixture().bootstrapNodes, newNetworkNode())
+		s.fixture().bootstrapNodes = append(s.fixture().bootstrapNodes, s.newNetworkNode(fmt.Sprintf("bootstrap_%d", i)))
 	}
 
 	for i := 0; i < s.nodesCount; i++ {
-		s.fixture().networkNodes = append(s.fixture().networkNodes, newNetworkNode())
+		s.fixture().networkNodes = append(s.fixture().networkNodes, s.newNetworkNode(fmt.Sprintf("node_%d", i)))
 	}
 
 	pulseReceivers := make([]string, 0)
@@ -142,11 +144,11 @@ func (s *testSuite) SetupNodesNetwork(nodes []*networkNode) {
 
 	results := make(chan error, len(nodes))
 	initNode := func(node *networkNode) {
-		err := node.init(s.fixture().ctx)
+		err := node.init()
 		results <- err
 	}
 	startNode := func(node *networkNode) {
-		err := node.componentManager.Start(s.fixture().ctx)
+		err := node.componentManager.Start(node.ctx)
 		results <- err
 	}
 
@@ -188,12 +190,12 @@ func (s *testSuite) TearDownTest() {
 	log.Info("=================== TearDownTest()")
 	log.Info("Stop network nodes")
 	for _, n := range s.fixture().networkNodes {
-		err := n.componentManager.Stop(s.fixture().ctx)
+		err := n.componentManager.Stop(n.ctx)
 		s.NoError(err)
 	}
 	log.Info("Stop bootstrap nodes")
 	for _, n := range s.fixture().bootstrapNodes {
-		err := n.componentManager.Stop(s.fixture().ctx)
+		err := n.componentManager.Stop(n.ctx)
 		s.NoError(err)
 	}
 	log.Info("Stop test pulsar")
@@ -241,14 +243,14 @@ func (s *testSuite) getNodesCount() int {
 
 func (s *testSuite) InitNode(node *networkNode) {
 	if node.componentManager != nil {
-		err := node.init(s.fixture().ctx)
+		err := node.init()
 		s.NoError(err)
 	}
 }
 
 func (s *testSuite) StartNode(node *networkNode) {
 	if node.componentManager != nil {
-		err := node.componentManager.Start(s.fixture().ctx)
+		err := node.componentManager.Start(node.ctx)
 		s.NoError(err)
 	}
 }
@@ -266,6 +268,7 @@ type networkNode struct {
 	privateKey          crypto.PrivateKey
 	cryptographyService core.CryptographyService
 	host                string
+	ctx                 context.Context
 
 	componentManager *component.Manager
 	serviceNetwork   *ServiceNetwork
@@ -273,7 +276,7 @@ type networkNode struct {
 }
 
 // newNetworkNode returns networkNode initialized only with id, host address and key pair
-func newNetworkNode() *networkNode {
+func (s *testSuite) newNetworkNode(name string) *networkNode {
 	key, err := platformpolicy.NewKeyProcessor().GeneratePrivateKey()
 	if err != nil {
 		panic(err.Error())
@@ -281,19 +284,21 @@ func newNetworkNode() *networkNode {
 	address := "127.0.0.1:" + strconv.Itoa(testNetworkPort)
 	testNetworkPort += 2 // coz consensus transport port+=1
 
+	nodeContext, _ := inslogger.WithField(s.fixture().ctx, "nodeName", name)
 	return &networkNode{
 		id:                  testutils.RandomRef(),
 		role:                RandomRole(),
 		privateKey:          key,
 		cryptographyService: cryptography.NewKeyBoundCryptographyService(key),
 		host:                address,
+		ctx:                 nodeContext,
 		consensusResult:     make(chan error, 30),
 	}
 }
 
 // init calls Init for node component manager and wraps PhaseManager
-func (n *networkNode) init(ctx context.Context) error {
-	err := n.componentManager.Init(ctx)
+func (n *networkNode) init() error {
+	err := n.componentManager.Init(n.ctx)
 	n.serviceNetwork.PhaseManager = &phaseManagerWrapper{original: n.serviceNetwork.PhaseManager, result: n.consensusResult}
 	n.serviceNetwork.NodeKeeper = &nodeKeeperWrapper{original: n.serviceNetwork.NodeKeeper}
 	return err
