@@ -422,3 +422,15 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	node.componentManager.Inject(serviceNetwork, NewTestNetworkSwitcher())
 	node.serviceNetwork = serviceNetwork
 }
+
+func setMajority(node *networkNode, majorityRule int) {
+	cert := node.serviceNetwork.CertificateManager.GetCertificate()
+	cert.(*certificate.Certificate).MajorityRule = majorityRule
+}
+
+func setMinRoles(node *networkNode, virtual, heavyMaterial, lightMaterial uint) {
+	cert := node.serviceNetwork.CertificateManager.GetCertificate()
+	cert.(*certificate.Certificate).MinRoles.Virtual = virtual
+	cert.(*certificate.Certificate).MinRoles.HeavyMaterial = heavyMaterial
+	cert.(*certificate.Certificate).MinRoles.LightMaterial = lightMaterial
+}
