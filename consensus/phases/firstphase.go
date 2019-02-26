@@ -29,6 +29,7 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/merkle"
+	"github.com/insolar/insolar/network/utils"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
@@ -62,10 +63,12 @@ func NewFirstPhase() FirstPhase {
 }
 
 type FirstPhaseImpl struct {
-	Calculator   merkle.Calculator        `inject:""`
-	Communicator Communicator             `inject:""`
-	Cryptography core.CryptographyService `inject:""`
-	NodeKeeper   network.NodeKeeper       `inject:""`
+	Calculator         merkle.Calculator        `inject:""`
+	Communicator       Communicator             `inject:""`
+	Cryptography       core.CryptographyService `inject:""`
+	NodeKeeper         network.NodeKeeper       `inject:""`
+	NetworkSwitcher    core.NetworkSwitcher     `inject:""`
+	CertificateManager core.CertificateManager  `inject:""`
 }
 
 // Execute do first phase
@@ -81,6 +84,13 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse) (*Firs
 	pulseHash, pulseProof, err := fp.Calculator.GetPulseProof(entry)
 	if fp.NodeKeeper.GetState() == core.ReadyNodeNetworkState {
 		unsyncList = fp.NodeKeeper.GetUnsyncList()
+	}
+
+	// In incomplete network state we should make consensus in between of only discovery nodes.
+	if fp.NetworkSwitcher.GetState() == core.NoNetworkState {
+		certificate := fp.CertificateManager.GetCertificate()
+		discoveryNodes := utils.FindDiscoveriesInNodeList(fp.NodeKeeper.GetActiveNodes(), certificate)
+		unsyncList = fp.NodeKeeper.GetUnsyncListFromNodes(discoveryNodes)
 	}
 
 	logger.Infof("[ NET Consensus phase-1 ] Calculated pulse proof: %s", base58.Encode(pulseHash))

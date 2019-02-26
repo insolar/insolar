@@ -386,7 +386,11 @@ func (nk *nodekeeper) NodesJoinedDuringPreviousPulse() bool {
 
 func (nk *nodekeeper) GetUnsyncList() network.UnsyncList {
 	activeNodes := nk.GetActiveNodes()
-	return newUnsyncList(nk.origin, activeNodes, len(activeNodes))
+	return nk.GetUnsyncListFromNodes(activeNodes)
+}
+
+func (nk *nodekeeper) GetUnsyncListFromNodes(nodes []core.Node) network.UnsyncList {
+	return newUnsyncList(nk.origin, nodes, len(nodes))
 }
 
 func (nk *nodekeeper) GetSparseUnsyncList(length int) network.UnsyncList {
