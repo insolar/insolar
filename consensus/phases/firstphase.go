@@ -87,8 +87,8 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse) (*Firs
 	}
 
 	// In incomplete network state we should make consensus in between of only discovery nodes.
-	if fp.NetworkSwitcher.GetState() == core.NoNetworkState {
-		certificate := fp.CertificateManager.GetCertificate()
+	certificate := fp.CertificateManager.GetCertificate()
+	if fp.NetworkSwitcher.GetState() == core.NoNetworkState && utils.OriginIsDiscovery(certificate) {
 		discoveryNodes := utils.FindDiscoveriesInNodeList(fp.NodeKeeper.GetActiveNodes(), certificate)
 		unsyncList = fp.NodeKeeper.GetUnsyncListFromNodes(discoveryNodes)
 	}
