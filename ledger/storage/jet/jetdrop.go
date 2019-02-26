@@ -32,5 +32,5 @@ type JetDrop struct { //nolint: golint
 	// Hash is a hash of all record hashes belongs to one pulse and previous drop hash.
 	Hash []byte
 
-	uint64 DropSize
+	DropSize uint64
 }
