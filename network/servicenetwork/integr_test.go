@@ -46,7 +46,7 @@ func (s *testSuite) TestNetworkConsensus3Times() {
 }
 
 func (s *testSuite) TestNodeConnect() {
-	testNode := newNetworkNode()
+	testNode := s.newNetworkNode("testNode")
 	s.preInitNode(testNode)
 
 	s.InitNode(testNode)
@@ -74,7 +74,7 @@ func (s *testSuite) TestNodeConnect() {
 }
 
 func (s *testSuite) TestNodeConnectInvalidVersion() {
-	testNode := newNetworkNode()
+	testNode := s.newNetworkNode("testNode")
 	s.preInitNode(testNode)
 	testNode.serviceNetwork.NodeKeeper.GetOrigin().(nodenetwork.MutableNode).SetVersion("ololo")
 	s.InitNode(testNode)
@@ -91,7 +91,7 @@ func (s *testSuite) TestManyNodesConnect() {
 	joinersCount := 10
 	nodes := make([]*networkNode, 0)
 	for i := 0; i < joinersCount; i++ {
-		nodes = append(nodes, newNetworkNode())
+		nodes = append(nodes, s.newNetworkNode(fmt.Sprintf("testNode_%d", i)))
 		s.preInitNode(nodes[i])
 		s.InitNode(nodes[i])
 	}
@@ -126,7 +126,7 @@ func (s *testSuite) TestNodeLeave() {
 		s.T().Skip(consensusMinMsg)
 	}
 
-	testNode := newNetworkNode()
+	testNode := s.newNetworkNode("testNode")
 	s.preInitNode(testNode)
 
 	s.InitNode(testNode)
@@ -163,7 +163,7 @@ func (s *testSuite) TestNodeLeaveAtETA() {
 		s.T().Skip(consensusMinMsg)
 	}
 
-	testNode := newNetworkNode()
+	testNode := s.newNetworkNode("testNode")
 	s.preInitNode(testNode)
 
 	s.InitNode(testNode)
@@ -204,7 +204,7 @@ func (s *testSuite) TestNodeComeAfterAnotherNodeSendLeaveETA() {
 		s.T().Skip(consensusMinMsg)
 	}
 
-	leavingNode := newNetworkNode()
+	leavingNode := s.newNetworkNode("leavingNode")
 	s.preInitNode(leavingNode)
 
 	s.InitNode(leavingNode)
@@ -228,7 +228,7 @@ func (s *testSuite) TestNodeComeAfterAnotherNodeSendLeaveETA() {
 	// wait for leavingNode will be marked as leaving
 	s.waitForConsensus(1)
 
-	newNode := newNetworkNode()
+	newNode := s.newNetworkNode("testNode")
 	s.preInitNode(newNode)
 
 	s.InitNode(newNode)
