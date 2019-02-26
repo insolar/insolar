@@ -16,6 +16,12 @@
 
 package common
 
+type State struct {
+	Transit func(element SlotElementHelper) (interface{}, ElState, error)
+	Migrate func(element SlotElementHelper) (interface{}, ElState, error)
+	Error func(element SlotElementHelper, err error) (interface{}, ElState)
+}
+
 type SlotElementHelper interface {
 	GetInputEvent() interface{}
 	GetPayload() interface{}

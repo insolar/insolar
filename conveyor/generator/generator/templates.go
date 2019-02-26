@@ -22,39 +22,41 @@ import (
 )
 
 var (
-	stateMachineIdsTpl = template.Must(template.New("stateMachineIdsTpl").Parse(`
-package sample
+	stateMachineTpl = template.Must(template.New("stateMachineTpl").Parse(`
+package {{.Package}}
 
 import (
 	"github.com/insolar/insolar/conveyor/generator/common"
 	"errors"
 )
 
-type SMFID{{.Name}} struct { // STFID = State Machine Flow IDs
+{{range $i, $machine := .StateMachines}}type SMFID{{$machine.Name}} struct {
 }
-`))
+{{range $i, $state := .States}}
+func (*SMFID{{$machine.Name}}) {{$state.Name}}() common.ElState {
+    return {{$i}}
+}{{end}}
 
-	stateTpl = template.Must(template.New("stateTpl").Parse(`
-func (*SMFID{{.Machine}}) {{.Name}}() common.ElState {
-    return {{.Value}}
-}
-`))
-
-	stateMachineRawTpl = template.Must(template.New("stateMachineRawTpl").Parse(`
-type SMRH{{.Name}} struct { // SMRH = State Machine Raw Handlers
-	cleanHandlers {{.Name}}
+type SMRH{{$machine.Name}} struct {
+	cleanHandlers {{$machine.Name}}
 }
 
-func NewSMRH{{.Name}}() SMRH{{.Name}} {
-	return SMRH{{.Name}}{
-		// cleanHandlers: &{{.Name}}Implementation{},
-	}
+func SMRH{{$machine.Name}}Export() []common.State {
+    m := SMRH{{$machine.Name}}{
+        cleanHandlers: &{{$machine.Name}}Implementation{},
+    }
+    var x []common.State
+    return append(x,{{range $i, $state := .States}}
+        common.State{
+	        Transit: m.{{$state.Transit.Name}},
+	        Migrate: m.{{$state.Migrate.Name}},
+	        Error: m.{{$state.Error.Name}},
+        },
+    {{end}})
 }
-`))
 
-	initTpl = template.Must(template.New("initTpl").Parse(`
-func (s *SMRH{{.Machine}}) Init(element common.SlotElementHelper) (interface{}, common.ElState, error) {
-    aInput, ok := element.GetInputEvent().({{.EventType}})
+func (s *SMRH{{$machine.Name}}) Init(element common.SlotElementHelper) (interface{}, common.ElState, error) {
+    aInput, ok := element.GetInputEvent().({{$machine.Init.EventType}})
     if !ok {
         return nil, 0, errors.New("wrong input event type")
     }
@@ -62,99 +64,53 @@ func (s *SMRH{{.Machine}}) Init(element common.SlotElementHelper) (interface{}, 
     if err != nil {
         return payload, state, err
     }
-    return s.cleanHandlers.{{.FirstHandlerName}}(aInput, payload)
+    return s.cleanHandlers.{{(index $machine.States 0).Transit.Name}}(aInput, payload)
 }
-`))
-
-	transitMigrateTpl = template.Must(template.New("transitMigrateTpl").Parse(`
-func (s *SMRH{{.Machine}}) {{.Name}}(element common.SlotElementHelper) (interface{}, common.ElState, error) {
-    aInput, ok := element.GetInputEvent().({{.EventType}})
+{{range $i, $state := $machine.States}}
+func (s *SMRH{{$machine.Name}}) {{$state.Transit.Name}}(element common.SlotElementHelper) (interface{}, common.ElState, error) {
+    aInput, ok := element.GetInputEvent().({{$machine.Init.EventType}})
     if !ok {
         return nil, 0, errors.New("wrong input event type")
     }
-    aPayload, ok := element.GetPayload().({{.PayloadType}})
+    aPayload, ok := element.GetPayload().({{index $state.Transit.Params 1}})
     if !ok {
         return nil, 0, errors.New("wrong payload type")
     }
-    return s.cleanHandlers.{{.Name}}(aInput, aPayload)
+    return s.cleanHandlers.{{$state.Transit.Name}}(aInput, aPayload)
 }
-`))
 
-	errorTpl = template.Must(template.New("errorTpl").Parse(`
-func (s *SMRH{{.Machine}}) {{.Name}}(element common.SlotElementHelper, err error) (interface{}, common.ElState) {
-    aInput, ok := element.GetInputEvent().({{.EventType}})
+func (s *SMRH{{$machine.Name}}) {{$state.Migrate.Name}}(element common.SlotElementHelper) (interface{}, common.ElState, error) {
+    aInput, ok := element.GetInputEvent().({{$machine.Init.EventType}})
+    if !ok {
+        return nil, 0, errors.New("wrong input event type")
+    }
+    aPayload, ok := element.GetPayload().({{index $state.Migrate.Params 1}})
+    if !ok {
+        return nil, 0, errors.New("wrong payload type")
+    }
+    return s.cleanHandlers.{{$state.Migrate.Name}}(aInput, aPayload)
+}
+
+func (s *SMRH{{$machine.Name}}) {{$state.Error.Name}}(element common.SlotElementHelper, err error) (interface{}, common.ElState) {
+    aInput, ok := element.GetInputEvent().({{$machine.Init.EventType}})
     if !ok {
         // TODO fix me
         // return nil, 0, errors.New("wrong input event type")
         return nil, 0
     }
-    aPayload, ok := element.GetPayload().({{.PayloadType}})
+    aPayload, ok := element.GetPayload().({{index $state.Error.Params 1}})
     if !ok {
         // TODO fix me
         // return nil, 0, errors.New("wrong payload type")
         return nil, 0
     }
-    return s.cleanHandlers.{{.Name}}(aInput, aPayload, err)
+    return s.cleanHandlers.{{$state.Error.Name}}(aInput, aPayload, err)
 }
+{{end}}
+{{end}}
 `))
-
 )
 
-type stateParams struct {
-	Machine string
-	Name string
-	Value int
-}
-
-func (g *Generator) GenerateStateMachine(w io.Writer, idx int) {
-	stateMachineIdsTpl.Execute(w, g.stateMachines[idx])
-	for i, state := range g.stateMachines[idx].States {
-		stateTpl.Execute(w, stateParams{
-			Machine: g.stateMachines[idx].Name,
-			Name: state.name,
-			Value: i + 1,
-		})
-	}
-}
-
-type initParams struct {
-	Machine string
-	EventType string
-	FirstHandlerName string
-}
-
-type handlerParams struct {
-	Machine string
-	Name string
-	EventType string
-	PayloadType string
-}
-
-func (g *Generator) GenerateRawHandlers(w io.Writer, idx int) {
-	stateMachineRawTpl.Execute(w, g.stateMachines[idx])
-	initTpl.Execute(w, initParams{
-		Machine: g.stateMachines[idx].Name,
-		EventType: g.stateMachines[idx].Init.eventType,
-		FirstHandlerName: g.stateMachines[idx].States[0].transit.name,
-	})
-	for _, state := range g.stateMachines[idx].States {
-		transitMigrateTpl.Execute(w, handlerParams{
-			Machine: g.stateMachines[idx].Name,
-			Name: state.transit.name,
-			EventType: g.stateMachines[idx].Init.eventType,
-			PayloadType: state.transit.params[1],
-		})
-		transitMigrateTpl.Execute(w, handlerParams{
-			Machine: g.stateMachines[idx].Name,
-			Name: state.migrate.name,
-			EventType: g.stateMachines[idx].Init.eventType,
-			PayloadType: state.migrate.params[1],
-		})
-		errorTpl.Execute(w, handlerParams{
-			Machine: g.stateMachines[idx].Name,
-			Name: state.error.name,
-			EventType: g.stateMachines[idx].Init.eventType,
-			PayloadType: state.error.params[1],
-		})
-	}
+func (p *Parser) Generate(w io.Writer) {
+	stateMachineTpl.Execute(w, p)
 }

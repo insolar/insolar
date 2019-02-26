@@ -2,54 +2,62 @@ package generator
 
 import (
 	"text/template"
-	"bytes"
 	"os"
+	"bufio"
 )
 
 var (
-	genTmpl = template.Must(template.New("genTmpl").Parse(`
-type _states struct {
-	transit func(element common.SlotElementHelper) (interface{}, common.ElState, error)
-	migrate func(element common.SlotElementHelper) (interface{}, common.ElState, error)
-	error func(element common.SlotElementHelper, err error) (interface{}, common.ElState)
-}
+	matrixTmpl = template.Must(template.New("matrixTmpl").
+		Parse(`package matrix
 
-var matrix map[string][]_states
-
-func _() {
-    matrix["{{.Name}}"] = []_states {
-        {{.States}}
-    }
-}
-`))
-	genStates = template.Must(template.New("genStates").Parse(`{
-                transit: {{.TransitHandler}},
-                migrate: {{.MigrateHandler}},
-                error: {{.ErrorHandler}},
-        },`))
+import (
+    "github.com/insolar/insolar/conveyor/generator/common"
+    {{range .Imports}}"{{.}}"
+    {{end}}
 )
 
-func (g *Generator) GenMatrix () {
+var matrix [][]common.State
+var indexes = make(map[string]int)
 
-	states := new(bytes.Buffer)
-	for _, state := range g.stateMachines[0].States {
-		genStates.Execute(states, struct {
-			TransitHandler string
-			MigrateHandler string
-			ErrorHandler string
-		}{
-			TransitHandler: state.transit.name,
-			MigrateHandler: state.migrate.name,
-			ErrorHandler: state.error.name,
-		})
+func init() {
+    matrix = append(matrix,
+        {{range .Machines}}{{.Module}}.SMRH{{.Name}}Export(),
+        {{end}}
+	)
+
+    {{range $i, $machine := .Machines}}indexes["{{.Module}}.{{$machine.Name}}"] = {{$i}}
+    {{end}}
+}
+`))
+)
+
+func (g *Generator) getImports() []string {
+	keys := make([]string, len(g.imports))
+	i := 0
+	for k := range g.imports {
+		keys[i] = k
+		i++
 	}
-	genTmpl.Execute(os.Stdout, struct{
-		Name string
-		States string
+	return keys
+}
+
+func (g *Generator) GenMatrix () error {
+	file, err := os.Create("conveyor/generator/matrix/matrix.go")
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	out := bufio.NewWriter(file)
+	matrixTmpl.Execute(out, struct{
+		Imports []string
+		Machines []*stateMachine
 	}{
-		Name: g.stateMachines[0].Name,
-		States: states.String(),
+		Imports: g.getImports(),
+		Machines: g.stateMachines,
+
 	})
+	out.Flush()
+	return nil
 }
 
 

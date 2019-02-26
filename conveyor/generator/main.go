@@ -18,22 +18,34 @@ package main
 
 import (
 	"github.com/insolar/insolar/conveyor/generator/generator"
-	"os"
-	"bufio"
 	"github.com/insolar/insolar/log"
+	"io/ioutil"
+	"strings"
 )
 
 func main() {
-	g := generator.Generator{}
-	g.ParseFile("conveyor/generator/sample/sample_state_machine.go")
-	file, err := os.Create("conveyor/generator/sample/sample_state_machine_generated.go")
+	g := generator.NewGenerator()
+	files, err := ioutil.ReadDir("conveyor/generator/state_machines/")
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer file.Close()
-	w := bufio.NewWriter(file)
-	g.GenerateStateMachine(w, 0)
-	g.GenerateRawHandlers(w, 0)
-	w.Flush()
+	for _, file := range files {
+		if file.IsDir() {
+			dirName := file.Name()
+			files, err := ioutil.ReadDir("conveyor/generator/state_machines/" + dirName)
+			if err != nil {
+				log.Fatal(err)
+			}
+			for _, file := range files {
+				if !strings.HasSuffix(file.Name(), "generated.go") {
+					g.ParseFile(dirName, file.Name())
+				}
+			}
+			continue
+		}
+		if !strings.HasSuffix(file.Name(), "generated.go") {
+			g.ParseFile("", file.Name())
+		}
+	}
 	g.GenMatrix()
 }
