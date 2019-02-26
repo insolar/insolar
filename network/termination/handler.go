@@ -37,7 +37,6 @@ func (t *terminationHandler) Leave(ctx context.Context) chan core.LeaveApproved 
 	return t.done
 }
 
-// TODO what if come here few times and second time we try to close closing chanel?
 func (t *terminationHandler) OnLeaveApproved() {
 	t.Lock()
 	defer t.Unlock()
