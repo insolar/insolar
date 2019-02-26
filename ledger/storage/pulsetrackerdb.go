@@ -55,7 +55,7 @@ func toPulse(raw []byte) (*Pulse, error) {
 
 // GetPulse returns pulse for provided pulse number.
 func (m *TransactionManager) GetPulse(ctx context.Context, num core.PulseNumber) (*Pulse, error) {
-	buf, err := m.get(ctx, prefixkey(scopeIDPulse, num.Bytes()))
+	buf, err := m.get(ctx, Prefixkey(scopeIDPulse, num.Bytes()))
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +77,7 @@ func (pt *pulseTracker) AddPulse(ctx context.Context, pulse core.Pulse) error {
 			previousSerialNumber int
 		)
 
-		_, err := tx.get(ctx, prefixkey(scopeIDPulse, pulse.PulseNumber.Bytes()))
+		_, err := tx.get(ctx, Prefixkey(scopeIDPulse, pulse.PulseNumber.Bytes()))
 		if err == nil {
 			return ErrOverride
 		} else if err != core.ErrNotFound {
@@ -101,7 +101,7 @@ func (pt *pulseTracker) AddPulse(ctx context.Context, pulse core.Pulse) error {
 				return err
 			}
 			prevPulse.Next = &pulse.PulseNumber
-			err = tx.set(ctx, prefixkey(scopeIDPulse, previousPulseNumber.Bytes()), prevPulse.Bytes())
+			err = tx.set(ctx, Prefixkey(scopeIDPulse, previousPulseNumber.Bytes()), prevPulse.Bytes())
 			if err != nil {
 				return err
 			}
@@ -113,12 +113,12 @@ func (pt *pulseTracker) AddPulse(ctx context.Context, pulse core.Pulse) error {
 			SerialNumber: previousSerialNumber + 1,
 			Pulse:        pulse,
 		}
-		err = tx.set(ctx, prefixkey(scopeIDPulse, pulse.PulseNumber.Bytes()), p.Bytes())
+		err = tx.set(ctx, Prefixkey(scopeIDPulse, pulse.PulseNumber.Bytes()), p.Bytes())
 		if err != nil {
 			return err
 		}
 
-		return tx.set(ctx, prefixkey(scopeIDSystem, []byte{sysLatestPulse}), p.Bytes())
+		return tx.set(ctx, Prefixkey(scopeIDSystem, []byte{sysLatestPulse}), p.Bytes())
 	})
 }
 
@@ -193,7 +193,7 @@ func (pt *pulseTracker) GetNthPrevPulse(ctx context.Context, n uint, num core.Pu
 
 // GetLatestPulse returns the latest pulse
 func (m *TransactionManager) GetLatestPulse(ctx context.Context) (*Pulse, error) {
-	buf, err := m.get(ctx, prefixkey(scopeIDSystem, []byte{sysLatestPulse}))
+	buf, err := m.get(ctx, Prefixkey(scopeIDSystem, []byte{sysLatestPulse}))
 	if err != nil {
 		return nil, err
 	}

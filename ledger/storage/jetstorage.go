@@ -136,10 +136,10 @@ func (js *jetStorage) AddJets(ctx context.Context, jetIDs ...core.RecordID) erro
 	js.addJetLock.Lock()
 	defer js.addJetLock.Unlock()
 
-	k := prefixkey(scopeIDSystem, []byte{sysJetList})
+	k := Prefixkey(scopeIDSystem, []byte{sysJetList})
 
 	var jets jet.IDSet
-	buff, err := js.DB.get(ctx, k)
+	buff, err := js.DB.Get(ctx, k)
 	if err == nil {
 		dec := codec.NewDecoder(bytes.NewReader(buff), &codec.CborHandle{})
 		err = dec.Decode(&jets)
@@ -155,7 +155,7 @@ func (js *jetStorage) AddJets(ctx context.Context, jetIDs ...core.RecordID) erro
 	for _, id := range jetIDs {
 		jets[id] = struct{}{}
 	}
-	return js.DB.set(ctx, k, jets.Bytes())
+	return js.DB.Set(ctx, k, jets.Bytes())
 }
 
 // GetJets returns jets of the current node
@@ -163,8 +163,8 @@ func (js *jetStorage) GetJets(ctx context.Context) (jet.IDSet, error) {
 	js.addJetLock.RLock()
 	defer js.addJetLock.RUnlock()
 
-	k := prefixkey(scopeIDSystem, []byte{sysJetList})
-	buff, err := js.DB.get(ctx, k)
+	k := Prefixkey(scopeIDSystem, []byte{sysJetList})
+	buff, err := js.DB.Get(ctx, k)
 	if err != nil {
 		return nil, err
 	}

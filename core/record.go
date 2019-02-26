@@ -24,7 +24,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/jbenet/go-base58"
+	base58 "github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 )
 
@@ -41,6 +41,9 @@ const (
 
 // RecordID is a unified record ID.
 type RecordID [RecordIDSize]byte
+
+// JetID should be used, when id is a jetID
+type JetID RecordID
 
 // String implements stringer on RecordID and returns base58 encoded value
 func (id *RecordID) String() string {

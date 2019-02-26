@@ -151,9 +151,9 @@ func (os *objectStorage) SetMessage(ctx context.Context, jetID core.RecordID, pu
 	}
 	hw.Sum(nil)
 
-	return os.DB.set(
+	return os.DB.Set(
 		ctx,
-		prefixkey(scopeIDMessage, prefix, pulseNumber.Bytes(), hw.Sum(nil)),
+		Prefixkey(scopeIDMessage, prefix, pulseNumber.Bytes(), hw.Sum(nil)),
 		messageBytes,
 	)
 }
@@ -165,7 +165,7 @@ func (os *objectStorage) IterateIndexIDs(
 	handler func(id core.RecordID) error,
 ) error {
 	_, jetPrefix := jet.Jet(jetID)
-	prefix := prefixkey(scopeIDLifeline, jetPrefix)
+	prefix := Prefixkey(scopeIDLifeline, jetPrefix)
 
 	return os.DB.iterate(ctx, prefix, func(k, v []byte) error {
 		pn := pulseNumFromKey(0, k)

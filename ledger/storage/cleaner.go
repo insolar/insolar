@@ -137,8 +137,8 @@ func (c *cleaner) removeJetRecordsUntil(
 ) (RmStat, error) {
 	var stat RmStat
 	_, prefix := jet.Jet(jetID)
-	jetprefix := prefixkey(namespace, prefix)
-	startprefix := prefixkey(namespace, prefix, rmScanFromPulse)
+	jetprefix := Prefixkey(namespace, prefix)
+	startprefix := Prefixkey(namespace, prefix, rmScanFromPulse)
 
 	return stat, c.DB.GetBadgerDB().Update(func(txn *badger.Txn) error {
 		opts := badger.DefaultIteratorOptions
@@ -178,7 +178,7 @@ func (c *cleaner) CleanJetIndexes(
 	recent.FilterNotExistWithLock(ctx, candidates, func(fordelete []core.RecordID) {
 		for _, recID := range fordelete {
 			stat.Scanned++
-			key := prefixkey(scopeIDLifeline, prefix, recID[:])
+			key := Prefixkey(scopeIDLifeline, prefix, recID[:])
 			err := c.DB.GetBadgerDB().Update(func(txn *badger.Txn) error {
 				return txn.Delete(key)
 			})

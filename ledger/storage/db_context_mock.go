@@ -1183,7 +1183,7 @@ func (m *mDBContextMockget) Set(f func(p context.Context, p1 []byte) (r []byte, 
 }
 
 //get implements github.com/insolar/insolar/ledger/storage.DBContext interface
-func (m *DBContextMock) get(p context.Context, p1 []byte) (r []byte, r1 error) {
+func (m *DBContextMock) Get(p context.Context, p1 []byte) (r []byte, r1 error) {
 	counter := atomic.AddUint64(&m.getPreCounter, 1)
 	defer atomic.AddUint64(&m.getCounter, 1)
 
@@ -1483,7 +1483,7 @@ func (m *mDBContextMockset) Set(f func(p context.Context, p1 []byte, p2 []byte) 
 }
 
 //set implements github.com/insolar/insolar/ledger/storage.DBContext interface
-func (m *DBContextMock) set(p context.Context, p1 []byte, p2 []byte) (r error) {
+func (m *DBContextMock) Set(p context.Context, p1 []byte, p2 []byte) (r error) {
 	counter := atomic.AddUint64(&m.setPreCounter, 1)
 	defer atomic.AddUint64(&m.setCounter, 1)
 
@@ -1616,7 +1616,7 @@ func (m *mDBContextMockwaitingFlight) Set(f func()) *DBContextMock {
 }
 
 //waitingFlight implements github.com/insolar/insolar/ledger/storage.DBContext interface
-func (m *DBContextMock) waitingFlight() {
+func (m *DBContextMock) WaitingFlight() {
 	counter := atomic.AddUint64(&m.waitingFlightPreCounter, 1)
 	defer atomic.AddUint64(&m.waitingFlightCounter, 1)
 

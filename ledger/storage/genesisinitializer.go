@@ -60,7 +60,7 @@ func (gi *genesisInitializer) Init(ctx context.Context) error {
 	jetID := *jet.NewID(0, nil)
 
 	getGenesisRef := func() (*core.RecordRef, error) {
-		buff, err := gi.DB.get(ctx, prefixkey(scopeIDSystem, []byte{sysGenesis}))
+		buff, err := gi.DB.Get(ctx, Prefixkey(scopeIDSystem, []byte{sysGenesis}))
 		if err != nil {
 			return nil, err
 		}
@@ -110,7 +110,7 @@ func (gi *genesisInitializer) Init(ctx context.Context) error {
 		}
 
 		genesisRef := core.NewRecordRef(*genesisID, *genesisID)
-		return genesisRef, gi.DB.set(ctx, prefixkey(scopeIDSystem, []byte{sysGenesis}), genesisRef[:])
+		return genesisRef, gi.DB.Set(ctx, Prefixkey(scopeIDSystem, []byte{sysGenesis}), genesisRef[:])
 	}
 
 	var err error

@@ -29,7 +29,7 @@ func (h bytes2hex) String() string {
 	return hex.EncodeToString(h)
 }
 
-func prefixkey(prefix byte, parts ...[]byte) []byte {
+func Prefixkey(prefix byte, parts ...[]byte) []byte {
 	tail := bytes.Join(parts, nil)
 	k := make([]byte, len(tail)+1)
 	k[0] = prefix

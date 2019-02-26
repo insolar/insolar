@@ -28,8 +28,8 @@ import (
 var ZeroJetID = *NewID(0, nil)
 
 // NewID generates RecordID for jet.
-func NewID(depth uint8, prefix []byte) *core.RecordID {
-	var id core.RecordID
+func NewID(depth uint8, prefix []byte) *core.JetID {
+	var id core.JetID
 	copy(id[:core.PulseNumberSize], core.PulseNumberJet.Bytes())
 	id[core.PulseNumberSize] = depth
 	copy(id[core.PulseNumberSize+1:], prefix)
@@ -54,14 +54,14 @@ func (j IDSet) Bytes() []byte {
 }
 
 // Jet extracts depth and prefix from jet id.
-func Jet(id core.RecordID) (uint8, []byte) {
-	if id.Pulse() != core.PulseNumberJet {
+func Jet(id core.JetID) (uint8, []byte) {
+	if core.RecordID(id).Pulse() != core.PulseNumberJet {
 		panic(fmt.Sprintf("provided id %b is not a jet id", id))
 	}
 	return id[core.PulseNumberSize], id[core.PulseNumberSize+1:]
 }
 
-func Parent(id core.RecordID) core.RecordID {
+func Parent(id core.JetID) core.JetID {
 	depth, prefix := Jet(id)
 	if depth == 0 {
 		return id
