@@ -15,31 +15,46 @@
  *
  */
 
-package servicenetwork
+package resolver
 
 import (
-	"context"
-	"sync/atomic"
+	"net"
+	"testing"
 
-	"github.com/insolar/insolar/core"
+	"github.com/stretchr/testify/suite"
 )
 
-type testNetworkSwitcher struct {
-	state int32
+type FixedAddressResolverSuite struct {
+	suite.Suite
 }
 
-func NewTestNetworkSwitcher() core.NetworkSwitcher {
-	state := int32(core.VoidNetworkState)
-	return &testNetworkSwitcher{state: state}
+func (s *FixedAddressResolverSuite) TestSuccess() {
+	localAddress := "127.0.0.1:12345"
+	externalAddress := "192.168.0.1"
+
+	conn := &MocktConn{}
+	conn.On("LocalAddr").Return(net.ResolveTCPAddr("tcp", localAddress))
+
+	r := NewFixedAddressResolver(externalAddress)
+	s.Require().IsType(&fixedAddressResolver{}, r)
+	realAddress, err := r.Resolve(conn)
+	s.NoError(err)
+	s.Equal("192.168.0.1:12345", realAddress)
 }
 
-func (t *testNetworkSwitcher) GetState() core.NetworkState {
-	s := atomic.LoadInt32(&t.state)
-	return core.NetworkState(s)
+func (s *FixedAddressResolverSuite) TestFailure_EmptyPort() {
+	localAddress := "empty_port"
+	externalAddress := "192.168.0.1"
+
+	conn := &MocktConn{}
+	conn.On("LocalAddr").Return(net.ResolveTCPAddr("tcp", localAddress))
+
+	r := NewFixedAddressResolver(externalAddress)
+	s.Require().IsType(&fixedAddressResolver{}, r)
+	_, err := r.Resolve(conn)
+	s.Error(err)
 }
 
-func (t *testNetworkSwitcher) OnPulse(context.Context, core.Pulse) error {
-	newState := int32(core.CompleteNetworkState)
-	atomic.StoreInt32(&t.state, newState)
-	return nil
+func TestFixedAddressResolver(t *testing.T) {
+	suite.Run(t, new(FixedAddressResolverSuite))
 }

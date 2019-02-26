@@ -29,6 +29,8 @@ import (
 	"github.com/insolar/insolar/consensus/phases"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/network/nodenetwork"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
@@ -68,6 +70,16 @@ func (s *testSuite) TestNodeConnect() {
 	s.Equal(s.getNodesCount()+1, len(activeNodes))
 	activeNodes = testNode.serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount()+1, len(activeNodes))
+}
+
+func (s *testSuite) TestNodeConnectInvalidVersion() {
+	testNode := newNetworkNode()
+	s.preInitNode(testNode)
+	testNode.serviceNetwork.NodeKeeper.GetOrigin().(nodenetwork.MutableNode).SetVersion("ololo")
+	s.InitNode(testNode)
+	err := testNode.componentManager.Start(s.fixture().ctx)
+	assert.Error(s.T(), err)
+	log.Infof("Error: %s", err)
 }
 
 func (s *testSuite) TestTwoNodesConnect() {
@@ -418,8 +430,7 @@ func (s *testSuite) TestDiscoveryDown() {
 		s.T().Skip(consensusMinMsg)
 	}
 
-	s.StopNode(s.fixture().bootstrapNodes[0])
-
+	s.fixture().bootstrapNodes[0].serviceNetwork.Stop(context.Background())
 	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
 	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount()-1, len(activeNodes))

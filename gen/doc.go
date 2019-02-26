@@ -1,5 +1,5 @@
 /*
- *    Copyright 2019 Insolar Technologies
+ *    Copyright 2019 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -14,20 +14,5 @@
  *    limitations under the License.
  */
 
-package core
-
-// TerminationHandler handles such node events as graceful stop, abort, etc.
-type TerminationHandler interface {
-	// Abort forces to stop all node components
-	Abort()
-}
-
-type terminationHandler struct{}
-
-func (terminationHandler) Abort() {
-	panic("Node leave acknowledged by network. Goodbye!")
-}
-
-func NewTerminationHandler() TerminationHandler {
-	return &terminationHandler{}
-}
+// Package gen contains functions for generating insolar types.
+package gen

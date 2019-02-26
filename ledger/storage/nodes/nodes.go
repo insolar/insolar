@@ -19,6 +19,7 @@ package nodes
 import (
 	"sync"
 
+	"github.com/insolar/insolar"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/storage"
 )
@@ -26,14 +27,14 @@ import (
 // Accessor provides info about active nodes.
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage/nodes.Accessor -o ./ -s _mock.go
 type Accessor interface {
-	All(pulse core.PulseNumber) ([]core.Node, error)
-	InRole(pulse core.PulseNumber, role core.StaticRole) ([]core.Node, error)
+	All(pulse core.PulseNumber) ([]insolar.Node, error)
+	InRole(pulse core.PulseNumber, role core.StaticRole) ([]insolar.Node, error)
 }
 
 // Setter provides methods for setting active nodes.
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage/nodes.Setter -o ./ -s _mock.go
 type Setter interface {
-	Set(pulse core.PulseNumber, nodes []core.Node) error
+	Set(pulse core.PulseNumber, nodes []insolar.Node) error
 	Delete(pulse core.PulseNumber)
 }
 
@@ -42,17 +43,17 @@ type Setter interface {
 // It should only contain previous N pulses. It should be stored on disk.
 type Storage struct {
 	lock  sync.RWMutex
-	nodes map[core.PulseNumber][]Node
+	nodes map[core.PulseNumber][]insolar.Node
 }
 
 // NewStorage create new instance of Storage
 func NewStorage() *Storage {
 	// return new(nodeStorage)
-	return &Storage{nodes: map[core.PulseNumber][]Node{}}
+	return &Storage{nodes: map[core.PulseNumber][]insolar.Node{}}
 }
 
 // Set saves active nodes for pulse in memory.
-func (a *Storage) Set(pulse core.PulseNumber, nodes []core.Node) error {
+func (a *Storage) Set(pulse core.PulseNumber, nodes []insolar.Node) error {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 
@@ -60,19 +61,17 @@ func (a *Storage) Set(pulse core.PulseNumber, nodes []core.Node) error {
 		return storage.ErrOverride
 	}
 
-	a.nodes[pulse] = []Node{}
-	for _, n := range nodes {
-		a.nodes[pulse] = append(a.nodes[pulse], Node{
-			FID:   n.ID(),
-			FRole: n.Role(),
-		})
+	if len(nodes) != 0 {
+		a.nodes[pulse] = append([]insolar.Node{}, nodes...)
+	} else {
+		a.nodes[pulse] = nil
 	}
 
 	return nil
 }
 
 // All return active nodes for specified pulse.
-func (a *Storage) All(pulse core.PulseNumber) ([]core.Node, error) {
+func (a *Storage) All(pulse core.PulseNumber) ([]insolar.Node, error) {
 	a.lock.RLock()
 	defer a.lock.RUnlock()
 
@@ -80,16 +79,13 @@ func (a *Storage) All(pulse core.PulseNumber) ([]core.Node, error) {
 	if !ok {
 		return nil, core.ErrNoNodes
 	}
-	res := make([]core.Node, len(nodes))
-	for i, n := range nodes {
-		res[i] = n
-	}
+	res := append(nodes[:0:0], nodes...)
 
 	return res, nil
 }
 
 // InRole return active nodes for specified pulse and role.
-func (a *Storage) InRole(pulse core.PulseNumber, role core.StaticRole) ([]core.Node, error) {
+func (a *Storage) InRole(pulse core.PulseNumber, role core.StaticRole) ([]insolar.Node, error) {
 	a.lock.RLock()
 	defer a.lock.RUnlock()
 
@@ -97,10 +93,10 @@ func (a *Storage) InRole(pulse core.PulseNumber, role core.StaticRole) ([]core.N
 	if !ok {
 		return nil, core.ErrNoNodes
 	}
-	var inRole []core.Node
-	for _, n := range nodes {
-		if n.Role() == role {
-			inRole = append(inRole, n)
+	var inRole []insolar.Node
+	for _, node := range nodes {
+		if node.Role == role {
+			inRole = append(inRole, node)
 		}
 	}
 

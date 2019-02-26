@@ -15,31 +15,43 @@
  *
  */
 
-package servicenetwork
+package resolver
 
 import (
-	"context"
-	"sync/atomic"
+	"fmt"
+	"net"
+	"net/url"
 
-	"github.com/insolar/insolar/core"
+	"github.com/pkg/errors"
 )
 
-type testNetworkSwitcher struct {
-	state int32
+type fixedAddressResolver struct {
+	publicAddress string
 }
 
-func NewTestNetworkSwitcher() core.NetworkSwitcher {
-	state := int32(core.VoidNetworkState)
-	return &testNetworkSwitcher{state: state}
+func NewFixedAddressResolver(publicAddress string) PublicAddressResolver {
+	return newFixedAddressResolver(publicAddress)
 }
 
-func (t *testNetworkSwitcher) GetState() core.NetworkState {
-	s := atomic.LoadInt32(&t.state)
-	return core.NetworkState(s)
+func newFixedAddressResolver(publicAddress string) *fixedAddressResolver {
+	return &fixedAddressResolver{
+		publicAddress: publicAddress,
+	}
 }
 
-func (t *testNetworkSwitcher) OnPulse(context.Context, core.Pulse) error {
-	newState := int32(core.CompleteNetworkState)
-	atomic.StoreInt32(&t.state, newState)
-	return nil
+func (r *fixedAddressResolver) Resolve(conn net.PacketConn) (string, error) {
+	urlString := conn.LocalAddr().String()
+	url, err := url.Parse(urlString)
+
+	var port string
+	if err != nil {
+		_, port, _ = net.SplitHostPort(urlString)
+	} else {
+		port = url.Port()
+	}
+
+	if port == "" {
+		return "", errors.New("Failed to extract port from uri: " + urlString)
+	}
+	return fmt.Sprintf("%s:%s", r.publicAddress, port), nil
 }

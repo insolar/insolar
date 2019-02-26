@@ -28,6 +28,9 @@ import (
 	"github.com/insolar/insolar/network/transport/packet"
 	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/insolar/insolar/network/transport/relay"
+	"github.com/insolar/insolar/network/transport/resolver"
+
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -175,4 +178,28 @@ func TestQuicTransport(t *testing.T) {
 	cfg2 := configuration.Transport{Protocol: "QUIC", Address: "127.0.0.1:17019", BehindNAT: false}
 
 	suite.Run(t, NewSuite(cfg1, cfg2))
+}
+
+func Test_createResolver(t *testing.T) {
+	a := assert.New(t)
+
+	cfg1 := configuration.Transport{Protocol: "TCP", Address: "127.0.0.1:17018", BehindNAT: false, FixedPublicAddress: "192.168.0.1"}
+	r, err := createResolver(cfg1)
+	a.NoError(err)
+	a.IsType(resolver.NewFixedAddressResolver(""), r)
+
+	cfg2 := configuration.Transport{Protocol: "TCP", Address: "127.0.0.1:17018", BehindNAT: true, FixedPublicAddress: ""}
+	r, err = createResolver(cfg2)
+	a.NoError(err)
+	a.IsType(resolver.NewStunResolver(""), r)
+
+	cfg3 := configuration.Transport{Protocol: "TCP", Address: "127.0.0.1:17018", BehindNAT: false, FixedPublicAddress: ""}
+	r, err = createResolver(cfg3)
+	a.NoError(err)
+	a.IsType(resolver.NewExactResolver(), r)
+
+	cfg4 := configuration.Transport{Protocol: "TCP", Address: "127.0.0.1:17018", BehindNAT: true, FixedPublicAddress: "192.168.0.1"}
+	r, err = createResolver(cfg4)
+	a.Error(err)
+	a.Nil(r)
 }
