@@ -51,20 +51,25 @@ type syncstate struct {
 	// insyncend core.PulseNumber
 	syncpulse *core.PulseNumber
 	insync    bool
-	timeout   time.Timer
+	timer     *time.Timer
 }
 
 func (s *syncstate) resetTimeout(ctx context.Context, pn core.PulseNumber) {
-	s.timeout.Reset(resetTimeout)
-	// timeout = *time.NewTimer(resetTimeout)
+	if s.timer != nil {
+		s.timer.Reset(resetTimeout)
+	} else {
+		s.timer = time.NewTimer(resetTimeout)
+	}
+	timer := s.timer
 	go func() {
-		<-s.timeout.C
+		<-timer.C
+
 		s.Lock()
-		defer s.Unlock()
-		if s.lastok == pn {
-			return
+		if s.timer == timer {
+			s.syncpulse = nil
+			s.timer = nil
 		}
-		s.syncpulse = nil
+		s.Unlock()
 	}()
 }
 
@@ -121,7 +126,7 @@ func (s *Sync) getJetSyncState(ctx context.Context, jetID core.RecordID) *syncst
 	s.Lock()
 	jetState, ok := s.jetSyncStates[jp]
 	if !ok {
-		jetState = &syncstate{timeout: *time.NewTimer(resetTimeout)}
+		jetState = &syncstate{}
 		s.jetSyncStates[jp] = jetState
 	}
 	s.Unlock()
