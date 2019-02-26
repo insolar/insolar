@@ -24,7 +24,7 @@ func (s *testSuite) TestNodeMajority_NodeFailedToConectWithWrongMajority() {
 		s.T().Skip(consensusMinMsg)
 	}
 
-	testNode := newNetworkNode()
+	testNode := s.newNetworkNode("testNode")
 	s.preInitNode(testNode)
 	setMajority(testNode, len(s.fixture().bootstrapNodes)+1)
 	s.InitNode(testNode)
@@ -32,4 +32,3 @@ func (s *testSuite) TestNodeMajority_NodeFailedToConectWithWrongMajority() {
 	err := testNode.componentManager.Start(s.fixture().ctx)
 	s.Error(err, "majority rule failed")
 }
-

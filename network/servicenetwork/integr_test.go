@@ -43,7 +43,7 @@ func (s *testSuite) TestNetworkConsensus3Times() {
 }
 
 func (s *testSuite) TestNodeConnect() {
-	testNode := newNetworkNode()
+	testNode := s.newNetworkNode("testNode")
 	s.preInitNode(testNode)
 	setMajority(testNode, len(s.fixture().bootstrapNodes))
 
@@ -76,8 +76,8 @@ func (s *testSuite) TestTwoNodesConnect() {
 		s.T().Skip(consensusMinMsg)
 	}
 
-	testNode := newNetworkNode()
-	testNode2 := newNetworkNode()
+	testNode := s.newNetworkNode("testNode")
+	testNode2 := s.newNetworkNode("testNode2")
 
 	s.preInitNode(testNode)
 	s.preInitNode(testNode2)
@@ -130,7 +130,7 @@ func (s *testSuite) TestNodeLeave() {
 		s.T().Skip(consensusMinMsg)
 	}
 
-	testNode := newNetworkNode()
+	testNode := s.newNetworkNode("testNode")
 	s.preInitNode(testNode)
 
 	s.InitNode(testNode)
@@ -167,7 +167,7 @@ func (s *testSuite) TestNodeLeaveAtETA() {
 		s.T().Skip(consensusMinMsg)
 	}
 
-	testNode := newNetworkNode()
+	testNode := s.newNetworkNode("testNode")
 	s.preInitNode(testNode)
 
 	s.InitNode(testNode)
@@ -208,7 +208,7 @@ func (s *testSuite) TestNodeComeAfterAnotherNodeSendLeaveETA() {
 		s.T().Skip(consensusMinMsg)
 	}
 
-	leavingNode := newNetworkNode()
+	leavingNode := s.newNetworkNode("leavingNode")
 	s.preInitNode(leavingNode)
 
 	s.InitNode(leavingNode)
@@ -232,7 +232,7 @@ func (s *testSuite) TestNodeComeAfterAnotherNodeSendLeaveETA() {
 	// wait for leavingNode will be marked as leaving
 	s.waitForConsensus(1)
 
-	newNode := newNetworkNode()
+	newNode := s.newNetworkNode("testNode")
 	s.preInitNode(newNode)
 
 	s.InitNode(newNode)
