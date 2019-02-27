@@ -18,6 +18,7 @@ package sample
 
 import (
 	"github.com/insolar/insolar/conveyor/generator/common"
+	"log"
 )
 
 // custom types
@@ -51,4 +52,38 @@ type TestStateMachine interface {
 	TransitSecondThird(input Event, payload *Payload) (*Payload, common.ElState, error)
 	MigrateSecond(input Event, payload *Payload) (*Payload, common.ElState, error)
 	ErrorSecond(input Event, payload *Payload, err error) (*Payload, common.ElState)
+}
+
+type TestStateMachineImplementation struct {
+	SMFIDTestStateMachine
+}
+
+func (t *TestStateMachineImplementation) Init(input Event) (*Payload, common.ElState, error) {
+	return nil, t.StateFirst(), nil
+}
+
+func (t *TestStateMachineImplementation) TransitFirstSecond(input Event, payload *Payload) (*Payload, common.ElState, error) {
+	return nil, t.StateSecond(), nil
+}
+
+func (t *TestStateMachineImplementation) MigrateFirst(input Event, payload *Payload) (*Payload, common.ElState, error) {
+	return nil, t.StateSecond(), nil
+}
+
+func (t *TestStateMachineImplementation) ErrorFirst(input Event, payload *Payload, err error) (*Payload, common.ElState) {
+	log.Print(err)
+	return nil, t.StateSecond()
+}
+
+func (t *TestStateMachineImplementation) TransitSecondThird(input Event, payload *Payload) (*Payload, common.ElState, error) {
+	return nil, 0, nil
+}
+
+func (t *TestStateMachineImplementation) MigrateSecond(input Event, payload *Payload) (*Payload, common.ElState, error) {
+	return nil, 0, nil
+}
+
+func (t *TestStateMachineImplementation) ErrorSecond(input Event, payload *Payload, err error) (*Payload, common.ElState) {
+	log.Print(err)
+	return nil, 0
 }

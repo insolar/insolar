@@ -17,9 +17,9 @@
 package common
 
 type State struct {
-	Transit func(element SlotElementHelper) (interface{}, ElState, error)
-	Migrate func(element SlotElementHelper) (interface{}, ElState, error)
-	Error func(element SlotElementHelper, err error) (interface{}, ElState)
+	Transit func(element SlotElementHelper) (interface{}, uint32, error)
+	Migrate func(element SlotElementHelper) (interface{}, uint32, error)
+	Error func(element SlotElementHelper, err error) (interface{}, uint32)
 }
 
 type SlotElementHelper interface {

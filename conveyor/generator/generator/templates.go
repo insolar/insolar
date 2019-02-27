@@ -55,19 +55,19 @@ func SMRH{{$machine.Name}}Export() []common.State {
     {{end}})
 }
 
-func (s *SMRH{{$machine.Name}}) Init(element common.SlotElementHelper) (interface{}, common.ElState, error) {
+func (s *SMRH{{$machine.Name}}) Init(element common.SlotElementHelper) (interface{}, uint32, error) {
     aInput, ok := element.GetInputEvent().({{$machine.Init.EventType}})
     if !ok {
         return nil, 0, errors.New("wrong input event type")
     }
     payload, state, err := s.cleanHandlers.Init(aInput)
     if err != nil {
-        return payload, state, err
+        return payload, state.ToInt(), err
     }
-    return s.cleanHandlers.{{(index $machine.States 0).Transit.Name}}(aInput, payload)
+    return payload, state.ToInt(), err
 }
 {{range $i, $state := $machine.States}}
-func (s *SMRH{{$machine.Name}}) {{$state.Transit.Name}}(element common.SlotElementHelper) (interface{}, common.ElState, error) {
+func (s *SMRH{{$machine.Name}}) {{$state.Transit.Name}}(element common.SlotElementHelper) (interface{}, uint32, error) {
     aInput, ok := element.GetInputEvent().({{$machine.Init.EventType}})
     if !ok {
         return nil, 0, errors.New("wrong input event type")
@@ -76,10 +76,11 @@ func (s *SMRH{{$machine.Name}}) {{$state.Transit.Name}}(element common.SlotEleme
     if !ok {
         return nil, 0, errors.New("wrong payload type")
     }
-    return s.cleanHandlers.{{$state.Transit.Name}}(aInput, aPayload)
+    payload, state, err := s.cleanHandlers.{{$state.Transit.Name}}(aInput, aPayload)
+    return payload, state.ToInt(), err
 }
 
-func (s *SMRH{{$machine.Name}}) {{$state.Migrate.Name}}(element common.SlotElementHelper) (interface{}, common.ElState, error) {
+func (s *SMRH{{$machine.Name}}) {{$state.Migrate.Name}}(element common.SlotElementHelper) (interface{}, uint32, error) {
     aInput, ok := element.GetInputEvent().({{$machine.Init.EventType}})
     if !ok {
         return nil, 0, errors.New("wrong input event type")
@@ -88,10 +89,11 @@ func (s *SMRH{{$machine.Name}}) {{$state.Migrate.Name}}(element common.SlotEleme
     if !ok {
         return nil, 0, errors.New("wrong payload type")
     }
-    return s.cleanHandlers.{{$state.Migrate.Name}}(aInput, aPayload)
+    payload, state, err := s.cleanHandlers.{{$state.Migrate.Name}}(aInput, aPayload)
+    return payload, state.ToInt(), err
 }
 
-func (s *SMRH{{$machine.Name}}) {{$state.Error.Name}}(element common.SlotElementHelper, err error) (interface{}, common.ElState) {
+func (s *SMRH{{$machine.Name}}) {{$state.Error.Name}}(element common.SlotElementHelper, err error) (interface{}, uint32) {
     aInput, ok := element.GetInputEvent().({{$machine.Init.EventType}})
     if !ok {
         // TODO fix me
@@ -104,7 +106,8 @@ func (s *SMRH{{$machine.Name}}) {{$state.Error.Name}}(element common.SlotElement
         // return nil, 0, errors.New("wrong payload type")
         return nil, 0
     }
-    return s.cleanHandlers.{{$state.Error.Name}}(aInput, aPayload, err)
+    payload, state := s.cleanHandlers.{{$state.Error.Name}}(aInput, aPayload, err)
+    return payload, state.ToInt()
 }
 {{end}}
 {{end}}
