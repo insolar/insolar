@@ -84,18 +84,19 @@ func (d *distributor) Distribute(ctx context.Context, pulse core.Pulse) {
 
 	ctx, span := instracer.StartSpan(ctx, "distributor.Distribute")
 	defer span.End()
-	d.resume(ctx)
-	defer d.pause(ctx)
 
 	bootstrapHosts := make([]*host.Host, 0, len(d.bootstrapHosts))
-
 	for _, node := range d.bootstrapHosts {
 		bootstrapHost, err := host.NewHost(node)
 		if err != nil {
 			logger.Error(err, "[ Distribute ] failed to create bootstrap node host")
+			continue
 		}
 		bootstrapHosts = append(bootstrapHosts, bootstrapHost)
 	}
+
+	d.resume(ctx)
+	defer d.pause(ctx)
 
 	wg := sync.WaitGroup{}
 	wg.Add(len(bootstrapHosts))
