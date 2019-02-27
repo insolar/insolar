@@ -21,8 +21,9 @@ func NewID(depth uint8, prefix []byte) *JetID {
 }
 
 // Jet extracts depth and prefix from jet id.
-func (id *JetID) Jet() (uint8, []byte) {
-	if core.RecordID(*id).Pulse() != core.PulseNumberJet {
+func (id JetID) Jet() (uint8, []byte) {
+	recordID := core.RecordID(id)
+	if recordID.Pulse() != core.PulseNumberJet {
 		panic(fmt.Sprintf("provided id %b is not a jet id", id))
 	}
 	return id[core.PulseNumberSize], id[core.PulseNumberSize+1:]

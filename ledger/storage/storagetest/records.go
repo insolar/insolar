@@ -77,7 +77,8 @@ func AddRandRecord(
 // AddRandDrop adds random drop.
 func AddRandDrop(
 	ctx context.Context,
-	dropStorage storage.DropStorage,
+	modifier jet.DropModifier,
+	accessor jet.DropAccessor,
 	jetID core.RecordID,
 	pulsenum core.PulseNumber,
 ) (*jet.JetDrop, error) {
@@ -89,9 +90,10 @@ func AddRandDrop(
 		PrevHash: hash1[:],
 		Hash:     hash2[:],
 	}
-	err := dropStorage.SetDrop(ctx, jetID, &drop)
+	err := modifier.Set(ctx, storage.JetID(jetID), drop)
 	if err != nil {
 		return nil, err
 	}
-	return dropStorage.GetDrop(ctx, jetID, pulsenum)
+	resDrop, err := accessor.ForPulse(ctx, storage.JetID(jetID), pulsenum)
+	return &resDrop, err
 }

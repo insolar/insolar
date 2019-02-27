@@ -69,6 +69,12 @@ type dropStorageMemory struct {
 	jets map[storage.JetID]*dropForPulseManager
 }
 
+func NewDropStorageMemory() *dropStorageMemory {
+	return &dropStorageMemory{
+		jets: map[storage.JetID]*dropForPulseManager{},
+	}
+}
+
 func (m *dropStorageMemory) fetchStorage(jetID storage.JetID) (ds *dropForPulseManager) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
@@ -92,7 +98,11 @@ func (m *dropStorageMemory) Set(ctx context.Context, jetID storage.JetID, drop J
 }
 
 type dropStorageDB struct {
-	DB storage.DBContext
+	DB storage.DBContext `inject:""`
+}
+
+func NewDropStorageDB() *dropStorageDB {
+	return &dropStorageDB{}
 }
 
 func (ds *dropStorageDB) ForPulse(ctx context.Context, jetID storage.JetID, pulse core.PulseNumber) (JetDrop, error) {
