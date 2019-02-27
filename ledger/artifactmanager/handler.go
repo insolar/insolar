@@ -53,7 +53,7 @@ type MessageHandler struct {
 	DelegationTokenFactory     core.DelegationTokenFactory     `inject:""`
 	HeavySync                  core.HeavySync                  `inject:""`
 	PulseStorage               core.PulseStorage               `inject:""`
-	JetStorage                 storage.JetStorage              `inject:""`
+	JetStorage                 jet.JetStorage                  `inject:""`
 
 	jet.DropModifier `inject:""`
 
@@ -362,7 +362,7 @@ func (h *MessageHandler) handleSetBlob(ctx context.Context, parcel core.Parcel) 
 
 func (h *MessageHandler) handleGetCode(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
 	msg := parcel.Message().(*message.GetCode)
-	jetID := *jet.NewID(0, nil)
+	jetID := *storage.NewID(0, nil)
 
 	codeRec, err := h.getCode(ctx, msg.Code.Record())
 	if err == core.ErrNotFound {
@@ -1095,7 +1095,7 @@ func (h *MessageHandler) handleValidationCheck(ctx context.Context, parcel core.
 }
 
 func (h *MessageHandler) getCode(ctx context.Context, id *core.RecordID) (*record.CodeRecord, error) {
-	jetID := *jet.NewID(0, nil)
+	jetID := *storage.NewID(0, nil)
 
 	rec, err := h.ObjectStorage.GetRecord(ctx, core.RecordID(jetID), id)
 	if err != nil {
@@ -1198,7 +1198,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 		"jet": jetID.DebugString(),
 	}).Info("received hot data")
 
-	err := h.DropModifier.Set(ctx, core.JetID(msg.DropJet), msg.Drop)
+	err := h.DropModifier.Set(ctx, storage.JetID(msg.DropJet), msg.Drop)
 	if err == storage.ErrOverride {
 		err = nil
 	}

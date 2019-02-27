@@ -51,7 +51,7 @@ type componentSuite struct {
 	pulseTracker  storage.PulseTracker
 	nodeStorage   nodes.Accessor
 	objectStorage storage.ObjectStorage
-	jetStorage    storage.JetStorage
+	jetStorage    jet.JetStorage
 }
 
 func NewComponentSuite() *componentSuite {
@@ -73,7 +73,7 @@ func (s *componentSuite) BeforeTest(suiteName, testName string) {
 	s.cleaner = cleaner
 	s.db = db
 	s.scheme = testutils.NewPlatformCryptographyScheme()
-	s.jetStorage = storage.NewJetStorage()
+	s.jetStorage = jet.NewJetStorage()
 	s.nodeStorage = nodes.NewStorage()
 	s.pulseTracker = storage.NewPulseTracker()
 	s.objectStorage = storage.NewObjectStorage()
@@ -109,7 +109,7 @@ func (s *componentSuite) TestLedgerArtifactManager_PendingRequest() {
 	mc := minimock.NewController(s.T())
 	defer mc.Finish()
 
-	jetID := *jet.NewID(0, nil)
+	jetID := *storage.NewID(0, nil)
 
 	amPulseStorageMock := testutils.NewPulseStorageMock(s.T())
 	amPulseStorageMock.CurrentFunc = func(p context.Context) (r *core.Pulse, r1 error) {
@@ -156,15 +156,15 @@ func (s *componentSuite) TestLedgerArtifactManager_PendingRequest() {
 	handler.JetCoordinator = jcMock
 
 	handler.HotDataWaiter = NewHotDataWaiterConcrete()
-	err := handler.HotDataWaiter.Unlock(s.ctx, jetID)
+	err := handler.HotDataWaiter.Unlock(s.ctx, core.RecordID(jetID))
 	require.NoError(s.T(), err)
 
 	err = handler.Init(s.ctx)
 	require.NoError(s.T(), err)
 	objRef := *genRandomRef(0)
 
-	s.jetStorage.UpdateJetTree(s.ctx, core.FirstPulseNumber, true, jetID)
-	s.jetStorage.UpdateJetTree(s.ctx, core.FirstPulseNumber+1, true, jetID)
+	s.jetStorage.UpdateJetTree(s.ctx, core.FirstPulseNumber, true, core.RecordID(jetID))
+	s.jetStorage.UpdateJetTree(s.ctx, core.FirstPulseNumber+1, true, core.RecordID(jetID))
 
 	// Register request
 	reqID, err := am.RegisterRequest(s.ctx, objRef, &message.Parcel{Msg: &message.CallMethod{}, PulseNumber: core.FirstPulseNumber})

@@ -66,7 +66,6 @@ func TmpDB(ctx context.Context, t testing.TB, options ...Option) (storage.DBCont
 	assert.NoError(t, err)
 
 	db, err := storage.NewDB(configuration.Ledger{
-		JetSizesHistoryDepth: 10,
 		Storage: configuration.Storage{
 			DataDirectory: tmpdir,
 		},

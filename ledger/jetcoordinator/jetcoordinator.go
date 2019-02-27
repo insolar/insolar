@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/nodes"
 	"github.com/insolar/insolar/utils/entropy"
 	"github.com/pkg/errors"
@@ -35,7 +36,7 @@ type JetCoordinator struct {
 	NodeNet                    core.NodeNetwork                `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 	PulseStorage               core.PulseStorage               `inject:""`
-	JetStorage                 storage.JetStorage              `inject:""`
+	JetStorage                 jet.JetStorage                  `inject:""`
 	PulseTracker               storage.PulseTracker            `inject:""`
 	Nodes                      nodes.Accessor                  `inject:""`
 
