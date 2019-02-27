@@ -1,8 +1,9 @@
 package generator
 
 import (
-	"testing"
 	"bytes"
+	"testing"
+
 	"github.com/magiconair/properties/assert"
 )
 
@@ -37,7 +38,7 @@ func NewSMRHTestStateMachine() SMRHTestStateMachine {
 	}
 }
 
-func (s *SMRHTestStateMachine) Init(element common.SlotElementHelper) (interface{}, common.ElState, error) {
+func (s *SMRHTestStateMachine) Init(element slot.SlotElementHelper) (interface{}, common.ElState, error) {
     aInput, ok := element.GetInputEvent().(Event)
     if !ok {
         return nil, 0, errors.New("wrong input event type")
@@ -49,7 +50,7 @@ func (s *SMRHTestStateMachine) Init(element common.SlotElementHelper) (interface
     return s.cleanHandlers.TransitFirstSecond(aInput, payload)
 }
 
-func (s *SMRHTestStateMachine) TransitFirstSecond(element common.SlotElementHelper) (interface{}, common.ElState, error) {
+func (s *SMRHTestStateMachine) TransitFirstSecond(element slot.SlotElementHelper) (interface{}, common.ElState, error) {
     aInput, ok := element.GetInputEvent().(Event)
     if !ok {
         return nil, 0, errors.New("wrong input event type")
@@ -61,7 +62,7 @@ func (s *SMRHTestStateMachine) TransitFirstSecond(element common.SlotElementHelp
     return s.cleanHandlers.TransitFirstSecond(aInput, aPayload)
 }
 
-func (s *SMRHTestStateMachine) MigrateFirst(element common.SlotElementHelper) (interface{}, common.ElState, error) {
+func (s *SMRHTestStateMachine) MigrateFirst(element slot.SlotElementHelper) (interface{}, common.ElState, error) {
     aInput, ok := element.GetInputEvent().(Event)
     if !ok {
         return nil, 0, errors.New("wrong input event type")
@@ -73,7 +74,7 @@ func (s *SMRHTestStateMachine) MigrateFirst(element common.SlotElementHelper) (i
     return s.cleanHandlers.MigrateFirst(aInput, aPayload)
 }
 
-func (s *SMRHTestStateMachine) ErrorFirst(element common.SlotElementHelper, err error) (interface{}, common.ElState) {
+func (s *SMRHTestStateMachine) ErrorFirst(element slot.SlotElementHelper, err error) (interface{}, common.ElState) {
     aInput, ok := element.GetInputEvent().(Event)
     if !ok {
         // TODO fix me
@@ -89,7 +90,7 @@ func (s *SMRHTestStateMachine) ErrorFirst(element common.SlotElementHelper, err 
     return s.cleanHandlers.ErrorFirst(aInput, aPayload, err)
 }
 
-func (s *SMRHTestStateMachine) TransitSecondThird(element common.SlotElementHelper) (interface{}, common.ElState, error) {
+func (s *SMRHTestStateMachine) TransitSecondThird(element slot.SlotElementHelper) (interface{}, common.ElState, error) {
     aInput, ok := element.GetInputEvent().(Event)
     if !ok {
         return nil, 0, errors.New("wrong input event type")
@@ -101,7 +102,7 @@ func (s *SMRHTestStateMachine) TransitSecondThird(element common.SlotElementHelp
     return s.cleanHandlers.TransitSecondThird(aInput, aPayload)
 }
 
-func (s *SMRHTestStateMachine) MigrateSecond(element common.SlotElementHelper) (interface{}, common.ElState, error) {
+func (s *SMRHTestStateMachine) MigrateSecond(element slot.SlotElementHelper) (interface{}, common.ElState, error) {
     aInput, ok := element.GetInputEvent().(Event)
     if !ok {
         return nil, 0, errors.New("wrong input event type")
@@ -113,7 +114,7 @@ func (s *SMRHTestStateMachine) MigrateSecond(element common.SlotElementHelper) (
     return s.cleanHandlers.MigrateSecond(aInput, aPayload)
 }
 
-func (s *SMRHTestStateMachine) ErrorSecond(element common.SlotElementHelper, err error) (interface{}, common.ElState) {
+func (s *SMRHTestStateMachine) ErrorSecond(element slot.SlotElementHelper, err error) (interface{}, common.ElState) {
     aInput, ok := element.GetInputEvent().(Event)
     if !ok {
         // TODO fix me
