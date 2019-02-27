@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package nodes_test
+package node_test
 
 import (
 	"testing"
@@ -23,12 +23,12 @@ import (
 	"github.com/insolar/insolar"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/gen"
-	"github.com/insolar/insolar/ledger/storage/nodes"
+	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestNodes(t *testing.T) {
-	storage := nodes.NewStorage()
+	storage := node.NewStorage()
 
 	var (
 		virtuals  []insolar.Node
