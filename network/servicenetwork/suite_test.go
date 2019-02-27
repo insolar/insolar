@@ -274,9 +274,10 @@ type networkNode struct {
 	host                string
 	ctx                 context.Context
 
-	componentManager *component.Manager
-	serviceNetwork   *ServiceNetwork
-	consensusResult  chan error
+	componentManager   *component.Manager
+	serviceNetwork     *ServiceNetwork
+	consensusResult    chan error
+	terminationHandler *testutils.TerminationHandlerMock
 }
 
 // newNetworkNode returns networkNode initialized only with id, host address and key pair
@@ -353,14 +354,6 @@ func RandomRole() core.StaticRole {
 	return core.StaticRole(i)
 }
 
-type terminationHandler struct {
-	NodeID core.RecordRef
-}
-
-func (t *terminationHandler) Abort(reason string) {
-	log.Errorf("Abort node: %s, reason: %s", t.NodeID, reason)
-}
-
 type pulseManagerMock struct {
 	pulse core.Pulse
 	lock  sync.Mutex
@@ -414,7 +407,11 @@ func (s *testSuite) preInitNode(node *networkNode) {
 
 	certManager, cryptographyService := s.initCrypto(node)
 	nodeNetwork, err := nodenetwork.NewNodeNetwork(cfg.Host, certManager.GetCertificate())
-	terminationHandler := &terminationHandler{NodeID: node.id}
+
+	node.terminationHandler = testutils.NewTerminationHandlerMock(s.T())
+	node.terminationHandler.AbortMock.Set(func(reason string) {
+		inslogger.FromContext(node.ctx).Errorf("Abort node: %s, reason: %s", node.id, reason)
+	})
 
 	networkSwitcher, err := state.NewNetworkSwitcher()
 	s.NoError(err)
@@ -423,7 +420,7 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	messageBusLocker.LockFunc = func(context.Context) {}
 	messageBusLocker.UnlockFunc = func(context.Context) {}
 
-	node.componentManager.Register(terminationHandler, nodeNetwork, newPulseManagerMock(nodeNetwork.(network.NodeKeeper)), netCoordinator, amMock)
+	node.componentManager.Register(node.terminationHandler, nodeNetwork, newPulseManagerMock(nodeNetwork.(network.NodeKeeper)), netCoordinator, amMock)
 	node.componentManager.Register(certManager, cryptographyService, rules.NewRules())
 	node.componentManager.Inject(serviceNetwork, networkSwitcher, messageBusLocker)
 	node.serviceNetwork = serviceNetwork
