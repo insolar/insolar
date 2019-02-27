@@ -23,6 +23,7 @@ import (
 	"github.com/insolar/insolar/core/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/version"
 )
 
 type Node struct {
@@ -42,6 +43,7 @@ type StatusReply struct {
 	Entropy             []byte
 	NodeState           string
 	AdditionalNodeState string
+	Version             string
 }
 
 // StatusService is a service that provides API for getting status of node.
@@ -95,6 +97,7 @@ func (s *StatusService) Get(r *http.Request, args *interface{}, reply *StatusRep
 
 	reply.PulseNumber = uint32(pulse.PulseNumber)
 	reply.Entropy = pulse.Entropy[:]
+	reply.Version = version.Version
 
 	return nil
 }

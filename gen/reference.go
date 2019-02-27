@@ -1,5 +1,5 @@
 /*
- *    Copyright 2019 Insolar Technologies
+ *    Copyright 2019 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -14,25 +14,21 @@
  *    limitations under the License.
  */
 
-package core
+package gen
 
 import (
-	"context"
+	"github.com/google/gofuzz"
+	"github.com/insolar/insolar/core"
 )
 
-// Component controller methods
-// Deprecated: and should be removed
-type Component interface {
-	Start(ctx context.Context, components Components) error
-	Stop(ctx context.Context) error
+// ID generates random id.
+func ID() (id core.RecordID) {
+	fuzz.New().Fuzz(&id)
+	return
 }
 
-// Components is a registry for other core interfaces
-// Fields order are important and represent start and stop order in the daemon
-// Deprecated: and should be removed after drop TmpLedger, DO NOT EDIT
-type Components struct {
-	NodeNetwork NodeNetwork
-	LogicRunner LogicRunner
-	Network     Network
-	MessageBus  MessageBus
+// Reference generates random reference.
+func Reference() (ref core.RecordRef) {
+	fuzz.New().Fuzz(&ref)
+	return
 }
