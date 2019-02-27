@@ -44,21 +44,12 @@ type distributor struct {
 	pulseRequestTimeout       time.Duration
 	randomNodesCount          int
 
-	pulsarHost     *host.Host
-	bootstrapHosts []*host.Host
+	pulsarHost *host.Host
+	conf       configuration.PulseDistributor
 }
 
+// NewDistributor creates a new distributor object of pulses
 func NewDistributor(conf configuration.PulseDistributor) (core.PulseDistributor, error) {
-	bootstrapHosts := make([]*host.Host, 0, len(conf.BootstrapHosts))
-
-	for _, node := range conf.BootstrapHosts {
-		bootstrapHost, err := host.NewHost(node)
-		if err != nil {
-			return nil, errors.Wrap(err, "[ NewDistributor ] failed to create bootstrap node host")
-		}
-		bootstrapHosts = append(bootstrapHosts, bootstrapHost)
-	}
-
 	return &distributor{
 		idGenerator: sequence.NewGeneratorImpl(),
 
@@ -67,7 +58,7 @@ func NewDistributor(conf configuration.PulseDistributor) (core.PulseDistributor,
 		pulseRequestTimeout:       time.Duration(conf.PulseRequestTimeout) * time.Millisecond,
 		randomNodesCount:          conf.RandomNodesCount,
 
-		bootstrapHosts: bootstrapHosts,
+		conf: conf,
 	}, nil
 }
 
@@ -95,10 +86,20 @@ func (d *distributor) Distribute(ctx context.Context, pulse core.Pulse) {
 	d.resume(ctx)
 	defer d.pause(ctx)
 
-	wg := sync.WaitGroup{}
-	wg.Add(len(d.bootstrapHosts))
+	bootstrapHosts := make([]*host.Host, 0, len(d.conf.BootstrapHosts))
 
-	for _, bootstrapHost := range d.bootstrapHosts {
+	for _, node := range d.conf.BootstrapHosts {
+		bootstrapHost, err := host.NewHost(node)
+		if err != nil {
+			logger.Error(err, "[ NewDistributor ] failed to create bootstrap node host")
+		}
+		bootstrapHosts = append(bootstrapHosts, bootstrapHost)
+	}
+
+	wg := sync.WaitGroup{}
+	wg.Add(len(bootstrapHosts))
+
+	for _, bootstrapHost := range bootstrapHosts {
 		go func(ctx context.Context, pulse core.Pulse, bootstrapHost *host.Host) {
 			defer wg.Done()
 
