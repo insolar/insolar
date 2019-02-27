@@ -27,12 +27,12 @@ func getURI(port uint) string {
 
 const (
 	defaultConfigPath            = "/etc/insolar/insolard.yaml"
-	defaultTranportListenPort    = 13831
+	defaultTranportListenPort    = 7900
 	defaultLogLevel              = "info"
 	defaultMetricsListenPort     = 8001
-	defaultRPCListenPort         = 33001
-	defaultInsgorundListenPort   = 33002
-	defaultApiListenPort         = 19101
+	defaultRPCListenPort         = 18182
+	defaultInsgorundListenPort   = 18181
+	defaultApiListenPort         = 19191
 	defaultJaegerEndpointPort    = 6831
 	defaultKeysPath              = "/etc/insolar/keys.json"
 	defaultCertPath              = "/etc/insolar/cert.json"
@@ -50,14 +50,14 @@ func main() {
 	}
 	cfg := hld.Configuration
 
-	defaultInsgorundListen := "127.0.0.1:" + string(defaultInsgorundListenPort)
+	insgorundListen := GetEnvDefault("INSGORUND_ENDPOINT", "insgorund:" + string(defaultInsgorundListenPort))
+
+	insolardMetricsListen := getURI(defaultMetricsListenPort)
+	insolardRPCListen := getURI(defaultRPCListenPort)
+	insolardAPIListen := getURI(defaultApiListenPort)
 
 	insolardTransportListen := GetEnvDefault("INSOLARD_TRANSPORT_LISTEN", getURI(defaultTranportListenPort))
 	insolardLogLevel := GetEnvDefault("INSOLARD_LOG_LEVEL", defaultLogLevel)
-	insolardMetricsListen := GetEnvDefault("INSOLARD_METRICS_LISTEN", getURI(defaultMetricsListenPort))
-	insolardRPCListen := GetEnvDefault("INSOLARD_RPC_LISTEN", getURI(defaultRPCListenPort))
-	insgorundListen := GetEnvDefault("INSGORUND_LISTEN", defaultInsgorundListen)
-	insolardAPIListen := GetEnvDefault("INSOLARD_API_LISTEN", getURI(defaultApiListenPort))
 	insolardTracerEndpoint := GetEnvDefault("INSOLARD_JAEGER_ENDPOINT", getURI(defaultJaegerEndpointPort))
 	insolardTransportFixedAddress := GetEnvDefault("INSOLARD_TRANSPORT_FIXED_ADDRESS", defaultTransportFixedAddress)
 

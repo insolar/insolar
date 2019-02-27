@@ -7,14 +7,9 @@ INSOLARD_BIN=/opt/bin/insolard
 INSGORUND_BIN=/opt/bin/insgorund
 
 GENERATE_BIN=/opt/bin/genconfig
-FOREGO_BIN=/opt/bin/forego
 
-export INSOLARD_TRANSPORT_LISTEN_PORT=${INSOLARD_TRANSPORT_LISTEN_PORT:-13831}
-export INSOLARD_METRICS_LISTEN_PORT=${INSOLARD_METRICS_LISTEN_PORT:-8001}
-export INSOLARD_RPC_LISTEN_PORT=${INSOLARD_RPC_LISTEN_PORT:-33001}
-export INSOLARD_API_LISTEN_PORT=${INSOLARD_API_LISTEN_PORT:-19101}
+export INSOLARD_TRANSPORT_LISTEN_PORT=${INSOLARD_TRANSPORT_LISTEN_PORT:-7900}
 export INSOLARD_LOG_LEVEL=${INSOLARD_LOG_LEVEL:-info}
-export INSGORUND_LISTEN_PORT=${INSGORUND_LISTEN_PORT:-33002}
 
 check_cert() {
     if   [ ! -f "/etc/insolar/cert.json" ]; then
@@ -43,23 +38,6 @@ generate_config() {
     $GENERATE_BIN /etc/insolar/insolard.yaml
 }
 
-construct_insgorund_cmd() {
-	local INSOLARD_RPC_LISTEN="$IP:$INSOLARD_RPC_LISTEN_PORT"
-
-	local insgorund_cmd="$INSGORUND_BIN --listen $INSGORUND_LISTEN"
-	insgorund_cmd="$insgorund_cmd --rpc $INSOLARD_RPC_ENDPOINT"
-	insgorund_cmd="$insgorund_cmd --log-level=$INSOLARD_LOG_LEVEL"
-	if [ ! -z "${INSOLARD_LOG_TO_FILE}" ]; then
-	    insgorund_cmd="$insgorund_cmd 2> /var/log/insgorund.log"
-	fi
-	echo $insgorund_cmd
-}
-
-generate_procfile() {
-    echo "insolard:  $(construct_insolar_cmd)"    > /opt/Procfile
-    echo "insgorund: $(construct_insgorund_cmd)" >> /opt/Procfile
-}
-
 construct_insolar_cmd() {
     local insolar_cmd="$INSOLARD_BIN --config /etc/insolar/insolard.yaml"
     if [ ! -z "${INSOLARD_JAEGER_ENDPOINT}" ]; then
@@ -73,17 +51,7 @@ construct_insolar_cmd() {
 
 check_cert
 check_genesis
-
-# extreme hack
-if [ -z "${INSGORUND_ENDPOINT}" ]; then
-    export INSGORUND_LISTEN=127.0.0.1:33302
-    export INSOLARD_RPC_ENDPOINT=127.0.0.1:33301
-    generate_config
-    generate_procfile
-    cd /opt && cat Procfile && $FOREGO_BIN start
-else
-    generate_config
-    $(construct_insolar_cmd)
-fi
+generate_config
+$(construct_insolar_cmd)
 
 exit 0
