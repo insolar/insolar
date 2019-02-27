@@ -1,25 +1,9 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
-
 package slot
 
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "SlotElementHelper" can be found in github.com/insolar/insolar/conveyor/interfaces
+The original interface "SlotElementHelper" can be found in github.com/insolar/insolar/conveyor/interfaces/slot
 */
 import (
 	"sync/atomic"
@@ -29,9 +13,14 @@ import (
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//SlotElementHelperMock implements github.com/insolar/insolar/conveyor/interfaces.SlotElementHelper
+//SlotElementHelperMock implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementHelper
 type SlotElementHelperMock struct {
 	t minimock.Tester
+
+	DeactivateTillFunc       func(p reactivateMode)
+	DeactivateTillCounter    uint64
+	DeactivateTillPreCounter uint64
+	DeactivateTillMock       mSlotElementHelperMockDeactivateTill
 
 	GetElementIDFunc       func() (r uint32)
 	GetElementIDCounter    uint64
@@ -68,6 +57,11 @@ type SlotElementHelperMock struct {
 	GetTypePreCounter uint64
 	GetTypeMock       mSlotElementHelperMockGetType
 
+	InformParentFunc       func(p interface{}) (r bool)
+	InformParentCounter    uint64
+	InformParentPreCounter uint64
+	InformParentMock       mSlotElementHelperMockInformParent
+
 	LeaveSequenceFunc       func()
 	LeaveSequenceCounter    uint64
 	LeaveSequencePreCounter uint64
@@ -78,23 +72,13 @@ type SlotElementHelperMock struct {
 	ReactivatePreCounter uint64
 	ReactivateMock       mSlotElementHelperMockReactivate
 
-	deactivateTillFunc       func(p reactivateMode)
-	deactivateTillCounter    uint64
-	deactivateTillPreCounter uint64
-	deactivateTillMock       mSlotElementHelperMockdeactivateTill
-
-	informParentFunc       func(p interface{}) (r bool)
-	informParentCounter    uint64
-	informParentPreCounter uint64
-	informParentMock       mSlotElementHelperMockinformParent
-
-	sendTaskFunc       func(p uint32, p1 interface{}, p2 uint32) (r error)
-	sendTaskCounter    uint64
-	sendTaskPreCounter uint64
-	sendTaskMock       mSlotElementHelperMocksendTask
+	SendTaskFunc       func(p uint32, p1 interface{}, p2 uint32) (r error)
+	SendTaskCounter    uint64
+	SendTaskPreCounter uint64
+	SendTaskMock       mSlotElementHelperMockSendTask
 }
 
-//NewSlotElementHelperMock returns a mock for github.com/insolar/insolar/conveyor/interfaces.SlotElementHelper
+//NewSlotElementHelperMock returns a mock for github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementHelper
 func NewSlotElementHelperMock(t minimock.Tester) *SlotElementHelperMock {
 	m := &SlotElementHelperMock{t: t}
 
@@ -102,6 +86,7 @@ func NewSlotElementHelperMock(t minimock.Tester) *SlotElementHelperMock {
 		controller.RegisterMocker(m)
 	}
 
+	m.DeactivateTillMock = mSlotElementHelperMockDeactivateTill{mock: m}
 	m.GetElementIDMock = mSlotElementHelperMockGetElementID{mock: m}
 	m.GetInputEventMock = mSlotElementHelperMockGetInputEvent{mock: m}
 	m.GetNodeIDMock = mSlotElementHelperMockGetNodeID{mock: m}
@@ -109,13 +94,135 @@ func NewSlotElementHelperMock(t minimock.Tester) *SlotElementHelperMock {
 	m.GetPayloadMock = mSlotElementHelperMockGetPayload{mock: m}
 	m.GetStateMock = mSlotElementHelperMockGetState{mock: m}
 	m.GetTypeMock = mSlotElementHelperMockGetType{mock: m}
+	m.InformParentMock = mSlotElementHelperMockInformParent{mock: m}
 	m.LeaveSequenceMock = mSlotElementHelperMockLeaveSequence{mock: m}
 	m.ReactivateMock = mSlotElementHelperMockReactivate{mock: m}
-	m.deactivateTillMock = mSlotElementHelperMockdeactivateTill{mock: m}
-	m.informParentMock = mSlotElementHelperMockinformParent{mock: m}
-	m.sendTaskMock = mSlotElementHelperMocksendTask{mock: m}
+	m.SendTaskMock = mSlotElementHelperMockSendTask{mock: m}
 
 	return m
+}
+
+type mSlotElementHelperMockDeactivateTill struct {
+	mock              *SlotElementHelperMock
+	mainExpectation   *SlotElementHelperMockDeactivateTillExpectation
+	expectationSeries []*SlotElementHelperMockDeactivateTillExpectation
+}
+
+type SlotElementHelperMockDeactivateTillExpectation struct {
+	input *SlotElementHelperMockDeactivateTillInput
+}
+
+type SlotElementHelperMockDeactivateTillInput struct {
+	p reactivateMode
+}
+
+//Expect specifies that invocation of SlotElementHelper.DeactivateTill is expected from 1 to Infinity times
+func (m *mSlotElementHelperMockDeactivateTill) Expect(p reactivateMode) *mSlotElementHelperMockDeactivateTill {
+	m.mock.DeactivateTillFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &SlotElementHelperMockDeactivateTillExpectation{}
+	}
+	m.mainExpectation.input = &SlotElementHelperMockDeactivateTillInput{p}
+	return m
+}
+
+//Return specifies results of invocation of SlotElementHelper.DeactivateTill
+func (m *mSlotElementHelperMockDeactivateTill) Return() *SlotElementHelperMock {
+	m.mock.DeactivateTillFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &SlotElementHelperMockDeactivateTillExpectation{}
+	}
+
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of SlotElementHelper.DeactivateTill is expected once
+func (m *mSlotElementHelperMockDeactivateTill) ExpectOnce(p reactivateMode) *SlotElementHelperMockDeactivateTillExpectation {
+	m.mock.DeactivateTillFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &SlotElementHelperMockDeactivateTillExpectation{}
+	expectation.input = &SlotElementHelperMockDeactivateTillInput{p}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+//Set uses given function f as a mock of SlotElementHelper.DeactivateTill method
+func (m *mSlotElementHelperMockDeactivateTill) Set(f func(p reactivateMode)) *SlotElementHelperMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.DeactivateTillFunc = f
+	return m.mock
+}
+
+//DeactivateTill implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementHelper interface
+func (m *SlotElementHelperMock) DeactivateTill(p reactivateMode) {
+	counter := atomic.AddUint64(&m.DeactivateTillPreCounter, 1)
+	defer atomic.AddUint64(&m.DeactivateTillCounter, 1)
+
+	if len(m.DeactivateTillMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.DeactivateTillMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to SlotElementHelperMock.DeactivateTill. %v", p)
+			return
+		}
+
+		input := m.DeactivateTillMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, SlotElementHelperMockDeactivateTillInput{p}, "SlotElementHelper.DeactivateTill got unexpected parameters")
+
+		return
+	}
+
+	if m.DeactivateTillMock.mainExpectation != nil {
+
+		input := m.DeactivateTillMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, SlotElementHelperMockDeactivateTillInput{p}, "SlotElementHelper.DeactivateTill got unexpected parameters")
+		}
+
+		return
+	}
+
+	if m.DeactivateTillFunc == nil {
+		m.t.Fatalf("Unexpected call to SlotElementHelperMock.DeactivateTill. %v", p)
+		return
+	}
+
+	m.DeactivateTillFunc(p)
+}
+
+//DeactivateTillMinimockCounter returns a count of SlotElementHelperMock.DeactivateTillFunc invocations
+func (m *SlotElementHelperMock) DeactivateTillMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.DeactivateTillCounter)
+}
+
+//DeactivateTillMinimockPreCounter returns the value of SlotElementHelperMock.DeactivateTill invocations
+func (m *SlotElementHelperMock) DeactivateTillMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.DeactivateTillPreCounter)
+}
+
+//DeactivateTillFinished returns true if mock invocations count is ok
+func (m *SlotElementHelperMock) DeactivateTillFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.DeactivateTillMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.DeactivateTillCounter) == uint64(len(m.DeactivateTillMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.DeactivateTillMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.DeactivateTillCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.DeactivateTillFunc != nil {
+		return atomic.LoadUint64(&m.DeactivateTillCounter) > 0
+	}
+
+	return true
 }
 
 type mSlotElementHelperMockGetElementID struct {
@@ -180,7 +287,7 @@ func (m *mSlotElementHelperMockGetElementID) Set(f func() (r uint32)) *SlotEleme
 	return m.mock
 }
 
-//GetElementID implements github.com/insolar/insolar/conveyor/interfaces.SlotElementHelper interface
+//GetElementID implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementHelper interface
 func (m *SlotElementHelperMock) GetElementID() (r uint32) {
 	counter := atomic.AddUint64(&m.GetElementIDPreCounter, 1)
 	defer atomic.AddUint64(&m.GetElementIDCounter, 1)
@@ -314,7 +421,7 @@ func (m *mSlotElementHelperMockGetInputEvent) Set(f func() (r interface{})) *Slo
 	return m.mock
 }
 
-//GetInputEvent implements github.com/insolar/insolar/conveyor/interfaces.SlotElementHelper interface
+//GetInputEvent implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementHelper interface
 func (m *SlotElementHelperMock) GetInputEvent() (r interface{}) {
 	counter := atomic.AddUint64(&m.GetInputEventPreCounter, 1)
 	defer atomic.AddUint64(&m.GetInputEventCounter, 1)
@@ -448,7 +555,7 @@ func (m *mSlotElementHelperMockGetNodeID) Set(f func() (r uint32)) *SlotElementH
 	return m.mock
 }
 
-//GetNodeID implements github.com/insolar/insolar/conveyor/interfaces.SlotElementHelper interface
+//GetNodeID implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementHelper interface
 func (m *SlotElementHelperMock) GetNodeID() (r uint32) {
 	counter := atomic.AddUint64(&m.GetNodeIDPreCounter, 1)
 	defer atomic.AddUint64(&m.GetNodeIDCounter, 1)
@@ -582,7 +689,7 @@ func (m *mSlotElementHelperMockGetParentElementID) Set(f func() (r uint32)) *Slo
 	return m.mock
 }
 
-//GetParentElementID implements github.com/insolar/insolar/conveyor/interfaces.SlotElementHelper interface
+//GetParentElementID implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementHelper interface
 func (m *SlotElementHelperMock) GetParentElementID() (r uint32) {
 	counter := atomic.AddUint64(&m.GetParentElementIDPreCounter, 1)
 	defer atomic.AddUint64(&m.GetParentElementIDCounter, 1)
@@ -716,7 +823,7 @@ func (m *mSlotElementHelperMockGetPayload) Set(f func() (r interface{})) *SlotEl
 	return m.mock
 }
 
-//GetPayload implements github.com/insolar/insolar/conveyor/interfaces.SlotElementHelper interface
+//GetPayload implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementHelper interface
 func (m *SlotElementHelperMock) GetPayload() (r interface{}) {
 	counter := atomic.AddUint64(&m.GetPayloadPreCounter, 1)
 	defer atomic.AddUint64(&m.GetPayloadCounter, 1)
@@ -850,7 +957,7 @@ func (m *mSlotElementHelperMockGetState) Set(f func() (r int)) *SlotElementHelpe
 	return m.mock
 }
 
-//GetState implements github.com/insolar/insolar/conveyor/interfaces.SlotElementHelper interface
+//GetState implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementHelper interface
 func (m *SlotElementHelperMock) GetState() (r int) {
 	counter := atomic.AddUint64(&m.GetStatePreCounter, 1)
 	defer atomic.AddUint64(&m.GetStateCounter, 1)
@@ -984,7 +1091,7 @@ func (m *mSlotElementHelperMockGetType) Set(f func() (r int)) *SlotElementHelper
 	return m.mock
 }
 
-//GetType implements github.com/insolar/insolar/conveyor/interfaces.SlotElementHelper interface
+//GetType implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementHelper interface
 func (m *SlotElementHelperMock) GetType() (r int) {
 	counter := atomic.AddUint64(&m.GetTypePreCounter, 1)
 	defer atomic.AddUint64(&m.GetTypeCounter, 1)
@@ -1056,6 +1163,153 @@ func (m *SlotElementHelperMock) GetTypeFinished() bool {
 	return true
 }
 
+type mSlotElementHelperMockInformParent struct {
+	mock              *SlotElementHelperMock
+	mainExpectation   *SlotElementHelperMockInformParentExpectation
+	expectationSeries []*SlotElementHelperMockInformParentExpectation
+}
+
+type SlotElementHelperMockInformParentExpectation struct {
+	input  *SlotElementHelperMockInformParentInput
+	result *SlotElementHelperMockInformParentResult
+}
+
+type SlotElementHelperMockInformParentInput struct {
+	p interface{}
+}
+
+type SlotElementHelperMockInformParentResult struct {
+	r bool
+}
+
+//Expect specifies that invocation of SlotElementHelper.InformParent is expected from 1 to Infinity times
+func (m *mSlotElementHelperMockInformParent) Expect(p interface{}) *mSlotElementHelperMockInformParent {
+	m.mock.InformParentFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &SlotElementHelperMockInformParentExpectation{}
+	}
+	m.mainExpectation.input = &SlotElementHelperMockInformParentInput{p}
+	return m
+}
+
+//Return specifies results of invocation of SlotElementHelper.InformParent
+func (m *mSlotElementHelperMockInformParent) Return(r bool) *SlotElementHelperMock {
+	m.mock.InformParentFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &SlotElementHelperMockInformParentExpectation{}
+	}
+	m.mainExpectation.result = &SlotElementHelperMockInformParentResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of SlotElementHelper.InformParent is expected once
+func (m *mSlotElementHelperMockInformParent) ExpectOnce(p interface{}) *SlotElementHelperMockInformParentExpectation {
+	m.mock.InformParentFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &SlotElementHelperMockInformParentExpectation{}
+	expectation.input = &SlotElementHelperMockInformParentInput{p}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *SlotElementHelperMockInformParentExpectation) Return(r bool) {
+	e.result = &SlotElementHelperMockInformParentResult{r}
+}
+
+//Set uses given function f as a mock of SlotElementHelper.InformParent method
+func (m *mSlotElementHelperMockInformParent) Set(f func(p interface{}) (r bool)) *SlotElementHelperMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.InformParentFunc = f
+	return m.mock
+}
+
+//InformParent implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementHelper interface
+func (m *SlotElementHelperMock) InformParent(p interface{}) (r bool) {
+	counter := atomic.AddUint64(&m.InformParentPreCounter, 1)
+	defer atomic.AddUint64(&m.InformParentCounter, 1)
+
+	if len(m.InformParentMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.InformParentMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to SlotElementHelperMock.InformParent. %v", p)
+			return
+		}
+
+		input := m.InformParentMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, SlotElementHelperMockInformParentInput{p}, "SlotElementHelper.InformParent got unexpected parameters")
+
+		result := m.InformParentMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the SlotElementHelperMock.InformParent")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.InformParentMock.mainExpectation != nil {
+
+		input := m.InformParentMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, SlotElementHelperMockInformParentInput{p}, "SlotElementHelper.InformParent got unexpected parameters")
+		}
+
+		result := m.InformParentMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the SlotElementHelperMock.InformParent")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.InformParentFunc == nil {
+		m.t.Fatalf("Unexpected call to SlotElementHelperMock.InformParent. %v", p)
+		return
+	}
+
+	return m.InformParentFunc(p)
+}
+
+//InformParentMinimockCounter returns a count of SlotElementHelperMock.InformParentFunc invocations
+func (m *SlotElementHelperMock) InformParentMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.InformParentCounter)
+}
+
+//InformParentMinimockPreCounter returns the value of SlotElementHelperMock.InformParent invocations
+func (m *SlotElementHelperMock) InformParentMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.InformParentPreCounter)
+}
+
+//InformParentFinished returns true if mock invocations count is ok
+func (m *SlotElementHelperMock) InformParentFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.InformParentMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.InformParentCounter) == uint64(len(m.InformParentMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.InformParentMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.InformParentCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.InformParentFunc != nil {
+		return atomic.LoadUint64(&m.InformParentCounter) > 0
+	}
+
+	return true
+}
+
 type mSlotElementHelperMockLeaveSequence struct {
 	mock              *SlotElementHelperMock
 	mainExpectation   *SlotElementHelperMockLeaveSequenceExpectation
@@ -1109,7 +1363,7 @@ func (m *mSlotElementHelperMockLeaveSequence) Set(f func()) *SlotElementHelperMo
 	return m.mock
 }
 
-//LeaveSequence implements github.com/insolar/insolar/conveyor/interfaces.SlotElementHelper interface
+//LeaveSequence implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementHelper interface
 func (m *SlotElementHelperMock) LeaveSequence() {
 	counter := atomic.AddUint64(&m.LeaveSequencePreCounter, 1)
 	defer atomic.AddUint64(&m.LeaveSequenceCounter, 1)
@@ -1219,7 +1473,7 @@ func (m *mSlotElementHelperMockReactivate) Set(f func()) *SlotElementHelperMock 
 	return m.mock
 }
 
-//Reactivate implements github.com/insolar/insolar/conveyor/interfaces.SlotElementHelper interface
+//Reactivate implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementHelper interface
 func (m *SlotElementHelperMock) Reactivate() {
 	counter := atomic.AddUint64(&m.ReactivatePreCounter, 1)
 	defer atomic.AddUint64(&m.ReactivateCounter, 1)
@@ -1276,362 +1530,92 @@ func (m *SlotElementHelperMock) ReactivateFinished() bool {
 	return true
 }
 
-type mSlotElementHelperMockdeactivateTill struct {
+type mSlotElementHelperMockSendTask struct {
 	mock              *SlotElementHelperMock
-	mainExpectation   *SlotElementHelperMockdeactivateTillExpectation
-	expectationSeries []*SlotElementHelperMockdeactivateTillExpectation
+	mainExpectation   *SlotElementHelperMockSendTaskExpectation
+	expectationSeries []*SlotElementHelperMockSendTaskExpectation
 }
 
-type SlotElementHelperMockdeactivateTillExpectation struct {
-	input *SlotElementHelperMockdeactivateTillInput
+type SlotElementHelperMockSendTaskExpectation struct {
+	input  *SlotElementHelperMockSendTaskInput
+	result *SlotElementHelperMockSendTaskResult
 }
 
-type SlotElementHelperMockdeactivateTillInput struct {
-	p reactivateMode
-}
-
-//Expect specifies that invocation of SlotElementHelper.deactivateTill is expected from 1 to Infinity times
-func (m *mSlotElementHelperMockdeactivateTill) Expect(p reactivateMode) *mSlotElementHelperMockdeactivateTill {
-	m.mock.deactivateTillFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &SlotElementHelperMockdeactivateTillExpectation{}
-	}
-	m.mainExpectation.input = &SlotElementHelperMockdeactivateTillInput{p}
-	return m
-}
-
-//Return specifies results of invocation of SlotElementHelper.deactivateTill
-func (m *mSlotElementHelperMockdeactivateTill) Return() *SlotElementHelperMock {
-	m.mock.deactivateTillFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &SlotElementHelperMockdeactivateTillExpectation{}
-	}
-
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of SlotElementHelper.deactivateTill is expected once
-func (m *mSlotElementHelperMockdeactivateTill) ExpectOnce(p reactivateMode) *SlotElementHelperMockdeactivateTillExpectation {
-	m.mock.deactivateTillFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &SlotElementHelperMockdeactivateTillExpectation{}
-	expectation.input = &SlotElementHelperMockdeactivateTillInput{p}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-//Set uses given function f as a mock of SlotElementHelper.deactivateTill method
-func (m *mSlotElementHelperMockdeactivateTill) Set(f func(p reactivateMode)) *SlotElementHelperMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.deactivateTillFunc = f
-	return m.mock
-}
-
-//deactivateTill implements github.com/insolar/insolar/conveyor/interfaces.SlotElementHelper interface
-func (m *SlotElementHelperMock) deactivateTill(p reactivateMode) {
-	counter := atomic.AddUint64(&m.deactivateTillPreCounter, 1)
-	defer atomic.AddUint64(&m.deactivateTillCounter, 1)
-
-	if len(m.deactivateTillMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.deactivateTillMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to SlotElementHelperMock.deactivateTill. %v", p)
-			return
-		}
-
-		input := m.deactivateTillMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, SlotElementHelperMockdeactivateTillInput{p}, "SlotElementHelper.deactivateTill got unexpected parameters")
-
-		return
-	}
-
-	if m.deactivateTillMock.mainExpectation != nil {
-
-		input := m.deactivateTillMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, SlotElementHelperMockdeactivateTillInput{p}, "SlotElementHelper.deactivateTill got unexpected parameters")
-		}
-
-		return
-	}
-
-	if m.deactivateTillFunc == nil {
-		m.t.Fatalf("Unexpected call to SlotElementHelperMock.deactivateTill. %v", p)
-		return
-	}
-
-	m.deactivateTillFunc(p)
-}
-
-//deactivateTillMinimockCounter returns a count of SlotElementHelperMock.deactivateTillFunc invocations
-func (m *SlotElementHelperMock) deactivateTillMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.deactivateTillCounter)
-}
-
-//deactivateTillMinimockPreCounter returns the value of SlotElementHelperMock.deactivateTill invocations
-func (m *SlotElementHelperMock) deactivateTillMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.deactivateTillPreCounter)
-}
-
-//deactivateTillFinished returns true if mock invocations count is ok
-func (m *SlotElementHelperMock) deactivateTillFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.deactivateTillMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.deactivateTillCounter) == uint64(len(m.deactivateTillMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.deactivateTillMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.deactivateTillCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.deactivateTillFunc != nil {
-		return atomic.LoadUint64(&m.deactivateTillCounter) > 0
-	}
-
-	return true
-}
-
-type mSlotElementHelperMockinformParent struct {
-	mock              *SlotElementHelperMock
-	mainExpectation   *SlotElementHelperMockinformParentExpectation
-	expectationSeries []*SlotElementHelperMockinformParentExpectation
-}
-
-type SlotElementHelperMockinformParentExpectation struct {
-	input  *SlotElementHelperMockinformParentInput
-	result *SlotElementHelperMockinformParentResult
-}
-
-type SlotElementHelperMockinformParentInput struct {
-	p interface{}
-}
-
-type SlotElementHelperMockinformParentResult struct {
-	r bool
-}
-
-//Expect specifies that invocation of SlotElementHelper.informParent is expected from 1 to Infinity times
-func (m *mSlotElementHelperMockinformParent) Expect(p interface{}) *mSlotElementHelperMockinformParent {
-	m.mock.informParentFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &SlotElementHelperMockinformParentExpectation{}
-	}
-	m.mainExpectation.input = &SlotElementHelperMockinformParentInput{p}
-	return m
-}
-
-//Return specifies results of invocation of SlotElementHelper.informParent
-func (m *mSlotElementHelperMockinformParent) Return(r bool) *SlotElementHelperMock {
-	m.mock.informParentFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &SlotElementHelperMockinformParentExpectation{}
-	}
-	m.mainExpectation.result = &SlotElementHelperMockinformParentResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of SlotElementHelper.informParent is expected once
-func (m *mSlotElementHelperMockinformParent) ExpectOnce(p interface{}) *SlotElementHelperMockinformParentExpectation {
-	m.mock.informParentFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &SlotElementHelperMockinformParentExpectation{}
-	expectation.input = &SlotElementHelperMockinformParentInput{p}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *SlotElementHelperMockinformParentExpectation) Return(r bool) {
-	e.result = &SlotElementHelperMockinformParentResult{r}
-}
-
-//Set uses given function f as a mock of SlotElementHelper.informParent method
-func (m *mSlotElementHelperMockinformParent) Set(f func(p interface{}) (r bool)) *SlotElementHelperMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.informParentFunc = f
-	return m.mock
-}
-
-//informParent implements github.com/insolar/insolar/conveyor/interfaces.SlotElementHelper interface
-func (m *SlotElementHelperMock) informParent(p interface{}) (r bool) {
-	counter := atomic.AddUint64(&m.informParentPreCounter, 1)
-	defer atomic.AddUint64(&m.informParentCounter, 1)
-
-	if len(m.informParentMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.informParentMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to SlotElementHelperMock.informParent. %v", p)
-			return
-		}
-
-		input := m.informParentMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, SlotElementHelperMockinformParentInput{p}, "SlotElementHelper.informParent got unexpected parameters")
-
-		result := m.informParentMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the SlotElementHelperMock.informParent")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.informParentMock.mainExpectation != nil {
-
-		input := m.informParentMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, SlotElementHelperMockinformParentInput{p}, "SlotElementHelper.informParent got unexpected parameters")
-		}
-
-		result := m.informParentMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the SlotElementHelperMock.informParent")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.informParentFunc == nil {
-		m.t.Fatalf("Unexpected call to SlotElementHelperMock.informParent. %v", p)
-		return
-	}
-
-	return m.informParentFunc(p)
-}
-
-//informParentMinimockCounter returns a count of SlotElementHelperMock.informParentFunc invocations
-func (m *SlotElementHelperMock) informParentMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.informParentCounter)
-}
-
-//informParentMinimockPreCounter returns the value of SlotElementHelperMock.informParent invocations
-func (m *SlotElementHelperMock) informParentMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.informParentPreCounter)
-}
-
-//informParentFinished returns true if mock invocations count is ok
-func (m *SlotElementHelperMock) informParentFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.informParentMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.informParentCounter) == uint64(len(m.informParentMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.informParentMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.informParentCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.informParentFunc != nil {
-		return atomic.LoadUint64(&m.informParentCounter) > 0
-	}
-
-	return true
-}
-
-type mSlotElementHelperMocksendTask struct {
-	mock              *SlotElementHelperMock
-	mainExpectation   *SlotElementHelperMocksendTaskExpectation
-	expectationSeries []*SlotElementHelperMocksendTaskExpectation
-}
-
-type SlotElementHelperMocksendTaskExpectation struct {
-	input  *SlotElementHelperMocksendTaskInput
-	result *SlotElementHelperMocksendTaskResult
-}
-
-type SlotElementHelperMocksendTaskInput struct {
+type SlotElementHelperMockSendTaskInput struct {
 	p  uint32
 	p1 interface{}
 	p2 uint32
 }
 
-type SlotElementHelperMocksendTaskResult struct {
+type SlotElementHelperMockSendTaskResult struct {
 	r error
 }
 
-//Expect specifies that invocation of SlotElementHelper.sendTask is expected from 1 to Infinity times
-func (m *mSlotElementHelperMocksendTask) Expect(p uint32, p1 interface{}, p2 uint32) *mSlotElementHelperMocksendTask {
-	m.mock.sendTaskFunc = nil
+//Expect specifies that invocation of SlotElementHelper.SendTask is expected from 1 to Infinity times
+func (m *mSlotElementHelperMockSendTask) Expect(p uint32, p1 interface{}, p2 uint32) *mSlotElementHelperMockSendTask {
+	m.mock.SendTaskFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &SlotElementHelperMocksendTaskExpectation{}
+		m.mainExpectation = &SlotElementHelperMockSendTaskExpectation{}
 	}
-	m.mainExpectation.input = &SlotElementHelperMocksendTaskInput{p, p1, p2}
+	m.mainExpectation.input = &SlotElementHelperMockSendTaskInput{p, p1, p2}
 	return m
 }
 
-//Return specifies results of invocation of SlotElementHelper.sendTask
-func (m *mSlotElementHelperMocksendTask) Return(r error) *SlotElementHelperMock {
-	m.mock.sendTaskFunc = nil
+//Return specifies results of invocation of SlotElementHelper.SendTask
+func (m *mSlotElementHelperMockSendTask) Return(r error) *SlotElementHelperMock {
+	m.mock.SendTaskFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &SlotElementHelperMocksendTaskExpectation{}
+		m.mainExpectation = &SlotElementHelperMockSendTaskExpectation{}
 	}
-	m.mainExpectation.result = &SlotElementHelperMocksendTaskResult{r}
+	m.mainExpectation.result = &SlotElementHelperMockSendTaskResult{r}
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of SlotElementHelper.sendTask is expected once
-func (m *mSlotElementHelperMocksendTask) ExpectOnce(p uint32, p1 interface{}, p2 uint32) *SlotElementHelperMocksendTaskExpectation {
-	m.mock.sendTaskFunc = nil
+//ExpectOnce specifies that invocation of SlotElementHelper.SendTask is expected once
+func (m *mSlotElementHelperMockSendTask) ExpectOnce(p uint32, p1 interface{}, p2 uint32) *SlotElementHelperMockSendTaskExpectation {
+	m.mock.SendTaskFunc = nil
 	m.mainExpectation = nil
 
-	expectation := &SlotElementHelperMocksendTaskExpectation{}
-	expectation.input = &SlotElementHelperMocksendTaskInput{p, p1, p2}
+	expectation := &SlotElementHelperMockSendTaskExpectation{}
+	expectation.input = &SlotElementHelperMockSendTaskInput{p, p1, p2}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
-func (e *SlotElementHelperMocksendTaskExpectation) Return(r error) {
-	e.result = &SlotElementHelperMocksendTaskResult{r}
+func (e *SlotElementHelperMockSendTaskExpectation) Return(r error) {
+	e.result = &SlotElementHelperMockSendTaskResult{r}
 }
 
-//Set uses given function f as a mock of SlotElementHelper.sendTask method
-func (m *mSlotElementHelperMocksendTask) Set(f func(p uint32, p1 interface{}, p2 uint32) (r error)) *SlotElementHelperMock {
+//Set uses given function f as a mock of SlotElementHelper.SendTask method
+func (m *mSlotElementHelperMockSendTask) Set(f func(p uint32, p1 interface{}, p2 uint32) (r error)) *SlotElementHelperMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
-	m.mock.sendTaskFunc = f
+	m.mock.SendTaskFunc = f
 	return m.mock
 }
 
-//sendTask implements github.com/insolar/insolar/conveyor/interfaces.SlotElementHelper interface
-func (m *SlotElementHelperMock) sendTask(p uint32, p1 interface{}, p2 uint32) (r error) {
-	counter := atomic.AddUint64(&m.sendTaskPreCounter, 1)
-	defer atomic.AddUint64(&m.sendTaskCounter, 1)
+//SendTask implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementHelper interface
+func (m *SlotElementHelperMock) SendTask(p uint32, p1 interface{}, p2 uint32) (r error) {
+	counter := atomic.AddUint64(&m.SendTaskPreCounter, 1)
+	defer atomic.AddUint64(&m.SendTaskCounter, 1)
 
-	if len(m.sendTaskMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.sendTaskMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to SlotElementHelperMock.sendTask. %v %v %v", p, p1, p2)
+	if len(m.SendTaskMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.SendTaskMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to SlotElementHelperMock.SendTask. %v %v %v", p, p1, p2)
 			return
 		}
 
-		input := m.sendTaskMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, SlotElementHelperMocksendTaskInput{p, p1, p2}, "SlotElementHelper.sendTask got unexpected parameters")
+		input := m.SendTaskMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, SlotElementHelperMockSendTaskInput{p, p1, p2}, "SlotElementHelper.SendTask got unexpected parameters")
 
-		result := m.sendTaskMock.expectationSeries[counter-1].result
+		result := m.SendTaskMock.expectationSeries[counter-1].result
 		if result == nil {
-			m.t.Fatal("No results are set for the SlotElementHelperMock.sendTask")
+			m.t.Fatal("No results are set for the SlotElementHelperMock.SendTask")
 			return
 		}
 
@@ -1640,16 +1624,16 @@ func (m *SlotElementHelperMock) sendTask(p uint32, p1 interface{}, p2 uint32) (r
 		return
 	}
 
-	if m.sendTaskMock.mainExpectation != nil {
+	if m.SendTaskMock.mainExpectation != nil {
 
-		input := m.sendTaskMock.mainExpectation.input
+		input := m.SendTaskMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, SlotElementHelperMocksendTaskInput{p, p1, p2}, "SlotElementHelper.sendTask got unexpected parameters")
+			testify_assert.Equal(m.t, *input, SlotElementHelperMockSendTaskInput{p, p1, p2}, "SlotElementHelper.SendTask got unexpected parameters")
 		}
 
-		result := m.sendTaskMock.mainExpectation.result
+		result := m.SendTaskMock.mainExpectation.result
 		if result == nil {
-			m.t.Fatal("No results are set for the SlotElementHelperMock.sendTask")
+			m.t.Fatal("No results are set for the SlotElementHelperMock.SendTask")
 		}
 
 		r = result.r
@@ -1657,39 +1641,39 @@ func (m *SlotElementHelperMock) sendTask(p uint32, p1 interface{}, p2 uint32) (r
 		return
 	}
 
-	if m.sendTaskFunc == nil {
-		m.t.Fatalf("Unexpected call to SlotElementHelperMock.sendTask. %v %v %v", p, p1, p2)
+	if m.SendTaskFunc == nil {
+		m.t.Fatalf("Unexpected call to SlotElementHelperMock.SendTask. %v %v %v", p, p1, p2)
 		return
 	}
 
-	return m.sendTaskFunc(p, p1, p2)
+	return m.SendTaskFunc(p, p1, p2)
 }
 
-//sendTaskMinimockCounter returns a count of SlotElementHelperMock.sendTaskFunc invocations
-func (m *SlotElementHelperMock) sendTaskMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.sendTaskCounter)
+//SendTaskMinimockCounter returns a count of SlotElementHelperMock.SendTaskFunc invocations
+func (m *SlotElementHelperMock) SendTaskMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.SendTaskCounter)
 }
 
-//sendTaskMinimockPreCounter returns the value of SlotElementHelperMock.sendTask invocations
-func (m *SlotElementHelperMock) sendTaskMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.sendTaskPreCounter)
+//SendTaskMinimockPreCounter returns the value of SlotElementHelperMock.SendTask invocations
+func (m *SlotElementHelperMock) SendTaskMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.SendTaskPreCounter)
 }
 
-//sendTaskFinished returns true if mock invocations count is ok
-func (m *SlotElementHelperMock) sendTaskFinished() bool {
+//SendTaskFinished returns true if mock invocations count is ok
+func (m *SlotElementHelperMock) SendTaskFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.sendTaskMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.sendTaskCounter) == uint64(len(m.sendTaskMock.expectationSeries))
+	if len(m.SendTaskMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.SendTaskCounter) == uint64(len(m.SendTaskMock.expectationSeries))
 	}
 
 	// if main expectation was set then invocations count should be greater than zero
-	if m.sendTaskMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.sendTaskCounter) > 0
+	if m.SendTaskMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.SendTaskCounter) > 0
 	}
 
 	// if func was set then invocations count should be greater than zero
-	if m.sendTaskFunc != nil {
-		return atomic.LoadUint64(&m.sendTaskCounter) > 0
+	if m.SendTaskFunc != nil {
+		return atomic.LoadUint64(&m.SendTaskCounter) > 0
 	}
 
 	return true
@@ -1698,6 +1682,10 @@ func (m *SlotElementHelperMock) sendTaskFinished() bool {
 //ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *SlotElementHelperMock) ValidateCallCounters() {
+
+	if !m.DeactivateTillFinished() {
+		m.t.Fatal("Expected call to SlotElementHelperMock.DeactivateTill")
+	}
 
 	if !m.GetElementIDFinished() {
 		m.t.Fatal("Expected call to SlotElementHelperMock.GetElementID")
@@ -1727,6 +1715,10 @@ func (m *SlotElementHelperMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to SlotElementHelperMock.GetType")
 	}
 
+	if !m.InformParentFinished() {
+		m.t.Fatal("Expected call to SlotElementHelperMock.InformParent")
+	}
+
 	if !m.LeaveSequenceFinished() {
 		m.t.Fatal("Expected call to SlotElementHelperMock.LeaveSequence")
 	}
@@ -1735,16 +1727,8 @@ func (m *SlotElementHelperMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to SlotElementHelperMock.Reactivate")
 	}
 
-	if !m.deactivateTillFinished() {
-		m.t.Fatal("Expected call to SlotElementHelperMock.deactivateTill")
-	}
-
-	if !m.informParentFinished() {
-		m.t.Fatal("Expected call to SlotElementHelperMock.informParent")
-	}
-
-	if !m.sendTaskFinished() {
-		m.t.Fatal("Expected call to SlotElementHelperMock.sendTask")
+	if !m.SendTaskFinished() {
+		m.t.Fatal("Expected call to SlotElementHelperMock.SendTask")
 	}
 
 }
@@ -1764,6 +1748,10 @@ func (m *SlotElementHelperMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *SlotElementHelperMock) MinimockFinish() {
 
+	if !m.DeactivateTillFinished() {
+		m.t.Fatal("Expected call to SlotElementHelperMock.DeactivateTill")
+	}
+
 	if !m.GetElementIDFinished() {
 		m.t.Fatal("Expected call to SlotElementHelperMock.GetElementID")
 	}
@@ -1792,6 +1780,10 @@ func (m *SlotElementHelperMock) MinimockFinish() {
 		m.t.Fatal("Expected call to SlotElementHelperMock.GetType")
 	}
 
+	if !m.InformParentFinished() {
+		m.t.Fatal("Expected call to SlotElementHelperMock.InformParent")
+	}
+
 	if !m.LeaveSequenceFinished() {
 		m.t.Fatal("Expected call to SlotElementHelperMock.LeaveSequence")
 	}
@@ -1800,16 +1792,8 @@ func (m *SlotElementHelperMock) MinimockFinish() {
 		m.t.Fatal("Expected call to SlotElementHelperMock.Reactivate")
 	}
 
-	if !m.deactivateTillFinished() {
-		m.t.Fatal("Expected call to SlotElementHelperMock.deactivateTill")
-	}
-
-	if !m.informParentFinished() {
-		m.t.Fatal("Expected call to SlotElementHelperMock.informParent")
-	}
-
-	if !m.sendTaskFinished() {
-		m.t.Fatal("Expected call to SlotElementHelperMock.sendTask")
+	if !m.SendTaskFinished() {
+		m.t.Fatal("Expected call to SlotElementHelperMock.SendTask")
 	}
 
 }
@@ -1826,6 +1810,7 @@ func (m *SlotElementHelperMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
+		ok = ok && m.DeactivateTillFinished()
 		ok = ok && m.GetElementIDFinished()
 		ok = ok && m.GetInputEventFinished()
 		ok = ok && m.GetNodeIDFinished()
@@ -1833,11 +1818,10 @@ func (m *SlotElementHelperMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.GetPayloadFinished()
 		ok = ok && m.GetStateFinished()
 		ok = ok && m.GetTypeFinished()
+		ok = ok && m.InformParentFinished()
 		ok = ok && m.LeaveSequenceFinished()
 		ok = ok && m.ReactivateFinished()
-		ok = ok && m.deactivateTillFinished()
-		ok = ok && m.informParentFinished()
-		ok = ok && m.sendTaskFinished()
+		ok = ok && m.SendTaskFinished()
 
 		if ok {
 			return
@@ -1845,6 +1829,10 @@ func (m *SlotElementHelperMock) MinimockWait(timeout time.Duration) {
 
 		select {
 		case <-timeoutCh:
+
+			if !m.DeactivateTillFinished() {
+				m.t.Error("Expected call to SlotElementHelperMock.DeactivateTill")
+			}
 
 			if !m.GetElementIDFinished() {
 				m.t.Error("Expected call to SlotElementHelperMock.GetElementID")
@@ -1874,6 +1862,10 @@ func (m *SlotElementHelperMock) MinimockWait(timeout time.Duration) {
 				m.t.Error("Expected call to SlotElementHelperMock.GetType")
 			}
 
+			if !m.InformParentFinished() {
+				m.t.Error("Expected call to SlotElementHelperMock.InformParent")
+			}
+
 			if !m.LeaveSequenceFinished() {
 				m.t.Error("Expected call to SlotElementHelperMock.LeaveSequence")
 			}
@@ -1882,16 +1874,8 @@ func (m *SlotElementHelperMock) MinimockWait(timeout time.Duration) {
 				m.t.Error("Expected call to SlotElementHelperMock.Reactivate")
 			}
 
-			if !m.deactivateTillFinished() {
-				m.t.Error("Expected call to SlotElementHelperMock.deactivateTill")
-			}
-
-			if !m.informParentFinished() {
-				m.t.Error("Expected call to SlotElementHelperMock.informParent")
-			}
-
-			if !m.sendTaskFinished() {
-				m.t.Error("Expected call to SlotElementHelperMock.sendTask")
+			if !m.SendTaskFinished() {
+				m.t.Error("Expected call to SlotElementHelperMock.SendTask")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)
@@ -1905,6 +1889,10 @@ func (m *SlotElementHelperMock) MinimockWait(timeout time.Duration) {
 //AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *SlotElementHelperMock) AllMocksCalled() bool {
+
+	if !m.DeactivateTillFinished() {
+		return false
+	}
 
 	if !m.GetElementIDFinished() {
 		return false
@@ -1934,6 +1922,10 @@ func (m *SlotElementHelperMock) AllMocksCalled() bool {
 		return false
 	}
 
+	if !m.InformParentFinished() {
+		return false
+	}
+
 	if !m.LeaveSequenceFinished() {
 		return false
 	}
@@ -1942,15 +1934,7 @@ func (m *SlotElementHelperMock) AllMocksCalled() bool {
 		return false
 	}
 
-	if !m.deactivateTillFinished() {
-		return false
-	}
-
-	if !m.informParentFinished() {
-		return false
-	}
-
-	if !m.sendTaskFinished() {
+	if !m.SendTaskFinished() {
 		return false
 	}
 
