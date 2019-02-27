@@ -39,7 +39,7 @@ import (
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/rules"
-	"github.com/insolar/insolar/network/utils"
+	"github.com/insolar/insolar/network/state"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
@@ -408,23 +408,20 @@ func (s *testSuite) preInitNode(node *networkNode) {
 		return make([]byte, packets.HashLength), nil
 	})
 
-	pubKey, _ := node.cryptographyService.GetPublicKey()
-
-	origin := nodenetwork.NewNode(node.id, node.role, pubKey, node.host, "")
 	certManager, cryptographyService := s.initCrypto(node)
+	nodeNetwork, err := nodenetwork.NewNodeNetwork(cfg.Host, certManager.GetCertificate())
+	terminationHandler := &terminationHandler{NodeID: node.id}
 
-	realKeeper := nodenetwork.NewNodeKeeper(origin)
-	terminationHandler := &terminationHandler{NodeID: origin.ID()}
+	networkSwitcher, err := state.NewNetworkSwitcher()
+	s.NoError(err)
 
-	realKeeper.SetState(core.WaitingNodeNetworkState)
-	if len(certManager.GetCertificate().GetDiscoveryNodes()) == 0 || utils.OriginIsDiscovery(certManager.GetCertificate()) {
-		realKeeper.SetState(core.ReadyNodeNetworkState)
-		realKeeper.AddActiveNodes([]core.Node{origin})
-	}
+	messageBusLocker := state.NewmessageBusLockerMock(s.T())
+	messageBusLocker.LockFunc = func(context.Context) {}
+	messageBusLocker.UnlockFunc = func(context.Context) {}
 
-	node.componentManager.Register(terminationHandler, realKeeper, newPulseManagerMock(realKeeper), netCoordinator, amMock)
+	node.componentManager.Register(terminationHandler, nodeNetwork, newPulseManagerMock(nodeNetwork.(network.NodeKeeper)), netCoordinator, amMock)
 	node.componentManager.Register(certManager, cryptographyService, rules.NewRules())
-	node.componentManager.Inject(serviceNetwork, NewTestNetworkSwitcher())
+	node.componentManager.Inject(serviceNetwork, networkSwitcher, messageBusLocker)
 	node.serviceNetwork = serviceNetwork
 }
 
