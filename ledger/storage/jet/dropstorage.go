@@ -121,7 +121,7 @@ func (ds *dropStorageDB) ForPulse(ctx context.Context, jetID storage.JetID, puls
 	return *drop, nil
 }
 
-func (ds *dropStorageDB) Set(ctx context.Context, jetID storage.JetID, drop JetDrop, pulse core.PulseNumber) error {
+func (ds *dropStorageDB) Set(ctx context.Context, jetID storage.JetID, drop JetDrop) error {
 	_, prefix := jetID.Jet()
 	k := storage.JetDropPrefixKey(prefix, drop.Pulse)
 	_, err := ds.DB.Get(ctx, k)

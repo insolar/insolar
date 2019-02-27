@@ -53,7 +53,7 @@ func TestTree_Find(t *testing.T) {
 	assert.False(t, actual)
 
 	jetID, actual := tree.Find(core.RecordID(*jetLookup))
-	assert.Equal(t, jetLookup, jetID)
+	assert.Equal(t, *jetLookup, storage.JetID(*jetID))
 	assert.True(t, actual)
 }
 
@@ -461,8 +461,8 @@ func TestTree_LeafIDs(t *testing.T) {
 	leafIDs := tree.LeafIDs()
 
 	require.Equal(t, len(leafIDs), 4)
-	assert.Equal(t, leafIDs[0], *storage.NewID(1, nil))          // 0000
-	assert.Equal(t, leafIDs[1], *storage.NewID(4, []byte{0xC0})) // 1100
-	assert.Equal(t, leafIDs[2], *storage.NewID(4, []byte{0xD0})) // 1101
-	assert.Equal(t, leafIDs[3], *storage.NewID(3, []byte{0xE0})) // 1110
+	assert.Equal(t, leafIDs[0], core.RecordID(*storage.NewID(1, nil)))          // 0000
+	assert.Equal(t, leafIDs[1], core.RecordID(*storage.NewID(4, []byte{0xC0}))) // 1100
+	assert.Equal(t, leafIDs[2], core.RecordID(*storage.NewID(4, []byte{0xD0}))) // 1101
+	assert.Equal(t, leafIDs[3], core.RecordID(*storage.NewID(3, []byte{0xE0}))) // 1110
 }
