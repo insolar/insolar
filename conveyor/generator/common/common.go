@@ -16,19 +16,10 @@
 
 package common
 
-type TransitHandler func(element SlotElementHelper) (interface{}, uint32, error)
-type MigrationHandler func(element SlotElementHelper) (interface{}, uint32, error)
-type ErrorHandler func(element SlotElementHelper, err error) (interface{}, uint32)
-type AdapterResponseHandler func(element SlotElementHelper, err error) (interface{}, uint32)
-type NestedHandler func(element SlotElementHelper, err error) (interface{}, uint32)
-
-type TransitionErrorHandler func(element SlotElementHelper, err error) (interface{}, uint32)
-type ResponseErrorHandler func(element SlotElementHelper, err error) (interface{}, uint32)
-
 type State struct {
-	Transit TransitHandler
-	Migrate MigrationHandler
-	Error   ErrorHandler
+	Transit func(element SlotElementHelper) (interface{}, uint32, error)
+	Migrate func(element SlotElementHelper) (interface{}, uint32, error)
+	Error func(element SlotElementHelper, err error) (interface{}, uint32)
 }
 
 type SlotElementHelper interface {
@@ -36,12 +27,13 @@ type SlotElementHelper interface {
 	GetPayload() interface{}
 }
 
-type ElState uint32 //Element State Machine Type ID
-type ElType uint32  //Element State ID
+type ElState uint32  //Element State Machine Type ID
+type ElType uint32   //Element State ID
 
 func (s ElState) ToInt() uint32 {
 	return uint32(s)
 }
+
 
 type RawHandlerT func(element SlotElementHelper) (err error, new_state uint32, new_payload interface{})
 
