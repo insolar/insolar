@@ -73,6 +73,7 @@ func (d *distributor) Start(ctx context.Context) error {
 	return nil
 }
 
+// Distribute starts a fire-and-forger process of pulse distribution to bootstrap hosts
 func (d *distributor) Distribute(ctx context.Context, pulse core.Pulse) {
 	logger := inslogger.FromContext(ctx)
 	defer func() {
@@ -91,7 +92,7 @@ func (d *distributor) Distribute(ctx context.Context, pulse core.Pulse) {
 	for _, node := range d.bootstrapHosts {
 		bootstrapHost, err := host.NewHost(node)
 		if err != nil {
-			logger.Error(err, "[ NewDistributor ] failed to create bootstrap node host")
+			logger.Error(err, "[ Distribute ] failed to create bootstrap node host")
 		}
 		bootstrapHosts = append(bootstrapHosts, bootstrapHost)
 	}
