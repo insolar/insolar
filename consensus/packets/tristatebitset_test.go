@@ -177,18 +177,32 @@ func TestTriStateBitSet_SerializeCompressed(t *testing.T) {
 	testSerializeDeserialize(t, refs, cells, true)
 }
 
-func TestTriStateBitSet_ThousandStates(t *testing.T) {
+func TestTriStateBitSet_ThousandStates_Compressed(t *testing.T) {
 	refs := initRefs(1024)
 	cells := initBitCells(refs)
 
 	testSerializeDeserialize(t, refs, cells, true)
 }
 
-func TestTriStateBitSet_ThousandDiffStates(t *testing.T) {
+func TestTriStateBitSet_ThousandDiffStates_Compressed(t *testing.T) {
 	refs := initRefs(1024)
 	cells := initDiffBitCells(refs)
 
 	testSerializeDeserialize(t, refs, cells, true)
+}
+
+func TestTriStateBitSet_ThousandStates(t *testing.T) {
+	refs := initRefs(1024)
+	cells := initBitCells(refs)
+
+	testSerializeDeserialize(t, refs, cells, false)
+}
+
+func TestTriStateBitSet_ThousandDiffStates(t *testing.T) {
+	refs := initRefs(1024)
+	cells := initDiffBitCells(refs)
+
+	testSerializeDeserialize(t, refs, cells, false)
 }
 
 func testSerializeDeserialize(t *testing.T, refs []core.RecordRef, cells []BitSetCell, compressed bool) {
