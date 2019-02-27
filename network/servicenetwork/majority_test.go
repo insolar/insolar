@@ -32,3 +32,30 @@ func (s *testSuite) TestNodeMajority_NodeFailedToConectWithWrongMajority() {
 	err := testNode.componentManager.Start(s.fixture().ctx)
 	s.Error(err, "majority rule failed")
 }
+
+func (s *testSuite) TestNodeMajority_NodeStopsAfterMajorityFaded() {
+	testNode := s.newNetworkNode("testNode")
+	s.preInitNode(testNode)
+	setMajority(testNode, len(s.fixture().bootstrapNodes))
+
+	testNode.terminationHandler.AbortMock.ExpectOnce("We are not discovery and majority rule faded")
+
+	s.InitNode(testNode)
+	s.StartNode(testNode)
+	defer func(s *testSuite) {
+		s.StopNode(testNode)
+	}(s)
+
+	s.waitForConsensus(1)
+
+	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	s.Equal(s.getNodesCount(), len(activeNodes))
+
+	s.waitForConsensus(1)
+
+	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
+	s.Equal(s.getNodesCount(), len(activeNodes))
+
+	setMajority(testNode, len(s.fixture().bootstrapNodes)+1)
+	s.waitForConsensus(1)
+}
