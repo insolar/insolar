@@ -19,7 +19,9 @@ RUN make install-deps ensure && go get gopkg.in/yaml.v2
 
 RUN mkdir /work
 WORKDIR /work
+COPY  keys /work/keys
 RUN /go/src/github.com/insolar/insolar/scripts/build/genesis/genesis.sh
+
 
 #                             RESULT CONTAINER
 FROM alpine:3.9 AS insgorund

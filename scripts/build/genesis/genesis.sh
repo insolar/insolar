@@ -32,3 +32,5 @@ $INSOLAR/bin/insolard  \
                 --keyout certs \
                 | tee log/genesis_output.log
 
+tar -czf data.tgz data
+tar -czf keys.tgz keys
