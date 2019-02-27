@@ -164,87 +164,38 @@ func TestBitArray(t *testing.T) {
 }
 
 func TestTriStateBitSet_Serialize(t *testing.T) {
-	count := 92
-	refs := initRefs(count)
+	refs := initRefs(92)
 	cells := initBitCells(refs)
 
-	mapper := &BitSetMapperMock{refs: refs}
-
-	bitset, _ := NewTriStateBitSet(len(cells))
-	err := bitset.ApplyChanges(cells, mapper)
-	assert.NoError(t, err)
-	data, err := bitset.Serialize()
-	assert.NoError(t, err)
-
-	parsedBitSet, err := NewBitSet(len(cells))
-	assert.NoError(t, err)
-	parsedBitSet, err = DeserializeBitSet(bytes.NewReader(data))
-	assert.NoError(t, err)
-
-	expected, err := bitset.GetCells(mapper)
-	assert.NoError(t, err)
-	actual, err := parsedBitSet.GetCells(mapper)
-	assert.NoError(t, err)
-	assert.Equal(t, expected, actual)
+	testSerializeDeserialize(t, refs, cells, false)
 }
 
 func TestTriStateBitSet_SerializeCompressed(t *testing.T) {
-	count := 44
-	refs := initRefs(count)
+	refs := initRefs(44)
 	cells := initBitCells(refs)
 
-	mapper := &BitSetMapperMock{refs: refs}
-
-	bitset, _ := NewTriStateBitSet(len(cells))
-	bitset.CompressedSet = true
-	err := bitset.ApplyChanges(cells, mapper)
-	assert.NoError(t, err)
-	data, err := bitset.Serialize()
-	assert.NoError(t, err)
-
-	parsedBitSet, err := DeserializeBitSet(bytes.NewReader(data))
-	assert.NoError(t, err)
-
-	expected, err := bitset.GetCells(mapper)
-	assert.NoError(t, err)
-	actual, err := parsedBitSet.GetCells(mapper)
-	assert.NoError(t, err)
-	assert.Equal(t, expected, actual)
+	testSerializeDeserialize(t, refs, cells, true)
 }
 
 func TestTriStateBitSet_ThousandStates(t *testing.T) {
-	count := 1024
-	refs := initRefs(count)
+	refs := initRefs(1024)
 	cells := initBitCells(refs)
 
-	mapper := &BitSetMapperMock{refs: refs}
-
-	bitset, _ := NewTriStateBitSet(len(cells))
-	bitset.CompressedSet = true
-	err := bitset.ApplyChanges(cells, mapper)
-	assert.NoError(t, err)
-	data, err := bitset.Serialize()
-	assert.NoError(t, err)
-
-	parsedBitSet, err := DeserializeBitSet(bytes.NewReader(data))
-	assert.NoError(t, err)
-
-	expected, err := bitset.GetCells(mapper)
-	assert.NoError(t, err)
-	actual, err := parsedBitSet.GetCells(mapper)
-	assert.NoError(t, err)
-	assert.Equal(t, expected, actual)
+	testSerializeDeserialize(t, refs, cells, true)
 }
 
 func TestTriStateBitSet_ThousandDiffStates(t *testing.T) {
-	count := 1024
-	refs := initRefs(count)
+	refs := initRefs(1024)
 	cells := initDiffBitCells(refs)
 
+	testSerializeDeserialize(t, refs, cells, true)
+}
+
+func testSerializeDeserialize(t *testing.T, refs []core.RecordRef, cells []BitSetCell, compressed bool) {
 	mapper := &BitSetMapperMock{refs: refs}
 
 	bitset, _ := NewTriStateBitSet(len(cells))
-	bitset.CompressedSet = true
+	bitset.CompressedSet = compressed
 	err := bitset.ApplyChanges(cells, mapper)
 	assert.NoError(t, err)
 	data, err := bitset.Serialize()
