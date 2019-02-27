@@ -185,21 +185,25 @@ func (s *testSuite) SetupNodesNetwork(nodes []*networkNode) {
 	s.NoError(err)
 }
 
+func (s *testSuite) stopNodes(nodes []*networkNode) {
+	for _, n := range nodes {
+		err := n.componentManager.Stop(n.ctx)
+		s.NoError(err)
+	}
+}
+
 // TearDownSuite shutdowns all nodes in network, calls once after all tests in suite finished
 func (s *testSuite) TearDownTest() {
 	log.Info("=================== TearDownTest()")
 	log.Info("Stop network nodes")
-	for _, n := range s.fixture().networkNodes {
-		err := n.componentManager.Stop(n.ctx)
-		s.NoError(err)
-	}
+	s.stopNodes(s.fixture().networkNodes)
+
 	log.Info("Stop bootstrap nodes")
-	for _, n := range s.fixture().bootstrapNodes {
-		err := n.componentManager.Stop(n.ctx)
-		s.NoError(err)
-	}
+	s.stopNodes(s.fixture().bootstrapNodes)
+
 	log.Info("Stop test pulsar")
-	s.fixture().pulsar.Stop(s.fixture().ctx)
+	err := s.fixture().pulsar.Stop(s.fixture().ctx)
+	s.NoError(err)
 }
 
 func (s *testSuite) waitForConsensus(consensusCount int) {
