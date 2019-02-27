@@ -38,7 +38,7 @@ RUN set -x && \
         go build -o /opt/bin/healthcheck /opt/tmp/healthcheck.go && \
         go build -o /opt/bin/genconfig   /opt/tmp/genconfig.go
 
-#                             RESULT CONTAINER
+#                             INSOLARD CONTAINER
 FROM alpine:3.9 AS insolard
 MAINTAINER eugene.blikh@insolar.io
 
@@ -61,11 +61,46 @@ COPY --from=insolard-builder        \
           "/opt/bin/forego",        \
           "/opt/bin/insgorund",     \
           "/opt/bin/"]
-COPY /docker/docker-entrypoint.sh /opt/bin/docker-entrypoint.sh
+COPY /docker/insolard-entrypoint.sh /opt/bin/docker-entrypoint.sh
 
-EXPOSE 8001 13831 13832 19101
+EXPOSE 8001 13831 13832 19191 7777
 HEALTHCHECK --start-period=3m --interval=1m --timeout=30s CMD [ "/opt/bin/healthcheck" ]
 VOLUME [ "/etc/insolar", "/var/log", "/var/lib/insolar" ]
 
-ENTRYPOINT [ "/opt/bin/docker-entrypoint.sh"  ]
+ENTRYPOINT [ "/opt/bin/insolard-entrypoint.sh"  ]
+CMD []
+
+#                               GENESIS BUILDER
+FROM insolard-builder AS insolard-genesis-builder
+MAINTAINER ivan.serezhkin@insolar.io
+
+WORKDIR /opt
+RUN set -x && \
+        cp -rf /go/src/github.com/insolar/insolar/keys /opt || : && \
+        /go/src/github.com/insolar/insolar/scripts/build/genesis/genesis.sh
+
+#                              GENESIS CONTAINER
+FROM alpine:3.9 AS genesis
+MAINTAINER ivan.serezhkin@insolar.io
+
+RUN mkdir -p /opt/genesis
+COPY --from=insolard-genesis-builder    \
+        [ "/opt/data.tgz",              \
+          "/opt/keys.tgz",              \
+          "/opt/genesis/" ]
+VOLUME /opt/output
+CMD ['cp', '/opt/genesis', '/opt/output/genesis']
+
+#                             INSGORUND CONTAINER
+FROM alpine:3.9 AS insgorund
+MAINTAINER ivan.serezhkin@insolar.io
+
+RUN mkdir -p /tmp/insgorund /opt/bin/
+COPY --from=insolard-genesis-builder /opt/bin/insgorund /insgorund
+COPY /docker/insgorund-entrypoint.sh /opt/bin/docker-entrypoint.sh
+
+EXPOSE 7777 8002
+VOLUME [ "/var/log" ]
+
+ENTRYPOINT [ "/opt/bin/docker-entrypoint.sh" ]
 CMD []
