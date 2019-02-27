@@ -20,6 +20,8 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/ledger/recentstorage"
+	"github.com/insolar/insolar/ledger/storage/genesis"
+	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/nodes"
 	"github.com/pkg/errors"
 
@@ -87,12 +89,22 @@ func GetLedgerComponents(conf configuration.Ledger, certificate core.Certificate
 	}
 
 	var pulseTracker storage.PulseTracker
+	var dropModifier jet.DropModifier
+	var dropAccessor jet.DropAccessor
 	// TODO: @imarkin 18.02.18 - Comparision with core.StaticRoleUnknown is a hack for genesis pulse (INS-1537)
 	switch certificate.GetRole() {
 	case core.StaticRoleUnknown, core.StaticRoleHeavyMaterial:
 		pulseTracker = storage.NewPulseTracker()
+
+		dbDropStorage := jet.NewDropStorageDB()
+		dropModifier = dbDropStorage
+		dropAccessor = dbDropStorage
 	default:
 		pulseTracker = storage.NewPulseTrackerMemory()
+
+		memoryDropStorage := jet.NewDropStorageMemory()
+		dropModifier = memoryDropStorage
+		dropAccessor = memoryDropStorage
 	}
 
 	return []interface{}{
@@ -100,12 +112,13 @@ func GetLedgerComponents(conf configuration.Ledger, certificate core.Certificate
 		storage.NewCleaner(),
 		pulseTracker,
 		storage.NewPulseStorage(),
-		storage.NewJetStorage(),
-		storage.NewDropStorage(conf.JetSizesHistoryDepth),
+		jet.NewJetStorage(),
+		dropModifier,
+		dropAccessor,
 		nodes.NewStorage(),
 		storage.NewObjectStorage(),
 		storage.NewReplicaStorage(),
-		storage.NewGenesisInitializer(),
+		genesis.NewGenesisInitializer(),
 		recentstorage.NewRecentStorageProvider(conf.RecentStorage.DefaultTTL),
 		artifactmanager.NewHotDataWaiterConcrete(),
 		artifactmanager.NewArtifactManger(),
