@@ -26,7 +26,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/jet"
-	"github.com/insolar/insolar/ledger/storage/nodes"
+	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
@@ -48,7 +48,7 @@ type jetCoordinatorSuite struct {
 	pulseStorage *storage.PulseStorage
 	pulseTracker storage.PulseTracker
 	jetStorage   storage.JetStorage
-	nodeStorage  *nodes.AccessorMock
+	nodeStorage  *node.AccessorMock
 	coordinator  *JetCoordinator
 }
 
@@ -72,7 +72,7 @@ func (s *jetCoordinatorSuite) BeforeTest(suiteName, testName string) {
 	s.pulseTracker = storage.NewPulseTracker()
 	s.pulseStorage = storage.NewPulseStorage()
 	s.jetStorage = storage.NewJetStorage()
-	s.nodeStorage = nodes.NewAccessorMock(s.T())
+	s.nodeStorage = node.NewAccessorMock(s.T())
 	s.coordinator = NewJetCoordinator(5)
 	s.coordinator.NodeNet = network.NewNodeNetworkMock(s.T())
 
@@ -273,7 +273,7 @@ func TestJetCoordinator_NodeForJet_GoToHeavy(t *testing.T) {
 		return &storage.Pulse{SerialNumber: 24}, nil
 	}
 	expectedID := core.NewRecordRef(testutils.RandomID(), testutils.RandomID())
-	activeNodesStorageMock := nodes.NewAccessorMock(t)
+	activeNodesStorageMock := node.NewAccessorMock(t)
 	activeNodesStorageMock.InRoleFunc = func(p core.PulseNumber, p1 core.StaticRole) (r []insolar.Node, r1 error) {
 		require.Equal(t, core.FirstPulseNumber, int(p))
 		require.Equal(t, core.StaticRoleHeavyMaterial, p1)
@@ -314,7 +314,7 @@ func TestJetCoordinator_NodeForJet_GoToLight(t *testing.T) {
 		return &storage.Pulse{SerialNumber: 49}, nil
 	}
 	expectedID := core.NewRecordRef(testutils.RandomID(), testutils.RandomID())
-	activeNodesStorageMock := nodes.NewAccessorMock(t)
+	activeNodesStorageMock := node.NewAccessorMock(t)
 	activeNodesStorageMock.InRoleFunc = func(p core.PulseNumber, p1 core.StaticRole) (r []insolar.Node, r1 error) {
 		require.Equal(t, 0, int(p))
 		require.Equal(t, core.StaticRoleLightMaterial, p1)

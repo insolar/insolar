@@ -21,7 +21,7 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar"
-	"github.com/insolar/insolar/ledger/storage/nodes"
+	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/core"
@@ -49,7 +49,7 @@ type fetchResult struct {
 }
 
 type jetTreeUpdater struct {
-	Nodes          nodes.Accessor
+	Nodes          node.Accessor
 	JetStorage     storage.JetStorage
 	MessageBus     core.MessageBus
 	JetCoordinator core.JetCoordinator
@@ -59,7 +59,7 @@ type jetTreeUpdater struct {
 }
 
 func newJetTreeUpdater(
-	ans nodes.Accessor,
+	ans node.Accessor,
 	js storage.JetStorage, mb core.MessageBus, jc core.JetCoordinator,
 ) *jetTreeUpdater {
 	return &jetTreeUpdater{

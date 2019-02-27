@@ -1,9 +1,9 @@
-package nodes
+package node
 
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "Setter" can be found in github.com/insolar/insolar/ledger/storage/nodes
+The original interface "Setter" can be found in github.com/insolar/insolar/ledger/storage/node
 */
 import (
 	"sync/atomic"
@@ -16,7 +16,7 @@ import (
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//SetterMock implements github.com/insolar/insolar/ledger/storage/nodes.Setter
+//SetterMock implements github.com/insolar/insolar/ledger/storage/node.Setter
 type SetterMock struct {
 	t minimock.Tester
 
@@ -31,7 +31,7 @@ type SetterMock struct {
 	SetMock       mSetterMockSet
 }
 
-//NewSetterMock returns a mock for github.com/insolar/insolar/ledger/storage/nodes.Setter
+//NewSetterMock returns a mock for github.com/insolar/insolar/ledger/storage/node.Setter
 func NewSetterMock(t minimock.Tester) *SetterMock {
 	m := &SetterMock{t: t}
 
@@ -103,7 +103,7 @@ func (m *mSetterMockDelete) Set(f func(p core.PulseNumber)) *SetterMock {
 	return m.mock
 }
 
-//Delete implements github.com/insolar/insolar/ledger/storage/nodes.Setter interface
+//Delete implements github.com/insolar/insolar/ledger/storage/node.Setter interface
 func (m *SetterMock) Delete(p core.PulseNumber) {
 	counter := atomic.AddUint64(&m.DeletePreCounter, 1)
 	defer atomic.AddUint64(&m.DeleteCounter, 1)
@@ -236,7 +236,7 @@ func (m *mSetterMockSet) Set(f func(p core.PulseNumber, p1 []insolar.Node) (r er
 	return m.mock
 }
 
-//Set implements github.com/insolar/insolar/ledger/storage/nodes.Setter interface
+//Set implements github.com/insolar/insolar/ledger/storage/node.Setter interface
 func (m *SetterMock) Set(p core.PulseNumber, p1 []insolar.Node) (r error) {
 	counter := atomic.AddUint64(&m.SetPreCounter, 1)
 	defer atomic.AddUint64(&m.SetCounter, 1)
