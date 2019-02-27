@@ -12,7 +12,7 @@ services:
       - "${PWD}/genesis/:/var/lib/insolar"
       - "${PWD}/log:/var/log"
     restart: always
-    link:
+    links:
         - insgorund
     ports:
       - "127.0.0.1:8001:8001/tcp"   # metrics
@@ -21,10 +21,14 @@ services:
       - "127.0.0.1:19191:19191/tcp" # api
 
   insgorund:
-    image: "insolard/insgorund:latest"
+    image: "insolar/insgorund:latest"
     restart: always
-    link:
-        - insolard
+    environment:
+      - INSOLARD_LOG_LEVEL=debug
+      - INSOLARD_LOG_TO_FILE=1
+      - INSOLARD_RPC_ENDPOINT=insolard:18182
+    volumes:
+      - "${PWD}/log:/var/log"
 
   prometheus:
     image: "prom/prometheus:v2.7.0"

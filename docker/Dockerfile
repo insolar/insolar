@@ -50,13 +50,13 @@ COPY --from=insolard-builder        \
           "/opt/bin/healthcheck",   \
           "/opt/bin/genconfig",     \
           "/opt/bin/"]
-COPY /docker/insolard-entrypoint.sh /opt/bin/docker-entrypoint.sh
+COPY docker/insolard-entrypoint.sh /opt/bin/docker-entrypoint.sh
 
 EXPOSE 7900 7901 8001 18182 19191
 HEALTHCHECK --start-period=3m --interval=1m --timeout=30s CMD [ "/opt/bin/healthcheck" ]
 VOLUME [ "/etc/insolar", "/var/log", "/var/lib/insolar" ]
 
-ENTRYPOINT [ "/opt/bin/insolard-entrypoint.sh"  ]
+ENTRYPOINT [ "/opt/bin/docker-entrypoint.sh"  ]
 CMD []
 
 #                               GENESIS BUILDER
@@ -84,9 +84,14 @@ CMD ['cp', '/opt/genesis', '/opt/output/genesis']
 FROM alpine:3.9 AS insgorund
 MAINTAINER ivan.serezhkin@insolar.io
 
-RUN mkdir -p /tmp/insgorund /opt/bin/
-COPY --from=insolard-genesis-builder /opt/bin/insgorund /insgorund
-COPY /docker/insgorund-entrypoint.sh /opt/bin/docker-entrypoint.sh
+RUN set -x && \
+        mkdir -p /var/log /opt/bin /tmp/insgorund /opt/insgorund && \
+        apk add --no-cache --virtual /opt/.runtime-deps \
+            bash    \
+            curl
+
+COPY --from=insolard-genesis-builder /opt/bin/insgorund /opt/bin/insgorund
+COPY docker/insgorund-entrypoint.sh /opt/bin/docker-entrypoint.sh
 
 EXPOSE 7777 8002
 VOLUME [ "/var/log" ]

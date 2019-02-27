@@ -4,8 +4,6 @@ set -e
 export IP=`awk 'END{print $1}' /etc/hosts`
 
 INSOLARD_BIN=/opt/bin/insolard
-INSGORUND_BIN=/opt/bin/insgorund
-
 GENERATE_BIN=/opt/bin/genconfig
 
 export INSOLARD_TRANSPORT_LISTEN_PORT=${INSOLARD_TRANSPORT_LISTEN_PORT:-7900}
@@ -44,7 +42,7 @@ construct_insolar_cmd() {
         insolar_cmd="$insolar_cmd --trace"
     fi
     if [ ! -z "${INSOLARD_LOG_TO_FILE}" ]; then
-        insolar_cmd="$insolar_cmd 2> /var/log/insolard.log"
+        insolar_cmd="$insolar_cmd 2>> /var/log/insolard.log"
     fi
     echo $insolar_cmd
 }
