@@ -1,0 +1,221 @@
+package pulse
+
+import (
+	"testing"
+
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/gen"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+func TestNodeStorage_ForPulseNumber(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+	pn := gen.PulseNumber()
+	pulse := core.Pulse{PulseNumber: pn}
+	storage := NewMemoryStorage()
+	storage.storage[pn] = &memoryNode{pulse: pulse}
+
+	t.Run("returns error when no pulse", func(t *testing.T) {
+		res, err := storage.ForPulseNumber(ctx, gen.PulseNumber())
+		assert.Equal(t, core.ErrNotFound, err)
+		assert.Equal(t, core.Pulse{}, res)
+	})
+
+	t.Run("returns correct pulse", func(t *testing.T) {
+		res, err := storage.ForPulseNumber(ctx, pn)
+		assert.NoError(t, err)
+		assert.Equal(t, pulse, res)
+	})
+}
+
+func TestNodeStorage_Latest(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+
+	t.Run("returns error when no pulse", func(t *testing.T) {
+		storage := NewMemoryStorage()
+		res, err := storage.Latest(ctx)
+		assert.Equal(t, core.ErrNotFound, err)
+		assert.Equal(t, core.Pulse{}, res)
+	})
+
+	t.Run("returns correct pulse", func(t *testing.T) {
+		storage := NewMemoryStorage()
+		pulse := core.Pulse{PulseNumber: gen.PulseNumber()}
+		storage.head = &memoryNode{pulse: pulse}
+		res, err := storage.Latest(ctx)
+		assert.NoError(t, err)
+		assert.Equal(t, pulse, res)
+	})
+}
+
+func TestNodeStorage_Append(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+	pn := gen.PulseNumber()
+	pulse := core.Pulse{PulseNumber: pn}
+
+	t.Run("appends to an empty storage", func(t *testing.T) {
+		storage := NewMemoryStorage()
+
+		err := storage.Append(ctx, pulse)
+		require.NoError(t, err)
+		require.NotNil(t, storage.head)
+		require.NotNil(t, storage.storage[pulse.PulseNumber])
+		assert.Equal(t, storage.storage[pulse.PulseNumber], storage.head)
+		assert.Equal(t, storage.tail, storage.head)
+		assert.Equal(t, memoryNode{pulse: pulse}, *storage.head)
+	})
+
+	t.Run("returns error if pulse number is equal or less", func(t *testing.T) {
+		storage := NewMemoryStorage()
+		head := &memoryNode{pulse: pulse}
+		storage.storage[pn] = head
+		storage.head = head
+		storage.tail = head
+
+		{
+			err := storage.Append(ctx, core.Pulse{PulseNumber: pn})
+			assert.Error(t, err)
+		}
+		{
+			err := storage.Append(ctx, core.Pulse{PulseNumber: pn - 1})
+			assert.Error(t, err)
+		}
+	})
+
+	t.Run("appends to a filled storage", func(t *testing.T) {
+		storage := NewMemoryStorage()
+		head := &memoryNode{pulse: pulse}
+		storage.storage[pn] = head
+		storage.head = head
+		storage.tail = head
+		pulse := pulse
+		pulse.PulseNumber += 1
+
+		err := storage.Append(ctx, pulse)
+		require.NoError(t, err)
+		require.NotNil(t, storage.head)
+		require.NotNil(t, storage.storage[pulse.PulseNumber])
+		assert.Equal(t, storage.storage[pulse.PulseNumber], storage.head)
+		assert.NotEqual(t, storage.tail, storage.head)
+		assert.Equal(t, memoryNode{pulse: pulse, prev: head}, *storage.head)
+	})
+}
+
+func TestMemoryStorage_Shift(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+	pn := gen.PulseNumber()
+	pulse := core.Pulse{PulseNumber: pn}
+
+	t.Run("returns error if empty", func(t *testing.T) {
+		storage := NewMemoryStorage()
+		shifted, err := storage.Shift(ctx)
+		assert.Error(t, err)
+		assert.Equal(t, core.Pulse{}, shifted)
+	})
+
+	t.Run("shifts if one in storage", func(t *testing.T) {
+		storage := NewMemoryStorage()
+		head := &memoryNode{pulse: pulse}
+		storage.storage[pn] = head
+		storage.head = head
+		storage.tail = head
+
+		shifted, err := storage.Shift(ctx)
+		assert.NoError(t, err)
+		assert.Equal(t, pulse, shifted)
+		assert.Nil(t, storage.head)
+		assert.Nil(t, storage.tail)
+		assert.Empty(t, storage.storage)
+	})
+
+	t.Run("shifts if two in storage", func(t *testing.T) {
+		storage := NewMemoryStorage()
+		tailPulse := pulse
+		headPulse := pulse
+		headPulse.PulseNumber += 1
+		head := &memoryNode{pulse: headPulse}
+		tail := &memoryNode{pulse: tailPulse}
+		head.prev = tail
+		tail.next = head
+		storage.storage[headPulse.PulseNumber] = head
+		storage.storage[tailPulse.PulseNumber] = tail
+		storage.head = head
+		storage.tail = tail
+
+		shifted, err := storage.Shift(ctx)
+		assert.NoError(t, err)
+		assert.Equal(t, tail.pulse, shifted)
+		assert.Equal(t, storage.head, storage.tail)
+		assert.Equal(t, head, storage.storage[head.pulse.PulseNumber])
+		assert.Equal(t, memoryNode{pulse: headPulse}, *head)
+	})
+}
+
+func TestMemoryStorage_ForwardsBackwards(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+	storage := NewMemoryStorage()
+	tailPulse := core.Pulse{PulseNumber: gen.PulseNumber()}
+	headPulse := core.Pulse{PulseNumber: tailPulse.PulseNumber + 1}
+	head := &memoryNode{pulse: headPulse}
+	tail := &memoryNode{pulse: tailPulse}
+	head.prev = tail
+	tail.next = head
+	storage.storage[headPulse.PulseNumber] = head
+	storage.storage[tailPulse.PulseNumber] = tail
+	storage.head = head
+	storage.tail = tail
+
+	t.Run("forwards returns itself if zero steps", func(t *testing.T) {
+		pulse, err := storage.Forwards(ctx, tailPulse.PulseNumber, 0)
+		assert.NoError(t, err)
+		assert.Equal(t, pulse, tailPulse)
+	})
+	t.Run("forwards returns next if one step", func(t *testing.T) {
+		pulse, err := storage.Forwards(ctx, tailPulse.PulseNumber, 1)
+		assert.NoError(t, err)
+		assert.Equal(t, pulse, headPulse)
+	})
+	t.Run("forwards returns error if forward overflow", func(t *testing.T) {
+		pulse, err := storage.Forwards(ctx, tailPulse.PulseNumber, 2)
+		assert.Equal(t, core.ErrNotFound, err)
+		assert.Equal(t, core.Pulse{}, pulse)
+	})
+	t.Run("forwards returns error if backward overflow", func(t *testing.T) {
+		pulse, err := storage.Forwards(ctx, tailPulse.PulseNumber-1, 1)
+		assert.Equal(t, core.ErrNotFound, err)
+		assert.Equal(t, core.Pulse{}, pulse)
+	})
+
+	t.Run("backwards returns itself if zero steps", func(t *testing.T) {
+		pulse, err := storage.Backwards(ctx, headPulse.PulseNumber, 0)
+		assert.NoError(t, err)
+		assert.Equal(t, pulse, headPulse)
+	})
+	t.Run("backwards returns next if one step", func(t *testing.T) {
+		pulse, err := storage.Backwards(ctx, headPulse.PulseNumber, 1)
+		assert.NoError(t, err)
+		assert.Equal(t, pulse, tailPulse)
+	})
+	t.Run("backwards returns error if backward overflow", func(t *testing.T) {
+		pulse, err := storage.Backwards(ctx, headPulse.PulseNumber, 2)
+		assert.Equal(t, core.ErrNotFound, err)
+		assert.Equal(t, core.Pulse{}, pulse)
+	})
+	t.Run("backwards returns error if forward overflow", func(t *testing.T) {
+		pulse, err := storage.Backwards(ctx, headPulse.PulseNumber-1, 1)
+		assert.Equal(t, core.ErrNotFound, err)
+		assert.Equal(t, core.Pulse{}, pulse)
+	})
+}
