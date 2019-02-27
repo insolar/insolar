@@ -95,6 +95,11 @@ func (d *distributor) Distribute(ctx context.Context, pulse core.Pulse) {
 		bootstrapHosts = append(bootstrapHosts, bootstrapHost)
 	}
 
+	if len(bootstrapHosts) == 0 {
+		logger.Error("[ Distribute ] no bootstrap hosts to distribute")
+		return
+	}
+
 	d.resume(ctx)
 	defer d.pause(ctx)
 
