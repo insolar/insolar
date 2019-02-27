@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package nodes
+package node
 
 import (
 	"sync"
@@ -25,15 +25,15 @@ import (
 )
 
 // Accessor provides info about active nodes.
-//go:generate minimock -i github.com/insolar/insolar/ledger/storage/nodes.Accessor -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage/node.Accessor -o ./ -s _mock.go
 type Accessor interface {
 	All(pulse core.PulseNumber) ([]insolar.Node, error)
 	InRole(pulse core.PulseNumber, role core.StaticRole) ([]insolar.Node, error)
 }
 
-// Setter provides methods for setting active nodes.
-//go:generate minimock -i github.com/insolar/insolar/ledger/storage/nodes.Setter -o ./ -s _mock.go
-type Setter interface {
+// Modifier provides methods for setting active nodes.
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage/node.Modifier -o ./ -s _mock.go
+type Modifier interface {
 	Set(pulse core.PulseNumber, nodes []insolar.Node) error
 	Delete(pulse core.PulseNumber)
 }

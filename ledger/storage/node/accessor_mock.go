@@ -1,9 +1,9 @@
-package nodes
+package node
 
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "Accessor" can be found in github.com/insolar/insolar/ledger/storage/nodes
+The original interface "Accessor" can be found in github.com/insolar/insolar/ledger/storage/node
 */
 import (
 	"sync/atomic"
@@ -16,7 +16,7 @@ import (
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//AccessorMock implements github.com/insolar/insolar/ledger/storage/nodes.Accessor
+//AccessorMock implements github.com/insolar/insolar/ledger/storage/node.Accessor
 type AccessorMock struct {
 	t minimock.Tester
 
@@ -31,7 +31,7 @@ type AccessorMock struct {
 	InRoleMock       mAccessorMockInRole
 }
 
-//NewAccessorMock returns a mock for github.com/insolar/insolar/ledger/storage/nodes.Accessor
+//NewAccessorMock returns a mock for github.com/insolar/insolar/ledger/storage/node.Accessor
 func NewAccessorMock(t minimock.Tester) *AccessorMock {
 	m := &AccessorMock{t: t}
 
@@ -113,7 +113,7 @@ func (m *mAccessorMockAll) Set(f func(p core.PulseNumber) (r []insolar.Node, r1 
 	return m.mock
 }
 
-//All implements github.com/insolar/insolar/ledger/storage/nodes.Accessor interface
+//All implements github.com/insolar/insolar/ledger/storage/node.Accessor interface
 func (m *AccessorMock) All(p core.PulseNumber) (r []insolar.Node, r1 error) {
 	counter := atomic.AddUint64(&m.AllPreCounter, 1)
 	defer atomic.AddUint64(&m.AllCounter, 1)
@@ -264,7 +264,7 @@ func (m *mAccessorMockInRole) Set(f func(p core.PulseNumber, p1 core.StaticRole)
 	return m.mock
 }
 
-//InRole implements github.com/insolar/insolar/ledger/storage/nodes.Accessor interface
+//InRole implements github.com/insolar/insolar/ledger/storage/node.Accessor interface
 func (m *AccessorMock) InRole(p core.PulseNumber, p1 core.StaticRole) (r []insolar.Node, r1 error) {
 	counter := atomic.AddUint64(&m.InRolePreCounter, 1)
 	defer atomic.AddUint64(&m.InRoleCounter, 1)

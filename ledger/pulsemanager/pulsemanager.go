@@ -24,7 +24,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar"
-	"github.com/insolar/insolar/ledger/storage/nodes"
+	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/trace"
@@ -65,8 +65,8 @@ type PulseManager struct {
 	JetStorage                 storage.JetStorage              `inject:""`
 	DropStorage                storage.DropStorage             `inject:""`
 	ObjectStorage              storage.ObjectStorage           `inject:""`
-	NodeSetter                 nodes.Setter                    `inject:""`
-	Nodes                      nodes.Accessor                  `inject:""`
+	NodeSetter                 node.Modifier                   `inject:""`
+	Nodes                      node.Accessor                   `inject:""`
 	PulseTracker               storage.PulseTracker            `inject:""`
 	ReplicaStorage             storage.ReplicaStorage          `inject:""`
 	DBContext                  storage.DBContext               `inject:""`
