@@ -45,7 +45,6 @@ func (s *testSuite) TestNetworkConsensus3Times() {
 func (s *testSuite) TestNodeConnect() {
 	testNode := s.newNetworkNode("testNode")
 	s.preInitNode(testNode)
-	setMajority(testNode, len(s.fixture().bootstrapNodes))
 
 	s.InitNode(testNode)
 	s.StartNode(testNode)
@@ -276,19 +275,20 @@ func (s *testSuite) TestNodeComeAfterAnotherNodeSendLeaveETA() {
 }
 
 func TestServiceNetworkOneBootstrap(t *testing.T) {
-	s := NewTestSuite(1, 0)
+
+	s := NewTestSuite(newTestNetworkConfig(1, 0))
 	suite.Run(t, s)
 }
 
 func TestServiceNetworkManyBootstraps(t *testing.T) {
-	s := NewTestSuite(15, 0)
+	s := NewTestSuite(newTestNetworkConfig(15, 0))
 	suite.Run(t, s)
 }
 
 func TestServiceNetworkManyNodes(t *testing.T) {
 	t.Skip("tmp 123")
 
-	s := NewTestSuite(5, 10)
+	s := NewTestSuite(newTestNetworkConfig(5, 10))
 	suite.Run(t, s)
 }
 

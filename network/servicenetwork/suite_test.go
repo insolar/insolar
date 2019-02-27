@@ -69,19 +69,41 @@ func newFixture(t *testing.T) *fixture {
 	}
 }
 
-type testSuite struct {
-	suite.Suite
-	fixtureMap     map[string]*fixture
-	bootstrapCount int
-	nodesCount     int
+type networkRules struct {
+	MajorityRule int
+	MinRoles     struct {
+		Virtual       uint
+		HeavyMaterial uint
+		LightMaterial uint
+	}
 }
 
-func NewTestSuite(bootstrapCount, nodesCount int) *testSuite {
+type testNetworkConfig struct {
+	discoveryNodesCount int
+	commonNodesCount    int
+	networkRules        networkRules
+}
+
+func newTestNetworkConfig(discoveryCount, commonCount int) testNetworkConfig {
+	majority := discoveryCount/2 + 1
+	return testNetworkConfig{
+		discoveryNodesCount: discoveryCount,
+		commonNodesCount:    commonCount,
+		networkRules:        networkRules{MajorityRule: majority},
+	}
+}
+
+type testSuite struct {
+	suite.Suite
+	fixtureMap map[string]*fixture
+	config     testNetworkConfig
+}
+
+func NewTestSuite(config testNetworkConfig) *testSuite {
 	return &testSuite{
-		Suite:          suite.Suite{},
-		fixtureMap:     make(map[string]*fixture, 0),
-		bootstrapCount: bootstrapCount,
-		nodesCount:     nodesCount,
+		Suite:      suite.Suite{},
+		fixtureMap: make(map[string]*fixture, 0),
+		config:     config,
 	}
 }
 
@@ -98,11 +120,11 @@ func (s *testSuite) SetupTest() {
 
 	log.Info("SetupTest")
 
-	for i := 0; i < s.bootstrapCount; i++ {
+	for i := 0; i < s.config.discoveryNodesCount; i++ {
 		s.fixture().bootstrapNodes = append(s.fixture().bootstrapNodes, s.newNetworkNode(fmt.Sprintf("bootstrap_%d", i)))
 	}
 
-	for i := 0; i < s.nodesCount; i++ {
+	for i := 0; i < s.config.commonNodesCount; i++ {
 		s.fixture().networkNodes = append(s.fixture().networkNodes, s.newNetworkNode(fmt.Sprintf("node_%d", i)))
 	}
 
@@ -324,6 +346,10 @@ func (s *testSuite) initCrypto(node *networkNode) (*certificate.CertificateManag
 	cert.Reference = node.id.String()
 	cert.Role = node.role.String()
 	cert.BootstrapNodes = make([]certificate.BootstrapNode, 0)
+	cert.MajorityRule = s.config.networkRules.MajorityRule
+	cert.MinRoles.LightMaterial = s.config.networkRules.MinRoles.LightMaterial
+	cert.MinRoles.HeavyMaterial = s.config.networkRules.MinRoles.HeavyMaterial
+	cert.MinRoles.Virtual = s.config.networkRules.MinRoles.Virtual
 
 	for _, b := range s.fixture().bootstrapNodes {
 		pubKey, _ := b.cryptographyService.GetPublicKey()
@@ -424,16 +450,4 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	node.componentManager.Register(certManager, cryptographyService, rules.NewRules())
 	node.componentManager.Inject(serviceNetwork, networkSwitcher, messageBusLocker)
 	node.serviceNetwork = serviceNetwork
-}
-
-func setMajority(node *networkNode, majorityRule int) {
-	cert := node.serviceNetwork.CertificateManager.GetCertificate()
-	cert.(*certificate.Certificate).MajorityRule = majorityRule
-}
-
-func setMinRoles(node *networkNode, virtual, heavyMaterial, lightMaterial uint) {
-	cert := node.serviceNetwork.CertificateManager.GetCertificate()
-	cert.(*certificate.Certificate).MinRoles.Virtual = virtual
-	cert.(*certificate.Certificate).MinRoles.HeavyMaterial = heavyMaterial
-	cert.(*certificate.Certificate).MinRoles.LightMaterial = lightMaterial
 }
