@@ -173,14 +173,14 @@ func (s *exporterSuite) TestExporter_Export() {
 	records := result.Data[strconv.FormatUint(uint64(core.FirstPulseNumber+10), 10)].([]*pulseData)[0].Records
 	object, ok := records[base58.Encode(objectID[:])]
 	if assert.True(s.T(), ok, "object not found by ID") {
-		assert.Equal(s.T(), "ObjectActivateRecord", object.Type)
+		assert.Equal(s.T(), "TypeActivate", object.Type)
 		assert.Equal(s.T(), true, object.Data.(*record.ObjectActivateRecord).IsDelegate)
 		assert.Equal(s.T(), "objectValue", object.Payload["Memory"].(payload)["Field"])
 	}
 
 	request, ok := records[base58.Encode(requestID[:])]
 	if assert.True(s.T(), ok, "request not found by ID") {
-		assert.Equal(s.T(), "RequestRecord", request.Type)
+		assert.Equal(s.T(), "TypeCallRequest", request.Type)
 		assert.Equal(s.T(), msgHash, request.Data.(*record.RequestRecord).MessageHash)
 		assert.Equal(s.T(), core.TypeCallConstructor.String(), request.Payload["Type"])
 	}

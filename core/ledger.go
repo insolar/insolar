@@ -56,23 +56,6 @@ func (r DynamicRole) IsVirtualRole() bool {
 	return false
 }
 
-// Deprecated: remove after deleting TmpLedger
-// Ledger is the global ledger handler. Other system parts communicate with ledger through it.
-// FIXME: THIS INTERFACE IS DEPRECATED. USE DI.
-type Ledger interface {
-	// Deprecated: remove after deleting TmpLedger
-	// GetArtifactManager returns artifact manager to work with.
-	GetArtifactManager() ArtifactManager
-
-	// Deprecated: remove after deleting TmpLedger
-	// GetJetCoordinator returns jet coordinator to work with.
-	GetJetCoordinator() JetCoordinator
-
-	// Deprecated: remove after deleting TmpLedger
-	// GetPulseManager returns pulse manager to work with.
-	GetPulseManager() PulseManager
-}
-
 // PulseManager provides Ledger's methods related to Pulse.
 //go:generate minimock -i github.com/insolar/insolar/core.PulseManager -o ../testutils -s _mock.go
 type PulseManager interface {
@@ -311,10 +294,4 @@ var (
 //go:generate minimock -i github.com/insolar/insolar/core.PulseStorage -o ../testutils -s _mock.go
 type PulseStorage interface {
 	Current(ctx context.Context) (*Pulse, error)
-}
-
-//go:generate minimock -i github.com/insolar/insolar/core.ArtifactManagerMessageHandler -o ../testutils -s _mock.go
-type ArtifactManagerMessageHandler interface {
-	ResetEarlyRequestCircuitBreaker(context.Context)
-	CloseEarlyRequestCircuitBreakerForJet(context.Context, RecordID)
 }

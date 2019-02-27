@@ -1,5 +1,5 @@
 /*
- *    Copyright 2019 Insolar Technologies
+ *    Copyright 2019 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -14,25 +14,14 @@
  *    limitations under the License.
  */
 
-package core
+package insolar
 
 import (
-	"context"
+	"github.com/insolar/insolar/core"
 )
 
-// Component controller methods
-// Deprecated: and should be removed
-type Component interface {
-	Start(ctx context.Context, components Components) error
-	Stop(ctx context.Context) error
-}
-
-// Components is a registry for other core interfaces
-// Fields order are important and represent start and stop order in the daemon
-// Deprecated: and should be removed after drop TmpLedger, DO NOT EDIT
-type Components struct {
-	NodeNetwork NodeNetwork
-	LogicRunner LogicRunner
-	Network     Network
-	MessageBus  MessageBus
+// Node represents insolar node.
+type Node struct {
+	ID   core.RecordRef
+	Role core.StaticRole
 }

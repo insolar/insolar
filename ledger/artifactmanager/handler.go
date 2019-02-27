@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/core/delegationtoken"
+	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/tag"
@@ -55,7 +56,7 @@ type MessageHandler struct {
 	JetStorage                 storage.JetStorage              `inject:""`
 	DropStorage                storage.DropStorage             `inject:""`
 	ObjectStorage              storage.ObjectStorage           `inject:""`
-	NodeStorage                storage.NodeStorage             `inject:""`
+	Nodes                      node.Accessor                   `inject:""`
 	PulseTracker               storage.PulseTracker            `inject:""`
 	DBContext                  storage.DBContext               `inject:""`
 	HotDataWaiter              HotDataWaiter                   `inject:""`
@@ -112,7 +113,7 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 	m := newMiddleware(h)
 	h.middleware = m
 
-	h.jetTreeUpdater = newJetTreeUpdater(h.NodeStorage, h.JetStorage, h.Bus, h.JetCoordinator)
+	h.jetTreeUpdater = newJetTreeUpdater(h.Nodes, h.JetStorage, h.Bus, h.JetCoordinator)
 
 	h.isHeavy = h.certificate.GetRole() == core.StaticRoleHeavyMaterial
 
@@ -305,7 +306,7 @@ func (h *MessageHandler) handleSetRecord(ctx context.Context, parcel core.Parcel
 	rec := record.DeserializeRecord(msg.Record)
 	jetID := jetFromContext(ctx)
 
-	id := record.NewRecordIDFromRecord(h.PlatformCryptographyScheme, parcel.Pulse(), rec)
+	calculatedID := record.NewRecordIDFromRecord(h.PlatformCryptographyScheme, parcel.Pulse(), rec)
 
 	switch r := rec.(type) {
 	case record.Request:
@@ -313,7 +314,7 @@ func (h *MessageHandler) handleSetRecord(ctx context.Context, parcel core.Parcel
 			return &reply.Error{ErrType: reply.ErrTooManyPendingRequests}, nil
 		}
 		recentStorage := h.RecentStorageProvider.GetPendingStorage(ctx, jetID)
-		recentStorage.AddPendingRequest(ctx, r.GetObject(), *id)
+		recentStorage.AddPendingRequest(ctx, r.GetObject(), *calculatedID)
 	case *record.ResultRecord:
 		recentStorage := h.RecentStorageProvider.GetPendingStorage(ctx, jetID)
 		recentStorage.RemovePendingRequest(ctx, r.Object, *r.Request.Record())
@@ -322,6 +323,7 @@ func (h *MessageHandler) handleSetRecord(ctx context.Context, parcel core.Parcel
 	id, err := h.ObjectStorage.SetRecord(ctx, jetID, parcel.Pulse(), rec)
 	if err == storage.ErrOverride {
 		inslogger.FromContext(ctx).WithField("type", fmt.Sprintf("%T", rec)).Warn("set record override")
+		id = calculatedID
 	} else if err != nil {
 		return nil, err
 	}
@@ -457,6 +459,9 @@ func (h *MessageHandler) handleGetObject(
 
 			obj, err := h.fetchObject(ctx, msg.Head, *node, stateID, parcel.Pulse())
 			if err != nil {
+				if err == core.ErrDeactivated {
+					return &reply.Error{ErrType: reply.ErrDeactivated}, nil
+				}
 				return nil, err
 			}
 
@@ -500,6 +505,9 @@ func (h *MessageHandler) handleGetObject(
 
 		obj, err := h.fetchObject(ctx, msg.Head, *node, stateID, parcel.Pulse())
 		if err != nil {
+			if err == core.ErrDeactivated {
+				return &reply.Error{ErrType: reply.ErrDeactivated}, nil
+			}
 			return nil, err
 		}
 
@@ -844,6 +852,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 		id, err := tx.SetRecord(ctx, jetID, parcel.Pulse(), rec)
 		if err == storage.ErrOverride {
 			logger.WithField("type", fmt.Sprintf("%T", rec)).Warn("set record override (#1)")
+			id = recID
 		} else if err != nil {
 			return err
 		}
@@ -920,6 +929,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel core.Pa
 		child, err = tx.SetRecord(ctx, jetID, parcel.Pulse(), childRec)
 		if err == storage.ErrOverride {
 			logger.WithField("type", fmt.Sprintf("%T", rec)).Warn("set record override (#2)")
+			child = recID
 		} else if err != nil {
 			return err
 		}
@@ -1160,6 +1170,10 @@ func (h *MessageHandler) fetchObject(
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch object state")
 	}
+	if rep, ok := genericReply.(*reply.Error); ok {
+		return nil, rep.Error()
+	}
+
 	rep, ok := genericReply.(*reply.Object)
 	if !ok {
 		return nil, fmt.Errorf("failed to fetch object state: unexpected reply type %T (reply=%+v)", genericReply, genericReply)

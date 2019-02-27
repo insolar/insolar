@@ -134,6 +134,14 @@
   version = "v1.2.0"
 
 [[projects]]
+  branch = "master"
+  digest = "1:3ee90c0d94da31b442dde97c99635aaafec68d0b8a3c12ee2075c6bdabeec6bb"
+  name = "github.com/google/gofuzz"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "24818f796faf91cd76ec7bddd72458fbced7a6c1"
+
+[[projects]]
   digest = "1:9fe4b4f866007c9981c6c44c02d5533b1fb78ca408355eb64e767ef416eb9dfb"
   name = "github.com/gorilla/rpc"
   packages = [
@@ -617,6 +625,7 @@
     "github.com/ccding/go-stun/stun",
     "github.com/dgraph-io/badger",
     "github.com/gojuno/minimock",
+    "github.com/google/gofuzz",
     "github.com/gorilla/rpc/v2",
     "github.com/gorilla/rpc/v2/json2",
     "github.com/hashicorp/go-multierror",
