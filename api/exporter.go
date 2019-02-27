@@ -19,11 +19,8 @@ package api
 import (
 	"context"
 	"net/http"
-	"strings"
 
-	jsonrpc "github.com/gorilla/rpc/v2/json2"
 	"github.com/insolar/insolar/core"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -88,17 +85,8 @@ func NewStorageExporterService(runner *Runner) *StorageExporterService {
 func (s *StorageExporterService) Export(r *http.Request, args *StorageExporterArgs, reply *StorageExporterReply) error {
 	exp := s.runner.StorageExporter
 	ctx := context.TODO()
-	result, err := exp.Export(ctx, core.PulseNumber(args.From), args.Size)
-	if err != nil {
-		if strings.Contains(err.Error(), "failed to fetch pulse data") {
-			return &jsonrpc.Error{
-				Code:    errCodePulseNotFound,
-				Message: "[ Export ]: " + err.Error(),
-				Data:    nil,
-			}
-		}
-		return errors.Wrap(err, "[ Export ]")
-	}
+	// err ignored because of maximizing positive export result
+	result, _ := exp.Export(ctx, core.PulseNumber(args.From), args.Size)
 
 	reply.Data = result.Data
 	reply.Size = result.Size
