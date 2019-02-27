@@ -73,7 +73,7 @@ func (d *distributor) Start(ctx context.Context) error {
 	return nil
 }
 
-// Distribute starts a fire-and-forger process of pulse distribution to bootstrap hosts
+// Distribute starts a fire-and-forget process of pulse distribution to bootstrap hosts
 func (d *distributor) Distribute(ctx context.Context, pulse core.Pulse) {
 	logger := inslogger.FromContext(ctx)
 	defer func() {
