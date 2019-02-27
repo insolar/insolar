@@ -17,10 +17,14 @@
 package drop
 
 import (
+	"context"
 	"io"
 
+	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/jet"
+	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/pkg/errors"
 )
 
@@ -84,4 +88,56 @@ func (b *builder) Build() (jet.JetDrop, error) {
 		Hash:     b.Hasher.Sum(nil),
 		DropSize: *b.dropSize,
 	}, nil
+}
+
+type Packer interface {
+	Pack(ctx context.Context, jetID core.JetID, pulse core.PulseNumber, prevHash []byte) (jet.JetDrop, error)
+}
+
+func NewPacker(hasher core.Hasher, db storage.DBContext) Packer {
+	return &packer{
+		Builder:   NewBuilder(hasher),
+		DBContext: db,
+	}
+}
+
+type packer struct {
+	Builder
+	storage.DBContext
+}
+
+func (p *packer) Pack(ctx context.Context, jetID core.JetID, pulse core.PulseNumber, prevHash []byte) (jet.JetDrop, error) {
+	p.DBContext.WaitingFlight()
+	_, jetPrefix := jet.Jet(jetID)
+
+	var dropSize uint64
+	recordPrefix := storage.IDRecordPrefixKey(jetPrefix, pulse)
+
+	err := p.GetBadgerDB().View(func(txn *badger.Txn) error {
+		it := txn.NewIterator(badger.DefaultIteratorOptions)
+		defer it.Close()
+
+		for it.Seek(recordPrefix); it.ValidForPrefix(recordPrefix); it.Next() {
+			val, err := it.Item().ValueCopy(nil)
+			if err != nil {
+				return err
+			}
+
+			err = p.Append(record.DeserializeRecord(val))
+			if err != nil {
+				return err
+			}
+			dropSize += uint64(len(val))
+		}
+		return nil
+	})
+	if err != nil {
+		return jet.JetDrop{}, err
+	}
+
+	p.Pulse(pulse)
+	p.PrevHash(prevHash)
+	p.Size(dropSize)
+
+	return p.Build()
 }

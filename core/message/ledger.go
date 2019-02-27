@@ -383,7 +383,6 @@ type HotData struct {
 	RecentObjects   map[core.RecordID]HotIndex
 	PendingRequests map[core.RecordID]recentstorage.PendingObjectContext
 	PulseNumber     core.PulseNumber
-	//JetDropSizeHistory jet.DropSizeHistory
 }
 
 // AllowedSenderObjectAndRole implements interface method

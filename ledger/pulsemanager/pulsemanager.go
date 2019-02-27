@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar"
+	jetDrop "github.com/insolar/insolar/ledger/storage/jet/drop"
 	"github.com/insolar/insolar/ledger/storage/nodes"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
@@ -239,11 +240,15 @@ func (m *PulseManager) createDrop(
 		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't GetDrop")
 	}
 
-	drop, messages, dropSize, err := m.DropStorage.CreateDrop(ctx, jetID, currentPulse, prevDrop.Hash)
+	packer := jetDrop.NewPacker(m.PlatformCryptographyScheme.ReferenceHasher(), m.DBContext)
+
+	packedDrop, err := packer.Pack(ctx, core.JetID(jetID), currentPulse, prevDrop.Hash)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't CreateDrop")
 	}
-	err = m.DropSaver.Set(ctx, core.JetID(jetID), *drop)
+	drop = &packedDrop
+
+	err = m.DropSaver.Set(ctx, core.JetID(jetID), packedDrop)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't SetDrop")
 	}
@@ -251,28 +256,6 @@ func (m *PulseManager) createDrop(
 	dropSerialized, err = jet.Encode(drop)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't Encode")
-	}
-
-	dropSizeData := &jet.DropSize{
-		JetID:    jetID,
-		PulseNo:  currentPulse,
-		DropSize: dropSize,
-	}
-	hasher := m.PlatformCryptographyScheme.IntegrityHasher()
-	_, err = dropSizeData.WriteHashData(hasher)
-	if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't WriteHashData")
-	}
-	signature, err := m.CryptographyService.Sign(hasher.Sum(nil))
-	dropSizeData.Signature = signature.Bytes()
-
-	if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't Sign")
-	}
-
-	err = m.DropStorage.AddDropSize(ctx, dropSizeData)
-	if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't AddDropSize")
 	}
 
 	return
@@ -327,18 +310,12 @@ func (m *PulseManager) getExecutorHotData(
 		statPendingSent.M(int64(requestCount)),
 	)
 
-	dropSizeHistory, err := m.DropStorage.GetDropSizeHistory(ctx, jetID)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ processRecentObjects ] Can't GetDropSizeHistory")
-	}
-
 	msg := &message.HotData{
-		Drop:               *drop,
-		DropJet:            jetID,
-		PulseNumber:        pulse,
-		RecentObjects:      recentObjects,
-		PendingRequests:    pendingRequests,
-		JetDropSizeHistory: dropSizeHistory,
+		Drop:            *drop,
+		DropJet:         jetID,
+		PulseNumber:     pulse,
+		RecentObjects:   recentObjects,
+		PendingRequests: pendingRequests,
 	}
 	return msg, nil
 }

@@ -16,114 +16,113 @@
 
 package storage
 
-import (
-	"context"
-	"sync"
-
-	"github.com/dgraph-io/badger"
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/storage/jet"
-)
+// import (
+// 	"context"
+// 	"sync"
+//
+// 	"github.com/insolar/insolar/core"
+// 	"github.com/insolar/insolar/ledger/storage/jet"
+// )
 
 // DropStorage jet-drops
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage.DropStorage -o ./ -s _mock.go
-type DropStorage interface {
-	CreateDrop(ctx context.Context, jetID core.RecordID, pulse core.PulseNumber, prevHash []byte) (
-		*jet.JetDrop,
-		[][]byte,
-		uint64,
-		error,
-	)
-	//SetDrop(ctx context.Context, jetID core.RecordID, drop *jet.JetDrop) error
-	//GetDrop(ctx context.Context, jetID core.RecordID, pulse core.PulseNumber) (*jet.JetDrop, error)
+// type DropStorage interface {
+// 	CreateDrop(ctx context.Context, jetID core.RecordID, pulse core.PulseNumber, prevHash []byte) (
+// 		*jet.JetDrop,
+// 		[][]byte,
+// 		uint64,
+// 		error,
+// 	)
+// 	//SetDrop(ctx context.Context, jetID core.RecordID, drop *jet.JetDrop) error
+// 	//GetDrop(ctx context.Context, jetID core.RecordID, pulse core.PulseNumber) (*jet.JetDrop, error)
+//
+// 	//AddDropSize(ctx context.Context, dropSize *jet.DropSize) error
+// 	//SetDropSizeHistory(ctx context.Context, jetID core.RecordID, dropSizeHistory jet.DropSizeHistory) error
+// 	//GetDropSizeHistory(ctx context.Context, jetID core.RecordID) (jet.DropSizeHistory, error)
+// }
 
-	//AddDropSize(ctx context.Context, dropSize *jet.DropSize) error
-	//SetDropSizeHistory(ctx context.Context, jetID core.RecordID, dropSizeHistory jet.DropSizeHistory) error
-	//GetDropSizeHistory(ctx context.Context, jetID core.RecordID) (jet.DropSizeHistory, error)
-}
-
-type dropStorage struct {
-	DB                         DBContext                       `inject:""`
-	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
-
-	addBlockSizeLock     sync.RWMutex
-	jetSizesHistoryDepth int
-}
-
-func NewDropStorage(jetSizesHistoryDepth int) DropStorage {
-	return &dropStorage{jetSizesHistoryDepth: jetSizesHistoryDepth}
-}
+// type dropStorage struct {
+// 	DB                         DBContext                       `inject:""`
+// 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
+//
+// 	addBlockSizeLock     sync.RWMutex
+// 	jetSizesHistoryDepth int
+// }
+//
+// func NewDropStorage(jetSizesHistoryDepth int) DropStorage {
+// 	return &dropStorage{jetSizesHistoryDepth: jetSizesHistoryDepth}
+// }
 
 // CreateDrop creates and stores jet drop for given pulse number.
 //
 // On success returns saved drop object, slot records, drop size.
-func (ds *dropStorage) CreateDrop(ctx context.Context, jetID core.RecordID, pulse core.PulseNumber, prevHash []byte) (
-	*jet.JetDrop,
-	[][]byte,
-	uint64,
-	error,
-) {
-	var err error
-	ds.DB.WaitingFlight()
-
-	hw := ds.PlatformCryptographyScheme.ReferenceHasher()
-	_, err = hw.Write(prevHash)
-	if err != nil {
-		return nil, nil, 0, err
-	}
-
-	var messages [][]byte
-	_, jetPrefix := jet.Jet(core.JetID(jetID))
-	// messagesPrefix := prefixkey(scopeIDMessage, jetPrefix, pulse.Bytes())
-
-	// err = db.db.View(func(txn *badger.Txn) error {
-	// 	it := txn.NewIterator(badger.DefaultIteratorOptions)
-	// 	defer it.Close()
-	//
-	// 	for it.Seek(messagesPrefix); it.ValidForPrefix(messagesPrefix); it.Next() {
-	// 		val, err := it.Item().ValueCopy(nil)
-	// 		if err != nil {
-	// 			return err
-	// 		}
-	// 		messages = append(messages, val)
-	// 	}
-	// 	return nil
-	// })
-	// if err != nil {
-	// 	return nil, nil, 0, err
-	// }
-
-	var dropSize uint64
-	recordPrefix := prefixkey(scopeIDRecord, jetPrefix, pulse.Bytes())
-
-	err = ds.DB.GetBadgerDB().View(func(txn *badger.Txn) error {
-		it := txn.NewIterator(badger.DefaultIteratorOptions)
-		defer it.Close()
-
-		for it.Seek(recordPrefix); it.ValidForPrefix(recordPrefix); it.Next() {
-			val, err := it.Item().ValueCopy(nil)
-			if err != nil {
-				return err
-			}
-			_, err = hw.Write(val)
-			if err != nil {
-				return err
-			}
-			dropSize += uint64(len(val))
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, nil, 0, err
-	}
-
-	drop := jet.JetDrop{
-		Pulse:    pulse,
-		PrevHash: prevHash,
-		Hash:     hw.Sum(nil),
-	}
-	return &drop, messages, dropSize, nil
-}
+// func (ds *dropStorage) CreateDrop(ctx context.Context, jetID core.RecordID, pulse core.PulseNumber, prevHash []byte) (
+// 	*jet.JetDrop,
+// 	[][]byte,
+// 	uint64,
+// 	error,
+// ) {
+// 	var err error
+// 	ds.DB.WaitingFlight()
+//
+// 	hw := ds.PlatformCryptographyScheme.ReferenceHasher()
+// 	_, err = hw.Write(prevHash)
+// 	if err != nil {
+// 		return nil, nil, 0, err
+// 	}
+//
+// 	var messages [][]byte
+// 	_, jetPrefix := jet.Jet(core.JetID(jetID))
+// 	// messagesPrefix := prefixkey(scopeIDMessage, jetPrefix, pulse.Bytes())
+//
+// 	// err = db.db.View(func(txn *badger.Txn) error {
+// 	// 	it := txn.NewIterator(badger.DefaultIteratorOptions)
+// 	// 	defer it.Close()
+// 	//
+// 	// 	for it.Seek(messagesPrefix); it.ValidForPrefix(messagesPrefix); it.Next() {
+// 	// 		val, err := it.Item().ValueCopy(nil)
+// 	// 		if err != nil {
+// 	// 			return err
+// 	// 		}
+// 	// 		messages = append(messages, val)
+// 	// 	}
+// 	// 	return nil
+// 	// })
+// 	// if err != nil {
+// 	// 	return nil, nil, 0, err
+// 	// }
+//
+// 	var dropSize uint64
+// 	recordPrefix := prefixkey(scopeIDRecord, jetPrefix, pulse.Bytes())
+//
+// 	err = ds.DB.GetBadgerDB().View(func(txn *badger.Txn) error {
+// 		it := txn.NewIterator(badger.DefaultIteratorOptions)
+// 		defer it.Close()
+//
+// 		for it.Seek(recordPrefix); it.ValidForPrefix(recordPrefix); it.Next() {
+// 			val, err := it.Item().ValueCopy(nil)
+// 			if err != nil {
+// 				return err
+// 			}
+// 			_, err = hw.Write(val)
+// 			if err != nil {
+// 				return err
+// 			}
+// 			dropSize += uint64(len(val))
+// 		}
+// 		return nil
+// 	})
+// 	if err != nil {
+// 		return nil, nil, 0, err
+// 	}
+//
+// 	drop := jet.JetDrop{
+// 		Pulse:    pulse,
+// 		PrevHash: prevHash,
+// 		Hash:     hw.Sum(nil),
+// 	}
+// 	return &drop, messages, dropSize, nil
+// }
 
 // SetDrop saves provided JetDrop in db.
 // func (ds *dropStorage) SetDrop(ctx context.Context, jetID core.RecordID, drop *jet.JetDrop) error {
