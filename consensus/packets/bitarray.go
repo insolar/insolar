@@ -51,9 +51,9 @@ func (arr *bitArray) Len() int {
 	return arr.bitsSize
 }
 
-func (arr *bitArray) put(bit, index int) error {
+func (arr *bitArray) set(bit, index int) error {
 	if index >= arr.bitsSize {
-		return errors.New("[ put ] failed to put a bit. out of range")
+		return errors.New("[ set ] failed to set a bit. out of range")
 	}
 	block := getBlockInBitArray(index)
 	step := getStepToMove(index)

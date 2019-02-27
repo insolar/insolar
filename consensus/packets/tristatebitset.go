@@ -26,7 +26,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-const lastBitMask = 0x01
+const lastBitMask = 0x1
 const lowLengthSize = 6
 const firstBitMask = 0x80
 const lastTwoBitsMask = 0x3
@@ -282,17 +282,17 @@ func (dbs *TriStateBitSet) changeBucketState(index int, newState TriState) error
 
 func (dbs *TriStateBitSet) putLastBit(state TriState, index int) error {
 	bit := int(state & lastBitMask)
-	return dbs.array.put(bit, index)
+	return dbs.array.set(bit, index)
 }
 
 func (dbs *TriStateBitSet) changeBitState(i int, state TriState) error {
-	err := dbs.putLastBit(state>>1, 2*i) // put first bit to array
+	err := dbs.putLastBit(state>>1, 2*i) // set first bit to array
 	if err != nil {
-		return errors.Wrap(err, "[ changeBitState ] failed to put last bit")
+		return errors.Wrap(err, "[ changeBitState ] failed to set last bit")
 	}
-	err = dbs.putLastBit(state, 2*i+1) // put second bit to array
+	err = dbs.putLastBit(state, 2*i+1) // set second bit to array
 	if err != nil {
-		return errors.Wrap(err, "[ changeBitState ] failed to put last bit")
+		return errors.Wrap(err, "[ changeBitState ] failed to set last bit")
 	}
 	return nil
 }
