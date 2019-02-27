@@ -29,7 +29,6 @@ import (
 const lastBitMask = 0x01
 const lowLengthSize = 6
 const firstBitMask = 0x80
-const lowBitLengthSize = 6
 const lastTwoBitsMask = 0x3
 
 // TriStateBitSet bitset implementation.
@@ -127,7 +126,7 @@ func (dbs *TriStateBitSet) serializeWithHLength(
 ) error {
 	var secondByte uint8 // hBitLength
 	firstByte++
-	firstByte = firstByte << lowBitLengthSize // move compressed and hBitLength bits to right
+	firstByte = firstByte << lowLengthSize // move compressed and hBitLength bits to right
 	secondByte = uint8(tmpLen)
 	err := binary.Write(result, defaultByteOrder, firstByte)
 	if err != nil {
