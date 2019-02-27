@@ -64,19 +64,9 @@ type HandlersConfiguration struct {
 }
 
 // TODO: logic will be provided after pulse change mechanism
-func (s *HandlersConfiguration) getMachineConfiguration(smType int) StateMachineType { // nolint: unused
+func (s *HandlersConfiguration) getMachineConfiguration(smType int) stateMachineTypeT { // nolint: unused
 	return nil
 }
-
-// ActivationStatus represents status of work for slot element
-type ActivationStatus int
-
-//go:generate stringer -type=ActivationStatus
-const (
-	EmptyElement = ActivationStatus(iota)
-	ActiveElement
-	NotActiveElement
-)
 
 // ElementList is a list of slotElements with pointers to head and tail
 type ElementList struct {
@@ -184,7 +174,7 @@ func (s *Slot) GetNodeData() interface{} { // nolint: unused
 }
 
 // createElement creates new active element from empty element
-func (s *Slot) createElement(stateMachineType StateMachineType, state uint16, event queue.OutputElement) (*slotElement, error) { // nolint: unused
+func (s *Slot) createElement(stateMachineType stateMachineTypeI, state uint16, event queue.OutputElement) (*slotElement, error) { // nolint: unused
 	element := s.popElement(EmptyElement)
 	element.stateMachineType = stateMachineType
 	element.state = state
@@ -221,21 +211,4 @@ func (s *Slot) pushElement(status ActivationStatus, element *slotElement) error 
 	}
 	list.pushElement(element)
 	return nil
-}
-
-type StateMachineType interface{}
-
-type slotElement struct {
-	id               uint32
-	payload          interface{} // nolint
-	state            uint16
-	stateMachineType StateMachineType
-
-	nextElement      *slotElement
-	activationStatus ActivationStatus
-}
-
-// newSlotElement creates new slot element with provided activation status
-func newSlotElement(activationStatus ActivationStatus) *slotElement {
-	return &slotElement{activationStatus: activationStatus}
 }
