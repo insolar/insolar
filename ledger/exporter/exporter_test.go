@@ -186,10 +186,10 @@ func (s *exporterSuite) TestExporter_Export() {
 	}
 
 	_, err = s.exporter.Export(s.ctx, 100000, 2)
-	require.NoError(s.T(), err)
+	require.Error(s.T(), err, "From-pulse should be smaller (or equal) current-pulse")
 
 	_, err = s.exporter.Export(s.ctx, 60000, 2)
-	require.NoError(s.T(), err)
+	require.NoError(s.T(), err, "From-pulse should be smaller (or equal) current-pulse")
 }
 
 func (s *exporterSuite) TestExporter_ExportGetBlobFailed() {

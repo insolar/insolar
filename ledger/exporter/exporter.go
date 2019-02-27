@@ -76,47 +76,37 @@ type pulseData struct {
 
 // Export returns data view from storage.
 func (e *Exporter) Export(ctx context.Context, fromPulse core.PulseNumber, size int) (*core.StorageExportResult, error) {
-	logger := inslogger.FromContext(ctx)
 	result := core.StorageExportResult{Data: map[string]interface{}{}}
 
 	jetIDs, err := e.JetStorage.GetJets(ctx)
 	if err != nil {
-		logger.Error("failed to fetch jets")
-		result.NextFrom = &fromPulse
-		return &result, nil
+		return nil, errors.Wrap(err, "failed to fetch jets")
 	}
 
 	currentPulse, err := e.PulseStorage.Current(ctx)
 	if err != nil {
-		logger.Error("failed to get current pulse data")
-		result.NextFrom = &fromPulse
-		return &result, nil
+		return nil, errors.Wrap(err, "failed to get current pulse data")
 	}
 
 	counter := 0
 	fromPulsePN := core.PulseNumber(math.Max(float64(fromPulse), float64(core.GenesisPulse.PulseNumber)))
 
 	if fromPulsePN > currentPulse.PulseNumber {
-		logger.Errorf("failed to fetch data: from-pulse[%v] > current-pulse[%v]", fromPulsePN, currentPulse.PulseNumber)
-		result.NextFrom = &fromPulse
-		return &result, nil
+		return nil, errors.Errorf("failed to fetch data: from-pulse[%v] > current-pulse[%v]",
+			fromPulsePN, currentPulse.PulseNumber)
 	}
 
 	_, err = e.PulseTracker.GetPulse(ctx, fromPulsePN)
 	if err != nil {
 		tryPulse, err := e.PulseTracker.GetPulse(ctx, core.GenesisPulse.PulseNumber)
 		if err != nil {
-			logger.Error("failed to fetch genesis pulse data")
-			result.NextFrom = &fromPulse
-			return &result, nil
+			return nil, errors.Wrap(err, "failed to fetch genesis pulse data")
 		}
 
 		for fromPulsePN > *tryPulse.Next {
 			tryPulse, err = e.PulseTracker.GetPulse(ctx, *tryPulse.Next)
 			if err != nil {
-				logger.Error("failed to iterate through first pulses")
-				result.NextFrom = &fromPulse
-				return &result, nil
+				return nil, errors.Wrap(err, "failed to iterate through first pulses")
 			}
 		}
 		fromPulsePN = *tryPulse.Next
@@ -126,9 +116,7 @@ func (e *Exporter) Export(ctx context.Context, fromPulse core.PulseNumber, size 
 	for iterPulse != nil && counter < size {
 		pulse, err := e.PulseTracker.GetPulse(ctx, *iterPulse)
 		if err != nil {
-			logger.Error("failed to fetch pulse data")
-			result.NextFrom = iterPulse
-			return &result, nil
+			return nil, errors.Wrap(err, "failed to fetch pulse data")
 		}
 
 		// We don't need data from current pulse, because of
