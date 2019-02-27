@@ -26,7 +26,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/jet"
-	"github.com/insolar/insolar/ledger/storage/nodes"
+	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/insolar/insolar/utils/entropy"
 	"github.com/pkg/errors"
 )
@@ -38,7 +38,7 @@ type JetCoordinator struct {
 	PulseStorage               core.PulseStorage               `inject:""`
 	JetStorage                 storage.JetStorage              `inject:""`
 	PulseTracker               storage.PulseTracker            `inject:""`
-	Nodes                      nodes.Accessor                  `inject:""`
+	Nodes                      node.Accessor                   `inject:""`
 
 	lightChainLimit int
 }
