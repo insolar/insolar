@@ -16,6 +16,7 @@
 
 package common
 
+type InitHandler func(element SlotElementHelper) (interface{}, uint32, error)
 type TransitHandler func(element SlotElementHelper) (interface{}, uint32, error)
 type MigrationHandler func(element SlotElementHelper) (interface{}, uint32, error)
 type ErrorHandler func(element SlotElementHelper, err error) (interface{}, uint32)
@@ -29,6 +30,12 @@ type State struct {
 	Transit TransitHandler
 	Migrate MigrationHandler
 	Error   ErrorHandler
+}
+
+type StateMachine struct {
+	InitHandler InitHandler
+	States []State
+	FinalizeHandler interface{}
 }
 
 type SlotElementHelper interface {
