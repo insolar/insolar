@@ -41,18 +41,22 @@ type SMRH{{$machine.Name}} struct {
 	cleanHandlers {{$machine.Name}}
 }
 
-func SMRH{{$machine.Name}}Export() []common.State {
+func SMRH{{$machine.Name}}Export() common.StateMachine {
     m := SMRH{{$machine.Name}}{
         cleanHandlers: &{{$machine.Name}}Implementation{},
     }
     var x []common.State
-    return append(x,{{range $i, $state := .States}}
+    x = append(x,{{range $i, $state := .States}}
         common.State{
 	        Transit: m.{{$state.Transit.Name}},
 	        Migrate: m.{{$state.Migrate.Name}},
 	        Error: m.{{$state.Error.Name}},
         },
     {{end}})
+    return common.StateMachine{
+        InitHandler: m.Init,
+        States: x,
+    }
 }
 
 func (s *SMRH{{$machine.Name}}) Init(element common.SlotElementHelper) (interface{}, uint32, error) {

@@ -16,17 +16,32 @@ import (
     {{end}}
 )
 
-var matrix [][]common.State
-var indexes = make(map[string]int)
+type matrix struct {
+    matrix  []common.StateMachine
+    indexes map[string]int
+}
+
+var Matrix matrix
 
 func init() {
-    matrix = append(matrix,
+    Matrix := matrix{
+        indexes: make(map[string]int),
+    }
+    Matrix.matrix = append(Matrix.matrix,
         {{range .Machines}}{{.Module}}.SMRH{{.Name}}Export(),
         {{end}}
 	)
 
-    {{range $i, $machine := .Machines}}indexes["{{.Module}}.{{$machine.Name}}"] = {{$i}}
+    {{range $i, $machine := .Machines}}Matrix.indexes["{{.Module}}.{{$machine.Name}}"] = {{$i}}
     {{end}}
+}
+
+func (m *matrix) GetHandlers(machine int, state int) *common.State {
+    return &m.matrix[machine].States[state]
+}
+
+func (m *matrix) GetIdx(machine string) int {
+    return m.indexes[machine]
 }
 `))
 )
