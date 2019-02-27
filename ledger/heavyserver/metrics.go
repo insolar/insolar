@@ -33,6 +33,7 @@ var (
 	statSyncedRecords = stats.Int64("heavyserver/synced/records", "The number synced records", stats.UnitDimensionless)
 	statSyncedPulse   = stats.Int64("heavyserver/synced/pulse", "Last synced pulse", stats.UnitDimensionless)
 	statSyncedBytes   = stats.Int64("heavyserver/synced/bytes", "Amount of synced records in bytes", stats.UnitBytes)
+	statSyncedTimeout = stats.Int64("heavyserver/synced/timeout", "Number of timeouts on sync", stats.UnitDimensionless)
 )
 
 func init() {

@@ -66,6 +66,7 @@ func (s *syncstate) resetTimeout(ctx context.Context, pn core.PulseNumber) {
 
 		s.Lock()
 		if s.timer == timer {
+			stats.Record(ctx, statSyncedTimeout.M(1))
 			s.syncpulse = nil
 			s.timer = nil
 		}

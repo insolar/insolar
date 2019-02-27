@@ -227,17 +227,25 @@ func (c *JetClient) syncloop(ctx context.Context) {
 
 		shouldretry := false
 		syncerr := c.HeavySync(ctx, syncPN)
+		inslog := inslog.WithFields(map[string]interface{}{
+			"jet_id":  c.jetID.DebugString(),
+			"pulse":   syncPN,
+			"attempt": c.syncbackoff.Attempt(),
+		})
 		if syncerr != nil {
 			if heavyerr, ok := syncerr.(*reply.HeavyError); ok {
 				shouldretry = heavyerr.IsRetryable()
 			}
 
 			syncerr = errors.Wrap(syncerr, "HeavySync failed")
-			inslog.Errorf("%v (on attempt=%v, shouldretry=%v)",
-				syncerr.Error(), c.syncbackoff.Attempt(), shouldretry)
+			inslog.WithFields(map[string]interface{}{
+				"err":       syncerr.Error(),
+				"retryable": shouldretry,
+			}).Error("sync failed")
 
 			if shouldretry {
 				retrydelay = c.syncbackoff.Duration()
+				stats.Record(ctx, statSyncedRetries.M(1))
 				continue
 			}
 			// TODO: write some info to dust - 14.Dec.2018 @nordicdyno
@@ -246,6 +254,7 @@ func (c *JetClient) syncloop(ctx context.Context) {
 			stats.Record(ctx,
 				statSyncedPulsesCount.M(1),
 			)
+			inslog.Info("sync completed")
 		}
 
 		finishpulse()
