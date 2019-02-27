@@ -18,6 +18,7 @@ package conveyor
 
 import (
 	"github.com/insolar/insolar/conveyor/generator/common"
+	"github.com/insolar/insolar/conveyor/generator/matrix"
 )
 
 // ActivationStatus represents status of work for slot element
@@ -31,21 +32,21 @@ const (
 )
 
 type stateMachineTypeI interface {
-	getTypeID() int
-	getMigrationHandler(state int) common.MigrationHandler
-	getTransitionHandler(state int) common.TransitHandler
-	getResponseHandler(state int) common.AdapterResponseHandler
-	getNestedHandler(state int) common.NestedHandler
+	GetTypeID() int
+	GetMigrationHandler(state int) common.MigrationHandler
+	GetTransitionHandler(state int) common.TransitHandler
+	GetResponseHandler(state int) common.AdapterResponseHandler
+	GetNestedHandler(state int) common.NestedHandler
 
-	getTransitionErrorHandler(state int) common.TransitionErrorHandler
-	getResponseErrorHandler(state int) common.ResponseErrorHandler
+	GetTransitionErrorHandler(state int) common.TransitionErrorHandler
+	GetResponseErrorHandler(state int) common.ResponseErrorHandler
 }
 
 type reactivateMode interface {
 }
 
-type slotElementHelper interface {
-	slotElementRestrictedHelper
+type SlotElementHelperI interface {
+	SlotElementRestrictedHelper
 	informParent(payload interface{}) bool
 	deactivateTill(reactivateOn reactivateMode)
 	sendTask(adapterID uint32, taskPayload interface{}, respHandlerID uint32) error
@@ -53,22 +54,22 @@ type slotElementHelper interface {
 	// isSequenceHead() bool
 }
 
-type slotElementRestrictedHelper interface {
-	slotElementReadOnly
+type SlotElementRestrictedHelper interface {
+	SlotElementReadOnly
 
-	getParentElementID() uint32
-	getInputEvent() interface{}
-	getPayload() interface{}
+	GetParentElementID() uint32
+	GetInputEvent() interface{}
+	GetPayload() interface{}
 
-	reactivate()
-	leaveSequence()
+	Reactivate()
+	LeaveSequence()
 }
 
-type slotElementReadOnly interface {
-	getElementID() uint32
-	getNodeID() uint32
-	getType() int
-	getState() int
+type SlotElementReadOnly interface {
+	GetElementID() uint32
+	GetNodeID() uint32
+	GetType() int
+	GetState() int
 }
 
 type slotElement struct {
@@ -77,6 +78,7 @@ type slotElement struct {
 	parentElementID  uint32
 	inputEvent       interface{}
 	payload          interface{} // nolint
+	postponedError   error
 	stateMachineType stateMachineTypeI
 	state            uint16
 
@@ -87,4 +89,59 @@ type slotElement struct {
 // newSlotElement creates new slot element with provided activation status
 func newSlotElement(activationStatus ActivationStatus) *slotElement {
 	return &slotElement{activationStatus: activationStatus}
+}
+
+func (se *slotElement) GetTypeID() int {
+	return se.stateMachineType.GetTypeID()
+}
+
+func (se *slotElement) GetMigrationHandler(state int) common.MigrationHandler {
+	return matrix.Matrix.GetHandlers(se.stateMachineType.GetTypeID(), state).Migrate
+}
+
+func (se *slotElement) GetTransitionHandler(state int) common.TransitHandler {
+	return matrix.Matrix.GetHandlers(se.stateMachineType.GetTypeID(), state).Transit
+}
+
+// TODO: implement me
+func (se *slotElement) GetResponseHandler(state int) common.AdapterResponseHandler {
+	panic("implement me")
+}
+
+// TODO: implement me
+func (se *slotElement) GetNestedHandler(state int) common.NestedHandler {
+	panic("implement me")
+}
+
+// TODO: implement me
+func (se *slotElement) GetTransitionErrorHandler(state int) common.TransitionErrorHandler {
+	panic("implement me")
+}
+
+// TODO: implement me
+func (se *slotElement) GetResponseErrorHandler(state int) common.ResponseErrorHandler {
+	panic("implement me")
+}
+
+// GetParentElementID return parentElementID
+func (se *slotElement) GetParentElementID() uint32 {
+	return se.parentElementID
+}
+
+// GetInputEvent return inputEvent
+func (se *slotElement) GetInputEvent() interface{} {
+	return se.inputEvent
+}
+
+// GetPayload return payload
+func (se *slotElement) GetPayload() interface{} {
+	return se.payload
+}
+
+func (se *slotElement) Reactivate() {
+	panic("implement me")
+}
+
+func (se *slotElement) LeaveSequence() {
+	panic("implement me")
 }
