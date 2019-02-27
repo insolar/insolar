@@ -60,7 +60,7 @@ type heavySuite struct {
 
 	jetStorage     storage.JetStorage
 	nodeAccessor   *node.AccessorMock
-	nodeSetter     *node.SetterMock
+	nodeSetter     *node.ModifierMock
 	pulseTracker   storage.PulseTracker
 	replicaStorage storage.ReplicaStorage
 	objectStorage  storage.ObjectStorage
@@ -88,7 +88,7 @@ func (s *heavySuite) BeforeTest(suiteName, testName string) {
 	s.db = db
 	s.jetStorage = storage.NewJetStorage()
 	s.nodeAccessor = node.NewAccessorMock(s.T())
-	s.nodeSetter = node.NewSetterMock(s.T())
+	s.nodeSetter = node.NewModifierMock(s.T())
 	s.pulseTracker = storage.NewPulseTracker()
 	s.replicaStorage = storage.NewReplicaStorage()
 	s.objectStorage = storage.NewObjectStorage()
