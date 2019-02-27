@@ -24,13 +24,13 @@ import (
 	"github.com/insolar/insolar/ledger/storage"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/jet.DropSaver -o ./ -s _mock.go
-type DropSaver interface {
+//go:generate minimock -i github.com/insolar/insolar/ledger/jet.DropModifier -o ./ -s _mock.go
+type DropModifier interface {
 	Set(ctx context.Context, jetID core.JetID, drop JetDrop) error
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/jet.DropFetcher -o ./ -s _mock.go
-type DropFetcher interface {
+//go:generate minimock -i github.com/insolar/insolar/ledger/jet.DropAccessor -o ./ -s _mock.go
+type DropAccessor interface {
 	ForPulse(ctx context.Context, jetID core.JetID, pulse core.PulseNumber) (JetDrop, error)
 }
 

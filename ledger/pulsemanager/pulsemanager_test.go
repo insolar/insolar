@@ -28,7 +28,6 @@ import (
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/index"
-	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
@@ -99,7 +98,7 @@ func (s *pulseManagerSuite) TestPulseManager_Set_CheckHotIndexesSending() {
 	s.T().Skip()
 
 	// Arrange
-	jetID := jet.ZeroJetID
+	jetID := storage.ZeroJetID
 	objID := core.RecordID{}
 
 	lr := testutils.NewLogicRunnerMock(s.T())

@@ -1,5 +1,5 @@
 /*
- *    Copyright 2019 Insolar Technologies
+ *    Copyright 2019 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package drop
+package jet
 
 import (
 	"context"
@@ -23,7 +23,6 @@ import (
 	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/pkg/errors"
 )
@@ -34,7 +33,7 @@ type Builder interface {
 	PrevHash(prevHash []byte)
 	Pulse(pn core.PulseNumber)
 
-	Build() (jet.JetDrop, error)
+	Build() (JetDrop, error)
 }
 
 type Hashable interface {
@@ -71,18 +70,18 @@ func (b *builder) Pulse(pn core.PulseNumber) {
 	b.pn = &pn
 }
 
-func (b *builder) Build() (jet.JetDrop, error) {
+func (b *builder) Build() (JetDrop, error) {
 	if b.prevHash == nil {
-		return jet.JetDrop{}, errors.New("prevHash is required")
+		return JetDrop{}, errors.New("prevHash is required")
 	}
 	if b.dropSize == nil {
-		return jet.JetDrop{}, errors.New("dropSize is required")
+		return JetDrop{}, errors.New("dropSize is required")
 	}
 	if b.pn == nil {
-		return jet.JetDrop{}, errors.New("pulseNumber is required")
+		return JetDrop{}, errors.New("pulseNumber is required")
 	}
 
-	return jet.JetDrop{
+	return JetDrop{
 		Pulse:    *b.pn,
 		PrevHash: b.prevHash,
 		Hash:     b.Hasher.Sum(nil),
@@ -91,7 +90,7 @@ func (b *builder) Build() (jet.JetDrop, error) {
 }
 
 type Packer interface {
-	Pack(ctx context.Context, jetID core.JetID, pulse core.PulseNumber, prevHash []byte) (jet.JetDrop, error)
+	Pack(ctx context.Context, jetID storage.JetID, pulse core.PulseNumber, prevHash []byte) (JetDrop, error)
 }
 
 func NewPacker(hasher core.Hasher, db storage.DBContext) Packer {
@@ -106,9 +105,9 @@ type packer struct {
 	storage.DBContext
 }
 
-func (p *packer) Pack(ctx context.Context, jetID core.JetID, pulse core.PulseNumber, prevHash []byte) (jet.JetDrop, error) {
+func (p *packer) Pack(ctx context.Context, jetID storage.JetID, pulse core.PulseNumber, prevHash []byte) (JetDrop, error) {
 	p.DBContext.WaitingFlight()
-	_, jetPrefix := jet.Jet(jetID)
+	_, jetPrefix := jetID.Jet()
 
 	var dropSize uint64
 	recordPrefix := storage.IDRecordPrefixKey(jetPrefix, pulse)
@@ -132,7 +131,7 @@ func (p *packer) Pack(ctx context.Context, jetID core.JetID, pulse core.PulseNum
 		return nil
 	})
 	if err != nil {
-		return jet.JetDrop{}, err
+		return JetDrop{}, err
 	}
 
 	p.Pulse(pulse)

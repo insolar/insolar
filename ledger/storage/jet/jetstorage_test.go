@@ -1,5 +1,5 @@
 /*
- *    Copyright 2019 Insolar Technologies
+ *    Copyright 2019 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package storage
+package jet
 
 import (
 	"testing"
@@ -37,7 +37,7 @@ func TestJetStorage_UpdateJetTree(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	js := NewJetStorage()
 
-	js.UpdateJetTree(ctx, 100, true, *jet.NewID(0, nil))
+	js.UpdateJetTree(ctx, 100, true, *NewID(0, nil))
 
 	tree := js.(*jetStorage).getJetTree(ctx, 100)
 	require.Equal(t, "root (level=0 actual=true)\n", tree.String())

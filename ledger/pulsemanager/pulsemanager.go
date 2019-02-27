@@ -24,7 +24,6 @@ import (
 	"time"
 
 	"github.com/insolar/insolar"
-	jetDrop "github.com/insolar/insolar/ledger/storage/jet/drop"
 	"github.com/insolar/insolar/ledger/storage/nodes"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
@@ -63,7 +62,7 @@ type PulseManager struct {
 	ActiveListSwapper          ActiveListSwapper               `inject:""`
 	PulseStorage               pulseStoragePm                  `inject:""`
 	HotDataWaiter              artifactmanager.HotDataWaiter   `inject:""`
-	JetStorage                 storage.JetStorage              `inject:""`
+	JetStorage                 jet.JetStorage                  `inject:""`
 
 	ObjectStorage  storage.ObjectStorage  `inject:""`
 	NodeSetter     nodes.Setter           `inject:""`
@@ -73,8 +72,8 @@ type PulseManager struct {
 	DBContext      storage.DBContext      `inject:""`
 	StorageCleaner storage.Cleaner        `inject:""`
 
-	DropSaver   jet.DropSaver   `inject:""`
-	DropFetcher jet.DropFetcher `inject:""`
+	DropSaver   jet.DropModifier `inject:""`
+	DropFetcher jet.DropAccessor `inject:""`
 
 	// TODO: move clients pool to component - @nordicdyno - 18.Dec.2018
 	syncClientsPool *heavyclient.Pool
@@ -240,7 +239,7 @@ func (m *PulseManager) createDrop(
 		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't GetDrop")
 	}
 
-	packer := jetDrop.NewPacker(m.PlatformCryptographyScheme.ReferenceHasher(), m.DBContext)
+	packer := jet.NewPacker(m.PlatformCryptographyScheme.ReferenceHasher(), m.DBContext)
 
 	packedDrop, err := packer.Pack(ctx, core.JetID(jetID), currentPulse, prevDrop.Hash)
 	if err != nil {

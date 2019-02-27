@@ -55,7 +55,7 @@ type MessageHandler struct {
 	PulseStorage               core.PulseStorage               `inject:""`
 	JetStorage                 storage.JetStorage              `inject:""`
 
-	jet.DropSaver `inject:""`
+	jet.DropModifier `inject:""`
 
 	ObjectStorage storage.ObjectStorage `inject:""`
 	Nodes         nodes.Accessor        `inject:""`
@@ -1198,7 +1198,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 		"jet": jetID.DebugString(),
 	}).Info("received hot data")
 
-	err := h.DropSaver.Set(ctx, core.JetID(msg.DropJet), msg.Drop)
+	err := h.DropModifier.Set(ctx, core.JetID(msg.DropJet), msg.Drop)
 	if err == storage.ErrOverride {
 		err = nil
 	}

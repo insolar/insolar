@@ -1,5 +1,5 @@
 /*
- *    Copyright 2019 Insolar Technologies
+ *    Copyright 2019 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -14,17 +14,17 @@
  *    limitations under the License.
  */
 
-package storage
+package jet
 
 import (
 	"bytes"
 	"context"
 	"sync"
 
+	"github.com/insolar/insolar/ledger/storage"
 	"github.com/ugorji/go/codec"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/storage/jet"
 )
 
 // JetStorage provides methods for working with jets
@@ -33,17 +33,17 @@ type JetStorage interface {
 	UpdateJetTree(ctx context.Context, pulse core.PulseNumber, setActual bool, ids ...core.RecordID)
 	FindJet(ctx context.Context, pulse core.PulseNumber, id core.RecordID) (*core.RecordID, bool)
 	SplitJetTree(ctx context.Context, pulse core.PulseNumber, jetID core.RecordID) (*core.RecordID, *core.RecordID, error)
-	CloneJetTree(ctx context.Context, from, to core.PulseNumber) *jet.Tree
+	CloneJetTree(ctx context.Context, from, to core.PulseNumber) *Tree
 	DeleteJetTree(ctx context.Context, pulse core.PulseNumber)
 
 	AddJets(ctx context.Context, jetIDs ...core.RecordID) error
-	GetJets(ctx context.Context) (jet.IDSet, error)
+	GetJets(ctx context.Context) (IDSet, error)
 }
 
 type jetStorage struct {
-	DB DBContext `inject:""`
+	DB storage.DBContext `inject:""`
 
-	trees     map[core.PulseNumber]*jet.Tree
+	trees     map[core.PulseNumber]*Tree
 	treesLock sync.RWMutex
 
 	addJetLock sync.RWMutex
@@ -51,7 +51,7 @@ type jetStorage struct {
 
 func NewJetStorage() JetStorage {
 	return &jetStorage{
-		trees: map[core.PulseNumber]*jet.Tree{},
+		trees: map[core.PulseNumber]*Tree{},
 	}
 }
 
@@ -101,7 +101,7 @@ func (js *jetStorage) SplitJetTree(
 // CloneJetTree copies tree from one pulse to another. Use it to copy past tree into new pulse.
 func (js *jetStorage) CloneJetTree(
 	ctx context.Context, from, to core.PulseNumber,
-) *jet.Tree {
+) *Tree {
 	js.treesLock.Lock()
 	defer js.treesLock.Unlock()
 
@@ -121,12 +121,12 @@ func (js *jetStorage) DeleteJetTree(
 	delete(js.trees, pulse)
 }
 
-func (js *jetStorage) getJetTree(ctx context.Context, pulse core.PulseNumber) *jet.Tree {
+func (js *jetStorage) getJetTree(ctx context.Context, pulse core.PulseNumber) *Tree {
 	if t, ok := js.trees[pulse]; ok {
 		return t
 	}
 
-	tree := jet.NewTree(pulse == core.GenesisPulse.PulseNumber)
+	tree := NewTree(pulse == core.GenesisPulse.PulseNumber)
 	js.trees[pulse] = tree
 	return tree
 }
@@ -136,9 +136,9 @@ func (js *jetStorage) AddJets(ctx context.Context, jetIDs ...core.RecordID) erro
 	js.addJetLock.Lock()
 	defer js.addJetLock.Unlock()
 
-	k := prefixkey(scopeIDSystem, []byte{sysJetList})
+	k := storage.JetListPrefixKey()
 
-	var jets jet.IDSet
+	var jets IDSet
 	buff, err := js.DB.Get(ctx, k)
 	if err == nil {
 		dec := codec.NewDecoder(bytes.NewReader(buff), &codec.CborHandle{})
@@ -147,7 +147,7 @@ func (js *jetStorage) AddJets(ctx context.Context, jetIDs ...core.RecordID) erro
 			return err
 		}
 	} else if err == core.ErrNotFound {
-		jets = jet.IDSet{}
+		jets = IDSet{}
 	} else {
 		return err
 	}
@@ -159,18 +159,18 @@ func (js *jetStorage) AddJets(ctx context.Context, jetIDs ...core.RecordID) erro
 }
 
 // GetJets returns jets of the current node
-func (js *jetStorage) GetJets(ctx context.Context) (jet.IDSet, error) {
+func (js *jetStorage) GetJets(ctx context.Context) (IDSet, error) {
 	js.addJetLock.RLock()
 	defer js.addJetLock.RUnlock()
 
-	k := prefixkey(scopeIDSystem, []byte{sysJetList})
+	k := storage.JetListPrefixKey()
 	buff, err := js.DB.Get(ctx, k)
 	if err != nil {
 		return nil, err
 	}
 
 	dec := codec.NewDecoder(bytes.NewReader(buff), &codec.CborHandle{})
-	var jets jet.IDSet
+	var jets IDSet
 	err = dec.Decode(&jets)
 	if err != nil {
 		return nil, err
