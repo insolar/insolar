@@ -28,7 +28,6 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
-	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/network"
 )
@@ -43,7 +42,7 @@ func (replyMock) Type() core.ReplyType {
 
 var testReply replyMock = 124
 
-func testHandler(ctx context.Context, msg core.Parcel) (core.Reply, error) {
+func testHandler(_ context.Context, _ core.Parcel) (core.Reply, error) {
 	return testReply, nil
 }
 
@@ -53,10 +52,11 @@ func prepare(t *testing.T, ctx context.Context, currentPulse int, msgPulse int) 
 
 	net := network.GetTestNetwork()
 	jc := testutils.NewJetCoordinatorMock(t)
-	ls := testutils.NewLocalStorageMock(t)
 	nn := network.NewNodeNetworkMock(t)
 	nn.GetOriginFunc = func() (r core.Node) {
-		return storage.Node{}
+		n := network.NewNodeMock(t)
+		n.IDMock.Return(core.RecordRef{})
+		return n
 	}
 
 	pcs := testutils.NewPlatformCryptographyScheme()
@@ -65,7 +65,7 @@ func prepare(t *testing.T, ctx context.Context, currentPulse int, msgPulse int) 
 	pf := NewParcelFactory()
 	ps := testutils.NewPulseStorageMock(t)
 
-	(&component.Manager{}).Inject(net, jc, ls, nn, pcs, cs, dtf, pf, ps, mb)
+	(&component.Manager{}).Inject(net, jc, nn, pcs, cs, dtf, pf, ps, mb)
 
 	ps.CurrentFunc = func(ctx context.Context) (*core.Pulse, error) {
 		return &core.Pulse{

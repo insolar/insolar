@@ -79,6 +79,5 @@ func (nr *NodeRecord) GetRole() (core.StaticRole, error) {
 
 // Destroy makes request to destroy current node record
 func (nr *NodeRecord) Destroy() error {
-	nr.SelfDestruct()
-	return nil
+	return nr.SelfDestruct()
 }

@@ -57,6 +57,19 @@ func (dbs *TriStateBitSet) GetCells(mapper BitSetMapper) ([]BitSetCell, error) {
 	return dbs.parseCells(mapper)
 }
 
+func (dbs *TriStateBitSet) GetTristateArray() ([]TriState, error) {
+	cellSize := int(dbs.array.bitsSize / 2)
+	cells := make([]TriState, cellSize)
+	var err error
+	for i := 0; i < cellSize; i++ {
+		cells[i], err = parseState(dbs.array, i)
+		if err != nil {
+			return nil, errors.Wrap(err, "[ GetTristateArray ] failed to parse TriState")
+		}
+	}
+	return cells, nil
+}
+
 func (dbs *TriStateBitSet) ApplyChanges(changes []BitSetCell, mapper BitSetMapper) error {
 	for _, cell := range changes {
 		index, err := mapper.RefToIndex(cell.NodeID)

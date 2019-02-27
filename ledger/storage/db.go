@@ -17,7 +17,6 @@
 package storage
 
 import (
-	"bytes"
 	"context"
 	"path/filepath"
 	"sync"
@@ -38,35 +37,21 @@ const (
 	scopeIDSystem   byte = 5
 	scopeIDMessage  byte = 6
 	scopeIDBlob     byte = 7
-	scopeIDLocal    byte = 8
 
 	sysGenesis                byte = 1
 	sysLatestPulse            byte = 2
 	sysHeavyClientState       byte = 3
 	sysLastSyncedPulseOnHeavy byte = 4
-	sysJetTree                byte = 5
-	sysJetList                byte = 6
-	sysDropSizeHistory        byte = 7
+	sysJetList                byte = 5
+	sysDropSizeHistory        byte = 6
 )
 
 // DBContext provides base db methods
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage.DBContext -o ./ -s _mock.go
 type DBContext interface {
-	SetTxRetiries(n int)
-
 	BeginTransaction(update bool) (*TransactionManager, error)
 	View(ctx context.Context, fn func(*TransactionManager) error) error
 	Update(ctx context.Context, fn func(*TransactionManager) error) error
-
-	SetLocalData(ctx context.Context, pulse core.PulseNumber, key []byte, data []byte) error
-	GetLocalData(ctx context.Context, pulse core.PulseNumber, key []byte) ([]byte, error)
-
-	IterateLocalData(
-		ctx context.Context,
-		pulse core.PulseNumber,
-		prefix []byte,
-		handler func(k, v []byte) error,
-	) error
 
 	IterateRecordsOnPulse(
 		ctx context.Context,
@@ -80,8 +65,6 @@ type DBContext interface {
 	GetBadgerDB() *badger.DB
 
 	Close() error
-
-	GetPlatformCryptographyScheme() core.PlatformCryptographyScheme
 
 	set(ctx context.Context, key, value []byte) error
 	get(ctx context.Context, key []byte) ([]byte, error)
@@ -116,11 +99,6 @@ type DB struct {
 
 	closeLock sync.RWMutex
 	isClosed  bool
-}
-
-// SetTxRetiries sets number of retries on conflict in Update
-func (db *DB) SetTxRetiries(n int) {
-	db.txretiries = n
 }
 
 func setOptions(o *badger.Options) *badger.Options {
@@ -253,36 +231,6 @@ func (db *DB) Update(ctx context.Context, fn func(*TransactionManager) error) er
 // GetBadgerDB return badger.DB instance (for internal usage, like tests)
 func (db *DB) GetBadgerDB() *badger.DB {
 	return db.db
-}
-
-// SetLocalData saves provided data to storage.
-func (db *DB) SetLocalData(ctx context.Context, pulse core.PulseNumber, key []byte, data []byte) error {
-	return db.set(
-		ctx,
-		bytes.Join([][]byte{{scopeIDLocal}, pulse.Bytes(), key}, nil),
-		data,
-	)
-}
-
-// GetLocalData retrieves data from storage.
-func (db *DB) GetLocalData(ctx context.Context, pulse core.PulseNumber, key []byte) ([]byte, error) {
-	return db.get(
-		ctx,
-		bytes.Join([][]byte{{scopeIDLocal}, pulse.Bytes(), key}, nil),
-	)
-}
-
-// IterateLocalData iterates over all record with specified prefix and calls handler with key and value of that record.
-//
-// The key will be returned without prefix (e.g. the remaining slice) and value will be returned as it was saved.
-func (db *DB) IterateLocalData(
-	ctx context.Context,
-	pulse core.PulseNumber,
-	prefix []byte,
-	handler func(k, v []byte) error,
-) error {
-	fullPrefix := bytes.Join([][]byte{{scopeIDLocal}, pulse.Bytes(), prefix}, nil)
-	return db.iterate(ctx, fullPrefix, handler)
 }
 
 // IterateRecordsOnPulse iterates over records on provided Jet ID and Pulse.

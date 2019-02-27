@@ -229,11 +229,15 @@ func (bc *bootstrapper) GetLastPulse() core.PulseNumber {
 func (bc *bootstrapper) checkActiveNode(node core.Node) error {
 	n := bc.NodeKeeper.GetActiveNode(node.ID())
 	if n != nil {
-		return errors.New(fmt.Sprintf("Node ID collision: %s", n.ID()))
+		return errors.Errorf("Node ID collision: %s", n.ID())
 	}
 	n = bc.NodeKeeper.GetActiveNodeByShortID(node.ShortID())
 	if n != nil {
-		return errors.New(fmt.Sprintf("Short ID collision: %d", n.ShortID()))
+		return errors.Errorf("Short ID collision: %d", n.ShortID())
+	}
+	if node.Version() != bc.NodeKeeper.GetOrigin().Version() {
+		return errors.Errorf("Node %s version %s does not match origin version %s",
+			node.ID(), node.Version(), bc.NodeKeeper.GetOrigin().Version())
 	}
 	return nil
 }
@@ -285,7 +289,6 @@ func (bc *bootstrapper) BootstrapDiscovery(ctx context.Context) (*network.Bootst
 			reconnectRequests, discoveryCount)
 		return nil, ErrReconnectRequired
 	}
-	activeNodes := make([]core.Node, 0)
 	activeNodesStr := make([]string, 0)
 
 	<-bc.bootstrapLock
@@ -302,9 +305,11 @@ func (bc *bootstrapper) BootstrapDiscovery(ctx context.Context) (*network.Bootst
 		if err != nil {
 			return nil, errors.Wrapf(err, "Discovery check of node %s failed", activeNode.ID())
 		}
+		activeNode.(nodenetwork.MutableNode).SetState(core.NodeDiscovery)
 		activeNodesStr = append(activeNodesStr, activeNode.ID().String())
 	}
 	bc.NodeKeeper.AddActiveNodes(activeNodes)
+	bc.NodeKeeper.GetOrigin().(nodenetwork.MutableNode).SetState(core.NodeDiscovery)
 	logger.Infof("[ BootstrapDiscovery ] Added active nodes: %s", strings.Join(activeNodesStr, ", "))
 	return parseBotstrapResults(bootstrapResults), nil
 }

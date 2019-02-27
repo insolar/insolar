@@ -134,6 +134,14 @@
   version = "v1.2.0"
 
 [[projects]]
+  branch = "master"
+  digest = "1:3ee90c0d94da31b442dde97c99635aaafec68d0b8a3c12ee2075c6bdabeec6bb"
+  name = "github.com/google/gofuzz"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "24818f796faf91cd76ec7bddd72458fbced7a6c1"
+
+[[projects]]
   digest = "1:9fe4b4f866007c9981c6c44c02d5533b1fb78ca408355eb64e767ef416eb9dfb"
   name = "github.com/gorilla/rpc"
   packages = [
@@ -258,6 +266,14 @@
   version = "v1.8.0"
 
 [[projects]]
+  digest = "1:0356f3312c9bd1cbeda81505b7fd437501d8e778ab66998ef69f00d7f9b3a0d7"
+  name = "github.com/mattn/go-runewidth"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "3ee7d812e62a0804a7d0a324e0249ca2db3476d3"
+  version = "v0.0.4"
+
+[[projects]]
   digest = "1:ff5ebae34cfbf047d505ee150de27e60570e8c394b3b8fdbb720ff6ac71985fc"
   name = "github.com/matttproud/golang_protobuf_extensions"
   packages = ["pbutil"]
@@ -272,6 +288,14 @@
   pruneopts = "UT"
   revision = "3536a929edddb9a5b34bd6861dc4a9647cb459fe"
   version = "v1.1.2"
+
+[[projects]]
+  digest = "1:abcdbf03ca6ca13d3697e2186edc1f33863bbdac2b3a44dfa39015e8903f7409"
+  name = "github.com/olekukonko/tablewriter"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "e6d60cf7ba1f42d86d54cdf5508611c4aafb3970"
+  version = "v0.0.1"
 
 [[projects]]
   branch = "master"
@@ -348,6 +372,18 @@
   ]
   pruneopts = "UT"
   revision = "619930b0b4713cc1280189bf0a4c54b3fb506f60"
+
+[[projects]]
+  branch = "master"
+  digest = "1:33c4725d2c51f4b8e38e3e91fc423f686893a6d17c173d9acc1ec3096bddde3b"
+  name = "github.com/rs/zerolog"
+  packages = [
+    ".",
+    "internal/cbor",
+    "internal/json",
+  ]
+  pruneopts = "UT"
+  revision = "aa55558e4cb2e8f05cd079342d430f77e946d00a"
 
 [[projects]]
   branch = "master"
@@ -589,15 +625,18 @@
     "github.com/ccding/go-stun/stun",
     "github.com/dgraph-io/badger",
     "github.com/gojuno/minimock",
+    "github.com/google/gofuzz",
     "github.com/gorilla/rpc/v2",
     "github.com/gorilla/rpc/v2/json2",
     "github.com/hashicorp/go-multierror",
     "github.com/jbenet/go-base58",
     "github.com/lucas-clemente/quic-go",
+    "github.com/olekukonko/tablewriter",
     "github.com/onrik/gomerkle",
     "github.com/pkg/errors",
     "github.com/prometheus/client_golang/prometheus",
     "github.com/prometheus/client_golang/prometheus/promhttp",
+    "github.com/rs/zerolog",
     "github.com/satori/go.uuid",
     "github.com/sirupsen/logrus",
     "github.com/spf13/cobra",

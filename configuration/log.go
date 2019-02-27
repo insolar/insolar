@@ -25,5 +25,5 @@ type Log struct {
 
 // NewLog creates new default configuration for logging
 func NewLog() Log {
-	return Log{Level: "Info", Adapter: "logrus", Formatter: "text"}
+	return Log{Level: "Info", Adapter: "zerolog", Formatter: "json"}
 }

@@ -202,6 +202,7 @@ func (nac *NodeAnnounceClaim) SetCloudHash(cloudHash []byte) {
 type NodeLeaveClaim struct {
 	// additional field that is not serialized and is set from transport layer on packet receive
 	NodeID core.RecordRef
+	ETA    core.PulseNumber
 }
 
 func (nlc *NodeLeaveClaim) Clone() ReferendumClaim {

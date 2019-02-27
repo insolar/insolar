@@ -56,27 +56,6 @@ func (r DynamicRole) IsVirtualRole() bool {
 	return false
 }
 
-// Deprecated: remove after deleting TmpLedger
-// Ledger is the global ledger handler. Other system parts communicate with ledger through it.
-// FIXME: THIS INTERFACE IS DEPRECATED. USE DI.
-type Ledger interface {
-	// Deprecated: remove after deleting TmpLedger
-	// GetArtifactManager returns artifact manager to work with.
-	GetArtifactManager() ArtifactManager
-
-	// Deprecated: remove after deleting TmpLedger
-	// GetJetCoordinator returns jet coordinator to work with.
-	GetJetCoordinator() JetCoordinator
-
-	// Deprecated: remove after deleting TmpLedger
-	// GetPulseManager returns pulse manager to work with.
-	GetPulseManager() PulseManager
-
-	// Deprecated: remove after deleting TmpLedger
-	// GetLocalStorage returns local storage to work with.
-	GetLocalStorage() LocalStorage
-}
-
 // PulseManager provides Ledger's methods related to Pulse.
 //go:generate minimock -i github.com/insolar/insolar/core.PulseManager -o ../testutils -s _mock.go
 type PulseManager interface {
@@ -227,6 +206,7 @@ type ArtifactManager interface {
 }
 
 // CodeDescriptor represents meta info required to fetch all code data.
+//go:generate minimock -i github.com/insolar/insolar/core.CodeDescriptor -o ../testutils -s _mock.go
 type CodeDescriptor interface {
 	// Ref returns reference to represented code record.
 	Ref() *RecordRef
@@ -275,19 +255,6 @@ type RefIterator interface {
 	HasNext() bool
 }
 
-// LocalStorage allows a node to save local data.
-//go:generate minimock -i github.com/insolar/insolar/core.LocalStorage -o ../testutils -s _mock.go
-type LocalStorage interface {
-	// Set saves data in storage.
-	Set(ctx context.Context, pulse PulseNumber, key []byte, data []byte) error
-	// Get retrieves data from storage.
-	Get(ctx context.Context, pulse PulseNumber, key []byte) ([]byte, error)
-	// Iterate iterates over all record with specified prefix and calls handler with key and value of that record.
-	//
-	// The key will be returned without prefix (e.g. the remaining slice) and value will be returned as it was saved.
-	Iterate(ctx context.Context, pulse PulseNumber, prefix []byte, handler func(k, v []byte) error) error
-}
-
 // KV is a generic key/value struct.
 type KV struct {
 	K []byte
@@ -327,10 +294,4 @@ var (
 //go:generate minimock -i github.com/insolar/insolar/core.PulseStorage -o ../testutils -s _mock.go
 type PulseStorage interface {
 	Current(ctx context.Context) (*Pulse, error)
-}
-
-//go:generate minimock -i github.com/insolar/insolar/core.ArtifactManagerMessageHandler -o ../testutils -s _mock.go
-type ArtifactManagerMessageHandler interface {
-	ResetEarlyRequestCircuitBreaker(context.Context)
-	CloseEarlyRequestCircuitBreakerForJet(context.Context, RecordID)
 }

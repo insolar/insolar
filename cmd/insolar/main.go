@@ -38,7 +38,8 @@ import (
 )
 
 const defaultStdoutPath = "-"
-const defaultURL = "http://localhost:19101/api"
+
+var defaultURL = "http://localhost:19101/api"
 
 func genDefaultConfig(r interface{}) ([]byte, error) {
 	t := reflect.TypeOf(r)
@@ -97,7 +98,7 @@ var (
 func parseInputParams() {
 	var rootCmd = &cobra.Command{}
 	rootCmd.Flags().StringVarP(&cmd, "cmd", "c", "",
-		"available commands: default_config | random_ref | version | gen_keys | gen_certificate | send_request | gen_send_configs")
+		"available commands: default_config | random_ref | version | gen_keys | gen_certificate | send_request | gen_send_configs | get_info | create_member")
 	rootCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "be verbose (default false)")
 	rootCmd.Flags().StringVarP(&output, "output", "o", defaultStdoutPath, "output file (use - for STDOUT)")
 	rootCmd.Flags().StringVarP(&sendUrls, "url", "u", defaultURL, "api url")
@@ -116,9 +117,93 @@ func parseInputParams() {
 
 }
 
+func main() {
+	if u := os.Getenv("INSOLAR_API_URL"); u != "" {
+		defaultURL = u
+	}
+	parseInputParams()
+
+	out, err := chooseOutput(output)
+	check("Problems with parsing input:", err)
+
+	switch cmd {
+	case "default_config":
+		printDefaultConfig(out)
+	case "random_ref":
+		randomRef(out)
+	case "version":
+		fmt.Println(version.GetFullVersion())
+	case "gen_keys":
+		generateKeysPair(out)
+	case "gen_certificate":
+		generateCertificate(out)
+	case "send_request":
+		sendRequest(out)
+	case "gen_send_configs":
+		genSendConfigs(out)
+	case "get_info":
+		getInfo(out)
+	case "create_member":
+		createMember(out)
+	}
+}
+
+type mixedConfig struct {
+	PrivateKey string `json:"private_key"`
+	PublicKey  string `json:"public_key"`
+	Caller     string `json:"caller"`
+}
+
+func createMember(out io.Writer) {
+	userName := os.Args[len(os.Args)-1]
+
+	ks := platformpolicy.NewKeyProcessor()
+	privKey, err := ks.GeneratePrivateKey()
+	check("Problems with generating of private key:", err)
+	privKeyStr, err := ks.ExportPrivateKeyPEM(privKey)
+	check("Problems with serialization of private key:", err)
+	pubKeyStr, err := ks.ExportPublicKeyPEM(ks.ExtractPublicKey(privKey))
+	check("Problems with serialization of public key:", err)
+
+	cfg := mixedConfig{
+		PrivateKey: string(privKeyStr),
+		PublicKey:  string(pubKeyStr),
+	}
+
+	info, err := requester.Info(sendUrls)
+	check("Problems with obtaining info", err)
+
+	ucfg, err := requester.CreateUserConfig(info.RootMember, cfg.PrivateKey)
+	check("Problems with creating user config:", err)
+
+	req := requester.RequestConfigJSON{
+		Params: []interface{}{userName, cfg.PublicKey},
+		Method: "CreateMember",
+	}
+
+	ctx := inslogger.ContextWithTrace(context.Background(), "insolarUtility")
+	r, err := requester.Send(ctx, sendUrls, ucfg, &req)
+	check("Problems with sending request", err)
+
+	var rStruct struct {
+		Result string `json:"result"`
+	}
+
+	err = json.Unmarshal(r, &rStruct)
+	check("Problems with understanding result", err)
+
+	cfg.Caller = rStruct.Result
+
+	result, err := json.MarshalIndent(cfg, "", "    ")
+	check("Problems with marshaling config:", err)
+
+	writeToOutput(out, string(result))
+
+}
+
 func verboseInfo(msg string) {
 	if verbose {
-		log.Infoln(msg)
+		log.Info(msg)
 	}
 }
 
@@ -180,7 +265,8 @@ func sendRequest(out io.Writer) {
 	requester.SetVerbose(verbose)
 	userCfg, err := requester.ReadUserConfigFromFile(configPath)
 	check("[ sendRequest ]", err)
-	if rootAsCaller {
+
+	if rootAsCaller || userCfg.Caller == "" {
 		info, err := requester.Info(sendUrls)
 		check("[ sendRequest ]", err)
 		userCfg.Caller = info.RootMember
@@ -218,25 +304,11 @@ func genSendConfigs(out io.Writer) {
 	writeToOutput(out, string(userConf)+"\n")
 }
 
-func main() {
-	parseInputParams()
-	out, err := chooseOutput(output)
-	check("Problems with parsing input:", err)
-
-	switch cmd {
-	case "default_config":
-		printDefaultConfig(out)
-	case "random_ref":
-		randomRef(out)
-	case "version":
-		fmt.Println(version.GetFullVersion())
-	case "gen_keys":
-		generateKeysPair(out)
-	case "gen_certificate":
-		generateCertificate(out)
-	case "send_request":
-		sendRequest(out)
-	case "gen_send_configs":
-		genSendConfigs(out)
-	}
+func getInfo(out io.Writer) {
+	info, err := requester.Info(sendUrls)
+	check("[ sendRequest ]", err)
+	fmt.Fprintf(out, "TraceID    : %s\n", info.TraceID)
+	fmt.Fprintf(out, "RootMember : %s\n", info.RootMember)
+	fmt.Fprintf(out, "NodeDomain : %s\n", info.NodeDomain)
+	fmt.Fprintf(out, "RootDomain : %s\n", info.RootDomain)
 }

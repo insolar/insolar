@@ -106,7 +106,7 @@ func (s *storageSuite) AfterTest(suiteName, testName string) {
 
 func (s *storageSuite) TestDB_GetRecordNotFound() {
 	rec, err := s.objectStorage.GetRecord(s.ctx, s.jetID, &core.RecordID{})
-	assert.Equal(s.T(), err, storage.ErrNotFound)
+	assert.Equal(s.T(), err, core.ErrNotFound)
 	assert.Nil(s.T(), rec)
 }
 
@@ -125,7 +125,7 @@ func (s *storageSuite) TestDB_SetRecord() {
 
 func (s *storageSuite) TestDB_SetObjectIndex_ReturnsNotFoundIfNoIndex() {
 	idx, err := s.objectStorage.GetObjectIndex(s.ctx, s.jetID, core.NewRecordID(0, hexhash("5000")), false)
-	assert.Equal(s.T(), storage.ErrNotFound, err)
+	assert.Equal(s.T(), core.ErrNotFound, err)
 	assert.Nil(s.T(), idx)
 }
 
@@ -165,7 +165,7 @@ func (s *storageSuite) TestDB_SetObjectIndex_SaveLastUpdate() {
 
 func (s *storageSuite) TestDB_GetDrop_ReturnsNotFoundIfNoDrop() {
 	drop, err := s.dropStorage.GetDrop(s.ctx, testutils.RandomJet(), 1)
-	assert.Equal(s.T(), err, storage.ErrNotFound)
+	assert.Equal(s.T(), err, core.ErrNotFound)
 	assert.Nil(s.T(), drop)
 }
 
@@ -249,44 +249,6 @@ func (s *storageSuite) TestDB_AddPulse() {
 		SerialNumber: prevPulse.SerialNumber + 1,
 	}
 	assert.Equal(s.T(), expectPulse, *pulse)
-}
-
-func (s *storageSuite) TestDB_SetLocalData() {
-	err := s.db.SetLocalData(s.ctx, 0, []byte{1}, []byte{2})
-	require.NoError(s.T(), err)
-
-	data, err := s.db.GetLocalData(s.ctx, 0, []byte{1})
-	require.NoError(s.T(), err)
-	assert.Equal(s.T(), []byte{2}, data)
-
-	_, err = s.db.GetLocalData(s.ctx, 1, []byte{1})
-	assert.Equal(s.T(), storage.ErrNotFound, err)
-}
-
-func (s *storageSuite) TestDB_IterateLocalData() {
-	err := s.db.SetLocalData(s.ctx, 1, []byte{1, 1}, []byte{1})
-	require.NoError(s.T(), err)
-	err = s.db.SetLocalData(s.ctx, 1, []byte{1, 2}, []byte{2})
-	require.NoError(s.T(), err)
-	err = s.db.SetLocalData(s.ctx, 1, []byte{2, 1}, []byte{3})
-	require.NoError(s.T(), err)
-	err = s.db.SetLocalData(s.ctx, 2, []byte{1, 1}, []byte{4})
-	require.NoError(s.T(), err)
-
-	type tuple struct {
-		k []byte
-		v []byte
-	}
-	var results []tuple
-	err = s.db.IterateLocalData(s.ctx, 1, []byte{1}, func(k, v []byte) error {
-		results = append(results, tuple{k: k, v: v})
-		return nil
-	})
-	require.NoError(s.T(), err)
-	assert.Equal(s.T(), []tuple{
-		{k: []byte{1}, v: []byte{1}},
-		{k: []byte{2}, v: []byte{2}},
-	}, results)
 }
 
 func TestDB_Close(t *testing.T) {

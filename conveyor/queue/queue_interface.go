@@ -18,13 +18,21 @@ package queue
 
 // SyncDone is callback for biggestQueueSignal
 type SyncDone interface {
-	done()
+	Done()
 }
 
 // OutputElement represent one element returned from queue
 type OutputElement struct {
 	data     interface{}
 	itemType uint32
+}
+
+func (oe *OutputElement) GetData() interface{} {
+	return oe.data
+}
+
+func (oe *OutputElement) GetItemType() uint32 {
+	return oe.itemType
 }
 
 type queueItem struct {

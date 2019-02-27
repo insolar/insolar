@@ -25,6 +25,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/spf13/cobra"
+	jww "github.com/spf13/jwalterweatherman"
+
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
@@ -40,10 +43,8 @@ import (
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
-	pulsarstorage "github.com/insolar/insolar/pulsar/storage"
+	"github.com/insolar/insolar/pulsar/storage"
 	"github.com/insolar/insolar/version"
-	"github.com/spf13/cobra"
-	jww "github.com/spf13/jwalterweatherman"
 )
 
 type inputParams struct {
@@ -77,12 +78,12 @@ func main() {
 		err = cfgHolder.Load()
 	}
 	if err != nil {
-		log.Warnln("failed to load configuration from file: ", err.Error())
+		log.Warn("failed to load configuration from file: ", err.Error())
 	}
 
 	err = cfgHolder.LoadEnv()
 	if err != nil {
-		log.Warnln("failed to load configuration from env:", err.Error())
+		log.Warn("failed to load configuration from env:", err.Error())
 	}
 
 	traceID := utils.RandTraceID()
@@ -231,7 +232,7 @@ func initLogger(ctx context.Context, cfg configuration.Log, traceid string) (con
 	}
 	err = inslog.SetLevel(cfg.Level)
 	if err != nil {
-		inslog.Errorln(err.Error())
+		inslog.Error(err.Error())
 	}
 	return inslogger.WithTraceField(inslogger.SetLogger(ctx, inslog), traceid)
 }

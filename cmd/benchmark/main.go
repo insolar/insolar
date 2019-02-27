@@ -25,12 +25,16 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
 	"github.com/insolar/insolar/api/sdk"
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/utils/backoff"
 	"github.com/pkg/errors"
 	"github.com/spf13/pflag"
 )
@@ -39,11 +43,13 @@ const defaultStdoutPath = "-"
 const defaultMemberFileDir = "scripts/insolard/benchmark"
 const defaultMemberFileName = "members.txt"
 
+const backoffAttemptsCount = 20
+
 var (
 	output             string
 	concurrent         int
 	repetitions        int
-	rootMemberKeys     string
+	memberKeys         string
 	apiURLs            []string
 	logLevel           string
 	saveMembersToFile  bool
@@ -55,7 +61,7 @@ func parseInputParams() {
 	pflag.StringVarP(&output, "output", "o", defaultStdoutPath, "output file (use - for STDOUT)")
 	pflag.IntVarP(&concurrent, "concurrent", "c", 1, "concurrent users")
 	pflag.IntVarP(&repetitions, "repetitions", "r", 1, "repetitions for one user")
-	pflag.StringVarP(&rootMemberKeys, "rootmemberkeys", "k", "", "path to file with RootMember keys")
+	pflag.StringVarP(&memberKeys, "memberkeys", "k", "", "path to file with member keys")
 	pflag.StringArrayVarP(&apiURLs, "apiurl", "u", []string{"http://localhost:19101/api"}, "url to api")
 	pflag.StringVarP(&logLevel, "loglevel", "l", "info", "log level for benchmark")
 	pflag.BoolVarP(&saveMembersToFile, "savemembers", "s", false, "save members to file")
@@ -90,7 +96,7 @@ func check(msg string, err error) {
 	}
 }
 
-func newScenarios(out io.Writer, insSDK *sdk.SDK, members []*sdk.Member, concurrent int, repetitions int) scenario {
+func newScenarios(out io.Writer, insSDK *sdk.SDK, members []*sdk.Member, concurrent int, repetitions int, penRetries int32) scenario {
 	return &transferDifferentMembersScenario{
 		concurrent:  concurrent,
 		repetitions: repetitions,
@@ -98,6 +104,7 @@ func newScenarios(out io.Writer, insSDK *sdk.SDK, members []*sdk.Member, concurr
 		out:         out,
 		members:     members,
 		insSDK:      insSDK,
+		penRetries:  int32(penRetries),
 	}
 }
 
@@ -128,31 +135,36 @@ func printResults(s scenario) {
 	s.printResult()
 }
 
-var numRetries = 3
-
-func createMembers(insSDK *sdk.SDK, count int) []*sdk.Member {
+func createMembers(insSDK *sdk.SDK, count int) ([]*sdk.Member, int32) {
 	var members []*sdk.Member
 	var member *sdk.Member
 	var traceID string
 	var err error
+	var retriesCount int32
 
 	for i := 0; i < count; i++ {
-		for j := 0; j < numRetries; j++ {
+		bof := backoff.Backoff{Min: 1 * time.Second, Max: 10 * time.Second}
+		for bof.Attempt() < backoffAttemptsCount {
 			member, traceID, err = insSDK.CreateMember()
 			if err == nil {
 				members = append(members, member)
 				break
 			}
 
-			fmt.Printf("Retry to create member. TraceID: %s Error is: %s\n", traceID, err.Error())
-			time.Sleep(time.Second)
+			if strings.Contains(err.Error(), core.ErrTooManyPendingRequests.Error()) {
+				retriesCount++
+			} else {
+				fmt.Printf("Retry to create member. TraceID: %s Error is: %s\n", traceID, err.Error())
+			}
+			time.Sleep(bof.Duration())
 		}
-		check(fmt.Sprintf("Couldn't create member after retries: %d", numRetries), err)
+		check(fmt.Sprintf("Couldn't create member after retries: %d", backoffAttemptsCount), err)
+		bof.Reset()
 	}
-	return members
+	return members, retriesCount
 }
 
-func getTotalBalance(insSDK *sdk.SDK, members []*sdk.Member) uint64 {
+func getTotalBalance(insSDK *sdk.SDK, members []*sdk.Member) (totalBalance uint64, penRetires int32) {
 	type Result struct {
 		num     int
 		balance uint64
@@ -167,14 +179,21 @@ func getTotalBalance(insSDK *sdk.SDK, members []*sdk.Member) uint64 {
 	// execute all queries in parallel
 	for i := 0; i < nmembers; i++ {
 		go func(m *sdk.Member, num int) {
+			bof := backoff.Backoff{Min: 1 * time.Second, Max: 10 * time.Second}
+
 			res := Result{num: num}
-			for attempt := 0; attempt < 3; attempt++ {
+			for bof.Attempt() < backoffAttemptsCount {
 				res.balance, res.err = insSDK.GetBalance(m)
 				if res.err == nil {
 					break
 				}
-				// retry
-				time.Sleep(1 * time.Second)
+				if strings.Contains(res.err.Error(), core.ErrTooManyPendingRequests.Error()) {
+					atomic.AddInt32(&penRetires, 1)
+				} else {
+					// retry
+					fmt.Printf("Retry to fetch balance for %v-th member: %v\n", res.num, res.err)
+				}
+				time.Sleep(bof.Duration())
 			}
 			results <- res
 			wg.Done()
@@ -182,30 +201,33 @@ func getTotalBalance(insSDK *sdk.SDK, members []*sdk.Member) uint64 {
 	}
 
 	wg.Wait()
-	totalBalance := uint64(0)
 	for i := 0; i < nmembers; i++ {
 		res := <-results
 		if res.err != nil {
-			fmt.Printf("Can't get balance for %v-th member: %v\n", res.num, res.err)
+			if !strings.Contains(res.err.Error(), core.ErrTooManyPendingRequests.Error()) {
+				fmt.Printf("Can't get balance for %v-th member: %v\n", res.num, res.err)
+			}
 			continue
 		}
 		totalBalance += res.balance
 	}
 
-	return totalBalance
+	return totalBalance, penRetires
 }
 
-func getMembers(insSDK *sdk.SDK) ([]*sdk.Member, error) {
+func getMembers(insSDK *sdk.SDK) ([]*sdk.Member, int32, error) {
 	var members []*sdk.Member
 	var err error
+	var retriesCount int32
+
 	if useMembersFromFile {
 		members, err = loadMembers(concurrent * 2)
 		if err != nil {
-			return nil, errors.Wrap(err, "error while loading members: ")
+			return nil, 0, errors.Wrap(err, "error while loading members: ")
 		}
 	} else {
 		start := time.Now()
-		members = createMembers(insSDK, concurrent*2)
+		members, retriesCount = createMembers(insSDK, concurrent*2)
 		creationTime := time.Since(start)
 		fmt.Printf("Members were created in %s\n", creationTime)
 		fmt.Printf("Average creation of member time - %s\n", time.Duration(int64(creationTime)/int64(concurrent*2)))
@@ -214,10 +236,10 @@ func getMembers(insSDK *sdk.SDK) ([]*sdk.Member, error) {
 	if saveMembersToFile {
 		err = saveMembers(members)
 		if err != nil {
-			return nil, errors.Wrap(err, "save member done with error: ")
+			return nil, 0, errors.Wrap(err, "save member done with error: ")
 		}
 	}
-	return members, nil
+	return members, retriesCount, nil
 }
 
 func saveMembers(members []*sdk.Member) error {
@@ -271,12 +293,16 @@ func main() {
 	out, err := chooseOutput(output)
 	check("Problems with output file:", err)
 
-	insSDK, err := sdk.NewSDK(apiURLs, rootMemberKeys)
+	insSDK, err := sdk.NewSDK(apiURLs, memberKeys)
 	check("SDK is not initialized: ", err)
 
-	members, err := getMembers(insSDK)
+	members, crMemPenBefore, err := getMembers(insSDK)
 	check("Error while loading members: ", err)
-	totalBalanceBefore := getTotalBalance(insSDK, members)
+	var totalBalanceBefore uint64
+	var balancePenRetries int32
+	if !noCheckBalance {
+		totalBalanceBefore, balancePenRetries = getTotalBalance(insSDK, members)
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -284,7 +310,7 @@ func main() {
 	var sigChan = make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGHUP)
 
-	s := newScenarios(out, insSDK, members, concurrent, repetitions)
+	s := newScenarios(out, insSDK, members, concurrent, repetitions, crMemPenBefore+balancePenRetries)
 	go func() {
 		stopGracefully := true
 		for {
@@ -315,7 +341,7 @@ func main() {
 	if !noCheckBalance {
 		totalBalanceAfter := uint64(0)
 		for nretries := 0; nretries < 3; nretries++ {
-			totalBalanceAfter = getTotalBalance(insSDK, members)
+			totalBalanceAfter, _ = getTotalBalance(insSDK, members)
 			if totalBalanceAfter == totalBalanceBefore {
 				break
 			}

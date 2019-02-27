@@ -119,5 +119,5 @@ func TestIncorrectSign(t *testing.T) {
 	var res map[string]interface{}
 	err = json.Unmarshal(body, &res)
 	require.NoError(t, err)
-	require.Contains(t, res["error"], "[ VerifySignature ] Incorrect signature")
+	require.Contains(t, res["error"], "Incorrect signature")
 }

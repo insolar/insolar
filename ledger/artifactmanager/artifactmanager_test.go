@@ -22,6 +22,11 @@ import (
 	"testing"
 
 	"github.com/gojuno/minimock"
+	"github.com/insolar/insolar/ledger/storage/node"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
+
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
@@ -38,9 +43,6 @@ import (
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/testmessagebus"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"github.com/stretchr/testify/suite"
 )
 
 type amSuite struct {
@@ -53,7 +55,7 @@ type amSuite struct {
 
 	scheme        core.PlatformCryptographyScheme
 	pulseTracker  storage.PulseTracker
-	nodeStorage   storage.NodeStorage
+	nodeStorage   node.Accessor
 	objectStorage storage.ObjectStorage
 	jetStorage    storage.JetStorage
 	dropStorage   storage.DropStorage
@@ -80,7 +82,7 @@ func (s *amSuite) BeforeTest(suiteName, testName string) {
 	s.db = db
 	s.scheme = platformpolicy.NewPlatformCryptographyScheme()
 	s.jetStorage = storage.NewJetStorage()
-	s.nodeStorage = storage.NewNodeStorage()
+	s.nodeStorage = node.NewStorage()
 	s.pulseTracker = storage.NewPulseTracker()
 	s.objectStorage = storage.NewObjectStorage()
 	s.dropStorage = storage.NewDropStorage(10)
@@ -160,11 +162,11 @@ func getTestData(s *amSuite) (
 	handler := MessageHandler{
 		replayHandlers:             map[core.MessageType]core.MessageHandler{},
 		PlatformCryptographyScheme: s.scheme,
-		conf:                       &configuration.Ledger{LightChainLimit: 3},
-		certificate:                certificate,
+		conf:        &configuration.Ledger{LightChainLimit: 3, PendingRequestsLimit: 10},
+		certificate: certificate,
 	}
 
-	handler.NodeStorage = s.nodeStorage
+	handler.Nodes = s.nodeStorage
 	handler.ObjectStorage = s.objectStorage
 	handler.PulseTracker = s.pulseTracker
 	handler.DBContext = s.db
@@ -181,6 +183,7 @@ func getTestData(s *amSuite) (
 	provideMock := recentstorage.NewProviderMock(s.T())
 	provideMock.GetIndexStorageMock.Return(indexMock)
 	provideMock.GetPendingStorageMock.Return(pendingMock)
+	provideMock.CountMock.Return(1)
 
 	handler.RecentStorageProvider = provideMock
 
@@ -792,6 +795,7 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterValidation() {
 	provideMock := recentstorage.NewProviderMock(s.T())
 	provideMock.GetIndexStorageMock.Return(indexMock)
 	provideMock.GetPendingStorageMock.Return(pendingMock)
+	provideMock.CountMock.Return(0)
 
 	certificate := testutils.NewCertificateMock(s.T())
 	certificate.GetRoleMock.Return(core.StaticRoleLightMaterial)
@@ -799,8 +803,8 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterValidation() {
 	handler := MessageHandler{
 		replayHandlers:             map[core.MessageType]core.MessageHandler{},
 		PlatformCryptographyScheme: s.scheme,
-		conf:                       &configuration.Ledger{LightChainLimit: 3},
-		certificate:                certificate,
+		conf:        &configuration.Ledger{LightChainLimit: 3, PendingRequestsLimit: 10},
+		certificate: certificate,
 	}
 
 	handler.Bus = mb
@@ -808,7 +812,7 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterValidation() {
 	handler.DBContext = s.db
 	handler.ObjectStorage = s.objectStorage
 	handler.PulseTracker = s.pulseTracker
-	handler.NodeStorage = s.nodeStorage
+	handler.Nodes = s.nodeStorage
 	handler.JetStorage = s.jetStorage
 
 	handler.RecentStorageProvider = provideMock
@@ -940,9 +944,9 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterRequest_JetMiss() {
 		_, err := am.RegisterRequest(s.ctx, *am.GenesisRef(), &message.Parcel{Msg: &message.CallMethod{}})
 		require.NoError(t, err)
 
-		tree, err := s.jetStorage.GetJetTree(s.ctx, core.FirstPulseNumber)
-		require.NoError(t, err)
-		jetID, actual := tree.Find(*core.NewRecordID(0, []byte{0xD5}))
+		jetID, actual := s.jetStorage.FindJet(
+			s.ctx, core.FirstPulseNumber, *core.NewRecordID(0, []byte{0xD5}),
+		)
 		assert.Equal(t, *jet.NewID(4, []byte{0xD0}), *jetID)
 		assert.True(t, actual)
 	})

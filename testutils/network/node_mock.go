@@ -33,10 +33,30 @@ type NodeMock struct {
 	GetGlobuleIDPreCounter uint64
 	GetGlobuleIDMock       mNodeMockGetGlobuleID
 
+	GetStateFunc       func() (r core.NodeState)
+	GetStateCounter    uint64
+	GetStatePreCounter uint64
+	GetStateMock       mNodeMockGetState
+
 	IDFunc       func() (r core.RecordRef)
 	IDCounter    uint64
 	IDPreCounter uint64
 	IDMock       mNodeMockID
+
+	IsWorkingFunc       func() (r bool)
+	IsWorkingCounter    uint64
+	IsWorkingPreCounter uint64
+	IsWorkingMock       mNodeMockIsWorking
+
+	LeavingFunc       func() (r bool)
+	LeavingCounter    uint64
+	LeavingPreCounter uint64
+	LeavingMock       mNodeMockLeaving
+
+	LeavingETAFunc       func() (r core.PulseNumber)
+	LeavingETACounter    uint64
+	LeavingETAPreCounter uint64
+	LeavingETAMock       mNodeMockLeavingETA
 
 	PublicKeyFunc       func() (r crypto.PublicKey)
 	PublicKeyCounter    uint64
@@ -70,7 +90,11 @@ func NewNodeMock(t minimock.Tester) *NodeMock {
 	m.AddressMock = mNodeMockAddress{mock: m}
 	m.ConsensusAddressMock = mNodeMockConsensusAddress{mock: m}
 	m.GetGlobuleIDMock = mNodeMockGetGlobuleID{mock: m}
+	m.GetStateMock = mNodeMockGetState{mock: m}
 	m.IDMock = mNodeMockID{mock: m}
+	m.IsWorkingMock = mNodeMockIsWorking{mock: m}
+	m.LeavingMock = mNodeMockLeaving{mock: m}
+	m.LeavingETAMock = mNodeMockLeavingETA{mock: m}
 	m.PublicKeyMock = mNodeMockPublicKey{mock: m}
 	m.RoleMock = mNodeMockRole{mock: m}
 	m.ShortIDMock = mNodeMockShortID{mock: m}
@@ -481,6 +505,140 @@ func (m *NodeMock) GetGlobuleIDFinished() bool {
 	return true
 }
 
+type mNodeMockGetState struct {
+	mock              *NodeMock
+	mainExpectation   *NodeMockGetStateExpectation
+	expectationSeries []*NodeMockGetStateExpectation
+}
+
+type NodeMockGetStateExpectation struct {
+	result *NodeMockGetStateResult
+}
+
+type NodeMockGetStateResult struct {
+	r core.NodeState
+}
+
+//Expect specifies that invocation of Node.GetState is expected from 1 to Infinity times
+func (m *mNodeMockGetState) Expect() *mNodeMockGetState {
+	m.mock.GetStateFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &NodeMockGetStateExpectation{}
+	}
+
+	return m
+}
+
+//Return specifies results of invocation of Node.GetState
+func (m *mNodeMockGetState) Return(r core.NodeState) *NodeMock {
+	m.mock.GetStateFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &NodeMockGetStateExpectation{}
+	}
+	m.mainExpectation.result = &NodeMockGetStateResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of Node.GetState is expected once
+func (m *mNodeMockGetState) ExpectOnce() *NodeMockGetStateExpectation {
+	m.mock.GetStateFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &NodeMockGetStateExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *NodeMockGetStateExpectation) Return(r core.NodeState) {
+	e.result = &NodeMockGetStateResult{r}
+}
+
+//Set uses given function f as a mock of Node.GetState method
+func (m *mNodeMockGetState) Set(f func() (r core.NodeState)) *NodeMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.GetStateFunc = f
+	return m.mock
+}
+
+//GetState implements github.com/insolar/insolar/core.Node interface
+func (m *NodeMock) GetState() (r core.NodeState) {
+	counter := atomic.AddUint64(&m.GetStatePreCounter, 1)
+	defer atomic.AddUint64(&m.GetStateCounter, 1)
+
+	if len(m.GetStateMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.GetStateMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to NodeMock.GetState.")
+			return
+		}
+
+		result := m.GetStateMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the NodeMock.GetState")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetStateMock.mainExpectation != nil {
+
+		result := m.GetStateMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the NodeMock.GetState")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetStateFunc == nil {
+		m.t.Fatalf("Unexpected call to NodeMock.GetState.")
+		return
+	}
+
+	return m.GetStateFunc()
+}
+
+//GetStateMinimockCounter returns a count of NodeMock.GetStateFunc invocations
+func (m *NodeMock) GetStateMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.GetStateCounter)
+}
+
+//GetStateMinimockPreCounter returns the value of NodeMock.GetState invocations
+func (m *NodeMock) GetStateMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.GetStatePreCounter)
+}
+
+//GetStateFinished returns true if mock invocations count is ok
+func (m *NodeMock) GetStateFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.GetStateMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.GetStateCounter) == uint64(len(m.GetStateMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.GetStateMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.GetStateCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.GetStateFunc != nil {
+		return atomic.LoadUint64(&m.GetStateCounter) > 0
+	}
+
+	return true
+}
+
 type mNodeMockID struct {
 	mock              *NodeMock
 	mainExpectation   *NodeMockIDExpectation
@@ -610,6 +768,408 @@ func (m *NodeMock) IDFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.IDFunc != nil {
 		return atomic.LoadUint64(&m.IDCounter) > 0
+	}
+
+	return true
+}
+
+type mNodeMockIsWorking struct {
+	mock              *NodeMock
+	mainExpectation   *NodeMockIsWorkingExpectation
+	expectationSeries []*NodeMockIsWorkingExpectation
+}
+
+type NodeMockIsWorkingExpectation struct {
+	result *NodeMockIsWorkingResult
+}
+
+type NodeMockIsWorkingResult struct {
+	r bool
+}
+
+//Expect specifies that invocation of Node.IsWorking is expected from 1 to Infinity times
+func (m *mNodeMockIsWorking) Expect() *mNodeMockIsWorking {
+	m.mock.IsWorkingFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &NodeMockIsWorkingExpectation{}
+	}
+
+	return m
+}
+
+//Return specifies results of invocation of Node.IsWorking
+func (m *mNodeMockIsWorking) Return(r bool) *NodeMock {
+	m.mock.IsWorkingFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &NodeMockIsWorkingExpectation{}
+	}
+	m.mainExpectation.result = &NodeMockIsWorkingResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of Node.IsWorking is expected once
+func (m *mNodeMockIsWorking) ExpectOnce() *NodeMockIsWorkingExpectation {
+	m.mock.IsWorkingFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &NodeMockIsWorkingExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *NodeMockIsWorkingExpectation) Return(r bool) {
+	e.result = &NodeMockIsWorkingResult{r}
+}
+
+//Set uses given function f as a mock of Node.IsWorking method
+func (m *mNodeMockIsWorking) Set(f func() (r bool)) *NodeMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.IsWorkingFunc = f
+	return m.mock
+}
+
+//IsWorking implements github.com/insolar/insolar/core.Node interface
+func (m *NodeMock) IsWorking() (r bool) {
+	counter := atomic.AddUint64(&m.IsWorkingPreCounter, 1)
+	defer atomic.AddUint64(&m.IsWorkingCounter, 1)
+
+	if len(m.IsWorkingMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.IsWorkingMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to NodeMock.IsWorking.")
+			return
+		}
+
+		result := m.IsWorkingMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the NodeMock.IsWorking")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.IsWorkingMock.mainExpectation != nil {
+
+		result := m.IsWorkingMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the NodeMock.IsWorking")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.IsWorkingFunc == nil {
+		m.t.Fatalf("Unexpected call to NodeMock.IsWorking.")
+		return
+	}
+
+	return m.IsWorkingFunc()
+}
+
+//IsWorkingMinimockCounter returns a count of NodeMock.IsWorkingFunc invocations
+func (m *NodeMock) IsWorkingMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.IsWorkingCounter)
+}
+
+//IsWorkingMinimockPreCounter returns the value of NodeMock.IsWorking invocations
+func (m *NodeMock) IsWorkingMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.IsWorkingPreCounter)
+}
+
+//IsWorkingFinished returns true if mock invocations count is ok
+func (m *NodeMock) IsWorkingFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.IsWorkingMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.IsWorkingCounter) == uint64(len(m.IsWorkingMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.IsWorkingMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.IsWorkingCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.IsWorkingFunc != nil {
+		return atomic.LoadUint64(&m.IsWorkingCounter) > 0
+	}
+
+	return true
+}
+
+type mNodeMockLeaving struct {
+	mock              *NodeMock
+	mainExpectation   *NodeMockLeavingExpectation
+	expectationSeries []*NodeMockLeavingExpectation
+}
+
+type NodeMockLeavingExpectation struct {
+	result *NodeMockLeavingResult
+}
+
+type NodeMockLeavingResult struct {
+	r bool
+}
+
+//Expect specifies that invocation of Node.Leaving is expected from 1 to Infinity times
+func (m *mNodeMockLeaving) Expect() *mNodeMockLeaving {
+	m.mock.LeavingFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &NodeMockLeavingExpectation{}
+	}
+
+	return m
+}
+
+//Return specifies results of invocation of Node.Leaving
+func (m *mNodeMockLeaving) Return(r bool) *NodeMock {
+	m.mock.LeavingFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &NodeMockLeavingExpectation{}
+	}
+	m.mainExpectation.result = &NodeMockLeavingResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of Node.Leaving is expected once
+func (m *mNodeMockLeaving) ExpectOnce() *NodeMockLeavingExpectation {
+	m.mock.LeavingFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &NodeMockLeavingExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *NodeMockLeavingExpectation) Return(r bool) {
+	e.result = &NodeMockLeavingResult{r}
+}
+
+//Set uses given function f as a mock of Node.Leaving method
+func (m *mNodeMockLeaving) Set(f func() (r bool)) *NodeMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.LeavingFunc = f
+	return m.mock
+}
+
+//Leaving implements github.com/insolar/insolar/core.Node interface
+func (m *NodeMock) Leaving() (r bool) {
+	counter := atomic.AddUint64(&m.LeavingPreCounter, 1)
+	defer atomic.AddUint64(&m.LeavingCounter, 1)
+
+	if len(m.LeavingMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.LeavingMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to NodeMock.Leaving.")
+			return
+		}
+
+		result := m.LeavingMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the NodeMock.Leaving")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.LeavingMock.mainExpectation != nil {
+
+		result := m.LeavingMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the NodeMock.Leaving")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.LeavingFunc == nil {
+		m.t.Fatalf("Unexpected call to NodeMock.Leaving.")
+		return
+	}
+
+	return m.LeavingFunc()
+}
+
+//LeavingMinimockCounter returns a count of NodeMock.LeavingFunc invocations
+func (m *NodeMock) LeavingMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.LeavingCounter)
+}
+
+//LeavingMinimockPreCounter returns the value of NodeMock.Leaving invocations
+func (m *NodeMock) LeavingMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.LeavingPreCounter)
+}
+
+//LeavingFinished returns true if mock invocations count is ok
+func (m *NodeMock) LeavingFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.LeavingMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.LeavingCounter) == uint64(len(m.LeavingMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.LeavingMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.LeavingCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.LeavingFunc != nil {
+		return atomic.LoadUint64(&m.LeavingCounter) > 0
+	}
+
+	return true
+}
+
+type mNodeMockLeavingETA struct {
+	mock              *NodeMock
+	mainExpectation   *NodeMockLeavingETAExpectation
+	expectationSeries []*NodeMockLeavingETAExpectation
+}
+
+type NodeMockLeavingETAExpectation struct {
+	result *NodeMockLeavingETAResult
+}
+
+type NodeMockLeavingETAResult struct {
+	r core.PulseNumber
+}
+
+//Expect specifies that invocation of Node.LeavingETA is expected from 1 to Infinity times
+func (m *mNodeMockLeavingETA) Expect() *mNodeMockLeavingETA {
+	m.mock.LeavingETAFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &NodeMockLeavingETAExpectation{}
+	}
+
+	return m
+}
+
+//Return specifies results of invocation of Node.LeavingETA
+func (m *mNodeMockLeavingETA) Return(r core.PulseNumber) *NodeMock {
+	m.mock.LeavingETAFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &NodeMockLeavingETAExpectation{}
+	}
+	m.mainExpectation.result = &NodeMockLeavingETAResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of Node.LeavingETA is expected once
+func (m *mNodeMockLeavingETA) ExpectOnce() *NodeMockLeavingETAExpectation {
+	m.mock.LeavingETAFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &NodeMockLeavingETAExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *NodeMockLeavingETAExpectation) Return(r core.PulseNumber) {
+	e.result = &NodeMockLeavingETAResult{r}
+}
+
+//Set uses given function f as a mock of Node.LeavingETA method
+func (m *mNodeMockLeavingETA) Set(f func() (r core.PulseNumber)) *NodeMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.LeavingETAFunc = f
+	return m.mock
+}
+
+//LeavingETA implements github.com/insolar/insolar/core.Node interface
+func (m *NodeMock) LeavingETA() (r core.PulseNumber) {
+	counter := atomic.AddUint64(&m.LeavingETAPreCounter, 1)
+	defer atomic.AddUint64(&m.LeavingETACounter, 1)
+
+	if len(m.LeavingETAMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.LeavingETAMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to NodeMock.LeavingETA.")
+			return
+		}
+
+		result := m.LeavingETAMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the NodeMock.LeavingETA")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.LeavingETAMock.mainExpectation != nil {
+
+		result := m.LeavingETAMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the NodeMock.LeavingETA")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.LeavingETAFunc == nil {
+		m.t.Fatalf("Unexpected call to NodeMock.LeavingETA.")
+		return
+	}
+
+	return m.LeavingETAFunc()
+}
+
+//LeavingETAMinimockCounter returns a count of NodeMock.LeavingETAFunc invocations
+func (m *NodeMock) LeavingETAMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.LeavingETACounter)
+}
+
+//LeavingETAMinimockPreCounter returns the value of NodeMock.LeavingETA invocations
+func (m *NodeMock) LeavingETAMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.LeavingETAPreCounter)
+}
+
+//LeavingETAFinished returns true if mock invocations count is ok
+func (m *NodeMock) LeavingETAFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.LeavingETAMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.LeavingETACounter) == uint64(len(m.LeavingETAMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.LeavingETAMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.LeavingETACounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.LeavingETAFunc != nil {
+		return atomic.LoadUint64(&m.LeavingETACounter) > 0
 	}
 
 	return true
@@ -1167,8 +1727,24 @@ func (m *NodeMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to NodeMock.GetGlobuleID")
 	}
 
+	if !m.GetStateFinished() {
+		m.t.Fatal("Expected call to NodeMock.GetState")
+	}
+
 	if !m.IDFinished() {
 		m.t.Fatal("Expected call to NodeMock.ID")
+	}
+
+	if !m.IsWorkingFinished() {
+		m.t.Fatal("Expected call to NodeMock.IsWorking")
+	}
+
+	if !m.LeavingFinished() {
+		m.t.Fatal("Expected call to NodeMock.Leaving")
+	}
+
+	if !m.LeavingETAFinished() {
+		m.t.Fatal("Expected call to NodeMock.LeavingETA")
 	}
 
 	if !m.PublicKeyFinished() {
@@ -1216,8 +1792,24 @@ func (m *NodeMock) MinimockFinish() {
 		m.t.Fatal("Expected call to NodeMock.GetGlobuleID")
 	}
 
+	if !m.GetStateFinished() {
+		m.t.Fatal("Expected call to NodeMock.GetState")
+	}
+
 	if !m.IDFinished() {
 		m.t.Fatal("Expected call to NodeMock.ID")
+	}
+
+	if !m.IsWorkingFinished() {
+		m.t.Fatal("Expected call to NodeMock.IsWorking")
+	}
+
+	if !m.LeavingFinished() {
+		m.t.Fatal("Expected call to NodeMock.Leaving")
+	}
+
+	if !m.LeavingETAFinished() {
+		m.t.Fatal("Expected call to NodeMock.LeavingETA")
 	}
 
 	if !m.PublicKeyFinished() {
@@ -1253,7 +1845,11 @@ func (m *NodeMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.AddressFinished()
 		ok = ok && m.ConsensusAddressFinished()
 		ok = ok && m.GetGlobuleIDFinished()
+		ok = ok && m.GetStateFinished()
 		ok = ok && m.IDFinished()
+		ok = ok && m.IsWorkingFinished()
+		ok = ok && m.LeavingFinished()
+		ok = ok && m.LeavingETAFinished()
 		ok = ok && m.PublicKeyFinished()
 		ok = ok && m.RoleFinished()
 		ok = ok && m.ShortIDFinished()
@@ -1278,8 +1874,24 @@ func (m *NodeMock) MinimockWait(timeout time.Duration) {
 				m.t.Error("Expected call to NodeMock.GetGlobuleID")
 			}
 
+			if !m.GetStateFinished() {
+				m.t.Error("Expected call to NodeMock.GetState")
+			}
+
 			if !m.IDFinished() {
 				m.t.Error("Expected call to NodeMock.ID")
+			}
+
+			if !m.IsWorkingFinished() {
+				m.t.Error("Expected call to NodeMock.IsWorking")
+			}
+
+			if !m.LeavingFinished() {
+				m.t.Error("Expected call to NodeMock.Leaving")
+			}
+
+			if !m.LeavingETAFinished() {
+				m.t.Error("Expected call to NodeMock.LeavingETA")
 			}
 
 			if !m.PublicKeyFinished() {
@@ -1322,7 +1934,23 @@ func (m *NodeMock) AllMocksCalled() bool {
 		return false
 	}
 
+	if !m.GetStateFinished() {
+		return false
+	}
+
 	if !m.IDFinished() {
+		return false
+	}
+
+	if !m.IsWorkingFinished() {
+		return false
+	}
+
+	if !m.LeavingFinished() {
+		return false
+	}
+
+	if !m.LeavingETAFinished() {
 		return false
 	}
 

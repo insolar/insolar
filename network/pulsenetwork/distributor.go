@@ -157,32 +157,6 @@ func (d *distributor) pingHost(ctx context.Context, host *host.Host) error {
 	return nil
 }
 
-func (d *distributor) sendPulseToHosts(ctx context.Context, pulse *core.Pulse, hosts []host.Host) {
-	logger := inslogger.FromContext(ctx)
-	logger.Debugf("Before sending pulse to nodes - %v", hosts)
-
-	ctx, span := instracer.StartSpan(ctx, "distributor.sendPulseToHosts")
-	defer span.End()
-	wg := sync.WaitGroup{}
-	wg.Add(len(hosts))
-
-	for _, pulseReceiver := range hosts {
-		go func(host host.Host) {
-			defer wg.Done()
-			err := d.sendPulseToHost(ctx, pulse, &host)
-			if err != nil {
-				logger.Errorf(
-					"[ sendPulseToHosts ] Failed to send pulse to host: %s, error: %s",
-					host.String(),
-					err.Error(),
-				)
-			}
-		}(pulseReceiver)
-	}
-
-	wg.Wait()
-}
-
 func (d *distributor) sendPulseToHost(ctx context.Context, pulse *core.Pulse, host *host.Host) error {
 	logger := inslogger.FromContext(ctx)
 	defer func() {

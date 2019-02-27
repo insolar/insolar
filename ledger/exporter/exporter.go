@@ -21,7 +21,6 @@ import (
 	"context"
 	"math"
 	"strconv"
-	"strings"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
@@ -157,7 +156,7 @@ func (e *Exporter) exportPulse(ctx context.Context, jetID core.RecordID, pulse *
 			return errors.Wrap(err, "exportPulse failed to getPayload")
 		}
 		records[string(base58.Encode(id[:]))] = recordData{
-			Type:    strings.Title(record.TypeFromRecord(rec).String()),
+			Type:    recordType(rec),
 			Data:    rec,
 			Payload: pl,
 		}
@@ -223,4 +222,31 @@ func (e *Exporter) getPayload(ctx context.Context, jetID core.RecordID, rec reco
 	}
 
 	return nil, nil
+}
+
+func recordType(rec record.Record) string {
+	switch rec.(type) {
+	case *record.GenesisRecord:
+		return "TypeGenesis"
+	case *record.ChildRecord:
+		return "TypeChild"
+	case *record.JetRecord:
+		return "TypeJet"
+	case *record.RequestRecord:
+		return "TypeCallRequest"
+	case *record.ResultRecord:
+		return "TypeResult"
+	case *record.TypeRecord:
+		return "TypeType"
+	case *record.CodeRecord:
+		return "TypeCode"
+	case *record.ObjectActivateRecord:
+		return "TypeActivate"
+	case *record.ObjectAmendRecord:
+		return "TypeAmend"
+	case *record.DeactivationRecord:
+		return "TypeDeactivate"
+	}
+
+	return record.TypeFromRecord(rec).String()
 }
