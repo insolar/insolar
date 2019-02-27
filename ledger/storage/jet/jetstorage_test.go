@@ -19,10 +19,11 @@ package jet
 import (
 	"testing"
 
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/ledger/storage"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/storage/jet"
 )
 
 func TestJetStorage_GetJetTree(t *testing.T) {
@@ -37,7 +38,7 @@ func TestJetStorage_UpdateJetTree(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	js := NewJetStorage()
 
-	js.UpdateJetTree(ctx, 100, true, *NewID(0, nil))
+	js.UpdateJetTree(ctx, 100, true, core.RecordID(*storage.NewID(0, nil)))
 
 	tree := js.(*jetStorage).getJetTree(ctx, 100)
 	require.Equal(t, "root (level=0 actual=true)\n", tree.String())
@@ -47,7 +48,7 @@ func TestJetStorage_SplitJetTree(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	js := NewJetStorage()
 
-	l, r, err := js.SplitJetTree(ctx, 100, *jet.NewID(0, nil))
+	l, r, err := js.SplitJetTree(ctx, 100, core.RecordID(*storage.NewID(0, nil)))
 	require.NoError(t, err)
 	require.Equal(t, "[JET 1 0]", l.DebugString())
 	require.Equal(t, "[JET 1 1]", r.DebugString())
@@ -60,7 +61,7 @@ func TestJetStorage_CloneJetTree(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	js := NewJetStorage()
 
-	js.UpdateJetTree(ctx, 100, true, *jet.NewID(0, nil))
+	js.UpdateJetTree(ctx, 100, true, core.RecordID(*storage.NewID(0, nil)))
 
 	tree := js.(*jetStorage).getJetTree(ctx, 100)
 	require.Equal(t, "root (level=0 actual=true)\n", tree.String())
@@ -79,7 +80,7 @@ func TestJetStorage_DeleteJetTree(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	js := NewJetStorage()
 
-	_, _, err := js.SplitJetTree(ctx, 100, *jet.NewID(0, nil))
+	_, _, err := js.SplitJetTree(ctx, 100, core.RecordID(*storage.NewID(0, nil)))
 	require.NoError(t, err)
 
 	js.DeleteJetTree(ctx, 100)

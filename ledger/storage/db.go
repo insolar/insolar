@@ -24,7 +24,6 @@ import (
 	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/pkg/errors"
 )
@@ -43,7 +42,6 @@ const (
 	sysHeavyClientState       byte = 3
 	sysLastSyncedPulseOnHeavy byte = 4
 	sysJetList                byte = 5
-	sysDropSizeHistory        byte = 6
 )
 
 // DBContext provides base db methods
@@ -240,7 +238,7 @@ func (db *DB) IterateRecordsOnPulse(
 	pulse core.PulseNumber,
 	handler func(id core.RecordID, rec record.Record) error,
 ) error {
-	_, jetPrefix := jet.Jet(jetID)
+	_, jetPrefix := JetID(jetID).Jet()
 	prefix := prefixkey(scopeIDRecord, jetPrefix, pulse.Bytes())
 
 	return db.iterate(ctx, prefix, func(k, v []byte) error {

@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/component"
+	"github.com/insolar/insolar/ledger/storage/jet"
 	base58 "github.com/jbenet/go-base58"
 	"github.com/stretchr/testify/suite"
 
@@ -30,7 +31,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/index"
-	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
@@ -48,8 +48,8 @@ type storageSuite struct {
 	db      storage.DBContext
 
 	objectStorage storage.ObjectStorage
-	dropStorage   storage.DropStorage
-	pulseTracker  storage.PulseTracker
+	//dropStorage   storage.DropStorage
+	pulseTracker storage.PulseTracker
 
 	jetID core.RecordID
 }

@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/ledger/storage"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
 )
@@ -89,7 +90,7 @@ func (j *jet) ExtractLeafIDs(ids *[]core.RecordID, path []byte, depth uint8) {
 		return
 	}
 	if j.Left == nil && j.Right == nil {
-		*ids = append(*ids, *NewID(depth, path))
+		*ids = append(*ids, core.RecordID(*storage.NewID(depth, path)))
 		return
 	}
 
@@ -248,13 +249,14 @@ func (t *Tree) Find(id core.RecordID) (*core.RecordID, bool) {
 	}
 	hash := id.Hash()
 	j, depth := t.Head.Find(hash, 0)
-	return NewID(uint8(depth), ResetBits(hash, depth)), j.Actual
+	recID := core.RecordID(*storage.NewID(uint8(depth), storage.ResetBits(hash, depth)))
+	return &recID, j.Actual
 }
 
 // Update add missing tree branches for provided prefix. If 'setActual' is set, all encountered nodes will be marked as
 // actual.
 func (t *Tree) Update(id core.RecordID, setActual bool) {
-	maxDepth, prefix := Jet(id)
+	maxDepth, prefix := storage.JetID(id).Jet()
 	t.Head.Update(prefix, setActual, maxDepth, 0)
 }
 
@@ -269,17 +271,19 @@ func (t *Tree) Bytes() []byte {
 // Split looks for provided jet and creates (and returns) two branches for it. If provided jet is not found, an error
 // will be returned.
 func (t *Tree) Split(jetID core.RecordID) (*core.RecordID, *core.RecordID, error) {
-	depth, prefix := Jet(jetID)
+	depth, prefix := storage.JetID(jetID).Jet()
 	j, foundDepth := t.Head.Find(prefix, 0)
 	if depth != foundDepth {
 		return nil, nil, errors.New("failed to split: incorrect jet provided")
 	}
 	j.Right = &jet{}
 	j.Left = &jet{}
-	leftPrefix := ResetBits(prefix, depth)
-	rightPrefix := ResetBits(prefix, depth)
+	leftPrefix := storage.ResetBits(prefix, depth)
+	rightPrefix := storage.ResetBits(prefix, depth)
 	setBit(rightPrefix, depth)
-	return NewID(depth+1, leftPrefix), NewID(depth+1, rightPrefix), nil
+	first := core.RecordID(*storage.NewID(depth+1, leftPrefix))
+	second := core.RecordID(*storage.NewID(depth+1, rightPrefix))
+	return &first, &second, nil
 }
 
 func (t *Tree) LeafIDs() []core.RecordID {

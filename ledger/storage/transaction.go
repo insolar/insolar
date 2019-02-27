@@ -22,7 +22,6 @@ import (
 	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/storage/index"
-	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/record"
 )
 
@@ -94,7 +93,7 @@ func (m *TransactionManager) GetRequest(ctx context.Context, jetID core.RecordID
 
 // GetBlob returns binary value stored by record ID.
 func (m *TransactionManager) GetBlob(ctx context.Context, jetID core.RecordID, id *core.RecordID) ([]byte, error) {
-	_, jetPrefix := jet.Jet(jetID)
+	_, jetPrefix := JetID(jetID).Jet()
 	k := prefixkey(scopeIDBlob, jetPrefix, id[:])
 	return m.get(ctx, k)
 }
@@ -102,7 +101,7 @@ func (m *TransactionManager) GetBlob(ctx context.Context, jetID core.RecordID, i
 // SetBlob saves binary value for provided pulse.
 func (m *TransactionManager) SetBlob(ctx context.Context, jetID core.RecordID, pulseNumber core.PulseNumber, blob []byte) (*core.RecordID, error) {
 	id := record.CalculateIDForBlob(m.db.PlatformCryptographyScheme, pulseNumber, blob)
-	_, jetPrefix := jet.Jet(jetID)
+	_, jetPrefix := JetID(jetID).Jet()
 	k := prefixkey(scopeIDBlob, jetPrefix, id[:])
 
 	// TODO: @andreyromancev. 16.01.19. Blob override is ok.
@@ -128,7 +127,7 @@ func (m *TransactionManager) SetBlob(ctx context.Context, jetID core.RecordID, p
 //
 // It returns ErrNotFound if the DB does not contain the key.
 func (m *TransactionManager) GetRecord(ctx context.Context, jetID core.RecordID, id *core.RecordID) (record.Record, error) {
-	_, jetPrefix := jet.Jet(jetID)
+	_, jetPrefix := JetID(jetID).Jet()
 	k := prefixkey(scopeIDRecord, jetPrefix, id[:])
 	buf, err := m.get(ctx, k)
 	if err != nil {
@@ -143,7 +142,7 @@ func (m *TransactionManager) GetRecord(ctx context.Context, jetID core.RecordID,
 // If record not found returns nil and ErrNotFound error
 func (m *TransactionManager) SetRecord(ctx context.Context, jetID core.RecordID, pulseNumber core.PulseNumber, rec record.Record) (*core.RecordID, error) {
 	id := record.NewRecordIDFromRecord(m.db.PlatformCryptographyScheme, pulseNumber, rec)
-	_, prefix := jet.Jet(jetID)
+	_, prefix := JetID(jetID).Jet()
 	k := prefixkey(scopeIDRecord, prefix, id[:])
 	geterr := m.db.db.View(func(tx *badger.Txn) error {
 		_, err := tx.Get(k)
@@ -173,7 +172,7 @@ func (m *TransactionManager) GetObjectIndex(
 	if forupdate {
 		m.lockOnID(id)
 	}
-	_, prefix := jet.Jet(jetID)
+	_, prefix := JetID(jetID).Jet()
 	k := prefixkey(scopeIDLifeline, prefix, id[:])
 	buf, err := m.get(ctx, k)
 	if err != nil {
@@ -189,7 +188,7 @@ func (m *TransactionManager) SetObjectIndex(
 	id *core.RecordID,
 	idx *index.ObjectLifeline,
 ) error {
-	_, prefix := jet.Jet(jetID)
+	_, prefix := JetID(jetID).Jet()
 	k := prefixkey(scopeIDLifeline, prefix, id[:])
 	if idx.Delegates == nil {
 		idx.Delegates = map[core.RecordRef]core.RecordRef{}
@@ -208,7 +207,7 @@ func (m *TransactionManager) RemoveObjectIndex(
 	ref *core.RecordID,
 ) error {
 	m.lockOnID(ref)
-	_, prefix := jet.Jet(jetID)
+	_, prefix := JetID(jetID).Jet()
 	k := prefixkey(scopeIDLifeline, prefix, ref[:])
 	return m.remove(ctx, k)
 }
