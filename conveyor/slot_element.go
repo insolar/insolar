@@ -16,6 +16,10 @@
 
 package conveyor
 
+import (
+	"github.com/insolar/insolar/conveyor/generator/common"
+)
+
 // ActivationStatus represents status of work for slot element
 type ActivationStatus int
 
@@ -28,17 +32,43 @@ const (
 
 type stateMachineTypeI interface {
 	getTypeID() int
-	getMigrationHandler(state int)
-	getTransitionHandler(state int)
-	getResponseHandler(state int)
-	getNestedHandler(state int)
+	getMigrationHandler(state int) common.MigrationHandler
+	getTransitionHandler(state int) common.TransitHandler
+	getResponseHandler(state int) common.AdapterResponseHandler
+	getNestedHandler(state int) common.NestedHandler
 
-	getTransitionErrorHandler(state int)
-	getResponseErrorHandler(state int)
+	getTransitionErrorHandler(state int) common.TransitionErrorHandler
+	getResponseErrorHandler(state int) common.ResponseErrorHandler
+}
+
+type reactivateMode interface {
 }
 
 type slotElementHelper interface {
-	informParent()
+	slotElementRestrictedHelper
+	informParent(payload interface{}) bool
+	deactivateTill(reactivateOn reactivateMode)
+	sendTask(adapterID uint32, taskPayload interface{}, respHandlerID uint32) error
+	// joinSequence( sequenceKey map-key,sequenceOrder uint64 )
+	// isSequenceHead() bool
+}
+
+type slotElementRestrictedHelper interface {
+	slotElementReadOnly
+
+	getParentElementID() uint32
+	getInputEvent() interface{}
+	getPayload() interface{}
+
+	reactivate()
+	leaveSequence()
+}
+
+type slotElementReadOnly interface {
+	getElementID() uint32
+	getNodeID() uint32
+	getType() int
+	getState() int
 }
 
 type slotElement struct {
