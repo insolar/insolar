@@ -31,9 +31,9 @@ type Accessor interface {
 	InRole(pulse core.PulseNumber, role core.StaticRole) ([]insolar.Node, error)
 }
 
-// Setter provides methods for setting active nodes.
-//go:generate minimock -i github.com/insolar/insolar/ledger/storage/node.Setter -o ./ -s _mock.go
-type Setter interface {
+// Modifier provides methods for setting active nodes.
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage/node.Modifier -o ./ -s _mock.go
+type Modifier interface {
 	Set(pulse core.PulseNumber, nodes []insolar.Node) error
 	Delete(pulse core.PulseNumber)
 }
