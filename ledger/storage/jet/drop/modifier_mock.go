@@ -3,7 +3,7 @@ package drop
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "DropModifier" can be found in github.com/insolar/insolar/ledger/storage/jet/drop
+The original interface "Modifier" can be found in github.com/insolar/insolar/ledger/storage/jet/drop
 */
 import (
 	context "context"
@@ -17,91 +17,91 @@ import (
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//DropModifierMock implements github.com/insolar/insolar/ledger/storage/jet/drop.DropModifier
-type DropModifierMock struct {
+//ModifierMock implements github.com/insolar/insolar/ledger/storage/jet/drop.Modifier
+type ModifierMock struct {
 	t minimock.Tester
 
 	SetFunc       func(p context.Context, p1 core.JetID, p2 jet.JetDrop) (r error)
 	SetCounter    uint64
 	SetPreCounter uint64
-	SetMock       mDropModifierMockSet
+	SetMock       mModifierMockSet
 }
 
-//NewDropModifierMock returns a mock for github.com/insolar/insolar/ledger/storage/jet/drop.DropModifier
-func NewDropModifierMock(t minimock.Tester) *DropModifierMock {
-	m := &DropModifierMock{t: t}
+//NewModifierMock returns a mock for github.com/insolar/insolar/ledger/storage/jet/drop.Modifier
+func NewModifierMock(t minimock.Tester) *ModifierMock {
+	m := &ModifierMock{t: t}
 
 	if controller, ok := t.(minimock.MockController); ok {
 		controller.RegisterMocker(m)
 	}
 
-	m.SetMock = mDropModifierMockSet{mock: m}
+	m.SetMock = mModifierMockSet{mock: m}
 
 	return m
 }
 
-type mDropModifierMockSet struct {
-	mock              *DropModifierMock
-	mainExpectation   *DropModifierMockSetExpectation
-	expectationSeries []*DropModifierMockSetExpectation
+type mModifierMockSet struct {
+	mock              *ModifierMock
+	mainExpectation   *ModifierMockSetExpectation
+	expectationSeries []*ModifierMockSetExpectation
 }
 
-type DropModifierMockSetExpectation struct {
-	input  *DropModifierMockSetInput
-	result *DropModifierMockSetResult
+type ModifierMockSetExpectation struct {
+	input  *ModifierMockSetInput
+	result *ModifierMockSetResult
 }
 
-type DropModifierMockSetInput struct {
+type ModifierMockSetInput struct {
 	p  context.Context
 	p1 core.JetID
 	p2 jet.JetDrop
 }
 
-type DropModifierMockSetResult struct {
+type ModifierMockSetResult struct {
 	r error
 }
 
-//Expect specifies that invocation of DropModifier.Set is expected from 1 to Infinity times
-func (m *mDropModifierMockSet) Expect(p context.Context, p1 core.JetID, p2 jet.JetDrop) *mDropModifierMockSet {
+//Expect specifies that invocation of Modifier.Set is expected from 1 to Infinity times
+func (m *mModifierMockSet) Expect(p context.Context, p1 core.JetID, p2 jet.JetDrop) *mModifierMockSet {
 	m.mock.SetFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &DropModifierMockSetExpectation{}
+		m.mainExpectation = &ModifierMockSetExpectation{}
 	}
-	m.mainExpectation.input = &DropModifierMockSetInput{p, p1, p2}
+	m.mainExpectation.input = &ModifierMockSetInput{p, p1, p2}
 	return m
 }
 
-//Return specifies results of invocation of DropModifier.Set
-func (m *mDropModifierMockSet) Return(r error) *DropModifierMock {
+//Return specifies results of invocation of Modifier.Set
+func (m *mModifierMockSet) Return(r error) *ModifierMock {
 	m.mock.SetFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &DropModifierMockSetExpectation{}
+		m.mainExpectation = &ModifierMockSetExpectation{}
 	}
-	m.mainExpectation.result = &DropModifierMockSetResult{r}
+	m.mainExpectation.result = &ModifierMockSetResult{r}
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of DropModifier.Set is expected once
-func (m *mDropModifierMockSet) ExpectOnce(p context.Context, p1 core.JetID, p2 jet.JetDrop) *DropModifierMockSetExpectation {
+//ExpectOnce specifies that invocation of Modifier.Set is expected once
+func (m *mModifierMockSet) ExpectOnce(p context.Context, p1 core.JetID, p2 jet.JetDrop) *ModifierMockSetExpectation {
 	m.mock.SetFunc = nil
 	m.mainExpectation = nil
 
-	expectation := &DropModifierMockSetExpectation{}
-	expectation.input = &DropModifierMockSetInput{p, p1, p2}
+	expectation := &ModifierMockSetExpectation{}
+	expectation.input = &ModifierMockSetInput{p, p1, p2}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
-func (e *DropModifierMockSetExpectation) Return(r error) {
-	e.result = &DropModifierMockSetResult{r}
+func (e *ModifierMockSetExpectation) Return(r error) {
+	e.result = &ModifierMockSetResult{r}
 }
 
-//Set uses given function f as a mock of DropModifier.Set method
-func (m *mDropModifierMockSet) Set(f func(p context.Context, p1 core.JetID, p2 jet.JetDrop) (r error)) *DropModifierMock {
+//Set uses given function f as a mock of Modifier.Set method
+func (m *mModifierMockSet) Set(f func(p context.Context, p1 core.JetID, p2 jet.JetDrop) (r error)) *ModifierMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -109,23 +109,23 @@ func (m *mDropModifierMockSet) Set(f func(p context.Context, p1 core.JetID, p2 j
 	return m.mock
 }
 
-//Set implements github.com/insolar/insolar/ledger/storage/jet/drop.DropModifier interface
-func (m *DropModifierMock) Set(p context.Context, p1 core.JetID, p2 jet.JetDrop) (r error) {
+//Set implements github.com/insolar/insolar/ledger/storage/jet/drop.Modifier interface
+func (m *ModifierMock) Set(p context.Context, p1 core.JetID, p2 jet.JetDrop) (r error) {
 	counter := atomic.AddUint64(&m.SetPreCounter, 1)
 	defer atomic.AddUint64(&m.SetCounter, 1)
 
 	if len(m.SetMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.SetMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to DropModifierMock.Set. %v %v %v", p, p1, p2)
+			m.t.Fatalf("Unexpected call to ModifierMock.Set. %v %v %v", p, p1, p2)
 			return
 		}
 
 		input := m.SetMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, DropModifierMockSetInput{p, p1, p2}, "DropModifier.Set got unexpected parameters")
+		testify_assert.Equal(m.t, *input, ModifierMockSetInput{p, p1, p2}, "Modifier.Set got unexpected parameters")
 
 		result := m.SetMock.expectationSeries[counter-1].result
 		if result == nil {
-			m.t.Fatal("No results are set for the DropModifierMock.Set")
+			m.t.Fatal("No results are set for the ModifierMock.Set")
 			return
 		}
 
@@ -138,12 +138,12 @@ func (m *DropModifierMock) Set(p context.Context, p1 core.JetID, p2 jet.JetDrop)
 
 		input := m.SetMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, DropModifierMockSetInput{p, p1, p2}, "DropModifier.Set got unexpected parameters")
+			testify_assert.Equal(m.t, *input, ModifierMockSetInput{p, p1, p2}, "Modifier.Set got unexpected parameters")
 		}
 
 		result := m.SetMock.mainExpectation.result
 		if result == nil {
-			m.t.Fatal("No results are set for the DropModifierMock.Set")
+			m.t.Fatal("No results are set for the ModifierMock.Set")
 		}
 
 		r = result.r
@@ -152,25 +152,25 @@ func (m *DropModifierMock) Set(p context.Context, p1 core.JetID, p2 jet.JetDrop)
 	}
 
 	if m.SetFunc == nil {
-		m.t.Fatalf("Unexpected call to DropModifierMock.Set. %v %v %v", p, p1, p2)
+		m.t.Fatalf("Unexpected call to ModifierMock.Set. %v %v %v", p, p1, p2)
 		return
 	}
 
 	return m.SetFunc(p, p1, p2)
 }
 
-//SetMinimockCounter returns a count of DropModifierMock.SetFunc invocations
-func (m *DropModifierMock) SetMinimockCounter() uint64 {
+//SetMinimockCounter returns a count of ModifierMock.SetFunc invocations
+func (m *ModifierMock) SetMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.SetCounter)
 }
 
-//SetMinimockPreCounter returns the value of DropModifierMock.Set invocations
-func (m *DropModifierMock) SetMinimockPreCounter() uint64 {
+//SetMinimockPreCounter returns the value of ModifierMock.Set invocations
+func (m *ModifierMock) SetMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.SetPreCounter)
 }
 
 //SetFinished returns true if mock invocations count is ok
-func (m *DropModifierMock) SetFinished() bool {
+func (m *ModifierMock) SetFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.SetMock.expectationSeries) > 0 {
 		return atomic.LoadUint64(&m.SetCounter) == uint64(len(m.SetMock.expectationSeries))
@@ -191,44 +191,44 @@ func (m *DropModifierMock) SetFinished() bool {
 
 //ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
-func (m *DropModifierMock) ValidateCallCounters() {
+func (m *ModifierMock) ValidateCallCounters() {
 
 	if !m.SetFinished() {
-		m.t.Fatal("Expected call to DropModifierMock.Set")
+		m.t.Fatal("Expected call to ModifierMock.Set")
 	}
 
 }
 
 //CheckMocksCalled checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
-func (m *DropModifierMock) CheckMocksCalled() {
+func (m *ModifierMock) CheckMocksCalled() {
 	m.Finish()
 }
 
 //Finish checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
-func (m *DropModifierMock) Finish() {
+func (m *ModifierMock) Finish() {
 	m.MinimockFinish()
 }
 
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
-func (m *DropModifierMock) MinimockFinish() {
+func (m *ModifierMock) MinimockFinish() {
 
 	if !m.SetFinished() {
-		m.t.Fatal("Expected call to DropModifierMock.Set")
+		m.t.Fatal("Expected call to ModifierMock.Set")
 	}
 
 }
 
 //Wait waits for all mocked methods to be called at least once
 //Deprecated: please use MinimockWait or use Wait method of minimock.Controller
-func (m *DropModifierMock) Wait(timeout time.Duration) {
+func (m *ModifierMock) Wait(timeout time.Duration) {
 	m.MinimockWait(timeout)
 }
 
 //MinimockWait waits for all mocked methods to be called at least once
 //this method is called by minimock.Controller
-func (m *DropModifierMock) MinimockWait(timeout time.Duration) {
+func (m *ModifierMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
@@ -242,7 +242,7 @@ func (m *DropModifierMock) MinimockWait(timeout time.Duration) {
 		case <-timeoutCh:
 
 			if !m.SetFinished() {
-				m.t.Error("Expected call to DropModifierMock.Set")
+				m.t.Error("Expected call to ModifierMock.Set")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)
@@ -255,7 +255,7 @@ func (m *DropModifierMock) MinimockWait(timeout time.Duration) {
 
 //AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
-func (m *DropModifierMock) AllMocksCalled() bool {
+func (m *ModifierMock) AllMocksCalled() bool {
 
 	if !m.SetFinished() {
 		return false

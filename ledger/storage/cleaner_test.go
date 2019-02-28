@@ -43,8 +43,8 @@ type cleanerSuite struct {
 	cleaner func()
 
 	objectStorage  storage.ObjectStorage
-	dropModifier   drop.DropModifier
-	dropAccessor   drop.DropAccessor
+	dropModifier   drop.Modifier
+	dropAccessor   drop.Accessor
 	storageCleaner storage.Cleaner
 }
 
@@ -293,7 +293,7 @@ func (c recordCase) Check(ctx context.Context, t *testing.T) {
 
 type dropCase struct {
 	cleanCase
-	dropAccessor drop.DropAccessor
+	dropAccessor drop.Accessor
 }
 
 func (c dropCase) Check(ctx context.Context, t *testing.T) {

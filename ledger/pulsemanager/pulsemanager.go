@@ -74,8 +74,8 @@ type PulseManager struct {
 	DBContext      storage.DBContext      `inject:""`
 	StorageCleaner storage.Cleaner        `inject:""`
 
-	DropModifier drop.DropModifier `inject:""`
-	DropAccessor drop.DropAccessor `inject:""`
+	DropModifier drop.Modifier `inject:""`
+	DropAccessor drop.Accessor `inject:""`
 
 	// TODO: move clients pool to component - @nordicdyno - 18.Dec.2018
 	syncClientsPool *heavyclient.Pool

@@ -3,7 +3,7 @@ package drop
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "DropAccessor" can be found in github.com/insolar/insolar/ledger/storage/jet/drop
+The original interface "Accessor" can be found in github.com/insolar/insolar/ledger/storage/jet/drop
 */
 import (
 	context "context"
@@ -17,92 +17,92 @@ import (
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//DropAccessorMock implements github.com/insolar/insolar/ledger/storage/jet/drop.DropAccessor
-type DropAccessorMock struct {
+//AccessorMock implements github.com/insolar/insolar/ledger/storage/jet/drop.Accessor
+type AccessorMock struct {
 	t minimock.Tester
 
 	ForPulseFunc       func(p context.Context, p1 core.JetID, p2 core.PulseNumber) (r jet.JetDrop, r1 error)
 	ForPulseCounter    uint64
 	ForPulsePreCounter uint64
-	ForPulseMock       mDropAccessorMockForPulse
+	ForPulseMock       mAccessorMockForPulse
 }
 
-//NewDropAccessorMock returns a mock for github.com/insolar/insolar/ledger/storage/jet/drop.DropAccessor
-func NewDropAccessorMock(t minimock.Tester) *DropAccessorMock {
-	m := &DropAccessorMock{t: t}
+//NewAccessorMock returns a mock for github.com/insolar/insolar/ledger/storage/jet/drop.Accessor
+func NewAccessorMock(t minimock.Tester) *AccessorMock {
+	m := &AccessorMock{t: t}
 
 	if controller, ok := t.(minimock.MockController); ok {
 		controller.RegisterMocker(m)
 	}
 
-	m.ForPulseMock = mDropAccessorMockForPulse{mock: m}
+	m.ForPulseMock = mAccessorMockForPulse{mock: m}
 
 	return m
 }
 
-type mDropAccessorMockForPulse struct {
-	mock              *DropAccessorMock
-	mainExpectation   *DropAccessorMockForPulseExpectation
-	expectationSeries []*DropAccessorMockForPulseExpectation
+type mAccessorMockForPulse struct {
+	mock              *AccessorMock
+	mainExpectation   *AccessorMockForPulseExpectation
+	expectationSeries []*AccessorMockForPulseExpectation
 }
 
-type DropAccessorMockForPulseExpectation struct {
-	input  *DropAccessorMockForPulseInput
-	result *DropAccessorMockForPulseResult
+type AccessorMockForPulseExpectation struct {
+	input  *AccessorMockForPulseInput
+	result *AccessorMockForPulseResult
 }
 
-type DropAccessorMockForPulseInput struct {
+type AccessorMockForPulseInput struct {
 	p  context.Context
 	p1 core.JetID
 	p2 core.PulseNumber
 }
 
-type DropAccessorMockForPulseResult struct {
+type AccessorMockForPulseResult struct {
 	r  jet.JetDrop
 	r1 error
 }
 
-//Expect specifies that invocation of DropAccessor.ForPulse is expected from 1 to Infinity times
-func (m *mDropAccessorMockForPulse) Expect(p context.Context, p1 core.JetID, p2 core.PulseNumber) *mDropAccessorMockForPulse {
+//Expect specifies that invocation of Accessor.ForPulse is expected from 1 to Infinity times
+func (m *mAccessorMockForPulse) Expect(p context.Context, p1 core.JetID, p2 core.PulseNumber) *mAccessorMockForPulse {
 	m.mock.ForPulseFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &DropAccessorMockForPulseExpectation{}
+		m.mainExpectation = &AccessorMockForPulseExpectation{}
 	}
-	m.mainExpectation.input = &DropAccessorMockForPulseInput{p, p1, p2}
+	m.mainExpectation.input = &AccessorMockForPulseInput{p, p1, p2}
 	return m
 }
 
-//Return specifies results of invocation of DropAccessor.ForPulse
-func (m *mDropAccessorMockForPulse) Return(r jet.JetDrop, r1 error) *DropAccessorMock {
+//Return specifies results of invocation of Accessor.ForPulse
+func (m *mAccessorMockForPulse) Return(r jet.JetDrop, r1 error) *AccessorMock {
 	m.mock.ForPulseFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &DropAccessorMockForPulseExpectation{}
+		m.mainExpectation = &AccessorMockForPulseExpectation{}
 	}
-	m.mainExpectation.result = &DropAccessorMockForPulseResult{r, r1}
+	m.mainExpectation.result = &AccessorMockForPulseResult{r, r1}
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of DropAccessor.ForPulse is expected once
-func (m *mDropAccessorMockForPulse) ExpectOnce(p context.Context, p1 core.JetID, p2 core.PulseNumber) *DropAccessorMockForPulseExpectation {
+//ExpectOnce specifies that invocation of Accessor.ForPulse is expected once
+func (m *mAccessorMockForPulse) ExpectOnce(p context.Context, p1 core.JetID, p2 core.PulseNumber) *AccessorMockForPulseExpectation {
 	m.mock.ForPulseFunc = nil
 	m.mainExpectation = nil
 
-	expectation := &DropAccessorMockForPulseExpectation{}
-	expectation.input = &DropAccessorMockForPulseInput{p, p1, p2}
+	expectation := &AccessorMockForPulseExpectation{}
+	expectation.input = &AccessorMockForPulseInput{p, p1, p2}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
-func (e *DropAccessorMockForPulseExpectation) Return(r jet.JetDrop, r1 error) {
-	e.result = &DropAccessorMockForPulseResult{r, r1}
+func (e *AccessorMockForPulseExpectation) Return(r jet.JetDrop, r1 error) {
+	e.result = &AccessorMockForPulseResult{r, r1}
 }
 
-//Set uses given function f as a mock of DropAccessor.ForPulse method
-func (m *mDropAccessorMockForPulse) Set(f func(p context.Context, p1 core.JetID, p2 core.PulseNumber) (r jet.JetDrop, r1 error)) *DropAccessorMock {
+//Set uses given function f as a mock of Accessor.ForPulse method
+func (m *mAccessorMockForPulse) Set(f func(p context.Context, p1 core.JetID, p2 core.PulseNumber) (r jet.JetDrop, r1 error)) *AccessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -110,23 +110,23 @@ func (m *mDropAccessorMockForPulse) Set(f func(p context.Context, p1 core.JetID,
 	return m.mock
 }
 
-//ForPulse implements github.com/insolar/insolar/ledger/storage/jet/drop.DropAccessor interface
-func (m *DropAccessorMock) ForPulse(p context.Context, p1 core.JetID, p2 core.PulseNumber) (r jet.JetDrop, r1 error) {
+//ForPulse implements github.com/insolar/insolar/ledger/storage/jet/drop.Accessor interface
+func (m *AccessorMock) ForPulse(p context.Context, p1 core.JetID, p2 core.PulseNumber) (r jet.JetDrop, r1 error) {
 	counter := atomic.AddUint64(&m.ForPulsePreCounter, 1)
 	defer atomic.AddUint64(&m.ForPulseCounter, 1)
 
 	if len(m.ForPulseMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.ForPulseMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to DropAccessorMock.ForPulse. %v %v %v", p, p1, p2)
+			m.t.Fatalf("Unexpected call to AccessorMock.ForPulse. %v %v %v", p, p1, p2)
 			return
 		}
 
 		input := m.ForPulseMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, DropAccessorMockForPulseInput{p, p1, p2}, "DropAccessor.ForPulse got unexpected parameters")
+		testify_assert.Equal(m.t, *input, AccessorMockForPulseInput{p, p1, p2}, "Accessor.ForPulse got unexpected parameters")
 
 		result := m.ForPulseMock.expectationSeries[counter-1].result
 		if result == nil {
-			m.t.Fatal("No results are set for the DropAccessorMock.ForPulse")
+			m.t.Fatal("No results are set for the AccessorMock.ForPulse")
 			return
 		}
 
@@ -140,12 +140,12 @@ func (m *DropAccessorMock) ForPulse(p context.Context, p1 core.JetID, p2 core.Pu
 
 		input := m.ForPulseMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, DropAccessorMockForPulseInput{p, p1, p2}, "DropAccessor.ForPulse got unexpected parameters")
+			testify_assert.Equal(m.t, *input, AccessorMockForPulseInput{p, p1, p2}, "Accessor.ForPulse got unexpected parameters")
 		}
 
 		result := m.ForPulseMock.mainExpectation.result
 		if result == nil {
-			m.t.Fatal("No results are set for the DropAccessorMock.ForPulse")
+			m.t.Fatal("No results are set for the AccessorMock.ForPulse")
 		}
 
 		r = result.r
@@ -155,25 +155,25 @@ func (m *DropAccessorMock) ForPulse(p context.Context, p1 core.JetID, p2 core.Pu
 	}
 
 	if m.ForPulseFunc == nil {
-		m.t.Fatalf("Unexpected call to DropAccessorMock.ForPulse. %v %v %v", p, p1, p2)
+		m.t.Fatalf("Unexpected call to AccessorMock.ForPulse. %v %v %v", p, p1, p2)
 		return
 	}
 
 	return m.ForPulseFunc(p, p1, p2)
 }
 
-//ForPulseMinimockCounter returns a count of DropAccessorMock.ForPulseFunc invocations
-func (m *DropAccessorMock) ForPulseMinimockCounter() uint64 {
+//ForPulseMinimockCounter returns a count of AccessorMock.ForPulseFunc invocations
+func (m *AccessorMock) ForPulseMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.ForPulseCounter)
 }
 
-//ForPulseMinimockPreCounter returns the value of DropAccessorMock.ForPulse invocations
-func (m *DropAccessorMock) ForPulseMinimockPreCounter() uint64 {
+//ForPulseMinimockPreCounter returns the value of AccessorMock.ForPulse invocations
+func (m *AccessorMock) ForPulseMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.ForPulsePreCounter)
 }
 
 //ForPulseFinished returns true if mock invocations count is ok
-func (m *DropAccessorMock) ForPulseFinished() bool {
+func (m *AccessorMock) ForPulseFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.ForPulseMock.expectationSeries) > 0 {
 		return atomic.LoadUint64(&m.ForPulseCounter) == uint64(len(m.ForPulseMock.expectationSeries))
@@ -194,44 +194,44 @@ func (m *DropAccessorMock) ForPulseFinished() bool {
 
 //ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
-func (m *DropAccessorMock) ValidateCallCounters() {
+func (m *AccessorMock) ValidateCallCounters() {
 
 	if !m.ForPulseFinished() {
-		m.t.Fatal("Expected call to DropAccessorMock.ForPulse")
+		m.t.Fatal("Expected call to AccessorMock.ForPulse")
 	}
 
 }
 
 //CheckMocksCalled checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
-func (m *DropAccessorMock) CheckMocksCalled() {
+func (m *AccessorMock) CheckMocksCalled() {
 	m.Finish()
 }
 
 //Finish checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
-func (m *DropAccessorMock) Finish() {
+func (m *AccessorMock) Finish() {
 	m.MinimockFinish()
 }
 
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
-func (m *DropAccessorMock) MinimockFinish() {
+func (m *AccessorMock) MinimockFinish() {
 
 	if !m.ForPulseFinished() {
-		m.t.Fatal("Expected call to DropAccessorMock.ForPulse")
+		m.t.Fatal("Expected call to AccessorMock.ForPulse")
 	}
 
 }
 
 //Wait waits for all mocked methods to be called at least once
 //Deprecated: please use MinimockWait or use Wait method of minimock.Controller
-func (m *DropAccessorMock) Wait(timeout time.Duration) {
+func (m *AccessorMock) Wait(timeout time.Duration) {
 	m.MinimockWait(timeout)
 }
 
 //MinimockWait waits for all mocked methods to be called at least once
 //this method is called by minimock.Controller
-func (m *DropAccessorMock) MinimockWait(timeout time.Duration) {
+func (m *AccessorMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
@@ -245,7 +245,7 @@ func (m *DropAccessorMock) MinimockWait(timeout time.Duration) {
 		case <-timeoutCh:
 
 			if !m.ForPulseFinished() {
-				m.t.Error("Expected call to DropAccessorMock.ForPulse")
+				m.t.Error("Expected call to AccessorMock.ForPulse")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)
@@ -258,7 +258,7 @@ func (m *DropAccessorMock) MinimockWait(timeout time.Duration) {
 
 //AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
-func (m *DropAccessorMock) AllMocksCalled() bool {
+func (m *AccessorMock) AllMocksCalled() bool {
 
 	if !m.ForPulseFinished() {
 		return false

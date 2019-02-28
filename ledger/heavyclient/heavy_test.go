@@ -65,8 +65,8 @@ type heavySuite struct {
 	pulseTracker   storage.PulseTracker
 	replicaStorage storage.ReplicaStorage
 	objectStorage  storage.ObjectStorage
-	dropModifier   drop.DropModifier
-	dropAccessor   drop.DropAccessor
+	dropModifier   drop.Modifier
+	dropAccessor   drop.Accessor
 	storageCleaner storage.Cleaner
 }
 

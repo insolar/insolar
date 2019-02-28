@@ -48,8 +48,8 @@ type replicaIterSuite struct {
 	db      storage.DBContext
 
 	objectStorage storage.ObjectStorage
-	dropModifier  jetdrop.DropModifier
-	dropAccessor  jetdrop.DropAccessor
+	dropModifier  jetdrop.Modifier
+	dropAccessor  jetdrop.Accessor
 }
 
 func NewReplicaIterSuite() *replicaIterSuite {
@@ -356,8 +356,8 @@ func setDrop(
 	ctx context.Context,
 	t *testing.T,
 	db storage.DBContext,
-	dropAccessor jetdrop.DropAccessor,
-	dropModifire jetdrop.DropModifier,
+	dropAccessor jetdrop.Accessor,
+	dropModifire jetdrop.Modifier,
 	jetID core.JetID,
 	pulsenum core.PulseNumber,
 ) {

@@ -55,8 +55,8 @@ type metricSuite struct {
 	nodeStorage   node.Accessor
 	objectStorage storage.ObjectStorage
 	jetStorage    jet.JetStorage
-	dropModifier  drop.DropModifier
-	dropAccessor  drop.DropAccessor
+	dropModifier  drop.Modifier
+	dropAccessor  drop.Accessor
 	genesisState  genesis.GenesisState
 }
 

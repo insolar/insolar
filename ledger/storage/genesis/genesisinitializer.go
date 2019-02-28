@@ -40,7 +40,7 @@ type genesisInitializer struct {
 	JetStorage    jet.JetStorage        `inject:""`
 	ObjectStorage storage.ObjectStorage `inject:""`
 	PulseTracker  storage.PulseTracker  `inject:""`
-	DropModifier  drop.DropModifier     `inject:""`
+	DropModifier  drop.Modifier         `inject:""`
 
 	genesisRef *core.RecordRef
 }

@@ -47,8 +47,8 @@ type storageSuite struct {
 	db      storage.DBContext
 
 	objectStorage storage.ObjectStorage
-	dropModifier  jetdrop.DropModifier
-	dropAccessor  jetdrop.DropAccessor
+	dropModifier  jetdrop.Modifier
+	dropAccessor  jetdrop.Accessor
 	pulseTracker  storage.PulseTracker
 
 	jetID core.RecordID

@@ -78,8 +78,8 @@ func AddRandRecord(
 // AddRandDrop adds random drop.
 func AddRandDrop(
 	ctx context.Context,
-	modifier drop.DropModifier,
-	accessor drop.DropAccessor,
+	modifier drop.Modifier,
+	accessor drop.Accessor,
 	jetID core.RecordID,
 	pulsenum core.PulseNumber,
 ) (*jet.JetDrop, error) {
