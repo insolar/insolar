@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
@@ -42,7 +43,8 @@ type cleanerSuite struct {
 	cleaner func()
 
 	objectStorage  storage.ObjectStorage
-	dropStorage    storage.DropStorage
+	dropModifier   jet.DropModifier
+	dropAccessor   jet.DropAccessor
 	storageCleaner storage.Cleaner
 }
 
@@ -65,7 +67,9 @@ func (s *cleanerSuite) BeforeTest(suiteName, testName string) {
 	s.cleaner = cleaner
 
 	s.objectStorage = storage.NewObjectStorage()
-	s.dropStorage = storage.NewDropStorage(0)
+	dropStorage := jet.NewDropStorageDB()
+	s.dropAccessor = dropStorage
+	s.dropModifier = dropStorage
 	s.storageCleaner = storage.NewCleaner()
 
 	s.cm.Inject(
@@ -73,7 +77,8 @@ func (s *cleanerSuite) BeforeTest(suiteName, testName string) {
 		db,
 		s.objectStorage,
 		s.storageCleaner,
-		s.dropStorage,
+		s.dropAccessor,
+		s.dropModifier,
 	)
 
 	err := s.cm.Init(s.ctx)
@@ -147,7 +152,7 @@ func (s *cleanerSuite) Test_RemoveRecords() {
 				objectStorage: s.objectStorage,
 			})
 
-			_, err = storagetest.AddRandDrop(ctx, s.dropStorage, jetID, pn)
+			_, err = storagetest.AddRandDrop(ctx, s.dropModifier, s.dropAccessor, jetID, pn)
 			require.NoError(t, err)
 			dropCC := cleanCase{
 				rectype:    "drop",
@@ -157,8 +162,8 @@ func (s *cleanerSuite) Test_RemoveRecords() {
 				shouldLeft: shouldLeft,
 			}
 			checks = append(checks, dropCase{
-				cleanCase:   dropCC,
-				dropStorage: s.dropStorage,
+				cleanCase:    dropCC,
+				dropAccessor: s.dropAccessor,
 			})
 		}
 	}
@@ -288,10 +293,10 @@ func (c recordCase) Check(ctx context.Context, t *testing.T) {
 
 type dropCase struct {
 	cleanCase
-	dropStorage storage.DropStorage
+	dropAccessor jet.DropAccessor
 }
 
 func (c dropCase) Check(ctx context.Context, t *testing.T) {
-	_, err := c.dropStorage.GetDrop(ctx, c.jetID, c.pulseNum)
+	_, err := c.dropAccessor.ForPulse(ctx, storage.JetID(c.jetID), c.pulseNum)
 	c.check(t, err)
 }

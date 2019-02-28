@@ -28,6 +28,7 @@ import (
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
@@ -47,7 +48,7 @@ type exporterSuite struct {
 
 	pulseTracker  storage.PulseTracker
 	objectStorage storage.ObjectStorage
-	jetStorage    storage.JetStorage
+	jetStorage    jet.JetStorage
 	pulseStorage  *storage.PulseStorage
 
 	exporter *Exporter
@@ -74,7 +75,7 @@ func (s *exporterSuite) BeforeTest(suiteName, testName string) {
 	s.cleaner = cleaner
 	s.pulseTracker = storage.NewPulseTracker()
 	s.objectStorage = storage.NewObjectStorage()
-	s.jetStorage = storage.NewJetStorage()
+	s.jetStorage = jet.NewJetStorage()
 	s.pulseStorage = storage.NewPulseStorage()
 	s.exporter = NewExporter(configuration.Exporter{ExportLag: 0})
 

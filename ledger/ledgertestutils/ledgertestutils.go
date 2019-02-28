@@ -30,6 +30,7 @@ import (
 	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/genesis"
 	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/nodes"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
@@ -57,13 +58,13 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 	db, dbcancel := storagetest.TmpDB(ctx, t, storagetest.Dir(dir))
 
 	cm := &component.Manager{}
-	gi := storage.NewGenesisInitializer()
+	gi := genesis.NewGenesisInitializer()
 	pt := storage.NewPulseTracker()
 	ps := storage.NewPulseStorage()
-	js := storage.NewJetStorage()
+	js := jet.NewJetStorage()
 	os := storage.NewObjectStorage()
 	ns := nodes.NewStorage()
-	ds := storage.NewDropStorage(10)
+	ds := jet.NewDropStorageDB()
 	rs := storage.NewReplicaStorage()
 	cl := storage.NewCleaner()
 
@@ -107,7 +108,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 	handler.Nodes = ns
 	handler.DBContext = db
 	handler.ObjectStorage = os
-	handler.DropStorage = ds
+	handler.DropModifier = ds
 
 	handler.PlatformCryptographyScheme = pcs
 	handler.JetCoordinator = jc
@@ -159,7 +160,8 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 	pm.ActiveListSwapper = alsMock
 	pm.PulseStorage = ps
 	pm.JetStorage = js
-	pm.DropStorage = ds
+	pm.DropModifier = ds
+	pm.DropAccessor = ds
 	pm.ObjectStorage = os
 	pm.Nodes = ns
 	pm.NodeSetter = ns
@@ -193,7 +195,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 	}
 
 	if closeJets {
-		err := pm.HotDataWaiter.Unlock(ctx, *jet.NewID(0, nil))
+		err := pm.HotDataWaiter.Unlock(ctx, core.RecordID(*storage.NewID(0, nil)))
 		require.NoError(t, err)
 	}
 

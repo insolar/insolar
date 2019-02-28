@@ -23,7 +23,6 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/component"
-	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -109,7 +108,7 @@ which try reads and writes the same key simultaneously
 */
 
 func (s *txnSuite) TestStore_Transaction_LockOnUpdate() {
-	jetID := *jet.NewID(0, nil)
+	jetID := core.RecordID(*storage.NewID(0, nil))
 
 	objid := core.NewRecordID(100500, nil)
 	idxid := core.NewRecordID(0, nil)

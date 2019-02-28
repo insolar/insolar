@@ -72,8 +72,8 @@ type PulseManager struct {
 	DBContext      storage.DBContext      `inject:""`
 	StorageCleaner storage.Cleaner        `inject:""`
 
-	DropSaver   jet.DropModifier `inject:""`
-	DropFetcher jet.DropAccessor `inject:""`
+	DropModifier jet.DropModifier `inject:""`
+	DropAccessor jet.DropAccessor `inject:""`
 
 	// TODO: move clients pool to component - @nordicdyno - 18.Dec.2018
 	syncClientsPool *heavyclient.Pool
@@ -115,7 +115,6 @@ func NewPulseManager(conf configuration.Ledger) *PulseManager {
 		options: pmOptions{
 			enableSync:            pmconf.HeavySyncEnabled,
 			splitThreshold:        pmconf.SplitThreshold,
-			dropHistorySize:       conf.JetSizesHistoryDepth,
 			storeLightPulses:      conf.LightChainLimit,
 			heavySyncMessageLimit: pmconf.HeavySyncMessageLimit,
 			lightChainLimit:       conf.LightChainLimit,
@@ -219,16 +218,16 @@ func (m *PulseManager) createDrop(
 	err error,
 ) {
 	//var prevDrop *jet.JetDrop
-	prevDrop, err := m.DropFetcher.ForPulse(ctx, core.JetID(jetID), prevPulse)
+	prevDrop, err := m.DropAccessor.ForPulse(ctx, storage.JetID(jetID), prevPulse)
 	if err == core.ErrNotFound {
-		prevDrop, err = m.DropFetcher.ForPulse(ctx, jet.Parent(core.JetID(jetID)), prevPulse)
+		prevDrop, err = m.DropAccessor.ForPulse(ctx, storage.JetID(jetID).Parent(), prevPulse)
 		if err == core.ErrNotFound {
 			inslogger.FromContext(ctx).WithFields(map[string]interface{}{
 				"pulse": prevPulse,
 				"jet":   jetID.DebugString(),
 			}).Error("failed to find drop")
 			prevDrop = jet.JetDrop{Pulse: prevPulse}
-			err = m.DropSaver.Set(ctx, core.JetID(jetID), prevDrop)
+			err = m.DropModifier.Set(ctx, storage.JetID(jetID), prevDrop)
 			if err != nil {
 				return nil, nil, nil, errors.Wrap(err, "failed to create empty drop")
 			}
@@ -241,13 +240,13 @@ func (m *PulseManager) createDrop(
 
 	packer := jet.NewPacker(m.PlatformCryptographyScheme.ReferenceHasher(), m.DBContext)
 
-	packedDrop, err := packer.Pack(ctx, core.JetID(jetID), currentPulse, prevDrop.Hash)
+	packedDrop, err := packer.Pack(ctx, storage.JetID(jetID), currentPulse, prevDrop.Hash)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't CreateDrop")
 	}
 	drop = &packedDrop
 
-	err = m.DropSaver.Set(ctx, core.JetID(jetID), packedDrop)
+	err = m.DropModifier.Set(ctx, storage.JetID(jetID), packedDrop)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't SetDrop")
 	}
@@ -598,7 +597,7 @@ func (m *PulseManager) setUnderGilSection(
 		// No active nodes for pulse. It means there was no processing (network start).
 		if len(nodes) == 0 {
 			// Activate zero jet for jet tree and unlock jet waiter.
-			zeroJet := *jet.NewID(0, nil)
+			zeroJet := core.RecordID(*storage.NewID(0, nil))
 			m.JetStorage.UpdateJetTree(ctx, newPulse.PulseNumber, true, core.RecordID(zeroJet))
 			err := m.HotDataWaiter.Unlock(ctx, core.RecordID(zeroJet))
 			if err != nil {
@@ -768,7 +767,7 @@ func (m *PulseManager) restoreGenesisRecentObjects(ctx context.Context) error {
 		return nil
 	}
 
-	jetID := *jet.NewID(0, nil)
+	jetID := core.RecordID(*storage.NewID(0, nil))
 	recent := m.RecentStorageProvider.GetIndexStorage(ctx, core.RecordID(jetID))
 
 	return m.ObjectStorage.IterateIndexIDs(ctx, core.RecordID(jetID), func(id core.RecordID) error {

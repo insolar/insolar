@@ -50,7 +50,7 @@ type fetchResult struct {
 
 type jetTreeUpdater struct {
 	Nodes          nodes.Accessor
-	JetStorage     storage.JetStorage
+	JetStorage     jet.JetStorage
 	MessageBus     core.MessageBus
 	JetCoordinator core.JetCoordinator
 
@@ -60,7 +60,7 @@ type jetTreeUpdater struct {
 
 func newJetTreeUpdater(
 	ans nodes.Accessor,
-	js storage.JetStorage, mb core.MessageBus, jc core.JetCoordinator,
+	js jet.JetStorage, mb core.MessageBus, jc core.JetCoordinator,
 ) *jetTreeUpdater {
 	return &jetTreeUpdater{
 		Nodes:          ans,
@@ -145,7 +145,7 @@ func (jtu *jetTreeUpdater) releaseJet(ctx context.Context, jetID core.RecordID, 
 		if depth == 0 {
 			break
 		}
-		jetID = jet.Parent(jetID)
+		jetID = core.RecordID(storage.JetID(jetID).Parent())
 		depth--
 	}
 }

@@ -55,7 +55,7 @@ type MessageHandler struct {
 	PulseStorage               core.PulseStorage               `inject:""`
 	JetStorage                 jet.JetStorage                  `inject:""`
 
-	jet.DropModifier `inject:""`
+	DropModifier jet.DropModifier `inject:""`
 
 	ObjectStorage storage.ObjectStorage `inject:""`
 	Nodes         nodes.Accessor        `inject:""`

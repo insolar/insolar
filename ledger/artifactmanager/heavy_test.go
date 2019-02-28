@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/nodes"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
@@ -49,8 +50,9 @@ type heavySuite struct {
 	pulseTracker  storage.PulseTracker
 	nodeStorage   nodes.Accessor
 	objectStorage storage.ObjectStorage
-	jetStorage    storage.JetStorage
-	dropStorage   storage.DropStorage
+	jetStorage    jet.JetStorage
+	dropModifier  jet.DropModifier
+	dropAccessor  jet.DropAccessor
 }
 
 func NewHeavySuite() *heavySuite {
@@ -72,11 +74,13 @@ func (s *heavySuite) BeforeTest(suiteName, testName string) {
 	s.cleaner = cleaner
 	s.db = db
 	s.scheme = platformpolicy.NewPlatformCryptographyScheme()
-	s.jetStorage = storage.NewJetStorage()
+	s.jetStorage = jet.NewJetStorage()
 	s.nodeStorage = nodes.NewStorage()
 	s.pulseTracker = storage.NewPulseTracker()
 	s.objectStorage = storage.NewObjectStorage()
-	s.dropStorage = storage.NewDropStorage(10)
+	dropStorage := jet.NewDropStorageDB()
+	s.dropAccessor = dropStorage
+	s.dropModifier = dropStorage
 
 	s.cm.Inject(
 		s.scheme,
@@ -85,7 +89,8 @@ func (s *heavySuite) BeforeTest(suiteName, testName string) {
 		s.nodeStorage,
 		s.pulseTracker,
 		s.objectStorage,
-		s.dropStorage,
+		s.dropAccessor,
+		s.dropModifier,
 	)
 
 	err := s.cm.Init(s.ctx)

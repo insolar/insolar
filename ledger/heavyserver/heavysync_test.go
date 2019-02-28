@@ -24,7 +24,6 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
@@ -233,8 +232,8 @@ func (s *heavysyncSuite) TestHeavy_SyncLockOnPrefix() {
 	var pnum core.PulseNumber
 
 	// different jets with same prefix
-	jetID1 := *jet.NewID(1, []byte{})
-	jetID2 := *jet.NewID(2, []byte{})
+	jetID1 := core.RecordID(*storage.NewID(1, []byte{}))
+	jetID2 := core.RecordID(*storage.NewID(2, []byte{}))
 
 	sync := NewSync(s.db)
 	sync.ReplicaStorage = s.replicaStorage

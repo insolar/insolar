@@ -58,13 +58,14 @@ type heavySuite struct {
 	cleaner func()
 	db      storage.DBContext
 
-	jetStorage     storage.JetStorage
+	jetStorage     jet.JetStorage
 	nodeAccessor   *nodes.AccessorMock
 	nodeSetter     *nodes.SetterMock
 	pulseTracker   storage.PulseTracker
 	replicaStorage storage.ReplicaStorage
 	objectStorage  storage.ObjectStorage
-	dropStorage    storage.DropStorage
+	dropModifier   jet.DropModifier
+	dropAccessor   jet.DropAccessor
 	storageCleaner storage.Cleaner
 }
 
@@ -86,13 +87,16 @@ func (s *heavySuite) BeforeTest(suiteName, testName string) {
 	db, cleaner := storagetest.TmpDB(s.ctx, s.T())
 	s.cleaner = cleaner
 	s.db = db
-	s.jetStorage = storage.NewJetStorage()
+	s.jetStorage = jet.NewJetStorage()
 	s.nodeAccessor = nodes.NewAccessorMock(s.T())
 	s.nodeSetter = nodes.NewSetterMock(s.T())
 	s.pulseTracker = storage.NewPulseTracker()
 	s.replicaStorage = storage.NewReplicaStorage()
 	s.objectStorage = storage.NewObjectStorage()
-	s.dropStorage = storage.NewDropStorage(10)
+	dropStorage := jet.NewDropStorageDB()
+	s.dropAccessor = dropStorage
+	s.dropModifier = dropStorage
+
 	s.storageCleaner = storage.NewCleaner()
 
 	s.cm.Inject(
@@ -104,7 +108,7 @@ func (s *heavySuite) BeforeTest(suiteName, testName string) {
 		s.pulseTracker,
 		s.replicaStorage,
 		s.objectStorage,
-		s.dropStorage,
+		dropStorage,
 		s.storageCleaner,
 	)
 
@@ -139,7 +143,7 @@ func (s *heavySuite) TestPulseManager_SendToHeavyWithRetry() {
 
 func sendToHeavy(s *heavySuite, withretry bool) {
 	// TODO: test should work with any JetID (add new test?) - 14.Dec.2018 @nordicdyno
-	jetID := jet.ZeroJetID
+	jetID := storage.ZeroJetID
 	// Mock N1: LR mock do nothing
 	lrMock := testutils.NewLogicRunnerMock(s.T())
 	lrMock.OnPulseMock.Return(nil)
@@ -267,7 +271,8 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 	pm.ReplicaStorage = s.replicaStorage
 	pm.StorageCleaner = s.storageCleaner
 	pm.ObjectStorage = s.objectStorage
-	pm.DropStorage = s.dropStorage
+	pm.DropAccessor = s.dropAccessor
+	pm.DropModifier = s.dropModifier
 
 	ps := storage.NewPulseStorage()
 	ps.PulseTracker = s.pulseTracker
@@ -300,7 +305,7 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 
 	for i := 0; i < 2; i++ {
 		// fmt.Printf("%v: call addRecords for pulse %v\n", t.Name(), lastpulse)
-		addRecords(s.ctx, s.T(), s.objectStorage, jetID, core.PulseNumber(lastpulse+i))
+		addRecords(s.ctx, s.T(), s.objectStorage, core.RecordID(jetID), core.PulseNumber(lastpulse+i))
 	}
 
 	fmt.Println("Case1: sync after db fill and with new received pulses")
@@ -313,7 +318,7 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 	fmt.Println("Case2: sync during db fill")
 	for i := 0; i < 2; i++ {
 		// fill DB with records, indexes (TODO: add blobs)
-		addRecords(s.ctx, s.T(), s.objectStorage, jetID, core.PulseNumber(lastpulse))
+		addRecords(s.ctx, s.T(), s.objectStorage, core.RecordID(jetID), core.PulseNumber(lastpulse))
 
 		lastpulse++
 		err = setpulse(s.ctx, pm, lastpulse)

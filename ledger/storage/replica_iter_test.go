@@ -48,7 +48,8 @@ type replicaIterSuite struct {
 	db      storage.DBContext
 
 	objectStorage storage.ObjectStorage
-	dropStorage   storage.DropStorage
+	dropModifier  jet.DropModifier
+	dropAccessor  jet.DropAccessor
 }
 
 func NewReplicaIterSuite() *replicaIterSuite {
@@ -71,13 +72,16 @@ func (s *replicaIterSuite) BeforeTest(suiteName, testName string) {
 	s.cleaner = cleaner
 
 	s.objectStorage = storage.NewObjectStorage()
-	s.dropStorage = storage.NewDropStorage(10)
+	dropStorage := jet.NewDropStorageDB()
+	s.dropAccessor = dropStorage
+	s.dropModifier = dropStorage
 
 	s.cm.Inject(
 		platformpolicy.NewPlatformCryptographyScheme(),
 		s.db,
 		s.objectStorage,
-		s.dropStorage,
+		s.dropAccessor,
+		s.dropModifier,
 	)
 
 	err := s.cm.Init(s.ctx)
@@ -118,7 +122,7 @@ func Test_StoreKeyValues(t *testing.T) {
 		defer cleaner()
 
 		os := storage.NewObjectStorage()
-		ds := storage.NewDropStorage(10)
+		ds := jet.NewDropStorageDB()
 
 		cm := &component.Manager{}
 		cm.Inject(
@@ -140,7 +144,7 @@ func Test_StoreKeyValues(t *testing.T) {
 		for n := 0; n < pulsescount; n++ {
 			lastPulse := core.PulseNumber(pulseDelta(n))
 			addRecords(ctx, t, os, jetID, lastPulse)
-			setDrop(ctx, t, ds, jetID, lastPulse)
+			setDrop(ctx, t, db, ds, ds, storage.JetID(jetID), lastPulse)
 		}
 
 		for n := 0; n < pulsescount; n++ {
@@ -186,7 +190,7 @@ func Test_StoreKeyValues(t *testing.T) {
 
 func (s *replicaIterSuite) Test_ReplicaIter_FirstPulse() {
 	// it's easy to test simple case with zero Jet
-	jetID := *jet.NewID(0, nil)
+	jetID := core.RecordID(*storage.NewID(0, nil))
 
 	addRecords(s.ctx, s.T(), s.objectStorage, jetID, core.FirstPulseNumber)
 	replicator := storage.NewReplicaIter(s.ctx, s.db, jetID, core.FirstPulseNumber, core.FirstPulseNumber+1, 100500)
@@ -223,7 +227,7 @@ func Test_ReplicaIter_Base(t *testing.T) {
 	defer cleaner()
 
 	os := storage.NewObjectStorage()
-	ds := storage.NewDropStorage(10)
+	ds := jet.NewDropStorageDB()
 
 	cm := &component.Manager{}
 	cm.Inject(
@@ -245,7 +249,7 @@ func Test_ReplicaIter_Base(t *testing.T) {
 	var lastPulse core.PulseNumber
 	pulsescount := 2
 	// it's easy to test simple case with zero Jet
-	jetID := *jet.NewID(0, nil)
+	jetID := core.RecordID(*storage.NewID(0, nil))
 
 	recsBefore, idxBefore := getallkeys(db.GetBadgerDB())
 	require.Nil(t, recsBefore)
@@ -259,7 +263,7 @@ func Test_ReplicaIter_Base(t *testing.T) {
 		lastPulse = pulseDelta(i)
 
 		addRecords(ctx, t, os, jetID, lastPulse)
-		setDrop(ctx, t, ds, jetID, lastPulse)
+		setDrop(ctx, t, db, ds, ds, storage.JetID(jetID), lastPulse)
 
 		recs, _ := getallkeys(db.GetBadgerDB())
 		recKeys := getdelta(recsBefore, recs)
@@ -351,23 +355,27 @@ func Test_ReplicaIter_Base(t *testing.T) {
 func setDrop(
 	ctx context.Context,
 	t *testing.T,
-	dropStorage storage.DropStorage,
-	jetID core.RecordID,
+	db storage.DBContext,
+	dropAccessor jet.DropAccessor,
+	dropModifire jet.DropModifier,
+	jetID storage.JetID,
 	pulsenum core.PulseNumber,
 ) {
-	prevDrop, err := dropStorage.GetDrop(ctx, jetID, pulsenum-1)
+	prevDrop, err := dropAccessor.ForPulse(ctx, jetID, pulsenum-1)
 	var prevhash []byte
 	if err == nil {
 		prevhash = prevDrop.Hash
 	} else if err != core.ErrNotFound {
 		require.NoError(t, err)
 	}
-	drop, _, dropSize, err := dropStorage.CreateDrop(ctx, jetID, pulsenum, prevhash)
+
+	packer := jet.NewPacker(platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher(), db)
+
+	drop, err := packer.Pack(ctx, jetID, pulsenum, prevhash)
 	if err != nil {
 		require.NoError(t, err)
 	}
-	require.NotEqual(t, 0, dropSize)
-	err = dropStorage.SetDrop(ctx, jetID, drop)
+	err = dropModifire.Set(ctx, jetID, drop)
 	require.NoError(t, err)
 }
 

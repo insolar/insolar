@@ -71,14 +71,14 @@ func (b *builder) Pulse(pn core.PulseNumber) {
 }
 
 func (b *builder) Build() (JetDrop, error) {
-	if b.prevHash == nil {
-		return JetDrop{}, errors.New("prevHash is required")
+	if b.pn == nil {
+		return JetDrop{}, errors.New("pulseNumber is required")
 	}
 	if b.dropSize == nil {
 		return JetDrop{}, errors.New("dropSize is required")
 	}
-	if b.pn == nil {
-		return JetDrop{}, errors.New("pulseNumber is required")
+	if b.prevHash == nil && *b.pn != core.FirstPulseNumber {
+		return JetDrop{}, errors.New("prevHash is required")
 	}
 
 	return JetDrop{

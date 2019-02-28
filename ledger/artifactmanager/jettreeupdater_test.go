@@ -44,7 +44,7 @@ func TestJetTreeUpdater_otherNodesForPulse(t *testing.T) {
 
 	jc := testutils.NewJetCoordinatorMock(mc)
 	ans := nodes.NewAccessorMock(mc)
-	js := storage.NewJetStorageMock(mc)
+	js := jet.NewJetStorageMock(mc)
 	jtu := &jetTreeUpdater{
 		Nodes:          ans,
 		JetStorage:     js,
@@ -128,7 +128,7 @@ func TestJetTreeUpdater_fetchActualJetFromOtherNodes(t *testing.T) {
 
 	jc := testutils.NewJetCoordinatorMock(mc)
 	ans := nodes.NewAccessorMock(mc)
-	js := storage.NewJetStorageMock(mc)
+	js := jet.NewJetStorageMock(mc)
 	mb := testutils.NewMessageBusMock(mc)
 	jtu := &jetTreeUpdater{
 		Nodes:          ans,
@@ -160,7 +160,7 @@ func TestJetTreeUpdater_fetchActualJetFromOtherNodes(t *testing.T) {
 		target := testutils.RandomID()
 
 		mb.SendMock.Return(
-			&reply.Jet{ID: *jet.NewID(0, nil), Actual: false},
+			&reply.Jet{ID: core.RecordID(*storage.NewID(0, nil)), Actual: false},
 			nil,
 		)
 
@@ -172,13 +172,13 @@ func TestJetTreeUpdater_fetchActualJetFromOtherNodes(t *testing.T) {
 		target := testutils.RandomID()
 
 		mb.SendMock.Return(
-			&reply.Jet{ID: *jet.NewID(0, nil), Actual: true},
+			&reply.Jet{ID: core.RecordID(*storage.NewID(0, nil)), Actual: true},
 			nil,
 		)
 
 		jetID, err := jtu.fetchActualJetFromOtherNodes(ctx, target, core.PulseNumber(100))
 		require.NoError(t, err)
-		require.Equal(t, jet.NewID(0, nil), jetID)
+		require.Equal(t, core.RecordID(*storage.NewID(0, nil)), *jetID)
 	})
 
 	// TODO: multiple nodes returned different results
@@ -192,7 +192,7 @@ func TestJetTreeUpdater_fetchJet(t *testing.T) {
 
 	jc := testutils.NewJetCoordinatorMock(mc)
 	ans := nodes.NewAccessorMock(mc)
-	js := storage.NewJetStorageMock(mc)
+	js := jet.NewJetStorageMock(mc)
 	mb := testutils.NewMessageBusMock(mc)
 	jtu := &jetTreeUpdater{
 		Nodes:          ans,
@@ -205,10 +205,11 @@ func TestJetTreeUpdater_fetchJet(t *testing.T) {
 	target := testutils.RandomID()
 
 	t.Run("quick reply, data is up to date", func(t *testing.T) {
-		js.FindJetMock.Return(jet.NewID(0, nil), true)
+		fjmr := core.RecordID(*storage.NewID(0, nil))
+		js.FindJetMock.Return(&fjmr, true)
 		jetID, err := jtu.fetchJet(ctx, target, core.PulseNumber(100))
 		require.NoError(t, err)
-		require.Equal(t, jet.NewID(0, nil), jetID)
+		require.Equal(t, &fjmr, jetID)
 	})
 
 	t.Run("fetch jet from friends", func(t *testing.T) {
@@ -221,20 +222,21 @@ func TestJetTreeUpdater_fetchJet(t *testing.T) {
 			[]insolar.Node{{ID: gen.Reference()}}, nil,
 		)
 		mb.SendMock.Return(
-			&reply.Jet{ID: *jet.NewID(0, nil), Actual: true},
+			&reply.Jet{ID: core.RecordID(*storage.NewID(0, nil)), Actual: true},
 			nil,
 		)
 
-		js.FindJetMock.Return(jet.NewID(0, nil), false)
+		fjm := core.RecordID(*storage.NewID(0, nil))
+		js.FindJetMock.Return(&fjm, false)
 		js.UpdateJetTreeFunc = func(ctx context.Context, pn core.PulseNumber, actual bool, jets ...core.RecordID) {
 			require.Equal(t, core.PulseNumber(100), pn)
 			require.True(t, actual)
-			require.Equal(t, []core.RecordID{*jet.NewID(0, nil)}, jets)
+			require.Equal(t, []core.RecordID{core.RecordID(*storage.NewID(0, nil))}, jets)
 		}
 
 		jetID, err := jtu.fetchJet(ctx, target, core.PulseNumber(100))
 		require.NoError(t, err)
-		require.Equal(t, jet.NewID(0, nil), jetID)
+		require.Equal(t, core.RecordID(*storage.NewID(0, nil)), *jetID)
 	})
 }
 
@@ -245,7 +247,7 @@ func TestJetTreeUpdater_Concurrency(t *testing.T) {
 
 	jc := testutils.NewJetCoordinatorMock(mc)
 	ans := nodes.NewAccessorMock(mc)
-	js := storage.NewJetStorageMock(mc)
+	js := jet.NewJetStorageMock(mc)
 	mb := testutils.NewMessageBusMock(mc)
 	jtu := &jetTreeUpdater{
 		Nodes:          ans,
@@ -263,11 +265,17 @@ func TestJetTreeUpdater_Concurrency(t *testing.T) {
 	ans.InRoleMock.Return(nodes, nil)
 
 	dataMu := sync.Mutex{}
+
+	first := core.RecordID(*storage.NewID(2, []byte{0}))
+	second := core.RecordID(*storage.NewID(2, []byte{0}))
+	third := core.RecordID(*storage.NewID(2, []byte{0}))
+	fourth := core.RecordID(*storage.NewID(2, []byte{0}))
+
 	data := map[byte]*core.RecordID{
-		0:   jet.NewID(2, []byte{0}), // 00
-		128: jet.NewID(2, []byte{0}), // 10
-		64:  jet.NewID(2, []byte{0}), // 01
-		192: jet.NewID(2, []byte{0}), // 11
+		0:   &first,  // 00
+		128: &second, // 10
+		64:  &third,  // 01
+		192: &fourth, // 11
 	}
 
 	mb.SendFunc = func(ctx context.Context, msg core.Message, opt *core.MessageSendOptions) (core.Reply, error) {

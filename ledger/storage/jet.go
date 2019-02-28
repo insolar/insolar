@@ -29,10 +29,10 @@ func (id JetID) Jet() (uint8, []byte) {
 	return id[core.PulseNumberSize], id[core.PulseNumberSize+1:]
 }
 
-func (id *JetID) Parent() JetID {
+func (id JetID) Parent() JetID {
 	depth, prefix := id.Jet()
 	if depth == 0 {
-		return *id
+		return id
 	}
 
 	return *NewID(depth-1, ResetBits(prefix, depth-1))
