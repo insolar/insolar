@@ -22,7 +22,15 @@ import (
 )
 
 var (
-	stateMachineTpl = template.Must(template.New("stateMachineTpl").Parse(`
+	funcMap = template.FuncMap{
+		"inc": func(i int) int {
+			return i + 1
+		},
+		"notNil": func(x interface{}) bool {
+			return x == nil
+		},
+	}
+	stateMachineTpl = template.Must(template.New("stateMachineTpl").Funcs(funcMap).Parse(`
 package {{.Package}}
 
 import (

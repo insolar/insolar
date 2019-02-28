@@ -19,6 +19,7 @@ package sample
 import (
 	"github.com/insolar/insolar/conveyor/generator/common"
 	"log"
+	"github.com/pkg/errors"
 )
 
 // custom types
@@ -76,7 +77,7 @@ func (t *TestStateMachineImplementation) ErrorFirst(input Event, payload *Payloa
 }
 
 func (t *TestStateMachineImplementation) TransitSecondThird(input Event, payload *Payload) (*Payload, common.ElState, error) {
-	return nil, 0, nil
+	return nil, t.StateSecond(), errors.New("Test error")
 }
 
 func (t *TestStateMachineImplementation) MigrateSecond(input Event, payload *Payload) (*Payload, common.ElState, error) {
