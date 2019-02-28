@@ -19,6 +19,7 @@ package conveyor
 import (
 	"fmt"
 
+	"github.com/insolar/insolar/conveyor/interfaces/state_machine"
 	"github.com/insolar/insolar/conveyor/queue"
 	"github.com/insolar/insolar/core"
 	"github.com/pkg/errors"
@@ -64,7 +65,7 @@ type HandlersConfiguration struct {
 }
 
 // TODO: logic will be provided after pulse change mechanism
-func (s *HandlersConfiguration) getMachineConfiguration(smType int) StateMachineType { // nolint: unused
+func (s *HandlersConfiguration) getMachineConfiguration(smType int) state_machine.StateMachineType { // nolint: unused
 	return nil
 }
 
@@ -113,7 +114,7 @@ type Slot struct {
 var SlotStateMachine = slotElement{
 	id:               0,
 	state:            0,
-	stateMachineType: 0,
+	stateMachineType: nil, // TODO: add smth correct
 }
 
 func initElementsBuf() []slotElement {
@@ -178,7 +179,7 @@ func (s *Slot) GetNodeData() interface{} { // nolint: unused
 }
 
 // createElement creates new active element from empty element
-func (s *Slot) createElement(stateMachineType StateMachineType, state uint16, event queue.OutputElement) (*slotElement, error) { // nolint: unused
+func (s *Slot) createElement(stateMachineType state_machine.StateMachineType, state uint16, event queue.OutputElement) (*slotElement, error) { // nolint: unused
 	element := s.popElement(EmptyElement)
 	element.stateMachineType = stateMachineType
 	element.state = state

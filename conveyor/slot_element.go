@@ -16,7 +16,10 @@
 
 package conveyor
 
-import "github.com/insolar/insolar/conveyor/interfaces/slot"
+import (
+	"github.com/insolar/insolar/conveyor/interfaces/slot"
+	"github.com/insolar/insolar/conveyor/interfaces/state_machine"
+)
 
 // ActivationStatus represents status of work for slot element
 type ActivationStatus int
@@ -28,17 +31,6 @@ const (
 	NotActiveElement
 )
 
-type StateMachineType interface {
-	GetTypeID() int
-	GetMigrationHandler(state int) MigrationHandler
-	GetTransitionHandler(state int) TransitHandler
-	GetResponseHandler(state int) AdapterResponseHandler
-	GetNestedHandler(state int) NestedHandler
-
-	GetTransitionErrorHandler(state int) TransitionErrorHandler
-	GetResponseErrorHandler(state int) ResponseErrorHandler
-}
-
 type slotElement struct {
 	id               uint32
 	nodeID           uint32
@@ -46,7 +38,7 @@ type slotElement struct {
 	inputEvent       interface{}
 	payload          interface{} // nolint
 	postponedError   error
-	stateMachineType StateMachineType
+	stateMachineType state_machine.StateMachineType
 	state            uint16
 
 	nextElement      *slotElement
@@ -56,45 +48,6 @@ type slotElement struct {
 // newSlotElement creates new slot element with provided activation status
 func newSlotElement(activationStatus ActivationStatus) *slotElement {
 	return &slotElement{activationStatus: activationStatus}
-}
-
-type MigrationHandler func()
-type TransitHandler func()
-type AdapterResponseHandler func()
-type NestedHandler func()
-type TransitionErrorHandler func()
-type ResponseErrorHandler func()
-
-// GetMigrationHandler implements StateMachineType
-func (se *slotElement) GetMigrationHandler(state int) MigrationHandler {
-	panic("implement me")
-	//return matrix.Matrix.GetHandlers(se.stateMachineType.GetTypeID(), state).Migrate
-}
-
-// GetTransitionHandler implements StateMachineType
-func (se *slotElement) GetTransitionHandler(state int) TransitHandler {
-	panic("implement me")
-	//return matrix.Matrix.GetHandlers(se.stateMachineType.GetTypeID(), state).Transit
-}
-
-// GetResponseHandler implements StateMachineType
-func (se *slotElement) GetResponseHandler(state int) AdapterResponseHandler {
-	panic("implement me")
-}
-
-// GetNestedHandler implements StateMachineType
-func (se *slotElement) GetNestedHandler(state int) NestedHandler {
-	panic("implement me")
-}
-
-// GetTransitionErrorHandler implements StateMachineType
-func (se *slotElement) GetTransitionErrorHandler(state int) TransitionErrorHandler {
-	panic("implement me")
-}
-
-// GetResponseErrorHandler implements StateMachineType
-func (se *slotElement) GetResponseErrorHandler(state int) ResponseErrorHandler {
-	panic("implement me")
 }
 
 // ---- SlotElementRestrictedHelper
