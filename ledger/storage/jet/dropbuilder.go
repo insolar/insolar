@@ -27,6 +27,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// Builder is an helper-interface, that helps to build new jetdrops
 type Builder interface {
 	Append(item Hashable) error
 	Size(size uint64)
@@ -36,6 +37,7 @@ type Builder interface {
 	Build() (JetDrop, error)
 }
 
+// Hashable is a base interface for an item, that can be appended to builder
 type Hashable interface {
 	WriteHashData(w io.Writer) (int, error)
 }
@@ -47,29 +49,35 @@ type builder struct {
 	pn       *core.PulseNumber
 }
 
+// NewBuilder creates a new instance of Builder
 func NewBuilder(hasher core.Hasher) Builder {
 	return &builder{
 		Hasher: hasher,
 	}
 }
 
+// Append appends a new item to builder
 func (b *builder) Append(item Hashable) (err error) {
 	_, err = item.WriteHashData(b.Hasher)
 	return
 }
 
+// Size sets a drop's size
 func (b *builder) Size(size uint64) {
 	b.dropSize = &size
 }
 
+// PrevHash sets a drop's prevHash
 func (b *builder) PrevHash(prevHash []byte) {
 	b.prevHash = prevHash
 }
 
+// Pulse sets a drop's pulse
 func (b *builder) Pulse(pn core.PulseNumber) {
 	b.pn = &pn
 }
 
+// Build builds JetDrop and returns it
 func (b *builder) Build() (JetDrop, error) {
 	if b.pn == nil {
 		return JetDrop{}, errors.New("pulseNumber is required")
@@ -89,10 +97,13 @@ func (b *builder) Build() (JetDrop, error) {
 	}, nil
 }
 
+// Packer is an wrapper interface around process of building jetdrop
+// It's considered that implementation of packer uses Bulder under the hood
 type Packer interface {
 	Pack(ctx context.Context, jetID storage.JetID, pulse core.PulseNumber, prevHash []byte) (JetDrop, error)
 }
 
+// NewPacker creates db-based impl of packer
 func NewPacker(hasher core.Hasher, db storage.DBContext) Packer {
 	return &packer{
 		Builder:   NewBuilder(hasher),
@@ -105,6 +116,7 @@ type packer struct {
 	storage.DBContext
 }
 
+// Pack creates new JetDrop through interactions with db and Builder
 func (p *packer) Pack(ctx context.Context, jetID storage.JetID, pulse core.PulseNumber, prevHash []byte) (JetDrop, error) {
 	p.DBContext.WaitingFlight()
 	_, jetPrefix := jetID.Jet()
