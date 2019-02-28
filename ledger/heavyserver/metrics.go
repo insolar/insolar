@@ -67,6 +67,13 @@ func init() {
 			Aggregation: view.Sum(),
 			TagKeys:     commontags,
 		},
+		&view.View{
+			Name:        statSyncedTimeout.Name(),
+			Description: statSyncedTimeout.Description(),
+			Measure:     statSyncedTimeout,
+			Aggregation: view.Count(),
+			TagKeys:     commontags,
+		},
 	)
 	if err != nil {
 		panic(err)
