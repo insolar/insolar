@@ -64,7 +64,7 @@ type HandlersConfiguration struct {
 }
 
 // TODO: logic will be provided after pulse change mechanism
-func (s *HandlersConfiguration) getMachineConfiguration(smType int) stateMachineTypeT { // nolint: unused
+func (s *HandlersConfiguration) getMachineConfiguration(smType int) StateMachineType { // nolint: unused
 	return nil
 }
 
@@ -157,24 +157,28 @@ func NewSlot(pulseState PulseState, pulseNumber core.PulseNumber) *Slot {
 	}
 }
 
+// GetPulseNumber implements iface SlotDetails
 func (s *Slot) GetPulseNumber() core.PulseNumber { // nolint: unused
 	return s.pulseNumber
 }
 
+// GetPulseData implements iface SlotDetails
 func (s *Slot) GetPulseData() core.Pulse { // nolint: unused
 	return s.pulse
 }
 
+// GetNodeID implements iface SlotDetails
 func (s *Slot) GetNodeID() uint32 { // nolint: unused
 	return s.nodeID
 }
 
+// GetNodeData implements iface SlotDetails
 func (s *Slot) GetNodeData() interface{} { // nolint: unused
 	return s.nodeData
 }
 
 // createElement creates new active element from empty element
-func (s *Slot) createElement(stateMachineType stateMachineTypeI, state uint16, event queue.OutputElement) (*slotElement, error) { // nolint: unused
+func (s *Slot) createElement(stateMachineType StateMachineType, state uint16, event queue.OutputElement) (*slotElement, error) { // nolint: unused
 	element := s.popElement(EmptyElement)
 	element.stateMachineType = stateMachineType
 	element.state = state

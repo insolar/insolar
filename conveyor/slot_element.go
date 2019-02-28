@@ -16,10 +16,7 @@
 
 package conveyor
 
-import (
-	"github.com/insolar/insolar/conveyor/generator/common"
-	"github.com/insolar/insolar/conveyor/generator/matrix"
-)
+import "github.com/insolar/insolar/conveyor/interfaces/slot"
 
 // ActivationStatus represents status of work for slot element
 type ActivationStatus int
@@ -31,45 +28,15 @@ const (
 	NotActiveElement
 )
 
-type stateMachineTypeI interface {
+type StateMachineType interface {
 	GetTypeID() int
-	GetMigrationHandler(state int) common.MigrationHandler
-	GetTransitionHandler(state int) common.TransitHandler
-	GetResponseHandler(state int) common.AdapterResponseHandler
-	GetNestedHandler(state int) common.NestedHandler
+	GetMigrationHandler(state int) MigrationHandler
+	GetTransitionHandler(state int) TransitHandler
+	GetResponseHandler(state int) AdapterResponseHandler
+	GetNestedHandler(state int) NestedHandler
 
-	GetTransitionErrorHandler(state int) common.TransitionErrorHandler
-	GetResponseErrorHandler(state int) common.ResponseErrorHandler
-}
-
-type reactivateMode interface {
-}
-
-type SlotElementHelperI interface {
-	SlotElementRestrictedHelper
-	informParent(payload interface{}) bool
-	deactivateTill(reactivateOn reactivateMode)
-	sendTask(adapterID uint32, taskPayload interface{}, respHandlerID uint32) error
-	// joinSequence( sequenceKey map-key,sequenceOrder uint64 )
-	// isSequenceHead() bool
-}
-
-type SlotElementRestrictedHelper interface {
-	SlotElementReadOnly
-
-	GetParentElementID() uint32
-	GetInputEvent() interface{}
-	GetPayload() interface{}
-
-	Reactivate()
-	LeaveSequence()
-}
-
-type SlotElementReadOnly interface {
-	GetElementID() uint32
-	GetNodeID() uint32
-	GetType() int
-	GetState() int
+	GetTransitionErrorHandler(state int) TransitionErrorHandler
+	GetResponseErrorHandler(state int) ResponseErrorHandler
 }
 
 type slotElement struct {
@@ -79,7 +46,7 @@ type slotElement struct {
 	inputEvent       interface{}
 	payload          interface{} // nolint
 	postponedError   error
-	stateMachineType stateMachineTypeI
+	stateMachineType StateMachineType
 	state            uint16
 
 	nextElement      *slotElement
@@ -91,57 +58,107 @@ func newSlotElement(activationStatus ActivationStatus) *slotElement {
 	return &slotElement{activationStatus: activationStatus}
 }
 
-func (se *slotElement) GetTypeID() int {
-	return se.stateMachineType.GetTypeID()
+type MigrationHandler func()
+type TransitHandler func()
+type AdapterResponseHandler func()
+type NestedHandler func()
+type TransitionErrorHandler func()
+type ResponseErrorHandler func()
+
+// GetMigrationHandler implements StateMachineType
+func (se *slotElement) GetMigrationHandler(state int) MigrationHandler {
+	panic("implement me")
+	//return matrix.Matrix.GetHandlers(se.stateMachineType.GetTypeID(), state).Migrate
 }
 
-func (se *slotElement) GetMigrationHandler(state int) common.MigrationHandler {
-	return matrix.Matrix.GetHandlers(se.stateMachineType.GetTypeID(), state).Migrate
+// GetTransitionHandler implements StateMachineType
+func (se *slotElement) GetTransitionHandler(state int) TransitHandler {
+	panic("implement me")
+	//return matrix.Matrix.GetHandlers(se.stateMachineType.GetTypeID(), state).Transit
 }
 
-func (se *slotElement) GetTransitionHandler(state int) common.TransitHandler {
-	return matrix.Matrix.GetHandlers(se.stateMachineType.GetTypeID(), state).Transit
-}
-
-// TODO: implement me
-func (se *slotElement) GetResponseHandler(state int) common.AdapterResponseHandler {
+// GetResponseHandler implements StateMachineType
+func (se *slotElement) GetResponseHandler(state int) AdapterResponseHandler {
 	panic("implement me")
 }
 
-// TODO: implement me
-func (se *slotElement) GetNestedHandler(state int) common.NestedHandler {
+// GetNestedHandler implements StateMachineType
+func (se *slotElement) GetNestedHandler(state int) NestedHandler {
 	panic("implement me")
 }
 
-// TODO: implement me
-func (se *slotElement) GetTransitionErrorHandler(state int) common.TransitionErrorHandler {
+// GetTransitionErrorHandler implements StateMachineType
+func (se *slotElement) GetTransitionErrorHandler(state int) TransitionErrorHandler {
 	panic("implement me")
 }
 
-// TODO: implement me
-func (se *slotElement) GetResponseErrorHandler(state int) common.ResponseErrorHandler {
+// GetResponseErrorHandler implements StateMachineType
+func (se *slotElement) GetResponseErrorHandler(state int) ResponseErrorHandler {
 	panic("implement me")
 }
 
-// GetParentElementID return parentElementID
+// ---- SlotElementRestrictedHelper
+
+// GetParentElementID implements SlotElementRestrictedHelper
 func (se *slotElement) GetParentElementID() uint32 {
 	return se.parentElementID
 }
 
-// GetInputEvent return inputEvent
+// GetInputEvent implements SlotElementRestrictedHelper
 func (se *slotElement) GetInputEvent() interface{} {
 	return se.inputEvent
 }
 
-// GetPayload return payload
+// GetPayload implements SlotElementRestrictedHelper
 func (se *slotElement) GetPayload() interface{} {
 	return se.payload
 }
 
+// Reactivate implements SlotElementRestrictedHelper
 func (se *slotElement) Reactivate() {
 	panic("implement me")
 }
 
+// LeaveSequence implements SlotElementRestrictedHelper
 func (se *slotElement) LeaveSequence() {
+	panic("implement me")
+}
+
+// ---- SlotElementReadOnly
+
+// LeaveSequence implements SlotElementReadOnly
+func (se *slotElement) GetElementID() uint32 {
+	return se.id
+}
+
+// GetNodeID implements SlotElementReadOnly
+func (se *slotElement) GetNodeID() uint32 {
+	return se.nodeID
+}
+
+// GetType implements SlotElementReadOnly
+func (se *slotElement) GetType() int {
+	return se.stateMachineType.GetTypeID()
+}
+
+// GetState implements SlotElementReadOnly
+func (se *slotElement) GetState() uint16 {
+	return se.state
+}
+
+// ---- SlotElementHelper
+
+// InformParent implements SlotElementHelper
+func (se *slotElement) InformParent(payload interface{}) bool {
+	panic("implement me")
+}
+
+// DeactivateTill implements SlotElementHelper
+func (se *slotElement) DeactivateTill(reactivateOn slot.ReactivateMode) {
+	panic("implement me")
+}
+
+// SendTask implements SlotElementHelper
+func (se *slotElement) SendTask(adapterID uint32, taskPayload interface{}, respHandlerID uint32) error {
 	panic("implement me")
 }
