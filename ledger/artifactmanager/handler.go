@@ -23,7 +23,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/core/delegationtoken"
-	"github.com/insolar/insolar/ledger/storage/nodes"
+	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/tag"
@@ -58,7 +58,7 @@ type MessageHandler struct {
 	DropModifier jet.DropModifier `inject:""`
 
 	ObjectStorage storage.ObjectStorage `inject:""`
-	Nodes         nodes.Accessor        `inject:""`
+	Nodes         node.Accessor        `inject:""`
 	PulseTracker  storage.PulseTracker  `inject:""`
 	DBContext     storage.DBContext     `inject:""`
 	HotDataWaiter HotDataWaiter         `inject:""`
@@ -265,10 +265,6 @@ func (h *MessageHandler) setHandlersForHeavy(m *middleware) {
 	h.Bus.MustRegister(core.TypeHeavyStartStop,
 		BuildMiddleware(h.handleHeavyStartStop,
 			instrumentHandler("handleHeavyStartStop")))
-
-	h.Bus.MustRegister(core.TypeHeavyReset,
-		BuildMiddleware(h.handleHeavyReset,
-			instrumentHandler("handleHeavyReset")))
 
 	h.Bus.MustRegister(core.TypeHeavyPayload,
 		BuildMiddleware(h.handleHeavyPayload,

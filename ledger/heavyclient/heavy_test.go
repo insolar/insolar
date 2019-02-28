@@ -39,7 +39,7 @@ import (
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/index"
 	"github.com/insolar/insolar/ledger/storage/jet"
-	"github.com/insolar/insolar/ledger/storage/nodes"
+	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
@@ -59,8 +59,8 @@ type heavySuite struct {
 	db      storage.DBContext
 
 	jetStorage     jet.JetStorage
-	nodeAccessor   *nodes.AccessorMock
-	nodeSetter     *nodes.SetterMock
+	nodeAccessor   *node.AccessorMock
+	nodeSetter     *node.ModifierMock
 	pulseTracker   storage.PulseTracker
 	replicaStorage storage.ReplicaStorage
 	objectStorage  storage.ObjectStorage
@@ -88,8 +88,8 @@ func (s *heavySuite) BeforeTest(suiteName, testName string) {
 	s.cleaner = cleaner
 	s.db = db
 	s.jetStorage = jet.NewJetStorage()
-	s.nodeAccessor = nodes.NewAccessorMock(s.T())
-	s.nodeSetter = nodes.NewSetterMock(s.T())
+	s.nodeAccessor = node.NewAccessorMock(s.T())
+	s.nodeSetter = node.NewModifierMock(s.T())
 	s.pulseTracker = storage.NewPulseTracker()
 	s.replicaStorage = storage.NewReplicaStorage()
 	s.objectStorage = storage.NewObjectStorage()
