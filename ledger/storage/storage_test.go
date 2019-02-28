@@ -170,7 +170,7 @@ func (s *storageSuite) TestDB_SetObjectIndex_SaveLastUpdate() {
 func (s *storageSuite) TestDB_GetDrop_ReturnsNotFoundIfNoDrop() {
 	drop, err := s.dropAccessor.ForPulse(s.ctx, core.JetID(testutils.RandomJet()), 1)
 	assert.Equal(s.T(), err, core.ErrNotFound)
-	assert.Equal(s.T(), jet.JetDrop{}, drop)
+	assert.Equal(s.T(), jet.Drop{}, drop)
 }
 
 func (s *storageSuite) TestDB_CreateDrop() {
@@ -213,7 +213,7 @@ func (s *storageSuite) TestDB_CreateDrop() {
 }
 
 func (s *storageSuite) TestDB_SetDrop() {
-	drop42 := jet.JetDrop{
+	drop42 := jet.Drop{
 		Pulse: 42,
 		Hash:  []byte{0xFF},
 	}

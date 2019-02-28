@@ -21,7 +21,7 @@ import (
 type PackerMock struct {
 	t minimock.Tester
 
-	PackFunc       func(p context.Context, p1 core.JetID, p2 core.PulseNumber, p3 []byte) (r jet.JetDrop, r1 error)
+	PackFunc       func(p context.Context, p1 core.JetID, p2 core.PulseNumber, p3 []byte) (r jet.Drop, r1 error)
 	PackCounter    uint64
 	PackPreCounter uint64
 	PackMock       mPackerMockPack
@@ -59,7 +59,7 @@ type PackerMockPackInput struct {
 }
 
 type PackerMockPackResult struct {
-	r  jet.JetDrop
+	r  jet.Drop
 	r1 error
 }
 
@@ -76,7 +76,7 @@ func (m *mPackerMockPack) Expect(p context.Context, p1 core.JetID, p2 core.Pulse
 }
 
 //Return specifies results of invocation of Packer.Pack
-func (m *mPackerMockPack) Return(r jet.JetDrop, r1 error) *PackerMock {
+func (m *mPackerMockPack) Return(r jet.Drop, r1 error) *PackerMock {
 	m.mock.PackFunc = nil
 	m.expectationSeries = nil
 
@@ -98,12 +98,12 @@ func (m *mPackerMockPack) ExpectOnce(p context.Context, p1 core.JetID, p2 core.P
 	return expectation
 }
 
-func (e *PackerMockPackExpectation) Return(r jet.JetDrop, r1 error) {
+func (e *PackerMockPackExpectation) Return(r jet.Drop, r1 error) {
 	e.result = &PackerMockPackResult{r, r1}
 }
 
 //Set uses given function f as a mock of Packer.Pack method
-func (m *mPackerMockPack) Set(f func(p context.Context, p1 core.JetID, p2 core.PulseNumber, p3 []byte) (r jet.JetDrop, r1 error)) *PackerMock {
+func (m *mPackerMockPack) Set(f func(p context.Context, p1 core.JetID, p2 core.PulseNumber, p3 []byte) (r jet.Drop, r1 error)) *PackerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -112,7 +112,7 @@ func (m *mPackerMockPack) Set(f func(p context.Context, p1 core.JetID, p2 core.P
 }
 
 //Pack implements github.com/insolar/insolar/ledger/storage/jet/drop.Packer interface
-func (m *PackerMock) Pack(p context.Context, p1 core.JetID, p2 core.PulseNumber, p3 []byte) (r jet.JetDrop, r1 error) {
+func (m *PackerMock) Pack(p context.Context, p1 core.JetID, p2 core.PulseNumber, p3 []byte) (r jet.Drop, r1 error) {
 	counter := atomic.AddUint64(&m.PackPreCounter, 1)
 	defer atomic.AddUint64(&m.PackCounter, 1)
 

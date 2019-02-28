@@ -214,12 +214,12 @@ func (m *PulseManager) createDrop(
 	jetID core.RecordID,
 	prevPulse, currentPulse core.PulseNumber,
 ) (
-	drop *jet.JetDrop,
+	drop *jet.Drop,
 	dropSerialized []byte,
 	messages [][]byte,
 	err error,
 ) {
-	//var prevDrop *jet.JetDrop
+	//var prevDrop *jet.Drop
 	prevDrop, err := m.DropAccessor.ForPulse(ctx, core.JetID(jetID), prevPulse)
 	if err == core.ErrNotFound {
 		prevDrop, err = m.DropAccessor.ForPulse(ctx, core.JetID(jetID).Parent(), prevPulse)
@@ -228,7 +228,7 @@ func (m *PulseManager) createDrop(
 				"pulse": prevPulse,
 				"jet":   jetID.DebugString(),
 			}).Error("failed to find drop")
-			prevDrop = jet.JetDrop{Pulse: prevPulse}
+			prevDrop = jet.Drop{Pulse: prevPulse}
 			err = m.DropModifier.Set(ctx, core.JetID(jetID), prevDrop)
 			if err != nil {
 				return nil, nil, nil, errors.Wrap(err, "failed to create empty drop")
@@ -265,7 +265,7 @@ func (m *PulseManager) getExecutorHotData(
 	ctx context.Context,
 	jetID core.RecordID,
 	pulse core.PulseNumber,
-	drop *jet.JetDrop,
+	drop *jet.Drop,
 	dropSerialized []byte,
 ) (*message.HotData, error) {
 	ctx, span := instracer.StartSpan(ctx, "pulse.prepare_hot_data")

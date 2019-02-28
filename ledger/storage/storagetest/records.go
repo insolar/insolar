@@ -82,11 +82,11 @@ func AddRandDrop(
 	accessor drop.Accessor,
 	jetID core.RecordID,
 	pulsenum core.PulseNumber,
-) (*jet.JetDrop, error) {
+) (*jet.Drop, error) {
 
 	hash1 := testutils.RandomID()
 	hash2 := testutils.RandomID()
-	drop := jet.JetDrop{
+	drop := jet.Drop{
 		Pulse:    pulsenum,
 		PrevHash: hash1[:],
 		Hash:     hash2[:],

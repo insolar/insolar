@@ -20,9 +20,9 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
-// JetDrop is a blockchain block.
+// Drop is a blockchain block.
 // It contains hashes of the current block and the previous one.
-type JetDrop struct { //nolint: golint
+type Drop struct {//nolint: golint
 	// Pulse number (probably we should save it too).
 	Pulse core.PulseNumber
 

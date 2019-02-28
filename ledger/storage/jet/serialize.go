@@ -23,7 +23,7 @@ import (
 )
 
 // Encode serializes jet drop.
-func Encode(drop *JetDrop) ([]byte, error) {
+func Encode(drop *Drop) ([]byte, error) {
 	var buf bytes.Buffer
 	enc := codec.NewEncoder(&buf, &codec.CborHandle{})
 	err := enc.Encode(drop)
@@ -34,9 +34,9 @@ func Encode(drop *JetDrop) ([]byte, error) {
 }
 
 // Decode deserializes jet drop.
-func Decode(buf []byte) (*JetDrop, error) {
+func Decode(buf []byte) (*Drop, error) {
 	dec := codec.NewDecoder(bytes.NewReader(buf), &codec.CborHandle{})
-	var drop JetDrop
+	var drop Drop
 	err := dec.Decode(&drop)
 	if err != nil {
 		return nil, err

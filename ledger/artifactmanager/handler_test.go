@@ -985,7 +985,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 			*secondID: {},
 			*thirdID:  {Active: true},
 		},
-		Drop:    jet.JetDrop{Pulse: core.FirstPulseNumber, Hash: []byte{88}},
+		Drop:    jet.Drop{Pulse: core.FirstPulseNumber, Hash: []byte{88}},
 		DropJet: jetID,
 	}
 
@@ -1036,7 +1036,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 
 	savedDrop, err := s.dropAccessor.ForPulse(s.ctx, core.JetID(jetID), core.FirstPulseNumber)
 	require.NoError(s.T(), err)
-	require.Equal(s.T(), jet.JetDrop{Pulse: core.FirstPulseNumber, Hash: []byte{88}}, savedDrop)
+	require.Equal(s.T(), jet.Drop{Pulse: core.FirstPulseNumber, Hash: []byte{88}}, savedDrop)
 
 	indexMock.MinimockFinish()
 	pendingMock.MinimockFinish()

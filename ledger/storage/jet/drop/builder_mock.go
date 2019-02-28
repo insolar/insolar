@@ -25,7 +25,7 @@ type BuilderMock struct {
 	AppendPreCounter uint64
 	AppendMock       mBuilderMockAppend
 
-	BuildFunc       func() (r jet.JetDrop, r1 error)
+	BuildFunc       func() (r jet.Drop, r1 error)
 	BuildCounter    uint64
 	BuildPreCounter uint64
 	BuildMock       mBuilderMockBuild
@@ -221,7 +221,7 @@ type BuilderMockBuildExpectation struct {
 }
 
 type BuilderMockBuildResult struct {
-	r  jet.JetDrop
+	r  jet.Drop
 	r1 error
 }
 
@@ -238,7 +238,7 @@ func (m *mBuilderMockBuild) Expect() *mBuilderMockBuild {
 }
 
 //Return specifies results of invocation of Builder.Build
-func (m *mBuilderMockBuild) Return(r jet.JetDrop, r1 error) *BuilderMock {
+func (m *mBuilderMockBuild) Return(r jet.Drop, r1 error) *BuilderMock {
 	m.mock.BuildFunc = nil
 	m.expectationSeries = nil
 
@@ -260,12 +260,12 @@ func (m *mBuilderMockBuild) ExpectOnce() *BuilderMockBuildExpectation {
 	return expectation
 }
 
-func (e *BuilderMockBuildExpectation) Return(r jet.JetDrop, r1 error) {
+func (e *BuilderMockBuildExpectation) Return(r jet.Drop, r1 error) {
 	e.result = &BuilderMockBuildResult{r, r1}
 }
 
 //Set uses given function f as a mock of Builder.Build method
-func (m *mBuilderMockBuild) Set(f func() (r jet.JetDrop, r1 error)) *BuilderMock {
+func (m *mBuilderMockBuild) Set(f func() (r jet.Drop, r1 error)) *BuilderMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -274,7 +274,7 @@ func (m *mBuilderMockBuild) Set(f func() (r jet.JetDrop, r1 error)) *BuilderMock
 }
 
 //Build implements github.com/insolar/insolar/ledger/storage/jet/drop.Builder interface
-func (m *BuilderMock) Build() (r jet.JetDrop, r1 error) {
+func (m *BuilderMock) Build() (r jet.Drop, r1 error) {
 	counter := atomic.AddUint64(&m.BuildPreCounter, 1)
 	defer atomic.AddUint64(&m.BuildCounter, 1)
 

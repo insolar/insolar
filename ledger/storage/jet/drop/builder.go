@@ -36,7 +36,7 @@ type Builder interface {
 	PrevHash(prevHash []byte)
 	Pulse(pn core.PulseNumber)
 
-	Build() (jet.JetDrop, error)
+	Build() (jet.Drop, error)
 }
 
 // Hashable is a base interface for an item, that can be appended to builder
@@ -79,19 +79,19 @@ func (b *builder) Pulse(pn core.PulseNumber) {
 	b.pn = &pn
 }
 
-// Build builds JetDrop and returns it
-func (b *builder) Build() (jet.JetDrop, error) {
+// Build builds Drop and returns it
+func (b *builder) Build() (jet.Drop, error) {
 	if b.pn == nil {
-		return jet.JetDrop{}, errors.New("pulseNumber is required")
+		return jet.Drop{}, errors.New("pulseNumber is required")
 	}
 	if b.dropSize == nil {
-		return jet.JetDrop{}, errors.New("dropSize is required")
+		return jet.Drop{}, errors.New("dropSize is required")
 	}
 	if b.prevHash == nil && *b.pn != core.FirstPulseNumber {
-		return jet.JetDrop{}, errors.New("prevHash is required")
+		return jet.Drop{}, errors.New("prevHash is required")
 	}
 
-	return jet.JetDrop{
+	return jet.Drop{
 		Pulse:    *b.pn,
 		PrevHash: b.prevHash,
 		Hash:     b.Hasher.Sum(nil),
@@ -103,7 +103,7 @@ func (b *builder) Build() (jet.JetDrop, error) {
 // It's considered that implementation of packer uses Bulder under the hood
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage/jet/drop.Packer -o ./ -s _mock.go
 type Packer interface {
-	Pack(ctx context.Context, jetID core.JetID, pulse core.PulseNumber, prevHash []byte) (jet.JetDrop, error)
+	Pack(ctx context.Context, jetID core.JetID, pulse core.PulseNumber, prevHash []byte) (jet.Drop, error)
 }
 
 // NewPacker creates db-based impl of packer
@@ -119,8 +119,8 @@ type packer struct {
 	storage.DBContext
 }
 
-// Pack creates new JetDrop through interactions with db and Builder
-func (p *packer) Pack(ctx context.Context, jetID core.JetID, pulse core.PulseNumber, prevHash []byte) (jet.JetDrop, error) {
+// Pack creates new Drop through interactions with db and Builder
+func (p *packer) Pack(ctx context.Context, jetID core.JetID, pulse core.PulseNumber, prevHash []byte) (jet.Drop, error) {
 	p.DBContext.WaitingFlight()
 	_, jetPrefix := jetID.Jet()
 
@@ -146,7 +146,7 @@ func (p *packer) Pack(ctx context.Context, jetID core.JetID, pulse core.PulseNum
 		return nil
 	})
 	if err != nil {
-		return jet.JetDrop{}, err
+		return jet.Drop{}, err
 	}
 
 	p.Pulse(pulse)

@@ -28,21 +28,21 @@ import (
 // Modifier provides interface for modifying jetdrops
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage/jet/drop.Modifier -o ./ -s _mock.go
 type Modifier interface {
-	Set(ctx context.Context, jetID core.JetID, drop jet.JetDrop) error
+	Set(ctx context.Context, jetID core.JetID, drop jet.Drop) error
 }
 
 // Accessor provides interface for accessing jetdrops
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage/jet/drop.Accessor -o ./ -s _mock.go
 type Accessor interface {
-	ForPulse(ctx context.Context, jetID core.JetID, pulse core.PulseNumber) (jet.JetDrop, error)
+	ForPulse(ctx context.Context, jetID core.JetID, pulse core.PulseNumber) (jet.Drop, error)
 }
 
 type dropForPulseManager struct {
 	lock  sync.RWMutex
-	drops map[core.PulseNumber]jet.JetDrop
+	drops map[core.PulseNumber]jet.Drop
 }
 
-func (m *dropForPulseManager) set(drop jet.JetDrop, pulse core.PulseNumber) error {
+func (m *dropForPulseManager) set(drop jet.Drop, pulse core.PulseNumber) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
@@ -55,13 +55,13 @@ func (m *dropForPulseManager) set(drop jet.JetDrop, pulse core.PulseNumber) erro
 	return nil
 }
 
-func (m *dropForPulseManager) forPulse(jetID core.JetID, pulse core.PulseNumber) (jet.JetDrop, error) {
+func (m *dropForPulseManager) forPulse(jetID core.JetID, pulse core.PulseNumber) (jet.Drop, error) {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 
 	drop, ok := m.drops[pulse]
 	if !ok {
-		return jet.JetDrop{}, core.ErrNotFound
+		return jet.Drop{}, core.ErrNotFound
 	}
 
 	return drop, nil
@@ -90,12 +90,12 @@ func (m *dropStorageMemory) fetchStorage(jetID core.JetID) (ds *dropForPulseMana
 	return
 }
 
-func (m *dropStorageMemory) ForPulse(ctx context.Context, jetID core.JetID, pulse core.PulseNumber) (jet.JetDrop, error) {
+func (m *dropStorageMemory) ForPulse(ctx context.Context, jetID core.JetID, pulse core.PulseNumber) (jet.Drop, error) {
 	ds := m.fetchStorage(jetID)
 	return ds.forPulse(jetID, pulse)
 }
 
-func (m *dropStorageMemory) Set(ctx context.Context, jetID core.JetID, drop jet.JetDrop) error {
+func (m *dropStorageMemory) Set(ctx context.Context, jetID core.JetID, drop jet.Drop) error {
 	ds := m.fetchStorage(jetID)
 	return ds.set(drop, drop.Pulse)
 }
@@ -108,23 +108,23 @@ func NewDropStorageDB() *dropStorageDB {
 	return &dropStorageDB{}
 }
 
-func (ds *dropStorageDB) ForPulse(ctx context.Context, jetID core.JetID, pulse core.PulseNumber) (jet.JetDrop, error) {
+func (ds *dropStorageDB) ForPulse(ctx context.Context, jetID core.JetID, pulse core.PulseNumber) (jet.Drop, error) {
 	_, prefix := jetID.Jet()
 	k := storage.JetDropPrefixKey(prefix, pulse)
 
 	// buf, err := db.get(ctx, k)
 	buf, err := ds.DB.Get(ctx, k)
 	if err != nil {
-		return jet.JetDrop{}, err
+		return jet.Drop{}, err
 	}
 	drop, err := jet.Decode(buf)
 	if err != nil {
-		return jet.JetDrop{}, err
+		return jet.Drop{}, err
 	}
 	return *drop, nil
 }
 
-func (ds *dropStorageDB) Set(ctx context.Context, jetID core.JetID, drop jet.JetDrop) error {
+func (ds *dropStorageDB) Set(ctx context.Context, jetID core.JetID, drop jet.Drop) error {
 	_, prefix := jetID.Jet()
 	k := storage.JetDropPrefixKey(prefix, drop.Pulse)
 	_, err := ds.DB.Get(ctx, k)

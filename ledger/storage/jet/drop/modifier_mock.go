@@ -21,7 +21,7 @@ import (
 type ModifierMock struct {
 	t minimock.Tester
 
-	SetFunc       func(p context.Context, p1 core.JetID, p2 jet.JetDrop) (r error)
+	SetFunc       func(p context.Context, p1 core.JetID, p2 jet.Drop) (r error)
 	SetCounter    uint64
 	SetPreCounter uint64
 	SetMock       mModifierMockSet
@@ -54,7 +54,7 @@ type ModifierMockSetExpectation struct {
 type ModifierMockSetInput struct {
 	p  context.Context
 	p1 core.JetID
-	p2 jet.JetDrop
+	p2 jet.Drop
 }
 
 type ModifierMockSetResult struct {
@@ -62,7 +62,7 @@ type ModifierMockSetResult struct {
 }
 
 //Expect specifies that invocation of Modifier.Set is expected from 1 to Infinity times
-func (m *mModifierMockSet) Expect(p context.Context, p1 core.JetID, p2 jet.JetDrop) *mModifierMockSet {
+func (m *mModifierMockSet) Expect(p context.Context, p1 core.JetID, p2 jet.Drop) *mModifierMockSet {
 	m.mock.SetFunc = nil
 	m.expectationSeries = nil
 
@@ -86,7 +86,7 @@ func (m *mModifierMockSet) Return(r error) *ModifierMock {
 }
 
 //ExpectOnce specifies that invocation of Modifier.Set is expected once
-func (m *mModifierMockSet) ExpectOnce(p context.Context, p1 core.JetID, p2 jet.JetDrop) *ModifierMockSetExpectation {
+func (m *mModifierMockSet) ExpectOnce(p context.Context, p1 core.JetID, p2 jet.Drop) *ModifierMockSetExpectation {
 	m.mock.SetFunc = nil
 	m.mainExpectation = nil
 
@@ -101,7 +101,7 @@ func (e *ModifierMockSetExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of Modifier.Set method
-func (m *mModifierMockSet) Set(f func(p context.Context, p1 core.JetID, p2 jet.JetDrop) (r error)) *ModifierMock {
+func (m *mModifierMockSet) Set(f func(p context.Context, p1 core.JetID, p2 jet.Drop) (r error)) *ModifierMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -110,7 +110,7 @@ func (m *mModifierMockSet) Set(f func(p context.Context, p1 core.JetID, p2 jet.J
 }
 
 //Set implements github.com/insolar/insolar/ledger/storage/jet/drop.Modifier interface
-func (m *ModifierMock) Set(p context.Context, p1 core.JetID, p2 jet.JetDrop) (r error) {
+func (m *ModifierMock) Set(p context.Context, p1 core.JetID, p2 jet.Drop) (r error) {
 	counter := atomic.AddUint64(&m.SetPreCounter, 1)
 	defer atomic.AddUint64(&m.SetCounter, 1)
 
