@@ -41,9 +41,12 @@ import (
 
 {{range $i, $machine := .StateMachines}}type SMFID{{$machine.Name}} struct {
 }
+func (*SMFID{{$machine.Name}}) TID() common.ElType {
+    return {{$i}}
+}
 {{range $i, $state := .States}}
 func (*SMFID{{$machine.Name}}) {{$state.Name}}() common.ElState {
-    return {{$i}}
+    return {{inc $i}}
 }{{end}}
 
 type SMRH{{$machine.Name}} struct {
@@ -55,7 +58,10 @@ func SMRH{{$machine.Name}}Export() common.StateMachine {
         cleanHandlers: &{{$machine.Name}}Implementation{},
     }
     var x []common.State
-    x = append(x,{{range $i, $state := .States}}
+    x = append(x, common.State{
+	        Transit: m.Init,
+	        Error: m.{{$machine.InitError.Name}},
+        }, {{range $i, $state := .States}}
         common.State{
 	        Transit: m.{{$state.Transit.Name}},
 	        Migrate: m.{{$state.Migrate.Name}},
@@ -63,7 +69,7 @@ func SMRH{{$machine.Name}}Export() common.StateMachine {
         },
     {{end}})
     return common.StateMachine{
-        InitHandler: m.Init,
+        Id: int(m.cleanHandlers.({{$machine.Name}}).TID()),
         States: x,
     }
 }
@@ -78,6 +84,14 @@ func (s *SMRH{{$machine.Name}}) Init(element slot.SlotElementHelper) (interface{
         return payload, state.ToInt(), err
     }
     return payload, state.ToInt(), err
+}
+func (s *SMRH{{$machine.Name}}) {{$machine.InitError.Name}}(element slot.SlotElementHelper, err error) (interface{}, uint32) {
+    aInput, ok := element.GetInputEvent().({{$machine.Init.EventType}})
+    if !ok {
+        return nil, 0
+    }
+    payload, state := s.cleanHandlers.{{$machine.InitError.Name}}(aInput, err)
+    return payload, state.ToInt()
 }
 {{range $i, $state := $machine.States}}
 func (s *SMRH{{$machine.Name}}) {{$state.Transit.Name}}(element slot.SlotElementHelper) (interface{}, uint32, error) {

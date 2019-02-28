@@ -95,6 +95,7 @@ func (p *Parser) parseStateMachineInterface(machine *stateMachine, source *ast.I
 			Results: remap(p.sourceCode, methodType.Results),
 		}
 		switch {
+		case currentHandler.Name == "TID":
 		case currentHandler.Name == "Init":
 			p.parseInit(machine, currentHandler)
 		case strings.HasPrefix(currentHandler.Name, "State"):
@@ -103,10 +104,12 @@ func (p *Parser) parseStateMachineInterface(machine *stateMachine, source *ast.I
 			p.parseTransit(machine, currentHandler)
 		case strings.HasPrefix(currentHandler.Name, "Migrate"):
 			p.parseMigrate(machine, currentHandler)
+		case strings.HasPrefix(currentHandler.Name, "Error") && len(machine.States) == 0:
+			p.parseInitError(machine, currentHandler)
 		case strings.HasPrefix(currentHandler.Name, "Error"):
 			p.parseError(machine, currentHandler)
 		default:
-			log.Fatal("Unknokn handler:", currentHandler.Name)
+			log.Fatal("Unknokn handler: ", currentHandler.Name)
 		}
 	}
 	p.StateMachines = append(p.StateMachines, machine)
@@ -208,6 +211,35 @@ func (*Parser) parseMigrate(machine *stateMachine, h *handler) {
 		log.Fatal("Only one migrate handler for state")
 	}
 	machine.States[len(machine.States)-1].Migrate = h
+}
+
+func (*Parser) parseInitError(machine *stateMachine, h *handler) {
+	if len(h.Params) != 2 {
+		log.Fatal("Error handler must have two parameters")
+	}
+	if h.Params[0] != machine.Init.EventType {
+		log.Fatal("Event should be of the same type with the event in the init")
+	}
+	if h.Params[1] != "error" {
+		log.Fatal("Second parameter must be of type error")
+	}
+	if len(h.Results) != 2 {
+		log.Fatal("Error should return two values")
+	}
+	if !strings.HasPrefix(h.Results[0], "*") {
+		log.Fatal("Returned payload should be a pointer")
+	}
+	if h.Results[1] != "common.ElState" {
+		log.Fatal("Returned state should be common.ElState")
+	}
+	if machine.InitError != nil {
+		log.Fatal("Only one init error handler for state machine")
+	}
+	machine.InitError = &initErrorHandler{
+		Name: h.Name,
+		EventType: h.Params[0],
+		payloadType: h.Results[0],
+	}
 }
 
 func (*Parser) parseError(machine *stateMachine, h *handler) {

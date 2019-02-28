@@ -24,7 +24,7 @@ import (
 )
 
 func main() {
-	g := generator.NewGenerator()
+	g := generator.NewGenerator("github.com/insolar/insolar", "conveyor/generator/state_machines", "conveyor/generator/matrix/matrix.go")
 	files, err := ioutil.ReadDir("conveyor/generator/state_machines/")
 	if err != nil {
 		log.Fatal(err)

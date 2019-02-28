@@ -29,9 +29,11 @@ type Payload struct{}
 // conveyer: state_machine
 type TestStateMachine interface {
 	// STF = State Machine Flow
+	TID() common.ElType
 	// TypeID() common.ElType // denotes TypeID of StateMachine for this Flow is for
 
 	Init(input Event) (*Payload, common.ElState, error)// i[nit][_AnyText](input ?) ([error,][state,] payload)
+	ErrorInit(input Event, err error) (*Payload, common.ElState)
 	//
 	// transition handler, from state 0 to S_FIRST().
 	// should be before any handler.
@@ -63,6 +65,10 @@ func (t *TestStateMachineImplementation) Init(input Event) (*Payload, common.ElS
 	return nil, t.StateFirst(), nil
 }
 
+func (t *TestStateMachineImplementation) ErrorInit(input Event, err error) (*Payload, common.ElState) {
+	return nil, t.StateFirst()
+}
+
 func (t *TestStateMachineImplementation) TransitFirstSecond(input Event, payload *Payload) (*Payload, common.ElState, error) {
 	return nil, t.StateSecond(), nil
 }
@@ -77,7 +83,7 @@ func (t *TestStateMachineImplementation) ErrorFirst(input Event, payload *Payloa
 }
 
 func (t *TestStateMachineImplementation) TransitSecondThird(input Event, payload *Payload) (*Payload, common.ElState, error) {
-	return nil, t.StateSecond(), errors.New("Test error")
+	return nil, 0, errors.New("Test error")
 }
 
 func (t *TestStateMachineImplementation) MigrateSecond(input Event, payload *Payload) (*Payload, common.ElState, error) {

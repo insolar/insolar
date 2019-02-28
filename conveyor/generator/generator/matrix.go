@@ -57,7 +57,7 @@ func (g *Generator) getImports() []string {
 }
 
 func (g *Generator) GenMatrix () error {
-	file, err := os.Create("conveyor/generator/matrix/matrix.go")
+	file, err := os.Create(g.matrix)
 	if err != nil {
 		return err
 	}

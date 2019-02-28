@@ -37,9 +37,44 @@ type State struct {
 }
 
 type StateMachine struct {
+	Id int
 	InitHandler     InitHandler
 	States          []State
 	FinalizeHandler interface{}
+}
+
+func (sm *StateMachine) GetTypeID() int {
+	return sm.Id
+}
+
+func (sm *StateMachine) GetTransitionHandler(state uint16) TransitHandler {
+	return sm.States[state].Transit
+}
+
+func (sm *StateMachine) GetMigrationHandler(state uint16) MigrationHandler {
+	return sm.States[state].Migrate
+}
+
+func (sm *StateMachine) GetTransitionErrorHandler(state uint16) ErrorHandler {
+	return sm.States[state].Error
+}
+
+func (sm *StateMachine) GetResponseHandler(state uint16) AdapterResponseHandler {
+	return func(element slot.SlotElementHelper, err error) (interface{}, uint32) {
+		return nil, 0
+	}
+}
+
+func (sm *StateMachine) GetNestedHandler() NestedHandler {
+	return func(element slot.SlotElementHelper, err error) (interface{}, uint32) {
+		return nil, 0
+	}
+}
+
+func (sm *StateMachine) GetResponseErrorHandler(state uint16) ResponseErrorHandler {
+	return func(element slot.SlotElementHelper, err error) (interface{}, uint32) {
+		return nil, 0
+	}
 }
 
 type ElState uint32 //Element State Machine Type ID

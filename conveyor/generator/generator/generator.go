@@ -18,8 +18,8 @@ package generator
 
 import (
 	"os"
-	"bufio"
 	"github.com/pkg/errors"
+	"bufio"
 )
 
 type handler struct {
@@ -40,35 +40,48 @@ type initHandler struct {
 	payloadType string
 }
 
+type initErrorHandler struct {
+	Name string
+	EventType string
+	payloadType string
+}
+
 type stateMachine struct {
 	Module string
 	Name string
 	Init *initHandler
+	InitError *initErrorHandler
 	States []state
 }
 
 type Generator struct {
 	stateMachines []*stateMachine
 	imports map[string]interface{}
+	matrix string
+	base string
+	path string
 }
 
-func NewGenerator() *Generator{
+func NewGenerator(base string, path string, matrix string) *Generator{
 	return &Generator{
 		imports: make(map[string]interface{}),
+		matrix: matrix,
+		base: base,
+		path: path,
 	}
 }
 
 func (g *Generator) ParseFile(dir string, filename string) error {
-	g.imports[importPath(dir)] = nil
+	g.imports[g.importPath(dir)] = nil
 
-	file := sourceFile(dir, filename)
-	p := Parser{generator: g, module: modulePath(dir), sourceFilename: file}
+	file := g.sourceFile(dir, filename)
+	p := Parser{generator: g, module: g.modulePath(dir), sourceFilename: file}
 	err := p.openFile()
 	if err != nil {
 		return err
 	}
 	p.findEachStateMachine()
-	outFile, err := os.Create(generatedFile(file))
+	outFile, err := os.Create(g.generatedFile(file))
 	if err != nil {
 		return errors.Wrap(err, "Couldn't create file")
 	}
