@@ -1,9 +1,9 @@
-package jet
+package drop
 
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "DropAccessor" can be found in github.com/insolar/insolar/ledger/storage/jet
+The original interface "DropAccessor" can be found in github.com/insolar/insolar/ledger/storage/jet/drop
 */
 import (
 	context "context"
@@ -12,21 +12,22 @@ import (
 
 	"github.com/gojuno/minimock"
 	core "github.com/insolar/insolar/core"
+	jet "github.com/insolar/insolar/ledger/storage/jet"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//DropAccessorMock implements github.com/insolar/insolar/ledger/storage/jet.DropAccessor
+//DropAccessorMock implements github.com/insolar/insolar/ledger/storage/jet/drop.DropAccessor
 type DropAccessorMock struct {
 	t minimock.Tester
 
-	ForPulseFunc       func(p context.Context, p1 core.JetID, p2 core.PulseNumber) (r JetDrop, r1 error)
+	ForPulseFunc       func(p context.Context, p1 core.JetID, p2 core.PulseNumber) (r jet.JetDrop, r1 error)
 	ForPulseCounter    uint64
 	ForPulsePreCounter uint64
 	ForPulseMock       mDropAccessorMockForPulse
 }
 
-//NewDropAccessorMock returns a mock for github.com/insolar/insolar/ledger/storage/jet.DropAccessor
+//NewDropAccessorMock returns a mock for github.com/insolar/insolar/ledger/storage/jet/drop.DropAccessor
 func NewDropAccessorMock(t minimock.Tester) *DropAccessorMock {
 	m := &DropAccessorMock{t: t}
 
@@ -57,7 +58,7 @@ type DropAccessorMockForPulseInput struct {
 }
 
 type DropAccessorMockForPulseResult struct {
-	r  JetDrop
+	r  jet.JetDrop
 	r1 error
 }
 
@@ -74,7 +75,7 @@ func (m *mDropAccessorMockForPulse) Expect(p context.Context, p1 core.JetID, p2 
 }
 
 //Return specifies results of invocation of DropAccessor.ForPulse
-func (m *mDropAccessorMockForPulse) Return(r JetDrop, r1 error) *DropAccessorMock {
+func (m *mDropAccessorMockForPulse) Return(r jet.JetDrop, r1 error) *DropAccessorMock {
 	m.mock.ForPulseFunc = nil
 	m.expectationSeries = nil
 
@@ -96,12 +97,12 @@ func (m *mDropAccessorMockForPulse) ExpectOnce(p context.Context, p1 core.JetID,
 	return expectation
 }
 
-func (e *DropAccessorMockForPulseExpectation) Return(r JetDrop, r1 error) {
+func (e *DropAccessorMockForPulseExpectation) Return(r jet.JetDrop, r1 error) {
 	e.result = &DropAccessorMockForPulseResult{r, r1}
 }
 
 //Set uses given function f as a mock of DropAccessor.ForPulse method
-func (m *mDropAccessorMockForPulse) Set(f func(p context.Context, p1 core.JetID, p2 core.PulseNumber) (r JetDrop, r1 error)) *DropAccessorMock {
+func (m *mDropAccessorMockForPulse) Set(f func(p context.Context, p1 core.JetID, p2 core.PulseNumber) (r jet.JetDrop, r1 error)) *DropAccessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -109,8 +110,8 @@ func (m *mDropAccessorMockForPulse) Set(f func(p context.Context, p1 core.JetID,
 	return m.mock
 }
 
-//ForPulse implements github.com/insolar/insolar/ledger/storage/jet.DropAccessor interface
-func (m *DropAccessorMock) ForPulse(p context.Context, p1 core.JetID, p2 core.PulseNumber) (r JetDrop, r1 error) {
+//ForPulse implements github.com/insolar/insolar/ledger/storage/jet/drop.DropAccessor interface
+func (m *DropAccessorMock) ForPulse(p context.Context, p1 core.JetID, p2 core.PulseNumber) (r jet.JetDrop, r1 error) {
 	counter := atomic.AddUint64(&m.ForPulsePreCounter, 1)
 	defer atomic.AddUint64(&m.ForPulseCounter, 1)
 

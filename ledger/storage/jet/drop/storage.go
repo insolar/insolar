@@ -1,5 +1,5 @@
 /*
- *    Copyright 2019 Insolar Technologies
+ *    Copyright 2019 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package jet
+package drop
 
 import (
 	"context"
@@ -22,26 +22,27 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/jet"
 )
 
 // DropModifier provides interface for modifying jetdrops
-//go:generate minimock -i github.com/insolar/insolar/ledger/storage/jet.DropModifier -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage/jet/drop.DropModifier -o ./ -s _mock.go
 type DropModifier interface {
-	Set(ctx context.Context, jetID core.JetID, drop JetDrop) error
+	Set(ctx context.Context, jetID core.JetID, drop jet.JetDrop) error
 }
 
 // DropAccessor provides interface for accessing jetdrops
-//go:generate minimock -i github.com/insolar/insolar/ledger/storage/jet.DropAccessor -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage/jet/drop.DropAccessor -o ./ -s _mock.go
 type DropAccessor interface {
-	ForPulse(ctx context.Context, jetID core.JetID, pulse core.PulseNumber) (JetDrop, error)
+	ForPulse(ctx context.Context, jetID core.JetID, pulse core.PulseNumber) (jet.JetDrop, error)
 }
 
 type dropForPulseManager struct {
 	lock  sync.RWMutex
-	drops map[core.PulseNumber]JetDrop
+	drops map[core.PulseNumber]jet.JetDrop
 }
 
-func (m *dropForPulseManager) set(drop JetDrop, pulse core.PulseNumber) error {
+func (m *dropForPulseManager) set(drop jet.JetDrop, pulse core.PulseNumber) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
@@ -54,13 +55,13 @@ func (m *dropForPulseManager) set(drop JetDrop, pulse core.PulseNumber) error {
 	return nil
 }
 
-func (m *dropForPulseManager) forPulse(jetID core.JetID, pulse core.PulseNumber) (JetDrop, error) {
+func (m *dropForPulseManager) forPulse(jetID core.JetID, pulse core.PulseNumber) (jet.JetDrop, error) {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 
 	drop, ok := m.drops[pulse]
 	if !ok {
-		return JetDrop{}, core.ErrNotFound
+		return jet.JetDrop{}, core.ErrNotFound
 	}
 
 	return drop, nil
@@ -89,12 +90,12 @@ func (m *dropStorageMemory) fetchStorage(jetID core.JetID) (ds *dropForPulseMana
 	return
 }
 
-func (m *dropStorageMemory) ForPulse(ctx context.Context, jetID core.JetID, pulse core.PulseNumber) (JetDrop, error) {
+func (m *dropStorageMemory) ForPulse(ctx context.Context, jetID core.JetID, pulse core.PulseNumber) (jet.JetDrop, error) {
 	ds := m.fetchStorage(jetID)
 	return ds.forPulse(jetID, pulse)
 }
 
-func (m *dropStorageMemory) Set(ctx context.Context, jetID core.JetID, drop JetDrop) error {
+func (m *dropStorageMemory) Set(ctx context.Context, jetID core.JetID, drop jet.JetDrop) error {
 	ds := m.fetchStorage(jetID)
 	return ds.set(drop, drop.Pulse)
 }
@@ -107,23 +108,23 @@ func NewDropStorageDB() *dropStorageDB {
 	return &dropStorageDB{}
 }
 
-func (ds *dropStorageDB) ForPulse(ctx context.Context, jetID core.JetID, pulse core.PulseNumber) (JetDrop, error) {
+func (ds *dropStorageDB) ForPulse(ctx context.Context, jetID core.JetID, pulse core.PulseNumber) (jet.JetDrop, error) {
 	_, prefix := jetID.Jet()
 	k := storage.JetDropPrefixKey(prefix, pulse)
 
 	// buf, err := db.get(ctx, k)
 	buf, err := ds.DB.Get(ctx, k)
 	if err != nil {
-		return JetDrop{}, err
+		return jet.JetDrop{}, err
 	}
-	drop, err := Decode(buf)
+	drop, err := jet.Decode(buf)
 	if err != nil {
-		return JetDrop{}, err
+		return jet.JetDrop{}, err
 	}
 	return *drop, nil
 }
 
-func (ds *dropStorageDB) Set(ctx context.Context, jetID core.JetID, drop JetDrop) error {
+func (ds *dropStorageDB) Set(ctx context.Context, jetID core.JetID, drop jet.JetDrop) error {
 	_, prefix := jetID.Jet()
 	k := storage.JetDropPrefixKey(prefix, drop.Pulse)
 	_, err := ds.DB.Get(ctx, k)
@@ -131,7 +132,7 @@ func (ds *dropStorageDB) Set(ctx context.Context, jetID core.JetID, drop JetDrop
 		return storage.ErrOverride
 	}
 
-	encoded, err := Encode(&drop)
+	encoded, err := jet.Encode(&drop)
 	if err != nil {
 		return err
 	}

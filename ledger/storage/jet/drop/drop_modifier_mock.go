@@ -1,9 +1,9 @@
-package jet
+package drop
 
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "DropModifier" can be found in github.com/insolar/insolar/ledger/storage/jet
+The original interface "DropModifier" can be found in github.com/insolar/insolar/ledger/storage/jet/drop
 */
 import (
 	context "context"
@@ -12,21 +12,22 @@ import (
 
 	"github.com/gojuno/minimock"
 	core "github.com/insolar/insolar/core"
+	jet "github.com/insolar/insolar/ledger/storage/jet"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//DropModifierMock implements github.com/insolar/insolar/ledger/storage/jet.DropModifier
+//DropModifierMock implements github.com/insolar/insolar/ledger/storage/jet/drop.DropModifier
 type DropModifierMock struct {
 	t minimock.Tester
 
-	SetFunc       func(p context.Context, p1 core.JetID, p2 JetDrop) (r error)
+	SetFunc       func(p context.Context, p1 core.JetID, p2 jet.JetDrop) (r error)
 	SetCounter    uint64
 	SetPreCounter uint64
 	SetMock       mDropModifierMockSet
 }
 
-//NewDropModifierMock returns a mock for github.com/insolar/insolar/ledger/storage/jet.DropModifier
+//NewDropModifierMock returns a mock for github.com/insolar/insolar/ledger/storage/jet/drop.DropModifier
 func NewDropModifierMock(t minimock.Tester) *DropModifierMock {
 	m := &DropModifierMock{t: t}
 
@@ -53,7 +54,7 @@ type DropModifierMockSetExpectation struct {
 type DropModifierMockSetInput struct {
 	p  context.Context
 	p1 core.JetID
-	p2 JetDrop
+	p2 jet.JetDrop
 }
 
 type DropModifierMockSetResult struct {
@@ -61,7 +62,7 @@ type DropModifierMockSetResult struct {
 }
 
 //Expect specifies that invocation of DropModifier.Set is expected from 1 to Infinity times
-func (m *mDropModifierMockSet) Expect(p context.Context, p1 core.JetID, p2 JetDrop) *mDropModifierMockSet {
+func (m *mDropModifierMockSet) Expect(p context.Context, p1 core.JetID, p2 jet.JetDrop) *mDropModifierMockSet {
 	m.mock.SetFunc = nil
 	m.expectationSeries = nil
 
@@ -85,7 +86,7 @@ func (m *mDropModifierMockSet) Return(r error) *DropModifierMock {
 }
 
 //ExpectOnce specifies that invocation of DropModifier.Set is expected once
-func (m *mDropModifierMockSet) ExpectOnce(p context.Context, p1 core.JetID, p2 JetDrop) *DropModifierMockSetExpectation {
+func (m *mDropModifierMockSet) ExpectOnce(p context.Context, p1 core.JetID, p2 jet.JetDrop) *DropModifierMockSetExpectation {
 	m.mock.SetFunc = nil
 	m.mainExpectation = nil
 
@@ -100,7 +101,7 @@ func (e *DropModifierMockSetExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of DropModifier.Set method
-func (m *mDropModifierMockSet) Set(f func(p context.Context, p1 core.JetID, p2 JetDrop) (r error)) *DropModifierMock {
+func (m *mDropModifierMockSet) Set(f func(p context.Context, p1 core.JetID, p2 jet.JetDrop) (r error)) *DropModifierMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -108,8 +109,8 @@ func (m *mDropModifierMockSet) Set(f func(p context.Context, p1 core.JetID, p2 J
 	return m.mock
 }
 
-//Set implements github.com/insolar/insolar/ledger/storage/jet.DropModifier interface
-func (m *DropModifierMock) Set(p context.Context, p1 core.JetID, p2 JetDrop) (r error) {
+//Set implements github.com/insolar/insolar/ledger/storage/jet/drop.DropModifier interface
+func (m *DropModifierMock) Set(p context.Context, p1 core.JetID, p2 jet.JetDrop) (r error) {
 	counter := atomic.AddUint64(&m.SetPreCounter, 1)
 	defer atomic.AddUint64(&m.SetCounter, 1)
 

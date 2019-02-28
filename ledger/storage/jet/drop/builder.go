@@ -29,6 +29,7 @@ import (
 )
 
 // Builder is an helper-interface, that helps to build new jetdrops
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage/jet/drop.Builder -o ./ -s _mock.go
 type Builder interface {
 	Append(item Hashable) error
 	Size(size uint64)
@@ -100,6 +101,7 @@ func (b *builder) Build() (jet.JetDrop, error) {
 
 // Packer is an wrapper interface around process of building jetdrop
 // It's considered that implementation of packer uses Bulder under the hood
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage/jet/drop.Packer -o ./ -s _mock.go
 type Packer interface {
 	Pack(ctx context.Context, jetID core.JetID, pulse core.PulseNumber, prevHash []byte) (jet.JetDrop, error)
 }
