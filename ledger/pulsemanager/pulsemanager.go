@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar"
+	jetdrop "github.com/insolar/insolar/ledger/storage/jet/drop"
 	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
@@ -238,7 +239,7 @@ func (m *PulseManager) createDrop(
 		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't GetDrop")
 	}
 
-	packer := jet.NewPacker(m.PlatformCryptographyScheme.ReferenceHasher(), m.DBContext)
+	packer := jetdrop.NewPacker(m.PlatformCryptographyScheme.ReferenceHasher(), m.DBContext)
 
 	packedDrop, err := packer.Pack(ctx, storage.JetID(jetID), currentPulse, prevDrop.Hash)
 	if err != nil {

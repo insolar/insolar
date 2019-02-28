@@ -22,6 +22,7 @@ import (
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/ledger/storage/jet"
+	jetdrop "github.com/insolar/insolar/ledger/storage/jet/drop"
 	base58 "github.com/jbenet/go-base58"
 	"github.com/stretchr/testify/suite"
 
@@ -202,7 +203,7 @@ func (s *storageSuite) TestDB_CreateDrop() {
 		require.NoError(s.T(), err)
 	}
 
-	packer := jet.NewPacker(platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher(), s.db)
+	packer := jetdrop.NewPacker(platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher(), s.db)
 
 	drop, err := packer.Pack(s.ctx, jetID, pulse, []byte{4, 5, 6})
 	require.NoError(s.T(), err)

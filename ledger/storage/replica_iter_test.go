@@ -30,6 +30,7 @@ import (
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/index"
 	"github.com/insolar/insolar/ledger/storage/jet"
+	jetdrop "github.com/insolar/insolar/ledger/storage/jet/drop"
 	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
@@ -369,7 +370,7 @@ func setDrop(
 		require.NoError(t, err)
 	}
 
-	packer := jet.NewPacker(platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher(), db)
+	packer := jetdrop.NewPacker(platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher(), db)
 
 	drop, err := packer.Pack(ctx, jetID, pulsenum, prevhash)
 	if err != nil {

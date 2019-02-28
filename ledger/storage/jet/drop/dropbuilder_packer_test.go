@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package jet_test
+package drop_test
 
 import (
 	"context"
@@ -22,7 +22,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/ledger/storage/jet"
+	"github.com/insolar/insolar/ledger/storage/jet/drop"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -44,7 +44,7 @@ type dropSuite struct {
 	cleaner func()
 	db      storage.DBContext
 
-	packer jet.Packer
+	packer drop.Packer
 }
 
 func NewDropSuite() *dropSuite {
@@ -66,7 +66,7 @@ func (s *dropSuite) BeforeTest(suiteName, testName string) {
 
 	s.db = db
 	s.cleaner = cleaner
-	s.packer = jet.NewPacker(
+	s.packer = drop.NewPacker(
 		platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher(),
 		s.db,
 	)
