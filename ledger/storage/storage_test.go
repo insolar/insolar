@@ -47,8 +47,8 @@ type storageSuite struct {
 	db      storage.DBContext
 
 	objectStorage storage.ObjectStorage
-	dropModifier  jet.DropModifier
-	dropAccessor  jet.DropAccessor
+	dropModifier  jetdrop.DropModifier
+	dropAccessor  jetdrop.DropAccessor
 	pulseTracker  storage.PulseTracker
 
 	jetID core.RecordID
@@ -75,7 +75,7 @@ func (s *storageSuite) BeforeTest(suiteName, testName string) {
 
 	s.objectStorage = storage.NewObjectStorage()
 
-	dropStorage := jet.NewDropStorageDB()
+	dropStorage := jetdrop.NewDropStorageDB()
 	s.dropAccessor = dropStorage
 	s.dropModifier = dropStorage
 	s.pulseTracker = storage.NewPulseTracker()
@@ -258,7 +258,7 @@ func TestDB_Close(t *testing.T) {
 	jetID := testutils.RandomJet()
 
 	os := storage.NewObjectStorage()
-	ds := jet.NewDropStorageDB()
+	ds := jetdrop.NewDropStorageDB()
 
 	cm := &component.Manager{}
 	cm.Inject(

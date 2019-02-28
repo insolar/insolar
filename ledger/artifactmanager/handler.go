@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/core/delegationtoken"
+	"github.com/insolar/insolar/ledger/storage/jet/drop"
 	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
@@ -55,7 +56,7 @@ type MessageHandler struct {
 	PulseStorage               core.PulseStorage               `inject:""`
 	JetStorage                 jet.JetStorage                  `inject:""`
 
-	DropModifier jet.DropModifier `inject:""`
+	DropModifier drop.DropModifier `inject:""`
 
 	ObjectStorage storage.ObjectStorage `inject:""`
 	Nodes         node.Accessor         `inject:""`

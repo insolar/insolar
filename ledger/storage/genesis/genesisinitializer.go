@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/index"
 	"github.com/insolar/insolar/ledger/storage/jet"
+	"github.com/insolar/insolar/ledger/storage/jet/drop"
 	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/pkg/errors"
 )
@@ -39,7 +40,7 @@ type genesisInitializer struct {
 	JetStorage    jet.JetStorage        `inject:""`
 	ObjectStorage storage.ObjectStorage `inject:""`
 	PulseTracker  storage.PulseTracker  `inject:""`
-	DropModifier  jet.DropModifier      `inject:""`
+	DropModifier  drop.DropModifier     `inject:""`
 
 	genesisRef *core.RecordRef
 }

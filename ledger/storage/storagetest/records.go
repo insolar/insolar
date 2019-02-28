@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/ledger/storage/jet"
+	"github.com/insolar/insolar/ledger/storage/jet/drop"
 	"github.com/insolar/insolar/ledger/storage/record"
 
 	"github.com/insolar/insolar/core"
@@ -77,8 +78,8 @@ func AddRandRecord(
 // AddRandDrop adds random drop.
 func AddRandDrop(
 	ctx context.Context,
-	modifier jet.DropModifier,
-	accessor jet.DropAccessor,
+	modifier drop.DropModifier,
+	accessor drop.DropAccessor,
 	jetID core.RecordID,
 	pulsenum core.PulseNumber,
 ) (*jet.JetDrop, error) {

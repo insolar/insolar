@@ -26,7 +26,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/jet"
+	"github.com/insolar/insolar/ledger/storage/jet/drop"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
@@ -43,8 +43,8 @@ type cleanerSuite struct {
 	cleaner func()
 
 	objectStorage  storage.ObjectStorage
-	dropModifier   jet.DropModifier
-	dropAccessor   jet.DropAccessor
+	dropModifier   drop.DropModifier
+	dropAccessor   drop.DropAccessor
 	storageCleaner storage.Cleaner
 }
 
@@ -67,7 +67,7 @@ func (s *cleanerSuite) BeforeTest(suiteName, testName string) {
 	s.cleaner = cleaner
 
 	s.objectStorage = storage.NewObjectStorage()
-	dropStorage := jet.NewDropStorageDB()
+	dropStorage := drop.NewDropStorageDB()
 	s.dropAccessor = dropStorage
 	s.dropModifier = dropStorage
 	s.storageCleaner = storage.NewCleaner()
@@ -293,7 +293,7 @@ func (c recordCase) Check(ctx context.Context, t *testing.T) {
 
 type dropCase struct {
 	cleanCase
-	dropAccessor jet.DropAccessor
+	dropAccessor drop.DropAccessor
 }
 
 func (c dropCase) Check(ctx context.Context, t *testing.T) {

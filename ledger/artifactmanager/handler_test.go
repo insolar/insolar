@@ -33,6 +33,7 @@ import (
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/index"
 	"github.com/insolar/insolar/ledger/storage/jet"
+	"github.com/insolar/insolar/ledger/storage/jet/drop"
 	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
@@ -56,8 +57,8 @@ type handlerSuite struct {
 	nodeStorage   node.Accessor
 	objectStorage storage.ObjectStorage
 	jetStorage    jet.JetStorage
-	dropModifier  jet.DropModifier
-	dropAccessor  jet.DropAccessor
+	dropModifier  drop.DropModifier
+	dropAccessor  drop.DropAccessor
 }
 
 func NewHandlerSuite() *handlerSuite {
@@ -83,7 +84,7 @@ func (s *handlerSuite) BeforeTest(suiteName, testName string) {
 	s.nodeStorage = node.NewStorage()
 	s.pulseTracker = storage.NewPulseTracker()
 	s.objectStorage = storage.NewObjectStorage()
-	dropStorage := jet.NewDropStorageDB()
+	dropStorage := drop.NewDropStorageDB()
 	s.dropAccessor = dropStorage
 	s.dropModifier = dropStorage
 

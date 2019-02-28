@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar"
+	"github.com/insolar/insolar/ledger/storage/jet/drop"
 	jetdrop "github.com/insolar/insolar/ledger/storage/jet/drop"
 	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/pkg/errors"
@@ -73,8 +74,8 @@ type PulseManager struct {
 	DBContext      storage.DBContext      `inject:""`
 	StorageCleaner storage.Cleaner        `inject:""`
 
-	DropModifier jet.DropModifier `inject:""`
-	DropAccessor jet.DropAccessor `inject:""`
+	DropModifier drop.DropModifier `inject:""`
+	DropAccessor drop.DropAccessor `inject:""`
 
 	// TODO: move clients pool to component - @nordicdyno - 18.Dec.2018
 	syncClientsPool *heavyclient.Pool

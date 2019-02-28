@@ -23,6 +23,7 @@ import (
 
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/ledger/storage/genesis"
+	"github.com/insolar/insolar/ledger/storage/jet/drop"
 	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -59,8 +60,8 @@ type amSuite struct {
 	nodeStorage   node.Accessor
 	objectStorage storage.ObjectStorage
 	jetStorage    jet.JetStorage
-	dropModifier  jet.DropModifier
-	dropAccessor  jet.DropAccessor
+	dropModifier  drop.DropModifier
+	dropAccessor  drop.DropAccessor
 	genesisState  genesis.GenesisState
 }
 
@@ -88,7 +89,7 @@ func (s *amSuite) BeforeTest(suiteName, testName string) {
 	s.pulseTracker = storage.NewPulseTracker()
 	s.objectStorage = storage.NewObjectStorage()
 
-	dropStorage := jet.NewDropStorageDB()
+	dropStorage := drop.NewDropStorageDB()
 	s.dropAccessor = dropStorage
 	s.dropModifier = dropStorage
 	s.genesisState = genesis.NewGenesisInitializer()

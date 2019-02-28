@@ -29,6 +29,7 @@ import (
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/genesis"
 	"github.com/insolar/insolar/ledger/storage/jet"
+	"github.com/insolar/insolar/ledger/storage/jet/drop"
 	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
@@ -54,8 +55,8 @@ type metricSuite struct {
 	nodeStorage   node.Accessor
 	objectStorage storage.ObjectStorage
 	jetStorage    jet.JetStorage
-	dropModifier  jet.DropModifier
-	dropAccessor  jet.DropAccessor
+	dropModifier  drop.DropModifier
+	dropAccessor  drop.DropAccessor
 	genesisState  genesis.GenesisState
 }
 
@@ -83,7 +84,7 @@ func (s *metricSuite) BeforeTest(suiteName, testName string) {
 	s.pulseTracker = storage.NewPulseTracker()
 	s.objectStorage = storage.NewObjectStorage()
 
-	dropStorage := jet.NewDropStorageDB()
+	dropStorage := drop.NewDropStorageDB()
 	s.dropAccessor = dropStorage
 	s.dropModifier = dropStorage
 	s.genesisState = genesis.NewGenesisInitializer()

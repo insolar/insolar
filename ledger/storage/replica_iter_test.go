@@ -29,7 +29,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/index"
-	"github.com/insolar/insolar/ledger/storage/jet"
 	jetdrop "github.com/insolar/insolar/ledger/storage/jet/drop"
 	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
@@ -49,8 +48,8 @@ type replicaIterSuite struct {
 	db      storage.DBContext
 
 	objectStorage storage.ObjectStorage
-	dropModifier  jet.DropModifier
-	dropAccessor  jet.DropAccessor
+	dropModifier  jetdrop.DropModifier
+	dropAccessor  jetdrop.DropAccessor
 }
 
 func NewReplicaIterSuite() *replicaIterSuite {
@@ -73,7 +72,7 @@ func (s *replicaIterSuite) BeforeTest(suiteName, testName string) {
 	s.cleaner = cleaner
 
 	s.objectStorage = storage.NewObjectStorage()
-	dropStorage := jet.NewDropStorageDB()
+	dropStorage := jetdrop.NewDropStorageDB()
 	s.dropAccessor = dropStorage
 	s.dropModifier = dropStorage
 
@@ -123,7 +122,7 @@ func Test_StoreKeyValues(t *testing.T) {
 		defer cleaner()
 
 		os := storage.NewObjectStorage()
-		ds := jet.NewDropStorageDB()
+		ds := jetdrop.NewDropStorageDB()
 
 		cm := &component.Manager{}
 		cm.Inject(
@@ -228,7 +227,7 @@ func Test_ReplicaIter_Base(t *testing.T) {
 	defer cleaner()
 
 	os := storage.NewObjectStorage()
-	ds := jet.NewDropStorageDB()
+	ds := jetdrop.NewDropStorageDB()
 
 	cm := &component.Manager{}
 	cm.Inject(
@@ -357,8 +356,8 @@ func setDrop(
 	ctx context.Context,
 	t *testing.T,
 	db storage.DBContext,
-	dropAccessor jet.DropAccessor,
-	dropModifire jet.DropModifier,
+	dropAccessor jetdrop.DropAccessor,
+	dropModifire jetdrop.DropModifier,
 	jetID core.JetID,
 	pulsenum core.PulseNumber,
 ) {
