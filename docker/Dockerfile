@@ -11,8 +11,8 @@ RUN set -x && \
             alpine-sdk    \
             bash
 
-COPY [ "/docker/genconfig.go",          \
-       "/docker/healthcheck.go",        \
+COPY [ "/docker/genconfig/genconfig.go",          \
+       "/docker/healthcheck/healthcheck.go",        \
        "/opt/tmp/" ]
 
 COPY . /go/src/github.com/insolar/insolar

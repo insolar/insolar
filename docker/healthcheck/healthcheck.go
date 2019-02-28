@@ -52,10 +52,10 @@ const (
 const statusBody = "{\"jsonrpc\": \"2.0\", \"method\": \"status.Get\", \"id\": 0}"
 
 func checkInsolard() int {
-	var apiUrl url.URL
-	apiUrl.Scheme = "http"
-	apiUrl.Host = GetEnvDefault("INSOLARD_API_LISTEN", getURI(defaultApiListenPort))
-	apiUrl.Path = "/api/rpc"
+	var apiURL url.URL
+	apiURL.Scheme = "http"
+	apiURL.Host = GetEnvDefault("INSOLARD_API_LISTEN", getURI(defaultApiListenPort))
+	apiURL.Path = "/api/rpc"
 
 	client := http.Client{
 		Transport: &http.Transport{},
@@ -63,7 +63,7 @@ func checkInsolard() int {
 	}
 
 	body := strings.NewReader(statusBody)
-	res, err := client.Post(apiUrl.String(), "application/json", body)
+	res, err := client.Post(apiURL.String(), "application/json", body)
 	if err != nil {
 		fmt.Printf("Failed to make HTTP request:", err.Error())
 		return 1
