@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	storage "github.com/insolar/insolar/ledger/storage"
+	core "github.com/insolar/insolar/core"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -20,7 +20,7 @@ import (
 type DropModifierMock struct {
 	t minimock.Tester
 
-	SetFunc       func(p context.Context, p1 storage.JetID, p2 JetDrop) (r error)
+	SetFunc       func(p context.Context, p1 core.JetID, p2 JetDrop) (r error)
 	SetCounter    uint64
 	SetPreCounter uint64
 	SetMock       mDropModifierMockSet
@@ -52,7 +52,7 @@ type DropModifierMockSetExpectation struct {
 
 type DropModifierMockSetInput struct {
 	p  context.Context
-	p1 storage.JetID
+	p1 core.JetID
 	p2 JetDrop
 }
 
@@ -61,7 +61,7 @@ type DropModifierMockSetResult struct {
 }
 
 //Expect specifies that invocation of DropModifier.Set is expected from 1 to Infinity times
-func (m *mDropModifierMockSet) Expect(p context.Context, p1 storage.JetID, p2 JetDrop) *mDropModifierMockSet {
+func (m *mDropModifierMockSet) Expect(p context.Context, p1 core.JetID, p2 JetDrop) *mDropModifierMockSet {
 	m.mock.SetFunc = nil
 	m.expectationSeries = nil
 
@@ -85,7 +85,7 @@ func (m *mDropModifierMockSet) Return(r error) *DropModifierMock {
 }
 
 //ExpectOnce specifies that invocation of DropModifier.Set is expected once
-func (m *mDropModifierMockSet) ExpectOnce(p context.Context, p1 storage.JetID, p2 JetDrop) *DropModifierMockSetExpectation {
+func (m *mDropModifierMockSet) ExpectOnce(p context.Context, p1 core.JetID, p2 JetDrop) *DropModifierMockSetExpectation {
 	m.mock.SetFunc = nil
 	m.mainExpectation = nil
 
@@ -100,7 +100,7 @@ func (e *DropModifierMockSetExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of DropModifier.Set method
-func (m *mDropModifierMockSet) Set(f func(p context.Context, p1 storage.JetID, p2 JetDrop) (r error)) *DropModifierMock {
+func (m *mDropModifierMockSet) Set(f func(p context.Context, p1 core.JetID, p2 JetDrop) (r error)) *DropModifierMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -109,7 +109,7 @@ func (m *mDropModifierMockSet) Set(f func(p context.Context, p1 storage.JetID, p
 }
 
 //Set implements github.com/insolar/insolar/ledger/storage/jet.DropModifier interface
-func (m *DropModifierMock) Set(p context.Context, p1 storage.JetID, p2 JetDrop) (r error) {
+func (m *DropModifierMock) Set(p context.Context, p1 core.JetID, p2 JetDrop) (r error) {
 	counter := atomic.AddUint64(&m.SetPreCounter, 1)
 	defer atomic.AddUint64(&m.SetCounter, 1)
 

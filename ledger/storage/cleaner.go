@@ -135,7 +135,7 @@ func (c *cleaner) removeJetRecordsUntil(
 	pn core.PulseNumber,
 ) (RmStat, error) {
 	var stat RmStat
-	_, prefix := JetID(jetID).Jet()
+	_, prefix := core.JetID(jetID).Jet()
 	jetprefix := prefixkey(namespace, prefix)
 	startprefix := prefixkey(namespace, prefix, rmScanFromPulse)
 
@@ -172,7 +172,7 @@ func (c *cleaner) CleanJetIndexes(
 	candidates []core.RecordID,
 ) (RmStat, error) {
 	var stat RmStat
-	_, prefix := JetID(jetID).Jet()
+	_, prefix := core.JetID(jetID).Jet()
 
 	recent.FilterNotExistWithLock(ctx, candidates, func(fordelete []core.RecordID) {
 		for _, recID := range fordelete {
