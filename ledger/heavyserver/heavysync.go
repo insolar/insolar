@@ -33,7 +33,7 @@ import (
 	"github.com/insolar/insolar/ledger/storage/jet"
 )
 
-const resetTimeout = time.Second * 10
+const defaultTimeout = time.Second * 10
 
 func errSyncInProgress(jetID core.RecordID, pn core.PulseNumber) *reply.HeavyError {
 	return &reply.HeavyError{
@@ -54,11 +54,11 @@ type syncstate struct {
 	timer     *time.Timer
 }
 
-func (s *syncstate) resetTimeout(ctx context.Context, pn core.PulseNumber) {
+func (s *syncstate) resetTimeout(ctx context.Context, timeout time.Duration) {
 	if s.timer != nil {
-		s.timer.Reset(resetTimeout)
+		s.timer.Reset(timeout)
 	} else {
-		s.timer = time.NewTimer(resetTimeout)
+		s.timer = time.NewTimer(timeout)
 	}
 	timer := s.timer
 	go func() {
@@ -157,7 +157,7 @@ func (s *Sync) Start(ctx context.Context, jetID core.RecordID, pn core.PulseNumb
 	}
 
 	jetState.syncpulse = &pn
-	jetState.resetTimeout(ctx, pn)
+	jetState.resetTimeout(ctx, defaultTimeout)
 	return nil
 }
 
@@ -182,7 +182,7 @@ func (s *Sync) Store(ctx context.Context, jetID core.RecordID, pn core.PulseNumb
 			return errSyncInProgress(jetID, pn)
 		}
 		jetState.insync = true
-		jetState.resetTimeout(ctx, pn)
+		jetState.resetTimeout(ctx, defaultTimeout)
 		return nil
 	}()
 	if err != nil {
