@@ -19,7 +19,7 @@ package conveyor
 import (
 	"testing"
 
-	"github.com/insolar/insolar/conveyor/interfaces/state_machine"
+	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
 	"github.com/insolar/insolar/conveyor/queue"
 	"github.com/insolar/insolar/core"
 	"github.com/stretchr/testify/require"
@@ -207,7 +207,7 @@ func TestSlot_createElement(t *testing.T) {
 	s := NewSlot(Future, testRealPulse)
 	event := queue.OutputElement{}
 
-	stateMachineMock := state_machine.NewStateMachineTypeMock(t)
+	stateMachineMock := statemachine.NewStateMachineTypeMock(t)
 
 	element, err := s.createElement(stateMachineMock, 1, event)
 	require.NotNil(t, element)
@@ -224,7 +224,7 @@ func TestSlot_createElement_Err(t *testing.T) {
 	delete(s.elementListMap, ActiveElement)
 	event := queue.OutputElement{}
 
-	stateMachineMock := state_machine.NewStateMachineTypeMock(t)
+	stateMachineMock := statemachine.NewStateMachineTypeMock(t)
 
 	element, err := s.createElement(stateMachineMock, 1, event)
 	require.Nil(t, element)

@@ -18,7 +18,7 @@ package conveyor
 
 import (
 	"github.com/insolar/insolar/conveyor/interfaces/slot"
-	"github.com/insolar/insolar/conveyor/interfaces/state_machine"
+	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
 )
 
 // ActivationStatus represents status of work for slot element
@@ -38,7 +38,7 @@ type slotElement struct {
 	inputEvent       interface{}
 	payload          interface{} // nolint
 	postponedError   error
-	stateMachineType state_machine.StateMachineType
+	stateMachineType statemachine.StateMachineType
 	state            uint16
 
 	nextElement      *slotElement
