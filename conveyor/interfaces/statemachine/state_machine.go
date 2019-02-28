@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package state_machine
+package statemachine
 
 import "github.com/insolar/insolar/conveyor/interfaces/slot"
 
@@ -29,7 +29,7 @@ type TransitionErrorHandler func(element slot.SlotElementHelper, err error) (int
 type ResponseErrorHandler func(element slot.SlotElementHelper, err error) (interface{}, uint32)
 
 // StateMachineType describes access to element's state machine
-//go:generate minimock -i github.com/insolar/insolar/conveyor/interfaces/state_machine.StateMachineType -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/conveyor/interfaces/statemachine.StateMachineType -o ./ -s _mock.go
 type StateMachineType interface {
 	GetTypeID() int
 	GetMigrationHandler(state int) MigrationHandler
