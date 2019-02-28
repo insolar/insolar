@@ -90,7 +90,7 @@ func (j *jet) ExtractLeafIDs(ids *[]core.RecordID, path []byte, depth uint8) {
 		return
 	}
 	if j.Left == nil && j.Right == nil {
-		*ids = append(*ids, core.RecordID(*storage.NewID(depth, path)))
+		*ids = append(*ids, core.RecordID(*storage.NewJetID(depth, path)))
 		return
 	}
 
@@ -249,7 +249,7 @@ func (t *Tree) Find(id core.RecordID) (*core.RecordID, bool) {
 	}
 	hash := id.Hash()
 	j, depth := t.Head.Find(hash, 0)
-	recID := core.RecordID(*storage.NewID(uint8(depth), storage.ResetBits(hash, depth)))
+	recID := core.RecordID(*storage.NewJetID(uint8(depth), storage.ResetBits(hash, depth)))
 	return &recID, j.Actual
 }
 
@@ -281,8 +281,8 @@ func (t *Tree) Split(jetID core.RecordID) (*core.RecordID, *core.RecordID, error
 	leftPrefix := storage.ResetBits(prefix, depth)
 	rightPrefix := storage.ResetBits(prefix, depth)
 	setBit(rightPrefix, depth)
-	first := core.RecordID(*storage.NewID(depth+1, leftPrefix))
-	second := core.RecordID(*storage.NewID(depth+1, rightPrefix))
+	first := core.RecordID(*storage.NewJetID(depth+1, leftPrefix))
+	second := core.RecordID(*storage.NewJetID(depth+1, rightPrefix))
 	return &first, &second, nil
 }
 

@@ -10,9 +10,10 @@ import (
 type JetID core.RecordID
 
 // ZeroJetID is value of an empty Jet ID
-var ZeroJetID = *NewID(0, nil)
+var ZeroJetID = *NewJetID(0, nil)
 
-func NewID(depth uint8, prefix []byte) *JetID {
+// NewJetID creates a new jet with provided ID and index
+func NewJetID(depth uint8, prefix []byte) *JetID {
 	var id JetID
 	copy(id[:core.PulseNumberSize], core.PulseNumberJet.Bytes())
 	id[core.PulseNumberSize] = depth
@@ -29,13 +30,14 @@ func (id JetID) Jet() (uint8, []byte) {
 	return id[core.PulseNumberSize], id[core.PulseNumberSize+1:]
 }
 
+// Parent returns a parent of the jet
 func (id JetID) Parent() JetID {
 	depth, prefix := id.Jet()
 	if depth == 0 {
 		return id
 	}
 
-	return *NewID(depth-1, ResetBits(prefix, depth-1))
+	return *NewJetID(depth-1, ResetBits(prefix, depth-1))
 }
 
 // ResetBits returns a new byte slice with all bits in 'value' reset, starting from 'start' number of bit. If 'start'

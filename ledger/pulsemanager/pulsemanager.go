@@ -598,7 +598,7 @@ func (m *PulseManager) setUnderGilSection(
 		// No active nodes for pulse. It means there was no processing (network start).
 		if len(nodes) == 0 {
 			// Activate zero jet for jet tree and unlock jet waiter.
-			zeroJet := core.RecordID(*storage.NewID(0, nil))
+			zeroJet := core.RecordID(*storage.NewJetID(0, nil))
 			m.JetStorage.UpdateJetTree(ctx, newPulse.PulseNumber, true, core.RecordID(zeroJet))
 			err := m.HotDataWaiter.Unlock(ctx, core.RecordID(zeroJet))
 			if err != nil {
@@ -768,7 +768,7 @@ func (m *PulseManager) restoreGenesisRecentObjects(ctx context.Context) error {
 		return nil
 	}
 
-	jetID := core.RecordID(*storage.NewID(0, nil))
+	jetID := core.RecordID(*storage.NewJetID(0, nil))
 	recent := m.RecentStorageProvider.GetIndexStorage(ctx, core.RecordID(jetID))
 
 	return m.ObjectStorage.IterateIndexIDs(ctx, core.RecordID(jetID), func(id core.RecordID) error {

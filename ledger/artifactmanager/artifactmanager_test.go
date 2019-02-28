@@ -225,7 +225,7 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterRequest() {
 	parcel := message.Parcel{Msg: &message.GenesisRequest{Name: "4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.4FFB8zfQoGznSmzDxwv4njX1aR9ioL8GHSH17QXH2AFa"}}
 	id, err := am.RegisterRequest(ctx, *am.GenesisRef(), &parcel)
 	assert.NoError(s.T(), err)
-	rec, err := os.GetRecord(ctx, core.RecordID(*storage.NewID(0, nil)), id)
+	rec, err := os.GetRecord(ctx, core.RecordID(*storage.NewJetID(0, nil)), id)
 	assert.NoError(s.T(), err)
 
 	assert.Equal(
@@ -289,7 +289,7 @@ func (s *amSuite) TestLedgerArtifactManager_DeclareType() {
 	typeDec := []byte{1, 2, 3}
 	id, err := am.DeclareType(ctx, domainRef, requestRef, typeDec)
 	assert.NoError(s.T(), err)
-	typeRec, err := os.GetRecord(ctx, core.RecordID(*storage.NewID(0, nil)), id)
+	typeRec, err := os.GetRecord(ctx, core.RecordID(*storage.NewJetID(0, nil)), id)
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), &record.TypeRecord{
 		SideEffectRecord: record.SideEffectRecord{
@@ -311,7 +311,7 @@ func (s *amSuite) TestLedgerArtifactManager_DeployCode_CreatesCorrectRecord() {
 		core.MachineTypeBuiltin,
 	)
 	assert.NoError(s.T(), err)
-	codeRec, err := os.GetRecord(ctx, core.RecordID(*storage.NewID(0, nil)), id)
+	codeRec, err := os.GetRecord(ctx, core.RecordID(*storage.NewJetID(0, nil)), id)
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), codeRec, &record.CodeRecord{
 		SideEffectRecord: record.SideEffectRecord{
@@ -325,7 +325,7 @@ func (s *amSuite) TestLedgerArtifactManager_DeployCode_CreatesCorrectRecord() {
 
 func (s *amSuite) TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord() {
 	ctx, os, am := getTestData(s)
-	jetID := core.RecordID(*storage.NewID(0, nil))
+	jetID := core.RecordID(*storage.NewJetID(0, nil))
 
 	memory := []byte{1, 2, 3}
 	codeRef := genRandomRef(0)
@@ -385,7 +385,7 @@ func (s *amSuite) TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord(
 
 func (s *amSuite) TestLedgerArtifactManager_DeactivateObject_CreatesCorrectRecord() {
 	ctx, os, am := getTestData(s)
-	jetID := core.RecordID(*storage.NewID(0, nil))
+	jetID := core.RecordID(*storage.NewJetID(0, nil))
 
 	objID, _ := os.SetRecord(
 		ctx,
@@ -426,7 +426,7 @@ func (s *amSuite) TestLedgerArtifactManager_DeactivateObject_CreatesCorrectRecor
 
 func (s *amSuite) TestLedgerArtifactManager_UpdateObject_CreatesCorrectRecord() {
 	ctx, os, am := getTestData(s)
-	jetID := core.RecordID(*storage.NewID(0, nil))
+	jetID := core.RecordID(*storage.NewJetID(0, nil))
 
 	objID, _ := os.SetRecord(
 		ctx,
@@ -476,7 +476,7 @@ func (s *amSuite) TestLedgerArtifactManager_UpdateObject_CreatesCorrectRecord() 
 
 func (s *amSuite) TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors() {
 	ctx, os, am := getTestData(s)
-	jetID := core.RecordID(*storage.NewID(0, nil))
+	jetID := core.RecordID(*storage.NewJetID(0, nil))
 
 	prototypeRef := genRandomRef(0)
 	parentRef := genRandomRef(0)
@@ -580,7 +580,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetChildren() {
 	// t.Parallel()
 	ctx, os, am := getTestData(s)
 	// defer cleaner()
-	jetID := core.RecordID(*storage.NewID(0, nil))
+	jetID := core.RecordID(*storage.NewJetID(0, nil))
 
 	parentID, _ := os.SetRecord(
 		ctx,
@@ -762,7 +762,7 @@ func (s *amSuite) TestLedgerArtifactManager_HandleJetDrop() {
 		Record: record.SerializeRecord(&codeRecord),
 	}
 
-	jetID := core.RecordID(*storage.NewID(0, nil))
+	jetID := core.RecordID(*storage.NewJetID(0, nil))
 
 	rep, err := am.DefaultBus.Send(ctx, &message.JetDrop{
 		JetID: jetID,
@@ -903,7 +903,7 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterResult() {
 	requestID, err := am.RegisterResult(ctx, *core.NewRecordRef(core.RecordID{}, objID), *request, []byte{1, 2, 3})
 	assert.NoError(s.T(), err)
 
-	rec, err := os.GetRecord(ctx, core.RecordID(*storage.NewID(0, nil)), requestID)
+	rec, err := os.GetRecord(ctx, core.RecordID(*storage.NewJetID(0, nil)), requestID)
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), record.ResultRecord{
 		Object:  objID,
@@ -931,7 +931,7 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterRequest_JetMiss() {
 	s.T().Run("returns error on exceeding retry limit", func(t *testing.T) {
 		mb := testutils.NewMessageBusMock(mc)
 		am.DefaultBus = mb
-		mb.SendMock.Return(&reply.JetMiss{JetID: core.RecordID(*storage.NewID(5, []byte{1, 2, 3}))}, nil)
+		mb.SendMock.Return(&reply.JetMiss{JetID: core.RecordID(*storage.NewJetID(5, []byte{1, 2, 3}))}, nil)
 		_, err := am.RegisterRequest(s.ctx, *am.GenesisRef(), &message.Parcel{Msg: &message.CallMethod{}})
 		require.Error(t, err)
 	})
@@ -945,7 +945,7 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterRequest_JetMiss() {
 				return &reply.ID{}, nil
 			}
 			retries--
-			return &reply.JetMiss{JetID: core.RecordID(*storage.NewID(4, []byte{0xD5}))}, nil
+			return &reply.JetMiss{JetID: core.RecordID(*storage.NewJetID(4, []byte{0xD5}))}, nil
 		}
 		_, err := am.RegisterRequest(s.ctx, *am.GenesisRef(), &message.Parcel{Msg: &message.CallMethod{}})
 		require.NoError(t, err)
@@ -953,7 +953,7 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterRequest_JetMiss() {
 		jetID, actual := s.jetStorage.FindJet(
 			s.ctx, core.FirstPulseNumber, *core.NewRecordID(0, []byte{0xD5}),
 		)
-		assert.Equal(t, core.RecordID(*storage.NewID(4, []byte{0xD0})), *jetID)
+		assert.Equal(t, core.RecordID(*storage.NewJetID(4, []byte{0xD0})), *jetID)
 		assert.True(t, actual)
 	})
 }

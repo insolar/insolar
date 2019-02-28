@@ -65,36 +65,36 @@ func TestRecordRef_String(t *testing.T) {
 }
 
 func TestRecordID_DebugString_Jet(t *testing.T) {
-	j := core.RecordID(*storage.NewID(0, []byte{}))
+	j := core.RecordID(*storage.NewJetID(0, []byte{}))
 	assert.Equal(t, "[JET 0 -]", j.DebugString())
 
-	j = core.RecordID(*storage.NewID(1, []byte{}))
+	j = core.RecordID(*storage.NewJetID(1, []byte{}))
 	assert.Equal(t, "[JET 1 0]", j.DebugString())
-	j = core.RecordID(*storage.NewID(2, []byte{}))
+	j = core.RecordID(*storage.NewJetID(2, []byte{}))
 	assert.Equal(t, "[JET 2 00]", j.DebugString())
 
-	j = core.RecordID(*storage.NewID(1, []byte{128}))
+	j = core.RecordID(*storage.NewJetID(1, []byte{128}))
 	assert.Equal(t, "[JET 1 1]", j.DebugString())
-	j = core.RecordID(*storage.NewID(2, []byte{192}))
+	j = core.RecordID(*storage.NewJetID(2, []byte{192}))
 	assert.Equal(t, "[JET 2 11]", j.DebugString())
 }
 
 func BenchmarkRecordID_DebugString_ZeroDepth(b *testing.B) {
-	jet := core.RecordID(*storage.NewID(0, []byte{}))
+	jet := core.RecordID(*storage.NewJetID(0, []byte{}))
 	for n := 0; n < b.N; n++ {
 		jet.DebugString()
 	}
 }
 
 func BenchmarkRecordID_DebugString_Depth1(b *testing.B) {
-	jet := core.RecordID(*storage.NewID(1, []byte{128}))
+	jet := core.RecordID(*storage.NewJetID(1, []byte{128}))
 	for n := 0; n < b.N; n++ {
 		jet.DebugString()
 	}
 }
 
 func BenchmarkRecordID_DebugString_Depth5(b *testing.B) {
-	jet := core.RecordID(*storage.NewID(5, []byte{128}))
+	jet := core.RecordID(*storage.NewJetID(5, []byte{128}))
 	for n := 0; n < b.N; n++ {
 		jet.DebugString()
 	}

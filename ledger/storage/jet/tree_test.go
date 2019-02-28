@@ -42,7 +42,7 @@ func TestTree_Find(t *testing.T) {
 		},
 	}
 	lookup := core.NewRecordID(0, []byte{0xD5}) // 11010101
-	jetLookup := storage.NewID(15, []byte{1, 2, 3})
+	jetLookup := storage.NewJetID(15, []byte{1, 2, 3})
 	expectedPrefix := make([]byte, core.RecordIDSize-core.PulseNumberSize-1)
 	expectedPrefix[0] = 0xD0 // 11010000
 
@@ -68,7 +68,7 @@ func TestTree_Update(t *testing.T) {
 	assert.Equal(t, prefix, make([]byte, core.RecordHashSize-1))
 	assert.Equal(t, false, actual)
 
-	tree.Update(core.RecordID(*storage.NewID(1, []byte{1 << 7})), false)
+	tree.Update(core.RecordID(*storage.NewJetID(1, []byte{1 << 7})), false)
 	id, actual = tree.Find(*lookup)
 	depth, prefix = storage.JetID(*id).Jet()
 	expectedPrefix := make([]byte, core.RecordHashSize-1)
@@ -77,14 +77,14 @@ func TestTree_Update(t *testing.T) {
 	assert.Equal(t, expectedPrefix, prefix)
 	assert.Equal(t, false, actual)
 
-	tree.Update(core.RecordID(*storage.NewID(8, lookup.Hash())), false)
+	tree.Update(core.RecordID(*storage.NewJetID(8, lookup.Hash())), false)
 	id, actual = tree.Find(*lookup)
 	depth, prefix = storage.JetID(*id).Jet()
 	assert.Equal(t, uint8(8), depth)
 	assert.Equal(t, lookup.Hash()[:core.RecordHashSize-1], prefix)
 	assert.Equal(t, false, actual)
 
-	tree.Update(core.RecordID(*storage.NewID(8, lookup.Hash())), true)
+	tree.Update(core.RecordID(*storage.NewJetID(8, lookup.Hash())), true)
 	id, actual = tree.Find(*lookup)
 	depth, prefix = storage.JetID(*id).Jet()
 	assert.Equal(t, uint8(8), depth)
@@ -101,8 +101,8 @@ func TestTree_Split(t *testing.T) {
 			Left: &jet{},
 		},
 	}
-	tooDeep := storage.NewID(6, []byte{0xD5}) // 11010101
-	ok := storage.NewID(2, []byte{0xD5})      // 11010101
+	tooDeep := storage.NewJetID(6, []byte{0xD5}) // 11010101
+	ok := storage.NewJetID(2, []byte{0xD5})      // 11010101
 
 	t.Run("not existing jet returns error", func(t *testing.T) {
 		_, _, err := tree.Split(core.RecordID(*tooDeep))
@@ -461,8 +461,8 @@ func TestTree_LeafIDs(t *testing.T) {
 	leafIDs := tree.LeafIDs()
 
 	require.Equal(t, len(leafIDs), 4)
-	assert.Equal(t, leafIDs[0], core.RecordID(*storage.NewID(1, nil)))          // 0000
-	assert.Equal(t, leafIDs[1], core.RecordID(*storage.NewID(4, []byte{0xC0}))) // 1100
-	assert.Equal(t, leafIDs[2], core.RecordID(*storage.NewID(4, []byte{0xD0}))) // 1101
-	assert.Equal(t, leafIDs[3], core.RecordID(*storage.NewID(3, []byte{0xE0}))) // 1110
+	assert.Equal(t, leafIDs[0], core.RecordID(*storage.NewJetID(1, nil)))          // 0000
+	assert.Equal(t, leafIDs[1], core.RecordID(*storage.NewJetID(4, []byte{0xC0}))) // 1100
+	assert.Equal(t, leafIDs[2], core.RecordID(*storage.NewJetID(4, []byte{0xD0}))) // 1101
+	assert.Equal(t, leafIDs[3], core.RecordID(*storage.NewJetID(3, []byte{0xE0}))) // 1110
 }

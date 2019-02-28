@@ -109,7 +109,7 @@ func (s *componentSuite) TestLedgerArtifactManager_PendingRequest() {
 	mc := minimock.NewController(s.T())
 	defer mc.Finish()
 
-	jetID := *storage.NewID(0, nil)
+	jetID := *storage.NewJetID(0, nil)
 
 	amPulseStorageMock := testutils.NewPulseStorageMock(s.T())
 	amPulseStorageMock.CurrentFunc = func(p context.Context) (r *core.Pulse, r1 error) {

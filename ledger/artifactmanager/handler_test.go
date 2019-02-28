@@ -119,7 +119,7 @@ func (s *handlerSuite) AfterTest(suiteName, testName string) {
 func (s *handlerSuite) TestMessageHandler_HandleGetObject_FetchesObject() {
 	mc := minimock.NewController(s.T())
 	defer mc.Finish()
-	jetID := core.RecordID(*storage.NewID(0, nil))
+	jetID := core.RecordID(*storage.NewJetID(0, nil))
 
 	tf := testutils.NewDelegationTokenFactoryMock(mc)
 	jc := testutils.NewJetCoordinatorMock(mc)
@@ -270,7 +270,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObject_FetchesObject() {
 func (s *handlerSuite) TestMessageHandler_HandleGetChildren_Redirects() {
 	mc := minimock.NewController(s.T())
 	defer mc.Finish()
-	jetID := core.RecordID(*storage.NewID(0, nil))
+	jetID := core.RecordID(*storage.NewJetID(0, nil))
 
 	tf := testutils.NewDelegationTokenFactoryMock(mc)
 	tf.IssueGetChildrenRedirectMock.Return(&delegationtoken.GetChildrenRedirectToken{Signature: []byte{1, 2, 3}}, nil)
@@ -397,7 +397,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetChildren_Redirects() {
 func (s *handlerSuite) TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeavy() {
 	mc := minimock.NewController(s.T())
 	defer mc.Finish()
-	jetID := core.RecordID(*storage.NewID(0, nil))
+	jetID := core.RecordID(*storage.NewJetID(0, nil))
 
 	indexMock := recentstorage.NewRecentIndexStorageMock(s.T())
 	pendingMock := recentstorage.NewPendingStorageMock(s.T())
@@ -471,7 +471,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeav
 func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy() {
 	mc := minimock.NewController(s.T())
 	defer mc.Finish()
-	jetID := core.RecordID(*storage.NewID(0, nil))
+	jetID := core.RecordID(*storage.NewJetID(0, nil))
 
 	indexMock := recentstorage.NewRecentIndexStorageMock(s.T())
 	pendingMock := recentstorage.NewPendingStorageMock(s.T())
@@ -550,7 +550,7 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_UpdateIndexState() 
 	// Arrange
 	mc := minimock.NewController(s.T())
 	defer mc.Finish()
-	jetID := core.RecordID(*storage.NewID(0, nil))
+	jetID := core.RecordID(*storage.NewJetID(0, nil))
 
 	indexMock := recentstorage.NewRecentIndexStorageMock(s.T())
 	pendingMock := recentstorage.NewPendingStorageMock(s.T())
@@ -615,7 +615,7 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_UpdateIndexState() 
 func (s *handlerSuite) TestMessageHandler_HandleGetObjectIndex() {
 	mc := minimock.NewController(s.T())
 	defer mc.Finish()
-	jetID := core.RecordID(*storage.NewID(0, nil))
+	jetID := core.RecordID(*storage.NewJetID(0, nil))
 	msg := message.GetObjectIndex{
 		Object: *genRandomRef(0),
 	}
@@ -687,7 +687,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHasPendingRequests() {
 	certificate := testutils.NewCertificateMock(s.T())
 	certificate.GetRoleMock.Return(core.StaticRoleLightMaterial)
 
-	jetID := core.RecordID(*storage.NewID(0, nil))
+	jetID := core.RecordID(*storage.NewJetID(0, nil))
 	jc := testutils.NewJetCoordinatorMock(mc)
 	mb := testutils.NewMessageBusMock(mc)
 	mb.MustRegisterMock.Return()
@@ -761,7 +761,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetCode_Redirects() {
 
 	h.RecentStorageProvider = provideMock
 
-	jetID := core.RecordID(*storage.NewID(0, nil))
+	jetID := core.RecordID(*storage.NewJetID(0, nil))
 	msg := message.GetCode{
 		Code: *genRandomRef(core.FirstPulseNumber),
 	}
@@ -804,7 +804,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetCode_Redirects() {
 func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHeavy() {
 	mc := minimock.NewController(s.T())
 	defer mc.Finish()
-	jetID := core.RecordID(*storage.NewID(0, nil))
+	jetID := core.RecordID(*storage.NewJetID(0, nil))
 
 	indexMock := recentstorage.NewRecentIndexStorageMock(s.T())
 	pendingMock := recentstorage.NewPendingStorageMock(s.T())
@@ -884,7 +884,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 	// Arrange
 	mc := minimock.NewController(s.T())
 	defer mc.Finish()
-	jetID := core.RecordID(*storage.NewID(0, nil))
+	jetID := core.RecordID(*storage.NewJetID(0, nil))
 
 	indexMock := recentstorage.NewRecentIndexStorageMock(s.T())
 	pendingMock := recentstorage.NewPendingStorageMock(s.T())
@@ -1044,7 +1044,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 func (s *handlerSuite) TestMessageHandler_HandleValidationCheck() {
 	mc := minimock.NewController(s.T())
 	defer mc.Finish()
-	jetID := core.RecordID(*storage.NewID(0, nil))
+	jetID := core.RecordID(*storage.NewJetID(0, nil))
 
 	indexMock := recentstorage.NewRecentIndexStorageMock(s.T())
 	pendingMock := recentstorage.NewPendingStorageMock(s.T())
@@ -1129,7 +1129,7 @@ func (s *handlerSuite) TestMessageHandler_HandleJetDrop_SaveJet() {
 	mc := minimock.NewController(s.T())
 	defer mc.Finish()
 
-	jetID := core.RecordID(*storage.NewID(0, []byte{2}))
+	jetID := core.RecordID(*storage.NewJetID(0, []byte{2}))
 	msg := message.JetDrop{
 		JetID: jetID,
 	}
@@ -1171,8 +1171,8 @@ func (s *handlerSuite) TestMessageHandler_HandleJetDrop_SaveJet_ExistingMap() {
 	// db, cleaner := storagetest.TmpDB(ctx, t)
 	defer mc.Finish()
 
-	jetID := core.RecordID(*storage.NewID(0, []byte{2}))
-	secondJetID := core.RecordID(*storage.NewID(0, []byte{3}))
+	jetID := core.RecordID(*storage.NewJetID(0, []byte{2}))
+	secondJetID := core.RecordID(*storage.NewJetID(0, []byte{3}))
 	msg := message.JetDrop{
 		JetID: jetID,
 	}
@@ -1219,7 +1219,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetRequest() {
 	mc := minimock.NewController(s.T())
 	defer mc.Finish()
 
-	jetID := core.RecordID(*storage.NewID(0, nil))
+	jetID := core.RecordID(*storage.NewJetID(0, nil))
 
 	req := record.RequestRecord{
 		MessageHash: []byte{1, 2, 3},

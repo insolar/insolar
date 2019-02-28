@@ -77,7 +77,7 @@ func RandomJetWithDepth(depth uint8) core.RecordID {
 	if err != nil {
 		panic(err)
 	}
-	return core.RecordID(*storage.NewID(depth, storage.ResetBits(jetbuf[1:], depth)))
+	return core.RecordID(*storage.NewJetID(depth, storage.ResetBits(jetbuf[1:], depth)))
 }
 
 // JetFromString converts string representation of Jet to core.RecordID.
@@ -99,7 +99,7 @@ func JetFromString(s string) core.RecordID {
 				"%v character is non 0 or 1, but %v (input string='%v')", i, char, s))
 		}
 	}
-	return core.RecordID(*storage.NewID(depth, jetPrefix))
+	return core.RecordID(*storage.NewJetID(depth, jetPrefix))
 
 }
 

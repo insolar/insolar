@@ -119,7 +119,7 @@ func (s *jetCoordinatorSuite) TestJetCoordinator_QueryRole() {
 	s.nodeStorage.InRoleMock.Return(nds, nil)
 
 	objID := core.NewRecordID(0, []byte{1, 42, 123})
-	s.jetStorage.UpdateJetTree(s.ctx, 0, true, core.RecordID(*storage.NewID(50, []byte{1, 42, 123})))
+	s.jetStorage.UpdateJetTree(s.ctx, 0, true, core.RecordID(*storage.NewJetID(50, []byte{1, 42, 123})))
 
 	selected, err := s.coordinator.QueryRole(s.ctx, core.DynamicRoleLightValidator, *objID, 0)
 	require.NoError(s.T(), err)

@@ -195,7 +195,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 	}
 
 	if closeJets {
-		err := pm.HotDataWaiter.Unlock(ctx, core.RecordID(*storage.NewID(0, nil)))
+		err := pm.HotDataWaiter.Unlock(ctx, core.RecordID(*storage.NewJetID(0, nil)))
 		require.NoError(t, err)
 	}
 

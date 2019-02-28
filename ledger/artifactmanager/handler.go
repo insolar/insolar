@@ -358,7 +358,7 @@ func (h *MessageHandler) handleSetBlob(ctx context.Context, parcel core.Parcel) 
 
 func (h *MessageHandler) handleGetCode(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
 	msg := parcel.Message().(*message.GetCode)
-	jetID := *storage.NewID(0, nil)
+	jetID := *storage.NewJetID(0, nil)
 
 	codeRec, err := h.getCode(ctx, msg.Code.Record())
 	if err == core.ErrNotFound {
@@ -1091,7 +1091,7 @@ func (h *MessageHandler) handleValidationCheck(ctx context.Context, parcel core.
 }
 
 func (h *MessageHandler) getCode(ctx context.Context, id *core.RecordID) (*record.CodeRecord, error) {
-	jetID := *storage.NewID(0, nil)
+	jetID := *storage.NewJetID(0, nil)
 
 	rec, err := h.ObjectStorage.GetRecord(ctx, core.RecordID(jetID), id)
 	if err != nil {

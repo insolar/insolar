@@ -213,7 +213,7 @@ func (s *LogicRunnerFuncSuite) incrementPulseHelper(ctx context.Context, lr core
 	)
 	s.Require().NoError(err)
 
-	rootJetId := core.RecordID(*storage.NewID(0, nil))
+	rootJetId := core.RecordID(*storage.NewJetID(0, nil))
 	_, err = lr.(*LogicRunner).MessageBus.Send(
 		ctx,
 		&message.HotData{
