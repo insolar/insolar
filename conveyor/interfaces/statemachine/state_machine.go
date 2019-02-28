@@ -35,7 +35,7 @@ type StateMachineType interface {
 	GetMigrationHandler(state int) MigrationHandler
 	GetTransitionHandler(state int) TransitHandler
 	GetResponseHandler(state int) AdapterResponseHandler
-	GetNestedHandler(state int) NestedHandler
+	GetNestedHandler() NestedHandler
 
 	GetTransitionErrorHandler(state int) TransitionErrorHandler
 	GetResponseErrorHandler(state int) ResponseErrorHandler

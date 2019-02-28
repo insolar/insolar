@@ -22,7 +22,7 @@ type StateMachineTypeMock struct {
 	GetMigrationHandlerPreCounter uint64
 	GetMigrationHandlerMock       mStateMachineTypeMockGetMigrationHandler
 
-	GetNestedHandlerFunc       func(p int) (r NestedHandler)
+	GetNestedHandlerFunc       func() (r NestedHandler)
 	GetNestedHandlerCounter    uint64
 	GetNestedHandlerPreCounter uint64
 	GetNestedHandlerMock       mStateMachineTypeMockGetNestedHandler
@@ -226,12 +226,7 @@ type mStateMachineTypeMockGetNestedHandler struct {
 }
 
 type StateMachineTypeMockGetNestedHandlerExpectation struct {
-	input  *StateMachineTypeMockGetNestedHandlerInput
 	result *StateMachineTypeMockGetNestedHandlerResult
-}
-
-type StateMachineTypeMockGetNestedHandlerInput struct {
-	p int
 }
 
 type StateMachineTypeMockGetNestedHandlerResult struct {
@@ -239,14 +234,14 @@ type StateMachineTypeMockGetNestedHandlerResult struct {
 }
 
 //Expect specifies that invocation of StateMachineType.GetNestedHandler is expected from 1 to Infinity times
-func (m *mStateMachineTypeMockGetNestedHandler) Expect(p int) *mStateMachineTypeMockGetNestedHandler {
+func (m *mStateMachineTypeMockGetNestedHandler) Expect() *mStateMachineTypeMockGetNestedHandler {
 	m.mock.GetNestedHandlerFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &StateMachineTypeMockGetNestedHandlerExpectation{}
 	}
-	m.mainExpectation.input = &StateMachineTypeMockGetNestedHandlerInput{p}
+
 	return m
 }
 
@@ -263,12 +258,12 @@ func (m *mStateMachineTypeMockGetNestedHandler) Return(r NestedHandler) *StateMa
 }
 
 //ExpectOnce specifies that invocation of StateMachineType.GetNestedHandler is expected once
-func (m *mStateMachineTypeMockGetNestedHandler) ExpectOnce(p int) *StateMachineTypeMockGetNestedHandlerExpectation {
+func (m *mStateMachineTypeMockGetNestedHandler) ExpectOnce() *StateMachineTypeMockGetNestedHandlerExpectation {
 	m.mock.GetNestedHandlerFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &StateMachineTypeMockGetNestedHandlerExpectation{}
-	expectation.input = &StateMachineTypeMockGetNestedHandlerInput{p}
+
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
@@ -278,7 +273,7 @@ func (e *StateMachineTypeMockGetNestedHandlerExpectation) Return(r NestedHandler
 }
 
 //Set uses given function f as a mock of StateMachineType.GetNestedHandler method
-func (m *mStateMachineTypeMockGetNestedHandler) Set(f func(p int) (r NestedHandler)) *StateMachineTypeMock {
+func (m *mStateMachineTypeMockGetNestedHandler) Set(f func() (r NestedHandler)) *StateMachineTypeMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -287,18 +282,15 @@ func (m *mStateMachineTypeMockGetNestedHandler) Set(f func(p int) (r NestedHandl
 }
 
 //GetNestedHandler implements github.com/insolar/insolar/conveyor/interfaces/statemachine.StateMachineType interface
-func (m *StateMachineTypeMock) GetNestedHandler(p int) (r NestedHandler) {
+func (m *StateMachineTypeMock) GetNestedHandler() (r NestedHandler) {
 	counter := atomic.AddUint64(&m.GetNestedHandlerPreCounter, 1)
 	defer atomic.AddUint64(&m.GetNestedHandlerCounter, 1)
 
 	if len(m.GetNestedHandlerMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.GetNestedHandlerMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to StateMachineTypeMock.GetNestedHandler. %v", p)
+			m.t.Fatalf("Unexpected call to StateMachineTypeMock.GetNestedHandler.")
 			return
 		}
-
-		input := m.GetNestedHandlerMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, StateMachineTypeMockGetNestedHandlerInput{p}, "StateMachineType.GetNestedHandler got unexpected parameters")
 
 		result := m.GetNestedHandlerMock.expectationSeries[counter-1].result
 		if result == nil {
@@ -313,11 +305,6 @@ func (m *StateMachineTypeMock) GetNestedHandler(p int) (r NestedHandler) {
 
 	if m.GetNestedHandlerMock.mainExpectation != nil {
 
-		input := m.GetNestedHandlerMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, StateMachineTypeMockGetNestedHandlerInput{p}, "StateMachineType.GetNestedHandler got unexpected parameters")
-		}
-
 		result := m.GetNestedHandlerMock.mainExpectation.result
 		if result == nil {
 			m.t.Fatal("No results are set for the StateMachineTypeMock.GetNestedHandler")
@@ -329,11 +316,11 @@ func (m *StateMachineTypeMock) GetNestedHandler(p int) (r NestedHandler) {
 	}
 
 	if m.GetNestedHandlerFunc == nil {
-		m.t.Fatalf("Unexpected call to StateMachineTypeMock.GetNestedHandler. %v", p)
+		m.t.Fatalf("Unexpected call to StateMachineTypeMock.GetNestedHandler.")
 		return
 	}
 
-	return m.GetNestedHandlerFunc(p)
+	return m.GetNestedHandlerFunc()
 }
 
 //GetNestedHandlerMinimockCounter returns a count of StateMachineTypeMock.GetNestedHandlerFunc invocations

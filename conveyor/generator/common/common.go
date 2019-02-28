@@ -18,27 +18,18 @@ package common
 
 import (
 	"github.com/insolar/insolar/conveyor/interfaces/slot"
+	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
 )
 
-type InitHandler func(element slot.SlotElementHelper) (interface{}, uint32, error)
-type TransitHandler func(element slot.SlotElementHelper) (interface{}, uint32, error)
-type MigrationHandler func(element slot.SlotElementHelper) (interface{}, uint32, error)
-type ErrorHandler func(element slot.SlotElementHelper, err error) (interface{}, uint32)
-type AdapterResponseHandler func(element slot.SlotElementHelper, err error) (interface{}, uint32)
-type NestedHandler func(element slot.SlotElementHelper, err error) (interface{}, uint32)
-
-type TransitionErrorHandler func(element slot.SlotElementHelper, err error) (interface{}, uint32)
-type ResponseErrorHandler func(element slot.SlotElementHelper, err error) (interface{}, uint32)
-
 type State struct {
-	Transit TransitHandler
-	Migrate MigrationHandler
-	Error   ErrorHandler
+	Transit statemachine.TransitHandler
+	Migrate statemachine.MigrationHandler
+	Error   statemachine.TransitionErrorHandler
 }
 
 type StateMachine struct {
 	Id int
-	InitHandler     InitHandler
+	InitHandler     statemachine.InitHandler
 	States          []State
 	FinalizeHandler interface{}
 }
@@ -47,31 +38,31 @@ func (sm *StateMachine) GetTypeID() int {
 	return sm.Id
 }
 
-func (sm *StateMachine) GetTransitionHandler(state uint16) TransitHandler {
+func (sm *StateMachine) GetTransitionHandler(state int) statemachine.TransitHandler {
 	return sm.States[state].Transit
 }
 
-func (sm *StateMachine) GetMigrationHandler(state uint16) MigrationHandler {
+func (sm *StateMachine) GetMigrationHandler(state int) statemachine.MigrationHandler {
 	return sm.States[state].Migrate
 }
 
-func (sm *StateMachine) GetTransitionErrorHandler(state uint16) ErrorHandler {
+func (sm *StateMachine) GetTransitionErrorHandler(state int) statemachine.TransitionErrorHandler {
 	return sm.States[state].Error
 }
 
-func (sm *StateMachine) GetResponseHandler(state uint16) AdapterResponseHandler {
+func (sm *StateMachine) GetResponseHandler(state int) statemachine.AdapterResponseHandler {
 	return func(element slot.SlotElementHelper, err error) (interface{}, uint32) {
 		return nil, 0
 	}
 }
 
-func (sm *StateMachine) GetNestedHandler() NestedHandler {
+func (sm *StateMachine) GetNestedHandler() statemachine.NestedHandler {
 	return func(element slot.SlotElementHelper, err error) (interface{}, uint32) {
 		return nil, 0
 	}
 }
 
-func (sm *StateMachine) GetResponseErrorHandler(state uint16) ResponseErrorHandler {
+func (sm *StateMachine) GetResponseErrorHandler(state int) statemachine.ResponseErrorHandler {
 	return func(element slot.SlotElementHelper, err error) (interface{}, uint32) {
 		return nil, 0
 	}
