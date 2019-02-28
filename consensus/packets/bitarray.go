@@ -86,13 +86,13 @@ func (arr *bitArray) serialize(compressed bool) ([]byte, error) {
 
 func (arr *bitArray) serializeCompressed() ([]byte, error) {
 	var result bytes.Buffer
-	last, err := arr.getState(0)
+	last, err := arr.GetState(0)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ serializeCompressed ] failed to get state from bitarray")
 	}
 	count := uint16(1)
 	for i := 1; i < arr.bitsSize/2; i++ { // cuz 2 bits == 1 state
-		current, err := arr.getState(i)
+		current, err := arr.GetState(i)
 		if err != nil {
 			return nil, errors.Wrap(err, "[ serializeCompressed ] failed to get state from bitarray")
 		}
@@ -126,21 +126,39 @@ func (arr *bitArray) get(index int) (uint8, error) {
 	return res & lastBitMask, nil
 }
 
-func (arr *bitArray) getState(index int) (uint8, error) {
+func (arr *bitArray) GetState(index int) (TriState, error) {
 	if index >= arr.bitsSize {
 		return 0, errors.New("failed to get a bit - index out of range")
 	}
 
 	stateFirstBit, err := arr.get(2 * index)
 	if err != nil {
-		return 0, errors.Wrap(err, "[ getState ] failed to get a bit from bitarray")
+		return 0, errors.Wrap(err, "[ GetState ] failed to get a bit from bitarray")
 	}
 	stateSecondBit, err := arr.get(2*index + 1)
 	if err != nil {
-		return 0, errors.Wrap(err, "[ getState ] failed to get a bit from bitarray")
+		return 0, errors.Wrap(err, "[ GetState ] failed to get a bit from bitarray")
 	}
+	result := (stateFirstBit << 1) + stateSecondBit
 
-	return (stateFirstBit << 1) + stateSecondBit, nil
+	return TriState(result), nil
+}
+
+func (arr *bitArray) SetState(index int, state TriState) error {
+	err := arr.putLastBit(state>>1, 2*index) // set first bit to array
+	if err != nil {
+		return errors.Wrap(err, "[ changeBitState ] failed to set last bit")
+	}
+	err = arr.putLastBit(state, 2*index+1) // set second bit to array
+	if err != nil {
+		return errors.Wrap(err, "[ changeBitState ] failed to set last bit")
+	}
+	return nil
+}
+
+func (arr *bitArray) putLastBit(state TriState, index int) error {
+	bit := int(state & lastBitMask)
+	return arr.set(bit, index)
 }
 
 func getStepToMove(index int) uint8 {
