@@ -16,18 +16,29 @@
 
 package slot
 
-type reactivateMode interface{}
+// ReactivateMode represents reason of reactivating of slot element
+type ReactivateMode int
 
+//go:generate stringer -type=ReactivateMode
+const (
+	Empty = ReactivateMode(iota)
+	Response
+	Tick
+	SeqHead
+)
+
+// SlotElementHelper gives access to slot element
 //go:generate minimock -i github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementHelper -o ./ -s _mock.go
 type SlotElementHelper interface {
 	SlotElementRestrictedHelper
 	InformParent(payload interface{}) bool
-	DeactivateTill(reactivateOn reactivateMode)
+	DeactivateTill(reactivateOn ReactivateMode)
 	SendTask(adapterID uint32, taskPayload interface{}, respHandlerID uint32) error
-	// joinSequence( sequenceKey map-key,sequenceOrder uint64 )
-	// isSequenceHead() bool
+	// JoinSequence( sequenceKey map-key,sequenceOrder uint64 )
+	// IsSequenceHead() bool
 }
 
+// SlotElementRestrictedHelper is restricted part of SlotElementHelper
 //go:generate minimock -i github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementRestrictedHelper -o ./ -s _mock.go
 type SlotElementRestrictedHelper interface {
 	SlotElementReadOnly
@@ -40,6 +51,7 @@ type SlotElementRestrictedHelper interface {
 	LeaveSequence()
 }
 
+// SlotElementReadOnly gives read-only access to slot element
 //go:generate minimock -i github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementReadOnly -o ./ -s _mock.go
 type SlotElementReadOnly interface {
 	GetElementID() uint32
