@@ -33,6 +33,7 @@ import (
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/index"
 	"github.com/insolar/insolar/ledger/storage/jet"
+	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
@@ -53,7 +54,7 @@ type handlerSuite struct {
 
 	scheme        core.PlatformCryptographyScheme
 	pulseTracker  storage.PulseTracker
-	nodeStorage   storage.NodeStorage
+	nodeStorage   node.Accessor
 	objectStorage storage.ObjectStorage
 	jetStorage    storage.JetStorage
 	dropStorage   storage.DropStorage
@@ -77,9 +78,9 @@ func (s *handlerSuite) BeforeTest(suiteName, testName string) {
 	db, cleaner := storagetest.TmpDB(s.ctx, s.T())
 	s.cleaner = cleaner
 	s.db = db
-	s.scheme = platformpolicy.NewPlatformCryptographyScheme()
+	s.scheme = testutils.NewPlatformCryptographyScheme()
 	s.jetStorage = storage.NewJetStorage()
-	s.nodeStorage = storage.NewNodeStorage()
+	s.nodeStorage = node.NewStorage()
 	s.pulseTracker = storage.NewPulseTracker()
 	s.objectStorage = storage.NewObjectStorage()
 	s.dropStorage = storage.NewDropStorage(10)
@@ -112,7 +113,7 @@ func (s *handlerSuite) AfterTest(suiteName, testName string) {
 	s.cleaner()
 }
 
-func (s *handlerSuite) TestMessageHandler_HandleGetObject_Redirects() {
+func (s *handlerSuite) TestMessageHandler_HandleGetObject_FetchesObject() {
 	mc := minimock.NewController(s.T())
 	defer mc.Finish()
 	jetID := *jet.NewID(0, nil)
@@ -126,13 +127,11 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObject_Redirects() {
 	certificate := testutils.NewCertificateMock(s.T())
 	certificate.GetRoleMock.Return(core.StaticRoleLightMaterial)
 
-	tf.IssueGetObjectRedirectMock.Return(&delegationtoken.GetObjectRedirectToken{Signature: []byte{1, 2, 3}}, nil)
-
 	h := NewMessageHandler(&configuration.Ledger{
 		LightChainLimit: 2,
 	}, certificate)
 	h.JetStorage = s.jetStorage
-	h.NodeStorage = s.nodeStorage
+	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
@@ -160,7 +159,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObject_Redirects() {
 	err := h.Init(s.ctx)
 	require.NoError(s.T(), err)
 
-	s.T().Run("fetches_index_from_heavy_when_no_index", func(t *testing.T) {
+	s.T().Run("fetches state from heavy when no index", func(t *testing.T) {
 		idxState := genRandomID(core.FirstPulseNumber)
 		objIndex := index.ObjectLifeline{
 			LatestState: idxState,
@@ -176,6 +175,10 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObject_Redirects() {
 				return &reply.ObjectIndex{Index: buf}, nil
 			}
 
+			if _, ok := gm.(*message.GetObject); ok {
+				return &reply.Object{Memory: []byte{42, 16, 2}}, nil
+			}
+
 			panic("unexpected call")
 		}
 
@@ -188,12 +191,9 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObject_Redirects() {
 			PulseNumber: core.FirstPulseNumber,
 		})
 		require.NoError(t, err)
-		redirect, ok := rep.(*reply.GetObjectRedirectReply)
+		obj, ok := rep.(*reply.Object)
 		require.True(t, ok)
-		token, ok := redirect.Token.(*delegationtoken.GetObjectRedirectToken)
-		assert.Equal(t, []byte{1, 2, 3}, token.Signature)
-		assert.Equal(t, lightRef, redirect.GetReceiver())
-		assert.Equal(t, idxState, redirect.StateID)
+		assert.Equal(t, []byte{42, 16, 2}, obj.Memory)
 
 		idx, err := s.objectStorage.GetObjectIndex(s.ctx, jetID, msg.Head.Record(), false)
 		require.NoError(t, err)
@@ -202,7 +202,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObject_Redirects() {
 
 	err = s.pulseTracker.AddPulse(s.ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 1})
 	require.NoError(s.T(), err)
-	s.T().Run("redirect to light when has index and state later than limit", func(t *testing.T) {
+	s.T().Run("fetches state from light when has index and state later than limit", func(t *testing.T) {
 		lightRef := genRandomRef(0)
 		jc.IsBeyondLimitMock.Return(false, nil)
 		jc.NodeForJetMock.Return(lightRef, nil)
@@ -211,24 +211,30 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObject_Redirects() {
 			LatestState: stateID,
 		})
 		require.NoError(t, err)
+
+		mb.SendFunc = func(c context.Context, gm core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
+			if _, ok := gm.(*message.GetObject); ok {
+				return &reply.Object{Memory: []byte{42, 16, 2}}, nil
+			}
+
+			panic("unexpected call")
+		}
+
 		rep, err := h.handleGetObject(contextWithJet(s.ctx, jetID), &message.Parcel{
 			Msg:         &msg,
 			PulseNumber: core.FirstPulseNumber + 1,
 		})
 		require.NoError(t, err)
-		redirect, ok := rep.(*reply.GetObjectRedirectReply)
+		obj, ok := rep.(*reply.Object)
 		require.True(t, ok)
-		token, ok := redirect.Token.(*delegationtoken.GetObjectRedirectToken)
-		assert.Equal(t, []byte{1, 2, 3}, token.Signature)
-		assert.Equal(t, lightRef, redirect.GetReceiver())
-		assert.Equal(t, stateID, redirect.StateID)
+		assert.Equal(t, []byte{42, 16, 2}, obj.Memory)
 	})
 
 	err = s.pulseTracker.AddPulse(s.ctx, core.Pulse{
 		PulseNumber: core.FirstPulseNumber + 2,
 	})
 	require.NoError(s.T(), err)
-	s.T().Run("redirect to heavy when has index and state earlier than limit", func(t *testing.T) {
+	s.T().Run("fetches state from heavy when has index and state earlier than limit", func(t *testing.T) {
 		heavyRef := genRandomRef(0)
 		jc.IsBeyondLimitMock.Return(false, nil)
 		jc.NodeForJetMock.Return(heavyRef, nil)
@@ -238,17 +244,23 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObject_Redirects() {
 			LatestState: stateID,
 		})
 		require.NoError(t, err)
+
+		mb.SendFunc = func(c context.Context, gm core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
+			if _, ok := gm.(*message.GetObject); ok {
+				return &reply.Object{Memory: []byte{42, 16, 2}}, nil
+			}
+
+			panic("unexpected call")
+		}
+
 		rep, err := h.handleGetObject(contextWithJet(s.ctx, jetID), &message.Parcel{
 			Msg:         &msg,
 			PulseNumber: core.FirstPulseNumber + 2,
 		})
 		require.NoError(t, err)
-		redirect, ok := rep.(*reply.GetObjectRedirectReply)
+		obj, ok := rep.(*reply.Object)
 		require.True(t, ok)
-		token, ok := redirect.Token.(*delegationtoken.GetObjectRedirectToken)
-		assert.Equal(t, []byte{1, 2, 3}, token.Signature)
-		assert.Equal(t, heavyRef, redirect.GetReceiver())
-		assert.Equal(t, stateID, redirect.StateID)
+		assert.Equal(t, []byte{42, 16, 2}, obj.Memory)
 	})
 }
 
@@ -288,7 +300,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetChildren_Redirects() {
 	h.DelegationTokenFactory = tf
 	h.Bus = mb
 	h.JetStorage = s.jetStorage
-	h.NodeStorage = s.nodeStorage
+	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
@@ -407,7 +419,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeav
 		LightChainLimit: 3,
 	}, certificate)
 	h.JetStorage = s.jetStorage
-	h.NodeStorage = s.nodeStorage
+	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
@@ -481,7 +493,7 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_FetchesIndexFromHea
 		LightChainLimit: 3,
 	}, certificate)
 	h.JetStorage = s.jetStorage
-	h.NodeStorage = s.nodeStorage
+	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
@@ -556,7 +568,7 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_UpdateIndexState() 
 		LightChainLimit: 3,
 	}, certificate)
 	h.JetStorage = s.jetStorage
-	h.NodeStorage = s.nodeStorage
+	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
@@ -571,7 +583,7 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_UpdateIndexState() 
 	amendRecord := record.ObjectAmendRecord{
 		PrevState: *objIndex.LatestState,
 	}
-	amendHash := s.db.GetPlatformCryptographyScheme().ReferenceHasher()
+	amendHash := s.scheme.ReferenceHasher()
 	_, err := amendRecord.WriteHashData(amendHash)
 	require.NoError(s.T(), err)
 
@@ -630,7 +642,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObjectIndex() {
 	h.JetCoordinator = jc
 	h.Bus = mb
 	h.JetStorage = s.jetStorage
-	h.NodeStorage = s.nodeStorage
+	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
@@ -681,7 +693,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHasPendingRequests() {
 	h.JetCoordinator = jc
 	h.Bus = mb
 	h.JetStorage = s.jetStorage
-	h.NodeStorage = s.nodeStorage
+	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
@@ -737,7 +749,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetCode_Redirects() {
 	h.DelegationTokenFactory = tf
 	h.Bus = mb
 	h.JetStorage = s.jetStorage
-	h.NodeStorage = s.nodeStorage
+	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
@@ -813,7 +825,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 		LightChainLimit: 2,
 	}, certificate)
 	h.JetStorage = s.jetStorage
-	h.NodeStorage = s.nodeStorage
+	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
@@ -890,7 +902,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 		LightChainLimit: 2,
 	}, certificate)
 	h.JetStorage = s.jetStorage
-	h.NodeStorage = s.nodeStorage
+	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
@@ -1041,7 +1053,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	h.RecentStorageProvider = provideMock
 	h.Bus = mb
 	h.JetStorage = s.jetStorage
-	h.NodeStorage = s.nodeStorage
+	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
@@ -1104,7 +1116,7 @@ func (s *handlerSuite) TestMessageHandler_HandleValidationCheck() {
 	h.JetCoordinator = jc
 	h.Bus = mb
 	h.JetStorage = s.jetStorage
-	h.NodeStorage = s.nodeStorage
+	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
@@ -1173,7 +1185,7 @@ func (s *handlerSuite) TestMessageHandler_HandleJetDrop_SaveJet() {
 		LightChainLimit: 3,
 	}, certificate)
 	h.JetStorage = s.jetStorage
-	h.NodeStorage = s.nodeStorage
+	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
@@ -1220,7 +1232,7 @@ func (s *handlerSuite) TestMessageHandler_HandleJetDrop_SaveJet_ExistingMap() {
 		LightChainLimit: 3,
 	}, certificate)
 	h.JetStorage = s.jetStorage
-	h.NodeStorage = s.nodeStorage
+	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage

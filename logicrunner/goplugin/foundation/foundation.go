@@ -94,11 +94,8 @@ func GetObject(ref core.RecordRef) ProxyInterface {
 }
 
 // SelfDestruct contract will be marked as deleted
-func (bc *BaseContract) SelfDestruct() {
-	err := proxyctx.Current.DeactivateObject(bc.GetReference())
-	if err != nil {
-		panic(err)
-	}
+func (bc *BaseContract) SelfDestruct() error {
+	return proxyctx.Current.DeactivateObject(bc.GetReference())
 }
 
 // Error elementary string based error struct satisfying builtin error interface

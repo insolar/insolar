@@ -37,7 +37,7 @@ func init() {
 	sizeOf := func(s Serializer) uint16 {
 		data, err := s.Serialize()
 		if err != nil {
-			log.Fatalln("Failed to init packets package: ", err.Error())
+			log.Fatal("Failed to init packets package: ", err.Error())
 		}
 		return uint16(len(data))
 	}

@@ -22,16 +22,19 @@ import (
 	"testing"
 
 	"github.com/gojuno/minimock"
+	"github.com/insolar/insolar"
+	"github.com/insolar/insolar/gen"
+	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/testutils"
-	"github.com/insolar/insolar/testutils/network"
 )
 
 func TestJetTreeUpdater_otherNodesForPulse(t *testing.T) {
@@ -40,16 +43,16 @@ func TestJetTreeUpdater_otherNodesForPulse(t *testing.T) {
 	defer mc.Finish()
 
 	jc := testutils.NewJetCoordinatorMock(mc)
-	ans := storage.NewNodeStorageMock(mc)
+	ans := node.NewAccessorMock(mc)
 	js := storage.NewJetStorageMock(mc)
 	jtu := &jetTreeUpdater{
-		ActiveNodesStorage: ans,
-		JetStorage:         js,
-		JetCoordinator:     jc,
+		Nodes:          ans,
+		JetStorage:     js,
+		JetCoordinator: jc,
 	}
 
 	t.Run("active nodes storage returns error", func(t *testing.T) {
-		ans.GetActiveNodesByRoleMock.Expect(
+		ans.InRoleMock.Expect(
 			100, core.StaticRoleLightMaterial,
 		).Return(
 			nil, errors.New("some"),
@@ -65,10 +68,10 @@ func TestJetTreeUpdater_otherNodesForPulse(t *testing.T) {
 
 	t.Run("no active nodes at all", func(t *testing.T) {
 
-		ans.GetActiveNodesByRoleMock.Expect(
+		ans.InRoleMock.Expect(
 			100, core.StaticRoleLightMaterial,
 		).Return(
-			[]core.Node{}, nil,
+			[]insolar.Node{}, nil,
 		)
 
 		nodes, err := jtu.otherNodesForPulse(ctx, core.PulseNumber(100))
@@ -77,14 +80,10 @@ func TestJetTreeUpdater_otherNodesForPulse(t *testing.T) {
 	})
 
 	t.Run("one active node, it's me", func(t *testing.T) {
-
-		someNode := network.NewNodeMock(mc)
-		someNode.IDMock.Return(meRef)
-
-		ans.GetActiveNodesByRoleMock.Expect(
+		ans.InRoleMock.Expect(
 			100, core.StaticRoleLightMaterial,
 		).Return(
-			[]core.Node{someNode}, nil,
+			[]insolar.Node{{ID: meRef}}, nil,
 		)
 
 		nodes, err := jtu.otherNodesForPulse(ctx, core.PulseNumber(100))
@@ -93,13 +92,11 @@ func TestJetTreeUpdater_otherNodesForPulse(t *testing.T) {
 	})
 
 	t.Run("active node", func(t *testing.T) {
-		someNode := network.NewNodeMock(mc)
-		someNode.IDMock.Return(testutils.RandomRef())
-
-		ans.GetActiveNodesByRoleMock.Expect(
+		someNode := insolar.Node{ID: gen.Reference()}
+		ans.InRoleMock.Expect(
 			100, core.StaticRoleLightMaterial,
 		).Return(
-			[]core.Node{someNode}, nil,
+			[]insolar.Node{someNode}, nil,
 		)
 
 		nodes, err := jtu.otherNodesForPulse(ctx, core.PulseNumber(100))
@@ -108,16 +105,13 @@ func TestJetTreeUpdater_otherNodesForPulse(t *testing.T) {
 	})
 
 	t.Run("active node and me", func(t *testing.T) {
-		meNode := network.NewNodeMock(mc)
-		meNode.IDMock.Return(meRef)
+		meNode := insolar.Node{ID: meRef}
+		someNode := insolar.Node{ID: gen.Reference()}
 
-		someNode := network.NewNodeMock(mc)
-		someNode.IDMock.Return(testutils.RandomRef())
-
-		ans.GetActiveNodesByRoleMock.Expect(
+		ans.InRoleMock.Expect(
 			100, core.StaticRoleLightMaterial,
 		).Return(
-			[]core.Node{someNode, meNode}, nil,
+			[]insolar.Node{someNode, meNode}, nil,
 		)
 
 		nodes, err := jtu.otherNodesForPulse(ctx, core.PulseNumber(100))
@@ -133,26 +127,23 @@ func TestJetTreeUpdater_fetchActualJetFromOtherNodes(t *testing.T) {
 	defer mc.Finish()
 
 	jc := testutils.NewJetCoordinatorMock(mc)
-	ans := storage.NewNodeStorageMock(mc)
+	ans := node.NewAccessorMock(mc)
 	js := storage.NewJetStorageMock(mc)
 	mb := testutils.NewMessageBusMock(mc)
 	jtu := &jetTreeUpdater{
-		ActiveNodesStorage: ans,
-		JetStorage:         js,
-		JetCoordinator:     jc,
-		MessageBus:         mb,
+		Nodes:          ans,
+		JetStorage:     js,
+		JetCoordinator: jc,
+		MessageBus:     mb,
 	}
 
 	meRef := testutils.RandomRef()
 	jc.MeMock.Return(meRef)
 
-	otherNode := network.NewNodeMock(mc)
-	otherNode.IDMock.Return(testutils.RandomRef())
-
-	ans.GetActiveNodesByRoleMock.Expect(
+	ans.InRoleMock.Expect(
 		100, core.StaticRoleLightMaterial,
 	).Return(
-		[]core.Node{otherNode}, nil,
+		[]insolar.Node{{ID: gen.Reference()}}, nil,
 	)
 
 	t.Run("MB error on fetching actual jet", func(t *testing.T) {
@@ -200,33 +191,21 @@ func TestJetTreeUpdater_fetchJet(t *testing.T) {
 	defer mc.Finish()
 
 	jc := testutils.NewJetCoordinatorMock(mc)
-	ans := storage.NewNodeStorageMock(mc)
+	ans := node.NewAccessorMock(mc)
 	js := storage.NewJetStorageMock(mc)
 	mb := testutils.NewMessageBusMock(mc)
 	jtu := &jetTreeUpdater{
-		ActiveNodesStorage: ans,
-		JetStorage:         js,
-		JetCoordinator:     jc,
-		MessageBus:         mb,
-		sequencer: map[string]*struct {
-			sync.Mutex
-			done bool
-		}{},
+		Nodes:          ans,
+		JetStorage:     js,
+		JetCoordinator: jc,
+		MessageBus:     mb,
+		sequencer:      map[seqKey]*seqEntry{},
 	}
 
 	target := testutils.RandomID()
 
-	t.Run("wrong tree", func(t *testing.T) {
-		js.GetJetTreeMock.Return(nil, errors.New("some"))
-		jetID, err := jtu.fetchJet(ctx, target, core.PulseNumber(100))
-		require.Error(t, err)
-		require.Nil(t, jetID)
-	})
-
 	t.Run("quick reply, data is up to date", func(t *testing.T) {
-		js.GetJetTreeMock.Return(
-			jet.NewTree(true), nil,
-		)
+		js.FindJetMock.Return(jet.NewID(0, nil), true)
 		jetID, err := jtu.fetchJet(ctx, target, core.PulseNumber(100))
 		require.NoError(t, err)
 		require.Equal(t, jet.NewID(0, nil), jetID)
@@ -236,31 +215,115 @@ func TestJetTreeUpdater_fetchJet(t *testing.T) {
 		meRef := testutils.RandomRef()
 		jc.MeMock.Return(meRef)
 
-		otherNode := network.NewNodeMock(mc)
-		otherNode.IDMock.Return(testutils.RandomRef())
-
-		ans.GetActiveNodesByRoleMock.Expect(
+		ans.InRoleMock.Expect(
 			100, core.StaticRoleLightMaterial,
 		).Return(
-			[]core.Node{otherNode}, nil,
+			[]insolar.Node{{ID: gen.Reference()}}, nil,
 		)
 		mb.SendMock.Return(
 			&reply.Jet{ID: *jet.NewID(0, nil), Actual: true},
 			nil,
 		)
 
-		js.GetJetTreeMock.Return(
-			jet.NewTree(false), nil,
-		)
-		js.UpdateJetTreeFunc = func(ctx context.Context, pn core.PulseNumber, actual bool, jets ...core.RecordID) (r error) {
+		js.FindJetMock.Return(jet.NewID(0, nil), false)
+		js.UpdateJetTreeFunc = func(ctx context.Context, pn core.PulseNumber, actual bool, jets ...core.RecordID) {
 			require.Equal(t, core.PulseNumber(100), pn)
 			require.True(t, actual)
 			require.Equal(t, []core.RecordID{*jet.NewID(0, nil)}, jets)
-			return nil
 		}
 
 		jetID, err := jtu.fetchJet(ctx, target, core.PulseNumber(100))
 		require.NoError(t, err)
 		require.Equal(t, jet.NewID(0, nil), jetID)
 	})
+}
+
+func TestJetTreeUpdater_Concurrency(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+	mc := minimock.NewController(t)
+	defer mc.Finish()
+
+	jc := testutils.NewJetCoordinatorMock(mc)
+	ans := node.NewAccessorMock(mc)
+	js := storage.NewJetStorageMock(mc)
+	mb := testutils.NewMessageBusMock(mc)
+	jtu := &jetTreeUpdater{
+		Nodes:          ans,
+		JetStorage:     js,
+		JetCoordinator: jc,
+		MessageBus:     mb,
+		sequencer:      map[seqKey]*seqEntry{},
+	}
+
+	meRef := testutils.RandomRef()
+	jc.MeMock.Return(meRef)
+
+	nodes := []insolar.Node{{ID: gen.Reference()}, {ID: gen.Reference()}, {ID: gen.Reference()}}
+
+	ans.InRoleMock.Return(nodes, nil)
+
+	dataMu := sync.Mutex{}
+	data := map[byte]*core.RecordID{
+		0:   jet.NewID(2, []byte{0}), // 00
+		128: jet.NewID(2, []byte{0}), // 10
+		64:  jet.NewID(2, []byte{0}), // 01
+		192: jet.NewID(2, []byte{0}), // 11
+	}
+
+	mb.SendFunc = func(ctx context.Context, msg core.Message, opt *core.MessageSendOptions) (core.Reply, error) {
+		dataMu.Lock()
+		defer dataMu.Unlock()
+
+		b := msg.(*message.GetJet).Object.Bytes()[0]
+		return &reply.Jet{ID: *data[b], Actual: true}, nil
+	}
+
+	i := 100
+	for i > 0 {
+		i--
+
+		treeMu := sync.Mutex{}
+		tree := jet.NewTree(false)
+
+		js.UpdateJetTreeFunc = func(ctx context.Context, pn core.PulseNumber, actual bool, jets ...core.RecordID) {
+			treeMu.Lock()
+			defer treeMu.Unlock()
+
+			for _, id := range jets {
+				tree.Update(id, actual)
+			}
+		}
+		js.FindJetFunc = func(ctx context.Context, pulse core.PulseNumber, id core.RecordID) (*core.RecordID, bool) {
+			treeMu.Lock()
+			defer treeMu.Unlock()
+
+			return tree.Find(id)
+		}
+
+		wg := sync.WaitGroup{}
+		wg.Add(4)
+
+		for _, b := range []byte{0, 128, 192} {
+			go func(b byte) {
+				target := core.NewRecordID(0, []byte{b})
+
+				jetID, err := jtu.fetchJet(ctx, *target, core.PulseNumber(100))
+				require.NoError(t, err)
+
+				dataMu.Lock()
+				require.Equal(t, data[b], jetID)
+				dataMu.Unlock()
+
+				wg.Done()
+			}(b)
+		}
+		go func() {
+			dataMu.Lock()
+			jtu.releaseJet(ctx, *data[128], core.PulseNumber(100))
+			dataMu.Unlock()
+
+			wg.Done()
+		}()
+		wg.Wait()
+	}
 }

@@ -121,14 +121,19 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		return errors.Wrap(err, "Failed to create internal transport")
 	}
 
-	// workaround for Consensus transport, port+=1 of default transport
-	n.cfg.Host.Transport.Address, err = incrementPort(n.cfg.Host.Transport.Address)
-	if err != nil {
-		return errors.Wrap(err, "failed to increment port.")
+	var consensusAddress string
+	if n.cfg.Host.Transport.FixedPublicAddress != "" {
+		// workaround for Consensus transport, port+=1 of default transport
+		consensusAddress, err = incrementPort(n.cfg.Host.Transport.Address)
+		if err != nil {
+			return errors.Wrap(err, "failed to increment port.")
+		}
+	} else {
+		consensusAddress = n.NodeKeeper.GetOrigin().ConsensusAddress()
 	}
 
 	consensusNetwork, err := hostnetwork.NewConsensusNetwork(
-		n.NodeKeeper.GetOrigin().ConsensusAddress(),
+		consensusAddress,
 		n.CertificateManager.GetCertificate().GetNodeRef().String(),
 		n.NodeKeeper.GetOrigin().ShortID(),
 		n.routingTable,
@@ -174,7 +179,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 func (n *ServiceNetwork) Start(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
 
-	logger.Infoln("Network starts listening...")
+	logger.Info("Network starts listening...")
 	n.routingTable.Inject(n.NodeKeeper)
 	n.hostNetwork.Start(ctx)
 
@@ -184,7 +189,7 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 		return errors.Wrap(err, "Failed to bootstrap network")
 	}
 
-	log.Infoln("Bootstrapping network...")
+	log.Info("Bootstrapping network...")
 	_, err = n.Controller.Bootstrap(ctx)
 	if err != nil {
 		return errors.Wrap(err, "Failed to bootstrap network")
@@ -194,11 +199,11 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 	return nil
 }
 
-func (n *ServiceNetwork) GracefulStop(ctx context.Context) {
+func (n *ServiceNetwork) Leave(ctx context.Context, ETA core.PulseNumber) {
 	logger := inslogger.FromContext(ctx)
 	logger.Info("Gracefully stopping service network")
 
-	n.NodeKeeper.AddPendingClaim(&packets.NodeLeaveClaim{})
+	n.NodeKeeper.AddPendingClaim(&packets.NodeLeaveClaim{ETA: ETA})
 }
 
 // Stop implements core.Component
@@ -241,17 +246,28 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse core.Pulse) {
 		return
 	}
 
-	currentPulse, err := n.PulseStorage.Current(ctx)
-	if err != nil {
-		logger.Fatalf("Could not get current pulse: %s", err.Error())
-	}
-
-	if !isNextPulse(currentPulse, &newPulse) {
-		logger.Infof("Incorrect pulse number. Current: %+v. New: %+v", currentPulse, newPulse)
+	if n.NodeKeeper.GetState() == core.WaitingNodeNetworkState {
+		// do not set pulse because otherwise we will set invalid active list
+		// pass consensus, prepare valid active list and set it on next pulse
+		go n.phaseManagerOnPulse(ctx, newPulse, currentTime)
 		return
 	}
 
-	err = n.NetworkSwitcher.OnPulse(ctx, newPulse)
+	// Ignore core.ErrNotFound because
+	// sometimes we can't fetch current pulse in new nodes
+	// (for fresh bootstrapped light-material with in-memory pulse-tracker)
+	if currentPulse, err := n.PulseStorage.Current(ctx); err != nil {
+		if err != core.ErrNotFound {
+			logger.Fatalf("Could not get current pulse: %s", err.Error())
+		}
+	} else {
+		if !isNextPulse(currentPulse, &newPulse) {
+			logger.Infof("Incorrect pulse number. Current: %+v. New: %+v", currentPulse, newPulse)
+			return
+		}
+	}
+
+	err := n.NetworkSwitcher.OnPulse(ctx, newPulse)
 	if err != nil {
 		logger.Error(errors.Wrap(err, "Failed to call OnPulse on NetworkSwitcher"))
 	}

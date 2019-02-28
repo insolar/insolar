@@ -39,6 +39,7 @@ import (
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/index"
 	"github.com/insolar/insolar/ledger/storage/jet"
+	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
@@ -58,7 +59,8 @@ type heavySuite struct {
 	db      storage.DBContext
 
 	jetStorage     storage.JetStorage
-	nodeStorage    storage.NodeStorage
+	nodeAccessor   *node.AccessorMock
+	nodeSetter     *node.ModifierMock
 	pulseTracker   storage.PulseTracker
 	replicaStorage storage.ReplicaStorage
 	objectStorage  storage.ObjectStorage
@@ -85,7 +87,8 @@ func (s *heavySuite) BeforeTest(suiteName, testName string) {
 	s.cleaner = cleaner
 	s.db = db
 	s.jetStorage = storage.NewJetStorage()
-	s.nodeStorage = storage.NewNodeStorage()
+	s.nodeAccessor = node.NewAccessorMock(s.T())
+	s.nodeSetter = node.NewModifierMock(s.T())
 	s.pulseTracker = storage.NewPulseTracker()
 	s.replicaStorage = storage.NewReplicaStorage()
 	s.objectStorage = storage.NewObjectStorage()
@@ -96,13 +99,17 @@ func (s *heavySuite) BeforeTest(suiteName, testName string) {
 		platformpolicy.NewPlatformCryptographyScheme(),
 		s.db,
 		s.jetStorage,
-		s.nodeStorage,
+		s.nodeAccessor,
+		s.nodeSetter,
 		s.pulseTracker,
 		s.replicaStorage,
 		s.objectStorage,
 		s.dropStorage,
 		s.storageCleaner,
 	)
+
+	s.nodeSetter.SetMock.Return(nil)
+	s.nodeAccessor.AllMock.Return(nil, nil)
 
 	err := s.cm.Init(s.ctx)
 	if err != nil {
@@ -145,7 +152,7 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 	// Mock N3: nodenet returns mocked node (above)
 	// and add stub for GetActiveNodes
 	nodenetMock := network.NewNodeNetworkMock(s.T())
-	nodenetMock.GetActiveNodesMock.Return(nil)
+	nodenetMock.GetWorkingNodesMock.Return(nil)
 	nodenetMock.GetOriginMock.Return(nodeMock)
 
 	// Mock N4: message bus for Send method
@@ -185,11 +192,6 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 		return &signature, nil
 	}
 	cryptoScheme := testutils.NewPlatformCryptographyScheme()
-
-	// Mock N10: ArtifactManagerMessageHandler
-	artifactManagerMessageHandlerMock := testutils.NewArtifactManagerMessageHandlerMock(s.T())
-	artifactManagerMessageHandlerMock.ResetEarlyRequestCircuitBreakerMock.Return()
-	artifactManagerMessageHandlerMock.CloseEarlyRequestCircuitBreakerForJetMock.Return()
 
 	// mock bus.Mock method, store synced records, and calls count with HeavyRecord
 	var statMutex sync.Mutex
@@ -258,7 +260,8 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 	pm.JetCoordinator = jcMock
 	pm.GIL = gilMock
 	pm.JetStorage = s.jetStorage
-	pm.NodeStorage = s.nodeStorage
+	pm.Nodes = s.nodeAccessor
+	pm.NodeSetter = s.nodeSetter
 	pm.DBContext = s.db
 	pm.PulseTracker = s.pulseTracker
 	pm.ReplicaStorage = s.replicaStorage

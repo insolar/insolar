@@ -24,6 +24,9 @@ type Transport struct {
 	Address string
 	// if true transport will use network traversal technique(like STUN) to get PublicAddress
 	BehindNAT bool
+	// if not empty - this should be public address of instance (to connect from the "other" side to)
+	// conflicts in BehindNAT
+	FixedPublicAddress string
 }
 
 // HostNetwork holds configuration for HostNetwork

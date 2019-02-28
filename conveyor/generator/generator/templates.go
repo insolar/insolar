@@ -17,8 +17,8 @@
 package generator
 
 import (
-	"text/template"
 	"io"
+	"text/template"
 )
 
 var (
@@ -35,6 +35,7 @@ package {{.Package}}
 
 import (
 	"github.com/insolar/insolar/conveyor/generator/common"
+	"github.com/insolar/insolar/conveyor/interfaces/slot"
 	"errors"
 )
 
@@ -67,7 +68,7 @@ func SMRH{{$machine.Name}}Export() common.StateMachine {
     }
 }
 
-func (s *SMRH{{$machine.Name}}) Init(element common.SlotElementHelper) (interface{}, uint32, error) {
+func (s *SMRH{{$machine.Name}}) Init(element slot.SlotElementHelper) (interface{}, uint32, error) {
     aInput, ok := element.GetInputEvent().({{$machine.Init.EventType}})
     if !ok {
         return nil, 0, errors.New("wrong input event type")
@@ -79,7 +80,7 @@ func (s *SMRH{{$machine.Name}}) Init(element common.SlotElementHelper) (interfac
     return payload, state.ToInt(), err
 }
 {{range $i, $state := $machine.States}}
-func (s *SMRH{{$machine.Name}}) {{$state.Transit.Name}}(element common.SlotElementHelper) (interface{}, uint32, error) {
+func (s *SMRH{{$machine.Name}}) {{$state.Transit.Name}}(element slot.SlotElementHelper) (interface{}, uint32, error) {
     aInput, ok := element.GetInputEvent().({{$machine.Init.EventType}})
     if !ok {
         return nil, 0, errors.New("wrong input event type")
@@ -92,7 +93,7 @@ func (s *SMRH{{$machine.Name}}) {{$state.Transit.Name}}(element common.SlotEleme
     return payload, state.ToInt(), err
 }
 
-func (s *SMRH{{$machine.Name}}) {{$state.Migrate.Name}}(element common.SlotElementHelper) (interface{}, uint32, error) {
+func (s *SMRH{{$machine.Name}}) {{$state.Migrate.Name}}(element slot.SlotElementHelper) (interface{}, uint32, error) {
     aInput, ok := element.GetInputEvent().({{$machine.Init.EventType}})
     if !ok {
         return nil, 0, errors.New("wrong input event type")
@@ -105,7 +106,7 @@ func (s *SMRH{{$machine.Name}}) {{$state.Migrate.Name}}(element common.SlotEleme
     return payload, state.ToInt(), err
 }
 
-func (s *SMRH{{$machine.Name}}) {{$state.Error.Name}}(element common.SlotElementHelper, err error) (interface{}, uint32) {
+func (s *SMRH{{$machine.Name}}) {{$state.Error.Name}}(element slot.SlotElementHelper, err error) (interface{}, uint32) {
     aInput, ok := element.GetInputEvent().({{$machine.Init.EventType}})
     if !ok {
         // TODO fix me

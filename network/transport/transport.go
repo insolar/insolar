@@ -29,6 +29,7 @@ import (
 	"github.com/insolar/insolar/network/transport/relay"
 	"github.com/insolar/insolar/network/transport/resolver"
 	"github.com/insolar/insolar/network/utils"
+
 	"github.com/pkg/errors"
 )
 
@@ -96,19 +97,30 @@ func NewConnection(cfg configuration.Transport) (net.PacketConn, string, error) 
 	if err != nil {
 		return nil, "", errors.Wrap(err, "[ NewConnection ] Failed to create connection")
 	}
-	publicAddress, err := createResolver(cfg.BehindNAT).Resolve(conn)
+	resolver, err := createResolver(cfg)
 	if err != nil {
 		utils.CloseVerbose(conn)
-		return nil, "", errors.Wrap(err, "[ NewConnection ] Failed to create resolver")
+		return nil, "", errors.Wrap(err,"[ NewConnection ] Failed to create resolver")
+	}
+	publicAddress, err := resolver.Resolve(conn)
+	if err != nil {
+		utils.CloseVerbose(conn)
+		return nil, "", errors.Wrap(err, "[ NewConnection ] Failed to resolve public address")
 	}
 	return conn, publicAddress, nil
 }
 
-func createResolver(stun bool) resolver.PublicAddressResolver {
-	if stun {
-		return resolver.NewStunResolver("")
+func createResolver(cfg configuration.Transport) (resolver.PublicAddressResolver, error) {
+	if cfg.BehindNAT && cfg.FixedPublicAddress != "" {
+		return nil, errors.New("BehindNAT and fixedPublicAddress cannot be set both")
 	}
-	return resolver.NewExactResolver()
+
+	if cfg.BehindNAT {
+		return resolver.NewStunResolver(""), nil
+	} else if cfg.FixedPublicAddress != "" {
+		return resolver.NewFixedAddressResolver(cfg.FixedPublicAddress), nil
+	}
+	return resolver.NewExactResolver(), nil
 }
 
 func ListenAndWaitUntilReady(ctx context.Context, transport Transport) {

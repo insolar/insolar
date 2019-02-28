@@ -29,6 +29,7 @@ import (
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/jet"
+	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
@@ -48,7 +49,7 @@ type componentSuite struct {
 
 	scheme        core.PlatformCryptographyScheme
 	pulseTracker  storage.PulseTracker
-	nodeStorage   storage.NodeStorage
+	nodeStorage   node.Accessor
 	objectStorage storage.ObjectStorage
 	jetStorage    storage.JetStorage
 }
@@ -71,9 +72,9 @@ func (s *componentSuite) BeforeTest(suiteName, testName string) {
 	db, cleaner := storagetest.TmpDB(s.ctx, s.T())
 	s.cleaner = cleaner
 	s.db = db
-	s.scheme = platformpolicy.NewPlatformCryptographyScheme()
+	s.scheme = testutils.NewPlatformCryptographyScheme()
 	s.jetStorage = storage.NewJetStorage()
-	s.nodeStorage = storage.NewNodeStorage()
+	s.nodeStorage = node.NewStorage()
 	s.pulseTracker = storage.NewPulseTracker()
 	s.objectStorage = storage.NewObjectStorage()
 
@@ -136,7 +137,7 @@ func (s *componentSuite) TestLedgerArtifactManager_PendingRequest() {
 
 	provider := recentstorage.NewRecentStorageProvider(0)
 
-	cryptoScheme := platformpolicy.NewPlatformCryptographyScheme()
+	cryptoScheme := testutils.NewPlatformCryptographyScheme()
 
 	handler := NewMessageHandler(&configuration.Ledger{
 		LightChainLimit: 10,
@@ -144,7 +145,7 @@ func (s *componentSuite) TestLedgerArtifactManager_PendingRequest() {
 		certificate)
 
 	handler.JetStorage = s.jetStorage
-	handler.NodeStorage = s.nodeStorage
+	handler.Nodes = s.nodeStorage
 	handler.DBContext = s.db
 	handler.PulseTracker = s.pulseTracker
 	handler.ObjectStorage = s.objectStorage
@@ -155,16 +156,15 @@ func (s *componentSuite) TestLedgerArtifactManager_PendingRequest() {
 	handler.JetCoordinator = jcMock
 
 	handler.HotDataWaiter = NewHotDataWaiterConcrete()
-	handler.HotDataWaiter.Unlock(s.ctx, jetID)
+	err := handler.HotDataWaiter.Unlock(s.ctx, jetID)
+	require.NoError(s.T(), err)
 
-	err := handler.Init(s.ctx)
+	err = handler.Init(s.ctx)
 	require.NoError(s.T(), err)
 	objRef := *genRandomRef(0)
 
-	err = s.jetStorage.UpdateJetTree(s.ctx, core.FirstPulseNumber, true, jetID)
-	require.NoError(s.T(), err)
-	err = s.jetStorage.UpdateJetTree(s.ctx, core.FirstPulseNumber+1, true, jetID)
-	require.NoError(s.T(), err)
+	s.jetStorage.UpdateJetTree(s.ctx, core.FirstPulseNumber, true, jetID)
+	s.jetStorage.UpdateJetTree(s.ctx, core.FirstPulseNumber+1, true, jetID)
 
 	// Register request
 	reqID, err := am.RegisterRequest(s.ctx, objRef, &message.Parcel{Msg: &message.CallMethod{}, PulseNumber: core.FirstPulseNumber})

@@ -6,6 +6,7 @@ TEST_DATA=testdata
 INSOLARD=$BIN_DIR/insolard
 INSGORUND=$BIN_DIR/insgorund
 PULSARD=$BIN_DIR/pulsard
+PULSEWATCHER=$BIN_DIR/pulsewatcher
 CONTRACT_STORAGE=contractstorage
 LEDGER_DIR=data
 CONFIGS_DIR=configs
@@ -13,10 +14,13 @@ BASE_DIR=scripts/insolard
 KEYS_FILE=$BASE_DIR/$CONFIGS_DIR/bootstrap_keys.json
 ROOT_MEMBER_KEYS_FILE=$BASE_DIR/$CONFIGS_DIR/root_member_keys.json
 DISCOVERY_NODES_DATA=$BASE_DIR/discoverynodes/
+NODES_DATA=$BASE_DIR/nodes/
+INSGORUND_DATA=$BASE_DIR/insgorund/
 GENESIS_CONFIG=$BASE_DIR/genesis.yaml
 GENERATED_CONFIGS_DIR=$BASE_DIR/$CONFIGS_DIR/generated_configs
 GENERATED_DISCOVERY_CONFIGS_DIR=$GENERATED_CONFIGS_DIR/discoverynodes
 INSGORUND_PORT_FILE=$BASE_DIR/$CONFIGS_DIR/insgorund_ports.txt
+PULSEWATCHER_CONFIG=$GENERATED_CONFIGS_DIR/utils/pulsewatcher.yaml
 
 insolar_log_level=${INSOLAR_LOG_LEVEL:-"Debug"}
 gorund_log_level=$insolar_log_level
@@ -95,6 +99,8 @@ clear_dirs()
     rm -rfv $LEDGER_DIR/*
     rm -rfv $DISCOVERY_NODES_DATA/*
     rm -rfv $GENERATED_CONFIGS_DIR/*
+    rm -rfv $INSGORUND_DATA/*
+    rm -rfv $NODES_DATA/*
     echo "clear_dirs() end."
 }
 
@@ -105,6 +111,7 @@ create_required_dirs()
     mkdir -vp $LEDGER_DIR
     mkdir -vp $DISCOVERY_NODES_DATA/certs
     mkdir -vp $GENERATED_CONFIGS_DIR
+    mkdir -vp $INSGORUND_DATA
     touch $INSGORUND_PORT_FILE
 
     for node in "${DISCOVERY_NODES[@]}"
@@ -181,7 +188,7 @@ usage()
 process_input_params()
 {
     OPTIND=1
-    while getopts "h?nglC" opt; do
+    while getopts "h?nglwC" opt; do
         case "$opt" in
         h|\?)
             usage
@@ -196,6 +203,9 @@ process_input_params()
         l)
             prepare
             exit 0
+            ;;
+        w)
+            watch_pulse=false
             ;;
         C)
             generate_insolard_configs
@@ -214,7 +224,7 @@ launch_insgorund()
         listen_port=$( echo "$line" | awk '{print $1}' )
         rpc_port=$( echo "$line" | awk '{print $2}' )
 
-        $INSGORUND -l $host:$listen_port --rpc $host:$rpc_port --log-level=$gorund_log_level --metrics :$metrics_port &
+        $INSGORUND -l $host:$listen_port --rpc $host:$rpc_port --log-level=$gorund_log_level --metrics :$metrics_port &> $INSGORUND_DATA/$rpc_port.log &
 
     done < "$INSGORUND_PORT_FILE"
 }
@@ -245,7 +255,7 @@ wait_for_complete_network_state()
 {
     while true
     do
-        num=`scripts/insolard/check_status.sh 2>/dev/null | grep "CompleteNetworkState" | wc -l`
+        num=`scripts/insolard/check_status.sh 2>/dev/null | grep "NodeReady" | wc -l`
         echo "$num/$NUM_DISCOVERY_NODES discovery nodes ready"
         if [[ "$num" -eq "$NUM_DISCOVERY_NODES" ]]
         then
@@ -264,7 +274,7 @@ genesis()
     generate_insolard_configs
 
     printf "start genesis ... \n"
-    $INSOLARD --config $BASE_DIR/insolar.yaml --genesis $GENESIS_CONFIG --keyout $DISCOVERY_NODES_DATA/certs
+    $INSOLARD --config $BASE_DIR/insolar.yaml --genesis $GENESIS_CONFIG --keyout $DISCOVERY_NODES_DATA/certs &> $DISCOVERY_NODES_DATA/genesis_output.log
     printf "genesis is done\n"
 
     copy_data
@@ -285,12 +295,16 @@ genesis()
 }
 
 run_insgorund=true
+watch_pulse=true
 check_working_dir
 process_input_params $@
 
 trap 'stop_listening true' INT TERM EXIT
 
 printf "start pulsar ... \n"
+ARTIFACTS_DIR=${ARTIFACTS_DIR:-".artifacts"}
+PULSAR_DATA_DIR=$ARTIFACTS_DIR/pulsar_data
+mkdir -p $PULSAR_DATA_DIR
 $PULSARD -c $GENERATED_CONFIGS_DIR/pulsar.yaml --trace &> $DISCOVERY_NODES_DATA/pulsar_output.log &
 
 if [[ "$run_insgorund" == "true" ]]
@@ -307,17 +321,6 @@ i=0
 for node in "${DISCOVERY_NODES[@]}"
 do
     i=$((i + 1))
-    if [[ "$i" -eq "$NUM_DISCOVERY_NODES" ]]
-    then
-        echo "DISCOVERY NODE $i STARTED in foreground"
-        if [[ "$NUM_NODES" -eq "0" ]]
-        then
-            INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $GENERATED_DISCOVERY_CONFIGS_DIR/insolar_$i.yaml --trace &> $node/output.log
-        else
-            INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $GENERATED_DISCOVERY_CONFIGS_DIR/insolar_$i.yaml --trace &> $node/output.log &
-        fi
-        break
-    fi
     INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD --config $GENERATED_DISCOVERY_CONFIGS_DIR/insolar_$i.yaml --trace &> $node/output.log &
     echo "DISCOVERY NODE $i STARTED in background"
 done
@@ -328,6 +331,15 @@ if [[ "$NUM_NODES" -ne "0" ]]
 then
     wait_for_complete_network_state
     scripts/insolard/start_nodes.sh
+fi
+
+if [[ "$watch_pulse" == "true" ]]
+then
+    echo "Starting pulse watcher..."
+    $PULSEWATCHER -c $PULSEWATCHER_CONFIG
+else
+    echo "Waiting..."
+    wait
 fi
 
 echo "FINISHING ..."

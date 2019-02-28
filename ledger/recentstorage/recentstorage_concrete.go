@@ -27,7 +27,7 @@ import (
 )
 
 // RecentStorageProvider provides a recent storage for jet
-type RecentStorageProvider struct {
+type RecentStorageProvider struct { //nolint: golint
 	indexStorages   map[core.RecordID]*RecentIndexStorageConcrete
 	pendingStorages map[core.RecordID]*PendingStorageConcrete
 
@@ -70,6 +70,19 @@ func (p *RecentStorageProvider) GetPendingStorage(ctx context.Context, jetID cor
 		p.pendingStorages[jetID] = storage
 	}
 	return storage
+}
+
+// Count returns count of pendings in all storages
+func (p *RecentStorageProvider) Count() int {
+	p.pendingLock.Lock()
+	defer p.pendingLock.Unlock()
+
+	count := 0
+	for _, storage := range p.pendingStorages {
+		count += len(storage.requests)
+	}
+
+	return count
 }
 
 // CloneIndexStorage clones indexes from one jet to another one

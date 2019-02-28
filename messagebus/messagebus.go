@@ -45,7 +45,6 @@ const deliverRPCMethodName = "MessageBus.Deliver"
 type MessageBus struct {
 	Network                    core.Network                    `inject:""`
 	JetCoordinator             core.JetCoordinator             `inject:""`
-	LocalStorage               core.LocalStorage               `inject:""`
 	NodeNetwork                core.NodeNetwork                `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 	CryptographyService        core.CryptographyService        `inject:""`
@@ -196,7 +195,7 @@ func (mb *MessageBus) SendParcel(
 	start := time.Now()
 	defer func() {
 		stats.Record(ctx, statParcelsTime.M(float64(time.Since(start).Nanoseconds())/1e6))
-		}()
+	}()
 
 	stats.Record(ctx, statParcelsSentTotal.M(1))
 
@@ -256,6 +255,7 @@ func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Repl
 	// We must check barrier just before exiting function
 	// to deliver reply right after pulse switches if it is switching right now.
 	defer readBarrier(ctx, &mb.globalLock)
+	ctx, _ = inslogger.WithField(ctx, "msg_type", msg.Type().String())
 	inslogger.FromContext(ctx).Debug("MessageBus.doDeliver starts ...")
 	handler, ok := mb.handlers[msg.Type()]
 	if !ok {
@@ -417,7 +417,7 @@ func (mb *MessageBus) checkParcel(ctx context.Context, parcel core.Parcel) error
 	sender := parcel.GetSender()
 
 	if mb.signmessages {
-		senderKey := mb.NodeNetwork.GetActiveNode(sender).PublicKey()
+		senderKey := mb.NodeNetwork.GetWorkingNode(sender).PublicKey()
 		if err := mb.ParcelFactory.Validate(senderKey, parcel); err != nil {
 			return errors.Wrap(err, "failed to check a message sign")
 		}

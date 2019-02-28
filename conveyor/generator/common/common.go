@@ -16,15 +16,19 @@
 
 package common
 
-type InitHandler func(element SlotElementHelper) (interface{}, uint32, error)
-type TransitHandler func(element SlotElementHelper) (interface{}, uint32, error)
-type MigrationHandler func(element SlotElementHelper) (interface{}, uint32, error)
-type ErrorHandler func(element SlotElementHelper, err error) (interface{}, uint32)
-type AdapterResponseHandler func(element SlotElementHelper, err error) (interface{}, uint32)
-type NestedHandler func(element SlotElementHelper, err error) (interface{}, uint32)
+import (
+	"github.com/insolar/insolar/conveyor/interfaces/slot"
+)
 
-type TransitionErrorHandler func(element SlotElementHelper, err error) (interface{}, uint32)
-type ResponseErrorHandler func(element SlotElementHelper, err error) (interface{}, uint32)
+type InitHandler func(element slot.SlotElementHelper) (interface{}, uint32, error)
+type TransitHandler func(element slot.SlotElementHelper) (interface{}, uint32, error)
+type MigrationHandler func(element slot.SlotElementHelper) (interface{}, uint32, error)
+type ErrorHandler func(element slot.SlotElementHelper, err error) (interface{}, uint32)
+type AdapterResponseHandler func(element slot.SlotElementHelper, err error) (interface{}, uint32)
+type NestedHandler func(element slot.SlotElementHelper, err error) (interface{}, uint32)
+
+type TransitionErrorHandler func(element slot.SlotElementHelper, err error) (interface{}, uint32)
+type ResponseErrorHandler func(element slot.SlotElementHelper, err error) (interface{}, uint32)
 
 type State struct {
 	Transit TransitHandler
@@ -33,14 +37,9 @@ type State struct {
 }
 
 type StateMachine struct {
-	InitHandler InitHandler
-	States []State
+	InitHandler     InitHandler
+	States          []State
 	FinalizeHandler interface{}
-}
-
-type SlotElementHelper interface {
-	GetInputEvent() interface{}
-	GetPayload() interface{}
 }
 
 type ElState uint32 //Element State Machine Type ID
@@ -50,6 +49,6 @@ func (s ElState) ToInt() uint32 {
 	return uint32(s)
 }
 
-type RawHandlerT func(element SlotElementHelper) (err error, new_state uint32, new_payload interface{})
+type RawHandlerT func(element slot.SlotElementHelper) (err error, new_state uint32, new_payload interface{})
 
 type ElUpdate uint32 ///Element State ID + Element Machine Type ID << 10

@@ -21,7 +21,6 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/core"
-	"github.com/pkg/errors"
 )
 
 // PulseStorage implements core.PulseStorage
@@ -49,7 +48,7 @@ func (ps *PulseStorage) Current(ctx context.Context) (*core.Pulse, error) {
 		if ps.currentPulse == nil {
 			currentPulse, err := ps.PulseTracker.GetLatestPulse(ctx)
 			if err != nil {
-				return nil, errors.Wrap(err, "[ PulseStorage.Current ] Can't GetLatestPulse")
+				return nil, err
 			}
 			ps.currentPulse = &currentPulse.Pulse
 		}

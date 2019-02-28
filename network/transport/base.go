@@ -20,8 +20,6 @@ package transport
 import (
 	"context"
 	"io"
-	"net"
-	"strings"
 	"sync"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -122,10 +120,6 @@ func (t *baseTransport) Stopped() <-chan bool {
 func (t *baseTransport) prepareDisconnect() {
 	t.disconnectStarted <- true
 	close(t.disconnectStarted)
-}
-
-func (t *baseTransport) getRemoteAddress(conn net.Conn) string {
-	return strings.Split(conn.RemoteAddr().String(), ":")[0]
 }
 
 // PublicAddress returns transport public ip address

@@ -21,6 +21,11 @@ import (
 	"context"
 	"sync/atomic"
 
+	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
+	"go.opencensus.io/tag"
+	"go.opencensus.io/trace"
+
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/consensus"
 	"github.com/insolar/insolar/consensus/packets"
@@ -29,10 +34,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
-	"github.com/pkg/errors"
-	"go.opencensus.io/stats"
-	"go.opencensus.io/tag"
-	"go.opencensus.io/trace"
 )
 
 // Communicator interface provides methods to exchange data between nodes
@@ -121,7 +122,7 @@ func (nc *ConsensusCommunicator) sendRequestToNodes(ctx context.Context, partici
 			logger.Debugf("Send %s request to %s", packet.GetType(), n.ID())
 			err := nc.ConsensusNetwork.SignAndSendPacket(packet, n.ID(), nc.Cryptography)
 			if err != nil {
-				logger.Error("Failed to send phase1 request: " + err.Error())
+				logger.Errorf("Failed to send %s request: %s", packet.GetType(), err.Error())
 				return
 			}
 			err = stats.RecordWithTags(context.Background(), []tag.Mutator{tag.Upsert(consensus.TagPhase, packet.GetType().String())}, consensus.PacketsSent.M(1))
@@ -239,9 +240,7 @@ func (nc *ConsensusCommunicator) ExchangePhase1(
 	logger := inslogger.FromContext(ctx)
 
 	result := make(map[core.RecordRef]*packets.Phase1Packet, len(participants))
-
 	result[nc.ConsensusNetwork.GetNodeID()] = packet
-
 	nc.setPulseNumber(packet.GetPulse().PulseNumber)
 
 	var request *packets.Phase1Packet
@@ -558,14 +557,14 @@ func (nc *ConsensusCommunicator) ExchangePhase3(ctx context.Context, participant
 func (nc *ConsensusCommunicator) phase1DataHandler(packet packets.ConsensusPacket, sender core.RecordRef) {
 	p, ok := packet.(*packets.Phase1Packet)
 	if !ok {
-		log.Errorln("invalid Phase1Packet")
+		log.Error("invalid Phase1Packet")
 		return
 	}
 
 	newPulse := p.GetPulse()
 
 	if newPulse.PulseNumber < nc.getPulseNumber() {
-		log.Warnln("ignore old pulse Phase1Packet")
+		log.Warn("ignore old pulse Phase1Packet")
 		return
 	}
 
@@ -579,14 +578,14 @@ func (nc *ConsensusCommunicator) phase1DataHandler(packet packets.ConsensusPacke
 func (nc *ConsensusCommunicator) phase2DataHandler(packet packets.ConsensusPacket, sender core.RecordRef) {
 	p, ok := packet.(*packets.Phase2Packet)
 	if !ok {
-		log.Errorln("invalid Phase2Packet")
+		log.Error("invalid Phase2Packet")
 		return
 	}
 
 	pulseNumber := p.GetPulseNumber()
 
 	if pulseNumber < nc.getPulseNumber() {
-		log.Warnln("ignore old pulse Phase2Packet")
+		log.Warn("ignore old pulse Phase2Packet")
 		return
 	}
 

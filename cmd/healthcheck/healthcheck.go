@@ -36,13 +36,13 @@ func main() {
 	pflag.Parse()
 
 	if *rpcAddress == "" || *rpcProtocol == "" || *refString == "" {
-		log.Errorln(errors.New("need to provide all params"))
+		log.Error(errors.New("need to provide all params"))
 		os.Exit(2)
 	}
 
 	client, err := rpc.Dial(*rpcProtocol, *rpcAddress)
 	if err != nil {
-		log.Errorln(err.Error())
+		log.Error(err.Error())
 		os.Exit(2)
 	}
 
@@ -66,7 +66,7 @@ func main() {
 
 	err = client.Call("RPC.CallMethod", req, &res)
 	if err != nil {
-		log.Errorln(err.Error())
+		log.Error(err.Error())
 		os.Exit(2)
 	}
 }
