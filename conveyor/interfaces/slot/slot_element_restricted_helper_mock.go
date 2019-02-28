@@ -41,7 +41,7 @@ type SlotElementRestrictedHelperMock struct {
 	GetPayloadPreCounter uint64
 	GetPayloadMock       mSlotElementRestrictedHelperMockGetPayload
 
-	GetStateFunc       func() (r int)
+	GetStateFunc       func() (r uint16)
 	GetStateCounter    uint64
 	GetStatePreCounter uint64
 	GetStateMock       mSlotElementRestrictedHelperMockGetState
@@ -764,7 +764,7 @@ type SlotElementRestrictedHelperMockGetStateExpectation struct {
 }
 
 type SlotElementRestrictedHelperMockGetStateResult struct {
-	r int
+	r uint16
 }
 
 //Expect specifies that invocation of SlotElementRestrictedHelper.GetState is expected from 1 to Infinity times
@@ -780,7 +780,7 @@ func (m *mSlotElementRestrictedHelperMockGetState) Expect() *mSlotElementRestric
 }
 
 //Return specifies results of invocation of SlotElementRestrictedHelper.GetState
-func (m *mSlotElementRestrictedHelperMockGetState) Return(r int) *SlotElementRestrictedHelperMock {
+func (m *mSlotElementRestrictedHelperMockGetState) Return(r uint16) *SlotElementRestrictedHelperMock {
 	m.mock.GetStateFunc = nil
 	m.expectationSeries = nil
 
@@ -802,12 +802,12 @@ func (m *mSlotElementRestrictedHelperMockGetState) ExpectOnce() *SlotElementRest
 	return expectation
 }
 
-func (e *SlotElementRestrictedHelperMockGetStateExpectation) Return(r int) {
+func (e *SlotElementRestrictedHelperMockGetStateExpectation) Return(r uint16) {
 	e.result = &SlotElementRestrictedHelperMockGetStateResult{r}
 }
 
 //Set uses given function f as a mock of SlotElementRestrictedHelper.GetState method
-func (m *mSlotElementRestrictedHelperMockGetState) Set(f func() (r int)) *SlotElementRestrictedHelperMock {
+func (m *mSlotElementRestrictedHelperMockGetState) Set(f func() (r uint16)) *SlotElementRestrictedHelperMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -816,7 +816,7 @@ func (m *mSlotElementRestrictedHelperMockGetState) Set(f func() (r int)) *SlotEl
 }
 
 //GetState implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementRestrictedHelper interface
-func (m *SlotElementRestrictedHelperMock) GetState() (r int) {
+func (m *SlotElementRestrictedHelperMock) GetState() (r uint16) {
 	counter := atomic.AddUint64(&m.GetStatePreCounter, 1)
 	defer atomic.AddUint64(&m.GetStateCounter, 1)
 
