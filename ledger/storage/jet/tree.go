@@ -22,7 +22,6 @@ import (
 	"strings"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/storage"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
 )
@@ -90,7 +89,7 @@ func (j *jet) ExtractLeafIDs(ids *[]core.RecordID, path []byte, depth uint8) {
 		return
 	}
 	if j.Left == nil && j.Right == nil {
-		*ids = append(*ids, core.RecordID(*storage.NewJetID(depth, path)))
+		*ids = append(*ids, core.RecordID(*core.NewJetID(depth, path)))
 		return
 	}
 
@@ -249,14 +248,14 @@ func (t *Tree) Find(id core.RecordID) (*core.RecordID, bool) {
 	}
 	hash := id.Hash()
 	j, depth := t.Head.Find(hash, 0)
-	recID := core.RecordID(*storage.NewJetID(uint8(depth), storage.ResetBits(hash, depth)))
+	recID := core.RecordID(*core.NewJetID(uint8(depth), core.ResetBits(hash, depth)))
 	return &recID, j.Actual
 }
 
 // Update add missing tree branches for provided prefix. If 'setActual' is set, all encountered nodes will be marked as
 // actual.
 func (t *Tree) Update(id core.RecordID, setActual bool) {
-	maxDepth, prefix := storage.JetID(id).Jet()
+	maxDepth, prefix := core.JetID(id).Jet()
 	t.Head.Update(prefix, setActual, maxDepth, 0)
 }
 
@@ -271,18 +270,18 @@ func (t *Tree) Bytes() []byte {
 // Split looks for provided jet and creates (and returns) two branches for it. If provided jet is not found, an error
 // will be returned.
 func (t *Tree) Split(jetID core.RecordID) (*core.RecordID, *core.RecordID, error) {
-	depth, prefix := storage.JetID(jetID).Jet()
+	depth, prefix := core.JetID(jetID).Jet()
 	j, foundDepth := t.Head.Find(prefix, 0)
 	if depth != foundDepth {
 		return nil, nil, errors.New("failed to split: incorrect jet provided")
 	}
 	j.Right = &jet{}
 	j.Left = &jet{}
-	leftPrefix := storage.ResetBits(prefix, depth)
-	rightPrefix := storage.ResetBits(prefix, depth)
+	leftPrefix := core.ResetBits(prefix, depth)
+	rightPrefix := core.ResetBits(prefix, depth)
 	setBit(rightPrefix, depth)
-	first := core.RecordID(*storage.NewJetID(depth+1, leftPrefix))
-	second := core.RecordID(*storage.NewJetID(depth+1, rightPrefix))
+	first := core.RecordID(*core.NewJetID(depth+1, leftPrefix))
+	second := core.RecordID(*core.NewJetID(depth+1, rightPrefix))
 	return &first, &second, nil
 }
 

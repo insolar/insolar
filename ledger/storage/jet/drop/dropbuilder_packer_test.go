@@ -126,7 +126,7 @@ func (s *dropSuite) TestStore_DropWaitWrites() {
 		<-txstarted
 		log.Debug("start CreateDrop")
 		close(dropwaits)
-		drop, droperr := s.packer.Pack(s.ctx, storage.JetID(core.TODOJetID), 0, []byte{})
+		drop, droperr := s.packer.Pack(s.ctx, core.JetID(core.TODOJetID), 0, []byte{})
 		if droperr != nil {
 			panic(droperr)
 		}

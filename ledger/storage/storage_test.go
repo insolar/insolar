@@ -168,7 +168,7 @@ func (s *storageSuite) TestDB_SetObjectIndex_SaveLastUpdate() {
 }
 
 func (s *storageSuite) TestDB_GetDrop_ReturnsNotFoundIfNoDrop() {
-	drop, err := s.dropAccessor.ForPulse(s.ctx, storage.JetID(testutils.RandomJet()), 1)
+	drop, err := s.dropAccessor.ForPulse(s.ctx, core.JetID(testutils.RandomJet()), 1)
 	assert.Equal(s.T(), err, core.ErrNotFound)
 	assert.Equal(s.T(), jet.JetDrop{}, drop)
 }
@@ -176,7 +176,7 @@ func (s *storageSuite) TestDB_GetDrop_ReturnsNotFoundIfNoDrop() {
 func (s *storageSuite) TestDB_CreateDrop() {
 	// FIXME: should work with random jet
 	// jetID := testutils.RandomJet()
-	jetID := *storage.NewJetID(0, nil)
+	jetID := *core.NewJetID(0, nil)
 
 	pulse := core.PulseNumber(core.FirstPulseNumber + 10)
 	err := s.pulseTracker.AddPulse(
@@ -219,7 +219,7 @@ func (s *storageSuite) TestDB_SetDrop() {
 	}
 	// FIXME: should work with random jet
 	// jetID := testutils.RandomJet()
-	jetID := *storage.NewJetID(0, nil)
+	jetID := *core.NewJetID(0, nil)
 	err := s.dropModifier.Set(s.ctx, jetID, drop42)
 	assert.NoError(s.T(), err)
 

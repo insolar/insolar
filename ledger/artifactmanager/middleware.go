@@ -82,7 +82,7 @@ func jetFromContext(ctx context.Context) core.RecordID {
 
 func (m *middleware) zeroJetForHeavy(handler core.MessageHandler) core.MessageHandler {
 	return func(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
-		return handler(contextWithJet(ctx, core.RecordID(*storage.NewJetID(0, nil))), parcel)
+		return handler(contextWithJet(ctx, core.RecordID(*core.NewJetID(0, nil))), parcel)
 	}
 }
 
@@ -101,7 +101,7 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 
 		// FIXME: @andreyromancev. 17.01.19. Temporary allow any genesis request. Remove it.
 		if parcel.Pulse() == core.FirstPulseNumber {
-			return handler(contextWithJet(ctx, core.RecordID(*storage.NewJetID(0, nil))), parcel)
+			return handler(contextWithJet(ctx, core.RecordID(*core.NewJetID(0, nil))), parcel)
 		}
 
 		// Check token jet.

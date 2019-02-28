@@ -98,7 +98,7 @@ func (s *pulseManagerSuite) TestPulseManager_Set_CheckHotIndexesSending() {
 	s.T().Skip()
 
 	// Arrange
-	jetID := storage.ZeroJetID
+	jetID := core.ZeroJetID
 	objID := core.RecordID{}
 
 	lr := testutils.NewLogicRunnerMock(s.T())

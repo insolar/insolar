@@ -29,7 +29,6 @@ import (
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/jet"
 )
 
@@ -131,7 +130,7 @@ func (jtu *jetTreeUpdater) releaseJet(ctx context.Context, jetID core.RecordID, 
 	jtu.seqMutex.Lock()
 	defer jtu.seqMutex.Unlock()
 
-	depth, _ := storage.JetID(jetID).Jet()
+	depth, _ := core.JetID(jetID).Jet()
 	for {
 		key := seqKey{pulse, jetID}
 		if v, ok := jtu.sequencer[key]; ok {
@@ -145,7 +144,7 @@ func (jtu *jetTreeUpdater) releaseJet(ctx context.Context, jetID core.RecordID, 
 		if depth == 0 {
 			break
 		}
-		jetID = core.RecordID(storage.JetID(jetID).Parent())
+		jetID = core.RecordID(core.JetID(jetID).Parent())
 		depth--
 	}
 }

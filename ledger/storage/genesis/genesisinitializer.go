@@ -58,7 +58,7 @@ func (gi *genesisInitializer) GenesisRef() *core.RecordRef {
 func (gi *genesisInitializer) Init(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
 	inslog.Info("start storage bootstrap")
-	jetID := *storage.NewJetID(0, nil)
+	jetID := *core.NewJetID(0, nil)
 
 	getGenesisRef := func() (*core.RecordRef, error) {
 		buff, err := gi.DB.Get(ctx, storage.GenesisPrefixKey())

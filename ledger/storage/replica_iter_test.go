@@ -145,7 +145,7 @@ func Test_StoreKeyValues(t *testing.T) {
 		for n := 0; n < pulsescount; n++ {
 			lastPulse := core.PulseNumber(pulseDelta(n))
 			addRecords(ctx, t, os, jetID, lastPulse)
-			setDrop(ctx, t, db, ds, ds, storage.JetID(jetID), lastPulse)
+			setDrop(ctx, t, db, ds, ds, core.JetID(jetID), lastPulse)
 		}
 
 		for n := 0; n < pulsescount; n++ {
@@ -191,7 +191,7 @@ func Test_StoreKeyValues(t *testing.T) {
 
 func (s *replicaIterSuite) Test_ReplicaIter_FirstPulse() {
 	// it's easy to test simple case with zero Jet
-	jetID := core.RecordID(*storage.NewJetID(0, nil))
+	jetID := core.RecordID(*core.NewJetID(0, nil))
 
 	addRecords(s.ctx, s.T(), s.objectStorage, jetID, core.FirstPulseNumber)
 	replicator := storage.NewReplicaIter(s.ctx, s.db, jetID, core.FirstPulseNumber, core.FirstPulseNumber+1, 100500)
@@ -250,7 +250,7 @@ func Test_ReplicaIter_Base(t *testing.T) {
 	var lastPulse core.PulseNumber
 	pulsescount := 2
 	// it's easy to test simple case with zero Jet
-	jetID := core.RecordID(*storage.NewJetID(0, nil))
+	jetID := core.RecordID(*core.NewJetID(0, nil))
 
 	recsBefore, idxBefore := getallkeys(db.GetBadgerDB())
 	require.Nil(t, recsBefore)
@@ -264,7 +264,7 @@ func Test_ReplicaIter_Base(t *testing.T) {
 		lastPulse = pulseDelta(i)
 
 		addRecords(ctx, t, os, jetID, lastPulse)
-		setDrop(ctx, t, db, ds, ds, storage.JetID(jetID), lastPulse)
+		setDrop(ctx, t, db, ds, ds, core.JetID(jetID), lastPulse)
 
 		recs, _ := getallkeys(db.GetBadgerDB())
 		recKeys := getdelta(recsBefore, recs)
@@ -359,7 +359,7 @@ func setDrop(
 	db storage.DBContext,
 	dropAccessor jet.DropAccessor,
 	dropModifire jet.DropModifier,
-	jetID storage.JetID,
+	jetID core.JetID,
 	pulsenum core.PulseNumber,
 ) {
 	prevDrop, err := dropAccessor.ForPulse(ctx, jetID, pulsenum-1)

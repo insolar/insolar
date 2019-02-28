@@ -297,6 +297,6 @@ type dropCase struct {
 }
 
 func (c dropCase) Check(ctx context.Context, t *testing.T) {
-	_, err := c.dropAccessor.ForPulse(ctx, storage.JetID(c.jetID), c.pulseNum)
+	_, err := c.dropAccessor.ForPulse(ctx, core.JetID(c.jetID), c.pulseNum)
 	c.check(t, err)
 }

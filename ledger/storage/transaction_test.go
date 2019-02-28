@@ -108,7 +108,7 @@ which try reads and writes the same key simultaneously
 */
 
 func (s *txnSuite) TestStore_Transaction_LockOnUpdate() {
-	jetID := core.RecordID(*storage.NewJetID(0, nil))
+	jetID := core.RecordID(*core.NewJetID(0, nil))
 
 	objid := core.NewRecordID(100500, nil)
 	idxid := core.NewRecordID(0, nil)

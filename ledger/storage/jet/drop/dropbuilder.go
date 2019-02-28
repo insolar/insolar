@@ -101,7 +101,7 @@ func (b *builder) Build() (jet.JetDrop, error) {
 // Packer is an wrapper interface around process of building jetdrop
 // It's considered that implementation of packer uses Bulder under the hood
 type Packer interface {
-	Pack(ctx context.Context, jetID storage.JetID, pulse core.PulseNumber, prevHash []byte) (jet.JetDrop, error)
+	Pack(ctx context.Context, jetID core.JetID, pulse core.PulseNumber, prevHash []byte) (jet.JetDrop, error)
 }
 
 // NewPacker creates db-based impl of packer
@@ -118,7 +118,7 @@ type packer struct {
 }
 
 // Pack creates new JetDrop through interactions with db and Builder
-func (p *packer) Pack(ctx context.Context, jetID storage.JetID, pulse core.PulseNumber, prevHash []byte) (jet.JetDrop, error) {
+func (p *packer) Pack(ctx context.Context, jetID core.JetID, pulse core.PulseNumber, prevHash []byte) (jet.JetDrop, error) {
 	p.DBContext.WaitingFlight()
 	_, jetPrefix := jetID.Jet()
 

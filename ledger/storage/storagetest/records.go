@@ -90,10 +90,10 @@ func AddRandDrop(
 		PrevHash: hash1[:],
 		Hash:     hash2[:],
 	}
-	err := modifier.Set(ctx, storage.JetID(jetID), drop)
+	err := modifier.Set(ctx, core.JetID(jetID), drop)
 	if err != nil {
 		return nil, err
 	}
-	resDrop, err := accessor.ForPulse(ctx, storage.JetID(jetID), pulsenum)
+	resDrop, err := accessor.ForPulse(ctx, core.JetID(jetID), pulsenum)
 	return &resDrop, err
 }

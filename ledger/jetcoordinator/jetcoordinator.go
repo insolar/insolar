@@ -303,7 +303,7 @@ func (jc *JetCoordinator) virtualsForObject(
 func (jc *JetCoordinator) lightMaterialsForJet(
 	ctx context.Context, jetID core.RecordID, pulse core.PulseNumber, count int,
 ) ([]core.RecordRef, error) {
-	_, prefix := storage.JetID(jetID).Jet()
+	_, prefix := core.JetID(jetID).Jet()
 
 	candidates, err := jc.Nodes.InRole(pulse, core.StaticRoleLightMaterial)
 	if err == core.ErrNoNodes {

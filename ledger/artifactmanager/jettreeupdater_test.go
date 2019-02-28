@@ -32,7 +32,6 @@ import (
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/testutils"
 )
@@ -160,7 +159,7 @@ func TestJetTreeUpdater_fetchActualJetFromOtherNodes(t *testing.T) {
 		target := testutils.RandomID()
 
 		mb.SendMock.Return(
-			&reply.Jet{ID: core.RecordID(*storage.NewJetID(0, nil)), Actual: false},
+			&reply.Jet{ID: core.RecordID(*core.NewJetID(0, nil)), Actual: false},
 			nil,
 		)
 
@@ -172,13 +171,13 @@ func TestJetTreeUpdater_fetchActualJetFromOtherNodes(t *testing.T) {
 		target := testutils.RandomID()
 
 		mb.SendMock.Return(
-			&reply.Jet{ID: core.RecordID(*storage.NewJetID(0, nil)), Actual: true},
+			&reply.Jet{ID: core.RecordID(*core.NewJetID(0, nil)), Actual: true},
 			nil,
 		)
 
 		jetID, err := jtu.fetchActualJetFromOtherNodes(ctx, target, core.PulseNumber(100))
 		require.NoError(t, err)
-		require.Equal(t, core.RecordID(*storage.NewJetID(0, nil)), *jetID)
+		require.Equal(t, core.RecordID(*core.NewJetID(0, nil)), *jetID)
 	})
 
 	// TODO: multiple nodes returned different results
@@ -205,7 +204,7 @@ func TestJetTreeUpdater_fetchJet(t *testing.T) {
 	target := testutils.RandomID()
 
 	t.Run("quick reply, data is up to date", func(t *testing.T) {
-		fjmr := core.RecordID(*storage.NewJetID(0, nil))
+		fjmr := core.RecordID(*core.NewJetID(0, nil))
 		js.FindJetMock.Return(&fjmr, true)
 		jetID, err := jtu.fetchJet(ctx, target, core.PulseNumber(100))
 		require.NoError(t, err)
@@ -222,21 +221,21 @@ func TestJetTreeUpdater_fetchJet(t *testing.T) {
 			[]insolar.Node{{ID: gen.Reference()}}, nil,
 		)
 		mb.SendMock.Return(
-			&reply.Jet{ID: core.RecordID(*storage.NewJetID(0, nil)), Actual: true},
+			&reply.Jet{ID: core.RecordID(*core.NewJetID(0, nil)), Actual: true},
 			nil,
 		)
 
-		fjm := core.RecordID(*storage.NewJetID(0, nil))
+		fjm := core.RecordID(*core.NewJetID(0, nil))
 		js.FindJetMock.Return(&fjm, false)
 		js.UpdateJetTreeFunc = func(ctx context.Context, pn core.PulseNumber, actual bool, jets ...core.RecordID) {
 			require.Equal(t, core.PulseNumber(100), pn)
 			require.True(t, actual)
-			require.Equal(t, []core.RecordID{core.RecordID(*storage.NewJetID(0, nil))}, jets)
+			require.Equal(t, []core.RecordID{core.RecordID(*core.NewJetID(0, nil))}, jets)
 		}
 
 		jetID, err := jtu.fetchJet(ctx, target, core.PulseNumber(100))
 		require.NoError(t, err)
-		require.Equal(t, core.RecordID(*storage.NewJetID(0, nil)), *jetID)
+		require.Equal(t, core.RecordID(*core.NewJetID(0, nil)), *jetID)
 	})
 }
 
@@ -266,10 +265,10 @@ func TestJetTreeUpdater_Concurrency(t *testing.T) {
 
 	dataMu := sync.Mutex{}
 
-	first := core.RecordID(*storage.NewJetID(2, []byte{0}))
-	second := core.RecordID(*storage.NewJetID(2, []byte{0}))
-	third := core.RecordID(*storage.NewJetID(2, []byte{0}))
-	fourth := core.RecordID(*storage.NewJetID(2, []byte{0}))
+	first := core.RecordID(*core.NewJetID(2, []byte{0}))
+	second := core.RecordID(*core.NewJetID(2, []byte{0}))
+	third := core.RecordID(*core.NewJetID(2, []byte{0}))
+	fourth := core.RecordID(*core.NewJetID(2, []byte{0}))
 
 	data := map[byte]*core.RecordID{
 		0:   &first,  // 00

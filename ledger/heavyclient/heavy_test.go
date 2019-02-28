@@ -143,7 +143,7 @@ func (s *heavySuite) TestPulseManager_SendToHeavyWithRetry() {
 
 func sendToHeavy(s *heavySuite, withretry bool) {
 	// TODO: test should work with any JetID (add new test?) - 14.Dec.2018 @nordicdyno
-	jetID := storage.ZeroJetID
+	jetID := core.ZeroJetID
 	// Mock N1: LR mock do nothing
 	lrMock := testutils.NewLogicRunnerMock(s.T())
 	lrMock.OnPulseMock.Return(nil)
