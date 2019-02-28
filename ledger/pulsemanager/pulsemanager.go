@@ -65,8 +65,8 @@ type PulseManager struct {
 	JetStorage                 jet.JetStorage                  `inject:""`
 
 	ObjectStorage  storage.ObjectStorage  `inject:""`
-	NodeSetter     node.Modifier           `inject:""`
-	Nodes          node.Accessor         `inject:""`
+	NodeSetter     node.Modifier          `inject:""`
+	Nodes          node.Accessor          `inject:""`
 	PulseTracker   storage.PulseTracker   `inject:""`
 	ReplicaStorage storage.ReplicaStorage `inject:""`
 	DBContext      storage.DBContext      `inject:""`
