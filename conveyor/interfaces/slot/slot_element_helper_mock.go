@@ -17,7 +17,7 @@ import (
 type SlotElementHelperMock struct {
 	t minimock.Tester
 
-	DeactivateTillFunc       func(p reactivateMode)
+	DeactivateTillFunc       func(p ReactivateMode)
 	DeactivateTillCounter    uint64
 	DeactivateTillPreCounter uint64
 	DeactivateTillMock       mSlotElementHelperMockDeactivateTill
@@ -113,11 +113,11 @@ type SlotElementHelperMockDeactivateTillExpectation struct {
 }
 
 type SlotElementHelperMockDeactivateTillInput struct {
-	p reactivateMode
+	p ReactivateMode
 }
 
 //Expect specifies that invocation of SlotElementHelper.DeactivateTill is expected from 1 to Infinity times
-func (m *mSlotElementHelperMockDeactivateTill) Expect(p reactivateMode) *mSlotElementHelperMockDeactivateTill {
+func (m *mSlotElementHelperMockDeactivateTill) Expect(p ReactivateMode) *mSlotElementHelperMockDeactivateTill {
 	m.mock.DeactivateTillFunc = nil
 	m.expectationSeries = nil
 
@@ -141,7 +141,7 @@ func (m *mSlotElementHelperMockDeactivateTill) Return() *SlotElementHelperMock {
 }
 
 //ExpectOnce specifies that invocation of SlotElementHelper.DeactivateTill is expected once
-func (m *mSlotElementHelperMockDeactivateTill) ExpectOnce(p reactivateMode) *SlotElementHelperMockDeactivateTillExpectation {
+func (m *mSlotElementHelperMockDeactivateTill) ExpectOnce(p ReactivateMode) *SlotElementHelperMockDeactivateTillExpectation {
 	m.mock.DeactivateTillFunc = nil
 	m.mainExpectation = nil
 
@@ -152,7 +152,7 @@ func (m *mSlotElementHelperMockDeactivateTill) ExpectOnce(p reactivateMode) *Slo
 }
 
 //Set uses given function f as a mock of SlotElementHelper.DeactivateTill method
-func (m *mSlotElementHelperMockDeactivateTill) Set(f func(p reactivateMode)) *SlotElementHelperMock {
+func (m *mSlotElementHelperMockDeactivateTill) Set(f func(p ReactivateMode)) *SlotElementHelperMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -161,7 +161,7 @@ func (m *mSlotElementHelperMockDeactivateTill) Set(f func(p reactivateMode)) *Sl
 }
 
 //DeactivateTill implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementHelper interface
-func (m *SlotElementHelperMock) DeactivateTill(p reactivateMode) {
+func (m *SlotElementHelperMock) DeactivateTill(p ReactivateMode) {
 	counter := atomic.AddUint64(&m.DeactivateTillPreCounter, 1)
 	defer atomic.AddUint64(&m.DeactivateTillCounter, 1)
 
