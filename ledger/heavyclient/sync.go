@@ -46,24 +46,11 @@ func messageToHeavy(ctx context.Context, bus core.MessageBus, msg core.Message) 
 func (c *JetClient) HeavySync(
 	ctx context.Context,
 	pn core.PulseNumber,
-	retry bool,
 ) error {
 	jetID := c.jetID
 	inslog := inslogger.FromContext(ctx)
 	inslog = inslog.WithField("jetID", jetID.DebugString())
 	inslog = inslog.WithField("pulseNum", pn)
-
-	if retry {
-		inslog.Info("synchronize: send reset message (retry sync)")
-		resetMsg := &message.HeavyReset{
-			JetID:    jetID,
-			PulseNum: pn,
-		}
-		if err := messageToHeavy(ctx, c.bus, resetMsg); err != nil {
-			inslog.Error("synchronize: reset failed")
-			return err
-		}
-	}
 
 	signalMsg := &message.HeavyStartStop{
 		JetID:    jetID,
