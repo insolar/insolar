@@ -36,6 +36,7 @@ func NewJetID(depth uint8, prefix []byte) *JetID {
 }
 
 // Jet extracts depth and prefix from jet id.
+// Deprecated: should be two methods. Depth and prefix
 func (id JetID) Jet() (uint8, []byte) {
 	recordID := RecordID(id)
 	if recordID.Pulse() != PulseNumberJet {
