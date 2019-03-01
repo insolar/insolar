@@ -218,26 +218,27 @@ func (m *PulseManager) createDrop(
 	messages [][]byte,
 	err error,
 ) {
-	var prevDrop jet.Drop
-	prevDrop, err = m.DropAccessor.ForPulse(ctx, core.JetID(jetID), prevPulse)
-	if err == core.ErrNotFound {
-		prevDrop, err = m.DropAccessor.ForPulse(ctx, storage.JetParent(core.JetID(jetID)), prevPulse)
-		if err == core.ErrNotFound {
-			inslogger.FromContext(ctx).WithFields(map[string]interface{}{
-				"pulse": prevPulse,
-				"jet":   jetID.DebugString(),
-			}).Error("failed to find drop")
-			prevDrop = jet.Drop{Pulse: prevPulse}
-			err = m.DropModifier.Set(ctx, core.JetID(jetID), prevDrop)
-			if err != nil {
-				return nil, nil, nil, errors.Wrap(err, "failed to create empty drop")
-			}
-		} else if err != nil {
-			return nil, nil, nil, errors.Wrap(err, "[ createDrop ] failed to find parent")
-		}
-	} else if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't GetDrop")
-	}
+	// TODO: 1.03.19 need to be replaced with smth. @egorikas
+	// var prevDrop jet.Drop
+	// prevDrop, err = m.DropAccessor.ForPulse(ctx, core.JetID(jetID), prevPulse)
+	// if err == core.ErrNotFound {
+	// 	prevDrop, err = m.DropAccessor.ForPulse(ctx, storage.JetParent(core.JetID(jetID)), prevPulse)
+	// 	if err == core.ErrNotFound {
+	// 		inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+	// 			"pulse": prevPulse,
+	// 			"jet":   jetID.DebugString(),
+	// 		}).Error("failed to find drop")
+	// 		prevDrop = jet.Drop{Pulse: prevPulse}
+	// 		err = m.DropModifier.Set(ctx, core.JetID(jetID), prevDrop)
+	// 		if err != nil {
+	// 			return nil, nil, nil, errors.Wrap(err, "failed to create empty drop")
+	// 		}
+	// 	} else if err != nil {
+	// 		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] failed to find parent")
+	// 	}
+	// } else if err != nil {
+	// 	return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't GetDrop")
+	// }
 
 	drop = &jet.Drop{
 		Pulse: currentPulse,
