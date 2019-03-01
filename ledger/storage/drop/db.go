@@ -37,70 +37,46 @@ type Accessor interface {
 	ForPulse(ctx context.Context, jetID core.JetID, pulse core.PulseNumber) (jet.Drop, error)
 }
 
-type dropForPulseManager struct {
-	lock  sync.RWMutex
-	drops map[core.PulseNumber]jet.Drop
-}
-
-func (m *dropForPulseManager) set(drop jet.Drop, pulse core.PulseNumber) error {
-	m.lock.Lock()
-	defer m.lock.Unlock()
-
-	if _, ok := m.drops[pulse]; ok {
-		return storage.ErrOverride
-	}
-
-	m.drops[pulse] = drop
-
-	return nil
-}
-
-func (m *dropForPulseManager) forPulse(jetID core.JetID, pulse core.PulseNumber) (jet.Drop, error) {
-	m.lock.RLock()
-	defer m.lock.RUnlock()
-
-	drop, ok := m.drops[pulse]
-	if !ok {
-		return jet.Drop{}, core.ErrNotFound
-	}
-
-	return drop, nil
+type dropKey struct {
+	pulse core.PulseNumber
+	jetID core.JetID
 }
 
 type dropStorageMemory struct {
-	lock sync.Mutex
-	jets map[core.JetID]*dropForPulseManager
+	lock sync.RWMutex
+	jets map[dropKey]jet.Drop
 }
 
 // NewStorageMemory creates new storage, that holds data in-memory
 func NewStorageMemory() *dropStorageMemory {
 	return &dropStorageMemory{
-		jets: map[core.JetID]*dropForPulseManager{},
+		jets: map[dropKey]jet.Drop{},
 	}
-}
-
-func (m *dropStorageMemory) fetchStorage(jetID core.JetID) (ds *dropForPulseManager) {
-	m.lock.Lock()
-	defer m.lock.Unlock()
-
-	ds, ok := m.jets[jetID]
-	if !ok {
-		m.jets[jetID] = new(dropForPulseManager)
-		ds = m.jets[jetID]
-	}
-	return
 }
 
 // ForPulse returns a jet.Drop for a provided pulse, that is stored in memory
 func (m *dropStorageMemory) ForPulse(ctx context.Context, jetID core.JetID, pulse core.PulseNumber) (jet.Drop, error) {
-	ds := m.fetchStorage(jetID)
-	return ds.forPulse(jetID, pulse)
+	m.lock.RLock()
+	m.lock.RUnlock()
+
+	key := dropKey{jetID: jetID, pulse: pulse}
+	d, ok := m.jets[key]
+	if !ok {
+		return jet.Drop{}, core.ErrNotFound
+	}
+
+	return d, nil
 }
 
 // Set saves a provided jet.Drop to memory
 func (m *dropStorageMemory) Set(ctx context.Context, jetID core.JetID, drop jet.Drop) error {
-	ds := m.fetchStorage(jetID)
-	return ds.set(drop, drop.Pulse)
+	m.lock.RLock()
+	m.lock.RUnlock()
+
+	key := dropKey{jetID: jetID, pulse: drop.Pulse}
+	m.jets[key] = drop
+
+	return nil
 }
 
 type dropStorageDB struct {
