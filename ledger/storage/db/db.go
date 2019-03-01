@@ -8,7 +8,7 @@ func (s Scope) Bytes() []byte {
 
 type Key interface {
 	Scope() Scope
-	Key() []byte
+	ID() []byte
 }
 
 type DB interface {

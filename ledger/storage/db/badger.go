@@ -35,7 +35,7 @@ func NewBadgerDB(conf configuration.Ledger) (*BadgerDB, error) {
 }
 
 func (b *BadgerDB) Get(key Key) (value []byte, err error) {
-	fullKey := append(key.Scope().Bytes(), key.Key()...)
+	fullKey := append(key.Scope().Bytes(), key.ID()...)
 
 	err = b.backend.View(func(txn *badger.Txn) error {
 		item, err := txn.Get(fullKey)
@@ -61,7 +61,7 @@ func (b *BadgerDB) Get(key Key) (value []byte, err error) {
 }
 
 func (b *BadgerDB) Set(key Key, value []byte) error {
-	fullKey := append(key.Scope().Bytes(), key.Key()...)
+	fullKey := append(key.Scope().Bytes(), key.ID()...)
 
 	err := b.backend.Update(func(txn *badger.Txn) error {
 		err := txn.Set(fullKey, value)

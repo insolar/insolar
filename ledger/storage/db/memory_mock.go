@@ -22,20 +22,20 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
-type MemoryDB struct {
+type MockDB struct {
 	lock    sync.RWMutex
 	backend map[string][]byte
 }
 
-func NewMemoryDB() (*MemoryDB, error) {
-	db := &MemoryDB{
+func NewMockDB() (*MockDB, error) {
+	db := &MockDB{
 		backend: map[string][]byte{},
 	}
 	return db, nil
 }
 
-func (b *MemoryDB) Get(key Key) (value []byte, err error) {
-	fullKey := append(key.Scope().Bytes(), key.Key()...)
+func (b *MockDB) Get(key Key) (value []byte, err error) {
+	fullKey := append(key.Scope().Bytes(), key.ID()...)
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
@@ -46,8 +46,8 @@ func (b *MemoryDB) Get(key Key) (value []byte, err error) {
 	return
 }
 
-func (b *MemoryDB) Set(key Key, value []byte) error {
-	fullKey := append(key.Scope().Bytes(), key.Key()...)
+func (b *MockDB) Set(key Key, value []byte) error {
+	fullKey := append(key.Scope().Bytes(), key.ID()...)
 	b.lock.Lock()
 	defer b.lock.Unlock()
 	b.backend[string(fullKey)] = append([]byte{}, value...)
