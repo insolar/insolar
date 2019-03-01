@@ -60,9 +60,9 @@ func (s *testSuite) TestNodeMajority_NodeStopsAfterMajorityFaded() {
 	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount(), len(activeNodes))
 
-	// stop half discovery
-	first3Discovery := s.fixture().bootstrapNodes[:2]
-	s.stopNodes(first3Discovery)
+	// stop two discovery
+	firstTwoDiscovery := s.fixture().bootstrapNodes[:2]
+	s.stopNodes(firstTwoDiscovery)
 
-	s.waitForConsensusExcept(1, first3Discovery)
+	s.waitForConsensusExcept(1, firstTwoDiscovery)
 }

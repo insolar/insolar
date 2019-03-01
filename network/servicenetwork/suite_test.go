@@ -244,7 +244,7 @@ skip:
 	return result
 }
 
-func TestNodesExcept(t *testing.T) {
+func TestGetNodesExcept(t *testing.T) {
 	n1 := &networkNode{id: testutils.RandomRef()}
 	n2 := &networkNode{id: testutils.RandomRef()}
 	n3 := &networkNode{id: testutils.RandomRef()}
