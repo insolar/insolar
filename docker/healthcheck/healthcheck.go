@@ -71,11 +71,7 @@ func checkInsolard() int {
 	}
 	var out struct {
 		Result struct {
-			PulseNumber    uint32
-			NetworkState   string
-			NodeState      string
-			Origin         struct{ Role string }
-			ActiveListSize int
+			PulseNumber uint32
 		}
 	}
 	err = json.Unmarshal(data, &out)
@@ -87,9 +83,8 @@ func checkInsolard() int {
 	// fmt.Print(data)
 	if out.Result.PulseNumber > 0 {
 		return 0
-	} else {
-		return 1
 	}
+	return 1
 }
 
 func main() {

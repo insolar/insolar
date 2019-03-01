@@ -22,9 +22,6 @@ construct_insgorund_cmd() {
     insgorund_cmd="$insgorund_cmd --log-level=$INSOLARD_LOG_LEVEL"
     insgorund_cmd="$insgorund_cmd --metrics=$INSGORUND_METRICS_LISTEN"
     insgorund_cmd="$insgorund_cmd --directory=$INSGORUND_CACHE_DIR"
-    if [ ! -z "${INSOLARD_LOG_TO_FILE}" ]; then
-        insgorund_cmd="$insgorund_cmd 2>> /var/log/insgorund.log"
-    fi
     echo $insgorund_cmd
 }
 

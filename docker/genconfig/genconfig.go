@@ -57,7 +57,7 @@ func main() {
 	insolardAPIListen := getURI(defaultAPIListenPort)
 
 	insolardTransportListen := GetEnvDefault("INSOLARD_TRANSPORT_LISTEN", getURI(defaultTranportListenPort))
-	insolardLogLevel := GetEnvDefault("INSOLARD_LOG_LEVEL", defaultLogLevel)
+		insolardLogLevel := GetEnvDefault("INSOLARD_LOG_LEVEL", defaultLogLevel)
 	insolardTracerEndpoint := GetEnvDefault("INSOLARD_JAEGER_ENDPOINT", getURI(defaultJaegerEndpointPort))
 	insolardTransportFixedAddress := GetEnvDefault("INSOLARD_TRANSPORT_FIXED_ADDRESS", defaultTransportFixedAddress)
 

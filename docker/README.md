@@ -38,7 +38,6 @@ insolard_insgorund:
     - "launchnet"
   environment:
     - INSOLARD_LOG_LEVEL=debug
-    - INSOLARD_LOG_TO_FILE=1
   volumes:
     - type: bind
       source: ./config-01

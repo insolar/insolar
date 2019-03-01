@@ -54,7 +54,7 @@ COPY docker/insolard-entrypoint.sh /opt/bin/docker-entrypoint.sh
 
 EXPOSE 7900 7901 8001 18182 19191
 HEALTHCHECK --start-period=3m --interval=1m --timeout=30s CMD [ "/opt/bin/healthcheck" ]
-VOLUME [ "/etc/insolar", "/var/log", "/var/lib/insolar" ]
+VOLUME [ "/etc/insolar", "/var/lib/insolar" ]
 
 ENTRYPOINT [ "/opt/bin/docker-entrypoint.sh"  ]
 CMD []
@@ -77,7 +77,7 @@ COPY --from=insolard-genesis-builder    \
         [ "/opt/data.tgz",              \
           "/opt/keys.tgz",              \
           "/opt/genesis/" ]
-VOLUME /opt/output
+VOLUME [ "/opt/output" ]
 CMD ['cp', '/opt/genesis', '/opt/output/genesis']
 
 #                             INSGORUND CONTAINER
@@ -94,7 +94,6 @@ COPY --from=insolard-genesis-builder /opt/bin/insgorund /opt/bin/insgorund
 COPY docker/insgorund-entrypoint.sh /opt/bin/docker-entrypoint.sh
 
 EXPOSE 7777 8002
-VOLUME [ "/var/log" ]
 
 ENTRYPOINT [ "/opt/bin/docker-entrypoint.sh" ]
 CMD []

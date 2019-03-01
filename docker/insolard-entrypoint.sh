@@ -41,9 +41,6 @@ construct_insolar_cmd() {
     if [ ! -z "${INSOLARD_JAEGER_ENDPOINT}" ]; then
         insolar_cmd="$insolar_cmd --trace"
     fi
-    if [ ! -z "${INSOLARD_LOG_TO_FILE}" ]; then
-        insolar_cmd="$insolar_cmd 2>> /var/log/insolard.log"
-    fi
     echo $insolar_cmd
 }
 
