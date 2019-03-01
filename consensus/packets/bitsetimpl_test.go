@@ -170,29 +170,6 @@ func testSerializeBitarray(t *testing.T, ba bitArray) {
 	assert.Equal(t, ba, ba2)
 }
 
-func TestBitSet(t *testing.T) {
-	count := 80
-	refs := initRefs(count)
-	cells := initBitCells(refs)
-
-	mapper := &BitSetMapperMock{refs: refs}
-	bitset, _ := NewBitSetImpl(len(cells))
-
-	expected := bitset.array
-	cells[count-3].State = Fraud
-	err := bitset.ApplyChanges(cells, mapper)
-	assert.NoError(t, err)
-
-	bitset2, _ := NewBitSetImpl(len(cells))
-
-	actual := bitset2.array
-	cells[count-3].State = Fraud
-	err = bitset2.ApplyChanges(cells, mapper)
-	assert.NoError(t, err)
-
-	assert.Equal(t, expected, actual)
-}
-
 func TestBitSet_Serialize(t *testing.T) {
 	refs := initRefs(92)
 	cells := initBitCells(refs)
@@ -238,8 +215,7 @@ func TestBitSet_ThousandDiffStates(t *testing.T) {
 func testSerializeDeserialize(t *testing.T, refs []core.RecordRef, cells []BitSetCell, compressed bool) {
 	mapper := &BitSetMapperMock{refs: refs}
 
-	bitset, _ := NewBitSetImpl(len(cells))
-	bitset.compressed = compressed
+	bitset, _ := NewBitSetImpl(len(cells), compressed)
 	err := bitset.ApplyChanges(cells, mapper)
 	assert.NoError(t, err)
 	data, err := bitset.Serialize()

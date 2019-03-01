@@ -126,32 +126,32 @@ func (ba bitArray) Serialize(compressed bool) ([]byte, error) {
 	return ba.serialize(), nil
 }
 
-func (arr bitArray) serializeCompressed() ([]byte, error) {
+func (ba bitArray) serializeCompressed() ([]byte, error) {
 	var result bytes.Buffer
-	last := arr[0]
+	last := ba[0]
 	count := 1
-	for i := 1; i < len(arr); i++ {
-		current := arr[i]
+	for i := 1; i < len(ba); i++ {
+		current := ba[i]
 		if last == current {
 			count++
 			continue
 		}
 
-		err := arr.writeSequence(&result, last, count)
+		err := ba.writeSequence(&result, last, count)
 		if err != nil {
 			return nil, err
 		}
 		count = 1
 		last = current
 	}
-	err := arr.writeSequence(&result, last, count)
+	err := ba.writeSequence(&result, last, count)
 	if err != nil {
 		return nil, err
 	}
 	return result.Bytes(), nil
 }
 
-func (arr bitArray) writeSequence(buf *bytes.Buffer, state BitSetState, count int) error {
+func (ba bitArray) writeSequence(buf *bytes.Buffer, state BitSetState, count int) error {
 	err := binary.Write(buf, binary.BigEndian, uint16(count))
 	if err != nil {
 		return errors.Wrap(err, "failed to write states count to buffer")

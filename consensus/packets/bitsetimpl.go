@@ -50,9 +50,10 @@ func (dbs *bitsetImpl) GetCells(mapper BitSetMapper) ([]BitSetCell, error) {
 }
 
 // NewBitSetImpl creates and returns a bitset implementation
-func NewBitSetImpl(size int) (*bitsetImpl, error) {
+func NewBitSetImpl(size int, compressed bool) (BitSet, error) {
 	bitset := &bitsetImpl{
-		array: make(bitArray, size),
+		compressed: compressed,
+		array:      make(bitArray, size),
 	}
 	for i := 0; i < size; i++ {
 		bitset.array[i] = TimedOut
