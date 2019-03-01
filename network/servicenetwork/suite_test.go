@@ -27,6 +27,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -49,7 +50,7 @@ import (
 )
 
 var (
-	testNetworkPort       = 10010
+	testNetworkPort int32 = 10010
 	pulseTimeMs     int32 = 5000
 	reqTimeoutMs    int32 = 2000
 	pulseDelta      int32 = 5
@@ -112,7 +113,7 @@ func (s *testSuite) fixture() *fixture {
 	return s.fixtureMap[s.T().Name()]
 }
 
-// SetupSuite creates and run network with bootstrap and common nodes once before run all tests in the suite
+// SetupTest creates and run network with bootstrap and common nodes before each test
 func (s *testSuite) SetupTest() {
 	s.fixtureMap[s.T().Name()] = newFixture(s.T())
 	var err error
@@ -215,7 +216,7 @@ func (s *testSuite) stopNodes(nodes []*networkNode) {
 	}
 }
 
-// TearDownSuite shutdowns all nodes in network, calls once after all tests in suite finished
+// TearDownTest shutdowns all nodes in network
 func (s *testSuite) TearDownTest() {
 	log.Info("=================== TearDownTest()")
 	log.Info("Stop network nodes")
@@ -330,8 +331,8 @@ func (s *testSuite) newNetworkNode(name string) *networkNode {
 	if err != nil {
 		panic(err.Error())
 	}
-	address := "127.0.0.1:" + strconv.Itoa(testNetworkPort)
-	testNetworkPort += 2 // coz consensus transport port+=1
+	address := "127.0.0.1:" + strconv.Itoa(int(atomic.LoadInt32(&testNetworkPort)))
+	incrementTestNetworkPort()
 
 	nodeContext, _ := inslogger.WithField(s.fixture().ctx, "nodeName", name)
 	return &networkNode{
@@ -472,4 +473,8 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	node.componentManager.Register(certManager, cryptographyService, rules.NewRules())
 	node.componentManager.Inject(serviceNetwork, networkSwitcher, messageBusLocker)
 	node.serviceNetwork = serviceNetwork
+}
+
+func incrementTestNetworkPort() {
+	atomic.AddInt32(&testNetworkPort, 2) // 2 coz consensus transport port+=1
 }
