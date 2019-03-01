@@ -22,7 +22,8 @@ import (
 
 // Drop is a blockchain block.
 // It contains hashes of the current block and the previous one.
-type Drop struct {//nolint: golint
+type Drop struct {
+	// nolint: golint
 	// Pulse number (probably we should save it too).
 	Pulse core.PulseNumber
 
@@ -32,5 +33,5 @@ type Drop struct {//nolint: golint
 	// Hash is a hash of all record hashes belongs to one pulse and previous drop hash.
 	Hash []byte
 
-	DropSize uint64
+	Size uint64
 }
