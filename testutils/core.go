@@ -24,6 +24,7 @@ import (
 	"math/big"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/ledger/storage"
 	uuid "github.com/satori/go.uuid"
 	"golang.org/x/crypto/sha3"
 )
@@ -76,7 +77,7 @@ func RandomJetWithDepth(depth uint8) core.RecordID {
 	if err != nil {
 		panic(err)
 	}
-	return core.RecordID(*core.NewJetID(depth, core.ResetBits(jetbuf[1:], depth)))
+	return core.RecordID(*core.NewJetID(depth, storage.ResetBits(jetbuf[1:], depth)))
 }
 
 // JetFromString converts string representation of Jet to core.RecordID.

@@ -21,6 +21,7 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar"
+	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/pkg/errors"
 
@@ -144,7 +145,7 @@ func (jtu *jetTreeUpdater) releaseJet(ctx context.Context, jetID core.RecordID, 
 		if depth == 0 {
 			break
 		}
-		jetID = core.RecordID(core.JetID(jetID).Parent())
+		jetID = core.RecordID(storage.JetParent(core.JetID(jetID)))
 		depth--
 	}
 }

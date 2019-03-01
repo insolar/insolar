@@ -222,7 +222,7 @@ func (m *PulseManager) createDrop(
 	//var prevDrop *jet.Drop
 	prevDrop, err := m.DropAccessor.ForPulse(ctx, core.JetID(jetID), prevPulse)
 	if err == core.ErrNotFound {
-		prevDrop, err = m.DropAccessor.ForPulse(ctx, core.JetID(jetID).Parent(), prevPulse)
+		prevDrop, err = m.DropAccessor.ForPulse(ctx, storage.JetParent(core.JetID(jetID)), prevPulse)
 		if err == core.ErrNotFound {
 			inslogger.FromContext(ctx).WithFields(map[string]interface{}{
 				"pulse": prevPulse,
