@@ -218,8 +218,8 @@ func (m *PulseManager) createDrop(
 	messages [][]byte,
 	err error,
 ) {
-	//var prevDrop *jet.Drop
-	prevDrop, err := m.DropAccessor.ForPulse(ctx, core.JetID(jetID), prevPulse)
+	var prevDrop jet.Drop
+	prevDrop, err = m.DropAccessor.ForPulse(ctx, core.JetID(jetID), prevPulse)
 	if err == core.ErrNotFound {
 		prevDrop, err = m.DropAccessor.ForPulse(ctx, storage.JetParent(core.JetID(jetID)), prevPulse)
 		if err == core.ErrNotFound {

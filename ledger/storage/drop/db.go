@@ -57,7 +57,7 @@ func NewStorageMemory() *dropStorageMemory { // nolint: golint
 // ForPulse returns a jet.Drop for a provided pulse, that is stored in memory
 func (m *dropStorageMemory) ForPulse(ctx context.Context, jetID core.JetID, pulse core.PulseNumber) (jet.Drop, error) {
 	m.lock.RLock()
-	m.lock.RUnlock()
+	defer m.lock.RUnlock()
 
 	key := dropKey{jetID: jetID, pulse: pulse}
 	d, ok := m.jets[key]
@@ -71,7 +71,7 @@ func (m *dropStorageMemory) ForPulse(ctx context.Context, jetID core.JetID, puls
 // Set saves a provided jet.Drop to memory
 func (m *dropStorageMemory) Set(ctx context.Context, jetID core.JetID, drop jet.Drop) error {
 	m.lock.RLock()
-	m.lock.RUnlock()
+	defer m.lock.RUnlock()
 
 	key := dropKey{jetID: jetID, pulse: drop.Pulse}
 	m.jets[key] = drop
