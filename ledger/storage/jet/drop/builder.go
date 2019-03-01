@@ -56,6 +56,9 @@ func NewBuilder(hasher core.Hasher) Builder {
 
 // Append appends a new item to builder
 func (b *builder) Append(item Hashable) (err error) {
+	if item == nil {
+		return errors.New("item can't be nil")
+	}
 	_, err = item.WriteHashData(b.Hasher)
 	return
 }

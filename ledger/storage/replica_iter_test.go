@@ -369,7 +369,7 @@ func setDrop(
 		require.NoError(t, err)
 	}
 
-	packer := jetdrop.NewPacker(platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher(), db)
+	packer := jetdrop.NewDbPacker(platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher(), db)
 
 	drop, err := packer.Pack(ctx, jetID, pulsenum, prevhash)
 	if err != nil {

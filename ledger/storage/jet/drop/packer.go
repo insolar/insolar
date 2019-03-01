@@ -33,8 +33,8 @@ type Packer interface {
 	Pack(ctx context.Context, jetID core.JetID, pulse core.PulseNumber, prevHash []byte) (jet.Drop, error)
 }
 
-// NewPacker creates db-based impl of packer
-func NewPacker(hasher core.Hasher, db storage.DBContext) Packer {
+// NewDbPacker creates db-based impl of packer
+func NewDbPacker(hasher core.Hasher, db storage.DBContext) Packer {
 	return &packer{
 		Builder:   NewBuilder(hasher),
 		DBContext: db,

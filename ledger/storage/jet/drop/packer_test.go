@@ -66,7 +66,7 @@ func (s *dropSuite) BeforeTest(suiteName, testName string) {
 
 	s.db = db
 	s.cleaner = cleaner
-	s.packer = drop.NewPacker(
+	s.packer = drop.NewDbPacker(
 		platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher(),
 		s.db,
 	)

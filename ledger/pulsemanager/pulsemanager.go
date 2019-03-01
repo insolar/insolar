@@ -240,7 +240,7 @@ func (m *PulseManager) createDrop(
 		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't GetDrop")
 	}
 
-	packer := jetdrop.NewPacker(m.PlatformCryptographyScheme.ReferenceHasher(), m.DBContext)
+	packer := jetdrop.NewDbPacker(m.PlatformCryptographyScheme.ReferenceHasher(), m.DBContext)
 
 	packedDrop, err := packer.Pack(ctx, core.JetID(jetID), currentPulse, prevDrop.Hash)
 	if err != nil {
