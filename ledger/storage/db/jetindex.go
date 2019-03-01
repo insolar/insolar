@@ -14,27 +14,48 @@
  *    limitations under the License.
  */
 
-package gen
+package db
 
 import (
-	"github.com/google/gofuzz"
+	"sync"
+
 	"github.com/insolar/insolar/core"
 )
 
-// ID generates random id.
-func ID() (id core.RecordID) {
-	fuzz.New().Fuzz(&id)
-	return
+type JetIndex struct {
+	lock    sync.Mutex
+	storage map[core.JetID]recordSet
 }
 
-// JetID generates random id.
-func JetID() (id core.JetID) {
-	fuzz.New().Fuzz(&id)
-	return
+func NewJetIndex() *JetIndex {
+	return &JetIndex{storage: map[core.JetID]recordSet{}}
 }
 
-// Reference generates random reference.
-func Reference() (ref core.RecordRef) {
-	fuzz.New().Fuzz(&ref)
-	return
+type recordSet map[core.RecordID]struct{}
+
+func (i *JetIndex) Add(id core.RecordID, jetID core.JetID) {
+	i.lock.Lock()
+	defer i.lock.Unlock()
+
+	jet, ok := i.storage[jetID]
+	if !ok {
+		jet = recordSet{}
+		i.storage[jetID] = jet
+	}
+	jet[id] = struct{}{}
+}
+
+func (i *JetIndex) Delete(id core.RecordID, jetID core.JetID) {
+	i.lock.Lock()
+	defer i.lock.Unlock()
+
+	jet, ok := i.storage[jetID]
+	if !ok {
+		return
+	}
+
+	delete(jet, id)
+	if len(jet) == 0 {
+		delete(i.storage, jetID)
+	}
 }
