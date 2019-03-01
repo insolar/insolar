@@ -19,15 +19,18 @@ package heavyserver
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/gen"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
@@ -256,6 +259,27 @@ func (s *heavysyncSuite) TestHeavy_SyncLockOnPrefix() {
 
 	err = sync.Start(s.ctx, jetID2, pnum+1)
 	require.NoError(s.T(), err, "should start after released lock")
+}
+
+func (s *heavysyncSuite) TestHeavy_Timeout() {
+	pn := gen.PulseNumber()
+	jetID := testutils.RandomJet()
+
+	sync := NewSync(s.db)
+	sync.ReplicaStorage = s.replicaStorage
+	err := sync.Start(s.ctx, jetID, pn)
+	require.NoError(s.T(), err)
+	state := sync.getJetSyncState(s.ctx, jetID)
+	state.Lock()
+	assert.Equal(s.T(), pn, *state.syncpulse)
+	assert.NotNil(s.T(), state.timer)
+	state.Unlock()
+	state.timer.Reset(0)
+	time.Sleep(time.Second)
+	state.Lock()
+	assert.Nil(s.T(), state.syncpulse)
+	assert.Nil(s.T(), state.timer)
+	state.Unlock()
 }
 
 func preparepulse(s *heavysyncSuite, pn core.PulseNumber) {
