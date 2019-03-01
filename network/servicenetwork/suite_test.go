@@ -86,7 +86,7 @@ type testNetworkConfig struct {
 }
 
 func newTestNetworkConfig(discoveryCount, commonCount int) testNetworkConfig {
-	majority := discoveryCount/2 + 1
+	majority := discoveryCount - 2
 	return testNetworkConfig{
 		discoveryNodesCount: discoveryCount,
 		commonNodesCount:    commonCount,
