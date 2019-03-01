@@ -20,6 +20,7 @@ package bootstrap
 import (
 	"context"
 	"encoding/gob"
+	"fmt"
 	"time"
 
 	"github.com/insolar/insolar/certificate"
@@ -79,6 +80,7 @@ type AuthorizationResponse struct {
 // RegistrationRequest
 type RegistrationRequest struct {
 	SessionID SessionID
+	Version   string
 	JoinClaim *packets.NodeJoinClaim
 }
 
@@ -153,6 +155,7 @@ func (ac *authorizationController) register(ctx context.Context, discoveryNode *
 		return errors.Wrap(err, "Failed to get origin claim")
 	}
 	request := ac.transport.NewRequestBuilder().Type(types.Register).Data(&RegistrationRequest{
+		Version:   ac.NodeKeeper.GetOrigin().Version(),
 		SessionID: sessionID,
 		JoinClaim: originClaim,
 	}).Build()
@@ -204,6 +207,12 @@ func (ac *authorizationController) getSession(sessionID SessionID, claim *packet
 
 func (ac *authorizationController) processRegisterRequest(ctx context.Context, request network.Request) (network.Response, error) {
 	data := request.GetData().(*RegistrationRequest)
+	if data.Version != ac.NodeKeeper.GetOrigin().Version() {
+		response := &RegistrationResponse{Code: OpRejected,
+			Error: fmt.Sprintf("Joiner version %s does not match discovery version %s",
+				data.Version, ac.NodeKeeper.GetOrigin().Version())}
+		return ac.transport.BuildResponse(ctx, request, response), nil
+	}
 	response := ac.buildRegistrationResponse(data.SessionID, data.JoinClaim)
 	if response.Code != OpConfirmed {
 		return ac.transport.BuildResponse(ctx, request, response), nil

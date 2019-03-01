@@ -29,7 +29,7 @@ import (
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/jet"
-	"github.com/insolar/insolar/ledger/storage/nodes"
+	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
@@ -49,7 +49,7 @@ type componentSuite struct {
 
 	scheme        core.PlatformCryptographyScheme
 	pulseTracker  storage.PulseTracker
-	nodeStorage   nodes.Accessor
+	nodeStorage   node.Accessor
 	objectStorage storage.ObjectStorage
 	jetStorage    storage.JetStorage
 }
@@ -74,7 +74,7 @@ func (s *componentSuite) BeforeTest(suiteName, testName string) {
 	s.db = db
 	s.scheme = testutils.NewPlatformCryptographyScheme()
 	s.jetStorage = storage.NewJetStorage()
-	s.nodeStorage = nodes.NewStorage()
+	s.nodeStorage = node.NewStorage()
 	s.pulseTracker = storage.NewPulseTracker()
 	s.objectStorage = storage.NewObjectStorage()
 
