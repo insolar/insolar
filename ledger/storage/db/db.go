@@ -11,6 +11,11 @@ type Key interface {
 	Key() []byte
 }
 
+type DB interface {
+	Get(key Key) (value []byte, err error)
+	Set(key Key, value []byte) error
+}
+
 const (
 	ScopePulse Scope = 1
 )
