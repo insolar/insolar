@@ -19,8 +19,8 @@ package storagetest
 import (
 	"context"
 
+	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/jet"
-	"github.com/insolar/insolar/ledger/storage/jet/drop"
 	"github.com/insolar/insolar/ledger/storage/record"
 
 	"github.com/insolar/insolar/core"

@@ -21,8 +21,8 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/component"
+	jetdrop "github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/jet"
-	jetdrop "github.com/insolar/insolar/ledger/storage/jet/drop"
 	base58 "github.com/jbenet/go-base58"
 	"github.com/stretchr/testify/suite"
 

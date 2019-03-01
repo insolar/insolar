@@ -24,8 +24,8 @@ import (
 	"time"
 
 	"github.com/insolar/insolar"
-	"github.com/insolar/insolar/ledger/storage/jet/drop"
-	jetdrop "github.com/insolar/insolar/ledger/storage/jet/drop"
+	"github.com/insolar/insolar/ledger/storage/drop"
+	jetdrop "github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"

@@ -26,13 +26,13 @@ import (
 )
 
 // Modifier provides interface for modifying jetdrops
-//go:generate minimock -i github.com/insolar/insolar/ledger/storage/jet/drop.Modifier -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage/drop.Modifier -o ./ -s _mock.go
 type Modifier interface {
 	Set(ctx context.Context, jetID core.JetID, drop jet.Drop) error
 }
 
 // Accessor provides interface for accessing jetdrops
-//go:generate minimock -i github.com/insolar/insolar/ledger/storage/jet/drop.Accessor -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage/drop.Accessor -o ./ -s _mock.go
 type Accessor interface {
 	ForPulse(ctx context.Context, jetID core.JetID, pulse core.PulseNumber) (jet.Drop, error)
 }
