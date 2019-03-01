@@ -325,7 +325,7 @@ func (s *testSuite) TestPartialPositive1PhaseTimeOut() {
 
 	setCommunicatorMock(s.fixture().bootstrapNodes, PartialPositive1Phase)
 
-	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
+	s.waitForConsensusExceptFirstBootstrap(2)
 	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount(), len(activeNodes))
 }
@@ -337,7 +337,7 @@ func (s *testSuite) TestPartialPositive2PhaseTimeOut() {
 
 	setCommunicatorMock(s.fixture().bootstrapNodes, PartialPositive2Phase)
 
-	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
+	s.waitForConsensusExceptFirstBootstrap(2)
 	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount(), len(activeNodes))
 }
@@ -349,7 +349,7 @@ func (s *testSuite) TestPartialNegative1PhaseTimeOut() {
 
 	setCommunicatorMock(s.fixture().bootstrapNodes, PartialNegative1Phase)
 
-	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
+	s.waitForConsensusExceptFirstBootstrap(2)
 	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount()-1, len(activeNodes))
 }
@@ -361,7 +361,7 @@ func (s *testSuite) TestPartialNegative2PhaseTimeOut() {
 
 	setCommunicatorMock(s.fixture().bootstrapNodes, PartialNegative2Phase)
 
-	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
+	s.waitForConsensusExceptFirstBootstrap(2)
 	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount(), len(activeNodes))
 }
@@ -373,7 +373,7 @@ func (s *testSuite) TestPartialNegative3PhaseTimeOut() {
 
 	setCommunicatorMock(s.fixture().bootstrapNodes, PartialNegative3Phase)
 
-	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
+	s.waitForConsensusExceptFirstBootstrap(2)
 	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount(), len(activeNodes))
 }
@@ -385,7 +385,7 @@ func (s *testSuite) TestPartialPositive3PhaseTimeOut() {
 
 	setCommunicatorMock(s.fixture().bootstrapNodes, PartialPositive3Phase)
 
-	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
+	s.waitForConsensusExceptFirstBootstrap(2)
 	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount(), len(activeNodes))
 }
@@ -397,7 +397,7 @@ func (s *testSuite) TestPartialNegative23PhaseTimeOut() {
 
 	setCommunicatorMock(s.fixture().bootstrapNodes, PartialNegative23Phase)
 
-	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
+	s.waitForConsensusExceptFirstBootstrap(2)
 	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount(), len(activeNodes))
 }
@@ -409,7 +409,7 @@ func (s *testSuite) TestPartialPositive23PhaseTimeOut() {
 
 	setCommunicatorMock(s.fixture().bootstrapNodes, PartialPositive23Phase)
 
-	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
+	s.waitForConsensusExceptFirstBootstrap(2)
 	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount(), len(activeNodes))
 }
@@ -421,7 +421,7 @@ func (s *testSuite) TestDiscoveryDown() {
 
 	s.StopNode(s.fixture().bootstrapNodes[0])
 
-	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
+	s.waitForConsensusExceptFirstBootstrap(2)
 	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount()-1, len(activeNodes))
 }
@@ -439,7 +439,7 @@ func (s *testSuite) TestDiscoveryRestart() {
 	log.Info("Discovery node stopped...")
 	require.NoError(s.T(), err)
 
-	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
+	s.waitForConsensusExceptFirstBootstrap(2)
 	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount()-1, len(activeNodes))
 
@@ -448,7 +448,7 @@ func (s *testSuite) TestDiscoveryRestart() {
 	log.Info("Discovery node started")
 	require.NoError(s.T(), err)
 
-	s.waitForConsensusExcept(3, s.fixture().bootstrapNodes[0].id)
+	s.waitForConsensusExceptFirstBootstrap(3)
 	activeNodes = s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount(), len(activeNodes))
 	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
@@ -475,10 +475,10 @@ func (s *testSuite) TestDiscoveryRestartNoWait() {
 		require.NoError(s.T(), err)
 	}(s)
 
-	s.waitForConsensusExcept(4, s.fixture().bootstrapNodes[0].id)
+	s.waitForConsensusExceptFirstBootstrap(4)
 	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetActiveNodes()
 	s.Equal(s.getNodesCount(), len(activeNodes))
-	s.waitForConsensusExcept(1, s.fixture().bootstrapNodes[0].id)
+	s.waitForConsensusExceptFirstBootstrap(1)
 	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount(), len(activeNodes))
 	activeNodes = s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
