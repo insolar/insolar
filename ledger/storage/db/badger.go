@@ -20,10 +20,10 @@ func NewBadgerDB(conf configuration.Ledger) (*BadgerDB, error) {
 		return nil, err
 	}
 
-	bdb, err := badger.Open(badger.Options{
-		Dir:      dir,
-		ValueDir: dir,
-	})
+	ops := badger.DefaultOptions
+	ops.ValueDir = dir
+	ops.Dir = dir
+	bdb, err := badger.Open(ops)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to open badger")
 	}
