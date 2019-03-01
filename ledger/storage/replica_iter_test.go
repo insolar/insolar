@@ -30,6 +30,7 @@ import (
 	"github.com/insolar/insolar/ledger/storage"
 	jetdrop "github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/index"
+	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
@@ -144,7 +145,7 @@ func Test_StoreKeyValues(t *testing.T) {
 		for n := 0; n < pulsescount; n++ {
 			lastPulse := core.PulseNumber(pulseDelta(n))
 			addRecords(ctx, t, os, jetID, lastPulse)
-			setDrop(ctx, t, db, ds, ds, core.JetID(jetID), lastPulse)
+			setDrop(ctx, t, ds, core.JetID(jetID), lastPulse)
 		}
 
 		for n := 0; n < pulsescount; n++ {
@@ -263,7 +264,7 @@ func Test_ReplicaIter_Base(t *testing.T) {
 		lastPulse = pulseDelta(i)
 
 		addRecords(ctx, t, os, jetID, lastPulse)
-		setDrop(ctx, t, db, ds, ds, core.JetID(jetID), lastPulse)
+		setDrop(ctx, t, ds, core.JetID(jetID), lastPulse)
 
 		recs, _ := getallkeys(db.GetBadgerDB())
 		recKeys := getdelta(recsBefore, recs)
@@ -355,27 +356,11 @@ func Test_ReplicaIter_Base(t *testing.T) {
 func setDrop(
 	ctx context.Context,
 	t *testing.T,
-	db storage.DBContext,
-	dropAccessor jetdrop.Accessor,
 	dropModifire jetdrop.Modifier,
 	jetID core.JetID,
 	pulsenum core.PulseNumber,
 ) {
-	prevDrop, err := dropAccessor.ForPulse(ctx, jetID, pulsenum-1)
-	var prevhash []byte
-	if err == nil {
-		prevhash = prevDrop.Hash
-	} else if err != core.ErrNotFound {
-		require.NoError(t, err)
-	}
-
-	packer := jetdrop.NewDbPacker(platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher(), db)
-
-	drop, err := packer.Pack(ctx, jetID, pulsenum, prevhash)
-	if err != nil {
-		require.NoError(t, err)
-	}
-	err = dropModifire.Set(ctx, jetID, drop)
+	err := dropModifire.Set(ctx, jetID, jet.Drop{Pulse: pulsenum})
 	require.NoError(t, err)
 }
 

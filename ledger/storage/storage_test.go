@@ -23,7 +23,6 @@ import (
 	"github.com/insolar/insolar/component"
 	jetdrop "github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/jet"
-	base58 "github.com/jbenet/go-base58"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/core"
@@ -171,45 +170,6 @@ func (s *storageSuite) TestDB_GetDrop_ReturnsNotFoundIfNoDrop() {
 	drop, err := s.dropAccessor.ForPulse(s.ctx, core.JetID(testutils.RandomJet()), 1)
 	assert.Equal(s.T(), err, core.ErrNotFound)
 	assert.Equal(s.T(), jet.Drop{}, drop)
-}
-
-func (s *storageSuite) TestDB_CreateDrop() {
-	// FIXME: should work with random jet
-	// jetID := testutils.RandomJet()
-	jetID := *core.NewJetID(0, nil)
-
-	pulse := core.PulseNumber(core.FirstPulseNumber + 10)
-	err := s.pulseTracker.AddPulse(
-		s.ctx,
-		core.Pulse{
-			PulseNumber: pulse,
-			Entropy:     core.Entropy{1, 2, 3},
-		},
-	)
-	cs := platformpolicy.NewPlatformCryptographyScheme()
-
-	msgCount := 3
-	for i := 1; i < 1+msgCount; i++ {
-		// setRecordMessage := message.SetRecord{
-		// 	Record: record.SerializeRecord(&record.CodeRecord{
-		// 		Code: record.CalculateIDForBlob(cs, pulse, []byte{byte(i)}),
-		// 	}),
-		// }
-		_, err := s.objectStorage.SetRecord(s.ctx, core.RecordID(jetID), pulse, &record.CodeRecord{
-			Code: record.CalculateIDForBlob(cs, pulse, []byte{byte(i)}),
-		})
-		require.NoError(s.T(), err)
-		_, err = s.objectStorage.SetBlob(s.ctx, core.RecordID(jetID), pulse, []byte{byte(i)})
-		require.NoError(s.T(), err)
-	}
-
-	packer := jetdrop.NewDbPacker(platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher(), s.db)
-
-	drop, err := packer.Pack(s.ctx, jetID, pulse, []byte{4, 5, 6})
-	require.NoError(s.T(), err)
-	// TODO: messages collection was disabled in ab46d01, validation is not active ATM
-	require.Equal(s.T(), pulse, drop.Pulse)
-	require.Equal(s.T(), "zBbFyxaAwxPAi7SSnijgBCzxSrQYQFVwdJBqHU", base58.Encode(drop.Hash))
 }
 
 func (s *storageSuite) TestDB_SetDrop() {
