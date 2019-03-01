@@ -7,7 +7,7 @@ It should have at least 2 files (1 optional):
    mandatory
 * `keys.json` - keys - private/public keys, mandatory
 * `insolar.yaml` - configuration file for insolar. It'll be backuped at first
-  run and all needed fields would be overwrited (look at genconfig.go for more
+  run and all needed fields will be overwritten (look at genconfig.go for more
   information), optional. Default one would be created if it's not passed.
 * `genesis` (???)
 
@@ -27,23 +27,9 @@ It should have at least 2 files (1 optional):
 #### Insgorund
 
 * `INSOLARD_LOG_LEVEL` - logging level (default: info)
-* `INSOLARD_RPC_ENDPOINT` - ...
+* `INSOLARD_RPC_ENDPOINT` - endpoint where insolard listens to requests (should
+   be passed explicitly)
 
 ### Example usages in docker-compose
 
-In case you want to run insolard and insgorund in one container:
-```yaml
-insolard_insgorund:
-  links:
-    - "launchnet"
-  environment:
-    - INSOLARD_LOG_LEVEL=debug
-  volumes:
-    - type: bind
-      source: ./config-01
-      target: /opt/config
-  build:
-    context: insolard
-    dockerfile: Dockerfile
-  restart: always
-```
+Look at `docker-compose` folder in project root.

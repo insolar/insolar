@@ -10,7 +10,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 )
 
-/* Return env variable or default value, it env is not presented */
+// getenv + default value
 func GetEnvDefault(key, defaultVal string) string {
 	val, ok := os.LookupEnv(key)
 	if !ok {
@@ -19,7 +19,7 @@ func GetEnvDefault(key, defaultVal string) string {
 	return val
 }
 
-/* Return '<host>:<port>' on public docker interface */
+// Return '<host>:<port>' on public docker interface
 func getURI(port uint) string {
 	host := GetEnvDefault("IP", "127.0.0.1")
 	return fmt.Sprintf("%s:%d", host, port)
@@ -50,14 +50,14 @@ func main() {
 	}
 	cfg := hld.Configuration
 
-	insgorundListen := GetEnvDefault("INSGORUND_ENDPOINT", "insgorund:" + string(defaultInsgorundListenPort))
+	insgorundListen := GetEnvDefault("INSGORUND_ENDPOINT", "insgorund:"+string(defaultInsgorundListenPort))
 
 	insolardMetricsListen := getURI(defaultMetricsListenPort)
 	insolardRPCListen := getURI(defaultRPCListenPort)
 	insolardAPIListen := getURI(defaultAPIListenPort)
 
 	insolardTransportListen := GetEnvDefault("INSOLARD_TRANSPORT_LISTEN", getURI(defaultTranportListenPort))
-		insolardLogLevel := GetEnvDefault("INSOLARD_LOG_LEVEL", defaultLogLevel)
+	insolardLogLevel := GetEnvDefault("INSOLARD_LOG_LEVEL", defaultLogLevel)
 	insolardTracerEndpoint := GetEnvDefault("INSOLARD_JAEGER_ENDPOINT", getURI(defaultJaegerEndpointPort))
 	insolardTransportFixedAddress := GetEnvDefault("INSOLARD_TRANSPORT_FIXED_ADDRESS", defaultTransportFixedAddress)
 
