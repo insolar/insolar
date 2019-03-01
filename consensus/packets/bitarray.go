@@ -144,7 +144,10 @@ func (arr bitArray) serializeCompressed() ([]byte, error) {
 		count = 1
 		last = current
 	}
-	arr.writeSequence(&result, last, count)
+	err := arr.writeSequence(&result, last, count)
+	if err != nil {
+		return nil, err
+	}
 	return result.Bytes(), nil
 }
 
