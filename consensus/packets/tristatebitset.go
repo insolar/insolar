@@ -70,7 +70,7 @@ func (dbs *TriStateBitSet) ApplyChanges(changes []BitSetCell, mapper BitSetMappe
 	for _, cell := range changes {
 		index, err := mapper.RefToIndex(cell.NodeID)
 		if err != nil {
-			return errors.Wrap(err, "[ ApplyChanges ] failed to get index from ref")
+			return errors.Wrapf(err, "failed to map reference %s to bitset index", cell.NodeID)
 		}
 		dbs.array[index] = cell.State
 	}
@@ -87,7 +87,7 @@ func (dbs *TriStateBitSet) Serialize() ([]byte, error) {
 
 	data, err := dbs.array.Serialize(dbs.CompressedSet)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ Serialize ] failed to serialize a bitarray")
+		return nil, errors.Wrap(err, "failed to serialize bitarray")
 	}
 
 	length := len(dbs.array)
@@ -96,18 +96,18 @@ func (dbs *TriStateBitSet) Serialize() ([]byte, error) {
 	if bits.Len(uint(length)) > lowLengthSize {
 		err = dbs.serializeWithHLength(firstByte, length, &result)
 		if err != nil {
-			return nil, errors.Wrap(err, "[ Serialize ] failed to serialize first bytes")
+			return nil, errors.Wrap(err, "failed to write 2-byte bitset header")
 		}
 	} else {
 		err = dbs.serializeWithLLength(firstByte, length, &result)
 		if err != nil {
-			return nil, errors.Wrap(err, "[ Serialize ] failed to serialize first bytes")
+			return nil, errors.Wrap(err, "failed to write 1-byte bitset header")
 		}
 	}
 
 	err = binary.Write(&result, defaultByteOrder, data)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ Serialize ] failed to write binary")
+		return nil, errors.Wrap(err, "failed to write bitset binary representation")
 	}
 
 	return result.Bytes(), nil
@@ -125,11 +125,11 @@ func (dbs *TriStateBitSet) serializeWithHLength(firstByte uint8, length int, res
 	}
 	err := binary.Write(result, defaultByteOrder, firstByte)
 	if err != nil {
-		return errors.Wrap(err, "[ serializeWithHLength ] failed to write binary")
+		return errors.Wrap(err, "failed to write first byte of bitset header")
 	}
 	err = binary.Write(result, defaultByteOrder, secondByte)
 	if err != nil {
-		return errors.Wrap(err, "[ serializeWithHLength ] failed to write binary")
+		return errors.Wrap(err, "failed to write second byte of bitset header")
 	}
 	return nil
 }
@@ -139,54 +139,62 @@ func (dbs *TriStateBitSet) serializeWithLLength(firstByte uint8, length int, res
 	firstByte += uint8(length)
 	err := binary.Write(result, defaultByteOrder, firstByte)
 	if err != nil {
-		return errors.Wrap(err, "[ serializeWithLLength ] failed to write binary")
+		return errors.Wrap(err, "failed to write first byte of bitset header")
 	}
 	return nil
 }
 
 func DeserializeBitSet(data io.Reader) (BitSet, error) {
-	firstbyte := uint8(0)
-	err := binary.Read(data, defaultByteOrder, &firstbyte)
-	if firstbyte == 0 {
-		return nil, errors.New("[ DeserializeBitSet ] failed to deserialize: wrong data")
+	compressed, length, err := parseHeader(data)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to parse bitset header")
 	}
 
 	var array bitArray
-	if err != nil {
-		return nil, errors.Wrap(err, "[ Deserialize ] failed to read first byte")
-	}
-	compressed, hbitFlag, lowLength := parseFirstByte(firstbyte)
-	var length int
-	if hbitFlag {
-		var highLength uint8
-		err = binary.Read(data, defaultByteOrder, &highLength)
-		if err != nil {
-			return nil, errors.Wrap(err, "[ Deserialize ] failed to read second byte")
-		}
-		length = int(lowLength)<<8 | int(highLength)
-	} else {
-		length = int(lowLength)
-	}
 	if compressed {
 		array, err = deserializeCompressed(data, length)
 		if err != nil {
-			return nil, errors.Wrap(err, "[ DeserializeBitSet ] failed to deserialize a compressed bitarray")
+			return nil, errors.Wrap(err, "failed to deserialize compressed bitarray")
 		}
 	} else {
 		payload := make([]uint8, div(length, statesInByte))
 		err := binary.Read(data, defaultByteOrder, &payload)
 		if err != nil {
-			return nil, errors.Wrap(err, "[ Deserialize ] failed to read payload")
+			return nil, errors.Wrap(err, "failed to read bitarray payload")
 		}
 		array, err = deserialize(payload, length)
 		if err != nil {
-			return nil, errors.Wrap(err, "[ Deserialize ] failed to parse a bitarray")
+			return nil, errors.Wrap(err, "failed to deserialize bitarray")
 		}
 	}
 	bitset := &TriStateBitSet{
 		array: array,
 	}
 	return bitset, nil
+}
+
+func parseHeader(data io.Reader) (bool, int, error) {
+	firstbyte := uint8(0)
+	err := binary.Read(data, defaultByteOrder, &firstbyte)
+	if err != nil {
+		return false, 0, errors.Wrap(err, "failed to read first byte")
+	}
+	var length int
+	compressed, hbitFlag, lowLength := parseFirstByte(firstbyte)
+	if hbitFlag {
+		var highLength uint8
+		err = binary.Read(data, defaultByteOrder, &highLength)
+		if err != nil {
+			return false, 0, errors.Wrap(err, "failed to read second byte")
+		}
+		length = int(lowLength)<<8 | int(highLength)
+	} else {
+		length = int(lowLength)
+	}
+	if length < 0 || length > 1024 {
+		return false, 0, errors.Errorf("got bitset with incorrect size: %d", length)
+	}
+	return compressed, length, nil
 }
 
 func parseFirstByte(b uint8) (compressed bool, hbitFlag bool, lbitLength uint8) {

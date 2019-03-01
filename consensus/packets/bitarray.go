@@ -77,11 +77,11 @@ func deserializeCompressed(data io.Reader, size int) (bitArray, error) {
 	for statesLeft > 0 {
 		err = binary.Read(data, binary.BigEndian, &count)
 		if err != nil {
-			return nil, errors.Wrap(err, "[ deserializeCompressed ] failed to read from data")
+			return nil, errors.Wrap(err, "failed to read states count from buffer")
 		}
 		err = binary.Read(data, binary.BigEndian, &value)
 		if err != nil {
-			return nil, errors.Wrap(err, "[ deserializeCompressed ] failed to read from data")
+			return nil, errors.Wrap(err, "failed to read state from buffer")
 		}
 		for i := 0; i < int(count); i++ {
 			result[index] = value
