@@ -65,7 +65,7 @@ MAINTAINER ivan.serezhkin@insolar.io
 
 WORKDIR /opt
 RUN set -x && \
-        cp -rf /go/src/github.com/insolar/insolar/keys /opt || : && \
+        cp -rf /go/src/github.com/insolar/insolar/keys /opt || true && \
         /go/src/github.com/insolar/insolar/scripts/build/genesis/genesis.sh
 
 #                              GENESIS CONTAINER

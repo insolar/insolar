@@ -6,14 +6,14 @@ services:
       - INSOLARD_LOG_LEVEL=warn
       - INSOLARD_TRANSPORT_FIXED_ADDRESS=
       - INSGORUND_ENDPOINT=insgorund:18181
+      - INSOLARD_JAEGER_ENDPOINT=jaeger:6831
     volumes:
-      - "./insolar-config:/etc/insolar"
+      - "./configs:/etc/insolar"
       - "./genesis:/var/lib/insolar"
     restart: always
     links:
         - insgorund
     ports:
-      - "127.0.0.1:8001:8001/tcp"   # metrics
       - "0.0.0.0:7900:7900/tcp"     # tcp - transport
       - "0.0.0.0:7901:7901/udp"     # udp - consensus
       - "0.0.0.0:19191:19191/tcp"   # api
@@ -73,9 +73,12 @@ services:
       - "9200:9200"
       - "9300:9300"
     environment:
+      path.repo: "/tmp/backup"
       ES_JAVA_OPTS: "-Xmx256m -Xms256m"
       discovery.type: "single-node"
       xpack.security.enabled: "false"
+    volumes:
+      - "./elasticsearch/backup:/tmp/backup"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9200/_cat/health?h=st"]
       interval: 30s
@@ -87,8 +90,11 @@ services:
     image: "docker.elastic.co/kibana/kibana:6.5.4"
     ports:
       - "5601:5601"
+    volumes:
+      - "./kibana/entrypoint.sh:/usr/local/bin/entrypoint.sh"
     depends_on:
       - elasticsearch
+    command: ["/usr/local/bin/entrypoint.sh"]
 
   jaeger:
     image: "jaegertracing/all-in-one:1.8"
