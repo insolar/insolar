@@ -22,6 +22,7 @@ import (
 	"crypto"
 	"fmt"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/stretchr/testify/assert"
 	"math/rand"
 	"strconv"
 	"strings"
@@ -228,38 +229,59 @@ func (s *testSuite) TearDownTest() {
 	s.NoError(err)
 }
 
-func (s *testSuite) waitForConsensus(consensusCount int) {
-	for i := 0; i < consensusCount; i++ {
-		for _, n := range s.fixture().bootstrapNodes {
-			err := <-n.consensusResult
-			s.NoError(err)
-		}
+func getNodesExcept(nodes []*networkNode, except []*networkNode) []*networkNode {
+	var result []*networkNode
+skip:
+	for _, n := range nodes {
 
-		for _, n := range s.fixture().networkNodes {
-			err := <-n.consensusResult
-			s.NoError(err)
+		for _, e := range except {
+			if n.id.Equal(e.id) {
+				continue skip
+			}
 		}
+		result = append(result, n)
+	}
+	return result
+}
+
+func TestNodesExcept(t *testing.T) {
+	n1 := &networkNode{id: testutils.RandomRef()}
+	n2 := &networkNode{id: testutils.RandomRef()}
+	n3 := &networkNode{id: testutils.RandomRef()}
+
+	nodes := []*networkNode{n1, n2, n3}
+	result := getNodesExcept(nodes, nil)
+	assert.Equal(t, nodes, result)
+
+	result = getNodesExcept(nodes, []*networkNode{n1, n3})
+	assert.Len(t, result, 1)
+	assert.Equal(t, n2, result[0])
+}
+
+func (s *testSuite) waitForNodesConsensus(nodes []*networkNode, except []*networkNode) {
+	part := getNodesExcept(nodes, except)
+	for _, n := range part {
+		err := <-n.consensusResult
+		s.NoError(err)
 	}
 }
 
-func (s *testSuite) waitForConsensusExcept(consensusCount int, exception core.RecordRef) {
+func (s *testSuite) waitForConsensus(consensusCount int) {
 	for i := 0; i < consensusCount; i++ {
-		for _, n := range s.fixture().bootstrapNodes {
-			if n.id.Equal(exception) {
-				continue
-			}
-			err := <-n.consensusResult
-			s.NoError(err)
-		}
-
-		for _, n := range s.fixture().networkNodes {
-			if n.id.Equal(exception) {
-				continue
-			}
-			err := <-n.consensusResult
-			s.NoError(err)
-		}
+		s.waitForNodesConsensus(s.fixture().bootstrapNodes, nil)
+		s.waitForNodesConsensus(s.fixture().networkNodes, nil)
 	}
+}
+
+func (s *testSuite) waitForConsensusExcept(consensusCount int, except []*networkNode) {
+	for i := 0; i < consensusCount; i++ {
+		s.waitForNodesConsensus(s.fixture().bootstrapNodes, except)
+		s.waitForNodesConsensus(s.fixture().networkNodes, except)
+	}
+}
+
+func (s *testSuite) waitForConsensusExceptFirstBootstrap(consensusCount int) {
+	s.waitForConsensusExcept(consensusCount, []*networkNode{s.fixture().bootstrapNodes[0]})
 }
 
 // nodesCount returns count of nodes in network without testNode
