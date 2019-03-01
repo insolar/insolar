@@ -48,7 +48,7 @@ type dropStorageMemory struct {
 }
 
 // NewStorageMemory creates new storage, that holds data in-memory
-func NewStorageMemory() *dropStorageMemory {
+func NewStorageMemory() *dropStorageMemory { // nolint: golint
 	return &dropStorageMemory{
 		jets: map[dropKey]jet.Drop{},
 	}
@@ -84,7 +84,7 @@ type dropStorageDB struct {
 }
 
 // NewStorageDB creates new storage, that holds data in db
-func NewStorageDB() *dropStorageDB {
+func NewStorageDB() *dropStorageDB { // nolint: golint
 	return &dropStorageDB{}
 }
 
