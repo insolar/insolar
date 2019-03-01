@@ -19,6 +19,10 @@ package drop
 import (
 	"testing"
 
+	fuzz "github.com/google/gofuzz"
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/stretchr/testify/require"
 )
 
@@ -28,17 +32,52 @@ func TestNewStorageMemory(t *testing.T) {
 	require.NotNil(t, ms.jets)
 }
 
+func TestDropStorageMemory_Set(t *testing.T) {
+	ms := NewStorageMemory()
+
+	var drops []jet.Drop
+	dropsIndex := 0
+	f := fuzz.New().Funcs(func(jd *jet.Drop, c fuzz.Continue) {
+		dropsIndex++
+		jd.Pulse = core.PulseNumber(dropsIndex)
+	}).NumElements(5, 10)
+	f.Fuzz(&drops)
+
+	for _, jd := range drops {
+		err := ms.Set(inslogger.TestContext(t), core.ZeroJetID, jd)
+		require.NoError(t, err)
+	}
+
+	require.Equal(t, dropsIndex, len(ms.jets))
+}
+
 func TestDropStorageMemory_ForPulse(t *testing.T) {
-	// ms := NewStorageMemory()
-	//
-	// var drops []jet.Drop
-	// f := fuzz.New().Funcs(func(jd *jet.Drop, c fuzz.Continue) {
-	// 	jd.Pulse = 123
-	// }).NumElements(5, 10)
-	// f.Fuzz(&drops)
-	//
-	// for _, jd := range drops {
-	// 	err := ms.Set(inslogger.TestContext(t), core.ZeroJetID, jd)
-	// 	require.NoError(t, err)
-	// }
+	ctx := inslogger.TestContext(t)
+	ms := NewStorageMemory()
+
+	err := ms.Set(ctx, core.ZeroJetID, jet.Drop{Pulse: 123})
+	require.NoError(t, err)
+	err = ms.Set(ctx, *core.NewJetID(1, nil), jet.Drop{Pulse: 2})
+	require.NoError(t, err)
+
+	drop, err := ms.ForPulse(ctx, core.ZeroJetID, core.PulseNumber(123))
+
+	require.Equal(t, core.PulseNumber(123), drop.Pulse)
+	require.Equal(t, 2, len(ms.jets))
+}
+
+func TestDropStorageMemory_DoubleSet(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+	ms := NewStorageMemory()
+
+	err := ms.Set(ctx, core.ZeroJetID, jet.Drop{Pulse: 123, Size: 123})
+	require.NoError(t, err)
+	err = ms.Set(ctx, core.ZeroJetID, jet.Drop{Pulse: 123, Size: 999})
+	require.NoError(t, err)
+
+	drop, err := ms.ForPulse(ctx, core.ZeroJetID, core.PulseNumber(123))
+
+	require.Equal(t, core.PulseNumber(123), drop.Pulse)
+	require.Equal(t, uint64(999), drop.Size)
+	require.Equal(t, 1, len(ms.jets))
 }
