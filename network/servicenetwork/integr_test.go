@@ -73,7 +73,7 @@ func (s *testSuite) TestNodeConnect() {
 }
 
 func (s *testSuite) TestNodeConnectInvalidVersion() {
-	testNode := newNetworkNode()
+	testNode := s.newNetworkNode("testNode")
 	s.preInitNode(testNode)
 	testNode.serviceNetwork.NodeKeeper.GetOrigin().(nodenetwork.MutableNode).SetVersion("ololo")
 	s.InitNode(testNode)
