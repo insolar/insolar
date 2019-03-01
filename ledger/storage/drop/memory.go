@@ -34,14 +34,14 @@ type dropStorageMemory struct {
 	jets map[dropKey]jet.Drop
 }
 
-// NewStorageMemory creates a new storage, that holds data in-memory.
+// NewStorageMemory creates a new storage, that holds data in a memory.
 func NewStorageMemory() *dropStorageMemory { // nolint: golint
 	return &dropStorageMemory{
 		jets: map[dropKey]jet.Drop{},
 	}
 }
 
-// ForPulse returns a jet.Drop for a provided pulse, that is stored in memory
+// ForPulse returns a jet.Drop for a provided pulse, that is stored in a memory
 func (m *dropStorageMemory) ForPulse(ctx context.Context, jetID core.JetID, pulse core.PulseNumber) (jet.Drop, error) {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
@@ -55,7 +55,7 @@ func (m *dropStorageMemory) ForPulse(ctx context.Context, jetID core.JetID, puls
 	return d, nil
 }
 
-// Set saves a provided jet.Drop to memory
+// Set saves a provided jet.Drop to a memory
 func (m *dropStorageMemory) Set(ctx context.Context, jetID core.JetID, drop jet.Drop) error {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
