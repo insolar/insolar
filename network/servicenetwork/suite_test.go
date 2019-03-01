@@ -331,8 +331,7 @@ func (s *testSuite) newNetworkNode(name string) *networkNode {
 	if err != nil {
 		panic(err.Error())
 	}
-	address := "127.0.0.1:" + strconv.Itoa(int(atomic.LoadInt32(&testNetworkPort)))
-	incrementTestNetworkPort()
+	address := "127.0.0.1:" + strconv.Itoa(int(incrementTestNetworkPort()))
 
 	nodeContext, _ := inslogger.WithField(s.fixture().ctx, "nodeName", name)
 	return &networkNode{
@@ -475,6 +474,6 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	node.serviceNetwork = serviceNetwork
 }
 
-func incrementTestNetworkPort() {
-	atomic.AddInt32(&testNetworkPort, 2) // 2 coz consensus transport port+=1
+func incrementTestNetworkPort() int32 {
+	return atomic.AddInt32(&testNetworkPort, 2) // 2 coz consensus transport port+=1
 }
