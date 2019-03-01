@@ -29,7 +29,7 @@ import (
 const bitsForState = 2
 const statesInByte = 4
 
-type bitArray []TriState
+type bitArray []BitSetState
 
 func div(dividend, divider int) int {
 	if (dividend % divider) == 0 {
@@ -38,10 +38,10 @@ func div(dividend, divider int) int {
 	return int(math.Round(float64(dividend/divider) + 0.5))
 }
 
-func parseStatesFromByte(b uint8) [statesInByte]TriState {
-	var result [statesInByte]TriState
+func parseStatesFromByte(b uint8) [statesInByte]BitSetState {
+	var result [statesInByte]BitSetState
 	for i := statesInByte; i > 0; i-- {
-		result[i-1] = TriState(b & lastTwoBitsMask)
+		result[i-1] = BitSetState(b & lastTwoBitsMask)
 		b >>= bitsForState
 	}
 	return result
@@ -69,7 +69,7 @@ func deserialize(data []byte, length int) (bitArray, error) {
 func deserializeCompressed(data io.Reader, size int) (bitArray, error) {
 	count := uint16(0)
 	index := 0
-	var value TriState
+	var value BitSetState
 	var err error
 
 	statesLeft := uint16(size)
@@ -106,7 +106,7 @@ func (ba bitArray) serialize() []byte {
 	return result
 }
 
-func writeStatesToByte(states []TriState) uint8 {
+func writeStatesToByte(states []BitSetState) uint8 {
 	var result uint8
 	result |= uint8(states[0]) & lastTwoBitsMask
 	for i := 1; i < len(states); i++ {
@@ -151,7 +151,7 @@ func (arr bitArray) serializeCompressed() ([]byte, error) {
 	return result.Bytes(), nil
 }
 
-func (arr bitArray) writeSequence(buf *bytes.Buffer, state TriState, count int) error {
+func (arr bitArray) writeSequence(buf *bytes.Buffer, state BitSetState, count int) error {
 	err := binary.Write(buf, binary.BigEndian, uint16(count))
 	if err != nil {
 		return errors.Wrap(err, "failed to write states count to buffer")

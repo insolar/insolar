@@ -31,13 +31,13 @@ const firstBitMask = 0x80
 const last6BitsMask = 0x3f
 const lastTwoBitsMask = 0x3
 
-// TriStateBitSet bitset implementation.
-type TriStateBitSet struct {
-	CompressedSet bool
-	array         bitArray
+// bitsetImpl bitset implementation
+type bitsetImpl struct {
+	compressed bool
+	array      bitArray
 }
 
-func (dbs *TriStateBitSet) GetCells(mapper BitSetMapper) ([]BitSetCell, error) {
+func (dbs *bitsetImpl) GetCells(mapper BitSetMapper) ([]BitSetCell, error) {
 	cells := make([]BitSetCell, len(dbs.array))
 	for i := 0; i < len(dbs.array); i++ {
 		id, err := mapper.IndexToRef(i)
@@ -49,9 +49,9 @@ func (dbs *TriStateBitSet) GetCells(mapper BitSetMapper) ([]BitSetCell, error) {
 	return cells, nil
 }
 
-// NewTriStateBitSet creates and returns a tristatebitset.
-func NewTriStateBitSet(size int) (*TriStateBitSet, error) {
-	bitset := &TriStateBitSet{
+// NewBitSetImpl creates and returns a bitset implementation
+func NewBitSetImpl(size int) (*bitsetImpl, error) {
+	bitset := &bitsetImpl{
 		array: make(bitArray, size),
 	}
 	for i := 0; i < size; i++ {
@@ -60,13 +60,13 @@ func NewTriStateBitSet(size int) (*TriStateBitSet, error) {
 	return bitset, nil
 }
 
-func (dbs *TriStateBitSet) GetTristateArray() ([]TriState, error) {
-	result := make([]TriState, len(dbs.array))
+func (dbs *bitsetImpl) GetTristateArray() ([]BitSetState, error) {
+	result := make([]BitSetState, len(dbs.array))
 	copy(result, dbs.array)
 	return result, nil
 }
 
-func (dbs *TriStateBitSet) ApplyChanges(changes []BitSetCell, mapper BitSetMapper) error {
+func (dbs *bitsetImpl) ApplyChanges(changes []BitSetCell, mapper BitSetMapper) error {
 	for _, cell := range changes {
 		index, err := mapper.RefToIndex(cell.NodeID)
 		if err != nil {
@@ -77,15 +77,15 @@ func (dbs *TriStateBitSet) ApplyChanges(changes []BitSetCell, mapper BitSetMappe
 	return nil
 }
 
-func (dbs *TriStateBitSet) Serialize() ([]byte, error) {
+func (dbs *bitsetImpl) Serialize() ([]byte, error) {
 	var firstByte uint8 // compressed and hBitLength bits
-	if dbs.CompressedSet {
+	if dbs.compressed {
 		firstByte = 0x01
 	} else {
 		firstByte = 0x00
 	}
 
-	data, err := dbs.array.Serialize(dbs.CompressedSet)
+	data, err := dbs.array.Serialize(dbs.compressed)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to serialize bitarray")
 	}
@@ -113,7 +113,7 @@ func (dbs *TriStateBitSet) Serialize() ([]byte, error) {
 	return result.Bytes(), nil
 }
 
-func (dbs *TriStateBitSet) serializeWithHLength(firstByte uint8, length int, result *bytes.Buffer) error {
+func (dbs *bitsetImpl) serializeWithHLength(firstByte uint8, length int, result *bytes.Buffer) error {
 	var secondByte uint8 // hBitLength
 	firstByte++
 	firstByte = firstByte << lowLengthSize // move compressed and hBitLength bits to right
@@ -134,7 +134,7 @@ func (dbs *TriStateBitSet) serializeWithHLength(firstByte uint8, length int, res
 	return nil
 }
 
-func (dbs *TriStateBitSet) serializeWithLLength(firstByte uint8, length int, result *bytes.Buffer) error {
+func (dbs *bitsetImpl) serializeWithLLength(firstByte uint8, length int, result *bytes.Buffer) error {
 	firstByte = firstByte << lowLengthSize // move compressed and hbit flags to right
 	firstByte += uint8(length)
 	err := binary.Write(result, defaultByteOrder, firstByte)
@@ -167,8 +167,9 @@ func DeserializeBitSet(data io.Reader) (BitSet, error) {
 			return nil, errors.Wrap(err, "failed to deserialize bitarray")
 		}
 	}
-	bitset := &TriStateBitSet{
-		array: array,
+	bitset := &bitsetImpl{
+		compressed: compressed,
+		array:      array,
 	}
 	return bitset, nil
 }

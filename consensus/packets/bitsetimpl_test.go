@@ -77,7 +77,7 @@ func (bsmm *BitSetMapperMock) Length() int {
 	return len(bsmm.refs)
 }
 
-func TestTriStateBitSet_GetBuckets(t *testing.T) {
+func TestBitSet_GetBuckets(t *testing.T) {
 	count := 70
 	refs := initRefs(count)
 	cells := initBitCells(refs)
@@ -91,7 +91,7 @@ func TestTriStateBitSet_GetBuckets(t *testing.T) {
 	assert.Equal(t, cells, newCells)
 }
 
-func TestTriStateBitSet_ApplyChanges(t *testing.T) {
+func TestBitSet_ApplyChanges(t *testing.T) {
 	count := 65
 	refs := initRefs(count)
 	cells := initBitCells(refs)
@@ -112,8 +112,9 @@ func TestTriStateBitSet_ApplyChanges(t *testing.T) {
 }
 
 func Test_parseStatesFromByte(t *testing.T) {
-	data := make([]TriState, statesInByte)
+	data := make([]BitSetState, statesInByte)
 	data[0] = Fraud
+	data[1] = Inconsistent
 	data[2] = TimedOut
 	data[3] = Legit
 
@@ -123,7 +124,7 @@ func Test_parseStatesFromByte(t *testing.T) {
 }
 
 func Test_parseStatesFromByte2(t *testing.T) {
-	data := make([]TriState, 3)
+	data := make([]BitSetState, 3)
 	data[0] = Fraud
 	data[1] = TimedOut
 	data[2] = Legit
@@ -136,7 +137,7 @@ func Test_parseStatesFromByte2(t *testing.T) {
 func TestBitArray_Serialize(t *testing.T) {
 	ba := make(bitArray, 25)
 	for i := 0; i < len(ba); i++ {
-		ba[i] = TriState(i % statesInByte)
+		ba[i] = BitSetState(i % statesInByte)
 	}
 	testSerializeBitarray(t, ba)
 }
@@ -150,7 +151,7 @@ func TestBitArray_Serialize2(t *testing.T) {
 func TestBitArray_SerializeCompressed(t *testing.T) {
 	ba := make(bitArray, 25)
 	for i := 0; i < len(ba); i++ {
-		ba[i] = TriState(i % statesInByte)
+		ba[i] = BitSetState(i % statesInByte)
 	}
 	testSerializeBitarray(t, ba)
 }
@@ -175,14 +176,14 @@ func TestBitSet(t *testing.T) {
 	cells := initBitCells(refs)
 
 	mapper := &BitSetMapperMock{refs: refs}
-	bitset, _ := NewTriStateBitSet(len(cells))
+	bitset, _ := NewBitSetImpl(len(cells))
 
 	expected := bitset.array
 	cells[count-3].State = Fraud
 	err := bitset.ApplyChanges(cells, mapper)
 	assert.NoError(t, err)
 
-	bitset2, _ := NewTriStateBitSet(len(cells))
+	bitset2, _ := NewBitSetImpl(len(cells))
 
 	actual := bitset2.array
 	cells[count-3].State = Fraud
@@ -192,42 +193,42 @@ func TestBitSet(t *testing.T) {
 	assert.Equal(t, expected, actual)
 }
 
-func TestTriStateBitSet_Serialize(t *testing.T) {
+func TestBitSet_Serialize(t *testing.T) {
 	refs := initRefs(92)
 	cells := initBitCells(refs)
 
 	testSerializeDeserialize(t, refs, cells, false)
 }
 
-func TestTriStateBitSet_SerializeCompressed(t *testing.T) {
+func TestBitSet_SerializeCompressed(t *testing.T) {
 	refs := initRefs(44)
 	cells := initBitCells(refs)
 
 	testSerializeDeserialize(t, refs, cells, true)
 }
 
-func TestTriStateBitSet_ThousandStates_Compressed(t *testing.T) {
+func TestBitSet_ThousandStates_Compressed(t *testing.T) {
 	refs := initRefs(1024)
 	cells := initBitCells(refs)
 
 	testSerializeDeserialize(t, refs, cells, true)
 }
 
-func TestTriStateBitSet_ThousandDiffStates_Compressed(t *testing.T) {
+func TestBitSet_ThousandDiffStates_Compressed(t *testing.T) {
 	refs := initRefs(1024)
 	cells := initDiffBitCells(refs)
 
 	testSerializeDeserialize(t, refs, cells, true)
 }
 
-func TestTriStateBitSet_ThousandStates(t *testing.T) {
+func TestBitSet_ThousandStates(t *testing.T) {
 	refs := initRefs(1024)
 	cells := initBitCells(refs)
 
 	testSerializeDeserialize(t, refs, cells, false)
 }
 
-func TestTriStateBitSet_ThousandDiffStates(t *testing.T) {
+func TestBitSet_ThousandDiffStates(t *testing.T) {
 	refs := initRefs(1024)
 	cells := initDiffBitCells(refs)
 
@@ -237,8 +238,8 @@ func TestTriStateBitSet_ThousandDiffStates(t *testing.T) {
 func testSerializeDeserialize(t *testing.T, refs []core.RecordRef, cells []BitSetCell, compressed bool) {
 	mapper := &BitSetMapperMock{refs: refs}
 
-	bitset, _ := NewTriStateBitSet(len(cells))
-	bitset.CompressedSet = compressed
+	bitset, _ := NewBitSetImpl(len(cells))
+	bitset.compressed = compressed
 	err := bitset.ApplyChanges(cells, mapper)
 	assert.NoError(t, err)
 	data, err := bitset.Serialize()
