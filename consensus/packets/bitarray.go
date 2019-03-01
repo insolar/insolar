@@ -20,151 +20,142 @@ package packets
 import (
 	"bytes"
 	"encoding/binary"
+	"io"
 	"math"
 
 	"github.com/pkg/errors"
 )
 
-const sizeOfBlock = 8
+const bitsForState = 2
+const statesInByte = 4
 
-type bitArray struct {
-	array    []uint8
-	bitsSize int
-}
+type bitArray []TriState
 
-func round(dividend, divider int) float64 {
+func div(dividend, divider int) int {
 	if (dividend % divider) == 0 {
-		return float64(dividend / divider)
+		return dividend / divider
 	}
-	return math.Round(float64(dividend/divider) + 0.5)
+	return int(math.Round(float64(dividend/divider) + 0.5))
 }
 
-func newBitArray(size int) *bitArray {
-	totalSize := uint64(round(size, sizeOfBlock))
-	return &bitArray{
-		array:    make([]uint8, totalSize),
-		bitsSize: int(size),
+func parseStatesFromByte(b uint8) [statesInByte]TriState {
+	var result [statesInByte]TriState
+	for i := statesInByte; i > 0; i-- {
+		result[i-1] = TriState(b & lastTwoBitsMask)
+		b >>= bitsForState
 	}
+	return result
 }
 
-func (arr *bitArray) Len() int {
-	return arr.bitsSize
+func deserialize(data []byte, length int) (bitArray, error) {
+	if len(data) != div(length, statesInByte) {
+		return nil, errors.Errorf("wrong size of data buffer, expected: %d, got: %d", int(div(length, statesInByte)), len(data))
+	}
+	result := make(bitArray, length)
+	statesLeft := length
+	for i := 0; i < len(data); i++ {
+		parsedStates := parseStatesFromByte(data[i])
+		statesRange := statesInByte
+		if statesLeft < statesInByte {
+			statesRange = statesLeft
+		}
+		startIndex := i * statesInByte
+		copy(result[startIndex:startIndex+statesRange], parsedStates[:statesRange])
+		statesLeft -= statesInByte
+	}
+	return result, nil
 }
 
-func (arr *bitArray) set(bit, index int) error {
-	if index >= arr.bitsSize {
-		return errors.New("[ set ] failed to set a bit. out of range")
-	}
-	block := getBlockInBitArray(index)
-	step := getStepToMove(index)
+func deserializeCompressed(data io.Reader, size int) (bitArray, error) {
+	count := uint16(0)
+	index := 0
+	var value TriState
+	var err error
 
-	mask := uint8(1 << step)
-	if bit == 0 {
-		arr.array[block] &= ^(mask) // change index bit to 0
-	} else if bit == 1 {
-		arr.array[block] |= mask // change index bit to 1
-	} else {
-		return errors.New("trying to set a wrong bit value")
+	statesLeft := uint16(size)
+	result := make(bitArray, size)
+	for statesLeft > 0 {
+		err = binary.Read(data, binary.BigEndian, &count)
+		if err != nil {
+			return nil, errors.Wrap(err, "[ deserializeCompressed ] failed to read from data")
+		}
+		err = binary.Read(data, binary.BigEndian, &value)
+		if err != nil {
+			return nil, errors.Wrap(err, "[ deserializeCompressed ] failed to read from data")
+		}
+		for i := 0; i < int(count); i++ {
+			result[index] = value
+			index++
+		}
+		statesLeft -= count
 	}
-	return nil
+	return result, nil
 }
 
-func (arr *bitArray) serialize(compressed bool) ([]byte, error) {
+func (ba bitArray) serialize() []byte {
+	length := div(len(ba), statesInByte)
+	result := make([]byte, length)
+	for i := 0; i < len(result); i++ {
+		startIndex := i * statesInByte
+		endIndex := i*statesInByte + statesInByte
+		if endIndex > len(ba) {
+			endIndex = len(ba)
+		}
+		result[i] = writeStatesToByte(ba[startIndex:endIndex])
+	}
+	return result
+}
+
+func writeStatesToByte(states []TriState) uint8 {
+	var result uint8
+	result |= uint8(states[0]) & lastTwoBitsMask
+	for i := 1; i < len(states); i++ {
+		result <<= bitsForState
+		result |= uint8(states[i]) & lastTwoBitsMask
+	}
+	for i := len(states); i < statesInByte; i++ {
+		result <<= bitsForState
+	}
+	return result
+}
+
+func (ba bitArray) Serialize(compressed bool) ([]byte, error) {
 	if compressed {
-		return arr.serializeCompressed()
+		return ba.serializeCompressed()
 	}
-	var result bytes.Buffer
-	for _, b := range arr.array {
-		err := binary.Write(&result, defaultByteOrder, b)
-		if err != nil {
-			return nil, errors.Wrap(err, "[ serialize ] failed to serialize a bitarray")
-		}
-	}
-
-	return result.Bytes(), nil
+	return ba.serialize(), nil
 }
 
-func (arr *bitArray) serializeCompressed() ([]byte, error) {
+func (arr bitArray) serializeCompressed() ([]byte, error) {
 	var result bytes.Buffer
-	last, err := arr.GetState(0)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ serializeCompressed ] failed to get state from bitarray")
-	}
-	count := uint16(1)
-	for i := 1; i < arr.bitsSize/2; i++ { // cuz 2 bits == 1 state
-		current, err := arr.GetState(i)
-		if err != nil {
-			return nil, errors.Wrap(err, "[ serializeCompressed ] failed to get state from bitarray")
-		}
-		if (last != current) || (i+1 >= arr.bitsSize/2) {
-			err := binary.Write(&result, binary.BigEndian, count)
-			if err != nil {
-				return nil, errors.Wrap(err, "[ serializeCompressed ] failed to write to buffer")
-			}
-			err = binary.Write(&result, binary.BigEndian, last)
-			if err != nil {
-				return nil, errors.Wrap(err, "[ serializeCompressed ] failed to write to buffer")
-			}
-			count = 1
-			last = current
-		} else {
+	last := arr[0]
+	count := 1
+	for i := 1; i < len(arr); i++ {
+		current := arr[i]
+		if last == current {
 			count++
+			continue
 		}
+
+		err := arr.writeSequence(&result, last, count)
+		if err != nil {
+			return nil, err
+		}
+		count = 1
+		last = current
 	}
+	arr.writeSequence(&result, last, count)
 	return result.Bytes(), nil
 }
 
-func (arr *bitArray) get(index int) (uint8, error) {
-	if index >= arr.bitsSize {
-		return 0, errors.New("failed to get a bit - index out of range")
-	}
-
-	block := getBlockInBitArray(index)
-	step := getStepToMove(index)
-	res := arr.array[block] >> step // get bit by index from block
-
-	return res & lastBitMask, nil
-}
-
-func (arr *bitArray) GetState(index int) (TriState, error) {
-	if index >= arr.bitsSize {
-		return 0, errors.New("failed to get a bit - index out of range")
-	}
-
-	stateFirstBit, err := arr.get(2 * index)
+func (arr bitArray) writeSequence(buf *bytes.Buffer, state TriState, count int) error {
+	err := binary.Write(buf, binary.BigEndian, uint16(count))
 	if err != nil {
-		return 0, errors.Wrap(err, "[ GetState ] failed to get a bit from bitarray")
+		return errors.Wrap(err, "failed to write states count to buffer")
 	}
-	stateSecondBit, err := arr.get(2*index + 1)
+	err = binary.Write(buf, binary.BigEndian, state)
 	if err != nil {
-		return 0, errors.Wrap(err, "[ GetState ] failed to get a bit from bitarray")
-	}
-	result := (stateFirstBit << 1) + stateSecondBit
-
-	return TriState(result), nil
-}
-
-func (arr *bitArray) SetState(index int, state TriState) error {
-	err := arr.putLastBit(state>>1, 2*index) // set first bit to array
-	if err != nil {
-		return errors.Wrap(err, "[ changeBitState ] failed to set last bit")
-	}
-	err = arr.putLastBit(state, 2*index+1) // set second bit to array
-	if err != nil {
-		return errors.Wrap(err, "[ changeBitState ] failed to set last bit")
+		return errors.Wrap(err, "failed to write state to buffer")
 	}
 	return nil
-}
-
-func (arr *bitArray) putLastBit(state TriState, index int) error {
-	bit := int(state & lastBitMask)
-	return arr.set(bit, index)
-}
-
-func getStepToMove(index int) uint8 {
-	return uint8(sizeOfBlock - index%sizeOfBlock - 1)
-}
-
-func getBlockInBitArray(index int) uint8 {
-	return uint8(index / sizeOfBlock)
 }

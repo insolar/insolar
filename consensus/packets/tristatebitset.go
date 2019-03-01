@@ -26,7 +26,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-const lastBitMask = 0x1
 const lowLengthSize = 6
 const firstBitMask = 0x80
 const last6BitsMask = 0x3f
@@ -35,39 +34,36 @@ const lastTwoBitsMask = 0x3
 // TriStateBitSet bitset implementation.
 type TriStateBitSet struct {
 	CompressedSet bool
+	array         bitArray
+}
 
-	array *bitArray
+func (dbs *TriStateBitSet) GetCells(mapper BitSetMapper) ([]BitSetCell, error) {
+	cells := make([]BitSetCell, len(dbs.array))
+	for i := 0; i < len(dbs.array); i++ {
+		id, err := mapper.IndexToRef(i)
+		if err != nil {
+			return nil, err
+		}
+		cells[i] = BitSetCell{NodeID: id, State: dbs.array[i]}
+	}
+	return cells, nil
 }
 
 // NewTriStateBitSet creates and returns a tristatebitset.
 func NewTriStateBitSet(size int) (*TriStateBitSet, error) {
 	bitset := &TriStateBitSet{
-		array: newBitArray(size * 2),
+		array: make(bitArray, size),
 	}
 	for i := 0; i < size; i++ {
-		err := bitset.array.SetState(i, TimedOut)
-		if err != nil {
-			return nil, err
-		}
+		bitset.array[i] = TimedOut
 	}
 	return bitset, nil
 }
 
-func (dbs *TriStateBitSet) GetCells(mapper BitSetMapper) ([]BitSetCell, error) {
-	return dbs.parseCells(mapper)
-}
-
 func (dbs *TriStateBitSet) GetTristateArray() ([]TriState, error) {
-	cellSize := int(dbs.array.bitsSize / 2)
-	cells := make([]TriState, cellSize)
-	var err error
-	for i := 0; i < cellSize; i++ {
-		cells[i], err = parseState(dbs.array, i)
-		if err != nil {
-			return nil, errors.Wrap(err, "[ GetTristateArray ] failed to parse TriState")
-		}
-	}
-	return cells, nil
+	result := make([]TriState, len(dbs.array))
+	copy(result, dbs.array)
+	return result, nil
 }
 
 func (dbs *TriStateBitSet) ApplyChanges(changes []BitSetCell, mapper BitSetMapper) error {
@@ -76,10 +72,7 @@ func (dbs *TriStateBitSet) ApplyChanges(changes []BitSetCell, mapper BitSetMappe
 		if err != nil {
 			return errors.Wrap(err, "[ ApplyChanges ] failed to get index from ref")
 		}
-		err = dbs.array.SetState(index, cell.State)
-		if err != nil {
-			return errors.Wrap(err, "[ ApplyChanges ] failed to change bucket state")
-		}
+		dbs.array[index] = cell.State
 	}
 	return nil
 }
@@ -92,12 +85,12 @@ func (dbs *TriStateBitSet) Serialize() ([]byte, error) {
 		firstByte = 0x00
 	}
 
-	data, err := dbs.array.serialize(dbs.CompressedSet)
+	data, err := dbs.array.Serialize(dbs.CompressedSet)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Serialize ] failed to serialize a bitarray")
 	}
 
-	length := len(data)
+	length := len(dbs.array)
 	var result bytes.Buffer
 	firstByte = firstByte << 1
 	if bits.Len(uint(length)) > lowLengthSize {
@@ -158,7 +151,7 @@ func DeserializeBitSet(data io.Reader) (BitSet, error) {
 		return nil, errors.New("[ DeserializeBitSet ] failed to deserialize: wrong data")
 	}
 
-	var array *bitArray
+	var array bitArray
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Deserialize ] failed to read first byte")
 	}
@@ -180,14 +173,12 @@ func DeserializeBitSet(data io.Reader) (BitSet, error) {
 			return nil, errors.Wrap(err, "[ DeserializeBitSet ] failed to deserialize a compressed bitarray")
 		}
 	} else {
-		payload := make([]uint8, length)
-		for i := 0; i < length; i++ {
-			err := binary.Read(data, defaultByteOrder, &payload[i])
-			if err != nil {
-				return nil, errors.Wrap(err, "[ Deserialize ] failed to read payload")
-			}
+		payload := make([]uint8, div(length, statesInByte))
+		err := binary.Read(data, defaultByteOrder, &payload)
+		if err != nil {
+			return nil, errors.Wrap(err, "[ Deserialize ] failed to read payload")
 		}
-		array, err = parseBitArray(payload)
+		array, err = deserialize(payload, length)
 		if err != nil {
 			return nil, errors.Wrap(err, "[ Deserialize ] failed to parse a bitarray")
 		}
@@ -196,84 +187,6 @@ func DeserializeBitSet(data io.Reader) (BitSet, error) {
 		array: array,
 	}
 	return bitset, nil
-}
-
-func (dbs *TriStateBitSet) parseCells(mapper BitSetMapper) ([]BitSetCell, error) {
-	cellSize := int(dbs.array.bitsSize / 2)
-	cells := make([]BitSetCell, cellSize)
-	for i := 0; i < cellSize; i++ {
-		id, err := mapper.IndexToRef(i)
-		if err != nil {
-			return nil, err
-		}
-		cells[i].NodeID = id
-		cells[i].State, err = parseState(dbs.array, i)
-		if err != nil {
-			return nil, errors.Wrap(err, "[ parseCells ] failed to parse TriState")
-		}
-	}
-	return cells, nil
-}
-
-func deserializeCompressed(data io.Reader, size int) (*bitArray, error) {
-	count := uint16(0)
-	value := uint8(0)
-	var payload []uint8
-	blockSize := 0
-	block := uint8(0)
-	var err error
-	for i := 1; i < size; i = i + 3 { // i := 1 to skip first byte which was read at prev func
-		err = binary.Read(data, binary.BigEndian, &count)
-		if err != nil {
-			return nil, errors.Wrap(err, "[ deserializeCompressed ] failed to read from data")
-		}
-		err = binary.Read(data, binary.BigEndian, &value)
-		if err != nil {
-			return nil, errors.Wrap(err, "[ deserializeCompressed ] failed to read from data")
-		}
-		for j := uint16(0); j < count; j++ {
-			block += value
-			blockSize += 2
-			if blockSize >= sizeOfBlock {
-				payload = append(payload, block)
-				blockSize = 0
-			}
-			block = block << 2
-		}
-	}
-	if (blockSize != 0) && (blockSize < sizeOfBlock) {
-		block += value
-		blockSize += 2
-		block = block << uint(sizeOfBlock-blockSize)
-		payload = append(payload, block)
-	}
-	return parseBitArray(payload)
-}
-
-func parseState(array *bitArray, index int) (TriState, error) {
-	state, err := array.GetState(index)
-	return TriState(state), err
-}
-
-func parseBitArray(payload []uint8) (*bitArray, error) {
-	len := len(payload)
-	lastByte := payload[len-1]
-	array := newBitArray(len*sizeOfBlock - getEmptyBitsCount(lastByte))
-	for i := 0; i < len; i++ {
-		array.array[i] = payload[i]
-	}
-	return array, nil
-}
-
-func getEmptyBitsCount(byte uint8) int {
-	emptyStates := 0
-	for i := 0; i < 4; i++ {
-		if (byte & lastTwoBitsMask) == 0 {
-			emptyStates++
-			byte >>= 2
-		}
-	}
-	return emptyStates * 2 // cuz calculated
 }
 
 func parseFirstByte(b uint8) (compressed bool, hbitFlag bool, lbitLength uint8) {

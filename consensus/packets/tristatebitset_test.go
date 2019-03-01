@@ -77,11 +77,6 @@ func (bsmm *BitSetMapperMock) Length() int {
 	return len(bsmm.refs)
 }
 
-func TestNewTriStateBitSet(t *testing.T) {
-	_, err := NewBitSet(10)
-	assert.NoError(t, err)
-}
-
 func TestTriStateBitSet_GetBuckets(t *testing.T) {
 	count := 70
 	refs := initRefs(count)
@@ -116,6 +111,64 @@ func TestTriStateBitSet_ApplyChanges(t *testing.T) {
 	assert.NotEqual(t, cells, newCells2)
 }
 
+func Test_parseStatesFromByte(t *testing.T) {
+	data := make([]TriState, statesInByte)
+	data[0] = Fraud
+	data[2] = TimedOut
+	data[3] = Legit
+
+	b := writeStatesToByte(data)
+	data2 := parseStatesFromByte(b)
+	assert.Equal(t, data, data2[:])
+}
+
+func Test_parseStatesFromByte2(t *testing.T) {
+	data := make([]TriState, 3)
+	data[0] = Fraud
+	data[1] = TimedOut
+	data[2] = Legit
+
+	b := writeStatesToByte(data)
+	data2 := parseStatesFromByte(b)
+	assert.Equal(t, data, data2[:3])
+}
+
+func TestBitArray_Serialize(t *testing.T) {
+	ba := make(bitArray, 25)
+	for i := 0; i < len(ba); i++ {
+		ba[i] = TriState(i % statesInByte)
+	}
+	testSerializeBitarray(t, ba)
+}
+
+func TestBitArray_Serialize2(t *testing.T) {
+	ba := make(bitArray, 25)
+	ba[16] = Legit
+	testSerializeBitarray(t, ba)
+}
+
+func TestBitArray_SerializeCompressed(t *testing.T) {
+	ba := make(bitArray, 25)
+	for i := 0; i < len(ba); i++ {
+		ba[i] = TriState(i % statesInByte)
+	}
+	testSerializeBitarray(t, ba)
+}
+
+func TestBitArray_SerializeCompressed2(t *testing.T) {
+	ba := make(bitArray, 25)
+	ba[16] = Legit
+	testSerializeBitarray(t, ba)
+}
+
+func testSerializeBitarray(t *testing.T, ba bitArray) {
+	data, err := ba.serializeCompressed()
+	assert.NoError(t, err)
+	ba2, err := deserializeCompressed(bytes.NewReader(data), len(ba))
+	assert.NoError(t, err)
+	assert.Equal(t, ba, ba2)
+}
+
 func TestBitSet(t *testing.T) {
 	count := 80
 	refs := initRefs(count)
@@ -136,30 +189,6 @@ func TestBitSet(t *testing.T) {
 	err = bitset2.ApplyChanges(cells, mapper)
 	assert.NoError(t, err)
 
-	assert.Equal(t, expected, actual)
-}
-
-func TestBitArray(t *testing.T) {
-	array := newBitArray(181)
-
-	expected := uint8(1)
-	err := array.set(1, 126)
-	assert.NoError(t, err)
-	err = array.set(1, 127)
-	assert.NoError(t, err)
-	err = array.set(1, 125)
-	assert.NoError(t, err)
-	err = array.set(0, 126)
-	assert.NoError(t, err)
-	actual, err := array.get(125)
-	assert.NoError(t, err)
-	assert.Equal(t, expected, actual)
-	actual, err = array.get(127)
-	assert.NoError(t, err)
-	assert.Equal(t, expected, actual)
-	actual, err = array.get(126)
-	assert.NoError(t, err)
-	expected = 0
 	assert.Equal(t, expected, actual)
 }
 
