@@ -90,32 +90,21 @@ func GetLedgerComponents(conf configuration.Ledger, certificate core.Certificate
 	}
 
 	var pulseTracker storage.PulseTracker
-	var dropModifier drop.Modifier
-	var dropAccessor drop.Accessor
 	// TODO: @imarkin 18.02.18 - Comparision with core.StaticRoleUnknown is a hack for genesis pulse (INS-1537)
 	switch certificate.GetRole() {
 	case core.StaticRoleUnknown, core.StaticRoleHeavyMaterial:
 		pulseTracker = storage.NewPulseTracker()
-
-		dbDropStorage := drop.NewStorageDB()
-		dropModifier = dbDropStorage
-		dropAccessor = dbDropStorage
 	default:
 		pulseTracker = storage.NewPulseTrackerMemory()
-
-		dbDropStorage := drop.NewStorageDB()
-		dropModifier = dbDropStorage
-		dropAccessor = dbDropStorage
 	}
 
 	return []interface{}{
 		db,
+		drop.NewStorageDB(),
 		storage.NewCleaner(),
 		pulseTracker,
 		storage.NewPulseStorage(),
 		jet.NewJetStorage(),
-		dropModifier,
-		dropAccessor,
 		node.NewStorage(),
 		storage.NewObjectStorage(),
 		storage.NewReplicaStorage(),
