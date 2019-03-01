@@ -14,27 +14,42 @@
  *    limitations under the License.
  */
 
-package gen
+package db
 
 import (
-	"github.com/google/gofuzz"
+	"sync"
+
 	"github.com/insolar/insolar/core"
 )
 
-// ID generates random id.
-func ID() (id core.RecordID) {
-	fuzz.New().Fuzz(&id)
+type MockDB struct {
+	lock    sync.RWMutex
+	backend map[string][]byte
+}
+
+func NewMockDB() (*MockDB, error) {
+	db := &MockDB{
+		backend: map[string][]byte{},
+	}
+	return db, nil
+}
+
+func (b *MockDB) Get(key Key) (value []byte, err error) {
+	fullKey := append(key.Scope().Bytes(), key.ID()...)
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+	value, ok := b.backend[string(fullKey)]
+	if !ok {
+		return nil, core.ErrNotFound
+	}
 	return
 }
 
-// JetID generates random id.
-func JetID() (id core.JetID) {
-	fuzz.New().Fuzz(&id)
-	return
-}
-
-// Reference generates random reference.
-func Reference() (ref core.RecordRef) {
-	fuzz.New().Fuzz(&ref)
-	return
+func (b *MockDB) Set(key Key, value []byte) error {
+	fullKey := append(key.Scope().Bytes(), key.ID()...)
+	b.lock.Lock()
+	defer b.lock.Unlock()
+	b.backend[string(fullKey)] = append([]byte{}, value...)
+	return nil
 }
