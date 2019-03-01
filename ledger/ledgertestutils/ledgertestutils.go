@@ -65,7 +65,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 	js := jet.NewJetStorage()
 	os := storage.NewObjectStorage()
 	ns := node.NewStorage()
-	ds := drop.NewDropStorageDB()
+	ds := drop.NewStorageDB()
 	rs := storage.NewReplicaStorage()
 	cl := storage.NewCleaner()
 

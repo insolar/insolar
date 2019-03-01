@@ -94,7 +94,7 @@ func (s *heavySuite) BeforeTest(suiteName, testName string) {
 	s.pulseTracker = storage.NewPulseTracker()
 	s.replicaStorage = storage.NewReplicaStorage()
 	s.objectStorage = storage.NewObjectStorage()
-	dropStorage := drop.NewDropStorageDB()
+	dropStorage := drop.NewStorageDB()
 	s.dropAccessor = dropStorage
 	s.dropModifier = dropStorage
 

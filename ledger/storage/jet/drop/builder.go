@@ -1,5 +1,5 @@
 /*
- *    Copyright 2019 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -17,14 +17,10 @@
 package drop
 
 import (
-	"context"
 	"io"
 
-	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/jet"
-	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/pkg/errors"
 )
 
@@ -97,61 +93,4 @@ func (b *builder) Build() (jet.Drop, error) {
 		Hash:     b.Hasher.Sum(nil),
 		DropSize: *b.dropSize,
 	}, nil
-}
-
-// Packer is an wrapper interface around process of building jetdrop
-// It's considered that implementation of packer uses Bulder under the hood
-//go:generate minimock -i github.com/insolar/insolar/ledger/storage/jet/drop.Packer -o ./ -s _mock.go
-type Packer interface {
-	Pack(ctx context.Context, jetID core.JetID, pulse core.PulseNumber, prevHash []byte) (jet.Drop, error)
-}
-
-// NewPacker creates db-based impl of packer
-func NewPacker(hasher core.Hasher, db storage.DBContext) Packer {
-	return &packer{
-		Builder:   NewBuilder(hasher),
-		DBContext: db,
-	}
-}
-
-type packer struct {
-	Builder
-	storage.DBContext
-}
-
-// Pack creates new Drop through interactions with db and Builder
-func (p *packer) Pack(ctx context.Context, jetID core.JetID, pulse core.PulseNumber, prevHash []byte) (jet.Drop, error) {
-	p.DBContext.WaitingFlight()
-	_, jetPrefix := jetID.Jet()
-
-	var dropSize uint64
-	recordPrefix := storage.IDRecordPrefixKey(jetPrefix, pulse)
-
-	err := p.GetBadgerDB().View(func(txn *badger.Txn) error {
-		it := txn.NewIterator(badger.DefaultIteratorOptions)
-		defer it.Close()
-
-		for it.Seek(recordPrefix); it.ValidForPrefix(recordPrefix); it.Next() {
-			val, err := it.Item().ValueCopy(nil)
-			if err != nil {
-				return err
-			}
-
-			err = p.Append(record.DeserializeRecord(val))
-			if err != nil {
-				return err
-			}
-			dropSize += uint64(len(val))
-		}
-		return nil
-	})
-	if err != nil {
-		return jet.Drop{}, err
-	}
-
-	p.Pulse(pulse)
-	p.PrevHash(prevHash)
-	p.Size(dropSize)
-
-	return p.Build()
 }

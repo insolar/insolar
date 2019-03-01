@@ -84,7 +84,7 @@ func (s *metricSuite) BeforeTest(suiteName, testName string) {
 	s.pulseTracker = storage.NewPulseTracker()
 	s.objectStorage = storage.NewObjectStorage()
 
-	dropStorage := drop.NewDropStorageDB()
+	dropStorage := drop.NewStorageDB()
 	s.dropAccessor = dropStorage
 	s.dropModifier = dropStorage
 	s.genesisState = genesis.NewGenesisInitializer()

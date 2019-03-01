@@ -1,5 +1,5 @@
 /*
- *    Copyright 2019 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -72,7 +72,8 @@ type dropStorageMemory struct {
 	jets map[core.JetID]*dropForPulseManager
 }
 
-func NewDropStorageMemory() *dropStorageMemory {
+// NewStorageMemory creates new storage, that holds data in-memory
+func NewStorageMemory() *dropStorageMemory {
 	return &dropStorageMemory{
 		jets: map[core.JetID]*dropForPulseManager{},
 	}
@@ -90,11 +91,13 @@ func (m *dropStorageMemory) fetchStorage(jetID core.JetID) (ds *dropForPulseMana
 	return
 }
 
+// ForPulse returns a jet.Drop for a provided pulse, that is stored in memory
 func (m *dropStorageMemory) ForPulse(ctx context.Context, jetID core.JetID, pulse core.PulseNumber) (jet.Drop, error) {
 	ds := m.fetchStorage(jetID)
 	return ds.forPulse(jetID, pulse)
 }
 
+// Set saves a provided jet.Drop to memory
 func (m *dropStorageMemory) Set(ctx context.Context, jetID core.JetID, drop jet.Drop) error {
 	ds := m.fetchStorage(jetID)
 	return ds.set(drop, drop.Pulse)
@@ -104,10 +107,12 @@ type dropStorageDB struct {
 	DB storage.DBContext `inject:""`
 }
 
-func NewDropStorageDB() *dropStorageDB {
+// NewStorageDB creates new storage, that holds data in db
+func NewStorageDB() *dropStorageDB {
 	return &dropStorageDB{}
 }
 
+// ForPulse returns a jet.Drop for a provided pulse, that is stored in db
 func (ds *dropStorageDB) ForPulse(ctx context.Context, jetID core.JetID, pulse core.PulseNumber) (jet.Drop, error) {
 	_, prefix := jetID.Jet()
 	k := storage.JetDropPrefixKey(prefix, pulse)
@@ -124,6 +129,7 @@ func (ds *dropStorageDB) ForPulse(ctx context.Context, jetID core.JetID, pulse c
 	return *drop, nil
 }
 
+// Set saves a provided jet.Drop to db
 func (ds *dropStorageDB) Set(ctx context.Context, jetID core.JetID, drop jet.Drop) error {
 	_, prefix := jetID.Jet()
 	k := storage.JetDropPrefixKey(prefix, drop.Pulse)

@@ -67,7 +67,7 @@ func (s *cleanerSuite) BeforeTest(suiteName, testName string) {
 	s.cleaner = cleaner
 
 	s.objectStorage = storage.NewObjectStorage()
-	dropStorage := drop.NewDropStorageDB()
+	dropStorage := drop.NewStorageDB()
 	s.dropAccessor = dropStorage
 	s.dropModifier = dropStorage
 	s.storageCleaner = storage.NewCleaner()

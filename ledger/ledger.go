@@ -97,15 +97,19 @@ func GetLedgerComponents(conf configuration.Ledger, certificate core.Certificate
 	case core.StaticRoleUnknown, core.StaticRoleHeavyMaterial:
 		pulseTracker = storage.NewPulseTracker()
 
-		dbDropStorage := drop.NewDropStorageDB()
+		dbDropStorage := drop.NewStorageDB()
 		dropModifier = dbDropStorage
 		dropAccessor = dbDropStorage
 	default:
 		pulseTracker = storage.NewPulseTrackerMemory()
 
-		memoryDropStorage := drop.NewDropStorageMemory()
-		dropModifier = memoryDropStorage
-		dropAccessor = memoryDropStorage
+		dbDropStorage := drop.NewStorageDB()
+		dropModifier = dbDropStorage
+		dropAccessor = dbDropStorage
+
+		// memoryDropStorage := drop.NewStorageMemory()
+		// dropModifier = memoryDropStorage
+		// dropAccessor = memoryDropStorage
 	}
 
 	return []interface{}{

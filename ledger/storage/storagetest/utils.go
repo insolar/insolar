@@ -80,7 +80,7 @@ func TmpDB(ctx context.Context, t testing.TB, options ...Option) (storage.DBCont
 		db,
 		jet.NewJetStorage(),
 		storage.NewObjectStorage(),
-		drop.NewDropStorageDB(),
+		drop.NewStorageDB(),
 		storage.NewPulseTracker(),
 	)
 
