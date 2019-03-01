@@ -21,10 +21,6 @@ func GetEnvDefault(key, defaultVal string) string {
 	return val
 }
 
-func obtainContainerRole() string {
-	return strings.ToLower(GetEnvDefault("INSOLARD_ROLE", "insolard+insgorund"))
-}
-
 func obtainDockerPublicIP() string {
 	cmd := exec.Command("awk", "END{print $1}", "/etc/hosts")
 	var stdout bytes.Buffer
@@ -46,7 +42,7 @@ func getURI(port uint) string {
 }
 
 const (
-	defaultApiListenPort = 19101
+	defaultAPIListenPort = 19191
 )
 
 const statusBody = "{\"jsonrpc\": \"2.0\", \"method\": \"status.Get\", \"id\": 0}"
@@ -54,7 +50,7 @@ const statusBody = "{\"jsonrpc\": \"2.0\", \"method\": \"status.Get\", \"id\": 0
 func checkInsolard() int {
 	var apiURL url.URL
 	apiURL.Scheme = "http"
-	apiURL.Host = GetEnvDefault("INSOLARD_API_LISTEN", getURI(defaultApiListenPort))
+	apiURL.Host = GetEnvDefault("INSOLARD_API_LISTEN", getURI(defaultAPIListenPort))
 	apiURL.Path = "/api/rpc"
 
 	client := http.Client{
@@ -65,12 +61,12 @@ func checkInsolard() int {
 	body := strings.NewReader(statusBody)
 	res, err := client.Post(apiURL.String(), "application/json", body)
 	if err != nil {
-		fmt.Printf("Failed to make HTTP request:", err.Error())
+		fmt.Printf("Failed to make HTTP request: %s", err.Error())
 		return 1
 	}
 	data, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		fmt.Printf("Failed to read body:", err.Error())
+		fmt.Printf("Failed to read body: %s", err.Error())
 		return 1
 	}
 	var out struct {
@@ -84,28 +80,18 @@ func checkInsolard() int {
 	}
 	err = json.Unmarshal(data, &out)
 	if err != nil {
-		fmt.Printf("Failed to parse body:", err.Error())
+		fmt.Printf("Failed to parse body: %s", err.Error())
 		return 1
 	}
 	// TODO: what to check in output ?
-	fmt.Print(data)
-	return 0
-}
-
-func checkInsgorund() int {
-	// TODO: implement healthcheck contract calling
-	return 0
+	// fmt.Print(data)
+	if out.Result.PulseNumber > 0 {
+		return 0
+	} else {
+		return 1
+	}
 }
 
 func main() {
-	role := obtainContainerRole()
-
-	retcode := 0
-	if strings.Index(role, "insolard") != -1 {
-		retcode |= checkInsolard()
-	}
-	if strings.Index(role, "insgorund") != -1 {
-		retcode |= checkInsgorund()
-	}
-	os.Exit(retcode)
+	os.Exit(checkInsolard())
 }

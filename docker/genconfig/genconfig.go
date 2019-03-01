@@ -32,7 +32,7 @@ const (
 	defaultMetricsListenPort     = 8001
 	defaultRPCListenPort         = 18182
 	defaultInsgorundListenPort   = 18181
-	defaultApiListenPort         = 19191
+	defaultAPIListenPort         = 19191
 	defaultJaegerEndpointPort    = 6831
 	defaultKeysPath              = "/etc/insolar/keys.json"
 	defaultCertPath              = "/etc/insolar/cert.json"
@@ -54,7 +54,7 @@ func main() {
 
 	insolardMetricsListen := getURI(defaultMetricsListenPort)
 	insolardRPCListen := getURI(defaultRPCListenPort)
-	insolardAPIListen := getURI(defaultApiListenPort)
+	insolardAPIListen := getURI(defaultAPIListenPort)
 
 	insolardTransportListen := GetEnvDefault("INSOLARD_TRANSPORT_LISTEN", getURI(defaultTranportListenPort))
 	insolardLogLevel := GetEnvDefault("INSOLARD_LOG_LEVEL", defaultLogLevel)
