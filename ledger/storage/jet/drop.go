@@ -17,29 +17,21 @@
 package jet
 
 import (
-	"bytes"
-
-	"github.com/ugorji/go/codec"
+	"github.com/insolar/insolar/core"
 )
 
-// Encode serializes jet drop.
-func Encode(drop *Drop) ([]byte, error) {
-	var buf bytes.Buffer
-	enc := codec.NewEncoder(&buf, &codec.CborHandle{})
-	err := enc.Encode(drop)
-	if err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
-}
+// Drop is a blockchain block.
+// It contains hashes of the current block and the previous one.
+type Drop struct {
+	// nolint: golint
+	// Pulse number (probably we should save it too).
+	Pulse core.PulseNumber
 
-// Decode deserializes jet drop.
-func Decode(buf []byte) (*Drop, error) {
-	dec := codec.NewDecoder(bytes.NewReader(buf), &codec.CborHandle{})
-	var drop Drop
-	err := dec.Decode(&drop)
-	if err != nil {
-		return nil, err
-	}
-	return &drop, nil
+	// PrevHash is a hash of all record hashes belongs to previous pulse.
+	PrevHash []byte
+
+	// Hash is a hash of all record hashes belongs to one pulse and previous drop hash.
+	Hash []byte
+
+	Size uint64
 }

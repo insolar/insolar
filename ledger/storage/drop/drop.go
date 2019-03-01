@@ -14,21 +14,23 @@
  *    limitations under the License.
  */
 
-package jet
+package drop
 
 import (
+	"context"
+
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/ledger/storage/jet"
 )
 
-// JetDrop is a blockchain block.
-// It contains hashes of the current block and the previous one.
-type JetDrop struct { //nolint: golint
-	// Pulse number (probably we should save it too).
-	Pulse core.PulseNumber
+// Modifier provides an interface for modifying jetdrops.
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage/drop.Modifier -o ./ -s _mock.go
+type Modifier interface {
+	Set(ctx context.Context, jetID core.JetID, drop jet.Drop) error
+}
 
-	// PrevHash is a hash of all record hashes belongs to previous pulse.
-	PrevHash []byte
-
-	// Hash is a hash of all record hashes belongs to one pulse and previous drop hash.
-	Hash []byte
+// Accessor provides an interface for accessing jetdrops.
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage/drop.Accessor -o ./ -s _mock.go
+type Accessor interface {
+	ForPulse(ctx context.Context, jetID core.JetID, pulse core.PulseNumber) (jet.Drop, error)
 }

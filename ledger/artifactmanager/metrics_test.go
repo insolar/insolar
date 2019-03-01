@@ -27,6 +27,9 @@ import (
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/drop"
+	"github.com/insolar/insolar/ledger/storage/genesis"
+	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
@@ -51,9 +54,10 @@ type metricSuite struct {
 	pulseTracker  storage.PulseTracker
 	nodeStorage   node.Accessor
 	objectStorage storage.ObjectStorage
-	jetStorage    storage.JetStorage
-	dropStorage   storage.DropStorage
-	genesisState  storage.GenesisState
+	jetStorage    jet.JetStorage
+	dropModifier  drop.Modifier
+	dropAccessor  drop.Accessor
+	genesisState  genesis.GenesisState
 }
 
 func NewMetricSuite() *metricSuite {
@@ -75,12 +79,15 @@ func (s *metricSuite) BeforeTest(suiteName, testName string) {
 	s.cleaner = cleaner
 	s.db = db
 	s.scheme = testutils.NewPlatformCryptographyScheme()
-	s.jetStorage = storage.NewJetStorage()
+	s.jetStorage = jet.NewJetStorage()
 	s.nodeStorage = node.NewStorage()
 	s.pulseTracker = storage.NewPulseTracker()
 	s.objectStorage = storage.NewObjectStorage()
-	s.dropStorage = storage.NewDropStorage(10)
-	s.genesisState = storage.NewGenesisInitializer()
+
+	dropStorage := drop.NewStorageDB()
+	s.dropAccessor = dropStorage
+	s.dropModifier = dropStorage
+	s.genesisState = genesis.NewGenesisInitializer()
 
 	s.cm.Inject(
 		s.scheme,
@@ -89,7 +96,7 @@ func (s *metricSuite) BeforeTest(suiteName, testName string) {
 		s.nodeStorage,
 		s.pulseTracker,
 		s.objectStorage,
-		s.dropStorage,
+		dropStorage,
 		s.genesisState,
 	)
 

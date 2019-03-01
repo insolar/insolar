@@ -36,7 +36,7 @@ type JetCoordinator struct {
 	NodeNet                    core.NodeNetwork                `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 	PulseStorage               core.PulseStorage               `inject:""`
-	JetStorage                 storage.JetStorage              `inject:""`
+	JetStorage                 jet.JetStorage                  `inject:""`
 	PulseTracker               storage.PulseTracker            `inject:""`
 	Nodes                      node.Accessor                   `inject:""`
 
@@ -303,7 +303,7 @@ func (jc *JetCoordinator) virtualsForObject(
 func (jc *JetCoordinator) lightMaterialsForJet(
 	ctx context.Context, jetID core.RecordID, pulse core.PulseNumber, count int,
 ) ([]core.RecordRef, error) {
-	_, prefix := jet.Jet(jetID)
+	_, prefix := core.JetID(jetID).Jet()
 
 	candidates, err := jc.Nodes.InRole(pulse, core.StaticRoleLightMaterial)
 	if err == core.ErrNoNodes {

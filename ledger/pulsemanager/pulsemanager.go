@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar"
+	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
@@ -62,15 +63,18 @@ type PulseManager struct {
 	ActiveListSwapper          ActiveListSwapper               `inject:""`
 	PulseStorage               pulseStoragePm                  `inject:""`
 	HotDataWaiter              artifactmanager.HotDataWaiter   `inject:""`
-	JetStorage                 storage.JetStorage              `inject:""`
-	DropStorage                storage.DropStorage             `inject:""`
-	ObjectStorage              storage.ObjectStorage           `inject:""`
-	NodeSetter                 node.Modifier                   `inject:""`
-	Nodes                      node.Accessor                   `inject:""`
-	PulseTracker               storage.PulseTracker            `inject:""`
-	ReplicaStorage             storage.ReplicaStorage          `inject:""`
-	DBContext                  storage.DBContext               `inject:""`
-	StorageCleaner             storage.Cleaner                 `inject:""`
+	JetStorage                 jet.JetStorage                  `inject:""`
+
+	ObjectStorage  storage.ObjectStorage  `inject:""`
+	NodeSetter     node.Modifier          `inject:""`
+	Nodes          node.Accessor          `inject:""`
+	PulseTracker   storage.PulseTracker   `inject:""`
+	ReplicaStorage storage.ReplicaStorage `inject:""`
+	DBContext      storage.DBContext      `inject:""`
+	StorageCleaner storage.Cleaner        `inject:""`
+
+	DropModifier drop.Modifier `inject:""`
+	DropAccessor drop.Accessor `inject:""`
 
 	// TODO: move clients pool to component - @nordicdyno - 18.Dec.2018
 	syncClientsPool *heavyclient.Pool
@@ -112,7 +116,6 @@ func NewPulseManager(conf configuration.Ledger) *PulseManager {
 		options: pmOptions{
 			enableSync:            pmconf.HeavySyncEnabled,
 			splitThreshold:        pmconf.SplitThreshold,
-			dropHistorySize:       conf.JetSizesHistoryDepth,
 			storeLightPulses:      conf.LightChainLimit,
 			heavySyncMessageLimit: pmconf.HeavySyncMessageLimit,
 			lightChainLimit:       conf.LightChainLimit,
@@ -210,37 +213,38 @@ func (m *PulseManager) createDrop(
 	jetID core.RecordID,
 	prevPulse, currentPulse core.PulseNumber,
 ) (
-	drop *jet.JetDrop,
+	drop *jet.Drop,
 	dropSerialized []byte,
 	messages [][]byte,
 	err error,
 ) {
-	var prevDrop *jet.JetDrop
-	prevDrop, err = m.DropStorage.GetDrop(ctx, jetID, prevPulse)
-	if err == core.ErrNotFound {
-		prevDrop, err = m.DropStorage.GetDrop(ctx, jet.Parent(jetID), prevPulse)
-		if err == core.ErrNotFound {
-			inslogger.FromContext(ctx).WithFields(map[string]interface{}{
-				"pulse": prevPulse,
-				"jet":   jetID.DebugString(),
-			}).Error("failed to find drop")
-			prevDrop = &jet.JetDrop{Pulse: prevPulse}
-			err = m.DropStorage.SetDrop(ctx, jetID, prevDrop)
-			if err != nil {
-				return nil, nil, nil, errors.Wrap(err, "failed to create empty drop")
-			}
-		} else if err != nil {
-			return nil, nil, nil, errors.Wrap(err, "[ createDrop ] failed to find parent")
-		}
-	} else if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't GetDrop")
+	// TODO: 1.03.19 need to be replaced with smth. @egorikas
+	// var prevDrop jet.Drop
+	// prevDrop, err = m.DropAccessor.ForPulse(ctx, core.JetID(jetID), prevPulse)
+	// if err == core.ErrNotFound {
+	// 	prevDrop, err = m.DropAccessor.ForPulse(ctx, storage.JetParent(core.JetID(jetID)), prevPulse)
+	// 	if err == core.ErrNotFound {
+	// 		inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+	// 			"pulse": prevPulse,
+	// 			"jet":   jetID.DebugString(),
+	// 		}).Error("failed to find drop")
+	// 		prevDrop = jet.Drop{Pulse: prevPulse}
+	// 		err = m.DropModifier.Set(ctx, core.JetID(jetID), prevDrop)
+	// 		if err != nil {
+	// 			return nil, nil, nil, errors.Wrap(err, "failed to create empty drop")
+	// 		}
+	// 	} else if err != nil {
+	// 		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] failed to find parent")
+	// 	}
+	// } else if err != nil {
+	// 	return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't GetDrop")
+	// }
+
+	drop = &jet.Drop{
+		Pulse: currentPulse,
 	}
 
-	drop, messages, dropSize, err := m.DropStorage.CreateDrop(ctx, jetID, currentPulse, prevDrop.Hash)
-	if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't CreateDrop")
-	}
-	err = m.DropStorage.SetDrop(ctx, jetID, drop)
+	err = m.DropModifier.Set(ctx, core.JetID(jetID), *drop)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't SetDrop")
 	}
@@ -250,28 +254,6 @@ func (m *PulseManager) createDrop(
 		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't Encode")
 	}
 
-	dropSizeData := &jet.DropSize{
-		JetID:    jetID,
-		PulseNo:  currentPulse,
-		DropSize: dropSize,
-	}
-	hasher := m.PlatformCryptographyScheme.IntegrityHasher()
-	_, err = dropSizeData.WriteHashData(hasher)
-	if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't WriteHashData")
-	}
-	signature, err := m.CryptographyService.Sign(hasher.Sum(nil))
-	dropSizeData.Signature = signature.Bytes()
-
-	if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't Sign")
-	}
-
-	err = m.DropStorage.AddDropSize(ctx, dropSizeData)
-	if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't AddDropSize")
-	}
-
 	return
 }
 
@@ -279,7 +261,7 @@ func (m *PulseManager) getExecutorHotData(
 	ctx context.Context,
 	jetID core.RecordID,
 	pulse core.PulseNumber,
-	drop *jet.JetDrop,
+	drop *jet.Drop,
 	dropSerialized []byte,
 ) (*message.HotData, error) {
 	ctx, span := instracer.StartSpan(ctx, "pulse.prepare_hot_data")
@@ -324,18 +306,12 @@ func (m *PulseManager) getExecutorHotData(
 		statPendingSent.M(int64(requestCount)),
 	)
 
-	dropSizeHistory, err := m.DropStorage.GetDropSizeHistory(ctx, jetID)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ processRecentObjects ] Can't GetDropSizeHistory")
-	}
-
 	msg := &message.HotData{
-		Drop:               *drop,
-		DropJet:            jetID,
-		PulseNumber:        pulse,
-		RecentObjects:      recentObjects,
-		PendingRequests:    pendingRequests,
-		JetDropSizeHistory: dropSizeHistory,
+		Drop:            *drop,
+		DropJet:         jetID,
+		PulseNumber:     pulse,
+		RecentObjects:   recentObjects,
+		PendingRequests: pendingRequests,
 	}
 	return msg, nil
 }
@@ -619,9 +595,9 @@ func (m *PulseManager) setUnderGilSection(
 		// No active nodes for pulse. It means there was no processing (network start).
 		if len(nodes) == 0 {
 			// Activate zero jet for jet tree and unlock jet waiter.
-			zeroJet := *jet.NewID(0, nil)
-			m.JetStorage.UpdateJetTree(ctx, newPulse.PulseNumber, true, zeroJet)
-			err := m.HotDataWaiter.Unlock(ctx, zeroJet)
+			zeroJet := core.RecordID(*core.NewJetID(0, nil))
+			m.JetStorage.UpdateJetTree(ctx, newPulse.PulseNumber, true, core.RecordID(zeroJet))
+			err := m.HotDataWaiter.Unlock(ctx, core.RecordID(zeroJet))
 			if err != nil {
 				if err == artifactmanager.ErrWaiterNotLocked {
 					inslogger.FromContext(ctx).Error(err)
@@ -789,10 +765,10 @@ func (m *PulseManager) restoreGenesisRecentObjects(ctx context.Context) error {
 		return nil
 	}
 
-	jetID := *jet.NewID(0, nil)
-	recent := m.RecentStorageProvider.GetIndexStorage(ctx, jetID)
+	jetID := core.RecordID(*core.NewJetID(0, nil))
+	recent := m.RecentStorageProvider.GetIndexStorage(ctx, core.RecordID(jetID))
 
-	return m.ObjectStorage.IterateIndexIDs(ctx, jetID, func(id core.RecordID) error {
+	return m.ObjectStorage.IterateIndexIDs(ctx, core.RecordID(jetID), func(id core.RecordID) error {
 		if id.Pulse() == core.FirstPulseNumber {
 			recent.AddObject(ctx, id)
 		}
