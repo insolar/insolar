@@ -106,10 +106,6 @@ func GetLedgerComponents(conf configuration.Ledger, certificate core.Certificate
 		dbDropStorage := drop.NewStorageDB()
 		dropModifier = dbDropStorage
 		dropAccessor = dbDropStorage
-
-		// memoryDropStorage := drop.NewStorageMemory()
-		// dropModifier = memoryDropStorage
-		// dropAccessor = memoryDropStorage
 	}
 
 	return []interface{}{
