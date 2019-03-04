@@ -59,6 +59,8 @@ type Control interface {
 	GetState() State
 	// IsOperational shows if conveyor is ready for work
 	IsOperational() bool
+	// InitiateShutdown shutting conveyor down and cancels tasks in adapters if force param set
+	InitiateShutdown(force bool)
 }
 
 // Conveyor is responsible for all pulse-dependent processing logic
@@ -104,6 +106,12 @@ func (c *PulseConveyor) IsOperational() bool {
 		return true
 	}
 	return false
+}
+
+func (c *PulseConveyor) InitiateShutdown(force bool) {
+	if force {
+		// cancel all tasks in adapters
+	}
 }
 
 func (c *PulseConveyor) unsafeGetSlot(pulseNumber core.PulseNumber) *Slot {
