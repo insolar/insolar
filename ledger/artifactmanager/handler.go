@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/core/delegationtoken"
+	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/tag"
@@ -55,7 +56,7 @@ type MessageHandler struct {
 	JetStorage                 storage.JetStorage              `inject:""`
 	DropStorage                storage.DropStorage             `inject:""`
 	ObjectStorage              storage.ObjectStorage           `inject:""`
-	NodeStorage                storage.NodeStorage             `inject:""`
+	Nodes                      node.Accessor                   `inject:""`
 	PulseTracker               storage.PulseTracker            `inject:""`
 	DBContext                  storage.DBContext               `inject:""`
 	HotDataWaiter              HotDataWaiter                   `inject:""`
@@ -112,7 +113,7 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 	m := newMiddleware(h)
 	h.middleware = m
 
-	h.jetTreeUpdater = newJetTreeUpdater(h.NodeStorage, h.JetStorage, h.Bus, h.JetCoordinator)
+	h.jetTreeUpdater = newJetTreeUpdater(h.Nodes, h.JetStorage, h.Bus, h.JetCoordinator)
 
 	h.isHeavy = h.certificate.GetRole() == core.StaticRoleHeavyMaterial
 
@@ -262,10 +263,6 @@ func (h *MessageHandler) setHandlersForHeavy(m *middleware) {
 	h.Bus.MustRegister(core.TypeHeavyStartStop,
 		BuildMiddleware(h.handleHeavyStartStop,
 			instrumentHandler("handleHeavyStartStop")))
-
-	h.Bus.MustRegister(core.TypeHeavyReset,
-		BuildMiddleware(h.handleHeavyReset,
-			instrumentHandler("handleHeavyReset")))
 
 	h.Bus.MustRegister(core.TypeHeavyPayload,
 		BuildMiddleware(h.handleHeavyPayload,
@@ -458,6 +455,9 @@ func (h *MessageHandler) handleGetObject(
 
 			obj, err := h.fetchObject(ctx, msg.Head, *node, stateID, parcel.Pulse())
 			if err != nil {
+				if err == core.ErrDeactivated {
+					return &reply.Error{ErrType: reply.ErrDeactivated}, nil
+				}
 				return nil, err
 			}
 
@@ -501,6 +501,9 @@ func (h *MessageHandler) handleGetObject(
 
 		obj, err := h.fetchObject(ctx, msg.Head, *node, stateID, parcel.Pulse())
 		if err != nil {
+			if err == core.ErrDeactivated {
+				return &reply.Error{ErrType: reply.ErrDeactivated}, nil
+			}
 			return nil, err
 		}
 
@@ -1163,6 +1166,10 @@ func (h *MessageHandler) fetchObject(
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch object state")
 	}
+	if rep, ok := genericReply.(*reply.Error); ok {
+		return nil, rep.Error()
+	}
+
 	rep, ok := genericReply.(*reply.Object)
 	if !ok {
 		return nil, fmt.Errorf("failed to fetch object state: unexpected reply type %T (reply=%+v)", genericReply, genericReply)

@@ -38,11 +38,10 @@ vm/wasm/test/data/*.wat
 
 /testdata
 data
-data_pulsar
 
 # generated/compiled files
 /bin
-/.artefacts
+/.artifacts
 coverage.txt
 
 # GoReleaser dist dir
