@@ -16,13 +16,16 @@
 
 package statemachine
 
-import "github.com/insolar/insolar/conveyor/interfaces/slot"
+import (
+	"github.com/insolar/insolar/conveyor/interfaces/adapter"
+	"github.com/insolar/insolar/conveyor/interfaces/slot"
+)
 
 type InitHandler func(element slot.SlotElementHelper) (interface{}, uint32, error)
 type TransitHandler func(element slot.SlotElementHelper) (interface{}, uint32, error)
 type MigrationHandler func(element slot.SlotElementHelper) (interface{}, uint32, error)
 type ErrorHandler func(element slot.SlotElementHelper, err error) (interface{}, uint32)
-type AdapterResponseHandler func(element slot.SlotElementHelper, err error) (interface{}, uint32)
+type AdapterResponseHandler func(element slot.SlotElementHelper, response adapter.IAdapterResponse) (interface{}, uint32, error)
 type NestedHandler func(element slot.SlotElementHelper, err error) (interface{}, uint32)
 
 type TransitionErrorHandler func(element slot.SlotElementHelper, err error) (interface{}, uint32)

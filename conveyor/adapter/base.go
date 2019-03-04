@@ -50,10 +50,26 @@ type AdapterTask struct {
 
 // AdapterResponse contains info with adapter response
 type AdapterResponse struct {
-	AdapterID   idType
-	ElementID   idType
-	HandlerID   idType
-	RespPayload interface{}
+	adapterID   idType
+	elementID   idType
+	handlerID   idType
+	respPayload interface{}
+}
+
+func (ar *AdapterResponse) GetAdapterID() uint32 {
+	return ar.adapterID
+}
+
+func (ar *AdapterResponse) GetElementID() uint32 {
+	return ar.elementID
+}
+
+func (ar *AdapterResponse) GetHandlerID() uint32 {
+	return ar.handlerID
+}
+
+func (ar *AdapterResponse) GetRespPayload() interface{} {
+	return ar.respPayload
 }
 
 // AdapterNestedEvent contains info with adapter nested event

@@ -19,8 +19,9 @@ package conveyor
 import (
 	"fmt"
 
-	"github.com/insolar/insolar/conveyor/adapter"
+	adapter2 "github.com/insolar/insolar/conveyor/interfaces/adapter"
 	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
+	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 )
 
@@ -102,13 +103,33 @@ func (w *workerStateMachineImpl) readResponseQueue() error {
 		if resp.GetItemType() > 9999 { // TODO: check isNestedEvent
 
 		} else {
-			adapterResp, ok := resp.GetData().(adapter.AdapterResponse)
+			adapterResp, ok := resp.GetData().(adapter2.IAdapterResponse)
 			if !ok {
 				panic(fmt.Sprintf("Bad type in adapter response queue: %T", resp.GetData()))
 			}
-			element := w.slot.elements[adapterResp.ElementID]
+			element := w.slot.elements[adapterResp.GetElementID()]
 
-			element.stateMachineType.GetResponseHandler(element.state)
+			respHandler := element.stateMachineType.GetResponseHandler(element.state)
+			if respHandler == nil {
+				panic(fmt.Sprintf("No response handler. State: %d. \nAdapterResp: %+v", element.state, adapterResp))
+			}
+
+			_, newState, err := respHandler(&element, adapterResp)
+			if err != nil {
+				log.Error("[ readResponseQueue ] Response handler errors: ", err)
+				respErrorHandler := element.stateMachineType.GetResponseErrorHandler(element.state)
+				if respErrorHandler == nil {
+					panic(fmt.Sprintf("No response error handler. State: %d. \nAdapterResp: %+v", element.state, adapterResp))
+				}
+
+				//respErrorPayLoad, state := respErrorHandler(&element, err)
+
+			}
+
+			if newState == 0 {
+				// TODO: call finalization handler
+			}
+
 			// Call ReponseHandler
 
 		}
