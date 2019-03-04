@@ -109,6 +109,9 @@ func (c *PulseConveyor) IsOperational() bool {
 }
 
 func (c *PulseConveyor) InitiateShutdown(force bool) {
+	c.lock.Lock()
+	c.state = ShuttingDown
+	c.lock.Unlock()
 	if force {
 		// cancel all tasks in adapters
 	}

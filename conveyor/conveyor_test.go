@@ -136,6 +136,13 @@ func TestConveyor_IsOperational(t *testing.T) {
 	}
 }
 
+func TestConveyor_InitiateShutdown(t *testing.T) {
+	c := testPulseConveyor(t, true)
+
+	c.InitiateShutdown(true)
+	require.Equal(t, ShuttingDown, c.state)
+}
+
 func TestConveyor_SinkPush(t *testing.T) {
 	c := testPulseConveyor(t, true)
 	data := "fancy_data"
