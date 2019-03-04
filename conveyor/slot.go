@@ -38,7 +38,7 @@ const (
 )
 
 // SlotState shows slot working mode
-type SlotState int
+type SlotState uint32
 
 //go:generate stringer -type=SlotState
 const (
@@ -49,14 +49,6 @@ const (
 
 const slotSize = 10000
 const slotElementDelta = 1000000 // nolint: unused
-
-// SlotDetails provides information about slot
-type SlotDetails interface {
-	GetPulseNumber() core.PulseNumber // nolint: unused
-	GetNodeID() uint32                // nolint: unused
-	GetPulseData() core.Pulse         // nolint: unused
-	GetNodeData() interface{}         // nolint: unused
-}
 
 // HandlersConfiguration contains configuration of handlers for specific pulse state
 // TODO: logic will be provided after pulse change mechanism
@@ -179,7 +171,7 @@ func (s *Slot) GetNodeData() interface{} { // nolint: unused
 }
 
 // createElement creates new active element from empty element
-func (s *Slot) createElement(stateMachineType statemachine.StateMachineType, state uint16, event queue.OutputElement) (*slotElement, error) { // nolint: unused
+func (s *Slot) createElement(stateMachineType statemachine.StateMachineType, state uint32, event queue.OutputElement) (*slotElement, error) { // nolint: unused
 	element := s.popElement(EmptyElement)
 	element.stateMachineType = stateMachineType
 	element.state = state

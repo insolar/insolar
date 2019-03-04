@@ -39,7 +39,7 @@ type slotElement struct {
 	payload          interface{} // nolint
 	postponedError   error
 	stateMachineType statemachine.StateMachineType
-	state            uint16
+	state            uint32
 
 	nextElement      *slotElement
 	activationStatus ActivationStatus
@@ -95,7 +95,7 @@ func (se *slotElement) GetType() int {
 }
 
 // GetState implements SlotElementReadOnly
-func (se *slotElement) GetState() uint16 {
+func (se *slotElement) GetState() uint32 {
 	return se.state
 }
 
