@@ -213,7 +213,7 @@ func TestSlot_createElement(t *testing.T) {
 	require.NotNil(t, element)
 	require.NoError(t, err)
 	require.Equal(t, stateMachineMock, element.stateMachineType)
-	require.Equal(t, 1, element.state)
+	require.Equal(t, uint32(1), element.state)
 	require.Equal(t, uint32(1), element.id)
 	require.Equal(t, ActiveElement, element.activationStatus)
 	require.Equal(t, 1, elementListLength(s.elementListMap[ActiveElement]))

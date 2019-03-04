@@ -47,7 +47,7 @@ type SlotElementHelperMock struct {
 	GetPayloadPreCounter uint64
 	GetPayloadMock       mSlotElementHelperMockGetPayload
 
-	GetStateFunc       func() (r int)
+	GetStateFunc       func() (r uint32)
 	GetStateCounter    uint64
 	GetStatePreCounter uint64
 	GetStateMock       mSlotElementHelperMockGetState
@@ -906,7 +906,7 @@ type SlotElementHelperMockGetStateExpectation struct {
 }
 
 type SlotElementHelperMockGetStateResult struct {
-	r int
+	r uint32
 }
 
 //Expect specifies that invocation of SlotElementHelper.GetState is expected from 1 to Infinity times
@@ -922,7 +922,7 @@ func (m *mSlotElementHelperMockGetState) Expect() *mSlotElementHelperMockGetStat
 }
 
 //Return specifies results of invocation of SlotElementHelper.GetState
-func (m *mSlotElementHelperMockGetState) Return(r int) *SlotElementHelperMock {
+func (m *mSlotElementHelperMockGetState) Return(r uint32) *SlotElementHelperMock {
 	m.mock.GetStateFunc = nil
 	m.expectationSeries = nil
 
@@ -944,12 +944,12 @@ func (m *mSlotElementHelperMockGetState) ExpectOnce() *SlotElementHelperMockGetS
 	return expectation
 }
 
-func (e *SlotElementHelperMockGetStateExpectation) Return(r int) {
+func (e *SlotElementHelperMockGetStateExpectation) Return(r uint32) {
 	e.result = &SlotElementHelperMockGetStateResult{r}
 }
 
 //Set uses given function f as a mock of SlotElementHelper.GetState method
-func (m *mSlotElementHelperMockGetState) Set(f func() (r int)) *SlotElementHelperMock {
+func (m *mSlotElementHelperMockGetState) Set(f func() (r uint32)) *SlotElementHelperMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -958,7 +958,7 @@ func (m *mSlotElementHelperMockGetState) Set(f func() (r int)) *SlotElementHelpe
 }
 
 //GetState implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementHelper interface
-func (m *SlotElementHelperMock) GetState() (r int) {
+func (m *SlotElementHelperMock) GetState() (r uint32) {
 	counter := atomic.AddUint64(&m.GetStatePreCounter, 1)
 	defer atomic.AddUint64(&m.GetStateCounter, 1)
 
