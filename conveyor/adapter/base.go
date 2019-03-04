@@ -16,9 +16,7 @@
 
 package adapter
 
-import (
-	"github.com/insolar/insolar/conveyor"
-)
+import "github.com/insolar/insolar/conveyor/interfaces/slot"
 
 type idType = uint32
 
@@ -37,7 +35,7 @@ type AdaptorToSlotResponseSink interface {
 	PushNestedEvent(adapterID idType, parentElementID idType, handlerID idType, eventPayload interface{})
 	GetPulseNumber() uint32
 	GetNodeID() uint32
-	GetSlotDetails() conveyor.SlotDetails
+	GetSlotDetails() slot.SlotDetails
 }
 
 // AdapterTask contains info for launch adapter task

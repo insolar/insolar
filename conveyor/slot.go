@@ -50,14 +50,6 @@ const (
 const slotSize = 10000
 const slotElementDelta = 1000000 // nolint: unused
 
-// SlotDetails provides information about slot
-type SlotDetails interface {
-	GetPulseNumber() core.PulseNumber // nolint: unused
-	GetNodeID() uint32                // nolint: unused
-	GetPulseData() core.Pulse         // nolint: unused
-	GetNodeData() interface{}         // nolint: unused
-}
-
 // HandlersConfiguration contains configuration of handlers for specific pulse state
 // TODO: logic will be provided after pulse change mechanism
 type HandlersConfiguration struct {
