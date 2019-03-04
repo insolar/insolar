@@ -26,7 +26,7 @@ type SlotElementReadOnlyMock struct {
 	GetNodeIDPreCounter uint64
 	GetNodeIDMock       mSlotElementReadOnlyMockGetNodeID
 
-	GetStateFunc       func() (r uint16)
+	GetStateFunc       func() (r int)
 	GetStateCounter    uint64
 	GetStatePreCounter uint64
 	GetStateMock       mSlotElementReadOnlyMockGetState
@@ -332,7 +332,7 @@ type SlotElementReadOnlyMockGetStateExpectation struct {
 }
 
 type SlotElementReadOnlyMockGetStateResult struct {
-	r uint16
+	r int
 }
 
 //Expect specifies that invocation of SlotElementReadOnly.GetState is expected from 1 to Infinity times
@@ -348,7 +348,7 @@ func (m *mSlotElementReadOnlyMockGetState) Expect() *mSlotElementReadOnlyMockGet
 }
 
 //Return specifies results of invocation of SlotElementReadOnly.GetState
-func (m *mSlotElementReadOnlyMockGetState) Return(r uint16) *SlotElementReadOnlyMock {
+func (m *mSlotElementReadOnlyMockGetState) Return(r int) *SlotElementReadOnlyMock {
 	m.mock.GetStateFunc = nil
 	m.expectationSeries = nil
 
@@ -370,12 +370,12 @@ func (m *mSlotElementReadOnlyMockGetState) ExpectOnce() *SlotElementReadOnlyMock
 	return expectation
 }
 
-func (e *SlotElementReadOnlyMockGetStateExpectation) Return(r uint16) {
+func (e *SlotElementReadOnlyMockGetStateExpectation) Return(r int) {
 	e.result = &SlotElementReadOnlyMockGetStateResult{r}
 }
 
 //Set uses given function f as a mock of SlotElementReadOnly.GetState method
-func (m *mSlotElementReadOnlyMockGetState) Set(f func() (r uint16)) *SlotElementReadOnlyMock {
+func (m *mSlotElementReadOnlyMockGetState) Set(f func() (r int)) *SlotElementReadOnlyMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -384,7 +384,7 @@ func (m *mSlotElementReadOnlyMockGetState) Set(f func() (r uint16)) *SlotElement
 }
 
 //GetState implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementReadOnly interface
-func (m *SlotElementReadOnlyMock) GetState() (r uint16) {
+func (m *SlotElementReadOnlyMock) GetState() (r int) {
 	counter := atomic.AddUint64(&m.GetStatePreCounter, 1)
 	defer atomic.AddUint64(&m.GetStateCounter, 1)
 

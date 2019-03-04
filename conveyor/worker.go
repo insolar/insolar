@@ -107,7 +107,8 @@ func (w *workerStateMachineImpl) readResponseQueue() error {
 				panic(fmt.Sprintf("Bad type in adapter response queue: %T", resp.GetData()))
 			}
 			element := w.slot.elements[adapterResp.ElementID]
-			element.stateMachineType.GetResponseHandler(33)
+
+			element.stateMachineType.GetResponseHandler(element.state)
 			// Call ReponseHandler
 
 		}

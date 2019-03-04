@@ -61,7 +61,7 @@ type SlotElementReadOnly interface {
 	GetElementID() uint32
 	GetNodeID() uint32
 	GetType() int
-	GetState() uint16
+	GetState() int
 }
 
 // SlotDetails provides information about slot
