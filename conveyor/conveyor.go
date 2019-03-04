@@ -159,12 +159,12 @@ func (c *PulseConveyor) SinkPushAll(pulseNumber core.PulseNumber, data []interfa
 
 // PreparePulse is preparing conveyor for working with provided pulse
 func (c *PulseConveyor) PreparePulse(pulse core.Pulse, callback queue.SyncDone) error {
-	if !c.IsOperational() {
-		return errors.New("[ PreparePulse ] conveyor is not operational now")
-	}
-
 	c.lock.Lock()
 	defer c.lock.Unlock()
+
+	if c.state == ShuttingDown {
+		return errors.New("[ PreparePulse ] conveyor is shut down")
+	}
 
 	if c.futurePulseData != nil {
 		return errors.New("[ PreparePulse ] preparation was already done")
@@ -235,11 +235,12 @@ func (p *pulseWithCallback) Done() {
 
 // ActivatePulse activates conveyor with prepared pulse
 func (c *PulseConveyor) ActivatePulse() error {
-	if !c.IsOperational() {
-		return errors.New("[ ActivatePulse ] conveyor is not operational now")
-	}
-
 	c.lock.Lock()
+
+	if c.state == ShuttingDown {
+		c.lock.Unlock()
+		return errors.New("[ ActivatePulse ] conveyor is shut down")
+	}
 
 	if c.futurePulseData == nil {
 		c.lock.Unlock()

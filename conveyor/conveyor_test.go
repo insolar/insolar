@@ -267,17 +267,17 @@ func TestConveyor_PreparePulse_ForFirstTime(t *testing.T) {
 	require.Equal(t, PreparingPulse, c.state)
 }
 
-func TestConveyor_PreparePulse_NotOperational(t *testing.T) {
+func TestConveyor_PreparePulse_ShutDown(t *testing.T) {
 	c := testPulseConveyor(t, true)
 	pulse := core.Pulse{PulseNumber: testRealPulse + testPulseDelta}
-	c.state = Inactive
+	c.state = ShuttingDown
 	callback := mockCallback()
 
 	err := c.PreparePulse(pulse, callback)
 
-	require.EqualError(t, err, "[ PreparePulse ] conveyor is not operational now")
+	require.EqualError(t, err, "[ PreparePulse ] conveyor is shut down")
 	require.Nil(t, c.futurePulseData)
-	require.Equal(t, Inactive, c.state)
+	require.Equal(t, ShuttingDown, c.state)
 }
 
 func TestConveyor_PreparePulse_AlreadyDone(t *testing.T) {
@@ -344,17 +344,17 @@ func TestConveyor_ActivatePulse(t *testing.T) {
 	require.Equal(t, Active, c.state)
 }
 
-func TestConveyor_ActivatePulse_NotOperational(t *testing.T) {
+func TestConveyor_ActivatePulse_ShutDown(t *testing.T) {
 	c := testPulseConveyor(t, true)
 	pulse := core.Pulse{PulseNumber: testRealPulse + testPulseDelta}
 	c.futurePulseData = &pulse
-	c.state = Inactive
+	c.state = ShuttingDown
 
 	err := c.ActivatePulse()
 
-	require.EqualError(t, err, "[ ActivatePulse ] conveyor is not operational now")
+	require.EqualError(t, err, "[ ActivatePulse ] conveyor is shut down")
 	require.Equal(t, &pulse, c.futurePulseData)
-	require.Equal(t, Inactive, c.state)
+	require.Equal(t, ShuttingDown, c.state)
 }
 
 func TestConveyor_ActivatePulse_NoPrepare(t *testing.T) {
