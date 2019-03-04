@@ -218,15 +218,15 @@ func (bc *bootstrapper) Bootstrap(ctx context.Context) (*network.BootstrapResult
 	}
 
 	majorityRule := bc.Certificate.GetMajorityRule()
-	b, isMajority := getDiscoveryFromBootstrapResults(bootstrapResults, majorityRule)
-	if isDiscovery || isMajority {
+	b := getDiscoveryFromBootstrapResults(bootstrapResults)
+	if isDiscovery || b.DiscoveryCount >= majorityRule {
 		return b, &DiscoveryNode{b.Host, findDiscovery(bc.Certificate, b.Host.NodeID)}, nil
 	}
 
-	return nil, nil, errors.New("majority rule failed")
+	return nil, nil, errors.Errorf("majority rule failed: %d < %d", b.DiscoveryCount, majorityRule)
 }
 
-func getDiscoveryFromBootstrapResults(bootstrapResults []*network.BootstrapResult, majorityRule int) (*network.BootstrapResult, bool) {
+func getDiscoveryFromBootstrapResults(bootstrapResults []*network.BootstrapResult) *network.BootstrapResult {
 	sort.Slice(bootstrapResults, func(i, j int) bool {
 		return bootstrapResults[i].DiscoveryCount > bootstrapResults[j].DiscoveryCount
 	})
@@ -242,7 +242,7 @@ func getDiscoveryFromBootstrapResults(bootstrapResults []*network.BootstrapResul
 
 	i := coreutils.RandomInt(len(maxBootstrapResults))
 	randomMaxResult := bootstrapResults[i]
-	return randomMaxResult, randomMaxResult.DiscoveryCount >= majorityRule
+	return randomMaxResult
 }
 
 func (bc *bootstrapper) SetLastPulse(number core.PulseNumber) {
