@@ -21,7 +21,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/conveyor"
+	"github.com/insolar/insolar/conveyor/interfaces/slot"
 	"github.com/insolar/insolar/log"
 	"github.com/stretchr/testify/require"
 )
@@ -60,8 +60,8 @@ func (m *mockResponseSink) GetNodeID() uint32 {
 	return 42
 }
 
-func (m *mockResponseSink) GetSlotDetails() conveyor.SlotDetails {
-	return &conveyor.Slot{}
+func (m *mockResponseSink) GetSlotDetails() slot.SlotDetails {
+	return slot.NewSlotDetailsMock(&testing.T{})
 }
 
 func TestFunctionality(t *testing.T) {

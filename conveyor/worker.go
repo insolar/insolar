@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/conveyor/adapter"
+	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
 	"github.com/pkg/errors"
 )
 
@@ -54,7 +55,7 @@ const (
 	NestedCall
 )
 
-func GetStateMachineByType(mtype MachineType) StateMachineType {
+func GetStateMachineByType(mtype MachineType) statemachine.StateMachineType {
 	return nil
 }
 
@@ -103,15 +104,16 @@ func (w *workerStateMachineImpl) readResponseQueue() error {
 		} else {
 			adapterResp, ok := resp.GetData().(adapter.AdapterResponse)
 			if !ok {
-				panic(fmt.Sprint("Bad type in adapter response queue: %T", resp.GetData()))
+				panic(fmt.Sprintf("Bad type in adapter response queue: %T", resp.GetData()))
 			}
 			element := w.slot.elements[adapterResp.ElementID]
-			element.stateMachineType.GetResponseHandler()
+			element.stateMachineType.GetResponseHandler(33)
 			// Call ReponseHandler
 
 		}
 	}
 
+	return nil
 }
 
 func (w *workerStateMachineImpl) working() {
