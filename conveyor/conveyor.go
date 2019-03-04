@@ -83,12 +83,11 @@ func NewPulseConveyor() Conveyor {
 		slotMap: make(map[core.PulseNumber]*Slot),
 		state:   Inactive,
 	}
-	antiqueSlot := NewSlot(Antique, AntiqueSlotPulse)
-	c.slotMap[AntiqueSlotPulse] = antiqueSlot
+	// antiqueSlot is slot for all pulses from past if conveyor dont have specific PastSlot for such pulse
+	antiqueSlot := NewSlot(Antique, core.AntiquePulseNumber)
+	c.slotMap[core.AntiquePulseNumber] = antiqueSlot
 	return c
 }
-
-const AntiqueSlotPulse = core.PulseNumber(0)
 
 // GetState returns current state of conveyor
 func (c *PulseConveyor) GetState() State {
@@ -112,7 +111,7 @@ func (c *PulseConveyor) unsafeGetSlot(pulseNumber core.PulseNumber) *Slot {
 		if c.futurePulseNumber == nil || pulseNumber > *c.futurePulseNumber {
 			return nil
 		}
-		slot = c.slotMap[AntiqueSlotPulse]
+		slot = c.slotMap[core.AntiquePulseNumber]
 	}
 	return slot
 }

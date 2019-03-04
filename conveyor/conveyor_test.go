@@ -92,7 +92,7 @@ func testPulseConveyor(t *testing.T, isQueueOk bool) *PulseConveyor {
 	slotMap := make(map[core.PulseNumber]*Slot)
 	slotMap[testRealPulse] = presentSlot
 	slotMap[testRealPulse+testPulseDelta] = futureSlot
-	slotMap[AntiqueSlotPulse] = mockSlot(t, q, AntiqueSlotPulse)
+	slotMap[core.AntiquePulseNumber] = mockSlot(t, q, core.AntiquePulseNumber)
 
 	return &PulseConveyor{
 		state:              Active,
@@ -160,7 +160,7 @@ func TestConveyor_SinkPush_AntiqueSlot(t *testing.T) {
 
 	err := c.SinkPush(testUnknownPastPulse, data)
 	require.NoError(t, err)
-	c.slotMap[AntiqueSlotPulse].inputQueue.(*queue.IQueueMock).SinkPushMock.Expect(data)
+	c.slotMap[core.AntiquePulseNumber].inputQueue.(*queue.IQueueMock).SinkPushMock.Expect(data)
 }
 
 func TestConveyor_SinkPush_UnknownSlot(t *testing.T) {
@@ -211,7 +211,7 @@ func TestConveyor_SinkPushAll_AntiqueSlot(t *testing.T) {
 
 	err := c.SinkPushAll(testUnknownPastPulse, data)
 	require.NoError(t, err)
-	c.slotMap[AntiqueSlotPulse].inputQueue.(*queue.IQueueMock).SinkPushMock.Expect(data)
+	c.slotMap[core.AntiquePulseNumber].inputQueue.(*queue.IQueueMock).SinkPushMock.Expect(data)
 }
 
 func TestConveyor_SinkPushAll_UnknownSlot(t *testing.T) {
