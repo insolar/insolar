@@ -95,10 +95,6 @@ func FindContractsDir() (string, error) {
 }
 
 func (s *LogicRunnerFuncSuite) SetupSuite() {
-	if err := log.SetLevel("debug"); err != nil {
-		log.Error("Failed to set logLevel to debug: ", err.Error())
-	}
-
 	var err error
 	if s.runnerBin, s.icc, err = goplugintestutils.Build(); err != nil {
 		s.Fail("Logic runner build failed, skip tests: ", err.Error())
@@ -2077,6 +2073,10 @@ func (s *LogicRunnerFuncSuite) getObjectInstance(ctx context.Context, am core.Ar
 }
 
 func TestLogicRunnerFunc(t *testing.T) {
+	if err := log.SetLevel("debug"); err != nil {
+		log.Error("Failed to set logLevel to debug: ", err.Error())
+	}
+
 	t.Parallel()
 	suite.Run(t, new(LogicRunnerFuncSuite))
 }
