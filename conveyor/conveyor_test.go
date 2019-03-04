@@ -335,7 +335,6 @@ func TestConveyor_ActivatePulse(t *testing.T) {
 	c.futurePulseData = &pulse
 	newFutureSlot := mockSlot(t, mockQueue(t), pulse.NextPulseNumber)
 	c.slotMap[pulse.NextPulseNumber] = newFutureSlot
-	c.newFuturePulseNumber = &pulse.NextPulseNumber
 	c.state = PreparingPulse
 
 	err := c.ActivatePulse()
@@ -374,7 +373,6 @@ func TestConveyor_ActivatePulse_PushSignalErr(t *testing.T) {
 	c.futurePulseData = &pulse
 	newFutureSlot := NewSlot(Unallocated, pulse.NextPulseNumber)
 	c.slotMap[pulse.NextPulseNumber] = newFutureSlot
-	c.newFuturePulseNumber = &pulse.NextPulseNumber
 	c.state = PreparingPulse
 
 	panicValue := fmt.Sprintf("[ ActivatePulse ] can't send signal to present slot (for pulse %d), error - test error", c.futurePulseNumber)

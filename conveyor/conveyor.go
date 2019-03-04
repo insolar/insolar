@@ -71,13 +71,12 @@ type Conveyor interface {
 
 // PulseConveyor is realization of Conveyor
 type PulseConveyor struct {
-	slotMap              map[core.PulseNumber]*Slot
-	futurePulseData      *core.Pulse
-	newFuturePulseNumber *core.PulseNumber
-	futurePulseNumber    *core.PulseNumber
-	presentPulseNumber   *core.PulseNumber
-	lock                 sync.RWMutex
-	state                State
+	slotMap            map[core.PulseNumber]*Slot
+	futurePulseData    *core.Pulse
+	futurePulseNumber  *core.PulseNumber
+	presentPulseNumber *core.PulseNumber
+	lock               sync.RWMutex
+	state              State
 }
 
 // NewPulseConveyor creates new instance of PulseConveyor
@@ -195,7 +194,6 @@ func (c *PulseConveyor) PreparePulse(pulse core.Pulse, callback queue.SyncDone) 
 	c.futurePulseData = &pulse
 	newFutureSlot := NewSlot(Unallocated, pulse.NextPulseNumber)
 	c.slotMap[pulse.NextPulseNumber] = newFutureSlot
-	c.newFuturePulseNumber = &pulse.NextPulseNumber
 	c.state = PreparingPulse
 	return nil
 }
@@ -249,7 +247,7 @@ func (c *PulseConveyor) ActivatePulse() error {
 	}
 
 	c.presentPulseNumber = c.futurePulseNumber
-	c.futurePulseNumber = c.newFuturePulseNumber
+	c.futurePulseNumber = &c.futurePulseData.NextPulseNumber
 
 	wg := sync.WaitGroup{}
 
