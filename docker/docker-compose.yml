@@ -1,0 +1,26 @@
+version: '3.7'
+services:
+  insolard:
+    image: "insolar/insolard:v0.8.4"
+    environment:
+      - INSOLARD_LOG_LEVEL=warn
+      - INSOLARD_TRANSPORT_FIXED_ADDRESS=
+      - INSGORUND_ENDPOINT=insgorund:18181
+    volumes:
+      - "${PWD}/configs/:/etc/insolar"
+      - "${PWD}/genesis/:/var/lib/insolar"
+    restart: always
+    links:
+        - insgorund
+    ports:
+      - "127.0.0.1:8001:8001/tcp"   # metrics
+      - "0.0.0.0:7900:7900/tcp"     # tcp - transport
+      - "0.0.0.0:7901:7901/udp"     # udp - consensus
+      - "0.0.0.0:19191:19191/tcp" # api
+
+  insgorund:
+    image: "insolar/insgorund:v0.8.4"
+    restart: always
+    environment:
+      - INSOLARD_LOG_LEVEL=warn
+      - INSOLARD_RPC_ENDPOINT=insolard:18182
