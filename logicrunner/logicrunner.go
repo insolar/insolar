@@ -147,6 +147,7 @@ type LogicRunner struct {
 
 	sock net.Listener
 
+	stopLock   sync.Mutex
 	isStopping bool
 	stopChan   chan struct{}
 }
@@ -227,9 +228,11 @@ func (lr *LogicRunner) Stop(ctx context.Context) error {
 }
 
 func (lr *LogicRunner) GracefulStop(ctx context.Context) error {
+	lr.stopLock.Lock()
 	lr.isStopping = true
-	<-lr.stopChan
+	lr.stopLock.Unlock()
 
+	<-lr.stopChan
 	return nil
 }
 
@@ -1063,11 +1066,19 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 		go lr.sendOnPulseMessagesAsync(ctx, messages)
 	}
 
-	if lr.isStopping && lr.state == nil {
-		lr.stopChan <- struct{}{}
-	}
+	lr.stopIfNeeded()
 
 	return nil
+}
+
+func (lr *LogicRunner) stopIfNeeded() {
+	if lr.state == nil {
+		lr.stopLock.Lock()
+		if lr.isStopping {
+			lr.stopChan <- struct{}{}
+		}
+		lr.stopLock.Unlock()
+	}
 }
 
 func (lr *LogicRunner) HandleStillExecutingMessage(
