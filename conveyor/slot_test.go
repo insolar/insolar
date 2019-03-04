@@ -168,7 +168,7 @@ func TestNewSlot(t *testing.T) {
 	require.Empty(t, s.inputQueue.RemoveAll())
 	require.Len(t, s.elements, slotSize)
 	require.Len(t, s.elementListMap, 3)
-	require.Equal(t, SlotStateMachine, s.slotStateMachine)
+	require.Equal(t, SlotStateMachine, s.stateMachine)
 }
 
 func TestSlot_getPulseNumber(t *testing.T) {
