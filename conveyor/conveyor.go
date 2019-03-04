@@ -21,6 +21,7 @@ import (
 
 	"github.com/insolar/insolar/conveyor/queue"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 )
 
@@ -169,14 +170,14 @@ func (c *PulseConveyor) PreparePulse(pulse core.Pulse, callback queue.SyncDone) 
 	futureSlot := c.slotMap[*c.futurePulseNumber]
 	err := futureSlot.inputQueue.PushSignal(PendingPulseSignal, callback)
 	if err != nil {
-		return errors.Wrapf(err, "[ PreparePulse ] can't send signal to future slot (for pulse %d)", c.futurePulseNumber)
+		log.Panicf("[ PreparePulse ] can't send signal to future slot (for pulse %d), error - %s", c.futurePulseNumber, err)
 	}
 
 	if c.presentPulseNumber != nil {
 		presentSlot := c.slotMap[*c.presentPulseNumber]
 		err := presentSlot.inputQueue.PushSignal(PendingPulseSignal, callback)
 		if err != nil {
-			return errors.Wrapf(err, "[ PreparePulse ] can't send signal to present slot (for pulse %d)", c.presentPulseNumber)
+			log.Panicf("[ PreparePulse ] can't send signal to present slot (for pulse %d), error - %s", c.presentPulseNumber, err)
 		}
 	}
 
@@ -247,7 +248,7 @@ func (c *PulseConveyor) ActivatePulse() error {
 	err := futureSlot.inputQueue.PushSignal(ActivatePulseSignal, callback)
 	if err != nil {
 		c.lock.Unlock()
-		return errors.Wrapf(err, "[ ActivatePulse ] can't send signal to future slot (for pulse %d)", c.futurePulseNumber)
+		log.Panicf("[ ActivatePulse ] can't send signal to future slot (for pulse %d), error - %s", c.futurePulseNumber, err)
 	}
 
 	presentSlot := c.slotMap[*c.presentPulseNumber]
@@ -255,7 +256,7 @@ func (c *PulseConveyor) ActivatePulse() error {
 	err = presentSlot.inputQueue.PushSignal(ActivatePulseSignal, &wg)
 	if err != nil {
 		c.lock.Unlock()
-		return errors.Wrapf(err, "[ ActivatePulse ] can't send signal to present slot (for pulse %d)", c.presentPulseNumber)
+		log.Panicf("[ ActivatePulse ] can't send signal to present slot (for pulse %d), error - %s", c.presentPulseNumber, err)
 	}
 
 	c.futurePulseData = nil

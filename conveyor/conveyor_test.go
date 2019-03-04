@@ -297,29 +297,27 @@ func TestConveyor_PreparePulse_NotFuture(t *testing.T) {
 	require.Equal(t, Active, c.state)
 }
 
-func TestConveyor_PreparePulse_PushSignalPresentErr(t *testing.T) {
+func TestConveyor_PreparePulse_PushSignalPresentPanic(t *testing.T) {
 	c := testPulseConveyor(t, false)
 	c.futurePulseNumber = nil
 	pulse := core.Pulse{PulseNumber: testRealPulse + testPulseDelta}
 	callback := mockCallback()
 	oldState := c.state
 
-	err := c.PreparePulse(pulse, callback)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "can't send signal to present slot")
+	panicValue := fmt.Sprintf("[ PreparePulse ] can't send signal to present slot (for pulse %d), error - test error", c.presentPulseNumber)
+	require.PanicsWithValue(t, panicValue, func() { c.PreparePulse(pulse, callback) })
 	require.Nil(t, c.futurePulseData)
 	require.Equal(t, oldState, c.state)
 }
 
-func TestConveyor_PreparePulse_PushSignalFutureErr(t *testing.T) {
+func TestConveyor_PreparePulse_PushSignalFuturePanic(t *testing.T) {
 	c := testPulseConveyor(t, false)
 	pulse := core.Pulse{PulseNumber: testRealPulse + testPulseDelta}
 	callback := mockCallback()
 	oldState := c.state
 
-	err := c.PreparePulse(pulse, callback)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "can't send signal to future slot")
+	panicValue := fmt.Sprintf("[ PreparePulse ] can't send signal to future slot (for pulse %d), error - test error", c.futurePulseNumber)
+	require.PanicsWithValue(t, panicValue, func() { c.PreparePulse(pulse, callback) })
 	require.Nil(t, c.futurePulseData)
 	require.Equal(t, oldState, c.state)
 }
@@ -372,10 +370,8 @@ func TestConveyor_ActivatePulse_PushSignalErr(t *testing.T) {
 	c.newFuturePulseNumber = &pulse.NextPulseNumber
 	c.state = PreparingPulse
 
-	err := c.ActivatePulse()
-
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "can't send signal to present slot")
+	panicValue := fmt.Sprintf("[ ActivatePulse ] can't send signal to present slot (for pulse %d), error - test error", c.futurePulseNumber)
+	require.PanicsWithValue(t, panicValue, func() { c.ActivatePulse() })
 	require.NotNil(t, c.futurePulseData)
 	require.Equal(t, PreparingPulse, c.state)
 }
