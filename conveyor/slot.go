@@ -19,6 +19,7 @@ package conveyor
 import (
 	"fmt"
 
+	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
 	"github.com/insolar/insolar/conveyor/queue"
 	"github.com/insolar/insolar/core"
 	"github.com/pkg/errors"
@@ -64,19 +65,9 @@ type HandlersConfiguration struct {
 }
 
 // TODO: logic will be provided after pulse change mechanism
-func (s *HandlersConfiguration) getMachineConfiguration(smType int) StateMachineType { // nolint: unused
+func (s *HandlersConfiguration) getMachineConfiguration(smType int) statemachine.StateMachineType { // nolint: unused
 	return nil
 }
-
-// ActivationStatus represents status of work for slot element
-type ActivationStatus int
-
-//go:generate stringer -type=ActivationStatus
-const (
-	EmptyElement = ActivationStatus(iota)
-	ActiveElement
-	NotActiveElement
-)
 
 // ElementList is a list of slotElements with pointers to head and tail
 type ElementList struct {
@@ -123,7 +114,7 @@ type Slot struct {
 var SlotStateMachine = slotElement{
 	id:               0,
 	state:            0,
-	stateMachineType: 0,
+	stateMachineType: nil, // TODO: add smth correct
 }
 
 func initElementsBuf() []slotElement {
@@ -167,24 +158,28 @@ func NewSlot(pulseState PulseState, pulseNumber core.PulseNumber) *Slot {
 	}
 }
 
+// GetPulseNumber implements iface SlotDetails
 func (s *Slot) GetPulseNumber() core.PulseNumber { // nolint: unused
 	return s.pulseNumber
 }
 
+// GetPulseData implements iface SlotDetails
 func (s *Slot) GetPulseData() core.Pulse { // nolint: unused
 	return s.pulse
 }
 
+// GetNodeID implements iface SlotDetails
 func (s *Slot) GetNodeID() uint32 { // nolint: unused
 	return s.nodeID
 }
 
+// GetNodeData implements iface SlotDetails
 func (s *Slot) GetNodeData() interface{} { // nolint: unused
 	return s.nodeData
 }
 
 // createElement creates new active element from empty element
-func (s *Slot) createElement(stateMachineType StateMachineType, state uint16, event queue.OutputElement) (*slotElement, error) { // nolint: unused
+func (s *Slot) createElement(stateMachineType statemachine.StateMachineType, state uint16, event queue.OutputElement) (*slotElement, error) { // nolint: unused
 	element := s.popElement(EmptyElement)
 	element.stateMachineType = stateMachineType
 	element.state = state
@@ -221,21 +216,4 @@ func (s *Slot) pushElement(status ActivationStatus, element *slotElement) error 
 	}
 	list.pushElement(element)
 	return nil
-}
-
-type StateMachineType interface{}
-
-type slotElement struct {
-	id               uint32
-	payload          interface{} // nolint
-	state            uint16
-	stateMachineType StateMachineType
-
-	nextElement      *slotElement
-	activationStatus ActivationStatus
-}
-
-// newSlotElement creates new slot element with provided activation status
-func newSlotElement(activationStatus ActivationStatus) *slotElement {
-	return &slotElement{activationStatus: activationStatus}
 }

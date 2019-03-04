@@ -26,7 +26,7 @@ type idType = uint32
 type PulseConveyorAdapterTaskSink interface {
 	PushTask(respSink AdaptorToSlotResponseSink, elementID idType, handlerID idType, taskPayload interface{}) error
 	CancelElementTasks(pulseNumber idType, elementID idType)
-	CancelPulseTasks(pulseNumber idType)
+	CancelPulseTasks(pulseNumber uint32)
 	FlushPulseTasks(pulseNumber uint32)
 	FlushNodeTasks(nodeID idType)
 }
