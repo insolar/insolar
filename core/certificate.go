@@ -32,8 +32,6 @@ type Certificate interface {
 
 	GetRootDomainReference() *RecordRef
 	GetDiscoveryNodes() []DiscoveryNode
-	GetMajorityRule() int
-	GetMinRoles() (virtual uint, heavyMaterial uint, lightMaterial uint)
 }
 
 //go:generate minimock -i github.com/insolar/insolar/core.DiscoveryNode -o ../testutils -s _mock.go

@@ -29,6 +29,8 @@ import (
 	"github.com/insolar/insolar/consensus/phases"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/network/nodenetwork"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
@@ -68,6 +70,16 @@ func (s *testSuite) TestNodeConnect() {
 	s.Equal(s.getNodesCount()+1, len(activeNodes))
 	activeNodes = testNode.serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount()+1, len(activeNodes))
+}
+
+func (s *testSuite) TestNodeConnectInvalidVersion() {
+	testNode := newNetworkNode()
+	s.preInitNode(testNode)
+	testNode.serviceNetwork.NodeKeeper.GetOrigin().(nodenetwork.MutableNode).SetVersion("ololo")
+	s.InitNode(testNode)
+	err := testNode.componentManager.Start(s.fixture().ctx)
+	assert.Error(s.T(), err)
+	log.Infof("Error: %s", err)
 }
 
 func (s *testSuite) TestManyNodesConnect() {
@@ -272,7 +284,7 @@ func TestServiceNetworkManyBootstraps(t *testing.T) {
 }
 
 func TestServiceNetworkManyNodes(t *testing.T) {
-	t.Skip(consensusMinMsg)
+	t.Skip("tmp 123")
 
 	s := NewTestSuite(5, 10)
 	suite.Run(t, s)

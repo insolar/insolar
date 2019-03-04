@@ -386,11 +386,7 @@ func (nk *nodekeeper) NodesJoinedDuringPreviousPulse() bool {
 
 func (nk *nodekeeper) GetUnsyncList() network.UnsyncList {
 	activeNodes := nk.GetActiveNodes()
-	return nk.GetUnsyncListFromNodes(activeNodes)
-}
-
-func (nk *nodekeeper) GetUnsyncListFromNodes(nodes []core.Node) network.UnsyncList {
-	return newUnsyncList(nk.origin, nodes, len(nodes))
+	return newUnsyncList(nk.origin, activeNodes, len(activeNodes))
 }
 
 func (nk *nodekeeper) GetSparseUnsyncList(length int) network.UnsyncList {
@@ -448,7 +444,7 @@ func (nk *nodekeeper) MoveSyncToActive(ctx context.Context) error {
 
 func (nk *nodekeeper) gracefullyStop() {
 	// TODO: graceful stop
-	nk.Handler.Abort("Gracefully stop")
+	nk.Handler.Abort()
 }
 
 func (nk *nodekeeper) reindex() {

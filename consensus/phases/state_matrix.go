@@ -27,14 +27,14 @@ import (
 )
 
 type StateMatrix struct {
-	data   [][]packets.TriState
+	data   [][]packets.BitSetState
 	mapper packets.BitSetMapper
 }
 
 func NewStateMatrix(mapper packets.BitSetMapper) *StateMatrix {
-	data := make([][]packets.TriState, mapper.Length())
+	data := make([][]packets.BitSetState, mapper.Length())
 	for i := 0; i < mapper.Length(); i++ {
-		data[i] = make([]packets.TriState, mapper.Length())
+		data[i] = make([]packets.BitSetState, mapper.Length())
 		for j := 0; j < mapper.Length(); j++ {
 			data[i][j] = packets.TimedOut
 		}

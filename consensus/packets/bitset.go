@@ -22,22 +22,24 @@ import (
 	"github.com/pkg/errors"
 )
 
-// TriState is state of the communicating node
-type TriState uint8
+// BitSetState is state of the communicating node
+type BitSetState uint8
 
 const (
-	// Legit is bit indicating OK data from node
-	Legit TriState = iota + 1
-	// TimedOut is bit indicating that timeout occurred when communicating with node
-	TimedOut
-	// Fraud is bit indicating that the node is malicious (fraud)
+	// TimedOut is state indicating that timeout occurred when communicating with node
+	TimedOut BitSetState = iota
+	// Legit is state indicating OK data from node
+	Legit
+	// Fraud is state indicating that the node is malicious (fraud)
 	Fraud
+	// Inconsistent is state indicating that node validation is inconsistent on different nodes
+	Inconsistent
 )
 
 // BitSetCell is structure that contains the state of the node
 type BitSetCell struct {
 	NodeID core.RecordRef
-	State  TriState
+	State  BitSetState
 }
 
 // Possible errors in BitSetMapper
@@ -66,12 +68,12 @@ type BitSet interface {
 	// GetCells get buckets of bitset
 	GetCells(mapper BitSetMapper) ([]BitSetCell, error)
 	// GetTristateArray get underlying tristate
-	GetTristateArray() ([]TriState, error)
+	GetTristateArray() ([]BitSetState, error)
 	// ApplyChanges returns copy of the current bitset with changes applied
 	ApplyChanges(changes []BitSetCell, mapper BitSetMapper) error
 }
 
 // NewBitSet creates bitset from a set of buckets and the mapper. Size == cells count.
 func NewBitSet(size int) (BitSet, error) {
-	return NewTriStateBitSet(size)
+	return NewBitSetImpl(size, false)
 }

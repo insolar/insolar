@@ -158,7 +158,7 @@ func (suite *LogicRunnerTestSuite) TestCheckPendingRequests() {
 		message     bool
 		messageType core.MessageType
 		amReply     *struct {
-			has bool;
+			has bool
 			err error
 		}
 		isError bool
@@ -186,7 +186,7 @@ func (suite *LogicRunnerTestSuite) TestCheckPendingRequests() {
 			message:     true,
 			messageType: core.TypeCallMethod,
 			amReply: &struct {
-				has bool;
+				has bool
 				err error
 			}{false, nil},
 			outState: message.NotPending,
@@ -197,7 +197,7 @@ func (suite *LogicRunnerTestSuite) TestCheckPendingRequests() {
 			message:     true,
 			messageType: core.TypeCallMethod,
 			amReply: &struct {
-				has bool;
+				has bool
 				err error
 			}{true, nil},
 			outState: message.InPending,
@@ -208,7 +208,7 @@ func (suite *LogicRunnerTestSuite) TestCheckPendingRequests() {
 			message:     true,
 			messageType: core.TypeCallMethod,
 			amReply: &struct {
-				has bool;
+				has bool
 				err error
 			}{true, errors.New("some")},
 			outState: message.PendingUnknown,
@@ -669,7 +669,7 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 
 	num := 100
 	wg := sync.WaitGroup{}
-	wg.Add(num*2)
+	wg.Add(num * 2)
 
 	suite.mb.SendFunc = func(
 		ctx context.Context, msg core.Message, opts *core.MessageSendOptions,
