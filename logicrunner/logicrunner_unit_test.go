@@ -248,56 +248,145 @@ func (suite *LogicRunnerTestSuite) TestCheckPendingRequests() {
 }
 
 func (suite *LogicRunnerTestSuite) TestPrepareState() {
-	object := testutils.RandomRef()
-	msg := &message.ExecutorResults{
-		Caller:    testutils.RandomRef(),
-		RecordRef: object,
+	type msgt struct {
+		pending  message.PendingState
+		queueLen int
+	}
+	type exp struct {
+		pending  message.PendingState
+		queueLen int
+		hasPendingCall bool
+	}
+	type obj struct {
+		pending  message.PendingState
+		queueLen int
+	}
+	table := []struct {
+		name           string
+		existingObject bool
+		object         obj
+		message        msgt
+		expected       exp
+	}{
+		{
+			name: "first call, NotPending in message",
+			message: msgt{pending: message.NotPending},
+			expected: exp{pending: message.NotPending},
+		},
+		{
+			name: "message says InPending, no object",
+			message: msgt{pending: message.InPending},
+			expected: exp{pending: message.InPending},
+		},
+		{
+			name:           "message says InPending, with object",
+			existingObject: true,
+			message: msgt{pending: message.InPending},
+			expected: exp{pending: message.InPending},
+		},
+		{
+			name:           "do not change pending status if existing says NotPending",
+			existingObject: true,
+			object: obj{pending: message.NotPending},
+			message: msgt{pending: message.InPending},
+			expected: exp{pending: message.NotPending},
+		},
+		{
+			name:           "message changes to NotPending, prev executor forces",
+			existingObject: true,
+			object: obj{pending: message.InPending},
+			message: msgt{pending: message.NotPending},
+			expected: exp{pending: message.NotPending},
+		},
+		{
+			name: "message has queue, no existing object",
+			message: msgt{
+				pending:  message.InPending,
+				queueLen: 1,
+			},
+			expected: exp{
+				pending:  message.InPending,
+				queueLen: 1,
+			},
+		},
+		{
+			name: "message has queue and object has queue",
+			existingObject: true,
+			object: obj{
+				pending:  message.InPending,
+				queueLen: 1,
+			},
+			message: msgt{
+				pending:  message.InPending,
+				queueLen: 1,
+			},
+			expected: exp{
+				pending:  message.InPending,
+				queueLen: 2,
+			},
+		},
+		{
+			name: "message has queue, but unknown pending state",
+			message: msgt{
+				pending:  message.PendingUnknown,
+				queueLen: 1,
+			},
+			expected: exp{
+				pending:  message.InPending,
+				queueLen: 1,
+				hasPendingCall: true,
+			},
+		},
 	}
 
-	// not pending
-	// it's a first call, it's also initialize lr.state[object].ExecutionState
-	// also check for empty Queue
-	msg.Pending = message.NotPending
-	_ = suite.lr.prepareObjectState(suite.ctx, msg)
-	suite.Require().Equal(message.NotPending, suite.lr.state[object].ExecutionState.pending)
-	suite.Require().Equal(0, len(suite.lr.state[object].ExecutionState.Queue))
+	for _, test := range table {
+		test := test
+		suite.T().Run(test.name, func(t *testing.T) {
+			object := testutils.RandomRef()
+			defer delete(suite.lr.state, object)
 
-	// pending without queue
-	suite.lr.state[object].ExecutionState.pending = message.PendingUnknown
-	msg.Pending = message.InPending
-	_ = suite.lr.prepareObjectState(suite.ctx, msg)
-	suite.Require().Equal(message.InPending, suite.lr.state[object].ExecutionState.pending)
+			msg := &message.ExecutorResults{
+				Caller:    testutils.RandomRef(),
+				RecordRef: object,
+				Pending:   test.message.pending,
+				Queue:     []message.ExecutionQueueElement{},
+			}
 
-	// do not change pending status if it isn't unknown
-	suite.lr.state[object].ExecutionState.pending = message.NotPending
-	msg.Pending = message.InPending
-	_ = suite.lr.prepareObjectState(suite.ctx, msg)
-	suite.Require().Equal(message.NotPending, suite.lr.state[object].ExecutionState.pending)
+			for test.message.queueLen > 0 {
+				test.message.queueLen--
 
-	// do not change pending status if it isn't unknown
-	suite.lr.state[object].ExecutionState.pending = message.InPending
-	msg.Pending = message.InPending
-	_ = suite.lr.prepareObjectState(suite.ctx, msg)
-	suite.Require().Equal(message.InPending, suite.lr.state[object].ExecutionState.pending)
+				parcel := testutils.NewParcelMock(suite.mc)
+				parcel.ContextMock.Expect(context.Background()).Return(context.Background())
+				msg.Queue = append(msg.Queue, message.ExecutionQueueElement{Parcel: parcel})
+			}
 
-	parcel := testutils.NewParcelMock(suite.mc)
-	parcel.ContextMock.Expect(context.Background()).Return(context.Background())
-	// brand new queue from message
-	msg.Queue = []message.ExecutionQueueElement{{Parcel: parcel}}
-	_ = suite.lr.prepareObjectState(suite.ctx, msg)
-	suite.Require().Equal(1, len(suite.lr.state[object].ExecutionState.Queue))
+			if test.existingObject {
+				os := suite.lr.UpsertObjectState(object)
+				os.ExecutionState = &ExecutionState{
+					pending: test.object.pending,
+					Queue: []ExecutionQueueElement{},
+				}
 
-	testMsg := message.CallMethod{ReturnMode: message.ReturnNoWait}
-	parcel = testutils.NewParcelMock(suite.mc)
-	parcel.ContextMock.Expect(context.Background()).Return(context.Background())
-	parcel.MessageMock.Return(&testMsg) // mock message that returns NoWait
+				for test.object.queueLen > 0 {
+					test.object.queueLen--
 
-	queueElementRequest := testutils.RandomRef()
-	msg.Queue = []message.ExecutionQueueElement{{Request: &queueElementRequest, Parcel: parcel}}
-	_ = suite.lr.prepareObjectState(suite.ctx, msg)
-	suite.Require().Equal(2, len(suite.lr.state[object].ExecutionState.Queue))
-	suite.Require().Equal(&queueElementRequest, suite.lr.state[object].ExecutionState.Queue[0].request)
-	suite.Require().Equal(&testMsg, suite.lr.state[object].ExecutionState.Queue[0].parcel.Message())
+					os.ExecutionState.Queue = append(
+						os.ExecutionState.Queue,
+						ExecutionQueueElement{},
+					)
+				}
+			}
+
+			if test.expected.hasPendingCall {
+				suite.am.HasPendingRequestsMock.Return(true, nil)
+			}
+
+			err := suite.lr.prepareObjectState(suite.ctx, msg)
+			suite.Require().NoError(err)
+			suite.Require().Equal(test.expected.pending, suite.lr.state[object].ExecutionState.pending)
+			suite.Require().Equal(test.expected.queueLen, len(suite.lr.state[object].ExecutionState.Queue))
+		})
+	}
 }
 
 func (suite *LogicRunnerTestSuite) TestHandlePendingFinishedMessage() {
@@ -738,11 +827,11 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 	)
 
 	table := []struct {
-		name                     string
-		when                     whenType
-		messagesExpected         []core.MessageType
-		errorExpected            bool
-		pendingInExecutorResults message.PendingState
+		name                      string
+		when                      whenType
+		messagesExpected          []core.MessageType
+		errorExpected             bool
+		pendingInExecutorResults  message.PendingState
 		queueLenInExecutorResults int
 	}{
 		{
@@ -755,10 +844,10 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 			when: whenRegisterRequest,
 		},
 		{
-			name:             "pulse change in HasPendingRequests",
-			when:             whenHasPendingRequest,
-			messagesExpected: []core.MessageType{core.TypeExecutorResults},
-			pendingInExecutorResults: message.PendingUnknown,
+			name:                      "pulse change in HasPendingRequests",
+			when:                      whenHasPendingRequest,
+			messagesExpected:          []core.MessageType{core.TypeExecutorResults},
+			pendingInExecutorResults:  message.PendingUnknown,
 			queueLenInExecutorResults: 1,
 		},
 		{
@@ -767,7 +856,7 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 			messagesExpected: []core.MessageType{
 				core.TypeExecutorResults, core.TypeReturnResults, core.TypePendingFinished, core.TypeStillExecuting,
 			},
-			pendingInExecutorResults: message.InPending,
+			pendingInExecutorResults:  message.InPending,
 			queueLenInExecutorResults: 0,
 		},
 	}
