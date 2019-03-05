@@ -563,7 +563,7 @@ func (suite *LogicRunnerTestSuite) TestPrepareObjectStateChangeLedgerHasMoreRequ
 	}
 
 	for _, test := range testCases {
-		msg = &message.ExecutorResults{RecordRef: ref, LedgerHasMoreRequests: test.messageStatus}
+		msg = &message.ExecutorResults{RecordRef: ref, LedgerHasMoreRequests: test.messageStatus, Pending: message.NotPending}
 		suite.lr.state[ref] = &ObjectState{ExecutionState: &ExecutionState{QueueProcessorActive: true, LedgerHasMoreRequests: test.objectStateStatus}}
 		err := suite.lr.prepareObjectState(suite.ctx, msg)
 		suite.Require().NoError(err)
