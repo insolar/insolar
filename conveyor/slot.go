@@ -93,6 +93,7 @@ type Slot struct {
 	inputQueue            queue.IQueue
 	pulseState            PulseState
 	slotState             SlotState
+	stateMachine          slotElement
 	pulse                 core.Pulse
 	pulseNumber           core.PulseNumber
 	nodeID                uint32
@@ -138,13 +139,12 @@ func NewSlot(pulseState PulseState, pulseNumber core.PulseNumber) *Slot {
 		ActiveElement:    {},
 		NotActiveElement: {},
 	}
-	firstElement := elementListMap[EmptyElement].popElement()
-	*firstElement = SlotStateMachine
 	return &Slot{
 		pulseState:     pulseState,
 		inputQueue:     queue.NewMutexQueue(),
 		pulseNumber:    pulseNumber,
 		slotState:      slotState,
+		stateMachine:   SlotStateMachine,
 		elements:       elements,
 		elementListMap: elementListMap,
 	}
@@ -182,6 +182,8 @@ func (s *Slot) createElement(stateMachineType statemachine.StateMachineType, sta
 
 	err := s.pushElement(ActiveElement, element)
 	if err != nil {
+		emptyList := s.elementListMap[EmptyElement]
+		emptyList.pushElement(element)
 		return nil, errors.Wrap(err, "[ createElement ]")
 	}
 	return element, nil
