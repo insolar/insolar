@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
+	constant "github.com/insolar/insolar/conveyor/interfaces/constant"
+
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
@@ -17,32 +19,32 @@ import (
 type StateMachineTypeMock struct {
 	t minimock.Tester
 
-	GetMigrationHandlerFunc       func(p SlotType, p1 uint32) (r MigrationHandler)
+	GetMigrationHandlerFunc       func(p constant.PulseState, p1 uint32) (r MigrationHandler)
 	GetMigrationHandlerCounter    uint64
 	GetMigrationHandlerPreCounter uint64
 	GetMigrationHandlerMock       mStateMachineTypeMockGetMigrationHandler
 
-	GetNestedHandlerFunc       func(p SlotType, p1 uint32) (r NestedHandler)
+	GetNestedHandlerFunc       func(p constant.PulseState, p1 uint32) (r NestedHandler)
 	GetNestedHandlerCounter    uint64
 	GetNestedHandlerPreCounter uint64
 	GetNestedHandlerMock       mStateMachineTypeMockGetNestedHandler
 
-	GetResponseErrorHandlerFunc       func(p SlotType, p1 uint32) (r ResponseErrorHandler)
+	GetResponseErrorHandlerFunc       func(p constant.PulseState, p1 uint32) (r ResponseErrorHandler)
 	GetResponseErrorHandlerCounter    uint64
 	GetResponseErrorHandlerPreCounter uint64
 	GetResponseErrorHandlerMock       mStateMachineTypeMockGetResponseErrorHandler
 
-	GetResponseHandlerFunc       func(p SlotType, p1 uint32) (r AdapterResponseHandler)
+	GetResponseHandlerFunc       func(p constant.PulseState, p1 uint32) (r AdapterResponseHandler)
 	GetResponseHandlerCounter    uint64
 	GetResponseHandlerPreCounter uint64
 	GetResponseHandlerMock       mStateMachineTypeMockGetResponseHandler
 
-	GetTransitionErrorHandlerFunc       func(p SlotType, p1 uint32) (r TransitionErrorHandler)
+	GetTransitionErrorHandlerFunc       func(p constant.PulseState, p1 uint32) (r TransitionErrorHandler)
 	GetTransitionErrorHandlerCounter    uint64
 	GetTransitionErrorHandlerPreCounter uint64
 	GetTransitionErrorHandlerMock       mStateMachineTypeMockGetTransitionErrorHandler
 
-	GetTransitionHandlerFunc       func(p SlotType, p1 uint32) (r TransitHandler)
+	GetTransitionHandlerFunc       func(p constant.PulseState, p1 uint32) (r TransitHandler)
 	GetTransitionHandlerCounter    uint64
 	GetTransitionHandlerPreCounter uint64
 	GetTransitionHandlerMock       mStateMachineTypeMockGetTransitionHandler
@@ -84,7 +86,7 @@ type StateMachineTypeMockGetMigrationHandlerExpectation struct {
 }
 
 type StateMachineTypeMockGetMigrationHandlerInput struct {
-	p  SlotType
+	p  constant.PulseState
 	p1 uint32
 }
 
@@ -93,7 +95,7 @@ type StateMachineTypeMockGetMigrationHandlerResult struct {
 }
 
 //Expect specifies that invocation of StateMachineType.GetMigrationHandler is expected from 1 to Infinity times
-func (m *mStateMachineTypeMockGetMigrationHandler) Expect(p SlotType, p1 uint32) *mStateMachineTypeMockGetMigrationHandler {
+func (m *mStateMachineTypeMockGetMigrationHandler) Expect(p constant.PulseState, p1 uint32) *mStateMachineTypeMockGetMigrationHandler {
 	m.mock.GetMigrationHandlerFunc = nil
 	m.expectationSeries = nil
 
@@ -117,7 +119,7 @@ func (m *mStateMachineTypeMockGetMigrationHandler) Return(r MigrationHandler) *S
 }
 
 //ExpectOnce specifies that invocation of StateMachineType.GetMigrationHandler is expected once
-func (m *mStateMachineTypeMockGetMigrationHandler) ExpectOnce(p SlotType, p1 uint32) *StateMachineTypeMockGetMigrationHandlerExpectation {
+func (m *mStateMachineTypeMockGetMigrationHandler) ExpectOnce(p constant.PulseState, p1 uint32) *StateMachineTypeMockGetMigrationHandlerExpectation {
 	m.mock.GetMigrationHandlerFunc = nil
 	m.mainExpectation = nil
 
@@ -132,7 +134,7 @@ func (e *StateMachineTypeMockGetMigrationHandlerExpectation) Return(r MigrationH
 }
 
 //Set uses given function f as a mock of StateMachineType.GetMigrationHandler method
-func (m *mStateMachineTypeMockGetMigrationHandler) Set(f func(p SlotType, p1 uint32) (r MigrationHandler)) *StateMachineTypeMock {
+func (m *mStateMachineTypeMockGetMigrationHandler) Set(f func(p constant.PulseState, p1 uint32) (r MigrationHandler)) *StateMachineTypeMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -141,7 +143,7 @@ func (m *mStateMachineTypeMockGetMigrationHandler) Set(f func(p SlotType, p1 uin
 }
 
 //GetMigrationHandler implements github.com/insolar/insolar/conveyor/interfaces/statemachine.StateMachineType interface
-func (m *StateMachineTypeMock) GetMigrationHandler(p SlotType, p1 uint32) (r MigrationHandler) {
+func (m *StateMachineTypeMock) GetMigrationHandler(p constant.PulseState, p1 uint32) (r MigrationHandler) {
 	counter := atomic.AddUint64(&m.GetMigrationHandlerPreCounter, 1)
 	defer atomic.AddUint64(&m.GetMigrationHandlerCounter, 1)
 
@@ -232,7 +234,7 @@ type StateMachineTypeMockGetNestedHandlerExpectation struct {
 }
 
 type StateMachineTypeMockGetNestedHandlerInput struct {
-	p  SlotType
+	p  constant.PulseState
 	p1 uint32
 }
 
@@ -241,7 +243,7 @@ type StateMachineTypeMockGetNestedHandlerResult struct {
 }
 
 //Expect specifies that invocation of StateMachineType.GetNestedHandler is expected from 1 to Infinity times
-func (m *mStateMachineTypeMockGetNestedHandler) Expect(p SlotType, p1 uint32) *mStateMachineTypeMockGetNestedHandler {
+func (m *mStateMachineTypeMockGetNestedHandler) Expect(p constant.PulseState, p1 uint32) *mStateMachineTypeMockGetNestedHandler {
 	m.mock.GetNestedHandlerFunc = nil
 	m.expectationSeries = nil
 
@@ -265,7 +267,7 @@ func (m *mStateMachineTypeMockGetNestedHandler) Return(r NestedHandler) *StateMa
 }
 
 //ExpectOnce specifies that invocation of StateMachineType.GetNestedHandler is expected once
-func (m *mStateMachineTypeMockGetNestedHandler) ExpectOnce(p SlotType, p1 uint32) *StateMachineTypeMockGetNestedHandlerExpectation {
+func (m *mStateMachineTypeMockGetNestedHandler) ExpectOnce(p constant.PulseState, p1 uint32) *StateMachineTypeMockGetNestedHandlerExpectation {
 	m.mock.GetNestedHandlerFunc = nil
 	m.mainExpectation = nil
 
@@ -280,7 +282,7 @@ func (e *StateMachineTypeMockGetNestedHandlerExpectation) Return(r NestedHandler
 }
 
 //Set uses given function f as a mock of StateMachineType.GetNestedHandler method
-func (m *mStateMachineTypeMockGetNestedHandler) Set(f func(p SlotType, p1 uint32) (r NestedHandler)) *StateMachineTypeMock {
+func (m *mStateMachineTypeMockGetNestedHandler) Set(f func(p constant.PulseState, p1 uint32) (r NestedHandler)) *StateMachineTypeMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -289,7 +291,7 @@ func (m *mStateMachineTypeMockGetNestedHandler) Set(f func(p SlotType, p1 uint32
 }
 
 //GetNestedHandler implements github.com/insolar/insolar/conveyor/interfaces/statemachine.StateMachineType interface
-func (m *StateMachineTypeMock) GetNestedHandler(p SlotType, p1 uint32) (r NestedHandler) {
+func (m *StateMachineTypeMock) GetNestedHandler(p constant.PulseState, p1 uint32) (r NestedHandler) {
 	counter := atomic.AddUint64(&m.GetNestedHandlerPreCounter, 1)
 	defer atomic.AddUint64(&m.GetNestedHandlerCounter, 1)
 
@@ -380,7 +382,7 @@ type StateMachineTypeMockGetResponseErrorHandlerExpectation struct {
 }
 
 type StateMachineTypeMockGetResponseErrorHandlerInput struct {
-	p  SlotType
+	p  constant.PulseState
 	p1 uint32
 }
 
@@ -389,7 +391,7 @@ type StateMachineTypeMockGetResponseErrorHandlerResult struct {
 }
 
 //Expect specifies that invocation of StateMachineType.GetResponseErrorHandler is expected from 1 to Infinity times
-func (m *mStateMachineTypeMockGetResponseErrorHandler) Expect(p SlotType, p1 uint32) *mStateMachineTypeMockGetResponseErrorHandler {
+func (m *mStateMachineTypeMockGetResponseErrorHandler) Expect(p constant.PulseState, p1 uint32) *mStateMachineTypeMockGetResponseErrorHandler {
 	m.mock.GetResponseErrorHandlerFunc = nil
 	m.expectationSeries = nil
 
@@ -413,7 +415,7 @@ func (m *mStateMachineTypeMockGetResponseErrorHandler) Return(r ResponseErrorHan
 }
 
 //ExpectOnce specifies that invocation of StateMachineType.GetResponseErrorHandler is expected once
-func (m *mStateMachineTypeMockGetResponseErrorHandler) ExpectOnce(p SlotType, p1 uint32) *StateMachineTypeMockGetResponseErrorHandlerExpectation {
+func (m *mStateMachineTypeMockGetResponseErrorHandler) ExpectOnce(p constant.PulseState, p1 uint32) *StateMachineTypeMockGetResponseErrorHandlerExpectation {
 	m.mock.GetResponseErrorHandlerFunc = nil
 	m.mainExpectation = nil
 
@@ -428,7 +430,7 @@ func (e *StateMachineTypeMockGetResponseErrorHandlerExpectation) Return(r Respon
 }
 
 //Set uses given function f as a mock of StateMachineType.GetResponseErrorHandler method
-func (m *mStateMachineTypeMockGetResponseErrorHandler) Set(f func(p SlotType, p1 uint32) (r ResponseErrorHandler)) *StateMachineTypeMock {
+func (m *mStateMachineTypeMockGetResponseErrorHandler) Set(f func(p constant.PulseState, p1 uint32) (r ResponseErrorHandler)) *StateMachineTypeMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -437,7 +439,7 @@ func (m *mStateMachineTypeMockGetResponseErrorHandler) Set(f func(p SlotType, p1
 }
 
 //GetResponseErrorHandler implements github.com/insolar/insolar/conveyor/interfaces/statemachine.StateMachineType interface
-func (m *StateMachineTypeMock) GetResponseErrorHandler(p SlotType, p1 uint32) (r ResponseErrorHandler) {
+func (m *StateMachineTypeMock) GetResponseErrorHandler(p constant.PulseState, p1 uint32) (r ResponseErrorHandler) {
 	counter := atomic.AddUint64(&m.GetResponseErrorHandlerPreCounter, 1)
 	defer atomic.AddUint64(&m.GetResponseErrorHandlerCounter, 1)
 
@@ -528,7 +530,7 @@ type StateMachineTypeMockGetResponseHandlerExpectation struct {
 }
 
 type StateMachineTypeMockGetResponseHandlerInput struct {
-	p  SlotType
+	p  constant.PulseState
 	p1 uint32
 }
 
@@ -537,7 +539,7 @@ type StateMachineTypeMockGetResponseHandlerResult struct {
 }
 
 //Expect specifies that invocation of StateMachineType.GetResponseHandler is expected from 1 to Infinity times
-func (m *mStateMachineTypeMockGetResponseHandler) Expect(p SlotType, p1 uint32) *mStateMachineTypeMockGetResponseHandler {
+func (m *mStateMachineTypeMockGetResponseHandler) Expect(p constant.PulseState, p1 uint32) *mStateMachineTypeMockGetResponseHandler {
 	m.mock.GetResponseHandlerFunc = nil
 	m.expectationSeries = nil
 
@@ -561,7 +563,7 @@ func (m *mStateMachineTypeMockGetResponseHandler) Return(r AdapterResponseHandle
 }
 
 //ExpectOnce specifies that invocation of StateMachineType.GetResponseHandler is expected once
-func (m *mStateMachineTypeMockGetResponseHandler) ExpectOnce(p SlotType, p1 uint32) *StateMachineTypeMockGetResponseHandlerExpectation {
+func (m *mStateMachineTypeMockGetResponseHandler) ExpectOnce(p constant.PulseState, p1 uint32) *StateMachineTypeMockGetResponseHandlerExpectation {
 	m.mock.GetResponseHandlerFunc = nil
 	m.mainExpectation = nil
 
@@ -576,7 +578,7 @@ func (e *StateMachineTypeMockGetResponseHandlerExpectation) Return(r AdapterResp
 }
 
 //Set uses given function f as a mock of StateMachineType.GetResponseHandler method
-func (m *mStateMachineTypeMockGetResponseHandler) Set(f func(p SlotType, p1 uint32) (r AdapterResponseHandler)) *StateMachineTypeMock {
+func (m *mStateMachineTypeMockGetResponseHandler) Set(f func(p constant.PulseState, p1 uint32) (r AdapterResponseHandler)) *StateMachineTypeMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -585,7 +587,7 @@ func (m *mStateMachineTypeMockGetResponseHandler) Set(f func(p SlotType, p1 uint
 }
 
 //GetResponseHandler implements github.com/insolar/insolar/conveyor/interfaces/statemachine.StateMachineType interface
-func (m *StateMachineTypeMock) GetResponseHandler(p SlotType, p1 uint32) (r AdapterResponseHandler) {
+func (m *StateMachineTypeMock) GetResponseHandler(p constant.PulseState, p1 uint32) (r AdapterResponseHandler) {
 	counter := atomic.AddUint64(&m.GetResponseHandlerPreCounter, 1)
 	defer atomic.AddUint64(&m.GetResponseHandlerCounter, 1)
 
@@ -676,7 +678,7 @@ type StateMachineTypeMockGetTransitionErrorHandlerExpectation struct {
 }
 
 type StateMachineTypeMockGetTransitionErrorHandlerInput struct {
-	p  SlotType
+	p  constant.PulseState
 	p1 uint32
 }
 
@@ -685,7 +687,7 @@ type StateMachineTypeMockGetTransitionErrorHandlerResult struct {
 }
 
 //Expect specifies that invocation of StateMachineType.GetTransitionErrorHandler is expected from 1 to Infinity times
-func (m *mStateMachineTypeMockGetTransitionErrorHandler) Expect(p SlotType, p1 uint32) *mStateMachineTypeMockGetTransitionErrorHandler {
+func (m *mStateMachineTypeMockGetTransitionErrorHandler) Expect(p constant.PulseState, p1 uint32) *mStateMachineTypeMockGetTransitionErrorHandler {
 	m.mock.GetTransitionErrorHandlerFunc = nil
 	m.expectationSeries = nil
 
@@ -709,7 +711,7 @@ func (m *mStateMachineTypeMockGetTransitionErrorHandler) Return(r TransitionErro
 }
 
 //ExpectOnce specifies that invocation of StateMachineType.GetTransitionErrorHandler is expected once
-func (m *mStateMachineTypeMockGetTransitionErrorHandler) ExpectOnce(p SlotType, p1 uint32) *StateMachineTypeMockGetTransitionErrorHandlerExpectation {
+func (m *mStateMachineTypeMockGetTransitionErrorHandler) ExpectOnce(p constant.PulseState, p1 uint32) *StateMachineTypeMockGetTransitionErrorHandlerExpectation {
 	m.mock.GetTransitionErrorHandlerFunc = nil
 	m.mainExpectation = nil
 
@@ -724,7 +726,7 @@ func (e *StateMachineTypeMockGetTransitionErrorHandlerExpectation) Return(r Tran
 }
 
 //Set uses given function f as a mock of StateMachineType.GetTransitionErrorHandler method
-func (m *mStateMachineTypeMockGetTransitionErrorHandler) Set(f func(p SlotType, p1 uint32) (r TransitionErrorHandler)) *StateMachineTypeMock {
+func (m *mStateMachineTypeMockGetTransitionErrorHandler) Set(f func(p constant.PulseState, p1 uint32) (r TransitionErrorHandler)) *StateMachineTypeMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -733,7 +735,7 @@ func (m *mStateMachineTypeMockGetTransitionErrorHandler) Set(f func(p SlotType, 
 }
 
 //GetTransitionErrorHandler implements github.com/insolar/insolar/conveyor/interfaces/statemachine.StateMachineType interface
-func (m *StateMachineTypeMock) GetTransitionErrorHandler(p SlotType, p1 uint32) (r TransitionErrorHandler) {
+func (m *StateMachineTypeMock) GetTransitionErrorHandler(p constant.PulseState, p1 uint32) (r TransitionErrorHandler) {
 	counter := atomic.AddUint64(&m.GetTransitionErrorHandlerPreCounter, 1)
 	defer atomic.AddUint64(&m.GetTransitionErrorHandlerCounter, 1)
 
@@ -824,7 +826,7 @@ type StateMachineTypeMockGetTransitionHandlerExpectation struct {
 }
 
 type StateMachineTypeMockGetTransitionHandlerInput struct {
-	p  SlotType
+	p  constant.PulseState
 	p1 uint32
 }
 
@@ -833,7 +835,7 @@ type StateMachineTypeMockGetTransitionHandlerResult struct {
 }
 
 //Expect specifies that invocation of StateMachineType.GetTransitionHandler is expected from 1 to Infinity times
-func (m *mStateMachineTypeMockGetTransitionHandler) Expect(p SlotType, p1 uint32) *mStateMachineTypeMockGetTransitionHandler {
+func (m *mStateMachineTypeMockGetTransitionHandler) Expect(p constant.PulseState, p1 uint32) *mStateMachineTypeMockGetTransitionHandler {
 	m.mock.GetTransitionHandlerFunc = nil
 	m.expectationSeries = nil
 
@@ -857,7 +859,7 @@ func (m *mStateMachineTypeMockGetTransitionHandler) Return(r TransitHandler) *St
 }
 
 //ExpectOnce specifies that invocation of StateMachineType.GetTransitionHandler is expected once
-func (m *mStateMachineTypeMockGetTransitionHandler) ExpectOnce(p SlotType, p1 uint32) *StateMachineTypeMockGetTransitionHandlerExpectation {
+func (m *mStateMachineTypeMockGetTransitionHandler) ExpectOnce(p constant.PulseState, p1 uint32) *StateMachineTypeMockGetTransitionHandlerExpectation {
 	m.mock.GetTransitionHandlerFunc = nil
 	m.mainExpectation = nil
 
@@ -872,7 +874,7 @@ func (e *StateMachineTypeMockGetTransitionHandlerExpectation) Return(r TransitHa
 }
 
 //Set uses given function f as a mock of StateMachineType.GetTransitionHandler method
-func (m *mStateMachineTypeMockGetTransitionHandler) Set(f func(p SlotType, p1 uint32) (r TransitHandler)) *StateMachineTypeMock {
+func (m *mStateMachineTypeMockGetTransitionHandler) Set(f func(p constant.PulseState, p1 uint32) (r TransitHandler)) *StateMachineTypeMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -881,7 +883,7 @@ func (m *mStateMachineTypeMockGetTransitionHandler) Set(f func(p SlotType, p1 ui
 }
 
 //GetTransitionHandler implements github.com/insolar/insolar/conveyor/interfaces/statemachine.StateMachineType interface
-func (m *StateMachineTypeMock) GetTransitionHandler(p SlotType, p1 uint32) (r TransitHandler) {
+func (m *StateMachineTypeMock) GetTransitionHandler(p constant.PulseState, p1 uint32) (r TransitHandler) {
 	counter := atomic.AddUint64(&m.GetTransitionHandlerPreCounter, 1)
 	defer atomic.AddUint64(&m.GetTransitionHandlerCounter, 1)
 

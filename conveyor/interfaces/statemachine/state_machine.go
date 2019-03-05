@@ -18,38 +18,27 @@ package statemachine
 
 import (
 	"github.com/insolar/insolar/conveyor/interfaces/adapter"
+	"github.com/insolar/insolar/conveyor/interfaces/constant"
 	"github.com/insolar/insolar/conveyor/interfaces/slot"
 )
 
-type InitHandler func(element slot.SlotElementHelper) (interface{}, uint32, error)
 type TransitHandler func(element slot.SlotElementHelper) (interface{}, uint32, error)
 type MigrationHandler func(element slot.SlotElementHelper) (interface{}, uint32, error)
-type ErrorHandler func(element slot.SlotElementHelper, err error) (interface{}, uint32)
 type AdapterResponseHandler func(element slot.SlotElementHelper, response adapter.IAdapterResponse) (interface{}, uint32, error)
 type NestedHandler func(element slot.SlotElementHelper, err error) (interface{}, uint32)
 
 type TransitionErrorHandler func(element slot.SlotElementHelper, err error) (interface{}, uint32)
-type ResponseErrorHandler func(element slot.SlotElementHelper, err error) (interface{}, uint32)
-
-// State is the states of conveyor
-type SlotType int
-
-//go:generate stringer -type=SlotType
-const (
-	Future = SlotType(iota + 1)
-	Present
-	Past
-)
+type ResponseErrorHandler func(element slot.SlotElementHelper, response adapter.IAdapterResponse, err error) (interface{}, uint32)
 
 // StateMachineType describes access to element's state machine
 //go:generate minimock -i github.com/insolar/insolar/conveyor/interfaces/statemachine.StateMachineType -o ./ -s _mock.go
 type StateMachineType interface {
 	GetTypeID() int
-	GetMigrationHandler(slotType SlotType, state uint32) MigrationHandler
-	GetTransitionHandler(slotType SlotType, state uint32) TransitHandler
-	GetResponseHandler(slotType SlotType, state uint32) AdapterResponseHandler
-	GetNestedHandler(slotType SlotType, state uint32) NestedHandler
+	GetMigrationHandler(pulseState constant.PulseState, state uint32) MigrationHandler
+	GetTransitionHandler(pulseState constant.PulseState, state uint32) TransitHandler
+	GetResponseHandler(pulseState constant.PulseState, state uint32) AdapterResponseHandler
+	GetNestedHandler(pulseState constant.PulseState, state uint32) NestedHandler
 
-	GetTransitionErrorHandler(slotType SlotType, state uint32) TransitionErrorHandler
-	GetResponseErrorHandler(slotType SlotType, state uint32) ResponseErrorHandler
+	GetTransitionErrorHandler(pulseState constant.PulseState, state uint32) TransitionErrorHandler
+	GetResponseErrorHandler(pulseState constant.PulseState, state uint32) ResponseErrorHandler
 }

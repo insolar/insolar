@@ -121,7 +121,7 @@ func (w *workerStateMachineImpl) readResponseQueue() error {
 			}
 			element := w.slot.elements[adapterResp.GetElementID()]
 
-			respHandler := element.stateMachineType.GetResponseHandler(element.state)
+			respHandler := element.stateMachineType.GetResponseHandler(w.slot.pulseState, element.state)
 			if respHandler == nil {
 				panic(fmt.Sprintf("No response handler. State: %d. \nAdapterResp: %+v", element.state, adapterResp))
 			}
@@ -129,12 +129,12 @@ func (w *workerStateMachineImpl) readResponseQueue() error {
 			payLoad, newState, err := respHandler(&element, adapterResp)
 			if err != nil {
 				log.Error("[ readResponseQueue ] Response handler errors: ", err)
-				respErrorHandler := element.stateMachineType.GetResponseErrorHandler(element.state)
+				respErrorHandler := element.stateMachineType.GetResponseErrorHandler(w.slot.pulseState, element.state)
 				if respErrorHandler == nil {
 					panic(fmt.Sprintf("No response error handler. State: %d. \nAdapterResp: %+v", element.state, adapterResp))
 				}
 
-				payLoad, newState = respErrorHandler(&element, err)
+				payLoad, newState = respErrorHandler(&element, adapterResp, err)
 			}
 
 			if newState == 0 {

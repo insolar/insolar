@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/insolar/insolar/conveyor/interfaces/constant"
 	"github.com/insolar/insolar/conveyor/queue"
 	"github.com/insolar/insolar/core"
 	"github.com/stretchr/testify/require"
@@ -371,7 +372,7 @@ func TestConveyor_ActivatePulse_PushSignalErr(t *testing.T) {
 	c := testPulseConveyor(t, false)
 	pulse := core.Pulse{PulseNumber: testRealPulse + testPulseDelta}
 	c.futurePulseData = &pulse
-	newFutureSlot := NewSlot(Unallocated, pulse.NextPulseNumber)
+	newFutureSlot := NewSlot(constant.Unallocated, pulse.NextPulseNumber)
 	c.slotMap[pulse.NextPulseNumber] = newFutureSlot
 	c.state = PreparingPulse
 

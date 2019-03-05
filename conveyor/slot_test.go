@@ -19,6 +19,7 @@ package conveyor
 import (
 	"testing"
 
+	"github.com/insolar/insolar/conveyor/interfaces/constant"
 	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
 	"github.com/insolar/insolar/conveyor/queue"
 	"github.com/insolar/insolar/core"
@@ -160,9 +161,9 @@ func TestInitElementsBuf(t *testing.T) {
 }
 
 func TestNewSlot(t *testing.T) {
-	s := NewSlot(Future, testRealPulse)
+	s := NewSlot(constant.Future, testRealPulse)
 	require.NotNil(t, s)
-	require.Equal(t, Future, s.pulseState)
+	require.Equal(t, constant.Future, s.pulseState)
 	require.Equal(t, testRealPulse, s.pulseNumber)
 	require.Equal(t, Initializing, s.slotState)
 	require.Empty(t, s.inputQueue.RemoveAll())
@@ -204,7 +205,7 @@ func TestSlot_getNodeData(t *testing.T) {
 }
 
 func TestSlot_createElement(t *testing.T) {
-	s := NewSlot(Future, testRealPulse)
+	s := NewSlot(constant.Future, testRealPulse)
 	oldEmptyLen := elementListLength(s.elementListMap[EmptyElement])
 	event := queue.OutputElement{}
 
@@ -222,7 +223,7 @@ func TestSlot_createElement(t *testing.T) {
 }
 
 func TestSlot_createElement_Err(t *testing.T) {
-	s := NewSlot(Future, testRealPulse)
+	s := NewSlot(constant.Future, testRealPulse)
 	oldEmptyLen := elementListLength(s.elementListMap[EmptyElement])
 	delete(s.elementListMap, ActiveElement)
 	event := queue.OutputElement{}
