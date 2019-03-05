@@ -70,6 +70,7 @@ func (sm *StateMachine) GetResponseErrorHandler(state int) statemachine.Response
 
 type ElState uint32 //Element State Machine Type ID
 type ElType uint32  //Element State ID
+type ElNewState uint32
 
 func (s ElState) ToInt() uint32 {
 	return uint32(s)
@@ -78,3 +79,7 @@ func (s ElState) ToInt() uint32 {
 type RawHandlerT func(element slot.SlotElementHelper) (err error, new_state uint32, new_payload interface{})
 
 type ElUpdate uint32 ///Element State ID + Element Machine Type ID << 10
+
+func (s ElUpdate) ToInt() uint32 {
+	return uint32(s)
+}

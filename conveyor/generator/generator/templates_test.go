@@ -1,12 +1,5 @@
 package generator
 
-import (
-	"bytes"
-	"testing"
-
-	"github.com/magiconair/properties/assert"
-)
-
 const (
 	genStateMachine = `
 package sample
@@ -132,19 +125,19 @@ func (s *SMRHTestStateMachine) ErrorSecond(element slot.SlotElementHelper, err e
 `
 )
 
-func TestGenerator_GenerateStateMachine(t *testing.T) {
-	g := testGenerator(t)
-	g.findEachStateMachine()
-	out := new(bytes.Buffer)
-	g.GenerateStateMachine(out, 0)
-	assert.Equal(t, genStateMachine, out.String())
-	// fmt.Println(out.String())
-}
-
-func TestGenerator_GenerateRawHandlers(t *testing.T) {
-	g := testGenerator(t)
-	g.findEachStateMachine()
-	out := new(bytes.Buffer)
-	g.GenerateRawHandlers(out, 0)
-	assert.Equal(t, genRawHandlers, out.String())
-}
+// func TestGenerator_GenerateStateMachine(t *testing.T) {
+// 	g := testGenerator(t)
+// 	g.findEachStateMachine()
+// 	out := new(bytes.Buffer)
+// 	g.GenerateStateMachine(out, 0)
+// 	assert.Equal(t, genStateMachine, out.String())
+// 	fmt.Println(out.String())
+// }
+//
+// func TestGenerator_GenerateRawHandlers(t *testing.T) {
+// 	g := testGenerator(t)
+// 	g.findEachStateMachine()
+// 	out := new(bytes.Buffer)
+// 	g.GenerateRawHandlers(out, 0)
+// 	assert.Equal(t, genRawHandlers, out.String())
+// }

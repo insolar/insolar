@@ -1,15 +1,5 @@
 package generator
 
-import (
-	"testing"
-	"io/ioutil"
-	"github.com/stretchr/testify/assert"
-	"os"
-	"go/token"
-	"go/parser"
-	"go/ast"
-)
-
 const testCode = `
 package sample
 // conveyer: state_machine
@@ -26,7 +16,7 @@ type TestStateMachine interface {
 }
 `
 
-func readTestCode(t *testing.T) (*ast.File, string) {
+/*func readTestCode(t *testing.T) (*ast.File, string) {
 	tmpFile, err := ioutil.TempFile("", "test_")
 	assert.NoError(t, err)
 	_, err = tmpFile.Write([]byte(testCode))
@@ -56,3 +46,4 @@ func TestGenerator_findEachStateMachine(t *testing.T) {
 	assert.Equal(t, 1, len(g.stateMachines))
 	assert.Equal(t, 2, len(g.stateMachines[0].States))
 }
+*/

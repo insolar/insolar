@@ -7,7 +7,12 @@ import (
 )
 
 var (
-	matrixTmpl = template.Must(template.New("matrixTmpl").
+	matrixFuncMap = template.FuncMap{
+		"isNull": func(i int) bool {
+			return i == 0
+		},
+	}
+	matrixTmpl = template.Must(template.New("matrixTmpl").Funcs(matrixFuncMap).
 		Parse(`package matrix
 
 import (
@@ -17,31 +22,25 @@ import (
 )
 
 type matrix struct {
-    matrix  []common.StateMachine
-    indexes map[string]int
+    matrix  []*common.StateMachine
 }
 
+type MachineType int
 var Matrix matrix
 
+const (
+    {{range $i, $m := .Machines}}{{$m.Name}}{{if (isNull $i)}} MachineType = iota + 1{{end}}{{end}}
+)
+
 func init() {
-    Matrix := matrix{
-        indexes: make(map[string]int),
-    }
-    Matrix.matrix = append(Matrix.matrix,
-        {{range .Machines}}{{.Module}}.SMRH{{.Name}}Export(),
-        {{end}}
-	)
-
-    {{range $i, $machine := .Machines}}Matrix.indexes["{{.Module}}.{{$machine.Name}}"] = {{$i}}
-    {{end}}
+    Matrix := matrix{}
+    Matrix.matrix = append(Matrix.matrix, nil,
+        {{range .Machines}}{{.Module}}.SMRH{{.Name}}Factory(),
+        {{end}})
 }
 
-func (m *matrix) GetHandlers(machine int, state int) *common.State {
-    return &m.matrix[machine].States[state]
-}
-
-func (m *matrix) GetIdx(machine string) int {
-    return m.indexes[machine]
+func (m *matrix) GetStateMachineByType(mType MachineType) *common.StateMachine {
+    return m.matrix[int(mType)]
 }
 `))
 )
