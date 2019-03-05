@@ -18,7 +18,7 @@ package sample
 
 import (
 	"github.com/insolar/insolar/conveyor/generator/common"
-	"github.com/insolar/insolar/conveyor/adapter"
+	"github.com/insolar/insolar/conveyor/interfaces/adapter"
 )
 
 // todo sort out this shit
@@ -70,9 +70,9 @@ type TestStateMachine interface {
 	esp_First(input interface{}, payload interface{}, err error) (*Payload, common.ElUpdate)
 
 	// Adapter Response Error
-	ea_First(input interface{}, payload interface{}, ar adapter.AdapterResponse, err error) (*Payload, common.ElUpdate)
-	eaf_First(input interface{}, payload interface{}, ar adapter.AdapterResponse, err error) (*Payload, common.ElUpdate)
-	eap_First(input interface{}, payload interface{}, ar adapter.AdapterResponse, err error) (*Payload, common.ElUpdate)
+	ea_First(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, common.ElUpdate)
+	eaf_First(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, common.ElUpdate)
+	eap_First(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, common.ElUpdate)
 
 	// State Declaration
 	s_Second() common.ElState
@@ -102,9 +102,9 @@ type TestStateMachine interface {
 	esp_Second(input interface{}, payload interface{}, err error) (*Payload, common.ElUpdate)
 
 	// Adapter Response Error
-	ea_Second(input interface{}, payload interface{}, ar adapter.AdapterResponse, err error) (*Payload, common.ElUpdate)
-	eaf_Second(input interface{}, payload interface{}, ar adapter.AdapterResponse, err error) (*Payload, common.ElUpdate)
-	eap_Second(input interface{}, payload interface{}, ar adapter.AdapterResponse, err error) (*Payload, common.ElUpdate)
+	ea_Second(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, common.ElUpdate)
+	eaf_Second(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, common.ElUpdate)
+	eap_Second(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, common.ElUpdate)
 }
 
 /*type TestStateMachineImplementation struct {

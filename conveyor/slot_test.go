@@ -19,6 +19,7 @@ package conveyor
 import (
 	"testing"
 
+	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
 	"github.com/insolar/insolar/conveyor/queue"
 	"github.com/insolar/insolar/core"
 	"github.com/stretchr/testify/require"
@@ -167,7 +168,7 @@ func TestNewSlot(t *testing.T) {
 	require.Empty(t, s.inputQueue.RemoveAll())
 	require.Len(t, s.elements, slotSize)
 	require.Len(t, s.elementListMap, 3)
-	require.Equal(t, SlotStateMachine, s.elements[0])
+	require.Equal(t, SlotStateMachine, s.stateMachine)
 }
 
 func TestSlot_getPulseNumber(t *testing.T) {
@@ -204,26 +205,34 @@ func TestSlot_getNodeData(t *testing.T) {
 
 func TestSlot_createElement(t *testing.T) {
 	s := NewSlot(Future, testRealPulse)
+	oldEmptyLen := elementListLength(s.elementListMap[EmptyElement])
 	event := queue.OutputElement{}
 
-	element, err := s.createElement("testStateMachineType", 1, event)
+	stateMachineMock := statemachine.NewStateMachineTypeMock(t)
+
+	element, err := s.createElement(stateMachineMock, 1, event)
 	require.NotNil(t, element)
 	require.NoError(t, err)
-	require.Equal(t, "testStateMachineType", element.stateMachineType)
-	require.Equal(t, uint16(1), element.state)
-	require.Equal(t, uint32(1), element.id)
+	require.Equal(t, stateMachineMock, element.stateMachineType)
+	require.Equal(t, uint32(1), element.state)
+	require.Equal(t, uint32(0), element.id)
 	require.Equal(t, ActiveElement, element.activationStatus)
 	require.Equal(t, 1, elementListLength(s.elementListMap[ActiveElement]))
+	require.Equal(t, oldEmptyLen-1, elementListLength(s.elementListMap[EmptyElement]))
 }
 
 func TestSlot_createElement_Err(t *testing.T) {
 	s := NewSlot(Future, testRealPulse)
+	oldEmptyLen := elementListLength(s.elementListMap[EmptyElement])
 	delete(s.elementListMap, ActiveElement)
 	event := queue.OutputElement{}
 
-	element, err := s.createElement("testStateMachineType", 1, event)
+	stateMachineMock := statemachine.NewStateMachineTypeMock(t)
+
+	element, err := s.createElement(stateMachineMock, 1, event)
 	require.Nil(t, element)
 	require.EqualError(t, err, "[ createElement ]: [ pushElement ] can't push element: list for status ActiveElement doesn't exist")
+	require.Equal(t, oldEmptyLen, elementListLength(s.elementListMap[EmptyElement]))
 }
 
 func TestSlot_popElement(t *testing.T) {

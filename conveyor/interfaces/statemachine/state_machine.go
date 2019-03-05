@@ -16,13 +16,16 @@
 
 package statemachine
 
-import "github.com/insolar/insolar/conveyor/interfaces/slot"
+import (
+	"github.com/insolar/insolar/conveyor/interfaces/adapter"
+	"github.com/insolar/insolar/conveyor/interfaces/slot"
+)
 
 type InitHandler func(element slot.SlotElementHelper) (interface{}, uint32, error)
 type TransitHandler func(element slot.SlotElementHelper) (interface{}, uint32, error)
 type MigrationHandler func(element slot.SlotElementHelper) (interface{}, uint32, error)
 type ErrorHandler func(element slot.SlotElementHelper, err error) (interface{}, uint32)
-type AdapterResponseHandler func(element slot.SlotElementHelper, err error) (interface{}, uint32)
+type AdapterResponseHandler func(element slot.SlotElementHelper, response adapter.IAdapterResponse) (interface{}, uint32, error)
 type NestedHandler func(element slot.SlotElementHelper, err error) (interface{}, uint32)
 
 type TransitionErrorHandler func(element slot.SlotElementHelper, err error) (interface{}, uint32)
@@ -32,11 +35,11 @@ type ResponseErrorHandler func(element slot.SlotElementHelper, err error) (inter
 //go:generate minimock -i github.com/insolar/insolar/conveyor/interfaces/statemachine.StateMachineType -o ./ -s _mock.go
 type StateMachineType interface {
 	GetTypeID() int
-	GetMigrationHandler(state int) MigrationHandler
-	GetTransitionHandler(state int) TransitHandler
-	GetResponseHandler(state int) AdapterResponseHandler
-	GetNestedHandler() NestedHandler
+	GetMigrationHandler(state uint32) MigrationHandler
+	GetTransitionHandler(state uint32) TransitHandler
+	GetResponseHandler(state uint32) AdapterResponseHandler
+	GetNestedHandler(state uint32) NestedHandler
 
-	GetTransitionErrorHandler(state int) TransitionErrorHandler
-	GetResponseErrorHandler(state int) ResponseErrorHandler
+	GetTransitionErrorHandler(state uint32) TransitionErrorHandler
+	GetResponseErrorHandler(state uint32) ResponseErrorHandler
 }

@@ -37,7 +37,7 @@ func (h *handler) checkInterfaceParameter(idx int) {
 }
 
 func (h *handler) checkAdapterResponseParameter(idx int) {
-	if h.Params[idx] != "adapter.AdapterResponse" {
+	if h.Params[idx] != "adapter.IAdapterResponse" {
 		exitWithError("%d parameter for %s should be an AdapterResponse", idx, h.Name)
 	}
 }

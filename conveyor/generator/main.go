@@ -47,5 +47,5 @@ func main() {
 			g.ParseFile("", file.Name())
 		}
 	}
-	g.GenMatrix()
+	//g.GenMatrix()
 }

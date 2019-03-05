@@ -19,6 +19,7 @@ package conveyor
 import (
 	"fmt"
 
+	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
 	"github.com/insolar/insolar/conveyor/queue"
 	"github.com/insolar/insolar/core"
 	"github.com/pkg/errors"
@@ -37,7 +38,7 @@ const (
 )
 
 // SlotState shows slot working mode
-type SlotState int
+type SlotState uint32
 
 //go:generate stringer -type=SlotState
 const (
@@ -49,14 +50,6 @@ const (
 const slotSize = 10000
 const slotElementDelta = 1000000 // nolint: unused
 
-// SlotDetails provides information about slot
-type SlotDetails interface {
-	GetPulseNumber() core.PulseNumber // nolint: unused
-	GetNodeID() uint32                // nolint: unused
-	GetPulseData() core.Pulse         // nolint: unused
-	GetNodeData() interface{}         // nolint: unused
-}
-
 // HandlersConfiguration contains configuration of handlers for specific pulse state
 // TODO: logic will be provided after pulse change mechanism
 type HandlersConfiguration struct {
@@ -64,19 +57,9 @@ type HandlersConfiguration struct {
 }
 
 // TODO: logic will be provided after pulse change mechanism
-func (s *HandlersConfiguration) getMachineConfiguration(smType int) StateMachineType { // nolint: unused
+func (s *HandlersConfiguration) getMachineConfiguration(smType int) statemachine.StateMachineType { // nolint: unused
 	return nil
 }
-
-// ActivationStatus represents status of work for slot element
-type ActivationStatus int
-
-//go:generate stringer -type=ActivationStatus
-const (
-	EmptyElement = ActivationStatus(iota)
-	ActiveElement
-	NotActiveElement
-)
 
 // ElementList is a list of slotElements with pointers to head and tail
 type ElementList struct {
@@ -110,6 +93,7 @@ type Slot struct {
 	inputQueue            queue.IQueue
 	pulseState            PulseState
 	slotState             SlotState
+	stateMachine          slotElement
 	pulse                 core.Pulse
 	pulseNumber           core.PulseNumber
 	nodeID                uint32
@@ -123,7 +107,7 @@ type Slot struct {
 var SlotStateMachine = slotElement{
 	id:               0,
 	state:            0,
-	stateMachineType: 0,
+	stateMachineType: nil, // TODO: add smth correct
 }
 
 func initElementsBuf() []slotElement {
@@ -155,36 +139,39 @@ func NewSlot(pulseState PulseState, pulseNumber core.PulseNumber) *Slot {
 		ActiveElement:    {},
 		NotActiveElement: {},
 	}
-	firstElement := elementListMap[EmptyElement].popElement()
-	*firstElement = SlotStateMachine
 	return &Slot{
 		pulseState:     pulseState,
 		inputQueue:     queue.NewMutexQueue(),
 		pulseNumber:    pulseNumber,
 		slotState:      slotState,
+		stateMachine:   SlotStateMachine,
 		elements:       elements,
 		elementListMap: elementListMap,
 	}
 }
 
+// GetPulseNumber implements iface SlotDetails
 func (s *Slot) GetPulseNumber() core.PulseNumber { // nolint: unused
 	return s.pulseNumber
 }
 
+// GetPulseData implements iface SlotDetails
 func (s *Slot) GetPulseData() core.Pulse { // nolint: unused
 	return s.pulse
 }
 
+// GetNodeID implements iface SlotDetails
 func (s *Slot) GetNodeID() uint32 { // nolint: unused
 	return s.nodeID
 }
 
+// GetNodeData implements iface SlotDetails
 func (s *Slot) GetNodeData() interface{} { // nolint: unused
 	return s.nodeData
 }
 
 // createElement creates new active element from empty element
-func (s *Slot) createElement(stateMachineType StateMachineType, state uint16, event queue.OutputElement) (*slotElement, error) { // nolint: unused
+func (s *Slot) createElement(stateMachineType statemachine.StateMachineType, state uint32, event queue.OutputElement) (*slotElement, error) { // nolint: unused
 	element := s.popElement(EmptyElement)
 	element.stateMachineType = stateMachineType
 	element.state = state
@@ -195,6 +182,8 @@ func (s *Slot) createElement(stateMachineType StateMachineType, state uint16, ev
 
 	err := s.pushElement(ActiveElement, element)
 	if err != nil {
+		emptyList := s.elementListMap[EmptyElement]
+		emptyList.pushElement(element)
 		return nil, errors.Wrap(err, "[ createElement ]")
 	}
 	return element, nil
@@ -221,21 +210,4 @@ func (s *Slot) pushElement(status ActivationStatus, element *slotElement) error 
 	}
 	list.pushElement(element)
 	return nil
-}
-
-type StateMachineType interface{}
-
-type slotElement struct {
-	id               uint32
-	payload          interface{} // nolint
-	state            uint16
-	stateMachineType StateMachineType
-
-	nextElement      *slotElement
-	activationStatus ActivationStatus
-}
-
-// newSlotElement creates new slot element with provided activation status
-func newSlotElement(activationStatus ActivationStatus) *slotElement {
-	return &slotElement{activationStatus: activationStatus}
 }
