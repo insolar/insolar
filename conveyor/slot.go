@@ -188,6 +188,10 @@ func (s *Slot) createElement(stateMachineType statemachine.StateMachineType, sta
 	return element, nil
 }
 
+func (s *Slot) hasExpired() bool {
+	panic("implement me")
+}
+
 // popElement gets element of provided status from correspondent linked list (and remove it from that list)
 func (s *Slot) popElement(status ActivationStatus) *slotElement { // nolint: unused
 	list, ok := s.elementListMap[status]

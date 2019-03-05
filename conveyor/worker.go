@@ -21,6 +21,7 @@ import (
 
 	adapter2 "github.com/insolar/insolar/conveyor/interfaces/adapter"
 	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
+	"github.com/insolar/insolar/conveyor/queue"
 	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 )
@@ -36,15 +37,15 @@ const (
 )
 
 type workerStateMachineImpl struct {
-	slot            *Slot
-	slotState       SlotState
-	nextWorkerState WorkerState
+	slot               *Slot
+	nextWorkerState    WorkerState
+	postponedResponses []queue.OutputElement
 }
 
 func newWorkerStateMachineImpl(slot *Slot) workerStateMachineImpl {
+	slot.slotState = Initializing
 	return workerStateMachineImpl{
 		slot:            slot,
-		slotState:       Initializing,
 		nextWorkerState: Unknown,
 	}
 }
@@ -61,7 +62,7 @@ func GetStateMachineByType(mtype MachineType) statemachine.StateMachineType {
 }
 
 func (w *workerStateMachineImpl) isWorkingState() bool {
-	return w.slotState == Working
+	return w.slot.slotState == Working
 }
 
 func (w *workerStateMachineImpl) readInputQueue() error {
@@ -94,14 +95,25 @@ func (w *workerStateMachineImpl) readInputQueue() error {
 	return nil
 }
 
+func setNewState(element *slotElement, payLoad interface{}, fullState uint32) {
+	sm, state := extractStates(fullState)
+	element.state = state
+	element.payload = payLoad
+	if sm != 0 {
+		element.stateMachineType = GetStateMachineByType(MachineType(sm))
+	}
+}
+
 func (w *workerStateMachineImpl) readResponseQueue() error {
-	postponedResponses := w.slot.responseQueue.RemoveAll()
+	w.postponedResponses = append(w.postponedResponses, w.slot.responseQueue.RemoveAll()...)
 	w.nextWorkerState = ProcessElements
 
-	for i := 0; i < len(postponedResponses); i++ {
-		resp := postponedResponses[i]
-		if resp.GetItemType() > 9999 { // TODO: check isNestedEvent
-
+	totalNumElements := len(w.postponedResponses)
+	numProcessedElements := 0
+	for i := 0; i < totalNumElements; i++ {
+		resp := w.postponedResponses[i]
+		if resp.GetItemType() > 9999 {
+			// TODO: check isNestedEvent
 		} else {
 			adapterResp, ok := resp.GetData().(adapter2.IAdapterResponse)
 			if !ok {
@@ -114,7 +126,7 @@ func (w *workerStateMachineImpl) readResponseQueue() error {
 				panic(fmt.Sprintf("No response handler. State: %d. \nAdapterResp: %+v", element.state, adapterResp))
 			}
 
-			_, newState, err := respHandler(&element, adapterResp)
+			payLoad, newState, err := respHandler(&element, adapterResp)
 			if err != nil {
 				log.Error("[ readResponseQueue ] Response handler errors: ", err)
 				respErrorHandler := element.stateMachineType.GetResponseErrorHandler(element.state)
@@ -122,20 +134,54 @@ func (w *workerStateMachineImpl) readResponseQueue() error {
 					panic(fmt.Sprintf("No response error handler. State: %d. \nAdapterResp: %+v", element.state, adapterResp))
 				}
 
-				//respErrorPayLoad, state := respErrorHandler(&element, err)
-
+				payLoad, newState = respErrorHandler(&element, err)
 			}
 
 			if newState == 0 {
 				// TODO: call finalization handler
 			}
 
-			// Call ReponseHandler
+			setNewState(&element, payLoad, newState)
+		}
 
+		numProcessedElements++
+
+		if w.slot.inputQueue.HasSignal() {
+			w.nextWorkerState = ReadInputQueue
+			break
 		}
 	}
 
+	w.postponedResponses = w.postponedResponses[totalNumElements:]
+
 	return nil
+}
+
+func (w *workerStateMachineImpl) waitQueuesOrTick() {
+	panic("implement me")
+}
+
+func (w *workerStateMachineImpl) processingElements() {
+	// element := w.slot.popElement(ActiveElement)
+	// if element == nil {
+	// 	if w.slot.pulseState == Past {
+	// 		if w.slot.hasExpired() {
+	// 			w.slot.slotState = Suspending
+	// 			log.Info("[ processingElements ] Set slot state to 'Suspending'")
+	// 			return
+	// 		}
+	// 	}
+	// 	w.waitQueuesOrTick()
+	// }
+	//
+	// lastState := element.state
+	// for ; element != nil; element = w.slot.popElement(ActiveElement) {
+	// 	if w.slot.inputQueue.HasSignal() {
+	// 		w.nextWorkerState = ReadInputQueue
+	// 		return
+	// 	}
+	//
+	// }
 }
 
 func (w *workerStateMachineImpl) working() {
@@ -144,6 +190,19 @@ func (w *workerStateMachineImpl) working() {
 		err := w.readInputQueue()
 		if err != nil {
 			panic("implement me")
+		}
+
+		if !w.isWorkingState() {
+			break
+		}
+
+		err = w.readResponseQueue()
+		if err != nil {
+			panic("implement me")
+		}
+
+		if w.nextWorkerState == ReadInputQueue {
+			continue
 		}
 
 	}
