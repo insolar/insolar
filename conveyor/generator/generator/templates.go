@@ -68,6 +68,43 @@ type SMRH{{$machine.Name}} struct {
 	cleanHandlers {{$machine.Name}}
 }
 
+func SMRH{{$machine.Name}}Export() common.StateMachine {
+    m := SMRH{{$machine.Name}}{
+        cleanHandlers: &{{$machine.Name}}Implementation{},
+    }
+
+    var x []common.State
+    x = append(x, common.State{
+            Transition: m.{{(index .States 0).GetTransitionName}},
+            TransitionFuture: m.{{(index .States 0).GetTransitionFutureName}},
+            TransitionPast: m.{{(index .States 0).GetTransitionPastName}},
+            ErrorState: m.{{(index .States 0).GetErrorStateName}},
+            ErrorStateFuture: m.{{(index .States 0).GetErrorStateFutureName}},
+            ErrorStatePast: m.{{(index .States 0).GetErrorStatePastName}},
+        },{{range $i, $state := .States}}{{if (gtNull $i)}}
+        common.State{
+            Migration: m.{{$state.GetMigrationName}},
+            MigrationFuturePresent: m.{{$state.GetMigrationFuturePresentName}},
+            Transition: m.{{$state.GetTransitionName}},
+            TransitionFuture: m.{{$state.GetTransitionFutureName}},
+            TransitionPast: m.{{$state.GetTransitionPastName}},
+            AdapterResponse: m.{{$state.GetAdapterResponseName}},
+            AdapterResponseFuture: m.{{$state.GetAdapterResponseFutureName}},
+            AdapterResponsePast: m.{{$state.GetAdapterResponsePastName}},
+            ErrorState: m.{{$state.GetErrorStateName}},
+            ErrorStateFuture: m.{{$state.GetErrorStateFutureName}},
+            ErrorStatePast: m.{{$state.GetErrorStatePastName}},
+            AdapterResponseError: m.{{$state.GetAdapterResponseErrorName}},
+            AdapterResponseErrorFuture: m.{{$state.GetAdapterResponseErrorFutureName}},
+            AdapterResponseErrorPast: m.{{$state.GetAdapterResponseErrorPastName}},
+        },{{end}}{{end}})
+
+    return common.StateMachine{
+        Id: int(m.cleanHandlers.({{$machine.Name}}).TID()),
+        States: x,
+    }
+}
+
 // (index .States 0).GetTransitionName
 {{template "initHandler" (params $machine (index .States 0).Transition)}}
 {{template "initHandler" (params $machine (index .States 0).TransitionFuture)}}

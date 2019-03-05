@@ -50,11 +50,11 @@ type TestStateMachine interface {
 	mfp_FirstSecond(input Event, payload *Payload) (*Payload, common.ElUpdate, error)
 
 	// Transition
-	t_First(input Event, payload *Payload, adapterHelper TA1) (*Payload, common.ElUpdate, error)
-	tf_First(input Event, payload *Payload, adapterHelper TA1) (*Payload, common.ElUpdate, error)
+	t_First(input Event, payload *Payload/* todo: , adapterHelper TA1*/) (*Payload, common.ElUpdate, error)
+	tf_First(input Event, payload *Payload/* todo: , adapterHelper TA1*/) (*Payload, common.ElUpdate, error)
 	tp_First(input Event, payload *Payload) (*Payload, common.ElUpdate, error)
 
-	// Finalization
+	// todo: Finalization
 	// f_First(input Event, payload *Payload)
 	// ff_First(input Event, payload *Payload)
 	// fp_First(input Event, payload *Payload)
@@ -82,11 +82,11 @@ type TestStateMachine interface {
 	mfp_SecondThird(input Event, payload *Payload) (*Payload, common.ElUpdate, error)
 
 	// Transition
-	t_Second(input Event, payload *Payload, adapterHelper1 TA1) (*Payload, common.ElUpdate, error)
-	tf_Second(input Event, payload *Payload, adapterHelper1 TA1) (*Payload, common.ElUpdate, error)
-	tp_Second(input Event, payload *Payload, adapterHelper1 TA1) (*Payload, common.ElUpdate, error)
+	t_Second(input Event, payload *Payload/* todo: , adapterHelper1 TA1*/) (*Payload, common.ElUpdate, error)
+	tf_Second(input Event, payload *Payload/* todo: , adapterHelper1 TA1*/) (*Payload, common.ElUpdate, error)
+	tp_Second(input Event, payload *Payload/* todo: , adapterHelper1 TA1*/) (*Payload, common.ElUpdate, error)
 
-	// Finalization
+	// todo: Finalization
 	// f_Second(input Event, payload *Payload)
 	// ff_Second(input Event, payload *Payload)
 	// fp_Second(input Event, payload *Payload)
