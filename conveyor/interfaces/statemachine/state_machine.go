@@ -31,15 +31,25 @@ type NestedHandler func(element slot.SlotElementHelper, err error) (interface{},
 type TransitionErrorHandler func(element slot.SlotElementHelper, err error) (interface{}, uint32)
 type ResponseErrorHandler func(element slot.SlotElementHelper, err error) (interface{}, uint32)
 
+// State is the states of conveyor
+type SlotType int
+
+//go:generate stringer -type=SlotType
+const (
+	Future = SlotType(iota + 1)
+	Present
+	Past
+)
+
 // StateMachineType describes access to element's state machine
 //go:generate minimock -i github.com/insolar/insolar/conveyor/interfaces/statemachine.StateMachineType -o ./ -s _mock.go
 type StateMachineType interface {
 	GetTypeID() int
-	GetMigrationHandler(state uint32) MigrationHandler
-	GetTransitionHandler(state uint32) TransitHandler
-	GetResponseHandler(state uint32) AdapterResponseHandler
-	GetNestedHandler(state uint32) NestedHandler
+	GetMigrationHandler(slotType SlotType, state uint32) MigrationHandler
+	GetTransitionHandler(slotType SlotType, state uint32) TransitHandler
+	GetResponseHandler(slotType SlotType, state uint32) AdapterResponseHandler
+	GetNestedHandler(slotType SlotType, state uint32) NestedHandler
 
-	GetTransitionErrorHandler(state uint32) TransitionErrorHandler
-	GetResponseErrorHandler(state uint32) ResponseErrorHandler
+	GetTransitionErrorHandler(slotType SlotType, state uint32) TransitionErrorHandler
+	GetResponseErrorHandler(slotType SlotType, state uint32) ResponseErrorHandler
 }
