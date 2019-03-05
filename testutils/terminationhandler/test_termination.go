@@ -17,10 +17,10 @@ func (t *testTerminationHandler) Abort() {
 	log.Error("Node leave acknowledged by network. Goodbye!")
 }
 
-func (t testTerminationHandler) Leave(ctx context.Context, pulseDelta core.PulseNumber) chan core.LeaveApproved {
+func (t testTerminationHandler) Leave(ctx context.Context, leaveAfterPulses core.PulseNumber) chan core.LeaveApproved {
 	panic("implement me")
 }
 
-func (t testTerminationHandler) OnLeaveApproved() {
+func (t testTerminationHandler) OnLeaveApproved(ctx context.Context) {
 	panic("implement me")
 }

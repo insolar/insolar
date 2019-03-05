@@ -440,14 +440,14 @@ func (nk *nodekeeper) MoveSyncToActive(ctx context.Context, pulse core.PulseNumb
 	nk.reindex()
 	nk.nodesJoinedDuringPrevPulse = mergeResult.NodesJoinedDuringPrevPulse
 
-	nk.gracefulStopIfNeeded(pulse)
+	nk.gracefulStopIfNeeded(ctx)
 
 	return nil
 }
 
-func (nk *nodekeeper) gracefulStopIfNeeded(pulse core.PulseNumber) {
+func (nk *nodekeeper) gracefulStopIfNeeded(ctx context.Context) {
 	if nk.origin.Leaving() {
-		nk.TerminationHandler.OnLeaveApproved()
+		nk.TerminationHandler.OnLeaveApproved(ctx)
 	}
 }
 

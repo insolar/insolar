@@ -228,11 +228,18 @@ func (lr *LogicRunner) Stop(ctx context.Context) error {
 }
 
 func (lr *LogicRunner) GracefulStop(ctx context.Context) error {
+	inslogger.FromContext(ctx).Debug("LogicRunner.GracefulStop starts ...")
+
 	lr.stopLock.Lock()
-	lr.isStopping = true
+	if !lr.isStopping {
+		lr.isStopping = true
+		lr.stopChan = make(chan struct{}, 1)
+	}
 	lr.stopLock.Unlock()
 
+	inslogger.FromContext(ctx).Debug("LogicRunner.GracefulStop wait ...")
 	<-lr.stopChan
+	inslogger.FromContext(ctx).Debug("LogicRunner.GracefulStop ends ...")
 	return nil
 }
 
@@ -1066,15 +1073,16 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse core.Pulse) error {
 		go lr.sendOnPulseMessagesAsync(ctx, messages)
 	}
 
-	lr.stopIfNeeded()
+	lr.stopIfNeeded(ctx)
 
 	return nil
 }
 
-func (lr *LogicRunner) stopIfNeeded() {
-	if lr.state == nil {
+func (lr *LogicRunner) stopIfNeeded(ctx context.Context) {
+	if len(lr.state) == 0 {
 		lr.stopLock.Lock()
 		if lr.isStopping {
+			inslogger.FromContext(ctx).Debug("LogicRunner ready to stop")
 			lr.stopChan <- struct{}{}
 		}
 		lr.stopLock.Unlock()

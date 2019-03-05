@@ -206,13 +206,23 @@ func (n *ServiceNetwork) Leave(ctx context.Context, ETA core.PulseNumber) {
 	n.NodeKeeper.AddPendingClaim(&packets.NodeLeaveClaim{ETA: ETA})
 }
 
+func (n *ServiceNetwork) GracefulStop(ctx context.Context) error {
+	logger := inslogger.FromContext(ctx)
+	// node leaving from network
+	// all components need to do what they want over net in gracefulStop
+	if !n.isGenesis {
+		logger.Info("ServiceNetwork.GracefulStop wait for accepting leaving claim")
+		<-n.TerminationHandler.Leave(ctx, 0)
+		logger.Info("ServiceNetwork.GracefulStop - leaving claim accepted")
+	}
+
+	return nil
+}
+
 // Stop implements core.Component
 func (n *ServiceNetwork) Stop(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
 
-	// node leaving from network
-	// all components need to do what they want over net in gracefulStop
-	n.Leave(ctx, 0)
 	logger.Info("Stopping network components")
 	if err := n.cm.Stop(ctx); err != nil {
 		log.Errorf("Error while stopping network components: %s", err.Error())

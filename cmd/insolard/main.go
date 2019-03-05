@@ -164,7 +164,9 @@ func main() {
 		inslog.Warn("GRACEFULL STOP APP")
 
 		if !params.isGenesis {
-			<-th.Leave(ctx)
+			inslog.Warn("main leave starts")
+			<-th.Leave(ctx, 10)
+			inslog.Warnf("main leave ends ")
 			err = cm.GracefulStop(ctx)
 			checkError(ctx, err, "failed to graceful stop components")
 		}
