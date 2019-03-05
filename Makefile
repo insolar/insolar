@@ -7,7 +7,6 @@ PULSARD = pulsard
 INSGORUND = insgorund
 BENCHMARK = benchmark
 PULSEWATCHER = pulsewatcher
-EXPORTER = exporter
 APIREQUESTER = apirequester
 HEALTHCHECK = healthcheck
 CERTGEN = certgen
@@ -114,10 +113,6 @@ $(PULSEWATCHER):
 .PHONY: $(APIREQUESTER)
 $(APIREQUESTER):
 	go build -o $(BIN_DIR)/$(APIREQUESTER) -ldflags "${LDFLAGS}" cmd/apirequester/*.go
-
-.PHONY: $(EXPORTER)
-$(EXPORTER):
-	go build -o $(BIN_DIR)/$(EXPORTER) -ldflags "${LDFLAGS}" cmd/exporter/*.go
 
 .PHONY: $(HEALTHCHECK)
 $(HEALTHCHECK):
