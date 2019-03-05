@@ -88,15 +88,15 @@ func SMRH{{$machine.Name}}Factory() *common.StateMachine {
             Transition: m.{{$state.GetTransitionName}},
             TransitionFuture: m.{{$state.GetTransitionFutureName}},
             TransitionPast: m.{{$state.GetTransitionPastName}},
-            AdapterResponse: m.{{$state.GetAdapterResponseName}},
-            AdapterResponseFuture: m.{{$state.GetAdapterResponseFutureName}},
-            AdapterResponsePast: m.{{$state.GetAdapterResponsePastName}},
+            {{if (handlerExists $state.AdapterResponse)}}AdapterResponse: m.{{$state.GetAdapterResponseName}},{{end}}
+            {{if (handlerExists $state.AdapterResponseFuture)}}AdapterResponseFuture: m.{{$state.GetAdapterResponseFutureName}},{{end}}
+            {{if (handlerExists $state.AdapterResponsePast)}}AdapterResponsePast: m.{{$state.GetAdapterResponsePastName}},{{end}}
             ErrorState: m.{{$state.GetErrorStateName}},
             ErrorStateFuture: m.{{$state.GetErrorStateFutureName}},
             ErrorStatePast: m.{{$state.GetErrorStatePastName}},
-            AdapterResponseError: m.{{$state.GetAdapterResponseErrorName}},
-            AdapterResponseErrorFuture: m.{{$state.GetAdapterResponseErrorFutureName}},
-            AdapterResponseErrorPast: m.{{$state.GetAdapterResponseErrorPastName}},
+            {{if (handlerExists $state.AdapterResponseError)}}AdapterResponseError: m.{{$state.GetAdapterResponseErrorName}},{{end}}
+            {{if (handlerExists $state.AdapterResponseErrorFuture)}}AdapterResponseErrorFuture: m.{{$state.GetAdapterResponseErrorFutureName}},{{end}}
+            {{if (handlerExists $state.AdapterResponseErrorPast)}}AdapterResponseErrorPast: m.{{$state.GetAdapterResponseErrorPastName}},{{end}}
         },{{end}}{{end}})
 
     return &common.StateMachine{
@@ -174,5 +174,6 @@ func SMRH{{$machine.Name}}Factory() *common.StateMachine {
 )
 
 func (p *Parser) Generate(w io.Writer) {
-	stateMachineTpl.Execute(w, p)
+	err := stateMachineTpl.Execute(w, p)
+	checkErr(err)
 }

@@ -60,7 +60,7 @@ func (g *Generator) GenMatrix () {
 	checkErr(err)
 	defer file.Close()
 	out := bufio.NewWriter(file)
-	matrixTmpl.Execute(out, struct{
+	err = matrixTmpl.Execute(out, struct{
 		Imports []string
 		Machines []*stateMachine
 	}{
@@ -68,6 +68,7 @@ func (g *Generator) GenMatrix () {
 		Machines: g.stateMachines,
 
 	})
+	checkErr(err)
 	out.Flush()
 }
 

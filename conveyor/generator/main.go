@@ -17,13 +17,28 @@
 package main
 
 import (
-	"github.com/insolar/insolar/conveyor/generator/generator"
-	"github.com/insolar/insolar/log"
-	"io/ioutil"
-	"strings"
+"fmt"
+"io/ioutil"
+"runtime"
+"strings"
+
+
+"github.com/insolar/insolar/conveyor/generator/generator"
+"github.com/insolar/insolar/log"
+
+
+
+
 )
 
 func main() {
+	_, currentFile, _, ok := runtime.Caller(0)
+	if !ok {
+		fmt.Println("error")
+		return
+	}
+	fmt.Println(currentFile)
+
 	g := generator.NewGenerator("github.com/insolar/insolar", "conveyor/generator/state_machines", "conveyor/generator/matrix/matrix.go")
 	files, err := ioutil.ReadDir("conveyor/generator/state_machines/")
 	if err != nil {

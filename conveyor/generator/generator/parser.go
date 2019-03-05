@@ -1,20 +1,13 @@
 package generator
 
 import (
-"fmt"
-"go/ast"
-"go/parser"
-"go/token"
-"io/ioutil"
-"os"
-"strings"
-
-
-
-
-
-
-
+	"fmt"
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"io/ioutil"
+	"os"
+	"strings"
 )
 
 type Parser struct {
@@ -45,8 +38,8 @@ func (p *Parser) openFile() {
 	checkErr(err)
 	fSet := token.NewFileSet()
 	p.sourceNode, err = parser.ParseFile(fSet, p.sourceFilename, nil, parser.ParseComments)
-	p.Package = p.sourceNode.Name.Name
 	checkErr(err)
+	p.Package = p.sourceNode.Name.Name
 }
 
 func (p *Parser) findEachStateMachine() {
@@ -97,7 +90,7 @@ func getFieldTypes(code []byte, fieldList *ast.FieldList) []string {
 }
 
 func (p *Parser) parseStateMachineInterface(machine *stateMachine, source *ast.InterfaceType) {
-	var curPos token.Pos = 0
+	curPos := token.Pos(0)
 	for _, methodItem := range source.Methods.List {
 		if len(methodItem.Names) == 0 {
 			continue
