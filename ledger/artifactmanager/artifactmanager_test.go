@@ -22,7 +22,7 @@ import (
 	"testing"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/ledger/storage/nodes"
+	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -55,7 +55,7 @@ type amSuite struct {
 
 	scheme        core.PlatformCryptographyScheme
 	pulseTracker  storage.PulseTracker
-	nodeStorage   nodes.Accessor
+	nodeStorage   node.Accessor
 	objectStorage storage.ObjectStorage
 	jetStorage    storage.JetStorage
 	dropStorage   storage.DropStorage
@@ -82,7 +82,7 @@ func (s *amSuite) BeforeTest(suiteName, testName string) {
 	s.db = db
 	s.scheme = platformpolicy.NewPlatformCryptographyScheme()
 	s.jetStorage = storage.NewJetStorage()
-	s.nodeStorage = nodes.NewStorage()
+	s.nodeStorage = node.NewStorage()
 	s.pulseTracker = storage.NewPulseTracker()
 	s.objectStorage = storage.NewObjectStorage()
 	s.dropStorage = storage.NewDropStorage(10)
@@ -162,8 +162,8 @@ func getTestData(s *amSuite) (
 	handler := MessageHandler{
 		replayHandlers:             map[core.MessageType]core.MessageHandler{},
 		PlatformCryptographyScheme: s.scheme,
-		conf:        &configuration.Ledger{LightChainLimit: 3, PendingRequestsLimit: 10},
-		certificate: certificate,
+		conf:                       &configuration.Ledger{LightChainLimit: 3, PendingRequestsLimit: 10},
+		certificate:                certificate,
 	}
 
 	handler.Nodes = s.nodeStorage
@@ -803,8 +803,8 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterValidation() {
 	handler := MessageHandler{
 		replayHandlers:             map[core.MessageType]core.MessageHandler{},
 		PlatformCryptographyScheme: s.scheme,
-		conf:        &configuration.Ledger{LightChainLimit: 3, PendingRequestsLimit: 10},
-		certificate: certificate,
+		conf:                       &configuration.Ledger{LightChainLimit: 3, PendingRequestsLimit: 10},
+		certificate:                certificate,
 	}
 
 	handler.Bus = mb

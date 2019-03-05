@@ -24,9 +24,10 @@ import (
 
 	"github.com/insolar/insolar"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/utils"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/jet"
-	"github.com/insolar/insolar/ledger/storage/nodes"
+	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/insolar/insolar/utils/entropy"
 	"github.com/pkg/errors"
 )
@@ -38,7 +39,7 @@ type JetCoordinator struct {
 	PulseStorage               core.PulseStorage               `inject:""`
 	JetStorage                 storage.JetStorage              `inject:""`
 	PulseTracker               storage.PulseTracker            `inject:""`
-	Nodes                      nodes.Accessor                  `inject:""`
+	Nodes                      node.Accessor                   `inject:""`
 
 	lightChainLimit int
 }
@@ -294,7 +295,7 @@ func (jc *JetCoordinator) virtualsForObject(
 
 	return getRefs(
 		jc.PlatformCryptographyScheme,
-		circleXOR(ent[:], objID.Hash()),
+		utils.CircleXOR(ent[:], objID.Hash()),
 		candidates,
 		count,
 	)
@@ -323,7 +324,7 @@ func (jc *JetCoordinator) lightMaterialsForJet(
 
 	return getRefs(
 		jc.PlatformCryptographyScheme,
-		circleXOR(ent[:], prefix),
+		utils.CircleXOR(ent[:], prefix),
 		candidates,
 		count,
 	)
@@ -373,15 +374,4 @@ func getRefs(
 		out = append(out, value.(core.RecordRef))
 	}
 	return out, nil
-}
-
-// CircleXOR performs XOR for 'value' and 'src'. The result is returned as new byte slice.
-// If 'value' is smaller than 'dst', XOR starts from the beginning of 'src'.
-func circleXOR(value, src []byte) []byte {
-	result := make([]byte, len(value))
-	srcLen := len(src)
-	for i := range result {
-		result[i] = value[i] ^ src[i%srcLen]
-	}
-	return result
 }

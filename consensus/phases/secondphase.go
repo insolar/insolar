@@ -324,7 +324,7 @@ func (sp *SecondPhaseImpl) generatePhase2Bitset(list network.UnsyncList, proofs 
 	return bitset, nil
 }
 
-func getNodeState(node core.Node, pulseNumber core.PulseNumber) packets.TriState {
+func getNodeState(node core.Node, pulseNumber core.PulseNumber) packets.BitSetState {
 	state := packets.Legit
 	if node.Leaving() && node.LeavingETA() < pulseNumber {
 		state = packets.TimedOut

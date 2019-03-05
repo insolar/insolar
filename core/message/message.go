@@ -89,8 +89,6 @@ func getEmptyMessage(mt core.MessageType) (core.Message, error) {
 		return &HeavyStartStop{}, nil
 	case core.TypeHeavyPayload:
 		return &HeavyPayload{}, nil
-	case core.TypeHeavyReset:
-		return &HeavyReset{}, nil
 	// Bootstrap
 	case core.TypeBootstrapRequest:
 		return &GenesisRequest{}, nil
@@ -226,7 +224,6 @@ func init() {
 	// heavy
 	gob.Register(&HeavyStartStop{})
 	gob.Register(&HeavyPayload{})
-	gob.Register(&HeavyReset{})
 
 	// Bootstrap
 	gob.Register(&GenesisRequest{})

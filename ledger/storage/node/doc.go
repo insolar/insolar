@@ -14,5 +14,5 @@
  *    limitations under the License.
  */
 
-// Package nodes contains node storage
-package nodes
+// Package node contains node storage
+package node

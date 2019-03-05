@@ -45,20 +45,11 @@ type distributor struct {
 	randomNodesCount          int
 
 	pulsarHost     *host.Host
-	bootstrapHosts []*host.Host
+	bootstrapHosts []string
 }
 
+// NewDistributor creates a new distributor object of pulses
 func NewDistributor(conf configuration.PulseDistributor) (core.PulseDistributor, error) {
-	bootstrapHosts := make([]*host.Host, 0, len(conf.BootstrapHosts))
-
-	for _, node := range conf.BootstrapHosts {
-		bootstrapHost, err := host.NewHost(node)
-		if err != nil {
-			return nil, errors.Wrap(err, "[ NewDistributor ] failed to create bootstrap node host")
-		}
-		bootstrapHosts = append(bootstrapHosts, bootstrapHost)
-	}
-
 	return &distributor{
 		idGenerator: sequence.NewGeneratorImpl(),
 
@@ -67,7 +58,7 @@ func NewDistributor(conf configuration.PulseDistributor) (core.PulseDistributor,
 		pulseRequestTimeout:       time.Duration(conf.PulseRequestTimeout) * time.Millisecond,
 		randomNodesCount:          conf.RandomNodesCount,
 
-		bootstrapHosts: bootstrapHosts,
+		bootstrapHosts: conf.BootstrapHosts,
 	}, nil
 }
 
@@ -82,6 +73,7 @@ func (d *distributor) Start(ctx context.Context) error {
 	return nil
 }
 
+// Distribute starts a fire-and-forget process of pulse distribution to bootstrap hosts
 func (d *distributor) Distribute(ctx context.Context, pulse core.Pulse) {
 	logger := inslogger.FromContext(ctx)
 	defer func() {
@@ -92,13 +84,29 @@ func (d *distributor) Distribute(ctx context.Context, pulse core.Pulse) {
 
 	ctx, span := instracer.StartSpan(ctx, "distributor.Distribute")
 	defer span.End()
+
+	bootstrapHosts := make([]*host.Host, 0, len(d.bootstrapHosts))
+	for _, node := range d.bootstrapHosts {
+		bootstrapHost, err := host.NewHost(node)
+		if err != nil {
+			logger.Error(err, "[ Distribute ] failed to create bootstrap node host")
+			continue
+		}
+		bootstrapHosts = append(bootstrapHosts, bootstrapHost)
+	}
+
+	if len(bootstrapHosts) == 0 {
+		logger.Error("[ Distribute ] no bootstrap hosts to distribute")
+		return
+	}
+
 	d.resume(ctx)
 	defer d.pause(ctx)
 
 	wg := sync.WaitGroup{}
-	wg.Add(len(d.bootstrapHosts))
+	wg.Add(len(bootstrapHosts))
 
-	for _, bootstrapHost := range d.bootstrapHosts {
+	for _, bootstrapHost := range bootstrapHosts {
 		go func(ctx context.Context, pulse core.Pulse, bootstrapHost *host.Host) {
 			defer wg.Done()
 
