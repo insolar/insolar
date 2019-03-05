@@ -19,22 +19,11 @@ package conveyor
 import (
 	"fmt"
 
+	"github.com/insolar/insolar/conveyor/interfaces/constant"
 	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
 	"github.com/insolar/insolar/conveyor/queue"
 	"github.com/insolar/insolar/core"
 	"github.com/pkg/errors"
-)
-
-// PulseState is the states of pulse inside slot
-type PulseState int
-
-//go:generate stringer -type=PulseState
-const (
-	Unallocated = PulseState(iota)
-	Future
-	Present
-	Past
-	Antique
 )
 
 // SlotState shows slot working mode
@@ -91,7 +80,7 @@ func (l *ElementList) pushElement(element *slotElement) { // nolint: unused
 type Slot struct {
 	handlersConfiguration HandlersConfiguration // nolint
 	inputQueue            queue.IQueue
-	pulseState            PulseState
+	pulseState            constant.PulseState
 	slotState             SlotState
 	stateMachine          slotElement
 	pulse                 core.Pulse
@@ -123,9 +112,9 @@ func initElementsBuf() []slotElement {
 }
 
 // NewSlot creates new instance of Slot
-func NewSlot(pulseState PulseState, pulseNumber core.PulseNumber) *Slot {
+func NewSlot(pulseState constant.PulseState, pulseNumber core.PulseNumber) *Slot {
 	slotState := Initializing
-	if pulseState == Antique {
+	if pulseState == constant.Antique {
 		slotState = Working
 	}
 

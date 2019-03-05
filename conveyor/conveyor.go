@@ -19,6 +19,7 @@ package conveyor
 import (
 	"sync"
 
+	"github.com/insolar/insolar/conveyor/interfaces/constant"
 	"github.com/insolar/insolar/conveyor/queue"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
@@ -86,7 +87,7 @@ func NewPulseConveyor() Conveyor {
 		state:   Inactive,
 	}
 	// antiqueSlot is slot for all pulses from past if conveyor dont have specific PastSlot for such pulse
-	antiqueSlot := NewSlot(Antique, core.AntiquePulseNumber)
+	antiqueSlot := NewSlot(constant.Antique, core.AntiquePulseNumber)
 	c.slotMap[core.AntiquePulseNumber] = antiqueSlot
 	return c
 }
@@ -170,7 +171,7 @@ func (c *PulseConveyor) PreparePulse(pulse core.Pulse, callback queue.SyncDone) 
 		return errors.New("[ PreparePulse ] preparation was already done")
 	}
 	if c.futurePulseNumber == nil {
-		c.slotMap[pulse.PulseNumber] = NewSlot(Future, pulse.PulseNumber)
+		c.slotMap[pulse.PulseNumber] = NewSlot(constant.Future, pulse.PulseNumber)
 		c.futurePulseNumber = &pulse.PulseNumber
 	}
 	if *c.futurePulseNumber != pulse.PulseNumber {
@@ -192,7 +193,7 @@ func (c *PulseConveyor) PreparePulse(pulse core.Pulse, callback queue.SyncDone) 
 	}
 
 	c.futurePulseData = &pulse
-	newFutureSlot := NewSlot(Unallocated, pulse.NextPulseNumber)
+	newFutureSlot := NewSlot(constant.Unallocated, pulse.NextPulseNumber)
 	c.slotMap[pulse.NextPulseNumber] = newFutureSlot
 	c.state = PreparingPulse
 	return nil
