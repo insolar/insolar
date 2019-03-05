@@ -1,14 +1,20 @@
 package generator
 
 import (
-	"strings"
-	"io/ioutil"
-	"go/token"
-	"go/parser"
-	"go/ast"
-	"log"
-	"fmt"
-	"os"
+"fmt"
+"go/ast"
+"go/parser"
+"go/token"
+"io/ioutil"
+"os"
+"strings"
+
+
+
+
+
+
+
 )
 
 type Parser struct {
@@ -155,7 +161,7 @@ func (p *Parser) parseStateMachineInterface(machine *stateMachine, source *ast.I
 		case strings.HasPrefix(currentHandler.Name, "eap_"):
 			currentHandler.setAsAdapterResponseErrorPast()
 		default:
-			log.Fatal("Unknown handler: ", currentHandler.Name)
+			exitWithError("Unknown handler: %s", currentHandler.Name)
 		}
 	}
 	p.StateMachines = append(p.StateMachines, machine)

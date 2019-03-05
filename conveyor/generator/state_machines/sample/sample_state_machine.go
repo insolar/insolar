@@ -23,7 +23,7 @@ import (
 
 // custom types
 type Event struct{}
-type Payload string
+type Payload struct{}
 type TA1 string
 type TAR string
 

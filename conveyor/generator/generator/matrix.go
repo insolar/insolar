@@ -55,11 +55,9 @@ func (g *Generator) getImports() []string {
 	return keys
 }
 
-func (g *Generator) GenMatrix () error {
+func (g *Generator) GenMatrix () {
 	file, err := os.Create(g.matrix)
-	if err != nil {
-		return err
-	}
+	checkErr(err)
 	defer file.Close()
 	out := bufio.NewWriter(file)
 	matrixTmpl.Execute(out, struct{
@@ -71,7 +69,6 @@ func (g *Generator) GenMatrix () error {
 
 	})
 	out.Flush()
-	return nil
 }
 
 
