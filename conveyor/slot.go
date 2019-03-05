@@ -56,6 +56,10 @@ type ElementList struct {
 	tail *slotElement
 }
 
+func (l *ElementList) isEmpty() bool {
+	return l.head == nil
+}
+
 // popElement gets element from linked list (and remove it from list)
 func (l *ElementList) popElement() *slotElement {
 	result := l.head
@@ -170,7 +174,7 @@ func (s *Slot) createElement(stateMachineType statemachine.StateMachineType, sta
 	// Set other fields to element, like:
 	// element.payload = event.GetPayload()
 
-	err := s.pushElement(ActiveElement, element)
+	err := s.pushElement(element)
 	if err != nil {
 		emptyList := s.elementListMap[EmptyElement]
 		emptyList.pushElement(element)
@@ -180,7 +184,16 @@ func (s *Slot) createElement(stateMachineType statemachine.StateMachineType, sta
 }
 
 func (s *Slot) hasExpired() bool {
-	panic("implement me")
+	// TODO: This is used to delete past slot, which doesn't have elements and not active for some configure time
+	return false
+}
+
+func (s *Slot) hasElements(status ActivationStatus) bool {
+	list, ok := s.elementListMap[status]
+	if !ok {
+		return false
+	}
+	return !list.isEmpty()
 }
 
 // popElement gets element of provided status from correspondent linked list (and remove it from that list)
@@ -192,15 +205,21 @@ func (s *Slot) popElement(status ActivationStatus) *slotElement { // nolint: unu
 	return list.popElement()
 }
 
+func (s *Slot) getSlotElementByID(id uint32) *slotElement {
+	return &s.elements[id%slotSize]
+}
+
 // pushElement adds element of provided status to correspondent linked list
-func (s *Slot) pushElement(status ActivationStatus, element *slotElement) error { // nolint: unused
-	element.activationStatus = status
+func (s *Slot) pushElement(element *slotElement) error { // nolint: unused
+	status := element.activationStatus
 	list, ok := s.elementListMap[status]
 	if !ok {
 		return fmt.Errorf("[ pushElement ] can't push element: list for status %s doesn't exist", status)
 	}
 	if status == EmptyElement {
-		element.id = element.id + slotElementDelta
+		oldID := element.id
+		*element = *newSlotElement(EmptyElement)
+		element.id = oldID + slotElementDelta
 	}
 	list.pushElement(element)
 	return nil
