@@ -33,8 +33,7 @@ func Test_Main(t *testing.T) {
 			g.ParseFile("", file.Name())
 		}
 	}
-	err = g.GenMatrix()
-	require.NoError(t, err)
+	g.GenMatrix()
 
 	out, err := exec.Command("go", "test", "-tags=with_generated", "./state_machine_test.go").CombinedOutput()
 	require.NoError(t, err)
