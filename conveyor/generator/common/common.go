@@ -23,7 +23,7 @@ import (
 )
 
 type State struct {
-	Migration statemachine.MigrationHandler
+	Migration              statemachine.MigrationHandler
 	MigrationFuturePresent statemachine.MigrationHandler
 	Transition statemachine.TransitHandler
 	TransitionFuture statemachine.TransitHandler
@@ -131,16 +131,11 @@ func (sm *StateMachine) GetResponseErrorHandler(slotType constant.PulseState, st
 
 type ElState uint32 //Element State Machine Type ID
 type ElType uint32  //Element State ID
-type ElNewState uint32
-
 func (s ElState) ToInt() uint32 {
 	return uint32(s)
 }
 
-type RawHandlerT func(element slot.SlotElementHelper) (err error, new_state uint32, new_payload interface{})
-
 type ElUpdate uint32 ///Element State ID + Element Machine Type ID << 10
-
 func (s ElUpdate) ToInt() uint32 {
 	return uint32(s)
 }

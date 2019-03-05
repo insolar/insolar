@@ -78,7 +78,6 @@ func SMRHTestStateMachineFactory() *common.StateMachine {
     }
 }
 
-// (index .States 0).GetTransitionName
 func (s *SMRHTestStateMachine) i_Init(element slot.SlotElementHelper) (interface{}, uint32, error) {
     aInput, ok := element.GetInputEvent().(Event)
     if !ok { return nil, 0, errors.New("wrong input event type") }

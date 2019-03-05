@@ -105,7 +105,6 @@ func SMRH{{$machine.Name}}Factory() *common.StateMachine {
     }
 }
 
-// (index .States 0).GetTransitionName
 {{template "initHandler" (params $machine (index .States 0).Transition)}}
 {{template "initHandler" (params $machine (index .States 0).TransitionFuture)}}
 {{template "initHandler" (params $machine (index .States 0).TransitionPast)}}

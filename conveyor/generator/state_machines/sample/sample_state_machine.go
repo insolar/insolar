@@ -23,7 +23,7 @@ import (
 
 // custom types
 type Event struct{}
-type Payload struct{}
+type Payload string
 type TA1 string
 type TAR string
 
@@ -104,40 +104,131 @@ type TestStateMachine interface {
 	eap_Second(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, common.ElUpdate)
 }
 
-/*type TestStateMachineImplementation struct {
+type TestStateMachineImplementation struct {
 	SMFIDTestStateMachine
 }
 
-func (t *TestStateMachineImplementation) Init(input Event, payload *Payload) (*Payload, common.ElState, error) {
-	return nil, t.StateFirst(), nil
+func (t *TestStateMachineImplementation) i_Init(input Event, payload interface{}) (*Payload, common.ElUpdate, error) {
+	return nil, common.ElUpdate(t.s_First()), nil
+}
+func (t *TestStateMachineImplementation) if_Init(input Event, payload interface{}) (*Payload, common.ElUpdate, error) {
+	return nil, common.ElUpdate(t.s_First()), nil
+}
+func (t *TestStateMachineImplementation) ip_Init(input Event, payload interface{}) (*Payload, common.ElUpdate, error) {
+	return nil, common.ElUpdate(t.s_First()), nil
 }
 
-func (t *TestStateMachineImplementation) ErrorInit(input Event, payload *Payload, err error) (*Payload, common.ElState) {
-	return nil, t.StateFirst()
+func (t *TestStateMachineImplementation) es_Init(input interface{}, payload interface{}, err error) (*Payload, common.ElUpdate) {
+	return nil, common.ElUpdate(t.s_First())
+}
+func (t *TestStateMachineImplementation) esf_Init(input interface{}, payload interface{}, err error) (*Payload, common.ElUpdate) {
+	return nil, common.ElUpdate(t.s_First())
+}
+func (t *TestStateMachineImplementation) esp_Init(input interface{}, payload interface{}, err error) (*Payload, common.ElUpdate) {
+	return nil, common.ElUpdate(t.s_First())
 }
 
-func (t *TestStateMachineImplementation) TransitFirstSecond(input Event, payload *Payload) (*Payload, common.ElState, error) {
-	return nil, t.StateSecond(), nil
+// Migration
+func (t *TestStateMachineImplementation) m_FirstSecond(input Event, payload *Payload) (*Payload, common.ElUpdate, error) {
+	return nil, 0, nil
 }
-
-func (t *TestStateMachineImplementation) MigrateFirst(input Event, payload *Payload) (*Payload, common.ElState, error) {
-	return nil, t.StateSecond(), nil
-}
-
-func (t *TestStateMachineImplementation) ErrorFirst(input Event, payload *Payload, err error) (*Payload, common.ElState) {
-	log.Print(err)
-	return nil, t.StateSecond()
-}
-
-func (t *TestStateMachineImplementation) TransitSecondThird(input Event, payload *Payload) (*Payload, common.ElState, error) {
-	return nil, 0, errors.New("Test error")
-}
-
-func (t *TestStateMachineImplementation) MigrateSecond(input Event, payload *Payload) (*Payload, common.ElState, error) {
+func (t *TestStateMachineImplementation) mfp_FirstSecond(input Event, payload *Payload) (*Payload, common.ElUpdate, error) {
 	return nil, 0, nil
 }
 
-func (t *TestStateMachineImplementation) ErrorSecond(input Event, payload *Payload, err error) (*Payload, common.ElState) {
-	log.Print(err)
+// Transition
+func (t *TestStateMachineImplementation) t_First(input Event, payload *Payload/* todo: , adapterHelper TA1*/) (*Payload, common.ElUpdate, error) {
+	return nil, common.ElUpdate(t.s_Second()), nil
+}
+func (t *TestStateMachineImplementation) tf_First(input Event, payload *Payload/* todo: , adapterHelper TA1*/) (*Payload, common.ElUpdate, error) {
+	return nil, common.ElUpdate(t.s_Second()), nil
+}
+func (t *TestStateMachineImplementation) tp_First(input Event, payload *Payload) (*Payload, common.ElUpdate, error) {
+	return nil, common.ElUpdate(t.s_Second()), nil
+}
+
+// Adapter Response
+func (t *TestStateMachineImplementation) a_First(input Event, payload *Payload, respPayload TAR) (*Payload, common.ElUpdate, error) {
+	return nil, 0, nil
+}
+func (t *TestStateMachineImplementation) af_First(input Event, payload *Payload, respPayload TAR) (*Payload, common.ElUpdate, error) {
+	return nil, 0, nil
+}
+func (t *TestStateMachineImplementation) ap_First(input Event, payload *Payload, respPayload TAR) (*Payload, common.ElUpdate, error) {
+	return nil, 0, nil
+}
+
+// State Error
+func (t *TestStateMachineImplementation) es_First(input interface{}, payload interface{}, err error) (*Payload, common.ElUpdate) {
+	return nil, common.ElUpdate(t.s_Second())
+}
+func (t *TestStateMachineImplementation) esf_First(input interface{}, payload interface{}, err error) (*Payload, common.ElUpdate) {
+	return nil, common.ElUpdate(t.s_Second())
+}
+func (t *TestStateMachineImplementation) esp_First(input interface{}, payload interface{}, err error) (*Payload, common.ElUpdate) {
+	return nil, common.ElUpdate(t.s_Second())
+}
+
+// Adapter Response Error
+func (t *TestStateMachineImplementation) ea_First(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, common.ElUpdate) {
 	return nil, 0
-}*/
+}
+func (t *TestStateMachineImplementation) eaf_First(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, common.ElUpdate) {
+	return nil, 0
+}
+func (t *TestStateMachineImplementation) eap_First(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, common.ElUpdate) {
+	return nil, 0
+}
+
+// Migration
+func (t *TestStateMachineImplementation) m_SecondThird(input Event, payload *Payload) (*Payload, common.ElUpdate, error) {
+	return nil, 0, nil
+}
+func (t *TestStateMachineImplementation) mfp_SecondThird(input Event, payload *Payload) (*Payload, common.ElUpdate, error) {
+	return nil, 0, nil
+}
+
+// Transition
+func (t *TestStateMachineImplementation) t_Second(input Event, payload *Payload/* todo: , adapterHelper1 TA1*/) (*Payload, common.ElUpdate, error) {
+	return nil, 0, nil
+}
+func (t *TestStateMachineImplementation) tf_Second(input Event, payload *Payload/* todo: , adapterHelper1 TA1*/) (*Payload, common.ElUpdate, error) {
+	return nil, 0, nil
+}
+func (t *TestStateMachineImplementation) tp_Second(input Event, payload *Payload/* todo: , adapterHelper1 TA1*/) (*Payload, common.ElUpdate, error) {
+	return nil, 0, nil
+}
+
+// Adapter Response
+func (t *TestStateMachineImplementation) a_Second(input Event, payload *Payload, respPayload TAR) (*Payload, common.ElUpdate, error) {
+	return nil, 0, nil
+}
+func (t *TestStateMachineImplementation) af_Second(input Event, payload *Payload, respPayload TAR) (*Payload, common.ElUpdate, error) {
+	return nil, 0, nil
+}
+func (t *TestStateMachineImplementation) ap_Second(input Event, payload *Payload, respPayload TAR) (*Payload, common.ElUpdate, error) {
+	return nil, 0, nil
+}
+
+// State Error
+func (t *TestStateMachineImplementation) es_Second(input interface{}, payload interface{}, err error) (*Payload, common.ElUpdate) {
+	return nil, 0
+}
+func (t *TestStateMachineImplementation) esf_Second(input interface{}, payload interface{}, err error) (*Payload, common.ElUpdate) {
+	return nil, 0
+}
+func (t *TestStateMachineImplementation) esp_Second(input interface{}, payload interface{}, err error) (*Payload, common.ElUpdate) {
+	return nil, 0
+}
+
+// Adapter Response Error
+func (t *TestStateMachineImplementation) ea_Second(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, common.ElUpdate) {
+	return nil, 0
+}
+func (t *TestStateMachineImplementation) eaf_Second(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, common.ElUpdate) {
+	return nil, 0
+}
+func (t *TestStateMachineImplementation) eap_Second(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, common.ElUpdate) {
+	return nil, 0
+}
+
