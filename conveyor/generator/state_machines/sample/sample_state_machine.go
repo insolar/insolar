@@ -21,14 +21,11 @@ import (
 	"github.com/insolar/insolar/conveyor/interfaces/adapter"
 )
 
-// todo sort out this shit
-type TA1 string
-type TAR string
-type AdapterResponse string
-
 // custom types
 type Event struct{}
 type Payload struct{}
+type TA1 string
+type TAR string
 
 // conveyor: state_machine
 type TestStateMachine interface {
