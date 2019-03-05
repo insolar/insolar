@@ -710,6 +710,243 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 	wg.Wait()
 }
 
+func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
+	objectRef := testutils.RandomRef()
+	parentRef := testutils.RandomRef()
+	protoRef := testutils.RandomRef()
+	codeRef := testutils.RandomRef()
+
+	meRef := testutils.RandomRef()
+	notMeRef := testutils.RandomRef()
+	suite.jc.MeMock.Return(meRef)
+
+	pn := 100
+	suite.ps.CurrentFunc = func(ctx context.Context) (*core.Pulse, error) {
+		return &core.Pulse{PulseNumber: core.PulseNumber(pn)}, nil
+	}
+
+	mle := testutils.NewMachineLogicExecutorMock(suite.mc)
+	err := suite.lr.RegisterExecutor(core.MachineTypeBuiltin, mle)
+	suite.Require().NoError(err)
+
+	type whenType int
+	const (
+		whenIsAuthorized whenType = iota
+		whenRegisterRequest
+		whenHasPendingRequest
+		whenCallMethod
+	)
+
+	table := []struct {
+		name                     string
+		when                     whenType
+		messagesExpected         []core.MessageType
+		errorExpected            bool
+		pendingInExecutorResults message.PendingState
+		queueLenInExecutorResults int
+	}{
+		{
+			name:          "pulse change in IsAuthorized",
+			when:          whenIsAuthorized,
+			errorExpected: true,
+		},
+		{
+			name: "pulse change in RegisterRequest",
+			when: whenRegisterRequest,
+		},
+		{
+			name:             "pulse change in HasPendingRequests",
+			when:             whenHasPendingRequest,
+			messagesExpected: []core.MessageType{core.TypeExecutorResults},
+			pendingInExecutorResults: message.PendingUnknown,
+			queueLenInExecutorResults: 1,
+		},
+		{
+			name: "pulse change in CallMethod",
+			when: whenCallMethod,
+			messagesExpected: []core.MessageType{
+				core.TypeExecutorResults, core.TypeReturnResults, core.TypePendingFinished, core.TypeStillExecuting,
+			},
+			pendingInExecutorResults: message.InPending,
+			queueLenInExecutorResults: 0,
+		},
+	}
+
+	for _, test := range table {
+		test := test
+		suite.T().Run(test.name, func(t *testing.T) {
+			pn = 100
+
+			once := sync.Once{}
+
+			wg := sync.WaitGroup{}
+			wg.Add(1)
+
+			changePulse := func() (ch chan struct{}) {
+				once.Do(func() {
+					ch = make(chan struct{})
+
+					pn += 1
+
+					go func() {
+						defer wg.Done()
+						defer close(ch)
+
+						pulse := core.Pulse{PulseNumber: core.PulseNumber(pn)}
+
+						ctx := inslogger.ContextWithTrace(suite.ctx, "pulse-"+strconv.Itoa(pn))
+
+						err := suite.lr.OnPulse(ctx, pulse)
+						suite.Require().NoError(err)
+					}()
+				})
+				return
+			}
+
+			suite.jc.IsAuthorizedFunc = func(
+				ctx context.Context, role core.DynamicRole, id core.RecordID, pnArg core.PulseNumber, obj core.RecordRef,
+			) (bool, error) {
+				if pnArg == 101 {
+					return false, nil
+				}
+
+				if test.when == whenIsAuthorized {
+					changePulse()
+					for pn == 100 {
+						time.Sleep(time.Millisecond)
+					}
+				}
+
+				return pn == 100, nil
+			}
+
+			if test.when > whenIsAuthorized {
+				suite.am.RegisterRequestFunc = func(ctx context.Context, r core.RecordRef, msg core.Parcel) (*core.RecordID, error) {
+					if test.when == whenRegisterRequest {
+						<-changePulse()
+					}
+
+					reqId := testutils.RandomID()
+					return &reqId, nil
+				}
+			}
+
+			if test.when > whenRegisterRequest {
+				suite.am.HasPendingRequestsFunc = func(ctx context.Context, r core.RecordRef) (bool, error) {
+					if test.when == whenHasPendingRequest {
+						<-changePulse()
+					}
+
+					return false, nil
+				}
+			}
+
+			if test.when > whenHasPendingRequest {
+				mle.CallMethodFunc = func(
+					ctx context.Context, lctx *core.LogicCallContext, r core.RecordRef,
+					mem []byte, method string, args core.Arguments,
+				) ([]byte, core.Arguments, error) {
+					if test.when == whenCallMethod {
+						<-changePulse()
+					}
+
+					return []byte{1, 2, 3}, []byte{}, nil
+				}
+
+				nodeMock := network.NewNodeMock(suite.T())
+				nodeMock.IDMock.Return(meRef)
+				suite.nn.GetOriginMock.Return(nodeMock)
+
+				od := testutils.NewObjectDescriptorMock(suite.T())
+				od.PrototypeMock.Return(&protoRef, nil)
+				od.MemoryMock.Return([]byte{1, 2, 3})
+				od.ParentMock.Return(&parentRef)
+				od.HeadRefMock.Return(&objectRef)
+
+				pd := testutils.NewObjectDescriptorMock(suite.T())
+				pd.CodeMock.Return(&codeRef, nil)
+				pd.HeadRefMock.Return(&protoRef)
+
+				cd := testutils.NewCodeDescriptorMock(suite.T())
+				cd.MachineTypeMock.Return(core.MachineTypeBuiltin)
+				cd.RefMock.Return(&codeRef)
+
+				suite.am.GetObjectFunc = func(
+					ctx context.Context, obj core.RecordRef, st *core.RecordID, approved bool,
+				) (core.ObjectDescriptor, error) {
+					switch obj {
+					case objectRef:
+						return od, nil
+					case protoRef:
+						return pd, nil
+					}
+					return nil, errors.New("unexpected call")
+				}
+
+				suite.am.GetCodeMock.Return(cd, nil)
+
+				suite.am.RegisterResultFunc = func(
+					ctx context.Context, r1 core.RecordRef, r2 core.RecordRef, mem []byte,
+				) (*core.RecordID, error) {
+					resId := testutils.RandomID()
+					return &resId, nil
+				}
+			}
+
+			wg.Add(len(test.messagesExpected))
+
+			if len(test.messagesExpected) > 0 {
+				suite.mb.SendFunc = func(
+					ctx context.Context, msg core.Message, opts *core.MessageSendOptions,
+				) (core.Reply, error) {
+
+					suite.Require().Contains(test.messagesExpected, msg.Type())
+					wg.Done()
+
+					if msg.Type() == core.TypeExecutorResults {
+						suite.Require().Equal(test.pendingInExecutorResults, msg.(*message.ExecutorResults).Pending)
+						suite.Require().Equal(test.queueLenInExecutorResults, len(msg.(*message.ExecutorResults).Queue))
+					}
+
+					switch msg.Type() {
+					case core.TypeReturnResults,
+						core.TypeExecutorResults,
+						core.TypePendingFinished,
+						core.TypeStillExecuting:
+						return &reply.OK{}, nil
+					default:
+						panic("no idea how to handle " + msg.Type().String())
+					}
+				}
+			}
+
+			msg := &message.CallMethod{
+				ObjectRef:      objectRef,
+				Method:         "some",
+				ProxyPrototype: protoRef,
+			}
+
+			parcel := testutils.NewParcelMock(suite.T())
+			parcel.DefaultTargetMock.Return(&objectRef)
+			parcel.MessageMock.Return(msg)
+			parcel.TypeMock.Return(msg.Type())
+			parcel.PulseMock.Return(core.PulseNumber(100))
+			parcel.GetSenderMock.Return(notMeRef)
+
+			ctx := inslogger.ContextWithTrace(suite.ctx, "req")
+
+			_, err := suite.lr.Execute(ctx, parcel)
+			if test.errorExpected {
+				suite.Require().Error(err)
+			} else {
+				suite.Require().NoError(err)
+			}
+
+			wg.Wait()
+		})
+	}
+}
+
 func TestLogicRunner(t *testing.T) {
 	t.Parallel()
 	suite.Run(t, new(LogicRunnerTestSuite))
