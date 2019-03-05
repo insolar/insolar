@@ -1,0 +1,79 @@
+package db_test
+
+import (
+	"io/ioutil"
+	"math/rand"
+	"testing"
+
+	"github.com/google/gofuzz"
+	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/ledger/storage/db"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+type testKey struct {
+	id    []byte
+	scope db.Scope
+}
+
+func (k testKey) Scope() db.Scope {
+	return k.scope
+}
+
+func (k testKey) ID() []byte {
+	return k.id
+}
+
+func TestDB_Components(t *testing.T) {
+	t.Parallel()
+
+	tmpdir, err := ioutil.TempDir("", "bdb-test-")
+	assert.NoError(t, err)
+	badger, err := db.NewBadgerDB(configuration.Ledger{Storage: configuration.Storage{DataDirectory: tmpdir}})
+	require.NoError(t, err)
+
+	mock := db.NewMockDB()
+
+	type data struct {
+		key   testKey
+		value []byte
+	}
+	var datas []data
+
+	f := fuzz.New().NilChance(0).NumElements(5, 10)
+	f = f.Funcs(func(d *data, c fuzz.Continue) {
+		id := make([]byte, 10)
+		rand.Read(id)
+		d.key = testKey{
+			scope: db.Scope(rand.Int31()),
+			id:    id,
+		}
+		d.value = make([]byte, 10)
+		rand.Read(d.value)
+	})
+	f.Fuzz(&datas)
+
+	for _, d := range datas {
+		{
+			err := badger.Set(d.key, d.value)
+			assert.NoError(t, err)
+		}
+		{
+			err := mock.Set(d.key, d.value)
+			assert.NoError(t, err)
+		}
+	}
+	for _, d := range datas {
+		{
+			val, err := badger.Get(d.key)
+			assert.NoError(t, err)
+			assert.Equal(t, d.value, val)
+		}
+		{
+			val, err := mock.Get(d.key)
+			assert.NoError(t, err)
+			assert.Equal(t, d.value, val)
+		}
+	}
+}

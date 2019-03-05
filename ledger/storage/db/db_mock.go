@@ -27,11 +27,11 @@ type MockDB struct {
 	backend map[string][]byte
 }
 
-func NewMockDB() (*MockDB, error) {
+func NewMockDB() *MockDB {
 	db := &MockDB{
 		backend: map[string][]byte{},
 	}
-	return db, nil
+	return db
 }
 
 func (b *MockDB) Get(key Key) (value []byte, err error) {
