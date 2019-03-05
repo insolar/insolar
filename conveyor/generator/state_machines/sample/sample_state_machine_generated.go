@@ -25,7 +25,7 @@ type SMRHTestStateMachine struct {
 	cleanHandlers TestStateMachine
 }
 
-func SMRHTestStateMachineExport() common.StateMachine {
+func SMRHTestStateMachineFactory() *common.StateMachine {
     m := SMRHTestStateMachine{
         cleanHandlers: &TestStateMachineImplementation{},
     }
@@ -72,7 +72,7 @@ func SMRHTestStateMachineExport() common.StateMachine {
             AdapterResponseErrorPast: m.eap_Second,
         },)
 
-    return common.StateMachine{
+    return &common.StateMachine{
         Id: int(m.cleanHandlers.(TestStateMachine).TID()),
         States: x,
     }

@@ -68,7 +68,7 @@ type SMRH{{$machine.Name}} struct {
 	cleanHandlers {{$machine.Name}}
 }
 
-func SMRH{{$machine.Name}}Export() common.StateMachine {
+func SMRH{{$machine.Name}}Factory() *common.StateMachine {
     m := SMRH{{$machine.Name}}{
         cleanHandlers: &{{$machine.Name}}Implementation{},
     }
@@ -99,7 +99,7 @@ func SMRH{{$machine.Name}}Export() common.StateMachine {
             AdapterResponseErrorPast: m.{{$state.GetAdapterResponseErrorPastName}},
         },{{end}}{{end}})
 
-    return common.StateMachine{
+    return &common.StateMachine{
         Id: int(m.cleanHandlers.({{$machine.Name}}).TID()),
         States: x,
     }
