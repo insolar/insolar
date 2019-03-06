@@ -49,7 +49,7 @@ func SMRH{{$machine.Name}}Factory() [3]common.StateMachine {
         ErrorState: m.{{(index .States 0).GetErrorStateFutureName}},
     },{{range $i, $state := .States}}{{if (gtNull $i)}}
     common.State{
-        Transition: m.{{$state.GetTransitionFutureName}},
+        {{if (handlerExists $state.TransitionFuture)}}Transition: m.{{$state.GetTransitionFutureName}},{{end}}
         {{if (handlerExists $state.AdapterResponseFuture)}}AdapterResponse: m.{{$state.GetAdapterResponseFutureName}},{{end}}
         ErrorState: m.{{$state.GetErrorStateFutureName}},
         {{if (handlerExists $state.AdapterResponseErrorFuture)}}AdapterResponseError: m.{{$state.GetAdapterResponseErrorFutureName}},{{end}}
