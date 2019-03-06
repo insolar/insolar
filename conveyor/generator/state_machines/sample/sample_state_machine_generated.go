@@ -1,11 +1,26 @@
+/*
+*    Copyright 2019 Insolar Technologies
+*
+*    Licensed under the Apache License, Version 2.0 (the "License");
+*    you may not use this file except in compliance with the License.
+*    You may obtain a copy of the License at
+*
+*        http://www.apache.org/licenses/LICENSE-2.0
+*
+*    Unless required by applicable law or agreed to in writing, software
+*    distributed under the License is distributed on an "AS IS" BASIS,
+*    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+*    See the License for the specific language governing permissions and
+*    limitations under the License.
+*/
 
 package sample
 
 import (
-	"github.com/insolar/insolar/conveyor/generator/common"
-	"github.com/insolar/insolar/conveyor/interfaces/slot"
+    "github.com/insolar/insolar/conveyor/generator/common"
+    "github.com/insolar/insolar/conveyor/interfaces/slot"
     "github.com/insolar/insolar/conveyor/interfaces/adapter"
-	"errors"
+    "errors"
 )
 
 type SMFIDTestStateMachine struct {}
@@ -14,15 +29,15 @@ func (*SMFIDTestStateMachine) TID() common.ElType {
     return 1
 }
 
-func (*SMFIDTestStateMachine) s_First() common.ElState {
+    func (*SMFIDTestStateMachine) s_First() common.ElState {
     return 1
 }
-func (*SMFIDTestStateMachine) s_Second() common.ElState {
+    func (*SMFIDTestStateMachine) s_Second() common.ElState {
     return 2
 }
 
 type SMRHTestStateMachine struct {
-	cleanHandlers TestStateMachine
+    cleanHandlers TestStateMachine
 }
 
 func SMRHTestStateMachineFactory() *common.StateMachine {
@@ -32,45 +47,45 @@ func SMRHTestStateMachineFactory() *common.StateMachine {
 
     var x []common.State
     x = append(x, common.State{
-            Transition: m.i_Init,
-            TransitionFuture: m.if_Init,
-            TransitionPast: m.ip_Init,
-            ErrorState: m.es_Init,
-            ErrorStateFuture: m.esf_Init,
-            ErrorStatePast: m.esp_Init,
-        },
-        common.State{
-            Migration: m.m_FirstSecond,
-            MigrationFuturePresent: m.mfp_FirstSecond,
-            Transition: m.t_First,
-            TransitionFuture: m.tf_First,
-            TransitionPast: m.tp_First,
-            AdapterResponse: m.a_First,
-            AdapterResponseFuture: m.af_First,
-            AdapterResponsePast: m.ap_First,
-            ErrorState: m.es_First,
-            ErrorStateFuture: m.esf_First,
-            ErrorStatePast: m.esp_First,
-            AdapterResponseError: m.ea_First,
-            AdapterResponseErrorFuture: m.eaf_First,
-            AdapterResponseErrorPast: m.eap_First,
-        },
-        common.State{
-            Migration: m.m_SecondThird,
-            MigrationFuturePresent: m.mfp_SecondThird,
-            Transition: m.t_Second,
-            TransitionFuture: m.tf_Second,
-            TransitionPast: m.tp_Second,
-            AdapterResponse: m.a_Second,
-            AdapterResponseFuture: m.af_Second,
-            AdapterResponsePast: m.ap_Second,
-            ErrorState: m.es_Second,
-            ErrorStateFuture: m.esf_Second,
-            ErrorStatePast: m.esp_Second,
-            AdapterResponseError: m.ea_Second,
-            AdapterResponseErrorFuture: m.eaf_Second,
-            AdapterResponseErrorPast: m.eap_Second,
-        },)
+        Transition: m.i_Init,
+        TransitionFuture: m.if_Init,
+        TransitionPast: m.ip_Init,
+        ErrorState: m.es_Init,
+        ErrorStateFuture: m.esf_Init,
+        ErrorStatePast: m.esp_Init,
+    },
+    common.State{
+        Migration: m.m_FirstSecond,
+        MigrationFuturePresent: m.mfp_FirstSecond,
+        Transition: m.t_First,
+        TransitionFuture: m.tf_First,
+        TransitionPast: m.tp_First,
+        AdapterResponse: m.a_First,
+        AdapterResponseFuture: m.af_First,
+        AdapterResponsePast: m.ap_First,
+        ErrorState: m.es_First,
+        ErrorStateFuture: m.esf_First,
+        ErrorStatePast: m.esp_First,
+        AdapterResponseError: m.ea_First,
+        AdapterResponseErrorFuture: m.eaf_First,
+        AdapterResponseErrorPast: m.eap_First,
+    },
+    common.State{
+        Migration: m.m_SecondThird,
+        MigrationFuturePresent: m.mfp_SecondThird,
+        Transition: m.t_Second,
+        TransitionFuture: m.tf_Second,
+        TransitionPast: m.tp_Second,
+        AdapterResponse: m.a_Second,
+        AdapterResponseFuture: m.af_Second,
+        AdapterResponsePast: m.ap_Second,
+        ErrorState: m.es_Second,
+        ErrorStateFuture: m.esf_Second,
+        ErrorStatePast: m.esp_Second,
+        AdapterResponseError: m.ea_Second,
+        AdapterResponseErrorFuture: m.eaf_Second,
+        AdapterResponseErrorPast: m.eap_Second,
+    },)
 
     return &common.StateMachine{
         Id: int(m.cleanHandlers.(TestStateMachine).TID()),

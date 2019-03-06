@@ -24,7 +24,11 @@ import (
 	"strings"
 )
 
-const insolarRep = "github.com/insolar/insolar"
+const (
+	insolarRep = "github.com/insolar/insolar"
+    stateMachineTemplate = "conveyor/generator/generator/templates/state_machine.go.tpl"
+    matrixTemplate="conveyor/generator/generator/templates/matrix.go.tpl"
+)
 
 type stateMachine struct {
 	Package string

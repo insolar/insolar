@@ -18,8 +18,8 @@ package matrix
 
 import (
     "github.com/insolar/insolar/conveyor/generator/common"
-    "github.com/insolar/insolar/conveyor/generator/state_machines/sample"
-    
+    {{range .Imports}}"{{.}}"
+    {{end}}
 )
 
 type matrix struct {
@@ -30,14 +30,14 @@ type MachineType int
 var Matrix matrix
 
 const (
-    TestStateMachine MachineType = iota + 1
+    {{range $i, $m := .Machines}}{{$m.Name}}{{if (isNull $i)}} MachineType = iota + 1{{end}}{{end}}
 )
 
 func init() {
     Matrix := matrix{}
     Matrix.matrix = append(Matrix.matrix, nil,
-    sample.SMRHTestStateMachineFactory(),
-)
+    {{range .Machines}}{{.Package}}.SMRH{{.Name}}Factory(),
+{{end}})
 }
 
 func (m *matrix) GetStateMachineByType(mType MachineType) *common.StateMachine {
