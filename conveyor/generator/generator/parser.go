@@ -47,7 +47,7 @@ func exitWithError(err string, a ...interface{}) {
 	os.Exit(1)
 }
 
-func (p *Parser) openFile() {
+func (p *Parser) readStateMachinesInterfaceFile() {
 	var err error
 	p.sourceCode, err = ioutil.ReadFile(p.sourceFilename)
 	checkErr(err)

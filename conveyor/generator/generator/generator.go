@@ -65,7 +65,7 @@ func (g *Generator) ParseFile(dir string, filename string) {
 
 	file := path.Join(g.fullPathToInsolar, g.PathToStateMachines, dir, filename)
 	p := Parser{generator: g, sourceFilename: file}
-	p.openFile()
+	p.readStateMachinesInterfaceFile()
 	p.findEachStateMachine()
 	outFileName := file[0:len(file)-3] + "_generated.go"
 	outFile, err := os.Create(outFileName)
