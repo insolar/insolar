@@ -52,6 +52,10 @@ func newSlotElement(activationStatus ActivationStatus) *slotElement {
 
 // ---- SlotElementRestrictedHelper
 
+func (se *slotElement) setDeleteState() {
+	se.activationStatus = EmptyElement
+}
+
 // GetParentElementID implements SlotElementRestrictedHelper
 func (se *slotElement) GetParentElementID() uint32 {
 	return se.parentElementID

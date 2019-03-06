@@ -116,14 +116,14 @@ func (w *workerStateMachineImpl) readResponseQueue() error {
 			if !ok {
 				panic(fmt.Sprintf("Bad type in adapter response queue: %T", resp.GetData()))
 			}
-			element := w.slot.elements[adapterResp.GetElementID()]
+			element := w.slot.getSlotElementByID(adapterResp.GetElementID())
 
 			respHandler := element.stateMachineType.GetResponseHandler(w.slot.pulseState, element.state)
 			if respHandler == nil {
 				panic(fmt.Sprintf("No response handler. State: %d. \nAdapterResp: %+v", element.state, adapterResp))
 			}
 
-			payLoad, newState, err := respHandler(&element, adapterResp)
+			payLoad, newState, err := respHandler(element, adapterResp)
 			if err != nil {
 				log.Error("[ readResponseQueue ] Response handler errors: ", err)
 				respErrorHandler := element.stateMachineType.GetResponseErrorHandler(w.slot.pulseState, element.state)
@@ -131,14 +131,14 @@ func (w *workerStateMachineImpl) readResponseQueue() error {
 					panic(fmt.Sprintf("No response error handler. State: %d. \nAdapterResp: %+v", element.state, adapterResp))
 				}
 
-				payLoad, newState = respErrorHandler(&element, adapterResp, err)
+				payLoad, newState = respErrorHandler(element, adapterResp, err)
 			}
 
 			if newState == 0 {
 				// TODO: call finalization handler
 			}
 
-			setNewState(&element, payLoad, newState)
+			setNewState(element, payLoad, newState)
 		}
 
 		numProcessedElements++
@@ -190,10 +190,10 @@ func (w *workerStateMachineImpl) processingElements() {
 			}
 
 			if newState == 0 {
-				panic("implement me")
+				element.setDeleteState()
 			}
-
 			setNewState(element, payLoad, newState)
+			w.slot.pushElement(element)
 
 			if w.slot.inputQueue.HasSignal() {
 				w.nextWorkerState = ReadInputQueue
@@ -238,5 +238,8 @@ func (w *workerStateMachineImpl) working() {
 		}
 
 	}
+}
+
+func (w *workerStateMachineImpl) suspending() {
 
 }
