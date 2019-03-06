@@ -22,6 +22,12 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage/db.JetIndexModifier -o ./ -s _mock.go
+type JetIndexModifier interface {
+	Add(id core.RecordID, jetID core.JetID)
+	Delete(id core.RecordID, jetID core.JetID)
+}
+
 type JetIndex struct {
 	lock    sync.Mutex
 	storage map[core.JetID]recordSet
