@@ -25,19 +25,10 @@ import (
 
 type State struct {
 	Migration              statemachine.MigrationHandler
-	// MigrationFuturePresent statemachine.MigrationHandler
 	Transition statemachine.TransitHandler
-	// TransitionFuture statemachine.TransitHandler
-	// TransitionPast statemachine.TransitHandler
 	AdapterResponse statemachine.AdapterResponseHandler
-	// AdapterResponseFuture statemachine.AdapterResponseHandler
-	// AdapterResponsePast statemachine.AdapterResponseHandler
 	ErrorState statemachine.TransitionErrorHandler
-	// ErrorStateFuture statemachine.TransitionErrorHandler
-	// ErrorStatePast statemachine.TransitionErrorHandler
 	AdapterResponseError statemachine.ResponseErrorHandler
-	// AdapterResponseErrorFuture statemachine.ResponseErrorHandler
-	// AdapterResponseErrorPast statemachine.ResponseErrorHandler
 	/*Finalization *handler
 	FinalizationFuture *handler
 	FinalizationPast *handler*/

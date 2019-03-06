@@ -19,6 +19,7 @@
 package main
 
 import (
+	"github.com/insolar/insolar/conveyor/generator/matrix"
 	"github.com/insolar/insolar/conveyor/generator/state_machines/sample"
 	"github.com/insolar/insolar/conveyor/interfaces/slot"
 	"testing"
@@ -33,7 +34,7 @@ func Test_Generated_State_Machine(t *testing.T) {
 		return &sample.Payload{}
 	}
 
-	machines := sample.SMRHTestStateMachineFactory()
+	machines := matrix.NewMatrix().GetStateMachinesByType(matrix.TestStateMachine)
 
 	var state uint32 = 0
 	for {

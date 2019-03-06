@@ -22,24 +22,25 @@ import (
     
 )
 
-type matrix struct {
-    matrix  []*common.StateMachine
+type Matrix struct {
+    matrix  [][3]common.StateMachine
 }
 
 type MachineType int
-var Matrix matrix
 
 const (
     TestStateMachine MachineType = iota + 1
 )
 
-func init() {
-    Matrix := matrix{}
-    Matrix.matrix = append(Matrix.matrix, nil,
+func NewMatrix() *Matrix {
+    m := Matrix{}
+    m.matrix = append(m.matrix,
+    [3]common.StateMachine{ {}, {}, {} },
     sample.SMRHTestStateMachineFactory(),
-)
+    )
+    return &m
 }
 
-func (m *matrix) GetStateMachineByType(mType MachineType) *common.StateMachine {
+func (m *Matrix) GetStateMachinesByType(mType MachineType) [3]common.StateMachine {
     return m.matrix[int(mType)]
 }
