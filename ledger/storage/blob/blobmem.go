@@ -21,25 +21,59 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/ledger/storage/db"
+	"go.opencensus.io/stats"
 )
 
-// simple aliases for key/value in memory map
-type objectID = core.RecordID
-type blobValue = []byte
-
+// Storage is an in-memory struct for blob-storage
 type Storage struct {
-	lock  sync.RWMutex
-	blobs map[objectID]blobValue
+	jetIndex db.JetIndexModifier
+
+	lock   sync.RWMutex
+	memory map[core.RecordID]Blob
 }
 
+// NewStorage creates a new instance of Storage.
 func NewStorage() *Storage {
-	return &Storage{blobs: map[objectID]blobValue{}}
+	return &Storage{
+		memory:   map[core.RecordID]Blob{},
+		jetIndex: db.NewJetIndex(),
+	}
 }
 
-func (s *Storage) Set(ctx context.Context, jetID core.JetID, pulseNumber core.PulseNumber, blob []byte) (*core.RecordID, error) {
-	panic("implement me")
+// Get returns Blob for provided id
+func (s *Storage) Get(ctx context.Context, id core.RecordID) (blob Blob, err error) {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+
+	blob, ok := s.memory[id]
+	if !ok {
+		err = ErrNotFound
+		return
+	}
+
+	return
 }
 
-func (s *Storage) Get(ctx context.Context, jetID core.JetID, id *core.RecordID) ([]byte, error) {
-	panic("implement me")
+// Set saves new Blob-value in storage
+func (s *Storage) Set(ctx context.Context, id core.RecordID, blob Blob) error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	_, ok := s.memory[id]
+	if ok {
+		return ErrOverride
+	}
+
+	s.memory[id] = blob
+	s.jetIndex.Add(id, blob.JetID)
+
+	blobSize := int64(len(blob.Value))
+
+	stats.Record(ctx,
+		statBlobInMemorySize.M(blobSize),
+		statBlobInMemoryCount.M(1),
+	)
+
+	return nil
 }

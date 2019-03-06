@@ -1,5 +1,5 @@
 /*
- *    Copyright 2019 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -14,27 +14,15 @@
  *    limitations under the License.
  */
 
-package gen
+package blob
 
 import (
-	fuzz "github.com/google/gofuzz"
-	"github.com/insolar/insolar/core"
+	"errors"
 )
 
-// ID generates random id.
-func ID() (id core.RecordID) {
-	fuzz.New().NilChance(0).Fuzz(&id)
-	return
-}
-
-// JetID generates random id.
-func JetID() (id core.JetID) {
-	fuzz.New().NilChance(0).Fuzz(&id)
-	return
-}
-
-// Reference generates random reference.
-func Reference() (ref core.RecordRef) {
-	fuzz.New().NilChance(0).Fuzz(&ref)
-	return
-}
+var (
+	// ErrNotFound is returned when blob-record not found
+	ErrNotFound = errors.New("not found")
+	// ErrOverride is returned if SetBlob tries to update existing record.
+	ErrOverride = errors.New("records override is forbidden")
+)
