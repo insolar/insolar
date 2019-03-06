@@ -47,6 +47,8 @@ func len3List() ElementList {
 	el3 := &slotElement{id: 3}
 	el1.nextElement = el2
 	el2.nextElement = el3
+	el3.prevElement = el2
+	el2.prevElement = el1
 
 	l := ElementList{
 		head: el1,
@@ -89,6 +91,7 @@ func TestElementList_popElement_FromLenOneList(t *testing.T) {
 	require.Equal(t, 0, elementListLength(&l))
 }
 
+// nani
 func TestElementList_popElement_Multiple(t *testing.T) {
 	l := ElementList{}
 	numElements := 333
@@ -111,6 +114,7 @@ func TestElementList_popElement_Multiple(t *testing.T) {
 		require.Equal(t, prevHead, el)
 		require.Equal(t, prevHead.nextElement, l.head)
 		require.Equal(t, prevTail, l.tail)
+		require.Equal(t, prevTail.prevElement, l.tail.prevElement)
 		require.Equal(t, numElements-i, elementListLength(&l))
 	}
 }
@@ -130,6 +134,7 @@ func TestElementList_pushElement_ToLenOneList(t *testing.T) {
 
 	l.pushElement(el)
 	require.Equal(t, el, expectedElement.nextElement)
+	require.Equal(t, expectedElement, el.prevElement)
 	require.Equal(t, el, l.tail)
 	require.Equal(t, 2, elementListLength(&l))
 }
@@ -149,6 +154,7 @@ func TestElementList_pushElement_Multiple(t *testing.T) {
 		require.Equal(t, prevHead, l.head)
 		require.Equal(t, el, prevTail.nextElement)
 		require.Equal(t, el, l.tail)
+		require.Equal(t, prevTail, el.prevElement)
 		require.Equal(t, i, elementListLength(&l))
 	}
 }
@@ -164,11 +170,12 @@ func TestElementList_pushElement_popElement(t *testing.T) {
 }
 
 func TestInitElementsBuf(t *testing.T) {
-	elements := initElementsBuf()
+	elements, emptyList := initElementsBuf()
 	require.Len(t, elements, slotSize)
 	for i := 0; i < slotSize; i++ {
 		require.Equal(t, EmptyElement, elements[i].activationStatus)
 	}
+	require.Equal(t, slotSize, elementListLength(emptyList))
 }
 
 func TestNewSlot(t *testing.T) {
@@ -294,6 +301,7 @@ func TestSlot_popElement(t *testing.T) {
 	element := s.popElement(ActiveElement)
 	require.Equal(t, prevHead, element)
 	require.Equal(t, prevHead.nextElement, s.elementListMap[ActiveElement].head)
+	require.Nil(t, s.elementListMap[ActiveElement].head.prevElement)
 	require.Equal(t, prevTail, s.elementListMap[ActiveElement].tail)
 	require.Equal(t, 2, elementListLength(s.elementListMap[ActiveElement]))
 }
@@ -324,6 +332,7 @@ func TestSlot_pushElement(t *testing.T) {
 	require.Equal(t, prevHead, s.elementListMap[ActiveElement].head)
 	require.Equal(t, element, prevTail.nextElement)
 	require.Equal(t, element, s.elementListMap[ActiveElement].tail)
+	require.Equal(t, prevTail, s.elementListMap[ActiveElement].tail.prevElement)
 	require.Equal(t, 4, elementListLength(s.elementListMap[ActiveElement]))
 
 	require.Equal(t, prevID, element.id)
@@ -357,6 +366,7 @@ func TestSlot_pushElement_Empty(t *testing.T) {
 	require.Equal(t, prevHead, s.elementListMap[EmptyElement].head)
 	require.Equal(t, element, prevTail.nextElement)
 	require.Equal(t, element, s.elementListMap[EmptyElement].tail)
+	require.Equal(t, prevTail, s.elementListMap[EmptyElement].tail.prevElement)
 	require.Equal(t, 4, elementListLength(s.elementListMap[EmptyElement]))
 
 	require.Equal(t, prevID+slotElementDelta, element.id)

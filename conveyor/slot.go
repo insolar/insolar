@@ -67,6 +67,9 @@ func (l *ElementList) popElement() *slotElement {
 		return nil
 	}
 	l.head = l.head.nextElement
+	if l.head != nil {
+		l.head.prevElement = nil
+	}
 	return result
 }
 
@@ -76,7 +79,9 @@ func (l *ElementList) pushElement(element *slotElement) { // nolint: unused
 		l.head = element
 	} else {
 		l.tail.nextElement = element
+		element.prevElement = l.tail
 	}
+	element.nextElement = nil
 	l.tail = element
 }
 
@@ -103,16 +108,15 @@ var SlotStateMachine = slotElement{
 	stateMachineType: nil, // TODO: add smth correct
 }
 
-func initElementsBuf() []slotElement {
+func initElementsBuf() ([]slotElement, *ElementList) {
 	elements := make([]slotElement, slotSize)
-	var nextElement *slotElement
-	for i := slotSize - 1; i >= 0; i-- {
+	emptyList := &ElementList{}
+	for i := 0; i < slotSize; i++ {
 		elements[i] = *newSlotElement(EmptyElement)
 		elements[i].id = uint32(i)
-		elements[i].nextElement = nextElement
-		nextElement = &elements[i]
+		emptyList.pushElement(&elements[i])
 	}
-	return elements
+	return elements, emptyList
 }
 
 // NewSlot creates new instance of Slot
@@ -122,13 +126,10 @@ func NewSlot(pulseState constant.PulseState, pulseNumber core.PulseNumber) *Slot
 		slotState = Working
 	}
 
-	elements := initElementsBuf()
+	elements, emptyList := initElementsBuf()
 
 	elementListMap := map[ActivationStatus]*ElementList{
-		EmptyElement: {
-			head: &elements[0],
-			tail: &elements[slotSize-1],
-		},
+		EmptyElement:     emptyList,
 		ActiveElement:    {},
 		NotActiveElement: {},
 	}
@@ -205,7 +206,18 @@ func (s *Slot) popElement(status ActivationStatus) *slotElement { // nolint: unu
 }
 
 func (s *Slot) getSlotElementByID(id uint32) *slotElement {
-	return &s.elements[id%slotSize]
+	element := &s.elements[id%slotSize]
+	next := element.nextElement
+	prev := element.prevElement
+	if prev != nil {
+		prev.nextElement = next
+	}
+	if next != nil {
+		next.prevElement = prev
+	}
+	element.prevElement = nil
+	element.nextElement = nil
+	return element
 }
 
 // pushElement adds element of provided status to correspondent linked list
