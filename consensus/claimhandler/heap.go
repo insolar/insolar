@@ -12,35 +12,62 @@
  *  Neither the name of Insolar Technologies nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
  *
  * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
-package servicenetwork
+package claimhandler
 
 import (
-	"testing"
+	"bytes"
+	"container/heap"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/insolar/insolar/consensus/packets"
 )
 
-func TestNewServiceNetwork_incrementPort(t *testing.T) {
-	addr, err := incrementPort("0.0.0.0:8080")
-	assert.NoError(t, err)
-	assert.Equal(t, "0.0.0.0:8081", addr)
+// Queue implements heap.Interface.
+type Queue []*Claim
 
-	addr, err = incrementPort("[::]:8080")
-	assert.NoError(t, err)
-	assert.Equal(t, "[::]:8081", addr)
+type Claim struct {
+	value    packets.ReferendumClaim
+	priority []byte
+	index    int
+}
 
-	addr, err = incrementPort("0.0.0.0:0")
-	assert.NoError(t, err)
-	assert.Equal(t, "0.0.0.0:0", addr)
+func (q *Queue) PushClaim(claim packets.ReferendumClaim, priority []byte) {
+	item := &Claim{
+		value:    claim,
+		index:    q.Len(),
+		priority: priority,
+	}
+	heap.Push(q, item)
+}
 
-	addr, err = incrementPort("invalid_address")
-	assert.Error(t, err)
-	assert.Equal(t, "invalid_address", addr)
+func (q *Queue) Push(x interface{}) {
+	item := x.(*Claim)
+	*q = append(*q, item)
+}
 
-	addr, err = incrementPort("127.0.0.1:port")
-	assert.Error(t, err)
-	assert.Equal(t, "127.0.0.1:port", addr)
+func (q *Queue) PopClaim() packets.ReferendumClaim {
+	return heap.Pop(q).(packets.ReferendumClaim)
+}
+
+func (q *Queue) Pop() interface{} {
+	l := q.Len()
+	item := (*q)[l-1]
+	*q = (*q)[0 : l-1]
+	return item.value
+}
+
+func (q Queue) Swap(i, j int) {
+	q[i], q[j] = q[j], q[i]
+	q[i].index = i
+	q[j].index = j
+}
+
+func (q Queue) Len() int {
+	return len(q)
+}
+
+// Less returns true if i > j cuz we need a greater to pop. Otherwise returns false.
+func (q Queue) Less(i, j int) bool {
+	return bytes.Compare(q[i].priority, q[j].priority) > 0
 }

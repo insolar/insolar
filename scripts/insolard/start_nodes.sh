@@ -13,7 +13,7 @@ CERT_GENERATOR=$BIN_DIR/certgen
 insolar_log_level=Debug
 
 NUM_NODES=$(sed -n '/^nodes:/,$p' $GENESIS_CONFIG | grep "host:" | grep -cv "#" )
-read -ra ROLES <<< $(sed -n '/^nodes:/,$p' ./scripts/insolard/genesis.yaml | grep "role" | cut -d: -f2)
+ROLES=($(sed -n '/^nodes:/,$p' ./scripts/insolard/genesis.yaml | grep "role" | cut -d: -f2))
 
 for i in `seq 1 $NUM_NODES`
 do

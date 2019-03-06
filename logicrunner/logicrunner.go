@@ -751,6 +751,8 @@ func (lr *LogicRunner) prepareObjectState(ctx context.Context, msg *message.Exec
 
 	es.Lock()
 
+	clarifyPending := false
+
 	if es.pending == message.InPending {
 		if es.Current != nil {
 			inslogger.FromContext(ctx).Debug(
@@ -767,6 +769,10 @@ func (lr *LogicRunner) prepareObjectState(ctx context.Context, msg *message.Exec
 		}
 	} else if es.pending == message.PendingUnknown {
 		es.pending = msg.Pending
+
+		if es.pending == message.PendingUnknown {
+			clarifyPending = true
+		}
 	}
 
 	// set false to true is good, set true to false may be wrong, better make unnecessary call
@@ -790,6 +796,13 @@ func (lr *LogicRunner) prepareObjectState(ctx context.Context, msg *message.Exec
 	}
 
 	es.Unlock()
+
+	if clarifyPending {
+		err := lr.ClarifyPendingState(ctx, es, nil)
+		if err != nil {
+			return err
+		}
+	}
 
 	err := lr.StartQueueProcessorIfNeeded(ctx, es)
 	if err != nil {
@@ -1209,7 +1222,7 @@ func (lr *LogicRunner) ClarifyPendingState(
 		return nil
 	}
 
-	if parcel.Type() != core.TypeCallMethod {
+	if parcel != nil && parcel.Type() != core.TypeCallMethod {
 		es.Unlock()
 		es.pending = message.NotPending
 		return nil

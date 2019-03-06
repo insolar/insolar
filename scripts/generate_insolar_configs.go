@@ -220,8 +220,6 @@ func main() {
 	cfgHolder := configuration.NewHolder()
 	err = cfgHolder.LoadFromFile(pulsarTemplate)
 	check("Can't read pulsar template config", err)
-	err = cfgHolder.LoadEnv()
-	check("Can't read pulsar template config", err)
 	fmt.Println("pulsar template config: " + pulsarTemplate)
 
 	pulsarConfig := cfgHolder.Configuration

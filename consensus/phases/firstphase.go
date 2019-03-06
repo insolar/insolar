@@ -114,6 +114,7 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse) (*Firs
 		if claim == nil {
 			break
 		}
+
 		success = packet.AddClaim(claim)
 		if !success {
 			break

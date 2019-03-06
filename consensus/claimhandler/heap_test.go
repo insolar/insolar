@@ -12,35 +12,70 @@
  *  Neither the name of Insolar Technologies nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
  *
  * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
-package servicenetwork
+package claimhandler
 
 import (
+	"bytes"
+	"crypto/rand"
 	"testing"
 
+	"github.com/insolar/insolar/consensus/packets"
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewServiceNetwork_incrementPort(t *testing.T) {
-	addr, err := incrementPort("0.0.0.0:8080")
+func TestQueue_PushClaim(t *testing.T) {
+	queue := Queue{}
+	elemCount := 20
+	entr := core.Entropy{}
+	_, err := rand.Read(entr[:])
 	assert.NoError(t, err)
-	assert.Equal(t, "0.0.0.0:8081", addr)
+	for i := 0; i < elemCount; i++ {
+		claim := getJoinClaim(t)
+		queue.PushClaim(claim, getPriority(claim.NodeRef, entr))
+	}
+	assert.Equal(t, queue.Len(), elemCount)
+}
 
-	addr, err = incrementPort("[::]:8080")
+func TestQueue_Pop(t *testing.T) {
+	queue := Queue{}
+	elemCount := 20
+	entr := core.Entropy{}
+	_, err := rand.Read(entr[:])
 	assert.NoError(t, err)
-	assert.Equal(t, "[::]:8081", addr)
+	for i := 0; i < elemCount; i++ {
+		claim := getJoinClaim(t)
+		queue.PushClaim(claim, getPriority(claim.NodeRef, entr))
+	}
+	assert.Equal(t, queue.Len(), elemCount)
 
-	addr, err = incrementPort("0.0.0.0:0")
+	claim := queue.PopClaim().(*packets.NodeJoinClaim)
+	refLen := len(claim.NodeRef.Bytes())
+	prevPriority := make([]byte, refLen)
+	priority := make([]byte, refLen)
+	copy(prevPriority, getPriority(claim.NodeRef, entr))
+	for i := 1; i < elemCount; i++ {
+		claim := queue.PopClaim().(*packets.NodeJoinClaim)
+		copy(priority, getPriority(claim.NodeRef, entr))
+		assert.True(t, bytes.Compare(prevPriority, priority) > 0)
+		copy(prevPriority, priority)
+	}
+}
+
+func getJoinClaim(t *testing.T) *packets.NodeJoinClaim {
+	nodeJoinClaim := &packets.NodeJoinClaim{}
+	nodeJoinClaim.ShortNodeID = core.ShortNodeID(77)
+	nodeJoinClaim.RelayNodeID = core.ShortNodeID(26)
+	nodeJoinClaim.ProtocolVersionAndFlags = uint32(99)
+	nodeJoinClaim.JoinsAfter = uint32(67)
+	nodeJoinClaim.NodeRoleRecID = 32
+	nodeJoinClaim.NodeRef = testutils.RandomRef()
+	_, err := rand.Read(nodeJoinClaim.NodePK[:])
 	assert.NoError(t, err)
-	assert.Equal(t, "0.0.0.0:0", addr)
+	nodeJoinClaim.NodeAddress.Set("127.0.0.1:5566")
 
-	addr, err = incrementPort("invalid_address")
-	assert.Error(t, err)
-	assert.Equal(t, "invalid_address", addr)
-
-	addr, err = incrementPort("127.0.0.1:port")
-	assert.Error(t, err)
-	assert.Equal(t, "127.0.0.1:port", addr)
+	return nodeJoinClaim
 }

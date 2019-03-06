@@ -12,35 +12,48 @@
  *  Neither the name of Insolar Technologies nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
  *
  * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
-package servicenetwork
+package claimhandler
 
 import (
+	"bytes"
+	"crypto/rand"
 	"testing"
 
+	"github.com/insolar/insolar/consensus/packets"
+	"github.com/insolar/insolar/core"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewServiceNetwork_incrementPort(t *testing.T) {
-	addr, err := incrementPort("0.0.0.0:8080")
+func TestJoinClaimHandler_HandleClaim(t *testing.T) {
+	activeNodesCount := 5
+	claimsCount := 10
+	entropy := core.Entropy{}
+	_, err := rand.Read(entropy[:])
 	assert.NoError(t, err)
-	assert.Equal(t, "0.0.0.0:8081", addr)
 
-	addr, err = incrementPort("[::]:8080")
-	assert.NoError(t, err)
-	assert.Equal(t, "[::]:8081", addr)
+	claims := make([]packets.ReferendumClaim, claimsCount)
+	priorityMap := make(map[core.RecordRef][]byte, claimsCount)
+	for i := 0; i < claimsCount; i++ {
+		claim := getJoinClaim(t)
+		claims[i] = claim
+		priorityMap[claim.NodeRef] = getPriority(claim.NodeRef, entropy)
+	}
 
-	addr, err = incrementPort("0.0.0.0:0")
-	assert.NoError(t, err)
-	assert.Equal(t, "0.0.0.0:0", addr)
+	handler := NewJoinHandler(activeNodesCount)
+	handler.AddClaims(claims, entropy)
+	res := handler.HandleAndReturnClaims()
+	assert.Len(t, res, int(float64(activeNodesCount)*NodesToJoinPercent))
 
-	addr, err = incrementPort("invalid_address")
-	assert.Error(t, err)
-	assert.Equal(t, "invalid_address", addr)
+	for _, claim := range res {
+		delete(priorityMap, claim.NodeRef)
+	}
 
-	addr, err = incrementPort("127.0.0.1:port")
-	assert.Error(t, err)
-	assert.Equal(t, "127.0.0.1:port", addr)
+	for i := len(res) - 1; i >= 0; i-- {
+		highPriority := getPriority(res[i].NodeRef, entropy)
+		for _, claim := range priorityMap {
+			assert.True(t, bytes.Compare(highPriority, claim) >= 0)
+		}
+	}
 }
