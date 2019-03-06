@@ -169,17 +169,21 @@ CONTRACTS = $(wildcard application/contract/*)
 regen-proxies: $(BININSGOCC)
 	$(foreach c, $(CONTRACTS), $(BININSGOCC) proxy application/contract/$(notdir $(c))/$(notdir $(c)).go; )
 
-.PHONY: docker-insolard
-docker-insolard:
-	docker build --tag insolar/insolard -f ./docker/Dockerfile.insolard .
-
 .PHONY: docker-pulsar
 docker-pulsar:
 	docker build --tag insolar/pulsar -f ./docker/Dockerfile.pulsar .
 
+.PHONY: docker-insolard
+docker-insolard:
+	docker build --target insolard --tag insolar/insolard -f ./docker/Dockerfile .
+
+.PHONY: docker-genesis
+docker-genesis:
+	docker build --target genesis --tag insolar/genesis -f ./docker/Dockerfile .
+
 .PHONY: docker-insgorund
 docker-insgorund:
-	docker build --tag insolar/insgorund -f ./docker/Dockerfile.insgorund .
+	docker build --target insgorund --tag insolar/insgorund -f ./docker/Dockerfile .
 
 .PHONY: docker
-docker: docker-insolard docker-pulsar docker-insgorund
+docker: docker-insolard docker-genesis docker-insgorund

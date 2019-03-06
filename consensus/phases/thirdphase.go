@@ -21,6 +21,7 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/consensus"
+	"github.com/insolar/insolar/consensus/claimhandler"
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -76,6 +77,7 @@ func (tp *ThirdPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse, state 
 		logger.Warn("[ NET Consensus phase-3 ] Failed to record received responses metric: " + err.Error())
 	}
 
+	handler := claimhandler.NewJoinHandler(totalCount)
 	for ref, packet := range responses {
 		err = nil
 		if !ref.Equal(tp.NodeKeeper.GetOrigin().ID()) {
@@ -89,6 +91,16 @@ func (tp *ThirdPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse, state 
 		// cells, err := packet.GetBitset().GetCells(state.UnsyncList)
 
 		state.UnsyncList.SetGlobuleHashSignature(ref, packet.GetGlobuleHashSignature())
+	}
+
+	for _, node := range nodes {
+		handler.AddClaims(state.UnsyncList.GetClaims(node.ID()), pulse.Entropy)
+	}
+
+	handledJoinClaims := handler.HandleAndReturnClaims()
+
+	for ref := range responses {
+		tp.removeExcessJoinClaims(handledJoinClaims, ref, state)
 	}
 
 	prevCloudHash := tp.NodeKeeper.GetCloudHash()
@@ -127,6 +139,29 @@ func (tp *ThirdPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse, state 
 		UnsyncList:   state.UnsyncList,
 		GlobuleProof: state.GlobuleProof,
 	}, nil
+}
+
+func (tp *ThirdPhaseImpl) removeExcessJoinClaims(joinClaims []*packets.NodeJoinClaim, ref core.RecordRef, state *SecondPhaseState) {
+	claims := state.UnsyncList.GetClaims(ref)
+	originLen := len(claims)
+	if originLen == 0 || len(joinClaims) == 0 {
+		return
+	}
+
+	updatedClaims := make([]packets.ReferendumClaim, 0)
+	for _, join := range joinClaims {
+		for i := 0; i < len(claims); i++ {
+			claim, ok := claims[i].(*packets.NodeJoinClaim)
+			if ok && claim.NodeRef.Equal(join.NodeRef) {
+				updatedClaims = append(updatedClaims, join)
+				continue
+			} else if !ok {
+				updatedClaims = append(updatedClaims, claim)
+			}
+		}
+	}
+
+	state.UnsyncList.InsertClaims(ref, updatedClaims)
 }
 
 func (tp *ThirdPhaseImpl) checkPacketSignature(packet *packets.Phase3Packet, recordRef core.RecordRef, unsyncList network.UnsyncList) error {

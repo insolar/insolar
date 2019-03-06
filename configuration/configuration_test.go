@@ -17,8 +17,11 @@
 package configuration
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
+	"path"
+	"strings"
 	"testing"
 
 	"github.com/spf13/viper"
@@ -51,14 +54,18 @@ func TestConfiguration_Save_Default(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(dir)
 
+	newConfigurationPath := path.Join(dir, "insolar.yml")
+
 	holder := NewHolder()
-	err = holder.SaveAs(dir + "insolar.yml")
+	holder.Configuration.Host.Transport.FixedPublicAddress = "192.168.1.1"
+	err = holder.SaveAs(newConfigurationPath)
 	require.NoError(t, err)
 
 	holder2 := NewHolder()
-	err = holder2.LoadFromFile(dir + "insolar.yml")
+	err = holder2.LoadFromFile(newConfigurationPath)
 	require.NoError(t, err)
 
+	require.Nil(t, holder2.viper.Get("insolar"))
 	require.Equal(t, holder.Configuration, holder2.Configuration)
 }
 
@@ -70,13 +77,17 @@ func TestConfiguration_Load_Invalid(t *testing.T) {
 
 func TestConfiguration_LoadEnv(t *testing.T) {
 	holder := NewHolder()
-	defaultCfg := NewConfiguration()
 
-	os.Setenv("INSOLAR_HOST_TRANSPORT_ADDRESS", "127.0.0.2:5555")
-	err := holder.LoadEnv()
+	require.NoError(t, os.Setenv("INSOLAR_HOST_TRANSPORT_ADDRESS", "127.0.0.2:5555"))
+	err := holder.LoadFromFile("testdata/default.yml")
 	require.NoError(t, err)
-	require.NotEqual(t, defaultCfg, holder.Configuration)
+	require.NoError(t, os.Unsetenv("INSOLAR_HOST_TRANSPORT_ADDRESS"))
+
+	require.NoError(t, err)
 	require.Equal(t, "127.0.0.2:5555", holder.Configuration.Host.Transport.Address)
+
+	defaultCfg := NewConfiguration()
+	require.Equal(t, "127.0.0.1:0", defaultCfg.Host.Transport.Address)
 }
 
 func TestConfiguration_Init(t *testing.T) {
@@ -97,4 +108,33 @@ func TestConfiguration_Init(t *testing.T) {
 	require.Nil(t, holder)
 
 	require.Panics(t, func() { NewHolder().MustInit(true) })
+}
+
+func TestMain(m *testing.M) {
+	// backup and delete INSOLAR_ env variables, that may interfere with tests
+	variablesBackup := make(map[string]string)
+	for _, varPair := range os.Environ() {
+		varPairSlice := strings.SplitN(varPair, "=", 2)
+		varName, varValue := varPairSlice[0], varPairSlice[1]
+
+		if strings.HasPrefix(varName, "INSOLAR_") {
+			variablesBackup[varName] = varValue
+			if err := os.Unsetenv(varName); err != nil {
+				fmt.Printf("Failed to unset env variable '%s': %s\n",
+						   varName, err.Error())
+			}
+		}
+	}
+
+	// run tests
+	m.Run()
+
+	// restore back variables
+	for varName, varValue := range variablesBackup {
+		if err := os.Setenv(varName, varValue); err != nil {
+			fmt.Printf("Failed to unset env variable '%s' with '%s': %s\n",
+				varName, varValue, err.Error())
+		}
+
+	}
 }
