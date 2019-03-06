@@ -100,7 +100,7 @@ func NewConnection(cfg configuration.Transport) (net.PacketConn, string, error) 
 	resolver, err := createResolver(cfg)
 	if err != nil {
 		utils.CloseVerbose(conn)
-		return nil, "", errors.Wrap(err,"[ NewConnection ] Failed to create resolver")
+		return nil, "", errors.Wrap(err, "[ NewConnection ] Failed to create resolver")
 	}
 	publicAddress, err := resolver.Resolve(conn)
 	if err != nil {
