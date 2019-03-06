@@ -40,56 +40,81 @@ type SMRHTestStateMachine struct {
     cleanHandlers TestStateMachine
 }
 
-func SMRHTestStateMachineFactory() *common.StateMachine {
+func SMRHTestStateMachineFactory() [3]common.StateMachine {
     m := SMRHTestStateMachine{
         cleanHandlers: &TestStateMachineImplementation{},
     }
 
-    var x []common.State
-    x = append(x, common.State{
-        Transition: m.i_Init,
-        TransitionFuture: m.if_Init,
-        TransitionPast: m.ip_Init,
-        ErrorState: m.es_Init,
-        ErrorStateFuture: m.esf_Init,
-        ErrorStatePast: m.esp_Init,
+    var x = [3][]common.State{}
+    // future state machine
+    x[0] = append(x[0], common.State{
+        Transition: m.if_Init,
+        ErrorState: m.esf_Init,
     },
     common.State{
-        Migration: m.m_FirstSecond,
-        MigrationFuturePresent: m.mfp_FirstSecond,
-        Transition: m.t_First,
-        TransitionFuture: m.tf_First,
-        TransitionPast: m.tp_First,
-        AdapterResponse: m.a_First,
-        AdapterResponseFuture: m.af_First,
-        AdapterResponsePast: m.ap_First,
-        ErrorState: m.es_First,
-        ErrorStateFuture: m.esf_First,
-        ErrorStatePast: m.esp_First,
-        AdapterResponseError: m.ea_First,
-        AdapterResponseErrorFuture: m.eaf_First,
-        AdapterResponseErrorPast: m.eap_First,
+        Transition: m.tf_First,
+        AdapterResponse: m.af_First,
+        ErrorState: m.esf_First,
+        AdapterResponseError: m.eaf_First,
     },
     common.State{
-        Migration: m.m_SecondThird,
-        MigrationFuturePresent: m.mfp_SecondThird,
-        Transition: m.t_Second,
-        TransitionFuture: m.tf_Second,
-        TransitionPast: m.tp_Second,
-        AdapterResponse: m.a_Second,
-        AdapterResponseFuture: m.af_Second,
-        AdapterResponsePast: m.ap_Second,
-        ErrorState: m.es_Second,
-        ErrorStateFuture: m.esf_Second,
-        ErrorStatePast: m.esp_Second,
-        AdapterResponseError: m.ea_Second,
-        AdapterResponseErrorFuture: m.eaf_Second,
-        AdapterResponseErrorPast: m.eap_Second,
+        Transition: m.tf_Second,
+        AdapterResponse: m.af_Second,
+        ErrorState: m.esf_Second,
+        AdapterResponseError: m.eaf_Second,
     },)
 
-    return &common.StateMachine{
-        Id: int(m.cleanHandlers.(TestStateMachine).TID()),
-        States: x,
+    // present state machine
+    x[1] = append(x[1], common.State{
+        Transition: m.i_Init,
+        ErrorState: m.es_Init,
+    },
+    common.State{
+        Migration: m.mfp_FirstSecond,
+        Transition: m.t_First,
+        AdapterResponse: m.a_First,
+        ErrorState: m.es_First,
+        AdapterResponseError: m.ea_First,
+    },
+    common.State{
+        Migration: m.mfp_SecondThird,
+        Transition: m.t_Second,
+        AdapterResponse: m.a_Second,
+        ErrorState: m.es_Second,
+        AdapterResponseError: m.ea_Second,
+    },)
+
+    // past state machine
+    x[2] = append(x[2], common.State{
+        Transition: m.ip_Init,
+        ErrorState: m.esp_Init,
+    },
+    common.State{
+        Transition: m.tp_First,
+        AdapterResponse: m.ap_First,
+        ErrorState: m.esp_First,
+        AdapterResponseError: m.eap_First,
+    },
+    common.State{
+        Transition: m.tp_Second,
+        AdapterResponse: m.ap_Second,
+        ErrorState: m.esp_Second,
+        AdapterResponseError: m.eap_Second,
+    },)
+
+    return [3]common.StateMachine{
+        common.StateMachine{
+            ID: int(m.cleanHandlers.(TestStateMachine).TID()),
+            States: x[0],
+        },
+        common.StateMachine{
+            ID: int(m.cleanHandlers.(TestStateMachine).TID()),
+            States: x[0],
+        },
+        common.StateMachine{
+            ID: int(m.cleanHandlers.(TestStateMachine).TID()),
+            States: x[0],
+        },
     }
 }
 

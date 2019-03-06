@@ -18,7 +18,6 @@ package statemachine
 
 import (
 	"github.com/insolar/insolar/conveyor/interfaces/adapter"
-	"github.com/insolar/insolar/conveyor/interfaces/constant"
 	"github.com/insolar/insolar/conveyor/interfaces/slot"
 )
 
@@ -34,11 +33,11 @@ type ResponseErrorHandler func(element slot.SlotElementHelper, response adapter.
 //go:generate minimock -i github.com/insolar/insolar/conveyor/interfaces/statemachine.StateMachineType -o ./ -s _mock.go
 type StateMachineType interface {
 	GetTypeID() int
-	GetMigrationHandler(pulseState constant.PulseState, state uint32) MigrationHandler
-	GetTransitionHandler(pulseState constant.PulseState, state uint32) TransitHandler
-	GetResponseHandler(pulseState constant.PulseState, state uint32) AdapterResponseHandler
-	GetNestedHandler(pulseState constant.PulseState, state uint32) NestedHandler
+	GetMigrationHandler(state uint32) MigrationHandler
+	GetTransitionHandler(state uint32) TransitHandler
+	GetResponseHandler(state uint32) AdapterResponseHandler
+	GetNestedHandler(state uint32) NestedHandler
 
-	GetTransitionErrorHandler(pulseState constant.PulseState, state uint32) TransitionErrorHandler
-	GetResponseErrorHandler(pulseState constant.PulseState, state uint32) ResponseErrorHandler
+	GetTransitionErrorHandler(state uint32) TransitionErrorHandler
+	GetResponseErrorHandler(state uint32) ResponseErrorHandler
 }

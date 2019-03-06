@@ -37,40 +37,62 @@ type SMRH{{$machine.Name}} struct {
     cleanHandlers {{$machine.Name}}
 }
 
-func SMRH{{$machine.Name}}Factory() *common.StateMachine {
+func SMRH{{$machine.Name}}Factory() [3]common.StateMachine {
     m := SMRH{{$machine.Name}}{
         cleanHandlers: &{{$machine.Name}}Implementation{},
     }
 
-    var x []common.State
-    x = append(x, common.State{
-        Transition: m.{{(index .States 0).GetTransitionName}},
-        TransitionFuture: m.{{(index .States 0).GetTransitionFutureName}},
-        TransitionPast: m.{{(index .States 0).GetTransitionPastName}},
-        ErrorState: m.{{(index .States 0).GetErrorStateName}},
-        ErrorStateFuture: m.{{(index .States 0).GetErrorStateFutureName}},
-        ErrorStatePast: m.{{(index .States 0).GetErrorStatePastName}},
+    var x = [3][]common.State{}
+    // future state machine
+    x[0] = append(x[0], common.State{
+        Transition: m.{{(index .States 0).GetTransitionFutureName}},
+        ErrorState: m.{{(index .States 0).GetErrorStateFutureName}},
     },{{range $i, $state := .States}}{{if (gtNull $i)}}
     common.State{
-        Migration: m.{{$state.GetMigrationName}},
-        MigrationFuturePresent: m.{{$state.GetMigrationFuturePresentName}},
-        Transition: m.{{$state.GetTransitionName}},
-        TransitionFuture: m.{{$state.GetTransitionFutureName}},
-        TransitionPast: m.{{$state.GetTransitionPastName}},
-        {{if (handlerExists $state.AdapterResponse)}}AdapterResponse: m.{{$state.GetAdapterResponseName}},{{end}}
-        {{if (handlerExists $state.AdapterResponseFuture)}}AdapterResponseFuture: m.{{$state.GetAdapterResponseFutureName}},{{end}}
-        {{if (handlerExists $state.AdapterResponsePast)}}AdapterResponsePast: m.{{$state.GetAdapterResponsePastName}},{{end}}
-        ErrorState: m.{{$state.GetErrorStateName}},
-        ErrorStateFuture: m.{{$state.GetErrorStateFutureName}},
-        ErrorStatePast: m.{{$state.GetErrorStatePastName}},
-        {{if (handlerExists $state.AdapterResponseError)}}AdapterResponseError: m.{{$state.GetAdapterResponseErrorName}},{{end}}
-        {{if (handlerExists $state.AdapterResponseErrorFuture)}}AdapterResponseErrorFuture: m.{{$state.GetAdapterResponseErrorFutureName}},{{end}}
-        {{if (handlerExists $state.AdapterResponseErrorPast)}}AdapterResponseErrorPast: m.{{$state.GetAdapterResponseErrorPastName}},{{end}}
+        Transition: m.{{$state.GetTransitionFutureName}},
+        {{if (handlerExists $state.AdapterResponseFuture)}}AdapterResponse: m.{{$state.GetAdapterResponseFutureName}},{{end}}
+        ErrorState: m.{{$state.GetErrorStateFutureName}},
+        {{if (handlerExists $state.AdapterResponseErrorFuture)}}AdapterResponseError: m.{{$state.GetAdapterResponseErrorFutureName}},{{end}}
     },{{end}}{{end}})
 
-    return &common.StateMachine{
-        Id: int(m.cleanHandlers.({{$machine.Name}}).TID()),
-        States: x,
+    // present state machine
+    x[1] = append(x[1], common.State{
+        Transition: m.{{(index .States 0).GetTransitionName}},
+        ErrorState: m.{{(index .States 0).GetErrorStateName}},
+    },{{range $i, $state := .States}}{{if (gtNull $i)}}
+    common.State{
+        Migration: m.{{$state.GetMigrationFuturePresentName}},
+        Transition: m.{{$state.GetTransitionName}},
+        {{if (handlerExists $state.AdapterResponse)}}AdapterResponse: m.{{$state.GetAdapterResponseName}},{{end}}
+        ErrorState: m.{{$state.GetErrorStateName}},
+        {{if (handlerExists $state.AdapterResponseError)}}AdapterResponseError: m.{{$state.GetAdapterResponseErrorName}},{{end}}
+    },{{end}}{{end}})
+
+    // past state machine
+    x[2] = append(x[2], common.State{
+        Transition: m.{{(index .States 0).GetTransitionPastName}},
+        ErrorState: m.{{(index .States 0).GetErrorStatePastName}},
+    },{{range $i, $state := .States}}{{if (gtNull $i)}}
+    common.State{
+        Transition: m.{{$state.GetTransitionPastName}},
+        {{if (handlerExists $state.AdapterResponsePast)}}AdapterResponse: m.{{$state.GetAdapterResponsePastName}},{{end}}
+        ErrorState: m.{{$state.GetErrorStatePastName}},
+        {{if (handlerExists $state.AdapterResponseErrorPast)}}AdapterResponseError: m.{{$state.GetAdapterResponseErrorPastName}},{{end}}
+    },{{end}}{{end}})
+
+    return [3]common.StateMachine{
+        common.StateMachine{
+            ID: int(m.cleanHandlers.({{$machine.Name}}).TID()),
+            States: x[0],
+        },
+        common.StateMachine{
+            ID: int(m.cleanHandlers.({{$machine.Name}}).TID()),
+            States: x[0],
+        },
+        common.StateMachine{
+            ID: int(m.cleanHandlers.({{$machine.Name}}).TID()),
+            States: x[0],
+        },
     }
 }
 

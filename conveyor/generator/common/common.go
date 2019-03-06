@@ -17,116 +17,66 @@
 package common
 
 import (
-	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
-	"github.com/insolar/insolar/conveyor/interfaces/slot"
-	"github.com/insolar/insolar/conveyor/interfaces/constant"
+
+"github.com/insolar/insolar/conveyor/interfaces/slot"
+"github.com/insolar/insolar/conveyor/interfaces/statemachine"
+
 )
 
 type State struct {
 	Migration              statemachine.MigrationHandler
-	MigrationFuturePresent statemachine.MigrationHandler
+	// MigrationFuturePresent statemachine.MigrationHandler
 	Transition statemachine.TransitHandler
-	TransitionFuture statemachine.TransitHandler
-	TransitionPast statemachine.TransitHandler
+	// TransitionFuture statemachine.TransitHandler
+	// TransitionPast statemachine.TransitHandler
 	AdapterResponse statemachine.AdapterResponseHandler
-	AdapterResponseFuture statemachine.AdapterResponseHandler
-	AdapterResponsePast statemachine.AdapterResponseHandler
+	// AdapterResponseFuture statemachine.AdapterResponseHandler
+	// AdapterResponsePast statemachine.AdapterResponseHandler
 	ErrorState statemachine.TransitionErrorHandler
-	ErrorStateFuture statemachine.TransitionErrorHandler
-	ErrorStatePast statemachine.TransitionErrorHandler
+	// ErrorStateFuture statemachine.TransitionErrorHandler
+	// ErrorStatePast statemachine.TransitionErrorHandler
 	AdapterResponseError statemachine.ResponseErrorHandler
-	AdapterResponseErrorFuture statemachine.ResponseErrorHandler
-	AdapterResponseErrorPast statemachine.ResponseErrorHandler
+	// AdapterResponseErrorFuture statemachine.ResponseErrorHandler
+	// AdapterResponseErrorPast statemachine.ResponseErrorHandler
 	/*Finalization *handler
 	FinalizationFuture *handler
 	FinalizationPast *handler*/
 }
 
 type StateMachine struct {
-	Id     int
+	ID     int
 	States []State
 }
 
 func (sm *StateMachine) GetTypeID() int {
-	return sm.Id
+	return sm.ID
 }
 
-func (sm *StateMachine) GetMigrationHandler(slotType constant.PulseState, state uint32) statemachine.MigrationHandler {
-	switch slotType {
-	case constant.Future:
-		return sm.States[state].MigrationFuturePresent
-	case constant.Present:
-		return sm.States[state].Migration
-	default:
-		panic("migration handler can't be called for past tense")
-	}
+func (sm *StateMachine) GetMigrationHandler(state uint32) statemachine.MigrationHandler {
+	return sm.States[state].Migration
 }
 
-func (sm *StateMachine) GetTransitionHandler(slotType constant.PulseState, state uint32) statemachine.TransitHandler {
-	switch slotType {
-	case constant.Future:
-		return sm.States[state].TransitionFuture
-	case constant.Present:
-		return sm.States[state].Transition
-	case constant.Past:
-		return sm.States[state].TransitionPast
-	case constant.Antique:
-		return sm.States[state].TransitionPast
-	default:
-		panic("handler can't be called for unallocated tense")
-	}
+func (sm *StateMachine) GetTransitionHandler(state uint32) statemachine.TransitHandler {
+	return sm.States[state].Transition
 }
 
-func (sm *StateMachine) GetResponseHandler(slotType constant.PulseState, state uint32) statemachine.AdapterResponseHandler {
-	switch slotType {
-	case constant.Future:
-		return sm.States[state].AdapterResponseFuture
-	case constant.Present:
-		return sm.States[state].AdapterResponse
-	case constant.Past:
-		return sm.States[state].AdapterResponsePast
-	case constant.Antique:
-		return sm.States[state].AdapterResponsePast
-	default:
-		panic("handler can't be called for unallocated tense")
-	}
+func (sm *StateMachine) GetResponseHandler(state uint32) statemachine.AdapterResponseHandler {
+	return sm.States[state].AdapterResponse
 }
 
-func (sm *StateMachine) GetNestedHandler(slotType constant.PulseState, state uint32) statemachine.NestedHandler {
+func (sm *StateMachine) GetNestedHandler(state uint32) statemachine.NestedHandler {
 	return func(element slot.SlotElementHelper, err error) (interface{}, uint32) {
 		// todo needs implementation
 		return nil, 0
 	}
 }
 
-func (sm *StateMachine) GetTransitionErrorHandler(slotType constant.PulseState, state uint32) statemachine.TransitionErrorHandler {
-	switch slotType {
-	case constant.Future:
-		return sm.States[state].ErrorStateFuture
-	case constant.Present:
-		return sm.States[state].ErrorState
-	case constant.Past:
-		return sm.States[state].ErrorStatePast
-	case constant.Antique:
-		return sm.States[state].ErrorStatePast
-	default:
-		panic("handler can't be called for unallocated tense")
-	}
+func (sm *StateMachine) GetTransitionErrorHandler(state uint32) statemachine.TransitionErrorHandler {
+	return sm.States[state].ErrorState
 }
 
-func (sm *StateMachine) GetResponseErrorHandler(slotType constant.PulseState, state uint32) statemachine.ResponseErrorHandler {
-	switch slotType {
-	case constant.Future:
-		return sm.States[state].AdapterResponseErrorFuture
-	case constant.Present:
-		return sm.States[state].AdapterResponseError
-	case constant.Past:
-		return sm.States[state].AdapterResponseErrorPast
-	case constant.Antique:
-		return sm.States[state].AdapterResponseErrorPast
-	default:
-		panic("handler can't be called for unallocated tense")
-	}
+func (sm *StateMachine) GetResponseErrorHandler(state uint32) statemachine.ResponseErrorHandler {
+	return sm.States[state].AdapterResponseError
 }
 
 type ElState uint32 //Element State Machine Type ID

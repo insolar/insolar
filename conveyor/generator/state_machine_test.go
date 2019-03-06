@@ -20,7 +20,6 @@ package main
 
 import (
 	"github.com/insolar/insolar/conveyor/generator/state_machines/sample"
-	"github.com/insolar/insolar/conveyor/interfaces/constant"
 	"github.com/insolar/insolar/conveyor/interfaces/slot"
 	"testing"
 )
@@ -34,11 +33,11 @@ func Test_Generated_State_Machine(t *testing.T) {
 		return &sample.Payload{}
 	}
 
-	machine := sample.SMRHTestStateMachineFactory()
+	machines := sample.SMRHTestStateMachineFactory()
 
 	var state uint32 = 0
 	for {
-		_, state, _ = machine.GetTransitionHandler(constant.Present, state)(element)
+		_, state, _ = machines[1].GetTransitionHandler(state)(element)
 		if state == 0 {
 			break
 		}
