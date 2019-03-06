@@ -2,19 +2,18 @@ package main
 
 import (
 	"fmt"
-	"os/exec"
-	"testing"
-	"github.com/insolar/insolar/conveyor/generator/generator"
 	"io/ioutil"
+	"os/exec"
 	"strings"
+	"testing"
+
+	"github.com/insolar/insolar/conveyor/generator/generator"
 	"github.com/stretchr/testify/require"
 )
 
 func Test_Main(t *testing.T) {
-	g := generator.NewGenerator(
-		"github.com/insolar/insolar/conveyor/generator/",
-		"state_machines",
-		"matrix/matrix.go")
+	g := generator.NewGenerator("conveyor/generator/state_machines/",
+		"conveyor/generator/matrix/matrix.go")
 	files, err := ioutil.ReadDir("state_machines/")
 	require.NoError(t, err)
 	for _, file := range files {

@@ -1,9 +1,10 @@
 package generator
 
 import (
-	"text/template"
-	"os"
 	"bufio"
+	"os"
+	"path"
+	"text/template"
 )
 
 var (
@@ -35,7 +36,7 @@ const (
 func init() {
     Matrix := matrix{}
     Matrix.matrix = append(Matrix.matrix, nil,
-        {{range .Machines}}{{.Module}}.SMRH{{.Name}}Factory(),
+        {{range .Machines}}{{.Package}}.SMRH{{.Name}}Factory(),
         {{end}})
 }
 
@@ -56,7 +57,7 @@ func (g *Generator) getImports() []string {
 }
 
 func (g *Generator) GenMatrix () {
-	file, err := os.Create(g.matrix)
+	file, err := os.Create(path.Join(g.fullPathToInsolar, g.pathToMatrixFile))
 	checkErr(err)
 	defer file.Close()
 	out := bufio.NewWriter(file)

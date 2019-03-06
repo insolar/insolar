@@ -15,7 +15,6 @@ type Parser struct {
 	sourceCode []byte
 	sourceNode *ast.File
 	generator *Generator
-	module string
 	Package string
 	StateMachines []*stateMachine
 }
@@ -60,7 +59,7 @@ func (p *Parser) findEachStateMachine() {
 
 			machine := &stateMachine{
 				Name: currType.Name.Name,
-				Module: p.module,
+				Package: p.Package,
 				States: []state{{Name: "Init"}},
 			}
 			p.parseStateMachineInterface(machine, currStruct)
