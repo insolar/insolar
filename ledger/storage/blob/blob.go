@@ -25,8 +25,8 @@ import (
 // Accessor provides info about Blob-values from storage
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage/blob.Accessor -o ./ -s _mock.go
 type Accessor interface {
-	// Get returns Blob for provided id
-	Get(ctx context.Context, id core.RecordID) (Blob, error)
+	// ForID returns Blob for provided id
+	ForID(ctx context.Context, id core.RecordID) (Blob, error)
 }
 
 // Modifier provides provides methods for setting Blob-values to storage

@@ -41,8 +41,8 @@ func NewStorage() *Storage {
 	}
 }
 
-// Get returns Blob for provided id
-func (s *Storage) Get(ctx context.Context, id core.RecordID) (blob Blob, err error) {
+// ForID returns Blob for provided id
+func (s *Storage) ForID(ctx context.Context, id core.RecordID) (blob Blob, err error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 

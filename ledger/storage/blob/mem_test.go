@@ -103,7 +103,7 @@ func TestBlobStorage_Get(t *testing.T) {
 		}
 		blobStorage.memory[id] = blob
 
-		resultBlob, err := blobStorage.Get(ctx, id)
+		resultBlob, err := blobStorage.ForID(ctx, id)
 		require.NoError(t, err)
 		assert.Equal(t, blob, resultBlob)
 		assert.Equal(t, rawBlob, resultBlob.Value)
@@ -118,7 +118,7 @@ func TestBlobStorage_Get(t *testing.T) {
 		}
 		blobStorage.memory[id] = blob
 
-		_, err := blobStorage.Get(ctx, gen.ID())
+		_, err := blobStorage.ForID(ctx, gen.ID())
 		require.Error(t, err)
 		assert.Equal(t, ErrNotFound, err)
 	})

@@ -59,7 +59,7 @@ func TestInMemoryBlob(t *testing.T) {
 		}
 
 		for _, bl := range blobs {
-			resBlob, err := blobStorage.Get(ctx, bl.id)
+			resBlob, err := blobStorage.ForID(ctx, bl.id)
 			require.NoError(t, err)
 
 			assert.Equal(t, bl.b, resBlob)
@@ -68,21 +68,29 @@ func TestInMemoryBlob(t *testing.T) {
 		}
 	})
 
-	t.Run("returns override error when saving with the same id", func(t *testing.T) {
-		for _, bl := range blobs {
-			err := blobStorage.Set(ctx, bl.id, bl.b)
-			require.Error(t, err)
-			assert.Equal(t, blob.ErrOverride, err)
-		}
-	})
-
 	t.Run("returns error when no blob-value for id", func(t *testing.T) {
 		t.Parallel()
 
 		for i := int32(0); i < rand.Int31n(10); i++ {
-			_, err := blobStorage.Get(ctx, gen.ID())
+			_, err := blobStorage.ForID(ctx, gen.ID())
 			require.Error(t, err)
 			assert.Equal(t, blob.ErrNotFound, err)
+		}
+	})
+
+	t.Run("returns override error when saving with the same id", func(t *testing.T) {
+		t.Parallel()
+
+		blobStorage := blob.NewStorage()
+		for _, bl := range blobs {
+			err := blobStorage.Set(ctx, bl.id, bl.b)
+			require.NoError(t, err)
+		}
+
+		for _, bl := range blobs {
+			err := blobStorage.Set(ctx, bl.id, bl.b)
+			require.Error(t, err)
+			assert.Equal(t, blob.ErrOverride, err)
 		}
 	})
 }

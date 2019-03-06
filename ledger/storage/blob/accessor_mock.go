@@ -20,10 +20,10 @@ import (
 type AccessorMock struct {
 	t minimock.Tester
 
-	GetFunc       func(p context.Context, p1 core.RecordID) (r Blob, r1 error)
-	GetCounter    uint64
-	GetPreCounter uint64
-	GetMock       mAccessorMockGet
+	ForIDFunc       func(p context.Context, p1 core.RecordID) (r Blob, r1 error)
+	ForIDCounter    uint64
+	ForIDPreCounter uint64
+	ForIDMock       mAccessorMockForID
 }
 
 //NewAccessorMock returns a mock for github.com/insolar/insolar/ledger/storage/blob.Accessor
@@ -34,97 +34,97 @@ func NewAccessorMock(t minimock.Tester) *AccessorMock {
 		controller.RegisterMocker(m)
 	}
 
-	m.GetMock = mAccessorMockGet{mock: m}
+	m.ForIDMock = mAccessorMockForID{mock: m}
 
 	return m
 }
 
-type mAccessorMockGet struct {
+type mAccessorMockForID struct {
 	mock              *AccessorMock
-	mainExpectation   *AccessorMockGetExpectation
-	expectationSeries []*AccessorMockGetExpectation
+	mainExpectation   *AccessorMockForIDExpectation
+	expectationSeries []*AccessorMockForIDExpectation
 }
 
-type AccessorMockGetExpectation struct {
-	input  *AccessorMockGetInput
-	result *AccessorMockGetResult
+type AccessorMockForIDExpectation struct {
+	input  *AccessorMockForIDInput
+	result *AccessorMockForIDResult
 }
 
-type AccessorMockGetInput struct {
+type AccessorMockForIDInput struct {
 	p  context.Context
 	p1 core.RecordID
 }
 
-type AccessorMockGetResult struct {
+type AccessorMockForIDResult struct {
 	r  Blob
 	r1 error
 }
 
-//Expect specifies that invocation of Accessor.Get is expected from 1 to Infinity times
-func (m *mAccessorMockGet) Expect(p context.Context, p1 core.RecordID) *mAccessorMockGet {
-	m.mock.GetFunc = nil
+//Expect specifies that invocation of Accessor.ForID is expected from 1 to Infinity times
+func (m *mAccessorMockForID) Expect(p context.Context, p1 core.RecordID) *mAccessorMockForID {
+	m.mock.ForIDFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &AccessorMockGetExpectation{}
+		m.mainExpectation = &AccessorMockForIDExpectation{}
 	}
-	m.mainExpectation.input = &AccessorMockGetInput{p, p1}
+	m.mainExpectation.input = &AccessorMockForIDInput{p, p1}
 	return m
 }
 
-//Return specifies results of invocation of Accessor.Get
-func (m *mAccessorMockGet) Return(r Blob, r1 error) *AccessorMock {
-	m.mock.GetFunc = nil
+//Return specifies results of invocation of Accessor.ForID
+func (m *mAccessorMockForID) Return(r Blob, r1 error) *AccessorMock {
+	m.mock.ForIDFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &AccessorMockGetExpectation{}
+		m.mainExpectation = &AccessorMockForIDExpectation{}
 	}
-	m.mainExpectation.result = &AccessorMockGetResult{r, r1}
+	m.mainExpectation.result = &AccessorMockForIDResult{r, r1}
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of Accessor.Get is expected once
-func (m *mAccessorMockGet) ExpectOnce(p context.Context, p1 core.RecordID) *AccessorMockGetExpectation {
-	m.mock.GetFunc = nil
+//ExpectOnce specifies that invocation of Accessor.ForID is expected once
+func (m *mAccessorMockForID) ExpectOnce(p context.Context, p1 core.RecordID) *AccessorMockForIDExpectation {
+	m.mock.ForIDFunc = nil
 	m.mainExpectation = nil
 
-	expectation := &AccessorMockGetExpectation{}
-	expectation.input = &AccessorMockGetInput{p, p1}
+	expectation := &AccessorMockForIDExpectation{}
+	expectation.input = &AccessorMockForIDInput{p, p1}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
-func (e *AccessorMockGetExpectation) Return(r Blob, r1 error) {
-	e.result = &AccessorMockGetResult{r, r1}
+func (e *AccessorMockForIDExpectation) Return(r Blob, r1 error) {
+	e.result = &AccessorMockForIDResult{r, r1}
 }
 
-//Set uses given function f as a mock of Accessor.Get method
-func (m *mAccessorMockGet) Set(f func(p context.Context, p1 core.RecordID) (r Blob, r1 error)) *AccessorMock {
+//Set uses given function f as a mock of Accessor.ForID method
+func (m *mAccessorMockForID) Set(f func(p context.Context, p1 core.RecordID) (r Blob, r1 error)) *AccessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
-	m.mock.GetFunc = f
+	m.mock.ForIDFunc = f
 	return m.mock
 }
 
-//Get implements github.com/insolar/insolar/ledger/storage/blob.Accessor interface
-func (m *AccessorMock) Get(p context.Context, p1 core.RecordID) (r Blob, r1 error) {
-	counter := atomic.AddUint64(&m.GetPreCounter, 1)
-	defer atomic.AddUint64(&m.GetCounter, 1)
+//ForID implements github.com/insolar/insolar/ledger/storage/blob.Accessor interface
+func (m *AccessorMock) ForID(p context.Context, p1 core.RecordID) (r Blob, r1 error) {
+	counter := atomic.AddUint64(&m.ForIDPreCounter, 1)
+	defer atomic.AddUint64(&m.ForIDCounter, 1)
 
-	if len(m.GetMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.GetMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to AccessorMock.Get. %v %v", p, p1)
+	if len(m.ForIDMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.ForIDMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to AccessorMock.ForID. %v %v", p, p1)
 			return
 		}
 
-		input := m.GetMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, AccessorMockGetInput{p, p1}, "Accessor.Get got unexpected parameters")
+		input := m.ForIDMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, AccessorMockForIDInput{p, p1}, "Accessor.ForID got unexpected parameters")
 
-		result := m.GetMock.expectationSeries[counter-1].result
+		result := m.ForIDMock.expectationSeries[counter-1].result
 		if result == nil {
-			m.t.Fatal("No results are set for the AccessorMock.Get")
+			m.t.Fatal("No results are set for the AccessorMock.ForID")
 			return
 		}
 
@@ -134,16 +134,16 @@ func (m *AccessorMock) Get(p context.Context, p1 core.RecordID) (r Blob, r1 erro
 		return
 	}
 
-	if m.GetMock.mainExpectation != nil {
+	if m.ForIDMock.mainExpectation != nil {
 
-		input := m.GetMock.mainExpectation.input
+		input := m.ForIDMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, AccessorMockGetInput{p, p1}, "Accessor.Get got unexpected parameters")
+			testify_assert.Equal(m.t, *input, AccessorMockForIDInput{p, p1}, "Accessor.ForID got unexpected parameters")
 		}
 
-		result := m.GetMock.mainExpectation.result
+		result := m.ForIDMock.mainExpectation.result
 		if result == nil {
-			m.t.Fatal("No results are set for the AccessorMock.Get")
+			m.t.Fatal("No results are set for the AccessorMock.ForID")
 		}
 
 		r = result.r
@@ -152,39 +152,39 @@ func (m *AccessorMock) Get(p context.Context, p1 core.RecordID) (r Blob, r1 erro
 		return
 	}
 
-	if m.GetFunc == nil {
-		m.t.Fatalf("Unexpected call to AccessorMock.Get. %v %v", p, p1)
+	if m.ForIDFunc == nil {
+		m.t.Fatalf("Unexpected call to AccessorMock.ForID. %v %v", p, p1)
 		return
 	}
 
-	return m.GetFunc(p, p1)
+	return m.ForIDFunc(p, p1)
 }
 
-//GetMinimockCounter returns a count of AccessorMock.GetFunc invocations
-func (m *AccessorMock) GetMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.GetCounter)
+//ForIDMinimockCounter returns a count of AccessorMock.ForIDFunc invocations
+func (m *AccessorMock) ForIDMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.ForIDCounter)
 }
 
-//GetMinimockPreCounter returns the value of AccessorMock.Get invocations
-func (m *AccessorMock) GetMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.GetPreCounter)
+//ForIDMinimockPreCounter returns the value of AccessorMock.ForID invocations
+func (m *AccessorMock) ForIDMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.ForIDPreCounter)
 }
 
-//GetFinished returns true if mock invocations count is ok
-func (m *AccessorMock) GetFinished() bool {
+//ForIDFinished returns true if mock invocations count is ok
+func (m *AccessorMock) ForIDFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.GetMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.GetCounter) == uint64(len(m.GetMock.expectationSeries))
+	if len(m.ForIDMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.ForIDCounter) == uint64(len(m.ForIDMock.expectationSeries))
 	}
 
 	// if main expectation was set then invocations count should be greater than zero
-	if m.GetMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.GetCounter) > 0
+	if m.ForIDMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.ForIDCounter) > 0
 	}
 
 	// if func was set then invocations count should be greater than zero
-	if m.GetFunc != nil {
-		return atomic.LoadUint64(&m.GetCounter) > 0
+	if m.ForIDFunc != nil {
+		return atomic.LoadUint64(&m.ForIDCounter) > 0
 	}
 
 	return true
@@ -194,8 +194,8 @@ func (m *AccessorMock) GetFinished() bool {
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *AccessorMock) ValidateCallCounters() {
 
-	if !m.GetFinished() {
-		m.t.Fatal("Expected call to AccessorMock.Get")
+	if !m.ForIDFinished() {
+		m.t.Fatal("Expected call to AccessorMock.ForID")
 	}
 
 }
@@ -215,8 +215,8 @@ func (m *AccessorMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *AccessorMock) MinimockFinish() {
 
-	if !m.GetFinished() {
-		m.t.Fatal("Expected call to AccessorMock.Get")
+	if !m.ForIDFinished() {
+		m.t.Fatal("Expected call to AccessorMock.ForID")
 	}
 
 }
@@ -233,7 +233,7 @@ func (m *AccessorMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
-		ok = ok && m.GetFinished()
+		ok = ok && m.ForIDFinished()
 
 		if ok {
 			return
@@ -242,8 +242,8 @@ func (m *AccessorMock) MinimockWait(timeout time.Duration) {
 		select {
 		case <-timeoutCh:
 
-			if !m.GetFinished() {
-				m.t.Error("Expected call to AccessorMock.Get")
+			if !m.ForIDFinished() {
+				m.t.Error("Expected call to AccessorMock.ForID")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)
@@ -258,7 +258,7 @@ func (m *AccessorMock) MinimockWait(timeout time.Duration) {
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *AccessorMock) AllMocksCalled() bool {
 
-	if !m.GetFinished() {
+	if !m.ForIDFinished() {
 		return false
 	}
 
