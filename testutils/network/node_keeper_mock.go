@@ -113,7 +113,7 @@ type NodeKeeperMock struct {
 	IsBootstrappedPreCounter uint64
 	IsBootstrappedMock       mNodeKeeperMockIsBootstrapped
 
-	MoveSyncToActiveFunc       func(p context.Context, p1 core.PulseNumber) (r error)
+	MoveSyncToActiveFunc       func(p context.Context) (r error)
 	MoveSyncToActiveCounter    uint64
 	MoveSyncToActivePreCounter uint64
 	MoveSyncToActiveMock       mNodeKeeperMockMoveSyncToActive
@@ -2717,8 +2717,7 @@ type NodeKeeperMockMoveSyncToActiveExpectation struct {
 }
 
 type NodeKeeperMockMoveSyncToActiveInput struct {
-	p  context.Context
-	p1 core.PulseNumber
+	p context.Context
 }
 
 type NodeKeeperMockMoveSyncToActiveResult struct {
@@ -2726,14 +2725,14 @@ type NodeKeeperMockMoveSyncToActiveResult struct {
 }
 
 //Expect specifies that invocation of NodeKeeper.MoveSyncToActive is expected from 1 to Infinity times
-func (m *mNodeKeeperMockMoveSyncToActive) Expect(p context.Context, p1 core.PulseNumber) *mNodeKeeperMockMoveSyncToActive {
+func (m *mNodeKeeperMockMoveSyncToActive) Expect(p context.Context) *mNodeKeeperMockMoveSyncToActive {
 	m.mock.MoveSyncToActiveFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &NodeKeeperMockMoveSyncToActiveExpectation{}
 	}
-	m.mainExpectation.input = &NodeKeeperMockMoveSyncToActiveInput{p, p1}
+	m.mainExpectation.input = &NodeKeeperMockMoveSyncToActiveInput{p}
 	return m
 }
 
@@ -2750,12 +2749,12 @@ func (m *mNodeKeeperMockMoveSyncToActive) Return(r error) *NodeKeeperMock {
 }
 
 //ExpectOnce specifies that invocation of NodeKeeper.MoveSyncToActive is expected once
-func (m *mNodeKeeperMockMoveSyncToActive) ExpectOnce(p context.Context, p1 core.PulseNumber) *NodeKeeperMockMoveSyncToActiveExpectation {
+func (m *mNodeKeeperMockMoveSyncToActive) ExpectOnce(p context.Context) *NodeKeeperMockMoveSyncToActiveExpectation {
 	m.mock.MoveSyncToActiveFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &NodeKeeperMockMoveSyncToActiveExpectation{}
-	expectation.input = &NodeKeeperMockMoveSyncToActiveInput{p, p1}
+	expectation.input = &NodeKeeperMockMoveSyncToActiveInput{p}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
@@ -2765,7 +2764,7 @@ func (e *NodeKeeperMockMoveSyncToActiveExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of NodeKeeper.MoveSyncToActive method
-func (m *mNodeKeeperMockMoveSyncToActive) Set(f func(p context.Context, p1 core.PulseNumber) (r error)) *NodeKeeperMock {
+func (m *mNodeKeeperMockMoveSyncToActive) Set(f func(p context.Context) (r error)) *NodeKeeperMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -2774,18 +2773,18 @@ func (m *mNodeKeeperMockMoveSyncToActive) Set(f func(p context.Context, p1 core.
 }
 
 //MoveSyncToActive implements github.com/insolar/insolar/network.NodeKeeper interface
-func (m *NodeKeeperMock) MoveSyncToActive(p context.Context, p1 core.PulseNumber) (r error) {
+func (m *NodeKeeperMock) MoveSyncToActive(p context.Context) (r error) {
 	counter := atomic.AddUint64(&m.MoveSyncToActivePreCounter, 1)
 	defer atomic.AddUint64(&m.MoveSyncToActiveCounter, 1)
 
 	if len(m.MoveSyncToActiveMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.MoveSyncToActiveMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to NodeKeeperMock.MoveSyncToActive. %v %v", p, p1)
+			m.t.Fatalf("Unexpected call to NodeKeeperMock.MoveSyncToActive. %v", p)
 			return
 		}
 
 		input := m.MoveSyncToActiveMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, NodeKeeperMockMoveSyncToActiveInput{p, p1}, "NodeKeeper.MoveSyncToActive got unexpected parameters")
+		testify_assert.Equal(m.t, *input, NodeKeeperMockMoveSyncToActiveInput{p}, "NodeKeeper.MoveSyncToActive got unexpected parameters")
 
 		result := m.MoveSyncToActiveMock.expectationSeries[counter-1].result
 		if result == nil {
@@ -2802,7 +2801,7 @@ func (m *NodeKeeperMock) MoveSyncToActive(p context.Context, p1 core.PulseNumber
 
 		input := m.MoveSyncToActiveMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, NodeKeeperMockMoveSyncToActiveInput{p, p1}, "NodeKeeper.MoveSyncToActive got unexpected parameters")
+			testify_assert.Equal(m.t, *input, NodeKeeperMockMoveSyncToActiveInput{p}, "NodeKeeper.MoveSyncToActive got unexpected parameters")
 		}
 
 		result := m.MoveSyncToActiveMock.mainExpectation.result
@@ -2816,11 +2815,11 @@ func (m *NodeKeeperMock) MoveSyncToActive(p context.Context, p1 core.PulseNumber
 	}
 
 	if m.MoveSyncToActiveFunc == nil {
-		m.t.Fatalf("Unexpected call to NodeKeeperMock.MoveSyncToActive. %v %v", p, p1)
+		m.t.Fatalf("Unexpected call to NodeKeeperMock.MoveSyncToActive. %v", p)
 		return
 	}
 
-	return m.MoveSyncToActiveFunc(p, p1)
+	return m.MoveSyncToActiveFunc(p)
 }
 
 //MoveSyncToActiveMinimockCounter returns a count of NodeKeeperMock.MoveSyncToActiveFunc invocations

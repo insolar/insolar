@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	core "github.com/insolar/insolar/core"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -20,7 +19,7 @@ import (
 type ActiveListSwapperMock struct {
 	t minimock.Tester
 
-	MoveSyncToActiveFunc       func(p context.Context, p1 core.PulseNumber) (r error)
+	MoveSyncToActiveFunc       func(p context.Context) (r error)
 	MoveSyncToActiveCounter    uint64
 	MoveSyncToActivePreCounter uint64
 	MoveSyncToActiveMock       mActiveListSwapperMockMoveSyncToActive
@@ -51,8 +50,7 @@ type ActiveListSwapperMockMoveSyncToActiveExpectation struct {
 }
 
 type ActiveListSwapperMockMoveSyncToActiveInput struct {
-	p  context.Context
-	p1 core.PulseNumber
+	p context.Context
 }
 
 type ActiveListSwapperMockMoveSyncToActiveResult struct {
@@ -60,14 +58,14 @@ type ActiveListSwapperMockMoveSyncToActiveResult struct {
 }
 
 //Expect specifies that invocation of ActiveListSwapper.MoveSyncToActive is expected from 1 to Infinity times
-func (m *mActiveListSwapperMockMoveSyncToActive) Expect(p context.Context, p1 core.PulseNumber) *mActiveListSwapperMockMoveSyncToActive {
+func (m *mActiveListSwapperMockMoveSyncToActive) Expect(p context.Context) *mActiveListSwapperMockMoveSyncToActive {
 	m.mock.MoveSyncToActiveFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &ActiveListSwapperMockMoveSyncToActiveExpectation{}
 	}
-	m.mainExpectation.input = &ActiveListSwapperMockMoveSyncToActiveInput{p, p1}
+	m.mainExpectation.input = &ActiveListSwapperMockMoveSyncToActiveInput{p}
 	return m
 }
 
@@ -84,12 +82,12 @@ func (m *mActiveListSwapperMockMoveSyncToActive) Return(r error) *ActiveListSwap
 }
 
 //ExpectOnce specifies that invocation of ActiveListSwapper.MoveSyncToActive is expected once
-func (m *mActiveListSwapperMockMoveSyncToActive) ExpectOnce(p context.Context, p1 core.PulseNumber) *ActiveListSwapperMockMoveSyncToActiveExpectation {
+func (m *mActiveListSwapperMockMoveSyncToActive) ExpectOnce(p context.Context) *ActiveListSwapperMockMoveSyncToActiveExpectation {
 	m.mock.MoveSyncToActiveFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &ActiveListSwapperMockMoveSyncToActiveExpectation{}
-	expectation.input = &ActiveListSwapperMockMoveSyncToActiveInput{p, p1}
+	expectation.input = &ActiveListSwapperMockMoveSyncToActiveInput{p}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
@@ -99,7 +97,7 @@ func (e *ActiveListSwapperMockMoveSyncToActiveExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of ActiveListSwapper.MoveSyncToActive method
-func (m *mActiveListSwapperMockMoveSyncToActive) Set(f func(p context.Context, p1 core.PulseNumber) (r error)) *ActiveListSwapperMock {
+func (m *mActiveListSwapperMockMoveSyncToActive) Set(f func(p context.Context) (r error)) *ActiveListSwapperMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -108,18 +106,18 @@ func (m *mActiveListSwapperMockMoveSyncToActive) Set(f func(p context.Context, p
 }
 
 //MoveSyncToActive implements github.com/insolar/insolar/ledger/pulsemanager.ActiveListSwapper interface
-func (m *ActiveListSwapperMock) MoveSyncToActive(p context.Context, p1 core.PulseNumber) (r error) {
+func (m *ActiveListSwapperMock) MoveSyncToActive(p context.Context) (r error) {
 	counter := atomic.AddUint64(&m.MoveSyncToActivePreCounter, 1)
 	defer atomic.AddUint64(&m.MoveSyncToActiveCounter, 1)
 
 	if len(m.MoveSyncToActiveMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.MoveSyncToActiveMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to ActiveListSwapperMock.MoveSyncToActive. %v %v", p, p1)
+			m.t.Fatalf("Unexpected call to ActiveListSwapperMock.MoveSyncToActive. %v", p)
 			return
 		}
 
 		input := m.MoveSyncToActiveMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, ActiveListSwapperMockMoveSyncToActiveInput{p, p1}, "ActiveListSwapper.MoveSyncToActive got unexpected parameters")
+		testify_assert.Equal(m.t, *input, ActiveListSwapperMockMoveSyncToActiveInput{p}, "ActiveListSwapper.MoveSyncToActive got unexpected parameters")
 
 		result := m.MoveSyncToActiveMock.expectationSeries[counter-1].result
 		if result == nil {
@@ -136,7 +134,7 @@ func (m *ActiveListSwapperMock) MoveSyncToActive(p context.Context, p1 core.Puls
 
 		input := m.MoveSyncToActiveMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, ActiveListSwapperMockMoveSyncToActiveInput{p, p1}, "ActiveListSwapper.MoveSyncToActive got unexpected parameters")
+			testify_assert.Equal(m.t, *input, ActiveListSwapperMockMoveSyncToActiveInput{p}, "ActiveListSwapper.MoveSyncToActive got unexpected parameters")
 		}
 
 		result := m.MoveSyncToActiveMock.mainExpectation.result
@@ -150,11 +148,11 @@ func (m *ActiveListSwapperMock) MoveSyncToActive(p context.Context, p1 core.Puls
 	}
 
 	if m.MoveSyncToActiveFunc == nil {
-		m.t.Fatalf("Unexpected call to ActiveListSwapperMock.MoveSyncToActive. %v %v", p, p1)
+		m.t.Fatalf("Unexpected call to ActiveListSwapperMock.MoveSyncToActive. %v", p)
 		return
 	}
 
-	return m.MoveSyncToActiveFunc(p, p1)
+	return m.MoveSyncToActiveFunc(p)
 }
 
 //MoveSyncToActiveMinimockCounter returns a count of ActiveListSwapperMock.MoveSyncToActiveFunc invocations

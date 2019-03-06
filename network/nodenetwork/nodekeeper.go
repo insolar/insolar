@@ -414,7 +414,7 @@ func (nk *nodekeeper) Sync(list network.UnsyncList) {
 	nk.sync = list
 }
 
-func (nk *nodekeeper) MoveSyncToActive(ctx context.Context, pulse core.PulseNumber) error {
+func (nk *nodekeeper) MoveSyncToActive(ctx context.Context) error {
 	nk.activeLock.Lock()
 	nk.syncLock.Lock()
 	defer func() {
