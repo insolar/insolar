@@ -21,11 +21,17 @@ import (
 	"context"
 	"crypto"
 	"fmt"
+	"io"
 	"math/rand"
-	"strconv"
+	"net"
 	"strings"
 	"sync"
+	"testing"
 	"time"
+
+	"github.com/pkg/errors"
+	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
@@ -40,9 +46,6 @@ import (
 	"github.com/insolar/insolar/network/utils"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
-	"github.com/pkg/errors"
-	"github.com/stretchr/testify/require"
-	"github.com/stretchr/testify/suite"
 )
 
 var (
@@ -72,6 +75,7 @@ type testSuite struct {
 	fixtureMap     map[string]*fixture
 	bootstrapCount int
 	nodesCount     int
+	addressPool    addressPool
 }
 
 func NewTestSuite(bootstrapCount, nodesCount int) *testSuite {
@@ -80,6 +84,7 @@ func NewTestSuite(bootstrapCount, nodesCount int) *testSuite {
 		fixtureMap:     make(map[string]*fixture, 0),
 		bootstrapCount: bootstrapCount,
 		nodesCount:     nodesCount,
+		addressPool:    addressPool{},
 	}
 }
 
@@ -97,11 +102,11 @@ func (s *testSuite) SetupTest() {
 	log.Info("SetupTest")
 
 	for i := 0; i < s.bootstrapCount; i++ {
-		s.fixture().bootstrapNodes = append(s.fixture().bootstrapNodes, newNetworkNode())
+		s.fixture().bootstrapNodes = append(s.fixture().bootstrapNodes, s.newNetworkNode())
 	}
 
 	for i := 0; i < s.nodesCount; i++ {
-		s.fixture().networkNodes = append(s.fixture().networkNodes, newNetworkNode())
+		s.fixture().networkNodes = append(s.fixture().networkNodes, s.newNetworkNode())
 	}
 
 	pulseReceivers := make([]string, 0)
@@ -277,13 +282,13 @@ type networkNode struct {
 }
 
 // newNetworkNode returns networkNode initialized only with id, host address and key pair
-func newNetworkNode() *networkNode {
+func (s *testSuite) newNetworkNode() *networkNode {
 	key, err := platformpolicy.NewKeyProcessor().GeneratePrivateKey()
 	if err != nil {
 		panic(err.Error())
 	}
-	address := "127.0.0.1:" + strconv.Itoa(testNetworkPort)
-	testNetworkPort += 2 // coz consensus transport port+=1
+
+	address, _ := s.addressPool.ReserveFreePair()
 
 	return &networkNode{
 		id:                  testutils.RandomRef(),
@@ -425,4 +430,87 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	node.componentManager.Register(certManager, cryptographyService)
 	node.componentManager.Inject(serviceNetwork, NewTestNetworkSwitcher())
 	node.serviceNetwork = serviceNetwork
+}
+
+type addressPool struct {
+	pool     map[string]io.Closer
+	poolLock sync.Mutex
+}
+
+func (a *addressPool) ReserveFreePair() (string, string) {
+	a.poolLock.Lock()
+	defer a.poolLock.Unlock()
+
+	for {
+
+		if a.pool == nil {
+			a.pool = make(map[string]io.Closer)
+		}
+		addrTcp, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("127.0.0.1:%d", testNetworkPort))
+		if err != nil {
+			panic(err.Error())
+		}
+
+		addrUdp, err := net.ResolveUDPAddr("udp", fmt.Sprintf("127.0.0.1:%d", testNetworkPort+1))
+		if err != nil {
+			panic(err.Error())
+		}
+
+		l1, err := net.ListenTCP("tcp", addrTcp)
+		if err != nil {
+			continue
+		}
+		defer func() {
+			l1.Close()
+		}()
+
+		l2, err := net.ListenUDP("udp", addrUdp)
+		if err != nil {
+			continue
+		}
+		defer func() {
+			l2.Close()
+		}()
+
+		addr1 := l1.Addr()
+		addr2 := l2.LocalAddr()
+		if addr2 == nil {
+			continue
+		}
+
+		testNetworkPort += 2
+		//		a.pool[addr1.String()] = l1
+		//		a.pool[addr2.String()] = l2
+
+		return addr1.String(), addr2.String()
+	}
+	// ports = append(ports, l.Addr().(*net.TCPAddr).Port)
+
+}
+
+func (a *addressPool) ReleaseListeners() error {
+	// a.poolLock.Lock()
+	// defer a.poolLock.Unlock()
+	//
+	// for _, listener := range a.pool {
+	// 	err := listener.Close()
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// }
+	// a.pool = make(map[string]*net.TCPListener)
+	return nil
+}
+
+func TestGetFreePorts(t *testing.T) {
+	// ports, err := GetFreePorts(4)
+	// assert.NoError(t, err)
+	// assert.Len(t, ports, 4)
+
+	pool := addressPool{}
+	defer pool.ReleaseListeners()
+
+	a1, a2 := pool.ReserveFreePair()
+	fmt.Println(a1, a2)
+	fmt.Printf("%v#", pool.pool)
 }
