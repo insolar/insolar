@@ -1,0 +1,117 @@
+version: '3.7'
+services:
+  insolard:
+    image: "insolar/insolard:v0.8.4"
+    environment:
+      - INSOLARD_LOG_LEVEL=warn
+      - INSOLARD_TRANSPORT_FIXED_ADDRESS=
+      - INSGORUND_ENDPOINT=insgorund:18181
+      - INSOLARD_JAEGER_ENDPOINT=jaeger:6831
+    volumes:
+      - "./configs:/etc/insolar"
+      - "./genesis:/var/lib/insolar"
+    restart: always
+    links:
+        - insgorund
+    ports:
+      - "0.0.0.0:7900:7900/tcp"     # tcp - transport
+      - "0.0.0.0:7901:7901/udp"     # udp - consensus
+      - "0.0.0.0:19191:19191/tcp"   # api
+    logging:
+      driver: gelf
+      options:
+        gelf-address: "udp://127.0.0.1:12201"
+    depends_on:
+      - logstash
+
+  insgorund:
+    image: "insolar/insgorund:v0.8.4"
+    restart: always
+    environment:
+      - INSOLARD_LOG_LEVEL=warn
+      - INSOLARD_RPC_ENDPOINT=insolard:18182
+    logging:
+      driver: gelf
+      options:
+        gelf-address: "udp://127.0.0.1:12201"
+    depends_on:
+      - logstash
+
+  logstash:
+    image: "docker.elastic.co/logstash/logstash:6.6.1"
+    volumes:
+      - "./logstash/logstash.conf:/usr/share/logstash/pipeline/logstash.conf"
+    ports:
+      - "12201:12201/udp"
+
+  prometheus:
+    image: "prom/prometheus:latest"
+    volumes:
+      - "./prometheus:/etc/prometheus:ro"
+    ports:
+      - '9090:9090'
+
+  grafana:
+    image: grafana/grafana:5.4.2
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=pass
+      - GF_EXPLORE_ENABLED=true
+      - GF_SERVER_ENABLE_GZIP=true
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+    depends_on:
+      - prometheus
+    ports:
+      - "3000:3000"
+
+# elastic and kibana are optional here,
+# but they provide more powerful  search and analysis than Jaeger's UI (augments it actually).
+  elasticsearch:
+    image: "docker.elastic.co/elasticsearch/elasticsearch:6.5.4"
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    environment:
+      path.repo: "/tmp/backup"
+      ES_JAVA_OPTS: "-Xmx256m -Xms256m"
+      discovery.type: "single-node"
+      xpack.security.enabled: "false"
+    volumes:
+      - "./elasticsearch/backup:/tmp/backup"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9200/_cat/health?h=st"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  kibana:
+    image: "docker.elastic.co/kibana/kibana:6.5.4"
+    ports:
+      - "5601:5601"
+    volumes:
+      - "./kibana/entrypoint.sh:/usr/local/bin/entrypoint.sh"
+    depends_on:
+      - elasticsearch
+    command: ["/usr/local/bin/entrypoint.sh"]
+
+  jaeger:
+    image: "jaegertracing/all-in-one:1.8"
+    ports:
+      - "6831:6831/udp"
+      - "16686:16686"
+      - "16687:16687"
+    environment:
+      SPAN_STORAGE_TYPE: "elasticsearch"
+      ES_SERVER_URLS: "http://elasticsearch:9200"
+      ES_TAGS_AS_FIELDS: "true"
+    depends_on:
+      - elasticsearch
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:16687/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: on-failure

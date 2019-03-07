@@ -188,11 +188,15 @@ func (w *workerStateMachineImpl) readResponseQueue() error {
 			if !ok {
 				panic(fmt.Sprintf("[ readResponseQueue ] Bad type in adapter response queue: %T", resp.GetData()))
 			}
-			element := w.slot.getSlotElementByID(adapterResp.GetElementID())
+			element := w.slot.extractSlotElementByID(adapterResp.GetElementID())
+			if element == nil {
+				log.Warnf("[ readResponseQueue ] Unknown element id: %d. AdapterResp: %+v", adapterResp.GetElementID(), adapterResp)
+				continue
+			}
 
 			respHandler := element.stateMachineType.GetResponseHandler(w.slot.pulseState, element.state)
 			if respHandler == nil {
-				panic(fmt.Sprintf("[ readResponseQueue ] No response handler. State: %d. \nAdapterResp: %+v", element.state, adapterResp))
+				panic(fmt.Sprintf("[ readResponseQueue ] No response handler. State: %d. AdapterResp: %+v", element.state, adapterResp))
 			}
 
 			payLoad, newState, err := respHandler(element, adapterResp)
@@ -200,7 +204,7 @@ func (w *workerStateMachineImpl) readResponseQueue() error {
 				log.Error("[ readResponseQueue ] Response handler errors: ", err)
 				respErrorHandler := element.stateMachineType.GetResponseErrorHandler(w.slot.pulseState, element.state)
 				if respErrorHandler == nil {
-					panic(fmt.Sprintf("[ readResponseQueue ] No response error handler. State: %d. \nAdapterResp: %+v", element.state, adapterResp))
+					panic(fmt.Sprintf("[ readResponseQueue ] No response error handler. State: %d. AdapterResp: %+v", element.state, adapterResp))
 				}
 
 				payLoad, newState = respErrorHandler(element, adapterResp, err)

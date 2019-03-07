@@ -37,7 +37,7 @@ const (
 )
 
 const slotSize = 10000
-const slotElementDelta = 1000000 // nolint: unused
+const slotElementDelta = slotSize // nolint: unused
 
 // HandlersConfiguration contains configuration of handlers for specific pulse state
 // TODO: logic will be provided after pulse change mechanism
@@ -52,8 +52,9 @@ func (s *HandlersConfiguration) getMachineConfiguration(smType int) statemachine
 
 // ElementList is a list of slotElements with pointers to head and tail
 type ElementList struct {
-	head *slotElement
-	tail *slotElement
+	head   *slotElement
+	tail   *slotElement
+	length int
 }
 
 func (l *ElementList) isEmpty() bool {
@@ -66,8 +67,30 @@ func (l *ElementList) popElement() *slotElement {
 	if result == nil {
 		return nil
 	}
-	l.head = l.head.nextElement
+	l.removeElement(result)
 	return result
+}
+
+// removeElement removes element from linked list
+func (l *ElementList) removeElement(element *slotElement) { // nolint: unused
+	if element == nil {
+		return
+	}
+	next := element.nextElement
+	prev := element.prevElement
+	if prev != nil {
+		prev.nextElement = next
+	} else {
+		l.head = next
+	}
+	if next != nil {
+		next.prevElement = prev
+	} else {
+		l.tail = prev
+	}
+	element.prevElement = nil
+	element.nextElement = nil
+	l.length--
 }
 
 // pushElement adds element to linked list
@@ -76,8 +99,15 @@ func (l *ElementList) pushElement(element *slotElement) { // nolint: unused
 		l.head = element
 	} else {
 		l.tail.nextElement = element
+		element.prevElement = l.tail
 	}
+	element.nextElement = nil
 	l.tail = element
+	l.length++
+}
+
+func (l *ElementList) len() int { // nolint: unused
+	return l.length
 }
 
 // Slot holds info about specific pulse and events for it
@@ -104,16 +134,15 @@ var SlotStateMachine = slotElement{
 	stateMachineType: nil, // TODO: add smth correct
 }
 
-func initElementsBuf() []slotElement {
+func initElementsBuf() ([]slotElement, *ElementList) {
 	elements := make([]slotElement, slotSize)
-	var nextElement *slotElement
-	for i := slotSize - 1; i >= 0; i-- {
+	emptyList := &ElementList{}
+	for i := 0; i < slotSize; i++ {
 		elements[i] = *newSlotElement(EmptyElement)
 		elements[i].id = uint32(i)
-		elements[i].nextElement = nextElement
-		nextElement = &elements[i]
+		emptyList.pushElement(&elements[i])
 	}
-	return elements
+	return elements, emptyList
 }
 
 // NewSlot creates new instance of Slot
@@ -123,13 +152,10 @@ func NewSlot(pulseState constant.PulseState, pulseNumber core.PulseNumber) *Slot
 		slotState = Working
 	}
 
-	elements := initElementsBuf()
+	elements, emptyList := initElementsBuf()
 
 	elementListMap := map[ActivationStatus]*ElementList{
-		EmptyElement: {
-			head: &elements[0],
-			tail: &elements[slotSize-1],
-		},
+		EmptyElement:     emptyList,
 		ActiveElement:    {},
 		NotActiveElement: {},
 	}
@@ -218,8 +244,24 @@ func (s *Slot) popElement(status ActivationStatus) *slotElement { // nolint: unu
 	return list.popElement()
 }
 
-func (s *Slot) getSlotElementByID(id uint32) *slotElement {
-	return &s.elements[id%slotSize]
+func (s *Slot) len(status ActivationStatus) int { // nolint: unused
+	list, ok := s.elementListMap[status]
+	if !ok {
+		return 0
+	}
+	return list.len()
+}
+
+func (s *Slot) extractSlotElementByID(id uint32) *slotElement { // nolint: unused
+	element := &s.elements[id%slotSize]
+	if element.id != id {
+		return nil
+	}
+	list, ok := s.elementListMap[element.activationStatus]
+	if ok {
+		list.removeElement(element)
+	}
+	return element
 }
 
 // pushElement adds element of provided status to correspondent linked list
