@@ -22,18 +22,21 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
+// MockDB is a mock DB implementation. It can be used as a stub for other implementations in component tests.
 type MockDB struct {
 	lock    sync.RWMutex
 	backend map[string][]byte
 }
 
-func NewMockDB() (*MockDB, error) {
+// NewMockDB creates new mock DB instance.
+func NewMockDB() *MockDB {
 	db := &MockDB{
 		backend: map[string][]byte{},
 	}
-	return db, nil
+	return db
 }
 
+// Get returns a copy of the value for specified key from memory.
 func (b *MockDB) Get(key Key) (value []byte, err error) {
 	fullKey := append(key.Scope().Bytes(), key.ID()...)
 
@@ -43,9 +46,10 @@ func (b *MockDB) Get(key Key) (value []byte, err error) {
 	if !ok {
 		return nil, core.ErrNotFound
 	}
-	return
+	return append([]byte{}, value...), nil
 }
 
+// Set stores value for a key in memory storage.
 func (b *MockDB) Set(key Key, value []byte) error {
 	fullKey := append(key.Scope().Bytes(), key.ID()...)
 	b.lock.Lock()
