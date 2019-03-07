@@ -457,20 +457,16 @@ func (a *addressPool) ReserveFreePair() (string, string) {
 		}
 
 		l1, err := net.ListenTCP("tcp", addrTcp)
+		defer l1.Close()
 		if err != nil {
 			continue
 		}
-		defer func() {
-			l1.Close()
-		}()
 
 		l2, err := net.ListenUDP("udp", addrUdp)
+		defer l2.Close()
 		if err != nil {
 			continue
 		}
-		defer func() {
-			l2.Close()
-		}()
 
 		addr1 := l1.Addr()
 		addr2 := l2.LocalAddr()
