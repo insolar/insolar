@@ -243,8 +243,10 @@ func (s *Slot) len(status ActivationStatus) int {
 
 func (s *Slot) getSlotElementByID(id uint32) *slotElement {
 	element := &s.elements[id%slotSize]
-	list := s.elementListMap[element.activationStatus]
-	list.removeElement(element)
+	list, ok := s.elementListMap[element.activationStatus]
+	if ok {
+		list.removeElement(element)
+	}
 	return element
 }
 
