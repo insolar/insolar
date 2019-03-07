@@ -8,7 +8,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-type memoryStorage struct {
+type StorageMem struct {
 	lock    sync.RWMutex
 	storage map[core.PulseNumber]*memoryNode
 	head    *memoryNode
@@ -20,13 +20,13 @@ type memoryNode struct {
 	prev, next *memoryNode
 }
 
-func NewMemoryStorage() *memoryStorage {
-	return &memoryStorage{
+func NewMemoryStorage() *StorageMem {
+	return &StorageMem{
 		storage: make(map[core.PulseNumber]*memoryNode),
 	}
 }
 
-func (s *memoryStorage) ForPulseNumber(ctx context.Context, pn core.PulseNumber) (pulse core.Pulse, err error) {
+func (s *StorageMem) ForPulseNumber(ctx context.Context, pn core.PulseNumber) (pulse core.Pulse, err error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
@@ -39,7 +39,7 @@ func (s *memoryStorage) ForPulseNumber(ctx context.Context, pn core.PulseNumber)
 	return node.pulse, nil
 }
 
-func (s *memoryStorage) Latest(ctx context.Context) (pulse core.Pulse, err error) {
+func (s *StorageMem) Latest(ctx context.Context) (pulse core.Pulse, err error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
@@ -51,7 +51,7 @@ func (s *memoryStorage) Latest(ctx context.Context) (pulse core.Pulse, err error
 	return s.head.pulse, nil
 }
 
-func (s *memoryStorage) Append(ctx context.Context, pulse core.Pulse) error {
+func (s *StorageMem) Append(ctx context.Context, pulse core.Pulse) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -87,7 +87,7 @@ func (s *memoryStorage) Append(ctx context.Context, pulse core.Pulse) error {
 	return nil
 }
 
-func (s *memoryStorage) Shift(ctx context.Context) (pulse core.Pulse, err error) {
+func (s *StorageMem) Shift(ctx context.Context) (pulse core.Pulse, err error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -109,7 +109,7 @@ func (s *memoryStorage) Shift(ctx context.Context) (pulse core.Pulse, err error)
 	return tail.pulse, nil
 }
 
-func (s *memoryStorage) Forwards(ctx context.Context, pn core.PulseNumber, steps int) (pulse core.Pulse, err error) {
+func (s *StorageMem) Forwards(ctx context.Context, pn core.PulseNumber, steps int) (pulse core.Pulse, err error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
@@ -131,7 +131,7 @@ func (s *memoryStorage) Forwards(ctx context.Context, pn core.PulseNumber, steps
 	return iterator.pulse, nil
 }
 
-func (s *memoryStorage) Backwards(ctx context.Context, pn core.PulseNumber, steps int) (pulse core.Pulse, err error) {
+func (s *StorageMem) Backwards(ctx context.Context, pn core.PulseNumber, steps int) (pulse core.Pulse, err error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
