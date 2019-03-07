@@ -276,19 +276,19 @@ func (s *testSuite) TestNodeComeAfterAnotherNodeSendLeaveETA() {
 
 func TestServiceNetworkOneBootstrap(t *testing.T) {
 
-	s := NewTestSuite(newTestNetworkConfig(1, 0))
+	s := NewTestSuite(1, 0)
 	suite.Run(t, s)
 }
 
 func TestServiceNetworkManyBootstraps(t *testing.T) {
-	s := NewTestSuite(newTestNetworkConfig(15, 0))
+	s := NewTestSuite(15, 0)
 	suite.Run(t, s)
 }
 
 func TestServiceNetworkManyNodes(t *testing.T) {
 	t.Skip("tmp 123")
 
-	s := NewTestSuite(newTestNetworkConfig(5, 10))
+	s := NewTestSuite(5, 10)
 	suite.Run(t, s)
 }
 

@@ -21,8 +21,6 @@ import (
 	"context"
 	"crypto"
 	"fmt"
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/stretchr/testify/assert"
 	"math/rand"
 	"strconv"
 	"strings"
@@ -30,6 +28,9 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
@@ -62,13 +63,15 @@ type fixture struct {
 	bootstrapNodes []*networkNode
 	networkNodes   []*networkNode
 	pulsar         TestPulsar
+	config         testNetworkConfig
 }
 
-func newFixture(t *testing.T) *fixture {
+func newFixture(t *testing.T, discoveryCount, commonCount int) *fixture {
 	return &fixture{
 		ctx:            inslogger.TestContext(t),
 		bootstrapNodes: make([]*networkNode, 0),
 		networkNodes:   make([]*networkNode, 0),
+		config:         newTestNetworkConfig(discoveryCount, commonCount),
 	}
 }
 
@@ -98,15 +101,17 @@ func newTestNetworkConfig(discoveryCount, commonCount int) testNetworkConfig {
 
 type testSuite struct {
 	suite.Suite
-	fixtureMap map[string]*fixture
-	config     testNetworkConfig
+	fixtureMap     map[string]*fixture
+	discoveryCount int
+	commonCount    int
 }
 
-func NewTestSuite(config testNetworkConfig) *testSuite {
+func NewTestSuite(discoveryCount, commonCount int) *testSuite {
 	return &testSuite{
-		Suite:      suite.Suite{},
-		fixtureMap: make(map[string]*fixture, 0),
-		config:     config,
+		Suite:          suite.Suite{},
+		fixtureMap:     make(map[string]*fixture, 0),
+		discoveryCount: discoveryCount,
+		commonCount:    commonCount,
 	}
 }
 
@@ -116,18 +121,18 @@ func (s *testSuite) fixture() *fixture {
 
 // SetupTest creates and run network with bootstrap and common nodes before each test
 func (s *testSuite) SetupTest() {
-	s.fixtureMap[s.T().Name()] = newFixture(s.T())
+	s.fixtureMap[s.T().Name()] = newFixture(s.T(), s.discoveryCount, s.commonCount)
 	var err error
 	s.fixture().pulsar, err = NewTestPulsar(pulseTimeMs, reqTimeoutMs, pulseDelta)
 	require.NoError(s.T(), err)
 
 	log.Info("SetupTest")
 
-	for i := 0; i < s.config.discoveryNodesCount; i++ {
+	for i := 0; i < s.fixture().config.discoveryNodesCount; i++ {
 		s.fixture().bootstrapNodes = append(s.fixture().bootstrapNodes, s.newNetworkNode(fmt.Sprintf("bootstrap_%d", i)))
 	}
 
-	for i := 0; i < s.config.commonNodesCount; i++ {
+	for i := 0; i < s.fixture().config.commonNodesCount; i++ {
 		s.fixture().networkNodes = append(s.fixture().networkNodes, s.newNetworkNode(fmt.Sprintf("node_%d", i)))
 	}
 
@@ -373,10 +378,10 @@ func (s *testSuite) initCrypto(node *networkNode) (*certificate.CertificateManag
 	cert.Reference = node.id.String()
 	cert.Role = node.role.String()
 	cert.BootstrapNodes = make([]certificate.BootstrapNode, 0)
-	cert.MajorityRule = s.config.networkRules.MajorityRule
-	cert.MinRoles.LightMaterial = s.config.networkRules.MinRoles.LightMaterial
-	cert.MinRoles.HeavyMaterial = s.config.networkRules.MinRoles.HeavyMaterial
-	cert.MinRoles.Virtual = s.config.networkRules.MinRoles.Virtual
+	cert.MajorityRule = s.fixture().config.networkRules.MajorityRule
+	cert.MinRoles.LightMaterial = s.fixture().config.networkRules.MinRoles.LightMaterial
+	cert.MinRoles.HeavyMaterial = s.fixture().config.networkRules.MinRoles.HeavyMaterial
+	cert.MinRoles.Virtual = s.fixture().config.networkRules.MinRoles.Virtual
 
 	for _, b := range s.fixture().bootstrapNodes {
 		pubKey, _ := b.cryptographyService.GetPublicKey()

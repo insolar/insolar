@@ -24,7 +24,7 @@ func (s *testSuite) TestNodeMajority_NodeFailedToConectWithWrongMajority() {
 		s.T().Skip(consensusMinMsg)
 	}
 
-	s.config.networkRules.MajorityRule = len(s.fixture().bootstrapNodes) + 1
+	s.fixture().config.networkRules.MajorityRule = len(s.fixture().bootstrapNodes) + 1
 
 	testNode := s.newNetworkNode("testNode")
 	s.preInitNode(testNode)
