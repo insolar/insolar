@@ -18,7 +18,6 @@ package configuration
 
 import (
 	"fmt"
-	stdlog "log"
 	"reflect"
 	"strings"
 
@@ -94,14 +93,7 @@ func (c *Holder) Init(required bool) (*Holder, error) {
 }
 
 func (c *Holder) registerDefaultValue(val reflect.Value, parts ...string) {
-	varName := "INSOLAR_" + strings.ToUpper(strings.Join(parts, "_"))
 	variablePath := strings.ToLower(strings.Join(parts, "."))
-
-	err := c.viper.BindEnv(variablePath, varName)
-
-	if err != nil {
-		stdlog.Println("bindEnv failed:", err.Error())
-	}
 
 	c.viper.SetDefault(variablePath, val.Interface())
 }
@@ -110,7 +102,7 @@ func (c *Holder) registerDifferentValue(val reflect.Value, parts ...string) {
 	variablePath := strings.Join(parts, ".")
 	previousValue := c.viper.Get(variablePath)
 
-	if ! reflect.DeepEqual(previousValue, val.Interface()) {
+	if !reflect.DeepEqual(previousValue, val.Interface()) {
 		c.viper.Set(variablePath, val.Interface())
 	}
 }
@@ -144,6 +136,9 @@ func NewHolder() *Holder {
 
 	holder.recurseCallInLeaf(holder.registerDefaultValue, cfg)
 
+	holder.viper.AutomaticEnv()
+	holder.viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	holder.viper.SetEnvPrefix("insolar")
 	return holder
 }
 
