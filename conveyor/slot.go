@@ -238,7 +238,7 @@ func (s *Slot) len(status ActivationStatus) int { // nolint: unused
 	return list.len()
 }
 
-func (s *Slot) extractSlotElementByID(id uint32) *slotElement {
+func (s *Slot) extractSlotElementByID(id uint32) *slotElement { // nolint: unused
 	element := &s.elements[id%slotSize]
 	if element.id != id {
 		return nil
