@@ -10,19 +10,19 @@ import (
 
 type StorageMem struct {
 	lock    sync.RWMutex
-	storage map[core.PulseNumber]*memoryNode
-	head    *memoryNode
-	tail    *memoryNode
+	storage map[core.PulseNumber]*memNode
+	head    *memNode
+	tail    *memNode
 }
 
-type memoryNode struct {
+type memNode struct {
 	pulse      core.Pulse
-	prev, next *memoryNode
+	prev, next *memNode
 }
 
-func NewMemoryStorage() *StorageMem {
+func NewStorageMem() *StorageMem {
 	return &StorageMem{
-		storage: make(map[core.PulseNumber]*memoryNode),
+		storage: make(map[core.PulseNumber]*memNode),
 	}
 }
 
@@ -57,7 +57,7 @@ func (s *StorageMem) Append(ctx context.Context, pulse core.Pulse) error {
 
 	var insertWithHead = func() {
 		oldHead := s.head
-		newHead := &memoryNode{
+		newHead := &memNode{
 			prev:  oldHead,
 			pulse: pulse,
 		}
@@ -67,7 +67,7 @@ func (s *StorageMem) Append(ctx context.Context, pulse core.Pulse) error {
 		s.head = newHead
 	}
 	var insertWithoutHead = func() {
-		s.head = &memoryNode{
+		s.head = &memNode{
 			pulse: pulse,
 		}
 		s.storage[pulse.PulseNumber] = s.head

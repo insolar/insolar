@@ -17,132 +17,127 @@
 package pulse
 
 import (
+	"bytes"
 	"context"
-	"sync"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/storage/db"
 	"github.com/pkg/errors"
+	"github.com/ugorji/go/codec"
 )
 
-type dbStorage struct {
-	lock    sync.RWMutex
-	storage map[core.PulseNumber]*memoryNode
-	head    *memoryNode
-	tail    *memoryNode
+type StorageDB struct {
+	DB db.DB `inject:""`
 }
 
-type dbKey core.PulseNumber
+type pulseKey core.PulseNumber
 
-func (k dbKey) Scope() db.Scope {
+func (k pulseKey) Scope() db.Scope {
 	return db.ScopePulse
 }
 
-func (k dbKey) Key() []byte {
-	return core.PulseNumber(k).Bytes()
+func (k pulseKey) ID() []byte {
+	return append([]byte{prefixPulse}, core.PulseNumber(k).Bytes()...)
+}
+
+type metaKey byte
+
+func (k metaKey) Scope() db.Scope {
+	return db.ScopePulse
+}
+
+func (k metaKey) ID() []byte {
+	return []byte{prefixMeta, byte(k)}
 }
 
 type dbNode struct {
 	pulse      core.Pulse
-	prev, next dbKey
+	prev, next *core.PulseNumber
 }
 
-func NewDBStorage() *dbStorage {
-	return &dbStorage{
-		storage: make(map[core.PulseNumber]*memoryNode),
-	}
+var (
+	prefixPulse byte = 1
+	prefixMeta  byte = 2
+)
+
+var (
+	keyHead metaKey = 1
+)
+
+func NewStorageDB() *StorageDB {
+	return &StorageDB{}
 }
 
-func (s *dbStorage) ForPulseNumber(ctx context.Context, pn core.PulseNumber) (pulse core.Pulse, err error) {
-	s.lock.RLock()
-	defer s.lock.RUnlock()
-
-	node, ok := s.storage[pn]
-	if !ok {
-		err = core.ErrNotFound
+func (s *StorageDB) ForPulseNumber(ctx context.Context, pn core.PulseNumber) (pulse core.Pulse, err error) {
+	nd, err := s.get(pn)
+	if err != nil {
 		return
 	}
-
-	return node.pulse, nil
+	return nd.pulse, nil
 }
 
-func (s *dbStorage) Latest(ctx context.Context) (pulse core.Pulse, err error) {
-	s.lock.RLock()
-	defer s.lock.RUnlock()
-
-	if s.head == nil {
-		err = core.ErrNotFound
+func (s *StorageDB) Latest(ctx context.Context) (pulse core.Pulse, err error) {
+	head, err := s.head()
+	if err != nil {
 		return
 	}
-
-	return s.head.pulse, nil
+	nd, err := s.get(head)
+	if err != nil {
+		return
+	}
+	return nd.pulse, nil
 }
 
-func (s *dbStorage) Append(ctx context.Context, pulse core.Pulse) error {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-
-	var insertWithHead = func() {
-		oldHead := s.head
-		newHead := &memoryNode{
-			prev:  oldHead,
-			pulse: pulse,
+func (s *StorageDB) Append(ctx context.Context, pulse core.Pulse) error {
+	var insertWithHead = func(head core.PulseNumber) error {
+		oldHead, err := s.get(head)
+		if err != nil {
+			return err
 		}
-		oldHead.next = newHead
-		newHead.prev = oldHead
-		s.storage[newHead.pulse.PulseNumber] = newHead
-		s.head = newHead
-	}
-	var insertWithoutHead = func() {
-		s.head = &memoryNode{
+		oldHead.next = &pulse.PulseNumber
+
+		// Set new pulse.
+		err = s.set(pulse.PulseNumber, dbNode{
+			prev:  &oldHead.pulse.PulseNumber,
 			pulse: pulse,
+		})
+		if err != nil {
+			return err
 		}
-		s.storage[pulse.PulseNumber] = s.head
-		s.tail = s.head
+		// Set old updated head.
+		err = s.set(oldHead.pulse.PulseNumber, oldHead)
+		if err != nil {
+			return err
+		}
+		// Set head meta record.
+		return s.setHead(pulse.PulseNumber)
+	}
+	var insertWithoutHead = func() error {
+		// Set new Pulse.
+		err := s.set(pulse.PulseNumber, dbNode{
+			pulse: pulse,
+		})
+		if err != nil {
+			return err
+		}
+		// Set head meta record.
+		return s.setHead(pulse.PulseNumber)
 	}
 
-	if s.head == nil {
-		insertWithoutHead()
-		return nil
+	head, err := s.head()
+	if err == ErrNotFound {
+		return insertWithoutHead()
 	}
 
-	if pulse.PulseNumber <= s.head.pulse.PulseNumber {
+	if pulse.PulseNumber <= head {
 		return errors.New("pulse should be greater than the latest")
 	}
-	insertWithHead()
-
-	return nil
+	return insertWithHead(head)
 }
 
-func (s *dbStorage) Shift(ctx context.Context) (pulse core.Pulse, err error) {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-
-	if s.tail == nil {
-		err = errors.New("nothing to shift")
-		return
-	}
-
-	delete(s.storage, s.tail.pulse.PulseNumber)
-	if s.tail == s.head {
-		tail := s.tail
-		s.tail, s.head = nil, nil
-		return tail.pulse, nil
-	}
-
-	tail := s.tail
-	tail.next.prev = nil
-	s.tail = tail.next
-	return tail.pulse, nil
-}
-
-func (s *dbStorage) Forwards(ctx context.Context, pn core.PulseNumber, steps int) (pulse core.Pulse, err error) {
-	s.lock.RLock()
-	defer s.lock.RUnlock()
-
-	node, ok := s.storage[pn]
-	if !ok {
-		err = core.ErrNotFound
+func (s *StorageDB) Forwards(ctx context.Context, pn core.PulseNumber, steps int) (pulse core.Pulse, err error) {
+	node, err := s.get(pn)
+	if err != nil {
 		return
 	}
 
@@ -152,19 +147,18 @@ func (s *dbStorage) Forwards(ctx context.Context, pn core.PulseNumber, steps int
 			err = core.ErrNotFound
 			return
 		}
-		iterator = iterator.next
+		iterator, err = s.get(*iterator.next)
+		if err != nil {
+			return
+		}
 	}
 
 	return iterator.pulse, nil
 }
 
-func (s *dbStorage) Backwards(ctx context.Context, pn core.PulseNumber, steps int) (pulse core.Pulse, err error) {
-	s.lock.RLock()
-	defer s.lock.RUnlock()
-
-	node, ok := s.storage[pn]
-	if !ok {
-		err = core.ErrNotFound
+func (s *StorageDB) Backwards(ctx context.Context, pn core.PulseNumber, steps int) (pulse core.Pulse, err error) {
+	node, err := s.get(pn)
+	if err != nil {
 		return
 	}
 
@@ -174,8 +168,58 @@ func (s *dbStorage) Backwards(ctx context.Context, pn core.PulseNumber, steps in
 			err = core.ErrNotFound
 			return
 		}
-		iterator = iterator.prev
+		iterator, err = s.get(*iterator.prev)
+		if err != nil {
+			return
+		}
 	}
 
 	return iterator.pulse, nil
+}
+
+func (s *StorageDB) get(pn core.PulseNumber) (nd dbNode, err error) {
+	buf, err := s.DB.Get(pulseKey(pn))
+	if err == db.ErrNotFound {
+		err = ErrNotFound
+		return
+	}
+	if err != nil {
+		return
+	}
+	nd = deserialize(buf)
+	return
+}
+
+func (s *StorageDB) set(pn core.PulseNumber, nd dbNode) error {
+	return s.DB.Set(pulseKey(pn), serialize(nd))
+}
+
+func (s *StorageDB) head() (pn core.PulseNumber, err error) {
+	buf, err := s.DB.Get(keyHead)
+	if err == db.ErrNotFound {
+		err = ErrNotFound
+		return
+	}
+	if err != nil {
+		return
+	}
+	pn = core.NewPulseNumber(buf)
+	return
+}
+
+func (s *StorageDB) setHead(pn core.PulseNumber) error {
+	return s.DB.Set(keyHead, pn.Bytes())
+}
+
+func serialize(nd dbNode) []byte {
+	buff := bytes.NewBuffer(nil)
+	enc := codec.NewEncoder(buff, &codec.CborHandle{})
+	enc.MustEncode(nd)
+	return buff.Bytes()
+}
+
+func deserialize(buf []byte) (nd dbNode) {
+	dec := codec.NewDecoderBytes(buf, &codec.CborHandle{})
+	dec.MustDecode(&nd)
+	return nd
 }

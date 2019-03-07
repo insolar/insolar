@@ -11,12 +11,12 @@ type Accessor interface {
 	Latest(ctx context.Context) (core.Pulse, error)
 }
 
-type Pusher interface {
-	Push(context.Context, core.Pulse) error
+type Shifter interface {
+	Shift(ctx context.Context) (pulse core.Pulse, err error)
 }
 
 type Appender interface {
-	Append(context.Context) (core.Pulse, error)
+	Append(ctx context.Context, pulse core.Pulse) error
 }
 
 type Calculator interface {
