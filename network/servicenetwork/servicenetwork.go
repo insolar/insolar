@@ -39,7 +39,6 @@ import (
 	"github.com/insolar/insolar/network/merkle"
 	"github.com/insolar/insolar/network/routing"
 	"github.com/insolar/insolar/network/utils"
-	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
@@ -63,6 +62,7 @@ type ServiceNetwork struct {
 	NodeKeeper          network.NodeKeeper              `inject:""`
 	NetworkSwitcher     core.NetworkSwitcher            `inject:""`
 	TerminationHandler  core.TerminationHandler         `inject:""`
+	KeyProcessor        core.KeyProcessor               `inject:""`
 
 	// subcomponents
 	PhaseManager phases.PhaseManager `inject:"subcomponent"`
@@ -308,22 +308,21 @@ func isNextPulse(currentPulse, newPulse *core.Pulse) bool {
 
 func (n *ServiceNetwork) verifyPulseSign(pulse core.Pulse) (bool, error) {
 	hashProvider := n.CryptographyScheme.IntegrityHasher()
-	proc := platformpolicy.NewKeyProcessor()
 	for _, psc := range pulse.Signs {
 		payload := pulsar.PulseSenderConfirmationPayload{PulseSenderConfirmation: psc}
 		hash, err := payload.Hash(hashProvider)
 		if err != nil {
-			return false, errors.Wrap(err, "[ ServiceNetwork] verifyPulseSign: error to get a hash from pulse payload")
+			return false, errors.Wrap(err, "[ verifyPulseSign ] error to get a hash from pulse payload")
 		}
-		key, err := proc.ImportPublicKeyBinary([]byte(psc.ChosenPublicKey))
+		key, err := n.KeyProcessor.ImportPublicKeyBinary([]byte(psc.ChosenPublicKey))
 		if err != nil {
-			return false, errors.Wrap(err, "[ ServiceNetwork] verifyPulseSign: error to import a public key")
+			return false, errors.Wrap(err, "[ verifyPulseSign ] error to import a public key")
 		}
 
 		verified := n.CryptographyService.Verify(key, core.SignatureFromBytes(psc.Signature), hash)
 
 		if !verified {
-			return false, errors.New("[ ServiceNetwork ] verifyPulseSign: error to verify a pulse")
+			return false, errors.New("[ verifyPulseSign ] error to verify a pulse")
 		}
 	}
 	return true, nil
