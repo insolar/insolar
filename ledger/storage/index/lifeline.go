@@ -33,6 +33,7 @@ type ObjectLifeline struct {
 	Delegates           map[core.RecordRef]core.RecordRef
 	State               record.State
 	LatestUpdate        core.PulseNumber
+	JetID               core.JetID
 }
 
 // EncodeObjectLifeline converts lifeline index into binary format.

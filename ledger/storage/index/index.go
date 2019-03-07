@@ -15,3 +15,25 @@
  */
 
 package index
+
+import (
+	"context"
+
+	"github.com/insolar/insolar/core"
+)
+
+// Accessor provides info about Index-values from storage
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage/index.Accessor -o ./ -s _mock.go
+type Accessor interface {
+	// ForID returns Index for provided id
+	ForID(ctx context.Context, id core.RecordID) (ObjectLifeline, error)
+}
+
+// Modifier provides provides methods for setting Index-values to storage
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage/index.Modifier -o ./ -s _mock.go
+type Modifier interface {
+	// Set saves new Index-value in storage
+	Set(ctx context.Context, id core.RecordID, index ObjectLifeline) error
+	// Delete Index-value by id from storage
+	Delete(ctx context.Context, id core.RecordID) error
+}
