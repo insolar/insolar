@@ -61,10 +61,9 @@ check pod state
     kubectl describe pod insolar-ve-0
     kubectl logs insolar-ve-0 -c insolard
 
-10. Shut down and remove all components
+10. Shut down and remove all created components
 
-    # ./bin/shutdown-all.sh
-    # kubectl delete -f .out/ve-sts.yaml
+    ./bin/shutdown-all.sh
 
 ## GCP
 
