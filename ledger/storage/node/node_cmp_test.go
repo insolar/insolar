@@ -28,8 +28,6 @@ import (
 )
 
 func TestNodes(t *testing.T) {
-	storage := node.NewStorage()
-
 	var (
 		virtuals  []insolar.Node
 		materials []insolar.Node
@@ -51,25 +49,30 @@ func TestNodes(t *testing.T) {
 	}
 	all = append(virtuals, materials...)
 	pulse := gen.PulseNumber()
+	storage := node.NewStorage()
 
-	t.Run("saves nodes", func(t *testing.T) {
+	// Saves nodes.
+	{
 		err := storage.Set(pulse, all)
 		assert.NoError(t, err)
-	})
-	t.Run("returns all nodes", func(t *testing.T) {
+	}
+	// Returns all nodes.
+	{
 		result, err := storage.All(pulse)
 		assert.NoError(t, err)
 		assert.Equal(t, all, result)
-	})
-	t.Run("returns in role nodes", func(t *testing.T) {
+	}
+	// Returns in role nodes.
+	{
 		result, err := storage.InRole(pulse, core.StaticRoleVirtual)
 		assert.NoError(t, err)
 		assert.Equal(t, virtuals, result)
-	})
-	t.Run("deletes nodes", func(t *testing.T) {
+	}
+	// Deletes nodes.
+	{
 		storage.Delete(pulse)
 		result, err := storage.All(pulse)
 		assert.Equal(t, core.ErrNoNodes, err)
 		assert.Nil(t, result)
-	})
+	}
 }
