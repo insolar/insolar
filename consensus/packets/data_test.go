@@ -276,7 +276,7 @@ func makePhase2Packet() *Phase2Packet {
 	phase2Packet.globuleHashSignature = randomArray66()
 	phase2Packet.SignatureHeaderSection1 = randomArray66()
 	phase2Packet.SignatureHeaderSection2 = randomArray66()
-	phase2Packet.bitSet, _ = NewTriStateBitSet(134)
+	phase2Packet.bitSet, _ = NewBitSet(134)
 
 	vote := &MissingNode{NodeIndex: 25}
 

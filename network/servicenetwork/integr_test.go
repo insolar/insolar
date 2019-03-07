@@ -22,6 +22,7 @@ package servicenetwork
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -82,58 +83,45 @@ func (s *testSuite) TestNodeConnectInvalidVersion() {
 	log.Infof("Error: %s", err)
 }
 
-func (s *testSuite) TestTwoNodesConnect() {
+func (s *testSuite) TestManyNodesConnect() {
 	if len(s.fixture().bootstrapNodes) < consensusMin {
 		s.T().Skip(consensusMinMsg)
 	}
 
-	testNode := s.newNetworkNode("testNode")
-	testNode2 := s.newNetworkNode("testNode2")
-
-	s.preInitNode(testNode)
-	s.preInitNode(testNode2)
-
-	s.InitNode(testNode)
-	s.InitNode(testNode2)
+	nodesCount := 10
+	nodes := make([]*networkNode, 0)
+	for i := 0; i < nodesCount; i++ {
+		nodes = append(nodes, s.newNetworkNode("testNode"+strconv.Itoa(i+1)))
+		s.preInitNode(nodes[i])
+		s.InitNode(nodes[i])
+	}
 
 	wg := sync.WaitGroup{}
-	wg.Add(2)
+	wg.Add(nodesCount)
 
-	go func(wg *sync.WaitGroup) {
-		s.StartNode(testNode)
-		wg.Done()
-	}(&wg)
-
-	go func(wg *sync.WaitGroup) {
-		s.StartNode(testNode2)
-		wg.Done()
-	}(&wg)
+	for _, node := range nodes {
+		go func(wg *sync.WaitGroup, node *networkNode) {
+			s.StartNode(node)
+			wg.Done()
+		}(&wg, node)
+	}
 
 	wg.Wait()
 
 	defer func(s *testSuite) {
-		s.StopNode(testNode)
-		s.StopNode(testNode2)
+		for _, node := range nodes {
+			s.StopNode(node)
+		}
 	}(s)
 
-	s.waitForConsensus(1)
+	s.waitForConsensus(5)
 
+	joined := nodesCount
+	if s.getMaxJoinCount() < nodesCount {
+		joined = s.getMaxJoinCount()
+	}
 	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
-	s.Equal(s.getNodesCount(), len(activeNodes))
-
-	s.waitForConsensus(1)
-
-	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
-	s.Equal(s.getNodesCount(), len(activeNodes))
-
-	s.waitForConsensus(2)
-
-	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
-	s.Equal(s.getNodesCount()+2, len(activeNodes))
-	activeNodes = testNode.serviceNetwork.NodeKeeper.GetWorkingNodes()
-	s.Equal(s.getNodesCount()+2, len(activeNodes))
-	activeNodes = testNode2.serviceNetwork.NodeKeeper.GetWorkingNodes()
-	s.Equal(s.getNodesCount()+2, len(activeNodes))
+	s.Equal(s.getNodesCount()+joined, len(activeNodes))
 }
 
 func (s *testSuite) TestNodeLeave() {

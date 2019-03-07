@@ -1,16 +1,15 @@
-insolar:
-  host:
-    transport:
-      protocol: TCP
-      address: 127.0.0.1:0
-      behindnat: false
-    bootstraphosts: []
-    isrelay: false
-  node:
-    nodes: []
-  log:
-    format: ""
-    level: Debug
-    output: insolar.log
-  stats:
-    listenaddress: 0.0.0.0:8080
+host:
+  transport:
+    protocol: TCP
+    address: 127.0.0.1:0
+    behindnat: false
+  bootstraphosts: []
+  isrelay: false
+node:
+  nodes: []
+log:
+  format: ""
+  level: Debug
+  output: insolar.log
+stats:
+  listenaddress: 0.0.0.0:8080
