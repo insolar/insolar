@@ -419,7 +419,7 @@ func TestSlot_pushElement_Empty(t *testing.T) {
 	require.Equal(t, prevID+slotElementDelta, element.id)
 }
 
-func TestSlot_getSlotElementByID(t *testing.T) {
+func TestSlot_extractSlotElementByID(t *testing.T) {
 	sm := statemachine.NewStateMachineTypeMock(t)
 	slot := NewSlot(constant.Present, 10)
 
@@ -452,6 +452,43 @@ func TestSlot_getSlotElementByID(t *testing.T) {
 		require.Equal(t, elements[i].state, slot.extractSlotElementByID(elements[i].id).state)
 		require.Equal(t, listLen-i, slot.len(ActiveElement))
 	}
+}
+
+func TestSlot_pushElementToEmpty_ExtractByID(t *testing.T) {
+	s := NewSlot(constant.Future, testRealPulse)
+
+	element := s.popElement(EmptyElement)
+	oldID := element.id
+	err := s.pushElement(element)
+	require.NoError(t, err)
+
+	elementByID := s.extractSlotElementByID(oldID)
+	require.Nil(t, elementByID)
+
+	elementByID = s.extractSlotElementByID(element.id)
+	require.NotNil(t, elementByID)
+}
+
+func TestSlot_extractSlotElementByID_NotExist(t *testing.T) {
+	s := NewSlot(constant.Present, 10)
+
+	elementByID := s.extractSlotElementByID(slotElementDelta)
+	require.Nil(t, elementByID)
+}
+
+func TestSlot_extractSlotElementByID_pushElement(t *testing.T) {
+	s := NewSlot(constant.Present, 10)
+
+	elementByID := s.extractSlotElementByID(0)
+	require.NotNil(t, elementByID)
+
+	elementByID.activationStatus = ActiveElement
+
+	err := s.pushElement(elementByID)
+	require.NoError(t, err)
+
+	require.Equal(t, 1, s.elementListMap[ActiveElement].len())
+	require.Equal(t, slotSize-1, s.elementListMap[EmptyElement].len())
 }
 
 func TestNewSlotElement(t *testing.T) {
