@@ -435,7 +435,7 @@ func TestSlot_getSlotElementByID(t *testing.T) {
 
 	listLen := slot.len(ActiveElement)
 	for i := 1; i < len(elements); i++ {
-		require.Equal(t, elements[i].state, slot.getSlotElementByID(elements[i].id).state)
+		require.Equal(t, elements[i].state, slot.extractSlotElementByID(elements[i].id).state)
 		require.Equal(t, listLen-i, slot.len(ActiveElement))
 	}
 
@@ -449,7 +449,7 @@ func TestSlot_getSlotElementByID(t *testing.T) {
 
 	listLen = slot.len(ActiveElement)
 	for i := 1; i < len(elements); i++ {
-		require.Equal(t, elements[i].state, slot.getSlotElementByID(elements[i].id).state)
+		require.Equal(t, elements[i].state, slot.extractSlotElementByID(elements[i].id).state)
 		require.Equal(t, listLen-i, slot.len(ActiveElement))
 	}
 }
