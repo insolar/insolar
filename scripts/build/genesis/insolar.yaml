@@ -1,0 +1,14 @@
+host:
+  transport:
+    address: 127.0.0.1:53837
+ledger:
+  storage:
+    datadirectory: ./data
+log:
+  level: Debug
+logicrunner:
+  rpclisten: 127.0.0.1:28112
+  goplugin:
+    runnerlisten: 127.0.0.1:28111
+pulsar:
+  listenaddress: 127.0.0.1:8090

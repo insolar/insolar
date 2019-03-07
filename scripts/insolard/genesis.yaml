@@ -111,6 +111,51 @@ nodes:
     role: "virtual"
     keys_file: "scripts/insolard/nodes/1/keys.json"
     cert_name: "node_cert_1.json"
+#  -
+#    host: "127.0.0.1:63846"
+#    role: "virtual"
+#    keys_file: "scripts/insolard/nodes/2/keys.json"
+#    cert_name: "node_cert_2.json"
+#  -
+#    host: "127.0.0.1:63856"
+#    role: "virtual"
+#    keys_file: "scripts/insolard/nodes/3/keys.json"
+#    cert_name: "node_cert_3.json"
+#  -
+#    host: "127.0.0.1:63866"
+#    role: "virtual"
+#    keys_file: "scripts/insolard/nodes/4/keys.json"
+#    cert_name: "node_cert_4.json"
+#  -
+#    host: "127.0.0.1:63876"
+#    role: "virtual"
+#    keys_file: "scripts/insolard/nodes/5/keys.json"
+#    cert_name: "node_cert_5.json"
+#  -
+#    host: "127.0.0.1:63886"
+#    role: "virtual"
+#    keys_file: "scripts/insolard/nodes/6/keys.json"
+#    cert_name: "node_cert_6.json"
+#  -
+#    host: "127.0.0.1:63896"
+#    role: "virtual"
+#    keys_file: "scripts/insolard/nodes/7/keys.json"
+#    cert_name: "node_cert_7.json"
+#  -
+#    host: "127.0.0.1:63956"
+#    role: "virtual"
+#    keys_file: "scripts/insolard/nodes/8/keys.json"
+#    cert_name: "node_cert_8.json"
+#  -
+#    host: "127.0.0.1:63966"
+#    role: "virtual"
+#    keys_file: "scripts/insolard/nodes/9/keys.json"
+#    cert_name: "node_cert_9.json"
+#  -
+#    host: "127.0.0.1:63976"
+#    role: "virtual"
+#    keys_file: "scripts/insolard/nodes/10/keys.json"
+#    cert_name: "node_cert_10.json"
 #  - # Attention! You must wait `lightChainLimit` pulses after LM joined to run benchmark w/o errors.
 #    host: "127.0.0.1:63936"
 #    role: "light_material"

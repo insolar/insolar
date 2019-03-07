@@ -23,9 +23,9 @@ ledger:
       5: 1
 log:
   level: Info
-  adapter: logrus
+  adapter: zerolog
 metrics:
-  listenaddress: 0.0.0.0:8080
+  listenaddress: 0.0.0.0:9090
 logicrunner:
   rpclisten: 127.0.0.1:7778
   rpcprotocol: tcp
@@ -55,7 +55,7 @@ pulsar:
     behindnat: false
   pulsedistributor:
     bootstraphosts:
-    - 127.0.0.1:64278
+    - localhost:53837
 bootstrap:
   rootkeys: ""
   rootbalance: 0
