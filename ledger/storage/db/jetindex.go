@@ -22,17 +22,21 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
+// JetIndex contains methods to implement quick access to data by jet. Indexes are stored in memory. Consider disk
+// implementation for large collections.
 type JetIndex struct {
 	lock    sync.Mutex
 	storage map[core.JetID]recordSet
 }
 
+type recordSet map[core.RecordID]struct{}
+
+// NewJetIndex creates new index instance.
 func NewJetIndex() *JetIndex {
 	return &JetIndex{storage: map[core.JetID]recordSet{}}
 }
 
-type recordSet map[core.RecordID]struct{}
-
+// Add creates index record for specified id and jet. To remove clean up index, use "Delete" method.
 func (i *JetIndex) Add(id core.RecordID, jetID core.JetID) {
 	i.lock.Lock()
 	defer i.lock.Unlock()
@@ -45,6 +49,7 @@ func (i *JetIndex) Add(id core.RecordID, jetID core.JetID) {
 	jet[id] = struct{}{}
 }
 
+// Delete removes specified id - jet record from index.
 func (i *JetIndex) Delete(id core.RecordID, jetID core.JetID) {
 	i.lock.Lock()
 	defer i.lock.Unlock()
