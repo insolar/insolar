@@ -340,7 +340,7 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse c
 	for i, jetID := range jetIDs {
 		wasExecutor := false
 		executor, err := m.JetCoordinator.LightExecutorForJet(ctx, jetID, currentPulse)
-		if err != nil && err != core.ErrNoNodes {
+		if err != nil && err != node.ErrNoNodes {
 			return nil, err
 		}
 		if err == nil {
@@ -571,7 +571,7 @@ func (m *PulseManager) setUnderGilSection(
 	if persist && oldPulse != nil {
 		jets, err = m.processJets(ctx, oldPulse.PulseNumber, newPulse.PulseNumber)
 		// We just joined to network
-		if err == core.ErrNoNodes {
+		if err == node.ErrNoNodes {
 			return jets, map[core.RecordID][]core.RecordID{}, oldPulse, prevPN, nil
 		}
 		if err != nil {
