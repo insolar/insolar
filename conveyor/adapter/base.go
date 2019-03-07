@@ -56,6 +56,10 @@ type AdapterResponse struct {
 	respPayload interface{}
 }
 
+func (ar *AdapterResponse) SetElementID(id idType) {
+	ar.elementID = id
+}
+
 func (ar *AdapterResponse) GetAdapterID() uint32 {
 	return ar.adapterID
 }
