@@ -1055,7 +1055,13 @@ func (suite *LogicRunnerTestSuite) TestGracefulStop() {
 	}
 
 	suite.lr.stopChan <- struct{}{}
-	<-stopFinished
+	select {
+	case <-stopFinished:
+		break
+	case <-time.After(2 * time.Second):
+		suite.Fail("GracefulStop not finished")
+	}
+
 	suite.Require().NoError(err)
 }
 
