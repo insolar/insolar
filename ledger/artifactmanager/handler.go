@@ -264,10 +264,6 @@ func (h *MessageHandler) setHandlersForHeavy(m *middleware) {
 		BuildMiddleware(h.handleHeavyStartStop,
 			instrumentHandler("handleHeavyStartStop")))
 
-	h.Bus.MustRegister(core.TypeHeavyReset,
-		BuildMiddleware(h.handleHeavyReset,
-			instrumentHandler("handleHeavyReset")))
-
 	h.Bus.MustRegister(core.TypeHeavyPayload,
 		BuildMiddleware(h.handleHeavyPayload,
 			instrumentHandler("handleHeavyPayload")))

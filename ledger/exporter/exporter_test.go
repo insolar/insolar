@@ -191,3 +191,29 @@ func (s *exporterSuite) TestExporter_Export() {
 	_, err = s.exporter.Export(s.ctx, 60000, 2)
 	require.NoError(s.T(), err, "From-pulse should be smaller (or equal) current-pulse")
 }
+
+func (s *exporterSuite) TestExporter_ExportGetBlobFailed() {
+	for i := 1; i <= 3; i++ {
+		err := s.pulseTracker.AddPulse(
+			s.ctx,
+			core.Pulse{
+				PulseNumber:     core.FirstPulseNumber + 10*core.PulseNumber(i),
+				PrevPulseNumber: core.FirstPulseNumber + 10*core.PulseNumber(i-1),
+				PulseTimestamp:  10 * int64(i+1),
+			},
+		)
+		require.NoError(s.T(), err)
+	}
+
+	_, err := s.objectStorage.SetRecord(s.ctx, s.jetID, core.FirstPulseNumber+10, &record.ObjectActivateRecord{
+		ObjectStateRecord: record.ObjectStateRecord{
+			Memory: &core.RecordID{},
+		},
+		IsDelegate: true,
+	})
+	require.NoError(s.T(), err)
+
+	result, err := s.exporter.Export(s.ctx, core.FirstPulseNumber+10, 10)
+	assert.Equal(s.T(), 1, len(result.Data))
+	assert.Equal(s.T(), 1, result.Size)
+}

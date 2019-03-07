@@ -76,3 +76,14 @@ func RandomInt(max int) int {
 	}
 	return int(i.Int64())
 }
+
+// CircleXOR performs XOR for 'value' and 'src'. The result is returned as new byte slice.
+// If 'value' is smaller than 'dst', XOR starts from the beginning of 'src'.
+func CircleXOR(value, src []byte) []byte {
+	result := make([]byte, len(value))
+	srcLen := len(src)
+	for i := range result {
+		result[i] = value[i] ^ src[i%srcLen]
+	}
+	return result
+}
