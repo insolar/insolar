@@ -131,7 +131,7 @@ func (w *workerStateMachineImpl) processSignalsWorking(elements []queue.OutputEl
 					break
 				}
 			default:
-				panic(fmt.Sprintf("[ processSignals ] Unknown signal: %+v", el.GetItemType()))
+				panic(fmt.Sprintf("[ processSignalsWorking ] Unknown signal: %+v", el.GetItemType()))
 			}
 		} else {
 			break
@@ -340,27 +340,32 @@ func (w *workerStateMachineImpl) sendRemovalSignalToConveyor() {
 	// catch conveyor lock, check input queue, if It's empty - remove slot from map, if it's not - got to Working state
 }
 
-func (w *workerStateMachineImpl) readInputQueueSuspending() error {
-	elements := w.slot.inputQueue.RemoveAll()
+func (w *workerStateMachineImpl) processSignalsSuspending(elements []queue.OutputElement) int {
 	numSignals := 0
 	for i := 0; i < len(elements); i++ {
-		numSignals++
 		el := elements[i]
 		if el.IsSignal() {
+			numSignals++
 			switch el.GetItemType() {
-			// TODO: process 'Cancel' signal: if we get it, go back to Working
 			case PendingPulseSignal:
-				log.Warn("[ readInputQueueSuspending ] Must not be PendingPulseSignal here. Skip it")
+				log.Warn("[ processSignalsSuspending ] Must not be PendingPulseSignal here. Skip it")
 			case ActivatePulseSignal:
 				w.changePulseState()
 				w.slot.slotState = Initializing
 			default:
-				panic(fmt.Sprintf("Got unKnown signal: %+v", el.GetItemType()))
+				panic(fmt.Sprintf("[ processSignalsSuspending ] Unknown signal: %+v", el.GetItemType()))
 			}
 		} else {
 			break
 		}
 	}
+
+	return numSignals
+}
+
+func (w *workerStateMachineImpl) readInputQueueSuspending() error {
+	elements := w.slot.inputQueue.RemoveAll()
+	numSignals := w.processSignalsSuspending(elements)
 
 	// remove signals
 	elements = elements[numSignals:]
@@ -376,7 +381,6 @@ func (w *workerStateMachineImpl) readInputQueueSuspending() error {
 		if w.slot.pulseState == constant.Past {
 			w.slot.slotState = Working
 		}
-
 	}
 
 	return nil

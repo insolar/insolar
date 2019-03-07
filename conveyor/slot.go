@@ -257,6 +257,9 @@ func (s *Slot) extractSlotElementByID(id uint32) *slotElement { // nolint: unuse
 	if element.id != id {
 		return nil
 	}
+	// if element.activationStatus == EmptyElement {
+	// 	return nil
+	// }
 	list, ok := s.elementListMap[element.activationStatus]
 	if ok {
 		list.removeElement(element)
