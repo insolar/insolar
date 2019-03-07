@@ -72,7 +72,7 @@ func (l *ElementList) popElement() *slotElement {
 }
 
 // removeElement removes element from linked list
-func (l *ElementList) removeElement(element *slotElement) {
+func (l *ElementList) removeElement(element *slotElement) { // nolint: unused
 	if element == nil {
 		return
 	}
@@ -109,7 +109,7 @@ func (l *ElementList) pushElement(element *slotElement) { // nolint: unused
 	l.length++
 }
 
-func (l *ElementList) len() int {
+func (l *ElementList) len() int { // nolint: unused
 	return l.length
 }
 
@@ -233,7 +233,7 @@ func (s *Slot) popElement(status ActivationStatus) *slotElement { // nolint: unu
 	return list.popElement()
 }
 
-func (s *Slot) len(status ActivationStatus) int {
+func (s *Slot) len(status ActivationStatus) int { // nolint: unused
 	list, ok := s.elementListMap[status]
 	if !ok {
 		return 0
