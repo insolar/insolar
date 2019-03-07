@@ -7,7 +7,6 @@ PULSARD = pulsard
 INSGORUND = insgorund
 BENCHMARK = benchmark
 PULSEWATCHER = pulsewatcher
-EXPORTER = exporter
 APIREQUESTER = apirequester
 HEALTHCHECK = healthcheck
 CERTGEN = certgen
@@ -54,11 +53,18 @@ clean:
 	rm -rf $(BIN_DIR)
 	./scripts/insolard/launchnet.sh -l
 
-.PHONY: install-deps
-install-deps:
+
+.PHONY: install-godep
+install-godep:
 	./scripts/build/fetchdeps github.com/golang/dep/cmd/dep 22125cfaa6ddc71e145b1535d4b7ee9744fefff2
+
+.PHONY: install-build-tools
+install-build-tools:
 	go get -u golang.org/x/tools/cmd/stringer
 	./scripts/build/fetchdeps github.com/gojuno/minimock/cmd/minimock 890c67cef23dd06d694294d4f7b1026ed7bac8e6
+
+.PHONY: install-deps
+install-deps: install-godep install-build-tools
 
 .PHONY: pre-build
 pre-build: ensure generate
@@ -114,10 +120,6 @@ $(PULSEWATCHER):
 .PHONY: $(APIREQUESTER)
 $(APIREQUESTER):
 	go build -o $(BIN_DIR)/$(APIREQUESTER) -ldflags "${LDFLAGS}" cmd/apirequester/*.go
-
-.PHONY: $(EXPORTER)
-$(EXPORTER):
-	go build -o $(BIN_DIR)/$(EXPORTER) -ldflags "${LDFLAGS}" cmd/exporter/*.go
 
 .PHONY: $(HEALTHCHECK)
 $(HEALTHCHECK):

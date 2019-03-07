@@ -78,10 +78,16 @@ local image_params = params.insolar.image;
 						"workingDir": "/opt/insolar",
 						"tty": true,
 						"stdin": true,
+						launch_cmd :: "/go/bin/insgorund -l 127.0.0.1:18181 --rpc 127.0.0.1:18182 -d /tmp/code 2>&1",
 						"command": [
 							"bash",
 							"-c",
-							"/go/bin/insgorund -l 127.0.0.1:18181 --rpc 127.0.0.1:18182 -d /tmp/code > /logs/$(POD_NAME).insgorund.log 2>&1"
+							if params.insolar.local_launch == true
+							then
+								self.launch_cmd + " | tee /logs/$(POD_NAME).insolard.log 2>&1"
+							else
+								self.launch_cmd
+
 						],
 						"env": [
 							{
@@ -119,15 +125,15 @@ local image_params = params.insolar.image;
 						"workingDir": "/opt/insolar",
 						"tty": true,
 						"stdin": true,
-						launch_insolar_cmd :: "/go/bin/insolard --config /opt/insolar/config/node-insolar.yaml --trace 2>&1",
+						launch_cmd :: "/go/bin/insolard --config /opt/insolar/config/node-insolar.yaml --trace 2>&1",
 						"command": [
 							"bash",
 							"-c",
 							if params.insolar.local_launch == true
 							then
-								self.launch_insolar_cmd + " | tee /logs/$(POD_NAME).insolard.log 2>&1"
+								self.launch_cmd + " | tee /logs/$(POD_NAME).insolard.log 2>&1"
 							else
-								self.launch_insolar_cmd
+								self.launch_cmd
 
 						],
 						"env": [
