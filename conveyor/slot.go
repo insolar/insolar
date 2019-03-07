@@ -52,8 +52,9 @@ func (s *HandlersConfiguration) getMachineConfiguration(smType int) statemachine
 
 // ElementList is a list of slotElements with pointers to head and tail
 type ElementList struct {
-	head *slotElement
-	tail *slotElement
+	head   *slotElement
+	tail   *slotElement
+	length int
 }
 
 func (l *ElementList) isEmpty() bool {
@@ -66,11 +67,33 @@ func (l *ElementList) popElement() *slotElement {
 	if result == nil {
 		return nil
 	}
-	l.head = l.head.nextElement
-	if l.head != nil {
-		l.head.prevElement = nil
-	}
+	l.removeElement(result)
 	return result
+}
+
+// removeElement removes element from linked list
+func (l *ElementList) removeElement(element *slotElement) {
+	if element == nil {
+		return
+	}
+	next := element.nextElement
+	prev := element.prevElement
+	if prev != nil {
+		prev.nextElement = next
+	} else {
+		l.head = next
+	}
+	if next != nil {
+		next.prevElement = prev
+	} else {
+		l.tail = prev
+	}
+	element.prevElement = nil
+	element.nextElement = nil
+	l.length--
+	if l.length == 0 {
+		l.tail = nil
+	}
 }
 
 // pushElement adds element to linked list
@@ -83,6 +106,11 @@ func (l *ElementList) pushElement(element *slotElement) { // nolint: unused
 	}
 	element.nextElement = nil
 	l.tail = element
+	l.length++
+}
+
+func (l *ElementList) len() int {
+	return l.length
 }
 
 // Slot holds info about specific pulse and events for it
@@ -205,18 +233,18 @@ func (s *Slot) popElement(status ActivationStatus) *slotElement { // nolint: unu
 	return list.popElement()
 }
 
+func (s *Slot) len(status ActivationStatus) int {
+	list, ok := s.elementListMap[status]
+	if !ok {
+		return 0
+	}
+	return list.len()
+}
+
 func (s *Slot) getSlotElementByID(id uint32) *slotElement {
 	element := &s.elements[id%slotSize]
-	next := element.nextElement
-	prev := element.prevElement
-	if prev != nil {
-		prev.nextElement = next
-	}
-	if next != nil {
-		next.prevElement = prev
-	}
-	element.prevElement = nil
-	element.nextElement = nil
+	list := s.elementListMap[element.activationStatus]
+	list.removeElement(element)
 	return element
 }
 
