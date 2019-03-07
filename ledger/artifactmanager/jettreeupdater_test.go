@@ -24,7 +24,7 @@ import (
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar"
 	"github.com/insolar/insolar/gen"
-	"github.com/insolar/insolar/ledger/storage/nodes"
+	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 
@@ -43,7 +43,7 @@ func TestJetTreeUpdater_otherNodesForPulse(t *testing.T) {
 	defer mc.Finish()
 
 	jc := testutils.NewJetCoordinatorMock(mc)
-	ans := nodes.NewAccessorMock(mc)
+	ans := node.NewAccessorMock(mc)
 	js := storage.NewJetStorageMock(mc)
 	jtu := &jetTreeUpdater{
 		Nodes:          ans,
@@ -127,7 +127,7 @@ func TestJetTreeUpdater_fetchActualJetFromOtherNodes(t *testing.T) {
 	defer mc.Finish()
 
 	jc := testutils.NewJetCoordinatorMock(mc)
-	ans := nodes.NewAccessorMock(mc)
+	ans := node.NewAccessorMock(mc)
 	js := storage.NewJetStorageMock(mc)
 	mb := testutils.NewMessageBusMock(mc)
 	jtu := &jetTreeUpdater{
@@ -191,7 +191,7 @@ func TestJetTreeUpdater_fetchJet(t *testing.T) {
 	defer mc.Finish()
 
 	jc := testutils.NewJetCoordinatorMock(mc)
-	ans := nodes.NewAccessorMock(mc)
+	ans := node.NewAccessorMock(mc)
 	js := storage.NewJetStorageMock(mc)
 	mb := testutils.NewMessageBusMock(mc)
 	jtu := &jetTreeUpdater{
@@ -244,7 +244,7 @@ func TestJetTreeUpdater_Concurrency(t *testing.T) {
 	defer mc.Finish()
 
 	jc := testutils.NewJetCoordinatorMock(mc)
-	ans := nodes.NewAccessorMock(mc)
+	ans := node.NewAccessorMock(mc)
 	js := storage.NewJetStorageMock(mc)
 	mb := testutils.NewMessageBusMock(mc)
 	jtu := &jetTreeUpdater{

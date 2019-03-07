@@ -31,7 +31,7 @@ import (
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/jet"
-	"github.com/insolar/insolar/ledger/storage/nodes"
+	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/messagebus"
@@ -62,7 +62,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 	ps := storage.NewPulseStorage()
 	js := storage.NewJetStorage()
 	os := storage.NewObjectStorage()
-	ns := nodes.NewStorage()
+	ns := node.NewStorage()
 	ds := storage.NewDropStorage(10)
 	rs := storage.NewReplicaStorage()
 	cl := storage.NewCleaner()

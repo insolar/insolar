@@ -7,7 +7,6 @@ PULSARD = pulsard
 INSGORUND = insgorund
 BENCHMARK = benchmark
 PULSEWATCHER = pulsewatcher
-EXPORTER = exporter
 APIREQUESTER = apirequester
 HEALTHCHECK = healthcheck
 CERTGEN = certgen
@@ -54,11 +53,18 @@ clean:
 	rm -rf $(BIN_DIR)
 	./scripts/insolard/launchnet.sh -l
 
-.PHONY: install-deps
-install-deps:
+
+.PHONY: install-godep
+install-godep:
 	./scripts/build/fetchdeps github.com/golang/dep/cmd/dep 22125cfaa6ddc71e145b1535d4b7ee9744fefff2
+
+.PHONY: install-build-tools
+install-build-tools:
 	go get -u golang.org/x/tools/cmd/stringer
 	./scripts/build/fetchdeps github.com/gojuno/minimock/cmd/minimock 890c67cef23dd06d694294d4f7b1026ed7bac8e6
+
+.PHONY: install-deps
+install-deps: install-godep install-build-tools
 
 .PHONY: pre-build
 pre-build: ensure generate
@@ -115,10 +121,6 @@ $(PULSEWATCHER):
 $(APIREQUESTER):
 	go build -o $(BIN_DIR)/$(APIREQUESTER) -ldflags "${LDFLAGS}" cmd/apirequester/*.go
 
-.PHONY: $(EXPORTER)
-$(EXPORTER):
-	go build -o $(BIN_DIR)/$(EXPORTER) -ldflags "${LDFLAGS}" cmd/exporter/*.go
-
 .PHONY: $(HEALTHCHECK)
 $(HEALTHCHECK):
 	go build -o $(BIN_DIR)/$(HEALTHCHECK) -ldflags "${LDFLAGS}" cmd/healthcheck/*.go
@@ -161,7 +163,7 @@ ci_test_func:
 
 .PHONY: ci_test_integrtest
 ci_test_integrtest:
-	CGO_ENABLED=1 go test $(TEST_ARGS) -tags networktest -v ./network/servicenetwork -count=1 | tee integr.file
+	CGO_ENABLED=1 go test $(TEST_ARGS) -timeout 40m -tags networktest -v ./network/servicenetwork -count=1 | tee integr.file
 
 
 .PHONY: regen-proxies
@@ -169,17 +171,21 @@ CONTRACTS = $(wildcard application/contract/*)
 regen-proxies: $(BININSGOCC)
 	$(foreach c, $(CONTRACTS), $(BININSGOCC) proxy application/contract/$(notdir $(c))/$(notdir $(c)).go; )
 
-.PHONY: docker-insolard
-docker-insolard:
-	docker build --tag insolar/insolard -f ./docker/Dockerfile.insolard .
-
 .PHONY: docker-pulsar
 docker-pulsar:
 	docker build --tag insolar/pulsar -f ./docker/Dockerfile.pulsar .
 
+.PHONY: docker-insolard
+docker-insolard:
+	docker build --target insolard --tag insolar/insolard -f ./docker/Dockerfile .
+
+.PHONY: docker-genesis
+docker-genesis:
+	docker build --target genesis --tag insolar/genesis -f ./docker/Dockerfile .
+
 .PHONY: docker-insgorund
 docker-insgorund:
-	docker build --tag insolar/insgorund -f ./docker/Dockerfile.insgorund .
+	docker build --target insgorund --tag insolar/insgorund -f ./docker/Dockerfile .
 
 .PHONY: docker
-docker: docker-insolard docker-pulsar docker-insgorund
+docker: docker-insolard docker-genesis docker-insgorund

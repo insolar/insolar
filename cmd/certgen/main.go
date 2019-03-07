@@ -27,6 +27,7 @@ import (
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/keystore"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/spf13/pflag"
 )
@@ -38,19 +39,21 @@ var ks = platformpolicy.NewKeyProcessor()
 var (
 	role        string
 	api         string
-	keysFileOut string
+	keysFile    string
 	certFileOut string
 	rootConfig  string
 	verbose     bool
+	reuseKeys   bool
 )
 
 func parseInputParams() {
 	pflag.StringVarP(&role, "role", "r", "virtual", "The role of the new node")
 	pflag.StringVarP(&api, "url", "h", defaultURL, "Insolar API URL")
 	pflag.BoolVarP(&verbose, "verbose", "v", false, "Be verbose (default false)")
-	pflag.StringVarP(&keysFileOut, "keys-file", "k", "keys.json", "The OUT file for public/private keys of the node")
+	pflag.BoolVarP(&reuseKeys, "reuse-keys", "u", false, "Read keys from file instead og generating of new ones")
+	pflag.StringVarP(&keysFile, "keys-file", "k", "keys.json", "The OUT/IN ( depends on 'reuse-keys' ) file for public/private keys of the node")
 	pflag.StringVarP(&certFileOut, "cert-file", "c", "cert.json", "The OUT file the node certificate")
-	pflag.StringVar(&rootConfig, "root-conf", "", "Config that contains public/private keys of root member")
+	pflag.StringVarP(&rootConfig, "root-conf", "t", "", "Config that contains public/private keys of root member")
 	pflag.Parse()
 }
 
@@ -58,7 +61,26 @@ func generateKeys() (crypto.PublicKey, crypto.PrivateKey) {
 	privKey, err := ks.GeneratePrivateKey()
 	checkError("Failed to generate private key:", err)
 	pubKey := ks.ExtractPublicKey(privKey)
+	fmt.Println("Generate reys")
 	return pubKey, privKey
+}
+
+func loadKeys() (crypto.PublicKey, crypto.PrivateKey) {
+	keyStore, err := keystore.NewKeyStore(keysFile)
+	checkError("Failed to laod keys", err)
+
+	privKey, err := keyStore.GetPrivateKey("")
+	checkError("Failed to GetPrivateKey", err)
+
+	fmt.Println("Load keys")
+	return ks.ExtractPublicKey(privKey), privKey
+}
+
+func getKeys() (crypto.PublicKey, crypto.PrivateKey) {
+	if reuseKeys {
+		return loadKeys()
+	}
+	return generateKeys()
 }
 
 type RegisterResult struct {
@@ -66,13 +88,22 @@ type RegisterResult struct {
 	TraceID string `json:"traceID"`
 }
 
+func extractReference(response []byte, requestTypeMsg string) core.RecordRef {
+	r := RegisterResult{}
+	err := json.Unmarshal(response, &r)
+	checkError(fmt.Sprintf("Failed to parse response from '%s' node request", requestTypeMsg), err)
+	if verbose {
+		fmt.Println("Response:", string(response))
+	}
+
+	ref, err := core.NewRefFromBase58(r.Result)
+	checkError(fmt.Sprintf("Failed to construct ref from '%s' node response", requestTypeMsg), err)
+
+	return *ref
+}
+
 func registerNode(key crypto.PublicKey, staticRole core.StaticRole) core.RecordRef {
-	requester.SetVerbose(verbose)
-	userCfg, err := requester.ReadUserConfigFromFile(rootConfig)
-	checkError("Failed to read root config:", err)
-	info, err := requester.Info(api)
-	checkError("Failed to execute info request to API:", err)
-	userCfg.Caller = info.RootMember
+	userCfg := getUserConfig()
 
 	keySerialized, err := ks.ExportPublicKeyPEM(key)
 	checkError("Failed to export public key:", err)
@@ -85,12 +116,8 @@ func registerNode(key crypto.PublicKey, staticRole core.StaticRole) core.RecordR
 	response, err := requester.Send(ctx, api, userCfg, &request)
 	checkError("Failed to execute register node request", err)
 
-	r := RegisterResult{}
-	err = json.Unmarshal(response, &r)
-	checkError("Failed to parse response from register node request", err)
-	ref, err := core.NewRefFromBase58(r.Result)
-	checkError("Failed to construct ref from register node response", err)
-	return *ref
+	fmt.Println("Register node")
+	return extractReference(response, "registerNode")
 }
 
 type GetCertificateResult struct {
@@ -136,7 +163,7 @@ func writeKeys(pubKey crypto.PublicKey, privKey crypto.PrivateKey) {
 		"public_key":  string(pubKeyStr),
 	}, "", "    ")
 	checkError("Failed to serialize file with private/public keys:", err)
-	f, err := openFile(keysFileOut)
+	f, err := openFile(keysFile)
 	checkError("Failed to open file with private/public keys:", err)
 	_, err = f.Write([]byte(result))
 	checkError("Failed to write file with private/public keys:", err)
@@ -151,13 +178,50 @@ func writeCertificate(cert []byte) {
 
 func checkError(msg string, err error) {
 	if err != nil {
-		fmt.Println(msg, err)
+		fmt.Println(msg, ": ", err)
 		os.Exit(1)
 	}
 }
 
 func openFile(path string) (io.Writer, error) {
 	return os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+}
+
+func getUserConfig() *requester.UserConfigJSON {
+	requester.SetVerbose(verbose)
+	userCfg, err := requester.ReadUserConfigFromFile(rootConfig)
+	checkError("Failed to read root config:", err)
+	info, err := requester.Info(api)
+	checkError("Failed to execute info request to API:", err)
+	userCfg.Caller = info.RootMember
+
+	return userCfg
+}
+
+func getNodeRefByPk(key crypto.PublicKey) core.RecordRef {
+	userCfg := getUserConfig()
+
+	keySerialized, err := ks.ExportPublicKeyPEM(key)
+	checkError("Failed to export public key:", err)
+	request := requester.RequestConfigJSON{
+		Method: "GetNodeRef",
+		Params: []interface{}{keySerialized},
+	}
+
+	ctx := inslogger.ContextWithTrace(context.Background(), "insolarUtility")
+	response, err := requester.Send(ctx, api, userCfg, &request)
+	checkError("Failed to execute GetNodeRefByPK node request", err)
+
+	fmt.Println("Extract node by PK")
+	return extractReference(response, "getNodeRefByPk")
+}
+
+func getNodeRef(pubKey crypto.PublicKey, staticRole core.StaticRole) core.RecordRef {
+	if reuseKeys {
+		return getNodeRefByPk(pubKey)
+	}
+
+	return registerNode(pubKey, staticRole)
 }
 
 func main() {
@@ -168,11 +232,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	pub, priv := generateKeys()
-	ref := registerNode(pub, staticRole)
+	pub, priv := getKeys()
+	ref := getNodeRef(pub, staticRole)
 	cert := fetchCertificate(ref)
 
-	writeKeys(pub, priv)
+	if !reuseKeys {
+		writeKeys(pub, priv)
+		fmt.Println("Write keys")
+	}
 	writeCertificate(cert)
-	fmt.Println("Successfully generated files with keys and certificate")
+	fmt.Println("Write certificate")
 }
