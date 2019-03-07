@@ -44,11 +44,10 @@ func NewLog(cfg configuration.Log) (core.Logger, error) {
 		err = errors.New("unknown adapter")
 	}
 
-	if err != nil {
-		return nil, errors.Wrap(err, "invalid logger config")
+	if err == nil {
+		err = logger.SetLevel(cfg.Level)
 	}
 
-	err = logger.SetLevel(cfg.Level)
 	if err != nil {
 		return nil, errors.Wrap(err, "invalid logger config")
 	}
@@ -145,3 +144,4 @@ func Panicf(format string, args ...interface{}) {
 func SetOutput(w io.Writer) {
 	GlobalLogger.SetOutput(w)
 }
+

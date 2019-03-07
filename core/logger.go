@@ -16,12 +16,73 @@
 
 package core
 
-import "io"
+import (
+	"fmt"
+	"io"
+	"strings"
+)
+
+// full copy of zerolog functions to work with logging level
+// needed to support logging level in packet
+type LogLevel uint8
+
+// NoLevel means it should be ignored
+const (
+	NoLevel LogLevel = iota
+	DebugLevel
+	InfoLevel
+	WarnLevel
+	ErrorLevel
+	FatalLevel
+	PanicLevel
+)
+
+func (l LogLevel) String() string {
+	switch l {
+	case NoLevel:
+		return ""
+	case DebugLevel:
+		return "debug"
+	case InfoLevel:
+		return "info"
+	case WarnLevel:
+		return "warn"
+	case ErrorLevel:
+		return "error"
+	case FatalLevel:
+		return "fatal"
+	case PanicLevel:
+		return "panic"
+	}
+	return ""
+}
+
+func ParseLevel(levelStr string) (LogLevel, error) {
+	switch strings.ToLower(levelStr) {
+	case NoLevel.String():
+		return NoLevel, nil
+	case DebugLevel.String():
+		return DebugLevel, nil
+	case InfoLevel.String():
+		return InfoLevel, nil
+	case WarnLevel.String():
+		return WarnLevel, nil
+	case ErrorLevel.String():
+		return ErrorLevel, nil
+	case FatalLevel.String():
+		return FatalLevel, nil
+	case PanicLevel.String():
+		return PanicLevel, nil
+	}
+	return NoLevel, fmt.Errorf("Unknown Level String: '%s', defaulting to NoLevel", levelStr)
+}
 
 // Logger is the interface for loggers used in the Insolar components.
 type Logger interface {
 	// SetLevel sets log level.
 	SetLevel(string) error
+	// SetLevelNumber set log level with number
+	SetLevelNumber(level LogLevel) error
 
 	// Debug logs a message at level Debug.
 	Debug(...interface{})
@@ -59,4 +120,7 @@ type Logger interface {
 	WithFields(map[string]interface{}) Logger
 	// WithField return copy of Logger with predefined single field.
 	WithField(string, interface{}) Logger
+
+	// Copy copies logger
+	Copy() Logger
 }

@@ -33,6 +33,24 @@ type zerologAdapter struct {
 	logger   zerolog.Logger
 }
 
+func InternalLevelToZerologLevel(level core.LogLevel) (zerolog.Level, error) {
+	switch level {
+	case core.DebugLevel:
+		return zerolog.DebugLevel, nil
+	case core.InfoLevel:
+		return zerolog.InfoLevel, nil
+	case core.WarnLevel:
+		return zerolog.WarnLevel, nil
+	case core.ErrorLevel:
+		return zerolog.ErrorLevel, nil
+	case core.FatalLevel:
+		return zerolog.FatalLevel, nil
+	case core.PanicLevel:
+		return zerolog.PanicLevel, nil
+	}
+	return zerolog.NoLevel, errors.New("Unknown internal level")
+}
+
 func newZerologAdapter(cfg configuration.Log) (*zerologAdapter, error) {
 	var output io.Writer
 	switch strings.ToLower(cfg.Formatter) {
@@ -45,7 +63,8 @@ func newZerologAdapter(cfg configuration.Log) (*zerologAdapter, error) {
 	}
 
 	zerolog.CallerSkipFrameCount = 3
-	return &zerologAdapter{logger: zerolog.New(output).Level(zerolog.InfoLevel).With().Timestamp().Caller().Logger()}, nil
+	logger := zerolog.New(output).Level(zerolog.InfoLevel).With().Timestamp().Caller().Logger()
+	return &zerologAdapter{ logger: logger }, nil
 }
 
 // WithFields return copy of adapter with predefined fields.
@@ -54,12 +73,12 @@ func (z *zerologAdapter) WithFields(fields map[string]interface{}) core.Logger {
 	for key, value := range fields {
 		w = w.Interface(key, value)
 	}
-	return &zerologAdapter{w.Logger() }
+	return &zerologAdapter{ logger: w.Logger() }
 }
 
 // WithField return copy of adapter with predefined single field.
 func (z *zerologAdapter) WithField(key string, value interface{}) core.Logger {
-	return &zerologAdapter{z.logger.With().Interface(key, value).Logger() }
+	return &zerologAdapter{ logger: z.logger.With().Interface(key, value).Logger() }
 }
 
 // Debug logs a message at level Debug on the stdout.
@@ -124,13 +143,32 @@ func (z zerologAdapter) Panicf(format string, args ...interface{}) {
 
 // SetLevel sets log level
 func (z *zerologAdapter) SetLevel(level string) error {
-	l, err := zerolog.ParseLevel(strings.ToLower(level))
+	levelNumber, err := core.ParseLevel(level)
 	if err != nil {
-		return errors.Wrap(err, "Failed to parse log level")
+		return err
 	}
-
-	z.logger = z.logger.Level(l)
+	if err = z.SetLevelNumber(levelNumber); err != nil {
+		return err
+	}
 	return nil
+}
+
+func (z *zerologAdapter) SetLevelNumber(level core.LogLevel) error {
+	if level == core.NoLevel {
+		return nil
+	}
+	zerologLevel, err := InternalLevelToZerologLevel(level)
+	if err != nil {
+		return err
+	}
+	z.logger = z.logger.Level(zerologLevel)
+	return nil
+}
+
+// returns new adapter with needed level
+func (z *zerologAdapter) Copy() core.Logger {
+	adapterCopy := *z
+	return &adapterCopy
 }
 
 // SetOutput sets the output destination for the logger.

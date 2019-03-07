@@ -33,6 +33,24 @@ type logrusAdapter struct {
 	entry          *logrus.Entry
 }
 
+func InternalLevelToLogrusLevel(level core.LogLevel) (logrus.Level, error) {
+	switch level {
+	case core.DebugLevel:
+		return logrus.DebugLevel, nil
+	case core.InfoLevel:
+		return logrus.InfoLevel, nil
+	case core.WarnLevel:
+		return logrus.WarnLevel, nil
+	case core.ErrorLevel:
+		return logrus.ErrorLevel, nil
+	case core.FatalLevel:
+		return logrus.FatalLevel, nil
+	case core.PanicLevel:
+		return logrus.PanicLevel, nil
+	}
+	return 0, errors.New("Unknown internal level")
+}
+
 func newLogrusAdapter(cfg configuration.Log) (*logrusAdapter, error) {
 	log := logrus.New()
 
@@ -183,13 +201,33 @@ func (l logrusAdapter) Panicf(format string, args ...interface{}) {
 
 // SetLevel sets log level
 func (l logrusAdapter) SetLevel(level string) error {
-	lvl, err := logrus.ParseLevel(level)
+	levelNumber, err := core.ParseLevel(level)
 	if err != nil {
 		return err
 	}
-
-	l.entry.Logger.Level = lvl
+	if err = l.SetLevelNumber(levelNumber); err != nil {
+		return err
+	}
 	return nil
+}
+
+func (l logrusAdapter) SetLevelNumber(level core.LogLevel) error {
+	if level == core.NoLevel {
+		return nil
+	}
+	logrusLevel, err := InternalLevelToLogrusLevel(level)
+	if err != nil {
+		return err
+	}
+	l.entry.Logger.Level = logrusLevel
+	return nil
+}
+
+// returns new adapter
+func (l logrusAdapter) Copy() core.Logger {
+	adapterCopy, entryCopy := l, *l.entry
+	adapterCopy.entry = &entryCopy
+	return adapterCopy
 }
 
 // SetOutput sets the output destination for the logger.
