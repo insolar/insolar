@@ -27,7 +27,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNodes(t *testing.T) {
+func TestNode(t *testing.T) {
 	var (
 		virtuals  []insolar.Node
 		materials []insolar.Node
