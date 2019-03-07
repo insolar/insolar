@@ -25,7 +25,12 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
+	"testing"
 	"time"
+
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
@@ -47,7 +52,7 @@ import (
 )
 
 var (
-	testNetworkPort       = 10010
+	testNetworkPort int32 = 10010
 	pulseTimeMs     int32 = 5000
 	reqTimeoutMs    int32 = 2000
 	pulseDelta      int32 = 5
@@ -58,29 +63,55 @@ type fixture struct {
 	bootstrapNodes []*networkNode
 	networkNodes   []*networkNode
 	pulsar         TestPulsar
+	config         testNetworkConfig
 }
 
-func newFixture() *fixture {
+func newFixture(t *testing.T, discoveryCount, commonCount int) *fixture {
 	return &fixture{
-		ctx:            context.Background(),
+		ctx:            inslogger.TestContext(t),
 		bootstrapNodes: make([]*networkNode, 0),
 		networkNodes:   make([]*networkNode, 0),
+		config:         newTestNetworkConfig(discoveryCount, commonCount),
+	}
+}
+
+type networkRules struct {
+	MajorityRule int
+	MinRoles     struct {
+		Virtual       uint
+		HeavyMaterial uint
+		LightMaterial uint
+	}
+}
+
+type testNetworkConfig struct {
+	discoveryNodesCount int
+	commonNodesCount    int
+	networkRules        networkRules
+}
+
+func newTestNetworkConfig(discoveryCount, commonCount int) testNetworkConfig {
+	majority := discoveryCount - 2
+	return testNetworkConfig{
+		discoveryNodesCount: discoveryCount,
+		commonNodesCount:    commonCount,
+		networkRules:        networkRules{MajorityRule: majority},
 	}
 }
 
 type testSuite struct {
 	suite.Suite
 	fixtureMap     map[string]*fixture
-	bootstrapCount int
-	nodesCount     int
+	discoveryCount int
+	commonCount    int
 }
 
-func NewTestSuite(bootstrapCount, nodesCount int) *testSuite {
+func NewTestSuite(discoveryCount, commonCount int) *testSuite {
 	return &testSuite{
 		Suite:          suite.Suite{},
 		fixtureMap:     make(map[string]*fixture, 0),
-		bootstrapCount: bootstrapCount,
-		nodesCount:     nodesCount,
+		discoveryCount: discoveryCount,
+		commonCount:    commonCount,
 	}
 }
 
@@ -88,21 +119,21 @@ func (s *testSuite) fixture() *fixture {
 	return s.fixtureMap[s.T().Name()]
 }
 
-// SetupSuite creates and run network with bootstrap and common nodes once before run all tests in the suite
+// SetupTest creates and run network with bootstrap and common nodes before each test
 func (s *testSuite) SetupTest() {
-	s.fixtureMap[s.T().Name()] = newFixture()
+	s.fixtureMap[s.T().Name()] = newFixture(s.T(), s.discoveryCount, s.commonCount)
 	var err error
 	s.fixture().pulsar, err = NewTestPulsar(pulseTimeMs, reqTimeoutMs, pulseDelta)
 	require.NoError(s.T(), err)
 
 	log.Info("SetupTest")
 
-	for i := 0; i < s.bootstrapCount; i++ {
-		s.fixture().bootstrapNodes = append(s.fixture().bootstrapNodes, newNetworkNode())
+	for i := 0; i < s.fixture().config.discoveryNodesCount; i++ {
+		s.fixture().bootstrapNodes = append(s.fixture().bootstrapNodes, s.newNetworkNode(fmt.Sprintf("bootstrap_%d", i)))
 	}
 
-	for i := 0; i < s.nodesCount; i++ {
-		s.fixture().networkNodes = append(s.fixture().networkNodes, newNetworkNode())
+	for i := 0; i < s.fixture().config.commonNodesCount; i++ {
+		s.fixture().networkNodes = append(s.fixture().networkNodes, s.newNetworkNode(fmt.Sprintf("node_%d", i)))
 	}
 
 	pulseReceivers := make([]string, 0)
@@ -143,11 +174,11 @@ func (s *testSuite) SetupNodesNetwork(nodes []*networkNode) {
 
 	results := make(chan error, len(nodes))
 	initNode := func(node *networkNode) {
-		err := node.init(s.fixture().ctx)
+		err := node.init()
 		results <- err
 	}
 	startNode := func(node *networkNode) {
-		err := node.componentManager.Start(s.fixture().ctx)
+		err := node.componentManager.Start(node.ctx)
 		results <- err
 	}
 
@@ -184,55 +215,80 @@ func (s *testSuite) SetupNodesNetwork(nodes []*networkNode) {
 	s.NoError(err)
 }
 
-// TearDownSuite shutdowns all nodes in network, calls once after all tests in suite finished
+func (s *testSuite) stopNodes(nodes []*networkNode) {
+	for _, n := range nodes {
+		err := n.componentManager.Stop(n.ctx)
+		s.NoError(err)
+	}
+}
+
+// TearDownTest shutdowns all nodes in network
 func (s *testSuite) TearDownTest() {
 	log.Info("=================== TearDownTest()")
 	log.Info("Stop network nodes")
-	for _, n := range s.fixture().networkNodes {
-		err := n.componentManager.Stop(s.fixture().ctx)
-		s.NoError(err)
-	}
+	s.stopNodes(s.fixture().networkNodes)
+
 	log.Info("Stop bootstrap nodes")
-	for _, n := range s.fixture().bootstrapNodes {
-		err := n.componentManager.Stop(s.fixture().ctx)
+	s.stopNodes(s.fixture().bootstrapNodes)
+
+	log.Info("Stop test pulsar")
+	err := s.fixture().pulsar.Stop(s.fixture().ctx)
+	s.NoError(err)
+}
+
+func getNodesExcept(nodes []*networkNode, except []*networkNode) []*networkNode {
+	var result []*networkNode
+skip:
+	for _, n := range nodes {
+
+		for _, e := range except {
+			if n.id.Equal(e.id) {
+				continue skip
+			}
+		}
+		result = append(result, n)
+	}
+	return result
+}
+
+func TestGetNodesExcept(t *testing.T) {
+	n1 := &networkNode{id: testutils.RandomRef()}
+	n2 := &networkNode{id: testutils.RandomRef()}
+	n3 := &networkNode{id: testutils.RandomRef()}
+
+	nodes := []*networkNode{n1, n2, n3}
+	result := getNodesExcept(nodes, nil)
+	assert.Equal(t, nodes, result)
+
+	result = getNodesExcept(nodes, []*networkNode{n1, n3})
+	assert.Len(t, result, 1)
+	assert.Equal(t, n2, result[0])
+}
+
+func (s *testSuite) waitForNodesConsensus(nodes []*networkNode, except []*networkNode) {
+	part := getNodesExcept(nodes, except)
+	for _, n := range part {
+		err := <-n.consensusResult
 		s.NoError(err)
 	}
-	log.Info("Stop test pulsar")
-	s.fixture().pulsar.Stop(s.fixture().ctx)
 }
 
 func (s *testSuite) waitForConsensus(consensusCount int) {
 	for i := 0; i < consensusCount; i++ {
-		for _, n := range s.fixture().bootstrapNodes {
-			err := <-n.consensusResult
-			s.NoError(err)
-		}
-
-		for _, n := range s.fixture().networkNodes {
-			err := <-n.consensusResult
-			s.NoError(err)
-		}
+		s.waitForNodesConsensus(s.fixture().bootstrapNodes, nil)
+		s.waitForNodesConsensus(s.fixture().networkNodes, nil)
 	}
 }
 
-func (s *testSuite) waitForConsensusExcept(consensusCount int, exception core.RecordRef) {
+func (s *testSuite) waitForConsensusExcept(consensusCount int, except []*networkNode) {
 	for i := 0; i < consensusCount; i++ {
-		for _, n := range s.fixture().bootstrapNodes {
-			if n.id.Equal(exception) {
-				continue
-			}
-			err := <-n.consensusResult
-			s.NoError(err)
-		}
-
-		for _, n := range s.fixture().networkNodes {
-			if n.id.Equal(exception) {
-				continue
-			}
-			err := <-n.consensusResult
-			s.NoError(err)
-		}
+		s.waitForNodesConsensus(s.fixture().bootstrapNodes, except)
+		s.waitForNodesConsensus(s.fixture().networkNodes, except)
 	}
+}
+
+func (s *testSuite) waitForConsensusExceptFirstBootstrap(consensusCount int) {
+	s.waitForConsensusExcept(consensusCount, []*networkNode{s.fixture().bootstrapNodes[0]})
 }
 
 // nodesCount returns count of nodes in network without testNode
@@ -246,14 +302,14 @@ func (s *testSuite) getMaxJoinCount() int {
 
 func (s *testSuite) InitNode(node *networkNode) {
 	if node.componentManager != nil {
-		err := node.init(s.fixture().ctx)
+		err := node.init()
 		s.NoError(err)
 	}
 }
 
 func (s *testSuite) StartNode(node *networkNode) {
 	if node.componentManager != nil {
-		err := node.componentManager.Start(s.fixture().ctx)
+		err := node.componentManager.Start(node.ctx)
 		s.NoError(err)
 	}
 }
@@ -271,34 +327,37 @@ type networkNode struct {
 	privateKey          crypto.PrivateKey
 	cryptographyService core.CryptographyService
 	host                string
+	ctx                 context.Context
 
-	componentManager *component.Manager
-	serviceNetwork   *ServiceNetwork
-	consensusResult  chan error
+	componentManager   *component.Manager
+	serviceNetwork     *ServiceNetwork
+	consensusResult    chan error
+	terminationHandler *testutils.TerminationHandlerMock
 }
 
 // newNetworkNode returns networkNode initialized only with id, host address and key pair
-func newNetworkNode() *networkNode {
+func (s *testSuite) newNetworkNode(name string) *networkNode {
 	key, err := platformpolicy.NewKeyProcessor().GeneratePrivateKey()
 	if err != nil {
 		panic(err.Error())
 	}
-	address := "127.0.0.1:" + strconv.Itoa(testNetworkPort)
-	testNetworkPort += 2 // coz consensus transport port+=1
+	address := "127.0.0.1:" + strconv.Itoa(int(incrementTestNetworkPort()))
 
+	nodeContext, _ := inslogger.WithField(s.fixture().ctx, "nodeName", name)
 	return &networkNode{
 		id:                  testutils.RandomRef(),
 		role:                RandomRole(),
 		privateKey:          key,
 		cryptographyService: cryptography.NewKeyBoundCryptographyService(key),
 		host:                address,
+		ctx:                 nodeContext,
 		consensusResult:     make(chan error, 30),
 	}
 }
 
 // init calls Init for node component manager and wraps PhaseManager
-func (n *networkNode) init(ctx context.Context) error {
-	err := n.componentManager.Init(ctx)
+func (n *networkNode) init() error {
+	err := n.componentManager.Init(n.ctx)
 	n.serviceNetwork.PhaseManager = &phaseManagerWrapper{original: n.serviceNetwork.PhaseManager, result: n.consensusResult}
 	n.serviceNetwork.NodeKeeper = &nodeKeeperWrapper{original: n.serviceNetwork.NodeKeeper}
 	return err
@@ -319,6 +378,10 @@ func (s *testSuite) initCrypto(node *networkNode) (*certificate.CertificateManag
 	cert.Reference = node.id.String()
 	cert.Role = node.role.String()
 	cert.BootstrapNodes = make([]certificate.BootstrapNode, 0)
+	cert.MajorityRule = s.fixture().config.networkRules.MajorityRule
+	cert.MinRoles.LightMaterial = s.fixture().config.networkRules.MinRoles.LightMaterial
+	cert.MinRoles.HeavyMaterial = s.fixture().config.networkRules.MinRoles.HeavyMaterial
+	cert.MinRoles.Virtual = s.fixture().config.networkRules.MinRoles.Virtual
 
 	for _, b := range s.fixture().bootstrapNodes {
 		pubKey, _ := b.cryptographyService.GetPublicKey()
@@ -347,14 +410,6 @@ func (s *testSuite) initCrypto(node *networkNode) (*certificate.CertificateManag
 func RandomRole() core.StaticRole {
 	i := rand.Int()%3 + 1
 	return core.StaticRole(i)
-}
-
-type terminationHandler struct {
-	NodeID core.RecordRef
-}
-
-func (t *terminationHandler) Abort(reason string) {
-	log.Errorf("Abort node: %s, reason: %s", t.NodeID, reason)
 }
 
 type pulseManagerMock struct {
@@ -410,7 +465,11 @@ func (s *testSuite) preInitNode(node *networkNode) {
 
 	certManager, cryptographyService := s.initCrypto(node)
 	nodeNetwork, err := nodenetwork.NewNodeNetwork(cfg.Host, certManager.GetCertificate())
-	terminationHandler := &terminationHandler{NodeID: node.id}
+
+	node.terminationHandler = testutils.NewTerminationHandlerMock(s.T())
+	node.terminationHandler.AbortMock.Set(func(reason string) {
+		inslogger.FromContext(node.ctx).Errorf("Abort node: %s, reason: %s", node.id, reason)
+	})
 
 	networkSwitcher, err := state.NewNetworkSwitcher()
 	s.NoError(err)
@@ -419,8 +478,12 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	messageBusLocker.LockFunc = func(context.Context) {}
 	messageBusLocker.UnlockFunc = func(context.Context) {}
 
-	node.componentManager.Register(terminationHandler, nodeNetwork, newPulseManagerMock(nodeNetwork.(network.NodeKeeper)), netCoordinator, amMock)
+	node.componentManager.Register(node.terminationHandler, nodeNetwork, newPulseManagerMock(nodeNetwork.(network.NodeKeeper)), netCoordinator, amMock)
 	node.componentManager.Register(certManager, cryptographyService, rules.NewRules())
 	node.componentManager.Inject(serviceNetwork, networkSwitcher, messageBusLocker)
 	node.serviceNetwork = serviceNetwork
+}
+
+func incrementTestNetworkPort() int32 {
+	return atomic.AddInt32(&testNetworkPort, 2) // 2 coz consensus transport port+=1
 }
