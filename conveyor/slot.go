@@ -136,6 +136,7 @@ func NewSlot(pulseState constant.PulseState, pulseNumber core.PulseNumber) *Slot
 	return &Slot{
 		pulseState:     pulseState,
 		inputQueue:     queue.NewMutexQueue(),
+		responseQueue:  queue.NewMutexQueue(),
 		pulseNumber:    pulseNumber,
 		slotState:      slotState,
 		stateMachine:   SlotStateMachine,
@@ -171,8 +172,8 @@ func (s *Slot) createElement(stateMachineType statemachine.StateMachineType, sta
 	element.state = state
 	element.activationStatus = ActiveElement
 	element.nextElement = nil
-	// Set other fields to element, like:
-	// element.payload = event.GetPayload()
+	// TODO:  Set other fields to element, like:
+	element.payload = event.GetData()
 
 	err := s.pushElement(element)
 	if err != nil {
@@ -194,6 +195,18 @@ func (s *Slot) hasElements(status ActivationStatus) bool {
 		return false
 	}
 	return !list.isEmpty()
+}
+
+func (s *Slot) isSuspending() bool {
+	return s.slotState == Suspending
+}
+
+func (s *Slot) isWorking() bool {
+	return s.slotState == Working
+}
+
+func (s *Slot) isInitializing() bool {
+	return s.slotState == Initializing
 }
 
 // popElement gets element of provided status from correspondent linked list (and remove it from that list)
