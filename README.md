@@ -88,6 +88,7 @@ Options:
 * `-k`: Path to root user keypair. All requests to create new user must be signed by root user.
 * `-u`: Node API URL. By default first node listens on 127.0.0.1:19101. It can be changed in config.
 
+Run benchmark
 
     bin/benchmark -c 2 -r 4 -k=scripts/insolard/configs/root_member_keys.json
 

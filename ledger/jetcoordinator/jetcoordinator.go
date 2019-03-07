@@ -24,6 +24,7 @@ import (
 
 	"github.com/insolar/insolar"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/utils"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/node"
@@ -36,7 +37,7 @@ type JetCoordinator struct {
 	NodeNet                    core.NodeNetwork                `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 	PulseStorage               core.PulseStorage               `inject:""`
-	JetStorage                 storage.JetStorage              `inject:""`
+	JetStorage                 jet.JetStorage                  `inject:""`
 	PulseTracker               storage.PulseTracker            `inject:""`
 	Nodes                      node.Accessor                   `inject:""`
 
@@ -294,7 +295,7 @@ func (jc *JetCoordinator) virtualsForObject(
 
 	return getRefs(
 		jc.PlatformCryptographyScheme,
-		circleXOR(ent[:], objID.Hash()),
+		utils.CircleXOR(ent[:], objID.Hash()),
 		candidates,
 		count,
 	)
@@ -303,7 +304,7 @@ func (jc *JetCoordinator) virtualsForObject(
 func (jc *JetCoordinator) lightMaterialsForJet(
 	ctx context.Context, jetID core.RecordID, pulse core.PulseNumber, count int,
 ) ([]core.RecordRef, error) {
-	_, prefix := jet.Jet(jetID)
+	_, prefix := core.JetID(jetID).Jet()
 
 	candidates, err := jc.Nodes.InRole(pulse, core.StaticRoleLightMaterial)
 	if err == core.ErrNoNodes {
@@ -323,7 +324,7 @@ func (jc *JetCoordinator) lightMaterialsForJet(
 
 	return getRefs(
 		jc.PlatformCryptographyScheme,
-		circleXOR(ent[:], prefix),
+		utils.CircleXOR(ent[:], prefix),
 		candidates,
 		count,
 	)
@@ -373,15 +374,4 @@ func getRefs(
 		out = append(out, value.(core.RecordRef))
 	}
 	return out, nil
-}
-
-// CircleXOR performs XOR for 'value' and 'src'. The result is returned as new byte slice.
-// If 'value' is smaller than 'dst', XOR starts from the beginning of 'src'.
-func circleXOR(value, src []byte) []byte {
-	result := make([]byte, len(value))
-	srcLen := len(src)
-	for i := range result {
-		result[i] = value[i] ^ src[i%srcLen]
-	}
-	return result
 }

@@ -28,6 +28,7 @@ import (
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
@@ -47,7 +48,7 @@ type exporterSuite struct {
 
 	pulseTracker  storage.PulseTracker
 	objectStorage storage.ObjectStorage
-	jetStorage    storage.JetStorage
+	jetStorage    jet.JetStorage
 	pulseStorage  *storage.PulseStorage
 
 	exporter *Exporter
@@ -74,7 +75,7 @@ func (s *exporterSuite) BeforeTest(suiteName, testName string) {
 	s.cleaner = cleaner
 	s.pulseTracker = storage.NewPulseTracker()
 	s.objectStorage = storage.NewObjectStorage()
-	s.jetStorage = storage.NewJetStorage()
+	s.jetStorage = jet.NewJetStorage()
 	s.pulseStorage = storage.NewPulseStorage()
 	s.exporter = NewExporter(configuration.Exporter{ExportLag: 0})
 
@@ -190,4 +191,30 @@ func (s *exporterSuite) TestExporter_Export() {
 
 	_, err = s.exporter.Export(s.ctx, 60000, 2)
 	require.NoError(s.T(), err, "From-pulse should be smaller (or equal) current-pulse")
+}
+
+func (s *exporterSuite) TestExporter_ExportGetBlobFailed() {
+	for i := 1; i <= 3; i++ {
+		err := s.pulseTracker.AddPulse(
+			s.ctx,
+			core.Pulse{
+				PulseNumber:     core.FirstPulseNumber + 10*core.PulseNumber(i),
+				PrevPulseNumber: core.FirstPulseNumber + 10*core.PulseNumber(i-1),
+				PulseTimestamp:  10 * int64(i+1),
+			},
+		)
+		require.NoError(s.T(), err)
+	}
+
+	_, err := s.objectStorage.SetRecord(s.ctx, s.jetID, core.FirstPulseNumber+10, &record.ObjectActivateRecord{
+		ObjectStateRecord: record.ObjectStateRecord{
+			Memory: &core.RecordID{},
+		},
+		IsDelegate: true,
+	})
+	require.NoError(s.T(), err)
+
+	result, err := s.exporter.Export(s.ctx, core.FirstPulseNumber+10, 10)
+	assert.Equal(s.T(), 1, len(result.Data))
+	assert.Equal(s.T(), 1, result.Size)
 }

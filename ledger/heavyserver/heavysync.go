@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
@@ -29,8 +30,9 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/jet"
 )
+
+const defaultTimeout = time.Second * 10
 
 func errSyncInProgress(jetID core.RecordID, pn core.PulseNumber) *reply.HeavyError {
 	return &reply.HeavyError{
@@ -48,6 +50,27 @@ type syncstate struct {
 	// insyncend core.PulseNumber
 	syncpulse *core.PulseNumber
 	insync    bool
+	timer     *time.Timer
+}
+
+func (s *syncstate) resetTimeout(ctx context.Context, timeout time.Duration) {
+	if s.timer != nil {
+		s.timer.Reset(timeout)
+	} else {
+		s.timer = time.NewTimer(timeout)
+	}
+	timer := s.timer
+	go func() {
+		<-timer.C
+
+		s.Lock()
+		if s.timer == timer {
+			stats.Record(ctx, statSyncedTimeout.M(1))
+			s.syncpulse = nil
+			s.timer = nil
+		}
+		s.Unlock()
+	}()
 }
 
 type jetprefix [core.JetPrefixSize]byte
@@ -98,7 +121,7 @@ func (s *Sync) checkIsNextPulse(ctx context.Context, jetID core.RecordID, jetsta
 
 func (s *Sync) getJetSyncState(ctx context.Context, jetID core.RecordID) *syncstate {
 	var jp jetprefix
-	_, jpBuf := jet.Jet(jetID)
+	_, jpBuf := core.JetID(jetID).Jet()
 	copy(jp[:], jpBuf)
 	s.Lock()
 	jetState, ok := s.jetSyncStates[jp]
@@ -133,6 +156,7 @@ func (s *Sync) Start(ctx context.Context, jetID core.RecordID, pn core.PulseNumb
 	}
 
 	jetState.syncpulse = &pn
+	jetState.resetTimeout(ctx, defaultTimeout)
 	return nil
 }
 
@@ -146,6 +170,7 @@ func (s *Sync) Store(ctx context.Context, jetID core.RecordID, pn core.PulseNumb
 	err := func() error {
 		jetState.Lock()
 		defer jetState.Unlock()
+
 		if jetState.syncpulse == nil {
 			return fmt.Errorf("heavyserver: jet %v not in sync mode", jetID)
 		}
@@ -156,6 +181,7 @@ func (s *Sync) Store(ctx context.Context, jetID core.RecordID, pn core.PulseNumb
 			return errSyncInProgress(jetID, pn)
 		}
 		jetState.insync = true
+		jetState.resetTimeout(ctx, defaultTimeout)
 		return nil
 	}()
 	if err != nil {
@@ -224,8 +250,9 @@ func (s *Sync) Reset(ctx context.Context, jetID core.RecordID, pn core.PulseNumb
 	jetState.Lock()
 	defer jetState.Unlock()
 
-	if jetState.insync {
-		return errSyncInProgress(jetID, pn)
+	if jetState.lastok == pn {
+		// Sync is finished. No need to reset.
+		return nil
 	}
 
 	inslogger.FromContext(ctx).Debugf("heavyserver: Reset sync: jetID=%v, pulse=%v", jetID, pn)

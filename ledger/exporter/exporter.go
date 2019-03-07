@@ -25,9 +25,11 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/record"
-	"github.com/jbenet/go-base58"
+	base58 "github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
 )
@@ -35,7 +37,7 @@ import (
 // Exporter provides methods for fetching data view from storage.
 type Exporter struct {
 	DB            storage.DBContext     `inject:""`
-	JetStorage    storage.JetStorage    `inject:""`
+	JetStorage    jet.JetStorage        `inject:""`
 	ObjectStorage storage.ObjectStorage `inject:""`
 	PulseTracker  storage.PulseTracker  `inject:""`
 	PulseStorage  core.PulseStorage     `inject:""`
@@ -151,10 +153,8 @@ func (e *Exporter) Export(ctx context.Context, fromPulse core.PulseNumber, size 
 func (e *Exporter) exportPulse(ctx context.Context, jetID core.RecordID, pulse *core.Pulse) (*pulseData, error) {
 	records := recordsData{}
 	err := e.DB.IterateRecordsOnPulse(ctx, jetID, pulse.PulseNumber, func(id core.RecordID, rec record.Record) error {
-		pl, err := e.getPayload(ctx, jetID, rec)
-		if err != nil {
-			return errors.Wrap(err, "exportPulse failed to getPayload")
-		}
+		pl := e.getPayload(ctx, jetID, rec)
+
 		records[string(base58.Encode(id[:]))] = recordData{
 			Type:    recordType(rec),
 			Data:    rec,
@@ -175,7 +175,7 @@ func (e *Exporter) exportPulse(ctx context.Context, jetID core.RecordID, pulse *
 	return &data, nil
 }
 
-func (e *Exporter) getPayload(ctx context.Context, jetID core.RecordID, rec record.Record) (payload, error) {
+func (e *Exporter) getPayload(ctx context.Context, jetID core.RecordID, rec record.Record) payload {
 	switch r := rec.(type) {
 	case record.ObjectState:
 		if r.GetMemory() == nil {
@@ -183,21 +183,22 @@ func (e *Exporter) getPayload(ctx context.Context, jetID core.RecordID, rec reco
 		}
 		blob, err := e.ObjectStorage.GetBlob(ctx, jetID, r.GetMemory())
 		if err != nil {
-			return nil, errors.Wrapf(err, "getPayload failed to GetBlob (jet: %s)", jetID.DebugString())
+			inslogger.FromContext(ctx).Errorf("getPayload failed to GetBlob (jet: %s)", jetID.DebugString())
+			return payload{}
 		}
 		memory := payload{}
 		err = codec.NewDecoderBytes(blob, &codec.CborHandle{}).Decode(&memory)
 		if err != nil {
-			return payload{"MemoryBinary": blob}, nil
+			return payload{"MemoryBinary": blob}
 		}
-		return payload{"Memory": memory}, nil
+		return payload{"Memory": memory}
 	case record.Request:
 		if r.GetPayload() == nil {
 			break
 		}
 		parcel, err := message.DeserializeParcel(bytes.NewBuffer(r.GetPayload()))
 		if err != nil {
-			return payload{"PayloadBinary": r.GetPayload()}, nil
+			return payload{"PayloadBinary": r.GetPayload()}
 		}
 
 		msg := parcel.Message()
@@ -205,23 +206,23 @@ func (e *Exporter) getPayload(ctx context.Context, jetID core.RecordID, rec reco
 		case *message.CallMethod:
 			res, err := m.ToMap()
 			if err != nil {
-				return payload{"Payload": m, "Type": msg.Type().String()}, nil
+				return payload{"Payload": m, "Type": msg.Type().String()}
 			}
-			return payload{"Payload": res, "Type": msg.Type().String()}, nil
+			return payload{"Payload": res, "Type": msg.Type().String()}
 		case *message.CallConstructor:
 			res, err := m.ToMap()
 			if err != nil {
-				return payload{"Payload": m, "Type": msg.Type().String()}, nil
+				return payload{"Payload": m, "Type": msg.Type().String()}
 			}
-			return payload{"Payload": res, "Type": msg.Type().String()}, nil
+			return payload{"Payload": res, "Type": msg.Type().String()}
 		case *message.GenesisRequest:
-			return payload{"Payload": m, "Type": msg.Type().String()}, nil
+			return payload{"Payload": m, "Type": msg.Type().String()}
 		}
 
-		return payload{"Payload": msg, "Type": msg.Type().String()}, nil
+		return payload{"Payload": msg, "Type": msg.Type().String()}
 	}
 
-	return nil, nil
+	return nil
 }
 
 func recordType(rec record.Record) string {

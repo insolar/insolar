@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/core/delegationtoken"
+	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
@@ -53,13 +54,15 @@ type MessageHandler struct {
 	DelegationTokenFactory     core.DelegationTokenFactory     `inject:""`
 	HeavySync                  core.HeavySync                  `inject:""`
 	PulseStorage               core.PulseStorage               `inject:""`
-	JetStorage                 storage.JetStorage              `inject:""`
-	DropStorage                storage.DropStorage             `inject:""`
-	ObjectStorage              storage.ObjectStorage           `inject:""`
-	Nodes                      node.Accessor                   `inject:""`
-	PulseTracker               storage.PulseTracker            `inject:""`
-	DBContext                  storage.DBContext               `inject:""`
-	HotDataWaiter              HotDataWaiter                   `inject:""`
+	JetStorage                 jet.JetStorage                  `inject:""`
+
+	DropModifier drop.Modifier `inject:""`
+
+	ObjectStorage storage.ObjectStorage `inject:""`
+	Nodes         node.Accessor         `inject:""`
+	PulseTracker  storage.PulseTracker  `inject:""`
+	DBContext     storage.DBContext     `inject:""`
+	HotDataWaiter HotDataWaiter         `inject:""`
 
 	certificate    core.Certificate
 	replayHandlers map[core.MessageType]core.MessageHandler
@@ -264,10 +267,6 @@ func (h *MessageHandler) setHandlersForHeavy(m *middleware) {
 		BuildMiddleware(h.handleHeavyStartStop,
 			instrumentHandler("handleHeavyStartStop")))
 
-	h.Bus.MustRegister(core.TypeHeavyReset,
-		BuildMiddleware(h.handleHeavyReset,
-			instrumentHandler("handleHeavyReset")))
-
 	h.Bus.MustRegister(core.TypeHeavyPayload,
 		BuildMiddleware(h.handleHeavyPayload,
 			instrumentHandler("handleHeavyPayload")))
@@ -360,12 +359,12 @@ func (h *MessageHandler) handleSetBlob(ctx context.Context, parcel core.Parcel) 
 
 func (h *MessageHandler) handleGetCode(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
 	msg := parcel.Message().(*message.GetCode)
-	jetID := *jet.NewID(0, nil)
+	jetID := *core.NewJetID(0, nil)
 
 	codeRec, err := h.getCode(ctx, msg.Code.Record())
 	if err == core.ErrNotFound {
 		// We don't have code record. Must be on another node.
-		node, err := h.JetCoordinator.NodeForJet(ctx, jetID, parcel.Pulse(), msg.Code.Record().Pulse())
+		node, err := h.JetCoordinator.NodeForJet(ctx, core.RecordID(jetID), parcel.Pulse(), msg.Code.Record().Pulse())
 		if err != nil {
 			return nil, err
 		}
@@ -374,7 +373,7 @@ func (h *MessageHandler) handleGetCode(ctx context.Context, parcel core.Parcel) 
 	if err != nil {
 		return nil, err
 	}
-	code, err := h.ObjectStorage.GetBlob(ctx, jetID, codeRec.Code)
+	code, err := h.ObjectStorage.GetBlob(ctx, core.RecordID(jetID), codeRec.Code)
 	if err != nil {
 		return nil, err
 	}
@@ -1093,9 +1092,9 @@ func (h *MessageHandler) handleValidationCheck(ctx context.Context, parcel core.
 }
 
 func (h *MessageHandler) getCode(ctx context.Context, id *core.RecordID) (*record.CodeRecord, error) {
-	jetID := *jet.NewID(0, nil)
+	jetID := *core.NewJetID(0, nil)
 
-	rec, err := h.ObjectStorage.GetRecord(ctx, jetID, id)
+	rec, err := h.ObjectStorage.GetRecord(ctx, core.RecordID(jetID), id)
 	if err != nil {
 		return nil, err
 	}
@@ -1196,17 +1195,12 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 		"jet": jetID.DebugString(),
 	}).Info("received hot data")
 
-	err := h.DropStorage.SetDrop(ctx, msg.DropJet, &msg.Drop)
+	err := h.DropModifier.Set(ctx, core.JetID(msg.DropJet), msg.Drop)
 	if err == storage.ErrOverride {
 		err = nil
 	}
 	if err != nil {
 		return nil, errors.Wrapf(err, "[jet]: drop error (pulse: %v)", msg.Drop.Pulse)
-	}
-
-	err = h.DropStorage.SetDropSizeHistory(ctx, msg.DropJet, msg.JetDropSizeHistory)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ handleHotRecords ] Can't SetDropSizeHistory")
 	}
 
 	pendingStorage := h.RecentStorageProvider.GetPendingStorage(ctx, jetID)

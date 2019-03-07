@@ -53,15 +53,6 @@ func (h *MessageHandler) handleHeavyStartStop(ctx context.Context, genericMsg co
 	return &reply.OK{}, nil
 }
 
-func (h *MessageHandler) handleHeavyReset(ctx context.Context, genericMsg core.Parcel) (core.Reply, error) {
-	msg := genericMsg.Message().(*message.HeavyReset)
-
-	if err := h.HeavySync.Reset(ctx, msg.JetID, msg.PulseNum); err != nil {
-		return heavyerrreply(err)
-	}
-	return &reply.OK{}, nil
-}
-
 func heavyerrreply(err error) (core.Reply, error) {
 	if herr, ok := err.(*reply.HeavyError); ok {
 		return herr, nil

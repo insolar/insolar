@@ -8,12 +8,12 @@ func (s Scope) Bytes() []byte {
 
 type Key interface {
 	Scope() Scope
-	Key() []byte
+	ID() []byte
 }
 
 type DB interface {
-	Get(Key) ([]byte, error)
-	Set(Key, []byte) error
+	Get(key Key) (value []byte, err error)
+	Set(key Key, value []byte) error
 }
 
 const (

@@ -24,7 +24,6 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/ledger/recentstorage"
-	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 )
@@ -136,7 +135,7 @@ func (c *cleaner) removeJetRecordsUntil(
 	pn core.PulseNumber,
 ) (RmStat, error) {
 	var stat RmStat
-	_, prefix := jet.Jet(jetID)
+	_, prefix := core.JetID(jetID).Jet()
 	jetprefix := prefixkey(namespace, prefix)
 	startprefix := prefixkey(namespace, prefix, rmScanFromPulse)
 
@@ -173,7 +172,7 @@ func (c *cleaner) CleanJetIndexes(
 	candidates []core.RecordID,
 ) (RmStat, error) {
 	var stat RmStat
-	_, prefix := jet.Jet(jetID)
+	_, prefix := core.JetID(jetID).Jet()
 
 	recent.FilterNotExistWithLock(ctx, candidates, func(fordelete []core.RecordID) {
 		for _, recID := range fordelete {
