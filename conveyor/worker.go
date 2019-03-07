@@ -18,9 +18,13 @@ package conveyor
 
 import (
 	"fmt"
+	"math/rand"
+	"testing"
+	"time"
 
-	adapter2 "github.com/insolar/insolar/conveyor/interfaces/adapter"
+	"github.com/insolar/insolar/conveyor/interfaces/adapter"
 	"github.com/insolar/insolar/conveyor/interfaces/constant"
+	"github.com/insolar/insolar/conveyor/interfaces/slot"
 	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
 	"github.com/insolar/insolar/conveyor/queue"
 	"github.com/insolar/insolar/log"
@@ -41,13 +45,16 @@ type workerStateMachineImpl struct {
 	slot               *Slot
 	nextWorkerState    WorkerState
 	postponedResponses []queue.OutputElement
+	stop               bool
 }
 
 func newWorkerStateMachineImpl(slot *Slot) workerStateMachineImpl {
 	slot.slotState = Initializing
 	return workerStateMachineImpl{
-		slot:            slot,
-		nextWorkerState: Unknown,
+		slot:               slot,
+		nextWorkerState:    Unknown,
+		postponedResponses: make([]queue.OutputElement, 0),
+		stop:               false,
 	}
 }
 
@@ -59,33 +66,97 @@ const (
 )
 
 func GetStateMachineByType(mtype MachineType) statemachine.StateMachineType {
-	return nil
+	//panic("implement me") // TODO:
+	sm := statemachine.NewStateMachineTypeMock(&testing.T{})
+	sm.GetMigrationHandlerFunc = func(p constant.PulseState, p1 uint32) (r statemachine.MigrationHandler) {
+		return func(element slot.SlotElementHelper) (interface{}, uint32, error) {
+			r := rand.Int() % 100
+			state := uint32(0)
+			if r < 80 {
+				state = 777777777
+			}
+			return element.GetElementID(), state, nil
+		}
+	}
+
+	sm.GetTransitionHandlerFunc = func(p constant.PulseState, p1 uint32) (r statemachine.TransitHandler) {
+		return func(element slot.SlotElementHelper) (interface{}, uint32, error) {
+			r := rand.Int() % 100
+			state := uint32(0)
+			if r < 80 {
+				state = 888888888
+			}
+			return element.GetElementID(), state, nil
+		}
+	}
+	return sm
 }
 
-func (w *workerStateMachineImpl) isWorkingState() bool {
-	return w.slot.slotState == Working
+func (w *workerStateMachineImpl) changePulseState() {
+	switch w.slot.pulseState {
+	case constant.Future:
+		w.slot.pulseState = constant.Present
+	case constant.Present:
+		w.slot.pulseState = constant.Past
+	case constant.Past:
+		log.Error("[ changePulseState ] Try to change pulse state for 'Past' slot. Skip it")
+	default:
+		panic("[ changePulseState ] Unknown state: " + w.slot.pulseState.String())
+	}
 }
 
-func (w *workerStateMachineImpl) readInputQueue() error {
-	elements := w.slot.inputQueue.RemoveAll()
+// TODO: is it ok?
+type emptySyncDone struct{}
+
+func (m emptySyncDone) Done() {}
+
+// If we have both signals ( PendingPulseSignal and ActivatePulseSignal ),
+// then change slot state and push ActivatePulseSignal back to queue.
+func (w *workerStateMachineImpl) processSignalsWorking(elements []queue.OutputElement) int {
+	numSignals := 0
+	hasPending := false
+	hasActivate := false
 	for i := 0; i < len(elements); i++ {
 		el := elements[i]
-		// check is it signal
-		if el.GetItemType() > 0 {
+		if el.IsSignal() {
+			numSignals++
 			switch el.GetItemType() {
 			case PendingPulseSignal:
-				panic("implement me")
+				w.slot.slotState = Suspending
+				hasPending = true
 			case ActivatePulseSignal:
-				panic("implement me")
+				hasActivate = true
+				if hasPending {
+					w.slot.inputQueue.PushSignal(ActivatePulseSignal, emptySyncDone{})
+					break
+				}
 			default:
-				panic("implement me")
+				panic(fmt.Sprintf("[ processSignals ] Unknown signal: %+v", el.GetItemType()))
 			}
 		} else {
-			// TODO: do it in one step
-			_, err := w.slot.createElement(GetStateMachineByType(InputEvent), 0, el)
-			if err != nil {
-				return errors.Wrap(err, "[ readInputQueue ] Can't createElement")
-			}
+			break
+		}
+	}
+
+	if hasActivate && !hasPending {
+		log.Error("[ processSignals ] Got ActivatePulseSignal and don't get PendingPulseSignal. Skip it. Continue working")
+	}
+
+	return numSignals
+}
+
+func (w *workerStateMachineImpl) readInputQueueWorking() error {
+	elements := w.slot.inputQueue.RemoveAll()
+
+	numSignals := w.processSignalsWorking(elements)
+	// remove signals
+	elements = elements[numSignals:]
+	for i := 0; i < len(elements); i++ {
+		el := elements[i]
+
+		_, err := w.slot.createElement(GetStateMachineByType(InputEvent), 0, el)
+		if err != nil {
+			return errors.Wrapf(err, "[ readInputQueueWorking ] Can't createElement: %+v", el)
 		}
 	}
 
@@ -111,16 +182,17 @@ func (w *workerStateMachineImpl) readResponseQueue() error {
 		resp := w.postponedResponses[i]
 		if resp.GetItemType() > 9999 {
 			// TODO: check isNestedEvent
+			panic("Nested request is Not implemented")
 		} else {
-			adapterResp, ok := resp.GetData().(adapter2.IAdapterResponse)
+			adapterResp, ok := resp.GetData().(adapter.IAdapterResponse)
 			if !ok {
-				panic(fmt.Sprintf("Bad type in adapter response queue: %T", resp.GetData()))
+				panic(fmt.Sprintf("[ readResponseQueue ] Bad type in adapter response queue: %T", resp.GetData()))
 			}
 			element := w.slot.getSlotElementByID(adapterResp.GetElementID())
 
 			respHandler := element.stateMachineType.GetResponseHandler(w.slot.pulseState, element.state)
 			if respHandler == nil {
-				panic(fmt.Sprintf("No response handler. State: %d. \nAdapterResp: %+v", element.state, adapterResp))
+				panic(fmt.Sprintf("[ readResponseQueue ] No response handler. State: %d. \nAdapterResp: %+v", element.state, adapterResp))
 			}
 
 			payLoad, newState, err := respHandler(element, adapterResp)
@@ -128,17 +200,19 @@ func (w *workerStateMachineImpl) readResponseQueue() error {
 				log.Error("[ readResponseQueue ] Response handler errors: ", err)
 				respErrorHandler := element.stateMachineType.GetResponseErrorHandler(w.slot.pulseState, element.state)
 				if respErrorHandler == nil {
-					panic(fmt.Sprintf("No response error handler. State: %d. \nAdapterResp: %+v", element.state, adapterResp))
+					panic(fmt.Sprintf("[ readResponseQueue ] No response error handler. State: %d. \nAdapterResp: %+v", element.state, adapterResp))
 				}
 
 				payLoad, newState = respErrorHandler(element, adapterResp, err)
 			}
 
 			if newState == 0 {
-				// TODO: call finalization handler
+				element.setDeleteState()
 			}
 
 			setNewState(element, payLoad, newState)
+
+			// TODO: push element back to list
 		}
 
 		numProcessedElements++
@@ -155,7 +229,9 @@ func (w *workerStateMachineImpl) readResponseQueue() error {
 }
 
 func (w *workerStateMachineImpl) waitQueuesOrTick() {
-	panic("implement me")
+	log.Info("[ waitQueuesOrTick ] sleep ...")
+	time.Sleep(time.Millisecond * 400)
+	//panic("[ waitQueuesOrTick ] implement me") // TODO :
 }
 
 func (w *workerStateMachineImpl) processingElements() {
@@ -171,13 +247,18 @@ func (w *workerStateMachineImpl) processingElements() {
 	}
 
 	if w.slot.inputQueue.HasSignal() {
+		log.Info("[ processingElements ] Set next worker state to 'ReadInputQueue'")
 		w.nextWorkerState = ReadInputQueue
 		return
 	}
 
 	element := w.slot.popElement(ActiveElement)
-	lastState := element.state
-	for ; element != nil; element = w.slot.popElement(ActiveElement) {
+	if element == nil {
+		return
+	}
+	var finishElement *slotElement
+	lastState := uint32(0)
+	for ; element != finishElement && element != nil; element = w.slot.popElement(ActiveElement) {
 		for lastState < element.state {
 			lastState = element.state
 			transitionHandler := element.stateMachineType.GetTransitionHandler(w.slot.pulseState, element.state)
@@ -197,31 +278,37 @@ func (w *workerStateMachineImpl) processingElements() {
 
 			if w.slot.inputQueue.HasSignal() {
 				w.nextWorkerState = ReadInputQueue
+				log.Info("[ processingElements ] Set next worker state to 'ReadInputQueue'")
 				return
 			}
 		}
 
+		if finishElement == nil {
+			finishElement = element
+		}
 	}
 }
 
 func (w *workerStateMachineImpl) working() {
 
-	for w.isWorkingState() {
-		err := w.readInputQueue()
+	for w.slot.isWorking() {
+		err := w.readInputQueueWorking()
 		if err != nil {
-			panic("implement me")
+			panic(fmt.Sprintf("[ working ] readInputQueueWorking. Error: %s", err))
 		}
 
-		if !w.isWorkingState() {
+		if !w.slot.isWorking() {
+			log.Info("[ working ] Break after readInputQueueWorking")
 			break
 		}
 
 		err = w.readResponseQueue()
 		if err != nil {
-			panic("implement me")
+			panic(fmt.Sprintf("[ working ] readResponseQueue. implement me: %s", err))
 		}
 
-		if !w.isWorkingState() {
+		if !w.slot.isWorking() {
+			log.Info("[ working ] Break after readResponseQueue")
 			break
 		}
 		if w.nextWorkerState == ReadInputQueue {
@@ -230,16 +317,161 @@ func (w *workerStateMachineImpl) working() {
 
 		w.processingElements()
 
-		if !w.isWorkingState() {
+		if !w.slot.isWorking() {
+			log.Info("[ working ] Break after processingElements")
 			break
 		}
 		if w.nextWorkerState == ReadInputQueue {
 			continue
 		}
-
 	}
 }
 
-func (w *workerStateMachineImpl) suspending() {
+func (w *workerStateMachineImpl) calculateNodeState() {
+	// TODO: приходит PreparePulse, в нём есть callback, вызываем какой-то адаптер, куда передаем этот callback
+}
 
+func (w *workerStateMachineImpl) sendRemovalSignalToConveyor() {
+	// TODO: how to do it?
+	// catch conveyor lock, check input queue, if It's empty - remove slot from map, if it's not - got to Working state
+}
+
+func (w *workerStateMachineImpl) readInputQueueSuspending() error {
+	elements := w.slot.inputQueue.RemoveAll()
+	numSignals := 0
+	for i := 0; i < len(elements); i++ {
+		numSignals++
+		el := elements[i]
+		if el.IsSignal() {
+			switch el.GetItemType() {
+			// TODO: process 'Cancel' signal: if we get it, go back to Working
+			case PendingPulseSignal:
+				log.Warn("[ readInputQueueSuspending ] Must not be PendingPulseSignal here. Skip it")
+			case ActivatePulseSignal:
+				w.changePulseState()
+				w.slot.slotState = Initializing
+			default:
+				panic(fmt.Sprintf("Got unKnown signal: %+v", el.GetItemType()))
+			}
+		} else {
+			break
+		}
+	}
+
+	// remove signals
+	elements = elements[numSignals:]
+
+	for i := 0; i < len(elements); i++ {
+		el := elements[i]
+
+		_, err := w.slot.createElement(GetStateMachineByType(InputEvent), 0, el)
+		if err != nil {
+			return errors.Wrap(err, "[ readInputQueue ] Can't createElement")
+		}
+
+		if w.slot.pulseState == constant.Past {
+			w.slot.slotState = Working
+		}
+
+	}
+
+	return nil
+}
+
+func (w *workerStateMachineImpl) suspending() {
+	log.Info("[ suspending ] workerStateMachineImpl.suspending starts ...")
+	switch w.slot.pulseState {
+	case constant.Past:
+		w.sendRemovalSignalToConveyor()
+	case constant.Present:
+		w.calculateNodeState()
+	}
+	for w.slot.isSuspending() {
+		err := w.readInputQueueSuspending()
+		if err != nil {
+			panic(fmt.Sprintf("[ suspending ] readInputQueueSuspending. Can't readInputQueueSuspending: %s", err))
+		}
+	}
+
+	log.Infof("[ suspending ] Leaving suspending. pulseState: %s. slotState: %s",
+		w.slot.pulseState.String(),
+		w.slot.slotState.String(),
+	)
+}
+
+func (w *workerStateMachineImpl) migrate(status ActivationStatus) error {
+	log.Infof("[ migrate ] Starts ... ( %s )", status.String())
+	element := w.slot.popElement(status)
+	var finishElement *slotElement
+	for ; element != finishElement && element != nil; element = w.slot.popElement(status) {
+		migHandler := element.stateMachineType.GetMigrationHandler(w.slot.pulseState, element.state)
+		payLoad, newState := element.payload, element.state
+		var err error
+		if migHandler == nil {
+			log.Infof("[ migrate ] No migration handler for pulseState: %d, element.state: %d. Now It's Ok", w.slot.pulseState, element.state)
+		} else {
+			payLoad, newState, err = migHandler(element)
+			if err != nil {
+				log.Error("[ migrate ] Response handler errors: ", err)
+				respErrorHandler := element.stateMachineType.GetTransitionErrorHandler(w.slot.pulseState, element.state)
+				if respErrorHandler == nil {
+					panic(fmt.Sprintf("[ migrate ] No error handler. State: %d.", element.state))
+				}
+
+				payLoad, newState = respErrorHandler(element, err)
+			}
+		}
+
+		if newState == 0 {
+			element.setDeleteState()
+		}
+		setNewState(element, payLoad, newState)
+
+		err = w.slot.pushElement(element)
+		if err != nil {
+			return errors.Wrapf(err, "Can't pushElement: %+v", element)
+		}
+
+		if finishElement == nil {
+			finishElement = element
+		}
+	}
+
+	log.Info("[ migrate ] END")
+	return nil
+
+}
+
+func (w *workerStateMachineImpl) initializing() {
+	if w.slot.pulseState == constant.Future {
+		log.Info("[ initializing ] pulseState is Future. Skip initializing")
+		return
+	} else {
+		// TODO: Get init handler from config
+	}
+
+	err := w.migrate(ActiveElement)
+	if err != nil {
+		panic("[ initializing ] migrate ActiveElement: " + err.Error())
+	}
+	w.migrate(NotActiveElement)
+	if err != nil {
+		panic("[ initializing ] migrate NotActiveElement: " + err.Error())
+	}
+}
+
+func (w *workerStateMachineImpl) run() {
+	for !w.stop {
+		switch w.slot.slotState {
+		case Initializing:
+			w.initializing()
+			w.slot.slotState = Working
+		case Working:
+			w.working()
+		case Suspending:
+			w.suspending()
+		default:
+			panic("[ run ] Unknown slot state: " + w.slot.slotState.String())
+		}
+	}
 }

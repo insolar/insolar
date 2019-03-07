@@ -393,6 +393,24 @@ func TestSlot_getSlotElementByID(t *testing.T) {
 	}
 }
 
+func TestSlot_PopPushMultiple(t *testing.T) {
+	sm := statemachine.NewStateMachineTypeMock(t)
+	slot := NewSlot(constant.Present, 10)
+
+	slot.createElement(sm, 33, queue.OutputElement{})
+
+	el := slot.popElement(ActiveElement)
+	require.NotNil(t, el)
+	slot.pushElement(el)
+
+	el = slot.popElement(ActiveElement)
+	require.NotNil(t, el)
+	slot.pushElement(el)
+
+	el = slot.popElement(ActiveElement)
+	require.NotNil(t, el)
+}
+
 func TestNewSlotElement(t *testing.T) {
 	s := newSlotElement(ActiveElement)
 	require.NotNil(t, s)

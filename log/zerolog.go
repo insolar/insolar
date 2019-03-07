@@ -30,7 +30,7 @@ import (
 )
 
 type zerologAdapter struct {
-	logger   zerolog.Logger
+	logger zerolog.Logger
 }
 
 func newZerologAdapter(cfg configuration.Log) (*zerologAdapter, error) {
@@ -45,7 +45,7 @@ func newZerologAdapter(cfg configuration.Log) (*zerologAdapter, error) {
 	}
 
 	zerolog.CallerSkipFrameCount = 3
-	return &zerologAdapter{logger: zerolog.New(output).Level(zerolog.InfoLevel).With().Timestamp().Caller().Logger()}, nil
+	return &zerologAdapter{logger: zerolog.New(output).Level(zerolog.InfoLevel).With().Timestamp().Logger()}, nil
 }
 
 // WithFields return copy of adapter with predefined fields.
@@ -54,12 +54,12 @@ func (z *zerologAdapter) WithFields(fields map[string]interface{}) core.Logger {
 	for key, value := range fields {
 		w = w.Interface(key, value)
 	}
-	return &zerologAdapter{w.Logger() }
+	return &zerologAdapter{w.Logger()}
 }
 
 // WithField return copy of adapter with predefined single field.
 func (z *zerologAdapter) WithField(key string, value interface{}) core.Logger {
-	return &zerologAdapter{z.logger.With().Interface(key, value).Logger() }
+	return &zerologAdapter{z.logger.With().Interface(key, value).Logger()}
 }
 
 // Debug logs a message at level Debug on the stdout.
