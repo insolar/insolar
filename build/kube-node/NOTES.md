@@ -8,3 +8,10 @@ Best way to get free credits on DO is create new account with promo link. You ha
 
 * Hactoberfest 100$ for new accounts https://do.co/hf100
 * also it's possible fine promo codes in the Web (i.e. https://gist.github.com/ellerbrock/a6fc476e1a59f306b8a06c3ac64a6a17)
+
+## MacOS X dependencies installation
+
+install `envsubst`
+
+    brew install gettext
+    brew link --force gettext
