@@ -104,8 +104,9 @@ func testPulseConveyor(t *testing.T, isQueueOk bool) *PulseConveyor {
 }
 
 func TestNewPulseConveyor(t *testing.T) {
-	c := NewPulseConveyor()
+	c, err := NewPulseConveyor()
 	require.NotNil(t, c)
+	require.NoError(t, err)
 }
 
 func TestConveyor_GetState(t *testing.T) {
