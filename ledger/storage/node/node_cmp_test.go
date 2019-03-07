@@ -72,7 +72,7 @@ func TestNodes(t *testing.T) {
 	{
 		storage.Delete(pulse)
 		result, err := storage.All(pulse)
-		assert.Equal(t, core.ErrNoNodes, err)
+		assert.Equal(t, node.ErrNoNodes, err)
 		assert.Nil(t, result)
 	}
 }

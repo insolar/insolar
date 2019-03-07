@@ -196,7 +196,7 @@ func (jc *JetCoordinator) LightValidatorsForObject(
 // Heavy returns *core.RecorRef to a heavy of specific pulse
 func (jc *JetCoordinator) Heavy(ctx context.Context, pulse core.PulseNumber) (*core.RecordRef, error) {
 	candidates, err := jc.Nodes.InRole(pulse, core.StaticRoleHeavyMaterial)
-	if err == core.ErrNoNodes {
+	if err == node.ErrNoNodes {
 		return nil, err
 	}
 	if err != nil {
@@ -278,7 +278,7 @@ func (jc *JetCoordinator) virtualsForObject(
 	ctx context.Context, objID core.RecordID, pulse core.PulseNumber, count int,
 ) ([]core.RecordRef, error) {
 	candidates, err := jc.Nodes.InRole(pulse, core.StaticRoleVirtual)
-	if err == core.ErrNoNodes {
+	if err == node.ErrNoNodes {
 		return nil, err
 	}
 	if err != nil {
@@ -307,14 +307,14 @@ func (jc *JetCoordinator) lightMaterialsForJet(
 	_, prefix := core.JetID(jetID).Jet()
 
 	candidates, err := jc.Nodes.InRole(pulse, core.StaticRoleLightMaterial)
-	if err == core.ErrNoNodes {
+	if err == node.ErrNoNodes {
 		return nil, err
 	}
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch active light nodes for pulse %v", pulse)
 	}
 	if len(candidates) == 0 {
-		return nil, core.ErrNoNodes
+		return nil, node.ErrNoNodes
 	}
 
 	ent, err := jc.entropy(ctx, pulse)
