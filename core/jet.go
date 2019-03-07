@@ -16,5 +16,31 @@
 
 package core
 
+import (
+	"fmt"
+)
+
 // JetID should be used, when id is a jetID
 type JetID RecordID
+
+// ZeroJetID is value of an empty Jet ID
+var ZeroJetID = *NewJetID(0, nil)
+
+// NewJetID creates a new jet with provided ID and index
+func NewJetID(depth uint8, prefix []byte) *JetID {
+	var id JetID
+	copy(id[:PulseNumberSize], PulseNumberJet.Bytes())
+	id[PulseNumberSize] = depth
+	copy(id[PulseNumberSize+1:], prefix)
+	return &id
+}
+
+// Jet extracts depth and prefix from jet id.
+// Deprecated: should be two methods. Depth and prefix
+func (id JetID) Jet() (uint8, []byte) {
+	recordID := RecordID(id)
+	if recordID.Pulse() != PulseNumberJet {
+		panic(fmt.Sprintf("provided id %b is not a jet id", id))
+	}
+	return id[PulseNumberSize], id[PulseNumberSize+1:]
+}

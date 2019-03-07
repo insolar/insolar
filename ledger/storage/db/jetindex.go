@@ -22,6 +22,13 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage/db.JetIndexModifier -o ./ -s _mock.go
+// JetIndexModifier is an interface for modifying index records.
+type JetIndexModifier interface {
+	Add(id core.RecordID, jetID core.JetID)
+	Delete(id core.RecordID, jetID core.JetID)
+}
+
 // JetIndex contains methods to implement quick access to data by jet. Indexes are stored in memory. Consider disk
 // implementation for large collections.
 type JetIndex struct {

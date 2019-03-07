@@ -21,6 +21,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/insolar/insolar/ledger/storage/genesis"
+	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 
@@ -40,8 +42,8 @@ const (
 // LedgerArtifactManager provides concrete API to storage for processing module.
 type LedgerArtifactManager struct {
 	DB           storage.DBContext    `inject:""`
-	GenesisState storage.GenesisState `inject:""`
-	JetStorage   storage.JetStorage   `inject:""`
+	GenesisState genesis.GenesisState `inject:""`
+	JetStorage   jet.JetStorage       `inject:""`
 
 	DefaultBus                 core.MessageBus                 `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`

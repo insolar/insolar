@@ -24,7 +24,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/jbenet/go-base58"
+	base58 "github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 )
 

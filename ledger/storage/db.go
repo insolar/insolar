@@ -24,7 +24,6 @@ import (
 	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/pkg/errors"
 )
@@ -43,7 +42,6 @@ const (
 	sysHeavyClientState       byte = 3
 	sysLastSyncedPulseOnHeavy byte = 4
 	sysJetList                byte = 5
-	sysDropSizeHistory        byte = 6
 )
 
 // DBContext provides base db methods
@@ -66,11 +64,11 @@ type DBContext interface {
 
 	Close() error
 
-	set(ctx context.Context, key, value []byte) error
-	get(ctx context.Context, key []byte) ([]byte, error)
+	Set(ctx context.Context, key, value []byte) error
+	Get(ctx context.Context, key []byte) ([]byte, error)
 
 	// TODO i.markin 28.01.19: Delete after switching to conveyor architecture.
-	waitingFlight()
+	WaitingFlight()
 
 	iterate(ctx context.Context,
 		prefix []byte,
@@ -240,7 +238,7 @@ func (db *DB) IterateRecordsOnPulse(
 	pulse core.PulseNumber,
 	handler func(id core.RecordID, rec record.Record) error,
 ) error {
-	_, jetPrefix := jet.Jet(jetID)
+	_, jetPrefix := core.JetID(jetID).Jet()
 	prefix := prefixkey(scopeIDRecord, jetPrefix, pulse.Bytes())
 
 	return db.iterate(ctx, prefix, func(k, v []byte) error {
@@ -272,7 +270,7 @@ func (db *DB) GetPlatformCryptographyScheme() core.PlatformCryptographyScheme {
 }
 
 // get wraps matching transaction manager method.
-func (db *DB) get(ctx context.Context, key []byte) ([]byte, error) {
+func (db *DB) Get(ctx context.Context, key []byte) ([]byte, error) {
 	tx, err := db.BeginTransaction(false)
 	if err != nil {
 		return nil, err
@@ -282,13 +280,13 @@ func (db *DB) get(ctx context.Context, key []byte) ([]byte, error) {
 }
 
 // set wraps matching transaction manager method.
-func (db *DB) set(ctx context.Context, key, value []byte) error {
+func (db *DB) Set(ctx context.Context, key, value []byte) error {
 	return db.Update(ctx, func(tx *TransactionManager) error {
 		return tx.set(ctx, key, value)
 	})
 }
 
-func (db *DB) waitingFlight() {
+func (db *DB) WaitingFlight() {
 	db.dropLock.Lock()
 	db.dropWG.Wait()
 	db.dropLock.Unlock()
