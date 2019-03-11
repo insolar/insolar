@@ -32,7 +32,7 @@ func (s *StorageMem) ForPulseNumber(ctx context.Context, pn core.PulseNumber) (p
 
 	node, ok := s.storage[pn]
 	if !ok {
-		err = core.ErrNotFound
+		err = ErrNotFound
 		return
 	}
 
@@ -44,7 +44,7 @@ func (s *StorageMem) Latest(ctx context.Context) (pulse core.Pulse, err error) {
 	defer s.lock.RUnlock()
 
 	if s.head == nil {
-		err = core.ErrNotFound
+		err = ErrNotFound
 		return
 	}
 
@@ -115,14 +115,14 @@ func (s *StorageMem) Forwards(ctx context.Context, pn core.PulseNumber, steps in
 
 	node, ok := s.storage[pn]
 	if !ok {
-		err = core.ErrNotFound
+		err = ErrNotFound
 		return
 	}
 
 	iterator := node
 	for i := 0; i < steps; i++ {
 		if iterator.next == nil {
-			err = core.ErrNotFound
+			err = ErrNotFound
 			return
 		}
 		iterator = iterator.next
@@ -137,14 +137,14 @@ func (s *StorageMem) Backwards(ctx context.Context, pn core.PulseNumber, steps i
 
 	node, ok := s.storage[pn]
 	if !ok {
-		err = core.ErrNotFound
+		err = ErrNotFound
 		return
 	}
 
 	iterator := node
 	for i := 0; i < steps; i++ {
 		if iterator.prev == nil {
-			err = core.ErrNotFound
+			err = ErrNotFound
 			return
 		}
 		iterator = iterator.prev

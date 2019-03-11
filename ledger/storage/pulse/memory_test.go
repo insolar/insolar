@@ -21,7 +21,7 @@ func TestNodeStorage_ForPulseNumber(t *testing.T) {
 
 	t.Run("returns error when no pulse", func(t *testing.T) {
 		res, err := storage.ForPulseNumber(ctx, gen.PulseNumber())
-		assert.Equal(t, core.ErrNotFound, err)
+		assert.Equal(t, ErrNotFound, err)
 		assert.Equal(t, core.Pulse{}, res)
 	})
 
@@ -40,7 +40,7 @@ func TestNodeStorage_Latest(t *testing.T) {
 	t.Run("returns error when no pulse", func(t *testing.T) {
 		storage := NewStorageMem()
 		res, err := storage.Latest(ctx)
-		assert.Equal(t, core.ErrNotFound, err)
+		assert.Equal(t, ErrNotFound, err)
 		assert.Equal(t, core.Pulse{}, res)
 	})
 
@@ -189,12 +189,12 @@ func TestMemoryStorage_ForwardsBackwards(t *testing.T) {
 	})
 	t.Run("forwards returns error if forward overflow", func(t *testing.T) {
 		pulse, err := storage.Forwards(ctx, tailPulse.PulseNumber, 2)
-		assert.Equal(t, core.ErrNotFound, err)
+		assert.Equal(t, ErrNotFound, err)
 		assert.Equal(t, core.Pulse{}, pulse)
 	})
 	t.Run("forwards returns error if backward overflow", func(t *testing.T) {
 		pulse, err := storage.Forwards(ctx, tailPulse.PulseNumber-1, 1)
-		assert.Equal(t, core.ErrNotFound, err)
+		assert.Equal(t, ErrNotFound, err)
 		assert.Equal(t, core.Pulse{}, pulse)
 	})
 
@@ -210,12 +210,12 @@ func TestMemoryStorage_ForwardsBackwards(t *testing.T) {
 	})
 	t.Run("backwards returns error if backward overflow", func(t *testing.T) {
 		pulse, err := storage.Backwards(ctx, headPulse.PulseNumber, 2)
-		assert.Equal(t, core.ErrNotFound, err)
+		assert.Equal(t, ErrNotFound, err)
 		assert.Equal(t, core.Pulse{}, pulse)
 	})
 	t.Run("backwards returns error if forward overflow", func(t *testing.T) {
 		pulse, err := storage.Backwards(ctx, headPulse.PulseNumber-1, 1)
-		assert.Equal(t, core.ErrNotFound, err)
+		assert.Equal(t, ErrNotFound, err)
 		assert.Equal(t, core.Pulse{}, pulse)
 	})
 }
