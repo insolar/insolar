@@ -48,7 +48,7 @@ func newZerologAdapter(cfg configuration.Log) (*zerologAdapter, error) {
 	return &zerologAdapter{logger: zerolog.New(output).Level(zerolog.InfoLevel).With().Timestamp().Logger()}, nil
 }
 
-// WithFields return copy of adapter with predefined fields.
+// WithFields return copy of iadapter with predefined fields.
 func (z *zerologAdapter) WithFields(fields map[string]interface{}) core.Logger {
 	w := z.logger.With()
 	for key, value := range fields {
@@ -57,7 +57,7 @@ func (z *zerologAdapter) WithFields(fields map[string]interface{}) core.Logger {
 	return &zerologAdapter{w.Logger()}
 }
 
-// WithField return copy of adapter with predefined single field.
+// WithField return copy of iadapter with predefined single field.
 func (z *zerologAdapter) WithField(key string, value interface{}) core.Logger {
 	return &zerologAdapter{z.logger.With().Interface(key, value).Logger()}
 }

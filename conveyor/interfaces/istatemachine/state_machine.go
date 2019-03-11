@@ -14,24 +14,24 @@
  *    limitations under the License.
  */
 
-package statemachine
+package istatemachine
 
 import (
-	"github.com/insolar/insolar/conveyor/interfaces/adapter"
 	"github.com/insolar/insolar/conveyor/interfaces/constant"
-	"github.com/insolar/insolar/conveyor/interfaces/slot"
+	"github.com/insolar/insolar/conveyor/interfaces/iadapter"
+	"github.com/insolar/insolar/conveyor/interfaces/islot"
 )
 
-type TransitHandler func(element slot.SlotElementHelper) (interface{}, uint32, error)
-type MigrationHandler func(element slot.SlotElementHelper) (interface{}, uint32, error)
-type AdapterResponseHandler func(element slot.SlotElementHelper, response adapter.IAdapterResponse) (interface{}, uint32, error)
-type NestedHandler func(element slot.SlotElementHelper, err error) (interface{}, uint32)
+type TransitHandler func(element islot.SlotElementHelper) (interface{}, uint32, error)
+type MigrationHandler func(element islot.SlotElementHelper) (interface{}, uint32, error)
+type AdapterResponseHandler func(element islot.SlotElementHelper, response iadapter.IAdapterResponse) (interface{}, uint32, error)
+type NestedHandler func(element islot.SlotElementHelper, err error) (interface{}, uint32)
 
-type TransitionErrorHandler func(element slot.SlotElementHelper, err error) (interface{}, uint32)
-type ResponseErrorHandler func(element slot.SlotElementHelper, response adapter.IAdapterResponse, err error) (interface{}, uint32)
+type TransitionErrorHandler func(element islot.SlotElementHelper, err error) (interface{}, uint32)
+type ResponseErrorHandler func(element islot.SlotElementHelper, response iadapter.IAdapterResponse, err error) (interface{}, uint32)
 
 // StateMachineType describes access to element's state machine
-//go:generate minimock -i github.com/insolar/insolar/conveyor/interfaces/statemachine.StateMachineType -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/conveyor/interfaces/istatemachine.StateMachineType -o ./ -s _mock.go
 type StateMachineType interface {
 	GetTypeID() int
 	GetMigrationHandler(pulseState constant.PulseState, state uint32) MigrationHandler

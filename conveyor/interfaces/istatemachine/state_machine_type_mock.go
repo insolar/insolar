@@ -1,9 +1,9 @@
-package statemachine
+package istatemachine
 
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "StateMachineType" can be found in github.com/insolar/insolar/conveyor/interfaces/statemachine
+The original interface "StateMachineType" can be found in github.com/insolar/insolar/conveyor/interfaces/istatemachine
 */
 import (
 	"sync/atomic"
@@ -15,7 +15,7 @@ import (
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//StateMachineTypeMock implements github.com/insolar/insolar/conveyor/interfaces/statemachine.StateMachineType
+//StateMachineTypeMock implements github.com/insolar/insolar/conveyor/interfaces/istatemachine.StateMachineType
 type StateMachineTypeMock struct {
 	t minimock.Tester
 
@@ -55,7 +55,7 @@ type StateMachineTypeMock struct {
 	GetTypeIDMock       mStateMachineTypeMockGetTypeID
 }
 
-//NewStateMachineTypeMock returns a mock for github.com/insolar/insolar/conveyor/interfaces/statemachine.StateMachineType
+//NewStateMachineTypeMock returns a mock for github.com/insolar/insolar/conveyor/interfaces/istatemachine.StateMachineType
 func NewStateMachineTypeMock(t minimock.Tester) *StateMachineTypeMock {
 	m := &StateMachineTypeMock{t: t}
 
@@ -142,7 +142,7 @@ func (m *mStateMachineTypeMockGetMigrationHandler) Set(f func(p constant.PulseSt
 	return m.mock
 }
 
-//GetMigrationHandler implements github.com/insolar/insolar/conveyor/interfaces/statemachine.StateMachineType interface
+//GetMigrationHandler implements github.com/insolar/insolar/conveyor/interfaces/istatemachine.StateMachineType interface
 func (m *StateMachineTypeMock) GetMigrationHandler(p constant.PulseState, p1 uint32) (r MigrationHandler) {
 	counter := atomic.AddUint64(&m.GetMigrationHandlerPreCounter, 1)
 	defer atomic.AddUint64(&m.GetMigrationHandlerCounter, 1)
@@ -290,7 +290,7 @@ func (m *mStateMachineTypeMockGetNestedHandler) Set(f func(p constant.PulseState
 	return m.mock
 }
 
-//GetNestedHandler implements github.com/insolar/insolar/conveyor/interfaces/statemachine.StateMachineType interface
+//GetNestedHandler implements github.com/insolar/insolar/conveyor/interfaces/istatemachine.StateMachineType interface
 func (m *StateMachineTypeMock) GetNestedHandler(p constant.PulseState, p1 uint32) (r NestedHandler) {
 	counter := atomic.AddUint64(&m.GetNestedHandlerPreCounter, 1)
 	defer atomic.AddUint64(&m.GetNestedHandlerCounter, 1)
@@ -438,7 +438,7 @@ func (m *mStateMachineTypeMockGetResponseErrorHandler) Set(f func(p constant.Pul
 	return m.mock
 }
 
-//GetResponseErrorHandler implements github.com/insolar/insolar/conveyor/interfaces/statemachine.StateMachineType interface
+//GetResponseErrorHandler implements github.com/insolar/insolar/conveyor/interfaces/istatemachine.StateMachineType interface
 func (m *StateMachineTypeMock) GetResponseErrorHandler(p constant.PulseState, p1 uint32) (r ResponseErrorHandler) {
 	counter := atomic.AddUint64(&m.GetResponseErrorHandlerPreCounter, 1)
 	defer atomic.AddUint64(&m.GetResponseErrorHandlerCounter, 1)
@@ -586,7 +586,7 @@ func (m *mStateMachineTypeMockGetResponseHandler) Set(f func(p constant.PulseSta
 	return m.mock
 }
 
-//GetResponseHandler implements github.com/insolar/insolar/conveyor/interfaces/statemachine.StateMachineType interface
+//GetResponseHandler implements github.com/insolar/insolar/conveyor/interfaces/istatemachine.StateMachineType interface
 func (m *StateMachineTypeMock) GetResponseHandler(p constant.PulseState, p1 uint32) (r AdapterResponseHandler) {
 	counter := atomic.AddUint64(&m.GetResponseHandlerPreCounter, 1)
 	defer atomic.AddUint64(&m.GetResponseHandlerCounter, 1)
@@ -734,7 +734,7 @@ func (m *mStateMachineTypeMockGetTransitionErrorHandler) Set(f func(p constant.P
 	return m.mock
 }
 
-//GetTransitionErrorHandler implements github.com/insolar/insolar/conveyor/interfaces/statemachine.StateMachineType interface
+//GetTransitionErrorHandler implements github.com/insolar/insolar/conveyor/interfaces/istatemachine.StateMachineType interface
 func (m *StateMachineTypeMock) GetTransitionErrorHandler(p constant.PulseState, p1 uint32) (r TransitionErrorHandler) {
 	counter := atomic.AddUint64(&m.GetTransitionErrorHandlerPreCounter, 1)
 	defer atomic.AddUint64(&m.GetTransitionErrorHandlerCounter, 1)
@@ -882,7 +882,7 @@ func (m *mStateMachineTypeMockGetTransitionHandler) Set(f func(p constant.PulseS
 	return m.mock
 }
 
-//GetTransitionHandler implements github.com/insolar/insolar/conveyor/interfaces/statemachine.StateMachineType interface
+//GetTransitionHandler implements github.com/insolar/insolar/conveyor/interfaces/istatemachine.StateMachineType interface
 func (m *StateMachineTypeMock) GetTransitionHandler(p constant.PulseState, p1 uint32) (r TransitHandler) {
 	counter := atomic.AddUint64(&m.GetTransitionHandlerPreCounter, 1)
 	defer atomic.AddUint64(&m.GetTransitionHandlerCounter, 1)
@@ -1024,7 +1024,7 @@ func (m *mStateMachineTypeMockGetTypeID) Set(f func() (r int)) *StateMachineType
 	return m.mock
 }
 
-//GetTypeID implements github.com/insolar/insolar/conveyor/interfaces/statemachine.StateMachineType interface
+//GetTypeID implements github.com/insolar/insolar/conveyor/interfaces/istatemachine.StateMachineType interface
 func (m *StateMachineTypeMock) GetTypeID() (r int) {
 	counter := atomic.AddUint64(&m.GetTypeIDPreCounter, 1)
 	defer atomic.AddUint64(&m.GetTypeIDCounter, 1)

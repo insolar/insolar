@@ -1,9 +1,9 @@
-package slot
+package islot
 
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "SlotElementReadOnly" can be found in github.com/insolar/insolar/conveyor/interfaces/slot
+The original interface "SlotElementReadOnly" can be found in github.com/insolar/insolar/conveyor/interfaces/islot
 */
 import (
 	"sync/atomic"
@@ -12,7 +12,7 @@ import (
 	"github.com/gojuno/minimock"
 )
 
-//SlotElementReadOnlyMock implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementReadOnly
+//SlotElementReadOnlyMock implements github.com/insolar/insolar/conveyor/interfaces/islot.SlotElementReadOnly
 type SlotElementReadOnlyMock struct {
 	t minimock.Tester
 
@@ -37,7 +37,7 @@ type SlotElementReadOnlyMock struct {
 	GetTypeMock       mSlotElementReadOnlyMockGetType
 }
 
-//NewSlotElementReadOnlyMock returns a mock for github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementReadOnly
+//NewSlotElementReadOnlyMock returns a mock for github.com/insolar/insolar/conveyor/interfaces/islot.SlotElementReadOnly
 func NewSlotElementReadOnlyMock(t minimock.Tester) *SlotElementReadOnlyMock {
 	m := &SlotElementReadOnlyMock{t: t}
 
@@ -115,7 +115,7 @@ func (m *mSlotElementReadOnlyMockGetElementID) Set(f func() (r uint32)) *SlotEle
 	return m.mock
 }
 
-//GetElementID implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementReadOnly interface
+//GetElementID implements github.com/insolar/insolar/conveyor/interfaces/islot.SlotElementReadOnly interface
 func (m *SlotElementReadOnlyMock) GetElementID() (r uint32) {
 	counter := atomic.AddUint64(&m.GetElementIDPreCounter, 1)
 	defer atomic.AddUint64(&m.GetElementIDCounter, 1)
@@ -249,7 +249,7 @@ func (m *mSlotElementReadOnlyMockGetNodeID) Set(f func() (r uint32)) *SlotElemen
 	return m.mock
 }
 
-//GetNodeID implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementReadOnly interface
+//GetNodeID implements github.com/insolar/insolar/conveyor/interfaces/islot.SlotElementReadOnly interface
 func (m *SlotElementReadOnlyMock) GetNodeID() (r uint32) {
 	counter := atomic.AddUint64(&m.GetNodeIDPreCounter, 1)
 	defer atomic.AddUint64(&m.GetNodeIDCounter, 1)
@@ -383,7 +383,7 @@ func (m *mSlotElementReadOnlyMockGetState) Set(f func() (r uint32)) *SlotElement
 	return m.mock
 }
 
-//GetState implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementReadOnly interface
+//GetState implements github.com/insolar/insolar/conveyor/interfaces/islot.SlotElementReadOnly interface
 func (m *SlotElementReadOnlyMock) GetState() (r uint32) {
 	counter := atomic.AddUint64(&m.GetStatePreCounter, 1)
 	defer atomic.AddUint64(&m.GetStateCounter, 1)
@@ -517,7 +517,7 @@ func (m *mSlotElementReadOnlyMockGetType) Set(f func() (r int)) *SlotElementRead
 	return m.mock
 }
 
-//GetType implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementReadOnly interface
+//GetType implements github.com/insolar/insolar/conveyor/interfaces/islot.SlotElementReadOnly interface
 func (m *SlotElementReadOnlyMock) GetType() (r int) {
 	counter := atomic.AddUint64(&m.GetTypePreCounter, 1)
 	defer atomic.AddUint64(&m.GetTypeCounter, 1)

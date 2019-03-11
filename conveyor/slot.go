@@ -20,13 +20,13 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/conveyor/interfaces/constant"
-	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
+	"github.com/insolar/insolar/conveyor/interfaces/istatemachine"
 	"github.com/insolar/insolar/conveyor/queue"
 	"github.com/insolar/insolar/core"
 	"github.com/pkg/errors"
 )
 
-// SlotState shows slot working mode
+// SlotState shows islot working mode
 type SlotState uint32
 
 //go:generate stringer -type=SlotState
@@ -46,7 +46,7 @@ type HandlersConfiguration struct {
 }
 
 // TODO: logic will be provided after pulse change mechanism
-func (s *HandlersConfiguration) getMachineConfiguration(smType int) statemachine.StateMachineType { // nolint: unused
+func (s *HandlersConfiguration) getMachineConfiguration(smType int) istatemachine.StateMachineType { // nolint: unused
 	return nil
 }
 
@@ -128,7 +128,7 @@ type Slot struct {
 	removeSlotCallback RemoveSlotCallback
 }
 
-// SlotStateMachine represents state machine of slot itself
+// SlotStateMachine represents state machine of islot itself
 var SlotStateMachine = slotElement{
 	id:               0,
 	state:            0,
@@ -194,7 +194,7 @@ func (s *Slot) GetNodeData() interface{} { // nolint: unused
 }
 
 // createElement creates new active element from empty element
-func (s *Slot) createElement(stateMachineType statemachine.StateMachineType, state uint32, event queue.OutputElement) (*slotElement, error) { // nolint: unused
+func (s *Slot) createElement(stateMachineType istatemachine.StateMachineType, state uint32, event queue.OutputElement) (*slotElement, error) { // nolint: unused
 	element := s.popElement(EmptyElement)
 	element.stateMachineType = stateMachineType
 	element.state = state
@@ -213,7 +213,7 @@ func (s *Slot) createElement(stateMachineType statemachine.StateMachineType, sta
 }
 
 func (s *Slot) hasExpired() bool {
-	// TODO: This is used to delete past slot, which doesn't have elements and not active for some configure time
+	// TODO: This is used to delete past islot, which doesn't have elements and not active for some configure time
 	return s.len(ActiveElement) == 0 && s.len(NotActiveElement) == 0
 }
 
@@ -259,9 +259,7 @@ func (s *Slot) extractSlotElementByID(id uint32) *slotElement { // nolint: unuse
 	if element.id != id {
 		return nil
 	}
-	// if element.activationStatus == EmptyElement {
-	// 	return nil
-	// }
+
 	list, ok := s.elementListMap[element.activationStatus]
 	if ok {
 		list.removeElement(element)

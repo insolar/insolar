@@ -17,11 +17,11 @@
 package conveyor
 
 import (
-	"github.com/insolar/insolar/conveyor/interfaces/slot"
-	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
+	"github.com/insolar/insolar/conveyor/interfaces/islot"
+	"github.com/insolar/insolar/conveyor/interfaces/istatemachine"
 )
 
-// ActivationStatus represents status of work for slot element
+// ActivationStatus represents status of work for islot element
 type ActivationStatus int
 
 //go:generate stringer -type=ActivationStatus
@@ -38,7 +38,7 @@ type slotElement struct {
 	inputEvent       interface{}
 	payload          interface{} // nolint
 	postponedError   error
-	stateMachineType statemachine.StateMachineType
+	stateMachineType istatemachine.StateMachineType
 	state            uint32
 
 	nextElement      *slotElement
@@ -46,7 +46,7 @@ type slotElement struct {
 	activationStatus ActivationStatus
 }
 
-// newSlotElement creates new slot element with provided activation status
+// newSlotElement creates new islot element with provided activation status
 func newSlotElement(activationStatus ActivationStatus) *slotElement {
 	return &slotElement{activationStatus: activationStatus}
 }
@@ -112,7 +112,7 @@ func (se *slotElement) InformParent(payload interface{}) bool {
 }
 
 // DeactivateTill implements SlotElementHelper
-func (se *slotElement) DeactivateTill(reactivateOn slot.ReactivateMode) {
+func (se *slotElement) DeactivateTill(reactivateOn islot.ReactivateMode) {
 	panic("implement me")
 }
 

@@ -59,7 +59,7 @@ func NewDropStorage(jetSizesHistoryDepth int) DropStorage {
 
 // CreateDrop creates and stores jet drop for given pulse number.
 //
-// On success returns saved drop object, slot records, drop size.
+// On success returns saved drop object, islot records, drop size.
 func (ds *dropStorage) CreateDrop(ctx context.Context, jetID core.RecordID, pulse core.PulseNumber, prevHash []byte) (
 	*jet.JetDrop,
 	[][]byte,

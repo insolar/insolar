@@ -176,7 +176,7 @@ func TestConveyor_SinkPush_UnknownSlot(t *testing.T) {
 	data := "fancy_data"
 
 	err := c.SinkPush(testUnknownFuturePulse, data)
-	require.EqualError(t, err, fmt.Sprintf("[ SinkPush ] can't get slot by pulse number %d", testUnknownFuturePulse))
+	require.EqualError(t, err, fmt.Sprintf("[ SinkPush ] can't get islot by pulse number %d", testUnknownFuturePulse))
 }
 
 func TestConveyor_SinkPush_NotOperational(t *testing.T) {
@@ -229,7 +229,7 @@ func TestConveyor_SinkPushAll_UnknownSlot(t *testing.T) {
 	data := []interface{}{data1, data2}
 
 	err := c.SinkPushAll(testUnknownFuturePulse, data)
-	require.EqualError(t, err, fmt.Sprintf("[ SinkPushAll ] can't get slot by pulse number %d", testUnknownFuturePulse))
+	require.EqualError(t, err, fmt.Sprintf("[ SinkPushAll ] can't get islot by pulse number %d", testUnknownFuturePulse))
 }
 
 func TestConveyor_SinkPushAll_NotOperational(t *testing.T) {
@@ -312,7 +312,7 @@ func TestConveyor_PreparePulse_PushSignalPresentPanic(t *testing.T) {
 	callback := mockCallback()
 	oldState := c.state
 
-	panicValue := fmt.Sprintf("[ PreparePulse ] can't send signal to present slot (for pulse %d), error - test error", c.presentPulseNumber)
+	panicValue := fmt.Sprintf("[ PreparePulse ] can't send signal to present islot (for pulse %d), error - test error", c.presentPulseNumber)
 	require.PanicsWithValue(t, panicValue, func() { c.PreparePulse(pulse, callback) })
 	require.Nil(t, c.futurePulseData)
 	require.Equal(t, oldState, c.state)
@@ -324,7 +324,7 @@ func TestConveyor_PreparePulse_PushSignalFuturePanic(t *testing.T) {
 	callback := mockCallback()
 	oldState := c.state
 
-	panicValue := fmt.Sprintf("[ PreparePulse ] can't send signal to future slot (for pulse %d), error - test error", c.futurePulseNumber)
+	panicValue := fmt.Sprintf("[ PreparePulse ] can't send signal to future islot (for pulse %d), error - test error", c.futurePulseNumber)
 	require.PanicsWithValue(t, panicValue, func() { c.PreparePulse(pulse, callback) })
 	require.Nil(t, c.futurePulseData)
 	require.Equal(t, oldState, c.state)
@@ -376,7 +376,7 @@ func TestConveyor_ActivatePulse_PushSignalErr(t *testing.T) {
 	c.slotMap[pulse.NextPulseNumber] = newFutureSlot
 	c.state = PreparingPulse
 
-	panicValue := fmt.Sprintf("[ ActivatePulse ] can't send signal to present slot (for pulse %d), error - test error", c.futurePulseNumber)
+	panicValue := fmt.Sprintf("[ ActivatePulse ] can't send signal to present islot (for pulse %d), error - test error", c.futurePulseNumber)
 	require.PanicsWithValue(t, panicValue, func() { c.ActivatePulse() })
 	require.NotNil(t, c.futurePulseData)
 	require.Equal(t, PreparingPulse, c.state)
@@ -391,7 +391,7 @@ func TestConveyor_ActivatePreparePulse(t *testing.T) {
 	err := c.PreparePulse(pulse, callback)
 	require.NoError(t, err)
 
-	// mock queue in new slot, created in prepare func
+	// mock queue in new islot, created in prepare func
 	c.slotMap[pulse.NextPulseNumber].inputQueue = mockQueue(t)
 
 	err = c.ActivatePulse()

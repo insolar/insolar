@@ -115,7 +115,7 @@ func (th *taskHolderT) stopAll(flush bool) {
 
 }
 
-// SimpleWaitAdapter holds all adapter logic
+// SimpleWaitAdapter holds all iadapter logic
 type SimpleWaitAdapter struct {
 	queue             queue.IQueue
 	processingStarted uint32
@@ -207,7 +207,7 @@ func (swa *SimpleWaitAdapter) StartProcessing(started chan bool) {
 	swa.processingStopped <- true
 }
 
-// it's function which make useful adapter's work
+// it's function which make useful iadapter's work
 func (swa *SimpleWaitAdapter) doWork(task processElement, cancelInfo *cancelInfoT) {
 
 	log.Info("[ doWork ] Start. cancelInfo.id: ", cancelInfo.id)

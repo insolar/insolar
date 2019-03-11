@@ -17,12 +17,12 @@
 package adapter
 
 import (
-	"github.com/insolar/insolar/conveyor/interfaces/slot"
+	"github.com/insolar/insolar/conveyor/interfaces/islot"
 )
 
 type idType = uint32
 
-// PulseConveyorAdapterTaskSink is iface which helps to slot to push task to adapter
+// PulseConveyorAdapterTaskSink is iface which helps to islot to push task to iadapter
 type PulseConveyorAdapterTaskSink interface {
 	PushTask(respSink AdaptorToSlotResponseSink, elementID idType, handlerID idType, taskPayload interface{}) error
 	CancelElementTasks(pulseNumber idType, elementID idType)
@@ -31,16 +31,16 @@ type PulseConveyorAdapterTaskSink interface {
 	FlushNodeTasks(nodeID idType)
 }
 
-// AdaptorToSlotResponseSink is iface which helps to adapter to access to slot
+// AdaptorToSlotResponseSink is iface which helps to iadapter to access to islot
 type AdaptorToSlotResponseSink interface {
 	PushResponse(adapterID idType, elementID idType, handlerID idType, respPayload interface{})
 	PushNestedEvent(adapterID idType, parentElementID idType, handlerID idType, eventPayload interface{})
 	GetPulseNumber() uint32
 	GetNodeID() uint32
-	GetSlotDetails() slot.SlotDetails
+	GetSlotDetails() islot.SlotDetails
 }
 
-// AdapterTask contains info for launch adapter task
+// AdapterTask contains info for launch iadapter task
 type AdapterTask struct {
 	respSink    AdaptorToSlotResponseSink
 	elementID   idType
@@ -48,7 +48,7 @@ type AdapterTask struct {
 	taskPayload interface{}
 }
 
-// AdapterResponse contains info with adapter response
+// AdapterResponse contains info with iadapter response
 type AdapterResponse struct {
 	adapterID   idType
 	elementID   idType
@@ -76,7 +76,7 @@ func (ar *AdapterResponse) GetRespPayload() interface{} {
 	return ar.respPayload
 }
 
-// AdapterNestedEvent contains info with adapter nested event
+// AdapterNestedEvent contains info with iadapter nested event
 type AdapterNestedEvent struct {
 	AdapterID       idType
 	ParentElementID idType

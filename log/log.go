@@ -41,7 +41,7 @@ func NewLog(cfg configuration.Log) (core.Logger, error) {
 	case "zerolog":
 		logger, err = newZerologAdapter(cfg)
 	default:
-		err = errors.New("unknown adapter")
+		err = errors.New("unknown iadapter")
 	}
 
 	if err != nil {

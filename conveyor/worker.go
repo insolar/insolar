@@ -22,16 +22,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/conveyor/interfaces/adapter"
 	"github.com/insolar/insolar/conveyor/interfaces/constant"
-	"github.com/insolar/insolar/conveyor/interfaces/slot"
-	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
+	"github.com/insolar/insolar/conveyor/interfaces/iadapter"
+	"github.com/insolar/insolar/conveyor/interfaces/islot"
+	"github.com/insolar/insolar/conveyor/interfaces/istatemachine"
 	"github.com/insolar/insolar/conveyor/queue"
 	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 )
 
-// WorkerState shows slot working mode
+// WorkerState shows islot working mode
 type WorkerState int
 
 //go:generate stringer -type=WorkerState
@@ -67,11 +67,11 @@ const (
 	NestedCall
 )
 
-func GetStateMachineByType(mtype MachineType) statemachine.StateMachineType {
+func GetStateMachineByType(mtype MachineType) istatemachine.StateMachineType {
 	//panic("implement me") // TODO:
-	sm := statemachine.NewStateMachineTypeMock(&testing.T{})
-	sm.GetMigrationHandlerFunc = func(p constant.PulseState, p1 uint32) (r statemachine.MigrationHandler) {
-		return func(element slot.SlotElementHelper) (interface{}, uint32, error) {
+	sm := istatemachine.NewStateMachineTypeMock(&testing.T{})
+	sm.GetMigrationHandlerFunc = func(p constant.PulseState, p1 uint32) (r istatemachine.MigrationHandler) {
+		return func(element islot.SlotElementHelper) (interface{}, uint32, error) {
 			r := rand.Int() % 100
 			state := uint32(0)
 			if r < 80 {
@@ -81,8 +81,8 @@ func GetStateMachineByType(mtype MachineType) statemachine.StateMachineType {
 		}
 	}
 
-	sm.GetTransitionHandlerFunc = func(p constant.PulseState, p1 uint32) (r statemachine.TransitHandler) {
-		return func(element slot.SlotElementHelper) (interface{}, uint32, error) {
+	sm.GetTransitionHandlerFunc = func(p constant.PulseState, p1 uint32) (r istatemachine.TransitHandler) {
+		return func(element islot.SlotElementHelper) (interface{}, uint32, error) {
 			r := rand.Int() % 100
 			state := uint32(0)
 			if r < 80 {
@@ -101,7 +101,7 @@ func (w *workerStateMachineImpl) changePulseState() {
 	case constant.Present:
 		w.slot.pulseState = constant.Past
 	case constant.Past:
-		log.Error("[ changePulseState ] Try to change pulse state for 'Past' slot. Skip it")
+		log.Error("[ changePulseState ] Try to change pulse state for 'Past' islot. Skip it")
 	default:
 		panic("[ changePulseState ] Unknown state: " + w.slot.pulseState.String())
 	}
@@ -113,7 +113,7 @@ type emptySyncDone struct{}
 func (m emptySyncDone) Done() {}
 
 // If we have both signals ( PendingPulseSignal and ActivatePulseSignal ),
-// then change slot state and push ActivatePulseSignal back to queue.
+// then change islot state and push ActivatePulseSignal back to queue.
 func (w *workerStateMachineImpl) processSignalsWorking(elements []queue.OutputElement) int {
 	numSignals := 0
 	hasPending := false
@@ -190,9 +190,9 @@ func (w *workerStateMachineImpl) readResponseQueue() error {
 			// TODO: check isNestedEvent
 			panic("Nested request is Not implemented")
 		} else {
-			adapterResp, ok := resp.GetData().(adapter.IAdapterResponse)
+			adapterResp, ok := resp.GetData().(iadapter.IAdapterResponse)
 			if !ok {
-				panic(fmt.Sprintf("[ readResponseQueue ] Bad type in adapter response queue: %T", resp.GetData()))
+				panic(fmt.Sprintf("[ readResponseQueue ] Bad type in iadapter response queue: %T", resp.GetData()))
 			}
 			element := w.slot.extractSlotElementByID(adapterResp.GetElementID())
 			if element == nil {
@@ -201,9 +201,6 @@ func (w *workerStateMachineImpl) readResponseQueue() error {
 			}
 
 			respHandler := element.stateMachineType.GetResponseHandler(w.slot.pulseState, element.state)
-			if respHandler == nil {
-				panic(fmt.Sprintf("[ readResponseQueue ] No response handler. State: %d. AdapterResp: %+v", element.state, adapterResp))
-			}
 
 			payLoad, newState, err := respHandler(element, adapterResp)
 			if err != nil {
@@ -232,7 +229,7 @@ func (w *workerStateMachineImpl) readResponseQueue() error {
 		}
 	}
 
-	w.postponedResponses = w.postponedResponses[totalNumElements:]
+	w.postponedResponses = w.postponedResponses[numProcessedElements:]
 
 	return nil
 }
@@ -248,7 +245,7 @@ func (w *workerStateMachineImpl) processingElements() {
 		if w.slot.pulseState == constant.Past {
 			if w.slot.hasExpired() {
 				w.slot.slotState = Suspending
-				log.Info("[ processingElements ] Set slot state to 'Suspending'")
+				log.Info("[ processingElements ] Set islot state to 'Suspending'")
 				return
 			}
 		}
@@ -331,7 +328,7 @@ func (w *workerStateMachineImpl) calculateNodeState() {
 func (w *workerStateMachineImpl) sendRemovalSignalToConveyor() {
 	w.slot.removeSlotCallback(w.slot.pulseNumber)
 	// TODO: how to do it?
-	// catch conveyor lock, check input queue, if It's empty - remove slot from map, if it's not - got to Working state
+	// catch conveyor lock, check input queue, if It's empty - remove islot from map, if it's not - got to Working state
 }
 
 func (w *workerStateMachineImpl) processSignalsSuspending(elements []queue.OutputElement) int {
@@ -472,7 +469,7 @@ func (w *workerStateMachineImpl) run() {
 		case Suspending:
 			w.suspending()
 		default:
-			panic("[ run ] Unknown slot state: " + w.slot.slotState.String())
+			panic("[ run ] Unknown islot state: " + w.slot.slotState.String())
 		}
 	}
 }

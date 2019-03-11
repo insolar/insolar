@@ -20,7 +20,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/conveyor/interfaces/constant"
-	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
+	"github.com/insolar/insolar/conveyor/interfaces/istatemachine"
 	"github.com/insolar/insolar/conveyor/queue"
 	"github.com/insolar/insolar/core"
 	"github.com/stretchr/testify/require"
@@ -274,7 +274,7 @@ func TestSlot_createElement(t *testing.T) {
 	oldEmptyLen := s.elementListMap[EmptyElement].len()
 	event := queue.OutputElement{}
 
-	stateMachineMock := statemachine.NewStateMachineTypeMock(t)
+	stateMachineMock := istatemachine.NewStateMachineTypeMock(t)
 
 	element, err := s.createElement(stateMachineMock, 1, event)
 	require.NotNil(t, element)
@@ -293,7 +293,7 @@ func TestSlot_createElement_Err(t *testing.T) {
 	delete(s.elementListMap, ActiveElement)
 	event := queue.OutputElement{}
 
-	stateMachineMock := statemachine.NewStateMachineTypeMock(t)
+	stateMachineMock := istatemachine.NewStateMachineTypeMock(t)
 
 	element, err := s.createElement(stateMachineMock, 1, event)
 	require.Nil(t, element)
@@ -313,7 +313,7 @@ func TestSlot_hasElements(t *testing.T) {
 	require.False(t, s.hasElements(NotActiveElement))
 	require.True(t, s.hasElements(EmptyElement))
 
-	sm := statemachine.NewStateMachineTypeMock(t)
+	sm := istatemachine.NewStateMachineTypeMock(t)
 	_, err := s.createElement(sm, 20, queue.OutputElement{})
 	require.NoError(t, err)
 
@@ -420,7 +420,7 @@ func TestSlot_pushElement_Empty(t *testing.T) {
 }
 
 func TestSlot_extractSlotElementByID(t *testing.T) {
-	sm := statemachine.NewStateMachineTypeMock(t)
+	sm := istatemachine.NewStateMachineTypeMock(t)
 	slot := NewSlot(constant.Present, 10, nil)
 
 	var elements []*slotElement
@@ -455,7 +455,7 @@ func TestSlot_extractSlotElementByID(t *testing.T) {
 }
 
 func TestSlot_PopPushMultiple(t *testing.T) {
-	sm := statemachine.NewStateMachineTypeMock(t)
+	sm := istatemachine.NewStateMachineTypeMock(t)
 	slot := NewSlot(constant.Present, 10, nil)
 
 	slot.createElement(sm, 33, queue.OutputElement{})

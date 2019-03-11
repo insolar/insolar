@@ -1,9 +1,9 @@
-package adapter
+package iadapter
 
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "IAdapterNestedEvent" can be found in github.com/insolar/insolar/conveyor/interfaces/adapter
+The original interface "IAdapterNestedEvent" can be found in github.com/insolar/insolar/conveyor/interfaces/iadapter
 */
 import (
 	"sync/atomic"
@@ -12,7 +12,7 @@ import (
 	"github.com/gojuno/minimock"
 )
 
-//IAdapterNestedEventMock implements github.com/insolar/insolar/conveyor/interfaces/adapter.IAdapterNestedEvent
+//IAdapterNestedEventMock implements github.com/insolar/insolar/conveyor/interfaces/iadapter.IAdapterNestedEvent
 type IAdapterNestedEventMock struct {
 	t minimock.Tester
 
@@ -37,7 +37,7 @@ type IAdapterNestedEventMock struct {
 	GetParentElementIDMock       mIAdapterNestedEventMockGetParentElementID
 }
 
-//NewIAdapterNestedEventMock returns a mock for github.com/insolar/insolar/conveyor/interfaces/adapter.IAdapterNestedEvent
+//NewIAdapterNestedEventMock returns a mock for github.com/insolar/insolar/conveyor/interfaces/iadapter.IAdapterNestedEvent
 func NewIAdapterNestedEventMock(t minimock.Tester) *IAdapterNestedEventMock {
 	m := &IAdapterNestedEventMock{t: t}
 
@@ -115,7 +115,7 @@ func (m *mIAdapterNestedEventMockGetAdapterID) Set(f func() (r uint32)) *IAdapte
 	return m.mock
 }
 
-//GetAdapterID implements github.com/insolar/insolar/conveyor/interfaces/adapter.IAdapterNestedEvent interface
+//GetAdapterID implements github.com/insolar/insolar/conveyor/interfaces/iadapter.IAdapterNestedEvent interface
 func (m *IAdapterNestedEventMock) GetAdapterID() (r uint32) {
 	counter := atomic.AddUint64(&m.GetAdapterIDPreCounter, 1)
 	defer atomic.AddUint64(&m.GetAdapterIDCounter, 1)
@@ -249,7 +249,7 @@ func (m *mIAdapterNestedEventMockGetEventPayload) Set(f func() (r interface{})) 
 	return m.mock
 }
 
-//GetEventPayload implements github.com/insolar/insolar/conveyor/interfaces/adapter.IAdapterNestedEvent interface
+//GetEventPayload implements github.com/insolar/insolar/conveyor/interfaces/iadapter.IAdapterNestedEvent interface
 func (m *IAdapterNestedEventMock) GetEventPayload() (r interface{}) {
 	counter := atomic.AddUint64(&m.GetEventPayloadPreCounter, 1)
 	defer atomic.AddUint64(&m.GetEventPayloadCounter, 1)
@@ -383,7 +383,7 @@ func (m *mIAdapterNestedEventMockGetHandlerID) Set(f func() (r uint32)) *IAdapte
 	return m.mock
 }
 
-//GetHandlerID implements github.com/insolar/insolar/conveyor/interfaces/adapter.IAdapterNestedEvent interface
+//GetHandlerID implements github.com/insolar/insolar/conveyor/interfaces/iadapter.IAdapterNestedEvent interface
 func (m *IAdapterNestedEventMock) GetHandlerID() (r uint32) {
 	counter := atomic.AddUint64(&m.GetHandlerIDPreCounter, 1)
 	defer atomic.AddUint64(&m.GetHandlerIDCounter, 1)
@@ -517,7 +517,7 @@ func (m *mIAdapterNestedEventMockGetParentElementID) Set(f func() (r uint32)) *I
 	return m.mock
 }
 
-//GetParentElementID implements github.com/insolar/insolar/conveyor/interfaces/adapter.IAdapterNestedEvent interface
+//GetParentElementID implements github.com/insolar/insolar/conveyor/interfaces/iadapter.IAdapterNestedEvent interface
 func (m *IAdapterNestedEventMock) GetParentElementID() (r uint32) {
 	counter := atomic.AddUint64(&m.GetParentElementIDPreCounter, 1)
 	defer atomic.AddUint64(&m.GetParentElementIDCounter, 1)

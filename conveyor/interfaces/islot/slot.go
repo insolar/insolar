@@ -14,13 +14,13 @@
  *    limitations under the License.
  */
 
-package slot
+package islot
 
 import (
 	"github.com/insolar/insolar/core"
 )
 
-// ReactivateMode represents reason of reactivating of slot element
+// ReactivateMode represents reason of reactivating of islot element
 type ReactivateMode int
 
 //go:generate stringer -type=ReactivateMode
@@ -31,8 +31,8 @@ const (
 	SeqHead
 )
 
-// SlotElementHelper gives access to slot element
-//go:generate minimock -i github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementHelper -o ./ -s _mock.go
+// SlotElementHelper gives access to islot element
+//go:generate minimock -i github.com/insolar/insolar/conveyor/interfaces/islot.SlotElementHelper -o ./ -s _mock.go
 type SlotElementHelper interface {
 	SlotElementRestrictedHelper
 	InformParent(payload interface{}) bool
@@ -43,7 +43,7 @@ type SlotElementHelper interface {
 }
 
 // SlotElementRestrictedHelper is restricted part of SlotElementHelper
-//go:generate minimock -i github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementRestrictedHelper -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/conveyor/interfaces/islot.SlotElementRestrictedHelper -o ./ -s _mock.go
 type SlotElementRestrictedHelper interface {
 	SlotElementReadOnly
 
@@ -55,8 +55,8 @@ type SlotElementRestrictedHelper interface {
 	LeaveSequence()
 }
 
-// SlotElementReadOnly gives read-only access to slot element
-//go:generate minimock -i github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementReadOnly -o ./ -s _mock.go
+// SlotElementReadOnly gives read-only access to islot element
+//go:generate minimock -i github.com/insolar/insolar/conveyor/interfaces/islot.SlotElementReadOnly -o ./ -s _mock.go
 type SlotElementReadOnly interface {
 	GetElementID() uint32
 	GetNodeID() uint32
@@ -64,8 +64,8 @@ type SlotElementReadOnly interface {
 	GetState() uint32
 }
 
-// SlotDetails provides information about slot
-//go:generate minimock -i github.com/insolar/insolar/conveyor/interfaces/slot.SlotDetails -o ./ -s _mock.go
+// SlotDetails provides information about islot
+//go:generate minimock -i github.com/insolar/insolar/conveyor/interfaces/islot.SlotDetails -o ./ -s _mock.go
 type SlotDetails interface {
 	GetPulseNumber() core.PulseNumber // nolint: unused
 	GetNodeID() uint32                // nolint: unused

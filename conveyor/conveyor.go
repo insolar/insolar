@@ -88,7 +88,7 @@ func NewPulseConveyor() Conveyor {
 		slotMap: make(map[core.PulseNumber]*Slot),
 		state:   Inactive,
 	}
-	// antiqueSlot is slot for all pulses from past if conveyor dont have specific PastSlot for such pulse
+	// antiqueSlot is islot for all pulses from past if conveyor dont have specific PastSlot for such pulse
 	antiqueSlot := NewSlot(constant.Antique, core.AntiquePulseNumber, c.RemoveSlot)
 	c.slotMap[core.AntiquePulseNumber] = antiqueSlot
 	return c
@@ -146,7 +146,7 @@ func (c *PulseConveyor) SinkPush(pulseNumber core.PulseNumber, data interface{})
 	}
 	slot := c.unsafeGetSlot(pulseNumber)
 	if slot == nil {
-		return errors.Errorf("[ SinkPush ] can't get slot by pulse number %d", pulseNumber)
+		return errors.Errorf("[ SinkPush ] can't get islot by pulse number %d", pulseNumber)
 	}
 	err := slot.inputQueue.SinkPush(data)
 	return errors.Wrap(err, "[ SinkPush ] can't push to queue")
@@ -161,7 +161,7 @@ func (c *PulseConveyor) SinkPushAll(pulseNumber core.PulseNumber, data []interfa
 	}
 	slot := c.unsafeGetSlot(pulseNumber)
 	if slot == nil {
-		return errors.Errorf("[ SinkPushAll ] can't get slot by pulse number %d", pulseNumber)
+		return errors.Errorf("[ SinkPushAll ] can't get islot by pulse number %d", pulseNumber)
 	}
 	err := slot.inputQueue.SinkPushAll(data)
 	return errors.Wrap(err, "[ SinkPushAll ] can't push to queue")
@@ -190,14 +190,14 @@ func (c *PulseConveyor) PreparePulse(pulse core.Pulse, callback queue.SyncDone) 
 	futureSlot := c.slotMap[*c.futurePulseNumber]
 	err := futureSlot.inputQueue.PushSignal(PendingPulseSignal, callback)
 	if err != nil {
-		log.Panicf("[ PreparePulse ] can't send signal to future slot (for pulse %d), error - %s", c.futurePulseNumber, err)
+		log.Panicf("[ PreparePulse ] can't send signal to future islot (for pulse %d), error - %s", c.futurePulseNumber, err)
 	}
 
 	if c.presentPulseNumber != nil {
 		presentSlot := c.slotMap[*c.presentPulseNumber]
 		err := presentSlot.inputQueue.PushSignal(PendingPulseSignal, callback)
 		if err != nil {
-			log.Panicf("[ PreparePulse ] can't send signal to present slot (for pulse %d), error - %s", c.presentPulseNumber, err)
+			log.Panicf("[ PreparePulse ] can't send signal to present islot (for pulse %d), error - %s", c.presentPulseNumber, err)
 		}
 	}
 
@@ -268,7 +268,7 @@ func (c *PulseConveyor) ActivatePulse() error {
 	err := futureSlot.inputQueue.PushSignal(ActivatePulseSignal, callback)
 	if err != nil {
 		c.lock.Unlock()
-		log.Panicf("[ ActivatePulse ] can't send signal to future slot (for pulse %d), error - %s", c.futurePulseNumber, err)
+		log.Panicf("[ ActivatePulse ] can't send signal to future islot (for pulse %d), error - %s", c.futurePulseNumber, err)
 	}
 
 	presentSlot := c.slotMap[*c.presentPulseNumber]
@@ -276,7 +276,7 @@ func (c *PulseConveyor) ActivatePulse() error {
 	err = presentSlot.inputQueue.PushSignal(ActivatePulseSignal, &wg)
 	if err != nil {
 		c.lock.Unlock()
-		log.Panicf("[ ActivatePulse ] can't send signal to present slot (for pulse %d), error - %s", c.presentPulseNumber, err)
+		log.Panicf("[ ActivatePulse ] can't send signal to present islot (for pulse %d), error - %s", c.presentPulseNumber, err)
 	}
 
 	c.futurePulseData = nil

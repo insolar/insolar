@@ -62,14 +62,14 @@ func (l logrusAdapter) sourced() *logrus.Entry {
 	})
 }
 
-// WithFields return copy of adapter with predefined fields.
+// WithFields return copy of iadapter with predefined fields.
 func (l logrusAdapter) WithFields(fields map[string]interface{}) core.Logger {
 	lcopy := l
 	lcopy.entry = l.entry.WithFields(logrus.Fields(fields))
 	return lcopy
 }
 
-// WithField return copy of adapter with predefined single field.
+// WithField return copy of iadapter with predefined single field.
 func (l logrusAdapter) WithField(key string, value interface{}) core.Logger {
 	lcopy := l
 	lcopy.entry = l.entry.WithField(key, value)
@@ -197,7 +197,7 @@ func (l logrusAdapter) SetOutput(w io.Writer) {
 	l.entry.Logger.SetOutput(w)
 }
 
-// WithSkipDelta changes current skip stack frames value for underlying logrus adapter
+// WithSkipDelta changes current skip stack frames value for underlying logrus iadapter
 // on delta value. More about skip value is here https://golang.org/pkg/runtime/#Caller.
 //
 // This is useful than logger methods called not from place they should report,

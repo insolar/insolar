@@ -14,10 +14,10 @@
  *    limitations under the License.
  */
 
-package adapter
+package iadapter
 
-// IAdapterResponse gives access to reponse of adapter
-//go:generate minimock -i github.com/insolar/insolar/conveyor/interfaces/adapter.IAdapterResponse -o ./ -s _mock.go
+// IAdapterResponse gives access to reponse of iadapter
+//go:generate minimock -i github.com/insolar/insolar/conveyor/interfaces/iadapter.IAdapterResponse -o ./ -s _mock.go
 type IAdapterResponse interface {
 	GetAdapterID() uint32
 	GetElementID() uint32
@@ -25,8 +25,8 @@ type IAdapterResponse interface {
 	GetRespPayload() interface{}
 }
 
-// IAdapterNestedEvent gives access to nested event of adapter
-//go:generate minimock -i github.com/insolar/insolar/conveyor/interfaces/adapter.IAdapterNestedEvent -o ./ -s _mock.go
+// IAdapterNestedEvent gives access to nested event of iadapter
+//go:generate minimock -i github.com/insolar/insolar/conveyor/interfaces/iadapter.IAdapterNestedEvent -o ./ -s _mock.go
 type IAdapterNestedEvent interface {
 	GetAdapterID() uint32
 	GetParentElementID() uint32
