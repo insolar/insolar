@@ -68,6 +68,7 @@ type Control interface {
 type Conveyor interface {
 	EventSink
 	Control
+	RemoveSlot(number core.PulseNumber)
 }
 
 // PulseConveyor is realization of Conveyor
@@ -87,9 +88,16 @@ func NewPulseConveyor() Conveyor {
 		state:   Inactive,
 	}
 	// antiqueSlot is slot for all pulses from past if conveyor dont have specific PastSlot for such pulse
-	antiqueSlot := NewSlot(constant.Antique, core.AntiquePulseNumber)
+	antiqueSlot := NewSlot(constant.Antique, core.AntiquePulseNumber, c)
 	c.slotMap[core.AntiquePulseNumber] = antiqueSlot
 	return c
+}
+
+func (c *PulseConveyor) RemoveSlot(number core.PulseNumber) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	delete(c.slotMap, number)
 }
 
 // GetState returns current state of conveyor
@@ -171,7 +179,7 @@ func (c *PulseConveyor) PreparePulse(pulse core.Pulse, callback queue.SyncDone) 
 		return errors.New("[ PreparePulse ] preparation was already done")
 	}
 	if c.futurePulseNumber == nil {
-		c.slotMap[pulse.PulseNumber] = NewSlot(constant.Future, pulse.PulseNumber)
+		c.slotMap[pulse.PulseNumber] = NewSlot(constant.Future, pulse.PulseNumber, nil)
 		c.futurePulseNumber = &pulse.PulseNumber
 	}
 	if *c.futurePulseNumber != pulse.PulseNumber {
@@ -193,7 +201,7 @@ func (c *PulseConveyor) PreparePulse(pulse core.Pulse, callback queue.SyncDone) 
 	}
 
 	c.futurePulseData = &pulse
-	newFutureSlot := NewSlot(constant.Unallocated, pulse.NextPulseNumber)
+	newFutureSlot := NewSlot(constant.Unallocated, pulse.NextPulseNumber, nil)
 	c.slotMap[pulse.NextPulseNumber] = newFutureSlot
 	c.state = PreparingPulse
 	return nil

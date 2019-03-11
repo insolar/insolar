@@ -226,7 +226,7 @@ func TestInitElementsBuf(t *testing.T) {
 }
 
 func TestNewSlot(t *testing.T) {
-	s := NewSlot(constant.Future, testRealPulse)
+	s := NewSlot(constant.Future, testRealPulse, nil)
 	require.NotNil(t, s)
 	require.Equal(t, constant.Future, s.pulseState)
 	require.Equal(t, testRealPulse, s.pulseNumber)
@@ -270,7 +270,7 @@ func TestSlot_getNodeData(t *testing.T) {
 }
 
 func TestSlot_createElement(t *testing.T) {
-	s := NewSlot(constant.Future, testRealPulse)
+	s := NewSlot(constant.Future, testRealPulse, nil)
 	oldEmptyLen := s.elementListMap[EmptyElement].len()
 	event := queue.OutputElement{}
 
@@ -288,7 +288,7 @@ func TestSlot_createElement(t *testing.T) {
 }
 
 func TestSlot_createElement_Err(t *testing.T) {
-	s := NewSlot(constant.Future, testRealPulse)
+	s := NewSlot(constant.Future, testRealPulse, nil)
 	oldEmptyLen := s.elementListMap[EmptyElement].len()
 	delete(s.elementListMap, ActiveElement)
 	event := queue.OutputElement{}
@@ -302,13 +302,13 @@ func TestSlot_createElement_Err(t *testing.T) {
 }
 
 func TestSlot_hasElements_UnexistingState(t *testing.T) {
-	s := NewSlot(constant.Present, 10)
+	s := NewSlot(constant.Present, 10, nil)
 	badState := ActivationStatus(4444444)
 	require.False(t, s.hasElements(badState))
 }
 
 func TestSlot_hasElements(t *testing.T) {
-	s := NewSlot(constant.Present, 10)
+	s := NewSlot(constant.Present, 10, nil)
 	require.False(t, s.hasElements(ActiveElement))
 	require.False(t, s.hasElements(NotActiveElement))
 	require.True(t, s.hasElements(EmptyElement))
@@ -421,7 +421,7 @@ func TestSlot_pushElement_Empty(t *testing.T) {
 
 func TestSlot_extractSlotElementByID(t *testing.T) {
 	sm := statemachine.NewStateMachineTypeMock(t)
-	slot := NewSlot(constant.Present, 10)
+	slot := NewSlot(constant.Present, 10, nil)
 
 	var elements []*slotElement
 
@@ -456,7 +456,7 @@ func TestSlot_extractSlotElementByID(t *testing.T) {
 
 func TestSlot_PopPushMultiple(t *testing.T) {
 	sm := statemachine.NewStateMachineTypeMock(t)
-	slot := NewSlot(constant.Present, 10)
+	slot := NewSlot(constant.Present, 10, nil)
 
 	slot.createElement(sm, 33, queue.OutputElement{})
 
@@ -473,7 +473,7 @@ func TestSlot_PopPushMultiple(t *testing.T) {
 }
 
 func TestSlot_pushElementToEmpty_ExtractByID(t *testing.T) {
-	s := NewSlot(constant.Future, testRealPulse)
+	s := NewSlot(constant.Future, testRealPulse, nil)
 
 	element := s.popElement(EmptyElement)
 	oldID := element.id
@@ -488,14 +488,14 @@ func TestSlot_pushElementToEmpty_ExtractByID(t *testing.T) {
 }
 
 func TestSlot_extractSlotElementByID_NotExist(t *testing.T) {
-	s := NewSlot(constant.Present, 10)
+	s := NewSlot(constant.Present, 10, nil)
 
 	elementByID := s.extractSlotElementByID(slotElementDelta)
 	require.Nil(t, elementByID)
 }
 
 func TestSlot_extractSlotElementByID_pushElement(t *testing.T) {
-	s := NewSlot(constant.Present, 10)
+	s := NewSlot(constant.Present, 10, nil)
 
 	elementByID := s.extractSlotElementByID(0)
 	require.NotNil(t, elementByID)

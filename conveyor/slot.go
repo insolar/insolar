@@ -125,6 +125,7 @@ type Slot struct {
 	elements              []slotElement
 	// we can use slice or just several fields of ElementList, it will be faster but not pretty
 	elementListMap map[ActivationStatus]*ElementList
+	conveyor       Conveyor
 }
 
 // SlotStateMachine represents state machine of slot itself
@@ -146,7 +147,7 @@ func initElementsBuf() ([]slotElement, *ElementList) {
 }
 
 // NewSlot creates new instance of Slot
-func NewSlot(pulseState constant.PulseState, pulseNumber core.PulseNumber) *Slot {
+func NewSlot(pulseState constant.PulseState, pulseNumber core.PulseNumber, conveyor Conveyor) *Slot {
 	slotState := Initializing
 	if pulseState == constant.Antique {
 		slotState = Working
@@ -168,6 +169,7 @@ func NewSlot(pulseState constant.PulseState, pulseNumber core.PulseNumber) *Slot
 		stateMachine:   SlotStateMachine,
 		elements:       elements,
 		elementListMap: elementListMap,
+		conveyor:       conveyor,
 	}
 }
 

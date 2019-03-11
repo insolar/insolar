@@ -330,6 +330,7 @@ func (w *workerStateMachineImpl) calculateNodeState() {
 }
 
 func (w *workerStateMachineImpl) sendRemovalSignalToConveyor() {
+	w.slot.conveyor.RemoveSlot(w.slot.pulseNumber)
 	// TODO: how to do it?
 	// catch conveyor lock, check input queue, if It's empty - remove slot from map, if it's not - got to Working state
 }
@@ -422,9 +423,6 @@ func (w *workerStateMachineImpl) migrate(status ActivationStatus) error {
 			if err != nil {
 				log.Error("[ migrate ] Response handler errors: ", err)
 				respErrorHandler := element.stateMachineType.GetTransitionErrorHandler(w.slot.pulseState, element.state)
-				if respErrorHandler == nil {
-					panic(fmt.Sprintf("[ migrate ] No error handler. State: %d.", element.state))
-				}
 
 				payLoad, newState = respErrorHandler(element, err)
 			}

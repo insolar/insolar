@@ -65,3 +65,8 @@ func TestStateConvertingAllOnes(t *testing.T) {
 
 	require.Equal(t, original, joinStates(sm, state))
 }
+
+func TestJoinStatesStateOverFlow(t *testing.T) {
+
+	require.PanicsWithValue(t, "Invalid state: 33333", func() { joinStates(0, 33333) })
+}
