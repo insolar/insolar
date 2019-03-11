@@ -16,13 +16,13 @@ spec:
     spec:
       containers:
       - name: insgorund
-        image: "insolar/insgorund:v0.8.4"
+        image: "insolar/insgorund:$INSOLAR_VERSION"
         env:
           - { name: "INSOLARD_LOG_LEVEL", value: "warn" }
           - { name: "INSOLARD_RPC_ENDPOINT", "insolard:18182" }
 
       - name: insolard
-        image: "insolar/insolard:v0.8.4"
+        image: "insolar/insolard:$INSOLAR_VERSION"
 
         # command: ["/bin/sh"]
         # stdin: true
@@ -56,6 +56,7 @@ spec:
           - mountPath: /opt/insolar/data
             name: data
       initContainers:
+      # genesis version should not be changed
         - name: genesis
           image: insolar/genesis:v0.8.4
           command: ["./init.sh"]
