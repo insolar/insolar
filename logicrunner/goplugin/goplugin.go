@@ -30,6 +30,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 )
 
@@ -152,6 +153,8 @@ func (gp *GoPlugin) CallMethod(
 ) (
 	[]byte, core.Arguments, error,
 ) {
+	ctx = insmetrics.InsertTag(ctx, tagMethodName, method)
+
 	inslogger.FromContext(ctx).Debug("GoPlugin.CallMethod starts")
 	start := time.Now()
 	defer func() {
