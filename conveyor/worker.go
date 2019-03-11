@@ -165,12 +165,16 @@ func (w *workerStateMachineImpl) readInputQueueWorking() error {
 	return nil
 }
 
-func setNewState(element *slotElement, payLoad interface{}, fullState uint32) {
-	sm, state := extractStates(fullState)
-	element.state = state
-	element.payload = payLoad
-	if sm != 0 {
-		element.stateMachineType = GetStateMachineByType(MachineType(sm))
+func setNewElementState(element *slotElement, payLoad interface{}, fullState uint32) {
+	if fullState == 0 {
+		element.setDeleteState()
+	} else {
+		sm, state := extractStates(fullState)
+		element.state = state
+		element.payload = payLoad
+		if sm != 0 {
+			element.stateMachineType = GetStateMachineByType(MachineType(sm))
+		}
 	}
 }
 
@@ -212,14 +216,12 @@ func (w *workerStateMachineImpl) readResponseQueue() error {
 				payLoad, newState = respErrorHandler(element, adapterResp, err)
 			}
 
-			if newState == 0 {
-				element.setDeleteState()
-			}
-
-			setNewState(element, payLoad, newState)
+			setNewElementState(element, payLoad, newState)
 			w.slot.pushElement(element)
-
-			// TODO: push element back to list
+			err = w.slot.pushElement(element)
+			if err != nil {
+				return errors.Wrapf(err, "[ readResponseQueue ] Can't pushElement: %+v", element)
+			}
 		}
 
 		numProcessedElements++
@@ -237,7 +239,7 @@ func (w *workerStateMachineImpl) readResponseQueue() error {
 
 func (w *workerStateMachineImpl) waitQueuesOrTick() {
 	log.Info("[ waitQueuesOrTick ] sleep ...")
-	time.Sleep(time.Millisecond * 400)
+	time.Sleep(time.Millisecond * 300)
 	//panic("[ waitQueuesOrTick ] implement me") // TODO :
 }
 
@@ -274,10 +276,7 @@ func (w *workerStateMachineImpl) processingElements() {
 				payLoad, newState = errorHandler(element, err)
 			}
 
-			if newState == 0 {
-				element.setDeleteState()
-			}
-			setNewState(element, payLoad, newState)
+			setNewElementState(element, payLoad, newState)
 			w.slot.pushElement(element)
 
 			if w.slot.inputQueue.HasSignal() {
@@ -321,9 +320,6 @@ func (w *workerStateMachineImpl) working() {
 			log.Info("[ working ] Break after processingElements")
 			break
 		}
-		if w.nextWorkerState == ReadInputQueue {
-			continue
-		}
 	}
 }
 
@@ -340,6 +336,7 @@ func (w *workerStateMachineImpl) sendRemovalSignalToConveyor() {
 
 func (w *workerStateMachineImpl) processSignalsSuspending(elements []queue.OutputElement) int {
 	numSignals := 0
+	// TODO: add check if many signals come
 	for i := 0; i < len(elements); i++ {
 		el := elements[i]
 		if el.IsSignal() {
@@ -433,7 +430,7 @@ func (w *workerStateMachineImpl) migrate(status ActivationStatus) error {
 		if newState == 0 {
 			element.setDeleteState()
 		}
-		setNewState(element, payLoad, newState)
+		setNewElementState(element, payLoad, newState)
 
 		err = w.slot.pushElement(element)
 		if err != nil {

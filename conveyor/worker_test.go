@@ -33,7 +33,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var testPulseStates = []constant.PulseState{constant.Future, constant.Present, constant.Past}
+//var testPulseStates = []constant.PulseState{constant.Future, constant.Present, constant.Past}
+var testPulseStates = []constant.PulseState{constant.Past}
 
 func addElements(queue queue.IQueue, num int) {
 	for i := 0; i < num; i++ {
@@ -615,11 +616,15 @@ func Test_migrate_MigrationHandler_LastStateOfStateMachine(t *testing.T) {
 					slot, worker := makeSlotAndWorker(tps, 444)
 					_, err := slot.createElement(sm, 22, queue.OutputElement{})
 					require.NoError(t, err)
+					oldSlot := *slot
 
 					moveLastElementToState(slot, tas, t)
 
 					numEmptyElements := slot.len(EmptyElement)
 					require.NoError(t, worker.migrate(tas))
+
+					areSlotStatesEqual(&oldSlot, slot, t, false)
+
 					element := slot.popElement(tas)
 					require.Nil(t, element)
 					require.Equal(t, numEmptyElements+1, slot.len(EmptyElement))
@@ -679,7 +684,7 @@ func Test_suspending_Past(t *testing.T) {
 	// to predict infinite loop
 	require.NoError(t, slot.inputQueue.PushSignal(ActivatePulseSignal, mockCallback()))
 
-	worker.slot.slotState = Suspending
+	slot.slotState = Suspending
 	worker.suspending()
 	areSlotStatesEqual(&oldSlot, slot, t, false)
 	require.True(t, removeSlot)
@@ -692,7 +697,7 @@ func Test_suspending_Present(t *testing.T) {
 	// to predict infinite loop
 	require.NoError(t, slot.inputQueue.PushSignal(ActivatePulseSignal, mockCallback()))
 
-	worker.slot.slotState = Suspending
+	slot.slotState = Suspending
 	require.Equal(t, 0, worker.nodeState)
 	worker.suspending()
 	areSlotStatesEqual(&oldSlot, slot, t, true)
@@ -706,13 +711,144 @@ func Test_suspending_ReadInputQueue(t *testing.T) {
 	require.NoError(t, slot.inputQueue.PushSignal(ActivatePulseSignal, mockCallback()))
 
 	require.Equal(t, 0, worker.nodeState)
-	worker.slot.slotState = Suspending
+	slot.slotState = Suspending
 	worker.suspending()
 	require.Equal(t, constant.Past, slot.pulseState)
 }
 
 // ---- working
 
-func Test_working(t *testing.T) {
+func Test_working_ChangeStateToSuspending(t *testing.T) {
+	for _, tt := range testPulseStates {
+		t.Run(tt.String(), func(t *testing.T) {
+			slot, worker := makeSlotAndWorker(tt, 22)
+			slot.slotState = Working
 
+			require.NoError(t, slot.inputQueue.PushSignal(PendingPulseSignal, mockCallback()))
+			require.NoError(t, slot.inputQueue.PushSignal(ActivatePulseSignal, mockCallback()))
+			worker.working()
+
+			require.Equal(t, Suspending, slot.slotState)
+			require.Equal(t, tt, slot.pulseState)
+		})
+	}
+}
+
+// ---- processingElements
+
+func Test_processingElements_NoElementsInPast(t *testing.T) {
+	slot, worker := makeSlotAndWorker(constant.Past, 22)
+
+	worker.processingElements()
+	require.Equal(t, Suspending, slot.slotState)
+}
+
+func Test_processingElements_AlreadyHasSignal(t *testing.T) {
+	slot, worker := makeSlotAndWorker(constant.Present, 22)
+	oldSlot := *slot
+
+	require.NoError(t, slot.inputQueue.PushSignal(ActivatePulseSignal, mockCallback()))
+	worker.processingElements()
+
+	areSlotStatesEqual(&oldSlot, slot, t, false)
+}
+
+func Test_processingElements_OneEvent(t *testing.T) {
+
+	transitionState := uint32(433)
+	transitionPayload := 556
+
+	sm := statemachine.NewStateMachineTypeMock(t)
+	sm.GetTransitionHandlerFunc = func(p constant.PulseState, p1 uint32) (r statemachine.TransitHandler) {
+		return func(element slot2.SlotElementHelper) (interface{}, uint32, error) {
+			return transitionPayload, joinStates(0, transitionState), nil
+		}
+	}
+
+	for _, tps := range testPulseStates {
+		t.Run(tps.String(), func(t *testing.T) {
+
+			slot, worker := makeSlotAndWorker(tps, 22)
+			oldSlot := *slot
+			_, err := slot.createElement(sm, 22, queue.OutputElement{})
+			require.NoError(t, err)
+
+			worker.processingElements()
+
+			areSlotStatesEqual(&oldSlot, slot, t, false)
+
+			element := slot.popElement(ActiveElement)
+			require.NotNil(t, element)
+
+			require.Equal(t, transitionState, element.state)
+			require.Equal(t, transitionPayload, element.payload)
+		})
+	}
+}
+
+func Test_processingElements_LastStateOfStateMachine(t *testing.T) {
+	sm := statemachine.NewStateMachineTypeMock(t)
+	sm.GetTransitionHandlerFunc = func(p constant.PulseState, p1 uint32) (r statemachine.TransitHandler) {
+		return func(element slot2.SlotElementHelper) (interface{}, uint32, error) {
+			return element.GetPayload(), 0, nil
+		}
+	}
+
+	for _, tps := range testPulseStates {
+		t.Run(tps.String(), func(t *testing.T) {
+
+			slot, worker := makeSlotAndWorker(tps, 22)
+			oldSlot := *slot
+
+			_, err := slot.createElement(sm, 22, queue.OutputElement{})
+			require.NoError(t, err)
+
+			numEmptyElements := slot.len(EmptyElement)
+			worker.processingElements()
+			element := slot.popElement(ActiveElement)
+			require.Nil(t, element)
+
+			require.Equal(t, numEmptyElements+1, slot.len(EmptyElement))
+			areSlotStatesEqual(&oldSlot, slot, t, false)
+		})
+	}
+}
+
+func Test_processingElements_TransitionHandlerError(t *testing.T) {
+	sm := statemachine.NewStateMachineTypeMock(t)
+	sm.GetTransitionHandlerFunc = func(p constant.PulseState, p1 uint32) (r statemachine.TransitHandler) {
+		return func(element slot2.SlotElementHelper) (interface{}, uint32, error) {
+			return nil, 0, errors.New("Test Error")
+		}
+	}
+
+	transitionErrorState := uint32(999)
+	transitionErrorPayLoad := 777
+
+	sm.GetTransitionErrorHandlerFunc = func(p constant.PulseState, p1 uint32) (r statemachine.TransitionErrorHandler) {
+		return func(element slot2.SlotElementHelper, err error) (interface{}, uint32) {
+			return transitionErrorPayLoad, joinStates(0, transitionErrorState)
+		}
+	}
+
+	for _, tps := range testPulseStates {
+		t.Run(tps.String(), func(t *testing.T) {
+
+			slot, worker := makeSlotAndWorker(tps, 22)
+
+			oldSlot := *slot
+
+			_, err := slot.createElement(sm, 22, queue.OutputElement{})
+			require.NoError(t, err)
+
+			worker.processingElements()
+			element := slot.popElement(ActiveElement)
+			require.NotNil(t, element)
+
+			require.Equal(t, transitionErrorState, element.state)
+			require.Equal(t, transitionErrorPayLoad, element.payload)
+
+			areSlotStatesEqual(&oldSlot, slot, t, false)
+		})
+	}
 }

@@ -214,7 +214,7 @@ func (s *Slot) createElement(stateMachineType statemachine.StateMachineType, sta
 
 func (s *Slot) hasExpired() bool {
 	// TODO: This is used to delete past slot, which doesn't have elements and not active for some configure time
-	return false
+	return s.len(ActiveElement) == 0 && s.len(NotActiveElement) == 0
 }
 
 func (s *Slot) hasElements(status ActivationStatus) bool {
