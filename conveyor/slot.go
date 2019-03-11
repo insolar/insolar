@@ -125,7 +125,7 @@ type Slot struct {
 	elements              []slotElement
 	// we can use slice or just several fields of ElementList, it will be faster but not pretty
 	elementListMap     map[ActivationStatus]*ElementList
-	removeSlotCallback RemoveSlotCallback
+	removeSlotCallback core.RemoveSlotCallback
 }
 
 // SlotStateMachine represents state machine of islot itself
@@ -147,7 +147,7 @@ func initElementsBuf() ([]slotElement, *ElementList) {
 }
 
 // NewSlot creates new instance of Slot
-func NewSlot(pulseState constant.PulseState, pulseNumber core.PulseNumber, removeSlotCallback RemoveSlotCallback) *Slot {
+func NewSlot(pulseState constant.PulseState, pulseNumber core.PulseNumber, removeSlotCallback core.RemoveSlotCallback) *Slot {
 	slotState := Initializing
 	if pulseState == constant.Antique {
 		slotState = Working

@@ -26,51 +26,10 @@ import (
 	"github.com/pkg/errors"
 )
 
-// EventSink allows to push events to conveyor
-type EventSink interface {
-	// SinkPush adds event to conveyor
-	SinkPush(pulseNumber core.PulseNumber, data interface{}) error
-	// SinkPushAll adds several events to conveyor
-	SinkPushAll(pulseNumber core.PulseNumber, data []interface{}) error
-}
-
-// State is the states of conveyor
-type State int
-
-//go:generate stringer -type=State
-const (
-	Active = State(iota)
-	PreparingPulse
-	ShuttingDown
-	Inactive
-)
-
 const (
 	PendingPulseSignal  = 1
 	ActivatePulseSignal = 2
 )
-
-// Control allows to control conveyor and pulse
-type Control interface {
-	// PreparePulse is preparing conveyor for working with provided pulse
-	PreparePulse(pulse core.Pulse, callback queue.SyncDone) error
-	// ActivatePulse is activate conveyor with prepared pulse
-	ActivatePulse() error
-	// GetState returns current state of conveyor
-	GetState() State
-	// IsOperational shows if conveyor is ready for work
-	IsOperational() bool
-	// InitiateShutdown shutting conveyor down and cancels tasks in adapters if force param set
-	InitiateShutdown(force bool)
-}
-
-type RemoveSlotCallback func(core.PulseNumber)
-
-// Conveyor is responsible for all pulse-dependent processing logic
-type Conveyor interface {
-	EventSink
-	Control
-}
 
 // PulseConveyor is realization of Conveyor
 type PulseConveyor struct {
@@ -79,19 +38,19 @@ type PulseConveyor struct {
 	futurePulseNumber  *core.PulseNumber
 	presentPulseNumber *core.PulseNumber
 	lock               sync.RWMutex
-	state              State
+	state              core.ConveyorState
 }
 
 // NewPulseConveyor creates new instance of PulseConveyor
-func NewPulseConveyor() Conveyor {
+func NewPulseConveyor() (core.Conveyor, error) {
 	c := &PulseConveyor{
 		slotMap: make(map[core.PulseNumber]*Slot),
-		state:   Inactive,
+		state:   core.ConveyorInactive,
 	}
 	// antiqueSlot is islot for all pulses from past if conveyor dont have specific PastSlot for such pulse
 	antiqueSlot := NewSlot(constant.Antique, core.AntiquePulseNumber, c.RemoveSlot)
 	c.slotMap[core.AntiquePulseNumber] = antiqueSlot
-	return c
+	return c, nil
 }
 
 func (c *PulseConveyor) RemoveSlot(number core.PulseNumber) {
@@ -102,7 +61,7 @@ func (c *PulseConveyor) RemoveSlot(number core.PulseNumber) {
 }
 
 // GetState returns current state of conveyor
-func (c *PulseConveyor) GetState() State {
+func (c *PulseConveyor) GetState() core.ConveyorState {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 	return c.state
@@ -111,7 +70,7 @@ func (c *PulseConveyor) GetState() State {
 // IsOperational shows if conveyor is ready for work
 func (c *PulseConveyor) IsOperational() bool {
 	currentState := c.GetState()
-	if currentState == Active || currentState == PreparingPulse {
+	if currentState == core.ConveyorActive || currentState == core.ConveyorPreparingPulse {
 		return true
 	}
 	return false
@@ -119,7 +78,7 @@ func (c *PulseConveyor) IsOperational() bool {
 
 func (c *PulseConveyor) InitiateShutdown(force bool) {
 	c.lock.Lock()
-	c.state = ShuttingDown
+	c.state = core.ConveyorShuttingDown
 	c.lock.Unlock()
 	if force { // nolint
 		// TODO: cancel all tasks in adapters
@@ -172,7 +131,7 @@ func (c *PulseConveyor) PreparePulse(pulse core.Pulse, callback queue.SyncDone) 
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	if c.state == ShuttingDown {
+	if c.state == core.ConveyorShuttingDown {
 		return errors.New("[ PreparePulse ] conveyor is shut down")
 	}
 
@@ -204,7 +163,7 @@ func (c *PulseConveyor) PreparePulse(pulse core.Pulse, callback queue.SyncDone) 
 	c.futurePulseData = &pulse
 	newFutureSlot := NewSlot(constant.Unallocated, pulse.NextPulseNumber, nil)
 	c.slotMap[pulse.NextPulseNumber] = newFutureSlot
-	c.state = PreparingPulse
+	c.state = core.ConveyorPreparingPulse
 	return nil
 }
 
@@ -247,7 +206,7 @@ func (p *pulseWithCallback) Done() {
 func (c *PulseConveyor) ActivatePulse() error {
 	c.lock.Lock()
 
-	if c.state == ShuttingDown {
+	if c.state == core.ConveyorShuttingDown {
 		c.lock.Unlock()
 		return errors.New("[ ActivatePulse ] conveyor is shut down")
 	}
@@ -280,7 +239,7 @@ func (c *PulseConveyor) ActivatePulse() error {
 	}
 
 	c.futurePulseData = nil
-	c.state = Active
+	c.state = core.ConveyorActive
 	c.lock.Unlock()
 	wg.Wait()
 
