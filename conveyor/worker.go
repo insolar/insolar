@@ -215,6 +215,7 @@ func (w *workerStateMachineImpl) readResponseQueue() error {
 			}
 
 			setNewState(element, payLoad, newState)
+			w.slot.pushElement(element)
 
 			// TODO: push element back to list
 		}
@@ -256,13 +257,10 @@ func (w *workerStateMachineImpl) processingElements() {
 		return
 	}
 
-	element := w.slot.popElement(ActiveElement)
-	if element == nil {
-		return
-	}
-	var finishElement *slotElement
 	lastState := uint32(0)
-	for ; element != finishElement && element != nil; element = w.slot.popElement(ActiveElement) {
+	numActiveElements := w.slot.len(ActiveElement)
+	for ; numActiveElements > 0; numActiveElements-- {
+		element := w.slot.popElement(ActiveElement)
 		for lastState < element.state {
 			lastState = element.state
 			transitionHandler := element.stateMachineType.GetTransitionHandler(w.slot.pulseState, element.state)
@@ -285,10 +283,6 @@ func (w *workerStateMachineImpl) processingElements() {
 				log.Info("[ processingElements ] Set next worker state to 'ReadInputQueue'")
 				return
 			}
-		}
-
-		if finishElement == nil {
-			finishElement = element
 		}
 	}
 }
@@ -410,14 +404,19 @@ func (w *workerStateMachineImpl) suspending() {
 
 func (w *workerStateMachineImpl) migrate(status ActivationStatus) error {
 	log.Infof("[ migrate ] Starts ... ( %s )", status.String())
-	element := w.slot.popElement(status)
-	var finishElement *slotElement
-	for ; element != finishElement && element != nil; element = w.slot.popElement(status) {
+	numElements := w.slot.len(status)
+	for ; numElements > 0; numElements-- {
+		element := w.slot.popElement(status)
 		migHandler := element.stateMachineType.GetMigrationHandler(w.slot.pulseState, element.state)
 		payLoad, newState := element.payload, element.state
 		var err error
 		if migHandler == nil {
-			log.Infof("[ migrate ] No migration handler for pulseState: %d, element.state: %d. Now It's Ok", w.slot.pulseState, element.state)
+			log.Infof("[ migrate ] No migration handler for pulseState: %d, element.state: %d. Nothing done", w.slot.pulseState, element.state)
+			err = w.slot.pushElement(element)
+			if err != nil {
+				return errors.Wrapf(err, "[ migrate ] Can't pushElement: %+v", element)
+			}
+			continue
 		} else {
 			payLoad, newState, err = migHandler(element)
 			if err != nil {
@@ -438,11 +437,7 @@ func (w *workerStateMachineImpl) migrate(status ActivationStatus) error {
 
 		err = w.slot.pushElement(element)
 		if err != nil {
-			return errors.Wrapf(err, "Can't pushElement: %+v", element)
-		}
-
-		if finishElement == nil {
-			finishElement = element
+			return errors.Wrapf(err, "[ migrate ] Can't pushElement: %+v", element)
 		}
 	}
 

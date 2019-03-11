@@ -32,6 +32,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var testPulseStates = []constant.PulseState{constant.Future, constant.Present, constant.Past}
+
 func addElements(queue queue.IQueue, num int) {
 	for i := 0; i < num; i++ {
 		queue.SinkPush("Test" + strconv.Itoa(i))
@@ -155,9 +157,8 @@ func areSlotStatesEqual(s1 *Slot, s2 *Slot, t *testing.T) {
 // ---- processSignalsWorking
 
 func Test_processSignalsWorking_EmptyInput(t *testing.T) {
-	tests := []constant.PulseState{constant.Future, constant.Present, constant.Past}
 
-	for _, tt := range tests {
+	for _, tt := range testPulseStates {
 		t.Run(tt.String(), func(t *testing.T) {
 			slot, worker := makeSlotAndWorker(tt, 22)
 
@@ -169,9 +170,8 @@ func Test_processSignalsWorking_EmptyInput(t *testing.T) {
 }
 
 func Test_processSignalsWorking_NonSignals(t *testing.T) {
-	tests := []constant.PulseState{constant.Future, constant.Present, constant.Past}
 
-	for _, tt := range tests {
+	for _, tt := range testPulseStates {
 		t.Run(tt.String(), func(t *testing.T) {
 			slot, worker := makeSlotAndWorker(tt, 22)
 			oldSlot := *slot
@@ -189,9 +189,8 @@ func Test_processSignalsWorking_NonSignals(t *testing.T) {
 }
 
 func Test_processSignalsWorking_BadSignal(t *testing.T) {
-	tests := []constant.PulseState{constant.Future, constant.Present, constant.Past}
 
-	for _, tt := range tests {
+	for _, tt := range testPulseStates {
 		t.Run(tt.String(), func(t *testing.T) {
 			slot, worker := makeSlotAndWorker(tt, 22)
 			oldSlot := *slot
@@ -206,9 +205,8 @@ func Test_processSignalsWorking_BadSignal(t *testing.T) {
 }
 
 func Test_processSignalsWorking_PendingPulseSignal(t *testing.T) {
-	tests := []constant.PulseState{constant.Future, constant.Present, constant.Past}
 
-	for _, tt := range tests {
+	for _, tt := range testPulseStates {
 		t.Run(tt.String(), func(t *testing.T) {
 			slot, worker := makeSlotAndWorker(tt, 22)
 			pendingSignal := []queue.OutputElement{*queue.NewOutputElement(1, PendingPulseSignal)}
@@ -219,9 +217,8 @@ func Test_processSignalsWorking_PendingPulseSignal(t *testing.T) {
 }
 
 func Test_processSignalsWorking_ActivatePulseSignal(t *testing.T) {
-	tests := []constant.PulseState{constant.Future, constant.Present, constant.Past}
 
-	for _, tt := range tests {
+	for _, tt := range testPulseStates {
 		t.Run(tt.String(), func(t *testing.T) {
 			slot, worker := makeSlotAndWorker(tt, 22)
 			oldSlot := *slot
@@ -234,9 +231,8 @@ func Test_processSignalsWorking_ActivatePulseSignal(t *testing.T) {
 }
 
 func Test_processSignalsWorking_ActivateAndPendingPulseSignals(t *testing.T) {
-	tests := []constant.PulseState{constant.Future, constant.Present, constant.Past}
 
-	for _, tt := range tests {
+	for _, tt := range testPulseStates {
 		t.Run(tt.String(), func(t *testing.T) {
 			slot, worker := makeSlotAndWorker(tt, 22)
 			signals := []queue.OutputElement{
@@ -256,9 +252,8 @@ func Test_processSignalsWorking_ActivateAndPendingPulseSignals(t *testing.T) {
 // ---- readInputQueueWorking
 
 func Test_readInputQueueWorking_EmptyInputQueue(t *testing.T) {
-	tests := []constant.PulseState{constant.Future, constant.Present, constant.Past}
 
-	for _, tt := range tests {
+	for _, tt := range testPulseStates {
 		t.Run(tt.String(), func(t *testing.T) {
 			slot, worker := makeSlotAndWorker(tt, 22)
 			oldSlot := *slot
@@ -270,8 +265,8 @@ func Test_readInputQueueWorking_EmptyInputQueue(t *testing.T) {
 }
 
 func Test_readInputQueueWorking_SignalOnly(t *testing.T) {
-	tests := []constant.PulseState{constant.Future, constant.Present, constant.Past}
-	for _, tt := range tests {
+
+	for _, tt := range testPulseStates {
 		t.Run(tt.String(), func(t *testing.T) {
 
 			slot, worker := makeSlotAndWorker(tt, 22)
@@ -285,9 +280,8 @@ func Test_readInputQueueWorking_SignalOnly(t *testing.T) {
 }
 
 func Test_readInputQueueWorking_EventOnly(t *testing.T) {
-	tests := []constant.PulseState{constant.Future, constant.Present, constant.Past}
 
-	for _, tt := range tests {
+	for _, tt := range testPulseStates {
 		t.Run(tt.String(), func(t *testing.T) {
 			slot, worker := makeSlotAndWorker(tt, 22)
 			oldSlot := *slot
@@ -304,9 +298,8 @@ func Test_readInputQueueWorking_EventOnly(t *testing.T) {
 }
 
 func Test_readInputQueueWorking_SignalsAndEvents(t *testing.T) {
-	tests := []constant.PulseState{constant.Future, constant.Present, constant.Past}
 
-	for _, tt := range tests {
+	for _, tt := range testPulseStates {
 		t.Run(tt.String(), func(t *testing.T) {
 			slot, worker := makeSlotAndWorker(tt, 22)
 			oldSlot := *slot
@@ -332,9 +325,8 @@ func Test_readInputQueueWorking_SignalsAndEvents(t *testing.T) {
 // ---- processSignalsSuspending
 
 func Test_processSignalsSuspending_EmptyInput(t *testing.T) {
-	tests := []constant.PulseState{constant.Future, constant.Present, constant.Past}
 
-	for _, tt := range tests {
+	for _, tt := range testPulseStates {
 		t.Run(tt.String(), func(t *testing.T) {
 			slot, worker := makeSlotAndWorker(tt, 22)
 
@@ -346,9 +338,8 @@ func Test_processSignalsSuspending_EmptyInput(t *testing.T) {
 }
 
 func Test_processSignalsSuspending_NonSignals(t *testing.T) {
-	tests := []constant.PulseState{constant.Future, constant.Present, constant.Past}
 
-	for _, tt := range tests {
+	for _, tt := range testPulseStates {
 		t.Run(tt.String(), func(t *testing.T) {
 			slot, worker := makeSlotAndWorker(tt, 22)
 			oldSlot := *slot
@@ -366,9 +357,8 @@ func Test_processSignalsSuspending_NonSignals(t *testing.T) {
 }
 
 func Test_processSignalsSuspending_BadSignal(t *testing.T) {
-	tests := []constant.PulseState{constant.Future, constant.Present, constant.Past}
 
-	for _, tt := range tests {
+	for _, tt := range testPulseStates {
 		t.Run(tt.String(), func(t *testing.T) {
 			slot, worker := makeSlotAndWorker(tt, 22)
 			oldSlot := *slot
@@ -383,9 +373,8 @@ func Test_processSignalsSuspending_BadSignal(t *testing.T) {
 }
 
 func Test_processSignalsSuspending_PendingPulseSignal(t *testing.T) {
-	tests := []constant.PulseState{constant.Future, constant.Present, constant.Past}
 
-	for _, tt := range tests {
+	for _, tt := range testPulseStates {
 		t.Run(tt.String(), func(t *testing.T) {
 			slot, worker := makeSlotAndWorker(tt, 22)
 			oldSlot := *slot
@@ -397,9 +386,8 @@ func Test_processSignalsSuspending_PendingPulseSignal(t *testing.T) {
 }
 
 func Test_processSignalsSuspending_ActivatePulseSignal(t *testing.T) {
-	tests := []constant.PulseState{constant.Future, constant.Present, constant.Past}
 
-	for _, tt := range tests {
+	for _, tt := range testPulseStates {
 		t.Run(tt.String(), func(t *testing.T) {
 			slot, worker := makeSlotAndWorker(tt, 22)
 			activateSignal := []queue.OutputElement{*queue.NewOutputElement(1, ActivatePulseSignal)}
@@ -413,9 +401,8 @@ func Test_processSignalsSuspending_ActivatePulseSignal(t *testing.T) {
 // ---- readInputQueueWorking
 
 func Test_readInputQueueSuspending_EmptyInputQueue(t *testing.T) {
-	tests := []constant.PulseState{constant.Future, constant.Present, constant.Past}
 
-	for _, tt := range tests {
+	for _, tt := range testPulseStates {
 		t.Run(tt.String(), func(t *testing.T) {
 			slot, worker := makeSlotAndWorker(tt, 22)
 			oldSlot := *slot
@@ -427,9 +414,8 @@ func Test_readInputQueueSuspending_EmptyInputQueue(t *testing.T) {
 }
 
 func Test_readInputQueueSuspending_SignalOnly(t *testing.T) {
-	tests := []constant.PulseState{constant.Future, constant.Present, constant.Past}
 
-	for _, tt := range tests {
+	for _, tt := range testPulseStates {
 		t.Run(tt.String(), func(t *testing.T) {
 			slot, worker := makeSlotAndWorker(tt, 22)
 			oldSlot := *slot
@@ -517,5 +503,125 @@ func Test_readInputQueueSuspending_SignalsAndEvents_Past(t *testing.T) {
 	}
 
 	require.Equal(t, Working, slot.slotState)
+
+}
+
+// ---- migrate
+var testActivationStatus = []ActivationStatus{ActiveElement, NotActiveElement}
+
+func Test_migrate_EmptyList(t *testing.T) {
+	for _, tps := range testPulseStates {
+		t.Run(tps.String(), func(t *testing.T) {
+
+			for _, tas := range testActivationStatus {
+				t.Run(tas.String(), func(t *testing.T) {
+
+					_, worker := makeSlotAndWorker(tps, 22)
+					require.NoError(t, worker.migrate(tas))
+				})
+			}
+		})
+	}
+}
+
+func Test_migrate_NoMigrationHandler(t *testing.T) {
+	sm := statemachine.NewStateMachineTypeMock(t)
+	sm.GetMigrationHandlerFunc = func(p constant.PulseState, p1 uint32) (r statemachine.MigrationHandler) {
+		return nil
+	}
+
+	for _, tps := range testPulseStates {
+		t.Run(tps.String(), func(t *testing.T) {
+			for _, tas := range testActivationStatus {
+				t.Run(tas.String(), func(t *testing.T) {
+
+					slot, worker := makeSlotAndWorker(tps, 22)
+					oldSlot := *slot
+
+					_, err := slot.createElement(sm, 22, queue.OutputElement{})
+					require.NoError(t, err)
+					numActiveElements := slot.len(tas)
+					require.NoError(t, worker.migrate(tas))
+					areSlotStatesEqual(&oldSlot, slot, t)
+					require.Equal(t, numActiveElements, slot.len(tas))
+				})
+			}
+		})
+	}
+}
+
+// pop element and move it to targetStatus list
+func moveLastElementToState(slot *Slot, targetStatus ActivationStatus, t *testing.T) {
+	element := slot.popElement(ActiveElement)
+	require.NotNil(t, element)
+	element.activationStatus = targetStatus
+	err := slot.pushElement(element)
+	require.NoError(t, err)
+}
+
+func Test_migrate_MigrationHandlerOk(t *testing.T) {
+	initState := uint32(44)
+	migrationState := initState + 1
+	initPayLoad := 99
+	migrationPayLoad := initPayLoad + 1
+	sm := statemachine.NewStateMachineTypeMock(t)
+	sm.GetMigrationHandlerFunc = func(p constant.PulseState, p1 uint32) (r statemachine.MigrationHandler) {
+		return func(element slot2.SlotElementHelper) (interface{}, uint32, error) {
+			return migrationPayLoad, joinStates(0, migrationState), nil
+		}
+	}
+
+	for _, tps := range testPulseStates {
+		t.Run(tps.String(), func(t *testing.T) {
+			for _, tas := range testActivationStatus {
+				t.Run(tas.String(), func(t *testing.T) {
+
+					slot, worker := makeSlotAndWorker(tps, 22)
+					event := queue.NewOutputElement(initPayLoad, 0)
+
+					_, err := slot.createElement(sm, initState, *event)
+					require.NoError(t, err)
+
+					moveLastElementToState(slot, tas, t)
+
+					require.NoError(t, worker.migrate(tas))
+					element := slot.popElement(tas)
+					require.NotNil(t, element)
+					require.Equal(t, migrationState, element.state)
+					require.Equal(t, migrationPayLoad, element.payload)
+				})
+			}
+		})
+	}
+}
+
+func Test_migrate_MigrationHandler_LastState(t *testing.T) {
+	sm := statemachine.NewStateMachineTypeMock(t)
+	sm.GetMigrationHandlerFunc = func(p constant.PulseState, p1 uint32) (r statemachine.MigrationHandler) {
+		return func(element slot2.SlotElementHelper) (interface{}, uint32, error) {
+			return element.GetPayload(), 0, nil
+		}
+	}
+
+	for _, tps := range testPulseStates {
+		t.Run(tps.String(), func(t *testing.T) {
+			for _, tas := range testActivationStatus {
+				t.Run(tas.String(), func(t *testing.T) {
+
+					slot, worker := makeSlotAndWorker(tps, 22)
+					_, err := slot.createElement(sm, 22, queue.OutputElement{})
+					require.NoError(t, err)
+
+					moveLastElementToState(slot, tas, t)
+
+					numEmptyElements := slot.len(EmptyElement)
+					require.NoError(t, worker.migrate(tas))
+					element := slot.popElement(tas)
+					require.Nil(t, element)
+					require.Equal(t, numEmptyElements+1, slot.len(EmptyElement))
+				})
+			}
+		})
+	}
 
 }
