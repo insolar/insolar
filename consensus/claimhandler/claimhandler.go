@@ -17,8 +17,6 @@
 package claimhandler
 
 import (
-	"math"
-
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/utils"
@@ -27,47 +25,64 @@ import (
 // NodesToJoinPercent how many nodes from active list can connect to the network.
 const NodesToJoinPercent = 1.0 / 3.0
 
-type JoinClaimHandler struct {
+type ClaimHandler struct {
 	queue       Queue
+	claims      map[core.RecordRef][]packets.ReferendumClaim
 	knownClaims map[core.RecordRef]bool
 	activeCount int
 }
 
-func NewJoinHandler(activeNodesCount int) *JoinClaimHandler {
-	handler := &JoinClaimHandler{
+func NewClaimHandler(activeNodesCount int) *ClaimHandler {
+	handler := &ClaimHandler{
 		queue:       Queue{},
 		activeCount: activeNodesCount,
+		knownClaims: make(map[core.RecordRef]bool),
+		claims:      make(map[core.RecordRef][]packets.ReferendumClaim),
 	}
-	handler.knownClaims = make(map[core.RecordRef]bool)
 	return handler
 }
 
-func (jch *JoinClaimHandler) AddClaims(claims []packets.ReferendumClaim, entropy core.Entropy) {
+func (ch *ClaimHandler) SetClaimsFromNode(node core.RecordRef, claims []packets.ReferendumClaim) {
+	ch.claims[node] = claims
+}
+
+func (ch *ClaimHandler) GetClaimsFromNode(node core.RecordRef) []packets.ReferendumClaim {
+	return ch.claims[node]
+}
+
+func (ch *ClaimHandler) AddKnownClaims(claims []packets.ReferendumClaim, entropy core.Entropy) {
 	for _, claim := range claims {
 		join, ok := claim.(*packets.NodeJoinClaim)
-		if !ok || jch.isKnownClaim(join) {
+		if !ok || ch.isKnownClaim(join) {
 			continue
 		}
 		priority := getPriority(join.NodeRef, entropy)
-		jch.queue.PushClaim(claim, priority)
-		jch.knownClaims[join.NodeRef] = true
+		ch.queue.PushClaim(claim, priority)
+		ch.knownClaims[join.NodeRef] = true
 	}
 }
 
-func (jch *JoinClaimHandler) HandleAndReturnClaims() []*packets.NodeJoinClaim {
-	return jch.getClaimsByPriority()
+func (ch *ClaimHandler) HandleAndReturnClaims() []*packets.NodeJoinClaim {
+	return ch.getClaimsByPriority()
 }
 
-func (jch *JoinClaimHandler) getClaimsByPriority() []*packets.NodeJoinClaim {
+func (ch *ClaimHandler) getClaimsByPriority() []*packets.NodeJoinClaim {
 	res := make([]*packets.NodeJoinClaim, 0)
-	nodesToJoin := float64(jch.activeCount) * NodesToJoinPercent
+	nodesToJoin := int(float64(ch.activeCount) * NodesToJoinPercent)
 
 	if nodesToJoin == 0 {
 		nodesToJoin++
 	}
-	queueLen := float64(jch.queue.Len())
-	for i := 0; i < int(math.Min(nodesToJoin, queueLen)); i++ {
-		res = append(res, jch.queue.PopClaim().(*packets.NodeJoinClaim))
+
+	min := func(first, second int) int {
+		if first < second {
+			return first
+		}
+		return second
+	}
+
+	for i := 0; i < min(nodesToJoin, ch.queue.Len()); i++ {
+		res = append(res, ch.queue.PopClaim().(*packets.NodeJoinClaim))
 	}
 
 	return res
@@ -77,7 +92,7 @@ func getPriority(ref core.RecordRef, entropy core.Entropy) []byte {
 	return utils.CircleXOR(ref[:], entropy[:])
 }
 
-func (jch *JoinClaimHandler) isKnownClaim(claim *packets.NodeJoinClaim) bool {
-	_, ok := jch.knownClaims[claim.NodeRef]
+func (ch *ClaimHandler) isKnownClaim(claim *packets.NodeJoinClaim) bool {
+	_, ok := ch.knownClaims[claim.NodeRef]
 	return ok
 }

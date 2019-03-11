@@ -77,7 +77,7 @@ func (tp *ThirdPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse, state 
 		logger.Warn("[ NET Consensus phase-3 ] Failed to record received responses metric: " + err.Error())
 	}
 
-	handler := claimhandler.NewJoinHandler(totalCount)
+	handler := claimhandler.NewClaimHandler(totalCount)
 	for ref, packet := range responses {
 		err = nil
 		if !ref.Equal(tp.NodeKeeper.GetOrigin().ID()) {
@@ -94,7 +94,7 @@ func (tp *ThirdPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse, state 
 	}
 
 	for _, node := range nodes {
-		handler.AddClaims(state.UnsyncList.GetClaims(node.ID()), pulse.Entropy)
+		handler.AddKnownClaims(state.UnsyncList.GetClaims(node.ID()), pulse.Entropy)
 	}
 
 	handledJoinClaims := handler.HandleAndReturnClaims()
