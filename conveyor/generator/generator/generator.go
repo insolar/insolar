@@ -25,45 +25,45 @@ import (
 )
 
 const (
-	insolarRep = "github.com/insolar/insolar"
-    stateMachineTemplate = "conveyor/generator/generator/templates/state_machine.go.tpl"
-    matrixTemplate="conveyor/generator/generator/templates/matrix.go.tpl"
+	insolarRep           = "github.com/insolar/insolar"
+	stateMachineTemplate = "conveyor/generator/generator/templates/state_machine.go.tpl"
+	matrixTemplate       = "conveyor/generator/generator/templates/matrix.go.tpl"
 )
 
 type stateMachine struct {
-	Package string
-	Name string
+	Package        string
+	Name           string
 	InputEventType *string
-	PayloadType *string
-	States []state
+	PayloadType    *string
+	States         []state
 }
 
 type Generator struct {
-	stateMachines []*stateMachine
-	imports map[string]interface{}
-	fullPathToInsolar string
-	PathToStateMachines string
-	pathToMatrixFile string
+	stateMachines       []*stateMachine
+	imports             map[string]interface{}
+	fullPathToInsolar   string
+	pathToStateMachines string
+	pathToMatrixFile    string
 }
 
-func NewGenerator(pathToStateMachines string, pathToMatrixFile string) *Generator{
+func NewGenerator(pathToStateMachines string, pathToMatrixFile string) *Generator {
 	_, me, _, ok := runtime.Caller(0)
 	if ok == false {
 		exitWithError("couldn't get self full path")
 	}
 	idx := strings.LastIndex(string(me), insolarRep)
 	return &Generator{
-		imports: make(map[string]interface{}),
-		fullPathToInsolar: string(me)[0:idx + len(insolarRep)],
-		PathToStateMachines: pathToStateMachines,
-		pathToMatrixFile: pathToMatrixFile,
+		imports:             make(map[string]interface{}),
+		fullPathToInsolar:   string(me)[0 : idx+len(insolarRep)],
+		pathToStateMachines: pathToStateMachines,
+		pathToMatrixFile:    pathToMatrixFile,
 	}
 }
 
 func (g *Generator) ParseFile(dir string, filename string) {
-	g.imports[path.Join(insolarRep, g.PathToStateMachines, dir)] = nil
+	g.imports[path.Join(insolarRep, g.pathToStateMachines, dir)] = nil
 
-	file := path.Join(g.fullPathToInsolar, g.PathToStateMachines, dir, filename)
+	file := path.Join(g.fullPathToInsolar, g.pathToStateMachines, dir, filename)
 	p := Parser{generator: g, sourceFilename: file}
 	p.readStateMachinesInterfaceFile()
 	p.findEachStateMachine()
@@ -74,6 +74,6 @@ func (g *Generator) ParseFile(dir string, filename string) {
 
 	w := bufio.NewWriter(outFile)
 	p.Generate(w)
-	w.Flush()
+	err = w.Flush()
+	checkErr(err)
 }
-

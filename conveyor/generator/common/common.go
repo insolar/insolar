@@ -17,66 +17,70 @@
 package common
 
 import (
-
-"github.com/insolar/insolar/conveyor/interfaces/slot"
-"github.com/insolar/insolar/conveyor/interfaces/statemachine"
-
+	"github.com/insolar/insolar/conveyor/interfaces/slot"
+	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
 )
 
+// TODO: move this code from common package
+// State struct contains predefined set of handlers
 type State struct {
-	Migration              statemachine.MigrationHandler
-	Transition statemachine.TransitHandler
-	AdapterResponse statemachine.AdapterResponseHandler
-	ErrorState statemachine.TransitionErrorHandler
+	Migration            statemachine.MigrationHandler
+	Transition           statemachine.TransitHandler
+	AdapterResponse      statemachine.AdapterResponseHandler
+	ErrorState           statemachine.TransitionErrorHandler
 	AdapterResponseError statemachine.ResponseErrorHandler
-	/*Finalization *handler
-	FinalizationFuture *handler
-	FinalizationPast *handler*/
+	// TODO: Finalization handlers
 }
 
+// StateMachine is a type for conveyor state machines
 type StateMachine struct {
 	ID     int
 	States []State
 }
 
+// GetTypeID method returns StateMachine ID
 func (sm *StateMachine) GetTypeID() int {
 	return sm.ID
 }
 
+// GetMigrationHandler method returns migration handler
 func (sm *StateMachine) GetMigrationHandler(state uint32) statemachine.MigrationHandler {
 	return sm.States[state].Migration
 }
 
+// GetTransitionHandler method returns transition handler
 func (sm *StateMachine) GetTransitionHandler(state uint32) statemachine.TransitHandler {
 	return sm.States[state].Transition
 }
 
+// GetResponseHandler returns response handler
 func (sm *StateMachine) GetResponseHandler(state uint32) statemachine.AdapterResponseHandler {
 	return sm.States[state].AdapterResponse
 }
 
+// GetNestedHandler returns nested handler
 func (sm *StateMachine) GetNestedHandler(state uint32) statemachine.NestedHandler {
 	return func(element slot.SlotElementHelper, err error) (interface{}, uint32) {
-		// todo needs implementation
+		// TODO: Implement me
 		return nil, 0
 	}
 }
 
+// GetTransitionErrorHandler returns transition error handler
 func (sm *StateMachine) GetTransitionErrorHandler(state uint32) statemachine.TransitionErrorHandler {
 	return sm.States[state].ErrorState
 }
 
+// GetResponseErrorHandler returns response error handler
 func (sm *StateMachine) GetResponseErrorHandler(state uint32) statemachine.ResponseErrorHandler {
 	return sm.States[state].AdapterResponseError
 }
 
-type ElState uint32 //Element State Machine Type ID
-type ElType uint32  //Element State ID
-func (s ElState) ToInt() uint32 {
-	return uint32(s)
-}
+// Element State ID
+type StateID uint32
 
-type ElUpdate uint32 ///Element State ID + Element Machine Type ID << 10
-func (s ElUpdate) ToInt() uint32 {
-	return uint32(s)
-}
+// Element State Machine Type ID
+type StateMachineID uint32
+
+// ElementState is StateID + (StateMachineID << 10)
+type ElementState uint32

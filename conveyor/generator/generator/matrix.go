@@ -42,7 +42,7 @@ func (g *Generator) getImports() []string {
 	return keys
 }
 
-func (g *Generator) GenMatrix () {
+func (g *Generator) GenMatrix() {
 	fileName := path.Join(g.fullPathToInsolar, matrixTemplate)
 	tplBody, err := ioutil.ReadFile(fileName)
 	checkErr(err)
@@ -53,16 +53,14 @@ func (g *Generator) GenMatrix () {
 	out := bufio.NewWriter(file)
 
 	err = template.Must(template.New("matrixTmpl").Funcs(matrixFuncMap).
-		Parse(string(tplBody))).Execute(out, struct{
-		Imports []string
+		Parse(string(tplBody))).Execute(out, struct {
+		Imports  []string
 		Machines []*stateMachine
 	}{
-		Imports: g.getImports(),
+		Imports:  g.getImports(),
 		Machines: g.stateMachines,
-
 	})
 	checkErr(err)
-	out.Flush()
+	err = out.Flush()
+	checkErr(err)
 }
-
-
