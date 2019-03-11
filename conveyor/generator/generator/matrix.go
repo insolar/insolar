@@ -25,7 +25,7 @@ import (
 )
 
 var (
-	matrixFuncMap = template.FuncMap{
+	templateFuncs = template.FuncMap{
 		"isNull": func(i int) bool {
 			return i == 0
 		},
@@ -33,13 +33,13 @@ var (
 )
 
 func (g *Generator) getImports() []string {
-	keys := make([]string, len(g.imports))
+	imports := make([]string, len(g.imports))
 	i := 0
-	for k := range g.imports {
-		keys[i] = k
+	for key := range g.imports {
+		imports[i] = key
 		i++
 	}
-	return keys
+	return imports
 }
 
 func (g *Generator) GenMatrix() {
@@ -52,7 +52,7 @@ func (g *Generator) GenMatrix() {
 	defer file.Close()
 	out := bufio.NewWriter(file)
 
-	err = template.Must(template.New("matrixTmpl").Funcs(matrixFuncMap).
+	err = template.Must(template.New("matrixTmpl").Funcs(templateFuncs).
 		Parse(string(tplBody))).Execute(out, struct {
 		Imports  []string
 		Machines []*stateMachine

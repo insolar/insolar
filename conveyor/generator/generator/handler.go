@@ -115,37 +115,16 @@ func (h *handler) setAsAdapterResponsePast() {
 }
 
 func (h *handler) setAsAdapterResponseError() {
-	if len(h.params) != 4 {
-		exitWithError("%s must have four parameters", h.name)
-	}
-	h.checkInterfaceParameter(0)
-	h.checkInterfaceParameter(1)
-	h.checkAdapterResponseParameter(2)
-	h.checkErrorParameter(3)
-	h.checkErrorHandlerReturns()
+	h.checkAdapterResponseErrorHandler()
 	h.machine.States[h.state].AdapterResponseError = h
 }
 
 func (h *handler) setAsAdapterResponseErrorFuture() {
-	if len(h.params) != 4 {
-		exitWithError("%s must have four parameters", h.name)
-	}
-	h.checkInterfaceParameter(0)
-	h.checkInterfaceParameter(1)
-	h.checkAdapterResponseParameter(2)
-	h.checkErrorParameter(3)
-	h.checkErrorHandlerReturns()
+	h.checkAdapterResponseErrorHandler()
 	h.machine.States[h.state].AdapterResponseErrorFuture = h
 }
 
 func (h *handler) setAsAdapterResponseErrorPast() {
-	if len(h.params) != 4 {
-		exitWithError("%s must have four parameters", h.name)
-	}
-	h.checkInterfaceParameter(0)
-	h.checkInterfaceParameter(1)
-	h.checkAdapterResponseParameter(2)
-	h.checkErrorParameter(3)
-	h.checkErrorHandlerReturns()
+	h.checkAdapterResponseErrorHandler()
 	h.machine.States[h.state].AdapterResponseErrorPast = h
 }

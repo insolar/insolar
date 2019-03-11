@@ -72,7 +72,14 @@ func (h *handler) checkAdapterResponseHandler() {
 }
 
 func (h *handler) checkAdapterResponseErrorHandler() {
-
+	if len(h.params) != 4 {
+		exitWithError("%s must have four parameters", h.name)
+	}
+	h.checkInterfaceParameter(0)
+	h.checkInterfaceParameter(1)
+	h.checkAdapterResponseParameter(2)
+	h.checkErrorParameter(3)
+	h.checkErrorHandlerReturns()
 }
 
 // Helper methods for checkers above
