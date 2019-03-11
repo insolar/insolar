@@ -18,8 +18,6 @@ package db
 
 import (
 	"sync"
-
-	"github.com/insolar/insolar/core"
 )
 
 // MockDB is a mock DB implementation. It can be used as a stub for other implementations in component tests.
@@ -44,7 +42,7 @@ func (b *MockDB) Get(key Key) (value []byte, err error) {
 	defer b.lock.RUnlock()
 	value, ok := b.backend[string(fullKey)]
 	if !ok {
-		return nil, core.ErrNotFound
+		return nil, ErrNotFound
 	}
 	return append([]byte{}, value...), nil
 }

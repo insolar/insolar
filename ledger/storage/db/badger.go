@@ -22,7 +22,6 @@ import (
 
 	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/core"
 	"github.com/pkg/errors"
 )
 
@@ -73,7 +72,7 @@ func (b *BadgerDB) Get(key Key) (value []byte, err error) {
 
 	if err != nil {
 		if err == badger.ErrKeyNotFound {
-			return nil, core.ErrNotFound
+			return nil, ErrNotFound
 		}
 		return nil, err
 	}
