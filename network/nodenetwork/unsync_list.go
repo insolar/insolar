@@ -40,7 +40,6 @@ type unsyncList struct {
 	length      int
 	origin      core.Node
 	activeNodes map[core.RecordRef]core.Node
-	claims      map[core.RecordRef][]consensus.ReferendumClaim
 	refToIndex  map[core.RecordRef]int
 	proofs      map[core.RecordRef]*consensus.NodePulseProof
 	ghs         map[core.RecordRef]consensus.GlobuleHashSignature
@@ -58,7 +57,6 @@ func (ul *unsyncList) SetGlobuleHashSignature(ref core.RecordRef, ghs consensus.
 
 func (ul *unsyncList) RemoveNode(nodeID core.RecordRef) {
 	delete(ul.activeNodes, nodeID)
-	delete(ul.claims, nodeID)
 	delete(ul.proofs, nodeID)
 	delete(ul.ghs, nodeID)
 }
@@ -78,20 +76,12 @@ func (ul *unsyncList) AddNode(node core.Node, bitsetIndex uint16) {
 	ul.addNode(node, int(bitsetIndex))
 }
 
-func (ul *unsyncList) GetClaims(nodeID core.RecordRef) []consensus.ReferendumClaim {
-	return ul.claims[nodeID]
-}
-
 func (ul *unsyncList) AddProof(nodeID core.RecordRef, proof *consensus.NodePulseProof) {
 	ul.proofs[nodeID] = proof
 }
 
 func (ul *unsyncList) GetProof(nodeID core.RecordRef) *consensus.NodePulseProof {
 	return ul.proofs[nodeID]
-}
-
-func (ul *unsyncList) InsertClaims(ref core.RecordRef, claims []consensus.ReferendumClaim) {
-	ul.claims[ref] = claims
 }
 
 func newUnsyncList(origin core.Node, activeNodesSorted []core.Node, length int) *unsyncList {
@@ -106,7 +96,6 @@ func newUnsyncList(origin core.Node, activeNodesSorted []core.Node, length int) 
 		result.addNode(node, i)
 	}
 	result.proofs = make(map[core.RecordRef]*consensus.NodePulseProof)
-	result.claims = make(map[core.RecordRef][]consensus.ReferendumClaim)
 	result.ghs = make(map[core.RecordRef]consensus.GlobuleHashSignature)
 
 	return result
@@ -130,7 +119,6 @@ func (ul *unsyncList) addNode(node core.Node, index int) {
 
 func (ul *unsyncList) removeNode(nodeID core.RecordRef) {
 	delete(ul.activeNodes, nodeID)
-	delete(ul.claims, nodeID)
 	delete(ul.proofs, nodeID)
 	delete(ul.ghs, nodeID)
 	i, ok := ul.refToIndex[nodeID]
@@ -138,11 +126,6 @@ func (ul *unsyncList) removeNode(nodeID core.RecordRef) {
 		delete(ul.indexToRef, i)
 	}
 	delete(ul.refToIndex, nodeID)
-}
-
-func (ul *unsyncList) AddClaims(claims map[core.RecordRef][]consensus.ReferendumClaim) error {
-	ul.claims = claims
-	return nil
 }
 
 func (ul *unsyncList) GetActiveNode(ref core.RecordRef) core.Node {
@@ -153,19 +136,17 @@ func (ul *unsyncList) GetActiveNodes() []core.Node {
 	return sortedNodeList(ul.activeNodes)
 }
 
-func (ul *unsyncList) GetMergedCopy() (*network.MergedListCopy, error) {
+func (ul *unsyncList) GetMergedCopy(claims []consensus.ReferendumClaim) (*network.MergedListCopy, error) {
 	nodes := copyActiveNodes(ul.activeNodes)
 
 	var nodesJoinedDuringPrevPulse bool
-	for _, claimList := range ul.claims {
-		for _, claim := range claimList {
-			isJoin, err := mergeClaim(nodes, claim)
-			if err != nil {
-				return nil, errors.Wrap(err, "[ GetMergedCopy ] failed to merge a claim")
-			}
-
-			nodesJoinedDuringPrevPulse = nodesJoinedDuringPrevPulse || isJoin
+	for _, claim := range claims {
+		isJoin, err := mergeClaim(nodes, claim)
+		if err != nil {
+			return nil, errors.Wrap(err, "[ GetMergedCopy ] failed to merge a claim")
 		}
+
+		nodesJoinedDuringPrevPulse = nodesJoinedDuringPrevPulse || isJoin
 	}
 
 	return &network.MergedListCopy{
@@ -244,12 +225,7 @@ func newSparseUnsyncList(origin core.Node, capacity int) *sparseUnsyncList {
 	return &sparseUnsyncList{unsyncList: *newUnsyncList(origin, nil, capacity)}
 }
 
-func (ul *sparseUnsyncList) AddClaims(claims map[core.RecordRef][]consensus.ReferendumClaim) error {
-	err := ul.unsyncList.AddClaims(claims)
-	if err != nil {
-		return errors.Wrap(err, "[ AddClaims ] failed to add a claims")
-	}
-
+func AddClaims(ul *sparseUnsyncList, claims map[core.RecordRef][]consensus.ReferendumClaim) error {
 	for _, claimList := range claims {
 		for _, claim := range claimList {
 			c, ok := claim.(*consensus.NodeAnnounceClaim)
@@ -269,8 +245,4 @@ func (ul *sparseUnsyncList) AddClaims(claims map[core.RecordRef][]consensus.Refe
 		}
 	}
 	return nil
-}
-
-func (ul *sparseUnsyncList) UpdateClaims(ref core.RecordRef, claims []consensus.ReferendumClaim) {
-	ul.unsyncList.claims[ref] = claims
 }

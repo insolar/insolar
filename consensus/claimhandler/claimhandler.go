@@ -32,14 +32,13 @@ type ClaimHandler struct {
 	activeCount int
 }
 
-func NewClaimHandler(activeNodesCount int) *ClaimHandler {
-	handler := &ClaimHandler{
+func NewClaimHandler(activeNodesCount int, claims map[core.RecordRef][]packets.ReferendumClaim) *ClaimHandler {
+	return &ClaimHandler{
 		queue:       Queue{},
 		activeCount: activeNodesCount,
 		knownClaims: make(map[core.RecordRef]bool),
-		claims:      make(map[core.RecordRef][]packets.ReferendumClaim),
+		claims:      claims,
 	}
-	return handler
 }
 
 func (ch *ClaimHandler) SetClaimsFromNode(node core.RecordRef, claims []packets.ReferendumClaim) {

@@ -21,7 +21,6 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/consensus"
-	"github.com/insolar/insolar/consensus/claimhandler"
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -77,7 +76,6 @@ func (tp *ThirdPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse, state 
 		logger.Warn("[ NET Consensus phase-3 ] Failed to record received responses metric: " + err.Error())
 	}
 
-	handler := claimhandler.NewClaimHandler(totalCount)
 	for ref, packet := range responses {
 		err = nil
 		if !ref.Equal(tp.NodeKeeper.GetOrigin().ID()) {
@@ -94,10 +92,10 @@ func (tp *ThirdPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse, state 
 	}
 
 	for _, node := range nodes {
-		handler.AddKnownClaims(state.UnsyncList.GetClaims(node.ID()), pulse.Entropy)
+		state.ClaimHandler.AddKnownClaims(state.ClaimHandler.GetClaimsFromNode(node.ID()), pulse.Entropy)
 	}
 
-	handledJoinClaims := handler.HandleAndReturnClaims()
+	handledJoinClaims := state.ClaimHandler.HandleAndReturnClaims()
 
 	for ref := range responses {
 		tp.removeExcessJoinClaims(handledJoinClaims, ref, state)
@@ -142,7 +140,7 @@ func (tp *ThirdPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse, state 
 }
 
 func (tp *ThirdPhaseImpl) removeExcessJoinClaims(joinClaims []*packets.NodeJoinClaim, ref core.RecordRef, state *SecondPhaseState) {
-	claims := state.UnsyncList.GetClaims(ref)
+	claims := state.ClaimHandler.GetClaimsFromNode(ref)
 	originLen := len(claims)
 	if originLen == 0 || len(joinClaims) == 0 {
 		return
@@ -161,7 +159,7 @@ func (tp *ThirdPhaseImpl) removeExcessJoinClaims(joinClaims []*packets.NodeJoinC
 		}
 	}
 
-	state.UnsyncList.InsertClaims(ref, updatedClaims)
+	state.ClaimHandler.SetClaimsFromNode(ref, updatedClaims)
 }
 
 func (tp *ThirdPhaseImpl) checkPacketSignature(packet *packets.Phase3Packet, recordRef core.RecordRef, unsyncList network.UnsyncList) error {

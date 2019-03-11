@@ -191,14 +191,8 @@ type UnsyncList interface {
 	consensus.BitSetMapper
 	// ApproveSync
 	ApproveSync([]core.RecordRef)
-	// AddClaims
-	AddClaims(map[core.RecordRef][]consensus.ReferendumClaim) error
 	// AddNode
 	AddNode(node core.Node, bitsetIndex uint16)
-	// GetClaims
-	GetClaims(nodeID core.RecordRef) []consensus.ReferendumClaim
-	// InsertClaims
-	InsertClaims(core.RecordRef, []consensus.ReferendumClaim)
 	// AddProof
 	AddProof(nodeID core.RecordRef, proof *consensus.NodePulseProof)
 	// GetProof
@@ -212,7 +206,7 @@ type UnsyncList interface {
 	// GetActiveNodes get active nodes for current consensus
 	GetActiveNodes() []core.Node
 	// GetMergedCopy returns copy of unsyncList with claims applied
-	GetMergedCopy() (*MergedListCopy, error)
+	GetMergedCopy(claims []consensus.ReferendumClaim) (*MergedListCopy, error)
 	//
 	RemoveNode(nodeID core.RecordRef)
 }

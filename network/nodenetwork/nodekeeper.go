@@ -120,9 +120,10 @@ type nodekeeper struct {
 	tempMapR map[core.RecordRef]*host.Host
 	tempMapS map[core.ShortNodeID]*host.Host
 
-	syncLock sync.Mutex
-	sync     network.UnsyncList
-	state    core.NodeNetworkState
+	syncLock   sync.Mutex
+	sync       network.UnsyncList
+	syncClaims []consensusPackets.ReferendumClaim
+	state      core.NodeNetworkState
 
 	isBootstrap     bool
 	isBootstrapLock sync.RWMutex
@@ -428,7 +429,7 @@ func (nk *nodekeeper) MoveSyncToActive(ctx context.Context) error {
 	nk.tempMapS = make(map[core.ShortNodeID]*host.Host)
 	nk.tempLock.Unlock()
 
-	mergeResult, err := nk.sync.GetMergedCopy()
+	mergeResult, err := nk.sync.GetMergedCopy(nk.syncClaims)
 	if err != nil {
 		return errors.Wrap(err, "[ MoveSyncToActive ] Failed to calculate new active list")
 	}
