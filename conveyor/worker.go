@@ -46,6 +46,8 @@ type workerStateMachineImpl struct {
 	nextWorkerState    WorkerState
 	postponedResponses []queue.OutputElement
 	stop               bool
+
+	nodeState int // TODO: remove it when right implementation of node state calculation appears
 }
 
 func newWorkerStateMachineImpl(slot *Slot) workerStateMachineImpl {
@@ -327,10 +329,11 @@ func (w *workerStateMachineImpl) working() {
 
 func (w *workerStateMachineImpl) calculateNodeState() {
 	// TODO: приходит PreparePulse, в нём есть callback, вызываем какой-то адаптер, куда передаем этот callback
+	w.nodeState = 555
 }
 
 func (w *workerStateMachineImpl) sendRemovalSignalToConveyor() {
-	w.slot.conveyor.RemoveSlot(w.slot.pulseNumber)
+	w.slot.removeSlotCallback(w.slot.pulseNumber)
 	// TODO: how to do it?
 	// catch conveyor lock, check input queue, if It's empty - remove slot from map, if it's not - got to Working state
 }
@@ -372,11 +375,10 @@ func (w *workerStateMachineImpl) readInputQueueSuspending() error {
 		if err != nil {
 			return errors.Wrap(err, "[ readInputQueue ] Can't createElement")
 		}
+	}
 
-		// TODO: it's not clear why?
-		if w.slot.pulseState == constant.Past {
-			w.slot.slotState = Working
-		}
+	if len(elements) != 0 && w.slot.pulseState == constant.Past {
+		w.slot.slotState = Working
 	}
 
 	return nil

@@ -64,11 +64,12 @@ type Control interface {
 	InitiateShutdown(force bool)
 }
 
+type RemoveSlotCallback func(core.PulseNumber)
+
 // Conveyor is responsible for all pulse-dependent processing logic
 type Conveyor interface {
 	EventSink
 	Control
-	RemoveSlot(number core.PulseNumber)
 }
 
 // PulseConveyor is realization of Conveyor
@@ -88,7 +89,7 @@ func NewPulseConveyor() Conveyor {
 		state:   Inactive,
 	}
 	// antiqueSlot is slot for all pulses from past if conveyor dont have specific PastSlot for such pulse
-	antiqueSlot := NewSlot(constant.Antique, core.AntiquePulseNumber, c)
+	antiqueSlot := NewSlot(constant.Antique, core.AntiquePulseNumber, c.RemoveSlot)
 	c.slotMap[core.AntiquePulseNumber] = antiqueSlot
 	return c
 }

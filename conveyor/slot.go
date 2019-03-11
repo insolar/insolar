@@ -124,8 +124,8 @@ type Slot struct {
 	nodeData              interface{}
 	elements              []slotElement
 	// we can use slice or just several fields of ElementList, it will be faster but not pretty
-	elementListMap map[ActivationStatus]*ElementList
-	conveyor       Conveyor
+	elementListMap     map[ActivationStatus]*ElementList
+	removeSlotCallback RemoveSlotCallback
 }
 
 // SlotStateMachine represents state machine of slot itself
@@ -147,7 +147,7 @@ func initElementsBuf() ([]slotElement, *ElementList) {
 }
 
 // NewSlot creates new instance of Slot
-func NewSlot(pulseState constant.PulseState, pulseNumber core.PulseNumber, conveyor Conveyor) *Slot {
+func NewSlot(pulseState constant.PulseState, pulseNumber core.PulseNumber, removeSlotCallback RemoveSlotCallback) *Slot {
 	slotState := Initializing
 	if pulseState == constant.Antique {
 		slotState = Working
@@ -161,15 +161,15 @@ func NewSlot(pulseState constant.PulseState, pulseNumber core.PulseNumber, conve
 		NotActiveElement: {},
 	}
 	return &Slot{
-		pulseState:     pulseState,
-		inputQueue:     queue.NewMutexQueue(),
-		responseQueue:  queue.NewMutexQueue(),
-		pulseNumber:    pulseNumber,
-		slotState:      slotState,
-		stateMachine:   SlotStateMachine,
-		elements:       elements,
-		elementListMap: elementListMap,
-		conveyor:       conveyor,
+		pulseState:         pulseState,
+		inputQueue:         queue.NewMutexQueue(),
+		responseQueue:      queue.NewMutexQueue(),
+		pulseNumber:        pulseNumber,
+		slotState:          slotState,
+		stateMachine:       SlotStateMachine,
+		elements:           elements,
+		elementListMap:     elementListMap,
+		removeSlotCallback: removeSlotCallback,
 	}
 }
 

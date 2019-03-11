@@ -128,6 +128,7 @@ func _TestSlot_Worker(t *testing.T) {
 func makeSlotAndWorker(pulseState constant.PulseState, pulseNumber core.PulseNumber) (*Slot, workerStateMachineImpl) {
 	slot := NewSlot(pulseState, pulseNumber, nil)
 	worker := newWorkerStateMachineImpl(slot)
+
 	return slot, worker
 }
 
@@ -147,12 +148,13 @@ func Test_changePulseState(t *testing.T) {
 	require.PanicsWithValue(t, "[ changePulseState ] Unknown state: PulseState(99999)", worker.changePulseState)
 }
 
-func areSlotStatesEqual(s1 *Slot, s2 *Slot, t *testing.T) {
-	require.Equal(t, s1.pulseState, s2.pulseState)
+func areSlotStatesEqual(s1 *Slot, s2 *Slot, t *testing.T, excludePulseStateCheck bool) {
+	if !excludePulseStateCheck {
+		require.Equal(t, s1.pulseState, s2.pulseState)
+	}
 	require.Equal(t, s1.stateMachine, s2.stateMachine)
 	require.Equal(t, s1.pulse, s2.pulse)
 	require.Equal(t, s1.slotState, s2.slotState)
-	// TODO: add check of lengthes
 }
 
 // ---- processSignalsWorking
@@ -165,7 +167,7 @@ func Test_processSignalsWorking_EmptyInput(t *testing.T) {
 
 			oldSlot := *slot
 			require.Equal(t, 0, worker.processSignalsWorking([]queue.OutputElement{}))
-			areSlotStatesEqual(&oldSlot, slot, t)
+			areSlotStatesEqual(&oldSlot, slot, t, false)
 		})
 	}
 }
@@ -184,7 +186,7 @@ func Test_processSignalsWorking_NonSignals(t *testing.T) {
 			}
 			require.Equal(t, 0, worker.processSignalsWorking(nonSignals))
 
-			areSlotStatesEqual(&oldSlot, slot, t)
+			areSlotStatesEqual(&oldSlot, slot, t, false)
 		})
 	}
 }
@@ -200,7 +202,7 @@ func Test_processSignalsWorking_BadSignal(t *testing.T) {
 			require.PanicsWithValue(t, "[ processSignalsWorking ] Unknown signal: 9999999", func() {
 				worker.processSignalsWorking(badSignal)
 			})
-			areSlotStatesEqual(&oldSlot, slot, t)
+			areSlotStatesEqual(&oldSlot, slot, t, false)
 		})
 	}
 }
@@ -226,7 +228,7 @@ func Test_processSignalsWorking_ActivatePulseSignal(t *testing.T) {
 			activateSignal := []queue.OutputElement{*queue.NewOutputElement(1, ActivatePulseSignal)}
 			require.Equal(t, 1, worker.processSignalsWorking(activateSignal))
 
-			areSlotStatesEqual(&oldSlot, slot, t)
+			areSlotStatesEqual(&oldSlot, slot, t, false)
 		})
 	}
 }
@@ -260,7 +262,7 @@ func Test_readInputQueueWorking_EmptyInputQueue(t *testing.T) {
 			oldSlot := *slot
 			require.NoError(t, worker.readInputQueueWorking())
 
-			areSlotStatesEqual(&oldSlot, slot, t)
+			areSlotStatesEqual(&oldSlot, slot, t, false)
 		})
 	}
 }
@@ -275,7 +277,7 @@ func Test_readInputQueueWorking_SignalOnly(t *testing.T) {
 
 			require.NoError(t, slot.inputQueue.PushSignal(ActivatePulseSignal, mockCallback()))
 			require.NoError(t, worker.readInputQueueWorking())
-			areSlotStatesEqual(&oldSlot, slot, t)
+			areSlotStatesEqual(&oldSlot, slot, t, false)
 		})
 	}
 }
@@ -291,7 +293,7 @@ func Test_readInputQueueWorking_EventOnly(t *testing.T) {
 			require.NoError(t, slot.inputQueue.SinkPush(payLoad))
 			require.NoError(t, worker.readInputQueueWorking())
 
-			areSlotStatesEqual(&oldSlot, slot, t)
+			areSlotStatesEqual(&oldSlot, slot, t, false)
 			el := slot.popElement(ActiveElement)
 			require.Equal(t, payLoad, el.payload)
 		})
@@ -313,7 +315,7 @@ func Test_readInputQueueWorking_SignalsAndEvents(t *testing.T) {
 			}
 
 			require.NoError(t, worker.readInputQueueWorking())
-			areSlotStatesEqual(&oldSlot, slot, t)
+			areSlotStatesEqual(&oldSlot, slot, t, false)
 
 			for i := 0; i < numElements; i++ {
 				el := slot.popElement(ActiveElement)
@@ -333,7 +335,7 @@ func Test_processSignalsSuspending_EmptyInput(t *testing.T) {
 
 			oldSlot := *slot
 			require.Equal(t, 0, worker.processSignalsSuspending([]queue.OutputElement{}))
-			areSlotStatesEqual(&oldSlot, slot, t)
+			areSlotStatesEqual(&oldSlot, slot, t, false)
 		})
 	}
 }
@@ -352,7 +354,7 @@ func Test_processSignalsSuspending_NonSignals(t *testing.T) {
 			}
 			require.Equal(t, 0, worker.processSignalsSuspending(nonSignals))
 
-			areSlotStatesEqual(&oldSlot, slot, t)
+			areSlotStatesEqual(&oldSlot, slot, t, false)
 		})
 	}
 }
@@ -368,7 +370,7 @@ func Test_processSignalsSuspending_BadSignal(t *testing.T) {
 			require.PanicsWithValue(t, "[ processSignalsSuspending ] Unknown signal: 9999999", func() {
 				worker.processSignalsSuspending(badSignal)
 			})
-			areSlotStatesEqual(&oldSlot, slot, t)
+			areSlotStatesEqual(&oldSlot, slot, t, false)
 		})
 	}
 }
@@ -381,7 +383,7 @@ func Test_processSignalsSuspending_PendingPulseSignal(t *testing.T) {
 			oldSlot := *slot
 			pendingSignal := []queue.OutputElement{*queue.NewOutputElement(1, PendingPulseSignal)}
 			require.Equal(t, 1, worker.processSignalsSuspending(pendingSignal))
-			areSlotStatesEqual(&oldSlot, slot, t)
+			areSlotStatesEqual(&oldSlot, slot, t, false)
 		})
 	}
 }
@@ -409,7 +411,7 @@ func Test_readInputQueueSuspending_EmptyInputQueue(t *testing.T) {
 			oldSlot := *slot
 			require.NoError(t, worker.readInputQueueSuspending())
 
-			areSlotStatesEqual(&oldSlot, slot, t)
+			areSlotStatesEqual(&oldSlot, slot, t, false)
 		})
 	}
 }
@@ -423,7 +425,7 @@ func Test_readInputQueueSuspending_SignalOnly(t *testing.T) {
 
 			require.NoError(t, slot.inputQueue.PushSignal(PendingPulseSignal, mockCallback()))
 			require.NoError(t, worker.readInputQueueSuspending())
-			areSlotStatesEqual(&oldSlot, slot, t)
+			areSlotStatesEqual(&oldSlot, slot, t, false)
 		})
 	}
 }
@@ -441,7 +443,7 @@ func Test_readInputQueueSuspending_EventOnly(t *testing.T) {
 			require.NoError(t, slot.inputQueue.SinkPush(payLoad))
 			require.NoError(t, worker.readInputQueueSuspending())
 
-			areSlotStatesEqual(&oldSlot, slot, t)
+			areSlotStatesEqual(&oldSlot, slot, t, false)
 			el := slot.popElement(ActiveElement)
 			require.Equal(t, payLoad, el.payload)
 		})
@@ -477,7 +479,7 @@ func Test_readInputQueueSuspending_SignalsAndEvents(t *testing.T) {
 			}
 
 			require.NoError(t, worker.readInputQueueSuspending())
-			areSlotStatesEqual(&oldSlot, slot, t)
+			areSlotStatesEqual(&oldSlot, slot, t, false)
 
 			for i := 0; i < numElements; i++ {
 				el := slot.popElement(ActiveElement)
@@ -508,6 +510,7 @@ func Test_readInputQueueSuspending_SignalsAndEvents_Past(t *testing.T) {
 }
 
 // ---- migrate
+
 var testActivationStatus = []ActivationStatus{ActiveElement, NotActiveElement}
 
 func Test_migrate_EmptyList(t *testing.T) {
@@ -543,7 +546,7 @@ func Test_migrate_NoMigrationHandler(t *testing.T) {
 					require.NoError(t, err)
 					numActiveElements := slot.len(tas)
 					require.NoError(t, worker.migrate(tas))
-					areSlotStatesEqual(&oldSlot, slot, t)
+					areSlotStatesEqual(&oldSlot, slot, t, false)
 					require.Equal(t, numActiveElements, slot.len(tas))
 				})
 			}
@@ -661,4 +664,55 @@ func Test_migrate_MigrationHandler_Error(t *testing.T) {
 			}
 		})
 	}
+}
+
+// ---- suspending
+
+func Test_suspending_Past(t *testing.T) {
+	slot, worker := makeSlotAndWorker(constant.Past, 22)
+	removeSlot := false
+	slot.removeSlotCallback = func(number core.PulseNumber) {
+		removeSlot = true
+	}
+	oldSlot := *slot
+
+	// to predict infinite loop
+	require.NoError(t, slot.inputQueue.PushSignal(ActivatePulseSignal, mockCallback()))
+
+	worker.slot.slotState = Suspending
+	worker.suspending()
+	areSlotStatesEqual(&oldSlot, slot, t, false)
+	require.True(t, removeSlot)
+}
+
+func Test_suspending_Present(t *testing.T) {
+	slot, worker := makeSlotAndWorker(constant.Present, 22)
+	oldSlot := *slot
+
+	// to predict infinite loop
+	require.NoError(t, slot.inputQueue.PushSignal(ActivatePulseSignal, mockCallback()))
+
+	worker.slot.slotState = Suspending
+	require.Equal(t, 0, worker.nodeState)
+	worker.suspending()
+	areSlotStatesEqual(&oldSlot, slot, t, true)
+	require.Equal(t, 555, worker.nodeState)
+}
+
+func Test_suspending_ReadInputQueue(t *testing.T) {
+	slot, worker := makeSlotAndWorker(constant.Present, 22)
+
+	// to predict infinite loop
+	require.NoError(t, slot.inputQueue.PushSignal(ActivatePulseSignal, mockCallback()))
+
+	require.Equal(t, 0, worker.nodeState)
+	worker.slot.slotState = Suspending
+	worker.suspending()
+	require.Equal(t, constant.Past, slot.pulseState)
+}
+
+// ---- working
+
+func Test_working(t *testing.T) {
+
 }
