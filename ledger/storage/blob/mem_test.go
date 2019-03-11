@@ -28,10 +28,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestBlobStorage_NewStorage(t *testing.T) {
+func TestBlobStorage_NewStorageMem(t *testing.T) {
 	t.Parallel()
 
-	blobStorage := NewStorage()
+	blobStorage := NewStorageMem()
 	assert.Equal(t, 0, len(blobStorage.memory))
 }
 
@@ -54,7 +54,7 @@ func TestBlobStorage_Set(t *testing.T) {
 	t.Run("saves correct blob-value", func(t *testing.T) {
 		t.Parallel()
 
-		blobStorage := &Storage{
+		blobStorage := &StorageMem{
 			memory:   map[core.RecordID]Blob{},
 			jetIndex: jetIndex,
 		}
@@ -69,7 +69,7 @@ func TestBlobStorage_Set(t *testing.T) {
 	t.Run("returns override error when saving with the same id", func(t *testing.T) {
 		t.Parallel()
 
-		blobStorage := &Storage{
+		blobStorage := &StorageMem{
 			memory:   map[core.RecordID]Blob{},
 			jetIndex: jetIndex,
 		}
@@ -98,7 +98,7 @@ func TestBlobStorage_ForID(t *testing.T) {
 	t.Run("returns correct blob-value", func(t *testing.T) {
 		t.Parallel()
 
-		blobStorage := &Storage{
+		blobStorage := &StorageMem{
 			memory: map[core.RecordID]Blob{},
 		}
 		blobStorage.memory[id] = blob
@@ -113,7 +113,7 @@ func TestBlobStorage_ForID(t *testing.T) {
 	t.Run("returns error when no blob-value for id", func(t *testing.T) {
 		t.Parallel()
 
-		blobStorage := &Storage{
+		blobStorage := &StorageMem{
 			memory: map[core.RecordID]Blob{},
 		}
 		blobStorage.memory[id] = blob

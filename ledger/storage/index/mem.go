@@ -18,20 +18,52 @@ package index
 
 import (
 	"context"
+	"sync"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/ledger/storage/db"
 )
 
-type Storage struct{}
+// StorageMem is an in-memory struct for index-storage
+type StorageMem struct {
+	jetIndex db.JetIndexModifier
 
-func (Storage) Set(ctx context.Context, id core.RecordID, index ObjectLifeline) error {
-	panic("implement me")
+	lock   sync.RWMutex
+	memory map[core.RecordID]ObjectLifeline
 }
 
-func (Storage) Delete(ctx context.Context, id core.RecordID) error {
-	panic("implement me")
+// NewStorageMem creates a new instance of Storage.
+func NewStorageMem() *StorageMem {
+	return &StorageMem{
+		memory:   map[core.RecordID]ObjectLifeline{},
+		jetIndex: db.NewJetIndex(),
+	}
 }
 
-func (Storage) ForID(ctx context.Context, id core.RecordID) (ObjectLifeline, error) {
-	panic("implement me")
+func (s *StorageMem) Set(ctx context.Context, id core.RecordID, index ObjectLifeline) error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	_, ok := s.memory[id]
+	if ok {
+		return ErrOverride
+	}
+
+	s.memory[id] = index
+	s.jetIndex.Add(id, index.JetID)
+
+	return nil
+}
+
+func (s *StorageMem) ForID(ctx context.Context, id core.RecordID) (idx ObjectLifeline, err error) {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+
+	idx, ok := s.memory[id]
+	if !ok {
+		err = ErrNotFound
+		return
+	}
+
+	return
 }

@@ -34,7 +34,7 @@ func TestInMemoryBlob(t *testing.T) {
 
 	ctx := inslogger.TestContext(t)
 
-	blobStorage := blob.NewStorage()
+	blobStorage := blob.NewStorageMem()
 
 	type tempBlob struct {
 		id core.RecordID
@@ -81,7 +81,7 @@ func TestInMemoryBlob(t *testing.T) {
 	t.Run("returns override error when saving with the same id", func(t *testing.T) {
 		t.Parallel()
 
-		blobStorage := blob.NewStorage()
+		blobStorage := blob.NewStorageMem()
 		for _, bl := range blobs {
 			err := blobStorage.Set(ctx, bl.id, bl.b)
 			require.NoError(t, err)

@@ -34,6 +34,4 @@ type Accessor interface {
 type Modifier interface {
 	// Set saves new Index-value in storage
 	Set(ctx context.Context, id core.RecordID, index ObjectLifeline) error
-	// Delete Index-value by id from storage
-	Delete(ctx context.Context, id core.RecordID) error
 }
