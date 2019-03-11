@@ -18,6 +18,7 @@ package db
 
 import (
 	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/dgraph-io/badger"
@@ -44,6 +45,7 @@ func TestBadgerDB_Get(t *testing.T) {
 	t.Parallel()
 
 	tmpdir, err := ioutil.TempDir("", "bdb-test-")
+	defer os.RemoveAll(tmpdir)
 	assert.NoError(t, err)
 
 	db, err := NewBadgerDB(configuration.Ledger{Storage: configuration.Storage{DataDirectory: tmpdir}})
@@ -69,6 +71,7 @@ func TestBadgerDB_Set(t *testing.T) {
 	t.Parallel()
 
 	tmpdir, err := ioutil.TempDir("", "bdb-test-")
+	defer os.RemoveAll(tmpdir)
 	assert.NoError(t, err)
 
 	db, err := NewBadgerDB(configuration.Ledger{Storage: configuration.Storage{DataDirectory: tmpdir}})

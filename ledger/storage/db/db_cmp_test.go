@@ -19,6 +19,7 @@ package db_test
 import (
 	"io/ioutil"
 	"math/rand"
+	"os"
 	"testing"
 
 	"github.com/google/gofuzz"
@@ -45,6 +46,7 @@ func TestDB_Components(t *testing.T) {
 	t.Parallel()
 
 	tmpdir, err := ioutil.TempDir("", "bdb-test-")
+	defer os.RemoveAll(tmpdir)
 	assert.NoError(t, err)
 	badger, err := db.NewBadgerDB(configuration.Ledger{Storage: configuration.Storage{DataDirectory: tmpdir}})
 	require.NoError(t, err)
