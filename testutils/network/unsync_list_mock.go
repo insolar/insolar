@@ -12,7 +12,6 @@ import (
 	"github.com/gojuno/minimock"
 	packets "github.com/insolar/insolar/consensus/packets"
 	core "github.com/insolar/insolar/core"
-	network "github.com/insolar/insolar/network"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -31,11 +30,6 @@ type UnsyncListMock struct {
 	AddProofPreCounter uint64
 	AddProofMock       mUnsyncListMockAddProof
 
-	ApproveSyncFunc       func(p []core.RecordRef)
-	ApproveSyncCounter    uint64
-	ApproveSyncPreCounter uint64
-	ApproveSyncMock       mUnsyncListMockApproveSync
-
 	GetActiveNodeFunc       func(p core.RecordRef) (r core.Node)
 	GetActiveNodeCounter    uint64
 	GetActiveNodePreCounter uint64
@@ -51,10 +45,10 @@ type UnsyncListMock struct {
 	GetGlobuleHashSignaturePreCounter uint64
 	GetGlobuleHashSignatureMock       mUnsyncListMockGetGlobuleHashSignature
 
-	GetMergedCopyFunc       func(p []packets.ReferendumClaim) (r *network.MergedListCopy, r1 error)
-	GetMergedCopyCounter    uint64
-	GetMergedCopyPreCounter uint64
-	GetMergedCopyMock       mUnsyncListMockGetMergedCopy
+	GetOriginFunc       func() (r core.Node)
+	GetOriginCounter    uint64
+	GetOriginPreCounter uint64
+	GetOriginMock       mUnsyncListMockGetOrigin
 
 	GetProofFunc       func(p core.RecordRef) (r *packets.NodePulseProof)
 	GetProofCounter    uint64
@@ -97,11 +91,10 @@ func NewUnsyncListMock(t minimock.Tester) *UnsyncListMock {
 
 	m.AddNodeMock = mUnsyncListMockAddNode{mock: m}
 	m.AddProofMock = mUnsyncListMockAddProof{mock: m}
-	m.ApproveSyncMock = mUnsyncListMockApproveSync{mock: m}
 	m.GetActiveNodeMock = mUnsyncListMockGetActiveNode{mock: m}
 	m.GetActiveNodesMock = mUnsyncListMockGetActiveNodes{mock: m}
 	m.GetGlobuleHashSignatureMock = mUnsyncListMockGetGlobuleHashSignature{mock: m}
-	m.GetMergedCopyMock = mUnsyncListMockGetMergedCopy{mock: m}
+	m.GetOriginMock = mUnsyncListMockGetOrigin{mock: m}
 	m.GetProofMock = mUnsyncListMockGetProof{mock: m}
 	m.IndexToRefMock = mUnsyncListMockIndexToRef{mock: m}
 	m.LengthMock = mUnsyncListMockLength{mock: m}
@@ -355,129 +348,6 @@ func (m *UnsyncListMock) AddProofFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.AddProofFunc != nil {
 		return atomic.LoadUint64(&m.AddProofCounter) > 0
-	}
-
-	return true
-}
-
-type mUnsyncListMockApproveSync struct {
-	mock              *UnsyncListMock
-	mainExpectation   *UnsyncListMockApproveSyncExpectation
-	expectationSeries []*UnsyncListMockApproveSyncExpectation
-}
-
-type UnsyncListMockApproveSyncExpectation struct {
-	input *UnsyncListMockApproveSyncInput
-}
-
-type UnsyncListMockApproveSyncInput struct {
-	p []core.RecordRef
-}
-
-//Expect specifies that invocation of UnsyncList.ApproveSync is expected from 1 to Infinity times
-func (m *mUnsyncListMockApproveSync) Expect(p []core.RecordRef) *mUnsyncListMockApproveSync {
-	m.mock.ApproveSyncFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &UnsyncListMockApproveSyncExpectation{}
-	}
-	m.mainExpectation.input = &UnsyncListMockApproveSyncInput{p}
-	return m
-}
-
-//Return specifies results of invocation of UnsyncList.ApproveSync
-func (m *mUnsyncListMockApproveSync) Return() *UnsyncListMock {
-	m.mock.ApproveSyncFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &UnsyncListMockApproveSyncExpectation{}
-	}
-
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of UnsyncList.ApproveSync is expected once
-func (m *mUnsyncListMockApproveSync) ExpectOnce(p []core.RecordRef) *UnsyncListMockApproveSyncExpectation {
-	m.mock.ApproveSyncFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &UnsyncListMockApproveSyncExpectation{}
-	expectation.input = &UnsyncListMockApproveSyncInput{p}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-//Set uses given function f as a mock of UnsyncList.ApproveSync method
-func (m *mUnsyncListMockApproveSync) Set(f func(p []core.RecordRef)) *UnsyncListMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.ApproveSyncFunc = f
-	return m.mock
-}
-
-//ApproveSync implements github.com/insolar/insolar/network.UnsyncList interface
-func (m *UnsyncListMock) ApproveSync(p []core.RecordRef) {
-	counter := atomic.AddUint64(&m.ApproveSyncPreCounter, 1)
-	defer atomic.AddUint64(&m.ApproveSyncCounter, 1)
-
-	if len(m.ApproveSyncMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.ApproveSyncMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to UnsyncListMock.ApproveSync. %v", p)
-			return
-		}
-
-		input := m.ApproveSyncMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, UnsyncListMockApproveSyncInput{p}, "UnsyncList.ApproveSync got unexpected parameters")
-
-		return
-	}
-
-	if m.ApproveSyncMock.mainExpectation != nil {
-
-		input := m.ApproveSyncMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, UnsyncListMockApproveSyncInput{p}, "UnsyncList.ApproveSync got unexpected parameters")
-		}
-
-		return
-	}
-
-	if m.ApproveSyncFunc == nil {
-		m.t.Fatalf("Unexpected call to UnsyncListMock.ApproveSync. %v", p)
-		return
-	}
-
-	m.ApproveSyncFunc(p)
-}
-
-//ApproveSyncMinimockCounter returns a count of UnsyncListMock.ApproveSyncFunc invocations
-func (m *UnsyncListMock) ApproveSyncMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.ApproveSyncCounter)
-}
-
-//ApproveSyncMinimockPreCounter returns the value of UnsyncListMock.ApproveSync invocations
-func (m *UnsyncListMock) ApproveSyncMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.ApproveSyncPreCounter)
-}
-
-//ApproveSyncFinished returns true if mock invocations count is ok
-func (m *UnsyncListMock) ApproveSyncFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.ApproveSyncMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.ApproveSyncCounter) == uint64(len(m.ApproveSyncMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.ApproveSyncMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.ApproveSyncCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.ApproveSyncFunc != nil {
-		return atomic.LoadUint64(&m.ApproveSyncCounter) > 0
 	}
 
 	return true
@@ -914,151 +784,135 @@ func (m *UnsyncListMock) GetGlobuleHashSignatureFinished() bool {
 	return true
 }
 
-type mUnsyncListMockGetMergedCopy struct {
+type mUnsyncListMockGetOrigin struct {
 	mock              *UnsyncListMock
-	mainExpectation   *UnsyncListMockGetMergedCopyExpectation
-	expectationSeries []*UnsyncListMockGetMergedCopyExpectation
+	mainExpectation   *UnsyncListMockGetOriginExpectation
+	expectationSeries []*UnsyncListMockGetOriginExpectation
 }
 
-type UnsyncListMockGetMergedCopyExpectation struct {
-	input  *UnsyncListMockGetMergedCopyInput
-	result *UnsyncListMockGetMergedCopyResult
+type UnsyncListMockGetOriginExpectation struct {
+	result *UnsyncListMockGetOriginResult
 }
 
-type UnsyncListMockGetMergedCopyInput struct {
-	p []packets.ReferendumClaim
+type UnsyncListMockGetOriginResult struct {
+	r core.Node
 }
 
-type UnsyncListMockGetMergedCopyResult struct {
-	r  *network.MergedListCopy
-	r1 error
-}
-
-//Expect specifies that invocation of UnsyncList.GetMergedCopy is expected from 1 to Infinity times
-func (m *mUnsyncListMockGetMergedCopy) Expect(p []packets.ReferendumClaim) *mUnsyncListMockGetMergedCopy {
-	m.mock.GetMergedCopyFunc = nil
+//Expect specifies that invocation of UnsyncList.GetOrigin is expected from 1 to Infinity times
+func (m *mUnsyncListMockGetOrigin) Expect() *mUnsyncListMockGetOrigin {
+	m.mock.GetOriginFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &UnsyncListMockGetMergedCopyExpectation{}
+		m.mainExpectation = &UnsyncListMockGetOriginExpectation{}
 	}
-	m.mainExpectation.input = &UnsyncListMockGetMergedCopyInput{p}
+
 	return m
 }
 
-//Return specifies results of invocation of UnsyncList.GetMergedCopy
-func (m *mUnsyncListMockGetMergedCopy) Return(r *network.MergedListCopy, r1 error) *UnsyncListMock {
-	m.mock.GetMergedCopyFunc = nil
+//Return specifies results of invocation of UnsyncList.GetOrigin
+func (m *mUnsyncListMockGetOrigin) Return(r core.Node) *UnsyncListMock {
+	m.mock.GetOriginFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &UnsyncListMockGetMergedCopyExpectation{}
+		m.mainExpectation = &UnsyncListMockGetOriginExpectation{}
 	}
-	m.mainExpectation.result = &UnsyncListMockGetMergedCopyResult{r, r1}
+	m.mainExpectation.result = &UnsyncListMockGetOriginResult{r}
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of UnsyncList.GetMergedCopy is expected once
-func (m *mUnsyncListMockGetMergedCopy) ExpectOnce(p []packets.ReferendumClaim) *UnsyncListMockGetMergedCopyExpectation {
-	m.mock.GetMergedCopyFunc = nil
+//ExpectOnce specifies that invocation of UnsyncList.GetOrigin is expected once
+func (m *mUnsyncListMockGetOrigin) ExpectOnce() *UnsyncListMockGetOriginExpectation {
+	m.mock.GetOriginFunc = nil
 	m.mainExpectation = nil
 
-	expectation := &UnsyncListMockGetMergedCopyExpectation{}
-	expectation.input = &UnsyncListMockGetMergedCopyInput{p}
+	expectation := &UnsyncListMockGetOriginExpectation{}
+
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
-func (e *UnsyncListMockGetMergedCopyExpectation) Return(r *network.MergedListCopy, r1 error) {
-	e.result = &UnsyncListMockGetMergedCopyResult{r, r1}
+func (e *UnsyncListMockGetOriginExpectation) Return(r core.Node) {
+	e.result = &UnsyncListMockGetOriginResult{r}
 }
 
-//Set uses given function f as a mock of UnsyncList.GetMergedCopy method
-func (m *mUnsyncListMockGetMergedCopy) Set(f func(p []packets.ReferendumClaim) (r *network.MergedListCopy, r1 error)) *UnsyncListMock {
+//Set uses given function f as a mock of UnsyncList.GetOrigin method
+func (m *mUnsyncListMockGetOrigin) Set(f func() (r core.Node)) *UnsyncListMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
-	m.mock.GetMergedCopyFunc = f
+	m.mock.GetOriginFunc = f
 	return m.mock
 }
 
-//GetMergedCopy implements github.com/insolar/insolar/network.UnsyncList interface
-func (m *UnsyncListMock) GetMergedCopy(p []packets.ReferendumClaim) (r *network.MergedListCopy, r1 error) {
-	counter := atomic.AddUint64(&m.GetMergedCopyPreCounter, 1)
-	defer atomic.AddUint64(&m.GetMergedCopyCounter, 1)
+//GetOrigin implements github.com/insolar/insolar/network.UnsyncList interface
+func (m *UnsyncListMock) GetOrigin() (r core.Node) {
+	counter := atomic.AddUint64(&m.GetOriginPreCounter, 1)
+	defer atomic.AddUint64(&m.GetOriginCounter, 1)
 
-	if len(m.GetMergedCopyMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.GetMergedCopyMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to UnsyncListMock.GetMergedCopy. %v", p)
+	if len(m.GetOriginMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.GetOriginMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to UnsyncListMock.GetOrigin.")
 			return
 		}
 
-		input := m.GetMergedCopyMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, UnsyncListMockGetMergedCopyInput{p}, "UnsyncList.GetMergedCopy got unexpected parameters")
-
-		result := m.GetMergedCopyMock.expectationSeries[counter-1].result
+		result := m.GetOriginMock.expectationSeries[counter-1].result
 		if result == nil {
-			m.t.Fatal("No results are set for the UnsyncListMock.GetMergedCopy")
+			m.t.Fatal("No results are set for the UnsyncListMock.GetOrigin")
 			return
 		}
 
 		r = result.r
-		r1 = result.r1
 
 		return
 	}
 
-	if m.GetMergedCopyMock.mainExpectation != nil {
+	if m.GetOriginMock.mainExpectation != nil {
 
-		input := m.GetMergedCopyMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, UnsyncListMockGetMergedCopyInput{p}, "UnsyncList.GetMergedCopy got unexpected parameters")
-		}
-
-		result := m.GetMergedCopyMock.mainExpectation.result
+		result := m.GetOriginMock.mainExpectation.result
 		if result == nil {
-			m.t.Fatal("No results are set for the UnsyncListMock.GetMergedCopy")
+			m.t.Fatal("No results are set for the UnsyncListMock.GetOrigin")
 		}
 
 		r = result.r
-		r1 = result.r1
 
 		return
 	}
 
-	if m.GetMergedCopyFunc == nil {
-		m.t.Fatalf("Unexpected call to UnsyncListMock.GetMergedCopy. %v", p)
+	if m.GetOriginFunc == nil {
+		m.t.Fatalf("Unexpected call to UnsyncListMock.GetOrigin.")
 		return
 	}
 
-	return m.GetMergedCopyFunc(p)
+	return m.GetOriginFunc()
 }
 
-//GetMergedCopyMinimockCounter returns a count of UnsyncListMock.GetMergedCopyFunc invocations
-func (m *UnsyncListMock) GetMergedCopyMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.GetMergedCopyCounter)
+//GetOriginMinimockCounter returns a count of UnsyncListMock.GetOriginFunc invocations
+func (m *UnsyncListMock) GetOriginMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.GetOriginCounter)
 }
 
-//GetMergedCopyMinimockPreCounter returns the value of UnsyncListMock.GetMergedCopy invocations
-func (m *UnsyncListMock) GetMergedCopyMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.GetMergedCopyPreCounter)
+//GetOriginMinimockPreCounter returns the value of UnsyncListMock.GetOrigin invocations
+func (m *UnsyncListMock) GetOriginMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.GetOriginPreCounter)
 }
 
-//GetMergedCopyFinished returns true if mock invocations count is ok
-func (m *UnsyncListMock) GetMergedCopyFinished() bool {
+//GetOriginFinished returns true if mock invocations count is ok
+func (m *UnsyncListMock) GetOriginFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.GetMergedCopyMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.GetMergedCopyCounter) == uint64(len(m.GetMergedCopyMock.expectationSeries))
+	if len(m.GetOriginMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.GetOriginCounter) == uint64(len(m.GetOriginMock.expectationSeries))
 	}
 
 	// if main expectation was set then invocations count should be greater than zero
-	if m.GetMergedCopyMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.GetMergedCopyCounter) > 0
+	if m.GetOriginMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.GetOriginCounter) > 0
 	}
 
 	// if func was set then invocations count should be greater than zero
-	if m.GetMergedCopyFunc != nil {
-		return atomic.LoadUint64(&m.GetMergedCopyCounter) > 0
+	if m.GetOriginFunc != nil {
+		return atomic.LoadUint64(&m.GetOriginCounter) > 0
 	}
 
 	return true
@@ -1904,10 +1758,6 @@ func (m *UnsyncListMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to UnsyncListMock.AddProof")
 	}
 
-	if !m.ApproveSyncFinished() {
-		m.t.Fatal("Expected call to UnsyncListMock.ApproveSync")
-	}
-
 	if !m.GetActiveNodeFinished() {
 		m.t.Fatal("Expected call to UnsyncListMock.GetActiveNode")
 	}
@@ -1920,8 +1770,8 @@ func (m *UnsyncListMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to UnsyncListMock.GetGlobuleHashSignature")
 	}
 
-	if !m.GetMergedCopyFinished() {
-		m.t.Fatal("Expected call to UnsyncListMock.GetMergedCopy")
+	if !m.GetOriginFinished() {
+		m.t.Fatal("Expected call to UnsyncListMock.GetOrigin")
 	}
 
 	if !m.GetProofFinished() {
@@ -1973,10 +1823,6 @@ func (m *UnsyncListMock) MinimockFinish() {
 		m.t.Fatal("Expected call to UnsyncListMock.AddProof")
 	}
 
-	if !m.ApproveSyncFinished() {
-		m.t.Fatal("Expected call to UnsyncListMock.ApproveSync")
-	}
-
 	if !m.GetActiveNodeFinished() {
 		m.t.Fatal("Expected call to UnsyncListMock.GetActiveNode")
 	}
@@ -1989,8 +1835,8 @@ func (m *UnsyncListMock) MinimockFinish() {
 		m.t.Fatal("Expected call to UnsyncListMock.GetGlobuleHashSignature")
 	}
 
-	if !m.GetMergedCopyFinished() {
-		m.t.Fatal("Expected call to UnsyncListMock.GetMergedCopy")
+	if !m.GetOriginFinished() {
+		m.t.Fatal("Expected call to UnsyncListMock.GetOrigin")
 	}
 
 	if !m.GetProofFinished() {
@@ -2033,11 +1879,10 @@ func (m *UnsyncListMock) MinimockWait(timeout time.Duration) {
 		ok := true
 		ok = ok && m.AddNodeFinished()
 		ok = ok && m.AddProofFinished()
-		ok = ok && m.ApproveSyncFinished()
 		ok = ok && m.GetActiveNodeFinished()
 		ok = ok && m.GetActiveNodesFinished()
 		ok = ok && m.GetGlobuleHashSignatureFinished()
-		ok = ok && m.GetMergedCopyFinished()
+		ok = ok && m.GetOriginFinished()
 		ok = ok && m.GetProofFinished()
 		ok = ok && m.IndexToRefFinished()
 		ok = ok && m.LengthFinished()
@@ -2060,10 +1905,6 @@ func (m *UnsyncListMock) MinimockWait(timeout time.Duration) {
 				m.t.Error("Expected call to UnsyncListMock.AddProof")
 			}
 
-			if !m.ApproveSyncFinished() {
-				m.t.Error("Expected call to UnsyncListMock.ApproveSync")
-			}
-
 			if !m.GetActiveNodeFinished() {
 				m.t.Error("Expected call to UnsyncListMock.GetActiveNode")
 			}
@@ -2076,8 +1917,8 @@ func (m *UnsyncListMock) MinimockWait(timeout time.Duration) {
 				m.t.Error("Expected call to UnsyncListMock.GetGlobuleHashSignature")
 			}
 
-			if !m.GetMergedCopyFinished() {
-				m.t.Error("Expected call to UnsyncListMock.GetMergedCopy")
+			if !m.GetOriginFinished() {
+				m.t.Error("Expected call to UnsyncListMock.GetOrigin")
 			}
 
 			if !m.GetProofFinished() {
@@ -2124,10 +1965,6 @@ func (m *UnsyncListMock) AllMocksCalled() bool {
 		return false
 	}
 
-	if !m.ApproveSyncFinished() {
-		return false
-	}
-
 	if !m.GetActiveNodeFinished() {
 		return false
 	}
@@ -2140,7 +1977,7 @@ func (m *UnsyncListMock) AllMocksCalled() bool {
 		return false
 	}
 
-	if !m.GetMergedCopyFinished() {
+	if !m.GetOriginFinished() {
 		return false
 	}
 
