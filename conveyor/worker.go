@@ -378,6 +378,7 @@ func (w *workerStateMachineImpl) readInputQueueSuspending() error {
 			return errors.Wrap(err, "[ readInputQueue ] Can't createElement")
 		}
 
+		// TODO: it's not clear why?
 		if w.slot.pulseState == constant.Past {
 			w.slot.slotState = Working
 		}

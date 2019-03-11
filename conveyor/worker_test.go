@@ -473,3 +473,49 @@ func Test_readInputQueueSuspending_EventOnly_Past(t *testing.T) {
 	el := slot.popElement(ActiveElement)
 	require.Equal(t, payLoad, el.payload)
 }
+
+func Test_readInputQueueSuspending_SignalsAndEvents(t *testing.T) {
+	tests := []constant.PulseState{constant.Future, constant.Present}
+
+	for _, tt := range tests {
+		t.Run(tt.String(), func(t *testing.T) {
+			slot, worker := makeSlotAndWorker(tt, 22)
+			oldSlot := *slot
+
+			slot.inputQueue.PushSignal(PendingPulseSignal, mockCallback())
+
+			numElements := 20
+			for i := 0; i < numElements; i++ {
+				require.NoError(t, slot.inputQueue.SinkPush(i))
+			}
+
+			require.NoError(t, worker.readInputQueueSuspending())
+			areSlotStatesEqual(&oldSlot, slot, t)
+
+			for i := 0; i < numElements; i++ {
+				el := slot.popElement(ActiveElement)
+				require.Equal(t, i, el.payload)
+			}
+		})
+	}
+}
+
+func Test_readInputQueueSuspending_SignalsAndEvents_Past(t *testing.T) {
+	slot, worker := makeSlotAndWorker(constant.Past, 22)
+	slot.inputQueue.PushSignal(ActivatePulseSignal, mockCallback())
+
+	numElements := 20
+	for i := 0; i < numElements; i++ {
+		require.NoError(t, slot.inputQueue.SinkPush(i))
+	}
+
+	require.NoError(t, worker.readInputQueueSuspending())
+
+	for i := 0; i < numElements; i++ {
+		el := slot.popElement(ActiveElement)
+		require.Equal(t, i, el.payload)
+	}
+
+	require.Equal(t, Working, slot.slotState)
+
+}
