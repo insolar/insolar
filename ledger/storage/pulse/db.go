@@ -19,32 +19,39 @@ package pulse
 import (
 	"bytes"
 	"context"
+	"sync"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/storage/db"
 	"github.com/ugorji/go/codec"
 )
 
+// StorageDB is a DB storage implementation. It saves pulses to disk and does not allow removal.
 type StorageDB struct {
-	DB db.DB `inject:""`
+	DB   db.DB `inject:""`
+	lock sync.RWMutex
 }
 
 type pulseKey core.PulseNumber
 
+// Scope implementation for DB key.
 func (k pulseKey) Scope() db.Scope {
 	return db.ScopePulse
 }
 
+// ID implementation for DB key.
 func (k pulseKey) ID() []byte {
 	return append([]byte{prefixPulse}, core.PulseNumber(k).Bytes()...)
 }
 
 type metaKey byte
 
+// Scope implementation for DB key.
 func (k metaKey) Scope() db.Scope {
 	return db.ScopePulse
 }
 
+// ID implementation for DB key.
 func (k metaKey) ID() []byte {
 	return []byte{prefixMeta, byte(k)}
 }
@@ -63,10 +70,12 @@ var (
 	keyHead metaKey = 1
 )
 
+// NewStorageDB creates new DB storage instance.
 func NewStorageDB() *StorageDB {
 	return &StorageDB{}
 }
 
+// ForPulseNumber returns pulse for provided pulse number. If not found, ErrNotFound will be returned.
 func (s *StorageDB) ForPulseNumber(ctx context.Context, pn core.PulseNumber) (pulse core.Pulse, err error) {
 	nd, err := s.get(pn)
 	if err != nil {
@@ -75,7 +84,11 @@ func (s *StorageDB) ForPulseNumber(ctx context.Context, pn core.PulseNumber) (pu
 	return nd.pulse, nil
 }
 
+// Latest returns latest pulse saved in DB. If not found, ErrNotFound will be returned.
 func (s *StorageDB) Latest(ctx context.Context) (pulse core.Pulse, err error) {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+
 	head, err := s.head()
 	if err != nil {
 		return
@@ -87,7 +100,12 @@ func (s *StorageDB) Latest(ctx context.Context) (pulse core.Pulse, err error) {
 	return nd.pulse, nil
 }
 
+// Append appends provided pulse to current storage. Pulse number should be greater than currently saved for preserving
+// pulse consistency. If provided pulse does not meet the requirements, ErrBadPulse will be returned.
 func (s *StorageDB) Append(ctx context.Context, pulse core.Pulse) error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
 	var insertWithHead = func(head core.PulseNumber) error {
 		oldHead, err := s.get(head)
 		if err != nil {
@@ -134,7 +152,12 @@ func (s *StorageDB) Append(ctx context.Context, pulse core.Pulse) error {
 	return insertWithHead(head)
 }
 
+// Forwards calculates steps pulses forwards from provided pulse. If calculated pulse does not exist, ErrNotFound will
+// be returned.
 func (s *StorageDB) Forwards(ctx context.Context, pn core.PulseNumber, steps int) (pulse core.Pulse, err error) {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+
 	node, err := s.get(pn)
 	if err != nil {
 		return
@@ -155,7 +178,12 @@ func (s *StorageDB) Forwards(ctx context.Context, pn core.PulseNumber, steps int
 	return iterator.pulse, nil
 }
 
+// Backwards calculates steps pulses backwards from provided pulse. If calculated pulse does not exist, ErrNotFound will
+// be returned.
 func (s *StorageDB) Backwards(ctx context.Context, pn core.PulseNumber, steps int) (pulse core.Pulse, err error) {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+
 	node, err := s.get(pn)
 	if err != nil {
 		return
