@@ -51,7 +51,8 @@ type SecondPhaseState struct {
 }
 
 type ThirdPhaseState struct {
-	ActiveNodes  []core.RecordRef
-	UnsyncList   network.UnsyncList
-	GlobuleProof *merkle.GlobuleProof
+	ActiveNodes    []core.Node
+	UnsyncList     network.UnsyncList
+	GlobuleProof   *merkle.GlobuleProof
+	ApprovedClaims []packets.ReferendumClaim
 }

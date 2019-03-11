@@ -30,6 +30,7 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/merkle"
+	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
@@ -181,6 +182,9 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse) (*Firs
 	claimHandler := claimhandler.NewClaimHandler(length, claimMap)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NET Consensus phase-1 ] Failed to add claims")
+	}
+	if fp.NodeKeeper.GetState() == core.WaitingNodeNetworkState {
+		nodenetwork.ApplyClaims(unsyncList, claimHandler.GetClaims())
 	}
 	valid, fault := validateProofs(fp.Calculator, unsyncList, pulseHash, proofSet)
 	for node := range valid {

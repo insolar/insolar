@@ -49,6 +49,14 @@ func (ch *ClaimHandler) GetClaimsFromNode(node core.RecordRef) []packets.Referen
 	return ch.claims[node]
 }
 
+func (ch *ClaimHandler) GetClaims() []packets.ReferendumClaim {
+	result := make([]packets.ReferendumClaim, 0)
+	for _, claims := range ch.claims {
+		result = append(result, claims...)
+	}
+	return result
+}
+
 func (ch *ClaimHandler) AddKnownClaims(claims []packets.ReferendumClaim, entropy core.Entropy) {
 	for _, claim := range claims {
 		join, ok := claim.(*packets.NodeJoinClaim)

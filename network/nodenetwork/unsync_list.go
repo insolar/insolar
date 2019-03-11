@@ -22,16 +22,15 @@ import (
 
 	consensus "github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/pkg/errors"
 )
 
-func copyActiveNodes(m map[core.RecordRef]core.Node) map[core.RecordRef]core.Node {
-	result := make(map[core.RecordRef]core.Node, len(m))
-	for k, v := range m {
-		v.(MutableNode).ChangeState()
-		result[k] = v
+func copyActiveNodes(nodes []core.Node) map[core.RecordRef]core.Node {
+	result := make(map[core.RecordRef]core.Node, len(nodes))
+	for _, node := range nodes {
+		node.(MutableNode).ChangeState()
+		result[node.ID()] = node
 	}
 	return result
 }
@@ -44,6 +43,10 @@ type unsyncList struct {
 	proofs      map[core.RecordRef]*consensus.NodePulseProof
 	ghs         map[core.RecordRef]consensus.GlobuleHashSignature
 	indexToRef  map[int]core.RecordRef
+}
+
+func (ul *unsyncList) GetOrigin() core.Node {
+	return ul.origin
 }
 
 func (ul *unsyncList) GetGlobuleHashSignature(ref core.RecordRef) (consensus.GlobuleHashSignature, bool) {
@@ -59,17 +62,6 @@ func (ul *unsyncList) RemoveNode(nodeID core.RecordRef) {
 	delete(ul.activeNodes, nodeID)
 	delete(ul.proofs, nodeID)
 	delete(ul.ghs, nodeID)
-}
-
-func (ul *unsyncList) ApproveSync(sync []core.RecordRef) {
-	prevActive := make([]core.RecordRef, 0, len(ul.activeNodes))
-	for nodeID := range ul.activeNodes {
-		prevActive = append(prevActive, nodeID)
-	}
-	diff := removeFromList(prevActive, sync)
-	for _, node := range diff {
-		ul.removeNode(node)
-	}
 }
 
 func (ul *unsyncList) AddNode(node core.Node, bitsetIndex uint16) {
@@ -117,17 +109,6 @@ func (ul *unsyncList) addNode(node core.Node, index int) {
 	ul.activeNodes[node.ID()] = node
 }
 
-func (ul *unsyncList) removeNode(nodeID core.RecordRef) {
-	delete(ul.activeNodes, nodeID)
-	delete(ul.proofs, nodeID)
-	delete(ul.ghs, nodeID)
-	i, ok := ul.refToIndex[nodeID]
-	if ok {
-		delete(ul.indexToRef, i)
-	}
-	delete(ul.refToIndex, nodeID)
-}
-
 func (ul *unsyncList) GetActiveNode(ref core.RecordRef) core.Node {
 	return ul.activeNodes[ref]
 }
@@ -136,12 +117,12 @@ func (ul *unsyncList) GetActiveNodes() []core.Node {
 	return sortedNodeList(ul.activeNodes)
 }
 
-func (ul *unsyncList) GetMergedCopy(claims []consensus.ReferendumClaim) (*network.MergedListCopy, error) {
-	nodes := copyActiveNodes(ul.activeNodes)
+func GetMergedCopy(nodes []core.Node, claims []consensus.ReferendumClaim) (*network.MergedListCopy, error) {
+	nodesMap := copyActiveNodes(nodes)
 
 	var nodesJoinedDuringPrevPulse bool
 	for _, claim := range claims {
-		isJoin, err := mergeClaim(nodes, claim)
+		isJoin, err := mergeClaim(nodesMap, claim)
 		if err != nil {
 			return nil, errors.Wrap(err, "[ GetMergedCopy ] failed to merge a claim")
 		}
@@ -150,7 +131,7 @@ func (ul *unsyncList) GetMergedCopy(claims []consensus.ReferendumClaim) (*networ
 	}
 
 	return &network.MergedListCopy{
-		ActiveList:                 nodes,
+		ActiveList:                 nodesMap,
 		NodesJoinedDuringPrevPulse: nodesJoinedDuringPrevPulse,
 	}, nil
 }
@@ -217,32 +198,21 @@ func (ul *unsyncList) Length() int {
 	return ul.length
 }
 
-type sparseUnsyncList struct {
-	unsyncList
-}
-
-func newSparseUnsyncList(origin core.Node, capacity int) *sparseUnsyncList {
-	return &sparseUnsyncList{unsyncList: *newUnsyncList(origin, nil, capacity)}
-}
-
-func AddClaims(ul *sparseUnsyncList, claims map[core.RecordRef][]consensus.ReferendumClaim) error {
-	for _, claimList := range claims {
-		for _, claim := range claimList {
-			c, ok := claim.(*consensus.NodeAnnounceClaim)
-			if !ok {
-				log.Error("[ AddClaims ] Could not convert claim with type TypeNodeAnnounceClaim to NodeAnnounceClaim")
-				continue
-			}
-
-			// TODO: fix version
-			node, err := ClaimToNode("", &c.NodeJoinClaim)
-			if err != nil {
-				return errors.Wrap(err, "[ AddClaims ] failed to convert Claim -> Node")
-			}
-			// TODO: check these two
-			ul.addNode(node, int(c.NodeAnnouncerIndex))
-			ul.addNode(ul.origin, int(c.NodeJoinerIndex))
+func ApplyClaims(ul network.UnsyncList, claims []consensus.ReferendumClaim) error {
+	for _, claim := range claims {
+		c, ok := claim.(*consensus.NodeAnnounceClaim)
+		if !ok {
+			continue
 		}
+
+		// TODO: fix version
+		node, err := ClaimToNode("", &c.NodeJoinClaim)
+		if err != nil {
+			return errors.Wrap(err, "[ AddClaims ] failed to convert Claim -> Node")
+		}
+		// TODO: check these two
+		ul.AddNode(node, c.NodeAnnouncerIndex)
+		ul.AddNode(ul.GetOrigin(), c.NodeJoinerIndex)
 	}
 	return nil
 }

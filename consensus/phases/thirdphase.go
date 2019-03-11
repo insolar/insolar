@@ -133,9 +133,10 @@ func (tp *ThirdPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse, state 
 	logger.Infof("[ NET Consensus phase-3 ] BFT consensus passed: %d/%d", validNodes, totalCount)
 
 	return &ThirdPhaseState{
-		ActiveNodes:  state.MatrixState.Active,
-		UnsyncList:   state.UnsyncList,
-		GlobuleProof: state.GlobuleProof,
+		ActiveNodes:    nodes,
+		UnsyncList:     state.UnsyncList,
+		GlobuleProof:   state.GlobuleProof,
+		ApprovedClaims: state.ClaimHandler.GetClaims(),
 	}, nil
 }
 
