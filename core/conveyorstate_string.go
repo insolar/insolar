@@ -4,9 +4,9 @@ package core
 
 import "strconv"
 
-const _ConveyorState_name = "ActivePreparingPulseShuttingDownInactive"
+const _ConveyorState_name = "ConveyorActiveConveyorPreparingPulseConveyorShuttingDownConveyorInactive"
 
-var _ConveyorState_index = [...]uint8{0, 6, 20, 32, 40}
+var _ConveyorState_index = [...]uint8{0, 14, 36, 56, 72}
 
 func (i ConveyorState) String() string {
 	if i < 0 || i >= ConveyorState(len(_ConveyorState_index)-1) {
