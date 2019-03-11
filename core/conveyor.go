@@ -33,10 +33,10 @@ type ConveyorState int
 
 //go:generate stringer -type=ConveyorState
 const (
-	Active = ConveyorState(iota)
-	PreparingPulse
-	ShuttingDown
-	Inactive
+	ConveyorActive = ConveyorState(iota)
+	ConveyorPreparingPulse
+	ConveyorShuttingDown
+	ConveyorInactive
 )
 
 // Control allows to control conveyor and pulse
