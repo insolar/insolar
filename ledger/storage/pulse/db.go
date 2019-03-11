@@ -34,24 +34,20 @@ type StorageDB struct {
 
 type pulseKey core.PulseNumber
 
-// Scope implementation for DB key.
 func (k pulseKey) Scope() db.Scope {
 	return db.ScopePulse
 }
 
-// ID implementation for DB key.
 func (k pulseKey) ID() []byte {
 	return append([]byte{prefixPulse}, core.PulseNumber(k).Bytes()...)
 }
 
 type metaKey byte
 
-// Scope implementation for DB key.
 func (k metaKey) Scope() db.Scope {
 	return db.ScopePulse
 }
 
-// ID implementation for DB key.
 func (k metaKey) ID() []byte {
 	return []byte{prefixMeta, byte(k)}
 }
