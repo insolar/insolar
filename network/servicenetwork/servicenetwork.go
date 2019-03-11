@@ -308,6 +308,9 @@ func isNextPulse(currentPulse, newPulse *core.Pulse) bool {
 
 func (n *ServiceNetwork) verifyPulseSign(pulse core.Pulse) (bool, error) {
 	hashProvider := n.CryptographyScheme.IntegrityHasher()
+	if len(pulse.Signs) == 0 {
+		return false, errors.New("[ verifyPulseSign ] received empty pulse signs")
+	}
 	for _, psc := range pulse.Signs {
 		payload := pulsar.PulseSenderConfirmationPayload{PulseSenderConfirmation: psc}
 		hash, err := payload.Hash(hashProvider)
