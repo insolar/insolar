@@ -174,7 +174,7 @@ func (scp *Pool) LightCleanup(
 
 		for _, c := range allClients {
 			jetID := c.jetID
-			_, jetPrefix := core.JetID(jetID).Jet()
+			jetPrefix := core.JetID(jetID).Prefix()
 			prefixKey := string(jetPrefix)
 
 			_, skipRecordsCleanup := jetPrefixSeen[prefixKey]
