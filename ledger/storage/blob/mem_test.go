@@ -82,7 +82,7 @@ func TestBlobStorage_Set(t *testing.T) {
 	})
 }
 
-func TestBlobStorage_Get(t *testing.T) {
+func TestBlobStorage_ForID(t *testing.T) {
 	t.Parallel()
 
 	ctx := inslogger.TestContext(t)

@@ -17,12 +17,12 @@
 package blob
 
 import (
-	"errors"
+	"github.com/pkg/errors"
 )
 
 var (
 	// ErrNotFound is returned when blob-record not found
 	ErrNotFound = errors.New("blob not found")
-	// ErrOverride is returned if SetBlob tries to update existing record.
+	// ErrOverride is returned if blob.Set tries to update existing record.
 	ErrOverride = errors.New("blob override is forbidden")
 )

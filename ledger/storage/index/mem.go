@@ -15,3 +15,23 @@
  */
 
 package index
+
+import (
+	"context"
+
+	"github.com/insolar/insolar/core"
+)
+
+type Storage struct{}
+
+func (Storage) Set(ctx context.Context, id core.RecordID, index ObjectLifeline) error {
+	panic("implement me")
+}
+
+func (Storage) Delete(ctx context.Context, id core.RecordID) error {
+	panic("implement me")
+}
+
+func (Storage) ForID(ctx context.Context, id core.RecordID) (ObjectLifeline, error) {
+	panic("implement me")
+}

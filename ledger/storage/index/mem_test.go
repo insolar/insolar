@@ -15,3 +15,23 @@
  */
 
 package index
+
+import (
+	"testing"
+)
+
+func TestIndexStorage_NewStorage(t *testing.T) {
+	panic("implement me")
+}
+
+func TestIndexStorage_ForID(t *testing.T) {
+	panic("implement me")
+}
+
+func TestIndexStorage_Set(t *testing.T) {
+	panic("implement me")
+}
+
+func TestIndexStorage_Delete(t *testing.T) {
+	panic("implement me")
+}
