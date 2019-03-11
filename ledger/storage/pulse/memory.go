@@ -80,7 +80,7 @@ func (s *StorageMem) Append(ctx context.Context, pulse core.Pulse) error {
 	}
 
 	if pulse.PulseNumber <= s.head.pulse.PulseNumber {
-		return errors.New("pulse should be greater than the latest")
+		return ErrBadPulse
 	}
 	insertWithHead()
 

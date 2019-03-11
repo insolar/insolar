@@ -82,11 +82,11 @@ func TestNodeStorage_Append(t *testing.T) {
 
 		{
 			err := storage.Append(ctx, core.Pulse{PulseNumber: pn})
-			assert.Error(t, err)
+			assert.Equal(t, ErrBadPulse, err)
 		}
 		{
 			err := storage.Append(ctx, core.Pulse{PulseNumber: pn - 1})
-			assert.Error(t, err)
+			assert.Equal(t, ErrBadPulse, err)
 		}
 	})
 

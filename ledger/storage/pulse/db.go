@@ -22,7 +22,6 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/storage/db"
-	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
 )
 
@@ -130,7 +129,7 @@ func (s *StorageDB) Append(ctx context.Context, pulse core.Pulse) error {
 	}
 
 	if pulse.PulseNumber <= head {
-		return errors.New("pulse should be greater than the latest")
+		return ErrBadPulse
 	}
 	return insertWithHead(head)
 }
