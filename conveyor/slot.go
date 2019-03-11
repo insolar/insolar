@@ -37,7 +37,7 @@ const (
 )
 
 const slotSize = 10000
-const slotElementDelta = 1000000 // nolint: unused
+const slotElementDelta = slotSize // nolint: unused
 
 // HandlersConfiguration contains configuration of handlers for specific pulse state
 // TODO: logic will be provided after pulse change mechanism
@@ -91,9 +91,6 @@ func (l *ElementList) removeElement(element *slotElement) { // nolint: unused
 	element.prevElement = nil
 	element.nextElement = nil
 	l.length--
-	if l.length == 0 {
-		l.tail = nil
-	}
 }
 
 // pushElement adds element to linked list
@@ -241,8 +238,11 @@ func (s *Slot) len(status ActivationStatus) int { // nolint: unused
 	return list.len()
 }
 
-func (s *Slot) getSlotElementByID(id uint32) *slotElement {
+func (s *Slot) extractSlotElementByID(id uint32) *slotElement { // nolint: unused
 	element := &s.elements[id%slotSize]
+	if element.id != id {
+		return nil
+	}
 	list, ok := s.elementListMap[element.activationStatus]
 	if ok {
 		list.removeElement(element)
