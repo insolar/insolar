@@ -61,7 +61,6 @@ type ServiceNetwork struct {
 	NodeKeeper          network.NodeKeeper              `inject:""`
 	NetworkSwitcher     core.NetworkSwitcher            `inject:""`
 	TerminationHandler  core.TerminationHandler         `inject:""`
-	Conveyor            core.Conveyor                   `inject:""`
 
 	// subcomponents
 	PhaseManager phases.PhaseManager `inject:"subcomponent"`
@@ -279,21 +278,6 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse core.Pulse) {
 		logger.Fatalf("Failed to set new pulse: %s", err.Error())
 	}
 	logger.Infof("Set new current pulse number: %d", newPulse.PulseNumber)
-
-	wg := sync.WaitGroup{}
-	// Wait fo callback?
-	// wg.Add(1)
-	err = n.Conveyor.PreparePulse(newPulse, &wg)
-	if err != nil {
-		logger.Fatalf("Failed to prepare pulse number %d at conveyor: %s", newPulse.PulseNumber, err.Error())
-		// wg.Done()
-	}
-	// wg.Wait()
-
-	err = n.Conveyor.ActivatePulse()
-	if err != nil {
-		logger.Fatalf("Failed to activate pulse number %d at conveyor: %s", newPulse.PulseNumber, err.Error())
-	}
 
 	go n.phaseManagerOnPulse(ctx, newPulse, currentTime)
 }
