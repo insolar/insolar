@@ -35,7 +35,7 @@ func NewMatrix() *Matrix {
 	m := Matrix{}
 	m.matrix = append(m.matrix,
 		[3]common.StateMachine{{}, {}, {}},
-		sample.SMRHTestStateMachineFactory(),
+		sample.RawTestStateMachineFactory(),
 	)
 	return &m
 }

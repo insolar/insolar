@@ -35,9 +35,9 @@ const (
 func NewMatrix() *Matrix {
     m := Matrix{}
     m.matrix = append(m.matrix,
-    [3]common.StateMachine{ {}, {}, {} },
-    {{range .Machines}}{{.Package}}.SMRH{{.Name}}Factory(),
-    {{end}})
+        [3]common.StateMachine{ {}, {}, {} },
+        {{range .Machines}}{{.Package}}.Raw{{.Name}}Factory(),
+        {{end}})
     return &m
 }
 
