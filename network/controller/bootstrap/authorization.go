@@ -29,11 +29,15 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller/common"
 	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/insolar/insolar/platformpolicy"
+	"github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
+	"go.opencensus.io/tag"
 	"go.opencensus.io/trace"
 )
 
@@ -175,6 +179,8 @@ func (ac *authorizationController) register(ctx context.Context, discoveryNode *
 		if attempt >= registrationRetries {
 			return errors.Errorf("Exceeded maximum number of registration retries (%d)", registrationRetries)
 		}
+		log.Warnf("Failed to register on discovery node %s. Reason: node %s is already in network active list. "+
+			"Retrying registration in %v", discoveryNode.Host, ac.NodeKeeper.GetOrigin().ID(), data.RetryIn)
 		time.Sleep(data.RetryIn)
 		return ac.register(ctx, discoveryNode, sessionID, attempt+1)
 	}
@@ -187,8 +193,24 @@ func (ac *authorizationController) buildRegistrationResponse(sessionID SessionID
 		return &RegistrationResponse{Code: OpRejected, Error: err.Error()}
 	}
 	if node := ac.NodeKeeper.GetActiveNode(claim.NodeRef); node != nil {
+		retryIn := session.TTL / 2
+
+		keyProc := platformpolicy.NewKeyProcessor()
+		// little hack: ignoring error, because it never fails in current implementation
+		nodeKey, _ := keyProc.ExportPublicKeyBinary(node.PublicKey())
+
+		log.Warnf("Joiner node (ID: %s, PK: %s) conflicts with node (ID: %s, PK: %s) in active list, sending request to reconnect in %v",
+			claim.NodeRef, base58.Encode(claim.NodePK[:]), node.ID(), base58.Encode(nodeKey), retryIn)
+
+		statsErr := stats.RecordWithTags(context.Background(), []tag.Mutator{
+			tag.Upsert(tagNodeRef, claim.NodeRef.String()),
+		}, statBootstrapReconnectRequired.M(1))
+		if statsErr != nil {
+			log.Warn("Failed to record reconnection retries metric: " + statsErr.Error())
+		}
+
 		ac.SessionManager.ProlongateSession(sessionID, session)
-		return &RegistrationResponse{Code: OpRetry, RetryIn: session.TTL / 2}
+		return &RegistrationResponse{Code: OpRetry, RetryIn: retryIn}
 	}
 	return &RegistrationResponse{Code: OpConfirmed}
 }

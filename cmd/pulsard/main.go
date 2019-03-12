@@ -81,11 +81,6 @@ func main() {
 		log.Warn("failed to load configuration from file: ", err.Error())
 	}
 
-	err = cfgHolder.LoadEnv()
-	if err != nil {
-		log.Warn("failed to load configuration from env:", err.Error())
-	}
-
 	traceID := utils.RandTraceID()
 	ctx, inslog := initLogger(context.Background(), cfgHolder.Configuration.Log, traceID)
 	log.SetGlobalLogger(inslog)

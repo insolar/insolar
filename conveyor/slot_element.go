@@ -42,6 +42,7 @@ type slotElement struct {
 	state            uint32
 
 	nextElement      *slotElement
+	prevElement      *slotElement
 	activationStatus ActivationStatus
 }
 

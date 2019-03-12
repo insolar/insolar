@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/contractrequester"
+	"github.com/insolar/insolar/conveyor"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/delegationtoken"
 	"github.com/insolar/insolar/cryptography"
@@ -152,6 +153,9 @@ func initComponents(
 	networkCoordinator, err := networkcoordinator.New()
 	checkError(ctx, err, "failed to start NetworkCoordinator")
 
+	pulseConveyor, err := conveyor.NewPulseConveyor()
+	checkError(ctx, err, "failed to start PulseConveyor")
+
 	_, err = manager.NewVersionManager(cfg.VersionManager)
 	checkError(ctx, err, "failed to load VersionManager: ")
 
@@ -191,6 +195,7 @@ func initComponents(
 		networkSwitcher,
 		networkCoordinator,
 		cryptographyService,
+		pulseConveyor,
 	}...)
 
 	cm.Inject(components...)

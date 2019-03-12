@@ -162,8 +162,8 @@ func getTestData(s *amSuite) (
 	handler := MessageHandler{
 		replayHandlers:             map[core.MessageType]core.MessageHandler{},
 		PlatformCryptographyScheme: s.scheme,
-		conf:        &configuration.Ledger{LightChainLimit: 3, PendingRequestsLimit: 10},
-		certificate: certificate,
+		conf:                       &configuration.Ledger{LightChainLimit: 3, PendingRequestsLimit: 10},
+		certificate:                certificate,
 	}
 
 	handler.Nodes = s.nodeStorage
@@ -803,8 +803,8 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterValidation() {
 	handler := MessageHandler{
 		replayHandlers:             map[core.MessageType]core.MessageHandler{},
 		PlatformCryptographyScheme: s.scheme,
-		conf:        &configuration.Ledger{LightChainLimit: 3, PendingRequestsLimit: 10},
-		certificate: certificate,
+		conf:                       &configuration.Ledger{LightChainLimit: 3, PendingRequestsLimit: 10},
+		certificate:                certificate,
 	}
 
 	handler.Bus = mb
