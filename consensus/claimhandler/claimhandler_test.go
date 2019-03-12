@@ -15,3 +15,86 @@
  */
 
 package claimhandler
+
+import (
+	"testing"
+
+	"github.com/insolar/insolar/consensus/packets"
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/testutils"
+	"github.com/stretchr/testify/assert"
+)
+
+func TestApprovedJoinersCount(t *testing.T) {
+	assert.Equal(t, 1, ApprovedJoinersCount(1, 1))
+	assert.Equal(t, 1, ApprovedJoinersCount(2, 3))
+	assert.Equal(t, 3, ApprovedJoinersCount(5, 10))
+	assert.Equal(t, 2, ApprovedJoinersCount(2, 10))
+}
+
+func TestClaimHandler_FilterClaims(t *testing.T) {
+	// announcers references do not affect joiner claims filter logic, so choose random
+	ref1 := testutils.RandomRef()
+	ref2 := testutils.RandomRef()
+	ref3 := testutils.RandomRef()
+
+	claims := make(map[core.RecordRef][]packets.ReferendumClaim)
+	claims[ref1] = []packets.ReferendumClaim{&packets.NodeBroadcast{}, &packets.NodeBroadcast{}, getJoinClaim(t, core.RecordRef{152})}
+	claims[ref2] = []packets.ReferendumClaim{getJoinClaim(t, core.RecordRef{0}), getJoinClaim(t, core.RecordRef{154})}
+	claims[ref3] = []packets.ReferendumClaim{getJoinClaim(t, core.RecordRef{1}), getJoinClaim(t, core.RecordRef{153})}
+
+	containsJoinClaim := func(claims []packets.ReferendumClaim, ref core.RecordRef) bool {
+		for _, claim := range claims {
+			joinClaim, ok := claim.(*packets.NodeJoinClaim)
+			if !ok {
+				continue
+			}
+			if joinClaim.NodeRef.Equal(ref) {
+				return true
+			}
+		}
+		return false
+	}
+
+	handler := NewClaimHandler(6, claims)
+	result := handler.FilterClaims([]core.RecordRef{ref1, ref2, ref3}, core.Entropy{0})
+	// 2 NodeBroadcast + 2 JoinClaims
+	assert.Equal(t, 4, len(result.ApprovedClaims))
+	assert.True(t, containsJoinClaim(result.ApprovedClaims, core.RecordRef{154}))
+	assert.True(t, containsJoinClaim(result.ApprovedClaims, core.RecordRef{153}))
+	assert.False(t, containsJoinClaim(result.ApprovedClaims, core.RecordRef{0}))
+	assert.False(t, containsJoinClaim(result.ApprovedClaims, core.RecordRef{1}))
+
+	// 2 NodeBroadcast + 2 JoinClaims
+	result = handler.FilterClaims([]core.RecordRef{ref1, ref2}, core.Entropy{0})
+	assert.Equal(t, 4, len(result.ApprovedClaims))
+	assert.True(t, containsJoinClaim(result.ApprovedClaims, core.RecordRef{154}))
+	assert.True(t, containsJoinClaim(result.ApprovedClaims, core.RecordRef{152}))
+	assert.False(t, containsJoinClaim(result.ApprovedClaims, core.RecordRef{0}))
+	assert.False(t, containsJoinClaim(result.ApprovedClaims, core.RecordRef{1}))
+
+	// only 2 JoinClaims
+	result = handler.FilterClaims([]core.RecordRef{ref2, ref3}, core.Entropy{0})
+	assert.Equal(t, 2, len(result.ApprovedClaims))
+	assert.True(t, containsJoinClaim(result.ApprovedClaims, core.RecordRef{154}))
+	assert.True(t, containsJoinClaim(result.ApprovedClaims, core.RecordRef{153}))
+	assert.False(t, containsJoinClaim(result.ApprovedClaims, core.RecordRef{0}))
+	assert.False(t, containsJoinClaim(result.ApprovedClaims, core.RecordRef{1}))
+}
+
+func TestClaimHandler_GetClaims(t *testing.T) {
+	// announcers references do not affect joiner claims filter logic, so choose random
+	ref1 := testutils.RandomRef()
+	ref2 := testutils.RandomRef()
+	ref3 := testutils.RandomRef()
+
+	claims := make(map[core.RecordRef][]packets.ReferendumClaim)
+	claims[ref1] = []packets.ReferendumClaim{&packets.NodeBroadcast{}, getJoinClaim(t, core.RecordRef{0})}
+	claims[ref2] = []packets.ReferendumClaim{getJoinClaim(t, core.RecordRef{1}), getJoinClaim(t, core.RecordRef{2})}
+
+	handler := NewClaimHandler(6, claims)
+	assert.Equal(t, 4, len(handler.GetClaims()))
+
+	handler.SetClaimsFromNode(ref3, []packets.ReferendumClaim{&packets.NodeBroadcast{}})
+	assert.Equal(t, 5, len(handler.GetClaims()))
+}
