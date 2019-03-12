@@ -161,7 +161,7 @@ ci_test_func:
 
 .PHONY: ci_test_integrtest
 ci_test_integrtest:
-	CGO_ENABLED=1 go test $(TEST_ARGS) -tags networktest -v ./network/servicenetwork -count=1 | tee integr.file
+	CGO_ENABLED=1 go test $(TEST_ARGS) -timeout 40m -tags networktest -v ./network/servicenetwork -count=1 | tee integr.file
 
 
 .PHONY: regen-proxies
