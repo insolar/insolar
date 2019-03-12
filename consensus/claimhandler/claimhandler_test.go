@@ -41,7 +41,7 @@ func TestJoinClaimHandler_HandleClaim(t *testing.T) {
 		priorityMap[claim.NodeRef] = getPriority(claim.NodeRef, entropy)
 	}
 
-	handler := NewClaimHandler(activeNodesCount)
+	handler := NewClaimHandler(activeNodesCount, map[core.RecordRef][]packets.ReferendumClaim{})
 	handler.AddKnownClaims(claims, entropy)
 	res := handler.HandleAndReturnClaims()
 	assert.Len(t, res, int(float64(activeNodesCount)*NodesToJoinPercent))
