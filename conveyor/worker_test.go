@@ -35,7 +35,7 @@ var testPulseStates = []constant.PulseState{constant.Future, constant.Present, c
 
 func makeSlotAndWorker(pulseState constant.PulseState, pulseNumber core.PulseNumber) (*Slot, worker) {
 	slot := NewSlot(pulseState, pulseNumber, nil)
-	worker := newWorkerStateMachineImpl(slot)
+	worker := newWorker(slot)
 	slot.removeSlotCallback = func(number core.PulseNumber) {}
 
 	return slot, worker

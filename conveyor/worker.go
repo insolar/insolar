@@ -48,7 +48,7 @@ type worker struct { // nolint: unused
 	nodeState int // TODO: remove it when right implementation of node state calculation appears
 }
 
-func newWorkerStateMachineImpl(slot *Slot) worker {
+func newWorker(slot *Slot) worker {
 	slot.slotState = Initializing
 	return worker{
 		slot:               slot,
