@@ -20,11 +20,6 @@ import (
 type ModifierMock struct {
 	t minimock.Tester
 
-	DeleteFunc       func(p context.Context, p1 core.RecordID) (r error)
-	DeleteCounter    uint64
-	DeletePreCounter uint64
-	DeleteMock       mModifierMockDelete
-
 	SetFunc       func(p context.Context, p1 core.RecordID, p2 ObjectLifeline) (r error)
 	SetCounter    uint64
 	SetPreCounter uint64
@@ -39,158 +34,9 @@ func NewModifierMock(t minimock.Tester) *ModifierMock {
 		controller.RegisterMocker(m)
 	}
 
-	m.DeleteMock = mModifierMockDelete{mock: m}
 	m.SetMock = mModifierMockSet{mock: m}
 
 	return m
-}
-
-type mModifierMockDelete struct {
-	mock              *ModifierMock
-	mainExpectation   *ModifierMockDeleteExpectation
-	expectationSeries []*ModifierMockDeleteExpectation
-}
-
-type ModifierMockDeleteExpectation struct {
-	input  *ModifierMockDeleteInput
-	result *ModifierMockDeleteResult
-}
-
-type ModifierMockDeleteInput struct {
-	p  context.Context
-	p1 core.RecordID
-}
-
-type ModifierMockDeleteResult struct {
-	r error
-}
-
-//Expect specifies that invocation of Modifier.Delete is expected from 1 to Infinity times
-func (m *mModifierMockDelete) Expect(p context.Context, p1 core.RecordID) *mModifierMockDelete {
-	m.mock.DeleteFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &ModifierMockDeleteExpectation{}
-	}
-	m.mainExpectation.input = &ModifierMockDeleteInput{p, p1}
-	return m
-}
-
-//Return specifies results of invocation of Modifier.Delete
-func (m *mModifierMockDelete) Return(r error) *ModifierMock {
-	m.mock.DeleteFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &ModifierMockDeleteExpectation{}
-	}
-	m.mainExpectation.result = &ModifierMockDeleteResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of Modifier.Delete is expected once
-func (m *mModifierMockDelete) ExpectOnce(p context.Context, p1 core.RecordID) *ModifierMockDeleteExpectation {
-	m.mock.DeleteFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &ModifierMockDeleteExpectation{}
-	expectation.input = &ModifierMockDeleteInput{p, p1}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *ModifierMockDeleteExpectation) Return(r error) {
-	e.result = &ModifierMockDeleteResult{r}
-}
-
-//Set uses given function f as a mock of Modifier.Delete method
-func (m *mModifierMockDelete) Set(f func(p context.Context, p1 core.RecordID) (r error)) *ModifierMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.DeleteFunc = f
-	return m.mock
-}
-
-//Delete implements github.com/insolar/insolar/ledger/storage/index.Modifier interface
-func (m *ModifierMock) Delete(p context.Context, p1 core.RecordID) (r error) {
-	counter := atomic.AddUint64(&m.DeletePreCounter, 1)
-	defer atomic.AddUint64(&m.DeleteCounter, 1)
-
-	if len(m.DeleteMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.DeleteMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to ModifierMock.Delete. %v %v", p, p1)
-			return
-		}
-
-		input := m.DeleteMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, ModifierMockDeleteInput{p, p1}, "Modifier.Delete got unexpected parameters")
-
-		result := m.DeleteMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the ModifierMock.Delete")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.DeleteMock.mainExpectation != nil {
-
-		input := m.DeleteMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, ModifierMockDeleteInput{p, p1}, "Modifier.Delete got unexpected parameters")
-		}
-
-		result := m.DeleteMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the ModifierMock.Delete")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.DeleteFunc == nil {
-		m.t.Fatalf("Unexpected call to ModifierMock.Delete. %v %v", p, p1)
-		return
-	}
-
-	return m.DeleteFunc(p, p1)
-}
-
-//DeleteMinimockCounter returns a count of ModifierMock.DeleteFunc invocations
-func (m *ModifierMock) DeleteMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.DeleteCounter)
-}
-
-//DeleteMinimockPreCounter returns the value of ModifierMock.Delete invocations
-func (m *ModifierMock) DeleteMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.DeletePreCounter)
-}
-
-//DeleteFinished returns true if mock invocations count is ok
-func (m *ModifierMock) DeleteFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.DeleteMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.DeleteCounter) == uint64(len(m.DeleteMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.DeleteMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.DeleteCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.DeleteFunc != nil {
-		return atomic.LoadUint64(&m.DeleteCounter) > 0
-	}
-
-	return true
 }
 
 type mModifierMockSet struct {
@@ -346,10 +192,6 @@ func (m *ModifierMock) SetFinished() bool {
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *ModifierMock) ValidateCallCounters() {
 
-	if !m.DeleteFinished() {
-		m.t.Fatal("Expected call to ModifierMock.Delete")
-	}
-
 	if !m.SetFinished() {
 		m.t.Fatal("Expected call to ModifierMock.Set")
 	}
@@ -371,10 +213,6 @@ func (m *ModifierMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *ModifierMock) MinimockFinish() {
 
-	if !m.DeleteFinished() {
-		m.t.Fatal("Expected call to ModifierMock.Delete")
-	}
-
 	if !m.SetFinished() {
 		m.t.Fatal("Expected call to ModifierMock.Set")
 	}
@@ -393,7 +231,6 @@ func (m *ModifierMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
-		ok = ok && m.DeleteFinished()
 		ok = ok && m.SetFinished()
 
 		if ok {
@@ -402,10 +239,6 @@ func (m *ModifierMock) MinimockWait(timeout time.Duration) {
 
 		select {
 		case <-timeoutCh:
-
-			if !m.DeleteFinished() {
-				m.t.Error("Expected call to ModifierMock.Delete")
-			}
 
 			if !m.SetFinished() {
 				m.t.Error("Expected call to ModifierMock.Set")
@@ -422,10 +255,6 @@ func (m *ModifierMock) MinimockWait(timeout time.Duration) {
 //AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *ModifierMock) AllMocksCalled() bool {
-
-	if !m.DeleteFinished() {
-		return false
-	}
 
 	if !m.SetFinished() {
 		return false
