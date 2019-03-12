@@ -65,3 +65,7 @@ func (ds *dropStorageDB) Set(ctx context.Context, jetID core.JetID, drop jet.Dro
 	}
 	return ds.DB.Set(ctx, k, encoded)
 }
+
+func (ds *dropStorageDB) Delete(pulse core.PulseNumber) {
+	panic("shouldn't be called. because db storage should work only on heavy. heavy should remove any data")
+}

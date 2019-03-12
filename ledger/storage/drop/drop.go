@@ -27,6 +27,7 @@ import (
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage/drop.Modifier -o ./ -s _mock.go
 type Modifier interface {
 	Set(ctx context.Context, jetID core.JetID, drop jet.Drop) error
+	Delete(pulse core.PulseNumber)
 }
 
 // Accessor provides an interface for accessing jetdrops.
