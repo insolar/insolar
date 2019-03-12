@@ -156,7 +156,7 @@ func (w *workerStateMachineImpl) processSignalsWorking(elements []queue.OutputEl
 }
 
 func (w *workerStateMachineImpl) readInputQueueWorking() error {
-	log.Debug("[ readInputQueueWorking ] starts ...")
+	log.Debugf("[ readInputQueueWorking ] starts ... ( w.slot.pulseState: %s )", w.slot.pulseState.String())
 	elements := w.slot.inputQueue.RemoveAll()
 
 	numSignals := w.processSignalsWorking(elements)
@@ -189,7 +189,7 @@ func setNewElementState(element *slotElement, payLoad interface{}, fullState uin
 }
 
 func (w *workerStateMachineImpl) readResponseQueue() error {
-	log.Debug("[ readResponseQueue ] starts ...")
+	log.Debugf("[ readResponseQueue ] starts ... ( w.slot.pulseState: %s )", w.slot.pulseState.String())
 	w.postponedResponses = append(w.postponedResponses, w.slot.responseQueue.RemoveAll()...)
 	w.nextWorkerState = ProcessElements
 
@@ -252,7 +252,7 @@ func (w *workerStateMachineImpl) waitQueuesOrTick() {
 }
 
 func (w *workerStateMachineImpl) processingElements() {
-	log.Debug("[ processingElements ] starts ...")
+	log.Debugf("[ processingElements ] starts ... ( w.slot.pulseState: %s )", w.slot.pulseState.String())
 	if !w.slot.hasElements(ActiveElement) {
 		if w.slot.pulseState == constant.Past {
 			if w.slot.hasExpired() {
@@ -309,7 +309,7 @@ func (w *workerStateMachineImpl) processingElements() {
 }
 
 func (w *workerStateMachineImpl) working() {
-
+	log.Debugf("[ working ] starts ... ( w.slot.pulseState: %s )", w.slot.pulseState.String())
 	for w.slot.isWorking() {
 		err := w.readInputQueueWorking()
 		if err != nil {
@@ -355,6 +355,7 @@ func (w *workerStateMachineImpl) sendRemovalSignalToConveyor() {
 }
 
 func (w *workerStateMachineImpl) processSignalsSuspending(elements []queue.OutputElement) int {
+	log.Debugf("[ processSignalsSuspending ] starts ... ( w.slot.pulseState: %s )", w.slot.pulseState.String())
 	numSignals := 0
 	// TODO: add check if many signals come
 	for i := 0; i < len(elements); i++ {
@@ -382,6 +383,7 @@ func (w *workerStateMachineImpl) processSignalsSuspending(elements []queue.Outpu
 }
 
 func (w *workerStateMachineImpl) readInputQueueSuspending() error {
+	log.Debugf("[ readInputQueueSuspending ] starts ... ( w.slot.pulseState: %s )", w.slot.pulseState.String())
 	elements := w.slot.inputQueue.RemoveAll()
 	numSignals := w.processSignalsSuspending(elements)
 
@@ -406,7 +408,7 @@ func (w *workerStateMachineImpl) readInputQueueSuspending() error {
 }
 
 func (w *workerStateMachineImpl) suspending() {
-	log.Info("[ suspending ] workerStateMachineImpl.suspending starts ...")
+	log.Debugf("[ suspending ] starts ... ( w.slot.pulseState: %s )", w.slot.pulseState.String())
 	switch w.slot.pulseState {
 	case constant.Past:
 		w.sendRemovalSignalToConveyor()
@@ -427,7 +429,7 @@ func (w *workerStateMachineImpl) suspending() {
 }
 
 func (w *workerStateMachineImpl) migrate(status ActivationStatus) error {
-	log.Infof("[ migrate ] Starts ... ( %s )", status.String())
+	log.Infof("[ migrate ] Starts ... ( status: %s. w.slot.pulseState: %s )", status.String(), w.slot.pulseState.String())
 	numElements := w.slot.len(status)
 	for ; numElements > 0; numElements-- {
 		element := w.slot.popElement(status)
@@ -459,7 +461,6 @@ func (w *workerStateMachineImpl) migrate(status ActivationStatus) error {
 		}
 	}
 
-	log.Info("[ migrate ] END")
 	return nil
 
 }
@@ -469,6 +470,7 @@ func (w *workerStateMachineImpl) getInitHandlersFromConfig() {
 }
 
 func (w *workerStateMachineImpl) initializing() {
+	log.Debugf("[ initializing ] starts ... ( w.slot.pulseState: %s )", w.slot.pulseState.String())
 	if w.slot.pulseState == constant.Future {
 		log.Info("[ initializing ] pulseState is Future. Skip initializing")
 		return

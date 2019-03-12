@@ -129,6 +129,7 @@ func _TestSlot_Worker(t *testing.T) {
 func makeSlotAndWorker(pulseState constant.PulseState, pulseNumber core.PulseNumber) (*Slot, workerStateMachineImpl) {
 	slot := NewSlot(pulseState, pulseNumber, nil)
 	worker := newWorkerStateMachineImpl(slot)
+	slot.removeSlotCallback = func(number core.PulseNumber) {}
 
 	return slot, worker
 }
@@ -1022,41 +1023,75 @@ func Test_initializing_NotEmptySlot(t *testing.T) {
 // ---- run
 
 func Test_run(t *testing.T) {
+	maxState := uint32(1000)
 	sm := istatemachine.NewStateMachineTypeMock(t)
-	sm.GetMigrationHandlerFunc = func(p constant.PulseState, p1 uint32) (r istatemachine.MigrationHandler) {
+	sm.GetMigrationHandlerFunc = func(p constant.PulseState, state uint32) (r istatemachine.MigrationHandler) {
 		return func(element islot.SlotElementHelper) (interface{}, uint32, error) {
-			return element.GetElementID(), joinStates(0, 434), nil
+			if state > maxState {
+				state /= 2
+			}
+			return element.GetElementID(), joinStates(0, state+1), nil
 		}
 	}
 
-	sm.GetTransitionHandlerFunc = func(p constant.PulseState, p1 uint32) (r istatemachine.TransitHandler) {
+	sm.GetTransitionHandlerFunc = func(p constant.PulseState, state uint32) (r istatemachine.TransitHandler) {
 		return func(element islot.SlotElementHelper) (interface{}, uint32, error) {
-			return element.GetElementID(), joinStates(0, 333), nil
+			if state > maxState {
+				state /= 2
+			}
+			return element.GetElementID(), joinStates(0, state+1), nil
 		}
 	}
 
-	slot, worker := makeSlotAndWorker(constant.Future, 22)
-	for i := 1; i < 400; i++ {
-		element, err := slot.createElement(sm, uint32(i), queue.OutputElement{})
-		require.NoError(t, err)
-		require.NotNil(t, element)
+	sm.GetResponseHandlerFunc = func(p constant.PulseState, state uint32) (r istatemachine.AdapterResponseHandler) {
+		return func(element islot.SlotElementHelper, response iadapter.IAdapterResponse) (interface{}, uint32, error) {
+			if state > maxState {
+				state /= 2
+			}
+			return element.GetPayload(), joinStates(0, state+1), nil
+		}
 	}
 
-	go func() {
-		time.Sleep(time.Millisecond * 400)
-		slot.inputQueue.PushSignal(PendingPulseSignal, mockCallback())
-	}()
+	for _, tt := range testPulseStates {
+		t.Run(tt.String(), func(t *testing.T) {
+			slot, worker := makeSlotAndWorker(tt, 22)
+			for i := 1; i < 8000; i++ {
+				state := uint32(i)
+				if state > maxState {
+					state /= maxState
+				}
+				element, err := slot.createElement(sm, uint32(state), queue.OutputElement{})
+				require.NoError(t, err)
+				require.NotNil(t, element)
+			}
 
-	go func() {
-		time.Sleep(time.Millisecond * 400)
-		slot.inputQueue.PushSignal(ActivatePulseSignal, mockCallback())
-	}()
+			go func() {
+				for i := 1; i < 10; i++ {
+					resp := &adapter.AdapterResponse{}
+					resp.SetElementID(uint32(i))
+					slot.responseQueue.SinkPush(resp)
+					time.Sleep(time.Millisecond * 50)
+				}
+			}()
 
-	go func() {
-		time.Sleep(time.Millisecond * 400)
-		slot.inputQueue.PushSignal(Cancel, mockCallback())
-	}()
+			go func() {
+				time.Sleep(time.Millisecond * 400)
+				slot.inputQueue.PushSignal(PendingPulseSignal, mockCallback())
+			}()
 
-	worker.run()
+			go func() {
+				time.Sleep(time.Millisecond * 600)
+				slot.inputQueue.PushSignal(ActivatePulseSignal, mockCallback())
+			}()
+
+			go func() {
+				time.Sleep(time.Millisecond * 800)
+				slot.inputQueue.PushSignal(Cancel, mockCallback())
+			}()
+
+			worker.run()
+
+		})
+	}
 
 }
