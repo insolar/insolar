@@ -108,7 +108,35 @@ func (currentPulsar *Pulsar) verify(ctx context.Context) {
 	if currentPulsar.isStandalone() {
 		currentPulsar.SetCurrentSlotEntropy(currentPulsar.GetGeneratedEntropy())
 		currentPulsar.CurrentSlotPulseSender = currentPulsar.PublicKeyRaw
+
+		payload := PulseSenderConfirmationPayload{core.PulseSenderConfirmation{
+			ChosenPublicKey: currentPulsar.CurrentSlotPulseSender,
+			Entropy:         *currentPulsar.GetCurrentSlotEntropy(),
+			PulseNumber:     currentPulsar.ProcessingPulseNumber,
+		}}
+		hashProvider := currentPulsar.PlatformCryptographyScheme.IntegrityHasher()
+		hash, err := payload.Hash(hashProvider)
+		if err != nil {
+			currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)
+			return
+		}
+		signature, err := currentPulsar.CryptographyService.Sign(hash)
+		if err != nil {
+			currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)
+			return
+		}
+
+		currentPulsar.currentSlotSenderConfirmationsLock.Lock()
+		currentPulsar.CurrentSlotSenderConfirmations[currentPulsar.PublicKeyRaw] = core.PulseSenderConfirmation{
+			ChosenPublicKey: currentPulsar.CurrentSlotPulseSender,
+			Signature:       signature.Bytes(),
+			Entropy:         *currentPulsar.GetCurrentSlotEntropy(),
+			PulseNumber:     currentPulsar.ProcessingPulseNumber,
+		}
+		currentPulsar.currentSlotSenderConfirmationsLock.Unlock()
+
 		currentPulsar.StateSwitcher.SwitchToState(ctx, SendingPulse, nil)
+
 		return
 	}
 
