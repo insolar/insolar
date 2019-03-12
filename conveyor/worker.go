@@ -133,7 +133,10 @@ func (w *workerStateMachineImpl) processSignalsWorking(elements []queue.OutputEl
 				log.Info("[ processSignalsWorking ] Got ActivatePulseSignal")
 				hasActivate = true
 				if hasPending {
-					w.slot.inputQueue.PushSignal(ActivatePulseSignal, emptySyncDone{})
+					err := w.slot.inputQueue.PushSignal(ActivatePulseSignal, emptySyncDone{})
+					if err != nil {
+						panic("[ processSignalsWorking ] Can't PushSignal: " + err.Error())
+					}
 					break
 				}
 			case Cancel:
@@ -225,7 +228,6 @@ func (w *workerStateMachineImpl) readResponseQueue() error {
 			}
 
 			setNewElementState(element, payLoad, newState)
-			w.slot.pushElement(element)
 			err = w.slot.pushElement(element)
 			if err != nil {
 				return errors.Wrapf(err, "[ readResponseQueue ] Can't pushElement: %+v", element)
@@ -482,7 +484,7 @@ func (w *workerStateMachineImpl) initializing() {
 	if err != nil {
 		panic("[ initializing ] migrate ActiveElement: " + err.Error())
 	}
-	w.migrate(NotActiveElement)
+	err = w.migrate(NotActiveElement)
 	if err != nil {
 		panic("[ initializing ] migrate NotActiveElement: " + err.Error())
 	}

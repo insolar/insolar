@@ -17,8 +17,6 @@
 package conveyor
 
 import (
-	"strconv"
-	"sync"
 	"testing"
 	"time"
 
@@ -29,102 +27,11 @@ import (
 	"github.com/insolar/insolar/conveyor/interfaces/istatemachine"
 	"github.com/insolar/insolar/conveyor/queue"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 )
 
 var testPulseStates = []constant.PulseState{constant.Future, constant.Present, constant.Past}
-
-func addElements(queue queue.IQueue, num int) {
-	for i := 0; i < num; i++ {
-		queue.SinkPush("Test" + strconv.Itoa(i))
-	}
-
-}
-
-func run(pulseState constant.PulseState, t *testing.T) {
-	slot := NewSlot(pulseState, 22, nil)
-	worker := newWorkerStateMachineImpl(slot)
-
-	sm := istatemachine.NewStateMachineTypeMock(t)
-	sm.GetMigrationHandlerFunc = func(p constant.PulseState, p1 uint32) (r istatemachine.MigrationHandler) {
-		return func(element islot.SlotElementHelper) (interface{}, uint32, error) {
-			return element.GetElementID(), 0, nil
-		}
-	}
-
-	sm.GetTransitionHandlerFunc = func(p constant.PulseState, p1 uint32) (r istatemachine.TransitHandler) {
-		return func(element islot.SlotElementHelper) (interface{}, uint32, error) {
-			return element.GetElementID(), 0, nil
-		}
-	}
-
-	el, _ := slot.createElement(sm, 22, queue.OutputElement{})
-	go worker.run()
-
-	for i := 0; i < 5; i++ {
-		resp := adapter.AdapterResponse{}
-		resp.SetElementID(el.GetElementID())
-
-		slot.responseQueue.SinkPush(&resp)
-
-		log.Info(">>>>>> ", i, 1)
-		time.Sleep(time.Millisecond * 400)
-		addElements(slot.inputQueue, 10)
-		log.Info(">>>>>> ", i, 2)
-		time.Sleep(time.Millisecond * 400)
-		slot.inputQueue.PushSignal(PendingPulseSignal, mockCallback())
-		addElements(slot.inputQueue, 10)
-		log.Info(">>>>>> ", i, 3)
-		time.Sleep(time.Millisecond * 300)
-		addElements(slot.inputQueue, 10)
-		slot.inputQueue.PushSignal(ActivatePulseSignal, mockCallback())
-		log.Info(">>>>>> ", i, 4)
-		addElements(slot.inputQueue, 10)
-
-		time.Sleep(time.Millisecond * 400)
-		log.Info(">>>>>> ", i, 5)
-
-		slot.inputQueue.PushSignal(PendingPulseSignal, mockCallback())
-		time.Sleep(time.Millisecond * 400)
-
-		log.Info(">>>>>> ", i, 6)
-
-		slot.inputQueue.PushSignal(ActivatePulseSignal, mockCallback())
-		log.Info(">>>>>> ", i, 7)
-	}
-
-	time.Sleep(time.Millisecond * 400)
-	slot.inputQueue.PushSignal(PendingPulseSignal, mockCallback())
-	slot.inputQueue.PushSignal(ActivatePulseSignal, mockCallback())
-
-	time.Sleep(time.Millisecond * 900)
-
-}
-
-func _TestSlot_Worker(t *testing.T) {
-	wg := sync.WaitGroup{}
-	wg.Add(1)
-	go func(wg *sync.WaitGroup) {
-		run(constant.Present, t)
-		wg.Done()
-	}(&wg)
-
-	// go func(wg *sync.WaitGroup) {
-	// 	run(constant.Past, t)
-	// 	wg.Done()
-	// }(&wg)
-	// go func(wg *sync.WaitGroup) {
-	// 	run(constant.Future, t)
-	// 	wg.Done()
-	// }(&wg)
-
-	wg.Wait()
-
-	//run(constant.Present, t)
-
-}
 
 func makeSlotAndWorker(pulseState constant.PulseState, pulseNumber core.PulseNumber) (*Slot, workerStateMachineImpl) {
 	slot := NewSlot(pulseState, pulseNumber, nil)
