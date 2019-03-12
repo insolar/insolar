@@ -39,7 +39,6 @@ import (
 	"github.com/insolar/insolar/network/merkle"
 	"github.com/insolar/insolar/network/routing"
 	"github.com/insolar/insolar/network/utils"
-	"github.com/insolar/insolar/pulsar"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 )
@@ -53,16 +52,14 @@ type ServiceNetwork struct {
 	routingTable network.RoutingTable // TODO: should be injected
 
 	// dependencies
-	CertificateManager  core.CertificateManager         `inject:""`
-	PulseManager        core.PulseManager               `inject:""`
-	PulseStorage        core.PulseStorage               `inject:""`
-	CryptographyService core.CryptographyService        `inject:""`
-	NetworkCoordinator  core.NetworkCoordinator         `inject:""`
-	CryptographyScheme  core.PlatformCryptographyScheme `inject:""`
-	NodeKeeper          network.NodeKeeper              `inject:""`
-	NetworkSwitcher     core.NetworkSwitcher            `inject:""`
-	TerminationHandler  core.TerminationHandler         `inject:""`
-	KeyProcessor        core.KeyProcessor               `inject:""`
+	CertificateManager  core.CertificateManager  `inject:""`
+	PulseManager        core.PulseManager        `inject:""`
+	PulseStorage        core.PulseStorage        `inject:""`
+	CryptographyService core.CryptographyService `inject:""`
+	NetworkCoordinator  core.NetworkCoordinator  `inject:""`
+	NodeKeeper          network.NodeKeeper       `inject:""`
+	NetworkSwitcher     core.NetworkSwitcher     `inject:""`
+	TerminationHandler  core.TerminationHandler  `inject:""`
 
 	// subcomponents
 	PhaseManager phases.PhaseManager `inject:"subcomponent"`
@@ -222,15 +219,6 @@ func (n *ServiceNetwork) Stop(ctx context.Context) error {
 }
 
 func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse core.Pulse) {
-	verified, err := n.verifyPulseSign(newPulse)
-	if err != nil {
-		log.Error("[ ServiceNetwork ] HandlePulse: ", err.Error())
-		return
-	}
-	if !verified {
-		log.Error("[ ServiceNetwork ] HandlePulse: failed to verify a pulse sign")
-		return
-	}
 	currentTime := time.Now()
 
 	n.lock.Lock()
@@ -278,7 +266,7 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse core.Pulse) {
 		}
 	}
 
-	err = n.NetworkSwitcher.OnPulse(ctx, newPulse)
+	err := n.NetworkSwitcher.OnPulse(ctx, newPulse)
 	if err != nil {
 		logger.Error(errors.Wrap(err, "Failed to call OnPulse on NetworkSwitcher"))
 	}
@@ -304,29 +292,4 @@ func (n *ServiceNetwork) phaseManagerOnPulse(ctx context.Context, newPulse core.
 
 func isNextPulse(currentPulse, newPulse *core.Pulse) bool {
 	return newPulse.PulseNumber > currentPulse.PulseNumber && newPulse.PulseNumber >= currentPulse.NextPulseNumber
-}
-
-func (n *ServiceNetwork) verifyPulseSign(pulse core.Pulse) (bool, error) {
-	hashProvider := n.CryptographyScheme.IntegrityHasher()
-	if len(pulse.Signs) == 0 {
-		return false, errors.New("[ verifyPulseSign ] received empty pulse signs")
-	}
-	for _, psc := range pulse.Signs {
-		payload := pulsar.PulseSenderConfirmationPayload{PulseSenderConfirmation: psc}
-		hash, err := payload.Hash(hashProvider)
-		if err != nil {
-			return false, errors.Wrap(err, "[ verifyPulseSign ] error to get a hash from pulse payload")
-		}
-		key, err := n.KeyProcessor.ImportPublicKeyBinary([]byte(psc.ChosenPublicKey))
-		if err != nil {
-			return false, errors.Wrap(err, "[ verifyPulseSign ] error to import a public key")
-		}
-
-		verified := n.CryptographyService.Verify(key, core.SignatureFromBytes(psc.Signature), hash)
-
-		if !verified {
-			return false, errors.New("[ verifyPulseSign ] error to verify a pulse")
-		}
-	}
-	return true, nil
 }

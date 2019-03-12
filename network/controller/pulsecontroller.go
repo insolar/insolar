@@ -25,6 +25,8 @@ import (
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/transport/packet"
 	"github.com/insolar/insolar/network/transport/packet/types"
+	"github.com/insolar/insolar/pulsar"
+	"github.com/pkg/errors"
 )
 
 type PulseController interface {
@@ -32,8 +34,11 @@ type PulseController interface {
 }
 
 type pulseController struct {
-	PulseHandler network.PulseHandler `inject:""`
-	NodeKeeper   network.NodeKeeper   `inject:""`
+	PulseHandler        network.PulseHandler            `inject:""`
+	NodeKeeper          network.NodeKeeper              `inject:""`
+	CryptographyScheme  core.PlatformCryptographyScheme `inject:""`
+	KeyProcessor        core.KeyProcessor               `inject:""`
+	CryptographyService core.CryptographyService        `inject:""`
 
 	hostNetwork  network.HostNetwork
 	routingTable network.RoutingTable
@@ -49,6 +54,13 @@ func (pc *pulseController) processPulse(ctx context.Context, request network.Req
 	data := request.GetData().(*packet.RequestPulse)
 	// we should not process pulses in Waiting state because network can be unready to join current node,
 	// so we should wait for pulse from consensus phase1 packet
+	// verified, err := pc.verifyPulseSign(data.Pulse)
+	// if err != nil {
+	// 	return nil, errors.Wrap(err, "[ ServiceNetwork ] HandlePulse: ")
+	// }
+	// if !verified {
+	// 	return nil, errors.New("[ ServiceNetwork ] HandlePulse: failed to verify a pulse sign")
+	// }
 	if pc.NodeKeeper.GetState() != core.WaitingNodeNetworkState {
 		go pc.PulseHandler.HandlePulse(context.Background(), data.Pulse)
 	}
@@ -59,6 +71,31 @@ func (pc *pulseController) processGetRandomHosts(ctx context.Context, request ne
 	data := request.GetData().(*packet.RequestGetRandomHosts)
 	randomHosts := pc.routingTable.GetRandomNodes(data.HostsNumber)
 	return pc.hostNetwork.BuildResponse(ctx, request, &packet.ResponseGetRandomHosts{Hosts: randomHosts}), nil
+}
+
+func (pc *pulseController) verifyPulseSign(pulse core.Pulse) (bool, error) {
+	hashProvider := pc.CryptographyScheme.IntegrityHasher()
+	if len(pulse.Signs) == 0 {
+		return false, errors.New("[ verifyPulseSign ] received empty pulse signs")
+	}
+	for _, psc := range pulse.Signs {
+		payload := pulsar.PulseSenderConfirmationPayload{PulseSenderConfirmation: psc}
+		hash, err := payload.Hash(hashProvider)
+		if err != nil {
+			return false, errors.Wrap(err, "[ verifyPulseSign ] error to get a hash from pulse payload")
+		}
+		key, err := pc.KeyProcessor.ImportPublicKeyPEM([]byte(psc.ChosenPublicKey))
+		if err != nil {
+			return false, errors.Wrap(err, "[ verifyPulseSign ] error to import a public key")
+		}
+
+		verified := pc.CryptographyService.Verify(key, core.SignatureFromBytes(psc.Signature), hash)
+
+		if !verified {
+			return false, errors.New("[ verifyPulseSign ] error to verify a pulse")
+		}
+	}
+	return true, nil
 }
 
 func NewPulseController(hostNetwork network.HostNetwork, routingTable network.RoutingTable) PulseController {

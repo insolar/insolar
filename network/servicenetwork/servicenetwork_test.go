@@ -18,17 +18,8 @@
 package servicenetwork
 
 import (
-	"crypto"
-	"crypto/rand"
 	"testing"
 
-	"github.com/insolar/insolar/component"
-	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/cryptography"
-	"github.com/insolar/insolar/platformpolicy"
-	"github.com/insolar/insolar/pulsar"
-	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -52,76 +43,4 @@ func TestNewServiceNetwork_incrementPort(t *testing.T) {
 	addr, err = incrementPort("127.0.0.1:port")
 	assert.Error(t, err)
 	assert.Equal(t, "127.0.0.1:port", addr)
-}
-
-func getServiceNetwork(t *testing.T) *ServiceNetwork {
-	cfg := configuration.NewConfiguration()
-	cfg.Pulsar.PulseTime = pulseTimeMs // pulse 5 sec for faster tests
-	cfg.Host.Transport.Address = "127.0.0.1:50001"
-	cfg.Service.Skip = 5
-
-	componentManager := &component.Manager{}
-	scheme := platformpolicy.NewPlatformCryptographyScheme()
-	proc := platformpolicy.NewKeyProcessor()
-	privKey, err := proc.GeneratePrivateKey()
-	assert.NoError(t, err)
-	service := cryptography.NewKeyBoundCryptographyService(privKey)
-
-	serviceNetwork, err := NewServiceNetwork(cfg, componentManager, false)
-	assert.NoError(t, err)
-
-	serviceNetwork.CryptographyScheme = scheme
-	serviceNetwork.KeyProcessor = proc
-	serviceNetwork.CryptographyService = service
-
-	return serviceNetwork
-}
-
-func getKeys(t *testing.T) (public string, private crypto.PrivateKey) {
-	proc := platformpolicy.NewKeyProcessor()
-	privKey, err := proc.GeneratePrivateKey()
-	assert.NoError(t, err)
-	key := proc.ExtractPublicKey(privKey)
-	pubKey, err := proc.ExportPublicKeyBinary(key)
-	assert.NoError(t, err)
-
-	return string(pubKey[:]), privKey
-}
-
-func TestVerifyPulseSign(t *testing.T) {
-	network := getServiceNetwork(t)
-	keyStr, privateKey := getKeys(t)
-
-	psc := core.PulseSenderConfirmation{
-		PulseNumber:     1,
-		ChosenPublicKey: string(keyStr[:]),
-		Entropy:         randomEntropy(),
-	}
-
-	payload := pulsar.PulseSenderConfirmationPayload{PulseSenderConfirmation: psc}
-	hasher := platformpolicy.NewPlatformCryptographyScheme().IntegrityHasher()
-	hash, err := payload.Hash(hasher)
-	assert.NoError(t, err)
-	service := cryptography.NewKeyBoundCryptographyService(privateKey)
-	sign, err := service.Sign(hash)
-	assert.NoError(t, err)
-
-	psc.Signature = sign.Bytes()
-
-	pulse := pulsar.NewPulse(1, 0, &entropygenerator.StandardEntropyGenerator{})
-	pulse.Signs = make(map[string]core.PulseSenderConfirmation, 1)
-	pulse.Signs["test"] = psc
-
-	valid, err := network.verifyPulseSign(*pulse)
-	assert.NoError(t, err)
-	assert.True(t, valid)
-}
-
-func randomEntropy() [64]byte {
-	var buf [64]byte
-	_, err := rand.Read(buf[:])
-	if err != nil {
-		panic(buf)
-	}
-	return buf
 }
