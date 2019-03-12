@@ -54,13 +54,13 @@ func (pc *pulseController) processPulse(ctx context.Context, request network.Req
 	data := request.GetData().(*packet.RequestPulse)
 	// we should not process pulses in Waiting state because network can be unready to join current node,
 	// so we should wait for pulse from consensus phase1 packet
-	// verified, err := pc.verifyPulseSign(data.Pulse)
-	// if err != nil {
-	// 	return nil, errors.Wrap(err, "[ ServiceNetwork ] HandlePulse: ")
-	// }
-	// if !verified {
-	// 	return nil, errors.New("[ ServiceNetwork ] HandlePulse: failed to verify a pulse sign")
-	// }
+	verified, err := pc.verifyPulseSign(data.Pulse)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ServiceNetwork ] HandlePulse: ")
+	}
+	if !verified {
+		return nil, errors.New("[ ServiceNetwork ] HandlePulse: failed to verify a pulse sign")
+	}
 	if pc.NodeKeeper.GetState() != core.WaitingNodeNetworkState {
 		go pc.PulseHandler.HandlePulse(context.Background(), data.Pulse)
 	}
