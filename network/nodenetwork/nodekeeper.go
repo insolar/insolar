@@ -414,7 +414,7 @@ func (nk *nodekeeper) Sync(ctx context.Context, nodes []core.Node, claims []cons
 	}
 
 	if nk.shouldExit(foundOrigin) {
-		return errors.New("Node leave acknowledged by network. Goodbye!")
+		return errors.New("node leave acknowledged by network")
 	}
 
 	return nil

@@ -180,11 +180,11 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse) (*Firs
 	}
 
 	claimHandler := claimhandler.NewClaimHandler(length, claimMap)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ NET Consensus phase-1 ] Failed to add claims")
-	}
 	if fp.NodeKeeper.GetState() == core.WaitingNodeNetworkState {
-		nodenetwork.ApplyClaims(unsyncList, claimHandler.GetClaims())
+		err = nodenetwork.ApplyClaims(unsyncList, claimHandler.GetClaims())
+		if err != nil {
+			return nil, errors.Wrap(err, "[ NET Consensus phase-1 ] Failed to apply claims")
+		}
 	}
 	valid, fault := validateProofs(fp.Calculator, unsyncList, pulseHash, proofSet)
 	for node := range valid {
