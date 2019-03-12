@@ -25,24 +25,24 @@ import (
 	"go.opencensus.io/stats"
 )
 
-// StorageMem is an in-memory struct for blob-storage
-type StorageMem struct {
+// StorageMemory is an in-memory struct for blob-storage
+type StorageMemory struct {
 	jetIndex db.JetIndexModifier
 
 	lock   sync.RWMutex
 	memory map[core.RecordID]Blob
 }
 
-// NewStorageMem creates a new instance of Storage.
-func NewStorageMem() *StorageMem {
-	return &StorageMem{
+// NewStorageMemory creates a new instance of Storage.
+func NewStorageMemory() *StorageMemory {
+	return &StorageMemory{
 		memory:   map[core.RecordID]Blob{},
 		jetIndex: db.NewJetIndex(),
 	}
 }
 
 // ForID returns Blob for provided id
-func (s *StorageMem) ForID(ctx context.Context, id core.RecordID) (blob Blob, err error) {
+func (s *StorageMemory) ForID(ctx context.Context, id core.RecordID) (blob Blob, err error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
@@ -56,7 +56,7 @@ func (s *StorageMem) ForID(ctx context.Context, id core.RecordID) (blob Blob, er
 }
 
 // Set saves new Blob-value in storage
-func (s *StorageMem) Set(ctx context.Context, id core.RecordID, blob Blob) error {
+func (s *StorageMemory) Set(ctx context.Context, id core.RecordID, blob Blob) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
