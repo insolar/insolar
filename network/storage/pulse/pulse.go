@@ -49,3 +49,9 @@ type RangeHasher interface {
 	GetRangeHash(core.PulseRange) ([]byte, error)
 	ValidateRangeHash(core.PulseRange, []byte) (bool, error)
 }
+
+// ChainHasher provides methods for hashing and validate pulse chain
+type ChainHasher interface {
+	GetRangeHash(chain []core.PulseNumber) ([]byte, error)
+	ValidateRangeHash(chain []core.PulseNumber, hash []byte) (bool, error)
+}
