@@ -33,7 +33,7 @@ import (
 
 var testPulseStates = []constant.PulseState{constant.Future, constant.Present, constant.Past}
 
-func makeSlotAndWorker(pulseState constant.PulseState, pulseNumber core.PulseNumber) (*Slot, workerStateMachineImpl) {
+func makeSlotAndWorker(pulseState constant.PulseState, pulseNumber core.PulseNumber) (*Slot, worker) {
 	slot := NewSlot(pulseState, pulseNumber, nil)
 	worker := newWorkerStateMachineImpl(slot)
 	slot.removeSlotCallback = func(number core.PulseNumber) {}
@@ -993,7 +993,7 @@ func Test_run(t *testing.T) {
 
 			go func() {
 				time.Sleep(time.Millisecond * 800)
-				slot.inputQueue.PushSignal(Cancel, mockCallback())
+				slot.inputQueue.PushSignal(CancelSignal, mockCallback())
 			}()
 
 			worker.run()

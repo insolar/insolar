@@ -29,7 +29,7 @@ import (
 const (
 	PendingPulseSignal  = 1
 	ActivatePulseSignal = 2
-	Cancel              = 3
+	CancelSignal        = 3
 )
 
 // PulseConveyor is realization of Conveyor
@@ -49,12 +49,12 @@ func NewPulseConveyor() (core.Conveyor, error) {
 		state:   core.ConveyorInactive,
 	}
 	// antiqueSlot is slot for all pulses from past if conveyor dont have specific PastSlot for such pulse
-	antiqueSlot := NewSlot(constant.Antique, core.AntiquePulseNumber, c.RemoveSlot)
+	antiqueSlot := NewSlot(constant.Antique, core.AntiquePulseNumber, c.removeSlot)
 	c.slotMap[core.AntiquePulseNumber] = antiqueSlot
 	return c, nil
 }
 
-func (c *PulseConveyor) RemoveSlot(number core.PulseNumber) {
+func (c *PulseConveyor) removeSlot(number core.PulseNumber) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
@@ -140,7 +140,7 @@ func (c *PulseConveyor) PreparePulse(pulse core.Pulse, callback queue.SyncDone) 
 		return errors.New("[ PreparePulse ] preparation was already done")
 	}
 	if c.futurePulseNumber == nil {
-		c.slotMap[pulse.PulseNumber] = NewSlot(constant.Future, pulse.PulseNumber, nil)
+		c.slotMap[pulse.PulseNumber] = NewSlot(constant.Future, pulse.PulseNumber, c.removeSlot)
 		c.futurePulseNumber = &pulse.PulseNumber
 	}
 	if *c.futurePulseNumber != pulse.PulseNumber {
@@ -162,7 +162,7 @@ func (c *PulseConveyor) PreparePulse(pulse core.Pulse, callback queue.SyncDone) 
 	}
 
 	c.futurePulseData = &pulse
-	newFutureSlot := NewSlot(constant.Unallocated, pulse.NextPulseNumber, nil)
+	newFutureSlot := NewSlot(constant.Unallocated, pulse.NextPulseNumber, c.removeSlot)
 	c.slotMap[pulse.NextPulseNumber] = newFutureSlot
 	c.state = core.ConveyorPreparingPulse
 	return nil

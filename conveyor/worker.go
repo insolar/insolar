@@ -18,13 +18,11 @@ package conveyor
 
 import (
 	"fmt"
-	"math/rand"
 	"testing"
 	"time"
 
 	"github.com/insolar/insolar/conveyor/interfaces/constant"
 	"github.com/insolar/insolar/conveyor/interfaces/iadapter"
-	"github.com/insolar/insolar/conveyor/interfaces/islot"
 	"github.com/insolar/insolar/conveyor/interfaces/istatemachine"
 	"github.com/insolar/insolar/conveyor/queue"
 	"github.com/insolar/insolar/log"
@@ -41,7 +39,7 @@ const (
 	ProcessElements
 )
 
-type workerStateMachineImpl struct {
+type worker struct { // nolint: unused
 	slot               *Slot
 	nextWorkerState    WorkerState
 	postponedResponses []queue.OutputElement
@@ -50,9 +48,9 @@ type workerStateMachineImpl struct {
 	nodeState int // TODO: remove it when right implementation of node state calculation appears
 }
 
-func newWorkerStateMachineImpl(slot *Slot) workerStateMachineImpl {
+func newWorkerStateMachineImpl(slot *Slot) worker {
 	slot.slotState = Initializing
-	return workerStateMachineImpl{
+	return worker{
 		slot:               slot,
 		nextWorkerState:    Unknown,
 		postponedResponses: make([]queue.OutputElement, 0),
@@ -70,31 +68,10 @@ const (
 func GetStateMachineByType(mtype MachineType) istatemachine.StateMachineType {
 	//panic("implement me") // TODO:
 	sm := istatemachine.NewStateMachineTypeMock(&testing.T{})
-	sm.GetMigrationHandlerFunc = func(p constant.PulseState, p1 uint32) (r istatemachine.MigrationHandler) {
-		return func(element islot.SlotElementHelper) (interface{}, uint32, error) {
-			r := rand.Int() % 100
-			state := uint32(0)
-			if r < 80 {
-				state = 777777777
-			}
-			return element.GetElementID(), state, nil
-		}
-	}
-
-	sm.GetTransitionHandlerFunc = func(p constant.PulseState, p1 uint32) (r istatemachine.TransitHandler) {
-		return func(element islot.SlotElementHelper) (interface{}, uint32, error) {
-			r := rand.Int() % 100
-			state := uint32(0)
-			if r < 80 {
-				state = 888888888
-			}
-			return element.GetElementID(), state, nil
-		}
-	}
 	return sm
 }
 
-func (w *workerStateMachineImpl) changePulseState() {
+func (w *worker) changePulseState() {
 	log.Debugf("[ changePulseState ] starts ... ( w.slot.pulseState: %s )", w.slot.pulseState.String())
 	switch w.slot.pulseState {
 	case constant.Future:
@@ -115,7 +92,7 @@ func (m emptySyncDone) Done() {}
 
 // If we have both signals ( PendingPulseSignal and ActivatePulseSignal ),
 // then change slot state and push ActivatePulseSignal back to queue.
-func (w *workerStateMachineImpl) processSignalsWorking(elements []queue.OutputElement) int {
+func (w *worker) processSignalsWorking(elements []queue.OutputElement) int {
 	log.Debugf("[ processSignalsWorking ] starts ... ( len: %d )", len(elements))
 	numSignals := 0
 	hasPending := false
@@ -139,7 +116,7 @@ func (w *workerStateMachineImpl) processSignalsWorking(elements []queue.OutputEl
 					}
 					break
 				}
-			case Cancel:
+			case CancelSignal:
 				w.stop = true // TODO: do it more correctly
 				w.slot.slotState = Suspending
 				log.Info("[ processSignalsWorking ] Got Cancel. Set slot state to 'Suspending'")
@@ -158,7 +135,7 @@ func (w *workerStateMachineImpl) processSignalsWorking(elements []queue.OutputEl
 	return numSignals
 }
 
-func (w *workerStateMachineImpl) readInputQueueWorking() error {
+func (w *worker) readInputQueueWorking() error {
 	log.Debugf("[ readInputQueueWorking ] starts ... ( w.slot.pulseState: %s )", w.slot.pulseState.String())
 	elements := w.slot.inputQueue.RemoveAll()
 
@@ -191,7 +168,7 @@ func setNewElementState(element *slotElement, payLoad interface{}, fullState uin
 	}
 }
 
-func (w *workerStateMachineImpl) readResponseQueue() error {
+func (w *worker) readResponseQueue() error {
 	log.Debugf("[ readResponseQueue ] starts ... ( w.slot.pulseState: %s )", w.slot.pulseState.String())
 	w.postponedResponses = append(w.postponedResponses, w.slot.responseQueue.RemoveAll()...)
 	w.nextWorkerState = ProcessElements
@@ -247,13 +224,13 @@ func (w *workerStateMachineImpl) readResponseQueue() error {
 	return nil
 }
 
-func (w *workerStateMachineImpl) waitQueuesOrTick() {
+func (w *worker) waitQueuesOrTick() {
 	log.Debug("[ waitQueuesOrTick ] sleep ...")
 	time.Sleep(time.Millisecond * 300)
 	//panic("[ waitQueuesOrTick ] implement me") // TODO :
 }
 
-func (w *workerStateMachineImpl) processingElements() {
+func (w *worker) processingElements() {
 	log.Debugf("[ processingElements ] starts ... ( w.slot.pulseState: %s )", w.slot.pulseState.String())
 	if !w.slot.hasElements(ActiveElement) {
 		if w.slot.pulseState == constant.Past {
@@ -310,7 +287,7 @@ func (w *workerStateMachineImpl) processingElements() {
 	}
 }
 
-func (w *workerStateMachineImpl) working() {
+func (w *worker) working() {
 	log.Debugf("[ working ] starts ... ( w.slot.pulseState: %s )", w.slot.pulseState.String())
 	for w.slot.isWorking() {
 		err := w.readInputQueueWorking()
@@ -345,18 +322,18 @@ func (w *workerStateMachineImpl) working() {
 	}
 }
 
-func (w *workerStateMachineImpl) calculateNodeState() {
+func (w *worker) calculateNodeState() {
 	// TODO: приходит PreparePulse, в нём есть callback, вызываем какой-то адаптер, куда передаем этот callback
 	w.nodeState = 555
 }
 
-func (w *workerStateMachineImpl) sendRemovalSignalToConveyor() {
+func (w *worker) sendRemovalSignalToConveyor() {
 	w.slot.removeSlotCallback(w.slot.pulseNumber)
 	// TODO: how to do it?
 	// catch conveyor lock, check input queue, if It's empty - remove slot from map, if it's not - got to Working state
 }
 
-func (w *workerStateMachineImpl) processSignalsSuspending(elements []queue.OutputElement) int {
+func (w *worker) processSignalsSuspending(elements []queue.OutputElement) int {
 	log.Debugf("[ processSignalsSuspending ] starts ... ( w.slot.pulseState: %s )", w.slot.pulseState.String())
 	numSignals := 0
 	// TODO: add check if many signals come
@@ -371,7 +348,7 @@ func (w *workerStateMachineImpl) processSignalsSuspending(elements []queue.Outpu
 				w.changePulseState()
 				w.slot.slotState = Initializing
 				log.Info("[ processSignalsSuspending ] Set slot state to 'Initializing'")
-			case Cancel:
+			case CancelSignal:
 				w.stop = true // TODO: do it more correctly
 			default:
 				panic(fmt.Sprintf("[ processSignalsSuspending ] Unknown signal: %+v", el.GetItemType()))
@@ -384,7 +361,7 @@ func (w *workerStateMachineImpl) processSignalsSuspending(elements []queue.Outpu
 	return numSignals
 }
 
-func (w *workerStateMachineImpl) readInputQueueSuspending() error {
+func (w *worker) readInputQueueSuspending() error {
 	log.Debugf("[ readInputQueueSuspending ] starts ... ( w.slot.pulseState: %s )", w.slot.pulseState.String())
 	elements := w.slot.inputQueue.RemoveAll()
 	numSignals := w.processSignalsSuspending(elements)
@@ -409,7 +386,7 @@ func (w *workerStateMachineImpl) readInputQueueSuspending() error {
 	return nil
 }
 
-func (w *workerStateMachineImpl) suspending() {
+func (w *worker) suspending() {
 	log.Debugf("[ suspending ] starts ... ( w.slot.pulseState: %s )", w.slot.pulseState.String())
 	switch w.slot.pulseState {
 	case constant.Past:
@@ -430,7 +407,7 @@ func (w *workerStateMachineImpl) suspending() {
 	)
 }
 
-func (w *workerStateMachineImpl) migrate(status ActivationStatus) error {
+func (w *worker) migrate(status ActivationStatus) error {
 	log.Infof("[ migrate ] Starts ... ( status: %s. w.slot.pulseState: %s )", status.String(), w.slot.pulseState.String())
 	numElements := w.slot.len(status)
 	for ; numElements > 0; numElements-- {
@@ -467,11 +444,11 @@ func (w *workerStateMachineImpl) migrate(status ActivationStatus) error {
 
 }
 
-func (w *workerStateMachineImpl) getInitHandlersFromConfig() {
+func (w *worker) getInitHandlersFromConfig() {
 	// TODO: impolement me
 }
 
-func (w *workerStateMachineImpl) initializing() {
+func (w *worker) initializing() {
 	log.Debugf("[ initializing ] starts ... ( w.slot.pulseState: %s )", w.slot.pulseState.String())
 	if w.slot.pulseState == constant.Future {
 		log.Info("[ initializing ] pulseState is Future. Skip initializing")
@@ -490,7 +467,7 @@ func (w *workerStateMachineImpl) initializing() {
 	}
 }
 
-func (w *workerStateMachineImpl) run() {
+func (w *worker) run() {
 	for !w.stop {
 		switch w.slot.slotState {
 		case Initializing:
