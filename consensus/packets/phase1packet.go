@@ -30,7 +30,7 @@ type Phase1Packet struct {
 	packetHeader PacketHeader
 
 	// -------------------- Section 1 ( Pulse )
-	pulseData      core.Pulse // optional
+	pulseData      PulseDataExt // optional
 	proofNodePulse NodePulseProof
 
 	// -------------------- Section 2 ( Claims ) ( optional )
@@ -97,8 +97,30 @@ func NewPhase1Packet(pulse core.Pulse) *Phase1Packet {
 	result := &Phase1Packet{}
 	result.packetHeader.PacketT = Phase1
 	result.packetHeader.Pulse = uint32(pulse.PulseNumber)
-	// result.pulseData = pulseToDataExt(pulse)
-	result.pulseData = pulse
+	result.pulseData = pulseToDataExt(pulse)
+	return result
+}
+
+func pulseToDataExt(pulse core.Pulse) PulseDataExt {
+	result := PulseDataExt{}
+	result.Entropy = pulse.Entropy
+	result.EpochPulseNo = uint32(pulse.EpochPulseNumber)
+	result.NextPulseDelta = uint16(pulse.NextPulseNumber - pulse.PulseNumber)
+	result.PrevPulseDelta = uint16(pulse.PulseNumber - pulse.PrevPulseNumber)
+	result.OriginID = pulse.OriginID
+	result.PulseTimestamp = uint32(pulse.PulseTimestamp)
+	return result
+}
+
+func dataToPulse(number core.PulseNumber, data PulseDataExt) core.Pulse {
+	result := core.Pulse{}
+	result.PulseNumber = number
+	result.Entropy = data.Entropy
+	result.EpochPulseNumber = int(data.EpochPulseNo)
+	result.NextPulseNumber = number + core.PulseNumber(data.NextPulseDelta)
+	result.PrevPulseNumber = number - core.PulseNumber(data.PrevPulseDelta)
+	result.OriginID = data.OriginID
+	result.PulseTimestamp = int64(data.PulseTimestamp)
 	return result
 }
 
@@ -115,7 +137,7 @@ func (p1p *Phase1Packet) GetPulseNumber() core.PulseNumber {
 }
 
 func (p1p *Phase1Packet) GetPulse() core.Pulse {
-	return p1p.pulseData
+	return dataToPulse(core.PulseNumber(p1p.packetHeader.Pulse), p1p.pulseData)
 }
 
 func (p1p *Phase1Packet) GetPulseProof() *NodePulseProof {

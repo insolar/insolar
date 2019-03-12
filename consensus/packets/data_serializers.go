@@ -20,12 +20,10 @@ package packets
 import (
 	"bytes"
 	"encoding/binary"
-	"encoding/gob"
 	"fmt"
 	"io"
 	"io/ioutil"
 
-	"github.com/insolar/insolar/core"
 	"github.com/pkg/errors"
 )
 
@@ -92,13 +90,10 @@ func (ph *PacketHeader) compactPulseAndCustomFlags() uint32 {
 func (p1p *Phase1Packet) DeserializeWithoutHeader(data io.Reader, header *PacketHeader) error {
 	p1p.packetHeader = *header
 
-	var pulse core.Pulse
-	enc := gob.NewDecoder(data)
-	err := enc.Decode(&pulse)
+	err := p1p.pulseData.Deserialize(data)
 	if err != nil {
 		return errors.Wrap(err, "[ Phase1Packet.DeserializeWithoutHeader ] Can't deserialize pulseData")
 	}
-	p1p.pulseData = pulse
 
 	err = p1p.proofNodePulse.Deserialize(data)
 	if err != nil {
@@ -182,13 +177,11 @@ func (p1p *Phase1Packet) rawBytes() ([]byte, error) {
 	}
 
 	// serializing of  PulseData
-	var pulseDataRaw bytes.Buffer
-	enc := gob.NewEncoder(&pulseDataRaw)
-	err = enc.Encode(p1p.pulseData)
+	pulseDataRaw, err := p1p.pulseData.Serialize()
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Phase1Packet.Serialize ] Can't serialize pulseDataRaw")
 	}
-	_, err = result.Write(pulseDataRaw.Bytes())
+	_, err = result.Write(pulseDataRaw)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Phase1Packet.Serialize ] Can't append pulseDataRaw")
 	}
