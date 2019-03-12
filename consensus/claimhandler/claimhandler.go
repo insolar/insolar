@@ -25,6 +25,25 @@ import (
 // NodesToJoinPercent how many nodes from active list can connect to the network.
 const NodesToJoinPercent = 1.0 / 3.0
 
+func maxJoinersForPulse(activeNodesCount int) int {
+	nodesToJoin := int(float64(activeNodesCount) * NodesToJoinPercent)
+	if nodesToJoin == 0 {
+		nodesToJoin++
+	}
+	return nodesToJoin
+}
+
+func min(first, second int) int {
+	if first < second {
+		return first
+	}
+	return second
+}
+
+func ApprovedJoinersCount(requestedJoinersCount, activeNodesCount int) int {
+	return min(requestedJoinersCount, maxJoinersForPulse(activeNodesCount))
+}
+
 type ClaimHandler struct {
 	claims      map[core.RecordRef][]packets.ReferendumClaim
 	activeCount int
@@ -121,23 +140,10 @@ func addKnownClaimsToQueue(queue *Queue, knownClaims recordRefSet, claims []pack
 
 func (ch *ClaimHandler) getApprovedJoinClaims(queue *Queue) []*packets.NodeJoinClaim {
 	res := make([]*packets.NodeJoinClaim, 0)
-	nodesToJoin := int(float64(ch.activeCount) * NodesToJoinPercent)
-
-	if nodesToJoin == 0 {
-		nodesToJoin++
-	}
-
-	min := func(first, second int) int {
-		if first < second {
-			return first
-		}
-		return second
-	}
-
-	for i := 0; i < min(nodesToJoin, queue.Len()); i++ {
+	nodesToJoin := ApprovedJoinersCount(queue.Len(), ch.activeCount)
+	for i := 0; i < nodesToJoin; i++ {
 		res = append(res, queue.PopClaim().(*packets.NodeJoinClaim))
 	}
-
 	return res
 }
 
