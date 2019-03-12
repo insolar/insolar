@@ -45,6 +45,9 @@ type worker struct { // nolint: unused
 	postponedResponses []queue.OutputElement
 	stop               bool
 
+	activatePulseSync queue.SyncDone
+	preparePulseSync  queue.SyncDone
+
 	nodeState int // TODO: remove it when right implementation of node state calculation appears
 }
 
@@ -85,11 +88,6 @@ func (w *worker) changePulseState() {
 	}
 }
 
-// TODO: is it ok?
-type emptySyncDone struct{}
-
-func (m emptySyncDone) Done() {}
-
 // If we have both signals ( PendingPulseSignal and ActivatePulseSignal ),
 // then change slot state and push ActivatePulseSignal back to queue.
 func (w *worker) processSignalsWorking(elements []queue.OutputElement) int {
@@ -97,6 +95,7 @@ func (w *worker) processSignalsWorking(elements []queue.OutputElement) int {
 	numSignals := 0
 	hasPending := false
 	hasActivate := false
+	var activateSyncDone queue.SyncDone
 	for i := 0; i < len(elements); i++ {
 		el := elements[i]
 		if el.IsSignal() {
@@ -106,16 +105,18 @@ func (w *worker) processSignalsWorking(elements []queue.OutputElement) int {
 				w.slot.slotState = Suspending
 				log.Info("[ processSignalsWorking ] Got PendingPulseSignal. Set slot state to 'Suspending'")
 				hasPending = true
-			case ActivatePulseSignal:
-				log.Info("[ processSignalsWorking ] Got ActivatePulseSignal")
-				hasActivate = true
-				if hasPending {
-					err := w.slot.inputQueue.PushSignal(ActivatePulseSignal, emptySyncDone{})
+				w.preparePulseSync = el.GetData().(queue.SyncDone)
+				if hasActivate {
+					err := w.slot.inputQueue.PushSignal(ActivatePulseSignal, activateSyncDone)
 					if err != nil {
 						panic("[ processSignalsWorking ] Can't PushSignal: " + err.Error())
 					}
 					break
 				}
+			case ActivatePulseSignal:
+				log.Info("[ processSignalsWorking ] Got ActivatePulseSignal")
+				hasActivate = true
+				activateSyncDone = el.GetData().(queue.SyncDone)
 			case CancelSignal:
 				w.stop = true // TODO: do it more correctly
 				w.slot.slotState = Suspending
@@ -325,6 +326,11 @@ func (w *worker) working() {
 func (w *worker) calculateNodeState() {
 	// TODO: приходит PreparePulse, в нём есть callback, вызываем какой-то адаптер, куда передаем этот callback
 	w.nodeState = 555
+	if w.preparePulseSync != nil {
+		w.preparePulseSync.Done()
+	} else {
+		log.Warn("[ calculateNodeState ] preparePulseSync is empty ")
+	}
 }
 
 func (w *worker) sendRemovalSignalToConveyor() {
@@ -347,6 +353,7 @@ func (w *worker) processSignalsSuspending(elements []queue.OutputElement) int {
 			case ActivatePulseSignal:
 				w.changePulseState()
 				w.slot.slotState = Initializing
+				w.activatePulseSync = el.GetData().(queue.SyncDone)
 				log.Info("[ processSignalsSuspending ] Set slot state to 'Initializing'")
 			case CancelSignal:
 				w.stop = true // TODO: do it more correctly
@@ -475,6 +482,11 @@ func (w *worker) run() {
 			w.slot.slotState = Working
 			log.Info("[ run ] Set slot state to 'Working'")
 		case Working:
+			if w.activatePulseSync != nil {
+				w.activatePulseSync.Done()
+			} else {
+				log.Warn("[ run ] activatePulseSync is empty")
+			}
 			w.working()
 		case Suspending:
 			w.suspending()

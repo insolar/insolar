@@ -89,9 +89,9 @@ func Test_processSignalsWorking_NonSignals(t *testing.T) {
 			oldSlot := *slot
 
 			nonSignals := []queue.OutputElement{
-				*queue.NewOutputElement(1, 0),
-				*queue.NewOutputElement(2, 0),
-				*queue.NewOutputElement(3, 0),
+				*queue.NewOutputElement(emptySyncDone{}, 0),
+				*queue.NewOutputElement(emptySyncDone{}, 0),
+				*queue.NewOutputElement(emptySyncDone{}, 0),
 			}
 			require.Equal(t, 0, worker.processSignalsWorking(nonSignals))
 
@@ -107,7 +107,7 @@ func Test_processSignalsWorking_BadSignal(t *testing.T) {
 			slot, worker := makeSlotAndWorker(tt, 22)
 			oldSlot := *slot
 
-			badSignal := []queue.OutputElement{*queue.NewOutputElement(1, 9999999)}
+			badSignal := []queue.OutputElement{*queue.NewOutputElement(emptySyncDone{}, 9999999)}
 			require.PanicsWithValue(t, "[ processSignalsWorking ] Unknown signal: 9999999", func() {
 				worker.processSignalsWorking(badSignal)
 			})
@@ -121,12 +121,16 @@ func Test_processSignalsWorking_PendingPulseSignal(t *testing.T) {
 	for _, tt := range testPulseStates {
 		t.Run(tt.String(), func(t *testing.T) {
 			slot, worker := makeSlotAndWorker(tt, 22)
-			pendingSignal := []queue.OutputElement{*queue.NewOutputElement(1, PendingPulseSignal)}
+			pendingSignal := []queue.OutputElement{*queue.NewOutputElement(emptySyncDone{}, PendingPulseSignal)}
 			require.Equal(t, 1, worker.processSignalsWorking(pendingSignal))
 			require.Equal(t, Suspending, slot.slotState)
 		})
 	}
 }
+
+type emptySyncDone struct{}
+
+func (m emptySyncDone) Done() {}
 
 func Test_processSignalsWorking_ActivatePulseSignal(t *testing.T) {
 
@@ -134,7 +138,7 @@ func Test_processSignalsWorking_ActivatePulseSignal(t *testing.T) {
 		t.Run(tt.String(), func(t *testing.T) {
 			slot, worker := makeSlotAndWorker(tt, 22)
 			oldSlot := *slot
-			activateSignal := []queue.OutputElement{*queue.NewOutputElement(1, ActivatePulseSignal)}
+			activateSignal := []queue.OutputElement{*queue.NewOutputElement(emptySyncDone{}, ActivatePulseSignal)}
 			require.Equal(t, 1, worker.processSignalsWorking(activateSignal))
 
 			areSlotStatesEqual(&oldSlot, slot, t, false)
@@ -148,8 +152,8 @@ func Test_processSignalsWorking_ActivateAndPendingPulseSignals(t *testing.T) {
 		t.Run(tt.String(), func(t *testing.T) {
 			slot, worker := makeSlotAndWorker(tt, 22)
 			signals := []queue.OutputElement{
-				*queue.NewOutputElement(1, PendingPulseSignal),
-				*queue.NewOutputElement(1, ActivatePulseSignal),
+				*queue.NewOutputElement(emptySyncDone{}, ActivatePulseSignal),
+				*queue.NewOutputElement(emptySyncDone{}, PendingPulseSignal),
 			}
 
 			require.Equal(t, 2, worker.processSignalsWorking(signals))
@@ -302,7 +306,7 @@ func Test_processSignalsSuspending_ActivatePulseSignal(t *testing.T) {
 	for _, tt := range testPulseStates {
 		t.Run(tt.String(), func(t *testing.T) {
 			slot, worker := makeSlotAndWorker(tt, 22)
-			activateSignal := []queue.OutputElement{*queue.NewOutputElement(1, ActivatePulseSignal)}
+			activateSignal := []queue.OutputElement{*queue.NewOutputElement(emptySyncDone{}, ActivatePulseSignal)}
 			require.Equal(t, 1, worker.processSignalsSuspending(activateSignal))
 
 			require.Equal(t, Initializing, slot.slotState)
