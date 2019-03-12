@@ -22,6 +22,7 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/storage/db"
+	"go.opencensus.io/stats"
 )
 
 // StorageMemory is an in-memory struct for index-storage
@@ -52,6 +53,10 @@ func (s *StorageMemory) Set(ctx context.Context, id core.RecordID, index ObjectL
 
 	s.memory[id] = index
 	s.jetIndex.Add(id, index.JetID)
+
+	stats.Record(ctx,
+		statIndexInMemoryCount.M(1),
+	)
 
 	return nil
 }

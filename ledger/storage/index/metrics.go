@@ -15,3 +15,37 @@
  */
 
 package index
+
+import (
+	"github.com/insolar/insolar/instrumentation/insmetrics"
+	"go.opencensus.io/stats"
+	"go.opencensus.io/stats/view"
+	"go.opencensus.io/tag"
+)
+
+var (
+	inmemoryStorage = insmetrics.MustTagKey("inmemorystorage")
+)
+
+var (
+	statIndexInMemoryCount = stats.Int64(
+		"indexstorage/inmemory/count",
+		"How many index-records have been saved in in-memory index storage",
+		stats.UnitDimensionless,
+	)
+)
+
+func init() {
+	err := view.Register(
+		&view.View{
+			Name:        statIndexInMemoryCount.Name(),
+			Description: statIndexInMemoryCount.Description(),
+			Measure:     statIndexInMemoryCount,
+			Aggregation: view.Count(),
+			TagKeys:     []tag.Key{inmemoryStorage},
+		},
+	)
+	if err != nil {
+		panic(err)
+	}
+}
