@@ -31,7 +31,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var testPulseStates = []constant.PulseState{constant.Future, constant.Present, constant.Past}
+var testPulseStates = []constant.PulseState{constant.Future, constant.Present, constant.Past, constant.Antique}
 
 func makeSlotAndWorker(pulseState constant.PulseState, pulseNumber core.PulseNumber) (*Slot, worker) {
 	slot := NewSlot(pulseState, pulseNumber, nil)
@@ -455,7 +455,7 @@ func Test_migrate_NoMigrationHandler(t *testing.T) {
 					slot, worker := makeSlotAndWorker(tps, 44444)
 					oldSlot := *slot
 
-					_, err := slot.createElement(sm, 22, queue.OutputElement{})
+					_, err := slot.createElement(sm, 0, queue.OutputElement{})
 					require.NoError(t, err)
 					numActiveElements := slot.len(tas)
 					require.NoError(t, worker.migrate(tas))
@@ -526,7 +526,7 @@ func Test_migrate_MigrationHandler_LastStateOfStateMachine(t *testing.T) {
 				t.Run(tas.String(), func(t *testing.T) {
 
 					slot, worker := makeSlotAndWorker(tps, 444)
-					_, err := slot.createElement(sm, 22, queue.OutputElement{})
+					_, err := slot.createElement(sm, 0, queue.OutputElement{})
 					require.NoError(t, err)
 					oldSlot := *slot
 
@@ -568,7 +568,7 @@ func Test_migrate_MigrationHandler_Error(t *testing.T) {
 				t.Run(tas.String(), func(t *testing.T) {
 
 					slot, worker := makeSlotAndWorker(tps, 22)
-					_, err := slot.createElement(sm, 22, queue.OutputElement{})
+					_, err := slot.createElement(sm, 0, queue.OutputElement{})
 					require.NoError(t, err)
 					moveLastElementToState(slot, tas, t)
 
@@ -682,7 +682,7 @@ func Test_processingElements_OneEvent(t *testing.T) {
 
 			slot, worker := makeSlotAndWorker(tps, 22)
 			oldSlot := *slot
-			_, err := slot.createElement(sm, 22, queue.OutputElement{})
+			_, err := slot.createElement(sm, 0, queue.OutputElement{})
 			require.NoError(t, err)
 
 			worker.processingElements()
@@ -712,7 +712,7 @@ func Test_processingElements_LastStateOfStateMachine(t *testing.T) {
 			slot, worker := makeSlotAndWorker(tps, 22)
 			oldSlot := *slot
 
-			_, err := slot.createElement(sm, 22, queue.OutputElement{})
+			_, err := slot.createElement(sm, 0, queue.OutputElement{})
 			require.NoError(t, err)
 
 			numEmptyElements := slot.len(EmptyElement)
@@ -750,7 +750,7 @@ func Test_processingElements_TransitionHandlerError(t *testing.T) {
 
 			oldSlot := *slot
 
-			_, err := slot.createElement(sm, 22, queue.OutputElement{})
+			_, err := slot.createElement(sm, 0, queue.OutputElement{})
 			require.NoError(t, err)
 
 			worker.processingElements()
@@ -798,7 +798,7 @@ func Test_readResponseQueue_OneEvent(t *testing.T) {
 			resp := &adapter.AdapterResponse{}
 			slot.responseQueue.SinkPush(resp)
 
-			_, err := slot.createElement(sm, 22, queue.OutputElement{})
+			_, err := slot.createElement(sm, 0, queue.OutputElement{})
 			require.NoError(t, err)
 
 			require.Empty(t, worker.postponedResponses)
@@ -835,7 +835,7 @@ func Test_readResponseQueue_BadElementIdInResponse(t *testing.T) {
 			resp := &adapter.AdapterResponse{}
 			slot.responseQueue.SinkPush(resp)
 
-			_, err := slot.createElement(nil, 33, queue.OutputElement{})
+			_, err := slot.createElement(nil, 0, queue.OutputElement{})
 			require.NoError(t, err)
 
 			// it changes element id
@@ -877,7 +877,7 @@ func Test_processingElements_ResponseHandlerError(t *testing.T) {
 			resp := &adapter.AdapterResponse{}
 			slot.responseQueue.SinkPush(resp)
 
-			_, err := slot.createElement(sm, 33, queue.OutputElement{})
+			_, err := slot.createElement(sm, 0, queue.OutputElement{})
 			require.NoError(t, err)
 
 			worker.readResponseQueue()
@@ -921,7 +921,7 @@ func Test_initializing_NotEmptySlot(t *testing.T) {
 			slot, worker := makeSlotAndWorker(tt, 22)
 			oldSlot := *slot
 
-			element, err := slot.createElement(sm, 777, queue.OutputElement{})
+			element, err := slot.createElement(sm, 0, queue.OutputElement{})
 			require.NoError(t, err)
 			require.NotNil(t, element)
 

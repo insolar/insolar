@@ -83,6 +83,8 @@ func (w *worker) changePulseState() {
 		w.slot.pulseState = constant.Past
 	case constant.Past:
 		log.Error("[ changePulseState ] Try to change pulse state for 'Past' slot. Skip it")
+	case constant.Antique:
+		log.Error("[ changePulseState ] Try to change pulse state for 'Antique' slot. Skip it")
 	default:
 		panic("[ changePulseState ] Unknown state: " + w.slot.pulseState.String())
 	}
@@ -250,13 +252,13 @@ func (w *worker) processingElements() {
 		return
 	}
 
-	lastState := uint32(0)
+	lastState := -1
 	numActiveElements := w.slot.len(ActiveElement)
 	breakProcessing := false
 	for ; numActiveElements > 0 && !breakProcessing; numActiveElements-- {
 		element := w.slot.popElement(ActiveElement)
-		for lastState < element.state {
-			lastState = element.state
+		for lastState < int(element.state) {
+			lastState = int(element.state)
 			transitionHandler := element.stateMachineType.GetTransitionHandler(w.slot.pulseState, element.state)
 			payLoad, newState, err := transitionHandler(element)
 

@@ -65,10 +65,6 @@ func NewAdapterResponse(adapterID idType, elementID idType, handlerID idType, re
 	}
 }
 
-func (ar *AdapterResponse) SetElementID(id idType) {
-	ar.elementID = id
-}
-
 func (ar *AdapterResponse) GetAdapterID() uint32 {
 	return ar.adapterID
 }
@@ -88,7 +84,7 @@ func (ar *AdapterResponse) GetRespPayload() interface{} {
 // AdapterNestedEvent contains info with adapter nested event
 type AdapterNestedEvent struct {
 	adapterID       idType
-	ParentElementID idType
-	HandlerID       idType
-	EventPayload    interface{}
+	parentElementID idType
+	handlerID       idType
+	eventPayload    interface{}
 }
