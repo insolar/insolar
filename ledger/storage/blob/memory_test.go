@@ -28,7 +28,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestBlobStorage_NewStorageMem(t *testing.T) {
+func TestBlobStorage_NewStorageMemory(t *testing.T) {
 	t.Parallel()
 
 	blobStorage := NewStorageMemory()

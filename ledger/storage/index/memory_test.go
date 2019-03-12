@@ -27,7 +27,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestIndexStorage_NewStorageMem(t *testing.T) {
+func TestIndexStorage_NewStorageMemory(t *testing.T) {
 	t.Parallel()
 
 	indexStorage := NewStorageMemory()
