@@ -20,19 +20,19 @@ package generator
 type handler struct {
 	machine *stateMachine
 	state   int
-	name    string
-	params  []string
-	results []string
+	Name    string
+	Params  []string
+	Results []string
 }
 
 func (h *handler) setAsState() {
-	if len(h.params) != 0 {
-		exitWithError("%s state must don't have any parameters", h.name)
+	if len(h.Params) != 0 {
+		exitWithError("%s state must don't have any parameters", h.Name)
 	}
-	if len(h.results) != 1 || h.results[0] != "common.ElState" {
-		exitWithError("%s state should returns only common.ElState")
+	if len(h.Results) != 1 || h.Results[0] != "common.StateID" {
+		exitWithError("%s state should returns only common.StateID", h.Name)
 	}
-	h.machine.States = append(h.machine.States, state{Name: h.name})
+	h.machine.States = append(h.machine.States, state{Name: h.Name})
 }
 
 func (h *handler) setAsInit() {

@@ -125,11 +125,11 @@ func SMRH{{$machine.Name}}Factory() [3]common.StateMachine {
     aInput, ok := element.GetInputEvent().({{.Machine.InputEventType}})
     if !ok { return nil, 0, errors.New("wrong input event type") }
     payload, state, err := s.cleanHandlers.{{.Handler.Name}}(aInput, element.GetPayload())
-    return payload, state.ToInt(), err
+    return payload, state, err
 }{{end}}{{end}}
 {{define "errorStateHandler"}}{{if (handlerExists .Handler)}}func (s *SMRH{{.Machine.Name}}) {{.Handler.Name}}(element slot.SlotElementHelper, err error) (interface{}, common.ElementState) {
     payload, state := s.cleanHandlers.{{.Handler.Name}}(element.GetInputEvent(), element.GetPayload(), err)
-    return payload, state.ToInt()
+    return payload, state
 }{{end}}{{end}}
 {{define "transitionHandler"}}{{if (handlerExists .Handler)}}func (s *SMRH{{.Machine.Name}}) {{.Handler.Name}}(element slot.SlotElementHelper) (interface{}, common.ElementState, error) {
     aInput, ok := element.GetInputEvent().({{.Machine.InputEventType}})
@@ -137,7 +137,7 @@ func SMRH{{$machine.Name}}Factory() [3]common.StateMachine {
     aPayload, ok := element.GetPayload().({{.Machine.PayloadType}})
     if !ok { return nil, 0, errors.New("wrong payload type") }
     payload, state, err := s.cleanHandlers.{{.Handler.Name}}(aInput, aPayload)
-    return payload, state.ToInt(), err
+    return payload, state, err
 }{{end}}{{end}}
 {{define "migrationHandler"}}{{if (handlerExists .Handler)}}func (s *SMRH{{.Machine.Name}}) {{.Handler.Name}}(element slot.SlotElementHelper) (interface{}, common.ElementState, error) {
     aInput, ok := element.GetInputEvent().({{.Machine.InputEventType}})
@@ -145,7 +145,7 @@ func SMRH{{$machine.Name}}Factory() [3]common.StateMachine {
     aPayload, ok := element.GetPayload().({{.Machine.PayloadType}})
     if !ok { return nil, 0, errors.New("wrong payload type") }
     payload, state, err := s.cleanHandlers.{{.Handler.Name}}(aInput, aPayload)
-    return payload, state.ToInt(), err
+    return payload, state, err
 }{{end}}{{end}}
 {{define "adapterResponseHandler"}}{{if (handlerExists .Handler)}}func (s *SMRH{{.Machine.Name}}) {{.Handler.Name}}(element slot.SlotElementHelper, ar adapter.IAdapterResponse) (interface{}, common.ElementState, error) {
     aInput, ok := element.GetInputEvent().({{.Machine.InputEventType}})
@@ -155,9 +155,9 @@ func SMRH{{$machine.Name}}Factory() [3]common.StateMachine {
     aResponse, ok := ar.GetRespPayload().({{index .Handler.Params 2}})
     if !ok { return nil, 0, errors.New("wrong response type") }
     payload, state, err := s.cleanHandlers.{{.Handler.Name}}(aInput, aPayload, aResponse)
-    return payload, state.ToInt(), err
+    return payload, state, err
 }{{end}}{{end}}
 {{define "adapterResponseErrorHandler"}}{{if (handlerExists .Handler)}}func (s *SMRH{{.Machine.Name}}) {{.Handler.Name}}(element slot.SlotElementHelper, ar adapter.IAdapterResponse, err error) (interface{}, common.ElementState) {
     payload, state := s.cleanHandlers.{{.Handler.Name}}(element.GetInputEvent(), element.GetPayload(), ar, err)
-    return payload, state.ToInt()
+    return payload, state
 }{{end}}{{end}}

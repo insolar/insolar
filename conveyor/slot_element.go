@@ -38,7 +38,7 @@ type slotElement struct {
 	inputEvent       interface{}
 	payload          interface{} // nolint
 	postponedError   error
-	stateMachineType statemachine.StateMachineType
+	stateMachineType statemachine.StateMachine
 	state            uint32
 
 	nextElement      *slotElement

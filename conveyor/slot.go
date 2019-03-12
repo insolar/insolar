@@ -46,7 +46,7 @@ type HandlersConfiguration struct {
 }
 
 // TODO: logic will be provided after pulse change mechanism
-func (s *HandlersConfiguration) getMachineConfiguration(smType int) statemachine.StateMachineType { // nolint: unused
+func (s *HandlersConfiguration) getMachineConfiguration(smType int) statemachine.StateMachine { // nolint: unused
 	return nil
 }
 
@@ -160,7 +160,7 @@ func (s *Slot) GetNodeData() interface{} { // nolint: unused
 }
 
 // createElement creates new active element from empty element
-func (s *Slot) createElement(stateMachineType statemachine.StateMachineType, state uint32, event queue.OutputElement) (*slotElement, error) { // nolint: unused
+func (s *Slot) createElement(stateMachineType statemachine.StateMachine, state uint32, event queue.OutputElement) (*slotElement, error) { // nolint: unused
 	element := s.popElement(EmptyElement)
 	element.stateMachineType = stateMachineType
 	element.state = state

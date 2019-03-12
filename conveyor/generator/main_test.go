@@ -51,6 +51,7 @@ func Test_Main(t *testing.T) {
 	g.GenMatrix()
 
 	out, err := exec.Command("go", "test", "-tags=with_generated", "./state_machine_test.go").CombinedOutput()
+	fmt.Println(err)
 	require.NoError(t, err)
 	fmt.Println(string(out))
 }

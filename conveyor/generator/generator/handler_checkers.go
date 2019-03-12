@@ -24,8 +24,8 @@ import (
 // Handler types are: Init, ErrorState, Migration, Transition, etc
 
 func (h *handler) checkInitHandler() {
-	if len(h.params) != 2 {
-		exitWithError("%s must have only two parameters", h.name)
+	if len(h.Params) != 2 {
+		exitWithError("%s must have only two parameters", h.Name)
 	}
 	h.checkInputEventType(0, true)
 	h.checkInterfaceParameter(1)
@@ -33,8 +33,8 @@ func (h *handler) checkInitHandler() {
 }
 
 func (h *handler) checkErrorStateHandler() {
-	if len(h.params) != 3 {
-		exitWithError("%s must have three parameters", h.name)
+	if len(h.Params) != 3 {
+		exitWithError("%s must have three parameters", h.Name)
 	}
 	h.checkInterfaceParameter(0)
 	h.checkInterfaceParameter(1)
@@ -43,8 +43,8 @@ func (h *handler) checkErrorStateHandler() {
 }
 
 func (h *handler) checkMigrationHandler() {
-	if len(h.params) != 2 {
-		exitWithError("%s must have only two parameters", h.name)
+	if len(h.Params) != 2 {
+		exitWithError("%s must have only two parameters", h.Name)
 	}
 	h.checkInputEventType(0, false)
 	h.checkPayloadParameter(1)
@@ -52,8 +52,8 @@ func (h *handler) checkMigrationHandler() {
 }
 
 func (h *handler) checkTransitionHandler() {
-	if len(h.params) < 2 {
-		exitWithError("%s must have two or more parameters", h.name)
+	if len(h.Params) < 2 {
+		exitWithError("%s must have two or more parameters", h.Name)
 	}
 	h.checkInputEventType(0, false)
 	h.checkPayloadParameter(1)
@@ -62,8 +62,8 @@ func (h *handler) checkTransitionHandler() {
 }
 
 func (h *handler) checkAdapterResponseHandler() {
-	if len(h.params) != 3 {
-		exitWithError("%s must have three parameters", h.name)
+	if len(h.Params) != 3 {
+		exitWithError("%s must have three parameters", h.Name)
 	}
 	h.checkInputEventType(0, false)
 	h.checkPayloadParameter(1)
@@ -72,8 +72,8 @@ func (h *handler) checkAdapterResponseHandler() {
 }
 
 func (h *handler) checkAdapterResponseErrorHandler() {
-	if len(h.params) != 4 {
-		exitWithError("%s must have four parameters", h.name)
+	if len(h.Params) != 4 {
+		exitWithError("%s must have four parameters", h.Name)
 	}
 	h.checkInterfaceParameter(0)
 	h.checkInterfaceParameter(1)
@@ -86,67 +86,67 @@ func (h *handler) checkAdapterResponseErrorHandler() {
 
 func (h *handler) checkInputEventType(idx int, setEventType bool) {
 	if setEventType && h.machine.InputEventType == nil {
-		h.machine.InputEventType = &h.params[idx]
-	} else if h.machine.InputEventType == nil || h.params[idx] != *h.machine.InputEventType {
-		exitWithError("%s should have input event same type as Init payload", h.name)
+		h.machine.InputEventType = &h.Params[idx]
+	} else if h.machine.InputEventType == nil || h.Params[idx] != *h.machine.InputEventType {
+		exitWithError("%s should have input event same type as Init payload", h.Name)
 	}
 }
 
 func (h *handler) checkPayloadParameter(idx int) {
-	if !strings.HasPrefix(h.params[1], "*") {
-		exitWithError("%s payload must be a pointer", h.name)
+	if !strings.HasPrefix(h.Params[1], "*") {
+		exitWithError("%s payload must be a pointer", h.Name)
 	}
-	if h.machine.PayloadType == nil || h.params[idx] != *h.machine.PayloadType {
-		exitWithError("%s returned payload should be same type as Init payload", h.name)
+	if h.machine.PayloadType == nil || h.Params[idx] != *h.machine.PayloadType {
+		exitWithError("%s returned payload should be same type as Init payload", h.Name)
 	}
 }
 
 func (h *handler) checkInterfaceParameter(idx int) {
-	if h.params[idx] != "interface{}" {
-		exitWithError("%d parameter for %s should be an interface{}", idx, h.name)
+	if h.Params[idx] != "interface{}" {
+		exitWithError("%d parameter for %s should be an interface{}", idx, h.Name)
 	}
 }
 
 func (h *handler) checkAdapterResponseParameter(idx int) {
-	if h.params[idx] != "adapter.IAdapterResponse" {
-		exitWithError("%d parameter for %s should be an AdapterResponse", idx, h.name)
+	if h.Params[idx] != "adapter.IAdapterResponse" {
+		exitWithError("%d parameter for %s should be an AdapterResponse", idx, h.Name)
 	}
 }
 
 func (h *handler) checkErrorParameter(idx int) {
-	if h.params[idx] != "error" {
-		exitWithError("%d parameter for %s should be an error", idx, h.name)
+	if h.Params[idx] != "error" {
+		exitWithError("%d parameter for %s should be an error", idx, h.Name)
 	}
 }
 
 func (h *handler) checkCommonHandlerReturns(setPayload bool) {
-	if len(h.results) != 3 {
-		exitWithError("%s should return three values", h.name)
+	if len(h.Results) != 3 {
+		exitWithError("%s should return three values", h.Name)
 	}
 	if setPayload && h.machine.PayloadType == nil {
-		if !strings.HasPrefix(h.results[0], "*") {
-			exitWithError("%s payload must be a pointer", h.name)
+		if !strings.HasPrefix(h.Results[0], "*") {
+			exitWithError("%s payload must be a pointer", h.Name)
 		}
-		h.machine.PayloadType = &h.results[0]
-	} else if h.machine.PayloadType == nil || h.results[0] != *h.machine.PayloadType {
-		exitWithError("%s returned payload should be same type as Init payload", h.name)
+		h.machine.PayloadType = &h.Results[0]
+	} else if h.machine.PayloadType == nil || h.Results[0] != *h.machine.PayloadType {
+		exitWithError("%s returned payload should be same type as Init payload", h.Name)
 	}
-	if h.results[1] != "common.ElUpdate" {
-		exitWithError("%s returned state should be ElUpdate", h.name)
+	if h.Results[1] != "common.ElementState" {
+		exitWithError("%s returned state should be ElementState", h.Name)
 	}
-	if h.results[2] != "error" {
-		exitWithError("%s returned error must be of type error", h.name)
+	if h.Results[2] != "error" {
+		exitWithError("%s returned error must be of type error", h.Name)
 	}
 }
 
 func (h *handler) checkErrorHandlerReturns() {
-	if len(h.results) != 2 {
-		exitWithError("%s should return two values", h.name)
+	if len(h.Results) != 2 {
+		exitWithError("%s should return two values", h.Name)
 	}
-	if h.results[0] != *h.machine.PayloadType {
-		exitWithError("%s returned payload should be same type as Init payload", h.name)
+	if h.Results[0] != *h.machine.PayloadType {
+		exitWithError("%s returned payload should be same type as Init payload", h.Name)
 	}
-	if h.results[1] != "common.ElUpdate" {
-		exitWithError("%s returned state should be ElUpdate", h.name)
+	if h.Results[1] != "common.ElementState" {
+		exitWithError("%s returned state should be ElementState", h.Name)
 	}
 }

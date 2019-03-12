@@ -21,23 +21,31 @@ import (
 	"github.com/insolar/insolar/conveyor/interfaces/slot"
 )
 
+// Element State ID
+type StateID uint32
+
+// Element State Machine Type ID
+type ID uint32
+
+// ElementState is StateID + (ID << 10)
+type ElementState uint32
+
+// Types below describes different types of handlers
 type TransitHandler func(element slot.SlotElementHelper) (interface{}, uint32, error)
 type MigrationHandler func(element slot.SlotElementHelper) (interface{}, uint32, error)
 type AdapterResponseHandler func(element slot.SlotElementHelper, response adapter.IAdapterResponse) (interface{}, uint32, error)
 type NestedHandler func(element slot.SlotElementHelper, err error) (interface{}, uint32)
-
 type TransitionErrorHandler func(element slot.SlotElementHelper, err error) (interface{}, uint32)
 type ResponseErrorHandler func(element slot.SlotElementHelper, response adapter.IAdapterResponse, err error) (interface{}, uint32)
 
-// StateMachineType describes access to element's state machine
-//go:generate minimock -i github.com/insolar/insolar/conveyor/interfaces/statemachine.StateMachineType -o ./ -s _mock.go
-type StateMachineType interface {
+// StateMachine describes access to element's state machine
+//go:generate minimock -i github.com/insolar/insolar/conveyor/interfaces/statemachine.StateMachine -o ./ -s _mock.go
+type StateMachine interface {
 	GetTypeID() int
 	GetMigrationHandler(state uint32) MigrationHandler
 	GetTransitionHandler(state uint32) TransitHandler
 	GetResponseHandler(state uint32) AdapterResponseHandler
 	GetNestedHandler(state uint32) NestedHandler
-
 	GetTransitionErrorHandler(state uint32) TransitionErrorHandler
 	GetResponseErrorHandler(state uint32) ResponseErrorHandler
 }

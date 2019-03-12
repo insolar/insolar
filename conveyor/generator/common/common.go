@@ -75,12 +75,3 @@ func (sm *StateMachine) GetTransitionErrorHandler(state uint32) statemachine.Tra
 func (sm *StateMachine) GetResponseErrorHandler(state uint32) statemachine.ResponseErrorHandler {
 	return sm.States[state].AdapterResponseError
 }
-
-// Element State ID
-type StateID uint32
-
-// Element State Machine Type ID
-type StateMachineID uint32
-
-// ElementState is StateID + (StateMachineID << 10)
-type ElementState uint32
