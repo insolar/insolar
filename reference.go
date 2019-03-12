@@ -23,6 +23,10 @@ import (
 // ID represents universal insolar ID.
 type ID = core.RecordID
 
+// JetID represents jet ID. It's the same as regular id, but has a specifically defined pulse number and a set of
+// methods unique to jet IDs.
+type JetID = core.JetID
+
 // Reference represents universal insolar Reference. Reference consists of two IDs. First ID is an affinity ID,
 // second is referred object ID.
 type Reference = core.RecordRef
