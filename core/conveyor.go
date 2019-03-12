@@ -53,9 +53,6 @@ type Control interface {
 	InitiateShutdown(force bool)
 }
 
-// RemoveSlotCallback allows to remove slot by pulse number
-type RemoveSlotCallback func(PulseNumber)
-
 // Conveyor is responsible for all pulse-dependent processing logic
 type Conveyor interface {
 	EventSink

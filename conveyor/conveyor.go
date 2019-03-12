@@ -32,6 +32,9 @@ const (
 	CancelSignal        = 3
 )
 
+// RemoveSlotCallback allows to remove slot by pulse number
+type RemoveSlotCallback func(number core.PulseNumber)
+
 // PulseConveyor is realization of Conveyor
 type PulseConveyor struct {
 	slotMap            map[core.PulseNumber]*Slot

@@ -978,8 +978,7 @@ func Test_run(t *testing.T) {
 
 			go func() {
 				for i := 1; i < 10; i++ {
-					resp := &adapter.AdapterResponse{}
-					resp.SetElementID(uint32(i))
+					resp := adapter.NewAdapterResponse(0, uint32(i), 0, 0)
 					slot.responseQueue.SinkPush(resp)
 					time.Sleep(time.Millisecond * 50)
 				}
