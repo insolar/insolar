@@ -57,7 +57,7 @@ func (pc *pulseController) processPulse(ctx context.Context, request network.Req
 	// so we should wait for pulse from consensus phase1 packet
 	verified, err := pc.verifyPulseSign(data.Pulse)
 	logger := inslogger.FromContext(ctx)
-	logger.Debugf("recv pulse: %v", data.Pulse)
+	logger.Infof("recv pulse: %v", data.Pulse)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ pulseController ] processPulse: ")
 	}
