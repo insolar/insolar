@@ -131,7 +131,7 @@ func (jtu *jetTreeUpdater) releaseJet(ctx context.Context, jetID core.RecordID, 
 	jtu.seqMutex.Lock()
 	defer jtu.seqMutex.Unlock()
 
-	depth, _ := core.JetID(jetID).Jet()
+	depth := core.JetID(jetID).Depth()
 	for {
 		key := seqKey{pulse, jetID}
 		if v, ok := jtu.sequencer[key]; ok {

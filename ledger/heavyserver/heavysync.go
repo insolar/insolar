@@ -121,7 +121,7 @@ func (s *Sync) checkIsNextPulse(ctx context.Context, jetID core.RecordID, jetsta
 
 func (s *Sync) getJetSyncState(ctx context.Context, jetID core.RecordID) *syncstate {
 	var jp jetprefix
-	_, jpBuf := core.JetID(jetID).Jet()
+	jpBuf := core.JetID(jetID).Prefix()
 	copy(jp[:], jpBuf)
 	s.Lock()
 	jetState, ok := s.jetSyncStates[jp]

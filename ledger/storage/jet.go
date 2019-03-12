@@ -22,7 +22,7 @@ import (
 
 // JetParent returns a parent of the jet
 func JetParent(id core.JetID) core.JetID {
-	depth, prefix := id.Jet()
+	depth, prefix := id.Depth(), id.Prefix()
 	if depth == 0 {
 		return id
 	}

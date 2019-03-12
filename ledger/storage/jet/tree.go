@@ -256,7 +256,7 @@ func (t *Tree) Find(id core.RecordID) (*core.RecordID, bool) {
 // Update add missing tree branches for provided prefix. If 'setActual' is set, all encountered nodes will be marked as
 // actual.
 func (t *Tree) Update(id core.RecordID, setActual bool) {
-	maxDepth, prefix := core.JetID(id).Jet()
+	maxDepth, prefix := core.JetID(id).Depth(), core.JetID(id).Prefix()
 	t.Head.Update(prefix, setActual, maxDepth, 0)
 }
 
@@ -271,7 +271,7 @@ func (t *Tree) Bytes() []byte {
 // Split looks for provided jet and creates (and returns) two branches for it. If provided jet is not found, an error
 // will be returned.
 func (t *Tree) Split(jetID core.RecordID) (*core.RecordID, *core.RecordID, error) {
-	depth, prefix := core.JetID(jetID).Jet()
+	depth, prefix := core.JetID(jetID).Depth(), core.JetID(jetID).Prefix()
 	j, foundDepth := t.Head.Find(prefix, 0)
 	if depth != foundDepth {
 		return nil, nil, errors.New("failed to split: incorrect jet provided")
