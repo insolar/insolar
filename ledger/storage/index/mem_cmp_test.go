@@ -14,4 +14,89 @@
  *    limitations under the License.
  */
 
-package index
+package index_test
+
+import (
+	"math/rand"
+	"testing"
+
+	fuzz "github.com/google/gofuzz"
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/gen"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/storage/index"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+func TestInMemoryIndex(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+
+	indexStorage := index.NewStorageMem()
+
+	type tempIndex struct {
+		id  core.RecordID
+		ls  core.RecordID
+		pn  core.PulseNumber
+		idx index.ObjectLifeline
+	}
+
+	var indices []tempIndex
+
+	f := fuzz.New().Funcs(func(t *tempIndex, c fuzz.Continue) {
+		t.id = gen.ID()
+		t.ls = gen.ID()
+		t.pn = gen.PulseNumber()
+		t.idx = index.ObjectLifeline{
+			LatestState:  &t.ls,
+			LatestUpdate: t.pn,
+			JetID:        gen.JetID(),
+		}
+	})
+	f.NumElements(5, 10).NilChance(0).Fuzz(&indices)
+
+	t.Run("saves correct index-value", func(t *testing.T) {
+		for _, i := range indices {
+			err := indexStorage.Set(ctx, i.id, i.idx)
+			require.NoError(t, err)
+		}
+
+		for _, i := range indices {
+			resIndex, err := indexStorage.ForID(ctx, i.id)
+			require.NoError(t, err)
+
+			assert.Equal(t, i.idx, resIndex)
+			assert.Equal(t, i.idx.JetID, resIndex.JetID)
+			assert.Equal(t, i.idx.LatestState, resIndex.LatestState)
+			assert.Equal(t, i.idx.LatestUpdate, resIndex.LatestUpdate)
+		}
+	})
+
+	t.Run("returns error when no index-value for id", func(t *testing.T) {
+		t.Parallel()
+
+		for i := int32(0); i < rand.Int31n(10); i++ {
+			_, err := indexStorage.ForID(ctx, gen.ID())
+			require.Error(t, err)
+			assert.Equal(t, index.ErrNotFound, err)
+		}
+	})
+
+	t.Run("returns override error when saving with the same id", func(t *testing.T) {
+		t.Parallel()
+
+		indexStorage := index.NewStorageMem()
+		for _, i := range indices {
+			err := indexStorage.Set(ctx, i.id, i.idx)
+			require.NoError(t, err)
+		}
+
+		for _, i := range indices {
+			err := indexStorage.Set(ctx, i.id, i.idx)
+			require.Error(t, err)
+			assert.Equal(t, index.ErrOverride, err)
+		}
+	})
+}

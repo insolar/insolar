@@ -118,3 +118,33 @@ func TestIndexStorage_Set(t *testing.T) {
 		assert.Equal(t, ErrOverride, err)
 	})
 }
+
+func TestIndexStorage_Set_SaveLastUpdate(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+
+	jetID := gen.JetID()
+	id := gen.ID()
+	pn := gen.PulseNumber()
+	idx := ObjectLifeline{
+		LatestState:  &id,
+		LatestUpdate: pn,
+		JetID:        jetID,
+	}
+
+	jetIndex := db.NewJetIndexModifierMock(t)
+	jetIndex.AddMock.Expect(id, jetID)
+
+	t.Run("saves correct LastUpdate field in index", func(t *testing.T) {
+		t.Parallel()
+
+		indexStorage := &StorageMem{
+			memory:   map[core.RecordID]ObjectLifeline{},
+			jetIndex: jetIndex,
+		}
+		err := indexStorage.Set(ctx, id, idx)
+		require.NoError(t, err)
+		assert.Equal(t, pn, indexStorage.memory[id].LatestUpdate)
+	})
+}
