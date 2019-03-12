@@ -136,7 +136,6 @@ type nodekeeper struct {
 	isBootstrapLock sync.RWMutex
 
 	Cryptography core.CryptographyService `inject:""`
-	Handler      core.TerminationHandler  `inject:""`
 }
 
 func (nk *nodekeeper) GetWorkingNode(ref core.RecordRef) core.Node {
@@ -421,7 +420,7 @@ func (nk *nodekeeper) Sync(nodes []core.Node, claims []consensus.ReferendumClaim
 	}
 
 	if nk.shouldExit(foundOrigin) {
-		nk.gracefullyStop()
+		return errors.New("Node leave acknowledged by network. Goodbye!")
 	}
 
 	return nil
@@ -453,11 +452,6 @@ func (nk *nodekeeper) MoveSyncToActive(ctx context.Context) error {
 	nk.reindex()
 	nk.nodesJoinedDuringPrevPulse = mergeResult.NodesJoinedDuringPrevPulse
 	return nil
-}
-
-func (nk *nodekeeper) gracefullyStop() {
-	// TODO: graceful stop
-	nk.Handler.Abort()
 }
 
 func (nk *nodekeeper) reindex() {
