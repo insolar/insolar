@@ -98,7 +98,7 @@ const (
 	// PulseNumberCurrent is a special pulse number value that signifies current pulse number.
 	PulseNumberCurrent = PulseNumber(2)
 	// AntiquePulseNumber is a special pulse number value that signifies pulse from distant past.
-	// Used by conveyor component for defining islot for pulses from distant past
+	// Used by conveyor component for defining slot for pulses from distant past
 	AntiquePulseNumber = PulseNumber(3)
 )
 

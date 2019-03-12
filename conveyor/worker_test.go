@@ -980,3 +980,41 @@ func Test_processingElements_ResponseHandlerError(t *testing.T) {
 	}
 
 }
+
+// ---- initializing
+
+func Test_initializing_EmptySlot(t *testing.T) {
+	for _, tt := range testPulseStates {
+		t.Run(tt.String(), func(t *testing.T) {
+			slot, worker := makeSlotAndWorker(tt, 22)
+			oldSlot := *slot
+			worker.initializing()
+			areSlotStatesEqual(&oldSlot, slot, t, false)
+		})
+	}
+}
+
+func Test_initializing_NotEmptySlot(t *testing.T) {
+	migrationPayLoad := 555
+	migrationState := uint32(99)
+	sm := istatemachine.NewStateMachineTypeMock(t)
+	sm.GetMigrationHandlerFunc = func(p constant.PulseState, p1 uint32) (r istatemachine.MigrationHandler) {
+		return func(element islot.SlotElementHelper) (interface{}, uint32, error) {
+			return migrationPayLoad, joinStates(0, migrationState), nil
+		}
+	}
+
+	for _, tt := range testPulseStates {
+		t.Run(tt.String(), func(t *testing.T) {
+			slot, worker := makeSlotAndWorker(tt, 22)
+			oldSlot := *slot
+
+			element, err := slot.createElement(sm, 777, queue.OutputElement{})
+			require.NoError(t, err)
+			require.NotNil(t, element)
+
+			worker.initializing()
+			areSlotStatesEqual(&oldSlot, slot, t, false)
+		})
+	}
+}

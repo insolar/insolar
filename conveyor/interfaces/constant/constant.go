@@ -16,7 +16,7 @@
 
 package constant
 
-// PulseState is the states of pulse inside islot
+// PulseState is the states of pulse inside slot
 type PulseState int
 
 //go:generate stringer -type=PulseState

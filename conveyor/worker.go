@@ -31,7 +31,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-// WorkerState shows islot working mode
+// WorkerState shows slot working mode
 type WorkerState int
 
 //go:generate stringer -type=WorkerState
@@ -101,7 +101,7 @@ func (w *workerStateMachineImpl) changePulseState() {
 	case constant.Present:
 		w.slot.pulseState = constant.Past
 	case constant.Past:
-		log.Error("[ changePulseState ] Try to change pulse state for 'Past' islot. Skip it")
+		log.Error("[ changePulseState ] Try to change pulse state for 'Past' slot. Skip it")
 	default:
 		panic("[ changePulseState ] Unknown state: " + w.slot.pulseState.String())
 	}
@@ -113,7 +113,7 @@ type emptySyncDone struct{}
 func (m emptySyncDone) Done() {}
 
 // If we have both signals ( PendingPulseSignal and ActivatePulseSignal ),
-// then change islot state and push ActivatePulseSignal back to queue.
+// then change slot state and push ActivatePulseSignal back to queue.
 func (w *workerStateMachineImpl) processSignalsWorking(elements []queue.OutputElement) int {
 	numSignals := 0
 	hasPending := false
@@ -245,7 +245,7 @@ func (w *workerStateMachineImpl) processingElements() {
 		if w.slot.pulseState == constant.Past {
 			if w.slot.hasExpired() {
 				w.slot.slotState = Suspending
-				log.Info("[ processingElements ] Set islot state to 'Suspending'")
+				log.Info("[ processingElements ] Set slot state to 'Suspending'")
 				return
 			}
 		}
@@ -328,7 +328,7 @@ func (w *workerStateMachineImpl) calculateNodeState() {
 func (w *workerStateMachineImpl) sendRemovalSignalToConveyor() {
 	w.slot.removeSlotCallback(w.slot.pulseNumber)
 	// TODO: how to do it?
-	// catch conveyor lock, check input queue, if It's empty - remove islot from map, if it's not - got to Working state
+	// catch conveyor lock, check input queue, if It's empty - remove slot from map, if it's not - got to Working state
 }
 
 func (w *workerStateMachineImpl) processSignalsSuspending(elements []queue.OutputElement) int {
@@ -440,12 +440,16 @@ func (w *workerStateMachineImpl) migrate(status ActivationStatus) error {
 
 }
 
+func (w *workerStateMachineImpl) getInitHandlersFromConfig() {
+	// TODO: impolement me
+}
+
 func (w *workerStateMachineImpl) initializing() {
 	if w.slot.pulseState == constant.Future {
 		log.Info("[ initializing ] pulseState is Future. Skip initializing")
 		return
 	} else {
-		// TODO: Get init handler from config
+		w.getInitHandlersFromConfig()
 	}
 
 	err := w.migrate(ActiveElement)
@@ -469,7 +473,7 @@ func (w *workerStateMachineImpl) run() {
 		case Suspending:
 			w.suspending()
 		default:
-			panic("[ run ] Unknown islot state: " + w.slot.slotState.String())
+			panic("[ run ] Unknown slot state: " + w.slot.slotState.String())
 		}
 	}
 }

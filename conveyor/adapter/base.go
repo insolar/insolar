@@ -22,7 +22,7 @@ import (
 
 type idType = uint32
 
-// PulseConveyorAdapterTaskSink is iface which helps to islot to push task to iadapter
+// PulseConveyorAdapterTaskSink is iface which helps to slot to push task to iadapter
 type PulseConveyorAdapterTaskSink interface {
 	PushTask(respSink AdaptorToSlotResponseSink, elementID idType, handlerID idType, taskPayload interface{}) error
 	CancelElementTasks(pulseNumber idType, elementID idType)
@@ -31,7 +31,7 @@ type PulseConveyorAdapterTaskSink interface {
 	FlushNodeTasks(nodeID idType)
 }
 
-// AdaptorToSlotResponseSink is iface which helps to iadapter to access to islot
+// AdaptorToSlotResponseSink is iface which helps to iadapter to access to slot
 type AdaptorToSlotResponseSink interface {
 	PushResponse(adapterID idType, elementID idType, handlerID idType, respPayload interface{})
 	PushNestedEvent(adapterID idType, parentElementID idType, handlerID idType, eventPayload interface{})

@@ -34,7 +34,7 @@ const (
 	// WaitingForStart means that state machine is waiting for the start
 	WaitingForStart
 
-	// GenerateEntropy means that state machine is generating entropy for a current islot
+	// GenerateEntropy means that state machine is generating entropy for a current slot
 	GenerateEntropy
 
 	// WaitingForEntropySigns means that state machine is waiting for other pulsars' signs of entropy

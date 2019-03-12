@@ -20,7 +20,7 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
-// ReactivateMode represents reason of reactivating of islot element
+// ReactivateMode represents reason of reactivating of slot element
 type ReactivateMode int
 
 //go:generate stringer -type=ReactivateMode
@@ -31,7 +31,7 @@ const (
 	SeqHead
 )
 
-// SlotElementHelper gives access to islot element
+// SlotElementHelper gives access to slot element
 //go:generate minimock -i github.com/insolar/insolar/conveyor/interfaces/islot.SlotElementHelper -o ./ -s _mock.go
 type SlotElementHelper interface {
 	SlotElementRestrictedHelper
@@ -55,7 +55,7 @@ type SlotElementRestrictedHelper interface {
 	LeaveSequence()
 }
 
-// SlotElementReadOnly gives read-only access to islot element
+// SlotElementReadOnly gives read-only access to slot element
 //go:generate minimock -i github.com/insolar/insolar/conveyor/interfaces/islot.SlotElementReadOnly -o ./ -s _mock.go
 type SlotElementReadOnly interface {
 	GetElementID() uint32
@@ -64,7 +64,7 @@ type SlotElementReadOnly interface {
 	GetState() uint32
 }
 
-// SlotDetails provides information about islot
+// SlotDetails provides information about slot
 //go:generate minimock -i github.com/insolar/insolar/conveyor/interfaces/islot.SlotDetails -o ./ -s _mock.go
 type SlotDetails interface {
 	GetPulseNumber() core.PulseNumber // nolint: unused

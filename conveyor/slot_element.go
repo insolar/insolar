@@ -21,7 +21,7 @@ import (
 	"github.com/insolar/insolar/conveyor/interfaces/istatemachine"
 )
 
-// ActivationStatus represents status of work for islot element
+// ActivationStatus represents status of work for slot element
 type ActivationStatus int
 
 //go:generate stringer -type=ActivationStatus
@@ -46,7 +46,7 @@ type slotElement struct {
 	activationStatus ActivationStatus
 }
 
-// newSlotElement creates new islot element with provided activation status
+// newSlotElement creates new slot element with provided activation status
 func newSlotElement(activationStatus ActivationStatus) *slotElement {
 	return &slotElement{activationStatus: activationStatus}
 }

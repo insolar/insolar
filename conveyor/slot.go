@@ -26,7 +26,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-// SlotState shows islot working mode
+// SlotState shows slot working mode
 type SlotState uint32
 
 //go:generate stringer -type=SlotState
@@ -128,7 +128,7 @@ type Slot struct {
 	removeSlotCallback core.RemoveSlotCallback
 }
 
-// SlotStateMachine represents state machine of islot itself
+// SlotStateMachine represents state machine of slot itself
 var SlotStateMachine = slotElement{
 	id:               0,
 	state:            0,
@@ -213,7 +213,7 @@ func (s *Slot) createElement(stateMachineType istatemachine.StateMachineType, st
 }
 
 func (s *Slot) hasExpired() bool {
-	// TODO: This is used to delete past islot, which doesn't have elements and not active for some configure time
+	// TODO: This is used to delete past slot, which doesn't have elements and not active for some configure time
 	return s.len(ActiveElement) == 0 && s.len(NotActiveElement) == 0
 }
 
