@@ -117,51 +117,6 @@ func (ul *unsyncList) GetActiveNodes() []core.Node {
 	return sortedNodeList(ul.activeNodes)
 }
 
-func GetMergedCopy(nodes []core.Node, claims []consensus.ReferendumClaim) (*network.MergedListCopy, error) {
-	nodesMap := copyActiveNodes(nodes)
-
-	var nodesJoinedDuringPrevPulse bool
-	for _, claim := range claims {
-		isJoin, err := mergeClaim(nodesMap, claim)
-		if err != nil {
-			return nil, errors.Wrap(err, "[ GetMergedCopy ] failed to merge a claim")
-		}
-
-		nodesJoinedDuringPrevPulse = nodesJoinedDuringPrevPulse || isJoin
-	}
-
-	return &network.MergedListCopy{
-		ActiveList:                 nodesMap,
-		NodesJoinedDuringPrevPulse: nodesJoinedDuringPrevPulse,
-	}, nil
-}
-
-func mergeClaim(nodes map[core.RecordRef]core.Node, claim consensus.ReferendumClaim) (bool, error) {
-	isJoinClaim := false
-	switch t := claim.(type) {
-	case *consensus.NodeJoinClaim:
-		isJoinClaim = true
-		// TODO: fix version
-		node, err := ClaimToNode("", t)
-		if err != nil {
-			return isJoinClaim, errors.Wrap(err, "[ mergeClaim ] failed to convert Claim -> Node")
-		}
-		node.(MutableNode).SetState(core.NodeJoining)
-		nodes[node.ID()] = node
-	case *consensus.NodeLeaveClaim:
-		if nodes[t.NodeID] == nil {
-			break
-		}
-
-		node := nodes[t.NodeID].(MutableNode)
-		if t.ETA == 0 || !node.Leaving() {
-			node.SetLeavingETA(t.ETA)
-		}
-	}
-
-	return isJoinClaim, nil
-}
-
 func sortedNodeList(nodes map[core.RecordRef]core.Node) []core.Node {
 	result := make([]core.Node, len(nodes))
 	i := 0

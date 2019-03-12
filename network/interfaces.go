@@ -209,11 +209,6 @@ type UnsyncList interface {
 	RemoveNode(nodeID core.RecordRef)
 }
 
-type MergedListCopy struct {
-	ActiveList                 map[core.RecordRef]core.Node
-	NodesJoinedDuringPrevPulse bool
-}
-
 // PartitionPolicy contains all rules how to initiate globule resharding.
 type PartitionPolicy interface {
 	ShardsCount() int

@@ -103,12 +103,6 @@ func NewNodeKeeper(origin core.Node) network.NodeKeeper {
 	}
 }
 
-func NewMergedListCopy() *network.MergedListCopy {
-	return &network.MergedListCopy{
-		ActiveList: make(map[core.RecordRef]core.Node),
-	}
-}
-
 type nodekeeper struct {
 	origin     core.Node
 	claimQueue *claimQueue
