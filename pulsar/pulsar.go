@@ -133,11 +133,11 @@ func NewPulsar(
 	}
 	pulsar.PublicKey = pubKey
 
-	pubKeyRaw, err := keyProcessor.ExportPublicKeyBinary(pubKey)
+	pubKeyRaw, err := keyProcessor.ExportPublicKeyPEM(pubKey)
 	if err != nil {
 		log.Fatal(err)
 	}
-	pulsar.PublicKeyRaw = string(pubKeyRaw[:])
+	pulsar.PublicKeyRaw = string(pubKeyRaw)
 
 	lastPulse, err := storage.GetLastPulse()
 	if err != nil {

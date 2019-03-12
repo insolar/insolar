@@ -26,6 +26,7 @@ import (
 	"testing"
 
 	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
@@ -774,7 +775,15 @@ func TestPulsar_verify_Standalone_Success(t *testing.T) {
 	mockSwitcher.SwitchToStateFunc = func(p context.Context, p1 State, p2 interface{}) {
 		require.Equal(t, SendingPulse, p1)
 	}
-	pulsar := &Pulsar{StateSwitcher: mockSwitcher}
+	proc := platformpolicy.NewKeyProcessor()
+	key, err := proc.GeneratePrivateKey()
+	assert.NoError(t, err)
+	pulsar := &Pulsar{
+		StateSwitcher:                  mockSwitcher,
+		PlatformCryptographyScheme:     platformpolicy.NewPlatformCryptographyScheme(),
+		CryptographyService:            cryptography.NewKeyBoundCryptographyService(key),
+		CurrentSlotSenderConfirmations: make(map[string]core.PulseSenderConfirmation),
+	}
 	pulsar.PublicKeyRaw = "testKey"
 	generatedEntropy := core.Entropy(pulsartestutils.MockEntropy)
 	pulsar.generatedEntropy = &generatedEntropy
@@ -859,13 +868,13 @@ func TestPulsar_verify_Success(t *testing.T) {
 	thirdCryptoService := cryptography.NewKeyBoundCryptographyService(thirdPrivate)
 
 	pulsar := &Pulsar{
-		KeyProcessor:                   platformpolicy.NewKeyProcessor(),
-		StateSwitcher:                  mockSwitcher,
-		CryptographyService:            pulsarCryptoService,
-		PlatformCryptographyScheme:     platformpolicy.NewPlatformCryptographyScheme(),
-		PublicKeyRaw:                   currentPulsarPublicKey,
-		ownedBftRow:                    map[string]*BftCell{},
-		bftGrid:                        map[string]map[string]*BftCell{},
+		KeyProcessor:               platformpolicy.NewKeyProcessor(),
+		StateSwitcher:              mockSwitcher,
+		CryptographyService:        pulsarCryptoService,
+		PlatformCryptographyScheme: platformpolicy.NewPlatformCryptographyScheme(),
+		PublicKeyRaw:               currentPulsarPublicKey,
+		ownedBftRow:                map[string]*BftCell{},
+		bftGrid:                    map[string]map[string]*BftCell{},
 		CurrentSlotSenderConfirmations: map[string]core.PulseSenderConfirmation{},
 		Neighbours: map[string]*Neighbour{
 			publicKeySecond: {PublicKey: pub2, OutgoingClient: &clientMock},
