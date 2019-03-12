@@ -29,6 +29,7 @@ import (
 const (
 	PendingPulseSignal  = 1
 	ActivatePulseSignal = 2
+	Cancel              = 3
 )
 
 // PulseConveyor is realization of Conveyor

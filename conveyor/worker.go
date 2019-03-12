@@ -95,6 +95,7 @@ func GetStateMachineByType(mtype MachineType) istatemachine.StateMachineType {
 }
 
 func (w *workerStateMachineImpl) changePulseState() {
+	log.Debugf("[ changePulseState ] starts ... ( w.slot.pulseState: %s )", w.slot.pulseState.String())
 	switch w.slot.pulseState {
 	case constant.Future:
 		w.slot.pulseState = constant.Present
@@ -115,6 +116,7 @@ func (m emptySyncDone) Done() {}
 // If we have both signals ( PendingPulseSignal and ActivatePulseSignal ),
 // then change slot state and push ActivatePulseSignal back to queue.
 func (w *workerStateMachineImpl) processSignalsWorking(elements []queue.OutputElement) int {
+	log.Debugf("[ processSignalsWorking ] starts ... ( len: %d )", len(elements))
 	numSignals := 0
 	hasPending := false
 	hasActivate := false
@@ -125,13 +127,19 @@ func (w *workerStateMachineImpl) processSignalsWorking(elements []queue.OutputEl
 			switch el.GetItemType() {
 			case PendingPulseSignal:
 				w.slot.slotState = Suspending
+				log.Info("[ processSignalsWorking ] Got PendingPulseSignal. Set slot state to 'Suspending'")
 				hasPending = true
 			case ActivatePulseSignal:
+				log.Info("[ processSignalsWorking ] Got ActivatePulseSignal")
 				hasActivate = true
 				if hasPending {
 					w.slot.inputQueue.PushSignal(ActivatePulseSignal, emptySyncDone{})
 					break
 				}
+			case Cancel:
+				w.stop = true // TODO: do it more correctly
+				w.slot.slotState = Suspending
+				log.Info("[ processSignalsWorking ] Got Cancel. Set slot state to 'Suspending'")
 			default:
 				panic(fmt.Sprintf("[ processSignalsWorking ] Unknown signal: %+v", el.GetItemType()))
 			}
@@ -148,6 +156,7 @@ func (w *workerStateMachineImpl) processSignalsWorking(elements []queue.OutputEl
 }
 
 func (w *workerStateMachineImpl) readInputQueueWorking() error {
+	log.Debug("[ readInputQueueWorking ] starts ...")
 	elements := w.slot.inputQueue.RemoveAll()
 
 	numSignals := w.processSignalsWorking(elements)
@@ -166,19 +175,21 @@ func (w *workerStateMachineImpl) readInputQueueWorking() error {
 }
 
 func setNewElementState(element *slotElement, payLoad interface{}, fullState uint32) {
-	if fullState == 0 {
-		element.setDeleteState()
-	} else {
+	log.Debugf("[ setNewElementState ] starts ... ( element: %+v, fullstate: %d )", element, fullState)
+	if fullState != 0 {
 		sm, state := extractStates(fullState)
 		element.state = state
 		element.payload = payLoad
 		if sm != 0 {
 			element.stateMachineType = GetStateMachineByType(MachineType(sm))
 		}
+	} else {
+		element.setDeleteState()
 	}
 }
 
 func (w *workerStateMachineImpl) readResponseQueue() error {
+	log.Debug("[ readResponseQueue ] starts ...")
 	w.postponedResponses = append(w.postponedResponses, w.slot.responseQueue.RemoveAll()...)
 	w.nextWorkerState = ProcessElements
 
@@ -235,12 +246,13 @@ func (w *workerStateMachineImpl) readResponseQueue() error {
 }
 
 func (w *workerStateMachineImpl) waitQueuesOrTick() {
-	log.Info("[ waitQueuesOrTick ] sleep ...")
+	log.Debug("[ waitQueuesOrTick ] sleep ...")
 	time.Sleep(time.Millisecond * 300)
 	//panic("[ waitQueuesOrTick ] implement me") // TODO :
 }
 
 func (w *workerStateMachineImpl) processingElements() {
+	log.Debug("[ processingElements ] starts ...")
 	if !w.slot.hasElements(ActiveElement) {
 		if w.slot.pulseState == constant.Past {
 			if w.slot.hasExpired() {
@@ -260,7 +272,8 @@ func (w *workerStateMachineImpl) processingElements() {
 
 	lastState := uint32(0)
 	numActiveElements := w.slot.len(ActiveElement)
-	for ; numActiveElements > 0; numActiveElements-- {
+	breakProcessing := false
+	for ; numActiveElements > 0 && !breakProcessing; numActiveElements-- {
 		element := w.slot.popElement(ActiveElement)
 		for lastState < element.state {
 			lastState = element.state
@@ -274,13 +287,23 @@ func (w *workerStateMachineImpl) processingElements() {
 			}
 
 			setNewElementState(element, payLoad, newState)
-			w.slot.pushElement(element)
 
 			if w.slot.inputQueue.HasSignal() {
 				w.nextWorkerState = ReadInputQueue
 				log.Info("[ processingElements ] Set next worker state to 'ReadInputQueue'")
-				return
+				breakProcessing = true
+				break
 			}
+
+			if newState == 0 {
+				breakProcessing = true
+				break
+			}
+		}
+
+		err := w.slot.pushElement(element)
+		if err != nil {
+			panic(fmt.Sprintf("[ processingElements ] Can't push element: %+v", element))
 		}
 	}
 }
@@ -344,6 +367,9 @@ func (w *workerStateMachineImpl) processSignalsSuspending(elements []queue.Outpu
 			case ActivatePulseSignal:
 				w.changePulseState()
 				w.slot.slotState = Initializing
+				log.Info("[ processSignalsSuspending ] Set slot state to 'Initializing'")
+			case Cancel:
+				w.stop = true // TODO: do it more correctly
 			default:
 				panic(fmt.Sprintf("[ processSignalsSuspending ] Unknown signal: %+v", el.GetItemType()))
 			}
@@ -367,12 +393,13 @@ func (w *workerStateMachineImpl) readInputQueueSuspending() error {
 
 		_, err := w.slot.createElement(GetStateMachineByType(InputEvent), 0, el)
 		if err != nil {
-			return errors.Wrap(err, "[ readInputQueue ] Can't createElement")
+			return errors.Wrap(err, "[ readInputQueueSuspending ] Can't createElement")
 		}
 	}
 
 	if len(elements) != 0 && w.slot.pulseState == constant.Past {
 		w.slot.slotState = Working
+		log.Info("[ readInputQueueSuspending ] Set slot state to 'Working'")
 	}
 
 	return nil
@@ -424,9 +451,6 @@ func (w *workerStateMachineImpl) migrate(status ActivationStatus) error {
 			}
 		}
 
-		if newState == 0 {
-			element.setDeleteState()
-		}
 		setNewElementState(element, payLoad, newState)
 
 		err = w.slot.pushElement(element)
@@ -468,6 +492,7 @@ func (w *workerStateMachineImpl) run() {
 		case Initializing:
 			w.initializing()
 			w.slot.slotState = Working
+			log.Info("[ run ] Set slot state to 'Working'")
 		case Working:
 			w.working()
 		case Suspending:

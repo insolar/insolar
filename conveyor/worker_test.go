@@ -1018,3 +1018,45 @@ func Test_initializing_NotEmptySlot(t *testing.T) {
 		})
 	}
 }
+
+// ---- run
+
+func Test_run(t *testing.T) {
+	sm := istatemachine.NewStateMachineTypeMock(t)
+	sm.GetMigrationHandlerFunc = func(p constant.PulseState, p1 uint32) (r istatemachine.MigrationHandler) {
+		return func(element islot.SlotElementHelper) (interface{}, uint32, error) {
+			return element.GetElementID(), joinStates(0, 434), nil
+		}
+	}
+
+	sm.GetTransitionHandlerFunc = func(p constant.PulseState, p1 uint32) (r istatemachine.TransitHandler) {
+		return func(element islot.SlotElementHelper) (interface{}, uint32, error) {
+			return element.GetElementID(), joinStates(0, 333), nil
+		}
+	}
+
+	slot, worker := makeSlotAndWorker(constant.Future, 22)
+	for i := 1; i < 400; i++ {
+		element, err := slot.createElement(sm, uint32(i), queue.OutputElement{})
+		require.NoError(t, err)
+		require.NotNil(t, element)
+	}
+
+	go func() {
+		time.Sleep(time.Millisecond * 400)
+		slot.inputQueue.PushSignal(PendingPulseSignal, mockCallback())
+	}()
+
+	go func() {
+		time.Sleep(time.Millisecond * 400)
+		slot.inputQueue.PushSignal(ActivatePulseSignal, mockCallback())
+	}()
+
+	go func() {
+		time.Sleep(time.Millisecond * 400)
+		slot.inputQueue.PushSignal(Cancel, mockCallback())
+	}()
+
+	worker.run()
+
+}
