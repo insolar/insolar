@@ -34,7 +34,7 @@ func TestInMemoryIndex(t *testing.T) {
 
 	ctx := inslogger.TestContext(t)
 
-	indexStorage := index.NewStorageMem()
+	indexStorage := index.NewStorageMemory()
 
 	type tempIndex struct {
 		id  core.RecordID
@@ -87,7 +87,7 @@ func TestInMemoryIndex(t *testing.T) {
 	t.Run("returns override error when saving with the same id", func(t *testing.T) {
 		t.Parallel()
 
-		indexStorage := index.NewStorageMem()
+		indexStorage := index.NewStorageMemory()
 		for _, i := range indices {
 			err := indexStorage.Set(ctx, i.id, i.idx)
 			require.NoError(t, err)

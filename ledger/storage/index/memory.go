@@ -24,23 +24,24 @@ import (
 	"github.com/insolar/insolar/ledger/storage/db"
 )
 
-// StorageMem is an in-memory struct for index-storage
-type StorageMem struct {
+// StorageMemory is an in-memory struct for index-storage
+type StorageMemory struct {
 	jetIndex db.JetIndexModifier
 
 	lock   sync.RWMutex
 	memory map[core.RecordID]ObjectLifeline
 }
 
-// NewStorageMem creates a new instance of Storage.
-func NewStorageMem() *StorageMem {
-	return &StorageMem{
+// NewStorageMemory creates a new instance of Storage.
+func NewStorageMemory() *StorageMemory {
+	return &StorageMemory{
 		memory:   map[core.RecordID]ObjectLifeline{},
 		jetIndex: db.NewJetIndex(),
 	}
 }
 
-func (s *StorageMem) Set(ctx context.Context, id core.RecordID, index ObjectLifeline) error {
+// Set saves new Index-value in storage
+func (s *StorageMemory) Set(ctx context.Context, id core.RecordID, index ObjectLifeline) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -55,7 +56,8 @@ func (s *StorageMem) Set(ctx context.Context, id core.RecordID, index ObjectLife
 	return nil
 }
 
-func (s *StorageMem) ForID(ctx context.Context, id core.RecordID) (idx ObjectLifeline, err error) {
+// ForID returns Index for provided id
+func (s *StorageMemory) ForID(ctx context.Context, id core.RecordID) (idx ObjectLifeline, err error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 

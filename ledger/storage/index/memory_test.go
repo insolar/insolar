@@ -30,7 +30,7 @@ import (
 func TestIndexStorage_NewStorageMem(t *testing.T) {
 	t.Parallel()
 
-	indexStorage := NewStorageMem()
+	indexStorage := NewStorageMemory()
 	assert.Equal(t, 0, len(indexStorage.memory))
 }
 
@@ -49,7 +49,7 @@ func TestIndexStorage_ForID(t *testing.T) {
 	t.Run("returns correct index-value", func(t *testing.T) {
 		t.Parallel()
 
-		indexStorage := &StorageMem{
+		indexStorage := &StorageMemory{
 			memory: map[core.RecordID]ObjectLifeline{},
 		}
 		indexStorage.memory[id] = idx
@@ -63,7 +63,7 @@ func TestIndexStorage_ForID(t *testing.T) {
 	t.Run("returns error when no index-value for id", func(t *testing.T) {
 		t.Parallel()
 
-		indexStorage := &StorageMem{
+		indexStorage := &StorageMemory{
 			memory: map[core.RecordID]ObjectLifeline{},
 		}
 		indexStorage.memory[id] = idx
@@ -92,7 +92,7 @@ func TestIndexStorage_Set(t *testing.T) {
 	t.Run("saves correct index-value", func(t *testing.T) {
 		t.Parallel()
 
-		indexStorage := &StorageMem{
+		indexStorage := &StorageMemory{
 			memory:   map[core.RecordID]ObjectLifeline{},
 			jetIndex: jetIndex,
 		}
@@ -106,7 +106,7 @@ func TestIndexStorage_Set(t *testing.T) {
 	t.Run("returns override error when saving with the same id", func(t *testing.T) {
 		t.Parallel()
 
-		indexStorage := &StorageMem{
+		indexStorage := &StorageMemory{
 			memory:   map[core.RecordID]ObjectLifeline{},
 			jetIndex: jetIndex,
 		}
@@ -139,7 +139,7 @@ func TestIndexStorage_Set_SaveLastUpdate(t *testing.T) {
 	t.Run("saves correct LastUpdate field in index", func(t *testing.T) {
 		t.Parallel()
 
-		indexStorage := &StorageMem{
+		indexStorage := &StorageMemory{
 			memory:   map[core.RecordID]ObjectLifeline{},
 			jetIndex: jetIndex,
 		}

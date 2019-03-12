@@ -22,15 +22,17 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
-// Accessor provides info about Blob-values from storage
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage/blob.Accessor -o ./ -s _mock.go
+
+// Accessor provides info about Blob-values from storage
 type Accessor interface {
 	// ForID returns Blob for provided id
 	ForID(ctx context.Context, id core.RecordID) (Blob, error)
 }
 
-// Modifier provides provides methods for setting Blob-values to storage
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage/blob.Modifier -o ./ -s _mock.go
+
+// Modifier provides provides methods for setting Blob-values to storage
 type Modifier interface {
 	// Set saves new Blob-value in storage
 	Set(ctx context.Context, id core.RecordID, blob Blob) error
