@@ -26,17 +26,13 @@ import (
 const NodesToJoinPercent = 1.0 / 3.0
 
 type ClaimHandler struct {
-	queue       Queue
 	claims      map[core.RecordRef][]packets.ReferendumClaim
-	knownClaims map[core.RecordRef]bool
 	activeCount int
 }
 
 func NewClaimHandler(activeNodesCount int, claims map[core.RecordRef][]packets.ReferendumClaim) *ClaimHandler {
 	return &ClaimHandler{
-		queue:       Queue{},
 		activeCount: activeNodesCount,
-		knownClaims: make(map[core.RecordRef]bool),
 		claims:      claims,
 	}
 }
@@ -57,23 +53,73 @@ func (ch *ClaimHandler) GetClaims() []packets.ReferendumClaim {
 	return result
 }
 
-func (ch *ClaimHandler) AddKnownClaims(claims []packets.ReferendumClaim, entropy core.Entropy) {
-	for _, claim := range claims {
-		join, ok := claim.(*packets.NodeJoinClaim)
-		if !ok || ch.isKnownClaim(join) {
-			continue
-		}
-		priority := getPriority(join.NodeRef, entropy)
-		ch.queue.PushClaim(claim, priority)
-		ch.knownClaims[join.NodeRef] = true
+type ClaimSplit struct {
+	ApprovedClaims []packets.ReferendumClaim
+	// TODO: add logic to return unallowed local claims back to ClaimQueue
+	LeftForNextPulse []packets.ReferendumClaim
+}
+
+type none struct{}
+type recordRefSet map[core.RecordRef]none
+
+func (ch *ClaimHandler) FilterClaims(approvedNodes []core.RecordRef, entropy core.Entropy) ClaimSplit {
+	knownClaims := make(recordRefSet)
+	queue := Queue{}
+
+	for _, node := range approvedNodes {
+		addKnownClaimsToQueue(&queue, knownClaims, ch.GetClaimsFromNode(node), entropy)
+	}
+
+	joinClaims := ch.getApprovedJoinClaims(&queue)
+	joinClaimsSet := make(recordRefSet)
+	for _, joinClaim := range joinClaims {
+		joinClaimsSet[joinClaim.NodeRef] = none{}
+	}
+
+	approvedClaims := make([]packets.ReferendumClaim, 0)
+	for _, node := range approvedNodes {
+		approvedClaimsForNode := getApprovedClaimsForNode(joinClaimsSet, ch.GetClaimsFromNode(node))
+		approvedClaims = append(approvedClaims, approvedClaimsForNode...)
+	}
+
+	return ClaimSplit{
+		ApprovedClaims: approvedClaims,
 	}
 }
 
-func (ch *ClaimHandler) HandleAndReturnClaims() []*packets.NodeJoinClaim {
-	return ch.getClaimsByPriority()
+func getApprovedClaimsForNode(approvedJoinClaims recordRefSet, claimsForNode []packets.ReferendumClaim) []packets.ReferendumClaim {
+	result := make([]packets.ReferendumClaim, 0)
+	for _, claim := range claimsForNode {
+		joinClaim, ok := claim.(*packets.NodeJoinClaim)
+		if !ok {
+			result = append(result, claim)
+			continue
+		}
+		_, ok = approvedJoinClaims[joinClaim.NodeRef]
+		if ok {
+			result = append(result, claim)
+		}
+	}
+	return result
 }
 
-func (ch *ClaimHandler) getClaimsByPriority() []*packets.NodeJoinClaim {
+func addKnownClaimsToQueue(queue *Queue, knownClaims recordRefSet, claims []packets.ReferendumClaim, entropy core.Entropy) {
+	for _, claim := range claims {
+		join, ok := claim.(*packets.NodeJoinClaim)
+		if !ok {
+			continue
+		}
+		_, ok = knownClaims[join.NodeRef]
+		if ok {
+			continue
+		}
+		priority := getPriority(join.NodeRef, entropy)
+		queue.PushClaim(claim, priority)
+		knownClaims[join.NodeRef] = none{}
+	}
+}
+
+func (ch *ClaimHandler) getApprovedJoinClaims(queue *Queue) []*packets.NodeJoinClaim {
 	res := make([]*packets.NodeJoinClaim, 0)
 	nodesToJoin := int(float64(ch.activeCount) * NodesToJoinPercent)
 
@@ -88,8 +134,8 @@ func (ch *ClaimHandler) getClaimsByPriority() []*packets.NodeJoinClaim {
 		return second
 	}
 
-	for i := 0; i < min(nodesToJoin, ch.queue.Len()); i++ {
-		res = append(res, ch.queue.PopClaim().(*packets.NodeJoinClaim))
+	for i := 0; i < min(nodesToJoin, queue.Len()); i++ {
+		res = append(res, queue.PopClaim().(*packets.NodeJoinClaim))
 	}
 
 	return res
@@ -97,9 +143,4 @@ func (ch *ClaimHandler) getClaimsByPriority() []*packets.NodeJoinClaim {
 
 func getPriority(ref core.RecordRef, entropy core.Entropy) []byte {
 	return utils.CircleXOR(ref[:], entropy[:])
-}
-
-func (ch *ClaimHandler) isKnownClaim(claim *packets.NodeJoinClaim) bool {
-	_, ok := ch.knownClaims[claim.NodeRef]
-	return ok
 }

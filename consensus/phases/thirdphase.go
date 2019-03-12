@@ -91,16 +91,6 @@ func (tp *ThirdPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse, state 
 		state.UnsyncList.SetGlobuleHashSignature(ref, packet.GetGlobuleHashSignature())
 	}
 
-	for _, node := range nodes {
-		state.ClaimHandler.AddKnownClaims(state.ClaimHandler.GetClaimsFromNode(node.ID()), pulse.Entropy)
-	}
-
-	handledJoinClaims := state.ClaimHandler.HandleAndReturnClaims()
-
-	for ref := range responses {
-		tp.removeExcessJoinClaims(handledJoinClaims, ref, state)
-	}
-
 	prevCloudHash := tp.NodeKeeper.GetCloudHash()
 	validNodes := 0
 	for _, node := range nodes {
@@ -132,35 +122,14 @@ func (tp *ThirdPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse, state 
 
 	logger.Infof("[ NET Consensus phase-3 ] BFT consensus passed: %d/%d", validNodes, totalCount)
 
+	claimSplit := state.ClaimHandler.FilterClaims(state.MatrixState.Active, pulse.Entropy)
+
 	return &ThirdPhaseState{
 		ActiveNodes:    nodes,
 		UnsyncList:     state.UnsyncList,
 		GlobuleProof:   state.GlobuleProof,
-		ApprovedClaims: state.ClaimHandler.GetClaims(),
+		ApprovedClaims: claimSplit.ApprovedClaims,
 	}, nil
-}
-
-func (tp *ThirdPhaseImpl) removeExcessJoinClaims(joinClaims []*packets.NodeJoinClaim, ref core.RecordRef, state *SecondPhaseState) {
-	claims := state.ClaimHandler.GetClaimsFromNode(ref)
-	originLen := len(claims)
-	if originLen == 0 || len(joinClaims) == 0 {
-		return
-	}
-
-	updatedClaims := make([]packets.ReferendumClaim, 0)
-	for _, join := range joinClaims {
-		for i := 0; i < len(claims); i++ {
-			claim, ok := claims[i].(*packets.NodeJoinClaim)
-			if ok && claim.NodeRef.Equal(join.NodeRef) {
-				updatedClaims = append(updatedClaims, join)
-				continue
-			} else if !ok {
-				updatedClaims = append(updatedClaims, claim)
-			}
-		}
-	}
-
-	state.ClaimHandler.SetClaimsFromNode(ref, updatedClaims)
 }
 
 func (tp *ThirdPhaseImpl) checkPacketSignature(packet *packets.Phase3Packet, recordRef core.RecordRef, unsyncList network.UnsyncList) error {
