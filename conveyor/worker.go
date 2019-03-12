@@ -476,9 +476,9 @@ func (w *workerStateMachineImpl) initializing() {
 	if w.slot.pulseState == constant.Future {
 		log.Info("[ initializing ] pulseState is Future. Skip initializing")
 		return
-	} else {
-		w.getInitHandlersFromConfig()
 	}
+
+	w.getInitHandlersFromConfig()
 
 	err := w.migrate(ActiveElement)
 	if err != nil {
