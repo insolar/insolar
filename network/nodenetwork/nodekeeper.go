@@ -98,7 +98,8 @@ func NewNodeKeeper(origin core.Node) network.NodeKeeper {
 		indexShortID: make(map[core.ShortNodeID]core.Node),
 		tempMapR:     make(map[core.RecordRef]*host.Host),
 		tempMapS:     make(map[core.ShortNodeID]*host.Host),
-		sync:         NewMergedListCopy(),
+		syncNodes:    make([]core.Node, 0),
+		syncClaims:   make([]consensus.ReferendumClaim, 0),
 	}
 }
 
@@ -126,9 +127,10 @@ type nodekeeper struct {
 	tempMapR map[core.RecordRef]*host.Host
 	tempMapS map[core.ShortNodeID]*host.Host
 
-	syncLock sync.Mutex
-	sync     *network.MergedListCopy
-	state    core.NodeNetworkState
+	syncLock   sync.Mutex
+	syncNodes  []core.Node
+	syncClaims []consensus.ReferendumClaim
+	state      core.NodeNetworkState
 
 	isBootstrap     bool
 	isBootstrapLock sync.RWMutex
@@ -182,7 +184,8 @@ func (nk *nodekeeper) Wipe(isDiscovery bool) {
 	nk.active = make(map[core.RecordRef]core.Node)
 	nk.reindex()
 	nk.syncLock.Lock()
-	nk.sync = NewMergedListCopy()
+	nk.syncNodes = make([]core.Node, 0)
+	nk.syncClaims = make([]consensus.ReferendumClaim, 0)
 	if isDiscovery {
 		nk.addActiveNode(nk.origin)
 		nk.state = core.ReadyNodeNetworkState
@@ -285,7 +288,10 @@ func (nk *nodekeeper) AddActiveNodes(nodes []core.Node) {
 	for i, node := range nodes {
 		nk.addActiveNode(node)
 		activeNodes[i] = node.ID().String()
-		nk.sync.ActiveList[node.ID()] = node
+
+		nk.syncLock.Lock()
+		nk.syncNodes = append(nk.syncNodes, node)
+		nk.syncLock.Unlock()
 	}
 	log.Debugf("Added active nodes: %s", strings.Join(activeNodes, ", "))
 }
@@ -402,14 +408,13 @@ func (nk *nodekeeper) Sync(nodes []core.Node, claims []consensus.ReferendumClaim
 	nk.syncLock.Lock()
 	defer nk.syncLock.Unlock()
 
-	mergeResult, err := GetMergedCopy(nodes, claims)
-	if err != nil {
-		return errors.Wrap(err, "[ Sync ] Failed to calculate new active list")
-	}
+	log.Debugf("Sync, nodes: %d, claims: %d", len(nodes), len(claims))
+	nk.syncNodes = nodes
+	nk.syncClaims = claims
 
 	foundOrigin := false
-	for nodeID := range mergeResult.ActiveList {
-		if nodeID.Equal(nk.origin.ID()) {
+	for _, node := range nodes {
+		if node.ID().Equal(nk.origin.ID()) {
 			foundOrigin = true
 			nk.state = core.ReadyNodeNetworkState
 		}
@@ -418,8 +423,6 @@ func (nk *nodekeeper) Sync(nodes []core.Node, claims []consensus.ReferendumClaim
 	if nk.shouldExit(foundOrigin) {
 		nk.gracefullyStop()
 	}
-
-	nk.sync = mergeResult
 
 	return nil
 }
@@ -438,12 +441,17 @@ func (nk *nodekeeper) MoveSyncToActive(ctx context.Context) error {
 	nk.tempMapS = make(map[core.ShortNodeID]*host.Host)
 	nk.tempLock.Unlock()
 
+	mergeResult, err := GetMergedCopy(nk.syncNodes, nk.syncClaims)
+	if err != nil {
+		return errors.Wrap(err, "[ Sync ] Failed to calculate new active list")
+	}
+
 	inslogger.FromContext(ctx).Infof("[ MoveSyncToActive ] New active list confirmed. Active list size: %d -> %d",
-		len(nk.active), len(nk.sync.ActiveList))
-	nk.active = nk.sync.ActiveList
+		len(nk.active), len(mergeResult.ActiveList))
+	nk.active = mergeResult.ActiveList
 	stats.Record(ctx, consensusMetrics.ActiveNodes.M(int64(len(nk.active))))
 	nk.reindex()
-	nk.nodesJoinedDuringPrevPulse = nk.sync.NodesJoinedDuringPrevPulse
+	nk.nodesJoinedDuringPrevPulse = mergeResult.NodesJoinedDuringPrevPulse
 	return nil
 }
 
