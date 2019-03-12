@@ -397,11 +397,11 @@ func (nk *nodekeeper) GetSparseUnsyncList(length int) network.UnsyncList {
 	return newUnsyncList(nk.origin, nil, length)
 }
 
-func (nk *nodekeeper) Sync(nodes []core.Node, claims []consensus.ReferendumClaim) error {
+func (nk *nodekeeper) Sync(ctx context.Context, nodes []core.Node, claims []consensus.ReferendumClaim) error {
 	nk.syncLock.Lock()
 	defer nk.syncLock.Unlock()
 
-	log.Debugf("Sync, nodes: %d, claims: %d", len(nodes), len(claims))
+	inslogger.FromContext(ctx).Debugf("Sync, nodes: %d, claims: %d", len(nodes), len(claims))
 	nk.syncNodes = nodes
 	nk.syncClaims = claims
 

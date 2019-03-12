@@ -174,7 +174,7 @@ type NodeKeeper interface {
 	// Should be called when nodekeeper state is WaitingNodeNetworkState.
 	GetSparseUnsyncList(length int) UnsyncList
 	// Sync move unsync -> sync
-	Sync([]core.Node, []consensus.ReferendumClaim) error
+	Sync(context.Context, []core.Node, []consensus.ReferendumClaim) error
 	// MoveSyncToActive merge sync list with active nodes
 	MoveSyncToActive(ctx context.Context) error
 	// AddTemporaryMapping add temporary mapping till the next pulse for consensus

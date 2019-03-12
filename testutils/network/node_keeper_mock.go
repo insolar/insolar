@@ -148,7 +148,7 @@ type NodeKeeperMock struct {
 	SetStatePreCounter uint64
 	SetStateMock       mNodeKeeperMockSetState
 
-	SyncFunc       func(p []core.Node, p1 []packets.ReferendumClaim) (r error)
+	SyncFunc       func(p context.Context, p1 []core.Node, p2 []packets.ReferendumClaim) (r error)
 	SyncCounter    uint64
 	SyncPreCounter uint64
 	SyncMock       mNodeKeeperMockSync
@@ -3661,8 +3661,9 @@ type NodeKeeperMockSyncExpectation struct {
 }
 
 type NodeKeeperMockSyncInput struct {
-	p  []core.Node
-	p1 []packets.ReferendumClaim
+	p  context.Context
+	p1 []core.Node
+	p2 []packets.ReferendumClaim
 }
 
 type NodeKeeperMockSyncResult struct {
@@ -3670,14 +3671,14 @@ type NodeKeeperMockSyncResult struct {
 }
 
 //Expect specifies that invocation of NodeKeeper.Sync is expected from 1 to Infinity times
-func (m *mNodeKeeperMockSync) Expect(p []core.Node, p1 []packets.ReferendumClaim) *mNodeKeeperMockSync {
+func (m *mNodeKeeperMockSync) Expect(p context.Context, p1 []core.Node, p2 []packets.ReferendumClaim) *mNodeKeeperMockSync {
 	m.mock.SyncFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &NodeKeeperMockSyncExpectation{}
 	}
-	m.mainExpectation.input = &NodeKeeperMockSyncInput{p, p1}
+	m.mainExpectation.input = &NodeKeeperMockSyncInput{p, p1, p2}
 	return m
 }
 
@@ -3694,12 +3695,12 @@ func (m *mNodeKeeperMockSync) Return(r error) *NodeKeeperMock {
 }
 
 //ExpectOnce specifies that invocation of NodeKeeper.Sync is expected once
-func (m *mNodeKeeperMockSync) ExpectOnce(p []core.Node, p1 []packets.ReferendumClaim) *NodeKeeperMockSyncExpectation {
+func (m *mNodeKeeperMockSync) ExpectOnce(p context.Context, p1 []core.Node, p2 []packets.ReferendumClaim) *NodeKeeperMockSyncExpectation {
 	m.mock.SyncFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &NodeKeeperMockSyncExpectation{}
-	expectation.input = &NodeKeeperMockSyncInput{p, p1}
+	expectation.input = &NodeKeeperMockSyncInput{p, p1, p2}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
@@ -3709,7 +3710,7 @@ func (e *NodeKeeperMockSyncExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of NodeKeeper.Sync method
-func (m *mNodeKeeperMockSync) Set(f func(p []core.Node, p1 []packets.ReferendumClaim) (r error)) *NodeKeeperMock {
+func (m *mNodeKeeperMockSync) Set(f func(p context.Context, p1 []core.Node, p2 []packets.ReferendumClaim) (r error)) *NodeKeeperMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -3718,18 +3719,18 @@ func (m *mNodeKeeperMockSync) Set(f func(p []core.Node, p1 []packets.ReferendumC
 }
 
 //Sync implements github.com/insolar/insolar/network.NodeKeeper interface
-func (m *NodeKeeperMock) Sync(p []core.Node, p1 []packets.ReferendumClaim) (r error) {
+func (m *NodeKeeperMock) Sync(p context.Context, p1 []core.Node, p2 []packets.ReferendumClaim) (r error) {
 	counter := atomic.AddUint64(&m.SyncPreCounter, 1)
 	defer atomic.AddUint64(&m.SyncCounter, 1)
 
 	if len(m.SyncMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.SyncMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to NodeKeeperMock.Sync. %v %v", p, p1)
+			m.t.Fatalf("Unexpected call to NodeKeeperMock.Sync. %v %v %v", p, p1, p2)
 			return
 		}
 
 		input := m.SyncMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, NodeKeeperMockSyncInput{p, p1}, "NodeKeeper.Sync got unexpected parameters")
+		testify_assert.Equal(m.t, *input, NodeKeeperMockSyncInput{p, p1, p2}, "NodeKeeper.Sync got unexpected parameters")
 
 		result := m.SyncMock.expectationSeries[counter-1].result
 		if result == nil {
@@ -3746,7 +3747,7 @@ func (m *NodeKeeperMock) Sync(p []core.Node, p1 []packets.ReferendumClaim) (r er
 
 		input := m.SyncMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, NodeKeeperMockSyncInput{p, p1}, "NodeKeeper.Sync got unexpected parameters")
+			testify_assert.Equal(m.t, *input, NodeKeeperMockSyncInput{p, p1, p2}, "NodeKeeper.Sync got unexpected parameters")
 		}
 
 		result := m.SyncMock.mainExpectation.result
@@ -3760,11 +3761,11 @@ func (m *NodeKeeperMock) Sync(p []core.Node, p1 []packets.ReferendumClaim) (r er
 	}
 
 	if m.SyncFunc == nil {
-		m.t.Fatalf("Unexpected call to NodeKeeperMock.Sync. %v %v", p, p1)
+		m.t.Fatalf("Unexpected call to NodeKeeperMock.Sync. %v %v %v", p, p1, p2)
 		return
 	}
 
-	return m.SyncFunc(p, p1)
+	return m.SyncFunc(p, p1, p2)
 }
 
 //SyncMinimockCounter returns a count of NodeKeeperMock.SyncFunc invocations
