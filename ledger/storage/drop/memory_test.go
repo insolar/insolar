@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/gen"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/storage/db"
 	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/stretchr/testify/require"
 )
@@ -108,4 +109,24 @@ func TestDropStorageDB_Set_Concurrent(t *testing.T) {
 
 	close(startChannel)
 	wg.Wait()
+}
+
+func TestDropStorageMemory_Delete(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+	ms := NewStorageMemory()
+
+	err := ms.Set(ctx, core.ZeroJetID, jet.Drop{Pulse: 123, Size: 123})
+	require.NoError(t, err)
+	err = ms.Set(ctx, core.ZeroJetID, jet.Drop{Pulse: 222, Size: 999})
+	require.NoError(t, err)
+
+	ms.Delete(core.PulseNumber(123))
+
+	drop, err := ms.ForPulse(ctx, core.ZeroJetID, core.PulseNumber(222))
+	require.NoError(t, err)
+	require.Equal(t, drop.Pulse, core.PulseNumber(222))
+	require.Equal(t, drop.Size, uint64(999))
+
+	drop, err = ms.ForPulse(ctx, core.ZeroJetID, core.PulseNumber(123))
+	require.Error(t, err, db.ErrNotFound)
 }

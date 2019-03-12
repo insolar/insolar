@@ -21,6 +21,7 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/ledger/storage/db"
 	"github.com/insolar/insolar/ledger/storage/jet"
 )
 
@@ -49,7 +50,7 @@ func (m *dropStorageMemory) ForPulse(ctx context.Context, jetID core.JetID, puls
 	key := dropKey{jetID: jetID, pulse: pulse}
 	d, ok := m.jets[key]
 	if !ok {
-		return jet.Drop{}, core.ErrNotFound
+		return jet.Drop{}, db.ErrNotFound
 	}
 
 	return d, nil
