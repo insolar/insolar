@@ -203,7 +203,7 @@ func (w *workerStateMachineImpl) readResponseQueue() error {
 		} else {
 			adapterResp, ok := resp.GetData().(iadapter.IAdapterResponse)
 			if !ok {
-				panic(fmt.Sprintf("[ readResponseQueue ] Bad type in iadapter response queue: %T", resp.GetData()))
+				panic(fmt.Sprintf("[ readResponseQueue ] Bad type in adapter response queue: %T", resp.GetData()))
 			}
 			element := w.slot.extractSlotElementByID(adapterResp.GetElementID())
 			if element == nil {

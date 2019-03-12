@@ -15,7 +15,7 @@
  */
 
 /*
-Package log contains iadapter for third-party loggers
+Package log contains adapter for third-party loggers
 
 Example:
 

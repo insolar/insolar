@@ -22,7 +22,7 @@ import (
 
 type idType = uint32
 
-// PulseConveyorAdapterTaskSink is iface which helps to slot to push task to iadapter
+// PulseConveyorAdapterTaskSink is iface which helps to slot to push task to adapter
 type PulseConveyorAdapterTaskSink interface {
 	PushTask(respSink AdaptorToSlotResponseSink, elementID idType, handlerID idType, taskPayload interface{}) error
 	CancelElementTasks(pulseNumber idType, elementID idType)
@@ -31,7 +31,7 @@ type PulseConveyorAdapterTaskSink interface {
 	FlushNodeTasks(nodeID idType)
 }
 
-// AdaptorToSlotResponseSink is iface which helps to iadapter to access to slot
+// AdaptorToSlotResponseSink is iface which helps to adapter to access to slot
 type AdaptorToSlotResponseSink interface {
 	PushResponse(adapterID idType, elementID idType, handlerID idType, respPayload interface{})
 	PushNestedEvent(adapterID idType, parentElementID idType, handlerID idType, eventPayload interface{})
@@ -40,7 +40,7 @@ type AdaptorToSlotResponseSink interface {
 	GetSlotDetails() islot.SlotDetails
 }
 
-// AdapterTask contains info for launch iadapter task
+// AdapterTask contains info for launch adapter task
 type AdapterTask struct {
 	respSink    AdaptorToSlotResponseSink
 	elementID   idType
@@ -48,7 +48,7 @@ type AdapterTask struct {
 	taskPayload interface{}
 }
 
-// AdapterResponse contains info with iadapter response
+// AdapterResponse contains info with adapter response
 type AdapterResponse struct {
 	adapterID   idType
 	elementID   idType
@@ -76,7 +76,7 @@ func (ar *AdapterResponse) GetRespPayload() interface{} {
 	return ar.respPayload
 }
 
-// AdapterNestedEvent contains info with iadapter nested event
+// AdapterNestedEvent contains info with adapter nested event
 type AdapterNestedEvent struct {
 	AdapterID       idType
 	ParentElementID idType

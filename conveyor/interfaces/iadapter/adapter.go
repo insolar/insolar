@@ -16,7 +16,7 @@
 
 package iadapter
 
-// IAdapterResponse gives access to reponse of iadapter
+// IAdapterResponse gives access to response of adapter
 //go:generate minimock -i github.com/insolar/insolar/conveyor/interfaces/iadapter.IAdapterResponse -o ./ -s _mock.go
 type IAdapterResponse interface {
 	GetAdapterID() uint32
@@ -25,7 +25,7 @@ type IAdapterResponse interface {
 	GetRespPayload() interface{}
 }
 
-// IAdapterNestedEvent gives access to nested event of iadapter
+// IAdapterNestedEvent gives access to nested event of adapter
 //go:generate minimock -i github.com/insolar/insolar/conveyor/interfaces/iadapter.IAdapterNestedEvent -o ./ -s _mock.go
 type IAdapterNestedEvent interface {
 	GetAdapterID() uint32
