@@ -131,8 +131,8 @@ func (h *handler) checkCommonHandlerReturns(setPayload bool) {
 	} else if h.machine.PayloadType == nil || h.Results[0] != *h.machine.PayloadType {
 		exitWithError("%s returned payload should be same type as Init payload", h.Name)
 	}
-	if h.Results[1] != "common.ElementState" {
-		exitWithError("%s returned state should be ElementState", h.Name)
+	if h.Results[1] != "statemachine.ElementState" {
+		exitWithError("%s returned state should be statemachine.ElementState", h.Name)
 	}
 	if h.Results[2] != "error" {
 		exitWithError("%s returned error must be of type error", h.Name)
@@ -146,7 +146,7 @@ func (h *handler) checkErrorHandlerReturns() {
 	if h.Results[0] != *h.machine.PayloadType {
 		exitWithError("%s returned payload should be same type as Init payload", h.Name)
 	}
-	if h.Results[1] != "common.ElementState" {
-		exitWithError("%s returned state should be ElementState", h.Name)
+	if h.Results[1] != "statemachine.ElementState" {
+		exitWithError("%s returned state should be statemachine.ElementState", h.Name)
 	}
 }

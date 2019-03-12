@@ -18,28 +18,30 @@ package {{.Package}}
 
 import (
     "github.com/insolar/insolar/conveyor/generator/common"
-    "github.com/insolar/insolar/conveyor/interfaces/slot"
     "github.com/insolar/insolar/conveyor/interfaces/adapter"
+    "github.com/insolar/insolar/conveyor/interfaces/slot"
+    "github.com/insolar/insolar/conveyor/interfaces/statemachine"
+
     "errors"
 )
 
-{{range $i, $machine := .StateMachines}}type SMFID{{$machine.Name}} struct {}
+{{range $i, $machine := .StateMachines}}type Base{{$machine.Name}} struct {}
 
-func (*SMFID{{$machine.Name}}) TID() common.StateMachineID {
+func (*Base{{$machine.Name}}) GetTypeID() statemachine.ID {
     return {{inc $i}}
 }
 {{range $i, $state := .States}}{{if (gtNull $i)}}
-    func (*SMFID{{$machine.Name}}) {{$state.Name}}() common.StateID {
+func (*Base{{$machine.Name}}) {{$state.Name}}() statemachine.StateID {
     return {{$i}}
 }{{end}}{{end}}
 
-type SMRH{{$machine.Name}} struct {
-    cleanHandlers {{$machine.Name}}
+type Raw{{$machine.Name}} struct {
+    cleanStateMachine {{$machine.Name}}
 }
 
-func SMRH{{$machine.Name}}Factory() [3]common.StateMachine {
-    m := SMRH{{$machine.Name}}{
-        cleanHandlers: &{{$machine.Name}}Implementation{},
+func Raw{{$machine.Name}}Factory() [3]common.StateMachine {
+    m := Raw{{$machine.Name}}{
+        cleanStateMachine: &Clean{{$machine.Name}}{},
     }
 
     var x = [3][]common.State{}
@@ -81,16 +83,16 @@ func SMRH{{$machine.Name}}Factory() [3]common.StateMachine {
     },{{end}}{{end}})
 
     return [3]common.StateMachine{
-        common.StateMachine{
-            ID: int(m.cleanHandlers.({{$machine.Name}}).TID()),
+        {
+            ID: m.cleanStateMachine.({{$machine.Name}}).GetTypeID(),
             States: x[0],
         },
-        common.StateMachine{
-            ID: int(m.cleanHandlers.({{$machine.Name}}).TID()),
+        {
+            ID: m.cleanStateMachine.({{$machine.Name}}).GetTypeID(),
             States: x[0],
         },
-        common.StateMachine{
-            ID: int(m.cleanHandlers.({{$machine.Name}}).TID()),
+        {
+            ID: m.cleanStateMachine.({{$machine.Name}}).GetTypeID(),
             States: x[0],
         },
     }
@@ -121,43 +123,43 @@ func SMRH{{$machine.Name}}Factory() [3]common.StateMachine {
 {{end}}{{end}}
 {{end}}
 
-{{define "initHandler"}}{{if (handlerExists .Handler)}}func (s *SMRH{{.Machine.Name}}) {{.Handler.Name}}(element slot.SlotElementHelper) (interface{}, common.ElementState, error) {
+{{define "initHandler"}}{{if (handlerExists .Handler)}}func (s *Raw{{.Machine.Name}}) {{.Handler.Name}}(element slot.SlotElementHelper) (interface{}, statemachine.ElementState, error) {
     aInput, ok := element.GetInputEvent().({{.Machine.InputEventType}})
     if !ok { return nil, 0, errors.New("wrong input event type") }
-    payload, state, err := s.cleanHandlers.{{.Handler.Name}}(aInput, element.GetPayload())
+    payload, state, err := s.cleanStateMachine.{{.Handler.Name}}(aInput, element.GetPayload())
     return payload, state, err
 }{{end}}{{end}}
-{{define "errorStateHandler"}}{{if (handlerExists .Handler)}}func (s *SMRH{{.Machine.Name}}) {{.Handler.Name}}(element slot.SlotElementHelper, err error) (interface{}, common.ElementState) {
-    payload, state := s.cleanHandlers.{{.Handler.Name}}(element.GetInputEvent(), element.GetPayload(), err)
+{{define "errorStateHandler"}}{{if (handlerExists .Handler)}}func (s *Raw{{.Machine.Name}}) {{.Handler.Name}}(element slot.SlotElementHelper, err error) (interface{}, statemachine.ElementState) {
+    payload, state := s.cleanStateMachine.{{.Handler.Name}}(element.GetInputEvent(), element.GetPayload(), err)
     return payload, state
 }{{end}}{{end}}
-{{define "transitionHandler"}}{{if (handlerExists .Handler)}}func (s *SMRH{{.Machine.Name}}) {{.Handler.Name}}(element slot.SlotElementHelper) (interface{}, common.ElementState, error) {
+{{define "transitionHandler"}}{{if (handlerExists .Handler)}}func (s *Raw{{.Machine.Name}}) {{.Handler.Name}}(element slot.SlotElementHelper) (interface{}, statemachine.ElementState, error) {
     aInput, ok := element.GetInputEvent().({{.Machine.InputEventType}})
     if !ok { return nil, 0, errors.New("wrong input event type") }
     aPayload, ok := element.GetPayload().({{.Machine.PayloadType}})
     if !ok { return nil, 0, errors.New("wrong payload type") }
-    payload, state, err := s.cleanHandlers.{{.Handler.Name}}(aInput, aPayload)
+    payload, state, err := s.cleanStateMachine.{{.Handler.Name}}(aInput, aPayload)
     return payload, state, err
 }{{end}}{{end}}
-{{define "migrationHandler"}}{{if (handlerExists .Handler)}}func (s *SMRH{{.Machine.Name}}) {{.Handler.Name}}(element slot.SlotElementHelper) (interface{}, common.ElementState, error) {
+{{define "migrationHandler"}}{{if (handlerExists .Handler)}}func (s *Raw{{.Machine.Name}}) {{.Handler.Name}}(element slot.SlotElementHelper) (interface{}, statemachine.ElementState, error) {
     aInput, ok := element.GetInputEvent().({{.Machine.InputEventType}})
     if !ok { return nil, 0, errors.New("wrong input event type") }
     aPayload, ok := element.GetPayload().({{.Machine.PayloadType}})
     if !ok { return nil, 0, errors.New("wrong payload type") }
-    payload, state, err := s.cleanHandlers.{{.Handler.Name}}(aInput, aPayload)
+    payload, state, err := s.cleanStateMachine.{{.Handler.Name}}(aInput, aPayload)
     return payload, state, err
 }{{end}}{{end}}
-{{define "adapterResponseHandler"}}{{if (handlerExists .Handler)}}func (s *SMRH{{.Machine.Name}}) {{.Handler.Name}}(element slot.SlotElementHelper, ar adapter.IAdapterResponse) (interface{}, common.ElementState, error) {
+{{define "adapterResponseHandler"}}{{if (handlerExists .Handler)}}func (s *Raw{{.Machine.Name}}) {{.Handler.Name}}(element slot.SlotElementHelper, ar adapter.IAdapterResponse) (interface{}, statemachine.ElementState, error) {
     aInput, ok := element.GetInputEvent().({{.Machine.InputEventType}})
     if !ok { return nil, 0, errors.New("wrong input event type") }
     aPayload, ok := element.GetPayload().({{.Machine.PayloadType}})
     if !ok { return nil, 0, errors.New("wrong payload type") }
     aResponse, ok := ar.GetRespPayload().({{index .Handler.Params 2}})
     if !ok { return nil, 0, errors.New("wrong response type") }
-    payload, state, err := s.cleanHandlers.{{.Handler.Name}}(aInput, aPayload, aResponse)
+    payload, state, err := s.cleanStateMachine.{{.Handler.Name}}(aInput, aPayload, aResponse)
     return payload, state, err
 }{{end}}{{end}}
-{{define "adapterResponseErrorHandler"}}{{if (handlerExists .Handler)}}func (s *SMRH{{.Machine.Name}}) {{.Handler.Name}}(element slot.SlotElementHelper, ar adapter.IAdapterResponse, err error) (interface{}, common.ElementState) {
-    payload, state := s.cleanHandlers.{{.Handler.Name}}(element.GetInputEvent(), element.GetPayload(), ar, err)
+{{define "adapterResponseErrorHandler"}}{{if (handlerExists .Handler)}}func (s *Raw{{.Machine.Name}}) {{.Handler.Name}}(element slot.SlotElementHelper, ar adapter.IAdapterResponse, err error) (interface{}, statemachine.ElementState) {
+    payload, state := s.cleanStateMachine.{{.Handler.Name}}(element.GetInputEvent(), element.GetPayload(), ar, err)
     return payload, state
 }{{end}}{{end}}

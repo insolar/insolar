@@ -29,7 +29,7 @@ type TAR string
 
 // conveyor: state_machine
 type TestStateMachine interface {
-	TID() statemachine.ID
+	GetTypeID() statemachine.ID
 
 	i_Init(input Event, payload interface{}) (*Payload, statemachine.ElementState, error)
 	if_Init(input Event, payload interface{}) (*Payload, statemachine.ElementState, error)
@@ -104,130 +104,130 @@ type TestStateMachine interface {
 	eap_Second(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, statemachine.ElementState)
 }
 
-type TestStateMachineImplementation struct {
-	SMFIDTestStateMachine
+type CleanTestStateMachine struct {
+	BaseTestStateMachine
 }
 
-func (t *TestStateMachineImplementation) i_Init(input Event, payload interface{}) (*Payload, statemachine.ElementState, error) {
+func (t *CleanTestStateMachine) i_Init(input Event, payload interface{}) (*Payload, statemachine.ElementState, error) {
 	return nil, statemachine.ElementState(t.s_First()), nil
 }
-func (t *TestStateMachineImplementation) if_Init(input Event, payload interface{}) (*Payload, statemachine.ElementState, error) {
+func (t *CleanTestStateMachine) if_Init(input Event, payload interface{}) (*Payload, statemachine.ElementState, error) {
 	return nil, statemachine.ElementState(t.s_First()), nil
 }
-func (t *TestStateMachineImplementation) ip_Init(input Event, payload interface{}) (*Payload, statemachine.ElementState, error) {
+func (t *CleanTestStateMachine) ip_Init(input Event, payload interface{}) (*Payload, statemachine.ElementState, error) {
 	return nil, statemachine.ElementState(t.s_First()), nil
 }
 
-func (t *TestStateMachineImplementation) es_Init(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState) {
+func (t *CleanTestStateMachine) es_Init(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState) {
 	return nil, statemachine.ElementState(t.s_First())
 }
-func (t *TestStateMachineImplementation) esf_Init(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState) {
+func (t *CleanTestStateMachine) esf_Init(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState) {
 	return nil, statemachine.ElementState(t.s_First())
 }
-func (t *TestStateMachineImplementation) esp_Init(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState) {
+func (t *CleanTestStateMachine) esp_Init(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState) {
 	return nil, statemachine.ElementState(t.s_First())
 }
 
 // Migration
-func (t *TestStateMachineImplementation) m_FirstSecond(input Event, payload *Payload) (*Payload, statemachine.ElementState, error) {
+func (t *CleanTestStateMachine) m_FirstSecond(input Event, payload *Payload) (*Payload, statemachine.ElementState, error) {
 	return nil, 0, nil
 }
-func (t *TestStateMachineImplementation) mfp_FirstSecond(input Event, payload *Payload) (*Payload, statemachine.ElementState, error) {
+func (t *CleanTestStateMachine) mfp_FirstSecond(input Event, payload *Payload) (*Payload, statemachine.ElementState, error) {
 	return nil, 0, nil
 }
 
 // Transition
-func (t *TestStateMachineImplementation) t_First(input Event, payload *Payload /* todo: , adapterHelper TA1*/) (*Payload, statemachine.ElementState, error) {
+func (t *CleanTestStateMachine) t_First(input Event, payload *Payload /* todo: , adapterHelper TA1*/) (*Payload, statemachine.ElementState, error) {
 	return nil, statemachine.ElementState(t.s_Second()), nil
 }
-func (t *TestStateMachineImplementation) tf_First(input Event, payload *Payload /* todo: , adapterHelper TA1*/) (*Payload, statemachine.ElementState, error) {
+func (t *CleanTestStateMachine) tf_First(input Event, payload *Payload /* todo: , adapterHelper TA1*/) (*Payload, statemachine.ElementState, error) {
 	return nil, statemachine.ElementState(t.s_Second()), nil
 }
-func (t *TestStateMachineImplementation) tp_First(input Event, payload *Payload) (*Payload, statemachine.ElementState, error) {
+func (t *CleanTestStateMachine) tp_First(input Event, payload *Payload) (*Payload, statemachine.ElementState, error) {
 	return nil, statemachine.ElementState(t.s_Second()), nil
 }
 
 // Adapter Response
-func (t *TestStateMachineImplementation) a_First(input Event, payload *Payload, respPayload TAR) (*Payload, statemachine.ElementState, error) {
+func (t *CleanTestStateMachine) a_First(input Event, payload *Payload, respPayload TAR) (*Payload, statemachine.ElementState, error) {
 	return nil, 0, nil
 }
-func (t *TestStateMachineImplementation) af_First(input Event, payload *Payload, respPayload TAR) (*Payload, statemachine.ElementState, error) {
+func (t *CleanTestStateMachine) af_First(input Event, payload *Payload, respPayload TAR) (*Payload, statemachine.ElementState, error) {
 	return nil, 0, nil
 }
-func (t *TestStateMachineImplementation) ap_First(input Event, payload *Payload, respPayload TAR) (*Payload, statemachine.ElementState, error) {
+func (t *CleanTestStateMachine) ap_First(input Event, payload *Payload, respPayload TAR) (*Payload, statemachine.ElementState, error) {
 	return nil, 0, nil
 }
 
 // State Error
-func (t *TestStateMachineImplementation) es_First(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState) {
+func (t *CleanTestStateMachine) es_First(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState) {
 	return nil, statemachine.ElementState(t.s_Second())
 }
-func (t *TestStateMachineImplementation) esf_First(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState) {
+func (t *CleanTestStateMachine) esf_First(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState) {
 	return nil, statemachine.ElementState(t.s_Second())
 }
-func (t *TestStateMachineImplementation) esp_First(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState) {
+func (t *CleanTestStateMachine) esp_First(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState) {
 	return nil, statemachine.ElementState(t.s_Second())
 }
 
 // Adapter Response Error
-func (t *TestStateMachineImplementation) ea_First(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, statemachine.ElementState) {
+func (t *CleanTestStateMachine) ea_First(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, statemachine.ElementState) {
 	return nil, 0
 }
-func (t *TestStateMachineImplementation) eaf_First(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, statemachine.ElementState) {
+func (t *CleanTestStateMachine) eaf_First(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, statemachine.ElementState) {
 	return nil, 0
 }
-func (t *TestStateMachineImplementation) eap_First(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, statemachine.ElementState) {
+func (t *CleanTestStateMachine) eap_First(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, statemachine.ElementState) {
 	return nil, 0
 }
 
 // Migration
-func (t *TestStateMachineImplementation) m_SecondThird(input Event, payload *Payload) (*Payload, statemachine.ElementState, error) {
+func (t *CleanTestStateMachine) m_SecondThird(input Event, payload *Payload) (*Payload, statemachine.ElementState, error) {
 	return nil, 0, nil
 }
-func (t *TestStateMachineImplementation) mfp_SecondThird(input Event, payload *Payload) (*Payload, statemachine.ElementState, error) {
+func (t *CleanTestStateMachine) mfp_SecondThird(input Event, payload *Payload) (*Payload, statemachine.ElementState, error) {
 	return nil, 0, nil
 }
 
 // Transition
-func (t *TestStateMachineImplementation) t_Second(input Event, payload *Payload /* todo: , adapterHelper1 TA1*/) (*Payload, statemachine.ElementState, error) {
+func (t *CleanTestStateMachine) t_Second(input Event, payload *Payload /* todo: , adapterHelper1 TA1*/) (*Payload, statemachine.ElementState, error) {
 	return nil, 0, nil
 }
-func (t *TestStateMachineImplementation) tf_Second(input Event, payload *Payload /* todo: , adapterHelper1 TA1*/) (*Payload, statemachine.ElementState, error) {
+func (t *CleanTestStateMachine) tf_Second(input Event, payload *Payload /* todo: , adapterHelper1 TA1*/) (*Payload, statemachine.ElementState, error) {
 	return nil, 0, nil
 }
-func (t *TestStateMachineImplementation) tp_Second(input Event, payload *Payload /* todo: , adapterHelper1 TA1*/) (*Payload, statemachine.ElementState, error) {
+func (t *CleanTestStateMachine) tp_Second(input Event, payload *Payload /* todo: , adapterHelper1 TA1*/) (*Payload, statemachine.ElementState, error) {
 	return nil, 0, nil
 }
 
 // Adapter Response
-func (t *TestStateMachineImplementation) a_Second(input Event, payload *Payload, respPayload TAR) (*Payload, statemachine.ElementState, error) {
+func (t *CleanTestStateMachine) a_Second(input Event, payload *Payload, respPayload TAR) (*Payload, statemachine.ElementState, error) {
 	return nil, 0, nil
 }
-func (t *TestStateMachineImplementation) af_Second(input Event, payload *Payload, respPayload TAR) (*Payload, statemachine.ElementState, error) {
+func (t *CleanTestStateMachine) af_Second(input Event, payload *Payload, respPayload TAR) (*Payload, statemachine.ElementState, error) {
 	return nil, 0, nil
 }
-func (t *TestStateMachineImplementation) ap_Second(input Event, payload *Payload, respPayload TAR) (*Payload, statemachine.ElementState, error) {
+func (t *CleanTestStateMachine) ap_Second(input Event, payload *Payload, respPayload TAR) (*Payload, statemachine.ElementState, error) {
 	return nil, 0, nil
 }
 
 // State Error
-func (t *TestStateMachineImplementation) es_Second(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState) {
+func (t *CleanTestStateMachine) es_Second(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState) {
 	return nil, 0
 }
-func (t *TestStateMachineImplementation) esf_Second(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState) {
+func (t *CleanTestStateMachine) esf_Second(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState) {
 	return nil, 0
 }
-func (t *TestStateMachineImplementation) esp_Second(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState) {
+func (t *CleanTestStateMachine) esp_Second(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState) {
 	return nil, 0
 }
 
 // Adapter Response Error
-func (t *TestStateMachineImplementation) ea_Second(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, statemachine.ElementState) {
+func (t *CleanTestStateMachine) ea_Second(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, statemachine.ElementState) {
 	return nil, 0
 }
-func (t *TestStateMachineImplementation) eaf_Second(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, statemachine.ElementState) {
+func (t *CleanTestStateMachine) eaf_Second(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, statemachine.ElementState) {
 	return nil, 0
 }
-func (t *TestStateMachineImplementation) eap_Second(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, statemachine.ElementState) {
+func (t *CleanTestStateMachine) eap_Second(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, statemachine.ElementState) {
 	return nil, 0
 }

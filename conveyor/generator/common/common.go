@@ -34,44 +34,44 @@ type State struct {
 
 // StateMachine is a type for conveyor state machines
 type StateMachine struct {
-	ID     int
+	ID     statemachine.ID
 	States []State
 }
 
 // GetTypeID method returns StateMachine ID
-func (sm *StateMachine) GetTypeID() int {
+func (sm *StateMachine) GetTypeID() statemachine.ID {
 	return sm.ID
 }
 
 // GetMigrationHandler method returns migration handler
-func (sm *StateMachine) GetMigrationHandler(state uint32) statemachine.MigrationHandler {
+func (sm *StateMachine) GetMigrationHandler(state statemachine.StateID) statemachine.MigrationHandler {
 	return sm.States[state].Migration
 }
 
 // GetTransitionHandler method returns transition handler
-func (sm *StateMachine) GetTransitionHandler(state uint32) statemachine.TransitHandler {
+func (sm *StateMachine) GetTransitionHandler(state statemachine.StateID) statemachine.TransitHandler {
 	return sm.States[state].Transition
 }
 
 // GetResponseHandler returns response handler
-func (sm *StateMachine) GetResponseHandler(state uint32) statemachine.AdapterResponseHandler {
+func (sm *StateMachine) GetResponseHandler(state statemachine.StateID) statemachine.AdapterResponseHandler {
 	return sm.States[state].AdapterResponse
 }
 
 // GetNestedHandler returns nested handler
-func (sm *StateMachine) GetNestedHandler(state uint32) statemachine.NestedHandler {
-	return func(element slot.SlotElementHelper, err error) (interface{}, uint32) {
+func (sm *StateMachine) GetNestedHandler(state statemachine.StateID) statemachine.NestedHandler {
+	return func(element slot.SlotElementHelper, err error) (interface{}, statemachine.ElementState) {
 		// TODO: Implement me
 		return nil, 0
 	}
 }
 
 // GetTransitionErrorHandler returns transition error handler
-func (sm *StateMachine) GetTransitionErrorHandler(state uint32) statemachine.TransitionErrorHandler {
+func (sm *StateMachine) GetTransitionErrorHandler(state statemachine.StateID) statemachine.TransitionErrorHandler {
 	return sm.States[state].ErrorState
 }
 
 // GetResponseErrorHandler returns response error handler
-func (sm *StateMachine) GetResponseErrorHandler(state uint32) statemachine.ResponseErrorHandler {
+func (sm *StateMachine) GetResponseErrorHandler(state statemachine.StateID) statemachine.ResponseErrorHandler {
 	return sm.States[state].AdapterResponseError
 }

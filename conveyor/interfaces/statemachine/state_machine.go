@@ -21,6 +21,7 @@ import (
 	"github.com/insolar/insolar/conveyor/interfaces/slot"
 )
 
+// TODO: move here helpers for types below
 // Element State ID
 type StateID uint32
 
@@ -31,21 +32,21 @@ type ID uint32
 type ElementState uint32
 
 // Types below describes different types of handlers
-type TransitHandler func(element slot.SlotElementHelper) (interface{}, uint32, error)
-type MigrationHandler func(element slot.SlotElementHelper) (interface{}, uint32, error)
-type AdapterResponseHandler func(element slot.SlotElementHelper, response adapter.IAdapterResponse) (interface{}, uint32, error)
-type NestedHandler func(element slot.SlotElementHelper, err error) (interface{}, uint32)
-type TransitionErrorHandler func(element slot.SlotElementHelper, err error) (interface{}, uint32)
-type ResponseErrorHandler func(element slot.SlotElementHelper, response adapter.IAdapterResponse, err error) (interface{}, uint32)
+type TransitHandler func(element slot.SlotElementHelper) (interface{}, ElementState, error)
+type MigrationHandler func(element slot.SlotElementHelper) (interface{}, ElementState, error)
+type AdapterResponseHandler func(element slot.SlotElementHelper, response adapter.IAdapterResponse) (interface{}, ElementState, error)
+type NestedHandler func(element slot.SlotElementHelper, err error) (interface{}, ElementState)
+type TransitionErrorHandler func(element slot.SlotElementHelper, err error) (interface{}, ElementState)
+type ResponseErrorHandler func(element slot.SlotElementHelper, response adapter.IAdapterResponse, err error) (interface{}, ElementState)
 
 // StateMachine describes access to element's state machine
 //go:generate minimock -i github.com/insolar/insolar/conveyor/interfaces/statemachine.StateMachine -o ./ -s _mock.go
 type StateMachine interface {
-	GetTypeID() int
-	GetMigrationHandler(state uint32) MigrationHandler
-	GetTransitionHandler(state uint32) TransitHandler
-	GetResponseHandler(state uint32) AdapterResponseHandler
-	GetNestedHandler(state uint32) NestedHandler
-	GetTransitionErrorHandler(state uint32) TransitionErrorHandler
-	GetResponseErrorHandler(state uint32) ResponseErrorHandler
+	GetTypeID() ID
+	GetMigrationHandler(state StateID) MigrationHandler
+	GetTransitionHandler(state StateID) TransitHandler
+	GetResponseHandler(state StateID) AdapterResponseHandler
+	GetNestedHandler(state StateID) NestedHandler
+	GetTransitionErrorHandler(state StateID) TransitionErrorHandler
+	GetResponseErrorHandler(state StateID) ResponseErrorHandler
 }

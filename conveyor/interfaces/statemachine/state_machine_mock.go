@@ -13,125 +13,125 @@ import (
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//StateMachineTypeMock implements github.com/insolar/insolar/conveyor/interfaces/statemachine.StateMachine
-type StateMachineTypeMock struct {
+//StateMachineMock implements github.com/insolar/insolar/conveyor/interfaces/statemachine.StateMachine
+type StateMachineMock struct {
 	t minimock.Tester
 
-	GetMigrationHandlerFunc       func(p uint32) (r MigrationHandler)
+	GetMigrationHandlerFunc       func(p StateID) (r MigrationHandler)
 	GetMigrationHandlerCounter    uint64
 	GetMigrationHandlerPreCounter uint64
-	GetMigrationHandlerMock       mStateMachineTypeMockGetMigrationHandler
+	GetMigrationHandlerMock       mStateMachineMockGetMigrationHandler
 
-	GetNestedHandlerFunc       func(p uint32) (r NestedHandler)
+	GetNestedHandlerFunc       func(p StateID) (r NestedHandler)
 	GetNestedHandlerCounter    uint64
 	GetNestedHandlerPreCounter uint64
-	GetNestedHandlerMock       mStateMachineTypeMockGetNestedHandler
+	GetNestedHandlerMock       mStateMachineMockGetNestedHandler
 
-	GetResponseErrorHandlerFunc       func(p uint32) (r ResponseErrorHandler)
+	GetResponseErrorHandlerFunc       func(p StateID) (r ResponseErrorHandler)
 	GetResponseErrorHandlerCounter    uint64
 	GetResponseErrorHandlerPreCounter uint64
-	GetResponseErrorHandlerMock       mStateMachineTypeMockGetResponseErrorHandler
+	GetResponseErrorHandlerMock       mStateMachineMockGetResponseErrorHandler
 
-	GetResponseHandlerFunc       func(p uint32) (r AdapterResponseHandler)
+	GetResponseHandlerFunc       func(p StateID) (r AdapterResponseHandler)
 	GetResponseHandlerCounter    uint64
 	GetResponseHandlerPreCounter uint64
-	GetResponseHandlerMock       mStateMachineTypeMockGetResponseHandler
+	GetResponseHandlerMock       mStateMachineMockGetResponseHandler
 
-	GetTransitionErrorHandlerFunc       func(p uint32) (r TransitionErrorHandler)
+	GetTransitionErrorHandlerFunc       func(p StateID) (r TransitionErrorHandler)
 	GetTransitionErrorHandlerCounter    uint64
 	GetTransitionErrorHandlerPreCounter uint64
-	GetTransitionErrorHandlerMock       mStateMachineTypeMockGetTransitionErrorHandler
+	GetTransitionErrorHandlerMock       mStateMachineMockGetTransitionErrorHandler
 
-	GetTransitionHandlerFunc       func(p uint32) (r TransitHandler)
+	GetTransitionHandlerFunc       func(p StateID) (r TransitHandler)
 	GetTransitionHandlerCounter    uint64
 	GetTransitionHandlerPreCounter uint64
-	GetTransitionHandlerMock       mStateMachineTypeMockGetTransitionHandler
+	GetTransitionHandlerMock       mStateMachineMockGetTransitionHandler
 
-	GetTypeIDFunc       func() (r int)
+	GetTypeIDFunc       func() (r ID)
 	GetTypeIDCounter    uint64
 	GetTypeIDPreCounter uint64
-	GetTypeIDMock       mStateMachineTypeMockGetTypeID
+	GetTypeIDMock       mStateMachineMockGetTypeID
 }
 
-//NewStateMachineTypeMock returns a mock for github.com/insolar/insolar/conveyor/interfaces/statemachine.StateMachine
-func NewStateMachineTypeMock(t minimock.Tester) *StateMachineTypeMock {
-	m := &StateMachineTypeMock{t: t}
+//NewStateMachineMock returns a mock for github.com/insolar/insolar/conveyor/interfaces/statemachine.StateMachine
+func NewStateMachineMock(t minimock.Tester) *StateMachineMock {
+	m := &StateMachineMock{t: t}
 
 	if controller, ok := t.(minimock.MockController); ok {
 		controller.RegisterMocker(m)
 	}
 
-	m.GetMigrationHandlerMock = mStateMachineTypeMockGetMigrationHandler{mock: m}
-	m.GetNestedHandlerMock = mStateMachineTypeMockGetNestedHandler{mock: m}
-	m.GetResponseErrorHandlerMock = mStateMachineTypeMockGetResponseErrorHandler{mock: m}
-	m.GetResponseHandlerMock = mStateMachineTypeMockGetResponseHandler{mock: m}
-	m.GetTransitionErrorHandlerMock = mStateMachineTypeMockGetTransitionErrorHandler{mock: m}
-	m.GetTransitionHandlerMock = mStateMachineTypeMockGetTransitionHandler{mock: m}
-	m.GetTypeIDMock = mStateMachineTypeMockGetTypeID{mock: m}
+	m.GetMigrationHandlerMock = mStateMachineMockGetMigrationHandler{mock: m}
+	m.GetNestedHandlerMock = mStateMachineMockGetNestedHandler{mock: m}
+	m.GetResponseErrorHandlerMock = mStateMachineMockGetResponseErrorHandler{mock: m}
+	m.GetResponseHandlerMock = mStateMachineMockGetResponseHandler{mock: m}
+	m.GetTransitionErrorHandlerMock = mStateMachineMockGetTransitionErrorHandler{mock: m}
+	m.GetTransitionHandlerMock = mStateMachineMockGetTransitionHandler{mock: m}
+	m.GetTypeIDMock = mStateMachineMockGetTypeID{mock: m}
 
 	return m
 }
 
-type mStateMachineTypeMockGetMigrationHandler struct {
-	mock              *StateMachineTypeMock
-	mainExpectation   *StateMachineTypeMockGetMigrationHandlerExpectation
-	expectationSeries []*StateMachineTypeMockGetMigrationHandlerExpectation
+type mStateMachineMockGetMigrationHandler struct {
+	mock              *StateMachineMock
+	mainExpectation   *StateMachineMockGetMigrationHandlerExpectation
+	expectationSeries []*StateMachineMockGetMigrationHandlerExpectation
 }
 
-type StateMachineTypeMockGetMigrationHandlerExpectation struct {
-	input  *StateMachineTypeMockGetMigrationHandlerInput
-	result *StateMachineTypeMockGetMigrationHandlerResult
+type StateMachineMockGetMigrationHandlerExpectation struct {
+	input  *StateMachineMockGetMigrationHandlerInput
+	result *StateMachineMockGetMigrationHandlerResult
 }
 
-type StateMachineTypeMockGetMigrationHandlerInput struct {
-	p uint32
+type StateMachineMockGetMigrationHandlerInput struct {
+	p StateID
 }
 
-type StateMachineTypeMockGetMigrationHandlerResult struct {
+type StateMachineMockGetMigrationHandlerResult struct {
 	r MigrationHandler
 }
 
 //Expect specifies that invocation of StateMachine.GetMigrationHandler is expected from 1 to Infinity times
-func (m *mStateMachineTypeMockGetMigrationHandler) Expect(p uint32) *mStateMachineTypeMockGetMigrationHandler {
+func (m *mStateMachineMockGetMigrationHandler) Expect(p StateID) *mStateMachineMockGetMigrationHandler {
 	m.mock.GetMigrationHandlerFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &StateMachineTypeMockGetMigrationHandlerExpectation{}
+		m.mainExpectation = &StateMachineMockGetMigrationHandlerExpectation{}
 	}
-	m.mainExpectation.input = &StateMachineTypeMockGetMigrationHandlerInput{p}
+	m.mainExpectation.input = &StateMachineMockGetMigrationHandlerInput{p}
 	return m
 }
 
 //Return specifies results of invocation of StateMachine.GetMigrationHandler
-func (m *mStateMachineTypeMockGetMigrationHandler) Return(r MigrationHandler) *StateMachineTypeMock {
+func (m *mStateMachineMockGetMigrationHandler) Return(r MigrationHandler) *StateMachineMock {
 	m.mock.GetMigrationHandlerFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &StateMachineTypeMockGetMigrationHandlerExpectation{}
+		m.mainExpectation = &StateMachineMockGetMigrationHandlerExpectation{}
 	}
-	m.mainExpectation.result = &StateMachineTypeMockGetMigrationHandlerResult{r}
+	m.mainExpectation.result = &StateMachineMockGetMigrationHandlerResult{r}
 	return m.mock
 }
 
 //ExpectOnce specifies that invocation of StateMachine.GetMigrationHandler is expected once
-func (m *mStateMachineTypeMockGetMigrationHandler) ExpectOnce(p uint32) *StateMachineTypeMockGetMigrationHandlerExpectation {
+func (m *mStateMachineMockGetMigrationHandler) ExpectOnce(p StateID) *StateMachineMockGetMigrationHandlerExpectation {
 	m.mock.GetMigrationHandlerFunc = nil
 	m.mainExpectation = nil
 
-	expectation := &StateMachineTypeMockGetMigrationHandlerExpectation{}
-	expectation.input = &StateMachineTypeMockGetMigrationHandlerInput{p}
+	expectation := &StateMachineMockGetMigrationHandlerExpectation{}
+	expectation.input = &StateMachineMockGetMigrationHandlerInput{p}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
-func (e *StateMachineTypeMockGetMigrationHandlerExpectation) Return(r MigrationHandler) {
-	e.result = &StateMachineTypeMockGetMigrationHandlerResult{r}
+func (e *StateMachineMockGetMigrationHandlerExpectation) Return(r MigrationHandler) {
+	e.result = &StateMachineMockGetMigrationHandlerResult{r}
 }
 
 //Set uses given function f as a mock of StateMachine.GetMigrationHandler method
-func (m *mStateMachineTypeMockGetMigrationHandler) Set(f func(p uint32) (r MigrationHandler)) *StateMachineTypeMock {
+func (m *mStateMachineMockGetMigrationHandler) Set(f func(p StateID) (r MigrationHandler)) *StateMachineMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -140,22 +140,22 @@ func (m *mStateMachineTypeMockGetMigrationHandler) Set(f func(p uint32) (r Migra
 }
 
 //GetMigrationHandler implements github.com/insolar/insolar/conveyor/interfaces/statemachine.StateMachine interface
-func (m *StateMachineTypeMock) GetMigrationHandler(p uint32) (r MigrationHandler) {
+func (m *StateMachineMock) GetMigrationHandler(p StateID) (r MigrationHandler) {
 	counter := atomic.AddUint64(&m.GetMigrationHandlerPreCounter, 1)
 	defer atomic.AddUint64(&m.GetMigrationHandlerCounter, 1)
 
 	if len(m.GetMigrationHandlerMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.GetMigrationHandlerMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to StateMachineTypeMock.GetMigrationHandler. %v", p)
+			m.t.Fatalf("Unexpected call to StateMachineMock.GetMigrationHandler. %v", p)
 			return
 		}
 
 		input := m.GetMigrationHandlerMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, StateMachineTypeMockGetMigrationHandlerInput{p}, "StateMachine.GetMigrationHandler got unexpected parameters")
+		testify_assert.Equal(m.t, *input, StateMachineMockGetMigrationHandlerInput{p}, "StateMachine.GetMigrationHandler got unexpected parameters")
 
 		result := m.GetMigrationHandlerMock.expectationSeries[counter-1].result
 		if result == nil {
-			m.t.Fatal("No results are set for the StateMachineTypeMock.GetMigrationHandler")
+			m.t.Fatal("No results are set for the StateMachineMock.GetMigrationHandler")
 			return
 		}
 
@@ -168,12 +168,12 @@ func (m *StateMachineTypeMock) GetMigrationHandler(p uint32) (r MigrationHandler
 
 		input := m.GetMigrationHandlerMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, StateMachineTypeMockGetMigrationHandlerInput{p}, "StateMachine.GetMigrationHandler got unexpected parameters")
+			testify_assert.Equal(m.t, *input, StateMachineMockGetMigrationHandlerInput{p}, "StateMachine.GetMigrationHandler got unexpected parameters")
 		}
 
 		result := m.GetMigrationHandlerMock.mainExpectation.result
 		if result == nil {
-			m.t.Fatal("No results are set for the StateMachineTypeMock.GetMigrationHandler")
+			m.t.Fatal("No results are set for the StateMachineMock.GetMigrationHandler")
 		}
 
 		r = result.r
@@ -182,25 +182,25 @@ func (m *StateMachineTypeMock) GetMigrationHandler(p uint32) (r MigrationHandler
 	}
 
 	if m.GetMigrationHandlerFunc == nil {
-		m.t.Fatalf("Unexpected call to StateMachineTypeMock.GetMigrationHandler. %v", p)
+		m.t.Fatalf("Unexpected call to StateMachineMock.GetMigrationHandler. %v", p)
 		return
 	}
 
 	return m.GetMigrationHandlerFunc(p)
 }
 
-//GetMigrationHandlerMinimockCounter returns a count of StateMachineTypeMock.GetMigrationHandlerFunc invocations
-func (m *StateMachineTypeMock) GetMigrationHandlerMinimockCounter() uint64 {
+//GetMigrationHandlerMinimockCounter returns a count of StateMachineMock.GetMigrationHandlerFunc invocations
+func (m *StateMachineMock) GetMigrationHandlerMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.GetMigrationHandlerCounter)
 }
 
-//GetMigrationHandlerMinimockPreCounter returns the value of StateMachineTypeMock.GetMigrationHandler invocations
-func (m *StateMachineTypeMock) GetMigrationHandlerMinimockPreCounter() uint64 {
+//GetMigrationHandlerMinimockPreCounter returns the value of StateMachineMock.GetMigrationHandler invocations
+func (m *StateMachineMock) GetMigrationHandlerMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.GetMigrationHandlerPreCounter)
 }
 
 //GetMigrationHandlerFinished returns true if mock invocations count is ok
-func (m *StateMachineTypeMock) GetMigrationHandlerFinished() bool {
+func (m *StateMachineMock) GetMigrationHandlerFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.GetMigrationHandlerMock.expectationSeries) > 0 {
 		return atomic.LoadUint64(&m.GetMigrationHandlerCounter) == uint64(len(m.GetMigrationHandlerMock.expectationSeries))
@@ -219,66 +219,66 @@ func (m *StateMachineTypeMock) GetMigrationHandlerFinished() bool {
 	return true
 }
 
-type mStateMachineTypeMockGetNestedHandler struct {
-	mock              *StateMachineTypeMock
-	mainExpectation   *StateMachineTypeMockGetNestedHandlerExpectation
-	expectationSeries []*StateMachineTypeMockGetNestedHandlerExpectation
+type mStateMachineMockGetNestedHandler struct {
+	mock              *StateMachineMock
+	mainExpectation   *StateMachineMockGetNestedHandlerExpectation
+	expectationSeries []*StateMachineMockGetNestedHandlerExpectation
 }
 
-type StateMachineTypeMockGetNestedHandlerExpectation struct {
-	input  *StateMachineTypeMockGetNestedHandlerInput
-	result *StateMachineTypeMockGetNestedHandlerResult
+type StateMachineMockGetNestedHandlerExpectation struct {
+	input  *StateMachineMockGetNestedHandlerInput
+	result *StateMachineMockGetNestedHandlerResult
 }
 
-type StateMachineTypeMockGetNestedHandlerInput struct {
-	p uint32
+type StateMachineMockGetNestedHandlerInput struct {
+	p StateID
 }
 
-type StateMachineTypeMockGetNestedHandlerResult struct {
+type StateMachineMockGetNestedHandlerResult struct {
 	r NestedHandler
 }
 
 //Expect specifies that invocation of StateMachine.GetNestedHandler is expected from 1 to Infinity times
-func (m *mStateMachineTypeMockGetNestedHandler) Expect(p uint32) *mStateMachineTypeMockGetNestedHandler {
+func (m *mStateMachineMockGetNestedHandler) Expect(p StateID) *mStateMachineMockGetNestedHandler {
 	m.mock.GetNestedHandlerFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &StateMachineTypeMockGetNestedHandlerExpectation{}
+		m.mainExpectation = &StateMachineMockGetNestedHandlerExpectation{}
 	}
-	m.mainExpectation.input = &StateMachineTypeMockGetNestedHandlerInput{p}
+	m.mainExpectation.input = &StateMachineMockGetNestedHandlerInput{p}
 	return m
 }
 
 //Return specifies results of invocation of StateMachine.GetNestedHandler
-func (m *mStateMachineTypeMockGetNestedHandler) Return(r NestedHandler) *StateMachineTypeMock {
+func (m *mStateMachineMockGetNestedHandler) Return(r NestedHandler) *StateMachineMock {
 	m.mock.GetNestedHandlerFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &StateMachineTypeMockGetNestedHandlerExpectation{}
+		m.mainExpectation = &StateMachineMockGetNestedHandlerExpectation{}
 	}
-	m.mainExpectation.result = &StateMachineTypeMockGetNestedHandlerResult{r}
+	m.mainExpectation.result = &StateMachineMockGetNestedHandlerResult{r}
 	return m.mock
 }
 
 //ExpectOnce specifies that invocation of StateMachine.GetNestedHandler is expected once
-func (m *mStateMachineTypeMockGetNestedHandler) ExpectOnce(p uint32) *StateMachineTypeMockGetNestedHandlerExpectation {
+func (m *mStateMachineMockGetNestedHandler) ExpectOnce(p StateID) *StateMachineMockGetNestedHandlerExpectation {
 	m.mock.GetNestedHandlerFunc = nil
 	m.mainExpectation = nil
 
-	expectation := &StateMachineTypeMockGetNestedHandlerExpectation{}
-	expectation.input = &StateMachineTypeMockGetNestedHandlerInput{p}
+	expectation := &StateMachineMockGetNestedHandlerExpectation{}
+	expectation.input = &StateMachineMockGetNestedHandlerInput{p}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
-func (e *StateMachineTypeMockGetNestedHandlerExpectation) Return(r NestedHandler) {
-	e.result = &StateMachineTypeMockGetNestedHandlerResult{r}
+func (e *StateMachineMockGetNestedHandlerExpectation) Return(r NestedHandler) {
+	e.result = &StateMachineMockGetNestedHandlerResult{r}
 }
 
 //Set uses given function f as a mock of StateMachine.GetNestedHandler method
-func (m *mStateMachineTypeMockGetNestedHandler) Set(f func(p uint32) (r NestedHandler)) *StateMachineTypeMock {
+func (m *mStateMachineMockGetNestedHandler) Set(f func(p StateID) (r NestedHandler)) *StateMachineMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -287,22 +287,22 @@ func (m *mStateMachineTypeMockGetNestedHandler) Set(f func(p uint32) (r NestedHa
 }
 
 //GetNestedHandler implements github.com/insolar/insolar/conveyor/interfaces/statemachine.StateMachine interface
-func (m *StateMachineTypeMock) GetNestedHandler(p uint32) (r NestedHandler) {
+func (m *StateMachineMock) GetNestedHandler(p StateID) (r NestedHandler) {
 	counter := atomic.AddUint64(&m.GetNestedHandlerPreCounter, 1)
 	defer atomic.AddUint64(&m.GetNestedHandlerCounter, 1)
 
 	if len(m.GetNestedHandlerMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.GetNestedHandlerMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to StateMachineTypeMock.GetNestedHandler. %v", p)
+			m.t.Fatalf("Unexpected call to StateMachineMock.GetNestedHandler. %v", p)
 			return
 		}
 
 		input := m.GetNestedHandlerMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, StateMachineTypeMockGetNestedHandlerInput{p}, "StateMachine.GetNestedHandler got unexpected parameters")
+		testify_assert.Equal(m.t, *input, StateMachineMockGetNestedHandlerInput{p}, "StateMachine.GetNestedHandler got unexpected parameters")
 
 		result := m.GetNestedHandlerMock.expectationSeries[counter-1].result
 		if result == nil {
-			m.t.Fatal("No results are set for the StateMachineTypeMock.GetNestedHandler")
+			m.t.Fatal("No results are set for the StateMachineMock.GetNestedHandler")
 			return
 		}
 
@@ -315,12 +315,12 @@ func (m *StateMachineTypeMock) GetNestedHandler(p uint32) (r NestedHandler) {
 
 		input := m.GetNestedHandlerMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, StateMachineTypeMockGetNestedHandlerInput{p}, "StateMachine.GetNestedHandler got unexpected parameters")
+			testify_assert.Equal(m.t, *input, StateMachineMockGetNestedHandlerInput{p}, "StateMachine.GetNestedHandler got unexpected parameters")
 		}
 
 		result := m.GetNestedHandlerMock.mainExpectation.result
 		if result == nil {
-			m.t.Fatal("No results are set for the StateMachineTypeMock.GetNestedHandler")
+			m.t.Fatal("No results are set for the StateMachineMock.GetNestedHandler")
 		}
 
 		r = result.r
@@ -329,25 +329,25 @@ func (m *StateMachineTypeMock) GetNestedHandler(p uint32) (r NestedHandler) {
 	}
 
 	if m.GetNestedHandlerFunc == nil {
-		m.t.Fatalf("Unexpected call to StateMachineTypeMock.GetNestedHandler. %v", p)
+		m.t.Fatalf("Unexpected call to StateMachineMock.GetNestedHandler. %v", p)
 		return
 	}
 
 	return m.GetNestedHandlerFunc(p)
 }
 
-//GetNestedHandlerMinimockCounter returns a count of StateMachineTypeMock.GetNestedHandlerFunc invocations
-func (m *StateMachineTypeMock) GetNestedHandlerMinimockCounter() uint64 {
+//GetNestedHandlerMinimockCounter returns a count of StateMachineMock.GetNestedHandlerFunc invocations
+func (m *StateMachineMock) GetNestedHandlerMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.GetNestedHandlerCounter)
 }
 
-//GetNestedHandlerMinimockPreCounter returns the value of StateMachineTypeMock.GetNestedHandler invocations
-func (m *StateMachineTypeMock) GetNestedHandlerMinimockPreCounter() uint64 {
+//GetNestedHandlerMinimockPreCounter returns the value of StateMachineMock.GetNestedHandler invocations
+func (m *StateMachineMock) GetNestedHandlerMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.GetNestedHandlerPreCounter)
 }
 
 //GetNestedHandlerFinished returns true if mock invocations count is ok
-func (m *StateMachineTypeMock) GetNestedHandlerFinished() bool {
+func (m *StateMachineMock) GetNestedHandlerFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.GetNestedHandlerMock.expectationSeries) > 0 {
 		return atomic.LoadUint64(&m.GetNestedHandlerCounter) == uint64(len(m.GetNestedHandlerMock.expectationSeries))
@@ -366,66 +366,66 @@ func (m *StateMachineTypeMock) GetNestedHandlerFinished() bool {
 	return true
 }
 
-type mStateMachineTypeMockGetResponseErrorHandler struct {
-	mock              *StateMachineTypeMock
-	mainExpectation   *StateMachineTypeMockGetResponseErrorHandlerExpectation
-	expectationSeries []*StateMachineTypeMockGetResponseErrorHandlerExpectation
+type mStateMachineMockGetResponseErrorHandler struct {
+	mock              *StateMachineMock
+	mainExpectation   *StateMachineMockGetResponseErrorHandlerExpectation
+	expectationSeries []*StateMachineMockGetResponseErrorHandlerExpectation
 }
 
-type StateMachineTypeMockGetResponseErrorHandlerExpectation struct {
-	input  *StateMachineTypeMockGetResponseErrorHandlerInput
-	result *StateMachineTypeMockGetResponseErrorHandlerResult
+type StateMachineMockGetResponseErrorHandlerExpectation struct {
+	input  *StateMachineMockGetResponseErrorHandlerInput
+	result *StateMachineMockGetResponseErrorHandlerResult
 }
 
-type StateMachineTypeMockGetResponseErrorHandlerInput struct {
-	p uint32
+type StateMachineMockGetResponseErrorHandlerInput struct {
+	p StateID
 }
 
-type StateMachineTypeMockGetResponseErrorHandlerResult struct {
+type StateMachineMockGetResponseErrorHandlerResult struct {
 	r ResponseErrorHandler
 }
 
 //Expect specifies that invocation of StateMachine.GetResponseErrorHandler is expected from 1 to Infinity times
-func (m *mStateMachineTypeMockGetResponseErrorHandler) Expect(p uint32) *mStateMachineTypeMockGetResponseErrorHandler {
+func (m *mStateMachineMockGetResponseErrorHandler) Expect(p StateID) *mStateMachineMockGetResponseErrorHandler {
 	m.mock.GetResponseErrorHandlerFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &StateMachineTypeMockGetResponseErrorHandlerExpectation{}
+		m.mainExpectation = &StateMachineMockGetResponseErrorHandlerExpectation{}
 	}
-	m.mainExpectation.input = &StateMachineTypeMockGetResponseErrorHandlerInput{p}
+	m.mainExpectation.input = &StateMachineMockGetResponseErrorHandlerInput{p}
 	return m
 }
 
 //Return specifies results of invocation of StateMachine.GetResponseErrorHandler
-func (m *mStateMachineTypeMockGetResponseErrorHandler) Return(r ResponseErrorHandler) *StateMachineTypeMock {
+func (m *mStateMachineMockGetResponseErrorHandler) Return(r ResponseErrorHandler) *StateMachineMock {
 	m.mock.GetResponseErrorHandlerFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &StateMachineTypeMockGetResponseErrorHandlerExpectation{}
+		m.mainExpectation = &StateMachineMockGetResponseErrorHandlerExpectation{}
 	}
-	m.mainExpectation.result = &StateMachineTypeMockGetResponseErrorHandlerResult{r}
+	m.mainExpectation.result = &StateMachineMockGetResponseErrorHandlerResult{r}
 	return m.mock
 }
 
 //ExpectOnce specifies that invocation of StateMachine.GetResponseErrorHandler is expected once
-func (m *mStateMachineTypeMockGetResponseErrorHandler) ExpectOnce(p uint32) *StateMachineTypeMockGetResponseErrorHandlerExpectation {
+func (m *mStateMachineMockGetResponseErrorHandler) ExpectOnce(p StateID) *StateMachineMockGetResponseErrorHandlerExpectation {
 	m.mock.GetResponseErrorHandlerFunc = nil
 	m.mainExpectation = nil
 
-	expectation := &StateMachineTypeMockGetResponseErrorHandlerExpectation{}
-	expectation.input = &StateMachineTypeMockGetResponseErrorHandlerInput{p}
+	expectation := &StateMachineMockGetResponseErrorHandlerExpectation{}
+	expectation.input = &StateMachineMockGetResponseErrorHandlerInput{p}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
-func (e *StateMachineTypeMockGetResponseErrorHandlerExpectation) Return(r ResponseErrorHandler) {
-	e.result = &StateMachineTypeMockGetResponseErrorHandlerResult{r}
+func (e *StateMachineMockGetResponseErrorHandlerExpectation) Return(r ResponseErrorHandler) {
+	e.result = &StateMachineMockGetResponseErrorHandlerResult{r}
 }
 
 //Set uses given function f as a mock of StateMachine.GetResponseErrorHandler method
-func (m *mStateMachineTypeMockGetResponseErrorHandler) Set(f func(p uint32) (r ResponseErrorHandler)) *StateMachineTypeMock {
+func (m *mStateMachineMockGetResponseErrorHandler) Set(f func(p StateID) (r ResponseErrorHandler)) *StateMachineMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -434,22 +434,22 @@ func (m *mStateMachineTypeMockGetResponseErrorHandler) Set(f func(p uint32) (r R
 }
 
 //GetResponseErrorHandler implements github.com/insolar/insolar/conveyor/interfaces/statemachine.StateMachine interface
-func (m *StateMachineTypeMock) GetResponseErrorHandler(p uint32) (r ResponseErrorHandler) {
+func (m *StateMachineMock) GetResponseErrorHandler(p StateID) (r ResponseErrorHandler) {
 	counter := atomic.AddUint64(&m.GetResponseErrorHandlerPreCounter, 1)
 	defer atomic.AddUint64(&m.GetResponseErrorHandlerCounter, 1)
 
 	if len(m.GetResponseErrorHandlerMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.GetResponseErrorHandlerMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to StateMachineTypeMock.GetResponseErrorHandler. %v", p)
+			m.t.Fatalf("Unexpected call to StateMachineMock.GetResponseErrorHandler. %v", p)
 			return
 		}
 
 		input := m.GetResponseErrorHandlerMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, StateMachineTypeMockGetResponseErrorHandlerInput{p}, "StateMachine.GetResponseErrorHandler got unexpected parameters")
+		testify_assert.Equal(m.t, *input, StateMachineMockGetResponseErrorHandlerInput{p}, "StateMachine.GetResponseErrorHandler got unexpected parameters")
 
 		result := m.GetResponseErrorHandlerMock.expectationSeries[counter-1].result
 		if result == nil {
-			m.t.Fatal("No results are set for the StateMachineTypeMock.GetResponseErrorHandler")
+			m.t.Fatal("No results are set for the StateMachineMock.GetResponseErrorHandler")
 			return
 		}
 
@@ -462,12 +462,12 @@ func (m *StateMachineTypeMock) GetResponseErrorHandler(p uint32) (r ResponseErro
 
 		input := m.GetResponseErrorHandlerMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, StateMachineTypeMockGetResponseErrorHandlerInput{p}, "StateMachine.GetResponseErrorHandler got unexpected parameters")
+			testify_assert.Equal(m.t, *input, StateMachineMockGetResponseErrorHandlerInput{p}, "StateMachine.GetResponseErrorHandler got unexpected parameters")
 		}
 
 		result := m.GetResponseErrorHandlerMock.mainExpectation.result
 		if result == nil {
-			m.t.Fatal("No results are set for the StateMachineTypeMock.GetResponseErrorHandler")
+			m.t.Fatal("No results are set for the StateMachineMock.GetResponseErrorHandler")
 		}
 
 		r = result.r
@@ -476,25 +476,25 @@ func (m *StateMachineTypeMock) GetResponseErrorHandler(p uint32) (r ResponseErro
 	}
 
 	if m.GetResponseErrorHandlerFunc == nil {
-		m.t.Fatalf("Unexpected call to StateMachineTypeMock.GetResponseErrorHandler. %v", p)
+		m.t.Fatalf("Unexpected call to StateMachineMock.GetResponseErrorHandler. %v", p)
 		return
 	}
 
 	return m.GetResponseErrorHandlerFunc(p)
 }
 
-//GetResponseErrorHandlerMinimockCounter returns a count of StateMachineTypeMock.GetResponseErrorHandlerFunc invocations
-func (m *StateMachineTypeMock) GetResponseErrorHandlerMinimockCounter() uint64 {
+//GetResponseErrorHandlerMinimockCounter returns a count of StateMachineMock.GetResponseErrorHandlerFunc invocations
+func (m *StateMachineMock) GetResponseErrorHandlerMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.GetResponseErrorHandlerCounter)
 }
 
-//GetResponseErrorHandlerMinimockPreCounter returns the value of StateMachineTypeMock.GetResponseErrorHandler invocations
-func (m *StateMachineTypeMock) GetResponseErrorHandlerMinimockPreCounter() uint64 {
+//GetResponseErrorHandlerMinimockPreCounter returns the value of StateMachineMock.GetResponseErrorHandler invocations
+func (m *StateMachineMock) GetResponseErrorHandlerMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.GetResponseErrorHandlerPreCounter)
 }
 
 //GetResponseErrorHandlerFinished returns true if mock invocations count is ok
-func (m *StateMachineTypeMock) GetResponseErrorHandlerFinished() bool {
+func (m *StateMachineMock) GetResponseErrorHandlerFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.GetResponseErrorHandlerMock.expectationSeries) > 0 {
 		return atomic.LoadUint64(&m.GetResponseErrorHandlerCounter) == uint64(len(m.GetResponseErrorHandlerMock.expectationSeries))
@@ -513,66 +513,66 @@ func (m *StateMachineTypeMock) GetResponseErrorHandlerFinished() bool {
 	return true
 }
 
-type mStateMachineTypeMockGetResponseHandler struct {
-	mock              *StateMachineTypeMock
-	mainExpectation   *StateMachineTypeMockGetResponseHandlerExpectation
-	expectationSeries []*StateMachineTypeMockGetResponseHandlerExpectation
+type mStateMachineMockGetResponseHandler struct {
+	mock              *StateMachineMock
+	mainExpectation   *StateMachineMockGetResponseHandlerExpectation
+	expectationSeries []*StateMachineMockGetResponseHandlerExpectation
 }
 
-type StateMachineTypeMockGetResponseHandlerExpectation struct {
-	input  *StateMachineTypeMockGetResponseHandlerInput
-	result *StateMachineTypeMockGetResponseHandlerResult
+type StateMachineMockGetResponseHandlerExpectation struct {
+	input  *StateMachineMockGetResponseHandlerInput
+	result *StateMachineMockGetResponseHandlerResult
 }
 
-type StateMachineTypeMockGetResponseHandlerInput struct {
-	p uint32
+type StateMachineMockGetResponseHandlerInput struct {
+	p StateID
 }
 
-type StateMachineTypeMockGetResponseHandlerResult struct {
+type StateMachineMockGetResponseHandlerResult struct {
 	r AdapterResponseHandler
 }
 
 //Expect specifies that invocation of StateMachine.GetResponseHandler is expected from 1 to Infinity times
-func (m *mStateMachineTypeMockGetResponseHandler) Expect(p uint32) *mStateMachineTypeMockGetResponseHandler {
+func (m *mStateMachineMockGetResponseHandler) Expect(p StateID) *mStateMachineMockGetResponseHandler {
 	m.mock.GetResponseHandlerFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &StateMachineTypeMockGetResponseHandlerExpectation{}
+		m.mainExpectation = &StateMachineMockGetResponseHandlerExpectation{}
 	}
-	m.mainExpectation.input = &StateMachineTypeMockGetResponseHandlerInput{p}
+	m.mainExpectation.input = &StateMachineMockGetResponseHandlerInput{p}
 	return m
 }
 
 //Return specifies results of invocation of StateMachine.GetResponseHandler
-func (m *mStateMachineTypeMockGetResponseHandler) Return(r AdapterResponseHandler) *StateMachineTypeMock {
+func (m *mStateMachineMockGetResponseHandler) Return(r AdapterResponseHandler) *StateMachineMock {
 	m.mock.GetResponseHandlerFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &StateMachineTypeMockGetResponseHandlerExpectation{}
+		m.mainExpectation = &StateMachineMockGetResponseHandlerExpectation{}
 	}
-	m.mainExpectation.result = &StateMachineTypeMockGetResponseHandlerResult{r}
+	m.mainExpectation.result = &StateMachineMockGetResponseHandlerResult{r}
 	return m.mock
 }
 
 //ExpectOnce specifies that invocation of StateMachine.GetResponseHandler is expected once
-func (m *mStateMachineTypeMockGetResponseHandler) ExpectOnce(p uint32) *StateMachineTypeMockGetResponseHandlerExpectation {
+func (m *mStateMachineMockGetResponseHandler) ExpectOnce(p StateID) *StateMachineMockGetResponseHandlerExpectation {
 	m.mock.GetResponseHandlerFunc = nil
 	m.mainExpectation = nil
 
-	expectation := &StateMachineTypeMockGetResponseHandlerExpectation{}
-	expectation.input = &StateMachineTypeMockGetResponseHandlerInput{p}
+	expectation := &StateMachineMockGetResponseHandlerExpectation{}
+	expectation.input = &StateMachineMockGetResponseHandlerInput{p}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
-func (e *StateMachineTypeMockGetResponseHandlerExpectation) Return(r AdapterResponseHandler) {
-	e.result = &StateMachineTypeMockGetResponseHandlerResult{r}
+func (e *StateMachineMockGetResponseHandlerExpectation) Return(r AdapterResponseHandler) {
+	e.result = &StateMachineMockGetResponseHandlerResult{r}
 }
 
 //Set uses given function f as a mock of StateMachine.GetResponseHandler method
-func (m *mStateMachineTypeMockGetResponseHandler) Set(f func(p uint32) (r AdapterResponseHandler)) *StateMachineTypeMock {
+func (m *mStateMachineMockGetResponseHandler) Set(f func(p StateID) (r AdapterResponseHandler)) *StateMachineMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -581,22 +581,22 @@ func (m *mStateMachineTypeMockGetResponseHandler) Set(f func(p uint32) (r Adapte
 }
 
 //GetResponseHandler implements github.com/insolar/insolar/conveyor/interfaces/statemachine.StateMachine interface
-func (m *StateMachineTypeMock) GetResponseHandler(p uint32) (r AdapterResponseHandler) {
+func (m *StateMachineMock) GetResponseHandler(p StateID) (r AdapterResponseHandler) {
 	counter := atomic.AddUint64(&m.GetResponseHandlerPreCounter, 1)
 	defer atomic.AddUint64(&m.GetResponseHandlerCounter, 1)
 
 	if len(m.GetResponseHandlerMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.GetResponseHandlerMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to StateMachineTypeMock.GetResponseHandler. %v", p)
+			m.t.Fatalf("Unexpected call to StateMachineMock.GetResponseHandler. %v", p)
 			return
 		}
 
 		input := m.GetResponseHandlerMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, StateMachineTypeMockGetResponseHandlerInput{p}, "StateMachine.GetResponseHandler got unexpected parameters")
+		testify_assert.Equal(m.t, *input, StateMachineMockGetResponseHandlerInput{p}, "StateMachine.GetResponseHandler got unexpected parameters")
 
 		result := m.GetResponseHandlerMock.expectationSeries[counter-1].result
 		if result == nil {
-			m.t.Fatal("No results are set for the StateMachineTypeMock.GetResponseHandler")
+			m.t.Fatal("No results are set for the StateMachineMock.GetResponseHandler")
 			return
 		}
 
@@ -609,12 +609,12 @@ func (m *StateMachineTypeMock) GetResponseHandler(p uint32) (r AdapterResponseHa
 
 		input := m.GetResponseHandlerMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, StateMachineTypeMockGetResponseHandlerInput{p}, "StateMachine.GetResponseHandler got unexpected parameters")
+			testify_assert.Equal(m.t, *input, StateMachineMockGetResponseHandlerInput{p}, "StateMachine.GetResponseHandler got unexpected parameters")
 		}
 
 		result := m.GetResponseHandlerMock.mainExpectation.result
 		if result == nil {
-			m.t.Fatal("No results are set for the StateMachineTypeMock.GetResponseHandler")
+			m.t.Fatal("No results are set for the StateMachineMock.GetResponseHandler")
 		}
 
 		r = result.r
@@ -623,25 +623,25 @@ func (m *StateMachineTypeMock) GetResponseHandler(p uint32) (r AdapterResponseHa
 	}
 
 	if m.GetResponseHandlerFunc == nil {
-		m.t.Fatalf("Unexpected call to StateMachineTypeMock.GetResponseHandler. %v", p)
+		m.t.Fatalf("Unexpected call to StateMachineMock.GetResponseHandler. %v", p)
 		return
 	}
 
 	return m.GetResponseHandlerFunc(p)
 }
 
-//GetResponseHandlerMinimockCounter returns a count of StateMachineTypeMock.GetResponseHandlerFunc invocations
-func (m *StateMachineTypeMock) GetResponseHandlerMinimockCounter() uint64 {
+//GetResponseHandlerMinimockCounter returns a count of StateMachineMock.GetResponseHandlerFunc invocations
+func (m *StateMachineMock) GetResponseHandlerMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.GetResponseHandlerCounter)
 }
 
-//GetResponseHandlerMinimockPreCounter returns the value of StateMachineTypeMock.GetResponseHandler invocations
-func (m *StateMachineTypeMock) GetResponseHandlerMinimockPreCounter() uint64 {
+//GetResponseHandlerMinimockPreCounter returns the value of StateMachineMock.GetResponseHandler invocations
+func (m *StateMachineMock) GetResponseHandlerMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.GetResponseHandlerPreCounter)
 }
 
 //GetResponseHandlerFinished returns true if mock invocations count is ok
-func (m *StateMachineTypeMock) GetResponseHandlerFinished() bool {
+func (m *StateMachineMock) GetResponseHandlerFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.GetResponseHandlerMock.expectationSeries) > 0 {
 		return atomic.LoadUint64(&m.GetResponseHandlerCounter) == uint64(len(m.GetResponseHandlerMock.expectationSeries))
@@ -660,66 +660,66 @@ func (m *StateMachineTypeMock) GetResponseHandlerFinished() bool {
 	return true
 }
 
-type mStateMachineTypeMockGetTransitionErrorHandler struct {
-	mock              *StateMachineTypeMock
-	mainExpectation   *StateMachineTypeMockGetTransitionErrorHandlerExpectation
-	expectationSeries []*StateMachineTypeMockGetTransitionErrorHandlerExpectation
+type mStateMachineMockGetTransitionErrorHandler struct {
+	mock              *StateMachineMock
+	mainExpectation   *StateMachineMockGetTransitionErrorHandlerExpectation
+	expectationSeries []*StateMachineMockGetTransitionErrorHandlerExpectation
 }
 
-type StateMachineTypeMockGetTransitionErrorHandlerExpectation struct {
-	input  *StateMachineTypeMockGetTransitionErrorHandlerInput
-	result *StateMachineTypeMockGetTransitionErrorHandlerResult
+type StateMachineMockGetTransitionErrorHandlerExpectation struct {
+	input  *StateMachineMockGetTransitionErrorHandlerInput
+	result *StateMachineMockGetTransitionErrorHandlerResult
 }
 
-type StateMachineTypeMockGetTransitionErrorHandlerInput struct {
-	p uint32
+type StateMachineMockGetTransitionErrorHandlerInput struct {
+	p StateID
 }
 
-type StateMachineTypeMockGetTransitionErrorHandlerResult struct {
+type StateMachineMockGetTransitionErrorHandlerResult struct {
 	r TransitionErrorHandler
 }
 
 //Expect specifies that invocation of StateMachine.GetTransitionErrorHandler is expected from 1 to Infinity times
-func (m *mStateMachineTypeMockGetTransitionErrorHandler) Expect(p uint32) *mStateMachineTypeMockGetTransitionErrorHandler {
+func (m *mStateMachineMockGetTransitionErrorHandler) Expect(p StateID) *mStateMachineMockGetTransitionErrorHandler {
 	m.mock.GetTransitionErrorHandlerFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &StateMachineTypeMockGetTransitionErrorHandlerExpectation{}
+		m.mainExpectation = &StateMachineMockGetTransitionErrorHandlerExpectation{}
 	}
-	m.mainExpectation.input = &StateMachineTypeMockGetTransitionErrorHandlerInput{p}
+	m.mainExpectation.input = &StateMachineMockGetTransitionErrorHandlerInput{p}
 	return m
 }
 
 //Return specifies results of invocation of StateMachine.GetTransitionErrorHandler
-func (m *mStateMachineTypeMockGetTransitionErrorHandler) Return(r TransitionErrorHandler) *StateMachineTypeMock {
+func (m *mStateMachineMockGetTransitionErrorHandler) Return(r TransitionErrorHandler) *StateMachineMock {
 	m.mock.GetTransitionErrorHandlerFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &StateMachineTypeMockGetTransitionErrorHandlerExpectation{}
+		m.mainExpectation = &StateMachineMockGetTransitionErrorHandlerExpectation{}
 	}
-	m.mainExpectation.result = &StateMachineTypeMockGetTransitionErrorHandlerResult{r}
+	m.mainExpectation.result = &StateMachineMockGetTransitionErrorHandlerResult{r}
 	return m.mock
 }
 
 //ExpectOnce specifies that invocation of StateMachine.GetTransitionErrorHandler is expected once
-func (m *mStateMachineTypeMockGetTransitionErrorHandler) ExpectOnce(p uint32) *StateMachineTypeMockGetTransitionErrorHandlerExpectation {
+func (m *mStateMachineMockGetTransitionErrorHandler) ExpectOnce(p StateID) *StateMachineMockGetTransitionErrorHandlerExpectation {
 	m.mock.GetTransitionErrorHandlerFunc = nil
 	m.mainExpectation = nil
 
-	expectation := &StateMachineTypeMockGetTransitionErrorHandlerExpectation{}
-	expectation.input = &StateMachineTypeMockGetTransitionErrorHandlerInput{p}
+	expectation := &StateMachineMockGetTransitionErrorHandlerExpectation{}
+	expectation.input = &StateMachineMockGetTransitionErrorHandlerInput{p}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
-func (e *StateMachineTypeMockGetTransitionErrorHandlerExpectation) Return(r TransitionErrorHandler) {
-	e.result = &StateMachineTypeMockGetTransitionErrorHandlerResult{r}
+func (e *StateMachineMockGetTransitionErrorHandlerExpectation) Return(r TransitionErrorHandler) {
+	e.result = &StateMachineMockGetTransitionErrorHandlerResult{r}
 }
 
 //Set uses given function f as a mock of StateMachine.GetTransitionErrorHandler method
-func (m *mStateMachineTypeMockGetTransitionErrorHandler) Set(f func(p uint32) (r TransitionErrorHandler)) *StateMachineTypeMock {
+func (m *mStateMachineMockGetTransitionErrorHandler) Set(f func(p StateID) (r TransitionErrorHandler)) *StateMachineMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -728,22 +728,22 @@ func (m *mStateMachineTypeMockGetTransitionErrorHandler) Set(f func(p uint32) (r
 }
 
 //GetTransitionErrorHandler implements github.com/insolar/insolar/conveyor/interfaces/statemachine.StateMachine interface
-func (m *StateMachineTypeMock) GetTransitionErrorHandler(p uint32) (r TransitionErrorHandler) {
+func (m *StateMachineMock) GetTransitionErrorHandler(p StateID) (r TransitionErrorHandler) {
 	counter := atomic.AddUint64(&m.GetTransitionErrorHandlerPreCounter, 1)
 	defer atomic.AddUint64(&m.GetTransitionErrorHandlerCounter, 1)
 
 	if len(m.GetTransitionErrorHandlerMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.GetTransitionErrorHandlerMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to StateMachineTypeMock.GetTransitionErrorHandler. %v", p)
+			m.t.Fatalf("Unexpected call to StateMachineMock.GetTransitionErrorHandler. %v", p)
 			return
 		}
 
 		input := m.GetTransitionErrorHandlerMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, StateMachineTypeMockGetTransitionErrorHandlerInput{p}, "StateMachine.GetTransitionErrorHandler got unexpected parameters")
+		testify_assert.Equal(m.t, *input, StateMachineMockGetTransitionErrorHandlerInput{p}, "StateMachine.GetTransitionErrorHandler got unexpected parameters")
 
 		result := m.GetTransitionErrorHandlerMock.expectationSeries[counter-1].result
 		if result == nil {
-			m.t.Fatal("No results are set for the StateMachineTypeMock.GetTransitionErrorHandler")
+			m.t.Fatal("No results are set for the StateMachineMock.GetTransitionErrorHandler")
 			return
 		}
 
@@ -756,12 +756,12 @@ func (m *StateMachineTypeMock) GetTransitionErrorHandler(p uint32) (r Transition
 
 		input := m.GetTransitionErrorHandlerMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, StateMachineTypeMockGetTransitionErrorHandlerInput{p}, "StateMachine.GetTransitionErrorHandler got unexpected parameters")
+			testify_assert.Equal(m.t, *input, StateMachineMockGetTransitionErrorHandlerInput{p}, "StateMachine.GetTransitionErrorHandler got unexpected parameters")
 		}
 
 		result := m.GetTransitionErrorHandlerMock.mainExpectation.result
 		if result == nil {
-			m.t.Fatal("No results are set for the StateMachineTypeMock.GetTransitionErrorHandler")
+			m.t.Fatal("No results are set for the StateMachineMock.GetTransitionErrorHandler")
 		}
 
 		r = result.r
@@ -770,25 +770,25 @@ func (m *StateMachineTypeMock) GetTransitionErrorHandler(p uint32) (r Transition
 	}
 
 	if m.GetTransitionErrorHandlerFunc == nil {
-		m.t.Fatalf("Unexpected call to StateMachineTypeMock.GetTransitionErrorHandler. %v", p)
+		m.t.Fatalf("Unexpected call to StateMachineMock.GetTransitionErrorHandler. %v", p)
 		return
 	}
 
 	return m.GetTransitionErrorHandlerFunc(p)
 }
 
-//GetTransitionErrorHandlerMinimockCounter returns a count of StateMachineTypeMock.GetTransitionErrorHandlerFunc invocations
-func (m *StateMachineTypeMock) GetTransitionErrorHandlerMinimockCounter() uint64 {
+//GetTransitionErrorHandlerMinimockCounter returns a count of StateMachineMock.GetTransitionErrorHandlerFunc invocations
+func (m *StateMachineMock) GetTransitionErrorHandlerMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.GetTransitionErrorHandlerCounter)
 }
 
-//GetTransitionErrorHandlerMinimockPreCounter returns the value of StateMachineTypeMock.GetTransitionErrorHandler invocations
-func (m *StateMachineTypeMock) GetTransitionErrorHandlerMinimockPreCounter() uint64 {
+//GetTransitionErrorHandlerMinimockPreCounter returns the value of StateMachineMock.GetTransitionErrorHandler invocations
+func (m *StateMachineMock) GetTransitionErrorHandlerMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.GetTransitionErrorHandlerPreCounter)
 }
 
 //GetTransitionErrorHandlerFinished returns true if mock invocations count is ok
-func (m *StateMachineTypeMock) GetTransitionErrorHandlerFinished() bool {
+func (m *StateMachineMock) GetTransitionErrorHandlerFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.GetTransitionErrorHandlerMock.expectationSeries) > 0 {
 		return atomic.LoadUint64(&m.GetTransitionErrorHandlerCounter) == uint64(len(m.GetTransitionErrorHandlerMock.expectationSeries))
@@ -807,66 +807,66 @@ func (m *StateMachineTypeMock) GetTransitionErrorHandlerFinished() bool {
 	return true
 }
 
-type mStateMachineTypeMockGetTransitionHandler struct {
-	mock              *StateMachineTypeMock
-	mainExpectation   *StateMachineTypeMockGetTransitionHandlerExpectation
-	expectationSeries []*StateMachineTypeMockGetTransitionHandlerExpectation
+type mStateMachineMockGetTransitionHandler struct {
+	mock              *StateMachineMock
+	mainExpectation   *StateMachineMockGetTransitionHandlerExpectation
+	expectationSeries []*StateMachineMockGetTransitionHandlerExpectation
 }
 
-type StateMachineTypeMockGetTransitionHandlerExpectation struct {
-	input  *StateMachineTypeMockGetTransitionHandlerInput
-	result *StateMachineTypeMockGetTransitionHandlerResult
+type StateMachineMockGetTransitionHandlerExpectation struct {
+	input  *StateMachineMockGetTransitionHandlerInput
+	result *StateMachineMockGetTransitionHandlerResult
 }
 
-type StateMachineTypeMockGetTransitionHandlerInput struct {
-	p uint32
+type StateMachineMockGetTransitionHandlerInput struct {
+	p StateID
 }
 
-type StateMachineTypeMockGetTransitionHandlerResult struct {
+type StateMachineMockGetTransitionHandlerResult struct {
 	r TransitHandler
 }
 
 //Expect specifies that invocation of StateMachine.GetTransitionHandler is expected from 1 to Infinity times
-func (m *mStateMachineTypeMockGetTransitionHandler) Expect(p uint32) *mStateMachineTypeMockGetTransitionHandler {
+func (m *mStateMachineMockGetTransitionHandler) Expect(p StateID) *mStateMachineMockGetTransitionHandler {
 	m.mock.GetTransitionHandlerFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &StateMachineTypeMockGetTransitionHandlerExpectation{}
+		m.mainExpectation = &StateMachineMockGetTransitionHandlerExpectation{}
 	}
-	m.mainExpectation.input = &StateMachineTypeMockGetTransitionHandlerInput{p}
+	m.mainExpectation.input = &StateMachineMockGetTransitionHandlerInput{p}
 	return m
 }
 
 //Return specifies results of invocation of StateMachine.GetTransitionHandler
-func (m *mStateMachineTypeMockGetTransitionHandler) Return(r TransitHandler) *StateMachineTypeMock {
+func (m *mStateMachineMockGetTransitionHandler) Return(r TransitHandler) *StateMachineMock {
 	m.mock.GetTransitionHandlerFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &StateMachineTypeMockGetTransitionHandlerExpectation{}
+		m.mainExpectation = &StateMachineMockGetTransitionHandlerExpectation{}
 	}
-	m.mainExpectation.result = &StateMachineTypeMockGetTransitionHandlerResult{r}
+	m.mainExpectation.result = &StateMachineMockGetTransitionHandlerResult{r}
 	return m.mock
 }
 
 //ExpectOnce specifies that invocation of StateMachine.GetTransitionHandler is expected once
-func (m *mStateMachineTypeMockGetTransitionHandler) ExpectOnce(p uint32) *StateMachineTypeMockGetTransitionHandlerExpectation {
+func (m *mStateMachineMockGetTransitionHandler) ExpectOnce(p StateID) *StateMachineMockGetTransitionHandlerExpectation {
 	m.mock.GetTransitionHandlerFunc = nil
 	m.mainExpectation = nil
 
-	expectation := &StateMachineTypeMockGetTransitionHandlerExpectation{}
-	expectation.input = &StateMachineTypeMockGetTransitionHandlerInput{p}
+	expectation := &StateMachineMockGetTransitionHandlerExpectation{}
+	expectation.input = &StateMachineMockGetTransitionHandlerInput{p}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
-func (e *StateMachineTypeMockGetTransitionHandlerExpectation) Return(r TransitHandler) {
-	e.result = &StateMachineTypeMockGetTransitionHandlerResult{r}
+func (e *StateMachineMockGetTransitionHandlerExpectation) Return(r TransitHandler) {
+	e.result = &StateMachineMockGetTransitionHandlerResult{r}
 }
 
 //Set uses given function f as a mock of StateMachine.GetTransitionHandler method
-func (m *mStateMachineTypeMockGetTransitionHandler) Set(f func(p uint32) (r TransitHandler)) *StateMachineTypeMock {
+func (m *mStateMachineMockGetTransitionHandler) Set(f func(p StateID) (r TransitHandler)) *StateMachineMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -875,22 +875,22 @@ func (m *mStateMachineTypeMockGetTransitionHandler) Set(f func(p uint32) (r Tran
 }
 
 //GetTransitionHandler implements github.com/insolar/insolar/conveyor/interfaces/statemachine.StateMachine interface
-func (m *StateMachineTypeMock) GetTransitionHandler(p uint32) (r TransitHandler) {
+func (m *StateMachineMock) GetTransitionHandler(p StateID) (r TransitHandler) {
 	counter := atomic.AddUint64(&m.GetTransitionHandlerPreCounter, 1)
 	defer atomic.AddUint64(&m.GetTransitionHandlerCounter, 1)
 
 	if len(m.GetTransitionHandlerMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.GetTransitionHandlerMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to StateMachineTypeMock.GetTransitionHandler. %v", p)
+			m.t.Fatalf("Unexpected call to StateMachineMock.GetTransitionHandler. %v", p)
 			return
 		}
 
 		input := m.GetTransitionHandlerMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, StateMachineTypeMockGetTransitionHandlerInput{p}, "StateMachine.GetTransitionHandler got unexpected parameters")
+		testify_assert.Equal(m.t, *input, StateMachineMockGetTransitionHandlerInput{p}, "StateMachine.GetTransitionHandler got unexpected parameters")
 
 		result := m.GetTransitionHandlerMock.expectationSeries[counter-1].result
 		if result == nil {
-			m.t.Fatal("No results are set for the StateMachineTypeMock.GetTransitionHandler")
+			m.t.Fatal("No results are set for the StateMachineMock.GetTransitionHandler")
 			return
 		}
 
@@ -903,12 +903,12 @@ func (m *StateMachineTypeMock) GetTransitionHandler(p uint32) (r TransitHandler)
 
 		input := m.GetTransitionHandlerMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, StateMachineTypeMockGetTransitionHandlerInput{p}, "StateMachine.GetTransitionHandler got unexpected parameters")
+			testify_assert.Equal(m.t, *input, StateMachineMockGetTransitionHandlerInput{p}, "StateMachine.GetTransitionHandler got unexpected parameters")
 		}
 
 		result := m.GetTransitionHandlerMock.mainExpectation.result
 		if result == nil {
-			m.t.Fatal("No results are set for the StateMachineTypeMock.GetTransitionHandler")
+			m.t.Fatal("No results are set for the StateMachineMock.GetTransitionHandler")
 		}
 
 		r = result.r
@@ -917,25 +917,25 @@ func (m *StateMachineTypeMock) GetTransitionHandler(p uint32) (r TransitHandler)
 	}
 
 	if m.GetTransitionHandlerFunc == nil {
-		m.t.Fatalf("Unexpected call to StateMachineTypeMock.GetTransitionHandler. %v", p)
+		m.t.Fatalf("Unexpected call to StateMachineMock.GetTransitionHandler. %v", p)
 		return
 	}
 
 	return m.GetTransitionHandlerFunc(p)
 }
 
-//GetTransitionHandlerMinimockCounter returns a count of StateMachineTypeMock.GetTransitionHandlerFunc invocations
-func (m *StateMachineTypeMock) GetTransitionHandlerMinimockCounter() uint64 {
+//GetTransitionHandlerMinimockCounter returns a count of StateMachineMock.GetTransitionHandlerFunc invocations
+func (m *StateMachineMock) GetTransitionHandlerMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.GetTransitionHandlerCounter)
 }
 
-//GetTransitionHandlerMinimockPreCounter returns the value of StateMachineTypeMock.GetTransitionHandler invocations
-func (m *StateMachineTypeMock) GetTransitionHandlerMinimockPreCounter() uint64 {
+//GetTransitionHandlerMinimockPreCounter returns the value of StateMachineMock.GetTransitionHandler invocations
+func (m *StateMachineMock) GetTransitionHandlerMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.GetTransitionHandlerPreCounter)
 }
 
 //GetTransitionHandlerFinished returns true if mock invocations count is ok
-func (m *StateMachineTypeMock) GetTransitionHandlerFinished() bool {
+func (m *StateMachineMock) GetTransitionHandlerFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.GetTransitionHandlerMock.expectationSeries) > 0 {
 		return atomic.LoadUint64(&m.GetTransitionHandlerCounter) == uint64(len(m.GetTransitionHandlerMock.expectationSeries))
@@ -954,61 +954,61 @@ func (m *StateMachineTypeMock) GetTransitionHandlerFinished() bool {
 	return true
 }
 
-type mStateMachineTypeMockGetTypeID struct {
-	mock              *StateMachineTypeMock
-	mainExpectation   *StateMachineTypeMockGetTypeIDExpectation
-	expectationSeries []*StateMachineTypeMockGetTypeIDExpectation
+type mStateMachineMockGetTypeID struct {
+	mock              *StateMachineMock
+	mainExpectation   *StateMachineMockGetTypeIDExpectation
+	expectationSeries []*StateMachineMockGetTypeIDExpectation
 }
 
-type StateMachineTypeMockGetTypeIDExpectation struct {
-	result *StateMachineTypeMockGetTypeIDResult
+type StateMachineMockGetTypeIDExpectation struct {
+	result *StateMachineMockGetTypeIDResult
 }
 
-type StateMachineTypeMockGetTypeIDResult struct {
-	r int
+type StateMachineMockGetTypeIDResult struct {
+	r ID
 }
 
 //Expect specifies that invocation of StateMachine.GetTypeID is expected from 1 to Infinity times
-func (m *mStateMachineTypeMockGetTypeID) Expect() *mStateMachineTypeMockGetTypeID {
+func (m *mStateMachineMockGetTypeID) Expect() *mStateMachineMockGetTypeID {
 	m.mock.GetTypeIDFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &StateMachineTypeMockGetTypeIDExpectation{}
+		m.mainExpectation = &StateMachineMockGetTypeIDExpectation{}
 	}
 
 	return m
 }
 
 //Return specifies results of invocation of StateMachine.GetTypeID
-func (m *mStateMachineTypeMockGetTypeID) Return(r int) *StateMachineTypeMock {
+func (m *mStateMachineMockGetTypeID) Return(r ID) *StateMachineMock {
 	m.mock.GetTypeIDFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &StateMachineTypeMockGetTypeIDExpectation{}
+		m.mainExpectation = &StateMachineMockGetTypeIDExpectation{}
 	}
-	m.mainExpectation.result = &StateMachineTypeMockGetTypeIDResult{r}
+	m.mainExpectation.result = &StateMachineMockGetTypeIDResult{r}
 	return m.mock
 }
 
 //ExpectOnce specifies that invocation of StateMachine.GetTypeID is expected once
-func (m *mStateMachineTypeMockGetTypeID) ExpectOnce() *StateMachineTypeMockGetTypeIDExpectation {
+func (m *mStateMachineMockGetTypeID) ExpectOnce() *StateMachineMockGetTypeIDExpectation {
 	m.mock.GetTypeIDFunc = nil
 	m.mainExpectation = nil
 
-	expectation := &StateMachineTypeMockGetTypeIDExpectation{}
+	expectation := &StateMachineMockGetTypeIDExpectation{}
 
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
-func (e *StateMachineTypeMockGetTypeIDExpectation) Return(r int) {
-	e.result = &StateMachineTypeMockGetTypeIDResult{r}
+func (e *StateMachineMockGetTypeIDExpectation) Return(r ID) {
+	e.result = &StateMachineMockGetTypeIDResult{r}
 }
 
 //Set uses given function f as a mock of StateMachine.GetTypeID method
-func (m *mStateMachineTypeMockGetTypeID) Set(f func() (r int)) *StateMachineTypeMock {
+func (m *mStateMachineMockGetTypeID) Set(f func() (r ID)) *StateMachineMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1017,19 +1017,19 @@ func (m *mStateMachineTypeMockGetTypeID) Set(f func() (r int)) *StateMachineType
 }
 
 //GetTypeID implements github.com/insolar/insolar/conveyor/interfaces/statemachine.StateMachine interface
-func (m *StateMachineTypeMock) GetTypeID() (r int) {
+func (m *StateMachineMock) GetTypeID() (r ID) {
 	counter := atomic.AddUint64(&m.GetTypeIDPreCounter, 1)
 	defer atomic.AddUint64(&m.GetTypeIDCounter, 1)
 
 	if len(m.GetTypeIDMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.GetTypeIDMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to StateMachineTypeMock.GetTypeID.")
+			m.t.Fatalf("Unexpected call to StateMachineMock.GetTypeID.")
 			return
 		}
 
 		result := m.GetTypeIDMock.expectationSeries[counter-1].result
 		if result == nil {
-			m.t.Fatal("No results are set for the StateMachineTypeMock.GetTypeID")
+			m.t.Fatal("No results are set for the StateMachineMock.GetTypeID")
 			return
 		}
 
@@ -1042,7 +1042,7 @@ func (m *StateMachineTypeMock) GetTypeID() (r int) {
 
 		result := m.GetTypeIDMock.mainExpectation.result
 		if result == nil {
-			m.t.Fatal("No results are set for the StateMachineTypeMock.GetTypeID")
+			m.t.Fatal("No results are set for the StateMachineMock.GetTypeID")
 		}
 
 		r = result.r
@@ -1051,25 +1051,25 @@ func (m *StateMachineTypeMock) GetTypeID() (r int) {
 	}
 
 	if m.GetTypeIDFunc == nil {
-		m.t.Fatalf("Unexpected call to StateMachineTypeMock.GetTypeID.")
+		m.t.Fatalf("Unexpected call to StateMachineMock.GetTypeID.")
 		return
 	}
 
 	return m.GetTypeIDFunc()
 }
 
-//GetTypeIDMinimockCounter returns a count of StateMachineTypeMock.GetTypeIDFunc invocations
-func (m *StateMachineTypeMock) GetTypeIDMinimockCounter() uint64 {
+//GetTypeIDMinimockCounter returns a count of StateMachineMock.GetTypeIDFunc invocations
+func (m *StateMachineMock) GetTypeIDMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.GetTypeIDCounter)
 }
 
-//GetTypeIDMinimockPreCounter returns the value of StateMachineTypeMock.GetTypeID invocations
-func (m *StateMachineTypeMock) GetTypeIDMinimockPreCounter() uint64 {
+//GetTypeIDMinimockPreCounter returns the value of StateMachineMock.GetTypeID invocations
+func (m *StateMachineMock) GetTypeIDMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.GetTypeIDPreCounter)
 }
 
 //GetTypeIDFinished returns true if mock invocations count is ok
-func (m *StateMachineTypeMock) GetTypeIDFinished() bool {
+func (m *StateMachineMock) GetTypeIDFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.GetTypeIDMock.expectationSeries) > 0 {
 		return atomic.LoadUint64(&m.GetTypeIDCounter) == uint64(len(m.GetTypeIDMock.expectationSeries))
@@ -1090,92 +1090,92 @@ func (m *StateMachineTypeMock) GetTypeIDFinished() bool {
 
 //ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
-func (m *StateMachineTypeMock) ValidateCallCounters() {
+func (m *StateMachineMock) ValidateCallCounters() {
 
 	if !m.GetMigrationHandlerFinished() {
-		m.t.Fatal("Expected call to StateMachineTypeMock.GetMigrationHandler")
+		m.t.Fatal("Expected call to StateMachineMock.GetMigrationHandler")
 	}
 
 	if !m.GetNestedHandlerFinished() {
-		m.t.Fatal("Expected call to StateMachineTypeMock.GetNestedHandler")
+		m.t.Fatal("Expected call to StateMachineMock.GetNestedHandler")
 	}
 
 	if !m.GetResponseErrorHandlerFinished() {
-		m.t.Fatal("Expected call to StateMachineTypeMock.GetResponseErrorHandler")
+		m.t.Fatal("Expected call to StateMachineMock.GetResponseErrorHandler")
 	}
 
 	if !m.GetResponseHandlerFinished() {
-		m.t.Fatal("Expected call to StateMachineTypeMock.GetResponseHandler")
+		m.t.Fatal("Expected call to StateMachineMock.GetResponseHandler")
 	}
 
 	if !m.GetTransitionErrorHandlerFinished() {
-		m.t.Fatal("Expected call to StateMachineTypeMock.GetTransitionErrorHandler")
+		m.t.Fatal("Expected call to StateMachineMock.GetTransitionErrorHandler")
 	}
 
 	if !m.GetTransitionHandlerFinished() {
-		m.t.Fatal("Expected call to StateMachineTypeMock.GetTransitionHandler")
+		m.t.Fatal("Expected call to StateMachineMock.GetTransitionHandler")
 	}
 
 	if !m.GetTypeIDFinished() {
-		m.t.Fatal("Expected call to StateMachineTypeMock.GetTypeID")
+		m.t.Fatal("Expected call to StateMachineMock.GetTypeID")
 	}
 
 }
 
 //CheckMocksCalled checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
-func (m *StateMachineTypeMock) CheckMocksCalled() {
+func (m *StateMachineMock) CheckMocksCalled() {
 	m.Finish()
 }
 
 //Finish checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
-func (m *StateMachineTypeMock) Finish() {
+func (m *StateMachineMock) Finish() {
 	m.MinimockFinish()
 }
 
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
-func (m *StateMachineTypeMock) MinimockFinish() {
+func (m *StateMachineMock) MinimockFinish() {
 
 	if !m.GetMigrationHandlerFinished() {
-		m.t.Fatal("Expected call to StateMachineTypeMock.GetMigrationHandler")
+		m.t.Fatal("Expected call to StateMachineMock.GetMigrationHandler")
 	}
 
 	if !m.GetNestedHandlerFinished() {
-		m.t.Fatal("Expected call to StateMachineTypeMock.GetNestedHandler")
+		m.t.Fatal("Expected call to StateMachineMock.GetNestedHandler")
 	}
 
 	if !m.GetResponseErrorHandlerFinished() {
-		m.t.Fatal("Expected call to StateMachineTypeMock.GetResponseErrorHandler")
+		m.t.Fatal("Expected call to StateMachineMock.GetResponseErrorHandler")
 	}
 
 	if !m.GetResponseHandlerFinished() {
-		m.t.Fatal("Expected call to StateMachineTypeMock.GetResponseHandler")
+		m.t.Fatal("Expected call to StateMachineMock.GetResponseHandler")
 	}
 
 	if !m.GetTransitionErrorHandlerFinished() {
-		m.t.Fatal("Expected call to StateMachineTypeMock.GetTransitionErrorHandler")
+		m.t.Fatal("Expected call to StateMachineMock.GetTransitionErrorHandler")
 	}
 
 	if !m.GetTransitionHandlerFinished() {
-		m.t.Fatal("Expected call to StateMachineTypeMock.GetTransitionHandler")
+		m.t.Fatal("Expected call to StateMachineMock.GetTransitionHandler")
 	}
 
 	if !m.GetTypeIDFinished() {
-		m.t.Fatal("Expected call to StateMachineTypeMock.GetTypeID")
+		m.t.Fatal("Expected call to StateMachineMock.GetTypeID")
 	}
 
 }
 
 //Wait waits for all mocked methods to be called at least once
 //Deprecated: please use MinimockWait or use Wait method of minimock.Controller
-func (m *StateMachineTypeMock) Wait(timeout time.Duration) {
+func (m *StateMachineMock) Wait(timeout time.Duration) {
 	m.MinimockWait(timeout)
 }
 
 //MinimockWait waits for all mocked methods to be called at least once
 //this method is called by minimock.Controller
-func (m *StateMachineTypeMock) MinimockWait(timeout time.Duration) {
+func (m *StateMachineMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
@@ -1195,31 +1195,31 @@ func (m *StateMachineTypeMock) MinimockWait(timeout time.Duration) {
 		case <-timeoutCh:
 
 			if !m.GetMigrationHandlerFinished() {
-				m.t.Error("Expected call to StateMachineTypeMock.GetMigrationHandler")
+				m.t.Error("Expected call to StateMachineMock.GetMigrationHandler")
 			}
 
 			if !m.GetNestedHandlerFinished() {
-				m.t.Error("Expected call to StateMachineTypeMock.GetNestedHandler")
+				m.t.Error("Expected call to StateMachineMock.GetNestedHandler")
 			}
 
 			if !m.GetResponseErrorHandlerFinished() {
-				m.t.Error("Expected call to StateMachineTypeMock.GetResponseErrorHandler")
+				m.t.Error("Expected call to StateMachineMock.GetResponseErrorHandler")
 			}
 
 			if !m.GetResponseHandlerFinished() {
-				m.t.Error("Expected call to StateMachineTypeMock.GetResponseHandler")
+				m.t.Error("Expected call to StateMachineMock.GetResponseHandler")
 			}
 
 			if !m.GetTransitionErrorHandlerFinished() {
-				m.t.Error("Expected call to StateMachineTypeMock.GetTransitionErrorHandler")
+				m.t.Error("Expected call to StateMachineMock.GetTransitionErrorHandler")
 			}
 
 			if !m.GetTransitionHandlerFinished() {
-				m.t.Error("Expected call to StateMachineTypeMock.GetTransitionHandler")
+				m.t.Error("Expected call to StateMachineMock.GetTransitionHandler")
 			}
 
 			if !m.GetTypeIDFinished() {
-				m.t.Error("Expected call to StateMachineTypeMock.GetTypeID")
+				m.t.Error("Expected call to StateMachineMock.GetTypeID")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)
@@ -1232,7 +1232,7 @@ func (m *StateMachineTypeMock) MinimockWait(timeout time.Duration) {
 
 //AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
-func (m *StateMachineTypeMock) AllMocksCalled() bool {
+func (m *StateMachineMock) AllMocksCalled() bool {
 
 	if !m.GetMigrationHandlerFinished() {
 		return false

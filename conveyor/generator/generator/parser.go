@@ -125,7 +125,7 @@ func (p *Parser) parseStateMachineInterface(machine *stateMachine, source *ast.I
 		}
 
 		switch {
-		case currentHandler.Name == "TID":
+		case currentHandler.Name == "GetTypeID":
 		case strings.HasPrefix(currentHandler.Name, "s_"):
 			currentHandler.setAsState()
 		case strings.HasPrefix(currentHandler.Name, "i_"):
