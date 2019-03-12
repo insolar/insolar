@@ -31,203 +31,213 @@ type TAR string
 type TestStateMachine interface {
 	GetTypeID() statemachine.ID
 
-	i_Init(input Event, payload interface{}) (*Payload, statemachine.ElementState, error)
-	if_Init(input Event, payload interface{}) (*Payload, statemachine.ElementState, error)
-	ip_Init(input Event, payload interface{}) (*Payload, statemachine.ElementState, error)
+	initPresentHandler(input Event, payload interface{}) (*Payload, statemachine.ElementState, error)
+	initFutureHandler(input Event, payload interface{}) (*Payload, statemachine.ElementState, error)
+	initPastHandler(input Event, payload interface{}) (*Payload, statemachine.ElementState, error)
 
-	es_Init(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState)
-	esf_Init(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState)
-	esp_Init(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState)
-
-	// State Declaration
-	s_First() statemachine.StateID
-
-	// Migration
-	m_FirstSecond(input Event, payload *Payload) (*Payload, statemachine.ElementState, error)
-	mfp_FirstSecond(input Event, payload *Payload) (*Payload, statemachine.ElementState, error)
-
-	// Transition
-	t_First(input Event, payload *Payload /* todo: , adapterHelper TA1*/) (*Payload, statemachine.ElementState, error)
-	tf_First(input Event, payload *Payload /* todo: , adapterHelper TA1*/) (*Payload, statemachine.ElementState, error)
-	tp_First(input Event, payload *Payload) (*Payload, statemachine.ElementState, error)
-
-	// TODO: Finalization
-	// f_First(input Event, payload *Payload)
-	// ff_First(input Event, payload *Payload)
-	// fp_First(input Event, payload *Payload)
-
-	// Adapter Response
-	a_First(input Event, payload *Payload, respPayload TAR) (*Payload, statemachine.ElementState, error)
-	af_First(input Event, payload *Payload, respPayload TAR) (*Payload, statemachine.ElementState, error)
-	ap_First(input Event, payload *Payload, respPayload TAR) (*Payload, statemachine.ElementState, error)
-
-	// State Error
-	es_First(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState)
-	esf_First(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState)
-	esp_First(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState)
-
-	// Adapter Response Error
-	ea_First(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, statemachine.ElementState)
-	eaf_First(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, statemachine.ElementState)
-	eap_First(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, statemachine.ElementState)
+	errorPresentInit(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState)
+	errorFutureInit(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState)
+	errorPastInit(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState)
 
 	// State Declaration
-	s_Second() statemachine.StateID
+	stateFirst() statemachine.StateID
 
 	// Migration
-	m_SecondThird(input Event, payload *Payload) (*Payload, statemachine.ElementState, error)
-	mfp_SecondThird(input Event, payload *Payload) (*Payload, statemachine.ElementState, error)
+	migrateFromPresentFirst(input Event, payload *Payload) (*Payload, statemachine.ElementState, error)
+	migrateFromFutureFirst(input Event, payload *Payload) (*Payload, statemachine.ElementState, error)
 
 	// Transition
-	t_Second(input Event, payload *Payload /* todo: , adapterHelper1 TA1*/) (*Payload, statemachine.ElementState, error)
-	tf_Second(input Event, payload *Payload /* todo: , adapterHelper1 TA1*/) (*Payload, statemachine.ElementState, error)
-	tp_Second(input Event, payload *Payload /* todo: , adapterHelper1 TA1*/) (*Payload, statemachine.ElementState, error)
+	transitPresentFirst(input Event, payload *Payload /* todo: , adapterHelper TA1*/) (*Payload, statemachine.ElementState, error)
+	transitFutureFirst(input Event, payload *Payload /* todo: , adapterHelper TA1*/) (*Payload, statemachine.ElementState, error)
+	transitPastFirst(input Event, payload *Payload) (*Payload, statemachine.ElementState, error)
 
 	// TODO: Finalization
-	// f_Second(input Event, payload *Payload)
-	// ff_Second(input Event, payload *Payload)
-	// fp_Second(input Event, payload *Payload)
+	// finalizePresentFirst(input Event, payload *Payload)
+	// ...
 
 	// Adapter Response
-	a_Second(input Event, payload *Payload, respPayload TAR) (*Payload, statemachine.ElementState, error)
-	af_Second(input Event, payload *Payload, respPayload TAR) (*Payload, statemachine.ElementState, error)
-	ap_Second(input Event, payload *Payload, respPayload TAR) (*Payload, statemachine.ElementState, error)
+	responsePresentFirst(input Event, payload *Payload, respPayload TAR) (*Payload, statemachine.ElementState, error)
+	responseFutureFirst(input Event, payload *Payload, respPayload TAR) (*Payload, statemachine.ElementState, error)
+	responsePastFirst(input Event, payload *Payload, respPayload TAR) (*Payload, statemachine.ElementState, error)
 
 	// State Error
-	es_Second(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState)
-	esf_Second(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState)
-	esp_Second(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState)
+	errorPresentFirst(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState)
+	errorFutureFirst(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState)
+	errorPastFirst(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState)
 
 	// Adapter Response Error
-	ea_Second(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, statemachine.ElementState)
-	eaf_Second(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, statemachine.ElementState)
-	eap_Second(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, statemachine.ElementState)
+	errorResponsePresentFirst(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, statemachine.ElementState)
+	errorResponseFutureFirst(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, statemachine.ElementState)
+	errorResponsePastFirst(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, statemachine.ElementState)
+
+	// State Declaration
+	stateSecond() statemachine.StateID
+
+	// Migration
+	migrateFromPresentSecond(input Event, payload *Payload) (*Payload, statemachine.ElementState, error)
+	migrateFromFutureSecond(input Event, payload *Payload) (*Payload, statemachine.ElementState, error)
+
+	// Transition
+	transitPresentFirstState(input Event, payload *Payload /* todo: , adapterHelper TA1*/) (*Payload, statemachine.ElementState, error)
+	transitFutureFirstState(input Event, payload *Payload /* todo: , adapterHelper TA1*/) (*Payload, statemachine.ElementState, error)
+	transitPastFirstState(input Event, payload *Payload) (*Payload, statemachine.ElementState, error)
+
+	// TODO: Finalization
+	// finalizePresentSecond(input Event, payload *Payload)
+	// ...
+
+	// Adapter Response
+	responsePresentSecond(input Event, payload *Payload, respPayload TAR) (*Payload, statemachine.ElementState, error)
+	responseFutureSecond(input Event, payload *Payload, respPayload TAR) (*Payload, statemachine.ElementState, error)
+	responsePastSecond(input Event, payload *Payload, respPayload TAR) (*Payload, statemachine.ElementState, error)
+
+	// State Error
+	errorPresentSecond(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState)
+	errorFutureSecond(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState)
+	errorPastSecond(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState)
+
+	// Adapter Response Error
+	errorResponsePresentSecond(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, statemachine.ElementState)
+	errorResponseFutureSecond(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, statemachine.ElementState)
+	errorResponsePastSecond(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, statemachine.ElementState)
 }
 
 type CleanTestStateMachine struct {
 	BaseTestStateMachine
 }
 
-func (t *CleanTestStateMachine) i_Init(input Event, payload interface{}) (*Payload, statemachine.ElementState, error) {
-	return nil, statemachine.ElementState(t.s_First()), nil
-}
-func (t *CleanTestStateMachine) if_Init(input Event, payload interface{}) (*Payload, statemachine.ElementState, error) {
-	return nil, statemachine.ElementState(t.s_First()), nil
-}
-func (t *CleanTestStateMachine) ip_Init(input Event, payload interface{}) (*Payload, statemachine.ElementState, error) {
-	return nil, statemachine.ElementState(t.s_First()), nil
+func (sm *CleanTestStateMachine) initPresentHandler(input Event, payload interface{}) (*Payload, statemachine.ElementState, error) {
+	panic("implement me")
 }
 
-func (t *CleanTestStateMachine) es_Init(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState) {
-	return nil, statemachine.ElementState(t.s_First())
-}
-func (t *CleanTestStateMachine) esf_Init(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState) {
-	return nil, statemachine.ElementState(t.s_First())
-}
-func (t *CleanTestStateMachine) esp_Init(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState) {
-	return nil, statemachine.ElementState(t.s_First())
+func (sm *CleanTestStateMachine) initFutureHandler(input Event, payload interface{}) (*Payload, statemachine.ElementState, error) {
+	panic("implement me")
 }
 
-// Migration
-func (t *CleanTestStateMachine) m_FirstSecond(input Event, payload *Payload) (*Payload, statemachine.ElementState, error) {
-	return nil, 0, nil
-}
-func (t *CleanTestStateMachine) mfp_FirstSecond(input Event, payload *Payload) (*Payload, statemachine.ElementState, error) {
-	return nil, 0, nil
+func (sm *CleanTestStateMachine) initPastHandler(input Event, payload interface{}) (*Payload, statemachine.ElementState, error) {
+	panic("implement me")
 }
 
-// Transition
-func (t *CleanTestStateMachine) t_First(input Event, payload *Payload /* todo: , adapterHelper TA1*/) (*Payload, statemachine.ElementState, error) {
-	return nil, statemachine.ElementState(t.s_Second()), nil
-}
-func (t *CleanTestStateMachine) tf_First(input Event, payload *Payload /* todo: , adapterHelper TA1*/) (*Payload, statemachine.ElementState, error) {
-	return nil, statemachine.ElementState(t.s_Second()), nil
-}
-func (t *CleanTestStateMachine) tp_First(input Event, payload *Payload) (*Payload, statemachine.ElementState, error) {
-	return nil, statemachine.ElementState(t.s_Second()), nil
+func (sm *CleanTestStateMachine) errorPresentInit(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState) {
+	panic("implement me")
 }
 
-// Adapter Response
-func (t *CleanTestStateMachine) a_First(input Event, payload *Payload, respPayload TAR) (*Payload, statemachine.ElementState, error) {
-	return nil, 0, nil
-}
-func (t *CleanTestStateMachine) af_First(input Event, payload *Payload, respPayload TAR) (*Payload, statemachine.ElementState, error) {
-	return nil, 0, nil
-}
-func (t *CleanTestStateMachine) ap_First(input Event, payload *Payload, respPayload TAR) (*Payload, statemachine.ElementState, error) {
-	return nil, 0, nil
+func (sm *CleanTestStateMachine) errorFutureInit(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState) {
+	panic("implement me")
 }
 
-// State Error
-func (t *CleanTestStateMachine) es_First(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState) {
-	return nil, statemachine.ElementState(t.s_Second())
-}
-func (t *CleanTestStateMachine) esf_First(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState) {
-	return nil, statemachine.ElementState(t.s_Second())
-}
-func (t *CleanTestStateMachine) esp_First(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState) {
-	return nil, statemachine.ElementState(t.s_Second())
+func (sm *CleanTestStateMachine) errorPastInit(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState) {
+	panic("implement me")
 }
 
-// Adapter Response Error
-func (t *CleanTestStateMachine) ea_First(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, statemachine.ElementState) {
-	return nil, 0
-}
-func (t *CleanTestStateMachine) eaf_First(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, statemachine.ElementState) {
-	return nil, 0
-}
-func (t *CleanTestStateMachine) eap_First(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, statemachine.ElementState) {
-	return nil, 0
+func (sm *CleanTestStateMachine) migrateFromPresentFirst(input Event, payload *Payload) (*Payload, statemachine.ElementState, error) {
+	panic("implement me")
 }
 
-// Migration
-func (t *CleanTestStateMachine) m_SecondThird(input Event, payload *Payload) (*Payload, statemachine.ElementState, error) {
-	return nil, 0, nil
-}
-func (t *CleanTestStateMachine) mfp_SecondThird(input Event, payload *Payload) (*Payload, statemachine.ElementState, error) {
-	return nil, 0, nil
+func (sm *CleanTestStateMachine) migrateFromFutureFirst(input Event, payload *Payload) (*Payload, statemachine.ElementState, error) {
+	panic("implement me")
 }
 
-// Transition
-func (t *CleanTestStateMachine) t_Second(input Event, payload *Payload /* todo: , adapterHelper1 TA1*/) (*Payload, statemachine.ElementState, error) {
-	return nil, 0, nil
-}
-func (t *CleanTestStateMachine) tf_Second(input Event, payload *Payload /* todo: , adapterHelper1 TA1*/) (*Payload, statemachine.ElementState, error) {
-	return nil, 0, nil
-}
-func (t *CleanTestStateMachine) tp_Second(input Event, payload *Payload /* todo: , adapterHelper1 TA1*/) (*Payload, statemachine.ElementState, error) {
-	return nil, 0, nil
+func (sm *CleanTestStateMachine) transitPresentFirst(input Event, payload *Payload /* todo: , adapterHelper TA1*/) (*Payload, statemachine.ElementState, error) {
+	panic("implement me")
 }
 
-// Adapter Response
-func (t *CleanTestStateMachine) a_Second(input Event, payload *Payload, respPayload TAR) (*Payload, statemachine.ElementState, error) {
-	return nil, 0, nil
-}
-func (t *CleanTestStateMachine) af_Second(input Event, payload *Payload, respPayload TAR) (*Payload, statemachine.ElementState, error) {
-	return nil, 0, nil
-}
-func (t *CleanTestStateMachine) ap_Second(input Event, payload *Payload, respPayload TAR) (*Payload, statemachine.ElementState, error) {
-	return nil, 0, nil
+func (sm *CleanTestStateMachine) transitFutureFirst(input Event, payload *Payload /* todo: , adapterHelper TA1*/) (*Payload, statemachine.ElementState, error) {
+	panic("implement me")
 }
 
-// State Error
-func (t *CleanTestStateMachine) es_Second(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState) {
-	return nil, 0
-}
-func (t *CleanTestStateMachine) esf_Second(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState) {
-	return nil, 0
-}
-func (t *CleanTestStateMachine) esp_Second(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState) {
-	return nil, 0
+func (sm *CleanTestStateMachine) transitPastFirst(input Event, payload *Payload) (*Payload, statemachine.ElementState, error) {
+	panic("implement me")
 }
 
-// Adapter Response Error
-func (t *CleanTestStateMachine) ea_Second(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, statemachine.ElementState) {
-	return nil, 0
+func (sm *CleanTestStateMachine) responsePresentFirst(input Event, payload *Payload, respPayload TAR) (*Payload, statemachine.ElementState, error) {
+	panic("implement me")
 }
-func (t *CleanTestStateMachine) eaf_Second(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, statemachine.ElementState) {
-	return nil, 0
+
+func (sm *CleanTestStateMachine) responseFutureFirst(input Event, payload *Payload, respPayload TAR) (*Payload, statemachine.ElementState, error) {
+	panic("implement me")
 }
-func (t *CleanTestStateMachine) eap_Second(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, statemachine.ElementState) {
-	return nil, 0
+
+func (sm *CleanTestStateMachine) responsePastFirst(input Event, payload *Payload, respPayload TAR) (*Payload, statemachine.ElementState, error) {
+	panic("implement me")
+}
+
+func (sm *CleanTestStateMachine) errorPresentFirst(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState) {
+	panic("implement me")
+}
+
+func (sm *CleanTestStateMachine) errorFutureFirst(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState) {
+	panic("implement me")
+}
+
+func (sm *CleanTestStateMachine) errorPastFirst(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState) {
+	panic("implement me")
+}
+
+func (sm *CleanTestStateMachine) errorResponsePresentFirst(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, statemachine.ElementState) {
+	panic("implement me")
+}
+
+func (sm *CleanTestStateMachine) errorResponseFutureFirst(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, statemachine.ElementState) {
+	panic("implement me")
+}
+
+func (sm *CleanTestStateMachine) errorResponsePastFirst(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, statemachine.ElementState) {
+	panic("implement me")
+}
+
+func (sm *CleanTestStateMachine) migrateFromPresentSecond(input Event, payload *Payload) (*Payload, statemachine.ElementState, error) {
+	panic("implement me")
+}
+
+func (sm *CleanTestStateMachine) migrateFromFutureSecond(input Event, payload *Payload) (*Payload, statemachine.ElementState, error) {
+	panic("implement me")
+}
+
+func (sm *CleanTestStateMachine) transitPresentFirstState(input Event, payload *Payload /* todo: , adapterHelper TA1*/) (*Payload, statemachine.ElementState, error) {
+	panic("implement me")
+}
+
+func (sm *CleanTestStateMachine) transitFutureFirstState(input Event, payload *Payload /* todo: , adapterHelper TA1*/) (*Payload, statemachine.ElementState, error) {
+	panic("implement me")
+}
+
+func (sm *CleanTestStateMachine) transitPastFirstState(input Event, payload *Payload) (*Payload, statemachine.ElementState, error) {
+	panic("implement me")
+}
+
+func (sm *CleanTestStateMachine) responsePresentSecond(input Event, payload *Payload, respPayload TAR) (*Payload, statemachine.ElementState, error) {
+	panic("implement me")
+}
+
+func (sm *CleanTestStateMachine) responseFutureSecond(input Event, payload *Payload, respPayload TAR) (*Payload, statemachine.ElementState, error) {
+	panic("implement me")
+}
+
+func (sm *CleanTestStateMachine) responsePastSecond(input Event, payload *Payload, respPayload TAR) (*Payload, statemachine.ElementState, error) {
+	panic("implement me")
+}
+
+func (sm *CleanTestStateMachine) errorPresentSecond(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState) {
+	panic("implement me")
+}
+
+func (sm *CleanTestStateMachine) errorFutureSecond(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState) {
+	panic("implement me")
+}
+
+func (sm *CleanTestStateMachine) errorPastSecond(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState) {
+	panic("implement me")
+}
+
+func (sm *CleanTestStateMachine) errorResponsePresentSecond(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, statemachine.ElementState) {
+	panic("implement me")
+}
+
+func (sm *CleanTestStateMachine) errorResponseFutureSecond(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, statemachine.ElementState) {
+	panic("implement me")
+}
+
+func (sm *CleanTestStateMachine) errorResponsePastSecond(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, statemachine.ElementState) {
+	panic("implement me")
 }

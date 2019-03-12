@@ -126,41 +126,41 @@ func (p *Parser) parseStateMachineInterface(machine *stateMachine, source *ast.I
 
 		switch {
 		case currentHandler.Name == "GetTypeID":
-		case strings.HasPrefix(currentHandler.Name, "s_"):
+		case strings.HasPrefix(currentHandler.Name, "state"):
 			currentHandler.setAsState()
-		case strings.HasPrefix(currentHandler.Name, "i_"):
+		case strings.HasPrefix(currentHandler.Name, "initPresent"):
 			currentHandler.setAsInit()
-		case strings.HasPrefix(currentHandler.Name, "if_"):
+		case strings.HasPrefix(currentHandler.Name, "initFuture"):
 			currentHandler.setAsInitFuture()
-		case strings.HasPrefix(currentHandler.Name, "ip_"):
+		case strings.HasPrefix(currentHandler.Name, "initPast"):
 			currentHandler.setAsInitPast()
-		case strings.HasPrefix(currentHandler.Name, "es_"):
+		case strings.HasPrefix(currentHandler.Name, "errorPresent"):
 			currentHandler.setAsErrorState()
-		case strings.HasPrefix(currentHandler.Name, "esf_"):
+		case strings.HasPrefix(currentHandler.Name, "errorFuture"):
 			currentHandler.setAsErrorStateFuture()
-		case strings.HasPrefix(currentHandler.Name, "esp_"):
+		case strings.HasPrefix(currentHandler.Name, "errorPast"):
 			currentHandler.setAsErrorStatePast()
-		case strings.HasPrefix(currentHandler.Name, "m_"):
+		case strings.HasPrefix(currentHandler.Name, "migrateFromPresent"):
 			currentHandler.setAsMigration()
-		case strings.HasPrefix(currentHandler.Name, "mfp_"):
+		case strings.HasPrefix(currentHandler.Name, "migrateFromFuture"):
 			currentHandler.setAsMigrationFuturePresent()
-		case strings.HasPrefix(currentHandler.Name, "t_"):
+		case strings.HasPrefix(currentHandler.Name, "transitPresent"):
 			currentHandler.setAsTransition()
-		case strings.HasPrefix(currentHandler.Name, "tf_"):
+		case strings.HasPrefix(currentHandler.Name, "transitFuture"):
 			currentHandler.setAsTransitionFuture()
-		case strings.HasPrefix(currentHandler.Name, "tp_"):
+		case strings.HasPrefix(currentHandler.Name, "transitPast"):
 			currentHandler.setAsTransitionPast()
-		case strings.HasPrefix(currentHandler.Name, "a_"):
+		case strings.HasPrefix(currentHandler.Name, "responsePresent"):
 			currentHandler.setAsAdapterResponse()
-		case strings.HasPrefix(currentHandler.Name, "af_"):
+		case strings.HasPrefix(currentHandler.Name, "responseFuture"):
 			currentHandler.setAsAdapterResponseFuture()
-		case strings.HasPrefix(currentHandler.Name, "ap_"):
+		case strings.HasPrefix(currentHandler.Name, "responsePast"):
 			currentHandler.setAsAdapterResponsePast()
-		case strings.HasPrefix(currentHandler.Name, "ea_"):
+		case strings.HasPrefix(currentHandler.Name, "errorResponsePresent"):
 			currentHandler.setAsAdapterResponseError()
-		case strings.HasPrefix(currentHandler.Name, "eaf_"):
+		case strings.HasPrefix(currentHandler.Name, "errorResponseFuture"):
 			currentHandler.setAsAdapterResponseErrorFuture()
-		case strings.HasPrefix(currentHandler.Name, "eap_"):
+		case strings.HasPrefix(currentHandler.Name, "errorResponsePast"):
 			currentHandler.setAsAdapterResponseErrorPast()
 		default:
 			exitWithError("Unknown handler: %s", currentHandler.Name)
