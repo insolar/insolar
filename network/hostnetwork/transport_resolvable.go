@@ -28,8 +28,9 @@ import (
 
 // TransportResolvable is implementation of HostNetwork interface that is capable of address resolving.
 type TransportResolvable struct {
+	Resolver network.RoutingTable `inject:""`
+
 	internalTransport network.InternalTransport
-	resolver          network.RoutingTable
 }
 
 // Start listening to network requests.
@@ -54,7 +55,7 @@ func (tr *TransportResolvable) GetNodeID() core.RecordRef {
 
 // SendRequest send request to a remote node.
 func (tr *TransportResolvable) SendRequest(ctx context.Context, request network.Request, receiver core.RecordRef) (network.Future, error) {
-	h, err := tr.resolver.Resolve(receiver)
+	h, err := tr.Resolver.Resolve(receiver)
 	if err != nil {
 		return nil, errors.Wrap(err, "error resolving NodeID -> Address")
 	}
@@ -64,7 +65,7 @@ func (tr *TransportResolvable) SendRequest(ctx context.Context, request network.
 // RegisterPacketHandler register a handler function to process incoming requests of a specific type.
 func (tr *TransportResolvable) RegisterRequestHandler(t types.PacketType, handler network.RequestHandler) {
 	f := func(ctx context.Context, request network.Request) (network.Response, error) {
-		tr.resolver.AddToKnownHosts(request.GetSenderHost())
+		tr.Resolver.AddToKnownHosts(request.GetSenderHost())
 		return handler(ctx, request)
 	}
 	tr.internalTransport.RegisterPacketHandler(t, f)
@@ -80,6 +81,6 @@ func (tr *TransportResolvable) BuildResponse(ctx context.Context, request networ
 	return tr.internalTransport.BuildResponse(ctx, request, responseData)
 }
 
-func NewHostTransport(transport network.InternalTransport, resolver network.RoutingTable) network.HostNetwork {
-	return &TransportResolvable{internalTransport: transport, resolver: resolver}
+func NewHostTransport(transport network.InternalTransport) network.HostNetwork {
+	return &TransportResolvable{internalTransport: transport}
 }

@@ -48,8 +48,7 @@ type ServiceNetwork struct {
 	cfg configuration.Configuration
 	cm  *component.Manager
 
-	hostNetwork  network.HostNetwork  // TODO: should be injected
-	routingTable network.RoutingTable // TODO: should be injected
+	hostNetwork network.HostNetwork // TODO: should be injected
 
 	// dependencies
 	CertificateManager  core.CertificateManager         `inject:""`
@@ -115,7 +114,6 @@ func incrementPort(address string) (string, error) {
 
 // Start implements component.Initer
 func (n *ServiceNetwork) Init(ctx context.Context) error {
-	n.routingTable = &routing.Table{}
 	internalTransport, err := hostnetwork.NewInternalTransport(n.cfg, n.CertificateManager.GetCertificate().GetNodeRef().String())
 	if err != nil {
 		return errors.Wrap(err, "Failed to create internal transport")
@@ -136,21 +134,21 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		consensusAddress,
 		n.CertificateManager.GetCertificate().GetNodeRef().String(),
 		n.NodeKeeper.GetOrigin().ShortID(),
-		n.routingTable,
 	)
 	if err != nil {
 		return errors.Wrap(err, "Failed to create consensus network.")
 	}
 
-	n.hostNetwork = hostnetwork.NewHostTransport(internalTransport, n.routingTable)
+	n.hostNetwork = hostnetwork.NewHostTransport(internalTransport)
 	options := controller.ConfigureOptions(n.cfg)
 
 	cert := n.CertificateManager.GetCertificate()
 	n.isDiscovery = utils.OriginIsDiscovery(cert)
 
 	n.cm.Inject(n,
+		&routing.Table{},
 		cert,
-		n.NodeKeeper,
+		n.hostNetwork,
 		merkle.NewCalculator(),
 		consensusNetwork,
 		phases.NewCommunicator(),
@@ -161,7 +159,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		bootstrap.NewSessionManager(),
 		controller.NewNetworkController(n.hostNetwork),
 		controller.NewRPCController(options, n.hostNetwork),
-		controller.NewPulseController(n.hostNetwork, n.routingTable),
+		controller.NewPulseController(n.hostNetwork),
 		bootstrap.NewBootstrapper(options, internalTransport),
 		bootstrap.NewAuthorizationController(options, internalTransport),
 		bootstrap.NewChallengeResponseController(options, internalTransport),
@@ -178,10 +176,6 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 // Start implements component.Starter
 func (n *ServiceNetwork) Start(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
-
-	logger.Info("Network starts listening...")
-	n.routingTable.Inject(n.NodeKeeper)
-	n.hostNetwork.Start(ctx)
 
 	log.Info("Starting network component manager...")
 	err := n.cm.Start(ctx)

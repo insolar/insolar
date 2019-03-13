@@ -212,8 +212,6 @@ type PartitionPolicy interface {
 
 // RoutingTable contains all routing information of the network.
 type RoutingTable interface {
-	// Inject inject dependencies from components
-	Inject(nodeKeeper NodeKeeper)
 	// Resolve NodeID -> ShortID, Address. Can initiate network requests.
 	Resolve(core.RecordRef) (*host.Host, error)
 	// ResolveConsensus ShortID -> NodeID, Address for node inside current globe for current consensus.

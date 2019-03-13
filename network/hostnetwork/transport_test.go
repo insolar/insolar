@@ -71,10 +71,9 @@ func (m *MockResolver) Resolve(nodeID core.RecordRef) (*host.Host, error) {
 	return result, nil
 }
 
-func (m *MockResolver) Inject(nodeKeeper network.NodeKeeper) {}
-func (m *MockResolver) AddToKnownHosts(h *host.Host)         {}
-func (m *MockResolver) Rebalance(network.PartitionPolicy)    {}
-func (m *MockResolver) GetRandomNodes(int) []host.Host       { return nil }
+func (m *MockResolver) AddToKnownHosts(h *host.Host)      {}
+func (m *MockResolver) Rebalance(network.PartitionPolicy) {}
+func (m *MockResolver) GetRandomNodes(int) []host.Host    { return nil }
 
 func (m *MockResolver) addMapping(key, value string) error {
 	k, err := core.NewRefFromBase58(key)
@@ -143,12 +142,12 @@ func createTwoHostNetworks(id1, id2 string) (t1, t2 network.HostNetwork, err err
 	if err != nil {
 		return nil, nil, err
 	}
-	tr1 := NewHostTransport(i1, m)
+	tr1 := &TransportResolvable{internalTransport: i1, Resolver: m}
 	i2, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID2+DOMAIN)
 	if err != nil {
 		return nil, nil, err
 	}
-	tr2 := NewHostTransport(i2, m)
+	tr2 := &TransportResolvable{internalTransport: i2, Resolver: m}
 
 	err = m.addMapping(id1, tr1.PublicAddress())
 	if err != nil {
@@ -214,7 +213,7 @@ func TestHostTransport_SendRequestPacket(t *testing.T) {
 
 	i1, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID1+DOMAIN)
 	require.NoError(t, err)
-	t1 := NewHostTransport(i1, m)
+	t1 := &TransportResolvable{internalTransport: i1, Resolver: m}
 	t1.Start(ctx)
 	defer t1.Stop(ctx)
 

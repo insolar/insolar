@@ -34,9 +34,9 @@ type PulseController interface {
 type pulseController struct {
 	PulseHandler network.PulseHandler `inject:""`
 	NodeKeeper   network.NodeKeeper   `inject:""`
+	Resolver     network.RoutingTable `inject:""`
 
-	hostNetwork  network.HostNetwork
-	routingTable network.RoutingTable
+	hostNetwork network.HostNetwork
 }
 
 func (pc *pulseController) Init(ctx context.Context) error {
@@ -57,10 +57,10 @@ func (pc *pulseController) processPulse(ctx context.Context, request network.Req
 
 func (pc *pulseController) processGetRandomHosts(ctx context.Context, request network.Request) (network.Response, error) {
 	data := request.GetData().(*packet.RequestGetRandomHosts)
-	randomHosts := pc.routingTable.GetRandomNodes(data.HostsNumber)
+	randomHosts := pc.Resolver.GetRandomNodes(data.HostsNumber)
 	return pc.hostNetwork.BuildResponse(ctx, request, &packet.ResponseGetRandomHosts{Hosts: randomHosts}), nil
 }
 
-func NewPulseController(hostNetwork network.HostNetwork, routingTable network.RoutingTable) PulseController {
-	return &pulseController{hostNetwork: hostNetwork, routingTable: routingTable}
+func NewPulseController(hostNetwork network.HostNetwork) PulseController {
+	return &pulseController{hostNetwork: hostNetwork}
 }

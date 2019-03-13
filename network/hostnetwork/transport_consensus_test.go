@@ -44,11 +44,13 @@ type consensusTransportSuite struct {
 func createTwoConsensusNetworks(id1, id2 core.ShortNodeID) (t1, t2 network.ConsensusNetwork, err error) {
 	m := newMockResolver()
 
-	cn1, err := NewConsensusNetwork("127.0.0.1:0", ID1+DOMAIN, id1, m)
+	cn1, err := NewConsensusNetwork("127.0.0.1:0", ID1+DOMAIN, id1)
+	cn1.(*transportConsensus).Resolver = m
 	if err != nil {
 		return nil, nil, err
 	}
-	cn2, err := NewConsensusNetwork("127.0.0.1:0", ID2+DOMAIN, id2, m)
+	cn2, err := NewConsensusNetwork("127.0.0.1:0", ID2+DOMAIN, id2)
+	cn2.(*transportConsensus).Resolver = m
 	if err != nil {
 		return nil, nil, err
 	}

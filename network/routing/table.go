@@ -28,7 +28,7 @@ import (
 )
 
 type Table struct {
-	NodeKeeper network.NodeKeeper
+	NodeKeeper network.NodeKeeper `inject:""`
 }
 
 func (t *Table) ResolveConsensus(id core.ShortNodeID) (*host.Host, error) {
@@ -128,8 +128,4 @@ func (t *Table) GetRandomNodes(count int) []host.Host {
 // Rebalance recreate shards of routing table with known hosts according to new partition policy.
 func (t *Table) Rebalance(network.PartitionPolicy) {
 	log.Warn("not implemented")
-}
-
-func (t *Table) Inject(nodeKeeper network.NodeKeeper) {
-	t.NodeKeeper = nodeKeeper
 }
