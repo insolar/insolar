@@ -26,6 +26,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/consensus/claimhandler"
 	"github.com/insolar/insolar/consensus/phases"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
@@ -87,16 +88,16 @@ func (s *testSuite) TestManyNodesConnect() {
 		s.T().Skip(consensusMinMsg)
 	}
 
-	nodesCount := 10
+	joinersCount := 10
 	nodes := make([]*networkNode, 0)
-	for i := 0; i < nodesCount; i++ {
+	for i := 0; i < joinersCount; i++ {
 		nodes = append(nodes, newNetworkNode())
 		s.preInitNode(nodes[i])
 		s.InitNode(nodes[i])
 	}
 
 	wg := sync.WaitGroup{}
-	wg.Add(nodesCount)
+	wg.Add(joinersCount)
 
 	for _, node := range nodes {
 		go func(wg *sync.WaitGroup, node *networkNode) {
@@ -115,10 +116,7 @@ func (s *testSuite) TestManyNodesConnect() {
 
 	s.waitForConsensus(5)
 
-	joined := nodesCount
-	if s.getMaxJoinCount() < nodesCount {
-		joined = s.getMaxJoinCount()
-	}
+	joined := claimhandler.ApprovedJoinersCount(joinersCount, s.getNodesCount())
 	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
 	s.Equal(s.getNodesCount()+joined, len(activeNodes))
 }
