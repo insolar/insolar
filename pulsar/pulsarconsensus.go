@@ -95,6 +95,7 @@ func (bftCell *BftCell) GetIsEntropyReceived() bool {
 }
 
 func (currentPulsar *Pulsar) verify(ctx context.Context) {
+	panic("verify is broken")
 	ctx, span := instracer.StartSpan(ctx, "Pulsar.verify")
 	defer span.End()
 
@@ -103,7 +104,6 @@ func (currentPulsar *Pulsar) verify(ctx context.Context) {
 
 	if currentPulsar.IsStateFailed() {
 		return
-
 	}
 	logger.Infof("currentPulsar.Neighbours len: %d", len(currentPulsar.Neighbours))
 	if currentPulsar.isStandalone() {
