@@ -160,8 +160,6 @@ type NodeKeeper interface {
 	GetOriginAnnounceClaim(mapper consensus.BitSetMapper) (*consensus.NodeAnnounceClaim, error)
 	// NodesJoinedDuringPreviousPulse returns true if the last Sync call contained approved Join claims
 	NodesJoinedDuringPreviousPulse() bool
-	// AddPendingClaim add pending claim to the internal queue of claims
-	AddPendingClaim(consensus.ReferendumClaim) bool
 	// GetClaimQueue get the internal queue of claims
 	GetClaimQueue() ClaimQueue
 	// GetUnsyncList get unsync list for current pulse. Has copy of active node list from nodekeeper as internal state.
@@ -258,4 +256,6 @@ type ClaimQueue interface {
 	Front() consensus.ReferendumClaim
 	// Length returns the length of the queue
 	Length() int
+	// Push adds claim to the queue.
+	Push(claim consensus.ReferendumClaim)
 }

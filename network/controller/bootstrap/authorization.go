@@ -248,7 +248,7 @@ func (ac *authorizationController) processRegisterRequest(ctx context.Context, r
 	}
 
 	inslogger.FromContext(ctx).Infof("Added join claim from node %s", request.GetSender())
-	ac.NodeKeeper.AddPendingClaim(data.JoinClaim)
+	ac.NodeKeeper.GetClaimQueue().Push(data.JoinClaim)
 	return ac.transport.BuildResponse(ctx, request, response), nil
 }
 

@@ -203,7 +203,7 @@ func (n *ServiceNetwork) Leave(ctx context.Context, ETA core.PulseNumber) {
 	logger := inslogger.FromContext(ctx)
 	logger.Info("Gracefully stopping service network")
 
-	n.NodeKeeper.AddPendingClaim(&packets.NodeLeaveClaim{ETA: ETA})
+	n.NodeKeeper.GetClaimQueue().Push(&packets.NodeLeaveClaim{ETA: ETA})
 }
 
 // Stop implements core.Component

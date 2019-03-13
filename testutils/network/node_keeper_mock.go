@@ -28,11 +28,6 @@ type NodeKeeperMock struct {
 	AddActiveNodesPreCounter uint64
 	AddActiveNodesMock       mNodeKeeperMockAddActiveNodes
 
-	AddPendingClaimFunc       func(p packets.ReferendumClaim) (r bool)
-	AddPendingClaimCounter    uint64
-	AddPendingClaimPreCounter uint64
-	AddPendingClaimMock       mNodeKeeperMockAddPendingClaim
-
 	AddTemporaryMappingFunc       func(p core.RecordRef, p1 core.ShortNodeID, p2 string) (r error)
 	AddTemporaryMappingCounter    uint64
 	AddTemporaryMappingPreCounter uint64
@@ -163,7 +158,6 @@ func NewNodeKeeperMock(t minimock.Tester) *NodeKeeperMock {
 	}
 
 	m.AddActiveNodesMock = mNodeKeeperMockAddActiveNodes{mock: m}
-	m.AddPendingClaimMock = mNodeKeeperMockAddPendingClaim{mock: m}
 	m.AddTemporaryMappingMock = mNodeKeeperMockAddTemporaryMapping{mock: m}
 	m.GetActiveNodeMock = mNodeKeeperMockGetActiveNode{mock: m}
 	m.GetActiveNodeByShortIDMock = mNodeKeeperMockGetActiveNodeByShortID{mock: m}
@@ -310,153 +304,6 @@ func (m *NodeKeeperMock) AddActiveNodesFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.AddActiveNodesFunc != nil {
 		return atomic.LoadUint64(&m.AddActiveNodesCounter) > 0
-	}
-
-	return true
-}
-
-type mNodeKeeperMockAddPendingClaim struct {
-	mock              *NodeKeeperMock
-	mainExpectation   *NodeKeeperMockAddPendingClaimExpectation
-	expectationSeries []*NodeKeeperMockAddPendingClaimExpectation
-}
-
-type NodeKeeperMockAddPendingClaimExpectation struct {
-	input  *NodeKeeperMockAddPendingClaimInput
-	result *NodeKeeperMockAddPendingClaimResult
-}
-
-type NodeKeeperMockAddPendingClaimInput struct {
-	p packets.ReferendumClaim
-}
-
-type NodeKeeperMockAddPendingClaimResult struct {
-	r bool
-}
-
-//Expect specifies that invocation of NodeKeeper.AddPendingClaim is expected from 1 to Infinity times
-func (m *mNodeKeeperMockAddPendingClaim) Expect(p packets.ReferendumClaim) *mNodeKeeperMockAddPendingClaim {
-	m.mock.AddPendingClaimFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &NodeKeeperMockAddPendingClaimExpectation{}
-	}
-	m.mainExpectation.input = &NodeKeeperMockAddPendingClaimInput{p}
-	return m
-}
-
-//Return specifies results of invocation of NodeKeeper.AddPendingClaim
-func (m *mNodeKeeperMockAddPendingClaim) Return(r bool) *NodeKeeperMock {
-	m.mock.AddPendingClaimFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &NodeKeeperMockAddPendingClaimExpectation{}
-	}
-	m.mainExpectation.result = &NodeKeeperMockAddPendingClaimResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of NodeKeeper.AddPendingClaim is expected once
-func (m *mNodeKeeperMockAddPendingClaim) ExpectOnce(p packets.ReferendumClaim) *NodeKeeperMockAddPendingClaimExpectation {
-	m.mock.AddPendingClaimFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &NodeKeeperMockAddPendingClaimExpectation{}
-	expectation.input = &NodeKeeperMockAddPendingClaimInput{p}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *NodeKeeperMockAddPendingClaimExpectation) Return(r bool) {
-	e.result = &NodeKeeperMockAddPendingClaimResult{r}
-}
-
-//Set uses given function f as a mock of NodeKeeper.AddPendingClaim method
-func (m *mNodeKeeperMockAddPendingClaim) Set(f func(p packets.ReferendumClaim) (r bool)) *NodeKeeperMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.AddPendingClaimFunc = f
-	return m.mock
-}
-
-//AddPendingClaim implements github.com/insolar/insolar/network.NodeKeeper interface
-func (m *NodeKeeperMock) AddPendingClaim(p packets.ReferendumClaim) (r bool) {
-	counter := atomic.AddUint64(&m.AddPendingClaimPreCounter, 1)
-	defer atomic.AddUint64(&m.AddPendingClaimCounter, 1)
-
-	if len(m.AddPendingClaimMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.AddPendingClaimMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to NodeKeeperMock.AddPendingClaim. %v", p)
-			return
-		}
-
-		input := m.AddPendingClaimMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, NodeKeeperMockAddPendingClaimInput{p}, "NodeKeeper.AddPendingClaim got unexpected parameters")
-
-		result := m.AddPendingClaimMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the NodeKeeperMock.AddPendingClaim")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.AddPendingClaimMock.mainExpectation != nil {
-
-		input := m.AddPendingClaimMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, NodeKeeperMockAddPendingClaimInput{p}, "NodeKeeper.AddPendingClaim got unexpected parameters")
-		}
-
-		result := m.AddPendingClaimMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the NodeKeeperMock.AddPendingClaim")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.AddPendingClaimFunc == nil {
-		m.t.Fatalf("Unexpected call to NodeKeeperMock.AddPendingClaim. %v", p)
-		return
-	}
-
-	return m.AddPendingClaimFunc(p)
-}
-
-//AddPendingClaimMinimockCounter returns a count of NodeKeeperMock.AddPendingClaimFunc invocations
-func (m *NodeKeeperMock) AddPendingClaimMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.AddPendingClaimCounter)
-}
-
-//AddPendingClaimMinimockPreCounter returns the value of NodeKeeperMock.AddPendingClaim invocations
-func (m *NodeKeeperMock) AddPendingClaimMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.AddPendingClaimPreCounter)
-}
-
-//AddPendingClaimFinished returns true if mock invocations count is ok
-func (m *NodeKeeperMock) AddPendingClaimFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.AddPendingClaimMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.AddPendingClaimCounter) == uint64(len(m.AddPendingClaimMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.AddPendingClaimMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.AddPendingClaimCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.AddPendingClaimFunc != nil {
-		return atomic.LoadUint64(&m.AddPendingClaimCounter) > 0
 	}
 
 	return true
@@ -3806,10 +3653,6 @@ func (m *NodeKeeperMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to NodeKeeperMock.AddActiveNodes")
 	}
 
-	if !m.AddPendingClaimFinished() {
-		m.t.Fatal("Expected call to NodeKeeperMock.AddPendingClaim")
-	}
-
 	if !m.AddTemporaryMappingFinished() {
 		m.t.Fatal("Expected call to NodeKeeperMock.AddTemporaryMapping")
 	}
@@ -3927,10 +3770,6 @@ func (m *NodeKeeperMock) MinimockFinish() {
 		m.t.Fatal("Expected call to NodeKeeperMock.AddActiveNodes")
 	}
 
-	if !m.AddPendingClaimFinished() {
-		m.t.Fatal("Expected call to NodeKeeperMock.AddPendingClaim")
-	}
-
 	if !m.AddTemporaryMappingFinished() {
 		m.t.Fatal("Expected call to NodeKeeperMock.AddTemporaryMapping")
 	}
@@ -4042,7 +3881,6 @@ func (m *NodeKeeperMock) MinimockWait(timeout time.Duration) {
 	for {
 		ok := true
 		ok = ok && m.AddActiveNodesFinished()
-		ok = ok && m.AddPendingClaimFinished()
 		ok = ok && m.AddTemporaryMappingFinished()
 		ok = ok && m.GetActiveNodeFinished()
 		ok = ok && m.GetActiveNodeByShortIDFinished()
@@ -4077,10 +3915,6 @@ func (m *NodeKeeperMock) MinimockWait(timeout time.Duration) {
 
 			if !m.AddActiveNodesFinished() {
 				m.t.Error("Expected call to NodeKeeperMock.AddActiveNodes")
-			}
-
-			if !m.AddPendingClaimFinished() {
-				m.t.Error("Expected call to NodeKeeperMock.AddPendingClaim")
 			}
 
 			if !m.AddTemporaryMappingFinished() {
@@ -4192,10 +4026,6 @@ func (m *NodeKeeperMock) MinimockWait(timeout time.Duration) {
 func (m *NodeKeeperMock) AllMocksCalled() bool {
 
 	if !m.AddActiveNodesFinished() {
-		return false
-	}
-
-	if !m.AddPendingClaimFinished() {
 		return false
 	}
 

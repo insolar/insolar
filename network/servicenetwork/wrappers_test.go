@@ -133,10 +133,6 @@ func (n *nodeKeeperWrapper) NodesJoinedDuringPreviousPulse() bool {
 	return n.original.NodesJoinedDuringPreviousPulse()
 }
 
-func (n *nodeKeeperWrapper) AddPendingClaim(claim consensus.ReferendumClaim) bool {
-	return n.original.AddPendingClaim(claim)
-}
-
 func (n *nodeKeeperWrapper) GetClaimQueue() network.ClaimQueue {
 	return n.original.GetClaimQueue()
 }
