@@ -22,7 +22,6 @@ import (
 	fuzz "github.com/google/gofuzz"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/stretchr/testify/require"
 )
 
@@ -35,9 +34,9 @@ func TestNewStorageMemory(t *testing.T) {
 func TestDropStorageMemory_Set(t *testing.T) {
 	ms := NewStorageMemory()
 
-	var drops []jet.Drop
+	var drops []Drop
 	dropsIndex := 0
-	f := fuzz.New().Funcs(func(jd *jet.Drop, c fuzz.Continue) {
+	f := fuzz.New().Funcs(func(jd *Drop, c fuzz.Continue) {
 		dropsIndex++
 		jd.Pulse = core.PulseNumber(dropsIndex)
 	}).NumElements(5, 10)
@@ -55,9 +54,9 @@ func TestDropStorageMemory_ForPulse(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	ms := NewStorageMemory()
 
-	err := ms.Set(ctx, core.ZeroJetID, jet.Drop{Pulse: 123})
+	err := ms.Set(ctx, core.ZeroJetID, Drop{Pulse: 123})
 	require.NoError(t, err)
-	err = ms.Set(ctx, *core.NewJetID(1, nil), jet.Drop{Pulse: 2})
+	err = ms.Set(ctx, *core.NewJetID(1, nil), Drop{Pulse: 2})
 	require.NoError(t, err)
 
 	drop, err := ms.ForPulse(ctx, core.ZeroJetID, core.PulseNumber(123))
@@ -70,9 +69,9 @@ func TestDropStorageMemory_DoubleSet(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	ms := NewStorageMemory()
 
-	err := ms.Set(ctx, core.ZeroJetID, jet.Drop{Pulse: 123, Size: 123})
+	err := ms.Set(ctx, core.ZeroJetID, Drop{Pulse: 123, Size: 123})
 	require.NoError(t, err)
-	err = ms.Set(ctx, core.ZeroJetID, jet.Drop{Pulse: 123, Size: 999})
+	err = ms.Set(ctx, core.ZeroJetID, Drop{Pulse: 123, Size: 999})
 	require.NoError(t, err)
 
 	drop, err := ms.ForPulse(ctx, core.ZeroJetID, core.PulseNumber(123))

@@ -21,7 +21,6 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/storage/jet"
 )
 
 type dropKey struct {
@@ -31,32 +30,32 @@ type dropKey struct {
 
 type dropStorageMemory struct {
 	lock sync.RWMutex
-	jets map[dropKey]jet.Drop
+	jets map[dropKey]Drop
 }
 
 // NewStorageMemory creates a new storage, that holds data in a memory.
 func NewStorageMemory() *dropStorageMemory { // nolint: golint
 	return &dropStorageMemory{
-		jets: map[dropKey]jet.Drop{},
+		jets: map[dropKey]Drop{},
 	}
 }
 
 // ForPulse returns a jet.Drop for a provided pulse, that is stored in a memory
-func (m *dropStorageMemory) ForPulse(ctx context.Context, jetID core.JetID, pulse core.PulseNumber) (jet.Drop, error) {
+func (m *dropStorageMemory) ForPulse(ctx context.Context, jetID core.JetID, pulse core.PulseNumber) (Drop, error) {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 
 	key := dropKey{jetID: jetID, pulse: pulse}
 	d, ok := m.jets[key]
 	if !ok {
-		return jet.Drop{}, core.ErrNotFound
+		return Drop{}, core.ErrNotFound
 	}
 
 	return d, nil
 }
 
 // Set saves a provided jet.Drop to a memory
-func (m *dropStorageMemory) Set(ctx context.Context, jetID core.JetID, drop jet.Drop) error {
+func (m *dropStorageMemory) Set(ctx context.Context, jetID core.JetID, drop Drop) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 

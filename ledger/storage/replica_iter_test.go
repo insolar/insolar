@@ -24,19 +24,21 @@ import (
 	"testing"
 
 	"github.com/dgraph-io/badger"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
+
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
-	jetdrop "github.com/insolar/insolar/ledger/storage/drop"
-	"github.com/insolar/insolar/ledger/storage/jet"
+	"github.com/insolar/insolar/ledger/storage/drop"
+	"github.com/insolar/insolar/ledger/storage/index"
 	"github.com/insolar/insolar/ledger/storage/object"
+	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"github.com/stretchr/testify/suite"
 )
 
 type replicaIterSuite struct {
@@ -48,8 +50,8 @@ type replicaIterSuite struct {
 	db      storage.DBContext
 
 	objectStorage storage.ObjectStorage
-	dropModifier  jetdrop.Modifier
-	dropAccessor  jetdrop.Accessor
+	dropModifier  drop.Modifier
+	dropAccessor  drop.Accessor
 }
 
 func NewReplicaIterSuite() *replicaIterSuite {
@@ -72,7 +74,7 @@ func (s *replicaIterSuite) BeforeTest(suiteName, testName string) {
 	s.cleaner = cleaner
 
 	s.objectStorage = storage.NewObjectStorage()
-	dropStorage := jetdrop.NewStorageDB()
+	dropStorage := drop.NewStorageDB()
 	s.dropAccessor = dropStorage
 	s.dropModifier = dropStorage
 
@@ -122,7 +124,7 @@ func Test_StoreKeyValues(t *testing.T) {
 		defer cleaner()
 
 		os := storage.NewObjectStorage()
-		ds := jetdrop.NewStorageDB()
+		ds := drop.NewStorageDB()
 
 		cm := &component.Manager{}
 		cm.Inject(
@@ -227,7 +229,7 @@ func Test_ReplicaIter_Base(t *testing.T) {
 	defer cleaner()
 
 	os := storage.NewObjectStorage()
-	ds := jetdrop.NewStorageDB()
+	ds := drop.NewStorageDB()
 
 	cm := &component.Manager{}
 	cm.Inject(
@@ -355,11 +357,11 @@ func Test_ReplicaIter_Base(t *testing.T) {
 func setDrop(
 	ctx context.Context,
 	t *testing.T,
-	dropModifire jetdrop.Modifier,
+	dropModifire drop.Modifier,
 	jetID core.JetID,
 	pulsenum core.PulseNumber,
 ) {
-	err := dropModifire.Set(ctx, jetID, jet.Drop{Pulse: pulsenum})
+	err := dropModifire.Set(ctx, jetID, drop.Drop{Pulse: pulsenum})
 	require.NoError(t, err)
 }
 

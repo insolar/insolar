@@ -213,7 +213,7 @@ func (m *PulseManager) createDrop(
 	jetID core.RecordID,
 	prevPulse, currentPulse core.PulseNumber,
 ) (
-	drop *jet.Drop,
+	block *drop.Drop,
 	dropSerialized []byte,
 	messages [][]byte,
 	err error,
@@ -240,16 +240,16 @@ func (m *PulseManager) createDrop(
 	// 	return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't GetDrop")
 	// }
 
-	drop = &jet.Drop{
+	block = &drop.Drop{
 		Pulse: currentPulse,
 	}
 
-	err = m.DropModifier.Set(ctx, core.JetID(jetID), *drop)
+	err = m.DropModifier.Set(ctx, core.JetID(jetID), *block)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't SetDrop")
 	}
 
-	dropSerialized, err = jet.Encode(drop)
+	dropSerialized, err = drop.Encode(block)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't Encode")
 	}
@@ -261,7 +261,7 @@ func (m *PulseManager) getExecutorHotData(
 	ctx context.Context,
 	jetID core.RecordID,
 	pulse core.PulseNumber,
-	drop *jet.Drop,
+	drop *drop.Drop,
 	dropSerialized []byte,
 ) (*message.HotData, error) {
 	ctx, span := instracer.StartSpan(ctx, "pulse.prepare_hot_data")
