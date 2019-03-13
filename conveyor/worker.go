@@ -332,6 +332,8 @@ func (w *worker) working() {
 			}
 		case ProcessElements:
 			w.processingElements()
+		default:
+			panic("[ working ] unknown nextWorkerState: " + w.nextWorkerState.String())
 		}
 	}
 }
