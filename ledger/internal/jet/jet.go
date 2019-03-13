@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package storage
+package jet
 
 import (
 	"github.com/insolar/insolar/core"

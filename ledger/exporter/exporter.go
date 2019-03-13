@@ -22,22 +22,24 @@ import (
 	"math"
 	"strconv"
 
+	base58 "github.com/jbenet/go-base58"
+	"github.com/pkg/errors"
+	"github.com/ugorji/go/codec"
+
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/internal/jet"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/object"
-	base58 "github.com/jbenet/go-base58"
-	"github.com/pkg/errors"
-	"github.com/ugorji/go/codec"
 )
 
 // Exporter provides methods for fetching data view from storage.
 type Exporter struct {
 	DB            storage.DBContext     `inject:""`
 	JetStorage    jet.JetStorage        `inject:""`
+
 	ObjectStorage storage.ObjectStorage `inject:""`
 	PulseTracker  storage.PulseTracker  `inject:""`
 	PulseStorage  core.PulseStorage     `inject:""`

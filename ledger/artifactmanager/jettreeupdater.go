@@ -21,7 +21,6 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar"
-	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/pkg/errors"
 
@@ -30,7 +29,7 @@ import (
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/insolar/ledger/storage/jet"
+	"github.com/insolar/insolar/ledger/internal/jet"
 )
 
 type seqEntry struct {
@@ -145,7 +144,7 @@ func (jtu *jetTreeUpdater) releaseJet(ctx context.Context, jetID core.RecordID, 
 		if depth == 0 {
 			break
 		}
-		jetID = core.RecordID(storage.JetParent(core.JetID(jetID)))
+		jetID = core.RecordID(jet.JetParent(core.JetID(jetID)))
 		depth--
 	}
 }

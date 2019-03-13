@@ -28,7 +28,7 @@ import (
 )
 
 // JetStorage provides methods for working with jets
-//go:generate minimock -i github.com/insolar/insolar/ledger/storage/jet.JetStorage -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/internal/jet.JetStorage -o ./ -s _mock.go
 type JetStorage interface {
 	UpdateJetTree(ctx context.Context, pulse core.PulseNumber, setActual bool, ids ...core.RecordID)
 	FindJet(ctx context.Context, pulse core.PulseNumber, id core.RecordID) (*core.RecordID, bool)

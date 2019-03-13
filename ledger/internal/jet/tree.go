@@ -22,7 +22,6 @@ import (
 	"strings"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/storage"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
 )
@@ -249,7 +248,7 @@ func (t *Tree) Find(id core.RecordID) (*core.RecordID, bool) {
 	}
 	hash := id.Hash()
 	j, depth := t.Head.Find(hash, 0)
-	recID := core.RecordID(*core.NewJetID(uint8(depth), storage.ResetBits(hash, depth)))
+	recID := core.RecordID(*core.NewJetID(uint8(depth), ResetBits(hash, depth)))
 	return &recID, j.Actual
 }
 
@@ -278,8 +277,8 @@ func (t *Tree) Split(jetID core.RecordID) (*core.RecordID, *core.RecordID, error
 	}
 	j.Right = &jet{}
 	j.Left = &jet{}
-	leftPrefix := storage.ResetBits(prefix, depth)
-	rightPrefix := storage.ResetBits(prefix, depth)
+	leftPrefix := ResetBits(prefix, depth)
+	rightPrefix := ResetBits(prefix, depth)
 	setBit(rightPrefix, depth)
 	first := core.RecordID(*core.NewJetID(depth+1, leftPrefix))
 	second := core.RecordID(*core.NewJetID(depth+1, rightPrefix))
