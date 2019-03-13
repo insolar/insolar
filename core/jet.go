@@ -18,6 +18,8 @@ package core
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
 )
 
 const (
@@ -58,4 +60,40 @@ func (id JetID) Prefix() []byte {
 		panic(fmt.Sprintf("provided id %b is not a jet id", id))
 	}
 	return id[PulseNumberSize+1:]
+}
+
+// DebugString prints JetID in human readable form.
+func (id *JetID) DebugString() string {
+	depth := int(id[PulseNumberSize])
+	if depth == 0 {
+		return "[JET 0 -]"
+	}
+
+	prefix := id[PulseNumberSize+1:]
+	var res strings.Builder
+	res.WriteString("[JET ")
+	res.WriteString(strconv.Itoa(depth))
+	res.WriteString(" ")
+	if len(prefix)*8 < depth {
+		return fmt.Sprintf("[JET: <wrong format> %d %b]", depth, prefix)
+	}
+
+ScanPrefix:
+	for _, b := range prefix {
+		for j := 7; j >= 0; j-- {
+			if 0 == (b >> uint(j) & 0x01) {
+				res.WriteString("0")
+			} else {
+				res.WriteString("1")
+			}
+
+			depth--
+			if depth == 0 {
+				res.WriteString("]")
+				break ScanPrefix
+			}
+		}
+	}
+
+	return res.String()
 }
