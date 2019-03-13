@@ -22,6 +22,7 @@ import (
 	"sync"
 
 	"github.com/dgraph-io/badger"
+	"github.com/dgraph-io/badger/options"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/storage/jet"
@@ -122,6 +123,7 @@ func NewDB(conf configuration.Ledger, opts *badger.Options) (DBContext, error) {
 
 	opts.Dir = dir
 	opts.ValueDir = dir
+	opts.ValueLogLoadingMode = options.FileIO
 
 	bdb, err := badger.Open(*opts)
 	if err != nil {
