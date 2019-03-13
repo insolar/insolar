@@ -15,38 +15,35 @@
  *
  */
 
-package pulse
+package storage
 
 import (
 	"context"
 	"github.com/insolar/insolar/core"
 )
 
-// Accessor provides methods for accessing pulses.
-type Accessor interface {
-	ForPulseNumber(context.Context, core.PulseNumber) (core.Pulse, error)
-	Latest(ctx context.Context) (core.Pulse, error)
+// CloudHashAccessor provides methods for accessing CloudHash.
+type CloudHashAccessor interface {
+	ForPulseNumber(context.Context, core.PulseNumber) ([]byte, error)
+	Latest(ctx context.Context) ([]byte, error)
 }
 
-// Appender provides method for appending pulses to storage.
-type Appender interface {
-	Append(ctx context.Context, pulse core.Pulse) error
+// CloudHashAppender provides method for appending pulses to storage.
+type CloudHashAppender interface {
+	Append(ctx context.Context, pulse core.PulseNumber, cloudHash []byte) error
 }
 
-// Calculator performs calculations for pulses.
-type Calculator interface {
-	Forwards(ctx context.Context, pn core.PulseNumber, steps int) (core.Pulse, error)
-	Backwards(ctx context.Context, pn core.PulseNumber, steps int) (core.Pulse, error)
+type cloudHashStorage struct {
 }
 
-// RangeHasher provides methods for hashing and validate pulse chain
-type RangeHasher interface {
-	GetRangeHash(core.PulseRange) ([]byte, error)œ
-	ValidateRangeHash(core.PulseRange, []byte) (bool, error)
+func (c *cloudHashStorage) ForPulseNumber(context.Context, core.PulseNumber) ([]byte, error) {
+	panic("implement me")
 }
 
-// ChainHasher provides methods for hashing and validate pulse chain
-type ChainHasher interface {
-	GetRangeHash(chain []core.PulseNumber) ([]byte, error)
-	ValidateRangeHash(chain []core.PulseNumber, hash []byte) (bool, error)
+func (c *cloudHashStorage) Latest(context.Context) ([]byte, error) {
+	panic("implement me")
+}
+
+func (c *cloudHashStorage) Append(ctx context.Context, pulse core.PulseNumber, cloudHash []byte) error {
+	panic("implement me")
 }
