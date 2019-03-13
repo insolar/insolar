@@ -137,6 +137,8 @@ func (currentPulsar *Pulsar) verify(ctx context.Context) {
 
 		currentPulsar.StateSwitcher.SwitchToState(ctx, SendingPulse, nil)
 
+		logger.Infof("confirmation pulse len: %d", len(currentPulsar.CurrentSlotSenderConfirmations))
+
 		return
 	}
 
