@@ -1,9 +1,9 @@
-package adapter
+package iadapter
 
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "IAdapterResponse" can be found in github.com/insolar/insolar/conveyor/interfaces/adapter
+The original interface "IAdapterResponse" can be found in github.com/insolar/insolar/conveyor/interfaces/iadapter
 */
 import (
 	"sync/atomic"
@@ -12,7 +12,7 @@ import (
 	"github.com/gojuno/minimock"
 )
 
-//IAdapterResponseMock implements github.com/insolar/insolar/conveyor/interfaces/adapter.IAdapterResponse
+//IAdapterResponseMock implements github.com/insolar/insolar/conveyor/interfaces/iadapter.IAdapterResponse
 type IAdapterResponseMock struct {
 	t minimock.Tester
 
@@ -37,7 +37,7 @@ type IAdapterResponseMock struct {
 	GetRespPayloadMock       mIAdapterResponseMockGetRespPayload
 }
 
-//NewIAdapterResponseMock returns a mock for github.com/insolar/insolar/conveyor/interfaces/adapter.IAdapterResponse
+//NewIAdapterResponseMock returns a mock for github.com/insolar/insolar/conveyor/interfaces/iadapter.IAdapterResponse
 func NewIAdapterResponseMock(t minimock.Tester) *IAdapterResponseMock {
 	m := &IAdapterResponseMock{t: t}
 
@@ -115,7 +115,7 @@ func (m *mIAdapterResponseMockGetAdapterID) Set(f func() (r uint32)) *IAdapterRe
 	return m.mock
 }
 
-//GetAdapterID implements github.com/insolar/insolar/conveyor/interfaces/adapter.IAdapterResponse interface
+//GetAdapterID implements github.com/insolar/insolar/conveyor/interfaces/iadapter.IAdapterResponse interface
 func (m *IAdapterResponseMock) GetAdapterID() (r uint32) {
 	counter := atomic.AddUint64(&m.GetAdapterIDPreCounter, 1)
 	defer atomic.AddUint64(&m.GetAdapterIDCounter, 1)
@@ -249,7 +249,7 @@ func (m *mIAdapterResponseMockGetElementID) Set(f func() (r uint32)) *IAdapterRe
 	return m.mock
 }
 
-//GetElementID implements github.com/insolar/insolar/conveyor/interfaces/adapter.IAdapterResponse interface
+//GetElementID implements github.com/insolar/insolar/conveyor/interfaces/iadapter.IAdapterResponse interface
 func (m *IAdapterResponseMock) GetElementID() (r uint32) {
 	counter := atomic.AddUint64(&m.GetElementIDPreCounter, 1)
 	defer atomic.AddUint64(&m.GetElementIDCounter, 1)
@@ -383,7 +383,7 @@ func (m *mIAdapterResponseMockGetHandlerID) Set(f func() (r uint32)) *IAdapterRe
 	return m.mock
 }
 
-//GetHandlerID implements github.com/insolar/insolar/conveyor/interfaces/adapter.IAdapterResponse interface
+//GetHandlerID implements github.com/insolar/insolar/conveyor/interfaces/iadapter.IAdapterResponse interface
 func (m *IAdapterResponseMock) GetHandlerID() (r uint32) {
 	counter := atomic.AddUint64(&m.GetHandlerIDPreCounter, 1)
 	defer atomic.AddUint64(&m.GetHandlerIDCounter, 1)
@@ -517,7 +517,7 @@ func (m *mIAdapterResponseMockGetRespPayload) Set(f func() (r interface{})) *IAd
 	return m.mock
 }
 
-//GetRespPayload implements github.com/insolar/insolar/conveyor/interfaces/adapter.IAdapterResponse interface
+//GetRespPayload implements github.com/insolar/insolar/conveyor/interfaces/iadapter.IAdapterResponse interface
 func (m *IAdapterResponseMock) GetRespPayload() (r interface{}) {
 	counter := atomic.AddUint64(&m.GetRespPayloadPreCounter, 1)
 	defer atomic.AddUint64(&m.GetRespPayloadCounter, 1)

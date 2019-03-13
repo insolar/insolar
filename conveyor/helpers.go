@@ -16,11 +16,16 @@
 
 package conveyor
 
-const (
-	smShift = 10
+import (
+	"fmt"
 )
 
-// first part of elUpdate is State Machine, second part is State
+const (
+	smShift       = 10
+	maxStateValue = (1 << smShift) - 1
+)
+
+// first part of elUpdate is State Machine, second part is State.
 func extractStates(elUpdate uint32) (uint32, uint32) {
 	sm := elUpdate >> smShift
 	state := elUpdate & ((1 << smShift) - 1)
@@ -28,7 +33,11 @@ func extractStates(elUpdate uint32) (uint32, uint32) {
 	return sm, state
 }
 
+// 'state' MUST be less than maxStateValue ( 2^smShift )
 func joinStates(sm uint32, state uint32) uint32 {
+	if state > maxStateValue {
+		panic(fmt.Sprint("Invalid state: ", state))
+	}
 	result := sm
 	result = result << smShift
 	return result + state
