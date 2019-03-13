@@ -846,15 +846,17 @@ func Test_readResponseQueue_BadElementIdInResponse(t *testing.T) {
 				require.NoError(t, slot.pushElement(element))
 			}
 
+			require.NoError(t, worker.readResponseQueue())
 			worker.readResponseQueue()
 
+			require.Empty(t, worker.postponedResponses)
 			areSlotStatesEqual(&oldSlot, slot, t, false)
 
 		})
 	}
 }
 
-func Test_processingElements_ResponseHandlerError(t *testing.T) {
+func Test_readResponseQueue_ResponseHandlerError(t *testing.T) {
 	sm := istatemachine.NewStateMachineTypeMock(t)
 	sm.GetResponseHandlerFunc = func(p constant.PulseState, p1 uint32) (r istatemachine.AdapterResponseHandler) {
 		return func(element islot.SlotElementHelper, response iadapter.IAdapterResponse) (interface{}, uint32, error) {
@@ -880,7 +882,8 @@ func Test_processingElements_ResponseHandlerError(t *testing.T) {
 			_, err := slot.createElement(sm, 0, queue.OutputElement{})
 			require.NoError(t, err)
 
-			worker.readResponseQueue()
+			require.NoError(t, worker.readResponseQueue())
+			require.Empty(t, worker.postponedResponses)
 			areSlotStatesEqual(&oldSlot, slot, t, false)
 
 			element := slot.popElement(ActiveElement)
@@ -890,7 +893,18 @@ func Test_processingElements_ResponseHandlerError(t *testing.T) {
 			require.Equal(t, responsePayload, element.payload)
 		})
 	}
+}
 
+func Test_readResponseQueue_NestedEventNotImplementedYet(t *testing.T) {
+	for _, tt := range testPulseStates {
+		t.Run(tt.String(), func(t *testing.T) {
+			slot, worker := makeSlotAndWorker(tt, 22)
+			slot.responseQueue.PushSignal(10000, mockCallback())
+			require.PanicsWithValue(t, "Nested request is Not implemented", func() {
+				require.NoError(t, worker.readResponseQueue())
+			})
+		})
+	}
 }
 
 // ---- initializing
