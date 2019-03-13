@@ -40,7 +40,6 @@ import (
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
-	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -91,7 +90,7 @@ func (s *testSuite) SetupTest() {
 	s.fixtureMap[s.T().Name()] = newFixture()
 	var err error
 	s.fixture().pulsar, err = NewTestPulsar(pulseTimeMs, reqTimeoutMs, pulseDelta)
-	require.NoError(s.T(), err)
+	s.Require().NoError(err)
 
 	log.Info("SetupTest")
 
@@ -110,14 +109,14 @@ func (s *testSuite) SetupTest() {
 
 	log.Info("Start test pulsar")
 	err = s.fixture().pulsar.Start(s.fixture().ctx, pulseReceivers)
-	require.NoError(s.T(), err)
+	s.Require().NoError(err)
 
 	log.Info("Setup bootstrap nodes")
 	s.SetupNodesNetwork(s.fixture().bootstrapNodes)
 
 	<-time.After(time.Second * 2)
 	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
-	require.Equal(s.T(), len(s.fixture().bootstrapNodes), len(activeNodes))
+	s.Require().Equal(len(s.fixture().bootstrapNodes), len(activeNodes))
 
 	if len(s.fixture().networkNodes) > 0 {
 		log.Info("Setup network nodes")
@@ -128,8 +127,8 @@ func (s *testSuite) SetupTest() {
 		activeNodes1 := s.fixture().networkNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
 		activeNodes2 := s.fixture().networkNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
 
-		require.Equal(s.T(), s.getNodesCount(), len(activeNodes1))
-		require.Equal(s.T(), s.getNodesCount(), len(activeNodes2))
+		s.Require().Equal(s.getNodesCount(), len(activeNodes1))
+		s.Require().Equal(s.getNodesCount(), len(activeNodes2))
 	}
 	fmt.Println("=================== SetupTest() Done")
 }
@@ -155,7 +154,7 @@ func (s *testSuite) SetupNodesNetwork(nodes []*networkNode) {
 			select {
 			case err := <-results:
 				count++
-				s.NoError(err)
+				s.Require().NoError(err)
 				if count == expected {
 					return nil
 				}
@@ -171,7 +170,7 @@ func (s *testSuite) SetupNodesNetwork(nodes []*networkNode) {
 	}
 
 	err := waitResults(results, len(nodes))
-	s.NoError(err)
+	s.Require().NoError(err)
 
 	log.Info("Start nodes")
 	for _, node := range nodes {
@@ -179,7 +178,7 @@ func (s *testSuite) SetupNodesNetwork(nodes []*networkNode) {
 	}
 
 	err = waitResults(results, len(nodes))
-	s.NoError(err)
+	s.Require().NoError(err)
 }
 
 // TearDownSuite shutdowns all nodes in network, calls once after all tests in suite finished
@@ -241,14 +240,14 @@ func (s *testSuite) getNodesCount() int {
 func (s *testSuite) InitNode(node *networkNode) {
 	if node.componentManager != nil {
 		err := node.init(s.fixture().ctx)
-		s.NoError(err)
+		s.Require().NoError(err)
 	}
 }
 
 func (s *testSuite) StartNode(node *networkNode) {
 	if node.componentManager != nil {
 		err := node.componentManager.Start(s.fixture().ctx)
-		s.NoError(err)
+		s.Require().NoError(err)
 	}
 }
 
@@ -300,13 +299,13 @@ func (n *networkNode) init(ctx context.Context) error {
 
 func (s *testSuite) initCrypto(node *networkNode) (*certificate.CertificateManager, core.CryptographyService) {
 	pubKey, err := node.cryptographyService.GetPublicKey()
-	s.NoError(err)
+	s.Require().NoError(err)
 
 	// init certificate
 
 	proc := platformpolicy.NewKeyProcessor()
 	publicKey, err := proc.ExportPublicKeyPEM(pubKey)
-	s.NoError(err)
+	s.Require().NoError(err)
 
 	cert := &certificate.Certificate{}
 	cert.PublicKey = string(publicKey[:])
@@ -317,7 +316,7 @@ func (s *testSuite) initCrypto(node *networkNode) (*certificate.CertificateManag
 	for _, b := range s.fixture().bootstrapNodes {
 		pubKey, _ := b.cryptographyService.GetPublicKey()
 		pubKeyBuf, err := proc.ExportPublicKeyPEM(pubKey)
-		s.NoError(err)
+		s.Require().NoError(err)
 
 		bootstrapNode := certificate.NewBootstrapNode(
 			pubKey,
@@ -330,11 +329,11 @@ func (s *testSuite) initCrypto(node *networkNode) (*certificate.CertificateManag
 
 	// dump cert and read it again from json for correct private files initialization
 	jsonCert, err := cert.Dump()
-	s.NoError(err)
+	s.Require().NoError(err)
 	log.Infof("cert: %s", jsonCert)
 
 	cert, err = certificate.ReadCertificateFromReader(pubKey, proc, strings.NewReader(jsonCert))
-	s.NoError(err)
+	s.Require().NoError(err)
 	return certificate.NewCertificateManager(cert), node.cryptographyService
 }
 
@@ -386,7 +385,7 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	node.componentManager = &component.Manager{}
 	node.componentManager.Register(platformpolicy.NewPlatformCryptographyScheme())
 	serviceNetwork, err := NewServiceNetwork(cfg, node.componentManager, false)
-	s.NoError(err)
+	s.Require().NoError(err)
 
 	netCoordinator := testutils.NewNetworkCoordinatorMock(s.T())
 	netCoordinator.ValidateCertMock.Set(func(p context.Context, p1 core.AuthorizationCertificate) (bool, error) {
