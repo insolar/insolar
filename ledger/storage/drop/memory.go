@@ -67,6 +67,7 @@ func (m *dropStorageMemory) Set(ctx context.Context, jetID core.JetID, drop jet.
 	return nil
 }
 
+// Delete methods removes a drop from a memory storage.
 func (m *dropStorageMemory) Delete(pulse core.PulseNumber) {
 	m.lock.Lock()
 	for key := range m.jets {

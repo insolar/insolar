@@ -17,15 +17,17 @@
 package drop
 
 import (
+	"bytes"
 	"context"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/db"
 	"github.com/insolar/insolar/ledger/storage/jet"
 )
 
 type dropStorageDB struct {
-	DB storage.DBContext `inject:""`
+	DB db.DB `inject:""`
 }
 
 // NewStorageDB creates a new storage, that holds data in a db
@@ -33,13 +35,25 @@ func NewStorageDB() *dropStorageDB { // nolint: golint
 	return &dropStorageDB{}
 }
 
+type dropDbKey struct {
+	jetPrefix []byte
+	pn        core.PulseNumber
+}
+
+func (dk *dropDbKey) Scope() db.Scope {
+	return db.ScopeJetDrop
+}
+
+func (dk *dropDbKey) ID() []byte {
+	return bytes.Join([][]byte{}, nil)
+}
+
 // ForPulse returns a jet.Drop for a provided pulse, that is stored in a db
 func (ds *dropStorageDB) ForPulse(ctx context.Context, jetID core.JetID, pulse core.PulseNumber) (jet.Drop, error) {
-	prefix := jetID.Prefix()
-	k := storage.JetDropPrefixKey(prefix, pulse)
+	k := dropDbKey{jetID.Prefix(), pulse}
 
 	// buf, err := db.get(ctx, k)
-	buf, err := ds.DB.Get(ctx, k)
+	buf, err := ds.DB.Get(&k)
 	if err != nil {
 		return jet.Drop{}, err
 	}
@@ -52,9 +66,9 @@ func (ds *dropStorageDB) ForPulse(ctx context.Context, jetID core.JetID, pulse c
 
 // Set saves a provided jet.Drop to a db
 func (ds *dropStorageDB) Set(ctx context.Context, jetID core.JetID, drop jet.Drop) error {
-	prefix := jetID.Prefix()
-	k := storage.JetDropPrefixKey(prefix, drop.Pulse)
-	_, err := ds.DB.Get(ctx, k)
+	k := dropDbKey{jetID.Prefix(), drop.Pulse}
+
+	_, err := ds.DB.Get(&k)
 	if err == nil {
 		return storage.ErrOverride
 	}
@@ -63,9 +77,11 @@ func (ds *dropStorageDB) Set(ctx context.Context, jetID core.JetID, drop jet.Dro
 	if err != nil {
 		return err
 	}
-	return ds.DB.Set(ctx, k, encoded)
+	return ds.DB.Set(&k, encoded)
 }
 
+// Delete methods removes a drop from a storage. But the method mustn't be called for a db storage.
+// Because db storage must be used only on a heavy-node
 func (ds *dropStorageDB) Delete(pulse core.PulseNumber) {
-	panic("shouldn't be called. because db storage should work only on heavy. heavy should remove any data")
+	panic("mustn't be called. because db storage must work only on a heavy node. heavy mustn't remove any data")
 }
