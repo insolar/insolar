@@ -167,7 +167,7 @@ func (w *worker) readInputQueueWorking() error {
 	return nil
 }
 
-func updateElement(element *slotElement, payLoad interface{}, fullState uint32) {
+func updateElement(element *slotElement, payload interface{}, fullState uint32) {
 	log.Debugf("[ updateElement ] starts ... ( element: %+v. fullstate: %d )", element, fullState)
 	if fullState != 0 {
 		sm, state := extractStates(fullState)
@@ -175,7 +175,7 @@ func updateElement(element *slotElement, payLoad interface{}, fullState uint32) 
 		if sm != 0 {
 			machineType = GetStateMachineByType(MachineType(sm))
 		}
-		element.update(state, payLoad, machineType)
+		element.update(state, payload, machineType)
 		return
 	}
 	element.setDeleteState()
@@ -194,7 +194,7 @@ func (w *worker) processResponse(resp queue.OutputElement) error {
 
 	respHandler := element.stateMachineType.GetResponseHandler(w.slot.pulseState, element.state)
 
-	payLoad, newState, err := respHandler(element, adapterResp)
+	payload, newState, err := respHandler(element, adapterResp)
 	if err != nil {
 		log.Error("[ processResponse ] Response handler errors: ", err)
 		respErrorHandler := element.stateMachineType.GetResponseErrorHandler(w.slot.pulseState, element.state)
@@ -202,10 +202,10 @@ func (w *worker) processResponse(resp queue.OutputElement) error {
 			panic(fmt.Sprintf("[ processResponse ] No response error handler. State: %d. AdapterResp: %+v", element.state, adapterResp))
 		}
 
-		payLoad, newState = respErrorHandler(element, adapterResp, err)
+		payload, newState = respErrorHandler(element, adapterResp, err)
 	}
 
-	updateElement(element, payLoad, newState)
+	updateElement(element, payload, newState)
 	err = w.slot.pushElement(element)
 	if err != nil {
 		return errors.Wrapf(err, "[ processResponse ] Can't pushElement: %+v", element)
@@ -303,13 +303,13 @@ func (w *worker) processingElements() {
 
 func (w *worker) processOneElement(element *slotElement) bool {
 	transitionHandler := element.stateMachineType.GetTransitionHandler(w.slot.pulseState, element.state)
-	payLoad, newState, err := transitionHandler(element)
+	payload, newState, err := transitionHandler(element)
 	if err != nil {
 		log.Error("[ processingElements ] Transition handler error: ", err)
 		errorHandler := element.stateMachineType.GetTransitionErrorHandler(w.slot.pulseState, element.state)
-		payLoad, newState = errorHandler(element, err)
+		payload, newState = errorHandler(element, err)
 	}
-	updateElement(element, payLoad, newState)
+	updateElement(element, payload, newState)
 
 	stopProcessingElement := (newState == 0) || element.isDeactivated()
 
@@ -447,15 +447,15 @@ func (w *worker) migrate(status ActivationStatus) error {
 			continue
 		}
 
-		payLoad, newState, err := migHandler(element)
+		payload, newState, err := migHandler(element)
 		if err != nil {
 			log.Error("[ migrate ] Response handler errors: ", err)
 			respErrorHandler := element.stateMachineType.GetTransitionErrorHandler(w.slot.pulseState, element.state)
 
-			payLoad, newState = respErrorHandler(element, err)
+			payload, newState = respErrorHandler(element, err)
 		}
 
-		updateElement(element, payLoad, newState)
+		updateElement(element, payload, newState)
 
 		err = w.slot.pushElement(element)
 		if err != nil {

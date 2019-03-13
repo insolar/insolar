@@ -201,14 +201,14 @@ func Test_readInputQueueWorking_EventOnly(t *testing.T) {
 		t.Run(tt.String(), func(t *testing.T) {
 			slot, worker := makeSlotAndWorker(tt, 22)
 			oldSlot := *slot
-			var payLoad interface{}
-			payLoad = 99
-			require.NoError(t, slot.inputQueue.SinkPush(payLoad))
+			var payload interface{}
+			payload = 99
+			require.NoError(t, slot.inputQueue.SinkPush(payload))
 			require.NoError(t, worker.readInputQueueWorking())
 
 			areSlotStatesEqual(&oldSlot, slot, t, false)
 			el := slot.popElement(ActiveElement)
-			require.Equal(t, payLoad, el.payload)
+			require.Equal(t, payload, el.payload)
 		})
 	}
 }
@@ -351,29 +351,29 @@ func Test_readInputQueueSuspending_EventOnly(t *testing.T) {
 		t.Run(tt.String(), func(t *testing.T) {
 			slot, worker := makeSlotAndWorker(tt, 22)
 			oldSlot := *slot
-			var payLoad interface{}
-			payLoad = 99
-			require.NoError(t, slot.inputQueue.SinkPush(payLoad))
+			var payload interface{}
+			payload = 99
+			require.NoError(t, slot.inputQueue.SinkPush(payload))
 			require.NoError(t, worker.readInputQueueSuspending())
 
 			areSlotStatesEqual(&oldSlot, slot, t, false)
 			el := slot.popElement(ActiveElement)
-			require.Equal(t, payLoad, el.payload)
+			require.Equal(t, payload, el.payload)
 		})
 	}
 }
 
 func Test_readInputQueueSuspending_EventOnly_Past(t *testing.T) {
 	slot, worker := makeSlotAndWorker(constant.Past, 4444)
-	var payLoad interface{}
-	payLoad = 99
-	require.NoError(t, slot.inputQueue.SinkPush(payLoad))
+	var payload interface{}
+	payload = 99
+	require.NoError(t, slot.inputQueue.SinkPush(payload))
 	require.NoError(t, worker.readInputQueueSuspending())
 
 	require.Equal(t, Working, slot.slotState)
 
 	el := slot.popElement(ActiveElement)
-	require.Equal(t, payLoad, el.payload)
+	require.Equal(t, payload, el.payload)
 }
 
 func Test_readInputQueueSuspending_SignalsAndEvents(t *testing.T) {

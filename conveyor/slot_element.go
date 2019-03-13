@@ -57,9 +57,9 @@ func (se *slotElement) setDeleteState() {
 	se.activationStatus = EmptyElement
 }
 
-func (se *slotElement) update(state uint32, payLoad interface{}, sm istatemachine.StateMachineType) {
+func (se *slotElement) update(state uint32, payload interface{}, sm istatemachine.StateMachineType) {
 	se.state = state
-	se.payload = payLoad
+	se.payload = payload
 	se.stateMachineType = sm
 }
 
