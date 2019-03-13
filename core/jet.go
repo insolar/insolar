@@ -20,6 +20,13 @@ import (
 	"fmt"
 )
 
+const (
+	// JetSize is a Jet's size (depth+prefix).
+	JetSize = RecordIDSize - PulseNumberSize
+	// JetPrefixSize is a Jet's prefix size.
+	JetPrefixSize = JetSize - 1
+)
+
 // JetID should be used, when id is a jetID
 type JetID RecordID
 
