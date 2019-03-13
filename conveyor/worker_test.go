@@ -820,7 +820,7 @@ func Test_readResponseQueue_BadTypeInResponseQueue(t *testing.T) {
 			slot, worker := makeSlotAndWorker(tt, 22)
 
 			slot.responseQueue.SinkPush(76576)
-			require.PanicsWithValue(t, "[ readResponseQueue ] Bad type in adapter response queue: int", func() {
+			require.PanicsWithValue(t, "[ processResponse ] Bad type in adapter response queue: int", func() {
 				worker.readResponseQueue()
 			})
 		})

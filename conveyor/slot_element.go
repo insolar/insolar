@@ -57,6 +57,16 @@ func (se *slotElement) setDeleteState() {
 	se.activationStatus = EmptyElement
 }
 
+func (se *slotElement) update(state uint32, payLoad interface{}, sm istatemachine.StateMachineType) {
+	se.state = state
+	se.payload = payLoad
+	se.stateMachineType = sm
+}
+
+func (se *slotElement) isDeactivated() bool {
+	return se.activationStatus == NotActiveElement
+}
+
 // GetParentElementID implements SlotElementRestrictedHelper
 func (se *slotElement) GetParentElementID() uint32 {
 	return se.parentElementID
