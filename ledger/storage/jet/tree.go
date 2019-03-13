@@ -292,6 +292,8 @@ func (t *Tree) LeafIDs() []core.RecordID {
 	return ids
 }
 
+// getBit returns true if bit at index is set to 1 in  byte array.
+// Panics if index is out of range (value size * 8).
 func getBit(value []byte, index uint8) bool {
 	if uint(index) >= uint(len(value)*8) {
 		panic(fmt.Sprintf("index overflow: value=%08b, index=%v", value, index))
@@ -302,6 +304,8 @@ func getBit(value []byte, index uint8) bool {
 	return value[byteIndex]&mask != 0
 }
 
+// setBit sets bit to 1 in byte array at index.
+// Panics if index is out of range (value size * 8).
 func setBit(value []byte, index uint8) {
 	if uint(index) >= uint(len(value)*8) {
 		panic("index overflow")
