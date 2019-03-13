@@ -75,7 +75,7 @@ func GetStateMachineByType(mtype MachineType) istatemachine.StateMachineType {
 }
 
 func (w *worker) changePulseState() {
-	log.Debugf("[ changePulseState ] starts ... ( w.slot.pulseState: %s )", w.slot.pulseState.String())
+	log.Debugf("[ changePulseState ] starts ... ( pulseState: %s )", w.slot.pulseState.String())
 	switch w.slot.pulseState {
 	case constant.Future:
 		w.slot.pulseState = constant.Present
@@ -93,7 +93,7 @@ func (w *worker) changePulseState() {
 // If we have both signals ( PendingPulseSignal and ActivatePulseSignal ),
 // then change slot state and push ActivatePulseSignal back to queue.
 func (w *worker) processSignalsWorking(elements []queue.OutputElement) int {
-	log.Debugf("[ processSignalsWorking ] starts ... ( len: %d )", len(elements))
+	log.Debugf("[ processSignalsWorking ] starts ... ( len: %d. pulseState: %s", w.slot.pulseState.String(), len(elements))
 	numSignals := 0
 	hasPending := false
 	hasActivate := false
@@ -139,7 +139,7 @@ func (w *worker) processSignalsWorking(elements []queue.OutputElement) int {
 }
 
 func (w *worker) readInputQueueWorking() error {
-	log.Debugf("[ readInputQueueWorking ] starts ... ( w.slot.pulseState: %s )", w.slot.pulseState.String())
+	log.Debugf("[ readInputQueueWorking ] starts ... ( pulseState: %s )", w.slot.pulseState.String())
 	elements := w.slot.inputQueue.RemoveAll()
 
 	numSignals := w.processSignalsWorking(elements)
@@ -158,7 +158,7 @@ func (w *worker) readInputQueueWorking() error {
 }
 
 func setNewElementState(element *slotElement, payLoad interface{}, fullState uint32) {
-	log.Debugf("[ setNewElementState ] starts ... ( element: %+v, fullstate: %d )", element, fullState)
+	log.Debugf("[ setNewElementState ] starts ... ( element: %+v. fullstate: %d )", element, fullState)
 	if fullState != 0 {
 		sm, state := extractStates(fullState)
 		element.state = state
@@ -172,7 +172,7 @@ func setNewElementState(element *slotElement, payLoad interface{}, fullState uin
 }
 
 func (w *worker) readResponseQueue() error {
-	log.Debugf("[ readResponseQueue ] starts ... ( w.slot.pulseState: %s )", w.slot.pulseState.String())
+	log.Debugf("[ readResponseQueue ] starts ... ( pulseState: %s )", w.slot.pulseState.String())
 	w.postponedResponses = append(w.postponedResponses, w.slot.responseQueue.RemoveAll()...)
 	w.nextWorkerState = ProcessElements
 
@@ -228,13 +228,13 @@ func (w *worker) readResponseQueue() error {
 }
 
 func (w *worker) waitQueuesOrTick() {
-	log.Debug("[ waitQueuesOrTick ] sleep ...")
+	log.Debugf("[ waitQueuesOrTick ] starts ... ( pulseState: %s )", w.slot.pulseState.String())
 	time.Sleep(time.Millisecond * 300)
 	//panic("[ waitQueuesOrTick ] implement me") // TODO :
 }
 
 func (w *worker) processingElements() {
-	log.Debugf("[ processingElements ] starts ... ( w.slot.pulseState: %s )", w.slot.pulseState.String())
+	log.Debugf("[ processingElements ] starts ... ( pulseState: %s )", w.slot.pulseState.String())
 	if !w.slot.hasElements(ActiveElement) {
 		if w.slot.pulseState == constant.Past {
 			if w.slot.hasExpired() {
@@ -291,7 +291,7 @@ func (w *worker) processingElements() {
 }
 
 func (w *worker) working() {
-	log.Debugf("[ working ] starts ... ( w.slot.pulseState: %s )", w.slot.pulseState.String())
+	log.Debugf("[ working ] starts ... ( pulseState: %s )", w.slot.pulseState.String())
 	for w.slot.isWorking() {
 		err := w.readInputQueueWorking()
 		if err != nil {
@@ -326,6 +326,7 @@ func (w *worker) working() {
 }
 
 func (w *worker) calculateNodeState() {
+	log.Debugf("[ calculateNodeState ] starts ... ( pulseState: %s )", w.slot.pulseState.String())
 	// TODO: приходит PreparePulse, в нём есть callback, вызываем какой-то адаптер, куда передаем этот callback
 	w.nodeState = 555
 	if w.preparePulseSync != nil {
@@ -336,13 +337,14 @@ func (w *worker) calculateNodeState() {
 }
 
 func (w *worker) sendRemovalSignalToConveyor() {
+	log.Debugf("[ sendRemovalSignalToConveyor ] starts ... ( pulseState: %s )", w.slot.pulseState.String())
 	w.slot.removeSlotCallback(w.slot.pulseNumber)
 	// TODO: how to do it?
 	// catch conveyor lock, check input queue, if It's empty - remove slot from map, if it's not - got to Working state
 }
 
 func (w *worker) processSignalsSuspending(elements []queue.OutputElement) int {
-	log.Debugf("[ processSignalsSuspending ] starts ... ( w.slot.pulseState: %s )", w.slot.pulseState.String())
+	log.Debugf("[ processSignalsSuspending ] starts ... ( pulseState: %s )", w.slot.pulseState.String())
 	numSignals := 0
 	// TODO: add check if many signals come
 	for i := 0; i < len(elements); i++ {
@@ -371,7 +373,7 @@ func (w *worker) processSignalsSuspending(elements []queue.OutputElement) int {
 }
 
 func (w *worker) readInputQueueSuspending() error {
-	log.Debugf("[ readInputQueueSuspending ] starts ... ( w.slot.pulseState: %s )", w.slot.pulseState.String())
+	log.Debugf("[ readInputQueueSuspending ] starts ... ( pulseState: %s )", w.slot.pulseState.String())
 	elements := w.slot.inputQueue.RemoveAll()
 	numSignals := w.processSignalsSuspending(elements)
 
@@ -396,7 +398,7 @@ func (w *worker) readInputQueueSuspending() error {
 }
 
 func (w *worker) suspending() {
-	log.Debugf("[ suspending ] starts ... ( w.slot.pulseState: %s )", w.slot.pulseState.String())
+	log.Debugf("[ suspending ] starts ... ( pulseState: %s )", w.slot.pulseState.String())
 	switch w.slot.pulseState {
 	case constant.Past:
 		w.sendRemovalSignalToConveyor()
@@ -417,7 +419,7 @@ func (w *worker) suspending() {
 }
 
 func (w *worker) migrate(status ActivationStatus) error {
-	log.Infof("[ migrate ] Starts ... ( status: %s. w.slot.pulseState: %s )", status.String(), w.slot.pulseState.String())
+	log.Infof("[ migrate ] Starts ... ( status: %s. pulseState: %s )", status.String(), w.slot.pulseState.String())
 	numElements := w.slot.len(status)
 	for ; numElements > 0; numElements-- {
 		element := w.slot.popElement(status)
@@ -458,7 +460,7 @@ func (w *worker) getInitHandlersFromConfig() {
 }
 
 func (w *worker) initializing() {
-	log.Debugf("[ initializing ] starts ... ( w.slot.pulseState: %s )", w.slot.pulseState.String())
+	log.Debugf("[ initializing ] starts ... ( pulseState: %s )", w.slot.pulseState.String())
 	if w.slot.pulseState == constant.Future {
 		log.Info("[ initializing ] pulseState is Future. Skip initializing")
 		return
