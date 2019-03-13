@@ -28,11 +28,6 @@ type Accessor interface {
 	Latest(ctx context.Context) (core.Pulse, error)
 }
 
-// Shifter provides method for removing pulses from storage.
-type Shifter interface {
-	Shift(ctx context.Context) (pulse core.Pulse, err error)
-}
-
 // Appender provides method for appending pulses to storage.
 type Appender interface {
 	Append(ctx context.Context, pulse core.Pulse) error
@@ -46,7 +41,7 @@ type Calculator interface {
 
 // RangeHasher provides methods for hashing and validate pulse chain
 type RangeHasher interface {
-	GetRangeHash(core.PulseRange) ([]byte, error)
+	GetRangeHash(core.PulseRange) ([]byte, error)œ
 	ValidateRangeHash(core.PulseRange, []byte) (bool, error)
 }
 
