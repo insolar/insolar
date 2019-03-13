@@ -106,138 +106,138 @@ type CleanTestStateMachine struct {
 	BaseTestStateMachine
 }
 
-func (sm *CleanTestStateMachine) initPresentHandler(input Event, payload interface{}) (*Payload, statemachine.ElementState, error) {
+func (CleanTestStateMachine) initPresentHandler(input Event, payload interface{}) (*Payload, statemachine.ElementState, error) {
 	panic("implement me")
 }
 
-func (sm *CleanTestStateMachine) initFutureHandler(input Event, payload interface{}) (*Payload, statemachine.ElementState, error) {
+func (CleanTestStateMachine) initFutureHandler(input Event, payload interface{}) (*Payload, statemachine.ElementState, error) {
 	panic("implement me")
 }
 
-func (sm *CleanTestStateMachine) initPastHandler(input Event, payload interface{}) (*Payload, statemachine.ElementState, error) {
+func (CleanTestStateMachine) initPastHandler(input Event, payload interface{}) (*Payload, statemachine.ElementState, error) {
 	panic("implement me")
 }
 
-func (sm *CleanTestStateMachine) errorPresentInit(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState) {
+func (CleanTestStateMachine) errorPresentInit(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState) {
 	panic("implement me")
 }
 
-func (sm *CleanTestStateMachine) errorFutureInit(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState) {
+func (CleanTestStateMachine) errorFutureInit(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState) {
 	panic("implement me")
 }
 
-func (sm *CleanTestStateMachine) errorPastInit(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState) {
+func (CleanTestStateMachine) errorPastInit(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState) {
 	panic("implement me")
 }
 
-func (sm *CleanTestStateMachine) migrateFromPresentFirst(input Event, payload *Payload) (*Payload, statemachine.ElementState, error) {
+func (CleanTestStateMachine) migrateFromPresentFirst(input Event, payload *Payload) (*Payload, statemachine.ElementState, error) {
 	panic("implement me")
 }
 
-func (sm *CleanTestStateMachine) migrateFromFutureFirst(input Event, payload *Payload) (*Payload, statemachine.ElementState, error) {
+func (CleanTestStateMachine) migrateFromFutureFirst(input Event, payload *Payload) (*Payload, statemachine.ElementState, error) {
 	panic("implement me")
 }
 
-func (sm *CleanTestStateMachine) transitPresentFirst(input Event, payload *Payload /* todo: , adapterHelper TA1*/) (*Payload, statemachine.ElementState, error) {
+func (CleanTestStateMachine) transitPresentFirst(input Event, payload *Payload /* todo: , adapterHelper TA1*/) (*Payload, statemachine.ElementState, error) {
 	panic("implement me")
 }
 
-func (sm *CleanTestStateMachine) transitFutureFirst(input Event, payload *Payload /* todo: , adapterHelper TA1*/) (*Payload, statemachine.ElementState, error) {
+func (CleanTestStateMachine) transitFutureFirst(input Event, payload *Payload /* todo: , adapterHelper TA1*/) (*Payload, statemachine.ElementState, error) {
 	panic("implement me")
 }
 
-func (sm *CleanTestStateMachine) transitPastFirst(input Event, payload *Payload) (*Payload, statemachine.ElementState, error) {
+func (CleanTestStateMachine) transitPastFirst(input Event, payload *Payload) (*Payload, statemachine.ElementState, error) {
 	panic("implement me")
 }
 
-func (sm *CleanTestStateMachine) responsePresentFirst(input Event, payload *Payload, respPayload TAR) (*Payload, statemachine.ElementState, error) {
+func (CleanTestStateMachine) responsePresentFirst(input Event, payload *Payload, respPayload TAR) (*Payload, statemachine.ElementState, error) {
 	panic("implement me")
 }
 
-func (sm *CleanTestStateMachine) responseFutureFirst(input Event, payload *Payload, respPayload TAR) (*Payload, statemachine.ElementState, error) {
+func (CleanTestStateMachine) responseFutureFirst(input Event, payload *Payload, respPayload TAR) (*Payload, statemachine.ElementState, error) {
 	panic("implement me")
 }
 
-func (sm *CleanTestStateMachine) responsePastFirst(input Event, payload *Payload, respPayload TAR) (*Payload, statemachine.ElementState, error) {
+func (CleanTestStateMachine) responsePastFirst(input Event, payload *Payload, respPayload TAR) (*Payload, statemachine.ElementState, error) {
 	panic("implement me")
 }
 
-func (sm *CleanTestStateMachine) errorPresentFirst(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState) {
+func (CleanTestStateMachine) errorPresentFirst(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState) {
 	panic("implement me")
 }
 
-func (sm *CleanTestStateMachine) errorFutureFirst(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState) {
+func (CleanTestStateMachine) errorFutureFirst(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState) {
 	panic("implement me")
 }
 
-func (sm *CleanTestStateMachine) errorPastFirst(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState) {
+func (CleanTestStateMachine) errorPastFirst(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState) {
 	panic("implement me")
 }
 
-func (sm *CleanTestStateMachine) errorResponsePresentFirst(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, statemachine.ElementState) {
+func (CleanTestStateMachine) errorResponsePresentFirst(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, statemachine.ElementState) {
 	panic("implement me")
 }
 
-func (sm *CleanTestStateMachine) errorResponseFutureFirst(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, statemachine.ElementState) {
+func (CleanTestStateMachine) errorResponseFutureFirst(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, statemachine.ElementState) {
 	panic("implement me")
 }
 
-func (sm *CleanTestStateMachine) errorResponsePastFirst(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, statemachine.ElementState) {
+func (CleanTestStateMachine) errorResponsePastFirst(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, statemachine.ElementState) {
 	panic("implement me")
 }
 
-func (sm *CleanTestStateMachine) migrateFromPresentSecond(input Event, payload *Payload) (*Payload, statemachine.ElementState, error) {
+func (CleanTestStateMachine) migrateFromPresentSecond(input Event, payload *Payload) (*Payload, statemachine.ElementState, error) {
 	panic("implement me")
 }
 
-func (sm *CleanTestStateMachine) migrateFromFutureSecond(input Event, payload *Payload) (*Payload, statemachine.ElementState, error) {
+func (CleanTestStateMachine) migrateFromFutureSecond(input Event, payload *Payload) (*Payload, statemachine.ElementState, error) {
 	panic("implement me")
 }
 
-func (sm *CleanTestStateMachine) transitPresentFirstState(input Event, payload *Payload /* todo: , adapterHelper TA1*/) (*Payload, statemachine.ElementState, error) {
+func (CleanTestStateMachine) transitPresentFirstState(input Event, payload *Payload /* todo: , adapterHelper TA1*/) (*Payload, statemachine.ElementState, error) {
 	panic("implement me")
 }
 
-func (sm *CleanTestStateMachine) transitFutureFirstState(input Event, payload *Payload /* todo: , adapterHelper TA1*/) (*Payload, statemachine.ElementState, error) {
+func (CleanTestStateMachine) transitFutureFirstState(input Event, payload *Payload /* todo: , adapterHelper TA1*/) (*Payload, statemachine.ElementState, error) {
 	panic("implement me")
 }
 
-func (sm *CleanTestStateMachine) transitPastFirstState(input Event, payload *Payload) (*Payload, statemachine.ElementState, error) {
+func (CleanTestStateMachine) transitPastFirstState(input Event, payload *Payload) (*Payload, statemachine.ElementState, error) {
 	panic("implement me")
 }
 
-func (sm *CleanTestStateMachine) responsePresentSecond(input Event, payload *Payload, respPayload TAR) (*Payload, statemachine.ElementState, error) {
+func (CleanTestStateMachine) responsePresentSecond(input Event, payload *Payload, respPayload TAR) (*Payload, statemachine.ElementState, error) {
 	panic("implement me")
 }
 
-func (sm *CleanTestStateMachine) responseFutureSecond(input Event, payload *Payload, respPayload TAR) (*Payload, statemachine.ElementState, error) {
+func (CleanTestStateMachine) responseFutureSecond(input Event, payload *Payload, respPayload TAR) (*Payload, statemachine.ElementState, error) {
 	panic("implement me")
 }
 
-func (sm *CleanTestStateMachine) responsePastSecond(input Event, payload *Payload, respPayload TAR) (*Payload, statemachine.ElementState, error) {
+func (CleanTestStateMachine) responsePastSecond(input Event, payload *Payload, respPayload TAR) (*Payload, statemachine.ElementState, error) {
 	panic("implement me")
 }
 
-func (sm *CleanTestStateMachine) errorPresentSecond(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState) {
+func (CleanTestStateMachine) errorPresentSecond(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState) {
 	panic("implement me")
 }
 
-func (sm *CleanTestStateMachine) errorFutureSecond(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState) {
+func (CleanTestStateMachine) errorFutureSecond(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState) {
 	panic("implement me")
 }
 
-func (sm *CleanTestStateMachine) errorPastSecond(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState) {
+func (CleanTestStateMachine) errorPastSecond(input interface{}, payload interface{}, err error) (*Payload, statemachine.ElementState) {
 	panic("implement me")
 }
 
-func (sm *CleanTestStateMachine) errorResponsePresentSecond(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, statemachine.ElementState) {
+func (CleanTestStateMachine) errorResponsePresentSecond(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, statemachine.ElementState) {
 	panic("implement me")
 }
 
-func (sm *CleanTestStateMachine) errorResponseFutureSecond(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, statemachine.ElementState) {
+func (CleanTestStateMachine) errorResponseFutureSecond(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, statemachine.ElementState) {
 	panic("implement me")
 }
 
-func (sm *CleanTestStateMachine) errorResponsePastSecond(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, statemachine.ElementState) {
+func (CleanTestStateMachine) errorResponsePastSecond(input interface{}, payload interface{}, ar adapter.IAdapterResponse, err error) (*Payload, statemachine.ElementState) {
 	panic("implement me")
 }

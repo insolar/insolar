@@ -31,7 +31,24 @@ type ID uint32
 // ElementState is StateID + (ID << 10)
 type ElementState uint32
 
-// Types below describes different types of handlers
+const (
+	stateShift = 10
+)
+
+// NewElementState constructs element from ID and StateID
+func NewElementState(stateMachine ID, state StateID) ElementState {
+	result := (uint32(stateMachine) << stateShift) + uint32(state)
+	return ElementState(result)
+}
+
+// Parse method returns ID and StateID from ElementState
+func (es ElementState) Parse() (ID, StateID) {
+	sm := es >> stateShift
+	state := es & ((1 << stateShift) - 1)
+	return ID(sm), StateID(state)
+}
+
+// Types below describes different types of raw handlers
 type TransitHandler func(element slot.SlotElementHelper) (interface{}, ElementState, error)
 type MigrationHandler func(element slot.SlotElementHelper) (interface{}, ElementState, error)
 type AdapterResponseHandler func(element slot.SlotElementHelper, response adapter.IAdapterResponse) (interface{}, ElementState, error)

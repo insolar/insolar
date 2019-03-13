@@ -17,12 +17,12 @@
 package {{.Package}}
 
 import (
-    "github.com/insolar/insolar/conveyor/generator/common"
-    "github.com/insolar/insolar/conveyor/interfaces/adapter"
-    "github.com/insolar/insolar/conveyor/interfaces/slot"
-    "github.com/insolar/insolar/conveyor/interfaces/statemachine"
+	"github.com/insolar/insolar/conveyor/generator/common"
+	"github.com/insolar/insolar/conveyor/interfaces/adapter"
+	"github.com/insolar/insolar/conveyor/interfaces/slot"
+	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
 
-    "errors"
+	"errors"
 )
 
 {{range $i, $machine := .StateMachines}}type Base{{$machine.Name}} struct {}

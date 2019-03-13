@@ -17,12 +17,12 @@
 package sample
 
 import (
-    "github.com/insolar/insolar/conveyor/generator/common"
-    "github.com/insolar/insolar/conveyor/interfaces/adapter"
-    "github.com/insolar/insolar/conveyor/interfaces/slot"
-    "github.com/insolar/insolar/conveyor/interfaces/statemachine"
+	"github.com/insolar/insolar/conveyor/generator/common"
+	"github.com/insolar/insolar/conveyor/interfaces/adapter"
+	"github.com/insolar/insolar/conveyor/interfaces/slot"
+	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
 
-    "errors"
+	"errors"
 )
 
 type BaseTestStateMachine struct {}
