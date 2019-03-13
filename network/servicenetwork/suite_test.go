@@ -30,7 +30,6 @@ import (
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/consensus/claimhandler"
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/cryptography"
@@ -237,10 +236,6 @@ func (s *testSuite) waitForConsensusExcept(consensusCount int, exception core.Re
 // nodesCount returns count of nodes in network without testNode
 func (s *testSuite) getNodesCount() int {
 	return len(s.fixture().bootstrapNodes) + len(s.fixture().networkNodes)
-}
-
-func (s *testSuite) getMaxJoinCount() int {
-	return int(float64(s.getNodesCount()) * claimhandler.NodesToJoinPercent)
 }
 
 func (s *testSuite) InitNode(node *networkNode) {

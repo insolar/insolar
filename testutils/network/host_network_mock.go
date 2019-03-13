@@ -52,12 +52,12 @@ type HostNetworkMock struct {
 	SendRequestPreCounter uint64
 	SendRequestMock       mHostNetworkMockSendRequest
 
-	StartFunc       func(p context.Context)
+	StartFunc       func(p context.Context) (r error)
 	StartCounter    uint64
 	StartPreCounter uint64
 	StartMock       mHostNetworkMockStart
 
-	StopFunc       func()
+	StopFunc       func(p context.Context) (r error)
 	StopCounter    uint64
 	StopPreCounter uint64
 	StopMock       mHostNetworkMockStop
@@ -917,11 +917,16 @@ type mHostNetworkMockStart struct {
 }
 
 type HostNetworkMockStartExpectation struct {
-	input *HostNetworkMockStartInput
+	input  *HostNetworkMockStartInput
+	result *HostNetworkMockStartResult
 }
 
 type HostNetworkMockStartInput struct {
 	p context.Context
+}
+
+type HostNetworkMockStartResult struct {
+	r error
 }
 
 //Expect specifies that invocation of HostNetwork.Start is expected from 1 to Infinity times
@@ -937,14 +942,14 @@ func (m *mHostNetworkMockStart) Expect(p context.Context) *mHostNetworkMockStart
 }
 
 //Return specifies results of invocation of HostNetwork.Start
-func (m *mHostNetworkMockStart) Return() *HostNetworkMock {
+func (m *mHostNetworkMockStart) Return(r error) *HostNetworkMock {
 	m.mock.StartFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &HostNetworkMockStartExpectation{}
 	}
-
+	m.mainExpectation.result = &HostNetworkMockStartResult{r}
 	return m.mock
 }
 
@@ -959,8 +964,12 @@ func (m *mHostNetworkMockStart) ExpectOnce(p context.Context) *HostNetworkMockSt
 	return expectation
 }
 
+func (e *HostNetworkMockStartExpectation) Return(r error) {
+	e.result = &HostNetworkMockStartResult{r}
+}
+
 //Set uses given function f as a mock of HostNetwork.Start method
-func (m *mHostNetworkMockStart) Set(f func(p context.Context)) *HostNetworkMock {
+func (m *mHostNetworkMockStart) Set(f func(p context.Context) (r error)) *HostNetworkMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -969,7 +978,7 @@ func (m *mHostNetworkMockStart) Set(f func(p context.Context)) *HostNetworkMock 
 }
 
 //Start implements github.com/insolar/insolar/network.HostNetwork interface
-func (m *HostNetworkMock) Start(p context.Context) {
+func (m *HostNetworkMock) Start(p context.Context) (r error) {
 	counter := atomic.AddUint64(&m.StartPreCounter, 1)
 	defer atomic.AddUint64(&m.StartCounter, 1)
 
@@ -982,6 +991,14 @@ func (m *HostNetworkMock) Start(p context.Context) {
 		input := m.StartMock.expectationSeries[counter-1].input
 		testify_assert.Equal(m.t, *input, HostNetworkMockStartInput{p}, "HostNetwork.Start got unexpected parameters")
 
+		result := m.StartMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the HostNetworkMock.Start")
+			return
+		}
+
+		r = result.r
+
 		return
 	}
 
@@ -992,6 +1009,13 @@ func (m *HostNetworkMock) Start(p context.Context) {
 			testify_assert.Equal(m.t, *input, HostNetworkMockStartInput{p}, "HostNetwork.Start got unexpected parameters")
 		}
 
+		result := m.StartMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the HostNetworkMock.Start")
+		}
+
+		r = result.r
+
 		return
 	}
 
@@ -1000,7 +1024,7 @@ func (m *HostNetworkMock) Start(p context.Context) {
 		return
 	}
 
-	m.StartFunc(p)
+	return m.StartFunc(p)
 }
 
 //StartMinimockCounter returns a count of HostNetworkMock.StartFunc invocations
@@ -1040,45 +1064,59 @@ type mHostNetworkMockStop struct {
 }
 
 type HostNetworkMockStopExpectation struct {
+	input  *HostNetworkMockStopInput
+	result *HostNetworkMockStopResult
+}
+
+type HostNetworkMockStopInput struct {
+	p context.Context
+}
+
+type HostNetworkMockStopResult struct {
+	r error
 }
 
 //Expect specifies that invocation of HostNetwork.Stop is expected from 1 to Infinity times
-func (m *mHostNetworkMockStop) Expect() *mHostNetworkMockStop {
+func (m *mHostNetworkMockStop) Expect(p context.Context) *mHostNetworkMockStop {
 	m.mock.StopFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &HostNetworkMockStopExpectation{}
 	}
-
+	m.mainExpectation.input = &HostNetworkMockStopInput{p}
 	return m
 }
 
 //Return specifies results of invocation of HostNetwork.Stop
-func (m *mHostNetworkMockStop) Return() *HostNetworkMock {
+func (m *mHostNetworkMockStop) Return(r error) *HostNetworkMock {
 	m.mock.StopFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &HostNetworkMockStopExpectation{}
 	}
-
+	m.mainExpectation.result = &HostNetworkMockStopResult{r}
 	return m.mock
 }
 
 //ExpectOnce specifies that invocation of HostNetwork.Stop is expected once
-func (m *mHostNetworkMockStop) ExpectOnce() *HostNetworkMockStopExpectation {
+func (m *mHostNetworkMockStop) ExpectOnce(p context.Context) *HostNetworkMockStopExpectation {
 	m.mock.StopFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &HostNetworkMockStopExpectation{}
-
+	expectation.input = &HostNetworkMockStopInput{p}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
+func (e *HostNetworkMockStopExpectation) Return(r error) {
+	e.result = &HostNetworkMockStopResult{r}
+}
+
 //Set uses given function f as a mock of HostNetwork.Stop method
-func (m *mHostNetworkMockStop) Set(f func()) *HostNetworkMock {
+func (m *mHostNetworkMockStop) Set(f func(p context.Context) (r error)) *HostNetworkMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1087,30 +1125,53 @@ func (m *mHostNetworkMockStop) Set(f func()) *HostNetworkMock {
 }
 
 //Stop implements github.com/insolar/insolar/network.HostNetwork interface
-func (m *HostNetworkMock) Stop() {
+func (m *HostNetworkMock) Stop(p context.Context) (r error) {
 	counter := atomic.AddUint64(&m.StopPreCounter, 1)
 	defer atomic.AddUint64(&m.StopCounter, 1)
 
 	if len(m.StopMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.StopMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to HostNetworkMock.Stop.")
+			m.t.Fatalf("Unexpected call to HostNetworkMock.Stop. %v", p)
 			return
 		}
+
+		input := m.StopMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, HostNetworkMockStopInput{p}, "HostNetwork.Stop got unexpected parameters")
+
+		result := m.StopMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the HostNetworkMock.Stop")
+			return
+		}
+
+		r = result.r
 
 		return
 	}
 
 	if m.StopMock.mainExpectation != nil {
 
+		input := m.StopMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, HostNetworkMockStopInput{p}, "HostNetwork.Stop got unexpected parameters")
+		}
+
+		result := m.StopMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the HostNetworkMock.Stop")
+		}
+
+		r = result.r
+
 		return
 	}
 
 	if m.StopFunc == nil {
-		m.t.Fatalf("Unexpected call to HostNetworkMock.Stop.")
+		m.t.Fatalf("Unexpected call to HostNetworkMock.Stop. %v", p)
 		return
 	}
 
-	m.StopFunc()
+	return m.StopFunc(p)
 }
 
 //StopMinimockCounter returns a count of HostNetworkMock.StopFunc invocations
