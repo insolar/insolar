@@ -105,6 +105,7 @@ func (currentPulsar *Pulsar) verify(ctx context.Context) {
 		return
 
 	}
+	logger.Infof("currentPulsar.Neighbours len: %d", len(currentPulsar.Neighbours))
 	if currentPulsar.isStandalone() {
 		currentPulsar.SetCurrentSlotEntropy(currentPulsar.GetGeneratedEntropy())
 		currentPulsar.CurrentSlotPulseSender = currentPulsar.PublicKeyRaw
