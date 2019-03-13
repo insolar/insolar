@@ -51,7 +51,7 @@ func getKeys(t *testing.T) (public string, private crypto.PrivateKey) {
 	return string(pubKey), privKey
 }
 
-func TestVerifyPulseSign(t *testing.T) {
+func TestVerifyPulseSignTrue(t *testing.T) {
 	controller := getController(t)
 	keyStr, privateKey := getKeys(t)
 
@@ -78,6 +78,27 @@ func TestVerifyPulseSign(t *testing.T) {
 	valid, err := controller.verifyPulseSign(*pulse)
 	assert.NoError(t, err)
 	assert.True(t, valid)
+}
+
+func TestVerifyPulseSignFalse(t *testing.T) {
+	controller := getController(t)
+	keyStr, _ := getKeys(t)
+
+	psc := core.PulseSenderConfirmation{
+		PulseNumber:     1,
+		ChosenPublicKey: string(keyStr[:]),
+		Entropy:         randomEntropy(),
+	}
+
+	psc.Signature = []byte("test")
+
+	pulse := pulsar.NewPulse(1, 0, &entropygenerator.StandardEntropyGenerator{})
+	pulse.Signs = make(map[string]core.PulseSenderConfirmation, 1)
+	pulse.Signs["keystr"] = psc
+
+	valid, err := controller.verifyPulseSign(*pulse)
+	assert.Error(t, err)
+	assert.False(t, valid)
 }
 
 func randomEntropy() [64]byte {
