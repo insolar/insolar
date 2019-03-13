@@ -36,8 +36,8 @@ type WorkerState int
 const (
 	Unknown = WorkerState(iota)
 	ReadInputQueue
-	ProcessElements
 	ReadResponseQueue
+	ProcessElements
 )
 
 type worker struct { // nolint: unused
