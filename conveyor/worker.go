@@ -328,14 +328,10 @@ func (w *worker) working() {
 		case ReadResponseQueue:
 			err := w.readResponseQueue()
 			if err != nil {
-				panic(fmt.Sprintf("[ working ] readResponseQueue. implement me: %s", err))
+				panic(fmt.Sprintf("[ working ] readResponseQueue. Error: %s", err))
 			}
 		case ProcessElements:
 			w.processingElements()
-		}
-		if !w.slot.isWorking() {
-			log.Info("[ working ] Break after processingElements")
-			break
 		}
 	}
 }
