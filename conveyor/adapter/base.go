@@ -17,6 +17,7 @@
 package adapter
 
 import (
+	"github.com/insolar/insolar/conveyor/interfaces/iadapter"
 	"github.com/insolar/insolar/conveyor/interfaces/islot"
 )
 
@@ -56,7 +57,8 @@ type AdapterResponse struct {
 	respPayload interface{}
 }
 
-func NewAdapterResponse(adapterID idType, elementID idType, handlerID idType, respPayload interface{}) *AdapterResponse {
+// NewAdapterResponse creates new adapter response
+func NewAdapterResponse(adapterID idType, elementID idType, handlerID idType, respPayload interface{}) iadapter.IAdapterResponse {
 	return &AdapterResponse{
 		adapterID:   adapterID,
 		elementID:   elementID,
@@ -65,18 +67,22 @@ func NewAdapterResponse(adapterID idType, elementID idType, handlerID idType, re
 	}
 }
 
+// GetAdapterID implements IAdapterResponse method
 func (ar *AdapterResponse) GetAdapterID() uint32 {
 	return ar.adapterID
 }
 
+// GetElementID implements IAdapterResponse method
 func (ar *AdapterResponse) GetElementID() uint32 {
 	return ar.elementID
 }
 
+// GetHandlerID implements IAdapterResponse method
 func (ar *AdapterResponse) GetHandlerID() uint32 {
 	return ar.handlerID
 }
 
+// GetRespPayload implements IAdapterResponse method
 func (ar *AdapterResponse) GetRespPayload() interface{} {
 	return ar.respPayload
 }
