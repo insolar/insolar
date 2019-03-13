@@ -252,7 +252,6 @@ func (currentPulsar *Pulsar) sendPulseToNodesAndPulsars(ctx context.Context) {
 	defer span.End()
 
 	logger.Debug("[sendPulseToNodesAndPulsars]. Pulse - %v", time.Now())
-	logger.Debug("[sendPulseToNodesAndPulsars]. size of signs - %v", len(currentPulsar.CurrentSlotSenderConfirmations))
 
 	if currentPulsar.IsStateFailed() {
 		return

@@ -22,7 +22,6 @@ import (
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/transport/packet"
 	"github.com/insolar/insolar/network/transport/packet/types"
@@ -56,8 +55,6 @@ func (pc *pulseController) processPulse(ctx context.Context, request network.Req
 	// we should not process pulses in Waiting state because network can be unready to join current node,
 	// so we should wait for pulse from consensus phase1 packet
 	verified, err := pc.verifyPulseSign(data.Pulse)
-	logger := inslogger.FromContext(ctx)
-	logger.Infof("recv pulse: %v", data.Pulse)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ pulseController ] processPulse: ")
 	}
