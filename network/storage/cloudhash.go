@@ -23,27 +23,34 @@ import (
 )
 
 // CloudHashAccessor provides methods for accessing CloudHash.
+//go:generate minimock -i github.com/insolar/insolar/network/storage.CloudHashAccessor -o ../../testutils/network -s _mock.go
 type CloudHashAccessor interface {
 	ForPulseNumber(context.Context, core.PulseNumber) ([]byte, error)
 	Latest(ctx context.Context) ([]byte, error)
 }
 
-// CloudHashAppender provides method for appending pulses to storage.
+// CloudHashAppender provides method for appending CloudHash to storage.
+//go:generate minimock -i github.com/insolar/insolar/network/storage.CloudHashAppender -o ../../testutils/network -s _mock.go
 type CloudHashAppender interface {
 	Append(ctx context.Context, pulse core.PulseNumber, cloudHash []byte) error
 }
 
-type cloudHashStorage struct {
+// NewCloudHashStorage constructor creates CloudHashStorage
+func NewCloudHashStorage() *CloudHashStorage {
+	return &CloudHashStorage{}
 }
 
-func (c *cloudHashStorage) ForPulseNumber(context.Context, core.PulseNumber) ([]byte, error) {
+type CloudHashStorage struct {
+}
+
+func (c *CloudHashStorage) ForPulseNumber(context.Context, core.PulseNumber) ([]byte, error) {
 	panic("implement me")
 }
 
-func (c *cloudHashStorage) Latest(context.Context) ([]byte, error) {
+func (c *CloudHashStorage) Latest(context.Context) ([]byte, error) {
 	panic("implement me")
 }
 
-func (c *cloudHashStorage) Append(ctx context.Context, pulse core.PulseNumber, cloudHash []byte) error {
+func (c *CloudHashStorage) Append(ctx context.Context, pulse core.PulseNumber, cloudHash []byte) error {
 	panic("implement me")
 }
