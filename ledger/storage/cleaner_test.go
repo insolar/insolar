@@ -153,20 +153,6 @@ func (s *cleanerSuite) Test_RemoveRecords() {
 				cleanCase:     recCC,
 				objectStorage: s.objectStorage,
 			})
-
-			_, err = storagetest.AddRandDrop(ctx, s.dropModifier, s.dropAccessor, jetID, pn)
-			require.NoError(t, err)
-			dropCC := cleanCase{
-				rectype:    "drop",
-				id:         recID,
-				jetID:      jetID,
-				pulseNum:   pn,
-				shouldLeft: shouldLeft,
-			}
-			checks = append(checks, dropCase{
-				cleanCase:    dropCC,
-				dropAccessor: s.dropAccessor,
-			})
 		}
 	}
 
@@ -290,15 +276,5 @@ type recordCase struct {
 
 func (c recordCase) Check(ctx context.Context, t *testing.T) {
 	_, err := c.objectStorage.GetRecord(ctx, c.jetID, c.id)
-	c.check(t, err)
-}
-
-type dropCase struct {
-	cleanCase
-	dropAccessor drop.Accessor
-}
-
-func (c dropCase) Check(ctx context.Context, t *testing.T) {
-	_, err := c.dropAccessor.ForPulse(ctx, core.JetID(c.jetID), c.pulseNum)
 	c.check(t, err)
 }

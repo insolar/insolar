@@ -21,7 +21,6 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/db"
 	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/ugorji/go/codec"
@@ -71,7 +70,7 @@ func (ds *dropStorageDB) Set(ctx context.Context, jetID core.JetID, drop jet.Dro
 
 	_, err := ds.DB.Get(&k)
 	if err == nil {
-		return storage.ErrOverride
+		return ErrOverride
 	}
 
 	encoded, err := jet.Encode(&drop)
