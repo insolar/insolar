@@ -23,32 +23,30 @@ import (
 )
 
 // PulseAccessor provides methods for accessing pulses.
+//go:generate minimock -i github.com/insolar/insolar/network/storage.PulseAccessor -o ../../testutils/network -s _mock.go
 type PulseAccessor interface {
 	ForPulseNumber(context.Context, core.PulseNumber) (core.PulseNumber, error)
 	Latest(ctx context.Context) (core.Pulse, error)
 }
 
 // PulseAppender provides method for appending pulses to storage.
+//go:generate minimock -i github.com/insolar/insolar/network/storage.PulseAppender -o ../../testutils/network -s _mock.go
 type PulseAppender interface {
 	Append(ctx context.Context, pulse core.Pulse) error
 }
 
 // PulseCalculator performs calculations for pulses.
+//go:generate minimock -i github.com/insolar/insolar/network/storage.PulseCalculator -o ../../testutils/network -s _mock.go
 type PulseCalculator interface {
 	Forwards(ctx context.Context, pn core.PulseNumber, steps int) (core.Pulse, error)
 	Backwards(ctx context.Context, pn core.PulseNumber, steps int) (core.Pulse, error)
 }
 
 // PulseRangeHasher provides methods for hashing and validate pulse chain
+//go:generate minimock -i github.com/insolar/insolar/network/storage.PulseRangeHasher -o ../../testutils/network -s _mock.go
 type PulseRangeHasher interface {
 	GetRangeHash(core.PulseRange) ([]byte, error)
 	ValidateRangeHash(core.PulseRange, []byte) (bool, error)
-}
-
-// PulseChainHasher provides methods for hashing and validate pulse chain
-type PulseChainHasher interface {
-	GetRangeHash(chain []core.PulseNumber) ([]byte, error)
-	ValidateRangeHash(chain []core.PulseNumber, hash []byte) (bool, error)
 }
 
 // NewPulseStorage constructor creates PulseStorage
@@ -57,6 +55,14 @@ func NewPulseStorage() *PulseStorage {
 }
 
 type PulseStorage struct {
+}
+
+func (p *PulseStorage) GetRangeHash(core.PulseRange) ([]byte, error) {
+	panic("implement me")
+}
+
+func (p *PulseStorage) ValidateRangeHash(core.PulseRange, []byte) (bool, error) {
+	panic("implement me")
 }
 
 func (p *PulseStorage) Forwards(ctx context.Context, pn core.PulseNumber, steps int) (core.Pulse, error) {
