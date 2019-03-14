@@ -281,11 +281,7 @@ func (m *PulseManager) getExecutorHotData(
 			logger.Error(err)
 			continue
 		}
-		encoded, err := index.Encode(lifeline)
-		if err != nil {
-			logger.Error(err)
-			continue
-		}
+		encoded := index.Encode(*lifeline)
 		recentObjects[id] = message.HotIndex{
 			TTL:   ttl,
 			Index: encoded,

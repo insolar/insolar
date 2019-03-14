@@ -54,25 +54,20 @@ type ObjectLifeline struct {
 }
 
 // Encode converts lifeline index into binary format.
-func Encode(index *ObjectLifeline) ([]byte, error) {
-	var buf bytes.Buffer
-	enc := codec.NewEncoder(&buf, &codec.CborHandle{})
-	err := enc.Encode(index)
-	if err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
+func Encode(index ObjectLifeline) []byte {
+	buff := bytes.NewBuffer(nil)
+	enc := codec.NewEncoder(buff, &codec.CborHandle{})
+	enc.MustEncode(index)
+
+	return buff.Bytes()
 }
 
 // Decode converts byte array into lifeline index struct.
-func Decode(buf []byte) (*ObjectLifeline, error) {
-	dec := codec.NewDecoder(bytes.NewReader(buf), &codec.CborHandle{})
-	var index ObjectLifeline
-	err := dec.Decode(&index)
-	if err != nil {
-		return nil, err
-	}
-	return &index, nil
+func Decode(buff []byte) (index ObjectLifeline) {
+	dec := codec.NewDecoderBytes(buff, &codec.CborHandle{})
+	dec.MustDecode(&index)
+
+	return
 }
 
 // Clone returns copy of argument idx value.
