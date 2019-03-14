@@ -19,7 +19,7 @@ package blob
 import (
 	"context"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage/blob.Accessor -o ./ -s _mock.go
@@ -27,7 +27,7 @@ import (
 // Accessor provides info about Blob-values from storage.
 type Accessor interface {
 	// ForID returns Blob for provided id.
-	ForID(ctx context.Context, id core.RecordID) (Blob, error)
+	ForID(ctx context.Context, id insolar.ID) (Blob, error)
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage/blob.Modifier -o ./ -s _mock.go
@@ -35,13 +35,13 @@ type Accessor interface {
 // Modifier provides methods for setting Blob-values to storage.
 type Modifier interface {
 	// Set saves new Blob-value in storage.
-	Set(ctx context.Context, id core.RecordID, blob Blob) error
+	Set(ctx context.Context, id insolar.ID, blob Blob) error
 }
 
 // Blob represents blob-value with jetID.
 type Blob struct {
 	Value []byte
-	JetID core.JetID
+	JetID insolar.JetID
 }
 
 // Clone returns copy of argument blob.

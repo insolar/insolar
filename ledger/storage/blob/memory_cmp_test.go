@@ -21,7 +21,7 @@ import (
 	"testing"
 
 	fuzz "github.com/google/gofuzz"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar"
 	"github.com/insolar/insolar/gen"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage/blob"
@@ -37,7 +37,7 @@ func TestInMemoryBlob(t *testing.T) {
 	blobStorage := blob.NewStorageMemory()
 
 	type tempBlob struct {
-		id core.RecordID
+		id insolar.ID
 		b  blob.Blob
 	}
 

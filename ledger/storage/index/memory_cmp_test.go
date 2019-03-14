@@ -21,7 +21,7 @@ import (
 	"testing"
 
 	fuzz "github.com/google/gofuzz"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar"
 	"github.com/insolar/insolar/gen"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage/index"
@@ -37,7 +37,7 @@ func TestInMemoryIndex(t *testing.T) {
 	indexStorage := index.NewStorageMemory()
 
 	type tempIndex struct {
-		id  core.RecordID
+		id  insolar.ID
 		idx index.ObjectLifeline
 	}
 

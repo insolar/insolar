@@ -19,7 +19,7 @@ package index
 import (
 	"testing"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar"
 	"github.com/insolar/insolar/gen"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage/db"
@@ -50,7 +50,7 @@ func TestIndexStorage_ForID(t *testing.T) {
 		t.Parallel()
 
 		indexStorage := &StorageMemory{
-			memory: map[core.RecordID]ObjectLifeline{},
+			memory: map[insolar.ID]ObjectLifeline{},
 		}
 		indexStorage.memory[id] = idx
 
@@ -64,7 +64,7 @@ func TestIndexStorage_ForID(t *testing.T) {
 		t.Parallel()
 
 		indexStorage := &StorageMemory{
-			memory: map[core.RecordID]ObjectLifeline{},
+			memory: map[insolar.ID]ObjectLifeline{},
 		}
 		indexStorage.memory[id] = idx
 
@@ -93,7 +93,7 @@ func TestIndexStorage_Set(t *testing.T) {
 		t.Parallel()
 
 		indexStorage := &StorageMemory{
-			memory:   map[core.RecordID]ObjectLifeline{},
+			memory:   map[insolar.ID]ObjectLifeline{},
 			jetIndex: jetIndex,
 		}
 		err := indexStorage.Set(ctx, id, idx)
@@ -107,7 +107,7 @@ func TestIndexStorage_Set(t *testing.T) {
 		t.Parallel()
 
 		indexStorage := &StorageMemory{
-			memory:   map[core.RecordID]ObjectLifeline{},
+			memory:   map[insolar.ID]ObjectLifeline{},
 			jetIndex: jetIndex,
 		}
 		err := indexStorage.Set(ctx, id, idx)
@@ -139,7 +139,7 @@ func TestIndexStorage_Set_SaveLastUpdate(t *testing.T) {
 		t.Parallel()
 
 		indexStorage := &StorageMemory{
-			memory:   map[core.RecordID]ObjectLifeline{},
+			memory:   map[insolar.ID]ObjectLifeline{},
 			jetIndex: jetIndex,
 		}
 		err := indexStorage.Set(ctx, id, idx)

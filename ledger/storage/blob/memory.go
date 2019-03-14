@@ -20,7 +20,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar"
 	"github.com/insolar/insolar/ledger/storage/db"
 	"go.opencensus.io/stats"
 )
@@ -30,19 +30,19 @@ type StorageMemory struct {
 	jetIndex db.JetIndexModifier
 
 	lock   sync.RWMutex
-	memory map[core.RecordID]Blob
+	memory map[insolar.ID]Blob
 }
 
 // NewStorageMemory creates a new instance of Storage.
 func NewStorageMemory() *StorageMemory {
 	return &StorageMemory{
-		memory:   map[core.RecordID]Blob{},
+		memory:   map[insolar.ID]Blob{},
 		jetIndex: db.NewJetIndex(),
 	}
 }
 
 // ForID returns Blob for provided id.
-func (s *StorageMemory) ForID(ctx context.Context, id core.RecordID) (blob Blob, err error) {
+func (s *StorageMemory) ForID(ctx context.Context, id insolar.ID) (blob Blob, err error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
@@ -58,7 +58,7 @@ func (s *StorageMemory) ForID(ctx context.Context, id core.RecordID) (blob Blob,
 }
 
 // Set saves new Blob-value in storage.
-func (s *StorageMemory) Set(ctx context.Context, id core.RecordID, blob Blob) error {
+func (s *StorageMemory) Set(ctx context.Context, id insolar.ID, blob Blob) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 

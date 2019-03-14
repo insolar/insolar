@@ -20,7 +20,7 @@ import (
 	"bytes"
 	"context"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar"
 	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/ugorji/go/codec"
 )
@@ -30,7 +30,7 @@ import (
 // Accessor provides info about Index-values from storage.
 type Accessor interface {
 	// ForID returns Index for provided id.
-	ForID(ctx context.Context, id core.RecordID) (ObjectLifeline, error)
+	ForID(ctx context.Context, id insolar.ID) (ObjectLifeline, error)
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage/index.Modifier -o ./ -s _mock.go
@@ -38,19 +38,19 @@ type Accessor interface {
 // Modifier provides methods for setting Index-values to storage.
 type Modifier interface {
 	// Set saves new Index-value in storage.
-	Set(ctx context.Context, id core.RecordID, index ObjectLifeline) error
+	Set(ctx context.Context, id insolar.ID, index ObjectLifeline) error
 }
 
 // ObjectLifeline represents meta information for record object.
 type ObjectLifeline struct {
-	LatestState         *core.RecordID // Amend or activate record.
-	LatestStateApproved *core.RecordID // State approved by VM.
-	ChildPointer        *core.RecordID // Meta record about child activation.
-	Parent              core.RecordRef
-	Delegates           map[core.RecordRef]core.RecordRef
+	LatestState         *insolar.ID // Amend or activate record.
+	LatestStateApproved *insolar.ID // State approved by VM.
+	ChildPointer        *insolar.ID // Meta record about child activation.
+	Parent              insolar.Reference
+	Delegates           map[insolar.Reference]insolar.Reference
 	State               record.State
-	LatestUpdate        core.PulseNumber
-	JetID               core.JetID
+	LatestUpdate        insolar.PulseNumber
+	JetID               insolar.JetID
 }
 
 // Encode converts lifeline index into binary format.
@@ -88,7 +88,7 @@ func Clone(idx ObjectLifeline) ObjectLifeline {
 	}
 
 	if idx.Delegates != nil {
-		cp := make(map[core.RecordRef]core.RecordRef)
+		cp := make(map[insolar.Reference]insolar.Reference)
 		for k, v := range idx.Delegates {
 			cp[k] = v
 		}

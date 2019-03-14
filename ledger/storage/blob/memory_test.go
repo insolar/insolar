@@ -20,7 +20,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar"
 	"github.com/insolar/insolar/gen"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage/db"
@@ -55,7 +55,7 @@ func TestBlobStorage_Set(t *testing.T) {
 		t.Parallel()
 
 		blobStorage := &StorageMemory{
-			memory:   map[core.RecordID]Blob{},
+			memory:   map[insolar.ID]Blob{},
 			jetIndex: jetIndex,
 		}
 		err := blobStorage.Set(ctx, id, blob)
@@ -70,7 +70,7 @@ func TestBlobStorage_Set(t *testing.T) {
 		t.Parallel()
 
 		blobStorage := &StorageMemory{
-			memory:   map[core.RecordID]Blob{},
+			memory:   map[insolar.ID]Blob{},
 			jetIndex: jetIndex,
 		}
 		err := blobStorage.Set(ctx, id, blob)
@@ -99,7 +99,7 @@ func TestBlobStorage_ForID(t *testing.T) {
 		t.Parallel()
 
 		blobStorage := &StorageMemory{
-			memory: map[core.RecordID]Blob{},
+			memory: map[insolar.ID]Blob{},
 		}
 		blobStorage.memory[id] = blob
 
@@ -114,7 +114,7 @@ func TestBlobStorage_ForID(t *testing.T) {
 		t.Parallel()
 
 		blobStorage := &StorageMemory{
-			memory: map[core.RecordID]Blob{},
+			memory: map[insolar.ID]Blob{},
 		}
 		blobStorage.memory[id] = blob
 

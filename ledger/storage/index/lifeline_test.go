@@ -20,7 +20,7 @@ import (
 	"testing"
 
 	fuzz "github.com/google/gofuzz"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar"
 	"github.com/insolar/insolar/gen"
 	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/stretchr/testify/assert"
@@ -37,12 +37,12 @@ func TestCloneObjectLifeline(t *testing.T) {
 	assert.False(t, &currentIdx == &clonedIdx)
 }
 
-func id() (id *core.RecordID) {
+func id() (id *insolar.ID) {
 	fuzz.New().NilChance(0.5).Fuzz(&id)
 	return
 }
 
-func delegates() (result map[core.RecordRef]core.RecordRef) {
+func delegates() (result map[insolar.Reference]insolar.Reference) {
 	fuzz.New().NilChance(0.5).NumElements(1, 10).Fuzz(&result)
 	return
 }
