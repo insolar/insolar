@@ -23,7 +23,6 @@ import (
 
 	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/storage/jet"
 )
 
 // iterstate stores iterator state
@@ -71,7 +70,7 @@ func NewReplicaIter(
 	// fmt.Printf("CALL NewReplicaIter [%v:%v] (jet=%v)\n", start, end, jetID)
 	newit := func(prefixbyte byte, jetID core.RecordID, start, end core.PulseNumber) *iterstate {
 		prefix := []byte{prefixbyte}
-		_, jetPrefix := jet.Jet(jetID)
+		jetPrefix := core.JetID(jetID).Prefix()
 		iter := &iterstate{prefix: prefix}
 		iter.start = bytes.Join([][]byte{prefix, jetPrefix[:], start.Bytes()}, nil)
 		iter.end = bytes.Join([][]byte{prefix, jetPrefix[:], end.Bytes()}, nil)

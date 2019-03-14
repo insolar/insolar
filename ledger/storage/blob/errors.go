@@ -14,21 +14,15 @@
  *    limitations under the License.
  */
 
-package jet
+package blob
 
 import (
-	"github.com/insolar/insolar/core"
+	"errors"
 )
 
-// JetDrop is a blockchain block.
-// It contains hashes of the current block and the previous one.
-type JetDrop struct { //nolint: golint
-	// Pulse number (probably we should save it too).
-	Pulse core.PulseNumber
-
-	// PrevHash is a hash of all record hashes belongs to previous pulse.
-	PrevHash []byte
-
-	// Hash is a hash of all record hashes belongs to one pulse and previous drop hash.
-	Hash []byte
-}
+var (
+	// ErrNotFound is returned when blob-record not found
+	ErrNotFound = errors.New("blob not found")
+	// ErrOverride is returned if SetBlob tries to update existing record.
+	ErrOverride = errors.New("blob override is forbidden")
+)

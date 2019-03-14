@@ -30,7 +30,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/jet"
 )
 
 const defaultTimeout = time.Second * 10
@@ -122,7 +121,7 @@ func (s *Sync) checkIsNextPulse(ctx context.Context, jetID core.RecordID, jetsta
 
 func (s *Sync) getJetSyncState(ctx context.Context, jetID core.RecordID) *syncstate {
 	var jp jetprefix
-	_, jpBuf := jet.Jet(jetID)
+	jpBuf := core.JetID(jetID).Prefix()
 	copy(jp[:], jpBuf)
 	s.Lock()
 	jetState, ok := s.jetSyncStates[jp]
