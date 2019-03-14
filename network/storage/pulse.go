@@ -51,5 +51,30 @@ type PulseChainHasher interface {
 	ValidateRangeHash(chain []core.PulseNumber, hash []byte) (bool, error)
 }
 
-type pulseStorage struct {
+// NewPulseStorage constructor creates PulseStorage
+func NewPulseStorage() *PulseStorage {
+	return &PulseStorage{}
+}
+
+type PulseStorage struct {
+}
+
+func (p *PulseStorage) Forwards(ctx context.Context, pn core.PulseNumber, steps int) (core.Pulse, error) {
+	panic("implement me")
+}
+
+func (p *PulseStorage) Backwards(ctx context.Context, pn core.PulseNumber, steps int) (core.Pulse, error) {
+	panic("implement me")
+}
+
+func (p *PulseStorage) Append(ctx context.Context, pulse core.Pulse) error {
+	panic("implement me")
+}
+
+func (p *PulseStorage) ForPulseNumber(context.Context, core.PulseNumber) (core.PulseNumber, error) {
+	panic("implement me")
+}
+
+func (p *PulseStorage) Latest(ctx context.Context) (core.Pulse, error) {
+	panic("implement me")
 }
