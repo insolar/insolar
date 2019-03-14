@@ -43,13 +43,11 @@ type transportConsensus struct {
 }
 
 func (tc *transportConsensus) Start(ctx context.Context) error {
-	tc.transportBase.Start(ctx)
-	return nil
+	return tc.transportBase.Start(ctx)
 }
 
 func (tc *transportConsensus) Stop(ctx context.Context) error {
-	tc.transportBase.Stop()
-	return nil
+	return tc.transportBase.Stop(ctx)
 }
 
 // RegisterPacketHandler register a handler function to process incoming requests of a specific type.

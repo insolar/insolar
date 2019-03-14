@@ -123,13 +123,21 @@ func createResolver(cfg configuration.Transport) (resolver.PublicAddressResolver
 	return resolver.NewExactResolver(), nil
 }
 
-func ListenAndWaitUntilReady(ctx context.Context, transport Transport) {
+func ListenAndWaitUntilReady(ctx context.Context, transport Transport) error {
 	started := make(chan struct{}, 1)
+	errored := make(chan error, 1)
 	go func(ctx context.Context, t Transport, started chan struct{}) {
 		err := t.Listen(ctx, started)
 		if err != nil {
 			inslogger.FromContext(ctx).Error(err)
+			errored <- err
 		}
 	}(ctx, transport, started)
-	<-started
+
+	select {
+	case <-started:
+		return nil
+	case err := <-errored:
+		return err
+	}
 }

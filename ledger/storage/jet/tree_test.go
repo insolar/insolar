@@ -46,7 +46,7 @@ func TestTree_Find(t *testing.T) {
 	expectedPrefix[0] = 0xD0 // 11010000
 
 	id, actual := tree.Find(*lookup)
-	depth, prefix := core.JetID(*id).Jet()
+	depth, prefix := core.JetID(*id).Depth(), core.JetID(*id).Prefix()
 	assert.Equal(t, depth, uint8(4))
 	assert.Equal(t, expectedPrefix, prefix)
 	assert.False(t, actual)
@@ -62,14 +62,14 @@ func TestTree_Update(t *testing.T) {
 	lookup := core.NewRecordID(0, []byte{0xD5}) // 11010101
 
 	id, actual := tree.Find(*lookup)
-	depth, prefix := core.JetID(*id).Jet()
+	depth, prefix := core.JetID(*id).Depth(), core.JetID(*id).Prefix()
 	assert.Equal(t, depth, uint8(0))
 	assert.Equal(t, prefix, make([]byte, core.RecordHashSize-1))
 	assert.Equal(t, false, actual)
 
 	tree.Update(core.RecordID(*core.NewJetID(1, []byte{1 << 7})), false)
 	id, actual = tree.Find(*lookup)
-	depth, prefix = core.JetID(*id).Jet()
+	depth, prefix = core.JetID(*id).Depth(), core.JetID(*id).Prefix()
 	expectedPrefix := make([]byte, core.RecordHashSize-1)
 	expectedPrefix[0] = 0x80
 	require.Equal(t, uint8(1), depth)
@@ -78,14 +78,14 @@ func TestTree_Update(t *testing.T) {
 
 	tree.Update(core.RecordID(*core.NewJetID(8, lookup.Hash())), false)
 	id, actual = tree.Find(*lookup)
-	depth, prefix = core.JetID(*id).Jet()
+	depth, prefix = core.JetID(*id).Depth(), core.JetID(*id).Prefix()
 	assert.Equal(t, uint8(8), depth)
 	assert.Equal(t, lookup.Hash()[:core.RecordHashSize-1], prefix)
 	assert.Equal(t, false, actual)
 
 	tree.Update(core.RecordID(*core.NewJetID(8, lookup.Hash())), true)
 	id, actual = tree.Find(*lookup)
-	depth, prefix = core.JetID(*id).Jet()
+	depth, prefix = core.JetID(*id).Depth(), core.JetID(*id).Prefix()
 	assert.Equal(t, uint8(8), depth)
 	assert.Equal(t, lookup.Hash()[:core.RecordHashSize-1], prefix)
 	assert.Equal(t, true, actual)
@@ -109,7 +109,7 @@ func TestTree_Split(t *testing.T) {
 	})
 
 	t.Run("splits jet", func(t *testing.T) {
-		okDepth, okPrefix := core.JetID(*ok).Jet()
+		okDepth, okPrefix := core.JetID(*ok).Depth(), core.JetID(*ok).Prefix()
 		lExpectedPrefix := make([]byte, len(okPrefix))
 		copy(lExpectedPrefix, okPrefix)
 		lExpectedPrefix[0] = 0xC0 // 11000000
@@ -119,8 +119,8 @@ func TestTree_Split(t *testing.T) {
 
 		left, right, err := tree.Split(core.RecordID(*ok))
 		require.NoError(t, err)
-		lDepth, lPrefix := core.JetID(*left).Jet()
-		rDepth, rPrefix := core.JetID(*right).Jet()
+		lDepth, lPrefix := core.JetID(*left).Depth(), core.JetID(*left).Prefix()
+		rDepth, rPrefix := core.JetID(*right).Depth(), core.JetID(*right).Prefix()
 		assert.Equal(t, uint8(okDepth+1), lDepth)
 		assert.Equal(t, uint8(okDepth+1), rDepth)
 		assert.Equal(t, lExpectedPrefix, lPrefix)

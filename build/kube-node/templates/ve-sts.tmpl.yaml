@@ -1,0 +1,74 @@
+---
+apiVersion: apps/v1beta1
+kind: StatefulSet
+metadata:
+  labels:
+    app: insolar-ve
+  name: insolar-ve
+spec:
+  podManagementPolicy: Parallel
+  replicas: 1
+  serviceName: insolar-ve
+  template:
+    metadata:
+      labels:
+        app: insolar-ve
+    spec:
+      containers:
+      - name: insgorund
+        image: "insolar/insgorund:$INSOLAR_VERSION"
+        env:
+          - { name: "INSOLARD_LOG_LEVEL", value: "warn" }
+          - { name: "INSOLARD_RPC_ENDPOINT", "insolard:18182" }
+
+      - name: insolard
+        image: "insolar/insolard:$INSOLAR_VERSION"
+
+        # command: ["/bin/sh"]
+        # stdin: true
+        # tty: true
+
+        ports:
+        - name: metrics
+          containerPort: 8080
+        - name: api
+          containerPort: 19191
+        - name: transport
+          containerPort: 30000
+        - name: consensus
+          containerPort: 30001
+        env:
+          - name: 'INSOLARD_TRANSPORT_FIXED_ADDRESS'
+            value: '$EXTERNAL_IP'
+          - name: 'INSOLARD_TRANSPORT_ADDRESS'
+            value: '0.0.0.0:30000'
+          - name: 'INSGORUND_ENDPOINT'
+            value: 'insgorund:18181'
+          - name: 'INSOLARD_LOG_LEVEL'
+            value: 'info'
+        volumeMounts:
+          - mountPath: /etc/insolar/keys.json
+            name: secrets
+            subPath: "keys.json"
+          - mountPath: /etc/insolar/cert.json
+            name: secrets
+            subPath: "cert.json"
+          - mountPath: /opt/insolar/data
+            name: data
+      initContainers:
+      # genesis version should not be changed
+        - name: genesis
+          image: insolar/genesis:v0.8.4
+          command: ["./init.sh"]
+          env:
+            - name: GENESIS_OUTPUT_DIR
+              value: "/data"
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          emptyDir: {}
+        - name: secrets
+          configMap:
+            name: node-secrets

@@ -30,7 +30,6 @@ import (
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/consensus/claimhandler"
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/cryptography"
@@ -239,10 +238,6 @@ func (s *testSuite) getNodesCount() int {
 	return len(s.fixture().bootstrapNodes) + len(s.fixture().networkNodes)
 }
 
-func (s *testSuite) getMaxJoinCount() int {
-	return int(float64(s.getNodesCount()) * claimhandler.NodesToJoinPercent)
-}
-
 func (s *testSuite) InitNode(node *networkNode) {
 	if node.componentManager != nil {
 		err := node.init(s.fixture().ctx)
@@ -421,8 +416,9 @@ func (s *testSuite) preInitNode(node *networkNode) {
 		realKeeper.AddActiveNodes([]core.Node{origin})
 	}
 
+	keyProc := platformpolicy.NewKeyProcessor()
 	node.componentManager.Register(terminationHandler, realKeeper, newPulseManagerMock(realKeeper), netCoordinator, amMock)
 	node.componentManager.Register(certManager, cryptographyService)
-	node.componentManager.Inject(serviceNetwork, NewTestNetworkSwitcher())
+	node.componentManager.Inject(serviceNetwork, NewTestNetworkSwitcher(), keyProc)
 	node.serviceNetwork = serviceNetwork
 }

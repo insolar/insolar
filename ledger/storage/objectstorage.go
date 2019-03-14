@@ -142,7 +142,7 @@ func (os *objectStorage) IterateIndexIDs(
 	jetID core.RecordID,
 	handler func(id core.RecordID) error,
 ) error {
-	_, jetPrefix := core.JetID(jetID).Jet()
+	jetPrefix := core.JetID(jetID).Prefix()
 	prefix := prefixkey(scopeIDLifeline, jetPrefix)
 
 	return os.DB.iterate(ctx, prefix, func(k, v []byte) error {

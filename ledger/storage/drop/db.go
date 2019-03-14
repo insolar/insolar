@@ -35,7 +35,7 @@ func NewStorageDB() *dropStorageDB { // nolint: golint
 
 // ForPulse returns a jet.Drop for a provided pulse, that is stored in a db
 func (ds *dropStorageDB) ForPulse(ctx context.Context, jetID core.JetID, pulse core.PulseNumber) (jet.Drop, error) {
-	_, prefix := jetID.Jet()
+	prefix := jetID.Prefix()
 	k := storage.JetDropPrefixKey(prefix, pulse)
 
 	// buf, err := db.get(ctx, k)
@@ -52,7 +52,7 @@ func (ds *dropStorageDB) ForPulse(ctx context.Context, jetID core.JetID, pulse c
 
 // Set saves a provided jet.Drop to a db
 func (ds *dropStorageDB) Set(ctx context.Context, jetID core.JetID, drop jet.Drop) error {
-	_, prefix := jetID.Jet()
+	prefix := jetID.Prefix()
 	k := storage.JetDropPrefixKey(prefix, drop.Pulse)
 	_, err := ds.DB.Get(ctx, k)
 	if err == nil {
