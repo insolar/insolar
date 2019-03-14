@@ -38,7 +38,20 @@ type Modifier interface {
 	Set(ctx context.Context, id core.RecordID, blob Blob) error
 }
 
+// Blob represents blob-value with jetID.
 type Blob struct {
 	Value []byte
 	JetID core.JetID
+}
+
+// Clone returns copy of argument blob.
+func Clone(blob Blob) Blob {
+	if len(blob.Value) == 0 {
+		blob.Value = nil
+	} else {
+		b := blob.Value
+		blob.Value = append(b[:0:0], b...)
+	}
+
+	return blob
 }

@@ -46,11 +46,13 @@ func (s *StorageMemory) ForID(ctx context.Context, id core.RecordID) (blob Blob,
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
-	blob, ok := s.memory[id]
+	b, ok := s.memory[id]
 	if !ok {
 		err = ErrNotFound
 		return
 	}
+
+	blob = Clone(b)
 
 	return
 }
@@ -65,10 +67,12 @@ func (s *StorageMemory) Set(ctx context.Context, id core.RecordID, blob Blob) er
 		return ErrOverride
 	}
 
-	s.memory[id] = blob
-	s.jetIndex.Add(id, blob.JetID)
+	b := Clone(blob)
 
-	blobSize := int64(len(blob.Value))
+	s.memory[id] = b
+	s.jetIndex.Add(id, b.JetID)
+
+	blobSize := int64(len(b.Value))
 
 	stats.Record(ctx,
 		statBlobInMemorySize.M(blobSize),
