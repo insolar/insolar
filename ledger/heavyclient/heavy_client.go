@@ -103,7 +103,7 @@ func (c *JetClient) updateLeftPulsesMetrics(ctx context.Context) {
 	if len(c.leftPulses) > 0 {
 		pn = c.leftPulses[0]
 	}
-	ctx = insmetrics.InsertTag(ctx, tagJet, core.RecordID(c.jetID).DebugString())
+	ctx = insmetrics.InsertTag(ctx, tagJet, c.jetID.DebugString())
 	stats.Record(ctx,
 		statUnsyncedPulsesCount.M(int64(len(c.leftPulses))),
 		statFirstUnsyncedPulse.M(int64(pn)),
@@ -230,7 +230,7 @@ func (c *JetClient) syncloop(ctx context.Context) {
 		shouldretry := false
 		syncerr := c.HeavySync(ctx, syncPN)
 		inslog := inslog.WithFields(map[string]interface{}{
-			"jet_id":  core.RecordID(c.jetID).DebugString(),
+			"jet_id":  c.jetID.DebugString(),
 			"pulse":   syncPN,
 			"attempt": c.syncbackoff.Attempt(),
 		})
@@ -252,7 +252,7 @@ func (c *JetClient) syncloop(ctx context.Context) {
 			}
 			// TODO: write some info to dust - 14.Dec.2018 @nordicdyno
 		} else {
-			ctx = insmetrics.InsertTag(ctx, tagJet, core.RecordID(c.jetID).DebugString())
+			ctx = insmetrics.InsertTag(ctx, tagJet, c.jetID.DebugString())
 			stats.Record(ctx,
 				statSyncedPulsesCount.M(1),
 			)
