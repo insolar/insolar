@@ -48,8 +48,6 @@ type ServiceNetwork struct {
 	cfg configuration.Configuration
 	cm  *component.Manager
 
-	hostNetwork network.HostNetwork // TODO: should be injected
-
 	// dependencies
 	CertificateManager  core.CertificateManager         `inject:""`
 	PulseManager        core.PulseManager               `inject:""`
@@ -139,7 +137,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		return errors.Wrap(err, "Failed to create consensus network.")
 	}
 
-	n.hostNetwork = hostnetwork.NewHostTransport(internalTransport)
+	hostNetwork := hostnetwork.NewHostTransport(internalTransport)
 	options := controller.ConfigureOptions(n.cfg)
 
 	cert := n.CertificateManager.GetCertificate()
@@ -148,7 +146,8 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	n.cm.Inject(n,
 		&routing.Table{},
 		cert,
-		n.hostNetwork,
+		internalTransport,
+		hostNetwork,
 		merkle.NewCalculator(),
 		consensusNetwork,
 		phases.NewCommunicator(),
@@ -157,9 +156,9 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		phases.NewThirdPhase(),
 		phases.NewPhaseManager(),
 		bootstrap.NewSessionManager(),
-		controller.NewNetworkController(n.hostNetwork),
-		controller.NewRPCController(options, n.hostNetwork),
-		controller.NewPulseController(n.hostNetwork),
+		controller.NewNetworkController(hostNetwork),
+		controller.NewRPCController(options, hostNetwork),
+		controller.NewPulseController(hostNetwork),
 		bootstrap.NewBootstrapper(options, internalTransport),
 		bootstrap.NewAuthorizationController(options, internalTransport),
 		bootstrap.NewChallengeResponseController(options, internalTransport),
@@ -202,14 +201,8 @@ func (n *ServiceNetwork) Leave(ctx context.Context, ETA core.PulseNumber) {
 
 // Stop implements core.Component
 func (n *ServiceNetwork) Stop(ctx context.Context) error {
-	logger := inslogger.FromContext(ctx)
-
-	logger.Info("Stopping network components")
-	if err := n.cm.Stop(ctx); err != nil {
-		log.Errorf("Error while stopping network components: %s", err.Error())
-	}
-	logger.Info("Stopping host network")
-	return n.hostNetwork.Stop(ctx)
+	inslogger.FromContext(ctx).Info("Stopping network component manager...")
+	return n.cm.Stop(ctx)
 }
 
 func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse core.Pulse) {

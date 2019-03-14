@@ -28,29 +28,18 @@ import (
 
 // TransportResolvable is implementation of HostNetwork interface that is capable of address resolving.
 type TransportResolvable struct {
-	Resolver network.RoutingTable `inject:""`
-
-	internalTransport network.InternalTransport
-}
-
-// Start listening to network requests.
-func (tr *TransportResolvable) Start(ctx context.Context) error {
-	return tr.internalTransport.Start(ctx)
-}
-
-// Stop listening to network requests.
-func (tr *TransportResolvable) Stop(ctx context.Context) error {
-	return tr.internalTransport.Stop(ctx)
+	Resolver  network.RoutingTable      `inject:""`
+	Transport network.InternalTransport `inject:""`
 }
 
 // PublicAddress returns public address that can be published for all nodes.
 func (tr *TransportResolvable) PublicAddress() string {
-	return tr.internalTransport.PublicAddress()
+	return tr.Transport.PublicAddress()
 }
 
 // GetNodeID get current node ID.
 func (tr *TransportResolvable) GetNodeID() core.RecordRef {
-	return tr.internalTransport.GetNodeID()
+	return tr.Transport.GetNodeID()
 }
 
 // SendRequest send request to a remote node.
@@ -59,7 +48,7 @@ func (tr *TransportResolvable) SendRequest(ctx context.Context, request network.
 	if err != nil {
 		return nil, errors.Wrap(err, "error resolving NodeID -> Address")
 	}
-	return tr.internalTransport.SendRequestPacket(ctx, request, h)
+	return tr.Transport.SendRequestPacket(ctx, request, h)
 }
 
 // RegisterPacketHandler register a handler function to process incoming requests of a specific type.
@@ -68,19 +57,19 @@ func (tr *TransportResolvable) RegisterRequestHandler(t types.PacketType, handle
 		tr.Resolver.AddToKnownHosts(request.GetSenderHost())
 		return handler(ctx, request)
 	}
-	tr.internalTransport.RegisterPacketHandler(t, f)
+	tr.Transport.RegisterPacketHandler(t, f)
 }
 
 // NewRequestBuilder create packet Builder for an outgoing request with sender set to current node.
 func (tr *TransportResolvable) NewRequestBuilder() network.RequestBuilder {
-	return tr.internalTransport.NewRequestBuilder()
+	return tr.Transport.NewRequestBuilder()
 }
 
 // BuildResponse create response to an incoming request with Data set to responseData.
 func (tr *TransportResolvable) BuildResponse(ctx context.Context, request network.Request, responseData interface{}) network.Response {
-	return tr.internalTransport.BuildResponse(ctx, request, responseData)
+	return tr.Transport.BuildResponse(ctx, request, responseData)
 }
 
 func NewHostTransport(transport network.InternalTransport) network.HostNetwork {
-	return &TransportResolvable{internalTransport: transport}
+	return &TransportResolvable{Transport: transport}
 }
