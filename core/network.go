@@ -49,3 +49,9 @@ type PulseDistributor interface {
 	// Distribute distributes a pulse across the network.
 	Distribute(context.Context, Pulse)
 }
+
+type Network2 interface {
+	Init(ctx context.Context) error
+	Start(ctx context.Context) error
+	Stop(ctx context.Context) error
+}
