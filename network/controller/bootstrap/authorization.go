@@ -53,12 +53,12 @@ type AuthorizationController interface {
 }
 
 type authorizationController struct {
-	NodeKeeper         network.NodeKeeper      `inject:""`
-	NetworkCoordinator core.NetworkCoordinator `inject:""`
-	SessionManager     SessionManager          `inject:""`
+	NodeKeeper         network.NodeKeeper        `inject:""`
+	NetworkCoordinator core.NetworkCoordinator   `inject:""`
+	SessionManager     SessionManager            `inject:""`
+	Transport          network.InternalTransport `inject:""`
 
-	options   *common.Options
-	transport network.InternalTransport
+	options *common.Options
 }
 
 type OperationCode uint8
@@ -117,10 +117,10 @@ func (ac *authorizationController) Authorize(ctx context.Context, discoveryNode 
 		return 0, errors.Wrap(err, "Error serializing certificate")
 	}
 
-	request := ac.transport.NewRequestBuilder().Type(types.Authorize).Data(&AuthorizationRequest{
+	request := ac.Transport.NewRequestBuilder().Type(types.Authorize).Data(&AuthorizationRequest{
 		Certificate: serializedCert,
 	}).Build()
-	future, err := ac.transport.SendRequestPacket(ctx, request, discoveryNode.Host)
+	future, err := ac.Transport.SendRequestPacket(ctx, request, discoveryNode.Host)
 	if err != nil {
 		return 0, errors.Wrapf(err, "Error sending authorize request")
 	}
@@ -158,12 +158,12 @@ func (ac *authorizationController) register(ctx context.Context, discoveryNode *
 	if err != nil {
 		return errors.Wrap(err, "Failed to get origin claim")
 	}
-	request := ac.transport.NewRequestBuilder().Type(types.Register).Data(&RegistrationRequest{
+	request := ac.Transport.NewRequestBuilder().Type(types.Register).Data(&RegistrationRequest{
 		Version:   ac.NodeKeeper.GetOrigin().Version(),
 		SessionID: sessionID,
 		JoinClaim: originClaim,
 	}).Build()
-	future, err := ac.transport.SendRequestPacket(ctx, request, discoveryNode.Host)
+	future, err := ac.Transport.SendRequestPacket(ctx, request, discoveryNode.Host)
 	if err != nil {
 		return errors.Wrapf(err, "Error sending register request")
 	}
@@ -233,51 +233,48 @@ func (ac *authorizationController) processRegisterRequest(ctx context.Context, r
 		response := &RegistrationResponse{Code: OpRejected,
 			Error: fmt.Sprintf("Joiner version %s does not match discovery version %s",
 				data.Version, ac.NodeKeeper.GetOrigin().Version())}
-		return ac.transport.BuildResponse(ctx, request, response), nil
+		return ac.Transport.BuildResponse(ctx, request, response), nil
 	}
 	response := ac.buildRegistrationResponse(data.SessionID, data.JoinClaim)
 	if response.Code != OpConfirmed {
-		return ac.transport.BuildResponse(ctx, request, response), nil
+		return ac.Transport.BuildResponse(ctx, request, response), nil
 	}
 
 	// TODO: fix Short ID assignment logic
 	if CheckShortIDCollision(ac.NodeKeeper, data.JoinClaim.ShortNodeID) {
 		response = &RegistrationResponse{Code: OpRejected,
 			Error: "Short ID of the joiner node conflicts with active node short ID"}
-		return ac.transport.BuildResponse(ctx, request, response), nil
+		return ac.Transport.BuildResponse(ctx, request, response), nil
 	}
 
 	inslogger.FromContext(ctx).Infof("Added join claim from node %s", request.GetSender())
 	ac.NodeKeeper.GetClaimQueue().Push(data.JoinClaim)
-	return ac.transport.BuildResponse(ctx, request, response), nil
+	return ac.Transport.BuildResponse(ctx, request, response), nil
 }
 
 func (ac *authorizationController) processAuthorizeRequest(ctx context.Context, request network.Request) (network.Response, error) {
 	data := request.GetData().(*AuthorizationRequest)
 	cert, err := certificate.Deserialize(data.Certificate, platformpolicy.NewKeyProcessor())
 	if err != nil {
-		return ac.transport.BuildResponse(ctx, request, &AuthorizationResponse{Code: OpRejected, Error: err.Error()}), nil
+		return ac.Transport.BuildResponse(ctx, request, &AuthorizationResponse{Code: OpRejected, Error: err.Error()}), nil
 	}
 	valid, err := ac.NetworkCoordinator.ValidateCert(ctx, cert)
 	if !valid {
 		if err == nil {
 			err = errors.New("Certificate validation failed")
 		}
-		return ac.transport.BuildResponse(ctx, request, &AuthorizationResponse{Code: OpRejected, Error: err.Error()}), nil
+		return ac.Transport.BuildResponse(ctx, request, &AuthorizationResponse{Code: OpRejected, Error: err.Error()}), nil
 	}
 	session := ac.SessionManager.NewSession(request.GetSender(), cert, ac.options.HandshakeSessionTTL)
-	return ac.transport.BuildResponse(ctx, request, &AuthorizationResponse{Code: OpConfirmed, SessionID: session}), nil
+	return ac.Transport.BuildResponse(ctx, request, &AuthorizationResponse{Code: OpConfirmed, SessionID: session}), nil
 }
 
 func (ac *authorizationController) Init(ctx context.Context) error {
-	ac.transport.RegisterPacketHandler(types.Register, ac.processRegisterRequest)
-	ac.transport.RegisterPacketHandler(types.Authorize, ac.processAuthorizeRequest)
+	ac.Transport.RegisterPacketHandler(types.Register, ac.processRegisterRequest)
+	ac.Transport.RegisterPacketHandler(types.Authorize, ac.processAuthorizeRequest)
 	return nil
 }
 
-func NewAuthorizationController(options *common.Options, transport network.InternalTransport) AuthorizationController {
-	return &authorizationController{
-		options:   options,
-		transport: transport,
-	}
+func NewAuthorizationController(options *common.Options) AuthorizationController {
+	return &authorizationController{options: options}
 }

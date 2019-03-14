@@ -62,13 +62,13 @@ type Bootstrapper interface {
 }
 
 type bootstrapper struct {
-	Certificate     core.Certificate     `inject:""`
-	NodeKeeper      network.NodeKeeper   `inject:""`
-	NetworkSwitcher core.NetworkSwitcher `inject:""`
+	Certificate     core.Certificate          `inject:""`
+	NodeKeeper      network.NodeKeeper        `inject:""`
+	NetworkSwitcher core.NetworkSwitcher      `inject:""`
+	Transport       network.InternalTransport `inject:""`
 
-	options   *common.Options
-	transport network.InternalTransport
-	pinger    *pinger.Pinger
+	options *common.Options
+	pinger  *pinger.Pinger
 
 	lastPulse      core.PulseNumber
 	lastPulseLock  sync.RWMutex
@@ -332,11 +332,11 @@ func (bc *bootstrapper) sendGenesisRequest(ctx context.Context, h *host.Host) (*
 	if err != nil {
 		return nil, errors.Wrapf(err, "Failed to prepare genesis request to address %s", h)
 	}
-	request := bc.transport.NewRequestBuilder().Type(types.Genesis).Data(&GenesisRequest{
+	request := bc.Transport.NewRequestBuilder().Type(types.Genesis).Data(&GenesisRequest{
 		LastPulse: bc.GetLastPulse(),
 		Discovery: discovery,
 	}).Build()
-	future, err := bc.transport.SendRequestPacket(ctx, request, h)
+	future, err := bc.Transport.SendRequestPacket(ctx, request, h)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Failed to send genesis request to address %s", h)
 	}
@@ -480,8 +480,8 @@ func (bc *bootstrapper) startBootstrap(ctx context.Context, address string) (*ne
 	if err != nil {
 		return nil, errors.Wrapf(err, "Failed to ping address %s", address)
 	}
-	request := bc.transport.NewRequestBuilder().Type(types.Bootstrap).Data(&NodeBootstrapRequest{}).Build()
-	future, err := bc.transport.SendRequestPacket(ctx, request, bootstrapHost)
+	request := bc.Transport.NewRequestBuilder().Type(types.Bootstrap).Data(&NodeBootstrapRequest{}).Build()
+	future, err := bc.Transport.SendRequestPacket(ctx, request, bootstrapHost)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Failed to send bootstrap request to address %s", address)
 	}
@@ -511,7 +511,7 @@ func (bc *bootstrapper) processBootstrap(ctx context.Context, request network.Re
 	} else {
 		code = Accepted
 	}
-	return bc.transport.BuildResponse(ctx, request,
+	return bc.Transport.BuildResponse(ctx, request,
 		&NodeBootstrapResponse{
 			Code: code,
 			// FirstPulseTimeUnix: bc.firstPulseTime.Unix(),
@@ -522,19 +522,20 @@ func (bc *bootstrapper) processGenesis(ctx context.Context, request network.Requ
 	data := request.GetData().(*GenesisRequest)
 	discovery, err := newNodeStruct(bc.NodeKeeper.GetOrigin())
 	if err != nil {
-		return bc.transport.BuildResponse(ctx, request, &GenesisResponse{Error: err.Error()}), nil
+		return bc.Transport.BuildResponse(ctx, request, &GenesisResponse{Error: err.Error()}), nil
 	}
 	bc.SetLastPulse(data.LastPulse)
 	bc.setRequest(request.GetSender(), data)
-	return bc.transport.BuildResponse(ctx, request, &GenesisResponse{
+	return bc.Transport.BuildResponse(ctx, request, &GenesisResponse{
 		Response: GenesisRequest{Discovery: discovery, LastPulse: bc.GetLastPulse()},
 	}), nil
 }
 
 func (bc *bootstrapper) Init(ctx context.Context) error {
 	bc.firstPulseTime = time.Now()
-	bc.transport.RegisterPacketHandler(types.Bootstrap, bc.processBootstrap)
-	bc.transport.RegisterPacketHandler(types.Genesis, bc.processGenesis)
+	bc.pinger = pinger.NewPinger(bc.Transport)
+	bc.Transport.RegisterPacketHandler(types.Bootstrap, bc.processBootstrap)
+	bc.Transport.RegisterPacketHandler(types.Genesis, bc.processGenesis)
 	return nil
 }
 
@@ -549,14 +550,9 @@ func parseBotstrapResults(results []*network.BootstrapResult) *network.Bootstrap
 	return results[minIDIndex]
 }
 
-func NewBootstrapper(
-	options *common.Options,
-
-	transport network.InternalTransport) Bootstrapper {
+func NewBootstrapper(options *common.Options) Bootstrapper {
 	return &bootstrapper{
 		options:       options,
-		transport:     transport,
-		pinger:        pinger.NewPinger(transport),
 		bootstrapLock: make(chan struct{}),
 
 		genesisRequestsReceived: make(map[core.RecordRef]*GenesisRequest),

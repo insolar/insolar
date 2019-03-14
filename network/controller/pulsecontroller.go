@@ -35,13 +35,12 @@ type pulseController struct {
 	PulseHandler network.PulseHandler `inject:""`
 	NodeKeeper   network.NodeKeeper   `inject:""`
 	Resolver     network.RoutingTable `inject:""`
-
-	hostNetwork network.HostNetwork
+	Network      network.HostNetwork  `inject:""`
 }
 
 func (pc *pulseController) Init(ctx context.Context) error {
-	pc.hostNetwork.RegisterRequestHandler(types.Pulse, pc.processPulse)
-	pc.hostNetwork.RegisterRequestHandler(types.GetRandomHosts, pc.processGetRandomHosts)
+	pc.Network.RegisterRequestHandler(types.Pulse, pc.processPulse)
+	pc.Network.RegisterRequestHandler(types.GetRandomHosts, pc.processGetRandomHosts)
 	return nil
 }
 
@@ -52,15 +51,15 @@ func (pc *pulseController) processPulse(ctx context.Context, request network.Req
 	if pc.NodeKeeper.GetState() != core.WaitingNodeNetworkState {
 		go pc.PulseHandler.HandlePulse(context.Background(), data.Pulse)
 	}
-	return pc.hostNetwork.BuildResponse(ctx, request, &packet.ResponsePulse{Success: true, Error: ""}), nil
+	return pc.Network.BuildResponse(ctx, request, &packet.ResponsePulse{Success: true, Error: ""}), nil
 }
 
 func (pc *pulseController) processGetRandomHosts(ctx context.Context, request network.Request) (network.Response, error) {
 	data := request.GetData().(*packet.RequestGetRandomHosts)
 	randomHosts := pc.Resolver.GetRandomNodes(data.HostsNumber)
-	return pc.hostNetwork.BuildResponse(ctx, request, &packet.ResponseGetRandomHosts{Hosts: randomHosts}), nil
+	return pc.Network.BuildResponse(ctx, request, &packet.ResponseGetRandomHosts{Hosts: randomHosts}), nil
 }
 
-func NewPulseController(hostNetwork network.HostNetwork) PulseController {
-	return &pulseController{hostNetwork: hostNetwork}
+func NewPulseController() PulseController {
+	return &pulseController{}
 }

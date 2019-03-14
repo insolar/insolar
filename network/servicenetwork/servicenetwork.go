@@ -156,12 +156,12 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		phases.NewThirdPhase(),
 		phases.NewPhaseManager(),
 		bootstrap.NewSessionManager(),
-		controller.NewNetworkController(hostNetwork),
-		controller.NewRPCController(options, hostNetwork),
-		controller.NewPulseController(hostNetwork),
-		bootstrap.NewBootstrapper(options, internalTransport),
-		bootstrap.NewAuthorizationController(options, internalTransport),
-		bootstrap.NewChallengeResponseController(options, internalTransport),
+		controller.NewNetworkController(),
+		controller.NewRPCController(options),
+		controller.NewPulseController(),
+		bootstrap.NewBootstrapper(options),
+		bootstrap.NewAuthorizationController(options),
+		bootstrap.NewChallengeResponseController(options),
 		bootstrap.NewNetworkBootstrapper(),
 	)
 	err = n.cm.Init(ctx)
