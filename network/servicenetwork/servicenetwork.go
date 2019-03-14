@@ -185,7 +185,7 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 	log.Info("Starting network component manager...")
 	err := n.cm.Start(ctx)
 	if err != nil {
-		return errors.Wrap(err, "Failed to bootstrap network")
+		return errors.Wrap(err, "Failed to start component manager")
 	}
 
 	log.Info("Bootstrapping network...")
