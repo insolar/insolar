@@ -781,6 +781,14 @@ func Test_readResponseQueue_EmptyResponseQueue(t *testing.T) {
 	}
 }
 
+func Test_readResponseQueue_OneEvent_Future(t *testing.T) {
+	slot, worker := makeSlotAndWorker(constant.Future, 22)
+	oldSlot := *slot
+	require.NoError(t, worker.readResponseQueue())
+
+	areSlotStatesEqual(&oldSlot, slot, t, false)
+}
+
 func Test_readResponseQueue_OneEvent(t *testing.T) {
 	responseState := uint32(446)
 	sm := istatemachine.NewStateMachineTypeMock(t)
@@ -790,7 +798,7 @@ func Test_readResponseQueue_OneEvent(t *testing.T) {
 		}
 	}
 
-	for _, tt := range testPulseStates {
+	for _, tt := range []constant.PulseState{constant.Past, constant.Present} {
 		t.Run(tt.String(), func(t *testing.T) {
 			slot, worker := makeSlotAndWorker(tt, 22)
 			oldSlot := *slot
@@ -941,6 +949,24 @@ func Test_initializing_NotEmptySlot(t *testing.T) {
 
 			worker.initializing()
 			areSlotStatesEqual(&oldSlot, slot, t, false)
+		})
+	}
+}
+
+func Test_CallCallbackOfSignal(t *testing.T) {
+	for _, tt := range testPulseStates {
+		t.Run(tt.String(), func(t *testing.T) {
+			slot, worker := makeSlotAndWorker(tt, 22)
+			callback := mockCallback()
+			slot.inputQueue.PushSignal(PendingPulseSignal, callback)
+
+			go worker.run()
+
+			callback.(*mockSyncDone).Wait()
+
+			callback = mockCallback()
+			slot.inputQueue.PushSignal(ActivatePulseSignal, callback)
+			callback.(*mockSyncDone).Wait()
 		})
 	}
 }

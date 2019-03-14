@@ -70,15 +70,24 @@ func mockSlot(t *testing.T, q *queue.IQueueMock, pulseNumber core.PulseNumber) *
 }
 
 type mockSyncDone struct {
+	waiter    chan int
 	doneCount int
 }
 
+func (s *mockSyncDone) Wait() {
+	<-s.waiter
+}
+
 func (s *mockSyncDone) Done() {
+	s.waiter <- 3
 	s.doneCount = s.doneCount + 1
 }
 
 func mockCallback() queue.SyncDone {
-	return &mockSyncDone{doneCount: 0}
+	return &mockSyncDone{
+		doneCount: 0,
+		waiter:    make(chan int, 3),
+	}
 }
 
 func testPulseConveyor(t *testing.T, isQueueOk bool) *PulseConveyor {
@@ -398,3 +407,19 @@ func TestConveyor_ActivatePreparePulse(t *testing.T) {
 	err = c.ActivatePulse()
 	require.NoError(t, err)
 }
+
+// // ---- integration  tests
+//
+// func TestConveyor_Integration(t *testing.T) {
+// 	conveyor, err := NewPulseConveyor()
+// 	require.NoError(t, err)
+// 	callback := mockCallback()
+// 	pulse := core.Pulse{PulseNumber: testRealPulse + testPulseDelta}
+// 	err = conveyor.PreparePulse(pulse, callback)
+// 	require.NoError(t, err)
+//
+// 	callback.(*mockSyncDone).Wait()
+//
+// 	// err = conveyor.ActivatePulse()
+// 	// require.NoError(t, err)
+// }

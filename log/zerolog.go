@@ -45,7 +45,9 @@ func newZerologAdapter(cfg configuration.Log) (*zerologAdapter, error) {
 	}
 
 	zerolog.CallerSkipFrameCount = 3
-	return &zerologAdapter{logger: zerolog.New(output).Level(zerolog.InfoLevel).With().Timestamp().Caller().Logger()}, nil
+	//return &zerologAdapter{logger: zerolog.New(output).Level(zerolog.InfoLevel).With().Timestamp().Caller().Logger()}, nil
+	//return &zerologAdapter{logger: zerolog.New(output).Level(zerolog.InfoLevel).With().Timestamp().Logger()}, nil
+	return &zerologAdapter{logger: zerolog.New(output).Level(zerolog.InfoLevel).With().Logger()}, nil
 }
 
 // WithFields return copy of adapter with predefined fields.

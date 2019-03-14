@@ -160,7 +160,8 @@ func NewSlot(pulseState constant.PulseState, pulseNumber core.PulseNumber, remov
 		ActiveElement:    {},
 		NotActiveElement: {},
 	}
-	return &Slot{
+
+	slot := &Slot{
 		pulseState:         pulseState,
 		inputQueue:         queue.NewMutexQueue(),
 		responseQueue:      queue.NewMutexQueue(),
@@ -171,6 +172,9 @@ func NewSlot(pulseState constant.PulseState, pulseNumber core.PulseNumber, remov
 		elementListMap:     elementListMap,
 		removeSlotCallback: removeSlotCallback,
 	}
+	// worker := newWorker(slot)
+	// go worker.run()
+	return slot
 }
 
 // GetPulseNumber implements iface SlotDetails
