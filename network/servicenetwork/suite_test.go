@@ -25,6 +25,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/insolar/insolar/certificate"
@@ -43,10 +44,10 @@ import (
 )
 
 var (
-	testNetworkPort       = 10010
-	pulseTimeMs     int32 = 5000
-	reqTimeoutMs    int32 = 2000
-	pulseDelta      int32 = 5
+	testNetworkPort uint32 = 10010
+	pulseTimeMs     int32  = 5000
+	reqTimeoutMs    int32  = 2000
+	pulseDelta      int32  = 5
 )
 
 type fixture struct {
@@ -275,8 +276,7 @@ func newNetworkNode() *networkNode {
 	if err != nil {
 		panic(err.Error())
 	}
-	address := "127.0.0.1:" + strconv.Itoa(testNetworkPort)
-	testNetworkPort += 2 // coz consensus transport port+=1
+	address := "127.0.0.1:" + strconv.Itoa(incrementTestPort())
 
 	return &networkNode{
 		id:                  testutils.RandomRef(),
@@ -286,6 +286,11 @@ func newNetworkNode() *networkNode {
 		host:                address,
 		consensusResult:     make(chan error, 30),
 	}
+}
+
+func incrementTestPort() int {
+	result := atomic.AddUint32(&testNetworkPort, 2) // coz consensus transport port+=1
+	return int(result)
 }
 
 // init calls Init for node component manager and wraps PhaseManager
