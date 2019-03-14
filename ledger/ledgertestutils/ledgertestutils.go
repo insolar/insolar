@@ -62,7 +62,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 	gi := genesis.NewGenesisInitializer()
 	pt := storage.NewPulseTracker()
 	ps := storage.NewPulseStorage()
-	js := jet.NewJetStorage()
+	js := jet.NewStore()
 	os := storage.NewObjectStorage()
 	ns := node.NewStorage()
 	ds := drop.NewStorageDB()
@@ -160,7 +160,8 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 	pm.LR = c.LogicRunner
 	pm.ActiveListSwapper = alsMock
 	pm.PulseStorage = ps
-	pm.JetStorage = js
+	pm.JetAccessor = js
+	pm.JetModifier = js
 	pm.DropModifier = ds
 	pm.DropAccessor = ds
 	pm.ObjectStorage = os

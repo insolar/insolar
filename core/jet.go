@@ -63,7 +63,7 @@ func (id JetID) Prefix() []byte {
 }
 
 // DebugString prints JetID in human readable form.
-func (id *JetID) DebugString() string {
+func (id JetID) DebugString() string {
 	depth := int(id[PulseNumberSize])
 	if depth == 0 {
 		return "[JET 0 -]"

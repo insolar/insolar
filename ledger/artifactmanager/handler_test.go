@@ -56,7 +56,7 @@ type handlerSuite struct {
 	pulseTracker  storage.PulseTracker
 	nodeStorage   node.Accessor
 	objectStorage storage.ObjectStorage
-	jetStorage    jet.JetStorage
+	jetStorage    jet.Storage
 	dropModifier  drop.Modifier
 	dropAccessor  drop.Accessor
 }
@@ -80,7 +80,7 @@ func (s *handlerSuite) BeforeTest(suiteName, testName string) {
 	s.cleaner = cleaner
 	s.db = db
 	s.scheme = testutils.NewPlatformCryptographyScheme()
-	s.jetStorage = jet.NewJetStorage()
+	s.jetStorage = jet.NewStore()
 	s.nodeStorage = node.NewStorage()
 	s.pulseTracker = storage.NewPulseTracker()
 	s.objectStorage = storage.NewObjectStorage()
@@ -1121,97 +1121,6 @@ func (s *handlerSuite) TestMessageHandler_HandleValidationCheck() {
 		_, ok := rep.(*reply.OK)
 		assert.True(t, ok)
 	})
-}
-
-func (s *handlerSuite) TestMessageHandler_HandleJetDrop_SaveJet() {
-	// Arrange
-	mc := minimock.NewController(s.T())
-	defer mc.Finish()
-
-	jetID := core.RecordID(*core.NewJetID(0, []byte{2}))
-	msg := message.JetDrop{
-		JetID: jetID,
-	}
-	expectedSetId := jet.IDSet{
-		jetID: struct{}{},
-	}
-
-	certificate := testutils.NewCertificateMock(s.T())
-	certificate.GetRoleMock.Return(core.StaticRoleLightMaterial)
-
-	h := NewMessageHandler(&configuration.Ledger{
-		LightChainLimit: 3,
-	}, certificate)
-	h.JetStorage = s.jetStorage
-	h.Nodes = s.nodeStorage
-	h.DBContext = s.db
-	h.PulseTracker = s.pulseTracker
-	h.ObjectStorage = s.objectStorage
-
-	// Act
-	response, err := h.handleJetDrop(s.ctx, &message.Parcel{Msg: &msg})
-	require.NoError(s.T(), err)
-
-	idSet, err := s.jetStorage.GetJets(s.ctx)
-	require.NoError(s.T(), err)
-	require.NotNil(s.T(), idSet)
-
-	// Assert
-	require.Equal(s.T(), &reply.OK{}, response)
-	for id := range expectedSetId {
-		require.True(s.T(), idSet.Has(id))
-	}
-}
-
-func (s *handlerSuite) TestMessageHandler_HandleJetDrop_SaveJet_ExistingMap() {
-	// Arrange
-	// ctx := inslogger.TestContext(t)
-	mc := minimock.NewController(s.T())
-	// db, cleaner := storagetest.TmpDB(ctx, t)
-	defer mc.Finish()
-
-	jetID := core.RecordID(*core.NewJetID(0, []byte{2}))
-	secondJetID := core.RecordID(*core.NewJetID(0, []byte{3}))
-	msg := message.JetDrop{
-		JetID: jetID,
-	}
-	secondMsg := message.JetDrop{
-		JetID: secondJetID,
-	}
-	expectedSetId := jet.IDSet{
-		jetID:       struct{}{},
-		secondJetID: struct{}{},
-	}
-
-	certificate := testutils.NewCertificateMock(s.T())
-	certificate.GetRoleMock.Return(core.StaticRoleLightMaterial)
-
-	h := NewMessageHandler(&configuration.Ledger{
-		LightChainLimit: 3,
-	}, certificate)
-	h.JetStorage = s.jetStorage
-	h.Nodes = s.nodeStorage
-	h.DBContext = s.db
-	h.PulseTracker = s.pulseTracker
-	h.ObjectStorage = s.objectStorage
-
-	// Act
-	response, err := h.handleJetDrop(s.ctx, &message.Parcel{Msg: &msg})
-	require.NoError(s.T(), err)
-	require.Equal(s.T(), &reply.OK{}, response)
-
-	secondResponse, err := h.handleJetDrop(s.ctx, &message.Parcel{Msg: &secondMsg})
-	require.NoError(s.T(), err)
-	require.Equal(s.T(), &reply.OK{}, secondResponse)
-
-	idSet, err := s.jetStorage.GetJets(s.ctx)
-	require.NoError(s.T(), err)
-	require.NotNil(s.T(), idSet)
-
-	// Assert
-	for id := range expectedSetId {
-		require.True(s.T(), idSet.Has(id))
-	}
 }
 
 func (s *handlerSuite) TestMessageHandler_HandleGetRequest() {

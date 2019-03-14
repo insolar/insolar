@@ -49,7 +49,7 @@ type fetchResult struct {
 
 type jetTreeUpdater struct {
 	Nodes          node.Accessor
-	JetStorage     jet.JetStorage
+	JetStorage     jet.Storage
 	MessageBus     core.MessageBus
 	JetCoordinator core.JetCoordinator
 
@@ -59,7 +59,9 @@ type jetTreeUpdater struct {
 
 func newJetTreeUpdater(
 	ans node.Accessor,
-	js jet.JetStorage, mb core.MessageBus, jc core.JetCoordinator,
+	js jet.Storage,
+	mb core.MessageBus,
+	jc core.JetCoordinator,
 ) *jetTreeUpdater {
 	return &jetTreeUpdater{
 		Nodes:          ans,
@@ -77,14 +79,14 @@ func (jtu *jetTreeUpdater) fetchJet(
 	defer span.End()
 
 	// Look in the local tree. Return if the actual jet found.
-	jetID, actual := jtu.JetStorage.FindJet(ctx, pulse, target)
+	jetID, actual := jtu.JetStorage.ForID(ctx, pulse, target)
 	if actual {
-		return jetID, nil
+		return (*core.RecordID)(&jetID), nil
 	}
 
 	// Not actual in our tree, asking neighbors for jet.
 	span.Annotate(nil, "tree in DB is not actual")
-	key := seqKey{pulse, *jetID}
+	key := seqKey{pulse, core.RecordID(jetID)}
 
 	executing := false
 
@@ -121,7 +123,7 @@ func (jtu *jetTreeUpdater) fetchJet(
 		return nil, err
 	}
 
-	jtu.JetStorage.UpdateJetTree(ctx, pulse, true, *resJet)
+	jtu.JetStorage.Update(ctx, pulse, true, core.JetID(*resJet))
 
 	return resJet, nil
 }
@@ -144,7 +146,7 @@ func (jtu *jetTreeUpdater) releaseJet(ctx context.Context, jetID core.RecordID, 
 		if depth == 0 {
 			break
 		}
-		jetID = core.RecordID(jet.JetParent(core.JetID(jetID)))
+		jetID = core.RecordID(jet.Parent(core.JetID(jetID)))
 		depth--
 	}
 }

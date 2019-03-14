@@ -17,164 +17,106 @@
 package jet
 
 import (
-	"bytes"
 	"context"
 	"sync"
-
-	"github.com/insolar/insolar/ledger/storage"
-	"github.com/ugorji/go/codec"
 
 	"github.com/insolar/insolar/core"
 )
 
-// JetStorage provides methods for working with jets
-//go:generate minimock -i github.com/insolar/insolar/ledger/internal/jet.JetStorage -o ./ -s _mock.go
-type JetStorage interface {
-	UpdateJetTree(ctx context.Context, pulse core.PulseNumber, setActual bool, ids ...core.RecordID)
-	FindJet(ctx context.Context, pulse core.PulseNumber, id core.RecordID) (*core.RecordID, bool)
-	SplitJetTree(ctx context.Context, pulse core.PulseNumber, jetID core.RecordID) (*core.RecordID, *core.RecordID, error)
-	CloneJetTree(ctx context.Context, from, to core.PulseNumber) *Tree
-	DeleteJetTree(ctx context.Context, pulse core.PulseNumber)
-
-	AddJets(ctx context.Context, jetIDs ...core.RecordID) error
-	GetJets(ctx context.Context) (IDSet, error)
+type Store struct {
+	sync.RWMutex
+	trees map[core.PulseNumber]*Tree
 }
 
-type jetStorage struct {
-	DB storage.DBContext `inject:""`
+var (
+	_ Accessor = &Store{}
+	_ Modifier = &Store{}
+)
 
-	trees     map[core.PulseNumber]*Tree
-	treesLock sync.RWMutex
-
-	addJetLock sync.RWMutex
-}
-
-func NewJetStorage() JetStorage {
-	return &jetStorage{
+func NewStore() *Store {
+	return &Store{
 		trees: map[core.PulseNumber]*Tree{},
 	}
 }
 
-// FindJet finds jet for specified pulse and object.
-func (js *jetStorage) FindJet(ctx context.Context, pulse core.PulseNumber, id core.RecordID) (*core.RecordID, bool) {
-	js.treesLock.RLock()
-
-	if t, ok := js.trees[pulse]; ok {
-		defer js.treesLock.RUnlock()
-		return t.Find(id)
-	}
-	js.treesLock.RUnlock()
-
-	js.treesLock.Lock()
-	defer js.treesLock.Unlock()
-	return js.getJetTree(ctx, pulse).Find(id)
+// TODO: add test if empty tree has at least one jetID
+func (s *Store) All(ctx context.Context, pulse core.PulseNumber) []core.JetID {
+	s.RLock()
+	defer s.RUnlock()
+	return s.treeForPulse(ctx, pulse).LeafIDs()
 }
 
-// UpdateJetTree updates jet tree for specified pulse.
-func (js *jetStorage) UpdateJetTree(ctx context.Context, pulse core.PulseNumber, setActual bool, ids ...core.RecordID) {
-	js.treesLock.Lock()
-	defer js.treesLock.Unlock()
+// ForID finds jet for specified pulse and object.
+func (s *Store) ForID(ctx context.Context, pulse core.PulseNumber, recordID core.RecordID) (core.JetID, bool) {
+	var t *Tree
+	s.RLock()
+	t, _ = s.trees[pulse]
+	s.RUnlock()
+	if t == nil {
+		t = s.TreeForPulse(ctx, pulse)
+	}
+	return t.Find(recordID)
+}
 
-	tree := js.getJetTree(ctx, pulse)
+// Update updates jet tree for specified pulse.
+func (s *Store) Update(ctx context.Context, pulse core.PulseNumber, setActual bool, ids ...core.JetID) {
+	s.Lock()
+	defer s.Unlock()
+
+	tree := s.treeForPulse(ctx, pulse)
 	for _, id := range ids {
 		tree.Update(id, setActual)
 	}
 }
 
-// SplitJetTree performs jet split and returns resulting jet ids.
-func (js *jetStorage) SplitJetTree(
-	ctx context.Context, pulse core.PulseNumber, jetID core.RecordID,
-) (*core.RecordID, *core.RecordID, error) {
-	js.treesLock.Lock()
-	defer js.treesLock.Unlock()
+// Split performs jet split and returns resulting jet ids.
+func (s *Store) Split(
+	ctx context.Context, pulse core.PulseNumber, id core.JetID,
+) (core.JetID, core.JetID, error) {
+	s.Lock()
+	defer s.Unlock()
 
-	tree := js.getJetTree(ctx, pulse)
-
-	left, right, err := tree.Split(jetID)
+	tree := s.treeForPulse(ctx, pulse)
+	left, right, err := tree.Split(id)
 	if err != nil {
-		return nil, nil, err
+		return core.ZeroJetID, core.ZeroJetID, err
 	}
-
 	return left, right, nil
 }
 
-// CloneJetTree copies tree from one pulse to another. Use it to copy past tree into new pulse.
-func (js *jetStorage) CloneJetTree(
+// TODO: rename?
+// Clone copies tree from one pulse to another. Use it to copy past tree into new pulse.
+func (s *Store) Clone(
 	ctx context.Context, from, to core.PulseNumber,
-) *Tree {
-	js.treesLock.Lock()
-	defer js.treesLock.Unlock()
-
-	tree := js.getJetTree(ctx, from)
-
-	res := tree.Clone(false)
-	js.trees[to] = res
-	return res
+) {
+	s.Lock()
+	defer s.Unlock()
+	s.trees[to] = s.treeForPulse(ctx, from).Clone(false)
 }
 
-func (js *jetStorage) DeleteJetTree(
+// Delete concurrent safe
+func (s *Store) Delete(
 	ctx context.Context, pulse core.PulseNumber,
 ) {
-	js.treesLock.Lock()
-	defer js.treesLock.Unlock()
-
-	delete(js.trees, pulse)
+	s.Lock()
+	defer s.Unlock()
+	delete(s.trees, pulse)
 }
 
-func (js *jetStorage) getJetTree(ctx context.Context, pulse core.PulseNumber) *Tree {
-	if t, ok := js.trees[pulse]; ok {
+// TreeForPulse concurrent safe ...
+func (s *Store) TreeForPulse(ctx context.Context, pulse core.PulseNumber) *Tree {
+	s.Lock()
+	defer s.Unlock()
+	return s.treeForPulse(ctx, pulse)
+}
+
+func (s *Store) treeForPulse(ctx context.Context, pulse core.PulseNumber) *Tree {
+	if t, ok := s.trees[pulse]; ok {
 		return t
 	}
 
-	tree := NewTree(pulse == core.GenesisPulse.PulseNumber)
-	js.trees[pulse] = tree
+	actualDefault := pulse == core.GenesisPulse.PulseNumber
+	tree := NewTree(actualDefault)
+	s.trees[pulse] = tree
 	return tree
-}
-
-// AddJets stores a list of jets of the current node.
-func (js *jetStorage) AddJets(ctx context.Context, jetIDs ...core.RecordID) error {
-	js.addJetLock.Lock()
-	defer js.addJetLock.Unlock()
-
-	k := storage.JetListPrefixKey()
-
-	var jets IDSet
-	buff, err := js.DB.Get(ctx, k)
-	if err == nil {
-		dec := codec.NewDecoder(bytes.NewReader(buff), &codec.CborHandle{})
-		err = dec.Decode(&jets)
-		if err != nil {
-			return err
-		}
-	} else if err == core.ErrNotFound {
-		jets = IDSet{}
-	} else {
-		return err
-	}
-
-	for _, id := range jetIDs {
-		jets[id] = struct{}{}
-	}
-	return js.DB.Set(ctx, k, jets.Bytes())
-}
-
-// GetJets returns jets of the current node
-func (js *jetStorage) GetJets(ctx context.Context) (IDSet, error) {
-	js.addJetLock.RLock()
-	defer js.addJetLock.RUnlock()
-
-	k := storage.JetListPrefixKey()
-	buff, err := js.DB.Get(ctx, k)
-	if err != nil {
-		return nil, err
-	}
-
-	dec := codec.NewDecoder(bytes.NewReader(buff), &codec.CborHandle{})
-	var jets IDSet
-	err = dec.Decode(&jets)
-	if err != nil {
-		return nil, err
-	}
-
-	return jets, nil
 }

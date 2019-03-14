@@ -58,7 +58,7 @@ type amSuite struct {
 	pulseTracker  storage.PulseTracker
 	nodeStorage   node.Accessor
 	objectStorage storage.ObjectStorage
-	jetStorage    jet.JetStorage
+	jetStorage    jet.Storage
 	dropModifier  drop.Modifier
 	dropAccessor  drop.Accessor
 	genesisState  genesis.GenesisState
@@ -83,7 +83,7 @@ func (s *amSuite) BeforeTest(suiteName, testName string) {
 	s.cleaner = cleaner
 	s.db = db
 	s.scheme = platformpolicy.NewPlatformCryptographyScheme()
-	s.jetStorage = jet.NewJetStorage()
+	s.jetStorage = jet.NewStore()
 	s.nodeStorage = node.NewStorage()
 	s.pulseTracker = storage.NewPulseTracker()
 	s.objectStorage = storage.NewObjectStorage()
@@ -325,13 +325,13 @@ func (s *amSuite) TestLedgerArtifactManager_DeployCode_CreatesCorrectRecord() {
 
 func (s *amSuite) TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord() {
 	ctx, os, am := getTestData(s)
-	jetID := core.RecordID(*core.NewJetID(0, nil))
+	jetID := *core.NewJetID(0, nil)
 
 	memory := []byte{1, 2, 3}
 	codeRef := genRandomRef(0)
 	parentID, _ := os.SetRecord(
 		ctx,
-		jetID,
+		core.RecordID(jetID),
 		core.GenesisPulse.PulseNumber,
 		&object.ObjectActivateRecord{
 			SideEffectRecord: object.SideEffectRecord{
@@ -339,7 +339,7 @@ func (s *amSuite) TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord(
 			},
 		},
 	)
-	err := os.SetObjectIndex(ctx, jetID, parentID, &object.Lifeline{
+	err := os.SetObjectIndex(ctx, core.RecordID(jetID), parentID, &object.Lifeline{
 		LatestState: parentID,
 	})
 	require.NoError(s.T(), err)
@@ -355,7 +355,8 @@ func (s *amSuite) TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord(
 		memory,
 	)
 	assert.Nil(s.T(), err)
-	activateRec, err := os.GetRecord(ctx, jetID, objDesc.StateID())
+
+	activateRec, err := os.GetRecord(ctx, core.RecordID(jetID), objDesc.StateID())
 	assert.Nil(s.T(), err)
 	assert.Equal(s.T(), activateRec, &object.ObjectActivateRecord{
 		SideEffectRecord: object.SideEffectRecord{
@@ -371,13 +372,14 @@ func (s *amSuite) TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord(
 		IsDelegate: false,
 	})
 
-	idx, err := os.GetObjectIndex(ctx, jetID, parentID, false)
+	idx, err := os.GetObjectIndex(ctx, core.RecordID(jetID), parentID, false)
 	assert.NoError(s.T(), err)
-	childRec, err := os.GetRecord(ctx, jetID, idx.ChildPointer)
+
+	childRec, err := os.GetRecord(ctx, core.RecordID(jetID), idx.ChildPointer)
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), objRef, childRec.(*object.ChildRecord).Ref)
 
-	idx, err = os.GetObjectIndex(ctx, jetID, objRef.Record(), false)
+	idx, err = os.GetObjectIndex(ctx, core.RecordID(jetID), objRef.Record(), false)
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), *objDesc.StateID(), *idx.LatestState)
 	assert.Equal(s.T(), *objDesc.Parent(), idx.Parent)
@@ -931,12 +933,16 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterRequest_JetMiss() {
 	s.T().Run("returns error on exceeding retry limit", func(t *testing.T) {
 		mb := testutils.NewMessageBusMock(mc)
 		am.DefaultBus = mb
-		mb.SendMock.Return(&reply.JetMiss{JetID: core.RecordID(*core.NewJetID(5, []byte{1, 2, 3}))}, nil)
+		mb.SendMock.Return(&reply.JetMiss{
+			JetID: core.RecordID(*core.NewJetID(5, []byte{1, 2, 3})),
+		}, nil)
 		_, err := am.RegisterRequest(s.ctx, *am.GenesisRef(), &message.Parcel{Msg: &message.CallMethod{}})
 		require.Error(t, err)
 	})
 
 	s.T().Run("returns no error and updates tree when jet miss", func(t *testing.T) {
+		b_1101 := byte(0xD0)
+		b_11010101 := byte(0xD5)
 		mb := testutils.NewMessageBusMock(mc)
 		am.DefaultBus = mb
 		retries := 3
@@ -945,16 +951,17 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterRequest_JetMiss() {
 				return &reply.ID{}, nil
 			}
 			retries--
-			return &reply.JetMiss{JetID: core.RecordID(*core.NewJetID(4, []byte{0xD5}))}, nil
+			return &reply.JetMiss{JetID: core.RecordID(*core.NewJetID(4, []byte{b_11010101}))}, nil
 		}
 		_, err := am.RegisterRequest(s.ctx, *am.GenesisRef(), &message.Parcel{Msg: &message.CallMethod{}})
 		require.NoError(t, err)
 
-		jetID, actual := s.jetStorage.FindJet(
+		jetID, actual := s.jetStorage.ForID(
 			s.ctx, core.FirstPulseNumber, *core.NewRecordID(0, []byte{0xD5}),
 		)
-		assert.Equal(t, core.RecordID(*core.NewJetID(4, []byte{0xD0})), *jetID)
-		assert.True(t, actual)
+
+		assert.Equal(t, core.NewJetID(4, []byte{b_1101}), &jetID, "proper jet ID for record")
+		assert.True(t, actual, "jet ID is actual in tree")
 	})
 }
 

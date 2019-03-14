@@ -24,7 +24,6 @@ import (
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/internal/jet"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/object"
@@ -37,7 +36,6 @@ type GenesisState interface {
 
 type genesisInitializer struct {
 	DB            storage.DBContext     `inject:""`
-	JetStorage    jet.JetStorage        `inject:""`
 	ObjectStorage storage.ObjectStorage `inject:""`
 	PulseTracker  storage.PulseTracker  `inject:""`
 	DropModifier  drop.Modifier         `inject:""`
@@ -72,11 +70,7 @@ func (gi *genesisInitializer) Init(ctx context.Context) error {
 	}
 
 	createGenesisRecord := func() (*core.RecordRef, error) {
-		err := gi.JetStorage.AddJets(ctx, core.RecordID(jetID))
-		if err != nil {
-			return nil, err
-		}
-
+		var err error
 		err = gi.PulseTracker.AddPulse(
 			ctx,
 			core.Pulse{

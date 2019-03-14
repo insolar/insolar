@@ -43,7 +43,7 @@ const (
 type LedgerArtifactManager struct {
 	DB           storage.DBContext    `inject:""`
 	GenesisState genesis.GenesisState `inject:""`
-	JetStorage   jet.JetStorage       `inject:""`
+	JetStorage   jet.Storage          `inject:""`
 
 	DefaultBus                 core.MessageBus                 `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`

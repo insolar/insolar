@@ -45,10 +45,6 @@ func IDRecordPrefixKey(jp []byte, pn core.PulseNumber) []byte {
 	return prefixkey(scopeIDRecord, jp, pn.Bytes())
 }
 
-func JetListPrefixKey() []byte {
-	return prefixkey(scopeIDSystem, []byte{sysJetList})
-}
-
 func GenesisPrefixKey() []byte {
 	return prefixkey(scopeIDSystem, []byte{sysGenesis})
 }

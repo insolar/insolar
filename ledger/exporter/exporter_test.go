@@ -49,11 +49,11 @@ type exporterSuite struct {
 
 	pulseTracker  storage.PulseTracker
 	objectStorage storage.ObjectStorage
-	jetStorage    jet.JetStorage
+	jetStorage    jet.Storage
 	pulseStorage  *storage.PulseStorage
 
 	exporter *Exporter
-	jetID    core.RecordID
+	jetID    core.JetID
 }
 
 func NewExporterSuite() *exporterSuite {
@@ -70,13 +70,13 @@ func TestExporter(t *testing.T) {
 func (s *exporterSuite) BeforeTest(suiteName, testName string) {
 	s.cm = &component.Manager{}
 	s.ctx = inslogger.TestContext(s.T())
-	s.jetID = core.TODOJetID
+	s.jetID = *core.NewJetID(0, nil)
 
 	db, cleaner := storagetest.TmpDB(s.ctx, s.T())
 	s.cleaner = cleaner
 	s.pulseTracker = storage.NewPulseTracker()
 	s.objectStorage = storage.NewObjectStorage()
-	s.jetStorage = jet.NewJetStorage()
+	s.jetStorage = jet.NewStore()
 	s.pulseStorage = storage.NewPulseStorage()
 	s.exporter = NewExporter(configuration.Exporter{ExportLag: 0})
 
@@ -109,6 +109,12 @@ func (s *exporterSuite) AfterTest(suiteName, testName string) {
 }
 
 func (s *exporterSuite) TestExporter_Export() {
+	var (
+		Pulse1  core.PulseNumber = core.FirstPulseNumber
+		Pulse10 core.PulseNumber = core.FirstPulseNumber + 10
+		Pulse20 core.PulseNumber = core.FirstPulseNumber + 20
+	)
+
 	for i := 1; i <= 3; i++ {
 		err := s.pulseTracker.AddPulse(
 			s.ctx,
@@ -131,25 +137,36 @@ func (s *exporterSuite) TestExporter_Export() {
 	blobData := testData{Field: "objectValue"}
 	blobData.Data.Field = "anotherValue"
 	codec.NewEncoderBytes(&mem, &codec.CborHandle{}).MustEncode(blobData)
-	blobID, err := s.objectStorage.SetBlob(s.ctx, s.jetID, core.FirstPulseNumber+10, mem)
+
+	blobID, err := s.objectStorage.SetBlob(s.ctx, core.RecordID(s.jetID), Pulse10, mem)
 	require.NoError(s.T(), err)
-	_, err = s.objectStorage.SetRecord(s.ctx, s.jetID, core.FirstPulseNumber+10, &object.GenesisRecord{})
+
+	_, err = s.objectStorage.SetRecord(s.ctx, core.RecordID(s.jetID), Pulse10, &object.GenesisRecord{})
 	require.NoError(s.T(), err)
-	objectID, err := s.objectStorage.SetRecord(s.ctx, s.jetID, core.FirstPulseNumber+10, &object.ObjectActivateRecord{
+
+	objectID, err := s.objectStorage.SetRecord(s.ctx, core.RecordID(s.jetID), Pulse10, &object.ObjectActivateRecord{
 		ObjectStateRecord: object.ObjectStateRecord{
 			Memory: blobID,
 		},
 		IsDelegate: true,
 	})
+	require.NoError(s.T(), err)
+	objectID58 := base58.Encode(objectID[:])
+
 	msg := &message.CallConstructor{}
 	var parcel core.Parcel = &message.Parcel{Msg: msg}
 
 	msgHash := platformpolicy.NewPlatformCryptographyScheme().IntegrityHasher().Hash(message.ToBytes(msg))
-	requestID, err := s.objectStorage.SetRecord(s.ctx, s.jetID, core.FirstPulseNumber+10, &object.RequestRecord{
-		MessageHash: msgHash,
-		Parcel:      message.ParcelToBytes(parcel),
-	})
+	requestID, err := s.objectStorage.SetRecord(
+		s.ctx,
+		core.RecordID(s.jetID),
+		Pulse10,
+		&object.RequestRecord{
+			MessageHash: msgHash,
+			Parcel:      message.ParcelToBytes(parcel),
+		})
 	require.NoError(s.T(), err)
+	requestID58 := base58.Encode(requestID[:])
 
 	result, err := s.exporter.Export(s.ctx, 0, 15)
 	require.NoError(s.T(), err)
@@ -161,26 +178,34 @@ func (s *exporterSuite) TestExporter_Export() {
 	require.NoError(s.T(), err)
 	assert.Equal(s.T(), 2, len(result.Data))
 	assert.Equal(s.T(), 2, result.Size)
-	assert.Equal(s.T(), core.FirstPulseNumber+20, int(*result.NextFrom))
+	assert.Equal(s.T(), int(Pulse20), int(*result.NextFrom))
+
 	_, err = json.Marshal(result)
 	assert.NoError(s.T(), err)
 
-	pulse := result.Data[strconv.FormatUint(uint64(core.FirstPulseNumber), 10)].([]*pulseData)[0].Pulse
-	assert.Equal(s.T(), core.FirstPulseNumber, int(pulse.PulseNumber))
-	assert.Equal(s.T(), int64(0), pulse.PulseTimestamp)
-	pulse = result.Data[strconv.FormatUint(uint64(core.FirstPulseNumber+10), 10)].([]*pulseData)[0].Pulse
-	assert.Equal(s.T(), core.FirstPulseNumber+10, int(pulse.PulseNumber))
-	assert.Equal(s.T(), int64(20), pulse.PulseTimestamp)
+	pn2str := func(pn core.PulseNumber) string {
+		return strconv.FormatUint(uint64(pn), 10)
+	}
 
-	records := result.Data[strconv.FormatUint(uint64(core.FirstPulseNumber+10), 10)].([]*pulseData)[0].Records
-	obj, ok := records[base58.Encode(objectID[:])]
+	pulse1data := result.Data[pn2str(Pulse1)].([]*pulseData)
+	require.NotEmpty(s.T(), pulse1data, "pulse 1 data should not be empty")
+	assert.Equal(s.T(), int(Pulse1), int(pulse1data[0].Pulse.PulseNumber))
+	assert.Equal(s.T(), int64(0), pulse1data[0].Pulse.PulseTimestamp)
+
+	pulse10data := result.Data[pn2str(Pulse10)].([]*pulseData)
+	require.NotEmpty(s.T(), pulse10data, "pulse 10 data should not be empty")
+	assert.Equal(s.T(), int(Pulse10), int(pulse10data[0].Pulse.PulseNumber))
+	assert.Equal(s.T(), int64(20), pulse10data[0].Pulse.PulseTimestamp)
+
+	records := pulse10data[0].Records
+	obj, ok := records[objectID58]
 	if assert.True(s.T(), ok, "object not found by ID") {
 		assert.Equal(s.T(), "TypeActivate", obj.Type)
 		assert.Equal(s.T(), true, obj.Data.(*object.ObjectActivateRecord).IsDelegate)
 		assert.Equal(s.T(), "objectValue", obj.Payload["Memory"].(payload)["Field"])
 	}
 
-	request, ok := records[base58.Encode(requestID[:])]
+	request, ok := records[requestID58]
 	if assert.True(s.T(), ok, "request not found by ID") {
 		assert.Equal(s.T(), "TypeCallRequest", request.Type)
 		assert.Equal(s.T(), msgHash, request.Data.(*object.RequestRecord).MessageHash)
@@ -207,7 +232,7 @@ func (s *exporterSuite) TestExporter_ExportGetBlobFailed() {
 		require.NoError(s.T(), err)
 	}
 
-	_, err := s.objectStorage.SetRecord(s.ctx, s.jetID, core.FirstPulseNumber+10, &object.ObjectActivateRecord{
+	_, err := s.objectStorage.SetRecord(s.ctx, core.RecordID(s.jetID), core.FirstPulseNumber+10, &object.ObjectActivateRecord{
 		ObjectStateRecord: object.ObjectStateRecord{
 			Memory: &core.RecordID{},
 		},

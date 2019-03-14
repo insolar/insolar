@@ -37,7 +37,7 @@ type JetCoordinator struct {
 	NodeNet                    core.NodeNetwork                `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 	PulseStorage               core.PulseStorage               `inject:""`
-	JetStorage                 jet.JetStorage                  `inject:""`
+	JetAccessor                jet.Accessor                    `inject:""`
 	PulseTracker               storage.PulseTracker            `inject:""`
 	Nodes                      node.Accessor                   `inject:""`
 
@@ -181,16 +181,16 @@ func (jc *JetCoordinator) LightValidatorsForJet(
 func (jc *JetCoordinator) LightExecutorForObject(
 	ctx context.Context, objID core.RecordID, pulse core.PulseNumber,
 ) (*core.RecordRef, error) {
-	jetID, _ := jc.JetStorage.FindJet(ctx, pulse, objID)
-	return jc.LightExecutorForJet(ctx, *jetID, pulse)
+	jetID, _ := jc.JetAccessor.ForID(ctx, pulse, objID)
+	return jc.LightExecutorForJet(ctx, core.RecordID(jetID), pulse)
 }
 
 // LightValidatorsForObject returns list of LVs for a provided pulse and objID
 func (jc *JetCoordinator) LightValidatorsForObject(
 	ctx context.Context, objID core.RecordID, pulse core.PulseNumber,
 ) ([]core.RecordRef, error) {
-	jetID, _ := jc.JetStorage.FindJet(ctx, pulse, objID)
-	return jc.LightValidatorsForJet(ctx, *jetID, pulse)
+	jetID, _ := jc.JetAccessor.ForID(ctx, pulse, objID)
+	return jc.LightValidatorsForJet(ctx, core.RecordID(jetID), pulse)
 }
 
 // Heavy returns *core.RecorRef to a heavy of specific pulse

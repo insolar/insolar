@@ -51,7 +51,7 @@ type heavySuite struct {
 	pulseTracker  storage.PulseTracker
 	nodeStorage   node.Accessor
 	objectStorage storage.ObjectStorage
-	jetStorage    jet.JetStorage
+	jetStorage    jet.Storage
 	dropModifier  drop.Modifier
 	dropAccessor  drop.Accessor
 }
@@ -75,7 +75,7 @@ func (s *heavySuite) BeforeTest(suiteName, testName string) {
 	s.cleaner = cleaner
 	s.db = db
 	s.scheme = platformpolicy.NewPlatformCryptographyScheme()
-	s.jetStorage = jet.NewJetStorage()
+	s.jetStorage = jet.NewStore()
 	s.nodeStorage = node.NewStorage()
 	s.pulseTracker = storage.NewPulseTracker()
 	s.objectStorage = storage.NewObjectStorage()

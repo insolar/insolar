@@ -22,6 +22,9 @@ import (
 	"os"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/ledger/internal/jet"
@@ -29,8 +32,6 @@ import (
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/genesis"
 	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 type tmpDBOptions struct {
@@ -78,7 +79,7 @@ func TmpDB(ctx context.Context, t testing.TB, options ...Option) (storage.DBCont
 	cm.Inject(
 		testutils.NewPlatformCryptographyScheme(),
 		db,
-		jet.NewJetStorage(),
+		jet.NewStore(),
 		storage.NewObjectStorage(),
 		drop.NewStorageDB(),
 		storage.NewPulseTracker(),

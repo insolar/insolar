@@ -17,11 +17,37 @@
 package jet
 
 import (
+	"context"
+	"strconv"
+	"strings"
+
 	"github.com/insolar/insolar/core"
 )
 
-// JetParent returns a parent of the jet
-func JetParent(id core.JetID) core.JetID {
+// Accessor provides an interface for accessing jet IDs.
+type Accessor interface {
+	All(ctx context.Context, pulse core.PulseNumber) []core.JetID
+	ForID(ctx context.Context, pulse core.PulseNumber, recordID core.RecordID) (core.JetID, bool)
+}
+
+// Modifier provides an interface for modifying jet IDs.
+type Modifier interface {
+	Update(ctx context.Context, pulse core.PulseNumber, actual bool, ids ...core.JetID)
+	Split(ctx context.Context, pulse core.PulseNumber, id core.JetID) (core.JetID, core.JetID, error)
+	Clone(ctx context.Context, from, to core.PulseNumber)
+	Delete(ctx context.Context, pulse core.PulseNumber)
+}
+
+//go:generate minimock -i github.com/insolar/insolar/ledger/internal/jet.Storage -o ./ -s _mock.go
+
+// Storage composes Accessor and Modifier interfaces.
+type Storage interface {
+	Accessor
+	Modifier
+}
+
+// Parent returns a parent of the jet or jet itself if depth of provided JetID is zero.
+func Parent(id core.JetID) core.JetID {
 	depth, prefix := id.Depth(), id.Prefix()
 	if depth == 0 {
 		return id
@@ -30,8 +56,10 @@ func JetParent(id core.JetID) core.JetID {
 	return *core.NewJetID(depth-1, ResetBits(prefix, depth-1))
 }
 
-// ResetBits returns a new byte slice with all bits in 'value' reset, starting from 'start' number of bit. If 'start'
-// is bigger than len(value), the original slice will be returned.
+// ResetBits returns a new byte slice with all bits in 'value' reset,
+// starting from 'start' number of bit.
+//
+// If 'start' is bigger than len(value), the original slice will be returned.
 func ResetBits(value []byte, start uint8) []byte {
 	if int(start) >= len(value)*8 {
 		return value
@@ -49,4 +77,32 @@ func ResetBits(value []byte, start uint8) []byte {
 	result[startByte] = value[startByte] & mask
 
 	return result
+}
+
+// NewIDFromString creates new JetID from string represents binary prefix.
+//
+// "0"     -> prefix=[0..0], depth=1
+// "1"     -> prefix=[1..0], depth=1
+// "1010"  -> prefix=[1010..0], depth=4
+func NewIDFromString(s string) core.JetID {
+	id := core.NewJetID(uint8(len(s)), parsePrefix(s))
+	return *id
+}
+
+func parsePrefix(s string) []byte {
+	var prefix []byte
+	tail := s[:]
+	for len(tail) > 0 {
+		offset := 8
+		if len(tail) < 8 {
+			tail += strings.Repeat("0", 8-len(tail))
+		}
+		parsed, err := strconv.ParseUint(tail[:offset], 2, 8)
+		if err != nil {
+			panic(err)
+		}
+		prefix = append(prefix, byte(parsed))
+		tail = tail[offset:]
+	}
+	return prefix
 }

@@ -32,7 +32,7 @@ import (
 
 type middleware struct {
 	objectStorage  storage.ObjectStorage
-	jetStorage     jet.JetStorage
+	jetAccessor    jet.Accessor
 	jetCoordinator core.JetCoordinator
 	messageBus     core.MessageBus
 	pulseStorage   core.PulseStorage
@@ -46,7 +46,7 @@ func newMiddleware(
 ) *middleware {
 	return &middleware{
 		objectStorage:  h.ObjectStorage,
-		jetStorage:     h.JetStorage,
+		jetAccessor:    h.JetStorage,
 		jetCoordinator: h.JetCoordinator,
 		messageBus:     h.Bus,
 		pulseStorage:   h.PulseStorage,
@@ -121,7 +121,7 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 			case *message.GetRequest:
 				pulse = tm.Request.Pulse()
 			}
-			jetID, actual := m.jetStorage.FindJet(ctx, pulse, target)
+			jetID, actual := m.jetAccessor.ForID(ctx, pulse, target)
 			if !actual {
 				inslogger.FromContext(ctx).WithFields(map[string]interface{}{
 					"msg":   msg.Type().String(),
@@ -130,7 +130,7 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 				}).Error("jet is not actual")
 			}
 
-			return handler(contextWithJet(ctx, *jetID), parcel)
+			return handler(contextWithJet(ctx, core.RecordID(jetID)), parcel)
 		}
 
 		// Calculate jet for current pulse.

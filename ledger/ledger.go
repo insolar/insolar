@@ -104,7 +104,7 @@ func GetLedgerComponents(conf configuration.Ledger, certificate core.Certificate
 		storage.NewCleaner(),
 		pulseTracker,
 		storage.NewPulseStorage(),
-		jet.NewJetStorage(),
+		jet.NewStore(),
 		node.NewStorage(),
 		storage.NewObjectStorage(),
 		storage.NewReplicaStorage(),

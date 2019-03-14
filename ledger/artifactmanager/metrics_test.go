@@ -54,7 +54,6 @@ type metricSuite struct {
 	pulseTracker  storage.PulseTracker
 	nodeStorage   node.Accessor
 	objectStorage storage.ObjectStorage
-	jetStorage    jet.JetStorage
 	dropModifier  drop.Modifier
 	dropAccessor  drop.Accessor
 	genesisState  genesis.GenesisState
@@ -79,7 +78,6 @@ func (s *metricSuite) BeforeTest(suiteName, testName string) {
 	s.cleaner = cleaner
 	s.db = db
 	s.scheme = testutils.NewPlatformCryptographyScheme()
-	s.jetStorage = jet.NewJetStorage()
 	s.nodeStorage = node.NewStorage()
 	s.pulseTracker = storage.NewPulseTracker()
 	s.objectStorage = storage.NewObjectStorage()
@@ -92,7 +90,7 @@ func (s *metricSuite) BeforeTest(suiteName, testName string) {
 	s.cm.Inject(
 		s.scheme,
 		s.db,
-		s.jetStorage,
+		jet.NewStore(),
 		s.nodeStorage,
 		s.pulseTracker,
 		s.objectStorage,

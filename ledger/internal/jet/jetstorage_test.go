@@ -27,64 +27,63 @@ import (
 
 func TestJetStorage_GetJetTree(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-	js := NewJetStorage()
+	s := NewStore()
 
-	tree := js.(*jetStorage).getJetTree(ctx, 100)
+	tree := s.treeForPulse(ctx, 100)
 	require.Equal(t, "root (level=0 actual=false)\n", tree.String())
 }
 
 func TestJetStorage_UpdateJetTree(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-	js := NewJetStorage()
+	s := NewStore()
 
-	js.UpdateJetTree(ctx, 100, true, core.RecordID(*core.NewJetID(0, nil)))
+	s.Update(ctx, 100, true, *core.NewJetID(0, nil))
 
-	tree := js.(*jetStorage).getJetTree(ctx, 100)
+	tree := s.treeForPulse(ctx, 100)
 	require.Equal(t, "root (level=0 actual=true)\n", tree.String())
 }
 
 func TestJetStorage_SplitJetTree(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-	js := NewJetStorage()
+	s := NewStore()
 
-	l, r, err := js.SplitJetTree(ctx, 100, core.RecordID(*core.NewJetID(0, nil)))
+	l, r, err := s.Split(ctx, 100, *core.NewJetID(0, nil))
 	require.NoError(t, err)
 	require.Equal(t, "[JET 1 0]", l.DebugString())
 	require.Equal(t, "[JET 1 1]", r.DebugString())
 
-	tree := js.(*jetStorage).getJetTree(ctx, 100)
+	tree := s.treeForPulse(ctx, 100)
 	require.Equal(t, "root (level=0 actual=false)\n 0 (level=1 actual=false)\n 1 (level=1 actual=false)\n", tree.String())
 }
 
 func TestJetStorage_CloneJetTree(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-	js := NewJetStorage()
+	s := NewStore()
 
-	js.UpdateJetTree(ctx, 100, true, core.RecordID(*core.NewJetID(0, nil)))
+	s.Update(ctx, 100, true, *core.NewJetID(0, nil))
 
-	tree := js.(*jetStorage).getJetTree(ctx, 100)
+	tree := s.treeForPulse(ctx, 100)
 	require.Equal(t, "root (level=0 actual=true)\n", tree.String())
 
-	tree = js.CloneJetTree(ctx, 100, 101)
+	s.Clone(ctx, 100, 101)
+
+	tree = s.treeForPulse(ctx, 101)
 	require.Equal(t, "root (level=0 actual=false)\n", tree.String())
 
-	tree = js.(*jetStorage).getJetTree(ctx, 101)
-	require.Equal(t, "root (level=0 actual=false)\n", tree.String())
-
-	tree = js.(*jetStorage).getJetTree(ctx, 100)
+	tree = s.treeForPulse(ctx, 100)
 	require.Equal(t, "root (level=0 actual=true)\n", tree.String())
 }
 
 func TestJetStorage_DeleteJetTree(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-	js := NewJetStorage()
+	s := NewStore()
 
-	_, _, err := js.SplitJetTree(ctx, 100, core.RecordID(*core.NewJetID(0, nil)))
+	_, _, err := s.Split(ctx, 100, *core.NewJetID(0, nil))
 	require.NoError(t, err)
 
-	js.DeleteJetTree(ctx, 100)
+	s.Delete(ctx, 100)
 
-	tree := js.(*jetStorage).getJetTree(ctx, 100)
+	tree := s.treeForPulse(ctx, 100)
 	require.NoError(t, err)
 	require.Equal(t, "root (level=0 actual=false)\n", tree.String())
 }

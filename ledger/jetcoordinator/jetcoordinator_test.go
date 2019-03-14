@@ -47,7 +47,7 @@ type jetCoordinatorSuite struct {
 
 	pulseStorage *storage.PulseStorage
 	pulseTracker storage.PulseTracker
-	jetStorage   jet.JetStorage
+	jetStorage   jet.Storage
 	nodeStorage  *node.AccessorMock
 	coordinator  *JetCoordinator
 }
@@ -71,7 +71,8 @@ func (s *jetCoordinatorSuite) BeforeTest(suiteName, testName string) {
 	s.cleaner = cleaner
 	s.pulseTracker = storage.NewPulseTracker()
 	s.pulseStorage = storage.NewPulseStorage()
-	s.jetStorage = jet.NewJetStorage()
+	storage := jet.NewStore()
+	s.jetStorage = storage
 	s.nodeStorage = node.NewAccessorMock(s.T())
 	s.coordinator = NewJetCoordinator(5)
 	s.coordinator.NodeNet = network.NewNodeNetworkMock(s.T())
@@ -81,7 +82,7 @@ func (s *jetCoordinatorSuite) BeforeTest(suiteName, testName string) {
 		db,
 		s.pulseTracker,
 		s.pulseStorage,
-		s.jetStorage,
+		storage,
 		s.nodeStorage,
 		s.coordinator,
 	)
@@ -119,7 +120,7 @@ func (s *jetCoordinatorSuite) TestJetCoordinator_QueryRole() {
 	s.nodeStorage.InRoleMock.Return(nds, nil)
 
 	objID := core.NewRecordID(0, []byte{1, 42, 123})
-	s.jetStorage.UpdateJetTree(s.ctx, 0, true, core.RecordID(*core.NewJetID(50, []byte{1, 42, 123})))
+	s.jetStorage.Update(s.ctx, 0, true, *core.NewJetID(50, []byte{1, 42, 123}))
 
 	selected, err := s.coordinator.QueryRole(s.ctx, core.DynamicRoleLightValidator, *objID, 0)
 	require.NoError(s.T(), err)
