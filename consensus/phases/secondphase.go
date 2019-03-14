@@ -231,7 +231,7 @@ func (sp *SecondPhaseImpl) Execute21(ctx context.Context, pulse *core.Pulse, sta
 		}
 
 		state.UnsyncList.AddNode(node, index)
-		err = sp.NodeKeeper.AddTemporaryMapping(claim.NodeRef, claim.ShortNodeID, claim.NodeAddress.Get())
+		err = sp.NodeKeeper.GetConsensusInfo().AddTemporaryMapping(claim.NodeRef, claim.ShortNodeID, claim.NodeAddress.Get())
 		if err != nil {
 			logger.Warn("Error adding temporary mapping: " + err.Error())
 		}

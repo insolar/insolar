@@ -36,7 +36,7 @@ func (t *Table) ResolveConsensus(id core.ShortNodeID) (*host.Host, error) {
 	if node != nil {
 		return host.NewHostNS(node.ConsensusAddress(), node.ID(), node.ShortID())
 	}
-	h := t.NodeKeeper.ResolveConsensus(id)
+	h := t.NodeKeeper.GetConsensusInfo().ResolveConsensus(id)
 	if h == nil {
 		return nil, errors.New("no such local node with ShortID: " + strconv.FormatUint(uint64(id), 10))
 	}
@@ -48,7 +48,7 @@ func (t *Table) ResolveConsensusRef(ref core.RecordRef) (*host.Host, error) {
 	if node != nil {
 		return host.NewHostNS(node.ConsensusAddress(), node.ID(), node.ShortID())
 	}
-	h := t.NodeKeeper.ResolveConsensusRef(ref)
+	h := t.NodeKeeper.GetConsensusInfo().ResolveConsensusRef(ref)
 	if h == nil {
 		return nil, errors.New("no such local node with node ID: " + ref.String())
 	}

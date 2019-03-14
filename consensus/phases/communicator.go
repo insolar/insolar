@@ -296,7 +296,7 @@ func (nc *ConsensusCommunicator) ExchangePhase1(
 					continue
 				}
 				res.id = claim.NodeRef
-				err := nc.NodeKeeper.AddTemporaryMapping(claim.NodeRef, claim.ShortNodeID, claim.NodeAddress.Get())
+				err := nc.NodeKeeper.GetConsensusInfo().AddTemporaryMapping(claim.NodeRef, claim.ShortNodeID, claim.NodeAddress.Get())
 				if err != nil {
 					logger.Warn("Error adding temporary mapping: " + err.Error())
 					continue

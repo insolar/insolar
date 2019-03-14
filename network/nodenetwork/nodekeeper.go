@@ -32,7 +32,6 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/transport"
-	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/utils"
 	"github.com/insolar/insolar/version"
 	"github.com/pkg/errors"
@@ -90,24 +89,22 @@ func resolveAddress(configuration configuration.HostNetwork) (string, error) {
 // NewNodeKeeper create new NodeKeeper
 func NewNodeKeeper(origin core.Node) network.NodeKeeper {
 	return &nodekeeper{
-		origin:       origin,
-		state:        core.ReadyNodeNetworkState,
-		claimQueue:   newClaimQueue(),
-		active:       make(map[core.RecordRef]core.Node),
-		indexNode:    make(map[core.StaticRole]*recordRefSet),
-		indexShortID: make(map[core.ShortNodeID]core.Node),
-		tempMapR:     make(map[core.RecordRef]*host.Host),
-		tempMapS:     make(map[core.ShortNodeID]*host.Host),
-		syncNodes:    make([]core.Node, 0),
-		syncClaims:   make([]consensus.ReferendumClaim, 0),
+		origin:        origin,
+		state:         core.ReadyNodeNetworkState,
+		claimQueue:    newClaimQueue(),
+		consensusInfo: newConsensusInfo(),
+		active:        make(map[core.RecordRef]core.Node),
+		indexNode:     make(map[core.StaticRole]*recordRefSet),
+		indexShortID:  make(map[core.ShortNodeID]core.Node),
+		syncNodes:     make([]core.Node, 0),
+		syncClaims:    make([]consensus.ReferendumClaim, 0),
 	}
 }
 
 type nodekeeper struct {
-	origin     core.Node
-	claimQueue *claimQueue
-
-	nodesJoinedDuringPrevPulse bool
+	origin        core.Node
+	claimQueue    *claimQueue
+	consensusInfo *consensusInfo
 
 	cloudHashLock sync.RWMutex
 	cloudHash     []byte
@@ -116,10 +113,6 @@ type nodekeeper struct {
 	active       map[core.RecordRef]core.Node
 	indexNode    map[core.StaticRole]*recordRefSet
 	indexShortID map[core.ShortNodeID]core.Node
-
-	tempLock sync.RWMutex
-	tempMapR map[core.RecordRef]*host.Host
-	tempMapS map[core.ShortNodeID]*host.Host
 
 	syncLock   sync.Mutex
 	syncNodes  []core.Node
@@ -130,6 +123,10 @@ type nodekeeper struct {
 	isBootstrapLock sync.RWMutex
 
 	Cryptography core.CryptographyService `inject:""`
+}
+
+func (nk *nodekeeper) GetConsensusInfo() network.ConsensusInfo {
+	return nk.consensusInfo
 }
 
 func (nk *nodekeeper) GetWorkingNode(ref core.RecordRef) core.Node {
@@ -160,10 +157,7 @@ func (nk *nodekeeper) Wipe(isDiscovery bool) {
 	nk.isBootstrap = false
 	nk.isBootstrapLock.Unlock()
 
-	nk.tempLock.Lock()
-	nk.tempMapR = make(map[core.RecordRef]*host.Host)
-	nk.tempMapS = make(map[core.ShortNodeID]*host.Host)
-	nk.tempLock.Unlock()
+	nk.consensusInfo.flush(false)
 
 	nk.cloudHashLock.Lock()
 	nk.cloudHash = nil
@@ -173,7 +167,6 @@ func (nk *nodekeeper) Wipe(isDiscovery bool) {
 	defer nk.activeLock.Unlock()
 
 	nk.claimQueue = newClaimQueue()
-	nk.nodesJoinedDuringPrevPulse = false
 	nk.active = make(map[core.RecordRef]core.Node)
 	nk.reindex()
 	nk.syncLock.Lock()
@@ -184,37 +177,6 @@ func (nk *nodekeeper) Wipe(isDiscovery bool) {
 		nk.state = core.ReadyNodeNetworkState
 	}
 	nk.syncLock.Unlock()
-}
-
-func (nk *nodekeeper) AddTemporaryMapping(nodeID core.RecordRef, shortID core.ShortNodeID, address string) error {
-	consensusAddress, err := incrementPort(address)
-	if err != nil {
-		return errors.Wrapf(err, "Failed to increment port for address %s", address)
-	}
-	h, err := host.NewHostNS(consensusAddress, nodeID, shortID)
-	if err != nil {
-		return errors.Wrapf(err, "Failed to generate address (%s, %s, %d)", consensusAddress, nodeID, shortID)
-	}
-	nk.tempLock.Lock()
-	nk.tempMapR[nodeID] = h
-	nk.tempMapS[shortID] = h
-	nk.tempLock.Unlock()
-	log.Infof("Added temporary mapping: %s -> (%s, %d)", consensusAddress, nodeID, shortID)
-	return nil
-}
-
-func (nk *nodekeeper) ResolveConsensus(shortID core.ShortNodeID) *host.Host {
-	nk.tempLock.RLock()
-	defer nk.tempLock.RUnlock()
-
-	return nk.tempMapS[shortID]
-}
-
-func (nk *nodekeeper) ResolveConsensusRef(nodeID core.RecordRef) *host.Host {
-	nk.tempLock.RLock()
-	defer nk.tempLock.RUnlock()
-
-	return nk.tempMapR[nodeID]
 }
 
 // TODO: remove this method when bootstrap mechanism completed
@@ -381,13 +343,6 @@ func (nk *nodekeeper) GetClaimQueue() network.ClaimQueue {
 	return nk.claimQueue
 }
 
-func (nk *nodekeeper) NodesJoinedDuringPreviousPulse() bool {
-	nk.activeLock.RLock()
-	defer nk.activeLock.RUnlock()
-
-	return nk.nodesJoinedDuringPrevPulse
-}
-
 func (nk *nodekeeper) GetUnsyncList() network.UnsyncList {
 	activeNodes := nk.GetActiveNodes()
 	return newUnsyncList(nk.origin, activeNodes, len(activeNodes))
@@ -428,12 +383,6 @@ func (nk *nodekeeper) MoveSyncToActive(ctx context.Context) error {
 		nk.activeLock.Unlock()
 	}()
 
-	nk.tempLock.Lock()
-	// clear temporary mappings
-	nk.tempMapR = make(map[core.RecordRef]*host.Host)
-	nk.tempMapS = make(map[core.ShortNodeID]*host.Host)
-	nk.tempLock.Unlock()
-
 	mergeResult, err := GetMergedCopy(nk.syncNodes, nk.syncClaims)
 	if err != nil {
 		return errors.Wrap(err, "[ Sync ] Failed to calculate new active list")
@@ -444,7 +393,7 @@ func (nk *nodekeeper) MoveSyncToActive(ctx context.Context) error {
 	nk.active = mergeResult.ActiveList
 	stats.Record(ctx, consensusMetrics.ActiveNodes.M(int64(len(nk.active))))
 	nk.reindex()
-	nk.nodesJoinedDuringPrevPulse = mergeResult.NodesJoinedDuringPrevPulse
+	nk.consensusInfo.flush(mergeResult.NodesJoinedDuringPrevPulse)
 	return nil
 }
 

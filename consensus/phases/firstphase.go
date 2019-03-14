@@ -99,7 +99,7 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse) (*Firs
 
 	var success bool
 	var originClaim *packets.NodeAnnounceClaim
-	if fp.NodeKeeper.NodesJoinedDuringPreviousPulse() {
+	if fp.NodeKeeper.GetConsensusInfo().NodesJoinedDuringPreviousPulse() {
 		log.Debugf("[ NET Consensus phase-1 ] Add origin announce claim to consensus phase1 packet")
 		originClaim, err = fp.NodeKeeper.GetOriginAnnounceClaim(unsyncList)
 		if err != nil {

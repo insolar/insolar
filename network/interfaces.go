@@ -156,8 +156,6 @@ type NodeKeeper interface {
 	GetOriginJoinClaim() (*consensus.NodeJoinClaim, error)
 	// GetOriginAnnounceClaim get origin NodeAnnounceClaim
 	GetOriginAnnounceClaim(mapper consensus.BitSetMapper) (*consensus.NodeAnnounceClaim, error)
-	// NodesJoinedDuringPreviousPulse returns true if the last Sync call contained approved Join claims
-	NodesJoinedDuringPreviousPulse() bool
 	// GetClaimQueue get the internal queue of claims
 	GetClaimQueue() ClaimQueue
 	// GetUnsyncList get unsync list for current pulse. Has copy of active node list from nodekeeper as internal state.
@@ -171,6 +169,15 @@ type NodeKeeper interface {
 	Sync(context.Context, []core.Node, []consensus.ReferendumClaim) error
 	// MoveSyncToActive merge sync list with active nodes
 	MoveSyncToActive(ctx context.Context) error
+	// GetConsensusInfo get additional info for the current consensus process
+	GetConsensusInfo() ConsensusInfo
+}
+
+// TODO: refactor code and make it not necessary
+// ConsensusInfo additional info for the current consensus process
+type ConsensusInfo interface {
+	// NodesJoinedDuringPreviousPulse returns true if the last Sync call contained approved Join claims
+	NodesJoinedDuringPreviousPulse() bool
 	// AddTemporaryMapping add temporary mapping till the next pulse for consensus
 	AddTemporaryMapping(nodeID core.RecordRef, shortID core.ShortNodeID, address string) error
 	// ResolveConsensus get temporary mapping by short ID
