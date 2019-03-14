@@ -25,7 +25,7 @@ import (
 	"go.opencensus.io/stats"
 )
 
-// StorageMemory is an in-memory struct for index-storage
+// StorageMemory is an in-memory struct for index-storage.
 type StorageMemory struct {
 	jetIndex db.JetIndexModifier
 
@@ -41,18 +41,15 @@ func NewStorageMemory() *StorageMemory {
 	}
 }
 
-// Set saves new Index-value in storage
+// Set saves new Index-value in storage.
 func (s *StorageMemory) Set(ctx context.Context, id core.RecordID, index ObjectLifeline) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	_, ok := s.memory[id]
-	if ok {
-		return ErrOverride
-	}
+	idx := CloneObjectLifeline(index)
 
-	s.memory[id] = index
-	s.jetIndex.Add(id, index.JetID)
+	s.memory[id] = idx
+	s.jetIndex.Add(id, idx.JetID)
 
 	stats.Record(ctx,
 		statIndexInMemoryCount.M(1),
@@ -61,8 +58,8 @@ func (s *StorageMemory) Set(ctx context.Context, id core.RecordID, index ObjectL
 	return nil
 }
 
-// ForID returns Index for provided id
-func (s *StorageMemory) ForID(ctx context.Context, id core.RecordID) (idx ObjectLifeline, err error) {
+// ForID returns Index for provided id.
+func (s *StorageMemory) ForID(ctx context.Context, id core.RecordID) (index ObjectLifeline, err error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
@@ -71,6 +68,8 @@ func (s *StorageMemory) ForID(ctx context.Context, id core.RecordID) (idx Object
 		err = ErrNotFound
 		return
 	}
+
+	index = CloneObjectLifeline(idx)
 
 	return
 }

@@ -38,8 +38,6 @@ func TestInMemoryIndex(t *testing.T) {
 
 	type tempIndex struct {
 		id  core.RecordID
-		ls  core.RecordID
-		pn  core.PulseNumber
 		idx index.ObjectLifeline
 	}
 
@@ -47,11 +45,11 @@ func TestInMemoryIndex(t *testing.T) {
 
 	f := fuzz.New().Funcs(func(t *tempIndex, c fuzz.Continue) {
 		t.id = gen.ID()
-		t.ls = gen.ID()
-		t.pn = gen.PulseNumber()
+		ls := gen.ID()
+		pn := gen.PulseNumber()
 		t.idx = index.ObjectLifeline{
-			LatestState:  &t.ls,
-			LatestUpdate: t.pn,
+			LatestState:  &ls,
+			LatestUpdate: pn,
 			JetID:        gen.JetID(),
 		}
 	})
@@ -84,7 +82,7 @@ func TestInMemoryIndex(t *testing.T) {
 		}
 	})
 
-	t.Run("returns override error when saving with the same id", func(t *testing.T) {
+	t.Run("override indices is ok", func(t *testing.T) {
 		t.Parallel()
 
 		indexStorage := index.NewStorageMemory()
@@ -95,8 +93,7 @@ func TestInMemoryIndex(t *testing.T) {
 
 		for _, i := range indices {
 			err := indexStorage.Set(ctx, i.id, i.idx)
-			require.Error(t, err)
-			assert.Equal(t, index.ErrOverride, err)
+			assert.NoError(t, err)
 		}
 	})
 }

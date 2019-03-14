@@ -21,8 +21,6 @@ import (
 )
 
 var (
-	// ErrNotFound is returned when index-record not found
+	// ErrNotFound is returned when index-record not found.
 	ErrNotFound = errors.New("index not found")
-	// ErrOverride is returned if index.Set tries to update existing record.
-	ErrOverride = errors.New("index override is forbidden")
 )

@@ -25,7 +25,7 @@ import (
 	"go.opencensus.io/stats"
 )
 
-// StorageMemory is an in-memory struct for blob-storage
+// StorageMemory is an in-memory struct for blob-storage.
 type StorageMemory struct {
 	jetIndex db.JetIndexModifier
 
@@ -41,7 +41,7 @@ func NewStorageMemory() *StorageMemory {
 	}
 }
 
-// ForID returns Blob for provided id
+// ForID returns Blob for provided id.
 func (s *StorageMemory) ForID(ctx context.Context, id core.RecordID) (blob Blob, err error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
@@ -55,7 +55,7 @@ func (s *StorageMemory) ForID(ctx context.Context, id core.RecordID) (blob Blob,
 	return
 }
 
-// Set saves new Blob-value in storage
+// Set saves new Blob-value in storage.
 func (s *StorageMemory) Set(ctx context.Context, id core.RecordID, blob Blob) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()

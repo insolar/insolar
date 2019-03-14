@@ -21,8 +21,8 @@ import (
 )
 
 var (
-	// ErrNotFound is returned when blob-record not found
+	// ErrNotFound is returned when blob-record not found.
 	ErrNotFound = errors.New("blob not found")
-	// ErrOverride is returned if blob.Set tries to update existing record.
+	// ErrOverride is returned when trying to update existing record with the same id.
 	ErrOverride = errors.New("blob override is forbidden")
 )

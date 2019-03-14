@@ -57,3 +57,31 @@ func DecodeObjectLifeline(buf []byte) (*ObjectLifeline, error) {
 	}
 	return &index, nil
 }
+
+// CloneObjectLifeline returns copy of argument idx value.
+func CloneObjectLifeline(idx ObjectLifeline) ObjectLifeline {
+	if idx.LatestState != nil {
+		tmp := *idx.LatestState
+		idx.LatestState = &tmp
+	}
+
+	if idx.LatestStateApproved != nil {
+		tmp := *idx.LatestStateApproved
+		idx.LatestStateApproved = &tmp
+	}
+
+	if idx.ChildPointer != nil {
+		tmp := *idx.ChildPointer
+		idx.ChildPointer = &tmp
+	}
+
+	if idx.Delegates != nil {
+		cp := make(map[core.RecordRef]core.RecordRef)
+		for k, v := range idx.Delegates {
+			cp[k] = v
+		}
+		idx.Delegates = cp
+	}
+
+	return idx
+}

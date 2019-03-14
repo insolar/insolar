@@ -124,14 +124,14 @@ func TestBlobStorage_ForID(t *testing.T) {
 	})
 }
 
-// sizedSlice generates random byte slice fixed size
+// sizedSlice generates random byte slice fixed size.
 func sizedSlice(size int32) (blob []byte) {
 	blob = make([]byte, size)
 	rand.Read(blob)
 	return
 }
 
-// slice generates random byte slice with random size between 0 and 1024
+// slice generates random byte slice with random size between 0 and 1024.
 func slice() []byte {
 	size := rand.Int31n(1024)
 	return sizedSlice(size)

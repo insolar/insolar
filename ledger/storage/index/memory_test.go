@@ -103,7 +103,7 @@ func TestIndexStorage_Set(t *testing.T) {
 		assert.Equal(t, jetID, indexStorage.memory[id].JetID)
 	})
 
-	t.Run("returns override error when saving with the same id", func(t *testing.T) {
+	t.Run("override indices is ok", func(t *testing.T) {
 		t.Parallel()
 
 		indexStorage := &StorageMemory{
@@ -114,8 +114,7 @@ func TestIndexStorage_Set(t *testing.T) {
 		require.NoError(t, err)
 
 		err = indexStorage.Set(ctx, id, idx)
-		require.Error(t, err)
-		assert.Equal(t, ErrOverride, err)
+		assert.NoError(t, err)
 	})
 }
 

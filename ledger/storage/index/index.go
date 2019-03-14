@@ -24,16 +24,16 @@ import (
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage/index.Accessor -o ./ -s _mock.go
 
-// Accessor provides info about Index-values from storage
+// Accessor provides info about Index-values from storage.
 type Accessor interface {
-	// ForID returns Index for provided id
+	// ForID returns Index for provided id.
 	ForID(ctx context.Context, id core.RecordID) (ObjectLifeline, error)
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage/index.Modifier -o ./ -s _mock.go
 
-// Modifier provides provides methods for setting Index-values to storage
+// Modifier provides methods for setting Index-values to storage.
 type Modifier interface {
-	// Set saves new Index-value in storage
+	// Set saves new Index-value in storage.
 	Set(ctx context.Context, id core.RecordID, index ObjectLifeline) error
 }
