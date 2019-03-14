@@ -31,7 +31,7 @@ func TestCloneObjectLifeline(t *testing.T) {
 
 	currentIdx := objectLifeline()
 
-	clonedIdx := CloneObjectLifeline(currentIdx)
+	clonedIdx := Clone(currentIdx)
 
 	assert.Equal(t, currentIdx, clonedIdx)
 	assert.False(t, &currentIdx == &clonedIdx)

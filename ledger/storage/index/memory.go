@@ -46,7 +46,7 @@ func (s *StorageMemory) Set(ctx context.Context, id core.RecordID, index ObjectL
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	idx := CloneObjectLifeline(index)
+	idx := Clone(index)
 
 	s.memory[id] = idx
 	s.jetIndex.Add(id, idx.JetID)
@@ -69,7 +69,7 @@ func (s *StorageMemory) ForID(ctx context.Context, id core.RecordID) (index Obje
 		return
 	}
 
-	index = CloneObjectLifeline(idx)
+	index = Clone(idx)
 
 	return
 }

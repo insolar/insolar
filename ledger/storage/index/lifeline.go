@@ -18,11 +18,28 @@ package index
 
 import (
 	"bytes"
+	"context"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/ugorji/go/codec"
 )
+
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage/index.Accessor -o ./ -s _mock.go
+
+// Accessor provides info about Index-values from storage.
+type Accessor interface {
+	// ForID returns Index for provided id.
+	ForID(ctx context.Context, id core.RecordID) (ObjectLifeline, error)
+}
+
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage/index.Modifier -o ./ -s _mock.go
+
+// Modifier provides methods for setting Index-values to storage.
+type Modifier interface {
+	// Set saves new Index-value in storage.
+	Set(ctx context.Context, id core.RecordID, index ObjectLifeline) error
+}
 
 // ObjectLifeline represents meta information for record object.
 type ObjectLifeline struct {
@@ -36,8 +53,8 @@ type ObjectLifeline struct {
 	JetID               core.JetID
 }
 
-// EncodeObjectLifeline converts lifeline index into binary format.
-func EncodeObjectLifeline(index *ObjectLifeline) ([]byte, error) {
+// Encode converts lifeline index into binary format.
+func Encode(index *ObjectLifeline) ([]byte, error) {
 	var buf bytes.Buffer
 	enc := codec.NewEncoder(&buf, &codec.CborHandle{})
 	err := enc.Encode(index)
@@ -47,8 +64,8 @@ func EncodeObjectLifeline(index *ObjectLifeline) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// DecodeObjectLifeline converts byte array into lifeline index struct.
-func DecodeObjectLifeline(buf []byte) (*ObjectLifeline, error) {
+// Decode converts byte array into lifeline index struct.
+func Decode(buf []byte) (*ObjectLifeline, error) {
 	dec := codec.NewDecoder(bytes.NewReader(buf), &codec.CborHandle{})
 	var index ObjectLifeline
 	err := dec.Decode(&index)
@@ -58,8 +75,8 @@ func DecodeObjectLifeline(buf []byte) (*ObjectLifeline, error) {
 	return &index, nil
 }
 
-// CloneObjectLifeline returns copy of argument idx value.
-func CloneObjectLifeline(idx ObjectLifeline) ObjectLifeline {
+// Clone returns copy of argument idx value.
+func Clone(idx ObjectLifeline) ObjectLifeline {
 	if idx.LatestState != nil {
 		tmp := *idx.LatestState
 		idx.LatestState = &tmp

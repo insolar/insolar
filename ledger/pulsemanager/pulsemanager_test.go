@@ -157,7 +157,7 @@ func (s *pulseManagerSuite) TestPulseManager_Set_CheckHotIndexesSending() {
 		require.Equal(s.T(), 1, len(objContext.Requests))
 
 		require.Equal(s.T(), 1, len(val.RecentObjects))
-		decodedIndex, err := index.DecodeObjectLifeline(val.RecentObjects[*firstID].Index)
+		decodedIndex, err := index.Decode(val.RecentObjects[*firstID].Index)
 		require.NoError(s.T(), err)
 		require.Equal(s.T(), firstIndex, *decodedIndex)
 		require.Equal(s.T(), 1, val.RecentObjects[*firstID].TTL)

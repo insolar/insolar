@@ -281,7 +281,7 @@ func (m *PulseManager) getExecutorHotData(
 			logger.Error(err)
 			continue
 		}
-		encoded, err := index.EncodeObjectLifeline(lifeline)
+		encoded, err := index.Encode(lifeline)
 		if err != nil {
 			logger.Error(err)
 			continue
