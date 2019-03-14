@@ -50,7 +50,7 @@ func Clone(blob Blob) Blob {
 		blob.Value = nil
 	} else {
 		b := blob.Value
-		blob.Value = append(b[:0:0], b...)
+		blob.Value = append([]byte(nil), b...)
 	}
 
 	return blob
