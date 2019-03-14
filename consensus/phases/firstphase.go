@@ -22,6 +22,7 @@ import (
 	"math"
 
 	"github.com/insolar/insolar/consensus"
+	"github.com/insolar/insolar/consensus/claimhandler"
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -29,6 +30,7 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/merkle"
+	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
@@ -165,18 +167,24 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse) (*Firs
 		claimMap[ref] = fp.filterClaims(ref, packet.GetClaims())
 	}
 
+	var length int
 	if fp.NodeKeeper.GetState() == core.WaitingNodeNetworkState {
-		length, err := detectSparseBitsetLength(claimMap, fp.NodeKeeper)
+		length, err = detectSparseBitsetLength(claimMap, fp.NodeKeeper)
 		if err != nil {
 			return nil, errors.Wrap(err, "[ NET Consensus phase-1 ] Failed to detect bitset length")
 		}
 		logger.Debugf("[ NET Consensus phase-1 ] Bitset length: %d", length)
 		unsyncList = fp.NodeKeeper.GetSparseUnsyncList(length)
+	} else {
+		length = len(activeNodes)
 	}
 
-	err = unsyncList.AddClaims(claimMap)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ NET Consensus phase-1 ] Failed to add claims")
+	claimHandler := claimhandler.NewClaimHandler(length, claimMap)
+	if fp.NodeKeeper.GetState() == core.WaitingNodeNetworkState {
+		err = nodenetwork.ApplyClaims(unsyncList, claimHandler.GetClaims())
+		if err != nil {
+			return nil, errors.Wrap(err, "[ NET Consensus phase-1 ] Failed to apply claims")
+		}
 	}
 	valid, fault := validateProofs(fp.Calculator, unsyncList, pulseHash, proofSet)
 	for node := range valid {
@@ -189,12 +197,13 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse) (*Firs
 	logger.Infof("[ NET Consensus phase-1 ] Valid proofs after phase: %d/%d", len(valid), unsyncList.Length())
 
 	return &FirstPhaseState{
-		PulseEntry:  entry,
-		PulseHash:   pulseHash,
-		PulseProof:  pulseProof,
-		ValidProofs: valid,
-		FaultProofs: fault,
-		UnsyncList:  unsyncList,
+		PulseEntry:   entry,
+		PulseHash:    pulseHash,
+		PulseProof:   pulseProof,
+		ValidProofs:  valid,
+		FaultProofs:  fault,
+		UnsyncList:   unsyncList,
+		ClaimHandler: claimHandler,
 	}, nil
 }
 

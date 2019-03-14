@@ -100,7 +100,10 @@ func (d *distributor) Distribute(ctx context.Context, pulse core.Pulse) {
 		return
 	}
 
-	d.resume(ctx)
+	if err := d.resume(ctx); err != nil {
+		logger.Error("[ Distribute ] resume distribution error: " + err.Error())
+		return
+	}
 	defer d.pause(ctx)
 
 	wg := sync.WaitGroup{}
@@ -201,9 +204,9 @@ func (d *distributor) pause(ctx context.Context) {
 	d.Transport.Close()
 }
 
-func (d *distributor) resume(ctx context.Context) {
+func (d *distributor) resume(ctx context.Context) error {
 	inslogger.FromContext(ctx).Info("[ Resume ] Resume distribution, starting transport")
 	ctx, span := instracer.StartSpan(ctx, "distributor.resume")
 	defer span.End()
-	transport.ListenAndWaitUntilReady(ctx, d.Transport)
+	return transport.ListenAndWaitUntilReady(ctx, d.Transport)
 }

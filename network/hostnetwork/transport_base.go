@@ -41,14 +41,16 @@ type transportBase struct {
 }
 
 // Listen start listening to network requests, should be started in goroutine.
-func (h *transportBase) Start(ctx context.Context) {
+func (h *transportBase) Start(ctx context.Context) error {
 	if !atomic.CompareAndSwapUint32(&h.started, 0, 1) {
-		inslogger.FromContext(ctx).Warn("double listen initiated")
-		return
+		return errors.New("Failed to start transport: double listen initiated")
 	}
-	transport.ListenAndWaitUntilReady(ctx, h.transport)
+	if err := transport.ListenAndWaitUntilReady(ctx, h.transport); err != nil {
+		return errors.Wrap(err, "Failed to start transport: listen syscall failed")
+	}
 
 	go h.listen(ctx)
+	return nil
 }
 
 func (h *transportBase) listen(ctx context.Context) {
@@ -70,12 +72,13 @@ func (h *transportBase) listen(ctx context.Context) {
 }
 
 // Disconnect stop listening to network requests.
-func (h *transportBase) Stop() {
+func (h *transportBase) Stop(ctx context.Context) error {
 	if atomic.CompareAndSwapUint32(&h.started, 1, 0) {
 		go h.transport.Stop()
 		<-h.transport.Stopped()
 		h.transport.Close()
 	}
+	return nil
 }
 
 func (h *transportBase) buildRequest(ctx context.Context, request network.Request, receiver *host.Host) *packet.Packet {

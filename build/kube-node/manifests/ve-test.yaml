@@ -1,0 +1,34 @@
+---
+apiVersion: apps/v1beta1
+kind: StatefulSet
+metadata:
+  labels:
+    app: insolar-ve
+  name: insolar-ve
+spec:
+  podManagementPolicy: Parallel
+  replicas: 1
+  serviceName: insolar-ve
+  template:
+    metadata:
+      labels:
+        app: insolar-ve
+    spec:
+      containers:
+      - name: insolard
+        image: nordicdyno/multiecho
+        command: ["/bin/multiecho", "-env"]
+        ports:
+        - name: transport
+          containerPort: 30000
+        - name: consensus
+          containerPort: 30001
+        - name: api
+          containerPort: 19191
+        - name: metrics
+          containerPort: 8080
+        env:
+          - name: TCP_LISTEN_PORTS
+            value: "30000,19191,8080"
+          - name: UDP_LISTEN_PORTS
+            value: "30001"

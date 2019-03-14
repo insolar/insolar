@@ -60,10 +60,8 @@ type RequestHandler func(context.Context, Request) (Response, error)
 // HostNetwork simple interface to send network requests and process network responses.
 //go:generate minimock -i github.com/insolar/insolar/network.HostNetwork -o ../testutils/network -s _mock.go
 type HostNetwork interface {
-	// Start listening to network requests.
-	Start(ctx context.Context)
-	// Stop listening to network requests.
-	Stop()
+	component.Starter
+	component.Stopper
 	// PublicAddress returns public address that can be published for all nodes.
 	PublicAddress() string
 	// GetNodeID get current node ID.
@@ -174,7 +172,7 @@ type NodeKeeper interface {
 	// Should be called when nodekeeper state is WaitingNodeNetworkState.
 	GetSparseUnsyncList(length int) UnsyncList
 	// Sync move unsync -> sync
-	Sync(list UnsyncList)
+	Sync(context.Context, []core.Node, []consensus.ReferendumClaim) error
 	// MoveSyncToActive merge sync list with active nodes
 	MoveSyncToActive(ctx context.Context) error
 	// AddTemporaryMapping add temporary mapping till the next pulse for consensus
@@ -189,16 +187,8 @@ type NodeKeeper interface {
 //go:generate minimock -i github.com/insolar/insolar/network.UnsyncList -o ../testutils/network -s _mock.go
 type UnsyncList interface {
 	consensus.BitSetMapper
-	// ApproveSync
-	ApproveSync([]core.RecordRef)
-	// AddClaims
-	AddClaims(map[core.RecordRef][]consensus.ReferendumClaim) error
 	// AddNode
 	AddNode(node core.Node, bitsetIndex uint16)
-	// GetClaims
-	GetClaims(nodeID core.RecordRef) []consensus.ReferendumClaim
-	// InsertClaims
-	InsertClaims(core.RecordRef, []consensus.ReferendumClaim)
 	// AddProof
 	AddProof(nodeID core.RecordRef, proof *consensus.NodePulseProof)
 	// GetProof
@@ -211,15 +201,10 @@ type UnsyncList interface {
 	GetActiveNode(ref core.RecordRef) core.Node
 	// GetActiveNodes get active nodes for current consensus
 	GetActiveNodes() []core.Node
-	// GetMergedCopy returns copy of unsyncList with claims applied
-	GetMergedCopy() (*MergedListCopy, error)
+	//
+	GetOrigin() core.Node
 	//
 	RemoveNode(nodeID core.RecordRef)
-}
-
-type MergedListCopy struct {
-	ActiveList                 map[core.RecordRef]core.Node
-	NodesJoinedDuringPrevPulse bool
 }
 
 // PartitionPolicy contains all rules how to initiate globule resharding.
@@ -247,10 +232,8 @@ type RoutingTable interface {
 
 // InternalTransport simple interface to send network requests and process network responses.
 type InternalTransport interface {
-	// Start listening to network requests, should be started in goroutine.
-	Start(ctx context.Context)
-	// Stop listening to network requests.
-	Stop()
+	component.Starter
+	component.Stopper
 	// PublicAddress returns public address that can be published for all nodes.
 	PublicAddress() string
 	// GetNodeID get current node ID.

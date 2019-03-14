@@ -83,7 +83,7 @@ func (sp *SecondPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse, state
 	}
 	packet.SetBitSet(bitset)
 	activeNodes := state.UnsyncList.GetActiveNodes()
-	packets, err := sp.Communicator.ExchangePhase2(ctx, state.UnsyncList, activeNodes, packet)
+	packets, err := sp.Communicator.ExchangePhase2(ctx, state.UnsyncList, state.ClaimHandler, activeNodes, packet)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NET Consensus phase-2.0 ] Failed to exchange packets")
 	}
@@ -186,7 +186,7 @@ func (sp *SecondPhaseImpl) Execute21(ctx context.Context, pulse *core.Pulse, sta
 	}
 	packet.SetBitSet(state.BitSet)
 
-	voteAnswers, err := sp.Communicator.ExchangePhase21(ctx, state.UnsyncList, packet, additionalRequests)
+	voteAnswers, err := sp.Communicator.ExchangePhase21(ctx, state.UnsyncList, state.ClaimHandler, packet, additionalRequests)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NET Consensus phase-2.1 ] Failed to send additional requests")
 	}
@@ -269,8 +269,8 @@ func (sp *SecondPhaseImpl) Execute21(ctx context.Context, pulse *core.Pulse, sta
 		list = append(list, claim.Claim)
 		claimMap[ref] = list
 	}
-	if err = state.UnsyncList.AddClaims(claimMap); err != nil {
-		return nil, errors.Wrap(err, "[ NET Consensus phase-2.1 ] Failed to add claims")
+	for ref, claims := range claimMap {
+		state.ClaimHandler.SetClaimsFromNode(ref, claims)
 	}
 	state.MatrixState, err = state.Matrix.CalculatePhase2(origin)
 	if err != nil {
