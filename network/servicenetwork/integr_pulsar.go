@@ -162,9 +162,6 @@ func getPSC(pulse core.Pulse) (map[string]core.PulseSenderConfirmation, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err != nil {
-		return nil, err
-	}
 	result := make(map[string]core.PulseSenderConfirmation)
 	psc := core.PulseSenderConfirmation{
 		PulseNumber:     pulse.PulseNumber,

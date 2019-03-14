@@ -52,15 +52,15 @@ func (pc *pulseController) Init(ctx context.Context) error {
 
 func (pc *pulseController) processPulse(ctx context.Context, request network.Request) (network.Response, error) {
 	data := request.GetData().(*packet.RequestPulse)
-	// we should not process pulses in Waiting state because network can be unready to join current node,
-	// so we should wait for pulse from consensus phase1 packet
 	verified, err := pc.verifyPulseSign(data.Pulse)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ pulseController ] processPulse: ")
+		return nil, errors.Wrap(err, "[ pulseController ] processPulse: error to verify a pulse sign")
 	}
 	if !verified {
 		return nil, errors.New("[ pulseController ] processPulse: failed to verify a pulse sign")
 	}
+	// we should not process pulses in Waiting state because network can be unready to join current node,
+	// so we should wait for pulse from consensus phase1 packet
 	if pc.NodeKeeper.GetState() != core.WaitingNodeNetworkState {
 		go pc.PulseHandler.HandlePulse(context.Background(), data.Pulse)
 	}
