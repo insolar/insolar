@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/ledger/recentstorage"
+	db2 "github.com/insolar/insolar/ledger/storage/db"
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/genesis"
 	"github.com/insolar/insolar/ledger/storage/jet"
@@ -89,6 +90,11 @@ func GetLedgerComponents(conf configuration.Ledger, certificate core.Certificate
 		panic(errors.Wrap(err, "failed to initialize DB"))
 	}
 
+	newDB, err := db2.NewBadgerDB(conf)
+	if err != nil {
+		panic(errors.Wrap(err, "failed to initialize DB"))
+	}
+
 	var pulseTracker storage.PulseTracker
 	var dropModifier drop.Modifier
 	var dropAccessor drop.Accessor
@@ -110,6 +116,7 @@ func GetLedgerComponents(conf configuration.Ledger, certificate core.Certificate
 
 	return []interface{}{
 		db,
+		newDB,
 		dropModifier,
 		dropAccessor,
 		storage.NewCleaner(),

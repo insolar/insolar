@@ -728,6 +728,7 @@ func (m *PulseManager) Start(ctx context.Context) error {
 			m.PulseStorage,
 			m.PulseTracker,
 			m.ReplicaStorage,
+			m.DropAccessor,
 			m.StorageCleaner,
 			m.DBContext,
 			heavyclient.Options{

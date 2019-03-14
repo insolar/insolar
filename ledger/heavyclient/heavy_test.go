@@ -37,6 +37,7 @@ import (
 	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/db"
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/index"
 	"github.com/insolar/insolar/ledger/storage/jet"
@@ -85,9 +86,9 @@ func (s *heavySuite) BeforeTest(suiteName, testName string) {
 	s.cm = &component.Manager{}
 	s.ctx = inslogger.TestContext(s.T())
 
-	db, cleaner := storagetest.TmpDB(s.ctx, s.T())
+	tmpDB, cleaner := storagetest.TmpDB(s.ctx, s.T())
 	s.cleaner = cleaner
-	s.db = db
+	s.db = tmpDB
 	s.jetStorage = jet.NewJetStorage()
 	s.nodeAccessor = node.NewAccessorMock(s.T())
 	s.nodeSetter = node.NewModifierMock(s.T())
@@ -103,6 +104,7 @@ func (s *heavySuite) BeforeTest(suiteName, testName string) {
 	s.cm.Inject(
 		platformpolicy.NewPlatformCryptographyScheme(),
 		s.db,
+		db.NewMockDB(),
 		s.jetStorage,
 		s.nodeAccessor,
 		s.nodeSetter,

@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/drop"
 	"go.opencensus.io/stats"
 	"golang.org/x/sync/singleflight"
 )
@@ -34,6 +35,7 @@ type Pool struct {
 	bus            core.MessageBus
 	pulseStorage   core.PulseStorage
 	pulseTracker   storage.PulseTracker
+	dropAccessor   drop.Accessor
 	replicaStorage storage.ReplicaStorage
 	cleaner        storage.Cleaner
 	db             storage.DBContext
@@ -52,12 +54,14 @@ func NewPool(
 	pulseStorage core.PulseStorage,
 	tracker storage.PulseTracker,
 	replicaStorage storage.ReplicaStorage,
+	dropAccessor drop.Accessor,
 	cleaner storage.Cleaner,
 	db storage.DBContext,
 	clientDefaults Options,
 ) *Pool {
 	return &Pool{
 		bus:            bus,
+		dropAccessor:   dropAccessor,
 		pulseStorage:   pulseStorage,
 		pulseTracker:   tracker,
 		replicaStorage: replicaStorage,
@@ -102,6 +106,7 @@ func (scp *Pool) AddPulsesToSyncClient(
 			scp.bus,
 			scp.pulseStorage,
 			scp.pulseTracker,
+			scp.dropAccessor,
 			scp.cleaner,
 			scp.db,
 			jetID,

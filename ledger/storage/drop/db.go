@@ -46,7 +46,7 @@ func (dk *dropDbKey) Scope() db.Scope {
 }
 
 func (dk *dropDbKey) ID() []byte {
-	return bytes.Join([][]byte{}, nil)
+	return bytes.Join([][]byte{dk.jetPrefix, dk.pn.Bytes()}, nil)
 }
 
 // ForPulse returns a jet.Drop for a provided pulse, that is stored in a db.

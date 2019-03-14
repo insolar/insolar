@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/db"
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/genesis"
 	"github.com/insolar/insolar/ledger/storage/jet"
@@ -66,7 +67,7 @@ func TmpDB(ctx context.Context, t testing.TB, options ...Option) (storage.DBCont
 	tmpdir, err := ioutil.TempDir(opts.dir, "bdb-test-")
 	assert.NoError(t, err)
 
-	db, err := storage.NewDB(configuration.Ledger{
+	tmpDB, err := storage.NewDB(configuration.Ledger{
 		Storage: configuration.Storage{
 			DataDirectory: tmpdir,
 		},
@@ -77,7 +78,8 @@ func TmpDB(ctx context.Context, t testing.TB, options ...Option) (storage.DBCont
 
 	cm.Inject(
 		testutils.NewPlatformCryptographyScheme(),
-		db,
+		tmpDB,
+		db.NewMockDB(),
 		jet.NewJetStorage(),
 		storage.NewObjectStorage(),
 		drop.NewStorageDB(),
@@ -98,10 +100,10 @@ func TmpDB(ctx context.Context, t testing.TB, options ...Option) (storage.DBCont
 		t.Error("ComponentManager start failed", err)
 	}
 
-	return db, func() {
+	return tmpDB, func() {
 		rmErr := os.RemoveAll(tmpdir)
 		if rmErr != nil {
-			t.Fatal("temporary db dir cleanup failed", rmErr)
+			t.Fatal("temporary tmpDB dir cleanup failed", rmErr)
 		}
 	}
 }

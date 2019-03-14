@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/db"
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
@@ -63,7 +64,7 @@ func (s *cleanerSuite) BeforeTest(suiteName, testName string) {
 	s.cm = &component.Manager{}
 	s.ctx = inslogger.TestContext(s.T())
 
-	db, cleaner := storagetest.TmpDB(s.ctx, s.T())
+	tmpDB, cleaner := storagetest.TmpDB(s.ctx, s.T())
 	s.cleaner = cleaner
 
 	s.objectStorage = storage.NewObjectStorage()
@@ -74,7 +75,8 @@ func (s *cleanerSuite) BeforeTest(suiteName, testName string) {
 
 	s.cm.Inject(
 		platformpolicy.NewPlatformCryptographyScheme(),
-		db,
+		tmpDB,
+		db.NewMockDB(),
 		s.objectStorage,
 		s.storageCleaner,
 		s.dropAccessor,

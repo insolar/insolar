@@ -30,6 +30,7 @@ import (
 	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/db"
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/genesis"
 	"github.com/insolar/insolar/ledger/storage/jet"
@@ -56,7 +57,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 	// Init subcomponents.
 	ctx := inslogger.TestContext(t)
 	conf := configuration.NewLedger()
-	db, dbcancel := storagetest.TmpDB(ctx, t, storagetest.Dir(dir))
+	tmpDB, dbcancel := storagetest.TmpDB(ctx, t, storagetest.Dir(dir))
 
 	cm := &component.Manager{}
 	gi := genesis.NewGenesisInitializer()
@@ -107,7 +108,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 	handler.PulseTracker = pt
 	handler.JetStorage = js
 	handler.Nodes = ns
-	handler.DBContext = db
+	handler.DBContext = tmpDB
 	handler.ObjectStorage = os
 	handler.DropModifier = ds
 
@@ -119,7 +120,8 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 
 	cm.Inject(
 		platformpolicy.NewPlatformCryptographyScheme(),
-		db,
+		tmpDB,
+		db.NewMockDB(),
 		js,
 		os,
 		ns,
@@ -201,7 +203,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 	}
 
 	// Create ledger.
-	l := ledger.NewTestLedger(db, am, pm, jc)
+	l := ledger.NewTestLedger(tmpDB, am, pm, jc)
 
-	return l, db, dbcancel
+	return l, tmpDB, dbcancel
 }
