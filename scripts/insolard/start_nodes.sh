@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#! /usr/bin/env bash
 
 BIN_DIR=bin
 BASE_DIR=scripts/insolard
