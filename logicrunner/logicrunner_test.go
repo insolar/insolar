@@ -208,17 +208,16 @@ func (s *LogicRunnerFuncSuite) incrementPulseHelper(ctx context.Context, lr core
 	)
 	s.Require().NoError(err)
 
-	rootJetId := *jet.NewID(0, nil)
+	rootJetId := core.RecordID(*core.NewJetID(0, nil))
 	_, err = lr.(*LogicRunner).MessageBus.Send(
 		ctx,
 		&message.HotData{
-			Jet:                *core.NewRecordRef(core.DomainID, rootJetId),
-			DropJet:            rootJetId,
-			Drop:               jet.JetDrop{Pulse: 1},
-			RecentObjects:      nil,
-			PendingRequests:    nil,
-			PulseNumber:        newPulseNumber,
-			JetDropSizeHistory: nil,
+			Jet:             *core.NewRecordRef(core.DomainID, rootJetId),
+			DropJet:         rootJetId,
+			Drop:            jet.Drop{Pulse: 1},
+			RecentObjects:   nil,
+			PendingRequests: nil,
+			PulseNumber:     newPulseNumber,
 		}, nil,
 	)
 	s.Require().NoError(err)

@@ -79,9 +79,6 @@ type Ledger struct {
 	// IMPORTANT: It should be the same on ALL nodes.
 	LightChainLimit int
 
-	// JetSizesHistoryDepth holds maximum number of drop sizes
-	JetSizesHistoryDepth int
-
 	// Exporter holds configuration of Exporter
 	Exporter Exporter
 
@@ -115,8 +112,6 @@ func NewLedger() Ledger {
 		},
 
 		LightChainLimit: 5, // 5 pulses
-
-		JetSizesHistoryDepth: 10,
 
 		Exporter: Exporter{
 			ExportLag: 40, // 40 seconds

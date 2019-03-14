@@ -19,6 +19,7 @@ package storagetest
 import (
 	"context"
 
+	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/record"
 
@@ -77,21 +78,23 @@ func AddRandRecord(
 // AddRandDrop adds random drop.
 func AddRandDrop(
 	ctx context.Context,
-	dropStorage storage.DropStorage,
+	modifier drop.Modifier,
+	accessor drop.Accessor,
 	jetID core.RecordID,
 	pulsenum core.PulseNumber,
-) (*jet.JetDrop, error) {
+) (*jet.Drop, error) {
 
 	hash1 := testutils.RandomID()
 	hash2 := testutils.RandomID()
-	drop := jet.JetDrop{
+	drop := jet.Drop{
 		Pulse:    pulsenum,
 		PrevHash: hash1[:],
 		Hash:     hash2[:],
 	}
-	err := dropStorage.SetDrop(ctx, jetID, &drop)
+	err := modifier.Set(ctx, core.JetID(jetID), drop)
 	if err != nil {
 		return nil, err
 	}
-	return dropStorage.GetDrop(ctx, jetID, pulsenum)
+	resDrop, err := accessor.ForPulse(ctx, core.JetID(jetID), pulsenum)
+	return &resDrop, err
 }

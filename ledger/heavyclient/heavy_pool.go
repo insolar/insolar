@@ -25,7 +25,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/jet"
 	"go.opencensus.io/stats"
 	"golang.org/x/sync/singleflight"
 )
@@ -175,7 +174,7 @@ func (scp *Pool) LightCleanup(
 
 		for _, c := range allClients {
 			jetID := c.jetID
-			_, jetPrefix := jet.Jet(jetID)
+			jetPrefix := core.JetID(jetID).Prefix()
 			prefixKey := string(jetPrefix)
 
 			_, skipRecordsCleanup := jetPrefixSeen[prefixKey]
