@@ -130,31 +130,3 @@ func TestDropStorageMemory_Delete(t *testing.T) {
 	drop, err = ms.ForPulse(ctx, core.ZeroJetID, core.PulseNumber(123))
 	require.Error(t, err, db.ErrNotFound)
 }
-
-func TestDropStorageMemory_ForPulseWithoutJet(t *testing.T) {
-	ctx := inslogger.TestContext(t)
-	ms := NewStorageMemory()
-
-	contains := func(drops []jet.Drop, fSize uint64, sSize uint64) bool {
-		res := 0
-		for _, dr := range drops {
-			if dr.Size == fSize && dr.Size != sSize {
-				res++
-			}
-			if dr.Size == sSize && dr.Size != fSize {
-				res++
-			}
-		}
-		return res == 2
-	}
-
-	_ = ms.Set(ctx, core.ZeroJetID, jet.Drop{Pulse: 123, Size: 123})
-	_ = ms.Set(ctx, core.ZeroJetID, jet.Drop{Pulse: 222, Size: 999})
-	_ = ms.Set(ctx, *core.NewJetID(1, []byte{123}), jet.Drop{Pulse: 123, Size: 999})
-
-	drops, err := ms.ForPulseWithoutJet(ctx, core.PulseNumber(123))
-
-	require.NoError(t, err)
-	require.Equal(t, 2, len(drops))
-	require.Equal(t, true, contains(drops, 123, 999))
-}

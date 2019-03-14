@@ -30,9 +30,13 @@ import (
 func (h *MessageHandler) handleHeavyPayload(ctx context.Context, genericMsg core.Parcel) (core.Reply, error) {
 	msg := genericMsg.Message().(*message.HeavyPayload)
 
-	if err := h.HeavySync.Store(ctx, msg.JetID, msg.PulseNum, msg.Records); err != nil {
+	if err := h.HeavySync.Store(ctx, core.RecordID(msg.JetID), msg.PulseNum, msg.Records); err != nil {
 		return heavyerrreply(err)
 	}
+	if err := h.HeavySync.StoreDrop(ctx, msg.JetID, msg.Drop); err != nil {
+		return heavyerrreply(err)
+	}
+
 	return &reply.OK{}, nil
 }
 
@@ -41,13 +45,13 @@ func (h *MessageHandler) handleHeavyStartStop(ctx context.Context, genericMsg co
 
 	// stop
 	if msg.Finished {
-		if err := h.HeavySync.Stop(ctx, msg.JetID, msg.PulseNum); err != nil {
+		if err := h.HeavySync.Stop(ctx, core.RecordID(msg.JetID), msg.PulseNum); err != nil {
 			return nil, err
 		}
 		return &reply.OK{}, nil
 	}
 	// start
-	if err := h.HeavySync.Start(ctx, msg.JetID, msg.PulseNum); err != nil {
+	if err := h.HeavySync.Start(ctx, core.RecordID(msg.JetID), msg.PulseNum); err != nil {
 		return heavyerrreply(err)
 	}
 	return &reply.OK{}, nil

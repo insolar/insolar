@@ -27,6 +27,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/utils/backoff"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
@@ -47,6 +48,7 @@ type JetClient struct {
 	pulseTracker   storage.PulseTracker
 	cleaner        storage.Cleaner
 	db             storage.DBContext
+	dropAccessor   drop.Accessor
 
 	opts Options
 
@@ -59,7 +61,7 @@ type JetClient struct {
 	syncdone chan struct{}
 
 	// state:
-	jetID       core.RecordID
+	jetID       core.JetID
 	muPulses    sync.Mutex
 	leftPulses  []core.PulseNumber
 	syncbackoff *backoff.Backoff
@@ -85,7 +87,7 @@ func NewJetClient(
 		pulseTracker:   pulseTracker,
 		cleaner:        cleaner,
 		db:             db,
-		jetID:          jetID,
+		jetID:          core.JetID(jetID),
 		syncbackoff:    backoffFromConfig(opts.BackoffConf),
 		signal:         make(chan struct{}, 1),
 		syncdone:       make(chan struct{}),
@@ -101,7 +103,7 @@ func (c *JetClient) updateLeftPulsesMetrics(ctx context.Context) {
 	if len(c.leftPulses) > 0 {
 		pn = c.leftPulses[0]
 	}
-	ctx = insmetrics.InsertTag(ctx, tagJet, c.jetID.DebugString())
+	ctx = insmetrics.InsertTag(ctx, tagJet, core.RecordID(c.jetID).DebugString())
 	stats.Record(ctx,
 		statUnsyncedPulsesCount.M(int64(len(c.leftPulses))),
 		statFirstUnsyncedPulse.M(int64(pn)),
@@ -113,7 +115,7 @@ func (c *JetClient) addPulses(ctx context.Context, pns []core.PulseNumber) {
 	c.muPulses.Lock()
 	c.leftPulses = append(c.leftPulses, pns...)
 
-	if err := c.replicaStorage.SetSyncClientJetPulses(ctx, c.jetID, c.leftPulses); err != nil {
+	if err := c.replicaStorage.SetSyncClientJetPulses(ctx, core.RecordID(c.jetID), c.leftPulses); err != nil {
 		inslogger.FromContext(ctx).Errorf(
 			"attempt to persist jet sync state failed: jetID=%v: %v", c.jetID, err.Error())
 	}
@@ -143,7 +145,7 @@ func (c *JetClient) unshiftPulse(ctx context.Context) *core.PulseNumber {
 	copy(shifted, c.leftPulses[1:])
 	c.leftPulses = shifted
 
-	if err := c.replicaStorage.SetSyncClientJetPulses(ctx, c.jetID, c.leftPulses); err != nil {
+	if err := c.replicaStorage.SetSyncClientJetPulses(ctx, core.RecordID(c.jetID), c.leftPulses); err != nil {
 		inslogger.FromContext(ctx).Errorf(
 			"attempt to persist jet sync state failed: jetID=%v: %v", c.jetID, err.Error())
 	}
@@ -228,7 +230,7 @@ func (c *JetClient) syncloop(ctx context.Context) {
 		shouldretry := false
 		syncerr := c.HeavySync(ctx, syncPN)
 		inslog := inslog.WithFields(map[string]interface{}{
-			"jet_id":  c.jetID.DebugString(),
+			"jet_id":  core.RecordID(c.jetID).DebugString(),
 			"pulse":   syncPN,
 			"attempt": c.syncbackoff.Attempt(),
 		})
@@ -250,7 +252,7 @@ func (c *JetClient) syncloop(ctx context.Context) {
 			}
 			// TODO: write some info to dust - 14.Dec.2018 @nordicdyno
 		} else {
-			ctx = insmetrics.InsertTag(ctx, tagJet, c.jetID.DebugString())
+			ctx = insmetrics.InsertTag(ctx, tagJet, core.RecordID(c.jetID).DebugString())
 			stats.Record(ctx,
 				statSyncedPulsesCount.M(1),
 			)

@@ -56,21 +56,6 @@ func (m *dropStorageMemory) ForPulse(ctx context.Context, jetID core.JetID, puls
 	return d, nil
 }
 
-// ForPulseWithoutJet returns a slice of jet.Drop for a provided pulse, that are stored in a memory
-func (m *dropStorageMemory) ForPulseWithoutJet(ctx context.Context, pulse core.PulseNumber) ([]jet.Drop, error) {
-	m.lock.RLock()
-	defer m.lock.RUnlock()
-	var res []jet.Drop
-
-	for key, drop := range m.jets {
-		if key.pulse == pulse {
-			res = append(res, drop)
-		}
-	}
-
-	return res, nil
-}
-
 // Set saves a provided jet.Drop to a memory
 func (m *dropStorageMemory) Set(ctx context.Context, jetID core.JetID, drop jet.Drop) error {
 	m.lock.Lock()
