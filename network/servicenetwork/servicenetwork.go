@@ -232,7 +232,7 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse core.Pulse) {
 		return
 	}
 
-	if n.NodeKeeper.GetState() == core.WaitingNodeNetworkState {
+	if n.NodeKeeper.GetConsensusInfo().IsJoiner() {
 		// do not set pulse because otherwise we will set invalid active list
 		// pass consensus, prepare valid active list and set it on next pulse
 		go n.phaseManagerOnPulse(ctx, newPulse, currentTime)

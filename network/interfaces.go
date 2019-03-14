@@ -150,8 +150,6 @@ type NodeKeeper interface {
 	GetActiveNodes() []core.Node
 	// GetActiveNodeByShortID get active node by short ID. Returns nil if node is not found.
 	GetActiveNodeByShortID(shortID core.ShortNodeID) core.Node
-	// SetState set state of the NodeKeeper
-	SetState(core.NodeNetworkState)
 	// GetOriginJoinClaim get origin NodeJoinClaim
 	GetOriginJoinClaim() (*consensus.NodeJoinClaim, error)
 	// GetOriginAnnounceClaim get origin NodeAnnounceClaim
@@ -184,6 +182,10 @@ type ConsensusInfo interface {
 	ResolveConsensus(shortID core.ShortNodeID) *host.Host
 	// ResolveConsensusRef get temporary mapping by node ID
 	ResolveConsensusRef(nodeID core.RecordRef) *host.Host
+	// ShouldConnectAsJoiner instruct current node whether it should perform consensus as joiner or not
+	SetIsJoiner(isJoiner bool)
+	// IsJoiner true if current node should perform consensus as joiner
+	IsJoiner() bool
 }
 
 // UnsyncList is interface to manage unsync list

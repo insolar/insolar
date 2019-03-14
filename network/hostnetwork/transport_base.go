@@ -23,7 +23,6 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/sequence"
 	"github.com/insolar/insolar/network/transport"
@@ -54,15 +53,16 @@ func (h *transportBase) Start(ctx context.Context) error {
 }
 
 func (h *transportBase) listen(ctx context.Context) {
+	logger := inslogger.FromContext(ctx)
 	for {
 		select {
 		case msg := <-h.transport.Packets():
 			if msg == nil {
-				log.Error("HostNetwork receiving channel is closed")
+				logger.Error("HostNetwork receiving channel is closed")
 				break
 			}
 			if msg.Error != nil {
-				log.Warnf("Received error response: %s", msg.Error.Error())
+				logger.Warnf("Received error response: %s", msg.Error.Error())
 			}
 			go h.messageProcessor(msg)
 		case <-h.transport.Stopped():

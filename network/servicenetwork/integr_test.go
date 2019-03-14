@@ -418,8 +418,10 @@ func (s *testSuite) TestDiscoveryDown() {
 	s.StopNode(s.fixture().bootstrapNodes[0])
 
 	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
-	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
-	s.Equal(s.getNodesCount()-1, len(activeNodes))
+	for i := 1; i < s.getNodesCount(); i++ {
+		activeNodes := s.fixture().bootstrapNodes[i].serviceNetwork.NodeKeeper.GetWorkingNodes()
+		s.Equal(s.getNodesCount()-1, len(activeNodes))
+	}
 }
 
 func (s *testSuite) TestDiscoveryRestart() {

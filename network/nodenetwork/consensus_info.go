@@ -30,6 +30,21 @@ type consensusInfo struct {
 	tempMapR                   map[core.RecordRef]*host.Host
 	tempMapS                   map[core.ShortNodeID]*host.Host
 	nodesJoinedDuringPrevPulse bool
+	isJoiner                   bool
+}
+
+func (ci *consensusInfo) SetIsJoiner(isJoiner bool) {
+	ci.lock.Lock()
+	defer ci.lock.Unlock()
+
+	ci.isJoiner = isJoiner
+}
+
+func (ci *consensusInfo) IsJoiner() bool {
+	ci.lock.RLock()
+	defer ci.lock.RUnlock()
+
+	return ci.isJoiner
 }
 
 func (ci *consensusInfo) NodesJoinedDuringPreviousPulse() bool {

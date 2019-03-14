@@ -49,17 +49,13 @@ type node struct {
 	NodeRole      core.StaticRole
 	NodePublicKey crypto.PublicKey
 
-	NodePulseNum core.PulseNumber
-
 	NodeAddress string
 	CAddress    string
 
 	versionMutex sync.RWMutex
 	NodeVersion  string
 
-	leavingMutex   sync.RWMutex
-	NodeLeaving    bool
-	NodeLeavingETA core.PulseNumber
+	NodeLeavingETA uint32
 
 	state uint32
 }
@@ -81,7 +77,6 @@ func (n *node) GetState() core.NodeState {
 
 func (n *node) ChangeState() {
 	// we don't expect concurrent changes, so do not CAS
-
 	currentState := atomic.LoadUint32(&n.state)
 	if currentState == uint32(core.NodeReady) {
 		return
@@ -154,31 +149,17 @@ func (n *node) Version() string {
 	return n.NodeVersion
 }
 
-func (n *node) IsWorking() bool {
-	return atomic.LoadUint32(&n.state) == uint32(core.NodeReady)
-}
-
 func (n *node) SetShortID(id core.ShortNodeID) {
 	atomic.StoreUint32(&n.NodeShortID, uint32(id))
 }
 
-func (n *node) Leaving() bool {
-	n.leavingMutex.RLock()
-	defer n.leavingMutex.RUnlock()
-	return n.NodeLeaving
-}
 func (n *node) LeavingETA() core.PulseNumber {
-	n.leavingMutex.RLock()
-	defer n.leavingMutex.RUnlock()
-	return n.NodeLeavingETA
+	return core.PulseNumber(atomic.LoadUint32(&n.NodeLeavingETA))
 }
 
 func (n *node) SetLeavingETA(number core.PulseNumber) {
-	n.leavingMutex.Lock()
-	defer n.leavingMutex.Unlock()
-
-	n.NodeLeaving = true
-	n.NodeLeavingETA = number
+	n.SetState(core.NodeLeaving)
+	atomic.StoreUint32(&n.NodeLeavingETA, uint32(number))
 }
 
 func init() {

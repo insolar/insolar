@@ -21,7 +21,7 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/component"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/transport/packet"
 	"github.com/insolar/insolar/network/transport/packet/types"
@@ -46,10 +46,11 @@ func (pc *pulseController) Init(ctx context.Context) error {
 
 func (pc *pulseController) processPulse(ctx context.Context, request network.Request) (network.Response, error) {
 	data := request.GetData().(*packet.RequestPulse)
-	// we should not process pulses in Waiting state because network can be unready to join current node,
-	// so we should wait for pulse from consensus phase1 packet
-	if pc.NodeKeeper.GetState() != core.WaitingNodeNetworkState {
+	// if we are a joiner node, we should receive pulse from phase1 packet and ignore pulse from pulsar
+	if !pc.NodeKeeper.GetConsensusInfo().IsJoiner() {
 		go pc.PulseHandler.HandlePulse(context.Background(), data.Pulse)
+	} else {
+		log.Debugf("Ignore pulse %v from pulsar, waiting for consensus phase1 packet", data.Pulse)
 	}
 	return pc.Network.BuildResponse(ctx, request, &packet.ResponsePulse{Success: true, Error: ""}), nil
 }

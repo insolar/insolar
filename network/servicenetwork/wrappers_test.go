@@ -104,14 +104,6 @@ func (n *nodeKeeperWrapper) GetActiveNodeByShortID(shortID core.ShortNodeID) cor
 	return n.original.GetActiveNodeByShortID(shortID)
 }
 
-func (n *nodeKeeperWrapper) SetState(state core.NodeNetworkState) {
-	n.original.SetState(state)
-}
-
-func (n *nodeKeeperWrapper) GetState() core.NodeNetworkState {
-	return n.original.GetState()
-}
-
 func (n *nodeKeeperWrapper) GetOriginJoinClaim() (*consensus.NodeJoinClaim, error) {
 	return n.original.GetOriginJoinClaim()
 }

@@ -77,11 +77,6 @@ type NodeKeeperMock struct {
 	GetSparseUnsyncListPreCounter uint64
 	GetSparseUnsyncListMock       mNodeKeeperMockGetSparseUnsyncList
 
-	GetStateFunc       func() (r core.NodeNetworkState)
-	GetStateCounter    uint64
-	GetStatePreCounter uint64
-	GetStateMock       mNodeKeeperMockGetState
-
 	GetUnsyncListFunc       func() (r network.UnsyncList)
 	GetUnsyncListCounter    uint64
 	GetUnsyncListPreCounter uint64
@@ -122,11 +117,6 @@ type NodeKeeperMock struct {
 	SetIsBootstrappedPreCounter uint64
 	SetIsBootstrappedMock       mNodeKeeperMockSetIsBootstrapped
 
-	SetStateFunc       func(p core.NodeNetworkState)
-	SetStateCounter    uint64
-	SetStatePreCounter uint64
-	SetStateMock       mNodeKeeperMockSetState
-
 	SyncFunc       func(p context.Context, p1 []core.Node, p2 []packets.ReferendumClaim) (r error)
 	SyncCounter    uint64
 	SyncPreCounter uint64
@@ -152,7 +142,6 @@ func NewNodeKeeperMock(t minimock.Tester) *NodeKeeperMock {
 	m.GetOriginAnnounceClaimMock = mNodeKeeperMockGetOriginAnnounceClaim{mock: m}
 	m.GetOriginJoinClaimMock = mNodeKeeperMockGetOriginJoinClaim{mock: m}
 	m.GetSparseUnsyncListMock = mNodeKeeperMockGetSparseUnsyncList{mock: m}
-	m.GetStateMock = mNodeKeeperMockGetState{mock: m}
 	m.GetUnsyncListMock = mNodeKeeperMockGetUnsyncList{mock: m}
 	m.GetWorkingNodeMock = mNodeKeeperMockGetWorkingNode{mock: m}
 	m.GetWorkingNodesMock = mNodeKeeperMockGetWorkingNodes{mock: m}
@@ -161,7 +150,6 @@ func NewNodeKeeperMock(t minimock.Tester) *NodeKeeperMock {
 	m.MoveSyncToActiveMock = mNodeKeeperMockMoveSyncToActive{mock: m}
 	m.SetCloudHashMock = mNodeKeeperMockSetCloudHash{mock: m}
 	m.SetIsBootstrappedMock = mNodeKeeperMockSetIsBootstrapped{mock: m}
-	m.SetStateMock = mNodeKeeperMockSetState{mock: m}
 	m.SyncMock = mNodeKeeperMockSync{mock: m}
 
 	return m
@@ -1688,140 +1676,6 @@ func (m *NodeKeeperMock) GetSparseUnsyncListFinished() bool {
 	return true
 }
 
-type mNodeKeeperMockGetState struct {
-	mock              *NodeKeeperMock
-	mainExpectation   *NodeKeeperMockGetStateExpectation
-	expectationSeries []*NodeKeeperMockGetStateExpectation
-}
-
-type NodeKeeperMockGetStateExpectation struct {
-	result *NodeKeeperMockGetStateResult
-}
-
-type NodeKeeperMockGetStateResult struct {
-	r core.NodeNetworkState
-}
-
-//Expect specifies that invocation of NodeKeeper.GetState is expected from 1 to Infinity times
-func (m *mNodeKeeperMockGetState) Expect() *mNodeKeeperMockGetState {
-	m.mock.GetStateFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &NodeKeeperMockGetStateExpectation{}
-	}
-
-	return m
-}
-
-//Return specifies results of invocation of NodeKeeper.GetState
-func (m *mNodeKeeperMockGetState) Return(r core.NodeNetworkState) *NodeKeeperMock {
-	m.mock.GetStateFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &NodeKeeperMockGetStateExpectation{}
-	}
-	m.mainExpectation.result = &NodeKeeperMockGetStateResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of NodeKeeper.GetState is expected once
-func (m *mNodeKeeperMockGetState) ExpectOnce() *NodeKeeperMockGetStateExpectation {
-	m.mock.GetStateFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &NodeKeeperMockGetStateExpectation{}
-
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *NodeKeeperMockGetStateExpectation) Return(r core.NodeNetworkState) {
-	e.result = &NodeKeeperMockGetStateResult{r}
-}
-
-//Set uses given function f as a mock of NodeKeeper.GetState method
-func (m *mNodeKeeperMockGetState) Set(f func() (r core.NodeNetworkState)) *NodeKeeperMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.GetStateFunc = f
-	return m.mock
-}
-
-//GetState implements github.com/insolar/insolar/network.NodeKeeper interface
-func (m *NodeKeeperMock) GetState() (r core.NodeNetworkState) {
-	counter := atomic.AddUint64(&m.GetStatePreCounter, 1)
-	defer atomic.AddUint64(&m.GetStateCounter, 1)
-
-	if len(m.GetStateMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.GetStateMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to NodeKeeperMock.GetState.")
-			return
-		}
-
-		result := m.GetStateMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the NodeKeeperMock.GetState")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.GetStateMock.mainExpectation != nil {
-
-		result := m.GetStateMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the NodeKeeperMock.GetState")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.GetStateFunc == nil {
-		m.t.Fatalf("Unexpected call to NodeKeeperMock.GetState.")
-		return
-	}
-
-	return m.GetStateFunc()
-}
-
-//GetStateMinimockCounter returns a count of NodeKeeperMock.GetStateFunc invocations
-func (m *NodeKeeperMock) GetStateMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.GetStateCounter)
-}
-
-//GetStateMinimockPreCounter returns the value of NodeKeeperMock.GetState invocations
-func (m *NodeKeeperMock) GetStateMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.GetStatePreCounter)
-}
-
-//GetStateFinished returns true if mock invocations count is ok
-func (m *NodeKeeperMock) GetStateFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.GetStateMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.GetStateCounter) == uint64(len(m.GetStateMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.GetStateMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.GetStateCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.GetStateFunc != nil {
-		return atomic.LoadUint64(&m.GetStateCounter) > 0
-	}
-
-	return true
-}
-
 type mNodeKeeperMockGetUnsyncList struct {
 	mock              *NodeKeeperMock
 	mainExpectation   *NodeKeeperMockGetUnsyncListExpectation
@@ -2911,129 +2765,6 @@ func (m *NodeKeeperMock) SetIsBootstrappedFinished() bool {
 	return true
 }
 
-type mNodeKeeperMockSetState struct {
-	mock              *NodeKeeperMock
-	mainExpectation   *NodeKeeperMockSetStateExpectation
-	expectationSeries []*NodeKeeperMockSetStateExpectation
-}
-
-type NodeKeeperMockSetStateExpectation struct {
-	input *NodeKeeperMockSetStateInput
-}
-
-type NodeKeeperMockSetStateInput struct {
-	p core.NodeNetworkState
-}
-
-//Expect specifies that invocation of NodeKeeper.SetState is expected from 1 to Infinity times
-func (m *mNodeKeeperMockSetState) Expect(p core.NodeNetworkState) *mNodeKeeperMockSetState {
-	m.mock.SetStateFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &NodeKeeperMockSetStateExpectation{}
-	}
-	m.mainExpectation.input = &NodeKeeperMockSetStateInput{p}
-	return m
-}
-
-//Return specifies results of invocation of NodeKeeper.SetState
-func (m *mNodeKeeperMockSetState) Return() *NodeKeeperMock {
-	m.mock.SetStateFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &NodeKeeperMockSetStateExpectation{}
-	}
-
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of NodeKeeper.SetState is expected once
-func (m *mNodeKeeperMockSetState) ExpectOnce(p core.NodeNetworkState) *NodeKeeperMockSetStateExpectation {
-	m.mock.SetStateFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &NodeKeeperMockSetStateExpectation{}
-	expectation.input = &NodeKeeperMockSetStateInput{p}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-//Set uses given function f as a mock of NodeKeeper.SetState method
-func (m *mNodeKeeperMockSetState) Set(f func(p core.NodeNetworkState)) *NodeKeeperMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.SetStateFunc = f
-	return m.mock
-}
-
-//SetState implements github.com/insolar/insolar/network.NodeKeeper interface
-func (m *NodeKeeperMock) SetState(p core.NodeNetworkState) {
-	counter := atomic.AddUint64(&m.SetStatePreCounter, 1)
-	defer atomic.AddUint64(&m.SetStateCounter, 1)
-
-	if len(m.SetStateMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.SetStateMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to NodeKeeperMock.SetState. %v", p)
-			return
-		}
-
-		input := m.SetStateMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, NodeKeeperMockSetStateInput{p}, "NodeKeeper.SetState got unexpected parameters")
-
-		return
-	}
-
-	if m.SetStateMock.mainExpectation != nil {
-
-		input := m.SetStateMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, NodeKeeperMockSetStateInput{p}, "NodeKeeper.SetState got unexpected parameters")
-		}
-
-		return
-	}
-
-	if m.SetStateFunc == nil {
-		m.t.Fatalf("Unexpected call to NodeKeeperMock.SetState. %v", p)
-		return
-	}
-
-	m.SetStateFunc(p)
-}
-
-//SetStateMinimockCounter returns a count of NodeKeeperMock.SetStateFunc invocations
-func (m *NodeKeeperMock) SetStateMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.SetStateCounter)
-}
-
-//SetStateMinimockPreCounter returns the value of NodeKeeperMock.SetState invocations
-func (m *NodeKeeperMock) SetStateMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.SetStatePreCounter)
-}
-
-//SetStateFinished returns true if mock invocations count is ok
-func (m *NodeKeeperMock) SetStateFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.SetStateMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.SetStateCounter) == uint64(len(m.SetStateMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.SetStateMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.SetStateCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.SetStateFunc != nil {
-		return atomic.LoadUint64(&m.SetStateCounter) > 0
-	}
-
-	return true
-}
-
 type mNodeKeeperMockSync struct {
 	mock              *NodeKeeperMock
 	mainExpectation   *NodeKeeperMockSyncExpectation
@@ -3231,10 +2962,6 @@ func (m *NodeKeeperMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to NodeKeeperMock.GetSparseUnsyncList")
 	}
 
-	if !m.GetStateFinished() {
-		m.t.Fatal("Expected call to NodeKeeperMock.GetState")
-	}
-
 	if !m.GetUnsyncListFinished() {
 		m.t.Fatal("Expected call to NodeKeeperMock.GetUnsyncList")
 	}
@@ -3265,10 +2992,6 @@ func (m *NodeKeeperMock) ValidateCallCounters() {
 
 	if !m.SetIsBootstrappedFinished() {
 		m.t.Fatal("Expected call to NodeKeeperMock.SetIsBootstrapped")
-	}
-
-	if !m.SetStateFinished() {
-		m.t.Fatal("Expected call to NodeKeeperMock.SetState")
 	}
 
 	if !m.SyncFinished() {
@@ -3336,10 +3059,6 @@ func (m *NodeKeeperMock) MinimockFinish() {
 		m.t.Fatal("Expected call to NodeKeeperMock.GetSparseUnsyncList")
 	}
 
-	if !m.GetStateFinished() {
-		m.t.Fatal("Expected call to NodeKeeperMock.GetState")
-	}
-
 	if !m.GetUnsyncListFinished() {
 		m.t.Fatal("Expected call to NodeKeeperMock.GetUnsyncList")
 	}
@@ -3372,10 +3091,6 @@ func (m *NodeKeeperMock) MinimockFinish() {
 		m.t.Fatal("Expected call to NodeKeeperMock.SetIsBootstrapped")
 	}
 
-	if !m.SetStateFinished() {
-		m.t.Fatal("Expected call to NodeKeeperMock.SetState")
-	}
-
 	if !m.SyncFinished() {
 		m.t.Fatal("Expected call to NodeKeeperMock.Sync")
 	}
@@ -3405,7 +3120,6 @@ func (m *NodeKeeperMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.GetOriginAnnounceClaimFinished()
 		ok = ok && m.GetOriginJoinClaimFinished()
 		ok = ok && m.GetSparseUnsyncListFinished()
-		ok = ok && m.GetStateFinished()
 		ok = ok && m.GetUnsyncListFinished()
 		ok = ok && m.GetWorkingNodeFinished()
 		ok = ok && m.GetWorkingNodesFinished()
@@ -3414,7 +3128,6 @@ func (m *NodeKeeperMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.MoveSyncToActiveFinished()
 		ok = ok && m.SetCloudHashFinished()
 		ok = ok && m.SetIsBootstrappedFinished()
-		ok = ok && m.SetStateFinished()
 		ok = ok && m.SyncFinished()
 
 		if ok {
@@ -3468,10 +3181,6 @@ func (m *NodeKeeperMock) MinimockWait(timeout time.Duration) {
 				m.t.Error("Expected call to NodeKeeperMock.GetSparseUnsyncList")
 			}
 
-			if !m.GetStateFinished() {
-				m.t.Error("Expected call to NodeKeeperMock.GetState")
-			}
-
 			if !m.GetUnsyncListFinished() {
 				m.t.Error("Expected call to NodeKeeperMock.GetUnsyncList")
 			}
@@ -3502,10 +3211,6 @@ func (m *NodeKeeperMock) MinimockWait(timeout time.Duration) {
 
 			if !m.SetIsBootstrappedFinished() {
 				m.t.Error("Expected call to NodeKeeperMock.SetIsBootstrapped")
-			}
-
-			if !m.SetStateFinished() {
-				m.t.Error("Expected call to NodeKeeperMock.SetState")
 			}
 
 			if !m.SyncFinished() {
@@ -3568,10 +3273,6 @@ func (m *NodeKeeperMock) AllMocksCalled() bool {
 		return false
 	}
 
-	if !m.GetStateFinished() {
-		return false
-	}
-
 	if !m.GetUnsyncListFinished() {
 		return false
 	}
@@ -3601,10 +3302,6 @@ func (m *NodeKeeperMock) AllMocksCalled() bool {
 	}
 
 	if !m.SetIsBootstrappedFinished() {
-		return false
-	}
-
-	if !m.SetStateFinished() {
 		return false
 	}
 

@@ -45,9 +45,7 @@ func NewNodeNetwork(configuration configuration.HostNetwork, certificate core.Ce
 		return nil, errors.Wrap(err, "Failed to create origin node")
 	}
 	nodeKeeper := NewNodeKeeper(origin)
-	nodeKeeper.SetState(core.WaitingNodeNetworkState)
 	if len(certificate.GetDiscoveryNodes()) == 0 || utils.OriginIsDiscovery(certificate) {
-		nodeKeeper.SetState(core.ReadyNodeNetworkState)
 		nodeKeeper.AddActiveNodes([]core.Node{origin})
 	}
 	return nodeKeeper, nil
@@ -90,7 +88,6 @@ func resolveAddress(configuration configuration.HostNetwork) (string, error) {
 func NewNodeKeeper(origin core.Node) network.NodeKeeper {
 	return &nodekeeper{
 		origin:        origin,
-		state:         core.ReadyNodeNetworkState,
 		claimQueue:    newClaimQueue(),
 		consensusInfo: newConsensusInfo(),
 		active:        make(map[core.RecordRef]core.Node),
@@ -117,7 +114,6 @@ type nodekeeper struct {
 	syncLock   sync.Mutex
 	syncNodes  []core.Node
 	syncClaims []consensus.ReferendumClaim
-	state      core.NodeNetworkState
 
 	isBootstrap     bool
 	isBootstrapLock sync.RWMutex
@@ -132,7 +128,7 @@ func (nk *nodekeeper) GetConsensusInfo() network.ConsensusInfo {
 func (nk *nodekeeper) GetWorkingNode(ref core.RecordRef) core.Node {
 	node := nk.GetActiveNode(ref)
 
-	if node == nil || node.Leaving() || !node.IsWorking() {
+	if node.GetState() != core.NodeReady {
 		return nil
 	}
 
@@ -174,7 +170,7 @@ func (nk *nodekeeper) Wipe(isDiscovery bool) {
 	nk.syncClaims = make([]consensus.ReferendumClaim, 0)
 	if isDiscovery {
 		nk.addActiveNode(nk.origin)
-		nk.state = core.ReadyNodeNetworkState
+		nk.origin.(MutableNode).SetState(core.NodeReady)
 	}
 	nk.syncLock.Unlock()
 }
@@ -281,7 +277,7 @@ func (nk *nodekeeper) addToIndex(node core.Node) {
 }
 
 func (nk *nodekeeper) addToRoleIndex(node core.Node) {
-	if node.Leaving() || !node.IsWorking() {
+	if node.GetState() != core.NodeReady {
 		return
 	}
 
@@ -298,26 +294,12 @@ func (nk *nodekeeper) GetWorkingNodes() []core.Node {
 	var workingNodes []core.Node
 	activeNodes := nk.GetActiveNodes()
 	for _, node := range activeNodes {
-		if !node.Leaving() && node.IsWorking() {
+		if node.GetState() == core.NodeReady {
 			workingNodes = append(workingNodes, node)
 		}
 	}
 
 	return workingNodes
-}
-
-func (nk *nodekeeper) SetState(state core.NodeNetworkState) {
-	nk.syncLock.Lock()
-	defer nk.syncLock.Unlock()
-
-	nk.state = state
-}
-
-func (nk *nodekeeper) GetState() core.NodeNetworkState {
-	nk.syncLock.Lock()
-	defer nk.syncLock.Unlock()
-
-	return nk.state
 }
 
 func (nk *nodekeeper) GetOriginJoinClaim() (*consensus.NodeJoinClaim, error) {
@@ -364,7 +346,8 @@ func (nk *nodekeeper) Sync(ctx context.Context, nodes []core.Node, claims []cons
 	for _, node := range nodes {
 		if node.ID().Equal(nk.origin.ID()) {
 			foundOrigin = true
-			nk.state = core.ReadyNodeNetworkState
+			// nk.origin.(MutableNode).ChangeState()
+			nk.consensusInfo.SetIsJoiner(false)
 		}
 	}
 
@@ -385,7 +368,7 @@ func (nk *nodekeeper) MoveSyncToActive(ctx context.Context) error {
 
 	mergeResult, err := GetMergedCopy(nk.syncNodes, nk.syncClaims)
 	if err != nil {
-		return errors.Wrap(err, "[ Sync ] Failed to calculate new active list")
+		return errors.Wrap(err, "[ MoveSyncToActive ] Failed to calculate new active list")
 	}
 
 	inslogger.FromContext(ctx).Infof("[ MoveSyncToActive ] New active list confirmed. Active list size: %d -> %d",
@@ -408,7 +391,7 @@ func (nk *nodekeeper) reindex() {
 }
 
 func (nk *nodekeeper) shouldExit(foundOrigin bool) bool {
-	return !foundOrigin && nk.state == core.ReadyNodeNetworkState && len(nk.active) != 0
+	return !foundOrigin && nk.origin.GetState() == core.NodeReady && len(nk.active) != 0
 }
 
 func (nk *nodekeeper) nodeToSignedClaim() (*consensus.NodeJoinClaim, error) {

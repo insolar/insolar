@@ -305,11 +305,11 @@ func (bc *bootstrapper) BootstrapDiscovery(ctx context.Context) (*network.Bootst
 		if err != nil {
 			return nil, errors.Wrapf(err, "Discovery check of node %s failed", activeNode.ID())
 		}
-		activeNode.(nodenetwork.MutableNode).SetState(core.NodeDiscovery)
+		activeNode.(nodenetwork.MutableNode).SetState(core.NodeUndefined)
 		activeNodesStr = append(activeNodesStr, activeNode.ID().String())
 	}
 	bc.NodeKeeper.AddActiveNodes(activeNodes)
-	bc.NodeKeeper.GetOrigin().(nodenetwork.MutableNode).SetState(core.NodeDiscovery)
+	bc.NodeKeeper.GetOrigin().(nodenetwork.MutableNode).SetState(core.NodeUndefined)
 	logger.Infof("[ BootstrapDiscovery ] Added active nodes: %s", strings.Join(activeNodesStr, ", "))
 	return parseBotstrapResults(bootstrapResults), nil
 }

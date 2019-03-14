@@ -4,9 +4,9 @@ package core
 
 import "strconv"
 
-const _NodeState_name = "NodeDiscoveryNodeJoiningNodeReady"
+const _NodeState_name = "NodeUndefinedNodePendingNodeReadyNodeLeaving"
 
-var _NodeState_index = [...]uint8{0, 13, 24, 33}
+var _NodeState_index = [...]uint8{0, 13, 24, 33, 44}
 
 func (i NodeState) String() string {
 	if i >= NodeState(len(_NodeState_index)-1) {
