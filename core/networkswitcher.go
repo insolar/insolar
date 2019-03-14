@@ -16,6 +16,8 @@
 
 package core
 
+// TODO: eliminate this
+
 import (
 	"context"
 )
