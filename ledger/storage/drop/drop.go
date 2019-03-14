@@ -34,4 +34,5 @@ type Modifier interface {
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage/drop.Accessor -o ./ -s _mock.go
 type Accessor interface {
 	ForPulse(ctx context.Context, jetID core.JetID, pulse core.PulseNumber) (jet.Drop, error)
+	ForPulseWithoutJet(ctx context.Context, pulse core.PulseNumber) ([]jet.Drop, error)
 }

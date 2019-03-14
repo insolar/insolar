@@ -26,6 +26,7 @@ type HeavyPayload struct {
 	JetID    core.RecordID
 	PulseNum core.PulseNumber
 	Records  []core.KV
+	Drops    [][]byte
 }
 
 // AllowedSenderObjectAndRole implements interface method

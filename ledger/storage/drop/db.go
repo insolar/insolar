@@ -30,7 +30,7 @@ type dropStorageDB struct {
 	DB db.DB `inject:""`
 }
 
-// NewStorageDB creates a new storage, that holds data in a db
+// NewStorageDB creates a new storage, that holds data in a db.
 func NewStorageDB() *dropStorageDB { // nolint: golint
 	return &dropStorageDB{}
 }
@@ -48,7 +48,7 @@ func (dk *dropDbKey) ID() []byte {
 	return bytes.Join([][]byte{}, nil)
 }
 
-// ForPulse returns a jet.Drop for a provided pulse, that is stored in a db
+// ForPulse returns a jet.Drop for a provided pulse, that is stored in a db.
 func (ds *dropStorageDB) ForPulse(ctx context.Context, jetID core.JetID, pulse core.PulseNumber) (jet.Drop, error) {
 	k := dropDbKey{jetID.Prefix(), pulse}
 
@@ -64,7 +64,13 @@ func (ds *dropStorageDB) ForPulse(ctx context.Context, jetID core.JetID, pulse c
 	return *drop, nil
 }
 
-// Set saves a provided jet.Drop to a db
+// ForPulseWithoutJet's db realisation is a stub of interface method.
+// Potentially it will return a slice of drops for pulse.
+func (ds *dropStorageDB) ForPulseWithoutJet(ctx context.Context, pulse core.PulseNumber) ([]jet.Drop, error) {
+	panic("see no reason for implement this methods for a db instance. db instance works only on a heavy node")
+}
+
+// Set saves a provided jet.Drop to a db.
 func (ds *dropStorageDB) Set(ctx context.Context, jetID core.JetID, drop jet.Drop) error {
 	k := dropDbKey{jetID.Prefix(), drop.Pulse}
 
@@ -81,7 +87,7 @@ func (ds *dropStorageDB) Set(ctx context.Context, jetID core.JetID, drop jet.Dro
 }
 
 // Delete methods removes a drop from a storage. But the method mustn't be called for a db storage.
-// Because db storage must be used only on a heavy-node
+// Because db storage must be used only on a heavy-node.
 func (ds *dropStorageDB) Delete(pulse core.PulseNumber) {
 	panic("mustn't be called. because db storage must work only on a heavy node. heavy mustn't remove any data")
 }
