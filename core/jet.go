@@ -27,6 +27,8 @@ const (
 	JetSize = RecordIDSize - PulseNumberSize
 	// JetPrefixSize is a Jet's prefix size.
 	JetPrefixSize = JetSize - 1
+	// JetMaximumDepth is a Jet's maximum depth (maximum offset in bits).
+	JetMaximumDepth = JetPrefixSize*8 - 1
 )
 
 // JetID should be used, when id is a jetID
