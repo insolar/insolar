@@ -20,7 +20,7 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/conveyor/interfaces/constant"
-	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
+	"github.com/insolar/insolar/conveyor/interfaces/istatemachine"
 	"github.com/insolar/insolar/conveyor/queue"
 	"github.com/insolar/insolar/core"
 	"github.com/pkg/errors"
@@ -46,7 +46,7 @@ type HandlersConfiguration struct {
 }
 
 // TODO: logic will be provided after pulse change mechanism
-func (s *HandlersConfiguration) getMachineConfiguration(smType int) statemachine.StateMachineType { // nolint: unused
+func (s *HandlersConfiguration) getMachineConfiguration(smType int) istatemachine.StateMachineType { // nolint: unused
 	return nil
 }
 
@@ -114,6 +114,7 @@ func (l *ElementList) len() int { // nolint: unused
 type Slot struct {
 	handlersConfiguration HandlersConfiguration // nolint
 	inputQueue            queue.IQueue
+	responseQueue         queue.IQueue
 	pulseState            constant.PulseState
 	slotState             SlotState
 	stateMachine          slotElement
@@ -123,7 +124,8 @@ type Slot struct {
 	nodeData              interface{}
 	elements              []slotElement
 	// we can use slice or just several fields of ElementList, it will be faster but not pretty
-	elementListMap map[ActivationStatus]*ElementList
+	elementListMap     map[ActivationStatus]*ElementList
+	removeSlotCallback RemoveSlotCallback
 }
 
 // SlotStateMachine represents state machine of slot itself
@@ -145,7 +147,7 @@ func initElementsBuf() ([]slotElement, *ElementList) {
 }
 
 // NewSlot creates new instance of Slot
-func NewSlot(pulseState constant.PulseState, pulseNumber core.PulseNumber) *Slot {
+func NewSlot(pulseState constant.PulseState, pulseNumber core.PulseNumber, removeSlotCallback RemoveSlotCallback) *Slot {
 	slotState := Initializing
 	if pulseState == constant.Antique {
 		slotState = Working
@@ -159,13 +161,15 @@ func NewSlot(pulseState constant.PulseState, pulseNumber core.PulseNumber) *Slot
 		NotActiveElement: {},
 	}
 	return &Slot{
-		pulseState:     pulseState,
-		inputQueue:     queue.NewMutexQueue(),
-		pulseNumber:    pulseNumber,
-		slotState:      slotState,
-		stateMachine:   SlotStateMachine,
-		elements:       elements,
-		elementListMap: elementListMap,
+		pulseState:         pulseState,
+		inputQueue:         queue.NewMutexQueue(),
+		responseQueue:      queue.NewMutexQueue(),
+		pulseNumber:        pulseNumber,
+		slotState:          slotState,
+		stateMachine:       SlotStateMachine,
+		elements:           elements,
+		elementListMap:     elementListMap,
+		removeSlotCallback: removeSlotCallback,
 	}
 }
 
@@ -190,14 +194,15 @@ func (s *Slot) GetNodeData() interface{} { // nolint: unused
 }
 
 // createElement creates new active element from empty element
-func (s *Slot) createElement(stateMachineType statemachine.StateMachineType, state uint32, event queue.OutputElement) (*slotElement, error) { // nolint: unused
+func (s *Slot) createElement(stateMachineType istatemachine.StateMachineType, state uint32, event queue.OutputElement) (*slotElement, error) { // nolint: unused
 	element := s.popElement(EmptyElement)
 	element.stateMachineType = stateMachineType
 	element.state = state
 	element.activationStatus = ActiveElement
 	element.nextElement = nil
-	// Set other fields to element, like:
-	// element.payload = event.GetPayload()
+	// TODO:  Set other fields to element, like:
+	element.payload = event.GetData()
+	element.inputEvent = event
 
 	err := s.pushElement(element)
 	if err != nil {
@@ -210,7 +215,7 @@ func (s *Slot) createElement(stateMachineType statemachine.StateMachineType, sta
 
 func (s *Slot) hasExpired() bool {
 	// TODO: This is used to delete past slot, which doesn't have elements and not active for some configure time
-	return false
+	return s.len(ActiveElement) == 0 && s.len(NotActiveElement) == 0
 }
 
 func (s *Slot) hasElements(status ActivationStatus) bool {
@@ -219,6 +224,18 @@ func (s *Slot) hasElements(status ActivationStatus) bool {
 		return false
 	}
 	return !list.isEmpty()
+}
+
+func (s *Slot) isSuspending() bool {
+	return s.slotState == Suspending
+}
+
+func (s *Slot) isWorking() bool {
+	return s.slotState == Working
+}
+
+func (s *Slot) isInitializing() bool {
+	return s.slotState == Initializing
 }
 
 // popElement gets element of provided status from correspondent linked list (and remove it from that list)
@@ -243,6 +260,7 @@ func (s *Slot) extractSlotElementByID(id uint32) *slotElement { // nolint: unuse
 	if element.id != id {
 		return nil
 	}
+
 	list, ok := s.elementListMap[element.activationStatus]
 	if ok {
 		list.removeElement(element)

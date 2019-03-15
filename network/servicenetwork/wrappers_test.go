@@ -149,8 +149,8 @@ func (n *nodeKeeperWrapper) GetSparseUnsyncList(length int) network.UnsyncList {
 	return n.original.GetSparseUnsyncList(length)
 }
 
-func (n *nodeKeeperWrapper) Sync(list network.UnsyncList) {
-	n.original.Sync(list)
+func (n *nodeKeeperWrapper) Sync(ctx context.Context, nodes []core.Node, claims []consensus.ReferendumClaim) error {
+	return n.original.Sync(ctx, nodes, claims)
 }
 
 func (n *nodeKeeperWrapper) MoveSyncToActive(ctx context.Context) error {

@@ -373,7 +373,7 @@ func TestConveyor_ActivatePulse_PushSignalErr(t *testing.T) {
 	c := testPulseConveyor(t, false)
 	pulse := core.Pulse{PulseNumber: testRealPulse + testPulseDelta}
 	c.futurePulseData = &pulse
-	newFutureSlot := NewSlot(constant.Unallocated, pulse.NextPulseNumber)
+	newFutureSlot := NewSlot(constant.Unallocated, pulse.NextPulseNumber, nil)
 	c.slotMap[pulse.NextPulseNumber] = newFutureSlot
 	c.state = core.ConveyorPreparingPulse
 

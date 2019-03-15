@@ -17,8 +17,8 @@
 package conveyor
 
 import (
-	"github.com/insolar/insolar/conveyor/interfaces/slot"
-	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
+	"github.com/insolar/insolar/conveyor/interfaces/islot"
+	"github.com/insolar/insolar/conveyor/interfaces/istatemachine"
 )
 
 // ActivationStatus represents status of work for slot element
@@ -38,7 +38,7 @@ type slotElement struct {
 	inputEvent       interface{}
 	payload          interface{} // nolint
 	postponedError   error
-	stateMachineType statemachine.StateMachineType
+	stateMachineType istatemachine.StateMachineType
 	state            uint32
 
 	nextElement      *slotElement
@@ -52,6 +52,20 @@ func newSlotElement(activationStatus ActivationStatus) *slotElement {
 }
 
 // ---- SlotElementRestrictedHelper
+
+func (se *slotElement) setDeleteState() {
+	se.activationStatus = EmptyElement
+}
+
+func (se *slotElement) update(state uint32, payload interface{}, sm istatemachine.StateMachineType) {
+	se.state = state
+	se.payload = payload
+	se.stateMachineType = sm
+}
+
+func (se *slotElement) isDeactivated() bool {
+	return se.activationStatus == NotActiveElement
+}
 
 // GetParentElementID implements SlotElementRestrictedHelper
 func (se *slotElement) GetParentElementID() uint32 {
@@ -108,7 +122,7 @@ func (se *slotElement) InformParent(payload interface{}) bool {
 }
 
 // DeactivateTill implements SlotElementHelper
-func (se *slotElement) DeactivateTill(reactivateOn slot.ReactivateMode) {
+func (se *slotElement) DeactivateTill(reactivateOn islot.ReactivateMode) {
 	panic("implement me")
 }
 

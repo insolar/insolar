@@ -17,7 +17,8 @@
 package adapter
 
 import (
-	"github.com/insolar/insolar/conveyor/interfaces/slot"
+	"github.com/insolar/insolar/conveyor/interfaces/iadapter"
+	"github.com/insolar/insolar/conveyor/interfaces/islot"
 	"github.com/insolar/insolar/conveyor/queue"
 )
 
@@ -38,7 +39,7 @@ type AdaptorToSlotResponseSink interface {
 	PushNestedEvent(adapterID idType, parentElementID idType, handlerID idType, eventPayload interface{})
 	GetPulseNumber() uint32
 	GetNodeID() uint32
-	GetSlotDetails() slot.SlotDetails
+	GetSlotDetails() islot.SlotDetails
 }
 
 // AdapterTask contains info for launch adapter task
@@ -55,6 +56,36 @@ type AdapterResponse struct {
 	elementID   idType
 	handlerID   idType
 	respPayload interface{}
+}
+
+// NewAdapterResponse creates new adapter response
+func NewAdapterResponse(adapterID idType, elementID idType, handlerID idType, respPayload interface{}) iadapter.IAdapterResponse {
+	return &AdapterResponse{
+		adapterID:   adapterID,
+		elementID:   elementID,
+		handlerID:   handlerID,
+		respPayload: respPayload,
+	}
+}
+
+// GetAdapterID implements IAdapterResponse method
+func (ar *AdapterResponse) GetAdapterID() uint32 {
+	return ar.adapterID
+}
+
+// GetElementID implements IAdapterResponse method
+func (ar *AdapterResponse) GetElementID() uint32 {
+	return ar.elementID
+}
+
+// GetHandlerID implements IAdapterResponse method
+func (ar *AdapterResponse) GetHandlerID() uint32 {
+	return ar.handlerID
+}
+
+// GetRespPayload implements IAdapterResponse method
+func (ar *AdapterResponse) GetRespPayload() interface{} {
+	return ar.respPayload
 }
 
 // AdapterNestedEvent contains info with adapter nested event

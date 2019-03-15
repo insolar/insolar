@@ -34,7 +34,7 @@ func TestQueue_PushClaim(t *testing.T) {
 	_, err := rand.Read(entr[:])
 	assert.NoError(t, err)
 	for i := 0; i < elemCount; i++ {
-		claim := getJoinClaim(t)
+		claim := getJoinClaim(t, testutils.RandomRef())
 		queue.PushClaim(claim, getPriority(claim.NodeRef, entr))
 	}
 	assert.Equal(t, queue.Len(), elemCount)
@@ -47,7 +47,7 @@ func TestQueue_Pop(t *testing.T) {
 	_, err := rand.Read(entr[:])
 	assert.NoError(t, err)
 	for i := 0; i < elemCount; i++ {
-		claim := getJoinClaim(t)
+		claim := getJoinClaim(t, testutils.RandomRef())
 		queue.PushClaim(claim, getPriority(claim.NodeRef, entr))
 	}
 	assert.Equal(t, queue.Len(), elemCount)
@@ -65,14 +65,14 @@ func TestQueue_Pop(t *testing.T) {
 	}
 }
 
-func getJoinClaim(t *testing.T) *packets.NodeJoinClaim {
+func getJoinClaim(t *testing.T, ref core.RecordRef) *packets.NodeJoinClaim {
 	nodeJoinClaim := &packets.NodeJoinClaim{}
 	nodeJoinClaim.ShortNodeID = core.ShortNodeID(77)
 	nodeJoinClaim.RelayNodeID = core.ShortNodeID(26)
 	nodeJoinClaim.ProtocolVersionAndFlags = uint32(99)
 	nodeJoinClaim.JoinsAfter = uint32(67)
 	nodeJoinClaim.NodeRoleRecID = 32
-	nodeJoinClaim.NodeRef = testutils.RandomRef()
+	nodeJoinClaim.NodeRef = ref
 	_, err := rand.Read(nodeJoinClaim.NodePK[:])
 	assert.NoError(t, err)
 	nodeJoinClaim.NodeAddress.Set("127.0.0.1:5566")

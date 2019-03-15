@@ -18,37 +18,57 @@
 package nodenetwork
 
 import (
-	"sort"
-
+	consensus "github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
+	"github.com/pkg/errors"
 )
 
-func removeFromList(nodeList, nodesToRemove []core.RecordRef) []core.RecordRef {
-	sort.Slice(nodeList, func(i, j int) bool {
-		return nodeList[i].Compare(nodeList[j]) < 0
-	})
-	sort.Slice(nodesToRemove, func(i, j int) bool {
-		return nodesToRemove[i].Compare(nodesToRemove[j]) < 0
-	})
+type MergedListCopy struct {
+	ActiveList                 map[core.RecordRef]core.Node
+	NodesJoinedDuringPrevPulse bool
+}
 
-	diff := make([]core.RecordRef, 0)
+func GetMergedCopy(nodes []core.Node, claims []consensus.ReferendumClaim) (*MergedListCopy, error) {
+	nodesMap := copyActiveNodes(nodes)
 
-	i := 0
-	for j := 0; i < len(nodeList) && j < len(nodesToRemove); {
-		comparison := nodeList[i].Compare(nodesToRemove[j])
-		if comparison < 0 {
-			diff = append(diff, nodeList[i])
-			i++
-		} else if comparison > 0 {
-			j++
-		} else {
-			i++
-			j++
+	var nodesJoinedDuringPrevPulse bool
+	for _, claim := range claims {
+		isJoin, err := mergeClaim(nodesMap, claim)
+		if err != nil {
+			return nil, errors.Wrap(err, "[ GetMergedCopy ] failed to merge a claim")
+		}
+
+		nodesJoinedDuringPrevPulse = nodesJoinedDuringPrevPulse || isJoin
+	}
+
+	return &MergedListCopy{
+		ActiveList:                 nodesMap,
+		NodesJoinedDuringPrevPulse: nodesJoinedDuringPrevPulse,
+	}, nil
+}
+
+func mergeClaim(nodes map[core.RecordRef]core.Node, claim consensus.ReferendumClaim) (bool, error) {
+	isJoinClaim := false
+	switch t := claim.(type) {
+	case *consensus.NodeJoinClaim:
+		isJoinClaim = true
+		// TODO: fix version
+		node, err := ClaimToNode("", t)
+		if err != nil {
+			return isJoinClaim, errors.Wrap(err, "[ mergeClaim ] failed to convert Claim -> Node")
+		}
+		node.(MutableNode).SetState(core.NodeJoining)
+		nodes[node.ID()] = node
+	case *consensus.NodeLeaveClaim:
+		if nodes[t.NodeID] == nil {
+			break
+		}
+
+		node := nodes[t.NodeID].(MutableNode)
+		if t.ETA == 0 || !node.Leaving() {
+			node.SetLeavingETA(t.ETA)
 		}
 	}
-	for i < len(nodeList) {
-		diff = append(diff, nodeList[i])
-		i++
-	}
-	return diff
+
+	return isJoinClaim, nil
 }
