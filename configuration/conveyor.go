@@ -16,14 +16,18 @@
 
 package configuration
 
+import (
+	"time"
+)
+
 // Conveyor holds configuration for conveyor
 type Conveyor struct {
-	PendingTimeout int
+	PendingTimeout time.Duration
 }
 
 // NewConveyor creates new conveyor config
 func NewConveyor() Conveyor {
 	return Conveyor{
-		PendingTimeout: 200,
+		PendingTimeout: 10 * time.Second,
 	}
 }
