@@ -38,7 +38,7 @@ type slotElement struct {
 	parentElementID uint32
 	inputEvent      interface{}
 	payload         interface{} // nolint: unused
-	postponedError  error       // nolint: unused
+	postponedError  error       // nolint: structcheck
 	stateMachine    statemachine.StateMachine
 	state           fsm.StateID
 

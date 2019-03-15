@@ -491,6 +491,7 @@ func (w *worker) initializing() {
 	}
 }
 
+// nolint: unused
 func (w *worker) run() {
 	for !w.stop {
 		switch w.slot.slotState {
