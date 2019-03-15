@@ -14,5 +14,5 @@
  *    limitations under the License.
  */
 
-// Package gen contains functions for generating insolar types.
+// Package gen contains functions for generating random base insolar types.
 package gen
