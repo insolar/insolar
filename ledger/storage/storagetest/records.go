@@ -21,11 +21,10 @@ import (
 
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/jet"
-	"github.com/insolar/insolar/ledger/storage/record"
+	"github.com/insolar/insolar/ledger/storage/object"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/index"
 	"github.com/insolar/insolar/testutils"
 )
 
@@ -38,7 +37,7 @@ func AddRandIndex(
 	pulsenum core.PulseNumber,
 ) (*core.RecordID, error) {
 	parentID := testutils.RandomID()
-	err := objectStorage.SetObjectIndex(ctx, jetID, &parentID, &index.ObjectLifeline{
+	err := objectStorage.SetObjectIndex(ctx, jetID, &parentID, &object.Lifeline{
 		LatestState: &parentID,
 	})
 	return &parentID, err
@@ -64,7 +63,7 @@ func AddRandRecord(
 ) (*core.RecordID, error) {
 
 	randID := testutils.RandomID()
-	record := record.CodeRecord{
+	record := object.CodeRecord{
 		Code: &randID,
 	}
 	return objectStorage.SetRecord(

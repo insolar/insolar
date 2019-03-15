@@ -14,11 +14,12 @@
  *    limitations under the License.
  */
 
-package index
+package object
 
 import (
 	"testing"
 
+	fuzz "github.com/google/gofuzz"
 	"github.com/insolar/insolar"
 	"github.com/insolar/insolar/gen"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -30,7 +31,7 @@ import (
 func TestIndexStorage_NewStorageMemory(t *testing.T) {
 	t.Parallel()
 
-	indexStorage := NewStorageMemory()
+	indexStorage := NewIndexMemory()
 	assert.Equal(t, 0, len(indexStorage.memory))
 }
 
@@ -41,7 +42,7 @@ func TestIndexStorage_ForID(t *testing.T) {
 
 	jetID := gen.JetID()
 	id := gen.ID()
-	idx := ObjectLifeline{
+	idx := Lifeline{
 		LatestState: &id,
 		JetID:       jetID,
 	}
@@ -49,8 +50,8 @@ func TestIndexStorage_ForID(t *testing.T) {
 	t.Run("returns correct index-value", func(t *testing.T) {
 		t.Parallel()
 
-		indexStorage := &StorageMemory{
-			memory: map[insolar.ID]ObjectLifeline{},
+		indexStorage := &IndexMemory{
+			memory: map[insolar.ID]Lifeline{},
 		}
 		indexStorage.memory[id] = idx
 
@@ -63,8 +64,8 @@ func TestIndexStorage_ForID(t *testing.T) {
 	t.Run("returns error when no index-value for id", func(t *testing.T) {
 		t.Parallel()
 
-		indexStorage := &StorageMemory{
-			memory: map[insolar.ID]ObjectLifeline{},
+		indexStorage := &IndexMemory{
+			memory: map[insolar.ID]Lifeline{},
 		}
 		indexStorage.memory[id] = idx
 
@@ -81,7 +82,7 @@ func TestIndexStorage_Set(t *testing.T) {
 
 	jetID := gen.JetID()
 	id := gen.ID()
-	idx := ObjectLifeline{
+	idx := Lifeline{
 		LatestState: &id,
 		JetID:       jetID,
 	}
@@ -92,8 +93,8 @@ func TestIndexStorage_Set(t *testing.T) {
 	t.Run("saves correct index-value", func(t *testing.T) {
 		t.Parallel()
 
-		indexStorage := &StorageMemory{
-			memory:   map[insolar.ID]ObjectLifeline{},
+		indexStorage := &IndexMemory{
+			memory:   map[insolar.ID]Lifeline{},
 			jetIndex: jetIndex,
 		}
 		err := indexStorage.Set(ctx, id, idx)
@@ -106,8 +107,8 @@ func TestIndexStorage_Set(t *testing.T) {
 	t.Run("override indices is ok", func(t *testing.T) {
 		t.Parallel()
 
-		indexStorage := &StorageMemory{
-			memory:   map[insolar.ID]ObjectLifeline{},
+		indexStorage := &IndexMemory{
+			memory:   map[insolar.ID]Lifeline{},
 			jetIndex: jetIndex,
 		}
 		err := indexStorage.Set(ctx, id, idx)
@@ -126,7 +127,7 @@ func TestIndexStorage_Set_SaveLastUpdate(t *testing.T) {
 	jetID := gen.JetID()
 	id := gen.ID()
 	pn := gen.PulseNumber()
-	idx := ObjectLifeline{
+	idx := Lifeline{
 		LatestState:  &id,
 		LatestUpdate: pn,
 		JetID:        jetID,
@@ -138,12 +139,56 @@ func TestIndexStorage_Set_SaveLastUpdate(t *testing.T) {
 	t.Run("saves correct LastUpdate field in index", func(t *testing.T) {
 		t.Parallel()
 
-		indexStorage := &StorageMemory{
-			memory:   map[insolar.ID]ObjectLifeline{},
+		indexStorage := &IndexMemory{
+			memory:   map[insolar.ID]Lifeline{},
 			jetIndex: jetIndex,
 		}
 		err := indexStorage.Set(ctx, id, idx)
 		require.NoError(t, err)
 		assert.Equal(t, pn, indexStorage.memory[id].LatestUpdate)
 	})
+}
+
+func TestCloneObjectLifeline(t *testing.T) {
+	t.Parallel()
+
+	currentIdx := lifeline()
+
+	clonedIdx := Clone(currentIdx)
+
+	assert.Equal(t, currentIdx, clonedIdx)
+	assert.False(t, &currentIdx == &clonedIdx)
+}
+
+func id() (id *insolar.ID) {
+	fuzz.New().NilChance(0.5).Fuzz(&id)
+	return
+}
+
+func delegates() (result map[insolar.Reference]insolar.Reference) {
+	fuzz.New().NilChance(0.5).NumElements(1, 10).Fuzz(&result)
+	return
+}
+
+func state() (state State) {
+	fuzz.New().NilChance(0).Fuzz(&state)
+	return
+}
+
+func lifeline() Lifeline {
+	var index Lifeline
+	fuzz.New().NilChance(0).Funcs(
+		func(idx *Lifeline, c fuzz.Continue) {
+			idx.LatestState = id()
+			idx.LatestStateApproved = id()
+			idx.ChildPointer = id()
+			idx.Delegates = delegates()
+			idx.State = state()
+			idx.Parent = gen.Reference()
+			idx.LatestUpdate = gen.PulseNumber()
+			idx.JetID = gen.JetID()
+		},
+	).Fuzz(&index)
+
+	return index
 }

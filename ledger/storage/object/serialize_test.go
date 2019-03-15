@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package record
+package object
 
 import (
 	"testing"

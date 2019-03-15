@@ -14,5 +14,13 @@
  *    limitations under the License.
  */
 
-// Package record contains code and types for storage records manipulation.
-package record
+package object
+
+import (
+	"github.com/pkg/errors"
+)
+
+var (
+	// ErrNotFound is returned when index-record not found.
+	ErrNotFound = errors.New("index not found")
+)

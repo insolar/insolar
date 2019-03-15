@@ -23,13 +23,12 @@ import (
 	"github.com/insolar/insolar/component"
 	jetdrop "github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/jet"
+	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/index"
-	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
@@ -114,7 +113,7 @@ func (s *storageSuite) TestDB_GetRecordNotFound() {
 }
 
 func (s *storageSuite) TestDB_SetRecord() {
-	rec := &record.RequestRecord{}
+	rec := &object.RequestRecord{}
 	gotRef, err := s.objectStorage.SetRecord(s.ctx, s.jetID, core.GenesisPulse.PulseNumber, rec)
 	assert.Nil(s.T(), err)
 
@@ -133,7 +132,7 @@ func (s *storageSuite) TestDB_SetObjectIndex_ReturnsNotFoundIfNoIndex() {
 }
 
 func (s *storageSuite) TestDB_SetObjectIndex_StoresCorrectDataInStorage() {
-	idx := index.ObjectLifeline{
+	idx := object.Lifeline{
 		LatestState: core.NewRecordID(0, hexhash("20")),
 	}
 	zeroid := core.NewRecordID(0, hexhash(""))
@@ -149,7 +148,7 @@ func (s *storageSuite) TestDB_SetObjectIndex_SaveLastUpdate() {
 	// Arrange
 	jetID := testutils.RandomJet()
 
-	idx := index.ObjectLifeline{
+	idx := object.Lifeline{
 		LatestState:  core.NewRecordID(0, hexhash("20")),
 		LatestUpdate: 1239,
 	}
@@ -247,7 +246,7 @@ func TestDB_Close(t *testing.T) {
 	assert.Nil(t, rec)
 	assert.Equal(t, err, storage.ErrClosed)
 
-	rec = &record.RequestRecord{}
+	rec = &object.RequestRecord{}
 	gotRef, err := os.SetRecord(ctx, jetID, core.GenesisPulse.PulseNumber, rec)
 	assert.Nil(t, gotRef)
 	assert.Equal(t, err, storage.ErrClosed)

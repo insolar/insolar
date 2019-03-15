@@ -21,8 +21,7 @@ import (
 
 	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/storage/index"
-	"github.com/insolar/insolar/ledger/storage/record"
+	"github.com/insolar/insolar/ledger/storage/object"
 )
 
 type keyval struct {
@@ -81,13 +80,13 @@ func (m *TransactionManager) Discard() {
 // GetRequest returns request record from BadgerDB by *record.Reference.
 //
 // It returns ErrNotFound if the DB does not contain the key.
-func (m *TransactionManager) GetRequest(ctx context.Context, jetID core.RecordID, id *core.RecordID) (record.Request, error) {
+func (m *TransactionManager) GetRequest(ctx context.Context, jetID core.RecordID, id *core.RecordID) (object.Request, error) {
 	rec, err := m.GetRecord(ctx, jetID, id)
 	if err != nil {
 		return nil, err
 	}
 	// TODO: return error if record is not a request.
-	req := rec.(record.Request)
+	req := rec.(object.Request)
 	return req, nil
 }
 
@@ -100,7 +99,7 @@ func (m *TransactionManager) GetBlob(ctx context.Context, jetID core.RecordID, i
 
 // SetBlob saves binary value for provided pulse.
 func (m *TransactionManager) SetBlob(ctx context.Context, jetID core.RecordID, pulseNumber core.PulseNumber, blob []byte) (*core.RecordID, error) {
-	id := record.CalculateIDForBlob(m.db.PlatformCryptographyScheme, pulseNumber, blob)
+	id := object.CalculateIDForBlob(m.db.PlatformCryptographyScheme, pulseNumber, blob)
 	jetPrefix := core.JetID(jetID).Prefix()
 	k := prefixkey(scopeIDBlob, jetPrefix, id[:])
 
@@ -126,22 +125,22 @@ func (m *TransactionManager) SetBlob(ctx context.Context, jetID core.RecordID, p
 // GetRecord returns record from BadgerDB by *record.Reference.
 //
 // It returns ErrNotFound if the DB does not contain the key.
-func (m *TransactionManager) GetRecord(ctx context.Context, jetID core.RecordID, id *core.RecordID) (record.Record, error) {
+func (m *TransactionManager) GetRecord(ctx context.Context, jetID core.RecordID, id *core.RecordID) (object.Record, error) {
 	jetPrefix := core.JetID(jetID).Prefix()
 	k := prefixkey(scopeIDRecord, jetPrefix, id[:])
 	buf, err := m.get(ctx, k)
 	if err != nil {
 		return nil, err
 	}
-	return record.DeserializeRecord(buf), nil
+	return object.DeserializeRecord(buf), nil
 }
 
 // SetRecord stores record in BadgerDB and returns *record.ID of new record.
 //
 // If record exists returns both *record.ID and ErrOverride error.
 // If record not found returns nil and ErrNotFound error
-func (m *TransactionManager) SetRecord(ctx context.Context, jetID core.RecordID, pulseNumber core.PulseNumber, rec record.Record) (*core.RecordID, error) {
-	id := record.NewRecordIDFromRecord(m.db.PlatformCryptographyScheme, pulseNumber, rec)
+func (m *TransactionManager) SetRecord(ctx context.Context, jetID core.RecordID, pulseNumber core.PulseNumber, rec object.Record) (*core.RecordID, error) {
+	id := object.NewRecordIDFromRecord(m.db.PlatformCryptographyScheme, pulseNumber, rec)
 	prefix := core.JetID(jetID).Prefix()
 	k := prefixkey(scopeIDRecord, prefix, id[:])
 	geterr := m.db.db.View(func(tx *badger.Txn) error {
@@ -155,7 +154,7 @@ func (m *TransactionManager) SetRecord(ctx context.Context, jetID core.RecordID,
 		return nil, geterr
 	}
 
-	err := m.set(ctx, k, record.SerializeRecord(rec))
+	err := m.set(ctx, k, object.SerializeRecord(rec))
 	if err != nil {
 		return nil, err
 	}
@@ -168,7 +167,7 @@ func (m *TransactionManager) GetObjectIndex(
 	jetID core.RecordID,
 	id *core.RecordID,
 	forupdate bool,
-) (*index.ObjectLifeline, error) {
+) (*object.Lifeline, error) {
 	if forupdate {
 		m.lockOnID(id)
 	}
@@ -178,7 +177,7 @@ func (m *TransactionManager) GetObjectIndex(
 	if err != nil {
 		return nil, err
 	}
-	res := index.Decode(buf)
+	res := object.Decode(buf)
 	return &res, nil
 }
 
@@ -187,14 +186,14 @@ func (m *TransactionManager) SetObjectIndex(
 	ctx context.Context,
 	jetID core.RecordID,
 	id *core.RecordID,
-	idx *index.ObjectLifeline,
+	idx *object.Lifeline,
 ) error {
 	prefix := core.JetID(jetID).Prefix()
 	k := prefixkey(scopeIDLifeline, prefix, id[:])
 	if idx.Delegates == nil {
 		idx.Delegates = map[core.RecordRef]core.RecordRef{}
 	}
-	encoded := index.Encode(*idx)
+	encoded := object.Encode(*idx)
 	return m.set(ctx, k, encoded)
 }
 

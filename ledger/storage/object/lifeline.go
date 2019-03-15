@@ -14,47 +14,49 @@
  *    limitations under the License.
  */
 
-package index
+package object
 
 import (
 	"bytes"
 	"context"
+	"sync"
 
 	"github.com/insolar/insolar"
-	"github.com/insolar/insolar/ledger/storage/record"
+	"github.com/insolar/insolar/ledger/storage/db"
 	"github.com/ugorji/go/codec"
+	"go.opencensus.io/stats"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/storage/index.Accessor -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage/object.IndexAccessor -o ./ -s _mock.go
 
-// Accessor provides info about Index-values from storage.
-type Accessor interface {
+// IndexAccessor provides info about Index-values from storage.
+type IndexAccessor interface {
 	// ForID returns Index for provided id.
-	ForID(ctx context.Context, id insolar.ID) (ObjectLifeline, error)
+	ForID(ctx context.Context, id insolar.ID) (Lifeline, error)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/storage/index.Modifier -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage/object.IndexModifier -o ./ -s _mock.go
 
-// Modifier provides methods for setting Index-values to storage.
-type Modifier interface {
+// IndexModifier provides methods for setting Index-values to storage.
+type IndexModifier interface {
 	// Set saves new Index-value in storage.
-	Set(ctx context.Context, id insolar.ID, index ObjectLifeline) error
+	Set(ctx context.Context, id insolar.ID, index Lifeline) error
 }
 
-// ObjectLifeline represents meta information for record object.
-type ObjectLifeline struct {
+// Lifeline represents meta information for record object.
+type Lifeline struct {
 	LatestState         *insolar.ID // Amend or activate record.
 	LatestStateApproved *insolar.ID // State approved by VM.
 	ChildPointer        *insolar.ID // Meta record about child activation.
 	Parent              insolar.Reference
 	Delegates           map[insolar.Reference]insolar.Reference
-	State               record.State
+	State               State
 	LatestUpdate        insolar.PulseNumber
 	JetID               insolar.JetID
 }
 
 // Encode converts lifeline index into binary format.
-func Encode(index ObjectLifeline) []byte {
+func Encode(index Lifeline) []byte {
 	buff := bytes.NewBuffer(nil)
 	enc := codec.NewEncoder(buff, &codec.CborHandle{})
 	enc.MustEncode(index)
@@ -63,7 +65,7 @@ func Encode(index ObjectLifeline) []byte {
 }
 
 // Decode converts byte array into lifeline index struct.
-func Decode(buff []byte) (index ObjectLifeline) {
+func Decode(buff []byte) (index Lifeline) {
 	dec := codec.NewDecoderBytes(buff, &codec.CborHandle{})
 	dec.MustDecode(&index)
 
@@ -71,7 +73,7 @@ func Decode(buff []byte) (index ObjectLifeline) {
 }
 
 // Clone returns copy of argument idx value.
-func Clone(idx ObjectLifeline) ObjectLifeline {
+func Clone(idx Lifeline) Lifeline {
 	if idx.LatestState != nil {
 		tmp := *idx.LatestState
 		idx.LatestState = &tmp
@@ -96,4 +98,53 @@ func Clone(idx ObjectLifeline) ObjectLifeline {
 	}
 
 	return idx
+}
+
+// IndexMemory is an in-memory struct for index-storage.
+type IndexMemory struct {
+	jetIndex db.JetIndexModifier
+
+	lock   sync.RWMutex
+	memory map[insolar.ID]Lifeline
+}
+
+// NewIndexMemory creates a new instance of Storage.
+func NewIndexMemory() *IndexMemory {
+	return &IndexMemory{
+		memory:   map[insolar.ID]Lifeline{},
+		jetIndex: db.NewJetIndex(),
+	}
+}
+
+// Set saves new Index-value in storage.
+func (s *IndexMemory) Set(ctx context.Context, id insolar.ID, index Lifeline) error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	idx := Clone(index)
+
+	s.memory[id] = idx
+	s.jetIndex.Add(id, idx.JetID)
+
+	stats.Record(ctx,
+		statIndexInMemoryCount.M(1),
+	)
+
+	return nil
+}
+
+// ForID returns Index for provided id.
+func (s *IndexMemory) ForID(ctx context.Context, id insolar.ID) (index Lifeline, err error) {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+
+	idx, ok := s.memory[id]
+	if !ok {
+		err = ErrNotFound
+		return
+	}
+
+	index = Clone(idx)
+
+	return
 }

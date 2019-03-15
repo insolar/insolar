@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package index_test
+package object_test
 
 import (
 	"math/rand"
@@ -24,7 +24,7 @@ import (
 	"github.com/insolar/insolar"
 	"github.com/insolar/insolar/gen"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/storage/index"
+	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -34,11 +34,11 @@ func TestInMemoryIndex(t *testing.T) {
 
 	ctx := inslogger.TestContext(t)
 
-	indexStorage := index.NewStorageMemory()
+	indexStorage := object.NewIndexMemory()
 
 	type tempIndex struct {
 		id  insolar.ID
-		idx index.ObjectLifeline
+		idx object.Lifeline
 	}
 
 	var indices []tempIndex
@@ -47,7 +47,7 @@ func TestInMemoryIndex(t *testing.T) {
 		t.id = gen.ID()
 		ls := gen.ID()
 		pn := gen.PulseNumber()
-		t.idx = index.ObjectLifeline{
+		t.idx = object.Lifeline{
 			LatestState:  &ls,
 			LatestUpdate: pn,
 			JetID:        gen.JetID(),
@@ -78,14 +78,14 @@ func TestInMemoryIndex(t *testing.T) {
 		for i := int32(0); i < rand.Int31n(10); i++ {
 			_, err := indexStorage.ForID(ctx, gen.ID())
 			require.Error(t, err)
-			assert.Equal(t, index.ErrNotFound, err)
+			assert.Equal(t, object.ErrNotFound, err)
 		}
 	})
 
 	t.Run("override indices is ok", func(t *testing.T) {
 		t.Parallel()
 
-		indexStorage := index.NewStorageMemory()
+		indexStorage := object.NewIndexMemory()
 		for _, i := range indices {
 			err := indexStorage.Set(ctx, i.id, i.idx)
 			require.NoError(t, err)

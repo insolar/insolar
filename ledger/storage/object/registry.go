@@ -14,13 +14,24 @@
  *    limitations under the License.
  */
 
-package index
+package object
 
-import (
-	"github.com/pkg/errors"
-)
+var registry = map[TypeID]Record{}
 
-var (
-	// ErrNotFound is returned when index-record not found.
-	ErrNotFound = errors.New("index not found")
-)
+// Register makes provided record serializable. Should be called for each record in init().
+func register(id TypeID, r Record) {
+	if _, ok := registry[id]; ok {
+		panic("duplicate record type")
+	}
+
+	registry[id] = r
+}
+
+// Registered returns records by type.
+func Registered() map[TypeID]Record {
+	res := map[TypeID]Record{}
+	for id, rec := range registry {
+		res[id] = rec
+	}
+	return res
+}

@@ -24,9 +24,8 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/drop"
-	"github.com/insolar/insolar/ledger/storage/index"
 	"github.com/insolar/insolar/ledger/storage/jet"
-	"github.com/insolar/insolar/ledger/storage/record"
+	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/pkg/errors"
 )
 
@@ -97,7 +96,7 @@ func (gi *genesisInitializer) Init(ctx context.Context) error {
 		if err != nil {
 			return nil, err
 		}
-		genesisID, err := gi.ObjectStorage.SetRecord(ctx, core.RecordID(jetID), lastPulse.Pulse.PulseNumber, &record.GenesisRecord{})
+		genesisID, err := gi.ObjectStorage.SetRecord(ctx, core.RecordID(jetID), lastPulse.Pulse.PulseNumber, &object.GenesisRecord{})
 		if err != nil {
 			return nil, err
 		}
@@ -105,7 +104,7 @@ func (gi *genesisInitializer) Init(ctx context.Context) error {
 			ctx,
 			core.RecordID(jetID),
 			genesisID,
-			&index.ObjectLifeline{LatestState: genesisID, LatestStateApproved: genesisID},
+			&object.Lifeline{LatestState: genesisID, LatestStateApproved: genesisID},
 		)
 		if err != nil {
 			return nil, err
