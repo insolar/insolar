@@ -43,8 +43,8 @@ func NewWaiter() Worker {
 }
 
 // Process implements Worker interface
-func (w *Waiter) Process(adapterID uint32, task AdapterTask, cancelInfo *cancelInfoT) {
-	log.Info("[ Waiter.Process ] Start. cancelInfo.id: ", cancelInfo.id)
+func (w *Waiter) Process(adapterID uint32, task AdapterTask, cancelInfo CancelInfo) {
+	log.Info("[ Waiter.Process ] Start. cancelInfo.id: ", cancelInfo.ID())
 
 	payload, ok := task.taskPayload.(WaiterTask)
 	var msg interface{}
@@ -56,10 +56,10 @@ func (w *Waiter) Process(adapterID uint32, task AdapterTask, cancelInfo *cancelI
 	}
 
 	select {
-	case <-cancelInfo.cancel:
+	case <-cancelInfo.Cancel():
 		log.Info("[ Waiter.Process ] Cancel. Return Nil as Response")
 		msg = nil
-	case <-cancelInfo.flush:
+	case <-cancelInfo.Flush():
 		log.Info("[ Waiter.Process ] Flush. DON'T Return Response")
 		return
 	case <-time.After(time.Duration(payload.waitPeriodMilliseconds) * time.Millisecond):

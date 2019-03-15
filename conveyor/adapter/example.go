@@ -26,51 +26,63 @@ import (
 	"github.com/insolar/insolar/log"
 )
 
-// QueueTask is task for adapter with queue
-type QueueTask struct {
-	cancelInfo *cancelInfoT
+// queueTask is task for adapter with queue
+type queueTask struct {
+	cancelInfo *cancelInfo
 	task       AdapterTask
 }
 
-type cancelInfoT struct {
+type cancelInfo struct {
 	id     uint64
 	cancel chan bool
 	flush  chan bool
 }
 
-func newCancelInfo(id uint64) *cancelInfoT {
-	return &cancelInfoT{
+func newCancelInfo(id uint64) *cancelInfo {
+	return &cancelInfo{
 		id:     id,
 		cancel: make(chan bool, 1),
 		flush:  make(chan bool, 1),
 	}
 }
 
-type taskHolderT struct {
-	taskHolderLock sync.Mutex
-	tasks          map[uint32][]*cancelInfoT
+func (ci *cancelInfo) ID() uint64 {
+	return ci.id
 }
 
-func newTaskHolder() taskHolderT {
-	return taskHolderT{
-		tasks: make(map[uint32][]*cancelInfoT),
+func (ci *cancelInfo) Cancel() chan bool {
+	return ci.cancel
+}
+
+func (ci *cancelInfo) Flush() chan bool {
+	return ci.flush
+}
+
+type taskHolder struct {
+	taskHolderLock sync.Mutex
+	tasks          map[uint32][]*cancelInfo
+}
+
+func newTaskHolder() taskHolder {
+	return taskHolder{
+		tasks: make(map[uint32][]*cancelInfo),
 	}
 }
 
-func (th *taskHolderT) add(info *cancelInfoT, pulseNumber uint32) {
-	log.Infof("[ taskHolderT.add ] Adding pulseNumber: %d. Id: %d", pulseNumber, info.id)
+func (th *taskHolder) add(info *cancelInfo, pulseNumber uint32) {
+	log.Infof("[ taskHolder.add ] Adding pulseNumber: %d. Id: %d", pulseNumber, info.id)
 	th.taskHolderLock.Lock()
 	defer th.taskHolderLock.Unlock()
 
 	el, ok := th.tasks[pulseNumber]
 	if !ok {
-		th.tasks[pulseNumber] = []*cancelInfoT{info}
+		th.tasks[pulseNumber] = []*cancelInfo{info}
 	} else {
 		th.tasks[pulseNumber] = append(el, info)
 	}
 }
 
-func processStop(cancelList []*cancelInfoT, flush bool) {
+func processStop(cancelList []*cancelInfo, flush bool) {
 	for _, el := range cancelList {
 		if flush {
 			log.Info("[ processStop ] flush: ", el.id)
@@ -82,14 +94,14 @@ func processStop(cancelList []*cancelInfoT, flush bool) {
 	}
 }
 
-func (th *taskHolderT) stop(pulseNumber uint32, flush bool) {
-	log.Infof("[ taskHolderT.stop ] Stopping pulseNumber: %d, flush: %d", pulseNumber, flush)
+func (th *taskHolder) stop(pulseNumber uint32, flush bool) {
+	log.Infof("[ taskHolder.stop ] Stopping pulseNumber: %d, flush: %d", pulseNumber, flush)
 	th.taskHolderLock.Lock()
 	defer th.taskHolderLock.Unlock()
 
 	cancelList, ok := th.tasks[pulseNumber]
 	if !ok {
-		log.Info("[ taskHolderT.stop ] No such pulseNumber: ", pulseNumber)
+		log.Info("[ taskHolder.stop ] No such pulseNumber: ", pulseNumber)
 		return
 	}
 
@@ -98,17 +110,17 @@ func (th *taskHolderT) stop(pulseNumber uint32, flush bool) {
 	delete(th.tasks, pulseNumber)
 }
 
-func (th *taskHolderT) stopAll(flush bool) {
+func (th *taskHolder) stopAll(flush bool) {
 	th.taskHolderLock.Lock()
 	defer th.taskHolderLock.Unlock()
 
-	log.Infof("[ taskHolderT.stopAll ] flush: ", flush)
+	log.Infof("[ taskHolder.stopAll ] flush: ", flush)
 
 	for _, cancelList := range th.tasks {
 		processStop(cancelList, flush)
 	}
 
-	th.tasks = make(map[uint32][]*cancelInfoT)
+	th.tasks = make(map[uint32][]*cancelInfo)
 
 }
 
@@ -121,7 +133,7 @@ type AdapterWithQueue struct {
 	// adapterID comes from configuration
 	adapterID uint32
 
-	taskHolder taskHolderT
+	taskHolder taskHolder
 	worker     Worker
 }
 
@@ -173,7 +185,7 @@ func (swa *AdapterWithQueue) StartProcessing(started chan bool) {
 		}
 
 		for _, itask := range itasks {
-			task, ok := itask.GetData().(QueueTask)
+			task, ok := itask.GetData().(queueTask)
 			if !ok {
 				panic(fmt.Sprintf("[ StartProcessing ] How does it happen? Wrong Type: %T", itask.GetData()))
 			}
@@ -210,7 +222,7 @@ func (swa *AdapterWithQueue) PushTask(respSink AdaptorToSlotResponseSink,
 	swa.taskHolder.add(cancelInfo, respSink.GetPulseNumber())
 
 	return swa.queue.SinkPush(
-		QueueTask{
+		queueTask{
 			cancelInfo: cancelInfo,
 			task: AdapterTask{
 				respSink:    respSink,

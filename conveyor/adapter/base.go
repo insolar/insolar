@@ -96,9 +96,16 @@ type AdapterNestedEvent struct {
 	eventPayload    interface{}
 }
 
+// CancelInfo provides info about cancellation
+type CancelInfo interface {
+	Cancel() chan bool
+	Flush() chan bool
+	ID() uint64
+}
+
 // Worker is iface for processing task for adapter
 type Worker interface {
-	Process(adapterID uint32, task AdapterTask, cancelInfo *cancelInfoT)
+	Process(adapterID uint32, task AdapterTask, cancelInfo CancelInfo)
 }
 
 // NewAdapterWithQueue creates new instance of Adapter

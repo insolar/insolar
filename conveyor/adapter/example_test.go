@@ -81,7 +81,7 @@ func TestFunctionality(t *testing.T) {
 	// wait for response
 	time.Sleep(200 * time.Millisecond)
 	require.Error(t, resp.GetResponse().(error))
-	require.Contains(t, resp.GetResponse().(error).Error(), "[ PushTask ] Incorrect payload type: int")
+	require.Contains(t, resp.GetResponse().(error).Error(), "[ Waiter.Process ] Incorrect payload type: int")
 
 	resp = &mockResponseSink{}
 	err = adapter.PushTask(resp, 33, 22, WaiterTask{waitPeriodMilliseconds: 20})

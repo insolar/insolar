@@ -44,7 +44,7 @@ func NewResponseSender() Worker {
 }
 
 // Process implements Worker interface
-func (sr *ResponseSender) Process(adapterID uint32, task AdapterTask, cancelInfo *cancelInfoT) {
+func (sr *ResponseSender) Process(adapterID uint32, task AdapterTask, cancelInfo CancelInfo) {
 	payload, ok := task.taskPayload.(ResponseSenderTask)
 	var msg interface{}
 
@@ -63,10 +63,10 @@ func (sr *ResponseSender) Process(adapterID uint32, task AdapterTask, cancelInfo
 	}(payload)
 
 	select {
-	case <-cancelInfo.cancel:
+	case <-cancelInfo.Cancel():
 		log.Info("[ ResponseSender.Process ] Cancel. Return Nil as Response")
 		msg = nil
-	case <-cancelInfo.flush:
+	case <-cancelInfo.Flush():
 		log.Info("[ ResponseSender.Process ] Flush. DON'T Return Response")
 		return
 	case <-done:
