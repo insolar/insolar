@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/conveyor/interfaces/constant"
+	"github.com/insolar/insolar/conveyor/interfaces/islot"
 	"github.com/insolar/insolar/conveyor/interfaces/istatemachine"
 	"github.com/insolar/insolar/conveyor/queue"
 	"github.com/insolar/insolar/core"
@@ -226,7 +227,7 @@ func TestInitElementsBuf(t *testing.T) {
 }
 
 func TestNewSlot(t *testing.T) {
-	s := NewSlot(constant.Future, testRealPulse, nil)
+	s := NewSlot(constant.Future, testRealPulse, nil, false)
 	require.NotNil(t, s)
 	require.Equal(t, constant.Future, s.pulseState)
 	require.Equal(t, testRealPulse, s.pulseNumber)
@@ -270,11 +271,11 @@ func TestSlot_getNodeData(t *testing.T) {
 }
 
 func TestSlot_createElement(t *testing.T) {
-	s := NewSlot(constant.Future, testRealPulse, nil)
+	s := NewSlot(constant.Future, testRealPulse, nil, false)
 	oldEmptyLen := s.elementListMap[EmptyElement].len()
 	event := queue.OutputElement{}
 
-	stateMachineMock := istatemachine.NewStateMachineTypeMock(t)
+	stateMachineMock := makeMockStateMachine(t)
 
 	element, err := s.createElement(stateMachineMock, 1, event)
 	require.NotNil(t, element)
@@ -288,12 +289,12 @@ func TestSlot_createElement(t *testing.T) {
 }
 
 func TestSlot_createElement_Err(t *testing.T) {
-	s := NewSlot(constant.Future, testRealPulse, nil)
+	s := NewSlot(constant.Future, testRealPulse, nil, false)
 	oldEmptyLen := s.elementListMap[EmptyElement].len()
 	delete(s.elementListMap, ActiveElement)
 	event := queue.OutputElement{}
 
-	stateMachineMock := istatemachine.NewStateMachineTypeMock(t)
+	stateMachineMock := makeMockStateMachine(t)
 
 	element, err := s.createElement(stateMachineMock, 1, event)
 	require.Nil(t, element)
@@ -302,18 +303,18 @@ func TestSlot_createElement_Err(t *testing.T) {
 }
 
 func TestSlot_hasElements_UnexistingState(t *testing.T) {
-	s := NewSlot(constant.Present, 10, nil)
+	s := NewSlot(constant.Present, 10, nil, false)
 	badState := ActivationStatus(4444444)
 	require.False(t, s.hasElements(badState))
 }
 
 func TestSlot_hasElements(t *testing.T) {
-	s := NewSlot(constant.Present, 10, nil)
+	s := NewSlot(constant.Present, 10, nil, false)
 	require.False(t, s.hasElements(ActiveElement))
 	require.False(t, s.hasElements(NotActiveElement))
 	require.True(t, s.hasElements(EmptyElement))
 
-	sm := istatemachine.NewStateMachineTypeMock(t)
+	sm := makeMockStateMachine(t)
 	_, err := s.createElement(sm, 20, queue.OutputElement{})
 	require.NoError(t, err)
 
@@ -420,8 +421,8 @@ func TestSlot_pushElement_Empty(t *testing.T) {
 }
 
 func TestSlot_extractSlotElementByID(t *testing.T) {
-	sm := istatemachine.NewStateMachineTypeMock(t)
-	slot := NewSlot(constant.Present, 10, nil)
+	sm := makeMockStateMachine(t)
+	slot := NewSlot(constant.Present, 10, nil, false)
 
 	var elements []*slotElement
 
@@ -454,9 +455,27 @@ func TestSlot_extractSlotElementByID(t *testing.T) {
 	}
 }
 
-func TestSlot_PopPushMultiple(t *testing.T) {
+func makeMockStateMachine(t *testing.T) istatemachine.StateMachineType {
 	sm := istatemachine.NewStateMachineTypeMock(t)
-	slot := NewSlot(constant.Present, 10, nil)
+
+	sm.GetTransitionHandlerFunc = func(p constant.PulseState, p1 uint32) (r istatemachine.TransitHandler) {
+		return func(element islot.SlotElementHelper) (interface{}, uint32, error) {
+			return nil, 0, nil
+		}
+	}
+
+	sm.GetMigrationHandlerFunc = func(p constant.PulseState, p1 uint32) (r istatemachine.MigrationHandler) {
+		return func(element islot.SlotElementHelper) (interface{}, uint32, error) {
+			return nil, 0, nil
+		}
+	}
+
+	return sm
+}
+
+func TestSlot_PopPushMultiple(t *testing.T) {
+	sm := makeMockStateMachine(t)
+	slot := NewSlot(constant.Present, 10, nil, false)
 
 	slot.createElement(sm, 33, queue.OutputElement{})
 
@@ -473,7 +492,7 @@ func TestSlot_PopPushMultiple(t *testing.T) {
 }
 
 func TestSlot_pushElementToEmpty_ExtractByID(t *testing.T) {
-	s := NewSlot(constant.Future, testRealPulse, nil)
+	s := NewSlot(constant.Future, testRealPulse, nil, false)
 
 	element := s.popElement(EmptyElement)
 	oldID := element.id
@@ -488,14 +507,14 @@ func TestSlot_pushElementToEmpty_ExtractByID(t *testing.T) {
 }
 
 func TestSlot_extractSlotElementByID_NotExist(t *testing.T) {
-	s := NewSlot(constant.Present, 10, nil)
+	s := NewSlot(constant.Present, 10, nil, false)
 
 	elementByID := s.extractSlotElementByID(slotElementDelta)
 	require.Nil(t, elementByID)
 }
 
 func TestSlot_extractSlotElementByID_pushElement(t *testing.T) {
-	s := NewSlot(constant.Present, 10, nil)
+	s := NewSlot(constant.Present, 10, nil, false)
 
 	elementByID := s.extractSlotElementByID(0)
 	require.NotNil(t, elementByID)

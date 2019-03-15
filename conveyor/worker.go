@@ -24,6 +24,7 @@ import (
 
 	"github.com/insolar/insolar/conveyor/interfaces/constant"
 	"github.com/insolar/insolar/conveyor/interfaces/iadapter"
+	"github.com/insolar/insolar/conveyor/interfaces/islot"
 	"github.com/insolar/insolar/conveyor/interfaces/istatemachine"
 	"github.com/insolar/insolar/conveyor/queue"
 	"github.com/insolar/insolar/core"
@@ -53,8 +54,6 @@ type worker struct { // nolint: unused
 	preparePulseSync  queue.SyncDone
 
 	ctxLogger core.Logger
-
-	nodeState int // TODO: remove it when right implementation of node state calculation appears
 }
 
 func newWorker(slot *Slot) worker {
@@ -84,6 +83,16 @@ const (
 func GetStateMachineByType(mtype MachineType) istatemachine.StateMachineType {
 	//panic("implement me") // TODO:
 	sm := istatemachine.NewStateMachineTypeMock(&testing.T{})
+	sm.GetTransitionHandlerFunc = func(p constant.PulseState, p1 uint32) (r istatemachine.TransitHandler) {
+		return func(element islot.SlotElementHelper) (interface{}, uint32, error) {
+			return nil, 0, nil
+		}
+	}
+	sm.GetMigrationHandlerFunc = func(p constant.PulseState, p1 uint32) (r istatemachine.MigrationHandler) {
+		return func(element islot.SlotElementHelper) (interface{}, uint32, error) {
+			return nil, 0, nil
+		}
+	}
 	return sm
 }
 
@@ -368,7 +377,7 @@ func (w *worker) working() {
 func (w *worker) calculateNodeState() {
 	w.ctxLogger.Debugf("[ calculateNodeState ] starts ... ( pulseState: %s )", w.slot.pulseState.String())
 	// TODO: приходит PreparePulse, в нём есть callback, вызываем какой-то адаптер, куда передаем этот callback
-	w.nodeState = 555
+	w.preparePulseSync.SetResult(555)
 }
 
 func (w *worker) sendRemovalSignalToConveyor() {
@@ -439,13 +448,12 @@ func (w *worker) suspending() {
 		w.sendRemovalSignalToConveyor()
 	case constant.Present:
 		w.calculateNodeState()
-	}
-
-	// TODO: it should be done differently for different pulse states
-	if w.preparePulseSync != nil {
-		w.preparePulseSync.Done()
-	} else {
-		w.ctxLogger.Warn("[ suspending ] preparePulseSync is empty ")
+	case constant.Future:
+		if w.preparePulseSync != nil {
+			w.preparePulseSync.SetResult(nil)
+		} else {
+			w.ctxLogger.Warn("[ suspending ] preparePulseSync is empty")
+		}
 	}
 
 	for w.slot.isSuspending() {
@@ -529,7 +537,7 @@ func (w *worker) run() {
 			w.ctxLogger.Info("[ run ] Set slot state to 'Working'")
 		case Working:
 			if w.activatePulseSync != nil {
-				w.activatePulseSync.Done()
+				w.activatePulseSync.SetResult(nil)
 			} else {
 				w.ctxLogger.Warn("[ run ] activatePulseSync is empty")
 			}

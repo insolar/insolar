@@ -147,7 +147,7 @@ func initElementsBuf() ([]slotElement, *ElementList) {
 }
 
 // NewSlot creates new instance of Slot
-func NewSlot(pulseState constant.PulseState, pulseNumber core.PulseNumber, removeSlotCallback RemoveSlotCallback) *Slot {
+func NewSlot(pulseState constant.PulseState, pulseNumber core.PulseNumber, removeSlotCallback RemoveSlotCallback, runWorker bool) *Slot {
 	slotState := Initializing
 	if pulseState == constant.Antique {
 		slotState = Working
@@ -172,9 +172,17 @@ func NewSlot(pulseState constant.PulseState, pulseNumber core.PulseNumber, remov
 		elementListMap:     elementListMap,
 		removeSlotCallback: removeSlotCallback,
 	}
-	// worker := newWorker(slot)
-	// go worker.run()
+
+	if runWorker {
+		slot.runWorker()
+	}
+
 	return slot
+}
+
+func (s *Slot) runWorker() {
+	worker := newWorker(s)
+	go worker.run()
 }
 
 // GetPulseNumber implements iface SlotDetails
