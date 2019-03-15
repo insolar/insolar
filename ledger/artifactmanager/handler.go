@@ -294,6 +294,15 @@ func (h *MessageHandler) setHandlersForHeavy(m *middleware) {
 		BuildMiddleware(h.handleGetObjectIndex,
 			instrumentHandler("handleGetObjectIndex"),
 			m.zeroJetForHeavy))
+
+	h.Bus.MustRegister(
+		core.TypeGetRequest,
+		BuildMiddleware(
+			h.handleGetRequest,
+			instrumentHandler("handleGetRequest"),
+			m.checkJet,
+		),
+	)
 }
 
 func (h *MessageHandler) handleSetRecord(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
