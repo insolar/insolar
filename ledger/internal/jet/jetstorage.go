@@ -33,13 +33,14 @@ var (
 	_ Modifier = &Store{}
 )
 
+// NewStore creates new Store instance.
 func NewStore() *Store {
 	return &Store{
 		trees: map[core.PulseNumber]*Tree{},
 	}
 }
 
-// TODO: add test if empty tree has at least one jetID
+// All returns all jet from jet tree for provided pulse.
 func (s *Store) All(ctx context.Context, pulse core.PulseNumber) []core.JetID {
 	s.RLock()
 	defer s.RUnlock()
@@ -48,9 +49,8 @@ func (s *Store) All(ctx context.Context, pulse core.PulseNumber) []core.JetID {
 
 // ForID finds jet for specified pulse and object.
 func (s *Store) ForID(ctx context.Context, pulse core.PulseNumber, recordID core.RecordID) (core.JetID, bool) {
-	var t *Tree
 	s.RLock()
-	t, _ = s.trees[pulse]
+	t := s.trees[pulse]
 	s.RUnlock()
 	if t == nil {
 		t = s.TreeForPulse(ctx, pulse)
@@ -84,7 +84,6 @@ func (s *Store) Split(
 	return left, right, nil
 }
 
-// TODO: rename?
 // Clone copies tree from one pulse to another. Use it to copy past tree into new pulse.
 func (s *Store) Clone(
 	ctx context.Context, from, to core.PulseNumber,
@@ -94,7 +93,7 @@ func (s *Store) Clone(
 	s.trees[to] = s.treeForPulse(ctx, from).Clone(false)
 }
 
-// Delete concurrent safe
+// Delete concurrent safe.
 func (s *Store) Delete(
 	ctx context.Context, pulse core.PulseNumber,
 ) {
@@ -103,13 +102,14 @@ func (s *Store) Delete(
 	delete(s.trees, pulse)
 }
 
-// TreeForPulse concurrent safe ...
+// TreeForPulse returns jet tree for pulse, it's concurrent safe.
 func (s *Store) TreeForPulse(ctx context.Context, pulse core.PulseNumber) *Tree {
 	s.Lock()
 	defer s.Unlock()
 	return s.treeForPulse(ctx, pulse)
 }
 
+// treeForPulse returns jet tree for pulse, it's concurrent unsafe.
 func (s *Store) treeForPulse(ctx context.Context, pulse core.PulseNumber) *Tree {
 	if t, ok := s.trees[pulse]; ok {
 		return t

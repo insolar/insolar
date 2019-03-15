@@ -70,8 +70,7 @@ func (gi *genesisInitializer) Init(ctx context.Context) error {
 	}
 
 	createGenesisRecord := func() (*core.RecordRef, error) {
-		var err error
-		err = gi.PulseTracker.AddPulse(
+		err := gi.PulseTracker.AddPulse(
 			ctx,
 			core.Pulse{
 				PulseNumber: core.GenesisPulse.PulseNumber,
