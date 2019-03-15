@@ -32,7 +32,6 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -435,7 +434,7 @@ func (s *testSuite) TestDiscoveryRestart() {
 	err := s.fixture().bootstrapNodes[0].serviceNetwork.Stop(context.Background())
 	s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.(*nodeKeeperWrapper).Wipe(true)
 	log.Info("Discovery node stopped...")
-	require.NoError(s.T(), err)
+	s.Require().NoError(err)
 
 	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
 	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
@@ -444,7 +443,7 @@ func (s *testSuite) TestDiscoveryRestart() {
 	log.Info("Discovery node starting...")
 	err = s.fixture().bootstrapNodes[0].serviceNetwork.Start(context.Background())
 	log.Info("Discovery node started")
-	require.NoError(s.T(), err)
+	s.Require().NoError(err)
 
 	s.waitForConsensusExcept(3, s.fixture().bootstrapNodes[0].id)
 	activeNodes = s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
@@ -464,13 +463,13 @@ func (s *testSuite) TestDiscoveryRestartNoWait() {
 	err := s.fixture().bootstrapNodes[0].serviceNetwork.Stop(context.Background())
 	s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.(*nodeKeeperWrapper).Wipe(true)
 	log.Info("Discovery node stopped...")
-	require.NoError(s.T(), err)
+	s.Require().NoError(err)
 
 	go func(s *testSuite) {
 		log.Info("Discovery node starting...")
 		err = s.fixture().bootstrapNodes[0].serviceNetwork.Start(context.Background())
 		log.Info("Discovery node started")
-		require.NoError(s.T(), err)
+		s.Require().NoError(err)
 	}(s)
 
 	s.waitForConsensusExcept(4, s.fixture().bootstrapNodes[0].id)
