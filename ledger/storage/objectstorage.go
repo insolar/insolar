@@ -20,12 +20,12 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/storage/index"
 	"github.com/insolar/insolar/ledger/storage/object"
 )
 
-// ObjectStorage returns objects and their meta
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage.ObjectStorage -o ./ -s _mock.go
+
+// ObjectStorage returns objects and their meta
 type ObjectStorage interface {
 	GetBlob(ctx context.Context, jetID core.RecordID, id *core.RecordID) ([]byte, error)
 	SetBlob(ctx context.Context, jetID core.RecordID, pulseNumber core.PulseNumber, blob []byte) (*core.RecordID, error)
@@ -44,13 +44,13 @@ type ObjectStorage interface {
 		jetID core.RecordID,
 		id *core.RecordID,
 		forupdate bool,
-	) (*index.ObjectLifeline, error)
+	) (*object.ObjectLifeline, error)
 
 	SetObjectIndex(
 		ctx context.Context,
 		jetID core.RecordID,
 		id *core.RecordID,
-		idx *index.ObjectLifeline,
+		idx *object.ObjectLifeline,
 	) error
 
 	RemoveObjectIndex(
@@ -162,7 +162,7 @@ func (os *objectStorage) GetObjectIndex(
 	jetID core.RecordID,
 	id *core.RecordID,
 	forupdate bool,
-) (*index.ObjectLifeline, error) {
+) (*object.ObjectLifeline, error) {
 	tx, err := os.DB.BeginTransaction(false)
 	if err != nil {
 		return nil, err
@@ -181,7 +181,7 @@ func (os *objectStorage) SetObjectIndex(
 	ctx context.Context,
 	jetID core.RecordID,
 	id *core.RecordID,
-	idx *index.ObjectLifeline,
+	idx *object.ObjectLifeline,
 ) error {
 	return os.DB.Update(ctx, func(tx *TransactionManager) error {
 		return tx.SetObjectIndex(ctx, jetID, id, idx)

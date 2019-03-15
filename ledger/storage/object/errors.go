@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package index
+package object
 
 import (
 	"github.com/pkg/errors"

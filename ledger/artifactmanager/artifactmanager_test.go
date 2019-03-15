@@ -39,7 +39,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/index"
 	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
@@ -340,7 +339,7 @@ func (s *amSuite) TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord(
 			},
 		},
 	)
-	err := os.SetObjectIndex(ctx, jetID, parentID, &index.ObjectLifeline{
+	err := os.SetObjectIndex(ctx, jetID, parentID, &object.ObjectLifeline{
 		LatestState: parentID,
 	})
 	require.NoError(s.T(), err)
@@ -398,7 +397,7 @@ func (s *amSuite) TestLedgerArtifactManager_DeactivateObject_CreatesCorrectRecor
 			},
 		},
 	)
-	err := os.SetObjectIndex(ctx, jetID, objID, &index.ObjectLifeline{
+	err := os.SetObjectIndex(ctx, jetID, objID, &object.ObjectLifeline{
 		State:       object.StateActivation,
 		LatestState: objID,
 	})
@@ -439,7 +438,7 @@ func (s *amSuite) TestLedgerArtifactManager_UpdateObject_CreatesCorrectRecord() 
 			},
 		},
 	)
-	err := os.SetObjectIndex(ctx, jetID, objID, &index.ObjectLifeline{
+	err := os.SetObjectIndex(ctx, jetID, objID, &object.ObjectLifeline{
 		State:       object.StateActivation,
 		LatestState: objID,
 	})
@@ -511,7 +510,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors(
 	_, err = os.SetBlob(ctx, jetID, core.GenesisPulse.PulseNumber, []byte{4})
 	require.NoError(s.T(), err)
 
-	objectIndex := index.ObjectLifeline{
+	objectIndex := object.ObjectLifeline{
 		LatestState:  objectAmendID,
 		ChildPointer: genRandomID(0),
 		Parent:       *parentRef,
@@ -623,7 +622,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetChildren() {
 			Ref:       *child3Ref,
 		})
 
-	parentIndex := index.ObjectLifeline{
+	parentIndex := object.ObjectLifeline{
 		LatestState:  parentID,
 		ChildPointer: childMeta3,
 	}

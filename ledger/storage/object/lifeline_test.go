@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package index
+package object
 
 import (
 	"testing"
@@ -22,7 +22,6 @@ import (
 	fuzz "github.com/google/gofuzz"
 	"github.com/insolar/insolar"
 	"github.com/insolar/insolar/gen"
-	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -47,7 +46,7 @@ func delegates() (result map[insolar.Reference]insolar.Reference) {
 	return
 }
 
-func state() (state object.State) {
+func state() (state State) {
 	fuzz.New().NilChance(0).Fuzz(&state)
 	return
 }

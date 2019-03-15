@@ -38,7 +38,6 @@ import (
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/drop"
-	"github.com/insolar/insolar/ledger/storage/index"
 	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/insolar/insolar/ledger/storage/object"
@@ -375,7 +374,7 @@ func addRecords(
 	require.NoError(t, err)
 
 	// set index of record
-	err = objectStorage.SetObjectIndex(ctx, jetID, parentID, &index.ObjectLifeline{
+	err = objectStorage.SetObjectIndex(ctx, jetID, parentID, &object.ObjectLifeline{
 		LatestState: parentID,
 	})
 	require.NoError(t, err)

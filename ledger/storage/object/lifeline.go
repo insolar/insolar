@@ -14,18 +14,17 @@
  *    limitations under the License.
  */
 
-package index
+package object
 
 import (
 	"bytes"
 	"context"
 
 	"github.com/insolar/insolar"
-	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/ugorji/go/codec"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/storage/index.Accessor -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage/object.Accessor -o ./ -s _mock.go
 
 // Accessor provides info about Index-values from storage.
 type Accessor interface {
@@ -33,7 +32,7 @@ type Accessor interface {
 	ForID(ctx context.Context, id insolar.ID) (ObjectLifeline, error)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/storage/index.Modifier -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage/object.Modifier -o ./ -s _mock.go
 
 // Modifier provides methods for setting Index-values to storage.
 type Modifier interface {
@@ -48,7 +47,7 @@ type ObjectLifeline struct {
 	ChildPointer        *insolar.ID // Meta record about child activation.
 	Parent              insolar.Reference
 	Delegates           map[insolar.Reference]insolar.Reference
-	State               object.State
+	State               State
 	LatestUpdate        insolar.PulseNumber
 	JetID               insolar.JetID
 }

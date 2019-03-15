@@ -29,7 +29,6 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/index"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
@@ -133,7 +132,7 @@ func (s *storageSuite) TestDB_SetObjectIndex_ReturnsNotFoundIfNoIndex() {
 }
 
 func (s *storageSuite) TestDB_SetObjectIndex_StoresCorrectDataInStorage() {
-	idx := index.ObjectLifeline{
+	idx := object.ObjectLifeline{
 		LatestState: core.NewRecordID(0, hexhash("20")),
 	}
 	zeroid := core.NewRecordID(0, hexhash(""))
@@ -149,7 +148,7 @@ func (s *storageSuite) TestDB_SetObjectIndex_SaveLastUpdate() {
 	// Arrange
 	jetID := testutils.RandomJet()
 
-	idx := index.ObjectLifeline{
+	idx := object.ObjectLifeline{
 		LatestState:  core.NewRecordID(0, hexhash("20")),
 		LatestUpdate: 1239,
 	}

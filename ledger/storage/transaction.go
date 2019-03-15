@@ -21,7 +21,6 @@ import (
 
 	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/storage/index"
 	"github.com/insolar/insolar/ledger/storage/object"
 )
 
@@ -168,7 +167,7 @@ func (m *TransactionManager) GetObjectIndex(
 	jetID core.RecordID,
 	id *core.RecordID,
 	forupdate bool,
-) (*index.ObjectLifeline, error) {
+) (*object.ObjectLifeline, error) {
 	if forupdate {
 		m.lockOnID(id)
 	}
@@ -178,7 +177,7 @@ func (m *TransactionManager) GetObjectIndex(
 	if err != nil {
 		return nil, err
 	}
-	res := index.Decode(buf)
+	res := object.Decode(buf)
 	return &res, nil
 }
 
@@ -187,14 +186,14 @@ func (m *TransactionManager) SetObjectIndex(
 	ctx context.Context,
 	jetID core.RecordID,
 	id *core.RecordID,
-	idx *index.ObjectLifeline,
+	idx *object.ObjectLifeline,
 ) error {
 	prefix := core.JetID(jetID).Prefix()
 	k := prefixkey(scopeIDLifeline, prefix, id[:])
 	if idx.Delegates == nil {
 		idx.Delegates = map[core.RecordRef]core.RecordRef{}
 	}
-	encoded := index.Encode(*idx)
+	encoded := object.Encode(*idx)
 	return m.set(ctx, k, encoded)
 }
 

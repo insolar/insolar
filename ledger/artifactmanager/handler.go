@@ -41,7 +41,6 @@ import (
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/hack"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/index"
 )
 
 // MessageHandler processes messages for local storage interaction.
@@ -811,7 +810,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 		s.Memory = blobID
 	}
 
-	var idx *index.ObjectLifeline
+	var idx *object.ObjectLifeline
 	err = h.DBContext.Update(ctx, func(tx *storage.TransactionManager) error {
 		var err error
 		idx, err = tx.GetObjectIndex(ctx, jetID, msg.Object.Record(), true)
@@ -819,7 +818,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 		if err == core.ErrNotFound {
 			if state.State() == object.StateActivation {
 				// We are activating the object. There is no index for it anywhere.
-				idx = &index.ObjectLifeline{State: object.StateUndefined}
+				idx = &object.ObjectLifeline{State: object.StateUndefined}
 			} else {
 				logger.Debug("failed to fetch index (fetching from heavy)")
 				// We are updating object. Index should be on the heavy executor.
@@ -1062,7 +1061,7 @@ func (h *MessageHandler) handleGetObjectIndex(ctx context.Context, parcel core.P
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
 
-	buf := index.Encode(*idx)
+	buf := object.Encode(*idx)
 
 	return &reply.ObjectIndex{Index: buf}, nil
 }
@@ -1118,7 +1117,7 @@ func validateState(old object.State, new object.State) error {
 
 func (h *MessageHandler) saveIndexFromHeavy(
 	ctx context.Context, jetID core.RecordID, obj core.RecordRef, heavy *core.RecordRef,
-) (*index.ObjectLifeline, error) {
+) (*object.ObjectLifeline, error) {
 	genericReply, err := h.Bus.Send(ctx, &message.GetObjectIndex{
 		Object: obj,
 	}, &core.MessageSendOptions{
@@ -1131,7 +1130,7 @@ func (h *MessageHandler) saveIndexFromHeavy(
 	if !ok {
 		return nil, fmt.Errorf("failed to fetch object index: unexpected reply type %T (reply=%+v)", genericReply, genericReply)
 	}
-	idx := index.Decode(rep.Index)
+	idx := object.Decode(rep.Index)
 
 	err = h.ObjectStorage.SetObjectIndex(ctx, jetID, obj.Record(), &idx)
 	if err != nil {
@@ -1230,7 +1229,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 
 	indexStorage := h.RecentStorageProvider.GetIndexStorage(ctx, jetID)
 	for id, meta := range msg.RecentObjects {
-		decodedIndex := index.Decode(meta.Index)
+		decodedIndex := object.Decode(meta.Index)
 
 		err = h.ObjectStorage.SetObjectIndex(ctx, jetID, &id, &decodedIndex)
 		if err != nil {

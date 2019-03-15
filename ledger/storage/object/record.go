@@ -20,8 +20,9 @@ import (
 	"io"
 )
 
-// TypeID encodes a record object type.
 //go:generate go run gen/type.go
+
+// TypeID encodes a record object type.
 type TypeID uint32
 
 // TypeIDSize is a size of TypeID type.

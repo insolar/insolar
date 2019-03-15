@@ -25,7 +25,6 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/index"
 	"github.com/insolar/insolar/testutils"
 )
 
@@ -38,7 +37,7 @@ func AddRandIndex(
 	pulsenum core.PulseNumber,
 ) (*core.RecordID, error) {
 	parentID := testutils.RandomID()
-	err := objectStorage.SetObjectIndex(ctx, jetID, &parentID, &index.ObjectLifeline{
+	err := objectStorage.SetObjectIndex(ctx, jetID, &parentID, &object.ObjectLifeline{
 		LatestState: &parentID,
 	})
 	return &parentID, err

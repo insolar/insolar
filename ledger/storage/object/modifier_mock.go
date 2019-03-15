@@ -1,9 +1,9 @@
-package index
+package object
 
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "Modifier" can be found in github.com/insolar/insolar/ledger/storage/index
+The original interface "Modifier" can be found in github.com/insolar/insolar/ledger/storage/object
 */
 import (
 	context "context"
@@ -16,7 +16,7 @@ import (
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//ModifierMock implements github.com/insolar/insolar/ledger/storage/index.Modifier
+//ModifierMock implements github.com/insolar/insolar/ledger/storage/object.Modifier
 type ModifierMock struct {
 	t minimock.Tester
 
@@ -26,7 +26,7 @@ type ModifierMock struct {
 	SetMock       mModifierMockSet
 }
 
-//NewModifierMock returns a mock for github.com/insolar/insolar/ledger/storage/index.Modifier
+//NewModifierMock returns a mock for github.com/insolar/insolar/ledger/storage/object.Modifier
 func NewModifierMock(t minimock.Tester) *ModifierMock {
 	m := &ModifierMock{t: t}
 
@@ -108,7 +108,7 @@ func (m *mModifierMockSet) Set(f func(p context.Context, p1 core.RecordID, p2 Ob
 	return m.mock
 }
 
-//Set implements github.com/insolar/insolar/ledger/storage/index.Modifier interface
+//Set implements github.com/insolar/insolar/ledger/storage/object.Modifier interface
 func (m *ModifierMock) Set(p context.Context, p1 core.RecordID, p2 ObjectLifeline) (r error) {
 	counter := atomic.AddUint64(&m.SetPreCounter, 1)
 	defer atomic.AddUint64(&m.SetCounter, 1)
