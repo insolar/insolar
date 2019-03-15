@@ -18,29 +18,31 @@ package adapter
 
 import (
 	"fmt"
+	"time"
 
-	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 )
 
-func NewResponseSendAdapter() PulseConveyorAdapterTaskSink {
-	return NewAdapterWithQueue(NewResponseSender())
+// NewWaitAdapter creates new instance of SimpleWaitAdapter with Waiter as worker
+func NewWaitAdapter() PulseConveyorAdapterTaskSink {
+	return NewAdapterWithQueue(NewWaiter())
 }
 
-type ResponseSenderTask struct {
-	Future core.Future
-	Result core.Reply
+type WaiterTask struct {
+	waitPeriodMilliseconds int
 }
 
-type ResponseSender struct{}
+type Waiter struct{}
 
-func NewResponseSender() Worker {
-	return &ResponseSender{}
+func NewWaiter() Worker {
+	return &Waiter{}
 }
 
-func (sr *ResponseSender) Process(adapterID uint32, task AdapterTask, cancelInfo *cancelInfoT) {
-	payload, ok := task.taskPayload.(ResponseSenderTask)
+func (w *Waiter) Process(adapterID uint32, task AdapterTask, cancelInfo *cancelInfoT) {
+	log.Info("[ doWork ] Start. cancelInfo.id: ", cancelInfo.id)
+
+	payload, ok := task.taskPayload.(WaiterTask)
 	var msg interface{}
 
 	if !ok {
@@ -49,14 +51,6 @@ func (sr *ResponseSender) Process(adapterID uint32, task AdapterTask, cancelInfo
 		return
 	}
 
-	done := make(chan bool, 1)
-	go func(payload ResponseSenderTask) {
-		res := payload.Result
-		f := payload.Future
-		f.SetResult(res)
-		done <- true
-	}(payload)
-
 	select {
 	case <-cancelInfo.cancel:
 		log.Info("[ SimpleWaitAdapter.doWork ] Cancel. Return Nil as Response")
@@ -64,11 +58,16 @@ func (sr *ResponseSender) Process(adapterID uint32, task AdapterTask, cancelInfo
 	case <-cancelInfo.flush:
 		log.Info("[ SimpleWaitAdapter.doWork ] Flush. DON'T Return Response")
 		return
-	case <-done:
-		msg = fmt.Sprintf("Response was send successfully")
+	case <-time.After(time.Duration(payload.waitPeriodMilliseconds) * time.Millisecond):
+		msg = fmt.Sprintf("Work completed successfully. Waited %d millisecond", payload.waitPeriodMilliseconds)
 	}
 
 	log.Info("[ SimpleWaitAdapter.doWork ] ", msg)
 
-	task.respSink.PushResponse(adapterID, task.elementID, task.handlerID, msg)
+	task.respSink.PushResponse(adapterID,
+		task.elementID,
+		task.handlerID,
+		msg)
+
+	// TODO: remove cancelInfo from swa.taskHolder
 }

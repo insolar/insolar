@@ -47,7 +47,6 @@ type AdapterTask struct {
 	elementID   idType
 	handlerID   idType
 	taskPayload interface{}
-	cancelInfo  *cancelInfoT
 }
 
 // AdapterResponse contains info with adapter response
@@ -66,20 +65,19 @@ type AdapterNestedEvent struct {
 	eventPayload    interface{}
 }
 
-type TaskProcessing interface {
-	Process(adapter uint32, task AdapterTask, cancelInfo *cancelInfoT)
-	// Process(adapter SimpleWaitAdapter, task AdapterTask, respPayload chan interface{})
+type Worker interface {
+	Process(adapterID uint32, task AdapterTask, cancelInfo *cancelInfoT)
 }
 
 // NewAdapterWithQueue creates new instance of Adapter
-func NewAdapterWithQueue(taskProcessing TaskProcessing) PulseConveyorAdapterTaskSink {
+func NewAdapterWithQueue(worker Worker) PulseConveyorAdapterTaskSink {
 	adapter := &AdapterWithQueue{
 		queue:             queue.NewMutexQueue(),
 		processingStarted: 0,
 		stopProcessing:    0,
 		processingStopped: make(chan bool, 1),
 		taskHolder:        newTaskHolder(),
-		process:           taskProcessing.Process,
+		worker:            worker,
 	}
 	started := make(chan bool, 1)
 	go adapter.StartProcessing(started)

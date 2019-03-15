@@ -24,16 +24,12 @@ import (
 
 	"github.com/insolar/insolar/conveyor/queue"
 	"github.com/insolar/insolar/log"
-	"github.com/pkg/errors"
 )
 
-// type processElement struct {
-// 	elementID   idType
-// 	handlerID   idType
-// 	taskPayload interface{}
-// 	respSink    AdaptorToSlotResponseSink
-// 	cancelInfo  *cancelInfoT
-// }
+type QueueTask struct {
+	cancelInfo *cancelInfoT
+	task       AdapterTask
+}
 
 type cancelInfoT struct {
 	id     uint64
@@ -125,21 +121,7 @@ type AdapterWithQueue struct {
 	adapterID uint32
 
 	taskHolder taskHolderT
-	process    func(adapterID uint32, task AdapterTask, cancelInfo *cancelInfoT)
-}
-
-type simpleWaitAdapterInputData struct {
-	waitPeriodMilliseconds int
-}
-
-// NewSimpleWaitAdapter creates new instance of SimpleWaitAdapter
-func NewSimpleWaitAdapter() PulseConveyorAdapterTaskSink {
-	taskProcessing := NewWaitProcessing()
-	return NewAdapterWithQueue(taskProcessing)
-}
-
-func NewWaitProcessing() TaskProcessing {
-	return &TaskWait{}
+	worker     Worker
 }
 
 // StopProcessing is blocking
@@ -190,12 +172,16 @@ func (swa *AdapterWithQueue) StartProcessing(started chan bool) {
 		}
 
 		for _, itask := range itasks {
-			task, ok := itask.GetData().(AdapterTask)
+			task, ok := itask.GetData().(QueueTask)
 			if !ok {
 				panic(fmt.Sprintf("[ StartProcessing ] How does it happen? Wrong Type: %T", itask.GetData()))
 			}
 
-			go swa.process(swa.adapterID, task, task.cancelInfo)
+			if swa.worker == nil {
+				panic(fmt.Sprintf("[ StartProcessing ] Worker function wasn't provided"))
+			}
+
+			go swa.worker.Process(swa.adapterID, task.task, task.cancelInfo)
 		}
 	}
 
@@ -219,21 +205,20 @@ func (swa *AdapterWithQueue) PushTask(respSink AdaptorToSlotResponseSink,
 	handlerID idType,
 	taskPayload interface{}) error {
 
-	payload, ok := taskPayload.(*simpleWaitAdapterInputData)
-	if !ok {
-		return errors.Errorf("[ PushTask ] Incorrect payload type: %T", taskPayload)
-	}
-
 	cancelInfo := newCancelInfo(atomicLoadAndIncrementUint64(&reqID))
 	swa.taskHolder.add(cancelInfo, respSink.GetPulseNumber())
 
-	return swa.queue.SinkPush(AdapterTask{
-		respSink:    respSink,
-		elementID:   elementID,
-		handlerID:   handlerID,
-		taskPayload: payload,
-		cancelInfo:  cancelInfo,
-	})
+	return swa.queue.SinkPush(
+		QueueTask{
+			cancelInfo: cancelInfo,
+			task: AdapterTask{
+				respSink:    respSink,
+				elementID:   elementID,
+				handlerID:   handlerID,
+				taskPayload: taskPayload,
+			},
+		},
+	)
 }
 
 // CancelElementTasks: now cancels all pulseNumber's tasks
@@ -254,32 +239,4 @@ func (swa *AdapterWithQueue) FlushPulseTasks(pulseNumber uint32) {
 // FlushNodeTasks: now flush all tasks
 func (swa *AdapterWithQueue) FlushNodeTasks(nodeID idType) {
 	swa.taskHolder.stopAll(true)
-}
-
-type TaskWait struct{}
-
-func (tw *TaskWait) Process(adapterID uint32, task AdapterTask, cancelInfo *cancelInfoT) {
-	log.Info("[ doWork ] Start. cancelInfo.id: ", cancelInfo.id)
-
-	payload := task.taskPayload.(simpleWaitAdapterInputData)
-
-	var msg string
-	select {
-	case <-cancelInfo.cancel:
-		msg = "Cancel. Return Response"
-	case <-cancelInfo.flush:
-		log.Info("[ SimpleWaitAdapter.doWork ] Flush. DON'T Return Response")
-		return
-	case <-time.After(time.Duration(payload.waitPeriodMilliseconds) * time.Millisecond):
-		msg = fmt.Sprintf("Work completed successfully. Waited %d millisecond", payload.waitPeriodMilliseconds)
-	}
-
-	log.Info("[ SimpleWaitAdapter.doWork ] ", msg)
-
-	task.respSink.PushResponse(adapterID,
-		task.elementID,
-		task.handlerID,
-		msg)
-
-	// TODO: remove cancelInfo from swa.taskHolder
 }

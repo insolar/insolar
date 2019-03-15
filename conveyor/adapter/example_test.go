@@ -28,7 +28,7 @@ import (
 )
 
 type mockResponseSink struct {
-	response string
+	response interface{}
 	lock     sync.Mutex
 }
 
@@ -36,10 +36,10 @@ func (m *mockResponseSink) PushResponse(adapterID idType, elementID idType, hand
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	log.Infof("[ mockResponseSink.PushResponse] PushResponse: %+v", respPayload)
-	m.response = respPayload.(string)
+	m.response = respPayload
 }
 
-func (m *mockResponseSink) GetResponse() string {
+func (m *mockResponseSink) GetResponse() interface{} {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
@@ -66,7 +66,7 @@ func (m *mockResponseSink) GetSlotDetails() slot.SlotDetails {
 }
 
 func TestFunctionality(t *testing.T) {
-	adapter := NewSimpleWaitAdapter().(*SimpleWaitAdapter)
+	adapter := NewWaitAdapter().(*AdapterWithQueue)
 	started := make(chan bool, 1)
 	adapter.StartProcessing(started)
 	<-started
@@ -76,46 +76,49 @@ func TestFunctionality(t *testing.T) {
 	adapter.FlushNodeTasks(55)
 	adapter.FlushPulseTasks(66)
 
-	err := adapter.PushTask(&mockResponseSink{}, 33, 22, 22)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "Incorrect payload type")
-
 	resp := &mockResponseSink{}
-	err = adapter.PushTask(resp, 33, 22, &simpleWaitAdapterInputData{waitPeriodMilliseconds: 20})
+	err := adapter.PushTask(resp, 33, 22, 22)
 	require.NoError(t, err)
 	time.Sleep(200 * time.Millisecond)
-	require.Contains(t, resp.GetResponse(), "Work completed successfully")
+	require.Error(t, resp.GetResponse().(error))
+	require.Contains(t, resp.GetResponse().(error).Error(), "[ PushTask ] Incorrect payload type: int")
+
+	resp = &mockResponseSink{}
+	err = adapter.PushTask(resp, 33, 22, WaiterTask{waitPeriodMilliseconds: 20})
+	require.NoError(t, err)
+	time.Sleep(200 * time.Millisecond)
+	require.Contains(t, resp.GetResponse().(string), "Work completed successfully")
 
 	// CancelPulseTasks test
 	resp = &mockResponseSink{}
-	err = adapter.PushTask(resp, 33, 22, &simpleWaitAdapterInputData{waitPeriodMilliseconds: 200000000})
+	err = adapter.PushTask(resp, 33, 22, WaiterTask{waitPeriodMilliseconds: 200000000})
 	require.NoError(t, err)
 	adapter.CancelPulseTasks(resp.GetPulseNumber())
 	time.Sleep(200 * time.Millisecond)
-	require.Contains(t, resp.GetResponse(), "Cancel. Return Response")
+	require.Nil(t, resp.GetResponse())
 
 	// FlushPulseTasks
 	resp = &mockResponseSink{}
-	err = adapter.PushTask(resp, 34, 22, &simpleWaitAdapterInputData{waitPeriodMilliseconds: 200000000})
+	err = adapter.PushTask(resp, 34, 22, WaiterTask{waitPeriodMilliseconds: 200000000})
 	require.NoError(t, err)
 	adapter.FlushPulseTasks(resp.GetPulseNumber())
 
 	// FlushPulseTasks
 	resp = &mockResponseSink{}
-	err = adapter.PushTask(resp, 34, 22, &simpleWaitAdapterInputData{waitPeriodMilliseconds: 200000000})
+	err = adapter.PushTask(resp, 34, 22, WaiterTask{waitPeriodMilliseconds: 200000000})
 	require.NoError(t, err)
 	adapter.FlushNodeTasks(resp.GetPulseNumber())
 
 	adapter.StopProcessing()
 	adapter.StopProcessing()
 
-	err = adapter.PushTask(resp, 34, 22, &simpleWaitAdapterInputData{waitPeriodMilliseconds: 200000000})
+	err = adapter.PushTask(resp, 34, 22, WaiterTask{waitPeriodMilliseconds: 200000000})
 	require.Contains(t, err.Error(), "Queue is blocked")
 }
 
 func TestParallel(t *testing.T) {
 
-	adapter := NewSimpleWaitAdapter().(*SimpleWaitAdapter)
+	adapter := NewWaitAdapter().(*AdapterWithQueue)
 	started := make(chan bool, 1)
 	adapter.StartProcessing(started)
 	<-started
@@ -139,7 +142,7 @@ func TestParallel(t *testing.T) {
 		go func(wg *sync.WaitGroup, adapter PulseConveyorAdapterTaskSink) {
 			for i := 0; i < numIterations; i++ {
 				resp := &mockResponseSink{}
-				adapter.PushTask(resp, 34, 22, simpleWaitAdapterInputData{waitPeriodMilliseconds: 20})
+				adapter.PushTask(resp, 34, 22, WaiterTask{waitPeriodMilliseconds: 20})
 			}
 			wg.Done()
 		}(&wg, adapter)
