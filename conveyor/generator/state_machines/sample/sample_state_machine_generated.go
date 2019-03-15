@@ -54,12 +54,14 @@ func RawTestStateMachineFactory() [3]common.StateMachine {
         ErrorState: m.errorFutureInit,
     },
     common.State{
+        Migration: m.migrateFromFutureFirst,
         Transition: m.transitFutureFirst,
         AdapterResponse: m.responseFutureFirst,
         ErrorState: m.errorFutureFirst,
         AdapterResponseError: m.errorResponseFutureFirst,
     },
     common.State{
+        Migration: m.migrateFromFutureSecond,
         Transition: m.transitFutureSecond,
         AdapterResponse: m.responseFutureSecond,
         ErrorState: m.errorFutureSecond,
@@ -72,14 +74,14 @@ func RawTestStateMachineFactory() [3]common.StateMachine {
         ErrorState: m.errorPresentInit,
     },
     common.State{
-        Migration: m.migrateFromFutureFirst,
+        Migration: m.migrateFromPresentFirst,
         Transition: m.transitPresentFirst,
         AdapterResponse: m.responsePresentFirst,
         ErrorState: m.errorPresentFirst,
         AdapterResponseError: m.errorResponsePresentFirst,
     },
     common.State{
-        Migration: m.migrateFromFutureSecond,
+        Migration: m.migrateFromPresentSecond,
         Transition: m.transitPresentSecond,
         AdapterResponse: m.responsePresentSecond,
         ErrorState: m.errorPresentSecond,

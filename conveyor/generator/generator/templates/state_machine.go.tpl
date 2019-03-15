@@ -51,6 +51,7 @@ func Raw{{$machine.Name}}Factory() [3]common.StateMachine {
         ErrorState: m.{{(index .States 0).GetErrorStateFutureName}},
     },{{range $i, $state := .States}}{{if (gtNull $i)}}
     common.State{
+        Migration: m.{{$state.GetMigrationFuturePresentName}},
         {{if (handlerExists $state.TransitionFuture)}}Transition: m.{{$state.GetTransitionFutureName}},{{end}}
         {{if (handlerExists $state.AdapterResponseFuture)}}AdapterResponse: m.{{$state.GetAdapterResponseFutureName}},{{end}}
         ErrorState: m.{{$state.GetErrorStateFutureName}},
@@ -63,7 +64,7 @@ func Raw{{$machine.Name}}Factory() [3]common.StateMachine {
         ErrorState: m.{{(index .States 0).GetErrorStateName}},
     },{{range $i, $state := .States}}{{if (gtNull $i)}}
     common.State{
-        Migration: m.{{$state.GetMigrationFuturePresentName}},
+        Migration: m.{{$state.GetMigrationName}},
         Transition: m.{{$state.GetTransitionName}},
         {{if (handlerExists $state.AdapterResponse)}}AdapterResponse: m.{{$state.GetAdapterResponseName}},{{end}}
         ErrorState: m.{{$state.GetErrorStateName}},
