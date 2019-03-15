@@ -124,8 +124,8 @@ func (th *taskHolder) stopAll(flush bool) {
 
 }
 
-// AdapterWithQueue holds all adapter logic
-type AdapterWithQueue struct {
+// CancellableQueueAdapter holds all adapter logic
+type CancellableQueueAdapter struct {
 	queue             queue.IQueue
 	processingStarted uint32
 	stopProcessing    uint32
@@ -138,7 +138,7 @@ type AdapterWithQueue struct {
 }
 
 // StopProcessing is blocking
-func (swa *AdapterWithQueue) StopProcessing() {
+func (swa *CancellableQueueAdapter) StopProcessing() {
 	if atomic.LoadUint32(&swa.stopProcessing) != 0 {
 		log.Infof("[ StopProcessing ]  Nothing done")
 		return
@@ -148,7 +148,7 @@ func (swa *AdapterWithQueue) StopProcessing() {
 }
 
 // StartProcessing start processing of input queue
-func (swa *AdapterWithQueue) StartProcessing(started chan bool) {
+func (swa *CancellableQueueAdapter) StartProcessing(started chan bool) {
 	if atomic.LoadUint32(&swa.processingStarted) != 0 {
 		log.Infof("[ StartProcessing ] processing already started. Nothing done")
 		close(started)
@@ -213,7 +213,7 @@ func atomicLoadAndIncrementUint64(addr *uint64) uint64 {
 }
 
 // PushTask implements PulseConveyorAdapterTaskSink
-func (swa *AdapterWithQueue) PushTask(respSink AdaptorToSlotResponseSink,
+func (swa *CancellableQueueAdapter) PushTask(respSink AdaptorToSlotResponseSink,
 	elementID idType,
 	handlerID idType,
 	taskPayload interface{}) error {
@@ -235,27 +235,27 @@ func (swa *AdapterWithQueue) PushTask(respSink AdaptorToSlotResponseSink,
 }
 
 // CancelElementTasks: now cancels all pulseNumber's tasks
-func (swa *AdapterWithQueue) CancelElementTasks(pulseNumber idType, elementID idType) {
+func (swa *CancellableQueueAdapter) CancelElementTasks(pulseNumber idType, elementID idType) {
 	swa.taskHolder.stop(pulseNumber, false)
 }
 
 // CancelPulseTasks: now cancels all pulseNumber's tasks
-func (swa *AdapterWithQueue) CancelPulseTasks(pulseNumber idType) {
+func (swa *CancellableQueueAdapter) CancelPulseTasks(pulseNumber idType) {
 	swa.taskHolder.stop(pulseNumber, false)
 }
 
 // FlushPulseTasks: now flush all pulseNumber's tasks
-func (swa *AdapterWithQueue) FlushPulseTasks(pulseNumber uint32) {
+func (swa *CancellableQueueAdapter) FlushPulseTasks(pulseNumber uint32) {
 	swa.taskHolder.stop(pulseNumber, true)
 }
 
 // FlushNodeTasks: now flush all tasks
-func (swa *AdapterWithQueue) FlushNodeTasks(nodeID idType) {
+func (swa *CancellableQueueAdapter) FlushNodeTasks(nodeID idType) {
 	swa.taskHolder.stopAll(true)
 }
 
 // PushTask implements PulseConveyorAdapterTaskSink
-func (swa *AdapterWithQueue) returnResponse(cancellableTask queueTask) {
+func (swa *CancellableQueueAdapter) returnResponse(cancellableTask queueTask) {
 	adapterTask := cancellableTask.task
 	event := swa.processor.Process(swa.adapterID, adapterTask, cancellableTask.cancelInfo)
 	if event.Flushed {

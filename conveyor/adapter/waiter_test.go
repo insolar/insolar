@@ -65,7 +65,7 @@ func (m *mockResponseSink) GetSlotDetails() slot.SlotDetails {
 }
 
 func TestFunctionality(t *testing.T) {
-	adapter := NewWaitAdapter().(*AdapterWithQueue)
+	adapter := NewWaitAdapter().(*CancellableQueueAdapter)
 	started := make(chan bool, 1)
 	adapter.StartProcessing(started)
 	<-started
@@ -118,7 +118,7 @@ func TestFunctionality(t *testing.T) {
 
 func TestParallel(t *testing.T) {
 
-	adapter := NewWaitAdapter().(*AdapterWithQueue)
+	adapter := NewWaitAdapter().(*CancellableQueueAdapter)
 	started := make(chan bool, 1)
 	adapter.StartProcessing(started)
 	<-started

@@ -116,7 +116,7 @@ type Processor interface {
 
 // NewAdapterWithQueue creates new instance of Adapter
 func NewAdapterWithQueue(processor Processor) PulseConveyorAdapterTaskSink {
-	adapter := &AdapterWithQueue{
+	adapter := &CancellableQueueAdapter{
 		queue:             queue.NewMutexQueue(),
 		processingStarted: 0,
 		stopProcessing:    0,
