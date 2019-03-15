@@ -24,9 +24,9 @@ import (
 )
 
 var (
-	// ErrTimeout is returned when the operation timeout is exceeded.
+	// ErrFutureTimeout is returned when the operation timeout is exceeded.
 	ErrFutureTimeout = errors.New("can't wait for result: timeout")
-	// ErrChannelClosed is returned when the input channel is closed.
+	// ErrFutureChannelClosed is returned when the input channel is closed.
 	ErrFutureChannelClosed = errors.New("can't wait for result: channel closed")
 )
 
