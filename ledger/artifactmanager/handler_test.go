@@ -35,7 +35,7 @@ import (
 	"github.com/insolar/insolar/ledger/storage/index"
 	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/node"
-	"github.com/insolar/insolar/ledger/storage/record"
+	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/network"
@@ -503,8 +503,8 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_FetchesIndexFromHea
 	h.PlatformCryptographyScheme = s.scheme
 	h.RecentStorageProvider = provideMock
 
-	objIndex := index.ObjectLifeline{LatestState: genRandomID(0), State: record.StateActivation}
-	amendRecord := record.ObjectAmendRecord{
+	objIndex := index.ObjectLifeline{LatestState: genRandomID(0), State: object.StateActivation}
+	amendRecord := object.ObjectAmendRecord{
 		PrevState: *objIndex.LatestState,
 	}
 	amendHash := s.scheme.ReferenceHasher()
@@ -512,7 +512,7 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_FetchesIndexFromHea
 	require.NoError(s.T(), err)
 
 	msg := message.UpdateObject{
-		Record: record.SerializeRecord(&amendRecord),
+		Record: object.SerializeRecord(&amendRecord),
 		Object: *genRandomRef(0),
 	}
 
@@ -580,10 +580,10 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_UpdateIndexState() 
 
 	objIndex := index.ObjectLifeline{
 		LatestState:  genRandomID(0),
-		State:        record.StateActivation,
+		State:        object.StateActivation,
 		LatestUpdate: 0,
 	}
-	amendRecord := record.ObjectAmendRecord{
+	amendRecord := object.ObjectAmendRecord{
 		PrevState: *objIndex.LatestState,
 	}
 	amendHash := s.scheme.ReferenceHasher()
@@ -591,7 +591,7 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_UpdateIndexState() 
 	require.NoError(s.T(), err)
 
 	msg := message.UpdateObject{
-		Record: record.SerializeRecord(&amendRecord),
+		Record: object.SerializeRecord(&amendRecord),
 		Object: *genRandomRef(0),
 	}
 	err = s.objectStorage.SetObjectIndex(s.ctx, jetID, msg.Object.Record(), &objIndex)
@@ -834,8 +834,8 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 	h.RecentStorageProvider = provideMock
 	h.PlatformCryptographyScheme = s.scheme
 
-	objIndex := index.ObjectLifeline{LatestState: genRandomID(0), State: record.StateActivation}
-	childRecord := record.ChildRecord{
+	objIndex := index.ObjectLifeline{LatestState: genRandomID(0), State: object.StateActivation}
+	childRecord := object.ChildRecord{
 		Ref:       *genRandomRef(0),
 		PrevChild: nil,
 	}
@@ -845,7 +845,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 	childID := core.NewRecordID(0, amendHash.Sum(nil))
 
 	msg := message.RegisterChild{
-		Record: record.SerializeRecord(&childRecord),
+		Record: object.SerializeRecord(&childRecord),
 		Parent: *genRandomRef(0),
 	}
 
@@ -913,15 +913,15 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 
 	objIndex := index.ObjectLifeline{
 		LatestState:  genRandomID(0),
-		State:        record.StateActivation,
+		State:        object.StateActivation,
 		LatestUpdate: core.FirstPulseNumber,
 	}
-	childRecord := record.ChildRecord{
+	childRecord := object.ChildRecord{
 		Ref:       *genRandomRef(0),
 		PrevChild: nil,
 	}
 	msg := message.RegisterChild{
-		Record: record.SerializeRecord(&childRecord),
+		Record: object.SerializeRecord(&childRecord),
 		Parent: *genRandomRef(0),
 	}
 
@@ -951,8 +951,8 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	jc := testutils.NewJetCoordinatorMock(mc)
 
 	firstID := core.NewRecordID(core.FirstPulseNumber, []byte{1, 2, 3})
-	secondID := record.NewRecordIDFromRecord(s.scheme, core.FirstPulseNumber, &record.CodeRecord{})
-	thirdID := record.NewRecordIDFromRecord(s.scheme, core.FirstPulseNumber-1, &record.CodeRecord{})
+	secondID := object.NewRecordIDFromRecord(s.scheme, core.FirstPulseNumber, &object.CodeRecord{})
+	thirdID := object.NewRecordIDFromRecord(s.scheme, core.FirstPulseNumber-1, &object.CodeRecord{})
 
 	mb := testutils.NewMessageBusMock(mc)
 	mb.MustRegisterMock.Return()
@@ -1084,7 +1084,7 @@ func (s *handlerSuite) TestMessageHandler_HandleValidationCheck() {
 	require.NoError(s.T(), err)
 
 	s.T().Run("returns not ok when not valid", func(t *testing.T) {
-		validatedStateID, err := s.objectStorage.SetRecord(s.ctx, jetID, 0, &record.ObjectAmendRecord{})
+		validatedStateID, err := s.objectStorage.SetRecord(s.ctx, jetID, 0, &object.ObjectAmendRecord{})
 		require.NoError(t, err)
 
 		msg := message.ValidationCheck{
@@ -1103,7 +1103,7 @@ func (s *handlerSuite) TestMessageHandler_HandleValidationCheck() {
 
 	s.T().Run("returns ok when valid", func(t *testing.T) {
 		approvedStateID := *genRandomID(0)
-		validatedStateID, err := s.objectStorage.SetRecord(s.ctx, jetID, 0, &record.ObjectAmendRecord{
+		validatedStateID, err := s.objectStorage.SetRecord(s.ctx, jetID, 0, &object.ObjectAmendRecord{
 			PrevState: approvedStateID,
 		})
 		require.NoError(t, err)
@@ -1220,7 +1220,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetRequest() {
 
 	jetID := core.RecordID(*core.NewJetID(0, nil))
 
-	req := record.RequestRecord{
+	req := object.RequestRecord{
 		MessageHash: []byte{1, 2, 3},
 		Object:      *genRandomID(0),
 	}
@@ -1242,5 +1242,5 @@ func (s *handlerSuite) TestMessageHandler_HandleGetRequest() {
 	require.NoError(s.T(), err)
 	reqReply, ok := rep.(*reply.Request)
 	require.True(s.T(), ok)
-	assert.Equal(s.T(), req, *record.DeserializeRecord(reqReply.Record).(*record.RequestRecord))
+	assert.Equal(s.T(), req, *object.DeserializeRecord(reqReply.Record).(*object.RequestRecord))
 }

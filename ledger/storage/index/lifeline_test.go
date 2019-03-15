@@ -22,7 +22,7 @@ import (
 	fuzz "github.com/google/gofuzz"
 	"github.com/insolar/insolar"
 	"github.com/insolar/insolar/gen"
-	"github.com/insolar/insolar/ledger/storage/record"
+	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -47,7 +47,7 @@ func delegates() (result map[insolar.Reference]insolar.Reference) {
 	return
 }
 
-func state() (state record.State) {
+func state() (state object.State) {
 	fuzz.New().NilChance(0).Fuzz(&state)
 	return
 }

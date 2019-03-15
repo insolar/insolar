@@ -31,7 +31,7 @@ import (
 	jetdrop "github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/index"
 	"github.com/insolar/insolar/ledger/storage/jet"
-	"github.com/insolar/insolar/ledger/storage/record"
+	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
@@ -376,8 +376,8 @@ func addRecords(
 		ctx,
 		jetID,
 		pulsenum,
-		&record.ObjectActivateRecord{
-			SideEffectRecord: record.SideEffectRecord{
+		&object.ObjectActivateRecord{
+			SideEffectRecord: object.SideEffectRecord{
 				Domain: testutils.RandomRef(),
 			},
 		},

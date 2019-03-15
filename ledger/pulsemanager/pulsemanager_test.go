@@ -28,7 +28,7 @@ import (
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/index"
-	"github.com/insolar/insolar/ledger/storage/record"
+	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
@@ -108,12 +108,12 @@ func (s *pulseManagerSuite) TestPulseManager_Set_CheckHotIndexesSending() {
 		s.ctx,
 		core.RecordID(jetID),
 		core.GenesisPulse.PulseNumber,
-		&record.ObjectActivateRecord{})
+		&object.ObjectActivateRecord{})
 	firstIndex := index.ObjectLifeline{
 		LatestState: firstID,
 	}
 	_ = s.objectStorage.SetObjectIndex(s.ctx, core.RecordID(jetID), firstID, &firstIndex)
-	codeRecord := &record.CodeRecord{}
+	codeRecord := &object.CodeRecord{}
 	secondID, _ := s.objectStorage.SetRecord(
 		s.ctx,
 		core.RecordID(jetID),

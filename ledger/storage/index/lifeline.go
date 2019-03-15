@@ -21,7 +21,7 @@ import (
 	"context"
 
 	"github.com/insolar/insolar"
-	"github.com/insolar/insolar/ledger/storage/record"
+	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/ugorji/go/codec"
 )
 
@@ -48,7 +48,7 @@ type ObjectLifeline struct {
 	ChildPointer        *insolar.ID // Meta record about child activation.
 	Parent              insolar.Reference
 	Delegates           map[insolar.Reference]insolar.Reference
-	State               record.State
+	State               object.State
 	LatestUpdate        insolar.PulseNumber
 	JetID               insolar.JetID
 }

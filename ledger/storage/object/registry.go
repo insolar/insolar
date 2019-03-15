@@ -1,4 +1,4 @@
-package record
+package object
 
 var registry = map[TypeID]Record{}
 
