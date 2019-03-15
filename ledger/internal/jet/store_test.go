@@ -22,6 +22,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/gen"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
@@ -32,6 +33,15 @@ func treeForPulse(s *Store, pulse core.PulseNumber) (*Tree, bool) {
 		return nil, false
 	}
 	return ltree.t, true
+}
+
+func TestJetStorage_Empty(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+	s := NewStore()
+
+	all := s.All(ctx, gen.PulseNumber())
+	require.Equal(t, 1, len(all), "should be just one jet ID")
+	require.Equal(t, core.ZeroJetID, all[0], "JetID should be a zero on empty storage")
 }
 
 func TestJetStorage_UpdateJetTree(t *testing.T) {
