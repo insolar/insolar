@@ -71,10 +71,9 @@ func (m *MockResolver) Resolve(nodeID core.RecordRef) (*host.Host, error) {
 	return result, nil
 }
 
-func (m *MockResolver) Inject(nodeKeeper network.NodeKeeper) {}
-func (m *MockResolver) AddToKnownHosts(h *host.Host)         {}
-func (m *MockResolver) Rebalance(network.PartitionPolicy)    {}
-func (m *MockResolver) GetRandomNodes(int) []host.Host       { return nil }
+func (m *MockResolver) AddToKnownHosts(h *host.Host)      {}
+func (m *MockResolver) Rebalance(network.PartitionPolicy) {}
+func (m *MockResolver) GetRandomNodes(int) []host.Host    { return nil }
 
 func (m *MockResolver) addMapping(key, value string) error {
 	k, err := core.NewRefFromBase58(key)
@@ -136,19 +135,19 @@ func TestNewInternalTransport2(t *testing.T) {
 	}()
 }
 
-func createTwoHostNetworks(id1, id2 string) (t1, t2 network.HostNetwork, err error) {
+func createTwoHostNetworks(id1, id2 string) (t1, t2 *TransportResolvable, err error) {
 	m := newMockResolver()
 
 	i1, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID1+DOMAIN)
 	if err != nil {
 		return nil, nil, err
 	}
-	tr1 := NewHostTransport(i1, m)
+	tr1 := &TransportResolvable{Transport: i1, Resolver: m}
 	i2, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID2+DOMAIN)
 	if err != nil {
 		return nil, nil, err
 	}
-	tr2 := NewHostTransport(i2, m)
+	tr2 := &TransportResolvable{Transport: i2, Resolver: m}
 
 	err = m.addMapping(id1, tr1.PublicAddress())
 	if err != nil {
@@ -189,12 +188,12 @@ func TestNewHostTransport(t *testing.T) {
 	}
 	t2.RegisterRequestHandler(types.Ping, handler)
 
-	t2.Start(ctx2)
-	t1.Start(ctx)
+	t2.Transport.Start(ctx2)
+	t1.Transport.Start(ctx)
 
 	defer func() {
-		t1.Stop(ctx)
-		t2.Stop(ctx2)
+		t1.Transport.Stop(ctx)
+		t2.Transport.Stop(ctx2)
 	}()
 
 	for i := 0; i < count; i++ {
@@ -214,9 +213,9 @@ func TestHostTransport_SendRequestPacket(t *testing.T) {
 
 	i1, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID1+DOMAIN)
 	require.NoError(t, err)
-	t1 := NewHostTransport(i1, m)
-	t1.Start(ctx)
-	defer t1.Stop(ctx)
+	t1 := &TransportResolvable{Transport: i1, Resolver: m}
+	t1.Transport.Start(ctx)
+	defer t1.Transport.Stop(ctx)
 
 	unknownID, err := core.NewRefFromBase58(IDUNKNOWN + DOMAIN)
 	require.NoError(t, err)
@@ -259,11 +258,11 @@ func TestHostTransport_SendRequestPacket2(t *testing.T) {
 
 	t2.RegisterRequestHandler(types.Ping, handler)
 
-	t2.Start(ctx2)
-	t1.Start(ctx)
+	t2.Transport.Start(ctx2)
+	t1.Transport.Start(ctx)
 	defer func() {
-		t1.Stop(ctx)
-		t2.Stop(ctx2)
+		t1.Transport.Stop(ctx)
+		t2.Transport.Stop(ctx2)
 	}()
 
 	request := t1.NewRequestBuilder().Type(types.Ping).Data(nil).Build()
@@ -298,11 +297,11 @@ func TestHostTransport_SendRequestPacket3(t *testing.T) {
 	}
 	t2.RegisterRequestHandler(types.Ping, handler)
 
-	t2.Start(ctx2)
-	t1.Start(ctx)
+	t2.Transport.Start(ctx2)
+	t1.Transport.Start(ctx)
 	defer func() {
-		t1.Stop(ctx)
-		t2.Stop(ctx2)
+		t1.Transport.Stop(ctx)
+		t2.Transport.Stop(ctx2)
 	}()
 
 	magicNumber := 42
@@ -342,9 +341,9 @@ func TestHostTransport_SendRequestPacket_errors(t *testing.T) {
 	}
 	t2.RegisterRequestHandler(types.Ping, handler)
 
-	t2.Start(ctx2)
-	defer t2.Stop(ctx2)
-	t1.Start(ctx)
+	t2.Transport.Start(ctx2)
+	defer t2.Transport.Stop(ctx2)
+	t1.Transport.Start(ctx)
 
 	request := t1.NewRequestBuilder().Type(types.Ping).Data(nil).Build()
 	ref, err := core.NewRefFromBase58(ID2 + DOMAIN)
@@ -357,7 +356,7 @@ func TestHostTransport_SendRequestPacket_errors(t *testing.T) {
 
 	f, err = t1.SendRequest(ctx, request, *ref)
 	require.NoError(t, err)
-	t1.Stop(ctx)
+	t1.Transport.Stop(ctx)
 
 	_, err = f.GetResponse(time.Second)
 	require.Error(t, err)
@@ -379,11 +378,11 @@ func TestHostTransport_WrongHandler(t *testing.T) {
 	}
 	t2.RegisterRequestHandler(InvalidPacket, handler)
 
-	t2.Start(ctx2)
-	t1.Start(ctx)
+	t2.Transport.Start(ctx2)
+	t1.Transport.Start(ctx)
 	defer func() {
-		t1.Stop(ctx)
-		t2.Stop(ctx2)
+		t1.Transport.Stop(ctx)
+		t2.Transport.Stop(ctx2)
 	}()
 
 	request := t1.NewRequestBuilder().Type(types.Ping).Build()

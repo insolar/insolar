@@ -22,6 +22,7 @@ import (
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/transport/packet"
 	"github.com/insolar/insolar/network/transport/packet/types"
@@ -39,14 +40,13 @@ type pulseController struct {
 	CryptographyScheme  core.PlatformCryptographyScheme `inject:""`
 	KeyProcessor        core.KeyProcessor               `inject:""`
 	CryptographyService core.CryptographyService        `inject:""`
-
-	hostNetwork  network.HostNetwork
-	routingTable network.RoutingTable
+	Resolver            network.RoutingTable            `inject:""`
+	Network             network.HostNetwork             `inject:""`
 }
 
 func (pc *pulseController) Init(ctx context.Context) error {
-	pc.hostNetwork.RegisterRequestHandler(types.Pulse, pc.processPulse)
-	pc.hostNetwork.RegisterRequestHandler(types.GetRandomHosts, pc.processGetRandomHosts)
+	pc.Network.RegisterRequestHandler(types.Pulse, pc.processPulse)
+	pc.Network.RegisterRequestHandler(types.GetRandomHosts, pc.processGetRandomHosts)
 	return nil
 }
 
@@ -59,18 +59,19 @@ func (pc *pulseController) processPulse(ctx context.Context, request network.Req
 	if !verified {
 		return nil, errors.New("[ pulseController ] processPulse: failed to verify a pulse sign")
 	}
-	// we should not process pulses in Waiting state because network can be unready to join current node,
-	// so we should wait for pulse from consensus phase1 packet
-	if pc.NodeKeeper.GetState() != core.WaitingNodeNetworkState {
+	// if we are a joiner node, we should receive pulse from phase1 packet and ignore pulse from pulsar
+	if !pc.NodeKeeper.GetConsensusInfo().IsJoiner() {
 		go pc.PulseHandler.HandlePulse(context.Background(), data.Pulse)
+	} else {
+		log.Debugf("Ignore pulse %v from pulsar, waiting for consensus phase1 packet", data.Pulse)
 	}
-	return pc.hostNetwork.BuildResponse(ctx, request, &packet.ResponsePulse{Success: true, Error: ""}), nil
+	return pc.Network.BuildResponse(ctx, request, &packet.ResponsePulse{Success: true, Error: ""}), nil
 }
 
 func (pc *pulseController) processGetRandomHosts(ctx context.Context, request network.Request) (network.Response, error) {
 	data := request.GetData().(*packet.RequestGetRandomHosts)
-	randomHosts := pc.routingTable.GetRandomNodes(data.HostsNumber)
-	return pc.hostNetwork.BuildResponse(ctx, request, &packet.ResponseGetRandomHosts{Hosts: randomHosts}), nil
+	randomHosts := pc.Resolver.GetRandomNodes(data.HostsNumber)
+	return pc.Network.BuildResponse(ctx, request, &packet.ResponseGetRandomHosts{Hosts: randomHosts}), nil
 }
 
 func (pc *pulseController) verifyPulseSign(pulse core.Pulse) (bool, error) {
@@ -98,6 +99,6 @@ func (pc *pulseController) verifyPulseSign(pulse core.Pulse) (bool, error) {
 	return true, nil
 }
 
-func NewPulseController(hostNetwork network.HostNetwork, routingTable network.RoutingTable) PulseController {
-	return &pulseController{hostNetwork: hostNetwork, routingTable: routingTable}
+func NewPulseController() PulseController {
+	return &pulseController{}
 }
