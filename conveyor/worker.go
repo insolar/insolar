@@ -168,6 +168,7 @@ func (w *worker) readInputQueueWorking() error {
 	return nil
 }
 
+// nolint: unused
 func updateElement(element *slotElement, payload interface{}, fullState fsm.ElementState) {
 	log.Debugf("[ updateElement ] starts ... ( element: %+v. fullstate: %d )", element, fullState)
 	if fullState != 0 {

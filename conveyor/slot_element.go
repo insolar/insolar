@@ -58,6 +58,7 @@ func (se *slotElement) setDeleteState() {
 	se.activationStatus = EmptyElement
 }
 
+// nolint: unused
 func (se *slotElement) update(state fsm.StateID, payload interface{}, sm statemachine.StateMachine) {
 	se.state = state
 	se.payload = payload
