@@ -583,6 +583,7 @@ func (lr *LogicRunner) executeOrValidate(
 	}
 	errstr := ""
 	if err != nil {
+		inslogger.FromContext(ctx).Warn("contract execution error: ", err)
 		errstr = err.Error()
 	}
 
