@@ -110,9 +110,7 @@ func (pm *Phases) OnPulse(ctx context.Context, pulse *core.Pulse, pulseStartTime
 		return errors.Wrap(err, "[ NET Consensus ] Error calculating cloud hash")
 	}
 	pm.NodeKeeper.SetCloudHash(hash)
-	state.UnsyncList.ApproveSync(state.ActiveNodes)
-	pm.NodeKeeper.Sync(state.UnsyncList)
-	return nil
+	return pm.NodeKeeper.Sync(ctx, state.ActiveNodes, state.ApprovedClaims)
 }
 
 func getPulseDuration(pulse *core.Pulse) (*time.Duration, error) {

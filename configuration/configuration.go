@@ -18,7 +18,6 @@ package configuration
 
 import (
 	"fmt"
-	stdlog "log"
 	"reflect"
 	"strings"
 
@@ -90,11 +89,40 @@ func (c *Holder) Init(required bool) (*Holder, error) {
 			return nil, err
 		}
 	}
-	err = c.LoadEnv()
-	if err != nil {
-		return nil, err
-	}
 	return c, nil
+}
+
+func (c *Holder) registerDefaultValue(val reflect.Value, parts ...string) {
+	variablePath := strings.ToLower(strings.Join(parts, "."))
+
+	c.viper.SetDefault(variablePath, val.Interface())
+}
+
+func (c *Holder) registerDifferentValue(val reflect.Value, parts ...string) {
+	variablePath := strings.Join(parts, ".")
+	previousValue := c.viper.Get(variablePath)
+
+	if !reflect.DeepEqual(previousValue, val.Interface()) {
+		c.viper.Set(variablePath, val.Interface())
+	}
+}
+
+func (c *Holder) recurseCallInLeaf(cb func(reflect.Value, ...string), iface interface{}, parts ...string) {
+	fldV := reflect.ValueOf(iface)
+	fldT := reflect.TypeOf(iface)
+
+	for fldPos := 0; fldPos < fldV.NumField(); fldPos++ {
+		fldName, fldValue := fldT.Field(fldPos).Name, fldV.Field(fldPos)
+
+		path := append(parts, fldName)
+
+		switch fldValue.Kind() {
+		case reflect.Struct:
+			c.recurseCallInLeaf(cb, fldValue.Interface(), path...)
+		default:
+			cb(fldValue, path...)
+		}
+	}
 }
 
 // NewHolder creates new Holder with default configuration
@@ -106,8 +134,9 @@ func NewHolder() *Holder {
 	holder.viper.AddConfigPath(".")
 	holder.viper.SetConfigType("yml")
 
-	holder.viper.SetDefault("insolar", cfg)
+	holder.recurseCallInLeaf(holder.registerDefaultValue, cfg)
 
+	holder.viper.AutomaticEnv()
 	holder.viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	holder.viper.SetEnvPrefix("insolar")
 	return holder
@@ -120,13 +149,6 @@ func (c *Holder) Load() error {
 		return err
 	}
 
-	return c.viper.UnmarshalKey("insolar", &c.Configuration)
-}
-
-// LoadEnv overrides configuration with env variables
-func (c *Holder) LoadEnv() error {
-	// workaround for AutomaticEnv issue https://github.com/spf13/viper/issues/188
-	bindEnvs(c.viper, c.Configuration)
 	return c.viper.Unmarshal(&c.Configuration)
 }
 
@@ -138,37 +160,14 @@ func (c *Holder) LoadFromFile(path string) error {
 
 // Save method writes configuration to default file path
 func (c *Holder) Save() error {
-	c.viper.Set("insolar", c.Configuration)
+	c.recurseCallInLeaf(c.registerDifferentValue, c.Configuration)
 	return c.viper.WriteConfig()
 }
 
 // SaveAs method writes configuration to particular file path
 func (c *Holder) SaveAs(path string) error {
+	c.recurseCallInLeaf(c.registerDifferentValue, c.Configuration)
 	return c.viper.WriteConfigAs(path)
-}
-
-func bindEnvs(v *viper.Viper, iface interface{}, parts ...string) {
-	ifv := reflect.ValueOf(iface)
-	ift := reflect.TypeOf(iface)
-	for i := 0; i < ift.NumField(); i++ {
-		fieldv := ifv.Field(i)
-		t := ift.Field(i)
-		name := strings.ToLower(t.Name)
-		tag, ok := t.Tag.Lookup("mapstructure")
-		if ok {
-			name = tag
-		}
-		path := append(parts, name)
-		switch fieldv.Kind() {
-		case reflect.Struct:
-			bindEnvs(v, fieldv.Interface(), path...)
-		default:
-			err := v.BindEnv(strings.Join(path, "."))
-			if err != nil {
-				stdlog.Println("bindEnv failed:", err.Error())
-			}
-		}
-	}
 }
 
 // ToString converts any configuration struct to yaml string

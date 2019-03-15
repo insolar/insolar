@@ -86,11 +86,6 @@ func main() {
 		log.Warn("failed to load configuration from file: ", err.Error())
 	}
 
-	err = cfgHolder.LoadEnv()
-	if err != nil {
-		log.Warn("failed to load configuration from env:", err.Error())
-	}
-
 	cfg := &cfgHolder.Configuration
 	cfg.Metrics.Namespace = "insolard"
 

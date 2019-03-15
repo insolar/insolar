@@ -17,6 +17,7 @@
 package conveyor
 
 import (
+	"github.com/insolar/insolar/conveyor/interfaces/fsm"
 	"github.com/insolar/insolar/conveyor/interfaces/slot"
 	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
 )
@@ -32,16 +33,17 @@ const (
 )
 
 type slotElement struct {
-	id               uint32
-	nodeID           uint32
-	parentElementID  uint32
-	inputEvent       interface{}
-	payload          interface{} // nolint
-	postponedError   error
-	stateMachineType statemachine.StateMachineType
-	state            uint16
+	id              uint32
+	nodeID          uint32
+	parentElementID uint32
+	inputEvent      interface{}
+	payload         interface{} // nolint: unused
+	postponedError  error       // nolint: structcheck
+	stateMachine    statemachine.StateMachine
+	state           fsm.StateID
 
 	nextElement      *slotElement
+	prevElement      *slotElement
 	activationStatus ActivationStatus
 }
 
@@ -51,6 +53,21 @@ func newSlotElement(activationStatus ActivationStatus) *slotElement {
 }
 
 // ---- SlotElementRestrictedHelper
+
+func (se *slotElement) setDeleteState() {
+	se.activationStatus = EmptyElement
+}
+
+// nolint: unused
+func (se *slotElement) update(state fsm.StateID, payload interface{}, sm statemachine.StateMachine) {
+	se.state = state
+	se.payload = payload
+	se.stateMachine = sm
+}
+
+func (se *slotElement) isDeactivated() bool {
+	return se.activationStatus == NotActiveElement
+}
 
 // GetParentElementID implements SlotElementRestrictedHelper
 func (se *slotElement) GetParentElementID() uint32 {
@@ -90,12 +107,12 @@ func (se *slotElement) GetNodeID() uint32 {
 }
 
 // GetType implements SlotElementReadOnly
-func (se *slotElement) GetType() int {
-	return se.stateMachineType.GetTypeID()
+func (se *slotElement) GetType() fsm.ID {
+	return se.stateMachine.GetTypeID()
 }
 
 // GetState implements SlotElementReadOnly
-func (se *slotElement) GetState() uint16 {
+func (se *slotElement) GetState() fsm.StateID {
 	return se.state
 }
 

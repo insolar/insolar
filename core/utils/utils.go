@@ -22,7 +22,7 @@ import (
 	"os"
 
 	"github.com/pkg/errors"
-	uuid "github.com/satori/go.uuid"
+	"github.com/satori/go.uuid"
 )
 
 type traceIDKey struct{}
@@ -65,4 +65,15 @@ func SendGracefulStopSignal() error {
 		return err
 	}
 	return p.Signal(os.Interrupt)
+}
+
+// CircleXOR performs XOR for 'value' and 'src'. The result is returned as new byte slice.
+// If 'value' is smaller than 'dst', XOR starts from the beginning of 'src'.
+func CircleXOR(value, src []byte) []byte {
+	result := make([]byte, len(value))
+	srcLen := len(src)
+	for i := range result {
+		result[i] = value[i] ^ src[i%srcLen]
+	}
+	return result
 }

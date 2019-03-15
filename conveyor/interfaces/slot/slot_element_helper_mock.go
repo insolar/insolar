@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
+	fsm "github.com/insolar/insolar/conveyor/interfaces/fsm"
+
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
@@ -47,12 +49,12 @@ type SlotElementHelperMock struct {
 	GetPayloadPreCounter uint64
 	GetPayloadMock       mSlotElementHelperMockGetPayload
 
-	GetStateFunc       func() (r uint16)
+	GetStateFunc       func() (r fsm.StateID)
 	GetStateCounter    uint64
 	GetStatePreCounter uint64
 	GetStateMock       mSlotElementHelperMockGetState
 
-	GetTypeFunc       func() (r int)
+	GetTypeFunc       func() (r fsm.ID)
 	GetTypeCounter    uint64
 	GetTypePreCounter uint64
 	GetTypeMock       mSlotElementHelperMockGetType
@@ -906,7 +908,7 @@ type SlotElementHelperMockGetStateExpectation struct {
 }
 
 type SlotElementHelperMockGetStateResult struct {
-	r uint16
+	r fsm.StateID
 }
 
 //Expect specifies that invocation of SlotElementHelper.GetState is expected from 1 to Infinity times
@@ -922,7 +924,7 @@ func (m *mSlotElementHelperMockGetState) Expect() *mSlotElementHelperMockGetStat
 }
 
 //Return specifies results of invocation of SlotElementHelper.GetState
-func (m *mSlotElementHelperMockGetState) Return(r uint16) *SlotElementHelperMock {
+func (m *mSlotElementHelperMockGetState) Return(r fsm.StateID) *SlotElementHelperMock {
 	m.mock.GetStateFunc = nil
 	m.expectationSeries = nil
 
@@ -944,12 +946,12 @@ func (m *mSlotElementHelperMockGetState) ExpectOnce() *SlotElementHelperMockGetS
 	return expectation
 }
 
-func (e *SlotElementHelperMockGetStateExpectation) Return(r uint16) {
+func (e *SlotElementHelperMockGetStateExpectation) Return(r fsm.StateID) {
 	e.result = &SlotElementHelperMockGetStateResult{r}
 }
 
 //Set uses given function f as a mock of SlotElementHelper.GetState method
-func (m *mSlotElementHelperMockGetState) Set(f func() (r uint16)) *SlotElementHelperMock {
+func (m *mSlotElementHelperMockGetState) Set(f func() (r fsm.StateID)) *SlotElementHelperMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -958,7 +960,7 @@ func (m *mSlotElementHelperMockGetState) Set(f func() (r uint16)) *SlotElementHe
 }
 
 //GetState implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementHelper interface
-func (m *SlotElementHelperMock) GetState() (r uint16) {
+func (m *SlotElementHelperMock) GetState() (r fsm.StateID) {
 	counter := atomic.AddUint64(&m.GetStatePreCounter, 1)
 	defer atomic.AddUint64(&m.GetStateCounter, 1)
 
@@ -1040,7 +1042,7 @@ type SlotElementHelperMockGetTypeExpectation struct {
 }
 
 type SlotElementHelperMockGetTypeResult struct {
-	r int
+	r fsm.ID
 }
 
 //Expect specifies that invocation of SlotElementHelper.GetType is expected from 1 to Infinity times
@@ -1056,7 +1058,7 @@ func (m *mSlotElementHelperMockGetType) Expect() *mSlotElementHelperMockGetType 
 }
 
 //Return specifies results of invocation of SlotElementHelper.GetType
-func (m *mSlotElementHelperMockGetType) Return(r int) *SlotElementHelperMock {
+func (m *mSlotElementHelperMockGetType) Return(r fsm.ID) *SlotElementHelperMock {
 	m.mock.GetTypeFunc = nil
 	m.expectationSeries = nil
 
@@ -1078,12 +1080,12 @@ func (m *mSlotElementHelperMockGetType) ExpectOnce() *SlotElementHelperMockGetTy
 	return expectation
 }
 
-func (e *SlotElementHelperMockGetTypeExpectation) Return(r int) {
+func (e *SlotElementHelperMockGetTypeExpectation) Return(r fsm.ID) {
 	e.result = &SlotElementHelperMockGetTypeResult{r}
 }
 
 //Set uses given function f as a mock of SlotElementHelper.GetType method
-func (m *mSlotElementHelperMockGetType) Set(f func() (r int)) *SlotElementHelperMock {
+func (m *mSlotElementHelperMockGetType) Set(f func() (r fsm.ID)) *SlotElementHelperMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1092,7 +1094,7 @@ func (m *mSlotElementHelperMockGetType) Set(f func() (r int)) *SlotElementHelper
 }
 
 //GetType implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementHelper interface
-func (m *SlotElementHelperMock) GetType() (r int) {
+func (m *SlotElementHelperMock) GetType() (r fsm.ID) {
 	counter := atomic.AddUint64(&m.GetTypePreCounter, 1)
 	defer atomic.AddUint64(&m.GetTypeCounter, 1)
 

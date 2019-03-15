@@ -16,27 +16,28 @@
 
 package statemachine
 
-import "github.com/insolar/insolar/conveyor/interfaces/slot"
+import (
+	"github.com/insolar/insolar/conveyor/interfaces/fsm"
+	"github.com/insolar/insolar/conveyor/interfaces/iadapter"
+	"github.com/insolar/insolar/conveyor/interfaces/slot"
+)
 
-type InitHandler func(element slot.SlotElementHelper) (interface{}, uint32, error)
-type TransitHandler func(element slot.SlotElementHelper) (interface{}, uint32, error)
-type MigrationHandler func(element slot.SlotElementHelper) (interface{}, uint32, error)
-type ErrorHandler func(element slot.SlotElementHelper, err error) (interface{}, uint32)
-type AdapterResponseHandler func(element slot.SlotElementHelper, err error) (interface{}, uint32)
-type NestedHandler func(element slot.SlotElementHelper, err error) (interface{}, uint32)
+// Types below describes different types of raw handlers
+type TransitHandler func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error)
+type MigrationHandler func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error)
+type AdapterResponseHandler func(element slot.SlotElementHelper, response iadapter.Response) (interface{}, fsm.ElementState, error)
+type NestedHandler func(element slot.SlotElementHelper, err error) (interface{}, fsm.ElementState)
+type TransitionErrorHandler func(element slot.SlotElementHelper, err error) (interface{}, fsm.ElementState)
+type ResponseErrorHandler func(element slot.SlotElementHelper, response iadapter.Response, err error) (interface{}, fsm.ElementState)
 
-type TransitionErrorHandler func(element slot.SlotElementHelper, err error) (interface{}, uint32)
-type ResponseErrorHandler func(element slot.SlotElementHelper, err error) (interface{}, uint32)
-
-// StateMachineType describes access to element's state machine
-//go:generate minimock -i github.com/insolar/insolar/conveyor/interfaces/statemachine.StateMachineType -o ./ -s _mock.go
-type StateMachineType interface {
-	GetTypeID() int
-	GetMigrationHandler(state int) MigrationHandler
-	GetTransitionHandler(state int) TransitHandler
-	GetResponseHandler(state int) AdapterResponseHandler
-	GetNestedHandler(state int) NestedHandler
-
-	GetTransitionErrorHandler(state int) TransitionErrorHandler
-	GetResponseErrorHandler(state int) ResponseErrorHandler
+// StateMachine describes access to element's state machine
+//go:generate minimock -i github.com/insolar/insolar/conveyor/interfaces/statemachine.StateMachine -o ./ -s _mock.go
+type StateMachine interface {
+	GetTypeID() fsm.ID
+	GetMigrationHandler(state fsm.StateID) MigrationHandler
+	GetTransitionHandler(state fsm.StateID) TransitHandler
+	GetResponseHandler(state fsm.StateID) AdapterResponseHandler
+	GetNestedHandler(state fsm.StateID) NestedHandler
+	GetTransitionErrorHandler(state fsm.StateID) TransitionErrorHandler
+	GetResponseErrorHandler(state fsm.StateID) ResponseErrorHandler
 }

@@ -33,13 +33,13 @@ type TransportResolvable struct {
 }
 
 // Start listening to network requests.
-func (tr *TransportResolvable) Start(ctx context.Context) {
-	tr.internalTransport.Start(ctx)
+func (tr *TransportResolvable) Start(ctx context.Context) error {
+	return tr.internalTransport.Start(ctx)
 }
 
 // Stop listening to network requests.
-func (tr *TransportResolvable) Stop() {
-	tr.internalTransport.Stop()
+func (tr *TransportResolvable) Stop(ctx context.Context) error {
+	return tr.internalTransport.Stop(ctx)
 }
 
 // PublicAddress returns public address that can be published for all nodes.

@@ -98,7 +98,7 @@ func (n *ServiceNetwork) RemoteProcedureRegister(name string, method core.Remote
 func incrementPort(address string) (string, error) {
 	parts := strings.Split(address, ":")
 	if len(parts) < 2 {
-		return address, errors.New("failed to get port from address")
+		return address, errors.New("failed to get port from address " + address)
 	}
 	port, err := strconv.Atoi(parts[len(parts)-1])
 	if err != nil {
@@ -215,8 +215,7 @@ func (n *ServiceNetwork) Stop(ctx context.Context) error {
 		log.Errorf("Error while stopping network components: %s", err.Error())
 	}
 	logger.Info("Stopping host network")
-	n.hostNetwork.Stop()
-	return nil
+	return n.hostNetwork.Stop(ctx)
 }
 
 func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse core.Pulse) {
