@@ -22,8 +22,9 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/conveyor/interfaces/constant"
+	"github.com/insolar/insolar/conveyor/interfaces/fsm"
 	"github.com/insolar/insolar/conveyor/interfaces/iadapter"
-	"github.com/insolar/insolar/conveyor/interfaces/istatemachine"
+	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
 	"github.com/insolar/insolar/conveyor/queue"
 	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
@@ -69,9 +70,9 @@ const (
 	NestedCall
 )
 
-func GetStateMachineByType(mtype MachineType) istatemachine.StateMachineType {
+func GetStateMachineByType(mtype MachineType) statemachine.StateMachine {
 	//panic("implement me") // TODO:
-	sm := istatemachine.NewStateMachineTypeMock(&testing.T{})
+	sm := statemachine.NewStateMachineMock(&testing.T{})
 	return sm
 }
 
@@ -167,11 +168,12 @@ func (w *worker) readInputQueueWorking() error {
 	return nil
 }
 
-func updateElement(element *slotElement, payload interface{}, fullState uint32) {
+// nolint: unused
+func updateElement(element *slotElement, payload interface{}, fullState fsm.ElementState) {
 	log.Debugf("[ updateElement ] starts ... ( element: %+v. fullstate: %d )", element, fullState)
 	if fullState != 0 {
-		sm, state := extractStates(fullState)
-		machineType := element.stateMachineType
+		sm, state := fullState.Parse()
+		machineType := element.stateMachine
 		if sm != 0 {
 			machineType = GetStateMachineByType(MachineType(sm))
 		}
@@ -182,7 +184,7 @@ func updateElement(element *slotElement, payload interface{}, fullState uint32) 
 }
 
 func (w *worker) processResponse(resp queue.OutputElement) error {
-	adapterResp, ok := resp.GetData().(iadapter.IAdapterResponse)
+	adapterResp, ok := resp.GetData().(iadapter.Response)
 	if !ok {
 		panic(fmt.Sprintf("[ processResponse ] Bad type in adapter response queue: %T", resp.GetData()))
 	}
@@ -192,12 +194,12 @@ func (w *worker) processResponse(resp queue.OutputElement) error {
 		return nil
 	}
 
-	respHandler := element.stateMachineType.GetResponseHandler(w.slot.pulseState, element.state)
+	respHandler := element.stateMachine.GetResponseHandler(element.state)
 
 	payload, newState, err := respHandler(element, adapterResp)
 	if err != nil {
 		log.Error("[ processResponse ] Response handler errors: ", err)
-		respErrorHandler := element.stateMachineType.GetResponseErrorHandler(w.slot.pulseState, element.state)
+		respErrorHandler := element.stateMachine.GetResponseErrorHandler(element.state)
 		if respErrorHandler == nil {
 			panic(fmt.Sprintf("[ processResponse ] No response error handler. State: %d. AdapterResp: %+v", element.state, adapterResp))
 		}
@@ -302,11 +304,11 @@ func (w *worker) processingElements() {
 }
 
 func (w *worker) processOneElement(element *slotElement) bool {
-	transitionHandler := element.stateMachineType.GetTransitionHandler(w.slot.pulseState, element.state)
+	transitionHandler := element.stateMachine.GetTransitionHandler(element.state)
 	payload, newState, err := transitionHandler(element)
 	if err != nil {
 		log.Error("[ processingElements ] Transition handler error: ", err)
-		errorHandler := element.stateMachineType.GetTransitionErrorHandler(w.slot.pulseState, element.state)
+		errorHandler := element.stateMachine.GetTransitionErrorHandler(element.state)
 		payload, newState = errorHandler(element, err)
 	}
 	updateElement(element, payload, newState)
@@ -436,7 +438,7 @@ func (w *worker) migrate(status ActivationStatus) error {
 	numElements := w.slot.len(status)
 	for ; numElements > 0; numElements-- {
 		element := w.slot.popElement(status)
-		migHandler := element.stateMachineType.GetMigrationHandler(w.slot.pulseState, element.state)
+		migHandler := element.stateMachine.GetMigrationHandler(element.state)
 		var err error
 		if migHandler == nil {
 			log.Infof("[ migrate ] No migration handler for pulseState: %d, element.state: %d. Nothing done", w.slot.pulseState, element.state)
@@ -450,7 +452,7 @@ func (w *worker) migrate(status ActivationStatus) error {
 		payload, newState, err := migHandler(element)
 		if err != nil {
 			log.Error("[ migrate ] Response handler errors: ", err)
-			respErrorHandler := element.stateMachineType.GetTransitionErrorHandler(w.slot.pulseState, element.state)
+			respErrorHandler := element.stateMachine.GetTransitionErrorHandler(element.state)
 
 			payload, newState = respErrorHandler(element, err)
 		}
@@ -490,6 +492,7 @@ func (w *worker) initializing() {
 	}
 }
 
+// nolint: unused
 func (w *worker) run() {
 	for !w.stop {
 		switch w.slot.slotState {

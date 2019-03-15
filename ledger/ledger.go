@@ -20,6 +20,9 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/ledger/recentstorage"
+	"github.com/insolar/insolar/ledger/storage/drop"
+	"github.com/insolar/insolar/ledger/storage/genesis"
+	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/pkg/errors"
 
@@ -97,15 +100,15 @@ func GetLedgerComponents(conf configuration.Ledger, certificate core.Certificate
 
 	return []interface{}{
 		db,
+		drop.NewStorageDB(),
 		storage.NewCleaner(),
 		pulseTracker,
 		storage.NewPulseStorage(),
-		storage.NewJetStorage(),
-		storage.NewDropStorage(conf.JetSizesHistoryDepth),
+		jet.NewJetStorage(),
 		node.NewStorage(),
 		storage.NewObjectStorage(),
 		storage.NewReplicaStorage(),
-		storage.NewGenesisInitializer(),
+		genesis.NewGenesisInitializer(),
 		recentstorage.NewRecentStorageProvider(conf.RecentStorage.DefaultTTL),
 		artifactmanager.NewHotDataWaiterConcrete(),
 		artifactmanager.NewArtifactManger(),

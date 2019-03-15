@@ -21,7 +21,6 @@ import (
 
 	"github.com/insolar/insolar"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/storage"
 )
 
 // Accessor provides info about active nodes.
@@ -58,7 +57,7 @@ func (a *Storage) Set(pulse core.PulseNumber, nodes []insolar.Node) error {
 	defer a.lock.Unlock()
 
 	if _, ok := a.nodes[pulse]; ok {
-		return storage.ErrOverride
+		return ErrOverride
 	}
 
 	if len(nodes) != 0 {
@@ -77,7 +76,7 @@ func (a *Storage) All(pulse core.PulseNumber) ([]insolar.Node, error) {
 
 	nodes, ok := a.nodes[pulse]
 	if !ok {
-		return nil, core.ErrNoNodes
+		return nil, ErrNoNodes
 	}
 	res := append(nodes[:0:0], nodes...)
 
@@ -91,7 +90,7 @@ func (a *Storage) InRole(pulse core.PulseNumber, role core.StaticRole) ([]insola
 
 	nodes, ok := a.nodes[pulse]
 	if !ok {
-		return nil, core.ErrNoNodes
+		return nil, ErrNoNodes
 	}
 	var inRole []insolar.Node
 	for _, node := range nodes {

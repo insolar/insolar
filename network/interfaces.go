@@ -259,3 +259,8 @@ type ClaimQueue interface {
 	// Length returns the length of the queue
 	Length() int
 }
+
+// Snapshot provides ...
+type Snapshot interface {
+	GetPulse()
+}
