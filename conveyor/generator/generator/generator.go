@@ -48,7 +48,7 @@ type Generator struct {
 
 func NewGenerator(pathToStateMachines string, pathToMatrixFile string) *Generator {
 	_, me, _, ok := runtime.Caller(0)
-	if ok == false {
+	if !ok {
 		exitWithError("couldn't get self full path")
 	}
 	idx := strings.LastIndex(string(me), insolarRep)
