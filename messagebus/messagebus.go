@@ -64,7 +64,7 @@ type MessageBus struct {
 	NextPulseMessagePoolCounter uint32
 	NextPulseMessagePoolLock    sync.RWMutex
 
-	futureManager core.FutureManager
+	futureManager FutureManager
 }
 
 // NewMessageBus creates plain MessageBus instance. It can be used to create Player and Recorder instances that
@@ -75,7 +75,7 @@ func NewMessageBus(config configuration.Configuration) (*MessageBus, error) {
 		signmessages:             config.Host.SignMessages,
 		conveyorPendingTimeout:   time.Duration(config.Conveyor.PendingTimeout) * time.Millisecond,
 		NextPulseMessagePoolChan: make(chan interface{}),
-		futureManager:            core.NewFutureManager(),
+		futureManager:            NewFutureManager(),
 	}
 	mb.Lock(context.Background())
 	return mb, nil
@@ -268,7 +268,7 @@ func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Repl
 	_, ok := conveyorReadyTypes[msg.Type()]
 	if ok {
 		f := mb.futureManager.Create()
-		event := core.ConveyorPendingMessage{Msg: msg, F: f}
+		event := ConveyorPendingMessage{Msg: msg, F: f}
 		err := mb.Conveyor.SinkPush(msg.Pulse(), event)
 		if err != nil {
 			f.Cancel()

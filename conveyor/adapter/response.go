@@ -31,7 +31,7 @@ func NewResponseSendAdapter() PulseConveyorAdapterTaskSink {
 
 // ResponseSenderTask is task for adapter for sending response
 type ResponseSenderTask struct {
-	Future core.Future
+	Future core.ConveyorFuture
 	Result core.Reply
 }
 

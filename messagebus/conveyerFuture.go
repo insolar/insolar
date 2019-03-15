@@ -14,13 +14,15 @@
  *    limitations under the License.
  */
 
-package core
+package messagebus
 
 import (
 	"errors"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/insolar/insolar/core"
 )
 
 var (
@@ -30,39 +32,20 @@ var (
 	ErrFutureChannelClosed = errors.New("can't wait for result: channel closed")
 )
 
-// Future is ConveyorPendingMessage response future.
-type Future interface {
-
-	// ID returns number.
-	ID() uint32
-
-	// Result is a channel to listen for future result.
-	Result() <-chan Reply
-
-	// SetResult makes packet to appear in result channel.
-	SetResult(res Reply)
-
-	// GetResult gets the future result from Result() channel with a timeout set to `duration`.
-	GetResult(duration time.Duration) (Reply, error)
-
-	// Cancel closes all channels and cleans up underlying structures.
-	Cancel()
-}
-
-// CancelCallback is a callback function executed when cancelling Future.
-type CancelCallback func(Future)
+// CancelCallback is a callback function executed when cancelling ConveyorFuture.
+type CancelCallback func(core.ConveyorFuture)
 
 type future struct {
-	result         chan Reply
+	result         chan core.Reply
 	id             uint32
 	finished       uint32
 	cancelCallback CancelCallback
 }
 
-// NewFuture creates new Future.
-func NewFuture(id uint32, cancelCallback CancelCallback) Future {
+// NewFuture creates new ConveyorFuture.
+func NewFuture(id uint32, cancelCallback CancelCallback) core.ConveyorFuture {
 	return &future{
-		result:         make(chan Reply, 1),
+		result:         make(chan core.Reply, 1),
 		id:             id,
 		cancelCallback: cancelCallback,
 	}
@@ -74,12 +57,12 @@ func (future *future) ID() uint32 {
 }
 
 // Result returns result packet channel.
-func (future *future) Result() <-chan Reply {
+func (future *future) Result() <-chan core.Reply {
 	return future.result
 }
 
 // SetResult write packet to the result channel.
-func (future *future) SetResult(res Reply) {
+func (future *future) SetResult(res core.Reply) {
 	if atomic.CompareAndSwapUint32(&future.finished, 0, 1) {
 		future.result <- res
 		future.finish()
@@ -87,7 +70,7 @@ func (future *future) SetResult(res Reply) {
 }
 
 // GetResult gets the future result from Result() channel with a timeout set to `duration`.
-func (future *future) GetResult(duration time.Duration) (Reply, error) {
+func (future *future) GetResult(duration time.Duration) (core.Reply, error) {
 	select {
 	case result, ok := <-future.Result():
 		if !ok {
@@ -100,7 +83,7 @@ func (future *future) GetResult(duration time.Duration) (Reply, error) {
 	}
 }
 
-// Cancel allows to cancel Future processing.
+// Cancel allows to cancel ConveyorFuture processing.
 func (future *future) Cancel() {
 	if atomic.CompareAndSwapUint32(&future.finished, 0, 1) {
 		future.finish()
@@ -114,19 +97,19 @@ func (future *future) finish() {
 
 type futureManager struct {
 	mutex   sync.RWMutex
-	futures map[uint32]Future
+	futures map[uint32]core.ConveyorFuture
 }
 
 func newFutureManager() *futureManager {
 	return &futureManager{
-		futures: make(map[uint32]Future),
+		futures: make(map[uint32]core.ConveyorFuture),
 	}
 }
 
 // Create implements FutureManager interface
-func (fm *futureManager) Create() Future {
+func (fm *futureManager) Create() core.ConveyorFuture {
 	id := uint32(1)
-	future := NewFuture(id, func(f Future) {
+	future := NewFuture(id, func(f core.ConveyorFuture) {
 		fm.delete(f.ID())
 	})
 
@@ -139,7 +122,7 @@ func (fm *futureManager) Create() Future {
 }
 
 // Get implements FutureManager interface
-func (fm *futureManager) Get(id uint32) Future {
+func (fm *futureManager) Get(id uint32) core.ConveyorFuture {
 	fm.mutex.RLock()
 	defer fm.mutex.RUnlock()
 
@@ -153,12 +136,18 @@ func (fm *futureManager) delete(id uint32) {
 	delete(fm.futures, id)
 }
 
-// FutureManager is store and create Future instances
+// FutureManager is store and create ConveyorFuture instances
 type FutureManager interface {
-	Get(id uint32) Future
-	Create() Future
+	Get(id uint32) core.ConveyorFuture
+	Create() core.ConveyorFuture
 }
 
 func NewFutureManager() FutureManager {
 	return newFutureManager()
+}
+
+// ConveyorPendingMessage is message for conveyor witch can pending for response
+type ConveyorPendingMessage struct {
+	Msg core.Parcel
+	F   core.ConveyorFuture
 }

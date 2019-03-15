@@ -17,6 +17,8 @@
 package core
 
 import (
+	"time"
+
 	"github.com/insolar/insolar/conveyor/queue"
 )
 
@@ -59,8 +61,16 @@ type Conveyor interface {
 	Control
 }
 
-// ConveyorPendingMessage is message for conveyor witch can pending for response
-type ConveyorPendingMessage struct {
-	Msg Parcel
-	F   Future
+// ConveyorFuture is pending for response from conveyor
+type ConveyorFuture interface {
+	// ID returns number.
+	ID() uint32
+	// Result is a channel to listen for future result.
+	Result() <-chan Reply
+	// SetResult makes packet to appear in result channel.
+	SetResult(res Reply)
+	// GetResult gets the future result from Result() channel with a timeout set to `duration`.
+	GetResult(duration time.Duration) (Reply, error)
+	// Cancel closes all channels and cleans up underlying structures.
+	Cancel()
 }
