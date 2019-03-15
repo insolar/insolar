@@ -20,9 +20,7 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/ledger/storage/index"
-	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/record"
 )
 
@@ -34,8 +32,6 @@ type ObjectStorage interface {
 
 	GetRecord(ctx context.Context, jetID core.RecordID, id *core.RecordID) (record.Record, error)
 	SetRecord(ctx context.Context, jetID core.RecordID, pulseNumber core.PulseNumber, rec record.Record) (*core.RecordID, error)
-
-	SetMessage(ctx context.Context, jetID core.RecordID, pulseNumber core.PulseNumber, genericMessage core.Message) error
 
 	IterateIndexIDs(
 		ctx context.Context,
@@ -140,31 +136,13 @@ func (os *objectStorage) SetRecord(ctx context.Context, jetID core.RecordID, pul
 	return id, nil
 }
 
-// SetMessage persists message to the database
-func (os *objectStorage) SetMessage(ctx context.Context, jetID core.RecordID, pulseNumber core.PulseNumber, genericMessage core.Message) error {
-	_, prefix := jet.Jet(jetID)
-	messageBytes := message.ToBytes(genericMessage)
-	hw := os.PlatformCryptographyScheme.ReferenceHasher()
-	_, err := hw.Write(messageBytes)
-	if err != nil {
-		return err
-	}
-	hw.Sum(nil)
-
-	return os.DB.set(
-		ctx,
-		prefixkey(scopeIDMessage, prefix, pulseNumber.Bytes(), hw.Sum(nil)),
-		messageBytes,
-	)
-}
-
 // IterateIndexIDs iterates over index IDs on provided Jet ID.
 func (os *objectStorage) IterateIndexIDs(
 	ctx context.Context,
 	jetID core.RecordID,
 	handler func(id core.RecordID) error,
 ) error {
-	_, jetPrefix := jet.Jet(jetID)
+	jetPrefix := core.JetID(jetID).Prefix()
 	prefix := prefixkey(scopeIDLifeline, jetPrefix)
 
 	return os.DB.iterate(ctx, prefix, func(k, v []byte) error {

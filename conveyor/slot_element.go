@@ -17,8 +17,9 @@
 package conveyor
 
 import (
-	"github.com/insolar/insolar/conveyor/interfaces/islot"
-	"github.com/insolar/insolar/conveyor/interfaces/istatemachine"
+	"github.com/insolar/insolar/conveyor/interfaces/fsm"
+	"github.com/insolar/insolar/conveyor/interfaces/slot"
+	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
 )
 
 // ActivationStatus represents status of work for slot element
@@ -32,14 +33,14 @@ const (
 )
 
 type slotElement struct {
-	id               uint32
-	nodeID           uint32
-	parentElementID  uint32
-	inputEvent       interface{}
-	payload          interface{} // nolint
-	postponedError   error
-	stateMachineType istatemachine.StateMachineType
-	state            uint32
+	id              uint32
+	nodeID          uint32
+	parentElementID uint32
+	inputEvent      interface{}
+	payload         interface{} // nolint: unused
+	postponedError  error       // nolint: structcheck
+	stateMachine    statemachine.StateMachine
+	state           fsm.StateID
 
 	nextElement      *slotElement
 	prevElement      *slotElement
@@ -57,10 +58,11 @@ func (se *slotElement) setDeleteState() {
 	se.activationStatus = EmptyElement
 }
 
-func (se *slotElement) update(state uint32, payload interface{}, sm istatemachine.StateMachineType) {
+// nolint: unused
+func (se *slotElement) update(state fsm.StateID, payload interface{}, sm statemachine.StateMachine) {
 	se.state = state
 	se.payload = payload
-	se.stateMachineType = sm
+	se.stateMachine = sm
 }
 
 func (se *slotElement) isDeactivated() bool {
@@ -105,12 +107,12 @@ func (se *slotElement) GetNodeID() uint32 {
 }
 
 // GetType implements SlotElementReadOnly
-func (se *slotElement) GetType() int {
-	return se.stateMachineType.GetTypeID()
+func (se *slotElement) GetType() fsm.ID {
+	return se.stateMachine.GetTypeID()
 }
 
 // GetState implements SlotElementReadOnly
-func (se *slotElement) GetState() uint32 {
+func (se *slotElement) GetState() fsm.StateID {
 	return se.state
 }
 
@@ -122,7 +124,7 @@ func (se *slotElement) InformParent(payload interface{}) bool {
 }
 
 // DeactivateTill implements SlotElementHelper
-func (se *slotElement) DeactivateTill(reactivateOn islot.ReactivateMode) {
+func (se *slotElement) DeactivateTill(reactivateOn slot.ReactivateMode) {
 	panic("implement me")
 }
 

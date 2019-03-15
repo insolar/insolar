@@ -20,8 +20,11 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/conveyor/interfaces/constant"
-	"github.com/insolar/insolar/conveyor/interfaces/islot"
-	"github.com/insolar/insolar/conveyor/interfaces/istatemachine"
+	"github.com/insolar/insolar/conveyor/interfaces/slot"
+
+	"github.com/insolar/insolar/conveyor/interfaces/fsm"
+	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
+
 	"github.com/insolar/insolar/conveyor/queue"
 	"github.com/insolar/insolar/core"
 	"github.com/stretchr/testify/require"
@@ -280,8 +283,8 @@ func TestSlot_createElement(t *testing.T) {
 	element, err := s.createElement(stateMachineMock, 1, event)
 	require.NotNil(t, element)
 	require.NoError(t, err)
-	require.Equal(t, stateMachineMock, element.stateMachineType)
-	require.Equal(t, uint32(1), element.state)
+	require.Equal(t, stateMachineMock, element.stateMachine)
+	require.Equal(t, fsm.StateID(1), element.state)
 	require.Equal(t, uint32(0), element.id)
 	require.Equal(t, ActiveElement, element.activationStatus)
 	require.Equal(t, 1, s.elementListMap[ActiveElement].len())
@@ -315,6 +318,7 @@ func TestSlot_hasElements(t *testing.T) {
 	require.True(t, s.hasElements(EmptyElement))
 
 	sm := makeMockStateMachine(t)
+
 	_, err := s.createElement(sm, 20, queue.OutputElement{})
 	require.NoError(t, err)
 
@@ -427,7 +431,7 @@ func TestSlot_extractSlotElementByID(t *testing.T) {
 	var elements []*slotElement
 
 	for i := 1; i < 100; i++ {
-		el, err := slot.createElement(sm, uint32(20+i), queue.OutputElement{})
+		el, err := slot.createElement(sm, fsm.StateID(20+i), queue.OutputElement{})
 		require.NoError(t, err)
 		elements = append(elements, el)
 	}
@@ -441,7 +445,7 @@ func TestSlot_extractSlotElementByID(t *testing.T) {
 	}
 
 	for i := 1; i < 100; i++ {
-		_, err := slot.createElement(sm, uint32(2000+i), queue.OutputElement{})
+		_, err := slot.createElement(sm, fsm.StateID(2000+i), queue.OutputElement{})
 		require.NoError(t, err)
 
 		el := slot.popElement(ActiveElement)
@@ -455,17 +459,17 @@ func TestSlot_extractSlotElementByID(t *testing.T) {
 	}
 }
 
-func makeMockStateMachine(t *testing.T) istatemachine.StateMachineType {
-	sm := istatemachine.NewStateMachineTypeMock(t)
+func makeMockStateMachine(t *testing.T) statemachine.StateMachine {
+	sm := statemachine.NewStateMachineMock(t)
 
-	sm.GetTransitionHandlerFunc = func(p constant.PulseState, p1 uint32) (r istatemachine.TransitHandler) {
-		return func(element islot.SlotElementHelper) (interface{}, uint32, error) {
+	sm.GetTransitionHandlerFunc = func(p fsm.StateID) (r statemachine.TransitHandler) {
+		return func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
 			return nil, 0, nil
 		}
 	}
 
-	sm.GetMigrationHandlerFunc = func(p constant.PulseState, p1 uint32) (r istatemachine.MigrationHandler) {
-		return func(element islot.SlotElementHelper) (interface{}, uint32, error) {
+	sm.GetMigrationHandlerFunc = func(p fsm.StateID) (r statemachine.MigrationHandler) {
+		return func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
 			return nil, 0, nil
 		}
 	}

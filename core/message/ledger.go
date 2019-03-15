@@ -227,7 +227,7 @@ func (*GetChildren) Type() core.MessageType {
 	return core.TypeGetChildren
 }
 
-// JetDrop spreads jet drop
+// Drop spreads jet drop
 type JetDrop struct {
 	ledgerMessage
 
@@ -240,7 +240,7 @@ type JetDrop struct {
 
 // AllowedSenderObjectAndRole implements interface method
 func (m *JetDrop) AllowedSenderObjectAndRole() (*core.RecordRef, core.DynamicRole) {
-	// This check is not needed, because JetDrop sender is explicitly checked in handler.
+	// This check is not needed, because Drop sender is explicitly checked in handler.
 	return nil, core.DynamicRoleUndefined
 }
 
@@ -377,13 +377,12 @@ func (*ValidationCheck) Type() core.MessageType {
 // HotData contains hot-data
 type HotData struct {
 	ledgerMessage
-	Jet                core.RecordRef
-	DropJet            core.RecordID // If will be different in case of split.
-	Drop               jet.JetDrop
-	RecentObjects      map[core.RecordID]HotIndex
-	PendingRequests    map[core.RecordID]recentstorage.PendingObjectContext
-	PulseNumber        core.PulseNumber
-	JetDropSizeHistory jet.DropSizeHistory
+	Jet             core.RecordRef
+	DropJet         core.RecordID // If will be different in case of split.
+	Drop            jet.Drop
+	RecentObjects   map[core.RecordID]HotIndex
+	PendingRequests map[core.RecordID]recentstorage.PendingObjectContext
+	PulseNumber     core.PulseNumber
 }
 
 // AllowedSenderObjectAndRole implements interface method

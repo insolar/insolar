@@ -20,7 +20,8 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/conveyor/interfaces/constant"
-	"github.com/insolar/insolar/conveyor/interfaces/istatemachine"
+	"github.com/insolar/insolar/conveyor/interfaces/fsm"
+	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
 	"github.com/insolar/insolar/conveyor/queue"
 	"github.com/insolar/insolar/core"
 	"github.com/pkg/errors"
@@ -46,7 +47,7 @@ type HandlersConfiguration struct {
 }
 
 // TODO: logic will be provided after pulse change mechanism
-func (s *HandlersConfiguration) getMachineConfiguration(smType int) istatemachine.StateMachineType { // nolint: unused
+func (s *HandlersConfiguration) getMachineConfiguration(smType int) statemachine.StateMachine { // nolint: unused
 	return nil
 }
 
@@ -130,9 +131,9 @@ type Slot struct {
 
 // SlotStateMachine represents state machine of slot itself
 var SlotStateMachine = slotElement{
-	id:               0,
-	state:            0,
-	stateMachineType: nil, // TODO: add smth correct
+	id:           0,
+	state:        0,
+	stateMachine: nil, // TODO: add smth correct
 }
 
 func initElementsBuf() ([]slotElement, *ElementList) {
@@ -206,9 +207,9 @@ func (s *Slot) GetNodeData() interface{} { // nolint: unused
 }
 
 // createElement creates new active element from empty element
-func (s *Slot) createElement(stateMachineType istatemachine.StateMachineType, state uint32, event queue.OutputElement) (*slotElement, error) { // nolint: unused
+func (s *Slot) createElement(stateMachine statemachine.StateMachine, state fsm.StateID, event queue.OutputElement) (*slotElement, error) { // nolint: unused
 	element := s.popElement(EmptyElement)
-	element.stateMachineType = stateMachineType
+	element.stateMachine = stateMachine
 	element.state = state
 	element.activationStatus = ActiveElement
 	element.nextElement = nil
