@@ -30,19 +30,19 @@ type StorageMemory struct {
 	jetIndex db.JetIndexModifier
 
 	lock   sync.RWMutex
-	memory map[insolar.ID]ObjectLifeline
+	memory map[insolar.ID]Lifeline
 }
 
 // NewStorageMemory creates a new instance of Storage.
 func NewStorageMemory() *StorageMemory {
 	return &StorageMemory{
-		memory:   map[insolar.ID]ObjectLifeline{},
+		memory:   map[insolar.ID]Lifeline{},
 		jetIndex: db.NewJetIndex(),
 	}
 }
 
 // Set saves new Index-value in storage.
-func (s *StorageMemory) Set(ctx context.Context, id insolar.ID, index ObjectLifeline) error {
+func (s *StorageMemory) Set(ctx context.Context, id insolar.ID, index Lifeline) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -59,7 +59,7 @@ func (s *StorageMemory) Set(ctx context.Context, id insolar.ID, index ObjectLife
 }
 
 // ForID returns Index for provided id.
-func (s *StorageMemory) ForID(ctx context.Context, id insolar.ID) (index ObjectLifeline, err error) {
+func (s *StorageMemory) ForID(ctx context.Context, id insolar.ID) (index Lifeline, err error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 

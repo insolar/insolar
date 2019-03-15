@@ -104,7 +104,7 @@ func (gi *genesisInitializer) Init(ctx context.Context) error {
 			ctx,
 			core.RecordID(jetID),
 			genesisID,
-			&object.ObjectLifeline{LatestState: genesisID, LatestStateApproved: genesisID},
+			&object.Lifeline{LatestState: genesisID, LatestStateApproved: genesisID},
 		)
 		if err != nil {
 			return nil, err

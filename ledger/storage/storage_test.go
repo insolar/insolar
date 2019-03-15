@@ -132,7 +132,7 @@ func (s *storageSuite) TestDB_SetObjectIndex_ReturnsNotFoundIfNoIndex() {
 }
 
 func (s *storageSuite) TestDB_SetObjectIndex_StoresCorrectDataInStorage() {
-	idx := object.ObjectLifeline{
+	idx := object.Lifeline{
 		LatestState: core.NewRecordID(0, hexhash("20")),
 	}
 	zeroid := core.NewRecordID(0, hexhash(""))
@@ -148,7 +148,7 @@ func (s *storageSuite) TestDB_SetObjectIndex_SaveLastUpdate() {
 	// Arrange
 	jetID := testutils.RandomJet()
 
-	idx := object.ObjectLifeline{
+	idx := object.Lifeline{
 		LatestState:  core.NewRecordID(0, hexhash("20")),
 		LatestUpdate: 1239,
 	}

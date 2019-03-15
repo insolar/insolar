@@ -20,7 +20,7 @@ import (
 type AccessorMock struct {
 	t minimock.Tester
 
-	ForIDFunc       func(p context.Context, p1 core.RecordID) (r ObjectLifeline, r1 error)
+	ForIDFunc       func(p context.Context, p1 core.RecordID) (r Lifeline, r1 error)
 	ForIDCounter    uint64
 	ForIDPreCounter uint64
 	ForIDMock       mAccessorMockForID
@@ -56,7 +56,7 @@ type AccessorMockForIDInput struct {
 }
 
 type AccessorMockForIDResult struct {
-	r  ObjectLifeline
+	r  Lifeline
 	r1 error
 }
 
@@ -73,7 +73,7 @@ func (m *mAccessorMockForID) Expect(p context.Context, p1 core.RecordID) *mAcces
 }
 
 //Return specifies results of invocation of Accessor.ForID
-func (m *mAccessorMockForID) Return(r ObjectLifeline, r1 error) *AccessorMock {
+func (m *mAccessorMockForID) Return(r Lifeline, r1 error) *AccessorMock {
 	m.mock.ForIDFunc = nil
 	m.expectationSeries = nil
 
@@ -95,12 +95,12 @@ func (m *mAccessorMockForID) ExpectOnce(p context.Context, p1 core.RecordID) *Ac
 	return expectation
 }
 
-func (e *AccessorMockForIDExpectation) Return(r ObjectLifeline, r1 error) {
+func (e *AccessorMockForIDExpectation) Return(r Lifeline, r1 error) {
 	e.result = &AccessorMockForIDResult{r, r1}
 }
 
 //Set uses given function f as a mock of Accessor.ForID method
-func (m *mAccessorMockForID) Set(f func(p context.Context, p1 core.RecordID) (r ObjectLifeline, r1 error)) *AccessorMock {
+func (m *mAccessorMockForID) Set(f func(p context.Context, p1 core.RecordID) (r Lifeline, r1 error)) *AccessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -109,7 +109,7 @@ func (m *mAccessorMockForID) Set(f func(p context.Context, p1 core.RecordID) (r 
 }
 
 //ForID implements github.com/insolar/insolar/ledger/storage/object.Accessor interface
-func (m *AccessorMock) ForID(p context.Context, p1 core.RecordID) (r ObjectLifeline, r1 error) {
+func (m *AccessorMock) ForID(p context.Context, p1 core.RecordID) (r Lifeline, r1 error) {
 	counter := atomic.AddUint64(&m.ForIDPreCounter, 1)
 	defer atomic.AddUint64(&m.ForIDCounter, 1)
 

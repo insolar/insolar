@@ -810,7 +810,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 		s.Memory = blobID
 	}
 
-	var idx *object.ObjectLifeline
+	var idx *object.Lifeline
 	err = h.DBContext.Update(ctx, func(tx *storage.TransactionManager) error {
 		var err error
 		idx, err = tx.GetObjectIndex(ctx, jetID, msg.Object.Record(), true)
@@ -818,7 +818,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 		if err == core.ErrNotFound {
 			if state.State() == object.StateActivation {
 				// We are activating the object. There is no index for it anywhere.
-				idx = &object.ObjectLifeline{State: object.StateUndefined}
+				idx = &object.Lifeline{State: object.StateUndefined}
 			} else {
 				logger.Debug("failed to fetch index (fetching from heavy)")
 				// We are updating object. Index should be on the heavy executor.
@@ -1117,7 +1117,7 @@ func validateState(old object.State, new object.State) error {
 
 func (h *MessageHandler) saveIndexFromHeavy(
 	ctx context.Context, jetID core.RecordID, obj core.RecordRef, heavy *core.RecordRef,
-) (*object.ObjectLifeline, error) {
+) (*object.Lifeline, error) {
 	genericReply, err := h.Bus.Send(ctx, &message.GetObjectIndex{
 		Object: obj,
 	}, &core.MessageSendOptions{

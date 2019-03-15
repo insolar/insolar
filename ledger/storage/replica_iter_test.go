@@ -388,7 +388,7 @@ func addRecords(
 	require.NoError(t, err)
 
 	// set index of record
-	err = objectStorage.SetObjectIndex(ctx, jetID, parentID, &object.ObjectLifeline{
+	err = objectStorage.SetObjectIndex(ctx, jetID, parentID, &object.Lifeline{
 		LatestState: parentID,
 	})
 	require.NoError(t, err)

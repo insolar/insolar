@@ -20,7 +20,7 @@ import (
 type ModifierMock struct {
 	t minimock.Tester
 
-	SetFunc       func(p context.Context, p1 core.RecordID, p2 ObjectLifeline) (r error)
+	SetFunc       func(p context.Context, p1 core.RecordID, p2 Lifeline) (r error)
 	SetCounter    uint64
 	SetPreCounter uint64
 	SetMock       mModifierMockSet
@@ -53,7 +53,7 @@ type ModifierMockSetExpectation struct {
 type ModifierMockSetInput struct {
 	p  context.Context
 	p1 core.RecordID
-	p2 ObjectLifeline
+	p2 Lifeline
 }
 
 type ModifierMockSetResult struct {
@@ -61,7 +61,7 @@ type ModifierMockSetResult struct {
 }
 
 //Expect specifies that invocation of Modifier.Set is expected from 1 to Infinity times
-func (m *mModifierMockSet) Expect(p context.Context, p1 core.RecordID, p2 ObjectLifeline) *mModifierMockSet {
+func (m *mModifierMockSet) Expect(p context.Context, p1 core.RecordID, p2 Lifeline) *mModifierMockSet {
 	m.mock.SetFunc = nil
 	m.expectationSeries = nil
 
@@ -85,7 +85,7 @@ func (m *mModifierMockSet) Return(r error) *ModifierMock {
 }
 
 //ExpectOnce specifies that invocation of Modifier.Set is expected once
-func (m *mModifierMockSet) ExpectOnce(p context.Context, p1 core.RecordID, p2 ObjectLifeline) *ModifierMockSetExpectation {
+func (m *mModifierMockSet) ExpectOnce(p context.Context, p1 core.RecordID, p2 Lifeline) *ModifierMockSetExpectation {
 	m.mock.SetFunc = nil
 	m.mainExpectation = nil
 
@@ -100,7 +100,7 @@ func (e *ModifierMockSetExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of Modifier.Set method
-func (m *mModifierMockSet) Set(f func(p context.Context, p1 core.RecordID, p2 ObjectLifeline) (r error)) *ModifierMock {
+func (m *mModifierMockSet) Set(f func(p context.Context, p1 core.RecordID, p2 Lifeline) (r error)) *ModifierMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -109,7 +109,7 @@ func (m *mModifierMockSet) Set(f func(p context.Context, p1 core.RecordID, p2 Ob
 }
 
 //Set implements github.com/insolar/insolar/ledger/storage/object.Modifier interface
-func (m *ModifierMock) Set(p context.Context, p1 core.RecordID, p2 ObjectLifeline) (r error) {
+func (m *ModifierMock) Set(p context.Context, p1 core.RecordID, p2 Lifeline) (r error) {
 	counter := atomic.AddUint64(&m.SetPreCounter, 1)
 	defer atomic.AddUint64(&m.SetCounter, 1)
 

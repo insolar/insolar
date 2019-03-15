@@ -51,10 +51,10 @@ func state() (state State) {
 	return
 }
 
-func objectLifeline() ObjectLifeline {
-	var index ObjectLifeline
+func objectLifeline() Lifeline {
+	var index Lifeline
 	fuzz.New().NilChance(0).Funcs(
-		func(idx *ObjectLifeline, c fuzz.Continue) {
+		func(idx *Lifeline, c fuzz.Continue) {
 			idx.LatestState = id()
 			idx.LatestStateApproved = id()
 			idx.ChildPointer = id()

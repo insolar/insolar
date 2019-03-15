@@ -41,7 +41,7 @@ func TestIndexStorage_ForID(t *testing.T) {
 
 	jetID := gen.JetID()
 	id := gen.ID()
-	idx := ObjectLifeline{
+	idx := Lifeline{
 		LatestState: &id,
 		JetID:       jetID,
 	}
@@ -50,7 +50,7 @@ func TestIndexStorage_ForID(t *testing.T) {
 		t.Parallel()
 
 		indexStorage := &StorageMemory{
-			memory: map[insolar.ID]ObjectLifeline{},
+			memory: map[insolar.ID]Lifeline{},
 		}
 		indexStorage.memory[id] = idx
 
@@ -64,7 +64,7 @@ func TestIndexStorage_ForID(t *testing.T) {
 		t.Parallel()
 
 		indexStorage := &StorageMemory{
-			memory: map[insolar.ID]ObjectLifeline{},
+			memory: map[insolar.ID]Lifeline{},
 		}
 		indexStorage.memory[id] = idx
 
@@ -81,7 +81,7 @@ func TestIndexStorage_Set(t *testing.T) {
 
 	jetID := gen.JetID()
 	id := gen.ID()
-	idx := ObjectLifeline{
+	idx := Lifeline{
 		LatestState: &id,
 		JetID:       jetID,
 	}
@@ -93,7 +93,7 @@ func TestIndexStorage_Set(t *testing.T) {
 		t.Parallel()
 
 		indexStorage := &StorageMemory{
-			memory:   map[insolar.ID]ObjectLifeline{},
+			memory:   map[insolar.ID]Lifeline{},
 			jetIndex: jetIndex,
 		}
 		err := indexStorage.Set(ctx, id, idx)
@@ -107,7 +107,7 @@ func TestIndexStorage_Set(t *testing.T) {
 		t.Parallel()
 
 		indexStorage := &StorageMemory{
-			memory:   map[insolar.ID]ObjectLifeline{},
+			memory:   map[insolar.ID]Lifeline{},
 			jetIndex: jetIndex,
 		}
 		err := indexStorage.Set(ctx, id, idx)
@@ -126,7 +126,7 @@ func TestIndexStorage_Set_SaveLastUpdate(t *testing.T) {
 	jetID := gen.JetID()
 	id := gen.ID()
 	pn := gen.PulseNumber()
-	idx := ObjectLifeline{
+	idx := Lifeline{
 		LatestState:  &id,
 		LatestUpdate: pn,
 		JetID:        jetID,
@@ -139,7 +139,7 @@ func TestIndexStorage_Set_SaveLastUpdate(t *testing.T) {
 		t.Parallel()
 
 		indexStorage := &StorageMemory{
-			memory:   map[insolar.ID]ObjectLifeline{},
+			memory:   map[insolar.ID]Lifeline{},
 			jetIndex: jetIndex,
 		}
 		err := indexStorage.Set(ctx, id, idx)

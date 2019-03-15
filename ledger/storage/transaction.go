@@ -167,7 +167,7 @@ func (m *TransactionManager) GetObjectIndex(
 	jetID core.RecordID,
 	id *core.RecordID,
 	forupdate bool,
-) (*object.ObjectLifeline, error) {
+) (*object.Lifeline, error) {
 	if forupdate {
 		m.lockOnID(id)
 	}
@@ -186,7 +186,7 @@ func (m *TransactionManager) SetObjectIndex(
 	ctx context.Context,
 	jetID core.RecordID,
 	id *core.RecordID,
-	idx *object.ObjectLifeline,
+	idx *object.Lifeline,
 ) error {
 	prefix := core.JetID(jetID).Prefix()
 	k := prefixkey(scopeIDLifeline, prefix, id[:])

@@ -339,7 +339,7 @@ func (s *amSuite) TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord(
 			},
 		},
 	)
-	err := os.SetObjectIndex(ctx, jetID, parentID, &object.ObjectLifeline{
+	err := os.SetObjectIndex(ctx, jetID, parentID, &object.Lifeline{
 		LatestState: parentID,
 	})
 	require.NoError(s.T(), err)
@@ -397,7 +397,7 @@ func (s *amSuite) TestLedgerArtifactManager_DeactivateObject_CreatesCorrectRecor
 			},
 		},
 	)
-	err := os.SetObjectIndex(ctx, jetID, objID, &object.ObjectLifeline{
+	err := os.SetObjectIndex(ctx, jetID, objID, &object.Lifeline{
 		State:       object.StateActivation,
 		LatestState: objID,
 	})
@@ -438,7 +438,7 @@ func (s *amSuite) TestLedgerArtifactManager_UpdateObject_CreatesCorrectRecord() 
 			},
 		},
 	)
-	err := os.SetObjectIndex(ctx, jetID, objID, &object.ObjectLifeline{
+	err := os.SetObjectIndex(ctx, jetID, objID, &object.Lifeline{
 		State:       object.StateActivation,
 		LatestState: objID,
 	})
@@ -510,7 +510,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors(
 	_, err = os.SetBlob(ctx, jetID, core.GenesisPulse.PulseNumber, []byte{4})
 	require.NoError(s.T(), err)
 
-	objectIndex := object.ObjectLifeline{
+	objectIndex := object.Lifeline{
 		LatestState:  objectAmendID,
 		ChildPointer: genRandomID(0),
 		Parent:       *parentRef,
@@ -622,7 +622,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetChildren() {
 			Ref:       *child3Ref,
 		})
 
-	parentIndex := object.ObjectLifeline{
+	parentIndex := object.Lifeline{
 		LatestState:  parentID,
 		ChildPointer: childMeta3,
 	}

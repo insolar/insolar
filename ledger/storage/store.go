@@ -30,8 +30,8 @@ type Store interface {
 	GetBlob(ctx context.Context, jetID core.RecordID, ref *core.RecordID) ([]byte, error)
 	SetBlob(ctx context.Context, jetID core.RecordID, number core.PulseNumber, blob []byte) (*core.RecordID, error)
 
-	GetObjectIndex(ctx context.Context, jetID core.RecordID, ref *core.RecordID, forupdate bool) (*object.ObjectLifeline, error)
-	SetObjectIndex(ctx context.Context, jetID core.RecordID, ref *core.RecordID, idx *object.ObjectLifeline) error
+	GetObjectIndex(ctx context.Context, jetID core.RecordID, ref *core.RecordID, forupdate bool) (*object.Lifeline, error)
+	SetObjectIndex(ctx context.Context, jetID core.RecordID, ref *core.RecordID, idx *object.Lifeline) error
 	RemoveObjectIndex(ctx context.Context, jetID core.RecordID, ref *core.RecordID) error
 
 	// Deprecated: use core.PulseStorage.Current() instead

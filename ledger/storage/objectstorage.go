@@ -44,13 +44,13 @@ type ObjectStorage interface {
 		jetID core.RecordID,
 		id *core.RecordID,
 		forupdate bool,
-	) (*object.ObjectLifeline, error)
+	) (*object.Lifeline, error)
 
 	SetObjectIndex(
 		ctx context.Context,
 		jetID core.RecordID,
 		id *core.RecordID,
-		idx *object.ObjectLifeline,
+		idx *object.Lifeline,
 	) error
 
 	RemoveObjectIndex(
@@ -162,7 +162,7 @@ func (os *objectStorage) GetObjectIndex(
 	jetID core.RecordID,
 	id *core.RecordID,
 	forupdate bool,
-) (*object.ObjectLifeline, error) {
+) (*object.Lifeline, error) {
 	tx, err := os.DB.BeginTransaction(false)
 	if err != nil {
 		return nil, err
@@ -181,7 +181,7 @@ func (os *objectStorage) SetObjectIndex(
 	ctx context.Context,
 	jetID core.RecordID,
 	id *core.RecordID,
-	idx *object.ObjectLifeline,
+	idx *object.Lifeline,
 ) error {
 	return os.DB.Update(ctx, func(tx *TransactionManager) error {
 		return tx.SetObjectIndex(ctx, jetID, id, idx)

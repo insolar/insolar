@@ -37,7 +37,7 @@ func AddRandIndex(
 	pulsenum core.PulseNumber,
 ) (*core.RecordID, error) {
 	parentID := testutils.RandomID()
-	err := objectStorage.SetObjectIndex(ctx, jetID, &parentID, &object.ObjectLifeline{
+	err := objectStorage.SetObjectIndex(ctx, jetID, &parentID, &object.Lifeline{
 		LatestState: &parentID,
 	})
 	return &parentID, err

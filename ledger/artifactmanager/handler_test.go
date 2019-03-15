@@ -164,7 +164,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObject_FetchesObject() {
 
 	s.T().Run("fetches state from heavy when no index", func(t *testing.T) {
 		idxState := genRandomID(core.FirstPulseNumber)
-		objIndex := object.ObjectLifeline{
+		objIndex := object.Lifeline{
 			LatestState: idxState,
 		}
 		lightRef := genRandomRef(0)
@@ -210,7 +210,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObject_FetchesObject() {
 		jc.IsBeyondLimitMock.Return(false, nil)
 		jc.NodeForJetMock.Return(lightRef, nil)
 		stateID := genRandomID(core.FirstPulseNumber)
-		err = s.objectStorage.SetObjectIndex(s.ctx, jetID, msg.Head.Record(), &object.ObjectLifeline{
+		err = s.objectStorage.SetObjectIndex(s.ctx, jetID, msg.Head.Record(), &object.Lifeline{
 			LatestState: stateID,
 		})
 		require.NoError(t, err)
@@ -243,7 +243,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObject_FetchesObject() {
 		jc.NodeForJetMock.Return(heavyRef, nil)
 		stateID := genRandomID(core.FirstPulseNumber)
 
-		err = s.objectStorage.SetObjectIndex(s.ctx, jetID, msg.Head.Record(), &object.ObjectLifeline{
+		err = s.objectStorage.SetObjectIndex(s.ctx, jetID, msg.Head.Record(), &object.Lifeline{
 			LatestState: stateID,
 		})
 		require.NoError(t, err)
@@ -317,7 +317,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetChildren_Redirects() {
 	require.NoError(s.T(), err)
 
 	s.T().Run("redirects to heavy when no index", func(t *testing.T) {
-		objIndex := object.ObjectLifeline{
+		objIndex := object.Lifeline{
 			LatestState:  genRandomID(core.FirstPulseNumber),
 			ChildPointer: genRandomID(core.FirstPulseNumber),
 		}
@@ -355,7 +355,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetChildren_Redirects() {
 		lightRef := genRandomRef(0)
 		jc.IsBeyondLimitMock.Return(false, nil)
 		jc.NodeForJetMock.Return(lightRef, nil)
-		err = s.objectStorage.SetObjectIndex(s.ctx, jetID, msg.Parent.Record(), &object.ObjectLifeline{
+		err = s.objectStorage.SetObjectIndex(s.ctx, jetID, msg.Parent.Record(), &object.Lifeline{
 			ChildPointer: genRandomID(core.FirstPulseNumber),
 		})
 		require.NoError(t, err)
@@ -377,7 +377,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetChildren_Redirects() {
 		heavyRef := genRandomRef(0)
 		jc.IsBeyondLimitMock.Return(false, nil)
 		jc.NodeForJetMock.Return(heavyRef, nil)
-		err = s.objectStorage.SetObjectIndex(s.ctx, jetID, msg.Parent.Record(), &object.ObjectLifeline{
+		err = s.objectStorage.SetObjectIndex(s.ctx, jetID, msg.Parent.Record(), &object.Lifeline{
 			ChildPointer: genRandomID(core.FirstPulseNumber),
 		})
 		require.NoError(t, err)
@@ -431,7 +431,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeav
 
 	delegateType := *genRandomRef(0)
 	delegate := *genRandomRef(0)
-	objIndex := object.ObjectLifeline{Delegates: map[core.RecordRef]core.RecordRef{delegateType: delegate}}
+	objIndex := object.Lifeline{Delegates: map[core.RecordRef]core.RecordRef{delegateType: delegate}}
 	msg := message.GetDelegate{
 		Head:   *genRandomRef(0),
 		AsType: delegateType,
@@ -502,7 +502,7 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_FetchesIndexFromHea
 	h.PlatformCryptographyScheme = s.scheme
 	h.RecentStorageProvider = provideMock
 
-	objIndex := object.ObjectLifeline{LatestState: genRandomID(0), State: object.StateActivation}
+	objIndex := object.Lifeline{LatestState: genRandomID(0), State: object.StateActivation}
 	amendRecord := object.ObjectAmendRecord{
 		PrevState: *objIndex.LatestState,
 	}
@@ -577,7 +577,7 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_UpdateIndexState() 
 	h.RecentStorageProvider = provideMock
 	h.PlatformCryptographyScheme = s.scheme
 
-	objIndex := object.ObjectLifeline{
+	objIndex := object.Lifeline{
 		LatestState:  genRandomID(0),
 		State:        object.StateActivation,
 		LatestUpdate: 0,
@@ -654,7 +654,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObjectIndex() {
 
 	h.RecentStorageProvider = provideMock
 
-	objectIndex := object.ObjectLifeline{LatestState: genRandomID(0)}
+	objectIndex := object.Lifeline{LatestState: genRandomID(0)}
 	err = s.objectStorage.SetObjectIndex(s.ctx, jetID, msg.Object.Record(), &objectIndex)
 	require.NoError(s.T(), err)
 
@@ -833,7 +833,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 	h.RecentStorageProvider = provideMock
 	h.PlatformCryptographyScheme = s.scheme
 
-	objIndex := object.ObjectLifeline{LatestState: genRandomID(0), State: object.StateActivation}
+	objIndex := object.Lifeline{LatestState: genRandomID(0), State: object.StateActivation}
 	childRecord := object.ChildRecord{
 		Ref:       *genRandomRef(0),
 		PrevChild: nil,
@@ -910,7 +910,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 	h.RecentStorageProvider = provideMock
 	h.PlatformCryptographyScheme = s.scheme
 
-	objIndex := object.ObjectLifeline{
+	objIndex := object.Lifeline{
 		LatestState:  genRandomID(0),
 		State:        object.StateActivation,
 		LatestUpdate: core.FirstPulseNumber,
@@ -962,10 +962,10 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 		return &reply.OK{}, nil
 	}
 
-	firstIndex := object.Encode(object.ObjectLifeline{
+	firstIndex := object.Encode(object.Lifeline{
 		LatestState: firstID,
 	})
-	err = s.objectStorage.SetObjectIndex(s.ctx, jetID, firstID, &object.ObjectLifeline{
+	err = s.objectStorage.SetObjectIndex(s.ctx, jetID, firstID, &object.Lifeline{
 		LatestState: firstID,
 	})
 

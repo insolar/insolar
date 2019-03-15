@@ -29,7 +29,7 @@ import (
 // Accessor provides info about Index-values from storage.
 type Accessor interface {
 	// ForID returns Index for provided id.
-	ForID(ctx context.Context, id insolar.ID) (ObjectLifeline, error)
+	ForID(ctx context.Context, id insolar.ID) (Lifeline, error)
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage/object.Modifier -o ./ -s _mock.go
@@ -37,11 +37,11 @@ type Accessor interface {
 // Modifier provides methods for setting Index-values to storage.
 type Modifier interface {
 	// Set saves new Index-value in storage.
-	Set(ctx context.Context, id insolar.ID, index ObjectLifeline) error
+	Set(ctx context.Context, id insolar.ID, index Lifeline) error
 }
 
-// ObjectLifeline represents meta information for record object.
-type ObjectLifeline struct {
+// Lifeline represents meta information for record object.
+type Lifeline struct {
 	LatestState         *insolar.ID // Amend or activate record.
 	LatestStateApproved *insolar.ID // State approved by VM.
 	ChildPointer        *insolar.ID // Meta record about child activation.
@@ -53,7 +53,7 @@ type ObjectLifeline struct {
 }
 
 // Encode converts lifeline index into binary format.
-func Encode(index ObjectLifeline) []byte {
+func Encode(index Lifeline) []byte {
 	buff := bytes.NewBuffer(nil)
 	enc := codec.NewEncoder(buff, &codec.CborHandle{})
 	enc.MustEncode(index)
@@ -62,7 +62,7 @@ func Encode(index ObjectLifeline) []byte {
 }
 
 // Decode converts byte array into lifeline index struct.
-func Decode(buff []byte) (index ObjectLifeline) {
+func Decode(buff []byte) (index Lifeline) {
 	dec := codec.NewDecoderBytes(buff, &codec.CborHandle{})
 	dec.MustDecode(&index)
 
@@ -70,7 +70,7 @@ func Decode(buff []byte) (index ObjectLifeline) {
 }
 
 // Clone returns copy of argument idx value.
-func Clone(idx ObjectLifeline) ObjectLifeline {
+func Clone(idx Lifeline) Lifeline {
 	if idx.LatestState != nil {
 		tmp := *idx.LatestState
 		idx.LatestState = &tmp

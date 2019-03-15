@@ -112,13 +112,13 @@ func (s *txnSuite) TestStore_Transaction_LockOnUpdate() {
 
 	objid := core.NewRecordID(100500, nil)
 	idxid := core.NewRecordID(0, nil)
-	objvalue0 := &object.ObjectLifeline{
+	objvalue0 := &object.Lifeline{
 		LatestState: objid,
 	}
 	err := s.objectStorage.SetObjectIndex(s.ctx, jetID, idxid, objvalue0)
 	require.NoError(s.T(), err)
 
-	lockfn := func(t *testing.T, withlock bool) *object.ObjectLifeline {
+	lockfn := func(t *testing.T, withlock bool) *object.Lifeline {
 		started2 := make(chan bool)
 		proceed2 := make(chan bool)
 		var wg sync.WaitGroup

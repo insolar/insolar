@@ -38,7 +38,7 @@ func TestInMemoryIndex(t *testing.T) {
 
 	type tempIndex struct {
 		id  insolar.ID
-		idx object.ObjectLifeline
+		idx object.Lifeline
 	}
 
 	var indices []tempIndex
@@ -47,7 +47,7 @@ func TestInMemoryIndex(t *testing.T) {
 		t.id = gen.ID()
 		ls := gen.ID()
 		pn := gen.PulseNumber()
-		t.idx = object.ObjectLifeline{
+		t.idx = object.Lifeline{
 			LatestState:  &ls,
 			LatestUpdate: pn,
 			JetID:        gen.JetID(),
