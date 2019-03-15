@@ -23,7 +23,6 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/storage/db"
 	"github.com/insolar/insolar/ledger/storage/jet"
-	"github.com/ugorji/go/codec"
 )
 
 type dropStorageDB struct {
@@ -84,19 +83,4 @@ func (ds *dropStorageDB) Set(ctx context.Context, jetID core.JetID, drop jet.Dro
 // Because db storage must be used only on a heavy-node.
 func (ds *dropStorageDB) Delete(pulse core.PulseNumber) {
 	panic("mustn't be called. because db storage must work only on a heavy node. heavy mustn't remove any data")
-}
-
-// Serialize serializes a drop
-func Serialize(dr jet.Drop) []byte {
-	buff := bytes.NewBuffer(nil)
-	enc := codec.NewEncoder(buff, &codec.CborHandle{})
-	enc.MustEncode(dr)
-	return buff.Bytes()
-}
-
-// Deserialize deserializes a jet.Drop
-func Deserialize(buf []byte) (dr jet.Drop) {
-	dec := codec.NewDecoderBytes(buf, &codec.CborHandle{})
-	dec.MustDecode(&dr)
-	return dr
 }

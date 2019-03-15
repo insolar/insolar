@@ -74,6 +74,7 @@ type PulseManager struct {
 	StorageCleaner storage.Cleaner        `inject:""`
 
 	DropModifier drop.Modifier `inject:""`
+	DropCleaner  drop.Cleaner  `inject:""`
 	DropAccessor drop.Accessor `inject:""`
 
 	// TODO: move clients pool to component - @nordicdyno - 18.Dec.2018
@@ -668,7 +669,7 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse core.Pulse, 
 	}
 	m.JetStorage.DeleteJetTree(ctx, p.Pulse.PulseNumber)
 	m.NodeSetter.Delete(p.Pulse.PulseNumber)
-	m.DropModifier.Delete(p.Pulse.PulseNumber)
+	m.DropCleaner.Delete(p.Pulse.PulseNumber)
 	err = m.PulseTracker.DeletePulse(ctx, p.Pulse.PulseNumber)
 	if err != nil {
 		inslogger.FromContext(ctx).Errorf("Can't clean pulse-tracker from pulse: %s", err)

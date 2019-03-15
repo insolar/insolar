@@ -30,14 +30,14 @@ type dropKey struct {
 }
 
 type dropStorageMemory struct {
-	lock sync.RWMutex
-	jets map[dropKey]jet.Drop
+	lock  sync.RWMutex
+	drops map[dropKey]jet.Drop
 }
 
 // NewStorageMemory creates a new storage, that holds data in a memory.
 func NewStorageMemory() *dropStorageMemory { // nolint: golint
 	return &dropStorageMemory{
-		jets: map[dropKey]jet.Drop{},
+		drops: map[dropKey]jet.Drop{},
 	}
 }
 
@@ -47,7 +47,7 @@ func (m *dropStorageMemory) ForPulse(ctx context.Context, jetID core.JetID, puls
 	defer m.lock.RUnlock()
 
 	key := dropKey{jetID: jetID, pulse: pulse}
-	d, ok := m.jets[key]
+	d, ok := m.drops[key]
 	if !ok {
 		return jet.Drop{}, ErrNotFound
 	}
@@ -61,7 +61,7 @@ func (m *dropStorageMemory) Set(ctx context.Context, jetID core.JetID, drop jet.
 	defer m.lock.Unlock()
 
 	key := dropKey{jetID: jetID, pulse: drop.Pulse}
-	m.jets[key] = drop
+	m.drops[key] = drop
 
 	return nil
 }
@@ -69,9 +69,9 @@ func (m *dropStorageMemory) Set(ctx context.Context, jetID core.JetID, drop jet.
 // Delete methods removes a drop from a memory storage.
 func (m *dropStorageMemory) Delete(pulse core.PulseNumber) {
 	m.lock.Lock()
-	for key := range m.jets {
+	for key := range m.drops {
 		if key.pulse == pulse {
-			delete(m.jets, key)
+			delete(m.drops, key)
 		}
 	}
 	m.lock.Unlock()

@@ -165,6 +165,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 	pm.JetStorage = js
 	pm.DropModifier = ds
 	pm.DropAccessor = ds
+	pm.DropCleaner = ds
 	pm.ObjectStorage = os
 	pm.Nodes = ns
 	pm.NodeSetter = ns

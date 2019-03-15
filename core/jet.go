@@ -18,8 +18,6 @@ package core
 
 import (
 	"fmt"
-	"strconv"
-	"strings"
 )
 
 // JetID should be used, when id is a jetID
@@ -57,37 +55,6 @@ func (id JetID) Prefix() []byte {
 
 // DebugString returns a debug representation of a jet
 func (id JetID) DebugString() string {
-	pulse := NewPulseNumber(id[:PulseNumberSize])
-	if pulse != PulseNumberJet {
-		return fmt.Sprintf("[JET: <wrong pulse number>]")
-	}
-
-	depth := int(id[PulseNumberSize])
-	if depth == 0 {
-		return "[JET 0 -]"
-	}
-
-	prefix := id[PulseNumberSize+1:]
-	var res strings.Builder
-	res.WriteString("[JET ")
-	res.WriteString(strconv.Itoa(depth))
-	res.WriteString(" ")
-
-	for _, b := range prefix {
-		for j := 7; j >= 0; j-- {
-			if 0 == (b >> uint(j) & 0x01) {
-				res.WriteString("0")
-			} else {
-				res.WriteString("1")
-			}
-
-			depth--
-			if depth == 0 {
-				res.WriteString("]")
-				return res.String()
-			}
-		}
-	}
-
-	return fmt.Sprintf("[JET: <wrong format> %d %b]", depth, prefix)
+	recID := RecordID(id)
+	return (&recID).DebugString()
 }

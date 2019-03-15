@@ -21,11 +21,10 @@ import (
 	"sync"
 	"testing"
 
-	fuzz "github.com/google/gofuzz"
+	"github.com/google/gofuzz"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/gen"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/storage/db"
 	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/stretchr/testify/require"
 )
@@ -33,57 +32,76 @@ import (
 func TestNewStorageMemory(t *testing.T) {
 	ms := NewStorageMemory()
 
-	require.NotNil(t, ms.jets)
+	require.NotNil(t, ms.drops)
 }
 
 func TestDropStorageMemory_Set(t *testing.T) {
 	ms := NewStorageMemory()
 
 	var drops []jet.Drop
-	dropsIndex := 0
+	genPulses := map[core.PulseNumber]struct{}{}
 	f := fuzz.New().Funcs(func(jd *jet.Drop, c fuzz.Continue) {
-		dropsIndex++
-		jd.Pulse = core.PulseNumber(dropsIndex)
-	}).NumElements(5, 10)
+		pn := gen.PulseNumber()
+		genPulses[pn] = struct{}{}
+		jd.Pulse = pn
+	}).NumElements(5, 1000)
 	f.Fuzz(&drops)
 
+	genJets := map[core.JetID]struct{}{}
 	for _, jd := range drops {
-		err := ms.Set(inslogger.TestContext(t), core.ZeroJetID, jd)
+		j := gen.JetID()
+		genJets[j] = struct{}{}
+		err := ms.Set(inslogger.TestContext(t), j, jd)
 		require.NoError(t, err)
 	}
 
-	require.Equal(t, dropsIndex, len(ms.jets))
+	require.Equal(t, len(drops), len(ms.drops))
+	for k, jd := range ms.drops {
+		_, ok := genPulses[jd.Pulse]
+		require.Equal(t, true, ok)
+		require.Equal(t, k.pulse, jd.Pulse)
+
+		_, ok = genJets[k.jetID]
+		require.Equal(t, true, ok)
+	}
 }
 
 func TestDropStorageMemory_ForPulse(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	ms := NewStorageMemory()
 
-	err := ms.Set(ctx, core.ZeroJetID, jet.Drop{Pulse: 123})
-	require.NoError(t, err)
-	err = ms.Set(ctx, *core.NewJetID(1, nil), jet.Drop{Pulse: 2})
-	require.NoError(t, err)
+	fJet := gen.JetID()
+	fPn := gen.PulseNumber()
+	_ = ms.Set(ctx, fJet, jet.Drop{Pulse: fPn})
+	sJet := gen.JetID()
+	sPn := gen.PulseNumber()
+	_ = ms.Set(ctx, sJet, jet.Drop{Pulse: sPn})
 
-	drop, err := ms.ForPulse(ctx, core.ZeroJetID, core.PulseNumber(123))
+	drop, err := ms.ForPulse(ctx, sJet, sPn)
 
-	require.Equal(t, core.PulseNumber(123), drop.Pulse)
-	require.Equal(t, 2, len(ms.jets))
+	require.NoError(t, err)
+	require.Equal(t, sPn, drop.Pulse)
+	require.Equal(t, 2, len(ms.drops))
 }
 
 func TestDropStorageMemory_DoubleSet(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	ms := NewStorageMemory()
 
-	err := ms.Set(ctx, core.ZeroJetID, jet.Drop{Pulse: 123, Size: 123})
-	require.NoError(t, err)
-	err = ms.Set(ctx, core.ZeroJetID, jet.Drop{Pulse: 123, Size: 999})
-	require.NoError(t, err)
+	fJet := gen.JetID()
+	fPn := gen.PulseNumber()
+	fSize := rand.Uint64()
+	sSize := rand.Uint64()
 
-	drop, err := ms.ForPulse(ctx, core.ZeroJetID, core.PulseNumber(123))
+	_ = ms.Set(ctx, fJet, jet.Drop{Pulse: fPn, Size: fSize})
+	_ = ms.Set(ctx, fJet, jet.Drop{Pulse: fPn, Size: sSize})
 
-	require.Equal(t, core.PulseNumber(123), drop.Pulse)
-	require.Equal(t, uint64(999), drop.Size)
-	require.Equal(t, 1, len(ms.jets))
+	drop, err := ms.ForPulse(ctx, fJet, fPn)
+
+	require.NoError(t, err)
+	require.Equal(t, fPn, drop.Pulse)
+	require.Equal(t, sSize, drop.Size)
+	require.Equal(t, 1, len(ms.drops))
 }
 
 func TestDropStorageDB_Set_Concurrent(t *testing.T) {
@@ -97,14 +115,14 @@ func TestDropStorageDB_Set_Concurrent(t *testing.T) {
 	wg.Add(gonum)
 
 	for i := 0; i < gonum; i++ {
-		go func(pulseNumber int) {
+		go func() {
 			<-startChannel
 
-			err := ms.Set(ctx, gen.JetID(), jet.Drop{Pulse: core.PulseNumber(pulseNumber), Size: rand.Uint64()})
+			err := ms.Set(ctx, gen.JetID(), jet.Drop{Pulse: gen.PulseNumber(), Size: rand.Uint64()})
 			require.NoError(t, err)
 
 			wg.Done()
-		}(i + 1)
+		}()
 	}
 
 	close(startChannel)
@@ -115,18 +133,27 @@ func TestDropStorageMemory_Delete(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	ms := NewStorageMemory()
 
-	err := ms.Set(ctx, core.ZeroJetID, jet.Drop{Pulse: 123, Size: 123})
-	require.NoError(t, err)
-	err = ms.Set(ctx, core.ZeroJetID, jet.Drop{Pulse: 222, Size: 999})
-	require.NoError(t, err)
+	fJet := gen.JetID()
+	sJet := gen.JetID()
+	fPn := gen.PulseNumber()
+	sPn := gen.PulseNumber()
+	fSize := rand.Uint64()
+	sSize := rand.Uint64()
+	tSize := rand.Uint64()
 
-	ms.Delete(core.PulseNumber(123))
+	_ = ms.Set(ctx, fJet, jet.Drop{Pulse: fPn, Size: fSize})
+	_ = ms.Set(ctx, sJet, jet.Drop{Pulse: fPn, Size: sSize})
+	_ = ms.Set(ctx, fJet, jet.Drop{Pulse: sPn, Size: tSize})
 
-	drop, err := ms.ForPulse(ctx, core.ZeroJetID, core.PulseNumber(222))
+	ms.Delete(fPn)
+
+	drop, err := ms.ForPulse(ctx, fJet, sPn)
 	require.NoError(t, err)
-	require.Equal(t, drop.Pulse, core.PulseNumber(222))
-	require.Equal(t, drop.Size, uint64(999))
+	require.Equal(t, drop.Pulse, sPn)
+	require.Equal(t, drop.Size, tSize)
 
-	drop, err = ms.ForPulse(ctx, core.ZeroJetID, core.PulseNumber(123))
-	require.Error(t, err, db.ErrNotFound)
+	drop, err = ms.ForPulse(ctx, fJet, fPn)
+	require.Error(t, err, ErrNotFound)
+	drop, err = ms.ForPulse(ctx, sJet, sPn)
+	require.Error(t, err, ErrNotFound)
 }
