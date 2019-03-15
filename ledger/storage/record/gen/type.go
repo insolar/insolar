@@ -7,7 +7,6 @@ package main
 
 import (
 	"html/template"
-	"io/ioutil"
 	"os"
 	"reflect"
 	"sort"
@@ -22,9 +21,10 @@ type typedRecord struct {
 }
 
 func main() {
-	f, err := ioutil.TempFile(os.TempDir(), "")
+	f, err := os.OpenFile("type_gen.go", os.O_RDWR|os.O_CREATE, 0666)
 	fatal(err)
 	defer f.Close()
+	fatal(f.Truncate(0))
 
 	reg := record.Registered()
 	records := make([]typedRecord, 0, len(reg))
@@ -43,9 +43,6 @@ func main() {
 	}{
 		Records: records,
 	})
-	fatal(err)
-
-	err = os.Rename(f.Name(), "type_gen.go")
 	fatal(err)
 }
 
