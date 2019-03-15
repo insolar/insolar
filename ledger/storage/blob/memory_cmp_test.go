@@ -21,7 +21,7 @@ import (
 	"testing"
 
 	fuzz "github.com/google/gofuzz"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar"
 	"github.com/insolar/insolar/gen"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage/blob"
@@ -34,10 +34,10 @@ func TestInMemoryBlob(t *testing.T) {
 
 	ctx := inslogger.TestContext(t)
 
-	blobStorage := blob.NewStorage()
+	blobStorage := blob.NewStorageMemory()
 
 	type tempBlob struct {
-		id core.RecordID
+		id insolar.ID
 		b  blob.Blob
 	}
 
@@ -81,7 +81,7 @@ func TestInMemoryBlob(t *testing.T) {
 	t.Run("returns override error when saving with the same id", func(t *testing.T) {
 		t.Parallel()
 
-		blobStorage := blob.NewStorage()
+		blobStorage := blob.NewStorageMemory()
 		for _, bl := range blobs {
 			err := blobStorage.Set(ctx, bl.id, bl.b)
 			require.NoError(t, err)
@@ -95,14 +95,14 @@ func TestInMemoryBlob(t *testing.T) {
 	})
 }
 
-// sizedSlice generates random byte slice fixed size
+// sizedSlice generates random byte slice fixed size.
 func sizedSlice(size int32) (blob []byte) {
 	blob = make([]byte, size)
 	rand.Read(blob)
 	return
 }
 
-// slice generates random byte slice with random size between 0 and 1024
+// slice generates random byte slice with random size between 0 and 1024.
 func slice() []byte {
 	size := rand.Int31n(1024)
 	return sizedSlice(size)

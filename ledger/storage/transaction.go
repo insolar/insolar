@@ -178,7 +178,8 @@ func (m *TransactionManager) GetObjectIndex(
 	if err != nil {
 		return nil, err
 	}
-	return index.DecodeObjectLifeline(buf)
+	res := index.Decode(buf)
+	return &res, nil
 }
 
 // SetObjectIndex stores object lifeline index.
@@ -193,10 +194,7 @@ func (m *TransactionManager) SetObjectIndex(
 	if idx.Delegates == nil {
 		idx.Delegates = map[core.RecordRef]core.RecordRef{}
 	}
-	encoded, err := index.EncodeObjectLifeline(idx)
-	if err != nil {
-		return err
-	}
+	encoded := index.Encode(*idx)
 	return m.set(ctx, k, encoded)
 }
 

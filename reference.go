@@ -30,3 +30,9 @@ type JetID = core.JetID
 // Reference represents universal insolar Reference. Reference consists of two IDs. First ID is an affinity ID,
 // second is referred object ID.
 type Reference = core.RecordRef
+
+// PulseNumber is a sequential number of Pulse.
+// Upper 2 bits are reserved for use in references (scope), must be zero otherwise.
+// Valid Absolute PulseNumber must be >65536.
+// If PulseNumber <65536 it is a relative PulseNumber
+type PulseNumber = core.PulseNumber

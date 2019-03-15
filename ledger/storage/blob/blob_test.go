@@ -17,12 +17,24 @@
 package blob
 
 import (
-	"github.com/pkg/errors"
+	"testing"
+
+	"github.com/insolar/insolar/gen"
+	"github.com/stretchr/testify/assert"
 )
 
-var (
-	// ErrNotFound is returned when blob-record not found.
-	ErrNotFound = errors.New("blob not found")
-	// ErrOverride is returned when trying to update existing record with the same id.
-	ErrOverride = errors.New("blob override is forbidden")
-)
+func TestClone(t *testing.T) {
+	t.Parallel()
+
+	jetID := gen.JetID()
+	rawBlob := slice()
+	blob := Blob{
+		JetID: jetID,
+		Value: rawBlob,
+	}
+
+	clonedBlob := Clone(blob)
+
+	assert.Equal(t, blob, clonedBlob)
+	assert.False(t, &blob == &clonedBlob)
+}

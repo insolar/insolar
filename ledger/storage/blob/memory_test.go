@@ -20,7 +20,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar"
 	"github.com/insolar/insolar/gen"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage/db"
@@ -28,10 +28,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestBlobStorage_NewStorage(t *testing.T) {
+func TestBlobStorage_NewStorageMemory(t *testing.T) {
 	t.Parallel()
 
-	blobStorage := NewStorage()
+	blobStorage := NewStorageMemory()
 	assert.Equal(t, 0, len(blobStorage.memory))
 }
 
@@ -54,8 +54,8 @@ func TestBlobStorage_Set(t *testing.T) {
 	t.Run("saves correct blob-value", func(t *testing.T) {
 		t.Parallel()
 
-		blobStorage := &Storage{
-			memory:   map[core.RecordID]Blob{},
+		blobStorage := &StorageMemory{
+			memory:   map[insolar.ID]Blob{},
 			jetIndex: jetIndex,
 		}
 		err := blobStorage.Set(ctx, id, blob)
@@ -69,8 +69,8 @@ func TestBlobStorage_Set(t *testing.T) {
 	t.Run("returns override error when saving with the same id", func(t *testing.T) {
 		t.Parallel()
 
-		blobStorage := &Storage{
-			memory:   map[core.RecordID]Blob{},
+		blobStorage := &StorageMemory{
+			memory:   map[insolar.ID]Blob{},
 			jetIndex: jetIndex,
 		}
 		err := blobStorage.Set(ctx, id, blob)
@@ -82,7 +82,7 @@ func TestBlobStorage_Set(t *testing.T) {
 	})
 }
 
-func TestBlobStorage_Get(t *testing.T) {
+func TestBlobStorage_ForID(t *testing.T) {
 	t.Parallel()
 
 	ctx := inslogger.TestContext(t)
@@ -98,8 +98,8 @@ func TestBlobStorage_Get(t *testing.T) {
 	t.Run("returns correct blob-value", func(t *testing.T) {
 		t.Parallel()
 
-		blobStorage := &Storage{
-			memory: map[core.RecordID]Blob{},
+		blobStorage := &StorageMemory{
+			memory: map[insolar.ID]Blob{},
 		}
 		blobStorage.memory[id] = blob
 
@@ -113,8 +113,8 @@ func TestBlobStorage_Get(t *testing.T) {
 	t.Run("returns error when no blob-value for id", func(t *testing.T) {
 		t.Parallel()
 
-		blobStorage := &Storage{
-			memory: map[core.RecordID]Blob{},
+		blobStorage := &StorageMemory{
+			memory: map[insolar.ID]Blob{},
 		}
 		blobStorage.memory[id] = blob
 
@@ -124,14 +124,14 @@ func TestBlobStorage_Get(t *testing.T) {
 	})
 }
 
-// sizedSlice generates random byte slice fixed size
+// sizedSlice generates random byte slice fixed size.
 func sizedSlice(size int32) (blob []byte) {
 	blob = make([]byte, size)
 	rand.Read(blob)
 	return
 }
 
-// slice generates random byte slice with random size between 0 and 1024
+// slice generates random byte slice with random size between 0 and 1024.
 func slice() []byte {
 	size := rand.Int31n(1024)
 	return sizedSlice(size)

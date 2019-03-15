@@ -174,7 +174,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObject_FetchesObject() {
 		mb.SendFunc = func(c context.Context, gm core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
 			if m, ok := gm.(*message.GetObjectIndex); ok {
 				assert.Equal(t, msg.Head, m.Object)
-				buf, err := index.EncodeObjectLifeline(&objIndex)
+				buf := index.Encode(objIndex)
 				require.NoError(t, err)
 				return &reply.ObjectIndex{Index: buf}, nil
 			}
@@ -325,7 +325,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetChildren_Redirects() {
 		mb.SendFunc = func(c context.Context, gm core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
 			if m, ok := gm.(*message.GetObjectIndex); ok {
 				assert.Equal(t, msg.Parent, m.Object)
-				buf, err := index.EncodeObjectLifeline(&objIndex)
+				buf := index.Encode(objIndex)
 				require.NoError(t, err)
 				return &reply.ObjectIndex{Index: buf}, nil
 			}
@@ -441,8 +441,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeav
 	mb.SendFunc = func(c context.Context, gm core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
 		if m, ok := gm.(*message.GetObjectIndex); ok {
 			assert.Equal(s.T(), msg.Head, m.Object)
-			buf, err := index.EncodeObjectLifeline(&objIndex)
-			require.NoError(s.T(), err)
+			buf := index.Encode(objIndex)
 			return &reply.ObjectIndex{Index: buf}, nil
 		}
 
@@ -520,7 +519,7 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_FetchesIndexFromHea
 	mb.SendFunc = func(c context.Context, gm core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
 		if m, ok := gm.(*message.GetObjectIndex); ok {
 			assert.Equal(s.T(), msg.Object, m.Object)
-			buf, err := index.EncodeObjectLifeline(&objIndex)
+			buf := index.Encode(objIndex)
 			require.NoError(s.T(), err)
 			return &reply.ObjectIndex{Index: buf}, nil
 		}
@@ -666,9 +665,8 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObjectIndex() {
 	require.NoError(s.T(), err)
 	indexRep, ok := rep.(*reply.ObjectIndex)
 	require.True(s.T(), ok)
-	decodedIndex, err := index.DecodeObjectLifeline(indexRep.Index)
-	require.NoError(s.T(), err)
-	assert.Equal(s.T(), objectIndex, *decodedIndex)
+	decodedIndex := index.Decode(indexRep.Index)
+	assert.Equal(s.T(), objectIndex, decodedIndex)
 }
 
 func (s *handlerSuite) TestMessageHandler_HandleHasPendingRequests() {
@@ -854,7 +852,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 	mb.SendFunc = func(c context.Context, gm core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
 		if m, ok := gm.(*message.GetObjectIndex); ok {
 			assert.Equal(s.T(), msg.Parent, m.Object)
-			buf, err := index.EncodeObjectLifeline(&objIndex)
+			buf := index.Encode(objIndex)
 			require.NoError(s.T(), err)
 			return &reply.ObjectIndex{Index: buf}, nil
 		}
@@ -965,7 +963,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 		return &reply.OK{}, nil
 	}
 
-	firstIndex, _ := index.EncodeObjectLifeline(&index.ObjectLifeline{
+	firstIndex := index.Encode(index.ObjectLifeline{
 		LatestState: firstID,
 	})
 	err = s.objectStorage.SetObjectIndex(s.ctx, jetID, firstID, &index.ObjectLifeline{
