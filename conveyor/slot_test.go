@@ -20,7 +20,8 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/conveyor/interfaces/constant"
-	"github.com/insolar/insolar/conveyor/interfaces/istatemachine"
+	"github.com/insolar/insolar/conveyor/interfaces/fsm"
+	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
 	"github.com/insolar/insolar/conveyor/queue"
 	"github.com/insolar/insolar/core"
 	"github.com/stretchr/testify/require"
@@ -274,13 +275,13 @@ func TestSlot_createElement(t *testing.T) {
 	oldEmptyLen := s.elementListMap[EmptyElement].len()
 	event := queue.OutputElement{}
 
-	stateMachineMock := istatemachine.NewStateMachineTypeMock(t)
+	stateMachineMock := statemachine.NewStateMachineMock(t)
 
 	element, err := s.createElement(stateMachineMock, 1, event)
 	require.NotNil(t, element)
 	require.NoError(t, err)
-	require.Equal(t, stateMachineMock, element.stateMachineType)
-	require.Equal(t, uint32(1), element.state)
+	require.Equal(t, stateMachineMock, element.stateMachine)
+	require.Equal(t, fsm.StateID(1), element.state)
 	require.Equal(t, uint32(0), element.id)
 	require.Equal(t, ActiveElement, element.activationStatus)
 	require.Equal(t, 1, s.elementListMap[ActiveElement].len())
@@ -293,7 +294,7 @@ func TestSlot_createElement_Err(t *testing.T) {
 	delete(s.elementListMap, ActiveElement)
 	event := queue.OutputElement{}
 
-	stateMachineMock := istatemachine.NewStateMachineTypeMock(t)
+	stateMachineMock := statemachine.NewStateMachineMock(t)
 
 	element, err := s.createElement(stateMachineMock, 1, event)
 	require.Nil(t, element)
@@ -313,7 +314,7 @@ func TestSlot_hasElements(t *testing.T) {
 	require.False(t, s.hasElements(NotActiveElement))
 	require.True(t, s.hasElements(EmptyElement))
 
-	sm := istatemachine.NewStateMachineTypeMock(t)
+	sm := statemachine.NewStateMachineMock(t)
 	_, err := s.createElement(sm, 20, queue.OutputElement{})
 	require.NoError(t, err)
 
@@ -420,13 +421,13 @@ func TestSlot_pushElement_Empty(t *testing.T) {
 }
 
 func TestSlot_extractSlotElementByID(t *testing.T) {
-	sm := istatemachine.NewStateMachineTypeMock(t)
+	sm := statemachine.NewStateMachineMock(t)
 	slot := NewSlot(constant.Present, 10, nil)
 
 	var elements []*slotElement
 
 	for i := 1; i < 100; i++ {
-		el, err := slot.createElement(sm, uint32(20+i), queue.OutputElement{})
+		el, err := slot.createElement(sm, fsm.StateID(20+i), queue.OutputElement{})
 		require.NoError(t, err)
 		elements = append(elements, el)
 	}
@@ -440,7 +441,7 @@ func TestSlot_extractSlotElementByID(t *testing.T) {
 	}
 
 	for i := 1; i < 100; i++ {
-		_, err := slot.createElement(sm, uint32(2000+i), queue.OutputElement{})
+		_, err := slot.createElement(sm, fsm.StateID(2000+i), queue.OutputElement{})
 		require.NoError(t, err)
 
 		el := slot.popElement(ActiveElement)
@@ -455,7 +456,7 @@ func TestSlot_extractSlotElementByID(t *testing.T) {
 }
 
 func TestSlot_PopPushMultiple(t *testing.T) {
-	sm := istatemachine.NewStateMachineTypeMock(t)
+	sm := statemachine.NewStateMachineMock(t)
 	slot := NewSlot(constant.Present, 10, nil)
 
 	slot.createElement(sm, 33, queue.OutputElement{})

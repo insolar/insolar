@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package conveyor
+package fsm
 
 import (
 	"testing"
@@ -24,49 +24,48 @@ import (
 
 func TestStateConvertingZeroState(t *testing.T) {
 	// hex( int( 22*'1' + 10*'0', 2) )
-	original := uint32(0xfffffc00)
+	original := ElementState(0xfffffc00)
 
-	sm, state := extractStates(original)
-	require.Equal(t, uint32(0x3fffff), sm)
-	require.Equal(t, uint32(0), state)
+	sm, state := original.Parse()
+	require.Equal(t, ID(0x3fffff), sm)
+	require.Equal(t, StateID(0), state)
 
-	require.Equal(t, original, joinStates(sm, state))
+	require.Equal(t, original, NewElementState(sm, state))
 }
 
 func TestStateConvertingZeroSM(t *testing.T) {
 	// hex( int( 22*'0' + 10*'1', 2) )
 
-	original := uint32(0x3ff)
+	original := ElementState(0x3ff)
 
-	sm, state := extractStates(original)
-	require.Equal(t, uint32(0), sm)
-	require.Equal(t, uint32(0x3ff), state)
+	sm, state := original.Parse()
+	require.Equal(t, ID(0), sm)
+	require.Equal(t, StateID(0x3ff), state)
 
-	require.Equal(t, original, joinStates(sm, state))
+	require.Equal(t, original, NewElementState(sm, state))
 }
 
 func TestStateConvertingZeroAll(t *testing.T) {
-	original := uint32(0)
+	original := ElementState(0)
 
-	sm, state := extractStates(original)
-	require.Equal(t, uint32(0), sm)
-	require.Equal(t, uint32(0), state)
+	sm, state := original.Parse()
+	require.Equal(t, ID(0), sm)
+	require.Equal(t, StateID(0), state)
 
-	require.Equal(t, original, joinStates(sm, state))
+	require.Equal(t, original, NewElementState(sm, state))
 }
 
 func TestStateConvertingAllOnes(t *testing.T) {
 	//  hex(int(32 * '1', 2))
-	original := uint32(0xffffffff)
+	original := ElementState(0xffffffff)
 
-	sm, state := extractStates(original)
-	require.Equal(t, uint32(0x3fffff), sm)
-	require.Equal(t, uint32(0x3ff), state)
+	sm, state := original.Parse()
+	require.Equal(t, ID(0x3fffff), sm)
+	require.Equal(t, StateID(0x3ff), state)
 
-	require.Equal(t, original, joinStates(sm, state))
+	require.Equal(t, original, NewElementState(sm, state))
 }
 
 func TestJoinStatesStateOverFlow(t *testing.T) {
-
-	require.PanicsWithValue(t, "Invalid state: 33333", func() { joinStates(0, 33333) })
+	require.PanicsWithValue(t, "Invalid state: 333333333", func() { NewElementState(1, 333333333) })
 }
