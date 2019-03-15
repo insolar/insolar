@@ -19,6 +19,7 @@ package message
 import (
 	"bytes"
 	"context"
+	"github.com/insolar/insolar/core"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -70,15 +71,20 @@ func TestSerializeSignedWithContext(t *testing.T) {
 	signMsgIn := &Parcel{
 		Msg:           msg,
 		Signature:     nil,
-		TraceSpanData: instracer.MustSerialize(ctxIn),
-		LogTraceID:    inslogger.TraceID(ctxIn),
+		ServiceData:   ServiceData{
+			TraceSpanData: instracer.MustSerialize(ctxIn),
+			LogTraceID:    inslogger.TraceID(ctxIn),
+			LogLevel:      core.DebugLevel,
+		},
 	}
 
 	signMsgOut, err := DeserializeParcel(bytes.NewBuffer(ParcelToBytes(signMsgIn)))
 	require.NoError(t, err)
 
 	ctxOut := signMsgOut.Context(context.Background())
-	require.Equal(t, traceid, inslogger.TraceID(ctxIn))
+	require.Equal(t, inslogger.TraceID(ctxIn), traceid)
 	require.Equal(t, inslogger.TraceID(ctxIn), inslogger.TraceID(ctxOut))
-	require.Equal(t, instracer.GetBaggage(ctxIn), instracer.GetBaggage(ctxOut))
+	require.Equal(t, instracer.GetBaggage(ctxOut), instracer.GetBaggage(ctxIn))
+	require.Equal(t, core.NoLevel, inslogger.GetLoggerLevel(ctxIn))
+	require.Equal(t, core.DebugLevel, inslogger.GetLoggerLevel(ctxOut))
 }

@@ -26,6 +26,7 @@ import (
 )
 
 type loggerKey struct{}
+type loggerLevelKey struct{}
 
 func TraceID(ctx context.Context) string {
 	return utils.TraceID(ctx)
@@ -39,6 +40,20 @@ func FromContext(ctx context.Context) core.Logger {
 // SetLogger returns context with provided core.Logger,
 func SetLogger(ctx context.Context, l core.Logger) context.Context {
 	return context.WithValue(ctx, loggerKey{}, l)
+}
+
+// SetLoggerLevel returns context with provided core.LogLevel and set logLevel on logger,
+func WithLoggerLevel(ctx context.Context, logLevel core.LogLevel) context.Context {
+	if logLevel != core.NoLevel {
+		oldLogger := FromContext(ctx)
+		logCopy := oldLogger.Copy()
+		if err := logCopy.SetLevelNumber(logLevel); err != nil {
+			oldLogger.Error("failed to set log level: ", err.Error())
+			return ctx
+		}
+		ctx = SetLogger(ctx, logCopy)
+	}
+	return context.WithValue(ctx, loggerLevelKey{}, logLevel)
 }
 
 // WithField returns context with logger initialized with provided field's key value and logger itself.
@@ -74,4 +89,18 @@ func getLogger(ctx context.Context) core.Logger {
 func TestContext(t *testing.T) context.Context {
 	ctx, _ := WithField(context.Background(), "testname", t.Name())
 	return ctx
+}
+
+func GetLoggerLevel(ctx context.Context) core.LogLevel {
+	logLevel := ctx.Value(loggerLevelKey{})
+	if logLevel == nil {
+		return core.NoLevel
+	}
+
+	logLevelValue, ok := logLevel.(core.LogLevel)
+	if !ok {
+		return core.NoLevel
+	}
+
+	return logLevelValue
 }

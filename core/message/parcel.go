@@ -19,7 +19,6 @@ package message
 import (
 	"context"
 	"crypto"
-
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
@@ -31,15 +30,20 @@ type ParcelFactory interface {
 	Validate(crypto.PublicKey, core.Parcel) error
 }
 
+type ServiceData struct {
+	LogTraceID    string
+	LogLevel      core.LogLevel
+	TraceSpanData []byte
+}
+
 // Parcel is a message signed by senders private key.
 type Parcel struct {
 	Sender        core.RecordRef
 	Msg           core.Message
 	Signature     []byte
-	LogTraceID    string
-	TraceSpanData []byte
 	Token         core.DelegationToken
 	PulseNumber   core.PulseNumber
+	ServiceData   ServiceData
 }
 
 // AllowedSenderObjectAndRole implements interface method
@@ -57,7 +61,7 @@ func (p *Parcel) DefaultTarget() *core.RecordRef {
 	return p.Msg.DefaultTarget()
 }
 
-// Pulse returns pulse, when parcel was sent
+// Pulse returns pulse, when parcel was sentьф
 func (p *Parcel) Pulse() core.PulseNumber {
 	return p.PulseNumber
 }
@@ -69,9 +73,10 @@ func (p *Parcel) Message() core.Message {
 
 // Context returns initialized context with propagated data with ctx as parent.
 func (p *Parcel) Context(ctx context.Context) context.Context {
-	ctx = inslogger.ContextWithTrace(ctx, p.LogTraceID)
-	parentspan := instracer.MustDeserialize(p.TraceSpanData)
-	return instracer.WithParentSpan(ctx, parentspan)
+	ctx = inslogger.ContextWithTrace(ctx, p.ServiceData.LogTraceID)
+	ctx = inslogger.WithLoggerLevel(ctx, p.ServiceData.LogLevel)
+	parentSpan := instracer.MustDeserialize(p.ServiceData.TraceSpanData)
+	return instracer.WithParentSpan(ctx, parentSpan)
 }
 
 func (p *Parcel) DelegationToken() core.DelegationToken {

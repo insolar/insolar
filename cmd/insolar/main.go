@@ -27,12 +27,14 @@ import (
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/version"
+
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -93,10 +95,11 @@ var (
 	verbose            bool
 	sendUrls           string
 	rootAsCaller       bool
+	logLevelServer     core.LogLevel
 )
 
 func parseInputParams() {
-	var rootCmd = &cobra.Command{}
+	var  rootCmd = &cobra.Command{}
 	rootCmd.Flags().StringVarP(&cmd, "cmd", "c", "",
 		"available commands: default_config | random_ref | version | gen_keys | gen_certificate | send_request | gen_send_configs | get_info | create_member")
 	rootCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "be verbose (default false)")
@@ -106,15 +109,21 @@ func parseInputParams() {
 	rootCmd.Flags().StringVarP(&configPath, "config", "g", "config.json", "path to configuration file")
 	rootCmd.Flags().StringVarP(&paramsPath, "params", "p", "", "path to params file (default params.json)")
 	rootCmd.Flags().BoolVarP(&rootAsCaller, "root_as_caller", "r", false, "use root member as caller")
+
+	var logLevelServerString string
+	rootCmd.Flags().StringVarP(&logLevelServerString, "log_level_server", "L", "", "server log level")
+
 	err := rootCmd.Execute()
 	check("Wrong input params:", err)
+
+	logLevelServer, err = core.ParseLevel(logLevelServerString)
+	check("Failed to parse logging level", err)
 
 	if len(cmd) == 0 {
 		err = rootCmd.Usage()
 		check("[ parseInputParams ]", err)
 		os.Exit(0)
 	}
-
 }
 
 func main() {
@@ -177,8 +186,9 @@ func createMember(out io.Writer) {
 	check("Problems with creating user config:", err)
 
 	req := requester.RequestConfigJSON{
-		Params: []interface{}{userName, cfg.PublicKey},
-		Method: "CreateMember",
+		Params:   []interface{}{userName, cfg.PublicKey},
+		Method:   "CreateMember",
+		LogLevel: logLevelServer,
 	}
 
 	ctx := inslogger.ContextWithTrace(context.Background(), "insolarUtility")

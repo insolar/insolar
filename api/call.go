@@ -36,11 +36,12 @@ import (
 
 // Request is a representation of request struct to api
 type Request struct {
-	Reference string `json:"reference"`
-	Method    string `json:"method"`
-	Params    []byte `json:"params"`
-	Seed      []byte `json:"seed"`
-	Signature []byte `json:"signature"`
+	Reference string      `json:"reference"`
+	Method    string      `json:"method"`
+	Params    []byte      `json:"params"`
+	Seed      []byte      `json:"seed"`
+	Signature []byte      `json:"signature"`
+	LogLevel  interface{} `json:"logLevel"`
 }
 
 type answer struct {
@@ -157,6 +158,20 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 		if err != nil {
 			processError(err, "Can't unmarshal request", &resp, insLog)
 			return
+		}
+
+		if params.LogLevel != nil {
+			logLevelStr, ok := params.LogLevel.(string)
+			if !ok {
+				processError(err, "Bad type logLevel", &resp, insLog)
+				return
+			}
+			logLevelNumber, err := core.ParseLevel(logLevelStr)
+			if err != nil {
+				processError(err, "Can't parse logLevel", &resp, insLog)
+				return
+			}
+			ctx = inslogger.WithLoggerLevel(ctx, logLevelNumber)
 		}
 
 		err = ar.checkSeed(params.Seed)
