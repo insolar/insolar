@@ -396,5 +396,5 @@ func TestTree_LeafIDs(t *testing.T) {
 
 func Test_ParsePrefix(t *testing.T) {
 	prefix := parsePrefix("1100")
-	assert.Equal(t, []byte{0xC0}, parsePrefix("1100"))
+	assert.Equal(t, []byte{0xC0}, prefix)
 }

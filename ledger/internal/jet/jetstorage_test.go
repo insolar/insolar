@@ -19,18 +19,19 @@ package jet
 import (
 	"testing"
 
-	"github.com/insolar/insolar/core"
 	"github.com/stretchr/testify/require"
 
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
-func TestJetStorage_GetJetTree(t *testing.T) {
-	ctx := inslogger.TestContext(t)
-	s := NewStore()
-
-	tree := s.treeForPulse(ctx, 100)
-	require.Equal(t, "root (level=0 actual=false)\n", tree.String())
+// helper for tests
+func treeForPulse(s *Store, pulse core.PulseNumber) (*Tree, bool) {
+	ltree, ok := s.trees[pulse]
+	if !ok {
+		return nil, false
+	}
+	return ltree.t, true
 }
 
 func TestJetStorage_UpdateJetTree(t *testing.T) {
@@ -39,7 +40,7 @@ func TestJetStorage_UpdateJetTree(t *testing.T) {
 
 	s.Update(ctx, 100, true, *core.NewJetID(0, nil))
 
-	tree := s.treeForPulse(ctx, 100)
+	tree, _ := treeForPulse(s, 100)
 	require.Equal(t, "root (level=0 actual=true)\n", tree.String())
 }
 
@@ -52,7 +53,7 @@ func TestJetStorage_SplitJetTree(t *testing.T) {
 	require.Equal(t, "[JET 1 0]", l.DebugString())
 	require.Equal(t, "[JET 1 1]", r.DebugString())
 
-	tree := s.treeForPulse(ctx, 100)
+	tree, _ := treeForPulse(s, 100)
 	require.Equal(t, "root (level=0 actual=false)\n 0 (level=1 actual=false)\n 1 (level=1 actual=false)\n", tree.String())
 }
 
@@ -62,15 +63,15 @@ func TestJetStorage_CloneJetTree(t *testing.T) {
 
 	s.Update(ctx, 100, true, *core.NewJetID(0, nil))
 
-	tree := s.treeForPulse(ctx, 100)
+	tree, _ := treeForPulse(s, 100)
 	require.Equal(t, "root (level=0 actual=true)\n", tree.String())
 
 	s.Clone(ctx, 100, 101)
 
-	tree = s.treeForPulse(ctx, 101)
+	tree, _ = treeForPulse(s, 101)
 	require.Equal(t, "root (level=0 actual=false)\n", tree.String())
 
-	tree = s.treeForPulse(ctx, 100)
+	tree, _ = treeForPulse(s, 100)
 	require.Equal(t, "root (level=0 actual=true)\n", tree.String())
 }
 
@@ -83,7 +84,10 @@ func TestJetStorage_DeleteJetTree(t *testing.T) {
 
 	s.Delete(ctx, 100)
 
-	tree := s.treeForPulse(ctx, 100)
-	require.NoError(t, err)
-	require.Equal(t, "root (level=0 actual=false)\n", tree.String())
+	_, ok := treeForPulse(s, 100)
+	require.False(t, ok, "tree should be an empty")
+
+	all := s.All(ctx, 100)
+	require.Equal(t, 1, len(all), "should be just one jet ID")
+	require.Equal(t, core.ZeroJetID, all[0], "JetID should be a zero after tree removal")
 }
