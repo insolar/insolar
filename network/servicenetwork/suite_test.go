@@ -417,8 +417,9 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	s.Require().NoError(err)
 	terminationHandler := &terminationHandler{NodeID: node.id}
 
+	keyProc := platformpolicy.NewKeyProcessor()
 	node.componentManager.Register(terminationHandler, realKeeper, newPulseManagerMock(realKeeper.(network.NodeKeeper)))
 	node.componentManager.Register(netCoordinator, amMock, certManager, cryptographyService)
-	node.componentManager.Inject(serviceNetwork, NewTestNetworkSwitcher())
+	node.componentManager.Inject(serviceNetwork, NewTestNetworkSwitcher(), keyProc)
 	node.serviceNetwork = serviceNetwork
 }

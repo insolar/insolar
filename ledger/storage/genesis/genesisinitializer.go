@@ -1,5 +1,5 @@
 /*
- *    Copyright 2019 Insolar Technologies
+ *    Copyright 2019 Insolar
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package storage
+package genesis
 
 import (
 	"context"
@@ -22,6 +22,8 @@ import (
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/index"
 	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/record"
@@ -34,11 +36,11 @@ type GenesisState interface {
 }
 
 type genesisInitializer struct {
-	DB            DBContext     `inject:""`
-	JetStorage    JetStorage    `inject:""`
-	ObjectStorage ObjectStorage `inject:""`
-	DropStorage   DropStorage   `inject:""`
-	PulseTracker  PulseTracker  `inject:""`
+	DB            storage.DBContext     `inject:""`
+	JetStorage    jet.JetStorage        `inject:""`
+	ObjectStorage storage.ObjectStorage `inject:""`
+	PulseTracker  storage.PulseTracker  `inject:""`
+	DropModifier  drop.Modifier         `inject:""`
 
 	genesisRef *core.RecordRef
 }
@@ -57,10 +59,10 @@ func (gi *genesisInitializer) GenesisRef() *core.RecordRef {
 func (gi *genesisInitializer) Init(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
 	inslog.Info("start storage bootstrap")
-	jetID := *jet.NewID(0, nil)
+	jetID := *core.NewJetID(0, nil)
 
 	getGenesisRef := func() (*core.RecordRef, error) {
-		buff, err := gi.DB.get(ctx, prefixkey(scopeIDSystem, []byte{sysGenesis}))
+		buff, err := gi.DB.Get(ctx, storage.GenesisPrefixKey())
 		if err != nil {
 			return nil, err
 		}
@@ -70,7 +72,7 @@ func (gi *genesisInitializer) Init(ctx context.Context) error {
 	}
 
 	createGenesisRecord := func() (*core.RecordRef, error) {
-		err := gi.JetStorage.AddJets(ctx, jetID)
+		err := gi.JetStorage.AddJets(ctx, core.RecordID(jetID))
 		if err != nil {
 			return nil, err
 		}
@@ -86,7 +88,7 @@ func (gi *genesisInitializer) Init(ctx context.Context) error {
 			return nil, err
 		}
 		// It should be 0. Because pulse after 65537 will try to use a hash of drop between 0 - 65537
-		err = gi.DropStorage.SetDrop(ctx, jetID, &jet.JetDrop{})
+		err = gi.DropModifier.Set(ctx, jetID, jet.Drop{})
 		if err != nil {
 			return nil, err
 		}
@@ -95,13 +97,13 @@ func (gi *genesisInitializer) Init(ctx context.Context) error {
 		if err != nil {
 			return nil, err
 		}
-		genesisID, err := gi.ObjectStorage.SetRecord(ctx, jetID, lastPulse.Pulse.PulseNumber, &record.GenesisRecord{})
+		genesisID, err := gi.ObjectStorage.SetRecord(ctx, core.RecordID(jetID), lastPulse.Pulse.PulseNumber, &record.GenesisRecord{})
 		if err != nil {
 			return nil, err
 		}
 		err = gi.ObjectStorage.SetObjectIndex(
 			ctx,
-			jetID,
+			core.RecordID(jetID),
 			genesisID,
 			&index.ObjectLifeline{LatestState: genesisID, LatestStateApproved: genesisID},
 		)
@@ -110,7 +112,7 @@ func (gi *genesisInitializer) Init(ctx context.Context) error {
 		}
 
 		genesisRef := core.NewRecordRef(*genesisID, *genesisID)
-		return genesisRef, gi.DB.set(ctx, prefixkey(scopeIDSystem, []byte{sysGenesis}), genesisRef[:])
+		return genesisRef, gi.DB.Set(ctx, storage.GenesisPrefixKey(), genesisRef[:])
 	}
 
 	var err error

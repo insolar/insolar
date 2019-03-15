@@ -17,18 +17,24 @@
 package gen
 
 import (
-	"github.com/google/gofuzz"
+	fuzz "github.com/google/gofuzz"
 	"github.com/insolar/insolar/core"
 )
 
 // ID generates random id.
 func ID() (id core.RecordID) {
-	fuzz.New().Fuzz(&id)
+	fuzz.New().NilChance(0).Fuzz(&id)
+	return
+}
+
+// JetID generates random id.
+func JetID() (id core.JetID) {
+	fuzz.New().NilChance(0).Fuzz(&id)
 	return
 }
 
 // Reference generates random reference.
 func Reference() (ref core.RecordRef) {
-	fuzz.New().Fuzz(&ref)
+	fuzz.New().NilChance(0).Fuzz(&ref)
 	return
 }

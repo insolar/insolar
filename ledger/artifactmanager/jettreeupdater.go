@@ -21,6 +21,7 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar"
+	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/pkg/errors"
 
@@ -29,7 +30,6 @@ import (
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/jet"
 )
 
@@ -50,7 +50,7 @@ type fetchResult struct {
 
 type jetTreeUpdater struct {
 	Nodes          node.Accessor
-	JetStorage     storage.JetStorage
+	JetStorage     jet.JetStorage
 	MessageBus     core.MessageBus
 	JetCoordinator core.JetCoordinator
 
@@ -60,7 +60,7 @@ type jetTreeUpdater struct {
 
 func newJetTreeUpdater(
 	ans node.Accessor,
-	js storage.JetStorage, mb core.MessageBus, jc core.JetCoordinator,
+	js jet.JetStorage, mb core.MessageBus, jc core.JetCoordinator,
 ) *jetTreeUpdater {
 	return &jetTreeUpdater{
 		Nodes:          ans,
@@ -131,7 +131,7 @@ func (jtu *jetTreeUpdater) releaseJet(ctx context.Context, jetID core.RecordID, 
 	jtu.seqMutex.Lock()
 	defer jtu.seqMutex.Unlock()
 
-	depth, _ := jet.Jet(jetID)
+	depth := core.JetID(jetID).Depth()
 	for {
 		key := seqKey{pulse, jetID}
 		if v, ok := jtu.sequencer[key]; ok {
@@ -145,7 +145,7 @@ func (jtu *jetTreeUpdater) releaseJet(ctx context.Context, jetID core.RecordID, 
 		if depth == 0 {
 			break
 		}
-		jetID = jet.Parent(jetID)
+		jetID = core.RecordID(storage.JetParent(core.JetID(jetID)))
 		depth--
 	}
 }

@@ -264,3 +264,8 @@ type ClaimQueue interface {
 	// Push adds claim to the queue.
 	Push(claim consensus.ReferendumClaim)
 }
+
+// Snapshot provides ...
+type Snapshot interface {
+	GetPulse()
+}

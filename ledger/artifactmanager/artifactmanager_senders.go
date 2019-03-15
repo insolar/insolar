@@ -24,7 +24,7 @@ import (
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 )
@@ -114,7 +114,7 @@ func followRedirectSender(bus core.MessageBus) PreSender {
 }
 
 // retryJetSender is using for refreshing jet-tree, if destination has no idea about a jet from message
-func retryJetSender(pulseNumber core.PulseNumber, jetStorage storage.JetStorage) PreSender {
+func retryJetSender(pulseNumber core.PulseNumber, jetStorage jet.JetStorage) PreSender {
 	return func(sender Sender) Sender {
 		return func(ctx context.Context, msg core.Message, options *core.MessageSendOptions) (core.Reply, error) {
 			retries := jetMissRetryCount
