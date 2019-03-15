@@ -19,23 +19,26 @@ package object
 import (
 	"bytes"
 	"context"
+	"sync"
 
 	"github.com/insolar/insolar"
+	"github.com/insolar/insolar/ledger/storage/db"
 	"github.com/ugorji/go/codec"
+	"go.opencensus.io/stats"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/storage/object.Accessor -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage/object.IndexAccessor -o ./ -s _mock.go
 
-// Accessor provides info about Index-values from storage.
-type Accessor interface {
+// IndexAccessor provides info about Index-values from storage.
+type IndexAccessor interface {
 	// ForID returns Index for provided id.
 	ForID(ctx context.Context, id insolar.ID) (Lifeline, error)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/storage/object.Modifier -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage/object.IndexModifier -o ./ -s _mock.go
 
-// Modifier provides methods for setting Index-values to storage.
-type Modifier interface {
+// IndexModifier provides methods for setting Index-values to storage.
+type IndexModifier interface {
 	// Set saves new Index-value in storage.
 	Set(ctx context.Context, id insolar.ID, index Lifeline) error
 }
@@ -95,4 +98,53 @@ func Clone(idx Lifeline) Lifeline {
 	}
 
 	return idx
+}
+
+// IndexMemory is an in-memory struct for index-storage.
+type IndexMemory struct {
+	jetIndex db.JetIndexModifier
+
+	lock   sync.RWMutex
+	memory map[insolar.ID]Lifeline
+}
+
+// NewIndexMemory creates a new instance of Storage.
+func NewIndexMemory() *IndexMemory {
+	return &IndexMemory{
+		memory:   map[insolar.ID]Lifeline{},
+		jetIndex: db.NewJetIndex(),
+	}
+}
+
+// Set saves new Index-value in storage.
+func (s *IndexMemory) Set(ctx context.Context, id insolar.ID, index Lifeline) error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	idx := Clone(index)
+
+	s.memory[id] = idx
+	s.jetIndex.Add(id, idx.JetID)
+
+	stats.Record(ctx,
+		statIndexInMemoryCount.M(1),
+	)
+
+	return nil
+}
+
+// ForID returns Index for provided id.
+func (s *IndexMemory) ForID(ctx context.Context, id insolar.ID) (index Lifeline, err error) {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+
+	idx, ok := s.memory[id]
+	if !ok {
+		err = ErrNotFound
+		return
+	}
+
+	index = Clone(idx)
+
+	return
 }

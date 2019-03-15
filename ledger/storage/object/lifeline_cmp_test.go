@@ -34,7 +34,7 @@ func TestInMemoryIndex(t *testing.T) {
 
 	ctx := inslogger.TestContext(t)
 
-	indexStorage := object.NewStorageMemory()
+	indexStorage := object.NewIndexMemory()
 
 	type tempIndex struct {
 		id  insolar.ID
@@ -85,7 +85,7 @@ func TestInMemoryIndex(t *testing.T) {
 	t.Run("override indices is ok", func(t *testing.T) {
 		t.Parallel()
 
-		indexStorage := object.NewStorageMemory()
+		indexStorage := object.NewIndexMemory()
 		for _, i := range indices {
 			err := indexStorage.Set(ctx, i.id, i.idx)
 			require.NoError(t, err)

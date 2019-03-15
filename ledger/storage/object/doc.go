@@ -14,5 +14,5 @@
  *    limitations under the License.
  */
 
-// Package record contains code and types for storage records manipulation.
+// Package object contains code and types for storage records manipulation.
 package object

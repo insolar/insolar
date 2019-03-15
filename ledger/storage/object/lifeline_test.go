@@ -22,13 +22,137 @@ import (
 	fuzz "github.com/google/gofuzz"
 	"github.com/insolar/insolar"
 	"github.com/insolar/insolar/gen"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/storage/db"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+func TestIndexStorage_NewStorageMemory(t *testing.T) {
+	t.Parallel()
+
+	indexStorage := NewIndexMemory()
+	assert.Equal(t, 0, len(indexStorage.memory))
+}
+
+func TestIndexStorage_ForID(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+
+	jetID := gen.JetID()
+	id := gen.ID()
+	idx := Lifeline{
+		LatestState: &id,
+		JetID:       jetID,
+	}
+
+	t.Run("returns correct index-value", func(t *testing.T) {
+		t.Parallel()
+
+		indexStorage := &IndexMemory{
+			memory: map[insolar.ID]Lifeline{},
+		}
+		indexStorage.memory[id] = idx
+
+		resultIdx, err := indexStorage.ForID(ctx, id)
+		require.NoError(t, err)
+		assert.Equal(t, idx, resultIdx)
+		assert.Equal(t, jetID, resultIdx.JetID)
+	})
+
+	t.Run("returns error when no index-value for id", func(t *testing.T) {
+		t.Parallel()
+
+		indexStorage := &IndexMemory{
+			memory: map[insolar.ID]Lifeline{},
+		}
+		indexStorage.memory[id] = idx
+
+		_, err := indexStorage.ForID(ctx, gen.ID())
+		require.Error(t, err)
+		assert.Equal(t, ErrNotFound, err)
+	})
+}
+
+func TestIndexStorage_Set(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+
+	jetID := gen.JetID()
+	id := gen.ID()
+	idx := Lifeline{
+		LatestState: &id,
+		JetID:       jetID,
+	}
+
+	jetIndex := db.NewJetIndexModifierMock(t)
+	jetIndex.AddMock.Expect(id, jetID)
+
+	t.Run("saves correct index-value", func(t *testing.T) {
+		t.Parallel()
+
+		indexStorage := &IndexMemory{
+			memory:   map[insolar.ID]Lifeline{},
+			jetIndex: jetIndex,
+		}
+		err := indexStorage.Set(ctx, id, idx)
+		require.NoError(t, err)
+		assert.Equal(t, 1, len(indexStorage.memory))
+		assert.Equal(t, idx, indexStorage.memory[id])
+		assert.Equal(t, jetID, indexStorage.memory[id].JetID)
+	})
+
+	t.Run("override indices is ok", func(t *testing.T) {
+		t.Parallel()
+
+		indexStorage := &IndexMemory{
+			memory:   map[insolar.ID]Lifeline{},
+			jetIndex: jetIndex,
+		}
+		err := indexStorage.Set(ctx, id, idx)
+		require.NoError(t, err)
+
+		err = indexStorage.Set(ctx, id, idx)
+		assert.NoError(t, err)
+	})
+}
+
+func TestIndexStorage_Set_SaveLastUpdate(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+
+	jetID := gen.JetID()
+	id := gen.ID()
+	pn := gen.PulseNumber()
+	idx := Lifeline{
+		LatestState:  &id,
+		LatestUpdate: pn,
+		JetID:        jetID,
+	}
+
+	jetIndex := db.NewJetIndexModifierMock(t)
+	jetIndex.AddMock.Expect(id, jetID)
+
+	t.Run("saves correct LastUpdate field in index", func(t *testing.T) {
+		t.Parallel()
+
+		indexStorage := &IndexMemory{
+			memory:   map[insolar.ID]Lifeline{},
+			jetIndex: jetIndex,
+		}
+		err := indexStorage.Set(ctx, id, idx)
+		require.NoError(t, err)
+		assert.Equal(t, pn, indexStorage.memory[id].LatestUpdate)
+	})
+}
 
 func TestCloneObjectLifeline(t *testing.T) {
 	t.Parallel()
 
-	currentIdx := objectLifeline()
+	currentIdx := lifeline()
 
 	clonedIdx := Clone(currentIdx)
 
@@ -51,7 +175,7 @@ func state() (state State) {
 	return
 }
 
-func objectLifeline() Lifeline {
+func lifeline() Lifeline {
 	var index Lifeline
 	fuzz.New().NilChance(0).Funcs(
 		func(idx *Lifeline, c fuzz.Continue) {
