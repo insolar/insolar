@@ -16,7 +16,10 @@
 
 package adapter
 
-import "github.com/insolar/insolar/conveyor/interfaces/slot"
+import (
+	"github.com/insolar/insolar/conveyor/interfaces/iadapter"
+	"github.com/insolar/insolar/conveyor/interfaces/slot"
+)
 
 type idType = uint32
 
@@ -52,6 +55,36 @@ type AdapterResponse struct {
 	elementID   idType
 	handlerID   idType
 	respPayload interface{}
+}
+
+// NewAdapterResponse creates new adapter response
+func NewAdapterResponse(adapterID idType, elementID idType, handlerID idType, respPayload interface{}) iadapter.Response {
+	return &AdapterResponse{
+		adapterID:   adapterID,
+		elementID:   elementID,
+		handlerID:   handlerID,
+		respPayload: respPayload,
+	}
+}
+
+// GetAdapterID implements Response method
+func (ar *AdapterResponse) GetAdapterID() uint32 {
+	return ar.adapterID
+}
+
+// GetElementID implements Response method
+func (ar *AdapterResponse) GetElementID() uint32 {
+	return ar.elementID
+}
+
+// GetHandlerID implements Response method
+func (ar *AdapterResponse) GetHandlerID() uint32 {
+	return ar.handlerID
+}
+
+// GetRespPayload implements Response method
+func (ar *AdapterResponse) GetRespPayload() interface{} {
+	return ar.respPayload
 }
 
 // AdapterNestedEvent contains info with adapter nested event

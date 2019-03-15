@@ -16,7 +16,10 @@
 
 package slot
 
-import "github.com/insolar/insolar/core"
+import (
+	"github.com/insolar/insolar/conveyor/interfaces/fsm"
+	"github.com/insolar/insolar/core"
+)
 
 // ReactivateMode represents reason of reactivating of slot element
 type ReactivateMode int
@@ -58,8 +61,9 @@ type SlotElementRestrictedHelper interface {
 type SlotElementReadOnly interface {
 	GetElementID() uint32
 	GetNodeID() uint32
-	GetType() int
-	GetState() uint32
+	GetType() fsm.ID
+	// TODO: statemachine.StateID
+	GetState() fsm.StateID
 }
 
 // SlotDetails provides information about slot

@@ -27,12 +27,21 @@ type OutputElement struct {
 	itemType uint32
 }
 
+func NewOutputElement(data interface{}, itemType uint32) *OutputElement {
+	return &OutputElement{data: data, itemType: itemType}
+}
+
 func (oe *OutputElement) GetData() interface{} {
 	return oe.data
 }
 
 func (oe *OutputElement) GetItemType() uint32 {
 	return oe.itemType
+}
+
+func (oe *OutputElement) IsSignal() bool {
+	// TODO: is ok OK?
+	return oe.itemType > 0
 }
 
 type queueItem struct {

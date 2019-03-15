@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
+	fsm "github.com/insolar/insolar/conveyor/interfaces/fsm"
 )
 
 //SlotElementReadOnlyMock implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementReadOnly
@@ -26,12 +27,12 @@ type SlotElementReadOnlyMock struct {
 	GetNodeIDPreCounter uint64
 	GetNodeIDMock       mSlotElementReadOnlyMockGetNodeID
 
-	GetStateFunc       func() (r uint32)
+	GetStateFunc       func() (r fsm.StateID)
 	GetStateCounter    uint64
 	GetStatePreCounter uint64
 	GetStateMock       mSlotElementReadOnlyMockGetState
 
-	GetTypeFunc       func() (r int)
+	GetTypeFunc       func() (r fsm.ID)
 	GetTypeCounter    uint64
 	GetTypePreCounter uint64
 	GetTypeMock       mSlotElementReadOnlyMockGetType
@@ -332,7 +333,7 @@ type SlotElementReadOnlyMockGetStateExpectation struct {
 }
 
 type SlotElementReadOnlyMockGetStateResult struct {
-	r uint32
+	r fsm.StateID
 }
 
 //Expect specifies that invocation of SlotElementReadOnly.GetState is expected from 1 to Infinity times
@@ -348,7 +349,7 @@ func (m *mSlotElementReadOnlyMockGetState) Expect() *mSlotElementReadOnlyMockGet
 }
 
 //Return specifies results of invocation of SlotElementReadOnly.GetState
-func (m *mSlotElementReadOnlyMockGetState) Return(r uint32) *SlotElementReadOnlyMock {
+func (m *mSlotElementReadOnlyMockGetState) Return(r fsm.StateID) *SlotElementReadOnlyMock {
 	m.mock.GetStateFunc = nil
 	m.expectationSeries = nil
 
@@ -370,12 +371,12 @@ func (m *mSlotElementReadOnlyMockGetState) ExpectOnce() *SlotElementReadOnlyMock
 	return expectation
 }
 
-func (e *SlotElementReadOnlyMockGetStateExpectation) Return(r uint32) {
+func (e *SlotElementReadOnlyMockGetStateExpectation) Return(r fsm.StateID) {
 	e.result = &SlotElementReadOnlyMockGetStateResult{r}
 }
 
 //Set uses given function f as a mock of SlotElementReadOnly.GetState method
-func (m *mSlotElementReadOnlyMockGetState) Set(f func() (r uint32)) *SlotElementReadOnlyMock {
+func (m *mSlotElementReadOnlyMockGetState) Set(f func() (r fsm.StateID)) *SlotElementReadOnlyMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -384,7 +385,7 @@ func (m *mSlotElementReadOnlyMockGetState) Set(f func() (r uint32)) *SlotElement
 }
 
 //GetState implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementReadOnly interface
-func (m *SlotElementReadOnlyMock) GetState() (r uint32) {
+func (m *SlotElementReadOnlyMock) GetState() (r fsm.StateID) {
 	counter := atomic.AddUint64(&m.GetStatePreCounter, 1)
 	defer atomic.AddUint64(&m.GetStateCounter, 1)
 
@@ -466,7 +467,7 @@ type SlotElementReadOnlyMockGetTypeExpectation struct {
 }
 
 type SlotElementReadOnlyMockGetTypeResult struct {
-	r int
+	r fsm.ID
 }
 
 //Expect specifies that invocation of SlotElementReadOnly.GetType is expected from 1 to Infinity times
@@ -482,7 +483,7 @@ func (m *mSlotElementReadOnlyMockGetType) Expect() *mSlotElementReadOnlyMockGetT
 }
 
 //Return specifies results of invocation of SlotElementReadOnly.GetType
-func (m *mSlotElementReadOnlyMockGetType) Return(r int) *SlotElementReadOnlyMock {
+func (m *mSlotElementReadOnlyMockGetType) Return(r fsm.ID) *SlotElementReadOnlyMock {
 	m.mock.GetTypeFunc = nil
 	m.expectationSeries = nil
 
@@ -504,12 +505,12 @@ func (m *mSlotElementReadOnlyMockGetType) ExpectOnce() *SlotElementReadOnlyMockG
 	return expectation
 }
 
-func (e *SlotElementReadOnlyMockGetTypeExpectation) Return(r int) {
+func (e *SlotElementReadOnlyMockGetTypeExpectation) Return(r fsm.ID) {
 	e.result = &SlotElementReadOnlyMockGetTypeResult{r}
 }
 
 //Set uses given function f as a mock of SlotElementReadOnly.GetType method
-func (m *mSlotElementReadOnlyMockGetType) Set(f func() (r int)) *SlotElementReadOnlyMock {
+func (m *mSlotElementReadOnlyMockGetType) Set(f func() (r fsm.ID)) *SlotElementReadOnlyMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -518,7 +519,7 @@ func (m *mSlotElementReadOnlyMockGetType) Set(f func() (r int)) *SlotElementRead
 }
 
 //GetType implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementReadOnly interface
-func (m *SlotElementReadOnlyMock) GetType() (r int) {
+func (m *SlotElementReadOnlyMock) GetType() (r fsm.ID) {
 	counter := atomic.AddUint64(&m.GetTypePreCounter, 1)
 	defer atomic.AddUint64(&m.GetTypeCounter, 1)
 

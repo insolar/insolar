@@ -19,12 +19,12 @@
 package main
 
 import (
+	"testing"
+
 	"github.com/insolar/insolar/conveyor/generator/matrix"
 	"github.com/insolar/insolar/conveyor/generator/state_machines/sample"
+	"github.com/insolar/insolar/conveyor/interfaces/fsm"
 	"github.com/insolar/insolar/conveyor/interfaces/slot"
-	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
-
-	"testing"
 )
 
 func Test_Generated_State_Machine(t *testing.T) {
@@ -38,11 +38,12 @@ func Test_Generated_State_Machine(t *testing.T) {
 
 	machines := matrix.NewMatrix().GetStateMachinesByType(matrix.TestStateMachine)
 
-	var stateID statemachine.StateID = 0
-	var elementState statemachine.ElementState = 0
+	var stateID fsm.StateID = 0
+	var elementState fsm.ElementState = 0
 	for {
 		_, elementState, _ = machines[1].GetTransitionHandler(stateID)(element)
-		if elementState == 0 {
+		_, stateID = elementState.Parse()
+		if stateID == 0 {
 			break
 		}
 	}

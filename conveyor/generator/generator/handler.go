@@ -29,8 +29,8 @@ func (h *handler) setAsState() {
 	if len(h.Params) != 0 {
 		exitWithError("%s state must don't have any parameters", h.Name)
 	}
-	if len(h.Results) != 1 || h.Results[0] != "statemachine.StateID" {
-		exitWithError("%s state should returns only statemachine.StateID", h.Name)
+	if len(h.Results) != 1 || h.Results[0] != "fsm.StateID" {
+		exitWithError("%s state should returns only fsm.StateID", h.Name)
 	}
 	h.machine.States = append(h.machine.States, state{Name: h.Name})
 }
