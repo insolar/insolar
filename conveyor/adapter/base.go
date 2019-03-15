@@ -16,7 +16,10 @@
 
 package adapter
 
-import "github.com/insolar/insolar/conveyor/interfaces/slot"
+import (
+	"github.com/insolar/insolar/conveyor/interfaces/slot"
+	"github.com/insolar/insolar/conveyor/queue"
+)
 
 type idType = uint32
 
@@ -44,6 +47,7 @@ type AdapterTask struct {
 	elementID   idType
 	handlerID   idType
 	taskPayload interface{}
+	cancelInfo  *cancelInfoT
 }
 
 // AdapterResponse contains info with adapter response
@@ -60,4 +64,26 @@ type AdapterNestedEvent struct {
 	parentElementID idType
 	handlerID       idType
 	eventPayload    interface{}
+}
+
+type TaskProcessing interface {
+	Process(adapter uint32, task AdapterTask, cancelInfo *cancelInfoT)
+	// Process(adapter SimpleWaitAdapter, task AdapterTask, respPayload chan interface{})
+}
+
+// NewAdapterWithQueue creates new instance of Adapter
+func NewAdapterWithQueue(taskProcessing TaskProcessing) PulseConveyorAdapterTaskSink {
+	adapter := &AdapterWithQueue{
+		queue:             queue.NewMutexQueue(),
+		processingStarted: 0,
+		stopProcessing:    0,
+		processingStopped: make(chan bool, 1),
+		taskHolder:        newTaskHolder(),
+		process:           taskProcessing.Process,
+	}
+	started := make(chan bool, 1)
+	go adapter.StartProcessing(started)
+	<-started
+
+	return adapter
 }

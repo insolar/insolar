@@ -27,13 +27,13 @@ import (
 	"github.com/pkg/errors"
 )
 
-type processElement struct {
-	elementID   idType
-	handlerID   idType
-	taskPayload interface{}
-	respSink    AdaptorToSlotResponseSink
-	cancelInfo  *cancelInfoT
-}
+// type processElement struct {
+// 	elementID   idType
+// 	handlerID   idType
+// 	taskPayload interface{}
+// 	respSink    AdaptorToSlotResponseSink
+// 	cancelInfo  *cancelInfoT
+// }
 
 type cancelInfoT struct {
 	id     uint64
@@ -115,8 +115,8 @@ func (th *taskHolderT) stopAll(flush bool) {
 
 }
 
-// SimpleWaitAdapter holds all adapter logic
-type SimpleWaitAdapter struct {
+// AdapterWithQueue holds all adapter logic
+type AdapterWithQueue struct {
 	queue             queue.IQueue
 	processingStarted uint32
 	stopProcessing    uint32
@@ -125,6 +125,7 @@ type SimpleWaitAdapter struct {
 	adapterID uint32
 
 	taskHolder taskHolderT
+	process    func(adapterID uint32, task AdapterTask, cancelInfo *cancelInfoT)
 }
 
 type simpleWaitAdapterInputData struct {
@@ -133,22 +134,16 @@ type simpleWaitAdapterInputData struct {
 
 // NewSimpleWaitAdapter creates new instance of SimpleWaitAdapter
 func NewSimpleWaitAdapter() PulseConveyorAdapterTaskSink {
-	adapter := &SimpleWaitAdapter{
-		queue:             queue.NewMutexQueue(),
-		processingStarted: 0,
-		stopProcessing:    0,
-		processingStopped: make(chan bool, 1),
-		taskHolder:        newTaskHolder(),
-	}
-	started := make(chan bool, 1)
-	go adapter.StartProcessing(started)
-	<-started
+	taskProcessing := NewWaitProcessing()
+	return NewAdapterWithQueue(taskProcessing)
+}
 
-	return adapter
+func NewWaitProcessing() TaskProcessing {
+	return &TaskWait{}
 }
 
 // StopProcessing is blocking
-func (swa *SimpleWaitAdapter) StopProcessing() {
+func (swa *AdapterWithQueue) StopProcessing() {
 	if atomic.LoadUint32(&swa.stopProcessing) != 0 {
 		log.Infof("[ StopProcessing ]  Nothing done")
 		return
@@ -158,7 +153,7 @@ func (swa *SimpleWaitAdapter) StopProcessing() {
 }
 
 // StartProcessing start processing of input queue
-func (swa *SimpleWaitAdapter) StartProcessing(started chan bool) {
+func (swa *AdapterWithQueue) StartProcessing(started chan bool) {
 	if atomic.LoadUint32(&swa.processingStarted) != 0 {
 		log.Infof("[ StartProcessing ] processing already started. Nothing done")
 		close(started)
@@ -195,21 +190,75 @@ func (swa *SimpleWaitAdapter) StartProcessing(started chan bool) {
 		}
 
 		for _, itask := range itasks {
-			task, ok := itask.GetData().(processElement)
+			task, ok := itask.GetData().(AdapterTask)
 			if !ok {
 				panic(fmt.Sprintf("[ StartProcessing ] How does it happen? Wrong Type: %T", itask.GetData()))
 			}
 
-			go swa.doWork(task, task.cancelInfo)
+			go swa.process(swa.adapterID, task, task.cancelInfo)
 		}
 	}
 
 	swa.processingStopped <- true
 }
 
-// it's function which make useful adapter's work
-func (swa *SimpleWaitAdapter) doWork(task processElement, cancelInfo *cancelInfoT) {
+var reqID uint64
 
+func atomicLoadAndIncrementUint64(addr *uint64) uint64 {
+	for {
+		val := atomic.LoadUint64(addr)
+		if atomic.CompareAndSwapUint64(addr, val, val+1) {
+			return val
+		}
+	}
+}
+
+// PushTask implements PulseConveyorAdapterTaskSink
+func (swa *AdapterWithQueue) PushTask(respSink AdaptorToSlotResponseSink,
+	elementID idType,
+	handlerID idType,
+	taskPayload interface{}) error {
+
+	payload, ok := taskPayload.(*simpleWaitAdapterInputData)
+	if !ok {
+		return errors.Errorf("[ PushTask ] Incorrect payload type: %T", taskPayload)
+	}
+
+	cancelInfo := newCancelInfo(atomicLoadAndIncrementUint64(&reqID))
+	swa.taskHolder.add(cancelInfo, respSink.GetPulseNumber())
+
+	return swa.queue.SinkPush(AdapterTask{
+		respSink:    respSink,
+		elementID:   elementID,
+		handlerID:   handlerID,
+		taskPayload: payload,
+		cancelInfo:  cancelInfo,
+	})
+}
+
+// CancelElementTasks: now cancels all pulseNumber's tasks
+func (swa *AdapterWithQueue) CancelElementTasks(pulseNumber idType, elementID idType) {
+	swa.taskHolder.stop(pulseNumber, false)
+}
+
+// CancelPulseTasks: now cancels all pulseNumber's tasks
+func (swa *AdapterWithQueue) CancelPulseTasks(pulseNumber idType) {
+	swa.taskHolder.stop(pulseNumber, false)
+}
+
+// FlushPulseTasks: now flush all pulseNumber's tasks
+func (swa *AdapterWithQueue) FlushPulseTasks(pulseNumber uint32) {
+	swa.taskHolder.stop(pulseNumber, true)
+}
+
+// FlushNodeTasks: now flush all tasks
+func (swa *AdapterWithQueue) FlushNodeTasks(nodeID idType) {
+	swa.taskHolder.stopAll(true)
+}
+
+type TaskWait struct{}
+
+func (tw *TaskWait) Process(adapterID uint32, task AdapterTask, cancelInfo *cancelInfoT) {
 	log.Info("[ doWork ] Start. cancelInfo.id: ", cancelInfo.id)
 
 	payload := task.taskPayload.(simpleWaitAdapterInputData)
@@ -227,64 +276,10 @@ func (swa *SimpleWaitAdapter) doWork(task processElement, cancelInfo *cancelInfo
 
 	log.Info("[ SimpleWaitAdapter.doWork ] ", msg)
 
-	task.respSink.PushResponse(swa.adapterID,
+	task.respSink.PushResponse(adapterID,
 		task.elementID,
 		task.handlerID,
 		msg)
 
 	// TODO: remove cancelInfo from swa.taskHolder
-}
-
-var reqID uint64
-
-func atomicLoadAndIncrementUint64(addr *uint64) uint64 {
-	for {
-		val := atomic.LoadUint64(addr)
-		if atomic.CompareAndSwapUint64(addr, val, val+1) {
-			return val
-		}
-	}
-}
-
-// PushTask implements PulseConveyorAdapterTaskSink
-func (swa *SimpleWaitAdapter) PushTask(respSink AdaptorToSlotResponseSink,
-	elementID idType,
-	handlerID idType,
-	taskPayload interface{}) error {
-
-	payload, ok := taskPayload.(simpleWaitAdapterInputData)
-	if !ok {
-		return errors.Errorf("[ PushTask ] Incorrect payload type: %T", taskPayload)
-	}
-
-	cancelInfo := newCancelInfo(atomicLoadAndIncrementUint64(&reqID))
-	swa.taskHolder.add(cancelInfo, respSink.GetPulseNumber())
-
-	return swa.queue.SinkPush(processElement{
-		respSink:    respSink,
-		elementID:   elementID,
-		handlerID:   handlerID,
-		taskPayload: payload,
-		cancelInfo:  cancelInfo,
-	})
-}
-
-// CancelElementTasks: now cancels all pulseNumber's tasks
-func (swa *SimpleWaitAdapter) CancelElementTasks(pulseNumber idType, elementID idType) {
-	swa.taskHolder.stop(pulseNumber, false)
-}
-
-// CancelPulseTasks: now cancels all pulseNumber's tasks
-func (swa *SimpleWaitAdapter) CancelPulseTasks(pulseNumber idType) {
-	swa.taskHolder.stop(pulseNumber, false)
-}
-
-// FlushPulseTasks: now flush all pulseNumber's tasks
-func (swa *SimpleWaitAdapter) FlushPulseTasks(pulseNumber uint32) {
-	swa.taskHolder.stop(pulseNumber, true)
-}
-
-// FlushNodeTasks: now flush all tasks
-func (swa *SimpleWaitAdapter) FlushNodeTasks(nodeID idType) {
-	swa.taskHolder.stopAll(true)
 }

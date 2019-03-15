@@ -77,17 +77,18 @@ func TestFunctionality(t *testing.T) {
 	adapter.FlushPulseTasks(66)
 
 	err := adapter.PushTask(&mockResponseSink{}, 33, 22, 22)
+	require.Error(t, err)
 	require.Contains(t, err.Error(), "Incorrect payload type")
 
 	resp := &mockResponseSink{}
-	err = adapter.PushTask(resp, 33, 22, simpleWaitAdapterInputData{waitPeriodMilliseconds: 20})
+	err = adapter.PushTask(resp, 33, 22, &simpleWaitAdapterInputData{waitPeriodMilliseconds: 20})
 	require.NoError(t, err)
 	time.Sleep(200 * time.Millisecond)
 	require.Contains(t, resp.GetResponse(), "Work completed successfully")
 
 	// CancelPulseTasks test
 	resp = &mockResponseSink{}
-	err = adapter.PushTask(resp, 33, 22, simpleWaitAdapterInputData{waitPeriodMilliseconds: 200000000})
+	err = adapter.PushTask(resp, 33, 22, &simpleWaitAdapterInputData{waitPeriodMilliseconds: 200000000})
 	require.NoError(t, err)
 	adapter.CancelPulseTasks(resp.GetPulseNumber())
 	time.Sleep(200 * time.Millisecond)
@@ -95,20 +96,20 @@ func TestFunctionality(t *testing.T) {
 
 	// FlushPulseTasks
 	resp = &mockResponseSink{}
-	err = adapter.PushTask(resp, 34, 22, simpleWaitAdapterInputData{waitPeriodMilliseconds: 200000000})
+	err = adapter.PushTask(resp, 34, 22, &simpleWaitAdapterInputData{waitPeriodMilliseconds: 200000000})
 	require.NoError(t, err)
 	adapter.FlushPulseTasks(resp.GetPulseNumber())
 
 	// FlushPulseTasks
 	resp = &mockResponseSink{}
-	err = adapter.PushTask(resp, 34, 22, simpleWaitAdapterInputData{waitPeriodMilliseconds: 200000000})
+	err = adapter.PushTask(resp, 34, 22, &simpleWaitAdapterInputData{waitPeriodMilliseconds: 200000000})
 	require.NoError(t, err)
 	adapter.FlushNodeTasks(resp.GetPulseNumber())
 
 	adapter.StopProcessing()
 	adapter.StopProcessing()
 
-	err = adapter.PushTask(resp, 34, 22, simpleWaitAdapterInputData{waitPeriodMilliseconds: 200000000})
+	err = adapter.PushTask(resp, 34, 22, &simpleWaitAdapterInputData{waitPeriodMilliseconds: 200000000})
 	require.Contains(t, err.Error(), "Queue is blocked")
 }
 

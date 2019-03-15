@@ -51,6 +51,7 @@ type MessageBus struct {
 	DelegationTokenFactory     core.DelegationTokenFactory     `inject:""`
 	ParcelFactory              message.ParcelFactory           `inject:""`
 	PulseStorage               core.PulseStorage               `inject:""`
+	Conveyor                   core.Conveyor                   `inject:""`
 
 	handlers     map[core.MessageType]core.MessageHandler
 	signmessages bool
@@ -59,6 +60,8 @@ type MessageBus struct {
 	NextPulseMessagePoolChan    chan interface{}
 	NextPulseMessagePoolCounter uint32
 	NextPulseMessagePoolLock    sync.RWMutex
+
+	futureManager core.FutureManager
 }
 
 // NewMessageBus creates plain MessageBus instance. It can be used to create Player and Recorder instances that
@@ -68,6 +71,7 @@ func NewMessageBus(config configuration.Configuration) (*MessageBus, error) {
 		handlers:                 map[core.MessageType]core.MessageHandler{},
 		signmessages:             config.Host.SignMessages,
 		NextPulseMessagePoolChan: make(chan interface{}),
+		futureManager:            core.NewFutureManager(),
 	}
 	mb.Lock(context.Background())
 	return mb, nil
@@ -220,7 +224,11 @@ func (mb *MessageBus) SendParcel(
 	if err != nil {
 		return nil, err
 	}
-
+	if parcel.Type() == core.TypeGetCode {
+		fmt.Println("lol kek lol deliver SendMessage")
+		fmt.Println(res)
+	}
+	fmt.Println("done love SendParcel", parcel.Type())
 	return reply.Deserialize(bytes.NewBuffer(res))
 }
 
@@ -243,6 +251,11 @@ func (mb *MessageBus) OnPulse(context.Context, core.Pulse) error {
 	return nil
 }
 
+type event struct {
+	msg core.Parcel
+	f   core.Future
+}
+
 func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Reply, error) {
 
 	var err error
@@ -258,6 +271,27 @@ func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Repl
 	ctx, _ = inslogger.WithField(ctx, "msg_type", msg.Type().String())
 	inslogger.FromContext(ctx).Debug("MessageBus.doDeliver starts ...")
 	handler, ok := mb.handlers[msg.Type()]
+	if msg.Type() == core.TypeGetCode {
+		f := mb.futureManager.Create()
+		data := event{msg, f}
+		err := mb.Conveyor.SinkPush(msg.Pulse(), data)
+		if err != nil {
+			f.Cancel()
+			err := errors.Wrapf(err, "error while calling Conveyor.SinkPush")
+			inslogger.FromContext(ctx).Error(err)
+			return nil, err
+		}
+		// This is nit ok by the way
+		resp, err := f.GetResult(time.Hour)
+		if err != nil {
+			return nil, &serializableError{
+				S: err.Error(),
+			}
+		}
+		return resp, nil
+
+	}
+	fmt.Println("done love doDeliver", msg.Type())
 	if !ok {
 		txt := "no handler for received message type"
 		inslogger.FromContext(ctx).Error(txt)
