@@ -16,6 +16,10 @@
 
 package fsm
 
+import (
+	"fmt"
+)
+
 // Element State ID
 type StateID uint32
 
@@ -26,11 +30,16 @@ type ID uint32
 type ElementState uint32
 
 const (
-	stateShift = 10
+	stateShift    = 10
+	maxStateValue = (1 << stateShift) - 1
 )
 
 // NewElementState constructs element from ID and StateID
+// state MUST be less than maxStateValue ( 2^stateShift )
 func NewElementState(stateMachine ID, state StateID) ElementState {
+	if state > maxStateValue {
+		panic(fmt.Sprint("Invalid state: ", state))
+	}
 	result := (uint32(stateMachine) << stateShift) + uint32(state)
 	return ElementState(result)
 }

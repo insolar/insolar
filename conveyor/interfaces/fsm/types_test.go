@@ -67,5 +67,5 @@ func TestStateConvertingAllOnes(t *testing.T) {
 }
 
 func TestJoinStatesStateOverFlow(t *testing.T) {
-	require.PanicsWithValue(t, "Invalid state: 333333333", func() { NewElementState(12, 333333333) })
+	require.PanicsWithValue(t, "Invalid state: 333333333", func() { NewElementState(1, 333333333) })
 }
