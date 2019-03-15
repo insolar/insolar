@@ -39,6 +39,7 @@ type Configuration struct {
 	KeysPath        string
 	CertificatePath string
 	Tracer          Tracer
+	Conveyor        Conveyor
 }
 
 // Holder provides methods to manage configuration
@@ -62,6 +63,7 @@ func NewConfiguration() Configuration {
 		KeysPath:        "./",
 		CertificatePath: "",
 		Tracer:          NewTracer(),
+		Conveyor:        NewConveyor(),
 	}
 
 	return cfg

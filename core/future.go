@@ -25,9 +25,9 @@ import (
 
 var (
 	// ErrTimeout is returned when the operation timeout is exceeded.
-	ErrTimeout = errors.New("timeout")
+	ErrFutureTimeout = errors.New("can't wait for result: timeout")
 	// ErrChannelClosed is returned when the input channel is closed.
-	ErrChannelClosed = errors.New("channel closed")
+	ErrFutureChannelClosed = errors.New("can't wait for result: channel closed")
 )
 
 // Future is network response future.
@@ -91,12 +91,12 @@ func (future *future) GetResult(duration time.Duration) (Reply, error) {
 	select {
 	case result, ok := <-future.Result():
 		if !ok {
-			return nil, ErrChannelClosed
+			return nil, ErrFutureChannelClosed
 		}
 		return result, nil
 	case <-time.After(duration):
 		future.Cancel()
-		return nil, ErrTimeout
+		return nil, ErrFutureTimeout
 	}
 }
 

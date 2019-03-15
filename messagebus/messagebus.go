@@ -55,8 +55,9 @@ type MessageBus struct {
 	PulseStorage               core.PulseStorage               `inject:""`
 	Conveyor                   core.Conveyor                   `inject:""`
 
-	handlers     map[core.MessageType]core.MessageHandler
-	signmessages bool
+	handlers               map[core.MessageType]core.MessageHandler
+	signmessages           bool
+	conveyorPendingTimeout time.Duration
 
 	globalLock                  sync.RWMutex
 	NextPulseMessagePoolChan    chan interface{}
@@ -72,6 +73,7 @@ func NewMessageBus(config configuration.Configuration) (*MessageBus, error) {
 	mb := &MessageBus{
 		handlers:                 map[core.MessageType]core.MessageHandler{},
 		signmessages:             config.Host.SignMessages,
+		conveyorPendingTimeout:   time.Duration(config.Conveyor.PendingTimeout) * time.Millisecond,
 		NextPulseMessagePoolChan: make(chan interface{}),
 		futureManager:            core.NewFutureManager(),
 	}
@@ -274,8 +276,7 @@ func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Repl
 			inslogger.FromContext(ctx).Error(err)
 			return nil, err
 		}
-		// This is not ok by the way
-		resp, err := f.GetResult(time.Hour)
+		resp, err := f.GetResult(mb.conveyorPendingTimeout)
 		if err != nil {
 			return nil, &serializableError{
 				S: err.Error(),
