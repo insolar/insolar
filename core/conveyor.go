@@ -59,6 +59,7 @@ type Conveyor interface {
 	Control
 }
 
+// ConveyorPendingMessage is message for conveyor witch can pending for response
 type ConveyorPendingMessage struct {
 	Msg Parcel
 	F   Future

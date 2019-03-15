@@ -29,40 +29,44 @@ func NewWaitAdapter() PulseConveyorAdapterTaskSink {
 	return NewAdapterWithQueue(NewWaiter())
 }
 
+// WaiterTask is task for adapter for waiting
 type WaiterTask struct {
 	waitPeriodMilliseconds int
 }
 
+// Waiter is worker for adapter for waiting
 type Waiter struct{}
 
+// NewWaiter returns new instance of worker which waiting
 func NewWaiter() Worker {
 	return &Waiter{}
 }
 
+// Process implements Worker interface
 func (w *Waiter) Process(adapterID uint32, task AdapterTask, cancelInfo *cancelInfoT) {
-	log.Info("[ doWork ] Start. cancelInfo.id: ", cancelInfo.id)
+	log.Info("[ Waiter.Process ] Start. cancelInfo.id: ", cancelInfo.id)
 
 	payload, ok := task.taskPayload.(WaiterTask)
 	var msg interface{}
 
 	if !ok {
-		msg = errors.Errorf("[ PushTask ] Incorrect payload type: %T", task.taskPayload)
+		msg = errors.Errorf("[ Waiter.Process ] Incorrect payload type: %T", task.taskPayload)
 		task.respSink.PushResponse(adapterID, task.elementID, task.handlerID, msg)
 		return
 	}
 
 	select {
 	case <-cancelInfo.cancel:
-		log.Info("[ SimpleWaitAdapter.doWork ] Cancel. Return Nil as Response")
+		log.Info("[ Waiter.Process ] Cancel. Return Nil as Response")
 		msg = nil
 	case <-cancelInfo.flush:
-		log.Info("[ SimpleWaitAdapter.doWork ] Flush. DON'T Return Response")
+		log.Info("[ Waiter.Process ] Flush. DON'T Return Response")
 		return
 	case <-time.After(time.Duration(payload.waitPeriodMilliseconds) * time.Millisecond):
 		msg = fmt.Sprintf("Work completed successfully. Waited %d millisecond", payload.waitPeriodMilliseconds)
 	}
 
-	log.Info("[ SimpleWaitAdapter.doWork ] ", msg)
+	log.Info("[ Waiter.Process ] ", msg)
 
 	task.respSink.PushResponse(adapterID,
 		task.elementID,

@@ -30,7 +30,7 @@ var (
 	ErrFutureChannelClosed = errors.New("can't wait for result: channel closed")
 )
 
-// Future is network response future.
+// Future is ConveyorPendingMessage response future.
 type Future interface {
 
 	// ID returns number.
@@ -112,18 +112,19 @@ func (future *future) finish() {
 	future.cancelCallback(future)
 }
 
-type futureManagerImpl struct {
+type futureManager struct {
 	mutex   sync.RWMutex
 	futures map[uint32]Future
 }
 
-func newFutureManagerImpl() *futureManagerImpl {
-	return &futureManagerImpl{
+func newFutureManager() *futureManager {
+	return &futureManager{
 		futures: make(map[uint32]Future),
 	}
 }
 
-func (fm *futureManagerImpl) Create() Future {
+// Create implements FutureManager interface
+func (fm *futureManager) Create() Future {
 	id := uint32(1)
 	future := NewFuture(id, func(f Future) {
 		fm.delete(f.ID())
@@ -137,25 +138,27 @@ func (fm *futureManagerImpl) Create() Future {
 	return future
 }
 
-func (fm *futureManagerImpl) Get(id uint32) Future {
+// Get implements FutureManager interface
+func (fm *futureManager) Get(id uint32) Future {
 	fm.mutex.RLock()
 	defer fm.mutex.RUnlock()
 
 	return fm.futures[id]
 }
 
-func (fm *futureManagerImpl) delete(id uint32) {
+func (fm *futureManager) delete(id uint32) {
 	fm.mutex.Lock()
 	defer fm.mutex.Unlock()
 
 	delete(fm.futures, id)
 }
 
+// FutureManager is store and create Future instances
 type FutureManager interface {
 	Get(id uint32) Future
 	Create() Future
 }
 
 func NewFutureManager() FutureManager {
-	return newFutureManagerImpl()
+	return newFutureManager()
 }

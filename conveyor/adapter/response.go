@@ -24,27 +24,32 @@ import (
 	"github.com/pkg/errors"
 )
 
+// NewResponseSendAdapter creates new instance of adapter for sending response
 func NewResponseSendAdapter() PulseConveyorAdapterTaskSink {
 	return NewAdapterWithQueue(NewResponseSender())
 }
 
+// ResponseSenderTask is task for adapter for sending response
 type ResponseSenderTask struct {
 	Future core.Future
 	Result core.Reply
 }
 
+// ResponseSender is worker for adapter for sending response
 type ResponseSender struct{}
 
+// NewResponseSender returns new instance of worker which sending response
 func NewResponseSender() Worker {
 	return &ResponseSender{}
 }
 
+// Process implements Worker interface
 func (sr *ResponseSender) Process(adapterID uint32, task AdapterTask, cancelInfo *cancelInfoT) {
 	payload, ok := task.taskPayload.(ResponseSenderTask)
 	var msg interface{}
 
 	if !ok {
-		msg = errors.Errorf("[ PushTask ] Incorrect payload type: %T", task.taskPayload)
+		msg = errors.Errorf("[ ResponseSender.Process ] Incorrect payload type: %T", task.taskPayload)
 		task.respSink.PushResponse(adapterID, task.elementID, task.handlerID, msg)
 		return
 	}
@@ -59,16 +64,16 @@ func (sr *ResponseSender) Process(adapterID uint32, task AdapterTask, cancelInfo
 
 	select {
 	case <-cancelInfo.cancel:
-		log.Info("[ SimpleWaitAdapter.doWork ] Cancel. Return Nil as Response")
+		log.Info("[ ResponseSender.Process ] Cancel. Return Nil as Response")
 		msg = nil
 	case <-cancelInfo.flush:
-		log.Info("[ SimpleWaitAdapter.doWork ] Flush. DON'T Return Response")
+		log.Info("[ ResponseSender.Process ] Flush. DON'T Return Response")
 		return
 	case <-done:
 		msg = fmt.Sprintf("Response was send successfully")
 	}
 
-	log.Info("[ SimpleWaitAdapter.doWork ] ", msg)
+	log.Info("[ ResponseSender.Process ] ", msg)
 
 	task.respSink.PushResponse(adapterID, task.elementID, task.handlerID, msg)
 }

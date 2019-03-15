@@ -96,6 +96,7 @@ type AdapterNestedEvent struct {
 	eventPayload    interface{}
 }
 
+// Worker is iface for processing task for adapter
 type Worker interface {
 	Process(adapterID uint32, task AdapterTask, cancelInfo *cancelInfoT)
 }

@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/log"
 )
 
+// QueueTask is task for adapter with queue
 type QueueTask struct {
 	cancelInfo *cancelInfoT
 	task       AdapterTask
