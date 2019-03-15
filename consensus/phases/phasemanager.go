@@ -58,6 +58,7 @@ func (pm *Phases) OnPulse(ctx context.Context, pulse *core.Pulse, pulseStartTime
 
 	var err error
 
+	// workaround for occasional race condition when multiple consensus processes are spawned for one pulse
 	if pulse.PulseNumber <= pm.lastPulse {
 		return nil
 	}

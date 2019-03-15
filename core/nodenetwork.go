@@ -31,9 +31,13 @@ type NodeState uint8
 
 //go:generate stringer -type=NodeState
 const (
+	// NodeUndefined node started but is not connected to network yet
 	NodeUndefined NodeState = iota
+	// NodePending node is in first pulse of discovery bootstrap or is joining to a bootstrapped network
 	NodePending
+	// NodeReady node is connected to network
 	NodeReady
+	// NodeLeaving node is about to leave network
 	NodeLeaving
 )
 
