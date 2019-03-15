@@ -42,7 +42,7 @@ import (
 )
 
 const (
-	registrationRetries = 10
+	registrationRetries = 20
 )
 
 type AuthorizationController interface {
