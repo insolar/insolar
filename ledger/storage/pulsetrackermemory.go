@@ -32,6 +32,7 @@ type pulseTrackerMemory struct {
 }
 
 // NewPulseTracker returns new instance PulseTracker with in-memory realization
+// DEPRECATED
 func NewPulseTrackerMemory() PulseTracker {
 	return &pulseTrackerMemory{memory: make(map[core.PulseNumber]Pulse)}
 }

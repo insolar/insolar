@@ -56,7 +56,7 @@ func (rs *replicaStorage) SetHeavySyncedPulse(ctx context.Context, jetID core.Re
 // GetHeavySyncedPulse returns last successfuly synced pulse number on heavy node.
 func (rs *replicaStorage) GetHeavySyncedPulse(ctx context.Context, jetID core.RecordID) (pn core.PulseNumber, err error) {
 	var buf []byte
-	buf, err = rs.DB.get(ctx, prefixkey(scopeIDSystem, jetID[:], []byte{sysLastSyncedPulseOnHeavy}))
+	buf, err = rs.DB.Get(ctx, prefixkey(scopeIDSystem, jetID[:], []byte{sysLastSyncedPulseOnHeavy}))
 	if err == nil {
 		pn = core.NewPulseNumber(buf)
 	} else if err == core.ErrNotFound {
@@ -74,7 +74,7 @@ func sysHeavyClientStateKeyForJet(jetID []byte) []byte {
 // GetSyncClientJetPulses returns all jet's pulses not synced to heavy.
 func (rs *replicaStorage) GetSyncClientJetPulses(ctx context.Context, jetID core.RecordID) ([]core.PulseNumber, error) {
 	k := sysHeavyClientStateKeyForJet(jetID[:])
-	buf, err := rs.DB.get(ctx, k)
+	buf, err := rs.DB.Get(ctx, k)
 	if err == core.ErrNotFound {
 		return nil, nil
 	} else if err != nil {
@@ -98,7 +98,7 @@ func (rs *replicaStorage) SetSyncClientJetPulses(ctx context.Context, jetID core
 	if err != nil {
 		return err
 	}
-	return rs.DB.set(ctx, k, buf.Bytes())
+	return rs.DB.Set(ctx, k, buf.Bytes())
 }
 
 // GetAllSyncClientJets returns map of all jet's processed by node.

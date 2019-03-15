@@ -41,18 +41,18 @@ func TestTree_Find(t *testing.T) {
 		},
 	}
 	lookup := core.NewRecordID(0, []byte{0xD5}) // 11010101
-	jetLookup := NewID(15, []byte{1, 2, 3})
+	jetLookup := core.NewJetID(15, []byte{1, 2, 3})
 	expectedPrefix := make([]byte, core.RecordIDSize-core.PulseNumberSize-1)
 	expectedPrefix[0] = 0xD0 // 11010000
 
 	id, actual := tree.Find(*lookup)
-	depth, prefix := Jet(*id)
+	depth, prefix := core.JetID(*id).Depth(), core.JetID(*id).Prefix()
 	assert.Equal(t, depth, uint8(4))
 	assert.Equal(t, expectedPrefix, prefix)
 	assert.False(t, actual)
 
-	jetID, actual := tree.Find(*jetLookup)
-	assert.Equal(t, jetLookup, jetID)
+	jetID, actual := tree.Find(core.RecordID(*jetLookup))
+	assert.Equal(t, *jetLookup, core.JetID(*jetID))
 	assert.True(t, actual)
 }
 
@@ -62,30 +62,30 @@ func TestTree_Update(t *testing.T) {
 	lookup := core.NewRecordID(0, []byte{0xD5}) // 11010101
 
 	id, actual := tree.Find(*lookup)
-	depth, prefix := Jet(*id)
+	depth, prefix := core.JetID(*id).Depth(), core.JetID(*id).Prefix()
 	assert.Equal(t, depth, uint8(0))
 	assert.Equal(t, prefix, make([]byte, core.RecordHashSize-1))
 	assert.Equal(t, false, actual)
 
-	tree.Update(*NewID(1, []byte{1 << 7}), false)
+	tree.Update(core.RecordID(*core.NewJetID(1, []byte{1 << 7})), false)
 	id, actual = tree.Find(*lookup)
-	depth, prefix = Jet(*id)
+	depth, prefix = core.JetID(*id).Depth(), core.JetID(*id).Prefix()
 	expectedPrefix := make([]byte, core.RecordHashSize-1)
 	expectedPrefix[0] = 0x80
 	require.Equal(t, uint8(1), depth)
 	assert.Equal(t, expectedPrefix, prefix)
 	assert.Equal(t, false, actual)
 
-	tree.Update(*NewID(8, lookup.Hash()), false)
+	tree.Update(core.RecordID(*core.NewJetID(8, lookup.Hash())), false)
 	id, actual = tree.Find(*lookup)
-	depth, prefix = Jet(*id)
+	depth, prefix = core.JetID(*id).Depth(), core.JetID(*id).Prefix()
 	assert.Equal(t, uint8(8), depth)
 	assert.Equal(t, lookup.Hash()[:core.RecordHashSize-1], prefix)
 	assert.Equal(t, false, actual)
 
-	tree.Update(*NewID(8, lookup.Hash()), true)
+	tree.Update(core.RecordID(*core.NewJetID(8, lookup.Hash())), true)
 	id, actual = tree.Find(*lookup)
-	depth, prefix = Jet(*id)
+	depth, prefix = core.JetID(*id).Depth(), core.JetID(*id).Prefix()
 	assert.Equal(t, uint8(8), depth)
 	assert.Equal(t, lookup.Hash()[:core.RecordHashSize-1], prefix)
 	assert.Equal(t, true, actual)
@@ -100,16 +100,16 @@ func TestTree_Split(t *testing.T) {
 			Left: &jet{},
 		},
 	}
-	tooDeep := NewID(6, []byte{0xD5}) // 11010101
-	ok := NewID(2, []byte{0xD5})      // 11010101
+	tooDeep := core.NewJetID(6, []byte{0xD5}) // 11010101
+	ok := core.NewJetID(2, []byte{0xD5})      // 11010101
 
 	t.Run("not existing jet returns error", func(t *testing.T) {
-		_, _, err := tree.Split(*tooDeep)
+		_, _, err := tree.Split(core.RecordID(*tooDeep))
 		assert.Error(t, err)
 	})
 
 	t.Run("splits jet", func(t *testing.T) {
-		okDepth, okPrefix := Jet(*ok)
+		okDepth, okPrefix := core.JetID(*ok).Depth(), core.JetID(*ok).Prefix()
 		lExpectedPrefix := make([]byte, len(okPrefix))
 		copy(lExpectedPrefix, okPrefix)
 		lExpectedPrefix[0] = 0xC0 // 11000000
@@ -117,10 +117,10 @@ func TestTree_Split(t *testing.T) {
 		copy(rExpectedPrefix, okPrefix)
 		rExpectedPrefix[0] = 0xE0 // 11100000
 
-		left, right, err := tree.Split(*ok)
+		left, right, err := tree.Split(core.RecordID(*ok))
 		require.NoError(t, err)
-		lDepth, lPrefix := Jet(*left)
-		rDepth, rPrefix := Jet(*right)
+		lDepth, lPrefix := core.JetID(*left).Depth(), core.JetID(*left).Prefix()
+		rDepth, rPrefix := core.JetID(*right).Depth(), core.JetID(*right).Prefix()
 		assert.Equal(t, uint8(okDepth+1), lDepth)
 		assert.Equal(t, uint8(okDepth+1), rDepth)
 		assert.Equal(t, lExpectedPrefix, lPrefix)
@@ -460,8 +460,8 @@ func TestTree_LeafIDs(t *testing.T) {
 	leafIDs := tree.LeafIDs()
 
 	require.Equal(t, len(leafIDs), 4)
-	assert.Equal(t, leafIDs[0], *NewID(1, nil))          // 0000
-	assert.Equal(t, leafIDs[1], *NewID(4, []byte{0xC0})) // 1100
-	assert.Equal(t, leafIDs[2], *NewID(4, []byte{0xD0})) // 1101
-	assert.Equal(t, leafIDs[3], *NewID(3, []byte{0xE0})) // 1110
+	assert.Equal(t, leafIDs[0], core.RecordID(*core.NewJetID(1, nil)))          // 0000
+	assert.Equal(t, leafIDs[1], core.RecordID(*core.NewJetID(4, []byte{0xC0}))) // 1100
+	assert.Equal(t, leafIDs[2], core.RecordID(*core.NewJetID(4, []byte{0xD0}))) // 1101
+	assert.Equal(t, leafIDs[3], core.RecordID(*core.NewJetID(3, []byte{0xE0}))) // 1110
 }

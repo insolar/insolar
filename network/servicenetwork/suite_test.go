@@ -416,8 +416,9 @@ func (s *testSuite) preInitNode(node *networkNode) {
 		realKeeper.AddActiveNodes([]core.Node{origin})
 	}
 
+	keyProc := platformpolicy.NewKeyProcessor()
 	node.componentManager.Register(terminationHandler, realKeeper, newPulseManagerMock(realKeeper), netCoordinator, amMock)
 	node.componentManager.Register(certManager, cryptographyService)
-	node.componentManager.Inject(serviceNetwork, NewTestNetworkSwitcher())
+	node.componentManager.Inject(serviceNetwork, NewTestNetworkSwitcher(), keyProc)
 	node.serviceNetwork = serviceNetwork
 }

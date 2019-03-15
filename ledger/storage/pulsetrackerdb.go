@@ -31,6 +31,7 @@ type pulseTracker struct {
 }
 
 // NewPulseTracker returns new instance PulseTracker with DB-storage realization
+// DEPRECATED
 func NewPulseTracker() PulseTracker {
 	return new(pulseTracker)
 }

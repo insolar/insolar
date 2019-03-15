@@ -14,40 +14,27 @@
  *    limitations under the License.
  */
 
-package jet
+package blob
 
 import (
 	"testing"
 
+	"github.com/insolar/insolar/gen"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestJetDrop_Hash(t *testing.T) {
-	drop1 := &JetDrop{
-		Pulse:    1,
-		PrevHash: []byte{1, 2, 3},
-		Hash:     []byte{4, 5, 6},
-	}
-	drop2 := &JetDrop{
-		Pulse:    2,
-		PrevHash: []byte{1, 2, 3},
-		Hash:     []byte{4, 5, 6},
+func TestClone(t *testing.T) {
+	t.Parallel()
+
+	jetID := gen.JetID()
+	rawBlob := slice()
+	blob := Blob{
+		JetID: jetID,
+		Value: rawBlob,
 	}
 
-	b1, err := Encode(drop1)
-	assert.NoError(t, err)
-	assert.NotNil(t, b1)
-	drop1got, err := Decode(b1)
-	assert.NoError(t, err)
-	assert.Equal(t, drop1, drop1got)
+	clonedBlob := Clone(blob)
 
-	b2, err := Encode(drop2)
-	assert.NoError(t, err)
-	assert.NotNil(t, b2)
-	drop2got, err := Decode(b2)
-	assert.NoError(t, err)
-	assert.Equal(t, drop2, drop2got)
-
-	assert.NotEqual(t, drop1got, drop2got)
-	assert.NotEqual(t, b1, b2)
+	assert.Equal(t, blob, clonedBlob)
+	assert.False(t, &blob == &clonedBlob)
 }

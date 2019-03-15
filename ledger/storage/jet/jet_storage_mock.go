@@ -1,9 +1,9 @@
-package storage
+package jet
 
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "JetStorage" can be found in github.com/insolar/insolar/ledger/storage
+The original interface "JetStorage" can be found in github.com/insolar/insolar/ledger/storage/jet
 */
 import (
 	context "context"
@@ -12,12 +12,11 @@ import (
 
 	"github.com/gojuno/minimock"
 	core "github.com/insolar/insolar/core"
-	jet "github.com/insolar/insolar/ledger/storage/jet"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//JetStorageMock implements github.com/insolar/insolar/ledger/storage.JetStorage
+//JetStorageMock implements github.com/insolar/insolar/ledger/storage/jet.JetStorage
 type JetStorageMock struct {
 	t minimock.Tester
 
@@ -26,7 +25,7 @@ type JetStorageMock struct {
 	AddJetsPreCounter uint64
 	AddJetsMock       mJetStorageMockAddJets
 
-	CloneJetTreeFunc       func(p context.Context, p1 core.PulseNumber, p2 core.PulseNumber) (r *jet.Tree)
+	CloneJetTreeFunc       func(p context.Context, p1 core.PulseNumber, p2 core.PulseNumber) (r *Tree)
 	CloneJetTreeCounter    uint64
 	CloneJetTreePreCounter uint64
 	CloneJetTreeMock       mJetStorageMockCloneJetTree
@@ -41,7 +40,7 @@ type JetStorageMock struct {
 	FindJetPreCounter uint64
 	FindJetMock       mJetStorageMockFindJet
 
-	GetJetsFunc       func(p context.Context) (r jet.IDSet, r1 error)
+	GetJetsFunc       func(p context.Context) (r IDSet, r1 error)
 	GetJetsCounter    uint64
 	GetJetsPreCounter uint64
 	GetJetsMock       mJetStorageMockGetJets
@@ -57,7 +56,7 @@ type JetStorageMock struct {
 	UpdateJetTreeMock       mJetStorageMockUpdateJetTree
 }
 
-//NewJetStorageMock returns a mock for github.com/insolar/insolar/ledger/storage.JetStorage
+//NewJetStorageMock returns a mock for github.com/insolar/insolar/ledger/storage/jet.JetStorage
 func NewJetStorageMock(t minimock.Tester) *JetStorageMock {
 	m := &JetStorageMock{t: t}
 
@@ -144,7 +143,7 @@ func (m *mJetStorageMockAddJets) Set(f func(p context.Context, p1 ...core.Record
 	return m.mock
 }
 
-//AddJets implements github.com/insolar/insolar/ledger/storage.JetStorage interface
+//AddJets implements github.com/insolar/insolar/ledger/storage/jet.JetStorage interface
 func (m *JetStorageMock) AddJets(p context.Context, p1 ...core.RecordID) (r error) {
 	counter := atomic.AddUint64(&m.AddJetsPreCounter, 1)
 	defer atomic.AddUint64(&m.AddJetsCounter, 1)
@@ -242,7 +241,7 @@ type JetStorageMockCloneJetTreeInput struct {
 }
 
 type JetStorageMockCloneJetTreeResult struct {
-	r *jet.Tree
+	r *Tree
 }
 
 //Expect specifies that invocation of JetStorage.CloneJetTree is expected from 1 to Infinity times
@@ -258,7 +257,7 @@ func (m *mJetStorageMockCloneJetTree) Expect(p context.Context, p1 core.PulseNum
 }
 
 //Return specifies results of invocation of JetStorage.CloneJetTree
-func (m *mJetStorageMockCloneJetTree) Return(r *jet.Tree) *JetStorageMock {
+func (m *mJetStorageMockCloneJetTree) Return(r *Tree) *JetStorageMock {
 	m.mock.CloneJetTreeFunc = nil
 	m.expectationSeries = nil
 
@@ -280,12 +279,12 @@ func (m *mJetStorageMockCloneJetTree) ExpectOnce(p context.Context, p1 core.Puls
 	return expectation
 }
 
-func (e *JetStorageMockCloneJetTreeExpectation) Return(r *jet.Tree) {
+func (e *JetStorageMockCloneJetTreeExpectation) Return(r *Tree) {
 	e.result = &JetStorageMockCloneJetTreeResult{r}
 }
 
 //Set uses given function f as a mock of JetStorage.CloneJetTree method
-func (m *mJetStorageMockCloneJetTree) Set(f func(p context.Context, p1 core.PulseNumber, p2 core.PulseNumber) (r *jet.Tree)) *JetStorageMock {
+func (m *mJetStorageMockCloneJetTree) Set(f func(p context.Context, p1 core.PulseNumber, p2 core.PulseNumber) (r *Tree)) *JetStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -293,8 +292,8 @@ func (m *mJetStorageMockCloneJetTree) Set(f func(p context.Context, p1 core.Puls
 	return m.mock
 }
 
-//CloneJetTree implements github.com/insolar/insolar/ledger/storage.JetStorage interface
-func (m *JetStorageMock) CloneJetTree(p context.Context, p1 core.PulseNumber, p2 core.PulseNumber) (r *jet.Tree) {
+//CloneJetTree implements github.com/insolar/insolar/ledger/storage/jet.JetStorage interface
+func (m *JetStorageMock) CloneJetTree(p context.Context, p1 core.PulseNumber, p2 core.PulseNumber) (r *Tree) {
 	counter := atomic.AddUint64(&m.CloneJetTreePreCounter, 1)
 	defer atomic.AddUint64(&m.CloneJetTreeCounter, 1)
 
@@ -432,7 +431,7 @@ func (m *mJetStorageMockDeleteJetTree) Set(f func(p context.Context, p1 core.Pul
 	return m.mock
 }
 
-//DeleteJetTree implements github.com/insolar/insolar/ledger/storage.JetStorage interface
+//DeleteJetTree implements github.com/insolar/insolar/ledger/storage/jet.JetStorage interface
 func (m *JetStorageMock) DeleteJetTree(p context.Context, p1 core.PulseNumber) {
 	counter := atomic.AddUint64(&m.DeleteJetTreePreCounter, 1)
 	defer atomic.AddUint64(&m.DeleteJetTreeCounter, 1)
@@ -567,7 +566,7 @@ func (m *mJetStorageMockFindJet) Set(f func(p context.Context, p1 core.PulseNumb
 	return m.mock
 }
 
-//FindJet implements github.com/insolar/insolar/ledger/storage.JetStorage interface
+//FindJet implements github.com/insolar/insolar/ledger/storage/jet.JetStorage interface
 func (m *JetStorageMock) FindJet(p context.Context, p1 core.PulseNumber, p2 core.RecordID) (r *core.RecordID, r1 bool) {
 	counter := atomic.AddUint64(&m.FindJetPreCounter, 1)
 	defer atomic.AddUint64(&m.FindJetCounter, 1)
@@ -665,7 +664,7 @@ type JetStorageMockGetJetsInput struct {
 }
 
 type JetStorageMockGetJetsResult struct {
-	r  jet.IDSet
+	r  IDSet
 	r1 error
 }
 
@@ -682,7 +681,7 @@ func (m *mJetStorageMockGetJets) Expect(p context.Context) *mJetStorageMockGetJe
 }
 
 //Return specifies results of invocation of JetStorage.GetJets
-func (m *mJetStorageMockGetJets) Return(r jet.IDSet, r1 error) *JetStorageMock {
+func (m *mJetStorageMockGetJets) Return(r IDSet, r1 error) *JetStorageMock {
 	m.mock.GetJetsFunc = nil
 	m.expectationSeries = nil
 
@@ -704,12 +703,12 @@ func (m *mJetStorageMockGetJets) ExpectOnce(p context.Context) *JetStorageMockGe
 	return expectation
 }
 
-func (e *JetStorageMockGetJetsExpectation) Return(r jet.IDSet, r1 error) {
+func (e *JetStorageMockGetJetsExpectation) Return(r IDSet, r1 error) {
 	e.result = &JetStorageMockGetJetsResult{r, r1}
 }
 
 //Set uses given function f as a mock of JetStorage.GetJets method
-func (m *mJetStorageMockGetJets) Set(f func(p context.Context) (r jet.IDSet, r1 error)) *JetStorageMock {
+func (m *mJetStorageMockGetJets) Set(f func(p context.Context) (r IDSet, r1 error)) *JetStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -717,8 +716,8 @@ func (m *mJetStorageMockGetJets) Set(f func(p context.Context) (r jet.IDSet, r1 
 	return m.mock
 }
 
-//GetJets implements github.com/insolar/insolar/ledger/storage.JetStorage interface
-func (m *JetStorageMock) GetJets(p context.Context) (r jet.IDSet, r1 error) {
+//GetJets implements github.com/insolar/insolar/ledger/storage/jet.JetStorage interface
+func (m *JetStorageMock) GetJets(p context.Context) (r IDSet, r1 error) {
 	counter := atomic.AddUint64(&m.GetJetsPreCounter, 1)
 	defer atomic.AddUint64(&m.GetJetsCounter, 1)
 
@@ -870,7 +869,7 @@ func (m *mJetStorageMockSplitJetTree) Set(f func(p context.Context, p1 core.Puls
 	return m.mock
 }
 
-//SplitJetTree implements github.com/insolar/insolar/ledger/storage.JetStorage interface
+//SplitJetTree implements github.com/insolar/insolar/ledger/storage/jet.JetStorage interface
 func (m *JetStorageMock) SplitJetTree(p context.Context, p1 core.PulseNumber, p2 core.RecordID) (r *core.RecordID, r1 *core.RecordID, r2 error) {
 	counter := atomic.AddUint64(&m.SplitJetTreePreCounter, 1)
 	defer atomic.AddUint64(&m.SplitJetTreeCounter, 1)
@@ -1015,7 +1014,7 @@ func (m *mJetStorageMockUpdateJetTree) Set(f func(p context.Context, p1 core.Pul
 	return m.mock
 }
 
-//UpdateJetTree implements github.com/insolar/insolar/ledger/storage.JetStorage interface
+//UpdateJetTree implements github.com/insolar/insolar/ledger/storage/jet.JetStorage interface
 func (m *JetStorageMock) UpdateJetTree(p context.Context, p1 core.PulseNumber, p2 bool, p3 ...core.RecordID) {
 	counter := atomic.AddUint64(&m.UpdateJetTreePreCounter, 1)
 	defer atomic.AddUint64(&m.UpdateJetTreeCounter, 1)

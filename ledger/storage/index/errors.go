@@ -14,21 +14,13 @@
  *    limitations under the License.
  */
 
-package jet
+package index
 
 import (
-	"github.com/insolar/insolar/core"
+	"github.com/pkg/errors"
 )
 
-// JetDrop is a blockchain block.
-// It contains hashes of the current block and the previous one.
-type JetDrop struct { //nolint: golint
-	// Pulse number (probably we should save it too).
-	Pulse core.PulseNumber
-
-	// PrevHash is a hash of all record hashes belongs to previous pulse.
-	PrevHash []byte
-
-	// Hash is a hash of all record hashes belongs to one pulse and previous drop hash.
-	Hash []byte
-}
+var (
+	// ErrNotFound is returned when index-record not found.
+	ErrNotFound = errors.New("index not found")
+)

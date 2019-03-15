@@ -52,15 +52,14 @@ type ServiceNetwork struct {
 	routingTable network.RoutingTable // TODO: should be injected
 
 	// dependencies
-	CertificateManager  core.CertificateManager         `inject:""`
-	PulseManager        core.PulseManager               `inject:""`
-	PulseStorage        core.PulseStorage               `inject:""`
-	CryptographyService core.CryptographyService        `inject:""`
-	NetworkCoordinator  core.NetworkCoordinator         `inject:""`
-	CryptographyScheme  core.PlatformCryptographyScheme `inject:""`
-	NodeKeeper          network.NodeKeeper              `inject:""`
-	NetworkSwitcher     core.NetworkSwitcher            `inject:""`
-	TerminationHandler  core.TerminationHandler         `inject:""`
+	CertificateManager  core.CertificateManager  `inject:""`
+	PulseManager        core.PulseManager        `inject:""`
+	PulseStorage        core.PulseStorage        `inject:""`
+	CryptographyService core.CryptographyService `inject:""`
+	NetworkCoordinator  core.NetworkCoordinator  `inject:""`
+	NodeKeeper          network.NodeKeeper       `inject:""`
+	NetworkSwitcher     core.NetworkSwitcher     `inject:""`
+	TerminationHandler  core.TerminationHandler  `inject:""`
 
 	// subcomponents
 	PhaseManager phases.PhaseManager `inject:"subcomponent"`
