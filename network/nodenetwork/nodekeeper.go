@@ -47,6 +47,8 @@ func NewNodeNetwork(configuration configuration.HostNetwork, certificate core.Ce
 	nodeKeeper := NewNodeKeeper(origin)
 	if len(certificate.GetDiscoveryNodes()) == 0 || utils.OriginIsDiscovery(certificate) {
 		nodeKeeper.AddActiveNodes([]core.Node{origin})
+	} else {
+		origin.(MutableNode).SetState(core.NodePending)
 	}
 	return nodeKeeper, nil
 }
@@ -346,7 +348,7 @@ func (nk *nodekeeper) Sync(ctx context.Context, nodes []core.Node, claims []cons
 	for _, node := range nodes {
 		if node.ID().Equal(nk.origin.ID()) {
 			foundOrigin = true
-			// nk.origin.(MutableNode).ChangeState()
+			nk.syncOrigin(node)
 			nk.consensusInfo.SetIsJoiner(false)
 		}
 	}
@@ -356,6 +358,17 @@ func (nk *nodekeeper) Sync(ctx context.Context, nodes []core.Node, claims []cons
 	}
 
 	return nil
+}
+
+// syncOrigin synchronize data in origin node with node from active list in case when they are different objects
+func (nk *nodekeeper) syncOrigin(node core.Node) {
+	if nk.origin == node {
+		return
+	}
+	mutableOrigin := nk.origin.(MutableNode)
+	mutableOrigin.SetState(node.GetState())
+	mutableOrigin.SetLeavingETA(node.LeavingETA())
+	mutableOrigin.SetShortID(node.ShortID())
 }
 
 func (nk *nodekeeper) MoveSyncToActive(ctx context.Context) error {
