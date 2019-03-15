@@ -122,10 +122,10 @@ func main() {
 				}
 				var out struct {
 					Result struct {
-						PulseNumber         uint32
-						NetworkState        string
-						AdditionalNodeState string
-						Origin              struct {
+						PulseNumber  uint32
+						NetworkState string
+						NodeState    string
+						Origin       struct {
 							Role string
 						}
 						ActiveListSize  int
@@ -141,7 +141,7 @@ func main() {
 				results[i] = []string{
 					url,
 					out.Result.NetworkState,
-					out.Result.AdditionalNodeState,
+					out.Result.NodeState,
 					strconv.Itoa(int(out.Result.PulseNumber)),
 					strconv.Itoa(out.Result.ActiveListSize),
 					strconv.Itoa(out.Result.WorkingListSize),
@@ -149,7 +149,7 @@ func main() {
 					"",
 				}
 				state = state && out.Result.NetworkState == core.CompleteNetworkState.String() &&
-					out.Result.AdditionalNodeState == core.NodeReady.String()
+					out.Result.NodeState == core.NodeReady.String()
 				lock.Unlock()
 				wg.Done()
 			}(url, i)
@@ -160,7 +160,7 @@ func main() {
 		table.SetHeader([]string{
 			"URL",
 			"Network State",
-			"Additional Node State",
+			"Node State",
 			"Pulse Number",
 			"Active List Size",
 			"Working List Size",

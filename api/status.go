@@ -35,15 +35,15 @@ type Node struct {
 
 // StatusReply is reply for Status service requests.
 type StatusReply struct {
-	NetworkState        string
-	Origin              Node
-	ActiveListSize      int
-	WorkingListSize     int
-	Nodes               []Node
-	PulseNumber         uint32
-	Entropy             []byte
-	AdditionalNodeState string
-	Version             string
+	NetworkState    string
+	Origin          Node
+	ActiveListSize  int
+	WorkingListSize int
+	Nodes           []Node
+	PulseNumber     uint32
+	Entropy         []byte
+	NodeState       string
+	Version         string
 }
 
 // StatusService is a service that provides API for getting status of node.
@@ -64,7 +64,7 @@ func (s *StatusService) Get(r *http.Request, args *interface{}, reply *StatusRep
 	inslog.Infof("[ StatusService.Get ] Incoming request: %s", r.RequestURI)
 
 	reply.NetworkState = s.runner.NetworkSwitcher.GetState().String()
-	reply.AdditionalNodeState = s.runner.NodeNetwork.GetOrigin().GetState().String()
+	reply.NodeState = s.runner.NodeNetwork.GetOrigin().GetState().String()
 
 	activeNodes := s.runner.NodeNetwork.(network.NodeKeeper).GetActiveNodes()
 	workingNodes := s.runner.NodeNetwork.GetWorkingNodes()
