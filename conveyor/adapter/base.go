@@ -134,7 +134,7 @@ type AdapterWithQueue struct {
 	adapterID uint32
 
 	taskHolder taskHolder
-	worker     Worker
+	processor  Processor
 }
 
 // StopProcessing is blocking
@@ -190,11 +190,11 @@ func (swa *AdapterWithQueue) StartProcessing(started chan bool) {
 				panic(fmt.Sprintf("[ StartProcessing ] How does it happen? Wrong Type: %T", itask.GetData()))
 			}
 
-			if swa.worker == nil {
-				panic(fmt.Sprintf("[ StartProcessing ] Worker function wasn't provided"))
+			if swa.processor == nil {
+				panic(fmt.Sprintf("[ StartProcessing ] Processor function wasn't provided"))
 			}
 
-			go swa.worker.Process(swa.adapterID, task.task, task.cancelInfo)
+			go swa.returnResponse(task)
 		}
 	}
 
@@ -252,4 +252,20 @@ func (swa *AdapterWithQueue) FlushPulseTasks(pulseNumber uint32) {
 // FlushNodeTasks: now flush all tasks
 func (swa *AdapterWithQueue) FlushNodeTasks(nodeID idType) {
 	swa.taskHolder.stopAll(true)
+}
+
+// PushTask implements PulseConveyorAdapterTaskSink
+func (swa *AdapterWithQueue) returnResponse(cancellableTask queueTask) {
+	adapterTask := cancellableTask.task
+	event := swa.processor.Process(swa.adapterID, adapterTask, cancellableTask.cancelInfo)
+	if event.Flushed {
+		return
+	}
+	respSink := adapterTask.respSink
+	for nestedEvent := range event.NestedEventPayload {
+		respSink.PushNestedEvent(swa.adapterID, adapterTask.elementID, adapterTask.handlerID, nestedEvent)
+	}
+	cancelInfo := newCancelInfo(atomicLoadAndIncrementUint64(&reqID))
+	swa.taskHolder.add(cancelInfo, respSink.GetPulseNumber())
+	respSink.PushResponse(swa.adapterID, adapterTask.elementID, adapterTask.handlerID, event.RespPayload)
 }

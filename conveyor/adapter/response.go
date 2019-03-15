@@ -39,19 +39,18 @@ type ResponseSenderTask struct {
 type ResponseSender struct{}
 
 // NewResponseSender returns new instance of worker which sending response
-func NewResponseSender() Worker {
+func NewResponseSender() Processor {
 	return &ResponseSender{}
 }
 
-// Process implements Worker interface
-func (sr *ResponseSender) Process(adapterID uint32, task AdapterTask, cancelInfo CancelInfo) {
+// Process implements Processor interface
+func (sr *ResponseSender) Process(adapterID uint32, task AdapterTask, cancelInfo CancelInfo) Events {
 	payload, ok := task.taskPayload.(ResponseSenderTask)
 	var msg interface{}
 
 	if !ok {
 		msg = errors.Errorf("[ ResponseSender.Process ] Incorrect payload type: %T", task.taskPayload)
-		task.respSink.PushResponse(adapterID, task.elementID, task.handlerID, msg)
-		return
+		return Events{RespPayload: msg}
 	}
 
 	done := make(chan bool, 1)
@@ -68,12 +67,11 @@ func (sr *ResponseSender) Process(adapterID uint32, task AdapterTask, cancelInfo
 		msg = nil
 	case <-cancelInfo.Flush():
 		log.Info("[ ResponseSender.Process ] Flush. DON'T Return Response")
-		return
+		return Events{Flushed: true}
 	case <-done:
 		msg = fmt.Sprintf("Response was send successfully")
 	}
 
 	log.Info("[ ResponseSender.Process ] ", msg)
-
-	task.respSink.PushResponse(adapterID, task.elementID, task.handlerID, msg)
+	return Events{RespPayload: msg}
 }

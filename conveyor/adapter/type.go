@@ -103,20 +103,26 @@ type CancelInfo interface {
 	ID() uint64
 }
 
-// Worker is iface for processing task for adapter
-type Worker interface {
-	Process(adapterID uint32, task AdapterTask, cancelInfo CancelInfo)
+type Events struct {
+	RespPayload        interface{}
+	NestedEventPayload []interface{}
+	Flushed            bool
+}
+
+// Processor is iface for processing task for adapter
+type Processor interface {
+	Process(adapterID uint32, task AdapterTask, cancelInfo CancelInfo) Events
 }
 
 // NewAdapterWithQueue creates new instance of Adapter
-func NewAdapterWithQueue(worker Worker) PulseConveyorAdapterTaskSink {
+func NewAdapterWithQueue(processor Processor) PulseConveyorAdapterTaskSink {
 	adapter := &AdapterWithQueue{
 		queue:             queue.NewMutexQueue(),
 		processingStarted: 0,
 		stopProcessing:    0,
 		processingStopped: make(chan bool, 1),
 		taskHolder:        newTaskHolder(),
-		worker:            worker,
+		processor:         processor,
 	}
 	started := make(chan bool, 1)
 	go adapter.StartProcessing(started)

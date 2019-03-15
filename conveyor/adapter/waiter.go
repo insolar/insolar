@@ -38,12 +38,12 @@ type WaiterTask struct {
 type Waiter struct{}
 
 // NewWaiter returns new instance of worker which waiting
-func NewWaiter() Worker {
+func NewWaiter() Processor {
 	return &Waiter{}
 }
 
-// Process implements Worker interface
-func (w *Waiter) Process(adapterID uint32, task AdapterTask, cancelInfo CancelInfo) {
+// Process implements Processor interface
+func (w *Waiter) Process(adapterID uint32, task AdapterTask, cancelInfo CancelInfo) Events {
 	log.Info("[ Waiter.Process ] Start. cancelInfo.id: ", cancelInfo.ID())
 
 	payload, ok := task.taskPayload.(WaiterTask)
@@ -51,8 +51,7 @@ func (w *Waiter) Process(adapterID uint32, task AdapterTask, cancelInfo CancelIn
 
 	if !ok {
 		msg = errors.Errorf("[ Waiter.Process ] Incorrect payload type: %T", task.taskPayload)
-		task.respSink.PushResponse(adapterID, task.elementID, task.handlerID, msg)
-		return
+		return Events{RespPayload: msg}
 	}
 
 	select {
@@ -61,17 +60,13 @@ func (w *Waiter) Process(adapterID uint32, task AdapterTask, cancelInfo CancelIn
 		msg = nil
 	case <-cancelInfo.Flush():
 		log.Info("[ Waiter.Process ] Flush. DON'T Return Response")
-		return
+		return Events{Flushed: true}
 	case <-time.After(time.Duration(payload.waitPeriodMilliseconds) * time.Millisecond):
 		msg = fmt.Sprintf("Work completed successfully. Waited %d millisecond", payload.waitPeriodMilliseconds)
 	}
 
 	log.Info("[ Waiter.Process ] ", msg)
 
-	task.respSink.PushResponse(adapterID,
-		task.elementID,
-		task.handlerID,
-		msg)
-
+	return Events{RespPayload: msg}
 	// TODO: remove cancelInfo from swa.taskHolder
 }
