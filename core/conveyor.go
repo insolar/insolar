@@ -58,3 +58,8 @@ type Conveyor interface {
 	EventSink
 	Control
 }
+
+type ConveyorPendingMessage struct {
+	Msg Parcel
+	F   Future
+}

@@ -40,6 +40,8 @@ import (
 
 const deliverRPCMethodName = "MessageBus.Deliver"
 
+var conveyorReadyTypes = map[core.MessageType]bool{}
+
 // MessageBus is component that routes application logic requests,
 // e.g. glue between network and logic runner
 type MessageBus struct {
@@ -224,11 +226,7 @@ func (mb *MessageBus) SendParcel(
 	if err != nil {
 		return nil, err
 	}
-	if parcel.Type() == core.TypeGetCode {
-		fmt.Println("lol kek lol deliver SendMessage")
-		fmt.Println(res)
-	}
-	fmt.Println("done love SendParcel", parcel.Type())
+
 	return reply.Deserialize(bytes.NewBuffer(res))
 }
 
@@ -251,11 +249,6 @@ func (mb *MessageBus) OnPulse(context.Context, core.Pulse) error {
 	return nil
 }
 
-type event struct {
-	msg core.Parcel
-	f   core.Future
-}
-
 func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Reply, error) {
 
 	var err error
@@ -270,18 +263,18 @@ func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Repl
 	defer readBarrier(ctx, &mb.globalLock)
 	ctx, _ = inslogger.WithField(ctx, "msg_type", msg.Type().String())
 	inslogger.FromContext(ctx).Debug("MessageBus.doDeliver starts ...")
-	handler, ok := mb.handlers[msg.Type()]
-	if msg.Type() == core.TypeGetCode {
+	_, ok := conveyorReadyTypes[msg.Type()]
+	if ok {
 		f := mb.futureManager.Create()
-		data := event{msg, f}
-		err := mb.Conveyor.SinkPush(msg.Pulse(), data)
+		event := core.ConveyorPendingMessage{Msg: msg, F: f}
+		err := mb.Conveyor.SinkPush(msg.Pulse(), event)
 		if err != nil {
 			f.Cancel()
 			err := errors.Wrapf(err, "error while calling Conveyor.SinkPush")
 			inslogger.FromContext(ctx).Error(err)
 			return nil, err
 		}
-		// This is nit ok by the way
+		// This is not ok by the way
 		resp, err := f.GetResult(time.Hour)
 		if err != nil {
 			return nil, &serializableError{
@@ -291,7 +284,7 @@ func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Repl
 		return resp, nil
 
 	}
-	fmt.Println("done love doDeliver", msg.Type())
+	handler, ok := mb.handlers[msg.Type()]
 	if !ok {
 		txt := "no handler for received message type"
 		inslogger.FromContext(ctx).Error(txt)
