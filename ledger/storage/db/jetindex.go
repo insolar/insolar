@@ -23,6 +23,7 @@ import (
 )
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage/db.JetIndexModifier -o ./ -s _mock.go
+
 // JetIndexModifier is an interface for modifying index records.
 type JetIndexModifier interface {
 	Add(id core.RecordID, jetID core.JetID)

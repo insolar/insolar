@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/genesis"
 	"github.com/insolar/insolar/ledger/storage/node"
+	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -38,9 +39,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/index"
 	"github.com/insolar/insolar/ledger/storage/jet"
-	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
@@ -232,7 +231,7 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterRequest() {
 	assert.Equal(
 		s.T(),
 		am.PlatformCryptographyScheme.IntegrityHasher().Hash(message.MustSerializeBytes(parcel.Msg)),
-		rec.(*record.RequestRecord).MessageHash,
+		rec.(*object.RequestRecord).MessageHash,
 	)
 }
 
@@ -292,8 +291,8 @@ func (s *amSuite) TestLedgerArtifactManager_DeclareType() {
 	assert.NoError(s.T(), err)
 	typeRec, err := os.GetRecord(ctx, core.RecordID(*core.NewJetID(0, nil)), id)
 	assert.NoError(s.T(), err)
-	assert.Equal(s.T(), &record.TypeRecord{
-		SideEffectRecord: record.SideEffectRecord{
+	assert.Equal(s.T(), &object.TypeRecord{
+		SideEffectRecord: object.SideEffectRecord{
 			Domain:  domainRef,
 			Request: requestRef,
 		},
@@ -314,12 +313,12 @@ func (s *amSuite) TestLedgerArtifactManager_DeployCode_CreatesCorrectRecord() {
 	assert.NoError(s.T(), err)
 	codeRec, err := os.GetRecord(ctx, core.RecordID(*core.NewJetID(0, nil)), id)
 	assert.NoError(s.T(), err)
-	assert.Equal(s.T(), codeRec, &record.CodeRecord{
-		SideEffectRecord: record.SideEffectRecord{
+	assert.Equal(s.T(), codeRec, &object.CodeRecord{
+		SideEffectRecord: object.SideEffectRecord{
 			Domain:  domainRef,
 			Request: requestRef,
 		},
-		Code:        record.CalculateIDForBlob(am.PlatformCryptographyScheme, core.GenesisPulse.PulseNumber, []byte{1, 2, 3}),
+		Code:        object.CalculateIDForBlob(am.PlatformCryptographyScheme, core.GenesisPulse.PulseNumber, []byte{1, 2, 3}),
 		MachineType: core.MachineTypeBuiltin,
 	})
 }
@@ -334,13 +333,13 @@ func (s *amSuite) TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord(
 		ctx,
 		jetID,
 		core.GenesisPulse.PulseNumber,
-		&record.ObjectActivateRecord{
-			SideEffectRecord: record.SideEffectRecord{
+		&object.ObjectActivateRecord{
+			SideEffectRecord: object.SideEffectRecord{
 				Domain: *genRandomRef(0),
 			},
 		},
 	)
-	err := os.SetObjectIndex(ctx, jetID, parentID, &index.ObjectLifeline{
+	err := os.SetObjectIndex(ctx, jetID, parentID, &object.Lifeline{
 		LatestState: parentID,
 	})
 	require.NoError(s.T(), err)
@@ -358,13 +357,13 @@ func (s *amSuite) TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord(
 	assert.Nil(s.T(), err)
 	activateRec, err := os.GetRecord(ctx, jetID, objDesc.StateID())
 	assert.Nil(s.T(), err)
-	assert.Equal(s.T(), activateRec, &record.ObjectActivateRecord{
-		SideEffectRecord: record.SideEffectRecord{
+	assert.Equal(s.T(), activateRec, &object.ObjectActivateRecord{
+		SideEffectRecord: object.SideEffectRecord{
 			Domain:  domainRef,
 			Request: objRef,
 		},
-		ObjectStateRecord: record.ObjectStateRecord{
-			Memory:      record.CalculateIDForBlob(am.PlatformCryptographyScheme, core.GenesisPulse.PulseNumber, memory),
+		ObjectStateRecord: object.ObjectStateRecord{
+			Memory:      object.CalculateIDForBlob(am.PlatformCryptographyScheme, core.GenesisPulse.PulseNumber, memory),
 			Image:       *codeRef,
 			IsPrototype: false,
 		},
@@ -376,7 +375,7 @@ func (s *amSuite) TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord(
 	assert.NoError(s.T(), err)
 	childRec, err := os.GetRecord(ctx, jetID, idx.ChildPointer)
 	assert.NoError(s.T(), err)
-	assert.Equal(s.T(), objRef, childRec.(*record.ChildRecord).Ref)
+	assert.Equal(s.T(), objRef, childRec.(*object.ChildRecord).Ref)
 
 	idx, err = os.GetObjectIndex(ctx, jetID, objRef.Record(), false)
 	assert.NoError(s.T(), err)
@@ -392,14 +391,14 @@ func (s *amSuite) TestLedgerArtifactManager_DeactivateObject_CreatesCorrectRecor
 		ctx,
 		jetID,
 		core.GenesisPulse.PulseNumber,
-		&record.ObjectActivateRecord{
-			SideEffectRecord: record.SideEffectRecord{
+		&object.ObjectActivateRecord{
+			SideEffectRecord: object.SideEffectRecord{
 				Domain: *genRandomRef(0),
 			},
 		},
 	)
-	err := os.SetObjectIndex(ctx, jetID, objID, &index.ObjectLifeline{
-		State:       record.StateActivation,
+	err := os.SetObjectIndex(ctx, jetID, objID, &object.Lifeline{
+		State:       object.StateActivation,
 		LatestState: objID,
 	})
 	require.NoError(s.T(), err)
@@ -416,8 +415,8 @@ func (s *amSuite) TestLedgerArtifactManager_DeactivateObject_CreatesCorrectRecor
 	assert.Nil(s.T(), err)
 	deactivateRec, err := os.GetRecord(ctx, jetID, deactivateID)
 	assert.Nil(s.T(), err)
-	assert.Equal(s.T(), deactivateRec, &record.DeactivationRecord{
-		SideEffectRecord: record.SideEffectRecord{
+	assert.Equal(s.T(), deactivateRec, &object.DeactivationRecord{
+		SideEffectRecord: object.SideEffectRecord{
 			Domain:  domainRef,
 			Request: requestRef,
 		},
@@ -433,14 +432,14 @@ func (s *amSuite) TestLedgerArtifactManager_UpdateObject_CreatesCorrectRecord() 
 		ctx,
 		jetID,
 		core.GenesisPulse.PulseNumber,
-		&record.ObjectActivateRecord{
-			SideEffectRecord: record.SideEffectRecord{
+		&object.ObjectActivateRecord{
+			SideEffectRecord: object.SideEffectRecord{
 				Domain: *genRandomRef(0),
 			},
 		},
 	)
-	err := os.SetObjectIndex(ctx, jetID, objID, &index.ObjectLifeline{
-		State:       record.StateActivation,
+	err := os.SetObjectIndex(ctx, jetID, objID, &object.Lifeline{
+		State:       object.StateActivation,
 		LatestState: objID,
 	})
 	require.NoError(s.T(), err)
@@ -461,13 +460,13 @@ func (s *amSuite) TestLedgerArtifactManager_UpdateObject_CreatesCorrectRecord() 
 	assert.Nil(s.T(), err)
 	updateRec, err := os.GetRecord(ctx, jetID, obj.StateID())
 	assert.Nil(s.T(), err)
-	assert.Equal(s.T(), updateRec, &record.ObjectAmendRecord{
-		SideEffectRecord: record.SideEffectRecord{
+	assert.Equal(s.T(), updateRec, &object.ObjectAmendRecord{
+		SideEffectRecord: object.SideEffectRecord{
 			Domain:  domainRef,
 			Request: requestRef,
 		},
-		ObjectStateRecord: record.ObjectStateRecord{
-			Memory:      record.CalculateIDForBlob(am.PlatformCryptographyScheme, core.GenesisPulse.PulseNumber, memory),
+		ObjectStateRecord: object.ObjectStateRecord{
+			Memory:      object.CalculateIDForBlob(am.PlatformCryptographyScheme, core.GenesisPulse.PulseNumber, memory),
 			Image:       *prototype,
 			IsPrototype: false,
 		},
@@ -486,12 +485,12 @@ func (s *amSuite) TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors(
 		ctx,
 		jetID,
 		core.GenesisPulse.PulseNumber,
-		&record.ObjectActivateRecord{
-			SideEffectRecord: record.SideEffectRecord{
+		&object.ObjectActivateRecord{
+			SideEffectRecord: object.SideEffectRecord{
 				Domain: domainRef,
 			},
-			ObjectStateRecord: record.ObjectStateRecord{
-				Memory: record.CalculateIDForBlob(am.PlatformCryptographyScheme, core.GenesisPulse.PulseNumber, []byte{3}),
+			ObjectStateRecord: object.ObjectStateRecord{
+				Memory: object.CalculateIDForBlob(am.PlatformCryptographyScheme, core.GenesisPulse.PulseNumber, []byte{3}),
 			},
 			Parent: *parentRef,
 		},
@@ -499,19 +498,19 @@ func (s *amSuite) TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors(
 	require.NoError(s.T(), err)
 	_, err = os.SetBlob(ctx, jetID, core.GenesisPulse.PulseNumber, []byte{3})
 	require.NoError(s.T(), err)
-	objectAmendID, _ := os.SetRecord(ctx, jetID, core.GenesisPulse.PulseNumber, &record.ObjectAmendRecord{
-		SideEffectRecord: record.SideEffectRecord{
+	objectAmendID, _ := os.SetRecord(ctx, jetID, core.GenesisPulse.PulseNumber, &object.ObjectAmendRecord{
+		SideEffectRecord: object.SideEffectRecord{
 			Domain: domainRef,
 		},
-		ObjectStateRecord: record.ObjectStateRecord{
-			Memory: record.CalculateIDForBlob(am.PlatformCryptographyScheme, core.GenesisPulse.PulseNumber, []byte{4}),
+		ObjectStateRecord: object.ObjectStateRecord{
+			Memory: object.CalculateIDForBlob(am.PlatformCryptographyScheme, core.GenesisPulse.PulseNumber, []byte{4}),
 			Image:  *prototypeRef,
 		},
 	})
 	_, err = os.SetBlob(ctx, jetID, core.GenesisPulse.PulseNumber, []byte{4})
 	require.NoError(s.T(), err)
 
-	objectIndex := index.ObjectLifeline{
+	objectIndex := object.Lifeline{
 		LatestState:  objectAmendID,
 		ChildPointer: genRandomID(0),
 		Parent:       *parentRef,
@@ -587,12 +586,12 @@ func (s *amSuite) TestLedgerArtifactManager_GetChildren() {
 		ctx,
 		jetID,
 		core.GenesisPulse.PulseNumber,
-		&record.ObjectActivateRecord{
-			SideEffectRecord: record.SideEffectRecord{
+		&object.ObjectActivateRecord{
+			SideEffectRecord: object.SideEffectRecord{
 				Domain: domainRef,
 			},
-			ObjectStateRecord: record.ObjectStateRecord{
-				Memory: record.CalculateIDForBlob(am.PlatformCryptographyScheme, core.GenesisPulse.PulseNumber, []byte{0}),
+			ObjectStateRecord: object.ObjectStateRecord{
+				Memory: object.CalculateIDForBlob(am.PlatformCryptographyScheme, core.GenesisPulse.PulseNumber, []byte{0}),
 			},
 		})
 	child1Ref := genRandomRef(1)
@@ -603,14 +602,14 @@ func (s *amSuite) TestLedgerArtifactManager_GetChildren() {
 		ctx,
 		jetID,
 		core.GenesisPulse.PulseNumber,
-		&record.ChildRecord{
+		&object.ChildRecord{
 			Ref: *child1Ref,
 		})
 	childMeta2, _ := os.SetRecord(
 		ctx,
 		jetID,
 		core.GenesisPulse.PulseNumber,
-		&record.ChildRecord{
+		&object.ChildRecord{
 			PrevChild: childMeta1,
 			Ref:       *child2Ref,
 		})
@@ -618,12 +617,12 @@ func (s *amSuite) TestLedgerArtifactManager_GetChildren() {
 		ctx,
 		jetID,
 		core.GenesisPulse.PulseNumber,
-		&record.ChildRecord{
+		&object.ChildRecord{
 			PrevChild: childMeta2,
 			Ref:       *child3Ref,
 		})
 
-	parentIndex := index.ObjectLifeline{
+	parentIndex := object.Lifeline{
 		LatestState:  parentID,
 		ChildPointer: childMeta3,
 	}
@@ -755,12 +754,12 @@ func (s *amSuite) TestLedgerArtifactManager_HandleJetDrop() {
 
 	ctx, os, am := getTestData(s)
 
-	codeRecord := record.CodeRecord{
-		Code: record.CalculateIDForBlob(am.PlatformCryptographyScheme, core.GenesisPulse.PulseNumber, []byte{1, 2, 3, 3, 2, 1}),
+	codeRecord := object.CodeRecord{
+		Code: object.CalculateIDForBlob(am.PlatformCryptographyScheme, core.GenesisPulse.PulseNumber, []byte{1, 2, 3, 3, 2, 1}),
 	}
 
 	setRecordMessage := message.SetRecord{
-		Record: record.SerializeRecord(&codeRecord),
+		Record: object.SerializeRecord(&codeRecord),
 	}
 
 	jetID := core.RecordID(*core.NewJetID(0, nil))
@@ -775,10 +774,10 @@ func (s *amSuite) TestLedgerArtifactManager_HandleJetDrop() {
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), reply.OK{}, *rep.(*reply.OK))
 
-	id := record.NewRecordIDFromRecord(s.scheme, 0, &codeRecord)
+	id := object.NewRecordIDFromRecord(s.scheme, 0, &codeRecord)
 	rec, err := os.GetRecord(ctx, jetID, id)
 	require.NoError(s.T(), err)
-	assert.Equal(s.T(), codeRecord, *rec.(*record.CodeRecord))
+	assert.Equal(s.T(), codeRecord, *rec.(*object.CodeRecord))
 }
 
 func (s *amSuite) TestLedgerArtifactManager_RegisterValidation() {
@@ -906,11 +905,11 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterResult() {
 
 	rec, err := os.GetRecord(ctx, core.RecordID(*core.NewJetID(0, nil)), requestID)
 	assert.NoError(s.T(), err)
-	assert.Equal(s.T(), record.ResultRecord{
+	assert.Equal(s.T(), object.ResultRecord{
 		Object:  objID,
 		Request: *request,
 		Payload: []byte{1, 2, 3},
-	}, *rec.(*record.ResultRecord))
+	}, *rec.(*object.ResultRecord))
 }
 
 func (s *amSuite) TestLedgerArtifactManager_RegisterRequest_JetMiss() {
@@ -975,10 +974,10 @@ func (s *amSuite) TestLedgerArtifactManager_GetRequest_Success() {
 	pulseStorageMock.CurrentMock.Return(core.GenesisPulse, nil)
 
 	var parcel core.Parcel = &message.Parcel{PulseNumber: 123987}
-	resRecord := record.RequestRecord{
+	resRecord := object.RequestRecord{
 		Parcel: message.ParcelToBytes(parcel),
 	}
-	finalResponse := &reply.Request{Record: record.SerializeRecord(&resRecord)}
+	finalResponse := &reply.Request{Record: object.SerializeRecord(&resRecord)}
 
 	mb := testutils.NewMessageBusMock(s.T())
 	mb.SendFunc = func(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) (r core.Reply, r1 error) {

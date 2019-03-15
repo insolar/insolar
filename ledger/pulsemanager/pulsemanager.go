@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar"
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/node"
+	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/trace"
@@ -41,7 +42,6 @@ import (
 	"github.com/insolar/insolar/ledger/heavyclient"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/index"
 	"github.com/insolar/insolar/ledger/storage/jet"
 )
 
@@ -281,11 +281,7 @@ func (m *PulseManager) getExecutorHotData(
 			logger.Error(err)
 			continue
 		}
-		encoded, err := index.EncodeObjectLifeline(lifeline)
-		if err != nil {
-			logger.Error(err)
-			continue
-		}
+		encoded := object.Encode(*lifeline)
 		recentObjects[id] = message.HotIndex{
 			TTL:   ttl,
 			Index: encoded,

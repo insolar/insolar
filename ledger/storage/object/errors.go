@@ -14,15 +14,13 @@
  *    limitations under the License.
  */
 
-package record
+package object
 
-import "github.com/insolar/insolar/core"
+import (
+	"github.com/pkg/errors"
+)
 
-func NewRecordIDFromRecord(scheme core.PlatformCryptographyScheme, pulse core.PulseNumber, rec Record) *core.RecordID {
-	hasher := scheme.ReferenceHasher()
-	_, err := rec.WriteHashData(hasher)
-	if err != nil {
-		panic(err)
-	}
-	return core.NewRecordID(pulse, hasher.Sum(nil))
-}
+var (
+	// ErrNotFound is returned when index-record not found.
+	ErrNotFound = errors.New("index not found")
+)

@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/core/delegationtoken"
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/node"
+	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/tag"
@@ -40,8 +41,6 @@ import (
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/hack"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/index"
-	"github.com/insolar/insolar/ledger/storage/record"
 )
 
 // MessageHandler processes messages for local storage interaction.
@@ -294,6 +293,15 @@ func (h *MessageHandler) setHandlersForHeavy(m *middleware) {
 		BuildMiddleware(h.handleGetObjectIndex,
 			instrumentHandler("handleGetObjectIndex"),
 			m.zeroJetForHeavy))
+
+	h.Bus.MustRegister(
+		core.TypeGetRequest,
+		BuildMiddleware(
+			h.handleGetRequest,
+			instrumentHandler("handleGetRequest"),
+			m.checkJet,
+		),
+	)
 }
 
 func (h *MessageHandler) handleSetRecord(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
@@ -302,19 +310,19 @@ func (h *MessageHandler) handleSetRecord(ctx context.Context, parcel core.Parcel
 	}
 
 	msg := parcel.Message().(*message.SetRecord)
-	rec := record.DeserializeRecord(msg.Record)
+	rec := object.DeserializeRecord(msg.Record)
 	jetID := jetFromContext(ctx)
 
-	calculatedID := record.NewRecordIDFromRecord(h.PlatformCryptographyScheme, parcel.Pulse(), rec)
+	calculatedID := object.NewRecordIDFromRecord(h.PlatformCryptographyScheme, parcel.Pulse(), rec)
 
 	switch r := rec.(type) {
-	case record.Request:
+	case object.Request:
 		if h.RecentStorageProvider.Count() > h.conf.PendingRequestsLimit {
 			return &reply.Error{ErrType: reply.ErrTooManyPendingRequests}, nil
 		}
 		recentStorage := h.RecentStorageProvider.GetPendingStorage(ctx, jetID)
 		recentStorage.AddPendingRequest(ctx, r.GetObject(), *calculatedID)
-	case *record.ResultRecord:
+	case *object.ResultRecord:
 		recentStorage := h.RecentStorageProvider.GetPendingStorage(ctx, jetID)
 		recentStorage.RemovePendingRequest(ctx, r.Object, *r.Request.Record())
 	}
@@ -337,7 +345,7 @@ func (h *MessageHandler) handleSetBlob(ctx context.Context, parcel core.Parcel) 
 
 	msg := parcel.Message().(*message.SetBlob)
 	jetID := jetFromContext(ctx)
-	calculatedID := record.CalculateIDForBlob(h.PlatformCryptographyScheme, parcel.Pulse(), msg.Memory)
+	calculatedID := object.CalculateIDForBlob(h.PlatformCryptographyScheme, parcel.Pulse(), msg.Memory)
 
 	_, err := h.ObjectStorage.GetBlob(ctx, jetID, calculatedID)
 	if err == nil {
@@ -523,11 +531,11 @@ func (h *MessageHandler) handleGetObject(
 	if err != nil {
 		return nil, err
 	}
-	state, ok := rec.(record.ObjectState)
+	state, ok := rec.(object.ObjectState)
 	if !ok {
 		return nil, errors.New("invalid object record")
 	}
-	if state.State() == record.StateDeactivation {
+	if state.State() == object.StateDeactivation {
 		return &reply.Error{ErrType: reply.ErrDeactivated}, nil
 	}
 
@@ -722,7 +730,7 @@ func (h *MessageHandler) handleGetChildren(
 			return nil, errors.New("failed to retrieve children")
 		}
 
-		childRec, ok := rec.(*record.ChildRecord)
+		childRec, ok := rec.(*object.ChildRecord)
 		if !ok {
 			return nil, errors.New("failed to retrieve children")
 		}
@@ -748,14 +756,14 @@ func (h *MessageHandler) handleGetRequest(ctx context.Context, parcel core.Parce
 		return nil, errors.New("failed to fetch request")
 	}
 
-	req, ok := rec.(*record.RequestRecord)
+	req, ok := rec.(*object.RequestRecord)
 	if !ok {
 		return nil, errors.New("failed to decode request")
 	}
 
 	rep := reply.Request{
 		ID:     msg.Request,
-		Record: record.SerializeRecord(req),
+		Record: object.SerializeRecord(req),
 	}
 
 	return &rep, nil
@@ -789,8 +797,8 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 		"pulse":  parcel.Pulse(),
 	})
 
-	rec := record.DeserializeRecord(msg.Record)
-	state, ok := rec.(record.ObjectState)
+	rec := object.DeserializeRecord(msg.Record)
+	state, ok := rec.(object.ObjectState)
 	if !ok {
 		return nil, errors.New("wrong object state record")
 	}
@@ -805,21 +813,21 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 	}
 
 	switch s := state.(type) {
-	case *record.ObjectActivateRecord:
+	case *object.ObjectActivateRecord:
 		s.Memory = blobID
-	case *record.ObjectAmendRecord:
+	case *object.ObjectAmendRecord:
 		s.Memory = blobID
 	}
 
-	var idx *index.ObjectLifeline
+	var idx *object.Lifeline
 	err = h.DBContext.Update(ctx, func(tx *storage.TransactionManager) error {
 		var err error
 		idx, err = tx.GetObjectIndex(ctx, jetID, msg.Object.Record(), true)
 		// No index on our node.
 		if err == core.ErrNotFound {
-			if state.State() == record.StateActivation {
+			if state.State() == object.StateActivation {
 				// We are activating the object. There is no index for it anywhere.
-				idx = &index.ObjectLifeline{State: record.StateUndefined}
+				idx = &object.Lifeline{State: object.StateUndefined}
 			} else {
 				logger.Debug("failed to fetch index (fetching from heavy)")
 				// We are updating object. Index should be on the heavy executor.
@@ -840,7 +848,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 			return err
 		}
 
-		recID := record.NewRecordIDFromRecord(h.PlatformCryptographyScheme, parcel.Pulse(), rec)
+		recID := object.NewRecordIDFromRecord(h.PlatformCryptographyScheme, parcel.Pulse(), rec)
 
 		// Index exists and latest record id does not match (preserving chain consistency).
 		// For the case when vm can't save or send result to another vm and it tries to update the same record again
@@ -857,8 +865,8 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 		}
 		idx.LatestState = id
 		idx.State = state.State()
-		if state.State() == record.StateActivation {
-			idx.Parent = state.(*record.ObjectActivateRecord).Parent
+		if state.State() == object.StateActivation {
+			idx.Parent = state.(*object.ObjectActivateRecord).Parent
 		}
 
 		idx.LatestUpdate = parcel.Pulse()
@@ -893,8 +901,8 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel core.Pa
 
 	msg := parcel.Message().(*message.RegisterChild)
 	jetID := jetFromContext(ctx)
-	rec := record.DeserializeRecord(msg.Record)
-	childRec, ok := rec.(*record.ChildRecord)
+	rec := object.DeserializeRecord(msg.Record)
+	childRec, ok := rec.(*object.ChildRecord)
 	if !ok {
 		return nil, errors.New("wrong child record")
 	}
@@ -917,7 +925,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel core.Pa
 			return err
 		}
 
-		recID := record.NewRecordIDFromRecord(h.PlatformCryptographyScheme, parcel.Pulse(), childRec)
+		recID := object.NewRecordIDFromRecord(h.PlatformCryptographyScheme, parcel.Pulse(), childRec)
 
 		// Children exist and pointer does not match (preserving chain consistency).
 		// For the case when vm can't save or send result to another vm and it tries to update the same record again
@@ -1062,10 +1070,7 @@ func (h *MessageHandler) handleGetObjectIndex(ctx context.Context, parcel core.P
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
 
-	buf, err := index.EncodeObjectLifeline(idx)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to serialize index")
-	}
+	buf := object.Encode(*idx)
 
 	return &reply.ObjectIndex{Index: buf}, nil
 }
@@ -1078,7 +1083,7 @@ func (h *MessageHandler) handleValidationCheck(ctx context.Context, parcel core.
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch state record")
 	}
-	state, ok := rec.(record.ObjectState)
+	state, ok := rec.(object.ObjectState)
 	if !ok {
 		return nil, errors.New("failed to fetch state record")
 	}
@@ -1091,14 +1096,14 @@ func (h *MessageHandler) handleValidationCheck(ctx context.Context, parcel core.
 	return &reply.OK{}, nil
 }
 
-func (h *MessageHandler) getCode(ctx context.Context, id *core.RecordID) (*record.CodeRecord, error) {
+func (h *MessageHandler) getCode(ctx context.Context, id *core.RecordID) (*object.CodeRecord, error) {
 	jetID := *core.NewJetID(0, nil)
 
 	rec, err := h.ObjectStorage.GetRecord(ctx, core.RecordID(jetID), id)
 	if err != nil {
 		return nil, err
 	}
-	codeRec, ok := rec.(*record.CodeRecord)
+	codeRec, ok := rec.(*object.CodeRecord)
 	if !ok {
 		return nil, errors.Wrap(ErrInvalidRef, "failed to retrieve code record")
 	}
@@ -1106,14 +1111,14 @@ func (h *MessageHandler) getCode(ctx context.Context, id *core.RecordID) (*recor
 	return codeRec, nil
 }
 
-func validateState(old record.State, new record.State) error {
-	if old == record.StateDeactivation {
+func validateState(old object.State, new object.State) error {
+	if old == object.StateDeactivation {
 		return ErrObjectDeactivated
 	}
-	if old == record.StateUndefined && new != record.StateActivation {
+	if old == object.StateUndefined && new != object.StateActivation {
 		return errors.New("object is not activated")
 	}
-	if old != record.StateUndefined && new == record.StateActivation {
+	if old != object.StateUndefined && new == object.StateActivation {
 		return errors.New("object is already activated")
 	}
 	return nil
@@ -1121,7 +1126,7 @@ func validateState(old record.State, new record.State) error {
 
 func (h *MessageHandler) saveIndexFromHeavy(
 	ctx context.Context, jetID core.RecordID, obj core.RecordRef, heavy *core.RecordRef,
-) (*index.ObjectLifeline, error) {
+) (*object.Lifeline, error) {
 	genericReply, err := h.Bus.Send(ctx, &message.GetObjectIndex{
 		Object: obj,
 	}, &core.MessageSendOptions{
@@ -1134,16 +1139,13 @@ func (h *MessageHandler) saveIndexFromHeavy(
 	if !ok {
 		return nil, fmt.Errorf("failed to fetch object index: unexpected reply type %T (reply=%+v)", genericReply, genericReply)
 	}
-	idx, err := index.DecodeObjectLifeline(rep.Index)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to decode")
-	}
+	idx := object.Decode(rep.Index)
 
-	err = h.ObjectStorage.SetObjectIndex(ctx, jetID, obj.Record(), idx)
+	err = h.ObjectStorage.SetObjectIndex(ctx, jetID, obj.Record(), &idx)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to save")
 	}
-	return idx, nil
+	return &idx, nil
 }
 
 func (h *MessageHandler) fetchObject(
@@ -1236,13 +1238,9 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 
 	indexStorage := h.RecentStorageProvider.GetIndexStorage(ctx, jetID)
 	for id, meta := range msg.RecentObjects {
-		decodedIndex, err := index.DecodeObjectLifeline(meta.Index)
-		if err != nil {
-			logger.Error(err)
-			continue
-		}
+		decodedIndex := object.Decode(meta.Index)
 
-		err = h.ObjectStorage.SetObjectIndex(ctx, jetID, &id, decodedIndex)
+		err = h.ObjectStorage.SetObjectIndex(ctx, jetID, &id, &decodedIndex)
 		if err != nil {
 			logger.Error(err)
 			continue
