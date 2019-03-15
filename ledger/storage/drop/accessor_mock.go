@@ -6,14 +6,14 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "Accessor" can be found in github.com/insolar/insolar/ledger/storage/drop
 */
 import (
-	"context"
+	context "context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	testify_assert "github.com/stretchr/testify/assert"
+	core "github.com/insolar/insolar/core"
 
-	"github.com/insolar/insolar/core"
+	testify_assert "github.com/stretchr/testify/assert"
 )
 
 //AccessorMock implements github.com/insolar/insolar/ledger/storage/drop.Accessor
