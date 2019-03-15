@@ -64,7 +64,7 @@ type Conveyor interface {
 // ConveyorFuture is pending for response from conveyor
 type ConveyorFuture interface {
 	// ID returns number.
-	ID() uint32
+	ID() uint64
 	// Result is a channel to listen for future result.
 	Result() <-chan Reply
 	// SetResult makes packet to appear in result channel.

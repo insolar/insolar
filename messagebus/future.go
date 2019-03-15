@@ -37,13 +37,13 @@ type CancelCallback func(core.ConveyorFuture)
 
 type future struct {
 	result         chan core.Reply
-	id             uint32
-	finished       uint32
+	id             uint64
+	finished       uint64
 	cancelCallback CancelCallback
 }
 
 // NewFuture creates new ConveyorFuture.
-func NewFuture(id uint32, cancelCallback CancelCallback) core.ConveyorFuture {
+func NewFuture(id uint64, cancelCallback CancelCallback) core.ConveyorFuture {
 	return &future{
 		result:         make(chan core.Reply, 1),
 		id:             id,
@@ -52,7 +52,7 @@ func NewFuture(id uint32, cancelCallback CancelCallback) core.ConveyorFuture {
 }
 
 // ID returns RequestID of packet.
-func (future *future) ID() uint32 {
+func (future *future) ID() uint64 {
 	return future.id
 }
 
@@ -63,7 +63,7 @@ func (future *future) Result() <-chan core.Reply {
 
 // SetResult write packet to the result channel.
 func (future *future) SetResult(res core.Reply) {
-	if atomic.CompareAndSwapUint32(&future.finished, 0, 1) {
+	if atomic.CompareAndSwapUint64(&future.finished, 0, 1) {
 		future.result <- res
 		future.finish()
 	}
@@ -85,7 +85,7 @@ func (future *future) GetResult(duration time.Duration) (core.Reply, error) {
 
 // Cancel allows to cancel ConveyorFuture processing.
 func (future *future) Cancel() {
-	if atomic.CompareAndSwapUint32(&future.finished, 0, 1) {
+	if atomic.CompareAndSwapUint64(&future.finished, 0, 1) {
 		future.finish()
 	}
 }
@@ -97,18 +97,19 @@ func (future *future) finish() {
 
 type futureManager struct {
 	mutex   sync.RWMutex
-	futures map[uint32]core.ConveyorFuture
+	futures map[uint64]core.ConveyorFuture
+	index   uint64
 }
 
 func newFutureManager() *futureManager {
 	return &futureManager{
-		futures: make(map[uint32]core.ConveyorFuture),
+		futures: make(map[uint64]core.ConveyorFuture),
 	}
 }
 
 // Create implements FutureManager interface
 func (fm *futureManager) Create() core.ConveyorFuture {
-	id := uint32(1)
+	id := fm.incrementIndex()
 	future := NewFuture(id, func(f core.ConveyorFuture) {
 		fm.delete(f.ID())
 	})
@@ -122,23 +123,41 @@ func (fm *futureManager) Create() core.ConveyorFuture {
 }
 
 // Get implements FutureManager interface
-func (fm *futureManager) Get(id uint32) core.ConveyorFuture {
+func (fm *futureManager) Get(id uint64) core.ConveyorFuture {
 	fm.mutex.RLock()
 	defer fm.mutex.RUnlock()
 
 	return fm.futures[id]
 }
 
-func (fm *futureManager) delete(id uint32) {
+func (fm *futureManager) delete(id uint64) {
 	fm.mutex.Lock()
 	defer fm.mutex.Unlock()
 
 	delete(fm.futures, id)
+	fm.decrementIndex()
+}
+
+func (fm *futureManager) incrementIndex() uint64 {
+	for {
+		val := atomic.LoadUint64(&fm.index)
+		if atomic.CompareAndSwapUint64(&fm.index, val, val+1) {
+			return val
+		}
+	}
+}
+func (fm *futureManager) decrementIndex() uint64 {
+	for {
+		val := atomic.LoadUint64(&fm.index)
+		if atomic.CompareAndSwapUint64(&fm.index, val, val-1) {
+			return val
+		}
+	}
 }
 
 // FutureManager is store and create ConveyorFuture instances
 type FutureManager interface {
-	Get(id uint32) core.ConveyorFuture
+	Get(id uint64) core.ConveyorFuture
 	Create() core.ConveyorFuture
 }
 
