@@ -82,15 +82,10 @@ func (s *Store) All(ctx context.Context, pulse core.PulseNumber) []core.JetID {
 	return s.LTreeForPulse(pulse).leafIDs()
 }
 
-// ForID finds jet for specified pulse and object.
+// ForID finds jet in jet tree for provided pulse and object.
+// Always returns jet id and activity flag for this jet.
 func (s *Store) ForID(ctx context.Context, pulse core.PulseNumber, recordID core.RecordID) (core.JetID, bool) {
-	s.RLock()
-	lt := s.trees[pulse]
-	if lt == nil {
-		lt = s.ltreeForPulse(pulse)
-	}
-	s.RUnlock()
-	return lt.find(recordID)
+	return s.LTreeForPulse(pulse).find(recordID)
 }
 
 // Update updates jet tree for specified pulse.
