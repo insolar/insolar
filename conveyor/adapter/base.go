@@ -50,11 +50,11 @@ func (ci *cancelInfo) ID() uint64 {
 	return ci.id
 }
 
-func (ci *cancelInfo) Cancel() chan bool {
+func (ci *cancelInfo) Cancel() <-chan bool {
 	return ci.cancel
 }
 
-func (ci *cancelInfo) Flush() chan bool {
+func (ci *cancelInfo) Flush() <-chan bool {
 	return ci.flush
 }
 

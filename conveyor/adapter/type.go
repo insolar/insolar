@@ -98,8 +98,8 @@ type AdapterNestedEvent struct {
 
 // CancelInfo provides info about cancellation
 type CancelInfo interface {
-	Cancel() chan bool
-	Flush() chan bool
+	Cancel() <-chan bool
+	Flush() <-chan bool
 	ID() uint64
 }
 
