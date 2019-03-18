@@ -31,6 +31,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/db"
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/node"
@@ -75,9 +76,9 @@ func (s *handlerSuite) BeforeTest(suiteName, testName string) {
 	s.cm = &component.Manager{}
 	s.ctx = inslogger.TestContext(s.T())
 
-	db, cleaner := storagetest.TmpDB(s.ctx, s.T())
+	tmpDB, cleaner := storagetest.TmpDB(s.ctx, s.T())
 	s.cleaner = cleaner
-	s.db = db
+	s.db = tmpDB
 	s.scheme = testutils.NewPlatformCryptographyScheme()
 	s.jetStorage = jet.NewJetStorage()
 	s.nodeStorage = node.NewStorage()
@@ -90,6 +91,7 @@ func (s *handlerSuite) BeforeTest(suiteName, testName string) {
 	s.cm.Inject(
 		s.scheme,
 		s.db,
+		db.NewMemoryMockDB(),
 		s.jetStorage,
 		s.nodeStorage,
 		s.pulseTracker,
@@ -982,8 +984,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 			*secondID: {},
 			*thirdID:  {Active: true},
 		},
-		Drop:    jet.Drop{Pulse: core.FirstPulseNumber, Hash: []byte{88}},
-		DropJet: jetID,
+		Drop: jet.Drop{Pulse: core.FirstPulseNumber, Hash: []byte{88}, JetID: core.JetID(jetID)},
 	}
 
 	indexMock := recentstorage.NewRecentIndexStorageMock(s.T())
@@ -1033,7 +1034,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 
 	savedDrop, err := s.dropAccessor.ForPulse(s.ctx, core.JetID(jetID), core.FirstPulseNumber)
 	require.NoError(s.T(), err)
-	require.Equal(s.T(), jet.Drop{Pulse: core.FirstPulseNumber, Hash: []byte{88}}, savedDrop)
+	require.Equal(s.T(), jet.Drop{Pulse: core.FirstPulseNumber, Hash: []byte{88}, JetID: core.JetID(jetID)}, savedDrop)
 
 	indexMock.MinimockFinish()
 	pendingMock.MinimockFinish()

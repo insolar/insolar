@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/ledger/recentstorage"
+	db2 "github.com/insolar/insolar/ledger/storage/db"
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/genesis"
 	"github.com/insolar/insolar/ledger/storage/jet"
@@ -89,18 +90,35 @@ func GetLedgerComponents(conf configuration.Ledger, certificate core.Certificate
 		panic(errors.Wrap(err, "failed to initialize DB"))
 	}
 
+	newDB, err := db2.NewBadgerDB(conf)
+	if err != nil {
+		panic(errors.Wrap(err, "failed to initialize DB"))
+	}
+
 	var pulseTracker storage.PulseTracker
+	var dropModifier drop.Modifier
+	var dropAccessor drop.Accessor
 	// TODO: @imarkin 18.02.18 - Comparision with core.StaticRoleUnknown is a hack for genesis pulse (INS-1537)
 	switch certificate.GetRole() {
 	case core.StaticRoleUnknown, core.StaticRoleHeavyMaterial:
 		pulseTracker = storage.NewPulseTracker()
+
+		dropDB := drop.NewStorageDB()
+		dropModifier = dropDB
+		dropAccessor = dropDB
 	default:
 		pulseTracker = storage.NewPulseTrackerMemory()
+
+		dropDB := drop.NewStorageMemory()
+		dropModifier = dropDB
+		dropAccessor = dropDB
 	}
 
 	return []interface{}{
 		db,
-		drop.NewStorageDB(),
+		newDB,
+		dropModifier,
+		dropAccessor,
 		storage.NewCleaner(),
 		pulseTracker,
 		storage.NewPulseStorage(),

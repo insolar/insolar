@@ -17,20 +17,46 @@
 package drop
 
 import (
+	"bytes"
 	"context"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/storage/jet"
+	"github.com/ugorji/go/codec"
 )
 
-// Modifier provides an interface for modifying jetdrops.
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage/drop.Modifier -o ./ -s _mock.go
+
+// Modifier provides an interface for modifying jetdrops.
 type Modifier interface {
-	Set(ctx context.Context, jetID core.JetID, drop jet.Drop) error
+	Set(ctx context.Context, drop jet.Drop) error
 }
 
-// Accessor provides an interface for accessing jetdrops.
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage/drop.Accessor -o ./ -s _mock.go
+
+// Accessor provides an interface for accessing jetdrops.
 type Accessor interface {
 	ForPulse(ctx context.Context, jetID core.JetID, pulse core.PulseNumber) (jet.Drop, error)
+}
+
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage/drop.Cleaner -o ./ -s _mock.go
+
+// Cleaner provides an interface for removing jetdrops from a storage.
+type Cleaner interface {
+	Delete(pulse core.PulseNumber)
+}
+
+// Serialize serializes a drop
+func Serialize(dr jet.Drop) []byte {
+	buff := bytes.NewBuffer(nil)
+	enc := codec.NewEncoder(buff, &codec.CborHandle{})
+	enc.MustEncode(dr)
+	return buff.Bytes()
+}
+
+// Deserialize deserializes a jet.Drop
+func Deserialize(buf []byte) (dr jet.Drop) {
+	dec := codec.NewDecoderBytes(buf, &codec.CborHandle{})
+	dec.MustDecode(&dr)
+	return dr
 }

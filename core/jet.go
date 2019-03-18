@@ -52,3 +52,9 @@ func (id JetID) Prefix() []byte {
 	}
 	return id[PulseNumberSize+1:]
 }
+
+// DebugString returns a debug representation of a jet
+func (id JetID) DebugString() string {
+	recID := RecordID(id)
+	return (&recID).DebugString()
+}

@@ -74,6 +74,7 @@ type PulseManager struct {
 	StorageCleaner storage.Cleaner        `inject:""`
 
 	DropModifier drop.Modifier `inject:""`
+	DropCleaner  drop.Cleaner  `inject:""`
 	DropAccessor drop.Accessor `inject:""`
 
 	// TODO: move clients pool to component - @nordicdyno - 18.Dec.2018
@@ -242,9 +243,10 @@ func (m *PulseManager) createDrop(
 
 	drop = &jet.Drop{
 		Pulse: currentPulse,
+		JetID: core.JetID(jetID),
 	}
 
-	err = m.DropModifier.Set(ctx, core.JetID(jetID), *drop)
+	err = m.DropModifier.Set(ctx, *drop)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't SetDrop")
 	}
@@ -304,7 +306,6 @@ func (m *PulseManager) getExecutorHotData(
 
 	msg := &message.HotData{
 		Drop:            *drop,
-		DropJet:         jetID,
 		PulseNumber:     pulse,
 		RecentObjects:   recentObjects,
 		PendingRequests: pendingRequests,
@@ -664,6 +665,7 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse core.Pulse, 
 	}
 	m.JetStorage.DeleteJetTree(ctx, p.Pulse.PulseNumber)
 	m.NodeSetter.Delete(p.Pulse.PulseNumber)
+	m.DropCleaner.Delete(p.Pulse.PulseNumber)
 	err = m.PulseTracker.DeletePulse(ctx, p.Pulse.PulseNumber)
 	if err != nil {
 		inslogger.FromContext(ctx).Errorf("Can't clean pulse-tracker from pulse: %s", err)
@@ -723,6 +725,7 @@ func (m *PulseManager) Start(ctx context.Context) error {
 			m.PulseStorage,
 			m.PulseTracker,
 			m.ReplicaStorage,
+			m.DropAccessor,
 			m.StorageCleaner,
 			m.DBContext,
 			heavyclient.Options{

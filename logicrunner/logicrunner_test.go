@@ -213,8 +213,7 @@ func (s *LogicRunnerFuncSuite) incrementPulseHelper(ctx context.Context, lr core
 		ctx,
 		&message.HotData{
 			Jet:             *core.NewRecordRef(core.DomainID, rootJetId),
-			DropJet:         rootJetId,
-			Drop:            jet.Drop{Pulse: 1},
+			Drop:            jet.Drop{Pulse: 1, JetID: core.JetID(rootJetId)},
 			RecentObjects:   nil,
 			PendingRequests: nil,
 			PulseNumber:     newPulseNumber,
