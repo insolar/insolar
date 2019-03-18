@@ -4,6 +4,15 @@ package packets
 
 import "strconv"
 
+func _() {
+	// An "invalid array index" compiler error signifies that the constant values have changed.
+	// Re-run the stringer command to generate them again.
+	var x [1]struct{}
+	_ = x[Phase1-1]
+	_ = x[Phase2-2]
+	_ = x[Phase3-3]
+}
+
 const _PacketType_name = "Phase1Phase2Phase3"
 
 var _PacketType_index = [...]uint8{0, 6, 12, 18}

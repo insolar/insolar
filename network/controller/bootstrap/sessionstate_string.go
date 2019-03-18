@@ -4,6 +4,15 @@ package bootstrap
 
 import "strconv"
 
+func _() {
+	// An "invalid array index" compiler error signifies that the constant values have changed.
+	// Re-run the stringer command to generate them again.
+	var x [1]struct{}
+	_ = x[Authorized-1]
+	_ = x[Challenge1-2]
+	_ = x[Challenge2-3]
+}
+
 const _SessionState_name = "AuthorizedChallenge1Challenge2"
 
 var _SessionState_index = [...]uint8{0, 10, 20, 30}
