@@ -25,7 +25,6 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/nodenetwork"
-	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/utils"
 	"github.com/pkg/errors"
 )
@@ -49,15 +48,7 @@ func (nb *networkBootstrapper) Bootstrap(ctx context.Context) (*network.Bootstra
 	ctx, span := instracer.StartSpan(ctx, "NetworkBootstrapper.Bootstrap")
 	defer span.End()
 	if len(nb.Certificate.GetDiscoveryNodes()) == 0 {
-		host, err := host.NewHostN(nb.NodeKeeper.GetOrigin().Address(), nb.NodeKeeper.GetOrigin().ID())
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to create a host")
-		}
-		log.Info("[ Bootstrap ] Zero bootstrap")
-		return &network.BootstrapResult{
-			Host: host,
-			// FirstPulseTime: nb.Bootstrapper.GetFirstFakePulseTime(),
-		}, nil
+		return nb.Bootstrapper.ZeroBootstrap(ctx)
 	}
 	var err error
 	var result *network.BootstrapResult

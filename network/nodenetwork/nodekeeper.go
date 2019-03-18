@@ -45,9 +45,7 @@ func NewNodeNetwork(configuration configuration.HostNetwork, certificate core.Ce
 		return nil, errors.Wrap(err, "Failed to create origin node")
 	}
 	nodeKeeper := NewNodeKeeper(origin)
-	if len(certificate.GetDiscoveryNodes()) == 0 || utils.OriginIsDiscovery(certificate) {
-		nodeKeeper.AddActiveNodes([]core.Node{origin})
-	} else {
+	if !utils.OriginIsDiscovery(certificate) {
 		origin.(MutableNode).SetState(core.NodePending)
 	}
 	return nodeKeeper, nil

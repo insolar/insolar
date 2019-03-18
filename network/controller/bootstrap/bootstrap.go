@@ -56,6 +56,7 @@ type Bootstrapper interface {
 
 	Bootstrap(ctx context.Context) (*network.BootstrapResult, *DiscoveryNode, error)
 	BootstrapDiscovery(ctx context.Context) (*network.BootstrapResult, error)
+	ZeroBootstrap(ctx context.Context) (*network.BootstrapResult, error)
 	SetLastPulse(number core.PulseNumber)
 	GetLastPulse() core.PulseNumber
 	// GetFirstFakePulseTime() time.Time
@@ -242,6 +243,19 @@ func (bc *bootstrapper) checkActiveNode(node core.Node) error {
 	return nil
 }
 
+func (bc *bootstrapper) ZeroBootstrap(ctx context.Context) (*network.BootstrapResult, error) {
+	host, err := host.NewHostN(bc.NodeKeeper.GetOrigin().Address(), bc.NodeKeeper.GetOrigin().ID())
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create a host")
+	}
+	inslogger.FromContext(ctx).Info("[ Bootstrap ] Zero bootstrap")
+	bc.NodeKeeper.AddActiveNodes([]core.Node{bc.NodeKeeper.GetOrigin()})
+	return &network.BootstrapResult{
+		Host: host,
+		// FirstPulseTime: nb.Bootstrapper.GetFirstFakePulseTime(),
+	}, nil
+}
+
 func (bc *bootstrapper) BootstrapDiscovery(ctx context.Context) (*network.BootstrapResult, error) {
 	logger := inslogger.FromContext(ctx)
 	logger.Info("[ BootstrapDiscovery ] Network bootstrap between discovery nodes")
@@ -255,14 +269,7 @@ func (bc *bootstrapper) BootstrapDiscovery(ctx context.Context) (*network.Bootst
 	}
 	discoveryCount := len(discoveryNodes)
 	if discoveryCount == 0 {
-		host, err := host.NewHostN(bc.NodeKeeper.GetOrigin().Address(), bc.NodeKeeper.GetOrigin().ID())
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to create a host")
-		}
-		return &network.BootstrapResult{
-			Host: host,
-			// FirstPulseTime: bc.firstPulseTime,
-		}, nil
+		return bc.ZeroBootstrap(ctx)
 	}
 
 	var bootstrapResults []*network.BootstrapResult
@@ -308,8 +315,9 @@ func (bc *bootstrapper) BootstrapDiscovery(ctx context.Context) (*network.Bootst
 		activeNode.(nodenetwork.MutableNode).SetState(core.NodeUndefined)
 		activeNodesStr = append(activeNodesStr, activeNode.ID().String())
 	}
-	bc.NodeKeeper.AddActiveNodes(activeNodes)
 	bc.NodeKeeper.GetOrigin().(nodenetwork.MutableNode).SetState(core.NodeUndefined)
+	activeNodes = append(activeNodes, bc.NodeKeeper.GetOrigin())
+	bc.NodeKeeper.AddActiveNodes(activeNodes)
 	logger.Infof("[ BootstrapDiscovery ] Added active nodes: %s", strings.Join(activeNodesStr, ", "))
 	return parseBotstrapResults(bootstrapResults), nil
 }
