@@ -268,7 +268,7 @@ func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Repl
 	_, ok := conveyorReadyTypes[msg.Type()]
 	if ok {
 		f := mb.futureManager.Create()
-		event := ConveyorPendingMessage{Msg: msg, F: f}
+		event := ConveyorPendingMessage{Msg: msg, Future: f}
 		err := mb.Conveyor.SinkPush(msg.Pulse(), event)
 		if err != nil {
 			f.Cancel()

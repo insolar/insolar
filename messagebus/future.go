@@ -165,8 +165,8 @@ func NewFutureManager() FutureManager {
 	return newFutureManager()
 }
 
-// ConveyorPendingMessage is message for conveyor witch can pending for response
+// ConveyorPendingMessage is message for conveyor witch can pend for response
 type ConveyorPendingMessage struct {
-	Msg core.Parcel
-	F   core.ConveyorFuture
+	Msg    core.Parcel
+	Future core.ConveyorFuture
 }

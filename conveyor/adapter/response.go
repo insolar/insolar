@@ -44,7 +44,7 @@ func NewResponseSender() Processor {
 }
 
 // Process implements Processor interface
-func (sr *ResponseSender) Process(adapterID uint32, task AdapterTask, cancelInfo CancelInfo) Events {
+func (rs *ResponseSender) Process(adapterID uint32, task AdapterTask, cancelInfo CancelInfo) Events {
 	payload, ok := task.taskPayload.(ResponseSenderTask)
 	var msg interface{}
 

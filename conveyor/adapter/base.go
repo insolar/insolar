@@ -194,7 +194,7 @@ func (swa *CancellableQueueAdapter) StartProcessing(started chan bool) {
 				panic(fmt.Sprintf("[ StartProcessing ] Processor function wasn't provided"))
 			}
 
-			go swa.returnResponse(task)
+			go swa.process(task)
 		}
 	}
 
@@ -254,8 +254,7 @@ func (swa *CancellableQueueAdapter) FlushNodeTasks(nodeID idType) {
 	swa.taskHolder.stopAll(true)
 }
 
-// PushTask implements PulseConveyorAdapterTaskSink
-func (swa *CancellableQueueAdapter) returnResponse(cancellableTask queueTask) {
+func (swa *CancellableQueueAdapter) process(cancellableTask queueTask) {
 	adapterTask := cancellableTask.task
 	event := swa.processor.Process(swa.adapterID, adapterTask, cancellableTask.cancelInfo)
 	if event.Flushed {
@@ -265,7 +264,5 @@ func (swa *CancellableQueueAdapter) returnResponse(cancellableTask queueTask) {
 	for nestedEvent := range event.NestedEventPayload {
 		respSink.PushNestedEvent(swa.adapterID, adapterTask.elementID, adapterTask.handlerID, nestedEvent)
 	}
-	cancelInfo := newCancelInfo(atomicLoadAndIncrementUint64(&reqID))
-	swa.taskHolder.add(cancelInfo, respSink.GetPulseNumber())
 	respSink.PushResponse(swa.adapterID, adapterTask.elementID, adapterTask.handlerID, event.RespPayload)
 }
