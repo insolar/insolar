@@ -29,7 +29,7 @@ import (
 
 // Modifier provides an interface for modifying jetdrops.
 type Modifier interface {
-	Set(ctx context.Context, jetID core.JetID, drop Drop) error
+	Set(ctx context.Context, drop Drop) error
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage/drop.Accessor -o ./ -s _mock.go
@@ -42,7 +42,6 @@ type Accessor interface {
 // Drop is a blockchain block.
 // It contains hashes of the current block and the previous one.
 type Drop struct {
-	// nolint: golint
 	// Pulse number (probably we should save it too).
 	Pulse core.PulseNumber
 
@@ -52,7 +51,11 @@ type Drop struct {
 	// Hash is a hash of all record hashes belongs to one pulse and previous drop hash.
 	Hash []byte
 
+	// Size represents data about physical size of the current jet.Drop.
 	Size uint64
+
+	// JetID represents data about JetID of the current jet.Drop.
+	JetID core.JetID
 }
 
 // Encode serializes jet drop.
@@ -75,4 +78,26 @@ func Decode(buf []byte) (*Drop, error) {
 		return nil, err
 	}
 	return &drop, nil
+}
+
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage/drop.Cleaner -o ./ -s _mock.go
+
+// Cleaner provides an interface for removing jetdrops from a storage.
+type Cleaner interface {
+	Delete(pulse core.PulseNumber)
+}
+
+// Serialize serializes a drop
+func Serialize(dr Drop) []byte {
+	buff := bytes.NewBuffer(nil)
+	enc := codec.NewEncoder(buff, &codec.CborHandle{})
+	enc.MustEncode(dr)
+	return buff.Bytes()
+}
+
+// Deserialize deserializes a jet.Drop
+func Deserialize(buf []byte) (dr Drop) {
+	dec := codec.NewDecoderBytes(buf, &codec.CborHandle{})
+	dec.MustDecode(&dr)
+	return dr
 }

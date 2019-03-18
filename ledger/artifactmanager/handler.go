@@ -1195,7 +1195,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 		"jet": jetID.DebugString(),
 	}).Info("received hot data")
 
-	err := h.DropModifier.Set(ctx, core.JetID(msg.DropJet), msg.Drop)
+	err := h.DropModifier.Set(ctx, msg.Drop)
 	if err == storage.ErrOverride {
 		err = nil
 	}

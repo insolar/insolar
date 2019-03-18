@@ -48,10 +48,10 @@ func TestDB_Components(t *testing.T) {
 	tmpdir, err := ioutil.TempDir("", "bdb-test-")
 	defer os.RemoveAll(tmpdir)
 	assert.NoError(t, err)
-	badger, err := db.NewBadgerDB(configuration.Ledger{Storage: configuration.Storage{DataDirectory: tmpdir}})
+	badger, err := db.NewBadgerDB(configuration.Ledger{Storage: configuration.Storage{DataDirectoryNewDB: tmpdir}})
 	require.NoError(t, err)
 
-	mock := db.NewMockDB()
+	mock := db.NewMemoryMockDB()
 
 	type data struct {
 		key   testKey

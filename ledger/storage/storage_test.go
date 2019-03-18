@@ -27,9 +27,10 @@ import (
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/storage/object"
-	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/db"
+	"github.com/insolar/insolar/ledger/storage/drop"
+	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
@@ -66,8 +67,8 @@ func (s *storageSuite) BeforeTest(suiteName, testName string) {
 	s.cm = &component.Manager{}
 	s.ctx = inslogger.TestContext(s.T())
 
-	db, cleaner := storagetest.TmpDB(s.ctx, s.T())
-	s.db = db
+	tmpDB, cleaner := storagetest.TmpDB(s.ctx, s.T())
+	s.db = tmpDB
 	s.cleaner = cleaner
 
 	s.objectStorage = storage.NewObjectStorage()
@@ -81,6 +82,7 @@ func (s *storageSuite) BeforeTest(suiteName, testName string) {
 	s.cm.Inject(
 		platformpolicy.NewPlatformCryptographyScheme(),
 		s.db,
+		db.NewMemoryMockDB(),
 		s.objectStorage,
 		s.dropModifier,
 		s.dropAccessor,
@@ -165,20 +167,21 @@ func (s *storageSuite) TestDB_SetObjectIndex_SaveLastUpdate() {
 }
 
 func (s *storageSuite) TestDB_GetDrop_ReturnsNotFoundIfNoDrop() {
-	gotDrop, err := s.dropAccessor.ForPulse(s.ctx, core.JetID(testutils.RandomJet()), 1)
-	assert.Equal(s.T(), err, core.ErrNotFound)
-	assert.Equal(s.T(), drop.Drop{}, gotDrop)
+	d, err := s.dropAccessor.ForPulse(s.ctx, core.JetID(testutils.RandomJet()), 1)
+	assert.Equal(s.T(), err, db.ErrNotFound)
+	assert.Equal(s.T(), drop.Drop{}, d)
 }
 
 func (s *storageSuite) TestDB_SetDrop() {
+	jetID := *core.NewJetID(0, nil)
 	drop42 := drop.Drop{
 		Pulse: 42,
 		Hash:  []byte{0xFF},
+		JetID: jetID,
 	}
 	// FIXME: should work with random jet
 	// jetID := testutils.RandomJet()
-	jetID := *core.NewJetID(0, nil)
-	err := s.dropModifier.Set(s.ctx, jetID, drop42)
+	err := s.dropModifier.Set(s.ctx, drop42)
 	assert.NoError(s.T(), err)
 
 	got, err := s.dropAccessor.ForPulse(s.ctx, jetID, 42)
@@ -211,7 +214,7 @@ func (s *storageSuite) TestDB_AddPulse() {
 
 func TestDB_Close(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-	db, cleaner := storagetest.TmpDB(ctx, t)
+	tmpDB, cleaner := storagetest.TmpDB(ctx, t)
 
 	jetID := testutils.RandomJet()
 
@@ -221,7 +224,8 @@ func TestDB_Close(t *testing.T) {
 	cm := &component.Manager{}
 	cm.Inject(
 		platformpolicy.NewPlatformCryptographyScheme(),
-		db,
+		tmpDB,
+		db.NewMemoryMockDB(),
 		os,
 		ds,
 	)

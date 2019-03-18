@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/drop"
 )
 
 func messageToHeavy(ctx context.Context, bus core.MessageBus, msg core.Message) error {
@@ -61,8 +62,14 @@ func (c *JetClient) HeavySync(
 		return err
 	}
 
+	dr, err := c.dropAccessor.ForPulse(ctx, jetID, pn)
+	if err != nil {
+		inslog.Error("synchronize: can't fetch a drop")
+		return err
+	}
+
 	replicator := storage.NewReplicaIter(
-		ctx, c.db, jetID, pn, pn+1, c.opts.SyncMessageLimit)
+		ctx, c.db, core.RecordID(jetID), pn, pn+1, c.opts.SyncMessageLimit)
 	for {
 		recs, err := replicator.NextRecords()
 		if err == storage.ErrReplicatorDone {
@@ -75,6 +82,7 @@ func (c *JetClient) HeavySync(
 			JetID:    jetID,
 			PulseNum: pn,
 			Records:  recs,
+			Drop:     drop.Serialize(dr),
 		}
 		if err := messageToHeavy(ctx, c.bus, msg); err != nil {
 			inslog.Error("synchronize: payload failed")

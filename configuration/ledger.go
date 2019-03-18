@@ -24,6 +24,8 @@ import (
 type Storage struct {
 	// DataDirectory is a directory where database's files live.
 	DataDirectory string
+	// DataDirectoryNewDB is a directory where new database's files live.
+	DataDirectoryNewDB string
 	// TxRetriesOnConflict defines how many retries on transaction conflicts
 	// storage update methods should do.
 	TxRetriesOnConflict int
@@ -92,6 +94,7 @@ func NewLedger() Ledger {
 	return Ledger{
 		Storage: Storage{
 			DataDirectory:       "./data",
+			DataDirectoryNewDB:  "./new-data",
 			TxRetriesOnConflict: 3,
 		},
 

@@ -17,28 +17,40 @@
 package drop
 
 import (
+	"bytes"
 	"context"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/db"
 )
 
 type dropStorageDB struct {
-	DB storage.DBContext `inject:""`
+	DB db.DB `inject:""`
 }
 
-// NewStorageDB creates a new storage, that holds data in a db
+// NewStorageDB creates a new storage, that holds data in a db.
 func NewStorageDB() *dropStorageDB { // nolint: golint
 	return &dropStorageDB{}
 }
 
-// ForPulse returns a jet.Drop for a provided pulse, that is stored in a db
-func (ds *dropStorageDB) ForPulse(ctx context.Context, jetID core.JetID, pulse core.PulseNumber) (Drop, error) {
-	prefix := jetID.Prefix()
-	k := storage.JetDropPrefixKey(prefix, pulse)
+type dropDbKey struct {
+	jetPrefix []byte
+	pn        core.PulseNumber
+}
 
-	// buf, err := db.get(ctx, k)
-	buf, err := ds.DB.Get(ctx, k)
+func (dk *dropDbKey) Scope() db.Scope {
+	return db.ScopeJetDrop
+}
+
+func (dk *dropDbKey) ID() []byte {
+	return bytes.Join([][]byte{dk.jetPrefix, dk.pn.Bytes()}, nil)
+}
+
+// ForPulse returns a Drop for a provided pulse, that is stored in a db.
+func (ds *dropStorageDB) ForPulse(ctx context.Context, jetID core.JetID, pulse core.PulseNumber) (Drop, error) {
+	k := dropDbKey{jetID.Prefix(), pulse}
+
+	buf, err := ds.DB.Get(&k)
 	if err != nil {
 		return Drop{}, err
 	}
@@ -49,18 +61,24 @@ func (ds *dropStorageDB) ForPulse(ctx context.Context, jetID core.JetID, pulse c
 	return *drop, nil
 }
 
-// Set saves a provided jet.Drop to a db
-func (ds *dropStorageDB) Set(ctx context.Context, jetID core.JetID, drop Drop) error {
-	prefix := jetID.Prefix()
-	k := storage.JetDropPrefixKey(prefix, drop.Pulse)
-	_, err := ds.DB.Get(ctx, k)
+// Set saves a provided Drop to a db.
+func (ds *dropStorageDB) Set(ctx context.Context, drop Drop) error {
+	k := dropDbKey{drop.JetID.Prefix(), drop.Pulse}
+
+	_, err := ds.DB.Get(&k)
 	if err == nil {
-		return storage.ErrOverride
+		return ErrOverride
 	}
 
 	encoded, err := Encode(&drop)
 	if err != nil {
 		return err
 	}
-	return ds.DB.Set(ctx, k, encoded)
+	return ds.DB.Set(&k, encoded)
+}
+
+// Delete methods removes a drop from a storage. But the method mustn't be called for a db storage.
+// Because db storage must be used only on a heavy-node.
+func (ds *dropStorageDB) Delete(pulse core.PulseNumber) {
+	panic("mustn't be called. because db storage must work only on a heavy node. heavy mustn't remove any data")
 }

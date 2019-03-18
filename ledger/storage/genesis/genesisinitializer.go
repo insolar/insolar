@@ -81,7 +81,7 @@ func (gi *genesisInitializer) Init(ctx context.Context) error {
 			return nil, err
 		}
 		// It should be 0. Because pulse after 65537 will try to use a hash of drop between 0 - 65537
-		err = gi.DropModifier.Set(ctx, jetID, drop.Drop{})
+		err = gi.DropModifier.Set(ctx, drop.Drop{JetID: jetID})
 		if err != nil {
 			return nil, err
 		}

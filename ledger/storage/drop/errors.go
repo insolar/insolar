@@ -14,18 +14,16 @@
  *    limitations under the License.
  */
 
-package core
+package drop
 
 import (
-	"context"
+	"github.com/pkg/errors"
 )
 
-// HeavySync provides methods for sync on heavy node.
-//go:generate minimock -i github.com/insolar/insolar/core.HeavySync -o ../testutils -s _mock.go
-type HeavySync interface {
-	Start(ctx context.Context, jet RecordID, pn PulseNumber) error
-	Store(ctx context.Context, jet RecordID, pn PulseNumber, kvs []KV) error
-	StoreDrop(ctx context.Context, jetID JetID, rawDrop []byte) error
-	Stop(ctx context.Context, jet RecordID, pn PulseNumber) error
-	Reset(ctx context.Context, jet RecordID, pn PulseNumber) error
-}
+var (
+	// ErrNotFound is returned when value was not found.
+	ErrNotFound = errors.New("value not found")
+
+	// ErrOverride is returned if something tries to update existing record.
+	ErrOverride = errors.New("records override is forbidden")
+)

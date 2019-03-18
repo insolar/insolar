@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/ledger/internal/jet"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/db"
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
@@ -71,9 +72,9 @@ func (s *heavySuite) BeforeTest(suiteName, testName string) {
 	s.cm = &component.Manager{}
 	s.ctx = inslogger.TestContext(s.T())
 
-	db, cleaner := storagetest.TmpDB(s.ctx, s.T())
+	tmpDB, cleaner := storagetest.TmpDB(s.ctx, s.T())
 	s.cleaner = cleaner
-	s.db = db
+	s.db = tmpDB
 	s.scheme = platformpolicy.NewPlatformCryptographyScheme()
 	s.jetStorage = jet.NewStore()
 	s.nodeStorage = node.NewStorage()
@@ -86,6 +87,7 @@ func (s *heavySuite) BeforeTest(suiteName, testName string) {
 	s.cm.Inject(
 		s.scheme,
 		s.db,
+		db.NewMemoryMockDB(),
 		s.jetStorage,
 		s.nodeStorage,
 		s.pulseTracker,
@@ -121,6 +123,7 @@ func (s *heavySuite) TestLedgerArtifactManager_handleHeavy() {
 	heavysync.StoreMock.Set(func(ctx context.Context, jetID core.RecordID, pn core.PulseNumber, kvs []core.KV) error {
 		return s.db.StoreKeyValues(ctx, kvs)
 	})
+	heavysync.StoreDropMock.Return(nil)
 	heavysync.StopMock.Return(nil)
 
 	recentIndexMock := recentstorage.NewRecentIndexStorageMock(s.T())
@@ -153,7 +156,7 @@ func (s *heavySuite) TestLedgerArtifactManager_handleHeavy() {
 
 	parcel := &message.Parcel{
 		Msg: &message.HeavyPayload{
-			JetID:   jetID,
+			JetID:   core.JetID(jetID),
 			Records: payload,
 		},
 	}

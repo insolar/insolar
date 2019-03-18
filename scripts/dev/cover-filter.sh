@@ -1,4 +1,4 @@
-#!/bin/sh
+#! /usr/bin/env sh
 # filters coverage stats for code that could be tested, but should not affect coverage metric
 #
 # * generated code (mock and stringer)

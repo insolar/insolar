@@ -32,10 +32,12 @@ import (
 	"github.com/insolar/insolar/core/delegationtoken"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/gen"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/internal/jet"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/db"
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/insolar/insolar/ledger/storage/object"
@@ -76,9 +78,9 @@ func (s *handlerSuite) BeforeTest(suiteName, testName string) {
 	s.cm = &component.Manager{}
 	s.ctx = inslogger.TestContext(s.T())
 
-	db, cleaner := storagetest.TmpDB(s.ctx, s.T())
+	tmpDB, cleaner := storagetest.TmpDB(s.ctx, s.T())
 	s.cleaner = cleaner
-	s.db = db
+	s.db = tmpDB
 	s.scheme = testutils.NewPlatformCryptographyScheme()
 	s.jetStorage = jet.NewStore()
 	s.nodeStorage = node.NewStorage()
@@ -91,6 +93,7 @@ func (s *handlerSuite) BeforeTest(suiteName, testName string) {
 	s.cm.Inject(
 		s.scheme,
 		s.db,
+		db.NewMemoryMockDB(),
 		s.jetStorage,
 		s.nodeStorage,
 		s.pulseTracker,
@@ -943,7 +946,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 
 func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	mc := minimock.NewController(s.T())
-	jetID := testutils.RandomJet()
+	jetID := gen.JetID()
 
 	err := s.pulseTracker.AddPulse(s.ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 1})
 	require.NoError(s.T(), err)
@@ -966,12 +969,12 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	firstIndex := object.Encode(object.Lifeline{
 		LatestState: firstID,
 	})
-	err = s.objectStorage.SetObjectIndex(s.ctx, jetID, firstID, &object.Lifeline{
+	err = s.objectStorage.SetObjectIndex(s.ctx, core.RecordID(jetID), firstID, &object.Lifeline{
 		LatestState: firstID,
 	})
 
 	hotIndexes := &message.HotData{
-		Jet:         *core.NewRecordRef(core.DomainID, jetID),
+		Jet:         *core.NewRecordRef(core.DomainID, core.RecordID(jetID)),
 		PulseNumber: core.FirstPulseNumber,
 		RecentObjects: map[core.RecordID]message.HotIndex{
 			*firstID: {
@@ -983,8 +986,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 			*secondID: {},
 			*thirdID:  {Active: true},
 		},
-		Drop:    drop.Drop{Pulse: core.FirstPulseNumber, Hash: []byte{88}},
-		DropJet: jetID,
+		Drop: drop.Drop{Pulse: core.FirstPulseNumber, Hash: []byte{88}, JetID: jetID},
 	}
 
 	indexMock := recentstorage.NewRecentIndexStorageMock(s.T())
@@ -1032,9 +1034,9 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	require.NoError(s.T(), err)
 	require.Equal(s.T(), res, &reply.OK{})
 
-	savedDrop, err := s.dropAccessor.ForPulse(s.ctx, core.JetID(jetID), core.FirstPulseNumber)
+	savedDrop, err := s.dropAccessor.ForPulse(s.ctx, jetID, core.FirstPulseNumber)
 	require.NoError(s.T(), err)
-	require.Equal(s.T(), drop.Drop{Pulse: core.FirstPulseNumber, Hash: []byte{88}}, savedDrop)
+	require.Equal(s.T(), drop.Drop{Pulse: core.FirstPulseNumber, Hash: []byte{88}, JetID: jetID}, savedDrop)
 
 	indexMock.MinimockFinish()
 	pendingMock.MinimockFinish()

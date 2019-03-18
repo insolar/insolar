@@ -28,6 +28,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/internal/jet"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/db"
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/genesis"
 	"github.com/insolar/insolar/ledger/storage/node"
@@ -74,9 +75,9 @@ func (s *metricSuite) BeforeTest(suiteName, testName string) {
 	s.cm = &component.Manager{}
 	s.ctx = inslogger.TestContext(s.T())
 
-	db, cleaner := storagetest.TmpDB(s.ctx, s.T())
+	tmpDB, cleaner := storagetest.TmpDB(s.ctx, s.T())
 	s.cleaner = cleaner
-	s.db = db
+	s.db = tmpDB
 	s.scheme = testutils.NewPlatformCryptographyScheme()
 	s.nodeStorage = node.NewStorage()
 	s.pulseTracker = storage.NewPulseTracker()
@@ -91,6 +92,7 @@ func (s *metricSuite) BeforeTest(suiteName, testName string) {
 		s.scheme,
 		s.db,
 		jet.NewStore(),
+		db.NewMemoryMockDB(),
 		s.nodeStorage,
 		s.pulseTracker,
 		s.objectStorage,
