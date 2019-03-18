@@ -22,7 +22,7 @@ import (
 )
 
 // bitsToString converts byte slice to plain string representation in bits.
-func bitsToString(bitslice []byte) string {
+func bitsToString(bitslice []byte) string { //nolint:unused,deadcode
 	var b strings.Builder
 	for _, bits := range bitslice {
 		fmt.Fprintf(&b, "%08b", bits)
@@ -31,7 +31,7 @@ func bitsToString(bitslice []byte) string {
 }
 
 // setBitsPrefix copies count bits from []bits to []in.
-func setBitsPrefix(in []byte, bits []byte, count int) []byte {
+func setBitsPrefix(in []byte, bits []byte, count int) []byte { //nolint:unused,deadcode
 	out := make([]byte, len(in))
 	// copy in to out
 	_ = copy(out, in)
