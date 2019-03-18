@@ -79,13 +79,13 @@ func NewStore() *Store {
 
 // All returns all jet from jet tree for provided pulse.
 func (s *Store) All(ctx context.Context, pulse core.PulseNumber) []core.JetID {
-	return s.LTreeForPulse(pulse).leafIDs()
+	return s.ltreeForPulse(pulse).leafIDs()
 }
 
 // ForID finds jet in jet tree for provided pulse and object.
 // Always returns jet id and activity flag for this jet.
 func (s *Store) ForID(ctx context.Context, pulse core.PulseNumber, recordID core.RecordID) (core.JetID, bool) {
-	return s.LTreeForPulse(pulse).find(recordID)
+	return s.ltreeForPulse(pulse).find(recordID)
 }
 
 // Update updates jet tree for specified pulse.
@@ -93,7 +93,7 @@ func (s *Store) Update(ctx context.Context, pulse core.PulseNumber, setActual bo
 	s.Lock()
 	defer s.Unlock()
 
-	ltree := s.ltreeForPulse(pulse)
+	ltree := s.ltreeForPulseUnsafe(pulse)
 	for _, id := range ids {
 		ltree.update(id, setActual)
 	}
@@ -105,7 +105,7 @@ func (s *Store) Update(ctx context.Context, pulse core.PulseNumber, setActual bo
 func (s *Store) Split(
 	ctx context.Context, pulse core.PulseNumber, id core.JetID,
 ) (core.JetID, core.JetID, error) {
-	ltree := s.LTreeForPulse(pulse)
+	ltree := s.ltreeForPulse(pulse)
 	left, right, err := ltree.split(id)
 	if err != nil {
 		return core.ZeroJetID, core.ZeroJetID, err
@@ -117,7 +117,7 @@ func (s *Store) Split(
 func (s *Store) Clone(
 	ctx context.Context, from, to core.PulseNumber,
 ) {
-	newTree := s.LTreeForPulse(from).clone(false)
+	newTree := s.ltreeForPulse(from).clone(false)
 
 	s.Lock()
 	s.trees[to] = &lockedTree{
@@ -135,15 +135,15 @@ func (s *Store) Delete(
 	delete(s.trees, pulse)
 }
 
-// LTreeForPulse returns jet tree with lock for pulse, it's concurrent safe.
-func (s *Store) LTreeForPulse(pulse core.PulseNumber) *lockedTree {
+// ltreeForPulse returns jet tree with lock for pulse, it's concurrent safe.
+func (s *Store) ltreeForPulse(pulse core.PulseNumber) *lockedTree {
 	s.Lock()
 	defer s.Unlock()
-	return s.ltreeForPulse(pulse)
+	return s.ltreeForPulseUnsafe(pulse)
 }
 
-// ltreeForPulse returns jet tree with lock for pulse, it's concurrent unsafe and requires write lock.
-func (s *Store) ltreeForPulse(pulse core.PulseNumber) *lockedTree {
+// ltreeForPulseUnsafe returns jet tree with lock for pulse, it's concurrent unsafe and requires write lock.
+func (s *Store) ltreeForPulseUnsafe(pulse core.PulseNumber) *lockedTree {
 	if ltree, ok := s.trees[pulse]; ok {
 		return ltree
 	}
