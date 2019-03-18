@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#! /usr/bin/env bash
 set -o pipefail
 
 confs=$( dirname $0 )"/configs/generated_configs/discoverynodes"
