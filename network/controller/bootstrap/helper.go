@@ -33,7 +33,7 @@ const nonceSize int = 128
 
 // CheckShortIDCollision returns true if NodeKeeper already contains node with such ShortID
 func CheckShortIDCollision(keeper network.NodeKeeper, id core.ShortNodeID) bool {
-	return keeper.GetActiveNodeByShortID(id) != nil
+	return keeper.GetAccessor().GetActiveNodeByShortID(id) != nil
 }
 
 // GenerateShortID correct ShortID of the node so it does not conflict with existing active node list
@@ -46,7 +46,7 @@ func GenerateShortID(keeper network.NodeKeeper, nodeID core.RecordRef) core.Shor
 }
 
 func regenerateShortID(keeper network.NodeKeeper, shortID core.ShortNodeID) core.ShortNodeID {
-	activeNodes := keeper.GetActiveNodes()
+	activeNodes := keeper.GetAccessor().GetActiveNodes()
 	shortIDs := make([]core.ShortNodeID, len(activeNodes))
 	for i, activeNode := range activeNodes {
 		shortIDs[i] = activeNode.ShortID()

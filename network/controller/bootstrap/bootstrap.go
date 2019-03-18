@@ -228,11 +228,11 @@ func (bc *bootstrapper) GetLastPulse() core.PulseNumber {
 }
 
 func (bc *bootstrapper) checkActiveNode(node core.Node) error {
-	n := bc.NodeKeeper.GetActiveNode(node.ID())
+	n := bc.NodeKeeper.GetAccessor().GetActiveNode(node.ID())
 	if n != nil {
 		return errors.Errorf("Node ID collision: %s", n.ID())
 	}
-	n = bc.NodeKeeper.GetActiveNodeByShortID(node.ShortID())
+	n = bc.NodeKeeper.GetAccessor().GetActiveNodeByShortID(node.ShortID())
 	if n != nil {
 		return errors.Errorf("Short ID collision: %d", n.ShortID())
 	}
@@ -249,7 +249,7 @@ func (bc *bootstrapper) ZeroBootstrap(ctx context.Context) (*network.BootstrapRe
 		return nil, errors.Wrap(err, "failed to create a host")
 	}
 	inslogger.FromContext(ctx).Info("[ Bootstrap ] Zero bootstrap")
-	bc.NodeKeeper.AddActiveNodes([]core.Node{bc.NodeKeeper.GetOrigin()})
+	bc.NodeKeeper.SetInitialSnapshot([]core.Node{bc.NodeKeeper.GetOrigin()})
 	return &network.BootstrapResult{
 		Host: host,
 		// FirstPulseTime: nb.Bootstrapper.GetFirstFakePulseTime(),
@@ -317,7 +317,7 @@ func (bc *bootstrapper) BootstrapDiscovery(ctx context.Context) (*network.Bootst
 	}
 	bc.NodeKeeper.GetOrigin().(nodenetwork.MutableNode).SetState(core.NodeUndefined)
 	activeNodes = append(activeNodes, bc.NodeKeeper.GetOrigin())
-	bc.NodeKeeper.AddActiveNodes(activeNodes)
+	bc.NodeKeeper.SetInitialSnapshot(activeNodes)
 	logger.Infof("[ BootstrapDiscovery ] Added active nodes: %s", strings.Join(activeNodesStr, ", "))
 	return parseBotstrapResults(bootstrapResults), nil
 }

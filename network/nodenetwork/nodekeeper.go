@@ -19,8 +19,6 @@ package nodenetwork
 
 import (
 	"context"
-	"sort"
-	"strings"
 	"sync"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -86,16 +84,15 @@ func resolveAddress(configuration configuration.HostNetwork) (string, error) {
 
 // NewNodeKeeper create new NodeKeeper
 func NewNodeKeeper(origin core.Node) network.NodeKeeper {
-	return &nodekeeper{
+	nk := &nodekeeper{
 		origin:        origin,
 		claimQueue:    newClaimQueue(),
 		consensusInfo: newConsensusInfo(),
-		active:        make(map[core.RecordRef]core.Node),
-		indexNode:     make(map[core.StaticRole]*recordRefSet),
-		indexShortID:  make(map[core.ShortNodeID]core.Node),
 		syncNodes:     make([]core.Node, 0),
 		syncClaims:    make([]consensus.ReferendumClaim, 0),
 	}
+	nk.SetInitialSnapshot([]core.Node{})
+	return nk
 }
 
 type nodekeeper struct {
@@ -106,10 +103,9 @@ type nodekeeper struct {
 	cloudHashLock sync.RWMutex
 	cloudHash     []byte
 
-	activeLock   sync.RWMutex
-	active       map[core.RecordRef]core.Node
-	indexNode    map[core.StaticRole]*recordRefSet
-	indexShortID map[core.ShortNodeID]core.Node
+	activeLock sync.RWMutex
+	snapshot   *Snapshot
+	accessor   *Accessor
 
 	syncLock   sync.Mutex
 	syncNodes  []core.Node
@@ -121,29 +117,35 @@ type nodekeeper struct {
 	Cryptography core.CryptographyService `inject:""`
 }
 
+func (nk *nodekeeper) SetInitialSnapshot(nodes []core.Node) {
+	nk.activeLock.Lock()
+	defer nk.activeLock.Unlock()
+
+	nodesMap := make(map[core.RecordRef]core.Node)
+	for _, node := range nodes {
+		nodesMap[node.ID()] = node
+	}
+	nk.snapshot = NewSnapshot(core.FirstPulseNumber, nodesMap)
+	nk.accessor = NewAccessor(nk.snapshot)
+}
+
+func (nk *nodekeeper) GetAccessor() network.Accessor {
+	nk.activeLock.RLock()
+	defer nk.activeLock.RUnlock()
+
+	return nk.accessor
+}
+
 func (nk *nodekeeper) GetConsensusInfo() network.ConsensusInfo {
 	return nk.consensusInfo
 }
 
 func (nk *nodekeeper) GetWorkingNode(ref core.RecordRef) core.Node {
-	node := nk.GetActiveNode(ref)
-
-	if node.GetState() != core.NodeReady {
-		return nil
-	}
-
-	return node
+	return nk.GetAccessor().GetWorkingNode(ref)
 }
 
 func (nk *nodekeeper) GetWorkingNodesByRole(role core.DynamicRole) []core.RecordRef {
-	nk.activeLock.RLock()
-	defer nk.activeLock.RUnlock()
-
-	list, exists := nk.indexNode[jetRoleToNodeRole(role)]
-	if !exists {
-		return nil
-	}
-	return list.Collect()
+	return nk.GetAccessor().GetWorkingNodesByRole(role)
 }
 
 func (nk *nodekeeper) Wipe(isDiscovery bool) {
@@ -159,17 +161,16 @@ func (nk *nodekeeper) Wipe(isDiscovery bool) {
 	nk.cloudHash = nil
 	nk.cloudHashLock.Unlock()
 
+	nk.SetInitialSnapshot([]core.Node{})
+
 	nk.activeLock.Lock()
 	defer nk.activeLock.Unlock()
 
 	nk.claimQueue = newClaimQueue()
-	nk.active = make(map[core.RecordRef]core.Node)
-	nk.reindex()
 	nk.syncLock.Lock()
 	nk.syncNodes = make([]core.Node, 0)
 	nk.syncClaims = make([]consensus.ReferendumClaim, 0)
 	if isDiscovery {
-		nk.addActiveNode(nk.origin)
 		nk.origin.(MutableNode).SetState(core.NodeReady)
 	}
 	nk.syncLock.Unlock()
@@ -214,92 +215,8 @@ func (nk *nodekeeper) SetCloudHash(cloudHash []byte) {
 	nk.cloudHash = cloudHash
 }
 
-func (nk *nodekeeper) GetActiveNodes() []core.Node {
-	nk.activeLock.RLock()
-	result := make([]core.Node, len(nk.active))
-	index := 0
-	for _, node := range nk.active {
-		result[index] = node
-		index++
-	}
-	nk.activeLock.RUnlock()
-	// Sort active nodes to return list with determinate order on every node.
-	// If we have more than 10k nodes, we need to optimize this
-	sort.Slice(result, func(i, j int) bool {
-		return result[i].ID().Compare(result[j].ID()) < 0
-	})
-	return result
-}
-
-func (nk *nodekeeper) AddActiveNodes(nodes []core.Node) {
-	nk.activeLock.Lock()
-	defer nk.activeLock.Unlock()
-
-	activeNodes := make([]string, len(nodes))
-	for i, node := range nodes {
-		nk.addActiveNode(node)
-		activeNodes[i] = node.ID().String()
-
-		nk.syncLock.Lock()
-		nk.syncNodes = append(nk.syncNodes, node)
-		nk.syncLock.Unlock()
-	}
-	log.Debugf("Added active nodes: %s", strings.Join(activeNodes, ", "))
-}
-
-func (nk *nodekeeper) GetActiveNode(ref core.RecordRef) core.Node {
-	nk.activeLock.RLock()
-	defer nk.activeLock.RUnlock()
-
-	return nk.active[ref]
-}
-
-func (nk *nodekeeper) GetActiveNodeByShortID(shortID core.ShortNodeID) core.Node {
-	nk.activeLock.RLock()
-	defer nk.activeLock.RUnlock()
-
-	return nk.indexShortID[shortID]
-}
-
-func (nk *nodekeeper) addActiveNode(node core.Node) {
-	if node.ID().Equal(nk.origin.ID()) {
-		nk.origin = node
-		log.Infof("Added origin node %s to active list", nk.origin.ID())
-	}
-	nk.active[node.ID()] = node
-
-	nk.addToIndex(node)
-}
-
-func (nk *nodekeeper) addToIndex(node core.Node) {
-	nk.indexShortID[node.ShortID()] = node
-	nk.addToRoleIndex(node)
-}
-
-func (nk *nodekeeper) addToRoleIndex(node core.Node) {
-	if node.GetState() != core.NodeReady {
-		return
-	}
-
-	list, ok := nk.indexNode[node.Role()]
-	if !ok {
-		list = newRecordRefSet()
-	}
-
-	list.Add(node.ID())
-	nk.indexNode[node.Role()] = list
-}
-
 func (nk *nodekeeper) GetWorkingNodes() []core.Node {
-	var workingNodes []core.Node
-	activeNodes := nk.GetActiveNodes()
-	for _, node := range activeNodes {
-		if node.GetState() == core.NodeReady {
-			workingNodes = append(workingNodes, node)
-		}
-	}
-
-	return workingNodes
+	return nk.GetAccessor().GetWorkingNodes()
 }
 
 func (nk *nodekeeper) GetOriginJoinClaim() (*consensus.NodeJoinClaim, error) {
@@ -326,7 +243,7 @@ func (nk *nodekeeper) GetClaimQueue() network.ClaimQueue {
 }
 
 func (nk *nodekeeper) GetUnsyncList() network.UnsyncList {
-	activeNodes := nk.GetActiveNodes()
+	activeNodes := nk.GetAccessor().GetActiveNodes()
 	return newUnsyncList(nk.origin, activeNodes, len(activeNodes))
 }
 
@@ -381,28 +298,18 @@ func (nk *nodekeeper) MoveSyncToActive(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "[ MoveSyncToActive ] Failed to calculate new active list")
 	}
-
 	inslogger.FromContext(ctx).Infof("[ MoveSyncToActive ] New active list confirmed. Active list size: %d -> %d",
-		len(nk.active), len(mergeResult.ActiveList))
-	nk.active = mergeResult.ActiveList
-	stats.Record(ctx, consensusMetrics.ActiveNodes.M(int64(len(nk.active))))
-	nk.reindex()
+		len(nk.accessor.GetActiveNodes()), len(mergeResult.ActiveList))
+
+	nk.snapshot = NewSnapshot(core.PulseNumber(0), mergeResult.ActiveList)
+	nk.accessor = NewAccessor(nk.snapshot)
+	stats.Record(ctx, consensusMetrics.ActiveNodes.M(int64(len(nk.accessor.GetActiveNodes()))))
 	nk.consensusInfo.flush(mergeResult.NodesJoinedDuringPrevPulse)
 	return nil
 }
 
-func (nk *nodekeeper) reindex() {
-	// drop all indexes
-	nk.indexNode = make(map[core.StaticRole]*recordRefSet)
-	nk.indexShortID = make(map[core.ShortNodeID]core.Node)
-
-	for _, node := range nk.active {
-		nk.addToIndex(node)
-	}
-}
-
 func (nk *nodekeeper) shouldExit(foundOrigin bool) bool {
-	return !foundOrigin && nk.origin.GetState() == core.NodeReady && len(nk.active) != 0
+	return !foundOrigin && nk.origin.GetState() == core.NodeReady && len(nk.GetAccessor().GetActiveNodes()) != 0
 }
 
 func (nk *nodekeeper) nodeToSignedClaim() (*consensus.NodeJoinClaim, error) {

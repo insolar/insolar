@@ -192,7 +192,7 @@ func (ac *authorizationController) buildRegistrationResponse(sessionID SessionID
 	if err != nil {
 		return &RegistrationResponse{Code: OpRejected, Error: err.Error()}
 	}
-	if node := ac.NodeKeeper.GetActiveNode(claim.NodeRef); node != nil {
+	if node := ac.NodeKeeper.GetAccessor().GetActiveNode(claim.NodeRef); node != nil {
 		retryIn := session.TTL / 2
 
 		keyProc := platformpolicy.NewKeyProcessor()

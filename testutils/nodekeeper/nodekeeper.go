@@ -55,7 +55,7 @@ func GetTestNodekeeper(cs core.CryptographyService) network.NodeKeeper {
 		)
 	}
 	nodes := []core.Node{getValidator(), getValidator(), getValidator()}
-	keeper.AddActiveNodes(nodes)
+	keeper.SetInitialSnapshot(nodes)
 
 	return keeper
 }

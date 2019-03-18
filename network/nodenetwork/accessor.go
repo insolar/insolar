@@ -17,6 +17,8 @@
 package nodenetwork
 
 import (
+	"sort"
+
 	"github.com/insolar/insolar/core"
 )
 
@@ -50,7 +52,13 @@ func (a *Accessor) GetWorkingNode(ref core.RecordRef) core.Node {
 }
 
 func (a *Accessor) GetWorkingNodes() []core.Node {
-	return a.snapshot.nodeList[ListWorking]
+	workingList := a.snapshot.nodeList[ListWorking]
+	result := make([]core.Node, len(workingList))
+	copy(result, workingList)
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].ID().Compare(result[j].ID()) < 0
+	})
+	return result
 }
 
 func (a *Accessor) GetWorkingNodesByRole(role core.DynamicRole) []core.RecordRef {
@@ -67,6 +75,11 @@ func GetSnapshotActiveNodes(snapshot *Snapshot) []core.Node {
 	copy(result[:len(joining)], joining[:])
 	copy(result[len(joining):len(joining)+len(working)], working[:])
 	copy(result[len(joining)+len(working):], leaving[:])
+
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].ID().Compare(result[j].ID()) < 0
+	})
+
 	return result
 }
 

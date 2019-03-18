@@ -36,6 +36,10 @@ type nodeKeeperWrapper struct {
 	original network.NodeKeeper
 }
 
+func (n *nodeKeeperWrapper) GetAccessor() network.Accessor {
+	return n.original.GetAccessor()
+}
+
 func (n *nodeKeeperWrapper) GetConsensusInfo() network.ConsensusInfo {
 	return n.original.GetConsensusInfo()
 }
@@ -71,15 +75,6 @@ func (n *nodeKeeperWrapper) GetOrigin() core.Node {
 	return n.original.GetOrigin()
 }
 
-func (n *nodeKeeperWrapper) GetActiveNode(ref core.RecordRef) core.Node {
-	return n.original.GetActiveNode(ref)
-}
-
-func (n *nodeKeeperWrapper) GetActiveNodes() []core.Node {
-	tmp := n.original.GetActiveNodes()
-	return tmp
-}
-
 func (n *nodeKeeperWrapper) GetCloudHash() []byte {
 	return n.original.GetCloudHash()
 }
@@ -96,12 +91,8 @@ func (n *nodeKeeperWrapper) SetCloudHash(hash []byte) {
 	n.original.SetCloudHash(hash)
 }
 
-func (n *nodeKeeperWrapper) AddActiveNodes(nodes []core.Node) {
-	n.original.AddActiveNodes(nodes)
-}
-
-func (n *nodeKeeperWrapper) GetActiveNodeByShortID(shortID core.ShortNodeID) core.Node {
-	return n.original.GetActiveNodeByShortID(shortID)
+func (n *nodeKeeperWrapper) SetInitialSnapshot(nodes []core.Node) {
+	n.original.SetInitialSnapshot(nodes)
 }
 
 func (n *nodeKeeperWrapper) GetOriginJoinClaim() (*consensus.NodeJoinClaim, error) {
