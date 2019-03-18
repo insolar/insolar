@@ -18,11 +18,6 @@ package drop
 
 import (
 	"testing"
-	//
-	// "github.com/google/gofuzz"
-	// "github.com/insolar/insolar/core"
-	// "github.com/insolar/insolar/gen"
-	// "github.com/insolar/insolar/ledger/storage/jet"
 
 	"github.com/google/gofuzz"
 	"github.com/insolar/insolar/core"
