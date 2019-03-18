@@ -63,8 +63,8 @@ func (ds *dropStorageDB) ForPulse(ctx context.Context, jetID core.JetID, pulse c
 }
 
 // Set saves a provided jet.Drop to a db.
-func (ds *dropStorageDB) Set(ctx context.Context, jetID core.JetID, drop jet.Drop) error {
-	k := dropDbKey{jetID.Prefix(), drop.Pulse}
+func (ds *dropStorageDB) Set(ctx context.Context, drop jet.Drop) error {
+	k := dropDbKey{drop.JetID.Prefix(), drop.Pulse}
 
 	_, err := ds.DB.Get(&k)
 	if err == nil {

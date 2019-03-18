@@ -45,10 +45,10 @@ func TestDropStorageDB_Set(t *testing.T) {
 	var inputs []setInput
 	encodedDrops := map[string]struct{}{}
 	f := fuzz.New().Funcs(func(inp *setInput, c fuzz.Continue) {
-		inp.jetID = gen.JetID()
 		inp.dr = jet.Drop{
 			Size:  rand.Uint64(),
 			Pulse: gen.PulseNumber(),
+			JetID: gen.JetID(),
 		}
 
 		encoded, _ := jet.Encode(&inp.dr)
@@ -68,17 +68,17 @@ func TestDropStorageDB_Set(t *testing.T) {
 	dropStor.DB = dbMock
 
 	for _, inp := range inputs {
-		err := dropStor.Set(ctx, inp.jetID, inp.dr)
+		err := dropStor.Set(ctx, inp.dr)
 		require.NoError(t, err)
 	}
 }
 
 func TestDropStorageDB_Set_ErrOverride(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-	jetID := gen.JetID()
 	dr := jet.Drop{
 		Size:  rand.Uint64(),
 		Pulse: gen.PulseNumber(),
+		JetID: gen.JetID(),
 	}
 
 	dbMock := db.NewDBMock(t)
@@ -87,7 +87,7 @@ func TestDropStorageDB_Set_ErrOverride(t *testing.T) {
 	dropStor := NewStorageDB()
 	dropStor.DB = dbMock
 
-	err := dropStor.Set(ctx, jetID, dr)
+	err := dropStor.Set(ctx, dr)
 
 	require.Error(t, err, ErrNotFound)
 }

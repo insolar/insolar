@@ -243,9 +243,10 @@ func (m *PulseManager) createDrop(
 
 	drop = &jet.Drop{
 		Pulse: currentPulse,
+		JetID: core.JetID(jetID),
 	}
 
-	err = m.DropModifier.Set(ctx, core.JetID(jetID), *drop)
+	err = m.DropModifier.Set(ctx, *drop)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't SetDrop")
 	}
@@ -309,7 +310,6 @@ func (m *PulseManager) getExecutorHotData(
 
 	msg := &message.HotData{
 		Drop:            *drop,
-		DropJet:         jetID,
 		PulseNumber:     pulse,
 		RecentObjects:   recentObjects,
 		PendingRequests: pendingRequests,

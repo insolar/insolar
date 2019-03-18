@@ -1,433 +1,57 @@
+/*
+ *    Copyright 2019 Insolar
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
+
 package db
 
-/*
-DO NOT EDIT!
-This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "DB" can be found in github.com/insolar/insolar/ledger/storage/db
-*/
 import (
-	"sync/atomic"
-	"time"
-
-	"github.com/gojuno/minimock"
-	testify_assert "github.com/stretchr/testify/assert"
+	"sync"
 )
 
-// DBMock implements github.com/insolar/insolar/ledger/storage/db.DB
-type DBMock struct {
-	t minimock.Tester
-
-	GetFunc       func(p Key) (r []byte, r1 error)
-	GetCounter    uint64
-	GetPreCounter uint64
-	GetMock       mDBMockGet
-
-	SetFunc       func(p Key, p1 []byte) (r error)
-	SetCounter    uint64
-	SetPreCounter uint64
-	SetMock       mDBMockSet
+// MockDB is a mock DB implementation. It can be used as a stub for other implementations in component tests.
+type MockDB struct {
+	lock    sync.RWMutex
+	backend map[string][]byte
 }
 
-// NewDBMock returns a mock for github.com/insolar/insolar/ledger/storage/db.DB
-func NewDBMock(t minimock.Tester) *DBMock {
-	m := &DBMock{t: t}
-
-	if controller, ok := t.(minimock.MockController); ok {
-		controller.RegisterMocker(m)
+// NewMemoryMockDB creates new mock DB instance.
+func NewMemoryMockDB() *MockDB {
+	db := &MockDB{
+		backend: map[string][]byte{},
 	}
-
-	m.GetMock = mDBMockGet{mock: m}
-	m.SetMock = mDBMockSet{mock: m}
-
-	return m
+	return db
 }
 
-type mDBMockGet struct {
-	mock              *DBMock
-	mainExpectation   *DBMockGetExpectation
-	expectationSeries []*DBMockGetExpectation
-}
+// Get returns a copy of the value for specified key from memory.
+func (b *MockDB) Get(key Key) (value []byte, err error) {
+	fullKey := append(key.Scope().Bytes(), key.ID()...)
 
-type DBMockGetExpectation struct {
-	input  *DBMockGetInput
-	result *DBMockGetResult
-}
-
-type DBMockGetInput struct {
-	p Key
-}
-
-type DBMockGetResult struct {
-	r  []byte
-	r1 error
-}
-
-// Expect specifies that invocation of DB.Get is expected from 1 to Infinity times
-func (m *mDBMockGet) Expect(p Key) *mDBMockGet {
-	m.mock.GetFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &DBMockGetExpectation{}
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+	value, ok := b.backend[string(fullKey)]
+	if !ok {
+		return nil, ErrNotFound
 	}
-	m.mainExpectation.input = &DBMockGetInput{p}
-	return m
+	return append([]byte{}, value...), nil
 }
 
-// Return specifies results of invocation of DB.Get
-func (m *mDBMockGet) Return(r []byte, r1 error) *DBMock {
-	m.mock.GetFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &DBMockGetExpectation{}
-	}
-	m.mainExpectation.result = &DBMockGetResult{r, r1}
-	return m.mock
-}
-
-// ExpectOnce specifies that invocation of DB.Get is expected once
-func (m *mDBMockGet) ExpectOnce(p Key) *DBMockGetExpectation {
-	m.mock.GetFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &DBMockGetExpectation{}
-	expectation.input = &DBMockGetInput{p}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *DBMockGetExpectation) Return(r []byte, r1 error) {
-	e.result = &DBMockGetResult{r, r1}
-}
-
-// Set uses given function f as a mock of DB.Get method
-func (m *mDBMockGet) Set(f func(p Key) (r []byte, r1 error)) *DBMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.GetFunc = f
-	return m.mock
-}
-
-// Get implements github.com/insolar/insolar/ledger/storage/db.DB interface
-func (m *DBMock) Get(p Key) (r []byte, r1 error) {
-	counter := atomic.AddUint64(&m.GetPreCounter, 1)
-	defer atomic.AddUint64(&m.GetCounter, 1)
-
-	if len(m.GetMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.GetMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to DBMock.Get. %v", p)
-			return
-		}
-
-		input := m.GetMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, DBMockGetInput{p}, "DB.Get got unexpected parameters")
-
-		result := m.GetMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the DBMock.Get")
-			return
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
-	}
-
-	if m.GetMock.mainExpectation != nil {
-
-		input := m.GetMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, DBMockGetInput{p}, "DB.Get got unexpected parameters")
-		}
-
-		result := m.GetMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the DBMock.Get")
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
-	}
-
-	if m.GetFunc == nil {
-		m.t.Fatalf("Unexpected call to DBMock.Get. %v", p)
-		return
-	}
-
-	return m.GetFunc(p)
-}
-
-// GetMinimockCounter returns a count of DBMock.GetFunc invocations
-func (m *DBMock) GetMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.GetCounter)
-}
-
-// GetMinimockPreCounter returns the value of DBMock.Get invocations
-func (m *DBMock) GetMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.GetPreCounter)
-}
-
-// GetFinished returns true if mock invocations count is ok
-func (m *DBMock) GetFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.GetMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.GetCounter) == uint64(len(m.GetMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.GetMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.GetCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.GetFunc != nil {
-		return atomic.LoadUint64(&m.GetCounter) > 0
-	}
-
-	return true
-}
-
-type mDBMockSet struct {
-	mock              *DBMock
-	mainExpectation   *DBMockSetExpectation
-	expectationSeries []*DBMockSetExpectation
-}
-
-type DBMockSetExpectation struct {
-	input  *DBMockSetInput
-	result *DBMockSetResult
-}
-
-type DBMockSetInput struct {
-	p  Key
-	p1 []byte
-}
-
-type DBMockSetResult struct {
-	r error
-}
-
-// Expect specifies that invocation of DB.Set is expected from 1 to Infinity times
-func (m *mDBMockSet) Expect(p Key, p1 []byte) *mDBMockSet {
-	m.mock.SetFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &DBMockSetExpectation{}
-	}
-	m.mainExpectation.input = &DBMockSetInput{p, p1}
-	return m
-}
-
-// Return specifies results of invocation of DB.Set
-func (m *mDBMockSet) Return(r error) *DBMock {
-	m.mock.SetFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &DBMockSetExpectation{}
-	}
-	m.mainExpectation.result = &DBMockSetResult{r}
-	return m.mock
-}
-
-// ExpectOnce specifies that invocation of DB.Set is expected once
-func (m *mDBMockSet) ExpectOnce(p Key, p1 []byte) *DBMockSetExpectation {
-	m.mock.SetFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &DBMockSetExpectation{}
-	expectation.input = &DBMockSetInput{p, p1}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *DBMockSetExpectation) Return(r error) {
-	e.result = &DBMockSetResult{r}
-}
-
-// Set uses given function f as a mock of DB.Set method
-func (m *mDBMockSet) Set(f func(p Key, p1 []byte) (r error)) *DBMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.SetFunc = f
-	return m.mock
-}
-
-// Set implements github.com/insolar/insolar/ledger/storage/db.DB interface
-func (m *DBMock) Set(p Key, p1 []byte) (r error) {
-	counter := atomic.AddUint64(&m.SetPreCounter, 1)
-	defer atomic.AddUint64(&m.SetCounter, 1)
-
-	if len(m.SetMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.SetMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to DBMock.Set. %v %v", p, p1)
-			return
-		}
-
-		input := m.SetMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, DBMockSetInput{p, p1}, "DB.Set got unexpected parameters")
-
-		result := m.SetMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the DBMock.Set")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.SetMock.mainExpectation != nil {
-
-		input := m.SetMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, DBMockSetInput{p, p1}, "DB.Set got unexpected parameters")
-		}
-
-		result := m.SetMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the DBMock.Set")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.SetFunc == nil {
-		m.t.Fatalf("Unexpected call to DBMock.Set. %v %v", p, p1)
-		return
-	}
-
-	return m.SetFunc(p, p1)
-}
-
-// SetMinimockCounter returns a count of DBMock.SetFunc invocations
-func (m *DBMock) SetMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.SetCounter)
-}
-
-// SetMinimockPreCounter returns the value of DBMock.Set invocations
-func (m *DBMock) SetMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.SetPreCounter)
-}
-
-// SetFinished returns true if mock invocations count is ok
-func (m *DBMock) SetFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.SetMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.SetCounter) == uint64(len(m.SetMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.SetMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.SetCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.SetFunc != nil {
-		return atomic.LoadUint64(&m.SetCounter) > 0
-	}
-
-	return true
-}
-
-// ValidateCallCounters checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
-func (m *DBMock) ValidateCallCounters() {
-
-	if !m.GetFinished() {
-		m.t.Fatal("Expected call to DBMock.Get")
-	}
-
-	if !m.SetFinished() {
-		m.t.Fatal("Expected call to DBMock.Set")
-	}
-
-}
-
-// CheckMocksCalled checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
-func (m *DBMock) CheckMocksCalled() {
-	m.Finish()
-}
-
-// Finish checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
-func (m *DBMock) Finish() {
-	m.MinimockFinish()
-}
-
-// MinimockFinish checks that all mocked methods of the interface have been called at least once
-func (m *DBMock) MinimockFinish() {
-
-	if !m.GetFinished() {
-		m.t.Fatal("Expected call to DBMock.Get")
-	}
-
-	if !m.SetFinished() {
-		m.t.Fatal("Expected call to DBMock.Set")
-	}
-
-}
-
-// Wait waits for all mocked methods to be called at least once
-// Deprecated: please use MinimockWait or use Wait method of minimock.Controller
-func (m *DBMock) Wait(timeout time.Duration) {
-	m.MinimockWait(timeout)
-}
-
-// MinimockWait waits for all mocked methods to be called at least once
-// this method is called by minimock.Controller
-func (m *DBMock) MinimockWait(timeout time.Duration) {
-	timeoutCh := time.After(timeout)
-	for {
-		ok := true
-		ok = ok && m.GetFinished()
-		ok = ok && m.SetFinished()
-
-		if ok {
-			return
-		}
-
-		select {
-		case <-timeoutCh:
-
-			if !m.GetFinished() {
-				m.t.Error("Expected call to DBMock.Get")
-			}
-
-			if !m.SetFinished() {
-				m.t.Error("Expected call to DBMock.Set")
-			}
-
-			m.t.Fatalf("Some mocks were not called on time: %s", timeout)
-			return
-		default:
-			time.Sleep(time.Millisecond)
-		}
-	}
-}
-
-// AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
-// it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
-func (m *DBMock) AllMocksCalled() bool {
-
-	if !m.GetFinished() {
-		return false
-	}
-
-	if !m.SetFinished() {
-		return false
-	}
-
-	return true
+// Set stores value for a key in memory storage.
+func (b *MockDB) Set(key Key, value []byte) error {
+	fullKey := append(key.Scope().Bytes(), key.ID()...)
+	b.lock.Lock()
+	defer b.lock.Unlock()
+	b.backend[string(fullKey)] = append([]byte{}, value...)
+	return nil
 }

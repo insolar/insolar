@@ -33,5 +33,9 @@ type Drop struct {
 	// Hash is a hash of all record hashes belongs to one pulse and previous drop hash.
 	Hash []byte
 
+	// Size represents data about physical size of the current jet.Drop.
 	Size uint64
+
+	// JetID represents data about JetID of the current jet.Drop.
+	JetID core.JetID
 }

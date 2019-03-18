@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/storage/jet"
 
 	testify_assert "github.com/stretchr/testify/assert"
@@ -21,7 +20,7 @@ import (
 type ModifierMock struct {
 	t minimock.Tester
 
-	SetFunc       func(p context.Context, p1 core.JetID, p2 jet.Drop) (r error)
+	SetFunc       func(p context.Context, p1 jet.Drop) (r error)
 	SetCounter    uint64
 	SetPreCounter uint64
 	SetMock       mModifierMockSet
@@ -53,8 +52,7 @@ type ModifierMockSetExpectation struct {
 
 type ModifierMockSetInput struct {
 	p  context.Context
-	p1 core.JetID
-	p2 jet.Drop
+	p1 jet.Drop
 }
 
 type ModifierMockSetResult struct {
@@ -62,14 +60,14 @@ type ModifierMockSetResult struct {
 }
 
 //Expect specifies that invocation of Modifier.Set is expected from 1 to Infinity times
-func (m *mModifierMockSet) Expect(p context.Context, p1 core.JetID, p2 jet.Drop) *mModifierMockSet {
+func (m *mModifierMockSet) Expect(p context.Context, p1 jet.Drop) *mModifierMockSet {
 	m.mock.SetFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &ModifierMockSetExpectation{}
 	}
-	m.mainExpectation.input = &ModifierMockSetInput{p, p1, p2}
+	m.mainExpectation.input = &ModifierMockSetInput{p, p1}
 	return m
 }
 
@@ -86,12 +84,12 @@ func (m *mModifierMockSet) Return(r error) *ModifierMock {
 }
 
 //ExpectOnce specifies that invocation of Modifier.Set is expected once
-func (m *mModifierMockSet) ExpectOnce(p context.Context, p1 core.JetID, p2 jet.Drop) *ModifierMockSetExpectation {
+func (m *mModifierMockSet) ExpectOnce(p context.Context, p1 jet.Drop) *ModifierMockSetExpectation {
 	m.mock.SetFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &ModifierMockSetExpectation{}
-	expectation.input = &ModifierMockSetInput{p, p1, p2}
+	expectation.input = &ModifierMockSetInput{p, p1}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
@@ -101,7 +99,7 @@ func (e *ModifierMockSetExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of Modifier.Set method
-func (m *mModifierMockSet) Set(f func(p context.Context, p1 core.JetID, p2 jet.Drop) (r error)) *ModifierMock {
+func (m *mModifierMockSet) Set(f func(p context.Context, p1 jet.Drop) (r error)) *ModifierMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -110,18 +108,18 @@ func (m *mModifierMockSet) Set(f func(p context.Context, p1 core.JetID, p2 jet.D
 }
 
 //Set implements github.com/insolar/insolar/ledger/storage/drop.Modifier interface
-func (m *ModifierMock) Set(p context.Context, p1 core.JetID, p2 jet.Drop) (r error) {
+func (m *ModifierMock) Set(p context.Context, p1 jet.Drop) (r error) {
 	counter := atomic.AddUint64(&m.SetPreCounter, 1)
 	defer atomic.AddUint64(&m.SetCounter, 1)
 
 	if len(m.SetMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.SetMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to ModifierMock.Set. %v %v %v", p, p1, p2)
+			m.t.Fatalf("Unexpected call to ModifierMock.Set. %v %v", p, p1)
 			return
 		}
 
 		input := m.SetMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, ModifierMockSetInput{p, p1, p2}, "Modifier.Set got unexpected parameters")
+		testify_assert.Equal(m.t, *input, ModifierMockSetInput{p, p1}, "Modifier.Set got unexpected parameters")
 
 		result := m.SetMock.expectationSeries[counter-1].result
 		if result == nil {
@@ -138,7 +136,7 @@ func (m *ModifierMock) Set(p context.Context, p1 core.JetID, p2 jet.Drop) (r err
 
 		input := m.SetMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, ModifierMockSetInput{p, p1, p2}, "Modifier.Set got unexpected parameters")
+			testify_assert.Equal(m.t, *input, ModifierMockSetInput{p, p1}, "Modifier.Set got unexpected parameters")
 		}
 
 		result := m.SetMock.mainExpectation.result
@@ -152,11 +150,11 @@ func (m *ModifierMock) Set(p context.Context, p1 core.JetID, p2 jet.Drop) (r err
 	}
 
 	if m.SetFunc == nil {
-		m.t.Fatalf("Unexpected call to ModifierMock.Set. %v %v %v", p, p1, p2)
+		m.t.Fatalf("Unexpected call to ModifierMock.Set. %v %v", p, p1)
 		return
 	}
 
-	return m.SetFunc(p, p1, p2)
+	return m.SetFunc(p, p1)
 }
 
 //SetMinimockCounter returns a count of ModifierMock.SetFunc invocations

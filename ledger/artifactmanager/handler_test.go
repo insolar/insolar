@@ -92,7 +92,7 @@ func (s *handlerSuite) BeforeTest(suiteName, testName string) {
 	s.cm.Inject(
 		s.scheme,
 		s.db,
-		db.NewMockDB(),
+		db.NewMemoryMockDB(),
 		s.jetStorage,
 		s.nodeStorage,
 		s.pulseTracker,
@@ -987,8 +987,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 			*secondID: {},
 			*thirdID:  {Active: true},
 		},
-		Drop:    jet.Drop{Pulse: core.FirstPulseNumber, Hash: []byte{88}},
-		DropJet: jetID,
+		Drop: jet.Drop{Pulse: core.FirstPulseNumber, Hash: []byte{88}, JetID: core.JetID(jetID)},
 	}
 
 	indexMock := recentstorage.NewRecentIndexStorageMock(s.T())
@@ -1038,7 +1037,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 
 	savedDrop, err := s.dropAccessor.ForPulse(s.ctx, core.JetID(jetID), core.FirstPulseNumber)
 	require.NoError(s.T(), err)
-	require.Equal(s.T(), jet.Drop{Pulse: core.FirstPulseNumber, Hash: []byte{88}}, savedDrop)
+	require.Equal(s.T(), jet.Drop{Pulse: core.FirstPulseNumber, Hash: []byte{88}, JetID: core.JetID(jetID)}, savedDrop)
 
 	indexMock.MinimockFinish()
 	pendingMock.MinimockFinish()

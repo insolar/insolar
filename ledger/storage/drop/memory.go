@@ -56,11 +56,15 @@ func (m *dropStorageMemory) ForPulse(ctx context.Context, jetID core.JetID, puls
 }
 
 // Set saves a provided jet.Drop to a memory
-func (m *dropStorageMemory) Set(ctx context.Context, jetID core.JetID, drop jet.Drop) error {
+func (m *dropStorageMemory) Set(ctx context.Context, drop jet.Drop) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	key := dropKey{jetID: jetID, pulse: drop.Pulse}
+	key := dropKey{jetID: drop.JetID, pulse: drop.Pulse}
+	_, ok := m.drops[key]
+	if ok {
+		return ErrOverride
+	}
 	m.drops[key] = drop
 
 	return nil

@@ -84,7 +84,7 @@ func (s *storageSuite) BeforeTest(suiteName, testName string) {
 	s.cm.Inject(
 		platformpolicy.NewPlatformCryptographyScheme(),
 		s.db,
-		db.NewMockDB(),
+		db.NewMemoryMockDB(),
 		s.objectStorage,
 		s.dropModifier,
 		s.dropAccessor,
@@ -175,14 +175,15 @@ func (s *storageSuite) TestDB_GetDrop_ReturnsNotFoundIfNoDrop() {
 }
 
 func (s *storageSuite) TestDB_SetDrop() {
+	jetID := *core.NewJetID(0, nil)
 	drop42 := jet.Drop{
 		Pulse: 42,
 		Hash:  []byte{0xFF},
+		JetID: jetID,
 	}
 	// FIXME: should work with random jet
 	// jetID := testutils.RandomJet()
-	jetID := *core.NewJetID(0, nil)
-	err := s.dropModifier.Set(s.ctx, jetID, drop42)
+	err := s.dropModifier.Set(s.ctx, drop42)
 	assert.NoError(s.T(), err)
 
 	got, err := s.dropAccessor.ForPulse(s.ctx, jetID, 42)
@@ -226,7 +227,7 @@ func TestDB_Close(t *testing.T) {
 	cm.Inject(
 		platformpolicy.NewPlatformCryptographyScheme(),
 		tmpDB,
-		db.NewMockDB(),
+		db.NewMemoryMockDB(),
 		os,
 		ds,
 	)

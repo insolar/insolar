@@ -31,7 +31,6 @@ import (
 	"github.com/insolar/insolar/ledger/storage/db"
 	jetdrop "github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/index"
-	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
@@ -81,7 +80,7 @@ func (s *replicaIterSuite) BeforeTest(suiteName, testName string) {
 	s.cm.Inject(
 		platformpolicy.NewPlatformCryptographyScheme(),
 		s.db,
-		db.NewMockDB(),
+		db.NewMemoryMockDB(),
 		s.objectStorage,
 		s.dropAccessor,
 		s.dropModifier,
@@ -131,7 +130,7 @@ func Test_StoreKeyValues(t *testing.T) {
 		cm.Inject(
 			platformpolicy.NewPlatformCryptographyScheme(),
 			tmpDB,
-			db.NewMockDB(),
+			db.NewMemoryMockDB(),
 			os,
 			ds,
 		)
@@ -236,7 +235,7 @@ func Test_ReplicaIter_Base(t *testing.T) {
 	cm.Inject(
 		platformpolicy.NewPlatformCryptographyScheme(),
 		tmpDB,
-		db.NewMockDB(),
+		db.NewMemoryMockDB(),
 		os,
 		ds,
 	)
@@ -355,16 +354,6 @@ func Test_ReplicaIter_Base(t *testing.T) {
 	}
 }
 
-func setDrop(
-	ctx context.Context,
-	t *testing.T,
-	dropModifire jetdrop.Modifier,
-	jetID core.JetID,
-	pulsenum core.PulseNumber,
-) {
-	err := dropModifire.Set(ctx, jetID, jet.Drop{Pulse: pulsenum})
-	require.NoError(t, err)
-}
 func addRecords(
 	ctx context.Context,
 	t *testing.T,

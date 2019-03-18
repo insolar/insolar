@@ -28,7 +28,7 @@ import (
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage/drop.Modifier -o ./ -s _mock.go
 // Modifier provides an interface for modifying jetdrops.
 type Modifier interface {
-	Set(ctx context.Context, jetID core.JetID, drop jet.Drop) error
+	Set(ctx context.Context, drop jet.Drop) error
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage/drop.Accessor -o ./ -s _mock.go

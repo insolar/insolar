@@ -51,7 +51,7 @@ func TestDB_Components(t *testing.T) {
 	badger, err := db.NewBadgerDB(configuration.Ledger{Storage: configuration.Storage{DataDirectoryNewDB: tmpdir}})
 	require.NoError(t, err)
 
-	mock := db.NewMockDB()
+	mock := db.NewMemoryMockDB()
 
 	type data struct {
 		key   testKey

@@ -104,7 +104,7 @@ func (s *heavySuite) BeforeTest(suiteName, testName string) {
 	s.cm.Inject(
 		platformpolicy.NewPlatformCryptographyScheme(),
 		s.db,
-		db.NewMockDB(),
+		db.NewMemoryMockDB(),
 		s.jetStorage,
 		s.nodeAccessor,
 		s.nodeSetter,

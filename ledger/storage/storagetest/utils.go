@@ -79,7 +79,7 @@ func TmpDB(ctx context.Context, t testing.TB, options ...Option) (storage.DBCont
 	cm.Inject(
 		testutils.NewPlatformCryptographyScheme(),
 		tmpDB,
-		db.NewMockDB(),
+		db.NewMemoryMockDB(),
 		jet.NewJetStorage(),
 		storage.NewObjectStorage(),
 		drop.NewStorageDB(),

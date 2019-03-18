@@ -76,7 +76,7 @@ func (s *cleanerSuite) BeforeTest(suiteName, testName string) {
 	s.cm.Inject(
 		platformpolicy.NewPlatformCryptographyScheme(),
 		tmpDB,
-		db.NewMockDB(),
+		db.NewMemoryMockDB(),
 		s.objectStorage,
 		s.storageCleaner,
 		s.dropAccessor,

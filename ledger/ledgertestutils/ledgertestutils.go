@@ -121,7 +121,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 	cm.Inject(
 		platformpolicy.NewPlatformCryptographyScheme(),
 		tmpDB,
-		db.NewMockDB(),
+		db.NewMemoryMockDB(),
 		js,
 		os,
 		ns,
