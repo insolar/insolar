@@ -259,7 +259,9 @@ func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Repl
 	inslogger.FromContext(ctx).Debug("MessageBus.doDeliver starts ...")
 	handler, ok := mb.handlers[msg.Type()]
 	if !ok {
-		return nil, errors.New("no handler for received message type")
+		txt := "no handler for received message type"
+		inslogger.FromContext(ctx).Error(txt)
+		return nil, errors.New(txt)
 	}
 
 	origin := mb.NodeNetwork.GetOrigin()

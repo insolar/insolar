@@ -39,10 +39,9 @@ import (
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/db"
 	"github.com/insolar/insolar/ledger/storage/drop"
-	"github.com/insolar/insolar/ledger/storage/index"
 	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/node"
-	"github.com/insolar/insolar/ledger/storage/record"
+	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
@@ -365,8 +364,8 @@ func addRecords(
 		ctx,
 		jetID,
 		pn,
-		&record.ObjectActivateRecord{
-			SideEffectRecord: record.SideEffectRecord{
+		&object.ObjectActivateRecord{
+			SideEffectRecord: object.SideEffectRecord{
 				Domain: testutils.RandomRef(),
 			},
 		},
@@ -377,7 +376,7 @@ func addRecords(
 	require.NoError(t, err)
 
 	// set index of record
-	err = objectStorage.SetObjectIndex(ctx, jetID, parentID, &index.ObjectLifeline{
+	err = objectStorage.SetObjectIndex(ctx, jetID, parentID, &object.Lifeline{
 		LatestState: parentID,
 	})
 	require.NoError(t, err)

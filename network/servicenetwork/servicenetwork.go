@@ -48,19 +48,15 @@ type ServiceNetwork struct {
 	cfg configuration.Configuration
 	cm  *component.Manager
 
-	hostNetwork  network.HostNetwork  // TODO: should be injected
-	routingTable network.RoutingTable // TODO: should be injected
-
 	// dependencies
-	CertificateManager  core.CertificateManager         `inject:""`
-	PulseManager        core.PulseManager               `inject:""`
-	PulseStorage        core.PulseStorage               `inject:""`
-	CryptographyService core.CryptographyService        `inject:""`
-	NetworkCoordinator  core.NetworkCoordinator         `inject:""`
-	CryptographyScheme  core.PlatformCryptographyScheme `inject:""`
-	NodeKeeper          network.NodeKeeper              `inject:""`
-	NetworkSwitcher     core.NetworkSwitcher            `inject:""`
-	TerminationHandler  core.TerminationHandler         `inject:""`
+	CertificateManager  core.CertificateManager  `inject:""`
+	PulseManager        core.PulseManager        `inject:""`
+	PulseStorage        core.PulseStorage        `inject:""`
+	CryptographyService core.CryptographyService `inject:""`
+	NetworkCoordinator  core.NetworkCoordinator  `inject:""`
+	NodeKeeper          network.NodeKeeper       `inject:""`
+	NetworkSwitcher     core.NetworkSwitcher     `inject:""`
+	TerminationHandler  core.TerminationHandler  `inject:""`
 
 	// subcomponents
 	PhaseManager phases.PhaseManager `inject:"subcomponent"`
@@ -98,7 +94,7 @@ func (n *ServiceNetwork) RemoteProcedureRegister(name string, method core.Remote
 func incrementPort(address string) (string, error) {
 	parts := strings.Split(address, ":")
 	if len(parts) < 2 {
-		return address, errors.New("failed to get port from address")
+		return address, errors.New("failed to get port from address " + address)
 	}
 	port, err := strconv.Atoi(parts[len(parts)-1])
 	if err != nil {
@@ -115,7 +111,6 @@ func incrementPort(address string) (string, error) {
 
 // Start implements component.Initer
 func (n *ServiceNetwork) Init(ctx context.Context) error {
-	n.routingTable = &routing.Table{}
 	internalTransport, err := hostnetwork.NewInternalTransport(n.cfg, n.CertificateManager.GetCertificate().GetNodeRef().String())
 	if err != nil {
 		return errors.Wrap(err, "Failed to create internal transport")
@@ -136,21 +131,22 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		consensusAddress,
 		n.CertificateManager.GetCertificate().GetNodeRef().String(),
 		n.NodeKeeper.GetOrigin().ShortID(),
-		n.routingTable,
 	)
 	if err != nil {
 		return errors.Wrap(err, "Failed to create consensus network.")
 	}
 
-	n.hostNetwork = hostnetwork.NewHostTransport(internalTransport, n.routingTable)
+	hostNetwork := hostnetwork.NewHostTransport(internalTransport)
 	options := controller.ConfigureOptions(n.cfg)
 
 	cert := n.CertificateManager.GetCertificate()
 	n.isDiscovery = utils.OriginIsDiscovery(cert)
 
 	n.cm.Inject(n,
+		&routing.Table{},
 		cert,
-		n.NodeKeeper,
+		internalTransport,
+		hostNetwork,
 		merkle.NewCalculator(),
 		consensusNetwork,
 		phases.NewCommunicator(),
@@ -159,12 +155,12 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		phases.NewThirdPhase(),
 		phases.NewPhaseManager(),
 		bootstrap.NewSessionManager(),
-		controller.NewNetworkController(n.hostNetwork),
-		controller.NewRPCController(options, n.hostNetwork),
-		controller.NewPulseController(n.hostNetwork, n.routingTable),
-		bootstrap.NewBootstrapper(options, internalTransport),
-		bootstrap.NewAuthorizationController(options, internalTransport),
-		bootstrap.NewChallengeResponseController(options, internalTransport),
+		controller.NewNetworkController(),
+		controller.NewRPCController(options),
+		controller.NewPulseController(),
+		bootstrap.NewBootstrapper(options),
+		bootstrap.NewAuthorizationController(options),
+		bootstrap.NewChallengeResponseController(options),
 		bootstrap.NewNetworkBootstrapper(),
 	)
 	err = n.cm.Init(ctx)
@@ -178,10 +174,6 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 // Start implements component.Starter
 func (n *ServiceNetwork) Start(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
-
-	logger.Info("Network starts listening...")
-	n.routingTable.Inject(n.NodeKeeper)
-	n.hostNetwork.Start(ctx)
 
 	log.Info("Starting network component manager...")
 	err := n.cm.Start(ctx)
@@ -203,20 +195,13 @@ func (n *ServiceNetwork) Leave(ctx context.Context, ETA core.PulseNumber) {
 	logger := inslogger.FromContext(ctx)
 	logger.Info("Gracefully stopping service network")
 
-	n.NodeKeeper.AddPendingClaim(&packets.NodeLeaveClaim{ETA: ETA})
+	n.NodeKeeper.GetClaimQueue().Push(&packets.NodeLeaveClaim{ETA: ETA})
 }
 
 // Stop implements core.Component
 func (n *ServiceNetwork) Stop(ctx context.Context) error {
-	logger := inslogger.FromContext(ctx)
-
-	logger.Info("Stopping network components")
-	if err := n.cm.Stop(ctx); err != nil {
-		log.Errorf("Error while stopping network components: %s", err.Error())
-	}
-	logger.Info("Stopping host network")
-	n.hostNetwork.Stop()
-	return nil
+	inslogger.FromContext(ctx).Info("Stopping network component manager...")
+	return n.cm.Stop(ctx)
 }
 
 func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse core.Pulse) {
@@ -246,7 +231,7 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse core.Pulse) {
 		return
 	}
 
-	if n.NodeKeeper.GetState() == core.WaitingNodeNetworkState {
+	if n.NodeKeeper.GetConsensusInfo().IsJoiner() {
 		// do not set pulse because otherwise we will set invalid active list
 		// pass consensus, prepare valid active list and set it on next pulse
 		go n.phaseManagerOnPulse(ctx, newPulse, currentTime)

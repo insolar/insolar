@@ -205,9 +205,5 @@ func (ps *PulseSenderConfirmationPayload) Hash(hashProvider core.Hasher) ([]byte
 	if err != nil {
 		return nil, err
 	}
-	_, err = hashProvider.Write(ps.Signature)
-	if err != nil {
-		return nil, err
-	}
 	return hashProvider.Sum(nil), nil
 }

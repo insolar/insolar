@@ -33,10 +33,9 @@ import (
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/db"
 	"github.com/insolar/insolar/ledger/storage/drop"
-	"github.com/insolar/insolar/ledger/storage/index"
 	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/node"
-	"github.com/insolar/insolar/ledger/storage/record"
+	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/network"
@@ -167,7 +166,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObject_FetchesObject() {
 
 	s.T().Run("fetches state from heavy when no index", func(t *testing.T) {
 		idxState := genRandomID(core.FirstPulseNumber)
-		objIndex := index.ObjectLifeline{
+		objIndex := object.Lifeline{
 			LatestState: idxState,
 		}
 		lightRef := genRandomRef(0)
@@ -176,7 +175,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObject_FetchesObject() {
 		mb.SendFunc = func(c context.Context, gm core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
 			if m, ok := gm.(*message.GetObjectIndex); ok {
 				assert.Equal(t, msg.Head, m.Object)
-				buf, err := index.EncodeObjectLifeline(&objIndex)
+				buf := object.Encode(objIndex)
 				require.NoError(t, err)
 				return &reply.ObjectIndex{Index: buf}, nil
 			}
@@ -213,7 +212,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObject_FetchesObject() {
 		jc.IsBeyondLimitMock.Return(false, nil)
 		jc.NodeForJetMock.Return(lightRef, nil)
 		stateID := genRandomID(core.FirstPulseNumber)
-		err = s.objectStorage.SetObjectIndex(s.ctx, jetID, msg.Head.Record(), &index.ObjectLifeline{
+		err = s.objectStorage.SetObjectIndex(s.ctx, jetID, msg.Head.Record(), &object.Lifeline{
 			LatestState: stateID,
 		})
 		require.NoError(t, err)
@@ -246,7 +245,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObject_FetchesObject() {
 		jc.NodeForJetMock.Return(heavyRef, nil)
 		stateID := genRandomID(core.FirstPulseNumber)
 
-		err = s.objectStorage.SetObjectIndex(s.ctx, jetID, msg.Head.Record(), &index.ObjectLifeline{
+		err = s.objectStorage.SetObjectIndex(s.ctx, jetID, msg.Head.Record(), &object.Lifeline{
 			LatestState: stateID,
 		})
 		require.NoError(t, err)
@@ -320,14 +319,14 @@ func (s *handlerSuite) TestMessageHandler_HandleGetChildren_Redirects() {
 	require.NoError(s.T(), err)
 
 	s.T().Run("redirects to heavy when no index", func(t *testing.T) {
-		objIndex := index.ObjectLifeline{
+		objIndex := object.Lifeline{
 			LatestState:  genRandomID(core.FirstPulseNumber),
 			ChildPointer: genRandomID(core.FirstPulseNumber),
 		}
 		mb.SendFunc = func(c context.Context, gm core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
 			if m, ok := gm.(*message.GetObjectIndex); ok {
 				assert.Equal(t, msg.Parent, m.Object)
-				buf, err := index.EncodeObjectLifeline(&objIndex)
+				buf := object.Encode(objIndex)
 				require.NoError(t, err)
 				return &reply.ObjectIndex{Index: buf}, nil
 			}
@@ -358,7 +357,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetChildren_Redirects() {
 		lightRef := genRandomRef(0)
 		jc.IsBeyondLimitMock.Return(false, nil)
 		jc.NodeForJetMock.Return(lightRef, nil)
-		err = s.objectStorage.SetObjectIndex(s.ctx, jetID, msg.Parent.Record(), &index.ObjectLifeline{
+		err = s.objectStorage.SetObjectIndex(s.ctx, jetID, msg.Parent.Record(), &object.Lifeline{
 			ChildPointer: genRandomID(core.FirstPulseNumber),
 		})
 		require.NoError(t, err)
@@ -380,7 +379,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetChildren_Redirects() {
 		heavyRef := genRandomRef(0)
 		jc.IsBeyondLimitMock.Return(false, nil)
 		jc.NodeForJetMock.Return(heavyRef, nil)
-		err = s.objectStorage.SetObjectIndex(s.ctx, jetID, msg.Parent.Record(), &index.ObjectLifeline{
+		err = s.objectStorage.SetObjectIndex(s.ctx, jetID, msg.Parent.Record(), &object.Lifeline{
 			ChildPointer: genRandomID(core.FirstPulseNumber),
 		})
 		require.NoError(t, err)
@@ -434,7 +433,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeav
 
 	delegateType := *genRandomRef(0)
 	delegate := *genRandomRef(0)
-	objIndex := index.ObjectLifeline{Delegates: map[core.RecordRef]core.RecordRef{delegateType: delegate}}
+	objIndex := object.Lifeline{Delegates: map[core.RecordRef]core.RecordRef{delegateType: delegate}}
 	msg := message.GetDelegate{
 		Head:   *genRandomRef(0),
 		AsType: delegateType,
@@ -443,8 +442,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeav
 	mb.SendFunc = func(c context.Context, gm core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
 		if m, ok := gm.(*message.GetObjectIndex); ok {
 			assert.Equal(s.T(), msg.Head, m.Object)
-			buf, err := index.EncodeObjectLifeline(&objIndex)
-			require.NoError(s.T(), err)
+			buf := object.Encode(objIndex)
 			return &reply.ObjectIndex{Index: buf}, nil
 		}
 
@@ -506,8 +504,8 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_FetchesIndexFromHea
 	h.PlatformCryptographyScheme = s.scheme
 	h.RecentStorageProvider = provideMock
 
-	objIndex := index.ObjectLifeline{LatestState: genRandomID(0), State: record.StateActivation}
-	amendRecord := record.ObjectAmendRecord{
+	objIndex := object.Lifeline{LatestState: genRandomID(0), State: object.StateActivation}
+	amendRecord := object.ObjectAmendRecord{
 		PrevState: *objIndex.LatestState,
 	}
 	amendHash := s.scheme.ReferenceHasher()
@@ -515,14 +513,14 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_FetchesIndexFromHea
 	require.NoError(s.T(), err)
 
 	msg := message.UpdateObject{
-		Record: record.SerializeRecord(&amendRecord),
+		Record: object.SerializeRecord(&amendRecord),
 		Object: *genRandomRef(0),
 	}
 
 	mb.SendFunc = func(c context.Context, gm core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
 		if m, ok := gm.(*message.GetObjectIndex); ok {
 			assert.Equal(s.T(), msg.Object, m.Object)
-			buf, err := index.EncodeObjectLifeline(&objIndex)
+			buf := object.Encode(objIndex)
 			require.NoError(s.T(), err)
 			return &reply.ObjectIndex{Index: buf}, nil
 		}
@@ -581,12 +579,12 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_UpdateIndexState() 
 	h.RecentStorageProvider = provideMock
 	h.PlatformCryptographyScheme = s.scheme
 
-	objIndex := index.ObjectLifeline{
+	objIndex := object.Lifeline{
 		LatestState:  genRandomID(0),
-		State:        record.StateActivation,
+		State:        object.StateActivation,
 		LatestUpdate: 0,
 	}
-	amendRecord := record.ObjectAmendRecord{
+	amendRecord := object.ObjectAmendRecord{
 		PrevState: *objIndex.LatestState,
 	}
 	amendHash := s.scheme.ReferenceHasher()
@@ -594,7 +592,7 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_UpdateIndexState() 
 	require.NoError(s.T(), err)
 
 	msg := message.UpdateObject{
-		Record: record.SerializeRecord(&amendRecord),
+		Record: object.SerializeRecord(&amendRecord),
 		Object: *genRandomRef(0),
 	}
 	err = s.objectStorage.SetObjectIndex(s.ctx, jetID, msg.Object.Record(), &objIndex)
@@ -658,7 +656,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObjectIndex() {
 
 	h.RecentStorageProvider = provideMock
 
-	objectIndex := index.ObjectLifeline{LatestState: genRandomID(0)}
+	objectIndex := object.Lifeline{LatestState: genRandomID(0)}
 	err = s.objectStorage.SetObjectIndex(s.ctx, jetID, msg.Object.Record(), &objectIndex)
 	require.NoError(s.T(), err)
 
@@ -668,9 +666,8 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObjectIndex() {
 	require.NoError(s.T(), err)
 	indexRep, ok := rep.(*reply.ObjectIndex)
 	require.True(s.T(), ok)
-	decodedIndex, err := index.DecodeObjectLifeline(indexRep.Index)
-	require.NoError(s.T(), err)
-	assert.Equal(s.T(), objectIndex, *decodedIndex)
+	decodedIndex := object.Decode(indexRep.Index)
+	assert.Equal(s.T(), objectIndex, decodedIndex)
 }
 
 func (s *handlerSuite) TestMessageHandler_HandleHasPendingRequests() {
@@ -838,8 +835,8 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 	h.RecentStorageProvider = provideMock
 	h.PlatformCryptographyScheme = s.scheme
 
-	objIndex := index.ObjectLifeline{LatestState: genRandomID(0), State: record.StateActivation}
-	childRecord := record.ChildRecord{
+	objIndex := object.Lifeline{LatestState: genRandomID(0), State: object.StateActivation}
+	childRecord := object.ChildRecord{
 		Ref:       *genRandomRef(0),
 		PrevChild: nil,
 	}
@@ -849,14 +846,14 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 	childID := core.NewRecordID(0, amendHash.Sum(nil))
 
 	msg := message.RegisterChild{
-		Record: record.SerializeRecord(&childRecord),
+		Record: object.SerializeRecord(&childRecord),
 		Parent: *genRandomRef(0),
 	}
 
 	mb.SendFunc = func(c context.Context, gm core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
 		if m, ok := gm.(*message.GetObjectIndex); ok {
 			assert.Equal(s.T(), msg.Parent, m.Object)
-			buf, err := index.EncodeObjectLifeline(&objIndex)
+			buf := object.Encode(objIndex)
 			require.NoError(s.T(), err)
 			return &reply.ObjectIndex{Index: buf}, nil
 		}
@@ -915,17 +912,17 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 	h.RecentStorageProvider = provideMock
 	h.PlatformCryptographyScheme = s.scheme
 
-	objIndex := index.ObjectLifeline{
+	objIndex := object.Lifeline{
 		LatestState:  genRandomID(0),
-		State:        record.StateActivation,
+		State:        object.StateActivation,
 		LatestUpdate: core.FirstPulseNumber,
 	}
-	childRecord := record.ChildRecord{
+	childRecord := object.ChildRecord{
 		Ref:       *genRandomRef(0),
 		PrevChild: nil,
 	}
 	msg := message.RegisterChild{
-		Record: record.SerializeRecord(&childRecord),
+		Record: object.SerializeRecord(&childRecord),
 		Parent: *genRandomRef(0),
 	}
 
@@ -955,8 +952,8 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	jc := testutils.NewJetCoordinatorMock(mc)
 
 	firstID := core.NewRecordID(core.FirstPulseNumber, []byte{1, 2, 3})
-	secondID := record.NewRecordIDFromRecord(s.scheme, core.FirstPulseNumber, &record.CodeRecord{})
-	thirdID := record.NewRecordIDFromRecord(s.scheme, core.FirstPulseNumber-1, &record.CodeRecord{})
+	secondID := object.NewRecordIDFromRecord(s.scheme, core.FirstPulseNumber, &object.CodeRecord{})
+	thirdID := object.NewRecordIDFromRecord(s.scheme, core.FirstPulseNumber-1, &object.CodeRecord{})
 
 	mb := testutils.NewMessageBusMock(mc)
 	mb.MustRegisterMock.Return()
@@ -967,10 +964,10 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 		return &reply.OK{}, nil
 	}
 
-	firstIndex, _ := index.EncodeObjectLifeline(&index.ObjectLifeline{
+	firstIndex := object.Encode(object.Lifeline{
 		LatestState: firstID,
 	})
-	err = s.objectStorage.SetObjectIndex(s.ctx, jetID, firstID, &index.ObjectLifeline{
+	err = s.objectStorage.SetObjectIndex(s.ctx, jetID, firstID, &object.Lifeline{
 		LatestState: firstID,
 	})
 
@@ -1087,7 +1084,7 @@ func (s *handlerSuite) TestMessageHandler_HandleValidationCheck() {
 	require.NoError(s.T(), err)
 
 	s.T().Run("returns not ok when not valid", func(t *testing.T) {
-		validatedStateID, err := s.objectStorage.SetRecord(s.ctx, jetID, 0, &record.ObjectAmendRecord{})
+		validatedStateID, err := s.objectStorage.SetRecord(s.ctx, jetID, 0, &object.ObjectAmendRecord{})
 		require.NoError(t, err)
 
 		msg := message.ValidationCheck{
@@ -1106,7 +1103,7 @@ func (s *handlerSuite) TestMessageHandler_HandleValidationCheck() {
 
 	s.T().Run("returns ok when valid", func(t *testing.T) {
 		approvedStateID := *genRandomID(0)
-		validatedStateID, err := s.objectStorage.SetRecord(s.ctx, jetID, 0, &record.ObjectAmendRecord{
+		validatedStateID, err := s.objectStorage.SetRecord(s.ctx, jetID, 0, &object.ObjectAmendRecord{
 			PrevState: approvedStateID,
 		})
 		require.NoError(t, err)
@@ -1223,7 +1220,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetRequest() {
 
 	jetID := core.RecordID(*core.NewJetID(0, nil))
 
-	req := record.RequestRecord{
+	req := object.RequestRecord{
 		MessageHash: []byte{1, 2, 3},
 		Object:      *genRandomID(0),
 	}
@@ -1245,5 +1242,5 @@ func (s *handlerSuite) TestMessageHandler_HandleGetRequest() {
 	require.NoError(s.T(), err)
 	reqReply, ok := rep.(*reply.Request)
 	require.True(s.T(), ok)
-	assert.Equal(s.T(), req, *record.DeserializeRecord(reqReply.Record).(*record.RequestRecord))
+	assert.Equal(s.T(), req, *object.DeserializeRecord(reqReply.Record).(*object.RequestRecord))
 }

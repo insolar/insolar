@@ -29,7 +29,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/jet"
-	"github.com/insolar/insolar/ledger/storage/record"
+	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
 	base58 "github.com/jbenet/go-base58"
@@ -132,10 +132,10 @@ func (s *exporterSuite) TestExporter_Export() {
 	codec.NewEncoderBytes(&mem, &codec.CborHandle{}).MustEncode(blobData)
 	blobID, err := s.objectStorage.SetBlob(s.ctx, s.jetID, core.FirstPulseNumber+10, mem)
 	require.NoError(s.T(), err)
-	_, err = s.objectStorage.SetRecord(s.ctx, s.jetID, core.FirstPulseNumber+10, &record.GenesisRecord{})
+	_, err = s.objectStorage.SetRecord(s.ctx, s.jetID, core.FirstPulseNumber+10, &object.GenesisRecord{})
 	require.NoError(s.T(), err)
-	objectID, err := s.objectStorage.SetRecord(s.ctx, s.jetID, core.FirstPulseNumber+10, &record.ObjectActivateRecord{
-		ObjectStateRecord: record.ObjectStateRecord{
+	objectID, err := s.objectStorage.SetRecord(s.ctx, s.jetID, core.FirstPulseNumber+10, &object.ObjectActivateRecord{
+		ObjectStateRecord: object.ObjectStateRecord{
 			Memory: blobID,
 		},
 		IsDelegate: true,
@@ -144,7 +144,7 @@ func (s *exporterSuite) TestExporter_Export() {
 	var parcel core.Parcel = &message.Parcel{Msg: msg}
 
 	msgHash := platformpolicy.NewPlatformCryptographyScheme().IntegrityHasher().Hash(message.ToBytes(msg))
-	requestID, err := s.objectStorage.SetRecord(s.ctx, s.jetID, core.FirstPulseNumber+10, &record.RequestRecord{
+	requestID, err := s.objectStorage.SetRecord(s.ctx, s.jetID, core.FirstPulseNumber+10, &object.RequestRecord{
 		MessageHash: msgHash,
 		Parcel:      message.ParcelToBytes(parcel),
 	})
@@ -172,17 +172,17 @@ func (s *exporterSuite) TestExporter_Export() {
 	assert.Equal(s.T(), int64(20), pulse.PulseTimestamp)
 
 	records := result.Data[strconv.FormatUint(uint64(core.FirstPulseNumber+10), 10)].([]*pulseData)[0].Records
-	object, ok := records[base58.Encode(objectID[:])]
+	obj, ok := records[base58.Encode(objectID[:])]
 	if assert.True(s.T(), ok, "object not found by ID") {
-		assert.Equal(s.T(), "TypeActivate", object.Type)
-		assert.Equal(s.T(), true, object.Data.(*record.ObjectActivateRecord).IsDelegate)
-		assert.Equal(s.T(), "objectValue", object.Payload["Memory"].(payload)["Field"])
+		assert.Equal(s.T(), "TypeActivate", obj.Type)
+		assert.Equal(s.T(), true, obj.Data.(*object.ObjectActivateRecord).IsDelegate)
+		assert.Equal(s.T(), "objectValue", obj.Payload["Memory"].(payload)["Field"])
 	}
 
 	request, ok := records[base58.Encode(requestID[:])]
 	if assert.True(s.T(), ok, "request not found by ID") {
 		assert.Equal(s.T(), "TypeCallRequest", request.Type)
-		assert.Equal(s.T(), msgHash, request.Data.(*record.RequestRecord).MessageHash)
+		assert.Equal(s.T(), msgHash, request.Data.(*object.RequestRecord).MessageHash)
 		assert.Equal(s.T(), core.TypeCallConstructor.String(), request.Payload["Type"])
 	}
 
@@ -206,8 +206,8 @@ func (s *exporterSuite) TestExporter_ExportGetBlobFailed() {
 		require.NoError(s.T(), err)
 	}
 
-	_, err := s.objectStorage.SetRecord(s.ctx, s.jetID, core.FirstPulseNumber+10, &record.ObjectActivateRecord{
-		ObjectStateRecord: record.ObjectStateRecord{
+	_, err := s.objectStorage.SetRecord(s.ctx, s.jetID, core.FirstPulseNumber+10, &object.ObjectActivateRecord{
+		ObjectStateRecord: object.ObjectStateRecord{
 			Memory: &core.RecordID{},
 		},
 		IsDelegate: true,

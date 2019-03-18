@@ -83,7 +83,7 @@ func (sp *SecondPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse, state
 	}
 	packet.SetBitSet(bitset)
 	activeNodes := state.UnsyncList.GetActiveNodes()
-	packets, err := sp.Communicator.ExchangePhase2(ctx, state.UnsyncList, activeNodes, packet)
+	packets, err := sp.Communicator.ExchangePhase2(ctx, state.UnsyncList, state.ClaimHandler, activeNodes, packet)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NET Consensus phase-2.0 ] Failed to exchange packets")
 	}
@@ -186,7 +186,7 @@ func (sp *SecondPhaseImpl) Execute21(ctx context.Context, pulse *core.Pulse, sta
 	}
 	packet.SetBitSet(state.BitSet)
 
-	voteAnswers, err := sp.Communicator.ExchangePhase21(ctx, state.UnsyncList, packet, additionalRequests)
+	voteAnswers, err := sp.Communicator.ExchangePhase21(ctx, state.UnsyncList, state.ClaimHandler, packet, additionalRequests)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NET Consensus phase-2.1 ] Failed to send additional requests")
 	}
@@ -231,7 +231,7 @@ func (sp *SecondPhaseImpl) Execute21(ctx context.Context, pulse *core.Pulse, sta
 		}
 
 		state.UnsyncList.AddNode(node, index)
-		err = sp.NodeKeeper.AddTemporaryMapping(claim.NodeRef, claim.ShortNodeID, claim.NodeAddress.Get())
+		err = sp.NodeKeeper.GetConsensusInfo().AddTemporaryMapping(claim.NodeRef, claim.ShortNodeID, claim.NodeAddress.Get())
 		if err != nil {
 			logger.Warn("Error adding temporary mapping: " + err.Error())
 		}
@@ -269,8 +269,8 @@ func (sp *SecondPhaseImpl) Execute21(ctx context.Context, pulse *core.Pulse, sta
 		list = append(list, claim.Claim)
 		claimMap[ref] = list
 	}
-	if err = state.UnsyncList.AddClaims(claimMap); err != nil {
-		return nil, errors.Wrap(err, "[ NET Consensus phase-2.1 ] Failed to add claims")
+	for ref, claims := range claimMap {
+		state.ClaimHandler.SetClaimsFromNode(ref, claims)
 	}
 	state.MatrixState, err = state.Matrix.CalculatePhase2(origin)
 	if err != nil {
@@ -326,7 +326,7 @@ func (sp *SecondPhaseImpl) generatePhase2Bitset(list network.UnsyncList, proofs 
 
 func getNodeState(node core.Node, pulseNumber core.PulseNumber) packets.BitSetState {
 	state := packets.Legit
-	if node.Leaving() && node.LeavingETA() < pulseNumber {
+	if node.GetState() == core.NodeLeaving && node.LeavingETA() < pulseNumber {
 		state = packets.TimedOut
 	}
 

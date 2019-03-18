@@ -11,6 +11,8 @@ import (
 
 	"github.com/gojuno/minimock"
 	packets "github.com/insolar/insolar/consensus/packets"
+
+	testify_assert "github.com/stretchr/testify/assert"
 )
 
 //ClaimQueueMock implements github.com/insolar/insolar/network.ClaimQueue
@@ -31,6 +33,11 @@ type ClaimQueueMock struct {
 	PopCounter    uint64
 	PopPreCounter uint64
 	PopMock       mClaimQueueMockPop
+
+	PushFunc       func(p packets.ReferendumClaim)
+	PushCounter    uint64
+	PushPreCounter uint64
+	PushMock       mClaimQueueMockPush
 }
 
 //NewClaimQueueMock returns a mock for github.com/insolar/insolar/network.ClaimQueue
@@ -44,6 +51,7 @@ func NewClaimQueueMock(t minimock.Tester) *ClaimQueueMock {
 	m.FrontMock = mClaimQueueMockFront{mock: m}
 	m.LengthMock = mClaimQueueMockLength{mock: m}
 	m.PopMock = mClaimQueueMockPop{mock: m}
+	m.PushMock = mClaimQueueMockPush{mock: m}
 
 	return m
 }
@@ -450,6 +458,129 @@ func (m *ClaimQueueMock) PopFinished() bool {
 	return true
 }
 
+type mClaimQueueMockPush struct {
+	mock              *ClaimQueueMock
+	mainExpectation   *ClaimQueueMockPushExpectation
+	expectationSeries []*ClaimQueueMockPushExpectation
+}
+
+type ClaimQueueMockPushExpectation struct {
+	input *ClaimQueueMockPushInput
+}
+
+type ClaimQueueMockPushInput struct {
+	p packets.ReferendumClaim
+}
+
+//Expect specifies that invocation of ClaimQueue.Push is expected from 1 to Infinity times
+func (m *mClaimQueueMockPush) Expect(p packets.ReferendumClaim) *mClaimQueueMockPush {
+	m.mock.PushFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &ClaimQueueMockPushExpectation{}
+	}
+	m.mainExpectation.input = &ClaimQueueMockPushInput{p}
+	return m
+}
+
+//Return specifies results of invocation of ClaimQueue.Push
+func (m *mClaimQueueMockPush) Return() *ClaimQueueMock {
+	m.mock.PushFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &ClaimQueueMockPushExpectation{}
+	}
+
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of ClaimQueue.Push is expected once
+func (m *mClaimQueueMockPush) ExpectOnce(p packets.ReferendumClaim) *ClaimQueueMockPushExpectation {
+	m.mock.PushFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &ClaimQueueMockPushExpectation{}
+	expectation.input = &ClaimQueueMockPushInput{p}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+//Set uses given function f as a mock of ClaimQueue.Push method
+func (m *mClaimQueueMockPush) Set(f func(p packets.ReferendumClaim)) *ClaimQueueMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.PushFunc = f
+	return m.mock
+}
+
+//Push implements github.com/insolar/insolar/network.ClaimQueue interface
+func (m *ClaimQueueMock) Push(p packets.ReferendumClaim) {
+	counter := atomic.AddUint64(&m.PushPreCounter, 1)
+	defer atomic.AddUint64(&m.PushCounter, 1)
+
+	if len(m.PushMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.PushMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to ClaimQueueMock.Push. %v", p)
+			return
+		}
+
+		input := m.PushMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, ClaimQueueMockPushInput{p}, "ClaimQueue.Push got unexpected parameters")
+
+		return
+	}
+
+	if m.PushMock.mainExpectation != nil {
+
+		input := m.PushMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, ClaimQueueMockPushInput{p}, "ClaimQueue.Push got unexpected parameters")
+		}
+
+		return
+	}
+
+	if m.PushFunc == nil {
+		m.t.Fatalf("Unexpected call to ClaimQueueMock.Push. %v", p)
+		return
+	}
+
+	m.PushFunc(p)
+}
+
+//PushMinimockCounter returns a count of ClaimQueueMock.PushFunc invocations
+func (m *ClaimQueueMock) PushMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.PushCounter)
+}
+
+//PushMinimockPreCounter returns the value of ClaimQueueMock.Push invocations
+func (m *ClaimQueueMock) PushMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.PushPreCounter)
+}
+
+//PushFinished returns true if mock invocations count is ok
+func (m *ClaimQueueMock) PushFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.PushMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.PushCounter) == uint64(len(m.PushMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.PushMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.PushCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.PushFunc != nil {
+		return atomic.LoadUint64(&m.PushCounter) > 0
+	}
+
+	return true
+}
+
 //ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *ClaimQueueMock) ValidateCallCounters() {
@@ -464,6 +595,10 @@ func (m *ClaimQueueMock) ValidateCallCounters() {
 
 	if !m.PopFinished() {
 		m.t.Fatal("Expected call to ClaimQueueMock.Pop")
+	}
+
+	if !m.PushFinished() {
+		m.t.Fatal("Expected call to ClaimQueueMock.Push")
 	}
 
 }
@@ -495,6 +630,10 @@ func (m *ClaimQueueMock) MinimockFinish() {
 		m.t.Fatal("Expected call to ClaimQueueMock.Pop")
 	}
 
+	if !m.PushFinished() {
+		m.t.Fatal("Expected call to ClaimQueueMock.Push")
+	}
+
 }
 
 //Wait waits for all mocked methods to be called at least once
@@ -512,6 +651,7 @@ func (m *ClaimQueueMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.FrontFinished()
 		ok = ok && m.LengthFinished()
 		ok = ok && m.PopFinished()
+		ok = ok && m.PushFinished()
 
 		if ok {
 			return
@@ -530,6 +670,10 @@ func (m *ClaimQueueMock) MinimockWait(timeout time.Duration) {
 
 			if !m.PopFinished() {
 				m.t.Error("Expected call to ClaimQueueMock.Pop")
+			}
+
+			if !m.PushFinished() {
+				m.t.Error("Expected call to ClaimQueueMock.Push")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)
@@ -553,6 +697,10 @@ func (m *ClaimQueueMock) AllMocksCalled() bool {
 	}
 
 	if !m.PopFinished() {
+		return false
+	}
+
+	if !m.PushFinished() {
 		return false
 	}
 

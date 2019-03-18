@@ -42,7 +42,8 @@ type Phases struct {
 	NodeKeeper   network.NodeKeeper `inject:""`
 	Calculator   merkle.Calculator  `inject:""`
 
-	lock sync.Mutex
+	lastPulse core.PulseNumber
+	lock      sync.Mutex
 }
 
 // NewPhaseManager creates and returns a new phase manager.
@@ -57,6 +58,12 @@ func (pm *Phases) OnPulse(ctx context.Context, pulse *core.Pulse, pulseStartTime
 
 	var err error
 
+	// workaround for occasional race condition when multiple consensus processes are spawned for one pulse
+	if pulse.PulseNumber <= pm.lastPulse {
+		return nil
+	}
+	pm.lastPulse = pulse.PulseNumber
+
 	consensusDelay := time.Since(pulseStartTime)
 	inslogger.FromContext(ctx).Infof("[ NET Consensus ] Starting consensus process, delay: %v", consensusDelay)
 
@@ -68,7 +75,10 @@ func (pm *Phases) OnPulse(ctx context.Context, pulse *core.Pulse, pulseStartTime
 	var tctx context.Context
 	var cancel context.CancelFunc
 
-	tctx, cancel = contextTimeoutWithDelay(ctx, *pulseDuration, consensusDelay, 0.3)
+	tctx, cancel, err = contextTimeoutWithDelay(ctx, *pulseDuration, consensusDelay, 0.3)
+	if err != nil {
+		return err
+	}
 	defer cancel()
 
 	firstPhaseState, err := pm.FirstPhase.Execute(tctx, pulse)
@@ -110,9 +120,7 @@ func (pm *Phases) OnPulse(ctx context.Context, pulse *core.Pulse, pulseStartTime
 		return errors.Wrap(err, "[ NET Consensus ] Error calculating cloud hash")
 	}
 	pm.NodeKeeper.SetCloudHash(hash)
-	state.UnsyncList.ApproveSync(state.ActiveNodes)
-	pm.NodeKeeper.Sync(state.UnsyncList)
-	return nil
+	return pm.NodeKeeper.Sync(ctx, state.ActiveNodes, state.ApprovedClaims)
 }
 
 func getPulseDuration(pulse *core.Pulse) (*time.Duration, error) {
@@ -126,11 +134,11 @@ func contextTimeout(ctx context.Context, duration time.Duration, k float64) (con
 	return timedCtx, cancelFund
 }
 
-func contextTimeoutWithDelay(ctx context.Context, duration, delay time.Duration, k float64) (context.Context, context.CancelFunc) {
+func contextTimeoutWithDelay(ctx context.Context, duration, delay time.Duration, k float64) (context.Context, context.CancelFunc, error) {
 	timeout := time.Duration(k*float64(duration)) - delay
 	if timeout < 0 {
-		inslogger.FromContext(ctx).Fatalf("[ NET Consensus ] Not enough time for consensus process")
+		return nil, nil, errors.New("[ NET Consensus ] Not enough time for consensus process")
 	}
 	timedCtx, cancelFund := context.WithTimeout(ctx, timeout)
-	return timedCtx, cancelFund
+	return timedCtx, cancelFund, nil
 }
