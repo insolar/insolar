@@ -267,5 +267,5 @@ type ClaimQueue interface {
 
 // Snapshot provides ...
 type Snapshot interface {
-	GetPulse()
+	GetPulse() core.PulseNumber
 }

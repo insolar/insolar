@@ -17,9 +17,69 @@
 
 package nodenetwork
 
+import (
+	"github.com/insolar/insolar/core"
+)
+
+type ListType int
+
+const (
+	ListWorking ListType = iota
+	ListIdle
+	ListLeaving
+	ListSuspected
+	ListJoiner
+
+	ListLength
+)
+
 type Snapshot struct {
+	pulse core.PulseNumber
+	state core.NetworkState
+
+	nodeList [ListLength][]core.Node
 }
 
-func (s *Snapshot) GetPulse() {
-	panic("implement me")
+func (s *Snapshot) GetPulse() core.PulseNumber {
+	return s.pulse
+}
+
+// NewSnapshot create new snapshot for pulse.
+func NewSnapshot(number core.PulseNumber, nodes map[core.RecordRef]core.Node) *Snapshot {
+	return &Snapshot{
+		pulse: number,
+		// TODO: pass actual state
+		state:    core.NoNetworkState,
+		nodeList: sortNodes(nodes),
+	}
+}
+
+// sortNodes temporary method to create snapshot lists. Will be replaced by special function that will take in count
+// previous snapshot and approved claims.
+func sortNodes(nodes map[core.RecordRef]core.Node) [ListLength][]core.Node {
+	var result [ListLength][]core.Node
+	for i := 0; i < int(ListLength); i++ {
+		result[i] = make([]core.Node, 0)
+	}
+	for _, node := range nodes {
+		listType := nodeStateToListType(node.GetState())
+		if listType == ListLength {
+			continue
+		}
+		result[listType] = append(result[listType], node)
+	}
+	return result
+}
+
+func nodeStateToListType(state core.NodeState) ListType {
+	switch state {
+	case core.NodeReady:
+		return ListWorking
+	case core.NodePending:
+		return ListJoiner
+	case core.NodeLeaving:
+		return ListLeaving
+	}
+	// special case for no match
+	return ListLength
 }
