@@ -17,7 +17,7 @@
 package gen
 
 import (
-	fuzz "github.com/google/gofuzz"
+	"github.com/google/gofuzz"
 	"github.com/insolar/insolar/core"
 )
 
@@ -30,6 +30,7 @@ func ID() (id core.RecordID) {
 // JetID generates random id.
 func JetID() (id core.JetID) {
 	fuzz.New().NilChance(0).Fuzz(&id)
+	copy(id[:core.PulseNumberSize], core.PulseNumberJet.Bytes())
 	return
 }
 

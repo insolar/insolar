@@ -51,7 +51,6 @@ func (dk *dropDbKey) ID() []byte {
 func (ds *dropStorageDB) ForPulse(ctx context.Context, jetID core.JetID, pulse core.PulseNumber) (jet.Drop, error) {
 	k := dropDbKey{jetID.Prefix(), pulse}
 
-	// buf, err := db.get(ctx, k)
 	buf, err := ds.DB.Get(&k)
 	if err != nil {
 		return jet.Drop{}, err

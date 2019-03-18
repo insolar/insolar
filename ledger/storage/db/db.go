@@ -16,6 +16,7 @@
 
 package db
 
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage/db.DB -o ./ -s _mock.go
 // DB provides a simple key-value store interface for persisting data.
 type DB interface {
 	Get(key Key) (value []byte, err error)

@@ -104,7 +104,7 @@ func TestDropStorageMemory_DoubleSet(t *testing.T) {
 	require.Equal(t, 1, len(ms.drops))
 }
 
-func TestDropStorageDB_Set_Concurrent(t *testing.T) {
+func TestDropStorageMemory_Set_Concurrent(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	var ms Modifier = NewStorageMemory()
 
