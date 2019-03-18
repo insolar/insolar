@@ -18,7 +18,6 @@ package messagebus
 
 import (
 	"errors"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -36,24 +35,15 @@ var (
 type CancelCallback func(core.ConveyorFuture)
 
 type future struct {
-	result         chan core.Reply
-	id             uint64
-	finished       uint64
-	cancelCallback CancelCallback
+	result   chan core.Reply
+	finished uint64
 }
 
 // NewFuture creates new ConveyorFuture.
-func NewFuture(id uint64, cancelCallback CancelCallback) core.ConveyorFuture {
+func NewFuture() core.ConveyorFuture {
 	return &future{
-		result:         make(chan core.Reply, 1),
-		id:             id,
-		cancelCallback: cancelCallback,
+		result: make(chan core.Reply, 1),
 	}
-}
-
-// ID returns RequestID of packet.
-func (future *future) ID() uint64 {
-	return future.id
 }
 
 // Result returns result packet channel.
@@ -92,80 +82,9 @@ func (future *future) Cancel() {
 
 func (future *future) finish() {
 	close(future.result)
-	future.cancelCallback(future)
 }
 
-type futureManager struct {
-	mutex   sync.RWMutex
-	futures map[uint64]core.ConveyorFuture
-	index   uint64
-}
-
-func newFutureManager() *futureManager {
-	return &futureManager{
-		futures: make(map[uint64]core.ConveyorFuture),
-	}
-}
-
-// Create implements FutureManager interface
-func (fm *futureManager) Create() core.ConveyorFuture {
-	id := fm.incrementIndex()
-	future := NewFuture(id, func(f core.ConveyorFuture) {
-		fm.delete(f.ID())
-	})
-
-	fm.mutex.Lock()
-	defer fm.mutex.Unlock()
-
-	fm.futures[id] = future
-
-	return future
-}
-
-// Get implements FutureManager interface
-func (fm *futureManager) Get(id uint64) core.ConveyorFuture {
-	fm.mutex.RLock()
-	defer fm.mutex.RUnlock()
-
-	return fm.futures[id]
-}
-
-func (fm *futureManager) delete(id uint64) {
-	fm.mutex.Lock()
-	defer fm.mutex.Unlock()
-
-	delete(fm.futures, id)
-	fm.decrementIndex()
-}
-
-func (fm *futureManager) incrementIndex() uint64 {
-	for {
-		val := atomic.LoadUint64(&fm.index)
-		if atomic.CompareAndSwapUint64(&fm.index, val, val+1) {
-			return val
-		}
-	}
-}
-func (fm *futureManager) decrementIndex() uint64 {
-	for {
-		val := atomic.LoadUint64(&fm.index)
-		if atomic.CompareAndSwapUint64(&fm.index, val, val-1) {
-			return val
-		}
-	}
-}
-
-// FutureManager is store and create ConveyorFuture instances
-type FutureManager interface {
-	Get(id uint64) core.ConveyorFuture
-	Create() core.ConveyorFuture
-}
-
-func NewFutureManager() FutureManager {
-	return newFutureManager()
-}
-
-// ConveyorPendingMessage is message for conveyor witch can pend for response
+// ConveyorPendingMessage is message for conveyor which can pend for response
 type ConveyorPendingMessage struct {
 	Msg    core.Parcel
 	Future core.ConveyorFuture
