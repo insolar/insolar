@@ -232,7 +232,7 @@ func (t *Tree) Find(recordID core.RecordID) (core.JetID, bool) {
 
 	hash := recordID.Hash()
 	j, depth := t.Head.Find(hash, 0)
-	id := *core.NewJetID(uint8(depth), ResetBits(hash, depth))
+	id := *core.NewJetID(uint8(depth), resetBits(hash, depth))
 	return id, j.Actual
 }
 
@@ -252,11 +252,11 @@ func (t *Tree) Split(id core.JetID) (core.JetID, core.JetID, error) {
 	}
 
 	j.Left = &jet{}
-	leftPrefix := ResetBits(prefix, depth)
+	leftPrefix := resetBits(prefix, depth)
 	left := core.NewJetID(depth+1, leftPrefix)
 
 	j.Right = &jet{}
-	rightPrefix := ResetBits(prefix, depth)
+	rightPrefix := resetBits(prefix, depth)
 	setBit(rightPrefix, depth)
 	right := core.NewJetID(depth+1, rightPrefix)
 

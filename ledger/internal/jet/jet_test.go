@@ -40,13 +40,13 @@ func TestJet_Parent(t *testing.T) {
 
 func TestJet_ResetBits(t *testing.T) {
 	orig := []byte{0xFF}
-	got := ResetBits(orig, 5)
+	got := resetBits(orig, 5)
 	require.Equal(t, parsePrefix("11111000"), got,
 		"bit reset sucessfully %b == %b", parsePrefix("11111000"), got)
 	require.NotEqual(t, &orig, &got, "without overflow returns a new slice")
 
-	gotWithOverflow := ResetBits(orig, 9)
+	gotWithOverflow := resetBits(orig, 9)
 	require.Equal(t, []byte{0xFF}, gotWithOverflow, "returns equals slice on overflow")
 	require.Equal(t, &orig, &gotWithOverflow, "on overflow returns the same slice")
-	require.Equal(t, []byte{0xFF}, orig, "original unchanged after ResetBits")
+	require.Equal(t, []byte{0xFF}, orig, "original unchanged after resetBits")
 }

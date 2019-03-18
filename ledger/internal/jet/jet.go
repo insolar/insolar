@@ -53,14 +53,14 @@ func Parent(id core.JetID) core.JetID {
 		return id
 	}
 
-	return *core.NewJetID(depth-1, ResetBits(prefix, depth-1))
+	return *core.NewJetID(depth-1, resetBits(prefix, depth-1))
 }
 
-// ResetBits returns a new byte slice with all bits in 'value' reset,
+// resetBits returns a new byte slice with all bits in 'value' reset,
 // starting from 'start' number of bit.
 //
 // If 'start' is bigger than len(value), the original slice will be returned.
-func ResetBits(value []byte, start uint8) []byte {
+func resetBits(value []byte, start uint8) []byte {
 	if int(start) >= len(value)*8 {
 		return value
 	}
