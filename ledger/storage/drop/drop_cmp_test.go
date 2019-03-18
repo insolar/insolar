@@ -23,20 +23,89 @@ import (
 	// "github.com/insolar/insolar/core"
 	// "github.com/insolar/insolar/gen"
 	// "github.com/insolar/insolar/ledger/storage/jet"
+
+	"github.com/google/gofuzz"
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/gen"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/storage/db"
+	"github.com/insolar/insolar/ledger/storage/jet"
+	"github.com/stretchr/testify/require"
 )
 
+type jetPulse struct {
+	jetID core.JetID
+	pn    core.PulseNumber
+}
+
 func TestDropStorageMemory(t *testing.T) {
-	// ms := NewStorageMemory()
-	//
-	// var drops []jet.Drop
-	// genPulses := map[core.PulseNumber]struct{}{}
-	// genJets := map[core.JetID]struct{}{}
-	// f := fuzz.New().Funcs(func(jd *jet.Drop, c fuzz.Continue) {
-	// 	pn := gen.PulseNumber()
-	// 	genPulses[pn] = struct{}{}
-	// 	jd.Pulse = pn
-	// }).NumElements(5, 1000)
-	// f.Fuzz(&drops)
-	//
-	//
+	ctx := inslogger.TestContext(t)
+	ms := NewStorageMemory()
+
+	var drops []jet.Drop
+	genInps := map[jetPulse]struct{}{}
+	f := fuzz.New().Funcs(func(jd *jet.Drop, c fuzz.Continue) {
+		pn := gen.PulseNumber()
+		jd.Pulse = pn
+
+		jetID := gen.JetID()
+		jd.JetID = jetID
+
+		genInps[jetPulse{jetID: jetID, pn: pn}] = struct{}{}
+	}).NumElements(5, 1000)
+	f.Fuzz(&drops)
+
+	// Add
+	for _, dr := range drops {
+		err := ms.Set(ctx, dr)
+		require.NoError(t, err)
+	}
+
+	// Fetch
+	for inp := range genInps {
+		_, err := ms.ForPulse(ctx, inp.jetID, inp.pn)
+		require.NoError(t, err)
+	}
+
+	// Delete
+	for inp := range genInps {
+		ms.Delete(inp.pn)
+	}
+
+	// Check for deleting
+	for inp := range genInps {
+		_, err := ms.ForPulse(ctx, inp.jetID, inp.pn)
+		require.Error(t, err, ErrNotFound)
+	}
+}
+
+func TestDropStorageDB(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+	ms := NewStorageDB()
+	ms.DB = db.NewMemoryMockDB()
+
+	var drops []jet.Drop
+	genInps := map[jetPulse]struct{}{}
+	f := fuzz.New().Funcs(func(jd *jet.Drop, c fuzz.Continue) {
+		pn := gen.PulseNumber()
+		jd.Pulse = pn
+
+		jetID := gen.JetID()
+		jd.JetID = jetID
+
+		genInps[jetPulse{jetID: jetID, pn: pn}] = struct{}{}
+	}).NumElements(5, 1000)
+	f.Fuzz(&drops)
+
+	// Add
+	for _, dr := range drops {
+		err := ms.Set(ctx, dr)
+		require.NoError(t, err)
+	}
+
+	// Fetch
+	for inp := range genInps {
+		_, err := ms.ForPulse(ctx, inp.jetID, inp.pn)
+		require.NoError(t, err)
+	}
 }
