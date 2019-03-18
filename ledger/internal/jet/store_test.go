@@ -17,8 +17,11 @@
 package jet
 
 import (
+	"fmt"
+	"sort"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/core"
@@ -100,4 +103,112 @@ func TestJetStorage_DeleteJetTree(t *testing.T) {
 	all := s.All(ctx, 100)
 	require.Equal(t, 1, len(all), "should be just one jet ID")
 	require.Equal(t, core.ZeroJetID, all[0], "JetID should be a zero after tree removal")
+}
+
+func TestJetStorage_ForID_Basic(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+
+	pn := gen.PulseNumber()
+	meaningfulBits := "01000011" + "11000011" + "010010"
+
+	bits := parsePrefix(meaningfulBits)
+	expectJetID := NewIDFromString(meaningfulBits)
+	// fmt.Printf("expectJetID:        %08b\n", expectJetID[:])
+	searchID := gen.ID()
+	hash := searchID[core.RecordHashOffset:]
+	hash = setBitsPrefix(hash, bits, len(meaningfulBits))
+	copy(searchID[core.RecordHashOffset:], hash)
+
+	for _, actuality := range []bool{true, false} {
+		s := NewStore()
+		s.Update(ctx, pn, actuality, expectJetID)
+		found, ok := s.ForID(ctx, pn, searchID)
+		require.Equal(t, expectJetID, found, "got jet with exactly same prefix")
+		require.Equal(t, actuality, ok, "jet should be in actuality state we defined in Update")
+	}
+}
+
+func TestJetStorage_ForID_Fuzz(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+	pn := gen.PulseNumber()
+
+	var jets = map[string]struct{}{}
+
+	// findBestMatch returns best match JetID for provided recordID, searches JetID in `jets` set.
+	findBestMatch := func(id core.RecordID) core.JetID {
+		// search in substrings
+		idbits := bitsToString(id.Hash())
+		var stat = map[string]int{}
+		for jetbits := range jets {
+			stat[jetbits] = 0
+			for i, b := range []byte(idbits) {
+				if i >= len(jetbits) {
+					break
+				}
+				if jetbits[i] != b {
+					break
+				}
+				stat[jetbits]++
+			}
+		}
+
+		var max int
+		var found string
+		for jetbits, matchlen := range stat {
+			if matchlen > max {
+				max = matchlen
+				found = jetbits
+			}
+		}
+		return NewIDFromString(found)
+	}
+
+	var searches []core.RecordID
+	s := NewStore()
+	// generate jet IDs, add them to jet store (actually to underlying jet tree)
+	// fill searches list with RecordID with hashes what should match with generated Jet ID
+	for i := 0; i < 100; i++ {
+		jetID := gen.JetID()
+		prefix, depth := jetID.Prefix(), jetID.Depth()
+
+		searchID := gen.ID()
+		hash := setBitsPrefix(searchID[core.RecordHashOffset:], prefix, int(depth))
+		copy(searchID[core.RecordHashOffset:], hash)
+
+		s.Update(ctx, pn, false, jetID)
+		searches = append(searches, searchID)
+	}
+	// fill jets set with jets saved in store.
+	for _, j := range s.All(ctx, pn) {
+		prefix, depth := j.Prefix(), j.Depth()
+		s := bitsToString(prefix)
+		jets[s[:depth]] = struct{}{}
+	}
+
+	// check is RecordID match proper JetID
+	for _, searchID := range searches {
+		found, _ := s.ForID(ctx, pn, searchID)
+		expect := findBestMatch(searchID)
+		assertResult := assert.Equalf(t,
+			expect, found,
+			" expect  = %08b\n got     = %08b\n id hash = %08b\n",
+			expect[core.JetPrefixOffset:],
+			found[core.JetPrefixOffset:],
+			searchID.Hash(),
+		)
+		if !assertResult {
+			// print more info on fail for easy investigation what happened.
+			fmt.Println("all jets:")
+			var sorted []string
+			for jetbits := range jets {
+				sorted = append(sorted, jetbits)
+			}
+			sort.Strings(sorted)
+			for _, j := range sorted {
+				fmt.Printf("  %v\n", j)
+			}
+			t.Fail()
+			return
+		}
+	}
 }
