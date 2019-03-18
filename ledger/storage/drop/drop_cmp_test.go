@@ -38,7 +38,7 @@ func TestDropStorageMemory(t *testing.T) {
 	ms := NewStorageMemory()
 
 	var drops []jet.Drop
-	genInps := map[jetPulse]struct{}{}
+	genInputs := map[jetPulse]struct{}{}
 	f := fuzz.New().Funcs(func(jd *jet.Drop, c fuzz.Continue) {
 		pn := gen.PulseNumber()
 		jd.Pulse = pn
@@ -46,7 +46,7 @@ func TestDropStorageMemory(t *testing.T) {
 		jetID := gen.JetID()
 		jd.JetID = jetID
 
-		genInps[jetPulse{jetID: jetID, pn: pn}] = struct{}{}
+		genInputs[jetPulse{jetID: jetID, pn: pn}] = struct{}{}
 	}).NumElements(5, 1000)
 	f.Fuzz(&drops)
 
@@ -57,18 +57,18 @@ func TestDropStorageMemory(t *testing.T) {
 	}
 
 	// Fetch
-	for inp := range genInps {
+	for inp := range genInputs {
 		_, err := ms.ForPulse(ctx, inp.jetID, inp.pn)
 		require.NoError(t, err)
 	}
 
 	// Delete
-	for inp := range genInps {
+	for inp := range genInputs {
 		ms.Delete(inp.pn)
 	}
 
 	// Check for deleting
-	for inp := range genInps {
+	for inp := range genInputs {
 		_, err := ms.ForPulse(ctx, inp.jetID, inp.pn)
 		require.Error(t, err, ErrNotFound)
 	}
@@ -80,7 +80,7 @@ func TestDropStorageDB(t *testing.T) {
 	ms.DB = db.NewMemoryMockDB()
 
 	var drops []jet.Drop
-	genInps := map[jetPulse]struct{}{}
+	genInputs := map[jetPulse]struct{}{}
 	f := fuzz.New().Funcs(func(jd *jet.Drop, c fuzz.Continue) {
 		pn := gen.PulseNumber()
 		jd.Pulse = pn
@@ -88,7 +88,7 @@ func TestDropStorageDB(t *testing.T) {
 		jetID := gen.JetID()
 		jd.JetID = jetID
 
-		genInps[jetPulse{jetID: jetID, pn: pn}] = struct{}{}
+		genInputs[jetPulse{jetID: jetID, pn: pn}] = struct{}{}
 	}).NumElements(5, 1000)
 	f.Fuzz(&drops)
 
@@ -99,7 +99,7 @@ func TestDropStorageDB(t *testing.T) {
 	}
 
 	// Fetch
-	for inp := range genInps {
+	for inp := range genInputs {
 		_, err := ms.ForPulse(ctx, inp.jetID, inp.pn)
 		require.NoError(t, err)
 	}
