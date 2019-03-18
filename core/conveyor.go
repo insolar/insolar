@@ -56,6 +56,7 @@ type Control interface {
 }
 
 // Conveyor is responsible for all pulse-dependent processing logic
+//go:generate minimock -i github.com/insolar/insolar/core.Conveyor -o ../testutils -s _mock.go
 type Conveyor interface {
 	EventSink
 	Control
