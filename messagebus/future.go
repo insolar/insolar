@@ -31,9 +31,6 @@ var (
 	ErrFutureChannelClosed = errors.New("can't wait for result: channel closed")
 )
 
-// CancelCallback is a callback function executed when cancelling ConveyorFuture.
-type CancelCallback func(core.ConveyorFuture)
-
 type future struct {
 	result   chan core.Reply
 	finished uint64
