@@ -6,12 +6,12 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "Modifier" can be found in github.com/insolar/insolar/ledger/storage/drop
 */
 import (
-	"context"
+	context "context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/ledger/storage/jet"
+	jet "github.com/insolar/insolar/ledger/storage/jet"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
