@@ -65,7 +65,7 @@ func moveBack(reader io.Reader) {
 	fmt.Print(escape(clearDown))
 }
 
-func displayResultsTable(results [][]string, buffer *bytes.Buffer, notReady bool) {
+func displayResultsTable(results [][]string, ready bool, buffer *bytes.Buffer) {
 	table := tablewriter.NewWriter(buffer)
 	table.SetHeader([]string{
 		"URL",
@@ -87,7 +87,7 @@ func displayResultsTable(results [][]string, buffer *bytes.Buffer, notReady bool
 
 	stateString := insolarReady
 	color := tablewriter.FgHiGreenColor
-	if notReady {
+	if !ready {
 		stateString = insolarNotReady
 		color = tablewriter.FgHiRedColor
 	}
@@ -115,6 +115,12 @@ func displayResultsTable(results [][]string, buffer *bytes.Buffer, notReady bool
 	fmt.Print(buffer)
 }
 
+func check(err error) {
+	if err != nil {
+		panic(err) // should never happen
+	}
+}
+
 func parseInt64(str string) int64 {
 	res, err := strconv.ParseInt(str, 10, 64)
 	if err != nil {
@@ -123,7 +129,7 @@ func parseInt64(str string) int64 {
 	return res
 }
 
-func displayResultsJson(results [][]string, buffer *bytes.Buffer, notReady bool) {
+func displayResultsJSON(results [][]string, ready bool, buffer *bytes.Buffer) {
 	type DocumentItem struct {
 		URL string
 		NetworkState string
@@ -150,18 +156,88 @@ func displayResultsJson(results [][]string, buffer *bytes.Buffer, notReady bool)
 
 	jsonDoc, err := json.MarshalIndent(doc, "", "    ")
 	if err != nil {
-		panic(err) // should never happen
+		panic(err) // shoukd never happen
 	}
 	fmt.Print(string(jsonDoc))
 	fmt.Print("\n\n")
 }
 
+func collectNodesStatuses(conf *pulsewatcher.Config) ([][]string, bool) {
+	client = http.Client{
+		Transport: &http.Transport{},
+		Timeout:   conf.Timeout,
+	}
+
+	state := true
+	errored := 0
+	results := make([][]string, len(conf.Nodes))
+	lock := &sync.Mutex{}
+
+	wg := &sync.WaitGroup{}
+	wg.Add(len(conf.Nodes))
+	for i, url := range conf.Nodes {
+		go func(url string, i int) {
+			res, err := client.Post("http://"+url+"/api/rpc", "application/json",
+				strings.NewReader(`{"jsonrpc": "2.0", "method": "status.Get", "id": 0}`))
+			if err != nil {
+				lock.Lock()
+				results[i] = []string{url, "", "", "", "", "", "", err.Error()}
+				errored++
+				lock.Unlock()
+				wg.Done()
+				return
+			}
+			defer res.Body.Close()
+			data, err := ioutil.ReadAll(res.Body)
+			if err != nil {
+				log.Fatal(err)
+			}
+			var out struct {
+				Result struct {
+					PulseNumber  uint32
+					NetworkState string
+					NodeState    string
+					Origin       struct {
+						Role string
+					}
+					ActiveListSize  int
+					WorkingListSize int
+				}
+			}
+			err = json.Unmarshal(data, &out)
+			if err != nil {
+				fmt.Println(string(data))
+				log.Fatal(err)
+			}
+			lock.Lock()
+			results[i] = []string{
+				url,
+				out.Result.NetworkState,
+				out.Result.NodeState,
+				strconv.Itoa(int(out.Result.PulseNumber)),
+				strconv.Itoa(out.Result.ActiveListSize),
+				strconv.Itoa(out.Result.WorkingListSize),
+				out.Result.Origin.Role,
+				"",
+			}
+			state = state && out.Result.NetworkState == core.CompleteNetworkState.String() &&
+				out.Result.NodeState == core.NodeReady.String()
+			lock.Unlock()
+			wg.Done()
+		}(url, i)
+	}
+	wg.Wait()
+
+	ready := state && errored != len(conf.Nodes)
+	return results, ready
+}
+
 func main() {
 	var configFile string
-	var useJsonFormat bool
+	var useJSONFormat bool
 	var singleOutput bool
 	pflag.StringVarP(&configFile, "config", "c", "", "config file")
-	pflag.BoolVarP(&useJsonFormat, "json", "j", false, "use JSON format")
+	pflag.BoolVarP(&useJSONFormat, "json", "j", false, "use JSON format")
 	pflag.BoolVarP(&singleOutput, "single", "s", false, "single output")
 	pflag.Parse()
 
@@ -176,86 +252,14 @@ func main() {
 		conf.Interval = 100 * time.Millisecond
 	}
 
-	client = http.Client{
-		Transport: &http.Transport{},
-		Timeout:   conf.Timeout,
-	}
-
 	buffer := &bytes.Buffer{}
-
-	var (
-		state   bool
-		errored int
-	)
-
 	fmt.Print("\n\n")
-
 	for {
-		state = true
-		errored = 0
-		results := make([][]string, len(conf.Nodes))
-		lock := &sync.Mutex{}
-
-		wg := &sync.WaitGroup{}
-		wg.Add(len(conf.Nodes))
-		for i, url := range conf.Nodes {
-			go func(url string, i int) {
-				res, err := client.Post("http://"+url+"/api/rpc", "application/json",
-					strings.NewReader(`{"jsonrpc": "2.0", "method": "status.Get", "id": 0}`))
-				if err != nil {
-					lock.Lock()
-					results[i] = []string{url, "", "", "", "", "", "", err.Error()}
-					errored++
-					lock.Unlock()
-					wg.Done()
-					return
-				}
-				defer res.Body.Close()
-				data, err := ioutil.ReadAll(res.Body)
-				if err != nil {
-					log.Fatal(err)
-				}
-				var out struct {
-					Result struct {
-						PulseNumber  uint32
-						NetworkState string
-						NodeState    string
-						Origin       struct {
-							Role string
-						}
-						ActiveListSize  int
-						WorkingListSize int
-					}
-				}
-				err = json.Unmarshal(data, &out)
-				if err != nil {
-					fmt.Println(string(data))
-					log.Fatal(err)
-				}
-				lock.Lock()
-				results[i] = []string{
-					url,
-					out.Result.NetworkState,
-					out.Result.NodeState,
-					strconv.Itoa(int(out.Result.PulseNumber)),
-					strconv.Itoa(out.Result.ActiveListSize),
-					strconv.Itoa(out.Result.WorkingListSize),
-					out.Result.Origin.Role,
-					"",
-				}
-				state = state && out.Result.NetworkState == core.CompleteNetworkState.String() &&
-					out.Result.NodeState == core.NodeReady.String()
-				lock.Unlock()
-				wg.Done()
-			}(url, i)
-		}
-		wg.Wait()
-
-		notReady := !state || errored == len(conf.Nodes)
-		if useJsonFormat {
-			displayResultsJson(results, buffer, notReady)
+		results, ready := collectNodesStatuses(conf)
+		if useJSONFormat {
+			displayResultsJSON(results, ready, buffer)
 		} else {
-			displayResultsTable(results, buffer, notReady)
+			displayResultsTable(results, ready, buffer)
 		}
 
 		if singleOutput {
