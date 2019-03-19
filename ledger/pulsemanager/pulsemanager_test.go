@@ -107,7 +107,7 @@ func (s *pulseManagerSuite) TestPulseManager_Set_CheckHotIndexesSending() {
 		s.ctx,
 		core.RecordID(jetID),
 		core.GenesisPulse.PulseNumber,
-		&object.ObjectActivateRecord{})
+		&object.ActivateRecord{})
 	firstIndex := object.Lifeline{
 		LatestState: firstID,
 	}

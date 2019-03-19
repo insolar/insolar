@@ -762,7 +762,7 @@ func (m *LedgerArtifactManager) activateObject(
 
 	o, err := m.sendUpdateObject(
 		ctx,
-		&object.ObjectActivateRecord{
+		&object.ActivateRecord{
 			SideEffectRecord: object.SideEffectRecord{
 				Domain:  domain,
 				Request: obj,

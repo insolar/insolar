@@ -144,7 +144,7 @@ func (s *exporterSuite) TestExporter_Export() {
 	_, err = s.objectStorage.SetRecord(s.ctx, core.RecordID(s.jetID), Pulse10, &object.GenesisRecord{})
 	require.NoError(s.T(), err)
 
-	objectID, err := s.objectStorage.SetRecord(s.ctx, core.RecordID(s.jetID), Pulse10, &object.ObjectActivateRecord{
+	objectID, err := s.objectStorage.SetRecord(s.ctx, core.RecordID(s.jetID), Pulse10, &object.ActivateRecord{
 		StateRecord: object.StateRecord{
 			Memory: blobID,
 		},
@@ -201,7 +201,7 @@ func (s *exporterSuite) TestExporter_Export() {
 	obj, ok := records[objectID58]
 	if assert.True(s.T(), ok, "object not found by ID") {
 		assert.Equal(s.T(), "TypeActivate", obj.Type)
-		assert.Equal(s.T(), true, obj.Data.(*object.ObjectActivateRecord).IsDelegate)
+		assert.Equal(s.T(), true, obj.Data.(*object.ActivateRecord).IsDelegate)
 		assert.Equal(s.T(), "objectValue", obj.Payload["Memory"].(payload)["Field"])
 	}
 
@@ -232,7 +232,7 @@ func (s *exporterSuite) TestExporter_ExportGetBlobFailed() {
 		require.NoError(s.T(), err)
 	}
 
-	_, err := s.objectStorage.SetRecord(s.ctx, core.RecordID(s.jetID), core.FirstPulseNumber+10, &object.ObjectActivateRecord{
+	_, err := s.objectStorage.SetRecord(s.ctx, core.RecordID(s.jetID), core.FirstPulseNumber+10, &object.ActivateRecord{
 		StateRecord: object.StateRecord{
 			Memory: &core.RecordID{},
 		},

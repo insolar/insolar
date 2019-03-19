@@ -46,7 +46,7 @@ func init() {
 	register(300, new(ResultRecord))
 	register(301, new(TypeRecord))
 	register(302, new(CodeRecord))
-	register(303, new(ObjectActivateRecord))
+	register(303, new(ActivateRecord))
 	register(304, new(ObjectAmendRecord))
 	register(305, new(DeactivationRecord))
 }

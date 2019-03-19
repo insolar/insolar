@@ -335,7 +335,7 @@ func (s *amSuite) TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord(
 		ctx,
 		core.RecordID(jetID),
 		core.GenesisPulse.PulseNumber,
-		&object.ObjectActivateRecord{
+		&object.ActivateRecord{
 			SideEffectRecord: object.SideEffectRecord{
 				Domain: *genRandomRef(0),
 			},
@@ -360,7 +360,7 @@ func (s *amSuite) TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord(
 
 	activateRec, err := os.GetRecord(ctx, core.RecordID(jetID), objDesc.StateID())
 	assert.Nil(s.T(), err)
-	assert.Equal(s.T(), activateRec, &object.ObjectActivateRecord{
+	assert.Equal(s.T(), activateRec, &object.ActivateRecord{
 		SideEffectRecord: object.SideEffectRecord{
 			Domain:  domainRef,
 			Request: objRef,
@@ -395,7 +395,7 @@ func (s *amSuite) TestLedgerArtifactManager_DeactivateObject_CreatesCorrectRecor
 		ctx,
 		jetID,
 		core.GenesisPulse.PulseNumber,
-		&object.ObjectActivateRecord{
+		&object.ActivateRecord{
 			SideEffectRecord: object.SideEffectRecord{
 				Domain: *genRandomRef(0),
 			},
@@ -436,7 +436,7 @@ func (s *amSuite) TestLedgerArtifactManager_UpdateObject_CreatesCorrectRecord() 
 		ctx,
 		jetID,
 		core.GenesisPulse.PulseNumber,
-		&object.ObjectActivateRecord{
+		&object.ActivateRecord{
 			SideEffectRecord: object.SideEffectRecord{
 				Domain: *genRandomRef(0),
 			},
@@ -489,7 +489,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors(
 		ctx,
 		jetID,
 		core.GenesisPulse.PulseNumber,
-		&object.ObjectActivateRecord{
+		&object.ActivateRecord{
 			SideEffectRecord: object.SideEffectRecord{
 				Domain: domainRef,
 			},
@@ -590,7 +590,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetChildren() {
 		ctx,
 		jetID,
 		core.GenesisPulse.PulseNumber,
-		&object.ObjectActivateRecord{
+		&object.ActivateRecord{
 			SideEffectRecord: object.SideEffectRecord{
 				Domain: domainRef,
 			},

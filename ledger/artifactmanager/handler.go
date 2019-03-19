@@ -816,7 +816,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 	}
 
 	switch s := state.(type) {
-	case *object.ObjectActivateRecord:
+	case *object.ActivateRecord:
 		s.Memory = blobID
 	case *object.ObjectAmendRecord:
 		s.Memory = blobID
@@ -869,7 +869,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 		idx.LatestState = id
 		idx.State = state.ID()
 		if state.ID() == object.StateActivation {
-			idx.Parent = state.(*object.ObjectActivateRecord).Parent
+			idx.Parent = state.(*object.ActivateRecord).Parent
 		}
 
 		idx.LatestUpdate = parcel.Pulse()

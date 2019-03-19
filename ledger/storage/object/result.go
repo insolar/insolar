@@ -115,8 +115,8 @@ func (r *StateRecord) GetIsPrototype() bool {
 	return r.IsPrototype
 }
 
-// ObjectActivateRecord is produced when we instantiate new object from an available prototype.
-type ObjectActivateRecord struct {
+// ActivateRecord is produced when we instantiate new object from an available prototype.
+type ActivateRecord struct {
 	SideEffectRecord
 	StateRecord
 
@@ -125,17 +125,17 @@ type ObjectActivateRecord struct {
 }
 
 // PrevStateID returns previous state id.
-func (r *ObjectActivateRecord) PrevStateID() *core.RecordID {
+func (r *ActivateRecord) PrevStateID() *core.RecordID {
 	return nil
 }
 
 // StateID returns state id.
-func (r *ObjectActivateRecord) ID() StateID {
+func (r *ActivateRecord) ID() StateID {
 	return StateActivation
 }
 
 // WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
-func (r *ObjectActivateRecord) WriteHashData(w io.Writer) (int, error) {
+func (r *ActivateRecord) WriteHashData(w io.Writer) (int, error) {
 	return w.Write(SerializeRecord(r))
 }
 

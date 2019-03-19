@@ -31,12 +31,12 @@ func Test_RecordByTypeIDPanic(t *testing.T) {
 func TestSerializeDeserializeRecord(t *testing.T) {
 	cs := platformpolicy.NewPlatformCryptographyScheme()
 
-	rec := ObjectActivateRecord{
+	rec := ActivateRecord{
 		StateRecord: StateRecord{
 			Memory: CalculateIDForBlob(cs, core.GenesisPulse.PulseNumber, []byte{1, 2, 3}),
 		},
 	}
 	serialized := SerializeRecord(&rec)
 	deserialized := DeserializeRecord(serialized)
-	assert.Equal(t, rec, *deserialized.(*ObjectActivateRecord))
+	assert.Equal(t, rec, *deserialized.(*ActivateRecord))
 }
