@@ -40,15 +40,17 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
-// CloudHashAccessor provides methods for accessing CloudHash.
 //go:generate minimock -i github.com/insolar/insolar/network/storage.CloudHashAccessor -o ../../testutils/network -s _mock.go
+
+// CloudHashAccessor provides methods for accessing CloudHash.
 type CloudHashAccessor interface {
 	ForPulseNumber(context.Context, core.PulseNumber) ([]byte, error)
 	Latest(ctx context.Context) ([]byte, error)
 }
 
-// CloudHashAppender provides method for appending CloudHash to storage.
 //go:generate minimock -i github.com/insolar/insolar/network/storage.CloudHashAppender -o ../../testutils/network -s _mock.go
+
+// CloudHashAppender provides method for appending CloudHash to storage.
 type CloudHashAppender interface {
 	Append(ctx context.Context, pulse core.PulseNumber, cloudHash []byte) error
 }
