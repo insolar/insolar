@@ -14,24 +14,16 @@
  *    limitations under the License.
  */
 
-package jet
+package drop
 
 import (
-	"github.com/insolar/insolar/core"
+	"github.com/pkg/errors"
 )
 
-// Drop is a blockchain block.
-// It contains hashes of the current block and the previous one.
-type Drop struct {
-	// nolint: golint
-	// Pulse number (probably we should save it too).
-	Pulse core.PulseNumber
+var (
+	// ErrNotFound is returned when value was not found.
+	ErrNotFound = errors.New("value not found")
 
-	// PrevHash is a hash of all record hashes belongs to previous pulse.
-	PrevHash []byte
-
-	// Hash is a hash of all record hashes belongs to one pulse and previous drop hash.
-	Hash []byte
-
-	Size uint64
-}
+	// ErrOverride is returned if something tries to update existing record.
+	ErrOverride = errors.New("records override is forbidden")
+)

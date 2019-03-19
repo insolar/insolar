@@ -21,7 +21,6 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/storage/jet"
 )
 
 type dropKey struct {
@@ -30,38 +29,53 @@ type dropKey struct {
 }
 
 type dropStorageMemory struct {
-	lock sync.RWMutex
-	jets map[dropKey]jet.Drop
+	lock  sync.RWMutex
+	drops map[dropKey]Drop
 }
 
 // NewStorageMemory creates a new storage, that holds data in a memory.
 func NewStorageMemory() *dropStorageMemory { // nolint: golint
 	return &dropStorageMemory{
-		jets: map[dropKey]jet.Drop{},
+		drops: map[dropKey]Drop{},
 	}
 }
 
-// ForPulse returns a jet.Drop for a provided pulse, that is stored in a memory
-func (m *dropStorageMemory) ForPulse(ctx context.Context, jetID core.JetID, pulse core.PulseNumber) (jet.Drop, error) {
+// ForPulse returns a Drop for a provided pulse, that is stored in a memory
+func (m *dropStorageMemory) ForPulse(ctx context.Context, jetID core.JetID, pulse core.PulseNumber) (Drop, error) {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 
 	key := dropKey{jetID: jetID, pulse: pulse}
-	d, ok := m.jets[key]
+	d, ok := m.drops[key]
 	if !ok {
-		return jet.Drop{}, core.ErrNotFound
+		return Drop{}, ErrNotFound
 	}
 
 	return d, nil
 }
 
-// Set saves a provided jet.Drop to a memory
-func (m *dropStorageMemory) Set(ctx context.Context, jetID core.JetID, drop jet.Drop) error {
+// Set saves a provided Drop to a memory
+func (m *dropStorageMemory) Set(ctx context.Context, drop Drop) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	key := dropKey{jetID: jetID, pulse: drop.Pulse}
-	m.jets[key] = drop
+	key := dropKey{jetID: drop.JetID, pulse: drop.Pulse}
+	_, ok := m.drops[key]
+	if ok {
+		return ErrOverride
+	}
+	m.drops[key] = drop
 
 	return nil
+}
+
+// Delete methods removes a drop from a memory storage.
+func (m *dropStorageMemory) Delete(pulse core.PulseNumber) {
+	m.lock.Lock()
+	for key := range m.drops {
+		if key.pulse == pulse {
+			delete(m.drops, key)
+		}
+	}
+	m.lock.Unlock()
 }

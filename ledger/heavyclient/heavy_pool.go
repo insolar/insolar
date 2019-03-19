@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/drop"
 	"go.opencensus.io/stats"
 	"golang.org/x/sync/singleflight"
 )
@@ -34,6 +35,7 @@ type Pool struct {
 	bus            core.MessageBus
 	pulseStorage   core.PulseStorage
 	pulseTracker   storage.PulseTracker
+	dropAccessor   drop.Accessor
 	replicaStorage storage.ReplicaStorage
 	cleaner        storage.Cleaner
 	db             storage.DBContext
@@ -52,12 +54,14 @@ func NewPool(
 	pulseStorage core.PulseStorage,
 	tracker storage.PulseTracker,
 	replicaStorage storage.ReplicaStorage,
+	dropAccessor drop.Accessor,
 	cleaner storage.Cleaner,
 	db storage.DBContext,
 	clientDefaults Options,
 ) *Pool {
 	return &Pool{
 		bus:            bus,
+		dropAccessor:   dropAccessor,
 		pulseStorage:   pulseStorage,
 		pulseTracker:   tracker,
 		replicaStorage: replicaStorage,
@@ -102,6 +106,7 @@ func (scp *Pool) AddPulsesToSyncClient(
 			scp.bus,
 			scp.pulseStorage,
 			scp.pulseTracker,
+			scp.dropAccessor,
 			scp.cleaner,
 			scp.db,
 			jetID,
@@ -181,7 +186,7 @@ func (scp *Pool) LightCleanup(
 			jetPrefixSeen[prefixKey] = struct{}{}
 
 			// TODO: fill candidates here
-			candidates := jetIndexesRemoved[jetID]
+			candidates := jetIndexesRemoved[core.RecordID(jetID)]
 
 			if (len(candidates) == 0) && skipRecordsCleanup {
 				continue
@@ -200,8 +205,8 @@ func (scp *Pool) LightCleanup(
 						untilPN, jetID.DebugString())
 
 					if len(candidates) > 0 {
-						jetRecentStore := rsp.GetIndexStorage(ctx, jetID)
-						idxsRmStat, err := scp.cleaner.CleanJetIndexes(ctx, jetID, jetRecentStore, candidates)
+						jetRecentStore := rsp.GetIndexStorage(ctx, core.RecordID(jetID))
+						idxsRmStat, err := scp.cleaner.CleanJetIndexes(ctx, core.RecordID(jetID), jetRecentStore, candidates)
 						if err != nil {
 							inslogger.FromContext(ctx).Errorf("Error on indexes cleanup (pulse < %v, jet = %v): %v",
 								untilPN, jetID.DebugString(), err)
@@ -214,7 +219,7 @@ func (scp *Pool) LightCleanup(
 						return nil, nil
 					}
 
-					recsRmStat, err := scp.cleaner.CleanJetRecordsUntilPulse(ctx, jetID, untilPN)
+					recsRmStat, err := scp.cleaner.CleanJetRecordsUntilPulse(ctx, core.RecordID(jetID), untilPN)
 					if err != nil {
 						inslogger.FromContext(ctx).Errorf("Error on light cleanup (pulse < %v, jet = %v): %v",
 							untilPN, jetID.DebugString(), err)

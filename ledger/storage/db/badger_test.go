@@ -48,7 +48,7 @@ func TestBadgerDB_Get(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	assert.NoError(t, err)
 
-	db, err := NewBadgerDB(configuration.Ledger{Storage: configuration.Storage{DataDirectory: tmpdir}})
+	db, err := NewBadgerDB(configuration.Ledger{Storage: configuration.Storage{DataDirectoryNewDB: tmpdir}})
 	require.NoError(t, err)
 
 	var (
@@ -74,7 +74,7 @@ func TestBadgerDB_Set(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	assert.NoError(t, err)
 
-	db, err := NewBadgerDB(configuration.Ledger{Storage: configuration.Storage{DataDirectory: tmpdir}})
+	db, err := NewBadgerDB(configuration.Ledger{Storage: configuration.Storage{DataDirectoryNewDB: tmpdir}})
 	require.NoError(t, err)
 
 	var (

@@ -100,13 +100,6 @@ func (c *cleaner) CleanJetRecordsUntilPulse(
 	}
 	allstat["records"] = stat
 
-	if stat, err = c.RemoveJetDropsUntil(ctx, jetID, pn); err != nil {
-		result = multierror.Append(result, errors.Wrap(err, "RemoveJetDropsUntil"))
-		stat.Errors = stat.Scanned
-		stat.Removed = 0
-	}
-	allstat["drops"] = stat
-
 	recordCleanupMetrics(ctx, allstat)
 
 	return allstat, result
@@ -121,11 +114,6 @@ func (c *cleaner) RemoveJetBlobsUntil(ctx context.Context, jetID core.RecordID, 
 // In recods pending requests live, so we need recent storage here
 func (c *cleaner) RemoveJetRecordsUntil(ctx context.Context, jetID core.RecordID, pn core.PulseNumber) (RmStat, error) {
 	return c.removeJetRecordsUntil(ctx, scopeIDRecord, jetID, pn)
-}
-
-// RemoveJetDropsUntil removes for provided JetID all jet drops older than provided pulse number.
-func (c *cleaner) RemoveJetDropsUntil(ctx context.Context, jetID core.RecordID, pn core.PulseNumber) (RmStat, error) {
-	return c.removeJetRecordsUntil(ctx, scopeIDJetDrop, jetID, pn)
 }
 
 func (c *cleaner) removeJetRecordsUntil(

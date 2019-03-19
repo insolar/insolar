@@ -14,5 +14,5 @@
  *    limitations under the License.
  */
 
-// Package jet provides methods for working with Jet objects.
+// Package jet provides objects and interfaces for working with Jet objects.
 package jet

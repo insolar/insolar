@@ -21,9 +21,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/insolar/insolar/ledger/storage/genesis"
-	"github.com/insolar/insolar/ledger/storage/jet"
-	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 
@@ -31,7 +28,10 @@ import (
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/ledger/internal/jet"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/genesis"
+	"github.com/insolar/insolar/ledger/storage/object"
 )
 
 const (
@@ -43,7 +43,7 @@ const (
 type LedgerArtifactManager struct {
 	DB           storage.DBContext    `inject:""`
 	GenesisState genesis.GenesisState `inject:""`
-	JetStorage   jet.JetStorage       `inject:""`
+	JetStorage   jet.Storage          `inject:""`
 
 	DefaultBus                 core.MessageBus                 `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
