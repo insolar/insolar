@@ -65,9 +65,104 @@ func moveBack(reader io.Reader) {
 	fmt.Print(escape(clearDown))
 }
 
+func displayResultsTable(results [][]string, buffer *bytes.Buffer, notReady bool) {
+	table := tablewriter.NewWriter(buffer)
+	table.SetHeader([]string{
+		"URL",
+		"Network State",
+		"Node State",
+		"Pulse Number",
+		"Active List Size",
+		"Working List Size",
+		"Role",
+		"Error",
+	})
+	table.SetBorder(false)
+
+	table.ClearRows()
+	table.ClearFooter()
+
+	moveBack(buffer)
+	buffer.Reset()
+
+	stateString := insolarReady
+	color := tablewriter.FgHiGreenColor
+	if notReady {
+		stateString = insolarNotReady
+		color = tablewriter.FgHiRedColor
+	}
+
+	table.SetFooter([]string{
+		"", "", "", "",
+		"Insolar State", stateString,
+		"Time", time.Now().Format(time.RFC3339),
+	})
+	table.SetFooterColor(
+		tablewriter.Colors{},
+		tablewriter.Colors{},
+		tablewriter.Colors{},
+		tablewriter.Colors{},
+
+		tablewriter.Colors{},
+		tablewriter.Colors{color},
+
+		tablewriter.Colors{},
+		tablewriter.Colors{},
+	)
+
+	table.AppendBulk(results)
+	table.Render()
+	fmt.Print(buffer)
+}
+
+func parseInt64(str string) int64 {
+	res, err := strconv.ParseInt(str, 10, 64)
+	if err != nil {
+		res = -1
+	}
+	return res
+}
+
+func displayResultsJson(results [][]string, buffer *bytes.Buffer, notReady bool) {
+	type DocumentItem struct {
+		URL string
+		NetworkState string
+		NodeState string
+		PulseNumber int64
+		ActiveListSize int64
+		WorkingListSize int64
+		Role string
+		Error string
+	}
+
+	doc := make([]DocumentItem, len(results))
+
+	for i, res := range results {
+		doc[i].URL = res[0]
+		doc[i].NetworkState = res[1]
+		doc[i].NodeState = res[2]
+		doc[i].PulseNumber = parseInt64(res[3])
+		doc[i].ActiveListSize = parseInt64(res[4])
+		doc[i].WorkingListSize = parseInt64(res[5])
+		doc[i].Role = res[6]
+		doc[i].Error = res[7]
+	}
+
+	jsonDoc, err := json.MarshalIndent(doc, "", "    ")
+	if err != nil {
+		panic(err) // should never happen
+	}
+	fmt.Print(string(jsonDoc))
+	fmt.Print("\n\n")
+}
+
 func main() {
 	var configFile string
+	var useJsonFormat bool
+	var singleOutput bool
 	pflag.StringVarP(&configFile, "config", "c", "", "config file")
+	pflag.BoolVarP(&useJsonFormat, "json", "j", false, "use JSON format")
+	pflag.BoolVarP(&singleOutput, "single", "s", false, "single output")
 	pflag.Parse()
 
 	conf, err := pulsewatcher.ReadConfig(configFile)
@@ -156,57 +251,16 @@ func main() {
 		}
 		wg.Wait()
 
-		table := tablewriter.NewWriter(buffer)
-		table.SetHeader([]string{
-			"URL",
-			"Network State",
-			"Node State",
-			"Pulse Number",
-			"Active List Size",
-			"Working List Size",
-			"Role",
-			"Error",
-		})
-		table.SetBorder(false)
-
-		table.ClearRows()
-		table.ClearFooter()
-
-		moveBack(buffer)
-		buffer.Reset()
-
-		stateString := insolarReady
-		color := tablewriter.FgHiGreenColor
-		if !state || errored == len(conf.Nodes) {
-			stateString = insolarNotReady
-			color = tablewriter.FgHiRedColor
+		notReady := !state || errored == len(conf.Nodes)
+		if useJsonFormat {
+			displayResultsJson(results, buffer, notReady)
+		} else {
+			displayResultsTable(results, buffer, notReady)
 		}
 
-		table.SetFooter([]string{
-			"", "", "", "",
-			"Insolar State", stateString,
-			"Time", time.Now().Format(time.RFC3339),
-		})
-		table.SetFooterColor(
-			tablewriter.Colors{},
-			tablewriter.Colors{},
-			tablewriter.Colors{},
-			tablewriter.Colors{},
-
-			tablewriter.Colors{},
-			tablewriter.Colors{color},
-
-			tablewriter.Colors{},
-			tablewriter.Colors{},
-		)
-
-		lock.Lock()
-		table.AppendBulk(results)
-		lock.Unlock()
-
-		table.Render()
-
-		fmt.Print(buffer)
+		if singleOutput {
+			break
+		}
 
 		time.Sleep(conf.Interval)
 	}
