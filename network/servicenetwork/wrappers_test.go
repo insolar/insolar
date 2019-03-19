@@ -25,7 +25,6 @@ import (
 	"github.com/insolar/insolar/consensus/phases"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/transport/host"
 )
 
 type nodeKeeperTestInterface interface {
@@ -35,6 +34,10 @@ type nodeKeeperTestInterface interface {
 
 type nodeKeeperWrapper struct {
 	original network.NodeKeeper
+}
+
+func (n *nodeKeeperWrapper) GetConsensusInfo() network.ConsensusInfo {
+	return n.original.GetConsensusInfo()
 }
 
 func (n *nodeKeeperWrapper) GetWorkingNode(ref core.RecordRef) core.Node {
@@ -51,18 +54,6 @@ func (n *nodeKeeperWrapper) GetWorkingNodesByRole(role core.DynamicRole) []core.
 
 func (n *nodeKeeperWrapper) Wipe(isDiscovery bool) {
 	n.original.(nodeKeeperTestInterface).Wipe(isDiscovery)
-}
-
-func (n *nodeKeeperWrapper) AddTemporaryMapping(nodeID core.RecordRef, shortID core.ShortNodeID, address string) error {
-	return n.original.AddTemporaryMapping(nodeID, shortID, address)
-}
-
-func (n *nodeKeeperWrapper) ResolveConsensus(shortID core.ShortNodeID) *host.Host {
-	return n.original.ResolveConsensus(shortID)
-}
-
-func (n *nodeKeeperWrapper) ResolveConsensusRef(nodeID core.RecordRef) *host.Host {
-	return n.original.ResolveConsensusRef(nodeID)
 }
 
 type phaseManagerWrapper struct {
@@ -113,28 +104,12 @@ func (n *nodeKeeperWrapper) GetActiveNodeByShortID(shortID core.ShortNodeID) cor
 	return n.original.GetActiveNodeByShortID(shortID)
 }
 
-func (n *nodeKeeperWrapper) SetState(state core.NodeNetworkState) {
-	n.original.SetState(state)
-}
-
-func (n *nodeKeeperWrapper) GetState() core.NodeNetworkState {
-	return n.original.GetState()
-}
-
 func (n *nodeKeeperWrapper) GetOriginJoinClaim() (*consensus.NodeJoinClaim, error) {
 	return n.original.GetOriginJoinClaim()
 }
 
 func (n *nodeKeeperWrapper) GetOriginAnnounceClaim(mapper consensus.BitSetMapper) (*consensus.NodeAnnounceClaim, error) {
 	return n.original.GetOriginAnnounceClaim(mapper)
-}
-
-func (n *nodeKeeperWrapper) NodesJoinedDuringPreviousPulse() bool {
-	return n.original.NodesJoinedDuringPreviousPulse()
-}
-
-func (n *nodeKeeperWrapper) AddPendingClaim(claim consensus.ReferendumClaim) bool {
-	return n.original.AddPendingClaim(claim)
 }
 
 func (n *nodeKeeperWrapper) GetClaimQueue() network.ClaimQueue {
@@ -149,8 +124,8 @@ func (n *nodeKeeperWrapper) GetSparseUnsyncList(length int) network.UnsyncList {
 	return n.original.GetSparseUnsyncList(length)
 }
 
-func (n *nodeKeeperWrapper) Sync(list network.UnsyncList) {
-	n.original.Sync(list)
+func (n *nodeKeeperWrapper) Sync(ctx context.Context, nodes []core.Node, claims []consensus.ReferendumClaim) error {
+	return n.original.Sync(ctx, nodes, claims)
 }
 
 func (n *nodeKeeperWrapper) MoveSyncToActive(ctx context.Context) error {

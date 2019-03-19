@@ -37,6 +37,14 @@ func prefixkey(prefix byte, parts ...[]byte) []byte {
 	return k
 }
 
+func JetListPrefixKey() []byte {
+	return prefixkey(scopeIDSystem, []byte{sysJetList})
+}
+
+func GenesisPrefixKey() []byte {
+	return prefixkey(scopeIDSystem, []byte{sysGenesis})
+}
+
 func pulseFromKey(key []byte) core.PulseNumber {
 	return core.NewPulseNumber(pulseBytesFromKey(key))
 }

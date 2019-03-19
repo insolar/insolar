@@ -37,10 +37,11 @@ import (
 	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/index"
+	"github.com/insolar/insolar/ledger/storage/db"
+	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/node"
-	"github.com/insolar/insolar/ledger/storage/record"
+	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
@@ -58,13 +59,14 @@ type heavySuite struct {
 	cleaner func()
 	db      storage.DBContext
 
-	jetStorage     storage.JetStorage
+	jetStorage     jet.JetStorage
 	nodeAccessor   *node.AccessorMock
 	nodeSetter     *node.ModifierMock
 	pulseTracker   storage.PulseTracker
 	replicaStorage storage.ReplicaStorage
 	objectStorage  storage.ObjectStorage
-	dropStorage    storage.DropStorage
+	dropModifier   drop.Modifier
+	dropAccessor   drop.Accessor
 	storageCleaner storage.Cleaner
 }
 
@@ -83,28 +85,32 @@ func (s *heavySuite) BeforeTest(suiteName, testName string) {
 	s.cm = &component.Manager{}
 	s.ctx = inslogger.TestContext(s.T())
 
-	db, cleaner := storagetest.TmpDB(s.ctx, s.T())
+	tmpDB, cleaner := storagetest.TmpDB(s.ctx, s.T())
 	s.cleaner = cleaner
-	s.db = db
-	s.jetStorage = storage.NewJetStorage()
+	s.db = tmpDB
+	s.jetStorage = jet.NewJetStorage()
 	s.nodeAccessor = node.NewAccessorMock(s.T())
 	s.nodeSetter = node.NewModifierMock(s.T())
 	s.pulseTracker = storage.NewPulseTracker()
 	s.replicaStorage = storage.NewReplicaStorage()
 	s.objectStorage = storage.NewObjectStorage()
-	s.dropStorage = storage.NewDropStorage(10)
+	dropStorage := drop.NewStorageDB()
+	s.dropAccessor = dropStorage
+	s.dropModifier = dropStorage
+
 	s.storageCleaner = storage.NewCleaner()
 
 	s.cm.Inject(
 		platformpolicy.NewPlatformCryptographyScheme(),
 		s.db,
+		db.NewMemoryMockDB(),
 		s.jetStorage,
 		s.nodeAccessor,
 		s.nodeSetter,
 		s.pulseTracker,
 		s.replicaStorage,
 		s.objectStorage,
-		s.dropStorage,
+		dropStorage,
 		s.storageCleaner,
 	)
 
@@ -139,7 +145,7 @@ func (s *heavySuite) TestPulseManager_SendToHeavyWithRetry() {
 
 func sendToHeavy(s *heavySuite, withretry bool) {
 	// TODO: test should work with any JetID (add new test?) - 14.Dec.2018 @nordicdyno
-	jetID := jet.ZeroJetID
+	jetID := core.ZeroJetID
 	// Mock N1: LR mock do nothing
 	lrMock := testutils.NewLogicRunnerMock(s.T())
 	lrMock.OnPulseMock.Return(nil)
@@ -267,7 +273,8 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 	pm.ReplicaStorage = s.replicaStorage
 	pm.StorageCleaner = s.storageCleaner
 	pm.ObjectStorage = s.objectStorage
-	pm.DropStorage = s.dropStorage
+	pm.DropAccessor = s.dropAccessor
+	pm.DropModifier = s.dropModifier
 
 	ps := storage.NewPulseStorage()
 	ps.PulseTracker = s.pulseTracker
@@ -300,7 +307,7 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 
 	for i := 0; i < 2; i++ {
 		// fmt.Printf("%v: call addRecords for pulse %v\n", t.Name(), lastpulse)
-		addRecords(s.ctx, s.T(), s.objectStorage, jetID, core.PulseNumber(lastpulse+i))
+		addRecords(s.ctx, s.T(), s.objectStorage, core.RecordID(jetID), core.PulseNumber(lastpulse+i))
 	}
 
 	fmt.Println("Case1: sync after db fill and with new received pulses")
@@ -313,7 +320,7 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 	fmt.Println("Case2: sync during db fill")
 	for i := 0; i < 2; i++ {
 		// fill DB with records, indexes (TODO: add blobs)
-		addRecords(s.ctx, s.T(), s.objectStorage, jetID, core.PulseNumber(lastpulse))
+		addRecords(s.ctx, s.T(), s.objectStorage, core.RecordID(jetID), core.PulseNumber(lastpulse))
 
 		lastpulse++
 		err = setpulse(s.ctx, pm, lastpulse)
@@ -357,8 +364,8 @@ func addRecords(
 		ctx,
 		jetID,
 		pn,
-		&record.ObjectActivateRecord{
-			SideEffectRecord: record.SideEffectRecord{
+		&object.ObjectActivateRecord{
+			SideEffectRecord: object.SideEffectRecord{
 				Domain: testutils.RandomRef(),
 			},
 		},
@@ -369,7 +376,7 @@ func addRecords(
 	require.NoError(t, err)
 
 	// set index of record
-	err = objectStorage.SetObjectIndex(ctx, jetID, parentID, &index.ObjectLifeline{
+	err = objectStorage.SetObjectIndex(ctx, jetID, parentID, &object.Lifeline{
 		LatestState: parentID,
 	})
 	require.NoError(t, err)

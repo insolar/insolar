@@ -25,6 +25,7 @@ import (
 type HeavySync interface {
 	Start(ctx context.Context, jet RecordID, pn PulseNumber) error
 	Store(ctx context.Context, jet RecordID, pn PulseNumber, kvs []KV) error
+	StoreDrop(ctx context.Context, jetID JetID, rawDrop []byte) error
 	Stop(ctx context.Context, jet RecordID, pn PulseNumber) error
 	Reset(ctx context.Context, jet RecordID, pn PulseNumber) error
 }

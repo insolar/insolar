@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/utils"
 	"github.com/pkg/errors"
@@ -65,7 +66,7 @@ func (nb *networkBootstrapper) Bootstrap(ctx context.Context) (*network.Bootstra
 		// if the network is up and complete, we return discovery nodes via consensus
 		if err == ErrReconnectRequired {
 			log.Debugf("[ Bootstrap ] Connecting discovery node %s as joiner", nb.NodeKeeper.GetOrigin().ID())
-			nb.NodeKeeper.SetState(core.WaitingNodeNetworkState)
+			nb.NodeKeeper.GetOrigin().(nodenetwork.MutableNode).SetState(core.NodePending)
 			result, err = nb.bootstrapJoiner(ctx)
 		}
 	} else {
@@ -89,6 +90,7 @@ func (nb *networkBootstrapper) GetLastPulse() core.PulseNumber {
 func (nb *networkBootstrapper) bootstrapJoiner(ctx context.Context) (*network.BootstrapResult, error) {
 	ctx, span := instracer.StartSpan(ctx, "NetworkBootstrapper.bootstrapJoiner")
 	defer span.End()
+	nb.NodeKeeper.GetConsensusInfo().SetIsJoiner(true)
 	result, discoveryNode, err := nb.Bootstrapper.Bootstrap(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error bootstrapping to discovery node")

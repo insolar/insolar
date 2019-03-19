@@ -194,6 +194,7 @@ func initComponents(
 		networkSwitcher,
 		networkCoordinator,
 		cryptographyService,
+		keyProcessor,
 	}...)
 
 	cm.Inject(components...)

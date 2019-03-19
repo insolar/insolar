@@ -23,7 +23,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/component"
-	"github.com/insolar/insolar/ledger/storage/jet"
+	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -32,7 +32,6 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/index"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 )
 
@@ -109,17 +108,17 @@ which try reads and writes the same key simultaneously
 */
 
 func (s *txnSuite) TestStore_Transaction_LockOnUpdate() {
-	jetID := *jet.NewID(0, nil)
+	jetID := core.RecordID(*core.NewJetID(0, nil))
 
 	objid := core.NewRecordID(100500, nil)
 	idxid := core.NewRecordID(0, nil)
-	objvalue0 := &index.ObjectLifeline{
+	objvalue0 := &object.Lifeline{
 		LatestState: objid,
 	}
 	err := s.objectStorage.SetObjectIndex(s.ctx, jetID, idxid, objvalue0)
 	require.NoError(s.T(), err)
 
-	lockfn := func(t *testing.T, withlock bool) *index.ObjectLifeline {
+	lockfn := func(t *testing.T, withlock bool) *object.Lifeline {
 		started2 := make(chan bool)
 		proceed2 := make(chan bool)
 		var wg sync.WaitGroup

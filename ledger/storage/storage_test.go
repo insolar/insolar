@@ -17,21 +17,19 @@
 package storage_test
 
 import (
-	"bytes"
 	"context"
 	"testing"
 
 	"github.com/insolar/insolar/component"
-	base58 "github.com/jbenet/go-base58"
+	"github.com/insolar/insolar/ledger/storage/db"
+	jetdrop "github.com/insolar/insolar/ledger/storage/drop"
+	"github.com/insolar/insolar/ledger/storage/jet"
+	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/index"
-	"github.com/insolar/insolar/ledger/storage/jet"
-	"github.com/insolar/insolar/ledger/storage/record"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
@@ -48,7 +46,8 @@ type storageSuite struct {
 	db      storage.DBContext
 
 	objectStorage storage.ObjectStorage
-	dropStorage   storage.DropStorage
+	dropModifier  jetdrop.Modifier
+	dropAccessor  jetdrop.Accessor
 	pulseTracker  storage.PulseTracker
 
 	jetID core.RecordID
@@ -69,20 +68,25 @@ func (s *storageSuite) BeforeTest(suiteName, testName string) {
 	s.cm = &component.Manager{}
 	s.ctx = inslogger.TestContext(s.T())
 
-	db, cleaner := storagetest.TmpDB(s.ctx, s.T())
-	s.db = db
+	tmpDB, cleaner := storagetest.TmpDB(s.ctx, s.T())
+	s.db = tmpDB
 	s.cleaner = cleaner
 
 	s.objectStorage = storage.NewObjectStorage()
-	s.dropStorage = storage.NewDropStorage(10)
+
+	dropStorage := jetdrop.NewStorageDB()
+	s.dropAccessor = dropStorage
+	s.dropModifier = dropStorage
 	s.pulseTracker = storage.NewPulseTracker()
 	s.jetID = testutils.RandomJet()
 
 	s.cm.Inject(
 		platformpolicy.NewPlatformCryptographyScheme(),
 		s.db,
+		db.NewMemoryMockDB(),
 		s.objectStorage,
-		s.dropStorage,
+		s.dropModifier,
+		s.dropAccessor,
 		s.pulseTracker,
 	)
 
@@ -111,7 +115,7 @@ func (s *storageSuite) TestDB_GetRecordNotFound() {
 }
 
 func (s *storageSuite) TestDB_SetRecord() {
-	rec := &record.RequestRecord{}
+	rec := &object.RequestRecord{}
 	gotRef, err := s.objectStorage.SetRecord(s.ctx, s.jetID, core.GenesisPulse.PulseNumber, rec)
 	assert.Nil(s.T(), err)
 
@@ -130,7 +134,7 @@ func (s *storageSuite) TestDB_SetObjectIndex_ReturnsNotFoundIfNoIndex() {
 }
 
 func (s *storageSuite) TestDB_SetObjectIndex_StoresCorrectDataInStorage() {
-	idx := index.ObjectLifeline{
+	idx := object.Lifeline{
 		LatestState: core.NewRecordID(0, hexhash("20")),
 	}
 	zeroid := core.NewRecordID(0, hexhash(""))
@@ -146,7 +150,7 @@ func (s *storageSuite) TestDB_SetObjectIndex_SaveLastUpdate() {
 	// Arrange
 	jetID := testutils.RandomJet()
 
-	idx := index.ObjectLifeline{
+	idx := object.Lifeline{
 		LatestState:  core.NewRecordID(0, hexhash("20")),
 		LatestUpdate: 1239,
 	}
@@ -164,68 +168,26 @@ func (s *storageSuite) TestDB_SetObjectIndex_SaveLastUpdate() {
 }
 
 func (s *storageSuite) TestDB_GetDrop_ReturnsNotFoundIfNoDrop() {
-	drop, err := s.dropStorage.GetDrop(s.ctx, testutils.RandomJet(), 1)
-	assert.Equal(s.T(), err, core.ErrNotFound)
-	assert.Nil(s.T(), drop)
-}
-
-func (s *storageSuite) TestDB_CreateDrop() {
-	// FIXME: should work with random jet
-	// jetID := testutils.RandomJet()
-	jetID := *jet.NewID(0, nil)
-
-	pulse := core.PulseNumber(core.FirstPulseNumber + 10)
-	err := s.pulseTracker.AddPulse(
-		s.ctx,
-		core.Pulse{
-			PulseNumber: pulse,
-			Entropy:     core.Entropy{1, 2, 3},
-		},
-	)
-	cs := platformpolicy.NewPlatformCryptographyScheme()
-
-	msgCount := 3
-	for i := 1; i < 1+msgCount; i++ {
-		setRecordMessage := message.SetRecord{
-			Record: record.SerializeRecord(&record.CodeRecord{
-				Code: record.CalculateIDForBlob(cs, pulse, []byte{byte(i)}),
-			}),
-		}
-		err = s.objectStorage.SetMessage(s.ctx, jetID, pulse, &setRecordMessage)
-		require.NoError(s.T(), err)
-		_, err = s.objectStorage.SetBlob(s.ctx, jetID, pulse, []byte{byte(i)})
-		require.NoError(s.T(), err)
-	}
-
-	drop, messages, dropSize, err := s.dropStorage.CreateDrop(s.ctx, jetID, pulse, []byte{4, 5, 6})
-	require.NoError(s.T(), err)
-	require.NotEqual(s.T(), 0, dropSize)
-	// TODO: messages collection was disabled in ab46d01, validation is not active ATM
-	require.Equal(s.T(), 0, len(messages))
-	require.Equal(s.T(), pulse, drop.Pulse)
-	require.Equal(s.T(), "2aCdao6DhZSWQNTrtrxJW7QQZRb6UJ1ssRi9cg", base58.Encode(drop.Hash))
-
-	for _, rawMessage := range messages {
-		formatedMessage, err := message.Deserialize(bytes.NewBuffer(rawMessage))
-		assert.NoError(s.T(), err)
-		assert.Equal(s.T(), core.TypeSetRecord, formatedMessage.Type())
-	}
+	drop, err := s.dropAccessor.ForPulse(s.ctx, core.JetID(testutils.RandomJet()), 1)
+	assert.Equal(s.T(), err, db.ErrNotFound)
+	assert.Equal(s.T(), jet.Drop{}, drop)
 }
 
 func (s *storageSuite) TestDB_SetDrop() {
-	drop42 := jet.JetDrop{
+	jetID := *core.NewJetID(0, nil)
+	drop42 := jet.Drop{
 		Pulse: 42,
 		Hash:  []byte{0xFF},
+		JetID: jetID,
 	}
 	// FIXME: should work with random jet
 	// jetID := testutils.RandomJet()
-	jetID := *jet.NewID(0, nil)
-	err := s.dropStorage.SetDrop(s.ctx, jetID, &drop42)
+	err := s.dropModifier.Set(s.ctx, drop42)
 	assert.NoError(s.T(), err)
 
-	got, err := s.dropStorage.GetDrop(s.ctx, jetID, 42)
+	got, err := s.dropAccessor.ForPulse(s.ctx, jetID, 42)
 	assert.NoError(s.T(), err)
-	assert.Equal(s.T(), *got, drop42)
+	assert.Equal(s.T(), got, drop42)
 }
 
 func (s *storageSuite) TestDB_AddPulse() {
@@ -253,17 +215,18 @@ func (s *storageSuite) TestDB_AddPulse() {
 
 func TestDB_Close(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-	db, cleaner := storagetest.TmpDB(ctx, t)
+	tmpDB, cleaner := storagetest.TmpDB(ctx, t)
 
 	jetID := testutils.RandomJet()
 
 	os := storage.NewObjectStorage()
-	ds := storage.NewDropStorage(10)
+	ds := jetdrop.NewStorageDB()
 
 	cm := &component.Manager{}
 	cm.Inject(
 		platformpolicy.NewPlatformCryptographyScheme(),
-		db,
+		tmpDB,
+		db.NewMemoryMockDB(),
 		os,
 		ds,
 	)
@@ -287,7 +250,7 @@ func TestDB_Close(t *testing.T) {
 	assert.Nil(t, rec)
 	assert.Equal(t, err, storage.ErrClosed)
 
-	rec = &record.RequestRecord{}
+	rec = &object.RequestRecord{}
 	gotRef, err := os.SetRecord(ctx, jetID, core.GenesisPulse.PulseNumber, rec)
 	assert.Nil(t, gotRef)
 	assert.Equal(t, err, storage.ErrClosed)

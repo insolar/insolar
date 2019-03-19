@@ -33,8 +33,7 @@ import (
 type Controller struct {
 	Bootstrapper  bootstrap.NetworkBootstrapper `inject:""`
 	RPCController RPCController                 `inject:""`
-
-	network network.HostNetwork
+	Network       network.HostNetwork           `inject:""`
 }
 
 func (c *Controller) SetLastIgnoredPulse(number core.PulseNumber) {
@@ -67,8 +66,8 @@ func (c *Controller) Bootstrap(ctx context.Context) (*network.BootstrapResult, e
 
 // Inject inject components.
 func (c *Controller) Init(ctx context.Context) error {
-	c.network.RegisterRequestHandler(types.Ping, func(ctx context.Context, request network.Request) (network.Response, error) {
-		return c.network.BuildResponse(ctx, request, nil), nil
+	c.Network.RegisterRequestHandler(types.Ping, func(ctx context.Context, request network.Request) (network.Response, error) {
+		return c.Network.BuildResponse(ctx, request, nil), nil
 	})
 	return nil
 }
@@ -90,6 +89,6 @@ func ConfigureOptions(conf configuration.Configuration) *common.Options {
 }
 
 // NewNetworkController create new network controller.
-func NewNetworkController(net network.HostNetwork) network.Controller {
-	return &Controller{network: net}
+func NewNetworkController() network.Controller {
+	return &Controller{}
 }

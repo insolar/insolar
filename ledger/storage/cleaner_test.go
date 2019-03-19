@@ -26,6 +26,8 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/db"
+	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
@@ -42,7 +44,8 @@ type cleanerSuite struct {
 	cleaner func()
 
 	objectStorage  storage.ObjectStorage
-	dropStorage    storage.DropStorage
+	dropModifier   drop.Modifier
+	dropAccessor   drop.Accessor
 	storageCleaner storage.Cleaner
 }
 
@@ -61,19 +64,23 @@ func (s *cleanerSuite) BeforeTest(suiteName, testName string) {
 	s.cm = &component.Manager{}
 	s.ctx = inslogger.TestContext(s.T())
 
-	db, cleaner := storagetest.TmpDB(s.ctx, s.T())
+	tmpDB, cleaner := storagetest.TmpDB(s.ctx, s.T())
 	s.cleaner = cleaner
 
 	s.objectStorage = storage.NewObjectStorage()
-	s.dropStorage = storage.NewDropStorage(0)
+	dropStorage := drop.NewStorageDB()
+	s.dropAccessor = dropStorage
+	s.dropModifier = dropStorage
 	s.storageCleaner = storage.NewCleaner()
 
 	s.cm.Inject(
 		platformpolicy.NewPlatformCryptographyScheme(),
-		db,
+		tmpDB,
+		db.NewMemoryMockDB(),
 		s.objectStorage,
 		s.storageCleaner,
-		s.dropStorage,
+		s.dropAccessor,
+		s.dropModifier,
 	)
 
 	err := s.cm.Init(s.ctx)
@@ -145,20 +152,6 @@ func (s *cleanerSuite) Test_RemoveRecords() {
 			checks = append(checks, recordCase{
 				cleanCase:     recCC,
 				objectStorage: s.objectStorage,
-			})
-
-			_, err = storagetest.AddRandDrop(ctx, s.dropStorage, jetID, pn)
-			require.NoError(t, err)
-			dropCC := cleanCase{
-				rectype:    "drop",
-				id:         recID,
-				jetID:      jetID,
-				pulseNum:   pn,
-				shouldLeft: shouldLeft,
-			}
-			checks = append(checks, dropCase{
-				cleanCase:   dropCC,
-				dropStorage: s.dropStorage,
 			})
 		}
 	}
@@ -283,15 +276,5 @@ type recordCase struct {
 
 func (c recordCase) Check(ctx context.Context, t *testing.T) {
 	_, err := c.objectStorage.GetRecord(ctx, c.jetID, c.id)
-	c.check(t, err)
-}
-
-type dropCase struct {
-	cleanCase
-	dropStorage storage.DropStorage
-}
-
-func (c dropCase) Check(ctx context.Context, t *testing.T) {
-	_, err := c.dropStorage.GetDrop(ctx, c.jetID, c.pulseNum)
 	c.check(t, err)
 }

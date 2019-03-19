@@ -26,12 +26,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/consensus/claimhandler"
 	"github.com/insolar/insolar/consensus/phases"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -45,7 +45,7 @@ func (s *testSuite) TestNetworkConsensus3Times() {
 }
 
 func (s *testSuite) TestNodeConnect() {
-	testNode := newNetworkNode()
+	testNode := s.newNetworkNode("testNode")
 	s.preInitNode(testNode)
 
 	s.InitNode(testNode)
@@ -73,7 +73,7 @@ func (s *testSuite) TestNodeConnect() {
 }
 
 func (s *testSuite) TestNodeConnectInvalidVersion() {
-	testNode := newNetworkNode()
+	testNode := s.newNetworkNode("testNode")
 	s.preInitNode(testNode)
 	testNode.serviceNetwork.NodeKeeper.GetOrigin().(nodenetwork.MutableNode).SetVersion("ololo")
 	s.InitNode(testNode)
@@ -87,16 +87,16 @@ func (s *testSuite) TestManyNodesConnect() {
 		s.T().Skip(consensusMinMsg)
 	}
 
-	nodesCount := 10
+	joinersCount := 10
 	nodes := make([]*networkNode, 0)
-	for i := 0; i < nodesCount; i++ {
-		nodes = append(nodes, newNetworkNode())
+	for i := 0; i < joinersCount; i++ {
+		nodes = append(nodes, s.newNetworkNode(fmt.Sprintf("testNode_%d", i)))
 		s.preInitNode(nodes[i])
 		s.InitNode(nodes[i])
 	}
 
 	wg := sync.WaitGroup{}
-	wg.Add(nodesCount)
+	wg.Add(joinersCount)
 
 	for _, node := range nodes {
 		go func(wg *sync.WaitGroup, node *networkNode) {
@@ -115,10 +115,7 @@ func (s *testSuite) TestManyNodesConnect() {
 
 	s.waitForConsensus(5)
 
-	joined := nodesCount
-	if s.getMaxJoinCount() < nodesCount {
-		joined = s.getMaxJoinCount()
-	}
+	joined := claimhandler.ApprovedJoinersCount(joinersCount, s.getNodesCount())
 	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
 	s.Equal(s.getNodesCount()+joined, len(activeNodes))
 }
@@ -128,7 +125,7 @@ func (s *testSuite) TestNodeLeave() {
 		s.T().Skip(consensusMinMsg)
 	}
 
-	testNode := newNetworkNode()
+	testNode := s.newNetworkNode("testNode")
 	s.preInitNode(testNode)
 
 	s.InitNode(testNode)
@@ -165,7 +162,7 @@ func (s *testSuite) TestNodeLeaveAtETA() {
 		s.T().Skip(consensusMinMsg)
 	}
 
-	testNode := newNetworkNode()
+	testNode := s.newNetworkNode("testNode")
 	s.preInitNode(testNode)
 
 	s.InitNode(testNode)
@@ -206,7 +203,7 @@ func (s *testSuite) TestNodeComeAfterAnotherNodeSendLeaveETA() {
 		s.T().Skip(consensusMinMsg)
 	}
 
-	leavingNode := newNetworkNode()
+	leavingNode := s.newNetworkNode("leavingNode")
 	s.preInitNode(leavingNode)
 
 	s.InitNode(leavingNode)
@@ -230,7 +227,7 @@ func (s *testSuite) TestNodeComeAfterAnotherNodeSendLeaveETA() {
 	// wait for leavingNode will be marked as leaving
 	s.waitForConsensus(1)
 
-	newNode := newNetworkNode()
+	newNode := s.newNetworkNode("testNode")
 	s.preInitNode(newNode)
 
 	s.InitNode(newNode)
@@ -420,8 +417,10 @@ func (s *testSuite) TestDiscoveryDown() {
 	s.StopNode(s.fixture().bootstrapNodes[0])
 
 	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
-	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
-	s.Equal(s.getNodesCount()-1, len(activeNodes))
+	for i := 1; i < s.getNodesCount(); i++ {
+		activeNodes := s.fixture().bootstrapNodes[i].serviceNetwork.NodeKeeper.GetWorkingNodes()
+		s.Equal(s.getNodesCount()-1, len(activeNodes))
+	}
 }
 
 func (s *testSuite) TestDiscoveryRestart() {
@@ -435,7 +434,7 @@ func (s *testSuite) TestDiscoveryRestart() {
 	err := s.fixture().bootstrapNodes[0].serviceNetwork.Stop(context.Background())
 	s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.(*nodeKeeperWrapper).Wipe(true)
 	log.Info("Discovery node stopped...")
-	require.NoError(s.T(), err)
+	s.Require().NoError(err)
 
 	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
 	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
@@ -444,7 +443,7 @@ func (s *testSuite) TestDiscoveryRestart() {
 	log.Info("Discovery node starting...")
 	err = s.fixture().bootstrapNodes[0].serviceNetwork.Start(context.Background())
 	log.Info("Discovery node started")
-	require.NoError(s.T(), err)
+	s.Require().NoError(err)
 
 	s.waitForConsensusExcept(3, s.fixture().bootstrapNodes[0].id)
 	activeNodes = s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
@@ -464,13 +463,13 @@ func (s *testSuite) TestDiscoveryRestartNoWait() {
 	err := s.fixture().bootstrapNodes[0].serviceNetwork.Stop(context.Background())
 	s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.(*nodeKeeperWrapper).Wipe(true)
 	log.Info("Discovery node stopped...")
-	require.NoError(s.T(), err)
+	s.Require().NoError(err)
 
 	go func(s *testSuite) {
 		log.Info("Discovery node starting...")
 		err = s.fixture().bootstrapNodes[0].serviceNetwork.Start(context.Background())
 		log.Info("Discovery node started")
-		require.NoError(s.T(), err)
+		s.Require().NoError(err)
 	}(s)
 
 	s.waitForConsensusExcept(4, s.fixture().bootstrapNodes[0].id)

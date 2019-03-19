@@ -25,6 +25,10 @@ import (
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/db"
+	"github.com/insolar/insolar/ledger/storage/drop"
+	"github.com/insolar/insolar/ledger/storage/genesis"
+	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -63,8 +67,7 @@ func TmpDB(ctx context.Context, t testing.TB, options ...Option) (storage.DBCont
 	tmpdir, err := ioutil.TempDir(opts.dir, "bdb-test-")
 	assert.NoError(t, err)
 
-	db, err := storage.NewDB(configuration.Ledger{
-		JetSizesHistoryDepth: 10,
+	tmpDB, err := storage.NewDB(configuration.Ledger{
 		Storage: configuration.Storage{
 			DataDirectory: tmpdir,
 		},
@@ -75,15 +78,16 @@ func TmpDB(ctx context.Context, t testing.TB, options ...Option) (storage.DBCont
 
 	cm.Inject(
 		testutils.NewPlatformCryptographyScheme(),
-		db,
-		storage.NewJetStorage(),
+		tmpDB,
+		db.NewMemoryMockDB(),
+		jet.NewJetStorage(),
 		storage.NewObjectStorage(),
-		storage.NewDropStorage(10),
+		drop.NewStorageDB(),
 		storage.NewPulseTracker(),
 	)
 
 	if !opts.nobootstrap {
-		gi := storage.NewGenesisInitializer()
+		gi := genesis.NewGenesisInitializer()
 		cm.Inject(gi)
 	}
 
@@ -96,10 +100,10 @@ func TmpDB(ctx context.Context, t testing.TB, options ...Option) (storage.DBCont
 		t.Error("ComponentManager start failed", err)
 	}
 
-	return db, func() {
+	return tmpDB, func() {
 		rmErr := os.RemoveAll(tmpdir)
 		if rmErr != nil {
-			t.Fatal("temporary db dir cleanup failed", rmErr)
+			t.Fatal("temporary tmpDB dir cleanup failed", rmErr)
 		}
 	}
 }

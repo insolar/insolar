@@ -71,3 +71,7 @@
 [[constraint]]
   branch = "master"
   name = "github.com/google/gofuzz"
+
+[[constraint]]
+  name = "github.com/rs/zerolog"
+  version = "1.12.0"

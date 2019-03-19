@@ -27,7 +27,8 @@ import (
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/record"
+	"github.com/insolar/insolar/ledger/storage/jet"
+	"github.com/insolar/insolar/ledger/storage/object"
 	base58 "github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
@@ -36,7 +37,7 @@ import (
 // Exporter provides methods for fetching data view from storage.
 type Exporter struct {
 	DB            storage.DBContext     `inject:""`
-	JetStorage    storage.JetStorage    `inject:""`
+	JetStorage    jet.JetStorage        `inject:""`
 	ObjectStorage storage.ObjectStorage `inject:""`
 	PulseTracker  storage.PulseTracker  `inject:""`
 	PulseStorage  core.PulseStorage     `inject:""`
@@ -62,7 +63,7 @@ func (p payload) MarshalJSON() ([]byte, error) {
 
 type recordData struct {
 	Type    string
-	Data    record.Record
+	Data    object.Record
 	Payload payload
 }
 
@@ -151,7 +152,7 @@ func (e *Exporter) Export(ctx context.Context, fromPulse core.PulseNumber, size 
 
 func (e *Exporter) exportPulse(ctx context.Context, jetID core.RecordID, pulse *core.Pulse) (*pulseData, error) {
 	records := recordsData{}
-	err := e.DB.IterateRecordsOnPulse(ctx, jetID, pulse.PulseNumber, func(id core.RecordID, rec record.Record) error {
+	err := e.DB.IterateRecordsOnPulse(ctx, jetID, pulse.PulseNumber, func(id core.RecordID, rec object.Record) error {
 		pl := e.getPayload(ctx, jetID, rec)
 
 		records[string(base58.Encode(id[:]))] = recordData{
@@ -174,9 +175,9 @@ func (e *Exporter) exportPulse(ctx context.Context, jetID core.RecordID, pulse *
 	return &data, nil
 }
 
-func (e *Exporter) getPayload(ctx context.Context, jetID core.RecordID, rec record.Record) payload {
+func (e *Exporter) getPayload(ctx context.Context, jetID core.RecordID, rec object.Record) payload {
 	switch r := rec.(type) {
-	case record.ObjectState:
+	case object.ObjectState:
 		if r.GetMemory() == nil {
 			break
 		}
@@ -191,7 +192,7 @@ func (e *Exporter) getPayload(ctx context.Context, jetID core.RecordID, rec reco
 			return payload{"MemoryBinary": blob}
 		}
 		return payload{"Memory": memory}
-	case record.Request:
+	case object.Request:
 		if r.GetPayload() == nil {
 			break
 		}
@@ -224,29 +225,29 @@ func (e *Exporter) getPayload(ctx context.Context, jetID core.RecordID, rec reco
 	return nil
 }
 
-func recordType(rec record.Record) string {
+func recordType(rec object.Record) string {
 	switch rec.(type) {
-	case *record.GenesisRecord:
+	case *object.GenesisRecord:
 		return "TypeGenesis"
-	case *record.ChildRecord:
+	case *object.ChildRecord:
 		return "TypeChild"
-	case *record.JetRecord:
+	case *object.JetRecord:
 		return "TypeJet"
-	case *record.RequestRecord:
+	case *object.RequestRecord:
 		return "TypeCallRequest"
-	case *record.ResultRecord:
+	case *object.ResultRecord:
 		return "TypeResult"
-	case *record.TypeRecord:
+	case *object.TypeRecord:
 		return "TypeType"
-	case *record.CodeRecord:
+	case *object.CodeRecord:
 		return "TypeCode"
-	case *record.ObjectActivateRecord:
+	case *object.ObjectActivateRecord:
 		return "TypeActivate"
-	case *record.ObjectAmendRecord:
+	case *object.ObjectAmendRecord:
 		return "TypeAmend"
-	case *record.DeactivationRecord:
+	case *object.DeactivationRecord:
 		return "TypeDeactivate"
 	}
 
-	return record.TypeFromRecord(rec).String()
+	return object.TypeFromRecord(rec).String()
 }

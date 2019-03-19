@@ -23,6 +23,6 @@ import (
 
 // PulseNumber generates random pulse number (excluding special cases).
 func PulseNumber() (pn core.PulseNumber) {
-	fuzz.New().Fuzz(&pn)
+	fuzz.New().NilChance(0).Fuzz(&pn)
 	return
 }

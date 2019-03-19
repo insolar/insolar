@@ -19,12 +19,12 @@ package storagetest
 import (
 	"context"
 
+	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/jet"
-	"github.com/insolar/insolar/ledger/storage/record"
+	"github.com/insolar/insolar/ledger/storage/object"
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/index"
 	"github.com/insolar/insolar/testutils"
 )
 
@@ -37,7 +37,7 @@ func AddRandIndex(
 	pulsenum core.PulseNumber,
 ) (*core.RecordID, error) {
 	parentID := testutils.RandomID()
-	err := objectStorage.SetObjectIndex(ctx, jetID, &parentID, &index.ObjectLifeline{
+	err := objectStorage.SetObjectIndex(ctx, jetID, &parentID, &object.Lifeline{
 		LatestState: &parentID,
 	})
 	return &parentID, err
@@ -63,7 +63,7 @@ func AddRandRecord(
 ) (*core.RecordID, error) {
 
 	randID := testutils.RandomID()
-	record := record.CodeRecord{
+	record := object.CodeRecord{
 		Code: &randID,
 	}
 	return objectStorage.SetRecord(
@@ -77,21 +77,24 @@ func AddRandRecord(
 // AddRandDrop adds random drop.
 func AddRandDrop(
 	ctx context.Context,
-	dropStorage storage.DropStorage,
+	modifier drop.Modifier,
+	accessor drop.Accessor,
 	jetID core.RecordID,
 	pulsenum core.PulseNumber,
-) (*jet.JetDrop, error) {
+) (*jet.Drop, error) {
 
 	hash1 := testutils.RandomID()
 	hash2 := testutils.RandomID()
-	drop := jet.JetDrop{
+	drop := jet.Drop{
 		Pulse:    pulsenum,
 		PrevHash: hash1[:],
 		Hash:     hash2[:],
+		JetID:    core.JetID(jetID),
 	}
-	err := dropStorage.SetDrop(ctx, jetID, &drop)
+	err := modifier.Set(ctx, drop)
 	if err != nil {
 		return nil, err
 	}
-	return dropStorage.GetDrop(ctx, jetID, pulsenum)
+	resDrop, err := accessor.ForPulse(ctx, core.JetID(jetID), pulsenum)
+	return &resDrop, err
 }

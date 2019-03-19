@@ -13,7 +13,7 @@ import (
 	badger "github.com/dgraph-io/badger"
 	"github.com/gojuno/minimock"
 	core "github.com/insolar/insolar/core"
-	record "github.com/insolar/insolar/ledger/storage/record"
+	object "github.com/insolar/insolar/ledger/storage/object"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -32,15 +32,25 @@ type DBContextMock struct {
 	ClosePreCounter uint64
 	CloseMock       mDBContextMockClose
 
+	GetFunc       func(p context.Context, p1 []byte) (r []byte, r1 error)
+	GetCounter    uint64
+	GetPreCounter uint64
+	GetMock       mDBContextMockGet
+
 	GetBadgerDBFunc       func() (r *badger.DB)
 	GetBadgerDBCounter    uint64
 	GetBadgerDBPreCounter uint64
 	GetBadgerDBMock       mDBContextMockGetBadgerDB
 
-	IterateRecordsOnPulseFunc       func(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 func(p core.RecordID, p1 record.Record) (r error)) (r error)
+	IterateRecordsOnPulseFunc       func(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 func(p core.RecordID, p1 object.Record) (r error)) (r error)
 	IterateRecordsOnPulseCounter    uint64
 	IterateRecordsOnPulsePreCounter uint64
 	IterateRecordsOnPulseMock       mDBContextMockIterateRecordsOnPulse
+
+	SetFunc       func(p context.Context, p1 []byte, p2 []byte) (r error)
+	SetCounter    uint64
+	SetPreCounter uint64
+	SetMock       mDBContextMockSet
 
 	StoreKeyValuesFunc       func(p context.Context, p1 []core.KV) (r error)
 	StoreKeyValuesCounter    uint64
@@ -57,25 +67,15 @@ type DBContextMock struct {
 	ViewPreCounter uint64
 	ViewMock       mDBContextMockView
 
-	getFunc       func(p context.Context, p1 []byte) (r []byte, r1 error)
-	getCounter    uint64
-	getPreCounter uint64
-	getMock       mDBContextMockget
+	WaitingFlightFunc       func()
+	WaitingFlightCounter    uint64
+	WaitingFlightPreCounter uint64
+	WaitingFlightMock       mDBContextMockWaitingFlight
 
 	iterateFunc       func(p context.Context, p1 []byte, p2 func(p []byte, p1 []byte) (r error)) (r error)
 	iterateCounter    uint64
 	iteratePreCounter uint64
 	iterateMock       mDBContextMockiterate
-
-	setFunc       func(p context.Context, p1 []byte, p2 []byte) (r error)
-	setCounter    uint64
-	setPreCounter uint64
-	setMock       mDBContextMockset
-
-	waitingFlightFunc       func()
-	waitingFlightCounter    uint64
-	waitingFlightPreCounter uint64
-	waitingFlightMock       mDBContextMockwaitingFlight
 }
 
 //NewDBContextMock returns a mock for github.com/insolar/insolar/ledger/storage.DBContext
@@ -88,15 +88,15 @@ func NewDBContextMock(t minimock.Tester) *DBContextMock {
 
 	m.BeginTransactionMock = mDBContextMockBeginTransaction{mock: m}
 	m.CloseMock = mDBContextMockClose{mock: m}
+	m.GetMock = mDBContextMockGet{mock: m}
 	m.GetBadgerDBMock = mDBContextMockGetBadgerDB{mock: m}
 	m.IterateRecordsOnPulseMock = mDBContextMockIterateRecordsOnPulse{mock: m}
+	m.SetMock = mDBContextMockSet{mock: m}
 	m.StoreKeyValuesMock = mDBContextMockStoreKeyValues{mock: m}
 	m.UpdateMock = mDBContextMockUpdate{mock: m}
 	m.ViewMock = mDBContextMockView{mock: m}
-	m.getMock = mDBContextMockget{mock: m}
+	m.WaitingFlightMock = mDBContextMockWaitingFlight{mock: m}
 	m.iterateMock = mDBContextMockiterate{mock: m}
-	m.setMock = mDBContextMockset{mock: m}
-	m.waitingFlightMock = mDBContextMockwaitingFlight{mock: m}
 
 	return m
 }
@@ -385,6 +385,157 @@ func (m *DBContextMock) CloseFinished() bool {
 	return true
 }
 
+type mDBContextMockGet struct {
+	mock              *DBContextMock
+	mainExpectation   *DBContextMockGetExpectation
+	expectationSeries []*DBContextMockGetExpectation
+}
+
+type DBContextMockGetExpectation struct {
+	input  *DBContextMockGetInput
+	result *DBContextMockGetResult
+}
+
+type DBContextMockGetInput struct {
+	p  context.Context
+	p1 []byte
+}
+
+type DBContextMockGetResult struct {
+	r  []byte
+	r1 error
+}
+
+//Expect specifies that invocation of DBContext.Get is expected from 1 to Infinity times
+func (m *mDBContextMockGet) Expect(p context.Context, p1 []byte) *mDBContextMockGet {
+	m.mock.GetFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &DBContextMockGetExpectation{}
+	}
+	m.mainExpectation.input = &DBContextMockGetInput{p, p1}
+	return m
+}
+
+//Return specifies results of invocation of DBContext.Get
+func (m *mDBContextMockGet) Return(r []byte, r1 error) *DBContextMock {
+	m.mock.GetFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &DBContextMockGetExpectation{}
+	}
+	m.mainExpectation.result = &DBContextMockGetResult{r, r1}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of DBContext.Get is expected once
+func (m *mDBContextMockGet) ExpectOnce(p context.Context, p1 []byte) *DBContextMockGetExpectation {
+	m.mock.GetFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &DBContextMockGetExpectation{}
+	expectation.input = &DBContextMockGetInput{p, p1}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *DBContextMockGetExpectation) Return(r []byte, r1 error) {
+	e.result = &DBContextMockGetResult{r, r1}
+}
+
+//Set uses given function f as a mock of DBContext.Get method
+func (m *mDBContextMockGet) Set(f func(p context.Context, p1 []byte) (r []byte, r1 error)) *DBContextMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.GetFunc = f
+	return m.mock
+}
+
+//Get implements github.com/insolar/insolar/ledger/storage.DBContext interface
+func (m *DBContextMock) Get(p context.Context, p1 []byte) (r []byte, r1 error) {
+	counter := atomic.AddUint64(&m.GetPreCounter, 1)
+	defer atomic.AddUint64(&m.GetCounter, 1)
+
+	if len(m.GetMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.GetMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to DBContextMock.Get. %v %v", p, p1)
+			return
+		}
+
+		input := m.GetMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, DBContextMockGetInput{p, p1}, "DBContext.Get got unexpected parameters")
+
+		result := m.GetMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the DBContextMock.Get")
+			return
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.GetMock.mainExpectation != nil {
+
+		input := m.GetMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, DBContextMockGetInput{p, p1}, "DBContext.Get got unexpected parameters")
+		}
+
+		result := m.GetMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the DBContextMock.Get")
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.GetFunc == nil {
+		m.t.Fatalf("Unexpected call to DBContextMock.Get. %v %v", p, p1)
+		return
+	}
+
+	return m.GetFunc(p, p1)
+}
+
+//GetMinimockCounter returns a count of DBContextMock.GetFunc invocations
+func (m *DBContextMock) GetMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.GetCounter)
+}
+
+//GetMinimockPreCounter returns the value of DBContextMock.Get invocations
+func (m *DBContextMock) GetMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.GetPreCounter)
+}
+
+//GetFinished returns true if mock invocations count is ok
+func (m *DBContextMock) GetFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.GetMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.GetCounter) == uint64(len(m.GetMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.GetMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.GetCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.GetFunc != nil {
+		return atomic.LoadUint64(&m.GetCounter) > 0
+	}
+
+	return true
+}
+
 type mDBContextMockGetBadgerDB struct {
 	mock              *DBContextMock
 	mainExpectation   *DBContextMockGetBadgerDBExpectation
@@ -534,7 +685,7 @@ type DBContextMockIterateRecordsOnPulseInput struct {
 	p  context.Context
 	p1 core.RecordID
 	p2 core.PulseNumber
-	p3 func(p core.RecordID, p1 record.Record) (r error)
+	p3 func(p core.RecordID, p1 object.Record) (r error)
 }
 
 type DBContextMockIterateRecordsOnPulseResult struct {
@@ -542,7 +693,7 @@ type DBContextMockIterateRecordsOnPulseResult struct {
 }
 
 //Expect specifies that invocation of DBContext.IterateRecordsOnPulse is expected from 1 to Infinity times
-func (m *mDBContextMockIterateRecordsOnPulse) Expect(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 func(p core.RecordID, p1 record.Record) (r error)) *mDBContextMockIterateRecordsOnPulse {
+func (m *mDBContextMockIterateRecordsOnPulse) Expect(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 func(p core.RecordID, p1 object.Record) (r error)) *mDBContextMockIterateRecordsOnPulse {
 	m.mock.IterateRecordsOnPulseFunc = nil
 	m.expectationSeries = nil
 
@@ -566,7 +717,7 @@ func (m *mDBContextMockIterateRecordsOnPulse) Return(r error) *DBContextMock {
 }
 
 //ExpectOnce specifies that invocation of DBContext.IterateRecordsOnPulse is expected once
-func (m *mDBContextMockIterateRecordsOnPulse) ExpectOnce(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 func(p core.RecordID, p1 record.Record) (r error)) *DBContextMockIterateRecordsOnPulseExpectation {
+func (m *mDBContextMockIterateRecordsOnPulse) ExpectOnce(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 func(p core.RecordID, p1 object.Record) (r error)) *DBContextMockIterateRecordsOnPulseExpectation {
 	m.mock.IterateRecordsOnPulseFunc = nil
 	m.mainExpectation = nil
 
@@ -581,7 +732,7 @@ func (e *DBContextMockIterateRecordsOnPulseExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of DBContext.IterateRecordsOnPulse method
-func (m *mDBContextMockIterateRecordsOnPulse) Set(f func(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 func(p core.RecordID, p1 record.Record) (r error)) (r error)) *DBContextMock {
+func (m *mDBContextMockIterateRecordsOnPulse) Set(f func(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 func(p core.RecordID, p1 object.Record) (r error)) (r error)) *DBContextMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -590,7 +741,7 @@ func (m *mDBContextMockIterateRecordsOnPulse) Set(f func(p context.Context, p1 c
 }
 
 //IterateRecordsOnPulse implements github.com/insolar/insolar/ledger/storage.DBContext interface
-func (m *DBContextMock) IterateRecordsOnPulse(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 func(p core.RecordID, p1 record.Record) (r error)) (r error) {
+func (m *DBContextMock) IterateRecordsOnPulse(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 func(p core.RecordID, p1 object.Record) (r error)) (r error) {
 	counter := atomic.AddUint64(&m.IterateRecordsOnPulsePreCounter, 1)
 	defer atomic.AddUint64(&m.IterateRecordsOnPulseCounter, 1)
 
@@ -664,6 +815,155 @@ func (m *DBContextMock) IterateRecordsOnPulseFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.IterateRecordsOnPulseFunc != nil {
 		return atomic.LoadUint64(&m.IterateRecordsOnPulseCounter) > 0
+	}
+
+	return true
+}
+
+type mDBContextMockSet struct {
+	mock              *DBContextMock
+	mainExpectation   *DBContextMockSetExpectation
+	expectationSeries []*DBContextMockSetExpectation
+}
+
+type DBContextMockSetExpectation struct {
+	input  *DBContextMockSetInput
+	result *DBContextMockSetResult
+}
+
+type DBContextMockSetInput struct {
+	p  context.Context
+	p1 []byte
+	p2 []byte
+}
+
+type DBContextMockSetResult struct {
+	r error
+}
+
+//Expect specifies that invocation of DBContext.Set is expected from 1 to Infinity times
+func (m *mDBContextMockSet) Expect(p context.Context, p1 []byte, p2 []byte) *mDBContextMockSet {
+	m.mock.SetFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &DBContextMockSetExpectation{}
+	}
+	m.mainExpectation.input = &DBContextMockSetInput{p, p1, p2}
+	return m
+}
+
+//Return specifies results of invocation of DBContext.Set
+func (m *mDBContextMockSet) Return(r error) *DBContextMock {
+	m.mock.SetFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &DBContextMockSetExpectation{}
+	}
+	m.mainExpectation.result = &DBContextMockSetResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of DBContext.Set is expected once
+func (m *mDBContextMockSet) ExpectOnce(p context.Context, p1 []byte, p2 []byte) *DBContextMockSetExpectation {
+	m.mock.SetFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &DBContextMockSetExpectation{}
+	expectation.input = &DBContextMockSetInput{p, p1, p2}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *DBContextMockSetExpectation) Return(r error) {
+	e.result = &DBContextMockSetResult{r}
+}
+
+//Set uses given function f as a mock of DBContext.Set method
+func (m *mDBContextMockSet) Set(f func(p context.Context, p1 []byte, p2 []byte) (r error)) *DBContextMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.SetFunc = f
+	return m.mock
+}
+
+//Set implements github.com/insolar/insolar/ledger/storage.DBContext interface
+func (m *DBContextMock) Set(p context.Context, p1 []byte, p2 []byte) (r error) {
+	counter := atomic.AddUint64(&m.SetPreCounter, 1)
+	defer atomic.AddUint64(&m.SetCounter, 1)
+
+	if len(m.SetMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.SetMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to DBContextMock.Set. %v %v %v", p, p1, p2)
+			return
+		}
+
+		input := m.SetMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, DBContextMockSetInput{p, p1, p2}, "DBContext.Set got unexpected parameters")
+
+		result := m.SetMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the DBContextMock.Set")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.SetMock.mainExpectation != nil {
+
+		input := m.SetMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, DBContextMockSetInput{p, p1, p2}, "DBContext.Set got unexpected parameters")
+		}
+
+		result := m.SetMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the DBContextMock.Set")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.SetFunc == nil {
+		m.t.Fatalf("Unexpected call to DBContextMock.Set. %v %v %v", p, p1, p2)
+		return
+	}
+
+	return m.SetFunc(p, p1, p2)
+}
+
+//SetMinimockCounter returns a count of DBContextMock.SetFunc invocations
+func (m *DBContextMock) SetMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.SetCounter)
+}
+
+//SetMinimockPreCounter returns the value of DBContextMock.Set invocations
+func (m *DBContextMock) SetMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.SetPreCounter)
+}
+
+//SetFinished returns true if mock invocations count is ok
+func (m *DBContextMock) SetFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.SetMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.SetCounter) == uint64(len(m.SetMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.SetMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.SetCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.SetFunc != nil {
+		return atomic.LoadUint64(&m.SetCounter) > 0
 	}
 
 	return true
@@ -1113,152 +1413,111 @@ func (m *DBContextMock) ViewFinished() bool {
 	return true
 }
 
-type mDBContextMockget struct {
+type mDBContextMockWaitingFlight struct {
 	mock              *DBContextMock
-	mainExpectation   *DBContextMockgetExpectation
-	expectationSeries []*DBContextMockgetExpectation
+	mainExpectation   *DBContextMockWaitingFlightExpectation
+	expectationSeries []*DBContextMockWaitingFlightExpectation
 }
 
-type DBContextMockgetExpectation struct {
-	input  *DBContextMockgetInput
-	result *DBContextMockgetResult
+type DBContextMockWaitingFlightExpectation struct {
 }
 
-type DBContextMockgetInput struct {
-	p  context.Context
-	p1 []byte
-}
-
-type DBContextMockgetResult struct {
-	r  []byte
-	r1 error
-}
-
-//Expect specifies that invocation of DBContext.get is expected from 1 to Infinity times
-func (m *mDBContextMockget) Expect(p context.Context, p1 []byte) *mDBContextMockget {
-	m.mock.getFunc = nil
+//Expect specifies that invocation of DBContext.WaitingFlight is expected from 1 to Infinity times
+func (m *mDBContextMockWaitingFlight) Expect() *mDBContextMockWaitingFlight {
+	m.mock.WaitingFlightFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &DBContextMockgetExpectation{}
+		m.mainExpectation = &DBContextMockWaitingFlightExpectation{}
 	}
-	m.mainExpectation.input = &DBContextMockgetInput{p, p1}
+
 	return m
 }
 
-//Return specifies results of invocation of DBContext.get
-func (m *mDBContextMockget) Return(r []byte, r1 error) *DBContextMock {
-	m.mock.getFunc = nil
+//Return specifies results of invocation of DBContext.WaitingFlight
+func (m *mDBContextMockWaitingFlight) Return() *DBContextMock {
+	m.mock.WaitingFlightFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &DBContextMockgetExpectation{}
+		m.mainExpectation = &DBContextMockWaitingFlightExpectation{}
 	}
-	m.mainExpectation.result = &DBContextMockgetResult{r, r1}
+
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of DBContext.get is expected once
-func (m *mDBContextMockget) ExpectOnce(p context.Context, p1 []byte) *DBContextMockgetExpectation {
-	m.mock.getFunc = nil
+//ExpectOnce specifies that invocation of DBContext.WaitingFlight is expected once
+func (m *mDBContextMockWaitingFlight) ExpectOnce() *DBContextMockWaitingFlightExpectation {
+	m.mock.WaitingFlightFunc = nil
 	m.mainExpectation = nil
 
-	expectation := &DBContextMockgetExpectation{}
-	expectation.input = &DBContextMockgetInput{p, p1}
+	expectation := &DBContextMockWaitingFlightExpectation{}
+
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
-func (e *DBContextMockgetExpectation) Return(r []byte, r1 error) {
-	e.result = &DBContextMockgetResult{r, r1}
-}
-
-//Set uses given function f as a mock of DBContext.get method
-func (m *mDBContextMockget) Set(f func(p context.Context, p1 []byte) (r []byte, r1 error)) *DBContextMock {
+//Set uses given function f as a mock of DBContext.WaitingFlight method
+func (m *mDBContextMockWaitingFlight) Set(f func()) *DBContextMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
-	m.mock.getFunc = f
+	m.mock.WaitingFlightFunc = f
 	return m.mock
 }
 
-//get implements github.com/insolar/insolar/ledger/storage.DBContext interface
-func (m *DBContextMock) get(p context.Context, p1 []byte) (r []byte, r1 error) {
-	counter := atomic.AddUint64(&m.getPreCounter, 1)
-	defer atomic.AddUint64(&m.getCounter, 1)
+//WaitingFlight implements github.com/insolar/insolar/ledger/storage.DBContext interface
+func (m *DBContextMock) WaitingFlight() {
+	counter := atomic.AddUint64(&m.WaitingFlightPreCounter, 1)
+	defer atomic.AddUint64(&m.WaitingFlightCounter, 1)
 
-	if len(m.getMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.getMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to DBContextMock.get. %v %v", p, p1)
+	if len(m.WaitingFlightMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.WaitingFlightMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to DBContextMock.WaitingFlight.")
 			return
 		}
 
-		input := m.getMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, DBContextMockgetInput{p, p1}, "DBContext.get got unexpected parameters")
+		return
+	}
 
-		result := m.getMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the DBContextMock.get")
-			return
-		}
-
-		r = result.r
-		r1 = result.r1
+	if m.WaitingFlightMock.mainExpectation != nil {
 
 		return
 	}
 
-	if m.getMock.mainExpectation != nil {
-
-		input := m.getMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, DBContextMockgetInput{p, p1}, "DBContext.get got unexpected parameters")
-		}
-
-		result := m.getMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the DBContextMock.get")
-		}
-
-		r = result.r
-		r1 = result.r1
-
+	if m.WaitingFlightFunc == nil {
+		m.t.Fatalf("Unexpected call to DBContextMock.WaitingFlight.")
 		return
 	}
 
-	if m.getFunc == nil {
-		m.t.Fatalf("Unexpected call to DBContextMock.get. %v %v", p, p1)
-		return
-	}
-
-	return m.getFunc(p, p1)
+	m.WaitingFlightFunc()
 }
 
-//getMinimockCounter returns a count of DBContextMock.getFunc invocations
-func (m *DBContextMock) getMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.getCounter)
+//WaitingFlightMinimockCounter returns a count of DBContextMock.WaitingFlightFunc invocations
+func (m *DBContextMock) WaitingFlightMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.WaitingFlightCounter)
 }
 
-//getMinimockPreCounter returns the value of DBContextMock.get invocations
-func (m *DBContextMock) getMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.getPreCounter)
+//WaitingFlightMinimockPreCounter returns the value of DBContextMock.WaitingFlight invocations
+func (m *DBContextMock) WaitingFlightMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.WaitingFlightPreCounter)
 }
 
-//getFinished returns true if mock invocations count is ok
-func (m *DBContextMock) getFinished() bool {
+//WaitingFlightFinished returns true if mock invocations count is ok
+func (m *DBContextMock) WaitingFlightFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.getMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.getCounter) == uint64(len(m.getMock.expectationSeries))
+	if len(m.WaitingFlightMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.WaitingFlightCounter) == uint64(len(m.WaitingFlightMock.expectationSeries))
 	}
 
 	// if main expectation was set then invocations count should be greater than zero
-	if m.getMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.getCounter) > 0
+	if m.WaitingFlightMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.WaitingFlightCounter) > 0
 	}
 
 	// if func was set then invocations count should be greater than zero
-	if m.getFunc != nil {
-		return atomic.LoadUint64(&m.getCounter) > 0
+	if m.WaitingFlightFunc != nil {
+		return atomic.LoadUint64(&m.WaitingFlightCounter) > 0
 	}
 
 	return true
@@ -1413,265 +1672,6 @@ func (m *DBContextMock) iterateFinished() bool {
 	return true
 }
 
-type mDBContextMockset struct {
-	mock              *DBContextMock
-	mainExpectation   *DBContextMocksetExpectation
-	expectationSeries []*DBContextMocksetExpectation
-}
-
-type DBContextMocksetExpectation struct {
-	input  *DBContextMocksetInput
-	result *DBContextMocksetResult
-}
-
-type DBContextMocksetInput struct {
-	p  context.Context
-	p1 []byte
-	p2 []byte
-}
-
-type DBContextMocksetResult struct {
-	r error
-}
-
-//Expect specifies that invocation of DBContext.set is expected from 1 to Infinity times
-func (m *mDBContextMockset) Expect(p context.Context, p1 []byte, p2 []byte) *mDBContextMockset {
-	m.mock.setFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &DBContextMocksetExpectation{}
-	}
-	m.mainExpectation.input = &DBContextMocksetInput{p, p1, p2}
-	return m
-}
-
-//Return specifies results of invocation of DBContext.set
-func (m *mDBContextMockset) Return(r error) *DBContextMock {
-	m.mock.setFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &DBContextMocksetExpectation{}
-	}
-	m.mainExpectation.result = &DBContextMocksetResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of DBContext.set is expected once
-func (m *mDBContextMockset) ExpectOnce(p context.Context, p1 []byte, p2 []byte) *DBContextMocksetExpectation {
-	m.mock.setFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &DBContextMocksetExpectation{}
-	expectation.input = &DBContextMocksetInput{p, p1, p2}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *DBContextMocksetExpectation) Return(r error) {
-	e.result = &DBContextMocksetResult{r}
-}
-
-//Set uses given function f as a mock of DBContext.set method
-func (m *mDBContextMockset) Set(f func(p context.Context, p1 []byte, p2 []byte) (r error)) *DBContextMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.setFunc = f
-	return m.mock
-}
-
-//set implements github.com/insolar/insolar/ledger/storage.DBContext interface
-func (m *DBContextMock) set(p context.Context, p1 []byte, p2 []byte) (r error) {
-	counter := atomic.AddUint64(&m.setPreCounter, 1)
-	defer atomic.AddUint64(&m.setCounter, 1)
-
-	if len(m.setMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.setMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to DBContextMock.set. %v %v %v", p, p1, p2)
-			return
-		}
-
-		input := m.setMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, DBContextMocksetInput{p, p1, p2}, "DBContext.set got unexpected parameters")
-
-		result := m.setMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the DBContextMock.set")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.setMock.mainExpectation != nil {
-
-		input := m.setMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, DBContextMocksetInput{p, p1, p2}, "DBContext.set got unexpected parameters")
-		}
-
-		result := m.setMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the DBContextMock.set")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.setFunc == nil {
-		m.t.Fatalf("Unexpected call to DBContextMock.set. %v %v %v", p, p1, p2)
-		return
-	}
-
-	return m.setFunc(p, p1, p2)
-}
-
-//setMinimockCounter returns a count of DBContextMock.setFunc invocations
-func (m *DBContextMock) setMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.setCounter)
-}
-
-//setMinimockPreCounter returns the value of DBContextMock.set invocations
-func (m *DBContextMock) setMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.setPreCounter)
-}
-
-//setFinished returns true if mock invocations count is ok
-func (m *DBContextMock) setFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.setMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.setCounter) == uint64(len(m.setMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.setMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.setCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.setFunc != nil {
-		return atomic.LoadUint64(&m.setCounter) > 0
-	}
-
-	return true
-}
-
-type mDBContextMockwaitingFlight struct {
-	mock              *DBContextMock
-	mainExpectation   *DBContextMockwaitingFlightExpectation
-	expectationSeries []*DBContextMockwaitingFlightExpectation
-}
-
-type DBContextMockwaitingFlightExpectation struct {
-}
-
-//Expect specifies that invocation of DBContext.waitingFlight is expected from 1 to Infinity times
-func (m *mDBContextMockwaitingFlight) Expect() *mDBContextMockwaitingFlight {
-	m.mock.waitingFlightFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &DBContextMockwaitingFlightExpectation{}
-	}
-
-	return m
-}
-
-//Return specifies results of invocation of DBContext.waitingFlight
-func (m *mDBContextMockwaitingFlight) Return() *DBContextMock {
-	m.mock.waitingFlightFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &DBContextMockwaitingFlightExpectation{}
-	}
-
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of DBContext.waitingFlight is expected once
-func (m *mDBContextMockwaitingFlight) ExpectOnce() *DBContextMockwaitingFlightExpectation {
-	m.mock.waitingFlightFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &DBContextMockwaitingFlightExpectation{}
-
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-//Set uses given function f as a mock of DBContext.waitingFlight method
-func (m *mDBContextMockwaitingFlight) Set(f func()) *DBContextMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.waitingFlightFunc = f
-	return m.mock
-}
-
-//waitingFlight implements github.com/insolar/insolar/ledger/storage.DBContext interface
-func (m *DBContextMock) waitingFlight() {
-	counter := atomic.AddUint64(&m.waitingFlightPreCounter, 1)
-	defer atomic.AddUint64(&m.waitingFlightCounter, 1)
-
-	if len(m.waitingFlightMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.waitingFlightMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to DBContextMock.waitingFlight.")
-			return
-		}
-
-		return
-	}
-
-	if m.waitingFlightMock.mainExpectation != nil {
-
-		return
-	}
-
-	if m.waitingFlightFunc == nil {
-		m.t.Fatalf("Unexpected call to DBContextMock.waitingFlight.")
-		return
-	}
-
-	m.waitingFlightFunc()
-}
-
-//waitingFlightMinimockCounter returns a count of DBContextMock.waitingFlightFunc invocations
-func (m *DBContextMock) waitingFlightMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.waitingFlightCounter)
-}
-
-//waitingFlightMinimockPreCounter returns the value of DBContextMock.waitingFlight invocations
-func (m *DBContextMock) waitingFlightMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.waitingFlightPreCounter)
-}
-
-//waitingFlightFinished returns true if mock invocations count is ok
-func (m *DBContextMock) waitingFlightFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.waitingFlightMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.waitingFlightCounter) == uint64(len(m.waitingFlightMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.waitingFlightMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.waitingFlightCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.waitingFlightFunc != nil {
-		return atomic.LoadUint64(&m.waitingFlightCounter) > 0
-	}
-
-	return true
-}
-
 //ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *DBContextMock) ValidateCallCounters() {
@@ -1684,12 +1684,20 @@ func (m *DBContextMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to DBContextMock.Close")
 	}
 
+	if !m.GetFinished() {
+		m.t.Fatal("Expected call to DBContextMock.Get")
+	}
+
 	if !m.GetBadgerDBFinished() {
 		m.t.Fatal("Expected call to DBContextMock.GetBadgerDB")
 	}
 
 	if !m.IterateRecordsOnPulseFinished() {
 		m.t.Fatal("Expected call to DBContextMock.IterateRecordsOnPulse")
+	}
+
+	if !m.SetFinished() {
+		m.t.Fatal("Expected call to DBContextMock.Set")
 	}
 
 	if !m.StoreKeyValuesFinished() {
@@ -1704,20 +1712,12 @@ func (m *DBContextMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to DBContextMock.View")
 	}
 
-	if !m.getFinished() {
-		m.t.Fatal("Expected call to DBContextMock.get")
+	if !m.WaitingFlightFinished() {
+		m.t.Fatal("Expected call to DBContextMock.WaitingFlight")
 	}
 
 	if !m.iterateFinished() {
 		m.t.Fatal("Expected call to DBContextMock.iterate")
-	}
-
-	if !m.setFinished() {
-		m.t.Fatal("Expected call to DBContextMock.set")
-	}
-
-	if !m.waitingFlightFinished() {
-		m.t.Fatal("Expected call to DBContextMock.waitingFlight")
 	}
 
 }
@@ -1745,12 +1745,20 @@ func (m *DBContextMock) MinimockFinish() {
 		m.t.Fatal("Expected call to DBContextMock.Close")
 	}
 
+	if !m.GetFinished() {
+		m.t.Fatal("Expected call to DBContextMock.Get")
+	}
+
 	if !m.GetBadgerDBFinished() {
 		m.t.Fatal("Expected call to DBContextMock.GetBadgerDB")
 	}
 
 	if !m.IterateRecordsOnPulseFinished() {
 		m.t.Fatal("Expected call to DBContextMock.IterateRecordsOnPulse")
+	}
+
+	if !m.SetFinished() {
+		m.t.Fatal("Expected call to DBContextMock.Set")
 	}
 
 	if !m.StoreKeyValuesFinished() {
@@ -1765,20 +1773,12 @@ func (m *DBContextMock) MinimockFinish() {
 		m.t.Fatal("Expected call to DBContextMock.View")
 	}
 
-	if !m.getFinished() {
-		m.t.Fatal("Expected call to DBContextMock.get")
+	if !m.WaitingFlightFinished() {
+		m.t.Fatal("Expected call to DBContextMock.WaitingFlight")
 	}
 
 	if !m.iterateFinished() {
 		m.t.Fatal("Expected call to DBContextMock.iterate")
-	}
-
-	if !m.setFinished() {
-		m.t.Fatal("Expected call to DBContextMock.set")
-	}
-
-	if !m.waitingFlightFinished() {
-		m.t.Fatal("Expected call to DBContextMock.waitingFlight")
 	}
 
 }
@@ -1797,15 +1797,15 @@ func (m *DBContextMock) MinimockWait(timeout time.Duration) {
 		ok := true
 		ok = ok && m.BeginTransactionFinished()
 		ok = ok && m.CloseFinished()
+		ok = ok && m.GetFinished()
 		ok = ok && m.GetBadgerDBFinished()
 		ok = ok && m.IterateRecordsOnPulseFinished()
+		ok = ok && m.SetFinished()
 		ok = ok && m.StoreKeyValuesFinished()
 		ok = ok && m.UpdateFinished()
 		ok = ok && m.ViewFinished()
-		ok = ok && m.getFinished()
+		ok = ok && m.WaitingFlightFinished()
 		ok = ok && m.iterateFinished()
-		ok = ok && m.setFinished()
-		ok = ok && m.waitingFlightFinished()
 
 		if ok {
 			return
@@ -1822,12 +1822,20 @@ func (m *DBContextMock) MinimockWait(timeout time.Duration) {
 				m.t.Error("Expected call to DBContextMock.Close")
 			}
 
+			if !m.GetFinished() {
+				m.t.Error("Expected call to DBContextMock.Get")
+			}
+
 			if !m.GetBadgerDBFinished() {
 				m.t.Error("Expected call to DBContextMock.GetBadgerDB")
 			}
 
 			if !m.IterateRecordsOnPulseFinished() {
 				m.t.Error("Expected call to DBContextMock.IterateRecordsOnPulse")
+			}
+
+			if !m.SetFinished() {
+				m.t.Error("Expected call to DBContextMock.Set")
 			}
 
 			if !m.StoreKeyValuesFinished() {
@@ -1842,20 +1850,12 @@ func (m *DBContextMock) MinimockWait(timeout time.Duration) {
 				m.t.Error("Expected call to DBContextMock.View")
 			}
 
-			if !m.getFinished() {
-				m.t.Error("Expected call to DBContextMock.get")
+			if !m.WaitingFlightFinished() {
+				m.t.Error("Expected call to DBContextMock.WaitingFlight")
 			}
 
 			if !m.iterateFinished() {
 				m.t.Error("Expected call to DBContextMock.iterate")
-			}
-
-			if !m.setFinished() {
-				m.t.Error("Expected call to DBContextMock.set")
-			}
-
-			if !m.waitingFlightFinished() {
-				m.t.Error("Expected call to DBContextMock.waitingFlight")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)
@@ -1878,11 +1878,19 @@ func (m *DBContextMock) AllMocksCalled() bool {
 		return false
 	}
 
+	if !m.GetFinished() {
+		return false
+	}
+
 	if !m.GetBadgerDBFinished() {
 		return false
 	}
 
 	if !m.IterateRecordsOnPulseFinished() {
+		return false
+	}
+
+	if !m.SetFinished() {
 		return false
 	}
 
@@ -1898,19 +1906,11 @@ func (m *DBContextMock) AllMocksCalled() bool {
 		return false
 	}
 
-	if !m.getFinished() {
+	if !m.WaitingFlightFinished() {
 		return false
 	}
 
 	if !m.iterateFinished() {
-		return false
-	}
-
-	if !m.setFinished() {
-		return false
-	}
-
-	if !m.waitingFlightFinished() {
 		return false
 	}
 

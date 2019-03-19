@@ -22,6 +22,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 
@@ -30,7 +31,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/jet"
 )
 
 const defaultTimeout = time.Second * 10
@@ -78,6 +78,7 @@ type jetprefix [core.JetPrefixSize]byte
 
 // Sync provides methods for syncing records to heavy storage.
 type Sync struct {
+	DropModifier   drop.Modifier          `inject:""`
 	ReplicaStorage storage.ReplicaStorage `inject:""`
 	DBContext      storage.DBContext
 
@@ -122,7 +123,7 @@ func (s *Sync) checkIsNextPulse(ctx context.Context, jetID core.RecordID, jetsta
 
 func (s *Sync) getJetSyncState(ctx context.Context, jetID core.RecordID) *syncstate {
 	var jp jetprefix
-	_, jpBuf := jet.Jet(jetID)
+	jpBuf := core.JetID(jetID).Prefix()
 	copy(jp[:], jpBuf)
 	s.Lock()
 	jetState, ok := s.jetSyncStates[jp]
@@ -212,6 +213,16 @@ func (s *Sync) Store(ctx context.Context, jetID core.RecordID, pn core.PulseNumb
 		statSyncedPulse.M(int64(pn)),
 		statSyncedBytes.M(recordsSize),
 	)
+	return nil
+}
+
+// StoreDrop saves a jet.Drop to a heavy db
+func (s *Sync) StoreDrop(ctx context.Context, jetID core.JetID, rawDrop []byte) error {
+	err := s.DropModifier.Set(ctx, drop.Deserialize(rawDrop))
+	if err != nil {
+		return errors.Wrapf(err, "heavyserver: drop storing failed")
+	}
+
 	return nil
 }
 

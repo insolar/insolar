@@ -38,18 +38,16 @@ import (
 
 type transportConsensus struct {
 	transportBase
-	resolver network.RoutingTable
+	Resolver network.RoutingTable `inject:""`
 	handlers map[packets.PacketType]network.ConsensusPacketHandler
 }
 
 func (tc *transportConsensus) Start(ctx context.Context) error {
-	tc.transportBase.Start(ctx)
-	return nil
+	return tc.transportBase.Start(ctx)
 }
 
 func (tc *transportConsensus) Stop(ctx context.Context) error {
-	tc.transportBase.Stop()
-	return nil
+	return tc.transportBase.Stop(ctx)
 }
 
 // RegisterPacketHandler register a handler function to process incoming requests of a specific type.
@@ -64,7 +62,7 @@ func (tc *transportConsensus) RegisterPacketHandler(t packets.PacketType, handle
 func (tc *transportConsensus) SignAndSendPacket(packet packets.ConsensusPacket,
 	receiver core.RecordRef, service core.CryptographyService) error {
 
-	receiverHost, err := tc.resolver.ResolveConsensusRef(receiver)
+	receiverHost, err := tc.Resolver.ResolveConsensusRef(receiver)
 	if err != nil {
 		return errors.Wrapf(err, "Failed to resolve %s request to node %s", packet.GetType(), receiver.String())
 	}
@@ -107,7 +105,7 @@ func (tc *transportConsensus) processMessage(msg *packet.Packet) {
 		log.Errorf("Error processing incoming message: sender ID %d equals to origin %d", p.GetTarget(), tc.origin.ShortID)
 		return
 	}
-	sender, err := tc.resolver.ResolveConsensus(p.GetOrigin())
+	sender, err := tc.Resolver.ResolveConsensus(p.GetOrigin())
 	// TODO: NETD18-79
 	// special case for Phase1 because we can get a valid packet from a node we don't know yet (first consensus case)
 	if err != nil && p.GetType() != packets.Phase1 {
@@ -125,9 +123,7 @@ func (tc *transportConsensus) processMessage(msg *packet.Packet) {
 	handler(p, sender.NodeID)
 }
 
-func NewConsensusNetwork(address, nodeID string, shortID core.ShortNodeID,
-	resolver network.RoutingTable) (network.ConsensusNetwork, error) {
-
+func NewConsensusNetwork(address, nodeID string, shortID core.ShortNodeID) (network.ConsensusNetwork, error) {
 	conf := configuration.Transport{}
 	conf.Address = address
 	conf.Protocol = "PURE_UDP"
@@ -149,7 +145,6 @@ func NewConsensusNetwork(address, nodeID string, shortID core.ShortNodeID,
 
 	result.transport = tp
 	result.sequenceGenerator = sequence.NewGeneratorImpl()
-	result.resolver = resolver
 	result.origin = origin
 	result.messageProcessor = result.processMessage
 	return result, nil

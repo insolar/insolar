@@ -23,7 +23,6 @@ import (
 	"github.com/insolar/insolar"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/gen"
-	"github.com/insolar/insolar/ledger/storage"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -56,7 +55,7 @@ func TestNodeStorage_All(t *testing.T) {
 	t.Run("returns error when no nodes", func(t *testing.T) {
 		nodeStorage := NewStorage()
 		result, err := nodeStorage.All(pulse)
-		assert.Equal(t, core.ErrNoNodes, err)
+		assert.Equal(t, ErrNoNodes, err)
 		assert.Nil(t, result)
 	})
 }
@@ -112,7 +111,7 @@ func TestNodeStorage_InRole(t *testing.T) {
 	t.Run("returns error when no nodes", func(t *testing.T) {
 		nodeStorage := NewStorage()
 		result, err := nodeStorage.InRole(pulse, core.StaticRoleVirtual)
-		assert.Equal(t, core.ErrNoNodes, err)
+		assert.Equal(t, ErrNoNodes, err)
 		assert.Nil(t, result)
 	})
 }
@@ -145,7 +144,7 @@ func TestStorage_Set(t *testing.T) {
 		nodeStorage := NewStorage()
 		_ = nodeStorage.Set(pulse, nodes)
 		err := nodeStorage.Set(pulse, nodes)
-		assert.Equal(t, storage.ErrOverride, err)
+		assert.Equal(t, ErrOverride, err)
 		assert.Equal(t, nodes, nodeStorage.nodes[pulse])
 	})
 }
@@ -171,7 +170,7 @@ func TestNewStorage_Delete(t *testing.T) {
 		{
 			nodeStorage.Delete(pulse)
 			result, err := nodeStorage.All(pulse)
-			assert.Equal(t, core.ErrNoNodes, err)
+			assert.Equal(t, ErrNoNodes, err)
 			assert.Nil(t, result)
 		}
 	})

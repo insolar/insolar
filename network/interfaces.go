@@ -60,10 +60,6 @@ type RequestHandler func(context.Context, Request) (Response, error)
 // HostNetwork simple interface to send network requests and process network responses.
 //go:generate minimock -i github.com/insolar/insolar/network.HostNetwork -o ../testutils/network -s _mock.go
 type HostNetwork interface {
-	// Start listening to network requests.
-	Start(ctx context.Context)
-	// Stop listening to network requests.
-	Stop()
 	// PublicAddress returns public address that can be published for all nodes.
 	PublicAddress() string
 	// GetNodeID get current node ID.
@@ -154,72 +150,66 @@ type NodeKeeper interface {
 	GetActiveNodes() []core.Node
 	// GetActiveNodeByShortID get active node by short ID. Returns nil if node is not found.
 	GetActiveNodeByShortID(shortID core.ShortNodeID) core.Node
-	// SetState set state of the NodeKeeper
-	SetState(core.NodeNetworkState)
 	// GetOriginJoinClaim get origin NodeJoinClaim
 	GetOriginJoinClaim() (*consensus.NodeJoinClaim, error)
 	// GetOriginAnnounceClaim get origin NodeAnnounceClaim
 	GetOriginAnnounceClaim(mapper consensus.BitSetMapper) (*consensus.NodeAnnounceClaim, error)
-	// NodesJoinedDuringPreviousPulse returns true if the last Sync call contained approved Join claims
-	NodesJoinedDuringPreviousPulse() bool
-	// AddPendingClaim add pending claim to the internal queue of claims
-	AddPendingClaim(consensus.ReferendumClaim) bool
 	// GetClaimQueue get the internal queue of claims
 	GetClaimQueue() ClaimQueue
 	// GetUnsyncList get unsync list for current pulse. Has copy of active node list from nodekeeper as internal state.
-	// Should be called when nodekeeper state is ReadyNodeNetworkState.
+	// Should be called when GetConsensusInfo().IsJoiner() == false.
 	GetUnsyncList() UnsyncList
 	// GetSparseUnsyncList get sparse unsync list for current pulse with predefined length of active node list.
-	// Does not contain active list, should collect active list during its lifetime via AddClaims.
-	// Should be called when nodekeeper state is WaitingNodeNetworkState.
+	// Does not contain active list, should collect active list during its lifetime via AddNode.
+	// Should be called when GetConsensusInfo().IsJoiner() == true.
 	GetSparseUnsyncList(length int) UnsyncList
 	// Sync move unsync -> sync
-	Sync(list UnsyncList)
+	Sync(context.Context, []core.Node, []consensus.ReferendumClaim) error
 	// MoveSyncToActive merge sync list with active nodes
 	MoveSyncToActive(ctx context.Context) error
+	// GetConsensusInfo get additional info for the current consensus process
+	GetConsensusInfo() ConsensusInfo
+}
+
+// TODO: refactor code and make it not necessary
+// ConsensusInfo additional info for the current consensus process
+type ConsensusInfo interface {
+	// NodesJoinedDuringPreviousPulse returns true if the last Sync call contained approved Join claims
+	NodesJoinedDuringPreviousPulse() bool
 	// AddTemporaryMapping add temporary mapping till the next pulse for consensus
 	AddTemporaryMapping(nodeID core.RecordRef, shortID core.ShortNodeID, address string) error
 	// ResolveConsensus get temporary mapping by short ID
 	ResolveConsensus(shortID core.ShortNodeID) *host.Host
 	// ResolveConsensusRef get temporary mapping by node ID
 	ResolveConsensusRef(nodeID core.RecordRef) *host.Host
+	// SetIsJoiner instruct current node whether it should perform consensus as joiner or not
+	SetIsJoiner(isJoiner bool)
+	// IsJoiner true if current node should perform consensus as joiner
+	IsJoiner() bool
 }
 
-// UnsyncList is interface to manage unsync list
+// UnsyncList is a snapshot of active list for pulse that is previous to consensus pulse
 //go:generate minimock -i github.com/insolar/insolar/network.UnsyncList -o ../testutils/network -s _mock.go
 type UnsyncList interface {
 	consensus.BitSetMapper
-	// ApproveSync
-	ApproveSync([]core.RecordRef)
-	// AddClaims
-	AddClaims(map[core.RecordRef][]consensus.ReferendumClaim) error
-	// AddNode
+	// AddNode add node to the snapshot of the current consensus
 	AddNode(node core.Node, bitsetIndex uint16)
-	// GetClaims
-	GetClaims(nodeID core.RecordRef) []consensus.ReferendumClaim
-	// InsertClaims
-	InsertClaims(core.RecordRef, []consensus.ReferendumClaim)
-	// AddProof
+	// AddProof add node pulse proof of a specific node
 	AddProof(nodeID core.RecordRef, proof *consensus.NodePulseProof)
-	// GetProof
+	// GetProof get node pulse proof of a specific node
 	GetProof(nodeID core.RecordRef) *consensus.NodePulseProof
-	// GetGlobuleHashSignature
+	// GetGlobuleHashSignature get globule hash signature of a specific node
 	GetGlobuleHashSignature(ref core.RecordRef) (consensus.GlobuleHashSignature, bool)
-	// SetGlobuleHashSignature
+	// SetGlobuleHashSignature set globule hash signature of a specific node
 	SetGlobuleHashSignature(core.RecordRef, consensus.GlobuleHashSignature)
 	// GetActiveNode get active node by reference ID for current consensus
 	GetActiveNode(ref core.RecordRef) core.Node
 	// GetActiveNodes get active nodes for current consensus
 	GetActiveNodes() []core.Node
-	// GetMergedCopy returns copy of unsyncList with claims applied
-	GetMergedCopy() (*MergedListCopy, error)
-	//
+	// GetOrigin get origin node for the current insolard
+	GetOrigin() core.Node
+	// RemoveNode remove node
 	RemoveNode(nodeID core.RecordRef)
-}
-
-type MergedListCopy struct {
-	ActiveList                 map[core.RecordRef]core.Node
-	NodesJoinedDuringPrevPulse bool
 }
 
 // PartitionPolicy contains all rules how to initiate globule resharding.
@@ -229,8 +219,6 @@ type PartitionPolicy interface {
 
 // RoutingTable contains all routing information of the network.
 type RoutingTable interface {
-	// Inject inject dependencies from components
-	Inject(nodeKeeper NodeKeeper)
 	// Resolve NodeID -> ShortID, Address. Can initiate network requests.
 	Resolve(core.RecordRef) (*host.Host, error)
 	// ResolveConsensus ShortID -> NodeID, Address for node inside current globe for current consensus.
@@ -247,10 +235,8 @@ type RoutingTable interface {
 
 // InternalTransport simple interface to send network requests and process network responses.
 type InternalTransport interface {
-	// Start listening to network requests, should be started in goroutine.
-	Start(ctx context.Context)
-	// Stop listening to network requests.
-	Stop()
+	component.Starter
+	component.Stopper
 	// PublicAddress returns public address that can be published for all nodes.
 	PublicAddress() string
 	// GetNodeID get current node ID.
@@ -275,4 +261,11 @@ type ClaimQueue interface {
 	Front() consensus.ReferendumClaim
 	// Length returns the length of the queue
 	Length() int
+	// Push adds claim to the queue.
+	Push(claim consensus.ReferendumClaim)
+}
+
+// Snapshot provides ...
+type Snapshot interface {
+	GetPulse()
 }
