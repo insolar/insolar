@@ -465,6 +465,7 @@ func TestConveyor_ChangePulseMultipleTimes_WithEvents(t *testing.T) {
 				conveyor.SinkPush(pulseNumber, "TEST")
 				conveyor.SinkPush(pulseNumber-testPulseDelta, "TEST")
 				conveyor.SinkPush(pulseNumber+testPulseDelta, "TEST")
+				conveyor.SinkPushAll(pulseNumber, []interface{}{"TEST", i * j})
 			}
 		}()
 
@@ -503,6 +504,7 @@ func TestConveyor_ChangePulseMultipleTimes_WithEvents(t *testing.T) {
 
 		go func() {
 			for j := 0; j < 10; j++ {
+				require.NoError(t, conveyor.SinkPushAll(pulseNumber, []interface{}{"TEST", i}))
 				require.NoError(t, conveyor.SinkPush(pulseNumber, "TEST"))
 				require.NoError(t, conveyor.SinkPush(pulseNumber-testPulseDelta, "TEST"))
 				conveyor.SinkPush(pulseNumber+testPulseDelta, "TEST")
@@ -512,3 +514,5 @@ func TestConveyor_ChangePulseMultipleTimes_WithEvents(t *testing.T) {
 
 	time.Sleep(time.Millisecond * 200)
 }
+
+// TODO: Add test on InitiateShutdown
