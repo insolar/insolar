@@ -18,7 +18,7 @@ package queue
 
 // SyncDone is callback for biggestQueueSignal
 type SyncDone interface {
-	Done()
+	SetResult(interface{})
 }
 
 // OutputElement represent one element returned from queue

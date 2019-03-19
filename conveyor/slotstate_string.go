@@ -4,9 +4,19 @@ package conveyor
 
 import "strconv"
 
-const _SlotState_name = "InitializingWorkingSuspending"
+func _() {
+	// An "invalid array index" compiler error signifies that the constant values have changed.
+	// Re-run the stringer command to generate them again.
+	var x [1]struct{}
+	_ = x[Initializing-0]
+	_ = x[Working-1]
+	_ = x[Suspending-2]
+	_ = x[Canceling-3]
+}
 
-var _SlotState_index = [...]uint8{0, 12, 19, 29}
+const _SlotState_name = "InitializingWorkingSuspendingCanceling"
+
+var _SlotState_index = [...]uint8{0, 12, 19, 29, 38}
 
 func (i SlotState) String() string {
 	if i >= SlotState(len(_SlotState_index)-1) {

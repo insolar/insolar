@@ -138,7 +138,7 @@ func TestRemoveAllAfterBlock(t *testing.T) {
 
 type mockSyncDone struct{}
 
-func (m mockSyncDone) Done() {}
+func (m mockSyncDone) SetResult(result interface{}) {}
 
 // with signals
 func TestSimplePushSignals(t *testing.T) {
@@ -342,16 +342,6 @@ func TestParallelAccess(t *testing.T) {
 		}(&wg, queue, gotElements)
 	}
 
-	// HasSignal
-	for i := 0; i < parallelHasSignal; i++ {
-		go func(wg *sync.WaitGroup, q IQueue) {
-			for i := 0; i < numIterations; i++ {
-				q.HasSignal()
-			}
-			wg.Done()
-		}(&wg, queue)
-	}
-
 	// PushSignal
 	for i := 0; i < parallelPushSignal; i++ {
 		go func(wg *sync.WaitGroup, q IQueue, added chan OutputElement, blocked chan OutputElement) {
@@ -365,6 +355,16 @@ func TestParallelAccess(t *testing.T) {
 			}
 			wg.Done()
 		}(&wg, queue, addedElements, blockedRequests)
+	}
+
+	// HasSignal
+	for i := 0; i < parallelHasSignal; i++ {
+		go func(wg *sync.WaitGroup, q IQueue) {
+			for i := 0; i < numIterations; i++ {
+				q.HasSignal()
+			}
+			wg.Done()
+		}(&wg, queue)
 	}
 
 	wg.Wait()
