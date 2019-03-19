@@ -167,7 +167,7 @@ func initElementsBuf() ([]slotElement, *ElementList) {
 	return elements, emptyList
 }
 
-// NewSlot creates new instance of Slot
+// NewWorkingSlot creates new instance of Slot
 func NewWorkingSlot(pulseState constant.PulseState, pulseNumber core.PulseNumber, removeSlotCallback RemoveSlotCallback) TaskPusher {
 
 	slot := newSlot(pulseState, pulseNumber, removeSlotCallback)
