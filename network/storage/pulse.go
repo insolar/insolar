@@ -80,6 +80,8 @@ func NewPulseStorage() *PulseStorage {
 }
 
 type PulseStorage struct {
+	DB   DB `inject:""`
+	lock sync.RWMutex
 }
 
 func (p *PulseStorage) GetRangeHash(core.PulseRange) ([]byte, error) {
@@ -90,22 +92,210 @@ func (p *PulseStorage) ValidateRangeHash(core.PulseRange, []byte) (bool, error) 
 	panic("implement me")
 }
 
-func (p *PulseStorage) Forwards(ctx context.Context, pn core.PulseNumber, steps int) (core.Pulse, error) {
-	panic("implement me")
+// Forwards calculates steps pulses forwards from provided pulse. If calculated pulse does not exist, ErrNotFound will
+// be returned.
+func (p *PulseStorage) Forwards(ctx context.Context, pn core.PulseNumber, steps int) (pulse core.Pulse, err error) {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+
+	node, err := p.get(pn)
+	if err != nil {
+		return
+	}
+
+	iterator := node
+	for i := 0; i < steps; i++ {
+		if iterator.next == nil {
+			err = core.ErrNotFound
+			return
+		}
+		iterator, err = p.get(*iterator.next)
+		if err != nil {
+			return
+		}
+	}
+
+	return iterator.pulse, nil
 }
 
-func (p *PulseStorage) Backwards(ctx context.Context, pn core.PulseNumber, steps int) (core.Pulse, error) {
-	panic("implement me")
+// Backwards calculates steps pulses backwards from provided pulse. If calculated pulse does not exist, ErrNotFound will
+// be returned.
+func (p *PulseStorage) Backwards(ctx context.Context, pn core.PulseNumber, steps int) (pulse core.Pulse, err error) {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+
+	node, err := p.get(pn)
+	if err != nil {
+		return
+	}
+
+	iterator := node
+	for i := 0; i < steps; i++ {
+		if iterator.prev == nil {
+			err = core.ErrNotFound
+			return
+		}
+		iterator, err = p.get(*iterator.prev)
+		if err != nil {
+			return
+		}
+	}
+
+	return iterator.pulse, nil
 }
 
+// Append appends provided pulse to current storage. Pulse number should be greater than currently saved for preserving
+// pulse consistency. If provided pulse does not meet the requirements, ErrBadPulse will be returned.
 func (p *PulseStorage) Append(ctx context.Context, pulse core.Pulse) error {
-	panic("implement me")
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
+	var insertWithHead = func(head core.PulseNumber) error {
+		oldHead, err := p.get(head)
+		if err != nil {
+			return err
+		}
+		oldHead.next = &pulse.PulseNumber
+
+		// Set new pulse.
+		err = p.set(pulse.PulseNumber, dbNode{
+			prev:  &oldHead.pulse.PulseNumber,
+			pulse: pulse,
+		})
+		if err != nil {
+			return err
+		}
+		// Set old updated head.
+		err = p.set(oldHead.pulse.PulseNumber, oldHead)
+		if err != nil {
+			return err
+		}
+		// Set head meta record.
+		return p.setHead(pulse.PulseNumber)
+	}
+	var insertWithoutHead = func() error {
+		// Set new Pulse.
+		err := p.set(pulse.PulseNumber, dbNode{
+			pulse: pulse,
+		})
+		if err != nil {
+			return err
+		}
+		// Set head meta record.
+		return p.setHead(pulse.PulseNumber)
+	}
+
+	head, err := p.head()
+	if err == ErrNotFound {
+		return insertWithoutHead()
+	}
+
+	if pulse.PulseNumber <= head {
+		return ErrBadPulse
+	}
+	return insertWithHead(head)
 }
 
-func (p *PulseStorage) ForPulseNumber(context.Context, core.PulseNumber) (core.PulseNumber, error) {
-	panic("implement me")
+func (p *PulseStorage) ForPulseNumber(ctx context.Context, pn core.PulseNumber) (pulse core.Pulse, err error) {
+	nd, err := p.get(pn)
+	if err != nil {
+		return
+	}
+	return nd.pulse, nil
 }
 
 func (p *PulseStorage) Latest(ctx context.Context) (core.Pulse, error) {
-	panic("implement me")
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+
+	head, err := p.head()
+	if err != nil {
+		return core.Pulse{}, err
+	}
+	nd, err := p.get(head)
+	if err != nil {
+		return core.Pulse{}, err
+	}
+	return nd.pulse, nil
+}
+
+type pulseKey core.PulseNumber
+
+func (k pulseKey) Scope() Scope {
+	return ScopePulse
+}
+
+func (k pulseKey) ID() []byte {
+	return append([]byte{prefixPulse}, core.PulseNumber(k).Bytes()...)
+}
+
+type metaKey byte
+
+func (k metaKey) Scope() Scope {
+	return ScopePulse
+}
+
+func (k metaKey) ID() []byte {
+	return []byte{prefixMeta, byte(k)}
+}
+
+type dbNode struct {
+	pulse      core.Pulse
+	prev, next *core.PulseNumber
+}
+
+var (
+	prefixPulse byte = 1
+	prefixMeta  byte = 2
+)
+
+var (
+	keyHead metaKey = 1
+)
+
+func (p *PulseStorage) get(pn core.PulseNumber) (nd dbNode, err error) {
+	buf, err := p.DB.Get(pulseKey(pn))
+	if err == ErrNotFound {
+		err = ErrNotFound
+		return
+	}
+	if err != nil {
+		return
+	}
+	nd = deserialize(buf)
+	return
+}
+
+func (p *PulseStorage) set(pn core.PulseNumber, nd dbNode) error {
+	return p.DB.Set(pulseKey(pn), serialize(nd))
+}
+
+func (p *PulseStorage) head() (pn core.PulseNumber, err error) {
+	buf, err := p.DB.Get(keyHead)
+	if err == ErrNotFound {
+		err = ErrNotFound
+		return
+	}
+	if err != nil {
+		return
+	}
+	pn = core.NewPulseNumber(buf)
+	return
+}
+
+func (p *PulseStorage) setHead(pn core.PulseNumber) error {
+	return p.DB.Set(keyHead, pn.Bytes())
+}
+
+func serialize(nd dbNode) []byte {
+	buff := bytes.NewBuffer(nil)
+	enc := codec.NewEncoder(buff, &codec.CborHandle{})
+	enc.MustEncode(nd)
+	return buff.Bytes()
+}
+
+func deserialize(buf []byte) (nd dbNode) {
+	dec := codec.NewDecoderBytes(buf, &codec.CborHandle{})
+	dec.MustDecode(&nd)
+	return nd
 }
