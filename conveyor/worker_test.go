@@ -618,7 +618,7 @@ func Test_suspending_Present(t *testing.T) {
 	slot.slotState = Suspending
 	worker.suspending()
 	areSlotStatesEqual(&oldSlot, slot, t, true)
-	require.Equal(t, 555, callback.(*mockSyncDone).Wait())
+	require.Equal(t, 555, callback.(*mockSyncDone).GetResult())
 }
 
 func Test_suspending_Future(t *testing.T) {
@@ -649,7 +649,7 @@ func Test_suspending_ReadInputQueue(t *testing.T) {
 	slot.slotState = Suspending
 	worker.suspending()
 	require.Equal(t, constant.Past, slot.pulseState)
-	require.Equal(t, 555, callback.(*mockSyncDone).Wait())
+	require.Equal(t, 555, callback.(*mockSyncDone).GetResult())
 }
 
 // ---- working
@@ -996,11 +996,11 @@ func Test_CallCallbackOfSignal(t *testing.T) {
 
 			go worker.run()
 
-			callback.(*mockSyncDone).Wait()
+			callback.(*mockSyncDone).GetResult()
 
 			callback = mockCallback()
 			slot.inputQueue.PushSignal(ActivatePulseSignal, callback)
-			callback.(*mockSyncDone).Wait()
+			callback.(*mockSyncDone).GetResult()
 		})
 	}
 }

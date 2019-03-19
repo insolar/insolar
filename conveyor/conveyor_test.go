@@ -82,7 +82,7 @@ type mockSyncDone struct {
 	doneCount int
 }
 
-func (s *mockSyncDone) Wait() int {
+func (s *mockSyncDone) GetResult() int {
 	result := <-s.waiter
 	hash, ok := result.(int)
 	if !ok {
@@ -428,7 +428,7 @@ func TestConveyor_ChangePulse(t *testing.T) {
 	err = conveyor.PreparePulse(pulse, callback)
 	require.NoError(t, err)
 
-	callback.(*mockSyncDone).Wait()
+	callback.(*mockSyncDone).GetResult()
 
 	err = conveyor.ActivatePulse()
 	require.NoError(t, err)
@@ -446,7 +446,7 @@ func TestConveyor_ChangePulseMultipleTimes(t *testing.T) {
 		err = conveyor.PreparePulse(pulse, callback)
 		require.NoError(t, err)
 
-		callback.(*mockSyncDone).Wait()
+		callback.(*mockSyncDone).GetResult()
 
 		err = conveyor.ActivatePulse()
 		require.NoError(t, err)
@@ -488,9 +488,9 @@ func TestConveyor_ChangePulseMultipleTimes_WithEvents(t *testing.T) {
 		require.NoError(t, err)
 
 		if i == 0 {
-			require.Equal(t, 0, callback.(*mockSyncDone).Wait())
+			require.Equal(t, 0, callback.(*mockSyncDone).GetResult())
 		} else {
-			require.Equal(t, 555, callback.(*mockSyncDone).Wait())
+			require.Equal(t, 555, callback.(*mockSyncDone).GetResult())
 		}
 
 		err = conveyor.ActivatePulse()
