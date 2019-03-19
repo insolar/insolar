@@ -50,13 +50,13 @@ func NewSnapshot(number core.PulseNumber, nodes map[core.RecordRef]core.Node) *S
 		pulse: number,
 		// TODO: pass actual state
 		state:    core.NoNetworkState,
-		nodeList: sortNodes(nodes),
+		nodeList: splitNodes(nodes),
 	}
 }
 
-// sortNodes temporary method to create snapshot lists. Will be replaced by special function that will take in count
+// splitNodes temporary method to create snapshot lists. Will be replaced by special function that will take in count
 // previous snapshot and approved claims.
-func sortNodes(nodes map[core.RecordRef]core.Node) [ListLength][]core.Node {
+func splitNodes(nodes map[core.RecordRef]core.Node) [ListLength][]core.Node {
 	var result [ListLength][]core.Node
 	for i := 0; i < int(ListLength); i++ {
 		result[i] = make([]core.Node, 0)
