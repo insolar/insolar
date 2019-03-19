@@ -1,5 +1,5 @@
 /*
- *    Copyright 2019 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -17,12 +17,12 @@
 package gen
 
 import (
-	"github.com/google/gofuzz"
+	fuzz "github.com/google/gofuzz"
 	"github.com/insolar/insolar/core"
 )
 
 // PulseNumber generates random pulse number (excluding special cases).
 func PulseNumber() (pn core.PulseNumber) {
-	fuzz.New().Fuzz(&pn)
+	fuzz.New().NilChance(0).Fuzz(&pn)
 	return
 }

@@ -20,13 +20,14 @@ import (
 	"context"
 	"sync"
 
+	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/storage"
-	"github.com/pkg/errors"
-	"go.opencensus.io/stats"
+	"github.com/insolar/insolar/ledger/internal/jet"
 )
 
 // ledgerArtifactSenders is a some kind of a middleware layer
@@ -114,7 +115,7 @@ func followRedirectSender(bus core.MessageBus) PreSender {
 }
 
 // retryJetSender is using for refreshing jet-tree, if destination has no idea about a jet from message
-func retryJetSender(pulseNumber core.PulseNumber, jetStorage storage.JetStorage) PreSender {
+func retryJetSender(pulseNumber core.PulseNumber, jetModifier jet.Modifier) PreSender {
 	return func(sender Sender) Sender {
 		return func(ctx context.Context, msg core.Message, options *core.MessageSendOptions) (core.Reply, error) {
 			retries := jetMissRetryCount
@@ -125,7 +126,7 @@ func retryJetSender(pulseNumber core.PulseNumber, jetStorage storage.JetStorage)
 				}
 
 				if r, ok := rep.(*reply.JetMiss); ok {
-					jetStorage.UpdateJetTree(ctx, pulseNumber, true, r.JetID)
+					jetModifier.Update(ctx, pulseNumber, true, core.JetID(r.JetID))
 				} else {
 					return rep, err
 				}

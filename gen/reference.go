@@ -1,5 +1,5 @@
 /*
- *    Copyright 2019 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -17,18 +17,33 @@
 package gen
 
 import (
-	"github.com/google/gofuzz"
+	fuzz "github.com/google/gofuzz"
+
 	"github.com/insolar/insolar/core"
 )
 
 // ID generates random id.
 func ID() (id core.RecordID) {
-	fuzz.New().Fuzz(&id)
+	fuzz.New().NilChance(0).Fuzz(&id)
+	return
+}
+
+// JetID generates random jet id.
+func JetID() (jetID core.JetID) {
+	f := fuzz.New().Funcs(func(id *core.JetID, c fuzz.Continue) {
+		c.Fuzz(id)
+		// set special pulse number
+		copy(id[:core.PulseNumberSize], core.PulseNumberJet.Bytes())
+		// set depth
+		// adds 1 because Intn returns [0,n)
+		id[core.PulseNumberSize] = byte(c.Intn(core.JetMaximumDepth + 1))
+	})
+	f.Fuzz(&jetID)
 	return
 }
 
 // Reference generates random reference.
 func Reference() (ref core.RecordRef) {
-	fuzz.New().Fuzz(&ref)
+	fuzz.New().NilChance(0).Fuzz(&ref)
 	return
 }

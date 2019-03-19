@@ -12,8 +12,7 @@ import (
 
 	"github.com/gojuno/minimock"
 	core "github.com/insolar/insolar/core"
-	index "github.com/insolar/insolar/ledger/storage/index"
-	record "github.com/insolar/insolar/ledger/storage/record"
+	object "github.com/insolar/insolar/ledger/storage/object"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -27,12 +26,12 @@ type ObjectStorageMock struct {
 	GetBlobPreCounter uint64
 	GetBlobMock       mObjectStorageMockGetBlob
 
-	GetObjectIndexFunc       func(p context.Context, p1 core.RecordID, p2 *core.RecordID, p3 bool) (r *index.ObjectLifeline, r1 error)
+	GetObjectIndexFunc       func(p context.Context, p1 core.RecordID, p2 *core.RecordID, p3 bool) (r *object.Lifeline, r1 error)
 	GetObjectIndexCounter    uint64
 	GetObjectIndexPreCounter uint64
 	GetObjectIndexMock       mObjectStorageMockGetObjectIndex
 
-	GetRecordFunc       func(p context.Context, p1 core.RecordID, p2 *core.RecordID) (r record.Record, r1 error)
+	GetRecordFunc       func(p context.Context, p1 core.RecordID, p2 *core.RecordID) (r object.Record, r1 error)
 	GetRecordCounter    uint64
 	GetRecordPreCounter uint64
 	GetRecordMock       mObjectStorageMockGetRecord
@@ -52,17 +51,12 @@ type ObjectStorageMock struct {
 	SetBlobPreCounter uint64
 	SetBlobMock       mObjectStorageMockSetBlob
 
-	SetMessageFunc       func(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 core.Message) (r error)
-	SetMessageCounter    uint64
-	SetMessagePreCounter uint64
-	SetMessageMock       mObjectStorageMockSetMessage
-
-	SetObjectIndexFunc       func(p context.Context, p1 core.RecordID, p2 *core.RecordID, p3 *index.ObjectLifeline) (r error)
+	SetObjectIndexFunc       func(p context.Context, p1 core.RecordID, p2 *core.RecordID, p3 *object.Lifeline) (r error)
 	SetObjectIndexCounter    uint64
 	SetObjectIndexPreCounter uint64
 	SetObjectIndexMock       mObjectStorageMockSetObjectIndex
 
-	SetRecordFunc       func(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 record.Record) (r *core.RecordID, r1 error)
+	SetRecordFunc       func(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 object.Record) (r *core.RecordID, r1 error)
 	SetRecordCounter    uint64
 	SetRecordPreCounter uint64
 	SetRecordMock       mObjectStorageMockSetRecord
@@ -82,7 +76,6 @@ func NewObjectStorageMock(t minimock.Tester) *ObjectStorageMock {
 	m.IterateIndexIDsMock = mObjectStorageMockIterateIndexIDs{mock: m}
 	m.RemoveObjectIndexMock = mObjectStorageMockRemoveObjectIndex{mock: m}
 	m.SetBlobMock = mObjectStorageMockSetBlob{mock: m}
-	m.SetMessageMock = mObjectStorageMockSetMessage{mock: m}
 	m.SetObjectIndexMock = mObjectStorageMockSetObjectIndex{mock: m}
 	m.SetRecordMock = mObjectStorageMockSetRecord{mock: m}
 
@@ -260,7 +253,7 @@ type ObjectStorageMockGetObjectIndexInput struct {
 }
 
 type ObjectStorageMockGetObjectIndexResult struct {
-	r  *index.ObjectLifeline
+	r  *object.Lifeline
 	r1 error
 }
 
@@ -277,7 +270,7 @@ func (m *mObjectStorageMockGetObjectIndex) Expect(p context.Context, p1 core.Rec
 }
 
 //Return specifies results of invocation of ObjectStorage.GetObjectIndex
-func (m *mObjectStorageMockGetObjectIndex) Return(r *index.ObjectLifeline, r1 error) *ObjectStorageMock {
+func (m *mObjectStorageMockGetObjectIndex) Return(r *object.Lifeline, r1 error) *ObjectStorageMock {
 	m.mock.GetObjectIndexFunc = nil
 	m.expectationSeries = nil
 
@@ -299,12 +292,12 @@ func (m *mObjectStorageMockGetObjectIndex) ExpectOnce(p context.Context, p1 core
 	return expectation
 }
 
-func (e *ObjectStorageMockGetObjectIndexExpectation) Return(r *index.ObjectLifeline, r1 error) {
+func (e *ObjectStorageMockGetObjectIndexExpectation) Return(r *object.Lifeline, r1 error) {
 	e.result = &ObjectStorageMockGetObjectIndexResult{r, r1}
 }
 
 //Set uses given function f as a mock of ObjectStorage.GetObjectIndex method
-func (m *mObjectStorageMockGetObjectIndex) Set(f func(p context.Context, p1 core.RecordID, p2 *core.RecordID, p3 bool) (r *index.ObjectLifeline, r1 error)) *ObjectStorageMock {
+func (m *mObjectStorageMockGetObjectIndex) Set(f func(p context.Context, p1 core.RecordID, p2 *core.RecordID, p3 bool) (r *object.Lifeline, r1 error)) *ObjectStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -313,7 +306,7 @@ func (m *mObjectStorageMockGetObjectIndex) Set(f func(p context.Context, p1 core
 }
 
 //GetObjectIndex implements github.com/insolar/insolar/ledger/storage.ObjectStorage interface
-func (m *ObjectStorageMock) GetObjectIndex(p context.Context, p1 core.RecordID, p2 *core.RecordID, p3 bool) (r *index.ObjectLifeline, r1 error) {
+func (m *ObjectStorageMock) GetObjectIndex(p context.Context, p1 core.RecordID, p2 *core.RecordID, p3 bool) (r *object.Lifeline, r1 error) {
 	counter := atomic.AddUint64(&m.GetObjectIndexPreCounter, 1)
 	defer atomic.AddUint64(&m.GetObjectIndexCounter, 1)
 
@@ -412,7 +405,7 @@ type ObjectStorageMockGetRecordInput struct {
 }
 
 type ObjectStorageMockGetRecordResult struct {
-	r  record.Record
+	r  object.Record
 	r1 error
 }
 
@@ -429,7 +422,7 @@ func (m *mObjectStorageMockGetRecord) Expect(p context.Context, p1 core.RecordID
 }
 
 //Return specifies results of invocation of ObjectStorage.GetRecord
-func (m *mObjectStorageMockGetRecord) Return(r record.Record, r1 error) *ObjectStorageMock {
+func (m *mObjectStorageMockGetRecord) Return(r object.Record, r1 error) *ObjectStorageMock {
 	m.mock.GetRecordFunc = nil
 	m.expectationSeries = nil
 
@@ -451,12 +444,12 @@ func (m *mObjectStorageMockGetRecord) ExpectOnce(p context.Context, p1 core.Reco
 	return expectation
 }
 
-func (e *ObjectStorageMockGetRecordExpectation) Return(r record.Record, r1 error) {
+func (e *ObjectStorageMockGetRecordExpectation) Return(r object.Record, r1 error) {
 	e.result = &ObjectStorageMockGetRecordResult{r, r1}
 }
 
 //Set uses given function f as a mock of ObjectStorage.GetRecord method
-func (m *mObjectStorageMockGetRecord) Set(f func(p context.Context, p1 core.RecordID, p2 *core.RecordID) (r record.Record, r1 error)) *ObjectStorageMock {
+func (m *mObjectStorageMockGetRecord) Set(f func(p context.Context, p1 core.RecordID, p2 *core.RecordID) (r object.Record, r1 error)) *ObjectStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -465,7 +458,7 @@ func (m *mObjectStorageMockGetRecord) Set(f func(p context.Context, p1 core.Reco
 }
 
 //GetRecord implements github.com/insolar/insolar/ledger/storage.ObjectStorage interface
-func (m *ObjectStorageMock) GetRecord(p context.Context, p1 core.RecordID, p2 *core.RecordID) (r record.Record, r1 error) {
+func (m *ObjectStorageMock) GetRecord(p context.Context, p1 core.RecordID, p2 *core.RecordID) (r object.Record, r1 error) {
 	counter := atomic.AddUint64(&m.GetRecordPreCounter, 1)
 	defer atomic.AddUint64(&m.GetRecordCounter, 1)
 
@@ -997,156 +990,6 @@ func (m *ObjectStorageMock) SetBlobFinished() bool {
 	return true
 }
 
-type mObjectStorageMockSetMessage struct {
-	mock              *ObjectStorageMock
-	mainExpectation   *ObjectStorageMockSetMessageExpectation
-	expectationSeries []*ObjectStorageMockSetMessageExpectation
-}
-
-type ObjectStorageMockSetMessageExpectation struct {
-	input  *ObjectStorageMockSetMessageInput
-	result *ObjectStorageMockSetMessageResult
-}
-
-type ObjectStorageMockSetMessageInput struct {
-	p  context.Context
-	p1 core.RecordID
-	p2 core.PulseNumber
-	p3 core.Message
-}
-
-type ObjectStorageMockSetMessageResult struct {
-	r error
-}
-
-//Expect specifies that invocation of ObjectStorage.SetMessage is expected from 1 to Infinity times
-func (m *mObjectStorageMockSetMessage) Expect(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 core.Message) *mObjectStorageMockSetMessage {
-	m.mock.SetMessageFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &ObjectStorageMockSetMessageExpectation{}
-	}
-	m.mainExpectation.input = &ObjectStorageMockSetMessageInput{p, p1, p2, p3}
-	return m
-}
-
-//Return specifies results of invocation of ObjectStorage.SetMessage
-func (m *mObjectStorageMockSetMessage) Return(r error) *ObjectStorageMock {
-	m.mock.SetMessageFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &ObjectStorageMockSetMessageExpectation{}
-	}
-	m.mainExpectation.result = &ObjectStorageMockSetMessageResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of ObjectStorage.SetMessage is expected once
-func (m *mObjectStorageMockSetMessage) ExpectOnce(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 core.Message) *ObjectStorageMockSetMessageExpectation {
-	m.mock.SetMessageFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &ObjectStorageMockSetMessageExpectation{}
-	expectation.input = &ObjectStorageMockSetMessageInput{p, p1, p2, p3}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *ObjectStorageMockSetMessageExpectation) Return(r error) {
-	e.result = &ObjectStorageMockSetMessageResult{r}
-}
-
-//Set uses given function f as a mock of ObjectStorage.SetMessage method
-func (m *mObjectStorageMockSetMessage) Set(f func(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 core.Message) (r error)) *ObjectStorageMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.SetMessageFunc = f
-	return m.mock
-}
-
-//SetMessage implements github.com/insolar/insolar/ledger/storage.ObjectStorage interface
-func (m *ObjectStorageMock) SetMessage(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 core.Message) (r error) {
-	counter := atomic.AddUint64(&m.SetMessagePreCounter, 1)
-	defer atomic.AddUint64(&m.SetMessageCounter, 1)
-
-	if len(m.SetMessageMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.SetMessageMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to ObjectStorageMock.SetMessage. %v %v %v %v", p, p1, p2, p3)
-			return
-		}
-
-		input := m.SetMessageMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, ObjectStorageMockSetMessageInput{p, p1, p2, p3}, "ObjectStorage.SetMessage got unexpected parameters")
-
-		result := m.SetMessageMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the ObjectStorageMock.SetMessage")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.SetMessageMock.mainExpectation != nil {
-
-		input := m.SetMessageMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, ObjectStorageMockSetMessageInput{p, p1, p2, p3}, "ObjectStorage.SetMessage got unexpected parameters")
-		}
-
-		result := m.SetMessageMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the ObjectStorageMock.SetMessage")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.SetMessageFunc == nil {
-		m.t.Fatalf("Unexpected call to ObjectStorageMock.SetMessage. %v %v %v %v", p, p1, p2, p3)
-		return
-	}
-
-	return m.SetMessageFunc(p, p1, p2, p3)
-}
-
-//SetMessageMinimockCounter returns a count of ObjectStorageMock.SetMessageFunc invocations
-func (m *ObjectStorageMock) SetMessageMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.SetMessageCounter)
-}
-
-//SetMessageMinimockPreCounter returns the value of ObjectStorageMock.SetMessage invocations
-func (m *ObjectStorageMock) SetMessageMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.SetMessagePreCounter)
-}
-
-//SetMessageFinished returns true if mock invocations count is ok
-func (m *ObjectStorageMock) SetMessageFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.SetMessageMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.SetMessageCounter) == uint64(len(m.SetMessageMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.SetMessageMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.SetMessageCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.SetMessageFunc != nil {
-		return atomic.LoadUint64(&m.SetMessageCounter) > 0
-	}
-
-	return true
-}
-
 type mObjectStorageMockSetObjectIndex struct {
 	mock              *ObjectStorageMock
 	mainExpectation   *ObjectStorageMockSetObjectIndexExpectation
@@ -1162,7 +1005,7 @@ type ObjectStorageMockSetObjectIndexInput struct {
 	p  context.Context
 	p1 core.RecordID
 	p2 *core.RecordID
-	p3 *index.ObjectLifeline
+	p3 *object.Lifeline
 }
 
 type ObjectStorageMockSetObjectIndexResult struct {
@@ -1170,7 +1013,7 @@ type ObjectStorageMockSetObjectIndexResult struct {
 }
 
 //Expect specifies that invocation of ObjectStorage.SetObjectIndex is expected from 1 to Infinity times
-func (m *mObjectStorageMockSetObjectIndex) Expect(p context.Context, p1 core.RecordID, p2 *core.RecordID, p3 *index.ObjectLifeline) *mObjectStorageMockSetObjectIndex {
+func (m *mObjectStorageMockSetObjectIndex) Expect(p context.Context, p1 core.RecordID, p2 *core.RecordID, p3 *object.Lifeline) *mObjectStorageMockSetObjectIndex {
 	m.mock.SetObjectIndexFunc = nil
 	m.expectationSeries = nil
 
@@ -1194,7 +1037,7 @@ func (m *mObjectStorageMockSetObjectIndex) Return(r error) *ObjectStorageMock {
 }
 
 //ExpectOnce specifies that invocation of ObjectStorage.SetObjectIndex is expected once
-func (m *mObjectStorageMockSetObjectIndex) ExpectOnce(p context.Context, p1 core.RecordID, p2 *core.RecordID, p3 *index.ObjectLifeline) *ObjectStorageMockSetObjectIndexExpectation {
+func (m *mObjectStorageMockSetObjectIndex) ExpectOnce(p context.Context, p1 core.RecordID, p2 *core.RecordID, p3 *object.Lifeline) *ObjectStorageMockSetObjectIndexExpectation {
 	m.mock.SetObjectIndexFunc = nil
 	m.mainExpectation = nil
 
@@ -1209,7 +1052,7 @@ func (e *ObjectStorageMockSetObjectIndexExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of ObjectStorage.SetObjectIndex method
-func (m *mObjectStorageMockSetObjectIndex) Set(f func(p context.Context, p1 core.RecordID, p2 *core.RecordID, p3 *index.ObjectLifeline) (r error)) *ObjectStorageMock {
+func (m *mObjectStorageMockSetObjectIndex) Set(f func(p context.Context, p1 core.RecordID, p2 *core.RecordID, p3 *object.Lifeline) (r error)) *ObjectStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1218,7 +1061,7 @@ func (m *mObjectStorageMockSetObjectIndex) Set(f func(p context.Context, p1 core
 }
 
 //SetObjectIndex implements github.com/insolar/insolar/ledger/storage.ObjectStorage interface
-func (m *ObjectStorageMock) SetObjectIndex(p context.Context, p1 core.RecordID, p2 *core.RecordID, p3 *index.ObjectLifeline) (r error) {
+func (m *ObjectStorageMock) SetObjectIndex(p context.Context, p1 core.RecordID, p2 *core.RecordID, p3 *object.Lifeline) (r error) {
 	counter := atomic.AddUint64(&m.SetObjectIndexPreCounter, 1)
 	defer atomic.AddUint64(&m.SetObjectIndexCounter, 1)
 
@@ -1312,7 +1155,7 @@ type ObjectStorageMockSetRecordInput struct {
 	p  context.Context
 	p1 core.RecordID
 	p2 core.PulseNumber
-	p3 record.Record
+	p3 object.Record
 }
 
 type ObjectStorageMockSetRecordResult struct {
@@ -1321,7 +1164,7 @@ type ObjectStorageMockSetRecordResult struct {
 }
 
 //Expect specifies that invocation of ObjectStorage.SetRecord is expected from 1 to Infinity times
-func (m *mObjectStorageMockSetRecord) Expect(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 record.Record) *mObjectStorageMockSetRecord {
+func (m *mObjectStorageMockSetRecord) Expect(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 object.Record) *mObjectStorageMockSetRecord {
 	m.mock.SetRecordFunc = nil
 	m.expectationSeries = nil
 
@@ -1345,7 +1188,7 @@ func (m *mObjectStorageMockSetRecord) Return(r *core.RecordID, r1 error) *Object
 }
 
 //ExpectOnce specifies that invocation of ObjectStorage.SetRecord is expected once
-func (m *mObjectStorageMockSetRecord) ExpectOnce(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 record.Record) *ObjectStorageMockSetRecordExpectation {
+func (m *mObjectStorageMockSetRecord) ExpectOnce(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 object.Record) *ObjectStorageMockSetRecordExpectation {
 	m.mock.SetRecordFunc = nil
 	m.mainExpectation = nil
 
@@ -1360,7 +1203,7 @@ func (e *ObjectStorageMockSetRecordExpectation) Return(r *core.RecordID, r1 erro
 }
 
 //Set uses given function f as a mock of ObjectStorage.SetRecord method
-func (m *mObjectStorageMockSetRecord) Set(f func(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 record.Record) (r *core.RecordID, r1 error)) *ObjectStorageMock {
+func (m *mObjectStorageMockSetRecord) Set(f func(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 object.Record) (r *core.RecordID, r1 error)) *ObjectStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1369,7 +1212,7 @@ func (m *mObjectStorageMockSetRecord) Set(f func(p context.Context, p1 core.Reco
 }
 
 //SetRecord implements github.com/insolar/insolar/ledger/storage.ObjectStorage interface
-func (m *ObjectStorageMock) SetRecord(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 record.Record) (r *core.RecordID, r1 error) {
+func (m *ObjectStorageMock) SetRecord(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 object.Record) (r *core.RecordID, r1 error) {
 	counter := atomic.AddUint64(&m.SetRecordPreCounter, 1)
 	defer atomic.AddUint64(&m.SetRecordCounter, 1)
 
@@ -1478,10 +1321,6 @@ func (m *ObjectStorageMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to ObjectStorageMock.SetBlob")
 	}
 
-	if !m.SetMessageFinished() {
-		m.t.Fatal("Expected call to ObjectStorageMock.SetMessage")
-	}
-
 	if !m.SetObjectIndexFinished() {
 		m.t.Fatal("Expected call to ObjectStorageMock.SetObjectIndex")
 	}
@@ -1531,10 +1370,6 @@ func (m *ObjectStorageMock) MinimockFinish() {
 		m.t.Fatal("Expected call to ObjectStorageMock.SetBlob")
 	}
 
-	if !m.SetMessageFinished() {
-		m.t.Fatal("Expected call to ObjectStorageMock.SetMessage")
-	}
-
 	if !m.SetObjectIndexFinished() {
 		m.t.Fatal("Expected call to ObjectStorageMock.SetObjectIndex")
 	}
@@ -1563,7 +1398,6 @@ func (m *ObjectStorageMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.IterateIndexIDsFinished()
 		ok = ok && m.RemoveObjectIndexFinished()
 		ok = ok && m.SetBlobFinished()
-		ok = ok && m.SetMessageFinished()
 		ok = ok && m.SetObjectIndexFinished()
 		ok = ok && m.SetRecordFinished()
 
@@ -1596,10 +1430,6 @@ func (m *ObjectStorageMock) MinimockWait(timeout time.Duration) {
 
 			if !m.SetBlobFinished() {
 				m.t.Error("Expected call to ObjectStorageMock.SetBlob")
-			}
-
-			if !m.SetMessageFinished() {
-				m.t.Error("Expected call to ObjectStorageMock.SetMessage")
 			}
 
 			if !m.SetObjectIndexFinished() {
@@ -1643,10 +1473,6 @@ func (m *ObjectStorageMock) AllMocksCalled() bool {
 	}
 
 	if !m.SetBlobFinished() {
-		return false
-	}
-
-	if !m.SetMessageFinished() {
 		return false
 	}
 

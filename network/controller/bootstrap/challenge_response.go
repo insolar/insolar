@@ -30,7 +30,7 @@ import (
 	"github.com/insolar/insolar/network/controller/common"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet/types"
-	base58 "github.com/jbenet/go-base58"
+	"github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 )
 
@@ -41,12 +41,12 @@ type ChallengeResponseController interface {
 }
 
 type challengeResponseController struct {
-	SessionManager SessionManager           `inject:""`
-	Cryptography   core.CryptographyService `inject:""`
-	NodeKeeper     network.NodeKeeper       `inject:""`
+	SessionManager SessionManager            `inject:""`
+	Cryptography   core.CryptographyService  `inject:""`
+	NodeKeeper     network.NodeKeeper        `inject:""`
+	Transport      network.InternalTransport `inject:""`
 
-	options   *common.Options
-	transport network.InternalTransport
+	options *common.Options
 }
 
 type Nonce []byte
@@ -131,7 +131,7 @@ func (cr *challengeResponseController) processChallenge1(ctx context.Context, re
 	if err != nil {
 		return cr.buildChallenge1ErrorResponse(ctx, request, err.Error()), nil
 	}
-	response := cr.transport.BuildResponse(ctx, request, &SignedChallengeResponse{
+	response := cr.Transport.BuildResponse(ctx, request, &SignedChallengeResponse{
 		Header: ChallengeResponseHeader{
 			Success: true,
 		},
@@ -146,7 +146,7 @@ func (cr *challengeResponseController) processChallenge1(ctx context.Context, re
 
 func (cr *challengeResponseController) buildChallenge1ErrorResponse(ctx context.Context, request network.Request, err string) network.Response {
 	log.Warn(err)
-	return cr.transport.BuildResponse(ctx, request, &ChallengeResponse{
+	return cr.Transport.BuildResponse(ctx, request, &ChallengeResponse{
 		Header: ChallengeResponseHeader{
 			Success: false,
 			Error:   err,
@@ -171,7 +171,7 @@ func (cr *challengeResponseController) processChallenge2(ctx context.Context, re
 	if err != nil {
 		return cr.buildChallenge2ErrorResponse(ctx, request, err.Error()), nil
 	}
-	response := cr.transport.BuildResponse(ctx, request, &ChallengeResponse{
+	response := cr.Transport.BuildResponse(ctx, request, &ChallengeResponse{
 		Header: ChallengeResponseHeader{
 			Success: true,
 		},
@@ -184,7 +184,7 @@ func (cr *challengeResponseController) processChallenge2(ctx context.Context, re
 
 func (cr *challengeResponseController) buildChallenge2ErrorResponse(ctx context.Context, request network.Request, err string) network.Response {
 	log.Warn(err)
-	return cr.transport.BuildResponse(ctx, request, &SignedChallengeResponse{
+	return cr.Transport.BuildResponse(ctx, request, &SignedChallengeResponse{
 		Header: ChallengeResponseHeader{
 			Success: false,
 			Error:   err,
@@ -193,8 +193,8 @@ func (cr *challengeResponseController) buildChallenge2ErrorResponse(ctx context.
 }
 
 func (cr *challengeResponseController) Init(ctx context.Context) error {
-	cr.transport.RegisterPacketHandler(types.Challenge1, cr.processChallenge1)
-	cr.transport.RegisterPacketHandler(types.Challenge2, cr.processChallenge2)
+	cr.Transport.RegisterPacketHandler(types.Challenge1, cr.processChallenge1)
+	cr.Transport.RegisterPacketHandler(types.Challenge2, cr.processChallenge2)
 	return nil
 }
 
@@ -203,9 +203,9 @@ func (cr *challengeResponseController) sendRequest1(ctx context.Context, discove
 
 	ctx, span := instracer.StartSpan(ctx, "ChallengeResponseController.sendRequest1")
 	defer span.End()
-	request := cr.transport.NewRequestBuilder().Type(types.Challenge1).Data(&ChallengeRequest{
+	request := cr.Transport.NewRequestBuilder().Type(types.Challenge1).Data(&ChallengeRequest{
 		SessionID: sessionID, Nonce: nonce}).Build()
-	future, err := cr.transport.SendRequestPacket(ctx, request, discoveryHost)
+	future, err := cr.Transport.SendRequestPacket(ctx, request, discoveryHost)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error sending challenge request")
 	}
@@ -225,9 +225,9 @@ func (cr *challengeResponseController) sendRequest2(ctx context.Context, discove
 
 	ctx, span := instracer.StartSpan(ctx, "ChallengeResponseController.sendRequest2")
 	defer span.End()
-	request := cr.transport.NewRequestBuilder().Type(types.Challenge2).Data(&SignedChallengeRequest{
+	request := cr.Transport.NewRequestBuilder().Type(types.Challenge2).Data(&SignedChallengeRequest{
 		SessionID: sessionID, XorNonce: xorNonce, SignedDiscoveryNonce: signedDiscoveryNonce}).Build()
-	future, err := cr.transport.SendRequestPacket(ctx, request, discoveryHost)
+	future, err := cr.Transport.SendRequestPacket(ctx, request, discoveryHost)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error sending challenge request")
 	}
@@ -282,9 +282,6 @@ func (cr *challengeResponseController) Execute(ctx context.Context, discoveryNod
 	return payload, nil
 }
 
-func NewChallengeResponseController(options *common.Options, transport network.InternalTransport) ChallengeResponseController {
-	return &challengeResponseController{
-		options:   options,
-		transport: transport,
-	}
+func NewChallengeResponseController(options *common.Options) ChallengeResponseController {
+	return &challengeResponseController{options: options}
 }

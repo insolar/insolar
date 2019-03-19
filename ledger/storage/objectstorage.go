@@ -20,22 +20,18 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/message"
-	"github.com/insolar/insolar/ledger/storage/index"
-	"github.com/insolar/insolar/ledger/storage/jet"
-	"github.com/insolar/insolar/ledger/storage/record"
+	"github.com/insolar/insolar/ledger/storage/object"
 )
 
-// ObjectStorage returns objects and their meta
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage.ObjectStorage -o ./ -s _mock.go
+
+// ObjectStorage returns objects and their meta
 type ObjectStorage interface {
 	GetBlob(ctx context.Context, jetID core.RecordID, id *core.RecordID) ([]byte, error)
 	SetBlob(ctx context.Context, jetID core.RecordID, pulseNumber core.PulseNumber, blob []byte) (*core.RecordID, error)
 
-	GetRecord(ctx context.Context, jetID core.RecordID, id *core.RecordID) (record.Record, error)
-	SetRecord(ctx context.Context, jetID core.RecordID, pulseNumber core.PulseNumber, rec record.Record) (*core.RecordID, error)
-
-	SetMessage(ctx context.Context, jetID core.RecordID, pulseNumber core.PulseNumber, genericMessage core.Message) error
+	GetRecord(ctx context.Context, jetID core.RecordID, id *core.RecordID) (object.Record, error)
+	SetRecord(ctx context.Context, jetID core.RecordID, pulseNumber core.PulseNumber, rec object.Record) (*core.RecordID, error)
 
 	IterateIndexIDs(
 		ctx context.Context,
@@ -48,13 +44,13 @@ type ObjectStorage interface {
 		jetID core.RecordID,
 		id *core.RecordID,
 		forupdate bool,
-	) (*index.ObjectLifeline, error)
+	) (*object.Lifeline, error)
 
 	SetObjectIndex(
 		ctx context.Context,
 		jetID core.RecordID,
 		id *core.RecordID,
-		idx *index.ObjectLifeline,
+		idx *object.Lifeline,
 	) error
 
 	RemoveObjectIndex(
@@ -108,9 +104,9 @@ func (os *objectStorage) SetBlob(ctx context.Context, jetID core.RecordID, pulse
 }
 
 // GetRecord wraps matching transaction manager method.
-func (os *objectStorage) GetRecord(ctx context.Context, jetID core.RecordID, id *core.RecordID) (record.Record, error) {
+func (os *objectStorage) GetRecord(ctx context.Context, jetID core.RecordID, id *core.RecordID) (object.Record, error) {
 	var (
-		fetchedRecord record.Record
+		fetchedRecord object.Record
 		err           error
 	)
 
@@ -125,7 +121,7 @@ func (os *objectStorage) GetRecord(ctx context.Context, jetID core.RecordID, id 
 }
 
 // SetRecord wraps matching transaction manager method.
-func (os *objectStorage) SetRecord(ctx context.Context, jetID core.RecordID, pulseNumber core.PulseNumber, rec record.Record) (*core.RecordID, error) {
+func (os *objectStorage) SetRecord(ctx context.Context, jetID core.RecordID, pulseNumber core.PulseNumber, rec object.Record) (*core.RecordID, error) {
 	var (
 		id  *core.RecordID
 		err error
@@ -140,31 +136,13 @@ func (os *objectStorage) SetRecord(ctx context.Context, jetID core.RecordID, pul
 	return id, nil
 }
 
-// SetMessage persists message to the database
-func (os *objectStorage) SetMessage(ctx context.Context, jetID core.RecordID, pulseNumber core.PulseNumber, genericMessage core.Message) error {
-	_, prefix := jet.Jet(jetID)
-	messageBytes := message.ToBytes(genericMessage)
-	hw := os.PlatformCryptographyScheme.ReferenceHasher()
-	_, err := hw.Write(messageBytes)
-	if err != nil {
-		return err
-	}
-	hw.Sum(nil)
-
-	return os.DB.set(
-		ctx,
-		prefixkey(scopeIDMessage, prefix, pulseNumber.Bytes(), hw.Sum(nil)),
-		messageBytes,
-	)
-}
-
 // IterateIndexIDs iterates over index IDs on provided Jet ID.
 func (os *objectStorage) IterateIndexIDs(
 	ctx context.Context,
 	jetID core.RecordID,
 	handler func(id core.RecordID) error,
 ) error {
-	_, jetPrefix := jet.Jet(jetID)
+	jetPrefix := core.JetID(jetID).Prefix()
 	prefix := prefixkey(scopeIDLifeline, jetPrefix)
 
 	return os.DB.iterate(ctx, prefix, func(k, v []byte) error {
@@ -184,7 +162,7 @@ func (os *objectStorage) GetObjectIndex(
 	jetID core.RecordID,
 	id *core.RecordID,
 	forupdate bool,
-) (*index.ObjectLifeline, error) {
+) (*object.Lifeline, error) {
 	tx, err := os.DB.BeginTransaction(false)
 	if err != nil {
 		return nil, err
@@ -203,7 +181,7 @@ func (os *objectStorage) SetObjectIndex(
 	ctx context.Context,
 	jetID core.RecordID,
 	id *core.RecordID,
-	idx *index.ObjectLifeline,
+	idx *object.Lifeline,
 ) error {
 	return os.DB.Update(ctx, func(tx *TransactionManager) error {
 		return tx.SetObjectIndex(ctx, jetID, id, idx)

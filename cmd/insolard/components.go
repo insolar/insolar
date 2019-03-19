@@ -196,6 +196,7 @@ func initComponents(
 		networkCoordinator,
 		cryptographyService,
 		pulseConveyor,
+		keyProcessor,
 	}...)
 
 	cm.Inject(components...)

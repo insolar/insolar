@@ -24,9 +24,13 @@ import (
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/cryptography"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/pulsenetwork"
 	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/network/transport/relay"
+	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/pulsar"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/pkg/errors"
 )
@@ -100,6 +104,7 @@ func (tp *testPulsar) Start(ctx context.Context, bootstrapHosts []string) error 
 func (tp *testPulsar) distribute(ctx context.Context) {
 	timeNow := time.Now()
 	pulseNumber := core.CalculatePulseNumber(timeNow)
+
 	pulse := core.Pulse{
 		PulseNumber:      pulseNumber,
 		Entropy:          tp.generator.GenerateEntropy(),
@@ -108,6 +113,12 @@ func (tp *testPulsar) distribute(ctx context.Context) {
 		EpochPulseNumber: 1,
 		OriginID:         [16]byte{206, 41, 229, 190, 7, 240, 162, 155, 121, 245, 207, 56, 161, 67, 189, 0},
 		PulseTimestamp:   timeNow.Unix(),
+	}
+
+	var err error
+	pulse.Signs, err = getPSC(pulse)
+	if err != nil {
+		log.Errorf("[ distribute ]", err)
 	}
 
 	for {
@@ -122,16 +133,58 @@ func (tp *testPulsar) distribute(ctx context.Context) {
 }
 
 func (tp *testPulsar) incrementPulse(pulse core.Pulse) core.Pulse {
-	newPulse := pulse.PulseNumber + core.PulseNumber(tp.pulseDelta)
-	return core.Pulse{
-		PulseNumber:      newPulse,
+	newPulseNumber := pulse.PulseNumber + core.PulseNumber(tp.pulseDelta)
+	newPulse := core.Pulse{
+		PulseNumber:      newPulseNumber,
 		Entropy:          tp.generator.GenerateEntropy(),
-		NextPulseNumber:  newPulse + core.PulseNumber(tp.pulseDelta),
+		NextPulseNumber:  newPulseNumber + core.PulseNumber(tp.pulseDelta),
 		PrevPulseNumber:  pulse.PulseNumber,
 		EpochPulseNumber: pulse.EpochPulseNumber,
 		OriginID:         pulse.OriginID,
 		PulseTimestamp:   time.Now().Unix(),
+		Signs:            pulse.Signs,
 	}
+	var err error
+	newPulse.Signs, err = getPSC(newPulse)
+	if err != nil {
+		log.Errorf("[ incermentPulse ]", err)
+	}
+	return newPulse
+}
+
+func getPSC(pulse core.Pulse) (map[string]core.PulseSenderConfirmation, error) {
+	proc := platformpolicy.NewKeyProcessor()
+	key, err := proc.GeneratePrivateKey()
+	if err != nil {
+		return nil, err
+	}
+	pem, err := proc.ExportPublicKeyPEM(proc.ExtractPublicKey(key))
+	if err != nil {
+		return nil, err
+	}
+	result := make(map[string]core.PulseSenderConfirmation)
+	psc := core.PulseSenderConfirmation{
+		PulseNumber:     pulse.PulseNumber,
+		ChosenPublicKey: string(pem),
+		Entropy:         pulse.Entropy,
+	}
+
+	payload := pulsar.PulseSenderConfirmationPayload{PulseSenderConfirmation: psc}
+	hasher := platformpolicy.NewPlatformCryptographyScheme().IntegrityHasher()
+	hash, err := payload.Hash(hasher)
+	if err != nil {
+		return nil, err
+	}
+	service := cryptography.NewKeyBoundCryptographyService(key)
+	sign, err := service.Sign(hash)
+	if err != nil {
+		return nil, err
+	}
+
+	psc.Signature = sign.Bytes()
+	result["test"] = psc
+
+	return result, nil
 }
 
 func (tp *testPulsar) Stop(ctx context.Context) error {

@@ -24,7 +24,6 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/ledger/recentstorage"
-	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 )
@@ -101,13 +100,6 @@ func (c *cleaner) CleanJetRecordsUntilPulse(
 	}
 	allstat["records"] = stat
 
-	if stat, err = c.RemoveJetDropsUntil(ctx, jetID, pn); err != nil {
-		result = multierror.Append(result, errors.Wrap(err, "RemoveJetDropsUntil"))
-		stat.Errors = stat.Scanned
-		stat.Removed = 0
-	}
-	allstat["drops"] = stat
-
 	recordCleanupMetrics(ctx, allstat)
 
 	return allstat, result
@@ -124,11 +116,6 @@ func (c *cleaner) RemoveJetRecordsUntil(ctx context.Context, jetID core.RecordID
 	return c.removeJetRecordsUntil(ctx, scopeIDRecord, jetID, pn)
 }
 
-// RemoveJetDropsUntil removes for provided JetID all jet drops older than provided pulse number.
-func (c *cleaner) RemoveJetDropsUntil(ctx context.Context, jetID core.RecordID, pn core.PulseNumber) (RmStat, error) {
-	return c.removeJetRecordsUntil(ctx, scopeIDJetDrop, jetID, pn)
-}
-
 func (c *cleaner) removeJetRecordsUntil(
 	ctx context.Context,
 	namespace byte,
@@ -136,7 +123,7 @@ func (c *cleaner) removeJetRecordsUntil(
 	pn core.PulseNumber,
 ) (RmStat, error) {
 	var stat RmStat
-	_, prefix := jet.Jet(jetID)
+	prefix := core.JetID(jetID).Prefix()
 	jetprefix := prefixkey(namespace, prefix)
 	startprefix := prefixkey(namespace, prefix, rmScanFromPulse)
 
@@ -173,7 +160,7 @@ func (c *cleaner) CleanJetIndexes(
 	candidates []core.RecordID,
 ) (RmStat, error) {
 	var stat RmStat
-	_, prefix := jet.Jet(jetID)
+	prefix := core.JetID(jetID).Prefix()
 
 	recent.FilterNotExistWithLock(ctx, candidates, func(fordelete []core.RecordID) {
 		for _, recID := range fordelete {

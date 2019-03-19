@@ -24,7 +24,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/jbenet/go-base58"
+	base58 "github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 )
 
@@ -33,9 +33,11 @@ const (
 	RecordHashSize = 28
 	// RecordIDSize is relative record address.
 	RecordIDSize = PulseNumberSize + RecordHashSize
+	// RecordHashOffset is a offset where hash bytes starts in RecordID.
+	RecordHashOffset = PulseNumberSize
 	// RecordRefSize is absolute records address (including domain ID).
 	RecordRefSize = RecordIDSize * 2
-	// RecordRefIDSeparator is character that separates RecordID from DomainID in serialized RecordRef
+	// RecordRefIDSeparator is character that separates RecordID from DomainID in serialized RecordRef.
 	RecordRefIDSeparator = "."
 )
 
@@ -51,7 +53,7 @@ func (id *RecordID) String() string {
 func NewRecordID(pulse PulseNumber, hash []byte) *RecordID {
 	var id RecordID
 	copy(id[:PulseNumberSize], pulse.Bytes())
-	copy(id[PulseNumberSize:], hash)
+	copy(id[RecordHashOffset:], hash)
 	return &id
 }
 
@@ -69,7 +71,7 @@ func (id *RecordID) Pulse() PulseNumber {
 // Hash returns a copy of Hash part of RecordID.
 func (id *RecordID) Hash() []byte {
 	recHash := make([]byte, RecordHashSize)
-	copy(recHash, id[PulseNumberSize:])
+	copy(recHash, id[RecordHashOffset:])
 	return recHash
 }
 
@@ -202,6 +204,7 @@ func (id *RecordID) DebugString() string {
 		return "<nil>"
 	}
 
+	// TODO: remove this branch after finish transition to JetID
 	pulse := NewPulseNumber(id[:PulseNumberSize])
 	if pulse == PulseNumberJet {
 		depth := int(id[PulseNumberSize])

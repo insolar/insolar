@@ -23,7 +23,6 @@ import (
 
 	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/storage/jet"
 )
 
 // iterstate stores iterator state
@@ -71,7 +70,7 @@ func NewReplicaIter(
 	// fmt.Printf("CALL NewReplicaIter [%v:%v] (jet=%v)\n", start, end, jetID)
 	newit := func(prefixbyte byte, jetID core.RecordID, start, end core.PulseNumber) *iterstate {
 		prefix := []byte{prefixbyte}
-		_, jetPrefix := jet.Jet(jetID)
+		jetPrefix := core.JetID(jetID).Prefix()
 		iter := &iterstate{prefix: prefix}
 		iter.start = bytes.Join([][]byte{prefix, jetPrefix[:], start.Bytes()}, nil)
 		iter.end = bytes.Join([][]byte{prefix, jetPrefix[:], end.Bytes()}, nil)
@@ -87,7 +86,6 @@ func NewReplicaIter(
 			newit(scopeIDRecord, jetID, start, end),
 			newit(scopeIDBlob, jetID, start, end),
 			newit(scopeIDLifeline, jetID, core.FirstPulseNumber, end),
-			newit(scopeIDJetDrop, jetID, start, end),
 		},
 	}
 }
@@ -196,11 +194,6 @@ func (fc *fetchchunk) fetch(
 
 // NullifyJetInKey nullify jet part in record.
 func NullifyJetInKey(key []byte) {
-	// if we remove jet part from drop, different drops from same pulses collapsed
-	// TODO: figure out how we want to send jet drops on heavy nodes - @Alexander Orlovsky 18.01.2019
-	if key[0] == scopeIDJetDrop {
-		return
-	}
 	for i := 1; i < core.RecordHashSize; i++ {
 		key[i] = 0
 	}

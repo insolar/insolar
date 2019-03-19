@@ -25,8 +25,8 @@ import (
 	"github.com/insolar/insolar"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/utils"
+	"github.com/insolar/insolar/ledger/internal/jet"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/insolar/insolar/utils/entropy"
 	"github.com/pkg/errors"
@@ -37,7 +37,7 @@ type JetCoordinator struct {
 	NodeNet                    core.NodeNetwork                `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 	PulseStorage               core.PulseStorage               `inject:""`
-	JetStorage                 storage.JetStorage              `inject:""`
+	JetAccessor                jet.Accessor                    `inject:""`
 	PulseTracker               storage.PulseTracker            `inject:""`
 	Nodes                      node.Accessor                   `inject:""`
 
@@ -181,22 +181,22 @@ func (jc *JetCoordinator) LightValidatorsForJet(
 func (jc *JetCoordinator) LightExecutorForObject(
 	ctx context.Context, objID core.RecordID, pulse core.PulseNumber,
 ) (*core.RecordRef, error) {
-	jetID, _ := jc.JetStorage.FindJet(ctx, pulse, objID)
-	return jc.LightExecutorForJet(ctx, *jetID, pulse)
+	jetID, _ := jc.JetAccessor.ForID(ctx, pulse, objID)
+	return jc.LightExecutorForJet(ctx, core.RecordID(jetID), pulse)
 }
 
 // LightValidatorsForObject returns list of LVs for a provided pulse and objID
 func (jc *JetCoordinator) LightValidatorsForObject(
 	ctx context.Context, objID core.RecordID, pulse core.PulseNumber,
 ) ([]core.RecordRef, error) {
-	jetID, _ := jc.JetStorage.FindJet(ctx, pulse, objID)
-	return jc.LightValidatorsForJet(ctx, *jetID, pulse)
+	jetID, _ := jc.JetAccessor.ForID(ctx, pulse, objID)
+	return jc.LightValidatorsForJet(ctx, core.RecordID(jetID), pulse)
 }
 
 // Heavy returns *core.RecorRef to a heavy of specific pulse
 func (jc *JetCoordinator) Heavy(ctx context.Context, pulse core.PulseNumber) (*core.RecordRef, error) {
 	candidates, err := jc.Nodes.InRole(pulse, core.StaticRoleHeavyMaterial)
-	if err == core.ErrNoNodes {
+	if err == node.ErrNoNodes {
 		return nil, err
 	}
 	if err != nil {
@@ -278,7 +278,7 @@ func (jc *JetCoordinator) virtualsForObject(
 	ctx context.Context, objID core.RecordID, pulse core.PulseNumber, count int,
 ) ([]core.RecordRef, error) {
 	candidates, err := jc.Nodes.InRole(pulse, core.StaticRoleVirtual)
-	if err == core.ErrNoNodes {
+	if err == node.ErrNoNodes {
 		return nil, err
 	}
 	if err != nil {
@@ -304,17 +304,17 @@ func (jc *JetCoordinator) virtualsForObject(
 func (jc *JetCoordinator) lightMaterialsForJet(
 	ctx context.Context, jetID core.RecordID, pulse core.PulseNumber, count int,
 ) ([]core.RecordRef, error) {
-	_, prefix := jet.Jet(jetID)
+	prefix := core.JetID(jetID).Prefix()
 
 	candidates, err := jc.Nodes.InRole(pulse, core.StaticRoleLightMaterial)
-	if err == core.ErrNoNodes {
+	if err == node.ErrNoNodes {
 		return nil, err
 	}
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch active light nodes for pulse %v", pulse)
 	}
 	if len(candidates) == 0 {
-		return nil, core.ErrNoNodes
+		return nil, node.ErrNoNodes
 	}
 
 	ent, err := jc.entropy(ctx, pulse)

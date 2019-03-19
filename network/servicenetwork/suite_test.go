@@ -25,7 +25,11 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
+	"testing"
 	"time"
+
+	"github.com/insolar/insolar/instrumentation/inslogger"
 
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
@@ -36,19 +40,17 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/nodenetwork"
-	"github.com/insolar/insolar/network/utils"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
-	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
 var (
-	testNetworkPort       = 10010
-	pulseTimeMs     int32 = 5000
-	reqTimeoutMs    int32 = 2000
-	pulseDelta      int32 = 5
+	testNetworkPort uint32 = 10010
+	pulseTimeMs     int32  = 5000
+	reqTimeoutMs    int32  = 2000
+	pulseDelta      int32  = 5
 )
 
 type fixture struct {
@@ -58,9 +60,9 @@ type fixture struct {
 	pulsar         TestPulsar
 }
 
-func newFixture() *fixture {
+func newFixture(t *testing.T) *fixture {
 	return &fixture{
-		ctx:            context.Background(),
+		ctx:            inslogger.TestContext(t),
 		bootstrapNodes: make([]*networkNode, 0),
 		networkNodes:   make([]*networkNode, 0),
 	}
@@ -88,19 +90,19 @@ func (s *testSuite) fixture() *fixture {
 
 // SetupSuite creates and run network with bootstrap and common nodes once before run all tests in the suite
 func (s *testSuite) SetupTest() {
-	s.fixtureMap[s.T().Name()] = newFixture()
+	s.fixtureMap[s.T().Name()] = newFixture(s.T())
 	var err error
 	s.fixture().pulsar, err = NewTestPulsar(pulseTimeMs, reqTimeoutMs, pulseDelta)
-	require.NoError(s.T(), err)
+	s.Require().NoError(err)
 
 	log.Info("SetupTest")
 
 	for i := 0; i < s.bootstrapCount; i++ {
-		s.fixture().bootstrapNodes = append(s.fixture().bootstrapNodes, newNetworkNode())
+		s.fixture().bootstrapNodes = append(s.fixture().bootstrapNodes, s.newNetworkNode(fmt.Sprintf("bootstrap_%d", i)))
 	}
 
 	for i := 0; i < s.nodesCount; i++ {
-		s.fixture().networkNodes = append(s.fixture().networkNodes, newNetworkNode())
+		s.fixture().networkNodes = append(s.fixture().networkNodes, s.newNetworkNode(fmt.Sprintf("node_%d", i)))
 	}
 
 	pulseReceivers := make([]string, 0)
@@ -110,14 +112,14 @@ func (s *testSuite) SetupTest() {
 
 	log.Info("Start test pulsar")
 	err = s.fixture().pulsar.Start(s.fixture().ctx, pulseReceivers)
-	require.NoError(s.T(), err)
+	s.Require().NoError(err)
 
 	log.Info("Setup bootstrap nodes")
 	s.SetupNodesNetwork(s.fixture().bootstrapNodes)
 
 	<-time.After(time.Second * 2)
 	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
-	require.Equal(s.T(), len(s.fixture().bootstrapNodes), len(activeNodes))
+	s.Require().Equal(len(s.fixture().bootstrapNodes), len(activeNodes))
 
 	if len(s.fixture().networkNodes) > 0 {
 		log.Info("Setup network nodes")
@@ -128,8 +130,8 @@ func (s *testSuite) SetupTest() {
 		activeNodes1 := s.fixture().networkNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
 		activeNodes2 := s.fixture().networkNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
 
-		require.Equal(s.T(), s.getNodesCount(), len(activeNodes1))
-		require.Equal(s.T(), s.getNodesCount(), len(activeNodes2))
+		s.Require().Equal(s.getNodesCount(), len(activeNodes1))
+		s.Require().Equal(s.getNodesCount(), len(activeNodes2))
 	}
 	fmt.Println("=================== SetupTest() Done")
 }
@@ -141,11 +143,11 @@ func (s *testSuite) SetupNodesNetwork(nodes []*networkNode) {
 
 	results := make(chan error, len(nodes))
 	initNode := func(node *networkNode) {
-		err := node.init(s.fixture().ctx)
+		err := node.init()
 		results <- err
 	}
 	startNode := func(node *networkNode) {
-		err := node.componentManager.Start(s.fixture().ctx)
+		err := node.componentManager.Start(node.ctx)
 		results <- err
 	}
 
@@ -155,7 +157,7 @@ func (s *testSuite) SetupNodesNetwork(nodes []*networkNode) {
 			select {
 			case err := <-results:
 				count++
-				s.NoError(err)
+				s.Require().NoError(err)
 				if count == expected {
 					return nil
 				}
@@ -171,7 +173,7 @@ func (s *testSuite) SetupNodesNetwork(nodes []*networkNode) {
 	}
 
 	err := waitResults(results, len(nodes))
-	s.NoError(err)
+	s.Require().NoError(err)
 
 	log.Info("Start nodes")
 	for _, node := range nodes {
@@ -179,7 +181,7 @@ func (s *testSuite) SetupNodesNetwork(nodes []*networkNode) {
 	}
 
 	err = waitResults(results, len(nodes))
-	s.NoError(err)
+	s.Require().NoError(err)
 }
 
 // TearDownSuite shutdowns all nodes in network, calls once after all tests in suite finished
@@ -187,12 +189,12 @@ func (s *testSuite) TearDownTest() {
 	log.Info("=================== TearDownTest()")
 	log.Info("Stop network nodes")
 	for _, n := range s.fixture().networkNodes {
-		err := n.componentManager.Stop(s.fixture().ctx)
+		err := n.componentManager.Stop(n.ctx)
 		s.NoError(err)
 	}
 	log.Info("Stop bootstrap nodes")
 	for _, n := range s.fixture().bootstrapNodes {
-		err := n.componentManager.Stop(s.fixture().ctx)
+		err := n.componentManager.Stop(n.ctx)
 		s.NoError(err)
 	}
 	log.Info("Stop test pulsar")
@@ -240,15 +242,15 @@ func (s *testSuite) getNodesCount() int {
 
 func (s *testSuite) InitNode(node *networkNode) {
 	if node.componentManager != nil {
-		err := node.init(s.fixture().ctx)
-		s.NoError(err)
+		err := node.init()
+		s.Require().NoError(err)
 	}
 }
 
 func (s *testSuite) StartNode(node *networkNode) {
 	if node.componentManager != nil {
-		err := node.componentManager.Start(s.fixture().ctx)
-		s.NoError(err)
+		err := node.componentManager.Start(node.ctx)
+		s.Require().NoError(err)
 	}
 }
 
@@ -265,6 +267,7 @@ type networkNode struct {
 	privateKey          crypto.PrivateKey
 	cryptographyService core.CryptographyService
 	host                string
+	ctx                 context.Context
 
 	componentManager *component.Manager
 	serviceNetwork   *ServiceNetwork
@@ -272,27 +275,33 @@ type networkNode struct {
 }
 
 // newNetworkNode returns networkNode initialized only with id, host address and key pair
-func newNetworkNode() *networkNode {
+func (s *testSuite) newNetworkNode(name string) *networkNode {
 	key, err := platformpolicy.NewKeyProcessor().GeneratePrivateKey()
 	if err != nil {
 		panic(err.Error())
 	}
-	address := "127.0.0.1:" + strconv.Itoa(testNetworkPort)
-	testNetworkPort += 2 // coz consensus transport port+=1
+	address := "127.0.0.1:" + strconv.Itoa(incrementTestPort())
 
+	nodeContext, _ := inslogger.WithField(s.fixture().ctx, "nodeName", name)
 	return &networkNode{
 		id:                  testutils.RandomRef(),
 		role:                RandomRole(),
 		privateKey:          key,
 		cryptographyService: cryptography.NewKeyBoundCryptographyService(key),
 		host:                address,
+		ctx:                 nodeContext,
 		consensusResult:     make(chan error, 30),
 	}
 }
 
+func incrementTestPort() int {
+	result := atomic.AddUint32(&testNetworkPort, 2) // coz consensus transport port+=1
+	return int(result)
+}
+
 // init calls Init for node component manager and wraps PhaseManager
-func (n *networkNode) init(ctx context.Context) error {
-	err := n.componentManager.Init(ctx)
+func (n *networkNode) init() error {
+	err := n.componentManager.Init(n.ctx)
 	n.serviceNetwork.PhaseManager = &phaseManagerWrapper{original: n.serviceNetwork.PhaseManager, result: n.consensusResult}
 	n.serviceNetwork.NodeKeeper = &nodeKeeperWrapper{original: n.serviceNetwork.NodeKeeper}
 	return err
@@ -300,13 +309,13 @@ func (n *networkNode) init(ctx context.Context) error {
 
 func (s *testSuite) initCrypto(node *networkNode) (*certificate.CertificateManager, core.CryptographyService) {
 	pubKey, err := node.cryptographyService.GetPublicKey()
-	s.NoError(err)
+	s.Require().NoError(err)
 
 	// init certificate
 
 	proc := platformpolicy.NewKeyProcessor()
 	publicKey, err := proc.ExportPublicKeyPEM(pubKey)
-	s.NoError(err)
+	s.Require().NoError(err)
 
 	cert := &certificate.Certificate{}
 	cert.PublicKey = string(publicKey[:])
@@ -317,7 +326,7 @@ func (s *testSuite) initCrypto(node *networkNode) (*certificate.CertificateManag
 	for _, b := range s.fixture().bootstrapNodes {
 		pubKey, _ := b.cryptographyService.GetPublicKey()
 		pubKeyBuf, err := proc.ExportPublicKeyPEM(pubKey)
-		s.NoError(err)
+		s.Require().NoError(err)
 
 		bootstrapNode := certificate.NewBootstrapNode(
 			pubKey,
@@ -330,11 +339,11 @@ func (s *testSuite) initCrypto(node *networkNode) (*certificate.CertificateManag
 
 	// dump cert and read it again from json for correct private files initialization
 	jsonCert, err := cert.Dump()
-	s.NoError(err)
+	s.Require().NoError(err)
 	log.Infof("cert: %s", jsonCert)
 
 	cert, err = certificate.ReadCertificateFromReader(pubKey, proc, strings.NewReader(jsonCert))
-	s.NoError(err)
+	s.Require().NoError(err)
 	return certificate.NewCertificateManager(cert), node.cryptographyService
 }
 
@@ -386,7 +395,7 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	node.componentManager = &component.Manager{}
 	node.componentManager.Register(platformpolicy.NewPlatformCryptographyScheme())
 	serviceNetwork, err := NewServiceNetwork(cfg, node.componentManager, false)
-	s.NoError(err)
+	s.Require().NoError(err)
 
 	netCoordinator := testutils.NewNetworkCoordinatorMock(s.T())
 	netCoordinator.ValidateCertMock.Set(func(p context.Context, p1 core.AuthorizationCertificate) (bool, error) {
@@ -402,22 +411,15 @@ func (s *testSuite) preInitNode(node *networkNode) {
 		return make([]byte, packets.HashLength), nil
 	})
 
-	pubKey, _ := node.cryptographyService.GetPublicKey()
-
-	origin := nodenetwork.NewNode(node.id, node.role, pubKey, node.host, "")
 	certManager, cryptographyService := s.initCrypto(node)
 
-	realKeeper := nodenetwork.NewNodeKeeper(origin)
-	terminationHandler := &terminationHandler{NodeID: origin.ID()}
+	realKeeper, err := nodenetwork.NewNodeNetwork(cfg.Host, certManager.GetCertificate())
+	s.Require().NoError(err)
+	terminationHandler := &terminationHandler{NodeID: node.id}
 
-	realKeeper.SetState(core.WaitingNodeNetworkState)
-	if len(certManager.GetCertificate().GetDiscoveryNodes()) == 0 || utils.OriginIsDiscovery(certManager.GetCertificate()) {
-		realKeeper.SetState(core.ReadyNodeNetworkState)
-		realKeeper.AddActiveNodes([]core.Node{origin})
-	}
-
-	node.componentManager.Register(terminationHandler, realKeeper, newPulseManagerMock(realKeeper), netCoordinator, amMock)
-	node.componentManager.Register(certManager, cryptographyService)
-	node.componentManager.Inject(serviceNetwork, NewTestNetworkSwitcher())
+	keyProc := platformpolicy.NewKeyProcessor()
+	node.componentManager.Register(terminationHandler, realKeeper, newPulseManagerMock(realKeeper.(network.NodeKeeper)))
+	node.componentManager.Register(netCoordinator, amMock, certManager, cryptographyService)
+	node.componentManager.Inject(serviceNetwork, NewTestNetworkSwitcher(), keyProc)
 	node.serviceNetwork = serviceNetwork
 }

@@ -22,26 +22,28 @@ import (
 	"testing"
 
 	"github.com/gojuno/minimock"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
+
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/delegationtoken"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/gen"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/internal/jet"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/index"
-	"github.com/insolar/insolar/ledger/storage/jet"
+	"github.com/insolar/insolar/ledger/storage/db"
+	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/node"
-	"github.com/insolar/insolar/ledger/storage/record"
+	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
-	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/network"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"github.com/stretchr/testify/suite"
 )
 
 type handlerSuite struct {
@@ -56,8 +58,9 @@ type handlerSuite struct {
 	pulseTracker  storage.PulseTracker
 	nodeStorage   node.Accessor
 	objectStorage storage.ObjectStorage
-	jetStorage    storage.JetStorage
-	dropStorage   storage.DropStorage
+	jetStorage    jet.Storage
+	dropModifier  drop.Modifier
+	dropAccessor  drop.Accessor
 }
 
 func NewHandlerSuite() *handlerSuite {
@@ -75,24 +78,28 @@ func (s *handlerSuite) BeforeTest(suiteName, testName string) {
 	s.cm = &component.Manager{}
 	s.ctx = inslogger.TestContext(s.T())
 
-	db, cleaner := storagetest.TmpDB(s.ctx, s.T())
+	tmpDB, cleaner := storagetest.TmpDB(s.ctx, s.T())
 	s.cleaner = cleaner
-	s.db = db
+	s.db = tmpDB
 	s.scheme = testutils.NewPlatformCryptographyScheme()
-	s.jetStorage = storage.NewJetStorage()
+	s.jetStorage = jet.NewStore()
 	s.nodeStorage = node.NewStorage()
 	s.pulseTracker = storage.NewPulseTracker()
 	s.objectStorage = storage.NewObjectStorage()
-	s.dropStorage = storage.NewDropStorage(10)
+	dropStorage := drop.NewStorageDB()
+	s.dropAccessor = dropStorage
+	s.dropModifier = dropStorage
 
 	s.cm.Inject(
 		s.scheme,
 		s.db,
+		db.NewMemoryMockDB(),
 		s.jetStorage,
 		s.nodeStorage,
 		s.pulseTracker,
 		s.objectStorage,
-		s.dropStorage,
+		s.dropAccessor,
+		s.dropModifier,
 	)
 
 	err := s.cm.Init(s.ctx)
@@ -116,7 +123,7 @@ func (s *handlerSuite) AfterTest(suiteName, testName string) {
 func (s *handlerSuite) TestMessageHandler_HandleGetObject_FetchesObject() {
 	mc := minimock.NewController(s.T())
 	defer mc.Finish()
-	jetID := *jet.NewID(0, nil)
+	jetID := core.RecordID(*core.NewJetID(0, nil))
 
 	tf := testutils.NewDelegationTokenFactoryMock(mc)
 	jc := testutils.NewJetCoordinatorMock(mc)
@@ -161,7 +168,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObject_FetchesObject() {
 
 	s.T().Run("fetches state from heavy when no index", func(t *testing.T) {
 		idxState := genRandomID(core.FirstPulseNumber)
-		objIndex := index.ObjectLifeline{
+		objIndex := object.Lifeline{
 			LatestState: idxState,
 		}
 		lightRef := genRandomRef(0)
@@ -170,7 +177,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObject_FetchesObject() {
 		mb.SendFunc = func(c context.Context, gm core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
 			if m, ok := gm.(*message.GetObjectIndex); ok {
 				assert.Equal(t, msg.Head, m.Object)
-				buf, err := index.EncodeObjectLifeline(&objIndex)
+				buf := object.Encode(objIndex)
 				require.NoError(t, err)
 				return &reply.ObjectIndex{Index: buf}, nil
 			}
@@ -207,7 +214,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObject_FetchesObject() {
 		jc.IsBeyondLimitMock.Return(false, nil)
 		jc.NodeForJetMock.Return(lightRef, nil)
 		stateID := genRandomID(core.FirstPulseNumber)
-		err = s.objectStorage.SetObjectIndex(s.ctx, jetID, msg.Head.Record(), &index.ObjectLifeline{
+		err = s.objectStorage.SetObjectIndex(s.ctx, jetID, msg.Head.Record(), &object.Lifeline{
 			LatestState: stateID,
 		})
 		require.NoError(t, err)
@@ -240,7 +247,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObject_FetchesObject() {
 		jc.NodeForJetMock.Return(heavyRef, nil)
 		stateID := genRandomID(core.FirstPulseNumber)
 
-		err = s.objectStorage.SetObjectIndex(s.ctx, jetID, msg.Head.Record(), &index.ObjectLifeline{
+		err = s.objectStorage.SetObjectIndex(s.ctx, jetID, msg.Head.Record(), &object.Lifeline{
 			LatestState: stateID,
 		})
 		require.NoError(t, err)
@@ -267,7 +274,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObject_FetchesObject() {
 func (s *handlerSuite) TestMessageHandler_HandleGetChildren_Redirects() {
 	mc := minimock.NewController(s.T())
 	defer mc.Finish()
-	jetID := *jet.NewID(0, nil)
+	jetID := core.RecordID(*core.NewJetID(0, nil))
 
 	tf := testutils.NewDelegationTokenFactoryMock(mc)
 	tf.IssueGetChildrenRedirectMock.Return(&delegationtoken.GetChildrenRedirectToken{Signature: []byte{1, 2, 3}}, nil)
@@ -314,14 +321,14 @@ func (s *handlerSuite) TestMessageHandler_HandleGetChildren_Redirects() {
 	require.NoError(s.T(), err)
 
 	s.T().Run("redirects to heavy when no index", func(t *testing.T) {
-		objIndex := index.ObjectLifeline{
+		objIndex := object.Lifeline{
 			LatestState:  genRandomID(core.FirstPulseNumber),
 			ChildPointer: genRandomID(core.FirstPulseNumber),
 		}
 		mb.SendFunc = func(c context.Context, gm core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
 			if m, ok := gm.(*message.GetObjectIndex); ok {
 				assert.Equal(t, msg.Parent, m.Object)
-				buf, err := index.EncodeObjectLifeline(&objIndex)
+				buf := object.Encode(objIndex)
 				require.NoError(t, err)
 				return &reply.ObjectIndex{Index: buf}, nil
 			}
@@ -352,7 +359,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetChildren_Redirects() {
 		lightRef := genRandomRef(0)
 		jc.IsBeyondLimitMock.Return(false, nil)
 		jc.NodeForJetMock.Return(lightRef, nil)
-		err = s.objectStorage.SetObjectIndex(s.ctx, jetID, msg.Parent.Record(), &index.ObjectLifeline{
+		err = s.objectStorage.SetObjectIndex(s.ctx, jetID, msg.Parent.Record(), &object.Lifeline{
 			ChildPointer: genRandomID(core.FirstPulseNumber),
 		})
 		require.NoError(t, err)
@@ -374,7 +381,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetChildren_Redirects() {
 		heavyRef := genRandomRef(0)
 		jc.IsBeyondLimitMock.Return(false, nil)
 		jc.NodeForJetMock.Return(heavyRef, nil)
-		err = s.objectStorage.SetObjectIndex(s.ctx, jetID, msg.Parent.Record(), &index.ObjectLifeline{
+		err = s.objectStorage.SetObjectIndex(s.ctx, jetID, msg.Parent.Record(), &object.Lifeline{
 			ChildPointer: genRandomID(core.FirstPulseNumber),
 		})
 		require.NoError(t, err)
@@ -394,7 +401,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetChildren_Redirects() {
 func (s *handlerSuite) TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeavy() {
 	mc := minimock.NewController(s.T())
 	defer mc.Finish()
-	jetID := *jet.NewID(0, nil)
+	jetID := core.RecordID(*core.NewJetID(0, nil))
 
 	indexMock := recentstorage.NewRecentIndexStorageMock(s.T())
 	pendingMock := recentstorage.NewPendingStorageMock(s.T())
@@ -428,7 +435,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeav
 
 	delegateType := *genRandomRef(0)
 	delegate := *genRandomRef(0)
-	objIndex := index.ObjectLifeline{Delegates: map[core.RecordRef]core.RecordRef{delegateType: delegate}}
+	objIndex := object.Lifeline{Delegates: map[core.RecordRef]core.RecordRef{delegateType: delegate}}
 	msg := message.GetDelegate{
 		Head:   *genRandomRef(0),
 		AsType: delegateType,
@@ -437,8 +444,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeav
 	mb.SendFunc = func(c context.Context, gm core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
 		if m, ok := gm.(*message.GetObjectIndex); ok {
 			assert.Equal(s.T(), msg.Head, m.Object)
-			buf, err := index.EncodeObjectLifeline(&objIndex)
-			require.NoError(s.T(), err)
+			buf := object.Encode(objIndex)
 			return &reply.ObjectIndex{Index: buf}, nil
 		}
 
@@ -468,7 +474,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeav
 func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy() {
 	mc := minimock.NewController(s.T())
 	defer mc.Finish()
-	jetID := *jet.NewID(0, nil)
+	jetID := core.RecordID(*core.NewJetID(0, nil))
 
 	indexMock := recentstorage.NewRecentIndexStorageMock(s.T())
 	pendingMock := recentstorage.NewPendingStorageMock(s.T())
@@ -500,8 +506,8 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_FetchesIndexFromHea
 	h.PlatformCryptographyScheme = s.scheme
 	h.RecentStorageProvider = provideMock
 
-	objIndex := index.ObjectLifeline{LatestState: genRandomID(0), State: record.StateActivation}
-	amendRecord := record.ObjectAmendRecord{
+	objIndex := object.Lifeline{LatestState: genRandomID(0), State: object.StateActivation}
+	amendRecord := object.ObjectAmendRecord{
 		PrevState: *objIndex.LatestState,
 	}
 	amendHash := s.scheme.ReferenceHasher()
@@ -509,14 +515,14 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_FetchesIndexFromHea
 	require.NoError(s.T(), err)
 
 	msg := message.UpdateObject{
-		Record: record.SerializeRecord(&amendRecord),
+		Record: object.SerializeRecord(&amendRecord),
 		Object: *genRandomRef(0),
 	}
 
 	mb.SendFunc = func(c context.Context, gm core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
 		if m, ok := gm.(*message.GetObjectIndex); ok {
 			assert.Equal(s.T(), msg.Object, m.Object)
-			buf, err := index.EncodeObjectLifeline(&objIndex)
+			buf := object.Encode(objIndex)
 			require.NoError(s.T(), err)
 			return &reply.ObjectIndex{Index: buf}, nil
 		}
@@ -547,7 +553,7 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_UpdateIndexState() 
 	// Arrange
 	mc := minimock.NewController(s.T())
 	defer mc.Finish()
-	jetID := *jet.NewID(0, nil)
+	jetID := core.RecordID(*core.NewJetID(0, nil))
 
 	indexMock := recentstorage.NewRecentIndexStorageMock(s.T())
 	pendingMock := recentstorage.NewPendingStorageMock(s.T())
@@ -575,12 +581,12 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_UpdateIndexState() 
 	h.RecentStorageProvider = provideMock
 	h.PlatformCryptographyScheme = s.scheme
 
-	objIndex := index.ObjectLifeline{
+	objIndex := object.Lifeline{
 		LatestState:  genRandomID(0),
-		State:        record.StateActivation,
+		State:        object.StateActivation,
 		LatestUpdate: 0,
 	}
-	amendRecord := record.ObjectAmendRecord{
+	amendRecord := object.ObjectAmendRecord{
 		PrevState: *objIndex.LatestState,
 	}
 	amendHash := s.scheme.ReferenceHasher()
@@ -588,7 +594,7 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_UpdateIndexState() 
 	require.NoError(s.T(), err)
 
 	msg := message.UpdateObject{
-		Record: record.SerializeRecord(&amendRecord),
+		Record: object.SerializeRecord(&amendRecord),
 		Object: *genRandomRef(0),
 	}
 	err = s.objectStorage.SetObjectIndex(s.ctx, jetID, msg.Object.Record(), &objIndex)
@@ -612,7 +618,7 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_UpdateIndexState() 
 func (s *handlerSuite) TestMessageHandler_HandleGetObjectIndex() {
 	mc := minimock.NewController(s.T())
 	defer mc.Finish()
-	jetID := *jet.NewID(0, nil)
+	jetID := core.RecordID(*core.NewJetID(0, nil))
 	msg := message.GetObjectIndex{
 		Object: *genRandomRef(0),
 	}
@@ -652,7 +658,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObjectIndex() {
 
 	h.RecentStorageProvider = provideMock
 
-	objectIndex := index.ObjectLifeline{LatestState: genRandomID(0)}
+	objectIndex := object.Lifeline{LatestState: genRandomID(0)}
 	err = s.objectStorage.SetObjectIndex(s.ctx, jetID, msg.Object.Record(), &objectIndex)
 	require.NoError(s.T(), err)
 
@@ -662,9 +668,8 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObjectIndex() {
 	require.NoError(s.T(), err)
 	indexRep, ok := rep.(*reply.ObjectIndex)
 	require.True(s.T(), ok)
-	decodedIndex, err := index.DecodeObjectLifeline(indexRep.Index)
-	require.NoError(s.T(), err)
-	assert.Equal(s.T(), objectIndex, *decodedIndex)
+	decodedIndex := object.Decode(indexRep.Index)
+	assert.Equal(s.T(), objectIndex, decodedIndex)
 }
 
 func (s *handlerSuite) TestMessageHandler_HandleHasPendingRequests() {
@@ -684,7 +689,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHasPendingRequests() {
 	certificate := testutils.NewCertificateMock(s.T())
 	certificate.GetRoleMock.Return(core.StaticRoleLightMaterial)
 
-	jetID := *jet.NewID(0, nil)
+	jetID := core.RecordID(*core.NewJetID(0, nil))
 	jc := testutils.NewJetCoordinatorMock(mc)
 	mb := testutils.NewMessageBusMock(mc)
 	mb.MustRegisterMock.Return()
@@ -758,7 +763,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetCode_Redirects() {
 
 	h.RecentStorageProvider = provideMock
 
-	jetID := *jet.NewID(0, nil)
+	jetID := core.RecordID(*core.NewJetID(0, nil))
 	msg := message.GetCode{
 		Code: *genRandomRef(core.FirstPulseNumber),
 	}
@@ -801,7 +806,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetCode_Redirects() {
 func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHeavy() {
 	mc := minimock.NewController(s.T())
 	defer mc.Finish()
-	jetID := *jet.NewID(0, nil)
+	jetID := core.RecordID(*core.NewJetID(0, nil))
 
 	indexMock := recentstorage.NewRecentIndexStorageMock(s.T())
 	pendingMock := recentstorage.NewPendingStorageMock(s.T())
@@ -832,8 +837,8 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 	h.RecentStorageProvider = provideMock
 	h.PlatformCryptographyScheme = s.scheme
 
-	objIndex := index.ObjectLifeline{LatestState: genRandomID(0), State: record.StateActivation}
-	childRecord := record.ChildRecord{
+	objIndex := object.Lifeline{LatestState: genRandomID(0), State: object.StateActivation}
+	childRecord := object.ChildRecord{
 		Ref:       *genRandomRef(0),
 		PrevChild: nil,
 	}
@@ -843,14 +848,14 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 	childID := core.NewRecordID(0, amendHash.Sum(nil))
 
 	msg := message.RegisterChild{
-		Record: record.SerializeRecord(&childRecord),
+		Record: object.SerializeRecord(&childRecord),
 		Parent: *genRandomRef(0),
 	}
 
 	mb.SendFunc = func(c context.Context, gm core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
 		if m, ok := gm.(*message.GetObjectIndex); ok {
 			assert.Equal(s.T(), msg.Parent, m.Object)
-			buf, err := index.EncodeObjectLifeline(&objIndex)
+			buf := object.Encode(objIndex)
 			require.NoError(s.T(), err)
 			return &reply.ObjectIndex{Index: buf}, nil
 		}
@@ -881,7 +886,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 	// Arrange
 	mc := minimock.NewController(s.T())
 	defer mc.Finish()
-	jetID := *jet.NewID(0, nil)
+	jetID := core.RecordID(*core.NewJetID(0, nil))
 
 	indexMock := recentstorage.NewRecentIndexStorageMock(s.T())
 	pendingMock := recentstorage.NewPendingStorageMock(s.T())
@@ -909,17 +914,17 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 	h.RecentStorageProvider = provideMock
 	h.PlatformCryptographyScheme = s.scheme
 
-	objIndex := index.ObjectLifeline{
+	objIndex := object.Lifeline{
 		LatestState:  genRandomID(0),
-		State:        record.StateActivation,
+		State:        object.StateActivation,
 		LatestUpdate: core.FirstPulseNumber,
 	}
-	childRecord := record.ChildRecord{
+	childRecord := object.ChildRecord{
 		Ref:       *genRandomRef(0),
 		PrevChild: nil,
 	}
 	msg := message.RegisterChild{
-		Record: record.SerializeRecord(&childRecord),
+		Record: object.SerializeRecord(&childRecord),
 		Parent: *genRandomRef(0),
 	}
 
@@ -939,37 +944,9 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 	require.Equal(s.T(), int(idx.LatestUpdate), core.FirstPulseNumber+100)
 }
 
-const testDropSize uint64 = 100
-
-func addDropSizeToDB(s *handlerSuite, jetID core.RecordID) {
-	dropSizeData := &jet.DropSize{
-		JetID:    jetID,
-		PulseNo:  core.FirstPulseNumber,
-		DropSize: testDropSize,
-	}
-
-	cryptoServiceMock := testutils.NewCryptographyServiceMock(s.T())
-	cryptoServiceMock.SignFunc = func(p []byte) (r *core.Signature, r1 error) {
-		signature := core.SignatureFromBytes(nil)
-		return &signature, nil
-	}
-
-	hasher := platformpolicy.NewPlatformCryptographyScheme().IntegrityHasher()
-	_, err := dropSizeData.WriteHashData(hasher)
-	require.NoError(s.T(), err)
-
-	signature, err := cryptoServiceMock.Sign(hasher.Sum(nil))
-	require.NoError(s.T(), err)
-
-	dropSizeData.Signature = signature.Bytes()
-
-	err = s.dropStorage.AddDropSize(s.ctx, dropSizeData)
-	require.NoError(s.T(), err)
-}
-
 func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	mc := minimock.NewController(s.T())
-	jetID := testutils.RandomJet()
+	jetID := gen.JetID()
 
 	err := s.pulseTracker.AddPulse(s.ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 1})
 	require.NoError(s.T(), err)
@@ -977,8 +954,8 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	jc := testutils.NewJetCoordinatorMock(mc)
 
 	firstID := core.NewRecordID(core.FirstPulseNumber, []byte{1, 2, 3})
-	secondID := record.NewRecordIDFromRecord(s.scheme, core.FirstPulseNumber, &record.CodeRecord{})
-	thirdID := record.NewRecordIDFromRecord(s.scheme, core.FirstPulseNumber-1, &record.CodeRecord{})
+	secondID := object.NewRecordIDFromRecord(s.scheme, core.FirstPulseNumber, &object.CodeRecord{})
+	thirdID := object.NewRecordIDFromRecord(s.scheme, core.FirstPulseNumber-1, &object.CodeRecord{})
 
 	mb := testutils.NewMessageBusMock(mc)
 	mb.MustRegisterMock.Return()
@@ -989,23 +966,15 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 		return &reply.OK{}, nil
 	}
 
-	firstIndex, _ := index.EncodeObjectLifeline(&index.ObjectLifeline{
+	firstIndex := object.Encode(object.Lifeline{
 		LatestState: firstID,
 	})
-	err = s.objectStorage.SetObjectIndex(s.ctx, jetID, firstID, &index.ObjectLifeline{
+	err = s.objectStorage.SetObjectIndex(s.ctx, core.RecordID(jetID), firstID, &object.Lifeline{
 		LatestState: firstID,
 	})
-
-	dropSizeHistory, err := s.dropStorage.GetDropSizeHistory(s.ctx, jetID)
-	require.NoError(s.T(), err)
-	require.Equal(s.T(), jet.DropSizeHistory{}, dropSizeHistory)
-	addDropSizeToDB(s, jetID)
-
-	dropSizeHistory, err = s.dropStorage.GetDropSizeHistory(s.ctx, jetID)
-	require.NoError(s.T(), err)
 
 	hotIndexes := &message.HotData{
-		Jet:         *core.NewRecordRef(core.DomainID, jetID),
+		Jet:         *core.NewRecordRef(core.DomainID, core.RecordID(jetID)),
 		PulseNumber: core.FirstPulseNumber,
 		RecentObjects: map[core.RecordID]message.HotIndex{
 			*firstID: {
@@ -1017,9 +986,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 			*secondID: {},
 			*thirdID:  {Active: true},
 		},
-		Drop:               jet.JetDrop{Pulse: core.FirstPulseNumber, Hash: []byte{88}},
-		DropJet:            jetID,
-		JetDropSizeHistory: dropSizeHistory,
+		Drop: drop.Drop{Pulse: core.FirstPulseNumber, Hash: []byte{88}, JetID: jetID},
 	}
 
 	indexMock := recentstorage.NewRecentIndexStorageMock(s.T())
@@ -1057,7 +1024,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
-	h.DropStorage = s.dropStorage
+	h.DropModifier = s.dropModifier
 
 	err = h.Init(s.ctx)
 	require.NoError(s.T(), err)
@@ -1067,16 +1034,9 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	require.NoError(s.T(), err)
 	require.Equal(s.T(), res, &reply.OK{})
 
-	savedDrop, err := h.DropStorage.GetDrop(s.ctx, jetID, core.FirstPulseNumber)
+	savedDrop, err := s.dropAccessor.ForPulse(s.ctx, jetID, core.FirstPulseNumber)
 	require.NoError(s.T(), err)
-	require.Equal(s.T(), &jet.JetDrop{Pulse: core.FirstPulseNumber, Hash: []byte{88}}, savedDrop)
-
-	// check drop size list
-	dropSizeHistory, err = s.dropStorage.GetDropSizeHistory(s.ctx, jetID)
-	require.NoError(s.T(), err)
-	require.Equal(s.T(), testDropSize, dropSizeHistory[0].DropSize)
-	require.Equal(s.T(), jetID, dropSizeHistory[0].JetID)
-	require.Equal(s.T(), core.FirstPulseNumber, int(dropSizeHistory[0].PulseNo))
+	require.Equal(s.T(), drop.Drop{Pulse: core.FirstPulseNumber, Hash: []byte{88}, JetID: jetID}, savedDrop)
 
 	indexMock.MinimockFinish()
 	pendingMock.MinimockFinish()
@@ -1085,7 +1045,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 func (s *handlerSuite) TestMessageHandler_HandleValidationCheck() {
 	mc := minimock.NewController(s.T())
 	defer mc.Finish()
-	jetID := *jet.NewID(0, nil)
+	jetID := core.RecordID(*core.NewJetID(0, nil))
 
 	indexMock := recentstorage.NewRecentIndexStorageMock(s.T())
 	pendingMock := recentstorage.NewPendingStorageMock(s.T())
@@ -1126,7 +1086,7 @@ func (s *handlerSuite) TestMessageHandler_HandleValidationCheck() {
 	require.NoError(s.T(), err)
 
 	s.T().Run("returns not ok when not valid", func(t *testing.T) {
-		validatedStateID, err := s.objectStorage.SetRecord(s.ctx, jetID, 0, &record.ObjectAmendRecord{})
+		validatedStateID, err := s.objectStorage.SetRecord(s.ctx, jetID, 0, &object.ObjectAmendRecord{})
 		require.NoError(t, err)
 
 		msg := message.ValidationCheck{
@@ -1145,7 +1105,7 @@ func (s *handlerSuite) TestMessageHandler_HandleValidationCheck() {
 
 	s.T().Run("returns ok when valid", func(t *testing.T) {
 		approvedStateID := *genRandomID(0)
-		validatedStateID, err := s.objectStorage.SetRecord(s.ctx, jetID, 0, &record.ObjectAmendRecord{
+		validatedStateID, err := s.objectStorage.SetRecord(s.ctx, jetID, 0, &object.ObjectAmendRecord{
 			PrevState: approvedStateID,
 		})
 		require.NoError(t, err)
@@ -1165,104 +1125,13 @@ func (s *handlerSuite) TestMessageHandler_HandleValidationCheck() {
 	})
 }
 
-func (s *handlerSuite) TestMessageHandler_HandleJetDrop_SaveJet() {
-	// Arrange
-	mc := minimock.NewController(s.T())
-	defer mc.Finish()
-
-	jetID := jet.NewID(0, []byte{2})
-	msg := message.JetDrop{
-		JetID: *jetID,
-	}
-	expectedSetId := jet.IDSet{
-		*jetID: struct{}{},
-	}
-
-	certificate := testutils.NewCertificateMock(s.T())
-	certificate.GetRoleMock.Return(core.StaticRoleLightMaterial)
-
-	h := NewMessageHandler(&configuration.Ledger{
-		LightChainLimit: 3,
-	}, certificate)
-	h.JetStorage = s.jetStorage
-	h.Nodes = s.nodeStorage
-	h.DBContext = s.db
-	h.PulseTracker = s.pulseTracker
-	h.ObjectStorage = s.objectStorage
-
-	// Act
-	response, err := h.handleJetDrop(s.ctx, &message.Parcel{Msg: &msg})
-	require.NoError(s.T(), err)
-
-	idSet, err := s.jetStorage.GetJets(s.ctx)
-	require.NoError(s.T(), err)
-	require.NotNil(s.T(), idSet)
-
-	// Assert
-	require.Equal(s.T(), &reply.OK{}, response)
-	for id := range expectedSetId {
-		require.True(s.T(), idSet.Has(id))
-	}
-}
-
-func (s *handlerSuite) TestMessageHandler_HandleJetDrop_SaveJet_ExistingMap() {
-	// Arrange
-	// ctx := inslogger.TestContext(t)
-	mc := minimock.NewController(s.T())
-	// db, cleaner := storagetest.TmpDB(ctx, t)
-	defer mc.Finish()
-
-	jetID := jet.NewID(0, []byte{2})
-	secondJetID := jet.NewID(0, []byte{3})
-	msg := message.JetDrop{
-		JetID: *jetID,
-	}
-	secondMsg := message.JetDrop{
-		JetID: *secondJetID,
-	}
-	expectedSetId := jet.IDSet{
-		*jetID:       struct{}{},
-		*secondJetID: struct{}{},
-	}
-
-	certificate := testutils.NewCertificateMock(s.T())
-	certificate.GetRoleMock.Return(core.StaticRoleLightMaterial)
-
-	h := NewMessageHandler(&configuration.Ledger{
-		LightChainLimit: 3,
-	}, certificate)
-	h.JetStorage = s.jetStorage
-	h.Nodes = s.nodeStorage
-	h.DBContext = s.db
-	h.PulseTracker = s.pulseTracker
-	h.ObjectStorage = s.objectStorage
-
-	// Act
-	response, err := h.handleJetDrop(s.ctx, &message.Parcel{Msg: &msg})
-	require.NoError(s.T(), err)
-	require.Equal(s.T(), &reply.OK{}, response)
-
-	secondResponse, err := h.handleJetDrop(s.ctx, &message.Parcel{Msg: &secondMsg})
-	require.NoError(s.T(), err)
-	require.Equal(s.T(), &reply.OK{}, secondResponse)
-
-	idSet, err := s.jetStorage.GetJets(s.ctx)
-	require.NoError(s.T(), err)
-	require.NotNil(s.T(), idSet)
-
-	// Assert
-	for id := range expectedSetId {
-		require.True(s.T(), idSet.Has(id))
-	}
-}
-
 func (s *handlerSuite) TestMessageHandler_HandleGetRequest() {
 	mc := minimock.NewController(s.T())
 	defer mc.Finish()
 
-	jetID := *jet.NewID(0, nil)
+	jetID := core.RecordID(*core.NewJetID(0, nil))
 
-	req := record.RequestRecord{
+	req := object.RequestRecord{
 		MessageHash: []byte{1, 2, 3},
 		Object:      *genRandomID(0),
 	}
@@ -1284,5 +1153,5 @@ func (s *handlerSuite) TestMessageHandler_HandleGetRequest() {
 	require.NoError(s.T(), err)
 	reqReply, ok := rep.(*reply.Request)
 	require.True(s.T(), ok)
-	assert.Equal(s.T(), req, *record.DeserializeRecord(reqReply.Record).(*record.RequestRecord))
+	assert.Equal(s.T(), req, *object.DeserializeRecord(reqReply.Record).(*object.RequestRecord))
 }

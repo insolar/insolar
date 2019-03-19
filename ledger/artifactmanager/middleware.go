@@ -26,13 +26,13 @@ import (
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/internal/jet"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/jet"
 )
 
 type middleware struct {
 	objectStorage  storage.ObjectStorage
-	jetStorage     storage.JetStorage
+	jetAccessor    jet.Accessor
 	jetCoordinator core.JetCoordinator
 	messageBus     core.MessageBus
 	pulseStorage   core.PulseStorage
@@ -46,7 +46,7 @@ func newMiddleware(
 ) *middleware {
 	return &middleware{
 		objectStorage:  h.ObjectStorage,
-		jetStorage:     h.JetStorage,
+		jetAccessor:    h.JetStorage,
 		jetCoordinator: h.JetCoordinator,
 		messageBus:     h.Bus,
 		pulseStorage:   h.PulseStorage,
@@ -82,7 +82,7 @@ func jetFromContext(ctx context.Context) core.RecordID {
 
 func (m *middleware) zeroJetForHeavy(handler core.MessageHandler) core.MessageHandler {
 	return func(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
-		return handler(contextWithJet(ctx, *jet.NewID(0, nil)), parcel)
+		return handler(contextWithJet(ctx, core.RecordID(*core.NewJetID(0, nil))), parcel)
 	}
 }
 
@@ -101,7 +101,7 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 
 		// FIXME: @andreyromancev. 17.01.19. Temporary allow any genesis request. Remove it.
 		if parcel.Pulse() == core.FirstPulseNumber {
-			return handler(contextWithJet(ctx, *jet.NewID(0, nil)), parcel)
+			return handler(contextWithJet(ctx, core.RecordID(*core.NewJetID(0, nil))), parcel)
 		}
 
 		// Check token jet.
@@ -121,7 +121,7 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 			case *message.GetRequest:
 				pulse = tm.Request.Pulse()
 			}
-			jetID, actual := m.jetStorage.FindJet(ctx, pulse, target)
+			jetID, actual := m.jetAccessor.ForID(ctx, pulse, target)
 			if !actual {
 				inslogger.FromContext(ctx).WithFields(map[string]interface{}{
 					"msg":   msg.Type().String(),
@@ -130,7 +130,7 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 				}).Error("jet is not actual")
 			}
 
-			return handler(contextWithJet(ctx, *jetID), parcel)
+			return handler(contextWithJet(ctx, core.RecordID(jetID)), parcel)
 		}
 
 		// Calculate jet for current pulse.

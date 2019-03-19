@@ -27,9 +27,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/index"
-	"github.com/insolar/insolar/ledger/storage/jet"
-	"github.com/insolar/insolar/ledger/storage/record"
+	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
@@ -99,7 +97,7 @@ func (s *pulseManagerSuite) TestPulseManager_Set_CheckHotIndexesSending() {
 	s.T().Skip()
 
 	// Arrange
-	jetID := jet.ZeroJetID
+	jetID := core.ZeroJetID
 	objID := core.RecordID{}
 
 	lr := testutils.NewLogicRunnerMock(s.T())
@@ -107,17 +105,17 @@ func (s *pulseManagerSuite) TestPulseManager_Set_CheckHotIndexesSending() {
 
 	firstID, _ := s.objectStorage.SetRecord(
 		s.ctx,
-		jetID,
+		core.RecordID(jetID),
 		core.GenesisPulse.PulseNumber,
-		&record.ObjectActivateRecord{})
-	firstIndex := index.ObjectLifeline{
+		&object.ObjectActivateRecord{})
+	firstIndex := object.Lifeline{
 		LatestState: firstID,
 	}
-	_ = s.objectStorage.SetObjectIndex(s.ctx, jetID, firstID, &firstIndex)
-	codeRecord := &record.CodeRecord{}
+	_ = s.objectStorage.SetObjectIndex(s.ctx, core.RecordID(jetID), firstID, &firstIndex)
+	codeRecord := &object.CodeRecord{}
 	secondID, _ := s.objectStorage.SetRecord(
 		s.ctx,
-		jetID,
+		core.RecordID(jetID),
 		core.GenesisPulse.PulseNumber,
 		codeRecord,
 	)
@@ -158,9 +156,8 @@ func (s *pulseManagerSuite) TestPulseManager_Set_CheckHotIndexesSending() {
 		require.Equal(s.T(), 1, len(objContext.Requests))
 
 		require.Equal(s.T(), 1, len(val.RecentObjects))
-		decodedIndex, err := index.DecodeObjectLifeline(val.RecentObjects[*firstID].Index)
-		require.NoError(s.T(), err)
-		require.Equal(s.T(), firstIndex, *decodedIndex)
+		decodedIndex := object.Decode(val.RecentObjects[*firstID].Index)
+		require.Equal(s.T(), firstIndex, decodedIndex)
 		require.Equal(s.T(), 1, val.RecentObjects[*firstID].TTL)
 
 		return nil, nil
@@ -179,9 +176,7 @@ func (s *pulseManagerSuite) TestPulseManager_Set_CheckHotIndexesSending() {
 	jetCoordinatorMock.LightExecutorForJetMock.Return(executor, nil)
 	jetCoordinatorMock.MeMock.Return(*executor)
 
-	pm := NewPulseManager(configuration.Ledger{
-		JetSizesHistoryDepth: 5,
-	})
+	pm := NewPulseManager(configuration.Ledger{})
 
 	gil := testutils.NewGlobalInsolarLockMock(s.T())
 	gil.AcquireMock.Return()
@@ -219,7 +214,7 @@ func (s *pulseManagerSuite) TestPulseManager_Set_CheckHotIndexesSending() {
 	require.NoError(s.T(), err)
 	// // TODO: @andreyromancev. 12.01.19. put 1, when dynamic split is working.
 	assert.Equal(s.T(), uint64(2), mbMock.SendMinimockCounter()) // 1 validator drop (no split)
-	savedIndex, err := s.objectStorage.GetObjectIndex(s.ctx, jetID, firstID, false)
+	savedIndex, err := s.objectStorage.GetObjectIndex(s.ctx, core.RecordID(jetID), firstID, false)
 	require.NoError(s.T(), err)
 
 	// Assert

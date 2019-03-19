@@ -27,10 +27,13 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger"
 	"github.com/insolar/insolar/ledger/artifactmanager"
+	"github.com/insolar/insolar/ledger/internal/jet"
 	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/jet"
+	"github.com/insolar/insolar/ledger/storage/db"
+	"github.com/insolar/insolar/ledger/storage/drop"
+	"github.com/insolar/insolar/ledger/storage/genesis"
 	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/log"
@@ -54,16 +57,16 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 	// Init subcomponents.
 	ctx := inslogger.TestContext(t)
 	conf := configuration.NewLedger()
-	db, dbcancel := storagetest.TmpDB(ctx, t, storagetest.Dir(dir))
+	tmpDB, dbcancel := storagetest.TmpDB(ctx, t, storagetest.Dir(dir))
 
 	cm := &component.Manager{}
-	gi := storage.NewGenesisInitializer()
+	gi := genesis.NewGenesisInitializer()
 	pt := storage.NewPulseTracker()
 	ps := storage.NewPulseStorage()
-	js := storage.NewJetStorage()
+	js := jet.NewStore()
 	os := storage.NewObjectStorage()
 	ns := node.NewStorage()
-	ds := storage.NewDropStorage(10)
+	ds := drop.NewStorageDB()
 	rs := storage.NewReplicaStorage()
 	cl := storage.NewCleaner()
 
@@ -105,9 +108,9 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 	handler.PulseTracker = pt
 	handler.JetStorage = js
 	handler.Nodes = ns
-	handler.DBContext = db
+	handler.DBContext = tmpDB
 	handler.ObjectStorage = os
-	handler.DropStorage = ds
+	handler.DropModifier = ds
 
 	handler.PlatformCryptographyScheme = pcs
 	handler.JetCoordinator = jc
@@ -117,7 +120,8 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 
 	cm.Inject(
 		platformpolicy.NewPlatformCryptographyScheme(),
-		db,
+		tmpDB,
+		db.NewMemoryMockDB(),
 		js,
 		os,
 		ns,
@@ -158,8 +162,11 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 	pm.LR = c.LogicRunner
 	pm.ActiveListSwapper = alsMock
 	pm.PulseStorage = ps
-	pm.JetStorage = js
-	pm.DropStorage = ds
+	pm.JetAccessor = js
+	pm.JetModifier = js
+	pm.DropModifier = ds
+	pm.DropAccessor = ds
+	pm.DropCleaner = ds
 	pm.ObjectStorage = os
 	pm.Nodes = ns
 	pm.NodeSetter = ns
@@ -193,12 +200,12 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 	}
 
 	if closeJets {
-		err := pm.HotDataWaiter.Unlock(ctx, *jet.NewID(0, nil))
+		err := pm.HotDataWaiter.Unlock(ctx, core.RecordID(*core.NewJetID(0, nil)))
 		require.NoError(t, err)
 	}
 
 	// Create ledger.
-	l := ledger.NewTestLedger(db, am, pm, jc)
+	l := ledger.NewTestLedger(tmpDB, am, pm, jc)
 
-	return l, db, dbcancel
+	return l, tmpDB, dbcancel
 }
