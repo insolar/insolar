@@ -4,9 +4,9 @@ package conveyor
 
 import "strconv"
 
-const _SlotState_name = "InitializingWorkingSuspending"
+const _SlotState_name = "InitializingWorkingSuspendingCanceling"
 
-var _SlotState_index = [...]uint8{0, 12, 19, 29}
+var _SlotState_index = [...]uint8{0, 12, 19, 29, 38}
 
 func (i SlotState) String() string {
 	if i >= SlotState(len(_SlotState_index)-1) {
