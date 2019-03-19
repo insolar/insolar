@@ -4,9 +4,10 @@ services:
     image: "insolar/insolard:v0.8.6"
     environment:
       - INSOLARD_LOG_LEVEL=warn
-      - INSOLARD_TRANSPORT_FIXED_ADDRESS=
+      - INSOLARD_TRANSPORT_FIXED_ADDRESS=<YOUR-PUBLIC-IP-HERE>
       - INSGORUND_ENDPOINT=insgorund:18181
       - INSOLARD_JAEGER_ENDPOINT=jaeger:6831
+      - INSOLAR_API_URL=http://insolard:19191/api
     volumes:
       - "./configs:/etc/insolar"
       - "./genesis:/var/lib/insolar"
