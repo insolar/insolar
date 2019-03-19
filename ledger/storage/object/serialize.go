@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"encoding/binary"
 
+	"github.com/insolar/insolar"
 	"github.com/insolar/insolar/core"
 	"github.com/ugorji/go/codec"
 )
@@ -55,7 +56,7 @@ func DeserializeRecord(buf []byte) VirtualRecord {
 }
 
 // CalculateIDForBlob calculate id for blob with using current pulse number
-func CalculateIDForBlob(scheme core.PlatformCryptographyScheme, pulseNumber core.PulseNumber, blob []byte) *core.RecordID {
+func CalculateIDForBlob(scheme core.PlatformCryptographyScheme, pulseNumber insolar.PulseNumber, blob []byte) *insolar.ID {
 	hasher := scheme.IntegrityHasher()
 	_, err := hasher.Write(blob)
 	if err != nil {

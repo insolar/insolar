@@ -19,6 +19,7 @@ package object
 import (
 	"io"
 
+	"github.com/insolar/insolar"
 	"github.com/insolar/insolar/core"
 )
 
@@ -41,19 +42,19 @@ type State interface {
 	// StateID returns state id.
 	ID() StateID
 	// GetImage returns state code.
-	GetImage() *core.RecordRef
+	GetImage() *insolar.Reference
 	// GetIsPrototype returns state code.
 	GetIsPrototype() bool
 	// GetMemory returns state memory.
-	GetMemory() *core.RecordID
+	GetMemory() *insolar.ID
 	// PrevStateID returns previous state id.
-	PrevStateID() *core.RecordID
+	PrevStateID() *insolar.ID
 }
 
 // ResultRecord represents result of a VM method.
 type ResultRecord struct {
-	Object  core.RecordID
-	Request core.RecordRef
+	Object  insolar.ID
+	Request insolar.Reference
 	Payload []byte
 }
 
@@ -64,8 +65,8 @@ func (r *ResultRecord) WriteHashData(w io.Writer) (int, error) {
 
 // SideEffectRecord is a record which is created in response to a request.
 type SideEffectRecord struct {
-	Domain  core.RecordRef
-	Request core.RecordRef
+	Domain  insolar.Reference
+	Request insolar.Reference
 }
 
 // TypeRecord is a code interface declaration.
@@ -84,7 +85,7 @@ func (r *TypeRecord) WriteHashData(w io.Writer) (int, error) {
 type CodeRecord struct {
 	SideEffectRecord
 
-	Code        *core.RecordID
+	Code        *insolar.ID
 	MachineType core.MachineType
 }
 
@@ -95,18 +96,18 @@ func (r *CodeRecord) WriteHashData(w io.Writer) (int, error) {
 
 // StateRecord is a record containing data for an object state.
 type StateRecord struct {
-	Memory      *core.RecordID
-	Image       core.RecordRef // If code or prototype object reference.
-	IsPrototype bool           // If true, Image should point to a prototype object. Otherwise to a code.
+	Memory      *insolar.ID
+	Image       insolar.Reference // If code or prototype object reference.
+	IsPrototype bool              // If true, Image should point to a prototype object. Otherwise to a code.
 }
 
 // GetMemory returns state memory.
-func (r *StateRecord) GetMemory() *core.RecordID {
+func (r *StateRecord) GetMemory() *insolar.ID {
 	return r.Memory
 }
 
 // GetImage returns state code.
-func (r *StateRecord) GetImage() *core.RecordRef {
+func (r *StateRecord) GetImage() *insolar.Reference {
 	return &r.Image
 }
 
@@ -120,12 +121,12 @@ type ActivateRecord struct {
 	SideEffectRecord
 	StateRecord
 
-	Parent     core.RecordRef
+	Parent     insolar.Reference
 	IsDelegate bool
 }
 
 // PrevStateID returns previous state id.
-func (r *ActivateRecord) PrevStateID() *core.RecordID {
+func (r *ActivateRecord) PrevStateID() *insolar.ID {
 	return nil
 }
 
@@ -144,11 +145,11 @@ type AmendRecord struct {
 	SideEffectRecord
 	StateRecord
 
-	PrevState core.RecordID
+	PrevState insolar.ID
 }
 
 // PrevStateID returns previous state id.
-func (r *AmendRecord) PrevStateID() *core.RecordID {
+func (r *AmendRecord) PrevStateID() *insolar.ID {
 	return &r.PrevState
 }
 
@@ -165,11 +166,11 @@ func (r *AmendRecord) WriteHashData(w io.Writer) (int, error) {
 // DeactivationRecord marks targeted object as disabled.
 type DeactivationRecord struct {
 	SideEffectRecord
-	PrevState core.RecordID
+	PrevState insolar.ID
 }
 
 // PrevStateID returns previous state id.
-func (r *DeactivationRecord) PrevStateID() *core.RecordID {
+func (r *DeactivationRecord) PrevStateID() *insolar.ID {
 	return &r.PrevState
 }
 
@@ -189,12 +190,12 @@ func (*DeactivationRecord) GetMachineType() core.MachineType {
 }
 
 // GetMemory returns state memory.
-func (*DeactivationRecord) GetMemory() *core.RecordID {
+func (*DeactivationRecord) GetMemory() *insolar.ID {
 	return nil
 }
 
 // GetImage returns state code.
-func (r *DeactivationRecord) GetImage() *core.RecordRef {
+func (r *DeactivationRecord) GetImage() *insolar.Reference {
 	return nil
 }
 

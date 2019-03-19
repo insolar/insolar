@@ -18,6 +18,8 @@ package object
 
 import (
 	"io"
+
+	"github.com/insolar/insolar"
 )
 
 //go:generate go run gen/type.go
@@ -32,6 +34,12 @@ const TypeIDSize = 4
 type VirtualRecord interface {
 	// WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
 	WriteHashData(w io.Writer) (int, error)
+}
+
+type MaterialRecord struct {
+	Record VirtualRecord
+
+	JetID insolar.JetID
 }
 
 func init() {
