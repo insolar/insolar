@@ -14,31 +14,39 @@
  *    limitations under the License.
  */
 
-package conveyor
+package fsm
 
 import (
 	"fmt"
 )
 
+// Element State ID
+type StateID uint32
+
+// Element State Machine Type ID
+type ID uint32
+
+// ElementState is StateID + (ID << 10)
+type ElementState uint32
+
 const (
-	smShift       = 10
-	maxStateValue = (1 << smShift) - 1
+	stateShift    = 10
+	maxStateValue = (1 << stateShift) - 1
 )
 
-// first part of elUpdate is State Machine, second part is State.
-func extractStates(elUpdate uint32) (uint32, uint32) {
-	sm := elUpdate >> smShift
-	state := elUpdate & ((1 << smShift) - 1)
-
-	return sm, state
-}
-
-// 'state' MUST be less than maxStateValue ( 2^smShift )
-func joinStates(sm uint32, state uint32) uint32 {
+// NewElementState constructs element from ID and StateID
+// state MUST be less than maxStateValue ( 2^stateShift )
+func NewElementState(stateMachine ID, state StateID) ElementState {
 	if state > maxStateValue {
 		panic(fmt.Sprint("Invalid state: ", state))
 	}
-	result := sm
-	result = result << smShift
-	return result + state
+	result := (uint32(stateMachine) << stateShift) + uint32(state)
+	return ElementState(result)
+}
+
+// Parse method returns ID and StateID from ElementState
+func (es ElementState) Parse() (ID, StateID) {
+	sm := es >> stateShift
+	state := es & ((1 << stateShift) - 1)
+	return ID(sm), StateID(state)
 }
