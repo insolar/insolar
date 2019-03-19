@@ -1,0 +1,135 @@
+/*
+ * The Clear BSD License
+ *
+ * Copyright (c) 2019 Insolar Technologies
+ *
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without modification, are permitted (subject to the limitations in the disclaimer below) provided that the following conditions are met:
+ *
+ *  Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+ *  Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+ *  Neither the name of Insolar Technologies nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+ *
+ * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ */
+
+package storage
+
+import (
+	"context"
+	"github.com/dgraph-io/badger"
+	"github.com/insolar/insolar/configuration"
+	"github.com/pkg/errors"
+	"path/filepath"
+)
+
+var (
+	// ErrNotFound is returned when value was not found.
+	ErrNotFound = errors.New("value not found")
+	ErrBadPulse = errors.New("pulse should be bigger than latest")
+)
+
+// DB provides a simple key-value store interface for persisting data.
+type DB interface {
+	Get(key Key) (value []byte, err error)
+	Set(key Key, value []byte) error
+}
+
+// Key represents a key for the key-value store. Scope is required to separate different DB clients and should be
+// unique.
+type Key interface {
+	Scope() Scope
+	ID() []byte
+}
+
+// Scope separates DB clients.
+type Scope byte
+
+// Bytes returns binary scope representation.
+func (s Scope) Bytes() []byte {
+	return []byte{byte(s)}
+}
+
+const (
+	// ScopePulse is the scope for pulse storage.
+	ScopePulse Scope = 1
+)
+
+type BadgerDB struct {
+	db *badger.DB
+}
+
+// NewBadgerDB creates new badger DB instance. Configuration should contain DataDirectory option. Badger will create
+// files there.
+func NewBadgerDB(conf configuration.ServiceNetwork) (*BadgerDB, error) {
+	dir, err := filepath.Abs(conf.CacheDirectory)
+	if err != nil {
+		return nil, err
+	}
+
+	ops := badger.DefaultOptions
+	ops.ValueDir = dir
+	ops.Dir = dir
+	bdb, err := badger.Open(ops)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to open badger")
+	}
+
+	db := &BadgerDB{
+		db: bdb,
+	}
+	return db, nil
+}
+
+// Get returns value for specified key or an error. A copy of a value will be returned (i.e. getting large value can be
+// long).
+func (b *BadgerDB) Get(key Key) (value []byte, err error) {
+	fullKey := append(key.Scope().Bytes(), key.ID()...)
+
+	err = b.db.View(func(txn *badger.Txn) error {
+		item, err := txn.Get(fullKey)
+		if err != nil {
+			return err
+		}
+		value, err = item.ValueCopy(nil)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		if err == badger.ErrKeyNotFound {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+
+	return
+}
+
+// Set stores value for a key.
+func (b *BadgerDB) Set(key Key, value []byte) error {
+	fullKey := append(key.Scope().Bytes(), key.ID()...)
+
+	err := b.db.Update(func(txn *badger.Txn) error {
+		err := txn.Set(fullKey, value)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Stop gracefully stops all disk writes. After calling this, it's safe to kill the process without losing data.
+func (b *BadgerDB) Stop(ctx context.Context) error {
+	return b.db.Close()
+}
