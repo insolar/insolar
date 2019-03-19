@@ -21,8 +21,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/insolar/insolar/ledger/storage/genesis"
-	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 
@@ -30,8 +28,10 @@ import (
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/ledger/internal/jet"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/record"
+	"github.com/insolar/insolar/ledger/storage/genesis"
+	"github.com/insolar/insolar/ledger/storage/object"
 )
 
 const (
@@ -43,7 +43,7 @@ const (
 type LedgerArtifactManager struct {
 	DB           storage.DBContext    `inject:""`
 	GenesisState genesis.GenesisState `inject:""`
-	JetStorage   jet.JetStorage       `inject:""`
+	JetStorage   jet.Storage          `inject:""`
 
 	DefaultBus                 core.MessageBus                 `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
@@ -96,12 +96,12 @@ func (m *LedgerArtifactManager) RegisterRequest(
 		return nil, err
 	}
 
-	rec := &record.RequestRecord{
+	rec := &object.RequestRecord{
 		Parcel:      message.ParcelToBytes(parcel),
 		MessageHash: m.PlatformCryptographyScheme.IntegrityHasher().Hash(message.MustSerializeBytes(parcel.Message())),
 		Object:      *obj.Record(),
 	}
-	recID := record.NewRecordIDFromRecord(
+	recID := object.NewRecordIDFromRecord(
 		m.PlatformCryptographyScheme,
 		currentPN,
 		rec)
@@ -302,8 +302,8 @@ func (m *LedgerArtifactManager) GetPendingRequest(ctx context.Context, objectID 
 
 	switch r := genericReply.(type) {
 	case *reply.Request:
-		rec := record.DeserializeRecord(r.Record)
-		castedRecord, ok := rec.(*record.RequestRecord)
+		rec := object.DeserializeRecord(r.Record)
+		castedRecord, ok := rec.(*object.RequestRecord)
 		if !ok {
 			return nil, fmt.Errorf("GetPendingRequest: unexpected message: %#v", r)
 		}
@@ -445,8 +445,8 @@ func (m *LedgerArtifactManager) DeclareType(
 
 	recid, err := m.setRecord(
 		ctx,
-		&record.TypeRecord{
-			SideEffectRecord: record.SideEffectRecord{
+		&object.TypeRecord{
+			SideEffectRecord: object.SideEffectRecord{
 				Domain:  domain,
 				Request: request,
 			},
@@ -484,15 +484,15 @@ func (m *LedgerArtifactManager) DeployCode(
 		return nil, err
 	}
 
-	codeRec := &record.CodeRecord{
-		SideEffectRecord: record.SideEffectRecord{
+	codeRec := &object.CodeRecord{
+		SideEffectRecord: object.SideEffectRecord{
 			Domain:  domain,
 			Request: request,
 		},
-		Code:        record.CalculateIDForBlob(m.PlatformCryptographyScheme, currentPN, code),
+		Code:        object.CalculateIDForBlob(m.PlatformCryptographyScheme, currentPN, code),
 		MachineType: machineType,
 	}
-	codeID := record.NewRecordIDFromRecord(m.PlatformCryptographyScheme, currentPN, codeRec)
+	codeID := object.NewRecordIDFromRecord(m.PlatformCryptographyScheme, currentPN, codeRec)
 	codeRef := core.NewRecordRef(*domain.Record(), *codeID)
 
 	_, err = m.setBlob(ctx, code, *codeRef, currentPN)
@@ -564,7 +564,7 @@ func (m *LedgerArtifactManager) ActivateObject(
 //
 // Deactivated object cannot be changed.
 func (m *LedgerArtifactManager) DeactivateObject(
-	ctx context.Context, domain, request core.RecordRef, object core.ObjectDescriptor,
+	ctx context.Context, domain, request core.RecordRef, obj core.ObjectDescriptor,
 ) (*core.RecordID, error) {
 	var err error
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.DeactivateObject")
@@ -581,14 +581,14 @@ func (m *LedgerArtifactManager) DeactivateObject(
 
 	desc, err := m.sendUpdateObject(
 		ctx,
-		&record.DeactivationRecord{
-			SideEffectRecord: record.SideEffectRecord{
+		&object.DeactivationRecord{
+			SideEffectRecord: object.SideEffectRecord{
 				Domain:  domain,
 				Request: request,
 			},
-			PrevState: *object.StateID(),
+			PrevState: *obj.StateID(),
 		},
-		*object.HeadRef(),
+		*obj.HeadRef(),
 		nil,
 		currentPN,
 	)
@@ -699,7 +699,7 @@ func (m *LedgerArtifactManager) RegisterValidation(
 
 // RegisterResult saves VM method call result.
 func (m *LedgerArtifactManager) RegisterResult(
-	ctx context.Context, object, request core.RecordRef, payload []byte,
+	ctx context.Context, obj, request core.RecordRef, payload []byte,
 ) (*core.RecordID, error) {
 	var err error
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.RegisterResult")
@@ -719,8 +719,8 @@ func (m *LedgerArtifactManager) RegisterResult(
 
 	recid, err := m.setRecord(
 		ctx,
-		&record.ResultRecord{
-			Object:  *object.Record(),
+		&object.ResultRecord{
+			Object:  *obj.Record(),
 			Request: request,
 			Payload: payload,
 		},
@@ -744,7 +744,7 @@ func (m *LedgerArtifactManager) pulse(ctx context.Context) (pn core.PulseNumber,
 func (m *LedgerArtifactManager) activateObject(
 	ctx context.Context,
 	domain core.RecordRef,
-	object core.RecordRef,
+	obj core.RecordRef,
 	prototype core.RecordRef,
 	isPrototype bool,
 	parent core.RecordRef,
@@ -760,22 +760,22 @@ func (m *LedgerArtifactManager) activateObject(
 		return nil, err
 	}
 
-	obj, err := m.sendUpdateObject(
+	o, err := m.sendUpdateObject(
 		ctx,
-		&record.ObjectActivateRecord{
-			SideEffectRecord: record.SideEffectRecord{
+		&object.ObjectActivateRecord{
+			SideEffectRecord: object.SideEffectRecord{
 				Domain:  domain,
-				Request: object,
+				Request: obj,
 			},
-			ObjectStateRecord: record.ObjectStateRecord{
-				Memory:      record.CalculateIDForBlob(m.PlatformCryptographyScheme, currentPN, memory),
+			ObjectStateRecord: object.ObjectStateRecord{
+				Memory:      object.CalculateIDForBlob(m.PlatformCryptographyScheme, currentPN, memory),
 				Image:       prototype,
 				IsPrototype: isPrototype,
 			},
 			Parent:     parent,
 			IsDelegate: asDelegate,
 		},
-		object,
+		obj,
 		memory,
 		currentPN,
 	)
@@ -795,12 +795,12 @@ func (m *LedgerArtifactManager) activateObject(
 	}
 	_, err = m.registerChild(
 		ctx,
-		&record.ChildRecord{
-			Ref:       object,
+		&object.ChildRecord{
+			Ref:       obj,
 			PrevChild: prevChild,
 		},
 		parent,
-		object,
+		obj,
 		asType,
 		currentPN,
 	)
@@ -811,19 +811,19 @@ func (m *LedgerArtifactManager) activateObject(
 	return &ObjectDescriptor{
 		ctx:          ctx,
 		am:           m,
-		head:         obj.Head,
-		state:        obj.State,
-		prototype:    obj.Prototype,
-		childPointer: obj.ChildPointer,
+		head:         o.Head,
+		state:        o.State,
+		prototype:    o.Prototype,
+		childPointer: o.ChildPointer,
 		memory:       memory,
-		parent:       obj.Parent,
+		parent:       o.Parent,
 	}, nil
 }
 
 func (m *LedgerArtifactManager) updateObject(
 	ctx context.Context,
 	domain, request core.RecordRef,
-	object core.ObjectDescriptor,
+	obj core.ObjectDescriptor,
 	code *core.RecordRef,
 	memory []byte,
 ) (core.ObjectDescriptor, error) {
@@ -831,14 +831,14 @@ func (m *LedgerArtifactManager) updateObject(
 		image *core.RecordRef
 		err   error
 	)
-	if object.IsPrototype() {
+	if obj.IsPrototype() {
 		if code != nil {
 			image = code
 		} else {
-			image, err = object.Code()
+			image, err = obj.Code()
 		}
 	} else {
-		image, err = object.Prototype()
+		image, err = obj.Prototype()
 	}
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to update object")
@@ -852,20 +852,20 @@ func (m *LedgerArtifactManager) updateObject(
 		return nil, err
 	}
 
-	obj, err := m.sendUpdateObject(
+	o, err := m.sendUpdateObject(
 		ctx,
-		&record.ObjectAmendRecord{
-			SideEffectRecord: record.SideEffectRecord{
+		&object.ObjectAmendRecord{
+			SideEffectRecord: object.SideEffectRecord{
 				Domain:  domain,
 				Request: request,
 			},
-			ObjectStateRecord: record.ObjectStateRecord{
+			ObjectStateRecord: object.ObjectStateRecord{
 				Image:       *image,
-				IsPrototype: object.IsPrototype(),
+				IsPrototype: obj.IsPrototype(),
 			},
-			PrevState: *object.StateID(),
+			PrevState: *obj.StateID(),
 		},
-		*object.HeadRef(),
+		*obj.HeadRef(),
 		memory,
 		currentPN,
 	)
@@ -876,18 +876,18 @@ func (m *LedgerArtifactManager) updateObject(
 	return &ObjectDescriptor{
 		ctx:          ctx,
 		am:           m,
-		head:         obj.Head,
-		state:        obj.State,
-		prototype:    obj.Prototype,
-		childPointer: obj.ChildPointer,
+		head:         o.Head,
+		state:        o.State,
+		prototype:    o.Prototype,
+		childPointer: o.ChildPointer,
 		memory:       memory,
-		parent:       obj.Parent,
+		parent:       o.Parent,
 	}, nil
 }
 
 func (m *LedgerArtifactManager) setRecord(
 	ctx context.Context,
-	rec record.Record,
+	rec object.Record,
 	target core.RecordRef,
 	currentPN core.PulseNumber,
 ) (*core.RecordID, error) {
@@ -895,7 +895,7 @@ func (m *LedgerArtifactManager) setRecord(
 
 	sender := BuildSender(bus.Send, retryJetSender(currentPN, m.JetStorage))
 	genericReply, err := sender(ctx, &message.SetRecord{
-		Record:    record.SerializeRecord(rec),
+		Record:    object.SerializeRecord(rec),
 		TargetRef: target,
 	}, nil)
 
@@ -943,8 +943,8 @@ func (m *LedgerArtifactManager) setBlob(
 
 func (m *LedgerArtifactManager) sendUpdateObject(
 	ctx context.Context,
-	rec record.Record,
-	object core.RecordRef,
+	rec object.Record,
+	obj core.RecordRef,
 	memory []byte,
 	currentPN core.PulseNumber,
 ) (*reply.Object, error) {
@@ -965,8 +965,8 @@ func (m *LedgerArtifactManager) sendUpdateObject(
 	genericReply, err := sender(
 		ctx,
 		&message.UpdateObject{
-			Record: record.SerializeRecord(rec),
-			Object: object,
+			Record: object.SerializeRecord(rec),
+			Object: obj,
 			Memory: memory,
 		}, nil)
 
@@ -986,7 +986,7 @@ func (m *LedgerArtifactManager) sendUpdateObject(
 
 func (m *LedgerArtifactManager) registerChild(
 	ctx context.Context,
-	rec record.Record,
+	rec object.Record,
 	parent core.RecordRef,
 	child core.RecordRef,
 	asType *core.RecordRef,
@@ -995,7 +995,7 @@ func (m *LedgerArtifactManager) registerChild(
 	bus := core.MessageBusFromContext(ctx, m.DefaultBus)
 	sender := BuildSender(bus.Send, retryJetSender(currentPN, m.JetStorage))
 	genericReact, err := sender(ctx, &message.RegisterChild{
-		Record: record.SerializeRecord(rec),
+		Record: object.SerializeRecord(rec),
 		Parent: parent,
 		Child:  child,
 		AsType: asType,

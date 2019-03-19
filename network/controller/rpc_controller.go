@@ -52,10 +52,10 @@ type RPCController interface {
 }
 
 type rpcController struct {
-	Scheme core.PlatformCryptographyScheme `inject:""`
+	Scheme  core.PlatformCryptographyScheme `inject:""`
+	Network network.HostNetwork             `inject:""`
 
 	options     *common.Options
-	hostNetwork network.HostNetwork
 	methodTable map[string]core.RemoteProcedure
 }
 
@@ -143,7 +143,7 @@ func (rpc *rpcController) initCascadeSendMessage(ctx context.Context, data core.
 	var err error
 
 	if findCurrentNode {
-		nodeID := rpc.hostNetwork.GetNodeID()
+		nodeID := rpc.Network.GetNodeID()
 		nextNodes, err = cascade.CalculateNextNodes(rpc.Scheme, data, &nodeID)
 	} else {
 		nextNodes, err = cascade.CalculateNextNodes(rpc.Scheme, data, nil)
@@ -176,7 +176,7 @@ func (rpc *rpcController) requestCascadeSendMessage(ctx context.Context, data co
 
 	_, span := instracer.StartSpan(context.Background(), "RPCController.requestCascadeSendMessage")
 	defer span.End()
-	request := rpc.hostNetwork.NewRequestBuilder().Type(types.Cascade).Data(&RequestCascade{
+	request := rpc.Network.NewRequestBuilder().Type(types.Cascade).Data(&RequestCascade{
 		TraceID: inslogger.TraceID(ctx),
 		RPC: RequestRPC{
 			Method: method,
@@ -185,7 +185,7 @@ func (rpc *rpcController) requestCascadeSendMessage(ctx context.Context, data co
 		Cascade: data,
 	}).Build()
 
-	future, err := rpc.hostNetwork.SendRequest(ctx, request, nodeID)
+	future, err := rpc.Network.SendRequest(ctx, request, nodeID)
 	if err != nil {
 		return err
 	}
@@ -213,7 +213,7 @@ func (rpc *rpcController) SendMessage(nodeID core.RecordRef, name string, msg co
 	ctx := context.Background() // TODO: ctx as argument
 	ctx = insmetrics.InsertTag(ctx, tagMessageType, msg.Type().String())
 	stats.Record(ctx, statParcelsSentSizeBytes.M(int64(len(msgBytes))))
-	request := rpc.hostNetwork.NewRequestBuilder().Type(types.RPC).Data(&RequestRPC{
+	request := rpc.Network.NewRequestBuilder().Type(types.RPC).Data(&RequestRPC{
 		Method: name,
 		Data:   [][]byte{msgBytes},
 	}).Build()
@@ -223,7 +223,7 @@ func (rpc *rpcController) SendMessage(nodeID core.RecordRef, name string, msg co
 	logger := inslogger.FromContext(ctx)
 	logger.Debugf("SendParcel with nodeID = %s method = %s, message reference = %s, RequestID = %d", nodeID.String(),
 		name, msg.DefaultTarget().String(), request.GetRequestID())
-	future, err := rpc.hostNetwork.SendRequest(ctx, request, nodeID)
+	future, err := rpc.Network.SendRequest(ctx, request, nodeID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Error sending RPC request to node %s", nodeID.String())
 	}
@@ -248,9 +248,9 @@ func (rpc *rpcController) processMessage(ctx context.Context, request network.Re
 	payload := request.GetData().(*RequestRPC)
 	result, err := rpc.invoke(ctx, payload.Method, payload.Data)
 	if err != nil {
-		return rpc.hostNetwork.BuildResponse(ctx, request, &ResponseRPC{Success: false, Error: err.Error()}), nil
+		return rpc.Network.BuildResponse(ctx, request, &ResponseRPC{Success: false, Error: err.Error()}), nil
 	}
-	return rpc.hostNetwork.BuildResponse(ctx, request, &ResponseRPC{Success: true, Result: result}), nil
+	return rpc.Network.BuildResponse(ctx, request, &ResponseRPC{Success: true, Result: result}), nil
 }
 
 func (rpc *rpcController) processCascade(ctx context.Context, request network.Request) (network.Response, error) {
@@ -270,20 +270,17 @@ func (rpc *rpcController) processCascade(ctx context.Context, request network.Re
 	}
 
 	if generalError != "" {
-		return rpc.hostNetwork.BuildResponse(ctx, request, &ResponseCascade{Success: false, Error: generalError}), nil
+		return rpc.Network.BuildResponse(ctx, request, &ResponseCascade{Success: false, Error: generalError}), nil
 	}
-	return rpc.hostNetwork.BuildResponse(ctx, request, &ResponseCascade{Success: true}), nil
+	return rpc.Network.BuildResponse(ctx, request, &ResponseCascade{Success: true}), nil
 }
 
 func (rpc *rpcController) Init(ctx context.Context) error {
-	rpc.hostNetwork.RegisterRequestHandler(types.RPC, rpc.processMessage)
-	rpc.hostNetwork.RegisterRequestHandler(types.Cascade, rpc.processCascade)
+	rpc.Network.RegisterRequestHandler(types.RPC, rpc.processMessage)
+	rpc.Network.RegisterRequestHandler(types.Cascade, rpc.processCascade)
 	return nil
 }
 
-func NewRPCController(options *common.Options, hostNetwork network.HostNetwork) RPCController {
-	return &rpcController{options: options,
-		hostNetwork: hostNetwork,
-		methodTable: make(map[string]core.RemoteProcedure),
-	}
+func NewRPCController(options *common.Options) RPCController {
+	return &rpcController{options: options, methodTable: make(map[string]core.RemoteProcedure)}
 }

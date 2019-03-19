@@ -26,8 +26,8 @@ type MockDB struct {
 	backend map[string][]byte
 }
 
-// NewMockDB creates new mock DB instance.
-func NewMockDB() *MockDB {
+// NewMemoryMockDB creates new mock DB instance.
+func NewMemoryMockDB() *MockDB {
 	db := &MockDB{
 		backend: map[string][]byte{},
 	}

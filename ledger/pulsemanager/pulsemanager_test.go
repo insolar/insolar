@@ -27,8 +27,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/index"
-	"github.com/insolar/insolar/ledger/storage/record"
+	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
@@ -108,12 +107,12 @@ func (s *pulseManagerSuite) TestPulseManager_Set_CheckHotIndexesSending() {
 		s.ctx,
 		core.RecordID(jetID),
 		core.GenesisPulse.PulseNumber,
-		&record.ObjectActivateRecord{})
-	firstIndex := index.ObjectLifeline{
+		&object.ObjectActivateRecord{})
+	firstIndex := object.Lifeline{
 		LatestState: firstID,
 	}
 	_ = s.objectStorage.SetObjectIndex(s.ctx, core.RecordID(jetID), firstID, &firstIndex)
-	codeRecord := &record.CodeRecord{}
+	codeRecord := &object.CodeRecord{}
 	secondID, _ := s.objectStorage.SetRecord(
 		s.ctx,
 		core.RecordID(jetID),
@@ -157,7 +156,7 @@ func (s *pulseManagerSuite) TestPulseManager_Set_CheckHotIndexesSending() {
 		require.Equal(s.T(), 1, len(objContext.Requests))
 
 		require.Equal(s.T(), 1, len(val.RecentObjects))
-		decodedIndex := index.Decode(val.RecentObjects[*firstID].Index)
+		decodedIndex := object.Decode(val.RecentObjects[*firstID].Index)
 		require.Equal(s.T(), firstIndex, decodedIndex)
 		require.Equal(s.T(), 1, val.RecentObjects[*firstID].TTL)
 

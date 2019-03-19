@@ -39,6 +39,11 @@ type HeavySyncMock struct {
 	StoreCounter    uint64
 	StorePreCounter uint64
 	StoreMock       mHeavySyncMockStore
+
+	StoreDropFunc       func(p context.Context, p1 core.JetID, p2 []byte) (r error)
+	StoreDropCounter    uint64
+	StoreDropPreCounter uint64
+	StoreDropMock       mHeavySyncMockStoreDrop
 }
 
 //NewHeavySyncMock returns a mock for github.com/insolar/insolar/core.HeavySync
@@ -53,6 +58,7 @@ func NewHeavySyncMock(t minimock.Tester) *HeavySyncMock {
 	m.StartMock = mHeavySyncMockStart{mock: m}
 	m.StopMock = mHeavySyncMockStop{mock: m}
 	m.StoreMock = mHeavySyncMockStore{mock: m}
+	m.StoreDropMock = mHeavySyncMockStoreDrop{mock: m}
 
 	return m
 }
@@ -654,6 +660,155 @@ func (m *HeavySyncMock) StoreFinished() bool {
 	return true
 }
 
+type mHeavySyncMockStoreDrop struct {
+	mock              *HeavySyncMock
+	mainExpectation   *HeavySyncMockStoreDropExpectation
+	expectationSeries []*HeavySyncMockStoreDropExpectation
+}
+
+type HeavySyncMockStoreDropExpectation struct {
+	input  *HeavySyncMockStoreDropInput
+	result *HeavySyncMockStoreDropResult
+}
+
+type HeavySyncMockStoreDropInput struct {
+	p  context.Context
+	p1 core.JetID
+	p2 []byte
+}
+
+type HeavySyncMockStoreDropResult struct {
+	r error
+}
+
+//Expect specifies that invocation of HeavySync.StoreDrop is expected from 1 to Infinity times
+func (m *mHeavySyncMockStoreDrop) Expect(p context.Context, p1 core.JetID, p2 []byte) *mHeavySyncMockStoreDrop {
+	m.mock.StoreDropFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &HeavySyncMockStoreDropExpectation{}
+	}
+	m.mainExpectation.input = &HeavySyncMockStoreDropInput{p, p1, p2}
+	return m
+}
+
+//Return specifies results of invocation of HeavySync.StoreDrop
+func (m *mHeavySyncMockStoreDrop) Return(r error) *HeavySyncMock {
+	m.mock.StoreDropFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &HeavySyncMockStoreDropExpectation{}
+	}
+	m.mainExpectation.result = &HeavySyncMockStoreDropResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of HeavySync.StoreDrop is expected once
+func (m *mHeavySyncMockStoreDrop) ExpectOnce(p context.Context, p1 core.JetID, p2 []byte) *HeavySyncMockStoreDropExpectation {
+	m.mock.StoreDropFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &HeavySyncMockStoreDropExpectation{}
+	expectation.input = &HeavySyncMockStoreDropInput{p, p1, p2}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *HeavySyncMockStoreDropExpectation) Return(r error) {
+	e.result = &HeavySyncMockStoreDropResult{r}
+}
+
+//Set uses given function f as a mock of HeavySync.StoreDrop method
+func (m *mHeavySyncMockStoreDrop) Set(f func(p context.Context, p1 core.JetID, p2 []byte) (r error)) *HeavySyncMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.StoreDropFunc = f
+	return m.mock
+}
+
+//StoreDrop implements github.com/insolar/insolar/core.HeavySync interface
+func (m *HeavySyncMock) StoreDrop(p context.Context, p1 core.JetID, p2 []byte) (r error) {
+	counter := atomic.AddUint64(&m.StoreDropPreCounter, 1)
+	defer atomic.AddUint64(&m.StoreDropCounter, 1)
+
+	if len(m.StoreDropMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.StoreDropMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to HeavySyncMock.StoreDrop. %v %v %v", p, p1, p2)
+			return
+		}
+
+		input := m.StoreDropMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, HeavySyncMockStoreDropInput{p, p1, p2}, "HeavySync.StoreDrop got unexpected parameters")
+
+		result := m.StoreDropMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the HeavySyncMock.StoreDrop")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.StoreDropMock.mainExpectation != nil {
+
+		input := m.StoreDropMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, HeavySyncMockStoreDropInput{p, p1, p2}, "HeavySync.StoreDrop got unexpected parameters")
+		}
+
+		result := m.StoreDropMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the HeavySyncMock.StoreDrop")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.StoreDropFunc == nil {
+		m.t.Fatalf("Unexpected call to HeavySyncMock.StoreDrop. %v %v %v", p, p1, p2)
+		return
+	}
+
+	return m.StoreDropFunc(p, p1, p2)
+}
+
+//StoreDropMinimockCounter returns a count of HeavySyncMock.StoreDropFunc invocations
+func (m *HeavySyncMock) StoreDropMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.StoreDropCounter)
+}
+
+//StoreDropMinimockPreCounter returns the value of HeavySyncMock.StoreDrop invocations
+func (m *HeavySyncMock) StoreDropMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.StoreDropPreCounter)
+}
+
+//StoreDropFinished returns true if mock invocations count is ok
+func (m *HeavySyncMock) StoreDropFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.StoreDropMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.StoreDropCounter) == uint64(len(m.StoreDropMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.StoreDropMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.StoreDropCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.StoreDropFunc != nil {
+		return atomic.LoadUint64(&m.StoreDropCounter) > 0
+	}
+
+	return true
+}
+
 //ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *HeavySyncMock) ValidateCallCounters() {
@@ -672,6 +827,10 @@ func (m *HeavySyncMock) ValidateCallCounters() {
 
 	if !m.StoreFinished() {
 		m.t.Fatal("Expected call to HeavySyncMock.Store")
+	}
+
+	if !m.StoreDropFinished() {
+		m.t.Fatal("Expected call to HeavySyncMock.StoreDrop")
 	}
 
 }
@@ -707,6 +866,10 @@ func (m *HeavySyncMock) MinimockFinish() {
 		m.t.Fatal("Expected call to HeavySyncMock.Store")
 	}
 
+	if !m.StoreDropFinished() {
+		m.t.Fatal("Expected call to HeavySyncMock.StoreDrop")
+	}
+
 }
 
 //Wait waits for all mocked methods to be called at least once
@@ -725,6 +888,7 @@ func (m *HeavySyncMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.StartFinished()
 		ok = ok && m.StopFinished()
 		ok = ok && m.StoreFinished()
+		ok = ok && m.StoreDropFinished()
 
 		if ok {
 			return
@@ -747,6 +911,10 @@ func (m *HeavySyncMock) MinimockWait(timeout time.Duration) {
 
 			if !m.StoreFinished() {
 				m.t.Error("Expected call to HeavySyncMock.Store")
+			}
+
+			if !m.StoreDropFinished() {
+				m.t.Error("Expected call to HeavySyncMock.StoreDrop")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)
@@ -774,6 +942,10 @@ func (m *HeavySyncMock) AllMocksCalled() bool {
 	}
 
 	if !m.StoreFinished() {
+		return false
+	}
+
+	if !m.StoreDropFinished() {
 		return false
 	}
 

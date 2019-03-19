@@ -1,4 +1,4 @@
-#!/bin/bash
+#! /usr/bin/env bash
 #
 # fethcdeps - installs go bin tool from package using provided git reference
 #

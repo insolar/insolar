@@ -35,9 +35,8 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/ugorji/go/codec"
 
+	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/testutils/terminationhandler"
-
-	"github.com/insolar/insolar/ledger/storage/jet"
 
 	"github.com/insolar/insolar/contractrequester"
 	"github.com/insolar/insolar/ledger/pulsemanager"
@@ -208,13 +207,12 @@ func (s *LogicRunnerFuncSuite) incrementPulseHelper(ctx context.Context, lr core
 	)
 	s.Require().NoError(err)
 
-	rootJetId := core.RecordID(*core.NewJetID(0, nil))
+	rootJetId := *core.NewJetID(0, nil)
 	_, err = lr.(*LogicRunner).MessageBus.Send(
 		ctx,
 		&message.HotData{
-			Jet:             *core.NewRecordRef(core.DomainID, rootJetId),
-			DropJet:         rootJetId,
-			Drop:            jet.Drop{Pulse: 1},
+			Jet:             *core.NewRecordRef(core.DomainID, core.RecordID(rootJetId)),
+			Drop:            drop.Drop{Pulse: 1, JetID: rootJetId},
 			RecentObjects:   nil,
 			PendingRequests: nil,
 			PulseNumber:     newPulseNumber,

@@ -57,7 +57,7 @@ func mergeClaim(nodes map[core.RecordRef]core.Node, claim consensus.ReferendumCl
 		if err != nil {
 			return isJoinClaim, errors.Wrap(err, "[ mergeClaim ] failed to convert Claim -> Node")
 		}
-		node.(MutableNode).SetState(core.NodeJoining)
+		node.(MutableNode).SetState(core.NodePending)
 		nodes[node.ID()] = node
 	case *consensus.NodeLeaveClaim:
 		if nodes[t.NodeID] == nil {
@@ -65,7 +65,7 @@ func mergeClaim(nodes map[core.RecordRef]core.Node, claim consensus.ReferendumCl
 		}
 
 		node := nodes[t.NodeID].(MutableNode)
-		if t.ETA == 0 || !node.Leaving() {
+		if t.ETA == 0 || node.GetState() != core.NodeLeaving {
 			node.SetLeavingETA(t.ETA)
 		}
 	}

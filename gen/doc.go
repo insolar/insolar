@@ -1,5 +1,5 @@
 /*
- *    Copyright 2019 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -14,5 +14,5 @@
  *    limitations under the License.
  */
 
-// Package gen contains functions for generating insolar types.
+// Package gen contains functions for generating random base insolar types.
 package gen

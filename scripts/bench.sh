@@ -1,4 +1,4 @@
-#!/bin/bash
+#! /usr/bin/env bash
 # Usage:
 # ./scripts/bench.sh -c 2 -r=40
 

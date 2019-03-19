@@ -35,7 +35,7 @@ func TestPulse_Components(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	memStorage := pulse.NewStorageMem()
 	dbStorage := pulse.NewStorageDB()
-	dbStorage.DB = db.NewMockDB()
+	dbStorage.DB = db.NewMemoryMockDB()
 
 	var pulses []core.Pulse
 	f := fuzz.New().Funcs(func(p *core.Pulse, c fuzz.Continue) {

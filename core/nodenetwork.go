@@ -31,9 +31,14 @@ type NodeState uint8
 
 //go:generate stringer -type=NodeState
 const (
-	NodeDiscovery NodeState = iota
-	NodeJoining
+	// NodeUndefined node started but is not connected to network yet
+	NodeUndefined NodeState = iota
+	// NodePending node is in first pulse of discovery bootstrap or is joining to a bootstrapped network
+	NodePending
+	// NodeReady node is connected to network
 	NodeReady
+	// NodeLeaving node is about to leave network
+	NodeLeaving
 )
 
 //go:generate minimock -i github.com/insolar/insolar/core.Node -o ../testutils/network -s _mock.go
@@ -54,32 +59,14 @@ type Node interface {
 	GetGlobuleID() GlobuleID
 	// Version of node software
 	Version() string
-	// Leaving indicates, that node preparing for graceful shutdown
-	Leaving() bool
 	// LeavingETA is pulse number, after which node leave
 	LeavingETA() PulseNumber
-	// IsWorking true if node is in working node list
-	IsWorking() bool
 	// GetState get state of the node
 	GetState() NodeState
 }
 
-type NodeNetworkState uint8
-
-//go:generate stringer -type=NodeNetworkState
-const (
-	// UndefinedNodeNetworkState is state of NodeKeeper while it is not valid
-	UndefinedNodeNetworkState NodeNetworkState = iota + 1
-	// WaitingNodeNetworkState is state of NodeKeeper while it is not part of consensus yet (waits for its join claim to pass)
-	WaitingNodeNetworkState
-	// ReadyNodeNetworkState is state of NodeKeeper when it is ready for consensus
-	ReadyNodeNetworkState
-)
-
 //go:generate minimock -i github.com/insolar/insolar/core.NodeNetwork -o ../testutils/network -s _mock.go
 type NodeNetwork interface {
-	// GetState get state of the NodeKeeper
-	GetState() NodeNetworkState
 	// GetOrigin get origin node for the current insolard. Returns nil if the current insolard is not a working node.
 	GetOrigin() Node
 	// GetWorkingNode get working node by its reference. Returns nil if node is not found.
