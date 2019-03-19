@@ -4,6 +4,15 @@ package conveyor
 
 import "strconv"
 
+func _() {
+	// An "invalid array index" compiler error signifies that the constant values have changed.
+	// Re-run the stringer command to generate them again.
+	var x [1]struct{}
+	_ = x[EmptyElement-0]
+	_ = x[ActiveElement-1]
+	_ = x[NotActiveElement-2]
+}
+
 const _ActivationStatus_name = "EmptyElementActiveElementNotActiveElement"
 
 var _ActivationStatus_index = [...]uint8{0, 12, 25, 41}
