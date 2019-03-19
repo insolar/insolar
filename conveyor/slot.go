@@ -19,6 +19,7 @@ package conveyor
 import (
 	"fmt"
 
+	"github.com/insolar/insolar/conveyor/generator/matrix"
 	"github.com/insolar/insolar/conveyor/interfaces/constant"
 	"github.com/insolar/insolar/conveyor/interfaces/fsm"
 	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
@@ -26,6 +27,12 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/pkg/errors"
 )
+
+var handlerStorage *matrix.Matrix
+
+func init() {
+	handlerStorage = matrix.NewMatrix()
+}
 
 // SlotState shows slot working mode
 type SlotState uint32

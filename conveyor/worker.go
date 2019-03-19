@@ -73,6 +73,7 @@ const (
 func GetStateMachineByType(mtype MachineType) statemachine.StateMachine {
 	//panic("implement me") // TODO:
 	sm := statemachine.NewStateMachineMock(&testing.T{})
+
 	return sm
 }
 
@@ -159,7 +160,7 @@ func (w *worker) readInputQueueWorking() error {
 	for i := 0; i < len(elements); i++ {
 		el := elements[i]
 
-		_, err := w.slot.createElement(GetStateMachineByType(InputEvent), 0, el)
+		_, err := w.slot.createElement(handlerStorage.GetStateMachinesByType(InputEvent), 0, el)
 		if err != nil {
 			return errors.Wrapf(err, "[ readInputQueueWorking ] Can't createElement: %+v", el)
 		}
