@@ -265,4 +265,5 @@ func (swa *CancellableQueueAdapter) process(cancellableTask queueTask) {
 		respSink.PushNestedEvent(swa.adapterID, adapterTask.elementID, adapterTask.handlerID, nestedEvent)
 	}
 	respSink.PushResponse(swa.adapterID, adapterTask.elementID, adapterTask.handlerID, event.RespPayload)
+	// TODO: remove cancelInfo from swa.taskHolder
 }
