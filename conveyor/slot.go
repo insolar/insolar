@@ -35,6 +35,7 @@ const (
 	Initializing = SlotState(iota)
 	Working
 	Suspending
+	Canceling
 )
 
 const slotSize = 10000
@@ -167,7 +168,15 @@ func initElementsBuf() ([]slotElement, *ElementList) {
 }
 
 // NewSlot creates new instance of Slot
-func NewSlot(pulseState constant.PulseState, pulseNumber core.PulseNumber, removeSlotCallback RemoveSlotCallback, runWorker bool) *Slot {
+func NewWorkingSlot(pulseState constant.PulseState, pulseNumber core.PulseNumber, removeSlotCallback RemoveSlotCallback) TaskPusher {
+
+	slot := newSlot(pulseState, pulseNumber, removeSlotCallback)
+	slot.runWorker()
+
+	return slot
+}
+
+func newSlot(pulseState constant.PulseState, pulseNumber core.PulseNumber, removeSlotCallback RemoveSlotCallback) *Slot {
 	slotState := Initializing
 	if pulseState == constant.Antique {
 		slotState = Working
@@ -181,7 +190,7 @@ func NewSlot(pulseState constant.PulseState, pulseNumber core.PulseNumber, remov
 		NotActiveElement: {},
 	}
 
-	slot := &Slot{
+	return &Slot{
 		pulseState:         pulseState,
 		inputQueue:         queue.NewMutexQueue(),
 		responseQueue:      queue.NewMutexQueue(),
@@ -192,12 +201,6 @@ func NewSlot(pulseState constant.PulseState, pulseNumber core.PulseNumber, remov
 		elementListMap:     elementListMap,
 		removeSlotCallback: removeSlotCallback,
 	}
-
-	if runWorker {
-		slot.runWorker()
-	}
-
-	return slot
 }
 
 func (s *Slot) runWorker() {
