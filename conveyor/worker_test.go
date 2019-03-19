@@ -914,7 +914,7 @@ func Test_readResponseQueue_ResponseHandlerError(t *testing.T) {
 		}
 	}
 
-	for _, tt := range testPulseStatesWithoutFuture {
+	for _, tt := range testPulseStates {
 		t.Run(tt.String(), func(t *testing.T) {
 			slot, worker := makeSlotAndWorker(tt, 22)
 			oldSlot := *slot
@@ -937,17 +937,8 @@ func Test_readResponseQueue_ResponseHandlerError(t *testing.T) {
 	}
 }
 
-func Test_readResponseQueue_ResponseHandlerErrorFuture(t *testing.T) {
-	slot, worker := makeSlotAndWorker(constant.Future, 22)
-	oldSlot := *slot
-	resp := &adapter.AdapterResponse{}
-	slot.responseQueue.SinkPush(resp)
-	require.NoError(t, worker.readResponseQueue())
-	areSlotStatesEqual(&oldSlot, slot, t, false)
-}
-
 func Test_readResponseQueue_NestedEventNotImplementedYet(t *testing.T) {
-	for _, tt := range testPulseStatesWithoutFuture {
+	for _, tt := range testPulseStates {
 		t.Run(tt.String(), func(t *testing.T) {
 			slot, worker := makeSlotAndWorker(tt, 22)
 			slot.responseQueue.PushSignal(10000, mockCallback())
@@ -956,14 +947,6 @@ func Test_readResponseQueue_NestedEventNotImplementedYet(t *testing.T) {
 			})
 		})
 	}
-}
-
-func Test_readResponseQueue_NestedEventNotImplementedYetFuture(t *testing.T) {
-	slot, worker := makeSlotAndWorker(constant.Future, 22)
-	oldSlot := *slot
-	slot.responseQueue.PushSignal(10000, mockCallback())
-	require.NoError(t, worker.readResponseQueue())
-	areSlotStatesEqual(&oldSlot, slot, t, false)
 }
 
 // ---- initializing

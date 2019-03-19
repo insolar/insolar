@@ -264,12 +264,6 @@ func (w *worker) readResponseQueue() error {
 	w.nextWorkerState = ProcessElements
 	w.postponedResponses = append(w.postponedResponses, w.slot.responseQueue.RemoveAll()...)
 
-	if w.slot.pulseState == constant.Future {
-		w.postponedResponses = make([]queue.OutputElement, 0)
-		w.ctxLogger.Warnf("[ readResponseQueue ] Shouldn't have responses in 'Future'. Drop them ( %d )", len(w.postponedResponses))
-		return nil
-	}
-
 	totalNumElements := len(w.postponedResponses)
 	numProcessedElements := 0
 	for i := 0; i < totalNumElements; i++ {
