@@ -37,7 +37,7 @@ type RemoveSlotCallback func(number core.PulseNumber)
 
 // PulseConveyor is realization of Conveyor
 type PulseConveyor struct {
-	slotMap            map[core.PulseNumber]*Slot
+	slotMap            map[core.PulseNumber]TaskPusher
 	futurePulseData    *core.Pulse
 	futurePulseNumber  *core.PulseNumber
 	presentPulseNumber *core.PulseNumber
@@ -48,7 +48,7 @@ type PulseConveyor struct {
 // NewPulseConveyor creates new instance of PulseConveyor
 func NewPulseConveyor() (core.Conveyor, error) {
 	c := &PulseConveyor{
-		slotMap: make(map[core.PulseNumber]*Slot),
+		slotMap: make(map[core.PulseNumber]TaskPusher),
 		state:   core.ConveyorInactive,
 	}
 	// antiqueSlot is slot for all pulses from past if conveyor dont have specific PastSlot for such pulse
@@ -62,7 +62,7 @@ func (c *PulseConveyor) removeSlot(number core.PulseNumber) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	c.slotMap[number].inputQueue.PushSignal(CancelSignal, nil)
+	c.slotMap[number].PushSignal(CancelSignal, nil)
 	delete(c.slotMap, number)
 }
 
@@ -91,7 +91,7 @@ func (c *PulseConveyor) unsafeGetState() core.ConveyorState {
 	return c.state
 }
 
-func (c *PulseConveyor) unsafeGetSlot(pulseNumber core.PulseNumber) *Slot {
+func (c *PulseConveyor) unsafeGetSlot(pulseNumber core.PulseNumber) TaskPusher {
 	slot, ok := c.slotMap[pulseNumber]
 	if !ok {
 		if c.futurePulseNumber == nil || pulseNumber > *c.futurePulseNumber {
@@ -122,7 +122,7 @@ func (c *PulseConveyor) SinkPush(pulseNumber core.PulseNumber, data interface{})
 	if slot == nil {
 		return errors.Errorf("[ SinkPush ] can't get slot by pulse number %d", pulseNumber)
 	}
-	err := slot.inputQueue.SinkPush(data)
+	err := slot.SinkPush(data)
 	return errors.Wrap(err, "[ SinkPush ] can't push to queue")
 }
 
@@ -137,7 +137,7 @@ func (c *PulseConveyor) SinkPushAll(pulseNumber core.PulseNumber, data []interfa
 	if slot == nil {
 		return errors.Errorf("[ SinkPushAll ] can't get slot by pulse number %d", pulseNumber)
 	}
-	err := slot.inputQueue.SinkPushAll(data)
+	err := slot.SinkPushAll(data)
 	return errors.Wrap(err, "[ SinkPushAll ] can't push to queue")
 }
 
@@ -169,7 +169,7 @@ func (c *PulseConveyor) PreparePulse(pulse core.Pulse, callback queue.SyncDone) 
 	barrierCallback := newBarrierCallback(expectedNumCallbacks, callback)
 
 	futureSlot := c.slotMap[*c.futurePulseNumber]
-	err := futureSlot.inputQueue.PushSignal(PendingPulseSignal, barrierCallback)
+	err := futureSlot.PushSignal(PendingPulseSignal, barrierCallback)
 	if err != nil {
 		log.Panicf("[ PreparePulse ] can't send signal to future slot (for pulse %d), error - %s", c.futurePulseNumber, err)
 	}
@@ -177,7 +177,7 @@ func (c *PulseConveyor) PreparePulse(pulse core.Pulse, callback queue.SyncDone) 
 	if c.presentPulseNumber != nil {
 		presentSlot := c.slotMap[*c.presentPulseNumber]
 
-		err := presentSlot.inputQueue.PushSignal(PendingPulseSignal, barrierCallback)
+		err := presentSlot.PushSignal(PendingPulseSignal, barrierCallback)
 		if err != nil {
 			log.Panicf("[ PreparePulse ] can't send signal to present slot (for pulse %d), error - %s", c.presentPulseNumber, err)
 		}
@@ -251,7 +251,7 @@ func (c *PulseConveyor) ActivatePulse() error {
 	futureSlot := c.slotMap[*c.futurePulseNumber]
 	callback := NewPulseWithCallback(&wg, *c.futurePulseData)
 
-	err := futureSlot.inputQueue.PushSignal(ActivatePulseSignal, callback)
+	err := futureSlot.PushSignal(ActivatePulseSignal, callback)
 	if err != nil {
 		c.lock.Unlock()
 		log.Panicf("[ ActivatePulse ] can't send signal to future slot (for pulse %d), error - %s", c.futurePulseNumber, err)
@@ -259,7 +259,7 @@ func (c *PulseConveyor) ActivatePulse() error {
 
 	if c.presentPulseNumber != nil {
 		presentSlot := c.slotMap[*c.presentPulseNumber]
-		err = presentSlot.inputQueue.PushSignal(ActivatePulseSignal, &wg)
+		err = presentSlot.PushSignal(ActivatePulseSignal, &wg)
 		if err != nil {
 			c.lock.Unlock()
 			log.Panicf("[ ActivatePulse ] can't send signal to present slot (for pulse %d), error - %s", c.presentPulseNumber, err)
@@ -284,7 +284,7 @@ func (c *PulseConveyor) getSlotConfiguration(state SlotState) HandlersConfigurat
 }
 
 // BarrierCallback wait for required number of SetResult.
-// After that invoke SetResult on given callback and forward there last result from SetResult
+// After that it invokes SetResult on given callback and forward there last result from all SetResults
 type BarrierCallback struct {
 	wg     *sync.WaitGroup
 	result interface{}
