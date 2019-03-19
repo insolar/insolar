@@ -4,6 +4,15 @@ package core
 
 import "strconv"
 
+func _() {
+	// An "invalid array index" compiler error signifies that the constant values have changed.
+	// Re-run the stringer command to generate them again.
+	var x [1]struct{}
+	_ = x[UndefinedNodeNetworkState-1]
+	_ = x[WaitingNodeNetworkState-2]
+	_ = x[ReadyNodeNetworkState-3]
+}
+
 const _NodeNetworkState_name = "UndefinedNodeNetworkStateWaitingNodeNetworkStateReadyNodeNetworkState"
 
 var _NodeNetworkState_index = [...]uint8{0, 25, 48, 69}

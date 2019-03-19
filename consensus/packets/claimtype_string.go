@@ -4,6 +4,19 @@ package packets
 
 import "strconv"
 
+func _() {
+	// An "invalid array index" compiler error signifies that the constant values have changed.
+	// Re-run the stringer command to generate them again.
+	var x [1]struct{}
+	_ = x[TypeNodeJoinClaim-1]
+	_ = x[TypeNodeAnnounceClaim-2]
+	_ = x[TypeCapabilityPollingAndActivation-3]
+	_ = x[TypeNodeViolationBlame-4]
+	_ = x[TypeNodeBroadcast-5]
+	_ = x[TypeNodeLeaveClaim-6]
+	_ = x[TypeChangeNetworkClaim-7]
+}
+
 const _ClaimType_name = "TypeNodeJoinClaimTypeNodeAnnounceClaimTypeCapabilityPollingAndActivationTypeNodeViolationBlameTypeNodeBroadcastTypeNodeLeaveClaimTypeChangeNetworkClaim"
 
 var _ClaimType_index = [...]uint8{0, 17, 38, 72, 94, 111, 129, 151}
