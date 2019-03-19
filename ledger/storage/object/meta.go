@@ -31,8 +31,8 @@ func (r *GenesisRecord) PrevStateID() *core.RecordID {
 	return nil
 }
 
-// State returns state id.
-func (r *GenesisRecord) State() State {
+// StateID returns state id.
+func (r *GenesisRecord) State() StateID {
 	return StateActivation
 }
 

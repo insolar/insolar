@@ -170,7 +170,7 @@ func delegates() (result map[insolar.Reference]insolar.Reference) {
 	return
 }
 
-func state() (state State) {
+func state() (state StateID) {
 	fuzz.New().NilChance(0).Fuzz(&state)
 	return
 }

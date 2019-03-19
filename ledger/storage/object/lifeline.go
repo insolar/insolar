@@ -50,7 +50,7 @@ type Lifeline struct {
 	ChildPointer        *insolar.ID // Meta record about child activation.
 	Parent              insolar.Reference
 	Delegates           map[insolar.Reference]insolar.Reference
-	State               State
+	State               StateID
 	LatestUpdate        insolar.PulseNumber
 	JetID               insolar.JetID
 }

@@ -1109,7 +1109,7 @@ func (h *MessageHandler) getCode(ctx context.Context, id *core.RecordID) (*objec
 	return codeRec, nil
 }
 
-func validateState(old object.State, new object.State) error {
+func validateState(old object.StateID, new object.StateID) error {
 	if old == object.StateDeactivation {
 		return ErrObjectDeactivated
 	}

@@ -22,12 +22,12 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
-// State is a state of lifeline records.
-type State int
+// StateID is a state of lifeline records.
+type StateID int
 
 const (
 	// StateUndefined is used for special cases.
-	StateUndefined = State(iota)
+	StateUndefined = StateID(iota)
 	// StateActivation means it's an activation record.
 	StateActivation
 	// StateAmend means it's an amend record.
@@ -38,8 +38,8 @@ const (
 
 // ObjectState is common object state record.
 type ObjectState interface {
-	// State returns state id.
-	State() State
+	// StateID returns state id.
+	State() StateID
 	// GetImage returns state code.
 	GetImage() *core.RecordRef
 	// GetIsPrototype returns state code.
@@ -129,8 +129,8 @@ func (r *ObjectActivateRecord) PrevStateID() *core.RecordID {
 	return nil
 }
 
-// State returns state id.
-func (r *ObjectActivateRecord) State() State {
+// StateID returns state id.
+func (r *ObjectActivateRecord) State() StateID {
 	return StateActivation
 }
 
@@ -152,8 +152,8 @@ func (r *ObjectAmendRecord) PrevStateID() *core.RecordID {
 	return &r.PrevState
 }
 
-// State returns state id.
-func (r *ObjectAmendRecord) State() State {
+// StateID returns state id.
+func (r *ObjectAmendRecord) State() StateID {
 	return StateAmend
 }
 
@@ -173,8 +173,8 @@ func (r *DeactivationRecord) PrevStateID() *core.RecordID {
 	return &r.PrevState
 }
 
-// State returns state id.
-func (r *DeactivationRecord) State() State {
+// StateID returns state id.
+func (r *DeactivationRecord) State() StateID {
 	return StateDeactivation
 }
 
