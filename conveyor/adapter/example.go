@@ -86,7 +86,7 @@ func processStop(cancelList []*cancelInfoT, flush bool) {
 }
 
 func (th *taskHolderT) stop(pulseNumber uint32, flush bool) {
-	log.Infof("[ taskHolderT.stop ] Stopping pulseNumber: %d, flush: %d", pulseNumber, flush)
+	log.Infof("[ taskHolderT.stop ] Stopping pulseNumber: %d, flush: %s", pulseNumber, flush)
 	th.taskHolderLock.Lock()
 	defer th.taskHolderLock.Unlock()
 
@@ -105,7 +105,7 @@ func (th *taskHolderT) stopAll(flush bool) {
 	th.taskHolderLock.Lock()
 	defer th.taskHolderLock.Unlock()
 
-	log.Infof("[ taskHolderT.stopAll ] flush: ", flush)
+	log.Info("[ taskHolderT.stopAll ] flush: ", flush)
 
 	for _, cancelList := range th.tasks {
 		processStop(cancelList, flush)
