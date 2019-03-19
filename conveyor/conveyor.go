@@ -62,6 +62,7 @@ func (c *PulseConveyor) removeSlot(number core.PulseNumber) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
+	c.slotMap[number].inputQueue.PushSignal(CancelSignal, nil)
 	delete(c.slotMap, number)
 }
 
@@ -69,25 +70,25 @@ func (c *PulseConveyor) removeSlot(number core.PulseNumber) {
 func (c *PulseConveyor) GetState() core.ConveyorState {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
-	return c.state
+
+	return c.unsafeGetState()
 }
 
 // IsOperational shows if conveyor is ready for work
 func (c *PulseConveyor) IsOperational() bool {
-	currentState := c.GetState()
-	if currentState == core.ConveyorActive || currentState == core.ConveyorPreparingPulse {
-		return true
-	}
-	return false
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+
+	return c.unsafeIsOperational()
 }
 
-func (c *PulseConveyor) InitiateShutdown(force bool) {
-	c.lock.Lock()
-	c.state = core.ConveyorShuttingDown
-	c.lock.Unlock()
-	if force { // nolint
-		// TODO: cancel all tasks in adapters
-	}
+func (c *PulseConveyor) unsafeIsOperational() bool {
+	currentState := c.unsafeGetState()
+	return currentState == core.ConveyorActive || currentState == core.ConveyorPreparingPulse
+}
+
+func (c *PulseConveyor) unsafeGetState() core.ConveyorState {
+	return c.state
 }
 
 func (c *PulseConveyor) unsafeGetSlot(pulseNumber core.PulseNumber) *Slot {
@@ -101,11 +102,20 @@ func (c *PulseConveyor) unsafeGetSlot(pulseNumber core.PulseNumber) *Slot {
 	return slot
 }
 
+func (c *PulseConveyor) InitiateShutdown(force bool) {
+	c.lock.Lock()
+	c.state = core.ConveyorShuttingDown
+	c.lock.Unlock()
+	if force { // nolint
+		// TODO: cancel all tasks in adapters
+	}
+}
+
 // SinkPush adds event to conveyor
 func (c *PulseConveyor) SinkPush(pulseNumber core.PulseNumber, data interface{}) error {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
-	if !c.IsOperational() {
+	if !c.unsafeIsOperational() {
 		return errors.New("[ SinkPush ] conveyor is not operational now")
 	}
 	slot := c.unsafeGetSlot(pulseNumber)
@@ -120,7 +130,7 @@ func (c *PulseConveyor) SinkPush(pulseNumber core.PulseNumber, data interface{})
 func (c *PulseConveyor) SinkPushAll(pulseNumber core.PulseNumber, data []interface{}) error {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
-	if !c.IsOperational() {
+	if !c.unsafeIsOperational() {
 		return errors.New("[ SinkPushAll ] conveyor is not operational now")
 	}
 	slot := c.unsafeGetSlot(pulseNumber)
@@ -166,6 +176,7 @@ func (c *PulseConveyor) PreparePulse(pulse core.Pulse, callback queue.SyncDone) 
 
 	if c.presentPulseNumber != nil {
 		presentSlot := c.slotMap[*c.presentPulseNumber]
+
 		err := presentSlot.inputQueue.PushSignal(PendingPulseSignal, barrierCallback)
 		if err != nil {
 			log.Panicf("[ PreparePulse ] can't send signal to present slot (for pulse %d), error - %s", c.presentPulseNumber, err)
@@ -173,8 +184,6 @@ func (c *PulseConveyor) PreparePulse(pulse core.Pulse, callback queue.SyncDone) 
 	}
 
 	c.futurePulseData = &pulse
-	newFutureSlot := NewSlot(constant.Unallocated, pulse.NextPulseNumber, c.removeSlot, true)
-	c.slotMap[pulse.NextPulseNumber] = newFutureSlot
 	c.state = core.ConveyorPreparingPulse
 	return nil
 }
@@ -203,11 +212,19 @@ func (p *pulseWithCallback) SetResult(result interface{}) {
 }
 
 type waitGroupSyncDone struct {
-	sync.WaitGroup
+	wg sync.WaitGroup
 }
 
 func (sd *waitGroupSyncDone) SetResult(result interface{}) {
-	sd.Done()
+	sd.wg.Done()
+}
+
+func (sd *waitGroupSyncDone) Wait() {
+	sd.wg.Wait()
+}
+
+func (sd *waitGroupSyncDone) Add(num int) {
+	sd.wg.Add(num)
 }
 
 // ActivatePulse activates conveyor with prepared pulse
@@ -225,10 +242,15 @@ func (c *PulseConveyor) ActivatePulse() error {
 	}
 
 	wg := waitGroupSyncDone{}
+	numCallbacks := 1
+	if c.presentPulseNumber != nil {
+		numCallbacks++
+	}
+	wg.Add(numCallbacks)
 
 	futureSlot := c.slotMap[*c.futurePulseNumber]
 	callback := NewPulseWithCallback(&wg, *c.futurePulseData)
-	wg.Add(1)
+
 	err := futureSlot.inputQueue.PushSignal(ActivatePulseSignal, callback)
 	if err != nil {
 		c.lock.Unlock()
@@ -237,7 +259,6 @@ func (c *PulseConveyor) ActivatePulse() error {
 
 	if c.presentPulseNumber != nil {
 		presentSlot := c.slotMap[*c.presentPulseNumber]
-		wg.Add(1)
 		err = presentSlot.inputQueue.PushSignal(ActivatePulseSignal, &wg)
 		if err != nil {
 			c.lock.Unlock()
@@ -247,6 +268,8 @@ func (c *PulseConveyor) ActivatePulse() error {
 
 	c.presentPulseNumber = c.futurePulseNumber
 	c.futurePulseNumber = &c.futurePulseData.NextPulseNumber
+
+	c.slotMap[*c.futurePulseNumber] = NewSlot(constant.Future, *c.futurePulseNumber, c.removeSlot, true)
 
 	c.futurePulseData = nil
 	c.state = core.ConveyorActive
@@ -260,6 +283,8 @@ func (c *PulseConveyor) getSlotConfiguration(state SlotState) HandlersConfigurat
 	return HandlersConfiguration{state: state}
 }
 
+// BarrierCallback wait for required number of SetResult.
+// After that invoke SetResult on given callback and forward there last result from SetResult
 type BarrierCallback struct {
 	wg     *sync.WaitGroup
 	result interface{}
@@ -273,14 +298,15 @@ func newBarrierCallback(num int, callback queue.SyncDone) *BarrierCallback {
 		wg: &wg,
 	}
 
-	go func() {
+	go func(bc *BarrierCallback) {
 		wg.Wait()
 		callback.SetResult(bc.result)
-	}()
+	}(bc)
 
 	return bc
 }
 
+// SetResult
 func (c *BarrierCallback) SetResult(result interface{}) {
 	if result != nil {
 		c.result = result
