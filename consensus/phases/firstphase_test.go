@@ -33,7 +33,11 @@ import (
 
 func TestFirstPhase_HandlePulse(t *testing.T) {
 	firstPhase := &FirstPhaseImpl{}
-	nodeKeeperMock := network.NewNodeKeeperMock(t)
+
+	node := nodenetwork.NewNode(core.RecordRef{}, core.StaticRoleUnknown, nil, "127.0.0.1:5432", "")
+	nodeKeeper := nodenetwork.NewNodeKeeper(node)
+	nodeKeeper.SetInitialSnapshot([]core.Node{node})
+
 	pulseCalculatorMock := merkle.NewCalculatorMock(t)
 	communicatorMock := NewCommunicatorMock(t)
 	consensusNetworkMock := network.NewConsensusNetworkMock(t)
@@ -47,17 +51,12 @@ func TestFirstPhase_HandlePulse(t *testing.T) {
 		return true
 	}
 
-	nodeKeeperMock.GetActiveNodesMock.Set(func() (r []core.Node) {
-		return []core.Node{nodenetwork.NewNode(core.RecordRef{}, core.StaticRoleUnknown, nil, "127.0.0.1:5432", "")}
-
-	})
-
 	cm := component.Manager{}
-	cm.Inject(cryptoServ, nodeKeeperMock, firstPhase, pulseCalculatorMock, communicatorMock, consensusNetworkMock)
+	cm.Inject(cryptoServ, nodeKeeper, firstPhase, pulseCalculatorMock, communicatorMock, consensusNetworkMock)
 
 	require.NotNil(t, firstPhase.Calculator)
 	require.NotNil(t, firstPhase.NodeKeeper)
-	activeNodes := firstPhase.NodeKeeper.GetActiveNodes()
+	activeNodes := firstPhase.NodeKeeper.GetAccessor().GetActiveNodes()
 	assert.Equal(t, 1, len(activeNodes))
 }
 
