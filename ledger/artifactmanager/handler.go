@@ -22,25 +22,24 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/insolar/insolar/core/delegationtoken"
-	"github.com/insolar/insolar/ledger/storage/drop"
-	"github.com/insolar/insolar/ledger/storage/node"
-	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/tag"
 
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/instrumentation/insmetrics"
-	"github.com/insolar/insolar/ledger/recentstorage"
-	"github.com/insolar/insolar/ledger/storage/jet"
-
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/core/delegationtoken"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/hack"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/insmetrics"
+	"github.com/insolar/insolar/ledger/internal/jet"
+	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/drop"
+	"github.com/insolar/insolar/ledger/storage/node"
+	"github.com/insolar/insolar/ledger/storage/object"
 )
 
 // MessageHandler processes messages for local storage interaction.
@@ -53,7 +52,7 @@ type MessageHandler struct {
 	DelegationTokenFactory     core.DelegationTokenFactory     `inject:""`
 	HeavySync                  core.HeavySync                  `inject:""`
 	PulseStorage               core.PulseStorage               `inject:""`
-	JetStorage                 jet.JetStorage                  `inject:""`
+	JetStorage                 jet.Storage                     `inject:""`
 
 	DropModifier drop.Modifier `inject:""`
 
@@ -449,7 +448,6 @@ func (h *MessageHandler) handleGetObject(
 	if h.isHeavy {
 		stateJet = &jetID
 	} else {
-		var actual bool
 		onHeavy, err := h.JetCoordinator.IsBeyondLimit(ctx, parcel.Pulse(), stateID.Pulse())
 		if err != nil {
 			return nil, err
@@ -483,7 +481,10 @@ func (h *MessageHandler) handleGetObject(
 			}, nil
 		}
 
-		stateJet, actual = h.JetStorage.FindJet(ctx, stateID.Pulse(), *msg.Head.Record())
+		// FIXME: after migration on JetID in all components. - @nordicdyno 13.03.2019
+		stateJetID, actual := h.JetStorage.ForID(ctx, stateID.Pulse(), *msg.Head.Record())
+		stateJet = (*core.RecordID)(&stateJetID)
+
 		if !actual {
 			actualJet, err := h.jetTreeUpdater.fetchJet(ctx, *msg.Head.Record(), stateID.Pulse())
 			if err != nil {
@@ -578,9 +579,9 @@ func (h *MessageHandler) handleHasPendingRequests(ctx context.Context, parcel co
 func (h *MessageHandler) handleGetJet(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
 	msg := parcel.Message().(*message.GetJet)
 
-	jetID, actual := h.JetStorage.FindJet(ctx, msg.Pulse, msg.Object)
+	jetID, actual := h.JetStorage.ForID(ctx, msg.Pulse, msg.Object)
 
-	return &reply.Jet{ID: *jetID, Actual: actual}, nil
+	return &reply.Jet{ID: core.RecordID(jetID), Actual: actual}, nil
 }
 
 func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
@@ -673,7 +674,6 @@ func (h *MessageHandler) handleGetChildren(
 	if h.isHeavy {
 		childJet = &jetID
 	} else {
-		var actual bool
 		onHeavy, err := h.JetCoordinator.IsBeyondLimit(ctx, parcel.Pulse(), currentChild.Pulse())
 		if err != nil {
 			return nil, err
@@ -686,7 +686,10 @@ func (h *MessageHandler) handleGetChildren(
 			return reply.NewGetChildrenRedirect(h.DelegationTokenFactory, parcel, node, *currentChild)
 		}
 
-		childJet, actual = h.JetStorage.FindJet(ctx, currentChild.Pulse(), *msg.Parent.Record())
+		// FIXME: after migration on JetID in all components. - @nordicdyno 13.03.2019
+		childJetID, actual := h.JetStorage.ForID(ctx, currentChild.Pulse(), *msg.Parent.Record())
+		childJet = (*core.RecordID)(&childJetID)
+
 		if !actual {
 			actualJet, err := h.jetTreeUpdater.fetchJet(ctx, *msg.Parent.Record(), currentChild.Pulse())
 			if err != nil {
@@ -982,13 +985,8 @@ func (h *MessageHandler) handleJetDrop(ctx context.Context, parcel core.Parcel) 
 		}
 	}
 
-	err := h.JetStorage.AddJets(ctx, msg.JetID)
-	if err != nil {
-		return nil, err
-	}
-
-	h.JetStorage.UpdateJetTree(
-		ctx, parcel.Pulse(), true, msg.JetID,
+	h.JetStorage.Update(
+		ctx, parcel.Pulse(), true, core.JetID(msg.JetID),
 	)
 
 	return &reply.OK{}, nil
@@ -1249,17 +1247,11 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 		indexStorage.AddObjectWithTLL(ctx, id, meta.TTL)
 	}
 
-	h.JetStorage.UpdateJetTree(
-		ctx, msg.PulseNumber, true, jetID,
+	h.JetStorage.Update(
+		ctx, msg.PulseNumber, true, core.JetID(jetID),
 	)
 
 	h.jetTreeUpdater.releaseJet(ctx, jetID, msg.PulseNumber)
-
-	err = h.JetStorage.AddJets(ctx, jetID)
-	if err != nil {
-		logger.Error(errors.Wrap(err, "couldn't add jet"))
-		return nil, err
-	}
 
 	return &reply.OK{}, nil
 }

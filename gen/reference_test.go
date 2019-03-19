@@ -14,28 +14,27 @@
  *    limitations under the License.
  */
 
-package jet
+package gen
 
 import (
+	"testing"
+
+	"github.com/stretchr/testify/require"
+
 	"github.com/insolar/insolar/core"
 )
 
-// Drop is a blockchain block.
-// It contains hashes of the current block and the previous one.
-type Drop struct {
-	// nolint: golint
-	// Pulse number (probably we should save it too).
-	Pulse core.PulseNumber
-
-	// PrevHash is a hash of all record hashes belongs to previous pulse.
-	PrevHash []byte
-
-	// Hash is a hash of all record hashes belongs to one pulse and previous drop hash.
-	Hash []byte
-
-	// Size represents data about physical size of the current jet.Drop.
-	Size uint64
-
-	// JetID represents data about JetID of the current jet.Drop.
-	JetID core.JetID
+func TestGen_JetID(t *testing.T) {
+	for i := 0; i < 10000; i++ {
+		jetID := JetID()
+		recID := (*core.RecordID)(&jetID)
+		require.Equalf(t,
+			core.PulseNumberJet, recID.Pulse(),
+			"pulse number should be core.PulseNumberJet. jet: %v", recID.DebugString())
+		require.GreaterOrEqualf(t,
+			uint8(core.JetMaximumDepth), jetID.Depth(),
+			"jet depth %v should be less than maximum value %v. jet: %v",
+			jetID.Depth(), core.JetMaximumDepth, jetID.DebugString(),
+		)
+	}
 }

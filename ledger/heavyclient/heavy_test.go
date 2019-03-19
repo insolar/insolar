@@ -27,6 +27,10 @@ import (
 	"time"
 
 	"github.com/dgraph-io/badger"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
+
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
@@ -34,21 +38,18 @@ import (
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/artifactmanager"
+	"github.com/insolar/insolar/ledger/internal/jet"
 	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/db"
 	"github.com/insolar/insolar/ledger/storage/drop"
-	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/network"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"github.com/stretchr/testify/suite"
 )
 
 type heavySuite struct {
@@ -59,7 +60,7 @@ type heavySuite struct {
 	cleaner func()
 	db      storage.DBContext
 
-	jetStorage     jet.JetStorage
+	jetStore       *jet.Store
 	nodeAccessor   *node.AccessorMock
 	nodeSetter     *node.ModifierMock
 	pulseTracker   storage.PulseTracker
@@ -88,7 +89,7 @@ func (s *heavySuite) BeforeTest(suiteName, testName string) {
 	tmpDB, cleaner := storagetest.TmpDB(s.ctx, s.T())
 	s.cleaner = cleaner
 	s.db = tmpDB
-	s.jetStorage = jet.NewJetStorage()
+	s.jetStore = jet.NewStore()
 	s.nodeAccessor = node.NewAccessorMock(s.T())
 	s.nodeSetter = node.NewModifierMock(s.T())
 	s.pulseTracker = storage.NewPulseTracker()
@@ -103,8 +104,8 @@ func (s *heavySuite) BeforeTest(suiteName, testName string) {
 	s.cm.Inject(
 		platformpolicy.NewPlatformCryptographyScheme(),
 		s.db,
+		s.jetStore,
 		db.NewMemoryMockDB(),
-		s.jetStorage,
 		s.nodeAccessor,
 		s.nodeSetter,
 		s.pulseTracker,
@@ -265,7 +266,8 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 	pm.Bus = busMock
 	pm.JetCoordinator = jcMock
 	pm.GIL = gilMock
-	pm.JetStorage = s.jetStorage
+	pm.JetAccessor = s.jetStore
+	pm.JetModifier = s.jetStore
 	pm.Nodes = s.nodeAccessor
 	pm.NodeSetter = s.nodeSetter
 	pm.DBContext = s.db
