@@ -62,7 +62,10 @@ func (c *PulseConveyor) removeSlot(number core.PulseNumber) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	c.slotMap[number].PushSignal(CancelSignal, nil)
+	err := c.slotMap[number].PushSignal(CancelSignal, nil)
+	if err != nil {
+		panic("[ removeSlot ] Can't PushSignal CancelSignal: " + err.Error())
+	}
 	delete(c.slotMap, number)
 }
 
@@ -188,13 +191,18 @@ func (c *PulseConveyor) PreparePulse(pulse core.Pulse, callback queue.SyncDone) 
 	return nil
 }
 
+type PulseWithCallback interface {
+	queue.SyncDone
+	GetPulse() core.Pulse
+}
+
 type pulseWithCallback struct {
 	callback queue.SyncDone
 	pulse    core.Pulse
 }
 
 // PulseWithCallback creates new instance of pulseWithCallback
-func NewPulseWithCallback(callback queue.SyncDone, pulse core.Pulse) *pulseWithCallback {
+func NewPulseWithCallback(callback queue.SyncDone, pulse core.Pulse) PulseWithCallback {
 	return &pulseWithCallback{
 		callback: callback,
 		pulse:    pulse,
