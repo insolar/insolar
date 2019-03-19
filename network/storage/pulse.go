@@ -35,33 +35,40 @@
 package storage
 
 import (
+	"bytes"
 	"context"
 
 	"github.com/insolar/insolar/core"
+	"github.com/ugorji/go/codec"
+	"sync"
 )
 
-// PulseAccessor provides methods for accessing pulses.
 //go:generate minimock -i github.com/insolar/insolar/network/storage.PulseAccessor -o ../../testutils/network -s _mock.go
+
+// PulseAccessor provides methods for accessing pulses.
 type PulseAccessor interface {
-	ForPulseNumber(context.Context, core.PulseNumber) (core.PulseNumber, error)
+	ForPulseNumber(context.Context, core.PulseNumber) (core.Pulse, error)
 	Latest(ctx context.Context) (core.Pulse, error)
 }
 
-// PulseAppender provides method for appending pulses to storage.
 //go:generate minimock -i github.com/insolar/insolar/network/storage.PulseAppender -o ../../testutils/network -s _mock.go
+
+// PulseAppender provides method for appending pulses to storage.
 type PulseAppender interface {
 	Append(ctx context.Context, pulse core.Pulse) error
 }
 
-// PulseCalculator performs calculations for pulses.
 //go:generate minimock -i github.com/insolar/insolar/network/storage.PulseCalculator -o ../../testutils/network -s _mock.go
+
+// PulseCalculator performs calculations for pulses.
 type PulseCalculator interface {
 	Forwards(ctx context.Context, pn core.PulseNumber, steps int) (core.Pulse, error)
 	Backwards(ctx context.Context, pn core.PulseNumber, steps int) (core.Pulse, error)
 }
 
-// PulseRangeHasher provides methods for hashing and validate pulse chain
 //go:generate minimock -i github.com/insolar/insolar/network/storage.PulseRangeHasher -o ../../testutils/network -s _mock.go
+
+// PulseRangeHasher provides methods for hashing and validate pulse chain
 type PulseRangeHasher interface {
 	GetRangeHash(core.PulseRange) ([]byte, error)
 	ValidateRangeHash(core.PulseRange, []byte) (bool, error)
