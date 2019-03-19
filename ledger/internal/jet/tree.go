@@ -17,20 +17,17 @@
 package jet
 
 import (
-	"bytes"
+	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/storage"
-	"github.com/pkg/errors"
-	"github.com/ugorji/go/codec"
 )
 
 type jet struct {
+	Actual bool
 	Left   *jet
 	Right  *jet
-	Actual bool
 }
 
 // Find returns jet for provided reference.
@@ -73,9 +70,11 @@ func (j *jet) Update(prefix []byte, setActual bool, maxDepth, depth uint8) {
 	}
 }
 
-// Clone clones tree either keeping actuality state or resetting it to false
+// Clone clones tree either keeping actuality state or resetting it to false.
 func (j *jet) Clone(keep bool) *jet {
-	res := &jet{Actual: keep && j.Actual}
+	res := &jet{
+		Actual: keep && j.Actual,
+	}
 	if j.Left != nil {
 		res.Left = j.Left.Clone(keep)
 	}
@@ -85,12 +84,12 @@ func (j *jet) Clone(keep bool) *jet {
 	return res
 }
 
-func (j *jet) ExtractLeafIDs(ids *[]core.RecordID, path []byte, depth uint8) {
+func (j *jet) ExtractLeafIDs(ids *[]core.JetID, path []byte, depth uint8) {
 	if j == nil {
 		return
 	}
 	if j.Left == nil && j.Right == nil {
-		*ids = append(*ids, core.RecordID(*core.NewJetID(depth, path)))
+		*ids = append(*ids, *core.NewJetID(depth, path))
 		return
 	}
 
@@ -105,19 +104,12 @@ func (j *jet) ExtractLeafIDs(ids *[]core.RecordID, path []byte, depth uint8) {
 	}
 }
 
-// Tree stores jet in a binary tree.
+// Tree represents jets tree.
 type Tree struct {
 	Head *jet
 }
 
-// String visualizes Jet's tree.
-func (t Tree) String() string {
-	if t.Head == nil {
-		return "<nil>"
-	}
-	return nodeDeepFmt(0, "", t.Head)
-}
-
+// toArray
 func (t *Tree) toArray() []*jet {
 	queue := []*jet{t.Head}
 	queueIndex := 0
@@ -160,7 +152,6 @@ func (t *Tree) Merge(newTree *Tree) *Tree {
 		if left > right {
 			return left
 		}
-
 		return right
 	}
 
@@ -216,6 +207,100 @@ func (t *Tree) Merge(newTree *Tree) *Tree {
 	return &Tree{Head: result[0]}
 }
 
+// NewTree creates new tree.
+func NewTree(isActual bool) *Tree {
+	return &Tree{
+		Head: &jet{
+			Actual: isActual,
+		},
+	}
+}
+
+// Clone clones the tree keeping actuality or setting everything to false
+func (t *Tree) Clone(keep bool) *Tree {
+	return &Tree{Head: t.Head.Clone(keep)}
+}
+
+// Find returns jet for provided record ID.
+// If found jet is actual, the second argument will be true.
+func (t *Tree) Find(recordID core.RecordID) (core.JetID, bool) {
+	// if provided record ID is JetID, returns it as actual.
+	// TODO: describe case
+	if recordID.Pulse() == core.PulseNumberJet {
+		return core.JetID(recordID), true
+	}
+
+	hash := recordID.Hash()
+	j, depth := t.Head.Find(hash, 0)
+	id := *core.NewJetID(uint8(depth), resetBits(hash, depth))
+	return id, j.Actual
+}
+
+// Update add missing tree branches for provided prefix.
+// If 'setActual' is set, all encountered nodes will be marked as actual.
+func (t *Tree) Update(id core.JetID, setActual bool) {
+	t.Head.Update(id.Prefix(), setActual, id.Depth(), 0)
+}
+
+// Split looks for provided jet and creates (and returns) two branches for it.
+// If provided jet is not found, an error will be returned.
+func (t *Tree) Split(id core.JetID) (core.JetID, core.JetID, error) {
+	depth, prefix := id.Depth(), id.Prefix()
+	j, foundDepth := t.Head.Find(prefix, 0)
+	if depth != foundDepth {
+		return core.ZeroJetID, core.ZeroJetID, errors.New("failed to split: incorrect jet provided")
+	}
+
+	j.Left = &jet{}
+	leftPrefix := resetBits(prefix, depth)
+	left := core.NewJetID(depth+1, leftPrefix)
+
+	j.Right = &jet{}
+	rightPrefix := resetBits(prefix, depth)
+	setBit(rightPrefix, depth)
+	right := core.NewJetID(depth+1, rightPrefix)
+
+	return *left, *right, nil
+}
+
+func (t *Tree) LeafIDs() []core.JetID {
+	var ids []core.JetID
+	t.Head.ExtractLeafIDs(&ids, make([]byte, core.RecordHashSize), 0)
+	return ids
+}
+
+// getBit returns true if bit at index is set to 1 in byte array.
+// Panics if index is out of range (value size * 8).
+func getBit(value []byte, index uint8) bool {
+	if uint(index) >= uint(len(value)*8) {
+		panic(fmt.Sprintf("index overflow: value=%08b, index=%v", value, index))
+	}
+	byteIndex := uint(index / 8)
+	bitIndex := uint(7 - index%8)
+	mask := byte(1 << bitIndex)
+	return value[byteIndex]&mask != 0
+}
+
+// setBit sets bit to 1 in byte array at index.
+// Panics if index is out of range (value size * 8).
+func setBit(value []byte, index uint8) {
+	if uint(index) >= uint(len(value)*8) {
+		panic("index overflow")
+	}
+	byteIndex := uint(index / 8)
+	bitIndex := uint(7 - index%8)
+	mask := byte(1 << bitIndex)
+	value[byteIndex] |= mask
+}
+
+// String visualizes Jet's tree.
+func (t Tree) String() string {
+	if t.Head == nil {
+		return "<nil>"
+	}
+	return nodeDeepFmt(0, "", t.Head)
+}
+
 func nodeDeepFmt(deep int, binPrefix string, node *jet) string {
 	prefix := strings.Repeat(" ", deep)
 	if deep == 0 {
@@ -230,84 +315,4 @@ func nodeDeepFmt(deep int, binPrefix string, node *jet) string {
 		s += nodeDeepFmt(deep+1, binPrefix+"1", node.Right)
 	}
 	return s
-}
-
-// NewTree creates new tree.
-func NewTree(isActual bool) *Tree {
-	return &Tree{Head: &jet{Actual: isActual}}
-}
-
-// Clone clones the tree keeping actuality or setting everything to false
-func (t *Tree) Clone(keep bool) *Tree {
-	return &Tree{Head: t.Head.Clone(keep)}
-}
-
-// Find returns jet for provided reference. If found jet is actual, the second argument will be true.
-func (t *Tree) Find(id core.RecordID) (*core.RecordID, bool) {
-	if id.Pulse() == core.PulseNumberJet {
-		return &id, true
-	}
-	hash := id.Hash()
-	j, depth := t.Head.Find(hash, 0)
-	recID := core.RecordID(*core.NewJetID(uint8(depth), storage.ResetBits(hash, depth)))
-	return &recID, j.Actual
-}
-
-// Update add missing tree branches for provided prefix. If 'setActual' is set, all encountered nodes will be marked as
-// actual.
-func (t *Tree) Update(id core.RecordID, setActual bool) {
-	maxDepth, prefix := core.JetID(id).Depth(), core.JetID(id).Prefix()
-	t.Head.Update(prefix, setActual, maxDepth, 0)
-}
-
-// Bytes serializes pulse.
-func (t *Tree) Bytes() []byte {
-	var buf bytes.Buffer
-	enc := codec.NewEncoder(&buf, &codec.CborHandle{})
-	enc.MustEncode(t)
-	return buf.Bytes()
-}
-
-// Split looks for provided jet and creates (and returns) two branches for it. If provided jet is not found, an error
-// will be returned.
-func (t *Tree) Split(jetID core.RecordID) (*core.RecordID, *core.RecordID, error) {
-	depth, prefix := core.JetID(jetID).Depth(), core.JetID(jetID).Prefix()
-	j, foundDepth := t.Head.Find(prefix, 0)
-	if depth != foundDepth {
-		return nil, nil, errors.New("failed to split: incorrect jet provided")
-	}
-	j.Right = &jet{}
-	j.Left = &jet{}
-	leftPrefix := storage.ResetBits(prefix, depth)
-	rightPrefix := storage.ResetBits(prefix, depth)
-	setBit(rightPrefix, depth)
-	first := core.RecordID(*core.NewJetID(depth+1, leftPrefix))
-	second := core.RecordID(*core.NewJetID(depth+1, rightPrefix))
-	return &first, &second, nil
-}
-
-func (t *Tree) LeafIDs() []core.RecordID {
-	var ids []core.RecordID
-	t.Head.ExtractLeafIDs(&ids, make([]byte, core.RecordHashSize), 0)
-	return ids
-}
-
-func getBit(value []byte, index uint8) bool {
-	if uint(index) >= uint(len(value)*8) {
-		panic(fmt.Sprintf("index overflow: value=%08b, index=%v", value, index))
-	}
-	byteIndex := uint(index / 8)
-	bitIndex := uint(7 - index%8)
-	mask := byte(1 << bitIndex)
-	return value[byteIndex]&mask != 0
-}
-
-func setBit(value []byte, index uint8) {
-	if uint(index) >= uint(len(value)*8) {
-		panic("index overflow")
-	}
-	byteIndex := uint(index / 8)
-	bitIndex := uint(7 - index%8)
-	mask := byte(1 << bitIndex)
-	value[byteIndex] |= mask
 }

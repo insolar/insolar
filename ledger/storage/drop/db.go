@@ -22,7 +22,6 @@ import (
 
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/storage/db"
-	"github.com/insolar/insolar/ledger/storage/jet"
 )
 
 type dropStorageDB struct {
@@ -47,23 +46,23 @@ func (dk *dropDbKey) ID() []byte {
 	return bytes.Join([][]byte{dk.jetPrefix, dk.pn.Bytes()}, nil)
 }
 
-// ForPulse returns a jet.Drop for a provided pulse, that is stored in a db.
-func (ds *dropStorageDB) ForPulse(ctx context.Context, jetID core.JetID, pulse core.PulseNumber) (jet.Drop, error) {
+// ForPulse returns a Drop for a provided pulse, that is stored in a db.
+func (ds *dropStorageDB) ForPulse(ctx context.Context, jetID core.JetID, pulse core.PulseNumber) (Drop, error) {
 	k := dropDbKey{jetID.Prefix(), pulse}
 
 	buf, err := ds.DB.Get(&k)
 	if err != nil {
-		return jet.Drop{}, err
+		return Drop{}, err
 	}
-	drop, err := jet.Decode(buf)
+	drop, err := Decode(buf)
 	if err != nil {
-		return jet.Drop{}, err
+		return Drop{}, err
 	}
 	return *drop, nil
 }
 
-// Set saves a provided jet.Drop to a db.
-func (ds *dropStorageDB) Set(ctx context.Context, drop jet.Drop) error {
+// Set saves a provided Drop to a db.
+func (ds *dropStorageDB) Set(ctx context.Context, drop Drop) error {
 	k := dropDbKey{drop.JetID.Prefix(), drop.Pulse}
 
 	_, err := ds.DB.Get(&k)
@@ -71,7 +70,7 @@ func (ds *dropStorageDB) Set(ctx context.Context, drop jet.Drop) error {
 		return ErrOverride
 	}
 
-	encoded, err := jet.Encode(&drop)
+	encoded, err := Encode(&drop)
 	if err != nil {
 		return err
 	}

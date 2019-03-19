@@ -21,12 +21,12 @@ import (
 	"testing"
 
 	fuzz "github.com/google/gofuzz"
+	"github.com/stretchr/testify/require"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/gen"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage/db"
-	"github.com/insolar/insolar/ledger/storage/jet"
-	"github.com/stretchr/testify/require"
 )
 
 func TestNewStorageDB(t *testing.T) {
@@ -37,7 +37,7 @@ func TestNewStorageDB(t *testing.T) {
 
 type setInput struct {
 	jetID core.JetID
-	dr    jet.Drop
+	dr    Drop
 }
 
 func TestDropStorageDB_Set(t *testing.T) {
@@ -45,13 +45,13 @@ func TestDropStorageDB_Set(t *testing.T) {
 	var inputs []setInput
 	encodedDrops := map[string]struct{}{}
 	f := fuzz.New().Funcs(func(inp *setInput, c fuzz.Continue) {
-		inp.dr = jet.Drop{
+		inp.dr = Drop{
 			Size:  rand.Uint64(),
 			Pulse: gen.PulseNumber(),
 			JetID: gen.JetID(),
 		}
 
-		encoded, _ := jet.Encode(&inp.dr)
+		encoded, _ := Encode(&inp.dr)
 		encodedDrops[string(encoded)] = struct{}{}
 	}).NumElements(5, 5000).NilChance(0)
 	f.Fuzz(&inputs)
@@ -75,7 +75,7 @@ func TestDropStorageDB_Set(t *testing.T) {
 
 func TestDropStorageDB_Set_ErrOverride(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-	dr := jet.Drop{
+	dr := Drop{
 		Size:  rand.Uint64(),
 		Pulse: gen.PulseNumber(),
 		JetID: gen.JetID(),
@@ -96,11 +96,11 @@ func TestDropStorageDB_ForPulse(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	jetID := gen.JetID()
 	pn := gen.PulseNumber()
-	dr := jet.Drop{
+	dr := Drop{
 		Size:  rand.Uint64(),
 		Pulse: gen.PulseNumber(),
 	}
-	buf, _ := jet.Encode(&dr)
+	buf, _ := Encode(&dr)
 
 	dbMock := db.NewDBMock(t)
 	dbMock.GetMock.Return(buf, nil)

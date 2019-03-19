@@ -19,7 +19,7 @@ package message
 import (
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/recentstorage"
-	"github.com/insolar/insolar/ledger/storage/jet"
+	"github.com/insolar/insolar/ledger/storage/drop"
 )
 
 // FIXME: @andreyromancev. 21.12.18. Remove this and create 'LogicRunnerMessage' interface to get rid of 'GetCaller' in ledger.
@@ -378,7 +378,7 @@ func (*ValidationCheck) Type() core.MessageType {
 type HotData struct {
 	ledgerMessage
 	Jet             core.RecordRef
-	Drop            jet.Drop
+	Drop            drop.Drop
 	RecentObjects   map[core.RecordID]HotIndex
 	PendingRequests map[core.RecordID]recentstorage.PendingObjectContext
 	PulseNumber     core.PulseNumber

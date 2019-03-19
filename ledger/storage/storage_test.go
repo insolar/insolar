@@ -20,21 +20,20 @@ import (
 	"context"
 	"testing"
 
-	"github.com/insolar/insolar/component"
-	"github.com/insolar/insolar/ledger/storage/db"
-	jetdrop "github.com/insolar/insolar/ledger/storage/drop"
-	"github.com/insolar/insolar/ledger/storage/jet"
-	"github.com/insolar/insolar/ledger/storage/object"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
+	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/db"
+	"github.com/insolar/insolar/ledger/storage/drop"
+	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 type storageSuite struct {
@@ -46,8 +45,8 @@ type storageSuite struct {
 	db      storage.DBContext
 
 	objectStorage storage.ObjectStorage
-	dropModifier  jetdrop.Modifier
-	dropAccessor  jetdrop.Accessor
+	dropModifier  drop.Modifier
+	dropAccessor  drop.Accessor
 	pulseTracker  storage.PulseTracker
 
 	jetID core.RecordID
@@ -74,7 +73,7 @@ func (s *storageSuite) BeforeTest(suiteName, testName string) {
 
 	s.objectStorage = storage.NewObjectStorage()
 
-	dropStorage := jetdrop.NewStorageDB()
+	dropStorage := drop.NewStorageDB()
 	s.dropAccessor = dropStorage
 	s.dropModifier = dropStorage
 	s.pulseTracker = storage.NewPulseTracker()
@@ -168,14 +167,14 @@ func (s *storageSuite) TestDB_SetObjectIndex_SaveLastUpdate() {
 }
 
 func (s *storageSuite) TestDB_GetDrop_ReturnsNotFoundIfNoDrop() {
-	drop, err := s.dropAccessor.ForPulse(s.ctx, core.JetID(testutils.RandomJet()), 1)
+	d, err := s.dropAccessor.ForPulse(s.ctx, core.JetID(testutils.RandomJet()), 1)
 	assert.Equal(s.T(), err, db.ErrNotFound)
-	assert.Equal(s.T(), jet.Drop{}, drop)
+	assert.Equal(s.T(), drop.Drop{}, d)
 }
 
 func (s *storageSuite) TestDB_SetDrop() {
 	jetID := *core.NewJetID(0, nil)
-	drop42 := jet.Drop{
+	drop42 := drop.Drop{
 		Pulse: 42,
 		Hash:  []byte{0xFF},
 		JetID: jetID,
@@ -220,7 +219,7 @@ func TestDB_Close(t *testing.T) {
 	jetID := testutils.RandomJet()
 
 	os := storage.NewObjectStorage()
-	ds := jetdrop.NewStorageDB()
+	ds := drop.NewStorageDB()
 
 	cm := &component.Manager{}
 	cm.Inject(

@@ -20,12 +20,12 @@ import (
 	"testing"
 
 	fuzz "github.com/google/gofuzz"
+	"github.com/stretchr/testify/require"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/gen"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage/db"
-	"github.com/insolar/insolar/ledger/storage/jet"
-	"github.com/stretchr/testify/require"
 )
 
 type jetPulse struct {
@@ -37,9 +37,9 @@ func TestDropStorageMemory(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	ms := NewStorageMemory()
 
-	var drops []jet.Drop
+	var drops []Drop
 	genInputs := map[jetPulse]struct{}{}
-	f := fuzz.New().Funcs(func(jd *jet.Drop, c fuzz.Continue) {
+	f := fuzz.New().Funcs(func(jd *Drop, c fuzz.Continue) {
 		pn := gen.PulseNumber()
 		jd.Pulse = pn
 
@@ -79,9 +79,9 @@ func TestDropStorageDB(t *testing.T) {
 	ds := NewStorageDB()
 	ds.DB = db.NewMemoryMockDB()
 
-	var drops []jet.Drop
+	var drops []Drop
 	genInputs := map[jetPulse]struct{}{}
-	f := fuzz.New().Funcs(func(jd *jet.Drop, c fuzz.Continue) {
+	f := fuzz.New().Funcs(func(jd *Drop, c fuzz.Continue) {
 		pn := gen.PulseNumber()
 		jd.Pulse = pn
 
@@ -112,9 +112,9 @@ func TestDropStorageCompare(t *testing.T) {
 	ds.DB = db.NewMemoryMockDB()
 	ms := NewStorageMemory()
 
-	var drops []jet.Drop
+	var drops []Drop
 	genInputs := map[jetPulse]struct{}{}
-	f := fuzz.New().Funcs(func(jd *jet.Drop, c fuzz.Continue) {
+	f := fuzz.New().Funcs(func(jd *Drop, c fuzz.Continue) {
 		pn := gen.PulseNumber()
 		jd.Pulse = pn
 
