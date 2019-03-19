@@ -19,6 +19,7 @@ package conveyor
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"testing"
 	"time"
 
@@ -102,7 +103,8 @@ func GetStateMachineByType(mtype MachineType) statemachine.StateMachine {
 
 func (w *worker) setLoggerFields() {
 	ctx, _ := inslogger.WithField(context.Background(), "pulseState", w.slot.pulseState.String())
-	_, w.ctxLogger = inslogger.WithField(ctx, "slotState", w.slot.slotState.String())
+	ctx, _ = inslogger.WithField(ctx, "slotState", w.slot.slotState.String())
+	_, w.ctxLogger = inslogger.WithField(ctx, "pulseNumber", strconv.Itoa(int(w.slot.pulseNumber)))
 }
 
 func (w *worker) changePulseState() {
@@ -122,9 +124,14 @@ func (w *worker) changePulseState() {
 	w.setLoggerFields()
 }
 
+func (w *worker) changeSlotState(state SlotState) {
+	w.slot.slotState = state
+	w.setLoggerFields()
+}
+
 func (w *worker) processPendingPulseSignalWorking(hasActivate bool, element *queue.OutputElement, activateSyncDone queue.SyncDone) bool {
-	w.slot.slotState = Suspending
 	w.ctxLogger.Info("[ processSignalsWorking ] Got PendingPulseSignal. Set slot state to 'Suspending'")
+	w.changeSlotState(Suspending)
 	w.preparePulseSync = element.GetData().(queue.SyncDone)
 	if hasActivate {
 		err := w.slot.inputQueue.PushSignal(ActivatePulseSignal, activateSyncDone)
@@ -161,8 +168,8 @@ func (w *worker) processSignalsWorking(elements []queue.OutputElement) int {
 				activateSyncDone = el.GetData().(queue.SyncDone)
 			case CancelSignal:
 				w.stop = true // TODO: do it more correctly
-				w.slot.slotState = Suspending
 				w.ctxLogger.Info("[ processSignalsWorking ] Got CancelSignal. Set slot state to 'Suspending'")
+				w.changeSlotState(Suspending)
 			default:
 				panic(fmt.Sprintf("[ processSignalsWorking ] Unknown signal: %+v", el.GetItemType()))
 			}
@@ -292,17 +299,17 @@ func (w *worker) readResponseQueue() error {
 
 func (w *worker) waitQueuesOrTick() {
 	w.ctxLogger.Debugf("[ waitQueuesOrTick ] starts ... ( pulseState: %s )", w.slot.pulseState.String())
-	time.Sleep(time.Millisecond * 300)
+	time.Sleep(time.Millisecond * 100)
 	//panic("[ waitQueuesOrTick ] implement me") // TODO :
 }
 
 func (w *worker) processingElements() {
-	w.ctxLogger.Debugf("[ processingElements ] starts ... ( pulseState: %s )", w.slot.pulseState.String())
+	w.ctxLogger.Debugf("[ processingElements ] starts ... ")
 	if !w.slot.hasElements(ActiveElement) {
 		if w.slot.pulseState == constant.Past {
 			if w.slot.hasExpired() {
-				w.slot.slotState = Suspending
 				w.ctxLogger.Info("[ processingElements ] Set slot state to 'Suspending'")
+				w.changeSlotState(Suspending)
 				return
 			}
 		}
@@ -359,7 +366,7 @@ func (w *worker) processOneElement(element *slotElement) bool {
 }
 
 func (w *worker) working() {
-	w.ctxLogger.Debugf("[ working ] starts ... ( pulseState: %s )", w.slot.pulseState.String())
+	w.ctxLogger.Debugf("[ working ] starts ... ")
 
 	for w.slot.isWorking() {
 		switch w.nextWorkerState {
@@ -382,20 +389,21 @@ func (w *worker) working() {
 }
 
 func (w *worker) calculateNodeState() {
-	w.ctxLogger.Debugf("[ calculateNodeState ] starts ... ( pulseState: %s )", w.slot.pulseState.String())
+	w.ctxLogger.Debugf("[ calculateNodeState ] starts ...")
 	// TODO: приходит PreparePulse, в нём есть callback, вызываем какой-то адаптер, куда передаем этот callback
 	w.preparePulseSync.SetResult(555)
+	w.preparePulseSync = nil
 }
 
 func (w *worker) sendRemovalSignalToConveyor() {
-	w.ctxLogger.Debugf("[ sendRemovalSignalToConveyor ] starts ... ( pulseState: %s )", w.slot.pulseState.String())
+	w.ctxLogger.Debugf("[ sendRemovalSignalToConveyor ] starts ... ")
 	w.slot.removeSlotCallback(w.slot.pulseNumber)
 	// TODO: how to do it?
 	// catch conveyor lock, check input queue, if It's empty - remove slot from map, if it's not - got to Working state
 }
 
 func (w *worker) processSignalsSuspending(elements []queue.OutputElement) int {
-	w.ctxLogger.Debugf("[ processSignalsSuspending ] starts ... ( pulseState: %s )", w.slot.pulseState.String())
+	w.ctxLogger.Debugf("[ processSignalsSuspending ] starts ... ")
 	numSignals := 0
 	// TODO: add check if many signals come
 	for i := 0; i < len(elements); i++ {
@@ -404,13 +412,15 @@ func (w *worker) processSignalsSuspending(elements []queue.OutputElement) int {
 			numSignals++
 			switch el.GetItemType() {
 			case PendingPulseSignal:
-				w.ctxLogger.Warn("[ processSignalsSuspending ] Must not be PendingPulseSignal here. Skip it")
+				w.ctxLogger.Warn("[ processSignalsSuspending ] Got PendingPulseSignal. Must not be PendingPulseSignal here. Skip it")
 			case ActivatePulseSignal:
+				w.ctxLogger.Info("[ processSignalsSuspending ] Got ActivatePulseSignal. Set slot state to 'Initializing'")
 				w.changePulseState()
-				w.slot.slotState = Initializing
+				w.changeSlotState(Initializing)
 				w.activatePulseSync = el.GetData().(queue.SyncDone)
-				w.ctxLogger.Info("[ processSignalsSuspending ] Set slot state to 'Initializing'")
 			case CancelSignal:
+				w.ctxLogger.Info("[ processSignalsSuspending ] Got CancelSignal. Set slot state to 'Initializing")
+				w.changeSlotState(Initializing)
 				w.stop = true // TODO: do it more correctly
 			default:
 				panic(fmt.Sprintf("[ processSignalsSuspending ] Unknown signal: %+v", el.GetItemType()))
@@ -424,6 +434,7 @@ func (w *worker) processSignalsSuspending(elements []queue.OutputElement) int {
 }
 
 func (w *worker) readInputQueueSuspending() error {
+	//TODO: add correct waiter
 	w.ctxLogger.Debugf("[ readInputQueueSuspending ] starts ... ( pulseState: %s )", w.slot.pulseState.String())
 	elements := w.slot.inputQueue.RemoveAll()
 	numSignals := w.processSignalsSuspending(elements)
@@ -441,8 +452,8 @@ func (w *worker) readInputQueueSuspending() error {
 	}
 
 	if len(elements) != 0 && w.slot.pulseState == constant.Past {
-		w.slot.slotState = Working
 		w.ctxLogger.Info("[ readInputQueueSuspending ] Set slot state to 'Working'")
+		w.changeSlotState(Working)
 	}
 
 	return nil
@@ -458,6 +469,7 @@ func (w *worker) suspending() {
 	case constant.Future:
 		if w.preparePulseSync != nil {
 			w.preparePulseSync.SetResult(nil)
+			w.preparePulseSync = nil
 		} else {
 			w.ctxLogger.Warn("[ suspending ] preparePulseSync is empty")
 		}
@@ -477,7 +489,7 @@ func (w *worker) suspending() {
 }
 
 func (w *worker) migrate(status ActivationStatus) error {
-	w.ctxLogger.Infof("[ migrate ] Starts ... ( status: %s. pulseState: %s )", status.String(), w.slot.pulseState.String())
+	w.ctxLogger.Debugf("[ migrate ] Starts ... ( status: %s. pulseState: %s )", status.String(), w.slot.pulseState.String())
 	numElements := w.slot.len(status)
 	for ; numElements > 0; numElements-- {
 		element := w.slot.popElement(status)
@@ -537,15 +549,17 @@ func (w *worker) initializing() {
 
 // nolint: unused
 func (w *worker) run() {
+	w.ctxLogger.Debug("[ run ] starts ...")
 	for !w.stop {
 		switch w.slot.slotState {
 		case Initializing:
 			w.initializing()
-			w.slot.slotState = Working
 			w.ctxLogger.Info("[ run ] Set slot state to 'Working'")
+			w.changeSlotState(Working)
 		case Working:
 			if w.activatePulseSync != nil {
 				w.activatePulseSync.SetResult(nil)
+				w.activatePulseSync = nil
 			} else {
 				w.ctxLogger.Warn("[ run ] activatePulseSync is empty")
 			}
@@ -556,4 +570,5 @@ func (w *worker) run() {
 			panic("[ run ] Unknown slot state: " + w.slot.slotState.String())
 		}
 	}
+	w.ctxLogger.Debug("[ run ] ends")
 }
