@@ -357,20 +357,3 @@ func (nk *nodekeeper) sign(data []byte) ([]byte, error) {
 	}
 	return sign.Bytes(), nil
 }
-
-func jetRoleToNodeRole(role core.DynamicRole) core.StaticRole {
-	switch role {
-	case core.DynamicRoleVirtualExecutor:
-		return core.StaticRoleVirtual
-	case core.DynamicRoleVirtualValidator:
-		return core.StaticRoleVirtual
-	case core.DynamicRoleLightExecutor:
-		return core.StaticRoleLightMaterial
-	case core.DynamicRoleLightValidator:
-		return core.StaticRoleLightMaterial
-	case core.DynamicRoleHeavyExecutor:
-		return core.StaticRoleHeavyMaterial
-	default:
-		return core.StaticRoleUnknown
-	}
-}

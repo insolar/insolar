@@ -62,7 +62,7 @@ func (a *Accessor) GetWorkingNodes() []core.Node {
 }
 
 func (a *Accessor) GetWorkingNodesByRole(role core.DynamicRole) []core.RecordRef {
-	staticRole := jetRoleToNodeRole(role)
+	staticRole := dynamicToStaticRole(role)
 	return a.roleIndex[staticRole].Collect()
 }
 
@@ -113,4 +113,21 @@ func NewAccessor(snapshot *Snapshot) *Accessor {
 		}
 	}
 	return result
+}
+
+func dynamicToStaticRole(role core.DynamicRole) core.StaticRole {
+	switch role {
+	case core.DynamicRoleVirtualExecutor:
+		return core.StaticRoleVirtual
+	case core.DynamicRoleVirtualValidator:
+		return core.StaticRoleVirtual
+	case core.DynamicRoleLightExecutor:
+		return core.StaticRoleLightMaterial
+	case core.DynamicRoleLightValidator:
+		return core.StaticRoleLightMaterial
+	case core.DynamicRoleHeavyExecutor:
+		return core.StaticRoleHeavyMaterial
+	default:
+		return core.StaticRoleUnknown
+	}
 }
