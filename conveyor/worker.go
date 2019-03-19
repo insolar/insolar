@@ -168,8 +168,8 @@ func (w *worker) processSignalsWorking(elements []queue.OutputElement) int {
 				activateSyncDone = el.GetData().(queue.SyncDone)
 			case CancelSignal:
 				w.stop = true // TODO: do it more correctly
-				w.ctxLogger.Info("[ processSignalsWorking ] Got CancelSignal. Set slot state to 'Suspending'")
-				w.changeSlotState(Suspending)
+				w.ctxLogger.Info("[ processSignalsWorking ] Got CancelSignal. Set slot state to 'Canceling'")
+				w.changeSlotState(Canceling)
 			default:
 				panic(fmt.Sprintf("[ processSignalsWorking ] Unknown signal: %+v", el.GetItemType()))
 			}
@@ -390,7 +390,7 @@ func (w *worker) working() {
 
 func (w *worker) calculateNodeState() {
 	w.ctxLogger.Debugf("[ calculateNodeState ] starts ...")
-	// TODO: приходит PreparePulse, в нём есть callback, вызываем какой-то адаптер, куда передаем этот callback
+	// TODO: PreparePulse comes, It contains callback, call some adapter it forward callback to it
 	w.preparePulseSync.SetResult(555)
 	w.preparePulseSync = nil
 }
@@ -419,8 +419,8 @@ func (w *worker) processSignalsSuspending(elements []queue.OutputElement) int {
 				w.changeSlotState(Initializing)
 				w.activatePulseSync = el.GetData().(queue.SyncDone)
 			case CancelSignal:
-				w.ctxLogger.Info("[ processSignalsSuspending ] Got CancelSignal. Set slot state to 'Initializing")
-				w.changeSlotState(Initializing)
+				w.ctxLogger.Info("[ processSignalsSuspending ] Got CancelSignal. Set slot state to 'Canceling")
+				w.changeSlotState(Canceling)
 				w.stop = true // TODO: do it more correctly
 			default:
 				panic(fmt.Sprintf("[ processSignalsSuspending ] Unknown signal: %+v", el.GetItemType()))
