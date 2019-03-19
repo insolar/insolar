@@ -53,7 +53,7 @@ type DBContext interface {
 		ctx context.Context,
 		jetID core.RecordID,
 		pulse core.PulseNumber,
-		handler func(id core.RecordID, rec object.Record) error,
+		handler func(id core.RecordID, rec object.VirtualRecord) error,
 	) error
 
 	StoreKeyValues(ctx context.Context, kvs []core.KV) error
@@ -234,7 +234,7 @@ func (db *DB) IterateRecordsOnPulse(
 	ctx context.Context,
 	jetID core.RecordID,
 	pulse core.PulseNumber,
-	handler func(id core.RecordID, rec object.Record) error,
+	handler func(id core.RecordID, rec object.VirtualRecord) error,
 ) error {
 	jetPrefix := core.JetID(jetID).Prefix()
 	prefix := prefixkey(scopeIDRecord, jetPrefix, pulse.Bytes())

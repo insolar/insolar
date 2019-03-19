@@ -125,7 +125,7 @@ func (m *TransactionManager) SetBlob(ctx context.Context, jetID core.RecordID, p
 // GetRecord returns record from BadgerDB by *record.Reference.
 //
 // It returns ErrNotFound if the DB does not contain the key.
-func (m *TransactionManager) GetRecord(ctx context.Context, jetID core.RecordID, id *core.RecordID) (object.Record, error) {
+func (m *TransactionManager) GetRecord(ctx context.Context, jetID core.RecordID, id *core.RecordID) (object.VirtualRecord, error) {
 	jetPrefix := core.JetID(jetID).Prefix()
 	k := prefixkey(scopeIDRecord, jetPrefix, id[:])
 	buf, err := m.get(ctx, k)
@@ -139,7 +139,7 @@ func (m *TransactionManager) GetRecord(ctx context.Context, jetID core.RecordID,
 //
 // If record exists returns both *record.ID and ErrOverride error.
 // If record not found returns nil and ErrNotFound error
-func (m *TransactionManager) SetRecord(ctx context.Context, jetID core.RecordID, pulseNumber core.PulseNumber, rec object.Record) (*core.RecordID, error) {
+func (m *TransactionManager) SetRecord(ctx context.Context, jetID core.RecordID, pulseNumber core.PulseNumber, rec object.VirtualRecord) (*core.RecordID, error) {
 	id := object.NewRecordIDFromRecord(m.db.PlatformCryptographyScheme, pulseNumber, rec)
 	prefix := core.JetID(jetID).Prefix()
 	k := prefixkey(scopeIDRecord, prefix, id[:])

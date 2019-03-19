@@ -64,7 +64,7 @@ func (p payload) MarshalJSON() ([]byte, error) {
 
 type recordData struct {
 	Type    string
-	Data    object.Record
+	Data    object.VirtualRecord
 	Payload payload
 }
 
@@ -150,7 +150,7 @@ func (e *Exporter) Export(ctx context.Context, fromPulse core.PulseNumber, size 
 
 func (e *Exporter) exportPulse(ctx context.Context, jetID core.JetID, pulse *core.Pulse) (*pulseData, error) {
 	records := recordsData{}
-	err := e.DB.IterateRecordsOnPulse(ctx, core.RecordID(jetID), pulse.PulseNumber, func(id core.RecordID, rec object.Record) error {
+	err := e.DB.IterateRecordsOnPulse(ctx, core.RecordID(jetID), pulse.PulseNumber, func(id core.RecordID, rec object.VirtualRecord) error {
 		pl := e.getPayload(ctx, jetID, rec)
 
 		records[string(base58.Encode(id[:]))] = recordData{
@@ -173,7 +173,7 @@ func (e *Exporter) exportPulse(ctx context.Context, jetID core.JetID, pulse *cor
 	return &data, nil
 }
 
-func (e *Exporter) getPayload(ctx context.Context, jetID core.JetID, rec object.Record) payload {
+func (e *Exporter) getPayload(ctx context.Context, jetID core.JetID, rec object.VirtualRecord) payload {
 	switch r := rec.(type) {
 	case object.State:
 		if r.GetMemory() == nil {
@@ -223,7 +223,7 @@ func (e *Exporter) getPayload(ctx context.Context, jetID core.JetID, rec object.
 	return nil
 }
 
-func recordType(rec object.Record) string {
+func recordType(rec object.VirtualRecord) string {
 	switch rec.(type) {
 	case *object.GenesisRecord:
 		return "TypeGenesis"

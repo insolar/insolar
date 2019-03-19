@@ -30,8 +30,8 @@ type ObjectStorage interface {
 	GetBlob(ctx context.Context, jetID core.RecordID, id *core.RecordID) ([]byte, error)
 	SetBlob(ctx context.Context, jetID core.RecordID, pulseNumber core.PulseNumber, blob []byte) (*core.RecordID, error)
 
-	GetRecord(ctx context.Context, jetID core.RecordID, id *core.RecordID) (object.Record, error)
-	SetRecord(ctx context.Context, jetID core.RecordID, pulseNumber core.PulseNumber, rec object.Record) (*core.RecordID, error)
+	GetRecord(ctx context.Context, jetID core.RecordID, id *core.RecordID) (object.VirtualRecord, error)
+	SetRecord(ctx context.Context, jetID core.RecordID, pulseNumber core.PulseNumber, rec object.VirtualRecord) (*core.RecordID, error)
 
 	IterateIndexIDs(
 		ctx context.Context,
@@ -104,9 +104,9 @@ func (os *objectStorage) SetBlob(ctx context.Context, jetID core.RecordID, pulse
 }
 
 // GetRecord wraps matching transaction manager method.
-func (os *objectStorage) GetRecord(ctx context.Context, jetID core.RecordID, id *core.RecordID) (object.Record, error) {
+func (os *objectStorage) GetRecord(ctx context.Context, jetID core.RecordID, id *core.RecordID) (object.VirtualRecord, error) {
 	var (
-		fetchedRecord object.Record
+		fetchedRecord object.VirtualRecord
 		err           error
 	)
 
@@ -121,7 +121,7 @@ func (os *objectStorage) GetRecord(ctx context.Context, jetID core.RecordID, id 
 }
 
 // SetRecord wraps matching transaction manager method.
-func (os *objectStorage) SetRecord(ctx context.Context, jetID core.RecordID, pulseNumber core.PulseNumber, rec object.Record) (*core.RecordID, error) {
+func (os *objectStorage) SetRecord(ctx context.Context, jetID core.RecordID, pulseNumber core.PulseNumber, rec object.VirtualRecord) (*core.RecordID, error) {
 	var (
 		id  *core.RecordID
 		err error

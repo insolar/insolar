@@ -3,7 +3,7 @@
 
 package object
 
-func TypeFromRecord(generic Record) TypeID {
+func TypeFromRecord(generic VirtualRecord) TypeID {
 	switch generic.(type) {
 	case *GenesisRecord:
 		return 100
@@ -30,7 +30,7 @@ func TypeFromRecord(generic Record) TypeID {
 	}
 }
 
-func RecordFromType(i TypeID) Record {
+func RecordFromType(i TypeID) VirtualRecord {
 	switch i {
 	case 100:
 		return new(GenesisRecord)

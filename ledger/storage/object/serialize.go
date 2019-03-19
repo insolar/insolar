@@ -37,7 +37,7 @@ func DeserializeType(buf []byte) TypeID {
 }
 
 // SerializeRecord returns binary representation of provided record.
-func SerializeRecord(rec Record) []byte {
+func SerializeRecord(rec VirtualRecord) []byte {
 	typeBytes := SerializeType(TypeFromRecord(rec))
 	buff := bytes.NewBuffer(typeBytes)
 	enc := codec.NewEncoder(buff, &codec.CborHandle{})
@@ -46,7 +46,7 @@ func SerializeRecord(rec Record) []byte {
 }
 
 // DeserializeRecord returns record decoded from bytes.
-func DeserializeRecord(buf []byte) Record {
+func DeserializeRecord(buf []byte) VirtualRecord {
 	t := DeserializeType(buf[:TypeIDSize])
 	dec := codec.NewDecoderBytes(buf[TypeIDSize:], &codec.CborHandle{})
 	rec := RecordFromType(t)

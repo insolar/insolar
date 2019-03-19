@@ -28,8 +28,8 @@ type TypeID uint32
 // TypeIDSize is a size of TypeID type.
 const TypeIDSize = 4
 
-// Record is base interface for all records.
-type Record interface {
+// VirtualRecord is base interface for all records.
+type VirtualRecord interface {
 	// WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
 	WriteHashData(w io.Writer) (int, error)
 }

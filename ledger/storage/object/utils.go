@@ -18,7 +18,7 @@ package object
 
 import "github.com/insolar/insolar/core"
 
-func NewRecordIDFromRecord(scheme core.PlatformCryptographyScheme, pulse core.PulseNumber, rec Record) *core.RecordID {
+func NewRecordIDFromRecord(scheme core.PlatformCryptographyScheme, pulse core.PulseNumber, rec VirtualRecord) *core.RecordID {
 	hasher := scheme.ReferenceHasher()
 	_, err := rec.WriteHashData(hasher)
 	if err != nil {

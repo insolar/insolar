@@ -887,7 +887,7 @@ func (m *LedgerArtifactManager) updateObject(
 
 func (m *LedgerArtifactManager) setRecord(
 	ctx context.Context,
-	rec object.Record,
+	rec object.VirtualRecord,
 	target core.RecordRef,
 	currentPN core.PulseNumber,
 ) (*core.RecordID, error) {
@@ -943,7 +943,7 @@ func (m *LedgerArtifactManager) setBlob(
 
 func (m *LedgerArtifactManager) sendUpdateObject(
 	ctx context.Context,
-	rec object.Record,
+	rec object.VirtualRecord,
 	obj core.RecordRef,
 	memory []byte,
 	currentPN core.PulseNumber,
@@ -986,7 +986,7 @@ func (m *LedgerArtifactManager) sendUpdateObject(
 
 func (m *LedgerArtifactManager) registerChild(
 	ctx context.Context,
-	rec object.Record,
+	rec object.VirtualRecord,
 	parent core.RecordRef,
 	child core.RecordRef,
 	asType *core.RecordRef,
