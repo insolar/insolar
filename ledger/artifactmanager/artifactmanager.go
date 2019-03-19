@@ -593,7 +593,7 @@ func (m *LedgerArtifactManager) DeactivateObject(
 		currentPN,
 	)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to deactivate object")
 	}
 	return &desc.State, nil
 }
@@ -805,7 +805,7 @@ func (m *LedgerArtifactManager) activateObject(
 		currentPN,
 	)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to activate")
 	}
 
 	return &ObjectDescriptor{
@@ -870,7 +870,7 @@ func (m *LedgerArtifactManager) updateObject(
 		currentPN,
 	)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to update object")
 	}
 
 	return &ObjectDescriptor{
@@ -971,7 +971,7 @@ func (m *LedgerArtifactManager) sendUpdateObject(
 		}, nil)
 
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to update object")
+		return nil, errors.Wrap(err, "UpdateObject message failed")
 	}
 
 	switch rep := genericReply.(type) {
