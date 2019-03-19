@@ -105,6 +105,7 @@ func (c *PulseConveyor) unsafeGetSlot(pulseNumber core.PulseNumber) TaskPusher {
 	return slot
 }
 
+// InitiateShutdown starts shutdown process
 func (c *PulseConveyor) InitiateShutdown(force bool) {
 	c.lock.Lock()
 	c.state = core.ConveyorShuttingDown
@@ -191,6 +192,7 @@ func (c *PulseConveyor) PreparePulse(pulse core.Pulse, callback queue.SyncDone) 
 	return nil
 }
 
+// PulseWithCallback contains info about new pulse and callback func
 type PulseWithCallback interface {
 	queue.SyncDone
 	GetPulse() core.Pulse
@@ -223,6 +225,7 @@ type waitGroupSyncDone struct {
 	sync.WaitGroup
 }
 
+// SetResult implements SyncDone
 func (sd *waitGroupSyncDone) SetResult(result interface{}) {
 	sd.Done()
 }
@@ -306,7 +309,7 @@ func newBarrierCallback(num int, callback queue.SyncDone) *BarrierCallback {
 	return bc
 }
 
-// SetResult
+// SetResult saves result if it's not nil and invoke waitGroup.Done
 func (c *BarrierCallback) SetResult(result interface{}) {
 	if result != nil {
 		c.result = result
