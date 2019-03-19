@@ -115,12 +115,6 @@ func displayResultsTable(results [][]string, ready bool, buffer *bytes.Buffer) {
 	fmt.Print(buffer)
 }
 
-func check(err error) {
-	if err != nil {
-		panic(err) // should never happen
-	}
-}
-
 func parseInt64(str string) int64 {
 	res, err := strconv.ParseInt(str, 10, 64)
 	if err != nil {
