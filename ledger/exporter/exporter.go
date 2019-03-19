@@ -175,7 +175,7 @@ func (e *Exporter) exportPulse(ctx context.Context, jetID core.JetID, pulse *cor
 
 func (e *Exporter) getPayload(ctx context.Context, jetID core.JetID, rec object.Record) payload {
 	switch r := rec.(type) {
-	case object.ObjectState:
+	case object.State:
 		if r.GetMemory() == nil {
 			break
 		}

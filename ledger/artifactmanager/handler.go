@@ -532,7 +532,7 @@ func (h *MessageHandler) handleGetObject(
 	if err != nil {
 		return nil, err
 	}
-	state, ok := rec.(object.ObjectState)
+	state, ok := rec.(object.State)
 	if !ok {
 		return nil, errors.New("invalid object record")
 	}
@@ -801,7 +801,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 	})
 
 	rec := object.DeserializeRecord(msg.Record)
-	state, ok := rec.(object.ObjectState)
+	state, ok := rec.(object.State)
 	if !ok {
 		return nil, errors.New("wrong object state record")
 	}
@@ -1081,7 +1081,7 @@ func (h *MessageHandler) handleValidationCheck(ctx context.Context, parcel core.
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch state record")
 	}
-	state, ok := rec.(object.ObjectState)
+	state, ok := rec.(object.State)
 	if !ok {
 		return nil, errors.New("failed to fetch state record")
 	}

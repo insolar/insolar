@@ -36,8 +36,8 @@ const (
 	StateDeactivation
 )
 
-// ObjectState is common object state record.
-type ObjectState interface {
+// State is common object state record.
+type State interface {
 	// StateID returns state id.
 	ID() StateID
 	// GetImage returns state code.
