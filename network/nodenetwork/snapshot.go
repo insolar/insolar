@@ -77,7 +77,7 @@ func nodeStateToListType(state core.NodeState) ListType {
 		return ListWorking
 	case core.NodePending:
 		return ListJoiner
-	case core.NodeLeaving:
+	case core.NodeUndefined, core.NodeLeaving:
 		return ListLeaving
 	}
 	// special case for no match

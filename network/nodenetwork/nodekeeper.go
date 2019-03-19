@@ -127,6 +127,7 @@ func (nk *nodekeeper) SetInitialSnapshot(nodes []core.Node) {
 	}
 	nk.snapshot = NewSnapshot(core.FirstPulseNumber, nodesMap)
 	nk.accessor = NewAccessor(nk.snapshot)
+	nk.syncNodes = nk.accessor.GetActiveNodes()
 }
 
 func (nk *nodekeeper) GetAccessor() network.Accessor {
