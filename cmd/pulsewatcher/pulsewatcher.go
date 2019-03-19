@@ -65,9 +65,174 @@ func moveBack(reader io.Reader) {
 	fmt.Print(escape(clearDown))
 }
 
+func displayResultsTable(results [][]string, ready bool, buffer *bytes.Buffer) {
+	table := tablewriter.NewWriter(buffer)
+	table.SetHeader([]string{
+		"URL",
+		"Network State",
+		"Node State",
+		"Pulse Number",
+		"Active List Size",
+		"Working List Size",
+		"Role",
+		"Error",
+	})
+	table.SetBorder(false)
+
+	table.ClearRows()
+	table.ClearFooter()
+
+	moveBack(buffer)
+	buffer.Reset()
+
+	stateString := insolarReady
+	color := tablewriter.FgHiGreenColor
+	if !ready {
+		stateString = insolarNotReady
+		color = tablewriter.FgHiRedColor
+	}
+
+	table.SetFooter([]string{
+		"", "", "", "",
+		"Insolar State", stateString,
+		"Time", time.Now().Format(time.RFC3339),
+	})
+	table.SetFooterColor(
+		tablewriter.Colors{},
+		tablewriter.Colors{},
+		tablewriter.Colors{},
+		tablewriter.Colors{},
+
+		tablewriter.Colors{},
+		tablewriter.Colors{color},
+
+		tablewriter.Colors{},
+		tablewriter.Colors{},
+	)
+
+	table.AppendBulk(results)
+	table.Render()
+	fmt.Print(buffer)
+}
+
+func parseInt64(str string) int64 {
+	res, err := strconv.ParseInt(str, 10, 64)
+	if err != nil {
+		res = -1
+	}
+	return res
+}
+
+func displayResultsJSON(results [][]string, ready bool, buffer *bytes.Buffer) {
+	type DocumentItem struct {
+		URL string
+		NetworkState string
+		NodeState string
+		PulseNumber int64
+		ActiveListSize int64
+		WorkingListSize int64
+		Role string
+		Error string
+	}
+
+	doc := make([]DocumentItem, len(results))
+
+	for i, res := range results {
+		doc[i].URL = res[0]
+		doc[i].NetworkState = res[1]
+		doc[i].NodeState = res[2]
+		doc[i].PulseNumber = parseInt64(res[3])
+		doc[i].ActiveListSize = parseInt64(res[4])
+		doc[i].WorkingListSize = parseInt64(res[5])
+		doc[i].Role = res[6]
+		doc[i].Error = res[7]
+	}
+
+	jsonDoc, err := json.MarshalIndent(doc, "", "    ")
+	if err != nil {
+		panic(err) // should never happen
+	}
+	fmt.Print(string(jsonDoc))
+	fmt.Print("\n\n")
+}
+
+func collectNodesStatuses(conf *pulsewatcher.Config) ([][]string, bool) {
+	client = http.Client{
+		Transport: &http.Transport{},
+		Timeout:   conf.Timeout,
+	}
+
+	state := true
+	errored := 0
+	results := make([][]string, len(conf.Nodes))
+	lock := &sync.Mutex{}
+
+	wg := &sync.WaitGroup{}
+	wg.Add(len(conf.Nodes))
+	for i, url := range conf.Nodes {
+		go func(url string, i int) {
+			res, err := client.Post("http://"+url+"/api/rpc", "application/json",
+				strings.NewReader(`{"jsonrpc": "2.0", "method": "status.Get", "id": 0}`))
+			if err != nil {
+				lock.Lock()
+				results[i] = []string{url, "", "", "", "", "", "", err.Error()}
+				errored++
+				lock.Unlock()
+				wg.Done()
+				return
+			}
+			defer res.Body.Close()
+			data, err := ioutil.ReadAll(res.Body)
+			if err != nil {
+				log.Fatal(err)
+			}
+			var out struct {
+				Result struct {
+					PulseNumber  uint32
+					NetworkState string
+					NodeState    string
+					Origin       struct {
+						Role string
+					}
+					ActiveListSize  int
+					WorkingListSize int
+				}
+			}
+			err = json.Unmarshal(data, &out)
+			if err != nil {
+				fmt.Println(string(data))
+				log.Fatal(err)
+			}
+			lock.Lock()
+			results[i] = []string{
+				url,
+				out.Result.NetworkState,
+				out.Result.NodeState,
+				strconv.Itoa(int(out.Result.PulseNumber)),
+				strconv.Itoa(out.Result.ActiveListSize),
+				strconv.Itoa(out.Result.WorkingListSize),
+				out.Result.Origin.Role,
+				"",
+			}
+			state = state && out.Result.NetworkState == core.CompleteNetworkState.String() &&
+				out.Result.NodeState == core.NodeReady.String()
+			lock.Unlock()
+			wg.Done()
+		}(url, i)
+	}
+	wg.Wait()
+
+	ready := state && errored != len(conf.Nodes)
+	return results, ready
+}
+
 func main() {
 	var configFile string
+	var useJSONFormat bool
+	var singleOutput bool
 	pflag.StringVarP(&configFile, "config", "c", "", "config file")
+	pflag.BoolVarP(&useJSONFormat, "json", "j", false, "use JSON format")
+	pflag.BoolVarP(&singleOutput, "single", "s", false, "single output")
 	pflag.Parse()
 
 	conf, err := pulsewatcher.ReadConfig(configFile)
@@ -81,132 +246,19 @@ func main() {
 		conf.Interval = 100 * time.Millisecond
 	}
 
-	client = http.Client{
-		Transport: &http.Transport{},
-		Timeout:   conf.Timeout,
-	}
-
 	buffer := &bytes.Buffer{}
-
-	var (
-		state   bool
-		errored int
-	)
-
 	fmt.Print("\n\n")
-
 	for {
-		state = true
-		errored = 0
-		results := make([][]string, len(conf.Nodes))
-		lock := &sync.Mutex{}
-
-		wg := &sync.WaitGroup{}
-		wg.Add(len(conf.Nodes))
-		for i, url := range conf.Nodes {
-			go func(url string, i int) {
-				res, err := client.Post("http://"+url+"/api/rpc", "application/json",
-					strings.NewReader(`{"jsonrpc": "2.0", "method": "status.Get", "id": 0}`))
-				if err != nil {
-					lock.Lock()
-					results[i] = []string{url, "", "", "", "", "", "", err.Error()}
-					errored++
-					lock.Unlock()
-					wg.Done()
-					return
-				}
-				defer res.Body.Close()
-				data, err := ioutil.ReadAll(res.Body)
-				if err != nil {
-					log.Fatal(err)
-				}
-				var out struct {
-					Result struct {
-						PulseNumber  uint32
-						NetworkState string
-						NodeState    string
-						Origin       struct {
-							Role string
-						}
-						ActiveListSize  int
-						WorkingListSize int
-					}
-				}
-				err = json.Unmarshal(data, &out)
-				if err != nil {
-					fmt.Println(string(data))
-					log.Fatal(err)
-				}
-				lock.Lock()
-				results[i] = []string{
-					url,
-					out.Result.NetworkState,
-					out.Result.NodeState,
-					strconv.Itoa(int(out.Result.PulseNumber)),
-					strconv.Itoa(out.Result.ActiveListSize),
-					strconv.Itoa(out.Result.WorkingListSize),
-					out.Result.Origin.Role,
-					"",
-				}
-				state = state && out.Result.NetworkState == core.CompleteNetworkState.String() &&
-					out.Result.NodeState == core.NodeReady.String()
-				lock.Unlock()
-				wg.Done()
-			}(url, i)
-		}
-		wg.Wait()
-
-		table := tablewriter.NewWriter(buffer)
-		table.SetHeader([]string{
-			"URL",
-			"Network State",
-			"Node State",
-			"Pulse Number",
-			"Active List Size",
-			"Working List Size",
-			"Role",
-			"Error",
-		})
-		table.SetBorder(false)
-
-		table.ClearRows()
-		table.ClearFooter()
-
-		moveBack(buffer)
-		buffer.Reset()
-
-		stateString := insolarReady
-		color := tablewriter.FgHiGreenColor
-		if !state || errored == len(conf.Nodes) {
-			stateString = insolarNotReady
-			color = tablewriter.FgHiRedColor
+		results, ready := collectNodesStatuses(conf)
+		if useJSONFormat {
+			displayResultsJSON(results, ready, buffer)
+		} else {
+			displayResultsTable(results, ready, buffer)
 		}
 
-		table.SetFooter([]string{
-			"", "", "", "",
-			"Insolar State", stateString,
-			"Time", time.Now().Format(time.RFC3339),
-		})
-		table.SetFooterColor(
-			tablewriter.Colors{},
-			tablewriter.Colors{},
-			tablewriter.Colors{},
-			tablewriter.Colors{},
-
-			tablewriter.Colors{},
-			tablewriter.Colors{color},
-
-			tablewriter.Colors{},
-			tablewriter.Colors{},
-		)
-
-		lock.Lock()
-		table.AppendBulk(results)
-		lock.Unlock()
-
-		table.Render()
-
-		fmt.Print(buffer)
+		if singleOutput {
+			break
+		}
 
 		time.Sleep(conf.Interval)
 	}
