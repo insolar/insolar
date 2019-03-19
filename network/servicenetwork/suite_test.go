@@ -178,7 +178,7 @@ func (s *testSuite) SetupNodesNetwork(nodes []*networkNode) {
 				if count == expected {
 					return nil
 				}
-			case <-time.After(time.Second * 20):
+			case <-time.After(time.Second * 30):
 				return errors.New("timeout")
 			}
 		}
