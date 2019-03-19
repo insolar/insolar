@@ -5,14 +5,31 @@
  *
  * All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without modification, are permitted (subject to the limitations in the disclaimer below) provided that the following conditions are met:
+ * Redistribution and use in source and binary forms, with or without modification,
+ * are permitted (subject to the limitations in the disclaimer below) provided that
+ * the following conditions are met:
  *
- *  Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
- *  Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
- *  Neither the name of Insolar Technologies nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+ *  * Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ *  * Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *  * Neither the name of Insolar Technologies nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software
+ *    without specific prior written permission.
  *
- * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
+ * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED
+ * BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+ * CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING,
+ * BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 package bootstrap
@@ -56,6 +73,7 @@ type Bootstrapper interface {
 
 	Bootstrap(ctx context.Context) (*network.BootstrapResult, *DiscoveryNode, error)
 	BootstrapDiscovery(ctx context.Context) (*network.BootstrapResult, error)
+	ZeroBootstrap(ctx context.Context) (*network.BootstrapResult, error)
 	SetLastPulse(number core.PulseNumber)
 	GetLastPulse() core.PulseNumber
 	// GetFirstFakePulseTime() time.Time
@@ -227,11 +245,11 @@ func (bc *bootstrapper) GetLastPulse() core.PulseNumber {
 }
 
 func (bc *bootstrapper) checkActiveNode(node core.Node) error {
-	n := bc.NodeKeeper.GetActiveNode(node.ID())
+	n := bc.NodeKeeper.GetAccessor().GetActiveNode(node.ID())
 	if n != nil {
 		return errors.Errorf("Node ID collision: %s", n.ID())
 	}
-	n = bc.NodeKeeper.GetActiveNodeByShortID(node.ShortID())
+	n = bc.NodeKeeper.GetAccessor().GetActiveNodeByShortID(node.ShortID())
 	if n != nil {
 		return errors.Errorf("Short ID collision: %d", n.ShortID())
 	}
@@ -240,6 +258,19 @@ func (bc *bootstrapper) checkActiveNode(node core.Node) error {
 			node.ID(), node.Version(), bc.NodeKeeper.GetOrigin().Version())
 	}
 	return nil
+}
+
+func (bc *bootstrapper) ZeroBootstrap(ctx context.Context) (*network.BootstrapResult, error) {
+	host, err := host.NewHostN(bc.NodeKeeper.GetOrigin().Address(), bc.NodeKeeper.GetOrigin().ID())
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create a host")
+	}
+	inslogger.FromContext(ctx).Info("[ Bootstrap ] Zero bootstrap")
+	bc.NodeKeeper.SetInitialSnapshot([]core.Node{bc.NodeKeeper.GetOrigin()})
+	return &network.BootstrapResult{
+		Host: host,
+		// FirstPulseTime: nb.Bootstrapper.GetFirstFakePulseTime(),
+	}, nil
 }
 
 func (bc *bootstrapper) BootstrapDiscovery(ctx context.Context) (*network.BootstrapResult, error) {
@@ -255,14 +286,7 @@ func (bc *bootstrapper) BootstrapDiscovery(ctx context.Context) (*network.Bootst
 	}
 	discoveryCount := len(discoveryNodes)
 	if discoveryCount == 0 {
-		host, err := host.NewHostN(bc.NodeKeeper.GetOrigin().Address(), bc.NodeKeeper.GetOrigin().ID())
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to create a host")
-		}
-		return &network.BootstrapResult{
-			Host: host,
-			// FirstPulseTime: bc.firstPulseTime,
-		}, nil
+		return bc.ZeroBootstrap(ctx)
 	}
 
 	var bootstrapResults []*network.BootstrapResult
@@ -308,8 +332,9 @@ func (bc *bootstrapper) BootstrapDiscovery(ctx context.Context) (*network.Bootst
 		activeNode.(nodenetwork.MutableNode).SetState(core.NodeUndefined)
 		activeNodesStr = append(activeNodesStr, activeNode.ID().String())
 	}
-	bc.NodeKeeper.AddActiveNodes(activeNodes)
 	bc.NodeKeeper.GetOrigin().(nodenetwork.MutableNode).SetState(core.NodeUndefined)
+	activeNodes = append(activeNodes, bc.NodeKeeper.GetOrigin())
+	bc.NodeKeeper.SetInitialSnapshot(activeNodes)
 	logger.Infof("[ BootstrapDiscovery ] Added active nodes: %s", strings.Join(activeNodesStr, ", "))
 	return parseBotstrapResults(bootstrapResults), nil
 }

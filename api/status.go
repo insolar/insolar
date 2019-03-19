@@ -66,7 +66,7 @@ func (s *StatusService) Get(r *http.Request, args *interface{}, reply *StatusRep
 	reply.NetworkState = s.runner.NetworkSwitcher.GetState().String()
 	reply.NodeState = s.runner.NodeNetwork.GetOrigin().GetState().String()
 
-	activeNodes := s.runner.NodeNetwork.(network.NodeKeeper).GetActiveNodes()
+	activeNodes := s.runner.NodeNetwork.(network.NodeKeeper).GetAccessor().GetActiveNodes()
 	workingNodes := s.runner.NodeNetwork.GetWorkingNodes()
 
 	reply.ActiveListSize = len(activeNodes)
