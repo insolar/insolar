@@ -33,3 +33,41 @@
  */
 
 package nodenetwork
+
+import (
+	"testing"
+
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/testutils"
+	"github.com/stretchr/testify/assert"
+)
+
+func TestGetSnapshotActiveNodes(t *testing.T) {
+	m := make(map[core.RecordRef]core.Node)
+
+	node := newMutableNode(testutils.RandomRef(), core.StaticRoleVirtual, nil, "127.0.0.1:0", "")
+	node.SetState(core.NodeReady)
+	m[node.ID()] = node
+
+	node2 := newMutableNode(testutils.RandomRef(), core.StaticRoleVirtual, nil, "127.0.0.1:0", "")
+	node2.SetState(core.NodePending)
+	m[node2.ID()] = node2
+
+	node3 := newMutableNode(testutils.RandomRef(), core.StaticRoleVirtual, nil, "127.0.0.1:0", "")
+	node3.SetState(core.NodeLeaving)
+	m[node3.ID()] = node3
+
+	node4 := newMutableNode(testutils.RandomRef(), core.StaticRoleVirtual, nil, "127.0.0.1:0", "")
+	node4.SetState(core.NodeUndefined)
+	m[node4.ID()] = node4
+
+	snapshot := NewSnapshot(core.FirstPulseNumber, m)
+	accessor := NewAccessor(snapshot)
+	assert.Equal(t, 4, len(accessor.GetActiveNodes()))
+	assert.Equal(t, 1, len(accessor.GetWorkingNodes()))
+	assert.NotNil(t, accessor.GetWorkingNode(node.ID()))
+	assert.Nil(t, accessor.GetWorkingNode(node2.ID()))
+	assert.NotNil(t, accessor.GetActiveNode(node2.ID()))
+	assert.NotNil(t, accessor.GetActiveNode(node3.ID()))
+	assert.NotNil(t, accessor.GetActiveNode(node4.ID()))
+}

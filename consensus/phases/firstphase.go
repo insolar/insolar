@@ -143,7 +143,7 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse) (*Firs
 	}
 	log.Infof("[ NET Consensus phase-1 ] Phase1Packet claims count: %d", len(packet.GetClaims()))
 
-	activeNodes := fp.NodeKeeper.GetActiveNodes()
+	activeNodes := fp.NodeKeeper.GetAccessor().GetActiveNodes()
 	resultPackets, err := fp.Communicator.ExchangePhase1(ctx, originClaim, activeNodes, packet)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NET Consensus phase-1 ] Failed to exchange results")
@@ -229,7 +229,7 @@ func (fp *FirstPhaseImpl) checkPacketSignature(packet *packets.Phase1Packet, rec
 		return fp.checkPacketSignatureFromClaim(packet, recordRef)
 	}
 
-	activeNode := fp.NodeKeeper.GetActiveNode(recordRef)
+	activeNode := fp.NodeKeeper.GetAccessor().GetActiveNode(recordRef)
 	if activeNode == nil {
 		return errors.New("failed to get active node")
 	}

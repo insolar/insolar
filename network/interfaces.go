@@ -159,14 +159,11 @@ type NodeKeeper interface {
 	GetCloudHash() []byte
 	// SetCloudHash set new cloud hash
 	SetCloudHash([]byte)
-	// GetActiveNode returns active node.
-	GetActiveNode(ref core.RecordRef) core.Node
-	// AddActiveNodes add active nodes.
-	AddActiveNodes([]core.Node)
-	// GetActiveNodes returns active nodes.
-	GetActiveNodes() []core.Node
-	// GetActiveNodeByShortID get active node by short ID. Returns nil if node is not found.
-	GetActiveNodeByShortID(shortID core.ShortNodeID) core.Node
+	// SetInitialSnapshot set initial snapshot for nodekeeper
+	SetInitialSnapshot(nodes []core.Node)
+	// GetAccessor get accessor to the internal snapshot for the current pulse
+	// TODO: add pulse to the function signature to get data of various pulses
+	GetAccessor() Accessor
 	// GetOriginJoinClaim get origin NodeJoinClaim
 	GetOriginJoinClaim() (*consensus.NodeJoinClaim, error)
 	// GetOriginAnnounceClaim get origin NodeAnnounceClaim
@@ -282,7 +279,24 @@ type ClaimQueue interface {
 	Push(claim consensus.ReferendumClaim)
 }
 
-// Snapshot provides ...
+// Snapshot contains node lists and network state for every pulse
 type Snapshot interface {
-	GetPulse()
+	GetPulse() core.PulseNumber
+}
+
+// Accessor is interface that provides read access to nodekeeper internal snapshot
+type Accessor interface {
+	// GetWorkingNode get working node by its reference. Returns nil if node is not found.
+	GetWorkingNode(ref core.RecordRef) core.Node
+	// GetWorkingNodes get working nodes.
+	GetWorkingNodes() []core.Node
+	// GetWorkingNodesByRole get working nodes by role
+	GetWorkingNodesByRole(role core.DynamicRole) []core.RecordRef
+
+	// GetActiveNode returns active node.
+	GetActiveNode(ref core.RecordRef) core.Node
+	// GetActiveNodes returns active nodes.
+	GetActiveNodes() []core.Node
+	// GetActiveNodeByShortID get active node by short ID. Returns nil if node is not found.
+	GetActiveNodeByShortID(shortID core.ShortNodeID) core.Node
 }

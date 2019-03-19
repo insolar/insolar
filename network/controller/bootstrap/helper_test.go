@@ -57,7 +57,7 @@ func newTestNodeWithShortID(id core.ShortNodeID) core.Node {
 
 func TestCorrectShortIDCollision(t *testing.T) {
 	keeper := nodenetwork.NewNodeKeeper(newTestNode())
-	keeper.AddActiveNodes([]core.Node{
+	keeper.SetInitialSnapshot([]core.Node{
 		newTestNodeWithShortID(0),
 		newTestNodeWithShortID(1),
 		newTestNodeWithShortID(30),
