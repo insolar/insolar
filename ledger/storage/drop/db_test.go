@@ -17,67 +17,131 @@
 package drop
 
 import (
+	"math/rand"
 	"testing"
 
-	fuzz "github.com/google/gofuzz"
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/storage/jet"
+	"github.com/google/gofuzz"
 	"github.com/stretchr/testify/require"
+
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/gen"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/storage/db"
 )
 
-func TestNewStorageMemory(t *testing.T) {
-	ms := NewStorageMemory()
+func TestNewStorageDB(t *testing.T) {
+	dbStor := NewStorageDB()
 
-	require.NotNil(t, ms.jets)
+	require.NotNil(t, dbStor)
 }
 
-func TestDropStorageMemory_Set(t *testing.T) {
-	ms := NewStorageMemory()
+type setInput struct {
+	jetID core.JetID
+	dr    Drop
+}
 
-	var drops []jet.Drop
-	dropsIndex := 0
-	f := fuzz.New().Funcs(func(jd *jet.Drop, c fuzz.Continue) {
-		dropsIndex++
-		jd.Pulse = core.PulseNumber(dropsIndex)
-	}).NumElements(5, 10)
-	f.Fuzz(&drops)
+func TestDropStorageDB_Set(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+	var inputs []setInput
+	encodedDrops := map[string]struct{}{}
+	f := fuzz.New().Funcs(func(inp *setInput, c fuzz.Continue) {
+		inp.dr = Drop{
+			Size:  rand.Uint64(),
+			Pulse: gen.PulseNumber(),
+			JetID: gen.JetID(),
+		}
 
-	for _, jd := range drops {
-		err := ms.Set(inslogger.TestContext(t), core.ZeroJetID, jd)
+		encoded, _ := Encode(&inp.dr)
+		encodedDrops[string(encoded)] = struct{}{}
+	}).NumElements(5, 5000).NilChance(0)
+	f.Fuzz(&inputs)
+
+	dbMock := db.NewDBMock(t)
+	dbMock.SetFunc = func(p db.Key, p1 []byte) (r error) {
+		_, ok := encodedDrops[string(p1)]
+		require.Equal(t, true, ok)
+		return nil
+	}
+	dbMock.GetMock.Return(nil, ErrNotFound)
+
+	dropStor := NewStorageDB()
+	dropStor.DB = dbMock
+
+	for _, inp := range inputs {
+		err := dropStor.Set(ctx, inp.dr)
 		require.NoError(t, err)
 	}
-
-	require.Equal(t, dropsIndex, len(ms.jets))
 }
 
-func TestDropStorageMemory_ForPulse(t *testing.T) {
+func TestDropStorageDB_Set_ErrOverride(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-	ms := NewStorageMemory()
+	dr := Drop{
+		Size:  rand.Uint64(),
+		Pulse: gen.PulseNumber(),
+		JetID: gen.JetID(),
+	}
 
-	err := ms.Set(ctx, core.ZeroJetID, jet.Drop{Pulse: 123})
-	require.NoError(t, err)
-	err = ms.Set(ctx, *core.NewJetID(1, nil), jet.Drop{Pulse: 2})
-	require.NoError(t, err)
+	dbMock := db.NewDBMock(t)
+	dbMock.GetMock.Return(nil, nil)
 
-	drop, err := ms.ForPulse(ctx, core.ZeroJetID, core.PulseNumber(123))
+	dropStor := NewStorageDB()
+	dropStor.DB = dbMock
 
-	require.Equal(t, core.PulseNumber(123), drop.Pulse)
-	require.Equal(t, 2, len(ms.jets))
+	err := dropStor.Set(ctx, dr)
+
+	require.Error(t, err, ErrNotFound)
 }
 
-func TestDropStorageMemory_DoubleSet(t *testing.T) {
+func TestDropStorageDB_ForPulse(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-	ms := NewStorageMemory()
+	jetID := gen.JetID()
+	pn := gen.PulseNumber()
+	dr := Drop{
+		Size:  rand.Uint64(),
+		Pulse: gen.PulseNumber(),
+	}
+	buf, _ := Encode(&dr)
 
-	err := ms.Set(ctx, core.ZeroJetID, jet.Drop{Pulse: 123, Size: 123})
+	dbMock := db.NewDBMock(t)
+	dbMock.GetMock.Return(buf, nil)
+
+	dropStor := NewStorageDB()
+	dropStor.DB = dbMock
+
+	resDr, err := dropStor.ForPulse(ctx, jetID, pn)
+
 	require.NoError(t, err)
-	err = ms.Set(ctx, core.ZeroJetID, jet.Drop{Pulse: 123, Size: 999})
-	require.NoError(t, err)
+	require.Equal(t, dr, resDr)
+}
 
-	drop, err := ms.ForPulse(ctx, core.ZeroJetID, core.PulseNumber(123))
+func TestDropStorageDB_ForPulse_NotExist(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+	jetID := gen.JetID()
+	pn := gen.PulseNumber()
 
-	require.Equal(t, core.PulseNumber(123), drop.Pulse)
-	require.Equal(t, uint64(999), drop.Size)
-	require.Equal(t, 1, len(ms.jets))
+	dbMock := db.NewDBMock(t)
+	dbMock.GetMock.Return(nil, ErrNotFound)
+
+	dropStor := NewStorageDB()
+	dropStor.DB = dbMock
+
+	_, err := dropStor.ForPulse(ctx, jetID, pn)
+
+	require.Error(t, err, ErrNotFound)
+}
+
+func TestDropStorageDB_ForPulse_ProblemsWithDecoding(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+	jetID := gen.JetID()
+	pn := gen.PulseNumber()
+
+	dbMock := db.NewDBMock(t)
+	dbMock.GetMock.Return([]byte{1, 2, 3}, nil)
+
+	dropStor := NewStorageDB()
+	dropStor.DB = dbMock
+
+	_, err := dropStor.ForPulse(ctx, jetID, pn)
+
+	require.Error(t, err)
 }

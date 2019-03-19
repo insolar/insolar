@@ -19,12 +19,10 @@ package storagetest
 import (
 	"context"
 
-	"github.com/insolar/insolar/ledger/storage/drop"
-	"github.com/insolar/insolar/ledger/storage/jet"
-	"github.com/insolar/insolar/ledger/storage/object"
-
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/drop"
+	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/insolar/insolar/testutils"
 )
 
@@ -81,16 +79,17 @@ func AddRandDrop(
 	accessor drop.Accessor,
 	jetID core.RecordID,
 	pulsenum core.PulseNumber,
-) (*jet.Drop, error) {
+) (*drop.Drop, error) {
 
 	hash1 := testutils.RandomID()
 	hash2 := testutils.RandomID()
-	drop := jet.Drop{
+	drop := drop.Drop{
 		Pulse:    pulsenum,
 		PrevHash: hash1[:],
 		Hash:     hash2[:],
+		JetID:    core.JetID(jetID),
 	}
-	err := modifier.Set(ctx, core.JetID(jetID), drop)
+	err := modifier.Set(ctx, drop)
 	if err != nil {
 		return nil, err
 	}

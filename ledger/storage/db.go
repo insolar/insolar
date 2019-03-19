@@ -31,10 +31,8 @@ import (
 const (
 	scopeIDLifeline byte = 1
 	scopeIDRecord   byte = 2
-	scopeIDJetDrop  byte = 3
 	scopeIDPulse    byte = 4
 	scopeIDSystem   byte = 5
-	scopeIDMessage  byte = 6
 	scopeIDBlob     byte = 7
 
 	sysGenesis                byte = 1

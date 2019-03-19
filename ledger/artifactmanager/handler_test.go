@@ -22,25 +22,28 @@ import (
 	"testing"
 
 	"github.com/gojuno/minimock"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
+
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/delegationtoken"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/gen"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/internal/jet"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/db"
 	"github.com/insolar/insolar/ledger/storage/drop"
-	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/network"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"github.com/stretchr/testify/suite"
 )
 
 type handlerSuite struct {
@@ -55,7 +58,7 @@ type handlerSuite struct {
 	pulseTracker  storage.PulseTracker
 	nodeStorage   node.Accessor
 	objectStorage storage.ObjectStorage
-	jetStorage    jet.JetStorage
+	jetStorage    jet.Storage
 	dropModifier  drop.Modifier
 	dropAccessor  drop.Accessor
 }
@@ -75,11 +78,11 @@ func (s *handlerSuite) BeforeTest(suiteName, testName string) {
 	s.cm = &component.Manager{}
 	s.ctx = inslogger.TestContext(s.T())
 
-	db, cleaner := storagetest.TmpDB(s.ctx, s.T())
+	tmpDB, cleaner := storagetest.TmpDB(s.ctx, s.T())
 	s.cleaner = cleaner
-	s.db = db
+	s.db = tmpDB
 	s.scheme = testutils.NewPlatformCryptographyScheme()
-	s.jetStorage = jet.NewJetStorage()
+	s.jetStorage = jet.NewStore()
 	s.nodeStorage = node.NewStorage()
 	s.pulseTracker = storage.NewPulseTracker()
 	s.objectStorage = storage.NewObjectStorage()
@@ -90,6 +93,7 @@ func (s *handlerSuite) BeforeTest(suiteName, testName string) {
 	s.cm.Inject(
 		s.scheme,
 		s.db,
+		db.NewMemoryMockDB(),
 		s.jetStorage,
 		s.nodeStorage,
 		s.pulseTracker,
@@ -942,7 +946,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 
 func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	mc := minimock.NewController(s.T())
-	jetID := testutils.RandomJet()
+	jetID := gen.JetID()
 
 	err := s.pulseTracker.AddPulse(s.ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 1})
 	require.NoError(s.T(), err)
@@ -965,12 +969,12 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	firstIndex := object.Encode(object.Lifeline{
 		LatestState: firstID,
 	})
-	err = s.objectStorage.SetObjectIndex(s.ctx, jetID, firstID, &object.Lifeline{
+	err = s.objectStorage.SetObjectIndex(s.ctx, core.RecordID(jetID), firstID, &object.Lifeline{
 		LatestState: firstID,
 	})
 
 	hotIndexes := &message.HotData{
-		Jet:         *core.NewRecordRef(core.DomainID, jetID),
+		Jet:         *core.NewRecordRef(core.DomainID, core.RecordID(jetID)),
 		PulseNumber: core.FirstPulseNumber,
 		RecentObjects: map[core.RecordID]message.HotIndex{
 			*firstID: {
@@ -982,8 +986,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 			*secondID: {},
 			*thirdID:  {Active: true},
 		},
-		Drop:    jet.Drop{Pulse: core.FirstPulseNumber, Hash: []byte{88}},
-		DropJet: jetID,
+		Drop: drop.Drop{Pulse: core.FirstPulseNumber, Hash: []byte{88}, JetID: jetID},
 	}
 
 	indexMock := recentstorage.NewRecentIndexStorageMock(s.T())
@@ -1031,9 +1034,9 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	require.NoError(s.T(), err)
 	require.Equal(s.T(), res, &reply.OK{})
 
-	savedDrop, err := s.dropAccessor.ForPulse(s.ctx, core.JetID(jetID), core.FirstPulseNumber)
+	savedDrop, err := s.dropAccessor.ForPulse(s.ctx, jetID, core.FirstPulseNumber)
 	require.NoError(s.T(), err)
-	require.Equal(s.T(), jet.Drop{Pulse: core.FirstPulseNumber, Hash: []byte{88}}, savedDrop)
+	require.Equal(s.T(), drop.Drop{Pulse: core.FirstPulseNumber, Hash: []byte{88}, JetID: jetID}, savedDrop)
 
 	indexMock.MinimockFinish()
 	pendingMock.MinimockFinish()
@@ -1120,97 +1123,6 @@ func (s *handlerSuite) TestMessageHandler_HandleValidationCheck() {
 		_, ok := rep.(*reply.OK)
 		assert.True(t, ok)
 	})
-}
-
-func (s *handlerSuite) TestMessageHandler_HandleJetDrop_SaveJet() {
-	// Arrange
-	mc := minimock.NewController(s.T())
-	defer mc.Finish()
-
-	jetID := core.RecordID(*core.NewJetID(0, []byte{2}))
-	msg := message.JetDrop{
-		JetID: jetID,
-	}
-	expectedSetId := jet.IDSet{
-		jetID: struct{}{},
-	}
-
-	certificate := testutils.NewCertificateMock(s.T())
-	certificate.GetRoleMock.Return(core.StaticRoleLightMaterial)
-
-	h := NewMessageHandler(&configuration.Ledger{
-		LightChainLimit: 3,
-	}, certificate)
-	h.JetStorage = s.jetStorage
-	h.Nodes = s.nodeStorage
-	h.DBContext = s.db
-	h.PulseTracker = s.pulseTracker
-	h.ObjectStorage = s.objectStorage
-
-	// Act
-	response, err := h.handleJetDrop(s.ctx, &message.Parcel{Msg: &msg})
-	require.NoError(s.T(), err)
-
-	idSet, err := s.jetStorage.GetJets(s.ctx)
-	require.NoError(s.T(), err)
-	require.NotNil(s.T(), idSet)
-
-	// Assert
-	require.Equal(s.T(), &reply.OK{}, response)
-	for id := range expectedSetId {
-		require.True(s.T(), idSet.Has(id))
-	}
-}
-
-func (s *handlerSuite) TestMessageHandler_HandleJetDrop_SaveJet_ExistingMap() {
-	// Arrange
-	// ctx := inslogger.TestContext(t)
-	mc := minimock.NewController(s.T())
-	// db, cleaner := storagetest.TmpDB(ctx, t)
-	defer mc.Finish()
-
-	jetID := core.RecordID(*core.NewJetID(0, []byte{2}))
-	secondJetID := core.RecordID(*core.NewJetID(0, []byte{3}))
-	msg := message.JetDrop{
-		JetID: jetID,
-	}
-	secondMsg := message.JetDrop{
-		JetID: secondJetID,
-	}
-	expectedSetId := jet.IDSet{
-		jetID:       struct{}{},
-		secondJetID: struct{}{},
-	}
-
-	certificate := testutils.NewCertificateMock(s.T())
-	certificate.GetRoleMock.Return(core.StaticRoleLightMaterial)
-
-	h := NewMessageHandler(&configuration.Ledger{
-		LightChainLimit: 3,
-	}, certificate)
-	h.JetStorage = s.jetStorage
-	h.Nodes = s.nodeStorage
-	h.DBContext = s.db
-	h.PulseTracker = s.pulseTracker
-	h.ObjectStorage = s.objectStorage
-
-	// Act
-	response, err := h.handleJetDrop(s.ctx, &message.Parcel{Msg: &msg})
-	require.NoError(s.T(), err)
-	require.Equal(s.T(), &reply.OK{}, response)
-
-	secondResponse, err := h.handleJetDrop(s.ctx, &message.Parcel{Msg: &secondMsg})
-	require.NoError(s.T(), err)
-	require.Equal(s.T(), &reply.OK{}, secondResponse)
-
-	idSet, err := s.jetStorage.GetJets(s.ctx)
-	require.NoError(s.T(), err)
-	require.NotNil(s.T(), idSet)
-
-	// Assert
-	for id := range expectedSetId {
-		require.True(s.T(), idSet.Has(id))
-	}
 }
 
 func (s *handlerSuite) TestMessageHandler_HandleGetRequest() {

@@ -14,32 +14,27 @@
  *    limitations under the License.
  */
 
-package jet
+package gen
 
 import (
-	"bytes"
+	"testing"
 
-	"github.com/ugorji/go/codec"
+	"github.com/stretchr/testify/require"
+
+	"github.com/insolar/insolar/core"
 )
 
-// Encode serializes jet drop.
-func Encode(drop *Drop) ([]byte, error) {
-	var buf bytes.Buffer
-	enc := codec.NewEncoder(&buf, &codec.CborHandle{})
-	err := enc.Encode(drop)
-	if err != nil {
-		return nil, err
+func TestGen_JetID(t *testing.T) {
+	for i := 0; i < 10000; i++ {
+		jetID := JetID()
+		recID := (*core.RecordID)(&jetID)
+		require.Equalf(t,
+			core.PulseNumberJet, recID.Pulse(),
+			"pulse number should be core.PulseNumberJet. jet: %v", recID.DebugString())
+		require.GreaterOrEqualf(t,
+			uint8(core.JetMaximumDepth), jetID.Depth(),
+			"jet depth %v should be less than maximum value %v. jet: %v",
+			jetID.Depth(), core.JetMaximumDepth, jetID.DebugString(),
+		)
 	}
-	return buf.Bytes(), nil
-}
-
-// Decode deserializes jet drop.
-func Decode(buf []byte) (*Drop, error) {
-	dec := codec.NewDecoder(bytes.NewReader(buf), &codec.CborHandle{})
-	var drop Drop
-	err := dec.Decode(&drop)
-	if err != nil {
-		return nil, err
-	}
-	return &drop, nil
 }

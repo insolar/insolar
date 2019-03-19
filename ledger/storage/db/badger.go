@@ -33,7 +33,7 @@ type BadgerDB struct {
 // NewBadgerDB creates new badger DB instance. Configuration should contain DataDirectory option. Badger will create
 // files there.
 func NewBadgerDB(conf configuration.Ledger) (*BadgerDB, error) {
-	dir, err := filepath.Abs(conf.Storage.DataDirectory)
+	dir, err := filepath.Abs(conf.Storage.DataDirectoryNewDB)
 	if err != nil {
 		return nil, err
 	}

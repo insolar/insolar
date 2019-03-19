@@ -86,7 +86,6 @@ func NewReplicaIter(
 			newit(scopeIDRecord, jetID, start, end),
 			newit(scopeIDBlob, jetID, start, end),
 			newit(scopeIDLifeline, jetID, core.FirstPulseNumber, end),
-			newit(scopeIDJetDrop, jetID, start, end),
 		},
 	}
 }
@@ -195,11 +194,6 @@ func (fc *fetchchunk) fetch(
 
 // NullifyJetInKey nullify jet part in record.
 func NullifyJetInKey(key []byte) {
-	// if we remove jet part from drop, different drops from same pulses collapsed
-	// TODO: figure out how we want to send jet drops on heavy nodes - @Alexander Orlovsky 18.01.2019
-	if key[0] == scopeIDJetDrop {
-		return
-	}
 	for i := 1; i < core.RecordHashSize; i++ {
 		key[i] = 0
 	}

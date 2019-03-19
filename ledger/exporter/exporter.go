@@ -22,22 +22,23 @@ import (
 	"math"
 	"strconv"
 
+	base58 "github.com/jbenet/go-base58"
+	"github.com/pkg/errors"
+	"github.com/ugorji/go/codec"
+
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/internal/jet"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/object"
-	base58 "github.com/jbenet/go-base58"
-	"github.com/pkg/errors"
-	"github.com/ugorji/go/codec"
 )
 
 // Exporter provides methods for fetching data view from storage.
 type Exporter struct {
 	DB            storage.DBContext     `inject:""`
-	JetStorage    jet.JetStorage        `inject:""`
+	JetAccessor   jet.Accessor          `inject:""`
 	ObjectStorage storage.ObjectStorage `inject:""`
 	PulseTracker  storage.PulseTracker  `inject:""`
 	PulseStorage  core.PulseStorage     `inject:""`
@@ -72,17 +73,12 @@ type recordsData map[string]recordData
 type pulseData struct {
 	Records recordsData
 	Pulse   core.Pulse
-	JetID   core.RecordID
+	JetID   core.JetID
 }
 
 // Export returns data view from storage.
 func (e *Exporter) Export(ctx context.Context, fromPulse core.PulseNumber, size int) (*core.StorageExportResult, error) {
 	result := core.StorageExportResult{Data: map[string]interface{}{}}
-
-	jetIDs, err := e.JetStorage.GetJets(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to fetch jets")
-	}
 
 	currentPulse, err := e.PulseStorage.Current(ctx)
 	if err != nil {
@@ -124,13 +120,15 @@ func (e *Exporter) Export(ctx context.Context, fromPulse core.PulseNumber, size 
 		// not all data for this pulse is persisted at this moment
 		// @sergey.morozov 20.01.18 - Blocks are synced to Heavy node with a lag.
 		// We can't reliably predict this lag so we add threshold of N seconds.
-		if pulse.Pulse.PulseNumber >= (currentPulse.PrevPulseNumber - core.PulseNumber(e.cfg.ExportLag)) {
+		pn := pulse.Pulse.PulseNumber
+		if pn >= (currentPulse.PrevPulseNumber - core.PulseNumber(e.cfg.ExportLag)) {
 			iterPulse = nil
 			break
 		}
 
 		var data []*pulseData
-		for jetID := range jetIDs {
+		all := e.JetAccessor.All(ctx, pn)
+		for _, jetID := range all {
 			fetchedData, err := e.exportPulse(ctx, jetID, &pulse.Pulse)
 			if err != nil {
 				return nil, err
@@ -138,7 +136,7 @@ func (e *Exporter) Export(ctx context.Context, fromPulse core.PulseNumber, size 
 			data = append(data, fetchedData)
 		}
 
-		result.Data[strconv.FormatUint(uint64(pulse.Pulse.PulseNumber), 10)] = data
+		result.Data[strconv.FormatUint(uint64(pn), 10)] = data
 
 		iterPulse = pulse.Next
 		counter++
@@ -150,9 +148,9 @@ func (e *Exporter) Export(ctx context.Context, fromPulse core.PulseNumber, size 
 	return &result, nil
 }
 
-func (e *Exporter) exportPulse(ctx context.Context, jetID core.RecordID, pulse *core.Pulse) (*pulseData, error) {
+func (e *Exporter) exportPulse(ctx context.Context, jetID core.JetID, pulse *core.Pulse) (*pulseData, error) {
 	records := recordsData{}
-	err := e.DB.IterateRecordsOnPulse(ctx, jetID, pulse.PulseNumber, func(id core.RecordID, rec object.Record) error {
+	err := e.DB.IterateRecordsOnPulse(ctx, core.RecordID(jetID), pulse.PulseNumber, func(id core.RecordID, rec object.Record) error {
 		pl := e.getPayload(ctx, jetID, rec)
 
 		records[string(base58.Encode(id[:]))] = recordData{
@@ -175,13 +173,13 @@ func (e *Exporter) exportPulse(ctx context.Context, jetID core.RecordID, pulse *
 	return &data, nil
 }
 
-func (e *Exporter) getPayload(ctx context.Context, jetID core.RecordID, rec object.Record) payload {
+func (e *Exporter) getPayload(ctx context.Context, jetID core.JetID, rec object.Record) payload {
 	switch r := rec.(type) {
 	case object.ObjectState:
 		if r.GetMemory() == nil {
 			break
 		}
-		blob, err := e.ObjectStorage.GetBlob(ctx, jetID, r.GetMemory())
+		blob, err := e.ObjectStorage.GetBlob(ctx, core.RecordID(jetID), r.GetMemory())
 		if err != nil {
 			inslogger.FromContext(ctx).Errorf("getPayload failed to GetBlob (jet: %s)", jetID.DebugString())
 			return payload{}

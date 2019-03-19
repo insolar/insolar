@@ -26,11 +26,11 @@ import (
 	"strings"
 	"time"
 
-	pulsewatcher "github.com/insolar/insolar/cmd/pulsewatcher/config"
+	"github.com/insolar/insolar/cmd/pulsewatcher/config"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/genesis"
 	"github.com/spf13/cobra"
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
 )
 
 func check(msg string, err error) {
@@ -41,17 +41,18 @@ func check(msg string, err error) {
 }
 
 const (
-	defaultOutputConfigNameTmpl      = "insolar_%d.yaml"
-	defaultHost                      = "127.0.0.1"
-	defaultJaegerEndPoint            = defaultHost + ":6831"
-	defaultLogLevel                  = "Debug"
-	defaultGenesisFile               = "genesis.yaml"
-	defaultPulsarTemplate            = "scripts/insolard/pulsar_template.yaml"
-	discoveryDataDirectoryTemplate   = "scripts/insolard/discoverynodes/%d/data"
-	discoveryCertificatePathTemplate = "scripts/insolard/discoverynodes/%d/cert.json"
-	nodeDataDirectoryTemplate        = "scripts/insolard/nodes/%d/data"
-	nodeCertificatePathTemplate      = "scripts/insolard/nodes/%d/cert.json"
-	pulsewatcherFileName             = "pulsewatcher.yaml"
+	defaultOutputConfigNameTmpl       = "insolar_%d.yaml"
+	defaultHost                       = "127.0.0.1"
+	defaultJaegerEndPoint             = defaultHost + ":6831"
+	defaultLogLevel                   = "Debug"
+	defaultGenesisFile                = "genesis.yaml"
+	defaultPulsarTemplate             = "scripts/insolard/pulsar_template.yaml"
+	discoveryDataDirectoryTemplate    = "scripts/insolard/discoverynodes/%d/data"
+	discoveryNewDataDirectoryTemplate = "scripts/insolard/discoverynodes/%d/new-data"
+	discoveryCertificatePathTemplate  = "scripts/insolard/discoverynodes/%d/cert.json"
+	nodeDataDirectoryTemplate         = "scripts/insolard/nodes/%d/data"
+	nodeCertificatePathTemplate       = "scripts/insolard/nodes/%d/cert.json"
+	pulsewatcherFileName              = "pulsewatcher.yaml"
 
 	prometheusConfigTmpl = "scripts/prom/server.yml.tmpl"
 	prometheusFileName   = "prometheus.yaml"
@@ -173,6 +174,7 @@ func main() {
 		conf.Log.Formatter = "json"
 		conf.KeysPath = genesisConf.DiscoveryKeysDir + fmt.Sprintf(genesisConf.KeysNameFormat, index)
 		conf.Ledger.Storage.DataDirectory = fmt.Sprintf(discoveryDataDirectoryTemplate, nodeIndex)
+		conf.Ledger.Storage.DataDirectoryNewDB = fmt.Sprintf(discoveryNewDataDirectoryTemplate, nodeIndex)
 		conf.CertificatePath = fmt.Sprintf(discoveryCertificatePathTemplate, nodeIndex)
 
 		discoveryNodesConfigs = append(discoveryNodesConfigs, conf)

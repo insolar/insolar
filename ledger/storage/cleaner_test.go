@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/db"
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
@@ -63,7 +64,7 @@ func (s *cleanerSuite) BeforeTest(suiteName, testName string) {
 	s.cm = &component.Manager{}
 	s.ctx = inslogger.TestContext(s.T())
 
-	db, cleaner := storagetest.TmpDB(s.ctx, s.T())
+	tmpDB, cleaner := storagetest.TmpDB(s.ctx, s.T())
 	s.cleaner = cleaner
 
 	s.objectStorage = storage.NewObjectStorage()
@@ -74,7 +75,8 @@ func (s *cleanerSuite) BeforeTest(suiteName, testName string) {
 
 	s.cm.Inject(
 		platformpolicy.NewPlatformCryptographyScheme(),
-		db,
+		tmpDB,
+		db.NewMemoryMockDB(),
 		s.objectStorage,
 		s.storageCleaner,
 		s.dropAccessor,
@@ -150,20 +152,6 @@ func (s *cleanerSuite) Test_RemoveRecords() {
 			checks = append(checks, recordCase{
 				cleanCase:     recCC,
 				objectStorage: s.objectStorage,
-			})
-
-			_, err = storagetest.AddRandDrop(ctx, s.dropModifier, s.dropAccessor, jetID, pn)
-			require.NoError(t, err)
-			dropCC := cleanCase{
-				rectype:    "drop",
-				id:         recID,
-				jetID:      jetID,
-				pulseNum:   pn,
-				shouldLeft: shouldLeft,
-			}
-			checks = append(checks, dropCase{
-				cleanCase:    dropCC,
-				dropAccessor: s.dropAccessor,
 			})
 		}
 	}
@@ -288,15 +276,5 @@ type recordCase struct {
 
 func (c recordCase) Check(ctx context.Context, t *testing.T) {
 	_, err := c.objectStorage.GetRecord(ctx, c.jetID, c.id)
-	c.check(t, err)
-}
-
-type dropCase struct {
-	cleanCase
-	dropAccessor drop.Accessor
-}
-
-func (c dropCase) Check(ctx context.Context, t *testing.T) {
-	_, err := c.dropAccessor.ForPulse(ctx, core.JetID(c.jetID), c.pulseNum)
 	c.check(t, err)
 }

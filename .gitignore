@@ -57,3 +57,5 @@ coverage.txt
 /ci/local-dev/logs
 /ci/local-dev/manifests/ks/lib
 /scripts/insolard/reusekeys
+cmd/insolard/new-data
+new-data
