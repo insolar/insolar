@@ -39,7 +39,7 @@ const (
 // ObjectState is common object state record.
 type ObjectState interface {
 	// StateID returns state id.
-	State() StateID
+	ID() StateID
 	// GetImage returns state code.
 	GetImage() *core.RecordRef
 	// GetIsPrototype returns state code.
@@ -130,7 +130,7 @@ func (r *ObjectActivateRecord) PrevStateID() *core.RecordID {
 }
 
 // StateID returns state id.
-func (r *ObjectActivateRecord) State() StateID {
+func (r *ObjectActivateRecord) ID() StateID {
 	return StateActivation
 }
 
@@ -153,7 +153,7 @@ func (r *ObjectAmendRecord) PrevStateID() *core.RecordID {
 }
 
 // StateID returns state id.
-func (r *ObjectAmendRecord) State() StateID {
+func (r *ObjectAmendRecord) ID() StateID {
 	return StateAmend
 }
 
@@ -174,7 +174,7 @@ func (r *DeactivationRecord) PrevStateID() *core.RecordID {
 }
 
 // StateID returns state id.
-func (r *DeactivationRecord) State() StateID {
+func (r *DeactivationRecord) ID() StateID {
 	return StateDeactivation
 }
 

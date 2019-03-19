@@ -536,7 +536,7 @@ func (h *MessageHandler) handleGetObject(
 	if !ok {
 		return nil, errors.New("invalid object record")
 	}
-	if state.State() == object.StateDeactivation {
+	if state.ID() == object.StateDeactivation {
 		return &reply.Error{ErrType: reply.ErrDeactivated}, nil
 	}
 
@@ -828,7 +828,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 		idx, err = tx.GetObjectIndex(ctx, jetID, msg.Object.Record(), true)
 		// No index on our node.
 		if err == core.ErrNotFound {
-			if state.State() == object.StateActivation {
+			if state.ID() == object.StateActivation {
 				// We are activating the object. There is no index for it anywhere.
 				idx = &object.Lifeline{State: object.StateUndefined}
 			} else {
@@ -847,7 +847,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 			return err
 		}
 
-		if err = validateState(idx.State, state.State()); err != nil {
+		if err = validateState(idx.State, state.ID()); err != nil {
 			return err
 		}
 
@@ -867,8 +867,8 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 			return err
 		}
 		idx.LatestState = id
-		idx.State = state.State()
-		if state.State() == object.StateActivation {
+		idx.State = state.ID()
+		if state.ID() == object.StateActivation {
 			idx.Parent = state.(*object.ObjectActivateRecord).Parent
 		}
 

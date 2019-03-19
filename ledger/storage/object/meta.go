@@ -32,7 +32,7 @@ func (r *GenesisRecord) PrevStateID() *core.RecordID {
 }
 
 // StateID returns state id.
-func (r *GenesisRecord) State() StateID {
+func (r *GenesisRecord) ID() StateID {
 	return StateActivation
 }
 
