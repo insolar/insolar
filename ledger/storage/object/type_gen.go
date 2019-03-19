@@ -21,7 +21,7 @@ func TypeFromRecord(generic Record) TypeID {
 		return 302
 	case *ActivateRecord:
 		return 303
-	case *ObjectAmendRecord:
+	case *AmendRecord:
 		return 304
 	case *DeactivationRecord:
 		return 305
@@ -49,7 +49,7 @@ func RecordFromType(i TypeID) Record {
 	case 303:
 		return new(ActivateRecord)
 	case 304:
-		return new(ObjectAmendRecord)
+		return new(AmendRecord)
 	case 305:
 		return new(DeactivationRecord)
 	default:
@@ -76,7 +76,7 @@ func (i TypeID) String() string {
 	case 303:
 		return "ActivateRecord"
 	case 304:
-		return "ObjectAmendRecord"
+		return "AmendRecord"
 	case 305:
 		return "DeactivationRecord"
 	default:

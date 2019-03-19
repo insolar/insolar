@@ -854,7 +854,7 @@ func (m *LedgerArtifactManager) updateObject(
 
 	o, err := m.sendUpdateObject(
 		ctx,
-		&object.ObjectAmendRecord{
+		&object.AmendRecord{
 			SideEffectRecord: object.SideEffectRecord{
 				Domain:  domain,
 				Request: request,

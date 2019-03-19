@@ -241,7 +241,7 @@ func recordType(rec object.Record) string {
 		return "TypeCode"
 	case *object.ActivateRecord:
 		return "TypeActivate"
-	case *object.ObjectAmendRecord:
+	case *object.AmendRecord:
 		return "TypeAmend"
 	case *object.DeactivationRecord:
 		return "TypeDeactivate"

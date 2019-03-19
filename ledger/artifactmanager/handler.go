@@ -818,7 +818,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 	switch s := state.(type) {
 	case *object.ActivateRecord:
 		s.Memory = blobID
-	case *object.ObjectAmendRecord:
+	case *object.AmendRecord:
 		s.Memory = blobID
 	}
 

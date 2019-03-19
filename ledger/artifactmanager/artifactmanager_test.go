@@ -464,7 +464,7 @@ func (s *amSuite) TestLedgerArtifactManager_UpdateObject_CreatesCorrectRecord() 
 	assert.Nil(s.T(), err)
 	updateRec, err := os.GetRecord(ctx, jetID, obj.StateID())
 	assert.Nil(s.T(), err)
-	assert.Equal(s.T(), updateRec, &object.ObjectAmendRecord{
+	assert.Equal(s.T(), updateRec, &object.AmendRecord{
 		SideEffectRecord: object.SideEffectRecord{
 			Domain:  domainRef,
 			Request: requestRef,
@@ -502,7 +502,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors(
 	require.NoError(s.T(), err)
 	_, err = os.SetBlob(ctx, jetID, core.GenesisPulse.PulseNumber, []byte{3})
 	require.NoError(s.T(), err)
-	objectAmendID, _ := os.SetRecord(ctx, jetID, core.GenesisPulse.PulseNumber, &object.ObjectAmendRecord{
+	objectAmendID, _ := os.SetRecord(ctx, jetID, core.GenesisPulse.PulseNumber, &object.AmendRecord{
 		SideEffectRecord: object.SideEffectRecord{
 			Domain: domainRef,
 		},

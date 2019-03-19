@@ -35,7 +35,7 @@ var emptyRecordsGens = []recordgen{
 	func() Record { return &ActivateRecord{} },
 	func() Record { return &CodeRecord{} },
 	func() Record { return &DeactivationRecord{} },
-	func() Record { return &ObjectAmendRecord{} },
+	func() Record { return &AmendRecord{} },
 	func() Record { return &TypeRecord{} },
 	func() Record { return &ChildRecord{} },
 	func() Record { return &GenesisRecord{} },

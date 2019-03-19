@@ -139,8 +139,8 @@ func (r *ActivateRecord) WriteHashData(w io.Writer) (int, error) {
 	return w.Write(SerializeRecord(r))
 }
 
-// ObjectAmendRecord is an amendment record for objects.
-type ObjectAmendRecord struct {
+// AmendRecord is an amendment record for objects.
+type AmendRecord struct {
 	SideEffectRecord
 	StateRecord
 
@@ -148,17 +148,17 @@ type ObjectAmendRecord struct {
 }
 
 // PrevStateID returns previous state id.
-func (r *ObjectAmendRecord) PrevStateID() *core.RecordID {
+func (r *AmendRecord) PrevStateID() *core.RecordID {
 	return &r.PrevState
 }
 
 // StateID returns state id.
-func (r *ObjectAmendRecord) ID() StateID {
+func (r *AmendRecord) ID() StateID {
 	return StateAmend
 }
 
 // WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
-func (r *ObjectAmendRecord) WriteHashData(w io.Writer) (int, error) {
+func (r *AmendRecord) WriteHashData(w io.Writer) (int, error) {
 	return w.Write(SerializeRecord(r))
 }
 
