@@ -1,5 +1,5 @@
 /*
- *    Copyright 2019 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ import (
 	rand2 "math/rand"
 	"testing"
 
-	"github.com/google/gofuzz"
+	fuzz "github.com/google/gofuzz"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/gen"
 	"github.com/insolar/insolar/instrumentation/inslogger"
