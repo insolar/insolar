@@ -111,6 +111,13 @@ func (l *ElementList) len() int { // nolint: unused
 	return l.length
 }
 
+// TaskPusher is interface which permits only safe access to slot
+type TaskPusher interface {
+	SinkPush(data interface{}) error
+	SinkPushAll(data []interface{}) error
+	PushSignal(signalType uint32, callback queue.SyncDone) error
+}
+
 // Slot holds info about specific pulse and events for it
 type Slot struct {
 	handlersConfiguration HandlersConfiguration // nolint
@@ -127,6 +134,18 @@ type Slot struct {
 	// we can use slice or just several fields of ElementList, it will be faster but not pretty
 	elementListMap     map[ActivationStatus]*ElementList
 	removeSlotCallback RemoveSlotCallback
+}
+
+func (s *Slot) SinkPush(data interface{}) error {
+	return s.inputQueue.SinkPush(data)
+}
+
+func (s *Slot) SinkPushAll(data []interface{}) error {
+	return s.inputQueue.SinkPushAll(data)
+}
+
+func (s *Slot) PushSignal(signalType uint32, callback queue.SyncDone) error {
+	return s.inputQueue.PushSignal(signalType, callback)
 }
 
 // SlotStateMachine represents state machine of slot itself
