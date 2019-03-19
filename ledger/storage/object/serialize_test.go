@@ -32,7 +32,7 @@ func TestSerializeDeserializeRecord(t *testing.T) {
 	cs := platformpolicy.NewPlatformCryptographyScheme()
 
 	rec := ObjectActivateRecord{
-		ObjectStateRecord: ObjectStateRecord{
+		StateRecord: StateRecord{
 			Memory: CalculateIDForBlob(cs, core.GenesisPulse.PulseNumber, []byte{1, 2, 3}),
 		},
 	}

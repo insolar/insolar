@@ -170,8 +170,8 @@ func getTestData(s *amSuite) (
 	handler := MessageHandler{
 		replayHandlers:             map[core.MessageType]core.MessageHandler{},
 		PlatformCryptographyScheme: s.scheme,
-		conf:        &configuration.Ledger{LightChainLimit: 3, PendingRequestsLimit: 10},
-		certificate: certificate,
+		conf:                       &configuration.Ledger{LightChainLimit: 3, PendingRequestsLimit: 10},
+		certificate:                certificate,
 	}
 
 	handler.Nodes = s.nodeStorage
@@ -365,7 +365,7 @@ func (s *amSuite) TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord(
 			Domain:  domainRef,
 			Request: objRef,
 		},
-		ObjectStateRecord: object.ObjectStateRecord{
+		StateRecord: object.StateRecord{
 			Memory:      object.CalculateIDForBlob(am.PlatformCryptographyScheme, core.GenesisPulse.PulseNumber, memory),
 			Image:       *codeRef,
 			IsPrototype: false,
@@ -469,7 +469,7 @@ func (s *amSuite) TestLedgerArtifactManager_UpdateObject_CreatesCorrectRecord() 
 			Domain:  domainRef,
 			Request: requestRef,
 		},
-		ObjectStateRecord: object.ObjectStateRecord{
+		StateRecord: object.StateRecord{
 			Memory:      object.CalculateIDForBlob(am.PlatformCryptographyScheme, core.GenesisPulse.PulseNumber, memory),
 			Image:       *prototype,
 			IsPrototype: false,
@@ -493,7 +493,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors(
 			SideEffectRecord: object.SideEffectRecord{
 				Domain: domainRef,
 			},
-			ObjectStateRecord: object.ObjectStateRecord{
+			StateRecord: object.StateRecord{
 				Memory: object.CalculateIDForBlob(am.PlatformCryptographyScheme, core.GenesisPulse.PulseNumber, []byte{3}),
 			},
 			Parent: *parentRef,
@@ -506,7 +506,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors(
 		SideEffectRecord: object.SideEffectRecord{
 			Domain: domainRef,
 		},
-		ObjectStateRecord: object.ObjectStateRecord{
+		StateRecord: object.StateRecord{
 			Memory: object.CalculateIDForBlob(am.PlatformCryptographyScheme, core.GenesisPulse.PulseNumber, []byte{4}),
 			Image:  *prototypeRef,
 		},
@@ -594,7 +594,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetChildren() {
 			SideEffectRecord: object.SideEffectRecord{
 				Domain: domainRef,
 			},
-			ObjectStateRecord: object.ObjectStateRecord{
+			StateRecord: object.StateRecord{
 				Memory: object.CalculateIDForBlob(am.PlatformCryptographyScheme, core.GenesisPulse.PulseNumber, []byte{0}),
 			},
 		})
@@ -813,8 +813,8 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterValidation() {
 	handler := MessageHandler{
 		replayHandlers:             map[core.MessageType]core.MessageHandler{},
 		PlatformCryptographyScheme: s.scheme,
-		conf:        &configuration.Ledger{LightChainLimit: 3, PendingRequestsLimit: 10},
-		certificate: certificate,
+		conf:                       &configuration.Ledger{LightChainLimit: 3, PendingRequestsLimit: 10},
+		certificate:                certificate,
 	}
 
 	handler.Bus = mb

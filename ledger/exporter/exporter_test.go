@@ -145,7 +145,7 @@ func (s *exporterSuite) TestExporter_Export() {
 	require.NoError(s.T(), err)
 
 	objectID, err := s.objectStorage.SetRecord(s.ctx, core.RecordID(s.jetID), Pulse10, &object.ObjectActivateRecord{
-		ObjectStateRecord: object.ObjectStateRecord{
+		StateRecord: object.StateRecord{
 			Memory: blobID,
 		},
 		IsDelegate: true,
@@ -233,7 +233,7 @@ func (s *exporterSuite) TestExporter_ExportGetBlobFailed() {
 	}
 
 	_, err := s.objectStorage.SetRecord(s.ctx, core.RecordID(s.jetID), core.FirstPulseNumber+10, &object.ObjectActivateRecord{
-		ObjectStateRecord: object.ObjectStateRecord{
+		StateRecord: object.StateRecord{
 			Memory: &core.RecordID{},
 		},
 		IsDelegate: true,

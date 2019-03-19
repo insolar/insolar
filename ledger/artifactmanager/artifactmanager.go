@@ -767,7 +767,7 @@ func (m *LedgerArtifactManager) activateObject(
 				Domain:  domain,
 				Request: obj,
 			},
-			ObjectStateRecord: object.ObjectStateRecord{
+			StateRecord: object.StateRecord{
 				Memory:      object.CalculateIDForBlob(m.PlatformCryptographyScheme, currentPN, memory),
 				Image:       prototype,
 				IsPrototype: isPrototype,
@@ -859,7 +859,7 @@ func (m *LedgerArtifactManager) updateObject(
 				Domain:  domain,
 				Request: request,
 			},
-			ObjectStateRecord: object.ObjectStateRecord{
+			StateRecord: object.StateRecord{
 				Image:       *image,
 				IsPrototype: obj.IsPrototype(),
 			},

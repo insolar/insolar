@@ -93,32 +93,32 @@ func (r *CodeRecord) WriteHashData(w io.Writer) (int, error) {
 	return w.Write(SerializeRecord(r))
 }
 
-// ObjectStateRecord is a record containing data for an object state.
-type ObjectStateRecord struct {
+// StateRecord is a record containing data for an object state.
+type StateRecord struct {
 	Memory      *core.RecordID
 	Image       core.RecordRef // If code or prototype object reference.
 	IsPrototype bool           // If true, Image should point to a prototype object. Otherwise to a code.
 }
 
 // GetMemory returns state memory.
-func (r *ObjectStateRecord) GetMemory() *core.RecordID {
+func (r *StateRecord) GetMemory() *core.RecordID {
 	return r.Memory
 }
 
 // GetImage returns state code.
-func (r *ObjectStateRecord) GetImage() *core.RecordRef {
+func (r *StateRecord) GetImage() *core.RecordRef {
 	return &r.Image
 }
 
 // GetIsPrototype returns state code.
-func (r *ObjectStateRecord) GetIsPrototype() bool {
+func (r *StateRecord) GetIsPrototype() bool {
 	return r.IsPrototype
 }
 
 // ObjectActivateRecord is produced when we instantiate new object from an available prototype.
 type ObjectActivateRecord struct {
 	SideEffectRecord
-	ObjectStateRecord
+	StateRecord
 
 	Parent     core.RecordRef
 	IsDelegate bool
@@ -142,7 +142,7 @@ func (r *ObjectActivateRecord) WriteHashData(w io.Writer) (int, error) {
 // ObjectAmendRecord is an amendment record for objects.
 type ObjectAmendRecord struct {
 	SideEffectRecord
-	ObjectStateRecord
+	StateRecord
 
 	PrevState core.RecordID
 }
