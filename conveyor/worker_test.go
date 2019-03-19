@@ -36,7 +36,7 @@ var testPulseStates = []constant.PulseState{constant.Future, constant.Present, c
 var testPulseStatesWithoutFuture = []constant.PulseState{constant.Present, constant.Past, constant.Antique}
 
 func makeSlotAndWorker(pulseState constant.PulseState, pulseNumber core.PulseNumber) (*Slot, worker) {
-	slot := NewSlot(pulseState, pulseNumber, nil, false)
+	slot := newSlot(pulseState, pulseNumber, nil)
 	worker := newWorker(slot)
 	slot.removeSlotCallback = func(number core.PulseNumber) {}
 
@@ -74,7 +74,7 @@ func Test_processSignalsWorking_EmptyInput(t *testing.T) {
 
 	for _, tt := range testPulseStates {
 		t.Run(tt.String(), func(t *testing.T) {
-			slot, worker := makeSlotAndWorker(constant.Antique, 22)
+			slot, worker := makeSlotAndWorker(tt, 22)
 
 			oldSlot := *slot
 			require.Equal(t, 0, worker.processSignalsWorking([]queue.OutputElement{}))
@@ -867,7 +867,6 @@ func Test_readResponseQueue_BadTypeInResponseQueue_Future(t *testing.T) {
 	slot.responseQueue.SinkPush(76576)
 	require.Empty(t, worker.postponedResponses)
 	areSlotStatesEqual(&oldSlot, slot, t, false)
-
 }
 
 func Test_readResponseQueue_BadElementIdInResponse(t *testing.T) {
