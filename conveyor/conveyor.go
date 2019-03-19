@@ -220,19 +220,11 @@ func (p *pulseWithCallback) SetResult(result interface{}) {
 }
 
 type waitGroupSyncDone struct {
-	wg sync.WaitGroup
+	sync.WaitGroup
 }
 
 func (sd *waitGroupSyncDone) SetResult(result interface{}) {
-	sd.wg.Done()
-}
-
-func (sd *waitGroupSyncDone) Wait() {
-	sd.wg.Wait()
-}
-
-func (sd *waitGroupSyncDone) Add(num int) {
-	sd.wg.Add(num)
+	sd.Done()
 }
 
 // ActivatePulse activates conveyor with prepared pulse
