@@ -150,7 +150,7 @@ func displayResultsJSON(results [][]string, ready bool, buffer *bytes.Buffer) {
 
 	jsonDoc, err := json.MarshalIndent(doc, "", "    ")
 	if err != nil {
-		panic(err) // shoukd never happen
+		panic(err) // should never happen
 	}
 	fmt.Print(string(jsonDoc))
 	fmt.Print("\n\n")
