@@ -63,6 +63,7 @@ type Conveyor interface {
 }
 
 // ConveyorFuture is pending for response from conveyor
+//go:generate minimock -i github.com/insolar/insolar/core.ConveyorFuture -o ../testutils -s _mock.go
 type ConveyorFuture interface {
 	// Result is a channel to listen for future result.
 	Result() <-chan Reply
