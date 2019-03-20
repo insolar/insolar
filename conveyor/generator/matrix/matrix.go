@@ -17,30 +17,31 @@
 package matrix
 
 import (
-    "github.com/insolar/insolar/conveyor/generator/common"
+    "github.com/insolar/insolar/conveyor/interfaces/statemachine"
     "github.com/insolar/insolar/conveyor/generator/state_machines/sample"
     
 )
 
 type Matrix struct {
-    matrix  [][3]common.StateMachine
+    matrix  [][3]statemachine.StateMachine
 }
 
 type MachineType int
 
 const (
     TestStateMachine MachineType = iota + 1
+    InitialEvent
 )
 
 func NewMatrix() *Matrix {
     m := Matrix{}
     m.matrix = append(m.matrix,
-        [3]common.StateMachine{ {}, {}, {} },
+        [3]statemachine.StateMachine{ },
         sample.RawTestStateMachineFactory(),
         )
     return &m
 }
 
-func (m *Matrix) GetStateMachinesByType(mType MachineType) [3]common.StateMachine {
+func (m *Matrix) GetStateMachinesByType(mType MachineType) [3]statemachine.StateMachine {
     return m.matrix[int(mType)]
 }

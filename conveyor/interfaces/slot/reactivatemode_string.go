@@ -4,6 +4,16 @@ package slot
 
 import "strconv"
 
+func _() {
+	// An "invalid array index" compiler error signifies that the constant values have changed.
+	// Re-run the stringer command to generate them again.
+	var x [1]struct{}
+	_ = x[Empty-0]
+	_ = x[Response-1]
+	_ = x[Tick-2]
+	_ = x[SeqHead-3]
+}
+
 const _ReactivateMode_name = "EmptyResponseTickSeqHead"
 
 var _ReactivateMode_index = [...]uint8{0, 5, 13, 17, 24}

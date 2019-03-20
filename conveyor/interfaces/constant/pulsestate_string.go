@@ -4,6 +4,17 @@ package constant
 
 import "strconv"
 
+func _() {
+	// An "invalid array index" compiler error signifies that the constant values have changed.
+	// Re-run the stringer command to generate them again.
+	var x [1]struct{}
+	_ = x[Unallocated-0]
+	_ = x[Future-1]
+	_ = x[Present-2]
+	_ = x[Past-3]
+	_ = x[Antique-4]
+}
+
 const _PulseState_name = "UnallocatedFuturePresentPastAntique"
 
 var _PulseState_index = [...]uint8{0, 11, 17, 24, 28, 35}
