@@ -85,23 +85,23 @@ func Raw{{$machine.Name}}Factory() [3]statemachine.StateMachine {
     },{{end}}{{end}})
 
 
-    sm0 := common.StateMachine{
-        ID:     m.cleanStateMachine.(TestStateMachine).GetTypeID(),
+    smFuture := common.StateMachine{
+        ID:     m.cleanStateMachine.({{$machine.Name}}).GetTypeID(),
         States: x[0],
     }
 
-    sm1 := common.StateMachine{
-        ID:     m.cleanStateMachine.(TestStateMachine).GetTypeID(),
+    smPresent := common.StateMachine{
+        ID:     m.cleanStateMachine.({{$machine.Name}}).GetTypeID(),
         States: x[1],
     }
 
-    sm2 := common.StateMachine{
-        ID:     m.cleanStateMachine.(TestStateMachine).GetTypeID(),
+    smPast := common.StateMachine{
+        ID:     m.cleanStateMachine.({{$machine.Name}}).GetTypeID(),
         States: x[2],
     }
 
     return [3]statemachine.StateMachine{
-        &sm0, &sm1, &sm2,
+        &smFuture, &smPresent, &smPast,
     }
 }
 
