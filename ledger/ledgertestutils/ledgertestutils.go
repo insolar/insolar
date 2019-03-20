@@ -18,6 +18,7 @@ package ledgertestutils
 
 import (
 	"context"
+	networknode "github.com/insolar/insolar/network/node"
 	"testing"
 
 	"github.com/gojuno/minimock"
@@ -98,7 +99,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 		}
 	}
 	if c.NodeNetwork == nil {
-		c.NodeNetwork = nodenetwork.NewNodeKeeper(nodenetwork.NewNode(core.RecordRef{}, core.StaticRoleLightMaterial, nil, "127.0.0.1:5432", ""))
+		c.NodeNetwork = nodenetwork.NewNodeKeeper(networknode.NewNode(core.RecordRef{}, core.StaticRoleLightMaterial, nil, "127.0.0.1:5432", ""))
 	}
 
 	certificate := testutils.NewCertificateMock(t)

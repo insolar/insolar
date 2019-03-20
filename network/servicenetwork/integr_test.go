@@ -39,6 +39,7 @@ package servicenetwork
 import (
 	"context"
 	"fmt"
+	"github.com/insolar/insolar/network/node"
 	"sync"
 	"testing"
 	"time"
@@ -47,7 +48,6 @@ import (
 	"github.com/insolar/insolar/consensus/phases"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )
@@ -92,7 +92,7 @@ func (s *testSuite) TestNodeConnect() {
 func (s *testSuite) TestNodeConnectInvalidVersion() {
 	testNode := s.newNetworkNode("testNode")
 	s.preInitNode(testNode)
-	testNode.serviceNetwork.NodeKeeper.GetOrigin().(nodenetwork.MutableNode).SetVersion("ololo")
+	testNode.serviceNetwork.NodeKeeper.GetOrigin().(node.MutableNode).SetVersion("ololo")
 	s.InitNode(testNode)
 	err := testNode.componentManager.Start(s.fixture().ctx)
 	assert.Error(s.T(), err)

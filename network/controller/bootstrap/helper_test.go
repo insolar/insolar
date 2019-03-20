@@ -36,6 +36,7 @@ package bootstrap
 
 import (
 	"crypto"
+	"github.com/insolar/insolar/network/node"
 	"testing"
 
 	"github.com/insolar/insolar/core"
@@ -46,13 +47,13 @@ import (
 )
 
 func newTestNode() core.Node {
-	return nodenetwork.NewNode(testutils.RandomRef(), core.StaticRoleUnknown, nil, "127.0.0.1:5432", "")
+	return node.NewNode(testutils.RandomRef(), core.StaticRoleUnknown, nil, "127.0.0.1:5432", "")
 }
 
 func newTestNodeWithShortID(id core.ShortNodeID) core.Node {
-	node := newTestNode()
-	node.(nodenetwork.MutableNode).SetShortID(id)
-	return node
+	n := newTestNode()
+	n.(node.MutableNode).SetShortID(id)
+	return n
 }
 
 func TestCorrectShortIDCollision(t *testing.T) {

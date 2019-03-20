@@ -32,7 +32,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package nodenetwork
+package node
 
 import (
 	"crypto"
@@ -107,7 +107,7 @@ func newMutableNode(
 	publicKey crypto.PublicKey,
 	address, version string) MutableNode {
 
-	consensusAddress, err := incrementPort(address)
+	consensusAddress, err := IncrementPort(address)
 	if err != nil {
 		panic(err)
 	}
@@ -199,8 +199,8 @@ func ClaimToNode(version string, claim *packets.NodeJoinClaim) (core.Node, error
 	return node, nil
 }
 
-// incrementPort increments port number if it not equals 0
-func incrementPort(address string) (string, error) {
+// IncrementPort increments port number if it not equals 0
+func IncrementPort(address string) (string, error) {
 	parts := strings.Split(address, ":")
 	if len(parts) != 2 {
 		return address, errors.New("failed to get port from address " + address)

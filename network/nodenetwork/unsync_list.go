@@ -35,6 +35,7 @@
 package nodenetwork
 
 import (
+	"github.com/insolar/insolar/network/node"
 	"sort"
 
 	consensus "github.com/insolar/insolar/consensus/packets"
@@ -45,9 +46,9 @@ import (
 
 func copyActiveNodes(nodes []core.Node) map[core.RecordRef]core.Node {
 	result := make(map[core.RecordRef]core.Node, len(nodes))
-	for _, node := range nodes {
-		node.(MutableNode).ChangeState()
-		result[node.ID()] = node
+	for _, n := range nodes {
+		n.(node.MutableNode).ChangeState()
+		result[n.ID()] = n
 	}
 	return result
 }
@@ -178,7 +179,7 @@ func ApplyClaims(ul network.UnsyncList, claims []consensus.ReferendumClaim) erro
 		}
 
 		// TODO: fix version
-		node, err := ClaimToNode("", &c.NodeJoinClaim)
+		node, err := node.ClaimToNode("", &c.NodeJoinClaim)
 		if err != nil {
 			return errors.Wrap(err, "[ AddClaims ] failed to convert Claim -> Node")
 		}

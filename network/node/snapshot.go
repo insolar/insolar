@@ -32,42 +32,71 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package nodenetwork
+package node
 
 import (
-	"testing"
-
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/assert"
 )
 
-func TestGetSnapshotActiveNodes(t *testing.T) {
-	m := make(map[core.RecordRef]core.Node)
+type ListType int
 
-	node := newMutableNode(testutils.RandomRef(), core.StaticRoleVirtual, nil, "127.0.0.1:0", "")
-	node.SetState(core.NodeReady)
-	m[node.ID()] = node
+const (
+	ListWorking ListType = iota
+	ListIdle
+	ListLeaving
+	ListSuspected
+	ListJoiner
 
-	node2 := newMutableNode(testutils.RandomRef(), core.StaticRoleVirtual, nil, "127.0.0.1:0", "")
-	node2.SetState(core.NodePending)
-	m[node2.ID()] = node2
+	ListLength
+)
 
-	node3 := newMutableNode(testutils.RandomRef(), core.StaticRoleVirtual, nil, "127.0.0.1:0", "")
-	node3.SetState(core.NodeLeaving)
-	m[node3.ID()] = node3
+type Snapshot struct {
+	pulse core.PulseNumber
+	state core.NetworkState
 
-	node4 := newMutableNode(testutils.RandomRef(), core.StaticRoleVirtual, nil, "127.0.0.1:0", "")
-	node4.SetState(core.NodeUndefined)
-	m[node4.ID()] = node4
+	nodeList [ListLength][]core.Node
+}
 
-	snapshot := NewSnapshot(core.FirstPulseNumber, m)
-	accessor := NewAccessor(snapshot)
-	assert.Equal(t, 4, len(accessor.GetActiveNodes()))
-	assert.Equal(t, 1, len(accessor.GetWorkingNodes()))
-	assert.NotNil(t, accessor.GetWorkingNode(node.ID()))
-	assert.Nil(t, accessor.GetWorkingNode(node2.ID()))
-	assert.NotNil(t, accessor.GetActiveNode(node2.ID()))
-	assert.NotNil(t, accessor.GetActiveNode(node3.ID()))
-	assert.NotNil(t, accessor.GetActiveNode(node4.ID()))
+func (s *Snapshot) GetPulse() core.PulseNumber {
+	return s.pulse
+}
+
+// NewSnapshot create new node for pulse.
+func NewSnapshot(number core.PulseNumber, nodes map[core.RecordRef]core.Node) *Snapshot {
+	return &Snapshot{
+		pulse: number,
+		// TODO: pass actual state
+		state:    core.NoNetworkState,
+		nodeList: splitNodes(nodes),
+	}
+}
+
+// splitNodes temporary method to create node lists. Will be replaced by special function that will take in count
+// previous node and approved claims.
+func splitNodes(nodes map[core.RecordRef]core.Node) [ListLength][]core.Node {
+	var result [ListLength][]core.Node
+	for i := 0; i < int(ListLength); i++ {
+		result[i] = make([]core.Node, 0)
+	}
+	for _, node := range nodes {
+		listType := nodeStateToListType(node.GetState())
+		if listType == ListLength {
+			continue
+		}
+		result[listType] = append(result[listType], node)
+	}
+	return result
+}
+
+func nodeStateToListType(state core.NodeState) ListType {
+	switch state {
+	case core.NodeReady:
+		return ListWorking
+	case core.NodePending:
+		return ListJoiner
+	case core.NodeUndefined, core.NodeLeaving:
+		return ListLeaving
+	}
+	// special case for no match
+	return ListLength
 }

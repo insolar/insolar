@@ -36,6 +36,7 @@ package nodenetwork
 
 import (
 	"context"
+	"github.com/insolar/insolar/network/node"
 	"sync"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -61,12 +62,12 @@ func NewNodeNetwork(configuration configuration.HostNetwork, certificate core.Ce
 	}
 	nodeKeeper := NewNodeKeeper(origin)
 	if !utils.OriginIsDiscovery(certificate) {
-		origin.(MutableNode).SetState(core.NodePending)
+		origin.(node.MutableNode).SetState(core.NodePending)
 	}
 	return nodeKeeper, nil
 }
 
-func createOrigin(configuration configuration.HostNetwork, certificate core.Certificate) (MutableNode, error) {
+func createOrigin(configuration configuration.HostNetwork, certificate core.Certificate) (core.Node, error) {
 	publicAddress, err := resolveAddress(configuration)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to resolve public address")
@@ -78,7 +79,7 @@ func createOrigin(configuration configuration.HostNetwork, certificate core.Cert
 		role = core.StaticRoleLightMaterial
 	}
 
-	return newMutableNode(
+	return node.NewNode(
 		*certificate.GetNodeRef(),
 		role,
 		certificate.GetPublicKey(),
@@ -121,8 +122,8 @@ type nodekeeper struct {
 	cloudHash     []byte
 
 	activeLock sync.RWMutex
-	snapshot   *Snapshot
-	accessor   *Accessor
+	snapshot   *node.Snapshot
+	accessor   *node.Accessor
 
 	syncLock   sync.Mutex
 	syncNodes  []core.Node
@@ -142,8 +143,8 @@ func (nk *nodekeeper) SetInitialSnapshot(nodes []core.Node) {
 	for _, node := range nodes {
 		nodesMap[node.ID()] = node
 	}
-	nk.snapshot = NewSnapshot(core.FirstPulseNumber, nodesMap)
-	nk.accessor = NewAccessor(nk.snapshot)
+	nk.snapshot = node.NewSnapshot(core.FirstPulseNumber, nodesMap)
+	nk.accessor = node.NewAccessor(nk.snapshot)
 	nk.syncNodes = nk.accessor.GetActiveNodes()
 }
 
@@ -189,7 +190,7 @@ func (nk *nodekeeper) Wipe(isDiscovery bool) {
 	nk.syncNodes = make([]core.Node, 0)
 	nk.syncClaims = make([]consensus.ReferendumClaim, 0)
 	if isDiscovery {
-		nk.origin.(MutableNode).SetState(core.NodeReady)
+		nk.origin.(node.MutableNode).SetState(core.NodeReady)
 	}
 	nk.syncLock.Unlock()
 }
@@ -294,14 +295,14 @@ func (nk *nodekeeper) Sync(ctx context.Context, nodes []core.Node, claims []cons
 }
 
 // syncOrigin synchronize data in origin node with node from active list in case when they are different objects
-func (nk *nodekeeper) syncOrigin(node core.Node) {
-	if nk.origin == node {
+func (nk *nodekeeper) syncOrigin(n core.Node) {
+	if nk.origin == n {
 		return
 	}
-	mutableOrigin := nk.origin.(MutableNode)
-	mutableOrigin.SetState(node.GetState())
-	mutableOrigin.SetLeavingETA(node.LeavingETA())
-	mutableOrigin.SetShortID(node.ShortID())
+	mutableOrigin := nk.origin.(node.MutableNode)
+	mutableOrigin.SetState(n.GetState())
+	mutableOrigin.SetLeavingETA(n.LeavingETA())
+	mutableOrigin.SetShortID(n.ShortID())
 }
 
 func (nk *nodekeeper) MoveSyncToActive(ctx context.Context) error {
@@ -319,8 +320,8 @@ func (nk *nodekeeper) MoveSyncToActive(ctx context.Context) error {
 	inslogger.FromContext(ctx).Infof("[ MoveSyncToActive ] New active list confirmed. Active list size: %d -> %d",
 		len(nk.accessor.GetActiveNodes()), len(mergeResult.ActiveList))
 
-	nk.snapshot = NewSnapshot(core.PulseNumber(0), mergeResult.ActiveList)
-	nk.accessor = NewAccessor(nk.snapshot)
+	nk.snapshot = node.NewSnapshot(core.PulseNumber(0), mergeResult.ActiveList)
+	nk.accessor = node.NewAccessor(nk.snapshot)
 	stats.Record(ctx, consensusMetrics.ActiveNodes.M(int64(len(nk.accessor.GetActiveNodes()))))
 	nk.consensusInfo.flush(mergeResult.NodesJoinedDuringPrevPulse)
 	return nil

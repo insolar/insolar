@@ -37,6 +37,7 @@ package phases
 import (
 	"context"
 	"crypto"
+	"github.com/insolar/insolar/network/node"
 	"testing"
 	"time"
 
@@ -44,7 +45,6 @@ import (
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/testutils"
 	networkUtils "github.com/insolar/insolar/testutils/network"
 	"github.com/stretchr/testify/suite"
@@ -105,7 +105,7 @@ func (s *communicatorSuite) SetupTest() {
 }
 
 func makeRandomNode() core.Node {
-	return nodenetwork.NewNode(testutils.RandomRef(), core.StaticRoleUnknown, nil, "127.0.0.1:5432", "")
+	return node.NewNode(testutils.RandomRef(), core.StaticRoleUnknown, nil, "127.0.0.1:5432", "")
 }
 
 func (s *communicatorSuite) TestExchangeData() {

@@ -17,15 +17,15 @@
 package manager
 
 import (
+	"github.com/insolar/insolar/network/node"
 	"testing"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/stretchr/testify/assert"
 )
 
 func newActiveNode(ver string) core.Node {
-	return nodenetwork.NewNode(core.RecordRef{255}, core.StaticRoleUnknown, nil, "127.0.0.1:5432", ver)
+	return node.NewNode(core.RecordRef{255}, core.StaticRoleUnknown, nil, "127.0.0.1:5432", ver)
 }
 
 func TestGetMapOfVersions(t *testing.T) {

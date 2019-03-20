@@ -37,6 +37,7 @@ package nodenetwork
 import (
 	consensus "github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/network/node"
 	"github.com/pkg/errors"
 )
 
@@ -70,20 +71,20 @@ func mergeClaim(nodes map[core.RecordRef]core.Node, claim consensus.ReferendumCl
 	case *consensus.NodeJoinClaim:
 		isJoinClaim = true
 		// TODO: fix version
-		node, err := ClaimToNode("", t)
+		n, err := node.ClaimToNode("", t)
 		if err != nil {
 			return isJoinClaim, errors.Wrap(err, "[ mergeClaim ] failed to convert Claim -> Node")
 		}
-		node.(MutableNode).SetState(core.NodePending)
-		nodes[node.ID()] = node
+		n.(node.MutableNode).SetState(core.NodePending)
+		nodes[n.ID()] = n
 	case *consensus.NodeLeaveClaim:
 		if nodes[t.NodeID] == nil {
 			break
 		}
 
-		node := nodes[t.NodeID].(MutableNode)
-		if t.ETA == 0 || node.GetState() != core.NodeLeaving {
-			node.SetLeavingETA(t.ETA)
+		n := nodes[t.NodeID].(node.MutableNode)
+		if t.ETA == 0 || n.GetState() != core.NodeLeaving {
+			n.SetLeavingETA(t.ETA)
 		}
 	}
 
