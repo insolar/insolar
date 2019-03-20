@@ -41,9 +41,20 @@ import (
 
 type BitsetMapper struct {
 	length     int
-	origin     insolar.NetworkNode
 	refToIndex map[insolar.Reference]int
 	indexToRef map[int]insolar.Reference
+}
+
+func NewBitsetMapper(activeNodesSorted []insolar.NetworkNode, length int) *BitsetMapper {
+	bm := &BitsetMapper{
+		length:     length,
+		refToIndex: make(map[insolar.Reference]int),
+		indexToRef: make(map[int]insolar.Reference),
+	}
+	for i, node := range activeNodesSorted {
+		bm.AddNode(node, uint16(i))
+	}
+	return bm
 }
 
 func (bm *BitsetMapper) AddNode(node insolar.NetworkNode, bitsetIndex uint16) {

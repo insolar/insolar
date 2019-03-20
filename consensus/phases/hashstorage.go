@@ -44,6 +44,13 @@ type HashStorage struct {
 	ghs    map[insolar.Reference]packets.GlobuleHashSignature
 }
 
+func NewHashStorage() *HashStorage {
+	return &HashStorage{
+		proofs: make(map[insolar.Reference]*packets.NodePulseProof),
+		ghs:    make(map[insolar.Reference]packets.GlobuleHashSignature),
+	}
+}
+
 func (hs *HashStorage) GetGlobuleHashSignature(ref insolar.Reference) (packets.GlobuleHashSignature, bool) {
 	ghs, ok := hs.ghs[ref]
 	return ghs, ok
