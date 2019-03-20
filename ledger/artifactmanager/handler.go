@@ -1068,7 +1068,7 @@ func (h *MessageHandler) handleGetObjectIndex(ctx context.Context, parcel core.P
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
 
-	buf := object.Encode(*idx)
+	buf := object.EncodeIndex(*idx)
 
 	return &reply.ObjectIndex{Index: buf}, nil
 }
@@ -1137,7 +1137,7 @@ func (h *MessageHandler) saveIndexFromHeavy(
 	if !ok {
 		return nil, fmt.Errorf("failed to fetch object index: unexpected reply type %T (reply=%+v)", genericReply, genericReply)
 	}
-	idx := object.Decode(rep.Index)
+	idx := object.DecodeIndex(rep.Index)
 
 	err = h.ObjectStorage.SetObjectIndex(ctx, jetID, obj.Record(), &idx)
 	if err != nil {
@@ -1236,7 +1236,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel core.Parce
 
 	indexStorage := h.RecentStorageProvider.GetIndexStorage(ctx, jetID)
 	for id, meta := range msg.RecentObjects {
-		decodedIndex := object.Decode(meta.Index)
+		decodedIndex := object.DecodeIndex(meta.Index)
 
 		err = h.ObjectStorage.SetObjectIndex(ctx, jetID, &id, &decodedIndex)
 		if err != nil {

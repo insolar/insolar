@@ -154,7 +154,7 @@ func TestCloneObjectLifeline(t *testing.T) {
 
 	currentIdx := lifeline()
 
-	clonedIdx := Clone(currentIdx)
+	clonedIdx := CloneIndex(currentIdx)
 
 	assert.Equal(t, currentIdx, clonedIdx)
 	assert.False(t, &currentIdx == &clonedIdx)

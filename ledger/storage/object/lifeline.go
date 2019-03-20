@@ -55,8 +55,8 @@ type Lifeline struct {
 	JetID               insolar.JetID
 }
 
-// Encode converts lifeline index into binary format.
-func Encode(index Lifeline) []byte {
+// EncodeIndex converts lifeline index into binary format.
+func EncodeIndex(index Lifeline) []byte {
 	buff := bytes.NewBuffer(nil)
 	enc := codec.NewEncoder(buff, &codec.CborHandle{})
 	enc.MustEncode(index)
@@ -64,16 +64,16 @@ func Encode(index Lifeline) []byte {
 	return buff.Bytes()
 }
 
-// Decode converts byte array into lifeline index struct.
-func Decode(buff []byte) (index Lifeline) {
+// DecodeIndex converts byte array into lifeline index struct.
+func DecodeIndex(buff []byte) (index Lifeline) {
 	dec := codec.NewDecoderBytes(buff, &codec.CborHandle{})
 	dec.MustDecode(&index)
 
 	return
 }
 
-// Clone returns copy of argument idx value.
-func Clone(idx Lifeline) Lifeline {
+// CloneIndex returns copy of argument idx value.
+func CloneIndex(idx Lifeline) Lifeline {
 	if idx.LatestState != nil {
 		tmp := *idx.LatestState
 		idx.LatestState = &tmp
@@ -121,7 +121,7 @@ func (m *IndexMemory) Set(ctx context.Context, id insolar.ID, index Lifeline) er
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	idx := Clone(index)
+	idx := CloneIndex(index)
 
 	m.memory[id] = idx
 	m.jetIndex.Add(id, idx.JetID)
@@ -144,7 +144,7 @@ func (m *IndexMemory) ForID(ctx context.Context, id insolar.ID) (index Lifeline,
 		return
 	}
 
-	index = Clone(idx)
+	index = CloneIndex(idx)
 
 	return
 }

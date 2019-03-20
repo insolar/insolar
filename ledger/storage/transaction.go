@@ -177,7 +177,7 @@ func (m *TransactionManager) GetObjectIndex(
 	if err != nil {
 		return nil, err
 	}
-	res := object.Decode(buf)
+	res := object.DecodeIndex(buf)
 	return &res, nil
 }
 
@@ -193,7 +193,7 @@ func (m *TransactionManager) SetObjectIndex(
 	if idx.Delegates == nil {
 		idx.Delegates = map[core.RecordRef]core.RecordRef{}
 	}
-	encoded := object.Encode(*idx)
+	encoded := object.EncodeIndex(*idx)
 	return m.set(ctx, k, encoded)
 }
 
