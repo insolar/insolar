@@ -159,7 +159,6 @@ func (tp *ThirdPhaseImpl) Execute(ctx context.Context, pulse *insolar.Pulse, sta
 
 	return &ThirdPhaseState{
 		ActiveNodes:    nodes,
-		UnsyncList:     state.UnsyncList,
 		GlobuleProof:   state.GlobuleProof,
 		ApprovedClaims: claimSplit.ApprovedClaims,
 	}, nil

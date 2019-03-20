@@ -85,7 +85,6 @@ type SecondPhaseState struct {
 
 type ThirdPhaseState struct {
 	ActiveNodes    []insolar.NetworkNode
-	UnsyncList     network.UnsyncList
 	GlobuleProof   *merkle.GlobuleProof
 	ApprovedClaims []packets.ReferendumClaim
 }
