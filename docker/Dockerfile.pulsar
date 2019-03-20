@@ -1,6 +1,0 @@
-FROM insolar/insolard as builder
-
-FROM alpine:latest
-RUN mkdir -p /.artifacts/pulsar_data && mkdir -p /go/bin
-COPY --from=builder /go/bin/pulsard /go/bin/pulsard
-ENTRYPOINT ["/go/bin/pulsard"]
