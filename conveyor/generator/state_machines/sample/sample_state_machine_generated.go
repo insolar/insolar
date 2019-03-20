@@ -21,6 +21,7 @@ import (
     "github.com/insolar/insolar/conveyor/interfaces/fsm"
 	"github.com/insolar/insolar/conveyor/interfaces/iadapter"
 	"github.com/insolar/insolar/conveyor/interfaces/slot"
+	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
 
 	"errors"
 )
@@ -42,7 +43,7 @@ type RawTestStateMachine struct {
     cleanStateMachine TestStateMachine
 }
 
-func RawTestStateMachineFactory() [3]common.StateMachine {
+func RawTestStateMachineFactory() [3]statemachine.StateMachine {
     m := RawTestStateMachine{
         cleanStateMachine: &CleanTestStateMachine{},
     }
@@ -106,19 +107,24 @@ func RawTestStateMachineFactory() [3]common.StateMachine {
         AdapterResponseError: m.errorResponsePastSecond,
     },)
 
-    return [3]common.StateMachine{
-        {
-            ID: m.cleanStateMachine.(TestStateMachine).GetTypeID(),
-            States: x[0],
-        },
-        {
-            ID: m.cleanStateMachine.(TestStateMachine).GetTypeID(),
-            States: x[1],
-        },
-        {
-            ID: m.cleanStateMachine.(TestStateMachine).GetTypeID(),
-            States: x[2],
-        },
+
+    smFuture := common.StateMachine{
+        ID:     m.cleanStateMachine.(TestStateMachine).GetTypeID(),
+        States: x[0],
+    }
+
+    smPresent := common.StateMachine{
+        ID:     m.cleanStateMachine.(TestStateMachine).GetTypeID(),
+        States: x[1],
+    }
+
+    smPast := common.StateMachine{
+        ID:     m.cleanStateMachine.(TestStateMachine).GetTypeID(),
+        States: x[2],
+    }
+
+    return [3]statemachine.StateMachine{
+        &smFuture, &smPresent, &smPast,
     }
 }
 

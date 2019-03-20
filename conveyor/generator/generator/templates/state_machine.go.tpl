@@ -21,6 +21,7 @@ import (
     "github.com/insolar/insolar/conveyor/interfaces/fsm"
 	"github.com/insolar/insolar/conveyor/interfaces/iadapter"
 	"github.com/insolar/insolar/conveyor/interfaces/slot"
+	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
 
 	"errors"
 )
@@ -39,7 +40,7 @@ type Raw{{$machine.Name}} struct {
     cleanStateMachine {{$machine.Name}}
 }
 
-func Raw{{$machine.Name}}Factory() [3]common.StateMachine {
+func Raw{{$machine.Name}}Factory() [3]statemachine.StateMachine {
     m := Raw{{$machine.Name}}{
         cleanStateMachine: &Clean{{$machine.Name}}{},
     }
@@ -83,19 +84,24 @@ func Raw{{$machine.Name}}Factory() [3]common.StateMachine {
         {{if (handlerExists $state.AdapterResponseErrorPast)}}AdapterResponseError: m.{{$state.GetAdapterResponseErrorPastName}},{{end}}
     },{{end}}{{end}})
 
-    return [3]common.StateMachine{
-        {
-            ID: m.cleanStateMachine.({{$machine.Name}}).GetTypeID(),
-            States: x[0],
-        },
-        {
-            ID: m.cleanStateMachine.({{$machine.Name}}).GetTypeID(),
-            States: x[1],
-        },
-        {
-            ID: m.cleanStateMachine.({{$machine.Name}}).GetTypeID(),
-            States: x[2],
-        },
+
+    smFuture := common.StateMachine{
+        ID:     m.cleanStateMachine.({{$machine.Name}}).GetTypeID(),
+        States: x[0],
+    }
+
+    smPresent := common.StateMachine{
+        ID:     m.cleanStateMachine.({{$machine.Name}}).GetTypeID(),
+        States: x[1],
+    }
+
+    smPast := common.StateMachine{
+        ID:     m.cleanStateMachine.({{$machine.Name}}).GetTypeID(),
+        States: x[2],
+    }
+
+    return [3]statemachine.StateMachine{
+        &smFuture, &smPresent, &smPast,
     }
 }
 
