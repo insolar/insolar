@@ -45,11 +45,11 @@ func NewResponseSender() Processor {
 
 // Process implements Processor interface
 func (rs *ResponseSender) Process(adapterID uint32, task AdapterTask, cancelInfo CancelInfo) Events {
-	payload, ok := task.taskPayload.(ResponseSenderTask)
+	payload, ok := task.TaskPayload.(ResponseSenderTask)
 	var msg interface{}
 
 	if !ok {
-		msg = errors.Errorf("[ ResponseSender.Process ] Incorrect payload type: %T", task.taskPayload)
+		msg = errors.Errorf("[ ResponseSender.Process ] Incorrect payload type: %T", task.TaskPayload)
 		return Events{RespPayload: msg}
 	}
 

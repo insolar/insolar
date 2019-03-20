@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/contractrequester"
 	"github.com/insolar/insolar/conveyor"
+	"github.com/insolar/insolar/conveyor/adapter"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/delegationtoken"
 	"github.com/insolar/insolar/cryptography"
@@ -32,6 +33,7 @@ import (
 	"github.com/insolar/insolar/genesisdataprovider"
 	"github.com/insolar/insolar/keystore"
 	"github.com/insolar/insolar/ledger"
+	"github.com/insolar/insolar/ledger/artifactmanager"
 	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/messagebus"
 	"github.com/insolar/insolar/metrics"
@@ -95,6 +97,11 @@ func initCertificateManager(
 	}
 
 	return certManager
+}
+
+// getAdapters creates and returns all adapters which needs other components
+func getAdapters() []interface{} {
+	return []interface{}{adapter.NewResponseSendAdapter(), artifactmanager.NewGetCodeAdapter()}
 }
 
 // initComponents creates and links all insolard components
@@ -176,6 +183,8 @@ func initComponents(
 
 	components := ledger.GetLedgerComponents(cfg.Ledger, certManager.GetCertificate())
 	ld := ledger.Ledger{} // TODO: remove me with cmOld
+
+	components = append(components, getAdapters())
 
 	components = append(components, []interface{}{
 		messageBus,

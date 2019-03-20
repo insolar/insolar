@@ -47,7 +47,7 @@ type AdapterTask struct {
 	respSink    AdaptorToSlotResponseSink
 	elementID   idType
 	handlerID   idType
-	taskPayload interface{}
+	TaskPayload interface{}
 }
 
 // AdapterResponse contains info with adapter response

@@ -228,7 +228,7 @@ func (a *CancellableQueueAdapter) PushTask(respSink AdaptorToSlotResponseSink,
 				respSink:    respSink,
 				elementID:   elementID,
 				handlerID:   handlerID,
-				taskPayload: taskPayload,
+				TaskPayload: taskPayload,
 			},
 		},
 	)

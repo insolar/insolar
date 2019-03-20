@@ -46,11 +46,11 @@ func NewWaiter() Processor {
 func (w *Waiter) Process(adapterID uint32, task AdapterTask, cancelInfo CancelInfo) Events {
 	log.Info("[ Waiter.Process ] Start. cancelInfo.id: ", cancelInfo.ID())
 
-	payload, ok := task.taskPayload.(WaiterTask)
+	payload, ok := task.TaskPayload.(WaiterTask)
 	var msg interface{}
 
 	if !ok {
-		msg = errors.Errorf("[ Waiter.Process ] Incorrect payload type: %T", task.taskPayload)
+		msg = errors.Errorf("[ Waiter.Process ] Incorrect payload type: %T", task.TaskPayload)
 		return Events{RespPayload: msg}
 	}
 
