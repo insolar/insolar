@@ -311,3 +311,7 @@ type Accessor interface {
 	// GetActiveNodeByShortID get active node by short ID. Returns nil if node is not found.
 	GetActiveNodeByShortID(shortID insolar.ShortNodeID) insolar.NetworkNode
 }
+
+type Mutator interface {
+	AddActiveNode(n insolar.NetworkNode)
+}

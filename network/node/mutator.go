@@ -54,19 +54,15 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-type Mutator interface {
-	AddActiveNode(n insolar.NetworkNode)
+func NewMutator(snapshot *Snapshot) *Mutator {
+	return &Mutator{Accessor: NewAccessor(snapshot)}
 }
 
-func NewMutator(snapshot *Snapshot) Mutator {
-	return &mutator{Accessor: NewAccessor(snapshot)}
-}
-
-type mutator struct {
+type Mutator struct {
 	*Accessor
 }
 
-func (m *mutator) AddActiveNode(n insolar.NetworkNode) {
+func (m *Mutator) AddActiveNode(n insolar.NetworkNode) {
 	workingList := m.snapshot.nodeList[ListWorking]
 	workingList = append(workingList, n)
 	m.active = append(m.active, n)

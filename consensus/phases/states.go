@@ -88,3 +88,9 @@ type ThirdPhaseState struct {
 	GlobuleProof   *merkle.GlobuleProof
 	ApprovedClaims []packets.ReferendumClaim
 }
+
+type ConsensusState struct {
+	NodesMutator network.Mutator
+	BitsetMapper *BitsetMapper
+	HashStorage  *HashStorage
+}
