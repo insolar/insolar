@@ -21,6 +21,9 @@ import (
 )
 
 var (
-	// ErrNotFound is returned when index-record not found.
-	ErrNotFound = errors.New("index not found")
+	// IdxNotFound is returned when index not found.
+	IdxNotFound = errors.New("index not found")
+
+	// RecNotFound is returned when record not found.
+	RecNotFound = errors.New("record not found")
 )

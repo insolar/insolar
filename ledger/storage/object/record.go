@@ -17,9 +17,13 @@
 package object
 
 import (
+	"context"
 	"io"
+	"sync"
 
 	"github.com/insolar/insolar"
+	"github.com/insolar/insolar/ledger/storage/db"
+	"go.opencensus.io/stats"
 )
 
 //go:generate go run gen/type.go
@@ -57,4 +61,97 @@ func init() {
 	register(303, new(ActivateRecord))
 	register(304, new(AmendRecord))
 	register(305, new(DeactivationRecord))
+}
+
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage/object.RecordAccessor -o ./ -s _mock.go
+
+// RecordAccessor provides info about record-values from storage.
+type RecordAccessor interface {
+	// ForID returns record for provided id.
+	ForID(ctx context.Context, id insolar.ID) (MaterialRecord, error)
+}
+
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage/object.RecordModifier -o ./ -s _mock.go
+
+// RecordModifier provides methods for setting record-values to storage.
+type RecordModifier interface {
+	// Set saves new record-value in storage.
+	Set(ctx context.Context, id insolar.ID, rec MaterialRecord) error
+}
+
+// // Clone returns copy of argument idx value.
+// func Clone(rec MaterialRecord) MaterialRecord {
+// 	if idx.LatestState != nil {
+// 		tmp := *idx.LatestState
+// 		idx.LatestState = &tmp
+// 	}
+//
+// 	if idx.LatestStateApproved != nil {
+// 		tmp := *idx.LatestStateApproved
+// 		idx.LatestStateApproved = &tmp
+// 	}
+//
+// 	if idx.ChildPointer != nil {
+// 		tmp := *idx.ChildPointer
+// 		idx.ChildPointer = &tmp
+// 	}
+//
+// 	if idx.Delegates != nil {
+// 		cp := make(map[insolar.Reference]insolar.Reference)
+// 		for k, v := range idx.Delegates {
+// 			cp[k] = v
+// 		}
+// 		idx.Delegates = cp
+// 	}
+//
+// 	return idx
+// }
+
+// RecordMemory is an in-memory struct for record-storage.
+type RecordMemory struct {
+	jetIndex db.JetIndexModifier
+
+	lock   sync.RWMutex
+	memory map[insolar.ID]MaterialRecord
+}
+
+// NewRecordMemory creates a new instance of RecordMemory storage.
+func NewRecordMemory() *RecordMemory {
+	return &RecordMemory{
+		memory:   map[insolar.ID]MaterialRecord{},
+		jetIndex: db.NewJetIndex(),
+	}
+}
+
+// Set saves new Index-value in storage.
+func (m *RecordMemory) Set(ctx context.Context, id insolar.ID, rec MaterialRecord) error {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	// r := Clone(rec)
+
+	m.memory[id] = rec
+	m.jetIndex.Add(id, rec.JetID)
+
+	stats.Record(ctx,
+		statIndexInMemoryCount.M(1),
+	)
+
+	return nil
+}
+
+// ForID returns Index for provided id.
+func (m *RecordMemory) ForID(ctx context.Context, id insolar.ID) (rec MaterialRecord, err error) {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+
+	rec, ok := m.memory[id]
+	if !ok {
+		err = RecNotFound
+		return
+	}
+
+	// rec = Clone(r)
+
+	return
 }
