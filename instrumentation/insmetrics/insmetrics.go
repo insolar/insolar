@@ -28,6 +28,8 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
+var TagNodeStaticRole = MustTagKey("role")
+
 // MustTagKey creates new tag.Key, panics on error
 func MustTagKey(key string) tag.Key {
 	k, err := tag.NewKey(key)
@@ -61,6 +63,7 @@ func RegisterPrometheus(
 	namespace string,
 	registry *prometheus.Registry,
 	reportperiod time.Duration,
+	nodeRole string,
 ) (*censusprom.Exporter, error) {
 	inslog := inslogger.FromContext(ctx)
 	exporter, err := censusprom.NewExporter(censusprom.Options{
@@ -69,6 +72,7 @@ func RegisterPrometheus(
 		OnError: func(err error) {
 			inslog.Error("Failed to export to Prometheus: ", err)
 		},
+		ConstLabels: prometheus.Labels{"role": nodeRole},
 	})
 	if err != nil {
 		return nil, err

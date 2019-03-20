@@ -18,6 +18,7 @@ package artifactmanager
 
 import (
 	"context"
+	"regexp"
 	"testing"
 	"time"
 
@@ -133,7 +134,7 @@ func (s *metricSuite) TestLedgerArtifactManager_Metrics() {
 	am.PulseStorage = amPulseStorageMock
 	am.GenesisState = s.genesisState
 
-	tmetrics := testmetrics.Start(s.ctx)
+	tmetrics := testmetrics.Start(s.ctx, s.T())
 	defer tmetrics.Stop()
 
 	msg := message.GenesisRequest{Name: "4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.4FFB8zfQoGznSmzDxwv4njX1aR9ioL8GHSH17QXH2AFa"}
@@ -146,6 +147,6 @@ func (s *metricSuite) TestLedgerArtifactManager_Metrics() {
 	content, err := tmetrics.FetchContent()
 	require.NoError(s.T(), err)
 
-	assert.Contains(s.T(), content, `insolar_artifactmanager_latency_count{method="RegisterRequest",result="2xx"}`)
-	assert.Contains(s.T(), content, `insolar_artifactmanager_calls{method="RegisterRequest",result="2xx"}`)
+	assert.Regexp(s.T(), regexp.MustCompile(`insolar_artifactmanager_latency_count{[^}]*method="RegisterRequest",result="2xx"[^}]*}`), content)
+	assert.Regexp(s.T(), regexp.MustCompile(`insolar_artifactmanager_calls{[^}]*method="RegisterRequest",result="2xx"[^}]*}`), content)
 }
