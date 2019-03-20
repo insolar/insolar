@@ -5,14 +5,31 @@
  *
  * All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without modification, are permitted (subject to the limitations in the disclaimer below) provided that the following conditions are met:
+ * Redistribution and use in source and binary forms, with or without modification,
+ * are permitted (subject to the limitations in the disclaimer below) provided that
+ * the following conditions are met:
  *
- *  Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
- *  Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
- *  Neither the name of Insolar Technologies nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+ *  * Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ *  * Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *  * Neither the name of Insolar Technologies nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software
+ *    without specific prior written permission.
  *
- * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
+ * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED
+ * BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+ * CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING,
+ * BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 package hostnetwork
@@ -38,7 +55,7 @@ import (
 
 type transportConsensus struct {
 	transportBase
-	resolver network.RoutingTable
+	Resolver network.RoutingTable `inject:""`
 	handlers map[packets.PacketType]network.ConsensusPacketHandler
 }
 
@@ -62,7 +79,7 @@ func (tc *transportConsensus) RegisterPacketHandler(t packets.PacketType, handle
 func (tc *transportConsensus) SignAndSendPacket(packet packets.ConsensusPacket,
 	receiver core.RecordRef, service core.CryptographyService) error {
 
-	receiverHost, err := tc.resolver.ResolveConsensusRef(receiver)
+	receiverHost, err := tc.Resolver.ResolveConsensusRef(receiver)
 	if err != nil {
 		return errors.Wrapf(err, "Failed to resolve %s request to node %s", packet.GetType(), receiver.String())
 	}
@@ -105,7 +122,7 @@ func (tc *transportConsensus) processMessage(msg *packet.Packet) {
 		log.Errorf("Error processing incoming message: sender ID %d equals to origin %d", p.GetTarget(), tc.origin.ShortID)
 		return
 	}
-	sender, err := tc.resolver.ResolveConsensus(p.GetOrigin())
+	sender, err := tc.Resolver.ResolveConsensus(p.GetOrigin())
 	// TODO: NETD18-79
 	// special case for Phase1 because we can get a valid packet from a node we don't know yet (first consensus case)
 	if err != nil && p.GetType() != packets.Phase1 {
@@ -123,9 +140,7 @@ func (tc *transportConsensus) processMessage(msg *packet.Packet) {
 	handler(p, sender.NodeID)
 }
 
-func NewConsensusNetwork(address, nodeID string, shortID core.ShortNodeID,
-	resolver network.RoutingTable) (network.ConsensusNetwork, error) {
-
+func NewConsensusNetwork(address, nodeID string, shortID core.ShortNodeID) (network.ConsensusNetwork, error) {
 	conf := configuration.Transport{}
 	conf.Address = address
 	conf.Protocol = "PURE_UDP"
@@ -147,7 +162,6 @@ func NewConsensusNetwork(address, nodeID string, shortID core.ShortNodeID,
 
 	result.transport = tp
 	result.sequenceGenerator = sequence.NewGeneratorImpl()
-	result.resolver = resolver
 	result.origin = origin
 	result.messageProcessor = result.processMessage
 	return result, nil

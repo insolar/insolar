@@ -20,19 +20,18 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/storage/index"
-	"github.com/insolar/insolar/ledger/storage/record"
+	"github.com/insolar/insolar/ledger/storage/object"
 )
 
 // Store is used by context unaware clients who can work inside transactions as well as outside.
 type Store interface {
-	GetRecord(ctx context.Context, jetID core.RecordID, ref *core.RecordID) (record.Record, error)
-	SetRecord(ctx context.Context, jetID core.RecordID, pulseNumber core.PulseNumber, rec record.Record) (*core.RecordID, error)
+	GetRecord(ctx context.Context, jetID core.RecordID, ref *core.RecordID) (object.Record, error)
+	SetRecord(ctx context.Context, jetID core.RecordID, pulseNumber core.PulseNumber, rec object.Record) (*core.RecordID, error)
 	GetBlob(ctx context.Context, jetID core.RecordID, ref *core.RecordID) ([]byte, error)
 	SetBlob(ctx context.Context, jetID core.RecordID, number core.PulseNumber, blob []byte) (*core.RecordID, error)
 
-	GetObjectIndex(ctx context.Context, jetID core.RecordID, ref *core.RecordID, forupdate bool) (*index.ObjectLifeline, error)
-	SetObjectIndex(ctx context.Context, jetID core.RecordID, ref *core.RecordID, idx *index.ObjectLifeline) error
+	GetObjectIndex(ctx context.Context, jetID core.RecordID, ref *core.RecordID, forupdate bool) (*object.Lifeline, error)
+	SetObjectIndex(ctx context.Context, jetID core.RecordID, ref *core.RecordID, idx *object.Lifeline) error
 	RemoveObjectIndex(ctx context.Context, jetID core.RecordID, ref *core.RecordID) error
 
 	// Deprecated: use core.PulseStorage.Current() instead

@@ -5,14 +5,31 @@
  *
  * All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without modification, are permitted (subject to the limitations in the disclaimer below) provided that the following conditions are met:
+ * Redistribution and use in source and binary forms, with or without modification,
+ * are permitted (subject to the limitations in the disclaimer below) provided that
+ * the following conditions are met:
  *
- *  Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
- *  Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
- *  Neither the name of Insolar Technologies nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+ *  * Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ *  * Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *  * Neither the name of Insolar Technologies nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software
+ *    without specific prior written permission.
  *
- * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
+ * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED
+ * BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+ * CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING,
+ * BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 package hostnetwork
@@ -71,10 +88,9 @@ func (m *MockResolver) Resolve(nodeID core.RecordRef) (*host.Host, error) {
 	return result, nil
 }
 
-func (m *MockResolver) Inject(nodeKeeper network.NodeKeeper) {}
-func (m *MockResolver) AddToKnownHosts(h *host.Host)         {}
-func (m *MockResolver) Rebalance(network.PartitionPolicy)    {}
-func (m *MockResolver) GetRandomNodes(int) []host.Host       { return nil }
+func (m *MockResolver) AddToKnownHosts(h *host.Host)      {}
+func (m *MockResolver) Rebalance(network.PartitionPolicy) {}
+func (m *MockResolver) GetRandomNodes(int) []host.Host    { return nil }
 
 func (m *MockResolver) addMapping(key, value string) error {
 	k, err := core.NewRefFromBase58(key)
@@ -136,19 +152,19 @@ func TestNewInternalTransport2(t *testing.T) {
 	}()
 }
 
-func createTwoHostNetworks(id1, id2 string) (t1, t2 network.HostNetwork, err error) {
+func createTwoHostNetworks(id1, id2 string) (t1, t2 *TransportResolvable, err error) {
 	m := newMockResolver()
 
 	i1, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID1+DOMAIN)
 	if err != nil {
 		return nil, nil, err
 	}
-	tr1 := NewHostTransport(i1, m)
+	tr1 := &TransportResolvable{Transport: i1, Resolver: m}
 	i2, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID2+DOMAIN)
 	if err != nil {
 		return nil, nil, err
 	}
-	tr2 := NewHostTransport(i2, m)
+	tr2 := &TransportResolvable{Transport: i2, Resolver: m}
 
 	err = m.addMapping(id1, tr1.PublicAddress())
 	if err != nil {
@@ -189,12 +205,12 @@ func TestNewHostTransport(t *testing.T) {
 	}
 	t2.RegisterRequestHandler(types.Ping, handler)
 
-	t2.Start(ctx2)
-	t1.Start(ctx)
+	t2.Transport.Start(ctx2)
+	t1.Transport.Start(ctx)
 
 	defer func() {
-		t1.Stop(ctx)
-		t2.Stop(ctx2)
+		t1.Transport.Stop(ctx)
+		t2.Transport.Stop(ctx2)
 	}()
 
 	for i := 0; i < count; i++ {
@@ -214,9 +230,9 @@ func TestHostTransport_SendRequestPacket(t *testing.T) {
 
 	i1, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID1+DOMAIN)
 	require.NoError(t, err)
-	t1 := NewHostTransport(i1, m)
-	t1.Start(ctx)
-	defer t1.Stop(ctx)
+	t1 := &TransportResolvable{Transport: i1, Resolver: m}
+	t1.Transport.Start(ctx)
+	defer t1.Transport.Stop(ctx)
 
 	unknownID, err := core.NewRefFromBase58(IDUNKNOWN + DOMAIN)
 	require.NoError(t, err)
@@ -259,11 +275,11 @@ func TestHostTransport_SendRequestPacket2(t *testing.T) {
 
 	t2.RegisterRequestHandler(types.Ping, handler)
 
-	t2.Start(ctx2)
-	t1.Start(ctx)
+	t2.Transport.Start(ctx2)
+	t1.Transport.Start(ctx)
 	defer func() {
-		t1.Stop(ctx)
-		t2.Stop(ctx2)
+		t1.Transport.Stop(ctx)
+		t2.Transport.Stop(ctx2)
 	}()
 
 	request := t1.NewRequestBuilder().Type(types.Ping).Data(nil).Build()
@@ -298,11 +314,11 @@ func TestHostTransport_SendRequestPacket3(t *testing.T) {
 	}
 	t2.RegisterRequestHandler(types.Ping, handler)
 
-	t2.Start(ctx2)
-	t1.Start(ctx)
+	t2.Transport.Start(ctx2)
+	t1.Transport.Start(ctx)
 	defer func() {
-		t1.Stop(ctx)
-		t2.Stop(ctx2)
+		t1.Transport.Stop(ctx)
+		t2.Transport.Stop(ctx2)
 	}()
 
 	magicNumber := 42
@@ -342,9 +358,9 @@ func TestHostTransport_SendRequestPacket_errors(t *testing.T) {
 	}
 	t2.RegisterRequestHandler(types.Ping, handler)
 
-	t2.Start(ctx2)
-	defer t2.Stop(ctx2)
-	t1.Start(ctx)
+	t2.Transport.Start(ctx2)
+	defer t2.Transport.Stop(ctx2)
+	t1.Transport.Start(ctx)
 
 	request := t1.NewRequestBuilder().Type(types.Ping).Data(nil).Build()
 	ref, err := core.NewRefFromBase58(ID2 + DOMAIN)
@@ -357,7 +373,7 @@ func TestHostTransport_SendRequestPacket_errors(t *testing.T) {
 
 	f, err = t1.SendRequest(ctx, request, *ref)
 	require.NoError(t, err)
-	t1.Stop(ctx)
+	t1.Transport.Stop(ctx)
 
 	_, err = f.GetResponse(time.Second)
 	require.Error(t, err)
@@ -379,11 +395,11 @@ func TestHostTransport_WrongHandler(t *testing.T) {
 	}
 	t2.RegisterRequestHandler(InvalidPacket, handler)
 
-	t2.Start(ctx2)
-	t1.Start(ctx)
+	t2.Transport.Start(ctx2)
+	t1.Transport.Start(ctx)
 	defer func() {
-		t1.Stop(ctx)
-		t2.Stop(ctx2)
+		t1.Transport.Stop(ctx)
+		t2.Transport.Stop(ctx2)
 	}()
 
 	request := t1.NewRequestBuilder().Type(types.Ping).Build()

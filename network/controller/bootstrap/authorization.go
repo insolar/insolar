@@ -5,14 +5,31 @@
  *
  * All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without modification, are permitted (subject to the limitations in the disclaimer below) provided that the following conditions are met:
+ * Redistribution and use in source and binary forms, with or without modification,
+ * are permitted (subject to the limitations in the disclaimer below) provided that
+ * the following conditions are met:
  *
- *  Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
- *  Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
- *  Neither the name of Insolar Technologies nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+ *  * Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ *  * Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *  * Neither the name of Insolar Technologies nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software
+ *    without specific prior written permission.
  *
- * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
+ * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED
+ * BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+ * CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING,
+ * BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 package bootstrap
@@ -34,7 +51,7 @@ import (
 	"github.com/insolar/insolar/network/controller/common"
 	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/jbenet/go-base58"
+	base58 "github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/tag"
@@ -42,7 +59,7 @@ import (
 )
 
 const (
-	registrationRetries = 10
+	registrationRetries = 20
 )
 
 type AuthorizationController interface {
@@ -53,12 +70,12 @@ type AuthorizationController interface {
 }
 
 type authorizationController struct {
-	NodeKeeper         network.NodeKeeper      `inject:""`
-	NetworkCoordinator core.NetworkCoordinator `inject:""`
-	SessionManager     SessionManager          `inject:""`
+	NodeKeeper         network.NodeKeeper        `inject:""`
+	NetworkCoordinator core.NetworkCoordinator   `inject:""`
+	SessionManager     SessionManager            `inject:""`
+	Transport          network.InternalTransport `inject:""`
 
-	options   *common.Options
-	transport network.InternalTransport
+	options *common.Options
 }
 
 type OperationCode uint8
@@ -117,10 +134,10 @@ func (ac *authorizationController) Authorize(ctx context.Context, discoveryNode 
 		return 0, errors.Wrap(err, "Error serializing certificate")
 	}
 
-	request := ac.transport.NewRequestBuilder().Type(types.Authorize).Data(&AuthorizationRequest{
+	request := ac.Transport.NewRequestBuilder().Type(types.Authorize).Data(&AuthorizationRequest{
 		Certificate: serializedCert,
 	}).Build()
-	future, err := ac.transport.SendRequestPacket(ctx, request, discoveryNode.Host)
+	future, err := ac.Transport.SendRequestPacket(ctx, request, discoveryNode.Host)
 	if err != nil {
 		return 0, errors.Wrapf(err, "Error sending authorize request")
 	}
@@ -158,12 +175,12 @@ func (ac *authorizationController) register(ctx context.Context, discoveryNode *
 	if err != nil {
 		return errors.Wrap(err, "Failed to get origin claim")
 	}
-	request := ac.transport.NewRequestBuilder().Type(types.Register).Data(&RegistrationRequest{
+	request := ac.Transport.NewRequestBuilder().Type(types.Register).Data(&RegistrationRequest{
 		Version:   ac.NodeKeeper.GetOrigin().Version(),
 		SessionID: sessionID,
 		JoinClaim: originClaim,
 	}).Build()
-	future, err := ac.transport.SendRequestPacket(ctx, request, discoveryNode.Host)
+	future, err := ac.Transport.SendRequestPacket(ctx, request, discoveryNode.Host)
 	if err != nil {
 		return errors.Wrapf(err, "Error sending register request")
 	}
@@ -192,7 +209,7 @@ func (ac *authorizationController) buildRegistrationResponse(sessionID SessionID
 	if err != nil {
 		return &RegistrationResponse{Code: OpRejected, Error: err.Error()}
 	}
-	if node := ac.NodeKeeper.GetActiveNode(claim.NodeRef); node != nil {
+	if node := ac.NodeKeeper.GetAccessor().GetActiveNode(claim.NodeRef); node != nil {
 		retryIn := session.TTL / 2
 
 		keyProc := platformpolicy.NewKeyProcessor()
@@ -233,51 +250,48 @@ func (ac *authorizationController) processRegisterRequest(ctx context.Context, r
 		response := &RegistrationResponse{Code: OpRejected,
 			Error: fmt.Sprintf("Joiner version %s does not match discovery version %s",
 				data.Version, ac.NodeKeeper.GetOrigin().Version())}
-		return ac.transport.BuildResponse(ctx, request, response), nil
+		return ac.Transport.BuildResponse(ctx, request, response), nil
 	}
 	response := ac.buildRegistrationResponse(data.SessionID, data.JoinClaim)
 	if response.Code != OpConfirmed {
-		return ac.transport.BuildResponse(ctx, request, response), nil
+		return ac.Transport.BuildResponse(ctx, request, response), nil
 	}
 
 	// TODO: fix Short ID assignment logic
 	if CheckShortIDCollision(ac.NodeKeeper, data.JoinClaim.ShortNodeID) {
 		response = &RegistrationResponse{Code: OpRejected,
 			Error: "Short ID of the joiner node conflicts with active node short ID"}
-		return ac.transport.BuildResponse(ctx, request, response), nil
+		return ac.Transport.BuildResponse(ctx, request, response), nil
 	}
 
 	inslogger.FromContext(ctx).Infof("Added join claim from node %s", request.GetSender())
-	ac.NodeKeeper.AddPendingClaim(data.JoinClaim)
-	return ac.transport.BuildResponse(ctx, request, response), nil
+	ac.NodeKeeper.GetClaimQueue().Push(data.JoinClaim)
+	return ac.Transport.BuildResponse(ctx, request, response), nil
 }
 
 func (ac *authorizationController) processAuthorizeRequest(ctx context.Context, request network.Request) (network.Response, error) {
 	data := request.GetData().(*AuthorizationRequest)
 	cert, err := certificate.Deserialize(data.Certificate, platformpolicy.NewKeyProcessor())
 	if err != nil {
-		return ac.transport.BuildResponse(ctx, request, &AuthorizationResponse{Code: OpRejected, Error: err.Error()}), nil
+		return ac.Transport.BuildResponse(ctx, request, &AuthorizationResponse{Code: OpRejected, Error: err.Error()}), nil
 	}
 	valid, err := ac.NetworkCoordinator.ValidateCert(ctx, cert)
 	if !valid {
 		if err == nil {
 			err = errors.New("Certificate validation failed")
 		}
-		return ac.transport.BuildResponse(ctx, request, &AuthorizationResponse{Code: OpRejected, Error: err.Error()}), nil
+		return ac.Transport.BuildResponse(ctx, request, &AuthorizationResponse{Code: OpRejected, Error: err.Error()}), nil
 	}
 	session := ac.SessionManager.NewSession(request.GetSender(), cert, ac.options.HandshakeSessionTTL)
-	return ac.transport.BuildResponse(ctx, request, &AuthorizationResponse{Code: OpConfirmed, SessionID: session}), nil
+	return ac.Transport.BuildResponse(ctx, request, &AuthorizationResponse{Code: OpConfirmed, SessionID: session}), nil
 }
 
 func (ac *authorizationController) Init(ctx context.Context) error {
-	ac.transport.RegisterPacketHandler(types.Register, ac.processRegisterRequest)
-	ac.transport.RegisterPacketHandler(types.Authorize, ac.processAuthorizeRequest)
+	ac.Transport.RegisterPacketHandler(types.Register, ac.processRegisterRequest)
+	ac.Transport.RegisterPacketHandler(types.Authorize, ac.processAuthorizeRequest)
 	return nil
 }
 
-func NewAuthorizationController(options *common.Options, transport network.InternalTransport) AuthorizationController {
-	return &authorizationController{
-		options:   options,
-		transport: transport,
-	}
+func NewAuthorizationController(options *common.Options) AuthorizationController {
+	return &authorizationController{options: options}
 }

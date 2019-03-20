@@ -7,14 +7,31 @@
  *
  * All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without modification, are permitted (subject to the limitations in the disclaimer below) provided that the following conditions are met:
+ * Redistribution and use in source and binary forms, with or without modification,
+ * are permitted (subject to the limitations in the disclaimer below) provided that
+ * the following conditions are met:
  *
- *  Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
- *  Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
- *  Neither the name of Insolar Technologies nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+ *  * Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ *  * Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *  * Neither the name of Insolar Technologies nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software
+ *    without specific prior written permission.
  *
- * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
+ * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED
+ * BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+ * CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING,
+ * BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 package servicenetwork
@@ -32,7 +49,6 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -46,7 +62,7 @@ func (s *testSuite) TestNetworkConsensus3Times() {
 }
 
 func (s *testSuite) TestNodeConnect() {
-	testNode := newNetworkNode()
+	testNode := s.newNetworkNode("testNode")
 	s.preInitNode(testNode)
 
 	s.InitNode(testNode)
@@ -57,7 +73,7 @@ func (s *testSuite) TestNodeConnect() {
 
 	s.waitForConsensus(1)
 
-	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
 	s.Equal(s.getNodesCount(), len(activeNodes))
 
 	s.waitForConsensus(1)
@@ -74,7 +90,7 @@ func (s *testSuite) TestNodeConnect() {
 }
 
 func (s *testSuite) TestNodeConnectInvalidVersion() {
-	testNode := newNetworkNode()
+	testNode := s.newNetworkNode("testNode")
 	s.preInitNode(testNode)
 	testNode.serviceNetwork.NodeKeeper.GetOrigin().(nodenetwork.MutableNode).SetVersion("ololo")
 	s.InitNode(testNode)
@@ -91,7 +107,7 @@ func (s *testSuite) TestManyNodesConnect() {
 	joinersCount := 10
 	nodes := make([]*networkNode, 0)
 	for i := 0; i < joinersCount; i++ {
-		nodes = append(nodes, newNetworkNode())
+		nodes = append(nodes, s.newNetworkNode(fmt.Sprintf("testNode_%d", i)))
 		s.preInitNode(nodes[i])
 		s.InitNode(nodes[i])
 	}
@@ -117,7 +133,7 @@ func (s *testSuite) TestManyNodesConnect() {
 	s.waitForConsensus(5)
 
 	joined := claimhandler.ApprovedJoinersCount(joinersCount, s.getNodesCount())
-	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
 	s.Equal(s.getNodesCount()+joined, len(activeNodes))
 }
 
@@ -126,7 +142,7 @@ func (s *testSuite) TestNodeLeave() {
 		s.T().Skip(consensusMinMsg)
 	}
 
-	testNode := newNetworkNode()
+	testNode := s.newNetworkNode("testNode")
 	s.preInitNode(testNode)
 
 	s.InitNode(testNode)
@@ -154,7 +170,7 @@ func (s *testSuite) TestNodeLeave() {
 	s.Equal(s.getNodesCount(), len(workingNodes))
 
 	// but all nodes are active
-	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
 	s.Equal(s.getNodesCount()+1, len(activeNodes))
 }
 
@@ -163,7 +179,7 @@ func (s *testSuite) TestNodeLeaveAtETA() {
 		s.T().Skip(consensusMinMsg)
 	}
 
-	testNode := newNetworkNode()
+	testNode := s.newNetworkNode("testNode")
 	s.preInitNode(testNode)
 
 	s.InitNode(testNode)
@@ -174,7 +190,7 @@ func (s *testSuite) TestNodeLeaveAtETA() {
 
 	// wait for node will be added at active list
 	s.waitForConsensus(2)
-	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
 	s.Equal(s.getNodesCount()+1, len(activeNodes))
 
 	pulse, err := s.fixture().bootstrapNodes[0].serviceNetwork.PulseStorage.Current(s.fixture().ctx)
@@ -186,13 +202,13 @@ func (s *testSuite) TestNodeLeaveAtETA() {
 	// node still active and working
 	s.waitForConsensus(1)
 	workingNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
-	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
 	s.Equal(s.getNodesCount()+1, len(activeNodes))
 	s.Equal(s.getNodesCount()+1, len(workingNodes))
 
 	// now node leaves, but it's still in active list
 	s.waitForConsensus(1)
-	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
 	workingNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount(), len(workingNodes))
 	s.Equal(s.getNodesCount()+1, len(activeNodes))
@@ -204,7 +220,7 @@ func (s *testSuite) TestNodeComeAfterAnotherNodeSendLeaveETA() {
 		s.T().Skip(consensusMinMsg)
 	}
 
-	leavingNode := newNetworkNode()
+	leavingNode := s.newNetworkNode("leavingNode")
 	s.preInitNode(leavingNode)
 
 	s.InitNode(leavingNode)
@@ -215,7 +231,7 @@ func (s *testSuite) TestNodeComeAfterAnotherNodeSendLeaveETA() {
 
 	// wait for node will be added at active list
 	s.waitForConsensus(2)
-	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
 	s.Equal(s.getNodesCount()+1, len(activeNodes))
 
 	pulse, err := s.fixture().bootstrapNodes[0].serviceNetwork.PulseStorage.Current(s.fixture().ctx)
@@ -228,7 +244,7 @@ func (s *testSuite) TestNodeComeAfterAnotherNodeSendLeaveETA() {
 	// wait for leavingNode will be marked as leaving
 	s.waitForConsensus(1)
 
-	newNode := newNetworkNode()
+	newNode := s.newNetworkNode("testNode")
 	s.preInitNode(newNode)
 
 	s.InitNode(newNode)
@@ -241,7 +257,7 @@ func (s *testSuite) TestNodeComeAfterAnotherNodeSendLeaveETA() {
 	s.waitForConsensus(2)
 
 	// newNode doesn't have workingNodes
-	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
 	workingNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	newNodeWorkingNodes := newNode.serviceNetwork.NodeKeeper.GetWorkingNodes()
 
@@ -251,7 +267,7 @@ func (s *testSuite) TestNodeComeAfterAnotherNodeSendLeaveETA() {
 
 	// newNode have to have same working node list as other nodes, but it doesn't because it miss leaving claim
 	s.waitForConsensus(1)
-	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
 	workingNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	newNodeWorkingNodes = newNode.serviceNetwork.NodeKeeper.GetWorkingNodes()
 
@@ -262,7 +278,7 @@ func (s *testSuite) TestNodeComeAfterAnotherNodeSendLeaveETA() {
 
 	// leaveNode leaving, newNode still ok
 	s.waitForConsensus(1)
-	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetActiveNodes()
+	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
 	workingNodes = newNode.serviceNetwork.NodeKeeper.GetWorkingNodes()
 	newNodeWorkingNodes = newNode.serviceNetwork.NodeKeeper.GetWorkingNodes()
 
@@ -418,8 +434,10 @@ func (s *testSuite) TestDiscoveryDown() {
 	s.StopNode(s.fixture().bootstrapNodes[0])
 
 	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
-	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
-	s.Equal(s.getNodesCount()-1, len(activeNodes))
+	for i := 1; i < s.getNodesCount(); i++ {
+		activeNodes := s.fixture().bootstrapNodes[i].serviceNetwork.NodeKeeper.GetWorkingNodes()
+		s.Equal(s.getNodesCount()-1, len(activeNodes))
+	}
 }
 
 func (s *testSuite) TestDiscoveryRestart() {
@@ -433,7 +451,7 @@ func (s *testSuite) TestDiscoveryRestart() {
 	err := s.fixture().bootstrapNodes[0].serviceNetwork.Stop(context.Background())
 	s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.(*nodeKeeperWrapper).Wipe(true)
 	log.Info("Discovery node stopped...")
-	require.NoError(s.T(), err)
+	s.Require().NoError(err)
 
 	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
 	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
@@ -442,7 +460,7 @@ func (s *testSuite) TestDiscoveryRestart() {
 	log.Info("Discovery node starting...")
 	err = s.fixture().bootstrapNodes[0].serviceNetwork.Start(context.Background())
 	log.Info("Discovery node started")
-	require.NoError(s.T(), err)
+	s.Require().NoError(err)
 
 	s.waitForConsensusExcept(3, s.fixture().bootstrapNodes[0].id)
 	activeNodes = s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
@@ -462,17 +480,17 @@ func (s *testSuite) TestDiscoveryRestartNoWait() {
 	err := s.fixture().bootstrapNodes[0].serviceNetwork.Stop(context.Background())
 	s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.(*nodeKeeperWrapper).Wipe(true)
 	log.Info("Discovery node stopped...")
-	require.NoError(s.T(), err)
+	s.Require().NoError(err)
 
 	go func(s *testSuite) {
 		log.Info("Discovery node starting...")
 		err = s.fixture().bootstrapNodes[0].serviceNetwork.Start(context.Background())
 		log.Info("Discovery node started")
-		require.NoError(s.T(), err)
+		s.Require().NoError(err)
 	}(s)
 
 	s.waitForConsensusExcept(4, s.fixture().bootstrapNodes[0].id)
-	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetActiveNodes()
+	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
 	s.Equal(s.getNodesCount(), len(activeNodes))
 	s.waitForConsensusExcept(1, s.fixture().bootstrapNodes[0].id)
 	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()

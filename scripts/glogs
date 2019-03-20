@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#! /usr/bin/env bash
 read -r -d '' help <<'EOF'
 #
 # Helper for searching inside launchnet nodes logs

@@ -1,5 +1,5 @@
 /*
- *    Copyright 2019 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -20,18 +20,18 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/storage/index"
-	"github.com/insolar/insolar/ledger/storage/record"
+	"github.com/insolar/insolar/ledger/storage/object"
 )
 
-// ObjectStorage returns objects and their meta
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage.ObjectStorage -o ./ -s _mock.go
+
+// ObjectStorage returns objects and their meta
 type ObjectStorage interface {
 	GetBlob(ctx context.Context, jetID core.RecordID, id *core.RecordID) ([]byte, error)
 	SetBlob(ctx context.Context, jetID core.RecordID, pulseNumber core.PulseNumber, blob []byte) (*core.RecordID, error)
 
-	GetRecord(ctx context.Context, jetID core.RecordID, id *core.RecordID) (record.Record, error)
-	SetRecord(ctx context.Context, jetID core.RecordID, pulseNumber core.PulseNumber, rec record.Record) (*core.RecordID, error)
+	GetRecord(ctx context.Context, jetID core.RecordID, id *core.RecordID) (object.Record, error)
+	SetRecord(ctx context.Context, jetID core.RecordID, pulseNumber core.PulseNumber, rec object.Record) (*core.RecordID, error)
 
 	IterateIndexIDs(
 		ctx context.Context,
@@ -44,13 +44,13 @@ type ObjectStorage interface {
 		jetID core.RecordID,
 		id *core.RecordID,
 		forupdate bool,
-	) (*index.ObjectLifeline, error)
+	) (*object.Lifeline, error)
 
 	SetObjectIndex(
 		ctx context.Context,
 		jetID core.RecordID,
 		id *core.RecordID,
-		idx *index.ObjectLifeline,
+		idx *object.Lifeline,
 	) error
 
 	RemoveObjectIndex(
@@ -104,9 +104,9 @@ func (os *objectStorage) SetBlob(ctx context.Context, jetID core.RecordID, pulse
 }
 
 // GetRecord wraps matching transaction manager method.
-func (os *objectStorage) GetRecord(ctx context.Context, jetID core.RecordID, id *core.RecordID) (record.Record, error) {
+func (os *objectStorage) GetRecord(ctx context.Context, jetID core.RecordID, id *core.RecordID) (object.Record, error) {
 	var (
-		fetchedRecord record.Record
+		fetchedRecord object.Record
 		err           error
 	)
 
@@ -121,7 +121,7 @@ func (os *objectStorage) GetRecord(ctx context.Context, jetID core.RecordID, id 
 }
 
 // SetRecord wraps matching transaction manager method.
-func (os *objectStorage) SetRecord(ctx context.Context, jetID core.RecordID, pulseNumber core.PulseNumber, rec record.Record) (*core.RecordID, error) {
+func (os *objectStorage) SetRecord(ctx context.Context, jetID core.RecordID, pulseNumber core.PulseNumber, rec object.Record) (*core.RecordID, error) {
 	var (
 		id  *core.RecordID
 		err error
@@ -162,7 +162,7 @@ func (os *objectStorage) GetObjectIndex(
 	jetID core.RecordID,
 	id *core.RecordID,
 	forupdate bool,
-) (*index.ObjectLifeline, error) {
+) (*object.Lifeline, error) {
 	tx, err := os.DB.BeginTransaction(false)
 	if err != nil {
 		return nil, err
@@ -181,7 +181,7 @@ func (os *objectStorage) SetObjectIndex(
 	ctx context.Context,
 	jetID core.RecordID,
 	id *core.RecordID,
-	idx *index.ObjectLifeline,
+	idx *object.Lifeline,
 ) error {
 	return os.DB.Update(ctx, func(tx *TransactionManager) error {
 		return tx.SetObjectIndex(ctx, jetID, id, idx)

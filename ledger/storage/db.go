@@ -24,17 +24,15 @@ import (
 	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/storage/record"
+	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/pkg/errors"
 )
 
 const (
 	scopeIDLifeline byte = 1
 	scopeIDRecord   byte = 2
-	scopeIDJetDrop  byte = 3
 	scopeIDPulse    byte = 4
 	scopeIDSystem   byte = 5
-	scopeIDMessage  byte = 6
 	scopeIDBlob     byte = 7
 
 	sysGenesis                byte = 1
@@ -55,7 +53,7 @@ type DBContext interface {
 		ctx context.Context,
 		jetID core.RecordID,
 		pulse core.PulseNumber,
-		handler func(id core.RecordID, rec record.Record) error,
+		handler func(id core.RecordID, rec object.Record) error,
 	) error
 
 	StoreKeyValues(ctx context.Context, kvs []core.KV) error
@@ -236,14 +234,14 @@ func (db *DB) IterateRecordsOnPulse(
 	ctx context.Context,
 	jetID core.RecordID,
 	pulse core.PulseNumber,
-	handler func(id core.RecordID, rec record.Record) error,
+	handler func(id core.RecordID, rec object.Record) error,
 ) error {
 	jetPrefix := core.JetID(jetID).Prefix()
 	prefix := prefixkey(scopeIDRecord, jetPrefix, pulse.Bytes())
 
 	return db.iterate(ctx, prefix, func(k, v []byte) error {
 		id := core.NewRecordID(pulse, k)
-		rec := record.DeserializeRecord(v)
+		rec := object.DeserializeRecord(v)
 		err := handler(*id, rec)
 		if err != nil {
 			return err

@@ -5,14 +5,31 @@
  *
  * All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without modification, are permitted (subject to the limitations in the disclaimer below) provided that the following conditions are met:
+ * Redistribution and use in source and binary forms, with or without modification,
+ * are permitted (subject to the limitations in the disclaimer below) provided that
+ * the following conditions are met:
  *
- *  Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
- *  Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
- *  Neither the name of Insolar Technologies nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+ *  * Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ *  * Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *  * Neither the name of Insolar Technologies nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software
+ *    without specific prior written permission.
  *
- * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
+ * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED
+ * BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+ * CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING,
+ * BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 package nodenetwork
@@ -49,17 +66,13 @@ type node struct {
 	NodeRole      core.StaticRole
 	NodePublicKey crypto.PublicKey
 
-	NodePulseNum core.PulseNumber
-
 	NodeAddress string
 	CAddress    string
 
 	versionMutex sync.RWMutex
 	NodeVersion  string
 
-	leavingMutex   sync.RWMutex
-	NodeLeaving    bool
-	NodeLeavingETA core.PulseNumber
+	NodeLeavingETA uint32
 
 	state uint32
 }
@@ -81,7 +94,6 @@ func (n *node) GetState() core.NodeState {
 
 func (n *node) ChangeState() {
 	// we don't expect concurrent changes, so do not CAS
-
 	currentState := atomic.LoadUint32(&n.state)
 	if currentState == uint32(core.NodeReady) {
 		return
@@ -154,31 +166,17 @@ func (n *node) Version() string {
 	return n.NodeVersion
 }
 
-func (n *node) IsWorking() bool {
-	return atomic.LoadUint32(&n.state) == uint32(core.NodeReady)
-}
-
 func (n *node) SetShortID(id core.ShortNodeID) {
 	atomic.StoreUint32(&n.NodeShortID, uint32(id))
 }
 
-func (n *node) Leaving() bool {
-	n.leavingMutex.RLock()
-	defer n.leavingMutex.RUnlock()
-	return n.NodeLeaving
-}
 func (n *node) LeavingETA() core.PulseNumber {
-	n.leavingMutex.RLock()
-	defer n.leavingMutex.RUnlock()
-	return n.NodeLeavingETA
+	return core.PulseNumber(atomic.LoadUint32(&n.NodeLeavingETA))
 }
 
 func (n *node) SetLeavingETA(number core.PulseNumber) {
-	n.leavingMutex.Lock()
-	defer n.leavingMutex.Unlock()
-
-	n.NodeLeaving = true
-	n.NodeLeavingETA = number
+	n.SetState(core.NodeLeaving)
+	atomic.StoreUint32(&n.NodeLeavingETA, uint32(number))
 }
 
 func init() {

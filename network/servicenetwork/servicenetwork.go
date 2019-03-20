@@ -5,14 +5,31 @@
  *
  * All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without modification, are permitted (subject to the limitations in the disclaimer below) provided that the following conditions are met:
+ * Redistribution and use in source and binary forms, with or without modification,
+ * are permitted (subject to the limitations in the disclaimer below) provided that
+ * the following conditions are met:
  *
- *  Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
- *  Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
- *  Neither the name of Insolar Technologies nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+ *  * Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ *  * Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *  * Neither the name of Insolar Technologies nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software
+ *    without specific prior written permission.
  *
- * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
+ * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED
+ * BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+ * CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING,
+ * BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 package servicenetwork
@@ -47,9 +64,6 @@ import (
 type ServiceNetwork struct {
 	cfg configuration.Configuration
 	cm  *component.Manager
-
-	hostNetwork  network.HostNetwork  // TODO: should be injected
-	routingTable network.RoutingTable // TODO: should be injected
 
 	// dependencies
 	CertificateManager  core.CertificateManager  `inject:""`
@@ -114,7 +128,6 @@ func incrementPort(address string) (string, error) {
 
 // Start implements component.Initer
 func (n *ServiceNetwork) Init(ctx context.Context) error {
-	n.routingTable = &routing.Table{}
 	internalTransport, err := hostnetwork.NewInternalTransport(n.cfg, n.CertificateManager.GetCertificate().GetNodeRef().String())
 	if err != nil {
 		return errors.Wrap(err, "Failed to create internal transport")
@@ -135,21 +148,22 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		consensusAddress,
 		n.CertificateManager.GetCertificate().GetNodeRef().String(),
 		n.NodeKeeper.GetOrigin().ShortID(),
-		n.routingTable,
 	)
 	if err != nil {
 		return errors.Wrap(err, "Failed to create consensus network.")
 	}
 
-	n.hostNetwork = hostnetwork.NewHostTransport(internalTransport, n.routingTable)
+	hostNetwork := hostnetwork.NewHostTransport(internalTransport)
 	options := controller.ConfigureOptions(n.cfg)
 
 	cert := n.CertificateManager.GetCertificate()
 	n.isDiscovery = utils.OriginIsDiscovery(cert)
 
 	n.cm.Inject(n,
+		&routing.Table{},
 		cert,
-		n.NodeKeeper,
+		internalTransport,
+		hostNetwork,
 		merkle.NewCalculator(),
 		consensusNetwork,
 		phases.NewCommunicator(),
@@ -158,12 +172,12 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		phases.NewThirdPhase(),
 		phases.NewPhaseManager(),
 		bootstrap.NewSessionManager(),
-		controller.NewNetworkController(n.hostNetwork),
-		controller.NewRPCController(options, n.hostNetwork),
-		controller.NewPulseController(n.hostNetwork, n.routingTable),
-		bootstrap.NewBootstrapper(options, internalTransport),
-		bootstrap.NewAuthorizationController(options, internalTransport),
-		bootstrap.NewChallengeResponseController(options, internalTransport),
+		controller.NewNetworkController(),
+		controller.NewRPCController(options),
+		controller.NewPulseController(),
+		bootstrap.NewBootstrapper(options),
+		bootstrap.NewAuthorizationController(options),
+		bootstrap.NewChallengeResponseController(options),
 		bootstrap.NewNetworkBootstrapper(),
 	)
 	err = n.cm.Init(ctx)
@@ -177,10 +191,6 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 // Start implements component.Starter
 func (n *ServiceNetwork) Start(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
-
-	logger.Info("Network starts listening...")
-	n.routingTable.Inject(n.NodeKeeper)
-	n.hostNetwork.Start(ctx)
 
 	log.Info("Starting network component manager...")
 	err := n.cm.Start(ctx)
@@ -202,19 +212,13 @@ func (n *ServiceNetwork) Leave(ctx context.Context, ETA core.PulseNumber) {
 	logger := inslogger.FromContext(ctx)
 	logger.Info("Gracefully stopping service network")
 
-	n.NodeKeeper.AddPendingClaim(&packets.NodeLeaveClaim{ETA: ETA})
+	n.NodeKeeper.GetClaimQueue().Push(&packets.NodeLeaveClaim{ETA: ETA})
 }
 
 // Stop implements core.Component
 func (n *ServiceNetwork) Stop(ctx context.Context) error {
-	logger := inslogger.FromContext(ctx)
-
-	logger.Info("Stopping network components")
-	if err := n.cm.Stop(ctx); err != nil {
-		log.Errorf("Error while stopping network components: %s", err.Error())
-	}
-	logger.Info("Stopping host network")
-	return n.hostNetwork.Stop(ctx)
+	inslogger.FromContext(ctx).Info("Stopping network component manager...")
+	return n.cm.Stop(ctx)
 }
 
 func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse core.Pulse) {
@@ -244,7 +248,7 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse core.Pulse) {
 		return
 	}
 
-	if n.NodeKeeper.GetState() == core.WaitingNodeNetworkState {
+	if n.NodeKeeper.GetConsensusInfo().IsJoiner() {
 		// do not set pulse because otherwise we will set invalid active list
 		// pass consensus, prepare valid active list and set it on next pulse
 		go n.phaseManagerOnPulse(ctx, newPulse, currentTime)

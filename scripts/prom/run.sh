@@ -1,4 +1,4 @@
-#!/bin/bash
+#! /usr/bin/env bash
 
 # Starts prometheus server for launchnet metrics collection.
 # uses port 9990 (default 9090 mysteriously clash with default insolard metrics port)

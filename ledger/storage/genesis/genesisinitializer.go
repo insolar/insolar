@@ -1,5 +1,5 @@
 /*
- *    Copyright 2019 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -19,15 +19,14 @@ package genesis
 import (
 	"context"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/drop"
-	"github.com/insolar/insolar/ledger/storage/index"
-	"github.com/insolar/insolar/ledger/storage/jet"
-	"github.com/insolar/insolar/ledger/storage/record"
-	"github.com/pkg/errors"
+	"github.com/insolar/insolar/ledger/storage/object"
 )
 
 type GenesisState interface {
@@ -37,7 +36,6 @@ type GenesisState interface {
 
 type genesisInitializer struct {
 	DB            storage.DBContext     `inject:""`
-	JetStorage    jet.JetStorage        `inject:""`
 	ObjectStorage storage.ObjectStorage `inject:""`
 	PulseTracker  storage.PulseTracker  `inject:""`
 	DropModifier  drop.Modifier         `inject:""`
@@ -72,12 +70,7 @@ func (gi *genesisInitializer) Init(ctx context.Context) error {
 	}
 
 	createGenesisRecord := func() (*core.RecordRef, error) {
-		err := gi.JetStorage.AddJets(ctx, core.RecordID(jetID))
-		if err != nil {
-			return nil, err
-		}
-
-		err = gi.PulseTracker.AddPulse(
+		err := gi.PulseTracker.AddPulse(
 			ctx,
 			core.Pulse{
 				PulseNumber: core.GenesisPulse.PulseNumber,
@@ -88,7 +81,7 @@ func (gi *genesisInitializer) Init(ctx context.Context) error {
 			return nil, err
 		}
 		// It should be 0. Because pulse after 65537 will try to use a hash of drop between 0 - 65537
-		err = gi.DropModifier.Set(ctx, jetID, jet.Drop{})
+		err = gi.DropModifier.Set(ctx, drop.Drop{JetID: jetID})
 		if err != nil {
 			return nil, err
 		}
@@ -97,7 +90,7 @@ func (gi *genesisInitializer) Init(ctx context.Context) error {
 		if err != nil {
 			return nil, err
 		}
-		genesisID, err := gi.ObjectStorage.SetRecord(ctx, core.RecordID(jetID), lastPulse.Pulse.PulseNumber, &record.GenesisRecord{})
+		genesisID, err := gi.ObjectStorage.SetRecord(ctx, core.RecordID(jetID), lastPulse.Pulse.PulseNumber, &object.GenesisRecord{})
 		if err != nil {
 			return nil, err
 		}
@@ -105,7 +98,7 @@ func (gi *genesisInitializer) Init(ctx context.Context) error {
 			ctx,
 			core.RecordID(jetID),
 			genesisID,
-			&index.ObjectLifeline{LatestState: genesisID, LatestStateApproved: genesisID},
+			&object.Lifeline{LatestState: genesisID, LatestStateApproved: genesisID},
 		)
 		if err != nil {
 			return nil, err

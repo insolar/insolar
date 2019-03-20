@@ -5,14 +5,31 @@
  *
  * All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without modification, are permitted (subject to the limitations in the disclaimer below) provided that the following conditions are met:
+ * Redistribution and use in source and binary forms, with or without modification,
+ * are permitted (subject to the limitations in the disclaimer below) provided that
+ * the following conditions are met:
  *
- *  Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
- *  Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
- *  Neither the name of Insolar Technologies nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+ *  * Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ *  * Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *  * Neither the name of Insolar Technologies nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software
+ *    without specific prior written permission.
  *
- * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
+ * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED
+ * BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+ * CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING,
+ * BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 package network
@@ -60,8 +77,6 @@ type RequestHandler func(context.Context, Request) (Response, error)
 // HostNetwork simple interface to send network requests and process network responses.
 //go:generate minimock -i github.com/insolar/insolar/network.HostNetwork -o ../testutils/network -s _mock.go
 type HostNetwork interface {
-	component.Starter
-	component.Stopper
 	// PublicAddress returns public address that can be published for all nodes.
 	PublicAddress() string
 	// GetNodeID get current node ID.
@@ -144,66 +159,70 @@ type NodeKeeper interface {
 	GetCloudHash() []byte
 	// SetCloudHash set new cloud hash
 	SetCloudHash([]byte)
-	// GetActiveNode returns active node.
-	GetActiveNode(ref core.RecordRef) core.Node
-	// AddActiveNodes add active nodes.
-	AddActiveNodes([]core.Node)
-	// GetActiveNodes returns active nodes.
-	GetActiveNodes() []core.Node
-	// GetActiveNodeByShortID get active node by short ID. Returns nil if node is not found.
-	GetActiveNodeByShortID(shortID core.ShortNodeID) core.Node
-	// SetState set state of the NodeKeeper
-	SetState(core.NodeNetworkState)
+	// SetInitialSnapshot set initial snapshot for nodekeeper
+	SetInitialSnapshot(nodes []core.Node)
+	// GetAccessor get accessor to the internal snapshot for the current pulse
+	// TODO: add pulse to the function signature to get data of various pulses
+	GetAccessor() Accessor
 	// GetOriginJoinClaim get origin NodeJoinClaim
 	GetOriginJoinClaim() (*consensus.NodeJoinClaim, error)
 	// GetOriginAnnounceClaim get origin NodeAnnounceClaim
 	GetOriginAnnounceClaim(mapper consensus.BitSetMapper) (*consensus.NodeAnnounceClaim, error)
-	// NodesJoinedDuringPreviousPulse returns true if the last Sync call contained approved Join claims
-	NodesJoinedDuringPreviousPulse() bool
-	// AddPendingClaim add pending claim to the internal queue of claims
-	AddPendingClaim(consensus.ReferendumClaim) bool
 	// GetClaimQueue get the internal queue of claims
 	GetClaimQueue() ClaimQueue
 	// GetUnsyncList get unsync list for current pulse. Has copy of active node list from nodekeeper as internal state.
-	// Should be called when nodekeeper state is ReadyNodeNetworkState.
+	// Should be called when GetConsensusInfo().IsJoiner() == false.
 	GetUnsyncList() UnsyncList
 	// GetSparseUnsyncList get sparse unsync list for current pulse with predefined length of active node list.
-	// Does not contain active list, should collect active list during its lifetime via AddClaims.
-	// Should be called when nodekeeper state is WaitingNodeNetworkState.
+	// Does not contain active list, should collect active list during its lifetime via AddNode.
+	// Should be called when GetConsensusInfo().IsJoiner() == true.
 	GetSparseUnsyncList(length int) UnsyncList
 	// Sync move unsync -> sync
 	Sync(context.Context, []core.Node, []consensus.ReferendumClaim) error
 	// MoveSyncToActive merge sync list with active nodes
 	MoveSyncToActive(ctx context.Context) error
+	// GetConsensusInfo get additional info for the current consensus process
+	GetConsensusInfo() ConsensusInfo
+}
+
+// TODO: refactor code and make it not necessary
+// ConsensusInfo additional info for the current consensus process
+type ConsensusInfo interface {
+	// NodesJoinedDuringPreviousPulse returns true if the last Sync call contained approved Join claims
+	NodesJoinedDuringPreviousPulse() bool
 	// AddTemporaryMapping add temporary mapping till the next pulse for consensus
 	AddTemporaryMapping(nodeID core.RecordRef, shortID core.ShortNodeID, address string) error
 	// ResolveConsensus get temporary mapping by short ID
 	ResolveConsensus(shortID core.ShortNodeID) *host.Host
 	// ResolveConsensusRef get temporary mapping by node ID
 	ResolveConsensusRef(nodeID core.RecordRef) *host.Host
+	// SetIsJoiner instruct current node whether it should perform consensus as joiner or not
+	SetIsJoiner(isJoiner bool)
+	// IsJoiner true if current node should perform consensus as joiner
+	IsJoiner() bool
 }
 
-// UnsyncList is interface to manage unsync list
+// UnsyncList is a snapshot of active list for pulse that is previous to consensus pulse
 //go:generate minimock -i github.com/insolar/insolar/network.UnsyncList -o ../testutils/network -s _mock.go
 type UnsyncList interface {
 	consensus.BitSetMapper
-	// AddNode
+	// AddNode add node to the snapshot of the current consensus
 	AddNode(node core.Node, bitsetIndex uint16)
-	// AddProof
+	// AddProof add node pulse proof of a specific node
 	AddProof(nodeID core.RecordRef, proof *consensus.NodePulseProof)
-	// GetProof
+	// GetProof get node pulse proof of a specific node
 	GetProof(nodeID core.RecordRef) *consensus.NodePulseProof
-	// GetGlobuleHashSignature
+	// GetGlobuleHashSignature get globule hash signature of a specific node
 	GetGlobuleHashSignature(ref core.RecordRef) (consensus.GlobuleHashSignature, bool)
-	// SetGlobuleHashSignature
+	// SetGlobuleHashSignature set globule hash signature of a specific node
 	SetGlobuleHashSignature(core.RecordRef, consensus.GlobuleHashSignature)
 	// GetActiveNode get active node by reference ID for current consensus
 	GetActiveNode(ref core.RecordRef) core.Node
 	// GetActiveNodes get active nodes for current consensus
 	GetActiveNodes() []core.Node
-	//
+	// GetOrigin get origin node for the current insolard
 	GetOrigin() core.Node
-	//
+	// RemoveNode remove node
 	RemoveNode(nodeID core.RecordRef)
 }
 
@@ -214,8 +233,6 @@ type PartitionPolicy interface {
 
 // RoutingTable contains all routing information of the network.
 type RoutingTable interface {
-	// Inject inject dependencies from components
-	Inject(nodeKeeper NodeKeeper)
 	// Resolve NodeID -> ShortID, Address. Can initiate network requests.
 	Resolve(core.RecordRef) (*host.Host, error)
 	// ResolveConsensus ShortID -> NodeID, Address for node inside current globe for current consensus.
@@ -258,9 +275,28 @@ type ClaimQueue interface {
 	Front() consensus.ReferendumClaim
 	// Length returns the length of the queue
 	Length() int
+	// Push adds claim to the queue.
+	Push(claim consensus.ReferendumClaim)
 }
 
-// Snapshot provides ...
+// Snapshot contains node lists and network state for every pulse
 type Snapshot interface {
-	GetPulse()
+	GetPulse() core.PulseNumber
+}
+
+// Accessor is interface that provides read access to nodekeeper internal snapshot
+type Accessor interface {
+	// GetWorkingNode get working node by its reference. Returns nil if node is not found.
+	GetWorkingNode(ref core.RecordRef) core.Node
+	// GetWorkingNodes get working nodes.
+	GetWorkingNodes() []core.Node
+	// GetWorkingNodesByRole get working nodes by role
+	GetWorkingNodesByRole(role core.DynamicRole) []core.RecordRef
+
+	// GetActiveNode returns active node.
+	GetActiveNode(ref core.RecordRef) core.Node
+	// GetActiveNodes returns active nodes.
+	GetActiveNodes() []core.Node
+	// GetActiveNodeByShortID get active node by short ID. Returns nil if node is not found.
+	GetActiveNodeByShortID(shortID core.ShortNodeID) core.Node
 }

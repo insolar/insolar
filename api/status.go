@@ -20,6 +20,7 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
@@ -34,16 +35,15 @@ type Node struct {
 
 // StatusReply is reply for Status service requests.
 type StatusReply struct {
-	NetworkState        string
-	Origin              Node
-	ActiveListSize      int
-	WorkingListSize     int
-	Nodes               []Node
-	PulseNumber         uint32
-	Entropy             []byte
-	NodeState           string
-	AdditionalNodeState string
-	Version             string
+	NetworkState    string
+	Origin          Node
+	ActiveListSize  int
+	WorkingListSize int
+	Nodes           []Node
+	PulseNumber     uint32
+	Entropy         []byte
+	NodeState       string
+	Version         string
 }
 
 // StatusService is a service that provides API for getting status of node.
@@ -64,10 +64,9 @@ func (s *StatusService) Get(r *http.Request, args *interface{}, reply *StatusRep
 	inslog.Infof("[ StatusService.Get ] Incoming request: %s", r.RequestURI)
 
 	reply.NetworkState = s.runner.NetworkSwitcher.GetState().String()
-	reply.NodeState = s.runner.NodeNetwork.GetState().String()
-	reply.AdditionalNodeState = s.runner.NodeNetwork.GetOrigin().GetState().String()
+	reply.NodeState = s.runner.NodeNetwork.GetOrigin().GetState().String()
 
-	activeNodes := s.runner.NodeNetwork.(network.NodeKeeper).GetActiveNodes()
+	activeNodes := s.runner.NodeNetwork.(network.NodeKeeper).GetAccessor().GetActiveNodes()
 	workingNodes := s.runner.NodeNetwork.GetWorkingNodes()
 
 	reply.ActiveListSize = len(activeNodes)
@@ -78,7 +77,7 @@ func (s *StatusService) Get(r *http.Request, args *interface{}, reply *StatusRep
 		nodes[i] = Node{
 			Reference: node.ID().String(),
 			Role:      node.Role().String(),
-			IsWorking: node.IsWorking(),
+			IsWorking: node.GetState() == core.NodeReady,
 		}
 	}
 
@@ -87,7 +86,7 @@ func (s *StatusService) Get(r *http.Request, args *interface{}, reply *StatusRep
 	reply.Origin = Node{
 		Reference: origin.ID().String(),
 		Role:      origin.Role().String(),
-		IsWorking: origin.IsWorking(),
+		IsWorking: origin.GetState() == core.NodeReady,
 	}
 
 	pulse, err := s.runner.PulseStorage.Current(ctx)

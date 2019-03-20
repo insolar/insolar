@@ -24,11 +24,6 @@ type NodeNetworkMock struct {
 	GetOriginPreCounter uint64
 	GetOriginMock       mNodeNetworkMockGetOrigin
 
-	GetStateFunc       func() (r core.NodeNetworkState)
-	GetStateCounter    uint64
-	GetStatePreCounter uint64
-	GetStateMock       mNodeNetworkMockGetState
-
 	GetWorkingNodeFunc       func(p core.RecordRef) (r core.Node)
 	GetWorkingNodeCounter    uint64
 	GetWorkingNodePreCounter uint64
@@ -54,7 +49,6 @@ func NewNodeNetworkMock(t minimock.Tester) *NodeNetworkMock {
 	}
 
 	m.GetOriginMock = mNodeNetworkMockGetOrigin{mock: m}
-	m.GetStateMock = mNodeNetworkMockGetState{mock: m}
 	m.GetWorkingNodeMock = mNodeNetworkMockGetWorkingNode{mock: m}
 	m.GetWorkingNodesMock = mNodeNetworkMockGetWorkingNodes{mock: m}
 	m.GetWorkingNodesByRoleMock = mNodeNetworkMockGetWorkingNodesByRole{mock: m}
@@ -191,140 +185,6 @@ func (m *NodeNetworkMock) GetOriginFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.GetOriginFunc != nil {
 		return atomic.LoadUint64(&m.GetOriginCounter) > 0
-	}
-
-	return true
-}
-
-type mNodeNetworkMockGetState struct {
-	mock              *NodeNetworkMock
-	mainExpectation   *NodeNetworkMockGetStateExpectation
-	expectationSeries []*NodeNetworkMockGetStateExpectation
-}
-
-type NodeNetworkMockGetStateExpectation struct {
-	result *NodeNetworkMockGetStateResult
-}
-
-type NodeNetworkMockGetStateResult struct {
-	r core.NodeNetworkState
-}
-
-//Expect specifies that invocation of NodeNetwork.GetState is expected from 1 to Infinity times
-func (m *mNodeNetworkMockGetState) Expect() *mNodeNetworkMockGetState {
-	m.mock.GetStateFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &NodeNetworkMockGetStateExpectation{}
-	}
-
-	return m
-}
-
-//Return specifies results of invocation of NodeNetwork.GetState
-func (m *mNodeNetworkMockGetState) Return(r core.NodeNetworkState) *NodeNetworkMock {
-	m.mock.GetStateFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &NodeNetworkMockGetStateExpectation{}
-	}
-	m.mainExpectation.result = &NodeNetworkMockGetStateResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of NodeNetwork.GetState is expected once
-func (m *mNodeNetworkMockGetState) ExpectOnce() *NodeNetworkMockGetStateExpectation {
-	m.mock.GetStateFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &NodeNetworkMockGetStateExpectation{}
-
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *NodeNetworkMockGetStateExpectation) Return(r core.NodeNetworkState) {
-	e.result = &NodeNetworkMockGetStateResult{r}
-}
-
-//Set uses given function f as a mock of NodeNetwork.GetState method
-func (m *mNodeNetworkMockGetState) Set(f func() (r core.NodeNetworkState)) *NodeNetworkMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.GetStateFunc = f
-	return m.mock
-}
-
-//GetState implements github.com/insolar/insolar/core.NodeNetwork interface
-func (m *NodeNetworkMock) GetState() (r core.NodeNetworkState) {
-	counter := atomic.AddUint64(&m.GetStatePreCounter, 1)
-	defer atomic.AddUint64(&m.GetStateCounter, 1)
-
-	if len(m.GetStateMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.GetStateMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to NodeNetworkMock.GetState.")
-			return
-		}
-
-		result := m.GetStateMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the NodeNetworkMock.GetState")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.GetStateMock.mainExpectation != nil {
-
-		result := m.GetStateMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the NodeNetworkMock.GetState")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.GetStateFunc == nil {
-		m.t.Fatalf("Unexpected call to NodeNetworkMock.GetState.")
-		return
-	}
-
-	return m.GetStateFunc()
-}
-
-//GetStateMinimockCounter returns a count of NodeNetworkMock.GetStateFunc invocations
-func (m *NodeNetworkMock) GetStateMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.GetStateCounter)
-}
-
-//GetStateMinimockPreCounter returns the value of NodeNetworkMock.GetState invocations
-func (m *NodeNetworkMock) GetStateMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.GetStatePreCounter)
-}
-
-//GetStateFinished returns true if mock invocations count is ok
-func (m *NodeNetworkMock) GetStateFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.GetStateMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.GetStateCounter) == uint64(len(m.GetStateMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.GetStateMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.GetStateCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.GetStateFunc != nil {
-		return atomic.LoadUint64(&m.GetStateCounter) > 0
 	}
 
 	return true
@@ -766,10 +626,6 @@ func (m *NodeNetworkMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to NodeNetworkMock.GetOrigin")
 	}
 
-	if !m.GetStateFinished() {
-		m.t.Fatal("Expected call to NodeNetworkMock.GetState")
-	}
-
 	if !m.GetWorkingNodeFinished() {
 		m.t.Fatal("Expected call to NodeNetworkMock.GetWorkingNode")
 	}
@@ -803,10 +659,6 @@ func (m *NodeNetworkMock) MinimockFinish() {
 		m.t.Fatal("Expected call to NodeNetworkMock.GetOrigin")
 	}
 
-	if !m.GetStateFinished() {
-		m.t.Fatal("Expected call to NodeNetworkMock.GetState")
-	}
-
 	if !m.GetWorkingNodeFinished() {
 		m.t.Fatal("Expected call to NodeNetworkMock.GetWorkingNode")
 	}
@@ -834,7 +686,6 @@ func (m *NodeNetworkMock) MinimockWait(timeout time.Duration) {
 	for {
 		ok := true
 		ok = ok && m.GetOriginFinished()
-		ok = ok && m.GetStateFinished()
 		ok = ok && m.GetWorkingNodeFinished()
 		ok = ok && m.GetWorkingNodesFinished()
 		ok = ok && m.GetWorkingNodesByRoleFinished()
@@ -848,10 +699,6 @@ func (m *NodeNetworkMock) MinimockWait(timeout time.Duration) {
 
 			if !m.GetOriginFinished() {
 				m.t.Error("Expected call to NodeNetworkMock.GetOrigin")
-			}
-
-			if !m.GetStateFinished() {
-				m.t.Error("Expected call to NodeNetworkMock.GetState")
 			}
 
 			if !m.GetWorkingNodeFinished() {
@@ -879,10 +726,6 @@ func (m *NodeNetworkMock) MinimockWait(timeout time.Duration) {
 func (m *NodeNetworkMock) AllMocksCalled() bool {
 
 	if !m.GetOriginFinished() {
-		return false
-	}
-
-	if !m.GetStateFinished() {
 		return false
 	}
 

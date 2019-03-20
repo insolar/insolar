@@ -35,6 +35,7 @@ const (
 	Initializing = SlotState(iota)
 	Working
 	Suspending
+	Canceling
 )
 
 const slotSize = 10000
@@ -111,6 +112,13 @@ func (l *ElementList) len() int { // nolint: unused
 	return l.length
 }
 
+// TaskPusher is interface which permits only safe access to slot
+type TaskPusher interface {
+	SinkPush(data interface{}) error
+	SinkPushAll(data []interface{}) error
+	PushSignal(signalType uint32, callback queue.SyncDone) error
+}
+
 // Slot holds info about specific pulse and events for it
 type Slot struct {
 	handlersConfiguration HandlersConfiguration // nolint
@@ -127,6 +135,18 @@ type Slot struct {
 	// we can use slice or just several fields of ElementList, it will be faster but not pretty
 	elementListMap     map[ActivationStatus]*ElementList
 	removeSlotCallback RemoveSlotCallback
+}
+
+func (s *Slot) SinkPush(data interface{}) error {
+	return s.inputQueue.SinkPush(data)
+}
+
+func (s *Slot) SinkPushAll(data []interface{}) error {
+	return s.inputQueue.SinkPushAll(data)
+}
+
+func (s *Slot) PushSignal(signalType uint32, callback queue.SyncDone) error {
+	return s.inputQueue.PushSignal(signalType, callback)
 }
 
 // SlotStateMachine represents state machine of slot itself
@@ -147,8 +167,16 @@ func initElementsBuf() ([]slotElement, *ElementList) {
 	return elements, emptyList
 }
 
-// NewSlot creates new instance of Slot
-func NewSlot(pulseState constant.PulseState, pulseNumber core.PulseNumber, removeSlotCallback RemoveSlotCallback) *Slot {
+// NewWorkingSlot creates new instance of Slot
+func NewWorkingSlot(pulseState constant.PulseState, pulseNumber core.PulseNumber, removeSlotCallback RemoveSlotCallback) TaskPusher {
+
+	slot := newSlot(pulseState, pulseNumber, removeSlotCallback)
+	slot.runWorker()
+
+	return slot
+}
+
+func newSlot(pulseState constant.PulseState, pulseNumber core.PulseNumber, removeSlotCallback RemoveSlotCallback) *Slot {
 	slotState := Initializing
 	if pulseState == constant.Antique {
 		slotState = Working
@@ -161,6 +189,7 @@ func NewSlot(pulseState constant.PulseState, pulseNumber core.PulseNumber, remov
 		ActiveElement:    {},
 		NotActiveElement: {},
 	}
+
 	return &Slot{
 		pulseState:         pulseState,
 		inputQueue:         queue.NewMutexQueue(),
@@ -172,6 +201,11 @@ func NewSlot(pulseState constant.PulseState, pulseNumber core.PulseNumber, remov
 		elementListMap:     elementListMap,
 		removeSlotCallback: removeSlotCallback,
 	}
+}
+
+func (s *Slot) runWorker() {
+	worker := newWorker(s)
+	go worker.run()
 }
 
 // GetPulseNumber implements iface SlotDetails

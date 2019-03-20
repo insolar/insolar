@@ -1,5 +1,5 @@
 /*
- *    Copyright 2019 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -16,6 +16,8 @@
 
 package db
 
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage/db.DB -o ./ -s _gen_mock.go
+
 // DB provides a simple key-value store interface for persisting data.
 type DB interface {
 	Get(key Key) (value []byte, err error)
@@ -25,7 +27,9 @@ type DB interface {
 // Key represents a key for the key-value store. Scope is required to separate different DB clients and should be
 // unique.
 type Key interface {
+	// Scope returns a first part for constructing a composite key for storing record in db
 	Scope() Scope
+	// ID returns a second part for constructing a composite key for storing record in db
 	ID() []byte
 }
 
@@ -40,4 +44,6 @@ func (s Scope) Bytes() []byte {
 const (
 	// ScopePulse is the scope for pulse storage.
 	ScopePulse Scope = 1
+	// ScopeJetDrop is the scope for a jet drop storage.
+	ScopeJetDrop Scope = 3
 )

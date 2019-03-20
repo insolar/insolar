@@ -1,5 +1,5 @@
 /*
- *    Copyright 2019 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -20,15 +20,15 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
-// ID represents universal insolar ID.
+// ID represents universal Insolar ID.
 type ID = core.RecordID
 
-// JetID represents jet ID. It's the same as regular id, but has a specifically defined pulse number and a set of
-// methods unique to jet IDs.
+// JetID represents jet ID. It's the same as regular id, but has a specifically
+// defined pulse number and a set of methods unique to jet IDs.
 type JetID = core.JetID
 
-// Reference represents universal insolar Reference. Reference consists of two IDs. First ID is an affinity ID,
-// second is referred object ID.
+// Reference represents universal Insolar Reference. Reference consists of two IDs.
+// First ID is an affinity ID, second is referred object ID.
 type Reference = core.RecordRef
 
 // PulseNumber is a sequential number of Pulse.
