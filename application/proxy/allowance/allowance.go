@@ -24,7 +24,7 @@ import (
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = core.NewRefFromBase58("11119Zp8v5pgLfpATapdtdxQdmbNWTCL4vPWdhaDJU.11111111111111111111111111111111")
+var PrototypeReference, _ = core.NewRefFromBase58("1111SN8612KAa4SkMimYUowArnp5s9WEXyNu5ZAc3e.11111111111111111111111111111111")
 
 // Allowance holds proxy type
 type Allowance struct {
