@@ -53,5 +53,5 @@ type SnapshotAccessor interface {
 
 // SnapshotAppender provides method for appending Snapshot to storage.
 type SnapshotAppender interface {
-	Append(ctx context.Context, pulse core.PulseNumber, snapshot node.Snapshot) error
+	Append(ctx context.Context, pulse core.PulseNumber, snapshot *node.Snapshot) error
 }
