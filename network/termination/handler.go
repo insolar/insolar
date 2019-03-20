@@ -7,7 +7,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/network/servicenetwork"
 )
 
 type terminationHandler struct {
@@ -15,10 +14,11 @@ type terminationHandler struct {
 	done        chan core.LeaveApproved
 	terminating bool
 
-	Network *servicenetwork.ServiceNetwork
+	Network      core.Network      `inject:""`
+	PulseStorage core.PulseStorage `inject:""`
 }
 
-func NewHandler(nw *servicenetwork.ServiceNetwork) core.TerminationHandler {
+func NewHandler(nw core.Network) core.TerminationHandler {
 	return &terminationHandler{Network: nw}
 }
 
@@ -35,7 +35,7 @@ func (t *terminationHandler) Leave(ctx context.Context, leaveAfterPulses core.Pu
 			inslogger.FromContext(ctx).Debug("terminationHandler.Leave() with 0")
 			t.Network.Leave(ctx, 0)
 		} else {
-			pulse, _ := t.Network.PulseStorage.Current(ctx)
+			pulse, _ := t.PulseStorage.Current(ctx)
 			pulseDelta := pulse.NextPulseNumber - pulse.PulseNumber
 
 			inslogger.FromContext(ctx).Debugf("terminationHandler.Leave() with leaveAfterPulses: %+v, in pulse %+v", leaveAfterPulses, pulse.PulseNumber+leaveAfterPulses*pulseDelta)
