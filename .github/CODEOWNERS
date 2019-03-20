@@ -6,6 +6,4 @@
 application/**                          @LinnikD
 ledger/**                               @andreyromancev
 network/**                              @dmitry-panchenko
-pulsar/**                               @egorikas
-vm/**                                   @Vany
 core/**                                 @andreyromancev
