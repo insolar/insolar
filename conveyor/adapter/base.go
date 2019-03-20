@@ -138,23 +138,23 @@ type CancellableQueueAdapter struct {
 }
 
 // StopProcessing is blocking
-func (swa *CancellableQueueAdapter) StopProcessing() {
-	if atomic.LoadUint32(&swa.stopProcessing) != 0 {
+func (a *CancellableQueueAdapter) StopProcessing() {
+	if atomic.LoadUint32(&a.stopProcessing) != 0 {
 		log.Infof("[ StopProcessing ]  Nothing done")
 		return
 	}
-	atomic.StoreUint32(&swa.stopProcessing, 1)
-	<-swa.processingStopped
+	atomic.StoreUint32(&a.stopProcessing, 1)
+	<-a.processingStopped
 }
 
 // StartProcessing start processing of input queue
-func (swa *CancellableQueueAdapter) StartProcessing(started chan bool) {
-	if atomic.LoadUint32(&swa.processingStarted) != 0 {
+func (a *CancellableQueueAdapter) StartProcessing(started chan bool) {
+	if atomic.LoadUint32(&a.processingStarted) != 0 {
 		log.Infof("[ StartProcessing ] processing already started. Nothing done")
 		close(started)
 		return
 	}
-	atomic.StoreUint32(&swa.processingStarted, 1)
+	atomic.StoreUint32(&a.processingStarted, 1)
 
 	started <- true
 
@@ -163,16 +163,16 @@ func (swa *CancellableQueueAdapter) StartProcessing(started chan bool) {
 
 		var itasks []queue.OutputElement
 
-		if atomic.LoadUint32(&swa.stopProcessing) != 0 {
+		if atomic.LoadUint32(&a.stopProcessing) != 0 {
 			if lastLoop {
 				log.Infof("[ StartProcessing ] Stop processing. EXIT")
 				break
 			}
-			itasks = swa.queue.BlockAndRemoveAll()
+			itasks = a.queue.BlockAndRemoveAll()
 			log.Info("[ StartProcessing ] Stop processing: one more loop")
 			lastLoop = true
 		} else {
-			itasks = swa.queue.RemoveAll()
+			itasks = a.queue.RemoveAll()
 		}
 
 		log.Infof("[ StartProcessing ] Got %d new tasks", len(itasks))
@@ -190,15 +190,15 @@ func (swa *CancellableQueueAdapter) StartProcessing(started chan bool) {
 				panic(fmt.Sprintf("[ StartProcessing ] How does it happen? Wrong Type: %T", itask.GetData()))
 			}
 
-			if swa.processor == nil {
+			if a.processor == nil {
 				panic(fmt.Sprintf("[ StartProcessing ] Processor function wasn't provided"))
 			}
 
-			go swa.process(task)
+			go a.process(task)
 		}
 	}
 
-	swa.processingStopped <- true
+	a.processingStopped <- true
 }
 
 var reqID uint64
@@ -213,15 +213,15 @@ func atomicLoadAndIncrementUint64(addr *uint64) uint64 {
 }
 
 // PushTask implements PulseConveyorAdapterTaskSink
-func (swa *CancellableQueueAdapter) PushTask(respSink AdaptorToSlotResponseSink,
+func (a *CancellableQueueAdapter) PushTask(respSink AdaptorToSlotResponseSink,
 	elementID idType,
 	handlerID idType,
 	taskPayload interface{}) error {
 
 	cancelInfo := newCancelInfo(atomicLoadAndIncrementUint64(&reqID))
-	swa.taskHolder.add(cancelInfo, respSink.GetPulseNumber())
+	a.taskHolder.add(cancelInfo, respSink.GetPulseNumber())
 
-	return swa.queue.SinkPush(
+	return a.queue.SinkPush(
 		queueTask{
 			cancelInfo: cancelInfo,
 			task: AdapterTask{
@@ -235,36 +235,36 @@ func (swa *CancellableQueueAdapter) PushTask(respSink AdaptorToSlotResponseSink,
 }
 
 // CancelElementTasks: now cancels all pulseNumber's tasks
-func (swa *CancellableQueueAdapter) CancelElementTasks(pulseNumber idType, elementID idType) {
-	swa.taskHolder.stop(pulseNumber, false)
+func (a *CancellableQueueAdapter) CancelElementTasks(pulseNumber idType, elementID idType) {
+	a.taskHolder.stop(pulseNumber, false)
 }
 
 // CancelPulseTasks: now cancels all pulseNumber's tasks
-func (swa *CancellableQueueAdapter) CancelPulseTasks(pulseNumber idType) {
-	swa.taskHolder.stop(pulseNumber, false)
+func (a *CancellableQueueAdapter) CancelPulseTasks(pulseNumber idType) {
+	a.taskHolder.stop(pulseNumber, false)
 }
 
 // FlushPulseTasks: now flush all pulseNumber's tasks
-func (swa *CancellableQueueAdapter) FlushPulseTasks(pulseNumber uint32) {
-	swa.taskHolder.stop(pulseNumber, true)
+func (a *CancellableQueueAdapter) FlushPulseTasks(pulseNumber uint32) {
+	a.taskHolder.stop(pulseNumber, true)
 }
 
 // FlushNodeTasks: now flush all tasks
-func (swa *CancellableQueueAdapter) FlushNodeTasks(nodeID idType) {
-	swa.taskHolder.stopAll(true)
+func (a *CancellableQueueAdapter) FlushNodeTasks(nodeID idType) {
+	a.taskHolder.stopAll(true)
 }
 
-func (swa *CancellableQueueAdapter) process(cancellableTask queueTask) {
+func (a *CancellableQueueAdapter) process(cancellableTask queueTask) {
 	adapterTask := cancellableTask.task
-	event := swa.processor.Process(swa.adapterID, adapterTask, cancellableTask.cancelInfo)
+	event := a.processor.Process(a.adapterID, adapterTask, cancellableTask.cancelInfo)
 	if event.Flushed {
 		log.Info("[ CancellableQueueAdapter.process ] Flush. DON'T push Response")
 		return
 	}
 	respSink := adapterTask.respSink
 	for nestedEvent := range event.NestedEventPayload {
-		respSink.PushNestedEvent(swa.adapterID, adapterTask.elementID, adapterTask.handlerID, nestedEvent)
+		respSink.PushNestedEvent(a.adapterID, adapterTask.elementID, adapterTask.handlerID, nestedEvent)
 	}
-	respSink.PushResponse(swa.adapterID, adapterTask.elementID, adapterTask.handlerID, event.RespPayload)
-	// TODO: remove cancelInfo from swa.taskHolder
+	respSink.PushResponse(a.adapterID, adapterTask.elementID, adapterTask.handlerID, event.RespPayload)
+	// TODO: remove cancelInfo from a.taskHolder
 }
