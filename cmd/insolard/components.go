@@ -25,7 +25,6 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/contractrequester"
 	"github.com/insolar/insolar/conveyor"
-	"github.com/insolar/insolar/conveyor/adapter"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/delegationtoken"
 	"github.com/insolar/insolar/cryptography"
@@ -101,7 +100,7 @@ func initCertificateManager(
 
 // getAdapters creates and returns all adapters which needs other components
 func getAdapters() []interface{} {
-	return []interface{}{adapter.NewResponseSendAdapter(), artifactmanager.NewGetCodeAdapter()}
+	return []interface{}{artifactmanager.NewGetCodeAdapter()}
 }
 
 // initComponents creates and links all insolard components
