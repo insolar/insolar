@@ -1,0 +1,139 @@
+/*
+ *    Copyright 2019 Insolar Technologies
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
+
+package adapter
+
+import (
+	"fmt"
+	"sync"
+	"testing"
+	"time"
+
+	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/testutils"
+	"github.com/stretchr/testify/require"
+)
+
+type replyMock int
+
+func (replyMock) Type() core.ReplyType {
+	return core.ReplyType(124)
+}
+func testResponseSenderTask(t *testing.T) ResponseSenderTask {
+	res := replyMock(111)
+	return ResponseSenderTask{Future: mockConveyorFuture(t, res), Result: res}
+}
+
+func mockConveyorFuture(t *testing.T, result core.Reply) *testutils.ConveyorFutureMock {
+	cfMock := testutils.NewConveyorFutureMock(t)
+	cfMock.SetResultFunc = func(p core.Reply) {
+		if result != p {
+			panic(fmt.Sprintf("Expected result %v, get %v", result, p))
+		}
+	}
+	return cfMock
+}
+
+func startResponseSendAdapter() *CancellableQueueAdapter {
+	adapter := NewResponseSendAdapter().(*CancellableQueueAdapter)
+	started := make(chan bool, 1)
+	adapter.StartProcessing(started)
+	<-started
+	return adapter
+}
+
+func TestResponseSendAdapter_PushTask_IncorrectPayload(t *testing.T) {
+	adapter := startResponseSendAdapter()
+	resp := &mockResponseSink{}
+
+	err := adapter.PushTask(resp, 33, 22, 22)
+	require.NoError(t, err)
+	// TODO: wait until swa.taskHolder is empty (i.e. task was done)
+	time.Sleep(200 * time.Millisecond)
+	require.Error(t, resp.GetResponse().(error))
+	require.Contains(t, resp.GetResponse().(error).Error(), "[ ResponseSender.Process ] Incorrect payload type: int")
+}
+
+func TestResponseSendAdapter_PushTask(t *testing.T) {
+	adapter := startResponseSendAdapter()
+	resp := &mockResponseSink{}
+
+	err := adapter.PushTask(resp, 33, 22, testResponseSenderTask(t))
+	require.NoError(t, err)
+	// TODO: wait until swa.taskHolder is empty (i.e. task was done)
+	time.Sleep(200 * time.Millisecond)
+	require.Contains(t, resp.GetResponse().(string), "Response was send successfully")
+}
+
+func TestResponseSendAdapter_PushTask_AfterStopProcessing(t *testing.T) {
+	adapter := startResponseSendAdapter()
+	resp := &mockResponseSink{}
+	adapter.StopProcessing()
+
+	err := adapter.PushTask(resp, 34, 22, testResponseSenderTask(t))
+	// TODO: check swa.taskHolder is empty (i.e. task wasn't created)
+	require.Contains(t, err.Error(), "Queue is blocked")
+}
+
+func TestResponseSendAdapter_CancelPulseTasks(t *testing.T) {
+	adapter := startResponseSendAdapter()
+	resp := &mockResponseSink{response: "startValue"}
+	err := adapter.PushTask(resp, 33, 22, testResponseSenderTask(t))
+	require.NoError(t, err)
+
+	adapter.CancelPulseTasks(resp.GetPulseNumber())
+	// TODO: wait until swa.taskHolder is empty (i.e. task was done)
+	time.Sleep(200 * time.Millisecond)
+	require.Nil(t, resp.GetResponse())
+}
+
+func TestResponseSendAdapter_FlushPulseTasks(t *testing.T) {
+	adapter := startResponseSendAdapter()
+	resp := &mockResponseSink{response: "startValue"}
+	err := adapter.PushTask(resp, 34, 22, testResponseSenderTask(t))
+	require.NoError(t, err)
+
+	adapter.FlushPulseTasks(resp.GetPulseNumber())
+	// TODO: wait until swa.taskHolder is empty (i.e. task was done)
+	time.Sleep(200 * time.Millisecond)
+	require.Equal(t, "startValue", resp.GetResponse())
+}
+
+func TestResponseSendAdapter_Parallel(t *testing.T) {
+	adapter := startResponseSendAdapter()
+
+	numIterations := 200
+	parallelPushTasks := 27
+
+	wg := sync.WaitGroup{}
+	wg.Add(parallelPushTasks)
+
+	// PushTask
+	for i := 0; i < parallelPushTasks; i++ {
+		go func(wg *sync.WaitGroup, adapter PulseConveyorAdapterTaskSink) {
+			for i := 0; i < numIterations; i++ {
+				resp := &mockResponseSink{}
+				adapter.PushTask(resp, 34, 22, testResponseSenderTask(t))
+			}
+			wg.Done()
+		}(&wg, adapter)
+	}
+
+	wg.Wait()
+
+	adapter.StopProcessing()
+
+}

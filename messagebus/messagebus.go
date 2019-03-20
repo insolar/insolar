@@ -40,6 +40,8 @@ import (
 
 const deliverRPCMethodName = "MessageBus.Deliver"
 
+var conveyorReadyTypes = map[core.MessageType]bool{}
+
 // MessageBus is component that routes application logic requests,
 // e.g. glue between network and logic runner
 type MessageBus struct {
@@ -51,9 +53,11 @@ type MessageBus struct {
 	DelegationTokenFactory     core.DelegationTokenFactory     `inject:""`
 	ParcelFactory              message.ParcelFactory           `inject:""`
 	PulseStorage               core.PulseStorage               `inject:""`
+	Conveyor                   core.Conveyor                   `inject:""`
 
-	handlers     map[core.MessageType]core.MessageHandler
-	signmessages bool
+	handlers               map[core.MessageType]core.MessageHandler
+	signmessages           bool
+	conveyorPendingTimeout time.Duration
 
 	globalLock                  sync.RWMutex
 	NextPulseMessagePoolChan    chan interface{}
@@ -67,6 +71,7 @@ func NewMessageBus(config configuration.Configuration) (*MessageBus, error) {
 	mb := &MessageBus{
 		handlers:                 map[core.MessageType]core.MessageHandler{},
 		signmessages:             config.Host.SignMessages,
+		conveyorPendingTimeout:   time.Duration(config.Conveyor.PendingTimeout) * time.Millisecond,
 		NextPulseMessagePoolChan: make(chan interface{}),
 	}
 	mb.Lock(context.Background())
@@ -257,6 +262,26 @@ func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Repl
 	defer readBarrier(ctx, &mb.globalLock)
 	ctx, _ = inslogger.WithField(ctx, "msg_type", msg.Type().String())
 	inslogger.FromContext(ctx).Debug("MessageBus.doDeliver starts ...")
+	_, ok := conveyorReadyTypes[msg.Type()]
+	if ok {
+		f := NewFuture()
+		event := ConveyorPendingMessage{Msg: msg, Future: f}
+		err := mb.Conveyor.SinkPush(msg.Pulse(), event)
+		if err != nil {
+			f.Cancel()
+			err := errors.Wrapf(err, "error while calling Conveyor.SinkPush")
+			inslogger.FromContext(ctx).Error(err)
+			return nil, err
+		}
+		resp, err := f.GetResult(mb.conveyorPendingTimeout)
+		if err != nil {
+			return nil, &serializableError{
+				S: err.Error(),
+			}
+		}
+		return resp, nil
+
+	}
 	handler, ok := mb.handlers[msg.Type()]
 	if !ok {
 		txt := "no handler for received message type"

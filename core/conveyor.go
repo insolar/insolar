@@ -17,6 +17,8 @@
 package core
 
 import (
+	"time"
+
 	"github.com/insolar/insolar/conveyor/queue"
 )
 
@@ -54,7 +56,21 @@ type Control interface {
 }
 
 // Conveyor is responsible for all pulse-dependent processing logic
+//go:generate minimock -i github.com/insolar/insolar/core.Conveyor -o ../testutils -s _mock.go
 type Conveyor interface {
 	EventSink
 	Control
+}
+
+// ConveyorFuture is pending for response from conveyor
+//go:generate minimock -i github.com/insolar/insolar/core.ConveyorFuture -o ../testutils -s _mock.go
+type ConveyorFuture interface {
+	// Result is a channel to listen for future result.
+	Result() <-chan Reply
+	// SetResult makes packet to appear in result channel.
+	SetResult(res Reply)
+	// GetResult gets the future result from Result() channel with a timeout set to `duration`.
+	GetResult(duration time.Duration) (Reply, error)
+	// Cancel closes all channels and cleans up underlying structures.
+	Cancel()
 }

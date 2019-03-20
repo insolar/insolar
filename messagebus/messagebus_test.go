@@ -64,8 +64,9 @@ func prepare(t *testing.T, ctx context.Context, currentPulse int, msgPulse int) 
 	dtf := testutils.NewDelegationTokenFactoryMock(t)
 	pf := NewParcelFactory()
 	ps := testutils.NewPulseStorageMock(t)
+	c := testutils.NewConveyorMock(t)
 
-	(&component.Manager{}).Inject(net, jc, nn, pcs, cs, dtf, pf, ps, mb)
+	(&component.Manager{}).Inject(net, jc, nn, pcs, cs, dtf, pf, ps, mb, c)
 
 	ps.CurrentFunc = func(ctx context.Context) (*core.Pulse, error) {
 		return &core.Pulse{
