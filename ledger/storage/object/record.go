@@ -79,34 +79,6 @@ type RecordModifier interface {
 	Set(ctx context.Context, id insolar.ID, rec MaterialRecord) error
 }
 
-// // Clone returns copy of argument idx value.
-// func Clone(rec MaterialRecord) MaterialRecord {
-// 	if idx.LatestState != nil {
-// 		tmp := *idx.LatestState
-// 		idx.LatestState = &tmp
-// 	}
-//
-// 	if idx.LatestStateApproved != nil {
-// 		tmp := *idx.LatestStateApproved
-// 		idx.LatestStateApproved = &tmp
-// 	}
-//
-// 	if idx.ChildPointer != nil {
-// 		tmp := *idx.ChildPointer
-// 		idx.ChildPointer = &tmp
-// 	}
-//
-// 	if idx.Delegates != nil {
-// 		cp := make(map[insolar.Reference]insolar.Reference)
-// 		for k, v := range idx.Delegates {
-// 			cp[k] = v
-// 		}
-// 		idx.Delegates = cp
-// 	}
-//
-// 	return idx
-// }
-
 // RecordMemory is an in-memory struct for record-storage.
 type RecordMemory struct {
 	jetIndex db.JetIndexModifier
@@ -123,12 +95,15 @@ func NewRecordMemory() *RecordMemory {
 	}
 }
 
-// Set saves new Index-value in storage.
+// Set saves new record-value in storage.
 func (m *RecordMemory) Set(ctx context.Context, id insolar.ID, rec MaterialRecord) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	// r := Clone(rec)
+	_, ok := m.memory[id]
+	if ok {
+		return ErrOverride
+	}
 
 	m.memory[id] = rec
 	m.jetIndex.Add(id, rec.JetID)
@@ -140,7 +115,7 @@ func (m *RecordMemory) Set(ctx context.Context, id insolar.ID, rec MaterialRecor
 	return nil
 }
 
-// ForID returns Index for provided id.
+// ForID returns record for provided id.
 func (m *RecordMemory) ForID(ctx context.Context, id insolar.ID) (rec MaterialRecord, err error) {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
@@ -150,8 +125,6 @@ func (m *RecordMemory) ForID(ctx context.Context, id insolar.ID) (rec MaterialRe
 		err = RecNotFound
 		return
 	}
-
-	// rec = Clone(r)
 
 	return
 }
