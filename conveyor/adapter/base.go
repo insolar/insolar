@@ -258,6 +258,7 @@ func (swa *CancellableQueueAdapter) process(cancellableTask queueTask) {
 	adapterTask := cancellableTask.task
 	event := swa.processor.Process(swa.adapterID, adapterTask, cancellableTask.cancelInfo)
 	if event.Flushed {
+		log.Info("[ CancellableQueueAdapter.process ] Flush. DON'T push Response")
 		return
 	}
 	respSink := adapterTask.respSink

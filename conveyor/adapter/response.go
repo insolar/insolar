@@ -72,6 +72,6 @@ func (rs *ResponseSender) Process(adapterID uint32, task AdapterTask, cancelInfo
 		msg = fmt.Sprintf("Response was send successfully")
 	}
 
-	log.Info("[ ResponseSender.Process ] ", msg)
+	log.Info("[ ResponseSender.Process ] response message is", msg)
 	return Events{RespPayload: msg}
 }
