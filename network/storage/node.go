@@ -36,22 +36,22 @@ package storage
 
 import (
 	"context"
+	"github.com/insolar/insolar/network/node"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/network"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/network/storage.SnapshotAccessor -o ../../testutils/network -s _mock.go
 
 // SnapshotAccessor provides methods for accessing Snapshot.
 type SnapshotAccessor interface {
-	ForPulseNumber(context.Context, core.PulseNumber) (network.Snapshot, error)
-	Latest(ctx context.Context) (network.Snapshot, error)
+	ForPulseNumber(context.Context, core.PulseNumber) (*node.Snapshot, error)
+	Latest(ctx context.Context) (*node.Snapshot, error)
 }
 
 //go:generate minimock -i github.com/insolar/insolar/network/storage.SnapshotAppender -o ../../testutils/network -s _mock.go
 
 // SnapshotAppender provides method for appending Snapshot to storage.
 type SnapshotAppender interface {
-	Append(ctx context.Context, pulse core.PulseNumber, snapshot network.Snapshot) error
+	Append(ctx context.Context, pulse core.PulseNumber, snapshot node.Snapshot) error
 }

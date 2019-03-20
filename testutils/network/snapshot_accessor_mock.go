@@ -12,7 +12,7 @@ import (
 
 	"github.com/gojuno/minimock"
 	core "github.com/insolar/insolar/core"
-	network "github.com/insolar/insolar/network"
+	node "github.com/insolar/insolar/network/node"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -21,12 +21,12 @@ import (
 type SnapshotAccessorMock struct {
 	t minimock.Tester
 
-	ForPulseNumberFunc       func(p context.Context, p1 core.PulseNumber) (r network.Snapshot, r1 error)
+	ForPulseNumberFunc       func(p context.Context, p1 core.PulseNumber) (r *node.Snapshot, r1 error)
 	ForPulseNumberCounter    uint64
 	ForPulseNumberPreCounter uint64
 	ForPulseNumberMock       mSnapshotAccessorMockForPulseNumber
 
-	LatestFunc       func(p context.Context) (r network.Snapshot, r1 error)
+	LatestFunc       func(p context.Context) (r *node.Snapshot, r1 error)
 	LatestCounter    uint64
 	LatestPreCounter uint64
 	LatestMock       mSnapshotAccessorMockLatest
@@ -63,7 +63,7 @@ type SnapshotAccessorMockForPulseNumberInput struct {
 }
 
 type SnapshotAccessorMockForPulseNumberResult struct {
-	r  network.Snapshot
+	r  *node.Snapshot
 	r1 error
 }
 
@@ -80,7 +80,7 @@ func (m *mSnapshotAccessorMockForPulseNumber) Expect(p context.Context, p1 core.
 }
 
 //Return specifies results of invocation of SnapshotAccessor.ForPulseNumber
-func (m *mSnapshotAccessorMockForPulseNumber) Return(r network.Snapshot, r1 error) *SnapshotAccessorMock {
+func (m *mSnapshotAccessorMockForPulseNumber) Return(r *node.Snapshot, r1 error) *SnapshotAccessorMock {
 	m.mock.ForPulseNumberFunc = nil
 	m.expectationSeries = nil
 
@@ -102,12 +102,12 @@ func (m *mSnapshotAccessorMockForPulseNumber) ExpectOnce(p context.Context, p1 c
 	return expectation
 }
 
-func (e *SnapshotAccessorMockForPulseNumberExpectation) Return(r network.Snapshot, r1 error) {
+func (e *SnapshotAccessorMockForPulseNumberExpectation) Return(r *node.Snapshot, r1 error) {
 	e.result = &SnapshotAccessorMockForPulseNumberResult{r, r1}
 }
 
 //Set uses given function f as a mock of SnapshotAccessor.ForPulseNumber method
-func (m *mSnapshotAccessorMockForPulseNumber) Set(f func(p context.Context, p1 core.PulseNumber) (r network.Snapshot, r1 error)) *SnapshotAccessorMock {
+func (m *mSnapshotAccessorMockForPulseNumber) Set(f func(p context.Context, p1 core.PulseNumber) (r *node.Snapshot, r1 error)) *SnapshotAccessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -116,7 +116,7 @@ func (m *mSnapshotAccessorMockForPulseNumber) Set(f func(p context.Context, p1 c
 }
 
 //ForPulseNumber implements github.com/insolar/insolar/network/storage.SnapshotAccessor interface
-func (m *SnapshotAccessorMock) ForPulseNumber(p context.Context, p1 core.PulseNumber) (r network.Snapshot, r1 error) {
+func (m *SnapshotAccessorMock) ForPulseNumber(p context.Context, p1 core.PulseNumber) (r *node.Snapshot, r1 error) {
 	counter := atomic.AddUint64(&m.ForPulseNumberPreCounter, 1)
 	defer atomic.AddUint64(&m.ForPulseNumberCounter, 1)
 
@@ -213,7 +213,7 @@ type SnapshotAccessorMockLatestInput struct {
 }
 
 type SnapshotAccessorMockLatestResult struct {
-	r  network.Snapshot
+	r  *node.Snapshot
 	r1 error
 }
 
@@ -230,7 +230,7 @@ func (m *mSnapshotAccessorMockLatest) Expect(p context.Context) *mSnapshotAccess
 }
 
 //Return specifies results of invocation of SnapshotAccessor.Latest
-func (m *mSnapshotAccessorMockLatest) Return(r network.Snapshot, r1 error) *SnapshotAccessorMock {
+func (m *mSnapshotAccessorMockLatest) Return(r *node.Snapshot, r1 error) *SnapshotAccessorMock {
 	m.mock.LatestFunc = nil
 	m.expectationSeries = nil
 
@@ -252,12 +252,12 @@ func (m *mSnapshotAccessorMockLatest) ExpectOnce(p context.Context) *SnapshotAcc
 	return expectation
 }
 
-func (e *SnapshotAccessorMockLatestExpectation) Return(r network.Snapshot, r1 error) {
+func (e *SnapshotAccessorMockLatestExpectation) Return(r *node.Snapshot, r1 error) {
 	e.result = &SnapshotAccessorMockLatestResult{r, r1}
 }
 
 //Set uses given function f as a mock of SnapshotAccessor.Latest method
-func (m *mSnapshotAccessorMockLatest) Set(f func(p context.Context) (r network.Snapshot, r1 error)) *SnapshotAccessorMock {
+func (m *mSnapshotAccessorMockLatest) Set(f func(p context.Context) (r *node.Snapshot, r1 error)) *SnapshotAccessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -266,7 +266,7 @@ func (m *mSnapshotAccessorMockLatest) Set(f func(p context.Context) (r network.S
 }
 
 //Latest implements github.com/insolar/insolar/network/storage.SnapshotAccessor interface
-func (m *SnapshotAccessorMock) Latest(p context.Context) (r network.Snapshot, r1 error) {
+func (m *SnapshotAccessorMock) Latest(p context.Context) (r *node.Snapshot, r1 error) {
 	counter := atomic.AddUint64(&m.LatestPreCounter, 1)
 	defer atomic.AddUint64(&m.LatestCounter, 1)
 

@@ -279,11 +279,6 @@ type ClaimQueue interface {
 	Push(claim consensus.ReferendumClaim)
 }
 
-// Snapshot contains node lists and network state for every pulse
-type Snapshot interface {
-	GetPulse() core.PulseNumber
-}
-
 // Accessor is interface that provides read access to nodekeeper internal snapshot
 type Accessor interface {
 	// GetWorkingNode get working node by its reference. Returns nil if node is not found.

@@ -12,7 +12,7 @@ import (
 
 	"github.com/gojuno/minimock"
 	core "github.com/insolar/insolar/core"
-	network "github.com/insolar/insolar/network"
+	node "github.com/insolar/insolar/network/node"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -21,7 +21,7 @@ import (
 type SnapshotAppenderMock struct {
 	t minimock.Tester
 
-	AppendFunc       func(p context.Context, p1 core.PulseNumber, p2 network.Snapshot) (r error)
+	AppendFunc       func(p context.Context, p1 core.PulseNumber, p2 node.Snapshot) (r error)
 	AppendCounter    uint64
 	AppendPreCounter uint64
 	AppendMock       mSnapshotAppenderMockAppend
@@ -54,7 +54,7 @@ type SnapshotAppenderMockAppendExpectation struct {
 type SnapshotAppenderMockAppendInput struct {
 	p  context.Context
 	p1 core.PulseNumber
-	p2 network.Snapshot
+	p2 node.Snapshot
 }
 
 type SnapshotAppenderMockAppendResult struct {
@@ -62,7 +62,7 @@ type SnapshotAppenderMockAppendResult struct {
 }
 
 //Expect specifies that invocation of SnapshotAppender.Append is expected from 1 to Infinity times
-func (m *mSnapshotAppenderMockAppend) Expect(p context.Context, p1 core.PulseNumber, p2 network.Snapshot) *mSnapshotAppenderMockAppend {
+func (m *mSnapshotAppenderMockAppend) Expect(p context.Context, p1 core.PulseNumber, p2 node.Snapshot) *mSnapshotAppenderMockAppend {
 	m.mock.AppendFunc = nil
 	m.expectationSeries = nil
 
@@ -86,7 +86,7 @@ func (m *mSnapshotAppenderMockAppend) Return(r error) *SnapshotAppenderMock {
 }
 
 //ExpectOnce specifies that invocation of SnapshotAppender.Append is expected once
-func (m *mSnapshotAppenderMockAppend) ExpectOnce(p context.Context, p1 core.PulseNumber, p2 network.Snapshot) *SnapshotAppenderMockAppendExpectation {
+func (m *mSnapshotAppenderMockAppend) ExpectOnce(p context.Context, p1 core.PulseNumber, p2 node.Snapshot) *SnapshotAppenderMockAppendExpectation {
 	m.mock.AppendFunc = nil
 	m.mainExpectation = nil
 
@@ -101,7 +101,7 @@ func (e *SnapshotAppenderMockAppendExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of SnapshotAppender.Append method
-func (m *mSnapshotAppenderMockAppend) Set(f func(p context.Context, p1 core.PulseNumber, p2 network.Snapshot) (r error)) *SnapshotAppenderMock {
+func (m *mSnapshotAppenderMockAppend) Set(f func(p context.Context, p1 core.PulseNumber, p2 node.Snapshot) (r error)) *SnapshotAppenderMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -110,7 +110,7 @@ func (m *mSnapshotAppenderMockAppend) Set(f func(p context.Context, p1 core.Puls
 }
 
 //Append implements github.com/insolar/insolar/network/storage.SnapshotAppender interface
-func (m *SnapshotAppenderMock) Append(p context.Context, p1 core.PulseNumber, p2 network.Snapshot) (r error) {
+func (m *SnapshotAppenderMock) Append(p context.Context, p1 core.PulseNumber, p2 node.Snapshot) (r error) {
 	counter := atomic.AddUint64(&m.AppendPreCounter, 1)
 	defer atomic.AddUint64(&m.AppendCounter, 1)
 
