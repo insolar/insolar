@@ -282,10 +282,6 @@ func (c *PulseConveyor) ActivatePulse() error {
 	return nil
 }
 
-func (c *PulseConveyor) getSlotConfiguration(state SlotState) HandlersConfiguration { // nolint: unused
-	return HandlersConfiguration{state: state}
-}
-
 // BarrierCallback wait for required number of SetResult.
 // After that it invokes SetResult on given callback and forward there last result from all SetResults
 type BarrierCallback struct {
