@@ -82,3 +82,25 @@ func (s *LeaveTestSuite) TestLeaveEta() {
 
 	s.HandlerIsTerminating()
 }
+
+func TestOnLeaveApproved(t *testing.T) {
+	suite.Run(t, new(OnLeaveApprovedTestSuite))
+}
+
+type OnLeaveApprovedTestSuite struct {
+	CommonTestSuite
+}
+
+func (s *OnLeaveApprovedTestSuite) TestBasicUsage() {
+	s.handler.terminating = true
+	s.handler.done = make(chan core.LeaveApproved, 1)
+
+	s.handler.OnLeaveApproved(s.ctx)
+
+	select {
+	case <-s.handler.done:
+		s.Equal(false, s.handler.terminating)
+	case <-time.After(time.Second):
+		s.Fail("done chanel doesn't close")
+	}
+}
