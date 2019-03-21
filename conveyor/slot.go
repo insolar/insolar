@@ -51,11 +51,12 @@ const slotElementDelta = slotSize // nolint: unused
 // HandlersConfiguration contains configuration of handlers for specific pulse state
 // TODO: logic will be provided after pulse change mechanism
 type HandlersConfiguration struct {
-	state SlotState // nolint: unused
+	pulseStateMachines statemachine.StateMachineSetAccessor
+	initStateMachine   statemachine.StateMachine
 }
 
 // TODO: logic will be provided after pulse change mechanism
-func (s *HandlersConfiguration) getMachineConfiguration(smType int) statemachine.StateMachine { // nolint: unused
+func (h *HandlersConfiguration) getMachineConfiguration(smType int) statemachine.StateMachine { // nolint: unused
 	return nil
 }
 
@@ -207,6 +208,9 @@ func newSlot(pulseState constant.PulseState, pulseNumber core.PulseNumber, remov
 		elements:           elements,
 		elementListMap:     elementListMap,
 		removeSlotCallback: removeSlotCallback,
+		handlersConfiguration: HandlersConfiguration{
+			initStateMachine: HandlerStorage.GetInitialStateMachine(),
+		},
 	}
 }
 
