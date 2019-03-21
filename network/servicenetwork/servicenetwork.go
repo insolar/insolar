@@ -191,7 +191,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		controller.NewNetworkController(),
 		controller.NewRPCController(options),
 		controller.NewPulseController(),
-		bootstrap.NewBootstrapper(options),
+		bootstrap.NewBootstrapper(options, n.connectToNewNetwork),
 		bootstrap.NewAuthorizationController(options),
 		bootstrap.NewChallengeResponseController(options),
 		bootstrap.NewNetworkBootstrapper(),
@@ -307,6 +307,10 @@ func (n *ServiceNetwork) phaseManagerOnPulse(ctx context.Context, newPulse core.
 		logger.Error("Failed to pass consensus: " + err.Error())
 		n.TerminationHandler.Abort()
 	}
+}
+
+func (n *ServiceNetwork) connectToNewNetwork(result network.BootstrapResult) {
+	panic("Implement it")
 }
 
 func isNextPulse(currentPulse, newPulse *core.Pulse) bool {
