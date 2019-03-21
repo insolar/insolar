@@ -22,8 +22,10 @@ import (
     {{end}}
 )
 
+const numPulseStates = 3
+
 type Matrix struct {
-    matrix  [][3]statemachine.StateMachine
+    matrix  [numPulseStates][]statemachine.StateMachine
 }
 
 type MachineType int
@@ -35,13 +37,30 @@ const (
 
 func NewMatrix() *Matrix {
     m := Matrix{}
-    m.matrix = append(m.matrix,
-        [3]statemachine.StateMachine{ },
-        {{range .Machines}}{{.Package}}.Raw{{.Name}}Factory(),
-        {{end}})
+
+    // Fill m.matrix[i][0] with empty state machine, since 0 - is state of completion of state machine
+    var emptyObject  statemachine.StateMachine
+    	for i := 0; i < numPulseStates; i++ {
+    		m.matrix[i] = append(m.matrix[i], emptyObject)
+    	}
+
+    {{range .Machines}}
+    sms{{.Name}} := {{.Package}}.Raw{{.Name}}Factory()
+    for i := 0; i < numPulseStates; i++ {
+        m.matrix[i] = append(m.matrix[i], sms{{.Name}}[i])
+    }
+    {{end}}
     return &m
 }
 
-func (m *Matrix) GetStateMachinesByType(mType MachineType) [3]statemachine.StateMachine {
-    return m.matrix[int(mType)]
+func (m *Matrix) GetStateMachinesByType(state int, mType MachineType) statemachine.StateMachine {
+    return m.matrix[state][int(mType)]
+}
+
+func (m *Matrix) GetConfigByPulseState(pulseState int) []statemachine.StateMachine {
+    return m.matrix[pulseState]
+}
+
+func (m *Matrix) GetInitialStateMachine() statemachine.StateMachine {
+    return m.matrix[1][1]
 }
