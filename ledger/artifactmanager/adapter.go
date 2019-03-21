@@ -26,12 +26,13 @@ import (
 )
 
 // NewGetCodeAdapter creates new instance of adapter for getting code
-func NewGetCodeAdapter(cg CodeGetter) adapter.PulseConveyorAdapterTaskSink {
+func NewGetCodeAdapter(cg GetCodeProcessor) adapter.PulseConveyorAdapterTaskSink {
 	return adapter.NewAdapterWithQueue(&cg)
 }
 
 // GetCodeTask is task for adapter for getting code
 type GetCodeTask struct {
+	// TODO: don't let adapter and component know about Parcel type, get every needed
 	Parcel core.Parcel
 }
 
@@ -41,44 +42,38 @@ type GetCodeResp struct {
 	Err    error
 }
 
-// CodeGetter is worker for adapter for getting code
-type CodeGetter struct {
+// GetCodeProcessor is worker for adapter for getting code
+type GetCodeProcessor struct {
 	Handlers HandlerStorage `inject:""`
 }
 
-// NewCodeGetter returns new instance of worker which get code
-func NewCodeGetter() adapter.Processor {
-	return &CodeGetter{}
+// NewGetCodeProcessor returns new instance of processor which get code
+func NewGetCodeProcessor() adapter.Processor {
+	return &GetCodeProcessor{}
 }
 
 // Process implements Processor interface
-func (rs *CodeGetter) Process(adapterID uint32, task adapter.AdapterTask, cancelInfo adapter.CancelInfo) adapter.Events {
+func (p *GetCodeProcessor) Process(task adapter.AdapterTask) adapter.Events {
 	payload, ok := task.TaskPayload.(GetCodeTask)
 	var msg GetCodeResp
 	if !ok {
-		msg.Err = errors.Errorf("[ CodeGetter.Process ] Incorrect payload type: %T", task.TaskPayload)
+		msg.Err = errors.Errorf("[ GetCodeProcessor.Process ] Incorrect payload type: %T", task.TaskPayload)
 		return adapter.Events{RespPayload: msg}
 	}
 
-	done := make(chan GetCodeResp, 1)
-	go func(payload GetCodeTask) {
-		ctx := context.Background()
-		parcel, err := rs.Handlers.handleGetCode(ctx, payload.Parcel)
-		done <- GetCodeResp{parcel, err}
-	}(payload)
+	ctx := context.Background()
+	parcel, err := p.Handlers.handleGetCode(ctx, payload.Parcel)
+	msg = GetCodeResp{parcel, err}
+	log.Info("[ GetCodeProcessor.Process ] Process was dome successfully")
 
-	var flushed bool
+	return adapter.Events{RespPayload: msg}
+}
 
-	select {
-	case <-cancelInfo.Cancel():
-		log.Info("[ CodeGetter.Process ] Cancel. Return Nil as Response")
-	case <-cancelInfo.Flush():
-		log.Info("[ CodeGetter.Process ] Flush. DON'T Return Response")
-		flushed = true
-	case resp := <-done:
-		log.Info("[ CodeGetter.Process ] Process was dome successfully")
-		msg = resp
-	}
+func (p *GetCodeProcessor) Cancel() interface{} {
+	log.Info("[ GetCodeProcessor.Process ] Cancel. Return Nil as Response")
+	return nil
+}
 
-	return adapter.Events{RespPayload: msg, Flushed: flushed}
+func (p *GetCodeProcessor) Flush() {
+	log.Info("[ GetCodeProcessor.Process ] Flushed.")
 }

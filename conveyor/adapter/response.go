@@ -44,7 +44,7 @@ func NewResponseSender() Processor {
 }
 
 // Process implements Processor interface
-func (rs *ResponseSender) Process(adapterID uint32, task AdapterTask, cancelInfo CancelInfo) Events {
+func (rs *ResponseSender) Process(task AdapterTask) Events {
 	payload, ok := task.TaskPayload.(ResponseSenderTask)
 	var msg interface{}
 
@@ -53,25 +53,20 @@ func (rs *ResponseSender) Process(adapterID uint32, task AdapterTask, cancelInfo
 		return Events{RespPayload: msg}
 	}
 
-	done := make(chan bool, 1)
-	go func(payload ResponseSenderTask) {
-		res := payload.Result
-		f := payload.Future
-		f.SetResult(res)
-		done <- true
-	}(payload)
+	res := payload.Result
+	f := payload.Future
+	f.SetResult(res)
 
-	select {
-	case <-cancelInfo.Cancel():
-		log.Info("[ ResponseSender.Process ] Cancel. Return Nil as Response")
-		msg = nil
-	case <-cancelInfo.Flush():
-		log.Info("[ ResponseSender.Process ] Flush. DON'T Return Response")
-		return Events{Flushed: true}
-	case <-done:
-		msg = fmt.Sprintf("Response was send successfully")
-	}
-
+	msg = fmt.Sprintf("Response was send successfully")
 	log.Info("[ ResponseSender.Process ] response message is", msg)
 	return Events{RespPayload: msg}
+}
+
+func (rs *ResponseSender) Cancel() interface{} {
+	log.Info("[ ResponseSender.Process ] Canceled. Return Nil as Response")
+	return nil
+}
+
+func (rs *ResponseSender) Flush() {
+	log.Info("[ ResponseSender.Process ] Flushed.")
 }

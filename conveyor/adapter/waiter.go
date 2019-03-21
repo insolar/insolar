@@ -43,8 +43,8 @@ func NewWaiter() Processor {
 }
 
 // Process implements Processor interface
-func (w *Waiter) Process(adapterID uint32, task AdapterTask, cancelInfo CancelInfo) Events {
-	log.Info("[ Waiter.Process ] Start. cancelInfo.id: ", cancelInfo.ID())
+func (w *Waiter) Process(task AdapterTask) Events {
+	log.Info("[ Waiter.Process ] Start.")
 
 	payload, ok := task.TaskPayload.(WaiterTask)
 	var msg interface{}
@@ -54,19 +54,18 @@ func (w *Waiter) Process(adapterID uint32, task AdapterTask, cancelInfo CancelIn
 		return Events{RespPayload: msg}
 	}
 
-	select {
-	case <-cancelInfo.Cancel():
-		log.Info("[ Waiter.Process ] Cancel. Return Nil as Response")
-		msg = nil
-	case <-cancelInfo.Flush():
-		log.Info("[ Waiter.Process ] Flush. DON'T Return Response")
-		return Events{Flushed: true}
-	case <-time.After(time.Duration(payload.waitPeriodMilliseconds) * time.Millisecond):
-		msg = fmt.Sprintf("Work completed successfully. Waited %d millisecond", payload.waitPeriodMilliseconds)
-	}
-
+	time.Sleep(time.Duration(payload.waitPeriodMilliseconds) * time.Millisecond)
+	msg = fmt.Sprintf("Work completed successfully. Waited %d millisecond", payload.waitPeriodMilliseconds)
 	log.Info("[ Waiter.Process ] ", msg)
 
 	return Events{RespPayload: msg}
-	// TODO: remove cancelInfo from swa.taskHolder
+}
+
+func (w *Waiter) Cancel() interface{} {
+	log.Info("[ Waiter.Process ] Canceled. Return Nil as Response")
+	return nil
+}
+
+func (w *Waiter) Flush() {
+	log.Info("[ Waiter.Process ] Flushed.")
 }

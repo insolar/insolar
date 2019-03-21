@@ -256,15 +256,28 @@ func (a *CancellableQueueAdapter) FlushNodeTasks(nodeID idType) {
 
 func (a *CancellableQueueAdapter) process(cancellableTask queueTask) {
 	adapterTask := cancellableTask.task
-	event := a.processor.Process(a.adapterID, adapterTask, cancellableTask.cancelInfo)
-	if event.Flushed {
-		log.Info("[ CancellableQueueAdapter.process ] Flush. DON'T push Response")
-		return
-	}
 	respSink := adapterTask.respSink
-	for nestedEvent := range event.NestedEventPayload {
-		respSink.PushNestedEvent(a.adapterID, adapterTask.elementID, adapterTask.handlerID, nestedEvent)
+
+	processResult := make(chan Events, 1)
+
+	go func() {
+		res := a.processor.Process(adapterTask)
+		processResult <- res
+	}()
+
+	select {
+	case <-cancellableTask.cancelInfo.Cancel():
+		log.Info("[ CancellableQueueAdapter.process ] Canceled")
+		response := a.processor.Cancel()
+		respSink.PushResponse(a.adapterID, adapterTask.elementID, adapterTask.handlerID, response)
+	case <-cancellableTask.cancelInfo.Flush():
+		log.Info("[ CancellableQueueAdapter.process ] Flushed. Don't push Response")
+		a.processor.Flush()
+	case event := <-processResult:
+		for nestedEvent := range event.NestedEventPayload {
+			respSink.PushNestedEvent(a.adapterID, adapterTask.elementID, adapterTask.handlerID, nestedEvent)
+		}
+		respSink.PushResponse(a.adapterID, adapterTask.elementID, adapterTask.handlerID, event.RespPayload)
+		// TODO: remove cancelInfo from a.taskHolder
 	}
-	respSink.PushResponse(a.adapterID, adapterTask.elementID, adapterTask.handlerID, event.RespPayload)
-	// TODO: remove cancelInfo from a.taskHolder
 }

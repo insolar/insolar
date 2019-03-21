@@ -106,12 +106,13 @@ type CancelInfo interface {
 type Events struct {
 	RespPayload        interface{}
 	NestedEventPayload []interface{}
-	Flushed            bool
 }
 
 // Processor is iface for processing task for adapter
 type Processor interface {
-	Process(adapterID uint32, task AdapterTask, cancelInfo CancelInfo) Events
+	Process(task AdapterTask) Events
+	Cancel() interface{}
+	Flush()
 }
 
 // NewAdapterWithQueue creates new instance of Adapter
