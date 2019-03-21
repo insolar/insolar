@@ -24,8 +24,16 @@ import (
 
 const numPulseStates = 3
 
+type StateMachineSet struct{
+    stateMachines []statemachine.StateMachine
+}
+
+func ( s *StateMachineSet ) GetStateMachineById(id int) statemachine.StateMachine{
+    return s.stateMachines[id]
+}
+
 type Matrix struct {
-    matrix  [numPulseStates][]statemachine.StateMachine
+    matrix  [numPulseStates]StateMachineSet
 }
 
 type MachineType int
@@ -41,26 +49,22 @@ func NewMatrix() *Matrix {
     // Fill m.matrix[i][0] with empty state machine, since 0 - is state of completion of state machine
     var emptyObject  statemachine.StateMachine
     	for i := 0; i < numPulseStates; i++ {
-    		m.matrix[i] = append(m.matrix[i], emptyObject)
+    		m.matrix[i].stateMachines = append(m.matrix[i].stateMachines, emptyObject)
     	}
 
     
     smsTestStateMachine := sample.RawTestStateMachineFactory()
     for i := 0; i < numPulseStates; i++ {
-        m.matrix[i] = append(m.matrix[i], smsTestStateMachine[i])
+        m.matrix[i].stateMachines = append(m.matrix[i].stateMachines, smsTestStateMachine[i])
     }
     
     return &m
 }
 
-func (m *Matrix) GetStateMachinesByType(state int, mType MachineType) statemachine.StateMachine {
-    return m.matrix[state][int(mType)]
-}
-
-func (m *Matrix) GetConfigByPulseState(pulseState int) []statemachine.StateMachine {
-    return m.matrix[pulseState]
+func (m *Matrix) GetConfigByPulseState(pulseState int) statemachine.StateMachineSetAccessor {
+    return &m.matrix[pulseState]
 }
 
 func (m *Matrix) GetInitialStateMachine() statemachine.StateMachine {
-    return m.matrix[1][1]
+    return m.matrix[1].stateMachines[1]
 }
