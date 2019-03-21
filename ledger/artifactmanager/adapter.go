@@ -62,7 +62,7 @@ func (rs *CodeGetter) Process(adapterID uint32, task adapter.AdapterTask, cancel
 	payload, ok := task.TaskPayload.(GetCodeTask)
 	var msg GetCodeResp
 	if !ok {
-		msg.Err = errors.Errorf("[ LedgerCommunicator.Process ] Incorrect payload type: %T", task.TaskPayload)
+		msg.Err = errors.Errorf("[ CodeGetter.Process ] Incorrect payload type: %T", task.TaskPayload)
 		return adapter.Events{RespPayload: msg}
 	}
 
@@ -77,12 +77,12 @@ func (rs *CodeGetter) Process(adapterID uint32, task adapter.AdapterTask, cancel
 
 	select {
 	case <-cancelInfo.Cancel():
-		log.Info("[ LedgerCommunicator.Process ] Cancel. Return Nil as Response")
+		log.Info("[ CodeGetter.Process ] Cancel. Return Nil as Response")
 	case <-cancelInfo.Flush():
-		log.Info("[ LedgerCommunicator.Process ] Flush. DON'T Return Response")
+		log.Info("[ CodeGetter.Process ] Flush. DON'T Return Response")
 		flushed = true
 	case resp := <-done:
-		log.Info("[ LedgerCommunicator.Process ] Process was dome successfully")
+		log.Info("[ CodeGetter.Process ] Process was dome successfully")
 		msg = resp
 	}
 
