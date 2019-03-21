@@ -22,14 +22,19 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"strings"
 	"testing"
 
+	"github.com/getkin/kin-openapi/openapi3"
+	"github.com/getkin/kin-openapi/openapi3filter"
+	"github.com/stretchr/testify/require"
+
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/insolar"
-	"github.com/stretchr/testify/require"
 )
 
 func contractError(body []byte) error {
@@ -120,4 +125,76 @@ func TestIncorrectSign(t *testing.T) {
 	err = json.Unmarshal(body, &res)
 	require.NoError(t, err)
 	require.Contains(t, res["error"], "Incorrect signature")
+}
+
+func TestExporter_ValidateResponse(t *testing.T) {
+	ctx := context.Background()
+	swagger, err := openapi3.NewSwaggerLoader().LoadSwaggerFromFile("testdata/api-exported.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = swagger.Validate(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	method := "exporter.Export"
+	response, err := requester.GetRPCResponse(TestRPCUrl, method, map[string]int{
+		"from": 0,
+		"size": 10,
+	})
+	require.NoError(t, err)
+	var j map[string]interface{}
+	umErr := json.Unmarshal(response, &j)
+	if umErr != nil {
+		t.Fatal("failed unmarshal response:", umErr, "\n", string(response))
+	}
+	responseFmt, jerr := json.MarshalIndent(j, "", "    ")
+	if jerr != nil {
+		t.Fatal("failed marshal unmarshaled response:", string(response), jerr)
+	}
+	// _ = j
+	// fmt.Println("response:", string(response))
+	// fmt.Println("formatted:", string(responseFmt))
+
+	// ignore servers addresses validation
+	swagger.Servers = nil
+	router := openapi3filter.NewRouter().WithSwagger(swagger)
+	route, pathParams, err := router.FindRoute("POST", &url.URL{
+		Path: "/api/rpc#method=" + method,
+	})
+	if err != nil {
+		t.Fatal("failed find route", err)
+	}
+
+	httpReq, _ := http.NewRequest(http.MethodPost, "/api/rpc", nil)
+	requestValidationInput := &openapi3filter.RequestValidationInput{
+		Request:    httpReq,
+		PathParams: pathParams,
+		Route:      route,
+	}
+	responseValidationInput := &openapi3filter.ResponseValidationInput{
+		RequestValidationInput: requestValidationInput,
+		Status:                 http.StatusOK,
+		Header: http.Header{
+			"Content-Type": []string{
+				"application/json", "charset=utf-8",
+			},
+		},
+	}
+	responseValidationInput.SetBodyBytes(response)
+
+	err = openapi3filter.ValidateResponse(ctx, responseValidationInput)
+	if err != nil {
+		fmt.Println("error validate: yes")
+		if _, ok := err.(*openapi3filter.ResponseError); ok {
+			// fmt.Printf("err.input: %+v\n", verr.Input)
+			// fmt.Println("input:")
+			fmt.Print(string(responseFmt))
+			// fmt.Printf("input: %+v\n", valerr.Input)
+		}
+		// t.Fatal()
+	}
+	// fmt.Println("err:", err)
+	require.NoError(t, err, "validate response failed")
 }
