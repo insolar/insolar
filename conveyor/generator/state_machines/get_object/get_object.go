@@ -52,36 +52,36 @@ const (
 )
 
 func Register() {
-	gen.AddMachine("TestMachine").
-		RegisterTransitionFuture(InitState, InitFuture).
-		RegisterTransition(InitState, Init).
+	gen.AddMachine("GetObjectStateMachine").
+		RegisterTransitionFuture(InitState, InitFuture, CheckingJet).
+		RegisterTransition(InitState, Init, CheckingJet).
 
-		RegisterTransition(CheckingJet, GetJet).
-		RegisterAdapterResponse(WaitingCheckingJet, GetJetResponse).
+		RegisterTransition(CheckingJet, GetJet, WaitingCheckingJet).
+		RegisterAdapterResponse(WaitingCheckingJet, GetJetResponse, InvokeWaitingHotData, FetchingJet).
 
-		RegisterTransition(FetchingJet, FetchJet).
-		RegisterAdapterResponse(WaitingFetchingJet, FetchJetResponse).
+		RegisterTransition(FetchingJet, FetchJet, WaitingFetchingJet).
+		RegisterAdapterResponse(WaitingFetchingJet, FetchJetResponse, InvokeWaitingHotData).
 
-		RegisterTransition(InvokeWaitingHotData, WaitHotData).
-		RegisterAdapterResponse(WaitingHotData, WaitHotDataResponse).
+		RegisterTransition(InvokeWaitingHotData, WaitHotData, WaitingHotData).
+		RegisterAdapterResponse(WaitingHotData, WaitHotDataResponse, CheckingIndex).
 
-		RegisterTransition(CheckingIndex, CheckIndex).
-		RegisterAdapterResponse(WaitingCheckingIndex, WaitCheckIndex).
+		RegisterTransition(CheckingIndex, CheckIndex, WaitingCheckingIndex).
+		RegisterAdapterResponse(WaitingCheckingIndex, WaitCheckIndex, CheckingState, FetchingIndex).
 
-		RegisterTransition(FetchingIndex, FetchIndex).
-		RegisterAdapterResponse(WaitingFetchingIndex, WaitFetchIndex).
+		RegisterTransition(FetchingIndex, FetchIndex, WaitingFetchingIndex).
+		RegisterAdapterResponse(WaitingFetchingIndex, WaitFetchIndex, CheckingState).
 
-		RegisterTransition(CheckingState, CheckState).
-		RegisterAdapterResponse(WaitingCheckingState, WaitCheckState).
+		RegisterTransition(CheckingState, CheckState, WaitingCheckingState).
+		RegisterAdapterResponse(WaitingCheckingState, WaitCheckState, Result, CheckingJetForState).
 
-		RegisterTransition(CheckingJetForState, CheckJetForState).
-		RegisterAdapterResponse(WaitingCheckingJetForState, WaitCheckJetForState).
+		RegisterTransition(CheckingJetForState, CheckJetForState, WaitingCheckingJetForState).
+		RegisterAdapterResponse(WaitingCheckingJetForState, WaitCheckJetForState, FetchingState, FetchingJetForState).
 
-		RegisterTransition(FetchingJetForState, FetchJetForState).
-		RegisterAdapterResponse(WaitingFetchingJetForState, WaitFetchJetForState).
+		RegisterTransition(FetchingJetForState, FetchJetForState, WaitingFetchingJetForState).
+		RegisterAdapterResponse(WaitingFetchingJetForState, WaitFetchJetForState, FetchingState).
 
-		RegisterTransition(FetchingState, FetchState).
-		RegisterAdapterResponse(WaitingFetchingState, WaitFetchState)
+		RegisterTransition(FetchingState, FetchState, WaitingFetchingState).
+		RegisterAdapterResponse(WaitingFetchingState, WaitFetchState, Result)
 }
 
 func InitFuture(helper slot.SlotElementHelper, input Event, payload interface{}) (*Payload, fsm.ElementState) {
