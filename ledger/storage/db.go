@@ -39,7 +39,6 @@ const (
 	sysLatestPulse            byte = 2
 	sysHeavyClientState       byte = 3
 	sysLastSyncedPulseOnHeavy byte = 4
-	sysJetList                byte = 5
 )
 
 // DBContext provides base db methods
