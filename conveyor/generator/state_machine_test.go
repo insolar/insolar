@@ -36,12 +36,12 @@ func Test_Generated_State_Machine(t *testing.T) {
 		return &sample.Payload{}
 	}
 
-	machines := matrix.NewMatrix().GetStateMachinesByType(matrix.TestStateMachine)
+	machines := matrix.NewMatrix().GetConfigByPulseState(1)
 
 	var stateID fsm.StateID = 0
 	var elementState fsm.ElementState = 0
 	for {
-		_, elementState, _ = machines[1].GetTransitionHandler(stateID)(element)
+		_, elementState, _ = machines.GetStateMachineById(int(matrix.TestStateMachine)).GetTransitionHandler(stateID)(element)
 		_, stateID = elementState.Parse()
 		if stateID == 0 {
 			break
