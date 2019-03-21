@@ -42,6 +42,7 @@ import (
 	"github.com/insolar/insolar/ledger/storage/object"
 )
 
+// TODO: remove this interface and write new functions for getting code and other logic in new interface/struct LedgerComponent or whatever
 // HandlerStorage contains handlers for different message bus messages.
 type HandlerStorage interface {
 	handleGetCode(ctx context.Context, parcel core.Parcel) (core.Reply, error)
