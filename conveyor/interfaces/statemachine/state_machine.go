@@ -42,7 +42,7 @@ type StateMachine interface {
 	GetResponseErrorHandler(state fsm.StateID) ResponseErrorHandler
 }
 
-// StateMachineSetAccessor gives access to set of state machines
-type StateMachineSetAccessor interface {
+// SetAccessor gives access to set of state machines
+type SetAccessor interface {
 	GetStateMachineById(id int) StateMachine
 }

@@ -51,7 +51,7 @@ const slotElementDelta = slotSize // nolint: unused
 // HandlersConfiguration contains configuration of handlers for specific pulse state
 // TODO: logic will be provided after pulse change mechanism
 type HandlersConfiguration struct {
-	pulseStateMachines statemachine.StateMachineSetAccessor
+	pulseStateMachines statemachine.SetAccessor
 	initStateMachine   statemachine.StateMachine
 }
 

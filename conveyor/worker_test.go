@@ -46,7 +46,7 @@ func (s *mockStateMachineSet) GetStateMachineById(id int) statemachine.StateMach
 
 type mockStateMachineHolder struct{}
 
-func (m *mockStateMachineHolder) GetConfigByPulseState(pulseState int) statemachine.StateMachineSetAccessor {
+func (m *mockStateMachineHolder) GetConfigByPulseState(pulseState int) statemachine.SetAccessor {
 
 	return &mockStateMachineSet{
 		stateMachine: m.GetStateMachinesByType(),
