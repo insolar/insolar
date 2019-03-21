@@ -41,3 +41,8 @@ type StateMachine interface {
 	GetTransitionErrorHandler(state fsm.StateID) TransitionErrorHandler
 	GetResponseErrorHandler(state fsm.StateID) ResponseErrorHandler
 }
+
+// StateMachineSetAccessor gives access to set of state machines
+type StateMachineSetAccessor interface {
+	GetStateMachineById(id int) StateMachine
+}
