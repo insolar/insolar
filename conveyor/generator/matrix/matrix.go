@@ -61,7 +61,7 @@ func NewMatrix() *Matrix {
     return &m
 }
 
-func (m *Matrix) GetConfigByPulseState(pulseState int) statemachine.StateMachineSetAccessor {
+func (m *Matrix) GetConfigByPulseState(pulseState int) statemachine.SetAccessor {
     return &m.matrix[pulseState]
 }
 
