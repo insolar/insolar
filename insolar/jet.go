@@ -104,3 +104,13 @@ ScanPrefix:
 
 	return res.String()
 }
+
+// String implements stringer on JetID and returns base58 encoded value.
+func (id JetID) String() string {
+	return base58.Encode(id[:])
+}
+
+// MarshalJSON serializes JetID into JSON.
+func (id JetID) MarshalJSON() ([]byte, error) {
+	return json.Marshal(id.String())
+}
