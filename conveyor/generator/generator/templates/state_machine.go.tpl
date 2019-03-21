@@ -102,6 +102,7 @@ func Raw{{$machine.Name}}Factory() [3]statemachine.StateMachine {
 
     return [3]statemachine.StateMachine{
         &smFuture, &smPresent, &smPast,
+
     }
 }
 

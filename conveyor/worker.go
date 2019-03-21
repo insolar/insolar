@@ -20,13 +20,12 @@ import (
 	"context"
 	"fmt"
 	"strconv"
-	"testing"
 	"time"
 
+	"github.com/insolar/insolar/conveyor/generator/matrix"
 	"github.com/insolar/insolar/conveyor/interfaces/constant"
 	"github.com/insolar/insolar/conveyor/interfaces/fsm"
 	"github.com/insolar/insolar/conveyor/interfaces/iadapter"
-	"github.com/insolar/insolar/conveyor/interfaces/slot"
 
 	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
 
@@ -77,28 +76,11 @@ func newWorker(slot *Slot) worker {
 	return w
 }
 
-type MachineType int
-
-const (
-	InputEvent MachineType = iota + 1
-	NestedCall
-)
-
-func GetStateMachineByType(mtype MachineType) statemachine.StateMachine {
+func GetStateMachineByType(mtype matrix.MachineType) statemachine.StateMachine {
 	//panic("implement me") // TODO:
-	sm := statemachine.NewStateMachineMock(&testing.T{})
-	sm.GetTransitionHandlerFunc = func(p fsm.StateID) (r statemachine.TransitHandler) {
-		return func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
-			return nil, 0, nil
-		}
-	}
-	sm.GetMigrationHandlerFunc = func(p fsm.StateID) (r statemachine.MigrationHandler) {
-		return func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
-			return nil, 0, nil
-		}
-	}
+	el := HandlerStorage.GetStateMachinesByType(mtype)[0]
 
-	return sm
+	return el
 }
 
 func (w *worker) setLoggerFields() {
@@ -196,7 +178,7 @@ func (w *worker) readInputQueueWorking() error {
 	for i := 0; i < len(elements); i++ {
 		el := elements[i]
 
-		_, err := w.slot.createElement(GetStateMachineByType(InputEvent), 0, el)
+		_, err := w.slot.createElement(GetStateMachineByType(matrix.InitialEvent), 0, el)
 		if err != nil {
 			return errors.Wrapf(err, "[ readInputQueueWorking ] Can't createElement: %+v", el)
 		}
@@ -212,7 +194,7 @@ func updateElement(element *slotElement, payload interface{}, fullState fsm.Elem
 		sm, state := fullState.Parse()
 		machineType := element.stateMachine
 		if sm != 0 {
-			machineType = GetStateMachineByType(MachineType(sm))
+			machineType = GetStateMachineByType(matrix.MachineType(sm))
 		}
 		element.update(state, payload, machineType)
 		return
@@ -439,7 +421,7 @@ func (w *worker) readInputQueueSuspending() error {
 	for i := 0; i < len(elements); i++ {
 		el := elements[i]
 
-		_, err := w.slot.createElement(GetStateMachineByType(InputEvent), 0, el)
+		_, err := w.slot.createElement(GetStateMachineByType(matrix.InitialEvent), 0, el)
 		if err != nil {
 			return errors.Wrap(err, "[ readInputQueueSuspending ] Can't createElement")
 		}

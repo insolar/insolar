@@ -17,10 +17,12 @@
 package conveyor
 
 import (
+	"os"
 	"testing"
 	"time"
 
 	"github.com/insolar/insolar/conveyor/adapter"
+	"github.com/insolar/insolar/conveyor/generator/matrix"
 	"github.com/insolar/insolar/conveyor/interfaces/constant"
 	"github.com/insolar/insolar/conveyor/interfaces/fsm"
 	"github.com/insolar/insolar/conveyor/interfaces/iadapter"
@@ -31,6 +33,47 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 )
+
+type mockStateMachineHolder struct{}
+
+func (m *mockStateMachineHolder) GetStateMachinesByType(mType matrix.MachineType) [3]statemachine.StateMachine {
+	sm := statemachine.NewStateMachineMock(&testing.T{})
+
+	sm.GetTransitionHandlerFunc = func(p fsm.StateID) (r statemachine.TransitHandler) {
+		return func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
+			return nil, 0, nil
+		}
+	}
+	sm.GetMigrationHandlerFunc = func(p fsm.StateID) (r statemachine.MigrationHandler) {
+		return func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
+			return nil, 0, nil
+		}
+	}
+
+	result := [3]statemachine.StateMachine{}
+	// TODO: fix it when GetStateMachinesByType will return one state machine
+	result[0] = sm
+
+	return result
+}
+
+func mockHandlerStorage() matrix.StateMachineHolder {
+	return &mockStateMachineHolder{}
+}
+
+func setup() {
+	HandlerStorage = mockHandlerStorage()
+}
+
+func testMainWrapper(m *testing.M) int {
+	setup()
+	code := m.Run()
+	return code
+}
+
+func TestMain(m *testing.M) {
+	os.Exit(testMainWrapper(m))
+}
 
 var testPulseStates = []constant.PulseState{constant.Future, constant.Present, constant.Past, constant.Antique}
 var testPulseStatesWithoutFuture = []constant.PulseState{constant.Present, constant.Past, constant.Antique}
@@ -44,6 +87,7 @@ func makeSlotAndWorker(pulseState constant.PulseState, pulseNumber core.PulseNum
 }
 
 func Test_changePulseState(t *testing.T) {
+	HandlerStorage = mockHandlerStorage()
 	slot, worker := makeSlotAndWorker(constant.Future, 22)
 
 	worker.changePulseState()
