@@ -104,3 +104,21 @@ func (s *OnLeaveApprovedTestSuite) TestBasicUsage() {
 		s.Fail("done chanel doesn't close")
 	}
 }
+
+func TestAbort(t *testing.T) {
+	suite.Run(t, new(AbortTestSuite))
+}
+
+type AbortTestSuite struct {
+	CommonTestSuite
+}
+
+func (s *AbortTestSuite) TestBasicUsage() {
+	defer func() {
+		if r := recover(); r == nil {
+			s.Fail("did not catch panic")
+		}
+	}()
+
+	s.handler.Abort()
+}
