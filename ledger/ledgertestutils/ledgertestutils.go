@@ -112,6 +112,11 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 	handler.ObjectStorage = os
 	handler.DropModifier = ds
 
+	idLockerMock := storage.NewIDLockerMock(t)
+	idLockerMock.LockMock.Return()
+	idLockerMock.UnlockMock.Return()
+	handler.IDLocker = idLockerMock
+
 	handler.PlatformCryptographyScheme = pcs
 	handler.JetCoordinator = jc
 

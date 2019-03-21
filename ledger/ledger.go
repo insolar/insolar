@@ -117,6 +117,7 @@ func GetLedgerComponents(conf configuration.Ledger, certificate core.Certificate
 	return []interface{}{
 		db,
 		newDB,
+		storage.NewIDLocker(),
 		dropModifier,
 		dropAccessor,
 		storage.NewCleaner(),

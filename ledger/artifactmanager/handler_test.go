@@ -506,6 +506,11 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_FetchesIndexFromHea
 	h.PlatformCryptographyScheme = s.scheme
 	h.RecentStorageProvider = provideMock
 
+	idLockMock := storage.NewIDLockerMock(s.T())
+	idLockMock.LockMock.Return()
+	idLockMock.UnlockMock.Return()
+	h.IDLocker = idLockMock
+
 	objIndex := object.Lifeline{LatestState: genRandomID(0), State: object.StateActivation}
 	amendRecord := object.ObjectAmendRecord{
 		PrevState: *objIndex.LatestState,
@@ -580,6 +585,11 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_UpdateIndexState() 
 	h.ObjectStorage = s.objectStorage
 	h.RecentStorageProvider = provideMock
 	h.PlatformCryptographyScheme = s.scheme
+
+	idLockMock := storage.NewIDLockerMock(s.T())
+	idLockMock.LockMock.Return()
+	idLockMock.UnlockMock.Return()
+	h.IDLocker = idLockMock
 
 	objIndex := object.Lifeline{
 		LatestState:  genRandomID(0),
@@ -837,6 +847,11 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 	h.RecentStorageProvider = provideMock
 	h.PlatformCryptographyScheme = s.scheme
 
+	idLockMock := storage.NewIDLockerMock(s.T())
+	idLockMock.LockMock.Return()
+	idLockMock.UnlockMock.Return()
+	h.IDLocker = idLockMock
+
 	objIndex := object.Lifeline{LatestState: genRandomID(0), State: object.StateActivation}
 	childRecord := object.ChildRecord{
 		Ref:       *genRandomRef(0),
@@ -913,6 +928,11 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 	h.ObjectStorage = s.objectStorage
 	h.RecentStorageProvider = provideMock
 	h.PlatformCryptographyScheme = s.scheme
+
+	idLockMock := storage.NewIDLockerMock(s.T())
+	idLockMock.LockMock.Return()
+	idLockMock.UnlockMock.Return()
+	h.IDLocker = idLockMock
 
 	objIndex := object.Lifeline{
 		LatestState:  genRandomID(0),

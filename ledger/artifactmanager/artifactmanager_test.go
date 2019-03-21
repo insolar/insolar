@@ -197,6 +197,12 @@ func getTestData(s *amSuite) (
 
 	handler.Bus = mb
 
+	idLockerMock := storage.NewIDLockerMock(s.T())
+	idLockerMock.LockMock.Return()
+	idLockerMock.UnlockMock.Return()
+
+	handler.IDLocker = idLockerMock
+
 	jc := testutils.NewJetCoordinatorMock(mc)
 	jc.LightExecutorForJetMock.Return(&core.RecordRef{}, nil)
 	jc.MeMock.Return(core.RecordRef{})
@@ -826,6 +832,11 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterValidation() {
 	handler.JetStorage = s.jetStorage
 
 	handler.RecentStorageProvider = provideMock
+
+	idLockMock := storage.NewIDLockerMock(s.T())
+	idLockMock.LockMock.Return()
+	idLockMock.UnlockMock.Return()
+	handler.IDLocker = idLockMock
 
 	err := handler.Init(s.ctx)
 	require.NoError(s.T(), err)

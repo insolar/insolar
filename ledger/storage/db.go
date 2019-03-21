@@ -90,8 +90,8 @@ type DB struct {
 	// so txretiries is our knob to tune up retry logic.
 	txretiries int
 
-	idlocker             *IDLocker
-	jetHeavyClientLocker *IDLocker
+	idlocker             IDLocker
+	jetHeavyClientLocker IDLocker
 
 	closeLock sync.RWMutex
 	isClosed  bool
