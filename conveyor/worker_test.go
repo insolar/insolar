@@ -23,6 +23,8 @@ import (
 
 	"github.com/insolar/insolar/conveyor/adapter"
 	"github.com/insolar/insolar/conveyor/generator/matrix"
+
+	//"github.com/insolar/insolar/conveyor/generator/matrix"
 	"github.com/insolar/insolar/conveyor/interfaces/constant"
 	"github.com/insolar/insolar/conveyor/interfaces/fsm"
 	"github.com/insolar/insolar/conveyor/interfaces/iadapter"
@@ -34,9 +36,28 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type mockStateMachineSet struct {
+	stateMachine statemachine.StateMachine
+}
+
+func (s *mockStateMachineSet) GetStateMachineById(id int) statemachine.StateMachine {
+	return s.stateMachine
+}
+
 type mockStateMachineHolder struct{}
 
-func (m *mockStateMachineHolder) GetStateMachinesByType(mType matrix.MachineType) [3]statemachine.StateMachine {
+func (m *mockStateMachineHolder) GetConfigByPulseState(pulseState int) statemachine.StateMachineSetAccessor {
+
+	return &mockStateMachineSet{
+		stateMachine: m.GetStateMachinesByType(),
+	}
+}
+
+func (m *mockStateMachineHolder) GetInitialStateMachine() statemachine.StateMachine {
+	return m.GetStateMachinesByType()
+}
+
+func (m *mockStateMachineHolder) GetStateMachinesByType() statemachine.StateMachine {
 	sm := statemachine.NewStateMachineMock(&testing.T{})
 
 	sm.GetTransitionHandlerFunc = func(p fsm.StateID) (r statemachine.TransitHandler) {
@@ -50,11 +71,7 @@ func (m *mockStateMachineHolder) GetStateMachinesByType(mType matrix.MachineType
 		}
 	}
 
-	result := [3]statemachine.StateMachine{}
-	// TODO: fix it when GetStateMachinesByType will return one state machine
-	result[0] = sm
-
-	return result
+	return sm
 }
 
 func mockHandlerStorage() matrix.StateMachineHolder {
