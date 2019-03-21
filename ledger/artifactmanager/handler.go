@@ -824,59 +824,63 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 		s.Memory = blobID
 	}
 
-	h.IDLocker.Lock(msg.Object.Record())
-	defer h.IDLocker.Unlock(msg.Object.Record())
-
-	idx, err := h.ObjectStorage.GetObjectIndex(ctx, jetID, msg.Object.Record(), true)
-	// No index on our node.
-	if err == core.ErrNotFound {
-		if state.State() == object.StateActivation {
-			// We are activating the object. There is no index for it anywhere.
-			idx = &object.Lifeline{State: object.StateUndefined}
-		} else {
-			logger.Debug("failed to fetch index (fetching from heavy)")
-			// We are updating object. Index should be on the heavy executor.
-			heavy, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
-			if err != nil {
-				return nil, err
+	var idx *object.Lifeline
+	err = h.DBContext.Update(ctx, func(tx *storage.TransactionManager) error {
+		var err error
+		idx, err = tx.GetObjectIndex(ctx, jetID, msg.Object.Record(), true)
+		// No index on our node.
+		if err == core.ErrNotFound {
+			if state.State() == object.StateActivation {
+				// We are activating the object. There is no index for it anywhere.
+				idx = &object.Lifeline{State: object.StateUndefined}
+			} else {
+				logger.Debug("failed to fetch index (fetching from heavy)")
+				// We are updating object. Index should be on the heavy executor.
+				heavy, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
+				if err != nil {
+					return err
+				}
+				idx, err = h.saveIndexFromHeavy(ctx, jetID, msg.Object, heavy)
+				if err != nil {
+					return errors.Wrap(err, "failed to fetch index from heavy")
+				}
 			}
-			idx, err = h.saveIndexFromHeavy(ctx, jetID, msg.Object, heavy)
-			if err != nil {
-				return nil, errors.Wrap(err, "failed to fetch index from heavy")
-			}
+		} else if err != nil {
+			return err
 		}
-	} else if err != nil {
-		return nil, err
-	}
 
-	if err = validateState(idx.State, state.State()); err != nil {
-		return &reply.Error{ErrType: reply.ErrDeactivated}, nil
-	}
+		if err = validateState(idx.State, state.State()); err != nil {
+			return err
+		}
 
-	recID := object.NewRecordIDFromRecord(h.PlatformCryptographyScheme, parcel.Pulse(), rec)
+		recID := object.NewRecordIDFromRecord(h.PlatformCryptographyScheme, parcel.Pulse(), rec)
 
-	// Index exists and latest record id does not match (preserving chain consistency).
-	// For the case when vm can't save or send result to another vm and it tries to update the same record again
-	if idx.LatestState != nil && !state.PrevStateID().Equal(idx.LatestState) && idx.LatestState != recID {
-		return nil, errors.New("invalid state record")
-	}
+		// Index exists and latest record id does not match (preserving chain consistency).
+		// For the case when vm can't save or send result to another vm and it tries to update the same record again
+		if idx.LatestState != nil && !state.PrevStateID().Equal(idx.LatestState) && idx.LatestState != recID {
+			return errors.New("invalid state record")
+		}
 
-	id, err := h.ObjectStorage.SetRecord(ctx, jetID, parcel.Pulse(), rec)
-	if err == storage.ErrOverride {
-		logger.WithField("type", fmt.Sprintf("%T", rec)).Warn("set record override (#1)")
-		id = recID
-	} else if err != nil {
-		return nil, err
-	}
-	idx.LatestState = id
-	idx.State = state.State()
-	if state.State() == object.StateActivation {
-		idx.Parent = state.(*object.ObjectActivateRecord).Parent
-	}
+		id, err := tx.SetRecord(ctx, jetID, parcel.Pulse(), rec)
+		if err == storage.ErrOverride {
+			logger.WithField("type", fmt.Sprintf("%T", rec)).Warn("set record override (#1)")
+			id = recID
+		} else if err != nil {
+			return err
+		}
+		idx.LatestState = id
+		idx.State = state.State()
+		if state.State() == object.StateActivation {
+			idx.Parent = state.(*object.ObjectActivateRecord).Parent
+		}
 
-	idx.LatestUpdate = parcel.Pulse()
-	err = h.ObjectStorage.SetObjectIndex(ctx, jetID, msg.Object.Record(), idx)
+		idx.LatestUpdate = parcel.Pulse()
+		return tx.SetObjectIndex(ctx, jetID, msg.Object.Record(), idx)
+	})
 	if err != nil {
+		if err == ErrObjectDeactivated {
+			return &reply.Error{ErrType: reply.ErrDeactivated}, nil
+		}
 		return nil, err
 	}
 
@@ -910,45 +914,51 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel core.Pa
 
 	h.RecentStorageProvider.GetIndexStorage(ctx, jetID).AddObject(ctx, *msg.Parent.Record())
 
-	h.IDLocker.Lock(msg.Parent.Record())
-	defer h.IDLocker.Unlock(msg.Parent.Record())
-
-	idx, err := h.ObjectStorage.GetObjectIndex(ctx, jetID, msg.Parent.Record(), false)
-	if err == core.ErrNotFound {
-		heavy, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
-		if err != nil {
-			return nil, err
+	var child *core.RecordID
+	err := h.DBContext.Update(ctx, func(tx *storage.TransactionManager) error {
+		idx, err := h.ObjectStorage.GetObjectIndex(ctx, jetID, msg.Parent.Record(), false)
+		if err == core.ErrNotFound {
+			heavy, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
+			if err != nil {
+				return err
+			}
+			idx, err = h.saveIndexFromHeavy(ctx, jetID, msg.Parent, heavy)
+			if err != nil {
+				return errors.Wrap(err, "failed to fetch index from heavy")
+			}
+		} else if err != nil {
+			return err
 		}
-		idx, err = h.saveIndexFromHeavy(ctx, jetID, msg.Parent, heavy)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to fetch index from heavy")
+
+		recID := object.NewRecordIDFromRecord(h.PlatformCryptographyScheme, parcel.Pulse(), childRec)
+
+		// Children exist and pointer does not match (preserving chain consistency).
+		// For the case when vm can't save or send result to another vm and it tries to update the same record again
+		if idx.ChildPointer != nil && !childRec.PrevChild.Equal(idx.ChildPointer) && idx.ChildPointer != recID {
+			return errors.New("invalid child record")
 		}
-	} else if err != nil {
-		return nil, err
-	}
 
-	recID := object.NewRecordIDFromRecord(h.PlatformCryptographyScheme, parcel.Pulse(), childRec)
+		child, err = tx.SetRecord(ctx, jetID, parcel.Pulse(), childRec)
+		if err == storage.ErrOverride {
+			logger.WithField("type", fmt.Sprintf("%T", rec)).Warn("set record override (#2)")
+			child = recID
+		} else if err != nil {
+			return err
+		}
 
-	// Children exist and pointer does not match (preserving chain consistency).
-	// For the case when vm can't save or send result to another vm and it tries to update the same record again
-	if idx.ChildPointer != nil && !childRec.PrevChild.Equal(idx.ChildPointer) && idx.ChildPointer != recID {
-		return nil, errors.New("invalid child record")
-	}
+		idx.ChildPointer = child
+		if msg.AsType != nil {
+			idx.Delegates[*msg.AsType] = msg.Child
+		}
+		idx.LatestUpdate = parcel.Pulse()
+		err = tx.SetObjectIndex(ctx, jetID, msg.Parent.Record(), idx)
+		if err != nil {
+			return err
+		}
 
-	child, err := h.ObjectStorage.SetRecord(ctx, jetID, parcel.Pulse(), childRec)
-	if err == storage.ErrOverride {
-		logger.WithField("type", fmt.Sprintf("%T", rec)).Warn("set record override (#2)")
-		child = recID
-	} else if err != nil {
-		return nil, err
-	}
+		return nil
+	})
 
-	idx.ChildPointer = child
-	if msg.AsType != nil {
-		idx.Delegates[*msg.AsType] = msg.Child
-	}
-	idx.LatestUpdate = parcel.Pulse()
-	err = h.ObjectStorage.SetObjectIndex(ctx, jetID, msg.Parent.Record(), idx)
 	if err != nil {
 		return nil, err
 	}
@@ -992,56 +1002,60 @@ func (h *MessageHandler) handleValidateRecord(ctx context.Context, parcel core.P
 	msg := parcel.Message().(*message.ValidateRecord)
 	jetID := jetFromContext(ctx)
 
-	h.IDLocker.Lock(msg.Object.Record())
-	defer h.IDLocker.Unlock(msg.Object.Record())
-
-	idx, err := h.ObjectStorage.GetObjectIndex(ctx, jetID, msg.Object.Record(), true)
-	if err == core.ErrNotFound {
-		heavy, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
-		if err != nil {
-			return nil, err
+	err := h.DBContext.Update(ctx, func(tx *storage.TransactionManager) error {
+		idx, err := tx.GetObjectIndex(ctx, jetID, msg.Object.Record(), true)
+		if err == core.ErrNotFound {
+			heavy, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
+			if err != nil {
+				return err
+			}
+			idx, err = h.saveIndexFromHeavy(ctx, jetID, msg.Object, heavy)
+			if err != nil {
+				return errors.Wrap(err, "failed to fetch index from heavy")
+			}
+		} else if err != nil {
+			return err
 		}
-		idx, err = h.saveIndexFromHeavy(ctx, jetID, msg.Object, heavy)
+
+		// Find node that has this state.
+		node, err := h.JetCoordinator.NodeForJet(ctx, jetID, parcel.Pulse(), msg.Object.Record().Pulse())
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to fetch index from heavy")
+			return err
 		}
-	} else if err != nil {
-		return nil, err
-	}
 
-	// Find node that has this state.
-	node, err := h.JetCoordinator.NodeForJet(ctx, jetID, parcel.Pulse(), msg.Object.Record().Pulse())
-	if err != nil {
-		return nil, err
-	}
+		// Send checking message.
+		genericReply, err := h.Bus.Send(ctx, &message.ValidationCheck{
+			Object:              msg.Object,
+			ValidatedState:      msg.State,
+			LatestStateApproved: idx.LatestStateApproved,
+		}, &core.MessageSendOptions{
+			Receiver: node,
+		})
+		if err != nil {
+			return err
+		}
+		switch genericReply.(type) {
+		case *reply.OK:
+			if msg.IsValid {
+				idx.LatestStateApproved = &msg.State
+			} else {
+				idx.LatestState = idx.LatestStateApproved
+			}
+			idx.LatestUpdate = parcel.Pulse()
+			err = tx.SetObjectIndex(ctx, jetID, msg.Object.Record(), idx)
+			if err != nil {
+				return errors.Wrap(err, "failed to save object index")
+			}
+		case *reply.NotOK:
+			return errors.New("validation sequence integrity failure")
+		default:
+			return errors.New("handleValidateRecord: unexpected reply")
+		}
 
-	// Send checking message.
-	genericReply, err := h.Bus.Send(ctx, &message.ValidationCheck{
-		Object:              msg.Object,
-		ValidatedState:      msg.State,
-		LatestStateApproved: idx.LatestStateApproved,
-	}, &core.MessageSendOptions{
-		Receiver: node,
+		return nil
 	})
 	if err != nil {
 		return nil, err
-	}
-	switch genericReply.(type) {
-	case *reply.OK:
-		if msg.IsValid {
-			idx.LatestStateApproved = &msg.State
-		} else {
-			idx.LatestState = idx.LatestStateApproved
-		}
-		idx.LatestUpdate = parcel.Pulse()
-		err = h.ObjectStorage.SetObjectIndex(ctx, jetID, msg.Object.Record(), idx)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to save object index")
-		}
-	case *reply.NotOK:
-		return nil, errors.New("validation sequence integrity failure")
-	default:
-		return nil, errors.New("handleValidateRecord: unexpected reply")
 	}
 
 	return &reply.OK{}, nil
