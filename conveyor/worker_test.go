@@ -58,16 +58,32 @@ func (m *mockStateMachineHolder) GetInitialStateMachine() statemachine.StateMach
 }
 
 func (m *mockStateMachineHolder) GetStateMachinesByType() statemachine.StateMachine {
-	sm := statemachine.NewStateMachineMock(&testing.T{})
 
-	sm.GetTransitionHandlerFunc = func(p fsm.StateID) (r statemachine.TransitHandler) {
+	sm := statemachine.NewStateMachineMock(&testing.T{})
+	sm.GetMigrationHandlerFunc = func(s fsm.StateID) (r statemachine.MigrationHandler) {
 		return func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
-			return nil, 0, nil
+			if s > maxState {
+				s /= 2
+			}
+			return element.GetElementID(), fsm.NewElementState(fsm.ID(s%3), s+1), nil
 		}
 	}
-	sm.GetMigrationHandlerFunc = func(p fsm.StateID) (r statemachine.MigrationHandler) {
+
+	sm.GetTransitionHandlerFunc = func(s fsm.StateID) (r statemachine.TransitHandler) {
 		return func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
-			return nil, 0, nil
+			if s > maxState {
+				s /= 2
+			}
+			return element.GetElementID(), fsm.NewElementState(fsm.ID(s%3), s+1), nil
+		}
+	}
+
+	sm.GetResponseHandlerFunc = func(s fsm.StateID) (r statemachine.AdapterResponseHandler) {
+		return func(element slot.SlotElementHelper, response iadapter.Response) (interface{}, fsm.ElementState, error) {
+			if s > maxState {
+				s /= 2
+			}
+			return element.GetPayload(), fsm.NewElementState(fsm.ID(s%3), s+1), nil
 		}
 	}
 
@@ -104,7 +120,6 @@ func makeSlotAndWorker(pulseState constant.PulseState, pulseNumber core.PulseNum
 }
 
 func Test_changePulseState(t *testing.T) {
-	HandlerStorage = mockHandlerStorage()
 	slot, worker := makeSlotAndWorker(constant.Future, 22)
 
 	worker.changePulseState()
@@ -1066,37 +1081,11 @@ func Test_CallCallbackOfSignal(t *testing.T) {
 	}
 }
 
+const maxState = fsm.StateID(1000)
+
 // ---- run
 
 func Test_run(t *testing.T) {
-	maxState := fsm.StateID(1000)
-	sm := statemachine.NewStateMachineMock(t)
-	sm.GetMigrationHandlerFunc = func(s fsm.StateID) (r statemachine.MigrationHandler) {
-		return func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
-			if s > maxState {
-				s /= 2
-			}
-			return element.GetElementID(), fsm.NewElementState(0, s+1), nil
-		}
-	}
-
-	sm.GetTransitionHandlerFunc = func(s fsm.StateID) (r statemachine.TransitHandler) {
-		return func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
-			if s > maxState {
-				s /= 2
-			}
-			return element.GetElementID(), fsm.NewElementState(0, s+1), nil
-		}
-	}
-
-	sm.GetResponseHandlerFunc = func(s fsm.StateID) (r statemachine.AdapterResponseHandler) {
-		return func(element slot.SlotElementHelper, response iadapter.Response) (interface{}, fsm.ElementState, error) {
-			if s > maxState {
-				s /= 2
-			}
-			return element.GetPayload(), fsm.NewElementState(0, s+1), nil
-		}
-	}
 
 	for _, tt := range testPulseStates {
 		t.Run(tt.String(), func(t *testing.T) {
@@ -1106,7 +1095,7 @@ func Test_run(t *testing.T) {
 				if state > maxState {
 					state /= maxState
 				}
-				element, err := slot.createElement(sm, fsm.StateID(state), queue.OutputElement{})
+				element, err := slot.createElement(HandlerStorage.GetInitialStateMachine(), fsm.StateID(state), queue.OutputElement{})
 				require.NoError(t, err)
 				require.NotNil(t, element)
 			}

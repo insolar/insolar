@@ -26,7 +26,6 @@ import (
 	"github.com/insolar/insolar/conveyor/interfaces/constant"
 	"github.com/insolar/insolar/conveyor/interfaces/fsm"
 	"github.com/insolar/insolar/conveyor/interfaces/iadapter"
-
 	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
 
 	"github.com/insolar/insolar/conveyor/queue"
@@ -503,17 +502,15 @@ func (w *worker) migrate(status ActivationStatus) error {
 func (w *worker) setPulseStateMachines() {
 	stateMachines := HandlerStorage.GetConfigByPulseState(int(w.slot.pulseState))
 	w.slot.handlersConfiguration.pulseStateMachines = stateMachines
-
 }
 
 func (w *worker) initializing() {
 	w.ctxLogger.Debugf("[ initializing ] starts ...")
+	w.setPulseStateMachines()
 	if w.slot.pulseState == constant.Future {
 		w.ctxLogger.Info("[ initializing ] pulseState is Future. Skip initializing")
 		return
 	}
-
-	w.setPulseStateMachines()
 
 	err := w.migrate(ActiveElement)
 	if err != nil {
