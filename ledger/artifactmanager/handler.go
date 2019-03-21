@@ -42,6 +42,11 @@ import (
 	"github.com/insolar/insolar/ledger/storage/object"
 )
 
+// HandlerStorage contains handlers for different message bus messages.
+type HandlerStorage interface {
+	handleGetCode(ctx context.Context, parcel core.Parcel) (core.Reply, error)
+}
+
 // MessageHandler processes messages for local storage interaction.
 type MessageHandler struct {
 	RecentStorageProvider      recentstorage.Provider          `inject:""`
