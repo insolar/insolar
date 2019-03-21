@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package main
 
@@ -30,7 +30,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/insolar/insolar/cmd/pulsewatcher/config"
+	pulsewatcher "github.com/insolar/insolar/cmd/pulsewatcher/config"
 	"github.com/insolar/insolar/core"
 	"github.com/olekukonko/tablewriter"
 	"github.com/pkg/errors"
@@ -125,14 +125,14 @@ func parseInt64(str string) int64 {
 
 func displayResultsJSON(results [][]string, ready bool, buffer *bytes.Buffer) {
 	type DocumentItem struct {
-		URL string
-		NetworkState string
-		NodeState string
-		PulseNumber int64
-		ActiveListSize int64
+		URL             string
+		NetworkState    string
+		NodeState       string
+		PulseNumber     int64
+		ActiveListSize  int64
 		WorkingListSize int64
-		Role string
-		Error string
+		Role            string
+		Error           string
 	}
 
 	doc := make([]DocumentItem, len(results))
