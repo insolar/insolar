@@ -32,7 +32,6 @@ import (
 	"github.com/insolar/insolar/conveyor/queue"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 )
 
@@ -76,11 +75,8 @@ func newWorker(slot *Slot) worker {
 	return w
 }
 
-func GetStateMachineByType(mtype matrix.MachineType) statemachine.StateMachine {
-	//panic("implement me") // TODO:
-	el := HandlerStorage.GetStateMachinesByType(mtype)[0]
-
-	return el
+func (w *worker) GetStateMachineByType(mType matrix.MachineType) statemachine.StateMachine {
+	return w.slot.handlersConfiguration.pulseStateMachines.GetStateMachineById(int(mType))
 }
 
 func (w *worker) setLoggerFields() {
@@ -178,7 +174,7 @@ func (w *worker) readInputQueueWorking() error {
 	for i := 0; i < len(elements); i++ {
 		el := elements[i]
 
-		_, err := w.slot.createElement(GetStateMachineByType(matrix.InitialEvent), 0, el)
+		_, err := w.slot.createElement(w.getInitialStateMachine(), 0, el)
 		if err != nil {
 			return errors.Wrapf(err, "[ readInputQueueWorking ] Can't createElement: %+v", el)
 		}
@@ -188,13 +184,13 @@ func (w *worker) readInputQueueWorking() error {
 }
 
 // nolint: unused
-func updateElement(element *slotElement, payload interface{}, fullState fsm.ElementState) {
-	log.Debugf("[ updateElement ] starts ... ( element: %+v. fullstate: %d )", element, fullState)
+func (w *worker) updateElement(element *slotElement, payload interface{}, fullState fsm.ElementState) {
+	w.ctxLogger.Debugf("[ updateElement ] starts ... ( element: %+v. fullstate: %d )", element, fullState)
 	if fullState != 0 {
 		sm, state := fullState.Parse()
 		machineType := element.stateMachine
 		if sm != 0 {
-			machineType = GetStateMachineByType(matrix.MachineType(sm))
+			machineType = w.GetStateMachineByType(matrix.MachineType(sm))
 		}
 		element.update(state, payload, machineType)
 		return
@@ -227,7 +223,7 @@ func (w *worker) processResponse(resp queue.OutputElement) error {
 		payload, newState = respErrorHandler(element, adapterResp, err)
 	}
 
-	updateElement(element, payload, newState)
+	w.updateElement(element, payload, newState)
 	err = w.slot.pushElement(element)
 	if err != nil {
 		return errors.Wrapf(err, "[ processResponse ] Can't pushElement: %+v", element)
@@ -334,7 +330,7 @@ func (w *worker) processOneElement(element *slotElement) bool {
 
 		payload, newState = errorHandler(element, err)
 	}
-	updateElement(element, payload, newState)
+	w.updateElement(element, payload, newState)
 
 	stopProcessingElement := (newState == 0) || element.isDeactivated()
 
@@ -376,6 +372,10 @@ func (w *worker) sendRemovalSignalToConveyor() {
 	w.slot.removeSlotCallback(w.slot.pulseNumber)
 	// TODO: how to do it?
 	// catch conveyor lock, check input queue, if It's empty - remove slot from map, if it's not - got to Working state
+}
+
+func (w *worker) getInitialStateMachine() statemachine.StateMachine {
+	return w.slot.handlersConfiguration.initStateMachine
 }
 
 func (w *worker) processSignalsSuspending(elements []queue.OutputElement) int {
@@ -421,7 +421,7 @@ func (w *worker) readInputQueueSuspending() error {
 	for i := 0; i < len(elements); i++ {
 		el := elements[i]
 
-		_, err := w.slot.createElement(GetStateMachineByType(matrix.InitialEvent), 0, el)
+		_, err := w.slot.createElement(w.getInitialStateMachine(), 0, el)
 		if err != nil {
 			return errors.Wrap(err, "[ readInputQueueSuspending ] Can't createElement")
 		}
@@ -488,7 +488,7 @@ func (w *worker) migrate(status ActivationStatus) error {
 			payload, newState = respErrorHandler(element, err)
 		}
 
-		updateElement(element, payload, newState)
+		w.updateElement(element, payload, newState)
 
 		err = w.slot.pushElement(element)
 		if err != nil {
@@ -500,8 +500,10 @@ func (w *worker) migrate(status ActivationStatus) error {
 
 }
 
-func (w *worker) getInitHandlersFromConfig() {
-	// TODO: impolement me
+func (w *worker) setPulseStateMachines() {
+	stateMachines := HandlerStorage.GetConfigByPulseState(int(w.slot.pulseState))
+	w.slot.handlersConfiguration.pulseStateMachines = stateMachines
+
 }
 
 func (w *worker) initializing() {
@@ -511,7 +513,7 @@ func (w *worker) initializing() {
 		return
 	}
 
-	w.getInitHandlersFromConfig()
+	w.setPulseStateMachines()
 
 	err := w.migrate(ActiveElement)
 	if err != nil {
