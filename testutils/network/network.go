@@ -17,6 +17,8 @@
 package network
 
 import (
+	context "context"
+
 	"github.com/insolar/insolar/core"
 )
 
@@ -33,6 +35,11 @@ func (n *testNetwork) RemoteProcedureRegister(name string, method core.RemotePro
 
 }
 
+func (n *testNetwork) Leave(ctx context.Context, ETA core.PulseNumber) {
+
+}
+
+// TODO remove this, use mock everywhere
 func GetTestNetwork() core.Network {
 	return &testNetwork{}
 }
