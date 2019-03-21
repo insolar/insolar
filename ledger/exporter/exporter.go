@@ -229,8 +229,6 @@ func recordType(rec object.Record) string {
 		return "TypeGenesis"
 	case *object.ChildRecord:
 		return "TypeChild"
-	case *object.JetRecord:
-		return "TypeJet"
 	case *object.RequestRecord:
 		return "TypeCallRequest"
 	case *object.ResultRecord:
