@@ -68,7 +68,7 @@ type PulseCalculator interface {
 
 //go:generate minimock -i github.com/insolar/insolar/network/storage.PulseRangeHasher -o ../../testutils/network -s _mock.go
 
-// PulseRangeHasher provides methods for hashing and validate pulse chain
+// PulseRangeHasher provides methods for hashing and validate Pulse chain
 type PulseRangeHasher interface {
 	GetRangeHash(core.PulseRange) ([]byte, error)
 	ValidateRangeHash(core.PulseRange, []byte) (bool, error)
@@ -92,7 +92,7 @@ func (p *PulseStorage) ValidateRangeHash(core.PulseRange, []byte) (bool, error) 
 	panic("implement me")
 }
 
-// Forwards calculates steps pulses forwards from provided pulse. If calculated pulse does not exist, ErrNotFound will
+// Forwards calculates steps pulses forwards from provided Pulse. If calculated Pulse does not exist, ErrNotFound will
 // be returned.
 func (p *PulseStorage) Forwards(ctx context.Context, pn core.PulseNumber, steps int) (pulse core.Pulse, err error) {
 	p.lock.RLock()
@@ -105,20 +105,20 @@ func (p *PulseStorage) Forwards(ctx context.Context, pn core.PulseNumber, steps 
 
 	iterator := node
 	for i := 0; i < steps; i++ {
-		if iterator.next == nil {
+		if iterator.Next == nil {
 			err = core.ErrNotFound
 			return
 		}
-		iterator, err = p.get(*iterator.next)
+		iterator, err = p.get(*iterator.Next)
 		if err != nil {
 			return
 		}
 	}
 
-	return iterator.pulse, nil
+	return iterator.Pulse, nil
 }
 
-// Backwards calculates steps pulses backwards from provided pulse. If calculated pulse does not exist, ErrNotFound will
+// Backwards calculates steps pulses backwards from provided Pulse. If calculated Pulse does not exist, ErrNotFound will
 // be returned.
 func (p *PulseStorage) Backwards(ctx context.Context, pn core.PulseNumber, steps int) (pulse core.Pulse, err error) {
 	p.lock.RLock()
@@ -131,21 +131,21 @@ func (p *PulseStorage) Backwards(ctx context.Context, pn core.PulseNumber, steps
 
 	iterator := node
 	for i := 0; i < steps; i++ {
-		if iterator.prev == nil {
+		if iterator.Prev == nil {
 			err = core.ErrNotFound
 			return
 		}
-		iterator, err = p.get(*iterator.prev)
+		iterator, err = p.get(*iterator.Prev)
 		if err != nil {
 			return
 		}
 	}
 
-	return iterator.pulse, nil
+	return iterator.Pulse, nil
 }
 
-// Append appends provided pulse to current storage. Pulse number should be greater than currently saved for preserving
-// pulse consistency. If provided pulse does not meet the requirements, ErrBadPulse will be returned.
+// Append appends provided Pulse to current storage. Pulse number should be greater than currently saved for preserving
+// Pulse consistency. If provided Pulse does not meet the requirements, ErrBadPulse will be returned.
 func (p *PulseStorage) Append(ctx context.Context, pulse core.Pulse) error {
 	p.lock.Lock()
 	defer p.lock.Unlock()
@@ -155,18 +155,18 @@ func (p *PulseStorage) Append(ctx context.Context, pulse core.Pulse) error {
 		if err != nil {
 			return err
 		}
-		oldHead.next = &pulse.PulseNumber
+		oldHead.Next = &pulse.PulseNumber
 
-		// Set new pulse.
+		// Set new Pulse.
 		err = p.set(pulse.PulseNumber, dbNode{
-			prev:  &oldHead.pulse.PulseNumber,
-			pulse: pulse,
+			Prev:  &oldHead.Pulse.PulseNumber,
+			Pulse: pulse,
 		})
 		if err != nil {
 			return err
 		}
 		// Set old updated head.
-		err = p.set(oldHead.pulse.PulseNumber, oldHead)
+		err = p.set(oldHead.Pulse.PulseNumber, oldHead)
 		if err != nil {
 			return err
 		}
@@ -176,7 +176,7 @@ func (p *PulseStorage) Append(ctx context.Context, pulse core.Pulse) error {
 	var insertWithoutHead = func() error {
 		// Set new Pulse.
 		err := p.set(pulse.PulseNumber, dbNode{
-			pulse: pulse,
+			Pulse: pulse,
 		})
 		if err != nil {
 			return err
@@ -201,7 +201,7 @@ func (p *PulseStorage) ForPulseNumber(ctx context.Context, pn core.PulseNumber) 
 	if err != nil {
 		return
 	}
-	return nd.pulse, nil
+	return nd.Pulse, nil
 }
 
 func (p *PulseStorage) Latest(ctx context.Context) (core.Pulse, error) {
@@ -216,17 +216,7 @@ func (p *PulseStorage) Latest(ctx context.Context) (core.Pulse, error) {
 	if err != nil {
 		return core.Pulse{}, err
 	}
-	return nd.pulse, nil
-}
-
-type pulseKey core.PulseNumber
-
-func (k pulseKey) Scope() Scope {
-	return ScopePulse
-}
-
-func (k pulseKey) ID() []byte {
-	return append([]byte{prefixPulse}, core.PulseNumber(k).Bytes()...)
+	return nd.Pulse, nil
 }
 
 type metaKey byte
@@ -240,8 +230,8 @@ func (k metaKey) ID() []byte {
 }
 
 type dbNode struct {
-	pulse      core.Pulse
-	prev, next *core.PulseNumber
+	Pulse      core.Pulse
+	Prev, Next *core.PulseNumber
 }
 
 var (

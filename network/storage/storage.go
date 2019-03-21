@@ -38,6 +38,7 @@ import (
 	"context"
 	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/core"
 	"github.com/pkg/errors"
 	"path/filepath"
 )
@@ -47,6 +48,16 @@ var (
 	ErrNotFound = errors.New("value not found")
 	ErrBadPulse = errors.New("pulse should be bigger than latest")
 )
+
+type pulseKey core.PulseNumber
+
+func (k pulseKey) Scope() Scope {
+	return ScopePulse
+}
+
+func (k pulseKey) ID() []byte {
+	return append([]byte{prefixPulse}, core.PulseNumber(k).Bytes()...)
+}
 
 // DB provides a simple key-value store interface for persisting data.
 type DB interface {

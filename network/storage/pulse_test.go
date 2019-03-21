@@ -46,7 +46,6 @@ import (
 )
 
 func TestNewPulseStorage(t *testing.T) {
-	t.Skip("123")
 	tmpdir, err := ioutil.TempDir("", "bdb-test-")
 	defer os.RemoveAll(tmpdir)
 	assert.NoError(t, err)
