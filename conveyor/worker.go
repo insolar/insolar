@@ -75,7 +75,7 @@ func newWorker(slot *Slot) worker {
 }
 
 func (w *worker) GetStateMachineByType(mType matrix.MachineType) statemachine.StateMachine {
-	return w.slot.handlersConfiguration.pulseStateMachines.GetStateMachineById(int(mType))
+	return w.slot.handlersConfiguration.pulseStateMachines.GetStateMachineByID(int(mType))
 }
 
 func (w *worker) setLoggerFields() {

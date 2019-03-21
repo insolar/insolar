@@ -44,5 +44,5 @@ type StateMachine interface {
 
 // SetAccessor gives access to set of state machines
 type SetAccessor interface {
-	GetStateMachineById(id int) StateMachine
+	GetStateMachineByID(id int) StateMachine
 }

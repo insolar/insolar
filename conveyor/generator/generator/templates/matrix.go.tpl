@@ -28,7 +28,7 @@ type StateMachineSet struct{
     stateMachines []statemachine.StateMachine
 }
 
-func ( s *StateMachineSet ) GetStateMachineById(id int) statemachine.StateMachine{
+func ( s *StateMachineSet ) GetStateMachineByID(id int) statemachine.StateMachine{
     return s.stateMachines[id]
 }
 
