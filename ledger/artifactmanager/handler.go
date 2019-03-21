@@ -897,12 +897,65 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel core.Par
 	return &rep, nil
 }
 
+func (h *MessageHandler) processChild(
+	ctx context.Context,
+	jetID core.RecordID,
+	parcel core.Parcel,
+	msg *message.RegisterChild,
+	rec object.Record,
+	childRec *object.ChildRecord,
+) (*core.RecordID, error) {
+	// h.IDLocker.Lock(msg.Parent.Record())
+	// defer h.IDLocker.Unlock(msg.Parent.Record())
+
+	logger := inslogger.FromContext(ctx)
+	idx, err := h.ObjectStorage.GetObjectIndex(ctx, jetID, msg.Parent.Record(), false)
+	if err == core.ErrNotFound {
+		heavy, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
+		if err != nil {
+			return nil, err
+		}
+		idx, err = h.saveIndexFromHeavy(ctx, jetID, msg.Parent, heavy)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to fetch index from heavy")
+		}
+	} else if err != nil {
+		return nil, err
+	}
+
+	recID := object.NewRecordIDFromRecord(h.PlatformCryptographyScheme, parcel.Pulse(), childRec)
+
+	// Children exist and pointer does not match (preserving chain consistency).
+	// For the case when vm can't save or send result to another vm and it tries to update the same record again
+	if idx.ChildPointer != nil && !childRec.PrevChild.Equal(idx.ChildPointer) && idx.ChildPointer != recID {
+		return nil, errors.New("invalid child record")
+	}
+
+	child, err := h.ObjectStorage.SetRecord(ctx, jetID, parcel.Pulse(), childRec)
+	if err == storage.ErrOverride {
+		logger.WithField("type", fmt.Sprintf("%T", rec)).Warn("set record override (#2)")
+		child = recID
+	} else if err != nil {
+		return nil, err
+	}
+
+	idx.ChildPointer = child
+	if msg.AsType != nil {
+		idx.Delegates[*msg.AsType] = msg.Child
+	}
+	idx.LatestUpdate = parcel.Pulse()
+	err = h.ObjectStorage.SetObjectIndex(ctx, jetID, msg.Parent.Record(), idx)
+	if err != nil {
+		return nil, err
+	}
+
+	return child, nil
+}
+
 func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
 	if h.isHeavy {
 		return nil, errors.New("heavy updates are forbidden")
 	}
-
-	logger := inslogger.FromContext(ctx)
 
 	msg := parcel.Message().(*message.RegisterChild)
 	jetID := jetFromContext(ctx)
@@ -914,51 +967,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel core.Pa
 
 	h.RecentStorageProvider.GetIndexStorage(ctx, jetID).AddObject(ctx, *msg.Parent.Record())
 
-	var child *core.RecordID
-	err := h.DBContext.Update(ctx, func(tx *storage.TransactionManager) error {
-		idx, err := h.ObjectStorage.GetObjectIndex(ctx, jetID, msg.Parent.Record(), false)
-		if err == core.ErrNotFound {
-			heavy, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
-			if err != nil {
-				return err
-			}
-			idx, err = h.saveIndexFromHeavy(ctx, jetID, msg.Parent, heavy)
-			if err != nil {
-				return errors.Wrap(err, "failed to fetch index from heavy")
-			}
-		} else if err != nil {
-			return err
-		}
-
-		recID := object.NewRecordIDFromRecord(h.PlatformCryptographyScheme, parcel.Pulse(), childRec)
-
-		// Children exist and pointer does not match (preserving chain consistency).
-		// For the case when vm can't save or send result to another vm and it tries to update the same record again
-		if idx.ChildPointer != nil && !childRec.PrevChild.Equal(idx.ChildPointer) && idx.ChildPointer != recID {
-			return errors.New("invalid child record")
-		}
-
-		child, err = tx.SetRecord(ctx, jetID, parcel.Pulse(), childRec)
-		if err == storage.ErrOverride {
-			logger.WithField("type", fmt.Sprintf("%T", rec)).Warn("set record override (#2)")
-			child = recID
-		} else if err != nil {
-			return err
-		}
-
-		idx.ChildPointer = child
-		if msg.AsType != nil {
-			idx.Delegates[*msg.AsType] = msg.Child
-		}
-		idx.LatestUpdate = parcel.Pulse()
-		err = tx.SetObjectIndex(ctx, jetID, msg.Parent.Record(), idx)
-		if err != nil {
-			return err
-		}
-
-		return nil
-	})
-
+	child, err := h.processChild(ctx, jetID, parcel, msg, rec, childRec)
 	if err != nil {
 		return nil, err
 	}
