@@ -39,7 +39,6 @@ func (n *testNetwork) Leave(ctx context.Context, ETA core.PulseNumber) {
 
 }
 
-// TODO remove this, use mock everywhere
 func GetTestNetwork() core.Network {
 	return &testNetwork{}
 }
