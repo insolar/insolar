@@ -32,7 +32,7 @@ func NewGetCodeAdapter(cg GetCodeProcessor) adapter.PulseConveyorAdapterTaskSink
 
 // GetCodeTask is task for adapter for getting code
 type GetCodeTask struct {
-	// TODO: don't let adapter and component know about Parcel type, get every needed
+	// TODO: don't let adapter and component know about Parcel type, get every needed info in
 	Parcel core.Parcel
 }
 
@@ -67,13 +67,4 @@ func (p *GetCodeProcessor) Process(task adapter.AdapterTask) adapter.Events {
 	log.Info("[ GetCodeProcessor.Process ] Process was dome successfully")
 
 	return adapter.Events{RespPayload: msg}
-}
-
-func (p *GetCodeProcessor) Cancel() interface{} {
-	log.Info("[ GetCodeProcessor.Process ] Cancel. Return Nil as Response")
-	return nil
-}
-
-func (p *GetCodeProcessor) Flush() {
-	log.Info("[ GetCodeProcessor.Process ] Flushed.")
 }

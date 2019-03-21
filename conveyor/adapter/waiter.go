@@ -60,12 +60,3 @@ func (w *Waiter) Process(task AdapterTask) Events {
 
 	return Events{RespPayload: msg}
 }
-
-func (w *Waiter) Cancel() interface{} {
-	log.Info("[ Waiter.Process ] Canceled. Return Nil as Response")
-	return nil
-}
-
-func (w *Waiter) Flush() {
-	log.Info("[ Waiter.Process ] Flushed.")
-}

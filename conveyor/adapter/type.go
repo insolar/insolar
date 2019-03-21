@@ -111,8 +111,6 @@ type Events struct {
 // Processor is iface for processing task for adapter
 type Processor interface {
 	Process(task AdapterTask) Events
-	Cancel() interface{}
-	Flush()
 }
 
 // NewAdapterWithQueue creates new instance of Adapter

@@ -258,22 +258,14 @@ func (a *CancellableQueueAdapter) process(cancellableTask queueTask) {
 	adapterTask := cancellableTask.task
 	respSink := adapterTask.respSink
 
-	processResult := make(chan Events, 1)
-
-	go func() {
-		res := a.processor.Process(adapterTask)
-		processResult <- res
-	}()
-
 	select {
 	case <-cancellableTask.cancelInfo.Cancel():
-		log.Info("[ CancellableQueueAdapter.process ] Canceled")
-		response := a.processor.Cancel()
-		respSink.PushResponse(a.adapterID, adapterTask.elementID, adapterTask.handlerID, response)
+		log.Info("[ CancellableQueueAdapter.process ] Task was canceled")
+		respSink.PushResponse(a.adapterID, adapterTask.elementID, adapterTask.handlerID, nil)
 	case <-cancellableTask.cancelInfo.Flush():
-		log.Info("[ CancellableQueueAdapter.process ] Flushed. Don't push Response")
-		a.processor.Flush()
-	case event := <-processResult:
+		log.Info("[ CancellableQueueAdapter.process ] Task was flushed. Don't push Response")
+	default:
+		event := a.processor.Process(adapterTask)
 		for nestedEvent := range event.NestedEventPayload {
 			respSink.PushNestedEvent(a.adapterID, adapterTask.elementID, adapterTask.handlerID, nestedEvent)
 		}

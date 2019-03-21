@@ -61,12 +61,3 @@ func (rs *ResponseSender) Process(task AdapterTask) Events {
 	log.Info("[ ResponseSender.Process ] response message is", msg)
 	return Events{RespPayload: msg}
 }
-
-func (rs *ResponseSender) Cancel() interface{} {
-	log.Info("[ ResponseSender.Process ] Canceled. Return Nil as Response")
-	return nil
-}
-
-func (rs *ResponseSender) Flush() {
-	log.Info("[ ResponseSender.Process ] Flushed.")
-}
