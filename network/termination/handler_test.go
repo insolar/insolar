@@ -24,7 +24,7 @@ type CommonTestSuite struct {
 	pulseStorage *testutils.PulseStorageMock
 }
 
-func TestHandler(t *testing.T) {
+func TestBasics(t *testing.T) {
 	suite.Run(t, new(CommonTestSuite))
 }
 
@@ -47,14 +47,27 @@ func (s *CommonTestSuite) TestHandlerInitialState() {
 	s.Equal(false, s.handler.terminating)
 }
 
-func (s *CommonTestSuite) TestLeaveNow() {
+func (s *CommonTestSuite) HandlerIsTerminating() {
+	s.Equal(true, s.handler.terminating)
+	s.Equal(1, cap(s.handler.done))
+}
+
+func TestLeave(t *testing.T) {
+	suite.Run(t, new(LeaveTestSuite))
+}
+
+type LeaveTestSuite struct {
+	CommonTestSuite
+}
+
+func (s *LeaveTestSuite) TestLeaveNow() {
 	s.network.LeaveMock.Expect(s.ctx, 0)
 	s.handler.Leave(s.ctx, 0)
 
 	s.HandlerIsTerminating()
 }
 
-func (s *CommonTestSuite) TestLeaveEta() {
+func (s *LeaveTestSuite) TestLeaveEta() {
 	mockPulseNumber := core.PulseNumber(2000000000)
 	testPulse := &core.Pulse{PulseNumber: core.PulseNumber(mockPulseNumber)}
 	pulseDelta := testPulse.NextPulseNumber - testPulse.PulseNumber
@@ -68,9 +81,4 @@ func (s *CommonTestSuite) TestLeaveEta() {
 	s.handler.Leave(s.ctx, leaveAfter)
 
 	s.HandlerIsTerminating()
-}
-
-func (s *CommonTestSuite) HandlerIsTerminating() {
-	s.Equal(true, s.handler.terminating)
-	s.Equal(1, cap(s.handler.done))
 }
