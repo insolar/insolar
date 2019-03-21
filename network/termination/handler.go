@@ -56,7 +56,6 @@ func (t *terminationHandler) OnLeaveApproved(ctx context.Context) {
 	}
 }
 
-// ci said that log.Fatal causes import cycle
 func (t *terminationHandler) Abort() {
 	panic("Node leave acknowledged by network. Goodbye!")
 }
