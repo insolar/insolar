@@ -26,10 +26,12 @@ import (
 	"strconv"
 	"time"
 
+	jsonrpc "github.com/gorilla/rpc/v2/json2"
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/pkg/errors"
 )
 
 var httpClient *http.Client
@@ -104,6 +106,35 @@ func GetResponseBody(url string, postP PostParams) ([]byte, error) {
 		return nil, errors.Wrap(err, "[ getResponseBody ] Problem with reading body")
 	}
 
+	return body, nil
+}
+
+// GetRPCResponse makes json/rpc v2 request and return result as byte slice.
+func GetRPCResponse(url string, method string, args interface{}) ([]byte, error) {
+	reqdata, err := jsonrpc.EncodeClientRequest(method, args)
+	if err != nil {
+		return nil, errors.Wrap(err, "encoding request failed")
+	}
+
+	req, err := http.NewRequest("POST", url, bytes.NewReader(reqdata))
+	if err != nil {
+		return nil, errors.Wrap(err, "[ getResponseBody ] Problem with creating request")
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	postResp, err := httpClient.Do(req)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ getResponseBody ] Problem with sending request")
+	}
+	if http.StatusOK != postResp.StatusCode {
+		return nil, errors.New("[ getResponseBody ] Bad http response code: " + strconv.Itoa(postResp.StatusCode))
+	}
+
+	body, err := ioutil.ReadAll(postResp.Body)
+	defer postResp.Body.Close()
+	if err != nil {
+		return nil, errors.Wrap(err, "[ getResponseBody ] Problem with reading body")
+	}
 	return body, nil
 }
 
