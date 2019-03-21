@@ -52,8 +52,8 @@ type exporterSuite struct {
 	jetStorage    jet.Storage
 	pulseStorage  *storage.PulseStorage
 
-	exporter *Exporter
-	jetID    insolar.JetID
+	exporter    *Exporter
+	jetRecordID insolar.RecordID
 }
 
 func NewExporterSuite() *exporterSuite {
@@ -70,7 +70,7 @@ func TestExporter(t *testing.T) {
 func (s *exporterSuite) BeforeTest(suiteName, testName string) {
 	s.cm = &component.Manager{}
 	s.ctx = inslogger.TestContext(s.T())
-	s.jetID = *insolar.NewJetID(0, nil)
+	s.jetRecordID = insolar.NewID(core.ZeroJetID)
 
 	db, cleaner := storagetest.TmpDB(s.ctx, s.T())
 	s.cleaner = cleaner
@@ -138,13 +138,13 @@ func (s *exporterSuite) TestExporter_Export() {
 	blobData.Data.Field = "anotherValue"
 	codec.NewEncoderBytes(&mem, &codec.CborHandle{}).MustEncode(blobData)
 
-	blobID, err := s.objectStorage.SetBlob(s.ctx, insolar.ID(s.jetID), Pulse10, mem)
+	blobID, err := s.objectStorage.SetBlob(s.ctx, s.jetRecordID, Pulse10, mem)
 	require.NoError(s.T(), err)
 
-	_, err = s.objectStorage.SetRecord(s.ctx, insolar.ID(s.jetID), Pulse10, &object.GenesisRecord{})
+	_, err = s.objectStorage.SetRecord(s.ctx, s.jetRecordID, Pulse10, &object.GenesisRecord{})
 	require.NoError(s.T(), err)
 
-	objectID, err := s.objectStorage.SetRecord(s.ctx, insolar.ID(s.jetID), Pulse10, &object.ObjectActivateRecord{
+	objectID, err := s.objectStorage.SetRecord(s.ctx, s.jetRecordID, Pulse10, &object.ObjectActivateRecord{
 		ObjectStateRecord: object.ObjectStateRecord{
 			Memory: blobID,
 		},
@@ -159,14 +159,13 @@ func (s *exporterSuite) TestExporter_Export() {
 	msgHash := platformpolicy.NewPlatformCryptographyScheme().IntegrityHasher().Hash(message.ToBytes(msg))
 	requestID, err := s.objectStorage.SetRecord(
 		s.ctx,
-		insolar.ID(s.jetID),
+		s.jetRecordID,
 		Pulse10,
 		&object.RequestRecord{
 			MessageHash: msgHash,
 			Parcel:      message.ParcelToBytes(parcel),
 		})
 	require.NoError(s.T(), err)
-	requestID58 := base58.Encode(requestID[:])
 
 	result, err := s.exporter.Export(s.ctx, 0, 15)
 	require.NoError(s.T(), err)
@@ -198,6 +197,8 @@ func (s *exporterSuite) TestExporter_Export() {
 	assert.Equal(s.T(), int64(20), pulse10data[0].Pulse.PulseTimestamp)
 
 	records := pulse10data[0].Records
+	requestID58 := base58.Encode(requestID[:])
+
 	obj, ok := records[objectID58]
 	if assert.True(s.T(), ok, "object not found by ID") {
 		assert.Equal(s.T(), "TypeActivate", obj.Type)
@@ -232,7 +233,7 @@ func (s *exporterSuite) TestExporter_ExportGetBlobFailed() {
 		require.NoError(s.T(), err)
 	}
 
-	_, err := s.objectStorage.SetRecord(s.ctx, insolar.ID(s.jetID), insolar.FirstPulseNumber+10, &object.ObjectActivateRecord{
+	_, err := s.objectStorage.SetRecord(s.ctx, s.jetRecordID, core.FirstPulseNumber+10, &object.ObjectActivateRecord{
 		ObjectStateRecord: object.ObjectStateRecord{
 			Memory: &insolar.ID{},
 		},

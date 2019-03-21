@@ -153,9 +153,6 @@ func TestExporter_ValidateResponse(t *testing.T) {
 	if jerr != nil {
 		t.Fatal("failed marshal unmarshaled response:", string(response), jerr)
 	}
-	// _ = j
-	// fmt.Println("response:", string(response))
-	// fmt.Println("formatted:", string(responseFmt))
 
 	// ignore servers addresses validation
 	swagger.Servers = nil
@@ -186,15 +183,9 @@ func TestExporter_ValidateResponse(t *testing.T) {
 
 	err = openapi3filter.ValidateResponse(ctx, responseValidationInput)
 	if err != nil {
-		fmt.Println("error validate: yes")
 		if _, ok := err.(*openapi3filter.ResponseError); ok {
-			// fmt.Printf("err.input: %+v\n", verr.Input)
-			// fmt.Println("input:")
-			fmt.Print(string(responseFmt))
-			// fmt.Printf("input: %+v\n", valerr.Input)
+			fmt.Print("got response:\n", string(responseFmt))
 		}
-		// t.Fatal()
 	}
-	// fmt.Println("err:", err)
 	require.NoError(t, err, "validate response failed")
 }

@@ -17,9 +17,12 @@
 package insolar
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
+
+	"github.com/jbenet/go-base58"
 )
 
 const (

@@ -78,14 +78,15 @@ type pulseData struct {
 
 // Export returns data view from storage.
 func (e *Exporter) Export(ctx context.Context, fromPulse insolar.PulseNumber, size int) (*insolar.StorageExportResult, error) {
-	result := insolar.StorageExportResult{Data: map[string]interface{}{}}
+	result := insolar.StorageExportResult{
+		Data: map[string]interface{}{},
+	}
 
 	currentPulse, err := e.PulseStorage.Current(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get current pulse data")
 	}
 
-	counter := 0
 	fromPulsePN := insolar.PulseNumber(math.Max(float64(fromPulse), float64(insolar.GenesisPulse.PulseNumber)))
 
 	if fromPulsePN > currentPulse.PulseNumber {
@@ -109,6 +110,7 @@ func (e *Exporter) Export(ctx context.Context, fromPulse insolar.PulseNumber, si
 		fromPulsePN = *tryPulse.Next
 	}
 
+	counter := 0
 	iterPulse := &fromPulsePN
 	for iterPulse != nil && counter < size {
 		pulse, err := e.PulseTracker.GetPulse(ctx, *iterPulse)
