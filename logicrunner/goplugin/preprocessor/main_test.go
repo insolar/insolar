@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package preprocessor
 
@@ -287,7 +287,7 @@ type A struct{
 }
 
 func (s *PreprocessorSuite) TestInitializationFunctionParamsProxy() {
-tmpDir, err := ioutil.TempDir("", "test-")
+	tmpDir, err := ioutil.TempDir("", "test-")
 	s.NoError(err)
 	defer os.RemoveAll(tmpDir) // nolint: errcheck
 
@@ -331,7 +331,7 @@ func ( a *A ) Get(
 }
 
 func (s *PreprocessorSuite) TestInitializationFunctionParamsWrapper() {
-tmpDir, err := ioutil.TempDir("", "test-")
+	tmpDir, err := ioutil.TempDir("", "test-")
 	s.NoError(err)
 	defer os.RemoveAll(tmpDir) //nolint: errcheck
 
@@ -374,7 +374,7 @@ func (a *A) Get(
 }
 
 func (s *PreprocessorSuite) TestContractOnlyIfEmbedBaseContract() {
-tmpDir, err := ioutil.TempDir("", "test-")
+	tmpDir, err := ioutil.TempDir("", "test-")
 	s.NoError(err)
 	defer os.RemoveAll(tmpDir) //nolint: errcheck
 
@@ -394,7 +394,7 @@ type A struct{
 }
 
 func (s *PreprocessorSuite) TestOnlyOneSmartContractMustExist() {
-tmpDir, err := ioutil.TempDir("", "test-")
+	tmpDir, err := ioutil.TempDir("", "test-")
 	s.NoError(err)
 	defer os.RemoveAll(tmpDir) //nolint: errcheck
 
@@ -418,7 +418,7 @@ type B struct{
 }
 
 func (s *PreprocessorSuite) TestImportsFromContract() {
-tmpDir, err := ioutil.TempDir("", "test-")
+	tmpDir, err := ioutil.TempDir("", "test-")
 	s.NoError(err)
 	defer os.RemoveAll(tmpDir)
 
@@ -627,7 +627,7 @@ func (s *PreprocessorSuite) TestProxyGeneration() {
 			t.Parallel()
 			a, r := assert.New(t), require.New(t)
 
-			parsed, err := ParseFile(path.Join(contractDir, contract, contract + ".go"))
+			parsed, err := ParseFile(path.Join(contractDir, contract, contract+".go"))
 			a.NotNil(parsed, "have parsed object")
 			a.NoError(err)
 
@@ -657,4 +657,3 @@ func TestPreprocessor(t *testing.T) {
 	t.Parallel()
 	suite.Run(t, new(PreprocessorSuite))
 }
-

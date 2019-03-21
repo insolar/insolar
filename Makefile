@@ -33,7 +33,7 @@ BININSGOCC=$(BIN_DIR)/$(INSGOCC)
 
 
 .PHONY: all
-all: clean install-deps pre-build build test
+all: clean install-deps pre-build build
 
 .PHONY: lint
 lint: ci-lint
