@@ -158,7 +158,7 @@ func TestResponseSenderHelper(t *testing.T) {
 		return event
 	}
 	slotElementHelperMock.SendTaskFunc = func(p uint32, response interface{}, p2 uint32) (r error) {
-		f := response.(ResponseSenderTask).Future
+		f := response.(SendResponseTask).Future
 		f.SetResult(testReply)
 		return nil
 	}

@@ -71,10 +71,10 @@ func (r *ResponseSenderHelper) SendResponse(element slot.SlotElementHelper, resu
 
 	pendingMsg, ok := element.GetInputEvent().(core.ConveyorPendingMessage)
 	if !ok {
-		return errors.New(fmt.Sprintf("[ ResponseSenderHelper.SendResponse ] Input event is not core.ConveyorPendingMessage: %T", element.GetInputEvent()))
+		return errors.Errorf("[ ResponseSenderHelper.SendResponse ] Input event is not core.ConveyorPendingMessage: %T", element.GetInputEvent())
 	}
 
-	response := ResponseSenderTask{
+	response := SendResponseTask{
 		Future: pendingMsg.Future,
 		Result: result,
 	}
