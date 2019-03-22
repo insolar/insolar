@@ -52,12 +52,6 @@ type ObjectStorage interface {
 		id *core.RecordID,
 		idx *object.Lifeline,
 	) error
-
-	RemoveObjectIndex(
-		ctx context.Context,
-		jetID core.RecordID,
-		ref *core.RecordID,
-	) error
 }
 
 type objectStorage struct {
