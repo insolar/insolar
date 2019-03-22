@@ -4,24 +4,6 @@ package types
 
 import "strconv"
 
-func _() {
-	// An "invalid array index" compiler error signifies that the constant values have changed.
-	// Re-run the stringer command to generate them again.
-	var x [1]struct{}
-	_ = x[Ping-1]
-	_ = x[RPC-2]
-	_ = x[Cascade-3]
-	_ = x[Pulse-4]
-	_ = x[GetRandomHosts-5]
-	_ = x[Bootstrap-6]
-	_ = x[Authorize-7]
-	_ = x[Register-8]
-	_ = x[Genesis-9]
-	_ = x[Challenge1-10]
-	_ = x[Challenge2-11]
-	_ = x[Disconnect-12]
-}
-
 const _PacketType_name = "PingRPCCascadePulseGetRandomHostsBootstrapAuthorizeRegisterGenesisChallenge1Challenge2Disconnect"
 
 var _PacketType_index = [...]uint8{0, 4, 7, 14, 19, 33, 42, 51, 59, 66, 76, 86, 96}
