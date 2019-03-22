@@ -74,3 +74,9 @@ type ConveyorFuture interface {
 	// Cancel closes all channels and cleans up underlying structures.
 	Cancel()
 }
+
+// ConveyorPendingMessage is message for conveyor which can pend for response
+type ConveyorPendingMessage struct {
+	Msg    Parcel
+	Future ConveyorFuture
+}

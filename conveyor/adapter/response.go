@@ -19,6 +19,7 @@ package adapter
 import (
 	"fmt"
 
+	"github.com/insolar/insolar/conveyor/interfaces/slot"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
@@ -60,4 +61,23 @@ func (rs *SendResponseProcessor) Process(task AdapterTask, nestedEventHelper Nes
 	msg = fmt.Sprintf("Response was send successfully")
 	log.Info("[ SendResponseProcessor.Process ] response message is", msg)
 	return msg
+}
+
+// SendResponseHelper is helper for SendResponseProcessor
+type SendResponseHelper struct{}
+
+// SendResponse makes correct message and send it to adapter
+func (r *SendResponseHelper) SendResponse(element slot.SlotElementHelper, result core.Reply, respHandlerID uint32) error {
+
+	pendingMsg, ok := element.GetInputEvent().(core.ConveyorPendingMessage)
+	if !ok {
+		return errors.Errorf("[ SendResponseHelper.SendResponse ] Input event is not core.ConveyorPendingMessage: %T", element.GetInputEvent())
+	}
+
+	response := SendResponseTask{
+		Future: pendingMsg.Future,
+		Result: result,
+	}
+	err := element.SendTask(uint32(SendResponseAdapterID), response, respHandlerID)
+	return errors.Wrap(err, "[ SendResponseHelper.SendResponse ] Can't SendTask")
 }

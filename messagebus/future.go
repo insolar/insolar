@@ -80,9 +80,3 @@ func (future *future) Cancel() {
 func (future *future) finish() {
 	close(future.result)
 }
-
-// ConveyorPendingMessage is message for conveyor which can pend for response
-type ConveyorPendingMessage struct {
-	Msg    core.Parcel
-	Future core.ConveyorFuture
-}
