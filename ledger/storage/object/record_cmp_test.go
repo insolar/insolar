@@ -20,6 +20,8 @@ import (
 	"math/rand"
 	"testing"
 
+	"github.com/insolar/insolar/insolar/record"
+
 	fuzz "github.com/google/gofuzz"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
@@ -38,14 +40,14 @@ func TestRecord_Components(t *testing.T) {
 
 	type tempRecord struct {
 		id  insolar.ID
-		rec object.MaterialRecord
+		rec record.MaterialRecord
 	}
 
 	var records []tempRecord
 
 	f := fuzz.New().Funcs(func(t *tempRecord, c fuzz.Continue) {
 		t.id = gen.ID()
-		t.rec = object.MaterialRecord{
+		t.rec = record.MaterialRecord{
 			Record: &object.ResultRecord{},
 			JetID:  gen.JetID(),
 		}

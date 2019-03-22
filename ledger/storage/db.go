@@ -18,6 +18,7 @@ package storage
 
 import (
 	"context"
+	"github.com/insolar/insolar/insolar/record"
 	"path/filepath"
 	"sync"
 
@@ -52,7 +53,7 @@ type DBContext interface {
 		ctx context.Context,
 		jetID insolar.ID,
 		pulse insolar.PulseNumber,
-		handler func(id insolar.ID, rec object.VirtualRecord) error,
+		handler func(id insolar.ID, rec record.VirtualRecord) error,
 	) error
 
 	StoreKeyValues(ctx context.Context, kvs []insolar.KV) error
@@ -231,7 +232,7 @@ func (db *DB) IterateRecordsOnPulse(
 	ctx context.Context,
 	jetID insolar.ID,
 	pulse insolar.PulseNumber,
-	handler func(id insolar.ID, rec object.VirtualRecord) error,
+	handler func(id insolar.ID, rec record.VirtualRecord) error,
 ) error {
 	jetPrefix := insolar.JetID(jetID).Prefix()
 	prefix := prefixkey(scopeIDRecord, jetPrefix, pulse.Bytes())

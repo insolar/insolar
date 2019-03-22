@@ -76,11 +76,11 @@ func (id *ID) Hash() []byte {
 }
 
 // Equal checks if reference points to the same record.
-func (id *ID) Equal(other *ID) bool {
-	if id == nil || other == nil {
+func (id *ID) Equal(other ID) bool {
+	if id == nil {
 		return false
 	}
-	return *id == *other
+	return *id == other
 }
 
 // NewIDFromBase58 deserializes ID from base58 encoded string.
@@ -196,6 +196,47 @@ func (ref *Reference) MarshalJSON() ([]byte, error) {
 		return json.Marshal(nil)
 	}
 	return json.Marshal(ref.String())
+}
+
+func (ref Reference) Marshal() ([]byte, error) {
+	return ref[:], nil
+}
+
+func (ref *Reference) MarshalTo(data []byte) (int, error) {
+	copy(data, ref[:])
+	return RecordRefSize, nil
+}
+
+func (ref *Reference) Unmarshal(data []byte) error {
+	if len(data) != RecordRefSize {
+		return errors.New("Not enough bytes to unpack Reference")
+	}
+	copy(ref[:], data)
+	return nil
+}
+func (ref *Reference) UnmarshalJSON(data []byte) error {
+	return json.Unmarshal(data, ref)
+}
+func (ref *Reference) Size() int { return RecordRefSize }
+
+func (id ID) Marshal() ([]byte, error) { return id[:], nil }
+func (id *ID) MarshalTo(data []byte) (int, error) {
+	copy(data, id[:])
+	return RecordIDSize, nil
+}
+func (id *ID) Unmarshal(data []byte) error {
+	if len(data) != RecordIDSize {
+		return errors.New("Not enough bytes to unpack ID")
+	}
+	copy(id[:], data)
+	return nil
+}
+func (id *ID) UnmarshalJSON(data []byte) error {
+	return json.Unmarshal(data, id)
+}
+func (id *ID) Size() int { return RecordIDSize }
+func (id ID) Compare(other ID) int {
+	return bytes.Compare(id.Bytes(), other.Bytes())
 }
 
 // DebugString prints ID in human readable form.
