@@ -21,9 +21,12 @@ type Catalog struct {
 }
 
 func newCatalog() *Catalog {
-	return &Catalog{}
+	return &Catalog{
+		responseSenderHelper: ResponseSenderHelper{},
+	}
 }
 
+// GetAdapterComponents is for component manager
 func GetAdapterComponents() []interface{} {
 	return []interface{}{
 		NewResponseSender(),
