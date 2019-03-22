@@ -55,7 +55,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/merkle"
@@ -63,7 +63,7 @@ import (
 )
 
 type PhaseManager interface {
-	OnPulse(ctx context.Context, pulse *core.Pulse, pulseStartTime time.Time) error
+	OnPulse(ctx context.Context, pulse *insolar.Pulse, pulseStartTime time.Time) error
 }
 
 type Phases struct {
@@ -71,11 +71,11 @@ type Phases struct {
 	SecondPhase SecondPhase `inject:""`
 	ThirdPhase  ThirdPhase  `inject:""`
 
-	PulseManager core.PulseManager  `inject:""`
-	NodeKeeper   network.NodeKeeper `inject:""`
-	Calculator   merkle.Calculator  `inject:""`
+	PulseManager insolar.PulseManager `inject:""`
+	NodeKeeper   network.NodeKeeper   `inject:""`
+	Calculator   merkle.Calculator    `inject:""`
 
-	lastPulse core.PulseNumber
+	lastPulse insolar.PulseNumber
 	lock      sync.Mutex
 }
 
@@ -85,7 +85,7 @@ func NewPhaseManager() PhaseManager {
 }
 
 // OnPulse starts calculate args on phases.
-func (pm *Phases) OnPulse(ctx context.Context, pulse *core.Pulse, pulseStartTime time.Time) error {
+func (pm *Phases) OnPulse(ctx context.Context, pulse *insolar.Pulse, pulseStartTime time.Time) error {
 	pm.lock.Lock()
 	defer pm.lock.Unlock()
 
@@ -156,7 +156,7 @@ func (pm *Phases) OnPulse(ctx context.Context, pulse *core.Pulse, pulseStartTime
 	return pm.NodeKeeper.Sync(ctx, state.ActiveNodes, state.ApprovedClaims)
 }
 
-func getPulseDuration(pulse *core.Pulse) (*time.Duration, error) {
+func getPulseDuration(pulse *insolar.Pulse) (*time.Duration, error) {
 	duration := time.Duration(pulse.NextPulseNumber-pulse.PulseNumber) * time.Second
 	return &duration, nil
 }

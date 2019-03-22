@@ -21,8 +21,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/insolar/insolar"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/stretchr/testify/assert"
 )
@@ -89,9 +88,9 @@ var hashtestsRecordsMutate = []struct {
 		"CodeRecord",
 		[]VirtualRecord{
 			&CodeRecord{},
-			&CodeRecord{Code: CalculateIDForBlob(pcs, core.GenesisPulse.PulseNumber, []byte{1, 2, 3})},
+			&CodeRecord{Code: CalculateIDForBlob(pcs, insolar.GenesisPulse.PulseNumber, []byte{1, 2, 3})},
 			&CodeRecord{
-				Code: CalculateIDForBlob(pcs, core.GenesisPulse.PulseNumber, []byte{1, 2, 3}),
+				Code: CalculateIDForBlob(pcs, insolar.GenesisPulse.PulseNumber, []byte{1, 2, 3}),
 				SideEffectRecord: SideEffectRecord{
 					Domain: insolar.Reference{1, 2, 3},
 				},

@@ -19,7 +19,7 @@ package foundation
 import (
 	"crypto"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/platformpolicy"
 )
 
@@ -39,7 +39,7 @@ func Sign(data []byte, key crypto.PrivateKey) ([]byte, error) {
 
 // Verify verifies signature.
 func Verify(data []byte, signatureRaw []byte, publicKey crypto.PublicKey) bool {
-	return platformCryptographyScheme.Verifier(publicKey).Verify(core.SignatureFromBytes(signatureRaw), data)
+	return platformCryptographyScheme.Verifier(publicKey).Verify(insolar.SignatureFromBytes(signatureRaw), data)
 }
 
 func GeneratePrivateKey() (crypto.PrivateKey, error) {

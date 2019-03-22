@@ -51,34 +51,34 @@
 package nodenetwork
 
 import (
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 )
 
 type none struct{}
 
 type recordRefSet struct {
-	data map[core.RecordRef]none
+	data map[insolar.Reference]none
 }
 
 func newRecordRefSet() *recordRefSet {
-	return &recordRefSet{data: make(map[core.RecordRef]none)}
+	return &recordRefSet{data: make(map[insolar.Reference]none)}
 }
 
-func (s *recordRefSet) Add(ref core.RecordRef) {
+func (s *recordRefSet) Add(ref insolar.Reference) {
 	s.data[ref] = none{}
 }
 
-func (s *recordRefSet) Remove(ref core.RecordRef) {
+func (s *recordRefSet) Remove(ref insolar.Reference) {
 	delete(s.data, ref)
 }
 
-func (s *recordRefSet) Contains(ref core.RecordRef) bool {
+func (s *recordRefSet) Contains(ref insolar.Reference) bool {
 	_, ok := s.data[ref]
 	return ok
 }
 
-func (s *recordRefSet) Collect() []core.RecordRef {
-	result := make([]core.RecordRef, len(s.data))
+func (s *recordRefSet) Collect() []insolar.Reference {
+	result := make([]insolar.Reference, len(s.data))
 	i := 0
 	for ref := range s.data {
 		result[i] = ref

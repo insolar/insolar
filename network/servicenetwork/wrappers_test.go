@@ -56,7 +56,7 @@ import (
 
 	consensus "github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/consensus/phases"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network"
 )
 
@@ -77,15 +77,15 @@ func (n *nodeKeeperWrapper) GetConsensusInfo() network.ConsensusInfo {
 	return n.original.GetConsensusInfo()
 }
 
-func (n *nodeKeeperWrapper) GetWorkingNode(ref core.RecordRef) core.Node {
+func (n *nodeKeeperWrapper) GetWorkingNode(ref insolar.Reference) insolar.NetworkNode {
 	return n.original.GetWorkingNode(ref)
 }
 
-func (n *nodeKeeperWrapper) GetWorkingNodes() []core.Node {
+func (n *nodeKeeperWrapper) GetWorkingNodes() []insolar.NetworkNode {
 	return n.original.GetWorkingNodes()
 }
 
-func (n *nodeKeeperWrapper) GetWorkingNodesByRole(role core.DynamicRole) []core.RecordRef {
+func (n *nodeKeeperWrapper) GetWorkingNodesByRole(role insolar.DynamicRole) []insolar.Reference {
 	return n.original.GetWorkingNodesByRole(role)
 }
 
@@ -98,13 +98,13 @@ type phaseManagerWrapper struct {
 	result   chan error
 }
 
-func (p *phaseManagerWrapper) OnPulse(ctx context.Context, pulse *core.Pulse, pulseStartTime time.Time) error {
+func (p *phaseManagerWrapper) OnPulse(ctx context.Context, pulse *insolar.Pulse, pulseStartTime time.Time) error {
 	res := p.original.OnPulse(ctx, pulse, pulseStartTime)
 	p.result <- res
 	return res
 }
 
-func (n *nodeKeeperWrapper) GetOrigin() core.Node {
+func (n *nodeKeeperWrapper) GetOrigin() insolar.NetworkNode {
 	return n.original.GetOrigin()
 }
 
@@ -124,7 +124,7 @@ func (n *nodeKeeperWrapper) SetCloudHash(hash []byte) {
 	n.original.SetCloudHash(hash)
 }
 
-func (n *nodeKeeperWrapper) SetInitialSnapshot(nodes []core.Node) {
+func (n *nodeKeeperWrapper) SetInitialSnapshot(nodes []insolar.NetworkNode) {
 	n.original.SetInitialSnapshot(nodes)
 }
 
@@ -148,7 +148,7 @@ func (n *nodeKeeperWrapper) GetSparseUnsyncList(length int) network.UnsyncList {
 	return n.original.GetSparseUnsyncList(length)
 }
 
-func (n *nodeKeeperWrapper) Sync(ctx context.Context, nodes []core.Node, claims []consensus.ReferendumClaim) error {
+func (n *nodeKeeperWrapper) Sync(ctx context.Context, nodes []insolar.NetworkNode, claims []consensus.ReferendumClaim) error {
 	return n.original.Sync(ctx, nodes, claims)
 }
 

@@ -17,7 +17,7 @@
 package extractor
 
 import (
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/pkg/errors"
 )
@@ -26,10 +26,10 @@ import (
 func NodeInfoResponse(data []byte) (string, string, error) {
 	res := struct {
 		PublicKey string
-		Role      core.StaticRole
+		Role      insolar.StaticRole
 	}{}
 	var contractErr *foundation.Error
-	_, err := core.UnMarshalResponse(data, []interface{}{&res, &contractErr})
+	_, err := insolar.UnMarshalResponse(data, []interface{}{&res, &contractErr})
 	if err != nil {
 		return "", "", errors.Wrap(err, "[ NodeInfoResponse ] Can't unmarshal response")
 	}

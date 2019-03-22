@@ -19,8 +19,7 @@ package object
 import (
 	"io"
 
-	"github.com/insolar/insolar"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 )
 
 // StateID is a state of lifeline records.
@@ -86,7 +85,7 @@ type CodeRecord struct {
 	SideEffectRecord
 
 	Code        *insolar.ID
-	MachineType core.MachineType
+	MachineType insolar.MachineType
 }
 
 // WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
@@ -185,8 +184,8 @@ func (r *DeactivationRecord) WriteHashData(w io.Writer) (int, error) {
 }
 
 // GetMachineType returns state code machine type.
-func (*DeactivationRecord) GetMachineType() core.MachineType {
-	return core.MachineTypeNotExist
+func (*DeactivationRecord) GetMachineType() insolar.MachineType {
+	return insolar.MachineTypeNotExist
 }
 
 // GetMemory returns state memory.

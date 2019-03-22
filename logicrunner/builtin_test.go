@@ -31,14 +31,14 @@ import (
 	"github.com/insolar/insolar/testutils/nodekeeper"
 	"github.com/stretchr/testify/require"
 
-	"github.com/insolar/insolar/core/delegationtoken"
-	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/insolar/delegationtoken"
+	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/logicrunner/builtin/helloworld"
 
 	"github.com/insolar/insolar/ledger/ledgertestutils"
@@ -46,9 +46,9 @@ import (
 	"github.com/insolar/insolar/testutils/testmessagebus"
 )
 
-func byteRecorRef(b byte) core.RecordRef {
-	var ref core.RecordRef
-	ref[core.RecordRefSize-1] = b
+func byteRecorRef(b byte) insolar.Reference {
+	var ref insolar.Reference
+	ref[insolar.RecordRefSize-1] = b
 	return ref
 }
 
@@ -60,8 +60,8 @@ func TestBareHelloworld(t *testing.T) {
 	})
 
 	mock := testutils.NewCryptographyServiceMock(t)
-	mock.SignFunc = func(p []byte) (r *core.Signature, r1 error) {
-		signature := core.SignatureFromBytes(nil)
+	mock.SignFunc = func(p []byte) (r *insolar.Signature, r1 error) {
+		signature := insolar.SignatureFromBytes(nil)
 		return &signature, nil
 	}
 	mock.GetPublicKeyFunc = func() (r crypto.PublicKey, r1 error) {
@@ -75,8 +75,8 @@ func TestBareHelloworld(t *testing.T) {
 
 	// FIXME: TmpLedger is deprecated. Use mocks instead.
 	l, db, cleaner := ledgertestutils.TmpLedger(
-		t, "", core.StaticRoleLightMaterial,
-		core.Components{
+		t, "", insolar.StaticRoleLightMaterial,
+		insolar.Components{
 			LogicRunner: lr,
 			NodeNetwork: nk,
 			MessageBus:  mb,
@@ -98,7 +98,7 @@ func TestBareHelloworld(t *testing.T) {
 
 	_ = l.GetPulseManager().Set(
 		ctx,
-		core.Pulse{PulseNumber: currentPulse.PulseNumber, Entropy: core.Entropy{}},
+		insolar.Pulse{PulseNumber: currentPulse.PulseNumber, Entropy: insolar.Entropy{}},
 		true,
 	)
 
@@ -122,14 +122,14 @@ func TestBareHelloworld(t *testing.T) {
 
 	domain := byteRecorRef(2)
 	request := byteRecorRef(3)
-	_, _, protoRef, err := goplugintestutils.AMPublishCode(t, am, domain, request, core.MachineTypeBuiltin, []byte("helloworld"))
+	_, _, protoRef, err := goplugintestutils.AMPublishCode(t, am, domain, request, insolar.MachineTypeBuiltin, []byte("helloworld"))
 	assert.NoError(t, err)
 
 	contract, err := am.RegisterRequest(ctx, *am.GenesisRef(), &message.Parcel{Msg: &message.CallConstructor{PrototypeRef: byteRecorRef(4)}})
 	assert.NoError(t, err)
 
 	// TODO: use proper conversion
-	reqref := core.RecordRef{}
+	reqref := insolar.Reference{}
 	reqref.SetRecord(*contract)
 
 	_, err = am.ActivateObject(
@@ -144,7 +144,7 @@ func TestBareHelloworld(t *testing.T) {
 		Method:    "Greet",
 		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"Vany"}),
 	}
-	parcel, err := parcelFactory.Create(ctx, msg, testutils.RandomRef(), nil, *core.GenesisPulse)
+	parcel, err := parcelFactory.Create(ctx, msg, testutils.RandomRef(), nil, *insolar.GenesisPulse)
 	assert.NoError(t, err)
 	// #1
 	ctx = inslogger.ContextWithTrace(ctx, "TestBareHelloworld1")
@@ -162,7 +162,7 @@ func TestBareHelloworld(t *testing.T) {
 		Method:    "Greet",
 		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"Ruz"}),
 	}
-	parcel, err = parcelFactory.Create(ctx, msg, testutils.RandomRef(), nil, *core.GenesisPulse)
+	parcel, err = parcelFactory.Create(ctx, msg, testutils.RandomRef(), nil, *insolar.GenesisPulse)
 	assert.NoError(t, err)
 	// #2
 	ctx = inslogger.ContextWithTrace(ctx, "TestBareHelloworld2")

@@ -25,8 +25,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
 
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/reply"
 )
 
 // Tape is an abstraction for saving replies for messages and restoring them.
@@ -36,12 +36,12 @@ import (
 type tape interface {
 	Write(ctx context.Context, writer io.Writer) error
 	Get(ctx context.Context, msgHash []byte) (*TapeItem, error)
-	Set(ctx context.Context, msgHash []byte, rep core.Reply, gotError error) error
+	Set(ctx context.Context, msgHash []byte, rep insolar.Reply, gotError error) error
 }
 
 // TapeItem stores reply/error pair for tape.
 type TapeItem struct {
-	Reply core.Reply
+	Reply insolar.Reply
 	Error error
 }
 
@@ -49,7 +49,7 @@ type TapeItem struct {
 //
 // It uses <storageTape id> + <message hash> for Value keys.
 type memoryTape struct {
-	pulse   core.PulseNumber
+	pulse   insolar.PulseNumber
 	storage []memoryTapeMessage
 }
 
@@ -64,7 +64,7 @@ type itemBlob struct {
 	ErrorB  []byte
 }
 
-func newMemoryTape(pulse core.PulseNumber) *memoryTape {
+func newMemoryTape(pulse insolar.PulseNumber) *memoryTape {
 	return &memoryTape{
 		pulse: pulse,
 	}
@@ -153,7 +153,7 @@ func (t *memoryTape) Get(ctx context.Context, msgHash []byte) (*TapeItem, error)
 	return &tapeMsg.Item, nil
 }
 
-func (t *memoryTape) Set(ctx context.Context, msgHash []byte, rep core.Reply, gotError error) error {
+func (t *memoryTape) Set(ctx context.Context, msgHash []byte, rep insolar.Reply, gotError error) error {
 	t.storage = append(t.storage, memoryTapeMessage{
 		MsgHash: msgHash,
 		Item: TapeItem{

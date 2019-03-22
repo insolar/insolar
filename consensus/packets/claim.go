@@ -53,7 +53,7 @@ package packets
 import (
 	"crypto"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 )
@@ -88,11 +88,11 @@ type ReferendumClaim interface {
 }
 
 type ClaimSupplementary interface {
-	AddSupplementaryInfo(nodeID core.RecordRef)
+	AddSupplementaryInfo(nodeID insolar.Reference)
 }
 
 type SignedClaim interface {
-	GetNodeID() core.RecordRef
+	GetNodeID() insolar.Reference
 	GetPublicKey() (crypto.PublicKey, error)
 	SerializeRaw() ([]byte, error)
 	GetSignature() []byte
@@ -171,12 +171,12 @@ func (address NodeAddress) Get() string {
 
 // NodeJoinClaim is a type 1, len == 272.
 type NodeJoinClaim struct {
-	ShortNodeID             core.ShortNodeID
-	RelayNodeID             core.ShortNodeID
+	ShortNodeID             insolar.ShortNodeID
+	RelayNodeID             insolar.ShortNodeID
 	ProtocolVersionAndFlags uint32
 	JoinsAfter              uint32
-	NodeRoleRecID           core.StaticRole
-	NodeRef                 core.RecordRef
+	NodeRoleRecID           insolar.StaticRole
+	NodeRef                 insolar.Reference
 	NodeAddress             NodeAddress
 	NodePK                  [PublicKeyLength]byte
 	Signature               [SignatureLength]byte
@@ -187,7 +187,7 @@ func (njc *NodeJoinClaim) Clone() ReferendumClaim {
 	return &result
 }
 
-func (njc *NodeJoinClaim) GetNodeID() core.RecordRef {
+func (njc *NodeJoinClaim) GetNodeID() insolar.Reference {
 	return njc.NodeRef
 }
 
@@ -234,8 +234,8 @@ func (nac *NodeAnnounceClaim) SetCloudHash(cloudHash []byte) {
 // Should be executed with the next pulse. Type 1, len == 0.
 type NodeLeaveClaim struct {
 	// additional field that is not serialized and is set from transport layer on packet receive
-	NodeID core.RecordRef
-	ETA    core.PulseNumber
+	NodeID insolar.Reference
+	ETA    insolar.PulseNumber
 }
 
 func (nlc *NodeLeaveClaim) Clone() ReferendumClaim {
@@ -243,7 +243,7 @@ func (nlc *NodeLeaveClaim) Clone() ReferendumClaim {
 	return &result
 }
 
-func (nlc *NodeLeaveClaim) AddSupplementaryInfo(nodeID core.RecordRef) {
+func (nlc *NodeLeaveClaim) AddSupplementaryInfo(nodeID insolar.Reference) {
 	nlc.NodeID = nodeID
 }
 
@@ -259,7 +259,7 @@ func getClaimWithHeaderSize(claim ReferendumClaim) uint16 {
 	return getClaimSize(claim) + claimHeaderSize
 }
 
-func NodeToClaim(node core.Node) (*NodeJoinClaim, error) {
+func NodeToClaim(node insolar.NetworkNode) (*NodeJoinClaim, error) {
 	keyProc := platformpolicy.NewKeyProcessor()
 	exportedKey, err := keyProc.ExportPublicKeyBinary(node.PublicKey())
 	if err != nil {

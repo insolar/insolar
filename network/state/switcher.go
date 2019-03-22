@@ -55,7 +55,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/metrics"
@@ -70,13 +70,13 @@ type messageBusLocker interface {
 
 // NetworkSwitcher is a network FSM using for bootstrapping
 type NetworkSwitcher struct {
-	NodeNetwork        core.NodeNetwork        `inject:""`
-	SwitcherWorkAround core.SwitcherWorkAround `inject:""`
-	MBLocker           messageBusLocker        `inject:""`
+	NodeNetwork        insolar.NodeNetwork        `inject:""`
+	SwitcherWorkAround insolar.SwitcherWorkAround `inject:""`
+	MBLocker           messageBusLocker           `inject:""`
 
 	counter uint64
 
-	state     core.NetworkState
+	state     insolar.NetworkState
 	stateLock sync.RWMutex
 	span      *trace.Span
 }
@@ -84,14 +84,14 @@ type NetworkSwitcher struct {
 // NewNetworkSwitcher creates new NetworkSwitcher
 func NewNetworkSwitcher() (*NetworkSwitcher, error) {
 	return &NetworkSwitcher{
-		state:     core.NoNetworkState,
+		state:     insolar.NoNetworkState,
 		stateLock: sync.RWMutex{},
 		counter:   1,
 	}, nil
 }
 
 // GetState method returns current network state
-func (ns *NetworkSwitcher) GetState() core.NetworkState {
+func (ns *NetworkSwitcher) GetState() insolar.NetworkState {
 	ns.stateLock.RLock()
 	defer ns.stateLock.RUnlock()
 
@@ -99,7 +99,7 @@ func (ns *NetworkSwitcher) GetState() core.NetworkState {
 }
 
 // OnPulse method checks current state and finds out reasons to update this state
-func (ns *NetworkSwitcher) OnPulse(ctx context.Context, pulse core.Pulse) error {
+func (ns *NetworkSwitcher) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
 	ns.stateLock.Lock()
 	defer ns.stateLock.Unlock()
 
@@ -110,8 +110,8 @@ func (ns *NetworkSwitcher) OnPulse(ctx context.Context, pulse core.Pulse) error 
 	defer span.End()
 	inslogger.FromContext(ctx).Infof("Current NetworkSwitcher state is: %s", ns.state)
 
-	if ns.SwitcherWorkAround.IsBootstrapped() && ns.state != core.CompleteNetworkState {
-		ns.state = core.CompleteNetworkState
+	if ns.SwitcherWorkAround.IsBootstrapped() && ns.state != insolar.CompleteNetworkState {
+		ns.state = insolar.CompleteNetworkState
 		ns.Release(ctx)
 		metrics.NetworkComplete.Set(float64(time.Now().Unix()))
 		inslogger.FromContext(ctx).Infof("Current NetworkSwitcher state switched to: %s", ns.state)

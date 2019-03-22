@@ -52,8 +52,8 @@ package claimhandler
 
 import (
 	"github.com/insolar/insolar/consensus/packets"
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/utils"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/utils"
 )
 
 // NodesToJoinPercent how many nodes from active list can connect to the network.
@@ -79,22 +79,22 @@ func ApprovedJoinersCount(requestedJoinersCount, activeNodesCount int) int {
 }
 
 type ClaimHandler struct {
-	claims      map[core.RecordRef][]packets.ReferendumClaim
+	claims      map[insolar.Reference][]packets.ReferendumClaim
 	activeCount int
 }
 
-func NewClaimHandler(activeNodesCount int, claims map[core.RecordRef][]packets.ReferendumClaim) *ClaimHandler {
+func NewClaimHandler(activeNodesCount int, claims map[insolar.Reference][]packets.ReferendumClaim) *ClaimHandler {
 	return &ClaimHandler{
 		activeCount: activeNodesCount,
 		claims:      claims,
 	}
 }
 
-func (ch *ClaimHandler) SetClaimsFromNode(node core.RecordRef, claims []packets.ReferendumClaim) {
+func (ch *ClaimHandler) SetClaimsFromNode(node insolar.Reference, claims []packets.ReferendumClaim) {
 	ch.claims[node] = claims
 }
 
-func (ch *ClaimHandler) GetClaimsFromNode(node core.RecordRef) []packets.ReferendumClaim {
+func (ch *ClaimHandler) GetClaimsFromNode(node insolar.Reference) []packets.ReferendumClaim {
 	return ch.claims[node]
 }
 
@@ -113,9 +113,9 @@ type ClaimSplit struct {
 }
 
 type none struct{}
-type recordRefSet map[core.RecordRef]none
+type recordRefSet map[insolar.Reference]none
 
-func (ch *ClaimHandler) FilterClaims(approvedNodes []core.RecordRef, entropy core.Entropy) ClaimSplit {
+func (ch *ClaimHandler) FilterClaims(approvedNodes []insolar.Reference, entropy insolar.Entropy) ClaimSplit {
 	knownClaims := make(recordRefSet)
 	queue := Queue{}
 
@@ -156,7 +156,7 @@ func getApprovedClaimsForNode(approvedJoinClaims recordRefSet, claimsForNode []p
 	return result
 }
 
-func addKnownClaimsToQueue(queue *Queue, knownClaims recordRefSet, claims []packets.ReferendumClaim, entropy core.Entropy) {
+func addKnownClaimsToQueue(queue *Queue, knownClaims recordRefSet, claims []packets.ReferendumClaim, entropy insolar.Entropy) {
 	for _, claim := range claims {
 		join, ok := claim.(*packets.NodeJoinClaim)
 		if !ok {
@@ -181,6 +181,6 @@ func (ch *ClaimHandler) getApprovedJoinClaims(queue *Queue) []*packets.NodeJoinC
 	return res
 }
 
-func getPriority(ref core.RecordRef, entropy core.Entropy) []byte {
+func getPriority(ref insolar.Reference, entropy insolar.Entropy) []byte {
 	return utils.CircleXOR(ref[:], entropy[:])
 }

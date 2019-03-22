@@ -19,7 +19,7 @@ package object
 import (
 	"testing"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/stretchr/testify/assert"
 )
@@ -33,7 +33,7 @@ func TestSerializeDeserializeRecord(t *testing.T) {
 
 	rec := ActivateRecord{
 		StateRecord: StateRecord{
-			Memory: CalculateIDForBlob(cs, core.GenesisPulse.PulseNumber, []byte{1, 2, 3}),
+			Memory: CalculateIDForBlob(cs, insolar.GenesisPulse.PulseNumber, []byte{1, 2, 3}),
 		},
 	}
 	serialized := SerializeRecord(&rec)

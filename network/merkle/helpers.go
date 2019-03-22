@@ -53,18 +53,18 @@ package merkle
 import (
 	"fmt"
 
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/utils"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/utils"
 )
 
 const reserved = 0xDEADBEEF
 
 type merkleHelper struct {
-	scheme     core.PlatformCryptographyScheme
-	leafHasher core.Hasher
+	scheme     insolar.PlatformCryptographyScheme
+	leafHasher insolar.Hasher
 }
 
-func newMerkleHelper(scheme core.PlatformCryptographyScheme) *merkleHelper {
+func newMerkleHelper(scheme insolar.PlatformCryptographyScheme) *merkleHelper {
 	return &merkleHelper{
 		scheme:     scheme,
 		leafHasher: scheme.IntegrityHasher(),
@@ -87,7 +87,7 @@ func (mh *merkleHelper) doubleSliceHash(slice1, slice2 []byte) []byte {
 	return hasher.Sum(nil)
 }
 
-func (mh *merkleHelper) pulseHash(pulse *core.Pulse) []byte {
+func (mh *merkleHelper) pulseHash(pulse *insolar.Pulse) []byte {
 	pulseNumberHash := mh.leafHasher.Hash(pulse.PulseNumber.Bytes())
 	entropyHash := mh.leafHasher.Hash(pulse.Entropy[:])
 
@@ -108,7 +108,7 @@ func (mh *merkleHelper) bucketEntryHash(entryIndex uint32, nodeHash []byte) []by
 	return mh.doubleSliceHash(entryIndexHash, nodeHash)
 }
 
-func (mh *merkleHelper) bucketInfoHash(role core.StaticRole, nodeCount uint32) []byte {
+func (mh *merkleHelper) bucketInfoHash(role insolar.StaticRole, nodeCount uint32) []byte {
 	roleHash := mh.leafHasher.Hash(utils.UInt32ToBytes(uint32(role)))
 	nodeCountHash := mh.leafHasher.Hash(utils.UInt32ToBytes(nodeCount))
 	return mh.doubleSliceHash(roleHash, nodeCountHash)

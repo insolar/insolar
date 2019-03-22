@@ -21,20 +21,20 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 )
 
 func TestGen_JetID(t *testing.T) {
 	for i := 0; i < 10000; i++ {
 		jetID := JetID()
-		recID := (*core.RecordID)(&jetID)
+		recID := (*insolar.ID)(&jetID)
 		require.Equalf(t,
-			core.PulseNumberJet, recID.Pulse(),
-			"pulse number should be core.PulseNumberJet. jet: %v", recID.DebugString())
+			insolar.PulseNumberJet, recID.Pulse(),
+			"pulse number should be insolar.PulseNumberJet. jet: %v", recID.DebugString())
 		require.GreaterOrEqualf(t,
-			uint8(core.JetMaximumDepth), jetID.Depth(),
+			uint8(insolar.JetMaximumDepth), jetID.Depth(),
 			"jet depth %v should be less than maximum value %v. jet: %v",
-			jetID.Depth(), core.JetMaximumDepth, jetID.DebugString(),
+			jetID.Depth(), insolar.JetMaximumDepth, jetID.DebugString(),
 		)
 	}
 }

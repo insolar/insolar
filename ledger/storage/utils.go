@@ -20,7 +20,7 @@ import (
 	"bytes"
 	"encoding/hex"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 )
 
 type bytes2hex []byte
@@ -41,10 +41,10 @@ func GenesisPrefixKey() []byte {
 	return prefixkey(scopeIDSystem, []byte{sysGenesis})
 }
 
-func pulseFromKey(key []byte) core.PulseNumber {
-	return core.NewPulseNumber(pulseBytesFromKey(key))
+func pulseFromKey(key []byte) insolar.PulseNumber {
+	return insolar.NewPulseNumber(pulseBytesFromKey(key))
 }
 
 func pulseBytesFromKey(key []byte) []byte {
-	return key[core.RecordHashSize : core.RecordHashSize+core.PulseNumberSize]
+	return key[insolar.RecordHashSize : insolar.RecordHashSize+insolar.PulseNumberSize]
 }

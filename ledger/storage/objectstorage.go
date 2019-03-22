@@ -19,7 +19,7 @@ package storage
 import (
 	"context"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/ledger/storage/object"
 )
 
@@ -27,42 +27,42 @@ import (
 
 // ObjectStorage returns objects and their meta
 type ObjectStorage interface {
-	GetBlob(ctx context.Context, jetID core.RecordID, id *core.RecordID) ([]byte, error)
-	SetBlob(ctx context.Context, jetID core.RecordID, pulseNumber core.PulseNumber, blob []byte) (*core.RecordID, error)
+	GetBlob(ctx context.Context, jetID insolar.ID, id *insolar.ID) ([]byte, error)
+	SetBlob(ctx context.Context, jetID insolar.ID, pulseNumber insolar.PulseNumber, blob []byte) (*insolar.ID, error)
 
-	GetRecord(ctx context.Context, jetID core.RecordID, id *core.RecordID) (object.VirtualRecord, error)
-	SetRecord(ctx context.Context, jetID core.RecordID, pulseNumber core.PulseNumber, rec object.VirtualRecord) (*core.RecordID, error)
+	GetRecord(ctx context.Context, jetID insolar.ID, id *insolar.ID) (object.VirtualRecord, error)
+	SetRecord(ctx context.Context, jetID insolar.ID, pulseNumber insolar.PulseNumber, rec object.VirtualRecord) (*insolar.ID, error)
 
 	IterateIndexIDs(
 		ctx context.Context,
-		jetID core.RecordID,
-		handler func(id core.RecordID) error,
+		jetID insolar.ID,
+		handler func(id insolar.ID) error,
 	) error
 
 	GetObjectIndex(
 		ctx context.Context,
-		jetID core.RecordID,
-		id *core.RecordID,
+		jetID insolar.ID,
+		id *insolar.ID,
 		forupdate bool,
 	) (*object.Lifeline, error)
 
 	SetObjectIndex(
 		ctx context.Context,
-		jetID core.RecordID,
-		id *core.RecordID,
+		jetID insolar.ID,
+		id *insolar.ID,
 		idx *object.Lifeline,
 	) error
 
 	RemoveObjectIndex(
 		ctx context.Context,
-		jetID core.RecordID,
-		ref *core.RecordID,
+		jetID insolar.ID,
+		ref *insolar.ID,
 	) error
 }
 
 type objectStorage struct {
-	DB                         DBContext                       `inject:""`
-	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
+	DB                         DBContext                          `inject:""`
+	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
 }
 
 func NewObjectStorage() ObjectStorage {
@@ -71,7 +71,7 @@ func NewObjectStorage() ObjectStorage {
 
 // GetBlob returns binary value stored by record ID.
 // TODO: switch from reference to passing blob id for consistency - @nordicdyno 6.Dec.2018
-func (os *objectStorage) GetBlob(ctx context.Context, jetID core.RecordID, id *core.RecordID) ([]byte, error) {
+func (os *objectStorage) GetBlob(ctx context.Context, jetID insolar.ID, id *insolar.ID) ([]byte, error) {
 	var (
 		blob []byte
 		err  error
@@ -88,9 +88,9 @@ func (os *objectStorage) GetBlob(ctx context.Context, jetID core.RecordID, id *c
 }
 
 // SetBlob saves binary value for provided pulse.
-func (os *objectStorage) SetBlob(ctx context.Context, jetID core.RecordID, pulseNumber core.PulseNumber, blob []byte) (*core.RecordID, error) {
+func (os *objectStorage) SetBlob(ctx context.Context, jetID insolar.ID, pulseNumber insolar.PulseNumber, blob []byte) (*insolar.ID, error) {
 	var (
-		id  *core.RecordID
+		id  *insolar.ID
 		err error
 	)
 	err = os.DB.Update(ctx, func(tx *TransactionManager) error {
@@ -104,7 +104,7 @@ func (os *objectStorage) SetBlob(ctx context.Context, jetID core.RecordID, pulse
 }
 
 // GetRecord wraps matching transaction manager method.
-func (os *objectStorage) GetRecord(ctx context.Context, jetID core.RecordID, id *core.RecordID) (object.VirtualRecord, error) {
+func (os *objectStorage) GetRecord(ctx context.Context, jetID insolar.ID, id *insolar.ID) (object.VirtualRecord, error) {
 	var (
 		fetchedRecord object.VirtualRecord
 		err           error
@@ -121,9 +121,9 @@ func (os *objectStorage) GetRecord(ctx context.Context, jetID core.RecordID, id 
 }
 
 // SetRecord wraps matching transaction manager method.
-func (os *objectStorage) SetRecord(ctx context.Context, jetID core.RecordID, pulseNumber core.PulseNumber, rec object.VirtualRecord) (*core.RecordID, error) {
+func (os *objectStorage) SetRecord(ctx context.Context, jetID insolar.ID, pulseNumber insolar.PulseNumber, rec object.VirtualRecord) (*insolar.ID, error) {
 	var (
-		id  *core.RecordID
+		id  *insolar.ID
 		err error
 	)
 	err = os.DB.Update(ctx, func(tx *TransactionManager) error {
@@ -139,15 +139,15 @@ func (os *objectStorage) SetRecord(ctx context.Context, jetID core.RecordID, pul
 // IterateIndexIDs iterates over index IDs on provided Jet ID.
 func (os *objectStorage) IterateIndexIDs(
 	ctx context.Context,
-	jetID core.RecordID,
-	handler func(id core.RecordID) error,
+	jetID insolar.ID,
+	handler func(id insolar.ID) error,
 ) error {
-	jetPrefix := core.JetID(jetID).Prefix()
+	jetPrefix := insolar.JetID(jetID).Prefix()
 	prefix := prefixkey(scopeIDLifeline, jetPrefix)
 
 	return os.DB.iterate(ctx, prefix, func(k, v []byte) error {
 		pn := pulseNumFromKey(0, k)
-		id := core.NewRecordID(pn, k[core.PulseNumberSize:])
+		id := insolar.NewID(pn, k[insolar.PulseNumberSize:])
 		err := handler(*id)
 		if err != nil {
 			return err
@@ -159,8 +159,8 @@ func (os *objectStorage) IterateIndexIDs(
 // GetObjectIndex wraps matching transaction manager method.
 func (os *objectStorage) GetObjectIndex(
 	ctx context.Context,
-	jetID core.RecordID,
-	id *core.RecordID,
+	jetID insolar.ID,
+	id *insolar.ID,
 	forupdate bool,
 ) (*object.Lifeline, error) {
 	tx, err := os.DB.BeginTransaction(false)
@@ -179,8 +179,8 @@ func (os *objectStorage) GetObjectIndex(
 // SetObjectIndex wraps matching transaction manager method.
 func (os *objectStorage) SetObjectIndex(
 	ctx context.Context,
-	jetID core.RecordID,
-	id *core.RecordID,
+	jetID insolar.ID,
+	id *insolar.ID,
 	idx *object.Lifeline,
 ) error {
 	return os.DB.Update(ctx, func(tx *TransactionManager) error {
@@ -191,8 +191,8 @@ func (os *objectStorage) SetObjectIndex(
 // RemoveObjectIndex removes an index of an object
 func (os *objectStorage) RemoveObjectIndex(
 	ctx context.Context,
-	jetID core.RecordID,
-	ref *core.RecordID,
+	jetID insolar.ID,
+	ref *insolar.ID,
 ) error {
 	return os.DB.Update(ctx, func(tx *TransactionManager) error {
 		return tx.RemoveObjectIndex(ctx, jetID, ref)

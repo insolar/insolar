@@ -19,17 +19,17 @@ package manager
 import (
 	"testing"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/stretchr/testify/assert"
 )
 
-func newActiveNode(ver string) core.Node {
-	return nodenetwork.NewNode(core.RecordRef{255}, core.StaticRoleUnknown, nil, "127.0.0.1:5432", ver)
+func newActiveNode(ver string) insolar.NetworkNode {
+	return nodenetwork.NewNode(insolar.Reference{255}, insolar.StaticRoleUnknown, nil, "127.0.0.1:5432", ver)
 }
 
 func TestGetMapOfVersions(t *testing.T) {
-	nodes := []core.Node{
+	nodes := []insolar.NetworkNode{
 		newActiveNode("v0.5.0"),
 		newActiveNode("v0.5.0"),
 		newActiveNode("v0.5.1"),
@@ -45,13 +45,13 @@ func TestGetMapOfVersions(t *testing.T) {
 }
 
 func TestProcessVersionConsensus(t *testing.T) {
-	nodes := []core.Node{
+	nodes := []insolar.NetworkNode{
 		newActiveNode("v0.5.0"),
 		newActiveNode("v0.5.0"),
 		newActiveNode("v0.5.1"),
 		newActiveNode("v0.5.1"),
 	}
-	assert.Error(t, ProcessVersionConsensus([]core.Node{}))
+	assert.Error(t, ProcessVersionConsensus([]insolar.NetworkNode{}))
 	assert.NoError(t, ProcessVersionConsensus(nodes))
 }
 

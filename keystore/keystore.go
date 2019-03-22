@@ -21,7 +21,7 @@ import (
 	"crypto"
 
 	"github.com/insolar/insolar/component"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/keystore/internal/privatekey"
 	"github.com/pkg/errors"
 )
@@ -45,7 +45,7 @@ func (ks *keyStore) Start(ctx context.Context) error {
 }
 
 type cachedKeyStore struct {
-	keyStore core.KeyStore
+	keyStore insolar.KeyStore
 
 	privateKey crypto.PrivateKey
 }
@@ -82,7 +82,7 @@ func (ks *cachedKeyStore) Start(ctx context.Context) error {
 	return nil
 }
 
-func NewKeyStore(path string) (core.KeyStore, error) {
+func NewKeyStore(path string) (insolar.KeyStore, error) {
 	keyStore := &keyStore{
 		path: path,
 	}

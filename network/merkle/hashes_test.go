@@ -58,7 +58,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/component"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar/pulsartestutils"
 	"github.com/insolar/insolar/testutils"
@@ -92,7 +92,7 @@ func (t *calculatorHashesSuite) TestGetGlobuleHash() {
 	globuleEntry := &GlobuleEntry{
 		PulseEntry: pulseEntry,
 		PulseHash:  ph,
-		ProofSet: map[core.Node]*PulseProof{
+		ProofSet: map[insolar.NetworkNode]*PulseProof{
 			t.nodeNetwork.GetOrigin(): pp,
 		},
 		PrevCloudHash: prevCloudHash,
@@ -120,7 +120,7 @@ func (t *calculatorHashesSuite) TestGetCloudHash() {
 	globuleEntry := &GlobuleEntry{
 		PulseEntry: pulseEntry,
 		PulseHash:  ph,
-		ProofSet: map[core.Node]*PulseProof{
+		ProofSet: map[insolar.NetworkNode]*PulseProof{
 			t.nodeNetwork.GetOrigin(): pp,
 		},
 		PrevCloudHash: prevCloudHash,
@@ -147,9 +147,9 @@ func (t *calculatorHashesSuite) TestGetCloudHash() {
 type calculatorHashesSuite struct {
 	suite.Suite
 
-	pulse       *core.Pulse
-	nodeNetwork core.NodeNetwork
-	service     core.CryptographyService
+	pulse       *insolar.Pulse
+	nodeNetwork insolar.NodeNetwork
+	service     insolar.CryptographyService
 
 	calculator Calculator
 }
@@ -161,8 +161,8 @@ func TestCalculatorHashes(t *testing.T) {
 	require.NotNil(t, key)
 
 	service := testutils.NewCryptographyServiceMock(t)
-	service.SignFunc = func(p []byte) (r *core.Signature, r1 error) {
-		signature := core.SignatureFromBytes([]byte("signature"))
+	service.SignFunc = func(p []byte) (r *insolar.Signature, r1 error) {
+		signature := insolar.SignatureFromBytes([]byte("signature"))
 		return &signature, nil
 	}
 	service.GetPublicKeyFunc = func() (r crypto.PublicKey, r1 error) {
@@ -189,9 +189,9 @@ func TestCalculatorHashes(t *testing.T) {
 	err := cm.Init(context.Background())
 	require.NoError(t, err)
 
-	pulse := &core.Pulse{
-		PulseNumber:     core.PulseNumber(1337),
-		NextPulseNumber: core.PulseNumber(1347),
+	pulse := &insolar.Pulse{
+		PulseNumber:     insolar.PulseNumber(1337),
+		NextPulseNumber: insolar.PulseNumber(1347),
 		Entropy:         pulsartestutils.MockEntropyGenerator{}.GenerateEntropy(),
 	}
 

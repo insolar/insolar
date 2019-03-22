@@ -28,7 +28,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/api/requester"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/stretchr/testify/require"
 )
 
@@ -104,7 +104,7 @@ func TestCrazyJSON(t *testing.T) {
 }
 
 func TestIncorrectSign(t *testing.T) {
-	args, err := core.MarshalArgs(nil)
+	args, err := insolar.MarshalArgs(nil)
 	require.NoError(t, err)
 	seed, err := requester.GetSeed(TestAPIURL)
 	require.NoError(t, err)

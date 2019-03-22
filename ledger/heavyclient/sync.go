@@ -19,15 +19,15 @@ package heavyclient
 import (
 	"context"
 
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/message"
-	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/drop"
 )
 
-func messageToHeavy(ctx context.Context, bus core.MessageBus, msg core.Message) error {
+func messageToHeavy(ctx context.Context, bus insolar.MessageBus, msg insolar.Message) error {
 	busreply, buserr := bus.Send(ctx, msg, nil)
 	if buserr != nil {
 		return buserr
@@ -46,7 +46,7 @@ func messageToHeavy(ctx context.Context, bus core.MessageBus, msg core.Message) 
 // It syncs records from start to end of provided pulse numbers.
 func (c *JetClient) HeavySync(
 	ctx context.Context,
-	pn core.PulseNumber,
+	pn insolar.PulseNumber,
 ) error {
 	jetID := c.jetID
 	inslog := inslogger.FromContext(ctx)
@@ -69,7 +69,7 @@ func (c *JetClient) HeavySync(
 	}
 
 	replicator := storage.NewReplicaIter(
-		ctx, c.db, core.RecordID(jetID), pn, pn+1, c.opts.SyncMessageLimit)
+		ctx, c.db, insolar.ID(jetID), pn, pn+1, c.opts.SyncMessageLimit)
 	for {
 		recs, err := replicator.NextRecords()
 		if err == storage.ErrReplicatorDone {

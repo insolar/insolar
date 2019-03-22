@@ -17,20 +17,20 @@
 package rootdomain
 
 import (
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = core.NewRefFromBase58("1111PA6jQA1o5Dk3JAkB1JCyUZxMBFxejUAjXNWrXf.11111111111111111111111111111111")
+var PrototypeReference, _ = insolar.NewReferenceFromBase58("1111pFSkboegJgGBvL22N3xwnSMUfGNcj9JRhK6YT8.11111111111111111111111111111111")
 
 // RootDomain holds proxy type
 type RootDomain struct {
-	Reference core.RecordRef
-	Prototype core.RecordRef
-	Code      core.RecordRef
+	Reference insolar.Reference
+	Prototype insolar.Reference
+	Code      insolar.Reference
 }
 
 // ContractConstructorHolder holds logic with object construction
@@ -40,7 +40,7 @@ type ContractConstructorHolder struct {
 }
 
 // AsChild saves object as child
-func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) (*RootDomain, error) {
+func (r *ContractConstructorHolder) AsChild(objRef insolar.Reference) (*RootDomain, error) {
 	ref, err := proxyctx.Current.SaveAsChild(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
 	if err != nil {
 		return nil, err
@@ -49,7 +49,7 @@ func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) (*RootDomain,
 }
 
 // AsDelegate saves object as delegate
-func (r *ContractConstructorHolder) AsDelegate(objRef core.RecordRef) (*RootDomain, error) {
+func (r *ContractConstructorHolder) AsDelegate(objRef insolar.Reference) (*RootDomain, error) {
 	ref, err := proxyctx.Current.SaveAsDelegate(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
 	if err != nil {
 		return nil, err
@@ -58,17 +58,17 @@ func (r *ContractConstructorHolder) AsDelegate(objRef core.RecordRef) (*RootDoma
 }
 
 // GetObject returns proxy object
-func GetObject(ref core.RecordRef) (r *RootDomain) {
+func GetObject(ref insolar.Reference) (r *RootDomain) {
 	return &RootDomain{Reference: ref}
 }
 
 // GetPrototype returns reference to the prototype
-func GetPrototype() core.RecordRef {
+func GetPrototype() insolar.Reference {
 	return *PrototypeReference
 }
 
 // GetImplementationFrom returns proxy to delegate of given type
-func GetImplementationFrom(object core.RecordRef) (*RootDomain, error) {
+func GetImplementationFrom(object insolar.Reference) (*RootDomain, error) {
 	ref, err := proxyctx.Current.GetDelegate(object, *PrototypeReference)
 	if err != nil {
 		return nil, err
@@ -90,15 +90,15 @@ func NewRootDomain() *ContractConstructorHolder {
 }
 
 // GetReference returns reference of the object
-func (r *RootDomain) GetReference() core.RecordRef {
+func (r *RootDomain) GetReference() insolar.Reference {
 	return r.Reference
 }
 
 // GetPrototype returns reference to the code
-func (r *RootDomain) GetPrototype() (core.RecordRef, error) {
+func (r *RootDomain) GetPrototype() (insolar.Reference, error) {
 	if r.Prototype.IsEmpty() {
 		ret := [2]interface{}{}
-		var ret0 core.RecordRef
+		var ret0 insolar.Reference
 		ret[0] = &ret0
 		var ret1 *foundation.Error
 		ret[1] = &ret1
@@ -125,10 +125,10 @@ func (r *RootDomain) GetPrototype() (core.RecordRef, error) {
 }
 
 // GetCode returns reference to the code
-func (r *RootDomain) GetCode() (core.RecordRef, error) {
+func (r *RootDomain) GetCode() (insolar.Reference, error) {
 	if r.Code.IsEmpty() {
 		ret := [2]interface{}{}
-		var ret0 core.RecordRef
+		var ret0 insolar.Reference
 		ret[0] = &ret0
 		var ret1 *foundation.Error
 		ret[1] = &ret1
@@ -210,13 +210,13 @@ func (r *RootDomain) CreateMemberNoWait(name string, key string) error {
 }
 
 // GetRootMemberRef is proxy generated method
-func (r *RootDomain) GetRootMemberRef() (*core.RecordRef, error) {
+func (r *RootDomain) GetRootMemberRef() (*insolar.Reference, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 *core.RecordRef
+	var ret0 *insolar.Reference
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
@@ -420,13 +420,13 @@ func (r *RootDomain) InfoNoWait() error {
 }
 
 // GetNodeDomainRef is proxy generated method
-func (r *RootDomain) GetNodeDomainRef() (core.RecordRef, error) {
+func (r *RootDomain) GetNodeDomainRef() (insolar.Reference, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 core.RecordRef
+	var ret0 insolar.Reference
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1

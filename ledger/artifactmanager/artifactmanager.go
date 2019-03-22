@@ -24,9 +24,9 @@ import (
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/message"
-	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/internal/jet"
 	"github.com/insolar/insolar/ledger/storage"
@@ -45,10 +45,10 @@ type LedgerArtifactManager struct {
 	GenesisState genesis.GenesisState `inject:""`
 	JetStorage   jet.Storage          `inject:""`
 
-	DefaultBus                 core.MessageBus                 `inject:""`
-	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
-	PulseStorage               core.PulseStorage               `inject:""`
-	JetCoordinator             core.JetCoordinator             `inject:""`
+	DefaultBus                 insolar.MessageBus                 `inject:""`
+	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
+	PulseStorage               insolar.PulseStorage               `inject:""`
+	JetCoordinator             insolar.JetCoordinator             `inject:""`
 
 	getChildrenChunkSize int
 	senders              *ledgerArtifactSenders
@@ -71,15 +71,15 @@ func NewArtifactManger() *LedgerArtifactManager {
 // GenesisRef returns the root record reference.
 //
 // Root record is the parent for all top-level records.
-func (m *LedgerArtifactManager) GenesisRef() *core.RecordRef {
+func (m *LedgerArtifactManager) GenesisRef() *insolar.Reference {
 	return m.GenesisState.GenesisRef()
 }
 
 // RegisterRequest sends message for request registration,
 // returns request record Ref if request successfully created or already exists.
 func (m *LedgerArtifactManager) RegisterRequest(
-	ctx context.Context, obj core.RecordRef, parcel core.Parcel,
-) (*core.RecordID, error) {
+	ctx context.Context, obj insolar.Reference, parcel insolar.Parcel,
+) (*insolar.ID, error) {
 	var err error
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.RegisterRequest")
 	instrumenter := instrument(ctx, "RegisterRequest").err(&err)
@@ -105,7 +105,7 @@ func (m *LedgerArtifactManager) RegisterRequest(
 		m.PlatformCryptographyScheme,
 		currentPN,
 		rec)
-	recRef := core.NewRecordRef(*parcel.DefaultTarget().Domain(), *recID)
+	recRef := insolar.NewReference(*parcel.DefaultTarget().Domain(), *recID)
 	id, err := m.setRecord(
 		ctx,
 		rec,
@@ -119,8 +119,8 @@ func (m *LedgerArtifactManager) RegisterRequest(
 //
 // This method is used by VM to fetch code for execution.
 func (m *LedgerArtifactManager) GetCode(
-	ctx context.Context, code core.RecordRef,
-) (core.CodeDescriptor, error) {
+	ctx context.Context, code insolar.Reference,
+) (insolar.CodeDescriptor, error) {
 	var err error
 	instrumenter := instrument(ctx, "GetCode").err(&err)
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.GetCode")
@@ -137,7 +137,7 @@ func (m *LedgerArtifactManager) GetCode(
 		return nil, err
 	}
 
-	bus := core.MessageBusFromContext(ctx, m.DefaultBus)
+	bus := insolar.MessageBusFromContext(ctx, m.DefaultBus)
 	sender := BuildSender(
 		bus.Send,
 		m.senders.cachedSender(m.PlatformCryptographyScheme),
@@ -173,10 +173,10 @@ func (m *LedgerArtifactManager) GetCode(
 // provide methods for fetching all related data.
 func (m *LedgerArtifactManager) GetObject(
 	ctx context.Context,
-	head core.RecordRef,
-	state *core.RecordID,
+	head insolar.Reference,
+	state *insolar.ID,
 	approved bool,
-) (core.ObjectDescriptor, error) {
+) (insolar.ObjectDescriptor, error) {
 	var (
 		desc *ObjectDescriptor
 		err  error
@@ -205,7 +205,7 @@ func (m *LedgerArtifactManager) GetObject(
 		return nil, err
 	}
 
-	bus := core.MessageBusFromContext(ctx, m.DefaultBus)
+	bus := insolar.MessageBusFromContext(ctx, m.DefaultBus)
 	sender := BuildSender(
 		bus.Send,
 		followRedirectSender(bus),
@@ -241,7 +241,7 @@ func (m *LedgerArtifactManager) GetObject(
 // GetPendingRequest returns an unclosed pending request
 // It takes an id from current LME
 // Then goes either to a light node or heavy node
-func (m *LedgerArtifactManager) GetPendingRequest(ctx context.Context, objectID core.RecordID) (core.Parcel, error) {
+func (m *LedgerArtifactManager) GetPendingRequest(ctx context.Context, objectID insolar.ID) (insolar.Parcel, error) {
 	var err error
 	instrumenter := instrument(ctx, "GetRegisterRequest").err(&err)
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.GetRegisterRequest")
@@ -255,7 +255,7 @@ func (m *LedgerArtifactManager) GetPendingRequest(ctx context.Context, objectID 
 
 	currentPN, err := m.pulse(ctx)
 
-	bus := core.MessageBusFromContext(ctx, m.DefaultBus)
+	bus := insolar.MessageBusFromContext(ctx, m.DefaultBus)
 	sender := BuildSender(
 		bus.Send,
 		retryJetSender(currentPN, m.JetStorage),
@@ -292,7 +292,7 @@ func (m *LedgerArtifactManager) GetPendingRequest(ctx context.Context, objectID 
 		ctx,
 		&message.GetRequest{
 			Request: requestIDReply.ID,
-		}, &core.MessageSendOptions{
+		}, &insolar.MessageSendOptions{
 			Receiver: node,
 		},
 	)
@@ -319,7 +319,7 @@ func (m *LedgerArtifactManager) GetPendingRequest(ctx context.Context, objectID 
 // HasPendingRequests returns true if object has unclosed requests.
 func (m *LedgerArtifactManager) HasPendingRequests(
 	ctx context.Context,
-	object core.RecordRef,
+	object insolar.Reference,
 ) (bool, error) {
 
 	currentPN, err := m.pulse(ctx)
@@ -327,7 +327,7 @@ func (m *LedgerArtifactManager) HasPendingRequests(
 		return false, err
 	}
 
-	bus := core.MessageBusFromContext(ctx, m.DefaultBus)
+	bus := insolar.MessageBusFromContext(ctx, m.DefaultBus)
 	sender := BuildSender(
 		bus.Send,
 		retryJetSender(currentPN, m.JetStorage),
@@ -354,8 +354,8 @@ func (m *LedgerArtifactManager) HasPendingRequests(
 // Object delegate should be previously created for this object. If object delegate does not exist, an error will
 // be returned.
 func (m *LedgerArtifactManager) GetDelegate(
-	ctx context.Context, head, asType core.RecordRef,
-) (*core.RecordRef, error) {
+	ctx context.Context, head, asType insolar.Reference,
+) (*insolar.Reference, error) {
 	var err error
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.GetDelegate")
 	instrumenter := instrument(ctx, "GetDelegate").err(&err)
@@ -372,7 +372,7 @@ func (m *LedgerArtifactManager) GetDelegate(
 		return nil, err
 	}
 
-	bus := core.MessageBusFromContext(ctx, m.DefaultBus)
+	bus := insolar.MessageBusFromContext(ctx, m.DefaultBus)
 	sender := BuildSender(bus.Send, followRedirectSender(bus), retryJetSender(currentPN, m.JetStorage))
 	genericReact, err := sender(ctx, &message.GetDelegate{
 		Head:   head,
@@ -396,8 +396,8 @@ func (m *LedgerArtifactManager) GetDelegate(
 //
 // During iteration children refs will be fetched from remote source (parent object).
 func (m *LedgerArtifactManager) GetChildren(
-	ctx context.Context, parent core.RecordRef, pulse *core.PulseNumber,
-) (core.RefIterator, error) {
+	ctx context.Context, parent insolar.Reference, pulse *insolar.PulseNumber,
+) (insolar.RefIterator, error) {
 	var err error
 
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.GetChildren")
@@ -415,7 +415,7 @@ func (m *LedgerArtifactManager) GetChildren(
 		return nil, err
 	}
 
-	bus := core.MessageBusFromContext(ctx, m.DefaultBus)
+	bus := insolar.MessageBusFromContext(ctx, m.DefaultBus)
 	sender := BuildSender(bus.Send, followRedirectSender(bus), retryJetSender(currentPN, m.JetStorage))
 	iter, err := NewChildIterator(ctx, sender, parent, pulse, m.getChildrenChunkSize)
 	return iter, err
@@ -425,8 +425,8 @@ func (m *LedgerArtifactManager) GetChildren(
 //
 // Type is a contract interface. It contains one method signature.
 func (m *LedgerArtifactManager) DeclareType(
-	ctx context.Context, domain, request core.RecordRef, typeDec []byte,
-) (*core.RecordID, error) {
+	ctx context.Context, domain, request insolar.Reference, typeDec []byte,
+) (*insolar.ID, error) {
 	var err error
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.DeclareType")
 	instrumenter := instrument(ctx, "DeclareType").err(&err)
@@ -463,11 +463,11 @@ func (m *LedgerArtifactManager) DeclareType(
 // CodeRef records are used to activate prototype or as migration code for an object.
 func (m *LedgerArtifactManager) DeployCode(
 	ctx context.Context,
-	domain core.RecordRef,
-	request core.RecordRef,
+	domain insolar.Reference,
+	request insolar.Reference,
 	code []byte,
-	machineType core.MachineType,
-) (*core.RecordID, error) {
+	machineType insolar.MachineType,
+) (*insolar.ID, error) {
 	var err error
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.DeployCode")
 	instrumenter := instrument(ctx, "DeployCode").err(&err)
@@ -493,7 +493,7 @@ func (m *LedgerArtifactManager) DeployCode(
 		MachineType: machineType,
 	}
 	codeID := object.NewRecordIDFromRecord(m.PlatformCryptographyScheme, currentPN, codeRec)
-	codeRef := core.NewRecordRef(*domain.Record(), *codeID)
+	codeRef := insolar.NewReference(*domain.Record(), *codeID)
 
 	_, err = m.setBlob(ctx, code, *codeRef, currentPN)
 	if err != nil {
@@ -518,9 +518,9 @@ func (m *LedgerArtifactManager) DeployCode(
 // Request reference will be this object's identifier and referred as "object head".
 func (m *LedgerArtifactManager) ActivatePrototype(
 	ctx context.Context,
-	domain, object, parent, code core.RecordRef,
+	domain, object, parent, code insolar.Reference,
 	memory []byte,
-) (core.ObjectDescriptor, error) {
+) (insolar.ObjectDescriptor, error) {
 	var err error
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.ActivatePrototype")
 	instrumenter := instrument(ctx, "ActivatePrototype").err(&err)
@@ -541,10 +541,10 @@ func (m *LedgerArtifactManager) ActivatePrototype(
 // Request reference will be this object's identifier and referred as "object head".
 func (m *LedgerArtifactManager) ActivateObject(
 	ctx context.Context,
-	domain, object, parent, prototype core.RecordRef,
+	domain, object, parent, prototype insolar.Reference,
 	asDelegate bool,
 	memory []byte,
-) (core.ObjectDescriptor, error) {
+) (insolar.ObjectDescriptor, error) {
 	var err error
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.ActivateObject")
 	instrumenter := instrument(ctx, "ActivateObject").err(&err)
@@ -564,8 +564,8 @@ func (m *LedgerArtifactManager) ActivateObject(
 //
 // Deactivated object cannot be changed.
 func (m *LedgerArtifactManager) DeactivateObject(
-	ctx context.Context, domain, request core.RecordRef, obj core.ObjectDescriptor,
-) (*core.RecordID, error) {
+	ctx context.Context, domain, request insolar.Reference, obj insolar.ObjectDescriptor,
+) (*insolar.ID, error) {
 	var err error
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.DeactivateObject")
 	instrumenter := instrument(ctx, "DeactivateObject").err(&err)
@@ -604,11 +604,11 @@ func (m *LedgerArtifactManager) DeactivateObject(
 // Returned reference will be the latest object state (exact) reference.
 func (m *LedgerArtifactManager) UpdatePrototype(
 	ctx context.Context,
-	domain, request core.RecordRef,
-	object core.ObjectDescriptor,
+	domain, request insolar.Reference,
+	object insolar.ObjectDescriptor,
 	memory []byte,
-	code *core.RecordRef,
-) (core.ObjectDescriptor, error) {
+	code *insolar.Reference,
+) (insolar.ObjectDescriptor, error) {
 	var err error
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.UpdatePrototype")
 	instrumenter := instrument(ctx, "UpdatePrototype").err(&err)
@@ -634,10 +634,10 @@ func (m *LedgerArtifactManager) UpdatePrototype(
 // Returned reference will be the latest object state (exact) reference.
 func (m *LedgerArtifactManager) UpdateObject(
 	ctx context.Context,
-	domain, request core.RecordRef,
-	object core.ObjectDescriptor,
+	domain, request insolar.Reference,
+	object insolar.ObjectDescriptor,
 	memory []byte,
-) (core.ObjectDescriptor, error) {
+) (insolar.ObjectDescriptor, error) {
 	var err error
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.UpdateObject")
 	instrumenter := instrument(ctx, "UpdateObject").err(&err)
@@ -662,10 +662,10 @@ func (m *LedgerArtifactManager) UpdateObject(
 // When fetching object, validity can be specified.
 func (m *LedgerArtifactManager) RegisterValidation(
 	ctx context.Context,
-	object core.RecordRef,
-	state core.RecordID,
+	object insolar.Reference,
+	state insolar.ID,
 	isValid bool,
-	validationMessages []core.Message,
+	validationMessages []insolar.Message,
 ) error {
 	var err error
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.RegisterValidation")
@@ -690,7 +690,7 @@ func (m *LedgerArtifactManager) RegisterValidation(
 		return err
 	}
 
-	bus := core.MessageBusFromContext(ctx, m.DefaultBus)
+	bus := insolar.MessageBusFromContext(ctx, m.DefaultBus)
 	sender := BuildSender(bus.Send, retryJetSender(currentPN, m.JetStorage))
 	_, err = sender(ctx, &msg, nil)
 
@@ -699,8 +699,8 @@ func (m *LedgerArtifactManager) RegisterValidation(
 
 // RegisterResult saves VM method call result.
 func (m *LedgerArtifactManager) RegisterResult(
-	ctx context.Context, obj, request core.RecordRef, payload []byte,
-) (*core.RecordID, error) {
+	ctx context.Context, obj, request insolar.Reference, payload []byte,
+) (*insolar.ID, error) {
 	var err error
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.RegisterResult")
 	instrumenter := instrument(ctx, "RegisterResult").err(&err)
@@ -731,7 +731,7 @@ func (m *LedgerArtifactManager) RegisterResult(
 }
 
 // pulse returns current PulseNumber for artifact manager
-func (m *LedgerArtifactManager) pulse(ctx context.Context) (pn core.PulseNumber, err error) {
+func (m *LedgerArtifactManager) pulse(ctx context.Context) (pn insolar.PulseNumber, err error) {
 	pulse, err := m.PulseStorage.Current(ctx)
 	if err != nil {
 		return
@@ -743,14 +743,14 @@ func (m *LedgerArtifactManager) pulse(ctx context.Context) (pn core.PulseNumber,
 
 func (m *LedgerArtifactManager) activateObject(
 	ctx context.Context,
-	domain core.RecordRef,
-	obj core.RecordRef,
-	prototype core.RecordRef,
+	domain insolar.Reference,
+	obj insolar.Reference,
+	prototype insolar.Reference,
 	isPrototype bool,
-	parent core.RecordRef,
+	parent insolar.Reference,
 	asDelegate bool,
 	memory []byte,
-) (core.ObjectDescriptor, error) {
+) (insolar.ObjectDescriptor, error) {
 	parentDesc, err := m.GetObject(ctx, parent, nil, false)
 	if err != nil {
 		return nil, err
@@ -784,8 +784,8 @@ func (m *LedgerArtifactManager) activateObject(
 	}
 
 	var (
-		prevChild *core.RecordID
-		asType    *core.RecordRef
+		prevChild *insolar.ID
+		asType    *insolar.Reference
 	)
 	if parentDesc.ChildPointer() != nil {
 		prevChild = parentDesc.ChildPointer()
@@ -822,13 +822,13 @@ func (m *LedgerArtifactManager) activateObject(
 
 func (m *LedgerArtifactManager) updateObject(
 	ctx context.Context,
-	domain, request core.RecordRef,
-	obj core.ObjectDescriptor,
-	code *core.RecordRef,
+	domain, request insolar.Reference,
+	obj insolar.ObjectDescriptor,
+	code *insolar.Reference,
 	memory []byte,
-) (core.ObjectDescriptor, error) {
+) (insolar.ObjectDescriptor, error) {
 	var (
-		image *core.RecordRef
+		image *insolar.Reference
 		err   error
 	)
 	if obj.IsPrototype() {
@@ -888,10 +888,10 @@ func (m *LedgerArtifactManager) updateObject(
 func (m *LedgerArtifactManager) setRecord(
 	ctx context.Context,
 	rec object.VirtualRecord,
-	target core.RecordRef,
-	currentPN core.PulseNumber,
-) (*core.RecordID, error) {
-	bus := core.MessageBusFromContext(ctx, m.DefaultBus)
+	target insolar.Reference,
+	currentPN insolar.PulseNumber,
+) (*insolar.ID, error) {
+	bus := insolar.MessageBusFromContext(ctx, m.DefaultBus)
 
 	sender := BuildSender(bus.Send, retryJetSender(currentPN, m.JetStorage))
 	genericReply, err := sender(ctx, &message.SetRecord{
@@ -916,11 +916,11 @@ func (m *LedgerArtifactManager) setRecord(
 func (m *LedgerArtifactManager) setBlob(
 	ctx context.Context,
 	blob []byte,
-	target core.RecordRef,
-	currentPN core.PulseNumber,
-) (*core.RecordID, error) {
+	target insolar.Reference,
+	currentPN insolar.PulseNumber,
+) (*insolar.ID, error) {
 
-	bus := core.MessageBusFromContext(ctx, m.DefaultBus)
+	bus := insolar.MessageBusFromContext(ctx, m.DefaultBus)
 	sender := BuildSender(bus.Send, retryJetSender(currentPN, m.JetStorage))
 	genericReact, err := sender(ctx, &message.SetBlob{
 		Memory:    blob,
@@ -944,9 +944,9 @@ func (m *LedgerArtifactManager) setBlob(
 func (m *LedgerArtifactManager) sendUpdateObject(
 	ctx context.Context,
 	rec object.VirtualRecord,
-	obj core.RecordRef,
+	obj insolar.Reference,
 	memory []byte,
-	currentPN core.PulseNumber,
+	currentPN insolar.PulseNumber,
 ) (*reply.Object, error) {
 	// TODO: @andreyromancev. 14.01.19. Uncomment when message streaming or validation is ready.
 	// genericRep, err := sendAndRetryJet(ctx, m.bus(ctx), m.db, &message.SetBlob{
@@ -960,7 +960,7 @@ func (m *LedgerArtifactManager) sendUpdateObject(
 	// 	return nil, fmt.Errorf("unexpected reply: %#v\n", genericRep)
 	// }
 
-	bus := core.MessageBusFromContext(ctx, m.DefaultBus)
+	bus := insolar.MessageBusFromContext(ctx, m.DefaultBus)
 	sender := BuildSender(bus.Send, retryJetSender(currentPN, m.JetStorage))
 	genericReply, err := sender(
 		ctx,
@@ -987,12 +987,12 @@ func (m *LedgerArtifactManager) sendUpdateObject(
 func (m *LedgerArtifactManager) registerChild(
 	ctx context.Context,
 	rec object.VirtualRecord,
-	parent core.RecordRef,
-	child core.RecordRef,
-	asType *core.RecordRef,
-	currentPN core.PulseNumber,
-) (*core.RecordID, error) {
-	bus := core.MessageBusFromContext(ctx, m.DefaultBus)
+	parent insolar.Reference,
+	child insolar.Reference,
+	asType *insolar.Reference,
+	currentPN insolar.PulseNumber,
+) (*insolar.ID, error) {
+	bus := insolar.MessageBusFromContext(ctx, m.DefaultBus)
 	sender := BuildSender(bus.Send, retryJetSender(currentPN, m.JetStorage))
 	genericReact, err := sender(ctx, &message.RegisterChild{
 		Record: object.SerializeRecord(rec),

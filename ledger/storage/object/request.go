@@ -19,7 +19,7 @@ package object
 import (
 	"io"
 
-	"github.com/insolar/insolar"
+	"github.com/insolar/insolar/insolar"
 )
 
 // Request extends VirtualRecord interface with GetPayload method.

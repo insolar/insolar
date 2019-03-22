@@ -19,7 +19,7 @@ package object
 import (
 	"io"
 
-	"github.com/insolar/insolar"
+	"github.com/insolar/insolar/insolar"
 )
 
 // GenesisRecord is the first record created on storage. It's used to link root objects to it.

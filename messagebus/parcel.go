@@ -20,17 +20,17 @@ import (
 	"context"
 	"crypto"
 
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/pkg/errors"
 )
 
 type parcelFactory struct {
-	DelegationTokenFactory     core.DelegationTokenFactory     `inject:""`
-	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
-	Cryptography               core.CryptographyService        `inject:""`
+	DelegationTokenFactory     insolar.DelegationTokenFactory     `inject:""`
+	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
+	Cryptography               insolar.CryptographyService        `inject:""`
 }
 
 // NewParcelFactory returns new instance of parcelFactory
@@ -38,7 +38,7 @@ func NewParcelFactory() message.ParcelFactory {
 	return &parcelFactory{}
 }
 
-func (pf *parcelFactory) Create(ctx context.Context, msg core.Message, sender core.RecordRef, token core.DelegationToken, currentPulse core.Pulse) (core.Parcel, error) {
+func (pf *parcelFactory) Create(ctx context.Context, msg insolar.Message, sender insolar.Reference, token insolar.DelegationToken, currentPulse insolar.Pulse) (insolar.Parcel, error) {
 	if msg == nil {
 		return nil, errors.New("failed to signature a nil message")
 	}
@@ -60,8 +60,8 @@ func (pf *parcelFactory) Create(ctx context.Context, msg core.Message, sender co
 	}, nil
 }
 
-func (pf *parcelFactory) Validate(publicKey crypto.PublicKey, parcel core.Parcel) error {
-	ok := pf.Cryptography.Verify(publicKey, core.SignatureFromBytes(parcel.GetSign()), message.ToBytes(parcel.Message()))
+func (pf *parcelFactory) Validate(publicKey crypto.PublicKey, parcel insolar.Parcel) error {
+	ok := pf.Cryptography.Verify(publicKey, insolar.SignatureFromBytes(parcel.GetSign()), message.ToBytes(parcel.Message()))
 	if !ok {
 		return errors.New("parcel isn't valid")
 	}
