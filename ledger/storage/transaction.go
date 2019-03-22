@@ -104,7 +104,7 @@ func (m *TransactionManager) SetBlob(ctx context.Context, jetID core.RecordID, p
 	k := prefixkey(scopeIDBlob, jetPrefix, id[:])
 
 	// TODO: @andreyromancev. 16.01.19. Blob override is ok.
-	// geterr := m.db.db.View(func(tx *badger.Txn) error {
+	// geterr := muxs.db.db.View(func(tx *badger.Txn) error {
 	// 	_, err := tx.Get(k)
 	// 	return err
 	// })

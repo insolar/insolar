@@ -85,7 +85,9 @@ func NewTestLedger(
 
 // GetLedgerComponents returns ledger components.
 func GetLedgerComponents(conf configuration.Ledger, certificate core.Certificate) []interface{} {
-	db, err := storage.NewDB(conf, nil)
+	idLocker := storage.NewIDLocker()
+
+	db, err := storage.NewDB(conf, nil, idLocker)
 	if err != nil {
 		panic(errors.Wrap(err, "failed to initialize DB"))
 	}
@@ -117,7 +119,7 @@ func GetLedgerComponents(conf configuration.Ledger, certificate core.Certificate
 	return []interface{}{
 		db,
 		newDB,
-		storage.NewIDLocker(),
+		idLocker,
 		dropModifier,
 		dropAccessor,
 		storage.NewCleaner(),

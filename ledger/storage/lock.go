@@ -24,7 +24,7 @@ import (
 )
 
 type mucount struct {
-	*sync.Mutex
+	*sync.RWMutex
 	count int32
 }
 
@@ -32,50 +32,84 @@ type mucount struct {
 type IDLocker interface {
 	Lock(id *core.RecordID)
 	Unlock(id *core.RecordID)
+
+	RLock(id *core.RecordID)
+	RUnlock(id *core.RecordID)
 }
 
 // IDLocker provides Lock/Unlock methods per record ID.
 //
 // TODO: for further optimization we could use sync.Pool for mutexes.
 type idLocker struct {
-	m    map[core.RecordID]*mucount
-	rwmu sync.Mutex
+	muxs map[core.RecordID]*mucount
+	mu   sync.Mutex
 }
 
 // NewIDLocker creates new initialized IDLocker.
 func NewIDLocker() IDLocker {
 	return &idLocker{
-		m: make(map[core.RecordID]*mucount),
+		muxs: make(map[core.RecordID]*mucount),
 	}
 }
 
 // Lock locks mutex belonged to record ID.
 // If mutex does not exist, it will be created in concurrent safe fashion.
 func (l *idLocker) Lock(id *core.RecordID) {
-	l.rwmu.Lock()
-	mc, ok := l.m[*id]
+	l.mu.Lock()
+	mc, ok := l.muxs[*id]
 	if !ok {
-		mc = &mucount{Mutex: &sync.Mutex{}}
-		l.m[*id] = mc
+		mc = &mucount{RWMutex: &sync.RWMutex{}}
+		l.muxs[*id] = mc
 	}
 	mc.count++
-	l.rwmu.Unlock()
+	l.mu.Unlock()
 
 	mc.Lock()
 }
 
 // Unlock unlocks mutex belonged to record ID.
 func (l *idLocker) Unlock(id *core.RecordID) {
-	l.rwmu.Lock()
-	defer l.rwmu.Unlock()
+	l.mu.Lock()
+	defer l.mu.Unlock()
 
-	mc, ok := l.m[*id]
+	mc, ok := l.muxs[*id]
 	if !ok {
 		panic(fmt.Sprintf("try to unlock not initialized mutex for ID %+v", id))
 	}
 	mc.count--
 	mc.Unlock()
 	if mc.count == 0 {
-		delete(l.m, *id)
+		delete(l.muxs, *id)
+	}
+}
+
+// Lock locks mutex belonged to record ID.
+// If mutex does not exist, it will be created in concurrent safe fashion.
+func (l *idLocker) RLock(id *core.RecordID) {
+	l.mu.Lock()
+	mc, ok := l.muxs[*id]
+	if !ok {
+		mc = &mucount{RWMutex: &sync.RWMutex{}}
+		l.muxs[*id] = mc
+	}
+	mc.count++
+	l.mu.Unlock()
+
+	mc.RLock()
+}
+
+// Unlock unlocks mutex belonged to record ID.
+func (l *idLocker) RUnlock(id *core.RecordID) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	mc, ok := l.muxs[*id]
+	if !ok {
+		panic(fmt.Sprintf("try to unlock not initialized mutex for ID %+v", id))
+	}
+	mc.count--
+	mc.RUnlock()
+	if mc.count == 0 {
+		delete(l.muxs, *id)
 	}
 }
