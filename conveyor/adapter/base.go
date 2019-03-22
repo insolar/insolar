@@ -33,9 +33,11 @@ type queueTask struct {
 }
 
 type cancelInfo struct {
-	id     uint64
-	cancel chan bool
-	flush  chan bool
+	id         uint64
+	cancel     chan bool
+	flush      chan bool
+	isCanceled bool
+	isFlushed  bool
 }
 
 func newCancelInfo(id uint64) *cancelInfo {
@@ -56,6 +58,14 @@ func (ci *cancelInfo) Cancel() <-chan bool {
 
 func (ci *cancelInfo) Flush() <-chan bool {
 	return ci.flush
+}
+
+func (ci *cancelInfo) IsCanceled() bool {
+	return ci.isCanceled
+}
+
+func (ci *cancelInfo) IsFlushed() bool {
+	return ci.isFlushed
 }
 
 type taskHolder struct {
@@ -86,9 +96,11 @@ func processStop(cancelList []*cancelInfo, flush bool) {
 	for _, el := range cancelList {
 		if flush {
 			log.Info("[ processStop ] flush: ", el.id)
+			el.isFlushed = true
 			el.flush <- true
 		} else {
 			log.Info("[ processStop ] cancel: ", el.id)
+			el.isCanceled = true
 			el.cancel <- true
 		}
 	}
@@ -268,8 +280,10 @@ func (a *CancellableQueueAdapter) process(cancellableTask queueTask) {
 	default:
 		helper := newNestedEventHelper(adapterTask, a.adapterID)
 		respPayload := a.processor.Process(adapterTask, helper, cancelInfo)
-		respSink.PushResponse(a.adapterID, adapterTask.elementID, adapterTask.handlerID, respPayload)
-		// TODO: remove cancelInfo from a.taskHolder
+		if !cancelInfo.IsFlushed() {
+			respSink.PushResponse(a.adapterID, adapterTask.elementID, adapterTask.handlerID, respPayload)
+			// TODO: remove cancelInfo from a.taskHolder
+		}
 	}
 }
 
