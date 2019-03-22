@@ -499,8 +499,32 @@ func (w *worker) migrate(status ActivationStatus) error {
 
 }
 
+func adjustPulseState(pulseState constant.PulseState) int {
+	result := int(pulseState)
+	if pulseState == constant.Antique {
+		result = int(constant.Past)
+	}
+
+	return result
+}
+
 func (w *worker) setPulseStateMachines() {
-	stateMachines := HandlerStorage.GetConfigByPulseState(int(w.slot.pulseState))
+
+	var stateMachines statemachine.SetAccessor
+
+	switch w.slot.pulseState {
+	case constant.Future:
+		stateMachines = HandlerStorage.GetFutureConfig()
+	case constant.Present:
+		stateMachines = HandlerStorage.GetPresentConfig()
+	case constant.Past:
+		stateMachines = HandlerStorage.GetPastConfig()
+	case constant.Antique:
+		stateMachines = HandlerStorage.GetPastConfig()
+	default:
+		panic(fmt.Sprintf("[ setPulseStateMachines ] unknown pulseState: %s", w.slot.pulseState.String()))
+	}
+
 	w.slot.handlersConfiguration.pulseStateMachines = stateMachines
 }
 
