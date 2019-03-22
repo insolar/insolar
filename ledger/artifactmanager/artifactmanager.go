@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package artifactmanager
 
@@ -21,9 +21,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/insolar/insolar/ledger/storage/genesis"
-	"github.com/insolar/insolar/ledger/storage/jet"
-	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 
@@ -31,7 +28,10 @@ import (
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/ledger/internal/jet"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/genesis"
+	"github.com/insolar/insolar/ledger/storage/object"
 )
 
 const (
@@ -43,7 +43,7 @@ const (
 type LedgerArtifactManager struct {
 	DB           storage.DBContext    `inject:""`
 	GenesisState genesis.GenesisState `inject:""`
-	JetStorage   jet.JetStorage       `inject:""`
+	JetStorage   jet.Storage          `inject:""`
 
 	DefaultBus                 core.MessageBus                 `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
@@ -593,7 +593,7 @@ func (m *LedgerArtifactManager) DeactivateObject(
 		currentPN,
 	)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to deactivate object")
 	}
 	return &desc.State, nil
 }
@@ -805,7 +805,7 @@ func (m *LedgerArtifactManager) activateObject(
 		currentPN,
 	)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to activate")
 	}
 
 	return &ObjectDescriptor{
@@ -870,7 +870,7 @@ func (m *LedgerArtifactManager) updateObject(
 		currentPN,
 	)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to update object")
 	}
 
 	return &ObjectDescriptor{
@@ -971,7 +971,7 @@ func (m *LedgerArtifactManager) sendUpdateObject(
 		}, nil)
 
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to update object")
+		return nil, errors.Wrap(err, "UpdateObject message failed")
 	}
 
 	switch rep := genericReply.(type) {

@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package artifactmanager
 
@@ -32,7 +32,7 @@ import (
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/storage/jet"
+	"github.com/insolar/insolar/ledger/internal/jet"
 	"github.com/insolar/insolar/testutils"
 )
 
@@ -43,7 +43,7 @@ func TestJetTreeUpdater_otherNodesForPulse(t *testing.T) {
 
 	jc := testutils.NewJetCoordinatorMock(mc)
 	ans := node.NewAccessorMock(mc)
-	js := jet.NewJetStorageMock(mc)
+	js := jet.NewStorageMock(mc)
 	jtu := &jetTreeUpdater{
 		Nodes:          ans,
 		JetStorage:     js,
@@ -127,7 +127,7 @@ func TestJetTreeUpdater_fetchActualJetFromOtherNodes(t *testing.T) {
 
 	jc := testutils.NewJetCoordinatorMock(mc)
 	ans := node.NewAccessorMock(mc)
-	js := jet.NewJetStorageMock(mc)
+	js := jet.NewStorageMock(mc)
 	mb := testutils.NewMessageBusMock(mc)
 	jtu := &jetTreeUpdater{
 		Nodes:          ans,
@@ -191,7 +191,7 @@ func TestJetTreeUpdater_fetchJet(t *testing.T) {
 
 	jc := testutils.NewJetCoordinatorMock(mc)
 	ans := node.NewAccessorMock(mc)
-	js := jet.NewJetStorageMock(mc)
+	js := jet.NewStorageMock(mc)
 	mb := testutils.NewMessageBusMock(mc)
 	jtu := &jetTreeUpdater{
 		Nodes:          ans,
@@ -204,11 +204,11 @@ func TestJetTreeUpdater_fetchJet(t *testing.T) {
 	target := testutils.RandomID()
 
 	t.Run("quick reply, data is up to date", func(t *testing.T) {
-		fjmr := core.RecordID(*core.NewJetID(0, nil))
-		js.FindJetMock.Return(&fjmr, true)
+		fjmr := *core.NewJetID(0, nil)
+		js.ForIDMock.Return(fjmr, true)
 		jetID, err := jtu.fetchJet(ctx, target, core.PulseNumber(100))
 		require.NoError(t, err)
-		require.Equal(t, &fjmr, jetID)
+		require.Equal(t, fjmr, core.JetID(*jetID))
 	})
 
 	t.Run("fetch jet from friends", func(t *testing.T) {
@@ -225,12 +225,12 @@ func TestJetTreeUpdater_fetchJet(t *testing.T) {
 			nil,
 		)
 
-		fjm := core.RecordID(*core.NewJetID(0, nil))
-		js.FindJetMock.Return(&fjm, false)
-		js.UpdateJetTreeFunc = func(ctx context.Context, pn core.PulseNumber, actual bool, jets ...core.RecordID) {
+		fjm := *core.NewJetID(0, nil)
+		js.ForIDMock.Return(fjm, false)
+		js.UpdateFunc = func(ctx context.Context, pn core.PulseNumber, actual bool, jets ...core.JetID) {
 			require.Equal(t, core.PulseNumber(100), pn)
 			require.True(t, actual)
-			require.Equal(t, []core.RecordID{core.RecordID(*core.NewJetID(0, nil))}, jets)
+			require.Equal(t, []core.JetID{*core.NewJetID(0, nil)}, jets)
 		}
 
 		jetID, err := jtu.fetchJet(ctx, target, core.PulseNumber(100))
@@ -246,7 +246,7 @@ func TestJetTreeUpdater_Concurrency(t *testing.T) {
 
 	jc := testutils.NewJetCoordinatorMock(mc)
 	ans := node.NewAccessorMock(mc)
-	js := jet.NewJetStorageMock(mc)
+	js := jet.NewStorageMock(mc)
 	mb := testutils.NewMessageBusMock(mc)
 	jtu := &jetTreeUpdater{
 		Nodes:          ans,
@@ -292,7 +292,7 @@ func TestJetTreeUpdater_Concurrency(t *testing.T) {
 		treeMu := sync.Mutex{}
 		tree := jet.NewTree(false)
 
-		js.UpdateJetTreeFunc = func(ctx context.Context, pn core.PulseNumber, actual bool, jets ...core.RecordID) {
+		js.UpdateFunc = func(ctx context.Context, pn core.PulseNumber, actual bool, jets ...core.JetID) {
 			treeMu.Lock()
 			defer treeMu.Unlock()
 
@@ -300,7 +300,7 @@ func TestJetTreeUpdater_Concurrency(t *testing.T) {
 				tree.Update(id, actual)
 			}
 		}
-		js.FindJetFunc = func(ctx context.Context, pulse core.PulseNumber, id core.RecordID) (*core.RecordID, bool) {
+		js.ForIDFunc = func(ctx context.Context, pulse core.PulseNumber, id core.RecordID) (core.JetID, bool) {
 			treeMu.Lock()
 			defer treeMu.Unlock()
 

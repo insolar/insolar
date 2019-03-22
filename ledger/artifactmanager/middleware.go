@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package artifactmanager
 
@@ -26,13 +26,13 @@ import (
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/internal/jet"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/jet"
 )
 
 type middleware struct {
 	objectStorage  storage.ObjectStorage
-	jetStorage     jet.JetStorage
+	jetAccessor    jet.Accessor
 	jetCoordinator core.JetCoordinator
 	messageBus     core.MessageBus
 	pulseStorage   core.PulseStorage
@@ -46,7 +46,7 @@ func newMiddleware(
 ) *middleware {
 	return &middleware{
 		objectStorage:  h.ObjectStorage,
-		jetStorage:     h.JetStorage,
+		jetAccessor:    h.JetStorage,
 		jetCoordinator: h.JetCoordinator,
 		messageBus:     h.Bus,
 		pulseStorage:   h.PulseStorage,
@@ -121,7 +121,7 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 			case *message.GetRequest:
 				pulse = tm.Request.Pulse()
 			}
-			jetID, actual := m.jetStorage.FindJet(ctx, pulse, target)
+			jetID, actual := m.jetAccessor.ForID(ctx, pulse, target)
 			if !actual {
 				inslogger.FromContext(ctx).WithFields(map[string]interface{}{
 					"msg":   msg.Type().String(),
@@ -130,7 +130,7 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 				}).Error("jet is not actual")
 			}
 
-			return handler(contextWithJet(ctx, *jetID), parcel)
+			return handler(contextWithJet(ctx, core.RecordID(jetID)), parcel)
 		}
 
 		// Calculate jet for current pulse.

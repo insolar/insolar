@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package testutils
 
@@ -24,10 +24,29 @@ import (
 	"math/big"
 
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/ledger/storage"
 	uuid "github.com/satori/go.uuid"
 	"golang.org/x/crypto/sha3"
 )
+
+//
+func resetBits(value []byte, start uint8) []byte {
+	if int(start) >= len(value)*8 {
+		return value
+	}
+
+	startByte := start / 8
+	startBit := start % 8
+
+	result := make([]byte, len(value))
+	copy(result, value[:startByte])
+
+	// Reset bits in starting byte.
+	mask := byte(0xFF)
+	mask <<= 8 - byte(startBit)
+	result[startByte] = value[startByte] & mask
+
+	return result
+}
 
 // RandomString generates random uuid and return it as a string
 func RandomString() string {
@@ -77,7 +96,7 @@ func RandomJetWithDepth(depth uint8) core.RecordID {
 	if err != nil {
 		panic(err)
 	}
-	return core.RecordID(*core.NewJetID(depth, storage.ResetBits(jetbuf[1:], depth)))
+	return core.RecordID(*core.NewJetID(depth, resetBits(jetbuf[1:], depth)))
 }
 
 // JetFromString converts string representation of Jet to core.RecordID.

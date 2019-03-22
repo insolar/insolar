@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package jetcoordinator
 
@@ -24,8 +24,8 @@ import (
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/internal/jet"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
@@ -47,7 +47,7 @@ type jetCoordinatorSuite struct {
 
 	pulseStorage *storage.PulseStorage
 	pulseTracker storage.PulseTracker
-	jetStorage   jet.JetStorage
+	jetStorage   jet.Storage
 	nodeStorage  *node.AccessorMock
 	coordinator  *JetCoordinator
 }
@@ -71,7 +71,8 @@ func (s *jetCoordinatorSuite) BeforeTest(suiteName, testName string) {
 	s.cleaner = cleaner
 	s.pulseTracker = storage.NewPulseTracker()
 	s.pulseStorage = storage.NewPulseStorage()
-	s.jetStorage = jet.NewJetStorage()
+	storage := jet.NewStore()
+	s.jetStorage = storage
 	s.nodeStorage = node.NewAccessorMock(s.T())
 	s.coordinator = NewJetCoordinator(5)
 	s.coordinator.NodeNet = network.NewNodeNetworkMock(s.T())
@@ -81,7 +82,7 @@ func (s *jetCoordinatorSuite) BeforeTest(suiteName, testName string) {
 		db,
 		s.pulseTracker,
 		s.pulseStorage,
-		s.jetStorage,
+		storage,
 		s.nodeStorage,
 		s.coordinator,
 	)
@@ -119,7 +120,7 @@ func (s *jetCoordinatorSuite) TestJetCoordinator_QueryRole() {
 	s.nodeStorage.InRoleMock.Return(nds, nil)
 
 	objID := core.NewRecordID(0, []byte{1, 42, 123})
-	s.jetStorage.UpdateJetTree(s.ctx, 0, true, core.RecordID(*core.NewJetID(50, []byte{1, 42, 123})))
+	s.jetStorage.Update(s.ctx, 0, true, *core.NewJetID(50, []byte{1, 42, 123}))
 
 	selected, err := s.coordinator.QueryRole(s.ctx, core.DynamicRoleLightValidator, *objID, 0)
 	require.NoError(s.T(), err)

@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package artifactmanager
 
@@ -20,13 +20,14 @@ import (
 	"context"
 	"sync"
 
+	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/message"
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/storage/jet"
-	"github.com/pkg/errors"
-	"go.opencensus.io/stats"
+	"github.com/insolar/insolar/ledger/internal/jet"
 )
 
 // ledgerArtifactSenders is a some kind of a middleware layer
@@ -114,7 +115,7 @@ func followRedirectSender(bus core.MessageBus) PreSender {
 }
 
 // retryJetSender is using for refreshing jet-tree, if destination has no idea about a jet from message
-func retryJetSender(pulseNumber core.PulseNumber, jetStorage jet.JetStorage) PreSender {
+func retryJetSender(pulseNumber core.PulseNumber, jetModifier jet.Modifier) PreSender {
 	return func(sender Sender) Sender {
 		return func(ctx context.Context, msg core.Message, options *core.MessageSendOptions) (core.Reply, error) {
 			retries := jetMissRetryCount
@@ -125,7 +126,7 @@ func retryJetSender(pulseNumber core.PulseNumber, jetStorage jet.JetStorage) Pre
 				}
 
 				if r, ok := rep.(*reply.JetMiss); ok {
-					jetStorage.UpdateJetTree(ctx, pulseNumber, true, r.JetID)
+					jetModifier.Update(ctx, pulseNumber, true, core.JetID(r.JetID))
 				} else {
 					return rep, err
 				}

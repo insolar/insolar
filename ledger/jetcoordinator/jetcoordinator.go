@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package jetcoordinator
 
@@ -25,8 +25,8 @@ import (
 	"github.com/insolar/insolar"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/core/utils"
+	"github.com/insolar/insolar/ledger/internal/jet"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/insolar/insolar/utils/entropy"
 	"github.com/pkg/errors"
@@ -37,7 +37,7 @@ type JetCoordinator struct {
 	NodeNet                    core.NodeNetwork                `inject:""`
 	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
 	PulseStorage               core.PulseStorage               `inject:""`
-	JetStorage                 jet.JetStorage                  `inject:""`
+	JetAccessor                jet.Accessor                    `inject:""`
 	PulseTracker               storage.PulseTracker            `inject:""`
 	Nodes                      node.Accessor                   `inject:""`
 
@@ -181,16 +181,16 @@ func (jc *JetCoordinator) LightValidatorsForJet(
 func (jc *JetCoordinator) LightExecutorForObject(
 	ctx context.Context, objID core.RecordID, pulse core.PulseNumber,
 ) (*core.RecordRef, error) {
-	jetID, _ := jc.JetStorage.FindJet(ctx, pulse, objID)
-	return jc.LightExecutorForJet(ctx, *jetID, pulse)
+	jetID, _ := jc.JetAccessor.ForID(ctx, pulse, objID)
+	return jc.LightExecutorForJet(ctx, core.RecordID(jetID), pulse)
 }
 
 // LightValidatorsForObject returns list of LVs for a provided pulse and objID
 func (jc *JetCoordinator) LightValidatorsForObject(
 	ctx context.Context, objID core.RecordID, pulse core.PulseNumber,
 ) ([]core.RecordRef, error) {
-	jetID, _ := jc.JetStorage.FindJet(ctx, pulse, objID)
-	return jc.LightValidatorsForJet(ctx, *jetID, pulse)
+	jetID, _ := jc.JetAccessor.ForID(ctx, pulse, objID)
+	return jc.LightValidatorsForJet(ctx, core.RecordID(jetID), pulse)
 }
 
 // Heavy returns *core.RecorRef to a heavy of specific pulse

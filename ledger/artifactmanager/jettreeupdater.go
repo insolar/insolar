@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package artifactmanager
 
@@ -21,7 +21,6 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar"
-	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/pkg/errors"
 
@@ -30,7 +29,7 @@ import (
 	"github.com/insolar/insolar/core/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/insolar/ledger/storage/jet"
+	"github.com/insolar/insolar/ledger/internal/jet"
 )
 
 type seqEntry struct {
@@ -50,7 +49,7 @@ type fetchResult struct {
 
 type jetTreeUpdater struct {
 	Nodes          node.Accessor
-	JetStorage     jet.JetStorage
+	JetStorage     jet.Storage
 	MessageBus     core.MessageBus
 	JetCoordinator core.JetCoordinator
 
@@ -60,7 +59,9 @@ type jetTreeUpdater struct {
 
 func newJetTreeUpdater(
 	ans node.Accessor,
-	js jet.JetStorage, mb core.MessageBus, jc core.JetCoordinator,
+	js jet.Storage,
+	mb core.MessageBus,
+	jc core.JetCoordinator,
 ) *jetTreeUpdater {
 	return &jetTreeUpdater{
 		Nodes:          ans,
@@ -78,14 +79,14 @@ func (jtu *jetTreeUpdater) fetchJet(
 	defer span.End()
 
 	// Look in the local tree. Return if the actual jet found.
-	jetID, actual := jtu.JetStorage.FindJet(ctx, pulse, target)
+	jetID, actual := jtu.JetStorage.ForID(ctx, pulse, target)
 	if actual {
-		return jetID, nil
+		return (*core.RecordID)(&jetID), nil
 	}
 
 	// Not actual in our tree, asking neighbors for jet.
 	span.Annotate(nil, "tree in DB is not actual")
-	key := seqKey{pulse, *jetID}
+	key := seqKey{pulse, core.RecordID(jetID)}
 
 	executing := false
 
@@ -122,7 +123,7 @@ func (jtu *jetTreeUpdater) fetchJet(
 		return nil, err
 	}
 
-	jtu.JetStorage.UpdateJetTree(ctx, pulse, true, *resJet)
+	jtu.JetStorage.Update(ctx, pulse, true, core.JetID(*resJet))
 
 	return resJet, nil
 }
@@ -145,7 +146,7 @@ func (jtu *jetTreeUpdater) releaseJet(ctx context.Context, jetID core.RecordID, 
 		if depth == 0 {
 			break
 		}
-		jetID = core.RecordID(storage.JetParent(core.JetID(jetID)))
+		jetID = core.RecordID(jet.Parent(core.JetID(jetID)))
 		depth--
 	}
 }

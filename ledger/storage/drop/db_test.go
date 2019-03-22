@@ -1,18 +1,18 @@
-/*
-*    Copyright 2019 Insolar Technologies
-*
-*    Licensed under the Apache License, Version 2.0 (the "License");
-*    you may not use this file except in compliance with the License.
-*    You may obtain a copy of the License at
-*
-*        http://www.apache.org/licenses/LICENSE-2.0
-*
-*    Unless required by applicable law or agreed to in writing, software
-*    distributed under the License is distributed on an "AS IS" BASIS,
-*    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-*    See the License for the specific language governing permissions and
-*    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package drop
 
@@ -20,13 +20,13 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/google/gofuzz"
+	fuzz "github.com/google/gofuzz"
+	"github.com/stretchr/testify/require"
+
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/gen"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage/db"
-	"github.com/insolar/insolar/ledger/storage/jet"
-	"github.com/stretchr/testify/require"
 )
 
 func TestNewStorageDB(t *testing.T) {
@@ -37,7 +37,7 @@ func TestNewStorageDB(t *testing.T) {
 
 type setInput struct {
 	jetID core.JetID
-	dr    jet.Drop
+	dr    Drop
 }
 
 func TestDropStorageDB_Set(t *testing.T) {
@@ -45,13 +45,13 @@ func TestDropStorageDB_Set(t *testing.T) {
 	var inputs []setInput
 	encodedDrops := map[string]struct{}{}
 	f := fuzz.New().Funcs(func(inp *setInput, c fuzz.Continue) {
-		inp.dr = jet.Drop{
+		inp.dr = Drop{
 			Size:  rand.Uint64(),
 			Pulse: gen.PulseNumber(),
 			JetID: gen.JetID(),
 		}
 
-		encoded, _ := jet.Encode(&inp.dr)
+		encoded, _ := Encode(&inp.dr)
 		encodedDrops[string(encoded)] = struct{}{}
 	}).NumElements(5, 5000).NilChance(0)
 	f.Fuzz(&inputs)
@@ -75,7 +75,7 @@ func TestDropStorageDB_Set(t *testing.T) {
 
 func TestDropStorageDB_Set_ErrOverride(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-	dr := jet.Drop{
+	dr := Drop{
 		Size:  rand.Uint64(),
 		Pulse: gen.PulseNumber(),
 		JetID: gen.JetID(),
@@ -96,11 +96,11 @@ func TestDropStorageDB_ForPulse(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	jetID := gen.JetID()
 	pn := gen.PulseNumber()
-	dr := jet.Drop{
+	dr := Drop{
 		Size:  rand.Uint64(),
 		Pulse: gen.PulseNumber(),
 	}
-	buf, _ := jet.Encode(&dr)
+	buf, _ := Encode(&dr)
 
 	dbMock := db.NewDBMock(t)
 	dbMock.GetMock.Return(buf, nil)

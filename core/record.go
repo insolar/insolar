@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package core
 
@@ -33,9 +33,11 @@ const (
 	RecordHashSize = 28
 	// RecordIDSize is relative record address.
 	RecordIDSize = PulseNumberSize + RecordHashSize
+	// RecordHashOffset is a offset where hash bytes starts in RecordID.
+	RecordHashOffset = PulseNumberSize
 	// RecordRefSize is absolute records address (including domain ID).
 	RecordRefSize = RecordIDSize * 2
-	// RecordRefIDSeparator is character that separates RecordID from DomainID in serialized RecordRef
+	// RecordRefIDSeparator is character that separates RecordID from DomainID in serialized RecordRef.
 	RecordRefIDSeparator = "."
 )
 
@@ -51,7 +53,7 @@ func (id *RecordID) String() string {
 func NewRecordID(pulse PulseNumber, hash []byte) *RecordID {
 	var id RecordID
 	copy(id[:PulseNumberSize], pulse.Bytes())
-	copy(id[PulseNumberSize:], hash)
+	copy(id[RecordHashOffset:], hash)
 	return &id
 }
 
@@ -69,7 +71,7 @@ func (id *RecordID) Pulse() PulseNumber {
 // Hash returns a copy of Hash part of RecordID.
 func (id *RecordID) Hash() []byte {
 	recHash := make([]byte, RecordHashSize)
-	copy(recHash, id[PulseNumberSize:])
+	copy(recHash, id[RecordHashOffset:])
 	return recHash
 }
 
@@ -202,6 +204,7 @@ func (id *RecordID) DebugString() string {
 		return "<nil>"
 	}
 
+	// TODO: remove this branch after finish transition to JetID
 	pulse := NewPulseNumber(id[:PulseNumberSize])
 	if pulse == PulseNumberJet {
 		depth := int(id[PulseNumberSize])
