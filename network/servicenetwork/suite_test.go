@@ -62,6 +62,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/network/termination"
+
 	"github.com/insolar/insolar/instrumentation/inslogger"
 
 	"github.com/insolar/insolar/certificate"
@@ -385,14 +387,6 @@ func RandomRole() core.StaticRole {
 	return core.StaticRole(i)
 }
 
-type terminationHandler struct {
-	NodeID core.RecordRef
-}
-
-func (t *terminationHandler) Abort() {
-	log.Errorf("Abort node: %s", t.NodeID)
-}
-
 type pulseManagerMock struct {
 	pulse core.Pulse
 	lock  sync.Mutex
@@ -448,11 +442,11 @@ func (s *testSuite) preInitNode(node *networkNode) {
 
 	realKeeper, err := nodenetwork.NewNodeNetwork(cfg.Host, certManager.GetCertificate())
 	s.Require().NoError(err)
-	terminationHandler := &terminationHandler{NodeID: node.id}
+	terminationHandler := termination.NewHandler(serviceNetwork)
 
 	keyProc := platformpolicy.NewKeyProcessor()
 	node.componentManager.Register(terminationHandler, realKeeper, newPulseManagerMock(realKeeper.(network.NodeKeeper)))
 	node.componentManager.Register(netCoordinator, amMock, certManager, cryptographyService)
-	node.componentManager.Inject(serviceNetwork, NewTestNetworkSwitcher(), keyProc)
+	node.componentManager.Inject(serviceNetwork, NewTestNetworkSwitcher(), keyProc, terminationHandler)
 	node.serviceNetwork = serviceNetwork
 }
