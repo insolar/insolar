@@ -63,7 +63,7 @@ func (rs *SendResponseProcessor) Process(task AdapterTask, nestedEventHelper Nes
 	return msg
 }
 
-// SendResponseHelper is helper for SendResponseTask
+// SendResponseHelper is helper for SendResponseProcessor
 type SendResponseHelper struct{}
 
 // SendResponse makes correct message and send it to adapter
@@ -71,7 +71,7 @@ func (r *SendResponseHelper) SendResponse(element slot.SlotElementHelper, result
 
 	pendingMsg, ok := element.GetInputEvent().(core.ConveyorPendingMessage)
 	if !ok {
-		return errors.Errorf("[ ResponseSenderHelper.SendResponse ] Input event is not core.ConveyorPendingMessage: %T", element.GetInputEvent())
+		return errors.Errorf("[ SendResponseHelper.SendResponse ] Input event is not core.ConveyorPendingMessage: %T", element.GetInputEvent())
 	}
 
 	response := SendResponseTask{
@@ -79,5 +79,5 @@ func (r *SendResponseHelper) SendResponse(element slot.SlotElementHelper, result
 		Result: result,
 	}
 	err := element.SendTask(uint32(SendResponseAdapterID), response, respHandlerID)
-	return errors.Wrap(err, "[ ResponseSenderHelper.SendResponse ] Can't SendTask")
+	return errors.Wrap(err, "[ SendResponseHelper.SendResponse ] Can't SendTask")
 }
