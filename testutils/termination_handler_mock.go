@@ -3,7 +3,7 @@ package testutils
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "TerminationHandler" can be found in github.com/insolar/insolar/core
+The original interface "TerminationHandler" can be found in github.com/insolar/insolar/insolar
 */
 import (
 	context "context"
@@ -11,12 +11,12 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	core "github.com/insolar/insolar/core"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//TerminationHandlerMock implements github.com/insolar/insolar/core.TerminationHandler
+//TerminationHandlerMock implements github.com/insolar/insolar/insolar.TerminationHandler
 type TerminationHandlerMock struct {
 	t minimock.Tester
 
@@ -25,7 +25,7 @@ type TerminationHandlerMock struct {
 	AbortPreCounter uint64
 	AbortMock       mTerminationHandlerMockAbort
 
-	LeaveFunc       func(p context.Context, p1 core.PulseNumber) (r chan core.LeaveApproved)
+	LeaveFunc       func(p context.Context, p1 insolar.PulseNumber) (r chan insolar.LeaveApproved)
 	LeaveCounter    uint64
 	LeavePreCounter uint64
 	LeaveMock       mTerminationHandlerMockLeave
@@ -36,7 +36,7 @@ type TerminationHandlerMock struct {
 	OnLeaveApprovedMock       mTerminationHandlerMockOnLeaveApproved
 }
 
-//NewTerminationHandlerMock returns a mock for github.com/insolar/insolar/core.TerminationHandler
+//NewTerminationHandlerMock returns a mock for github.com/insolar/insolar/insolar.TerminationHandler
 func NewTerminationHandlerMock(t minimock.Tester) *TerminationHandlerMock {
 	m := &TerminationHandlerMock{t: t}
 
@@ -104,7 +104,7 @@ func (m *mTerminationHandlerMockAbort) Set(f func()) *TerminationHandlerMock {
 	return m.mock
 }
 
-//Abort implements github.com/insolar/insolar/core.TerminationHandler interface
+//Abort implements github.com/insolar/insolar/insolar.TerminationHandler interface
 func (m *TerminationHandlerMock) Abort() {
 	counter := atomic.AddUint64(&m.AbortPreCounter, 1)
 	defer atomic.AddUint64(&m.AbortCounter, 1)
@@ -174,15 +174,15 @@ type TerminationHandlerMockLeaveExpectation struct {
 
 type TerminationHandlerMockLeaveInput struct {
 	p  context.Context
-	p1 core.PulseNumber
+	p1 insolar.PulseNumber
 }
 
 type TerminationHandlerMockLeaveResult struct {
-	r chan core.LeaveApproved
+	r chan insolar.LeaveApproved
 }
 
 //Expect specifies that invocation of TerminationHandler.Leave is expected from 1 to Infinity times
-func (m *mTerminationHandlerMockLeave) Expect(p context.Context, p1 core.PulseNumber) *mTerminationHandlerMockLeave {
+func (m *mTerminationHandlerMockLeave) Expect(p context.Context, p1 insolar.PulseNumber) *mTerminationHandlerMockLeave {
 	m.mock.LeaveFunc = nil
 	m.expectationSeries = nil
 
@@ -194,7 +194,7 @@ func (m *mTerminationHandlerMockLeave) Expect(p context.Context, p1 core.PulseNu
 }
 
 //Return specifies results of invocation of TerminationHandler.Leave
-func (m *mTerminationHandlerMockLeave) Return(r chan core.LeaveApproved) *TerminationHandlerMock {
+func (m *mTerminationHandlerMockLeave) Return(r chan insolar.LeaveApproved) *TerminationHandlerMock {
 	m.mock.LeaveFunc = nil
 	m.expectationSeries = nil
 
@@ -206,7 +206,7 @@ func (m *mTerminationHandlerMockLeave) Return(r chan core.LeaveApproved) *Termin
 }
 
 //ExpectOnce specifies that invocation of TerminationHandler.Leave is expected once
-func (m *mTerminationHandlerMockLeave) ExpectOnce(p context.Context, p1 core.PulseNumber) *TerminationHandlerMockLeaveExpectation {
+func (m *mTerminationHandlerMockLeave) ExpectOnce(p context.Context, p1 insolar.PulseNumber) *TerminationHandlerMockLeaveExpectation {
 	m.mock.LeaveFunc = nil
 	m.mainExpectation = nil
 
@@ -216,12 +216,12 @@ func (m *mTerminationHandlerMockLeave) ExpectOnce(p context.Context, p1 core.Pul
 	return expectation
 }
 
-func (e *TerminationHandlerMockLeaveExpectation) Return(r chan core.LeaveApproved) {
+func (e *TerminationHandlerMockLeaveExpectation) Return(r chan insolar.LeaveApproved) {
 	e.result = &TerminationHandlerMockLeaveResult{r}
 }
 
 //Set uses given function f as a mock of TerminationHandler.Leave method
-func (m *mTerminationHandlerMockLeave) Set(f func(p context.Context, p1 core.PulseNumber) (r chan core.LeaveApproved)) *TerminationHandlerMock {
+func (m *mTerminationHandlerMockLeave) Set(f func(p context.Context, p1 insolar.PulseNumber) (r chan insolar.LeaveApproved)) *TerminationHandlerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -229,8 +229,8 @@ func (m *mTerminationHandlerMockLeave) Set(f func(p context.Context, p1 core.Pul
 	return m.mock
 }
 
-//Leave implements github.com/insolar/insolar/core.TerminationHandler interface
-func (m *TerminationHandlerMock) Leave(p context.Context, p1 core.PulseNumber) (r chan core.LeaveApproved) {
+//Leave implements github.com/insolar/insolar/insolar.TerminationHandler interface
+func (m *TerminationHandlerMock) Leave(p context.Context, p1 insolar.PulseNumber) (r chan insolar.LeaveApproved) {
 	counter := atomic.AddUint64(&m.LeavePreCounter, 1)
 	defer atomic.AddUint64(&m.LeaveCounter, 1)
 
@@ -367,7 +367,7 @@ func (m *mTerminationHandlerMockOnLeaveApproved) Set(f func(p context.Context)) 
 	return m.mock
 }
 
-//OnLeaveApproved implements github.com/insolar/insolar/core.TerminationHandler interface
+//OnLeaveApproved implements github.com/insolar/insolar/insolar.TerminationHandler interface
 func (m *TerminationHandlerMock) OnLeaveApproved(p context.Context) {
 	counter := atomic.AddUint64(&m.OnLeaveApprovedPreCounter, 1)
 	defer atomic.AddUint64(&m.OnLeaveApprovedCounter, 1)
