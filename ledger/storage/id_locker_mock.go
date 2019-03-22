@@ -24,6 +24,16 @@ type IDLockerMock struct {
 	LockPreCounter uint64
 	LockMock       mIDLockerMockLock
 
+	RLockFunc       func(p *core.RecordID)
+	RLockCounter    uint64
+	RLockPreCounter uint64
+	RLockMock       mIDLockerMockRLock
+
+	RUnlockFunc       func(p *core.RecordID)
+	RUnlockCounter    uint64
+	RUnlockPreCounter uint64
+	RUnlockMock       mIDLockerMockRUnlock
+
 	UnlockFunc       func(p *core.RecordID)
 	UnlockCounter    uint64
 	UnlockPreCounter uint64
@@ -39,6 +49,8 @@ func NewIDLockerMock(t minimock.Tester) *IDLockerMock {
 	}
 
 	m.LockMock = mIDLockerMockLock{mock: m}
+	m.RLockMock = mIDLockerMockRLock{mock: m}
+	m.RUnlockMock = mIDLockerMockRUnlock{mock: m}
 	m.UnlockMock = mIDLockerMockUnlock{mock: m}
 
 	return m
@@ -162,6 +174,252 @@ func (m *IDLockerMock) LockFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.LockFunc != nil {
 		return atomic.LoadUint64(&m.LockCounter) > 0
+	}
+
+	return true
+}
+
+type mIDLockerMockRLock struct {
+	mock              *IDLockerMock
+	mainExpectation   *IDLockerMockRLockExpectation
+	expectationSeries []*IDLockerMockRLockExpectation
+}
+
+type IDLockerMockRLockExpectation struct {
+	input *IDLockerMockRLockInput
+}
+
+type IDLockerMockRLockInput struct {
+	p *core.RecordID
+}
+
+//Expect specifies that invocation of IDLocker.RLock is expected from 1 to Infinity times
+func (m *mIDLockerMockRLock) Expect(p *core.RecordID) *mIDLockerMockRLock {
+	m.mock.RLockFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &IDLockerMockRLockExpectation{}
+	}
+	m.mainExpectation.input = &IDLockerMockRLockInput{p}
+	return m
+}
+
+//Return specifies results of invocation of IDLocker.RLock
+func (m *mIDLockerMockRLock) Return() *IDLockerMock {
+	m.mock.RLockFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &IDLockerMockRLockExpectation{}
+	}
+
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of IDLocker.RLock is expected once
+func (m *mIDLockerMockRLock) ExpectOnce(p *core.RecordID) *IDLockerMockRLockExpectation {
+	m.mock.RLockFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &IDLockerMockRLockExpectation{}
+	expectation.input = &IDLockerMockRLockInput{p}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+//Set uses given function f as a mock of IDLocker.RLock method
+func (m *mIDLockerMockRLock) Set(f func(p *core.RecordID)) *IDLockerMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.RLockFunc = f
+	return m.mock
+}
+
+//RLock implements github.com/insolar/insolar/ledger/storage.IDLocker interface
+func (m *IDLockerMock) RLock(p *core.RecordID) {
+	counter := atomic.AddUint64(&m.RLockPreCounter, 1)
+	defer atomic.AddUint64(&m.RLockCounter, 1)
+
+	if len(m.RLockMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.RLockMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to IDLockerMock.RLock. %v", p)
+			return
+		}
+
+		input := m.RLockMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, IDLockerMockRLockInput{p}, "IDLocker.RLock got unexpected parameters")
+
+		return
+	}
+
+	if m.RLockMock.mainExpectation != nil {
+
+		input := m.RLockMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, IDLockerMockRLockInput{p}, "IDLocker.RLock got unexpected parameters")
+		}
+
+		return
+	}
+
+	if m.RLockFunc == nil {
+		m.t.Fatalf("Unexpected call to IDLockerMock.RLock. %v", p)
+		return
+	}
+
+	m.RLockFunc(p)
+}
+
+//RLockMinimockCounter returns a count of IDLockerMock.RLockFunc invocations
+func (m *IDLockerMock) RLockMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.RLockCounter)
+}
+
+//RLockMinimockPreCounter returns the value of IDLockerMock.RLock invocations
+func (m *IDLockerMock) RLockMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.RLockPreCounter)
+}
+
+//RLockFinished returns true if mock invocations count is ok
+func (m *IDLockerMock) RLockFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.RLockMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.RLockCounter) == uint64(len(m.RLockMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.RLockMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.RLockCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.RLockFunc != nil {
+		return atomic.LoadUint64(&m.RLockCounter) > 0
+	}
+
+	return true
+}
+
+type mIDLockerMockRUnlock struct {
+	mock              *IDLockerMock
+	mainExpectation   *IDLockerMockRUnlockExpectation
+	expectationSeries []*IDLockerMockRUnlockExpectation
+}
+
+type IDLockerMockRUnlockExpectation struct {
+	input *IDLockerMockRUnlockInput
+}
+
+type IDLockerMockRUnlockInput struct {
+	p *core.RecordID
+}
+
+//Expect specifies that invocation of IDLocker.RUnlock is expected from 1 to Infinity times
+func (m *mIDLockerMockRUnlock) Expect(p *core.RecordID) *mIDLockerMockRUnlock {
+	m.mock.RUnlockFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &IDLockerMockRUnlockExpectation{}
+	}
+	m.mainExpectation.input = &IDLockerMockRUnlockInput{p}
+	return m
+}
+
+//Return specifies results of invocation of IDLocker.RUnlock
+func (m *mIDLockerMockRUnlock) Return() *IDLockerMock {
+	m.mock.RUnlockFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &IDLockerMockRUnlockExpectation{}
+	}
+
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of IDLocker.RUnlock is expected once
+func (m *mIDLockerMockRUnlock) ExpectOnce(p *core.RecordID) *IDLockerMockRUnlockExpectation {
+	m.mock.RUnlockFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &IDLockerMockRUnlockExpectation{}
+	expectation.input = &IDLockerMockRUnlockInput{p}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+//Set uses given function f as a mock of IDLocker.RUnlock method
+func (m *mIDLockerMockRUnlock) Set(f func(p *core.RecordID)) *IDLockerMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.RUnlockFunc = f
+	return m.mock
+}
+
+//RUnlock implements github.com/insolar/insolar/ledger/storage.IDLocker interface
+func (m *IDLockerMock) RUnlock(p *core.RecordID) {
+	counter := atomic.AddUint64(&m.RUnlockPreCounter, 1)
+	defer atomic.AddUint64(&m.RUnlockCounter, 1)
+
+	if len(m.RUnlockMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.RUnlockMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to IDLockerMock.RUnlock. %v", p)
+			return
+		}
+
+		input := m.RUnlockMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, IDLockerMockRUnlockInput{p}, "IDLocker.RUnlock got unexpected parameters")
+
+		return
+	}
+
+	if m.RUnlockMock.mainExpectation != nil {
+
+		input := m.RUnlockMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, IDLockerMockRUnlockInput{p}, "IDLocker.RUnlock got unexpected parameters")
+		}
+
+		return
+	}
+
+	if m.RUnlockFunc == nil {
+		m.t.Fatalf("Unexpected call to IDLockerMock.RUnlock. %v", p)
+		return
+	}
+
+	m.RUnlockFunc(p)
+}
+
+//RUnlockMinimockCounter returns a count of IDLockerMock.RUnlockFunc invocations
+func (m *IDLockerMock) RUnlockMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.RUnlockCounter)
+}
+
+//RUnlockMinimockPreCounter returns the value of IDLockerMock.RUnlock invocations
+func (m *IDLockerMock) RUnlockMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.RUnlockPreCounter)
+}
+
+//RUnlockFinished returns true if mock invocations count is ok
+func (m *IDLockerMock) RUnlockFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.RUnlockMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.RUnlockCounter) == uint64(len(m.RUnlockMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.RUnlockMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.RUnlockCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.RUnlockFunc != nil {
+		return atomic.LoadUint64(&m.RUnlockCounter) > 0
 	}
 
 	return true
@@ -298,6 +556,14 @@ func (m *IDLockerMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to IDLockerMock.Lock")
 	}
 
+	if !m.RLockFinished() {
+		m.t.Fatal("Expected call to IDLockerMock.RLock")
+	}
+
+	if !m.RUnlockFinished() {
+		m.t.Fatal("Expected call to IDLockerMock.RUnlock")
+	}
+
 	if !m.UnlockFinished() {
 		m.t.Fatal("Expected call to IDLockerMock.Unlock")
 	}
@@ -323,6 +589,14 @@ func (m *IDLockerMock) MinimockFinish() {
 		m.t.Fatal("Expected call to IDLockerMock.Lock")
 	}
 
+	if !m.RLockFinished() {
+		m.t.Fatal("Expected call to IDLockerMock.RLock")
+	}
+
+	if !m.RUnlockFinished() {
+		m.t.Fatal("Expected call to IDLockerMock.RUnlock")
+	}
+
 	if !m.UnlockFinished() {
 		m.t.Fatal("Expected call to IDLockerMock.Unlock")
 	}
@@ -342,6 +616,8 @@ func (m *IDLockerMock) MinimockWait(timeout time.Duration) {
 	for {
 		ok := true
 		ok = ok && m.LockFinished()
+		ok = ok && m.RLockFinished()
+		ok = ok && m.RUnlockFinished()
 		ok = ok && m.UnlockFinished()
 
 		if ok {
@@ -353,6 +629,14 @@ func (m *IDLockerMock) MinimockWait(timeout time.Duration) {
 
 			if !m.LockFinished() {
 				m.t.Error("Expected call to IDLockerMock.Lock")
+			}
+
+			if !m.RLockFinished() {
+				m.t.Error("Expected call to IDLockerMock.RLock")
+			}
+
+			if !m.RUnlockFinished() {
+				m.t.Error("Expected call to IDLockerMock.RUnlock")
 			}
 
 			if !m.UnlockFinished() {
@@ -372,6 +656,14 @@ func (m *IDLockerMock) MinimockWait(timeout time.Duration) {
 func (m *IDLockerMock) AllMocksCalled() bool {
 
 	if !m.LockFinished() {
+		return false
+	}
+
+	if !m.RLockFinished() {
+		return false
+	}
+
+	if !m.RUnlockFinished() {
 		return false
 	}
 
