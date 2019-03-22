@@ -16,4 +16,8 @@
 
 package adapter
 
-const ResponseSenderAdapterID = 1
+type ID uint32
+
+const (
+	ResponseSenderAdapterID ID = iota + 1
+)
