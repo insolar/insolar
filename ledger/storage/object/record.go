@@ -22,6 +22,7 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar"
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/ledger/storage/db"
 	"go.opencensus.io/stats"
 )
@@ -127,4 +128,85 @@ func (m *RecordMemory) ForID(ctx context.Context, id insolar.ID) (rec MaterialRe
 	}
 
 	return
+}
+
+// RecordDB is a DB storage implementation. It saves records to disk and does not allow removal.
+type RecordDB struct {
+	DB   db.DB `inject:""`
+	lock sync.RWMutex
+}
+
+type recordKey insolar.ID
+
+func (k recordKey) Scope() db.Scope {
+	return db.ScopeRecord
+}
+
+func (k recordKey) ID() []byte {
+	res := insolar.ID(k)
+	return (&res).Bytes()
+}
+
+// NewRecordDB creates new DB storage instance.
+func NewRecordDB() *RecordDB {
+	return &RecordDB{}
+}
+
+// Set saves new record-value in storage.
+func (r *RecordDB) Set(ctx context.Context, id insolar.ID, rec MaterialRecord) error {
+	r.lock.Lock()
+	defer r.lock.Unlock()
+
+	return r.set(id, rec)
+}
+
+// ForID returns record for provided id.
+func (r *RecordDB) ForID(ctx context.Context, id insolar.ID) (MaterialRecord, error) {
+	r.lock.RLock()
+	defer r.lock.RUnlock()
+
+	return r.get(id)
+}
+
+func (r *RecordDB) set(id insolar.ID, rec MaterialRecord) error {
+	key := recordKey(id)
+
+	_, err := r.DB.Get(key)
+	if err == nil {
+		return ErrOverride
+	}
+
+	return r.DB.Set(key, EncodeRecord(rec))
+}
+
+func (r *RecordDB) get(id insolar.ID) (rec MaterialRecord, err error) {
+	buff, err := r.DB.Get(recordKey(id))
+	if err == db.ErrNotFound {
+		err = RecNotFound
+		return
+	}
+	if err != nil {
+		return
+	}
+	rec = DecodeRecord(buff)
+	return
+}
+
+func EncodeRecord(rec MaterialRecord) []byte {
+	buff := SerializeRecord(rec.Record)
+	result := append(buff[:], rec.JetID[:]...)
+
+	return result
+}
+
+func DecodeRecord(buff []byte) MaterialRecord {
+	recBuff := buff[:len(buff)-core.RecordIDSize]
+	jetIDBuff := buff[len(buff)-core.RecordIDSize:]
+
+	rec := DeserializeRecord(recBuff)
+
+	var jetID insolar.JetID
+	copy(jetID[:], jetIDBuff)
+
+	return MaterialRecord{Record: rec, JetID: jetID}
 }

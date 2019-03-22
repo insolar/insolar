@@ -24,17 +24,17 @@ import (
 	"github.com/insolar/insolar"
 	"github.com/insolar/insolar/gen"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/storage/db"
 	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestInMemoryRecord(t *testing.T) {
-	t.Parallel()
-
+func TestRecord_Components(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-
-	recordStorage := object.NewRecordMemory()
+	memStorage := object.NewRecordMemory()
+	dbStorage := object.NewRecordDB()
+	dbStorage.DB = db.NewMemoryMockDB()
 
 	type tempRecord struct {
 		id  insolar.ID
@@ -50,21 +50,28 @@ func TestInMemoryRecord(t *testing.T) {
 			JetID:  gen.JetID(),
 		}
 	})
-	f.NumElements(5, 10).NilChance(0).Fuzz(&records)
+	f.NilChance(0)
+	f.NumElements(10, 20)
+	f.Fuzz(&records)
 
 	t.Run("saves correct record", func(t *testing.T) {
+		t.Parallel()
+
 		for _, r := range records {
-			err := recordStorage.Set(ctx, r.id, r.rec)
-			require.NoError(t, err)
+			memErr := memStorage.Set(ctx, r.id, r.rec)
+			dbErr := dbStorage.Set(ctx, r.id, r.rec)
+			require.NoError(t, memErr)
+			require.NoError(t, dbErr)
 		}
 
 		for _, r := range records {
-			resRecord, err := recordStorage.ForID(ctx, r.id)
-			require.NoError(t, err)
+			memRecord, memErr := memStorage.ForID(ctx, r.id)
+			dbRecord, dbErr := dbStorage.ForID(ctx, r.id)
+			require.NoError(t, memErr)
+			require.NoError(t, dbErr)
 
-			assert.Equal(t, r.rec, resRecord)
-			assert.Equal(t, r.rec.Record, resRecord.Record)
-			assert.Equal(t, r.rec.JetID, resRecord.JetID)
+			assert.Equal(t, r.rec, memRecord)
+			assert.Equal(t, r.rec, dbRecord)
 		}
 	})
 
@@ -72,25 +79,36 @@ func TestInMemoryRecord(t *testing.T) {
 		t.Parallel()
 
 		for i := int32(0); i < rand.Int31n(10); i++ {
-			_, err := recordStorage.ForID(ctx, gen.ID())
-			require.Error(t, err)
-			assert.Equal(t, object.RecNotFound, err)
+			_, memErr := memStorage.ForID(ctx, gen.ID())
+			_, dbErr := dbStorage.ForID(ctx, gen.ID())
+			require.Error(t, memErr)
+			require.Error(t, dbErr)
+			assert.Equal(t, object.RecNotFound, memErr)
+			assert.Equal(t, object.RecNotFound, dbErr)
 		}
 	})
 
 	t.Run("returns override error when saving with the same id", func(t *testing.T) {
 		t.Parallel()
 
-		recordStorage := object.NewRecordMemory()
+		memStorage := object.NewRecordMemory()
+		dbStorage := object.NewRecordDB()
+		dbStorage.DB = db.NewMemoryMockDB()
+
 		for _, r := range records {
-			err := recordStorage.Set(ctx, r.id, r.rec)
-			require.NoError(t, err)
+			memErr := memStorage.Set(ctx, r.id, r.rec)
+			dbErr := dbStorage.Set(ctx, r.id, r.rec)
+			require.NoError(t, memErr)
+			require.NoError(t, dbErr)
 		}
 
 		for _, r := range records {
-			err := recordStorage.Set(ctx, r.id, r.rec)
-			require.Error(t, err)
-			assert.Equal(t, object.ErrOverride, err)
+			memErr := memStorage.Set(ctx, r.id, r.rec)
+			dbErr := dbStorage.Set(ctx, r.id, r.rec)
+			require.Error(t, memErr)
+			require.Error(t, dbErr)
+			assert.Equal(t, object.ErrOverride, memErr)
+			assert.Equal(t, object.ErrOverride, dbErr)
 		}
 	})
 }
