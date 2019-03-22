@@ -95,7 +95,7 @@ func (l *idLocker) RLock(id *core.RecordID) {
 	mc.count++
 	l.mu.Unlock()
 
-	mc.RLock()
+	mc.Lock()
 }
 
 // Unlock unlocks mutex belonged to record ID.
@@ -108,7 +108,7 @@ func (l *idLocker) RUnlock(id *core.RecordID) {
 		panic(fmt.Sprintf("try to unlock not initialized mutex for ID %+v", id))
 	}
 	mc.count--
-	mc.RUnlock()
+	mc.Unlock()
 	if mc.count == 0 {
 		delete(l.muxs, *id)
 	}
