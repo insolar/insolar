@@ -33,19 +33,19 @@ type logrusAdapter struct {
 	entry          *logrus.Entry
 }
 
-func InternalLevelToLogrusLevel(level core.LogLevel) (logrus.Level, error) {
+func InternalLevelToLogrusLevel(level insolar.LogLevel) (logrus.Level, error) {
 	switch level {
-	case core.DebugLevel:
+	case insolar.DebugLevel:
 		return logrus.DebugLevel, nil
-	case core.InfoLevel:
+	case insolar.InfoLevel:
 		return logrus.InfoLevel, nil
-	case core.WarnLevel:
+	case insolar.WarnLevel:
 		return logrus.WarnLevel, nil
-	case core.ErrorLevel:
+	case insolar.ErrorLevel:
 		return logrus.ErrorLevel, nil
-	case core.FatalLevel:
+	case insolar.FatalLevel:
 		return logrus.FatalLevel, nil
-	case core.PanicLevel:
+	case insolar.PanicLevel:
 		return logrus.PanicLevel, nil
 	}
 	return 0, errors.New("Unknown internal level")
@@ -201,7 +201,7 @@ func (l logrusAdapter) Panicf(format string, args ...interface{}) {
 
 // SetLevel sets log level
 func (l logrusAdapter) SetLevel(level string) error {
-	levelNumber, err := core.ParseLevel(level)
+	levelNumber, err := insolar.ParseLevel(level)
 	if err != nil {
 		return err
 	}
@@ -211,8 +211,8 @@ func (l logrusAdapter) SetLevel(level string) error {
 	return nil
 }
 
-func (l logrusAdapter) SetLevelNumber(level core.LogLevel) error {
-	if level == core.NoLevel {
+func (l logrusAdapter) SetLevelNumber(level insolar.LogLevel) error {
+	if level == insolar.NoLevel {
 		return nil
 	}
 	logrusLevel, err := InternalLevelToLogrusLevel(level)
@@ -224,7 +224,7 @@ func (l logrusAdapter) SetLevelNumber(level core.LogLevel) error {
 }
 
 // returns new adapter
-func (l logrusAdapter) Copy() core.Logger {
+func (l logrusAdapter) Copy() insolar.Logger {
 	adapterCopy, entryCopy := l, *l.entry
 	adapterCopy.entry = &entryCopy
 	return adapterCopy

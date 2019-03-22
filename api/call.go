@@ -166,7 +166,7 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 				processError(err, "Bad type logLevel", &resp, insLog)
 				return
 			}
-			logLevelNumber, err := core.ParseLevel(logLevelStr)
+			logLevelNumber, err := insolar.ParseLevel(logLevelStr)
 			if err != nil {
 				processError(err, "Can't parse logLevel", &resp, insLog)
 				return

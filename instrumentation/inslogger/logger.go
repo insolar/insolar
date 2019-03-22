@@ -42,9 +42,9 @@ func SetLogger(ctx context.Context, l insolar.Logger) context.Context {
 	return context.WithValue(ctx, loggerKey{}, l)
 }
 
-// SetLoggerLevel returns context with provided core.LogLevel and set logLevel on logger,
-func WithLoggerLevel(ctx context.Context, logLevel core.LogLevel) context.Context {
-	if logLevel != core.NoLevel {
+// SetLoggerLevel returns context with provided insolar.LogLevel and set logLevel on logger,
+func WithLoggerLevel(ctx context.Context, logLevel insolar.LogLevel) context.Context {
+	if logLevel != insolar.NoLevel {
 		oldLogger := FromContext(ctx)
 		logCopy := oldLogger.Copy()
 		if err := logCopy.SetLevelNumber(logLevel); err != nil {
@@ -91,15 +91,15 @@ func TestContext(t *testing.T) context.Context {
 	return ctx
 }
 
-func GetLoggerLevel(ctx context.Context) core.LogLevel {
+func GetLoggerLevel(ctx context.Context) insolar.LogLevel {
 	logLevel := ctx.Value(loggerLevelKey{})
 	if logLevel == nil {
-		return core.NoLevel
+		return insolar.NoLevel
 	}
 
-	logLevelValue, ok := logLevel.(core.LogLevel)
+	logLevelValue, ok := logLevel.(insolar.LogLevel)
 	if !ok {
-		return core.NoLevel
+		return insolar.NoLevel
 	}
 
 	return logLevelValue

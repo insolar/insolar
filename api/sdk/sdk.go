@@ -23,7 +23,7 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/api/requester"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
@@ -62,7 +62,7 @@ type memberKeys struct {
 type SDK struct {
 	apiURLs    *ringBuffer
 	rootMember *requester.UserConfigJSON
-	logLevel    interface{}
+	logLevel   interface{}
 }
 
 // NewSDK creates insSDK object
@@ -99,7 +99,7 @@ func NewSDK(urls []string, rootMemberKeysPath string) (*SDK, error) {
 }
 
 func (sdk *SDK) SetLogLevel(logLevel string) error {
-	_, err := core.ParseLevel(logLevel)
+	_, err := insolar.ParseLevel(logLevel)
 	if err != nil {
 		return errors.Wrap(err, "Invalid log level provided")
 	}

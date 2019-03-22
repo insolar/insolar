@@ -27,8 +27,8 @@ import (
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/cryptography"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/platformpolicy"
@@ -95,11 +95,11 @@ var (
 	verbose            bool
 	sendUrls           string
 	rootAsCaller       bool
-	logLevelServer     core.LogLevel
+	logLevelServer     insolar.LogLevel
 )
 
 func parseInputParams() {
-	var  rootCmd = &cobra.Command{}
+	var rootCmd = &cobra.Command{}
 	rootCmd.Flags().StringVarP(&cmd, "cmd", "c", "",
 		"available commands: default_config | random_ref | version | gen_keys | gen_certificate | send_request | gen_send_configs | get_info | create_member")
 	rootCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "be verbose (default false)")
@@ -116,7 +116,7 @@ func parseInputParams() {
 	err := rootCmd.Execute()
 	check("Wrong input params:", err)
 
-	logLevelServer, err = core.ParseLevel(logLevelServerString)
+	logLevelServer, err = insolar.ParseLevel(logLevelServerString)
 	check("Failed to parse logging level", err)
 
 	if len(cmd) == 0 {
