@@ -52,10 +52,6 @@ func (m *mockStateMachineHolder) makeSetAccessor() statemachine.SetAccessor {
 	}
 }
 
-func (m *mockStateMachineHolder) GetConfigByPulseState(pulseState int) statemachine.SetAccessor {
-	return m.makeSetAccessor()
-}
-
 func (m *mockStateMachineHolder) GetFutureConfig() statemachine.SetAccessor {
 	return m.makeSetAccessor()
 }
