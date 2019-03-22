@@ -26,15 +26,15 @@ type idType = uint32
 
 // PulseConveyorAdapterTaskSink is iface which helps to slot to push task to adapter
 type PulseConveyorAdapterTaskSink interface {
-	PushTask(respSink AdaptorToSlotResponseSink, elementID idType, handlerID idType, taskPayload interface{}) error
+	PushTask(respSink AdapterToSlotResponseSink, elementID idType, handlerID idType, taskPayload interface{}) error
 	CancelElementTasks(pulseNumber idType, elementID idType)
 	CancelPulseTasks(pulseNumber uint32)
 	FlushPulseTasks(pulseNumber uint32)
 	FlushNodeTasks(nodeID idType)
 }
 
-// AdaptorToSlotResponseSink is iface which helps to adapter to access to slot
-type AdaptorToSlotResponseSink interface {
+// AdapterToSlotResponseSink is iface which helps to adapter to access to slot
+type AdapterToSlotResponseSink interface {
 	PushResponse(adapterID idType, elementID idType, handlerID idType, respPayload interface{})
 	PushNestedEvent(adapterID idType, parentElementID idType, handlerID idType, eventPayload interface{})
 	GetPulseNumber() uint32
@@ -44,7 +44,7 @@ type AdaptorToSlotResponseSink interface {
 
 // AdapterTask contains info for launch adapter task
 type AdapterTask struct {
-	respSink    AdaptorToSlotResponseSink
+	respSink    AdapterToSlotResponseSink
 	elementID   idType
 	handlerID   idType
 	taskPayload interface{}
