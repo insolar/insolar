@@ -21,10 +21,8 @@ import (
 )
 
 var (
-	// IdxNotFound is returned when index not found.
-	IdxNotFound = errors.New("index not found")
-	// RecNotFound is returned when record not found.
-	RecNotFound = errors.New("record not found")
+	// ErrNotFound is returned when value not found.
+	ErrNotFound = errors.New("not found")
 	// ErrOverride is returned when trying to update existing record with the same id.
 	ErrOverride = errors.New("record override is forbidden")
 )

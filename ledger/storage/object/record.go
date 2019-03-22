@@ -123,7 +123,7 @@ func (m *RecordMemory) ForID(ctx context.Context, id insolar.ID) (rec MaterialRe
 
 	rec, ok := m.memory[id]
 	if !ok {
-		err = RecNotFound
+		err = ErrNotFound
 		return
 	}
 
@@ -182,7 +182,7 @@ func (r *RecordDB) set(id insolar.ID, rec MaterialRecord) error {
 func (r *RecordDB) get(id insolar.ID) (rec MaterialRecord, err error) {
 	buff, err := r.DB.Get(recordKey(id))
 	if err == db.ErrNotFound {
-		err = RecNotFound
+		err = ErrNotFound
 		return
 	}
 	if err != nil {

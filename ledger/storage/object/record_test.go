@@ -70,7 +70,7 @@ func TestRecordStorage_ForID(t *testing.T) {
 
 		_, err := recordStorage.ForID(ctx, gen.ID())
 		require.Error(t, err)
-		assert.Equal(t, RecNotFound, err)
+		assert.Equal(t, ErrNotFound, err)
 	})
 }
 

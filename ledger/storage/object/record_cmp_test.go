@@ -83,8 +83,8 @@ func TestRecord_Components(t *testing.T) {
 			_, dbErr := dbStorage.ForID(ctx, gen.ID())
 			require.Error(t, memErr)
 			require.Error(t, dbErr)
-			assert.Equal(t, object.RecNotFound, memErr)
-			assert.Equal(t, object.RecNotFound, dbErr)
+			assert.Equal(t, object.ErrNotFound, memErr)
+			assert.Equal(t, object.ErrNotFound, dbErr)
 		}
 	})
 

@@ -78,7 +78,7 @@ func TestInMemoryIndex(t *testing.T) {
 		for i := int32(0); i < rand.Int31n(10); i++ {
 			_, err := indexStorage.ForID(ctx, gen.ID())
 			require.Error(t, err)
-			assert.Equal(t, object.IdxNotFound, err)
+			assert.Equal(t, object.ErrNotFound, err)
 		}
 	})
 

@@ -140,7 +140,7 @@ func (m *IndexMemory) ForID(ctx context.Context, id insolar.ID) (index Lifeline,
 
 	idx, ok := m.memory[id]
 	if !ok {
-		err = IdxNotFound
+		err = ErrNotFound
 		return
 	}
 
