@@ -53,7 +53,7 @@ type exporterSuite struct {
 	pulseStorage  *storage.PulseStorage
 
 	exporter    *Exporter
-	jetRecordID insolar.RecordID
+	jetRecordID insolar.ID
 }
 
 func NewExporterSuite() *exporterSuite {
@@ -70,7 +70,7 @@ func TestExporter(t *testing.T) {
 func (s *exporterSuite) BeforeTest(suiteName, testName string) {
 	s.cm = &component.Manager{}
 	s.ctx = inslogger.TestContext(s.T())
-	s.jetRecordID = insolar.NewID(core.ZeroJetID)
+	s.jetRecordID = insolar.ID(insolar.ZeroJetID)
 
 	db, cleaner := storagetest.TmpDB(s.ctx, s.T())
 	s.cleaner = cleaner
@@ -233,7 +233,7 @@ func (s *exporterSuite) TestExporter_ExportGetBlobFailed() {
 		require.NoError(s.T(), err)
 	}
 
-	_, err := s.objectStorage.SetRecord(s.ctx, s.jetRecordID, core.FirstPulseNumber+10, &object.ObjectActivateRecord{
+	_, err := s.objectStorage.SetRecord(s.ctx, s.jetRecordID, insolar.FirstPulseNumber+10, &object.ObjectActivateRecord{
 		ObjectStateRecord: object.ObjectStateRecord{
 			Memory: &insolar.ID{},
 		},
