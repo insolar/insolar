@@ -499,15 +499,6 @@ func (w *worker) migrate(status ActivationStatus) error {
 
 }
 
-func adjustPulseState(pulseState constant.PulseState) int {
-	result := int(pulseState)
-	if pulseState == constant.Antique {
-		result = int(constant.Past)
-	}
-
-	return result
-}
-
 func (w *worker) setPulseStateMachines() {
 
 	var stateMachines statemachine.SetAccessor
