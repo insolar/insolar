@@ -74,6 +74,7 @@ func TestFirstPhase_HandlePulse(t *testing.T) {
 	pulseCalculatorMock := merkle.NewCalculatorMock(t)
 	communicatorMock := NewCommunicatorMock(t)
 	consensusNetworkMock := network.NewConsensusNetworkMock(t)
+	terminationHandler := testutils.NewTerminationHandlerMock(t)
 
 	cryptoServ := testutils.NewCryptographyServiceMock(t)
 	cryptoServ.SignFunc = func(p []byte) (r *core.Signature, r1 error) {
@@ -85,7 +86,7 @@ func TestFirstPhase_HandlePulse(t *testing.T) {
 	}
 
 	cm := component.Manager{}
-	cm.Inject(cryptoServ, nodeKeeper, firstPhase, pulseCalculatorMock, communicatorMock, consensusNetworkMock)
+	cm.Inject(cryptoServ, nodeKeeper, firstPhase, pulseCalculatorMock, communicatorMock, consensusNetworkMock, terminationHandler)
 
 	require.NotNil(t, firstPhase.Calculator)
 	require.NotNil(t, firstPhase.NodeKeeper)
