@@ -40,7 +40,6 @@ type MachineType int
 
 const (
     {{range $i, $m := .Machines}}{{$m.Name}}{{if (isNull $i)}} MachineType = iota + 1{{end}}{{end}}
-    InitialEvent
 )
 
 func NewMatrix() *Matrix {
@@ -61,10 +60,18 @@ func NewMatrix() *Matrix {
     return &m
 }
 
-func (m *Matrix) GetConfigByPulseState(pulseState int) statemachine.SetAccessor {
-    return &m.matrix[pulseState]
-}
-
 func (m *Matrix) GetInitialStateMachine() statemachine.StateMachine {
     return m.matrix[1].stateMachines[1]
+}
+
+func (m *Matrix) GetFutureConfig() statemachine.SetAccessor{
+    return &m.matrix[0]
+}
+
+func (m *Matrix) GetPresentConfig() statemachine.SetAccessor{
+    return &m.matrix[1]
+}
+
+func (m *Matrix) GetPastConfig() statemachine.SetAccessor{
+    return &m.matrix[2]
 }
