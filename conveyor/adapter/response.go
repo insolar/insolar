@@ -64,10 +64,10 @@ func (rs *SendResponseProcessor) Process(task AdapterTask, nestedEventHelper Nes
 }
 
 // ResponseSenderHelper is helper for ResponseSender
-type ResponseSenderHelper struct{}
+type SendResponseHelper struct{}
 
 // SendResponse makes correct message and send it to adapter
-func (r *ResponseSenderHelper) SendResponse(element slot.SlotElementHelper, result core.Reply, respHandlerID uint32) error {
+func (r *SendResponseHelper) SendResponse(element slot.SlotElementHelper, result core.Reply, respHandlerID uint32) error {
 
 	pendingMsg, ok := element.GetInputEvent().(core.ConveyorPendingMessage)
 	if !ok {
@@ -78,6 +78,6 @@ func (r *ResponseSenderHelper) SendResponse(element slot.SlotElementHelper, resu
 		Future: pendingMsg.Future,
 		Result: result,
 	}
-	err := element.SendTask(uint32(ResponseSenderAdapterID), response, respHandlerID)
+	err := element.SendTask(uint32(SendResponseAdapterID), response, respHandlerID)
 	return errors.Wrap(err, "[ ResponseSenderHelper.SendResponse ] Can't SendTask")
 }

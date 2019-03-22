@@ -17,11 +17,11 @@
 package adapter
 
 type Catalog struct {
-	responseSenderHelper ResponseSenderHelper
+	responseSenderHelper SendResponseHelper
 }
 
 func newCatalog() *Catalog {
 	return &Catalog{
-		responseSenderHelper: ResponseSenderHelper{},
+		responseSenderHelper: SendResponseHelper{},
 	}
 }

@@ -19,5 +19,5 @@ package adapter
 type ID uint32
 
 const (
-	ResponseSenderAdapterID ID = iota + 1
+	SendResponseAdapterID ID = iota + 1
 )
