@@ -12,38 +12,35 @@
 *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 *    See the License for the specific language governing permissions and
 *    limitations under the License.
-*/
+ */
 
 package matrix
 
 import (
-    "github.com/insolar/insolar/conveyor/interfaces/statemachine"
-    "github.com/insolar/insolar/conveyor/generator/state_machines/getcode"
-    "github.com/insolar/insolar/conveyor/generator/state_machines/sample"
-    
+	"github.com/insolar/insolar/conveyor/generator/state_machines/sample"
+	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
 )
 
 type Matrix struct {
-    matrix  [][3]statemachine.StateMachine
+	matrix [][3]statemachine.StateMachine
 }
 
 type MachineType int
 
 const (
-    GetCodeStateMachine MachineType = iota + 1TestStateMachine
-    InitialEvent
+	TestStateMachine MachineType = iota + 1
+	InitialEvent
 )
 
 func NewMatrix() *Matrix {
-    m := Matrix{}
-    m.matrix = append(m.matrix,
-        [3]statemachine.StateMachine{ },
-        getcode.RawGetCodeStateMachineFactory(),
-        sample.RawTestStateMachineFactory(),
-        )
-    return &m
+	m := Matrix{}
+	m.matrix = append(m.matrix,
+		[3]statemachine.StateMachine{},
+		sample.RawTestStateMachineFactory(),
+	)
+	return &m
 }
 
 func (m *Matrix) GetStateMachinesByType(mType MachineType) [3]statemachine.StateMachine {
-    return m.matrix[int(mType)]
+	return m.matrix[int(mType)]
 }
