@@ -77,8 +77,10 @@ func (rs *ResponseSender) Process(adapterID uint32, task AdapterTask, cancelInfo
 	return Events{RespPayload: msg}
 }
 
+// ResponseSenderHelper is helper for ResponseSender
 type ResponseSenderHelper struct{}
 
+// SendResponse makes correct message and send it to adapter
 func (r *ResponseSenderHelper) SendResponse(element slot.SlotElementHelper, result core.Reply, respHandlerID uint32) error {
 
 	pendingMsg, ok := element.GetInputEvent().(core.ConveyorPendingMessage)
