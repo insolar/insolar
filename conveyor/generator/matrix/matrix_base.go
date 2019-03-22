@@ -19,5 +19,8 @@ package matrix
 import "github.com/insolar/insolar/conveyor/interfaces/statemachine"
 
 type StateMachineHolder interface {
-	GetStateMachinesByType(mType MachineType) [3]statemachine.StateMachine
+	GetFutureConfig() statemachine.SetAccessor
+	GetPresentConfig() statemachine.SetAccessor
+	GetPastConfig() statemachine.SetAccessor
+	GetInitialStateMachine() statemachine.StateMachine
 }
