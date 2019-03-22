@@ -32,9 +32,9 @@ type replyMock int
 func (replyMock) Type() core.ReplyType {
 	return core.ReplyType(124)
 }
-func testResponseSenderTask(t *testing.T) ResponseSenderTask {
+func testResponseSenderTask(t *testing.T) SendResponseTask {
 	res := replyMock(111)
-	return ResponseSenderTask{Future: mockConveyorFuture(t, res), Result: res}
+	return SendResponseTask{Future: mockConveyorFuture(t, res), Result: res}
 }
 
 func mockConveyorFuture(t *testing.T, result core.Reply) *testutils.ConveyorFutureMock {
@@ -64,7 +64,7 @@ func TestResponseSendAdapter_PushTask_IncorrectPayload(t *testing.T) {
 	// TODO: wait until swa.taskHolder is empty (i.e. task was done)
 	time.Sleep(200 * time.Millisecond)
 	require.Error(t, resp.GetResponse().(error))
-	require.Contains(t, resp.GetResponse().(error).Error(), "[ ResponseSender.Process ] Incorrect payload type: int")
+	require.Contains(t, resp.GetResponse().(error).Error(), "[ SendResponseProcessor.Process ] Incorrect payload type: int")
 }
 
 func TestResponseSendAdapter_PushTask(t *testing.T) {
