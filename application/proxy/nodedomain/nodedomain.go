@@ -17,20 +17,20 @@
 package nodedomain
 
 import (
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = core.NewRefFromBase58("11112h1xisMHk3SDW77aJKeWZPDW2mQySW56JKqvCvC.11111111111111111111111111111111")
+var PrototypeReference, _ = insolar.NewRefFromBase58("11112oevBrSr8ZYLKkpF3xcoG6fPBduvdJJ3Ez6himF.11111111111111111111111111111111")
 
 // NodeDomain holds proxy type
 type NodeDomain struct {
-	Reference core.RecordRef
-	Prototype core.RecordRef
-	Code      core.RecordRef
+	Reference insolar.RecordRef
+	Prototype insolar.RecordRef
+	Code      insolar.RecordRef
 }
 
 // ContractConstructorHolder holds logic with object construction
@@ -40,7 +40,7 @@ type ContractConstructorHolder struct {
 }
 
 // AsChild saves object as child
-func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) (*NodeDomain, error) {
+func (r *ContractConstructorHolder) AsChild(objRef insolar.RecordRef) (*NodeDomain, error) {
 	ref, err := proxyctx.Current.SaveAsChild(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
 	if err != nil {
 		return nil, err
@@ -49,7 +49,7 @@ func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) (*NodeDomain,
 }
 
 // AsDelegate saves object as delegate
-func (r *ContractConstructorHolder) AsDelegate(objRef core.RecordRef) (*NodeDomain, error) {
+func (r *ContractConstructorHolder) AsDelegate(objRef insolar.RecordRef) (*NodeDomain, error) {
 	ref, err := proxyctx.Current.SaveAsDelegate(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
 	if err != nil {
 		return nil, err
@@ -58,17 +58,17 @@ func (r *ContractConstructorHolder) AsDelegate(objRef core.RecordRef) (*NodeDoma
 }
 
 // GetObject returns proxy object
-func GetObject(ref core.RecordRef) (r *NodeDomain) {
+func GetObject(ref insolar.RecordRef) (r *NodeDomain) {
 	return &NodeDomain{Reference: ref}
 }
 
 // GetPrototype returns reference to the prototype
-func GetPrototype() core.RecordRef {
+func GetPrototype() insolar.RecordRef {
 	return *PrototypeReference
 }
 
 // GetImplementationFrom returns proxy to delegate of given type
-func GetImplementationFrom(object core.RecordRef) (*NodeDomain, error) {
+func GetImplementationFrom(object insolar.RecordRef) (*NodeDomain, error) {
 	ref, err := proxyctx.Current.GetDelegate(object, *PrototypeReference)
 	if err != nil {
 		return nil, err
@@ -90,15 +90,15 @@ func NewNodeDomain() *ContractConstructorHolder {
 }
 
 // GetReference returns reference of the object
-func (r *NodeDomain) GetReference() core.RecordRef {
+func (r *NodeDomain) GetReference() insolar.RecordRef {
 	return r.Reference
 }
 
 // GetPrototype returns reference to the code
-func (r *NodeDomain) GetPrototype() (core.RecordRef, error) {
+func (r *NodeDomain) GetPrototype() (insolar.RecordRef, error) {
 	if r.Prototype.IsEmpty() {
 		ret := [2]interface{}{}
-		var ret0 core.RecordRef
+		var ret0 insolar.RecordRef
 		ret[0] = &ret0
 		var ret1 *foundation.Error
 		ret[1] = &ret1
@@ -125,10 +125,10 @@ func (r *NodeDomain) GetPrototype() (core.RecordRef, error) {
 }
 
 // GetCode returns reference to the code
-func (r *NodeDomain) GetCode() (core.RecordRef, error) {
+func (r *NodeDomain) GetCode() (insolar.RecordRef, error) {
 	if r.Code.IsEmpty() {
 		ret := [2]interface{}{}
-		var ret0 core.RecordRef
+		var ret0 insolar.RecordRef
 		ret[0] = &ret0
 		var ret1 *foundation.Error
 		ret[1] = &ret1
@@ -264,7 +264,7 @@ func (r *NodeDomain) GetNodeRefByPKNoWait(publicKey string) error {
 }
 
 // RemoveNode is proxy generated method
-func (r *NodeDomain) RemoveNode(nodeRef core.RecordRef) error {
+func (r *NodeDomain) RemoveNode(nodeRef insolar.RecordRef) error {
 	var args [1]interface{}
 	args[0] = nodeRef
 
@@ -296,7 +296,7 @@ func (r *NodeDomain) RemoveNode(nodeRef core.RecordRef) error {
 }
 
 // RemoveNodeNoWait is proxy generated method
-func (r *NodeDomain) RemoveNodeNoWait(nodeRef core.RecordRef) error {
+func (r *NodeDomain) RemoveNodeNoWait(nodeRef insolar.RecordRef) error {
 	var args [1]interface{}
 	args[0] = nodeRef
 

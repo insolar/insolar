@@ -19,7 +19,7 @@ package storagetest
 import (
 	"context"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/object"
@@ -31,9 +31,9 @@ func AddRandIndex(
 	ctx context.Context,
 	// t *testing.T,
 	objectStorage storage.ObjectStorage,
-	jetID core.RecordID,
-	pulsenum core.PulseNumber,
-) (*core.RecordID, error) {
+	jetID insolar.RecordID,
+	pulsenum insolar.PulseNumber,
+) (*insolar.RecordID, error) {
 	parentID := testutils.RandomID()
 	err := objectStorage.SetObjectIndex(ctx, jetID, &parentID, &object.Lifeline{
 		LatestState: &parentID,
@@ -45,9 +45,9 @@ func AddRandIndex(
 func AddRandBlob(
 	ctx context.Context,
 	objectStorage storage.ObjectStorage,
-	jetID core.RecordID,
-	pulsenum core.PulseNumber,
-) (*core.RecordID, error) {
+	jetID insolar.RecordID,
+	pulsenum insolar.PulseNumber,
+) (*insolar.RecordID, error) {
 	randID := testutils.RandomID()
 	return objectStorage.SetBlob(ctx, jetID, pulsenum, randID[:])
 }
@@ -56,9 +56,9 @@ func AddRandBlob(
 func AddRandRecord(
 	ctx context.Context,
 	objectStorage storage.ObjectStorage,
-	jetID core.RecordID,
-	pulsenum core.PulseNumber,
-) (*core.RecordID, error) {
+	jetID insolar.RecordID,
+	pulsenum insolar.PulseNumber,
+) (*insolar.RecordID, error) {
 
 	randID := testutils.RandomID()
 	record := object.CodeRecord{
@@ -77,8 +77,8 @@ func AddRandDrop(
 	ctx context.Context,
 	modifier drop.Modifier,
 	accessor drop.Accessor,
-	jetID core.RecordID,
-	pulsenum core.PulseNumber,
+	jetID insolar.RecordID,
+	pulsenum insolar.PulseNumber,
 ) (*drop.Drop, error) {
 
 	hash1 := testutils.RandomID()
@@ -87,12 +87,12 @@ func AddRandDrop(
 		Pulse:    pulsenum,
 		PrevHash: hash1[:],
 		Hash:     hash2[:],
-		JetID:    core.JetID(jetID),
+		JetID:    insolar.JetID(jetID),
 	}
 	err := modifier.Set(ctx, drop)
 	if err != nil {
 		return nil, err
 	}
-	resDrop, err := accessor.ForPulse(ctx, core.JetID(jetID), pulsenum)
+	resDrop, err := accessor.ForPulse(ctx, insolar.JetID(jetID), pulsenum)
 	return &resDrop, err
 }

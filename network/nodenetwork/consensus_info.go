@@ -53,7 +53,7 @@ package nodenetwork
 import (
 	"sync"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/pkg/errors"
@@ -61,8 +61,8 @@ import (
 
 type consensusInfo struct {
 	lock                       sync.RWMutex
-	tempMapR                   map[core.RecordRef]*host.Host
-	tempMapS                   map[core.ShortNodeID]*host.Host
+	tempMapR                   map[insolar.RecordRef]*host.Host
+	tempMapS                   map[insolar.ShortNodeID]*host.Host
 	nodesJoinedDuringPrevPulse bool
 	isJoiner                   bool
 }
@@ -88,7 +88,7 @@ func (ci *consensusInfo) NodesJoinedDuringPreviousPulse() bool {
 	return ci.nodesJoinedDuringPrevPulse
 }
 
-func (ci *consensusInfo) AddTemporaryMapping(nodeID core.RecordRef, shortID core.ShortNodeID, address string) error {
+func (ci *consensusInfo) AddTemporaryMapping(nodeID insolar.RecordRef, shortID insolar.ShortNodeID, address string) error {
 	consensusAddress, err := incrementPort(address)
 	if err != nil {
 		return errors.Wrapf(err, "Failed to increment port for address %s", address)
@@ -105,14 +105,14 @@ func (ci *consensusInfo) AddTemporaryMapping(nodeID core.RecordRef, shortID core
 	return nil
 }
 
-func (ci *consensusInfo) ResolveConsensus(shortID core.ShortNodeID) *host.Host {
+func (ci *consensusInfo) ResolveConsensus(shortID insolar.ShortNodeID) *host.Host {
 	ci.lock.RLock()
 	defer ci.lock.RUnlock()
 
 	return ci.tempMapS[shortID]
 }
 
-func (ci *consensusInfo) ResolveConsensusRef(nodeID core.RecordRef) *host.Host {
+func (ci *consensusInfo) ResolveConsensusRef(nodeID insolar.RecordRef) *host.Host {
 	ci.lock.RLock()
 	defer ci.lock.RUnlock()
 
@@ -123,14 +123,14 @@ func (ci *consensusInfo) flush(nodesJoinedDuringPrevPulse bool) {
 	ci.lock.Lock()
 	defer ci.lock.Unlock()
 
-	ci.tempMapR = make(map[core.RecordRef]*host.Host)
-	ci.tempMapS = make(map[core.ShortNodeID]*host.Host)
+	ci.tempMapR = make(map[insolar.RecordRef]*host.Host)
+	ci.tempMapS = make(map[insolar.ShortNodeID]*host.Host)
 	ci.nodesJoinedDuringPrevPulse = nodesJoinedDuringPrevPulse
 }
 
 func newConsensusInfo() *consensusInfo {
 	return &consensusInfo{
-		tempMapR: make(map[core.RecordRef]*host.Host),
-		tempMapS: make(map[core.ShortNodeID]*host.Host),
+		tempMapR: make(map[insolar.RecordRef]*host.Host),
+		tempMapS: make(map[insolar.ShortNodeID]*host.Host),
 	}
 }

@@ -57,7 +57,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 )
 
@@ -86,16 +86,16 @@ func AtomicLoadAndIncrementUint64(addr *uint64) uint64 {
 }
 
 // GenerateShortID generate short ID for node without checking collisions
-func GenerateShortID(ref core.RecordRef) core.ShortNodeID {
-	return core.ShortNodeID(GenerateUintShortID(ref))
+func GenerateShortID(ref insolar.RecordRef) insolar.ShortNodeID {
+	return insolar.ShortNodeID(GenerateUintShortID(ref))
 }
 
 // GenerateShortID generate short ID for node without checking collisions
-func GenerateUintShortID(ref core.RecordRef) uint32 {
+func GenerateUintShortID(ref insolar.RecordRef) uint32 {
 	return crc32.ChecksumIEEE(ref[:])
 }
 
-func OriginIsDiscovery(cert core.Certificate) bool {
+func OriginIsDiscovery(cert insolar.Certificate) bool {
 	bNodes := cert.GetDiscoveryNodes()
 	for _, discoveryNode := range bNodes {
 		if cert.GetNodeRef().Equal(*discoveryNode.GetNodeRef()) {

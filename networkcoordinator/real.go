@@ -55,24 +55,24 @@ import (
 
 	"github.com/insolar/insolar/application/extractor"
 	"github.com/insolar/insolar/certificate"
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/message"
-	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/reply"
 	"github.com/pkg/errors"
 )
 
 type realNetworkCoordinator struct {
-	CertificateManager core.CertificateManager
-	ContractRequester  core.ContractRequester
-	MessageBus         core.MessageBus
-	CS                 core.CryptographyService
+	CertificateManager insolar.CertificateManager
+	ContractRequester  insolar.ContractRequester
+	MessageBus         insolar.MessageBus
+	CS                 insolar.CryptographyService
 }
 
 func newRealNetworkCoordinator(
-	manager core.CertificateManager,
-	requester core.ContractRequester,
-	msgBus core.MessageBus,
-	cs core.CryptographyService,
+	manager insolar.CertificateManager,
+	requester insolar.ContractRequester,
+	msgBus insolar.MessageBus,
+	cs insolar.CryptographyService,
 ) *realNetworkCoordinator {
 	return &realNetworkCoordinator{
 		CertificateManager: manager,
@@ -83,7 +83,7 @@ func newRealNetworkCoordinator(
 }
 
 // GetCert method generates cert by requesting signs from discovery nodes
-func (rnc *realNetworkCoordinator) GetCert(ctx context.Context, registeredNodeRef *core.RecordRef) (core.Certificate, error) {
+func (rnc *realNetworkCoordinator) GetCert(ctx context.Context, registeredNodeRef *insolar.RecordRef) (insolar.Certificate, error) {
 	pKey, role, err := rnc.getNodeInfo(ctx, registeredNodeRef)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ GetCert ] Couldn't get node info")
@@ -106,7 +106,7 @@ func (rnc *realNetworkCoordinator) GetCert(ctx context.Context, registeredNodeRe
 }
 
 // requestCertSign method requests sign from single discovery node
-func (rnc *realNetworkCoordinator) requestCertSign(ctx context.Context, discoveryNode core.DiscoveryNode, registeredNodeRef *core.RecordRef) ([]byte, error) {
+func (rnc *realNetworkCoordinator) requestCertSign(ctx context.Context, discoveryNode insolar.DiscoveryNode, registeredNodeRef *insolar.RecordRef) ([]byte, error) {
 	var sign []byte
 	var err error
 
@@ -121,7 +121,7 @@ func (rnc *realNetworkCoordinator) requestCertSign(ctx context.Context, discover
 		msg := &message.NodeSignPayload{
 			NodeRef: registeredNodeRef,
 		}
-		opts := &core.MessageSendOptions{
+		opts := &insolar.MessageSendOptions{
 			Receiver: discoveryNode.GetNodeRef(),
 		}
 		r, err := rnc.MessageBus.Send(ctx, msg, opts)
@@ -135,7 +135,7 @@ func (rnc *realNetworkCoordinator) requestCertSign(ctx context.Context, discover
 }
 
 // signCertHandler is MsgBus handler that signs certificate for some node with node own key
-func (rnc *realNetworkCoordinator) signCertHandler(ctx context.Context, p core.Parcel) (core.Reply, error) {
+func (rnc *realNetworkCoordinator) signCertHandler(ctx context.Context, p insolar.Parcel) (insolar.Reply, error) {
 	nodeRef := p.Message().(message.NodeSignPayloadInt).GetNodeRef()
 	sign, err := rnc.signCert(ctx, nodeRef)
 	if err != nil {
@@ -147,7 +147,7 @@ func (rnc *realNetworkCoordinator) signCertHandler(ctx context.Context, p core.P
 }
 
 // signCert returns certificate sign fore node
-func (rnc *realNetworkCoordinator) signCert(ctx context.Context, registeredNodeRef *core.RecordRef) ([]byte, error) {
+func (rnc *realNetworkCoordinator) signCert(ctx context.Context, registeredNodeRef *insolar.RecordRef) ([]byte, error) {
 	pKey, role, err := rnc.getNodeInfo(ctx, registeredNodeRef)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ SignCert ] Couldn't extract response")
@@ -163,7 +163,7 @@ func (rnc *realNetworkCoordinator) signCert(ctx context.Context, registeredNodeR
 }
 
 // getNodeInfo request info from ledger
-func (rnc *realNetworkCoordinator) getNodeInfo(ctx context.Context, nodeRef *core.RecordRef) (string, string, error) {
+func (rnc *realNetworkCoordinator) getNodeInfo(ctx context.Context, nodeRef *insolar.RecordRef) (string, string, error) {
 	res, err := rnc.ContractRequester.SendRequest(ctx, nodeRef, "GetNodeInfo", []interface{}{})
 	if err != nil {
 		return "", "", errors.Wrap(err, "[ GetCert ] Couldn't call GetNodeInfo")
@@ -176,6 +176,6 @@ func (rnc *realNetworkCoordinator) getNodeInfo(ctx context.Context, nodeRef *cor
 }
 
 // SetPulse uses PulseManager component for saving pulse info
-func (rnc *realNetworkCoordinator) SetPulse(ctx context.Context, pulse core.Pulse) error {
+func (rnc *realNetworkCoordinator) SetPulse(ctx context.Context, pulse insolar.Pulse) error {
 	return errors.New("not implemented")
 }

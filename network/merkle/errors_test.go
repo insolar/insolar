@@ -57,7 +57,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/component"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/ledger/ledgertestutils"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar/pulsartestutils"
@@ -72,9 +72,9 @@ import (
 type calculatorErrorSuite struct {
 	suite.Suite
 
-	pulse       *core.Pulse
-	nodeNetwork core.NodeNetwork
-	service     core.CryptographyService
+	pulse       *insolar.Pulse
+	nodeNetwork insolar.NodeNetwork
+	service     insolar.CryptographyService
 
 	calculator Calculator
 }
@@ -120,7 +120,7 @@ func (t *calculatorErrorSuite) TestGetGlobuleProofSignError() {
 	globuleEntry := &GlobuleEntry{
 		PulseEntry: pulseEntry,
 		PulseHash:  nil,
-		ProofSet: map[core.Node]*PulseProof{
+		ProofSet: map[insolar.NetworkNode]*PulseProof{
 			t.nodeNetwork.GetOrigin(): {},
 		},
 		PrevCloudHash: prevCloudHash,
@@ -162,7 +162,7 @@ func (t *calculatorErrorSuite) TestGetCloudProofCalculateError() {
 
 func TestCalculatorError(t *testing.T) {
 	// FIXME: TmpLedger is deprecated. Use mocks instead.
-	l, _, clean := ledgertestutils.TmpLedger(t, "", core.StaticRoleLightMaterial, core.Components{}, true)
+	l, _, clean := ledgertestutils.TmpLedger(t, "", insolar.StaticRoleLightMaterial, insolar.Components{}, true)
 
 	calculator := &calculator{}
 
@@ -172,7 +172,7 @@ func TestCalculatorError(t *testing.T) {
 	require.NotNil(t, key)
 
 	service := testutils.NewCryptographyServiceMock(t)
-	service.SignFunc = func(p []byte) (r *core.Signature, r1 error) {
+	service.SignFunc = func(p []byte) (r *insolar.Signature, r1 error) {
 		return nil, errors.New("Sign error")
 	}
 	service.GetPublicKeyFunc = func() (r crypto.PublicKey, r1 error) {
@@ -197,9 +197,9 @@ func TestCalculatorError(t *testing.T) {
 	err := cm.Init(context.Background())
 	require.NoError(t, err)
 
-	pulse := &core.Pulse{
-		PulseNumber:     core.PulseNumber(1337),
-		NextPulseNumber: core.PulseNumber(1347),
+	pulse := &insolar.Pulse{
+		PulseNumber:     insolar.PulseNumber(1337),
+		NextPulseNumber: insolar.PulseNumber(1347),
 		Entropy:         pulsartestutils.MockEntropyGenerator{}.GenerateEntropy(),
 	}
 
@@ -224,7 +224,7 @@ func TestCalculatorLedgerError(t *testing.T) {
 	require.NotNil(t, key)
 
 	service := testutils.NewCryptographyServiceMock(t)
-	service.SignFunc = func(p []byte) (r *core.Signature, r1 error) {
+	service.SignFunc = func(p []byte) (r *insolar.Signature, r1 error) {
 		return nil, errors.New("Sign error")
 	}
 	service.GetPublicKeyFunc = func() (r crypto.PublicKey, r1 error) {
@@ -249,9 +249,9 @@ func TestCalculatorLedgerError(t *testing.T) {
 	err := cm.Init(context.Background())
 	require.NoError(t, err)
 
-	pulse := &core.Pulse{
-		PulseNumber:     core.PulseNumber(1337),
-		NextPulseNumber: core.PulseNumber(1347),
+	pulse := &insolar.Pulse{
+		PulseNumber:     insolar.PulseNumber(1337),
+		NextPulseNumber: insolar.PulseNumber(1347),
 		Entropy:         pulsartestutils.MockEntropyGenerator{}.GenerateEntropy(),
 	}
 

@@ -51,7 +51,7 @@
 package nodenetwork
 
 import (
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 )
 
 type ListType int
@@ -67,32 +67,32 @@ const (
 )
 
 type Snapshot struct {
-	pulse core.PulseNumber
-	state core.NetworkState
+	pulse insolar.PulseNumber
+	state insolar.NetworkState
 
-	nodeList [ListLength][]core.Node
+	nodeList [ListLength][]insolar.NetworkNode
 }
 
-func (s *Snapshot) GetPulse() core.PulseNumber {
+func (s *Snapshot) GetPulse() insolar.PulseNumber {
 	return s.pulse
 }
 
 // NewSnapshot create new snapshot for pulse.
-func NewSnapshot(number core.PulseNumber, nodes map[core.RecordRef]core.Node) *Snapshot {
+func NewSnapshot(number insolar.PulseNumber, nodes map[insolar.RecordRef]insolar.NetworkNode) *Snapshot {
 	return &Snapshot{
 		pulse: number,
 		// TODO: pass actual state
-		state:    core.NoNetworkState,
+		state:    insolar.NoNetworkState,
 		nodeList: splitNodes(nodes),
 	}
 }
 
 // splitNodes temporary method to create snapshot lists. Will be replaced by special function that will take in count
 // previous snapshot and approved claims.
-func splitNodes(nodes map[core.RecordRef]core.Node) [ListLength][]core.Node {
-	var result [ListLength][]core.Node
+func splitNodes(nodes map[insolar.RecordRef]insolar.NetworkNode) [ListLength][]insolar.NetworkNode {
+	var result [ListLength][]insolar.NetworkNode
 	for i := 0; i < int(ListLength); i++ {
-		result[i] = make([]core.Node, 0)
+		result[i] = make([]insolar.NetworkNode, 0)
 	}
 	for _, node := range nodes {
 		listType := nodeStateToListType(node.GetState())
@@ -104,13 +104,13 @@ func splitNodes(nodes map[core.RecordRef]core.Node) [ListLength][]core.Node {
 	return result
 }
 
-func nodeStateToListType(state core.NodeState) ListType {
+func nodeStateToListType(state insolar.NodeState) ListType {
 	switch state {
-	case core.NodeReady:
+	case insolar.NodeReady:
 		return ListWorking
-	case core.NodePending:
+	case insolar.NodePending:
 		return ListJoiner
-	case core.NodeUndefined, core.NodeLeaving:
+	case insolar.NodeUndefined, insolar.NodeLeaving:
 		return ListLeaving
 	}
 	// special case for no match

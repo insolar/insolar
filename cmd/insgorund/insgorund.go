@@ -31,7 +31,7 @@ import (
 
 	"github.com/spf13/pflag"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/goplugin/ginsider"
 )
@@ -72,7 +72,7 @@ func main() {
 			log.Fatal("code param format is <ref>:</path/to/plugin.so>")
 			os.Exit(1)
 		}
-		ref, err := core.NewRefFromBase58(codeSlice[0])
+		ref, err := insolar.NewRefFromBase58(codeSlice[0])
 		if err != nil {
 			log.Fatalf("Couldn't parse ref: %s", err.Error())
 			os.Exit(1)

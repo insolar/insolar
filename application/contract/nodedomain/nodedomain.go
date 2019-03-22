@@ -21,7 +21,7 @@ import (
 
 	"github.com/insolar/insolar/application/proxy/noderecord"
 	"github.com/insolar/insolar/application/proxy/rootdomain"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 
@@ -39,7 +39,7 @@ func NewNodeDomain() (*NodeDomain, error) {
 	}, nil
 }
 
-func (nd *NodeDomain) getNodeRecord(ref core.RecordRef) *noderecord.NodeRecord {
+func (nd *NodeDomain) getNodeRecord(ref insolar.RecordRef) *noderecord.NodeRecord {
 	return noderecord.GetObject(ref)
 }
 
@@ -70,17 +70,17 @@ func (nd *NodeDomain) RegisterNode(publicKey string, role string) (string, error
 func (nd *NodeDomain) GetNodeRefByPK(publicKey string) (string, error) {
 	nodeRef, ok := nd.NodeIndexPK[publicKey]
 	if !ok {
-		return nodeRef, fmt.Errorf("[ GetNodeRefByPK ] Node not found by PK: %s", publicKey)
+		return nodeRef, fmt.Errorf("[ GetNodeRefByPK ] NetworkNode not found by PK: %s", publicKey)
 	}
 	return nodeRef, nil
 }
 
 // RemoveNode deletes node from registry
-func (nd *NodeDomain) RemoveNode(nodeRef core.RecordRef) error {
+func (nd *NodeDomain) RemoveNode(nodeRef insolar.RecordRef) error {
 	node := nd.getNodeRecord(nodeRef)
 	nodePK, err := node.GetPublicKey()
 	if err != nil {
-		return fmt.Errorf("[ RemoveNode ] Node not found by PK: %s", nodePK)
+		return fmt.Errorf("[ RemoveNode ] NetworkNode not found by PK: %s", nodePK)
 	}
 
 	delete(nd.NodeIndexPK, nodePK)

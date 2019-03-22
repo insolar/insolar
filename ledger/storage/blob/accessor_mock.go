@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	core "github.com/insolar/insolar/core"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -20,7 +20,7 @@ import (
 type AccessorMock struct {
 	t minimock.Tester
 
-	ForIDFunc       func(p context.Context, p1 core.RecordID) (r Blob, r1 error)
+	ForIDFunc       func(p context.Context, p1 insolar.RecordID) (r Blob, r1 error)
 	ForIDCounter    uint64
 	ForIDPreCounter uint64
 	ForIDMock       mAccessorMockForID
@@ -52,7 +52,7 @@ type AccessorMockForIDExpectation struct {
 
 type AccessorMockForIDInput struct {
 	p  context.Context
-	p1 core.RecordID
+	p1 insolar.RecordID
 }
 
 type AccessorMockForIDResult struct {
@@ -61,7 +61,7 @@ type AccessorMockForIDResult struct {
 }
 
 //Expect specifies that invocation of Accessor.ForID is expected from 1 to Infinity times
-func (m *mAccessorMockForID) Expect(p context.Context, p1 core.RecordID) *mAccessorMockForID {
+func (m *mAccessorMockForID) Expect(p context.Context, p1 insolar.RecordID) *mAccessorMockForID {
 	m.mock.ForIDFunc = nil
 	m.expectationSeries = nil
 
@@ -85,7 +85,7 @@ func (m *mAccessorMockForID) Return(r Blob, r1 error) *AccessorMock {
 }
 
 //ExpectOnce specifies that invocation of Accessor.ForID is expected once
-func (m *mAccessorMockForID) ExpectOnce(p context.Context, p1 core.RecordID) *AccessorMockForIDExpectation {
+func (m *mAccessorMockForID) ExpectOnce(p context.Context, p1 insolar.RecordID) *AccessorMockForIDExpectation {
 	m.mock.ForIDFunc = nil
 	m.mainExpectation = nil
 
@@ -100,7 +100,7 @@ func (e *AccessorMockForIDExpectation) Return(r Blob, r1 error) {
 }
 
 //Set uses given function f as a mock of Accessor.ForID method
-func (m *mAccessorMockForID) Set(f func(p context.Context, p1 core.RecordID) (r Blob, r1 error)) *AccessorMock {
+func (m *mAccessorMockForID) Set(f func(p context.Context, p1 insolar.RecordID) (r Blob, r1 error)) *AccessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -109,7 +109,7 @@ func (m *mAccessorMockForID) Set(f func(p context.Context, p1 core.RecordID) (r 
 }
 
 //ForID implements github.com/insolar/insolar/ledger/storage/blob.Accessor interface
-func (m *AccessorMock) ForID(p context.Context, p1 core.RecordID) (r Blob, r1 error) {
+func (m *AccessorMock) ForID(p context.Context, p1 insolar.RecordID) (r Blob, r1 error) {
 	counter := atomic.AddUint64(&m.ForIDPreCounter, 1)
 	defer atomic.AddUint64(&m.ForIDCounter, 1)
 

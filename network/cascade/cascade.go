@@ -56,7 +56,7 @@ import (
 	"math"
 	"sort"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 )
 
 func min(a, b int) int {
@@ -68,11 +68,11 @@ func min(a, b int) int {
 
 // Cascade is struct to hold callback that sends cascade messages to next layers of cascade
 type Cascade struct {
-	SendMessage func(data core.Cascade, method string, args [][]byte) error
+	SendMessage func(data insolar.Cascade, method string, args [][]byte) error
 }
 
 // SendToNextLayer sends data to callback.
-func (casc *Cascade) SendToNextLayer(data core.Cascade, method string, args [][]byte) error {
+func (casc *Cascade) SendToNextLayer(data insolar.Cascade, method string, args [][]byte) error {
 	return casc.SendMessage(data, method, args)
 }
 
@@ -84,11 +84,11 @@ func geometricProgressionSum(a int, r int, n int) int {
 	return a * (1 - S) / (1 - r)
 }
 
-func calcHash(scheme core.PlatformCryptographyScheme, nodeID core.RecordRef, entropy core.Entropy) []byte {
-	data := make([]byte, core.RecordRefSize)
+func calcHash(scheme insolar.PlatformCryptographyScheme, nodeID insolar.RecordRef, entropy insolar.Entropy) []byte {
+	data := make([]byte, insolar.RecordRefSize)
 	copy(data, nodeID[:])
 	for i, d := range data {
-		data[i] = entropy[i%core.EntropySize] ^ d
+		data[i] = entropy[i%insolar.EntropySize] ^ d
 	}
 
 	h := scheme.IntegrityHasher()
@@ -99,7 +99,7 @@ func calcHash(scheme core.PlatformCryptographyScheme, nodeID core.RecordRef, ent
 	return h.Sum(nil)
 }
 
-func getNextCascadeLayerIndexes(nodeIds []core.RecordRef, currentNode core.RecordRef, replicationFactor uint) (startIndex, endIndex int) {
+func getNextCascadeLayerIndexes(nodeIds []insolar.RecordRef, currentNode insolar.RecordRef, replicationFactor uint) (startIndex, endIndex int) {
 	depth := 0
 	j := 0
 	layerWidth := replicationFactor
@@ -137,8 +137,8 @@ func getNextCascadeLayerIndexes(nodeIds []core.RecordRef, currentNode core.Recor
 }
 
 // CalculateNextNodes get nodes of the next cascade layer from the input nodes slice
-func CalculateNextNodes(scheme core.PlatformCryptographyScheme, data core.Cascade, currentNode *core.RecordRef) (nextNodeIds []core.RecordRef, err error) {
-	nodeIds := make([]core.RecordRef, len(data.NodeIds))
+func CalculateNextNodes(scheme insolar.PlatformCryptographyScheme, data insolar.Cascade, currentNode *insolar.RecordRef) (nextNodeIds []insolar.RecordRef, err error) {
+	nodeIds := make([]insolar.RecordRef, len(data.NodeIds))
 	copy(nodeIds, data.NodeIds)
 
 	// catching possible panic from calcHash

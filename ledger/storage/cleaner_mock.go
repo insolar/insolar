@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	core "github.com/insolar/insolar/core"
+	insolar "github.com/insolar/insolar/insolar"
 	recentstorage "github.com/insolar/insolar/ledger/recentstorage"
 
 	testify_assert "github.com/stretchr/testify/assert"
@@ -21,12 +21,12 @@ import (
 type CleanerMock struct {
 	t minimock.Tester
 
-	CleanJetIndexesFunc       func(p context.Context, p1 core.RecordID, p2 recentstorage.RecentIndexStorage, p3 []core.RecordID) (r RmStat, r1 error)
+	CleanJetIndexesFunc       func(p context.Context, p1 insolar.RecordID, p2 recentstorage.RecentIndexStorage, p3 []insolar.RecordID) (r RmStat, r1 error)
 	CleanJetIndexesCounter    uint64
 	CleanJetIndexesPreCounter uint64
 	CleanJetIndexesMock       mCleanerMockCleanJetIndexes
 
-	CleanJetRecordsUntilPulseFunc       func(p context.Context, p1 core.RecordID, p2 core.PulseNumber) (r map[string]RmStat, r1 error)
+	CleanJetRecordsUntilPulseFunc       func(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber) (r map[string]RmStat, r1 error)
 	CleanJetRecordsUntilPulseCounter    uint64
 	CleanJetRecordsUntilPulsePreCounter uint64
 	CleanJetRecordsUntilPulseMock       mCleanerMockCleanJetRecordsUntilPulse
@@ -59,9 +59,9 @@ type CleanerMockCleanJetIndexesExpectation struct {
 
 type CleanerMockCleanJetIndexesInput struct {
 	p  context.Context
-	p1 core.RecordID
+	p1 insolar.RecordID
 	p2 recentstorage.RecentIndexStorage
-	p3 []core.RecordID
+	p3 []insolar.RecordID
 }
 
 type CleanerMockCleanJetIndexesResult struct {
@@ -70,7 +70,7 @@ type CleanerMockCleanJetIndexesResult struct {
 }
 
 //Expect specifies that invocation of Cleaner.CleanJetIndexes is expected from 1 to Infinity times
-func (m *mCleanerMockCleanJetIndexes) Expect(p context.Context, p1 core.RecordID, p2 recentstorage.RecentIndexStorage, p3 []core.RecordID) *mCleanerMockCleanJetIndexes {
+func (m *mCleanerMockCleanJetIndexes) Expect(p context.Context, p1 insolar.RecordID, p2 recentstorage.RecentIndexStorage, p3 []insolar.RecordID) *mCleanerMockCleanJetIndexes {
 	m.mock.CleanJetIndexesFunc = nil
 	m.expectationSeries = nil
 
@@ -94,7 +94,7 @@ func (m *mCleanerMockCleanJetIndexes) Return(r RmStat, r1 error) *CleanerMock {
 }
 
 //ExpectOnce specifies that invocation of Cleaner.CleanJetIndexes is expected once
-func (m *mCleanerMockCleanJetIndexes) ExpectOnce(p context.Context, p1 core.RecordID, p2 recentstorage.RecentIndexStorage, p3 []core.RecordID) *CleanerMockCleanJetIndexesExpectation {
+func (m *mCleanerMockCleanJetIndexes) ExpectOnce(p context.Context, p1 insolar.RecordID, p2 recentstorage.RecentIndexStorage, p3 []insolar.RecordID) *CleanerMockCleanJetIndexesExpectation {
 	m.mock.CleanJetIndexesFunc = nil
 	m.mainExpectation = nil
 
@@ -109,7 +109,7 @@ func (e *CleanerMockCleanJetIndexesExpectation) Return(r RmStat, r1 error) {
 }
 
 //Set uses given function f as a mock of Cleaner.CleanJetIndexes method
-func (m *mCleanerMockCleanJetIndexes) Set(f func(p context.Context, p1 core.RecordID, p2 recentstorage.RecentIndexStorage, p3 []core.RecordID) (r RmStat, r1 error)) *CleanerMock {
+func (m *mCleanerMockCleanJetIndexes) Set(f func(p context.Context, p1 insolar.RecordID, p2 recentstorage.RecentIndexStorage, p3 []insolar.RecordID) (r RmStat, r1 error)) *CleanerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -118,7 +118,7 @@ func (m *mCleanerMockCleanJetIndexes) Set(f func(p context.Context, p1 core.Reco
 }
 
 //CleanJetIndexes implements github.com/insolar/insolar/ledger/storage.Cleaner interface
-func (m *CleanerMock) CleanJetIndexes(p context.Context, p1 core.RecordID, p2 recentstorage.RecentIndexStorage, p3 []core.RecordID) (r RmStat, r1 error) {
+func (m *CleanerMock) CleanJetIndexes(p context.Context, p1 insolar.RecordID, p2 recentstorage.RecentIndexStorage, p3 []insolar.RecordID) (r RmStat, r1 error) {
 	counter := atomic.AddUint64(&m.CleanJetIndexesPreCounter, 1)
 	defer atomic.AddUint64(&m.CleanJetIndexesCounter, 1)
 
@@ -212,8 +212,8 @@ type CleanerMockCleanJetRecordsUntilPulseExpectation struct {
 
 type CleanerMockCleanJetRecordsUntilPulseInput struct {
 	p  context.Context
-	p1 core.RecordID
-	p2 core.PulseNumber
+	p1 insolar.RecordID
+	p2 insolar.PulseNumber
 }
 
 type CleanerMockCleanJetRecordsUntilPulseResult struct {
@@ -222,7 +222,7 @@ type CleanerMockCleanJetRecordsUntilPulseResult struct {
 }
 
 //Expect specifies that invocation of Cleaner.CleanJetRecordsUntilPulse is expected from 1 to Infinity times
-func (m *mCleanerMockCleanJetRecordsUntilPulse) Expect(p context.Context, p1 core.RecordID, p2 core.PulseNumber) *mCleanerMockCleanJetRecordsUntilPulse {
+func (m *mCleanerMockCleanJetRecordsUntilPulse) Expect(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber) *mCleanerMockCleanJetRecordsUntilPulse {
 	m.mock.CleanJetRecordsUntilPulseFunc = nil
 	m.expectationSeries = nil
 
@@ -246,7 +246,7 @@ func (m *mCleanerMockCleanJetRecordsUntilPulse) Return(r map[string]RmStat, r1 e
 }
 
 //ExpectOnce specifies that invocation of Cleaner.CleanJetRecordsUntilPulse is expected once
-func (m *mCleanerMockCleanJetRecordsUntilPulse) ExpectOnce(p context.Context, p1 core.RecordID, p2 core.PulseNumber) *CleanerMockCleanJetRecordsUntilPulseExpectation {
+func (m *mCleanerMockCleanJetRecordsUntilPulse) ExpectOnce(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber) *CleanerMockCleanJetRecordsUntilPulseExpectation {
 	m.mock.CleanJetRecordsUntilPulseFunc = nil
 	m.mainExpectation = nil
 
@@ -261,7 +261,7 @@ func (e *CleanerMockCleanJetRecordsUntilPulseExpectation) Return(r map[string]Rm
 }
 
 //Set uses given function f as a mock of Cleaner.CleanJetRecordsUntilPulse method
-func (m *mCleanerMockCleanJetRecordsUntilPulse) Set(f func(p context.Context, p1 core.RecordID, p2 core.PulseNumber) (r map[string]RmStat, r1 error)) *CleanerMock {
+func (m *mCleanerMockCleanJetRecordsUntilPulse) Set(f func(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber) (r map[string]RmStat, r1 error)) *CleanerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -270,7 +270,7 @@ func (m *mCleanerMockCleanJetRecordsUntilPulse) Set(f func(p context.Context, p1
 }
 
 //CleanJetRecordsUntilPulse implements github.com/insolar/insolar/ledger/storage.Cleaner interface
-func (m *CleanerMock) CleanJetRecordsUntilPulse(p context.Context, p1 core.RecordID, p2 core.PulseNumber) (r map[string]RmStat, r1 error) {
+func (m *CleanerMock) CleanJetRecordsUntilPulse(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber) (r map[string]RmStat, r1 error) {
 	counter := atomic.AddUint64(&m.CleanJetRecordsUntilPulsePreCounter, 1)
 	defer atomic.AddUint64(&m.CleanJetRecordsUntilPulseCounter, 1)
 

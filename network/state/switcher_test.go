@@ -56,7 +56,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/component"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/testutils/network"
 	"github.com/stretchr/testify/require"
 )
@@ -89,7 +89,7 @@ func TestNewNetworkSwitcher(t *testing.T) {
 	require.Equal(t, nodeNet, switcher.NodeNetwork)
 	require.Equal(t, switcherWorkAround, switcher.SwitcherWorkAround)
 	require.Equal(t, messageBusLocker, switcher.MBLocker)
-	require.Equal(t, core.NoNetworkState, switcher.state)
+	require.Equal(t, insolar.NoNetworkState, switcher.state)
 	require.Equal(t, sync.RWMutex{}, switcher.stateLock)
 }
 
@@ -98,7 +98,7 @@ func TestGetState(t *testing.T) {
 	require.NoError(t, err)
 
 	state := switcher.GetState()
-	require.Equal(t, core.NoNetworkState, state)
+	require.Equal(t, insolar.NoNetworkState, state)
 }
 
 func TestOnPulseNoChange(t *testing.T) {
@@ -111,9 +111,9 @@ func TestOnPulseNoChange(t *testing.T) {
 	cm := &component.Manager{}
 	cm.Inject(switcherWorkAround, switcher, nodeNet, messageBusLocker)
 
-	err = switcher.OnPulse(context.Background(), core.Pulse{})
+	err = switcher.OnPulse(context.Background(), insolar.Pulse{})
 	require.NoError(t, err)
-	require.Equal(t, core.NoNetworkState, switcher.state)
+	require.Equal(t, insolar.NoNetworkState, switcher.state)
 	require.Equal(t, uint64(0), messageBusLocker.UnlockCounter)
 }
 
@@ -127,9 +127,9 @@ func TestOnPulseStateChanged(t *testing.T) {
 	cm := &component.Manager{}
 	cm.Inject(switcherWorkAround, switcher, nodeNet, messageBusLocker)
 
-	err = switcher.OnPulse(context.Background(), core.Pulse{})
+	err = switcher.OnPulse(context.Background(), insolar.Pulse{})
 	require.NoError(t, err)
-	require.Equal(t, core.CompleteNetworkState, switcher.state)
+	require.Equal(t, insolar.CompleteNetworkState, switcher.state)
 	require.Equal(t, uint64(1), messageBusLocker.UnlockCounter)
 }
 
@@ -143,10 +143,10 @@ func TestGetStateAfterStateChanged(t *testing.T) {
 	cm := &component.Manager{}
 	cm.Inject(switcherWorkAround, switcher, nodeNet, messageBusLocker)
 
-	err = switcher.OnPulse(context.Background(), core.Pulse{})
+	err = switcher.OnPulse(context.Background(), insolar.Pulse{})
 	require.NoError(t, err)
-	require.Equal(t, core.CompleteNetworkState, switcher.state)
+	require.Equal(t, insolar.CompleteNetworkState, switcher.state)
 
 	state := switcher.GetState()
-	require.Equal(t, core.CompleteNetworkState, state)
+	require.Equal(t, insolar.CompleteNetworkState, state)
 }

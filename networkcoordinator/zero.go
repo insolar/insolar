@@ -53,7 +53,7 @@ package networkcoordinator
 import (
 	"context"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/pkg/errors"
 )
 
@@ -64,14 +64,14 @@ func newZeroNetworkCoordinator() *zeroNetworkCoordinator {
 	return &zeroNetworkCoordinator{}
 }
 
-func (znc *zeroNetworkCoordinator) GetCert(ctx context.Context, nodeRef *core.RecordRef) (core.Certificate, error) {
+func (znc *zeroNetworkCoordinator) GetCert(ctx context.Context, nodeRef *insolar.RecordRef) (insolar.Certificate, error) {
 	return nil, errors.New("GetCert is not allowed in Zero Network")
 }
 
-func (znc *zeroNetworkCoordinator) signCertHandler(ctx context.Context, p core.Parcel) (core.Reply, error) {
+func (znc *zeroNetworkCoordinator) signCertHandler(ctx context.Context, p insolar.Parcel) (insolar.Reply, error) {
 	return nil, errors.New("signCertHandler is not allowed in Zero Network")
 }
 
-func (znc *zeroNetworkCoordinator) SetPulse(ctx context.Context, pulse core.Pulse) error {
+func (znc *zeroNetworkCoordinator) SetPulse(ctx context.Context, pulse insolar.Pulse) error {
 	return errors.New("not implemented")
 }

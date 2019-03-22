@@ -17,7 +17,7 @@
 package extractor
 
 import (
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/pkg/errors"
 )
@@ -26,7 +26,7 @@ import (
 func CallResponse(data []byte) (interface{}, *foundation.Error, error) {
 	var result interface{}
 	var contractErr *foundation.Error
-	_, err := core.UnMarshalResponse(data, []interface{}{&result, &contractErr})
+	_, err := insolar.UnMarshalResponse(data, []interface{}{&result, &contractErr})
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "[ CallResponse ] Can't unmarshal response ")
 	}

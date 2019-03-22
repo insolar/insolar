@@ -25,7 +25,7 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/component"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/db"
@@ -49,7 +49,7 @@ type storageSuite struct {
 	dropAccessor  drop.Accessor
 	pulseTracker  storage.PulseTracker
 
-	jetID core.RecordID
+	jetID insolar.RecordID
 }
 
 func NewStorageSuite() *storageSuite {
@@ -108,35 +108,35 @@ func (s *storageSuite) AfterTest(suiteName, testName string) {
 }
 
 func (s *storageSuite) TestDB_GetRecordNotFound() {
-	rec, err := s.objectStorage.GetRecord(s.ctx, s.jetID, &core.RecordID{})
-	assert.Equal(s.T(), err, core.ErrNotFound)
+	rec, err := s.objectStorage.GetRecord(s.ctx, s.jetID, &insolar.RecordID{})
+	assert.Equal(s.T(), err, insolar.ErrNotFound)
 	assert.Nil(s.T(), rec)
 }
 
 func (s *storageSuite) TestDB_SetRecord() {
 	rec := &object.RequestRecord{}
-	gotRef, err := s.objectStorage.SetRecord(s.ctx, s.jetID, core.GenesisPulse.PulseNumber, rec)
+	gotRef, err := s.objectStorage.SetRecord(s.ctx, s.jetID, insolar.GenesisPulse.PulseNumber, rec)
 	assert.Nil(s.T(), err)
 
 	gotRec, err := s.objectStorage.GetRecord(s.ctx, s.jetID, gotRef)
 	assert.Nil(s.T(), err)
 	assert.Equal(s.T(), rec, gotRec)
 
-	_, err = s.objectStorage.SetRecord(s.ctx, s.jetID, core.GenesisPulse.PulseNumber, rec)
+	_, err = s.objectStorage.SetRecord(s.ctx, s.jetID, insolar.GenesisPulse.PulseNumber, rec)
 	assert.Equalf(s.T(), err, storage.ErrOverride, "records override should be forbidden")
 }
 
 func (s *storageSuite) TestDB_SetObjectIndex_ReturnsNotFoundIfNoIndex() {
-	idx, err := s.objectStorage.GetObjectIndex(s.ctx, s.jetID, core.NewRecordID(0, hexhash("5000")), false)
-	assert.Equal(s.T(), core.ErrNotFound, err)
+	idx, err := s.objectStorage.GetObjectIndex(s.ctx, s.jetID, insolar.NewRecordID(0, hexhash("5000")), false)
+	assert.Equal(s.T(), insolar.ErrNotFound, err)
 	assert.Nil(s.T(), idx)
 }
 
 func (s *storageSuite) TestDB_SetObjectIndex_StoresCorrectDataInStorage() {
 	idx := object.Lifeline{
-		LatestState: core.NewRecordID(0, hexhash("20")),
+		LatestState: insolar.NewRecordID(0, hexhash("20")),
 	}
-	zeroid := core.NewRecordID(0, hexhash(""))
+	zeroid := insolar.NewRecordID(0, hexhash(""))
 	err := s.objectStorage.SetObjectIndex(s.ctx, s.jetID, zeroid, &idx)
 	assert.Nil(s.T(), err)
 
@@ -150,10 +150,10 @@ func (s *storageSuite) TestDB_SetObjectIndex_SaveLastUpdate() {
 	jetID := testutils.RandomJet()
 
 	idx := object.Lifeline{
-		LatestState:  core.NewRecordID(0, hexhash("20")),
+		LatestState:  insolar.NewRecordID(0, hexhash("20")),
 		LatestUpdate: 1239,
 	}
-	zeroid := core.NewRecordID(0, hexhash(""))
+	zeroid := insolar.NewRecordID(0, hexhash(""))
 
 	// Act
 	err := s.objectStorage.SetObjectIndex(s.ctx, jetID, zeroid, &idx)
@@ -167,13 +167,13 @@ func (s *storageSuite) TestDB_SetObjectIndex_SaveLastUpdate() {
 }
 
 func (s *storageSuite) TestDB_GetDrop_ReturnsNotFoundIfNoDrop() {
-	d, err := s.dropAccessor.ForPulse(s.ctx, core.JetID(testutils.RandomJet()), 1)
+	d, err := s.dropAccessor.ForPulse(s.ctx, insolar.JetID(testutils.RandomJet()), 1)
 	assert.Equal(s.T(), err, db.ErrNotFound)
 	assert.Equal(s.T(), drop.Drop{}, d)
 }
 
 func (s *storageSuite) TestDB_SetDrop() {
-	jetID := *core.NewJetID(0, nil)
+	jetID := *insolar.NewJetID(0, nil)
 	drop42 := drop.Drop{
 		Pulse: 42,
 		Hash:  []byte{0xFF},
@@ -190,12 +190,12 @@ func (s *storageSuite) TestDB_SetDrop() {
 }
 
 func (s *storageSuite) TestDB_AddPulse() {
-	pulse42 := core.Pulse{PulseNumber: 42, Entropy: core.Entropy{1, 2, 3}}
+	pulse42 := insolar.Pulse{PulseNumber: 42, Entropy: insolar.Entropy{1, 2, 3}}
 	err := s.pulseTracker.AddPulse(s.ctx, pulse42)
 	require.NoError(s.T(), err)
 
 	latestPulse, err := s.pulseTracker.GetLatestPulse(s.ctx)
-	assert.Equal(s.T(), core.PulseNumber(42), latestPulse.Pulse.PulseNumber)
+	assert.Equal(s.T(), insolar.PulseNumber(42), latestPulse.Pulse.PulseNumber)
 
 	pulse, err := s.pulseTracker.GetPulse(s.ctx, latestPulse.Pulse.PulseNumber)
 	require.NoError(s.T(), err)
@@ -203,7 +203,7 @@ func (s *storageSuite) TestDB_AddPulse() {
 	prevPulse, err := s.pulseTracker.GetPulse(s.ctx, *latestPulse.Prev)
 	require.NoError(s.T(), err)
 
-	prevPN := core.PulseNumber(core.FirstPulseNumber)
+	prevPN := insolar.PulseNumber(insolar.FirstPulseNumber)
 	expectPulse := storage.Pulse{
 		Prev:         &prevPN,
 		Pulse:        pulse42,
@@ -245,12 +245,12 @@ func TestDB_Close(t *testing.T) {
 
 	cleaner()
 
-	rec, err := os.GetRecord(ctx, jetID, &core.RecordID{})
+	rec, err := os.GetRecord(ctx, jetID, &insolar.RecordID{})
 	assert.Nil(t, rec)
 	assert.Equal(t, err, storage.ErrClosed)
 
 	rec = &object.RequestRecord{}
-	gotRef, err := os.SetRecord(ctx, jetID, core.GenesisPulse.PulseNumber, rec)
+	gotRef, err := os.SetRecord(ctx, jetID, insolar.GenesisPulse.PulseNumber, rec)
 	assert.Nil(t, gotRef)
 	assert.Equal(t, err, storage.ErrClosed)
 }

@@ -56,7 +56,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/network"
@@ -82,7 +82,7 @@ type distributor struct {
 }
 
 // NewDistributor creates a new distributor object of pulses
-func NewDistributor(conf configuration.PulseDistributor) (core.PulseDistributor, error) {
+func NewDistributor(conf configuration.PulseDistributor) (insolar.PulseDistributor, error) {
 	return &distributor{
 		idGenerator: sequence.NewGeneratorImpl(),
 
@@ -100,14 +100,14 @@ func (d *distributor) Start(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "[ NewDistributor ] failed to create pulsar host")
 	}
-	pulsarHost.NodeID = core.RecordRef{}
+	pulsarHost.NodeID = insolar.RecordRef{}
 
 	d.pulsarHost = pulsarHost
 	return nil
 }
 
 // Distribute starts a fire-and-forget process of pulse distribution to bootstrap hosts
-func (d *distributor) Distribute(ctx context.Context, pulse core.Pulse) {
+func (d *distributor) Distribute(ctx context.Context, pulse insolar.Pulse) {
 	logger := inslogger.FromContext(ctx)
 	defer func() {
 		if r := recover(); r != nil {
@@ -143,7 +143,7 @@ func (d *distributor) Distribute(ctx context.Context, pulse core.Pulse) {
 	wg.Add(len(bootstrapHosts))
 
 	for _, bootstrapHost := range bootstrapHosts {
-		go func(ctx context.Context, pulse core.Pulse, bootstrapHost *host.Host) {
+		go func(ctx context.Context, pulse insolar.Pulse, bootstrapHost *host.Host) {
 			defer wg.Done()
 
 			if bootstrapHost.NodeID.IsEmpty() {
@@ -201,7 +201,7 @@ func (d *distributor) pingHost(ctx context.Context, host *host.Host) error {
 	return nil
 }
 
-func (d *distributor) sendPulseToHost(ctx context.Context, pulse *core.Pulse, host *host.Host) error {
+func (d *distributor) sendPulseToHost(ctx context.Context, pulse *insolar.Pulse, host *host.Host) error {
 	logger := inslogger.FromContext(ctx)
 	defer func() {
 		if x := recover(); x != nil {

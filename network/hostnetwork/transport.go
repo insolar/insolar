@@ -55,7 +55,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
@@ -77,7 +77,7 @@ type hostTransport struct {
 
 type packetWrapper packet.Packet
 
-func (p *packetWrapper) GetSender() core.RecordRef {
+func (p *packetWrapper) GetSender() insolar.RecordRef {
 	return p.Sender.NodeID
 }
 

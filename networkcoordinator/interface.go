@@ -53,17 +53,17 @@ package networkcoordinator
 import (
 	"context"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 )
 
 // Coordinator interface contains NetworkState dependent methods
 type Coordinator interface {
 	// GetCert returns certificate object by node reference, using discovery nodes for signing
-	GetCert(context.Context, *core.RecordRef) (core.Certificate, error)
+	GetCert(context.Context, *insolar.RecordRef) (insolar.Certificate, error)
 
 	// SetPulse uses PulseManager component for saving pulse info
-	SetPulse(ctx context.Context, pulse core.Pulse) error
+	SetPulse(ctx context.Context, pulse insolar.Pulse) error
 
 	// signCertHandler is used by MsgBus handler for signing certificate
-	signCertHandler(ctx context.Context, p core.Parcel) (core.Reply, error)
+	signCertHandler(ctx context.Context, p insolar.Parcel) (insolar.Reply, error)
 }

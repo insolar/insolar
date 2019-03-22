@@ -56,9 +56,9 @@ import (
 
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/message"
-	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
@@ -101,8 +101,8 @@ func TestNetworkCoordinator_GetCoordinator_Zero(t *testing.T) {
 	nc, err := New()
 	require.NoError(t, err)
 	ns := testutils.NewNetworkSwitcherMock(t)
-	ns.GetStateFunc = func() core.NetworkState {
-		return core.NoNetworkState
+	ns.GetStateFunc = func() insolar.NetworkState {
+		return insolar.NoNetworkState
 	}
 	nc.NetworkSwitcher = ns
 	nc.MessageBus = mockMessageBus(t, true, nil, nil)
@@ -116,8 +116,8 @@ func TestNetworkCoordinator_GetCoordinator_Real(t *testing.T) {
 	nc, err := New()
 	require.NoError(t, err)
 	ns := testutils.NewNetworkSwitcherMock(t)
-	ns.GetStateFunc = func() core.NetworkState {
-		return core.CompleteNetworkState
+	ns.GetStateFunc = func() insolar.NetworkState {
+		return insolar.CompleteNetworkState
 	}
 	nc.NetworkSwitcher = ns
 	nc.MessageBus = mockMessageBus(t, true, nil, nil)
@@ -128,23 +128,23 @@ func TestNetworkCoordinator_GetCoordinator_Real(t *testing.T) {
 }
 
 func mockReply(t *testing.T) []byte {
-	node, err := core.MarshalArgs(struct {
+	node, err := insolar.MarshalArgs(struct {
 		PublicKey string
-		Role      core.StaticRole
+		Role      insolar.StaticRole
 	}{
 		PublicKey: "test_node_public_key",
-		Role:      core.StaticRoleVirtual,
+		Role:      insolar.StaticRoleVirtual,
 	}, nil)
 	require.NoError(t, err)
 	return []byte(node)
 }
 
-func mockMessageBus(t *testing.T, ok bool, ref *core.RecordRef, discovery *core.RecordRef) *testutils.MessageBusMock {
+func mockMessageBus(t *testing.T, ok bool, ref *insolar.RecordRef, discovery *insolar.RecordRef) *testutils.MessageBusMock {
 	mb := testutils.NewMessageBusMock(t)
-	mb.MustRegisterFunc = func(p core.MessageType, handler core.MessageHandler) {
-		require.Equal(t, p, core.TypeNodeSignRequest)
+	mb.MustRegisterFunc = func(p insolar.MessageType, handler insolar.MessageHandler) {
+		require.Equal(t, p, insolar.TypeNodeSignRequest)
 	}
-	mb.SendFunc = func(p context.Context, msg core.Message, options *core.MessageSendOptions) (core.Reply, error) {
+	mb.SendFunc = func(p context.Context, msg insolar.Message, options *insolar.MessageSendOptions) (insolar.Reply, error) {
 		require.Equal(t, ref, msg.(*message.NodeSignPayload).NodeRef)
 		require.Equal(t, discovery, options.Receiver)
 		if ok {
@@ -157,9 +157,9 @@ func mockMessageBus(t *testing.T, ok bool, ref *core.RecordRef, discovery *core.
 	return mb
 }
 
-func mockCertificateManager(t *testing.T, certNodeRef *core.RecordRef, discoveryNodeRef *core.RecordRef, unsignCertOk bool) *testutils.CertificateManagerMock {
+func mockCertificateManager(t *testing.T, certNodeRef *insolar.RecordRef, discoveryNodeRef *insolar.RecordRef, unsignCertOk bool) *testutils.CertificateManagerMock {
 	cm := testutils.NewCertificateManagerMock(t)
-	cm.GetCertificateFunc = func() core.Certificate {
+	cm.GetCertificateFunc = func() insolar.Certificate {
 		return &certificate.Certificate{
 			AuthorizationCertificate: certificate.AuthorizationCertificate{
 				PublicKey: "test_public_key",
@@ -177,7 +177,7 @@ func mockCertificateManager(t *testing.T, certNodeRef *core.RecordRef, discovery
 			},
 		}
 	}
-	cm.NewUnsignedCertificateFunc = func(key string, role string, nodeRef string) (core.Certificate, error) {
+	cm.NewUnsignedCertificateFunc = func(key string, role string, nodeRef string) (insolar.Certificate, error) {
 		require.Equal(t, "test_node_public_key", key)
 		require.Equal(t, "virtual", role)
 
@@ -206,11 +206,11 @@ func mockCertificateManager(t *testing.T, certNodeRef *core.RecordRef, discovery
 	return cm
 }
 
-func mockCryptographyService(t *testing.T, ok bool) core.CryptographyService {
+func mockCryptographyService(t *testing.T, ok bool) insolar.CryptographyService {
 	cs := testutils.NewCryptographyServiceMock(t)
-	cs.SignFunc = func(data []byte) (*core.Signature, error) {
+	cs.SignFunc = func(data []byte) (*insolar.Signature, error) {
 		if ok {
-			sig := core.SignatureFromBytes([]byte("test_sig"))
+			sig := insolar.SignatureFromBytes([]byte("test_sig"))
 			return &sig, nil
 		}
 		return nil, errors.New("test_error")

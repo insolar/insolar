@@ -3,49 +3,49 @@ package testutils
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "DelegationTokenFactory" can be found in github.com/insolar/insolar/core
+The original interface "DelegationTokenFactory" can be found in github.com/insolar/insolar/insolar
 */
 import (
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	core "github.com/insolar/insolar/core"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//DelegationTokenFactoryMock implements github.com/insolar/insolar/core.DelegationTokenFactory
+//DelegationTokenFactoryMock implements github.com/insolar/insolar/insolar.DelegationTokenFactory
 type DelegationTokenFactoryMock struct {
 	t minimock.Tester
 
-	IssueGetChildrenRedirectFunc       func(p *core.RecordRef, p1 core.Message) (r core.DelegationToken, r1 error)
+	IssueGetChildrenRedirectFunc       func(p *insolar.RecordRef, p1 insolar.Message) (r insolar.DelegationToken, r1 error)
 	IssueGetChildrenRedirectCounter    uint64
 	IssueGetChildrenRedirectPreCounter uint64
 	IssueGetChildrenRedirectMock       mDelegationTokenFactoryMockIssueGetChildrenRedirect
 
-	IssueGetCodeRedirectFunc       func(p *core.RecordRef, p1 core.Message) (r core.DelegationToken, r1 error)
+	IssueGetCodeRedirectFunc       func(p *insolar.RecordRef, p1 insolar.Message) (r insolar.DelegationToken, r1 error)
 	IssueGetCodeRedirectCounter    uint64
 	IssueGetCodeRedirectPreCounter uint64
 	IssueGetCodeRedirectMock       mDelegationTokenFactoryMockIssueGetCodeRedirect
 
-	IssueGetObjectRedirectFunc       func(p *core.RecordRef, p1 core.Message) (r core.DelegationToken, r1 error)
+	IssueGetObjectRedirectFunc       func(p *insolar.RecordRef, p1 insolar.Message) (r insolar.DelegationToken, r1 error)
 	IssueGetObjectRedirectCounter    uint64
 	IssueGetObjectRedirectPreCounter uint64
 	IssueGetObjectRedirectMock       mDelegationTokenFactoryMockIssueGetObjectRedirect
 
-	IssuePendingExecutionFunc       func(p core.Message, p1 core.PulseNumber) (r core.DelegationToken, r1 error)
+	IssuePendingExecutionFunc       func(p insolar.Message, p1 insolar.PulseNumber) (r insolar.DelegationToken, r1 error)
 	IssuePendingExecutionCounter    uint64
 	IssuePendingExecutionPreCounter uint64
 	IssuePendingExecutionMock       mDelegationTokenFactoryMockIssuePendingExecution
 
-	VerifyFunc       func(p core.Parcel) (r bool, r1 error)
+	VerifyFunc       func(p insolar.Parcel) (r bool, r1 error)
 	VerifyCounter    uint64
 	VerifyPreCounter uint64
 	VerifyMock       mDelegationTokenFactoryMockVerify
 }
 
-//NewDelegationTokenFactoryMock returns a mock for github.com/insolar/insolar/core.DelegationTokenFactory
+//NewDelegationTokenFactoryMock returns a mock for github.com/insolar/insolar/insolar.DelegationTokenFactory
 func NewDelegationTokenFactoryMock(t minimock.Tester) *DelegationTokenFactoryMock {
 	m := &DelegationTokenFactoryMock{t: t}
 
@@ -74,17 +74,17 @@ type DelegationTokenFactoryMockIssueGetChildrenRedirectExpectation struct {
 }
 
 type DelegationTokenFactoryMockIssueGetChildrenRedirectInput struct {
-	p  *core.RecordRef
-	p1 core.Message
+	p  *insolar.RecordRef
+	p1 insolar.Message
 }
 
 type DelegationTokenFactoryMockIssueGetChildrenRedirectResult struct {
-	r  core.DelegationToken
+	r  insolar.DelegationToken
 	r1 error
 }
 
 //Expect specifies that invocation of DelegationTokenFactory.IssueGetChildrenRedirect is expected from 1 to Infinity times
-func (m *mDelegationTokenFactoryMockIssueGetChildrenRedirect) Expect(p *core.RecordRef, p1 core.Message) *mDelegationTokenFactoryMockIssueGetChildrenRedirect {
+func (m *mDelegationTokenFactoryMockIssueGetChildrenRedirect) Expect(p *insolar.RecordRef, p1 insolar.Message) *mDelegationTokenFactoryMockIssueGetChildrenRedirect {
 	m.mock.IssueGetChildrenRedirectFunc = nil
 	m.expectationSeries = nil
 
@@ -96,7 +96,7 @@ func (m *mDelegationTokenFactoryMockIssueGetChildrenRedirect) Expect(p *core.Rec
 }
 
 //Return specifies results of invocation of DelegationTokenFactory.IssueGetChildrenRedirect
-func (m *mDelegationTokenFactoryMockIssueGetChildrenRedirect) Return(r core.DelegationToken, r1 error) *DelegationTokenFactoryMock {
+func (m *mDelegationTokenFactoryMockIssueGetChildrenRedirect) Return(r insolar.DelegationToken, r1 error) *DelegationTokenFactoryMock {
 	m.mock.IssueGetChildrenRedirectFunc = nil
 	m.expectationSeries = nil
 
@@ -108,7 +108,7 @@ func (m *mDelegationTokenFactoryMockIssueGetChildrenRedirect) Return(r core.Dele
 }
 
 //ExpectOnce specifies that invocation of DelegationTokenFactory.IssueGetChildrenRedirect is expected once
-func (m *mDelegationTokenFactoryMockIssueGetChildrenRedirect) ExpectOnce(p *core.RecordRef, p1 core.Message) *DelegationTokenFactoryMockIssueGetChildrenRedirectExpectation {
+func (m *mDelegationTokenFactoryMockIssueGetChildrenRedirect) ExpectOnce(p *insolar.RecordRef, p1 insolar.Message) *DelegationTokenFactoryMockIssueGetChildrenRedirectExpectation {
 	m.mock.IssueGetChildrenRedirectFunc = nil
 	m.mainExpectation = nil
 
@@ -118,12 +118,12 @@ func (m *mDelegationTokenFactoryMockIssueGetChildrenRedirect) ExpectOnce(p *core
 	return expectation
 }
 
-func (e *DelegationTokenFactoryMockIssueGetChildrenRedirectExpectation) Return(r core.DelegationToken, r1 error) {
+func (e *DelegationTokenFactoryMockIssueGetChildrenRedirectExpectation) Return(r insolar.DelegationToken, r1 error) {
 	e.result = &DelegationTokenFactoryMockIssueGetChildrenRedirectResult{r, r1}
 }
 
 //Set uses given function f as a mock of DelegationTokenFactory.IssueGetChildrenRedirect method
-func (m *mDelegationTokenFactoryMockIssueGetChildrenRedirect) Set(f func(p *core.RecordRef, p1 core.Message) (r core.DelegationToken, r1 error)) *DelegationTokenFactoryMock {
+func (m *mDelegationTokenFactoryMockIssueGetChildrenRedirect) Set(f func(p *insolar.RecordRef, p1 insolar.Message) (r insolar.DelegationToken, r1 error)) *DelegationTokenFactoryMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -131,8 +131,8 @@ func (m *mDelegationTokenFactoryMockIssueGetChildrenRedirect) Set(f func(p *core
 	return m.mock
 }
 
-//IssueGetChildrenRedirect implements github.com/insolar/insolar/core.DelegationTokenFactory interface
-func (m *DelegationTokenFactoryMock) IssueGetChildrenRedirect(p *core.RecordRef, p1 core.Message) (r core.DelegationToken, r1 error) {
+//IssueGetChildrenRedirect implements github.com/insolar/insolar/insolar.DelegationTokenFactory interface
+func (m *DelegationTokenFactoryMock) IssueGetChildrenRedirect(p *insolar.RecordRef, p1 insolar.Message) (r insolar.DelegationToken, r1 error) {
 	counter := atomic.AddUint64(&m.IssueGetChildrenRedirectPreCounter, 1)
 	defer atomic.AddUint64(&m.IssueGetChildrenRedirectCounter, 1)
 
@@ -225,17 +225,17 @@ type DelegationTokenFactoryMockIssueGetCodeRedirectExpectation struct {
 }
 
 type DelegationTokenFactoryMockIssueGetCodeRedirectInput struct {
-	p  *core.RecordRef
-	p1 core.Message
+	p  *insolar.RecordRef
+	p1 insolar.Message
 }
 
 type DelegationTokenFactoryMockIssueGetCodeRedirectResult struct {
-	r  core.DelegationToken
+	r  insolar.DelegationToken
 	r1 error
 }
 
 //Expect specifies that invocation of DelegationTokenFactory.IssueGetCodeRedirect is expected from 1 to Infinity times
-func (m *mDelegationTokenFactoryMockIssueGetCodeRedirect) Expect(p *core.RecordRef, p1 core.Message) *mDelegationTokenFactoryMockIssueGetCodeRedirect {
+func (m *mDelegationTokenFactoryMockIssueGetCodeRedirect) Expect(p *insolar.RecordRef, p1 insolar.Message) *mDelegationTokenFactoryMockIssueGetCodeRedirect {
 	m.mock.IssueGetCodeRedirectFunc = nil
 	m.expectationSeries = nil
 
@@ -247,7 +247,7 @@ func (m *mDelegationTokenFactoryMockIssueGetCodeRedirect) Expect(p *core.RecordR
 }
 
 //Return specifies results of invocation of DelegationTokenFactory.IssueGetCodeRedirect
-func (m *mDelegationTokenFactoryMockIssueGetCodeRedirect) Return(r core.DelegationToken, r1 error) *DelegationTokenFactoryMock {
+func (m *mDelegationTokenFactoryMockIssueGetCodeRedirect) Return(r insolar.DelegationToken, r1 error) *DelegationTokenFactoryMock {
 	m.mock.IssueGetCodeRedirectFunc = nil
 	m.expectationSeries = nil
 
@@ -259,7 +259,7 @@ func (m *mDelegationTokenFactoryMockIssueGetCodeRedirect) Return(r core.Delegati
 }
 
 //ExpectOnce specifies that invocation of DelegationTokenFactory.IssueGetCodeRedirect is expected once
-func (m *mDelegationTokenFactoryMockIssueGetCodeRedirect) ExpectOnce(p *core.RecordRef, p1 core.Message) *DelegationTokenFactoryMockIssueGetCodeRedirectExpectation {
+func (m *mDelegationTokenFactoryMockIssueGetCodeRedirect) ExpectOnce(p *insolar.RecordRef, p1 insolar.Message) *DelegationTokenFactoryMockIssueGetCodeRedirectExpectation {
 	m.mock.IssueGetCodeRedirectFunc = nil
 	m.mainExpectation = nil
 
@@ -269,12 +269,12 @@ func (m *mDelegationTokenFactoryMockIssueGetCodeRedirect) ExpectOnce(p *core.Rec
 	return expectation
 }
 
-func (e *DelegationTokenFactoryMockIssueGetCodeRedirectExpectation) Return(r core.DelegationToken, r1 error) {
+func (e *DelegationTokenFactoryMockIssueGetCodeRedirectExpectation) Return(r insolar.DelegationToken, r1 error) {
 	e.result = &DelegationTokenFactoryMockIssueGetCodeRedirectResult{r, r1}
 }
 
 //Set uses given function f as a mock of DelegationTokenFactory.IssueGetCodeRedirect method
-func (m *mDelegationTokenFactoryMockIssueGetCodeRedirect) Set(f func(p *core.RecordRef, p1 core.Message) (r core.DelegationToken, r1 error)) *DelegationTokenFactoryMock {
+func (m *mDelegationTokenFactoryMockIssueGetCodeRedirect) Set(f func(p *insolar.RecordRef, p1 insolar.Message) (r insolar.DelegationToken, r1 error)) *DelegationTokenFactoryMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -282,8 +282,8 @@ func (m *mDelegationTokenFactoryMockIssueGetCodeRedirect) Set(f func(p *core.Rec
 	return m.mock
 }
 
-//IssueGetCodeRedirect implements github.com/insolar/insolar/core.DelegationTokenFactory interface
-func (m *DelegationTokenFactoryMock) IssueGetCodeRedirect(p *core.RecordRef, p1 core.Message) (r core.DelegationToken, r1 error) {
+//IssueGetCodeRedirect implements github.com/insolar/insolar/insolar.DelegationTokenFactory interface
+func (m *DelegationTokenFactoryMock) IssueGetCodeRedirect(p *insolar.RecordRef, p1 insolar.Message) (r insolar.DelegationToken, r1 error) {
 	counter := atomic.AddUint64(&m.IssueGetCodeRedirectPreCounter, 1)
 	defer atomic.AddUint64(&m.IssueGetCodeRedirectCounter, 1)
 
@@ -376,17 +376,17 @@ type DelegationTokenFactoryMockIssueGetObjectRedirectExpectation struct {
 }
 
 type DelegationTokenFactoryMockIssueGetObjectRedirectInput struct {
-	p  *core.RecordRef
-	p1 core.Message
+	p  *insolar.RecordRef
+	p1 insolar.Message
 }
 
 type DelegationTokenFactoryMockIssueGetObjectRedirectResult struct {
-	r  core.DelegationToken
+	r  insolar.DelegationToken
 	r1 error
 }
 
 //Expect specifies that invocation of DelegationTokenFactory.IssueGetObjectRedirect is expected from 1 to Infinity times
-func (m *mDelegationTokenFactoryMockIssueGetObjectRedirect) Expect(p *core.RecordRef, p1 core.Message) *mDelegationTokenFactoryMockIssueGetObjectRedirect {
+func (m *mDelegationTokenFactoryMockIssueGetObjectRedirect) Expect(p *insolar.RecordRef, p1 insolar.Message) *mDelegationTokenFactoryMockIssueGetObjectRedirect {
 	m.mock.IssueGetObjectRedirectFunc = nil
 	m.expectationSeries = nil
 
@@ -398,7 +398,7 @@ func (m *mDelegationTokenFactoryMockIssueGetObjectRedirect) Expect(p *core.Recor
 }
 
 //Return specifies results of invocation of DelegationTokenFactory.IssueGetObjectRedirect
-func (m *mDelegationTokenFactoryMockIssueGetObjectRedirect) Return(r core.DelegationToken, r1 error) *DelegationTokenFactoryMock {
+func (m *mDelegationTokenFactoryMockIssueGetObjectRedirect) Return(r insolar.DelegationToken, r1 error) *DelegationTokenFactoryMock {
 	m.mock.IssueGetObjectRedirectFunc = nil
 	m.expectationSeries = nil
 
@@ -410,7 +410,7 @@ func (m *mDelegationTokenFactoryMockIssueGetObjectRedirect) Return(r core.Delega
 }
 
 //ExpectOnce specifies that invocation of DelegationTokenFactory.IssueGetObjectRedirect is expected once
-func (m *mDelegationTokenFactoryMockIssueGetObjectRedirect) ExpectOnce(p *core.RecordRef, p1 core.Message) *DelegationTokenFactoryMockIssueGetObjectRedirectExpectation {
+func (m *mDelegationTokenFactoryMockIssueGetObjectRedirect) ExpectOnce(p *insolar.RecordRef, p1 insolar.Message) *DelegationTokenFactoryMockIssueGetObjectRedirectExpectation {
 	m.mock.IssueGetObjectRedirectFunc = nil
 	m.mainExpectation = nil
 
@@ -420,12 +420,12 @@ func (m *mDelegationTokenFactoryMockIssueGetObjectRedirect) ExpectOnce(p *core.R
 	return expectation
 }
 
-func (e *DelegationTokenFactoryMockIssueGetObjectRedirectExpectation) Return(r core.DelegationToken, r1 error) {
+func (e *DelegationTokenFactoryMockIssueGetObjectRedirectExpectation) Return(r insolar.DelegationToken, r1 error) {
 	e.result = &DelegationTokenFactoryMockIssueGetObjectRedirectResult{r, r1}
 }
 
 //Set uses given function f as a mock of DelegationTokenFactory.IssueGetObjectRedirect method
-func (m *mDelegationTokenFactoryMockIssueGetObjectRedirect) Set(f func(p *core.RecordRef, p1 core.Message) (r core.DelegationToken, r1 error)) *DelegationTokenFactoryMock {
+func (m *mDelegationTokenFactoryMockIssueGetObjectRedirect) Set(f func(p *insolar.RecordRef, p1 insolar.Message) (r insolar.DelegationToken, r1 error)) *DelegationTokenFactoryMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -433,8 +433,8 @@ func (m *mDelegationTokenFactoryMockIssueGetObjectRedirect) Set(f func(p *core.R
 	return m.mock
 }
 
-//IssueGetObjectRedirect implements github.com/insolar/insolar/core.DelegationTokenFactory interface
-func (m *DelegationTokenFactoryMock) IssueGetObjectRedirect(p *core.RecordRef, p1 core.Message) (r core.DelegationToken, r1 error) {
+//IssueGetObjectRedirect implements github.com/insolar/insolar/insolar.DelegationTokenFactory interface
+func (m *DelegationTokenFactoryMock) IssueGetObjectRedirect(p *insolar.RecordRef, p1 insolar.Message) (r insolar.DelegationToken, r1 error) {
 	counter := atomic.AddUint64(&m.IssueGetObjectRedirectPreCounter, 1)
 	defer atomic.AddUint64(&m.IssueGetObjectRedirectCounter, 1)
 
@@ -527,17 +527,17 @@ type DelegationTokenFactoryMockIssuePendingExecutionExpectation struct {
 }
 
 type DelegationTokenFactoryMockIssuePendingExecutionInput struct {
-	p  core.Message
-	p1 core.PulseNumber
+	p  insolar.Message
+	p1 insolar.PulseNumber
 }
 
 type DelegationTokenFactoryMockIssuePendingExecutionResult struct {
-	r  core.DelegationToken
+	r  insolar.DelegationToken
 	r1 error
 }
 
 //Expect specifies that invocation of DelegationTokenFactory.IssuePendingExecution is expected from 1 to Infinity times
-func (m *mDelegationTokenFactoryMockIssuePendingExecution) Expect(p core.Message, p1 core.PulseNumber) *mDelegationTokenFactoryMockIssuePendingExecution {
+func (m *mDelegationTokenFactoryMockIssuePendingExecution) Expect(p insolar.Message, p1 insolar.PulseNumber) *mDelegationTokenFactoryMockIssuePendingExecution {
 	m.mock.IssuePendingExecutionFunc = nil
 	m.expectationSeries = nil
 
@@ -549,7 +549,7 @@ func (m *mDelegationTokenFactoryMockIssuePendingExecution) Expect(p core.Message
 }
 
 //Return specifies results of invocation of DelegationTokenFactory.IssuePendingExecution
-func (m *mDelegationTokenFactoryMockIssuePendingExecution) Return(r core.DelegationToken, r1 error) *DelegationTokenFactoryMock {
+func (m *mDelegationTokenFactoryMockIssuePendingExecution) Return(r insolar.DelegationToken, r1 error) *DelegationTokenFactoryMock {
 	m.mock.IssuePendingExecutionFunc = nil
 	m.expectationSeries = nil
 
@@ -561,7 +561,7 @@ func (m *mDelegationTokenFactoryMockIssuePendingExecution) Return(r core.Delegat
 }
 
 //ExpectOnce specifies that invocation of DelegationTokenFactory.IssuePendingExecution is expected once
-func (m *mDelegationTokenFactoryMockIssuePendingExecution) ExpectOnce(p core.Message, p1 core.PulseNumber) *DelegationTokenFactoryMockIssuePendingExecutionExpectation {
+func (m *mDelegationTokenFactoryMockIssuePendingExecution) ExpectOnce(p insolar.Message, p1 insolar.PulseNumber) *DelegationTokenFactoryMockIssuePendingExecutionExpectation {
 	m.mock.IssuePendingExecutionFunc = nil
 	m.mainExpectation = nil
 
@@ -571,12 +571,12 @@ func (m *mDelegationTokenFactoryMockIssuePendingExecution) ExpectOnce(p core.Mes
 	return expectation
 }
 
-func (e *DelegationTokenFactoryMockIssuePendingExecutionExpectation) Return(r core.DelegationToken, r1 error) {
+func (e *DelegationTokenFactoryMockIssuePendingExecutionExpectation) Return(r insolar.DelegationToken, r1 error) {
 	e.result = &DelegationTokenFactoryMockIssuePendingExecutionResult{r, r1}
 }
 
 //Set uses given function f as a mock of DelegationTokenFactory.IssuePendingExecution method
-func (m *mDelegationTokenFactoryMockIssuePendingExecution) Set(f func(p core.Message, p1 core.PulseNumber) (r core.DelegationToken, r1 error)) *DelegationTokenFactoryMock {
+func (m *mDelegationTokenFactoryMockIssuePendingExecution) Set(f func(p insolar.Message, p1 insolar.PulseNumber) (r insolar.DelegationToken, r1 error)) *DelegationTokenFactoryMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -584,8 +584,8 @@ func (m *mDelegationTokenFactoryMockIssuePendingExecution) Set(f func(p core.Mes
 	return m.mock
 }
 
-//IssuePendingExecution implements github.com/insolar/insolar/core.DelegationTokenFactory interface
-func (m *DelegationTokenFactoryMock) IssuePendingExecution(p core.Message, p1 core.PulseNumber) (r core.DelegationToken, r1 error) {
+//IssuePendingExecution implements github.com/insolar/insolar/insolar.DelegationTokenFactory interface
+func (m *DelegationTokenFactoryMock) IssuePendingExecution(p insolar.Message, p1 insolar.PulseNumber) (r insolar.DelegationToken, r1 error) {
 	counter := atomic.AddUint64(&m.IssuePendingExecutionPreCounter, 1)
 	defer atomic.AddUint64(&m.IssuePendingExecutionCounter, 1)
 
@@ -678,7 +678,7 @@ type DelegationTokenFactoryMockVerifyExpectation struct {
 }
 
 type DelegationTokenFactoryMockVerifyInput struct {
-	p core.Parcel
+	p insolar.Parcel
 }
 
 type DelegationTokenFactoryMockVerifyResult struct {
@@ -687,7 +687,7 @@ type DelegationTokenFactoryMockVerifyResult struct {
 }
 
 //Expect specifies that invocation of DelegationTokenFactory.Verify is expected from 1 to Infinity times
-func (m *mDelegationTokenFactoryMockVerify) Expect(p core.Parcel) *mDelegationTokenFactoryMockVerify {
+func (m *mDelegationTokenFactoryMockVerify) Expect(p insolar.Parcel) *mDelegationTokenFactoryMockVerify {
 	m.mock.VerifyFunc = nil
 	m.expectationSeries = nil
 
@@ -711,7 +711,7 @@ func (m *mDelegationTokenFactoryMockVerify) Return(r bool, r1 error) *Delegation
 }
 
 //ExpectOnce specifies that invocation of DelegationTokenFactory.Verify is expected once
-func (m *mDelegationTokenFactoryMockVerify) ExpectOnce(p core.Parcel) *DelegationTokenFactoryMockVerifyExpectation {
+func (m *mDelegationTokenFactoryMockVerify) ExpectOnce(p insolar.Parcel) *DelegationTokenFactoryMockVerifyExpectation {
 	m.mock.VerifyFunc = nil
 	m.mainExpectation = nil
 
@@ -726,7 +726,7 @@ func (e *DelegationTokenFactoryMockVerifyExpectation) Return(r bool, r1 error) {
 }
 
 //Set uses given function f as a mock of DelegationTokenFactory.Verify method
-func (m *mDelegationTokenFactoryMockVerify) Set(f func(p core.Parcel) (r bool, r1 error)) *DelegationTokenFactoryMock {
+func (m *mDelegationTokenFactoryMockVerify) Set(f func(p insolar.Parcel) (r bool, r1 error)) *DelegationTokenFactoryMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -734,8 +734,8 @@ func (m *mDelegationTokenFactoryMockVerify) Set(f func(p core.Parcel) (r bool, r
 	return m.mock
 }
 
-//Verify implements github.com/insolar/insolar/core.DelegationTokenFactory interface
-func (m *DelegationTokenFactoryMock) Verify(p core.Parcel) (r bool, r1 error) {
+//Verify implements github.com/insolar/insolar/insolar.DelegationTokenFactory interface
+func (m *DelegationTokenFactoryMock) Verify(p insolar.Parcel) (r bool, r1 error) {
 	counter := atomic.AddUint64(&m.VerifyPreCounter, 1)
 	defer atomic.AddUint64(&m.VerifyCounter, 1)
 

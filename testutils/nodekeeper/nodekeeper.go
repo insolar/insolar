@@ -17,18 +17,18 @@
 package nodekeeper
 
 import (
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/nodenetwork"
 )
 
-func GetTestNodekeeper(cs core.CryptographyService) network.NodeKeeper {
+func GetTestNodekeeper(cs insolar.CryptographyService) network.NodeKeeper {
 	pk, err := cs.GetPublicKey()
 	if err != nil {
 		panic(err)
 	}
 
-	ref, err := core.NewRefFromBase58("4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa")
+	ref, err := insolar.NewRefFromBase58("4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa")
 	if err != nil {
 		panic(err)
 	}
@@ -36,7 +36,7 @@ func GetTestNodekeeper(cs core.CryptographyService) network.NodeKeeper {
 	keeper := nodenetwork.NewNodeKeeper(
 		nodenetwork.NewNode(
 			*ref,
-			core.StaticRoleVirtual,
+			insolar.StaticRoleVirtual,
 			pk,
 			// TODO implement later
 			"127.0.0.1:5432",
@@ -44,17 +44,17 @@ func GetTestNodekeeper(cs core.CryptographyService) network.NodeKeeper {
 		))
 
 	// dirty hack - we need 3 nodes as validators, pass one node 3 times
-	getValidator := func() core.Node {
+	getValidator := func() insolar.NetworkNode {
 		return nodenetwork.NewNode(
 			*ref,
-			core.StaticRoleVirtual,
+			insolar.StaticRoleVirtual,
 			pk,
 			// TODO implement later
 			"127.0.0.1:5432",
 			"",
 		)
 	}
-	nodes := []core.Node{getValidator(), getValidator(), getValidator()}
+	nodes := []insolar.NetworkNode{getValidator(), getValidator(), getValidator()}
 	keeper.SetInitialSnapshot(nodes)
 
 	return keeper

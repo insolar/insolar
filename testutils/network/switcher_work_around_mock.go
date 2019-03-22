@@ -3,7 +3,7 @@ package network
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "SwitcherWorkAround" can be found in github.com/insolar/insolar/core
+The original interface "SwitcherWorkAround" can be found in github.com/insolar/insolar/insolar
 */
 import (
 	"sync/atomic"
@@ -13,7 +13,7 @@ import (
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//SwitcherWorkAroundMock implements github.com/insolar/insolar/core.SwitcherWorkAround
+//SwitcherWorkAroundMock implements github.com/insolar/insolar/insolar.SwitcherWorkAround
 type SwitcherWorkAroundMock struct {
 	t minimock.Tester
 
@@ -28,7 +28,7 @@ type SwitcherWorkAroundMock struct {
 	SetIsBootstrappedMock       mSwitcherWorkAroundMockSetIsBootstrapped
 }
 
-//NewSwitcherWorkAroundMock returns a mock for github.com/insolar/insolar/core.SwitcherWorkAround
+//NewSwitcherWorkAroundMock returns a mock for github.com/insolar/insolar/insolar.SwitcherWorkAround
 func NewSwitcherWorkAroundMock(t minimock.Tester) *SwitcherWorkAroundMock {
 	m := &SwitcherWorkAroundMock{t: t}
 
@@ -104,7 +104,7 @@ func (m *mSwitcherWorkAroundMockIsBootstrapped) Set(f func() (r bool)) *Switcher
 	return m.mock
 }
 
-//IsBootstrapped implements github.com/insolar/insolar/core.SwitcherWorkAround interface
+//IsBootstrapped implements github.com/insolar/insolar/insolar.SwitcherWorkAround interface
 func (m *SwitcherWorkAroundMock) IsBootstrapped() (r bool) {
 	counter := atomic.AddUint64(&m.IsBootstrappedPreCounter, 1)
 	defer atomic.AddUint64(&m.IsBootstrappedCounter, 1)
@@ -234,7 +234,7 @@ func (m *mSwitcherWorkAroundMockSetIsBootstrapped) Set(f func(p bool)) *Switcher
 	return m.mock
 }
 
-//SetIsBootstrapped implements github.com/insolar/insolar/core.SwitcherWorkAround interface
+//SetIsBootstrapped implements github.com/insolar/insolar/insolar.SwitcherWorkAround interface
 func (m *SwitcherWorkAroundMock) SetIsBootstrapped(p bool) {
 	counter := atomic.AddUint64(&m.SetIsBootstrappedPreCounter, 1)
 	defer atomic.AddUint64(&m.SetIsBootstrappedCounter, 1)

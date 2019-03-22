@@ -34,8 +34,8 @@ import (
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/message"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -48,7 +48,7 @@ type heavySuite struct {
 	cleaner func()
 	db      storage.DBContext
 
-	scheme        core.PlatformCryptographyScheme
+	scheme        insolar.PlatformCryptographyScheme
 	pulseTracker  storage.PulseTracker
 	nodeStorage   node.Accessor
 	objectStorage storage.ObjectStorage
@@ -120,7 +120,7 @@ func (s *heavySuite) TestLedgerArtifactManager_handleHeavy() {
 	// prepare mock
 	heavysync := testutils.NewHeavySyncMock(s.T())
 	heavysync.StartMock.Return(nil)
-	heavysync.StoreMock.Set(func(ctx context.Context, jetID core.RecordID, pn core.PulseNumber, kvs []core.KV) error {
+	heavysync.StoreMock.Set(func(ctx context.Context, jetID insolar.RecordID, pn insolar.PulseNumber, kvs []insolar.KV) error {
 		return s.db.StoreKeyValues(ctx, kvs)
 	})
 	heavysync.StoreDropMock.Return(nil)
@@ -135,7 +135,7 @@ func (s *heavySuite) TestLedgerArtifactManager_handleHeavy() {
 	provideMock.GetPendingStorageMock.Return(pendingMock)
 
 	certificate := testutils.NewCertificateMock(s.T())
-	certificate.GetRoleMock.Return(core.StaticRoleHeavyMaterial)
+	certificate.GetRoleMock.Return(insolar.StaticRoleHeavyMaterial)
 
 	// message hanler with mok
 	mh := NewMessageHandler(nil, certificate)
@@ -148,7 +148,7 @@ func (s *heavySuite) TestLedgerArtifactManager_handleHeavy() {
 
 	mh.HeavySync = heavysync
 
-	payload := []core.KV{
+	payload := []insolar.KV{
 		{K: []byte("ABC"), V: []byte("CDE")},
 		{K: []byte("ABC"), V: []byte("CDE")},
 		{K: []byte("CDE"), V: []byte("ABC")},
@@ -156,7 +156,7 @@ func (s *heavySuite) TestLedgerArtifactManager_handleHeavy() {
 
 	parcel := &message.Parcel{
 		Msg: &message.HeavyPayload{
-			JetID:   core.JetID(jetID),
+			JetID:   insolar.JetID(jetID),
 			Records: payload,
 		},
 	}

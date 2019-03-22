@@ -19,21 +19,21 @@ package object
 import (
 	"io"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 )
 
 // Request extends Record interface with GetPayload method.
 type Request interface {
 	Record
 	GetPayload() []byte
-	GetObject() core.RecordID
+	GetObject() insolar.RecordID
 }
 
 // RequestRecord is a contract execution request.
 type RequestRecord struct {
 	Parcel      []byte
 	MessageHash []byte
-	Object      core.RecordID
+	Object      insolar.RecordID
 }
 
 // WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
@@ -47,6 +47,6 @@ func (r *RequestRecord) GetPayload() []byte {
 }
 
 // GetObject returns request object.
-func (r *RequestRecord) GetObject() core.RecordID {
+func (r *RequestRecord) GetObject() insolar.RecordID {
 	return r.Object
 }

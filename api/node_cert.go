@@ -21,8 +21,8 @@ import (
 	"net/http"
 
 	"github.com/insolar/insolar/certificate"
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/utils"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 )
@@ -53,7 +53,7 @@ func (s *NodeCertService) Get(r *http.Request, args *NodeCertArgs, reply *NodeCe
 
 	inslog.Infof("[ NodeCertService.Get ] Incoming request: %s", r.RequestURI)
 
-	nodeRef, err := core.NewRefFromBase58(args.Ref)
+	nodeRef, err := insolar.NewRefFromBase58(args.Ref)
 	if err != nil {
 		return errors.Wrap(err, "[ NodeCertService.Get ] failed to parse args.Ref")
 	}

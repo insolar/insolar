@@ -53,7 +53,7 @@ package hostnetwork
 import (
 	"context"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/pkg/errors"
@@ -71,12 +71,12 @@ func (tr *TransportResolvable) PublicAddress() string {
 }
 
 // GetNodeID get current node ID.
-func (tr *TransportResolvable) GetNodeID() core.RecordRef {
+func (tr *TransportResolvable) GetNodeID() insolar.RecordRef {
 	return tr.Transport.GetNodeID()
 }
 
 // SendRequest send request to a remote node.
-func (tr *TransportResolvable) SendRequest(ctx context.Context, request network.Request, receiver core.RecordRef) (network.Future, error) {
+func (tr *TransportResolvable) SendRequest(ctx context.Context, request network.Request, receiver insolar.RecordRef) (network.Future, error) {
 	h, err := tr.Resolver.Resolve(receiver)
 	if err != nil {
 		return nil, errors.Wrap(err, "error resolving NodeID -> Address")

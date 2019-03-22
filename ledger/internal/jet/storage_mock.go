@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	core "github.com/insolar/insolar/core"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -20,32 +20,32 @@ import (
 type StorageMock struct {
 	t minimock.Tester
 
-	AllFunc       func(p context.Context, p1 core.PulseNumber) (r []core.JetID)
+	AllFunc       func(p context.Context, p1 insolar.PulseNumber) (r []insolar.JetID)
 	AllCounter    uint64
 	AllPreCounter uint64
 	AllMock       mStorageMockAll
 
-	CloneFunc       func(p context.Context, p1 core.PulseNumber, p2 core.PulseNumber)
+	CloneFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.PulseNumber)
 	CloneCounter    uint64
 	ClonePreCounter uint64
 	CloneMock       mStorageMockClone
 
-	DeleteFunc       func(p context.Context, p1 core.PulseNumber)
+	DeleteFunc       func(p context.Context, p1 insolar.PulseNumber)
 	DeleteCounter    uint64
 	DeletePreCounter uint64
 	DeleteMock       mStorageMockDelete
 
-	ForIDFunc       func(p context.Context, p1 core.PulseNumber, p2 core.RecordID) (r core.JetID, r1 bool)
+	ForIDFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.RecordID) (r insolar.JetID, r1 bool)
 	ForIDCounter    uint64
 	ForIDPreCounter uint64
 	ForIDMock       mStorageMockForID
 
-	SplitFunc       func(p context.Context, p1 core.PulseNumber, p2 core.JetID) (r core.JetID, r1 core.JetID, r2 error)
+	SplitFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID) (r insolar.JetID, r1 insolar.JetID, r2 error)
 	SplitCounter    uint64
 	SplitPreCounter uint64
 	SplitMock       mStorageMockSplit
 
-	UpdateFunc       func(p context.Context, p1 core.PulseNumber, p2 bool, p3 ...core.JetID)
+	UpdateFunc       func(p context.Context, p1 insolar.PulseNumber, p2 bool, p3 ...insolar.JetID)
 	UpdateCounter    uint64
 	UpdatePreCounter uint64
 	UpdateMock       mStorageMockUpdate
@@ -82,15 +82,15 @@ type StorageMockAllExpectation struct {
 
 type StorageMockAllInput struct {
 	p  context.Context
-	p1 core.PulseNumber
+	p1 insolar.PulseNumber
 }
 
 type StorageMockAllResult struct {
-	r []core.JetID
+	r []insolar.JetID
 }
 
 //Expect specifies that invocation of Storage.All is expected from 1 to Infinity times
-func (m *mStorageMockAll) Expect(p context.Context, p1 core.PulseNumber) *mStorageMockAll {
+func (m *mStorageMockAll) Expect(p context.Context, p1 insolar.PulseNumber) *mStorageMockAll {
 	m.mock.AllFunc = nil
 	m.expectationSeries = nil
 
@@ -102,7 +102,7 @@ func (m *mStorageMockAll) Expect(p context.Context, p1 core.PulseNumber) *mStora
 }
 
 //Return specifies results of invocation of Storage.All
-func (m *mStorageMockAll) Return(r []core.JetID) *StorageMock {
+func (m *mStorageMockAll) Return(r []insolar.JetID) *StorageMock {
 	m.mock.AllFunc = nil
 	m.expectationSeries = nil
 
@@ -114,7 +114,7 @@ func (m *mStorageMockAll) Return(r []core.JetID) *StorageMock {
 }
 
 //ExpectOnce specifies that invocation of Storage.All is expected once
-func (m *mStorageMockAll) ExpectOnce(p context.Context, p1 core.PulseNumber) *StorageMockAllExpectation {
+func (m *mStorageMockAll) ExpectOnce(p context.Context, p1 insolar.PulseNumber) *StorageMockAllExpectation {
 	m.mock.AllFunc = nil
 	m.mainExpectation = nil
 
@@ -124,12 +124,12 @@ func (m *mStorageMockAll) ExpectOnce(p context.Context, p1 core.PulseNumber) *St
 	return expectation
 }
 
-func (e *StorageMockAllExpectation) Return(r []core.JetID) {
+func (e *StorageMockAllExpectation) Return(r []insolar.JetID) {
 	e.result = &StorageMockAllResult{r}
 }
 
 //Set uses given function f as a mock of Storage.All method
-func (m *mStorageMockAll) Set(f func(p context.Context, p1 core.PulseNumber) (r []core.JetID)) *StorageMock {
+func (m *mStorageMockAll) Set(f func(p context.Context, p1 insolar.PulseNumber) (r []insolar.JetID)) *StorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -138,7 +138,7 @@ func (m *mStorageMockAll) Set(f func(p context.Context, p1 core.PulseNumber) (r 
 }
 
 //All implements github.com/insolar/insolar/ledger/internal/jet.Storage interface
-func (m *StorageMock) All(p context.Context, p1 core.PulseNumber) (r []core.JetID) {
+func (m *StorageMock) All(p context.Context, p1 insolar.PulseNumber) (r []insolar.JetID) {
 	counter := atomic.AddUint64(&m.AllPreCounter, 1)
 	defer atomic.AddUint64(&m.AllCounter, 1)
 
@@ -229,12 +229,12 @@ type StorageMockCloneExpectation struct {
 
 type StorageMockCloneInput struct {
 	p  context.Context
-	p1 core.PulseNumber
-	p2 core.PulseNumber
+	p1 insolar.PulseNumber
+	p2 insolar.PulseNumber
 }
 
 //Expect specifies that invocation of Storage.Clone is expected from 1 to Infinity times
-func (m *mStorageMockClone) Expect(p context.Context, p1 core.PulseNumber, p2 core.PulseNumber) *mStorageMockClone {
+func (m *mStorageMockClone) Expect(p context.Context, p1 insolar.PulseNumber, p2 insolar.PulseNumber) *mStorageMockClone {
 	m.mock.CloneFunc = nil
 	m.expectationSeries = nil
 
@@ -258,7 +258,7 @@ func (m *mStorageMockClone) Return() *StorageMock {
 }
 
 //ExpectOnce specifies that invocation of Storage.Clone is expected once
-func (m *mStorageMockClone) ExpectOnce(p context.Context, p1 core.PulseNumber, p2 core.PulseNumber) *StorageMockCloneExpectation {
+func (m *mStorageMockClone) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 insolar.PulseNumber) *StorageMockCloneExpectation {
 	m.mock.CloneFunc = nil
 	m.mainExpectation = nil
 
@@ -269,7 +269,7 @@ func (m *mStorageMockClone) ExpectOnce(p context.Context, p1 core.PulseNumber, p
 }
 
 //Set uses given function f as a mock of Storage.Clone method
-func (m *mStorageMockClone) Set(f func(p context.Context, p1 core.PulseNumber, p2 core.PulseNumber)) *StorageMock {
+func (m *mStorageMockClone) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.PulseNumber)) *StorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -278,7 +278,7 @@ func (m *mStorageMockClone) Set(f func(p context.Context, p1 core.PulseNumber, p
 }
 
 //Clone implements github.com/insolar/insolar/ledger/internal/jet.Storage interface
-func (m *StorageMock) Clone(p context.Context, p1 core.PulseNumber, p2 core.PulseNumber) {
+func (m *StorageMock) Clone(p context.Context, p1 insolar.PulseNumber, p2 insolar.PulseNumber) {
 	counter := atomic.AddUint64(&m.ClonePreCounter, 1)
 	defer atomic.AddUint64(&m.CloneCounter, 1)
 
@@ -354,11 +354,11 @@ type StorageMockDeleteExpectation struct {
 
 type StorageMockDeleteInput struct {
 	p  context.Context
-	p1 core.PulseNumber
+	p1 insolar.PulseNumber
 }
 
 //Expect specifies that invocation of Storage.Delete is expected from 1 to Infinity times
-func (m *mStorageMockDelete) Expect(p context.Context, p1 core.PulseNumber) *mStorageMockDelete {
+func (m *mStorageMockDelete) Expect(p context.Context, p1 insolar.PulseNumber) *mStorageMockDelete {
 	m.mock.DeleteFunc = nil
 	m.expectationSeries = nil
 
@@ -382,7 +382,7 @@ func (m *mStorageMockDelete) Return() *StorageMock {
 }
 
 //ExpectOnce specifies that invocation of Storage.Delete is expected once
-func (m *mStorageMockDelete) ExpectOnce(p context.Context, p1 core.PulseNumber) *StorageMockDeleteExpectation {
+func (m *mStorageMockDelete) ExpectOnce(p context.Context, p1 insolar.PulseNumber) *StorageMockDeleteExpectation {
 	m.mock.DeleteFunc = nil
 	m.mainExpectation = nil
 
@@ -393,7 +393,7 @@ func (m *mStorageMockDelete) ExpectOnce(p context.Context, p1 core.PulseNumber) 
 }
 
 //Set uses given function f as a mock of Storage.Delete method
-func (m *mStorageMockDelete) Set(f func(p context.Context, p1 core.PulseNumber)) *StorageMock {
+func (m *mStorageMockDelete) Set(f func(p context.Context, p1 insolar.PulseNumber)) *StorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -402,7 +402,7 @@ func (m *mStorageMockDelete) Set(f func(p context.Context, p1 core.PulseNumber))
 }
 
 //Delete implements github.com/insolar/insolar/ledger/internal/jet.Storage interface
-func (m *StorageMock) Delete(p context.Context, p1 core.PulseNumber) {
+func (m *StorageMock) Delete(p context.Context, p1 insolar.PulseNumber) {
 	counter := atomic.AddUint64(&m.DeletePreCounter, 1)
 	defer atomic.AddUint64(&m.DeleteCounter, 1)
 
@@ -479,17 +479,17 @@ type StorageMockForIDExpectation struct {
 
 type StorageMockForIDInput struct {
 	p  context.Context
-	p1 core.PulseNumber
-	p2 core.RecordID
+	p1 insolar.PulseNumber
+	p2 insolar.RecordID
 }
 
 type StorageMockForIDResult struct {
-	r  core.JetID
+	r  insolar.JetID
 	r1 bool
 }
 
 //Expect specifies that invocation of Storage.ForID is expected from 1 to Infinity times
-func (m *mStorageMockForID) Expect(p context.Context, p1 core.PulseNumber, p2 core.RecordID) *mStorageMockForID {
+func (m *mStorageMockForID) Expect(p context.Context, p1 insolar.PulseNumber, p2 insolar.RecordID) *mStorageMockForID {
 	m.mock.ForIDFunc = nil
 	m.expectationSeries = nil
 
@@ -501,7 +501,7 @@ func (m *mStorageMockForID) Expect(p context.Context, p1 core.PulseNumber, p2 co
 }
 
 //Return specifies results of invocation of Storage.ForID
-func (m *mStorageMockForID) Return(r core.JetID, r1 bool) *StorageMock {
+func (m *mStorageMockForID) Return(r insolar.JetID, r1 bool) *StorageMock {
 	m.mock.ForIDFunc = nil
 	m.expectationSeries = nil
 
@@ -513,7 +513,7 @@ func (m *mStorageMockForID) Return(r core.JetID, r1 bool) *StorageMock {
 }
 
 //ExpectOnce specifies that invocation of Storage.ForID is expected once
-func (m *mStorageMockForID) ExpectOnce(p context.Context, p1 core.PulseNumber, p2 core.RecordID) *StorageMockForIDExpectation {
+func (m *mStorageMockForID) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 insolar.RecordID) *StorageMockForIDExpectation {
 	m.mock.ForIDFunc = nil
 	m.mainExpectation = nil
 
@@ -523,12 +523,12 @@ func (m *mStorageMockForID) ExpectOnce(p context.Context, p1 core.PulseNumber, p
 	return expectation
 }
 
-func (e *StorageMockForIDExpectation) Return(r core.JetID, r1 bool) {
+func (e *StorageMockForIDExpectation) Return(r insolar.JetID, r1 bool) {
 	e.result = &StorageMockForIDResult{r, r1}
 }
 
 //Set uses given function f as a mock of Storage.ForID method
-func (m *mStorageMockForID) Set(f func(p context.Context, p1 core.PulseNumber, p2 core.RecordID) (r core.JetID, r1 bool)) *StorageMock {
+func (m *mStorageMockForID) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.RecordID) (r insolar.JetID, r1 bool)) *StorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -537,7 +537,7 @@ func (m *mStorageMockForID) Set(f func(p context.Context, p1 core.PulseNumber, p
 }
 
 //ForID implements github.com/insolar/insolar/ledger/internal/jet.Storage interface
-func (m *StorageMock) ForID(p context.Context, p1 core.PulseNumber, p2 core.RecordID) (r core.JetID, r1 bool) {
+func (m *StorageMock) ForID(p context.Context, p1 insolar.PulseNumber, p2 insolar.RecordID) (r insolar.JetID, r1 bool) {
 	counter := atomic.AddUint64(&m.ForIDPreCounter, 1)
 	defer atomic.AddUint64(&m.ForIDCounter, 1)
 
@@ -631,18 +631,18 @@ type StorageMockSplitExpectation struct {
 
 type StorageMockSplitInput struct {
 	p  context.Context
-	p1 core.PulseNumber
-	p2 core.JetID
+	p1 insolar.PulseNumber
+	p2 insolar.JetID
 }
 
 type StorageMockSplitResult struct {
-	r  core.JetID
-	r1 core.JetID
+	r  insolar.JetID
+	r1 insolar.JetID
 	r2 error
 }
 
 //Expect specifies that invocation of Storage.Split is expected from 1 to Infinity times
-func (m *mStorageMockSplit) Expect(p context.Context, p1 core.PulseNumber, p2 core.JetID) *mStorageMockSplit {
+func (m *mStorageMockSplit) Expect(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID) *mStorageMockSplit {
 	m.mock.SplitFunc = nil
 	m.expectationSeries = nil
 
@@ -654,7 +654,7 @@ func (m *mStorageMockSplit) Expect(p context.Context, p1 core.PulseNumber, p2 co
 }
 
 //Return specifies results of invocation of Storage.Split
-func (m *mStorageMockSplit) Return(r core.JetID, r1 core.JetID, r2 error) *StorageMock {
+func (m *mStorageMockSplit) Return(r insolar.JetID, r1 insolar.JetID, r2 error) *StorageMock {
 	m.mock.SplitFunc = nil
 	m.expectationSeries = nil
 
@@ -666,7 +666,7 @@ func (m *mStorageMockSplit) Return(r core.JetID, r1 core.JetID, r2 error) *Stora
 }
 
 //ExpectOnce specifies that invocation of Storage.Split is expected once
-func (m *mStorageMockSplit) ExpectOnce(p context.Context, p1 core.PulseNumber, p2 core.JetID) *StorageMockSplitExpectation {
+func (m *mStorageMockSplit) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID) *StorageMockSplitExpectation {
 	m.mock.SplitFunc = nil
 	m.mainExpectation = nil
 
@@ -676,12 +676,12 @@ func (m *mStorageMockSplit) ExpectOnce(p context.Context, p1 core.PulseNumber, p
 	return expectation
 }
 
-func (e *StorageMockSplitExpectation) Return(r core.JetID, r1 core.JetID, r2 error) {
+func (e *StorageMockSplitExpectation) Return(r insolar.JetID, r1 insolar.JetID, r2 error) {
 	e.result = &StorageMockSplitResult{r, r1, r2}
 }
 
 //Set uses given function f as a mock of Storage.Split method
-func (m *mStorageMockSplit) Set(f func(p context.Context, p1 core.PulseNumber, p2 core.JetID) (r core.JetID, r1 core.JetID, r2 error)) *StorageMock {
+func (m *mStorageMockSplit) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID) (r insolar.JetID, r1 insolar.JetID, r2 error)) *StorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -690,7 +690,7 @@ func (m *mStorageMockSplit) Set(f func(p context.Context, p1 core.PulseNumber, p
 }
 
 //Split implements github.com/insolar/insolar/ledger/internal/jet.Storage interface
-func (m *StorageMock) Split(p context.Context, p1 core.PulseNumber, p2 core.JetID) (r core.JetID, r1 core.JetID, r2 error) {
+func (m *StorageMock) Split(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID) (r insolar.JetID, r1 insolar.JetID, r2 error) {
 	counter := atomic.AddUint64(&m.SplitPreCounter, 1)
 	defer atomic.AddUint64(&m.SplitCounter, 1)
 
@@ -785,13 +785,13 @@ type StorageMockUpdateExpectation struct {
 
 type StorageMockUpdateInput struct {
 	p  context.Context
-	p1 core.PulseNumber
+	p1 insolar.PulseNumber
 	p2 bool
-	p3 []core.JetID
+	p3 []insolar.JetID
 }
 
 //Expect specifies that invocation of Storage.Update is expected from 1 to Infinity times
-func (m *mStorageMockUpdate) Expect(p context.Context, p1 core.PulseNumber, p2 bool, p3 ...core.JetID) *mStorageMockUpdate {
+func (m *mStorageMockUpdate) Expect(p context.Context, p1 insolar.PulseNumber, p2 bool, p3 ...insolar.JetID) *mStorageMockUpdate {
 	m.mock.UpdateFunc = nil
 	m.expectationSeries = nil
 
@@ -815,7 +815,7 @@ func (m *mStorageMockUpdate) Return() *StorageMock {
 }
 
 //ExpectOnce specifies that invocation of Storage.Update is expected once
-func (m *mStorageMockUpdate) ExpectOnce(p context.Context, p1 core.PulseNumber, p2 bool, p3 ...core.JetID) *StorageMockUpdateExpectation {
+func (m *mStorageMockUpdate) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 bool, p3 ...insolar.JetID) *StorageMockUpdateExpectation {
 	m.mock.UpdateFunc = nil
 	m.mainExpectation = nil
 
@@ -826,7 +826,7 @@ func (m *mStorageMockUpdate) ExpectOnce(p context.Context, p1 core.PulseNumber, 
 }
 
 //Set uses given function f as a mock of Storage.Update method
-func (m *mStorageMockUpdate) Set(f func(p context.Context, p1 core.PulseNumber, p2 bool, p3 ...core.JetID)) *StorageMock {
+func (m *mStorageMockUpdate) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 bool, p3 ...insolar.JetID)) *StorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -835,7 +835,7 @@ func (m *mStorageMockUpdate) Set(f func(p context.Context, p1 core.PulseNumber, 
 }
 
 //Update implements github.com/insolar/insolar/ledger/internal/jet.Storage interface
-func (m *StorageMock) Update(p context.Context, p1 core.PulseNumber, p2 bool, p3 ...core.JetID) {
+func (m *StorageMock) Update(p context.Context, p1 insolar.PulseNumber, p2 bool, p3 ...insolar.JetID) {
 	counter := atomic.AddUint64(&m.UpdatePreCounter, 1)
 	defer atomic.AddUint64(&m.UpdateCounter, 1)
 

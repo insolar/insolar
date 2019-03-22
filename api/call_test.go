@@ -25,8 +25,8 @@ import (
 
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/platformpolicy"
@@ -116,23 +116,23 @@ func TestTimeoutSuite(t *testing.T) {
 	require.NoError(t, err)
 
 	cert := testutils.NewCertificateMock(t)
-	cert.GetRootDomainReferenceFunc = func() (r *core.RecordRef) {
+	cert.GetRootDomainReferenceFunc = func() (r *insolar.RecordRef) {
 		ref := testutils.RandomRef()
 		return &ref
 	}
 
 	cm := testutils.NewCertificateManagerMock(t)
-	cm.GetCertificateFunc = func() (r core.Certificate) {
+	cm.GetCertificateFunc = func() (r insolar.Certificate) {
 		return cert
 	}
 
 	cr := testutils.NewContractRequesterMock(t)
-	cr.SendRequestFunc = func(p context.Context, p1 *core.RecordRef, method string, p3 []interface{}) (core.Reply, error) {
+	cr.SendRequestFunc = func(p context.Context, p1 *insolar.RecordRef, method string, p3 []interface{}) (insolar.Reply, error) {
 		switch method {
 		case "GetPublicKey":
 			var result = string(pKeyString)
 			var contractErr *foundation.Error
-			data, _ := core.MarshalArgs(result, contractErr)
+			data, _ := insolar.MarshalArgs(result, contractErr)
 			return &reply.CallMethod{
 				Result: data,
 			}, nil
@@ -142,7 +142,7 @@ func TestTimeoutSuite(t *testing.T) {
 			}
 			var result = "OK"
 			var contractErr *foundation.Error
-			data, _ := core.MarshalArgs(result, contractErr)
+			data, _ := insolar.MarshalArgs(result, contractErr)
 			return &reply.CallMethod{
 				Result: data,
 			}, nil

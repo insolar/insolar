@@ -54,13 +54,13 @@ import (
 	"sort"
 
 	consensus "github.com/insolar/insolar/consensus/packets"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network"
 	"github.com/pkg/errors"
 )
 
-func copyActiveNodes(nodes []core.Node) map[core.RecordRef]core.Node {
-	result := make(map[core.RecordRef]core.Node, len(nodes))
+func copyActiveNodes(nodes []insolar.NetworkNode) map[insolar.RecordRef]insolar.NetworkNode {
+	result := make(map[insolar.RecordRef]insolar.NetworkNode, len(nodes))
 	for _, node := range nodes {
 		node.(MutableNode).ChangeState()
 		result[node.ID()] = node
@@ -70,63 +70,63 @@ func copyActiveNodes(nodes []core.Node) map[core.RecordRef]core.Node {
 
 type unsyncList struct {
 	length      int
-	origin      core.Node
-	activeNodes map[core.RecordRef]core.Node
-	refToIndex  map[core.RecordRef]int
-	proofs      map[core.RecordRef]*consensus.NodePulseProof
-	ghs         map[core.RecordRef]consensus.GlobuleHashSignature
-	indexToRef  map[int]core.RecordRef
+	origin      insolar.NetworkNode
+	activeNodes map[insolar.RecordRef]insolar.NetworkNode
+	refToIndex  map[insolar.RecordRef]int
+	proofs      map[insolar.RecordRef]*consensus.NodePulseProof
+	ghs         map[insolar.RecordRef]consensus.GlobuleHashSignature
+	indexToRef  map[int]insolar.RecordRef
 }
 
-func (ul *unsyncList) GetOrigin() core.Node {
+func (ul *unsyncList) GetOrigin() insolar.NetworkNode {
 	return ul.origin
 }
 
-func (ul *unsyncList) GetGlobuleHashSignature(ref core.RecordRef) (consensus.GlobuleHashSignature, bool) {
+func (ul *unsyncList) GetGlobuleHashSignature(ref insolar.RecordRef) (consensus.GlobuleHashSignature, bool) {
 	ghs, ok := ul.ghs[ref]
 	return ghs, ok
 }
 
-func (ul *unsyncList) SetGlobuleHashSignature(ref core.RecordRef, ghs consensus.GlobuleHashSignature) {
+func (ul *unsyncList) SetGlobuleHashSignature(ref insolar.RecordRef, ghs consensus.GlobuleHashSignature) {
 	ul.ghs[ref] = ghs
 }
 
-func (ul *unsyncList) RemoveNode(nodeID core.RecordRef) {
+func (ul *unsyncList) RemoveNode(nodeID insolar.RecordRef) {
 	delete(ul.activeNodes, nodeID)
 	delete(ul.proofs, nodeID)
 	delete(ul.ghs, nodeID)
 }
 
-func (ul *unsyncList) AddNode(node core.Node, bitsetIndex uint16) {
+func (ul *unsyncList) AddNode(node insolar.NetworkNode, bitsetIndex uint16) {
 	ul.addNode(node, int(bitsetIndex))
 }
 
-func (ul *unsyncList) AddProof(nodeID core.RecordRef, proof *consensus.NodePulseProof) {
+func (ul *unsyncList) AddProof(nodeID insolar.RecordRef, proof *consensus.NodePulseProof) {
 	ul.proofs[nodeID] = proof
 }
 
-func (ul *unsyncList) GetProof(nodeID core.RecordRef) *consensus.NodePulseProof {
+func (ul *unsyncList) GetProof(nodeID insolar.RecordRef) *consensus.NodePulseProof {
 	return ul.proofs[nodeID]
 }
 
-func newUnsyncList(origin core.Node, activeNodesSorted []core.Node, length int) *unsyncList {
+func newUnsyncList(origin insolar.NetworkNode, activeNodesSorted []insolar.NetworkNode, length int) *unsyncList {
 	result := &unsyncList{
 		length:      length,
 		origin:      origin,
-		indexToRef:  make(map[int]core.RecordRef, len(activeNodesSorted)),
-		refToIndex:  make(map[core.RecordRef]int, len(activeNodesSorted)),
-		activeNodes: make(map[core.RecordRef]core.Node, len(activeNodesSorted)),
+		indexToRef:  make(map[int]insolar.RecordRef, len(activeNodesSorted)),
+		refToIndex:  make(map[insolar.RecordRef]int, len(activeNodesSorted)),
+		activeNodes: make(map[insolar.RecordRef]insolar.NetworkNode, len(activeNodesSorted)),
 	}
 	for i, node := range activeNodesSorted {
 		result.addNode(node, i)
 	}
-	result.proofs = make(map[core.RecordRef]*consensus.NodePulseProof)
-	result.ghs = make(map[core.RecordRef]consensus.GlobuleHashSignature)
+	result.proofs = make(map[insolar.RecordRef]*consensus.NodePulseProof)
+	result.ghs = make(map[insolar.RecordRef]consensus.GlobuleHashSignature)
 
 	return result
 }
 
-func (ul *unsyncList) addNodes(nodes []core.Node) {
+func (ul *unsyncList) addNodes(nodes []insolar.NetworkNode) {
 	sort.Slice(nodes, func(i, j int) bool {
 		return nodes[i].ID().Compare(nodes[j].ID()) < 0
 	})
@@ -136,22 +136,22 @@ func (ul *unsyncList) addNodes(nodes []core.Node) {
 	}
 }
 
-func (ul *unsyncList) addNode(node core.Node, index int) {
+func (ul *unsyncList) addNode(node insolar.NetworkNode, index int) {
 	ul.indexToRef[index] = node.ID()
 	ul.refToIndex[node.ID()] = index
 	ul.activeNodes[node.ID()] = node
 }
 
-func (ul *unsyncList) GetActiveNode(ref core.RecordRef) core.Node {
+func (ul *unsyncList) GetActiveNode(ref insolar.RecordRef) insolar.NetworkNode {
 	return ul.activeNodes[ref]
 }
 
-func (ul *unsyncList) GetActiveNodes() []core.Node {
+func (ul *unsyncList) GetActiveNodes() []insolar.NetworkNode {
 	return sortedNodeList(ul.activeNodes)
 }
 
-func sortedNodeList(nodes map[core.RecordRef]core.Node) []core.Node {
-	result := make([]core.Node, len(nodes))
+func sortedNodeList(nodes map[insolar.RecordRef]insolar.NetworkNode) []insolar.NetworkNode {
+	result := make([]insolar.NetworkNode, len(nodes))
 	i := 0
 	for _, node := range nodes {
 		result[i] = node
@@ -163,18 +163,18 @@ func sortedNodeList(nodes map[core.RecordRef]core.Node) []core.Node {
 	return result
 }
 
-func (ul *unsyncList) IndexToRef(index int) (core.RecordRef, error) {
+func (ul *unsyncList) IndexToRef(index int) (insolar.RecordRef, error) {
 	if index < 0 || index >= ul.length {
-		return core.RecordRef{}, consensus.ErrBitSetOutOfRange
+		return insolar.RecordRef{}, consensus.ErrBitSetOutOfRange
 	}
 	result, ok := ul.indexToRef[index]
 	if !ok {
-		return core.RecordRef{}, consensus.ErrBitSetNodeIsMissing
+		return insolar.RecordRef{}, consensus.ErrBitSetNodeIsMissing
 	}
 	return result, nil
 }
 
-func (ul *unsyncList) RefToIndex(nodeID core.RecordRef) (int, error) {
+func (ul *unsyncList) RefToIndex(nodeID insolar.RecordRef) (int, error) {
 	index, ok := ul.refToIndex[nodeID]
 	if !ok {
 		return 0, consensus.ErrBitSetIncorrectNode
@@ -196,7 +196,7 @@ func ApplyClaims(ul network.UnsyncList, claims []consensus.ReferendumClaim) erro
 		// TODO: fix version
 		node, err := ClaimToNode("", &c.NodeJoinClaim)
 		if err != nil {
-			return errors.Wrap(err, "[ AddClaims ] failed to convert Claim -> Node")
+			return errors.Wrap(err, "[ AddClaims ] failed to convert Claim -> NetworkNode")
 		}
 		// TODO: check these two
 		ul.AddNode(node, c.NodeAnnouncerIndex)

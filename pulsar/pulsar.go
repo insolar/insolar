@@ -32,7 +32,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 
 	"github.com/insolar/insolar/log"
 	pulsarstorage "github.com/insolar/insolar/pulsar/storage"
@@ -59,23 +59,23 @@ type Pulsar struct {
 
 	StartProcessLock sync.Mutex
 
-	generatedEntropy     *core.Entropy
+	generatedEntropy     *insolar.Entropy
 	generatedEntropyLock sync.RWMutex
 
 	GeneratedEntropySign []byte
 
-	currentSlotEntropy     *core.Entropy
+	currentSlotEntropy     *insolar.Entropy
 	currentSlotEntropyLock sync.RWMutex
 
 	CurrentSlotPulseSender string
 
 	currentSlotSenderConfirmationsLock sync.RWMutex
-	CurrentSlotSenderConfirmations     map[string]core.PulseSenderConfirmation
+	CurrentSlotSenderConfirmations     map[string]insolar.PulseSenderConfirmation
 
-	ProcessingPulseNumber core.PulseNumber
+	ProcessingPulseNumber insolar.PulseNumber
 
 	lastPulseLock sync.RWMutex
-	lastPulse     *core.Pulse
+	lastPulse     *insolar.Pulse
 
 	ownedBtfRowLock sync.RWMutex
 	ownedBftRow     map[string]*BftCell
@@ -85,20 +85,20 @@ type Pulsar struct {
 
 	StateSwitcher              StateSwitcher
 	Certificate                certificate.Certificate
-	CryptographyService        core.CryptographyService
-	PlatformCryptographyScheme core.PlatformCryptographyScheme
-	KeyProcessor               core.KeyProcessor
-	PulseDistributor           core.PulseDistributor
+	CryptographyService        insolar.CryptographyService
+	PlatformCryptographyScheme insolar.PlatformCryptographyScheme
+	KeyProcessor               insolar.KeyProcessor
+	PulseDistributor           insolar.PulseDistributor
 }
 
 // NewPulsar creates a new pulse with using of custom GeneratedEntropy Generator
 func NewPulsar(
 	// TODO: refactor constructor; inject components. INS-939 - @dmitry-panchenko 11.Dec.2018
 	configuration configuration.Pulsar,
-	cryptographyService core.CryptographyService,
-	scheme core.PlatformCryptographyScheme,
-	keyProcessor core.KeyProcessor,
-	pulseDistributor core.PulseDistributor,
+	cryptographyService insolar.CryptographyService,
+	scheme insolar.PlatformCryptographyScheme,
+	keyProcessor insolar.KeyProcessor,
+	pulseDistributor insolar.PulseDistributor,
 	storage pulsarstorage.PulsarStorage,
 	rpcWrapperFactory RPCClientWrapperFactory,
 	entropyGenerator entropygenerator.EntropyGenerator,
@@ -175,7 +175,7 @@ func NewPulsar(
 	gob.Register(&EntropySignaturePayload{})
 	gob.Register(&EntropyPayload{})
 	gob.Register(&VectorPayload{})
-	gob.Register(core.PulseSenderConfirmation{})
+	gob.Register(insolar.PulseSenderConfirmation{})
 	gob.Register(&PulsePayload{})
 	gob.Register(&PulseSenderConfirmationPayload{})
 
@@ -291,7 +291,7 @@ func (currentPulsar *Pulsar) CheckConnectionsToPulsars(ctx context.Context) {
 }
 
 // StartConsensusProcess starts process of calculating consensus between pulsars
-func (currentPulsar *Pulsar) StartConsensusProcess(ctx context.Context, pulseNumber core.PulseNumber) error {
+func (currentPulsar *Pulsar) StartConsensusProcess(ctx context.Context, pulseNumber insolar.PulseNumber) error {
 	ctx, span := instracer.StartSpan(ctx, "Pulsar.StartConsensusProcess")
 	defer span.End()
 

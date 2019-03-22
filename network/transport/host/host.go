@@ -53,16 +53,16 @@ package host
 import (
 	"fmt"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/pkg/errors"
 )
 
 // Host is the over-the-wire representation of a host.
 type Host struct {
 	// NodeID is unique identifier of the node
-	NodeID core.RecordRef
+	NodeID insolar.RecordRef
 	// ShortID is shortened unique identifier of the node inside the globe
-	ShortID core.ShortNodeID
+	ShortID insolar.ShortNodeID
 	// Address is IP and port.
 	Address *Address
 }
@@ -77,7 +77,7 @@ func NewHost(address string) (*Host, error) {
 }
 
 // NewHostN creates a new Host with specified physical address and NodeID.
-func NewHostN(address string, nodeID core.RecordRef) (*Host, error) {
+func NewHostN(address string, nodeID insolar.RecordRef) (*Host, error) {
 	h, err := NewHost(address)
 	if err != nil {
 		return nil, err
@@ -87,7 +87,7 @@ func NewHostN(address string, nodeID core.RecordRef) (*Host, error) {
 }
 
 // NewHostNS creates a new Host with specified physical address, NodeID and ShortID.
-func NewHostNS(address string, nodeID core.RecordRef, shortID core.ShortNodeID) (*Host, error) {
+func NewHostNS(address string, nodeID insolar.RecordRef, shortID insolar.ShortNodeID) (*Host, error) {
 	h, err := NewHostN(address, nodeID)
 	if err != nil {
 		return nil, err

@@ -56,7 +56,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/pkg/errors"
 )
 
@@ -357,7 +357,7 @@ func (nac *NodeAnnounceClaim) Deserialize(data io.Reader) error {
 	return nil
 }
 
-func (nac *NodeAnnounceClaim) Update(nodeJoinerID core.RecordRef, crypto core.CryptographyService) error {
+func (nac *NodeAnnounceClaim) Update(nodeJoinerID insolar.RecordRef, crypto insolar.CryptographyService) error {
 	index, err := nac.BitSetMapper.RefToIndex(nodeJoinerID)
 	if err != nil {
 		return errors.Wrap(err, "[ NodeAnnounceClaim.Update ] failed to map joiner node ID to bitset index")

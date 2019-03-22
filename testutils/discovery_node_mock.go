@@ -3,7 +3,7 @@ package testutils
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "DiscoveryNode" can be found in github.com/insolar/insolar/core
+The original interface "DiscoveryNode" can be found in github.com/insolar/insolar/insolar
 */
 import (
 	crypto "crypto"
@@ -11,10 +11,10 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	core "github.com/insolar/insolar/core"
+	insolar "github.com/insolar/insolar/insolar"
 )
 
-//DiscoveryNodeMock implements github.com/insolar/insolar/core.DiscoveryNode
+//DiscoveryNodeMock implements github.com/insolar/insolar/insolar.DiscoveryNode
 type DiscoveryNodeMock struct {
 	t minimock.Tester
 
@@ -23,7 +23,7 @@ type DiscoveryNodeMock struct {
 	GetHostPreCounter uint64
 	GetHostMock       mDiscoveryNodeMockGetHost
 
-	GetNodeRefFunc       func() (r *core.RecordRef)
+	GetNodeRefFunc       func() (r *insolar.RecordRef)
 	GetNodeRefCounter    uint64
 	GetNodeRefPreCounter uint64
 	GetNodeRefMock       mDiscoveryNodeMockGetNodeRef
@@ -34,7 +34,7 @@ type DiscoveryNodeMock struct {
 	GetPublicKeyMock       mDiscoveryNodeMockGetPublicKey
 }
 
-//NewDiscoveryNodeMock returns a mock for github.com/insolar/insolar/core.DiscoveryNode
+//NewDiscoveryNodeMock returns a mock for github.com/insolar/insolar/insolar.DiscoveryNode
 func NewDiscoveryNodeMock(t minimock.Tester) *DiscoveryNodeMock {
 	m := &DiscoveryNodeMock{t: t}
 
@@ -111,7 +111,7 @@ func (m *mDiscoveryNodeMockGetHost) Set(f func() (r string)) *DiscoveryNodeMock 
 	return m.mock
 }
 
-//GetHost implements github.com/insolar/insolar/core.DiscoveryNode interface
+//GetHost implements github.com/insolar/insolar/insolar.DiscoveryNode interface
 func (m *DiscoveryNodeMock) GetHost() (r string) {
 	counter := atomic.AddUint64(&m.GetHostPreCounter, 1)
 	defer atomic.AddUint64(&m.GetHostCounter, 1)
@@ -194,7 +194,7 @@ type DiscoveryNodeMockGetNodeRefExpectation struct {
 }
 
 type DiscoveryNodeMockGetNodeRefResult struct {
-	r *core.RecordRef
+	r *insolar.RecordRef
 }
 
 //Expect specifies that invocation of DiscoveryNode.GetNodeRef is expected from 1 to Infinity times
@@ -210,7 +210,7 @@ func (m *mDiscoveryNodeMockGetNodeRef) Expect() *mDiscoveryNodeMockGetNodeRef {
 }
 
 //Return specifies results of invocation of DiscoveryNode.GetNodeRef
-func (m *mDiscoveryNodeMockGetNodeRef) Return(r *core.RecordRef) *DiscoveryNodeMock {
+func (m *mDiscoveryNodeMockGetNodeRef) Return(r *insolar.RecordRef) *DiscoveryNodeMock {
 	m.mock.GetNodeRefFunc = nil
 	m.expectationSeries = nil
 
@@ -232,12 +232,12 @@ func (m *mDiscoveryNodeMockGetNodeRef) ExpectOnce() *DiscoveryNodeMockGetNodeRef
 	return expectation
 }
 
-func (e *DiscoveryNodeMockGetNodeRefExpectation) Return(r *core.RecordRef) {
+func (e *DiscoveryNodeMockGetNodeRefExpectation) Return(r *insolar.RecordRef) {
 	e.result = &DiscoveryNodeMockGetNodeRefResult{r}
 }
 
 //Set uses given function f as a mock of DiscoveryNode.GetNodeRef method
-func (m *mDiscoveryNodeMockGetNodeRef) Set(f func() (r *core.RecordRef)) *DiscoveryNodeMock {
+func (m *mDiscoveryNodeMockGetNodeRef) Set(f func() (r *insolar.RecordRef)) *DiscoveryNodeMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -245,8 +245,8 @@ func (m *mDiscoveryNodeMockGetNodeRef) Set(f func() (r *core.RecordRef)) *Discov
 	return m.mock
 }
 
-//GetNodeRef implements github.com/insolar/insolar/core.DiscoveryNode interface
-func (m *DiscoveryNodeMock) GetNodeRef() (r *core.RecordRef) {
+//GetNodeRef implements github.com/insolar/insolar/insolar.DiscoveryNode interface
+func (m *DiscoveryNodeMock) GetNodeRef() (r *insolar.RecordRef) {
 	counter := atomic.AddUint64(&m.GetNodeRefPreCounter, 1)
 	defer atomic.AddUint64(&m.GetNodeRefCounter, 1)
 
@@ -379,7 +379,7 @@ func (m *mDiscoveryNodeMockGetPublicKey) Set(f func() (r crypto.PublicKey)) *Dis
 	return m.mock
 }
 
-//GetPublicKey implements github.com/insolar/insolar/core.DiscoveryNode interface
+//GetPublicKey implements github.com/insolar/insolar/insolar.DiscoveryNode interface
 func (m *DiscoveryNodeMock) GetPublicKey() (r crypto.PublicKey) {
 	counter := atomic.AddUint64(&m.GetPublicKeyPreCounter, 1)
 	defer atomic.AddUint64(&m.GetPublicKeyCounter, 1)

@@ -12,7 +12,7 @@ import (
 
 	"github.com/gojuno/minimock"
 	packets "github.com/insolar/insolar/consensus/packets"
-	core "github.com/insolar/insolar/core"
+	insolar "github.com/insolar/insolar/insolar"
 	network "github.com/insolar/insolar/network"
 
 	testify_assert "github.com/stretchr/testify/assert"
@@ -42,7 +42,7 @@ type NodeKeeperMock struct {
 	GetConsensusInfoPreCounter uint64
 	GetConsensusInfoMock       mNodeKeeperMockGetConsensusInfo
 
-	GetOriginFunc       func() (r core.Node)
+	GetOriginFunc       func() (r insolar.NetworkNode)
 	GetOriginCounter    uint64
 	GetOriginPreCounter uint64
 	GetOriginMock       mNodeKeeperMockGetOrigin
@@ -67,17 +67,17 @@ type NodeKeeperMock struct {
 	GetUnsyncListPreCounter uint64
 	GetUnsyncListMock       mNodeKeeperMockGetUnsyncList
 
-	GetWorkingNodeFunc       func(p core.RecordRef) (r core.Node)
+	GetWorkingNodeFunc       func(p insolar.RecordRef) (r insolar.NetworkNode)
 	GetWorkingNodeCounter    uint64
 	GetWorkingNodePreCounter uint64
 	GetWorkingNodeMock       mNodeKeeperMockGetWorkingNode
 
-	GetWorkingNodesFunc       func() (r []core.Node)
+	GetWorkingNodesFunc       func() (r []insolar.NetworkNode)
 	GetWorkingNodesCounter    uint64
 	GetWorkingNodesPreCounter uint64
 	GetWorkingNodesMock       mNodeKeeperMockGetWorkingNodes
 
-	GetWorkingNodesByRoleFunc       func(p core.DynamicRole) (r []core.RecordRef)
+	GetWorkingNodesByRoleFunc       func(p insolar.DynamicRole) (r []insolar.RecordRef)
 	GetWorkingNodesByRoleCounter    uint64
 	GetWorkingNodesByRolePreCounter uint64
 	GetWorkingNodesByRoleMock       mNodeKeeperMockGetWorkingNodesByRole
@@ -97,7 +97,7 @@ type NodeKeeperMock struct {
 	SetCloudHashPreCounter uint64
 	SetCloudHashMock       mNodeKeeperMockSetCloudHash
 
-	SetInitialSnapshotFunc       func(p []core.Node)
+	SetInitialSnapshotFunc       func(p []insolar.NetworkNode)
 	SetInitialSnapshotCounter    uint64
 	SetInitialSnapshotPreCounter uint64
 	SetInitialSnapshotMock       mNodeKeeperMockSetInitialSnapshot
@@ -107,7 +107,7 @@ type NodeKeeperMock struct {
 	SetIsBootstrappedPreCounter uint64
 	SetIsBootstrappedMock       mNodeKeeperMockSetIsBootstrapped
 
-	SyncFunc       func(p context.Context, p1 []core.Node, p2 []packets.ReferendumClaim) (r error)
+	SyncFunc       func(p context.Context, p1 []insolar.NetworkNode, p2 []packets.ReferendumClaim) (r error)
 	SyncCounter    uint64
 	SyncPreCounter uint64
 	SyncMock       mNodeKeeperMockSync
@@ -690,7 +690,7 @@ type NodeKeeperMockGetOriginExpectation struct {
 }
 
 type NodeKeeperMockGetOriginResult struct {
-	r core.Node
+	r insolar.NetworkNode
 }
 
 //Expect specifies that invocation of NodeKeeper.GetOrigin is expected from 1 to Infinity times
@@ -706,7 +706,7 @@ func (m *mNodeKeeperMockGetOrigin) Expect() *mNodeKeeperMockGetOrigin {
 }
 
 //Return specifies results of invocation of NodeKeeper.GetOrigin
-func (m *mNodeKeeperMockGetOrigin) Return(r core.Node) *NodeKeeperMock {
+func (m *mNodeKeeperMockGetOrigin) Return(r insolar.NetworkNode) *NodeKeeperMock {
 	m.mock.GetOriginFunc = nil
 	m.expectationSeries = nil
 
@@ -728,12 +728,12 @@ func (m *mNodeKeeperMockGetOrigin) ExpectOnce() *NodeKeeperMockGetOriginExpectat
 	return expectation
 }
 
-func (e *NodeKeeperMockGetOriginExpectation) Return(r core.Node) {
+func (e *NodeKeeperMockGetOriginExpectation) Return(r insolar.NetworkNode) {
 	e.result = &NodeKeeperMockGetOriginResult{r}
 }
 
 //Set uses given function f as a mock of NodeKeeper.GetOrigin method
-func (m *mNodeKeeperMockGetOrigin) Set(f func() (r core.Node)) *NodeKeeperMock {
+func (m *mNodeKeeperMockGetOrigin) Set(f func() (r insolar.NetworkNode)) *NodeKeeperMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -742,7 +742,7 @@ func (m *mNodeKeeperMockGetOrigin) Set(f func() (r core.Node)) *NodeKeeperMock {
 }
 
 //GetOrigin implements github.com/insolar/insolar/network.NodeKeeper interface
-func (m *NodeKeeperMock) GetOrigin() (r core.Node) {
+func (m *NodeKeeperMock) GetOrigin() (r insolar.NetworkNode) {
 	counter := atomic.AddUint64(&m.GetOriginPreCounter, 1)
 	defer atomic.AddUint64(&m.GetOriginCounter, 1)
 
@@ -1393,15 +1393,15 @@ type NodeKeeperMockGetWorkingNodeExpectation struct {
 }
 
 type NodeKeeperMockGetWorkingNodeInput struct {
-	p core.RecordRef
+	p insolar.RecordRef
 }
 
 type NodeKeeperMockGetWorkingNodeResult struct {
-	r core.Node
+	r insolar.NetworkNode
 }
 
 //Expect specifies that invocation of NodeKeeper.GetWorkingNode is expected from 1 to Infinity times
-func (m *mNodeKeeperMockGetWorkingNode) Expect(p core.RecordRef) *mNodeKeeperMockGetWorkingNode {
+func (m *mNodeKeeperMockGetWorkingNode) Expect(p insolar.RecordRef) *mNodeKeeperMockGetWorkingNode {
 	m.mock.GetWorkingNodeFunc = nil
 	m.expectationSeries = nil
 
@@ -1413,7 +1413,7 @@ func (m *mNodeKeeperMockGetWorkingNode) Expect(p core.RecordRef) *mNodeKeeperMoc
 }
 
 //Return specifies results of invocation of NodeKeeper.GetWorkingNode
-func (m *mNodeKeeperMockGetWorkingNode) Return(r core.Node) *NodeKeeperMock {
+func (m *mNodeKeeperMockGetWorkingNode) Return(r insolar.NetworkNode) *NodeKeeperMock {
 	m.mock.GetWorkingNodeFunc = nil
 	m.expectationSeries = nil
 
@@ -1425,7 +1425,7 @@ func (m *mNodeKeeperMockGetWorkingNode) Return(r core.Node) *NodeKeeperMock {
 }
 
 //ExpectOnce specifies that invocation of NodeKeeper.GetWorkingNode is expected once
-func (m *mNodeKeeperMockGetWorkingNode) ExpectOnce(p core.RecordRef) *NodeKeeperMockGetWorkingNodeExpectation {
+func (m *mNodeKeeperMockGetWorkingNode) ExpectOnce(p insolar.RecordRef) *NodeKeeperMockGetWorkingNodeExpectation {
 	m.mock.GetWorkingNodeFunc = nil
 	m.mainExpectation = nil
 
@@ -1435,12 +1435,12 @@ func (m *mNodeKeeperMockGetWorkingNode) ExpectOnce(p core.RecordRef) *NodeKeeper
 	return expectation
 }
 
-func (e *NodeKeeperMockGetWorkingNodeExpectation) Return(r core.Node) {
+func (e *NodeKeeperMockGetWorkingNodeExpectation) Return(r insolar.NetworkNode) {
 	e.result = &NodeKeeperMockGetWorkingNodeResult{r}
 }
 
 //Set uses given function f as a mock of NodeKeeper.GetWorkingNode method
-func (m *mNodeKeeperMockGetWorkingNode) Set(f func(p core.RecordRef) (r core.Node)) *NodeKeeperMock {
+func (m *mNodeKeeperMockGetWorkingNode) Set(f func(p insolar.RecordRef) (r insolar.NetworkNode)) *NodeKeeperMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1449,7 +1449,7 @@ func (m *mNodeKeeperMockGetWorkingNode) Set(f func(p core.RecordRef) (r core.Nod
 }
 
 //GetWorkingNode implements github.com/insolar/insolar/network.NodeKeeper interface
-func (m *NodeKeeperMock) GetWorkingNode(p core.RecordRef) (r core.Node) {
+func (m *NodeKeeperMock) GetWorkingNode(p insolar.RecordRef) (r insolar.NetworkNode) {
 	counter := atomic.AddUint64(&m.GetWorkingNodePreCounter, 1)
 	defer atomic.AddUint64(&m.GetWorkingNodeCounter, 1)
 
@@ -1539,7 +1539,7 @@ type NodeKeeperMockGetWorkingNodesExpectation struct {
 }
 
 type NodeKeeperMockGetWorkingNodesResult struct {
-	r []core.Node
+	r []insolar.NetworkNode
 }
 
 //Expect specifies that invocation of NodeKeeper.GetWorkingNodes is expected from 1 to Infinity times
@@ -1555,7 +1555,7 @@ func (m *mNodeKeeperMockGetWorkingNodes) Expect() *mNodeKeeperMockGetWorkingNode
 }
 
 //Return specifies results of invocation of NodeKeeper.GetWorkingNodes
-func (m *mNodeKeeperMockGetWorkingNodes) Return(r []core.Node) *NodeKeeperMock {
+func (m *mNodeKeeperMockGetWorkingNodes) Return(r []insolar.NetworkNode) *NodeKeeperMock {
 	m.mock.GetWorkingNodesFunc = nil
 	m.expectationSeries = nil
 
@@ -1577,12 +1577,12 @@ func (m *mNodeKeeperMockGetWorkingNodes) ExpectOnce() *NodeKeeperMockGetWorkingN
 	return expectation
 }
 
-func (e *NodeKeeperMockGetWorkingNodesExpectation) Return(r []core.Node) {
+func (e *NodeKeeperMockGetWorkingNodesExpectation) Return(r []insolar.NetworkNode) {
 	e.result = &NodeKeeperMockGetWorkingNodesResult{r}
 }
 
 //Set uses given function f as a mock of NodeKeeper.GetWorkingNodes method
-func (m *mNodeKeeperMockGetWorkingNodes) Set(f func() (r []core.Node)) *NodeKeeperMock {
+func (m *mNodeKeeperMockGetWorkingNodes) Set(f func() (r []insolar.NetworkNode)) *NodeKeeperMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1591,7 +1591,7 @@ func (m *mNodeKeeperMockGetWorkingNodes) Set(f func() (r []core.Node)) *NodeKeep
 }
 
 //GetWorkingNodes implements github.com/insolar/insolar/network.NodeKeeper interface
-func (m *NodeKeeperMock) GetWorkingNodes() (r []core.Node) {
+func (m *NodeKeeperMock) GetWorkingNodes() (r []insolar.NetworkNode) {
 	counter := atomic.AddUint64(&m.GetWorkingNodesPreCounter, 1)
 	defer atomic.AddUint64(&m.GetWorkingNodesCounter, 1)
 
@@ -1674,15 +1674,15 @@ type NodeKeeperMockGetWorkingNodesByRoleExpectation struct {
 }
 
 type NodeKeeperMockGetWorkingNodesByRoleInput struct {
-	p core.DynamicRole
+	p insolar.DynamicRole
 }
 
 type NodeKeeperMockGetWorkingNodesByRoleResult struct {
-	r []core.RecordRef
+	r []insolar.RecordRef
 }
 
 //Expect specifies that invocation of NodeKeeper.GetWorkingNodesByRole is expected from 1 to Infinity times
-func (m *mNodeKeeperMockGetWorkingNodesByRole) Expect(p core.DynamicRole) *mNodeKeeperMockGetWorkingNodesByRole {
+func (m *mNodeKeeperMockGetWorkingNodesByRole) Expect(p insolar.DynamicRole) *mNodeKeeperMockGetWorkingNodesByRole {
 	m.mock.GetWorkingNodesByRoleFunc = nil
 	m.expectationSeries = nil
 
@@ -1694,7 +1694,7 @@ func (m *mNodeKeeperMockGetWorkingNodesByRole) Expect(p core.DynamicRole) *mNode
 }
 
 //Return specifies results of invocation of NodeKeeper.GetWorkingNodesByRole
-func (m *mNodeKeeperMockGetWorkingNodesByRole) Return(r []core.RecordRef) *NodeKeeperMock {
+func (m *mNodeKeeperMockGetWorkingNodesByRole) Return(r []insolar.RecordRef) *NodeKeeperMock {
 	m.mock.GetWorkingNodesByRoleFunc = nil
 	m.expectationSeries = nil
 
@@ -1706,7 +1706,7 @@ func (m *mNodeKeeperMockGetWorkingNodesByRole) Return(r []core.RecordRef) *NodeK
 }
 
 //ExpectOnce specifies that invocation of NodeKeeper.GetWorkingNodesByRole is expected once
-func (m *mNodeKeeperMockGetWorkingNodesByRole) ExpectOnce(p core.DynamicRole) *NodeKeeperMockGetWorkingNodesByRoleExpectation {
+func (m *mNodeKeeperMockGetWorkingNodesByRole) ExpectOnce(p insolar.DynamicRole) *NodeKeeperMockGetWorkingNodesByRoleExpectation {
 	m.mock.GetWorkingNodesByRoleFunc = nil
 	m.mainExpectation = nil
 
@@ -1716,12 +1716,12 @@ func (m *mNodeKeeperMockGetWorkingNodesByRole) ExpectOnce(p core.DynamicRole) *N
 	return expectation
 }
 
-func (e *NodeKeeperMockGetWorkingNodesByRoleExpectation) Return(r []core.RecordRef) {
+func (e *NodeKeeperMockGetWorkingNodesByRoleExpectation) Return(r []insolar.RecordRef) {
 	e.result = &NodeKeeperMockGetWorkingNodesByRoleResult{r}
 }
 
 //Set uses given function f as a mock of NodeKeeper.GetWorkingNodesByRole method
-func (m *mNodeKeeperMockGetWorkingNodesByRole) Set(f func(p core.DynamicRole) (r []core.RecordRef)) *NodeKeeperMock {
+func (m *mNodeKeeperMockGetWorkingNodesByRole) Set(f func(p insolar.DynamicRole) (r []insolar.RecordRef)) *NodeKeeperMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1730,7 +1730,7 @@ func (m *mNodeKeeperMockGetWorkingNodesByRole) Set(f func(p core.DynamicRole) (r
 }
 
 //GetWorkingNodesByRole implements github.com/insolar/insolar/network.NodeKeeper interface
-func (m *NodeKeeperMock) GetWorkingNodesByRole(p core.DynamicRole) (r []core.RecordRef) {
+func (m *NodeKeeperMock) GetWorkingNodesByRole(p insolar.DynamicRole) (r []insolar.RecordRef) {
 	counter := atomic.AddUint64(&m.GetWorkingNodesByRolePreCounter, 1)
 	defer atomic.AddUint64(&m.GetWorkingNodesByRoleCounter, 1)
 
@@ -2224,11 +2224,11 @@ type NodeKeeperMockSetInitialSnapshotExpectation struct {
 }
 
 type NodeKeeperMockSetInitialSnapshotInput struct {
-	p []core.Node
+	p []insolar.NetworkNode
 }
 
 //Expect specifies that invocation of NodeKeeper.SetInitialSnapshot is expected from 1 to Infinity times
-func (m *mNodeKeeperMockSetInitialSnapshot) Expect(p []core.Node) *mNodeKeeperMockSetInitialSnapshot {
+func (m *mNodeKeeperMockSetInitialSnapshot) Expect(p []insolar.NetworkNode) *mNodeKeeperMockSetInitialSnapshot {
 	m.mock.SetInitialSnapshotFunc = nil
 	m.expectationSeries = nil
 
@@ -2252,7 +2252,7 @@ func (m *mNodeKeeperMockSetInitialSnapshot) Return() *NodeKeeperMock {
 }
 
 //ExpectOnce specifies that invocation of NodeKeeper.SetInitialSnapshot is expected once
-func (m *mNodeKeeperMockSetInitialSnapshot) ExpectOnce(p []core.Node) *NodeKeeperMockSetInitialSnapshotExpectation {
+func (m *mNodeKeeperMockSetInitialSnapshot) ExpectOnce(p []insolar.NetworkNode) *NodeKeeperMockSetInitialSnapshotExpectation {
 	m.mock.SetInitialSnapshotFunc = nil
 	m.mainExpectation = nil
 
@@ -2263,7 +2263,7 @@ func (m *mNodeKeeperMockSetInitialSnapshot) ExpectOnce(p []core.Node) *NodeKeepe
 }
 
 //Set uses given function f as a mock of NodeKeeper.SetInitialSnapshot method
-func (m *mNodeKeeperMockSetInitialSnapshot) Set(f func(p []core.Node)) *NodeKeeperMock {
+func (m *mNodeKeeperMockSetInitialSnapshot) Set(f func(p []insolar.NetworkNode)) *NodeKeeperMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -2272,7 +2272,7 @@ func (m *mNodeKeeperMockSetInitialSnapshot) Set(f func(p []core.Node)) *NodeKeep
 }
 
 //SetInitialSnapshot implements github.com/insolar/insolar/network.NodeKeeper interface
-func (m *NodeKeeperMock) SetInitialSnapshot(p []core.Node) {
+func (m *NodeKeeperMock) SetInitialSnapshot(p []insolar.NetworkNode) {
 	counter := atomic.AddUint64(&m.SetInitialSnapshotPreCounter, 1)
 	defer atomic.AddUint64(&m.SetInitialSnapshotCounter, 1)
 
@@ -2472,7 +2472,7 @@ type NodeKeeperMockSyncExpectation struct {
 
 type NodeKeeperMockSyncInput struct {
 	p  context.Context
-	p1 []core.Node
+	p1 []insolar.NetworkNode
 	p2 []packets.ReferendumClaim
 }
 
@@ -2481,7 +2481,7 @@ type NodeKeeperMockSyncResult struct {
 }
 
 //Expect specifies that invocation of NodeKeeper.Sync is expected from 1 to Infinity times
-func (m *mNodeKeeperMockSync) Expect(p context.Context, p1 []core.Node, p2 []packets.ReferendumClaim) *mNodeKeeperMockSync {
+func (m *mNodeKeeperMockSync) Expect(p context.Context, p1 []insolar.NetworkNode, p2 []packets.ReferendumClaim) *mNodeKeeperMockSync {
 	m.mock.SyncFunc = nil
 	m.expectationSeries = nil
 
@@ -2505,7 +2505,7 @@ func (m *mNodeKeeperMockSync) Return(r error) *NodeKeeperMock {
 }
 
 //ExpectOnce specifies that invocation of NodeKeeper.Sync is expected once
-func (m *mNodeKeeperMockSync) ExpectOnce(p context.Context, p1 []core.Node, p2 []packets.ReferendumClaim) *NodeKeeperMockSyncExpectation {
+func (m *mNodeKeeperMockSync) ExpectOnce(p context.Context, p1 []insolar.NetworkNode, p2 []packets.ReferendumClaim) *NodeKeeperMockSyncExpectation {
 	m.mock.SyncFunc = nil
 	m.mainExpectation = nil
 
@@ -2520,7 +2520,7 @@ func (e *NodeKeeperMockSyncExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of NodeKeeper.Sync method
-func (m *mNodeKeeperMockSync) Set(f func(p context.Context, p1 []core.Node, p2 []packets.ReferendumClaim) (r error)) *NodeKeeperMock {
+func (m *mNodeKeeperMockSync) Set(f func(p context.Context, p1 []insolar.NetworkNode, p2 []packets.ReferendumClaim) (r error)) *NodeKeeperMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -2529,7 +2529,7 @@ func (m *mNodeKeeperMockSync) Set(f func(p context.Context, p1 []core.Node, p2 [
 }
 
 //Sync implements github.com/insolar/insolar/network.NodeKeeper interface
-func (m *NodeKeeperMock) Sync(p context.Context, p1 []core.Node, p2 []packets.ReferendumClaim) (r error) {
+func (m *NodeKeeperMock) Sync(p context.Context, p1 []insolar.NetworkNode, p2 []packets.ReferendumClaim) (r error) {
 	counter := atomic.AddUint64(&m.SyncPreCounter, 1)
 	defer atomic.AddUint64(&m.SyncCounter, 1)
 

@@ -23,7 +23,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 )
 
 func TestTree_Update(t *testing.T) {
@@ -33,35 +33,35 @@ func TestTree_Update(t *testing.T) {
 		prefix []byte
 	)
 
-	lookup := core.NewRecordID(0, []byte{0xD5}) // 11010101
+	lookup := insolar.NewRecordID(0, []byte{0xD5}) // 11010101
 
 	id, actual := tree.Find(*lookup)
 	depth, prefix = id.Depth(), id.Prefix()
 	assert.Equal(t, depth, uint8(0))
-	assert.Equal(t, prefix, make([]byte, core.RecordHashSize-1))
+	assert.Equal(t, prefix, make([]byte, insolar.RecordHashSize-1))
 	assert.Equal(t, false, actual)
 
-	tree.Update(*core.NewJetID(1, []byte{1 << 7}), false)
+	tree.Update(*insolar.NewJetID(1, []byte{1 << 7}), false)
 	id, actual = tree.Find(*lookup)
 	depth, prefix = id.Depth(), id.Prefix()
-	expectedPrefix := make([]byte, core.RecordHashSize-1)
+	expectedPrefix := make([]byte, insolar.RecordHashSize-1)
 	expectedPrefix[0] = 0x80
 	require.Equal(t, uint8(1), depth)
 	assert.Equal(t, expectedPrefix, prefix)
 	assert.Equal(t, false, actual)
 
-	tree.Update(*core.NewJetID(8, lookup.Hash()), false)
+	tree.Update(*insolar.NewJetID(8, lookup.Hash()), false)
 	id, actual = tree.Find(*lookup)
 	depth, prefix = id.Depth(), id.Prefix()
 	assert.Equal(t, uint8(8), depth)
-	assert.Equal(t, lookup.Hash()[:core.RecordHashSize-1], prefix)
+	assert.Equal(t, lookup.Hash()[:insolar.RecordHashSize-1], prefix)
 	assert.Equal(t, false, actual)
 
-	tree.Update(*core.NewJetID(8, lookup.Hash()), true)
+	tree.Update(*insolar.NewJetID(8, lookup.Hash()), true)
 	id, actual = tree.Find(*lookup)
 	depth, prefix = id.Depth(), id.Prefix()
 	assert.Equal(t, uint8(8), depth)
-	assert.Equal(t, lookup.Hash()[:core.RecordHashSize-1], prefix)
+	assert.Equal(t, lookup.Hash()[:insolar.RecordHashSize-1], prefix)
 	assert.Equal(t, true, actual)
 }
 
@@ -80,9 +80,9 @@ func TestTree_Find(t *testing.T) {
 			},
 		},
 	}
-	lookup := core.NewRecordID(0, []byte{0xD5}) // 11010101
-	jetLookup := core.NewJetID(15, []byte{1, 2, 3})
-	expectedPrefix := make([]byte, core.RecordIDSize-core.PulseNumberSize-1)
+	lookup := insolar.NewRecordID(0, []byte{0xD5}) // 11010101
+	jetLookup := insolar.NewJetID(15, []byte{1, 2, 3})
+	expectedPrefix := make([]byte, insolar.RecordIDSize-insolar.PulseNumberSize-1)
 	expectedPrefix[0] = 0xD0 // 11010000
 
 	id, actual := tree.Find(*lookup)
@@ -91,7 +91,7 @@ func TestTree_Find(t *testing.T) {
 	assert.Equal(t, expectedPrefix, prefix)
 	assert.False(t, actual)
 
-	jetID, actual := tree.Find(core.RecordID(*jetLookup))
+	jetID, actual := tree.Find(insolar.RecordID(*jetLookup))
 	assert.Equal(t, *jetLookup, jetID)
 	assert.True(t, actual)
 }
@@ -105,8 +105,8 @@ func TestTree_Split(t *testing.T) {
 			},
 		},
 	}
-	tooDeep := core.NewJetID(6, []byte{0xD5}) // 11010101
-	ok := core.NewJetID(2, []byte{0xD5})      // 11010101
+	tooDeep := insolar.NewJetID(6, []byte{0xD5}) // 11010101
+	ok := insolar.NewJetID(2, []byte{0xD5})      // 11010101
 
 	t.Run("not existing jet returns error", func(t *testing.T) {
 		_, _, err := tree.Split(*tooDeep)

@@ -3,7 +3,7 @@ package network
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "Node" can be found in github.com/insolar/insolar/core
+The original interface "NetworkNode" can be found in github.com/insolar/insolar/insolar
 */
 import (
 	crypto "crypto"
@@ -11,10 +11,10 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	core "github.com/insolar/insolar/core"
+	core "github.com/insolar/insolar/insolar"
 )
 
-//NodeMock implements github.com/insolar/insolar/core.Node
+//NodeMock implements github.com/insolar/insolar/insolar.NetworkNode
 type NodeMock struct {
 	t minimock.Tester
 
@@ -69,7 +69,7 @@ type NodeMock struct {
 	VersionMock       mNodeMockVersion
 }
 
-//NewNodeMock returns a mock for github.com/insolar/insolar/core.Node
+//NewNodeMock returns a mock for github.com/insolar/insolar/insolar.NetworkNode
 func NewNodeMock(t minimock.Tester) *NodeMock {
 	m := &NodeMock{t: t}
 
@@ -105,7 +105,7 @@ type NodeMockAddressResult struct {
 	r string
 }
 
-//Expect specifies that invocation of Node.Address is expected from 1 to Infinity times
+//Expect specifies that invocation of NetworkNode.Address is expected from 1 to Infinity times
 func (m *mNodeMockAddress) Expect() *mNodeMockAddress {
 	m.mock.AddressFunc = nil
 	m.expectationSeries = nil
@@ -117,7 +117,7 @@ func (m *mNodeMockAddress) Expect() *mNodeMockAddress {
 	return m
 }
 
-//Return specifies results of invocation of Node.Address
+//Return specifies results of invocation of NetworkNode.Address
 func (m *mNodeMockAddress) Return(r string) *NodeMock {
 	m.mock.AddressFunc = nil
 	m.expectationSeries = nil
@@ -129,7 +129,7 @@ func (m *mNodeMockAddress) Return(r string) *NodeMock {
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of Node.Address is expected once
+//ExpectOnce specifies that invocation of NetworkNode.Address is expected once
 func (m *mNodeMockAddress) ExpectOnce() *NodeMockAddressExpectation {
 	m.mock.AddressFunc = nil
 	m.mainExpectation = nil
@@ -144,7 +144,7 @@ func (e *NodeMockAddressExpectation) Return(r string) {
 	e.result = &NodeMockAddressResult{r}
 }
 
-//Set uses given function f as a mock of Node.Address method
+//Set uses given function f as a mock of NetworkNode.Address method
 func (m *mNodeMockAddress) Set(f func() (r string)) *NodeMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -153,7 +153,7 @@ func (m *mNodeMockAddress) Set(f func() (r string)) *NodeMock {
 	return m.mock
 }
 
-//Address implements github.com/insolar/insolar/core.Node interface
+//Address implements github.com/insolar/insolar/insolar.NetworkNode interface
 func (m *NodeMock) Address() (r string) {
 	counter := atomic.AddUint64(&m.AddressPreCounter, 1)
 	defer atomic.AddUint64(&m.AddressCounter, 1)
@@ -239,7 +239,7 @@ type NodeMockConsensusAddressResult struct {
 	r string
 }
 
-//Expect specifies that invocation of Node.ConsensusAddress is expected from 1 to Infinity times
+//Expect specifies that invocation of NetworkNode.ConsensusAddress is expected from 1 to Infinity times
 func (m *mNodeMockConsensusAddress) Expect() *mNodeMockConsensusAddress {
 	m.mock.ConsensusAddressFunc = nil
 	m.expectationSeries = nil
@@ -251,7 +251,7 @@ func (m *mNodeMockConsensusAddress) Expect() *mNodeMockConsensusAddress {
 	return m
 }
 
-//Return specifies results of invocation of Node.ConsensusAddress
+//Return specifies results of invocation of NetworkNode.ConsensusAddress
 func (m *mNodeMockConsensusAddress) Return(r string) *NodeMock {
 	m.mock.ConsensusAddressFunc = nil
 	m.expectationSeries = nil
@@ -263,7 +263,7 @@ func (m *mNodeMockConsensusAddress) Return(r string) *NodeMock {
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of Node.ConsensusAddress is expected once
+//ExpectOnce specifies that invocation of NetworkNode.ConsensusAddress is expected once
 func (m *mNodeMockConsensusAddress) ExpectOnce() *NodeMockConsensusAddressExpectation {
 	m.mock.ConsensusAddressFunc = nil
 	m.mainExpectation = nil
@@ -278,7 +278,7 @@ func (e *NodeMockConsensusAddressExpectation) Return(r string) {
 	e.result = &NodeMockConsensusAddressResult{r}
 }
 
-//Set uses given function f as a mock of Node.ConsensusAddress method
+//Set uses given function f as a mock of NetworkNode.ConsensusAddress method
 func (m *mNodeMockConsensusAddress) Set(f func() (r string)) *NodeMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -287,7 +287,7 @@ func (m *mNodeMockConsensusAddress) Set(f func() (r string)) *NodeMock {
 	return m.mock
 }
 
-//ConsensusAddress implements github.com/insolar/insolar/core.Node interface
+//ConsensusAddress implements github.com/insolar/insolar/insolar.NetworkNode interface
 func (m *NodeMock) ConsensusAddress() (r string) {
 	counter := atomic.AddUint64(&m.ConsensusAddressPreCounter, 1)
 	defer atomic.AddUint64(&m.ConsensusAddressCounter, 1)
@@ -373,7 +373,7 @@ type NodeMockGetGlobuleIDResult struct {
 	r core.GlobuleID
 }
 
-//Expect specifies that invocation of Node.GetGlobuleID is expected from 1 to Infinity times
+//Expect specifies that invocation of NetworkNode.GetGlobuleID is expected from 1 to Infinity times
 func (m *mNodeMockGetGlobuleID) Expect() *mNodeMockGetGlobuleID {
 	m.mock.GetGlobuleIDFunc = nil
 	m.expectationSeries = nil
@@ -385,7 +385,7 @@ func (m *mNodeMockGetGlobuleID) Expect() *mNodeMockGetGlobuleID {
 	return m
 }
 
-//Return specifies results of invocation of Node.GetGlobuleID
+//Return specifies results of invocation of NetworkNode.GetGlobuleID
 func (m *mNodeMockGetGlobuleID) Return(r core.GlobuleID) *NodeMock {
 	m.mock.GetGlobuleIDFunc = nil
 	m.expectationSeries = nil
@@ -397,7 +397,7 @@ func (m *mNodeMockGetGlobuleID) Return(r core.GlobuleID) *NodeMock {
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of Node.GetGlobuleID is expected once
+//ExpectOnce specifies that invocation of NetworkNode.GetGlobuleID is expected once
 func (m *mNodeMockGetGlobuleID) ExpectOnce() *NodeMockGetGlobuleIDExpectation {
 	m.mock.GetGlobuleIDFunc = nil
 	m.mainExpectation = nil
@@ -412,7 +412,7 @@ func (e *NodeMockGetGlobuleIDExpectation) Return(r core.GlobuleID) {
 	e.result = &NodeMockGetGlobuleIDResult{r}
 }
 
-//Set uses given function f as a mock of Node.GetGlobuleID method
+//Set uses given function f as a mock of NetworkNode.GetGlobuleID method
 func (m *mNodeMockGetGlobuleID) Set(f func() (r core.GlobuleID)) *NodeMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -421,7 +421,7 @@ func (m *mNodeMockGetGlobuleID) Set(f func() (r core.GlobuleID)) *NodeMock {
 	return m.mock
 }
 
-//GetGlobuleID implements github.com/insolar/insolar/core.Node interface
+//GetGlobuleID implements github.com/insolar/insolar/insolar.NetworkNode interface
 func (m *NodeMock) GetGlobuleID() (r core.GlobuleID) {
 	counter := atomic.AddUint64(&m.GetGlobuleIDPreCounter, 1)
 	defer atomic.AddUint64(&m.GetGlobuleIDCounter, 1)
@@ -507,7 +507,7 @@ type NodeMockGetStateResult struct {
 	r core.NodeState
 }
 
-//Expect specifies that invocation of Node.GetState is expected from 1 to Infinity times
+//Expect specifies that invocation of NetworkNode.GetState is expected from 1 to Infinity times
 func (m *mNodeMockGetState) Expect() *mNodeMockGetState {
 	m.mock.GetStateFunc = nil
 	m.expectationSeries = nil
@@ -519,7 +519,7 @@ func (m *mNodeMockGetState) Expect() *mNodeMockGetState {
 	return m
 }
 
-//Return specifies results of invocation of Node.GetState
+//Return specifies results of invocation of NetworkNode.GetState
 func (m *mNodeMockGetState) Return(r core.NodeState) *NodeMock {
 	m.mock.GetStateFunc = nil
 	m.expectationSeries = nil
@@ -531,7 +531,7 @@ func (m *mNodeMockGetState) Return(r core.NodeState) *NodeMock {
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of Node.GetState is expected once
+//ExpectOnce specifies that invocation of NetworkNode.GetState is expected once
 func (m *mNodeMockGetState) ExpectOnce() *NodeMockGetStateExpectation {
 	m.mock.GetStateFunc = nil
 	m.mainExpectation = nil
@@ -546,7 +546,7 @@ func (e *NodeMockGetStateExpectation) Return(r core.NodeState) {
 	e.result = &NodeMockGetStateResult{r}
 }
 
-//Set uses given function f as a mock of Node.GetState method
+//Set uses given function f as a mock of NetworkNode.GetState method
 func (m *mNodeMockGetState) Set(f func() (r core.NodeState)) *NodeMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -555,7 +555,7 @@ func (m *mNodeMockGetState) Set(f func() (r core.NodeState)) *NodeMock {
 	return m.mock
 }
 
-//GetState implements github.com/insolar/insolar/core.Node interface
+//GetState implements github.com/insolar/insolar/insolar.NetworkNode interface
 func (m *NodeMock) GetState() (r core.NodeState) {
 	counter := atomic.AddUint64(&m.GetStatePreCounter, 1)
 	defer atomic.AddUint64(&m.GetStateCounter, 1)
@@ -641,7 +641,7 @@ type NodeMockIDResult struct {
 	r core.RecordRef
 }
 
-//Expect specifies that invocation of Node.ID is expected from 1 to Infinity times
+//Expect specifies that invocation of NetworkNode.ID is expected from 1 to Infinity times
 func (m *mNodeMockID) Expect() *mNodeMockID {
 	m.mock.IDFunc = nil
 	m.expectationSeries = nil
@@ -653,7 +653,7 @@ func (m *mNodeMockID) Expect() *mNodeMockID {
 	return m
 }
 
-//Return specifies results of invocation of Node.ID
+//Return specifies results of invocation of NetworkNode.ID
 func (m *mNodeMockID) Return(r core.RecordRef) *NodeMock {
 	m.mock.IDFunc = nil
 	m.expectationSeries = nil
@@ -665,7 +665,7 @@ func (m *mNodeMockID) Return(r core.RecordRef) *NodeMock {
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of Node.ID is expected once
+//ExpectOnce specifies that invocation of NetworkNode.ID is expected once
 func (m *mNodeMockID) ExpectOnce() *NodeMockIDExpectation {
 	m.mock.IDFunc = nil
 	m.mainExpectation = nil
@@ -680,7 +680,7 @@ func (e *NodeMockIDExpectation) Return(r core.RecordRef) {
 	e.result = &NodeMockIDResult{r}
 }
 
-//Set uses given function f as a mock of Node.ID method
+//Set uses given function f as a mock of NetworkNode.ID method
 func (m *mNodeMockID) Set(f func() (r core.RecordRef)) *NodeMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -689,7 +689,7 @@ func (m *mNodeMockID) Set(f func() (r core.RecordRef)) *NodeMock {
 	return m.mock
 }
 
-//ID implements github.com/insolar/insolar/core.Node interface
+//ID implements github.com/insolar/insolar/insolar.NetworkNode interface
 func (m *NodeMock) ID() (r core.RecordRef) {
 	counter := atomic.AddUint64(&m.IDPreCounter, 1)
 	defer atomic.AddUint64(&m.IDCounter, 1)
@@ -775,7 +775,7 @@ type NodeMockLeavingETAResult struct {
 	r core.PulseNumber
 }
 
-//Expect specifies that invocation of Node.LeavingETA is expected from 1 to Infinity times
+//Expect specifies that invocation of NetworkNode.LeavingETA is expected from 1 to Infinity times
 func (m *mNodeMockLeavingETA) Expect() *mNodeMockLeavingETA {
 	m.mock.LeavingETAFunc = nil
 	m.expectationSeries = nil
@@ -787,7 +787,7 @@ func (m *mNodeMockLeavingETA) Expect() *mNodeMockLeavingETA {
 	return m
 }
 
-//Return specifies results of invocation of Node.LeavingETA
+//Return specifies results of invocation of NetworkNode.LeavingETA
 func (m *mNodeMockLeavingETA) Return(r core.PulseNumber) *NodeMock {
 	m.mock.LeavingETAFunc = nil
 	m.expectationSeries = nil
@@ -799,7 +799,7 @@ func (m *mNodeMockLeavingETA) Return(r core.PulseNumber) *NodeMock {
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of Node.LeavingETA is expected once
+//ExpectOnce specifies that invocation of NetworkNode.LeavingETA is expected once
 func (m *mNodeMockLeavingETA) ExpectOnce() *NodeMockLeavingETAExpectation {
 	m.mock.LeavingETAFunc = nil
 	m.mainExpectation = nil
@@ -814,7 +814,7 @@ func (e *NodeMockLeavingETAExpectation) Return(r core.PulseNumber) {
 	e.result = &NodeMockLeavingETAResult{r}
 }
 
-//Set uses given function f as a mock of Node.LeavingETA method
+//Set uses given function f as a mock of NetworkNode.LeavingETA method
 func (m *mNodeMockLeavingETA) Set(f func() (r core.PulseNumber)) *NodeMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -823,7 +823,7 @@ func (m *mNodeMockLeavingETA) Set(f func() (r core.PulseNumber)) *NodeMock {
 	return m.mock
 }
 
-//LeavingETA implements github.com/insolar/insolar/core.Node interface
+//LeavingETA implements github.com/insolar/insolar/insolar.NetworkNode interface
 func (m *NodeMock) LeavingETA() (r core.PulseNumber) {
 	counter := atomic.AddUint64(&m.LeavingETAPreCounter, 1)
 	defer atomic.AddUint64(&m.LeavingETACounter, 1)
@@ -909,7 +909,7 @@ type NodeMockPublicKeyResult struct {
 	r crypto.PublicKey
 }
 
-//Expect specifies that invocation of Node.PublicKey is expected from 1 to Infinity times
+//Expect specifies that invocation of NetworkNode.PublicKey is expected from 1 to Infinity times
 func (m *mNodeMockPublicKey) Expect() *mNodeMockPublicKey {
 	m.mock.PublicKeyFunc = nil
 	m.expectationSeries = nil
@@ -921,7 +921,7 @@ func (m *mNodeMockPublicKey) Expect() *mNodeMockPublicKey {
 	return m
 }
 
-//Return specifies results of invocation of Node.PublicKey
+//Return specifies results of invocation of NetworkNode.PublicKey
 func (m *mNodeMockPublicKey) Return(r crypto.PublicKey) *NodeMock {
 	m.mock.PublicKeyFunc = nil
 	m.expectationSeries = nil
@@ -933,7 +933,7 @@ func (m *mNodeMockPublicKey) Return(r crypto.PublicKey) *NodeMock {
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of Node.PublicKey is expected once
+//ExpectOnce specifies that invocation of NetworkNode.PublicKey is expected once
 func (m *mNodeMockPublicKey) ExpectOnce() *NodeMockPublicKeyExpectation {
 	m.mock.PublicKeyFunc = nil
 	m.mainExpectation = nil
@@ -948,7 +948,7 @@ func (e *NodeMockPublicKeyExpectation) Return(r crypto.PublicKey) {
 	e.result = &NodeMockPublicKeyResult{r}
 }
 
-//Set uses given function f as a mock of Node.PublicKey method
+//Set uses given function f as a mock of NetworkNode.PublicKey method
 func (m *mNodeMockPublicKey) Set(f func() (r crypto.PublicKey)) *NodeMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -957,7 +957,7 @@ func (m *mNodeMockPublicKey) Set(f func() (r crypto.PublicKey)) *NodeMock {
 	return m.mock
 }
 
-//PublicKey implements github.com/insolar/insolar/core.Node interface
+//PublicKey implements github.com/insolar/insolar/insolar.NetworkNode interface
 func (m *NodeMock) PublicKey() (r crypto.PublicKey) {
 	counter := atomic.AddUint64(&m.PublicKeyPreCounter, 1)
 	defer atomic.AddUint64(&m.PublicKeyCounter, 1)
@@ -1043,7 +1043,7 @@ type NodeMockRoleResult struct {
 	r core.StaticRole
 }
 
-//Expect specifies that invocation of Node.Role is expected from 1 to Infinity times
+//Expect specifies that invocation of NetworkNode.Role is expected from 1 to Infinity times
 func (m *mNodeMockRole) Expect() *mNodeMockRole {
 	m.mock.RoleFunc = nil
 	m.expectationSeries = nil
@@ -1055,7 +1055,7 @@ func (m *mNodeMockRole) Expect() *mNodeMockRole {
 	return m
 }
 
-//Return specifies results of invocation of Node.Role
+//Return specifies results of invocation of NetworkNode.Role
 func (m *mNodeMockRole) Return(r core.StaticRole) *NodeMock {
 	m.mock.RoleFunc = nil
 	m.expectationSeries = nil
@@ -1067,7 +1067,7 @@ func (m *mNodeMockRole) Return(r core.StaticRole) *NodeMock {
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of Node.Role is expected once
+//ExpectOnce specifies that invocation of NetworkNode.Role is expected once
 func (m *mNodeMockRole) ExpectOnce() *NodeMockRoleExpectation {
 	m.mock.RoleFunc = nil
 	m.mainExpectation = nil
@@ -1082,7 +1082,7 @@ func (e *NodeMockRoleExpectation) Return(r core.StaticRole) {
 	e.result = &NodeMockRoleResult{r}
 }
 
-//Set uses given function f as a mock of Node.Role method
+//Set uses given function f as a mock of NetworkNode.Role method
 func (m *mNodeMockRole) Set(f func() (r core.StaticRole)) *NodeMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -1091,7 +1091,7 @@ func (m *mNodeMockRole) Set(f func() (r core.StaticRole)) *NodeMock {
 	return m.mock
 }
 
-//Role implements github.com/insolar/insolar/core.Node interface
+//Role implements github.com/insolar/insolar/insolar.NetworkNode interface
 func (m *NodeMock) Role() (r core.StaticRole) {
 	counter := atomic.AddUint64(&m.RolePreCounter, 1)
 	defer atomic.AddUint64(&m.RoleCounter, 1)
@@ -1177,7 +1177,7 @@ type NodeMockShortIDResult struct {
 	r core.ShortNodeID
 }
 
-//Expect specifies that invocation of Node.ShortID is expected from 1 to Infinity times
+//Expect specifies that invocation of NetworkNode.ShortID is expected from 1 to Infinity times
 func (m *mNodeMockShortID) Expect() *mNodeMockShortID {
 	m.mock.ShortIDFunc = nil
 	m.expectationSeries = nil
@@ -1189,7 +1189,7 @@ func (m *mNodeMockShortID) Expect() *mNodeMockShortID {
 	return m
 }
 
-//Return specifies results of invocation of Node.ShortID
+//Return specifies results of invocation of NetworkNode.ShortID
 func (m *mNodeMockShortID) Return(r core.ShortNodeID) *NodeMock {
 	m.mock.ShortIDFunc = nil
 	m.expectationSeries = nil
@@ -1201,7 +1201,7 @@ func (m *mNodeMockShortID) Return(r core.ShortNodeID) *NodeMock {
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of Node.ShortID is expected once
+//ExpectOnce specifies that invocation of NetworkNode.ShortID is expected once
 func (m *mNodeMockShortID) ExpectOnce() *NodeMockShortIDExpectation {
 	m.mock.ShortIDFunc = nil
 	m.mainExpectation = nil
@@ -1216,7 +1216,7 @@ func (e *NodeMockShortIDExpectation) Return(r core.ShortNodeID) {
 	e.result = &NodeMockShortIDResult{r}
 }
 
-//Set uses given function f as a mock of Node.ShortID method
+//Set uses given function f as a mock of NetworkNode.ShortID method
 func (m *mNodeMockShortID) Set(f func() (r core.ShortNodeID)) *NodeMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -1225,7 +1225,7 @@ func (m *mNodeMockShortID) Set(f func() (r core.ShortNodeID)) *NodeMock {
 	return m.mock
 }
 
-//ShortID implements github.com/insolar/insolar/core.Node interface
+//ShortID implements github.com/insolar/insolar/insolar.NetworkNode interface
 func (m *NodeMock) ShortID() (r core.ShortNodeID) {
 	counter := atomic.AddUint64(&m.ShortIDPreCounter, 1)
 	defer atomic.AddUint64(&m.ShortIDCounter, 1)
@@ -1311,7 +1311,7 @@ type NodeMockVersionResult struct {
 	r string
 }
 
-//Expect specifies that invocation of Node.Version is expected from 1 to Infinity times
+//Expect specifies that invocation of NetworkNode.Version is expected from 1 to Infinity times
 func (m *mNodeMockVersion) Expect() *mNodeMockVersion {
 	m.mock.VersionFunc = nil
 	m.expectationSeries = nil
@@ -1323,7 +1323,7 @@ func (m *mNodeMockVersion) Expect() *mNodeMockVersion {
 	return m
 }
 
-//Return specifies results of invocation of Node.Version
+//Return specifies results of invocation of NetworkNode.Version
 func (m *mNodeMockVersion) Return(r string) *NodeMock {
 	m.mock.VersionFunc = nil
 	m.expectationSeries = nil
@@ -1335,7 +1335,7 @@ func (m *mNodeMockVersion) Return(r string) *NodeMock {
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of Node.Version is expected once
+//ExpectOnce specifies that invocation of NetworkNode.Version is expected once
 func (m *mNodeMockVersion) ExpectOnce() *NodeMockVersionExpectation {
 	m.mock.VersionFunc = nil
 	m.mainExpectation = nil
@@ -1350,7 +1350,7 @@ func (e *NodeMockVersionExpectation) Return(r string) {
 	e.result = &NodeMockVersionResult{r}
 }
 
-//Set uses given function f as a mock of Node.Version method
+//Set uses given function f as a mock of NetworkNode.Version method
 func (m *mNodeMockVersion) Set(f func() (r string)) *NodeMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -1359,7 +1359,7 @@ func (m *mNodeMockVersion) Set(f func() (r string)) *NodeMock {
 	return m.mock
 }
 
-//Version implements github.com/insolar/insolar/core.Node interface
+//Version implements github.com/insolar/insolar/insolar.NetworkNode interface
 func (m *NodeMock) Version() (r string) {
 	counter := atomic.AddUint64(&m.VersionPreCounter, 1)
 	defer atomic.AddUint64(&m.VersionCounter, 1)

@@ -17,25 +17,25 @@
 package noderecord
 
 import (
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
 
 type RecordInfo struct {
 	PublicKey string
-	Role      core.StaticRole
+	Role      insolar.StaticRole
 }
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = core.NewRefFromBase58("1111FQUb571VmGqGhB9Ea677tC6FWHn2qLwZkHo2EU.11111111111111111111111111111111")
+var PrototypeReference, _ = insolar.NewRefFromBase58("11113CuM1amoErZ2KUDB56FGz6B5aQK92pUZy2RGLxm.11111111111111111111111111111111")
 
 // NodeRecord holds proxy type
 type NodeRecord struct {
-	Reference core.RecordRef
-	Prototype core.RecordRef
-	Code      core.RecordRef
+	Reference insolar.RecordRef
+	Prototype insolar.RecordRef
+	Code      insolar.RecordRef
 }
 
 // ContractConstructorHolder holds logic with object construction
@@ -45,7 +45,7 @@ type ContractConstructorHolder struct {
 }
 
 // AsChild saves object as child
-func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) (*NodeRecord, error) {
+func (r *ContractConstructorHolder) AsChild(objRef insolar.RecordRef) (*NodeRecord, error) {
 	ref, err := proxyctx.Current.SaveAsChild(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
 	if err != nil {
 		return nil, err
@@ -54,7 +54,7 @@ func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) (*NodeRecord,
 }
 
 // AsDelegate saves object as delegate
-func (r *ContractConstructorHolder) AsDelegate(objRef core.RecordRef) (*NodeRecord, error) {
+func (r *ContractConstructorHolder) AsDelegate(objRef insolar.RecordRef) (*NodeRecord, error) {
 	ref, err := proxyctx.Current.SaveAsDelegate(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
 	if err != nil {
 		return nil, err
@@ -63,17 +63,17 @@ func (r *ContractConstructorHolder) AsDelegate(objRef core.RecordRef) (*NodeReco
 }
 
 // GetObject returns proxy object
-func GetObject(ref core.RecordRef) (r *NodeRecord) {
+func GetObject(ref insolar.RecordRef) (r *NodeRecord) {
 	return &NodeRecord{Reference: ref}
 }
 
 // GetPrototype returns reference to the prototype
-func GetPrototype() core.RecordRef {
+func GetPrototype() insolar.RecordRef {
 	return *PrototypeReference
 }
 
 // GetImplementationFrom returns proxy to delegate of given type
-func GetImplementationFrom(object core.RecordRef) (*NodeRecord, error) {
+func GetImplementationFrom(object insolar.RecordRef) (*NodeRecord, error) {
 	ref, err := proxyctx.Current.GetDelegate(object, *PrototypeReference)
 	if err != nil {
 		return nil, err
@@ -97,15 +97,15 @@ func NewNodeRecord(publicKey string, roleStr string) *ContractConstructorHolder 
 }
 
 // GetReference returns reference of the object
-func (r *NodeRecord) GetReference() core.RecordRef {
+func (r *NodeRecord) GetReference() insolar.RecordRef {
 	return r.Reference
 }
 
 // GetPrototype returns reference to the code
-func (r *NodeRecord) GetPrototype() (core.RecordRef, error) {
+func (r *NodeRecord) GetPrototype() (insolar.RecordRef, error) {
 	if r.Prototype.IsEmpty() {
 		ret := [2]interface{}{}
-		var ret0 core.RecordRef
+		var ret0 insolar.RecordRef
 		ret[0] = &ret0
 		var ret1 *foundation.Error
 		ret[1] = &ret1
@@ -132,10 +132,10 @@ func (r *NodeRecord) GetPrototype() (core.RecordRef, error) {
 }
 
 // GetCode returns reference to the code
-func (r *NodeRecord) GetCode() (core.RecordRef, error) {
+func (r *NodeRecord) GetCode() (insolar.RecordRef, error) {
 	if r.Code.IsEmpty() {
 		ret := [2]interface{}{}
-		var ret0 core.RecordRef
+		var ret0 insolar.RecordRef
 		ret[0] = &ret0
 		var ret1 *foundation.Error
 		ret[1] = &ret1
@@ -265,13 +265,13 @@ func (r *NodeRecord) GetPublicKeyNoWait() error {
 }
 
 // GetRole is proxy generated method
-func (r *NodeRecord) GetRole() (core.StaticRole, error) {
+func (r *NodeRecord) GetRole() (insolar.StaticRole, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 core.StaticRole
+	var ret0 insolar.StaticRole
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1

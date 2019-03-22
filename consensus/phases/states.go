@@ -53,7 +53,7 @@ package phases
 import (
 	"github.com/insolar/insolar/consensus/claimhandler"
 	"github.com/insolar/insolar/consensus/packets"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/merkle"
 )
@@ -64,8 +64,8 @@ type FirstPhaseState struct {
 	PulseHash  merkle.OriginHash
 	PulseProof *merkle.PulseProof
 
-	ValidProofs map[core.Node]*merkle.PulseProof
-	FaultProofs map[core.RecordRef]*merkle.PulseProof
+	ValidProofs map[insolar.NetworkNode]*merkle.PulseProof
+	FaultProofs map[insolar.RecordRef]*merkle.PulseProof
 
 	UnsyncList   network.UnsyncList
 	ClaimHandler *claimhandler.ClaimHandler
@@ -84,7 +84,7 @@ type SecondPhaseState struct {
 }
 
 type ThirdPhaseState struct {
-	ActiveNodes    []core.Node
+	ActiveNodes    []insolar.NetworkNode
 	UnsyncList     network.UnsyncList
 	GlobuleProof   *merkle.GlobuleProof
 	ApprovedClaims []packets.ReferendumClaim

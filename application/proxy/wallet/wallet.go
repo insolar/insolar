@@ -17,20 +17,20 @@
 package wallet
 
 import (
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = core.NewRefFromBase58("111136eVq8GUQNoURMRE2pcnchdSU28K14Jy7JVHv81.11111111111111111111111111111111")
+var PrototypeReference, _ = insolar.NewRefFromBase58("11112tuySkiFPRWHNTjb1DiC4qVSajBqo54XoFjMCBm.11111111111111111111111111111111")
 
 // Wallet holds proxy type
 type Wallet struct {
-	Reference core.RecordRef
-	Prototype core.RecordRef
-	Code      core.RecordRef
+	Reference insolar.RecordRef
+	Prototype insolar.RecordRef
+	Code      insolar.RecordRef
 }
 
 // ContractConstructorHolder holds logic with object construction
@@ -40,7 +40,7 @@ type ContractConstructorHolder struct {
 }
 
 // AsChild saves object as child
-func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) (*Wallet, error) {
+func (r *ContractConstructorHolder) AsChild(objRef insolar.RecordRef) (*Wallet, error) {
 	ref, err := proxyctx.Current.SaveAsChild(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
 	if err != nil {
 		return nil, err
@@ -49,7 +49,7 @@ func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) (*Wallet, err
 }
 
 // AsDelegate saves object as delegate
-func (r *ContractConstructorHolder) AsDelegate(objRef core.RecordRef) (*Wallet, error) {
+func (r *ContractConstructorHolder) AsDelegate(objRef insolar.RecordRef) (*Wallet, error) {
 	ref, err := proxyctx.Current.SaveAsDelegate(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
 	if err != nil {
 		return nil, err
@@ -58,17 +58,17 @@ func (r *ContractConstructorHolder) AsDelegate(objRef core.RecordRef) (*Wallet, 
 }
 
 // GetObject returns proxy object
-func GetObject(ref core.RecordRef) (r *Wallet) {
+func GetObject(ref insolar.RecordRef) (r *Wallet) {
 	return &Wallet{Reference: ref}
 }
 
 // GetPrototype returns reference to the prototype
-func GetPrototype() core.RecordRef {
+func GetPrototype() insolar.RecordRef {
 	return *PrototypeReference
 }
 
 // GetImplementationFrom returns proxy to delegate of given type
-func GetImplementationFrom(object core.RecordRef) (*Wallet, error) {
+func GetImplementationFrom(object insolar.RecordRef) (*Wallet, error) {
 	ref, err := proxyctx.Current.GetDelegate(object, *PrototypeReference)
 	if err != nil {
 		return nil, err
@@ -91,15 +91,15 @@ func New(balance uint) *ContractConstructorHolder {
 }
 
 // GetReference returns reference of the object
-func (r *Wallet) GetReference() core.RecordRef {
+func (r *Wallet) GetReference() insolar.RecordRef {
 	return r.Reference
 }
 
 // GetPrototype returns reference to the code
-func (r *Wallet) GetPrototype() (core.RecordRef, error) {
+func (r *Wallet) GetPrototype() (insolar.RecordRef, error) {
 	if r.Prototype.IsEmpty() {
 		ret := [2]interface{}{}
-		var ret0 core.RecordRef
+		var ret0 insolar.RecordRef
 		ret[0] = &ret0
 		var ret1 *foundation.Error
 		ret[1] = &ret1
@@ -126,10 +126,10 @@ func (r *Wallet) GetPrototype() (core.RecordRef, error) {
 }
 
 // GetCode returns reference to the code
-func (r *Wallet) GetCode() (core.RecordRef, error) {
+func (r *Wallet) GetCode() (insolar.RecordRef, error) {
 	if r.Code.IsEmpty() {
 		ret := [2]interface{}{}
-		var ret0 core.RecordRef
+		var ret0 insolar.RecordRef
 		ret[0] = &ret0
 		var ret1 *foundation.Error
 		ret[1] = &ret1
@@ -155,7 +155,7 @@ func (r *Wallet) GetCode() (core.RecordRef, error) {
 }
 
 // Transfer is proxy generated method
-func (r *Wallet) Transfer(amount uint, to *core.RecordRef) error {
+func (r *Wallet) Transfer(amount uint, to *insolar.RecordRef) error {
 	var args [2]interface{}
 	args[0] = amount
 	args[1] = to
@@ -188,7 +188,7 @@ func (r *Wallet) Transfer(amount uint, to *core.RecordRef) error {
 }
 
 // TransferNoWait is proxy generated method
-func (r *Wallet) TransferNoWait(amount uint, to *core.RecordRef) error {
+func (r *Wallet) TransferNoWait(amount uint, to *insolar.RecordRef) error {
 	var args [2]interface{}
 	args[0] = amount
 	args[1] = to
@@ -209,7 +209,7 @@ func (r *Wallet) TransferNoWait(amount uint, to *core.RecordRef) error {
 }
 
 // Accept is proxy generated method
-func (r *Wallet) Accept(aRef *core.RecordRef) error {
+func (r *Wallet) Accept(aRef *insolar.RecordRef) error {
 	var args [1]interface{}
 	args[0] = aRef
 
@@ -241,7 +241,7 @@ func (r *Wallet) Accept(aRef *core.RecordRef) error {
 }
 
 // AcceptNoWait is proxy generated method
-func (r *Wallet) AcceptNoWait(aRef *core.RecordRef) error {
+func (r *Wallet) AcceptNoWait(aRef *insolar.RecordRef) error {
 	var args [1]interface{}
 	args[0] = aRef
 

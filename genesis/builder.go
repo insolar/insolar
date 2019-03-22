@@ -24,8 +24,8 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/goplugin/preprocessor"
 	"github.com/pkg/errors"
@@ -65,14 +65,14 @@ func OpenFile(dir string, name string) (*os.File, error) {
 type ContractsBuilder struct {
 	root string
 
-	ArtifactManager core.ArtifactManager
-	Prototypes      map[string]*core.RecordRef
-	Codes           map[string]*core.RecordRef
+	ArtifactManager insolar.ArtifactManager
+	Prototypes      map[string]*insolar.RecordRef
+	Codes           map[string]*insolar.RecordRef
 }
 
 // NewContractBuilder returns a new `ContractsBuilder`, takes in: path to tmp directory,
 // artifact manager, ...
-func NewContractBuilder(am core.ArtifactManager) *ContractsBuilder {
+func NewContractBuilder(am insolar.ArtifactManager) *ContractsBuilder {
 	tmpDir, err := ioutil.TempDir("", "test-")
 	if err != nil {
 		return nil
@@ -80,8 +80,8 @@ func NewContractBuilder(am core.ArtifactManager) *ContractsBuilder {
 
 	cb := &ContractsBuilder{
 		root:            tmpDir,
-		Prototypes:      make(map[string]*core.RecordRef),
-		Codes:           make(map[string]*core.RecordRef),
+		Prototypes:      make(map[string]*insolar.RecordRef),
+		Codes:           make(map[string]*insolar.RecordRef),
 		ArtifactManager: am}
 	return cb
 }
@@ -96,9 +96,9 @@ func (cb *ContractsBuilder) Clean() {
 }
 
 // Build ...
-func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]*preprocessor.ParsedFile, domain *core.RecordID) error {
+func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]*preprocessor.ParsedFile, domain *insolar.RecordID) error {
 
-	domainRef := core.NewRecordRef(*domain, *domain)
+	domainRef := insolar.NewRecordRef(*domain, *domain)
 
 	for name := range contracts {
 		protoID, err := cb.ArtifactManager.RegisterRequest(
@@ -108,7 +108,7 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]*pre
 			return errors.Wrap(err, "[ Build ] Can't RegisterRequest")
 		}
 
-		protoRef := core.NewRecordRef(*domain, *protoID)
+		protoRef := insolar.NewRecordRef(*domain, *protoID)
 		log.Debugf("Registered prototype %q for contract %q in %q", protoRef.String(), name, cb.root)
 		cb.Prototypes[name] = protoRef
 	}
@@ -169,10 +169,10 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]*pre
 		log.Debugf("Deploying code for contract %q", name)
 		codeID, err := cb.ArtifactManager.DeployCode(
 			ctx,
-			*domainRef, *core.NewRecordRef(*domain, *codeReq),
-			pluginBinary, core.MachineTypeGoPlugin,
+			*domainRef, *insolar.NewRecordRef(*domain, *codeReq),
+			pluginBinary, insolar.MachineTypeGoPlugin,
 		)
-		codeRef := core.NewRecordRef(*domain, *codeID)
+		codeRef := insolar.NewRecordRef(*domain, *codeID)
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't SetRecord")
 		}

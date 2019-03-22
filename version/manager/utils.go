@@ -18,13 +18,13 @@ package manager
 
 import (
 	"github.com/blang/semver"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/version"
 	"github.com/pkg/errors"
 )
 
-func ProcessVersionConsensus(nodes []core.Node) error {
+func ProcessVersionConsensus(nodes []insolar.NetworkNode) error {
 	if len(nodes) == 0 {
 		return errors.New("List of nodes is empty")
 	}
@@ -48,7 +48,7 @@ func ProcessVersionConsensus(nodes []core.Node) error {
 	return nil
 }
 
-func getMapOfVersion(nodes []core.Node) *map[string]int {
+func getMapOfVersion(nodes []insolar.NetworkNode) *map[string]int {
 	mapOfVersions := make(map[string]int)
 
 	for _, node := range nodes {

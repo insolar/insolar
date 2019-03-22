@@ -54,15 +54,15 @@ import (
 	"context"
 	"crypto"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/pkg/errors"
 )
 
 type calculator struct {
-	ArtifactManager            core.ArtifactManager            `inject:""`
-	NodeNetwork                core.NodeNetwork                `inject:""`
-	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
-	CryptographyService        core.CryptographyService        `inject:""`
+	ArtifactManager            insolar.ArtifactManager            `inject:""`
+	NodeNetwork                insolar.NodeNetwork                `inject:""`
+	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
+	CryptographyService        insolar.CryptographyService        `inject:""`
 
 	merkleHelper *merkleHelper
 }
@@ -76,7 +76,7 @@ func (c *calculator) Init(ctx context.Context) error {
 	return nil
 }
 
-func (c *calculator) getStateHash(role core.StaticRole) (OriginHash, error) {
+func (c *calculator) getStateHash(role insolar.StaticRole) (OriginHash, error) {
 	// TODO: do something with role
 	return c.ArtifactManager.State()
 }

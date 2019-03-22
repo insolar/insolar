@@ -21,18 +21,18 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/application/extractor"
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/reply"
 	"github.com/pkg/errors"
 )
 
 // GenesisDataProvider gives access to basic information about genesis objects
 type GenesisDataProvider struct {
-	CertificateManager core.CertificateManager `inject:""`
-	ContractRequester  core.ContractRequester  `inject:""`
+	CertificateManager insolar.CertificateManager `inject:""`
+	ContractRequester  insolar.ContractRequester  `inject:""`
 
-	rootMemberRef *core.RecordRef
-	nodeDomainRef *core.RecordRef
+	rootMemberRef *insolar.RecordRef
+	nodeDomainRef *insolar.RecordRef
 	lock          sync.RWMutex
 }
 
@@ -51,12 +51,12 @@ func (gdp *GenesisDataProvider) setInfo(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "[ setInfo ] Can't extract response")
 	}
-	rootMemberRef, err := core.NewRefFromBase58(info.RootMember)
+	rootMemberRef, err := insolar.NewRefFromBase58(info.RootMember)
 	if err != nil {
 		return errors.Wrap(err, "[ setInfo ] Failed to parse info.RootMember")
 	}
 	gdp.rootMemberRef = rootMemberRef
-	nodeDomainRef, err := core.NewRefFromBase58(info.NodeDomain)
+	nodeDomainRef, err := insolar.NewRefFromBase58(info.NodeDomain)
 	if err != nil {
 		return errors.Wrap(err, "[ setInfo ] Failed to parse info.NodeDomain")
 	}
@@ -66,12 +66,12 @@ func (gdp *GenesisDataProvider) setInfo(ctx context.Context) error {
 }
 
 // GetRootDomain returns reference to RootDomain
-func (gdp *GenesisDataProvider) GetRootDomain(ctx context.Context) *core.RecordRef {
+func (gdp *GenesisDataProvider) GetRootDomain(ctx context.Context) *insolar.RecordRef {
 	return gdp.CertificateManager.GetCertificate().GetRootDomainReference()
 }
 
 // GetNodeDomain returns reference to NodeDomain
-func (gdp *GenesisDataProvider) GetNodeDomain(ctx context.Context) (*core.RecordRef, error) {
+func (gdp *GenesisDataProvider) GetNodeDomain(ctx context.Context) (*insolar.RecordRef, error) {
 	gdp.lock.Lock()
 	defer gdp.lock.Unlock()
 	if gdp.nodeDomainRef == nil {
@@ -84,7 +84,7 @@ func (gdp *GenesisDataProvider) GetNodeDomain(ctx context.Context) (*core.Record
 }
 
 // GetRootMember returns reference to RootMember
-func (gdp *GenesisDataProvider) GetRootMember(ctx context.Context) (*core.RecordRef, error) {
+func (gdp *GenesisDataProvider) GetRootMember(ctx context.Context) (*insolar.RecordRef, error) {
 	gdp.lock.Lock()
 	defer gdp.lock.Unlock()
 	if gdp.rootMemberRef == nil {

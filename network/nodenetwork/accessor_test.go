@@ -53,31 +53,31 @@ package nodenetwork
 import (
 	"testing"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestGetSnapshotActiveNodes(t *testing.T) {
-	m := make(map[core.RecordRef]core.Node)
+	m := make(map[insolar.RecordRef]insolar.NetworkNode)
 
-	node := newMutableNode(testutils.RandomRef(), core.StaticRoleVirtual, nil, "127.0.0.1:0", "")
-	node.SetState(core.NodeReady)
+	node := newMutableNode(testutils.RandomRef(), insolar.StaticRoleVirtual, nil, "127.0.0.1:0", "")
+	node.SetState(insolar.NodeReady)
 	m[node.ID()] = node
 
-	node2 := newMutableNode(testutils.RandomRef(), core.StaticRoleVirtual, nil, "127.0.0.1:0", "")
-	node2.SetState(core.NodePending)
+	node2 := newMutableNode(testutils.RandomRef(), insolar.StaticRoleVirtual, nil, "127.0.0.1:0", "")
+	node2.SetState(insolar.NodePending)
 	m[node2.ID()] = node2
 
-	node3 := newMutableNode(testutils.RandomRef(), core.StaticRoleVirtual, nil, "127.0.0.1:0", "")
-	node3.SetState(core.NodeLeaving)
+	node3 := newMutableNode(testutils.RandomRef(), insolar.StaticRoleVirtual, nil, "127.0.0.1:0", "")
+	node3.SetState(insolar.NodeLeaving)
 	m[node3.ID()] = node3
 
-	node4 := newMutableNode(testutils.RandomRef(), core.StaticRoleVirtual, nil, "127.0.0.1:0", "")
-	node4.SetState(core.NodeUndefined)
+	node4 := newMutableNode(testutils.RandomRef(), insolar.StaticRoleVirtual, nil, "127.0.0.1:0", "")
+	node4.SetState(insolar.NodeUndefined)
 	m[node4.ID()] = node4
 
-	snapshot := NewSnapshot(core.FirstPulseNumber, m)
+	snapshot := NewSnapshot(insolar.FirstPulseNumber, m)
 	accessor := NewAccessor(snapshot)
 	assert.Equal(t, 4, len(accessor.GetActiveNodes()))
 	assert.Equal(t, 1, len(accessor.GetWorkingNodes()))

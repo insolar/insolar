@@ -16,7 +16,7 @@
 
 package helloworld
 
-import "github.com/insolar/insolar/core"
+import "github.com/insolar/insolar/insolar"
 
 // HelloWorld contract
 type HelloWorld struct {
@@ -25,9 +25,9 @@ type HelloWorld struct {
 }
 
 // CodeRef returns something strange
-func CodeRef() core.RecordRef {
-	var ref core.RecordRef
-	ref[core.RecordRefSize-1] = 1
+func CodeRef() insolar.RecordRef {
+	var ref insolar.RecordRef
+	ref[insolar.RecordRefSize-1] = 1
 	return ref
 }
 

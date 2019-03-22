@@ -26,7 +26,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
@@ -136,7 +136,7 @@ func GetSeed(url string) ([]byte, error) {
 }
 
 func constructParams(params []interface{}) ([]byte, error) {
-	args, err := core.MarshalArgs(params...)
+	args, err := insolar.MarshalArgs(params...)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ constructParams ]")
 	}
@@ -154,12 +154,12 @@ func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, reqC
 		return nil, errors.Wrap(err, "[ Send ] Problem with serializing params")
 	}
 
-	callerRef, err := core.NewRefFromBase58(userCfg.Caller)
+	callerRef, err := insolar.NewRefFromBase58(userCfg.Caller)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Send ] Failed to parse userCfg.Caller")
 	}
 
-	serRequest, err := core.MarshalArgs(
+	serRequest, err := insolar.MarshalArgs(
 		*callerRef,
 		reqCfg.Method,
 		params,

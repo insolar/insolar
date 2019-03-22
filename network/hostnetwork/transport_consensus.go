@@ -56,7 +56,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/consensus"
 	"github.com/insolar/insolar/consensus/packets"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/sequence"
@@ -93,7 +93,7 @@ func (tc *transportConsensus) RegisterPacketHandler(t packets.PacketType, handle
 }
 
 func (tc *transportConsensus) SignAndSendPacket(packet packets.ConsensusPacket,
-	receiver core.RecordRef, service core.CryptographyService) error {
+	receiver insolar.RecordRef, service insolar.CryptographyService) error {
 
 	receiverHost, err := tc.Resolver.ResolveConsensusRef(receiver)
 	if err != nil {
@@ -156,7 +156,7 @@ func (tc *transportConsensus) processMessage(msg *packet.Packet) {
 	handler(p, sender.NodeID)
 }
 
-func NewConsensusNetwork(address, nodeID string, shortID core.ShortNodeID) (network.ConsensusNetwork, error) {
+func NewConsensusNetwork(address, nodeID string, shortID insolar.ShortNodeID) (network.ConsensusNetwork, error) {
 	conf := configuration.Transport{}
 	conf.Address = address
 	conf.Protocol = "PURE_UDP"

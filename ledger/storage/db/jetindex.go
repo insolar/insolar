@@ -19,33 +19,33 @@ package db
 import (
 	"sync"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage/db.JetIndexModifier -o ./ -s _mock.go
 
 // JetIndexModifier is an interface for modifying index records.
 type JetIndexModifier interface {
-	Add(id core.RecordID, jetID core.JetID)
-	Delete(id core.RecordID, jetID core.JetID)
+	Add(id insolar.RecordID, jetID insolar.JetID)
+	Delete(id insolar.RecordID, jetID insolar.JetID)
 }
 
 // JetIndex contains methods to implement quick access to data by jet. Indexes are stored in memory. Consider disk
 // implementation for large collections.
 type JetIndex struct {
 	lock    sync.Mutex
-	storage map[core.JetID]recordSet
+	storage map[insolar.JetID]recordSet
 }
 
-type recordSet map[core.RecordID]struct{}
+type recordSet map[insolar.RecordID]struct{}
 
 // NewJetIndex creates new index instance.
 func NewJetIndex() *JetIndex {
-	return &JetIndex{storage: map[core.JetID]recordSet{}}
+	return &JetIndex{storage: map[insolar.JetID]recordSet{}}
 }
 
 // Add creates index record for specified id and jet. To remove clean up index, use "Delete" method.
-func (i *JetIndex) Add(id core.RecordID, jetID core.JetID) {
+func (i *JetIndex) Add(id insolar.RecordID, jetID insolar.JetID) {
 	i.lock.Lock()
 	defer i.lock.Unlock()
 
@@ -58,7 +58,7 @@ func (i *JetIndex) Add(id core.RecordID, jetID core.JetID) {
 }
 
 // Delete removes specified id - jet record from index.
-func (i *JetIndex) Delete(id core.RecordID, jetID core.JetID) {
+func (i *JetIndex) Delete(id insolar.RecordID, jetID insolar.JetID) {
 	i.lock.Lock()
 	defer i.lock.Unlock()
 

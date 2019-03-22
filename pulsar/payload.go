@@ -21,7 +21,7 @@ import (
 	"sort"
 	"strconv"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/ugorji/go/codec"
 )
 
@@ -34,16 +34,16 @@ type Payload struct {
 
 // PayloadData is a body of Payload
 type PayloadData interface {
-	Hash(hashProvider core.Hasher) ([]byte, error)
+	Hash(hashProvider insolar.Hasher) ([]byte, error)
 }
 
 // HandshakePayload is a struct for handshake step
 type HandshakePayload struct {
-	Entropy core.Entropy
+	Entropy insolar.Entropy
 }
 
 // Hash calculates hash of payload
-func (hp *HandshakePayload) Hash(hashProvider core.Hasher) ([]byte, error) {
+func (hp *HandshakePayload) Hash(hashProvider insolar.Hasher) ([]byte, error) {
 	_, err := hashProvider.Write(hp.Entropy[:])
 	if err != nil {
 		return nil, err
@@ -54,12 +54,12 @@ func (hp *HandshakePayload) Hash(hashProvider core.Hasher) ([]byte, error) {
 
 // EntropySignaturePayload is a struct for sending Sign of Entropy step
 type EntropySignaturePayload struct {
-	PulseNumber      core.PulseNumber
+	PulseNumber      insolar.PulseNumber
 	EntropySignature []byte
 }
 
 // Hash calculates hash of payload
-func (es *EntropySignaturePayload) Hash(hashProvider core.Hasher) ([]byte, error) {
+func (es *EntropySignaturePayload) Hash(hashProvider insolar.Hasher) ([]byte, error) {
 	_, err := hashProvider.Write(es.EntropySignature[:])
 	if err != nil {
 		return nil, err
@@ -74,12 +74,12 @@ func (es *EntropySignaturePayload) Hash(hashProvider core.Hasher) ([]byte, error
 
 // EntropyPayload is a struct for sending Entropy step
 type EntropyPayload struct {
-	PulseNumber core.PulseNumber
-	Entropy     core.Entropy
+	PulseNumber insolar.PulseNumber
+	Entropy     insolar.Entropy
 }
 
 // Hash calculates hash of payload
-func (ep *EntropyPayload) Hash(hashProvider core.Hasher) ([]byte, error) {
+func (ep *EntropyPayload) Hash(hashProvider insolar.Hasher) ([]byte, error) {
 	_, err := hashProvider.Write(ep.Entropy[:])
 	if err != nil {
 		return nil, err
@@ -94,12 +94,12 @@ func (ep *EntropyPayload) Hash(hashProvider core.Hasher) ([]byte, error) {
 
 // VectorPayload is a struct for sending vector of Entropy step
 type VectorPayload struct {
-	PulseNumber core.PulseNumber
+	PulseNumber insolar.PulseNumber
 	Vector      map[string]*BftCell
 }
 
 // Hash calculates hash of payload
-func (vp *VectorPayload) Hash(hashProvider core.Hasher) ([]byte, error) {
+func (vp *VectorPayload) Hash(hashProvider insolar.Hasher) ([]byte, error) {
 	var sortedKeys []string
 	for key := range vp.Vector {
 		sortedKeys = append(sortedKeys, key)
@@ -138,11 +138,11 @@ func (vp *VectorPayload) Hash(hashProvider core.Hasher) ([]byte, error) {
 
 // PulsePayload is a struct for sending finished pulse to all pulsars
 type PulsePayload struct {
-	Pulse core.Pulse
+	Pulse insolar.Pulse
 }
 
 // Hash calculates hash of payload
-func (pp *PulsePayload) Hash(hashProvider core.Hasher) ([]byte, error) {
+func (pp *PulsePayload) Hash(hashProvider insolar.Hasher) ([]byte, error) {
 	var sortedKeys []string
 	for key := range pp.Pulse.Signs {
 		sortedKeys = append(sortedKeys, key)
@@ -188,11 +188,11 @@ func (pp *PulsePayload) Hash(hashProvider core.Hasher) ([]byte, error) {
 
 // PulseSenderConfirmationPayload is a struct with info about pulse's confirmations
 type PulseSenderConfirmationPayload struct {
-	core.PulseSenderConfirmation
+	insolar.PulseSenderConfirmation
 }
 
 // Hash calculates hash of payload
-func (ps *PulseSenderConfirmationPayload) Hash(hashProvider core.Hasher) ([]byte, error) {
+func (ps *PulseSenderConfirmationPayload) Hash(hashProvider insolar.Hasher) ([]byte, error) {
 	_, err := hashProvider.Write(ps.PulseNumber.Bytes())
 	if err != nil {
 		return nil, err

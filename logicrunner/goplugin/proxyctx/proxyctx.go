@@ -17,17 +17,17 @@
 package proxyctx
 
 import (
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 )
 
 // ProxyHelper interface with methods that are needed by contract proxies
 type ProxyHelper interface {
-	RouteCall(ref core.RecordRef, wait bool, method string, args []byte, proxyPrototype core.RecordRef) ([]byte, error)
-	SaveAsChild(parentRef, classRef core.RecordRef, constructorName string, argsSerialized []byte) (core.RecordRef, error)
-	GetObjChildrenIterator(head core.RecordRef, prototype core.RecordRef, iteratorID string) (*ChildrenTypedIterator, error)
-	SaveAsDelegate(parentRef, classRef core.RecordRef, constructorName string, argsSerialized []byte) (core.RecordRef, error)
-	GetDelegate(object, ofType core.RecordRef) (core.RecordRef, error)
-	DeactivateObject(object core.RecordRef) error
+	RouteCall(ref insolar.RecordRef, wait bool, method string, args []byte, proxyPrototype insolar.RecordRef) ([]byte, error)
+	SaveAsChild(parentRef, classRef insolar.RecordRef, constructorName string, argsSerialized []byte) (insolar.RecordRef, error)
+	GetObjChildrenIterator(head insolar.RecordRef, prototype insolar.RecordRef, iteratorID string) (*ChildrenTypedIterator, error)
+	SaveAsDelegate(parentRef, classRef insolar.RecordRef, constructorName string, argsSerialized []byte) (insolar.RecordRef, error)
+	GetDelegate(object, ofType insolar.RecordRef) (insolar.RecordRef, error)
+	DeactivateObject(object insolar.RecordRef) error
 	Serialize(what interface{}, to *[]byte) error
 	Deserialize(from []byte, into interface{}) error
 	MakeErrorSerializable(error) error
@@ -39,13 +39,13 @@ var Current ProxyHelper
 // ChildrenTypedIterator iterator over children of object with specified type
 // it uses cache on insolard service side, provided by IteratorID
 type ChildrenTypedIterator struct {
-	Parent         core.RecordRef
-	ChildPrototype core.RecordRef // only child of specified prototype, if childPrototype.IsEmpty - ignored
+	Parent         insolar.RecordRef
+	ChildPrototype insolar.RecordRef // only child of specified prototype, if childPrototype.IsEmpty - ignored
 
-	IteratorID string           // map key to iterators slice in logicrunner service
-	Buff       []core.RecordRef // bucket of objects from previous RPC call to service
-	buffIndex  int              // current element
-	CanFetch   bool             // if true, we can call RPC again and get new objects
+	IteratorID string              // map key to iterators slice in logicrunner service
+	Buff       []insolar.RecordRef // bucket of objects from previous RPC call to service
+	buffIndex  int                 // current element
+	CanFetch   bool                // if true, we can call RPC again and get new objects
 }
 
 // HasNext return true if iterator has element in cache or can fetch data again
@@ -55,12 +55,12 @@ func (oi *ChildrenTypedIterator) HasNext() bool {
 
 // Next return next element from iterator cache or fetching new from service
 // return error only if fetch() fails
-func (oi *ChildrenTypedIterator) Next() (core.RecordRef, error) {
+func (oi *ChildrenTypedIterator) Next() (insolar.RecordRef, error) {
 	if !oi.hasInBuffer() && oi.CanFetch {
 		err := oi.fetch()
 		if err != nil {
 			oi.CanFetch = false
-			return core.RecordRef{}, err
+			return insolar.RecordRef{}, err
 		}
 	}
 
@@ -71,9 +71,9 @@ func (oi *ChildrenTypedIterator) hasInBuffer() bool {
 	return oi.buffIndex < len(oi.Buff)
 }
 
-func (oi *ChildrenTypedIterator) nextFromBuffer() core.RecordRef {
+func (oi *ChildrenTypedIterator) nextFromBuffer() insolar.RecordRef {
 	if !oi.hasInBuffer() {
-		return core.RecordRef{}
+		return insolar.RecordRef{}
 	}
 
 	result := oi.Buff[oi.buffIndex]

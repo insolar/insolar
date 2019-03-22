@@ -21,13 +21,13 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/application/proxy/wallet"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 
 type Allowance struct {
 	foundation.BaseContract
-	To         core.RecordRef
+	To         insolar.RecordRef
 	Amount     uint
 	ExpireTime int64
 }
@@ -70,7 +70,7 @@ func (a *Allowance) GetExpiredBalance() (uint, error) {
 }
 
 // New check is caller wallet and makes new allowance
-func New(to *core.RecordRef, amount uint, expire int64) (*Allowance, error) {
+func New(to *insolar.RecordRef, amount uint, expire int64) (*Allowance, error) {
 	if !wallet.PrototypeReference.Equal(*foundation.GetContext().CallerPrototype) {
 		return nil, fmt.Errorf("[ New Allowance ] : Can't create allowance from not wallet contract")
 	}

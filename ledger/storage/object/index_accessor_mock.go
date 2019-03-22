@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	core "github.com/insolar/insolar/core"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -20,7 +20,7 @@ import (
 type IndexAccessorMock struct {
 	t minimock.Tester
 
-	ForIDFunc       func(p context.Context, p1 core.RecordID) (r Lifeline, r1 error)
+	ForIDFunc       func(p context.Context, p1 insolar.RecordID) (r Lifeline, r1 error)
 	ForIDCounter    uint64
 	ForIDPreCounter uint64
 	ForIDMock       mIndexAccessorMockForID
@@ -52,7 +52,7 @@ type IndexAccessorMockForIDExpectation struct {
 
 type IndexAccessorMockForIDInput struct {
 	p  context.Context
-	p1 core.RecordID
+	p1 insolar.RecordID
 }
 
 type IndexAccessorMockForIDResult struct {
@@ -61,7 +61,7 @@ type IndexAccessorMockForIDResult struct {
 }
 
 //Expect specifies that invocation of IndexAccessor.ForID is expected from 1 to Infinity times
-func (m *mIndexAccessorMockForID) Expect(p context.Context, p1 core.RecordID) *mIndexAccessorMockForID {
+func (m *mIndexAccessorMockForID) Expect(p context.Context, p1 insolar.RecordID) *mIndexAccessorMockForID {
 	m.mock.ForIDFunc = nil
 	m.expectationSeries = nil
 
@@ -85,7 +85,7 @@ func (m *mIndexAccessorMockForID) Return(r Lifeline, r1 error) *IndexAccessorMoc
 }
 
 //ExpectOnce specifies that invocation of IndexAccessor.ForID is expected once
-func (m *mIndexAccessorMockForID) ExpectOnce(p context.Context, p1 core.RecordID) *IndexAccessorMockForIDExpectation {
+func (m *mIndexAccessorMockForID) ExpectOnce(p context.Context, p1 insolar.RecordID) *IndexAccessorMockForIDExpectation {
 	m.mock.ForIDFunc = nil
 	m.mainExpectation = nil
 
@@ -100,7 +100,7 @@ func (e *IndexAccessorMockForIDExpectation) Return(r Lifeline, r1 error) {
 }
 
 //Set uses given function f as a mock of IndexAccessor.ForID method
-func (m *mIndexAccessorMockForID) Set(f func(p context.Context, p1 core.RecordID) (r Lifeline, r1 error)) *IndexAccessorMock {
+func (m *mIndexAccessorMockForID) Set(f func(p context.Context, p1 insolar.RecordID) (r Lifeline, r1 error)) *IndexAccessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -109,7 +109,7 @@ func (m *mIndexAccessorMockForID) Set(f func(p context.Context, p1 core.RecordID
 }
 
 //ForID implements github.com/insolar/insolar/ledger/storage/object.IndexAccessor interface
-func (m *IndexAccessorMock) ForID(p context.Context, p1 core.RecordID) (r Lifeline, r1 error) {
+func (m *IndexAccessorMock) ForID(p context.Context, p1 insolar.RecordID) (r Lifeline, r1 error) {
 	counter := atomic.AddUint64(&m.ForIDPreCounter, 1)
 	defer atomic.AddUint64(&m.ForIDCounter, 1)
 

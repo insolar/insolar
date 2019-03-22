@@ -20,7 +20,7 @@ import (
 	"context"
 	"sort"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/utils/entropy"
@@ -72,8 +72,8 @@ func (currentPulsar *Pulsar) clearState() {
 	currentPulsar.CurrentSlotPulseSender = ""
 	log.Debug("currentPulsar.currentSlotSenderConfirmationsLock.Lock()")
 	currentPulsar.currentSlotSenderConfirmationsLock.Lock()
-	log.Debug("currentPulsar.CurrentSlotSenderConfirmations = map[string]core.PulseSenderConfirmation{}")
-	currentPulsar.CurrentSlotSenderConfirmations = map[string]core.PulseSenderConfirmation{}
+	log.Debug("currentPulsar.CurrentSlotSenderConfirmations = map[string]insolar.PulseSenderConfirmation{}")
+	currentPulsar.CurrentSlotSenderConfirmations = map[string]insolar.PulseSenderConfirmation{}
 	log.Debug("currentPulsar.currentSlotSenderConfirmationsLock.Unlock()")
 	currentPulsar.currentSlotSenderConfirmationsLock.Unlock()
 
@@ -125,14 +125,14 @@ func (currentPulsar *Pulsar) checkPayloadSignature(request *Payload) (bool, erro
 		return false, err
 	}
 
-	return currentPulsar.CryptographyService.Verify(publicKey, core.SignatureFromBytes(request.Signature), hash), nil
+	return currentPulsar.CryptographyService.Verify(publicKey, insolar.SignatureFromBytes(request.Signature), hash), nil
 }
 
 // copied from jetcoordinator
 // (the only difference is type of input/output arrays)
 func selectByEntropy(
-	scheme core.PlatformCryptographyScheme,
-	e core.Entropy,
+	scheme insolar.PlatformCryptographyScheme,
+	e insolar.Entropy,
 	values []string,
 	count int,
 ) ([]string, error) { // nolint: megacheck
@@ -155,42 +155,42 @@ func selectByEntropy(
 }
 
 // GetLastPulse returns last pulse in the thread-safe mode
-func (currentPulsar *Pulsar) GetLastPulse() *core.Pulse {
+func (currentPulsar *Pulsar) GetLastPulse() *insolar.Pulse {
 	currentPulsar.lastPulseLock.RLock()
 	defer currentPulsar.lastPulseLock.RUnlock()
 	return currentPulsar.lastPulse
 }
 
 // SetLastPulse sets last pulse in the thread-safe mode
-func (currentPulsar *Pulsar) SetLastPulse(newPulse *core.Pulse) {
+func (currentPulsar *Pulsar) SetLastPulse(newPulse *insolar.Pulse) {
 	currentPulsar.lastPulseLock.Lock()
 	defer currentPulsar.lastPulseLock.Unlock()
 	currentPulsar.lastPulse = newPulse
 }
 
 // GetCurrentSlotEntropy returns currentSlotEntropy in the thread-safe mode
-func (currentPulsar *Pulsar) GetCurrentSlotEntropy() *core.Entropy {
+func (currentPulsar *Pulsar) GetCurrentSlotEntropy() *insolar.Entropy {
 	currentPulsar.currentSlotEntropyLock.RLock()
 	defer currentPulsar.currentSlotEntropyLock.RUnlock()
 	return currentPulsar.currentSlotEntropy
 }
 
 // SetCurrentSlotEntropy sets currentSlotEntropy in the thread-safe mode
-func (currentPulsar *Pulsar) SetCurrentSlotEntropy(currentSlotEntropy *core.Entropy) {
+func (currentPulsar *Pulsar) SetCurrentSlotEntropy(currentSlotEntropy *insolar.Entropy) {
 	currentPulsar.currentSlotEntropyLock.Lock()
 	defer currentPulsar.currentSlotEntropyLock.Unlock()
 	currentPulsar.currentSlotEntropy = currentSlotEntropy
 }
 
 // GetGeneratedEntropy returns generatedEntropy in the thread-safe mode
-func (currentPulsar *Pulsar) GetGeneratedEntropy() *core.Entropy {
+func (currentPulsar *Pulsar) GetGeneratedEntropy() *insolar.Entropy {
 	currentPulsar.generatedEntropyLock.RLock()
 	defer currentPulsar.generatedEntropyLock.RUnlock()
 	return currentPulsar.generatedEntropy
 }
 
 // SetGeneratedEntropy sets generatedEntropy in the thread-safe mode
-func (currentPulsar *Pulsar) SetGeneratedEntropy(currentSlotEntropy *core.Entropy) {
+func (currentPulsar *Pulsar) SetGeneratedEntropy(currentSlotEntropy *insolar.Entropy) {
 	currentPulsar.generatedEntropyLock.Lock()
 	defer currentPulsar.generatedEntropyLock.Unlock()
 	currentPulsar.generatedEntropy = currentSlotEntropy

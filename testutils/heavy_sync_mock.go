@@ -3,7 +3,7 @@ package testutils
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "HeavySync" can be found in github.com/insolar/insolar/core
+The original interface "HeavySync" can be found in github.com/insolar/insolar/insolar
 */
 import (
 	context "context"
@@ -11,42 +11,42 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	core "github.com/insolar/insolar/core"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//HeavySyncMock implements github.com/insolar/insolar/core.HeavySync
+//HeavySyncMock implements github.com/insolar/insolar/insolar.HeavySync
 type HeavySyncMock struct {
 	t minimock.Tester
 
-	ResetFunc       func(p context.Context, p1 core.RecordID, p2 core.PulseNumber) (r error)
+	ResetFunc       func(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber) (r error)
 	ResetCounter    uint64
 	ResetPreCounter uint64
 	ResetMock       mHeavySyncMockReset
 
-	StartFunc       func(p context.Context, p1 core.RecordID, p2 core.PulseNumber) (r error)
+	StartFunc       func(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber) (r error)
 	StartCounter    uint64
 	StartPreCounter uint64
 	StartMock       mHeavySyncMockStart
 
-	StopFunc       func(p context.Context, p1 core.RecordID, p2 core.PulseNumber) (r error)
+	StopFunc       func(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber) (r error)
 	StopCounter    uint64
 	StopPreCounter uint64
 	StopMock       mHeavySyncMockStop
 
-	StoreFunc       func(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 []core.KV) (r error)
+	StoreFunc       func(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber, p3 []insolar.KV) (r error)
 	StoreCounter    uint64
 	StorePreCounter uint64
 	StoreMock       mHeavySyncMockStore
 
-	StoreDropFunc       func(p context.Context, p1 core.JetID, p2 []byte) (r error)
+	StoreDropFunc       func(p context.Context, p1 insolar.JetID, p2 []byte) (r error)
 	StoreDropCounter    uint64
 	StoreDropPreCounter uint64
 	StoreDropMock       mHeavySyncMockStoreDrop
 }
 
-//NewHeavySyncMock returns a mock for github.com/insolar/insolar/core.HeavySync
+//NewHeavySyncMock returns a mock for github.com/insolar/insolar/insolar.HeavySync
 func NewHeavySyncMock(t minimock.Tester) *HeavySyncMock {
 	m := &HeavySyncMock{t: t}
 
@@ -76,8 +76,8 @@ type HeavySyncMockResetExpectation struct {
 
 type HeavySyncMockResetInput struct {
 	p  context.Context
-	p1 core.RecordID
-	p2 core.PulseNumber
+	p1 insolar.RecordID
+	p2 insolar.PulseNumber
 }
 
 type HeavySyncMockResetResult struct {
@@ -85,7 +85,7 @@ type HeavySyncMockResetResult struct {
 }
 
 //Expect specifies that invocation of HeavySync.Reset is expected from 1 to Infinity times
-func (m *mHeavySyncMockReset) Expect(p context.Context, p1 core.RecordID, p2 core.PulseNumber) *mHeavySyncMockReset {
+func (m *mHeavySyncMockReset) Expect(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber) *mHeavySyncMockReset {
 	m.mock.ResetFunc = nil
 	m.expectationSeries = nil
 
@@ -109,7 +109,7 @@ func (m *mHeavySyncMockReset) Return(r error) *HeavySyncMock {
 }
 
 //ExpectOnce specifies that invocation of HeavySync.Reset is expected once
-func (m *mHeavySyncMockReset) ExpectOnce(p context.Context, p1 core.RecordID, p2 core.PulseNumber) *HeavySyncMockResetExpectation {
+func (m *mHeavySyncMockReset) ExpectOnce(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber) *HeavySyncMockResetExpectation {
 	m.mock.ResetFunc = nil
 	m.mainExpectation = nil
 
@@ -124,7 +124,7 @@ func (e *HeavySyncMockResetExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of HeavySync.Reset method
-func (m *mHeavySyncMockReset) Set(f func(p context.Context, p1 core.RecordID, p2 core.PulseNumber) (r error)) *HeavySyncMock {
+func (m *mHeavySyncMockReset) Set(f func(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber) (r error)) *HeavySyncMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -132,8 +132,8 @@ func (m *mHeavySyncMockReset) Set(f func(p context.Context, p1 core.RecordID, p2
 	return m.mock
 }
 
-//Reset implements github.com/insolar/insolar/core.HeavySync interface
-func (m *HeavySyncMock) Reset(p context.Context, p1 core.RecordID, p2 core.PulseNumber) (r error) {
+//Reset implements github.com/insolar/insolar/insolar.HeavySync interface
+func (m *HeavySyncMock) Reset(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber) (r error) {
 	counter := atomic.AddUint64(&m.ResetPreCounter, 1)
 	defer atomic.AddUint64(&m.ResetCounter, 1)
 
@@ -225,8 +225,8 @@ type HeavySyncMockStartExpectation struct {
 
 type HeavySyncMockStartInput struct {
 	p  context.Context
-	p1 core.RecordID
-	p2 core.PulseNumber
+	p1 insolar.RecordID
+	p2 insolar.PulseNumber
 }
 
 type HeavySyncMockStartResult struct {
@@ -234,7 +234,7 @@ type HeavySyncMockStartResult struct {
 }
 
 //Expect specifies that invocation of HeavySync.Start is expected from 1 to Infinity times
-func (m *mHeavySyncMockStart) Expect(p context.Context, p1 core.RecordID, p2 core.PulseNumber) *mHeavySyncMockStart {
+func (m *mHeavySyncMockStart) Expect(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber) *mHeavySyncMockStart {
 	m.mock.StartFunc = nil
 	m.expectationSeries = nil
 
@@ -258,7 +258,7 @@ func (m *mHeavySyncMockStart) Return(r error) *HeavySyncMock {
 }
 
 //ExpectOnce specifies that invocation of HeavySync.Start is expected once
-func (m *mHeavySyncMockStart) ExpectOnce(p context.Context, p1 core.RecordID, p2 core.PulseNumber) *HeavySyncMockStartExpectation {
+func (m *mHeavySyncMockStart) ExpectOnce(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber) *HeavySyncMockStartExpectation {
 	m.mock.StartFunc = nil
 	m.mainExpectation = nil
 
@@ -273,7 +273,7 @@ func (e *HeavySyncMockStartExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of HeavySync.Start method
-func (m *mHeavySyncMockStart) Set(f func(p context.Context, p1 core.RecordID, p2 core.PulseNumber) (r error)) *HeavySyncMock {
+func (m *mHeavySyncMockStart) Set(f func(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber) (r error)) *HeavySyncMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -281,8 +281,8 @@ func (m *mHeavySyncMockStart) Set(f func(p context.Context, p1 core.RecordID, p2
 	return m.mock
 }
 
-//Start implements github.com/insolar/insolar/core.HeavySync interface
-func (m *HeavySyncMock) Start(p context.Context, p1 core.RecordID, p2 core.PulseNumber) (r error) {
+//Start implements github.com/insolar/insolar/insolar.HeavySync interface
+func (m *HeavySyncMock) Start(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber) (r error) {
 	counter := atomic.AddUint64(&m.StartPreCounter, 1)
 	defer atomic.AddUint64(&m.StartCounter, 1)
 
@@ -374,8 +374,8 @@ type HeavySyncMockStopExpectation struct {
 
 type HeavySyncMockStopInput struct {
 	p  context.Context
-	p1 core.RecordID
-	p2 core.PulseNumber
+	p1 insolar.RecordID
+	p2 insolar.PulseNumber
 }
 
 type HeavySyncMockStopResult struct {
@@ -383,7 +383,7 @@ type HeavySyncMockStopResult struct {
 }
 
 //Expect specifies that invocation of HeavySync.Stop is expected from 1 to Infinity times
-func (m *mHeavySyncMockStop) Expect(p context.Context, p1 core.RecordID, p2 core.PulseNumber) *mHeavySyncMockStop {
+func (m *mHeavySyncMockStop) Expect(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber) *mHeavySyncMockStop {
 	m.mock.StopFunc = nil
 	m.expectationSeries = nil
 
@@ -407,7 +407,7 @@ func (m *mHeavySyncMockStop) Return(r error) *HeavySyncMock {
 }
 
 //ExpectOnce specifies that invocation of HeavySync.Stop is expected once
-func (m *mHeavySyncMockStop) ExpectOnce(p context.Context, p1 core.RecordID, p2 core.PulseNumber) *HeavySyncMockStopExpectation {
+func (m *mHeavySyncMockStop) ExpectOnce(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber) *HeavySyncMockStopExpectation {
 	m.mock.StopFunc = nil
 	m.mainExpectation = nil
 
@@ -422,7 +422,7 @@ func (e *HeavySyncMockStopExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of HeavySync.Stop method
-func (m *mHeavySyncMockStop) Set(f func(p context.Context, p1 core.RecordID, p2 core.PulseNumber) (r error)) *HeavySyncMock {
+func (m *mHeavySyncMockStop) Set(f func(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber) (r error)) *HeavySyncMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -430,8 +430,8 @@ func (m *mHeavySyncMockStop) Set(f func(p context.Context, p1 core.RecordID, p2 
 	return m.mock
 }
 
-//Stop implements github.com/insolar/insolar/core.HeavySync interface
-func (m *HeavySyncMock) Stop(p context.Context, p1 core.RecordID, p2 core.PulseNumber) (r error) {
+//Stop implements github.com/insolar/insolar/insolar.HeavySync interface
+func (m *HeavySyncMock) Stop(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber) (r error) {
 	counter := atomic.AddUint64(&m.StopPreCounter, 1)
 	defer atomic.AddUint64(&m.StopCounter, 1)
 
@@ -523,9 +523,9 @@ type HeavySyncMockStoreExpectation struct {
 
 type HeavySyncMockStoreInput struct {
 	p  context.Context
-	p1 core.RecordID
-	p2 core.PulseNumber
-	p3 []core.KV
+	p1 insolar.RecordID
+	p2 insolar.PulseNumber
+	p3 []insolar.KV
 }
 
 type HeavySyncMockStoreResult struct {
@@ -533,7 +533,7 @@ type HeavySyncMockStoreResult struct {
 }
 
 //Expect specifies that invocation of HeavySync.Store is expected from 1 to Infinity times
-func (m *mHeavySyncMockStore) Expect(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 []core.KV) *mHeavySyncMockStore {
+func (m *mHeavySyncMockStore) Expect(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber, p3 []insolar.KV) *mHeavySyncMockStore {
 	m.mock.StoreFunc = nil
 	m.expectationSeries = nil
 
@@ -557,7 +557,7 @@ func (m *mHeavySyncMockStore) Return(r error) *HeavySyncMock {
 }
 
 //ExpectOnce specifies that invocation of HeavySync.Store is expected once
-func (m *mHeavySyncMockStore) ExpectOnce(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 []core.KV) *HeavySyncMockStoreExpectation {
+func (m *mHeavySyncMockStore) ExpectOnce(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber, p3 []insolar.KV) *HeavySyncMockStoreExpectation {
 	m.mock.StoreFunc = nil
 	m.mainExpectation = nil
 
@@ -572,7 +572,7 @@ func (e *HeavySyncMockStoreExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of HeavySync.Store method
-func (m *mHeavySyncMockStore) Set(f func(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 []core.KV) (r error)) *HeavySyncMock {
+func (m *mHeavySyncMockStore) Set(f func(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber, p3 []insolar.KV) (r error)) *HeavySyncMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -580,8 +580,8 @@ func (m *mHeavySyncMockStore) Set(f func(p context.Context, p1 core.RecordID, p2
 	return m.mock
 }
 
-//Store implements github.com/insolar/insolar/core.HeavySync interface
-func (m *HeavySyncMock) Store(p context.Context, p1 core.RecordID, p2 core.PulseNumber, p3 []core.KV) (r error) {
+//Store implements github.com/insolar/insolar/insolar.HeavySync interface
+func (m *HeavySyncMock) Store(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber, p3 []insolar.KV) (r error) {
 	counter := atomic.AddUint64(&m.StorePreCounter, 1)
 	defer atomic.AddUint64(&m.StoreCounter, 1)
 
@@ -673,7 +673,7 @@ type HeavySyncMockStoreDropExpectation struct {
 
 type HeavySyncMockStoreDropInput struct {
 	p  context.Context
-	p1 core.JetID
+	p1 insolar.JetID
 	p2 []byte
 }
 
@@ -682,7 +682,7 @@ type HeavySyncMockStoreDropResult struct {
 }
 
 //Expect specifies that invocation of HeavySync.StoreDrop is expected from 1 to Infinity times
-func (m *mHeavySyncMockStoreDrop) Expect(p context.Context, p1 core.JetID, p2 []byte) *mHeavySyncMockStoreDrop {
+func (m *mHeavySyncMockStoreDrop) Expect(p context.Context, p1 insolar.JetID, p2 []byte) *mHeavySyncMockStoreDrop {
 	m.mock.StoreDropFunc = nil
 	m.expectationSeries = nil
 
@@ -706,7 +706,7 @@ func (m *mHeavySyncMockStoreDrop) Return(r error) *HeavySyncMock {
 }
 
 //ExpectOnce specifies that invocation of HeavySync.StoreDrop is expected once
-func (m *mHeavySyncMockStoreDrop) ExpectOnce(p context.Context, p1 core.JetID, p2 []byte) *HeavySyncMockStoreDropExpectation {
+func (m *mHeavySyncMockStoreDrop) ExpectOnce(p context.Context, p1 insolar.JetID, p2 []byte) *HeavySyncMockStoreDropExpectation {
 	m.mock.StoreDropFunc = nil
 	m.mainExpectation = nil
 
@@ -721,7 +721,7 @@ func (e *HeavySyncMockStoreDropExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of HeavySync.StoreDrop method
-func (m *mHeavySyncMockStoreDrop) Set(f func(p context.Context, p1 core.JetID, p2 []byte) (r error)) *HeavySyncMock {
+func (m *mHeavySyncMockStoreDrop) Set(f func(p context.Context, p1 insolar.JetID, p2 []byte) (r error)) *HeavySyncMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -729,8 +729,8 @@ func (m *mHeavySyncMockStoreDrop) Set(f func(p context.Context, p1 core.JetID, p
 	return m.mock
 }
 
-//StoreDrop implements github.com/insolar/insolar/core.HeavySync interface
-func (m *HeavySyncMock) StoreDrop(p context.Context, p1 core.JetID, p2 []byte) (r error) {
+//StoreDrop implements github.com/insolar/insolar/insolar.HeavySync interface
+func (m *HeavySyncMock) StoreDrop(p context.Context, p1 insolar.JetID, p2 []byte) (r error) {
 	counter := atomic.AddUint64(&m.StoreDropPreCounter, 1)
 	defer atomic.AddUint64(&m.StoreDropCounter, 1)
 

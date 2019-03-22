@@ -19,18 +19,18 @@ package artifactmanager
 import (
 	"context"
 
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/message"
-	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/reply"
 )
 
 // TODO: check sender if it was light material in synced pulses:
 // sender := genericMsg.GetSender()
 // sender.isItWasLMInPulse(pulsenum)
-func (h *MessageHandler) handleHeavyPayload(ctx context.Context, genericMsg core.Parcel) (core.Reply, error) {
+func (h *MessageHandler) handleHeavyPayload(ctx context.Context, genericMsg insolar.Parcel) (insolar.Reply, error) {
 	msg := genericMsg.Message().(*message.HeavyPayload)
 
-	if err := h.HeavySync.Store(ctx, core.RecordID(msg.JetID), msg.PulseNum, msg.Records); err != nil {
+	if err := h.HeavySync.Store(ctx, insolar.RecordID(msg.JetID), msg.PulseNum, msg.Records); err != nil {
 		return heavyerrreply(err)
 	}
 	if err := h.HeavySync.StoreDrop(ctx, msg.JetID, msg.Drop); err != nil {
@@ -40,24 +40,24 @@ func (h *MessageHandler) handleHeavyPayload(ctx context.Context, genericMsg core
 	return &reply.OK{}, nil
 }
 
-func (h *MessageHandler) handleHeavyStartStop(ctx context.Context, genericMsg core.Parcel) (core.Reply, error) {
+func (h *MessageHandler) handleHeavyStartStop(ctx context.Context, genericMsg insolar.Parcel) (insolar.Reply, error) {
 	msg := genericMsg.Message().(*message.HeavyStartStop)
 
 	// stop
 	if msg.Finished {
-		if err := h.HeavySync.Stop(ctx, core.RecordID(msg.JetID), msg.PulseNum); err != nil {
+		if err := h.HeavySync.Stop(ctx, insolar.RecordID(msg.JetID), msg.PulseNum); err != nil {
 			return nil, err
 		}
 		return &reply.OK{}, nil
 	}
 	// start
-	if err := h.HeavySync.Start(ctx, core.RecordID(msg.JetID), msg.PulseNum); err != nil {
+	if err := h.HeavySync.Start(ctx, insolar.RecordID(msg.JetID), msg.PulseNum); err != nil {
 		return heavyerrreply(err)
 	}
 	return &reply.OK{}, nil
 }
 
-func heavyerrreply(err error) (core.Reply, error) {
+func heavyerrreply(err error) (insolar.Reply, error) {
 	if herr, ok := err.(*reply.HeavyError); ok {
 		return herr, nil
 	}

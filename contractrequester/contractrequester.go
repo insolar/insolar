@@ -26,17 +26,17 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/message"
-	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 )
 
 // ContractRequester helps to call contracts
 type ContractRequester struct {
-	MessageBus   core.MessageBus   `inject:""`
-	PulseStorage core.PulseStorage `inject:""`
+	MessageBus   insolar.MessageBus   `inject:""`
+	PulseStorage insolar.PulseStorage `inject:""`
 	ResultMutex  sync.Mutex
 	ResultMap    map[uint64]chan *message.ReturnResults
 	Sequence     uint64
@@ -50,7 +50,7 @@ func New() (*ContractRequester, error) {
 }
 
 func (cr *ContractRequester) Start(ctx context.Context) error {
-	cr.MessageBus.MustRegister(core.TypeReturnResults, cr.ReceiveResult)
+	cr.MessageBus.MustRegister(insolar.TypeReturnResults, cr.ReceiveResult)
 	return nil
 }
 
@@ -65,11 +65,11 @@ func randomUint64() uint64 {
 }
 
 // SendRequest makes synchronously call to method of contract by its ref without additional information
-func (cr *ContractRequester) SendRequest(ctx context.Context, ref *core.RecordRef, method string, argsIn []interface{}) (core.Reply, error) {
+func (cr *ContractRequester) SendRequest(ctx context.Context, ref *insolar.RecordRef, method string, argsIn []interface{}) (insolar.Reply, error) {
 	ctx, span := instracer.StartSpan(ctx, "SendRequest "+method)
 	defer span.End()
 
-	args, err := core.MarshalArgs(argsIn...)
+	args, err := insolar.MarshalArgs(argsIn...)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ContractRequester::SendRequest ] Can't marshal")
 	}
@@ -85,7 +85,7 @@ func (cr *ContractRequester) SendRequest(ctx context.Context, ref *core.RecordRe
 	return routResult, nil
 }
 
-func (cr *ContractRequester) CallMethod(ctx context.Context, base core.Message, async bool, ref *core.RecordRef, method string, argsIn core.Arguments, mustPrototype *core.RecordRef) (core.Reply, error) {
+func (cr *ContractRequester) CallMethod(ctx context.Context, base insolar.Message, async bool, ref *insolar.RecordRef, method string, argsIn insolar.Arguments, mustPrototype *insolar.RecordRef) (insolar.Reply, error) {
 	ctx, span := instracer.StartSpan(ctx, "ContractRequester.CallMethod "+method)
 	defer span.End()
 
@@ -95,7 +95,7 @@ func (cr *ContractRequester) CallMethod(ctx context.Context, base core.Message, 
 	}
 	log := inslogger.FromContext(ctx)
 
-	mb := core.MessageBusFromContext(ctx, cr.MessageBus)
+	mb := insolar.MessageBusFromContext(ctx, cr.MessageBus)
 	if mb == nil {
 		log.Debug("Context doesn't provide MessageBus")
 		mb = cr.MessageBus
@@ -178,15 +178,15 @@ func (cr *ContractRequester) CallMethod(ctx context.Context, base core.Message, 
 	return result, nil
 }
 
-func (cr *ContractRequester) CallConstructor(ctx context.Context, base core.Message, async bool,
-	prototype *core.RecordRef, to *core.RecordRef, method string,
-	argsIn core.Arguments, saveAs int) (*core.RecordRef, error) {
+func (cr *ContractRequester) CallConstructor(ctx context.Context, base insolar.Message, async bool,
+	prototype *insolar.RecordRef, to *insolar.RecordRef, method string,
+	argsIn insolar.Arguments, saveAs int) (*insolar.RecordRef, error) {
 	baseMessage, ok := base.(*message.BaseLogicMessage)
 	if !ok {
 		return nil, errors.New("Wrong type for BaseMessage")
 	}
 
-	mb := core.MessageBusFromContext(ctx, cr.MessageBus)
+	mb := insolar.MessageBusFromContext(ctx, cr.MessageBus)
 	if mb == nil {
 		return nil, errors.New("No access to message bus")
 	}
@@ -249,7 +249,7 @@ func (cr *ContractRequester) CallConstructor(ctx context.Context, base core.Mess
 	}
 }
 
-func (cr *ContractRequester) ReceiveResult(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
+func (cr *ContractRequester) ReceiveResult(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 	msg, ok := parcel.Message().(*message.ReturnResults)
 	if !ok {
 		return nil, errors.New("ReceiveResult() accepts only message.ReturnResults")

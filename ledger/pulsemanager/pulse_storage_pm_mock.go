@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	core "github.com/insolar/insolar/core"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -20,7 +20,7 @@ import (
 type pulseStoragePmMock struct {
 	t minimock.Tester
 
-	CurrentFunc       func(p context.Context) (r *core.Pulse, r1 error)
+	CurrentFunc       func(p context.Context) (r *insolar.Pulse, r1 error)
 	CurrentCounter    uint64
 	CurrentPreCounter uint64
 	CurrentMock       mpulseStoragePmMockCurrent
@@ -30,7 +30,7 @@ type pulseStoragePmMock struct {
 	LockPreCounter uint64
 	LockMock       mpulseStoragePmMockLock
 
-	SetFunc       func(p *core.Pulse)
+	SetFunc       func(p *insolar.Pulse)
 	SetCounter    uint64
 	SetPreCounter uint64
 	SetMock       mpulseStoragePmMockSet
@@ -73,7 +73,7 @@ type pulseStoragePmMockCurrentInput struct {
 }
 
 type pulseStoragePmMockCurrentResult struct {
-	r  *core.Pulse
+	r  *insolar.Pulse
 	r1 error
 }
 
@@ -90,7 +90,7 @@ func (m *mpulseStoragePmMockCurrent) Expect(p context.Context) *mpulseStoragePmM
 }
 
 //Return specifies results of invocation of pulseStoragePm.Current
-func (m *mpulseStoragePmMockCurrent) Return(r *core.Pulse, r1 error) *pulseStoragePmMock {
+func (m *mpulseStoragePmMockCurrent) Return(r *insolar.Pulse, r1 error) *pulseStoragePmMock {
 	m.mock.CurrentFunc = nil
 	m.expectationSeries = nil
 
@@ -112,12 +112,12 @@ func (m *mpulseStoragePmMockCurrent) ExpectOnce(p context.Context) *pulseStorage
 	return expectation
 }
 
-func (e *pulseStoragePmMockCurrentExpectation) Return(r *core.Pulse, r1 error) {
+func (e *pulseStoragePmMockCurrentExpectation) Return(r *insolar.Pulse, r1 error) {
 	e.result = &pulseStoragePmMockCurrentResult{r, r1}
 }
 
 //Set uses given function f as a mock of pulseStoragePm.Current method
-func (m *mpulseStoragePmMockCurrent) Set(f func(p context.Context) (r *core.Pulse, r1 error)) *pulseStoragePmMock {
+func (m *mpulseStoragePmMockCurrent) Set(f func(p context.Context) (r *insolar.Pulse, r1 error)) *pulseStoragePmMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -126,7 +126,7 @@ func (m *mpulseStoragePmMockCurrent) Set(f func(p context.Context) (r *core.Puls
 }
 
 //Current implements github.com/insolar/insolar/ledger/pulsemanager.pulseStoragePm interface
-func (m *pulseStoragePmMock) Current(p context.Context) (r *core.Pulse, r1 error) {
+func (m *pulseStoragePmMock) Current(p context.Context) (r *insolar.Pulse, r1 error) {
 	counter := atomic.AddUint64(&m.CurrentPreCounter, 1)
 	defer atomic.AddUint64(&m.CurrentCounter, 1)
 
@@ -328,11 +328,11 @@ type pulseStoragePmMockSetExpectation struct {
 }
 
 type pulseStoragePmMockSetInput struct {
-	p *core.Pulse
+	p *insolar.Pulse
 }
 
 //Expect specifies that invocation of pulseStoragePm.Set is expected from 1 to Infinity times
-func (m *mpulseStoragePmMockSet) Expect(p *core.Pulse) *mpulseStoragePmMockSet {
+func (m *mpulseStoragePmMockSet) Expect(p *insolar.Pulse) *mpulseStoragePmMockSet {
 	m.mock.SetFunc = nil
 	m.expectationSeries = nil
 
@@ -356,7 +356,7 @@ func (m *mpulseStoragePmMockSet) Return() *pulseStoragePmMock {
 }
 
 //ExpectOnce specifies that invocation of pulseStoragePm.Set is expected once
-func (m *mpulseStoragePmMockSet) ExpectOnce(p *core.Pulse) *pulseStoragePmMockSetExpectation {
+func (m *mpulseStoragePmMockSet) ExpectOnce(p *insolar.Pulse) *pulseStoragePmMockSetExpectation {
 	m.mock.SetFunc = nil
 	m.mainExpectation = nil
 
@@ -367,7 +367,7 @@ func (m *mpulseStoragePmMockSet) ExpectOnce(p *core.Pulse) *pulseStoragePmMockSe
 }
 
 //Set uses given function f as a mock of pulseStoragePm.Set method
-func (m *mpulseStoragePmMockSet) Set(f func(p *core.Pulse)) *pulseStoragePmMock {
+func (m *mpulseStoragePmMockSet) Set(f func(p *insolar.Pulse)) *pulseStoragePmMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -376,7 +376,7 @@ func (m *mpulseStoragePmMockSet) Set(f func(p *core.Pulse)) *pulseStoragePmMock 
 }
 
 //Set implements github.com/insolar/insolar/ledger/pulsemanager.pulseStoragePm interface
-func (m *pulseStoragePmMock) Set(p *core.Pulse) {
+func (m *pulseStoragePmMock) Set(p *insolar.Pulse) {
 	counter := atomic.AddUint64(&m.SetPreCounter, 1)
 	defer atomic.AddUint64(&m.SetCounter, 1)
 

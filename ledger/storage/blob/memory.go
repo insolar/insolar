@@ -20,7 +20,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/insolar/insolar"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/ledger/storage/db"
 	"go.opencensus.io/stats"
 )

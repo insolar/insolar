@@ -22,8 +22,8 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/ledger/storage"
@@ -42,8 +42,8 @@ type Options struct {
 
 // JetClient heavy replication client. Replicates records for one jet.
 type JetClient struct {
-	bus            core.MessageBus
-	pulseStorage   core.PulseStorage
+	bus            insolar.MessageBus
+	pulseStorage   insolar.PulseStorage
 	replicaStorage storage.ReplicaStorage
 	pulseTracker   storage.PulseTracker
 	cleaner        storage.Cleaner
@@ -61,9 +61,9 @@ type JetClient struct {
 	syncdone chan struct{}
 
 	// state:
-	jetID       core.JetID
+	jetID       insolar.JetID
 	muPulses    sync.Mutex
-	leftPulses  []core.PulseNumber
+	leftPulses  []insolar.PulseNumber
 	syncbackoff *backoff.Backoff
 }
 
@@ -72,13 +72,13 @@ type JetClient struct {
 // First argument defines what jet it serve.
 func NewJetClient(
 	replicaStorage storage.ReplicaStorage,
-	mb core.MessageBus,
-	pulseStorage core.PulseStorage,
+	mb insolar.MessageBus,
+	pulseStorage insolar.PulseStorage,
 	pulseTracker storage.PulseTracker,
 	dropAccessor drop.Accessor,
 	cleaner storage.Cleaner,
 	db storage.DBContext,
-	jetID core.RecordID,
+	jetID insolar.RecordID,
 	opts Options,
 ) *JetClient {
 	jsc := &JetClient{
@@ -89,7 +89,7 @@ func NewJetClient(
 		dropAccessor:   dropAccessor,
 		cleaner:        cleaner,
 		db:             db,
-		jetID:          core.JetID(jetID),
+		jetID:          insolar.JetID(jetID),
 		syncbackoff:    backoffFromConfig(opts.BackoffConf),
 		signal:         make(chan struct{}, 1),
 		syncdone:       make(chan struct{}),
@@ -101,7 +101,7 @@ func NewJetClient(
 // should be called from protected by mutex code
 func (c *JetClient) updateLeftPulsesMetrics(ctx context.Context) {
 	// instrumentation
-	var pn core.PulseNumber
+	var pn insolar.PulseNumber
 	if len(c.leftPulses) > 0 {
 		pn = c.leftPulses[0]
 	}
@@ -113,11 +113,11 @@ func (c *JetClient) updateLeftPulsesMetrics(ctx context.Context) {
 }
 
 // addPulses add pulse numbers for syncing.
-func (c *JetClient) addPulses(ctx context.Context, pns []core.PulseNumber) {
+func (c *JetClient) addPulses(ctx context.Context, pns []insolar.PulseNumber) {
 	c.muPulses.Lock()
 	c.leftPulses = append(c.leftPulses, pns...)
 
-	if err := c.replicaStorage.SetSyncClientJetPulses(ctx, core.RecordID(c.jetID), c.leftPulses); err != nil {
+	if err := c.replicaStorage.SetSyncClientJetPulses(ctx, insolar.RecordID(c.jetID), c.leftPulses); err != nil {
 		inslogger.FromContext(ctx).Errorf(
 			"attempt to persist jet sync state failed: jetID=%v: %v", c.jetID, err.Error())
 	}
@@ -133,7 +133,7 @@ func (c *JetClient) pulsesLeft() int {
 }
 
 // unshiftPulse removes and returns pulse number from head of processing queue.
-func (c *JetClient) unshiftPulse(ctx context.Context) *core.PulseNumber {
+func (c *JetClient) unshiftPulse(ctx context.Context) *insolar.PulseNumber {
 	c.muPulses.Lock()
 	defer c.muPulses.Unlock()
 
@@ -147,7 +147,7 @@ func (c *JetClient) unshiftPulse(ctx context.Context) *core.PulseNumber {
 	copy(shifted, c.leftPulses[1:])
 	c.leftPulses = shifted
 
-	if err := c.replicaStorage.SetSyncClientJetPulses(ctx, core.RecordID(c.jetID), c.leftPulses); err != nil {
+	if err := c.replicaStorage.SetSyncClientJetPulses(ctx, insolar.RecordID(c.jetID), c.leftPulses); err != nil {
 		inslogger.FromContext(ctx).Errorf(
 			"attempt to persist jet sync state failed: jetID=%v: %v", c.jetID, err.Error())
 	}
@@ -156,7 +156,7 @@ func (c *JetClient) unshiftPulse(ctx context.Context) *core.PulseNumber {
 	return &result
 }
 
-func (c *JetClient) nextPulseNumber() (core.PulseNumber, bool) {
+func (c *JetClient) nextPulseNumber() (insolar.PulseNumber, bool) {
 	c.muPulses.Lock()
 	defer c.muPulses.Unlock()
 
@@ -182,7 +182,7 @@ func (c *JetClient) syncloop(ctx context.Context) {
 	defer close(c.syncdone)
 
 	var (
-		syncPN     core.PulseNumber
+		syncPN     insolar.PulseNumber
 		hasNext    bool
 		retrydelay time.Duration
 	)
@@ -287,7 +287,7 @@ func backoffFromConfig(bconf configuration.Backoff) *backoff.Backoff {
 	}
 }
 
-func isPulseNumberOutdated(ctx context.Context, pulseTracker storage.PulseTracker, pstore core.PulseStorage, pn core.PulseNumber, delta int) bool {
+func isPulseNumberOutdated(ctx context.Context, pulseTracker storage.PulseTracker, pstore insolar.PulseStorage, pn insolar.PulseNumber, delta int) bool {
 	current, err := pstore.Current(ctx)
 	if err != nil {
 		panic(err)

@@ -22,8 +22,8 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/component"
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
@@ -32,40 +32,40 @@ import (
 
 func mockContractRequesterWithError(t *testing.T) *testutils.ContractRequesterMock {
 	contractRequesterMock := testutils.NewContractRequesterMock(t)
-	contractRequesterMock.SendRequestFunc = func(p context.Context, p1 *core.RecordRef, p2 string, p3 []interface{}) (r core.Reply, r1 error) {
+	contractRequesterMock.SendRequestFunc = func(p context.Context, p1 *insolar.RecordRef, p2 string, p3 []interface{}) (r insolar.Reply, r1 error) {
 		return nil, errors.New("test reasons")
 	}
 	return contractRequesterMock
 }
 
-func mockContractRequester(t *testing.T, res core.Reply) *testutils.ContractRequesterMock {
+func mockContractRequester(t *testing.T, res insolar.Reply) *testutils.ContractRequesterMock {
 	contractRequesterMock := testutils.NewContractRequesterMock(t)
-	contractRequesterMock.SendRequestFunc = func(p context.Context, p1 *core.RecordRef, p2 string, p3 []interface{}) (r core.Reply, r1 error) {
+	contractRequesterMock.SendRequestFunc = func(p context.Context, p1 *insolar.RecordRef, p2 string, p3 []interface{}) (r insolar.Reply, r1 error) {
 		return res, nil
 	}
 	return contractRequesterMock
 }
 
-func mockCertificateManager(t *testing.T, rootDomainRef *core.RecordRef) *testutils.CertificateManagerMock {
+func mockCertificateManager(t *testing.T, rootDomainRef *insolar.RecordRef) *testutils.CertificateManagerMock {
 	certificateMock := testutils.NewCertificateMock(t)
-	certificateMock.GetRootDomainReferenceFunc = func() (r *core.RecordRef) {
+	certificateMock.GetRootDomainReferenceFunc = func() (r *insolar.RecordRef) {
 		return rootDomainRef
 	}
 
 	certificateManagerMock := testutils.NewCertificateManagerMock(t)
-	certificateManagerMock.GetCertificateFunc = func() (r core.Certificate) {
+	certificateManagerMock.GetCertificateFunc = func() (r insolar.Certificate) {
 		return certificateMock
 	}
 	return certificateManagerMock
 }
 
-func mockInfoResult(rootMemberRef core.RecordRef, nodeDomainRef core.RecordRef) core.Reply {
+func mockInfoResult(rootMemberRef insolar.RecordRef, nodeDomainRef insolar.RecordRef) insolar.Reply {
 	result := map[string]interface{}{
 		"root_member": rootMemberRef.String(),
 		"node_domain": nodeDomainRef.String(),
 	}
 	resJSON, _ := json.Marshal(result)
-	resSer, _ := core.MarshalArgs(resJSON, nil)
+	resSer, _ := insolar.MarshalArgs(resJSON, nil)
 	return &reply.CallMethod{Result: resSer}
 }
 

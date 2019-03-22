@@ -55,7 +55,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -90,7 +90,7 @@ func TestSessionManager_CleanupSimple(t *testing.T) {
 	err := sm.Start(context.Background())
 	require.NoError(t, err)
 
-	sm.NewSession(core.RecordRef{}, nil, time.Second)
+	sm.NewSession(insolar.RecordRef{}, nil, time.Second)
 	require.Equal(t, sessionMapLen(sm), 1)
 
 	time.Sleep(1500 * time.Millisecond)
@@ -106,7 +106,7 @@ func TestSessionManager_CleanupConcurrent(t *testing.T) {
 	err := sm.Start(context.Background())
 	require.NoError(t, err)
 
-	id := sm.NewSession(core.RecordRef{}, nil, time.Second)
+	id := sm.NewSession(insolar.RecordRef{}, nil, time.Second)
 	require.Equal(t, sessionMapLen(sm), 1)
 
 	// delete session here and check nothing happened
@@ -125,9 +125,9 @@ func TestSessionManager_CleanupOrder(t *testing.T) {
 	err := sm.Start(context.Background())
 	require.NoError(t, err)
 
-	sm.NewSession(core.RecordRef{}, nil, 2*time.Second)
-	sm.NewSession(core.RecordRef{}, nil, 2*time.Second)
-	sm.NewSession(core.RecordRef{}, nil, time.Second)
+	sm.NewSession(insolar.RecordRef{}, nil, 2*time.Second)
+	sm.NewSession(insolar.RecordRef{}, nil, 2*time.Second)
+	sm.NewSession(insolar.RecordRef{}, nil, time.Second)
 	require.Equal(t, sessionMapLen(sm), 3)
 
 	time.Sleep(1500 * time.Millisecond)

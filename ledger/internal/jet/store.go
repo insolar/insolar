@@ -20,7 +20,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 )
 
 var (
@@ -33,19 +33,19 @@ type lockedTree struct {
 	t *Tree
 }
 
-func (lt *lockedTree) find(recordID core.RecordID) (core.JetID, bool) {
+func (lt *lockedTree) find(recordID insolar.RecordID) (insolar.JetID, bool) {
 	lt.RLock()
 	defer lt.RUnlock()
 	return lt.t.Find(recordID)
 }
 
-func (lt *lockedTree) update(id core.JetID, setActual bool) {
+func (lt *lockedTree) update(id insolar.JetID, setActual bool) {
 	lt.Lock()
 	defer lt.Unlock()
 	lt.t.Update(id, setActual)
 }
 
-func (lt *lockedTree) leafIDs() []core.JetID {
+func (lt *lockedTree) leafIDs() []insolar.JetID {
 	lt.RLock()
 	defer lt.RUnlock()
 	return lt.t.LeafIDs()
@@ -57,7 +57,7 @@ func (lt *lockedTree) clone(keep bool) *Tree {
 	return lt.t.Clone(keep)
 }
 
-func (lt *lockedTree) split(id core.JetID) (core.JetID, core.JetID, error) {
+func (lt *lockedTree) split(id insolar.JetID) (insolar.JetID, insolar.JetID, error) {
 	lt.RLock()
 	defer lt.RUnlock()
 	return lt.t.Split(id)
@@ -67,29 +67,29 @@ func (lt *lockedTree) split(id core.JetID) (core.JetID, core.JetID, error) {
 // It provides methods for querying and modification this trees.
 type Store struct {
 	sync.RWMutex
-	trees map[core.PulseNumber]*lockedTree
+	trees map[insolar.PulseNumber]*lockedTree
 }
 
 // NewStore creates new Store instance.
 func NewStore() *Store {
 	return &Store{
-		trees: map[core.PulseNumber]*lockedTree{},
+		trees: map[insolar.PulseNumber]*lockedTree{},
 	}
 }
 
 // All returns all jet from jet tree for provided pulse.
-func (s *Store) All(ctx context.Context, pulse core.PulseNumber) []core.JetID {
+func (s *Store) All(ctx context.Context, pulse insolar.PulseNumber) []insolar.JetID {
 	return s.ltreeForPulse(pulse).leafIDs()
 }
 
 // ForID finds jet in jet tree for provided pulse and object.
 // Always returns jet id and activity flag for this jet.
-func (s *Store) ForID(ctx context.Context, pulse core.PulseNumber, recordID core.RecordID) (core.JetID, bool) {
+func (s *Store) ForID(ctx context.Context, pulse insolar.PulseNumber, recordID insolar.RecordID) (insolar.JetID, bool) {
 	return s.ltreeForPulse(pulse).find(recordID)
 }
 
 // Update updates jet tree for specified pulse.
-func (s *Store) Update(ctx context.Context, pulse core.PulseNumber, setActual bool, ids ...core.JetID) {
+func (s *Store) Update(ctx context.Context, pulse insolar.PulseNumber, setActual bool, ids ...insolar.JetID) {
 	s.Lock()
 	defer s.Unlock()
 
@@ -103,19 +103,19 @@ func (s *Store) Update(ctx context.Context, pulse core.PulseNumber, setActual bo
 
 // Split performs jet split and returns resulting jet ids.
 func (s *Store) Split(
-	ctx context.Context, pulse core.PulseNumber, id core.JetID,
-) (core.JetID, core.JetID, error) {
+	ctx context.Context, pulse insolar.PulseNumber, id insolar.JetID,
+) (insolar.JetID, insolar.JetID, error) {
 	ltree := s.ltreeForPulse(pulse)
 	left, right, err := ltree.split(id)
 	if err != nil {
-		return core.ZeroJetID, core.ZeroJetID, err
+		return insolar.ZeroJetID, insolar.ZeroJetID, err
 	}
 	return left, right, nil
 }
 
 // Clone copies tree from one pulse to another. Use it to copy past tree into new pulse.
 func (s *Store) Clone(
-	ctx context.Context, from, to core.PulseNumber,
+	ctx context.Context, from, to insolar.PulseNumber,
 ) {
 	newTree := s.ltreeForPulse(from).clone(false)
 
@@ -128,7 +128,7 @@ func (s *Store) Clone(
 
 // Delete concurrent safe.
 func (s *Store) Delete(
-	ctx context.Context, pulse core.PulseNumber,
+	ctx context.Context, pulse insolar.PulseNumber,
 ) {
 	s.Lock()
 	defer s.Unlock()
@@ -136,20 +136,20 @@ func (s *Store) Delete(
 }
 
 // ltreeForPulse returns jet tree with lock for pulse, it's concurrent safe.
-func (s *Store) ltreeForPulse(pulse core.PulseNumber) *lockedTree {
+func (s *Store) ltreeForPulse(pulse insolar.PulseNumber) *lockedTree {
 	s.Lock()
 	defer s.Unlock()
 	return s.ltreeForPulseUnsafe(pulse)
 }
 
 // ltreeForPulseUnsafe returns jet tree with lock for pulse, it's concurrent unsafe and requires write lock.
-func (s *Store) ltreeForPulseUnsafe(pulse core.PulseNumber) *lockedTree {
+func (s *Store) ltreeForPulseUnsafe(pulse insolar.PulseNumber) *lockedTree {
 	if ltree, ok := s.trees[pulse]; ok {
 		return ltree
 	}
 
 	ltree := &lockedTree{
-		t: NewTree(pulse == core.GenesisPulse.PulseNumber),
+		t: NewTree(pulse == insolar.GenesisPulse.PulseNumber),
 	}
 	s.trees[pulse] = ltree
 	return ltree

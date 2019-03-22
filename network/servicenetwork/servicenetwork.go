@@ -61,7 +61,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/consensus/phases"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
@@ -82,14 +82,14 @@ type ServiceNetwork struct {
 	cm  *component.Manager
 
 	// dependencies
-	CertificateManager  core.CertificateManager  `inject:""`
-	PulseManager        core.PulseManager        `inject:""`
-	PulseStorage        core.PulseStorage        `inject:""`
-	CryptographyService core.CryptographyService `inject:""`
-	NetworkCoordinator  core.NetworkCoordinator  `inject:""`
-	NodeKeeper          network.NodeKeeper       `inject:""`
-	NetworkSwitcher     core.NetworkSwitcher     `inject:""`
-	TerminationHandler  core.TerminationHandler  `inject:""`
+	CertificateManager  insolar.CertificateManager  `inject:""`
+	PulseManager        insolar.PulseManager        `inject:""`
+	PulseStorage        insolar.PulseStorage        `inject:""`
+	CryptographyService insolar.CryptographyService `inject:""`
+	NetworkCoordinator  insolar.NetworkCoordinator  `inject:""`
+	NodeKeeper          network.NodeKeeper          `inject:""`
+	NetworkSwitcher     insolar.NetworkSwitcher     `inject:""`
+	TerminationHandler  insolar.TerminationHandler  `inject:""`
 
 	// subcomponents
 	PhaseManager phases.PhaseManager `inject:"subcomponent"`
@@ -109,17 +109,17 @@ func NewServiceNetwork(conf configuration.Configuration, rootCm *component.Manag
 }
 
 // SendMessage sends a message from MessageBus.
-func (n *ServiceNetwork) SendMessage(nodeID core.RecordRef, method string, msg core.Parcel) ([]byte, error) {
+func (n *ServiceNetwork) SendMessage(nodeID insolar.RecordRef, method string, msg insolar.Parcel) ([]byte, error) {
 	return n.Controller.SendMessage(nodeID, method, msg)
 }
 
 // SendCascadeMessage sends a message from MessageBus to a cascade of nodes
-func (n *ServiceNetwork) SendCascadeMessage(data core.Cascade, method string, msg core.Parcel) error {
+func (n *ServiceNetwork) SendCascadeMessage(data insolar.Cascade, method string, msg insolar.Parcel) error {
 	return n.Controller.SendCascadeMessage(data, method, msg)
 }
 
 // RemoteProcedureRegister registers procedure for remote call on this host.
-func (n *ServiceNetwork) RemoteProcedureRegister(name string, method core.RemoteProcedure) {
+func (n *ServiceNetwork) RemoteProcedureRegister(name string, method insolar.RemoteProcedure) {
 	n.Controller.RemoteProcedureRegister(name, method)
 }
 
@@ -224,20 +224,20 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 	return nil
 }
 
-func (n *ServiceNetwork) Leave(ctx context.Context, ETA core.PulseNumber) {
+func (n *ServiceNetwork) Leave(ctx context.Context, ETA insolar.PulseNumber) {
 	logger := inslogger.FromContext(ctx)
 	logger.Info("Gracefully stopping service network")
 
 	n.NodeKeeper.GetClaimQueue().Push(&packets.NodeLeaveClaim{ETA: ETA})
 }
 
-// Stop implements core.Component
+// Stop implements insolar.Component
 func (n *ServiceNetwork) Stop(ctx context.Context) error {
 	inslogger.FromContext(ctx).Info("Stopping network component manager...")
 	return n.cm.Stop(ctx)
 }
 
-func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse core.Pulse) {
+func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse) {
 	currentTime := time.Now()
 
 	n.lock.Lock()
@@ -259,7 +259,7 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse core.Pulse) {
 		n.Controller.SetLastIgnoredPulse(newPulse.NextPulseNumber)
 		return
 	}
-	if n.isDiscovery && newPulse.PulseNumber <= n.Controller.GetLastIgnoredPulse()+core.PulseNumber(n.skip) {
+	if n.isDiscovery && newPulse.PulseNumber <= n.Controller.GetLastIgnoredPulse()+insolar.PulseNumber(n.skip) {
 		log.Infof("Ignore pulse %d: network is not yet initialized", newPulse.PulseNumber)
 		return
 	}
@@ -271,11 +271,11 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse core.Pulse) {
 		return
 	}
 
-	// Ignore core.ErrNotFound because
+	// Ignore insolar.ErrNotFound because
 	// sometimes we can't fetch current pulse in new nodes
 	// (for fresh bootstrapped light-material with in-memory pulse-tracker)
 	if currentPulse, err := n.PulseStorage.Current(ctx); err != nil {
-		if err != core.ErrNotFound {
+		if err != insolar.ErrNotFound {
 			logger.Fatalf("Could not get current pulse: %s", err.Error())
 		}
 	} else {
@@ -291,7 +291,7 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse core.Pulse) {
 	}
 
 	logger.Debugf("Before set new current pulse number: %d", newPulse.PulseNumber)
-	err = n.PulseManager.Set(ctx, newPulse, n.NetworkSwitcher.GetState() == core.CompleteNetworkState)
+	err = n.PulseManager.Set(ctx, newPulse, n.NetworkSwitcher.GetState() == insolar.CompleteNetworkState)
 	if err != nil {
 		logger.Fatalf("Failed to set new pulse: %s", err.Error())
 	}
@@ -300,7 +300,7 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse core.Pulse) {
 	go n.phaseManagerOnPulse(ctx, newPulse, currentTime)
 }
 
-func (n *ServiceNetwork) phaseManagerOnPulse(ctx context.Context, newPulse core.Pulse, pulseStartTime time.Time) {
+func (n *ServiceNetwork) phaseManagerOnPulse(ctx context.Context, newPulse insolar.Pulse, pulseStartTime time.Time) {
 	logger := inslogger.FromContext(ctx)
 
 	if err := n.PhaseManager.OnPulse(ctx, &newPulse, pulseStartTime); err != nil {
@@ -309,6 +309,6 @@ func (n *ServiceNetwork) phaseManagerOnPulse(ctx context.Context, newPulse core.
 	}
 }
 
-func isNextPulse(currentPulse, newPulse *core.Pulse) bool {
+func isNextPulse(currentPulse, newPulse *insolar.Pulse) bool {
 	return newPulse.PulseNumber > currentPulse.PulseNumber && newPulse.PulseNumber >= currentPulse.NextPulseNumber
 }

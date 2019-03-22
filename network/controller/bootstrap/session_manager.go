@@ -59,7 +59,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/component"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/utils"
 	"github.com/pkg/errors"
@@ -82,8 +82,8 @@ const (
 )
 
 type Session struct {
-	NodeID core.RecordRef
-	Cert   core.AuthorizationCertificate
+	NodeID insolar.RecordRef
+	Cert   insolar.AuthorizationCertificate
 	State  SessionState
 
 	DiscoveryNonce Nonce
@@ -107,10 +107,10 @@ type SessionManager interface {
 	component.Starter
 	component.Stopper
 
-	NewSession(ref core.RecordRef, cert core.AuthorizationCertificate, ttl time.Duration) SessionID
+	NewSession(ref insolar.RecordRef, cert insolar.AuthorizationCertificate, ttl time.Duration) SessionID
 	CheckSession(id SessionID, expected SessionState) error
 	SetDiscoveryNonce(id SessionID, discoveryNonce Nonce) error
-	GetChallengeData(id SessionID) (core.AuthorizationCertificate, Nonce, error)
+	GetChallengeData(id SessionID) (insolar.AuthorizationCertificate, Nonce, error)
 	ChallengePassed(id SessionID) error
 	ReleaseSession(id SessionID) (*Session, error)
 	ProlongateSession(id SessionID, session *Session)
@@ -161,7 +161,7 @@ func (sm *sessionManager) Stop(ctx context.Context) error {
 	return nil
 }
 
-func (sm *sessionManager) NewSession(ref core.RecordRef, cert core.AuthorizationCertificate, ttl time.Duration) SessionID {
+func (sm *sessionManager) NewSession(ref insolar.RecordRef, cert insolar.AuthorizationCertificate, ttl time.Duration) SessionID {
 	id := utils.AtomicLoadAndIncrementUint64(&sm.sequence)
 	session := &Session{
 		NodeID: ref,
@@ -215,7 +215,7 @@ func (sm *sessionManager) SetDiscoveryNonce(id SessionID, discoveryNonce Nonce) 
 	return nil
 }
 
-func (sm *sessionManager) GetChallengeData(id SessionID) (core.AuthorizationCertificate, Nonce, error) {
+func (sm *sessionManager) GetChallengeData(id SessionID) (insolar.AuthorizationCertificate, Nonce, error) {
 	sm.lock.Lock()
 	defer sm.lock.Unlock()
 

@@ -53,7 +53,7 @@ package host
 import (
 	"testing"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/require"
 )
@@ -76,14 +76,14 @@ func TestHost_String(t *testing.T) {
 func TestHost_Equal(t *testing.T) {
 	id1 := testutils.RandomRef()
 	id2 := testutils.RandomRef()
-	idNil := core.RecordRef{}
+	idNil := insolar.RecordRef{}
 	addr1, _ := NewAddress("127.0.0.1:31337")
 	addr2, _ := NewAddress("10.10.11.11:12345")
 
 	tests := []struct {
-		id1   core.RecordRef
+		id1   insolar.RecordRef
 		addr1 *Address
-		id2   core.RecordRef
+		id2   insolar.RecordRef
 		addr2 *Address
 		equal bool
 		name  string

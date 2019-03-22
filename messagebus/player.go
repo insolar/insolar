@@ -19,7 +19,7 @@ package messagebus
 import (
 	"context"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 )
 
 // Player is a MessageBus wrapper that replays replies from provided tape. The tape can be created and by Recorder
@@ -27,12 +27,12 @@ import (
 type player struct {
 	sender
 	tape         tape
-	scheme       core.PlatformCryptographyScheme
-	pulseStorage core.PulseStorage
+	scheme       insolar.PlatformCryptographyScheme
+	pulseStorage insolar.PulseStorage
 }
 
 // newPlayer creates player instance. It will replay replies from provided tape.
-func newPlayer(s sender, tape tape, scheme core.PlatformCryptographyScheme, pulseStorage core.PulseStorage) *player {
+func newPlayer(s sender, tape tape, scheme insolar.PlatformCryptographyScheme, pulseStorage insolar.PulseStorage) *player {
 	return &player{
 		sender:       s,
 		tape:         tape,
@@ -43,7 +43,7 @@ func newPlayer(s sender, tape tape, scheme core.PlatformCryptographyScheme, puls
 
 // Send wraps MessageBus Send to reply replies from the tape. If reply for this message is not on the tape, an error
 // will be returned.
-func (p *player) Send(ctx context.Context, msg core.Message, ops *core.MessageSendOptions) (core.Reply, error) {
+func (p *player) Send(ctx context.Context, msg insolar.Message, ops *insolar.MessageSendOptions) (insolar.Reply, error) {
 	currentPulse, err := p.pulseStorage.Current(ctx)
 	if err != nil {
 		return nil, err
@@ -63,6 +63,6 @@ func (p *player) Send(ctx context.Context, msg core.Message, ops *core.MessageSe
 	return item.Reply, item.Error
 }
 
-func (p *player) OnPulse(context.Context, core.Pulse) error {
+func (p *player) OnPulse(context.Context, insolar.Pulse) error {
 	panic("This method must not be called")
 }

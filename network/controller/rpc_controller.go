@@ -62,8 +62,8 @@ import (
 	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/component"
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/instrumentation/instracer"
@@ -79,17 +79,17 @@ type RPCController interface {
 	// hack for DI, else we receive ServiceNetwork injection in RPCController instead of rpcController that leads to stack overflow
 	IAmRPCController()
 
-	SendMessage(nodeID core.RecordRef, name string, msg core.Parcel) ([]byte, error)
-	SendCascadeMessage(data core.Cascade, method string, msg core.Parcel) error
-	RemoteProcedureRegister(name string, method core.RemoteProcedure)
+	SendMessage(nodeID insolar.RecordRef, name string, msg insolar.Parcel) ([]byte, error)
+	SendCascadeMessage(data insolar.Cascade, method string, msg insolar.Parcel) error
+	RemoteProcedureRegister(name string, method insolar.RemoteProcedure)
 }
 
 type rpcController struct {
-	Scheme  core.PlatformCryptographyScheme `inject:""`
-	Network network.HostNetwork             `inject:""`
+	Scheme  insolar.PlatformCryptographyScheme `inject:""`
+	Network network.HostNetwork                `inject:""`
 
 	options     *common.Options
-	methodTable map[string]core.RemoteProcedure
+	methodTable map[string]insolar.RemoteProcedure
 }
 
 type RequestRPC struct {
@@ -106,7 +106,7 @@ type ResponseRPC struct {
 type RequestCascade struct {
 	TraceID string
 	RPC     RequestRPC
-	Cascade core.Cascade
+	Cascade insolar.Cascade
 }
 
 type ResponseCascade struct {
@@ -125,7 +125,7 @@ func (rpc *rpcController) IAmRPCController() {
 	// hack for DI, else we receive ServiceNetwork injection in RPCController instead of rpcController that leads to stack overflow
 }
 
-func (rpc *rpcController) RemoteProcedureRegister(name string, method core.RemoteProcedure) {
+func (rpc *rpcController) RemoteProcedureRegister(name string, method insolar.RemoteProcedure) {
 	_, span := instracer.StartSpan(context.Background(), "RPCController.RemoteProcedureRegister")
 	span.AddAttributes(
 		trace.StringAttribute("method", name),
@@ -142,7 +142,7 @@ func (rpc *rpcController) invoke(ctx context.Context, name string, data [][]byte
 	return method(ctx, data)
 }
 
-func (rpc *rpcController) SendCascadeMessage(data core.Cascade, method string, msg core.Parcel) error {
+func (rpc *rpcController) SendCascadeMessage(data insolar.Cascade, method string, msg insolar.Parcel) error {
 	if msg == nil {
 		return errors.New("message is nil")
 	}
@@ -157,7 +157,7 @@ func (rpc *rpcController) SendCascadeMessage(data core.Cascade, method string, m
 	return rpc.initCascadeSendMessage(ctx, data, false, method, [][]byte{message.ParcelToBytes(msg)})
 }
 
-func (rpc *rpcController) initCascadeSendMessage(ctx context.Context, data core.Cascade,
+func (rpc *rpcController) initCascadeSendMessage(ctx context.Context, data insolar.Cascade,
 	findCurrentNode bool, method string, args [][]byte) error {
 
 	_, span := instracer.StartSpan(context.Background(), "RPCController.initCascadeSendMessage")
@@ -172,7 +172,7 @@ func (rpc *rpcController) initCascadeSendMessage(ctx context.Context, data core.
 		return errors.New("replication factor should not be zero")
 	}
 
-	var nextNodes []core.RecordRef
+	var nextNodes []insolar.RecordRef
 	var err error
 
 	if findCurrentNode {
@@ -204,7 +204,7 @@ func (rpc *rpcController) initCascadeSendMessage(ctx context.Context, data core.
 	return nil
 }
 
-func (rpc *rpcController) requestCascadeSendMessage(ctx context.Context, data core.Cascade, nodeID core.RecordRef,
+func (rpc *rpcController) requestCascadeSendMessage(ctx context.Context, data insolar.Cascade, nodeID insolar.RecordRef,
 	method string, args [][]byte) error {
 
 	_, span := instracer.StartSpan(context.Background(), "RPCController.requestCascadeSendMessage")
@@ -241,7 +241,7 @@ func (rpc *rpcController) requestCascadeSendMessage(ctx context.Context, data co
 	return nil
 }
 
-func (rpc *rpcController) SendMessage(nodeID core.RecordRef, name string, msg core.Parcel) ([]byte, error) {
+func (rpc *rpcController) SendMessage(nodeID insolar.RecordRef, name string, msg insolar.Parcel) ([]byte, error) {
 	msgBytes := message.ParcelToBytes(msg)
 	ctx := context.Background() // TODO: ctx as argument
 	ctx = insmetrics.InsertTag(ctx, tagMessageType, msg.Type().String())
@@ -315,5 +315,5 @@ func (rpc *rpcController) Init(ctx context.Context) error {
 }
 
 func NewRPCController(options *common.Options) RPCController {
-	return &rpcController{options: options, methodTable: make(map[string]core.RemoteProcedure)}
+	return &rpcController{options: options, methodTable: make(map[string]insolar.RemoteProcedure)}
 }

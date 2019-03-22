@@ -54,7 +54,7 @@ import (
 	"context"
 	"sync/atomic"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/sequence"
@@ -125,7 +125,7 @@ func (h *transportBase) PublicAddress() string {
 }
 
 // GetNodeID get current node ID.
-func (h *transportBase) GetNodeID() core.RecordRef {
+func (h *transportBase) GetNodeID() insolar.RecordRef {
 	return h.origin.NodeID
 }
 
@@ -139,7 +139,7 @@ func getOrigin(tp transport.Transport, id string) (*host.Host, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "error resolving address")
 	}
-	nodeID, err := core.NewRefFromBase58(id)
+	nodeID, err := insolar.NewRefFromBase58(id)
 	if err != nil {
 		return nil, errors.Wrap(err, "error parsing NodeID from string")
 	}

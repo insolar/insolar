@@ -21,7 +21,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 
 	"github.com/stretchr/testify/require"
@@ -29,7 +29,7 @@ import (
 
 func TestNewRecentIndexStorage(t *testing.T) {
 	t.Parallel()
-	jetID := *core.NewRecordID(123, []byte{1})
+	jetID := *insolar.NewRecordID(123, []byte{1})
 	index := NewRecentIndexStorage(jetID, 123)
 	require.NotNil(t, index)
 	require.NotNil(t, index.indexes)
@@ -39,22 +39,22 @@ func TestNewRecentIndexStorage(t *testing.T) {
 func TestNewRecentIndexStorage_AddId(t *testing.T) {
 	t.Parallel()
 	ctx := inslogger.TestContext(t)
-	jetID := *core.NewRecordID(123, []byte{1})
+	jetID := *insolar.NewRecordID(123, []byte{1})
 	s := NewRecentIndexStorage(jetID, 123)
 
 	wg := sync.WaitGroup{}
 	wg.Add(3)
 
 	go func() {
-		s.AddObject(ctx, *core.NewRecordID(123, []byte{1}))
+		s.AddObject(ctx, *insolar.NewRecordID(123, []byte{1}))
 		wg.Done()
 	}()
 	go func() {
-		s.AddObject(ctx, *core.NewRecordID(123, []byte{2}))
+		s.AddObject(ctx, *insolar.NewRecordID(123, []byte{2}))
 		wg.Done()
 	}()
 	go func() {
-		s.AddObject(ctx, *core.NewRecordID(123, []byte{3}))
+		s.AddObject(ctx, *insolar.NewRecordID(123, []byte{3}))
 		wg.Done()
 	}()
 
@@ -65,20 +65,20 @@ func TestNewRecentIndexStorage_AddId(t *testing.T) {
 func TestPendingStorage_AddPendingRequest(t *testing.T) {
 	t.Parallel()
 	ctx := inslogger.TestContext(t)
-	jetID := *core.NewRecordID(123, []byte{99})
+	jetID := *insolar.NewRecordID(123, []byte{99})
 
 	s := NewPendingStorage(jetID)
 
-	obj1 := *core.NewRecordID(0, nil)
-	obj2 := *core.NewRecordID(1, nil)
+	obj1 := *insolar.NewRecordID(0, nil)
+	obj2 := *insolar.NewRecordID(1, nil)
 
 	wg := sync.WaitGroup{}
 	wg.Add(3)
 
-	expectedIDs := []core.RecordID{
-		*core.NewRecordID(123, []byte{1}),
-		*core.NewRecordID(123, []byte{2}),
-		*core.NewRecordID(123, []byte{3}),
+	expectedIDs := []insolar.RecordID{
+		*insolar.NewRecordID(123, []byte{1}),
+		*insolar.NewRecordID(123, []byte{2}),
+		*insolar.NewRecordID(123, []byte{3}),
 	}
 	go func() {
 		s.AddPendingRequest(ctx, obj1, expectedIDs[0])
@@ -94,7 +94,7 @@ func TestPendingStorage_AddPendingRequest(t *testing.T) {
 	}()
 	wg.Wait()
 
-	contains := func(slice []core.RecordID, x core.RecordID) bool {
+	contains := func(slice []insolar.RecordID, x insolar.RecordID) bool {
 		for _, n := range slice {
 			if x == n {
 				return true
@@ -119,24 +119,24 @@ func TestPendingStorage_AddPendingRequest(t *testing.T) {
 func TestPendingStorage_RemovePendingRequest(t *testing.T) {
 	t.Parallel()
 	ctx := inslogger.TestContext(t)
-	jetID := *core.NewRecordID(123, []byte{99})
+	jetID := *insolar.NewRecordID(123, []byte{99})
 
 	s := NewPendingStorage(jetID)
 
-	obj := *core.NewRecordID(0, nil)
+	obj := *insolar.NewRecordID(0, nil)
 
-	expectedIDs := []core.RecordID{
-		*core.NewRecordID(123, []byte{1}),
+	expectedIDs := []insolar.RecordID{
+		*insolar.NewRecordID(123, []byte{1}),
 	}
-	extraIDs := []core.RecordID{
-		*core.NewRecordID(123, []byte{2}),
-		*core.NewRecordID(123, []byte{3}),
-		*core.NewRecordID(123, []byte{4}),
+	extraIDs := []insolar.RecordID{
+		*insolar.NewRecordID(123, []byte{2}),
+		*insolar.NewRecordID(123, []byte{3}),
+		*insolar.NewRecordID(123, []byte{4}),
 	}
-	s.requests = map[core.RecordID]*lockedPendingObjectContext{
+	s.requests = map[insolar.RecordID]*lockedPendingObjectContext{
 		obj: {
 			Context: &PendingObjectContext{
-				Requests: []core.RecordID{expectedIDs[0], extraIDs[0], extraIDs[1], extraIDs[2]},
+				Requests: []insolar.RecordID{expectedIDs[0], extraIDs[0], extraIDs[1], extraIDs[2]},
 			},
 		},
 	}
@@ -159,10 +159,10 @@ func TestPendingStorage_RemovePendingRequest(t *testing.T) {
 
 	require.Equal(
 		t,
-		map[core.RecordID]PendingObjectContext{
+		map[insolar.RecordID]PendingObjectContext{
 			obj: {
 				Active:   true,
-				Requests: []core.RecordID{expectedIDs[0]},
+				Requests: []insolar.RecordID{expectedIDs[0]},
 			},
 		},
 		s.GetRequests(),
@@ -172,26 +172,26 @@ func TestPendingStorage_RemovePendingRequest(t *testing.T) {
 func TestPendingStorage_RemovePendingRequest_RemoveNothingIfThereIsNothing(t *testing.T) {
 	t.Parallel()
 	ctx := inslogger.TestContext(t)
-	jetID := *core.NewRecordID(123, []byte{99})
-	objID := *core.NewRecordID(123, []byte{1})
-	anotherObj := *core.NewRecordID(123, nil)
+	jetID := *insolar.NewRecordID(123, []byte{99})
+	objID := *insolar.NewRecordID(123, []byte{1})
+	anotherObj := *insolar.NewRecordID(123, nil)
 	s := NewPendingStorage(jetID)
 
-	s.requests = map[core.RecordID]*lockedPendingObjectContext{
+	s.requests = map[insolar.RecordID]*lockedPendingObjectContext{
 		objID: {
 			Context: &PendingObjectContext{
-				Requests: []core.RecordID{},
+				Requests: []insolar.RecordID{},
 			},
 		},
 	}
 
-	s.RemovePendingRequest(ctx, anotherObj, *core.NewRecordID(123, []byte{2}))
+	s.RemovePendingRequest(ctx, anotherObj, *insolar.NewRecordID(123, []byte{2}))
 
 	require.Equal(
 		t,
-		map[core.RecordID]PendingObjectContext{
+		map[insolar.RecordID]PendingObjectContext{
 			objID: {
-				Requests: []core.RecordID{},
+				Requests: []insolar.RecordID{},
 			},
 		},
 		s.GetRequests(),
@@ -220,7 +220,7 @@ func TestRecentStorageProvider_GetStorage(t *testing.T) {
 
 	for i := 0; i < 8; i++ {
 		go func(jetIndex int) {
-			jetID := *core.NewRecordID(123, []byte{byte(jetIndex)})
+			jetID := *insolar.NewRecordID(123, []byte{byte(jetIndex)})
 			indStorage := provider.GetIndexStorage(inslogger.TestContext(t), jetID)
 			require.NotNil(t, indStorage)
 			pendingStorage := provider.GetPendingStorage(inslogger.TestContext(t), jetID)
@@ -238,13 +238,13 @@ func TestRecentStorageProvider_GetStorage(t *testing.T) {
 
 func TestRecentStorage_markForDelete(t *testing.T) {
 	t.Parallel()
-	candidates := make([]core.RecordID, 0, 100)
-	expect := make([]core.RecordID, 0, 50)
-	recentStorageMap := make(map[core.RecordID]recentObjectMeta)
-	jetID := *core.NewRecordID(123, []byte{99})
+	candidates := make([]insolar.RecordID, 0, 100)
+	expect := make([]insolar.RecordID, 0, 50)
+	recentStorageMap := make(map[insolar.RecordID]recentObjectMeta)
+	jetID := *insolar.NewRecordID(123, []byte{99})
 
 	for i := 0; i < 100; i++ {
-		rID := *core.NewRecordID(123, []byte{byte(i)})
+		rID := *insolar.NewRecordID(123, []byte{byte(i)})
 		candidates = append(candidates, rID)
 		if i%2 == 0 {
 			expect = append(expect, rID)
@@ -266,15 +266,15 @@ func TestRecentStorageProvider_DecreaseIndexesTTL(t *testing.T) {
 	// Arrange
 	ctx := inslogger.TestContext(t)
 
-	firstJet := *core.NewRecordID(123, []byte{1})
-	secondJet := *core.NewRecordID(123, []byte{2})
+	firstJet := *insolar.NewRecordID(123, []byte{1})
+	secondJet := *insolar.NewRecordID(123, []byte{2})
 
 	provider := NewRecentStorageProvider(8)
-	provider.GetIndexStorage(ctx, firstJet).AddObject(ctx, *core.NewRecordID(123, []byte{22}))
-	provider.GetIndexStorage(ctx, firstJet).AddObject(ctx, *core.NewRecordID(123, []byte{33}))
+	provider.GetIndexStorage(ctx, firstJet).AddObject(ctx, *insolar.NewRecordID(123, []byte{22}))
+	provider.GetIndexStorage(ctx, firstJet).AddObject(ctx, *insolar.NewRecordID(123, []byte{33}))
 
-	removedFirst := *core.NewRecordID(123, []byte{21})
-	removedSecond := *core.NewRecordID(123, []byte{22})
+	removedFirst := *insolar.NewRecordID(123, []byte{21})
+	removedSecond := *insolar.NewRecordID(123, []byte{22})
 	provider.GetIndexStorage(ctx, secondJet).AddObjectWithTLL(ctx, removedFirst, 1)
 	provider.GetIndexStorage(ctx, secondJet).AddObjectWithTLL(ctx, removedSecond, 1)
 
@@ -309,28 +309,28 @@ func TestRecentStorageProvider_DecreaseIndexesTTL_WorksOnEmptyStorage(t *testing
 	result := provider.DecreaseIndexesTTL(ctx)
 
 	// Assert
-	require.Equal(t, map[core.RecordID][]core.RecordID{}, result)
+	require.Equal(t, map[insolar.RecordID][]insolar.RecordID{}, result)
 }
 
 func TestPendingStorageConcrete_GetRequestsForObject(t *testing.T) {
 	t.Parallel()
 
-	objID := *core.NewRecordID(123, []byte{1})
-	requestID := *core.NewRecordID(123, []byte{2})
+	objID := *insolar.NewRecordID(123, []byte{1})
+	requestID := *insolar.NewRecordID(123, []byte{2})
 
-	unexpectedID := *core.NewRecordID(123, []byte{3})
-	unexpectedReqID := *core.NewRecordID(123, []byte{4})
+	unexpectedID := *insolar.NewRecordID(123, []byte{3})
+	unexpectedReqID := *insolar.NewRecordID(123, []byte{4})
 
 	pendingStorage := &PendingStorageConcrete{
-		requests: map[core.RecordID]*lockedPendingObjectContext{
+		requests: map[insolar.RecordID]*lockedPendingObjectContext{
 			objID: {
 				Context: &PendingObjectContext{
-					Requests: []core.RecordID{requestID},
+					Requests: []insolar.RecordID{requestID},
 				},
 			},
 			unexpectedID: {
 				Context: &PendingObjectContext{
-					Requests: []core.RecordID{unexpectedReqID},
+					Requests: []insolar.RecordID{unexpectedReqID},
 				},
 			},
 		},
@@ -345,10 +345,10 @@ func TestPendingStorageConcrete_GetRequestsForObject(t *testing.T) {
 func TestPendingStorageConcrete_GetRequestsForObject_NoObject(t *testing.T) {
 	t.Parallel()
 
-	unexpectedReqID := *core.NewRecordID(123, []byte{2})
+	unexpectedReqID := *insolar.NewRecordID(123, []byte{2})
 
 	pendingStorage := &PendingStorageConcrete{
-		requests: map[core.RecordID]*lockedPendingObjectContext{},
+		requests: map[insolar.RecordID]*lockedPendingObjectContext{},
 	}
 
 	requests := pendingStorage.GetRequestsForObject(unexpectedReqID)
@@ -360,12 +360,12 @@ func TestPendingStorageConcrete_SetContextToObject(t *testing.T) {
 	t.Parallel()
 
 	pendingStorage := &PendingStorageConcrete{
-		requests: map[core.RecordID]*lockedPendingObjectContext{},
+		requests: map[insolar.RecordID]*lockedPendingObjectContext{},
 	}
-	expectedObj := *core.NewRecordID(123, []byte{1})
+	expectedObj := *insolar.NewRecordID(123, []byte{1})
 	expectedContext := PendingObjectContext{
 		Active:   true,
-		Requests: []core.RecordID{*core.NewRecordID(123, []byte{2}), *core.NewRecordID(123, []byte{3})},
+		Requests: []insolar.RecordID{*insolar.NewRecordID(123, []byte{2}), *insolar.NewRecordID(123, []byte{3})},
 	}
 
 	pendingStorage.SetContextToObject(inslogger.TestContext(t), expectedObj, expectedContext)
@@ -377,15 +377,15 @@ func TestPendingStorageConcrete_SetContextToObject(t *testing.T) {
 func TestPendingStorageConcrete_RemovePendingRequest_RemoveFromStart(t *testing.T) {
 	t.Parallel()
 
-	objID := *core.NewRecordID(123, []byte{100})
-	first := *core.NewRecordID(123, []byte{1})
-	second := *core.NewRecordID(123, []byte{2})
+	objID := *insolar.NewRecordID(123, []byte{100})
+	first := *insolar.NewRecordID(123, []byte{1})
+	second := *insolar.NewRecordID(123, []byte{2})
 	pendingStorage := &PendingStorageConcrete{
-		requests: map[core.RecordID]*lockedPendingObjectContext{
+		requests: map[insolar.RecordID]*lockedPendingObjectContext{
 
 			objID: {
 				Context: &PendingObjectContext{
-					Requests: []core.RecordID{first, second},
+					Requests: []insolar.RecordID{first, second},
 				},
 			},
 		},
@@ -400,15 +400,15 @@ func TestPendingStorageConcrete_RemovePendingRequest_RemoveFromStart(t *testing.
 func TestPendingStorageConcrete_RemovePendingRequest_RemoveFromEnd(t *testing.T) {
 	t.Parallel()
 
-	objID := *core.NewRecordID(123, []byte{100})
-	first := *core.NewRecordID(123, []byte{1})
-	second := *core.NewRecordID(123, []byte{2})
+	objID := *insolar.NewRecordID(123, []byte{100})
+	first := *insolar.NewRecordID(123, []byte{1})
+	second := *insolar.NewRecordID(123, []byte{2})
 	pendingStorage := &PendingStorageConcrete{
-		requests: map[core.RecordID]*lockedPendingObjectContext{
+		requests: map[insolar.RecordID]*lockedPendingObjectContext{
 
 			objID: {
 				Context: &PendingObjectContext{
-					Requests: []core.RecordID{first, second},
+					Requests: []insolar.RecordID{first, second},
 				},
 			},
 		},
@@ -423,16 +423,16 @@ func TestPendingStorageConcrete_RemovePendingRequest_RemoveFromEnd(t *testing.T)
 func TestPendingStorageConcrete_RemovePendingRequest_RemoveFromMiddle(t *testing.T) {
 	t.Parallel()
 
-	objID := *core.NewRecordID(123, []byte{100})
-	first := *core.NewRecordID(123, []byte{1})
-	second := *core.NewRecordID(123, []byte{2})
-	third := *core.NewRecordID(123, []byte{3})
+	objID := *insolar.NewRecordID(123, []byte{100})
+	first := *insolar.NewRecordID(123, []byte{1})
+	second := *insolar.NewRecordID(123, []byte{2})
+	third := *insolar.NewRecordID(123, []byte{3})
 	pendingStorage := &PendingStorageConcrete{
-		requests: map[core.RecordID]*lockedPendingObjectContext{
+		requests: map[insolar.RecordID]*lockedPendingObjectContext{
 
 			objID: {
 				Context: &PendingObjectContext{
-					Requests: []core.RecordID{first, second, third},
+					Requests: []insolar.RecordID{first, second, third},
 				},
 			},
 		},
@@ -448,9 +448,9 @@ func TestPendingStorageConcrete_RemovePendingRequest_RemoveFromMiddle(t *testing
 func TestPendingStorageConcrete_RemovePendingRequest_NothingHappensIfNoRequests(t *testing.T) {
 	t.Parallel()
 
-	objID := *core.NewRecordID(123, []byte{100})
+	objID := *insolar.NewRecordID(123, []byte{100})
 	pendingStorage := &PendingStorageConcrete{
-		requests: map[core.RecordID]*lockedPendingObjectContext{
+		requests: map[insolar.RecordID]*lockedPendingObjectContext{
 
 			objID: {
 				Context: &PendingObjectContext{},
@@ -458,7 +458,7 @@ func TestPendingStorageConcrete_RemovePendingRequest_NothingHappensIfNoRequests(
 		},
 	}
 
-	pendingStorage.RemovePendingRequest(inslogger.TestContext(t), objID, *core.NewRecordID(123, []byte{1}))
+	pendingStorage.RemovePendingRequest(inslogger.TestContext(t), objID, *insolar.NewRecordID(123, []byte{1}))
 
 	require.Equal(t, 1, len(pendingStorage.requests))
 	_, ok := pendingStorage.requests[objID]
@@ -468,14 +468,14 @@ func TestPendingStorageConcrete_RemovePendingRequest_NothingHappensIfNoRequests(
 func TestPendingStorageConcrete_RemovePendingRequest_RemoveOnlyOne(t *testing.T) {
 	t.Parallel()
 
-	objID := *core.NewRecordID(123, []byte{100})
-	first := *core.NewRecordID(123, []byte{1})
+	objID := *insolar.NewRecordID(123, []byte{100})
+	first := *insolar.NewRecordID(123, []byte{1})
 
 	pendingStorage := &PendingStorageConcrete{
-		requests: map[core.RecordID]*lockedPendingObjectContext{
+		requests: map[insolar.RecordID]*lockedPendingObjectContext{
 			objID: {
 				Context: &PendingObjectContext{
-					Requests: []core.RecordID{first},
+					Requests: []insolar.RecordID{first},
 				},
 			},
 		},
@@ -489,16 +489,16 @@ func TestPendingStorageConcrete_RemovePendingRequest_RemoveOnlyOne(t *testing.T)
 func TestPendingStorageConcrete_RemovePendingRequest_RemoveNotExisting(t *testing.T) {
 	t.Parallel()
 
-	objID := *core.NewRecordID(123, []byte{100})
-	first := *core.NewRecordID(123, []byte{1})
-	second := *core.NewRecordID(123, []byte{2})
-	third := *core.NewRecordID(123, []byte{3})
+	objID := *insolar.NewRecordID(123, []byte{100})
+	first := *insolar.NewRecordID(123, []byte{1})
+	second := *insolar.NewRecordID(123, []byte{2})
+	third := *insolar.NewRecordID(123, []byte{3})
 	pendingStorage := &PendingStorageConcrete{
-		requests: map[core.RecordID]*lockedPendingObjectContext{
+		requests: map[insolar.RecordID]*lockedPendingObjectContext{
 
 			objID: {
 				Context: &PendingObjectContext{
-					Requests: []core.RecordID{first, second},
+					Requests: []insolar.RecordID{first, second},
 				},
 			},
 		},

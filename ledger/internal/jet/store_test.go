@@ -24,13 +24,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/gen"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 // helper for tests
-func treeForPulse(s *Store, pulse core.PulseNumber) (*Tree, bool) {
+func treeForPulse(s *Store, pulse insolar.PulseNumber) (*Tree, bool) {
 	ltree, ok := s.trees[pulse]
 	if !ok {
 		return nil, false
@@ -44,14 +44,14 @@ func TestJetStorage_Empty(t *testing.T) {
 
 	all := s.All(ctx, gen.PulseNumber())
 	require.Equal(t, 1, len(all), "should be just one jet ID")
-	require.Equal(t, core.ZeroJetID, all[0], "JetID should be a zero on empty storage")
+	require.Equal(t, insolar.ZeroJetID, all[0], "JetID should be a zero on empty storage")
 }
 
 func TestJetStorage_UpdateJetTree(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	s := NewStore()
 
-	s.Update(ctx, 100, true, *core.NewJetID(0, nil))
+	s.Update(ctx, 100, true, *insolar.NewJetID(0, nil))
 
 	tree, _ := treeForPulse(s, 100)
 	require.Equal(t, "root (level=0 actual=true)\n", tree.String())
@@ -61,7 +61,7 @@ func TestJetStorage_SplitJetTree(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	s := NewStore()
 
-	left, right, err := s.Split(ctx, 100, *core.NewJetID(0, nil))
+	left, right, err := s.Split(ctx, 100, *insolar.NewJetID(0, nil))
 	require.NoError(t, err)
 	require.Equal(t, "[JET 1 0]", left.DebugString())
 	require.Equal(t, "[JET 1 1]", right.DebugString())
@@ -74,7 +74,7 @@ func TestJetStorage_CloneJetTree(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	s := NewStore()
 
-	s.Update(ctx, 100, true, *core.NewJetID(0, nil))
+	s.Update(ctx, 100, true, *insolar.NewJetID(0, nil))
 
 	tree, _ := treeForPulse(s, 100)
 	require.Equal(t, "root (level=0 actual=true)\n", tree.String())
@@ -92,7 +92,7 @@ func TestJetStorage_DeleteJetTree(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	s := NewStore()
 
-	_, _, err := s.Split(ctx, 100, *core.NewJetID(0, nil))
+	_, _, err := s.Split(ctx, 100, *insolar.NewJetID(0, nil))
 	require.NoError(t, err)
 
 	s.Delete(ctx, 100)
@@ -102,7 +102,7 @@ func TestJetStorage_DeleteJetTree(t *testing.T) {
 
 	all := s.All(ctx, 100)
 	require.Equal(t, 1, len(all), "should be just one jet ID")
-	require.Equal(t, core.ZeroJetID, all[0], "JetID should be a zero after tree removal")
+	require.Equal(t, insolar.ZeroJetID, all[0], "JetID should be a zero after tree removal")
 }
 
 func TestJetStorage_ForID_Basic(t *testing.T) {
@@ -115,9 +115,9 @@ func TestJetStorage_ForID_Basic(t *testing.T) {
 	expectJetID := NewIDFromString(meaningfulBits)
 	// fmt.Printf("expectJetID:        %08b\n", expectJetID[:])
 	searchID := gen.ID()
-	hash := searchID[core.RecordHashOffset:]
+	hash := searchID[insolar.RecordHashOffset:]
 	hash = setBitsPrefix(hash, bits, len(meaningfulBits))
-	copy(searchID[core.RecordHashOffset:], hash)
+	copy(searchID[insolar.RecordHashOffset:], hash)
 
 	for _, actuality := range []bool{true, false} {
 		s := NewStore()
@@ -135,7 +135,7 @@ func TestJetStorage_ForID_Fuzz(t *testing.T) {
 	var jets = map[string]struct{}{}
 
 	// findBestMatch returns best match JetID for provided recordID, searches JetID in `jets` set.
-	findBestMatch := func(id core.RecordID) core.JetID {
+	findBestMatch := func(id insolar.RecordID) insolar.JetID {
 		// search in substrings
 		idbits := bitsToString(id.Hash())
 		var stat = map[string]int{}
@@ -163,7 +163,7 @@ func TestJetStorage_ForID_Fuzz(t *testing.T) {
 		return NewIDFromString(found)
 	}
 
-	var searches []core.RecordID
+	var searches []insolar.RecordID
 	s := NewStore()
 	// generate jet IDs, add them to jet store (actually to underlying jet tree)
 	// fill searches list with RecordID with hashes what should match with generated Jet ID
@@ -172,8 +172,8 @@ func TestJetStorage_ForID_Fuzz(t *testing.T) {
 		prefix, depth := jetID.Prefix(), jetID.Depth()
 
 		searchID := gen.ID()
-		hash := setBitsPrefix(searchID[core.RecordHashOffset:], prefix, int(depth))
-		copy(searchID[core.RecordHashOffset:], hash)
+		hash := setBitsPrefix(searchID[insolar.RecordHashOffset:], prefix, int(depth))
+		copy(searchID[insolar.RecordHashOffset:], hash)
 
 		s.Update(ctx, pn, false, jetID)
 		searches = append(searches, searchID)
@@ -192,8 +192,8 @@ func TestJetStorage_ForID_Fuzz(t *testing.T) {
 		assertResult := assert.Equalf(t,
 			expect, found,
 			" expect  = %08b\n got     = %08b\n id hash = %08b\n",
-			expect[core.JetPrefixOffset:],
-			found[core.JetPrefixOffset:],
+			expect[insolar.JetPrefixOffset:],
+			found[insolar.JetPrefixOffset:],
 			searchID.Hash(),
 		)
 		if !assertResult {

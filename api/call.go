@@ -25,9 +25,9 @@ import (
 
 	"github.com/insolar/insolar/api/seedmanager"
 	"github.com/insolar/insolar/application/extractor"
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/reply"
-	"github.com/insolar/insolar/core/utils"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/reply"
+	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/metrics"
@@ -83,7 +83,7 @@ func (ar *Runner) makeCall(ctx context.Context, params Request) (interface{}, er
 	ctx, span := instracer.StartSpan(ctx, "SendRequest "+params.Method)
 	defer span.End()
 
-	reference, err := core.NewRefFromBase58(params.Reference)
+	reference, err := insolar.NewRefFromBase58(params.Reference)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ makeCall ] failed to parse params.Reference")
 	}
@@ -112,7 +112,7 @@ func (ar *Runner) makeCall(ctx context.Context, params Request) (interface{}, er
 	return result, nil
 }
 
-func processError(err error, extraMsg string, resp *answer, insLog core.Logger) {
+func processError(err error, extraMsg string, resp *answer, insLog insolar.Logger) {
 	resp.Error = err.Error()
 	insLog.Error(errors.Wrapf(err, "[ CallHandler ] %s", extraMsg))
 }

@@ -23,7 +23,7 @@ import (
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger"
 	"github.com/insolar/insolar/ledger/artifactmanager"
@@ -48,7 +48,7 @@ import (
 // TmpLedger crteates ledger on top of temporary database.
 // Returns *ledger.Ledger and cleanup function.
 // FIXME: THIS METHOD IS DEPRECATED. USE MOCKS.
-func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Components, closeJets bool) (*ledger.Ledger, storage.DBContext, func()) {
+func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c insolar.Components, closeJets bool) (*ledger.Ledger, storage.DBContext, func()) {
 	log.Warn("TmpLedger is deprecated. Use mocks.")
 
 	pcs := platformpolicy.NewPlatformCryptographyScheme()
@@ -77,9 +77,9 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 	pm := pulsemanager.NewPulseManager(conf)
 	jc := testutils.NewJetCoordinatorMock(mc)
 	jc.IsAuthorizedMock.Return(true, nil)
-	jc.LightExecutorForJetMock.Return(&core.RecordRef{}, nil)
-	jc.HeavyMock.Return(&core.RecordRef{}, nil)
-	jc.MeMock.Return(core.RecordRef{})
+	jc.LightExecutorForJetMock.Return(&insolar.RecordRef{}, nil)
+	jc.HeavyMock.Return(&insolar.RecordRef{}, nil)
+	jc.MeMock.Return(insolar.RecordRef{})
 	jc.IsBeyondLimitMock.Return(false, nil)
 
 	// Init components.
@@ -98,7 +98,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 		}
 	}
 	if c.NodeNetwork == nil {
-		c.NodeNetwork = nodenetwork.NewNodeKeeper(nodenetwork.NewNode(core.RecordRef{}, core.StaticRoleLightMaterial, nil, "127.0.0.1:5432", ""))
+		c.NodeNetwork = nodenetwork.NewNodeKeeper(nodenetwork.NewNode(insolar.RecordRef{}, insolar.StaticRoleLightMaterial, nil, "127.0.0.1:5432", ""))
 	}
 
 	certificate := testutils.NewCertificateMock(t)
@@ -200,7 +200,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 	}
 
 	if closeJets {
-		err := pm.HotDataWaiter.Unlock(ctx, core.RecordID(*core.NewJetID(0, nil)))
+		err := pm.HotDataWaiter.Unlock(ctx, insolar.RecordID(*insolar.NewJetID(0, nil)))
 		require.NoError(t, err)
 	}
 

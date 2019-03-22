@@ -53,7 +53,7 @@ package routing
 import (
 	"strconv"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/transport/host"
@@ -64,7 +64,7 @@ type Table struct {
 	NodeKeeper network.NodeKeeper `inject:""`
 }
 
-func (t *Table) ResolveConsensus(id core.ShortNodeID) (*host.Host, error) {
+func (t *Table) ResolveConsensus(id insolar.ShortNodeID) (*host.Host, error) {
 	node := t.NodeKeeper.GetAccessor().GetActiveNodeByShortID(id)
 	if node != nil {
 		return host.NewHostNS(node.ConsensusAddress(), node.ID(), node.ShortID())
@@ -76,7 +76,7 @@ func (t *Table) ResolveConsensus(id core.ShortNodeID) (*host.Host, error) {
 	return h, nil
 }
 
-func (t *Table) ResolveConsensusRef(ref core.RecordRef) (*host.Host, error) {
+func (t *Table) ResolveConsensusRef(ref insolar.RecordRef) (*host.Host, error) {
 	node := t.NodeKeeper.GetAccessor().GetActiveNode(ref)
 	if node != nil {
 		return host.NewHostNS(node.ConsensusAddress(), node.ID(), node.ShortID())
@@ -88,11 +88,11 @@ func (t *Table) ResolveConsensusRef(ref core.RecordRef) (*host.Host, error) {
 	return h, nil
 }
 
-func (t *Table) isLocalNode(core.RecordRef) bool {
+func (t *Table) isLocalNode(insolar.RecordRef) bool {
 	return true
 }
 
-func (t *Table) resolveRemoteNode(ref core.RecordRef) (*host.Host, error) {
+func (t *Table) resolveRemoteNode(ref insolar.RecordRef) (*host.Host, error) {
 	return nil, errors.New("not implemented")
 }
 
@@ -101,7 +101,7 @@ func (t *Table) addRemoteHost(h *host.Host) {
 }
 
 // Resolve NodeID -> ShortID, Address. Can initiate network requests.
-func (t *Table) Resolve(ref core.RecordRef) (*host.Host, error) {
+func (t *Table) Resolve(ref insolar.RecordRef) (*host.Host, error) {
 	if t.isLocalNode(ref) {
 		node := t.NodeKeeper.GetAccessor().GetActiveNode(ref)
 		if node == nil {

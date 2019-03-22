@@ -20,13 +20,12 @@ import (
 	"context"
 	"sync"
 
-	"github.com/insolar/insolar"
 	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/pkg/errors"
 
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/message"
-	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/internal/jet"
@@ -38,20 +37,20 @@ type seqEntry struct {
 }
 
 type seqKey struct {
-	pulse core.PulseNumber
-	jet   core.RecordID
+	pulse insolar.PulseNumber
+	jet   insolar.RecordID
 }
 
 type fetchResult struct {
-	jet *core.RecordID
+	jet *insolar.RecordID
 	err error
 }
 
 type jetTreeUpdater struct {
 	Nodes          node.Accessor
 	JetStorage     jet.Storage
-	MessageBus     core.MessageBus
-	JetCoordinator core.JetCoordinator
+	MessageBus     insolar.MessageBus
+	JetCoordinator insolar.JetCoordinator
 
 	seqMutex  sync.Mutex
 	sequencer map[seqKey]*seqEntry
@@ -60,8 +59,8 @@ type jetTreeUpdater struct {
 func newJetTreeUpdater(
 	ans node.Accessor,
 	js jet.Storage,
-	mb core.MessageBus,
-	jc core.JetCoordinator,
+	mb insolar.MessageBus,
+	jc insolar.JetCoordinator,
 ) *jetTreeUpdater {
 	return &jetTreeUpdater{
 		Nodes:          ans,
@@ -73,20 +72,20 @@ func newJetTreeUpdater(
 }
 
 func (jtu *jetTreeUpdater) fetchJet(
-	ctx context.Context, target core.RecordID, pulse core.PulseNumber,
-) (*core.RecordID, error) {
+	ctx context.Context, target insolar.RecordID, pulse insolar.PulseNumber,
+) (*insolar.RecordID, error) {
 	ctx, span := instracer.StartSpan(ctx, "jet_tree_updater.fetch_jet")
 	defer span.End()
 
 	// Look in the local tree. Return if the actual jet found.
 	jetID, actual := jtu.JetStorage.ForID(ctx, pulse, target)
 	if actual {
-		return (*core.RecordID)(&jetID), nil
+		return (*insolar.RecordID)(&jetID), nil
 	}
 
 	// Not actual in our tree, asking neighbors for jet.
 	span.Annotate(nil, "tree in DB is not actual")
-	key := seqKey{pulse, core.RecordID(jetID)}
+	key := seqKey{pulse, insolar.RecordID(jetID)}
 
 	executing := false
 
@@ -123,16 +122,16 @@ func (jtu *jetTreeUpdater) fetchJet(
 		return nil, err
 	}
 
-	jtu.JetStorage.Update(ctx, pulse, true, core.JetID(*resJet))
+	jtu.JetStorage.Update(ctx, pulse, true, insolar.JetID(*resJet))
 
 	return resJet, nil
 }
 
-func (jtu *jetTreeUpdater) releaseJet(ctx context.Context, jetID core.RecordID, pulse core.PulseNumber) {
+func (jtu *jetTreeUpdater) releaseJet(ctx context.Context, jetID insolar.RecordID, pulse insolar.PulseNumber) {
 	jtu.seqMutex.Lock()
 	defer jtu.seqMutex.Unlock()
 
-	depth := core.JetID(jetID).Depth()
+	depth := insolar.JetID(jetID).Depth()
 	for {
 		key := seqKey{pulse, jetID}
 		if v, ok := jtu.sequencer[key]; ok {
@@ -146,14 +145,14 @@ func (jtu *jetTreeUpdater) releaseJet(ctx context.Context, jetID core.RecordID, 
 		if depth == 0 {
 			break
 		}
-		jetID = core.RecordID(jet.Parent(core.JetID(jetID)))
+		jetID = insolar.RecordID(jet.Parent(insolar.JetID(jetID)))
 		depth--
 	}
 }
 
 func (jtu *jetTreeUpdater) fetchActualJetFromOtherNodes(
-	ctx context.Context, target core.RecordID, pulse core.PulseNumber,
-) (*core.RecordID, error) {
+	ctx context.Context, target insolar.RecordID, pulse insolar.PulseNumber,
+) (*insolar.RecordID, error) {
 	ctx, span := instracer.StartSpan(ctx, "jet_tree_updater.fetch_jet_from_other_nodes")
 	defer span.End()
 
@@ -185,7 +184,7 @@ func (jtu *jetTreeUpdater) fetchActualJetFromOtherNodes(
 				rep, err := jtu.MessageBus.Send(
 					ctx,
 					&message.GetJet{Object: target, Pulse: pulse},
-					&core.MessageSendOptions{Receiver: &nodeID},
+					&insolar.MessageSendOptions{Receiver: &nodeID},
 				)
 				if err != nil {
 					inslogger.FromContext(ctx).Error(
@@ -215,8 +214,8 @@ func (jtu *jetTreeUpdater) fetchActualJetFromOtherNodes(
 		}
 		wg.Wait()
 
-		seen := make(map[core.RecordID]struct{})
-		res := make([]*core.RecordID, 0)
+		seen := make(map[insolar.RecordID]struct{})
+		res := make([]*insolar.RecordID, 0)
 		for _, r := range replies {
 			if r == nil {
 				continue
@@ -249,12 +248,12 @@ func (jtu *jetTreeUpdater) fetchActualJetFromOtherNodes(
 }
 
 func (jtu *jetTreeUpdater) otherNodesForPulse(
-	ctx context.Context, pulse core.PulseNumber,
+	ctx context.Context, pulse insolar.PulseNumber,
 ) ([]insolar.Node, error) {
 	ctx, span := instracer.StartSpan(ctx, "jet_tree_updater.other_nodes_for_pulse")
 	defer span.End()
 
-	res, err := jtu.Nodes.InRole(pulse, core.StaticRoleLightMaterial)
+	res, err := jtu.Nodes.InRole(pulse, insolar.StaticRoleLightMaterial)
 	if err != nil {
 		return nil, err
 	}

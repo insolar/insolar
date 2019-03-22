@@ -58,7 +58,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/transport/host"
@@ -80,11 +80,11 @@ const (
 )
 
 type MockResolver struct {
-	mapping  map[core.RecordRef]*host.Host
-	smapping map[core.ShortNodeID]*host.Host
+	mapping  map[insolar.RecordRef]*host.Host
+	smapping map[insolar.ShortNodeID]*host.Host
 }
 
-func (m *MockResolver) ResolveConsensus(id core.ShortNodeID) (*host.Host, error) {
+func (m *MockResolver) ResolveConsensus(id insolar.ShortNodeID) (*host.Host, error) {
 	result, exist := m.smapping[id]
 	if !exist {
 		return nil, errors.New("failed to resolve")
@@ -92,11 +92,11 @@ func (m *MockResolver) ResolveConsensus(id core.ShortNodeID) (*host.Host, error)
 	return result, nil
 }
 
-func (m *MockResolver) ResolveConsensusRef(nodeID core.RecordRef) (*host.Host, error) {
+func (m *MockResolver) ResolveConsensusRef(nodeID insolar.RecordRef) (*host.Host, error) {
 	return m.Resolve(nodeID)
 }
 
-func (m *MockResolver) Resolve(nodeID core.RecordRef) (*host.Host, error) {
+func (m *MockResolver) Resolve(nodeID insolar.RecordRef) (*host.Host, error) {
 	result, exist := m.mapping[nodeID]
 	if !exist {
 		return nil, errors.New("failed to resolve")
@@ -109,7 +109,7 @@ func (m *MockResolver) Rebalance(network.PartitionPolicy) {}
 func (m *MockResolver) GetRandomNodes(int) []host.Host    { return nil }
 
 func (m *MockResolver) addMapping(key, value string) error {
-	k, err := core.NewRefFromBase58(key)
+	k, err := insolar.NewRefFromBase58(key)
 	if err != nil {
 		return err
 	}
@@ -128,8 +128,8 @@ func (m *MockResolver) addMappingHost(h *host.Host) {
 
 func newMockResolver() *MockResolver {
 	return &MockResolver{
-		mapping:  make(map[core.RecordRef]*host.Host),
-		smapping: make(map[core.ShortNodeID]*host.Host),
+		mapping:  make(map[insolar.RecordRef]*host.Host),
+		smapping: make(map[insolar.ShortNodeID]*host.Host),
 	}
 }
 
@@ -150,7 +150,7 @@ func TestNewInternalTransport(t *testing.T) {
 	defer tp.Stop(ctx)
 	// require that new address with correct port has been assigned
 	require.NotEqual(t, address, tp.PublicAddress())
-	ref, err := core.NewRefFromBase58(ID1 + DOMAIN)
+	ref, err := insolar.NewRefFromBase58(ID1 + DOMAIN)
 	require.NoError(t, err)
 	require.Equal(t, *ref, tp.GetNodeID())
 }
@@ -203,10 +203,10 @@ func TestNewHostTransport(t *testing.T) {
 	ctx := context.Background()
 	ctx2 := context.Background()
 	t1, t2, err := createTwoHostNetworks(ID1+DOMAIN, ID2+DOMAIN)
-	ref1, err := core.NewRefFromBase58(ID1 + DOMAIN)
+	ref1, err := insolar.NewRefFromBase58(ID1 + DOMAIN)
 	require.NoError(t, err)
 	require.Equal(t, *ref1, t1.GetNodeID())
-	ref2, err := core.NewRefFromBase58(ID2 + DOMAIN)
+	ref2, err := insolar.NewRefFromBase58(ID2 + DOMAIN)
 	require.Equal(t, *ref2, t2.GetNodeID())
 	require.NoError(t, err)
 
@@ -231,7 +231,7 @@ func TestNewHostTransport(t *testing.T) {
 
 	for i := 0; i < count; i++ {
 		request := t1.NewRequestBuilder().Type(types.Ping).Data(nil).Build()
-		ref, err := core.NewRefFromBase58(ID2 + DOMAIN)
+		ref, err := insolar.NewRefFromBase58(ID2 + DOMAIN)
 		require.NoError(t, err)
 		_, err = t1.SendRequest(ctx, request, *ref)
 		require.NoError(t, err)
@@ -250,7 +250,7 @@ func TestHostTransport_SendRequestPacket(t *testing.T) {
 	t1.Transport.Start(ctx)
 	defer t1.Transport.Stop(ctx)
 
-	unknownID, err := core.NewRefFromBase58(IDUNKNOWN + DOMAIN)
+	unknownID, err := insolar.NewRefFromBase58(IDUNKNOWN + DOMAIN)
 	require.NoError(t, err)
 
 	// should return error because cannot resolve NodeID -> Address
@@ -263,7 +263,7 @@ func TestHostTransport_SendRequestPacket(t *testing.T) {
 	err = m.addMapping(ID3+DOMAIN, "127.0.0.1:7654")
 	require.NoError(t, err)
 
-	ref, err := core.NewRefFromBase58(ID2 + DOMAIN)
+	ref, err := insolar.NewRefFromBase58(ID2 + DOMAIN)
 	require.NoError(t, err)
 	// should return error because resolved address is invalid
 	_, err = t1.SendRequest(ctx, request, *ref)
@@ -281,7 +281,7 @@ func TestHostTransport_SendRequestPacket2(t *testing.T) {
 
 	handler := func(ctx context.Context, r network.Request) (network.Response, error) {
 		log.Info("handler triggered")
-		ref, err := core.NewRefFromBase58(ID1 + DOMAIN)
+		ref, err := insolar.NewRefFromBase58(ID1 + DOMAIN)
 		require.NoError(t, err)
 		require.Equal(t, *ref, r.GetSender())
 		require.Equal(t, t1.PublicAddress(), r.GetSenderHost().Address.String())
@@ -299,12 +299,12 @@ func TestHostTransport_SendRequestPacket2(t *testing.T) {
 	}()
 
 	request := t1.NewRequestBuilder().Type(types.Ping).Data(nil).Build()
-	ref, err := core.NewRefFromBase58(ID1 + DOMAIN)
+	ref, err := insolar.NewRefFromBase58(ID1 + DOMAIN)
 	require.NoError(t, err)
 	require.Equal(t, *ref, request.GetSender())
 	require.Equal(t, t1.PublicAddress(), request.GetSenderHost().Address.String())
 
-	ref, err = core.NewRefFromBase58(ID2 + DOMAIN)
+	ref, err = insolar.NewRefFromBase58(ID2 + DOMAIN)
 	require.NoError(t, err)
 	_, err = t1.SendRequest(ctx, request, *ref)
 	require.NoError(t, err)
@@ -339,7 +339,7 @@ func TestHostTransport_SendRequestPacket3(t *testing.T) {
 
 	magicNumber := 42
 	request := t1.NewRequestBuilder().Type(types.Ping).Data(&Data{Number: magicNumber}).Build()
-	ref, err := core.NewRefFromBase58(ID2 + DOMAIN)
+	ref, err := insolar.NewRefFromBase58(ID2 + DOMAIN)
 	require.NoError(t, err)
 	f, err := t1.SendRequest(ctx, request, *ref)
 	require.NoError(t, err)
@@ -379,7 +379,7 @@ func TestHostTransport_SendRequestPacket_errors(t *testing.T) {
 	t1.Transport.Start(ctx)
 
 	request := t1.NewRequestBuilder().Type(types.Ping).Data(nil).Build()
-	ref, err := core.NewRefFromBase58(ID2 + DOMAIN)
+	ref, err := insolar.NewRefFromBase58(ID2 + DOMAIN)
 	require.NoError(t, err)
 	f, err := t1.SendRequest(ctx, request, *ref)
 	require.NoError(t, err)
@@ -419,7 +419,7 @@ func TestHostTransport_WrongHandler(t *testing.T) {
 	}()
 
 	request := t1.NewRequestBuilder().Type(types.Ping).Build()
-	ref, err := core.NewRefFromBase58(ID2 + DOMAIN)
+	ref, err := insolar.NewRefFromBase58(ID2 + DOMAIN)
 	require.NoError(t, err)
 	_, err = t1.SendRequest(ctx, request, *ref)
 	require.NoError(t, err)

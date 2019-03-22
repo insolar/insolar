@@ -38,14 +38,14 @@ import (
 
 	"github.com/insolar/insolar/platformpolicy"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 
 	"github.com/pkg/errors"
 )
 
 var foundationPath = "github.com/insolar/insolar/logicrunner/goplugin/foundation"
 var proxyctxPath = "github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
-var corePath = "github.com/insolar/insolar/core"
+var corePath = "github.com/insolar/insolar/insolar"
 
 // ParsedFile struct with prepared info we extract from source code
 type ParsedFile struct {
@@ -273,10 +273,10 @@ func (pf *ParsedFile) WriteProxy(classReference string, out io.Writer) error {
 	if classReference == "" {
 		hasher := platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher()
 		codeHash := hasher.Hash([]byte(pf.code))
-		ref := core.NewRecordRef(core.RecordID{}, *core.NewRecordID(0, codeHash))
+		ref := insolar.NewRecordRef(insolar.RecordID{}, *insolar.NewRecordID(0, codeHash))
 		classReference = ref.String()
 	}
-	_, err = core.NewRefFromBase58(classReference)
+	_, err = insolar.NewRefFromBase58(classReference)
 	if err != nil {
 		return errors.Wrap(err, "can't write proxy: ")
 	}

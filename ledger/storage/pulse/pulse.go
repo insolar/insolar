@@ -19,27 +19,27 @@ package pulse
 import (
 	"context"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 )
 
 // Accessor provides methods for accessing pulses.
 type Accessor interface {
-	ForPulseNumber(context.Context, core.PulseNumber) (core.Pulse, error)
-	Latest(ctx context.Context) (core.Pulse, error)
+	ForPulseNumber(context.Context, insolar.PulseNumber) (insolar.Pulse, error)
+	Latest(ctx context.Context) (insolar.Pulse, error)
 }
 
 // Shifter provides method for removing pulses from storage.
 type Shifter interface {
-	Shift(ctx context.Context) (pulse core.Pulse, err error)
+	Shift(ctx context.Context) (pulse insolar.Pulse, err error)
 }
 
 // Appender provides method for appending pulses to storage.
 type Appender interface {
-	Append(ctx context.Context, pulse core.Pulse) error
+	Append(ctx context.Context, pulse insolar.Pulse) error
 }
 
 // Calculator performs calculations for pulses.
 type Calculator interface {
-	Forwards(ctx context.Context, pn core.PulseNumber, steps int) (core.Pulse, error)
-	Backwards(ctx context.Context, pn core.PulseNumber, steps int) (core.Pulse, error)
+	Forwards(ctx context.Context, pn insolar.PulseNumber, steps int) (insolar.Pulse, error)
+	Backwards(ctx context.Context, pn insolar.PulseNumber, steps int) (insolar.Pulse, error)
 }
