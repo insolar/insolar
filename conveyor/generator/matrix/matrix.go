@@ -21,26 +21,55 @@ import (
 	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
 )
 
+const numPulseStates = 3
+
+type StateMachineSet struct {
+	stateMachines []statemachine.StateMachine
+}
+
+func (s *StateMachineSet) GetStateMachineByID(id int) statemachine.StateMachine {
+	return s.stateMachines[id]
+}
+
 type Matrix struct {
-	matrix [][3]statemachine.StateMachine
+	matrix [numPulseStates]StateMachineSet
 }
 
 type MachineType int
 
 const (
 	TestStateMachine MachineType = iota + 1
-	InitialEvent
 )
 
 func NewMatrix() *Matrix {
 	m := Matrix{}
-	m.matrix = append(m.matrix,
-		[3]statemachine.StateMachine{},
-		sample.RawTestStateMachineFactory(),
-	)
+
+	// Fill m.matrix[i][0] with empty state machine, since 0 - is state of completion of state machine
+	var emptyObject statemachine.StateMachine
+	for i := 0; i < numPulseStates; i++ {
+		m.matrix[i].stateMachines = append(m.matrix[i].stateMachines, emptyObject)
+	}
+
+	smsTestStateMachine := sample.RawTestStateMachineFactory()
+	for i := 0; i < numPulseStates; i++ {
+		m.matrix[i].stateMachines = append(m.matrix[i].stateMachines, smsTestStateMachine[i])
+	}
+
 	return &m
 }
 
-func (m *Matrix) GetStateMachinesByType(mType MachineType) [3]statemachine.StateMachine {
-	return m.matrix[int(mType)]
+func (m *Matrix) GetInitialStateMachine() statemachine.StateMachine {
+	return m.matrix[1].stateMachines[1]
+}
+
+func (m *Matrix) GetFutureConfig() statemachine.SetAccessor {
+	return &m.matrix[0]
+}
+
+func (m *Matrix) GetPresentConfig() statemachine.SetAccessor {
+	return &m.matrix[1]
+}
+
+func (m *Matrix) GetPastConfig() statemachine.SetAccessor {
+	return &m.matrix[2]
 }

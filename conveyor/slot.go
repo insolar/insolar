@@ -19,6 +19,7 @@ package conveyor
 import (
 	"fmt"
 
+	"github.com/insolar/insolar/conveyor/generator/matrix"
 	"github.com/insolar/insolar/conveyor/interfaces/constant"
 	"github.com/insolar/insolar/conveyor/interfaces/fsm"
 	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
@@ -26,6 +27,12 @@ import (
 	"github.com/insolar/insolar/core"
 	"github.com/pkg/errors"
 )
+
+var HandlerStorage matrix.StateMachineHolder
+
+func init() {
+	HandlerStorage = matrix.NewMatrix()
+}
 
 // SlotState shows slot working mode
 type SlotState uint32
@@ -44,11 +51,12 @@ const slotElementDelta = slotSize // nolint: unused
 // HandlersConfiguration contains configuration of handlers for specific pulse state
 // TODO: logic will be provided after pulse change mechanism
 type HandlersConfiguration struct {
-	state SlotState // nolint: unused
+	pulseStateMachines statemachine.SetAccessor
+	initStateMachine   statemachine.StateMachine
 }
 
 // TODO: logic will be provided after pulse change mechanism
-func (s *HandlersConfiguration) getMachineConfiguration(smType int) statemachine.StateMachine { // nolint: unused
+func (h *HandlersConfiguration) getMachineConfiguration(smType int) statemachine.StateMachine { // nolint: unused
 	return nil
 }
 
@@ -200,6 +208,9 @@ func newSlot(pulseState constant.PulseState, pulseNumber core.PulseNumber, remov
 		elements:           elements,
 		elementListMap:     elementListMap,
 		removeSlotCallback: removeSlotCallback,
+		handlersConfiguration: HandlersConfiguration{
+			initStateMachine: HandlerStorage.GetInitialStateMachine(),
+		},
 	}
 }
 

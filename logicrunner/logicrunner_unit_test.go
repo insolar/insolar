@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package logicrunner
 
@@ -253,8 +253,8 @@ func (suite *LogicRunnerTestSuite) TestPrepareState() {
 		queueLen int
 	}
 	type exp struct {
-		pending  message.PendingState
-		queueLen int
+		pending        message.PendingState
+		queueLen       int
 		hasPendingCall bool
 	}
 	type obj struct {
@@ -269,34 +269,34 @@ func (suite *LogicRunnerTestSuite) TestPrepareState() {
 		expected       exp
 	}{
 		{
-			name: "first call, NotPending in message",
-			message: msgt{pending: message.NotPending},
+			name:     "first call, NotPending in message",
+			message:  msgt{pending: message.NotPending},
 			expected: exp{pending: message.NotPending},
 		},
 		{
-			name: "message says InPending, no object",
-			message: msgt{pending: message.InPending},
+			name:     "message says InPending, no object",
+			message:  msgt{pending: message.InPending},
 			expected: exp{pending: message.InPending},
 		},
 		{
 			name:           "message says InPending, with object",
 			existingObject: true,
-			message: msgt{pending: message.InPending},
-			expected: exp{pending: message.InPending},
+			message:        msgt{pending: message.InPending},
+			expected:       exp{pending: message.InPending},
 		},
 		{
 			name:           "do not change pending status if existing says NotPending",
 			existingObject: true,
-			object: obj{pending: message.NotPending},
-			message: msgt{pending: message.InPending},
-			expected: exp{pending: message.NotPending},
+			object:         obj{pending: message.NotPending},
+			message:        msgt{pending: message.InPending},
+			expected:       exp{pending: message.NotPending},
 		},
 		{
 			name:           "message changes to NotPending, prev executor forces",
 			existingObject: true,
-			object: obj{pending: message.InPending},
-			message: msgt{pending: message.NotPending},
-			expected: exp{pending: message.NotPending},
+			object:         obj{pending: message.InPending},
+			message:        msgt{pending: message.NotPending},
+			expected:       exp{pending: message.NotPending},
 		},
 		{
 			name: "message has queue, no existing object",
@@ -310,7 +310,7 @@ func (suite *LogicRunnerTestSuite) TestPrepareState() {
 			},
 		},
 		{
-			name: "message has queue and object has queue",
+			name:           "message has queue and object has queue",
 			existingObject: true,
 			object: obj{
 				pending:  message.InPending,
@@ -332,8 +332,8 @@ func (suite *LogicRunnerTestSuite) TestPrepareState() {
 				queueLen: 1,
 			},
 			expected: exp{
-				pending:  message.InPending,
-				queueLen: 1,
+				pending:        message.InPending,
+				queueLen:       1,
 				hasPendingCall: true,
 			},
 		},
@@ -364,7 +364,7 @@ func (suite *LogicRunnerTestSuite) TestPrepareState() {
 				os := suite.lr.UpsertObjectState(object)
 				os.ExecutionState = &ExecutionState{
 					pending: test.object.pending,
-					Queue: []ExecutionQueueElement{},
+					Queue:   []ExecutionQueueElement{},
 				}
 
 				for test.object.queueLen > 0 {
