@@ -36,8 +36,8 @@ type cancelInfo struct {
 	id         uint64
 	cancel     chan bool
 	flush      chan bool
-	isCanceled bool
-	isFlushed  bool
+	isCanceled uint32
+	isFlushed  uint32
 }
 
 func newCancelInfo(id uint64) *cancelInfo {
@@ -61,11 +61,11 @@ func (ci *cancelInfo) Flush() <-chan bool {
 }
 
 func (ci *cancelInfo) IsCanceled() bool {
-	return ci.isCanceled
+	return atomic.LoadUint32(&ci.isCanceled) != 0
 }
 
 func (ci *cancelInfo) IsFlushed() bool {
-	return ci.isFlushed
+	return atomic.LoadUint32(&ci.isFlushed) != 0
 }
 
 type taskHolder struct {
@@ -96,11 +96,11 @@ func processStop(cancelList []*cancelInfo, flush bool) {
 	for _, el := range cancelList {
 		if flush {
 			log.Info("[ processStop ] flush: ", el.id)
-			el.isFlushed = true
+			atomic.StoreUint32(&el.isFlushed, 1)
 			el.flush <- true
 		} else {
 			log.Info("[ processStop ] cancel: ", el.id)
-			el.isCanceled = true
+			atomic.StoreUint32(&el.isCanceled, 1)
 			el.cancel <- true
 		}
 	}
