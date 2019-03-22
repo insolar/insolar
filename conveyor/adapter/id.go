@@ -20,4 +20,5 @@ type ID uint32
 
 const (
 	SendResponseAdapterID ID = iota + 1
+	GetCodeAdapterID
 )

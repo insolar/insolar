@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/conveyor/adapter"
+	"github.com/insolar/insolar/conveyor/interfaces/slot"
 	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
@@ -67,4 +68,16 @@ func (p *GetCodeProcessor) Process(task adapter.AdapterTask, nestedEventHelper a
 	log.Info("[ GetCodeProcessor.Process ] Process was dome successfully")
 
 	return msg
+}
+
+// GetCodeHelper is helper for GetCodeProcessor
+type GetCodeHelper struct{}
+
+// SendResponse makes correct message and send it to adapter
+func (r *GetCodeHelper) GetCode(element slot.SlotElementHelper, parcel core.Parcel, respHandlerID uint32) error {
+	task := GetCodeTask{
+		Parcel: parcel,
+	}
+	err := element.SendTask(uint32(adapter.GetCodeAdapterID), task, respHandlerID)
+	return errors.Wrap(err, "[ GetCodeHelper.SendResponse ] Can't SendTask")
 }
