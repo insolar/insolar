@@ -1,19 +1,52 @@
-/*
- * The Clear BSD License
- *
- * Copyright (c) 2019 Insolar Technologies
- *
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without modification, are permitted (subject to the limitations in the disclaimer below) provided that the following conditions are met:
- *
- *  Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
- *  Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
- *  Neither the name of Insolar Technologies nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
- *
- * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- */
+//
+// Modified BSD 3-Clause Clear License
+//
+// Copyright (c) 2019 Insolar Technologies GmbH
+//
+// All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without modification,
+// are permitted (subject to the limitations in the disclaimer below) provided that
+// the following conditions are met:
+//  * Redistributions of source code must retain the above copyright notice, this list
+//    of conditions and the following disclaimer.
+//  * Redistributions in binary form must reproduce the above copyright notice, this list
+//    of conditions and the following disclaimer in the documentation and/or other materials
+//    provided with the distribution.
+//  * Neither the name of Insolar Technologies GmbH nor the names of its contributors
+//    may be used to endorse or promote products derived from this software without
+//    specific prior written permission.
+//
+// NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED
+// BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS
+// AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+// INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY
+// AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL
+// THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+// INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+// OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+//
+// Notwithstanding any other provisions of this license, it is prohibited to:
+//    (a) use this software,
+//
+//    (b) prepare modifications and derivative works of this software,
+//
+//    (c) distribute this software (including without limitation in source code, binary or
+//        object code form), and
+//
+//    (d) reproduce copies of this software
+//
+//    for any commercial purposes, and/or
+//
+//    for the purposes of making available this software to third parties as a service,
+//    including, without limitation, any software-as-a-service, platform-as-a-service,
+//    infrastructure-as-a-service or other similar online service, irrespective of
+//    whether it competes with the products or services of Insolar Technologies GmbH.
+//
 
 package cascade
 
@@ -23,7 +56,7 @@ import (
 	"math"
 	"sort"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 )
 
 func min(a, b int) int {
@@ -35,11 +68,11 @@ func min(a, b int) int {
 
 // Cascade is struct to hold callback that sends cascade messages to next layers of cascade
 type Cascade struct {
-	SendMessage func(data core.Cascade, method string, args [][]byte) error
+	SendMessage func(data insolar.Cascade, method string, args [][]byte) error
 }
 
 // SendToNextLayer sends data to callback.
-func (casc *Cascade) SendToNextLayer(data core.Cascade, method string, args [][]byte) error {
+func (casc *Cascade) SendToNextLayer(data insolar.Cascade, method string, args [][]byte) error {
 	return casc.SendMessage(data, method, args)
 }
 
@@ -51,11 +84,11 @@ func geometricProgressionSum(a int, r int, n int) int {
 	return a * (1 - S) / (1 - r)
 }
 
-func calcHash(scheme core.PlatformCryptographyScheme, nodeID core.RecordRef, entropy core.Entropy) []byte {
-	data := make([]byte, core.RecordRefSize)
+func calcHash(scheme insolar.PlatformCryptographyScheme, nodeID insolar.Reference, entropy insolar.Entropy) []byte {
+	data := make([]byte, insolar.RecordRefSize)
 	copy(data, nodeID[:])
 	for i, d := range data {
-		data[i] = entropy[i%core.EntropySize] ^ d
+		data[i] = entropy[i%insolar.EntropySize] ^ d
 	}
 
 	h := scheme.IntegrityHasher()
@@ -66,7 +99,7 @@ func calcHash(scheme core.PlatformCryptographyScheme, nodeID core.RecordRef, ent
 	return h.Sum(nil)
 }
 
-func getNextCascadeLayerIndexes(nodeIds []core.RecordRef, currentNode core.RecordRef, replicationFactor uint) (startIndex, endIndex int) {
+func getNextCascadeLayerIndexes(nodeIds []insolar.Reference, currentNode insolar.Reference, replicationFactor uint) (startIndex, endIndex int) {
 	depth := 0
 	j := 0
 	layerWidth := replicationFactor
@@ -104,8 +137,8 @@ func getNextCascadeLayerIndexes(nodeIds []core.RecordRef, currentNode core.Recor
 }
 
 // CalculateNextNodes get nodes of the next cascade layer from the input nodes slice
-func CalculateNextNodes(scheme core.PlatformCryptographyScheme, data core.Cascade, currentNode *core.RecordRef) (nextNodeIds []core.RecordRef, err error) {
-	nodeIds := make([]core.RecordRef, len(data.NodeIds))
+func CalculateNextNodes(scheme insolar.PlatformCryptographyScheme, data insolar.Cascade, currentNode *insolar.Reference) (nextNodeIds []insolar.Reference, err error) {
+	nodeIds := make([]insolar.Reference, len(data.NodeIds))
 	copy(nodeIds, data.NodeIds)
 
 	// catching possible panic from calcHash

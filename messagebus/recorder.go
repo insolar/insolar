@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package messagebus
 
@@ -20,7 +20,7 @@ import (
 	"context"
 	"io"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 )
 
 // Recorder is a MessageBus wrapper that stores received replies to the tape. The tape then can be transferred and
@@ -28,12 +28,12 @@ import (
 type recorder struct {
 	sender
 	tape         tape
-	scheme       core.PlatformCryptographyScheme
-	pulseStorage core.PulseStorage
+	scheme       insolar.PlatformCryptographyScheme
+	pulseStorage insolar.PulseStorage
 }
 
 // newRecorder create new recorder instance.
-func newRecorder(s sender, tape tape, scheme core.PlatformCryptographyScheme, pulseStorage core.PulseStorage) *recorder {
+func newRecorder(s sender, tape tape, scheme insolar.PlatformCryptographyScheme, pulseStorage insolar.PulseStorage) *recorder {
 	return &recorder{
 		sender:       s,
 		tape:         tape,
@@ -49,7 +49,7 @@ func (r *recorder) WriteTape(ctx context.Context, w io.Writer) error {
 
 // Send wraps MessageBus Send to save received replies to the tape. This reply is also used to return directly from the
 // tape is the message is sent again, thus providing a cash for message replies.
-func (r *recorder) Send(ctx context.Context, msg core.Message, ops *core.MessageSendOptions) (core.Reply, error) {
+func (r *recorder) Send(ctx context.Context, msg insolar.Message, ops *insolar.MessageSendOptions) (insolar.Reply, error) {
 	currentPulse, err := r.pulseStorage.Current(ctx)
 	if err != nil {
 		return nil, err
@@ -76,6 +76,6 @@ func (r *recorder) Send(ctx context.Context, msg core.Message, ops *core.Message
 	return rep, nil
 }
 
-func (r *recorder) OnPulse(context.Context, core.Pulse) error {
+func (r *recorder) OnPulse(context.Context, insolar.Pulse) error {
 	panic("This method must not be called")
 }

@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package artifactmanager
 
@@ -21,7 +21,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
@@ -117,7 +117,7 @@ func TestHotDataWaiterConcrete_Wait_ThrowTimeout(t *testing.T) {
 	go func() {
 		err := hdwGetter().Wait(inslogger.TestContext(t), jetID)
 		require.NotNil(t, err)
-		require.Equal(t, core.ErrHotDataTimeout, err)
+		require.Equal(t, insolar.ErrHotDataTimeout, err)
 		close(syncChannel)
 	}()
 
@@ -156,13 +156,13 @@ func TestHotDataWaiterConcrete_Wait_ThrowTimeout_MultipleMembers(t *testing.T) {
 	go func() {
 		err := hdwGetter().Wait(inslogger.TestContext(t), jetID)
 		require.NotNil(t, err)
-		require.Equal(t, core.ErrHotDataTimeout, err)
+		require.Equal(t, insolar.ErrHotDataTimeout, err)
 		syncChannel <- struct{}{}
 	}()
 	go func() {
 		err := hdwGetter().Wait(inslogger.TestContext(t), secondJetID)
 		require.NotNil(t, err)
-		require.Equal(t, core.ErrHotDataTimeout, err)
+		require.Equal(t, insolar.ErrHotDataTimeout, err)
 		syncChannel <- struct{}{}
 	}()
 

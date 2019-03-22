@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package main
 
@@ -41,17 +41,18 @@ func check(msg string, err error) {
 }
 
 const (
-	defaultOutputConfigNameTmpl      = "insolar_%d.yaml"
-	defaultHost                      = "127.0.0.1"
-	defaultJaegerEndPoint            = defaultHost + ":6831"
-	defaultLogLevel                  = "Debug"
-	defaultGenesisFile               = "genesis.yaml"
-	defaultPulsarTemplate            = "scripts/insolard/pulsar_template.yaml"
-	discoveryDataDirectoryTemplate   = "scripts/insolard/discoverynodes/%d/data"
-	discoveryCertificatePathTemplate = "scripts/insolard/discoverynodes/%d/cert.json"
-	nodeDataDirectoryTemplate        = "scripts/insolard/nodes/%d/data"
-	nodeCertificatePathTemplate      = "scripts/insolard/nodes/%d/cert.json"
-	pulsewatcherFileName             = "pulsewatcher.yaml"
+	defaultOutputConfigNameTmpl       = "insolar_%d.yaml"
+	defaultHost                       = "127.0.0.1"
+	defaultJaegerEndPoint             = defaultHost + ":6831"
+	defaultLogLevel                   = "Debug"
+	defaultGenesisFile                = "genesis.yaml"
+	defaultPulsarTemplate             = "scripts/insolard/pulsar_template.yaml"
+	discoveryDataDirectoryTemplate    = "scripts/insolard/discoverynodes/%d/data"
+	discoveryNewDataDirectoryTemplate = "scripts/insolard/discoverynodes/%d/new-data"
+	discoveryCertificatePathTemplate  = "scripts/insolard/discoverynodes/%d/cert.json"
+	nodeDataDirectoryTemplate         = "scripts/insolard/nodes/%d/data"
+	nodeCertificatePathTemplate       = "scripts/insolard/nodes/%d/cert.json"
+	pulsewatcherFileName              = "pulsewatcher.yaml"
 
 	prometheusConfigTmpl = "scripts/prom/server.yml.tmpl"
 	prometheusFileName   = "prometheus.yaml"
@@ -173,6 +174,7 @@ func main() {
 		conf.Log.Formatter = "json"
 		conf.KeysPath = genesisConf.DiscoveryKeysDir + fmt.Sprintf(genesisConf.KeysNameFormat, index)
 		conf.Ledger.Storage.DataDirectory = fmt.Sprintf(discoveryDataDirectoryTemplate, nodeIndex)
+		conf.Ledger.Storage.DataDirectoryNewDB = fmt.Sprintf(discoveryNewDataDirectoryTemplate, nodeIndex)
 		conf.CertificatePath = fmt.Sprintf(discoveryCertificatePathTemplate, nodeIndex)
 
 		discoveryNodesConfigs = append(discoveryNodesConfigs, conf)

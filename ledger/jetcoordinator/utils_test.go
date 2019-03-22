@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package jetcoordinator
 
@@ -23,8 +23,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/insolar/insolar"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/utils/entropy"
 )
@@ -102,17 +101,17 @@ func benchSelectByEntropy(b *testing.B, valuescount int, count int) {
 }
 
 // compiler should avoid to optimize call of benched function
-var refresults []core.RecordRef
+var refresults []insolar.Reference
 
 func benchSelectByEntropyWrapped(b *testing.B, valuescount int, count int) {
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
 
-	var e core.Entropy
+	var e insolar.Entropy
 	copy(e[:], randslice(64))
 
 	values := make([]insolar.Node, 0, valuescount)
 	for i := 0; i < valuescount; i++ {
-		var coreref core.RecordRef
+		var coreref insolar.Reference
 		copy(coreref[:], randslice(64))
 		values = append(values, insolar.Node{ID: coreref})
 	}

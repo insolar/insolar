@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package pulsar
 
@@ -24,8 +24,8 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/cryptography"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
@@ -39,7 +39,7 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
 	storage := pulsartestutils.NewPulsarStorageMock(t)
-	storage.GetLastPulseMock.Return(&core.Pulse{PulseNumber: 123}, nil)
+	storage.GetLastPulseMock.Return(&insolar.Pulse{PulseNumber: 123}, nil)
 
 	pulseDistributor := testutils.NewPulseDistributorMock(t)
 	pulseDistributor.DistributeMock.Return()
@@ -123,14 +123,14 @@ func TestPulsar_SendPulseToNode(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
 	storage := pulsartestutils.NewPulsarStorageMock(t)
-	storage.GetLastPulseMock.Return(core.GenesisPulse, nil)
-	storage.SavePulseFunc = func(p *core.Pulse) (r error) { return nil }
-	storage.SetLastPulseFunc = func(p *core.Pulse) (r error) { return nil }
+	storage.GetLastPulseMock.Return(insolar.GenesisPulse, nil)
+	storage.SavePulseFunc = func(p *insolar.Pulse) (r error) { return nil }
+	storage.SetLastPulseFunc = func(p *insolar.Pulse) (r error) { return nil }
 	stateSwitcher := &StateSwitcherImpl{}
 
 	pulseDistributor := testutils.NewPulseDistributorMock(t)
-	pulseDistributor.DistributeFunc = func(p context.Context, p1 core.Pulse) {
-		require.Equal(t, core.FirstPulseNumber+1, int(p1.PulseNumber))
+	pulseDistributor.DistributeFunc = func(p context.Context, p1 insolar.Pulse) {
+		require.Equal(t, insolar.FirstPulseNumber+1, int(p1.PulseNumber))
 	}
 
 	keyProcessor := platformpolicy.NewKeyProcessor()
@@ -162,7 +162,7 @@ func TestPulsar_SendPulseToNode(t *testing.T) {
 
 	// Act
 	go func() {
-		err := newPulsar.StartConsensusProcess(ctx, core.GenesisPulse.PulseNumber+1)
+		err := newPulsar.StartConsensusProcess(ctx, insolar.GenesisPulse.PulseNumber+1)
 		require.NoError(t, err)
 	}()
 
@@ -178,19 +178,19 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 
 	// Arrange
 	storage := pulsartestutils.NewPulsarStorageMock(t)
-	storage.GetLastPulseMock.Return(core.GenesisPulse, nil)
-	storage.SavePulseFunc = func(p *core.Pulse) (r error) {
-		require.Equal(t, core.FirstPulseNumber+1, int(p.PulseNumber))
+	storage.GetLastPulseMock.Return(insolar.GenesisPulse, nil)
+	storage.SavePulseFunc = func(p *insolar.Pulse) (r error) {
+		require.Equal(t, insolar.FirstPulseNumber+1, int(p.PulseNumber))
 		return nil
 	}
-	storage.SetLastPulseFunc = func(p *core.Pulse) (r error) {
-		require.Equal(t, core.FirstPulseNumber+1, int(p.PulseNumber))
+	storage.SetLastPulseFunc = func(p *insolar.Pulse) (r error) {
+		require.Equal(t, insolar.FirstPulseNumber+1, int(p.PulseNumber))
 		return nil
 	}
 
 	pulseDistributor := testutils.NewPulseDistributorMock(t)
-	pulseDistributor.DistributeFunc = func(p context.Context, p1 core.Pulse) {
-		require.Equal(t, core.FirstPulseNumber+1, int(p1.PulseNumber))
+	pulseDistributor.DistributeFunc = func(p context.Context, p1 insolar.Pulse) {
+		require.Equal(t, insolar.FirstPulseNumber+1, int(p1.PulseNumber))
 	}
 
 	keyProcessorFirst := platformpolicy.NewKeyProcessor()
@@ -277,7 +277,7 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 
 	// Act
 	go func() {
-		err = firstPulsar.StartConsensusProcess(ctx, core.GenesisPulse.PulseNumber+1)
+		err = firstPulsar.StartConsensusProcess(ctx, insolar.GenesisPulse.PulseNumber+1)
 		require.NoError(t, err)
 	}()
 	time.Sleep(500 * time.Millisecond)
@@ -288,8 +288,8 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 
 	require.Equal(t, WaitingForStart, firstPulsar.StateSwitcher.GetState())
 	require.Equal(t, WaitingForStart, secondPulsar.StateSwitcher.GetState())
-	require.Equal(t, core.GenesisPulse.PulseNumber+1, firstPulsar.GetLastPulse().PulseNumber)
-	require.Equal(t, core.GenesisPulse.PulseNumber+1, secondPulsar.GetLastPulse().PulseNumber)
+	require.Equal(t, insolar.GenesisPulse.PulseNumber+1, firstPulsar.GetLastPulse().PulseNumber)
+	require.Equal(t, insolar.GenesisPulse.PulseNumber+1, secondPulsar.GetLastPulse().PulseNumber)
 	require.Equal(t, 2, len(firstPulsar.GetLastPulse().Signs))
 	require.Equal(t, 2, len(secondPulsar.GetLastPulse().Signs))
 
@@ -304,13 +304,13 @@ func TestSevenPulsars_Full_Consensus(t *testing.T) {
 	// Arrange
 
 	storage := pulsartestutils.NewPulsarStorageMock(t)
-	storage.GetLastPulseMock.Return(core.GenesisPulse, nil)
-	storage.SavePulseFunc = func(p *core.Pulse) (r error) {
-		require.Equal(t, core.FirstPulseNumber+1, int(p.PulseNumber))
+	storage.GetLastPulseMock.Return(insolar.GenesisPulse, nil)
+	storage.SavePulseFunc = func(p *insolar.Pulse) (r error) {
+		require.Equal(t, insolar.FirstPulseNumber+1, int(p.PulseNumber))
 		return nil
 	}
-	storage.SetLastPulseFunc = func(p *core.Pulse) (r error) {
-		require.Equal(t, core.FirstPulseNumber+1, int(p.PulseNumber))
+	storage.SetLastPulseFunc = func(p *insolar.Pulse) (r error) {
+		require.Equal(t, insolar.FirstPulseNumber+1, int(p.PulseNumber))
 		return nil
 	}
 
@@ -335,8 +335,8 @@ func TestSevenPulsars_Full_Consensus(t *testing.T) {
 	}
 
 	pulseDistributorMock := testutils.NewPulseDistributorMock(t)
-	pulseDistributorMock.DistributeFunc = func(p context.Context, p1 core.Pulse) {
-		require.Equal(t, core.FirstPulseNumber+1, int(p1.PulseNumber))
+	pulseDistributorMock.DistributeFunc = func(p context.Context, p1 insolar.Pulse) {
+		require.Equal(t, insolar.FirstPulseNumber+1, int(p1.PulseNumber))
 	}
 
 	for pulsarIndex := 0; pulsarIndex < 7; pulsarIndex++ {
@@ -410,7 +410,7 @@ func TestSevenPulsars_Full_Consensus(t *testing.T) {
 
 	// Main act
 	go func() {
-		err := pulsars[0].StartConsensusProcess(ctx, core.GenesisPulse.PulseNumber+1)
+		err := pulsars[0].StartConsensusProcess(ctx, insolar.GenesisPulse.PulseNumber+1)
 		require.NoError(t, err)
 	}()
 
@@ -423,7 +423,7 @@ func TestSevenPulsars_Full_Consensus(t *testing.T) {
 
 		pulsar.lastPulseLock.RLock()
 
-		require.Equal(t, core.GenesisPulse.PulseNumber+1, pulsar.GetLastPulse().PulseNumber)
+		require.Equal(t, insolar.GenesisPulse.PulseNumber+1, pulsar.GetLastPulse().PulseNumber)
 		require.Equal(t, 7, len(pulsar.GetLastPulse().Signs))
 
 		pulsar.lastPulseLock.RUnlock()
@@ -434,7 +434,7 @@ func TestSevenPulsars_Full_Consensus(t *testing.T) {
 			pulseSenderConfirmation := pulsar.GetLastPulse().Signs[string(publicKeyBytes)]
 
 			confirmationForCheck := PulseSenderConfirmationPayload{
-				core.PulseSenderConfirmation{
+				insolar.PulseSenderConfirmation{
 					PulseNumber:     pulseSenderConfirmation.PulseNumber,
 					ChosenPublicKey: pulseSenderConfirmation.ChosenPublicKey,
 					Entropy:         pulseSenderConfirmation.Entropy,
@@ -444,7 +444,7 @@ func TestSevenPulsars_Full_Consensus(t *testing.T) {
 			hashProvider := pulsar.PlatformCryptographyScheme.IntegrityHasher()
 			hash, _ := confirmationForCheck.Hash(hashProvider)
 
-			isOk := pulsar.CryptographyService.Verify(pubKey, core.SignatureFromBytes(pulseSenderConfirmation.Signature), hash)
+			isOk := pulsar.CryptographyService.Verify(pubKey, insolar.SignatureFromBytes(pulseSenderConfirmation.Signature), hash)
 			require.Equal(t, true, isOk)
 		}
 	}

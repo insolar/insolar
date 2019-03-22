@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package node
 
@@ -20,9 +20,8 @@ import (
 	"testing"
 
 	"github.com/google/gofuzz"
-	"github.com/insolar/insolar"
-	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/gen"
+	"github.com/insolar/insolar/insolar"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -71,14 +70,14 @@ func TestNodeStorage_InRole(t *testing.T) {
 	{
 		f := fuzz.New().Funcs(func(e *insolar.Node, c fuzz.Continue) {
 			e.ID = gen.Reference()
-			e.Role = core.StaticRoleVirtual
+			e.Role = insolar.StaticRoleVirtual
 		})
 		f.NumElements(5, 10).NilChance(0).Fuzz(&virtuals)
 	}
 	{
 		f := fuzz.New().Funcs(func(e *insolar.Node, c fuzz.Continue) {
 			e.ID = gen.Reference()
-			e.Role = core.StaticRoleLightMaterial
+			e.Role = insolar.StaticRoleLightMaterial
 		})
 		f.NumElements(5, 10).NilChance(0).Fuzz(&materials)
 	}
@@ -89,12 +88,12 @@ func TestNodeStorage_InRole(t *testing.T) {
 		nodeStorage := NewStorage()
 		nodeStorage.nodes[pulse] = all
 		{
-			result, err := nodeStorage.InRole(pulse, core.StaticRoleVirtual)
+			result, err := nodeStorage.InRole(pulse, insolar.StaticRoleVirtual)
 			assert.NoError(t, err)
 			assert.Equal(t, virtuals, result)
 		}
 		{
-			result, err := nodeStorage.InRole(pulse, core.StaticRoleLightMaterial)
+			result, err := nodeStorage.InRole(pulse, insolar.StaticRoleLightMaterial)
 			assert.NoError(t, err)
 			assert.Equal(t, materials, result)
 		}
@@ -103,14 +102,14 @@ func TestNodeStorage_InRole(t *testing.T) {
 	t.Run("returns nil when empty nodes", func(t *testing.T) {
 		nodeStorage := NewStorage()
 		nodeStorage.nodes[pulse] = nil
-		result, err := nodeStorage.InRole(pulse, core.StaticRoleVirtual)
+		result, err := nodeStorage.InRole(pulse, insolar.StaticRoleVirtual)
 		assert.NoError(t, err)
 		assert.Nil(t, result)
 	})
 
 	t.Run("returns error when no nodes", func(t *testing.T) {
 		nodeStorage := NewStorage()
-		result, err := nodeStorage.InRole(pulse, core.StaticRoleVirtual)
+		result, err := nodeStorage.InRole(pulse, insolar.StaticRoleVirtual)
 		assert.Equal(t, ErrNoNodes, err)
 		assert.Nil(t, result)
 	})

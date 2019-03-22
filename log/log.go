@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package log
 
@@ -24,15 +24,15 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 )
 
 const defaultSkipCallNumber = 3
 const timestampFormat = "2006-01-02 15:04:05.000000"
 
 // NewLog creates logger instance with particular configuration
-func NewLog(cfg configuration.Log) (core.Logger, error) {
-	var logger core.Logger
+func NewLog(cfg configuration.Log) (insolar.Logger, error) {
+	var logger insolar.Logger
 	var err error
 
 	switch strings.ToLower(cfg.Adapter) {
@@ -57,7 +57,7 @@ func NewLog(cfg configuration.Log) (core.Logger, error) {
 
 // GlobalLogger creates global logger with correct skipCallNumber
 // TODO: make it private again
-var GlobalLogger = func() core.Logger {
+var GlobalLogger = func() insolar.Logger {
 	holder := configuration.NewHolder().MustInit(false)
 	logger, err := NewLog(holder.Configuration.Log)
 	if err != nil {
@@ -71,7 +71,7 @@ var GlobalLogger = func() core.Logger {
 	return logger
 }()
 
-func SetGlobalLogger(logger core.Logger) {
+func SetGlobalLogger(logger insolar.Logger) {
 	GlobalLogger = logger
 }
 

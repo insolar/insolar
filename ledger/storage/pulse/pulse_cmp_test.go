@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package pulse_test
 
@@ -21,9 +21,9 @@ import (
 	rand2 "math/rand"
 	"testing"
 
-	"github.com/google/gofuzz"
-	"github.com/insolar/insolar/core"
+	fuzz "github.com/google/gofuzz"
 	"github.com/insolar/insolar/gen"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage/db"
 	"github.com/insolar/insolar/ledger/storage/pulse"
@@ -35,10 +35,10 @@ func TestPulse_Components(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	memStorage := pulse.NewStorageMem()
 	dbStorage := pulse.NewStorageDB()
-	dbStorage.DB = db.NewMockDB()
+	dbStorage.DB = db.NewMemoryMockDB()
 
-	var pulses []core.Pulse
-	f := fuzz.New().Funcs(func(p *core.Pulse, c fuzz.Continue) {
+	var pulses []insolar.Pulse
+	f := fuzz.New().Funcs(func(p *insolar.Pulse, c fuzz.Continue) {
 		p.PulseNumber = gen.PulseNumber()
 		_, err := rand.Read(p.Entropy[:])
 		require.NoError(t, err)
@@ -46,7 +46,7 @@ func TestPulse_Components(t *testing.T) {
 	f.NilChance(0).NumElements(10, 20)
 	f.Fuzz(&pulses)
 
-	var appended []core.Pulse
+	var appended []insolar.Pulse
 	latest := pulses[0]
 	for i, p := range pulses {
 		// Append appends if pulse is greater.

@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 // Package builtin is implementation of builtin contracts engine
 package builtin
@@ -26,7 +26,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/helloworld"
 )
 
@@ -36,13 +36,13 @@ type Contract interface {
 
 // BuiltIn is a contract runner engine
 type BuiltIn struct {
-	AM       core.ArtifactManager
-	EB       core.MessageBus
+	AM       insolar.ArtifactManager
+	EB       insolar.MessageBus
 	Registry map[string]Contract
 }
 
 // NewBuiltIn is an constructor
-func NewBuiltIn(eb core.MessageBus, am core.ArtifactManager) *BuiltIn {
+func NewBuiltIn(eb insolar.MessageBus, am insolar.ArtifactManager) *BuiltIn {
 	bi := BuiltIn{
 		AM:       am,
 		EB:       eb,
@@ -54,7 +54,7 @@ func NewBuiltIn(eb core.MessageBus, am core.ArtifactManager) *BuiltIn {
 	return &bi
 }
 
-func (bi *BuiltIn) CallConstructor(ctx context.Context, callCtx *core.LogicCallContext, code core.RecordRef, name string, args core.Arguments) (objectState []byte, err error) {
+func (bi *BuiltIn) CallConstructor(ctx context.Context, callCtx *insolar.LogicCallContext, code insolar.Reference, name string, args insolar.Arguments) (objectState []byte, err error) {
 	panic("implement me")
 }
 
@@ -63,7 +63,7 @@ func (bi *BuiltIn) Stop() error {
 }
 
 // CallMethod runs a method on contract
-func (bi *BuiltIn) CallMethod(ctx context.Context, callCtx *core.LogicCallContext, codeRef core.RecordRef, data []byte, method string, args core.Arguments) (newObjectState []byte, methodResults core.Arguments, err error) {
+func (bi *BuiltIn) CallMethod(ctx context.Context, callCtx *insolar.LogicCallContext, codeRef insolar.Reference, data []byte, method string, args insolar.Arguments) (newObjectState []byte, methodResults insolar.Arguments, err error) {
 	am := bi.AM
 	ctx, span := instracer.StartSpan(ctx, "buildin.CallMethod")
 	defer span.End()

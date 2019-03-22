@@ -1,5 +1,5 @@
 /*
- *    Copyright 2019 Insolar
+ *    Copyright 2019 Insolar Technologies
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ package db
 import (
 	"testing"
 
-	"github.com/google/gofuzz"
+	fuzz "github.com/google/gofuzz"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -39,7 +39,7 @@ func (k testMockKey) ID() []byte {
 func TestMockDB_Get(t *testing.T) {
 	t.Parallel()
 
-	db := NewMockDB()
+	db := NewMemoryMockDB()
 
 	var (
 		key           testMockKey
@@ -55,7 +55,7 @@ func TestMockDB_Get(t *testing.T) {
 }
 
 func TestNewMockDB_Get_ValueImmutable(t *testing.T) {
-	db := NewMockDB()
+	db := NewMemoryMockDB()
 	key := testMockKey{
 		id:    []byte{1},
 		scope: 0,
@@ -72,7 +72,7 @@ func TestNewMockDB_Get_ValueImmutable(t *testing.T) {
 func TestMockDB_Set(t *testing.T) {
 	t.Parallel()
 
-	db := NewMockDB()
+	db := NewMemoryMockDB()
 
 	var (
 		key           testMockKey

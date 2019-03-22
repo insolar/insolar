@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package messagebus
 
@@ -29,9 +29,9 @@ import (
 	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/message"
-	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/hack"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
@@ -43,16 +43,16 @@ const deliverRPCMethodName = "MessageBus.Deliver"
 // MessageBus is component that routes application logic requests,
 // e.g. glue between network and logic runner
 type MessageBus struct {
-	Network                    core.Network                    `inject:""`
-	JetCoordinator             core.JetCoordinator             `inject:""`
-	NodeNetwork                core.NodeNetwork                `inject:""`
-	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
-	CryptographyService        core.CryptographyService        `inject:""`
-	DelegationTokenFactory     core.DelegationTokenFactory     `inject:""`
-	ParcelFactory              message.ParcelFactory           `inject:""`
-	PulseStorage               core.PulseStorage               `inject:""`
+	Network                    insolar.Network                    `inject:""`
+	JetCoordinator             insolar.JetCoordinator             `inject:""`
+	NodeNetwork                insolar.NodeNetwork                `inject:""`
+	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
+	CryptographyService        insolar.CryptographyService        `inject:""`
+	DelegationTokenFactory     insolar.DelegationTokenFactory     `inject:""`
+	ParcelFactory              message.ParcelFactory              `inject:""`
+	PulseStorage               insolar.PulseStorage               `inject:""`
 
-	handlers     map[core.MessageType]core.MessageHandler
+	handlers     map[insolar.MessageType]insolar.MessageHandler
 	signmessages bool
 
 	globalLock                  sync.RWMutex
@@ -65,7 +65,7 @@ type MessageBus struct {
 // wrap it, providing additional functionality.
 func NewMessageBus(config configuration.Configuration) (*MessageBus, error) {
 	mb := &MessageBus{
-		handlers:                 map[core.MessageType]core.MessageHandler{},
+		handlers:                 map[insolar.MessageType]insolar.MessageHandler{},
 		signmessages:             config.Host.SignMessages,
 		NextPulseMessagePoolChan: make(chan interface{}),
 	}
@@ -77,7 +77,7 @@ func NewMessageBus(config configuration.Configuration) (*MessageBus, error) {
 // stream is exhausted.
 //
 // Player can be created from MessageBus and passed as MessageBus instance.
-func (mb *MessageBus) NewPlayer(ctx context.Context, reader io.Reader) (core.MessageBus, error) {
+func (mb *MessageBus) NewPlayer(ctx context.Context, reader io.Reader) (insolar.MessageBus, error) {
 	tape, err := newMemoryTapeFromReader(ctx, reader)
 	if err != nil {
 		return nil, err
@@ -89,7 +89,7 @@ func (mb *MessageBus) NewPlayer(ctx context.Context, reader io.Reader) (core.Mes
 // NewRecorder creates a new recorder with unique tape that can be used to store message replies.
 //
 // Recorder can be created from MessageBus and passed as MessageBus instance.
-func (mb *MessageBus) NewRecorder(ctx context.Context, currentPulse core.Pulse) (core.MessageBus, error) {
+func (mb *MessageBus) NewRecorder(ctx context.Context, currentPulse insolar.Pulse) (insolar.MessageBus, error) {
 	tape := newMemoryTape(currentPulse.PulseNumber)
 	rec := newRecorder(mb, tape, mb.PlatformCryptographyScheme, mb.PulseStorage)
 	return rec, nil
@@ -117,7 +117,7 @@ func (mb *MessageBus) Unlock(ctx context.Context) {
 
 // Register sets a function as a handler for particular message type,
 // only one handler per type is allowed
-func (mb *MessageBus) Register(p core.MessageType, handler core.MessageHandler) error {
+func (mb *MessageBus) Register(p insolar.MessageType, handler insolar.MessageHandler) error {
 	_, ok := mb.handlers[p]
 	if ok {
 		return errors.New("handler for this type already exists")
@@ -128,7 +128,7 @@ func (mb *MessageBus) Register(p core.MessageType, handler core.MessageHandler) 
 }
 
 // MustRegister is a Register wrapper that panics if an error was returned.
-func (mb *MessageBus) MustRegister(p core.MessageType, handler core.MessageHandler) {
+func (mb *MessageBus) MustRegister(p insolar.MessageType, handler insolar.MessageHandler) {
 	err := mb.Register(p, handler)
 	if err != nil {
 		panic(err)
@@ -136,7 +136,7 @@ func (mb *MessageBus) MustRegister(p core.MessageType, handler core.MessageHandl
 }
 
 // Send an `Message` and get a `Value` or error from remote host.
-func (mb *MessageBus) Send(ctx context.Context, msg core.Message, ops *core.MessageSendOptions) (core.Reply, error) {
+func (mb *MessageBus) Send(ctx context.Context, msg insolar.Message, ops *insolar.MessageSendOptions) (insolar.Reply, error) {
 	ctx, span := instracer.StartSpan(ctx, "MessageBus.Send "+msg.Type().String())
 	defer span.End()
 
@@ -155,17 +155,17 @@ func (mb *MessageBus) Send(ctx context.Context, msg core.Message, ops *core.Mess
 }
 
 // CreateParcel creates signed message from provided message.
-func (mb *MessageBus) CreateParcel(ctx context.Context, msg core.Message, token core.DelegationToken, currentPulse core.Pulse) (core.Parcel, error) {
+func (mb *MessageBus) CreateParcel(ctx context.Context, msg insolar.Message, token insolar.DelegationToken, currentPulse insolar.Pulse) (insolar.Parcel, error) {
 	return mb.ParcelFactory.Create(ctx, msg, mb.NodeNetwork.GetOrigin().ID(), token, currentPulse)
 }
 
 // SendParcel sends provided message via network.
 func (mb *MessageBus) SendParcel(
 	ctx context.Context,
-	parcel core.Parcel,
-	currentPulse core.Pulse,
-	options *core.MessageSendOptions,
-) (core.Reply, error) {
+	parcel insolar.Parcel,
+	currentPulse insolar.Pulse,
+	options *insolar.MessageSendOptions,
+) (insolar.Reply, error) {
 	parcelType := parcel.Type().String()
 	ctx, span := instracer.StartSpan(ctx, "MessageBus.SendParcel "+parcelType)
 	ctx = insmetrics.InsertTag(ctx, tagMessageType, parcelType)
@@ -174,17 +174,17 @@ func (mb *MessageBus) SendParcel(
 	readBarrier(ctx, &mb.globalLock)
 
 	var (
-		nodes []core.RecordRef
+		nodes []insolar.Reference
 		err   error
 	)
 	if options != nil && options.Receiver != nil {
-		nodes = []core.RecordRef{*options.Receiver}
+		nodes = []insolar.Reference{*options.Receiver}
 	} else {
 		// TODO: send to all actors of the role if nil Target
 		target := parcel.DefaultTarget()
 		// FIXME: @andreyromancev. 21.12.18. Temp hack. All messages should have a default target.
 		if target == nil {
-			target = &core.RecordRef{}
+			target = &insolar.Reference{}
 		}
 		nodes, err = mb.JetCoordinator.QueryRole(ctx, parcel.DefaultRole(), *target.Record(), currentPulse.PulseNumber)
 		if err != nil {
@@ -200,7 +200,7 @@ func (mb *MessageBus) SendParcel(
 	stats.Record(ctx, statParcelsSentTotal.M(1))
 
 	if len(nodes) > 1 {
-		cascade := core.Cascade{
+		cascade := insolar.Cascade{
 			NodeIds:           nodes,
 			Entropy:           currentPulse.Entropy,
 			ReplicationFactor: 2,
@@ -232,7 +232,7 @@ func (e *serializableError) Error() string {
 	return e.S
 }
 
-func (mb *MessageBus) OnPulse(context.Context, core.Pulse) error {
+func (mb *MessageBus) OnPulse(context.Context, insolar.Pulse) error {
 	close(mb.NextPulseMessagePoolChan)
 
 	mb.NextPulseMessagePoolLock.Lock()
@@ -243,7 +243,7 @@ func (mb *MessageBus) OnPulse(context.Context, core.Pulse) error {
 	return nil
 }
 
-func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Reply, error) {
+func (mb *MessageBus) doDeliver(ctx context.Context, msg insolar.Parcel) (insolar.Reply, error) {
 
 	var err error
 	ctx, span := instracer.StartSpan(ctx, "MessageBus.doDeliver")
@@ -280,7 +280,7 @@ func (mb *MessageBus) doDeliver(ctx context.Context, msg core.Parcel) (core.Repl
 	return resp, nil
 }
 
-func (mb *MessageBus) checkPulse(ctx context.Context, parcel core.Parcel, locked bool) error {
+func (mb *MessageBus) checkPulse(ctx context.Context, parcel insolar.Parcel, locked bool) error {
 	ctx, span := instracer.StartSpan(ctx, "MessageBus.checkPulse")
 	defer span.End()
 
@@ -324,7 +324,7 @@ func (mb *MessageBus) checkPulse(ctx context.Context, parcel core.Parcel, locked
 	return nil
 }
 
-func (mb *MessageBus) handleParcelFromTheFuture(ctx context.Context, parcel core.Parcel, locked bool) error {
+func (mb *MessageBus) handleParcelFromTheFuture(ctx context.Context, parcel insolar.Parcel, locked bool) error {
 	ctx, span := instracer.StartSpan(ctx, "MessageBus.handleParcelFromTheFuture")
 	defer span.End()
 
@@ -415,7 +415,7 @@ func (mb *MessageBus) deliver(ctx context.Context, args [][]byte) (result []byte
 	return buf.Bytes(), nil
 }
 
-func (mb *MessageBus) checkParcel(ctx context.Context, parcel core.Parcel) error {
+func (mb *MessageBus) checkParcel(ctx context.Context, parcel insolar.Parcel) error {
 	sender := parcel.GetSender()
 
 	if mb.signmessages {

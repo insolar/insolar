@@ -1,19 +1,52 @@
-/*
- * The Clear BSD License
- *
- * Copyright (c) 2019 Insolar Technologies
- *
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without modification, are permitted (subject to the limitations in the disclaimer below) provided that the following conditions are met:
- *
- *  Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
- *  Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
- *  Neither the name of Insolar Technologies nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
- *
- * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- */
+//
+// Modified BSD 3-Clause Clear License
+//
+// Copyright (c) 2019 Insolar Technologies GmbH
+//
+// All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without modification,
+// are permitted (subject to the limitations in the disclaimer below) provided that
+// the following conditions are met:
+//  * Redistributions of source code must retain the above copyright notice, this list
+//    of conditions and the following disclaimer.
+//  * Redistributions in binary form must reproduce the above copyright notice, this list
+//    of conditions and the following disclaimer in the documentation and/or other materials
+//    provided with the distribution.
+//  * Neither the name of Insolar Technologies GmbH nor the names of its contributors
+//    may be used to endorse or promote products derived from this software without
+//    specific prior written permission.
+//
+// NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED
+// BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS
+// AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+// INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY
+// AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL
+// THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+// INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+// OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+//
+// Notwithstanding any other provisions of this license, it is prohibited to:
+//    (a) use this software,
+//
+//    (b) prepare modifications and derivative works of this software,
+//
+//    (c) distribute this software (including without limitation in source code, binary or
+//        object code form), and
+//
+//    (d) reproduce copies of this software
+//
+//    for any commercial purposes, and/or
+//
+//    for the purposes of making available this software to third parties as a service,
+//    including, without limitation, any software-as-a-service, platform-as-a-service,
+//    infrastructure-as-a-service or other similar online service, irrespective of
+//    whether it competes with the products or services of Insolar Technologies GmbH.
+//
 
 package networkcoordinator
 
@@ -22,17 +55,17 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/certificate"
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/message"
-	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 )
 
-func mockContractRequester(t *testing.T, nodeRef core.RecordRef, ok bool, r []byte) core.ContractRequester {
+func mockContractRequester(t *testing.T, nodeRef insolar.Reference, ok bool, r []byte) insolar.ContractRequester {
 	cr := testutils.NewContractRequesterMock(t)
-	cr.SendRequestFunc = func(ctx context.Context, ref *core.RecordRef, method string, args []interface{}) (core.Reply, error) {
+	cr.SendRequestFunc = func(ctx context.Context, ref *insolar.Reference, method string, args []interface{}) (insolar.Reply, error) {
 		require.Equal(t, nodeRef, *ref)
 		require.Equal(t, "GetNodeInfo", method)
 		require.Equal(t, 0, len(args))
@@ -58,8 +91,8 @@ func TestRealNetworkCoordinator_GetCert(t *testing.T) {
 	cr := mockContractRequester(t, nodeRef, true, mockReply(t))
 
 	ns := testutils.NewNetworkSwitcherMock(t)
-	ns.GetStateFunc = func() core.NetworkState {
-		return core.CompleteNetworkState
+	ns.GetStateFunc = func() insolar.NetworkState {
+		return insolar.CompleteNetworkState
 	}
 
 	mb := mockMessageBus(t, true, &nodeRef, &certNodeRef)
@@ -118,8 +151,8 @@ func TestRealNetworkCoordinator_GetCert_UnsignedCertificateError(t *testing.T) {
 	cr := mockContractRequester(t, nodeRef, true, mockReply(t))
 
 	ns := testutils.NewNetworkSwitcherMock(t)
-	ns.GetStateFunc = func() core.NetworkState {
-		return core.CompleteNetworkState
+	ns.GetStateFunc = func() insolar.NetworkState {
+		return insolar.CompleteNetworkState
 	}
 
 	cm := mockCertificateManager(t, &certNodeRef, &certNodeRef, false)
@@ -136,8 +169,8 @@ func TestRealNetworkCoordinator_GetCert_SignCertError(t *testing.T) {
 	cr := mockContractRequester(t, nodeRef, true, mockReply(t))
 
 	ns := testutils.NewNetworkSwitcherMock(t)
-	ns.GetStateFunc = func() core.NetworkState {
-		return core.CompleteNetworkState
+	ns.GetStateFunc = func() insolar.NetworkState {
+		return insolar.CompleteNetworkState
 	}
 
 	cm := mockCertificateManager(t, &certNodeRef, &certNodeRef, true)
@@ -156,8 +189,8 @@ func TestRealNetworkCoordinator_requestCertSignSelfDiscoveryNode(t *testing.T) {
 	cr := mockContractRequester(t, nodeRef, true, mockReply(t))
 
 	ns := testutils.NewNetworkSwitcherMock(t)
-	ns.GetStateFunc = func() core.NetworkState {
-		return core.CompleteNetworkState
+	ns.GetStateFunc = func() insolar.NetworkState {
+		return insolar.CompleteNetworkState
 	}
 
 	mb := mockMessageBus(t, true, &nodeRef, &certNodeRef)
@@ -186,16 +219,16 @@ func TestRealNetworkCoordinator_requestCertSignOtherDiscoveryNode(t *testing.T) 
 	cr := mockContractRequester(t, nodeRef, true, mockReply(t))
 
 	ns := testutils.NewNetworkSwitcherMock(t)
-	ns.GetStateFunc = func() core.NetworkState {
-		return core.CompleteNetworkState
+	ns.GetStateFunc = func() insolar.NetworkState {
+		return insolar.CompleteNetworkState
 	}
 
 	mb := mockMessageBus(t, true, &nodeRef, &discoveryNodeRef)
 
 	cm := mockCertificateManager(t, &certNodeRef, &discoveryNodeRef, true)
 	ps := testutils.NewPulseStorageMock(t)
-	ps.CurrentFunc = func(ctx context.Context) (*core.Pulse, error) {
-		return &core.Pulse{}, nil
+	ps.CurrentFunc = func(ctx context.Context) (*insolar.Pulse, error) {
+		return &insolar.Pulse{}, nil
 	}
 
 	coord := newRealNetworkCoordinator(cm, cr, mb, nil)
@@ -218,8 +251,8 @@ func TestRealNetworkCoordinator_requestCertSignSelfDiscoveryNode_signCertError(t
 	cr := mockContractRequester(t, nodeRef, false, nil)
 
 	ns := testutils.NewNetworkSwitcherMock(t)
-	ns.GetStateFunc = func() core.NetworkState {
-		return core.CompleteNetworkState
+	ns.GetStateFunc = func() insolar.NetworkState {
+		return insolar.CompleteNetworkState
 	}
 
 	cm := mockCertificateManager(t, &certNodeRef, &certNodeRef, true)
@@ -243,8 +276,8 @@ func TestRealNetworkCoordinator_requestCertSignOtherDiscoveryNode_CurrentPulseEr
 	cr := mockContractRequester(t, nodeRef, true, mockReply(t))
 
 	ns := testutils.NewNetworkSwitcherMock(t)
-	ns.GetStateFunc = func() core.NetworkState {
-		return core.CompleteNetworkState
+	ns.GetStateFunc = func() insolar.NetworkState {
+		return insolar.CompleteNetworkState
 	}
 
 	mb := mockMessageBus(t, false, &nodeRef, &discoveryNodeRef)
@@ -270,8 +303,8 @@ func TestRealNetworkCoordinator_requestCertSignOtherDiscoveryNode_SendError(t *t
 	cr := mockContractRequester(t, nodeRef, true, mockReply(t))
 
 	ns := testutils.NewNetworkSwitcherMock(t)
-	ns.GetStateFunc = func() core.NetworkState {
-		return core.CompleteNetworkState
+	ns.GetStateFunc = func() insolar.NetworkState {
+		return insolar.CompleteNetworkState
 	}
 
 	mb := mockMessageBus(t, false, &nodeRef, &discoveryNodeRef)
@@ -279,8 +312,8 @@ func TestRealNetworkCoordinator_requestCertSignOtherDiscoveryNode_SendError(t *t
 	cm := mockCertificateManager(t, &certNodeRef, &discoveryNodeRef, true)
 
 	ps := testutils.NewPulseStorageMock(t)
-	ps.CurrentFunc = func(ctx context.Context) (*core.Pulse, error) {
-		return &core.Pulse{}, nil
+	ps.CurrentFunc = func(ctx context.Context) (*insolar.Pulse, error) {
+		return &insolar.Pulse{}, nil
 	}
 
 	coord := newRealNetworkCoordinator(cm, cr, mb, nil)

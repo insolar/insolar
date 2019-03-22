@@ -26,7 +26,7 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -40,17 +40,17 @@ type PulsarStorageMock struct {
 	ClosePreCounter uint64
 	CloseMock       mPulsarStorageMockClose
 
-	GetLastPulseFunc       func() (r *core.Pulse, r1 error)
+	GetLastPulseFunc       func() (r *insolar.Pulse, r1 error)
 	GetLastPulseCounter    uint64
 	GetLastPulsePreCounter uint64
 	GetLastPulseMock       mPulsarStorageMockGetLastPulse
 
-	SavePulseFunc       func(p *core.Pulse) (r error)
+	SavePulseFunc       func(p *insolar.Pulse) (r error)
 	SavePulseCounter    uint64
 	SavePulsePreCounter uint64
 	SavePulseMock       mPulsarStorageMockSavePulse
 
-	SetLastPulseFunc       func(p *core.Pulse) (r error)
+	SetLastPulseFunc       func(p *insolar.Pulse) (r error)
 	SetLastPulseCounter    uint64
 	SetLastPulsePreCounter uint64
 	SetLastPulseMock       mPulsarStorageMockSetLastPulse
@@ -119,22 +119,22 @@ type mPulsarStorageMockGetLastPulse struct {
 }
 
 //Return sets up a mock for PulsarStorage.GetLastPulse to return Return's arguments
-func (m *mPulsarStorageMockGetLastPulse) Return(r *core.Pulse, r1 error) *PulsarStorageMock {
-	m.mock.GetLastPulseFunc = func() (*core.Pulse, error) {
+func (m *mPulsarStorageMockGetLastPulse) Return(r *insolar.Pulse, r1 error) *PulsarStorageMock {
+	m.mock.GetLastPulseFunc = func() (*insolar.Pulse, error) {
 		return r, r1
 	}
 	return m.mock
 }
 
 //Set uses given function f as a mock of PulsarStorage.GetLastPulse method
-func (m *mPulsarStorageMockGetLastPulse) Set(f func() (r *core.Pulse, r1 error)) *PulsarStorageMock {
+func (m *mPulsarStorageMockGetLastPulse) Set(f func() (r *insolar.Pulse, r1 error)) *PulsarStorageMock {
 	m.mock.GetLastPulseFunc = f
 
 	return m.mock
 }
 
 //GetLastPulse implements github.com/insolar/insolar/pulsar/storage.PulsarStorage interface
-func (m *PulsarStorageMock) GetLastPulse() (r *core.Pulse, r1 error) {
+func (m *PulsarStorageMock) GetLastPulse() (r *insolar.Pulse, r1 error) {
 	atomic.AddUint64(&m.GetLastPulsePreCounter, 1)
 	defer atomic.AddUint64(&m.GetLastPulseCounter, 1)
 
@@ -163,32 +163,32 @@ type mPulsarStorageMockSavePulse struct {
 
 //PulsarStorageMockSavePulseParams represents input parameters of the PulsarStorage.SavePulse
 type PulsarStorageMockSavePulseParams struct {
-	p *core.Pulse
+	p *insolar.Pulse
 }
 
 //Expect sets up expected params for the PulsarStorage.SavePulse
-func (m *mPulsarStorageMockSavePulse) Expect(p *core.Pulse) *mPulsarStorageMockSavePulse {
+func (m *mPulsarStorageMockSavePulse) Expect(p *insolar.Pulse) *mPulsarStorageMockSavePulse {
 	m.mockExpectations = &PulsarStorageMockSavePulseParams{p}
 	return m
 }
 
 //Return sets up a mock for PulsarStorage.SavePulse to return Return's arguments
 func (m *mPulsarStorageMockSavePulse) Return(r error) *PulsarStorageMock {
-	m.mock.SavePulseFunc = func(p *core.Pulse) error {
+	m.mock.SavePulseFunc = func(p *insolar.Pulse) error {
 		return r
 	}
 	return m.mock
 }
 
 //Set uses given function f as a mock of PulsarStorage.SavePulse method
-func (m *mPulsarStorageMockSavePulse) Set(f func(p *core.Pulse) (r error)) *PulsarStorageMock {
+func (m *mPulsarStorageMockSavePulse) Set(f func(p *insolar.Pulse) (r error)) *PulsarStorageMock {
 	m.mock.SavePulseFunc = f
 	m.mockExpectations = nil
 	return m.mock
 }
 
 //SavePulse implements github.com/insolar/insolar/pulsar/storage.PulsarStorage interface
-func (m *PulsarStorageMock) SavePulse(p *core.Pulse) (r error) {
+func (m *PulsarStorageMock) SavePulse(p *insolar.Pulse) (r error) {
 	atomic.AddUint64(&m.SavePulsePreCounter, 1)
 	defer atomic.AddUint64(&m.SavePulseCounter, 1)
 
@@ -229,32 +229,32 @@ type mPulsarStorageMockSetLastPulse struct {
 
 //PulsarStorageMockSetLastPulseParams represents input parameters of the PulsarStorage.SetLastPulse
 type PulsarStorageMockSetLastPulseParams struct {
-	p *core.Pulse
+	p *insolar.Pulse
 }
 
 //Expect sets up expected params for the PulsarStorage.SetLastPulse
-func (m *mPulsarStorageMockSetLastPulse) Expect(p *core.Pulse) *mPulsarStorageMockSetLastPulse {
+func (m *mPulsarStorageMockSetLastPulse) Expect(p *insolar.Pulse) *mPulsarStorageMockSetLastPulse {
 	m.mockExpectations = &PulsarStorageMockSetLastPulseParams{p}
 	return m
 }
 
 //Return sets up a mock for PulsarStorage.SetLastPulse to return Return's arguments
 func (m *mPulsarStorageMockSetLastPulse) Return(r error) *PulsarStorageMock {
-	m.mock.SetLastPulseFunc = func(p *core.Pulse) error {
+	m.mock.SetLastPulseFunc = func(p *insolar.Pulse) error {
 		return r
 	}
 	return m.mock
 }
 
 //Set uses given function f as a mock of PulsarStorage.SetLastPulse method
-func (m *mPulsarStorageMockSetLastPulse) Set(f func(p *core.Pulse) (r error)) *PulsarStorageMock {
+func (m *mPulsarStorageMockSetLastPulse) Set(f func(p *insolar.Pulse) (r error)) *PulsarStorageMock {
 	m.mock.SetLastPulseFunc = f
 	m.mockExpectations = nil
 	return m.mock
 }
 
 //SetLastPulse implements github.com/insolar/insolar/pulsar/storage.PulsarStorage interface
-func (m *PulsarStorageMock) SetLastPulse(p *core.Pulse) (r error) {
+func (m *PulsarStorageMock) SetLastPulse(p *insolar.Pulse) (r error) {
 	atomic.AddUint64(&m.SetLastPulsePreCounter, 1)
 	defer atomic.AddUint64(&m.SetLastPulseCounter, 1)
 

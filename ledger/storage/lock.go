@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package storage
 
@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 )
 
 type mucount struct {
@@ -32,20 +32,20 @@ type mucount struct {
 //
 // TODO: for further optimization we could use sync.Pool for mutexes.
 type IDLocker struct {
-	m    map[core.RecordID]*mucount
+	m    map[insolar.ID]*mucount
 	rwmu sync.Mutex
 }
 
 // NewIDLocker creates new initialized IDLocker.
 func NewIDLocker() *IDLocker {
 	return &IDLocker{
-		m: make(map[core.RecordID]*mucount),
+		m: make(map[insolar.ID]*mucount),
 	}
 }
 
 // Lock locks mutex belonged to record ID.
 // If mutex does not exist, it will be created in concurrent safe fashion.
-func (l *IDLocker) Lock(id *core.RecordID) {
+func (l *IDLocker) Lock(id *insolar.ID) {
 	l.rwmu.Lock()
 	mc, ok := l.m[*id]
 	if !ok {
@@ -59,7 +59,7 @@ func (l *IDLocker) Lock(id *core.RecordID) {
 }
 
 // Unlock unlocks mutex belonged to record ID.
-func (l *IDLocker) Unlock(id *core.RecordID) {
+func (l *IDLocker) Unlock(id *insolar.ID) {
 	l.rwmu.Lock()
 	defer l.rwmu.Unlock()
 

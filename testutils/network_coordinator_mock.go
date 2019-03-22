@@ -3,7 +3,7 @@ package testutils
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "NetworkCoordinator" can be found in github.com/insolar/insolar/core
+The original interface "NetworkCoordinator" can be found in github.com/insolar/insolar/insolar
 */
 import (
 	context "context"
@@ -11,16 +11,16 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	core "github.com/insolar/insolar/core"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//NetworkCoordinatorMock implements github.com/insolar/insolar/core.NetworkCoordinator
+//NetworkCoordinatorMock implements github.com/insolar/insolar/insolar.NetworkCoordinator
 type NetworkCoordinatorMock struct {
 	t minimock.Tester
 
-	GetCertFunc       func(p context.Context, p1 *core.RecordRef) (r core.Certificate, r1 error)
+	GetCertFunc       func(p context.Context, p1 *insolar.Reference) (r insolar.Certificate, r1 error)
 	GetCertCounter    uint64
 	GetCertPreCounter uint64
 	GetCertMock       mNetworkCoordinatorMockGetCert
@@ -30,18 +30,18 @@ type NetworkCoordinatorMock struct {
 	IsStartedPreCounter uint64
 	IsStartedMock       mNetworkCoordinatorMockIsStarted
 
-	SetPulseFunc       func(p context.Context, p1 core.Pulse) (r error)
+	SetPulseFunc       func(p context.Context, p1 insolar.Pulse) (r error)
 	SetPulseCounter    uint64
 	SetPulsePreCounter uint64
 	SetPulseMock       mNetworkCoordinatorMockSetPulse
 
-	ValidateCertFunc       func(p context.Context, p1 core.AuthorizationCertificate) (r bool, r1 error)
+	ValidateCertFunc       func(p context.Context, p1 insolar.AuthorizationCertificate) (r bool, r1 error)
 	ValidateCertCounter    uint64
 	ValidateCertPreCounter uint64
 	ValidateCertMock       mNetworkCoordinatorMockValidateCert
 }
 
-//NewNetworkCoordinatorMock returns a mock for github.com/insolar/insolar/core.NetworkCoordinator
+//NewNetworkCoordinatorMock returns a mock for github.com/insolar/insolar/insolar.NetworkCoordinator
 func NewNetworkCoordinatorMock(t minimock.Tester) *NetworkCoordinatorMock {
 	m := &NetworkCoordinatorMock{t: t}
 
@@ -70,16 +70,16 @@ type NetworkCoordinatorMockGetCertExpectation struct {
 
 type NetworkCoordinatorMockGetCertInput struct {
 	p  context.Context
-	p1 *core.RecordRef
+	p1 *insolar.Reference
 }
 
 type NetworkCoordinatorMockGetCertResult struct {
-	r  core.Certificate
+	r  insolar.Certificate
 	r1 error
 }
 
 //Expect specifies that invocation of NetworkCoordinator.GetCert is expected from 1 to Infinity times
-func (m *mNetworkCoordinatorMockGetCert) Expect(p context.Context, p1 *core.RecordRef) *mNetworkCoordinatorMockGetCert {
+func (m *mNetworkCoordinatorMockGetCert) Expect(p context.Context, p1 *insolar.Reference) *mNetworkCoordinatorMockGetCert {
 	m.mock.GetCertFunc = nil
 	m.expectationSeries = nil
 
@@ -91,7 +91,7 @@ func (m *mNetworkCoordinatorMockGetCert) Expect(p context.Context, p1 *core.Reco
 }
 
 //Return specifies results of invocation of NetworkCoordinator.GetCert
-func (m *mNetworkCoordinatorMockGetCert) Return(r core.Certificate, r1 error) *NetworkCoordinatorMock {
+func (m *mNetworkCoordinatorMockGetCert) Return(r insolar.Certificate, r1 error) *NetworkCoordinatorMock {
 	m.mock.GetCertFunc = nil
 	m.expectationSeries = nil
 
@@ -103,7 +103,7 @@ func (m *mNetworkCoordinatorMockGetCert) Return(r core.Certificate, r1 error) *N
 }
 
 //ExpectOnce specifies that invocation of NetworkCoordinator.GetCert is expected once
-func (m *mNetworkCoordinatorMockGetCert) ExpectOnce(p context.Context, p1 *core.RecordRef) *NetworkCoordinatorMockGetCertExpectation {
+func (m *mNetworkCoordinatorMockGetCert) ExpectOnce(p context.Context, p1 *insolar.Reference) *NetworkCoordinatorMockGetCertExpectation {
 	m.mock.GetCertFunc = nil
 	m.mainExpectation = nil
 
@@ -113,12 +113,12 @@ func (m *mNetworkCoordinatorMockGetCert) ExpectOnce(p context.Context, p1 *core.
 	return expectation
 }
 
-func (e *NetworkCoordinatorMockGetCertExpectation) Return(r core.Certificate, r1 error) {
+func (e *NetworkCoordinatorMockGetCertExpectation) Return(r insolar.Certificate, r1 error) {
 	e.result = &NetworkCoordinatorMockGetCertResult{r, r1}
 }
 
 //Set uses given function f as a mock of NetworkCoordinator.GetCert method
-func (m *mNetworkCoordinatorMockGetCert) Set(f func(p context.Context, p1 *core.RecordRef) (r core.Certificate, r1 error)) *NetworkCoordinatorMock {
+func (m *mNetworkCoordinatorMockGetCert) Set(f func(p context.Context, p1 *insolar.Reference) (r insolar.Certificate, r1 error)) *NetworkCoordinatorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -126,8 +126,8 @@ func (m *mNetworkCoordinatorMockGetCert) Set(f func(p context.Context, p1 *core.
 	return m.mock
 }
 
-//GetCert implements github.com/insolar/insolar/core.NetworkCoordinator interface
-func (m *NetworkCoordinatorMock) GetCert(p context.Context, p1 *core.RecordRef) (r core.Certificate, r1 error) {
+//GetCert implements github.com/insolar/insolar/insolar.NetworkCoordinator interface
+func (m *NetworkCoordinatorMock) GetCert(p context.Context, p1 *insolar.Reference) (r insolar.Certificate, r1 error) {
 	counter := atomic.AddUint64(&m.GetCertPreCounter, 1)
 	defer atomic.AddUint64(&m.GetCertCounter, 1)
 
@@ -270,7 +270,7 @@ func (m *mNetworkCoordinatorMockIsStarted) Set(f func() (r bool)) *NetworkCoordi
 	return m.mock
 }
 
-//IsStarted implements github.com/insolar/insolar/core.NetworkCoordinator interface
+//IsStarted implements github.com/insolar/insolar/insolar.NetworkCoordinator interface
 func (m *NetworkCoordinatorMock) IsStarted() (r bool) {
 	counter := atomic.AddUint64(&m.IsStartedPreCounter, 1)
 	defer atomic.AddUint64(&m.IsStartedCounter, 1)
@@ -355,7 +355,7 @@ type NetworkCoordinatorMockSetPulseExpectation struct {
 
 type NetworkCoordinatorMockSetPulseInput struct {
 	p  context.Context
-	p1 core.Pulse
+	p1 insolar.Pulse
 }
 
 type NetworkCoordinatorMockSetPulseResult struct {
@@ -363,7 +363,7 @@ type NetworkCoordinatorMockSetPulseResult struct {
 }
 
 //Expect specifies that invocation of NetworkCoordinator.SetPulse is expected from 1 to Infinity times
-func (m *mNetworkCoordinatorMockSetPulse) Expect(p context.Context, p1 core.Pulse) *mNetworkCoordinatorMockSetPulse {
+func (m *mNetworkCoordinatorMockSetPulse) Expect(p context.Context, p1 insolar.Pulse) *mNetworkCoordinatorMockSetPulse {
 	m.mock.SetPulseFunc = nil
 	m.expectationSeries = nil
 
@@ -387,7 +387,7 @@ func (m *mNetworkCoordinatorMockSetPulse) Return(r error) *NetworkCoordinatorMoc
 }
 
 //ExpectOnce specifies that invocation of NetworkCoordinator.SetPulse is expected once
-func (m *mNetworkCoordinatorMockSetPulse) ExpectOnce(p context.Context, p1 core.Pulse) *NetworkCoordinatorMockSetPulseExpectation {
+func (m *mNetworkCoordinatorMockSetPulse) ExpectOnce(p context.Context, p1 insolar.Pulse) *NetworkCoordinatorMockSetPulseExpectation {
 	m.mock.SetPulseFunc = nil
 	m.mainExpectation = nil
 
@@ -402,7 +402,7 @@ func (e *NetworkCoordinatorMockSetPulseExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of NetworkCoordinator.SetPulse method
-func (m *mNetworkCoordinatorMockSetPulse) Set(f func(p context.Context, p1 core.Pulse) (r error)) *NetworkCoordinatorMock {
+func (m *mNetworkCoordinatorMockSetPulse) Set(f func(p context.Context, p1 insolar.Pulse) (r error)) *NetworkCoordinatorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -410,8 +410,8 @@ func (m *mNetworkCoordinatorMockSetPulse) Set(f func(p context.Context, p1 core.
 	return m.mock
 }
 
-//SetPulse implements github.com/insolar/insolar/core.NetworkCoordinator interface
-func (m *NetworkCoordinatorMock) SetPulse(p context.Context, p1 core.Pulse) (r error) {
+//SetPulse implements github.com/insolar/insolar/insolar.NetworkCoordinator interface
+func (m *NetworkCoordinatorMock) SetPulse(p context.Context, p1 insolar.Pulse) (r error) {
 	counter := atomic.AddUint64(&m.SetPulsePreCounter, 1)
 	defer atomic.AddUint64(&m.SetPulseCounter, 1)
 
@@ -503,7 +503,7 @@ type NetworkCoordinatorMockValidateCertExpectation struct {
 
 type NetworkCoordinatorMockValidateCertInput struct {
 	p  context.Context
-	p1 core.AuthorizationCertificate
+	p1 insolar.AuthorizationCertificate
 }
 
 type NetworkCoordinatorMockValidateCertResult struct {
@@ -512,7 +512,7 @@ type NetworkCoordinatorMockValidateCertResult struct {
 }
 
 //Expect specifies that invocation of NetworkCoordinator.ValidateCert is expected from 1 to Infinity times
-func (m *mNetworkCoordinatorMockValidateCert) Expect(p context.Context, p1 core.AuthorizationCertificate) *mNetworkCoordinatorMockValidateCert {
+func (m *mNetworkCoordinatorMockValidateCert) Expect(p context.Context, p1 insolar.AuthorizationCertificate) *mNetworkCoordinatorMockValidateCert {
 	m.mock.ValidateCertFunc = nil
 	m.expectationSeries = nil
 
@@ -536,7 +536,7 @@ func (m *mNetworkCoordinatorMockValidateCert) Return(r bool, r1 error) *NetworkC
 }
 
 //ExpectOnce specifies that invocation of NetworkCoordinator.ValidateCert is expected once
-func (m *mNetworkCoordinatorMockValidateCert) ExpectOnce(p context.Context, p1 core.AuthorizationCertificate) *NetworkCoordinatorMockValidateCertExpectation {
+func (m *mNetworkCoordinatorMockValidateCert) ExpectOnce(p context.Context, p1 insolar.AuthorizationCertificate) *NetworkCoordinatorMockValidateCertExpectation {
 	m.mock.ValidateCertFunc = nil
 	m.mainExpectation = nil
 
@@ -551,7 +551,7 @@ func (e *NetworkCoordinatorMockValidateCertExpectation) Return(r bool, r1 error)
 }
 
 //Set uses given function f as a mock of NetworkCoordinator.ValidateCert method
-func (m *mNetworkCoordinatorMockValidateCert) Set(f func(p context.Context, p1 core.AuthorizationCertificate) (r bool, r1 error)) *NetworkCoordinatorMock {
+func (m *mNetworkCoordinatorMockValidateCert) Set(f func(p context.Context, p1 insolar.AuthorizationCertificate) (r bool, r1 error)) *NetworkCoordinatorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -559,8 +559,8 @@ func (m *mNetworkCoordinatorMockValidateCert) Set(f func(p context.Context, p1 c
 	return m.mock
 }
 
-//ValidateCert implements github.com/insolar/insolar/core.NetworkCoordinator interface
-func (m *NetworkCoordinatorMock) ValidateCert(p context.Context, p1 core.AuthorizationCertificate) (r bool, r1 error) {
+//ValidateCert implements github.com/insolar/insolar/insolar.NetworkCoordinator interface
+func (m *NetworkCoordinatorMock) ValidateCert(p context.Context, p1 insolar.AuthorizationCertificate) (r bool, r1 error) {
 	counter := atomic.AddUint64(&m.ValidateCertPreCounter, 1)
 	defer atomic.AddUint64(&m.ValidateCertCounter, 1)
 

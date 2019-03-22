@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package storage_test
 
@@ -24,19 +24,20 @@ import (
 	"testing"
 
 	"github.com/dgraph-io/badger"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
+
 	"github.com/insolar/insolar/component"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
-	jetdrop "github.com/insolar/insolar/ledger/storage/drop"
-	"github.com/insolar/insolar/ledger/storage/jet"
+	"github.com/insolar/insolar/ledger/storage/db"
+	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"github.com/stretchr/testify/suite"
 )
 
 type replicaIterSuite struct {
@@ -48,8 +49,8 @@ type replicaIterSuite struct {
 	db      storage.DBContext
 
 	objectStorage storage.ObjectStorage
-	dropModifier  jetdrop.Modifier
-	dropAccessor  jetdrop.Accessor
+	dropModifier  drop.Modifier
+	dropAccessor  drop.Accessor
 }
 
 func NewReplicaIterSuite() *replicaIterSuite {
@@ -67,18 +68,19 @@ func (s *replicaIterSuite) BeforeTest(suiteName, testName string) {
 	s.cm = &component.Manager{}
 	s.ctx = inslogger.TestContext(s.T())
 
-	db, cleaner := storagetest.TmpDB(s.ctx, s.T())
-	s.db = db
+	tmpDB, cleaner := storagetest.TmpDB(s.ctx, s.T())
+	s.db = tmpDB
 	s.cleaner = cleaner
 
 	s.objectStorage = storage.NewObjectStorage()
-	dropStorage := jetdrop.NewStorageDB()
+	dropStorage := drop.NewStorageDB()
 	s.dropAccessor = dropStorage
 	s.dropModifier = dropStorage
 
 	s.cm.Inject(
 		platformpolicy.NewPlatformCryptographyScheme(),
 		s.db,
+		db.NewMemoryMockDB(),
 		s.objectStorage,
 		s.dropAccessor,
 		s.dropModifier,
@@ -102,7 +104,7 @@ func (s *replicaIterSuite) AfterTest(suiteName, testName string) {
 	s.cleaner()
 }
 
-func pulseDelta(n int) core.PulseNumber { return core.PulseNumber(core.FirstPulseNumber + n) }
+func pulseDelta(n int) insolar.PulseNumber { return insolar.PulseNumber(insolar.FirstPulseNumber + n) }
 
 func Test_StoreKeyValues(t *testing.T) {
 	t.Parallel()
@@ -114,20 +116,21 @@ func Test_StoreKeyValues(t *testing.T) {
 		expectedrecs []key
 		expectedidxs []key
 	)
-	var allKVs []core.KV
+	var allKVs []insolar.KV
 	pulsescount := 3
 
 	func() {
-		db, cleaner := storagetest.TmpDB(ctx, t)
+		tmpDB, cleaner := storagetest.TmpDB(ctx, t)
 		defer cleaner()
 
 		os := storage.NewObjectStorage()
-		ds := jetdrop.NewStorageDB()
+		ds := drop.NewStorageDB()
 
 		cm := &component.Manager{}
 		cm.Inject(
 			platformpolicy.NewPlatformCryptographyScheme(),
-			db,
+			tmpDB,
+			db.NewMemoryMockDB(),
 			os,
 			ds,
 		)
@@ -142,14 +145,13 @@ func Test_StoreKeyValues(t *testing.T) {
 		defer cm.Stop(ctx)
 
 		for n := 0; n < pulsescount; n++ {
-			lastPulse := core.PulseNumber(pulseDelta(n))
+			lastPulse := insolar.PulseNumber(pulseDelta(n))
 			addRecords(ctx, t, os, jetID, lastPulse)
-			setDrop(ctx, t, ds, core.JetID(jetID), lastPulse)
 		}
 
 		for n := 0; n < pulsescount; n++ {
 			start, end := pulseDelta(n), pulseDelta(n+1)
-			replicator := storage.NewReplicaIter(ctx, db, jetID, start, end, 99)
+			replicator := storage.NewReplicaIter(ctx, tmpDB, jetID, start, end, 99)
 
 			for i := 0; ; i++ {
 				recs, err := replicator.NextRecords()
@@ -162,7 +164,7 @@ func Test_StoreKeyValues(t *testing.T) {
 				allKVs = append(allKVs, recs...)
 			}
 		}
-		expectedrecs, expectedidxs = getallkeys(db.GetBadgerDB())
+		expectedrecs, expectedidxs = getallkeys(tmpDB.GetBadgerDB())
 		nullifyJetInKeys(expectedrecs)
 		nullifyJetInKeys(expectedidxs)
 		sortkeys(expectedrecs)
@@ -190,10 +192,10 @@ func Test_StoreKeyValues(t *testing.T) {
 
 func (s *replicaIterSuite) Test_ReplicaIter_FirstPulse() {
 	// it's easy to test simple case with zero Jet
-	jetID := core.RecordID(*core.NewJetID(0, nil))
+	jetID := insolar.ID(*insolar.NewJetID(0, nil))
 
-	addRecords(s.ctx, s.T(), s.objectStorage, jetID, core.FirstPulseNumber)
-	replicator := storage.NewReplicaIter(s.ctx, s.db, jetID, core.FirstPulseNumber, core.FirstPulseNumber+1, 100500)
+	addRecords(s.ctx, s.T(), s.objectStorage, jetID, insolar.FirstPulseNumber)
+	replicator := storage.NewReplicaIter(s.ctx, s.db, jetID, insolar.FirstPulseNumber, insolar.FirstPulseNumber+1, 100500)
 	var got []key
 	for i := 0; ; i++ {
 		if i > 50 {
@@ -223,16 +225,17 @@ func (s *replicaIterSuite) Test_ReplicaIter_FirstPulse() {
 
 func Test_ReplicaIter_Base(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-	db, cleaner := storagetest.TmpDB(ctx, t, storagetest.DisableBootstrap())
+	tmpDB, cleaner := storagetest.TmpDB(ctx, t, storagetest.DisableBootstrap())
 	defer cleaner()
 
 	os := storage.NewObjectStorage()
-	ds := jetdrop.NewStorageDB()
+	ds := drop.NewStorageDB()
 
 	cm := &component.Manager{}
 	cm.Inject(
 		platformpolicy.NewPlatformCryptographyScheme(),
-		db,
+		tmpDB,
+		db.NewMemoryMockDB(),
 		os,
 		ds,
 	)
@@ -246,12 +249,12 @@ func Test_ReplicaIter_Base(t *testing.T) {
 	}
 	defer cm.Stop(ctx)
 
-	var lastPulse core.PulseNumber
+	var lastPulse insolar.PulseNumber
 	pulsescount := 2
 	// it's easy to test simple case with zero Jet
-	jetID := core.RecordID(*core.NewJetID(0, nil))
+	jetID := insolar.ID(*insolar.NewJetID(0, nil))
 
-	recsBefore, idxBefore := getallkeys(db.GetBadgerDB())
+	recsBefore, idxBefore := getallkeys(tmpDB.GetBadgerDB())
 	require.Nil(t, recsBefore)
 	require.Nil(t, idxBefore)
 
@@ -263,19 +266,18 @@ func Test_ReplicaIter_Base(t *testing.T) {
 		lastPulse = pulseDelta(i)
 
 		addRecords(ctx, t, os, jetID, lastPulse)
-		setDrop(ctx, t, ds, core.JetID(jetID), lastPulse)
 
-		recs, _ := getallkeys(db.GetBadgerDB())
+		recs, _ := getallkeys(tmpDB.GetBadgerDB())
 		recKeys := getdelta(recsBefore, recs)
 		recsBefore = recs
 
-		_, idxAll := getallkeys(db.GetBadgerDB())
+		_, idxAll := getallkeys(tmpDB.GetBadgerDB())
 
 		recsPerPulse[i] = recKeys
 		ttPerPulse[i] = append(ttPerPulse[i], recKeys...)
 		ttPerPulse[i] = append(ttPerPulse[i], idxAll...)
 	}
-	_, idxsAfter := getallkeys(db.GetBadgerDB())
+	_, idxsAfter := getallkeys(tmpDB.GetBadgerDB())
 
 	for i := 0; i < pulsescount; i++ {
 		// in range should be all record from the next pulses
@@ -292,7 +294,7 @@ func Test_ReplicaIter_Base(t *testing.T) {
 
 	for n := 0; n < pulsescount; n++ {
 		p := pulseDelta(n)
-		replicator := storage.NewReplicaIter(ctx, db, jetID, p, p+1, maxsize)
+		replicator := storage.NewReplicaIter(ctx, tmpDB, jetID, p, p+1, maxsize)
 		var got []key
 
 		iterations := 1
@@ -329,7 +331,7 @@ func Test_ReplicaIter_Base(t *testing.T) {
 	for n := 0; n < pulsescount; n++ {
 		p := pulseDelta(n)
 
-		replicator := storage.NewReplicaIter(ctx, db, jetID, p, lastPulse, maxsize)
+		replicator := storage.NewReplicaIter(ctx, tmpDB, jetID, p, lastPulse, maxsize)
 		var got []key
 		for {
 			recs, err := replicator.NextRecords()
@@ -352,23 +354,12 @@ func Test_ReplicaIter_Base(t *testing.T) {
 	}
 }
 
-func setDrop(
-	ctx context.Context,
-	t *testing.T,
-	dropModifire jetdrop.Modifier,
-	jetID core.JetID,
-	pulsenum core.PulseNumber,
-) {
-	err := dropModifire.Set(ctx, jetID, jet.Drop{Pulse: pulsenum})
-	require.NoError(t, err)
-}
-
 func addRecords(
 	ctx context.Context,
 	t *testing.T,
 	objectStorage storage.ObjectStorage,
-	jetID core.RecordID,
-	pulsenum core.PulseNumber,
+	jetID insolar.ID,
+	pulsenum insolar.PulseNumber,
 ) {
 	// set record
 	parentID, err := objectStorage.SetRecord(

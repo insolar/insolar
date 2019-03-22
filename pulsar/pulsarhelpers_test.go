@@ -1,26 +1,26 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package pulsar
 
 import (
 	"testing"
 
-	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/cryptography"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/stretchr/testify/require"
@@ -148,19 +148,19 @@ func TestPreparePayloadAndCheckIt(t *testing.T) {
 		secondEntropy := entropyGenerator.GenerateEntropy()
 		pulseEntropy := entropyGenerator.GenerateEntropy()
 		pulsePayload := &PulsePayload{
-			Pulse: core.Pulse{
+			Pulse: insolar.Pulse{
 				Entropy: pulseEntropy,
-				Signs: map[string]core.PulseSenderConfirmation{
-					"first":  core.PulseSenderConfirmation{Entropy: firstEntropy},
-					"second": core.PulseSenderConfirmation{Entropy: secondEntropy},
+				Signs: map[string]insolar.PulseSenderConfirmation{
+					"first":  insolar.PulseSenderConfirmation{Entropy: firstEntropy},
+					"second": insolar.PulseSenderConfirmation{Entropy: secondEntropy},
 				},
 			}}
 		secondPulsePayload := &PulsePayload{
-			Pulse: core.Pulse{
+			Pulse: insolar.Pulse{
 				Entropy: pulseEntropy,
-				Signs: map[string]core.PulseSenderConfirmation{
-					"second": core.PulseSenderConfirmation{Entropy: secondEntropy},
-					"first":  core.PulseSenderConfirmation{Entropy: firstEntropy},
+				Signs: map[string]insolar.PulseSenderConfirmation{
+					"second": insolar.PulseSenderConfirmation{Entropy: secondEntropy},
+					"first":  insolar.PulseSenderConfirmation{Entropy: firstEntropy},
 				},
 			}}
 
@@ -195,7 +195,7 @@ func TestPreparePayloadAndCheckIt(t *testing.T) {
 	t.Run("PulseSenderConfirmationPayload", func(t *testing.T) {
 		// Arrange
 		entropyGenerator := entropygenerator.StandardEntropyGenerator{}
-		payloadBody := &PulseSenderConfirmationPayload{core.PulseSenderConfirmation{Entropy: entropyGenerator.GenerateEntropy()}}
+		payloadBody := &PulseSenderConfirmationPayload{insolar.PulseSenderConfirmation{Entropy: entropyGenerator.GenerateEntropy()}}
 
 		// Act
 		payload, firstError := pulsar.preparePayload(payloadBody)

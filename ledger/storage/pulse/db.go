@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package pulse
 
@@ -21,7 +21,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/ledger/storage/db"
 	"github.com/ugorji/go/codec"
 )
@@ -32,14 +32,14 @@ type StorageDB struct {
 	lock sync.RWMutex
 }
 
-type pulseKey core.PulseNumber
+type pulseKey insolar.PulseNumber
 
 func (k pulseKey) Scope() db.Scope {
 	return db.ScopePulse
 }
 
 func (k pulseKey) ID() []byte {
-	return append([]byte{prefixPulse}, core.PulseNumber(k).Bytes()...)
+	return append([]byte{prefixPulse}, insolar.PulseNumber(k).Bytes()...)
 }
 
 type metaKey byte
@@ -53,8 +53,8 @@ func (k metaKey) ID() []byte {
 }
 
 type dbNode struct {
-	pulse      core.Pulse
-	prev, next *core.PulseNumber
+	pulse      insolar.Pulse
+	prev, next *insolar.PulseNumber
 }
 
 var (
@@ -72,7 +72,7 @@ func NewStorageDB() *StorageDB {
 }
 
 // ForPulseNumber returns pulse for provided pulse number. If not found, ErrNotFound will be returned.
-func (s *StorageDB) ForPulseNumber(ctx context.Context, pn core.PulseNumber) (pulse core.Pulse, err error) {
+func (s *StorageDB) ForPulseNumber(ctx context.Context, pn insolar.PulseNumber) (pulse insolar.Pulse, err error) {
 	nd, err := s.get(pn)
 	if err != nil {
 		return
@@ -81,7 +81,7 @@ func (s *StorageDB) ForPulseNumber(ctx context.Context, pn core.PulseNumber) (pu
 }
 
 // Latest returns latest pulse saved in DB. If not found, ErrNotFound will be returned.
-func (s *StorageDB) Latest(ctx context.Context) (pulse core.Pulse, err error) {
+func (s *StorageDB) Latest(ctx context.Context) (pulse insolar.Pulse, err error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
@@ -98,11 +98,11 @@ func (s *StorageDB) Latest(ctx context.Context) (pulse core.Pulse, err error) {
 
 // Append appends provided pulse to current storage. Pulse number should be greater than currently saved for preserving
 // pulse consistency. If provided pulse does not meet the requirements, ErrBadPulse will be returned.
-func (s *StorageDB) Append(ctx context.Context, pulse core.Pulse) error {
+func (s *StorageDB) Append(ctx context.Context, pulse insolar.Pulse) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	var insertWithHead = func(head core.PulseNumber) error {
+	var insertWithHead = func(head insolar.PulseNumber) error {
 		oldHead, err := s.get(head)
 		if err != nil {
 			return err
@@ -150,7 +150,7 @@ func (s *StorageDB) Append(ctx context.Context, pulse core.Pulse) error {
 
 // Forwards calculates steps pulses forwards from provided pulse. If calculated pulse does not exist, ErrNotFound will
 // be returned.
-func (s *StorageDB) Forwards(ctx context.Context, pn core.PulseNumber, steps int) (pulse core.Pulse, err error) {
+func (s *StorageDB) Forwards(ctx context.Context, pn insolar.PulseNumber, steps int) (pulse insolar.Pulse, err error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
@@ -162,7 +162,7 @@ func (s *StorageDB) Forwards(ctx context.Context, pn core.PulseNumber, steps int
 	iterator := node
 	for i := 0; i < steps; i++ {
 		if iterator.next == nil {
-			err = core.ErrNotFound
+			err = insolar.ErrNotFound
 			return
 		}
 		iterator, err = s.get(*iterator.next)
@@ -176,7 +176,7 @@ func (s *StorageDB) Forwards(ctx context.Context, pn core.PulseNumber, steps int
 
 // Backwards calculates steps pulses backwards from provided pulse. If calculated pulse does not exist, ErrNotFound will
 // be returned.
-func (s *StorageDB) Backwards(ctx context.Context, pn core.PulseNumber, steps int) (pulse core.Pulse, err error) {
+func (s *StorageDB) Backwards(ctx context.Context, pn insolar.PulseNumber, steps int) (pulse insolar.Pulse, err error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
@@ -188,7 +188,7 @@ func (s *StorageDB) Backwards(ctx context.Context, pn core.PulseNumber, steps in
 	iterator := node
 	for i := 0; i < steps; i++ {
 		if iterator.prev == nil {
-			err = core.ErrNotFound
+			err = insolar.ErrNotFound
 			return
 		}
 		iterator, err = s.get(*iterator.prev)
@@ -200,7 +200,7 @@ func (s *StorageDB) Backwards(ctx context.Context, pn core.PulseNumber, steps in
 	return iterator.pulse, nil
 }
 
-func (s *StorageDB) get(pn core.PulseNumber) (nd dbNode, err error) {
+func (s *StorageDB) get(pn insolar.PulseNumber) (nd dbNode, err error) {
 	buf, err := s.DB.Get(pulseKey(pn))
 	if err == db.ErrNotFound {
 		err = ErrNotFound
@@ -213,11 +213,11 @@ func (s *StorageDB) get(pn core.PulseNumber) (nd dbNode, err error) {
 	return
 }
 
-func (s *StorageDB) set(pn core.PulseNumber, nd dbNode) error {
+func (s *StorageDB) set(pn insolar.PulseNumber, nd dbNode) error {
 	return s.DB.Set(pulseKey(pn), serialize(nd))
 }
 
-func (s *StorageDB) head() (pn core.PulseNumber, err error) {
+func (s *StorageDB) head() (pn insolar.PulseNumber, err error) {
 	buf, err := s.DB.Get(keyHead)
 	if err == db.ErrNotFound {
 		err = ErrNotFound
@@ -226,11 +226,11 @@ func (s *StorageDB) head() (pn core.PulseNumber, err error) {
 	if err != nil {
 		return
 	}
-	pn = core.NewPulseNumber(buf)
+	pn = insolar.NewPulseNumber(buf)
 	return
 }
 
-func (s *StorageDB) setHead(pn core.PulseNumber) error {
+func (s *StorageDB) setHead(pn insolar.PulseNumber) error {
 	return s.DB.Set(keyHead, pn.Bytes())
 }
 

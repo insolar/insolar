@@ -33,7 +33,7 @@ BININSGOCC=$(BIN_DIR)/$(INSGOCC)
 
 
 .PHONY: all
-all: clean install-deps pre-build build test
+all: clean install-deps pre-build build
 
 .PHONY: lint
 lint: ci-lint
@@ -60,7 +60,7 @@ install-godep:
 
 .PHONY: install-build-tools
 install-build-tools:
-	go get -u golang.org/x/tools/cmd/stringer
+	./scripts/build/fetchdeps golang.org/x/tools/cmd/stringer 63e6ed9258fa6cbc90aab9b1eef3e0866e89b874
 	./scripts/build/fetchdeps github.com/gojuno/minimock/cmd/minimock 890c67cef23dd06d694294d4f7b1026ed7bac8e6
 
 .PHONY: install-deps

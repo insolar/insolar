@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package recentstorage
 
@@ -20,7 +20,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"go.opencensus.io/stats"
@@ -28,8 +28,8 @@ import (
 
 // RecentStorageProvider provides a recent storage for jet
 type RecentStorageProvider struct { //nolint: golint
-	indexStorages   map[core.RecordID]*RecentIndexStorageConcrete
-	pendingStorages map[core.RecordID]*PendingStorageConcrete
+	indexStorages   map[insolar.ID]*RecentIndexStorageConcrete
+	pendingStorages map[insolar.ID]*PendingStorageConcrete
 
 	indexLock   sync.Mutex
 	pendingLock sync.Mutex
@@ -41,13 +41,13 @@ type RecentStorageProvider struct { //nolint: golint
 func NewRecentStorageProvider(defaultTTL int) *RecentStorageProvider {
 	return &RecentStorageProvider{
 		DefaultTTL:      defaultTTL,
-		indexStorages:   map[core.RecordID]*RecentIndexStorageConcrete{},
-		pendingStorages: map[core.RecordID]*PendingStorageConcrete{},
+		indexStorages:   map[insolar.ID]*RecentIndexStorageConcrete{},
+		pendingStorages: map[insolar.ID]*PendingStorageConcrete{},
 	}
 }
 
 // GetIndexStorage returns a recent indexes for a specific jet
-func (p *RecentStorageProvider) GetIndexStorage(ctx context.Context, jetID core.RecordID) RecentIndexStorage {
+func (p *RecentStorageProvider) GetIndexStorage(ctx context.Context, jetID insolar.ID) RecentIndexStorage {
 	p.indexLock.Lock()
 	defer p.indexLock.Unlock()
 
@@ -60,7 +60,7 @@ func (p *RecentStorageProvider) GetIndexStorage(ctx context.Context, jetID core.
 }
 
 // GetPendingStorage returns pendings for a specific jet
-func (p *RecentStorageProvider) GetPendingStorage(ctx context.Context, jetID core.RecordID) PendingStorage {
+func (p *RecentStorageProvider) GetPendingStorage(ctx context.Context, jetID insolar.ID) PendingStorage {
 	p.pendingLock.Lock()
 	defer p.pendingLock.Unlock()
 
@@ -86,7 +86,7 @@ func (p *RecentStorageProvider) Count() int {
 }
 
 // CloneIndexStorage clones indexes from one jet to another one
-func (p *RecentStorageProvider) CloneIndexStorage(ctx context.Context, fromJetID, toJetID core.RecordID) {
+func (p *RecentStorageProvider) CloneIndexStorage(ctx context.Context, fromJetID, toJetID insolar.ID) {
 	p.indexLock.Lock()
 	defer p.indexLock.Unlock()
 
@@ -96,7 +96,7 @@ func (p *RecentStorageProvider) CloneIndexStorage(ctx context.Context, fromJetID
 	}
 	toStorage := &RecentIndexStorageConcrete{
 		jetID:      toJetID,
-		indexes:    map[core.RecordID]recentObjectMeta{},
+		indexes:    map[insolar.ID]recentObjectMeta{},
 		DefaultTTL: p.DefaultTTL,
 	}
 	for k, v := range fromStorage.indexes {
@@ -107,7 +107,7 @@ func (p *RecentStorageProvider) CloneIndexStorage(ctx context.Context, fromJetID
 }
 
 // ClonePendingStorage clones pending requests from one jet to another one
-func (p *RecentStorageProvider) ClonePendingStorage(ctx context.Context, fromJetID, toJetID core.RecordID) {
+func (p *RecentStorageProvider) ClonePendingStorage(ctx context.Context, fromJetID, toJetID insolar.ID) {
 	p.pendingLock.Lock()
 	fromStorage, ok := p.pendingStorages[fromJetID]
 	p.pendingLock.Unlock()
@@ -119,7 +119,7 @@ func (p *RecentStorageProvider) ClonePendingStorage(ctx context.Context, fromJet
 	fromStorage.lock.RLock()
 	toStorage := &PendingStorageConcrete{
 		jetID:    toJetID,
-		requests: map[core.RecordID]*lockedPendingObjectContext{},
+		requests: map[insolar.ID]*lockedPendingObjectContext{},
 	}
 	for objID, pendingContext := range fromStorage.requests {
 		if len(pendingContext.Context.Requests) == 0 {
@@ -130,7 +130,7 @@ func (p *RecentStorageProvider) ClonePendingStorage(ctx context.Context, fromJet
 
 		clone := PendingObjectContext{
 			Active:   pendingContext.Context.Active,
-			Requests: []core.RecordID{},
+			Requests: []insolar.ID{},
 		}
 
 		clone.Requests = append(clone.Requests, pendingContext.Context.Requests...)
@@ -148,17 +148,17 @@ func (p *RecentStorageProvider) ClonePendingStorage(ctx context.Context, fromJet
 // DecreaseIndexesTTL decrease ttl of all indexes in all storages
 // If storage contains indexes with zero ttl, they are removed from storage and returned to a caller
 // If there are no indexes with ttl more then 0, storage is removed
-func (p *RecentStorageProvider) DecreaseIndexesTTL(ctx context.Context) map[core.RecordID][]core.RecordID {
+func (p *RecentStorageProvider) DecreaseIndexesTTL(ctx context.Context) map[insolar.ID][]insolar.ID {
 	p.indexLock.Lock()
 	defer p.indexLock.Unlock()
 
 	resMapLock := sync.Mutex{}
-	resMap := map[core.RecordID][]core.RecordID{}
+	resMap := map[insolar.ID][]insolar.ID{}
 	wg := sync.WaitGroup{}
 	wg.Add(len(p.indexStorages))
 
 	for jetID, storage := range p.indexStorages {
-		go func(jetID core.RecordID, s *RecentIndexStorageConcrete) {
+		go func(jetID insolar.ID, s *RecentIndexStorageConcrete) {
 			res := s.DecreaseIndexTTL(ctx)
 
 			if len(res) > 0 {
@@ -184,7 +184,7 @@ func (p *RecentStorageProvider) DecreaseIndexesTTL(ctx context.Context) map[core
 
 // RemovePendingStorage removes pending requests for a specific jet from provider
 // If there is a reference to RecentIndexStorage somewhere, it won't be affected
-func (p *RecentStorageProvider) RemovePendingStorage(ctx context.Context, id core.RecordID) {
+func (p *RecentStorageProvider) RemovePendingStorage(ctx context.Context, id insolar.ID) {
 	p.pendingLock.Lock()
 	defer p.pendingLock.Unlock()
 
@@ -202,8 +202,8 @@ func (p *RecentStorageProvider) RemovePendingStorage(ctx context.Context, id cor
 // RecentIndexStorageConcrete is an implementation of RecentIndexStorage interface
 // This is a in-memory cache for indexes` ids
 type RecentIndexStorageConcrete struct {
-	jetID      core.RecordID
-	indexes    map[core.RecordID]recentObjectMeta
+	jetID      insolar.ID
+	indexes    map[insolar.ID]recentObjectMeta
 	lock       sync.Mutex
 	DefaultTTL int
 }
@@ -213,17 +213,17 @@ type recentObjectMeta struct {
 }
 
 // NewRecentIndexStorage creates new *RecentIndexStorage
-func NewRecentIndexStorage(jetID core.RecordID, defaultTTL int) *RecentIndexStorageConcrete {
-	return &RecentIndexStorageConcrete{jetID: jetID, DefaultTTL: defaultTTL, indexes: map[core.RecordID]recentObjectMeta{}}
+func NewRecentIndexStorage(jetID insolar.ID, defaultTTL int) *RecentIndexStorageConcrete {
+	return &RecentIndexStorageConcrete{jetID: jetID, DefaultTTL: defaultTTL, indexes: map[insolar.ID]recentObjectMeta{}}
 }
 
 // AddObject adds index's id to an in-memory cache and sets DefaultTTL for it
-func (r *RecentIndexStorageConcrete) AddObject(ctx context.Context, id core.RecordID) {
+func (r *RecentIndexStorageConcrete) AddObject(ctx context.Context, id insolar.ID) {
 	r.AddObjectWithTLL(ctx, id, r.DefaultTTL)
 }
 
 // AddObjectWithTLL adds index's id to an in-memory cache with provided ttl
-func (r *RecentIndexStorageConcrete) AddObjectWithTLL(ctx context.Context, id core.RecordID, ttl int) {
+func (r *RecentIndexStorageConcrete) AddObjectWithTLL(ctx context.Context, id insolar.ID, ttl int) {
 	r.lock.Lock()
 	defer r.lock.Unlock()
 
@@ -239,11 +239,11 @@ func (r *RecentIndexStorageConcrete) AddObjectWithTLL(ctx context.Context, id co
 }
 
 // GetObjects returns deep copy of indexes' ids
-func (r *RecentIndexStorageConcrete) GetObjects() map[core.RecordID]int {
+func (r *RecentIndexStorageConcrete) GetObjects() map[insolar.ID]int {
 	r.lock.Lock()
 	defer r.lock.Unlock()
 
-	targetMap := make(map[core.RecordID]int, len(r.indexes))
+	targetMap := make(map[insolar.ID]int, len(r.indexes))
 	for key, value := range r.indexes {
 		targetMap[key] = value.ttl
 	}
@@ -256,8 +256,8 @@ func (r *RecentIndexStorageConcrete) GetObjects() map[core.RecordID]int {
 // and the passes it to lockedFn
 func (r *RecentIndexStorageConcrete) FilterNotExistWithLock(
 	ctx context.Context,
-	candidates []core.RecordID,
-	lockedFn func(filtered []core.RecordID),
+	candidates []insolar.ID,
+	lockedFn func(filtered []insolar.ID),
 ) {
 	r.lock.Lock()
 	markedCandidates := r.markForDelete(candidates)
@@ -265,8 +265,8 @@ func (r *RecentIndexStorageConcrete) FilterNotExistWithLock(
 	r.lock.Unlock()
 }
 
-func (r *RecentIndexStorageConcrete) markForDelete(candidates []core.RecordID) []core.RecordID {
-	result := make([]core.RecordID, 0, len(candidates))
+func (r *RecentIndexStorageConcrete) markForDelete(candidates []insolar.ID) []insolar.ID {
+	result := make([]insolar.ID, 0, len(candidates))
 
 	for _, c := range candidates {
 		_, exists := r.indexes[c]
@@ -279,11 +279,11 @@ func (r *RecentIndexStorageConcrete) markForDelete(candidates []core.RecordID) [
 
 // DecreaseIndexTTL decreases ttls and remove indexes with 0 ttl
 // Removed indexes will be returned as a functon's result
-func (r *RecentIndexStorageConcrete) DecreaseIndexTTL(ctx context.Context) []core.RecordID {
+func (r *RecentIndexStorageConcrete) DecreaseIndexTTL(ctx context.Context) []insolar.ID {
 	r.lock.Lock()
 	defer r.lock.Unlock()
 
-	var clearedObjects []core.RecordID
+	var clearedObjects []insolar.ID
 	for key, value := range r.indexes {
 		value.ttl--
 		if value.ttl <= 0 {
@@ -300,9 +300,9 @@ func (r *RecentIndexStorageConcrete) DecreaseIndexTTL(ctx context.Context) []cor
 type PendingStorageConcrete struct {
 	lock sync.RWMutex
 
-	jetID core.RecordID
+	jetID insolar.ID
 
-	requests map[core.RecordID]*lockedPendingObjectContext
+	requests map[insolar.ID]*lockedPendingObjectContext
 }
 
 // PendingObjectContext contains a list of requests for an object
@@ -311,7 +311,7 @@ type PendingStorageConcrete struct {
 // notifications about forgotten requests
 type PendingObjectContext struct {
 	Active   bool
-	Requests []core.RecordID
+	Requests []insolar.ID
 }
 
 type lockedPendingObjectContext struct {
@@ -320,16 +320,16 @@ type lockedPendingObjectContext struct {
 }
 
 // NewPendingStorage creates *PendingStorage
-func NewPendingStorage(jetID core.RecordID) *PendingStorageConcrete {
+func NewPendingStorage(jetID insolar.ID) *PendingStorageConcrete {
 	return &PendingStorageConcrete{
 		jetID:    jetID,
-		requests: map[core.RecordID]*lockedPendingObjectContext{},
+		requests: map[insolar.ID]*lockedPendingObjectContext{},
 	}
 }
 
 // AddPendingRequest adds an id of pending request to memory
 // The id stores in a collection ids of a specific object
-func (r *PendingStorageConcrete) AddPendingRequest(ctx context.Context, obj, req core.RecordID) {
+func (r *PendingStorageConcrete) AddPendingRequest(ctx context.Context, obj, req insolar.ID) {
 	r.lock.Lock()
 	defer r.lock.Unlock()
 
@@ -340,7 +340,7 @@ func (r *PendingStorageConcrete) AddPendingRequest(ctx context.Context, obj, req
 			lock: sync.RWMutex{},
 			Context: &PendingObjectContext{
 				Active:   true,
-				Requests: []core.RecordID{},
+				Requests: []insolar.ID{},
 			},
 		}
 		r.requests[obj] = objectContext
@@ -356,7 +356,7 @@ func (r *PendingStorageConcrete) AddPendingRequest(ctx context.Context, obj, req
 }
 
 // SetContextToObject add a context to a provided object
-func (r *PendingStorageConcrete) SetContextToObject(ctx context.Context, obj core.RecordID, objContext PendingObjectContext) {
+func (r *PendingStorageConcrete) SetContextToObject(ctx context.Context, obj insolar.ID, objContext PendingObjectContext) {
 	r.lock.Lock()
 	defer r.lock.Unlock()
 
@@ -368,17 +368,17 @@ func (r *PendingStorageConcrete) SetContextToObject(ctx context.Context, obj cor
 }
 
 // GetRequests returns a deep-copy of requests collections
-func (r *PendingStorageConcrete) GetRequests() map[core.RecordID]PendingObjectContext {
+func (r *PendingStorageConcrete) GetRequests() map[insolar.ID]PendingObjectContext {
 	r.lock.RLock()
 	defer r.lock.RUnlock()
 
-	requestsClone := map[core.RecordID]PendingObjectContext{}
+	requestsClone := map[insolar.ID]PendingObjectContext{}
 	for objID, objContext := range r.requests {
 		objContext.lock.RLock()
 
 		objectClone := PendingObjectContext{
 			Active:   objContext.Context.Active,
-			Requests: []core.RecordID{},
+			Requests: []insolar.ID{},
 		}
 		objectClone.Requests = append(objectClone.Requests, objContext.Context.Requests...)
 		requestsClone[objID] = objectClone
@@ -390,7 +390,7 @@ func (r *PendingStorageConcrete) GetRequests() map[core.RecordID]PendingObjectCo
 }
 
 // GetRequestsForObject returns a deep-copy of requests collection for a specific object
-func (r *PendingStorageConcrete) GetRequestsForObject(obj core.RecordID) []core.RecordID {
+func (r *PendingStorageConcrete) GetRequestsForObject(obj insolar.ID) []insolar.ID {
 	r.lock.RLock()
 	defer r.lock.RUnlock()
 
@@ -402,14 +402,14 @@ func (r *PendingStorageConcrete) GetRequestsForObject(obj core.RecordID) []core.
 	forObject.lock.RLock()
 	defer forObject.lock.RUnlock()
 
-	results := make([]core.RecordID, 0, len(forObject.Context.Requests))
+	results := make([]insolar.ID, 0, len(forObject.Context.Requests))
 	results = append(results, forObject.Context.Requests...)
 
 	return results
 }
 
 // RemovePendingRequest removes a request on object from cache
-func (r *PendingStorageConcrete) RemovePendingRequest(ctx context.Context, obj, req core.RecordID) {
+func (r *PendingStorageConcrete) RemovePendingRequest(ctx context.Context, obj, req insolar.ID) {
 	r.lock.RLock()
 	defer r.lock.RUnlock()
 
@@ -443,7 +443,7 @@ func (r *PendingStorageConcrete) RemovePendingRequest(ctx context.Context, obj, 
 	}
 
 	if len(objContext.Context.Requests) == 1 {
-		objContext.Context.Requests = []core.RecordID{}
+		objContext.Context.Requests = []insolar.ID{}
 		return
 	}
 

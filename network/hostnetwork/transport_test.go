@@ -1,19 +1,52 @@
-/*
- * The Clear BSD License
- *
- * Copyright (c) 2019 Insolar Technologies
- *
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without modification, are permitted (subject to the limitations in the disclaimer below) provided that the following conditions are met:
- *
- *  Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
- *  Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
- *  Neither the name of Insolar Technologies nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
- *
- * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- */
+//
+// Modified BSD 3-Clause Clear License
+//
+// Copyright (c) 2019 Insolar Technologies GmbH
+//
+// All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without modification,
+// are permitted (subject to the limitations in the disclaimer below) provided that
+// the following conditions are met:
+//  * Redistributions of source code must retain the above copyright notice, this list
+//    of conditions and the following disclaimer.
+//  * Redistributions in binary form must reproduce the above copyright notice, this list
+//    of conditions and the following disclaimer in the documentation and/or other materials
+//    provided with the distribution.
+//  * Neither the name of Insolar Technologies GmbH nor the names of its contributors
+//    may be used to endorse or promote products derived from this software without
+//    specific prior written permission.
+//
+// NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED
+// BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS
+// AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+// INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY
+// AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL
+// THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+// INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+// OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+//
+// Notwithstanding any other provisions of this license, it is prohibited to:
+//    (a) use this software,
+//
+//    (b) prepare modifications and derivative works of this software,
+//
+//    (c) distribute this software (including without limitation in source code, binary or
+//        object code form), and
+//
+//    (d) reproduce copies of this software
+//
+//    for any commercial purposes, and/or
+//
+//    for the purposes of making available this software to third parties as a service,
+//    including, without limitation, any software-as-a-service, platform-as-a-service,
+//    infrastructure-as-a-service or other similar online service, irrespective of
+//    whether it competes with the products or services of Insolar Technologies GmbH.
+//
 
 package hostnetwork
 
@@ -25,7 +58,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/transport/host"
@@ -47,11 +80,11 @@ const (
 )
 
 type MockResolver struct {
-	mapping  map[core.RecordRef]*host.Host
-	smapping map[core.ShortNodeID]*host.Host
+	mapping  map[insolar.Reference]*host.Host
+	smapping map[insolar.ShortNodeID]*host.Host
 }
 
-func (m *MockResolver) ResolveConsensus(id core.ShortNodeID) (*host.Host, error) {
+func (m *MockResolver) ResolveConsensus(id insolar.ShortNodeID) (*host.Host, error) {
 	result, exist := m.smapping[id]
 	if !exist {
 		return nil, errors.New("failed to resolve")
@@ -59,11 +92,11 @@ func (m *MockResolver) ResolveConsensus(id core.ShortNodeID) (*host.Host, error)
 	return result, nil
 }
 
-func (m *MockResolver) ResolveConsensusRef(nodeID core.RecordRef) (*host.Host, error) {
+func (m *MockResolver) ResolveConsensusRef(nodeID insolar.Reference) (*host.Host, error) {
 	return m.Resolve(nodeID)
 }
 
-func (m *MockResolver) Resolve(nodeID core.RecordRef) (*host.Host, error) {
+func (m *MockResolver) Resolve(nodeID insolar.Reference) (*host.Host, error) {
 	result, exist := m.mapping[nodeID]
 	if !exist {
 		return nil, errors.New("failed to resolve")
@@ -76,7 +109,7 @@ func (m *MockResolver) Rebalance(network.PartitionPolicy) {}
 func (m *MockResolver) GetRandomNodes(int) []host.Host    { return nil }
 
 func (m *MockResolver) addMapping(key, value string) error {
-	k, err := core.NewRefFromBase58(key)
+	k, err := insolar.NewReferenceFromBase58(key)
 	if err != nil {
 		return err
 	}
@@ -95,8 +128,8 @@ func (m *MockResolver) addMappingHost(h *host.Host) {
 
 func newMockResolver() *MockResolver {
 	return &MockResolver{
-		mapping:  make(map[core.RecordRef]*host.Host),
-		smapping: make(map[core.ShortNodeID]*host.Host),
+		mapping:  make(map[insolar.Reference]*host.Host),
+		smapping: make(map[insolar.ShortNodeID]*host.Host),
 	}
 }
 
@@ -117,7 +150,7 @@ func TestNewInternalTransport(t *testing.T) {
 	defer tp.Stop(ctx)
 	// require that new address with correct port has been assigned
 	require.NotEqual(t, address, tp.PublicAddress())
-	ref, err := core.NewRefFromBase58(ID1 + DOMAIN)
+	ref, err := insolar.NewReferenceFromBase58(ID1 + DOMAIN)
 	require.NoError(t, err)
 	require.Equal(t, *ref, tp.GetNodeID())
 }
@@ -170,10 +203,10 @@ func TestNewHostTransport(t *testing.T) {
 	ctx := context.Background()
 	ctx2 := context.Background()
 	t1, t2, err := createTwoHostNetworks(ID1+DOMAIN, ID2+DOMAIN)
-	ref1, err := core.NewRefFromBase58(ID1 + DOMAIN)
+	ref1, err := insolar.NewReferenceFromBase58(ID1 + DOMAIN)
 	require.NoError(t, err)
 	require.Equal(t, *ref1, t1.GetNodeID())
-	ref2, err := core.NewRefFromBase58(ID2 + DOMAIN)
+	ref2, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
 	require.Equal(t, *ref2, t2.GetNodeID())
 	require.NoError(t, err)
 
@@ -198,7 +231,7 @@ func TestNewHostTransport(t *testing.T) {
 
 	for i := 0; i < count; i++ {
 		request := t1.NewRequestBuilder().Type(types.Ping).Data(nil).Build()
-		ref, err := core.NewRefFromBase58(ID2 + DOMAIN)
+		ref, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
 		require.NoError(t, err)
 		_, err = t1.SendRequest(ctx, request, *ref)
 		require.NoError(t, err)
@@ -217,7 +250,7 @@ func TestHostTransport_SendRequestPacket(t *testing.T) {
 	t1.Transport.Start(ctx)
 	defer t1.Transport.Stop(ctx)
 
-	unknownID, err := core.NewRefFromBase58(IDUNKNOWN + DOMAIN)
+	unknownID, err := insolar.NewReferenceFromBase58(IDUNKNOWN + DOMAIN)
 	require.NoError(t, err)
 
 	// should return error because cannot resolve NodeID -> Address
@@ -230,7 +263,7 @@ func TestHostTransport_SendRequestPacket(t *testing.T) {
 	err = m.addMapping(ID3+DOMAIN, "127.0.0.1:7654")
 	require.NoError(t, err)
 
-	ref, err := core.NewRefFromBase58(ID2 + DOMAIN)
+	ref, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
 	require.NoError(t, err)
 	// should return error because resolved address is invalid
 	_, err = t1.SendRequest(ctx, request, *ref)
@@ -248,7 +281,7 @@ func TestHostTransport_SendRequestPacket2(t *testing.T) {
 
 	handler := func(ctx context.Context, r network.Request) (network.Response, error) {
 		log.Info("handler triggered")
-		ref, err := core.NewRefFromBase58(ID1 + DOMAIN)
+		ref, err := insolar.NewReferenceFromBase58(ID1 + DOMAIN)
 		require.NoError(t, err)
 		require.Equal(t, *ref, r.GetSender())
 		require.Equal(t, t1.PublicAddress(), r.GetSenderHost().Address.String())
@@ -266,12 +299,12 @@ func TestHostTransport_SendRequestPacket2(t *testing.T) {
 	}()
 
 	request := t1.NewRequestBuilder().Type(types.Ping).Data(nil).Build()
-	ref, err := core.NewRefFromBase58(ID1 + DOMAIN)
+	ref, err := insolar.NewReferenceFromBase58(ID1 + DOMAIN)
 	require.NoError(t, err)
 	require.Equal(t, *ref, request.GetSender())
 	require.Equal(t, t1.PublicAddress(), request.GetSenderHost().Address.String())
 
-	ref, err = core.NewRefFromBase58(ID2 + DOMAIN)
+	ref, err = insolar.NewReferenceFromBase58(ID2 + DOMAIN)
 	require.NoError(t, err)
 	_, err = t1.SendRequest(ctx, request, *ref)
 	require.NoError(t, err)
@@ -306,7 +339,7 @@ func TestHostTransport_SendRequestPacket3(t *testing.T) {
 
 	magicNumber := 42
 	request := t1.NewRequestBuilder().Type(types.Ping).Data(&Data{Number: magicNumber}).Build()
-	ref, err := core.NewRefFromBase58(ID2 + DOMAIN)
+	ref, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
 	require.NoError(t, err)
 	f, err := t1.SendRequest(ctx, request, *ref)
 	require.NoError(t, err)
@@ -346,7 +379,7 @@ func TestHostTransport_SendRequestPacket_errors(t *testing.T) {
 	t1.Transport.Start(ctx)
 
 	request := t1.NewRequestBuilder().Type(types.Ping).Data(nil).Build()
-	ref, err := core.NewRefFromBase58(ID2 + DOMAIN)
+	ref, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
 	require.NoError(t, err)
 	f, err := t1.SendRequest(ctx, request, *ref)
 	require.NoError(t, err)
@@ -386,7 +419,7 @@ func TestHostTransport_WrongHandler(t *testing.T) {
 	}()
 
 	request := t1.NewRequestBuilder().Type(types.Ping).Build()
-	ref, err := core.NewRefFromBase58(ID2 + DOMAIN)
+	ref, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
 	require.NoError(t, err)
 	_, err = t1.SendRequest(ctx, request, *ref)
 	require.NoError(t, err)

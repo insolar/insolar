@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package storage_test
 
@@ -22,10 +22,11 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/component"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/db"
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
@@ -63,7 +64,7 @@ func (s *cleanerSuite) BeforeTest(suiteName, testName string) {
 	s.cm = &component.Manager{}
 	s.ctx = inslogger.TestContext(s.T())
 
-	db, cleaner := storagetest.TmpDB(s.ctx, s.T())
+	tmpDB, cleaner := storagetest.TmpDB(s.ctx, s.T())
 	s.cleaner = cleaner
 
 	s.objectStorage = storage.NewObjectStorage()
@@ -74,7 +75,8 @@ func (s *cleanerSuite) BeforeTest(suiteName, testName string) {
 
 	s.cm.Inject(
 		platformpolicy.NewPlatformCryptographyScheme(),
-		db,
+		tmpDB,
+		db.NewMemoryMockDB(),
 		s.objectStorage,
 		s.storageCleaner,
 		s.dropAccessor,
@@ -106,18 +108,18 @@ func (s *cleanerSuite) Test_RemoveRecords() {
 	jetID00 := testutils.JetFromString("00")
 	jetID01 := testutils.JetFromString("01")
 	jetID11 := testutils.JetFromString("11")
-	jets := []core.RecordID{jetID00, jetID01, jetID11}
+	jets := []insolar.ID{jetID00, jetID01, jetID11}
 
 	// should remove all records in rmJetID on pulses 1, 2, but all in pulse 3 for rmJetID should left
 	// and other jets records should not be removed too
 	var checks []cleanChecker
 	until := 2
-	rmUntilPN := core.PulseNumber(core.FirstPulseNumber + until + 1)
+	rmUntilPN := insolar.PulseNumber(insolar.FirstPulseNumber + until + 1)
 	rmJetID := jetID01
 
 	for _, jetID := range jets {
 		for i := 1; i <= 3; i++ {
-			pn := core.PulseNumber(core.FirstPulseNumber + i)
+			pn := insolar.PulseNumber(insolar.FirstPulseNumber + i)
 
 			shouldLeft := true
 			if jetID == rmJetID {
@@ -151,20 +153,6 @@ func (s *cleanerSuite) Test_RemoveRecords() {
 				cleanCase:     recCC,
 				objectStorage: s.objectStorage,
 			})
-
-			_, err = storagetest.AddRandDrop(ctx, s.dropModifier, s.dropAccessor, jetID, pn)
-			require.NoError(t, err)
-			dropCC := cleanCase{
-				rectype:    "drop",
-				id:         recID,
-				jetID:      jetID,
-				pulseNum:   pn,
-				shouldLeft: shouldLeft,
-			}
-			checks = append(checks, dropCase{
-				cleanCase:    dropCC,
-				dropAccessor: s.dropAccessor,
-			})
 		}
 	}
 
@@ -182,17 +170,17 @@ func (s *cleanerSuite) Test_RemoveJetIndexes() {
 	jetID00 := testutils.JetFromString("00")
 	jetID01 := testutils.JetFromString("01")
 	jetID11 := testutils.JetFromString("11")
-	jets := []core.RecordID{jetID00, jetID01, jetID11}
+	jets := []insolar.ID{jetID00, jetID01, jetID11}
 
 	// should remove records in Pulse 1, 2, but left 3
 	var checks []cleanChecker
 	until := 2
 	rmJetID := jetID01
-	var removeIndexes []core.RecordID
+	var removeIndexes []insolar.ID
 
 	for _, jetID := range jets {
 		for i := 1; i <= 3; i++ {
-			pn := core.PulseNumber(core.FirstPulseNumber + i)
+			pn := insolar.PulseNumber(insolar.FirstPulseNumber + i)
 			idxID, err := storagetest.AddRandIndex(ctx, s.objectStorage, jetID, pn)
 			require.NoError(t, err)
 
@@ -218,7 +206,7 @@ func (s *cleanerSuite) Test_RemoveJetIndexes() {
 	}
 
 	recent := recentstorage.NewRecentIndexStorageMock(s.T())
-	recent.FilterNotExistWithLockFunc = func(ctx context.Context, candidates []core.RecordID, fn func(fordelete []core.RecordID)) {
+	recent.FilterNotExistWithLockFunc = func(ctx context.Context, candidates []insolar.ID, fn func(fordelete []insolar.ID)) {
 		fn(candidates)
 	}
 
@@ -238,9 +226,9 @@ type cleanChecker interface {
 
 type cleanCase struct {
 	rectype    string
-	id         *core.RecordID
-	jetID      core.RecordID
-	pulseNum   core.PulseNumber
+	id         *insolar.ID
+	jetID      insolar.ID
+	pulseNum   insolar.PulseNumber
 	shouldLeft bool
 }
 
@@ -256,7 +244,7 @@ func (cc cleanCase) check(t *testing.T, err error) {
 		}
 		return
 	}
-	if !assert.Exactly(t, err, core.ErrNotFound) {
+	if !assert.Exactly(t, err, insolar.ErrNotFound) {
 		fmt.Printf("%v => err: %T\n", cc, err)
 	}
 }
@@ -288,15 +276,5 @@ type recordCase struct {
 
 func (c recordCase) Check(ctx context.Context, t *testing.T) {
 	_, err := c.objectStorage.GetRecord(ctx, c.jetID, c.id)
-	c.check(t, err)
-}
-
-type dropCase struct {
-	cleanCase
-	dropAccessor drop.Accessor
-}
-
-func (c dropCase) Check(ctx context.Context, t *testing.T) {
-	_, err := c.dropAccessor.ForPulse(ctx, core.JetID(c.jetID), c.pulseNum)
 	c.check(t, err)
 }

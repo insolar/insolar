@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package heavyclient
 
@@ -21,19 +21,21 @@ import (
 	"sync"
 	"time"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/drop"
 	"go.opencensus.io/stats"
 	"golang.org/x/sync/singleflight"
 )
 
 // Pool manages state of heavy sync clients (one client per jet id).
 type Pool struct {
-	bus            core.MessageBus
-	pulseStorage   core.PulseStorage
+	bus            insolar.MessageBus
+	pulseStorage   insolar.PulseStorage
 	pulseTracker   storage.PulseTracker
+	dropAccessor   drop.Accessor
 	replicaStorage storage.ReplicaStorage
 	cleaner        storage.Cleaner
 	db             storage.DBContext
@@ -41,30 +43,32 @@ type Pool struct {
 	clientDefaults Options
 
 	sync.Mutex
-	clients map[core.RecordID]*JetClient
+	clients map[insolar.ID]*JetClient
 
 	cleanupGroup singleflight.Group
 }
 
 // NewPool constructor of new pool.
 func NewPool(
-	bus core.MessageBus,
-	pulseStorage core.PulseStorage,
+	bus insolar.MessageBus,
+	pulseStorage insolar.PulseStorage,
 	tracker storage.PulseTracker,
 	replicaStorage storage.ReplicaStorage,
+	dropAccessor drop.Accessor,
 	cleaner storage.Cleaner,
 	db storage.DBContext,
 	clientDefaults Options,
 ) *Pool {
 	return &Pool{
 		bus:            bus,
+		dropAccessor:   dropAccessor,
 		pulseStorage:   pulseStorage,
 		pulseTracker:   tracker,
 		replicaStorage: replicaStorage,
 		clientDefaults: clientDefaults,
 		cleaner:        cleaner,
 		db:             db,
-		clients:        map[core.RecordID]*JetClient{},
+		clients:        map[insolar.ID]*JetClient{},
 	}
 }
 
@@ -90,9 +94,9 @@ func (scp *Pool) Stop(ctx context.Context) {
 // Bool flag 'shouldrun' controls should heavy client be started (if not already) or not.
 func (scp *Pool) AddPulsesToSyncClient(
 	ctx context.Context,
-	jetID core.RecordID,
+	jetID insolar.ID,
 	shouldrun bool,
-	pns ...core.PulseNumber,
+	pns ...insolar.PulseNumber,
 ) *JetClient {
 	scp.Lock()
 	client, ok := scp.clients[jetID]
@@ -102,6 +106,7 @@ func (scp *Pool) AddPulsesToSyncClient(
 			scp.bus,
 			scp.pulseStorage,
 			scp.pulseTracker,
+			scp.dropAccessor,
 			scp.cleaner,
 			scp.db,
 			jetID,
@@ -142,9 +147,9 @@ func (scp *Pool) AllClients(ctx context.Context) []*JetClient {
 // Under hood it uses singleflight on Jet prefix to avoid clashing on the same key space.
 func (scp *Pool) LightCleanup(
 	ctx context.Context,
-	untilPN core.PulseNumber,
+	untilPN insolar.PulseNumber,
 	rsp recentstorage.Provider,
-	jetIndexesRemoved map[core.RecordID][]core.RecordID,
+	jetIndexesRemoved map[insolar.ID][]insolar.ID,
 ) error {
 	inslog := inslogger.FromContext(ctx)
 	start := time.Now()
@@ -174,14 +179,14 @@ func (scp *Pool) LightCleanup(
 
 		for _, c := range allClients {
 			jetID := c.jetID
-			jetPrefix := core.JetID(jetID).Prefix()
+			jetPrefix := insolar.JetID(jetID).Prefix()
 			prefixKey := string(jetPrefix)
 
 			_, skipRecordsCleanup := jetPrefixSeen[prefixKey]
 			jetPrefixSeen[prefixKey] = struct{}{}
 
 			// TODO: fill candidates here
-			candidates := jetIndexesRemoved[jetID]
+			candidates := jetIndexesRemoved[insolar.ID(jetID)]
 
 			if (len(candidates) == 0) && skipRecordsCleanup {
 				continue
@@ -200,8 +205,8 @@ func (scp *Pool) LightCleanup(
 						untilPN, jetID.DebugString())
 
 					if len(candidates) > 0 {
-						jetRecentStore := rsp.GetIndexStorage(ctx, jetID)
-						idxsRmStat, err := scp.cleaner.CleanJetIndexes(ctx, jetID, jetRecentStore, candidates)
+						jetRecentStore := rsp.GetIndexStorage(ctx, insolar.ID(jetID))
+						idxsRmStat, err := scp.cleaner.CleanJetIndexes(ctx, insolar.ID(jetID), jetRecentStore, candidates)
 						if err != nil {
 							inslogger.FromContext(ctx).Errorf("Error on indexes cleanup (pulse < %v, jet = %v): %v",
 								untilPN, jetID.DebugString(), err)
@@ -214,7 +219,7 @@ func (scp *Pool) LightCleanup(
 						return nil, nil
 					}
 
-					recsRmStat, err := scp.cleaner.CleanJetRecordsUntilPulse(ctx, jetID, untilPN)
+					recsRmStat, err := scp.cleaner.CleanJetRecordsUntilPulse(ctx, insolar.ID(jetID), untilPN)
 					if err != nil {
 						inslogger.FromContext(ctx).Errorf("Error on light cleanup (pulse < %v, jet = %v): %v",
 							untilPN, jetID.DebugString(), err)

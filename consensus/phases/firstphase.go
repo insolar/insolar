@@ -1,19 +1,52 @@
-/*
- * The Clear BSD License
- *
- * Copyright (c) 2019 Insolar Technologies
- *
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without modification, are permitted (subject to the limitations in the disclaimer below) provided that the following conditions are met:
- *
- *  Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
- *  Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
- *  Neither the name of Insolar Technologies nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
- *
- * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- */
+//
+// Modified BSD 3-Clause Clear License
+//
+// Copyright (c) 2019 Insolar Technologies GmbH
+//
+// All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without modification,
+// are permitted (subject to the limitations in the disclaimer below) provided that
+// the following conditions are met:
+//  * Redistributions of source code must retain the above copyright notice, this list
+//    of conditions and the following disclaimer.
+//  * Redistributions in binary form must reproduce the above copyright notice, this list
+//    of conditions and the following disclaimer in the documentation and/or other materials
+//    provided with the distribution.
+//  * Neither the name of Insolar Technologies GmbH nor the names of its contributors
+//    may be used to endorse or promote products derived from this software without
+//    specific prior written permission.
+//
+// NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED
+// BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS
+// AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+// INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY
+// AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL
+// THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+// INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+// OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+//
+// Notwithstanding any other provisions of this license, it is prohibited to:
+//    (a) use this software,
+//
+//    (b) prepare modifications and derivative works of this software,
+//
+//    (c) distribute this software (including without limitation in source code, binary or
+//        object code form), and
+//
+//    (d) reproduce copies of this software
+//
+//    for any commercial purposes, and/or
+//
+//    for the purposes of making available this software to third parties as a service,
+//    including, without limitation, any software-as-a-service, platform-as-a-service,
+//    infrastructure-as-a-service or other similar online service, irrespective of
+//    whether it competes with the products or services of Insolar Technologies GmbH.
+//
 
 package phases
 
@@ -24,7 +57,7 @@ import (
 	"github.com/insolar/insolar/consensus"
 	"github.com/insolar/insolar/consensus/claimhandler"
 	"github.com/insolar/insolar/consensus/packets"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
@@ -32,7 +65,7 @@ import (
 	"github.com/insolar/insolar/network/merkle"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/jbenet/go-base58"
+	base58 "github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/tag"
@@ -56,7 +89,7 @@ func consensusReachedWithPercent(resultLen, participanstLen int, percent float64
 }
 
 type FirstPhase interface {
-	Execute(ctx context.Context, pulse *core.Pulse) (*FirstPhaseState, error)
+	Execute(ctx context.Context, pulse *insolar.Pulse) (*FirstPhaseState, error)
 }
 
 func NewFirstPhase() FirstPhase {
@@ -64,14 +97,14 @@ func NewFirstPhase() FirstPhase {
 }
 
 type FirstPhaseImpl struct {
-	Calculator   merkle.Calculator        `inject:""`
-	Communicator Communicator             `inject:""`
-	Cryptography core.CryptographyService `inject:""`
-	NodeKeeper   network.NodeKeeper       `inject:""`
+	Calculator   merkle.Calculator           `inject:""`
+	Communicator Communicator                `inject:""`
+	Cryptography insolar.CryptographyService `inject:""`
+	NodeKeeper   network.NodeKeeper          `inject:""`
 }
 
 // Execute do first phase
-func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPhaseState, error) {
+func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *insolar.Pulse) (*FirstPhaseState, error) {
 	entry := &merkle.PulseEntry{Pulse: pulse}
 	logger := inslogger.FromContext(ctx)
 	ctx, span := instracer.StartSpan(ctx, "FirstPhase.Execute")
@@ -126,7 +159,7 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse) (*Firs
 	}
 	log.Infof("[ NET Consensus phase-1 ] Phase1Packet claims count: %d", len(packet.GetClaims()))
 
-	activeNodes := fp.NodeKeeper.GetActiveNodes()
+	activeNodes := fp.NodeKeeper.GetAccessor().GetActiveNodes()
 	resultPackets, err := fp.Communicator.ExchangePhase1(ctx, originClaim, activeNodes, packet)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NET Consensus phase-1 ] Failed to exchange results")
@@ -144,9 +177,9 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse) (*Firs
 		logger.Warn("[ NET Consensus phase-1 ] Failed to record received packets metric: " + err.Error())
 	}
 
-	proofSet := make(map[core.RecordRef]*merkle.PulseProof)
-	rawProofs := make(map[core.RecordRef]*packets.NodePulseProof)
-	claimMap := make(map[core.RecordRef][]packets.ReferendumClaim)
+	proofSet := make(map[insolar.Reference]*merkle.PulseProof)
+	rawProofs := make(map[insolar.Reference]*packets.NodePulseProof)
+	claimMap := make(map[insolar.Reference][]packets.ReferendumClaim)
 	for ref, packet := range resultPackets {
 		err = nil
 		if !ref.Equal(fp.NodeKeeper.GetOrigin().ID()) {
@@ -160,7 +193,7 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse) (*Firs
 		rawProofs[ref] = rawProof
 		proofSet[ref] = &merkle.PulseProof{
 			BaseProof: merkle.BaseProof{
-				Signature: core.SignatureFromBytes(rawProof.Signature()),
+				Signature: insolar.SignatureFromBytes(rawProof.Signature()),
 			},
 			StateHash: rawProof.StateHash(),
 		}
@@ -207,12 +240,12 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse) (*Firs
 	}, nil
 }
 
-func (fp *FirstPhaseImpl) checkPacketSignature(packet *packets.Phase1Packet, recordRef core.RecordRef) error {
+func (fp *FirstPhaseImpl) checkPacketSignature(packet *packets.Phase1Packet, recordRef insolar.Reference) error {
 	if fp.NodeKeeper.GetConsensusInfo().IsJoiner() {
 		return fp.checkPacketSignatureFromClaim(packet, recordRef)
 	}
 
-	activeNode := fp.NodeKeeper.GetActiveNode(recordRef)
+	activeNode := fp.NodeKeeper.GetAccessor().GetActiveNode(recordRef)
 	if activeNode == nil {
 		return errors.New("failed to get active node")
 	}
@@ -220,7 +253,7 @@ func (fp *FirstPhaseImpl) checkPacketSignature(packet *packets.Phase1Packet, rec
 	return packet.Verify(fp.Cryptography, key)
 }
 
-func (fp *FirstPhaseImpl) checkPacketSignatureFromClaim(packet *packets.Phase1Packet, recordRef core.RecordRef) error {
+func (fp *FirstPhaseImpl) checkPacketSignatureFromClaim(packet *packets.Phase1Packet, recordRef insolar.Reference) error {
 	announceClaim := packet.GetAnnounceClaim()
 	if announceClaim == nil {
 		return errors.New("could not find announce claim")
@@ -232,7 +265,7 @@ func (fp *FirstPhaseImpl) checkPacketSignatureFromClaim(packet *packets.Phase1Pa
 	return packet.Verify(fp.Cryptography, pk)
 }
 
-func detectSparseBitsetLength(claims map[core.RecordRef][]packets.ReferendumClaim, nk network.NodeKeeper) (int, error) {
+func detectSparseBitsetLength(claims map[insolar.Reference][]packets.ReferendumClaim, nk network.NodeKeeper) (int, error) {
 	// TODO: NETD18-47
 	for _, claimList := range claims {
 		for _, claim := range claimList {
@@ -250,7 +283,7 @@ func detectSparseBitsetLength(claims map[core.RecordRef][]packets.ReferendumClai
 	return 0, errors.New("no announce claims were received")
 }
 
-func (fp *FirstPhaseImpl) filterClaims(nodeID core.RecordRef, claims []packets.ReferendumClaim) []packets.ReferendumClaim {
+func (fp *FirstPhaseImpl) filterClaims(nodeID insolar.Reference, claims []packets.ReferendumClaim) []packets.ReferendumClaim {
 	result := make([]packets.ReferendumClaim, 0)
 	for _, claim := range claims {
 		signedClaim, ok := claim.(packets.SignedClaim)
@@ -280,7 +313,7 @@ func (fp *FirstPhaseImpl) checkClaimSignature(claim packets.SignedClaim) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to serialize a claim")
 	}
-	success := fp.Cryptography.Verify(key, core.SignatureFromBytes(claim.GetSignature()), rawClaim)
+	success := fp.Cryptography.Verify(key, insolar.SignatureFromBytes(claim.GetSignature()), rawClaim)
 	if !success {
 		return errors.New("signature verification failed")
 	}

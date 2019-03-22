@@ -1,19 +1,52 @@
-/*
- * The Clear BSD License
- *
- * Copyright (c) 2019 Insolar Technologies
- *
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without modification, are permitted (subject to the limitations in the disclaimer below) provided that the following conditions are met:
- *
- *  Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
- *  Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
- *  Neither the name of Insolar Technologies nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
- *
- * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- */
+//
+// Modified BSD 3-Clause Clear License
+//
+// Copyright (c) 2019 Insolar Technologies GmbH
+//
+// All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without modification,
+// are permitted (subject to the limitations in the disclaimer below) provided that
+// the following conditions are met:
+//  * Redistributions of source code must retain the above copyright notice, this list
+//    of conditions and the following disclaimer.
+//  * Redistributions in binary form must reproduce the above copyright notice, this list
+//    of conditions and the following disclaimer in the documentation and/or other materials
+//    provided with the distribution.
+//  * Neither the name of Insolar Technologies GmbH nor the names of its contributors
+//    may be used to endorse or promote products derived from this software without
+//    specific prior written permission.
+//
+// NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED
+// BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS
+// AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+// INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY
+// AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL
+// THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+// INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+// OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+//
+// Notwithstanding any other provisions of this license, it is prohibited to:
+//    (a) use this software,
+//
+//    (b) prepare modifications and derivative works of this software,
+//
+//    (c) distribute this software (including without limitation in source code, binary or
+//        object code form), and
+//
+//    (d) reproduce copies of this software
+//
+//    for any commercial purposes, and/or
+//
+//    for the purposes of making available this software to third parties as a service,
+//    including, without limitation, any software-as-a-service, platform-as-a-service,
+//    infrastructure-as-a-service or other similar online service, irrespective of
+//    whether it competes with the products or services of Insolar Technologies GmbH.
+//
 
 package phases
 
@@ -30,7 +63,7 @@ import (
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/consensus"
 	"github.com/insolar/insolar/consensus/packets"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
@@ -44,42 +77,42 @@ type Communicator interface {
 	ExchangePhase1(
 		ctx context.Context,
 		originClaim *packets.NodeAnnounceClaim,
-		participants []core.Node,
+		participants []insolar.NetworkNode,
 		packet *packets.Phase1Packet,
-	) (map[core.RecordRef]*packets.Phase1Packet, error)
+	) (map[insolar.Reference]*packets.Phase1Packet, error)
 	// ExchangePhase2 used in second consensus step to exchange data between participants
 	ExchangePhase2(ctx context.Context, list network.UnsyncList, handler *claimhandler.ClaimHandler,
-		participants []core.Node, packet *packets.Phase2Packet) (map[core.RecordRef]*packets.Phase2Packet, error)
+		participants []insolar.NetworkNode, packet *packets.Phase2Packet) (map[insolar.Reference]*packets.Phase2Packet, error)
 	// ExchangePhase21 is used between phases 2 and 3 of consensus to send additional MissingNode requests
 	ExchangePhase21(ctx context.Context, list network.UnsyncList, handler *claimhandler.ClaimHandler,
 		packet *packets.Phase2Packet, additionalRequests []*AdditionalRequest) ([]packets.ReferendumVote, error)
 	// ExchangePhase3 used in third consensus step to exchange data between participants
-	ExchangePhase3(ctx context.Context, participants []core.Node, packet *packets.Phase3Packet) (map[core.RecordRef]*packets.Phase3Packet, error)
+	ExchangePhase3(ctx context.Context, participants []insolar.NetworkNode, packet *packets.Phase3Packet) (map[insolar.Reference]*packets.Phase3Packet, error)
 
 	component.Initer
 }
 
 type phase1Result struct {
-	id     core.RecordRef
+	id     insolar.Reference
 	packet *packets.Phase1Packet
 }
 
 type phase2Result struct {
-	id     core.RecordRef
+	id     insolar.Reference
 	packet *packets.Phase2Packet
 }
 
 type phase3Result struct {
-	id     core.RecordRef
+	id     insolar.Reference
 	packet *packets.Phase3Packet
 }
 
 // ConsensusCommunicator is simple Communicator implementation which communicates with each participants
 type ConsensusCommunicator struct {
-	ConsensusNetwork network.ConsensusNetwork `inject:""`
-	PulseHandler     network.PulseHandler     `inject:""`
-	Cryptography     core.CryptographyService `inject:""`
-	NodeKeeper       network.NodeKeeper       `inject:""`
+	ConsensusNetwork network.ConsensusNetwork    `inject:""`
+	PulseHandler     network.PulseHandler        `inject:""`
+	Cryptography     insolar.CryptographyService `inject:""`
+	NodeKeeper       network.NodeKeeper          `inject:""`
 
 	phase1result chan phase1Result
 	phase2result chan phase2Result
@@ -104,23 +137,23 @@ func (nc *ConsensusCommunicator) Init(ctx context.Context) error {
 	return nil
 }
 
-func (nc *ConsensusCommunicator) getPulseNumber() core.PulseNumber {
+func (nc *ConsensusCommunicator) getPulseNumber() insolar.PulseNumber {
 	pulseNumber := atomic.LoadUint32(&nc.currentPulseNumber)
-	return core.PulseNumber(pulseNumber)
+	return insolar.PulseNumber(pulseNumber)
 }
 
-func (nc *ConsensusCommunicator) setPulseNumber(new core.PulseNumber) bool {
+func (nc *ConsensusCommunicator) setPulseNumber(new insolar.PulseNumber) bool {
 	old := nc.getPulseNumber()
 	return old < new && atomic.CompareAndSwapUint32(&nc.currentPulseNumber, uint32(old), uint32(new))
 }
 
-func (nc *ConsensusCommunicator) sendRequestToNodes(ctx context.Context, participants []core.Node, packet packets.ConsensusPacket) {
+func (nc *ConsensusCommunicator) sendRequestToNodes(ctx context.Context, participants []insolar.NetworkNode, packet packets.ConsensusPacket) {
 	for _, node := range participants {
 		if node.ID().Equal(nc.NodeKeeper.GetOrigin().ID()) {
 			continue
 		}
 
-		go func(ctx context.Context, n core.Node, packet packets.ConsensusPacket) {
+		go func(ctx context.Context, n insolar.NetworkNode, packet packets.ConsensusPacket) {
 			logger := inslogger.FromContext(ctx)
 			logger.Debugf("Send %s request to %s", packet.GetType(), n.ID())
 			err := nc.ConsensusNetwork.SignAndSendPacket(packet, n.ID(), nc.Cryptography)
@@ -137,9 +170,9 @@ func (nc *ConsensusCommunicator) sendRequestToNodes(ctx context.Context, partici
 }
 
 func (nc *ConsensusCommunicator) sendRequestToNodesWithOrigin(ctx context.Context, originClaim *packets.NodeAnnounceClaim,
-	participants []core.Node, packet *packets.Phase1Packet) error {
+	participants []insolar.NetworkNode, packet *packets.Phase1Packet) error {
 
-	requests := make(map[core.RecordRef]packets.ConsensusPacket)
+	requests := make(map[insolar.Reference]packets.ConsensusPacket)
 	for _, participant := range participants {
 		if participant.ID().Equal(nc.NodeKeeper.GetOrigin().ID()) {
 			continue
@@ -153,7 +186,7 @@ func (nc *ConsensusCommunicator) sendRequestToNodesWithOrigin(ctx context.Contex
 	}
 
 	for ref, req := range requests {
-		go func(ctx context.Context, node core.RecordRef, consensusPacket packets.ConsensusPacket) {
+		go func(ctx context.Context, node insolar.Reference, consensusPacket packets.ConsensusPacket) {
 			logger := inslogger.FromContext(ctx)
 			logger.Debug("Send phase1 request with origin to %s", node)
 			err := nc.ConsensusNetwork.SignAndSendPacket(consensusPacket, node, nc.Cryptography)
@@ -234,22 +267,22 @@ func (nc *ConsensusCommunicator) generatePhase2Response(ctx context.Context, ori
 func (nc *ConsensusCommunicator) ExchangePhase1(
 	ctx context.Context,
 	originClaim *packets.NodeAnnounceClaim,
-	participants []core.Node,
+	participants []insolar.NetworkNode,
 	packet *packets.Phase1Packet,
-) (map[core.RecordRef]*packets.Phase1Packet, error) {
+) (map[insolar.Reference]*packets.Phase1Packet, error) {
 	_, span := instracer.StartSpan(ctx, "Communicator.ExchangePhase1")
 	span.AddAttributes(trace.Int64Attribute("pulse", int64(packet.GetPulseNumber())))
 	defer span.End()
 	logger := inslogger.FromContext(ctx)
 
-	result := make(map[core.RecordRef]*packets.Phase1Packet, len(participants))
+	result := make(map[insolar.Reference]*packets.Phase1Packet, len(participants))
 	result[nc.ConsensusNetwork.GetNodeID()] = packet
 	nc.setPulseNumber(packet.GetPulse().PulseNumber)
 
 	var request *packets.Phase1Packet
 
 	type none struct{}
-	sentRequests := make(map[core.RecordRef]none)
+	sentRequests := make(map[insolar.Reference]none)
 
 	// TODO: awful, need rework
 	if originClaim == nil {
@@ -271,7 +304,7 @@ func (nc *ConsensusCommunicator) ExchangePhase1(
 		sentRequests[p.ID()] = none{}
 	}
 
-	shouldSendResponse := func(ref core.RecordRef) bool {
+	shouldSendResponse := func(ref insolar.Reference) bool {
 		_, ok := sentRequests[ref]
 		return !ok
 	}
@@ -328,20 +361,20 @@ func (nc *ConsensusCommunicator) ExchangePhase1(
 
 // ExchangePhase2 used in second consensus phase to exchange data between participants
 func (nc *ConsensusCommunicator) ExchangePhase2(ctx context.Context, list network.UnsyncList, handler *claimhandler.ClaimHandler,
-	participants []core.Node, packet *packets.Phase2Packet) (map[core.RecordRef]*packets.Phase2Packet, error) {
+	participants []insolar.NetworkNode, packet *packets.Phase2Packet) (map[insolar.Reference]*packets.Phase2Packet, error) {
 	_, span := instracer.StartSpan(ctx, "Communicator.ExchangePhase2")
 	span.AddAttributes(trace.Int64Attribute("pulse", int64(packet.GetPulseNumber())))
 	defer span.End()
 	logger := inslogger.FromContext(ctx)
 
-	result := make(map[core.RecordRef]*packets.Phase2Packet, len(participants))
+	result := make(map[insolar.Reference]*packets.Phase2Packet, len(participants))
 
 	result[nc.ConsensusNetwork.GetNodeID()] = packet
 
 	nc.sendRequestToNodes(ctx, participants, packet)
 
 	type none struct{}
-	sentRequests := make(map[core.RecordRef]none)
+	sentRequests := make(map[insolar.Reference]none)
 
 	shouldSendResponse := func(p *phase2Result) bool {
 		_, ok := sentRequests[p.id]
@@ -389,7 +422,7 @@ func (nc *ConsensusCommunicator) ExchangePhase2(ctx context.Context, list networ
 	}
 }
 
-func selectCandidate(candidates []core.RecordRef) core.RecordRef {
+func selectCandidate(candidates []insolar.Reference) insolar.Reference {
 	// TODO: make it random
 	if len(candidates) == 0 {
 		panic("candidates list should have at least 1 candidate (check consensus state matrix calculation routines)")
@@ -427,7 +460,7 @@ func (nc *ConsensusCommunicator) ExchangePhase21(ctx context.Context, list netwo
 	logger := inslogger.FromContext(ctx)
 
 	type none struct{}
-	incoming := make(map[core.RecordRef]none)
+	incoming := make(map[insolar.Reference]none)
 	responsesFilter := make(map[int]none)
 	for _, req := range additionalRequests {
 		responsesFilter[req.RequestIndex] = none{}
@@ -506,8 +539,8 @@ func (nc *ConsensusCommunicator) ExchangePhase21(ctx context.Context, list netwo
 }
 
 // ExchangePhase3 used in third consensus step to exchange data between participants
-func (nc *ConsensusCommunicator) ExchangePhase3(ctx context.Context, participants []core.Node, packet *packets.Phase3Packet) (map[core.RecordRef]*packets.Phase3Packet, error) {
-	result := make(map[core.RecordRef]*packets.Phase3Packet, len(participants))
+func (nc *ConsensusCommunicator) ExchangePhase3(ctx context.Context, participants []insolar.NetworkNode, packet *packets.Phase3Packet) (map[insolar.Reference]*packets.Phase3Packet, error) {
+	result := make(map[insolar.Reference]*packets.Phase3Packet, len(participants))
 	_, span := instracer.StartSpan(ctx, "Communicator.ExchangePhase3")
 	span.AddAttributes(trace.Int64Attribute("pulse", int64(packet.GetPulseNumber())))
 	defer span.End()
@@ -518,7 +551,7 @@ func (nc *ConsensusCommunicator) ExchangePhase3(ctx context.Context, participant
 	nc.sendRequestToNodes(ctx, participants, packet)
 
 	type none struct{}
-	sentRequests := make(map[core.RecordRef]none)
+	sentRequests := make(map[insolar.Reference]none)
 
 	shouldSendResponse := func(p *phase3Result) bool {
 		_, ok := sentRequests[p.id]
@@ -557,7 +590,7 @@ func (nc *ConsensusCommunicator) ExchangePhase3(ctx context.Context, participant
 	}
 }
 
-func (nc *ConsensusCommunicator) phase1DataHandler(packet packets.ConsensusPacket, sender core.RecordRef) {
+func (nc *ConsensusCommunicator) phase1DataHandler(packet packets.ConsensusPacket, sender insolar.Reference) {
 	p, ok := packet.(*packets.Phase1Packet)
 	if !ok {
 		log.Error("invalid Phase1Packet")
@@ -578,7 +611,7 @@ func (nc *ConsensusCommunicator) phase1DataHandler(packet packets.ConsensusPacke
 	nc.phase1result <- phase1Result{id: sender, packet: p}
 }
 
-func (nc *ConsensusCommunicator) phase2DataHandler(packet packets.ConsensusPacket, sender core.RecordRef) {
+func (nc *ConsensusCommunicator) phase2DataHandler(packet packets.ConsensusPacket, sender insolar.Reference) {
 	p, ok := packet.(*packets.Phase2Packet)
 	if !ok {
 		log.Error("invalid Phase2Packet")
@@ -595,7 +628,7 @@ func (nc *ConsensusCommunicator) phase2DataHandler(packet packets.ConsensusPacke
 	nc.phase2result <- phase2Result{id: sender, packet: p}
 }
 
-func (nc *ConsensusCommunicator) phase3DataHandler(packet packets.ConsensusPacket, sender core.RecordRef) {
+func (nc *ConsensusCommunicator) phase3DataHandler(packet packets.ConsensusPacket, sender insolar.Reference) {
 	p, ok := packet.(*packets.Phase3Packet)
 	if !ok {
 		log.Warn("failed to cast a type 3 packet to phase3packet")

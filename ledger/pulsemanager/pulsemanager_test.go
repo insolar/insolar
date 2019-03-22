@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package pulsemanager
 
@@ -22,8 +22,8 @@ import (
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
@@ -97,26 +97,26 @@ func (s *pulseManagerSuite) TestPulseManager_Set_CheckHotIndexesSending() {
 	s.T().Skip()
 
 	// Arrange
-	jetID := core.ZeroJetID
-	objID := core.RecordID{}
+	jetID := insolar.ZeroJetID
+	objID := insolar.ID{}
 
 	lr := testutils.NewLogicRunnerMock(s.T())
 	lr.OnPulseMock.Return(nil)
 
 	firstID, _ := s.objectStorage.SetRecord(
 		s.ctx,
-		core.RecordID(jetID),
-		core.GenesisPulse.PulseNumber,
+		insolar.ID(jetID),
+		insolar.GenesisPulse.PulseNumber,
 		&object.ObjectActivateRecord{})
 	firstIndex := object.Lifeline{
 		LatestState: firstID,
 	}
-	_ = s.objectStorage.SetObjectIndex(s.ctx, core.RecordID(jetID), firstID, &firstIndex)
+	_ = s.objectStorage.SetObjectIndex(s.ctx, insolar.ID(jetID), firstID, &firstIndex)
 	codeRecord := &object.CodeRecord{}
 	secondID, _ := s.objectStorage.SetRecord(
 		s.ctx,
-		core.RecordID(jetID),
-		core.GenesisPulse.PulseNumber,
+		insolar.ID(jetID),
+		insolar.GenesisPulse.PulseNumber,
 		codeRecord,
 	)
 
@@ -125,12 +125,12 @@ func (s *pulseManagerSuite) TestPulseManager_Set_CheckHotIndexesSending() {
 	// TODO: @andreyromancev. 12.01.19. Uncomment to check if this doesn't delete indexes it should not.
 	// recentMock.ClearZeroTTLObjectsMock.Return()
 	// recentMock.ClearObjectsMock.Return()
-	indexMock.GetObjectsMock.Return(map[core.RecordID]int{
+	indexMock.GetObjectsMock.Return(map[insolar.ID]int{
 		*firstID: 1,
 	})
 	pendingMock.GetRequestsMock.Return(
-		map[core.RecordID]recentstorage.PendingObjectContext{
-			objID: {Requests: []core.RecordID{*secondID}},
+		map[insolar.ID]recentstorage.PendingObjectContext{
+			objID: {Requests: []insolar.ID{*secondID}},
 		})
 
 	providerMock := recentstorage.NewProviderMock(s.T())
@@ -140,10 +140,10 @@ func (s *pulseManagerSuite) TestPulseManager_Set_CheckHotIndexesSending() {
 	providerMock.CloneIndexStorageMock.Return()
 
 	mbMock := testutils.NewMessageBusMock(s.T())
-	mbMock.OnPulseFunc = func(context.Context, core.Pulse) error {
+	mbMock.OnPulseFunc = func(context.Context, insolar.Pulse) error {
 		return nil
 	}
-	mbMock.SendFunc = func(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) (r core.Reply, r1 error) {
+	mbMock.SendFunc = func(p context.Context, p1 insolar.Message, p2 *insolar.MessageSendOptions) (r insolar.Reply, r1 error) {
 		val, ok := p1.(*message.HotData)
 		if !ok {
 			return nil, nil
@@ -164,15 +164,15 @@ func (s *pulseManagerSuite) TestPulseManager_Set_CheckHotIndexesSending() {
 	}
 
 	nodeMock := network.NewNodeMock(s.T())
-	nodeMock.RoleMock.Return(core.StaticRoleLightMaterial)
-	nodeMock.IDMock.Return(core.RecordRef{})
+	nodeMock.RoleMock.Return(insolar.StaticRoleLightMaterial)
+	nodeMock.IDMock.Return(insolar.Reference{})
 
 	nodeNetworkMock := network.NewNodeNetworkMock(s.T())
-	nodeNetworkMock.GetWorkingNodesMock.Return([]core.Node{nodeMock})
+	nodeNetworkMock.GetWorkingNodesMock.Return([]insolar.NetworkNode{nodeMock})
 	nodeNetworkMock.GetOriginMock.Return(nodeMock)
 
 	jetCoordinatorMock := testutils.NewJetCoordinatorMock(s.T())
-	executor := core.NewRecordRef(core.RecordID{}, *core.NewRecordID(123, []byte{3, 2, 1}))
+	executor := insolar.NewReference(insolar.ID{}, *insolar.NewID(123, []byte{3, 2, 1}))
 	jetCoordinatorMock.LightExecutorForJetMock.Return(executor, nil)
 	jetCoordinatorMock.MeMock.Return(*executor)
 
@@ -186,13 +186,13 @@ func (s *pulseManagerSuite) TestPulseManager_Set_CheckHotIndexesSending() {
 	alsMock.MoveSyncToActiveFunc = func(context.Context) error { return nil }
 
 	cryptoServiceMock := testutils.NewCryptographyServiceMock(s.T())
-	cryptoServiceMock.SignFunc = func(p []byte) (r *core.Signature, r1 error) {
-		signature := core.SignatureFromBytes(nil)
+	cryptoServiceMock.SignFunc = func(p []byte) (r *insolar.Signature, r1 error) {
+		signature := insolar.SignatureFromBytes(nil)
 		return &signature, nil
 	}
 
 	pulseStorageMock := NewpulseStoragePmMock(s.T())
-	pulseStorageMock.CurrentMock.Return(core.GenesisPulse, nil)
+	pulseStorageMock.CurrentMock.Return(insolar.GenesisPulse, nil)
 	pulseStorageMock.LockMock.Return()
 	pulseStorageMock.UnlockMock.Return()
 	pulseStorageMock.SetMock.Return()
@@ -210,11 +210,11 @@ func (s *pulseManagerSuite) TestPulseManager_Set_CheckHotIndexesSending() {
 	pm.JetCoordinator = jetCoordinatorMock
 
 	// Act
-	err := pm.Set(s.ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 1}, true)
+	err := pm.Set(s.ctx, insolar.Pulse{PulseNumber: insolar.FirstPulseNumber + 1}, true)
 	require.NoError(s.T(), err)
 	// // TODO: @andreyromancev. 12.01.19. put 1, when dynamic split is working.
 	assert.Equal(s.T(), uint64(2), mbMock.SendMinimockCounter()) // 1 validator drop (no split)
-	savedIndex, err := s.objectStorage.GetObjectIndex(s.ctx, core.RecordID(jetID), firstID, false)
+	savedIndex, err := s.objectStorage.GetObjectIndex(s.ctx, insolar.ID(jetID), firstID, false)
 	require.NoError(s.T(), err)
 
 	// Assert

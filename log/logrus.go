@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package log
 
@@ -25,7 +25,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 )
 
 type logrusAdapter struct {
@@ -81,14 +81,14 @@ func (l logrusAdapter) sourced() *logrus.Entry {
 }
 
 // WithFields return copy of adapter with predefined fields.
-func (l logrusAdapter) WithFields(fields map[string]interface{}) core.Logger {
+func (l logrusAdapter) WithFields(fields map[string]interface{}) insolar.Logger {
 	lcopy := l
 	lcopy.entry = l.entry.WithFields(logrus.Fields(fields))
 	return lcopy
 }
 
 // WithField return copy of adapter with predefined single field.
-func (l logrusAdapter) WithField(key string, value interface{}) core.Logger {
+func (l logrusAdapter) WithField(key string, value interface{}) insolar.Logger {
 	lcopy := l
 	lcopy.entry = l.entry.WithField(key, value)
 	return lcopy
@@ -240,7 +240,7 @@ func (l logrusAdapter) SetOutput(w io.Writer) {
 //
 // This is useful than logger methods called not from place they should report,
 // like helper functions.
-func WithSkipDelta(cl core.Logger, delta int) core.Logger {
+func WithSkipDelta(cl insolar.Logger, delta int) insolar.Logger {
 	l, ok := cl.(logrusAdapter)
 	if !ok {
 		return cl

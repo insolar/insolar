@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package api
 
@@ -24,7 +24,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/certificate"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/stretchr/testify/suite"
 
@@ -51,14 +51,14 @@ func (suite *MainAPISuite) TestSerialization() {
 	var b bool = true
 	var c string = "test"
 
-	serArgs, err := core.MarshalArgs(a, b, c)
+	serArgs, err := insolar.MarshalArgs(a, b, c)
 	suite.NoError(err)
 	suite.NotNil(serArgs)
 
 	var aR uint
 	var bR bool
 	var cR string
-	rowResp, err := core.UnMarshalResponse(serArgs, []interface{}{aR, bR, cR})
+	rowResp, err := insolar.UnMarshalResponse(serArgs, []interface{}{aR, bR, cR})
 	suite.NoError(err)
 	suite.Len(rowResp, 3)
 	suite.Equal(reflect.TypeOf(a), reflect.TypeOf(rowResp[0]))

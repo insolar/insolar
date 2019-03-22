@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package artifactmanager
 
@@ -23,18 +23,19 @@ import (
 	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/internal/jet"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/db"
 	"github.com/insolar/insolar/ledger/storage/drop"
-	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/message"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -47,11 +48,11 @@ type heavySuite struct {
 	cleaner func()
 	db      storage.DBContext
 
-	scheme        core.PlatformCryptographyScheme
+	scheme        insolar.PlatformCryptographyScheme
 	pulseTracker  storage.PulseTracker
 	nodeStorage   node.Accessor
 	objectStorage storage.ObjectStorage
-	jetStorage    jet.JetStorage
+	jetStorage    jet.Storage
 	dropModifier  drop.Modifier
 	dropAccessor  drop.Accessor
 }
@@ -71,11 +72,11 @@ func (s *heavySuite) BeforeTest(suiteName, testName string) {
 	s.cm = &component.Manager{}
 	s.ctx = inslogger.TestContext(s.T())
 
-	db, cleaner := storagetest.TmpDB(s.ctx, s.T())
+	tmpDB, cleaner := storagetest.TmpDB(s.ctx, s.T())
 	s.cleaner = cleaner
-	s.db = db
+	s.db = tmpDB
 	s.scheme = platformpolicy.NewPlatformCryptographyScheme()
-	s.jetStorage = jet.NewJetStorage()
+	s.jetStorage = jet.NewStore()
 	s.nodeStorage = node.NewStorage()
 	s.pulseTracker = storage.NewPulseTracker()
 	s.objectStorage = storage.NewObjectStorage()
@@ -86,6 +87,7 @@ func (s *heavySuite) BeforeTest(suiteName, testName string) {
 	s.cm.Inject(
 		s.scheme,
 		s.db,
+		db.NewMemoryMockDB(),
 		s.jetStorage,
 		s.nodeStorage,
 		s.pulseTracker,
@@ -118,9 +120,10 @@ func (s *heavySuite) TestLedgerArtifactManager_handleHeavy() {
 	// prepare mock
 	heavysync := testutils.NewHeavySyncMock(s.T())
 	heavysync.StartMock.Return(nil)
-	heavysync.StoreMock.Set(func(ctx context.Context, jetID core.RecordID, pn core.PulseNumber, kvs []core.KV) error {
+	heavysync.StoreMock.Set(func(ctx context.Context, jetID insolar.ID, pn insolar.PulseNumber, kvs []insolar.KV) error {
 		return s.db.StoreKeyValues(ctx, kvs)
 	})
+	heavysync.StoreDropMock.Return(nil)
 	heavysync.StopMock.Return(nil)
 
 	recentIndexMock := recentstorage.NewRecentIndexStorageMock(s.T())
@@ -132,7 +135,7 @@ func (s *heavySuite) TestLedgerArtifactManager_handleHeavy() {
 	provideMock.GetPendingStorageMock.Return(pendingMock)
 
 	certificate := testutils.NewCertificateMock(s.T())
-	certificate.GetRoleMock.Return(core.StaticRoleHeavyMaterial)
+	certificate.GetRoleMock.Return(insolar.StaticRoleHeavyMaterial)
 
 	// message hanler with mok
 	mh := NewMessageHandler(nil, certificate)
@@ -145,7 +148,7 @@ func (s *heavySuite) TestLedgerArtifactManager_handleHeavy() {
 
 	mh.HeavySync = heavysync
 
-	payload := []core.KV{
+	payload := []insolar.KV{
 		{K: []byte("ABC"), V: []byte("CDE")},
 		{K: []byte("ABC"), V: []byte("CDE")},
 		{K: []byte("CDE"), V: []byte("ABC")},
@@ -153,7 +156,7 @@ func (s *heavySuite) TestLedgerArtifactManager_handleHeavy() {
 
 	parcel := &message.Parcel{
 		Msg: &message.HeavyPayload{
-			JetID:   jetID,
+			JetID:   insolar.JetID(jetID),
 			Records: payload,
 		},
 	}

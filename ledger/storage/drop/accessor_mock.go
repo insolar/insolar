@@ -11,8 +11,7 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	core "github.com/insolar/insolar/core"
-	jet "github.com/insolar/insolar/ledger/storage/jet"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -21,7 +20,7 @@ import (
 type AccessorMock struct {
 	t minimock.Tester
 
-	ForPulseFunc       func(p context.Context, p1 core.JetID, p2 core.PulseNumber) (r jet.Drop, r1 error)
+	ForPulseFunc       func(p context.Context, p1 insolar.JetID, p2 insolar.PulseNumber) (r Drop, r1 error)
 	ForPulseCounter    uint64
 	ForPulsePreCounter uint64
 	ForPulseMock       mAccessorMockForPulse
@@ -53,17 +52,17 @@ type AccessorMockForPulseExpectation struct {
 
 type AccessorMockForPulseInput struct {
 	p  context.Context
-	p1 core.JetID
-	p2 core.PulseNumber
+	p1 insolar.JetID
+	p2 insolar.PulseNumber
 }
 
 type AccessorMockForPulseResult struct {
-	r  jet.Drop
+	r  Drop
 	r1 error
 }
 
 //Expect specifies that invocation of Accessor.ForPulse is expected from 1 to Infinity times
-func (m *mAccessorMockForPulse) Expect(p context.Context, p1 core.JetID, p2 core.PulseNumber) *mAccessorMockForPulse {
+func (m *mAccessorMockForPulse) Expect(p context.Context, p1 insolar.JetID, p2 insolar.PulseNumber) *mAccessorMockForPulse {
 	m.mock.ForPulseFunc = nil
 	m.expectationSeries = nil
 
@@ -75,7 +74,7 @@ func (m *mAccessorMockForPulse) Expect(p context.Context, p1 core.JetID, p2 core
 }
 
 //Return specifies results of invocation of Accessor.ForPulse
-func (m *mAccessorMockForPulse) Return(r jet.Drop, r1 error) *AccessorMock {
+func (m *mAccessorMockForPulse) Return(r Drop, r1 error) *AccessorMock {
 	m.mock.ForPulseFunc = nil
 	m.expectationSeries = nil
 
@@ -87,7 +86,7 @@ func (m *mAccessorMockForPulse) Return(r jet.Drop, r1 error) *AccessorMock {
 }
 
 //ExpectOnce specifies that invocation of Accessor.ForPulse is expected once
-func (m *mAccessorMockForPulse) ExpectOnce(p context.Context, p1 core.JetID, p2 core.PulseNumber) *AccessorMockForPulseExpectation {
+func (m *mAccessorMockForPulse) ExpectOnce(p context.Context, p1 insolar.JetID, p2 insolar.PulseNumber) *AccessorMockForPulseExpectation {
 	m.mock.ForPulseFunc = nil
 	m.mainExpectation = nil
 
@@ -97,12 +96,12 @@ func (m *mAccessorMockForPulse) ExpectOnce(p context.Context, p1 core.JetID, p2 
 	return expectation
 }
 
-func (e *AccessorMockForPulseExpectation) Return(r jet.Drop, r1 error) {
+func (e *AccessorMockForPulseExpectation) Return(r Drop, r1 error) {
 	e.result = &AccessorMockForPulseResult{r, r1}
 }
 
 //Set uses given function f as a mock of Accessor.ForPulse method
-func (m *mAccessorMockForPulse) Set(f func(p context.Context, p1 core.JetID, p2 core.PulseNumber) (r jet.Drop, r1 error)) *AccessorMock {
+func (m *mAccessorMockForPulse) Set(f func(p context.Context, p1 insolar.JetID, p2 insolar.PulseNumber) (r Drop, r1 error)) *AccessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -111,7 +110,7 @@ func (m *mAccessorMockForPulse) Set(f func(p context.Context, p1 core.JetID, p2 
 }
 
 //ForPulse implements github.com/insolar/insolar/ledger/storage/drop.Accessor interface
-func (m *AccessorMock) ForPulse(p context.Context, p1 core.JetID, p2 core.PulseNumber) (r jet.Drop, r1 error) {
+func (m *AccessorMock) ForPulse(p context.Context, p1 insolar.JetID, p2 insolar.PulseNumber) (r Drop, r1 error) {
 	counter := atomic.AddUint64(&m.ForPulsePreCounter, 1)
 	defer atomic.AddUint64(&m.ForPulseCounter, 1)
 

@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package storage
 
@@ -22,7 +22,7 @@ import (
 	"errors"
 
 	"github.com/dgraph-io/badger"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 )
 
 // iterstate stores iterator state
@@ -48,7 +48,7 @@ type ReplicaIter struct {
 	dbContext  DBContext
 	limitBytes int
 	istates    []*iterstate
-	lastpulse  core.PulseNumber
+	lastpulse  insolar.PulseNumber
 }
 
 // NewReplicaIter creates ReplicaIter what iterates over records on jet,
@@ -56,21 +56,21 @@ type ReplicaIter struct {
 //
 // Params 'start' and 'end' defines pulses from which scan should happen,
 // and on which it should be stopped, but indexes scan are always started
-// from core.FirstPulseNumber.
+// from insolar.FirstPulseNumber.
 //
 // Param 'limit' sets per message limit.
 func NewReplicaIter(
 	ctx context.Context,
 	dbContext DBContext,
-	jetID core.RecordID,
-	start core.PulseNumber,
-	end core.PulseNumber,
+	jetID insolar.ID,
+	start insolar.PulseNumber,
+	end insolar.PulseNumber,
 	limit int,
 ) *ReplicaIter {
 	// fmt.Printf("CALL NewReplicaIter [%v:%v] (jet=%v)\n", start, end, jetID)
-	newit := func(prefixbyte byte, jetID core.RecordID, start, end core.PulseNumber) *iterstate {
+	newit := func(prefixbyte byte, jetID insolar.ID, start, end insolar.PulseNumber) *iterstate {
 		prefix := []byte{prefixbyte}
-		jetPrefix := core.JetID(jetID).Prefix()
+		jetPrefix := insolar.JetID(jetID).Prefix()
 		iter := &iterstate{prefix: prefix}
 		iter.start = bytes.Join([][]byte{prefix, jetPrefix[:], start.Bytes()}, nil)
 		iter.end = bytes.Join([][]byte{prefix, jetPrefix[:], end.Bytes()}, nil)
@@ -85,14 +85,13 @@ func NewReplicaIter(
 		istates: []*iterstate{
 			newit(scopeIDRecord, jetID, start, end),
 			newit(scopeIDBlob, jetID, start, end),
-			newit(scopeIDLifeline, jetID, core.FirstPulseNumber, end),
-			newit(scopeIDJetDrop, jetID, start, end),
+			newit(scopeIDLifeline, jetID, insolar.FirstPulseNumber, end),
 		},
 	}
 }
 
 // NextRecords fetches next part of key value pairs.
-func (r *ReplicaIter) NextRecords() ([]core.KV, error) {
+func (r *ReplicaIter) NextRecords() ([]insolar.KV, error) {
 	if r.isDone() {
 		return nil, ErrReplicatorDone
 	}
@@ -105,7 +104,7 @@ func (r *ReplicaIter) NextRecords() ([]core.KV, error) {
 			continue
 		}
 		var fetcherr error
-		var lastpulse core.PulseNumber
+		var lastpulse insolar.PulseNumber
 		is.start, lastpulse, fetcherr = fc.fetch(r.ctx, is.prefix, is.start, is.end)
 		if fetcherr != nil {
 			return nil, fetcherr
@@ -118,7 +117,7 @@ func (r *ReplicaIter) NextRecords() ([]core.KV, error) {
 }
 
 // LastPulse returns maximum pulse number of returned keys after each fetch.
-func (r *ReplicaIter) LastSeenPulse() core.PulseNumber {
+func (r *ReplicaIter) LastSeenPulse() insolar.PulseNumber {
 	return r.lastpulse
 }
 
@@ -136,7 +135,7 @@ func (r *ReplicaIter) isDone() bool {
 
 type fetchchunk struct {
 	db      *badger.DB
-	records []core.KV
+	records []insolar.KV
 	size    int
 	limit   int
 }
@@ -146,13 +145,13 @@ func (fc *fetchchunk) fetch(
 	prefix []byte,
 	start []byte,
 	end []byte,
-) ([]byte, core.PulseNumber, error) {
+) ([]byte, insolar.PulseNumber, error) {
 	if fc.size > fc.limit {
 		return start, 0, nil
 	}
 
 	var nextstart []byte
-	var lastpulse core.PulseNumber
+	var lastpulse insolar.PulseNumber
 	err := fc.db.View(func(txn *badger.Txn) error {
 		it := txn.NewIterator(badger.DefaultIteratorOptions)
 		defer it.Close()
@@ -184,7 +183,7 @@ func (fc *fetchchunk) fetch(
 			}
 
 			NullifyJetInKey(key)
-			fc.records = append(fc.records, core.KV{K: key, V: value})
+			fc.records = append(fc.records, insolar.KV{K: key, V: value})
 			fc.size += len(key) + len(value)
 		}
 		nextstart = nil
@@ -195,12 +194,7 @@ func (fc *fetchchunk) fetch(
 
 // NullifyJetInKey nullify jet part in record.
 func NullifyJetInKey(key []byte) {
-	// if we remove jet part from drop, different drops from same pulses collapsed
-	// TODO: figure out how we want to send jet drops on heavy nodes - @Alexander Orlovsky 18.01.2019
-	if key[0] == scopeIDJetDrop {
-		return
-	}
-	for i := 1; i < core.RecordHashSize; i++ {
+	for i := 1; i < insolar.RecordHashSize; i++ {
 		key[i] = 0
 	}
 }

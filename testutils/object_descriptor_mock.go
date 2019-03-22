@@ -3,38 +3,38 @@ package testutils
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "ObjectDescriptor" can be found in github.com/insolar/insolar/core
+The original interface "ObjectDescriptor" can be found in github.com/insolar/insolar/insolar
 */
 import (
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	core "github.com/insolar/insolar/core"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//ObjectDescriptorMock implements github.com/insolar/insolar/core.ObjectDescriptor
+//ObjectDescriptorMock implements github.com/insolar/insolar/insolar.ObjectDescriptor
 type ObjectDescriptorMock struct {
 	t minimock.Tester
 
-	ChildPointerFunc       func() (r *core.RecordID)
+	ChildPointerFunc       func() (r *insolar.ID)
 	ChildPointerCounter    uint64
 	ChildPointerPreCounter uint64
 	ChildPointerMock       mObjectDescriptorMockChildPointer
 
-	ChildrenFunc       func(p *core.PulseNumber) (r core.RefIterator, r1 error)
+	ChildrenFunc       func(p *insolar.PulseNumber) (r insolar.RefIterator, r1 error)
 	ChildrenCounter    uint64
 	ChildrenPreCounter uint64
 	ChildrenMock       mObjectDescriptorMockChildren
 
-	CodeFunc       func() (r *core.RecordRef, r1 error)
+	CodeFunc       func() (r *insolar.Reference, r1 error)
 	CodeCounter    uint64
 	CodePreCounter uint64
 	CodeMock       mObjectDescriptorMockCode
 
-	HeadRefFunc       func() (r *core.RecordRef)
+	HeadRefFunc       func() (r *insolar.Reference)
 	HeadRefCounter    uint64
 	HeadRefPreCounter uint64
 	HeadRefMock       mObjectDescriptorMockHeadRef
@@ -49,23 +49,23 @@ type ObjectDescriptorMock struct {
 	MemoryPreCounter uint64
 	MemoryMock       mObjectDescriptorMockMemory
 
-	ParentFunc       func() (r *core.RecordRef)
+	ParentFunc       func() (r *insolar.Reference)
 	ParentCounter    uint64
 	ParentPreCounter uint64
 	ParentMock       mObjectDescriptorMockParent
 
-	PrototypeFunc       func() (r *core.RecordRef, r1 error)
+	PrototypeFunc       func() (r *insolar.Reference, r1 error)
 	PrototypeCounter    uint64
 	PrototypePreCounter uint64
 	PrototypeMock       mObjectDescriptorMockPrototype
 
-	StateIDFunc       func() (r *core.RecordID)
+	StateIDFunc       func() (r *insolar.ID)
 	StateIDCounter    uint64
 	StateIDPreCounter uint64
 	StateIDMock       mObjectDescriptorMockStateID
 }
 
-//NewObjectDescriptorMock returns a mock for github.com/insolar/insolar/core.ObjectDescriptor
+//NewObjectDescriptorMock returns a mock for github.com/insolar/insolar/insolar.ObjectDescriptor
 func NewObjectDescriptorMock(t minimock.Tester) *ObjectDescriptorMock {
 	m := &ObjectDescriptorMock{t: t}
 
@@ -97,7 +97,7 @@ type ObjectDescriptorMockChildPointerExpectation struct {
 }
 
 type ObjectDescriptorMockChildPointerResult struct {
-	r *core.RecordID
+	r *insolar.ID
 }
 
 //Expect specifies that invocation of ObjectDescriptor.ChildPointer is expected from 1 to Infinity times
@@ -113,7 +113,7 @@ func (m *mObjectDescriptorMockChildPointer) Expect() *mObjectDescriptorMockChild
 }
 
 //Return specifies results of invocation of ObjectDescriptor.ChildPointer
-func (m *mObjectDescriptorMockChildPointer) Return(r *core.RecordID) *ObjectDescriptorMock {
+func (m *mObjectDescriptorMockChildPointer) Return(r *insolar.ID) *ObjectDescriptorMock {
 	m.mock.ChildPointerFunc = nil
 	m.expectationSeries = nil
 
@@ -135,12 +135,12 @@ func (m *mObjectDescriptorMockChildPointer) ExpectOnce() *ObjectDescriptorMockCh
 	return expectation
 }
 
-func (e *ObjectDescriptorMockChildPointerExpectation) Return(r *core.RecordID) {
+func (e *ObjectDescriptorMockChildPointerExpectation) Return(r *insolar.ID) {
 	e.result = &ObjectDescriptorMockChildPointerResult{r}
 }
 
 //Set uses given function f as a mock of ObjectDescriptor.ChildPointer method
-func (m *mObjectDescriptorMockChildPointer) Set(f func() (r *core.RecordID)) *ObjectDescriptorMock {
+func (m *mObjectDescriptorMockChildPointer) Set(f func() (r *insolar.ID)) *ObjectDescriptorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -148,8 +148,8 @@ func (m *mObjectDescriptorMockChildPointer) Set(f func() (r *core.RecordID)) *Ob
 	return m.mock
 }
 
-//ChildPointer implements github.com/insolar/insolar/core.ObjectDescriptor interface
-func (m *ObjectDescriptorMock) ChildPointer() (r *core.RecordID) {
+//ChildPointer implements github.com/insolar/insolar/insolar.ObjectDescriptor interface
+func (m *ObjectDescriptorMock) ChildPointer() (r *insolar.ID) {
 	counter := atomic.AddUint64(&m.ChildPointerPreCounter, 1)
 	defer atomic.AddUint64(&m.ChildPointerCounter, 1)
 
@@ -232,16 +232,16 @@ type ObjectDescriptorMockChildrenExpectation struct {
 }
 
 type ObjectDescriptorMockChildrenInput struct {
-	p *core.PulseNumber
+	p *insolar.PulseNumber
 }
 
 type ObjectDescriptorMockChildrenResult struct {
-	r  core.RefIterator
+	r  insolar.RefIterator
 	r1 error
 }
 
 //Expect specifies that invocation of ObjectDescriptor.Children is expected from 1 to Infinity times
-func (m *mObjectDescriptorMockChildren) Expect(p *core.PulseNumber) *mObjectDescriptorMockChildren {
+func (m *mObjectDescriptorMockChildren) Expect(p *insolar.PulseNumber) *mObjectDescriptorMockChildren {
 	m.mock.ChildrenFunc = nil
 	m.expectationSeries = nil
 
@@ -253,7 +253,7 @@ func (m *mObjectDescriptorMockChildren) Expect(p *core.PulseNumber) *mObjectDesc
 }
 
 //Return specifies results of invocation of ObjectDescriptor.Children
-func (m *mObjectDescriptorMockChildren) Return(r core.RefIterator, r1 error) *ObjectDescriptorMock {
+func (m *mObjectDescriptorMockChildren) Return(r insolar.RefIterator, r1 error) *ObjectDescriptorMock {
 	m.mock.ChildrenFunc = nil
 	m.expectationSeries = nil
 
@@ -265,7 +265,7 @@ func (m *mObjectDescriptorMockChildren) Return(r core.RefIterator, r1 error) *Ob
 }
 
 //ExpectOnce specifies that invocation of ObjectDescriptor.Children is expected once
-func (m *mObjectDescriptorMockChildren) ExpectOnce(p *core.PulseNumber) *ObjectDescriptorMockChildrenExpectation {
+func (m *mObjectDescriptorMockChildren) ExpectOnce(p *insolar.PulseNumber) *ObjectDescriptorMockChildrenExpectation {
 	m.mock.ChildrenFunc = nil
 	m.mainExpectation = nil
 
@@ -275,12 +275,12 @@ func (m *mObjectDescriptorMockChildren) ExpectOnce(p *core.PulseNumber) *ObjectD
 	return expectation
 }
 
-func (e *ObjectDescriptorMockChildrenExpectation) Return(r core.RefIterator, r1 error) {
+func (e *ObjectDescriptorMockChildrenExpectation) Return(r insolar.RefIterator, r1 error) {
 	e.result = &ObjectDescriptorMockChildrenResult{r, r1}
 }
 
 //Set uses given function f as a mock of ObjectDescriptor.Children method
-func (m *mObjectDescriptorMockChildren) Set(f func(p *core.PulseNumber) (r core.RefIterator, r1 error)) *ObjectDescriptorMock {
+func (m *mObjectDescriptorMockChildren) Set(f func(p *insolar.PulseNumber) (r insolar.RefIterator, r1 error)) *ObjectDescriptorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -288,8 +288,8 @@ func (m *mObjectDescriptorMockChildren) Set(f func(p *core.PulseNumber) (r core.
 	return m.mock
 }
 
-//Children implements github.com/insolar/insolar/core.ObjectDescriptor interface
-func (m *ObjectDescriptorMock) Children(p *core.PulseNumber) (r core.RefIterator, r1 error) {
+//Children implements github.com/insolar/insolar/insolar.ObjectDescriptor interface
+func (m *ObjectDescriptorMock) Children(p *insolar.PulseNumber) (r insolar.RefIterator, r1 error) {
 	counter := atomic.AddUint64(&m.ChildrenPreCounter, 1)
 	defer atomic.AddUint64(&m.ChildrenCounter, 1)
 
@@ -381,7 +381,7 @@ type ObjectDescriptorMockCodeExpectation struct {
 }
 
 type ObjectDescriptorMockCodeResult struct {
-	r  *core.RecordRef
+	r  *insolar.Reference
 	r1 error
 }
 
@@ -398,7 +398,7 @@ func (m *mObjectDescriptorMockCode) Expect() *mObjectDescriptorMockCode {
 }
 
 //Return specifies results of invocation of ObjectDescriptor.Code
-func (m *mObjectDescriptorMockCode) Return(r *core.RecordRef, r1 error) *ObjectDescriptorMock {
+func (m *mObjectDescriptorMockCode) Return(r *insolar.Reference, r1 error) *ObjectDescriptorMock {
 	m.mock.CodeFunc = nil
 	m.expectationSeries = nil
 
@@ -420,12 +420,12 @@ func (m *mObjectDescriptorMockCode) ExpectOnce() *ObjectDescriptorMockCodeExpect
 	return expectation
 }
 
-func (e *ObjectDescriptorMockCodeExpectation) Return(r *core.RecordRef, r1 error) {
+func (e *ObjectDescriptorMockCodeExpectation) Return(r *insolar.Reference, r1 error) {
 	e.result = &ObjectDescriptorMockCodeResult{r, r1}
 }
 
 //Set uses given function f as a mock of ObjectDescriptor.Code method
-func (m *mObjectDescriptorMockCode) Set(f func() (r *core.RecordRef, r1 error)) *ObjectDescriptorMock {
+func (m *mObjectDescriptorMockCode) Set(f func() (r *insolar.Reference, r1 error)) *ObjectDescriptorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -433,8 +433,8 @@ func (m *mObjectDescriptorMockCode) Set(f func() (r *core.RecordRef, r1 error)) 
 	return m.mock
 }
 
-//Code implements github.com/insolar/insolar/core.ObjectDescriptor interface
-func (m *ObjectDescriptorMock) Code() (r *core.RecordRef, r1 error) {
+//Code implements github.com/insolar/insolar/insolar.ObjectDescriptor interface
+func (m *ObjectDescriptorMock) Code() (r *insolar.Reference, r1 error) {
 	counter := atomic.AddUint64(&m.CodePreCounter, 1)
 	defer atomic.AddUint64(&m.CodeCounter, 1)
 
@@ -518,7 +518,7 @@ type ObjectDescriptorMockHeadRefExpectation struct {
 }
 
 type ObjectDescriptorMockHeadRefResult struct {
-	r *core.RecordRef
+	r *insolar.Reference
 }
 
 //Expect specifies that invocation of ObjectDescriptor.HeadRef is expected from 1 to Infinity times
@@ -534,7 +534,7 @@ func (m *mObjectDescriptorMockHeadRef) Expect() *mObjectDescriptorMockHeadRef {
 }
 
 //Return specifies results of invocation of ObjectDescriptor.HeadRef
-func (m *mObjectDescriptorMockHeadRef) Return(r *core.RecordRef) *ObjectDescriptorMock {
+func (m *mObjectDescriptorMockHeadRef) Return(r *insolar.Reference) *ObjectDescriptorMock {
 	m.mock.HeadRefFunc = nil
 	m.expectationSeries = nil
 
@@ -556,12 +556,12 @@ func (m *mObjectDescriptorMockHeadRef) ExpectOnce() *ObjectDescriptorMockHeadRef
 	return expectation
 }
 
-func (e *ObjectDescriptorMockHeadRefExpectation) Return(r *core.RecordRef) {
+func (e *ObjectDescriptorMockHeadRefExpectation) Return(r *insolar.Reference) {
 	e.result = &ObjectDescriptorMockHeadRefResult{r}
 }
 
 //Set uses given function f as a mock of ObjectDescriptor.HeadRef method
-func (m *mObjectDescriptorMockHeadRef) Set(f func() (r *core.RecordRef)) *ObjectDescriptorMock {
+func (m *mObjectDescriptorMockHeadRef) Set(f func() (r *insolar.Reference)) *ObjectDescriptorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -569,8 +569,8 @@ func (m *mObjectDescriptorMockHeadRef) Set(f func() (r *core.RecordRef)) *Object
 	return m.mock
 }
 
-//HeadRef implements github.com/insolar/insolar/core.ObjectDescriptor interface
-func (m *ObjectDescriptorMock) HeadRef() (r *core.RecordRef) {
+//HeadRef implements github.com/insolar/insolar/insolar.ObjectDescriptor interface
+func (m *ObjectDescriptorMock) HeadRef() (r *insolar.Reference) {
 	counter := atomic.AddUint64(&m.HeadRefPreCounter, 1)
 	defer atomic.AddUint64(&m.HeadRefCounter, 1)
 
@@ -703,7 +703,7 @@ func (m *mObjectDescriptorMockIsPrototype) Set(f func() (r bool)) *ObjectDescrip
 	return m.mock
 }
 
-//IsPrototype implements github.com/insolar/insolar/core.ObjectDescriptor interface
+//IsPrototype implements github.com/insolar/insolar/insolar.ObjectDescriptor interface
 func (m *ObjectDescriptorMock) IsPrototype() (r bool) {
 	counter := atomic.AddUint64(&m.IsPrototypePreCounter, 1)
 	defer atomic.AddUint64(&m.IsPrototypeCounter, 1)
@@ -837,7 +837,7 @@ func (m *mObjectDescriptorMockMemory) Set(f func() (r []byte)) *ObjectDescriptor
 	return m.mock
 }
 
-//Memory implements github.com/insolar/insolar/core.ObjectDescriptor interface
+//Memory implements github.com/insolar/insolar/insolar.ObjectDescriptor interface
 func (m *ObjectDescriptorMock) Memory() (r []byte) {
 	counter := atomic.AddUint64(&m.MemoryPreCounter, 1)
 	defer atomic.AddUint64(&m.MemoryCounter, 1)
@@ -920,7 +920,7 @@ type ObjectDescriptorMockParentExpectation struct {
 }
 
 type ObjectDescriptorMockParentResult struct {
-	r *core.RecordRef
+	r *insolar.Reference
 }
 
 //Expect specifies that invocation of ObjectDescriptor.Parent is expected from 1 to Infinity times
@@ -936,7 +936,7 @@ func (m *mObjectDescriptorMockParent) Expect() *mObjectDescriptorMockParent {
 }
 
 //Return specifies results of invocation of ObjectDescriptor.Parent
-func (m *mObjectDescriptorMockParent) Return(r *core.RecordRef) *ObjectDescriptorMock {
+func (m *mObjectDescriptorMockParent) Return(r *insolar.Reference) *ObjectDescriptorMock {
 	m.mock.ParentFunc = nil
 	m.expectationSeries = nil
 
@@ -958,12 +958,12 @@ func (m *mObjectDescriptorMockParent) ExpectOnce() *ObjectDescriptorMockParentEx
 	return expectation
 }
 
-func (e *ObjectDescriptorMockParentExpectation) Return(r *core.RecordRef) {
+func (e *ObjectDescriptorMockParentExpectation) Return(r *insolar.Reference) {
 	e.result = &ObjectDescriptorMockParentResult{r}
 }
 
 //Set uses given function f as a mock of ObjectDescriptor.Parent method
-func (m *mObjectDescriptorMockParent) Set(f func() (r *core.RecordRef)) *ObjectDescriptorMock {
+func (m *mObjectDescriptorMockParent) Set(f func() (r *insolar.Reference)) *ObjectDescriptorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -971,8 +971,8 @@ func (m *mObjectDescriptorMockParent) Set(f func() (r *core.RecordRef)) *ObjectD
 	return m.mock
 }
 
-//Parent implements github.com/insolar/insolar/core.ObjectDescriptor interface
-func (m *ObjectDescriptorMock) Parent() (r *core.RecordRef) {
+//Parent implements github.com/insolar/insolar/insolar.ObjectDescriptor interface
+func (m *ObjectDescriptorMock) Parent() (r *insolar.Reference) {
 	counter := atomic.AddUint64(&m.ParentPreCounter, 1)
 	defer atomic.AddUint64(&m.ParentCounter, 1)
 
@@ -1054,7 +1054,7 @@ type ObjectDescriptorMockPrototypeExpectation struct {
 }
 
 type ObjectDescriptorMockPrototypeResult struct {
-	r  *core.RecordRef
+	r  *insolar.Reference
 	r1 error
 }
 
@@ -1071,7 +1071,7 @@ func (m *mObjectDescriptorMockPrototype) Expect() *mObjectDescriptorMockPrototyp
 }
 
 //Return specifies results of invocation of ObjectDescriptor.Prototype
-func (m *mObjectDescriptorMockPrototype) Return(r *core.RecordRef, r1 error) *ObjectDescriptorMock {
+func (m *mObjectDescriptorMockPrototype) Return(r *insolar.Reference, r1 error) *ObjectDescriptorMock {
 	m.mock.PrototypeFunc = nil
 	m.expectationSeries = nil
 
@@ -1093,12 +1093,12 @@ func (m *mObjectDescriptorMockPrototype) ExpectOnce() *ObjectDescriptorMockProto
 	return expectation
 }
 
-func (e *ObjectDescriptorMockPrototypeExpectation) Return(r *core.RecordRef, r1 error) {
+func (e *ObjectDescriptorMockPrototypeExpectation) Return(r *insolar.Reference, r1 error) {
 	e.result = &ObjectDescriptorMockPrototypeResult{r, r1}
 }
 
 //Set uses given function f as a mock of ObjectDescriptor.Prototype method
-func (m *mObjectDescriptorMockPrototype) Set(f func() (r *core.RecordRef, r1 error)) *ObjectDescriptorMock {
+func (m *mObjectDescriptorMockPrototype) Set(f func() (r *insolar.Reference, r1 error)) *ObjectDescriptorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1106,8 +1106,8 @@ func (m *mObjectDescriptorMockPrototype) Set(f func() (r *core.RecordRef, r1 err
 	return m.mock
 }
 
-//Prototype implements github.com/insolar/insolar/core.ObjectDescriptor interface
-func (m *ObjectDescriptorMock) Prototype() (r *core.RecordRef, r1 error) {
+//Prototype implements github.com/insolar/insolar/insolar.ObjectDescriptor interface
+func (m *ObjectDescriptorMock) Prototype() (r *insolar.Reference, r1 error) {
 	counter := atomic.AddUint64(&m.PrototypePreCounter, 1)
 	defer atomic.AddUint64(&m.PrototypeCounter, 1)
 
@@ -1191,7 +1191,7 @@ type ObjectDescriptorMockStateIDExpectation struct {
 }
 
 type ObjectDescriptorMockStateIDResult struct {
-	r *core.RecordID
+	r *insolar.ID
 }
 
 //Expect specifies that invocation of ObjectDescriptor.StateID is expected from 1 to Infinity times
@@ -1207,7 +1207,7 @@ func (m *mObjectDescriptorMockStateID) Expect() *mObjectDescriptorMockStateID {
 }
 
 //Return specifies results of invocation of ObjectDescriptor.StateID
-func (m *mObjectDescriptorMockStateID) Return(r *core.RecordID) *ObjectDescriptorMock {
+func (m *mObjectDescriptorMockStateID) Return(r *insolar.ID) *ObjectDescriptorMock {
 	m.mock.StateIDFunc = nil
 	m.expectationSeries = nil
 
@@ -1229,12 +1229,12 @@ func (m *mObjectDescriptorMockStateID) ExpectOnce() *ObjectDescriptorMockStateID
 	return expectation
 }
 
-func (e *ObjectDescriptorMockStateIDExpectation) Return(r *core.RecordID) {
+func (e *ObjectDescriptorMockStateIDExpectation) Return(r *insolar.ID) {
 	e.result = &ObjectDescriptorMockStateIDResult{r}
 }
 
 //Set uses given function f as a mock of ObjectDescriptor.StateID method
-func (m *mObjectDescriptorMockStateID) Set(f func() (r *core.RecordID)) *ObjectDescriptorMock {
+func (m *mObjectDescriptorMockStateID) Set(f func() (r *insolar.ID)) *ObjectDescriptorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1242,8 +1242,8 @@ func (m *mObjectDescriptorMockStateID) Set(f func() (r *core.RecordID)) *ObjectD
 	return m.mock
 }
 
-//StateID implements github.com/insolar/insolar/core.ObjectDescriptor interface
-func (m *ObjectDescriptorMock) StateID() (r *core.RecordID) {
+//StateID implements github.com/insolar/insolar/insolar.ObjectDescriptor interface
+func (m *ObjectDescriptorMock) StateID() (r *insolar.ID) {
 	counter := atomic.AddUint64(&m.StateIDPreCounter, 1)
 	defer atomic.AddUint64(&m.StateIDCounter, 1)
 

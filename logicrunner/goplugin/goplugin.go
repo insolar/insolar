@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 // Package goplugin - golang plugin in docker runner
 package goplugin
@@ -28,8 +28,9 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 )
 
@@ -50,15 +51,15 @@ type RunnerOptions struct {
 // GoPlugin is a logic runner of code written in golang and compiled as go plugins
 type GoPlugin struct {
 	Cfg             *configuration.LogicRunner
-	MessageBus      core.MessageBus
-	ArtifactManager core.ArtifactManager
+	MessageBus      insolar.MessageBus
+	ArtifactManager insolar.ArtifactManager
 
 	clientMutex sync.Mutex
 	client      *rpc.Client
 }
 
 // NewGoPlugin returns a new started GoPlugin
-func NewGoPlugin(conf *configuration.LogicRunner, eb core.MessageBus, am core.ArtifactManager) (*GoPlugin, error) {
+func NewGoPlugin(conf *configuration.LogicRunner, eb insolar.MessageBus, am insolar.ArtifactManager) (*GoPlugin, error) {
 	gp := GoPlugin{
 		Cfg:             conf,
 		MessageBus:      eb,
@@ -146,12 +147,14 @@ func (gp *GoPlugin) CallMethodRPC(ctx context.Context, req rpctypes.DownCallMeth
 
 // CallMethod runs a method on an object in controlled environment
 func (gp *GoPlugin) CallMethod(
-	ctx context.Context, callContext *core.LogicCallContext,
-	code core.RecordRef, data []byte,
-	method string, args core.Arguments,
+	ctx context.Context, callContext *insolar.LogicCallContext,
+	code insolar.Reference, data []byte,
+	method string, args insolar.Arguments,
 ) (
-	[]byte, core.Arguments, error,
+	[]byte, insolar.Arguments, error,
 ) {
+	ctx = insmetrics.InsertTag(ctx, tagMethodName, method)
+
 	inslogger.FromContext(ctx).Debug("GoPlugin.CallMethod starts")
 	start := time.Now()
 	defer func() {
@@ -196,8 +199,8 @@ func (gp *GoPlugin) CallConstructorRPC(ctx context.Context, req rpctypes.DownCal
 
 // CallConstructor runs a constructor of a contract in controlled environment
 func (gp *GoPlugin) CallConstructor(
-	ctx context.Context, callContext *core.LogicCallContext,
-	code core.RecordRef, name string, args core.Arguments,
+	ctx context.Context, callContext *insolar.LogicCallContext,
+	code insolar.Reference, name string, args insolar.Arguments,
 ) (
 	[]byte, error,
 ) {

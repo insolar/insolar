@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package storage_test
 
@@ -27,7 +27,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/testutils"
@@ -42,7 +42,7 @@ type replicaSuite struct {
 
 	replicaStorage storage.ReplicaStorage
 
-	jetID core.RecordID
+	jetID insolar.ID
 }
 
 func NewReplicaSuite() *replicaSuite {
@@ -59,7 +59,7 @@ func TestReplicaStorage(t *testing.T) {
 func (s *replicaSuite) BeforeTest(suiteName, testName string) {
 	s.cm = &component.Manager{}
 	s.ctx = inslogger.TestContext(s.T())
-	s.jetID = core.TODOJetID
+	s.jetID = insolar.TODOJetID
 
 	db, cleaner := storagetest.TmpDB(s.ctx, s.T())
 	s.cleaner = cleaner
@@ -93,9 +93,9 @@ func (s *replicaSuite) Test_ReplicatedPulse() {
 	// test {Set/Get}HeavySyncedPulse methods pair
 	heavyGot0, err := s.replicaStorage.GetHeavySyncedPulse(s.ctx, s.jetID)
 	require.NoError(s.T(), err)
-	assert.Equal(s.T(), core.PulseNumber(0), heavyGot0)
+	assert.Equal(s.T(), insolar.PulseNumber(0), heavyGot0)
 
-	expectHeavy := core.PulseNumber(100500)
+	expectHeavy := insolar.PulseNumber(100500)
 	err = s.replicaStorage.SetHeavySyncedPulse(s.ctx, s.jetID, expectHeavy)
 	require.NoError(s.T(), err)
 
@@ -105,12 +105,12 @@ func (s *replicaSuite) Test_ReplicatedPulse() {
 }
 
 func (s *replicaSuite) Test_SyncClientJetPulses() {
-	var expectEmpty []core.PulseNumber
+	var expectEmpty []insolar.PulseNumber
 	gotEmpty, err := s.replicaStorage.GetSyncClientJetPulses(s.ctx, s.jetID)
 	require.NoError(s.T(), err)
 	assert.Equal(s.T(), expectEmpty, gotEmpty)
 
-	expect := []core.PulseNumber{100, 500, 100500}
+	expect := []insolar.PulseNumber{100, 500, 100500}
 	err = s.replicaStorage.SetSyncClientJetPulses(s.ctx, s.jetID, expect)
 	require.NoError(s.T(), err)
 
@@ -121,23 +121,23 @@ func (s *replicaSuite) Test_SyncClientJetPulses() {
 
 func (s *replicaSuite) Test_GetAllSyncClientJets() {
 	tt := []struct {
-		jetID  core.RecordID
-		pulses []core.PulseNumber
+		jetID  insolar.ID
+		pulses []insolar.PulseNumber
 	}{
 		{
 			jetID:  testutils.RandomJet(),
-			pulses: []core.PulseNumber{100, 500, 100500},
+			pulses: []insolar.PulseNumber{100, 500, 100500},
 		},
 		{
 			jetID:  testutils.RandomJet(),
-			pulses: []core.PulseNumber{100, 500},
+			pulses: []insolar.PulseNumber{100, 500},
 		},
 		{
 			jetID: testutils.RandomJet(),
 		},
 		{
 			jetID:  testutils.RandomJet(),
-			pulses: []core.PulseNumber{100500},
+			pulses: []insolar.PulseNumber{100500},
 		},
 	}
 

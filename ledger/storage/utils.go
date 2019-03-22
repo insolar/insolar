@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package storage
 
@@ -20,7 +20,7 @@ import (
 	"bytes"
 	"encoding/hex"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 )
 
 type bytes2hex []byte
@@ -37,26 +37,14 @@ func prefixkey(prefix byte, parts ...[]byte) []byte {
 	return k
 }
 
-func JetDropPrefixKey(jp []byte, pn core.PulseNumber) []byte {
-	return prefixkey(scopeIDJetDrop, jp, pn.Bytes())
-}
-
-func IDRecordPrefixKey(jp []byte, pn core.PulseNumber) []byte {
-	return prefixkey(scopeIDRecord, jp, pn.Bytes())
-}
-
-func JetListPrefixKey() []byte {
-	return prefixkey(scopeIDSystem, []byte{sysJetList})
-}
-
 func GenesisPrefixKey() []byte {
 	return prefixkey(scopeIDSystem, []byte{sysGenesis})
 }
 
-func pulseFromKey(key []byte) core.PulseNumber {
-	return core.NewPulseNumber(pulseBytesFromKey(key))
+func pulseFromKey(key []byte) insolar.PulseNumber {
+	return insolar.NewPulseNumber(pulseBytesFromKey(key))
 }
 
 func pulseBytesFromKey(key []byte) []byte {
-	return key[core.RecordHashSize : core.RecordHashSize+core.PulseNumberSize]
+	return key[insolar.RecordHashSize : insolar.RecordHashSize+insolar.PulseNumberSize]
 }

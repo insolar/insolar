@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package allowance
 
@@ -21,13 +21,13 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/application/proxy/wallet"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 
 type Allowance struct {
 	foundation.BaseContract
-	To         core.RecordRef
+	To         insolar.Reference
 	Amount     uint
 	ExpireTime int64
 }
@@ -70,7 +70,7 @@ func (a *Allowance) GetExpiredBalance() (uint, error) {
 }
 
 // New check is caller wallet and makes new allowance
-func New(to *core.RecordRef, amount uint, expire int64) (*Allowance, error) {
+func New(to *insolar.Reference, amount uint, expire int64) (*Allowance, error) {
 	if !wallet.PrototypeReference.Equal(*foundation.GetContext().CallerPrototype) {
 		return nil, fmt.Errorf("[ New Allowance ] : Can't create allowance from not wallet contract")
 	}

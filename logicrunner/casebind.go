@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package logicrunner
 
@@ -24,17 +24,17 @@ import (
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/message"
-	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/reply"
 	"github.com/pkg/errors"
 )
 
 type CaseRequest struct {
-	Parcel     core.Parcel
-	Request    core.RecordRef
-	MessageBus core.MessageBus
-	Reply      core.Reply
+	Parcel     insolar.Parcel
+	Request    insolar.Reference
+	MessageBus insolar.MessageBus
+	Reply      insolar.Reply
 	Error      string
 }
 
@@ -47,7 +47,7 @@ func NewCaseBind() *CaseBind {
 	return &CaseBind{Requests: make([]CaseRequest, 0)}
 }
 
-func NewCaseBindFromValidateMessage(ctx context.Context, mb core.MessageBus, msg *message.ValidateCaseBind) *CaseBind {
+func NewCaseBindFromValidateMessage(ctx context.Context, mb insolar.MessageBus, msg *message.ValidateCaseBind) *CaseBind {
 	res := &CaseBind{
 		Requests: make([]CaseRequest, len(msg.Requests)),
 	}
@@ -83,7 +83,7 @@ func (cb *CaseBind) getCaseBindForMessage(ctx context.Context) []message.CaseBin
 	//
 	//for i, req := range cb.Requests {
 	//	var buf bytes.Buffer
-	//	err := req.MessageBus.(core.TapeWriter).WriteTape(ctx, &buf)
+	//	err := req.MessageBus.(insolar.TapeWriter).WriteTape(ctx, &buf)
 	//	if err != nil {
 	//		panic("couldn't write tape: " + err.Error())
 	//	}
@@ -99,7 +99,7 @@ func (cb *CaseBind) getCaseBindForMessage(ctx context.Context) []message.CaseBin
 	//return requests
 }
 
-func (cb *CaseBind) ToValidateMessage(ctx context.Context, ref Ref, pulse core.Pulse) *message.ValidateCaseBind {
+func (cb *CaseBind) ToValidateMessage(ctx context.Context, ref Ref, pulse insolar.Pulse) *message.ValidateCaseBind {
 	res := &message.ValidateCaseBind{
 		RecordRef: ref,
 		Requests:  cb.getCaseBindForMessage(ctx),
@@ -108,7 +108,7 @@ func (cb *CaseBind) ToValidateMessage(ctx context.Context, ref Ref, pulse core.P
 	return res
 }
 
-func (cb *CaseBind) NewRequest(p core.Parcel, request Ref, mb core.MessageBus) *CaseRequest {
+func (cb *CaseBind) NewRequest(p insolar.Parcel, request Ref, mb insolar.MessageBus) *CaseRequest {
 	res := CaseRequest{
 		Parcel:     p,
 		Request:    request,
@@ -119,7 +119,7 @@ func (cb *CaseBind) NewRequest(p core.Parcel, request Ref, mb core.MessageBus) *
 }
 
 type CaseBindReplay struct {
-	Pulse    core.Pulse
+	Pulse    insolar.Pulse
 	CaseBind CaseBind
 	Request  int
 	Record   int
@@ -143,7 +143,7 @@ func (r *CaseBindReplay) NextRequest() *CaseRequest {
 	return &r.CaseBind.Requests[r.Request]
 }
 
-func (lr *LogicRunner) Validate(ctx context.Context, ref Ref, p core.Pulse, cb CaseBind) (int, error) {
+func (lr *LogicRunner) Validate(ctx context.Context, ref Ref, p insolar.Pulse, cb CaseBind) (int, error) {
 	os := lr.UpsertObjectState(ref)
 	vs := os.StartValidation(ref)
 
@@ -165,7 +165,7 @@ func (lr *LogicRunner) Validate(ctx context.Context, ref Ref, p core.Pulse, cb C
 		traceID := "TODO" // FIXME
 
 		ctx = inslogger.ContextWithTrace(ctx, traceID)
-		ctx = core.ContextWithMessageBus(ctx, request.MessageBus)
+		ctx = insolar.ContextWithMessageBus(ctx, request.MessageBus)
 
 		sender := request.Parcel.GetSender()
 		vs.Current = &CurrentExecution{
@@ -174,7 +174,7 @@ func (lr *LogicRunner) Validate(ctx context.Context, ref Ref, p core.Pulse, cb C
 			RequesterNode: &sender,
 		}
 
-		rep, err := func() (core.Reply, error) {
+		rep, err := func() (insolar.Reply, error) {
 			vs.Unlock()
 			defer vs.Lock()
 			return lr.executeOrValidate(ctx, vs, request.Parcel)
@@ -188,7 +188,7 @@ func (lr *LogicRunner) Validate(ctx context.Context, ref Ref, p core.Pulse, cb C
 	return 1, nil
 }
 
-func (lr *LogicRunner) HandleValidateCaseBindMessage(ctx context.Context, inmsg core.Parcel) (core.Reply, error) {
+func (lr *LogicRunner) HandleValidateCaseBindMessage(ctx context.Context, inmsg insolar.Parcel) (insolar.Reply, error) {
 	ctx = loggerWithTargetID(ctx, inmsg)
 	inslogger.FromContext(ctx).Debug("LogicRunner.HandleValidateCaseBindMessage starts ...")
 	msg, ok := inmsg.Message().(*message.ValidateCaseBind)
@@ -196,7 +196,7 @@ func (lr *LogicRunner) HandleValidateCaseBindMessage(ctx context.Context, inmsg 
 		return nil, errors.New("Execute( ! message.ValidateCaseBindInterface )")
 	}
 
-	err := lr.CheckOurRole(ctx, msg, core.DynamicRoleVirtualValidator)
+	err := lr.CheckOurRole(ctx, msg, insolar.DynamicRoleVirtualValidator)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ HandleValidateCaseBindMessage ] can't play role")
 	}
@@ -218,7 +218,7 @@ func (lr *LogicRunner) HandleValidateCaseBindMessage(ctx context.Context, inmsg 
 	return &reply.OK{}, err
 }
 
-func (lr *LogicRunner) HandleValidationResultsMessage(ctx context.Context, inmsg core.Parcel) (core.Reply, error) {
+func (lr *LogicRunner) HandleValidationResultsMessage(ctx context.Context, inmsg insolar.Parcel) (insolar.Reply, error) {
 	ctx = loggerWithTargetID(ctx, inmsg)
 	inslogger.FromContext(ctx).Debug("LogicRunner.HandleValidationResultsMessage starts ...")
 	msg, ok := inmsg.Message().(*message.ValidationResults)
@@ -233,7 +233,7 @@ func (lr *LogicRunner) HandleValidationResultsMessage(ctx context.Context, inmsg
 	return &reply.OK{}, nil
 }
 
-func (lr *LogicRunner) HandleExecutorResultsMessage(ctx context.Context, inmsg core.Parcel) (core.Reply, error) {
+func (lr *LogicRunner) HandleExecutorResultsMessage(ctx context.Context, inmsg insolar.Parcel) (insolar.Reply, error) {
 	ctx = loggerWithTargetID(ctx, inmsg)
 	inslogger.FromContext(ctx).Debug("LogicRunner.HandleExecutorResultsMessage starts ...")
 	msg, ok := inmsg.Message().(*message.ExecutorResults)
@@ -253,7 +253,7 @@ func (lr *LogicRunner) HandleExecutorResultsMessage(ctx context.Context, inmsg c
 	}
 
 	// validation things
-	// c := lr.GetConsensus(ctx, msg.RecordRef)
+	// c := lr.GetConsensus(ctx, msg.Reference)
 	// c.AddExecutor(ctx, inmsg, msg)
 
 	return &reply.OK{}, nil
@@ -262,7 +262,7 @@ func (lr *LogicRunner) HandleExecutorResultsMessage(ctx context.Context, inmsg c
 // ValidationBehaviour is a special object that responsible for validation behavior of other methods.
 type ValidationBehaviour interface {
 	Mode() string
-	Result(reply core.Reply, err error) error
+	Result(reply insolar.Reply, err error) error
 }
 
 type ValidationSaver struct {
@@ -275,11 +275,11 @@ func (vb *ValidationSaver) Mode() string {
 	return "execution"
 }
 
-func (vb *ValidationSaver) NewRequest(p core.Parcel, request Ref, mb core.MessageBus) {
+func (vb *ValidationSaver) NewRequest(p insolar.Parcel, request Ref, mb insolar.MessageBus) {
 	vb.current = vb.caseBind.NewRequest(p, request, mb)
 }
 
-func (vb *ValidationSaver) Result(reply core.Reply, err error) error {
+func (vb *ValidationSaver) Result(reply insolar.Reply, err error) error {
 	if vb.current == nil {
 		return errors.New("result call without request registered")
 	}
@@ -305,7 +305,7 @@ func (vb *ValidationChecker) NextRequest() *CaseRequest {
 	return vb.current
 }
 
-func (vb *ValidationChecker) Result(reply core.Reply, err error) error {
+func (vb *ValidationChecker) Result(reply insolar.Reply, err error) error {
 	if vb.current == nil {
 		return errors.New("result call without request registered")
 	}

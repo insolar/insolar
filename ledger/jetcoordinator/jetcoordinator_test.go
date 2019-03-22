@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package jetcoordinator
 
@@ -20,12 +20,11 @@ import (
 	"context"
 	"testing"
 
-	"github.com/insolar/insolar"
 	"github.com/insolar/insolar/component"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/internal/jet"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
@@ -47,7 +46,7 @@ type jetCoordinatorSuite struct {
 
 	pulseStorage *storage.PulseStorage
 	pulseTracker storage.PulseTracker
-	jetStorage   jet.JetStorage
+	jetStorage   jet.Storage
 	nodeStorage  *node.AccessorMock
 	coordinator  *JetCoordinator
 }
@@ -71,7 +70,8 @@ func (s *jetCoordinatorSuite) BeforeTest(suiteName, testName string) {
 	s.cleaner = cleaner
 	s.pulseTracker = storage.NewPulseTracker()
 	s.pulseStorage = storage.NewPulseStorage()
-	s.jetStorage = jet.NewJetStorage()
+	storage := jet.NewStore()
+	s.jetStorage = storage
 	s.nodeStorage = node.NewAccessorMock(s.T())
 	s.coordinator = NewJetCoordinator(5)
 	s.coordinator.NodeNet = network.NewNodeNetworkMock(s.T())
@@ -81,7 +81,7 @@ func (s *jetCoordinatorSuite) BeforeTest(suiteName, testName string) {
 		db,
 		s.pulseTracker,
 		s.pulseStorage,
-		s.jetStorage,
+		storage,
 		s.nodeStorage,
 		s.coordinator,
 	)
@@ -105,28 +105,28 @@ func (s *jetCoordinatorSuite) AfterTest(suiteName, testName string) {
 }
 
 func (s *jetCoordinatorSuite) TestJetCoordinator_QueryRole() {
-	err := s.pulseTracker.AddPulse(s.ctx, core.Pulse{PulseNumber: 0, Entropy: core.Entropy{1, 2, 3}})
+	err := s.pulseTracker.AddPulse(s.ctx, insolar.Pulse{PulseNumber: 0, Entropy: insolar.Entropy{1, 2, 3}})
 	require.NoError(s.T(), err)
 	var nds []insolar.Node
-	var nodeRefs []core.RecordRef
+	var nodeRefs []insolar.Reference
 	for i := 0; i < 100; i++ {
-		ref := *core.NewRecordRef(core.DomainID, *core.NewRecordID(0, []byte{byte(i)}))
-		nds = append(nds, insolar.Node{ID: ref, Role: core.StaticRoleLightMaterial})
+		ref := *insolar.NewReference(insolar.DomainID, *insolar.NewID(0, []byte{byte(i)}))
+		nds = append(nds, insolar.Node{ID: ref, Role: insolar.StaticRoleLightMaterial})
 		nodeRefs = append(nodeRefs, ref)
 	}
 	require.NoError(s.T(), err)
 
 	s.nodeStorage.InRoleMock.Return(nds, nil)
 
-	objID := core.NewRecordID(0, []byte{1, 42, 123})
-	s.jetStorage.UpdateJetTree(s.ctx, 0, true, core.RecordID(*core.NewJetID(50, []byte{1, 42, 123})))
+	objID := insolar.NewID(0, []byte{1, 42, 123})
+	s.jetStorage.Update(s.ctx, 0, true, *insolar.NewJetID(50, []byte{1, 42, 123}))
 
-	selected, err := s.coordinator.QueryRole(s.ctx, core.DynamicRoleLightValidator, *objID, 0)
+	selected, err := s.coordinator.QueryRole(s.ctx, insolar.DynamicRoleLightValidator, *objID, 0)
 	require.NoError(s.T(), err)
 	assert.Equal(s.T(), 3, len(selected))
 
 	// Indexes are hard-coded from previously calculated values.
-	assert.Equal(s.T(), []core.RecordRef{nodeRefs[16], nodeRefs[21], nodeRefs[78]}, selected)
+	assert.Equal(s.T(), []insolar.Reference{nodeRefs[16], nodeRefs[21], nodeRefs[78]}, selected)
 }
 
 func TestJetCoordinator_Me(t *testing.T) {
@@ -167,7 +167,7 @@ func TestJetCoordinator_IsBeyondLimit_ProblemsWithTracker(t *testing.T) {
 	calc.PulseTracker = pulseTrackerMock
 
 	// Act
-	res, err := calc.IsBeyondLimit(ctx, core.FirstPulseNumber, 0)
+	res, err := calc.IsBeyondLimit(ctx, insolar.FirstPulseNumber, 0)
 
 	// Assert
 	require.NotNil(t, err)
@@ -179,8 +179,8 @@ func TestJetCoordinator_IsBeyondLimit_ProblemsWithTracker_SecondCall(t *testing.
 	// Arrange
 	ctx := inslogger.TestContext(t)
 	pulseTrackerMock := storage.NewPulseTrackerMock(t)
-	pulseTrackerMock.GetPulseFunc = func(p context.Context, p1 core.PulseNumber) (r *storage.Pulse, r1 error) {
-		if p1 == core.FirstPulseNumber {
+	pulseTrackerMock.GetPulseFunc = func(p context.Context, p1 insolar.PulseNumber) (r *storage.Pulse, r1 error) {
+		if p1 == insolar.FirstPulseNumber {
 			return &storage.Pulse{}, nil
 		}
 
@@ -190,7 +190,7 @@ func TestJetCoordinator_IsBeyondLimit_ProblemsWithTracker_SecondCall(t *testing.
 	calc.PulseTracker = pulseTrackerMock
 
 	// Act
-	res, err := calc.IsBeyondLimit(ctx, core.FirstPulseNumber, 0)
+	res, err := calc.IsBeyondLimit(ctx, insolar.FirstPulseNumber, 0)
 
 	// Assert
 	require.NotNil(t, err)
@@ -202,8 +202,8 @@ func TestJetCoordinator_IsBeyondLimit_OutsideOfLightChainLimit(t *testing.T) {
 	// Arrange
 	ctx := inslogger.TestContext(t)
 	pulseTrackerMock := storage.NewPulseTrackerMock(t)
-	pulseTrackerMock.GetPulseFunc = func(p context.Context, p1 core.PulseNumber) (r *storage.Pulse, r1 error) {
-		if p1 == core.FirstPulseNumber {
+	pulseTrackerMock.GetPulseFunc = func(p context.Context, p1 insolar.PulseNumber) (r *storage.Pulse, r1 error) {
+		if p1 == insolar.FirstPulseNumber {
 			return &storage.Pulse{SerialNumber: 50}, nil
 		}
 
@@ -213,7 +213,7 @@ func TestJetCoordinator_IsBeyondLimit_OutsideOfLightChainLimit(t *testing.T) {
 	calc.PulseTracker = pulseTrackerMock
 
 	// Act
-	res, err := calc.IsBeyondLimit(ctx, core.FirstPulseNumber, 0)
+	res, err := calc.IsBeyondLimit(ctx, insolar.FirstPulseNumber, 0)
 
 	// Assert
 	require.Nil(t, err)
@@ -225,8 +225,8 @@ func TestJetCoordinator_IsBeyondLimit_InsideOfLightChainLimit(t *testing.T) {
 	// Arrange
 	ctx := inslogger.TestContext(t)
 	pulseTrackerMock := storage.NewPulseTrackerMock(t)
-	pulseTrackerMock.GetPulseFunc = func(p context.Context, p1 core.PulseNumber) (r *storage.Pulse, r1 error) {
-		if p1 == core.FirstPulseNumber {
+	pulseTrackerMock.GetPulseFunc = func(p context.Context, p1 insolar.PulseNumber) (r *storage.Pulse, r1 error) {
+		if p1 == insolar.FirstPulseNumber {
 			return &storage.Pulse{SerialNumber: 50}, nil
 		}
 
@@ -236,7 +236,7 @@ func TestJetCoordinator_IsBeyondLimit_InsideOfLightChainLimit(t *testing.T) {
 	calc.PulseTracker = pulseTrackerMock
 
 	// Act
-	res, err := calc.IsBeyondLimit(ctx, core.FirstPulseNumber, 0)
+	res, err := calc.IsBeyondLimit(ctx, insolar.FirstPulseNumber, 0)
 
 	// Assert
 	require.Nil(t, err)
@@ -253,7 +253,7 @@ func TestJetCoordinator_NodeForJet_CheckLimitFailed(t *testing.T) {
 	calc.PulseTracker = pulseTrackerMock
 
 	// Act
-	res, err := calc.NodeForJet(ctx, testutils.RandomJet(), core.FirstPulseNumber, 0)
+	res, err := calc.NodeForJet(ctx, testutils.RandomJet(), insolar.FirstPulseNumber, 0)
 
 	// Assert
 	require.NotNil(t, err)
@@ -265,26 +265,26 @@ func TestJetCoordinator_NodeForJet_GoToHeavy(t *testing.T) {
 	// Arrange
 	ctx := inslogger.TestContext(t)
 	pulseTrackerMock := storage.NewPulseTrackerMock(t)
-	pulseTrackerMock.GetPulseFunc = func(p context.Context, p1 core.PulseNumber) (r *storage.Pulse, r1 error) {
-		if p1 == core.FirstPulseNumber {
+	pulseTrackerMock.GetPulseFunc = func(p context.Context, p1 insolar.PulseNumber) (r *storage.Pulse, r1 error) {
+		if p1 == insolar.FirstPulseNumber {
 			return &storage.Pulse{SerialNumber: 50}, nil
 		}
 
 		return &storage.Pulse{SerialNumber: 24}, nil
 	}
-	expectedID := core.NewRecordRef(testutils.RandomID(), testutils.RandomID())
+	expectedID := insolar.NewReference(testutils.RandomID(), testutils.RandomID())
 	activeNodesStorageMock := node.NewAccessorMock(t)
-	activeNodesStorageMock.InRoleFunc = func(p core.PulseNumber, p1 core.StaticRole) (r []insolar.Node, r1 error) {
-		require.Equal(t, core.FirstPulseNumber, int(p))
-		require.Equal(t, core.StaticRoleHeavyMaterial, p1)
+	activeNodesStorageMock.InRoleFunc = func(p insolar.PulseNumber, p1 insolar.StaticRole) (r []insolar.Node, r1 error) {
+		require.Equal(t, insolar.FirstPulseNumber, int(p))
+		require.Equal(t, insolar.StaticRoleHeavyMaterial, p1)
 
 		return []insolar.Node{{ID: *expectedID}}, nil
 	}
 
 	pulseStorageMock := testutils.NewPulseStorageMock(t)
-	pulseStorageMock.CurrentFunc = func(p context.Context) (r *core.Pulse, r1 error) {
+	pulseStorageMock.CurrentFunc = func(p context.Context) (r *insolar.Pulse, r1 error) {
 		generator := entropygenerator.StandardEntropyGenerator{}
-		return &core.Pulse{PulseNumber: core.FirstPulseNumber, Entropy: generator.GenerateEntropy()}, nil
+		return &insolar.Pulse{PulseNumber: insolar.FirstPulseNumber, Entropy: generator.GenerateEntropy()}, nil
 	}
 
 	calc := NewJetCoordinator(25)
@@ -294,7 +294,7 @@ func TestJetCoordinator_NodeForJet_GoToHeavy(t *testing.T) {
 	calc.PlatformCryptographyScheme = platformpolicy.NewPlatformCryptographyScheme()
 
 	// Act
-	resNode, err := calc.NodeForJet(ctx, testutils.RandomJet(), core.FirstPulseNumber, 0)
+	resNode, err := calc.NodeForJet(ctx, testutils.RandomJet(), insolar.FirstPulseNumber, 0)
 
 	// Assert
 	require.Nil(t, err)
@@ -306,26 +306,26 @@ func TestJetCoordinator_NodeForJet_GoToLight(t *testing.T) {
 	// Arrange
 	ctx := inslogger.TestContext(t)
 	pulseTrackerMock := storage.NewPulseTrackerMock(t)
-	pulseTrackerMock.GetPulseFunc = func(p context.Context, p1 core.PulseNumber) (r *storage.Pulse, r1 error) {
-		if p1 == core.FirstPulseNumber {
+	pulseTrackerMock.GetPulseFunc = func(p context.Context, p1 insolar.PulseNumber) (r *storage.Pulse, r1 error) {
+		if p1 == insolar.FirstPulseNumber {
 			return &storage.Pulse{SerialNumber: 50}, nil
 		}
 
 		return &storage.Pulse{SerialNumber: 49}, nil
 	}
-	expectedID := core.NewRecordRef(testutils.RandomID(), testutils.RandomID())
+	expectedID := insolar.NewReference(testutils.RandomID(), testutils.RandomID())
 	activeNodesStorageMock := node.NewAccessorMock(t)
-	activeNodesStorageMock.InRoleFunc = func(p core.PulseNumber, p1 core.StaticRole) (r []insolar.Node, r1 error) {
+	activeNodesStorageMock.InRoleFunc = func(p insolar.PulseNumber, p1 insolar.StaticRole) (r []insolar.Node, r1 error) {
 		require.Equal(t, 0, int(p))
-		require.Equal(t, core.StaticRoleLightMaterial, p1)
+		require.Equal(t, insolar.StaticRoleLightMaterial, p1)
 
 		return []insolar.Node{{ID: *expectedID}}, nil
 	}
 
 	pulseStorageMock := testutils.NewPulseStorageMock(t)
-	pulseStorageMock.CurrentFunc = func(p context.Context) (r *core.Pulse, r1 error) {
+	pulseStorageMock.CurrentFunc = func(p context.Context) (r *insolar.Pulse, r1 error) {
 		generator := entropygenerator.StandardEntropyGenerator{}
-		return &core.Pulse{PulseNumber: core.FirstPulseNumber, Entropy: generator.GenerateEntropy()}, nil
+		return &insolar.Pulse{PulseNumber: insolar.FirstPulseNumber, Entropy: generator.GenerateEntropy()}, nil
 	}
 
 	calc := NewJetCoordinator(25)
@@ -335,7 +335,7 @@ func TestJetCoordinator_NodeForJet_GoToLight(t *testing.T) {
 	calc.PlatformCryptographyScheme = platformpolicy.NewPlatformCryptographyScheme()
 
 	// Act
-	resNode, err := calc.NodeForJet(ctx, testutils.RandomJet(), core.FirstPulseNumber, 0)
+	resNode, err := calc.NodeForJet(ctx, testutils.RandomJet(), insolar.FirstPulseNumber, 0)
 
 	// Assert
 	require.Nil(t, err)

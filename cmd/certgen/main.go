@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package main
 
@@ -25,7 +25,7 @@ import (
 	"os"
 
 	"github.com/insolar/insolar/api/requester"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/keystore"
 	"github.com/insolar/insolar/platformpolicy"
@@ -88,7 +88,7 @@ type RegisterResult struct {
 	TraceID string `json:"traceID"`
 }
 
-func extractReference(response []byte, requestTypeMsg string) core.RecordRef {
+func extractReference(response []byte, requestTypeMsg string) insolar.Reference {
 	r := RegisterResult{}
 	err := json.Unmarshal(response, &r)
 	checkError(fmt.Sprintf("Failed to parse response from '%s' node request", requestTypeMsg), err)
@@ -96,13 +96,13 @@ func extractReference(response []byte, requestTypeMsg string) core.RecordRef {
 		fmt.Println("Response:", string(response))
 	}
 
-	ref, err := core.NewRefFromBase58(r.Result)
+	ref, err := insolar.NewReferenceFromBase58(r.Result)
 	checkError(fmt.Sprintf("Failed to construct ref from '%s' node response", requestTypeMsg), err)
 
 	return *ref
 }
 
-func registerNode(key crypto.PublicKey, staticRole core.StaticRole) core.RecordRef {
+func registerNode(key crypto.PublicKey, staticRole insolar.StaticRole) insolar.Reference {
 	userCfg := getUserConfig()
 
 	keySerialized, err := ks.ExportPublicKeyPEM(key)
@@ -130,7 +130,7 @@ type GetCertificateResponse struct {
 	Result  GetCertificateResult `json:"result"`
 }
 
-func fetchCertificate(ref core.RecordRef) []byte {
+func fetchCertificate(ref insolar.Reference) []byte {
 	params := requester.PostParams{
 		"ref": ref.String(),
 	}
@@ -198,7 +198,7 @@ func getUserConfig() *requester.UserConfigJSON {
 	return userCfg
 }
 
-func getNodeRefByPk(key crypto.PublicKey) core.RecordRef {
+func getNodeRefByPk(key crypto.PublicKey) insolar.Reference {
 	userCfg := getUserConfig()
 
 	keySerialized, err := ks.ExportPublicKeyPEM(key)
@@ -216,7 +216,7 @@ func getNodeRefByPk(key crypto.PublicKey) core.RecordRef {
 	return extractReference(response, "getNodeRefByPk")
 }
 
-func getNodeRef(pubKey crypto.PublicKey, staticRole core.StaticRole) core.RecordRef {
+func getNodeRef(pubKey crypto.PublicKey, staticRole insolar.StaticRole) insolar.Reference {
 	if reuseKeys {
 		return getNodeRefByPk(pubKey)
 	}
@@ -226,8 +226,8 @@ func getNodeRef(pubKey crypto.PublicKey, staticRole core.StaticRole) core.Record
 
 func main() {
 	parseInputParams()
-	staticRole := core.GetStaticRoleFromString(role)
-	if staticRole == core.StaticRoleUnknown {
+	staticRole := insolar.GetStaticRoleFromString(role)
+	if staticRole == insolar.StaticRoleUnknown {
 		fmt.Println("Invalid role:", role)
 		os.Exit(1)
 	}
