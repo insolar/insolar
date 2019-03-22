@@ -125,7 +125,7 @@ func (m *TransactionManager) SetBlob(ctx context.Context, jetID insolar.ID, puls
 // GetRecord returns record from BadgerDB by *record.Reference.
 //
 // It returns ErrNotFound if the DB does not contain the key.
-func (m *TransactionManager) GetRecord(ctx context.Context, jetID insolar.ID, id *insolar.ID) (object.Record, error) {
+func (m *TransactionManager) GetRecord(ctx context.Context, jetID insolar.ID, id *insolar.ID) (object.VirtualRecord, error) {
 	jetPrefix := insolar.JetID(jetID).Prefix()
 	k := prefixkey(scopeIDRecord, jetPrefix, id[:])
 	buf, err := m.get(ctx, k)
@@ -139,7 +139,7 @@ func (m *TransactionManager) GetRecord(ctx context.Context, jetID insolar.ID, id
 //
 // If record exists returns both *record.ID and ErrOverride error.
 // If record not found returns nil and ErrNotFound error
-func (m *TransactionManager) SetRecord(ctx context.Context, jetID insolar.ID, pulseNumber insolar.PulseNumber, rec object.Record) (*insolar.ID, error) {
+func (m *TransactionManager) SetRecord(ctx context.Context, jetID insolar.ID, pulseNumber insolar.PulseNumber, rec object.VirtualRecord) (*insolar.ID, error) {
 	id := object.NewRecordIDFromRecord(m.db.PlatformCryptographyScheme, pulseNumber, rec)
 	prefix := insolar.JetID(jetID).Prefix()
 	k := prefixkey(scopeIDRecord, prefix, id[:])
@@ -177,7 +177,7 @@ func (m *TransactionManager) GetObjectIndex(
 	if err != nil {
 		return nil, err
 	}
-	res := object.Decode(buf)
+	res := object.DecodeIndex(buf)
 	return &res, nil
 }
 
@@ -193,7 +193,7 @@ func (m *TransactionManager) SetObjectIndex(
 	if idx.Delegates == nil {
 		idx.Delegates = map[insolar.Reference]insolar.Reference{}
 	}
-	encoded := object.Encode(*idx)
+	encoded := object.EncodeIndex(*idx)
 	return m.set(ctx, k, encoded)
 }
 

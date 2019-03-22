@@ -177,7 +177,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObject_FetchesObject() {
 		mb.SendFunc = func(c context.Context, gm insolar.Message, o *insolar.MessageSendOptions) (r insolar.Reply, r1 error) {
 			if m, ok := gm.(*message.GetObjectIndex); ok {
 				assert.Equal(t, msg.Head, m.Object)
-				buf := object.Encode(objIndex)
+				buf := object.EncodeIndex(objIndex)
 				require.NoError(t, err)
 				return &reply.ObjectIndex{Index: buf}, nil
 			}
@@ -328,7 +328,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetChildren_Redirects() {
 		mb.SendFunc = func(c context.Context, gm insolar.Message, o *insolar.MessageSendOptions) (r insolar.Reply, r1 error) {
 			if m, ok := gm.(*message.GetObjectIndex); ok {
 				assert.Equal(t, msg.Parent, m.Object)
-				buf := object.Encode(objIndex)
+				buf := object.EncodeIndex(objIndex)
 				require.NoError(t, err)
 				return &reply.ObjectIndex{Index: buf}, nil
 			}
@@ -444,7 +444,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeav
 	mb.SendFunc = func(c context.Context, gm insolar.Message, o *insolar.MessageSendOptions) (r insolar.Reply, r1 error) {
 		if m, ok := gm.(*message.GetObjectIndex); ok {
 			assert.Equal(s.T(), msg.Head, m.Object)
-			buf := object.Encode(objIndex)
+			buf := object.EncodeIndex(objIndex)
 			return &reply.ObjectIndex{Index: buf}, nil
 		}
 
@@ -507,7 +507,7 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_FetchesIndexFromHea
 	h.RecentStorageProvider = provideMock
 
 	objIndex := object.Lifeline{LatestState: genRandomID(0), State: object.StateActivation}
-	amendRecord := object.ObjectAmendRecord{
+	amendRecord := object.AmendRecord{
 		PrevState: *objIndex.LatestState,
 	}
 	amendHash := s.scheme.ReferenceHasher()
@@ -522,7 +522,7 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_FetchesIndexFromHea
 	mb.SendFunc = func(c context.Context, gm insolar.Message, o *insolar.MessageSendOptions) (r insolar.Reply, r1 error) {
 		if m, ok := gm.(*message.GetObjectIndex); ok {
 			assert.Equal(s.T(), msg.Object, m.Object)
-			buf := object.Encode(objIndex)
+			buf := object.EncodeIndex(objIndex)
 			require.NoError(s.T(), err)
 			return &reply.ObjectIndex{Index: buf}, nil
 		}
@@ -586,7 +586,7 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_UpdateIndexState() 
 		State:        object.StateActivation,
 		LatestUpdate: 0,
 	}
-	amendRecord := object.ObjectAmendRecord{
+	amendRecord := object.AmendRecord{
 		PrevState: *objIndex.LatestState,
 	}
 	amendHash := s.scheme.ReferenceHasher()
@@ -668,7 +668,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObjectIndex() {
 	require.NoError(s.T(), err)
 	indexRep, ok := rep.(*reply.ObjectIndex)
 	require.True(s.T(), ok)
-	decodedIndex := object.Decode(indexRep.Index)
+	decodedIndex := object.DecodeIndex(indexRep.Index)
 	assert.Equal(s.T(), objectIndex, decodedIndex)
 }
 
@@ -855,7 +855,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 	mb.SendFunc = func(c context.Context, gm insolar.Message, o *insolar.MessageSendOptions) (r insolar.Reply, r1 error) {
 		if m, ok := gm.(*message.GetObjectIndex); ok {
 			assert.Equal(s.T(), msg.Parent, m.Object)
-			buf := object.Encode(objIndex)
+			buf := object.EncodeIndex(objIndex)
 			require.NoError(s.T(), err)
 			return &reply.ObjectIndex{Index: buf}, nil
 		}
@@ -966,7 +966,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 		return &reply.OK{}, nil
 	}
 
-	firstIndex := object.Encode(object.Lifeline{
+	firstIndex := object.EncodeIndex(object.Lifeline{
 		LatestState: firstID,
 	})
 	err = s.objectStorage.SetObjectIndex(s.ctx, insolar.ID(jetID), firstID, &object.Lifeline{
@@ -1086,7 +1086,7 @@ func (s *handlerSuite) TestMessageHandler_HandleValidationCheck() {
 	require.NoError(s.T(), err)
 
 	s.T().Run("returns not ok when not valid", func(t *testing.T) {
-		validatedStateID, err := s.objectStorage.SetRecord(s.ctx, jetID, 0, &object.ObjectAmendRecord{})
+		validatedStateID, err := s.objectStorage.SetRecord(s.ctx, jetID, 0, &object.AmendRecord{})
 		require.NoError(t, err)
 
 		msg := message.ValidationCheck{
@@ -1105,7 +1105,7 @@ func (s *handlerSuite) TestMessageHandler_HandleValidationCheck() {
 
 	s.T().Run("returns ok when valid", func(t *testing.T) {
 		approvedStateID := *genRandomID(0)
-		validatedStateID, err := s.objectStorage.SetRecord(s.ctx, jetID, 0, &object.ObjectAmendRecord{
+		validatedStateID, err := s.objectStorage.SetRecord(s.ctx, jetID, 0, &object.AmendRecord{
 			PrevState: approvedStateID,
 		})
 		require.NoError(t, err)

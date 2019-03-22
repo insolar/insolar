@@ -64,7 +64,7 @@ func (p payload) MarshalJSON() ([]byte, error) {
 
 type recordData struct {
 	Type    string
-	Data    object.Record
+	Data    object.VirtualRecord
 	Payload payload
 }
 
@@ -150,7 +150,7 @@ func (e *Exporter) Export(ctx context.Context, fromPulse insolar.PulseNumber, si
 
 func (e *Exporter) exportPulse(ctx context.Context, jetID insolar.JetID, pulse *insolar.Pulse) (*pulseData, error) {
 	records := recordsData{}
-	err := e.DB.IterateRecordsOnPulse(ctx, insolar.ID(jetID), pulse.PulseNumber, func(id insolar.ID, rec object.Record) error {
+	err := e.DB.IterateRecordsOnPulse(ctx, insolar.ID(jetID), pulse.PulseNumber, func(id insolar.ID, rec object.VirtualRecord) error {
 		pl := e.getPayload(ctx, jetID, rec)
 
 		records[string(base58.Encode(id[:]))] = recordData{
@@ -173,9 +173,9 @@ func (e *Exporter) exportPulse(ctx context.Context, jetID insolar.JetID, pulse *
 	return &data, nil
 }
 
-func (e *Exporter) getPayload(ctx context.Context, jetID insolar.JetID, rec object.Record) payload {
+func (e *Exporter) getPayload(ctx context.Context, jetID insolar.JetID, rec object.VirtualRecord) payload {
 	switch r := rec.(type) {
-	case object.ObjectState:
+	case object.State:
 		if r.GetMemory() == nil {
 			break
 		}
@@ -223,7 +223,7 @@ func (e *Exporter) getPayload(ctx context.Context, jetID insolar.JetID, rec obje
 	return nil
 }
 
-func recordType(rec object.Record) string {
+func recordType(rec object.VirtualRecord) string {
 	switch rec.(type) {
 	case *object.GenesisRecord:
 		return "TypeGenesis"
@@ -239,9 +239,9 @@ func recordType(rec object.Record) string {
 		return "TypeType"
 	case *object.CodeRecord:
 		return "TypeCode"
-	case *object.ObjectActivateRecord:
+	case *object.ActivateRecord:
 		return "TypeActivate"
-	case *object.ObjectAmendRecord:
+	case *object.AmendRecord:
 		return "TypeAmend"
 	case *object.DeactivationRecord:
 		return "TypeDeactivate"

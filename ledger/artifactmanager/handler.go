@@ -532,11 +532,11 @@ func (h *MessageHandler) handleGetObject(
 	if err != nil {
 		return nil, err
 	}
-	state, ok := rec.(object.ObjectState)
+	state, ok := rec.(object.State)
 	if !ok {
 		return nil, errors.New("invalid object record")
 	}
-	if state.State() == object.StateDeactivation {
+	if state.ID() == object.StateDeactivation {
 		return &reply.Error{ErrType: reply.ErrDeactivated}, nil
 	}
 
@@ -801,7 +801,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel insolar.
 	})
 
 	rec := object.DeserializeRecord(msg.Record)
-	state, ok := rec.(object.ObjectState)
+	state, ok := rec.(object.State)
 	if !ok {
 		return nil, errors.New("wrong object state record")
 	}
@@ -816,9 +816,9 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel insolar.
 	}
 
 	switch s := state.(type) {
-	case *object.ObjectActivateRecord:
+	case *object.ActivateRecord:
 		s.Memory = blobID
-	case *object.ObjectAmendRecord:
+	case *object.AmendRecord:
 		s.Memory = blobID
 	}
 
@@ -828,7 +828,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel insolar.
 		idx, err = tx.GetObjectIndex(ctx, jetID, msg.Object.Record(), true)
 		// No index on our node.
 		if err == insolar.ErrNotFound {
-			if state.State() == object.StateActivation {
+			if state.ID() == object.StateActivation {
 				// We are activating the object. There is no index for it anywhere.
 				idx = &object.Lifeline{State: object.StateUndefined}
 			} else {
@@ -847,7 +847,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel insolar.
 			return err
 		}
 
-		if err = validateState(idx.State, state.State()); err != nil {
+		if err = validateState(idx.State, state.ID()); err != nil {
 			return err
 		}
 
@@ -867,9 +867,9 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel insolar.
 			return err
 		}
 		idx.LatestState = id
-		idx.State = state.State()
-		if state.State() == object.StateActivation {
-			idx.Parent = state.(*object.ObjectActivateRecord).Parent
+		idx.State = state.ID()
+		if state.ID() == object.StateActivation {
+			idx.Parent = state.(*object.ActivateRecord).Parent
 		}
 
 		idx.LatestUpdate = parcel.Pulse()
@@ -1068,7 +1068,7 @@ func (h *MessageHandler) handleGetObjectIndex(ctx context.Context, parcel insola
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
 
-	buf := object.Encode(*idx)
+	buf := object.EncodeIndex(*idx)
 
 	return &reply.ObjectIndex{Index: buf}, nil
 }
@@ -1081,7 +1081,7 @@ func (h *MessageHandler) handleValidationCheck(ctx context.Context, parcel insol
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch state record")
 	}
-	state, ok := rec.(object.ObjectState)
+	state, ok := rec.(object.State)
 	if !ok {
 		return nil, errors.New("failed to fetch state record")
 	}
@@ -1109,7 +1109,7 @@ func (h *MessageHandler) getCode(ctx context.Context, id *insolar.ID) (*object.C
 	return codeRec, nil
 }
 
-func validateState(old object.State, new object.State) error {
+func validateState(old object.StateID, new object.StateID) error {
 	if old == object.StateDeactivation {
 		return ErrObjectDeactivated
 	}
@@ -1137,7 +1137,7 @@ func (h *MessageHandler) saveIndexFromHeavy(
 	if !ok {
 		return nil, fmt.Errorf("failed to fetch object index: unexpected reply type %T (reply=%+v)", genericReply, genericReply)
 	}
-	idx := object.Decode(rep.Index)
+	idx := object.DecodeIndex(rep.Index)
 
 	err = h.ObjectStorage.SetObjectIndex(ctx, jetID, obj.Record(), &idx)
 	if err != nil {
@@ -1236,7 +1236,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel insolar.Pa
 
 	indexStorage := h.RecentStorageProvider.GetIndexStorage(ctx, jetID)
 	for id, meta := range msg.RecentObjects {
-		decodedIndex := object.Decode(meta.Index)
+		decodedIndex := object.DecodeIndex(meta.Index)
 
 		err = h.ObjectStorage.SetObjectIndex(ctx, jetID, &id, &decodedIndex)
 		if err != nil {

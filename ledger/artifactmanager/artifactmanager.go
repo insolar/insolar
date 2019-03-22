@@ -762,12 +762,12 @@ func (m *LedgerArtifactManager) activateObject(
 
 	o, err := m.sendUpdateObject(
 		ctx,
-		&object.ObjectActivateRecord{
+		&object.ActivateRecord{
 			SideEffectRecord: object.SideEffectRecord{
 				Domain:  domain,
 				Request: obj,
 			},
-			ObjectStateRecord: object.ObjectStateRecord{
+			StateRecord: object.StateRecord{
 				Memory:      object.CalculateIDForBlob(m.PlatformCryptographyScheme, currentPN, memory),
 				Image:       prototype,
 				IsPrototype: isPrototype,
@@ -854,12 +854,12 @@ func (m *LedgerArtifactManager) updateObject(
 
 	o, err := m.sendUpdateObject(
 		ctx,
-		&object.ObjectAmendRecord{
+		&object.AmendRecord{
 			SideEffectRecord: object.SideEffectRecord{
 				Domain:  domain,
 				Request: request,
 			},
-			ObjectStateRecord: object.ObjectStateRecord{
+			StateRecord: object.StateRecord{
 				Image:       *image,
 				IsPrototype: obj.IsPrototype(),
 			},
@@ -887,7 +887,7 @@ func (m *LedgerArtifactManager) updateObject(
 
 func (m *LedgerArtifactManager) setRecord(
 	ctx context.Context,
-	rec object.Record,
+	rec object.VirtualRecord,
 	target insolar.Reference,
 	currentPN insolar.PulseNumber,
 ) (*insolar.ID, error) {
@@ -943,7 +943,7 @@ func (m *LedgerArtifactManager) setBlob(
 
 func (m *LedgerArtifactManager) sendUpdateObject(
 	ctx context.Context,
-	rec object.Record,
+	rec object.VirtualRecord,
 	obj insolar.Reference,
 	memory []byte,
 	currentPN insolar.PulseNumber,
@@ -986,7 +986,7 @@ func (m *LedgerArtifactManager) sendUpdateObject(
 
 func (m *LedgerArtifactManager) registerChild(
 	ctx context.Context,
-	rec object.Record,
+	rec object.VirtualRecord,
 	parent insolar.Reference,
 	child insolar.Reference,
 	asType *insolar.Reference,
